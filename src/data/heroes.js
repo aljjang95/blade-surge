@@ -1,0 +1,102 @@
+// 영웅 정의 — 모델(KayKit Adventurers, CC0), 애니메이션, 스킬, 기본 스탯
+export const RARITY = {
+  N:   { name: 'N',   color: '#9aa3b2', mult: 1.0 },
+  R:   { name: 'R',   color: '#4cc3ff', mult: 1.2 },
+  SR:  { name: 'SR',  color: '#b26bff', mult: 1.5 },
+  SSR: { name: 'SSR', color: '#ffcf5a', mult: 2.0 },
+};
+
+export const HEROES = {
+  knight: {
+    id: 'knight', name: '검성 아르카', title: '성검의 계승자', rarity: 'SSR', model: 'Knight', portrait: '/img/hero_knight.webp',
+    weapon: '1h', color: '#ffcf5a', accent: '#fff3c0',
+    show: ['1H_Sword', 'Round_Shield'],
+    base: { hp: 1400, atk: 120, def: 40, crit: 0.15, critDmg: 1.6, spd: 6.2 },
+    combo: [
+      { anim: '1H_Melee_Attack_Slice_Horizontal', hitAt: 0.42, dmg: 1.0, range: 2.6, arc: 140, kb: 1.5, dur: 0.55 },
+      { anim: '1H_Melee_Attack_Slice_Diagonal',   hitAt: 0.40, dmg: 1.1, range: 2.6, arc: 120, kb: 1.5, dur: 0.55 },
+      { anim: '1H_Melee_Attack_Chop',             hitAt: 0.45, dmg: 1.7, range: 2.8, arc: 160, kb: 4.5, dur: 0.7, finisher: true },
+    ],
+    skills: [
+      { id: 'holy_slash',  name: '성검 일섬', icon: '/img/sk_knight_1.webp', cd: 5,  anim: '1H_Melee_Attack_Slice_Horizontal', castAt: 0.4, dmg: 3.2, desc: '전방으로 거대한 빛의 참격을 날려 관통 피해' },
+      { id: 'shield_bash', name: '철벽 강타', icon: '/img/sk_knight_2.webp', cd: 8,  anim: 'Block_Attack', castAt: 0.35, dmg: 2.4, desc: '방패로 지면을 강타해 주변 적을 기절시키고 밀쳐냄' },
+      { id: 'judgment',    name: '심판의 빛', icon: '/img/sk_knight_3.webp', cd: 12, anim: 'Spellcast_Raise', castAt: 0.5, dmg: 2.0, desc: '주변 모든 적에게 빛의 기둥이 낙하' },
+      { id: 'dragon_slash', name: '용살검 · 천공', icon: '/img/sk_knight_ult.webp', ult: true, anim: '2H_Melee_Attack_Chop', castAt: 0.55, dmg: 12, desc: '하늘을 가르는 일격. 전방 광역에 압도적인 피해' },
+    ],
+  },
+  barbarian: {
+    id: 'barbarian', name: '광전사 드라칸', title: '피의 도끼', rarity: 'SSR', model: 'Barbarian', portrait: '/img/hero_barbarian.webp',
+    weapon: '2h', color: '#ff5a3c', accent: '#ffd0b0',
+    show: ['2H_Axe'],
+    base: { hp: 1800, atk: 150, def: 30, crit: 0.20, critDmg: 1.8, spd: 5.8 },
+    combo: [
+      { anim: '2H_Melee_Attack_Slice', hitAt: 0.45, dmg: 1.2, range: 3.0, arc: 160, kb: 2.0, dur: 0.65 },
+      { anim: '2H_Melee_Attack_Stab',  hitAt: 0.42, dmg: 1.2, range: 3.2, arc: 80,  kb: 2.0, dur: 0.6 },
+      { anim: '2H_Melee_Attack_Chop',  hitAt: 0.5,  dmg: 2.2, range: 3.0, arc: 170, kb: 6.0, dur: 0.85, finisher: true },
+    ],
+    skills: [
+      { id: 'whirlwind',  name: '회오리 참격', icon: '/img/sk_barb_1.webp', cd: 7,  anim: '2H_Melee_Attack_Spin', castAt: 0.3, dmg: 0.9, ticks: 5, desc: '도끼를 휘돌려 주변 적을 연속으로 베어냄' },
+      { id: 'quake',      name: '대지 분쇄', icon: '/img/sk_barb_2.webp', cd: 10, anim: '2H_Melee_Attack_Chop', castAt: 0.5, dmg: 4.0, desc: '땅을 내리쳐 충격파로 광역 피해와 넉백' },
+      { id: 'berserk',    name: '광폭화',   icon: '/img/sk_barb_3.webp', cd: 16, anim: 'Cheer', castAt: 0.2, dmg: 0, desc: '8초간 공격력 +60%, 공격속도 +30%' },
+      { id: 'hell_axe',   name: '지옥의 도끼', icon: '/img/sk_barb_ult.webp', ult: true, anim: 'Jump_Full_Short', castAt: 0.5, dmg: 14, desc: '불타는 거대 도끼를 낙하시켜 전장을 불태움' },
+    ],
+  },
+  mage: {
+    id: 'mage', name: '대마도사 리아', title: '별을 부르는 자', rarity: 'SR', model: 'Mage', portrait: '/img/hero_mage.webp',
+    weapon: 'staff', color: '#4cc3ff', accent: '#d0f0ff', ranged: true,
+    show: ['2H_Staff'],
+    base: { hp: 1000, atk: 170, def: 20, crit: 0.12, critDmg: 1.7, spd: 5.6 },
+    combo: [
+      { anim: 'Spellcast_Shoot', hitAt: 0.35, dmg: 0.9, range: 9, arc: 30, kb: 0.8, dur: 0.5, projectile: 'bolt' },
+      { anim: 'Spellcast_Shoot', hitAt: 0.35, dmg: 0.9, range: 9, arc: 30, kb: 0.8, dur: 0.5, projectile: 'bolt' },
+      { anim: 'Spellcast_Long',  hitAt: 0.5,  dmg: 1.8, range: 9, arc: 40, kb: 3.0, dur: 0.8, projectile: 'bigbolt', finisher: true },
+    ],
+    skills: [
+      { id: 'fireball',   name: '화염구',     icon: '/img/sk_mage_1.webp', cd: 5,  anim: 'Spellcast_Shoot', castAt: 0.35, dmg: 3.5, desc: '폭발하는 화염구를 발사해 광역 피해' },
+      { id: 'chain',      name: '번개 사슬',  icon: '/img/sk_mage_2.webp', cd: 9,  anim: 'Spellcast_Raise', castAt: 0.45, dmg: 2.2, desc: '적들을 연쇄하는 번개. 최대 6명 타격' },
+      { id: 'blizzard',   name: '빙결 폭풍',  icon: '/img/sk_mage_3.webp', cd: 13, anim: 'Spellcast_Long', castAt: 0.5, dmg: 0.8, ticks: 6, desc: '주변에 얼음 폭풍을 일으켜 지속 피해와 둔화' },
+      { id: 'meteor',     name: '메테오 스톰', icon: '/img/sk_mage_ult.webp', ult: true, anim: 'Spellcast_Raise', castAt: 0.5, dmg: 4.5, ticks: 5, desc: '하늘에서 운석이 쏟아져 전장을 초토화' },
+    ],
+  },
+  rogue: {
+    id: 'rogue', name: '암살자 카인', title: '그림자 속의 칼날', rarity: 'SR', model: 'Rogue', portrait: '/img/hero_rogue.webp',
+    weapon: 'dual', color: '#b26bff', accent: '#e8d0ff',
+    show: ['Knife', 'Knife_Offhand'],
+    base: { hp: 1100, atk: 135, def: 25, crit: 0.35, critDmg: 2.0, spd: 7.2 },
+    combo: [
+      { anim: 'Dualwield_Melee_Attack_Slice', hitAt: 0.35, dmg: 0.8, range: 2.3, arc: 120, kb: 1.0, dur: 0.4 },
+      { anim: 'Dualwield_Melee_Attack_Chop',  hitAt: 0.35, dmg: 0.8, range: 2.3, arc: 120, kb: 1.0, dur: 0.4 },
+      { anim: 'Dualwield_Melee_Attack_Stab',  hitAt: 0.4,  dmg: 1.6, range: 2.6, arc: 90,  kb: 3.5, dur: 0.55, finisher: true },
+    ],
+    skills: [
+      { id: 'shadow_dash', name: '그림자 질주', icon: '/img/sk_rogue_1.webp', cd: 6,  anim: 'Dodge_Forward', castAt: 0.1, dmg: 2.6, desc: '적을 관통하며 질주해 경로상 모든 적을 베어냄' },
+      { id: 'poison_bomb', name: '독무 폭탄',   icon: '/img/sk_rogue_2.webp', cd: 9,  anim: 'Throw', castAt: 0.45, dmg: 0.6, ticks: 8, desc: '독 연막을 투척해 지속 피해' },
+      { id: 'flurry',      name: '환영 난무',   icon: '/img/sk_rogue_3.webp', cd: 11, anim: 'Dualwield_Melee_Attack_Stab', castAt: 0.2, dmg: 0.7, ticks: 8, desc: '잔상을 남기며 8연속 찌르기' },
+      { id: 'thousand',    name: '천 개의 칼날', icon: '/img/sk_rogue_ult.webp', ult: true, anim: 'Spellcast_Raise', castAt: 0.4, dmg: 1.4, ticks: 10, desc: '하늘에서 수천의 칼날이 쏟아짐' },
+    ],
+  },
+};
+
+export const HERO_ORDER = ['knight', 'barbarian', 'mage', 'rogue'];
+
+// 레벨업 필요 EXP / 골드
+export const levelExp = (lv) => Math.floor(100 * Math.pow(1.18, lv - 1));
+export const levelGold = (lv) => Math.floor(200 * Math.pow(1.15, lv - 1));
+export const starShards = (star) => [0, 20, 40, 80, 160, 320][star] || 999;
+export const skillUpGold = (lv) => Math.floor(500 * Math.pow(1.4, lv - 1));
+
+export function heroStats(def, state, equipBonus = { atk: 0, hp: 0, crit: 0, def: 0 }) {
+  const lv = state?.level || 1, star = state?.star || 1;
+  const rm = RARITY[def.rarity].mult;
+  const lvm = 1 + (lv - 1) * 0.08;
+  const stm = 1 + (star - 1) * 0.25;
+  const eb = equipBonus;
+  const hp = Math.floor((def.base.hp * lvm * stm * rm + (eb.hp || 0)) * (1 + (eb.hpPct || 0)));
+  const atk = Math.floor((def.base.atk * lvm * stm * rm + (eb.atk || 0)) * (1 + (eb.atkPct || 0)));
+  const defv = Math.floor(def.base.def * lvm) + (eb.def || 0);
+  const crit = Math.min(0.8, def.base.crit + (eb.crit || 0));
+  const critDmg = def.base.critDmg + (eb.critDmg || 0);
+  const ultGain = 1 + (eb.ultGain || 0);
+  const power = Math.floor(atk * 6 + hp * 0.5 + defv * 4 + crit * 1000 + (critDmg - 1.5) * 500);
+  return { hp, atk, def: defv, crit, critDmg, ultGain, spd: def.base.spd, power };
+}

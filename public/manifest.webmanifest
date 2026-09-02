@@ -1,0 +1,1 @@
+{ "name": "BLADE SURGE", "short_name": "BladeSurge", "start_url": "/", "display": "fullscreen", "orientation": "any", "background_color": "#0b0a12", "theme_color": "#0b0a12", "icons": [{ "src": "/img/icon.png", "sizes": "512x512", "type": "image/png" }] }
