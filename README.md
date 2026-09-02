@@ -1,65 +1,86 @@
 # BLADE SURGE — 블레이드 서지
 
-three.js(WebGL2) 기반 모바일 3D 핵앤슬래시 가챠 RPG 웹앱. 과금은 전부 **목업**(실제 결제 없음).
-
-## 실행 / 배포 (Cloudflare Workers Static Assets)
+three.js(WebGL2) 기반 **가로모드 모바일 3D 몹몰이 핵앤슬래시 가챠 RPG** 웹앱.
+과금은 전부 **목업**(실제 결제 없음) — 결제 SDK 연결 지점만 만들어 둠.
 
 ```bash
 npm install
-npm run dev            # http://localhost:5173  (--host 로 폰에서 접속 가능)
-npm run build          # dist/ 생성
-npx wrangler login     # 최초 1회
-npx wrangler deploy    # wrangler.jsonc 의 assets.directory = ./dist
+npm run dev            # http://localhost:5173  (--host 로 폰에서 접속)
+npm run build          # dist/
+npx wrangler login && npx wrangler deploy   # Cloudflare Workers Static Assets
 ```
 
-- `wrangler.jsonc`: Workers + Static Assets (SPA 폴백). Pages 로 올릴 경우 `npx wrangler pages deploy dist` 도 동작.
-- `public/_headers`: 모델/사운드 장기 캐시.
-- PWA 매니페스트 포함(`public/manifest.webmanifest`) — 홈 화면 추가 시 전체화면.
+## 게임 루프
+```
+몹몰이 (10~28마리) → 진공 광역기로 쓸어담기 → 코인·강화석·장비 우수수 드랍
+   → 자석 흡수 → 같은 등급 4개 모아 세트 완성 → 강화(+20, 파괴 위험)
+   → 전투력 상승 → 더 높은 스테이지 → 부족한 강화석/보호권을 상점에서 …
+```
 
-## 조작
+## 조작 (가로모드 권장)
 | 입력 | 터치 | 키보드 |
 |---|---|---|
-| 이동 | 왼쪽 가상 조이스틱 | WASD / 방향키 |
+| 이동 | 좌측 가상 조이스틱(터치한 곳에 생성) | WASD / 방향키 |
 | 공격 (3단 콤보) | 공격 버튼(홀드 가능) | J / Space |
 | 회피 (무적 0.4s) | 회피 | K / Shift |
 | 스킬 1~3 | 스킬 버튼 | 1 2 3 |
-| 궁극기 (게이지 100) | 금색 버튼 | R |
-| 자동전투 | AUTO | — |
+| 궁극기 (게이지 100) | 금색 원형 버튼 | R |
+| 자동 전투 | AUTO | — |
+
+세로로 잡으면 회전 안내가 뜨고, "세로로 계속하기"로 무시할 수 있다.
+
+## 전투 설계
+- **몹몰이**: 웨이브당 10~28마리를 한꺼번에 깔고, 죽는 만큼 큐에서 보충한다.
+  동시 생존 상한은 그래픽 설정에 연동(낮음 16 / 보통 24 / 높음 34).
+- **진공(vacuum)**: 방패 강타·회오리·대지 분쇄·빙결 폭풍·환영 난무 등 다수 스킬이
+  적을 중심으로 끌어당긴 뒤 때린다. 기본 콤보 3타(마무리)도 약하게 끌어당긴다.
+- **엘리트 3종**: 해골 대장/암살단장/대주술사 — 크고 단단하며 장비 **확정 드랍**.
+- **보스 3종**(챕터별): 해골 군주(회전·강타·소환) / 리치 왕(소울레인·부채꼴 탄막·소환) /
+  사신 그림자(대시·회전·소환). 60%·30%에서 페이즈 전환, 30%부터 광폭화.
+- 적 밀도에 따라 카메라가 자동으로 줌아웃하고, 자동전투는 **가장 밀집한 무리**를 조준한다.
+
+## 성장 / 과금 (전부 목업)
+| 축 | 내용 |
+|---|---|
+| 필드 드랍 | 코인·강화석·장비가 3D로 튀어나와 자석 흡수. SR/SSR은 빔 + 팡파레 |
+| 세트 | 등급별 4종(신병/용병/기사단/용살자). 2세트·4세트 효과가 스탯에 즉시 반영 |
+| 강화 | +0~+20. **+8까지 100%**, +12부터 **파괴 위험**, 실패 시 단계 하락 |
+| 소모품 | 강화석(재료) · 보호 주문서(파괴 방지) · 축복 주문서(성공률 +20%) |
+| 가챠 | 천장 80회, 소프트천장 60회, 10연 SR 이상 보장, 중복 시 조각 +10 |
+| 그 외 | 배틀패스 30단계 · VIP · 월정액 · 첫 결제 2배 · 부활(보석) · 광고 2배 보상 |
+
+결제 연결 지점: `src/ui/ui.js` → `paySheet(sku)` (목업 시트) → 실제로는 Google Play Billing /
+App Store / PG 호출 후 서버 검증 → `economy.purchase(id)`. 광고는 `watchAd()`.
 
 ## 구조
 ```
-index.html            화면 DOM (부트/로비/HUD/결과/소환연출/모달)
-src/main.js           앱 부트스트랩, 로비 쇼케이스, 프레임 루프 (app.step 으로 결정적 스텝 가능)
-src/style.css         UI 스타일 (모바일 세로 우선, 가로 대응)
+index.html            부트/로비/HUD/결과/소환/모달/회전안내 DOM
+src/main.js           부트스트랩, 로비 쇼케이스, 프레임 루프 (app.step 으로 결정적 스텝 가능)
+src/style.css         가로모드 우선 레이아웃 (좌측 세로 레일) + 세로 대응
 src/engine/
-  renderer.js         WebGL2 렌더러, EffectComposer(블룸 + 색수차/비네트/플래시/방사형블러), 카메라 리그(트라우마 셰이크/줌 펀치)
-  assets.js           GLTF+meshopt 로더, SkeletonUtils 복제, 프로시저럴 텍스처
-  fx.js               GPU Points 파티클 3풀, 참격 아크/초승달, 충격파 링, 빛기둥, 번개, 무기 트레일, 잔상, 데미지 숫자
-  audio.js            Web Audio — Kenney 샘플 + 합성(휘두름/저역펀치/폭발/번개/마법), BGM 크로스페이드·덕킹, 햅틱
+  renderer.js         WebGL2 + EffectComposer(블룸·색수차·비네트·플래시·방사형블러), 카메라 리그
+  assets.js           GLTF+meshopt 로더, 스킨드 메시 병합(드로우콜 1/8), VFX 텍스처 프리로드
+  fx.js               GPU Points 3풀 + 플립북/마법진/화염기둥/번개/참격/충격파/잔상/데미지숫자
+  audio.js            Kenney 샘플 + 프로시저럴 SFX 30여종, BGM 크로스페이드·덕킹, 햅틱
   input.js            가상 조이스틱 / 액션 버튼 / 키보드
 src/game/
-  actor.js            공통 액터(애니 크로스페이드, 히트플래시, 넉백, 경계)
-  player.js           콤보 상태기계, 스킬 캐스팅, 회피, 자동전투 AI, 피격
-  skills.js           16종 스킬 구현 (영웅 4 × 스킬 3 + 궁극기)
-  enemies.js          적 AI(추격/예고/공격/경직/회피), 원거리, 보스(회전·강타·소환·광폭화 페이즈)
-  battle.js           웨이브/보스 진행, 히트 판정, 투사체, 히트스탑/슬로우모, 궁극기 연출, 승패
-  arena.js            KayKit Dungeon 파츠로 아레나 조립(InstancedMesh), 테마 조명, 횃불
-  economy.js          세이브(localStorage), 화폐/에너지, 영웅 성장, 장비 강화, 가챠(천장/소프트천장), 상점 목업, 배틀패스, 출석/우편/임무
-src/data/             영웅·장비·스테이지·상점 데이터
-src/ui/
-  ui.js               HUD, 결과창, 모달, 목업 결제 시트, 부활 유도, 광고 목업
-  meta.js             로비 탭(모험/영웅/소환/상점/패스), 소환 연출, 설정
-public/models/        KayKit CC0 GLB (meshopt 압축)
-public/sfx, bgm/      Kenney CC0 SFX, OpenGameArt CC0 BGM
-public/img/           GPT 생성 이미지 (초상/아이콘/배경/로고)
+  actor.js            공통 액터(애니 크로스페이드, 히트플래시, 넉백)
+  player.js           콤보 상태기계, 스킬, 회피, 밀집 조준 자동전투
+  skills.js           16종 스킬 (영웅 4 × 스킬 3 + 궁극기), 진공·텍스처 VFX
+  enemies.js          잡몹/엘리트/보스 AI, 보스 패턴 킷 3종
+  drops.js            3D 필드 드랍 + 자석 흡수 + 희귀도 연출
+  battle.js           웨이브·지속 스폰, 히트 판정, 진공, 투사체, 히트스탑, 승패
+  arena.js            KayKit Dungeon 파츠 조립(InstancedMesh), 테마 조명, 횃불
+  economy.js          세이브, 화폐/에너지, 성장, 세트 보너스, 강화, 가챠, 상점, 패스
+src/data/             영웅·장비(세트/강화)·스테이지·상점 데이터
+src/ui/               HUD·결과·모달·목업 결제 / 로비 탭·강화 패널·소환 연출
+public/models/        KayKit CC0 GLB (meshopt)
+public/img/vfx/       GPT 생성 VFX 텍스처 10종
+public/bgm, sfx/      Flow Music BGM 6곡, Kenney CC0 SFX
 ```
 
-## 결제 연동 지점
-`src/ui/ui.js` → `paySheet(sku)` 가 목업 결제 시트. 실제 서비스 시 여기서 Google Play Billing / App Store / PG 호출 후 서버 검증 → `economy.purchase(id)` 호출로 교체.
-광고 보상은 `watchAd()` (AdMob 등 리워드 광고 SDK 연결 지점).
-
 ## 에셋 라이선스
-- 3D: KayKit Adventurers / Skeletons / Dungeon Remastered — Kay Lousberg, CC0
-- SFX: Kenney Impact Sounds / Interface Sounds / Casino Audio / Music Jingles — CC0
-- BGM: OpenGameArt CC0 — "JRPG Epic Rock Battle Theme #1", "Boss Battle #9 [Metal]", "Dark Shrine Loop", "Determined Pursuit"
-- 이미지: ChatGPT 이미지 생성 (프로젝트 전용)
+- 3D: **KayKit** Adventurers / Skeletons / Dungeon Remastered — Kay Lousberg, **CC0**
+- SFX: **Kenney** Impact / Interface / Casino / Music Jingles — **CC0**
+- BGM: **Google Flow Music** 생성 (전투2·보스2·로비·가챠)
+- 이미지/VFX: **ChatGPT** 이미지 생성 (프로젝트 전용)
