@@ -93,6 +93,29 @@ Cowork 클라우드 세션의 에이전트 프록시는 **세션에 인가된 �
 - 푸시가 필요하면: 세션에 저장소를 **push 권한으로** 붙여야 한다(앱에서 소스 추가). Claude Code(PC) 세션에는 이 제약이 없다.
 - 그때까지 **작업을 잃지 않는 법 → 아래 R2 인계 통로**.
 
+
+### 회전 축 선점 — 예약 세션끼리 안 겹치게 (필수, 2026-09-03)
+같은 날 세 세션이 각자 회전을 돌아 **서로 못 합치는 갈래가 셋** 생겼다.
+브랜치·PR 로는 못 막는다 — 충돌은 코드가 아니라 **무엇을 할지 고르는 순간**에 이미 결정된다.
+
+```bash
+node tools/rsi-claim.mjs status                 # 잡힌 축 + 최근 회전 기록
+node tools/rsi-claim.mjs claim PRD-4-4 "신규 직업"   # 선점 (이미 잡혔으면 exit 2 → 다른 축으로)
+node tools/rsi-claim.mjs done  PRD-4-4 <R2번들키>    # 완료 기록 + 락 해제
+node tools/rsi-claim.mjs fail  PRD-4-4 "게이트 실패"
+node tools/rsi-claim.mjs steal PRD-4-4          # 6시간 넘게 방치된 죽은 락 회수
+```
+D1 `apex-rsi` 의 PRIMARY KEY 충돌이 락이다(같은 축 INSERT 는 하나만 성공). 뿌리 CF 토큰으로 붙는다.
+
+**회전 시작 순서 — 이 순서를 지켜라**
+1. `session-auth` 스킬로 인증
+2. `git fetch origin` **그리고 R2 `rotations/` 의 최신 번들을 흡수**해 base 를 맞춘다.
+   origin/main 은 낡아 있을 수 있다 — 푸시가 막힌 회전이 R2 에만 있다
+3. `rsi-claim status` → 안 잡힌 축을 `claim`. 못 잡으면 다른 축, 전부 잡혔으면 **그 회전은 그냥 종료한다**
+4. RSI 루프 1회전 (게이트 A/B/C)
+5. 통과하면 커밋 → `node tools/gh-push.mjs` → 실패하면 R2 번들 업로드
+6. `rsi-claim done <축> <번들키>`
+
 ### 푸시하는 법 — `node tools/gh-push.mjs` (2026-09-03~)
 `git push` 는 못 쓴다(위 표). 대신 Cloudflare 워커 **apex-git** 이 우회로다 —
 워커는 CF 네트워크에서 도니까 컨테이너 프록시 바깥이고, 거기서 api.github.com 을 부른다.
