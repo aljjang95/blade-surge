@@ -23,84 +23,129 @@ export const SETS = {
              two:  { ultGain: 0.3, procs: ['phoenix_burn'], text: '궁극기 수급 +30%, 궁극기 시전 시 불사조 화염 폭발' },
              four: { ultGain: 0.3, procs: ['phoenix_burn', 'phoenix_rebirth'], text: '층당 1회, 쓰러지면 불사조가 되어 HP 50%로 부활' } },
 };
-export const RARITY_SET = { N: 'recruit', R: 'merc', SR: 'knight', SSR: 'dragon' };
+// ---------- 등급 5단계 (던파식) ----------
+export const RARITIES = ['N', 'S', 'E', 'U', 'L'];
+export const RARITY_INFO = {
+  N: { name: '노말',     color: '#e6e6e6', mult: 1.0, sell: 200 },
+  S: { name: '스페셜',   color: '#5ce07a', mult: 1.6, sell: 900 },
+  E: { name: '에픽',     color: '#4cc3ff', mult: 2.6, sell: 4000 },
+  U: { name: '유니크',   color: '#c07cff', mult: 3.6, sell: 12000 },
+  L: { name: '레전드리', color: '#ff9a2e', mult: 5.5, sell: 40000 },
+};
+export const RARITY_SET = { N: 'recruit', S: 'merc', E: 'knight', U: null, L: 'dragon' };
 export const THEMED_SETS = ['storm', 'blood', 'gravity', 'phoenix'];
+// 가챠(영웅 등급 R/SR/SSR)에서 장비가 나올 때의 등급 대응
+export const GACHA_ITEM_RARITY = { R: 'S', SR: 'E', SSR: 'L' };
 
+// 슬롯별 기준치 — 강화가 등급과 무관하게 이 값을 기준으로 붙는다 (구린 무기도 고강이면 세다)
+export const SLOT_BASE = { weapon: { atk: 20 }, armor: { hp: 130, def: 3 }, ring: { atk: 9, crit: 0 }, boots: { hp: 65, atk: 4 } };
+
+// 아이템: 슬롯당 N4 · S4 · E4 · U(테마 4 + 단독 1) · L3.  mult 는 RARITY_INFO.mult 를 기본으로, 개별 보정(k)
+const W = (id, name, rarity, k = 1, extra = {}) => ({ id, name, rarity, atk: Math.round(SLOT_BASE.weapon.atk * RARITY_INFO[rarity].mult * k), ...extra });
+const A = (id, name, rarity, k = 1, extra = {}) => ({ id, name, rarity, hp: Math.round(SLOT_BASE.armor.hp * RARITY_INFO[rarity].mult * k), def: Math.round(SLOT_BASE.armor.def * RARITY_INFO[rarity].mult * k), ...extra });
+const R = (id, name, rarity, k = 1, extra = {}) => ({ id, name, rarity, atk: Math.round(SLOT_BASE.ring.atk * RARITY_INFO[rarity].mult * k), ...extra });
+const B = (id, name, rarity, k = 1, extra = {}) => ({ id, name, rarity, hp: Math.round(SLOT_BASE.boots.hp * RARITY_INFO[rarity].mult * k), atk: Math.round(SLOT_BASE.boots.atk * RARITY_INFO[rarity].mult * k), ...extra });
 export const ITEM_POOL = {
   weapon: [
-    { id: 'w_iron',   name: '철검',        rarity: 'N',   atk: 18 },
-    { id: 'w_steel',  name: '강철 대검',   rarity: 'R',   atk: 40 },
-    { id: 'w_flame',  name: '화염 검',     rarity: 'SR',  atk: 85, crit: 0.03 },
-    { id: 'w_dragon', name: '용살자의 검', rarity: 'SSR', atk: 180, crit: 0.08 },
-    { id: 'w_storm',   name: '뇌명검',       rarity: 'SR', set: 'storm',   atk: 80, crit: 0.04, icon: '/img/it_storm_weapon.webp' },
-    { id: 'w_blood',   name: '흡혈귀의 송곳니', rarity: 'SR', set: 'blood', atk: 92, icon: '/img/it_blood_weapon.webp' },
-    { id: 'w_gravity', name: '특이점 대검',   rarity: 'SR', set: 'gravity', atk: 78, crit: 0.03, icon: '/img/it_gravity_weapon.webp' },
-    { id: 'w_phoenix', name: '불사조의 검',   rarity: 'SR', set: 'phoenix', atk: 84, crit: 0.05, icon: '/img/it_phoenix_weapon.webp' },
+    W('w_iron', '철검', 'N'), W('w_rusty', '녹슨 장검', 'N', 0.9), W('w_wood', '훈련용 목검', 'N', 0.8, { crit: 0.01 }), W('w_cleaver', '푸줏간 식칼', 'N', 1.1),
+    W('w_steel', '강철 대검', 'S'), W('w_bronze', '청동 곡도', 'S', 0.95, { crit: 0.02 }), W('w_hunter', '사냥꾼의 검', 'S', 1.05), W('w_guard', '수비대 장검', 'S', 0.9, { crit: 0.03 }),
+    W('w_flame', '화염 검', 'E', 1, { crit: 0.03 }), W('w_frost', '서리 검', 'E', 0.95, { crit: 0.05 }), W('w_rune', '룬 각인 검', 'E', 1.05), W('w_knight', '기사단 장검', 'E', 1, { crit: 0.04 }),
+    W('w_storm', '뇌명검', 'U', 1, { set: 'storm', crit: 0.04, icon: '/img/it_storm_weapon.webp' }),
+    W('w_blood', '흡혈귀의 송곳니', 'U', 1.1, { set: 'blood', icon: '/img/it_blood_weapon.webp' }),
+    W('w_gravity', '특이점 대검', 'U', 0.95, { set: 'gravity', crit: 0.03, icon: '/img/it_gravity_weapon.webp' }),
+    W('w_phoenix', '불사조의 검', 'U', 1, { set: 'phoenix', crit: 0.05, icon: '/img/it_phoenix_weapon.webp' }),
+    W('w_void', '공허의 조각검', 'U', 1.15, { crit: 0.08 }),
+    W('w_dragon', '용살자의 검', 'L', 1, { crit: 0.08 }), W('w_sun', '태양의 대검', 'L', 1.08, { crit: 0.06 }), W('w_king', '왕의 성검', 'L', 0.95, { crit: 0.12 }),
   ],
   armor: [
-    { id: 'a_leather', name: '가죽 갑옷',   rarity: 'N',   hp: 120 },
-    { id: 'a_chain',   name: '사슬 갑옷',   rarity: 'R',   hp: 280, def: 6 },
-    { id: 'a_knight',  name: '기사의 판금', rarity: 'SR',  hp: 600, def: 14 },
-    { id: 'a_titan',   name: '거인의 흉갑', rarity: 'SSR', hp: 1300, def: 30 },
-    { id: 'a_storm',   name: '뇌운 갑주',     rarity: 'SR', set: 'storm',   hp: 540, def: 12, icon: '/img/it_storm_armor.webp' },
-    { id: 'a_blood',   name: '핏빛 흉갑',     rarity: 'SR', set: 'blood',   hp: 680, def: 10, icon: '/img/it_blood_armor.webp' },
-    { id: 'a_gravity', name: '암흑 물질 갑옷', rarity: 'SR', set: 'gravity', hp: 600, def: 16, icon: '/img/it_gravity_armor.webp' },
-    { id: 'a_phoenix', name: '불사조 깃털 갑옷', rarity: 'SR', set: 'phoenix', hp: 560, def: 13, icon: '/img/it_phoenix_armor.webp' },
+    A('a_leather', '가죽 갑옷', 'N'), A('a_cloth', '누더기 로브', 'N', 0.85), A('a_padded', '누빔 갑옷', 'N', 1.05), A('a_scrap', '고철 흉갑', 'N', 1.1),
+    A('a_chain', '사슬 갑옷', 'S'), A('a_scale', '비늘 갑옷', 'S', 1.05), A('a_ranger', '순찰자의 가죽옷', 'S', 0.9, { crit: 0.02 }), A('a_bronze', '청동 흉갑', 'S', 1.1),
+    A('a_knight', '기사의 판금', 'E'), A('a_mithril', '미스릴 사슬', 'E', 0.95, { crit: 0.03 }), A('a_wyvern', '와이번 가죽 갑옷', 'E', 1.05), A('a_paladin', '성기사 갑주', 'E', 1.1),
+    A('a_storm', '뇌운 갑주', 'U', 1, { set: 'storm', icon: '/img/it_storm_armor.webp' }),
+    A('a_blood', '핏빛 흉갑', 'U', 1.1, { set: 'blood', icon: '/img/it_blood_armor.webp' }),
+    A('a_gravity', '암흑 물질 갑옷', 'U', 1.05, { set: 'gravity', icon: '/img/it_gravity_armor.webp' }),
+    A('a_phoenix', '불사조 깃털 갑옷', 'U', 0.95, { set: 'phoenix', icon: '/img/it_phoenix_armor.webp' }),
+    A('a_void', '공허의 갑주', 'U', 1.15),
+    A('a_titan', '거인의 흉갑', 'L'), A('a_sun', '태양의 판금', 'L', 1.08), A('a_king', '왕의 갑주', 'L', 0.95, { crit: 0.04 }),
   ],
   ring: [
-    { id: 'r_copper', name: '구리 반지',   rarity: 'N',   atk: 8 },
-    { id: 'r_silver', name: '은 반지',     rarity: 'R',   atk: 18, crit: 0.02 },
-    { id: 'r_ruby',   name: '루비 반지',   rarity: 'SR',  atk: 40, crit: 0.05 },
-    { id: 'r_abyss',  name: '심연의 반지', rarity: 'SSR', atk: 90, crit: 0.12 },
-    { id: 'r_storm',   name: '뇌전의 고리',   rarity: 'SR', set: 'storm',   atk: 38, crit: 0.06, icon: '/img/it_storm_ring.webp' },
-    { id: 'r_blood',   name: '피의 서약 반지', rarity: 'SR', set: 'blood',   atk: 44, crit: 0.03, icon: '/img/it_blood_ring.webp' },
-    { id: 'r_gravity', name: '사건의 지평선', rarity: 'SR', set: 'gravity', atk: 36, crit: 0.05, icon: '/img/it_gravity_ring.webp' },
-    { id: 'r_phoenix', name: '잿불 반지',     rarity: 'SR', set: 'phoenix', atk: 40, crit: 0.05, icon: '/img/it_phoenix_ring.webp' },
+    R('r_copper', '구리 반지', 'N'), R('r_bone', '뼈 반지', 'N', 0.9), R('r_wood', '나무 반지', 'N', 0.85, { crit: 0.01 }), R('r_iron', '철 반지', 'N', 1.1),
+    R('r_silver', '은 반지', 'S', 1, { crit: 0.02 }), R('r_jade', '옥 반지', 'S', 0.95, { crit: 0.03 }), R('r_amber', '호박 반지', 'S', 1.05), R('r_pearl', '진주 반지', 'S', 0.9, { crit: 0.04 }),
+    R('r_ruby', '루비 반지', 'E', 1, { crit: 0.05 }), R('r_sapphire', '사파이어 반지', 'E', 0.95, { crit: 0.06 }), R('r_emerald', '에메랄드 반지', 'E', 1.05, { crit: 0.03 }), R('r_moon', '달빛 반지', 'E', 1, { crit: 0.05 }),
+    R('r_storm', '뇌전의 고리', 'U', 1, { set: 'storm', crit: 0.06, icon: '/img/it_storm_ring.webp' }),
+    R('r_blood', '피의 서약 반지', 'U', 1.1, { set: 'blood', crit: 0.03, icon: '/img/it_blood_ring.webp' }),
+    R('r_gravity', '사건의 지평선', 'U', 0.95, { set: 'gravity', crit: 0.05, icon: '/img/it_gravity_ring.webp' }),
+    R('r_phoenix', '잿불 반지', 'U', 1, { set: 'phoenix', crit: 0.05, icon: '/img/it_phoenix_ring.webp' }),
+    R('r_void', '공허의 인장', 'U', 1.1, { crit: 0.1 }),
+    R('r_abyss', '심연의 반지', 'L', 1, { crit: 0.12 }), R('r_sun', '태양의 인장', 'L', 1.08, { crit: 0.1 }), R('r_king', '왕의 반지', 'L', 0.95, { crit: 0.15 }),
   ],
   boots: [
-    { id: 'b_cloth',  name: '천 신발',     rarity: 'N',   hp: 60 },
-    { id: 'b_swift',  name: '신속의 장화', rarity: 'R',   hp: 140, atk: 8 },
-    { id: 'b_wind',   name: '바람의 장화', rarity: 'SR',  hp: 300, atk: 20 },
-    { id: 'b_sky',    name: '천공의 장화', rarity: 'SSR', hp: 650, atk: 45, crit: 0.04 },
-    { id: 'b_storm',   name: '번개 걸음',     rarity: 'SR', set: 'storm',   hp: 280, atk: 22, icon: '/img/it_storm_boots.webp' },
-    { id: 'b_blood',   name: '피 웅덩이 장화', rarity: 'SR', set: 'blood',   hp: 340, atk: 16, icon: '/img/it_blood_boots.webp' },
-    { id: 'b_gravity', name: '무중력 장화',   rarity: 'SR', set: 'gravity', hp: 300, atk: 18, icon: '/img/it_gravity_boots.webp' },
-    { id: 'b_phoenix', name: '불새의 발톱',   rarity: 'SR', set: 'phoenix', hp: 290, atk: 21, icon: '/img/it_phoenix_boots.webp' },
+    B('b_cloth', '천 신발', 'N'), B('b_straw', '짚신', 'N', 0.85), B('b_worn', '해진 가죽 장화', 'N', 1.05), B('b_wooden', '나막신', 'N', 0.95),
+    B('b_swift', '신속의 장화', 'S'), B('b_ranger', '순찰자의 장화', 'S', 1.05), B('b_chain', '사슬 각반', 'S', 1.1), B('b_silk', '비단 신발', 'S', 0.9, { crit: 0.02 }),
+    B('b_wind', '바람의 장화', 'E'), B('b_knight', '기사의 철화', 'E', 1.1), B('b_shadow', '그림자 장화', 'E', 0.95, { crit: 0.04 }), B('b_mithril', '미스릴 장화', 'E', 1.05),
+    B('b_storm', '번개 걸음', 'U', 1, { set: 'storm', icon: '/img/it_storm_boots.webp' }),
+    B('b_blood', '피 웅덩이 장화', 'U', 1.1, { set: 'blood', icon: '/img/it_blood_boots.webp' }),
+    B('b_gravity', '무중력 장화', 'U', 1, { set: 'gravity', icon: '/img/it_gravity_boots.webp' }),
+    B('b_phoenix', '불새의 발톱', 'U', 0.95, { set: 'phoenix', icon: '/img/it_phoenix_boots.webp' }),
+    B('b_void', '공허의 장화', 'U', 1.15, { crit: 0.03 }),
+    B('b_sky', '천공의 장화', 'L', 1, { crit: 0.04 }), B('b_sun', '태양의 장화', 'L', 1.08), B('b_king', '왕의 장화', 'L', 0.95, { crit: 0.06 }),
   ],
 };
 export const ITEM_BY_ID = {};
-for (const s of SLOTS) for (const it of ITEM_POOL[s]) ITEM_BY_ID[it.id] = { ...it, slot: s, set: it.set || RARITY_SET[it.rarity] };
+for (const s of SLOTS) { const seen = {}; ITEM_POOL[s].forEach((it) => {
+  const k = seen[it.rarity] = (seen[it.rarity] ?? -1) + 1;   // 등급 안에서 몇 번째 디자인인지 → 시트 아이콘
+  const sheetIcon = it.set ? null : it.rarity === 'U' ? `/img/it_u_${s}.webp` : `/img/it_${it.rarity.toLowerCase()}_${s}_${Math.min(3, k)}.webp`;
+  ITEM_BY_ID[it.id] = { ...it, slot: s, set: it.set || RARITY_SET[it.rarity] || null, variant: k, sheetIcon };
+}); }
+/** 등급별 아이템 목록 */
+export const ITEMS_OF = (rarity, slot = null) => Object.values(ITEM_BY_ID).filter((it) => it.rarity === rarity && (!slot || it.slot === slot));
+/** 등급 순서 인덱스 (정렬용) */
+export const rarityRank = (r) => RARITIES.indexOf(r);
 /** 세트 조각으로 제작 가능한 테마 세트 장비 (세트id → 슬롯 → 아이템 def) */
 export const CRAFT_COST = 30;   // 세트 조각
 export const craftable = (setId, slot) => ITEM_POOL[slot].find((it) => it.set === setId);
 
-export const ITEM_ICON = (item) => item.icon || `/img/it_${item.slot}_${item.rarity.toLowerCase()}.webp`;
-export const RARITY_COLOR = { N: '#9aa3b2', R: '#4cc3ff', SR: '#b26bff', SSR: '#ffcf5a' };
+// 아이콘: 명시 → 등급 시트(it_<등급>_<슬롯>_<n>) → 옛 등급 아이콘 폴백
+const LEGACY_ICON = { N: 'n', S: 'r', E: 'sr', U: 'sr', L: 'ssr' };
+export const ITEM_ICON = (item) => item.icon || (item.sheetIcon ? item.sheetIcon : `/img/it_${item.slot}_${LEGACY_ICON[item.rarity] || 'n'}.webp`);
+export const RARITY_COLOR = { N: RARITY_INFO.N.color, S: RARITY_INFO.S.color, E: RARITY_INFO.E.color, U: RARITY_INFO.U.color, L: RARITY_INFO.L.color };
 
-// ---------- 강화 (+0 ~ +20) ----------
+// ---------- 강화 (+0 ~ +20, 던파식) ----------
+// 핵심: 강화 보너스는 등급이 아니라 **슬롯 기준치(SLOT_BASE)** 에 붙는다. 흰 무기 +10 이 레전드리 +0 보다 세다.
 export const ENH_MAX = 20;
-/** 성공 확률: +8까지 100%, 이후 감소 */
-export const enhanceChance = (lv) => lv < 8 ? 1 : lv < 12 ? 0.7 - (lv - 8) * 0.05 : lv < 16 ? 0.45 - (lv - 12) * 0.05 : 0.25 - (lv - 16) * 0.03;
+/** 성공 확률 */
+export const enhanceChance = (lv) => lv < 8 ? 1 : ({ 8: 0.85, 9: 0.75, 10: 0.65, 11: 0.5, 12: 0.4, 13: 0.3, 14: 0.25, 15: 0.2, 16: 0.15, 17: 0.13, 18: 0.11, 19: 0.09 }[lv] ?? 0.08);
 /** 실패 시 파괴 확률 (+12 이상). 보호 주문서로 0 */
-export const destroyChance = (lv) => lv < 12 ? 0 : lv < 16 ? 0.1 : 0.25;
-/** 실패 시 단계 하락 (+8~+11: 0, +12~: 1) */
-export const enhanceCost = (lv) => Math.floor(300 * Math.pow(1.32, lv));
-export const enhanceStones = (lv) => lv < 5 ? 0 : lv < 10 ? 1 : lv < 15 ? 3 : 6;
+export const destroyChance = (lv) => lv < 12 ? 0 : lv < 15 ? 0.1 : 0.2;
+/** 실패 시 단계 하락: +10 이상에서 1 (던파 +11↑ 하락에 해당) */
+export const enhanceDown = (lv) => lv >= 10 ? 1 : 0;
+export const enhanceCost = (lv) => Math.floor(250 * Math.pow(1.3, lv));
+export const enhanceStones = (lv) => lv < 3 ? 0 : lv < 8 ? 1 : lv < 12 ? 2 : lv < 16 ? 3 : 5;
 /** 강화석 등급 — 비석 3종: +9까지 하급(stones), +14까지 중급(stones2), 그 위는 상급(stones3) */
 export const enhanceStoneTier = (lv) => lv < 10 ? 1 : lv < 15 ? 2 : 3;
 export const STONE_KEY = { 1: 'stones', 2: 'stones2', 3: 'stones3' };
 export const STONE_NAME = { 1: '강화석', 2: '상급 강화석', 3: '전설 강화석' };
 export const STONE_ICON = { 1: '/img/icon_stone_1.webp', 2: '/img/icon_stone_2.webp', 3: '/img/icon_stone_3.webp' };
-export const enhanceMult = (lv) => 1 + lv * 0.12 + (lv >= 10 ? 0.2 : 0) + (lv >= 15 ? 0.3 : 0) + (lv >= 20 ? 0.5 : 0);
+/** 강화 단위 누적 — 단계가 오를수록 한 단계의 가치가 커진다 (+10 = 17, +12 = 25, +15 = 40, +20 = 81) */
+const ENH_STEP = [0, 1, 1, 1, 1, 1, 2, 2, 2, 3, 3, 4, 4, 5, 5, 5, 7, 7, 7, 10, 10];
+export const enhanceUnits = (lv) => { let u = 0; for (let i = 1; i <= Math.min(ENH_MAX, lv); i++) u += ENH_STEP[i]; return u; };
+/** 기본 스탯 배율(약하게) — 등급 차이는 유지하되 강화 플랫 보너스가 주역 */
+export const enhanceMult = (lv) => 1 + lv * 0.05;
 export const ENH_TIER = (lv) => lv >= 20 ? 'mythic' : lv >= 15 ? 'legend' : lv >= 10 ? 'epic' : lv >= 5 ? 'rare' : '';
 
 export function itemStats(inst) {
-  const def = ITEM_BY_ID[inst.id];
-  const m = enhanceMult(inst.enh || 0);
-  return { atk: Math.floor((def.atk || 0) * m), hp: Math.floor((def.hp || 0) * m), def: Math.floor((def.def || 0) * m), crit: def.crit || 0 };
+  const def = ITEM_BY_ID[inst.id]; const lv = inst.enh || 0;
+  const m = enhanceMult(lv), u = enhanceUnits(lv), sb = SLOT_BASE[def.slot];
+  return {
+    atk: Math.floor((def.atk || 0) * m + (sb.atk || 0) * u * 0.6),
+    hp: Math.floor((def.hp || 0) * m + (sb.hp || 0) * u * 0.6),
+    def: Math.floor((def.def || 0) * m + (sb.def || 0) * u * 0.5),
+    crit: def.crit || 0,
+  };
 }
 
-export const RARITY_WEIGHT_STAGE = { N: 62, R: 28, SR: 9, SSR: 1 };
-export const RARITY_WEIGHT_ELITE = { N: 10, R: 55, SR: 30, SSR: 5 };
-export const RARITY_WEIGHT_BOSS  = { N: 0, R: 40, SR: 45, SSR: 15 };
+// 드랍 등급 가중치 — 좋은 건 드물어야 좋은 것이다. 잡몹은 흰·초록, 유니크·레전드리는 보스에서나
+export const RARITY_WEIGHT_STAGE = { N: 70, S: 24, E: 5.5, U: 0.4, L: 0.1 };
+export const RARITY_WEIGHT_ELITE = { N: 25, S: 50, E: 20, U: 4, L: 1 };
+export const RARITY_WEIGHT_BOSS  = { N: 0, S: 35, E: 45, U: 15, L: 5 };
 export const RARITY_WEIGHT_GACHA = { R: 86, SR: 12, SSR: 2 };

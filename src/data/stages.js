@@ -8,14 +8,14 @@ export const STAGES_PER_CHAPTER = 10;
 
 // 챕터별 잡몹 / 엘리트 풀 — 겹치지 않게 짜서 스테이지마다 그림이 바뀐다
 const ROSTER = {
-  crypt:  { trash: ['skel_minion', 'skel_rogue', 'ghost', 'blob_green', 'skel_minion', 'bone_orc'],
-            ranged: ['skel_mage', 'ghost_skull'],
+  crypt:  { trash: ['skel_minion', 'skel_rogue', 'ghost', 'bomb_slime', 'skel_shield', 'bone_orc'],
+            ranged: ['skel_mage', 'ghost_skull', 'skel_priest'],
             elite: ['elite_skel_captain', 'elite_bone_lord', 'elite_wraith'] },
-  throne: { trash: ['orc', 'orc_blob', 'tribal', 'cactoro', 'orc', 'imp'],
-            ranged: ['hywirl', 'armabee'],
+  throne: { trash: ['orc', 'orc_blob', 'tribal', 'cacto_wall', 'bomb_imp', 'imp'],
+            ranged: ['hywirl', 'armabee', 'tribal_shaman'],
             elite: ['elite_orc_chief', 'elite_yeti', 'elite_bluedemon'] },
-  abyss:  { trash: ['blob_pink', 'blob_spiky', 'alien', 'squidle', 'mushnub', 'ninja'],
-            ranged: ['glub', 'armabee_evo'],
+  abyss:  { trash: ['blob_pink', 'bomb_abyss', 'alien', 'golem_guard', 'mushnub', 'ninja'],
+            ranged: ['glub', 'armabee_evo', 'abyss_seer'],
             elite: ['elite_mushroom_king', 'elite_golem', 'elite_dragonling'] },
 };
 
@@ -65,6 +65,13 @@ export const ENEMIES = {
   elite_bone_lord:    { name: '골편 군주', model: 'Big_Orc_Skull', hp: 1300, atk: 44, spd: 3.4, range: 2.8, atkTime: 1.6, exp: 58, scale: 1.35, armor: 0.2, elite: true, tint: '#d0e0ff', gold: 8 },
   elite_wraith:       { name: '대원령', model: 'Flying_Ghost', hp: 900, atk: 42, spd: 5.6, range: 2.4, atkTime: 1.0, exp: 55, scale: 1.7, elite: true, tint: '#a0d0ff', ghostly: true, gold: 8 },
 
+  // --- 새 행동 3종 (PRD §4-6: 스탯만 다른 리스킨 금지) ---
+  // bomber: 돌진 → 2.2 안에서 0.7초 도화선 → 자폭. 아군도 다친다 → 진공으로 무리에 끌어넣으면 연쇄 폭발
+  bomb_slime:  { name: '폭탄 슬라임', model: 'Blob_GreenSpikyBlob', hp: 110, atk: 30, spd: 6.4, range: 1.6, atkTime: 1.0, exp: 12, scale: 0.95, gold: 1, behavior: 'bomber', tint: '#ffd060' },
+  // shaman: 거리 유지 + 6초마다 주변 아군 회복 + 9초마다 소환. 먼저 잡아야 한다
+  skel_priest: { name: '해골 사제', model: 'Skeleton_Mage', hp: 170, atk: 22, spd: 3.2, range: 8.0, atkTime: 2.4, weapon: 'Skeleton_Staff', ranged: true, exp: 18, scale: 1.05, gold: 3, projColor: 0xa0ffb0, behavior: 'shaman', summon: 'skel_minion', tint: '#b0ffc0' },
+  // shield: 정면 피해 80% 감소. 뒤·옆에서 치거나, 마무리 타격(kb≥4) 4번이면 가드 브레이크 3초
+  skel_shield: { name: '해골 방패병', model: 'Skeleton_Warrior', hp: 360, atk: 24, spd: 3.4, range: 2.2, atkTime: 1.6, weapon: 'Skeleton_Blade', shield: 'Skeleton_Shield_Large_A', exp: 16, scale: 1.05, gold: 2, armor: 0.1, behavior: 'shield' },
   // ================= 2장 · 불타는 왕좌 (오크 · 악마) =================
   orc:      { name: '오크 전사', model: 'Big_Orc', hp: 300, atk: 26, spd: 4.0, range: 2.2, atkTime: 1.3, exp: 12, scale: 1.0, gold: 2 },
   orc_blob: { name: '꼬마 오크', model: 'Blob_Orc', hp: 170, atk: 20, spd: 4.8, range: 1.8, atkTime: 1.0, exp: 10, scale: 1.0, gold: 1 },
@@ -77,6 +84,9 @@ export const ENEMIES = {
   elite_yeti:      { name: '설산 거인', model: 'Big_Yeti', hp: 1800, atk: 48, spd: 3.0, range: 3.0, atkTime: 1.8, exp: 68, scale: 1.55, armor: 0.3, elite: true, tint: '#c0e8ff', gold: 9 },
   elite_bluedemon: { name: '푸른 악마', model: 'Big_BlueDemon', hp: 1200, atk: 56, spd: 4.6, range: 2.6, atkTime: 1.2, exp: 65, scale: 1.4, elite: true, tint: '#a0c0ff', gold: 9 },
 
+  bomb_imp:      { name: '폭발 임프', model: 'Blob_Mushnub', hp: 130, atk: 38, spd: 6.8, range: 1.6, atkTime: 1.0, exp: 14, scale: 1.0, gold: 1, behavior: 'bomber', tint: '#ff9060' },
+  tribal_shaman: { name: '부족 주술사', model: 'Big_Tribal', hp: 260, atk: 28, spd: 3.6, range: 8.0, atkTime: 2.2, ranged: true, exp: 20, scale: 1.0, gold: 3, projColor: 0xff8040, behavior: 'shaman', summon: 'orc_blob', tint: '#ffd0a0' },
+  cacto_wall:    { name: '가시 방벽', model: 'Big_Cactoro', hp: 520, atk: 26, spd: 3.0, range: 2.1, atkTime: 1.7, exp: 18, scale: 1.1, gold: 2, armor: 0.15, behavior: 'shield' },
   // ================= 3장 · 심연의 제단 (이계 · 용) =================
   blob_pink:  { name: '심연 슬라임', model: 'Blob_PinkBlob', hp: 260, atk: 24, spd: 3.6, range: 1.8, atkTime: 1.3, exp: 13, scale: 1.0, gold: 2 },
   blob_spiky: { name: '가시 슬라임', model: 'Blob_GreenSpikyBlob', hp: 300, atk: 28, spd: 3.4, range: 1.8, atkTime: 1.4, exp: 14, scale: 1.0, armor: 0.15, gold: 2 },
@@ -86,6 +96,9 @@ export const ENEMIES = {
   ninja:      { name: '그림자 닌자', model: 'Big_Ninja', hp: 240, atk: 40, spd: 6.4, range: 2.1, atkTime: 0.85, exp: 18, scale: 1.0, dodge: 0.25, gold: 2 },
   glub:       { name: '심연 눈알', model: 'Flying_Glub', hp: 180, atk: 44, spd: 3.2, range: 9.0, atkTime: 2.0, ranged: true, exp: 18, scale: 1.0, gold: 3, projColor: 0xb26bff },
   armabee_evo:{ name: '진화한 독침벌', model: 'Flying_Armabee_Evolved', hp: 200, atk: 40, spd: 5.2, range: 8.0, atkTime: 1.6, ranged: true, exp: 18, scale: 1.0, gold: 3, projColor: 0xd0a0ff },
+  bomb_abyss:  { name: '심연 폭탄', model: 'Blob_PinkBlob', hp: 160, atk: 46, spd: 7.0, range: 1.6, atkTime: 1.0, exp: 16, scale: 1.0, gold: 2, behavior: 'bomber', tint: '#ff70ff' },
+  abyss_seer:  { name: '심연 주시자', model: 'Flying_Glub', hp: 220, atk: 34, spd: 3.4, range: 9.0, atkTime: 2.2, ranged: true, exp: 22, scale: 1.05, gold: 3, projColor: 0xb26bff, behavior: 'shaman', summon: 'squidle', tint: '#d0b0ff' },
+  golem_guard: { name: '골렘 수호자', model: 'Flying_Goleling_Evolved', hp: 640, atk: 30, spd: 3.0, range: 2.4, atkTime: 1.8, exp: 20, scale: 1.15, gold: 3, armor: 0.2, behavior: 'shield' },
   elite_mushroom_king: { name: '버섯 왕', model: 'Big_MushroomKing', hp: 2000, atk: 54, spd: 3.0, range: 3.0, atkTime: 1.7, exp: 75, scale: 1.5, armor: 0.25, elite: true, tint: '#e0a0ff', gold: 10 },
   elite_golem:         { name: '심연 골렘', model: 'Flying_Goleling_Evolved', hp: 1700, atk: 52, spd: 3.4, range: 2.8, atkTime: 1.6, exp: 72, scale: 1.6, armor: 0.3, elite: true, tint: '#a0ffd0', gold: 10 },
   elite_dragonling:    { name: '새끼 용', model: 'Flying_Dragon', hp: 1400, atk: 60, spd: 5.4, range: 2.8, atkTime: 1.3, exp: 78, scale: 1.5, elite: true, tint: '#ffc0a0', gold: 10 },

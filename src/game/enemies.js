@@ -33,6 +33,8 @@ export class Enemy extends Actor {
     this.state = 'spawn'; this.stateT = 0; this.spawning = true; this.telegraph = 0;
     this.atkCd = 0.6 + Math.random() * 1.2; this.hitAt = 0.5; this.attackDur = def.atkTime; this.attackDone = false;
     this.stagger = 0; this.poison = 0; this.poisonT = 0; this.phase = 0; this.enraged = false; this.special = null;
+    // 행동형 (bomber / shaman / shield)
+    this.behavior = def.behavior || null; this.fuse = -1; this.healT = 4 + Math.random() * 2; this.summonT = 7 + Math.random() * 3; this.blocks = 0; this.guardBroken = 0;
     this.radius = 0.7 * def.scale;
     if (this.has('spawn')) { this.play(this.A('spawn'), { once: true, fade: 0, speed: 1.7 }); this.spawnLen = (this.clips[this.A('spawn')]?.duration || 1) / 1.7; }
     else { this.play(this.A('idle'), { fade: 0 }); this.spawnLen = 0.42; this.popIn = 0; this.model.scale.setScalar(0.01); }
@@ -42,8 +44,8 @@ export class Enemy extends Actor {
     else game.fx.ring(pos, 0x40ff80, { r0: 0.2, r1: 2, life: 0.4 });
     audio.spawnRise({ vol: def.boss ? 0.5 : def.elite ? 0.35 : 0.14, boss: !!def.boss });
     // 엘리트/보스는 발밑 마커로 난전 중에도 식별
-    if (def.elite || def.boss) {
-      const col = def.boss ? 0xff3040 : 0xffc040;
+    if (def.elite || def.boss || def.behavior === 'shield' || def.behavior === 'shaman') {
+      const col = def.boss ? 0xff3040 : def.elite ? 0xffc040 : def.behavior === 'shield' ? 0x60a0ff : 0x80ff90;
       const mk = new THREE.Mesh(new THREE.RingGeometry(def.boss ? 1.5 : 0.95, def.boss ? 1.9 : 1.25, 28),
         new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.65, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
       mk.rotation.x = -Math.PI / 2; mk.position.y = 0.07; mk.renderOrder = 3;
@@ -59,6 +61,18 @@ export class Enemy extends Actor {
       this.play(this.A('dodge'), { once: true, fade: 0.05, speed: 1.5 }); this.state = 'dodge'; this.stateT = 0; this.kb.set(-dirx, 0, -dirz).normalize().multiplyScalar(-8);
       this.game.fx.damage(this.pos, 0, { text: 'MISS' }); this.game.fx.ghost(this.model, 0x80ff90, { life: 0.3, opacity: 0.4 });
       return 0;
+    }
+    // 방패병: 정면 가드 — 타격 방향이 내 정면에서 오면 80% 감소. 무거운 타격 4번이면 가드 브레이크
+    if (this.behavior === 'shield' && this.guardBroken <= 0 && this.alive) {
+      const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw); const l = Math.hypot(dirx, dirz) || 1;
+      const frontal = (dirx / l) * fx + (dirz / l) * fz < -0.35;   // 타격은 공격자→나 방향이라 정면이면 음수
+      if (frontal) {
+        if (kb >= 4) this.blocks += 2; else this.blocks++;
+        this.game.fx.flash(this.pos.clone().addScaledVector(new THREE.Vector3(fx, 0, fz), 0.8).setY(1.1 * this.def.scale), 0x9fd0ff, { size: 1.6, life: 0.12 });
+        this.game.fx.damage(this.pos, 0, { text: 'BLOCK' }); audio.play('hit_metal0', { vol: 0.5, rate: 1.4 }); audio.play('hit_plate', { vol: 0.3, rate: 1.2 });
+        if (this.blocks >= 4) { this.guardBroken = 3; this.blocks = 0; this.stun = Math.max(this.stun, 1.0); this.game.fx.shockTex(this.pos, 0x9fd0ff, { r1: 3, life: 0.35 }); this.game.fx.damage(this.pos, 0, { text: 'GUARD BREAK' }); audio.shatter({ vol: 0.5 }); if (this.marker) this.marker.material.color.set(0xff8040); }
+        else { dmg *= 0.2; kb *= 0.2; }
+      }
     }
     const armor = this.def.armor || 0; dmg *= 1 - armor;
     this.hp -= dmg;
@@ -101,6 +115,22 @@ export class Enemy extends Actor {
     }
     if (this.state === 'hurt') { this.vel.set(0, 0, 0); if (this.stateT > this.stagger) { this.state = 'chase'; this.play(this.A('idleCombat'), { fade: 0.12 }); } return; }
     if (this.state === 'dodge') { if (this.stateT > 0.4) { this.state = 'chase'; this.play(this.A('idle'), { fade: 0.1 }); } return; }
+    // ---- 행동형 ----
+    if (this.guardBroken > 0) { this.guardBroken -= dt; if (this.guardBroken <= 0 && this.marker) this.marker.material.color.set(0x60a0ff); }
+    if (this.behavior === 'bomber') {
+      if (this.fuse >= 0) {   // 도화선: 부풀며 점멸, 0.7초 뒤 자폭
+        this.fuse += dt; this.vel.set(0, 0, 0);
+        const k = this.fuse / 0.7; this.model.scale.setScalar(this.scale * (1 + k * 0.5)); this.tintEmissive = new THREE.Color(1, 0.25 + 0.6 * Math.abs(Math.sin(this.fuse * 40)), 0);
+        if (this.fuse >= 0.7) this.explode();
+        return;
+      }
+      if (d < 2.2 && this.state === 'chase') { this.fuse = 0; this.telegraph = 0.7; this.game.fx.ring(this.pos, 0xff6030, { r0: 3.3, r1: 3.6, life: 0.7, y: 0.06, width: 1 }); audio.charge({ vol: 0.3, dur: 0.6 }); return; }
+    } else if (this.behavior === 'shaman') {
+      this.healT -= dt; this.summonT -= dt;
+      if (this.healT <= 0) { this.healT = 6; let n = 0; for (const o of this.game.enemies) { if (!o.alive || o === this || o.distTo(this) > 6 || o.hp >= o.maxHp) continue; o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.15); this.game.fx.embers(o.pos, 0x80ff90, { n: 4, radius: 0.5, life: 0.7, rise: 2.5 }); n++; }
+        if (n) { this.game.fx.groundTex(this.pos, 'circle_gold', 0x80ff90, { r0: 1, r1: 7, life: 0.8, spin: 1, fadeIn: 0.1 }); this.game.fx.damage(this.pos, 0, { text: '치유 ×' + n }); audio.magic({ vol: 0.3, base: 392, notes: [0, 4, 7], step: 0.06 }); } }
+      if (this.summonT <= 0) { this.summonT = 9; const alive = this.game.enemies.filter((e) => e.alive).length; if (alive < this.game.maxAlive - 3) { this.game.summonMinions(this, 2); this.play(this.A('cast'), { once: true, fade: 0.1 }); } }
+    }
     // 분리 (몹몰이 시 겹침 방지, 가까운 것만)
     let sx = 0, sz = 0; let cnt = 0;
     for (const o of this.game.enemies) { if (o === this || !o.alive) continue; const dx = this.pos.x - o.pos.x; if (dx > 2.5 || dx < -2.5) continue; const dz = this.pos.z - o.pos.z; if (dz > 2.5 || dz < -2.5) continue; const dd = Math.hypot(dx, dz); const min = this.radius + o.radius + 0.2; if (dd < min && dd > 0.001) { sx += dx / dd * (min - dd) * 5; sz += dz / dd * (min - dd) * 5; if (++cnt > 6) break; } }
@@ -129,6 +159,15 @@ export class Enemy extends Actor {
       if (!this.attackDone && t >= this.hitAt) { this.attackDone = true; this.telegraph = 0; this.doAttack(); }
       if (t >= 1) { this.state = 'chase'; this.dashV = null; this.atkCd = (this.def.atkTime * 0.6 + Math.random() * 0.8) * (this.enraged ? 0.6 : 1); this.play(this.A('idleCombat'), { fade: 0.15 }); }
     }
+  }
+  /** 자폭 — 플레이어와 주변 적 모두에게. 무리 속에서 터지면 연쇄 */
+  explode() {
+    const g = this.game, p = this.player; const c = this.pos.clone();
+    g.fx.explosion(c, { size: 5.5, color: 0xff7a30, life: 0.5 }); g.fx.shockTex(c, 0xff8a40, { r1: 6, life: 0.45 }); g.fx.burst(c.clone().setY(0.8), 0xffa040, { n: 26, speed: 10, size: 0.4, up: 1 }); g.fx.dustPuff(c, { size: 4, life: 0.6 });
+    audio.boom({ vol: 0.7, dur: 0.5, low: 70 }); g.renderer.shake(0.5); audio.vibe(40);
+    if (p.alive && Math.hypot(p.pos.x - c.x, p.pos.z - c.z) < 3.4) p.hurt(this.atk * 2.5, { dirx: p.pos.x - c.x, dirz: p.pos.z - c.z, kb: 9, kind: 'blunt' });
+    for (const o of this.game.enemies) { if (o === this || !o.alive || o.spawning) continue; const dx = o.pos.x - c.x, dz = o.pos.z - c.z; if (Math.hypot(dx, dz) > 3.4) continue; o.hurt(this.atk * 3, { dirx: dx, dirz: dz, kb: 7, kind: 'blunt' }); if (o.behavior === 'bomber' && o.fuse < 0 && o.alive) o.fuse = 0.5; }
+    this.hp = 0; this.kill(0, 0, 3);
   }
   startAttack(d) {
     this.state = 'attack'; this.stateT = 0; this.attackDone = false;

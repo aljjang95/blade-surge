@@ -1,7 +1,7 @@
 import { $, fmt } from './ui.js';
 import { audio } from '../engine/audio.js';
 import { HEROES, HERO_ORDER, RARITY, heroStats, levelExp, levelGold, starShards, skillUpGold } from '../data/heroes.js';
-import { ITEM_BY_ID, ITEM_ICON, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST, craftable, itemStats, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, STONE_ICON, enhanceChance, destroyChance, enhanceMult, ENH_MAX, RARITY_COLOR } from '../data/items.js';
+import { ITEM_BY_ID, ITEM_ICON, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST, craftable, itemStats, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, STONE_ICON, enhanceChance, destroyChance, enhanceMult, ENH_MAX, RARITY_COLOR , RARITY_INFO, rarityRank, enhanceDown} from '../data/items.js';
 import { SKUS, SHOP_TABS, GACHA, BATTLE_PASS, PASS_TRACK, DAILY_REWARDS } from '../data/shop.js';
 import { CHAPTERS, STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
 import { REWARD_LABEL } from '../game/economy.js';
@@ -111,10 +111,10 @@ export class Meta {
       <h3 style="margin:12px 0 6px;font-size:14px">스킬</h3><div class="skill-row">${def.skills.map((s, i) => `<div class="skill-ic" data-sk="${i}" style="border-color:${def.color}"><img src="${s.icon}" onerror="this.style.display='none';this.parentNode.style.background='${def.color}'"><span>Lv.${h.skills[i]}</span></div>`).join('')}</div>
       <h3 style="margin:12px 0 6px;font-size:14px">세트 효과</h3>${this.setListHtml(id)}
       <h3 style="margin:12px 0 6px;font-size:14px">장비</h3><div class="equip-grid">${SLOTS.map((sl) => { const uid = h.equip[sl]; const inst = this.eco.s.inventory.find((x) => x.uid === uid); if (!inst) return `<div class="equip-slot" data-slot="${sl}">${SLOT_NAME[sl]}<br>+</div>`; const it = ITEM_BY_ID[inst.id]; return `<div class="equip-slot has rar-${it.rarity}" data-slot="${sl}" data-uid="${uid}"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><span class="plus">+${inst.enh}</span></div>`; }).join('')}</div>
-      <h3 style="margin:12px 0 6px;font-size:14px">가방 <small style="color:var(--muted)">${this.eco.s.inventory.length}개</small></h3><div class="inv-list">${this.eco.s.inventory.slice().sort((a, b) => ['N', 'R', 'SR', 'SSR'].indexOf(ITEM_BY_ID[b.id].rarity) - ['N', 'R', 'SR', 'SSR'].indexOf(ITEM_BY_ID[a.id].rarity)).map((inst) => { const it = ITEM_BY_ID[inst.id]; const eq = Object.values(this.eco.s.heroes).some((hh) => Object.values(hh.equip).includes(inst.uid)); return `<div class="equip-slot has rar-${it.rarity}" data-inv="${inst.uid}" style="${eq ? 'opacity:.5' : ''}"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><span class="plus" style="color:${inst.enh >= 15 ? '#ff5a7a' : inst.enh >= 10 ? '#b26bff' : inst.enh >= 5 ? '#4cc3ff' : 'var(--gold)'}">+${inst.enh}</span></div>`; }).join('') || '<div style="color:var(--muted);font-size:12px">비어 있음 — 스테이지 클리어 또는 소환으로 획득</div>'}</div>`;
+      <h3 style="margin:12px 0 6px;font-size:14px">가방 <small style="color:var(--muted)">${this.eco.s.inventory.length}개</small></h3><div class="inv-list">${this.eco.s.inventory.slice().sort((a, b) => (rarityRank(ITEM_BY_ID[b.id].rarity) - rarityRank(ITEM_BY_ID[a.id].rarity)) || ((b.enh || 0) - (a.enh || 0))).map((inst) => { const it = ITEM_BY_ID[inst.id]; const eq = Object.values(this.eco.s.heroes).some((hh) => Object.values(hh.equip).includes(inst.uid)); return `<div class="equip-slot has rar-${it.rarity}" data-inv="${inst.uid}" style="${eq ? 'opacity:.5' : ''}"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><span class="plus" style="color:${inst.enh >= 15 ? '#ff5a7a' : inst.enh >= 10 ? '#b26bff' : inst.enh >= 5 ? '#4cc3ff' : 'var(--gold)'}">+${inst.enh}</span></div>`; }).join('') || '<div style="color:var(--muted);font-size:12px">비어 있음 — 스테이지 클리어 또는 소환으로 획득</div>'}</div>`;
     $('h-lv').onclick = () => { if (this.eco.levelUpHero(id)) { audio.levelUp({ vol: 0.42 }); audio.vibe(20); this.ui.toast(`Lv.${this.eco.hero(id).level} 달성!`, 'gold'); this.renderHeroes(); } else { this.ui.toast('골드 부족', 'red'); audio.play('ui_error'); this.offerGold(); } };
     $('h-star').onclick = () => { if (this.eco.promoteHero(id)) { audio.play('jingle_legend', { vol: 0.7 }); this.ui.toast('승급 성공! ★' + this.eco.hero(id).star, 'gold'); this.renderHeroes(); } else { this.ui.toast('영웅 조각 부족 — 소환에서 중복 획득 시 조각 +10', 'red'); } };
-    const hs = $('h-sel'); if (hs) hs.onclick = () => { this.eco.s.selected = id; this.eco.emit(); this.app.showcaseHero(id); this.renderHeroes(); this.ui.toast(`${def.name} 출전!`, 'gold'); };
+    const hs = $('h-sel'); if (hs) hs.onclick = () => { this.eco.s.selected = id; this.eco.emit(); this.app.showcaseHero(id); this.renderHeroes(); this.ui.toast(`${def.name} 출전!`, 'gold'); audio.voice(`hero_${id}_select`, { min: 1 }); };
     det.querySelectorAll('[data-sk]').forEach((el) => el.onclick = () => this.showSkill(id, +el.dataset.sk));
     const hc = $('h-craft'); if (hc) hc.onclick = () => this.showCraft(id);
     det.querySelectorAll('.equip-slot[data-slot]').forEach((el) => el.onclick = () => { const uid = el.dataset.uid; if (uid) this.showItem(+uid, id); else this.ui.toast('가방에서 장비를 선택해 장착하세요'); });
@@ -126,7 +126,7 @@ export class Meta {
     const order = ['dragon', 'knight', 'merc', 'recruit', ...THEMED_SETS];
     const rows = order.map((sid) => {
       const n = counts[sid] || 0; if (!n) return '';
-      const S = SETS[sid]; const on2 = n >= 2, on4 = n >= 4; const col = S.themed ? '#' + S.color.toString(16).padStart(6, '0') : RARITY_COLOR[{ recruit: 'N', merc: 'R', knight: 'SR', dragon: 'SSR' }[sid]];
+      const S = SETS[sid]; const on2 = n >= 2, on4 = n >= 4; const col = S.themed ? '#' + S.color.toString(16).padStart(6, '0') : RARITY_COLOR[{ recruit: 'N', merc: 'S', knight: 'E', dragon: 'L' }[sid]];
       return `<div class="set-row ${on2 ? '' : 'off'}"><img src="${S.icon}" onerror="this.remove()"><div style="flex:1"><div class="sr-name" style="color:${col}">${S.name} (${n}/4)${S.themed ? ' <small style="color:var(--muted);font-weight:400">테마</small>' : ''}</div><div class="${on2 ? 'sr-eff' : ''}" style="font-size:10px">2세트: ${pct(S.two)}</div><div class="${on4 ? 'sr-eff' : ''}" style="font-size:10px;${on4 ? '' : 'color:var(--muted)'}">4세트: ${pct(S.four)}</div></div></div>`;
     }).filter(Boolean).join('');
     return `<div class="set-list">${rows || '<div style="font-size:11px;color:var(--muted)">같은 등급 장비 2/4개 = 스탯 세트 · 테마 세트(폭풍·흡혈·중력·불사조)는 플레이 방식이 바뀝니다</div>'}<button class="btn btn-ghost btn-sm" id="h-craft" style="align-self:flex-start">세트 제작 <small><img src="/img/icon_fragment.webp" style="width:12px;height:12px;vertical-align:-2px"> ${this.eco.s.fragments || 0}</small></button></div>`;
@@ -158,8 +158,8 @@ export class Meta {
     const it = ITEM_BY_ID[inst.id]; const h = this.eco.hero(heroId); const equipped = h.equip[it.slot] === uid;
     const st = itemStats(inst);
     const statTxt = [st.atk ? `공격력 +${st.atk}` : '', st.hp ? `HP +${st.hp}` : '', st.def ? `방어 +${st.def}` : '', st.crit ? `치명 +${Math.round(st.crit * 100)}%` : ''].filter(Boolean).join(' · ');
-    const set = SETS[it.set] || SETS.recruit;
-    this.ui.modal(`<div class="item-detail"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><div><div style="font-weight:900;font-size:16px;color:${RARITY_COLOR[it.rarity]}">${it.name} <span style="color:var(--gold)">+${inst.enh}</span></div><div style="font-size:12px;color:var(--muted)">${it.rarity} · ${SLOT_NAME[it.slot]} · ${set.name}</div><div style="font-size:13px;margin-top:4px">${statTxt}</div></div></div>
+    const set = it.set ? SETS[it.set] : null;
+    this.ui.modal(`<div class="item-detail"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><div><div style="font-weight:900;font-size:16px;color:${RARITY_COLOR[it.rarity]}">${it.name} <span style="color:var(--gold)">+${inst.enh}</span></div><div style="font-size:12px;color:var(--muted)"><b style="color:${RARITY_COLOR[it.rarity]}">${RARITY_INFO[it.rarity].name}</b> · ${SLOT_NAME[it.slot]}${set ? ' · ' + set.name : ''}</div><div style="font-size:13px;margin-top:4px">${statTxt}</div></div></div>
       <div class="modal-btns"><button class="btn btn-ghost btn-sm" id="i-sell">판매</button><button class="btn btn-blue btn-sm" id="i-enh">강화</button><button class="btn btn-gold btn-sm" id="i-eq">${equipped ? '해제' : '장착'}</button></div>`, { onOpen: (b) => {
       b.querySelector('#i-eq').onclick = () => { if (equipped) this.eco.unequip(heroId, it.slot); else this.eco.equip(heroId, uid); audio.play('ui_confirm', { vol: 0.5 }); this.ui.closeModal(); this.renderHeroes(); };
       b.querySelector('#i-sell').onclick = async () => { if (await this.ui.confirm('판매', `${it.name} +${inst.enh} 을(를) 판매할까요?`)) { const g = this.eco.sellItem(uid); this.ui.toast(`골드 +${fmt(g)}`, 'gold'); audio.pick('coin', 2); this.renderHeroes(); } };
@@ -186,14 +186,14 @@ export class Meta {
         <div style="font-weight:900;color:${RARITY_COLOR[it.rarity]}">${it.name}</div>
         ${maxed ? '<p style="color:var(--gold);font-weight:900">최대 강화 달성!</p>' : `
         <div class="enh-stats">${rows.map((r) => `<div><span>${r[0]}</span><span>${fmt(r[1])} → <b>${fmt(r[2])}</b></span></div>`).join('')}</div>
-        <div class="enh-rate">성공 확률 <b id="e-rate">${Math.round(chance * 100)}%</b>${destroy > 0 ? ` · <span class="warn" id="e-destroy">파괴 ${Math.round(destroy * 100)}%</span>` : ''}${lv >= 12 ? ' · 실패 시 <b>-1</b> 하락' : ''}</div>
+        <div class="enh-rate">성공 확률 <b id="e-rate">${Math.round(chance * 100)}%</b>${destroy > 0 ? ` · <span class="warn" id="e-destroy">파괴 ${Math.round(destroy * 100)}%</span>` : ''}${enhanceDown(lv) ? ' · 실패 시 <b>-1</b> 하락' : ''}</div>
         <div class="enh-opts">
           <div class="enh-opt" data-opt="bless"><img src="/img/icon_bless.webp" onerror="this.remove()"><span>축복 +20%</span><span class="cnt">×${s.bless}</span></div>
           ${destroy > 0 ? `<div class="enh-opt" data-opt="protect"><img src="/img/icon_protect.webp" onerror="this.remove()"><span>보호 (파괴 방지)</span><span class="cnt">×${s.protect}</span></div>` : ''}
         </div>
         <div class="enh-cost"><span class="${s.gold < cost ? 'lack' : ''}"><i class="ic ic-gold"></i> ${fmt(cost)}</span>${stones ? `<span class="${(s[skey] || 0) < stones ? 'lack' : ''}"><img src="${STONE_ICON[tier]}" style="width:14px;height:14px;vertical-align:-2px" onerror="this.remove()"> ${STONE_NAME[tier]} ${stones} <span style="color:var(--muted)">(보유 ${s[skey] || 0})</span></span>` : ''}</div>`}
         <div class="modal-btns"><button class="btn btn-ghost" id="e-close">닫기</button>${maxed ? '' : '<button class="btn btn-gold" id="e-go">강화하기</button>'}</div>
-        <p style="font-size:10px">+8까지 100% 성공 · +12부터 파괴 위험 · 비석 3종: 강화석(+9까지) · 상급(엘리트 드랍, +14까지) · 전설(보스 드랍, +15↑)</p>
+        <p style="font-size:10px">+7까지 100% · +10부터 실패 시 하락 · +12부터 파괴 위험 · 강화는 등급과 무관하게 붙는다(흰 무기 +10 &gt; 레전드리 +0) · 비석 3종: 강화석(+9까지) · 상급(엘리트 드랍, +14까지) · 전설(보스 드랍, +15↑)</p>
       </div>`;
       this.ui.modal(html, { onOpen: (b) => {
         const opts = { bless: false, protect: false };
@@ -214,9 +214,9 @@ export class Meta {
             audio.play('ui_error'); return;
           }
           const icon = b.querySelector('.enh-icon');
-          if (r.destroyed) { audio.shatter({ vol: 0.75 }); audio.vibe([120, 60, 120]); this.ui.toast('장비가 파괴되었습니다…', 'red'); setTimeout(render, 350); }
-          else if (r.success) { audio.levelUp({ vol: 0.4, base: 440 + r.enh * 18 }); if (r.enh >= 12) audio.play('jingle_legend', { vol: 0.55 }); audio.vibe([20, 20, 50]); icon?.classList.add('enh-flash'); this.ui.toast(`강화 성공! +${r.enh}`, 'gold'); setTimeout(render, 380); }
-          else { audio.fail({ vol: 0.55 }); audio.vibe(60); icon?.classList.add('enh-fail'); this.ui.toast(r.down ? `강화 실패… +${r.enh}로 하락` : '강화 실패…', 'red'); setTimeout(render, 380); }
+          if (r.destroyed) { audio.shatter({ vol: 0.75 }); audio.voice('enh_destroy'); audio.vibe([120, 60, 120]); this.ui.toast('장비가 파괴되었습니다…', 'red'); setTimeout(render, 350); }
+          else if (r.success) { audio.levelUp({ vol: 0.4, base: 440 + r.enh * 18 }); if (r.enh >= 8) audio.voice('enh_success', { min: 3 }); if (r.enh >= 12) audio.play('jingle_legend', { vol: 0.55 }); audio.vibe([20, 20, 50]); icon?.classList.add('enh-flash'); this.ui.toast(`강화 성공! +${r.enh}`, 'gold'); setTimeout(render, 380); }
+          else { audio.fail({ vol: 0.55 }); audio.vibe(60); if (lv >= 8) audio.voice('enh_fail', { min: 3 }); icon?.classList.add('enh-fail'); this.ui.toast(r.down ? `강화 실패… +${r.enh}로 하락` : '강화 실패…', 'red'); setTimeout(render, 380); }
           this.refreshTop();
         };
       } });

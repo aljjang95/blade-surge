@@ -78,7 +78,9 @@ export class Battle {
     this.ui.setFloorLabel(stage.idx, this.world);
     this.ui.waveBanner(`${stage.idx}층`);
     audio.waveHorn({ vol: 0.45 });
-    this.after(0.5, () => { if (this.active) audio.voice('floor_start', { min: 30 }); });
+    this.heroId = heroId; this.bossKey = stage.chapter.boss;
+    this.after(0.25, () => { if (this.active) audio.voice(`hero_${heroId}_select`, { min: 20 }); });
+    this.after(3.2, () => { if (this.active) audio.voice('floor_start', { min: 30 }); });
     // 테마 세트가 켜져 있으면 알려준다 — 발동 효과는 눈에 띄어야 세트를 모을 이유가 된다
     const themed = this.setBonus.filter((a) => a.set.themed);
     themed.forEach((a, i) => this.after(1.2 + i * 0.9, () => { if (!this.active) return; this.ui.toast(`${a.set.name} ${a.tier}세트 발동 — ${a.set[a.tier === 4 ? 'four' : 'two'].text}`, 'gold'); this.fx.holyBurst(this.player.pos, { size: 6, life: 0.5, color: a.set.color }); audio.magic({ vol: 0.3, base: 440, notes: [0, 4, 7], step: 0.07 }); audio.voice('set_' + a.set.id, { min: 5 }); }));
@@ -139,7 +141,7 @@ export class Battle {
     this.after(1.1, () => {
       if (!this.active) return;
       p.revive(); p.hp = Math.floor(p.maxHp * 0.5); this.renderer.desat = 0; this.timeCtl.slowmo(0.4, 0.6);
-      this.ui.toast('불사조의 부활!', 'gold'); audio.voice('rebirth');
+      this.ui.toast('불사조의 부활!', 'gold'); audio.voice('rebirth'); this.after(2.2, () => audio.voice(`hero_${this.heroId}_revive`));
       this.fx.texFlash(p.pos, 'phoenix', 0xffc060, { size: 14, life: 0.9, grow: 1.6, y: 2.5 }); this.fx.holyBurst(p.pos, { size: 12, life: 0.7, color: 0xffa040 });
       this.hitRadius(p.pos, 8, p.atk * 2.5, { kb: 14, stun: 1.2, kind: 'magic', dirFrom: p.pos });
       audio.playMusic(this.boss ? 'bgm_boss' : 'bgm_battle'); audio.boom({ vol: 0.9, dur: 1, low: 45 }); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12, 16], step: 0.07 }); audio.vibe([60, 40, 120]);
@@ -210,7 +212,7 @@ export class Battle {
     const list = this.roomRoster(room);
     if (!list.length) { this.markCleared(room); return; }
     const isBoss = room.type === ROOM_TYPE.BOSS;
-    if (isBoss) { audio.playMusic(Math.random() < 0.5 ? 'bgm_boss' : 'bgm_boss2'); this.ui.waveBanner('BOSS'); this.renderer.shake(0.5); audio.voice('boss_appear', { min: 10 }); }
+    if (isBoss) { audio.playMusic(Math.random() < 0.5 ? 'bgm_boss' : 'bgm_boss2'); this.ui.waveBanner('BOSS'); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 })); }
     else if (room.type === ROOM_TYPE.ELITE) { this.ui.waveBanner('ELITE'); audio.waveHorn({ vol: 0.42 }); audio.voice('elite', { min: 8 }); }
     else if (room.type === ROOM_TYPE.TREASURE) audio.voice('treasure', { min: 8 });
     // 한 번에 다 깔되 동시 상한을 넘으면 큐로
@@ -263,8 +265,8 @@ export class Battle {
   }
   summonMinions(boss, n) { const t = boss.def.summon || 'skel_minion'; for (let i = 0; i < n; i++) this.after(i * 0.12, () => this.spawnEnemy(t, boss.pos)); this.ui.toast(`${boss.def.name}이(가) 병사를 소환했다!`, 'red'); audio.magic({ vol: 0.4, base: 150, notes: [0, -2, -4], step: 0.12, type: 'sawtooth' }); }
   bossPhase(boss, phase) {
-    if (phase === 1) { this.ui.toast('보스 2페이즈!', 'red'); audio.voice('boss_phase'); this.fx.shockTex(boss.pos, 0xff3030, { r1: 9, life: 0.8 }); }
-    else { this.ui.toast(`${boss.def.name} 광폭화!`, 'red'); audio.voice('boss_enrage'); this.fx.firePillar(boss.pos, { height: 11, width: 3.5, life: 1.2, color: 0xff2020 }); this.renderer.flashScreen(0.4, 0xff2020); this.renderer.shake(0.8); audio.boom({ vol: 0.8, dur: 0.8 }); }
+    if (phase === 1) { this.ui.toast('보스 2페이즈!', 'red'); audio.voice(`${this.bossKey}_phase`); this.fx.shockTex(boss.pos, 0xff3030, { r1: 9, life: 0.8 }); }
+    else { this.ui.toast(`${boss.def.name} 광폭화!`, 'red'); audio.voice(`${this.bossKey}_enrage`); this.fx.firePillar(boss.pos, { height: 11, width: 3.5, life: 1.2, color: 0xff2020 }); this.renderer.flashScreen(0.4, 0xff2020); this.renderer.shake(0.8); audio.boom({ vol: 0.8, dur: 0.8 }); }
   }
   onEnemyDeath(e) {
     this.kills++; this.waveKilled++; this.player.addUlt(e.isBoss ? 30 : e.isElite ? 16 : 5);
@@ -283,7 +285,7 @@ export class Battle {
       this.timeCtl.slowmo(0.15, 1.8); this.renderer.punch(1.4); this.renderer.flashScreen(0.9, 0xffffff); this.renderer.aberr = 2; this.renderer.shake(1);
       this.fx.explosion(e.pos, { size: 12, life: 0.8, color: 0xffd0a0 }); this.fx.holyBurst(e.pos, { size: 14, life: 0.7 });
       this.fx.burst(e.pos.clone().setY(1.5), 0xff5050, { n: 80, speed: 14, size: 0.6, up: 1 }); this.fx.shockTex(e.pos, 0xffd060, { r1: 16, life: 0.9 });
-      audio.boom({ vol: 1, dur: 1.4, low: 40 }); audio.play('jingle_win1', { vol: 0.8, delay: 0.8 }); audio.vibe([100, 50, 100, 50, 200]); this.after(1.2, () => audio.voice('boss_kill'));
+      audio.boom({ vol: 1, dur: 1.4, low: 40 }); audio.play('jingle_win1', { vol: 0.8, delay: 0.8 }); audio.vibe([100, 50, 100, 50, 200]); this.after(0.3, () => audio.voice(`${this.bossKey}_death`)); this.after(3.4, () => audio.voice('boss_kill'));
       this.after(2.6, () => this.victory());
     }
     // 이 방 소속 적이 전멸하면 방 클리어
@@ -300,7 +302,7 @@ export class Battle {
     this.after(1.8, () => { if (this.active) this.ui.showRevive(this); });
   }
   revivePlayer() {
-    this.player.revive(); this.renderer.desat = 0; this.revived++;
+    this.player.revive(); this.renderer.desat = 0; this.revived++; audio.voice(`hero_${this.heroId}_revive`);
     this.fx.holyBurst(this.player.pos, { size: 9, life: 0.6 }); this.fx.shockTex(this.player.pos, 0xffd060, { r1: 9, life: 0.7 });
     this.hitRadius(this.player.pos, 7, 1, { kb: 14, stun: 1.5, kind: 'magic', source: this.player, dirFrom: this.player.pos });
     audio.playMusic(this.boss ? 'bgm_boss' : 'bgm_battle'); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12], step: 0.08 });
@@ -308,7 +310,7 @@ export class Battle {
   defeat() { this.active = false; this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed }; this.ui.showResult(this, false); }
   victory() {
     if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear();
-    this.player.play('Cheer', { fade: 0.2 }); audio.playMusic(null); audio.play('jingle_win0', { vol: 0.9 }); this.ui.showBoss('', false); setTimeout(() => audio.voice('floor_clear'), 2600);
+    this.player.play('Cheer', { fade: 0.2 }); audio.playMusic(null); audio.play('jingle_win0', { vol: 0.9 }); this.ui.showBoss('', false); setTimeout(() => audio.voice(`hero_${this.heroId}_win`), 1200); setTimeout(() => audio.voice('floor_clear'), 3800);
     this.fx.burst(this.player.pos.clone().setY(1), 0xffd060, { n: 60, speed: 9, size: 0.5, up: 1.5, grav: 6, life: 1.2 }); this.fx.embers(this.player.pos, 0xffe080, { n: 40, radius: 2, life: 2, rise: 3 });
     // 남은 드랍 자동 수거
     this.player.magnetMul = 99;
@@ -459,6 +461,7 @@ export class Battle {
     this.drops.update(dt);
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; this.ui.setCombo(0); } }
     if (this.player.alive && this.player.hp < this.player.maxHp * 0.25) audio.voice('low_hp', { min: 15 });
+    else if (this.player.alive && this.player.hp < this.player.maxHp * 0.5) audio.voice(`hero_${this.heroId}_hurt`, { min: 14 });
     // 카메라: 적 밀도에 따라 살짝 줌아웃 (몹몰이 시야 확보)
     const rig = this.renderer.rig;
     // 카메라 리드: 진행 방향으로 살짝 앞서 보고, 락온 대상 쪽으로 조금 당긴다

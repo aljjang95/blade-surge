@@ -47,11 +47,12 @@ export class DropSystem {
       const it = { mesh, kind, payload, vx: Math.cos(a) * s, vy: 4 + Math.random() * 3, vz: Math.sin(a) * s, t: 0, state: 'fly', spin: (Math.random() - 0.5) * 8 };
       this.scene.add(mesh); this.items.push(it);
       // 희귀 장비는 기둥 빔
-      if (kind === 'item' && (payload.rarity === 'SR' || payload.rarity === 'SSR')) {
+      if (kind === 'item' && ['E', 'U', 'L'].includes(payload.rarity)) {
         const beam = new THREE.Sprite(this.beamMat.clone()); beam.material.color.set(RARITY_COLOR[payload.rarity]);
         beam.scale.set(1.4, 5, 1); beam.position.copy(pos).setY(2.2); this.scene.add(beam); it.beam = beam;
         this.game.fx.groundTex(pos, 'shockwave', RARITY_COLOR[payload.rarity], { r0: 0.3, r1: 3, life: 0.6 });
-        if (payload.rarity === 'SSR') { this.game.fx.holyBurst(pos, { size: 5, color: 0xffcf5a }); audio.play('jingle_legend', { vol: 0.7 }); this.game.renderer.flashScreen(0.25, 0xffcf5a); }
+        if (payload.rarity === 'L') { this.game.fx.holyBurst(pos, { size: 5, color: 0xff9a2e }); audio.play('jingle_legend', { vol: 0.7 }); this.game.renderer.flashScreen(0.25, 0xff9a2e); }
+        else if (payload.rarity === 'U') { this.game.fx.holyBurst(pos, { size: 4, color: 0xc07cff }); audio.play('ui_glass', { vol: 0.7, rate: 0.9 }); }
         else audio.play('ui_glass', { vol: 0.6, rate: 1.2 });
       }
     }
@@ -110,7 +111,8 @@ export class DropSystem {
       g.ui.lootPopup(def, it.payload.rarity);
       audio.loot(it.payload.rarity);
       g.fx.burst(pos, RARITY_COLOR[it.payload.rarity], { n: 14, speed: 6, size: 0.35, life: 0.5 });
-      audio.vibe(it.payload.rarity === 'SSR' ? [40, 30, 90] : 20);
+      audio.vibe(it.payload.rarity === 'L' ? [40, 30, 90] : it.payload.rarity === 'U' ? [30, 20, 50] : 20);
+      if (it.payload.rarity === 'L') audio.voice('legend_drop', { min: 5 }); else if (it.payload.rarity === 'U') audio.voice('unique_drop', { min: 8 });
     }
   }
   /** 적 처치 시 드랍 롤 */
@@ -124,7 +126,8 @@ export class DropSystem {
     if (enemy.isElite) { this.spawn(pos, 'stone2', 1, { count: 1 }); if (Math.random() < 0.6) this.spawn(pos, 'frag', 2, { count: 1 }); }
     if (enemy.isBoss) { this.spawn(pos, 'stone2', 2, { count: 1 }); this.spawn(pos, 'stone3', 1, { count: 1 }); this.spawn(pos, 'frag', 5, { count: 1, spread: 1.5 }); }
     // 장비: 엘리트 확정, 보스 2개, 잡몹 낮은 확률
-    const rolls = enemy.isBoss ? 3 : enemy.isElite ? 1 : (Math.random() < 0.055 ? 1 : 0);
+    // 장비: 보스 3, 엘리트 2, 잡몹 8% — 자주 떨어지되 대부분 흰·초록 (등급 가중치가 희소성을 만든다)
+    const rolls = enemy.isBoss ? 3 : enemy.isElite ? 2 : (Math.random() < 0.08 ? 1 : 0);
     for (let i = 0; i < rolls; i++) {
       const table = enemy.isBoss ? 'boss' : enemy.isElite ? 'elite' : 'normal';
       const inst = this.game.rollDrop(table);

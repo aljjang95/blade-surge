@@ -189,9 +189,10 @@ class AudioSys {
   /** 아이템 획득 (희귀도별) */
   loot(rarity = 'N') {
     if (!this.enabled || !this.ctx) return;
-    if (rarity === 'SSR') { this.holy({ vol: 0.5, base: 659, dur: 1.1 }); this.play('jingle_legend', { vol: 0.6 }); this.vibe([30, 30, 90]); }
-    else if (rarity === 'SR') { this.magic({ vol: 0.38, base: 587, notes: [0, 4, 7, 12], step: 0.05 }); this.ting({ vol: 0.3, freq: 2200 }); }
-    else if (rarity === 'R') { this.magic({ vol: 0.3, base: 523, notes: [0, 7], step: 0.05 }); }
+    if (rarity === 'L' || rarity === 'SSR') { this.holy({ vol: 0.5, base: 659, dur: 1.1 }); this.play('jingle_legend', { vol: 0.6 }); this.vibe([30, 30, 90]); }
+    else if (rarity === 'U') { this.holy({ vol: 0.35, base: 587, dur: 0.8 }); this.magic({ vol: 0.3, base: 440, notes: [0, 3, 7, 10], step: 0.05, type: 'triangle' }); }
+    else if (rarity === 'E' || rarity === 'SR') { this.magic({ vol: 0.38, base: 587, notes: [0, 4, 7, 12], step: 0.05 }); this.ting({ vol: 0.3, freq: 2200 }); }
+    else if (rarity === 'S' || rarity === 'R') { this.magic({ vol: 0.3, base: 523, notes: [0, 7], step: 0.05 }); }
     else this.play('ui_drop', { vol: 0.4 });
   }
   /** 코인/재화 픽업 (피치 상승 콤보) */

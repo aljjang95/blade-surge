@@ -1,6 +1,6 @@
 // 경제·진행 상태 (localStorage 저장). 결제는 전부 목업.
 import { HEROES, HERO_ORDER, levelExp, levelGold, starShards, skillUpGold, heroStats } from '../data/heroes.js';
-import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, itemStats, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST} from '../data/items.js';
+import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, itemStats, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
 import { SKUS, GACHA, BATTLE_PASS, ENERGY, DAILY_REWARDS, PASS_TRACK } from '../data/shop.js';
 import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 
@@ -90,7 +90,9 @@ export class Economy {
   // ---------- 장비 ----------
   addItem(rarity, slot = null) {
     slot = slot || SLOTS[Math.floor(Math.random() * SLOTS.length)];
-    const def = ITEM_POOL[slot].find((x) => x.rarity === rarity) || ITEM_POOL[slot][0];
+    if (GACHA_ITEM_RARITY[rarity]) rarity = GACHA_ITEM_RARITY[rarity];   // 가챠 등급(R/SR/SSR) → 장비 등급
+    const pool = ITEM_POOL[slot].filter((x) => x.rarity === rarity);
+    const def = pool.length ? pool[Math.floor(Math.random() * pool.length)] : ITEM_POOL[slot][0];
     const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); return inst;
   }
   equip(heroId, uid) { const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst) return; const slot = ITEM_BY_ID[inst.id].slot; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; if (e[slot] === uid) e[slot] = null; } this.hero(heroId).equip[slot] = uid; this.emit(); }
@@ -110,12 +112,12 @@ export class Economy {
     if (success) inst.enh++;
     else {
       if (!protect && Math.random() < destroyChance(lv)) { destroyed = true; this.s.inventory.splice(this.s.inventory.indexOf(inst), 1); for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } }
-      else if (lv >= 12) { down = 1; inst.enh--; }
+      else if (enhanceDown(lv)) { down = enhanceDown(lv); inst.enh -= down; }
     }
     this.s.quests.enh = (this.s.quests.enh || 0) + 1;
     this.emit(); return { ok: true, success, destroyed, down, enh: destroyed ? lv : inst.enh, chance };
   }
-  sellItem(uid) { const i = this.s.inventory.findIndex((x) => x.uid === uid); if (i < 0) return; const inst = this.s.inventory[i]; const r = ITEM_BY_ID[inst.id].rarity; const gold = { N: 300, R: 1200, SR: 6000, SSR: 30000 }[r]; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } this.s.inventory.splice(i, 1); this.s.gold += gold; this.emit(); return gold; }
+  sellItem(uid) { const i = this.s.inventory.findIndex((x) => x.uid === uid); if (i < 0) return; const inst = this.s.inventory[i]; const r = ITEM_BY_ID[inst.id].rarity; const gold = RARITY_INFO[r]?.sell || 200; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } this.s.inventory.splice(i, 1); this.s.gold += gold; this.emit(); return gold; }
   /** 필드 드랍 아이템 (즉시 인벤토리) */
   fieldDrop(rarity) { const it = this.addItem(rarity); this.save(); return it; }
   // ---------- 스테이지 ----------

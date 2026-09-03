@@ -186,8 +186,11 @@ b { font-weight: 900; }
 .equip-slot.has { border-style: solid; }
 .equip-slot img { width: 70%; height: 70%; object-fit: contain; }
 .equip-slot .plus { position: absolute; bottom: 1px; right: 3px; font-size: 10px; font-weight: 900; color: var(--gold); }
-.rar-N { border-color: var(--r-n) !important; } .rar-R { border-color: var(--r-r) !important; box-shadow: inset 0 0 12px rgba(76,195,255,.25) } .rar-SR { border-color: var(--r-sr) !important; box-shadow: inset 0 0 12px rgba(178,107,255,.35) } .rar-SSR { border-color: var(--r-ssr) !important; box-shadow: inset 0 0 14px rgba(255,207,90,.45) }
+/* 영웅 등급(R/SR/SSR) 과 장비 등급(N/S/E/U/L 흰·초록·파랑·보라·주황) */
+.rar-N { border-color: #e6e6e6 !important; } .rar-R { border-color: var(--r-r) !important; box-shadow: inset 0 0 12px rgba(76,195,255,.25) } .rar-SR { border-color: var(--r-sr) !important; box-shadow: inset 0 0 12px rgba(178,107,255,.35) } .rar-SSR { border-color: var(--r-ssr) !important; box-shadow: inset 0 0 14px rgba(255,207,90,.45) }
+.rar-S { border-color: #5ce07a !important; box-shadow: inset 0 0 10px rgba(92,224,122,.25) } .rar-E { border-color: #4cc3ff !important; box-shadow: inset 0 0 12px rgba(76,195,255,.3) } .rar-U { border-color: #c07cff !important; box-shadow: inset 0 0 12px rgba(192,124,255,.4) } .rar-L { border-color: #ff9a2e !important; box-shadow: inset 0 0 14px rgba(255,154,46,.5), 0 0 10px rgba(255,154,46,.35) }
 .bg-N { background: var(--r-n); color: #111 } .bg-R { background: var(--r-r); color: #06213d } .bg-SR { background: var(--r-sr); color: #fff } .bg-SSR { background: var(--r-ssr); color: #3a2200 }
+.bg-S { background: #5ce07a; color: #05300f } .bg-E { background: #4cc3ff; color: #06213d } .bg-U { background: #c07cff; color: #fff } .bg-L { background: #ff9a2e; color: #3a1a00 }
 .hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .hero-actions .btn { flex: 1; min-width: 120px; }
 .inv-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
