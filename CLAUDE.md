@@ -2,6 +2,44 @@
 
 새 세션이면 **여기부터 읽고**, 이어서 `PRD.md`(기준) → `RSI.md`(루프) → `LESSONS.md`(지뢰밭) 순으로 읽어라.
 
+---
+
+## 0. 부트스트랩 — 새 세션의 첫 명령
+
+> 세션마다 컨테이너가 새로 뜬다. **레포 말고는 아무것도 남아 있지 않다.**
+> 연결된 폴더가 있으면 거기에 작업 사본이 이미 있는지 먼저 확인하고, 없으면 클론한다.
+
+```bash
+# 작업 위치를 정한다. 연결된 폴더가 있으면 그 아래, 없으면 세션 디스크에.
+#   연결 폴더:  /sessions/<세션>/mnt/outputs/blade-surge   ← 대표님 PC에 남는다
+#   미연결:     /sessions/<세션>/blade-surge               ← 세션 끝나면 사라진다
+W=/sessions/$(ls /sessions | head -1)
+DIR=$W/mnt/outputs/blade-surge; [ -d "$W/mnt/outputs" ] || DIR=$W/blade-surge
+
+[ -d "$DIR/.git" ] && (cd "$DIR" && git pull) \
+  || git clone https://github.com/aljjang95/blade-surge "$DIR"     # public, 인증 불필요
+cd "$DIR" && npm install
+npm run build && echo BOOTSTRAP_OK
+```
+
+> **함정**: 마운트(`mnt/`) 위에는 git 오브젝트를 못 만든다("Operation not permitted").
+> 마운트에서 작업하려면 **git 저장소는 세션 디스크에 두고**(`/sessions/<세션>/repo`)
+> 작업 사본만 마운트에 두고 `rsync` 로 오간다. 지금까지 이 방식으로 했다.
+
+### 하네스를 돌리려면 (게이트 A) — 추가로 필요한 것
+```bash
+npx playwright install chromium
+# 루트가 없어 libXdamage.so.1 이 없으면:
+mkdir -p /tmp/libs && cd /tmp/libs && \
+  apt-get download libxdamage1 2>/dev/null && dpkg -x libxdamage1*.deb .
+export LD_LIBRARY_PATH=/tmp/libs/usr/lib/x86_64-linux-gnu
+```
+`package.json` 의 playwright 버전과 브라우저 캐시 빌드가 어긋나면 실행이 죽는다 — `LESSONS.md` 참조.
+
+### 푸시하려면
+`§자격증명 → GitHub` 의 디바이스 플로우로 재인증한다(약 30초, 대표님 승인 필요).
+**읽기만 할 거면 인증 없이 클론된다.** 커밋을 올릴 때만 필요하다.
+
 ## 무엇인가
 
 가로모드 웹앱 3D 몹몰이 핵앤슬래시 가챠 RPG. three.js r0.170 + WebGL2 + Vite 6.
