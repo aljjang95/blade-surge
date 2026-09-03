@@ -24,17 +24,35 @@ export class Arena {
     this.lights.length = 0; this.torches.length = 0; this.torchPos.length = 0; this.doors.length = 0;
   }
   _meshOf(name) { const p = this.gltf.scene.getObjectByName(name); let m = null; p?.traverse((o) => { if (!m && o.isMesh) m = o; }); return { mesh: m, part: p }; }
-  instanced(name, transforms, tint) {
+  /**
+   * 인스턴싱. 층 전체를 하나의 InstancedMesh 로 묶으면 바운딩 스피어가 층 전체를 덮어
+   * **프러스텀 컬링이 절대 안 걸린다** — 안 보이는 방까지 매 프레임 그린다.
+   * 그래서 공간 청크(CHUNK 유닛 격자)로 쪼개 각 덩어리가 따로 컬링되게 한다.
+   * castShadow=false 인 것(바닥 등)은 그림자 패스에서 통째로 빠져 삼각형이 절반 난다.
+   */
+  instanced(name, transforms, tint, opts = {}) {
     if (!transforms.length) return;
     const { mesh: src, part } = this._meshOf(name); if (!src) return;
+    const { castShadow = true, chunk = 44 } = opts;
     const mat = src.material.clone(); if (tint) mat.color.multiply(new THREE.Color(tint));
-    const im = new THREE.InstancedMesh(src.geometry, mat, transforms.length);
     part.updateWorldMatrix(true, true);
     const local = new THREE.Matrix4().copy(part.matrixWorld).invert().multiply(src.matrixWorld);
-    const o = new THREE.Object3D();
-    transforms.forEach((t, i) => { o.position.set(t.x, t.y || 0, t.z); o.rotation.set(0, t.ry || 0, 0); o.scale.setScalar(t.s || 1); o.updateMatrix(); im.setMatrixAt(i, o.matrix.multiply(local)); });
-    im.castShadow = true; im.receiveShadow = true; im.frustumCulled = true;
-    this.group.add(im); return im;
+
+    // 공간 버킷으로 분할
+    const buckets = new Map();
+    for (const t of transforms) {
+      const k = `${Math.floor(t.x / chunk)},${Math.floor(t.z / chunk)}`;
+      (buckets.get(k) || buckets.set(k, []).get(k)).push(t);
+    }
+    const o = new THREE.Object3D(); const out = [];
+    for (const list of buckets.values()) {
+      const im = new THREE.InstancedMesh(src.geometry, mat, list.length);
+      list.forEach((t, i) => { o.position.set(t.x, t.y || 0, t.z); o.rotation.set(0, t.ry || 0, 0); o.scale.setScalar(t.s || 1); o.updateMatrix(); im.setMatrixAt(i, o.matrix.multiply(local)); });
+      im.castShadow = castShadow; im.receiveShadow = true; im.frustumCulled = true;
+      im.computeBoundingSphere?.();   // 청크 기준 타이트한 바운드 → 컬링이 실제로 걸린다
+      this.group.add(im); out.push(im);
+    }
+    return out[0];
   }
   place(name, x, z, ry = 0, s = 1, tint) {
     const p = getPart(this.gltf, name); p.position.set(x, 0, z); p.rotation.y = ry; p.scale.setScalar(s);
@@ -54,7 +72,7 @@ export class Arena {
     this.scene.add(sun); this.lights.push(sun);
     const floors = [];
     for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) floors.push({ x: i * TILE, z: j * TILE, ry: Math.floor(Math.random() * 4) * Math.PI / 2 });
-    this.instanced('floor_tile_large', floors, T.tint);
+    this.instanced('floor_tile_large', floors, T.tint, { castShadow: false });
     const R = 10, walls = [];
     for (let i = -2; i <= 2; i++) { walls.push({ x: i * TILE, z: -R, ry: 0 }, { x: i * TILE, z: R, ry: Math.PI }, { x: -R, z: i * TILE, ry: Math.PI / 2 }, { x: R, z: i * TILE, ry: -Math.PI / 2 }); }
     this.instanced('wall', walls, T.tint);
@@ -94,7 +112,7 @@ export class Arena {
     };
     for (const r of floorData.rooms) put(r, r.type === ROOM_TYPE.BOSS);
     for (const c of floorData.corridors) put(c, false);
-    for (const k in floors) this.instanced(k, floors[k], T.tint);
+    for (const k in floors) this.instanced(k, floors[k], T.tint, { castShadow: false });
 
     // ---- 벽: 걷기 가능 셀의 경계에 세운다 ----
     const walls = { wall: [], wall_cracked: [], wall_broken: [], wall_arched: [], wall_window_open: [] };

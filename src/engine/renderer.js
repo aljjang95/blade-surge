@@ -69,7 +69,7 @@ export class Renderer {
     this.composer.setPixelRatio(this.pixelRatio);
     this.renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(this.renderPass);
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.55, 0.5, 0.88);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.5, 0.88);
     this.composer.addPass(this.bloom);
     this.finalPass = new ShaderPass(FinalShader);
     this.composer.addPass(this.finalPass);
@@ -96,7 +96,15 @@ export class Renderer {
     // 세로 화면이면 시야를 넓혀 전장 확보
     this.camera.fov = w < h ? 60 : 46;
     this.camera.updateProjectionMatrix();
-    this.bloom.resolution.set(Math.min(512, w / 2), Math.min(512, h / 2));
+    // 블룸 내부 해상도를 직접 강제한다.
+    // 함정: UnrealBloomPass 의 `resolution` 필드는 생성자에서만 쓰인다. 그 뒤에는
+    // EffectComposer.setSize() 가 pass.setSize(w, h) 를 호출해 **캔버스 전체 해상도**로
+    // 밉 체인을 다시 잡아버려서, resolution 을 아무리 낮춰도 아무 효과가 없다.
+    // 블룸은 5단 밉 × (가로+세로 블러) = 10회 풀스크린 패스라 해상도 제곱으로 비싸진다.
+    // composer.setSize 뒤에 setSize 를 다시 불러 덮어써야 실제로 낮아진다.
+    const bw = Math.min(320, Math.round(w / 3)), bh = Math.min(320, Math.round(h / 3));
+    this.bloom.resolution.set(bw, bh);
+    this.bloom.setSize(bw, bh);
   }
   shake(amount) { this.rig.trauma = Math.min(1, this.rig.trauma + amount); }
   punch(z) { this.rig.zoom = Math.max(this.rig.zoom, z); }
