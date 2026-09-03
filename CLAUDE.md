@@ -99,11 +99,16 @@ git push git@github.com:aljjang95/blade-surge.git HEAD:main
 
 > **함정**: `gh auth login --web` 을 백그라운드로 띄우면 bash 호출이 끝날 때 프로세스가 죽는다(`setsid` 도 소용없음 — 호출마다 bwrap 샌드박스).
 
-### Cloudflare
-`wrangler deploy` 는 `CLOUDFLARE_API_TOKEN` 환경변수를 읽는다.
-드라이브 `env` 폴더의 `cloudflare.env.example` 은 **값이 비어 있다**(원본은 PC DPAPI 금고). 배포하려면
-대표님이 Workers Scripts:Edit 범위의 토큰을 **`cloudflare-blade-surge.env`** (`CLOUDFLARE_API_TOKEN=`, `CLOUDFLARE_ACCOUNT_ID=`) 로
-같은 폴더에 올려주셔야 한다. 그 전까지 `npm run deploy` 는 건너뛰고 푸시까지만 한다. 쓴 뒤 컨테이너에 남기지 않는다.
+### Cloudflare — 드라이브 `cloudflare.env` (사람 승인 불필요)
+드라이브 `env` 폴더의 **`cloudflare.env`** (file id `1N-chIyf2f7KkiwQkAIpc-Few2P2driop`): `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`(cfut_, 2026-09-03 검증).
+```bash
+# Drive MCP download_file_content(fileId="1N-chIyf2f7KkiwQkAIpc-Few2P2driop") → content(base64) 를 파일로 → 디코드
+C=/sessions/$SESSION/cf; mkdir -p $C && chmod 700 $C; base64 -d $C/drive.b64 > $C/cloudflare.env; chmod 600 $C/cloudflare.env
+set -a; . $C/cloudflare.env; set +a          # 값을 echo 하지 마라
+npm run deploy                               # = vite build && wrangler deploy → https://blade-surge.affinity-agent-studio.workers.dev
+```
+401 이 나면 토큰이 폐기된 것 — 대표님께 **첨부 파일**로 새 토큰을 받아 같은 파일을 덮어쓴다(채팅 본문에 붙이지 않게).
+세션이 끝나면 `$C` 를 지운다.
 
 ### .gitignore 불변식
 `.env`, `*.token`, `cf.token` 은 커밋에 절대 들어가지 않는다.
