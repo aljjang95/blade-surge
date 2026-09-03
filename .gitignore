@@ -4,4 +4,4 @@ dist
 .env
 *.log
 
-.rsi/
+.rsi/shots/
