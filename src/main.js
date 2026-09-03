@@ -62,7 +62,7 @@ class App {
   async showcaseHero(id, first = false) {
     const def = HEROES[id];
     if (this.showcase) { this.scene.remove(this.showcase.root); this.showcase = null; }
-    if (first || this.mode === 'lobby') this.arena.build('lobby', { lobby: true });
+    if (first || this.mode === 'lobby') this.arena.buildLobby();
     const { root, mixer, clips } = spawnCharacter(this.models[def.model]);
     root.rotation.y = Math.PI * 0.15;
     for (const n of ALL_WEAPON_NODES) { const o = root.getObjectByName(n); if (o) o.visible = def.show.includes(n); }
@@ -114,7 +114,7 @@ class App {
         if (s.t > s.next) { s.t = 0; s.next = 5 + Math.random() * 4; const pool = ['Cheer', 'Interact', 'Idle']; const nm = pool[Math.floor(Math.random() * pool.length)]; const a = s.mixer.clipAction(s.clips[nm]); if (nm !== 'Idle') { a.reset().setLoop(THREE.LoopOnce).play(); const idle = s.mixer.clipAction(s.clips['Idle']); a.crossFadeFrom(idle, 0.2); setTimeout(() => { idle.reset().play(); idle.crossFadeFrom(a, 0.3); }, s.clips[nm].duration * 1000 - 300); } }
         if (Math.random() < realDt * 3) this.fx.embers(new THREE.Vector3(0, 0.2, 0), s.def.color, { n: 1, radius: 1.2, life: 1.5, size: 0.25, rise: 1.2 });
       }
-      this.arena.update(realDt, this.fx); this.fx.update(realDt);
+      this.arena.update(realDt, this.fx, this.showcase ? this.showcase.root.position : null); this.fx.update(realDt);
       this.renderer.update(realDt, realDt);
       if (render && (this.lobbyVisible || this.meta.tab === 'home')) this.renderer.render();
     }

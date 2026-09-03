@@ -39,10 +39,10 @@ export function stageDef(ch, st) {
     for (let e = 0; e < elites; e++) list.push(R.elite[(e + st + w) % R.elite.length]);
     waves.push(list);
   }
-  if (boss) waves.push([chapter.boss, R.trash[0], R.trash[1], R.trash[0], R.trash[2]]);
   const energy = 6 + Math.floor(idx / 6);
   return {
-    ch, st, idx, boss, chapter, name: `${ch}-${st} ${chapter.name}`, waves, scale, energy,
+    ch, st, idx, boss, chapter, name: `${idx}층 · ${chapter.name}`, waves, scale, energy,
+    rosterFor: () => R,
     recPower: Math.floor(900 * Math.pow(1.15, idx - 1)),
     rewards: {
       gold: Math.floor(400 * scale), exp: Math.floor(110 * scale), bp: 60 + (boss ? 60 : 0),

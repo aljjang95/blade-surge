@@ -245,7 +245,7 @@ b { font-weight: 900; }
 .boss-name { font-family: var(--disp); font-size: 15px; color: #ff6b8a; text-shadow: 0 2px 6px #000; letter-spacing: .1em; }
 .boss-hp { height: 12px; background: rgba(0,0,0,.65); border: 1px solid rgba(255,100,130,.5); border-radius: 6px; overflow: hidden; }
 .boss-hp > div { height: 100%; width: 100%; background: linear-gradient(90deg, #ff2d55, #ff8aa0); transition: width .2s; }
-.combo { position: absolute; right: 12px; top: 21%; text-align: right; text-shadow: 0 3px 10px #000; transform-origin: right center; }
+.combo { position: absolute; right: 12px; top: 44%; text-align: right; text-shadow: 0 3px 10px #000; transform-origin: right center; }
 .combo b { display: block; font-family: var(--disp); font-size: 54px; line-height: .9; color: var(--gold); -webkit-text-stroke: 1px #7a3a00; }
 .combo span { font-family: var(--disp); font-size: 16px; letter-spacing: .2em; color: #fff; }
 .combo.hot b { color: #ff5a7a; -webkit-text-stroke: 1px #6b0018; }
@@ -471,7 +471,7 @@ b { font-weight: 900; }
   .hud-portrait { width: 42px; height: 42px; }
   .wave { font-size: 15px; } .stage-name { font-size: 10px; }
   .bossbar { top: calc(58px + var(--sat)); left: 26%; right: 26%; }
-  .combo { top: 15%; right: 16px; }
+  .combo { top: 42%; right: 16px; }
   .combo b { font-size: 46px; } .combo span { font-size: 14px; }
   .joy-base { left: 84px; bottom: calc(78px + var(--sab)); width: 112px; height: 112px; }
   .joystick { width: 42%; height: 78%; }
@@ -560,3 +560,38 @@ b { font-weight: 900; }
 @keyframes enhFlash { 0% { filter: brightness(4); transform: scale(1.25) } 100% { filter: none; transform: none } }
 .enh-fail { animation: enhFail .4s ease-out; }
 @keyframes enhFail { 0%,100% { transform: none } 25% { transform: translateX(-8px) } 75% { transform: translateX(8px) } }
+
+/* ---------- 미니맵 + 목표 (우측 상단) ---------- */
+.hud-right { flex-direction: column; align-items: flex-end; gap: 6px; }
+.hud-right-top { display: flex; gap: 6px; }
+#minimap-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+#minimap { width: 116px; height: 116px; border-radius: 10px; display: block;
+  box-shadow: 0 2px 10px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,215,120,.25); background: rgba(8,6,16,.7); }
+#objective { font-size: 10px; font-weight: 700; color: var(--muted); background: rgba(8,6,16,.72);
+  border: 1px solid rgba(255,255,255,.12); border-radius: 8px; padding: 2px 7px; max-width: 190px; text-align: right;
+  white-space: nowrap; text-shadow: 0 1px 2px #000; }
+#objective b { color: var(--gold); }
+
+@media (orientation: landscape) {
+  #minimap { width: 128px; height: 128px; }
+  #objective { font-size: 10px; }
+}
+@media (orientation: landscape) and (max-height: 400px) {
+  #minimap { width: 104px; height: 104px; }
+  #objective { font-size: 9px; max-width: 160px; }
+}
+@media (orientation: portrait) {
+  #minimap { width: 92px; height: 92px; }
+  #objective { font-size: 9px; max-width: 150px; }
+}
+
+/* ---------- 컨트롤 손맛: 락온 / 퍼펙트 회피 ---------- */
+.perfect-flash { position: absolute; inset: 0; pointer-events: none; opacity: 0;
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(120,220,255,.35) 100%); }
+.perfect-flash.on { animation: perfectFx .55s ease-out; }
+@keyframes perfectFx { 0% { opacity: 1 } 100% { opacity: 0 } }
+#perfect-label { position: absolute; left: 0; right: 0; top: 34%; text-align: center; pointer-events: none;
+  font-family: var(--disp); font-size: 30px; color: #bfefff; text-shadow: 0 0 18px #4cc3ff, 0 3px 0 #06213d; opacity: 0; }
+#perfect-label.on { animation: perfectLabel .8s cubic-bezier(.1,.9,.3,1); }
+@keyframes perfectLabel { 0% { opacity: 0; transform: scale(1.6) } 15% { opacity: 1; transform: scale(1) } 70% { opacity: 1 } 100% { opacity: 0; transform: translateY(-14px) } }
+.sprint-ring { position: absolute; inset: -6px; border-radius: 50%; border: 2px solid rgba(107,255,143,.8); opacity: 0; }

@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { audio } from '../engine/audio.js';
 import { ITEM_BY_ID, ITEM_ICON, RARITY_COLOR } from '../data/items.js';
 import { REWARD_LABEL } from '../game/economy.js';
+import { Minimap } from './minimap.js';
+import { ROOM_TYPE } from '../game/world.js';
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => Math.floor(n).toLocaleString('ko-KR');
@@ -14,6 +16,8 @@ export class UI {
     this.skillBtns = [...document.querySelectorAll('.skill-btn')];
     this.hurtT = 0; this.comboEl = $('combo'); this.comboN = $('combo-n');
     this.lootLayer = $('loot-layer'); this.lootQueue = [];
+    this.minimap = new Minimap($('minimap'));
+    this.miniT = 0;
     document.body.classList.add('force-landscape');
     $('btn-ignore-rotate').addEventListener('click', () => document.body.classList.remove('force-landscape'));
     this._bindGlobal();
@@ -32,7 +36,16 @@ export class UI {
     $('btn-result-double').addEventListener('click', () => this.watchAd());
   }
   show(el, on) { el.classList.toggle('show', on); }
-  showHud(on) { this.show(this.el.hud, on); if (!on) { this.comboEl.classList.add('hidden'); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); } }
+  setupMinimap(floor) { this.minimap.setFloor(floor); $('minimap-wrap').classList.remove('hidden'); }
+  setObjective(floor) {
+    const left = floor.rooms.filter((r) => !r.cleared && r.type !== ROOM_TYPE.START).length;
+    const boss = floor.bossRoom;
+    const el = $('objective');
+    if (boss && boss.cleared) el.innerHTML = '<b style="color:var(--green)">층 클리어!</b>';
+    else if (boss && boss.discovered) el.innerHTML = '☠ <b>보스방 발견</b> — 처치하면 층 클리어';
+    else el.innerHTML = `☠ 보스를 찾아라 · 남은 구역 <b>${left}</b>`;
+  }
+  showHud(on) { this.show(this.el.hud, on); if (!on) { this.comboEl.classList.add('hidden'); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
   pause(on) { const b = this.app.battle; if (!b.player) return; b.paused = on; this.show(this.el.pause, on); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
@@ -76,21 +89,32 @@ export class UI {
     this.modal(`<div class="levelup-pop"><div class="big">구매 완료!</div><p>${sku.name}</p><div class="loot" style="margin:10px 0">${this.rewardHtml(got)}</div>${extra}<div class="modal-btns"><button class="btn btn-gold" id="m-ok">받기</button></div></div>`, { onOpen: (b) => { b.querySelector('#m-ok').onclick = () => this.closeModal(); } });
   }
   hurtVignette() { this.hurtT = 0.5; }
+  perfectDodge() {
+    const f = $('perfect-flash'), l = $('perfect-label');
+    f.classList.remove('on'); l.classList.remove('on'); void f.offsetWidth; void l.offsetWidth;
+    f.classList.add('on'); l.classList.add('on');
+  }
 
   // ---------------- HUD ----------------
   setupHud(def, player) {
-    $('hud-portrait').src = def.portrait; $('hud-stage').textContent = this.app.battle.stage.name;
+    $('hud-portrait').src = def.portrait; $('hud-stage').textContent = '';
     this.skillBtns.forEach((b, i) => { const sk = def.skills[i]; const img = b.querySelector('img'); img.src = sk.icon; img.onerror = () => { img.style.display = 'none'; b.style.background = `linear-gradient(135deg, ${def.color}, #222)`; }; b.style.display = ''; });
     $('btn-auto').classList.toggle('on', !!player.auto);
     this.setCombo(0); $('hud-ult').parentElement.classList.remove('full');
   }
-  setWave(w, total, boss) { $('hud-wave').textContent = boss ? 'BOSS' : `WAVE ${w}/${total}`; }
+  setWave() {}
+  setFloorLabel(floorNum, floor) {
+    const clr = floor.rooms.filter((r) => r.cleared).length, tot = floor.rooms.length;
+    $('hud-wave').textContent = `${floorNum}층`;
+    $('hud-stage').textContent = `구역 ${clr}/${tot}`;
+  }
   waveBanner(text) { const b = $('wave-banner'); b.textContent = text; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); }
   showBoss(name, on, portrait) { $('bossbar').classList.toggle('hidden', !on); $('boss-name').textContent = name; const im = $('boss-portrait'); if (portrait) { im.src = portrait; im.style.display = ''; } else im.style.display = 'none'; }
   setCombo(n) { if (n <= 1) { this.comboEl.classList.add('hidden'); return; } this.comboEl.classList.remove('hidden'); this.comboN.textContent = n; this.comboEl.classList.toggle('hot', n >= 30); this.comboEl.classList.remove('pop'); void this.comboEl.offsetWidth; this.comboEl.classList.add('pop'); }
   ultCinema(name, def) { const c = $('ult-cinema'); $('ult-name').textContent = name; $('ult-name').style.textShadow = `0 0 20px ${def.color}, 0 4px 0 #000`; c.classList.remove('on'); void c.offsetWidth; c.classList.add('on'); setTimeout(() => c.classList.remove('on'), 1700); }
   updateHud(b, dt) {
     const p = b.player; if (!p) return;
+    this.miniT -= dt; if (this.miniT <= 0) { this.miniT = 1 / 20; this.minimap.draw(b); }
     const hp = Math.max(0, p.hp / p.maxHp); $('hud-hp').style.width = hp * 100 + '%'; $('hud-hp-txt').textContent = `${fmt(p.hp)} / ${fmt(p.maxHp)}`;
     $('hud-hp').style.background = hp < 0.3 ? 'linear-gradient(90deg,#ff2d55,#ff8aa0)' : 'linear-gradient(90deg,#2bd46a,#a6ff5a)';
     const ult = p.ult / p.ultMax; $('hud-ult').style.width = ult * 100 + '%'; $('hud-ult').parentElement.classList.toggle('full', ult >= 1);

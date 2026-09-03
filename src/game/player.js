@@ -17,6 +17,7 @@ export class Player extends Actor {
     this.cds = [0, 0, 0, 0]; this.ult = 0; this.ultMax = 100;
     this.buffs = { atk: 1, spd: 1, atkSpd: 1, t: 0 };
     this.auto = false; this.autoT = 0; this.magnetMul = 1;
+    this.sprint = 0; this.sprintT = 0; this.lockTarget = null; this.perfectWindow = 0; this.perfectCd = 0;
     this.trail = null; this.current = null; this.skillCtx = null;
     this.moveDir = new THREE.Vector3();
     this.play('Idle');
@@ -47,13 +48,19 @@ export class Player extends Actor {
     // 이동
     if (this.state === 'idle' || this.state === 'move') {
       if (wantMove) {
-        const spd = this.stats.spd * this.buffs.spd * (this.slow ? 0.5 : 1);
+        // 계속 달리면 스프린트로 가속 (넓은 필드 이동 스트레스 완화)
+        this.sprintT = Math.min(1.6, this.sprintT + dt);
+        this.sprint = this.sprintT > 0.7 ? Math.min(1, (this.sprintT - 0.7) / 0.6) : 0;
+        const spd = this.stats.spd * this.buffs.spd * (this.slow ? 0.5 : 1) * (1 + this.sprint * 0.45);
         this.vel.copy(this.moveDir).multiplyScalar(spd);
         this.faceDir(this.moveDir.x, this.moveDir.z);
         if (this.state !== 'move') { this.state = 'move'; this.play('Running_A', { fade: 0.15 }); }
-        this.action.timeScale = 1.1 * this.buffs.spd;
-        this.footT += dt; if (this.footT > 0.28) { this.footT = 0; this.game.fx.dust(this.pos, { n: 2, size: 0.6, life: 0.5, speed: 1 }); }
+        this.action.timeScale = (1.1 + this.sprint * 0.35) * this.buffs.spd;
+        this.footT += dt;
+        if (this.footT > (this.sprint > 0.5 ? 0.2 : 0.28)) { this.footT = 0; this.game.fx.dust(this.pos, { n: this.sprint > 0.5 ? 3 : 2, size: 0.6 + this.sprint * 0.4, life: 0.5, speed: 1 }); }
+        if (this.sprint > 0.6 && Math.random() < dt * 8) this.game.fx.embers(this.pos, this.def.color, { n: 1, radius: 0.4, life: 0.35, size: 0.2, rise: 1 });
       } else {
+        this.sprintT = Math.max(0, this.sprintT - dt * 3); this.sprint = 0;
         this.vel.set(0, 0, 0);
         if (this.state !== 'idle') { this.state = 'idle'; this.play('Idle', { fade: 0.2 }); }
       }
@@ -64,7 +71,12 @@ export class Player extends Actor {
     for (const e of this.game.enemies) { if (!e.alive || e.spawning) continue; const d = this.distTo(e); if (d < bd) { bd = d; best = e; } }
     return best;
   }
-  autoAim(maxDist = 7) { const e = this.nearestEnemy(maxDist); if (e) this.face(e.pos.x, e.pos.z); return e; }
+  autoAim(maxDist = 7) {
+    // 이미 조준 중인 대상이 사거리 안이면 유지 (타겟 튐 방지 = 손맛)
+    let e = (this.lockTarget && this.lockTarget.alive && this.distTo(this.lockTarget) < maxDist * 1.3) ? this.lockTarget : this.nearestEnemy(maxDist);
+    if (e) { this.face(e.pos.x, e.pos.z); this.lockTarget = e; }
+    return e;
+  }
 
   // ---------------- 기본 콤보 ----------------
   startCombo(idx) {
@@ -111,6 +123,7 @@ export class Player extends Actor {
   // ---------------- 회피 ----------------
   dodge(dir) {
     this.stopTrail(); this.state = 'dodge'; this.stateT = 0; this.invuln = 0.4;
+    this.perfectWindow = 0.28;   // 이 안에 피격 판정이 스치면 퍼펙트
     const d = dir ? dir.clone().normalize() : this.forward(_v.clone());
     this.faceDir(d.x, d.z);
     this.vel.copy(d).multiplyScalar(19);
@@ -140,7 +153,15 @@ export class Player extends Actor {
   }
   // ---------------- 피격 ----------------
   hurt(dmg, { dirx = 0, dirz = 0, kb = 2, kind = 'blunt' } = {}) {
-    if (!this.alive || this.invuln > 0) return false;
+    if (!this.alive) return false;
+    if (this.invuln > 0) {
+      // 회피 직후 스치면 퍼펙트 — 슬로우모 + 궁극기 게이지 + 반격 버프
+      if (this.perfectWindow > 0 && this.perfectCd <= 0) {
+        this.perfectWindow = 0; this.perfectCd = 1.2;
+        this.game.onPerfectDodge(this);
+      }
+      return false;
+    }
     const red = Math.max(1, dmg - this.stats.def * 0.5) * (1 - Math.min(0.6, this.stats.def / (this.stats.def + 400)));
     this.hp -= red;
     this.flash(0xff4040, 0.15);
@@ -159,9 +180,8 @@ export class Player extends Actor {
   // ---------------- 자동 전투 ----------------
   autoMove(dt) {
     const out = { x: 0, y: 0 };
-    // 몹몰이: 가장 밀집한 무리로 이동
     const list = this.game.enemies.filter((e) => e.alive && !e.spawning);
-    if (!list.length) return out;
+    if (!list.length) return this.autoExplore(dt);
     let hub = null, bestN = -1;
     for (const c of list) { let n = 0; for (const e of list) { const dx = e.pos.x - c.pos.x, dz = e.pos.z - c.pos.z; if (dx * dx + dz * dz < 16) n += e.isBoss ? 5 : e.isElite ? 2 : 1; } const dist = this.distTo(c); const score = n - dist * 0.35; if (score > bestN) { bestN = score; hub = c; } }
     const e = hub || list[0];
@@ -184,10 +204,34 @@ export class Player extends Actor {
     } else if (this.state === 'attack' && this.hitDone) this.game.input.press('attack');
     return out;
   }
+  /** 적이 없으면 다음 목표 방으로 이동 (보스 발견 시 보스방 우선) */
+  autoExplore(dt) {
+    const out = { x: 0, y: 0 };
+    const g = this.game, W = g.world; if (!W) return out;
+    let target = g.autoTarget;
+    if (!target || target.cleared) {
+      const cands = W.rooms.filter((r) => !r.cleared);
+      if (!cands.length) return out;
+      // 보스방을 찾았으면 보스 우선, 아니면 가장 가까운 미클리어 방
+      const boss = W.bossRoom;
+      target = (boss && !boss.cleared && boss.discovered) ? boss
+        : cands.sort((a, b) => Math.hypot(a.x - this.pos.x, a.z - this.pos.z) - Math.hypot(b.x - this.pos.x, b.z - this.pos.z))[0];
+      g.autoTarget = target;
+    }
+    const flow = W.buildFlow(target.x, target.z);
+    const d = W.flowDir(flow, this.pos.x, this.pos.z);
+    if (d) { out.x = d[0]; out.y = d[1]; }
+    else { const dx = target.x - this.pos.x, dz = target.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; }
+    return out;
+  }
 
   // ---------------- 업데이트 ----------------
   update(dt) {
     super.update(dt);
+    if (this.perfectWindow > 0) this.perfectWindow -= dt;
+    if (this.perfectCd > 0) this.perfectCd -= dt;
+    // 락온: 조준 대상이 계속 바뀌지 않도록 유지
+    if (this.lockTarget && (!this.lockTarget.alive || this.distTo(this.lockTarget) > 11)) this.lockTarget = null;
     for (let i = 0; i < 4; i++) if (this.cds[i] > 0) this.cds[i] = Math.max(0, this.cds[i] - dt);
     if (this.buffs.t > 0) { this.buffs.t -= dt; this.game.fx.aura(this.pos, 0xff3030, 2); if (this.buffs.t <= 0) { this.buffs.atk = 1; this.buffs.spd = 1; this.buffs.atkSpd = 1; this.tintEmissive = null; } }
     if (!this.alive) return;

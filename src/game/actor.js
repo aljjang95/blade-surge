@@ -60,10 +60,13 @@ export class Actor {
   update(dt) {
     this.mixer.update(dt);
     // 넉백 감쇠
+    const fx0 = this.pos.x, fz0 = this.pos.z;
     if (this.kb.lengthSq() > 0.0001) { this.pos.addScaledVector(this.kb, dt); this.kb.multiplyScalar(Math.pow(0.02, dt)); }
     this.pos.addScaledVector(this.vel, dt);
-    // 아레나 경계
-    const d = Math.hypot(this.pos.x, this.pos.z); if (d > ARENA_R) { this.pos.x *= ARENA_R / d; this.pos.z *= ARENA_R / d; }
+    // 벽 충돌 (월드가 있으면 슬라이딩, 없으면 원형 아레나)
+    const W = this.game.world;
+    if (W) { const [rx, rz] = W.resolve(fx0, fz0, this.pos.x, this.pos.z, this.radius * 0.8); this.pos.x = rx; this.pos.z = rz; }
+    else { const d = Math.hypot(this.pos.x, this.pos.z); if (d > ARENA_R) { this.pos.x *= ARENA_R / d; this.pos.z *= ARENA_R / d; } }
     this.pos.y = this.rig.hover || 0;
     this.root.rotation.y = this.yaw + (this.rig.faceFlip ? Math.PI : 0);
     if (this.stun > 0) this.stun -= dt;
