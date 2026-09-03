@@ -99,11 +99,32 @@ export class UI {
   // ---------------- HUD ----------------
   setupHud(def, player) {
     $('hud-portrait').src = def.portrait; $('hud-stage').textContent = '';
-    this.skillBtns.forEach((b, i) => { const sk = def.skills[i]; const img = b.querySelector('img'); img.src = sk.icon; img.onerror = () => { img.style.display = 'none'; b.style.background = `linear-gradient(135deg, ${def.color}, #222)`; }; b.style.display = ''; });
+    this.skillBtns.forEach((b, i) => {
+      const sk = def.skills[i];
+      if (!sk) { b.style.display = 'none'; return; }
+      const img = b.querySelector('img'); img.src = sk.icon; img.style.display = '';
+      img.onerror = () => { img.style.display = 'none'; b.style.background = `linear-gradient(135deg, ${def.color}, #222)`; };
+      b.style.display = '';
+      // 각성 슬롯: 잠겨 있으면 흑백 + 해금 레벨 배지 (해금 동기 = 과금 동기)
+      const locked = !player.unlocked(i);
+      b.classList.toggle('locked', locked);
+      // 버튼 DOM 은 전투마다 재사용된다 — 이전 영웅의 쿨타임 채움과 ready 플래그를 지우지 않으면 그대로 남는다
+      b.querySelector('.cd').style.setProperty('--p', '0%'); b.dataset.ready = '0'; b.classList.remove('ready', 'ready-flash');
+      const lk = b.querySelector('.lock b'); if (lk && sk.unlock) lk.textContent = sk.unlock;
+    });
     $('btn-auto').classList.toggle('on', !!player.auto);
     this.setCombo(0); $('hud-ult').parentElement.classList.remove('full');
   }
   setWave() {}
+  /** 각성 해금 연출 — 레벨 구간을 넘겨 새 스킬이 열렸을 때 */
+  awakenBanner(list) {
+    if (!list || !list.length) return;
+    const sk = list[0];
+    this.waveBanner(`각성 — ${sk.name}`);
+    this.toast(`Lv.${sk.unlock} 각성! <b style="color:#ff9ad8">${sk.name}</b> 해금`, 'gold');
+    audio.play('jingle_win1', { vol: 0.7 });
+    if (list.length > 1) setTimeout(() => this.toast(`Lv.${list[1].unlock} 각성! <b style="color:#ff9ad8">${list[1].name}</b> 해금`, 'gold'), 900);
+  }
   setFloorLabel(floorNum, floor) {
     const clr = floor.rooms.filter((r) => r.cleared).length, tot = floor.rooms.length;
     $('hud-wave').textContent = `${floorNum}층`;
@@ -119,7 +140,7 @@ export class UI {
     const hp = Math.max(0, p.hp / p.maxHp); $('hud-hp').style.width = hp * 100 + '%'; $('hud-hp-txt').textContent = `${fmt(p.hp)} / ${fmt(p.maxHp)}`;
     $('hud-hp').style.background = hp < 0.3 ? 'linear-gradient(90deg,#ff2d55,#ff8aa0)' : 'linear-gradient(90deg,#2bd46a,#a6ff5a)';
     const ult = p.ult / p.ultMax; $('hud-ult').style.width = ult * 100 + '%'; $('hud-ult').parentElement.classList.toggle('full', ult >= 1);
-    this.skillBtns.forEach((btn, i) => { const sk = p.def.skills[i]; let pct; if (sk.ult) { pct = 1 - ult; btn.classList.toggle('ready', ult >= 1); } else pct = p.cds[i] / sk.cd; btn.querySelector('.cd').style.setProperty('--p', (pct * 100) + '%'); const wasReady = btn.dataset.ready === '1'; const ready = pct <= 0; if (ready && !wasReady && b.elapsed > 1) { btn.classList.remove('ready-flash'); void btn.offsetWidth; btn.classList.add('ready-flash'); audio.play('ui_pluck', { vol: 0.25 }); } btn.dataset.ready = ready ? '1' : '0'; });
+    this.skillBtns.forEach((btn, i) => { const sk = p.def.skills[i]; if (!sk || btn.classList.contains('locked')) return; let pct; if (sk.ult) { pct = 1 - ult; btn.classList.toggle('ready', ult >= 1); } else pct = p.cds[i] / sk.cd; btn.querySelector('.cd').style.setProperty('--p', (pct * 100) + '%'); const wasReady = btn.dataset.ready === '1'; const ready = pct <= 0; if (ready && !wasReady && b.elapsed > 1) { btn.classList.remove('ready-flash'); void btn.offsetWidth; btn.classList.add('ready-flash'); audio.play('ui_pluck', { vol: 0.25 }); } btn.dataset.ready = ready ? '1' : '0'; });
     if (b.boss && b.boss.alive) $('boss-hp').style.width = (b.boss.hp / b.boss.maxHp * 100) + '%';
     if (this.hurtT > 0) { this.hurtT -= dt; } $('hud-vignette').style.opacity = Math.max(hp < 0.3 ? 0.5 + Math.sin(performance.now() / 150) * 0.2 : 0, this.hurtT > 0 ? this.hurtT * 1.6 : 0);
   }
@@ -158,7 +179,7 @@ export class UI {
         else { const [nm, ic] = REWARD_LABEL[x.g.k] || [x.g.k, '']; d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(x.g.n)}</span><div class="nm">${nm}</div>`; audio.pick('coin', 2, { vol: 0.5 }); }
         loot.appendChild(d);
       }, 1200 + i * 220));
-      setTimeout(() => { const h = eco.hero(); const need = Math.max(1, (h.level ? require_(h.level) : 100)); $('result-exp').style.width = Math.min(100, h.exp / need * 100) + '%'; $('result-exp-txt').textContent = `Lv.${h.level} +${rw.exp}`; const pl = eco.passLevel; $('result-bp').style.width = ((eco.s.pass.xp % 100)) + '%'; $('result-bp-txt').textContent = `Lv.${pl} +${b.stage.rewards.bp}`; if (rw.ups) { this.toast(`영웅 레벨업! Lv.${h.level}`, 'gold'); audio.play('jingle_win1', { vol: 0.6 }); } if (rw.passUps) this.toast(`시즌 패스 Lv.${pl} 달성!`, 'gold'); }, 1500);
+      setTimeout(() => { const h = eco.hero(); const need = Math.max(1, (h.level ? require_(h.level) : 100)); $('result-exp').style.width = Math.min(100, h.exp / need * 100) + '%'; $('result-exp-txt').textContent = `Lv.${h.level} +${rw.exp}`; const pl = eco.passLevel; $('result-bp').style.width = ((eco.s.pass.xp % 100)) + '%'; $('result-bp-txt').textContent = `Lv.${pl} +${b.stage.rewards.bp}`; if (rw.ups) { this.toast(`영웅 레벨업! Lv.${h.level}`, 'gold'); audio.play('jingle_win1', { vol: 0.6 }); } if (rw.awakened && rw.awakened.length) setTimeout(() => this.awakenBanner(rw.awakened), 700); if (rw.passUps) this.toast(`시즌 패스 Lv.${pl} 달성!`, 'gold'); }, 1500);
       if (rw.first) setTimeout(() => this.toast(`첫 클리어 보상! 보석 +${b.stage.rewards.firstGems}`, 'gold'), 1800);
       const nx = eco.nextStage(); $('btn-result-next').querySelector('small').innerHTML = `<i class="ic ic-energy"></i> -${nx.energy}`;
       $('btn-result-double').disabled = false;

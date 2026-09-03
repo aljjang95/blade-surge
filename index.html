@@ -13,7 +13,9 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet" />
+  <!-- 웹폰트는 렌더를 막지 않는다. 회선이 느리거나 폰트 CDN 이 죽으면 부트가 통째로 그만큼 늦어졌다 (하네스 실측 0.9초 → 14.9초) -->
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all';this.onload=null" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet" /></noscript>
 </head>
 <body>
   <canvas id="gl"></canvas>
@@ -161,6 +163,8 @@
       <button class="skill-btn" data-skill="1"><img alt="" /><div class="cd"></div><span class="key">2</span></button>
       <button class="skill-btn" data-skill="2"><img alt="" /><div class="cd"></div><span class="key">3</span></button>
       <button class="skill-btn ult" data-skill="3"><img alt="" /><div class="cd"></div><span class="key">R</span></button>
+      <button class="skill-btn awk" data-skill="4"><img alt="" /><div class="cd"></div><span class="key">Q</span><div class="lock"><b>10</b></div></button>
+      <button class="skill-btn awk" data-skill="5"><img alt="" /><div class="cd"></div><span class="key">E</span><div class="lock"><b>20</b></div></button>
       <button class="dodge-btn" id="btn-dodge">회피</button>
       <button class="attack-btn" id="btn-attack"><span>공격</span></button>
     </div>

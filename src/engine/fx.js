@@ -223,7 +223,7 @@ export class FX {
     const tr = new WeaponTrail(getPoints, color, segs, life); this.scene.add(tr.mesh); this.trails.push(tr); return tr;
   }
   // ---------- 잔상 (스킨드 메시 스냅샷) ----------
-  ghost(root, color, { life = 0.45, opacity = 0.7 } = {}) {
+  ghost(root, color, { life = 0.45, opacity = 0.7, at = null } = {}) {
     if (this.lite) return;
     const parts = [];
     root.updateMatrixWorld(true);
@@ -237,6 +237,7 @@ export class FX {
     if (!parts.length) return;
     const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false });
     const grp = new THREE.Group(); for (const g of parts) { const mm = new THREE.Mesh(g, m); mm.userData.ownGeo = true; grp.add(mm); }
+    if (at) { root.getWorldPosition(_v); grp.position.set(at.x - _v.x, 0, at.z - _v.z); }   // 분신: 지오메트리가 월드 좌표로 구워져 있어 그룹 오프셋으로 옮긴다
     this.add(grp, life, (k) => { m.opacity = opacity * (1 - k); }, () => m.dispose());
   }
   // ========== GPT 생성 VFX 텍스처 기반 이펙트 ==========

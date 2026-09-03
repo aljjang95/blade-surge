@@ -181,6 +181,10 @@ b { font-weight: 900; }
 .skill-ic { width: 52px; height: 52px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,.2); background: #222; position: relative; }
 .skill-ic img { width: 100%; height: 100%; object-fit: cover; }
 .skill-ic span { position: absolute; bottom: 0; right: 0; background: rgba(0,0,0,.7); font-size: 9px; padding: 1px 4px; }
+.skill-ic.awk { box-shadow: 0 0 12px rgba(255,120,210,.4); }
+.skill-ic.awk.locked img { filter: grayscale(1) brightness(.4); }
+.skill-ic.awk.locked span { font-size: 8px; color: #ff9ad8; }
+.awk-note { flex: 1; min-width: 0; align-self: center; font-size: 11px; color: var(--muted); line-height: 1.4; }
 .equip-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-bottom: 10px; }
 .equip-slot { aspect-ratio: 1; min-width: 0; border-radius: 10px; background: rgba(255,255,255,.06); border: 1px dashed rgba(255,255,255,.2); display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; color: var(--muted); position: relative; overflow: hidden; }
 .equip-slot.has { border-style: solid; }
@@ -293,6 +297,19 @@ b { font-weight: 900; }
 .skill-btn[data-skill="1"] { right: 36px; bottom: 104px; }
 .skill-btn[data-skill="2"] { right: 108px; bottom: 138px; }
 .skill-btn.ult { right: 20px; bottom: 170px; width: 68px; height: 68px; border-radius: 50%; border-color: var(--gold); }
+/* 각성 슬롯 — 세 번째 열. 잠금 상태에선 흑백 + 해금 레벨 배지 */
+.skill-btn[data-skill="4"] { right: 176px; bottom: 44px; }
+.skill-btn[data-skill="5"] { right: 184px; bottom: 112px; }
+.skill-btn.awk { border-color: #ff9ad8; box-shadow: 0 4px 10px rgba(0,0,0,.5), 0 0 14px rgba(255,120,210,.45); }
+.skill-btn.awk::after { content: '각성'; position: absolute; right: 2px; bottom: 1px; font-size: 8px; font-weight: 900; color: #ffd4f0; text-shadow: 0 1px 2px #000; letter-spacing: -.5px; }
+.skill-btn .lock { display: none; }
+.skill-btn.locked { border-color: rgba(255,255,255,.22); box-shadow: none; opacity: .82; }
+.skill-btn.locked img { filter: grayscale(1) brightness(.42); }
+.skill-btn.locked .cd { background: rgba(0,0,0,.5); }
+.skill-btn.locked .lock { display: flex; position: absolute; inset: 0; align-items: center; justify-content: center; flex-direction: column; gap: 1px; font-size: 9px; color: #ffd4f0; font-weight: 900; }
+.skill-btn.locked .lock::before { content: '🔒'; font-size: 15px; filter: drop-shadow(0 1px 2px #000); }
+.skill-btn.locked .lock b { font-size: 10px; color: #fff; text-shadow: 0 1px 2px #000; }
+.skill-btn.locked .lock b::before { content: 'Lv.'; font-size: 8px; opacity: .8; }
 .skill-btn.ult.ready { animation: ultReady .8s ease-in-out infinite alternate; }
 @keyframes ultReady { from { box-shadow: 0 0 8px var(--gold) } to { box-shadow: 0 0 26px var(--gold), 0 0 50px rgba(255,170,40,.6) } }
 .skill-btn.ready-flash { animation: readyFlash .4s ease-out; }
@@ -509,6 +526,8 @@ b { font-weight: 900; }
   .skill-btn[data-skill="1"] { right: 30px; bottom: 98px; }
   .skill-btn[data-skill="2"] { right: 100px; bottom: 128px; }
   .skill-btn.ult { right: 22px; bottom: 164px; width: 64px; height: 64px; }
+  .skill-btn[data-skill="4"] { right: 164px; bottom: 40px; }
+  .skill-btn[data-skill="5"] { right: 172px; bottom: 104px; }
   .ult-name { font-size: 36px; top: 20%; }
   .wave-banner { font-size: 38px; top: 26%; }
 
@@ -544,6 +563,8 @@ b { font-weight: 900; }
   .attack-btn { width: 76px; height: 76px; }
   .skill-btn { width: 52px; height: 52px; }
   .skill-btn.ult { width: 58px; height: 58px; bottom: 148px; }
+  .skill-btn[data-skill="4"] { right: 150px; bottom: 36px; }
+  .skill-btn[data-skill="5"] { right: 156px; bottom: 94px; }
   .result-title { font-size: 30px; }
   .combo b { font-size: 38px; }
 }

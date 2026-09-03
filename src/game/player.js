@@ -7,15 +7,17 @@ import { applyLook } from './look.js';
 const _v = new THREE.Vector3();
 
 export class Player extends Actor {
-  constructor(game, gltf, def, stats, skillLevels = [1, 1, 1, 1], equip = {}) {
+  constructor(game, gltf, def, stats, skillLevels = [1, 1, 1, 1, 1, 1], equip = {}, heroLevel = 1) {
     super(game, gltf, { scale: 1.0 });
     this.def = def; this.stats = stats; this.skillLevels = skillLevels;
+    this.heroLevel = heroLevel;   // 각성 스킬 해금 판정용
     this.maxHp = stats.hp; this.hp = stats.hp;
     this.look = applyLook(this.model, def, equip);   // 장비 외형: 무기/방패 메시 + 등급 발광 + 궤적색
     this.auraT = 0;
     this.state = 'idle'; this.stateT = 0;
     this.comboIdx = 0; this.comboQueued = false; this.hitDone = false; this.comboWindow = 0;
-    this.cds = [0, 0, 0, 0]; this.ult = 0; this.ultMax = 100;
+    this.cds = def.skills.map(() => 0); this.ult = 0; this.ultMax = 100;
+    this.dr = 0; this.drT = 0; this.sanctum = null;   // 성역: 피해 감소
     this.buffs = { atk: 1, spd: 1, atkSpd: 1, t: 0 }; this.stormT = 0;
     this.auto = false; this.autoT = 0; this.magnetMul = 1;
     this.sprint = 0; this.sprintT = 0; this.lockTarget = null; this.perfectWindow = 0; this.perfectCd = 0;
@@ -41,7 +43,7 @@ export class Player extends Actor {
     // 회피
     if (input.consume('dodge') && this.state !== 'dodge' && this.state !== 'ult' && this.stun <= 0) return this.dodge(wantMove ? this.moveDir : null);
     // 스킬
-    for (let i = 0; i < 4; i++) if (input.consume('skill' + i)) { if (this.tryCastSkill(i)) return; }
+    for (let i = 0; i < this.def.skills.length; i++) if (input.consume('skill' + i)) { if (this.tryCastSkill(i)) return; }
     // 공격
     // 선입력: 콤보 중 누르거나 '누르고 있으면' 다음 타 예약. 이전엔 hitDone 뒤의 '탭'만 받아서 — 버튼을 누르고 있는 사람은 영원히 1타만 반복했다 (끊기는 느낌의 진범)
     if (input.consume('attack') || input.attackHeld) {
@@ -191,9 +193,13 @@ export class Player extends Actor {
       for (let i = 1; i <= 2; i++) { const at = this.pos.clone().addScaledVector(d, i * 2.6); this.game.after(0.1 * i, () => this.game.stormStrike(at, this.atk * 0.8)); }
     }
   }
+  /** 각성 스킬 해금 여부 — 레벨 구간(unlock)을 넘겼는가 */
+  unlocked(i) { const sk = this.def.skills[i]; return !!sk && (!sk.unlock || this.heroLevel >= sk.unlock); }
+
   // ---------------- 스킬 ----------------
   tryCastSkill(i) {
     const sk = this.def.skills[i]; if (!sk) return false;
+    if (!this.unlocked(i)) { this.game.ui.toast(`Lv.${sk.unlock} 각성으로 해금됩니다`, 'red'); audio.play('ui_error', { vol: 0.5 }); return false; }
     if (sk.ult) { if (this.ult < this.ultMax) { this.game.ui.toast('궁극기 게이지 부족', 'red'); audio.play('ui_error', { vol: 0.5 }); return false; } }
     else if (this.cds[i] > 0) return false;
     if (this.state === 'ult' || this.state === 'dodge' || this.stun > 0) return false;
@@ -224,7 +230,12 @@ export class Player extends Actor {
       return false;
     }
     // 비율 경감만. 정액 차감(dmg - def*0.5)은 레벨 1 방어 40 이 1층 잡몹 공격 18 을 통째로 먹어 모든 피격이 1 이 됐다 (hitTakenRatio 0 의 진범)
-    const red = Math.max(1, Math.round(dmg * (1 - Math.min(0.6, this.stats.def / (this.stats.def + 250)))));
+    let red = Math.max(1, Math.round(dmg * (1 - Math.min(0.6, this.stats.def / (this.stats.def + 250)))));
+    // 성역 안: 받는 피해 감소 (검성 각성 2)
+    if (this.dr > 0 && this.drT > 0 && (!this.sanctum || Math.hypot(this.pos.x - this.sanctum.pos.x, this.pos.z - this.sanctum.pos.z) < this.sanctum.r)) {
+      red = Math.max(1, Math.round(red * (1 - this.dr)));
+      this.game.fx.holyBurst(this.pos.clone().setY(1.1), { size: 2.6, life: 0.25 });
+    }
     this.hp -= red;
     this.flash(0xff4040, 0.15);
     this.game.fx.damage(this.pos, red, { kind: 'self' });
@@ -256,10 +267,11 @@ export class Player extends Actor {
     if (this.state === 'idle' || this.state === 'move') {
       // 스킬 우선: 적이 3마리 이상 뭉쳤을 때 광역기 우선
       const cluster = list.reduce((a, x) => a + (x.distTo(e) < 4.5 ? 1 : 0), 0);
-      for (let i = 3; i >= 0; i--) {
-        const sk = this.def.skills[i]; const ready = sk.ult ? this.ult >= this.ultMax : this.cds[i] <= 0;
+      for (let i = this.def.skills.length - 1; i >= 0; i--) {
+        const sk = this.def.skills[i]; if (!this.unlocked(i)) continue;
+        const ready = sk.ult ? this.ult >= this.ultMax : this.cds[i] <= 0;
         if (!ready) continue;
-        const wantCluster = sk.ult ? 3 : i === 0 ? 1 : 2;
+        const wantCluster = sk.ult ? 3 : sk.awaken ? 2 : i === 0 ? 1 : 2;
         if (cluster >= wantCluster && d < (this.def.ranged ? 11 : 8)) { this.game.input.press('skill' + i); return out; }
       }
       if (d > want + 0.4) {
@@ -307,11 +319,12 @@ export class Player extends Actor {
     if (this.perfectWindow > 0) this.perfectWindow -= dt;
     if (this.stormT > 0) { this.stormT -= dt; this.game.fx.aura(this.pos, 0x7fd9ff, 1.5); if (this.stormT <= 0 && this.buffs.t <= 0) this.tintEmissive = null; }
     if (this.perfectCd > 0) this.perfectCd -= dt;
+    if (this.drT > 0) { this.drT -= dt; if (this.drT <= 0) { this.dr = 0; this.sanctum = null; } }
     if (this.comboResume) { this.comboResume.t -= dt; if (this.comboResume.t <= 0) this.comboResume = null; }
     if (this.look.aura && this.alive) { this.auraT -= dt; if (this.auraT <= 0) { this.auraT = this.look.enhMax >= 15 ? 0.12 : 0.22; this.game.fx.aura(this.pos, this.look.aura, 1); } }   // +10 이상 강화: 잔불 오라
     // 락온: 조준 대상이 계속 바뀌지 않도록 유지
     if (this.lockTarget && (!this.lockTarget.alive || this.distTo(this.lockTarget) > 11)) this.lockTarget = null;
-    for (let i = 0; i < 4; i++) if (this.cds[i] > 0) this.cds[i] = Math.max(0, this.cds[i] - dt);
+    for (let i = 0; i < this.cds.length; i++) if (this.cds[i] > 0) this.cds[i] = Math.max(0, this.cds[i] - dt);   // 4로 박아두면 각성 슬롯(4·5)이 영원히 안 돌아온다
     if (this.buffs.t > 0) { this.buffs.t -= dt; this.game.fx.aura(this.pos, 0xff3030, 2); if (this.buffs.t <= 0) { this.buffs.atk = 1; this.buffs.spd = 1; this.buffs.atkSpd = 1; this.tintEmissive = null; } }
     if (!this.alive) return;
     this.stateT += dt;

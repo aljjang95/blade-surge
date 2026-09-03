@@ -15,7 +15,7 @@ export class Economy {
   fresh() {
     return {
       created: now(), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: now(), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
-      heroes: { knight: { level: 1, exp: 0, star: 1, shards: 0, skills: [1, 1, 1, 1], equip: { weapon: null, armor: null, ring: null, boots: null } } },
+      heroes: { knight: { level: 1, exp: 0, star: 1, shards: 0, skills: [1, 1, 1, 1, 1, 1], equip: { weapon: null, armor: null, ring: null, boots: null } } },
       selected: 'knight', inventory: [], invSeq: 1,
       progress: { unlocked: 1, stars: {} }, // stars['1-1'] = 3
       pity: 0, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
@@ -24,7 +24,12 @@ export class Economy {
       quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto' }, limitedStart: now(),
     };
   }
-  load() { try { const raw = localStorage.getItem(KEY); if (raw) { const s = JSON.parse(raw); return { ...this.fresh(), ...s }; } } catch (e) {} return this.fresh(); }
+  load() { try { const raw = localStorage.getItem(KEY); if (raw) { const s = JSON.parse(raw); return this.migrate({ ...this.fresh(), ...s }); } } catch (e) {} return this.fresh(); }
+  /** 구 세이브 보정 — 각성 슬롯이 늘어나면 스킬 레벨 배열도 늘려 준다 */
+  migrate(s) {
+    for (const id in s.heroes) { const h = s.heroes[id]; const need = (HEROES[id]?.skills.length) || 4; if (!Array.isArray(h.skills)) h.skills = []; while (h.skills.length < need) h.skills.push(1); }
+    return s;
+  }
   save() { try { localStorage.setItem(KEY, JSON.stringify(this.s)); } catch (e) {} }
   reset() { localStorage.removeItem(KEY); this.s = this.fresh(); this.emit(); }
 
@@ -88,7 +93,7 @@ export class Economy {
   levelUpHero(id) { const h = this.hero(id); const cost = levelGold(h.level); if (this.s.gold < cost || h.level >= 80) return false; this.s.gold -= cost; h.level++; this.emit(); return true; }
   promoteHero(id) { const h = this.hero(id); const need = starShards(h.star); if (h.shards < need || h.star >= 5) return false; h.shards -= need; h.star++; this.emit(); return true; }
   upgradeSkill(id, i) { const h = this.hero(id); const cost = skillUpGold(h.skills[i]); if (this.s.gold < cost || h.skills[i] >= 10) return false; this.s.gold -= cost; h.skills[i]++; this.emit(); return true; }
-  grantHero(id) { if (this.s.heroes[id]) { this.s.heroes[id].shards += 10; return { dup: true }; } this.s.heroes[id] = { level: 1, exp: 0, star: 1, shards: 0, skills: [1, 1, 1, 1], equip: { weapon: null, armor: null, ring: null, boots: null } }; return { dup: false }; }
+  grantHero(id) { if (this.s.heroes[id]) { this.s.heroes[id].shards += 10; return { dup: true }; } this.s.heroes[id] = { level: 1, exp: 0, star: 1, shards: 0, skills: [1, 1, 1, 1, 1, 1], equip: { weapon: null, armor: null, ring: null, boots: null } }; return { dup: false }; }
   // ---------- 장비 ----------
   addItem(rarity, slot = null) {
     slot = slot || SLOTS[Math.floor(Math.random() * SLOTS.length)];
@@ -137,10 +142,14 @@ export class Economy {
     for (const l of fieldLoot) loot.push(l);
     if (double && Math.random() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE))); }
     if (stage.boss && Math.random() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
+    const prevLv = this.hero(s.selected).level;
     const ups = this.addHeroExp(s.selected, r.exp * m);
+    const nowLv = this.hero(s.selected).level;
+    // 이번 판에 넘긴 각성 구간
+    const awakened = (HEROES[s.selected].skills || []).filter((k) => k.unlock && prevLv < k.unlock && nowLv >= k.unlock);
     const passUps = this.addPassXp(r.bp);
     s.quests.stages++; this.emit();
-    return { got, loot, ups, passUps, first, exp: r.exp * m };
+    return { got, loot, ups, passUps, first, exp: r.exp * m, awakened };
   }
   sweep(stage) { const s = this.s; if (s.sweep <= 0 || (s.progress.stars[this.stageKey(stage.ch, stage.st)] || 0) < 3) return null; if (!this.spendEnergy(stage.energy)) return null; s.sweep--; return this.completeStage(stage, 3); }
   // ---------- 가챠 ----------

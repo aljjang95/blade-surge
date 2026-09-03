@@ -26,6 +26,9 @@ export const HEROES = {
       { id: 'shield_bash', name: '철벽 강타', icon: '/img/sk_knight_2.webp', cd: 8,  anim: 'Block_Attack', castAt: 0.35, dmg: 2.4, desc: '방패로 지면을 강타해 주변 적을 기절시키고 밀쳐냄' },
       { id: 'judgment',    name: '심판의 빛', icon: '/img/sk_knight_3.webp', cd: 12, anim: 'Spellcast_Raise', castAt: 0.5, dmg: 2.0, desc: '주변 모든 적에게 빛의 기둥이 낙하' },
       { id: 'dragon_slash', name: '용살검 · 천공', icon: '/img/sk_knight_ult.webp', ult: true, anim: '2H_Melee_Attack_Chop', castAt: 0.55, dmg: 12, desc: '하늘을 가르는 일격. 전방 광역에 압도적인 피해' },
+      // ── 각성 (레벨 구간 해금) ──
+      { id: 'chain_bind',  name: '성쇄 · 결박', icon: '/img/sk_kn_a1.webp', cd: 11, unlock: 10, awaken: 1, anim: 'Spellcast_Raise', castAt: 0.35, dmg: 3.0, desc: '빛의 사슬이 주변 적을 끌어와 2초간 결박한다. 사슬이 끊기며 폭발' },
+      { id: 'sanctuary',   name: '천상의 성역', icon: '/img/sk_kn_a2.webp', cd: 22, unlock: 20, awaken: 2, anim: 'Spellcast_Raise', castAt: 0.4,  dmg: 0.9, desc: '7초간 성역 전개. 적은 밖으로 나갈 수 없고 지속 피해, 나는 받는 피해 35% 감소' },
     ],
   },
   barbarian: {
@@ -46,6 +49,9 @@ export const HEROES = {
       { id: 'quake',      name: '대지 분쇄', icon: '/img/sk_barb_2.webp', cd: 10, anim: '2H_Melee_Attack_Chop', castAt: 0.5, dmg: 4.0, desc: '땅을 내리쳐 충격파로 광역 피해와 넉백' },
       { id: 'berserk',    name: '광폭화',   icon: '/img/sk_barb_3.webp', cd: 16, anim: 'Cheer', castAt: 0.2, dmg: 0, desc: '8초간 공격력 +60%, 공격속도 +30%' },
       { id: 'hell_axe',   name: '지옥의 도끼', icon: '/img/sk_barb_ult.webp', ult: true, anim: 'Jump_Full_Short', castAt: 0.5, dmg: 14, desc: '불타는 거대 도끼를 낙하시켜 전장을 불태움' },
+      // ── 각성 (레벨 구간 해금) ──
+      { id: 'bull_rush',   name: '광란의 돌진', icon: '/img/sk_bb_a1.webp', cd: 9,  unlock: 10, awaken: 1, anim: '2H_Melee_Attack_Stab', castAt: 0.1, dmg: 2.4, desc: '적을 앞으로 밀어 모으며 돌진하고, 벽처럼 뭉친 적을 끝에서 폭발시킨다' },
+      { id: 'magma_zone',  name: '용암 분출 · 진', icon: '/img/sk_bb_a2.webp', cd: 24, unlock: 20, awaken: 2, anim: '2H_Melee_Attack_Chop', castAt: 0.45, dmg: 1.8, desc: '주변에 용암 기둥이 차례로 솟아 적을 띄우고, 갈라진 균열이 9초간 남아 지진다' },
     ],
   },
   mage: {
@@ -66,6 +72,9 @@ export const HEROES = {
       { id: 'chain',      name: '번개 사슬',  icon: '/img/sk_mage_2.webp', cd: 9,  anim: 'Spellcast_Raise', castAt: 0.45, dmg: 2.2, desc: '적들을 연쇄하는 번개. 최대 6명 타격' },
       { id: 'blizzard',   name: '빙결 폭풍',  icon: '/img/sk_mage_3.webp', cd: 13, anim: 'Spellcast_Long', castAt: 0.5, dmg: 0.8, ticks: 6, desc: '주변에 얼음 폭풍을 일으켜 지속 피해와 둔화' },
       { id: 'meteor',     name: '메테오 스톰', icon: '/img/sk_mage_ult.webp', ult: true, anim: 'Spellcast_Raise', castAt: 0.5, dmg: 4.5, ticks: 5, desc: '하늘에서 운석이 쏟아져 전장을 초토화' },
+      // ── 각성 (레벨 구간 해금) ──
+      { id: 'arc_reflect', name: '프리즘 난반사', icon: '/img/sk_mg_a1.webp', cd: 10, unlock: 10, awaken: 1, anim: 'Spellcast_Shoot', castAt: 0.35, dmg: 1.6, desc: '빛의 창이 적과 벽을 튕기며 최대 12회 반사. 반사마다 피해가 커진다' },
+      { id: 'chrono_seal', name: '시간 봉인',   icon: '/img/sk_mg_a2.webp', cd: 26, unlock: 20, awaken: 2, anim: 'Spellcast_Raise', castAt: 0.4, dmg: 0.6, desc: '주변 적의 시간을 3초간 멈춘다. 멈춘 동안 준 피해가 각인되어 해제 순간 터진다' },
     ],
   },
   rogue: {
@@ -87,6 +96,9 @@ export const HEROES = {
       { id: 'poison_bomb', name: '독무 폭탄',   icon: '/img/sk_rogue_2.webp', cd: 9,  anim: 'Throw', castAt: 0.45, dmg: 0.6, ticks: 8, desc: '독 연막을 투척해 지속 피해' },
       { id: 'flurry',      name: '환영 난무',   icon: '/img/sk_rogue_3.webp', cd: 11, anim: 'Dualwield_Melee_Attack_Stab', castAt: 0.2, dmg: 0.7, ticks: 8, desc: '잔상을 남기며 8연속 찌르기' },
       { id: 'thousand',    name: '천 개의 칼날', icon: '/img/sk_rogue_ult.webp', ult: true, anim: 'Spellcast_Raise', castAt: 0.4, dmg: 1.4, ticks: 10, desc: '하늘에서 수천의 칼날이 쏟아짐' },
+      // ── 각성 (레벨 구간 해금) ──
+      { id: 'shadow_mark', name: '그림자 표식', icon: '/img/sk_rg_a1.webp', cd: 10, unlock: 10, awaken: 1, anim: 'Dualwield_Melee_Attack_Stab', castAt: 0.3, dmg: 1.5, desc: '최대 8명에게 표식을 새기고 분신이 차례로 순간이동해 벤다. 표식은 서로를 끌어당기며 터진다' },
+      { id: 'void_step',   name: '공허 보법',   icon: '/img/sk_rg_a2.webp', cd: 25, unlock: 20, awaken: 2, anim: 'Dodge_Forward', castAt: 0.1, dmg: 1.2, desc: '공허에 잠겨 무적이 된 채 적들 사이를 12번 순간이동하며 베고, 마지막 적에서 터져 나온다' },
     ],
   },
 };

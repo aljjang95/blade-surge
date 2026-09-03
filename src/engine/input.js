@@ -63,6 +63,7 @@ export class Input {
       if (e.code === 'KeyJ' || e.code === 'Space') { this.attackHeld = true; this.press('attack'); }
       if (e.code === 'KeyK' || e.code === 'ShiftLeft') this.press('dodge');
       if (e.code === 'Digit1') this.press('skill0'); if (e.code === 'Digit2') this.press('skill1'); if (e.code === 'Digit3') this.press('skill2'); if (e.code === 'KeyR' || e.code === 'Digit4') this.press('skill3');
+      if (e.code === 'KeyQ' || e.code === 'Digit5') this.press('skill4'); if (e.code === 'KeyE' || e.code === 'Digit6') this.press('skill5');
     });
     window.addEventListener('keyup', (e) => { this.keys[e.code] = false; if (e.code === 'KeyJ' || e.code === 'Space') this.attackHeld = false; });
   }
