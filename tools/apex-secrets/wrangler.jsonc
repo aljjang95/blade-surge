@@ -10,6 +10,8 @@
   "secrets_store_secrets": [
     { "binding": "APEX_GATE_SHA256", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_GATE_SHA256" },
     { "binding": "GITHUB_DEPLOY_KEY_BLADE_SURGE_B64", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "GITHUB_DEPLOY_KEY_BLADE_SURGE_B64" },
+    { "binding": "GITHUB_DEPLOY_KEY_TLL_3D_MODEL_B64", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "GITHUB_DEPLOY_KEY_TLL_3D_MODEL_B64" },
+    { "binding": "TLL_ADMIN_KEY", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "TLL_ADMIN_KEY" },
     { "binding": "RUNWARE_API_KEY", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "RUNWARE_API_KEY" },
     { "binding": "FISH_API_KEY", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "FISH_API_KEY" },
     { "binding": "ADMIN_API_TOKEN", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "ADMIN_API_TOKEN" },

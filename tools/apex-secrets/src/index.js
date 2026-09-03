@@ -1,7 +1,7 @@
 // apex-secrets — Secrets Store 값을 세션에 건네는 워커.
 // GET /v1/secrets?names=A,B   Authorization: Bearer <CF 토큰>
 // 토큰의 sha256 이 APEX_GATE_SHA256 과 다르면 404 (존재 자체를 숨긴다). 값은 로그에 남기지 않는다.
-const EXPOSABLE = ['GITHUB_DEPLOY_KEY_BLADE_SURGE_B64', 'FISH_API_KEY', 'RUNWARE_API_KEY', 'ADMIN_API_TOKEN', 'TAVILY_API_KEY', 'PEXELS_API_KEY', 'PIXABAY_API_KEY', 'BROWSERBASE_API_KEY', 'DEEPSEEK_API_KEY', 'GLM_API_KEY'];
+const EXPOSABLE = ['GITHUB_DEPLOY_KEY_BLADE_SURGE_B64', 'GITHUB_DEPLOY_KEY_TLL_3D_MODEL_B64', 'TLL_ADMIN_KEY', 'FISH_API_KEY', 'RUNWARE_API_KEY', 'ADMIN_API_TOKEN', 'TAVILY_API_KEY', 'PEXELS_API_KEY', 'PIXABAY_API_KEY', 'BROWSERBASE_API_KEY', 'DEEPSEEK_API_KEY', 'GLM_API_KEY'];
 
 async function sha256(s) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join(''); }
 
