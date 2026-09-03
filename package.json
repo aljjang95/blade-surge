@@ -7,12 +7,14 @@
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview --host",
-    "deploy": "vite build && wrangler deploy"
+    "deploy": "vite build && wrangler deploy",
+    "metrics": "node tools/metrics.mjs"
   },
   "dependencies": {
     "three": "^0.170.0"
   },
   "devDependencies": {
+    "playwright": "^1.62.1",
     "vite": "^6.0.0",
     "wrangler": "^4.0.0"
   }
