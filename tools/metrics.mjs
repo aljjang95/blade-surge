@@ -104,25 +104,53 @@ await page.waitForTimeout(1200);
 // 결정적 스텝으로 전환 + AUTO
 await page.evaluate(() => { window.app.testPause = true; window.app.battle.player.auto = true; });
 
+// 워밍업: 이 층 로스터의 적 타입을 전부 한 번씩 그려 셰이더를 미리 컴파일한다.
+// SwiftShader 는 새 프로그램 변종을 처음 만나는 프레임에서 수 초~수십 초를 멈추는데, 그건 렌더 비용이 아니라 컴파일 비용이다.
+// 밀도 복구 후 한 층이 178초 호출 상한을 넘겨 측정이 불가능해져 넣었다. 측정 창 밖이라 avgFrameMs 는 기준선(컴파일 포함)보다 낮게 나온다.
+const warm = await page.evaluate(() => {
+  const app = window.app, b = app.battle, R = b.stage.rosterFor('normal');
+  const types = [...new Set([...R.trash, ...R.ranged, ...R.elite, b.stage.chapter.boss])];
+  const before = b.enemies.length;
+  const made = types.map((t) => b.spawnEnemy(t, null, b.world.startRoom)).filter(Boolean);
+  const auto = b.player.auto; b.player.auto = false; b.input.enabled = false;
+  const t0 = performance.now();
+  for (let i = 0; i < 40; i++) app.step(1 / 60, i === 20 || i === 39);
+  const ms = performance.now() - t0;
+  for (const e of made) { e.dispose(); const i = b.enemies.indexOf(e); if (i >= 0) b.enemies.splice(i, 1); }
+  for (const p of b.projectiles) if (p.mesh) b.scene.remove(p.mesh);
+  b.projectiles.length = 0; b.boss = null; app.ui.showBoss('', false); b.fx.clearAll(); b.timers.length = 0; b.pending.length = 0;
+  b.peakAlive = 0; b.elapsed = 0; b.kills = 0; b.combo = 0; b.maxCombo = 0; b.dmgDealt = 0;
+  b.player.hp = b.player.maxHp; b.player.kb.set(0, 0, 0); b.player.stun = 0;
+  b.player.auto = auto; b.input.enabled = true;
+  return { types: made.length, leftover: b.enemies.length - before, ms: Math.round(ms) };
+});
+console.log(`워밍업: 적 ${warm.types}종 셰이더 컴파일 ${warm.ms}ms${warm.leftover ? ' (잔여 ' + warm.leftover + ')' : ''}`);
+
 const DT = 1 / 60, CHUNK = 120;   // 한 번에 2초씩 밟는다
+// 렌더는 청크 RENDER_EVERY 개마다 한 번. SwiftShader 는 난전 프레임 하나에 벽시계 5~30초를 태운다(JS 쪽 frameMs 에는 안 잡힌다 —
+// 래스터는 GPU 프로세스에서 비동기로 돈다). 밀도 복구 후 매 청크 렌더로는 한 층이 bash 178초 상한을 넘겨 측정이 끊겼다.
+const RENDER_EVERY = Number(arg('--render-every', '3'));
 const maxChunks = Math.ceil(FLOOR_TIMEOUT_SEC / (CHUNK * DT));
-let shots = 0, sawBossFight = false, prevLoot = 0, dryFrames = 0, longestDry = 0;
+let shots = 0, denseShot = false, sawBossFight = false, prevLoot = 0, dryFrames = 0, longestDry = 0;
 const frameMs = [], aliveSeen = [], drawCalls = [];
 const beats = { explore: false, encounter: false, vacuum: false, drop: false, setProgress: false, bossFound: false, bossKill: false, floorClear: false };
 let s = null, gameSec = 0, hpLow = 0;
 
 for (let k = 0; k < maxChunks; k++) {
-  const r = await page.evaluate(({ dt, n }) => {
+  const doRender = k % RENDER_EVERY === 0 || (!denseShot && s && s.alive >= 10);   // 무리가 깔린 직후 청크는 반드시 그린다
+  const r = await page.evaluate(({ dt, n, doRender }) => {
     const app = window.app, t = [];
     const info = app.renderer?.r?.info;
     if (info) { info.autoReset = false; info.reset(); }
-    for (let i = 0; i < n; i++) { const a = performance.now(); app.step(dt, i === n - 1); t.push(performance.now() - a); }
+    for (let i = 0; i < n; i++) { const a = performance.now(); app.step(dt, doRender && i === n - 1); t.push(performance.now() - a); }
     const b = app.battle, W = b.world;
     return {
       frames: t,
       calls: app.renderer?.r?.info?.render?.calls ?? 0,
+      rendered: doRender,
       active: b.active,
       alive: b.enemies.filter((e) => e.alive).length,
+      peak: b.peakAlive ?? 0,   // 게임 쪽 프레임 단위 누적 — 2초 샘플링이 놓치는 피크
       kills: b.kills,
       loot: b.drops?.loot?.length ?? 0,
       hp: b.player.hp, maxHp: b.player.maxHp,
@@ -133,10 +161,10 @@ for (let k = 0; k < maxChunks; k++) {
       inBoss: b.curRoom?.type === 'boss',
       sets: (() => { try { return app.eco.setCount?.() ?? 0; } catch { return 0; } })(),
     };
-  }, { dt: DT, n: CHUNK });
+  }, { dt: DT, n: CHUNK, doRender });
 
   frameMs.push(...r.frames);
-  drawCalls.push(r.calls);
+  if (r.rendered) drawCalls.push(r.calls);
   aliveSeen.push(r.alive);
   gameSec += CHUNK * DT;
 
@@ -154,11 +182,14 @@ for (let k = 0; k < maxChunks; k++) {
   prevLoot = r.loot;
   if (r.maxHp > 0) hpLow = Math.max(hpLow, 1 - r.hp / r.maxHp);   // 이번 층에서 가장 많이 깎였던 지점
 
-  // 스크린샷: 초반 / 보스 발견 / 종료
-  if ((k === 3 || (r.bossFound && shots === 1)) && shots < 2) {
-    await page.screenshot({ path: resolve(PROJ, SHOTS, `s${shots}.png`) }); shots++;
+  // 무리가 실제로 깔린 순간 — 밀도 회전의 게이트 B 는 이 한 장으로 본다
+  if (!denseShot && r.rendered && r.alive >= 10) { denseShot = true; const a = Date.now(); await page.screenshot({ path: resolve(PROJ, SHOTS, 'dense.png') }); if (args.includes('--verbose')) console.error(`  shot dense ${Date.now() - a}ms`); }
+  // 스크린샷: 보스 발견 / 종료 (초반 컷은 dense.png 가 대신한다 — 스크린샷 한 장이 SwiftShader 에서 5~30초다)
+  if (r.rendered && r.bossFound && shots < 1) {
+    const a = Date.now(); await page.screenshot({ path: resolve(PROJ, SHOTS, `s${shots}.png`) }); shots++; if (args.includes('--verbose')) console.error(`  shot s${shots - 1} ${Date.now() - a}ms`);
   }
   s = r;
+  if (args.includes('--verbose')) console.error(`[${Math.round(gameSec)}s]${r.rendered ? 'R' : ' '} alive=${r.alive} peak=${r.peak} kills=${r.kills} rooms=${r.clr}/${r.rooms} hp=${Math.round(r.hp)} calls=${r.calls} chunkMs=${Math.round(r.frames.reduce((a, b) => a + b, 0))} maxMs=${Math.round(Math.max(...r.frames))} wall=${Math.round((Date.now() - t0) / 1000)}s`);
   if (!r.active) break;
 }
 await page.screenshot({ path: resolve(PROJ, SHOTS, `s${shots}.png`) });
@@ -170,7 +201,8 @@ const m = {
   bootMs,
   floorClearSec: round(gameSec, 1),
   killsPerFloor: s.kills,
-  maxAliveSeen: Math.max(...aliveSeen),
+  maxAliveSeen: Math.max(s.peak, ...aliveSeen),
+  _maxAliveSampled: Math.max(...aliveSeen),
   dropsPerFloor: prevLoot,
   longestDryStreakSec: round(longestDry * DT, 1),
   hitTakenRatio: round(hpLow, 3),

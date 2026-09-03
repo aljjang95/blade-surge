@@ -195,13 +195,19 @@ export class Player extends Actor {
         const wantCluster = sk.ult ? 3 : i === 0 ? 1 : 2;
         if (cluster >= wantCluster && d < (this.def.ranged ? 11 : 8)) { this.game.input.press('skill' + i); return out; }
       }
-      if (d > want + 0.4) { const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; }
+      if (d > want + 0.4) {
+        const W = this.game.world; const er = W && W.roomAt(e.pos.x, e.pos.z), pr = W && W.roomAt(this.pos.x, this.pos.z);
+        const flow = (W && er && er !== pr) ? W.buildFlow(er.x, er.z) : null;   // 다른 방의 적: 직선은 벽에 박힌다
+        const fd = flow && W.flowDir(flow, this.pos.x, this.pos.z);
+        if (fd) { out.x = fd[0]; out.y = fd[1]; }
+        else { const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; }
+      }
       else if (this.def.ranged && d < want - 3) { const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = -dx / l; out.y = -dz / l; }
       else this.game.input.press('attack');
       // 예고 회피
       const threat = list.find((x) => x.telegraph > 0 && this.distTo(x) < 4);
       if (threat && Math.random() < dt * 3) this.game.input.press('dodge');
-    } else if (this.state === 'attack' && this.hitDone) this.game.input.press('attack');
+    } else if (this.state === 'attack' && this.hitDone && d < want + 1.5) this.game.input.press('attack');   // 사거리 밖(물러서는 원거리 몹)이면 콤보를 끊고 이동으로 돌아간다 — 안 끊으면 허공 콤보가 영원히 이어진다
     return out;
   }
   /** 적이 없으면 다음 목표 방으로 이동 (보스 발견 시 보스방 우선) */

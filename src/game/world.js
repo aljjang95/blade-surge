@@ -130,6 +130,15 @@ export class Floor {
     this.mask = new Uint8Array(this.cols * this.rows);
     for (const r of rects) this.fillRect(r, 1);
     this.bounds = { minX, maxX, minZ, maxZ };
+    // 길찾기용 침식 마스크 — 8이웃이 전부 바닥인 셀만. 배우 반경(≈0.56)이 셀 반폭(0.5)보다 커서
+    // 벽 옆 셀 중심으로 유도하면 반경이 벽에 걸려 영원히 제자리걸음한다 (밀도 복구 회전에서 실측)
+    this.inner = new Uint8Array(this.cols * this.rows);
+    for (let z = 1; z < this.rows - 1; z++) for (let x = 1; x < this.cols - 1; x++) {
+      const i = z * this.cols + x; if (!this.mask[i]) continue;
+      let ok = 1;
+      for (let dz = -1; dz <= 1 && ok; dz++) for (let dx = -1; dx <= 1; dx++) if (!this.mask[i + dz * this.cols + dx]) { ok = 0; break; }
+      this.inner[i] = ok;
+    }
   }
   fillRect(r, v) {
     const x0 = Math.floor((r.x - r.w / 2 - this.minX) / CELL), x1 = Math.ceil((r.x + r.w / 2 - this.minX) / CELL);
@@ -146,6 +155,8 @@ export class Floor {
   resolve(fromX, fromZ, toX, toZ, radius = 0.55) {
     const ok = (x, z) => this.walkable(x + radius, z) && this.walkable(x - radius, z) && this.walkable(x, z + radius) && this.walkable(x, z - radius);
     if (ok(toX, toZ)) return [toX, toZ];
+    // 이미 벽에 반경만큼 파묻혀 있으면(넉백·대시 끝) 어떤 이동도 거부되어 영원히 갇힌다 — 중심이 바닥이면 빠져나오게 둔다
+    if (!ok(fromX, fromZ) && this.walkable(toX, toZ)) return [toX, toZ];
     if (ok(toX, fromZ)) return [toX, fromZ];   // X 만 이동 (벽 따라 미끄러짐)
     if (ok(fromX, toZ)) return [fromX, toZ];   // Z 만 이동
     return [fromX, fromZ];
@@ -168,7 +179,7 @@ export class Floor {
     if (sx < 0 || sz < 0 || sx >= this.cols || sz >= this.rows) return null;
     const q = new Int32Array(N); let head = 0, tail = 0;
     const si = sz * this.cols + sx;
-    if (this.mask[si] !== 1) return null;
+    if (this.inner[si] !== 1) return null;
     dist[si] = 0; q[tail++] = si;
     while (head < tail) {
       const cur = q[head++]; const cz = (cur / this.cols) | 0, cx = cur - cz * this.cols; const d = dist[cur];
@@ -176,7 +187,7 @@ export class Floor {
         const nx = cx + (k === 0 ? 1 : k === 1 ? -1 : 0), nz = cz + (k === 2 ? 1 : k === 3 ? -1 : 0);
         if (nx < 0 || nz < 0 || nx >= this.cols || nz >= this.rows) continue;
         const ni = nz * this.cols + nx;
-        if (dist[ni] !== -1 || this.mask[ni] !== 1) continue;
+        if (dist[ni] !== -1 || this.inner[ni] !== 1) continue;
         dist[ni] = d + 1; q[tail++] = ni;
       }
     }
@@ -187,18 +198,20 @@ export class Floor {
     if (!flow) return null;
     const cx = Math.floor((wx - this.minX) / CELL), cz = Math.floor((wz - this.minZ) / CELL);
     if (cx < 1 || cz < 1 || cx >= this.cols - 1 || cz >= this.rows - 1) return null;
-    let best = -1, bx = 0, bz = 0;
     const here = flow[cz * this.cols + cx];
-    if (here < 0) return null;
+    let best = -1, bx = 0, bz = 0;
     for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
       if (!dx && !dz) continue;
       const d = flow[(cz + dz) * this.cols + (cx + dx)];
       if (d < 0) continue;
       if (best === -1 || d < best) { best = d; bx = dx; bz = dz; }
     }
-    if (best === -1 || best >= here) return null;
-    const l = Math.hypot(bx, bz) || 1;
-    return [bx / l, bz / l];
+    // 벽에 붙은 셀(here<0)에 서 있으면 이웃 어느 셀로든 빠져나오고, 아니면 더 가까운 셀로만
+    if (best === -1 || (here >= 0 && best >= here)) return null;
+    // 다음 셀의 중심을 향한다 — 셀 방향만 주면 옆벽에 반경만큼 걸린 채 제자리걸음한다
+    const tx = this.minX + (cx + bx + 0.5) * CELL, tz = this.minZ + (cz + bz + 0.5) * CELL;
+    const vx = tx - wx, vz = tz - wz; const l = Math.hypot(vx, vz) || 1;
+    return [vx / l, vz / l];
   }
   get remaining() { return this.rooms.filter((r) => !r.cleared && r.type !== ROOM_TYPE.START).length; }
 }

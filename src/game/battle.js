@@ -34,7 +34,7 @@ export class Battle {
     this.combo = 0; this.comboT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0;
     this.wave = 0; this.waveT = 0; this.stage = null; this.boss = null; this.result = null; this.revived = 0;
     this.pending = []; // 지속 스폰 큐
-    this.maxAlive = 34;
+    this.maxAlive = 34; this.peakAlive = 0;
   }
   after(sec, fn) { this.timers.push({ t: sec, fn }); }
   rollDrop(table) {
@@ -47,7 +47,7 @@ export class Battle {
   async start(stage, heroId, heroState, equipBonus) {
     this.stage = stage; this.active = true; this.paused = false; this.result = null; this.revived = 0;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear();
-    this.combo = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null;
+    this.combo = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0;
     const def = HEROES[heroId]; const stats = heroStats(def, heroState, equipBonus);
     this.setBonus = equipBonus.active || [];
 
@@ -78,18 +78,56 @@ export class Battle {
   }
 
   // ---------------- 방 진입 / 클리어 ----------------
+  /** 방 정원 — 방 면적으로 뽑는다. 몹몰이는 무리가 보여야 성립하므로 작은 방도 두 자릿수 */
+  rosterSize(room) {
+    if (room.type === ROOM_TYPE.BOSS || room.type === ROOM_TYPE.START) return 0;
+    const area = room.w * room.h;   // 변 14~24 → 196~576
+    const base = room.type === ROOM_TYPE.ELITE ? 6 + Math.round(area / 50)
+      : room.type === ROOM_TYPE.TREASURE ? 4 + Math.round(area / 70)
+      : 8 + Math.round(area / 40);
+    return Math.min(24, base + Math.floor(this.stage.idx * 0.45));
+  }
   roomRoster(room) {
     const R = this.stage.rosterFor(room.type);
-    const n = room.type === ROOM_TYPE.BOSS ? 0
-      : room.type === ROOM_TYPE.ELITE ? 5 + Math.floor(this.stage.idx * 0.35)
-      : room.type === ROOM_TYPE.TREASURE ? 4 + Math.floor(this.stage.idx * 0.25)
-      : 6 + Math.floor(this.stage.idx * 0.45);
+    // 증원으로 이미 달려나간 만큼은 정원에서 뺀다 (총량 보존)
+    const n = Math.max(0, this.rosterSize(room) - (room.reinforced || 0));
     const list = [];
-    for (let i = 0; i < Math.min(18, n); i++) list.push((i % 6 === 5 ? R.ranged : R.trash)[(i * 3 + room.id) % (i % 6 === 5 ? R.ranged.length : R.trash.length)]);
+    for (let i = 0; i < n; i++) list.push((i % 6 === 5 ? R.ranged : R.trash)[(i * 3 + room.id) % (i % 6 === 5 ? R.ranged.length : R.trash.length)]);
     if (room.type === ROOM_TYPE.ELITE) { list.push(R.elite[room.id % R.elite.length]); if (this.stage.idx > 8) list.push(R.elite[(room.id + 1) % R.elite.length]); }
     else if (room.type === ROOM_TYPE.NORMAL && Math.random() < 0.35) list.push(R.elite[room.id % R.elite.length]);
-    if (room.type === ROOM_TYPE.BOSS) list.push(this.stage.chapter.boss, R.trash[0], R.trash[1], R.trash[0]);
+    if (room.type === ROOM_TYPE.BOSS) list.push(this.stage.chapter.boss, R.trash[0], R.trash[1], R.trash[0], R.trash[2], R.ranged[0], R.trash[1]);
     return list;
+  }
+  /** 증원 — 이웃 방의 무리가 싸움 소리를 듣고 복도로 몰려온다. 이웃 정원에서 미리 뺀 몫이라 층 총량은 같다 */
+  callReinforcements(room) {
+    const R = this.stage.rosterFor(room.type); let wave = 0;
+    for (const nid of room.links || []) {
+      const nb = this.world.rooms[nid];
+      if (!nb || nb.cleared || nb.spawned || nb.type === ROOM_TYPE.BOSS || nb.type === ROOM_TYPE.START) continue;
+      if ((room.id * 7 + nb.id * 13 + this.stage.idx) % 5 >= 3) continue;   // 이웃 5곳 중 3곳꼴, 시드 결정적
+      // 이웃 쪽 방 가장자리(복도 입구 근처)에서 쏟아져 들어온다
+      const dx = nb.x - room.x, dz = nb.z - room.z; const l = Math.hypot(dx, dz) || 1;
+      const ex = THREE.MathUtils.clamp(room.x + dx / l * room.w / 2, room.x - room.w / 2 + 2.5, room.x + room.w / 2 - 2.5);
+      const ez = THREE.MathUtils.clamp(room.z + dz / l * room.h / 2, room.z - room.h / 2 + 2.5, room.z + room.h / 2 - 2.5);
+      const delay = 1.1 + wave * 0.9; wave++;
+      this.after(delay, () => {
+        // 도착 시점에 판단·차감한다 — 미리 빼두면 방이 먼저 닫혔을 때 그 몫이 층에서 증발한다
+        if (!this.active || nb.spawned || nb.cleared || this.curRoom !== room) return;
+        const k = Math.min(8, Math.floor((this.rosterSize(nb) - (nb.reinforced || 0)) * 0.4));
+        if (k < 3) return;
+        nb.reinforced = (nb.reinforced || 0) + k;
+        this.ui.toast('증원이 몰려온다!', 'red'); audio.waveHorn({ vol: 0.3 });
+        this.fx.groundTex(new THREE.Vector3(ex, 0, ez), 'shockwave', 0xff6040, { r0: 0.4, r1: 4, life: 0.5 });
+        for (let i = 0; i < k; i++) this.after(i * 0.1, () => {
+          if (!this.active) return;
+          const t = (i % 5 === 4 ? R.ranged : R.trash)[(i * 5 + nb.id) % (i % 5 === 4 ? R.ranged.length : R.trash.length)];
+          let alive = 0; for (const e of this.enemies) if (e.alive) alive++;
+          if (alive >= this.maxAlive) { this.pending.push({ t, room }); return; }
+          const a = (i / k) * Math.PI * 2, r = 0.8 + (i % 3) * 0.7;
+          this.spawnEnemy(t, null, room, new THREE.Vector3(ex + Math.cos(a) * r, 0, ez + Math.sin(a) * r));
+        });
+      });
+    }
   }
   enterRoom(room) {
     if (!room || room === this.curRoom) return;
@@ -106,8 +144,9 @@ export class Battle {
     // 한 번에 다 깔되 동시 상한을 넘으면 큐로
     const initial = Math.min(list.length, this.maxAlive - this.enemies.filter((e) => e.alive).length);
     for (let i = 0; i < initial; i++) this.after(0.08 + i * 0.07, () => this.spawnEnemy(list[i], null, room));
-    this.pending = list.slice(initial).map((t) => ({ t, room }));
+    for (const t of list.slice(initial)) this.pending.push({ t, room });   // 덮어쓰면 이전 방 잔여가 증발해 그 방이 영영 안 닫힌다
     room.pendingCount = list.length;
+    if (!isBoss) this.callReinforcements(room);
   }
   markCleared(room) {
     if (room.cleared) return;
@@ -127,11 +166,12 @@ export class Battle {
 
   stop() { this.active = false; this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) if (p.mesh) this.scene.remove(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.renderer.desat = 0; this.world = null; }
 
-  spawnEnemy(type, near = null, room = null) {
+  spawnEnemy(type, near = null, room = null, at = null) {
     const def = ENEMIES[type]; if (!def) return; const gltf = this.app.models[def.model]; if (!gltf) return;
     const rm = room || this.curRoom || this.world?.startRoom;
     let pos;
-    if (near) { const a = Math.random() * Math.PI * 2; pos = near.clone().add(new THREE.Vector3(Math.cos(a) * 3, 0, Math.sin(a) * 3)); }
+    if (at) { const [x, z] = this.world ? this.world.resolve(rm.x, rm.z, at.x, at.z, 0.6) : [at.x, at.z]; pos = new THREE.Vector3(x, 0, z); }
+    else if (near) { const a = Math.random() * Math.PI * 2; pos = near.clone().add(new THREE.Vector3(Math.cos(a) * 3, 0, Math.sin(a) * 3)); }
     else if (this.world && rm) {
       let best = null;
       for (let k = 0; k < 12; k++) {
@@ -335,7 +375,9 @@ export class Battle {
     this.input.update();
     if (this.active) this.player.handleInput(this.input, dt);
     this.player.update(dt);
-    for (let i = this.enemies.length - 1; i >= 0; i--) { const e = this.enemies[i]; e.update(dt); if (e.dead) { e.dispose(); this.enemies.splice(i, 1); } }
+    let alive = 0;
+    for (let i = this.enemies.length - 1; i >= 0; i--) { const e = this.enemies[i]; e.update(dt); if (e.dead) { e.dispose(); this.enemies.splice(i, 1); } else if (e.alive && !e.spawning) alive++; }
+    if (alive > this.peakAlive) this.peakAlive = alive;   // 층 내 동시 생존 최대 (하네스 maxAliveSeen)
     this.updateProjectiles(dt);
     this.drops.update(dt);
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; this.ui.setCombo(0); } }

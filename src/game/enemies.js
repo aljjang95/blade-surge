@@ -19,6 +19,12 @@ export class Enemy extends Actor {
       if (def.shield) { const s = getPart(weaponsGltf, def.shield); const h = this.node('handslot.l'); if (h) h.add(s); }
       if (/자객|암살|사신/.test(def.name)) { const w = getPart(weaponsGltf, 'Skeleton_Blade'); const h = this.node('handslot.l'); if (h) h.add(w); }
     }
+    // 잡몹은 몸통만 그림자를 드리운다 — 눈·무기 그림자 패스는 안 보이는데 드로우콜만 2배로 먹는다 (밀도 복구 후 계측)
+    if (!def.boss && !def.elite) {
+      let body = null;
+      this.root.traverse((o) => { if (o.isMesh) { const n = o.geometry?.attributes?.position?.count || 0; if (!body || n > body.n) body = { o, n }; } });
+      this.root.traverse((o) => { if (o.isMesh) o.castShadow = body && o === body.o; });
+    }
     // 눈 발광
     this.model.traverse((o) => { if (o.isMesh && /Eyes/.test(o.name)) { o.material.emissive = new THREE.Color(def.boss ? 0xff2020 : def.elite ? 0xffc040 : 0x40ff80); o.material.emissiveIntensity = 2.5; this.eyeMat = o.material; } });
     this.mats = this.mats.filter((m) => m !== this.eyeMat);
