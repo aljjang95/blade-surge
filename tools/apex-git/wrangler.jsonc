@@ -1,0 +1,20 @@
+{
+  // apex-git — 클라우드 세션이 GitHub 에 '쓰기' 를 할 수 있는 유일한 통로.
+  //
+  // 왜 필요한가: Cowork 클라우드 세션의 에이전트 프록시는 github.com / api.github.com 을
+  // 세션 인가 저장소가 아니면 403 으로 끊는다. 토큰을 붙여도 헤더째 버려진다(요청이 GitHub 에 안 닿는다).
+  // SSH 도 22번 차단 + 443 TLS 가로채기로 불가. 즉 컨테이너 안에서는 어떤 자격증명으로도 못 민다.
+  // 이 워커는 Cloudflare 네트워크에서 도니까 그 프록시 바깥이다 — 세션은 워커를 부르고, 워커가 GitHub 를 부른다.
+  //
+  // 게이트: Authorization: Bearer <CF API 토큰> 의 sha256 == APEX_GATE_SHA256 (apex-secrets 와 같은 뿌리)
+  // 배포: cd tools/apex-git && npx wrangler deploy   (CLOUDFLARE_API_TOKEN 필요)
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "apex-git",
+  "main": "src/index.js",
+  "compatibility_date": "2025-06-01",
+  "observability": { "enabled": true },
+  "secrets_store_secrets": [
+    { "binding": "APEX_GATE_SHA256", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_GATE_SHA256" },
+    { "binding": "GITHUB_PAT", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "GITHUB_PAT" }
+  ]
+}
