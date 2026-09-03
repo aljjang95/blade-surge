@@ -39,9 +39,11 @@ export LD_LIBRARY_PATH=/tmp/libs/usr/lib/x86_64-linux-gnu
 ```
 `package.json` 의 playwright 버전과 브라우저 캐시 빌드가 어긋나면 실행이 죽는다 — `LESSONS.md` 참조.
 
-### 푸시하려면
-`§자격증명 → GitHub` 의 디바이스 플로우로 재인증한다(약 30초, 대표님 승인 필요).
-**읽기만 할 거면 인증 없이 클론된다.** 커밋을 올릴 때만 필요하다.
+### 푸시하려면 — 디바이스 플로우 아니고 **드라이브의 deploy key** (2026-09-03 부터)
+구글 드라이브 `env` 폴더(folder id `1OTXsIE1saKr1mhNpkmRR-96wYmbM6nYD`)의
+**`github-deploy-blade-surge.env`** (file id `1m1a5PQulhpx2zp1HEIVgIdESYyw1d9U3`) 에 이 레포 전용 쓰기 deploy key 가 있다.
+대표님 승인 없이 세션 첫 호출에서 바로 푸시 권한이 선다. `§자격증명 → GitHub` 참조.
+**읽기만 할 거면 인증 없이 클론된다.**
 
 ## 무엇인가
 
@@ -66,33 +68,42 @@ node tools/metrics.mjs   # 자동 채점 하네스 (RSI 게이트 A)
 **토큰 값을 채팅·로그·커밋·스크린샷·에코에 한 글자도 출력하지 않는다.**
 `sed -E 's/(gh[pousr]_[A-Za-z0-9]+)/[HIDDEN]/g'` 같은 마스킹을 항상 파이프로 건다.
 
-### GitHub (세션마다 재인증 필요, 약 30초)
-컨테이너는 세션마다 새로 뜨므로 gh 인증이 날아간다. 디바이스 플로우로 다시 붙인다:
+### GitHub — 드라이브 deploy key (세션마다 30초, 사람 승인 불필요)
+레포 전용 ed25519 deploy key(write). 이 레포에만 push 된다. 폐기는 github.com/aljjang95/blade-surge/settings/keys.
 
 ```bash
-# 1) gh 설치 (/tmp 말고 /sessions 디스크에 받아라 — /tmp 는 쓰기 실패한 적 있음)
-cd /sessions/$SESSION/ghtmp && curl -sSL -o gh.tgz \
-  https://github.com/cli/cli/releases/download/v2.63.2/gh_2.63.2_linux_amd64.tar.gz
-tar xzf gh.tgz && cp gh_*/bin/gh ~/bin/gh
-
-# 2) 디바이스 코드 받기 → user_code 를 대표님께 보여드린다
-curl -sS -X POST https://github.com/login/device/code -H "Accept: application/json" \
-  -d "client_id=178c6fc778ccc68e1d6a" -d "scope=repo workflow"
-# device_code 는 파일에 저장해 둔다 (호출 간 유지되어야 함)
-
-# 3) 대표님 승인 후 1회 교환
-curl -sS -X POST https://github.com/login/oauth/access_token -H "Accept: application/json" \
-  -d "client_id=178c6fc778ccc68e1d6a" -d "device_code=$(cat device_code)" \
-  -d "grant_type=urn:ietf:params:oauth:grant-type:device_code"
-# → access_token 을 chmod 600 파일로. 이후 export GH_TOKEN="$(cat ...)"
+# 1) Google Drive MCP download_file_content(fileId="1m1a5PQulhpx2zp1HEIVgIdESYyw1d9U3") → content(base64) 를 파일로
+#    (드라이브 검색: parentId = '1OTXsIE1saKr1mhNpkmRR-96wYmbM6nYD', 제목 github-deploy-blade-surge.env)
+K=/sessions/$SESSION/gh; mkdir -p $K
+base64 -d $K/drive.b64 > $K/deploy.env            # KEY=value 3줄. 값을 echo 하지 마라
+python3 -c "import base64;d=dict(l.split('=',1) for l in open('$K/deploy.env') if '=' in l and not l.startswith('#'));open('$K/key','wb').write(base64.b64decode(d['GITHUB_DEPLOY_KEY_B64'].strip()))"
+chmod 600 $K/key
+# 2) 이후 모든 git 원격 명령
+export GIT_SSH_COMMAND="ssh -i $K/key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
+git push git@github.com:aljjang95/blade-surge.git HEAD:main
 ```
 
-> **함정**: `gh auth login --web` 을 백그라운드로 띄우면 bash 호출이 끝날 때 프로세스가 죽어서
-> 폴링이 끊긴다. 위처럼 device_code 를 파일에 남기고 **승인 후 1회만 교환**하는 방식으로 하라.
+> 키가 죽었으면(401/Permission denied) 아래 **예비 경로**: OAuth 디바이스 플로우. 대표님 승인 필요.
+> ```bash
+> curl -sS -X POST https://github.com/login/device/code -H "Accept: application/json" \
+>   -d "client_id=178c6fc778ccc68e1d6a" -d "scope=repo workflow"      # user_code 를 대표님께
+> # device_code 는 파일에 저장, 승인 후 1회 교환:
+> curl -sS -X POST https://github.com/login/oauth/access_token -H "Accept: application/json" \
+>   -d "client_id=178c6fc778ccc68e1d6a" -d "device_code=$(cat device_code)" \
+>   -d "grant_type=urn:ietf:params:oauth:grant-type:device_code"
+> # 토큰 사용: export 먼저 하고 URL 에 넣어라 — `GH_TOKEN=... git push "https://x-access-token:${GH_TOKEN}@..."` 는
+> # 접두 대입이 URL 확장보다 늦어 빈 토큰이 들어간다(실제로 당했다)
+> ```
+> 그리고 새 deploy key 를 만들어(`ssh-keygen -t ed25519`, `POST /repos/aljjang95/blade-surge/keys` read_only=false)
+> 드라이브에 같은 형식으로 다시 올려라. OAuth 토큰 자체는 드라이브에 올리지 않는다 — 전 레포 권한이라 범위가 너무 넓다.
+
+> **함정**: `gh auth login --web` 을 백그라운드로 띄우면 bash 호출이 끝날 때 프로세스가 죽는다(`setsid` 도 소용없음 — 호출마다 bwrap 샌드박스).
 
 ### Cloudflare
 `wrangler deploy` 는 `CLOUDFLARE_API_TOKEN` 환경변수를 읽는다.
-토큰은 대표님이 업로드하신 파일에서 읽어 env 로만 넘기고, 쓴 뒤에는 남기지 않는다.
+드라이브 `env` 폴더의 `cloudflare.env.example` 은 **값이 비어 있다**(원본은 PC DPAPI 금고). 배포하려면
+대표님이 Workers Scripts:Edit 범위의 토큰을 **`cloudflare-blade-surge.env`** (`CLOUDFLARE_API_TOKEN=`, `CLOUDFLARE_ACCOUNT_ID=`) 로
+같은 폴더에 올려주셔야 한다. 그 전까지 `npm run deploy` 는 건너뛰고 푸시까지만 한다. 쓴 뒤 컨테이너에 남기지 않는다.
 
 ### .gitignore 불변식
 `.env`, `*.token`, `cf.token` 은 커밋에 절대 들어가지 않는다.
