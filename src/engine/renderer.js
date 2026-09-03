@@ -42,6 +42,12 @@ const FinalShader = {
     }`,
 };
 
+/** 카메라 프리셋 — y/z 는 타겟 기준 오프셋, fov 는 가로모드 기준(세로는 +14), lookY 는 시선 높이, lag 는 추적 탄성 */
+export const CAMERA_PRESETS = {
+  top:    { y: 13.5, z: 7.5,  fov: 44, lookY: 0.8, lag: 6,   name: '탑다운',   desc: '높이서 내려다보는 클래식 시점 — 몹몰이 파악이 쉽다' },
+  action: { y: 8.5,  z: 10.5, fov: 54, lookY: 1.5, lag: 7.5, name: '액션',     desc: '낮고 가까운 시점 — 타격감과 속도감이 크다' },
+  wide:   { y: 16.5, z: 13,   fov: 38, lookY: 0.6, lag: 4.5, name: '시네마틱', desc: '멀고 넓은 시점 — 전장 전체와 보스 패턴이 보인다' },
+};
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
@@ -62,7 +68,9 @@ export class Renderer {
     this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
 
     // 카메라 리그
-    this.rig = { target: new THREE.Vector3(), pos: new THREE.Vector3(0, 12, 12), offset: new THREE.Vector3(0, 10.4, 9.0), trauma: 0, zoom: 0, lookOffset: new THREE.Vector3(0, 1, 0), mode: 'battle', orbit: 0, lag: 6 };
+    this.rig = { target: new THREE.Vector3(), pos: new THREE.Vector3(0, 12, 12), offset: new THREE.Vector3(0, 12.5, 8.5), trauma: 0, zoom: 0, lookOffset: new THREE.Vector3(0, 1, 0), mode: 'battle', orbit: 0, lag: 6,
+      // 프리셋: 사람들이 주로 고르는 세 시점 + AUTO(상황 블렌드). battle.update 가 base 를 읽어 offset/fov 를 목표로 보간한다
+      preset: 'auto', base: { ...CAMERA_PRESETS.top }, fov: 46, side: 0 };
     this.time = 0;
 
     this.composer = new EffectComposer(r);
@@ -94,7 +102,7 @@ export class Renderer {
     this.composer.setSize(w, h);
     this.camera.aspect = w / h;
     // 세로 화면이면 시야를 넓혀 전장 확보
-    this.camera.fov = w < h ? 60 : 46;
+    this.camera.fov = (this.rig?.fov ?? 46) + (w < h ? 14 : 0);
     this.camera.updateProjectionMatrix();
     // 블룸 내부 해상도를 직접 강제한다.
     // 함정: UnrealBloomPass 의 `resolution` 필드는 생성자에서만 쓰인다. 그 뒤에는
@@ -105,6 +113,16 @@ export class Renderer {
     const bw = Math.min(320, Math.round(w / 3)), bh = Math.min(320, Math.round(h / 3));
     this.bloom.resolution.set(bw, bh);
     this.bloom.setSize(bw, bh);
+  }
+  /** 설정에서 고른 카메라 — 'auto' 면 battle 이 상황별로 top/action/wide 를 블렌드한다 */
+  setCameraPreset(name) {
+    const rig = this.rig; rig.preset = CAMERA_PRESETS[name] ? name : 'auto';
+    if (rig.preset !== 'auto') Object.assign(rig.base, CAMERA_PRESETS[rig.preset]);
+  }
+  /** 프레임마다 목표 fov 로 보간 (배틀이 rig.fov 를 바꾼다) */
+  _applyFov(realDt) {
+    const want = this.rig.fov + (window.innerWidth < window.innerHeight ? 14 : 0);
+    if (Math.abs(this.camera.fov - want) > 0.05) { this.camera.fov += (want - this.camera.fov) * Math.min(1, realDt * 3); this.camera.updateProjectionMatrix(); }
   }
   shake(amount) { this.rig.trauma = Math.min(1, this.rig.trauma + amount); }
   punch(z) { this.rig.zoom = Math.max(this.rig.zoom, z); }
@@ -127,7 +145,9 @@ export class Renderer {
       cam.lookAt(rig.target.x, rig.target.y + 1.1, rig.target.z);
     } else {
       const off = rig.offset.clone().multiplyScalar(1 - rig.zoom * 0.18);
+      off.x += rig.side;   // 액션 시점: 이동 방향 반대편으로 살짝 비켜서 진행 방향이 열린다
       desired = rig.target.clone().add(off);
+      this._applyFov(realDt);
       rig.pos.lerp(desired, 1 - Math.exp(-realDt * rig.lag));
       cam.position.copy(rig.pos);
       cam.position.x += n(31, 0) * t * 0.9;

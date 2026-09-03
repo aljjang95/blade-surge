@@ -15,7 +15,7 @@ export class Player extends Actor {
     this.state = 'idle'; this.stateT = 0;
     this.comboIdx = 0; this.comboQueued = false; this.hitDone = false; this.comboWindow = 0;
     this.cds = [0, 0, 0, 0]; this.ult = 0; this.ultMax = 100;
-    this.buffs = { atk: 1, spd: 1, atkSpd: 1, t: 0 };
+    this.buffs = { atk: 1, spd: 1, atkSpd: 1, t: 0 }; this.stormT = 0;
     this.auto = false; this.autoT = 0; this.magnetMul = 1;
     this.sprint = 0; this.sprintT = 0; this.lockTarget = null; this.perfectWindow = 0; this.perfectCd = 0;
     this.trail = null; this.current = null; this.skillCtx = null;
@@ -23,7 +23,7 @@ export class Player extends Actor {
     this.play('Idle');
     this.footT = 0;
   }
-  get atk() { return this.stats.atk * this.buffs.atk; }
+  get atk() { return this.stats.atk * this.buffs.atk * (this.game.hasProc?.('blood_rage') && this.hp < this.maxHp * 0.5 ? 1.5 : 1); }
   get busy() { return this.state === 'attack' || this.state === 'skill' || this.state === 'dodge' || this.state === 'ult' || this.state === 'hurt'; }
   addUlt(n) { this.ult = Math.min(this.ultMax, this.ult + n); }
 
@@ -84,7 +84,7 @@ export class Player extends Actor {
     this.state = 'attack'; this.stateT = 0; this.comboIdx = idx; this.comboQueued = false; this.hitDone = false; this.current = c;
     this.vel.set(0, 0, 0);
     const target = this.autoAim(this.def.ranged ? 12 : 7);
-    const dur = c.dur / this.buffs.atkSpd;
+    const dur = c.dur / (this.buffs.atkSpd * (this.stormT > 0 ? 1.4 : 1));
     this.playTimed(c.anim, dur, { fade: 0.06 });
     // 근접이면 살짝 전진(러쉬감)
     if (!this.def.ranged) { const f = this.forward(_v); const d = target ? Math.max(0, Math.min(2.2, this.distTo(target) - 1.6)) : 0.6; this.vel.copy(f).multiplyScalar(d / Math.max(0.15, c.hitAt * dur)); }
@@ -107,12 +107,15 @@ export class Player extends Actor {
       this.game.fx.flash(spawn, this.def.color, { size: 1.2, life: 0.15 });
     } else {
       const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, c.arc, dmg, { kb: c.kb, kind: 'slash', finisher: c.finisher });
+      const gravity = this.game.hasProc('gravity_pull');
+      if (gravity && !c.finisher) this.game.vacuum(this.pos.clone().addScaledVector(f, 1.5), 6, 5);   // 중력 2세트: 모든 타격이 끌어당긴다
+      if (c.finisher && hits && this.game.hasProc('storm_chain')) this.game.stormChain(this.pos.clone().addScaledVector(f, c.range * 0.7), this.atk * 0.6);
       const tilt = this.comboIdx === 1 ? 0.7 : this.comboIdx === 2 ? -1.4 : -0.3;
       const sp = this.pos.clone().addScaledVector(f, c.range * 0.45).setY(1.15);
       this.game.fx.slashSprite(sp, f, this.def.color, { size: c.range * 1.7, life: c.finisher ? 0.32 : 0.22, tilt, flip: this.comboIdx % 2 === 1 });
       if (c.finisher) {
         // 마무리 타격: 살짝 몹몰이 + 충격파
-        this.game.vacuum(this.pos.clone().addScaledVector(f, 1.5), 5.5, 8);
+        this.game.vacuum(this.pos.clone().addScaledVector(f, 1.5), gravity ? 11 : 5.5, gravity ? 16 : 8);
         this.game.fx.shockTex(this.pos.clone().addScaledVector(f, 1.2), this.def.color, { r1: 4.2, life: 0.35 });
         this.game.fx.explosion(this.pos.clone().addScaledVector(f, 1.6), { size: 3.2, color: this.def.accent, life: 0.35 });
         this.game.renderer.shake(0.35); this.game.fx.dustPuff(this.pos.clone().addScaledVector(f, 1.5), { size: 2.4, life: 0.5 });
@@ -131,6 +134,10 @@ export class Player extends Actor {
     audio.whoosh({ vol: 0.5, pitch: 0.7, dur: 0.3 }); audio.vibe(15);
     this.game.fx.dust(this.pos, { n: 8, size: 1.2 });
     this.ghostT = 0;
+    if (this.game.hasProc('storm_dash')) {   // 폭풍 4세트: 공속 버프 + 경로 낙뢰 2발
+      this.stormT = 3; this.tintEmissive = new THREE.Color(0.1, 0.3, 0.5);
+      for (let i = 1; i <= 2; i++) { const at = this.pos.clone().addScaledVector(d, i * 2.6); this.game.after(0.1 * i, () => this.game.stormStrike(at, this.atk * 0.8)); }
+    }
   }
   // ---------------- 스킬 ----------------
   tryCastSkill(i) {
@@ -147,7 +154,8 @@ export class Player extends Actor {
     const lvMult = 1 + (this.skillLevels[i] - 1) * 0.12;
     this.skillCtx = { sk, impl, t: 0, cast: false, done: false, dmg: this.atk * sk.dmg * lvMult, level: this.skillLevels[i], data: {} };
     if (sk.anim) this.playTimed(sk.anim, impl.dur || 0.8, { fade: 0.06 });
-    if (sk.ult) { this.game.ultCinematic(sk, this); audio.charge({ vol: 0.35, dur: 0.7 }); }
+    if (sk.ult) { this.game.ultCinematic(sk, this); audio.charge({ vol: 0.35, dur: 0.7 }); audio.voice('ult', { min: 10, duck: 0.6, dur: 0.8 }); if (this.game.hasProc('phoenix_burn')) this.game.after(0.35, () => this.game.phoenixBurn(this)); }
+    else if (this.game.hasProc('gravity_hole')) { const t = this.lockTarget && this.lockTarget.alive ? this.lockTarget.pos.clone() : this.pos.clone().addScaledVector(this.forward(_v.clone()), 4); this.game.singularity(t); }
     impl.start?.(this.game, this, this.skillCtx);
     return true;
   }
@@ -170,6 +178,7 @@ export class Player extends Actor {
     this.game.renderer.shake(0.3); this.game.renderer.flashScreen(0.18, 0xff2040); this.game.ui.hurtVignette();
     audio.hit('hurt'); audio.vibe([30, 20, 30]);
     this.knockback(dirx, dirz, kb);
+    if (this.game.hasProc('blood_rage') && (this._bloodCd || 0) <= this.game.elapsed) { this._bloodCd = this.game.elapsed + 1.5; this.game.bloodBurst(this); }
     // 스킬/궁극기 중엔 슈퍼아머
     if (this.state !== 'skill' && this.state !== 'ult' && this.state !== 'dodge') { this.stopTrail(); this.state = 'hurt'; this.stateT = 0; this.play(Math.random() < 0.5 ? 'Hit_A' : 'Hit_B', { once: true, fade: 0.05, speed: 1.6 }); }
     if (this.hp <= 0) { this.hp = 0; this.stopTrail(); this.state = 'dead'; this.die(); this.game.onPlayerDeath(); }
@@ -235,6 +244,7 @@ export class Player extends Actor {
   update(dt) {
     super.update(dt);
     if (this.perfectWindow > 0) this.perfectWindow -= dt;
+    if (this.stormT > 0) { this.stormT -= dt; this.game.fx.aura(this.pos, 0x7fd9ff, 1.5); if (this.stormT <= 0 && this.buffs.t <= 0) this.tintEmissive = null; }
     if (this.perfectCd > 0) this.perfectCd -= dt;
     // 락온: 조준 대상이 계속 바뀌지 않도록 유지
     if (this.lockTarget && (!this.lockTarget.alive || this.distTo(this.lockTarget) > 11)) this.lockTarget = null;
@@ -243,7 +253,7 @@ export class Player extends Actor {
     if (!this.alive) return;
     this.stateT += dt;
     if (this.state === 'attack') {
-      const c = this.current; const dur = c.dur / this.buffs.atkSpd; const t = this.stateT / dur;
+      const c = this.current; const dur = c.dur / (this.buffs.atkSpd * (this.stormT > 0 ? 1.4 : 1)); const t = this.stateT / dur;
       if (!this.hitDone && t >= c.hitAt) { this.hitDone = true; this.doComboHit(); this.vel.multiplyScalar(0.2); }
       if (this.hitDone && this.trail && t >= c.hitAt + 0.25) this.stopTrail();
       if (this.hitDone) this.vel.multiplyScalar(Math.pow(0.001, dt));

@@ -12,6 +12,18 @@ import { HEROES } from './data/heroes.js';
 import { ENEMIES, stageDef } from './data/stages.js';
 import { UI, $ } from './ui/ui.js';
 import { Meta } from './ui/meta.js';
+const BOOT_TIPS = [
+  '<b>진공기</b>로 적을 끌어모은 뒤 한 번에 쓸어담는 것이 몹몰이의 기본이다.',
+  '적의 공격 직전 <b>회피</b>하면 퍼펙트 회피 — 시간이 느려지고 반격 창이 열린다.',
+  '<b>미니맵</b>의 화살표는 아직 못 찾은 보스방의 방향이다.',
+  '싸움 소리를 들은 <b>이웃 방의 무리</b>가 복도로 몰려온다. 입구를 등지지 마라.',
+  '같은 세트 <b>2개·4개</b>를 맞추면 플레이 방식이 바뀌는 세트 효과가 열린다.',
+  '<b>강화 +8</b>까지는 실패가 없다. +12부터는 파괴 위험 — 보호석을 챙겨라.',
+  '보물방을 클리어하면 장비 상자가 열린다. 층을 다 밟을수록 별이 늘어난다.',
+  '설정에서 <b>카메라</b>를 바꿔보라 — 탑다운·액션·시네마틱, 또는 상황에 맞춘 AUTO.',
+  '보스는 체력 60%·30%에서 패턴이 바뀌고, 30%부터 <b>광폭화</b>한다.',
+  '<b>질주</b> 중 적과 부딪히면 넉백. 무리 사이를 가르며 달려라.',
+];
 
 const ALL_WEAPON_NODES = ['1H_Sword_Offhand', 'Badge_Shield', 'Rectangle_Shield', 'Round_Shield', 'Spike_Shield', '1H_Sword', '2H_Sword', 'Spellbook', 'Spellbook_open', '1H_Wand', '2H_Staff', 'Knife_Offhand', '1H_Crossbow', '2H_Crossbow', 'Knife', 'Throwable', '1H_Axe_Offhand', 'Barbarian_Round_Shield', '1H_Axe', '2H_Axe', 'Mug'];
 
@@ -31,8 +43,12 @@ class App {
     this.applySettings();
   }
   async boot() {
-    const fill = $('boot-fill'), msg = $('boot-msg');
-    const setP = (p, m) => { fill.style.width = (p * 100) + '%'; if (m) msg.textContent = m; };
+    const fill = $('boot-fill'), msg = $('boot-msg'), pct = $('boot-pct');
+    const setP = (p, m) => { fill.style.width = (p * 100) + '%'; pct.textContent = Math.round(p * 100) + '%'; if (m) msg.textContent = m; };
+    // 팁 로테이션 — 로딩 중에도 손이 배운다
+    const tipEl = $('boot-tip'); let tipI = Math.floor(Math.random() * BOOT_TIPS.length);
+    const showTip = () => { tipEl.classList.remove('on'); setTimeout(() => { tipEl.innerHTML = BOOT_TIPS[tipI++ % BOOT_TIPS.length]; tipEl.classList.add('on'); }, 450); };
+    showTip(); this._tipTimer = setInterval(showTip, 3600);
     setP(0.02, '3D 모델 로딩 중…');
     await preloadAll((p) => setP(0.05 + p * 0.65, `3D 모델 로딩 중… ${Math.round(p * 100)}%`));
     setP(0.72, '이펙트 텍스처 로딩 중…');
@@ -47,16 +63,19 @@ class App {
     this.renderer.r.compile(this.scene, this.renderer.camera);
     const start = $('boot-start'); start.classList.remove('hidden'); msg.textContent = '';
     await new Promise((res) => { const go = async () => { start.disabled = true; start.textContent = '사운드 준비 중…'; await audio.init(); audio.resume(); res(); }; start.addEventListener('click', go, { once: true }); });
-    $('boot').classList.remove('show');
+    clearInterval(this._tipTimer);
+    const bootEl = $('boot'); bootEl.classList.add('leaving');
     this.toLobby(true);
+    setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
     document.addEventListener('visibilitychange', () => { if (document.hidden) { if (this.mode === 'battle') this.ui.pause(true); } else audio.resume(); });
     requestAnimationFrame((t) => this.loop(t));
   }
   applySettings() {
-    const st = this.eco.s.settings; audio.setSfxOn(st.sfx); audio.setMusicOn(st.music); audio.haptics = st.haptics;
+    const st = this.eco.s.settings; audio.setSfxOn(st.sfx); audio.setMusicOn(st.music); audio.haptics = st.haptics; audio.setVoiceOn(st.voice !== false);
     let q = st.quality;
     if (!q || q === 'auto') { const cores = navigator.hardwareConcurrency || 4; const mem = navigator.deviceMemory || 4; q = (cores <= 4 || mem <= 3) ? 'mid' : 'high'; st.quality = q; }
     this.renderer.setQuality(q); this.fx.setQuality(q);
+    this.renderer.setCameraPreset(st.camera || 'auto');
   }
   // ---------- 로비 ----------
   async showcaseHero(id, first = false) {
@@ -76,6 +95,7 @@ class App {
   toLobby(first = false) {
     if (this.mode === 'battle') { this.battle.stop(); }
     this.ui.hideResult(); this.mode = 'lobby';
+    if (first) setTimeout(() => audio.voice('welcome', { vol: 0.9 }), 900);
     this.ui.show($('meta'), true);
     this.showcaseHero(this.eco.s.selected, true);
     this.renderer.desat = 0; this.renderer.rig.mode = 'lobby';

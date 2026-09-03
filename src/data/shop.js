@@ -30,8 +30,10 @@ export const SKUS = [
   { id: 'gem6', tab: 'gem', kind: 'cash', name: '보석 12,000', price: 129000, priceLabel: '₩129,000', icon: '/img/icon_gem.webp', gems: 12000, bonus: 12000 },
 
   // ---- 강화 재료 (과금 핵심) ----
-  { id: 'stone1', tab: 'enh', kind: 'gem', name: '강화석 10', price: 150, icon: '/img/icon_stone.webp', desc: '강화석 ×10', rewards: { stones: 10 } },
-  { id: 'stone2', tab: 'enh', kind: 'gem', name: '강화석 60', price: 720, icon: '/img/icon_stone.webp', desc: '강화석 ×60', rewards: { stones: 60 }, badge: '+20%' },
+  { id: 'stone1', tab: 'enh', kind: 'gem', name: '강화석 10', price: 150, icon: '/img/icon_stone_1.webp', desc: '강화석 ×10', rewards: { stones: 10 } },
+  { id: 'stone2', tab: 'enh', kind: 'gem', name: '강화석 60', price: 720, icon: '/img/icon_stone_1.webp', desc: '강화석 ×60', rewards: { stones: 60 }, badge: '+20%' },
+  { id: 'stone_hi', tab: 'enh', kind: 'gem', name: '상급 강화석 10', price: 480, icon: '/img/icon_stone_2.webp', desc: '상급 강화석 ×10 (+10~+14 강화용)', rewards: { stones2: 10 } },
+  { id: 'stone_legend', tab: 'enh', kind: 'gem', name: '전설 강화석 3', price: 900, icon: '/img/icon_stone_3.webp', desc: '전설 강화석 ×3 (+15 이상 강화용)', rewards: { stones3: 3 } },
   { id: 'protect1', tab: 'enh', kind: 'gem', name: '보호 주문서', price: 300, icon: '/img/icon_protect.webp', desc: '강화 실패 시 파괴 방지 ×1', rewards: { protect: 1 } },
   { id: 'protect5', tab: 'enh', kind: 'gem', name: '보호 주문서 ×5', price: 1250, icon: '/img/icon_protect.webp', desc: '파괴 방지 ×5', rewards: { protect: 5 }, badge: '인기' },
   { id: 'bless1', tab: 'enh', kind: 'gem', name: '축복 주문서', price: 200, icon: '/img/icon_bless.webp', desc: '강화 성공률 +20% ×1', rewards: { bless: 1 } },

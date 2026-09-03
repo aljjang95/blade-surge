@@ -15,7 +15,7 @@ export class DropSystem {
     this.items = [];
     this.magnetR = 4.2;      // 자석 반경
     this.pickR = 1.1;
-    this.gold = 0; this.stones = 0; this.loot = [];
+    this.gold = 0; this.stones = 0; this.stones2 = 0; this.stones3 = 0; this.fragments = 0; this.loot = [];
     this._geoCoin = null; this._matCache = {};
     this.beamMat = new THREE.SpriteMaterial({ map: softCircleTex(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true });
   }
@@ -37,6 +37,9 @@ export class DropSystem {
       let mesh;
       if (kind === 'gold') { mesh = new THREE.Mesh(this._geoCoin, this._matCoin); mesh.scale.setScalar(1.1); }
       else if (kind === 'stone') { mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.22), this._mat(0x4cc3ff, 1.6)); mesh.userData.own = true; }
+      else if (kind === 'stone2') { mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.28), this._mat(0x3a7bff, 2.0)); mesh.userData.own = true; }
+      else if (kind === 'stone3') { mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.34), this._mat(0xffd35a, 2.4)); mesh.userData.own = true; }
+      else if (kind === 'frag') { mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.1, 6), this._mat(0xb26bff, 2.0)); mesh.userData.own = true; }
       else { const c = RARITY_COLOR[payload.rarity] || '#fff'; mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), this._mat(new THREE.Color(c).getHex(), 1.4)); mesh.userData.own = true; }
       mesh.position.copy(pos); mesh.position.y = 0.6 + Math.random() * 0.3;
       mesh.castShadow = false;
@@ -93,6 +96,14 @@ export class DropSystem {
     } else if (it.kind === 'stone') {
       this.stones += it.payload; g.ui.flyReward(pos, `강화석 +${it.payload}`, g.renderer.camera, 'stone');
       audio.ice({ vol: 0.3, dur: 0.3 }); g.fx.burst(pos, 0x4cc3ff, { n: 5, speed: 4, size: 0.25, life: 0.35 });
+    } else if (it.kind === 'stone2' || it.kind === 'stone3') {
+      const hi = it.kind === 'stone3'; this[it.kind] += it.payload;
+      g.ui.flyReward(pos, `${hi ? '전설' : '상급'} 강화석 +${it.payload}`, g.renderer.camera, 'stone');
+      audio.ice({ vol: 0.4, dur: 0.4 }); if (hi) audio.play('ui_glass', { vol: 0.5, rate: 1.4 });
+      g.fx.burst(pos, hi ? 0xffd35a : 0x3a7bff, { n: 9, speed: 5, size: 0.3, life: 0.4 });
+    } else if (it.kind === 'frag') {
+      this.fragments += it.payload; g.ui.flyReward(pos, `세트 조각 +${it.payload}`, g.renderer.camera, 'stone');
+      audio.magic({ vol: 0.25, base: 520, notes: [0, 7, 12], step: 0.04 }); g.fx.burst(pos, 0xb26bff, { n: 8, speed: 5, size: 0.3, life: 0.4 });
     } else {
       this.loot.push(it.payload);
       const def = ITEM_BY_ID[it.payload.id];
@@ -109,6 +120,9 @@ export class DropSystem {
     const goldAmt = Math.max(1, Math.floor(g * stage.scale * (0.8 + Math.random() * 0.5)));
     this.spawn(pos, 'gold', goldAmt, { count: enemy.isBoss ? 8 : enemy.isElite ? 3 : 1, spread: enemy.isBoss ? 2 : 1 });
     if (enemy.isBoss || enemy.isElite || Math.random() < 0.18) this.spawn(pos, 'stone', enemy.isBoss ? 5 : enemy.isElite ? 2 : 1, { count: 1 });
+    // 비석 상위 등급: 엘리트 → 상급, 보스 → 전설. 세트 조각은 엘리트·보스에서만 (제작 30개)
+    if (enemy.isElite) { this.spawn(pos, 'stone2', 1, { count: 1 }); if (Math.random() < 0.6) this.spawn(pos, 'frag', 2, { count: 1 }); }
+    if (enemy.isBoss) { this.spawn(pos, 'stone2', 2, { count: 1 }); this.spawn(pos, 'stone3', 1, { count: 1 }); this.spawn(pos, 'frag', 5, { count: 1, spread: 1.5 }); }
     // 장비: 엘리트 확정, 보스 2개, 잡몹 낮은 확률
     const rolls = enemy.isBoss ? 3 : enemy.isElite ? 1 : (Math.random() < 0.055 ? 1 : 0);
     for (let i = 0; i < rolls; i++) {
@@ -117,5 +131,5 @@ export class DropSystem {
       if (inst) this.spawn(pos, 'item', inst, { count: 1, spread: 1.4 });
     }
   }
-  clear() { while (this.items.length) this._remove(this.items.length - 1); this.gold = 0; this.stones = 0; this.loot = []; }
+  clear() { while (this.items.length) this._remove(this.items.length - 1); this.gold = 0; this.stones = 0; this.stones2 = 0; this.stones3 = 0; this.fragments = 0; this.loot = []; }
 }

@@ -51,19 +51,42 @@ b { font-weight: 900; }
 .link { color: var(--blue); text-decoration: underline; font-size: 13px; }
 
 /* ---------- boot ---------- */
-#boot { background: #07060d; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px; }
+#boot { background: #07060d; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 14px; overflow: hidden; }
 #boot.show { display: flex; }
-.boot-bg { position: absolute; inset: 0; background: url('/img/bg_splash.webp') center/cover no-repeat, radial-gradient(ellipse at 50% 30%, #2a1a4a, #07060d 70%); opacity: .95; }
-.boot-bg::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(7,6,13,.2) 0%, rgba(7,6,13,.1) 40%, rgba(7,6,13,.9) 100%); }
+#boot.leaving { animation: bootOut .6s ease forwards; }
+@keyframes bootOut { to { opacity: 0; transform: scale(1.04); } }
+.boot-bg { position: absolute; inset: -4%; background: url('/img/bg_loading.webp') center 35%/cover no-repeat, radial-gradient(ellipse at 50% 30%, #2a1a4a, #07060d 70%); opacity: .95; animation: kenburns 24s ease-in-out infinite alternate; }
+@media (orientation: portrait) { .boot-bg { background-image: url('/img/bg_splash.webp'); background-position: center; } }
+@keyframes kenburns { from { transform: scale(1) translate(0, 0); } to { transform: scale(1.08) translate(-1.5%, 1%); } }
+.boot-vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 50% 45%, rgba(7,6,13,0) 35%, rgba(7,6,13,.55) 75%, rgba(7,6,13,.95) 100%), linear-gradient(180deg, rgba(7,6,13,.35) 0%, rgba(7,6,13,0) 30%, rgba(7,6,13,0) 55%, rgba(7,6,13,.92) 100%); }
+.boot-embers { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.boot-embers i { position: absolute; bottom: -10px; width: 4px; height: 4px; border-radius: 50%; background: #ffb52e; box-shadow: 0 0 8px 2px rgba(255,160,40,.7); opacity: 0; animation: ember 7s linear infinite; }
+.boot-embers i:nth-child(1) { left: 8%; animation-delay: 0s; } .boot-embers i:nth-child(2) { left: 18%; animation-delay: 1.4s; width: 3px; height: 3px; }
+.boot-embers i:nth-child(3) { left: 27%; animation-delay: 3.1s; } .boot-embers i:nth-child(4) { left: 36%; animation-delay: .7s; width: 5px; height: 5px; }
+.boot-embers i:nth-child(5) { left: 45%; animation-delay: 2.2s; } .boot-embers i:nth-child(6) { left: 53%; animation-delay: 4.6s; width: 3px; height: 3px; }
+.boot-embers i:nth-child(7) { left: 61%; animation-delay: 1.9s; } .boot-embers i:nth-child(8) { left: 70%; animation-delay: 5.3s; }
+.boot-embers i:nth-child(9) { left: 78%; animation-delay: .3s; width: 3px; height: 3px; } .boot-embers i:nth-child(10) { left: 86%; animation-delay: 3.8s; }
+.boot-embers i:nth-child(11) { left: 93%; animation-delay: 2.7s; width: 5px; height: 5px; } .boot-embers i:nth-child(12) { left: 14%; animation-delay: 6.1s; }
+@keyframes ember { 0% { transform: translate(0, 0) scale(.6); opacity: 0; } 10% { opacity: .9; } 50% { transform: translate(14px, -45vh) scale(1); opacity: .7; } 100% { transform: translate(-10px, -95vh) scale(.4); opacity: 0; } }
 .boot-logo { position: relative; z-index: 1; width: min(78vw, 420px); text-align: center; filter: drop-shadow(0 8px 30px rgba(255,180,60,.35)); animation: logoIn 1.2s cubic-bezier(.2,1.4,.3,1) both; }
 .boot-logo img { width: 100%; }
-.logo-text { font-family: var(--disp); font-size: clamp(48px, 14vw, 96px); line-height: .9; color: #fff; text-shadow: 0 0 30px rgba(255,190,80,.6), 0 4px 0 #7a3a00; letter-spacing: .02em; }
-.logo-text span { display: block; color: var(--gold); -webkit-text-stroke: 1px #7a3a00; }
+.logo-text { font-family: var(--disp); font-size: clamp(44px, 12vw, 88px); line-height: .9; color: #fff; text-shadow: 0 0 30px rgba(255,190,80,.6), 0 4px 0 #7a3a00; letter-spacing: .02em; position: relative; }
+.logo-text span { display: block; color: var(--gold); -webkit-text-stroke: 1px #7a3a00; background: linear-gradient(100deg, var(--gold) 0%, var(--gold) 40%, #fff6d0 50%, var(--gold) 60%, var(--gold) 100%); background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: logoShine 3.2s ease-in-out 1.2s infinite; }
+@keyframes logoShine { 0% { background-position: 120% 0; } 35%, 100% { background-position: -30% 0; } }
+.boot-tagline { margin-top: 8px; font-size: 12px; letter-spacing: .28em; color: rgba(255,230,180,.75); text-transform: uppercase; animation: fadeUp 1s ease .6s both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes logoIn { from { transform: scale(1.4) translateY(30px); opacity: 0; filter: blur(8px) } to { transform: none; opacity: 1; filter: none } }
-.boot-bar { position: relative; z-index: 1; width: min(70vw, 360px); height: 10px; background: rgba(255,255,255,.12); border-radius: 6px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); }
+.boot-progress { position: relative; z-index: 1; width: min(70vw, 360px); display: flex; flex-direction: column; gap: 6px; }
+.boot-bar { position: relative; width: 100%; height: 10px; background: rgba(255,255,255,.12); border-radius: 6px; overflow: hidden; box-shadow: inset 0 0 0 1px rgba(255,255,255,.15); }
 #boot-fill { height: 100%; width: 0; background: linear-gradient(90deg, #ffb52e, #fff1b0); border-radius: 6px; transition: width .25s; box-shadow: 0 0 12px #ffb52e; }
-#boot-msg { position: relative; z-index: 1; color: var(--muted); font-size: 13px; }
-#boot-start { position: relative; z-index: 1; animation: pulse 1.4s ease-in-out infinite; }
+.boot-bar-shine { position: absolute; top: 0; bottom: 0; width: 40%; background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.35), rgba(255,255,255,0)); animation: barShine 1.6s linear infinite; mix-blend-mode: screen; }
+@keyframes barShine { from { left: -40%; } to { left: 100%; } }
+.boot-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+#boot-pct { font-variant-numeric: tabular-nums; color: rgba(255,230,180,.85); font-weight: 700; }
+#boot-start { position: relative; z-index: 1; animation: pulse 1.4s ease-in-out infinite; box-shadow: 0 0 30px rgba(255,181,46,.45), 0 6px 0 #7a3a00; }
+.boot-tip { position: relative; z-index: 1; min-height: 34px; max-width: min(84vw, 520px); text-align: center; font-size: 12px; line-height: 1.5; color: rgba(255,255,255,.7); opacity: 0; transition: opacity .45s; }
+.boot-tip.on { opacity: 1; }
+.boot-tip b { color: var(--gold); }
 .boot-credit { position: absolute; bottom: calc(10px + var(--sab)); font-size: 10px; color: rgba(255,255,255,.35); z-index: 1; }
 @keyframes pulse { 0%,100% { transform: scale(1) } 50% { transform: scale(1.05) } }
 
@@ -595,3 +618,21 @@ b { font-weight: 900; }
 #perfect-label.on { animation: perfectLabel .8s cubic-bezier(.1,.9,.3,1); }
 @keyframes perfectLabel { 0% { opacity: 0; transform: scale(1.6) } 15% { opacity: 1; transform: scale(1) } 70% { opacity: 1 } 100% { opacity: 0; transform: translateY(-14px) } }
 .sprint-ring { position: absolute; inset: -6px; border-radius: 50%; border: 2px solid rgba(107,255,143,.8); opacity: 0; }
+
+/* 가로 폰(짧은 높이): 로고를 줄여 키아트의 영웅들이 보이게 */
+@media (max-height: 480px) {
+  #boot { gap: 8px; justify-content: flex-start; padding-top: 6vh; }
+  .logo-text { font-size: 50px; }
+  .boot-tagline { display: none; }
+  .boot-progress { width: min(60vw, 320px); }
+  #boot-start { margin-top: 9vh; }
+  .boot-tip { min-height: 18px; font-size: 11px; }
+}
+
+/* 세트 제작 */
+.craft-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-height: 56vh; overflow-y: auto; }
+.craft-set { background: rgba(255,255,255,.05); border-radius: 10px; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.cs-head { display: flex; gap: 8px; align-items: center; font-size: 12px; min-width: 0; }
+.cs-head img { width: 36px; height: 36px; flex: none; }
+.cs-slots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+@media (max-width: 700px) { .craft-grid { grid-template-columns: 1fr; } }

@@ -1,10 +1,11 @@
 import { $, fmt } from './ui.js';
 import { audio } from '../engine/audio.js';
 import { HEROES, HERO_ORDER, RARITY, heroStats, levelExp, levelGold, starShards, skillUpGold } from '../data/heroes.js';
-import { ITEM_BY_ID, ITEM_ICON, SLOTS, SLOT_NAME, SETS, itemStats, enhanceCost, enhanceStones, enhanceChance, destroyChance, enhanceMult, ENH_MAX, RARITY_COLOR } from '../data/items.js';
+import { ITEM_BY_ID, ITEM_ICON, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST, craftable, itemStats, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, STONE_ICON, enhanceChance, destroyChance, enhanceMult, ENH_MAX, RARITY_COLOR } from '../data/items.js';
 import { SKUS, SHOP_TABS, GACHA, BATTLE_PASS, PASS_TRACK, DAILY_REWARDS } from '../data/shop.js';
 import { CHAPTERS, STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
 import { REWARD_LABEL } from '../game/economy.js';
+const CAM_DESC = { auto: '상황에 맞춰 자동 — 탐험은 액션, 난전은 탑다운, 보스는 시네마틱', top: '높이서 내려다보는 클래식 시점 — 몹몰이 파악이 쉽다', action: '낮고 가까운 시점 — 타격감과 속도감이 크다', wide: '멀고 넓은 시점 — 전장 전체와 보스 패턴이 보인다' };
 
 const RC = { N: 'var(--r-n)', R: 'var(--r-r)', SR: 'var(--r-sr)', SSR: 'var(--r-ssr)' };
 const hms = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); const d = Math.floor(s / 86400); const h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60; return (d ? d + '일 ' : '') + `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${ss.toString().padStart(2, '0')}`; };
@@ -115,18 +116,37 @@ export class Meta {
     $('h-star').onclick = () => { if (this.eco.promoteHero(id)) { audio.play('jingle_legend', { vol: 0.7 }); this.ui.toast('승급 성공! ★' + this.eco.hero(id).star, 'gold'); this.renderHeroes(); } else { this.ui.toast('영웅 조각 부족 — 소환에서 중복 획득 시 조각 +10', 'red'); } };
     const hs = $('h-sel'); if (hs) hs.onclick = () => { this.eco.s.selected = id; this.eco.emit(); this.app.showcaseHero(id); this.renderHeroes(); this.ui.toast(`${def.name} 출전!`, 'gold'); };
     det.querySelectorAll('[data-sk]').forEach((el) => el.onclick = () => this.showSkill(id, +el.dataset.sk));
+    const hc = $('h-craft'); if (hc) hc.onclick = () => this.showCraft(id);
     det.querySelectorAll('.equip-slot[data-slot]').forEach((el) => el.onclick = () => { const uid = el.dataset.uid; if (uid) this.showItem(+uid, id); else this.ui.toast('가방에서 장비를 선택해 장착하세요'); });
     det.querySelectorAll('[data-inv]').forEach((el) => el.onclick = () => this.showItem(+el.dataset.inv, id));
   }
   setListHtml(heroId) {
     const b = this.eco.heroEquipBonus(heroId); const counts = b.sets || {};
-    const pct = (o) => Object.entries(o).map(([k, v]) => ({ atk: '공격력', hp: 'HP', crit: '치명', critDmg: '치명피해', ultGain: '궁극기 수급' }[k] + ' +' + Math.round(v * 100) + '%')).join(', ');
-    const rows = ['SSR', 'SR', 'R', 'N'].map((rar) => {
-      const n = counts[rar] || 0; if (!n) return '';
-      const S = SETS[rar]; const on2 = n >= 2, on4 = n >= 4;
-      return `<div class="set-row ${on2 ? '' : 'off'}"><img src="${S.icon}" onerror="this.remove()"><div style="flex:1"><div class="sr-name" style="color:${RARITY_COLOR[rar]}">${S.name} (${n}/4)</div><div class="${on2 ? 'sr-eff' : ''}" style="font-size:10px">2세트: ${pct(S.two)}</div><div class="${on4 ? 'sr-eff' : ''}" style="font-size:10px;${on4 ? '' : 'color:var(--muted)'}">4세트: ${pct(S.four)}</div></div></div>`;
+    const pct = (o) => o.text ? o.text : Object.entries(o).filter(([k]) => k !== 'procs' && k !== 'text').map(([k, v]) => ({ atk: '공격력', hp: 'HP', crit: '치명', critDmg: '치명피해', ultGain: '궁극기 수급' }[k] + ' +' + Math.round(v * 100) + '%')).join(', ');
+    const order = ['dragon', 'knight', 'merc', 'recruit', ...THEMED_SETS];
+    const rows = order.map((sid) => {
+      const n = counts[sid] || 0; if (!n) return '';
+      const S = SETS[sid]; const on2 = n >= 2, on4 = n >= 4; const col = S.themed ? '#' + S.color.toString(16).padStart(6, '0') : RARITY_COLOR[{ recruit: 'N', merc: 'R', knight: 'SR', dragon: 'SSR' }[sid]];
+      return `<div class="set-row ${on2 ? '' : 'off'}"><img src="${S.icon}" onerror="this.remove()"><div style="flex:1"><div class="sr-name" style="color:${col}">${S.name} (${n}/4)${S.themed ? ' <small style="color:var(--muted);font-weight:400">테마</small>' : ''}</div><div class="${on2 ? 'sr-eff' : ''}" style="font-size:10px">2세트: ${pct(S.two)}</div><div class="${on4 ? 'sr-eff' : ''}" style="font-size:10px;${on4 ? '' : 'color:var(--muted)'}">4세트: ${pct(S.four)}</div></div></div>`;
     }).filter(Boolean).join('');
-    return `<div class="set-list">${rows || '<div style="font-size:11px;color:var(--muted)">같은 등급 장비를 2개/4개 맞추면 세트 효과가 발동합니다</div>'}</div>`;
+    return `<div class="set-list">${rows || '<div style="font-size:11px;color:var(--muted)">같은 등급 장비 2/4개 = 스탯 세트 · 테마 세트(폭풍·흡혈·중력·불사조)는 플레이 방식이 바뀝니다</div>'}<button class="btn btn-ghost btn-sm" id="h-craft" style="align-self:flex-start">세트 제작 <small><img src="/img/icon_fragment.webp" style="width:12px;height:12px;vertical-align:-2px"> ${this.eco.s.fragments || 0}</small></button></div>`;
+  }
+  /** 세트 조각으로 테마 세트 장비 제작 — 엘리트/보스가 떨군다 */
+  showCraft(heroId) {
+    const s = this.eco.s;
+    const html = `<h2>세트 제작</h2><p style="font-size:12px;color:var(--muted)">세트 조각 <b style="color:#b26bff">${s.fragments || 0}</b> 보유 · 부위당 ${CRAFT_COST}개. 조각은 엘리트·보스가 떨굽니다.</p>
+      <div class="craft-grid">${THEMED_SETS.map((sid) => { const S = SETS[sid]; const col = '#' + S.color.toString(16).padStart(6, '0'); return `<div class="craft-set"><div class="cs-head"><img src="${S.icon}" onerror="this.remove()"><div><div style="font-weight:900;color:${col}">${S.name}</div><div style="font-size:10px;color:var(--muted)">2: ${S.two.text}</div><div style="font-size:10px;color:var(--muted)">4: ${S.four.text}</div></div></div><div class="cs-slots">${SLOTS.map((sl) => { const it = craftable(sid, sl); const own = s.inventory.filter((x) => x.id === it.id).length; return `<div class="equip-slot has rar-SR" data-craft="${sid}:${sl}" title="${it.name}"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><span class="plus">${own ? '×' + own : ''}</span></div>`; }).join('')}</div></div>`; }).join('')}</div>
+      <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`;
+    this.ui.modal(html, { onOpen: (b) => {
+      b.querySelector('#m-cancel').onclick = () => { this.ui.closeModal(); this.renderHeroes(); };
+      b.querySelectorAll('[data-craft]').forEach((el) => el.onclick = async () => {
+        const [sid, sl] = el.dataset.craft.split(':'); const it = craftable(sid, sl);
+        if ((s.fragments || 0) < CRAFT_COST) { this.ui.toast(`세트 조각 부족 (${s.fragments || 0}/${CRAFT_COST})`, 'red'); audio.play('ui_error'); return; }
+        if (!await this.ui.confirm('제작', `${it.name}을(를) 세트 조각 ${CRAFT_COST}개로 제작할까요?`)) return;
+        const r = this.eco.craftSetItem(sid, sl);
+        if (r.ok) { audio.play('jingle_legend', { vol: 0.6 }); audio.vibe([20, 20, 60]); this.ui.toast(`${it.name} 제작!`, 'gold'); this.ui.closeModal(); this.showCraft(heroId); }
+      });
+    } });
   }
   showSkill(id, i) {
     const def = HEROES[id]; const sk = def.skills[i]; const h = this.eco.hero(id); const lv = h.skills[i]; const cost = skillUpGold(lv);
@@ -138,7 +158,7 @@ export class Meta {
     const it = ITEM_BY_ID[inst.id]; const h = this.eco.hero(heroId); const equipped = h.equip[it.slot] === uid;
     const st = itemStats(inst);
     const statTxt = [st.atk ? `공격력 +${st.atk}` : '', st.hp ? `HP +${st.hp}` : '', st.def ? `방어 +${st.def}` : '', st.crit ? `치명 +${Math.round(st.crit * 100)}%` : ''].filter(Boolean).join(' · ');
-    const set = SETS[it.rarity];
+    const set = SETS[it.set] || SETS.recruit;
     this.ui.modal(`<div class="item-detail"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><div><div style="font-weight:900;font-size:16px;color:${RARITY_COLOR[it.rarity]}">${it.name} <span style="color:var(--gold)">+${inst.enh}</span></div><div style="font-size:12px;color:var(--muted)">${it.rarity} · ${SLOT_NAME[it.slot]} · ${set.name}</div><div style="font-size:13px;margin-top:4px">${statTxt}</div></div></div>
       <div class="modal-btns"><button class="btn btn-ghost btn-sm" id="i-sell">판매</button><button class="btn btn-blue btn-sm" id="i-enh">강화</button><button class="btn btn-gold btn-sm" id="i-eq">${equipped ? '해제' : '장착'}</button></div>`, { onOpen: (b) => {
       b.querySelector('#i-eq').onclick = () => { if (equipped) this.eco.unequip(heroId, it.slot); else this.eco.equip(heroId, uid); audio.play('ui_confirm', { vol: 0.5 }); this.ui.closeModal(); this.renderHeroes(); };
@@ -153,7 +173,7 @@ export class Meta {
       if (!inst) { this.ui.modal(`<h2 style="color:var(--red)">장비 파괴</h2><p>강화에 실패해 장비가 파괴되었습니다.</p><div class="modal-btns"><button class="btn btn-gold" id="m-ok">확인</button></div>`, { onOpen: (b) => b.querySelector('#m-ok').onclick = () => { this.ui.closeModal(); this.renderHeroes(); } }); return; }
       const it = ITEM_BY_ID[inst.id]; const lv = inst.enh; const s = this.eco.s;
       const cur = itemStats(inst); const nextInst = { ...inst, enh: Math.min(ENH_MAX, lv + 1) }; const nxt = itemStats(nextInst);
-      const cost = enhanceCost(lv), stones = enhanceStones(lv);
+      const cost = enhanceCost(lv), stones = enhanceStones(lv); const tier = enhanceStoneTier(lv), skey = STONE_KEY[tier];
       const chance = enhanceChance(lv), destroy = destroyChance(lv);
       const maxed = lv >= ENH_MAX;
       const rows = [['공격력', cur.atk, nxt.atk], ['HP', cur.hp, nxt.hp], ['방어', cur.def, nxt.def]].filter((r) => r[1] || r[2]);
@@ -171,9 +191,9 @@ export class Meta {
           <div class="enh-opt" data-opt="bless"><img src="/img/icon_bless.webp" onerror="this.remove()"><span>축복 +20%</span><span class="cnt">×${s.bless}</span></div>
           ${destroy > 0 ? `<div class="enh-opt" data-opt="protect"><img src="/img/icon_protect.webp" onerror="this.remove()"><span>보호 (파괴 방지)</span><span class="cnt">×${s.protect}</span></div>` : ''}
         </div>
-        <div class="enh-cost"><span class="${s.gold < cost ? 'lack' : ''}"><i class="ic ic-gold"></i> ${fmt(cost)}</span>${stones ? `<span class="${s.stones < stones ? 'lack' : ''}"><img src="/img/icon_stone.webp" style="width:14px;height:14px;vertical-align:-2px" onerror="this.remove()"> 강화석 ${stones} <span style="color:var(--muted)">(보유 ${s.stones})</span></span>` : ''}</div>`}
+        <div class="enh-cost"><span class="${s.gold < cost ? 'lack' : ''}"><i class="ic ic-gold"></i> ${fmt(cost)}</span>${stones ? `<span class="${(s[skey] || 0) < stones ? 'lack' : ''}"><img src="${STONE_ICON[tier]}" style="width:14px;height:14px;vertical-align:-2px" onerror="this.remove()"> ${STONE_NAME[tier]} ${stones} <span style="color:var(--muted)">(보유 ${s[skey] || 0})</span></span>` : ''}</div>`}
         <div class="modal-btns"><button class="btn btn-ghost" id="e-close">닫기</button>${maxed ? '' : '<button class="btn btn-gold" id="e-go">강화하기</button>'}</div>
-        <p style="font-size:10px">+8까지 100% 성공 · +12부터 파괴 위험 · 강화석/주문서는 상점에서 구매</p>
+        <p style="font-size:10px">+8까지 100% 성공 · +12부터 파괴 위험 · 비석 3종: 강화석(+9까지) · 상급(엘리트 드랍, +14까지) · 전설(보스 드랍, +15↑)</p>
       </div>`;
       this.ui.modal(html, { onOpen: (b) => {
         const opts = { bless: false, protect: false };
@@ -189,7 +209,7 @@ export class Meta {
           const r = this.eco.enhance(uid, opts);
           if (!r.ok) {
             if (r.reason === 'gold') { this.ui.toast('골드 부족', 'red'); this.offerGold(); }
-            else if (r.reason === 'stones') { this.ui.toast('강화석 부족', 'red'); this.offerStones(); }
+            else if (r.reason === 'stones') { this.ui.toast(`${STONE_NAME[r.tier || 1]} 부족${r.tier > 1 ? ' — ' + (r.tier === 3 ? '보스' : '엘리트') + '가 떨굽니다' : ''}`, 'red'); if (!r.tier || r.tier === 1) this.offerStones(); }
             else this.ui.toast('강화할 수 없습니다', 'red');
             audio.play('ui_error'); return;
           }
@@ -297,11 +317,13 @@ export class Meta {
   }
   showSettings() {
     const st = this.eco.s.settings;
+    if (st.voice === undefined) st.voice = true;
     const row = (k, label) => `<div class="setting-row"><span>${label}</span><div class="toggle ${st[k] ? 'on' : ''}" data-k="${k}"></div></div>`;
-    this.ui.modal(`<h2>설정</h2>${row('sfx', '효과음')}${row('music', '배경음악')}${row('haptics', '진동')}<div class="setting-row"><span>그래픽</span><div class="seg">${['low', 'mid', 'high'].map((q) => `<button data-q="${q}" class="${st.quality === q ? 'on' : ''}">${{ low: '낮음', mid: '보통', high: '높음' }[q]}</button>`).join('')}</div></div><div class="setting-row"><span>조작</span><span style="font-size:11px;color:var(--muted)">이동 WASD · 공격 J/Space · 회피 K · 스킬 1~3 · 궁극기 R</span></div>
+    this.ui.modal(`<h2>설정</h2>${row('sfx', '효과음')}${row('music', '배경음악')}${row('voice', '나레이션')}${row('haptics', '진동')}<div class="setting-row"><span>그래픽</span><div class="seg">${['low', 'mid', 'high'].map((q) => `<button data-q="${q}" class="${st.quality === q ? 'on' : ''}">${{ low: '낮음', mid: '보통', high: '높음' }[q]}</button>`).join('')}</div></div><div class="setting-row"><span>카메라</span><div class="seg">${['auto', 'top', 'action', 'wide'].map((c) => `<button data-cam="${c}" class="${(st.camera || 'auto') === c ? 'on' : ''}">${{ auto: 'AUTO', top: '탑다운', action: '액션', wide: '시네마틱' }[c]}</button>`).join('')}</div></div><div class="setting-row" style="border-bottom:0;padding-top:0"><span id="cam-desc" style="font-size:11px;color:var(--muted)">${CAM_DESC[st.camera || 'auto']}</span></div><div class="setting-row"><span>조작</span><span style="font-size:11px;color:var(--muted)">이동 WASD · 공격 J/Space · 회피 K · 스킬 1~3 · 궁극기 R</span></div>
       <div class="modal-btns"><button class="btn btn-red btn-sm" id="m-reset">데이터 초기화</button><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {
       b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
       b.querySelectorAll('.toggle').forEach((t) => t.onclick = () => { const k = t.dataset.k; st[k] = !st[k]; t.classList.toggle('on', st[k]); this.app.applySettings(); this.eco.save(); });
+      b.querySelectorAll('[data-cam]').forEach((c) => c.onclick = () => { st.camera = c.dataset.cam; b.querySelectorAll('[data-cam]').forEach((x) => x.classList.toggle('on', x === c)); b.querySelector('#cam-desc').textContent = CAM_DESC[st.camera]; this.app.applySettings(); this.eco.save(); audio.play('ui_open', { vol: 0.3 }); });
       b.querySelectorAll('[data-q]').forEach((q) => q.onclick = () => { st.quality = q.dataset.q; b.querySelectorAll('[data-q]').forEach((x) => x.classList.toggle('on', x === q)); this.app.applySettings(); this.eco.save(); });
       b.querySelector('#m-reset').onclick = async () => { if (await this.ui.confirm('초기화', '모든 진행 데이터가 삭제됩니다. 계속할까요?', { okCls: 'btn-red' })) { this.eco.reset(); location.reload(); } };
     } });

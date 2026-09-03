@@ -21,13 +21,19 @@
   <!-- ===== BOOT ===== -->
   <div id="boot" class="screen show">
     <div class="boot-bg"></div>
+    <div class="boot-embers" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="boot-vignette"></div>
     <div class="boot-logo">
       <div id="boot-logo-text" class="logo-text">BLADE<span>SURGE</span></div>
+      <div class="boot-tagline">무한의 성 · 몹몰이 핵앤슬래시</div>
     </div>
-    <div class="boot-bar"><div id="boot-fill"></div></div>
-    <div id="boot-msg">에셋 로딩 중…</div>
+    <div class="boot-progress">
+      <div class="boot-bar"><div id="boot-fill"></div><div class="boot-bar-shine"></div></div>
+      <div class="boot-row"><div id="boot-msg">에셋 로딩 중…</div><div id="boot-pct">0%</div></div>
+    </div>
     <button id="boot-start" class="btn btn-gold btn-xl hidden">터치하여 시작</button>
-    <div class="boot-credit">3D: KayKit (CC0) · SFX: Kenney (CC0) · BGM: OpenGameArt (CC0)</div>
+    <div id="boot-tip" class="boot-tip"></div>
+    <div class="boot-credit">3D: KayKit · Quaternius (CC0) · SFX: Kenney (CC0) · BGM: 자체 생성</div>
   </div>
 
   <!-- ===== LOBBY / META (shared top bar + bottom nav) ===== -->

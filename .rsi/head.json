@@ -1,17 +1,17 @@
 {
   "errors": 0,
-  "bootMs": 3540,
-  "floorClearSec": 66,
-  "killsPerFloor": 87,
+  "bootMs": 1724,
+  "floorClearSec": 76,
+  "killsPerFloor": 104,
   "maxAliveSeen": 18,
   "_maxAliveSampled": 18,
-  "dropsPerFloor": 10,
-  "longestDryStreakSec": 28,
+  "dropsPerFloor": 15,
+  "longestDryStreakSec": 14,
   "hitTakenRatio": 0,
-  "avgFrameMs": 5.06,
-  "p95FrameMs": 3.4,
+  "avgFrameMs": 4.31,
+  "p95FrameMs": 3.3,
   "rhythmBeats": 6,
-  "drawCalls": 211,
+  "drawCalls": 246,
   "_beats": {
     "explore": true,
     "encounter": true,
@@ -22,9 +22,9 @@
     "bossKill": false,
     "floorClear": true
   },
-  "_roomsCleared": "7/9",
+  "_roomsCleared": "8/9",
   "_endReason": "보스처치",
-  "_avgAlive": 3,
+  "_avgAlive": 2.9,
   "_errorSamples": [],
-  "_at": "2026-09-03T08:41:47.297Z"
+  "_at": "2026-09-03T10:10:44.399Z"
 }

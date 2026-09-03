@@ -148,7 +148,7 @@ export class UI {
     $('btn-result-next').style.display = win ? '' : 'none'; $('btn-result-double').style.display = win ? '' : 'none';
     $('result-exp').style.width = '0%'; $('result-bp').style.width = '0%';
     if (win) {
-      this.lastReward = eco.completeStage(b.stage, r.stars, { fieldGold: b.drops.gold, fieldStones: b.drops.stones, fieldLoot: b.drops.loot }); const rw = this.lastReward;
+      this.lastReward = eco.completeStage(b.stage, r.stars, { fieldGold: b.drops.gold, fieldStones: b.drops.stones, fieldStones2: b.drops.stones2, fieldStones3: b.drops.stones3, fieldFragments: b.drops.fragments, fieldLoot: b.drops.loot }); const rw = this.lastReward;
       stars.forEach((s, i) => { if (i < r.stars) setTimeout(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
       const items = [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];
       items.forEach((x, i) => setTimeout(() => {

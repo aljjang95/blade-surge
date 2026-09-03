@@ -8,6 +8,7 @@ class AudioSys {
     this.ctx = null; this.buffers = {}; this.enabled = true; this.musicOn = true; this.haptics = true;
     this.music = null; this.musicName = null; this.musicGain = null; this.sfxGain = null; this.master = null;
     this.lastPlay = {};
+    this.voiceOn = true; this.voiceBuf = {}; this._voiceSrc = null; this._voiceLast = {};
   }
   async init() {
     if (this.ctx) return;
@@ -19,6 +20,7 @@ class AudioSys {
     // 컴프레서로 타격음 펀치감
     const comp = this.ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 6; comp.attack.value = 0.002; comp.release.value = 0.12;
     this.sfxGain.disconnect(); this.sfxGain.connect(comp); comp.connect(this.master);
+    this.voiceGain = this.ctx.createGain(); this.voiceGain.gain.value = 1; this.voiceGain.connect(this.master);
     await Promise.all(SFX_FILES.map(async (n) => {
       try { const ab = await (await fetch(`/sfx/${n}.mp3`)).arrayBuffer(); this.buffers[n] = await this.ctx.decodeAudioData(ab); } catch (e) { console.warn('sfx fail', n); }
     }));
@@ -34,6 +36,18 @@ class AudioSys {
     const g = this.ctx.createGain(); g.gain.value = vol; s.connect(g); g.connect(this.sfxGain); s.start(t + delay);
   }
   pick(prefix, n, opts) { this.play(prefix + Math.floor(Math.random() * n), opts); }
+  /** 나레이션(TTS, /sfx/voice/*.mp3 — edge-tts InJoon 생성). 새 대사가 이전 대사를 끊고, BGM 을 잠깐 덕킹한다. min 은 같은 대사 최소 간격(초) */
+  async voice(name, { vol = 1, min = 2, duck = 0.45, dur = 1.6 } = {}) {
+    if (!this.voiceOn || !this.ctx) return;
+    const t = this.now(); if (this._voiceLast[name] && t - this._voiceLast[name] < min) return; this._voiceLast[name] = t;
+    let b = this.voiceBuf[name];
+    if (!b) { try { const ab = await (await fetch(`/sfx/voice/${name}.mp3`)).arrayBuffer(); b = this.voiceBuf[name] = await this.ctx.decodeAudioData(ab); } catch (e) { this.voiceBuf[name] = null; return; } }
+    if (!b || !this.voiceOn) return;
+    if (this._voiceSrc) { try { this._voiceSrc.stop(); } catch (e) {} }
+    const src = this.ctx.createBufferSource(); src.buffer = b; const g = this.ctx.createGain(); g.gain.value = vol; src.connect(g); g.connect(this.voiceGain); src.start(); this._voiceSrc = src;
+    this.duck(duck, Math.max(dur, b.duration + 0.4));
+  }
+  setVoiceOn(on) { this.voiceOn = on; if (!on && this._voiceSrc) { try { this._voiceSrc.stop(); } catch (e) {} } }
 
   // ---------- 프로시저럴 SFX ----------
   _noise(dur) {

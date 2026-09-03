@@ -85,7 +85,7 @@ export function getPart(gltf, name) {
 // ---------- 이미지 텍스처 (GPT 생성 VFX) ----------
 const texLoader = new THREE.TextureLoader();
 export const VFX_TEX = {};
-export const VFX_LIST = ['circle_gold', 'circle_demon', 'slash', 'shockwave', 'lightning', 'fire_pillar', 'ice', 'holy_burst', 'explosion', 'dust'];
+export const VFX_LIST = ['circle_gold', 'circle_demon', 'slash', 'shockwave', 'lightning', 'fire_pillar', 'ice', 'holy_burst', 'explosion', 'dust', 'lightning_chain', 'blood_burst', 'singularity', 'phoenix'];
 export async function preloadVfx() {
   await Promise.all(VFX_LIST.map((n) => new Promise((res) => texLoader.load(`/img/vfx/${n}.webp`, (t) => { t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 2; VFX_TEX[n] = t; res(); }, undefined, () => { console.warn('vfx tex fail', n); res(); }))));
 }
