@@ -10,21 +10,24 @@
 > 연결된 폴더가 있으면 거기에 작업 사본이 이미 있는지 먼저 확인하고, 없으면 클론한다.
 
 ```bash
-# 작업 위치를 정한다. 연결된 폴더가 있으면 그 아래, 없으면 세션 디스크에.
-#   연결 폴더:  /sessions/<세션>/mnt/outputs/blade-surge   ← 대표님 PC에 남는다
-#   미연결:     /sessions/<세션>/blade-surge               ← 세션 끝나면 사라진다
 W=/sessions/$(ls /sessions | head -1)
-DIR=$W/mnt/outputs/blade-surge; [ -d "$W/mnt/outputs" ] || DIR=$W/blade-surge
-
-[ -d "$DIR/.git" ] && (cd "$DIR" && git pull) \
-  || git clone https://github.com/aljjang95/blade-surge "$DIR"     # public, 인증 불필요
-cd "$DIR" && npm install
+git clone https://github.com/aljjang95/blade-surge $W/repo    # public, 인증 불필요
+cd $W/repo && npm install
 npm run build && echo BOOTSTRAP_OK
 ```
 
-> **함정**: 마운트(`mnt/`) 위에는 git 오브젝트를 못 만든다("Operation not permitted").
-> 마운트에서 작업하려면 **git 저장소는 세션 디스크에 두고**(`/sessions/<세션>/repo`)
-> 작업 사본만 마운트에 두고 `rsync` 로 오간다. 지금까지 이 방식으로 했다.
+> **작업은 반드시 세션 디스크(`/sessions/<세션>/…`)에서 한다. 마운트에서 하지 마라.**
+>
+> 마운트(`mnt/outputs`, 연결된 사용자 폴더 모두)는 **덮어쓰기만 되고 삭제가 안 된다** — 실측:
+> ```
+> unlink: 불가    rename: OK    rmdir: 불가
+> ```
+> 그래서 마운트 위에서는 **git 이 죽고**(lock 파일을 지우지 못해 `could not lock config file`),
+> **npm install 도 못 돌고**, `rsync --delete` 도 안 먹는다.
+> 실수로 마운트에 클론하면 **지울 수도 없는 잔해가 대표님 폴더에 남는다** (실제로 저질렀다).
+>
+> 마운트는 **결과물을 건네는 통로**로만 써라 — 빌드 산출물, 스크린샷, 리포트를 복사해 넣는 용도.
+> 프로젝트를 대표님 폴더에 상주시킬 이유는 없다. **영속성은 GitHub 레포가 담당한다.**
 
 ### 하네스를 돌리려면 (게이트 A) — 추가로 필요한 것
 ```bash
