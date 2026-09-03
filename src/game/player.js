@@ -2,16 +2,17 @@ import * as THREE from 'three';
 import { Actor } from './actor.js';
 import { audio } from '../engine/audio.js';
 import { SKILLS } from './skills.js';
+import { applyLook } from './look.js';
 
 const _v = new THREE.Vector3();
-const ALL_WEAPON_NODES = ['1H_Sword_Offhand', 'Badge_Shield', 'Rectangle_Shield', 'Round_Shield', 'Spike_Shield', '1H_Sword', '2H_Sword', 'Spellbook', 'Spellbook_open', '1H_Wand', '2H_Staff', 'Knife_Offhand', '1H_Crossbow', '2H_Crossbow', 'Knife', 'Throwable', '1H_Axe_Offhand', 'Barbarian_Round_Shield', '1H_Axe', '2H_Axe', 'Mug'];
 
 export class Player extends Actor {
-  constructor(game, gltf, def, stats, skillLevels = [1, 1, 1, 1]) {
+  constructor(game, gltf, def, stats, skillLevels = [1, 1, 1, 1], equip = {}) {
     super(game, gltf, { scale: 1.0 });
     this.def = def; this.stats = stats; this.skillLevels = skillLevels;
     this.maxHp = stats.hp; this.hp = stats.hp;
-    this.setVisibleParts(def.show, ALL_WEAPON_NODES);
+    this.look = applyLook(this.model, def, equip);   // 장비 외형: 무기/방패 메시 + 등급 발광 + 궤적색
+    this.auraT = 0;
     this.state = 'idle'; this.stateT = 0;
     this.comboIdx = 0; this.comboQueued = false; this.hitDone = false; this.comboWindow = 0;
     this.cds = [0, 0, 0, 0]; this.ult = 0; this.ultMax = 100;
@@ -94,7 +95,7 @@ export class Player extends Actor {
   startTrail() {
     if (this.trail) this.trail.stop();
     const hand = this.def.weapon === 'dual' ? 'handslot.r' : 'handslot.r'; const len = this.def.weapon === '2h' ? 1.6 : 1.2;
-    this.trail = this.game.fx.trail(() => this.weaponPoints(hand, len), this.def.color, { segs: 14, life: 0.2 });
+    this.trail = this.game.fx.trail(() => this.weaponPoints(hand, len), this.look.trailColor, { segs: 14, life: 0.2 });
   }
   stopTrail() { if (this.trail) { this.trail.stop(); this.trail = null; } }
   doComboHit() {
@@ -250,6 +251,7 @@ export class Player extends Actor {
     if (this.perfectWindow > 0) this.perfectWindow -= dt;
     if (this.stormT > 0) { this.stormT -= dt; this.game.fx.aura(this.pos, 0x7fd9ff, 1.5); if (this.stormT <= 0 && this.buffs.t <= 0) this.tintEmissive = null; }
     if (this.perfectCd > 0) this.perfectCd -= dt;
+    if (this.look.aura && this.alive) { this.auraT -= dt; if (this.auraT <= 0) { this.auraT = this.look.enhMax >= 15 ? 0.12 : 0.22; this.game.fx.aura(this.pos, this.look.aura, 1); } }   // +10 이상 강화: 잔불 오라
     // 락온: 조준 대상이 계속 바뀌지 않도록 유지
     if (this.lockTarget && (!this.lockTarget.alive || this.distTo(this.lockTarget) > 11)) this.lockTarget = null;
     for (let i = 0; i < 4; i++) if (this.cds[i] > 0) this.cds[i] = Math.max(0, this.cds[i] - dt);

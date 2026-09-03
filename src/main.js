@@ -25,7 +25,7 @@ const BOOT_TIPS = [
   '<b>질주</b> 중 적과 부딪히면 넉백. 무리 사이를 가르며 달려라.',
 ];
 
-const ALL_WEAPON_NODES = ['1H_Sword_Offhand', 'Badge_Shield', 'Rectangle_Shield', 'Round_Shield', 'Spike_Shield', '1H_Sword', '2H_Sword', 'Spellbook', 'Spellbook_open', '1H_Wand', '2H_Staff', 'Knife_Offhand', '1H_Crossbow', '2H_Crossbow', 'Knife', 'Throwable', '1H_Axe_Offhand', 'Barbarian_Round_Shield', '1H_Axe', '2H_Axe', 'Mug'];
+import { applyLook } from './game/look.js';
 
 class App {
   constructor() {
@@ -84,10 +84,10 @@ class App {
     if (first || this.mode === 'lobby') this.arena.buildLobby();
     const { root, mixer, clips } = spawnCharacter(this.models[def.model]);
     root.rotation.y = Math.PI * 0.15;
-    for (const n of ALL_WEAPON_NODES) { const o = root.getObjectByName(n); if (o) o.visible = def.show.includes(n); }
+    const look = applyLook(root, def, this.eco.heroEquipInsts(id));   // 로비 쇼케이스도 장착 장비대로
     const a = mixer.clipAction(clips['Idle']); a.play();
     this.scene.add(root);
-    this.showcase = { root, mixer, clips, def, t: 0, next: 4 + Math.random() * 3 };
+    this.showcase = { root, mixer, clips, def, look, t: 0, next: 4 + Math.random() * 3, auraT: 0 };
     if (!first) { this.fx.pillar(new THREE.Vector3(0, 0, 0), def.color, { radius: 1.2, height: 8, life: 0.8 }); this.fx.burst(new THREE.Vector3(0, 1, 0), def.color, { n: 40, speed: 6, size: 0.4, up: 1 }); audio.magic({ vol: 0.3, base: 440, notes: [0, 4, 7, 12] }); }
     this.renderer.rig.mode = 'lobby'; this.renderer.rig.target.set(0, 0, 0);
   }
@@ -133,6 +133,7 @@ class App {
         const s = this.showcase; s.mixer.update(realDt); s.t += realDt;
         if (s.t > s.next) { s.t = 0; s.next = 5 + Math.random() * 4; const pool = ['Cheer', 'Interact', 'Idle']; const nm = pool[Math.floor(Math.random() * pool.length)]; const a = s.mixer.clipAction(s.clips[nm]); if (nm !== 'Idle') { a.reset().setLoop(THREE.LoopOnce).play(); const idle = s.mixer.clipAction(s.clips['Idle']); a.crossFadeFrom(idle, 0.2); setTimeout(() => { idle.reset().play(); idle.crossFadeFrom(a, 0.3); }, s.clips[nm].duration * 1000 - 300); } }
         if (Math.random() < realDt * 3) this.fx.embers(new THREE.Vector3(0, 0.2, 0), s.def.color, { n: 1, radius: 1.2, life: 1.5, size: 0.25, rise: 1.2 });
+        if (s.look?.aura) { s.auraT -= realDt; if (s.auraT <= 0) { s.auraT = 0.2; this.fx.aura(s.root.position, s.look.aura, 1); } }
       }
       this.arena.update(realDt, this.fx, this.showcase ? this.showcase.root.position : null); this.fx.update(realDt);
       this.renderer.update(realDt, realDt);

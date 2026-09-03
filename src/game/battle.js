@@ -61,7 +61,7 @@ export class Battle {
     this.roomsCleared = 0; this.bossFound = false;
 
     const gltf = await loadModel(def.model);
-    this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1]);
+    this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1], this.app.eco.heroEquipInsts(heroId));
     const sr = this.world.startRoom;
     this.player.pos.set(sr.x, 0, sr.z); this.player.yaw = 0;
     this.drops.setup(this.app.models.dungeon);

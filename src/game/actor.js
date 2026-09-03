@@ -73,9 +73,10 @@ export class Actor {
     if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) this.slow = 0; }
     if (this.invuln > 0) this.invuln -= dt;
     // 히트 플래시
-    if (this.flashT > 0) { this.flashT -= dt; const k = Math.max(0, this.flashT / 0.12); for (const m of this.mats) { m.emissive.copy(this.flashColor).multiplyScalar(k * 1.2); } }
-    else if (this.tintEmissive) { for (const m of this.mats) m.emissive.copy(this.tintEmissive); }
-    else if (this.mats[0].emissive.r > 0 || this.mats[0].emissive.g > 0 || this.mats[0].emissive.b > 0) { for (const m of this.mats) m.emissive.setScalar(0); }
+    // 장비 발광(look.js 의 baseEmissive)은 플래시·틴트 밑에 항상 깔린다
+    if (this.flashT > 0) { this.flashT -= dt; const k = Math.max(0, this.flashT / 0.12); for (const m of this.mats) { m.emissive.copy(this.flashColor).multiplyScalar(k * 1.2); if (m.userData.baseEmissive) m.emissive.add(m.userData.baseEmissive); } this._emDirty = true; }
+    else if (this.tintEmissive) { for (const m of this.mats) { m.emissive.copy(this.tintEmissive); if (m.userData.baseEmissive) m.emissive.add(m.userData.baseEmissive); } this._emDirty = true; }
+    else if (this._emDirty) { this._emDirty = false; for (const m of this.mats) { if (m.userData.baseEmissive) m.emissive.copy(m.userData.baseEmissive); else m.emissive.setScalar(0); } }
     if (this.deathT >= 0) { this.deathT += dt; if (this.deathT > 1.2) { this.pos.y = (this.rig.hover || 0) - (this.deathT - 1.2) * 1.5; } if (this.deathT > 2.4) this.dead = true; }
   }
   die() {

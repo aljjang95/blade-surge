@@ -103,6 +103,7 @@ src/game/
   arena.js            buildLobby() / buildFloor() — 던전 킷 인스턴싱, 테마 조명, 횃불
   actor.js            공통 액터(애니 크로스페이드, 히트플래시, 넉백, 월드 충돌)
   player.js           콤보 상태기계, 스킬, 회피/퍼펙트, 질주, 락온, AUTO 탐험
+  look.js             장비 외형 — 등급별 무기/방패 메시, 발광, 강화 오라 (전투·로비 공용)
   skills.js           스킬 16종 — 진공·텍스처 VFX
   enemies.js          잡몹/엘리트/보스 AI, 보스 패턴 킷 3종
   drops.js            3D 필드 드랍 + 자석 흡수 + 희귀도 연출
@@ -111,7 +112,9 @@ src/game/
 src/data/             rigs(리그별 애니 이름 번역) / stages / heroes / items / shop
 src/ui/               ui.js(HUD·결과·목업결제) / meta.js(로비·강화·소환) / minimap.js
 public/models,img,bgm,sfx/
-tools/metrics.mjs     자동 채점 하네스
+tools/metrics.mjs     자동 채점 하네스 (레벨 1 영웅 · 1층)
+tools/shot_seal.mjs   게이트 B 컷: 봉인 결계 / 포탈 / 보스 진입
+tools/shot_look.mjs   게이트 B 컷: 장비 외형 4영웅 × 3단계
 ```
 
 ## 코드 규칙

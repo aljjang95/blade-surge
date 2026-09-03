@@ -81,6 +81,8 @@ export class Economy {
     this.s.fragments -= CRAFT_COST;
     const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); this.emit(); return { ok: true, inst };
   }
+  /** 슬롯별 장착 인스턴스 (외형용) */
+  heroEquipInsts(id) { const h = this.hero(id); const o = {}; for (const sl of SLOTS) o[sl] = this.s.inventory.find((x) => x.uid === h.equip[sl]) || null; return o; }
   heroPower(id) { return heroStats(HEROES[id], this.hero(id), this.heroEquipBonus(id)).power; }
   addHeroExp(id, exp) { const h = this.hero(id); h.exp += exp; let ups = 0; while (h.exp >= levelExp(h.level) && h.level < 80) { h.exp -= levelExp(h.level); h.level++; ups++; } this.emit(); return ups; }
   levelUpHero(id) { const h = this.hero(id); const cost = levelGold(h.level); if (this.s.gold < cost || h.level >= 80) return false; this.s.gold -= cost; h.level++; this.emit(); return true; }

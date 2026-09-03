@@ -161,7 +161,7 @@ export class Meta {
     const set = it.set ? SETS[it.set] : null;
     this.ui.modal(`<div class="item-detail"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><div><div style="font-weight:900;font-size:16px;color:${RARITY_COLOR[it.rarity]}">${it.name} <span style="color:var(--gold)">+${inst.enh}</span></div><div style="font-size:12px;color:var(--muted)"><b style="color:${RARITY_COLOR[it.rarity]}">${RARITY_INFO[it.rarity].name}</b> · ${SLOT_NAME[it.slot]}${set ? ' · ' + set.name : ''}</div><div style="font-size:13px;margin-top:4px">${statTxt}</div></div></div>
       <div class="modal-btns"><button class="btn btn-ghost btn-sm" id="i-sell">판매</button><button class="btn btn-blue btn-sm" id="i-enh">강화</button><button class="btn btn-gold btn-sm" id="i-eq">${equipped ? '해제' : '장착'}</button></div>`, { onOpen: (b) => {
-      b.querySelector('#i-eq').onclick = () => { if (equipped) this.eco.unequip(heroId, it.slot); else this.eco.equip(heroId, uid); audio.play('ui_confirm', { vol: 0.5 }); this.ui.closeModal(); this.renderHeroes(); };
+      b.querySelector('#i-eq').onclick = () => { if (equipped) this.eco.unequip(heroId, it.slot); else this.eco.equip(heroId, uid); audio.play('ui_confirm', { vol: 0.5 }); this.ui.closeModal(); this.renderHeroes(); if (heroId === this.eco.s.selected) this.app.showcaseHero(heroId); };   // 장착 즉시 외형 반영
       b.querySelector('#i-sell').onclick = async () => { if (await this.ui.confirm('판매', `${it.name} +${inst.enh} 을(를) 판매할까요?`)) { const g = this.eco.sellItem(uid); this.ui.toast(`골드 +${fmt(g)}`, 'gold'); audio.pick('coin', 2); this.renderHeroes(); } };
       b.querySelector('#i-enh').onclick = () => { this.ui.closeModal(); this.showEnhance(uid, heroId); };
     } });
