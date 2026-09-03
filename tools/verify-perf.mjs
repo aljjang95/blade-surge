@@ -6,6 +6,7 @@
  * 그래서 판정은 **삼각형 수 / 드로우콜 / 블룸 렌더타깃 크기** 로 한다. 이건 안 흔들린다.
  */
 import { chromium } from 'playwright';
+import { CHROME } from './chrome.mjs';
 import { spawn } from 'child_process';
 import { resolve } from 'path';
 
@@ -14,7 +15,7 @@ const PORT = 4195;
 const srv = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--host'], { cwd: PROJ, stdio: 'ignore' });
 for (let i = 0; i < 60; i++) { try { const r = await fetch(`http://localhost:${PORT}/`); if (r.ok) break; } catch {} await new Promise((r) => setTimeout(r, 500)); }
 
-const br = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+const br = await chromium.launch({ ...(CHROME ? { executablePath: CHROME } : {}), args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const page = await (await br.newContext({ viewport: { width: 880, height: 400 }, hasTouch: true, isMobile: true })).newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message.slice(0, 160)));

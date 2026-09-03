@@ -99,7 +99,7 @@ export class Enemy extends Actor {
     super.update(dt);
     if (this.marker) { if (this.alive) { this.marker.rotation.z += dt * 1.2; this.marker.material.opacity = 0.5 + Math.sin(this.game.elapsed * 3) * 0.18; } else this.marker.visible = false; }
     if (this.poison > 0) { this.poison -= dt; this.poisonT -= dt; if (this.poisonT <= 0) { this.poisonT = 0.5; if (this.alive) { const d = this.maxHp * 0.02 + 8; this.hp -= d; this.game.fx.damage(this.pos, d, { kind: 'skill' }); this.game.fx.embers(this.pos, 0x80ff90, { n: 3, radius: 0.5, life: 0.6 }); if (this.hp <= 0) { this.hp = 0; this.kill(0, 0, 2); } } } this.tintEmissive = new THREE.Color(0, 0.25, 0.05); }
-    else if (this.tintEmissive && !this.enraged && !this.isElite) this.tintEmissive = null;
+    else if (this.tintEmissive && !this.enraged && !this.isElite && !(this._crystal > 0)) this.tintEmissive = null;   // 결정화 틴트는 세트 쪽이 되돌린다
     if (!this.alive) return;
     this.stateT += dt; const p = this.player; if (!p) return;
     const d = this.distTo(p); const spdMul = (this.slow ? 0.5 : 1) * (this.enraged ? 1.35 : 1);

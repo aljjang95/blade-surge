@@ -1,17 +1,17 @@
 {
   "errors": 0,
-  "bootMs": 4044,
-  "floorClearSec": 190,
-  "killsPerFloor": 158,
-  "maxAliveSeen": 17,
-  "_maxAliveSampled": 15,
-  "dropsPerFloor": 32,
+  "bootMs": 2342,
+  "floorClearSec": 180,
+  "killsPerFloor": 162,
+  "maxAliveSeen": 21,
+  "_maxAliveSampled": 21,
+  "dropsPerFloor": 41,
   "longestDryStreakSec": 16,
-  "hitTakenRatio": 0.278,
-  "avgFrameMs": 4.56,
-  "p95FrameMs": 4.4,
+  "hitTakenRatio": 0.233,
+  "avgFrameMs": 5.06,
+  "p95FrameMs": 1.5,
   "rhythmBeats": 7,
-  "drawCalls": 282,
+  "drawCalls": 270,
   "_beats": {
     "explore": true,
     "encounter": true,
@@ -24,7 +24,7 @@
   },
   "_roomsCleared": "11/11",
   "_endReason": "전구역클리어",
-  "_avgAlive": 2.7,
+  "_avgAlive": 3,
   "_errorSamples": [],
-  "_at": "2026-09-03T18:52:51.439Z"
+  "_at": "2026-09-03T19:47:28.375Z"
 }

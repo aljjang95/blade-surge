@@ -9,6 +9,7 @@ import { HEROES, heroStats } from '../data/heroes.js';
 import { loadModel } from '../engine/assets.js';
 import { RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_BOSS } from '../data/items.js';
 import { audio } from '../engine/audio.js';
+import { SetProcs } from './setprocs.js';
 
 const _v = new THREE.Vector3();
 const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
@@ -54,6 +55,7 @@ export class Battle {
     this.setBonus = equipBonus.active || [];
     this.procs = new Set(equipBonus.procs || []);   // 테마 세트 발동 효과 (items.js SETS.*.procs)
     this.holes = []; this.rebirthUsed = false;
+    this.sp = this.sp || new SetProcs(this); this.sp.clear();   // 회전 8 테마 세트 (서리·역병·룬·사슬)
 
     // ---- 무한의 성: 한 층 절차 생성 ----
     this.world = new Floor(stage.idx, stage.chapter.theme);
@@ -84,7 +86,7 @@ export class Battle {
     this.after(3.2, () => { if (this.active) audio.voice('floor_start', { min: 30 }); });   // 층 시작 안내 ("The seal is broken" 는 unsealBoss 의 seal_break 가 맡는다)
     // 테마 세트가 켜져 있으면 알려준다 — 발동 효과는 눈에 띄어야 세트를 모을 이유가 된다
     const themed = this.setBonus.filter((a) => a.set.themed);
-    themed.forEach((a, i) => this.after(1.2 + i * 0.9, () => { if (!this.active) return; this.ui.toast(`${a.set.name} ${a.tier}세트 발동 — ${a.set[a.tier === 4 ? 'four' : 'two'].text}`, 'gold'); this.fx.holyBurst(this.player.pos, { size: 6, life: 0.5, color: a.set.color }); audio.magic({ vol: 0.3, base: 440, notes: [0, 4, 7], step: 0.07 }); audio.voice('set_' + a.set.id, { min: 5 }); }));
+    themed.forEach((a, i) => this.after(1.2 + i * 0.9, () => { if (!this.active) return; this.ui.toast(`${a.set.name} ${a.tier}세트 발동 — ${a.set[a.tier === 4 ? 'four' : 'two'].text}`, 'gold'); this.fx.holyBurst(this.player.pos, { size: 6, life: 0.5, color: a.set.color }); audio.magic({ vol: 0.3, base: 440, notes: [0, 4, 7], step: 0.07 }); if (a.set.voiced) audio.voice('set_' + a.set.id, { min: 5 }); }));
   }
   hasProc(name) { return this.procs && this.procs.has(name); }
 
@@ -288,7 +290,7 @@ export class Battle {
     this.scene.remove(P.mesh); this.portal = null;
   }
 
-  stop() { this.active = false; if (this.portal) { this.scene.remove(this.portal.mesh); this.portal = null; } this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) if (p.mesh) this.scene.remove(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.renderer.desat = 0; this.world = null; }
+  stop() { this.active = false; if (this.portal) { this.scene.remove(this.portal.mesh); this.portal = null; } this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) if (p.mesh) this.scene.remove(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const def = ENEMIES[type]; if (!def) return; const gltf = this.app.models[def.model]; if (!gltf) return;
@@ -327,6 +329,7 @@ export class Battle {
   }
   onEnemyDeath(e) {
     this.kills++; this.waveKilled++; this.player.addUlt(e.isBoss ? 30 : e.isElite ? 16 : 5);
+    if (this.sp) this.sp.onKill(e);
     if (this.hasProc('blood_leech') && this.player.alive) { const heal = Math.floor(this.player.maxHp * 0.03); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); this.fx.embers(this.player.pos, 0xff3a5a, { n: 4, radius: 0.6, life: 0.6, rise: 2 }); if (this.fx.dmgLayer.children.length < 20) this.fx.damage(this.player.pos, heal, { kind: 'heal', text: '+' + heal }); }
     this.app.eco.s.quests.kills++;
     this.drops.onKill(e, this.stage);
@@ -418,8 +421,10 @@ export class Battle {
   damageEnemy(e, dmg, opts = {}) {
     const p = this.player; const crit = Math.random() < p.stats.crit;
     let amount = dmg * (0.9 + Math.random() * 0.2) * (crit ? p.stats.critDmg : 1);
+    if (this.sp) amount *= this.sp.dmgMul(e);   // 서리 세트: 결정화된 적은 받는 피해 +30%
     const dealt = e.hurt(amount, { ...opts, crit });
     if (dealt <= 0) return;
+    if (this.sp && !opts.noProc) this.sp.onHit(e);
     this.dmgDealt += dealt;
     this.combo++; this.comboT = 2.5; this.maxCombo = Math.max(this.maxCombo, this.combo); this.ui.setCombo(this.combo);
     p.addUlt((crit ? 3 : 2) * (p.stats.ultGain || 1));
@@ -516,6 +521,7 @@ export class Battle {
     if (alive > this.peakAlive) this.peakAlive = alive;   // 층 내 동시 생존 최대 (하네스 maxAliveSeen)
     this.updateProjectiles(dt);
     for (let i = this.holes.length - 1; i >= 0; i--) { const h = this.holes[i]; h.t -= dt; this.vacuum(h.pos, 7, 1.1); if (h.t <= 0) this.holes.splice(i, 1); }
+    if (this.sp) this.sp.update(dt);
     this.drops.update(dt);
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; this.ui.setCombo(0); } }
     if (this.player.alive && this.player.hp < this.player.maxHp * 0.25) { audio.voice(`hero_${this.heroId}_low_hp`, { min: 12 }); audio.voice('low_hp', { min: 25 }); }

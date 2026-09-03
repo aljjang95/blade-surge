@@ -37,7 +37,9 @@ mkdir -p /tmp/libs && cd /tmp/libs && \
   apt-get download libxdamage1 2>/dev/null && dpkg -x libxdamage1*.deb .
 export LD_LIBRARY_PATH=/tmp/libs/usr/lib/x86_64-linux-gnu
 ```
-`package.json` 의 playwright 버전과 브라우저 캐시 빌드가 어긋나면 실행이 죽는다 — `LESSONS.md` 참조.
+`package.json` 의 playwright 버전과 브라우저 캐시 빌드가 어긋나면 실행이 죽는다.
+**이 컨테이너에는 크로미움이 이미 깔려 있다** (`/opt/pw-browsers/chromium`, 빌드 번호가 playwright 기대치와 다를 수 있다).
+`tools/chrome.mjs` 가 그걸 찾아 `executablePath` 로 넘기므로 `npx playwright install` 은 보통 필요 없다.
 
 ### 푸시·배포·API 키 — 전부 `session-auth` 스킬 한 번으로
 `session-auth` 스킬(보스님 계정에만 있는 파일)에 뿌리 토큰과 부트스트랩 스크립트가 있다. 그걸 읽고 실행하면
@@ -137,6 +139,7 @@ src/game/
   player.js           콤보 상태기계, 스킬, 회피/퍼펙트, 질주, 락온, AUTO 탐험
   look.js             장비 외형 — 등급별 무기/방패 메시, 발광, 강화 오라 (전투·로비 공용)
   skills.js           스킬 16종 — 진공·텍스처 VFX
+  setprocs.js         테마 세트 발동 효과 — 서리결정/역병포자/룬각인/심연사슬 (회전 8)
   enemies.js          잡몹/엘리트/보스 AI, 보스 패턴 킷 3종
   drops.js            3D 필드 드랍 + 자석 흡수 + 희귀도 연출
   battle.js           방 진입/클리어, 히트 판정, 진공, 투사체, 히트스탑, 승패
@@ -149,6 +152,8 @@ tools/shot_seal.mjs   게이트 B 컷: 봉인 결계 / 포탈 / 보스 진입
 tools/shot_look.mjs   게이트 B 컷: 장비 외형 4영웅 × 3단계
 tools/shot_combo.mjs  게이트 B 컷: 기본 콤보 홀드 체인 (사람 입력 경로 — 하네스 AUTO 는 탭이라 못 잡는다)
 tools/voice/          보이스 파이프라인 — lines.mjs(대본·목소리 설명) → gen.mjs refs|lines|report (Runware Qwen VoiceDesign + Seed Audio, ASR 대조). refs/ 는 목소리 정체성 — 지우지 마라
+tools/shot_sets.mjs   게이트 B 컷+단언: 테마 세트 4종이 실제로 발화하는지 (하네스는 장비 없이 돌아 세트를 못 본다)
+tools/chrome.mjs      헤드리스 크롬 경로 해결 — 컨테이너의 /opt/pw-browsers/chromium 을 먼저 쓴다
 ```
 
 ## 코드 규칙
@@ -169,7 +174,8 @@ tools/voice/          보이스 파이프라인 — lines.mjs(대본·목소리 
 - SFX: Kenney — CC0
 - BGM: Google Flow Music 생성
 - 보이스: 자체 생성 (Runware Qwen VoiceDesign 으로 설명문에서 만든 독자 목소리 → Seed Audio 연기. 실존 인물 클론 없음). 영어 + 기합
-- 이미지/VFX: 자체 생성 (`parallel-gpt-image` 스킬)
+- 이미지/VFX: 자체 생성 (`parallel-gpt-image` 스킬, 또는 인앱 브라우저가 없는 예약 세션에서는 `RUNWARE_API_KEY` 로 Runware API)
+  · Runware 는 `session-auth` 금고에 키가 있고 세션에서 바로 배치 생성된다 — 예약 작업(사람 없음)에서 쓰는 경로다
 
 > Quaternius 미러 레포 중 "Patreon Exclusive" 폴더가 섞인 것이 있다. 공식 배포처에서만 받아라.
 

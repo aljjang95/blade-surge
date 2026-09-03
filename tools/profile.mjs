@@ -11,6 +11,7 @@
  *       그래서 **비율과 순위**를 본다 — 무엇이 제일 비싼가.
  */
 import { chromium } from 'playwright';
+import { CHROME } from './chrome.mjs';
 import { spawn } from 'child_process';
 import { mkdirSync, writeFileSync } from 'fs';
 import { resolve } from 'path';
@@ -27,7 +28,7 @@ for (let i = 0; i < 60; i++) {
   try { const r = await fetch(`http://localhost:${PORT}/`); if (r.ok) break; } catch {}
   await new Promise((r) => setTimeout(r, 500));
 }
-const br = await chromium.launch({ args: [
+const br = await chromium.launch({ ...(CHROME ? { executablePath: CHROME } : {}), args: [
   '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
   '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required', '--js-flags=--expose-gc',
 ] });

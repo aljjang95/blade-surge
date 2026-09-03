@@ -660,3 +660,13 @@ b { font-weight: 900; }
 .cs-head img { width: 36px; height: 36px; flex: none; }
 .cs-slots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
 @media (max-width: 700px) { .craft-grid { grid-template-columns: 1fr; } }
+
+/* 테마 세트 게이지 — 룬 장전 / 포자 반경 / 얼음 기둥 / 사슬 (회전 8) */
+.setgauge { display: flex; align-items: center; gap: 5px; margin-top: 3px; height: 11px; }
+.setgauge.hidden { display: none; }
+.sg-label { font-size: 9px; font-weight: 900; letter-spacing: .5px; opacity: .85; text-shadow: 0 1px 2px #000; }
+.sg-pips { display: flex; gap: 2px; }
+.sg-pips i { width: 9px; height: 5px; border-radius: 2px; background: rgba(255,255,255,.16); box-shadow: inset 0 0 0 1px rgba(0,0,0,.35); transition: background .12s, box-shadow .12s; }
+.sg-pips i.on { background: currentColor; box-shadow: 0 0 6px currentColor; }
+.setgauge.full .sg-label { animation: sgPulse .6s ease-in-out infinite; }
+@keyframes sgPulse { 0%,100% { opacity: .85; } 50% { opacity: 1; text-shadow: 0 0 8px currentColor; } }

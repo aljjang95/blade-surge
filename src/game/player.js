@@ -127,11 +127,13 @@ export class Player extends Actor {
     if (c.move === 'fan') {   // 부채꼴 3발
       for (let i = -1; i <= 1; i++) { const dir = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.3); const spawn = this.pos.clone().add(dir.clone().multiplyScalar(0.8)); spawn.y = 1.3; this.game.spawnProjectile({ pos: spawn, dir, speed: 20, radius: 0.6, dmg, color: this.def.color, size: 0.4, owner: this, kb: c.kb, kind: 'magic' }); }
       audio.magic({ vol: 0.25, base: 520, notes: [0, 4, 7], step: 0.03 }); this.game.fx.flash(this.pos.clone().addScaledVector(f, 0.8).setY(1.3), this.def.color, { size: 1.6, life: 0.15 });
+      this.game.sp?.onComboHit(1);   // 투사체는 나중에 맞으므로 시전 시점에 장전한다 (원거리 영웅이 세트를 못 쓰던 구멍)
       return;
     }
     if (c.move === 'nova') {   // 노바: 끌어모아 터뜨린다
       this.game.vacuum(this.pos.clone(), c.range + 2, gravity ? 14 : 9);
       const hits = this.game.hitRadius(this.pos, c.range, dmg, { kb: c.kb, kind: 'magic', finisher: true });
+      this.game.sp?.onComboHit(hits);
       this.game.fx.holyBurst(this.pos, { size: c.range * 2.4, life: 0.45, color: this.def.accent }); this.game.fx.shockTex(this.pos, this.def.color, { r1: c.range * 1.6, life: 0.4 }); this.game.fx.ring(this.pos, this.def.color, { r0: 0.5, r1: c.range + 1, life: 0.35, vertical: false });
       this.game.renderer.shake(0.4); audio.magic({ vol: 0.4, base: 330, notes: [0, 7, 12], step: 0.04 }); audio.boom({ vol: 0.4, dur: 0.4, low: 90 });
       if (!hits) audio.whoosh({ vol: 0.15, pitch: 1.8, dur: 0.12 });
@@ -140,6 +142,7 @@ export class Player extends Actor {
     if (c.move === 'slam') {   // 도약 강타: 착지점 반경
       const cpos = this.pos.clone().addScaledVector(f, 0.8);
       const hits = this.game.hitRadius(cpos, c.range, dmg, { kb: c.kb, kind: 'blunt', finisher: true });
+      this.game.sp?.onComboHit(hits);
       this.game.fx.shockTex(cpos, this.def.color, { r1: c.range * 1.5, life: 0.45 }); this.game.fx.dustPuff(cpos, { size: c.range * 1.2, life: 0.6 }); this.game.fx.explosion(cpos, { size: 4, color: this.def.accent, life: 0.4 }); this.game.fx.burst(cpos.clone().setY(0.4), this.def.color, { n: 20, speed: 8, size: 0.4 });
       this.game.renderer.shake(0.7); this.game.renderer.punch(0.5); audio.boom({ vol: 0.7, dur: 0.5, low: 55 }); audio.vibe(30);
       if (hits && this.game.hasProc('storm_chain')) this.game.stormChain(cpos, this.atk * 0.6);
@@ -147,6 +150,7 @@ export class Player extends Actor {
     }
     if (c.move === 'spin') {   // 회전베기: 360°, ticks 연타
       const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, 360, dmg, { kb: c.kb, kind: 'slash', quietStop: tick > 0 });
+      if (tick === 0) this.game.sp?.onComboHit(hits);
       this.game.fx.slashArc(this.pos, this.yaw + tick * 2.1, this.def.color, { radius: c.range + 0.3, arc: 300, height: 1.1, life: 0.22, thickness: 0.6 });
       this.game.fx.dust(this.pos, { n: 4, size: 1.2 });
       if (tick === 0 || gravity) this.game.vacuum(this.pos.clone(), c.range + 1.5, gravity ? 10 : 5);
@@ -159,8 +163,10 @@ export class Player extends Actor {
       this.game.spawnProjectile({ pos: spawn, dir: f, speed: 22, radius: 0.7, dmg, color: this.def.color, size: c.projectile === 'bigbolt' ? 0.7 : 0.4, owner: this, kb: c.kb, kind: 'magic', pierce: c.projectile === 'bigbolt' });
       audio.magic({ vol: 0.2, base: 660, notes: [0, 7], step: 0.03 });
       this.game.fx.flash(spawn, this.def.color, { size: 1.2, life: 0.15 });
+      this.game.sp?.onComboHit(1);
     } else {
       const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, c.arc, dmg, { kb: c.kb, kind: 'slash', finisher: c.finisher });
+      this.game.sp?.onComboHit(hits);
       if (c.through) { this.game.fx.ghost(this.model, this.def.color, { life: 0.3, opacity: 0.5 }); this.game.fx.slashArc(this.pos, this.yaw, this.def.color, { radius: c.range, arc: 300, height: 1, life: 0.2 }); }   // 관통: 지나온 자리에 잔상
       if (gravity && !c.finisher) this.game.vacuum(this.pos.clone().addScaledVector(f, 1.5), 6, 5);   // 중력 2세트: 모든 타격이 끌어당긴다
       if (c.finisher && hits && this.game.hasProc('storm_chain')) this.game.stormChain(this.pos.clone().addScaledVector(f, c.range * 0.7), this.atk * 0.6);
@@ -188,6 +194,7 @@ export class Player extends Actor {
     audio.whoosh({ vol: 0.5, pitch: 0.7, dur: 0.3 }); audio.vibe(15);
     this.game.fx.dust(this.pos, { n: 8, size: 1.2 });
     this.ghostT = 0;
+    this.game.sp?.onDodge(d);   // 룬 세트: 장전 방출 / 사슬 세트: 감아 끌어오기
     if (this.game.hasProc('storm_dash')) {   // 폭풍 4세트: 공속 버프 + 경로 낙뢰 2발
       this.stormT = 3; this.tintEmissive = new THREE.Color(0.1, 0.3, 0.5);
       for (let i = 1; i <= 2; i++) { const at = this.pos.clone().addScaledVector(d, i * 2.6); this.game.after(0.1 * i, () => this.game.stormStrike(at, this.atk * 0.8)); }
@@ -215,6 +222,7 @@ export class Player extends Actor {
     if (!sk.ult) audio.bark(`hero_${this.def.id}_skill${i}`, { vol: 0.95, min: 1.5 });   // 스킬 이름 외침
     if (sk.ult) { this.game.ultCinematic(sk, this); audio.charge({ vol: 0.35, dur: 0.7 }); audio.voice(`hero_${this.def.id}_ult`, { min: 8, duck: 0.5, dur: 1.6 }); if (this.game.hasProc('phoenix_burn')) this.game.after(0.35, () => this.game.phoenixBurn(this)); }
     else if (this.game.hasProc('gravity_hole')) { const t = this.lockTarget && this.lockTarget.alive ? this.lockTarget.pos.clone() : this.pos.clone().addScaledVector(this.forward(_v.clone()), 4); this.game.singularity(t); }
+    if (!sk.ult) this.game.sp?.onSkillCast(i, sk);   // 룬 4세트: 만장전이면 과부하 — 이 스킬의 쿨타임이 0이 된다
     impl.start?.(this.game, this, this.skillCtx);
     return true;
   }

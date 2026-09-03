@@ -9,6 +9,7 @@
  * 밴드를 벗어나면 exit 1 로 떨어진다. 게임 시간은 app.step(dt) 로 결정적으로 밟는다.
  */
 import { chromium } from 'playwright';
+import { CHROME } from './chrome.mjs';
 import { spawn } from 'child_process';
 import { mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { dirname, resolve } from 'path';
@@ -72,7 +73,7 @@ for (let i = 0; i < 60; i++) {
   await new Promise((r) => setTimeout(r, 500));
 }
 
-const br = await chromium.launch({ args: [
+const br = await chromium.launch({ ...(CHROME ? { executablePath: CHROME } : {}), args: [
   '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
   '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required',
 ] });

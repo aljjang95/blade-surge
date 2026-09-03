@@ -46,7 +46,7 @@ export class UI {
     else if (boss && boss.discovered) el.innerHTML = '☠ <b>보스방 발견</b> — 처치하면 층 클리어';
     else el.innerHTML = `☠ 보스를 찾아라 · 남은 구역 <b>${left}</b>`;
   }
-  showHud(on) { this.show(this.el.hud, on); if (!on) { this.comboEl.classList.add('hidden'); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
+  showHud(on) { this.show(this.el.hud, on); if (!on) { $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
   pause(on) { const b = this.app.battle; if (!b.player) return; b.paused = on; this.show(this.el.pause, on); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
@@ -141,8 +141,24 @@ export class UI {
     $('hud-hp').style.background = hp < 0.3 ? 'linear-gradient(90deg,#ff2d55,#ff8aa0)' : 'linear-gradient(90deg,#2bd46a,#a6ff5a)';
     const ult = p.ult / p.ultMax; $('hud-ult').style.width = ult * 100 + '%'; $('hud-ult').parentElement.classList.toggle('full', ult >= 1);
     this.skillBtns.forEach((btn, i) => { const sk = p.def.skills[i]; if (!sk || btn.classList.contains('locked')) return; let pct; if (sk.ult) { pct = 1 - ult; btn.classList.toggle('ready', ult >= 1); } else pct = p.cds[i] / sk.cd; btn.querySelector('.cd').style.setProperty('--p', (pct * 100) + '%'); const wasReady = btn.dataset.ready === '1'; const ready = pct <= 0; if (ready && !wasReady && b.elapsed > 1) { btn.classList.remove('ready-flash'); void btn.offsetWidth; btn.classList.add('ready-flash'); audio.play('ui_pluck', { vol: 0.25 }); } btn.dataset.ready = ready ? '1' : '0'; });
+    this.setGauge(b);
     if (b.boss && b.boss.alive) $('boss-hp').style.width = (b.boss.hp / b.boss.maxHp * 100) + '%';
     if (this.hurtT > 0) { this.hurtT -= dt; } $('hud-vignette').style.opacity = Math.max(hp < 0.3 ? 0.5 + Math.sin(performance.now() / 150) * 0.2 : 0, this.hurtT > 0 ? this.hurtT * 1.6 : 0);
+  }
+
+  /** 테마 세트 게이지 — 켜진 세트가 자원을 쓰면 그 상태를 HUD 에 띄운다 (룬 장전 / 포자 반경 / 얼음 기둥 / 사슬) */
+  setGauge(b) {
+    const el = $('hud-setgauge'); if (!el) return;
+    const g = b.sp && b.sp.gauge();
+    if (!g) { if (!el.classList.contains('hidden')) el.classList.add('hidden'); return; }
+    el.classList.remove('hidden');
+    el.classList.toggle('full', !!g.full);
+    el.style.color = g.color;
+    const lab = $('sg-label'); if (lab.textContent !== g.label) lab.textContent = g.label;
+    const pips = $('sg-pips');
+    if (pips.childElementCount !== g.max) { pips.innerHTML = ''; for (let i = 0; i < g.max; i++) pips.appendChild(document.createElement('i')); }
+    const n = Math.max(0, Math.min(g.max, g.n));
+    if (this._sgN !== n || this._sgL !== g.label) { this._sgN = n; this._sgL = g.label; for (let i = 0; i < g.max; i++) pips.children[i].classList.toggle('on', i < n); }
   }
 
   // ---------------- 부활 (과금 유도) ----------------
