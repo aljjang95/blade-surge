@@ -1,0 +1,30 @@
+{
+  "errors": 0,
+  "bootMs": 891,
+  "floorClearSec": 84,
+  "killsPerFloor": 93,
+  "maxAliveSeen": 19,
+  "_maxAliveSampled": 19,
+  "dropsPerFloor": 17,
+  "longestDryStreakSec": 20,
+  "hitTakenRatio": 0.054,
+  "avgFrameMs": 3.22,
+  "p95FrameMs": 1.2,
+  "rhythmBeats": 6,
+  "drawCalls": 278,
+  "_beats": {
+    "explore": true,
+    "encounter": true,
+    "vacuum": true,
+    "drop": true,
+    "setProgress": false,
+    "bossFound": true,
+    "bossKill": false,
+    "floorClear": true
+  },
+  "_roomsCleared": "7/9",
+  "_endReason": "보스처치",
+  "_avgAlive": 2.9,
+  "_errorSamples": [],
+  "_at": "2026-09-03T15:13:45.273Z"
+}

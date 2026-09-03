@@ -88,8 +88,8 @@ try { await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 90000 })
 catch { await bail('부트 실패\n' + errors.slice(0, 10).join('\n'), br); }
 const bootMs = Date.now() - t0;
 
-// 일일보상/모달을 치우고 레벨을 올려 층을 돌 수 있게 한다
-await page.evaluate(() => { const e = window.app.eco; e.s.daily.last = Math.floor(Date.now() / 86400000); e.hero().level = 30; e.save(); });
+// 일일보상/모달을 치운다. 영웅은 레벨 1(첫 플레이어 그대로) — 레벨 30 으로 재던 때는 1층을 11배 초과 전력으로 돌아 피격 0·1분 클리어가 나왔다 (window.__LV 로 바꿀 수 있다)
+await page.evaluate(() => { const e = window.app.eco; e.s.daily.last = Math.floor(Date.now() / 86400000); e.hero().level = Number(window.__LV || 1); e.save(); });
 await page.click('#boot-start', { force: true });
 await page.waitForTimeout(1500);
 await page.evaluate(() => window.app.ui.closeModal());
@@ -189,7 +189,7 @@ for (let k = 0; k < maxChunks; k++) {
     const a = Date.now(); await page.screenshot({ path: resolve(PROJ, SHOTS, `s${shots}.png`) }); shots++; if (args.includes('--verbose')) console.error(`  shot s${shots - 1} ${Date.now() - a}ms`);
   }
   s = r;
-  if (args.includes('--verbose')) console.error(`[${Math.round(gameSec)}s]${r.rendered ? 'R' : ' '} alive=${r.alive} peak=${r.peak} kills=${r.kills} rooms=${r.clr}/${r.rooms} hp=${Math.round(r.hp)} calls=${r.calls} chunkMs=${Math.round(r.frames.reduce((a, b) => a + b, 0))} maxMs=${Math.round(Math.max(...r.frames))} wall=${Math.round((Date.now() - t0) / 1000)}s`);
+  if (args.includes('--verbose')) console.error(`[${Math.round(gameSec)}s]${r.rendered ? 'R' : ' '} alive=${r.alive} peak=${r.peak} kills=${r.kills} loot=${r.loot} rooms=${r.clr}/${r.rooms} hp=${Math.round(r.hp)} calls=${r.calls} chunkMs=${Math.round(r.frames.reduce((a, b) => a + b, 0))} maxMs=${Math.round(Math.max(...r.frames))} wall=${Math.round((Date.now() - t0) / 1000)}s`);
   if (!r.active) break;
 }
 await page.screenshot({ path: resolve(PROJ, SHOTS, `s${shots}.png`) });

@@ -33,7 +33,7 @@ export class Floor {
 
   generate() {
     const G = 5;                       // 5x5 매크로 그리드
-    const want = 9 + Math.min(4, Math.floor(this.floor / 4));  // 층이 오를수록 방이 많다
+    const want = 11 + Math.min(4, Math.floor(this.floor / 4));  // 층이 오를수록 방이 많다 (9→11: 봉인+포탈 도입 후 1층 130초, 밴드 하한 150 에 모자랐다)
     const visited = new Set();
     const order = [];
     const key = (x, y) => y * G + x;
@@ -101,6 +101,30 @@ export class Floor {
     if (rest[nElite]) rest[nElite].type = ROOM_TYPE.TREASURE;
     this.bossRoom = this.rooms.find((rm) => rm.type === ROOM_TYPE.BOSS) || this.rooms[this.rooms.length - 1];
     this.startRoom = start;
+    // 보스 봉인 — 보스방으로 들어가는 복도 입구마다 결계. 다른 구역을 전부 정화해야 풀린다
+    // (층이 1분대에 끝나던 진범: 보스방을 발견하자마자 남은 방을 버리고 직행했다)
+    this.gates = [];
+    const B = this.bossRoom;
+    for (const [[ax, ay], [bx, by]] of (this.linkPending || [])) {
+      const A = cells.get(key(ax, ay)), C = cells.get(key(bx, by));
+      if (!A || !C || (A !== B && C !== B)) continue;
+      const vertical = ax === bx;   // lShape: 가로(z=A.z, A.x→C.x) 다음 세로(x=C.x, A.z→C.z)
+      if (C === B) {
+        if (vertical) this.gates.push({ x: C.x, z: C.z - Math.sign(C.z - A.z) * C.h / 2, w: 8, h: 2, axis: 'x' });
+        else this.gates.push({ x: C.x - Math.sign(C.x - A.x) * C.w / 2, z: A.z, w: 2, h: 8, axis: 'z' });
+      } else {
+        if (vertical) this.gates.push({ x: C.x, z: A.z + Math.sign(C.z - A.z) * A.h / 2, w: 8, h: 2, axis: 'x' });
+        else this.gates.push({ x: A.x + Math.sign(C.x - A.x) * A.w / 2, z: A.z, w: 2, h: 8, axis: 'z' });
+      }
+    }
+    this.sealed = this.gates.length > 0 && this.rooms.some((rm) => rm.type !== ROOM_TYPE.START && rm.type !== ROOM_TYPE.BOSS);
+  }
+  /** 봉인 해제 — 결계 셀을 다시 바닥으로, 침식 마스크·거리장 캐시 갱신 */
+  unseal() {
+    if (!this.sealed) return;
+    this.sealed = false;
+    for (const g of this.gates) this.fillRect(g, 1);
+    this.buildInner(); this._flowKey = null; this._flow = null;
   }
   /** 두 방을 잇는 L자 복도(폭 6) */
   lShape(A, B) {
@@ -129,7 +153,11 @@ export class Floor {
     this.rows = Math.ceil((maxZ - minZ + pad * 2) / CELL);
     this.mask = new Uint8Array(this.cols * this.rows);
     for (const r of rects) this.fillRect(r, 1);
+    if (this.sealed) for (const g of this.gates) this.fillRect(g, 0);
     this.bounds = { minX, maxX, minZ, maxZ };
+    this.buildInner();
+  }
+  buildInner() {
     // 길찾기용 침식 마스크 — 8이웃이 전부 바닥인 셀만. 배우 반경(≈0.56)이 셀 반폭(0.5)보다 커서
     // 벽 옆 셀 중심으로 유도하면 반경이 벽에 걸려 영원히 제자리걸음한다 (밀도 복구 회전에서 실측)
     this.inner = new Uint8Array(this.cols * this.rows);

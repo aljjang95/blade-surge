@@ -170,7 +170,8 @@ export class Player extends Actor {
       }
       return false;
     }
-    const red = Math.max(1, dmg - this.stats.def * 0.5) * (1 - Math.min(0.6, this.stats.def / (this.stats.def + 400)));
+    // 비율 경감만. 정액 차감(dmg - def*0.5)은 레벨 1 방어 40 이 1층 잡몹 공격 18 을 통째로 먹어 모든 피격이 1 이 됐다 (hitTakenRatio 0 의 진범)
+    const red = Math.max(1, Math.round(dmg * (1 - Math.min(0.6, this.stats.def / (this.stats.def + 250)))));
     this.hp -= red;
     this.flash(0xff4040, 0.15);
     this.game.fx.damage(this.pos, red, { kind: 'self' });
@@ -213,23 +214,26 @@ export class Player extends Actor {
       }
       else if (this.def.ranged && d < want - 3) { const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = -dx / l; out.y = -dz / l; }
       else this.game.input.press('attack');
-      // 예고 회피
-      const threat = list.find((x) => x.telegraph > 0 && this.distTo(x) < 4);
-      if (threat && Math.random() < dt * 3) this.game.input.press('dodge');
     } else if (this.state === 'attack' && this.hitDone && d < want + 1.5) this.game.input.press('attack');   // 사거리 밖(물러서는 원거리 몹)이면 콤보를 끊고 이동으로 돌아간다 — 안 끊으면 허공 콤보가 영원히 이어진다
+    // 예고 회피 — 콤보 중에도 타격이 끝났으면 캔슬해서 구른다. 보스·엘리트의 큰 예고는 거의 확실히, 잡몹은 절반쯤 (적 위협 회전: 콤보 중 회피 불가라 보스전에서 HP 의 30% 를 그냥 맞았다)
+    if (this.state === 'idle' || this.state === 'move' || (this.state === 'attack' && this.hitDone)) {
+      const threat = list.find((x) => x.telegraph > 0 && this.distTo(x) < (x.isBoss ? 5.5 : x.isElite ? 5 : 4));
+      if (threat && Math.random() < dt * (threat.isBoss || threat.isElite ? 9 : 3)) this.game.input.press('dodge');
+    }
     return out;
   }
   /** 적이 없으면 다음 목표 방으로 이동 (보스 발견 시 보스방 우선) */
   autoExplore(dt) {
     const out = { x: 0, y: 0 };
     const g = this.game, W = g.world; if (!W) return out;
+    if (g.portal) { const dx = g.portal.pos.x - this.pos.x, dz = g.portal.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; return out; }   // 봉인 해제 포탈 → 보스방 앞
     let target = g.autoTarget;
     if (!target || target.cleared) {
-      const cands = W.rooms.filter((r) => !r.cleared);
+      const cands = W.rooms.filter((r) => !r.cleared && !(W.sealed && r === W.bossRoom));   // 봉인된 보스방은 못 들어간다
       if (!cands.length) return out;
-      // 보스방을 찾았으면 보스 우선, 아니면 가장 가까운 미클리어 방
+      // 봉인이 풀린 보스방을 찾았으면 보스 우선, 아니면 가장 가까운 미클리어 방
       const boss = W.bossRoom;
-      target = (boss && !boss.cleared && boss.discovered) ? boss
+      target = (boss && !boss.cleared && boss.discovered && !W.sealed) ? boss
         : cands.sort((a, b) => Math.hypot(a.x - this.pos.x, a.z - this.pos.z) - Math.hypot(b.x - this.pos.x, b.z - this.pos.z))[0];
       g.autoTarget = target;
     }

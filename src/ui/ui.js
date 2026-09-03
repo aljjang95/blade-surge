@@ -42,6 +42,7 @@ export class UI {
     const boss = floor.bossRoom;
     const el = $('objective');
     if (boss && boss.cleared) el.innerHTML = '<b style="color:var(--green)">층 클리어!</b>';
+    else if (floor.sealed) el.innerHTML = `☠ 보스 봉인 해제까지 남은 구역 <b>${left - 1}</b>`;   // HUD 우측 폭이 좁다 — 긴 문장은 스킬 버튼에 가려진다
     else if (boss && boss.discovered) el.innerHTML = '☠ <b>보스방 발견</b> — 처치하면 층 클리어';
     else el.innerHTML = `☠ 보스를 찾아라 · 남은 구역 <b>${left}</b>`;
   }

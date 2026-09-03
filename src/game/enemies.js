@@ -110,6 +110,8 @@ export class Enemy extends Actor {
     }
     if (this.stun > 0 && this.state !== 'dead') { this.vel.set(0, 0, 0); if (!this.rig.hit.includes(this.actionName) && this.state !== 'hurt') { this.play(this.A('hit'), { once: true, clamp: true, fade: 0.05 }); } this.telegraph = 0; this.attackDone = false; if (this.state === 'attack') this.state = 'chase'; return; }
     if (this.isBoss) {
+      const q = Math.floor((1 - this.hp / this.maxHp) * 5);   // 20% 마다 파편(장비) — 보스전 중 보상 공백 방지
+      if (q > (this.shed || 0) && q < 5) { this.shed = q; this.game.bossShed(this); }
       if (this.phase === 0 && this.hp < this.maxHp * 0.6) { this.phase = 1; this.game.bossPhase(this, 1); }
       if (this.phase === 1 && this.hp < this.maxHp * 0.3) { this.phase = 2; this.enraged = true; this.tintEmissive = new THREE.Color(0.4, 0.02, 0.02); this.game.bossPhase(this, 2); }
     }

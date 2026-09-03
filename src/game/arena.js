@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { VFX_TEX } from '../engine/assets.js';
 import { getPart } from '../engine/assets.js';
 import { ROOM_TYPE } from './world.js';
 
@@ -16,12 +17,40 @@ export class Arena {
     this.scene = scene; this.gltf = dungeonGltf; this.renderer = renderer;
     this.group = new THREE.Group(); scene.add(this.group);
     this.lights = []; this.torches = []; this.torchPos = []; this.t = 0;
-    this.doors = [];
+    this.doors = []; this.seals = [];
+  }
+  /** 보스 봉인 결계 — 복도 입구를 막는 붉은 룬 장막. 구역을 전부 정화하면 openSeal 로 깨진다 */
+  buildSeals(floorData) {
+    for (const s of this.seals) this.group.remove(s); this.seals.length = 0;
+    if (!floorData.sealed) return;
+    for (const g of floorData.gates) {
+      // 장막(반투명 검붉은 판) + 마법진(circle_demon, 회전) + 발밑 룬. 가산 판 하나로는 밝은 바닥 위에서 거의 안 보였다 (스크린샷 대조)
+      const wall = new THREE.Mesh(new THREE.PlaneGeometry(7.5, 4.2, 1, 1),
+        new THREE.MeshBasicMaterial({ color: 0x5a0a1c, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
+      wall.position.set(g.x, 2.1, g.z); if (g.axis === 'z') wall.rotation.y = Math.PI / 2; wall.renderOrder = 2;
+      const tex = VFX_TEX.circle_demon;
+      const sigil = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.2),
+        new THREE.MeshBasicMaterial({ map: tex || null, color: 0xff3050, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+      sigil.position.set(0, -0.05, 0.02); sigil.renderOrder = 3; wall.add(sigil);
+      const rune = new THREE.Mesh(new THREE.RingGeometry(1.6, 2.2, 6),
+        new THREE.MeshBasicMaterial({ color: 0xff6070, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+      rune.position.set(0, -2.02, 0); rune.rotation.x = Math.PI / 2; rune.renderOrder = 3;
+      wall.userData.rune = rune; wall.userData.sigil = sigil; wall.add(rune);
+      this.group.add(wall); this.seals.push(wall);
+    }
+  }
+  openSeal(fx) {
+    for (const s of this.seals) {
+      const p = s.position.clone().setY(0);
+      fx?.shockTex(p, 0xff4060, { r1: 8, life: 0.7 }); fx?.firePillar(p, { height: 8, width: 3.2, life: 0.9, color: 0xff4060 }); fx?.burst(p.clone().setY(1.5), 0xff8090, { n: 30, speed: 9, size: 0.45, up: 1 });
+      this.group.remove(s);
+    }
+    this.seals.length = 0;
   }
   clear() {
     while (this.group.children.length) { const c = this.group.children.pop(); c.traverse?.((o) => { if (o.isInstancedMesh) o.dispose(); }); }
     for (const l of this.lights) this.scene.remove(l);
-    this.lights.length = 0; this.torches.length = 0; this.torchPos.length = 0; this.doors.length = 0;
+    this.lights.length = 0; this.torches.length = 0; this.torchPos.length = 0; this.doors.length = 0; this.seals.length = 0;
   }
   _meshOf(name) { const p = this.gltf.scene.getObjectByName(name); let m = null; p?.traverse((o) => { if (!m && o.isMesh) m = o; }); return { mesh: m, part: p }; }
   /**
@@ -175,10 +204,12 @@ export class Arena {
     }
     this.instanced('pillar_decorated', pillars, T.tint);
     this.instanced('banner_shield_red', banners);
+    this.buildSeals(floorData);
   }
 
   update(dt, fx, playerPos) {
     this.t += dt;
+    for (const s of this.seals) { s.material.opacity = 0.5 + Math.sin(this.t * 4) * 0.08; const r = s.userData.rune, g = s.userData.sigil; if (r) { r.rotation.z += dt * 0.8; r.material.opacity = 0.55 + Math.sin(this.t * 6) * 0.2; } if (g) { g.rotation.z -= dt * 0.5; g.material.opacity = 0.8 + Math.sin(this.t * 5) * 0.15; } }
     for (const t of this.torches) t.l.intensity = t.i0 * (0.85 + Math.sin(this.t * 13 + t.seed) * 0.08 + Math.sin(this.t * 31 + t.seed * 3) * 0.07);
     if (this.sun && playerPos) { this.sun.position.set(playerPos.x + 10, 22, playerPos.z + 8); this.sun.target.position.copy(playerPos); this.sun.target.updateMatrixWorld(); }
     if (fx && this.torchPos.length && Math.random() < dt * 24 && playerPos) {

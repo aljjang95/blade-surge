@@ -49,6 +49,7 @@ export class Battle {
     this.stage = stage; this.active = true; this.paused = false; this.result = null; this.revived = 0;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
     this.combo = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0;
+    if (this.portal) { this.scene.remove(this.portal.mesh); this.portal = null; }
     const def = HEROES[heroId]; const stats = heroStats(def, heroState, equipBonus);
     this.setBonus = equipBonus.active || [];
     this.procs = new Set(equipBonus.procs || []);   // 테마 세트 발동 효과 (items.js SETS.*.procs)
@@ -212,7 +213,13 @@ export class Battle {
     const list = this.roomRoster(room);
     if (!list.length) { this.markCleared(room); return; }
     const isBoss = room.type === ROOM_TYPE.BOSS;
-    if (isBoss) { audio.playMusic(Math.random() < 0.5 ? 'bgm_boss' : 'bgm_boss2'); this.ui.waveBanner('BOSS'); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 })); }
+    if (isBoss) {
+      audio.playMusic(Math.random() < 0.5 ? 'bgm_boss' : 'bgm_boss2'); this.ui.waveBanner('BOSS'); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 }));
+      // 보스방 입구의 제물 — 봉인 뒤 가장 먼 방까지 걸어오는 20초 + 보스전 초반 20초가 무보상 40초로 이어졌다 (longestDryStreakSec 실측)
+      const p = this.player.pos, dx = room.x - p.x, dz = room.z - p.z, l = Math.hypot(dx, dz) || 1;
+      const at = new THREE.Vector3(p.x + dx / l * 3.5, 0.6, p.z + dz / l * 3.5);
+      this.after(0.5, () => { for (let i = 0; i < 2; i++) { const inst = this.rollDrop('elite'); if (inst) this.drops.spawn(at, 'item', inst, { count: 1, spread: 1.8 }); } this.drops.spawn(at, 'stone', 3, { count: 3, spread: 2 }); this.fx.groundTex(at.clone().setY(0), 'circle_gold', 0xffd060, { r0: 1, r1: 5, life: 0.8, spin: 1 }); });
+    }
     else if (room.type === ROOM_TYPE.ELITE) { this.ui.waveBanner('ELITE'); audio.waveHorn({ vol: 0.42 }); audio.voice('elite', { min: 8 }); }
     else if (room.type === ROOM_TYPE.TREASURE) audio.voice('treasure', { min: 8 });
     // 한 번에 다 깔되 동시 상한을 넘으면 큐로
@@ -228,6 +235,14 @@ export class Battle {
     if (room.type !== ROOM_TYPE.START) {
       this.ui.toast(`${room.type === ROOM_TYPE.BOSS ? '보스방' : room.type === ROOM_TYPE.ELITE ? '엘리트 구역' : room.type === ROOM_TYPE.TREASURE ? '보물방' : '구역'} 클리어!`, 'gold');
       audio.play('jingle_win1', { vol: 0.45 });
+      // 구역 정화 보상 — 장비 1개 확정. 잡몹 8% 드랍만으로는 엘리트 없는 방 두 개가 연달아 빈손이라 무보상 50초가 났다 (하네스 실측)
+      if (room.type === ROOM_TYPE.NORMAL || room.type === ROOM_TYPE.ELITE) {
+        const p = this.player.pos, f = this.player.forward(new THREE.Vector3());
+        const at = new THREE.Vector3(p.x + f.x * 1.5, 0.6, p.z + f.z * 1.5);
+        const inst = this.rollDrop(room.type === ROOM_TYPE.ELITE ? 'elite' : 'normal'); if (inst) this.drops.spawn(at, 'item', inst, { count: 1, spread: 1.2 });
+        this.drops.spawn(at, 'gold', Math.max(2, Math.floor(6 * this.stage.scale)), { count: 3, spread: 1.6 });
+        this.fx.groundTex(at.clone().setY(0), 'circle_gold', 0xffd060, { r0: 0.6, r1: 3.5, life: 0.6, spin: 1 });
+      }
       // 보물방은 클리어 시 장비 상자
       if (room.type === ROOM_TYPE.TREASURE) {
         for (let i = 0; i < 3; i++) { const inst = this.rollDrop('elite'); if (inst) this.drops.spawn(new THREE.Vector3(room.x, 0.6, room.z), 'item', inst, { count: 1, spread: 1.6 }); }
@@ -236,10 +251,44 @@ export class Battle {
     }
     this.ui.setObjective(this.world); this.ui.setFloorLabel(this.stage.idx, this.world);
     if (room.type === ROOM_TYPE.BOSS) this.after(2.4, () => this.victory());
-    if (room.type !== ROOM_TYPE.START && room.type !== ROOM_TYPE.BOSS && this.world.remaining === 1 && !this.world.bossRoom.cleared) audio.voice('floor_start', { min: 30 });
+    if (room.type !== ROOM_TYPE.START && room.type !== ROOM_TYPE.BOSS && this.world.remaining === 1 && !this.world.bossRoom.cleared) this.after(1.2, () => this.unsealBoss());
+  }
+  /** 보스 봉인 해제 — 마지막 구역을 정화한 순간. 결계가 깨지고 AUTO 도 이제 보스방을 목표로 잡는다 */
+  unsealBoss() {
+    if (!this.active || !this.world || !this.world.sealed) return;
+    this.world.unseal(); this.arena.openSeal(this.fx);
+    this.ui.toast('보스의 봉인이 풀렸다!', 'red'); this.ui.waveBanner('봉인 해제'); this.renderer.shake(0.5); this.renderer.flashScreen(0.25, 0xff3050);
+    audio.waveHorn({ vol: 0.5, boss: true }); audio.boom({ vol: 0.6, dur: 0.7, low: 60 }); audio.voice('floor_start', { min: 30 });
+    this.ui.setObjective(this.world);
+    this.openPortal();
+  }
+  /** 봉인 해제 포탈 — 마지막 구역에서 보스방 문 앞까지. 가장 먼 방까지 20초 넘게 걷는 동안 보상이 끊겼다 (longestDryStreakSec 40~44 실측) */
+  openPortal() {
+    const W = this.world, B = W.bossRoom, g = W.gates[0]; if (!g) return;
+    const p = this.player.pos; const f = this.player.forward(new THREE.Vector3());
+    let [px, pz] = W.resolve(p.x, p.z, p.x + f.x * 3, p.z + f.z * 3, 0.8);
+    if (Math.hypot(px - p.x, pz - p.z) < 1.5) { px = p.x; pz = p.z; }   // 벽 앞이면 제자리
+    const dx = g.x - B.x, dz = g.z - B.z, l = Math.hypot(dx, dz) || 1;
+    const exit = new THREE.Vector3(g.x + dx / l * 3.5, 0, g.z + dz / l * 3.5);   // 문 바깥 복도
+    const mesh = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.7, 40),
+      new THREE.MeshBasicMaterial({ color: 0xff4060, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+    mesh.rotation.x = -Math.PI / 2; mesh.position.set(px, 0.1, pz); mesh.renderOrder = 3; this.scene.add(mesh);
+    this.portal = { pos: new THREE.Vector3(px, 0, pz), exit, mesh, t: 0, cd: 0 };
+    this.fx.castCircle(this.portal.pos, 0xff4060, { radius: 2.2, life: 1.2, demon: true }); this.fx.firePillar(this.portal.pos, { height: 5, width: 2.4, life: 0.8, color: 0xff4060 });
+    this.ui.toast('보스방으로 가는 포탈이 열렸다', 'gold');
+  }
+  usePortal() {
+    const P = this.portal; if (!P) return;
+    const p = this.player;
+    this.fx.firePillar(p.pos, { height: 6, width: 2.4, life: 0.5, color: 0xff4060 }); this.fx.ghost(p.model, 0xff4060, { life: 0.4, opacity: 0.6 });
+    p.pos.copy(P.exit); p.kb.set(0, 0, 0); p.vel.set(0, 0, 0); p.invuln = Math.max(p.invuln || 0, 1);
+    const rig = this.renderer.rig; rig.target.copy(p.pos); rig.pos.copy(p.pos).add(rig.offset);
+    this.fx.castCircle(P.exit, 0xff4060, { radius: 2.4, life: 1, demon: true }); this.fx.burst(P.exit.clone().setY(1.2), 0xff8090, { n: 24, speed: 7, size: 0.4, up: 1 });
+    this.renderer.flashScreen(0.5, 0xff3050); audio.whoosh({ vol: 0.6, pitch: 0.6, dur: 0.6 }); audio.vibe(30);
+    this.scene.remove(P.mesh); this.portal = null;
   }
 
-  stop() { this.active = false; this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) if (p.mesh) this.scene.remove(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.renderer.desat = 0; this.world = null; }
+  stop() { this.active = false; if (this.portal) { this.scene.remove(this.portal.mesh); this.portal = null; } this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) if (p.mesh) this.scene.remove(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.renderer.desat = 0; this.world = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const def = ENEMIES[type]; if (!def) return; const gltf = this.app.models[def.model]; if (!gltf) return;
@@ -264,6 +313,14 @@ export class Battle {
     return e;
   }
   summonMinions(boss, n) { const t = boss.def.summon || 'skel_minion'; for (let i = 0; i < n; i++) this.after(i * 0.12, () => this.spawnEnemy(t, boss.pos)); this.ui.toast(`${boss.def.name}이(가) 병사를 소환했다!`, 'red'); audio.magic({ vol: 0.4, base: 150, notes: [0, -2, -4], step: 0.12, type: 'sawtooth' }); }
+  /** 보스 갑옷 파편 — HP 20% 마다 장비·재화가 튄다. 50초 보스전에 60/30% 페이즈 드랍만으로는 보상 공백이 36초까지 벌어졌다 (하네스 실측) */
+  bossShed(boss) {
+    const at = boss.pos.clone().setY(0.6);
+    this.drops.spawn(at, 'gold', Math.max(2, Math.floor((boss.def.gold || 20) * this.stage.scale * 0.25)), { count: 4, spread: 2.5 });
+    this.drops.spawn(at, 'stone', 2, { count: 2, spread: 2 });
+    const inst = this.rollDrop('elite'); if (inst) this.drops.spawn(at, 'item', inst, { count: 1, spread: 2.2 });
+    this.fx.burst(at.clone().setY(1.6 * boss.def.scale), 0xffd080, { n: 16, speed: 7, size: 0.4, up: 1 }); audio.play('hit_plate', { vol: 0.5, rate: 0.8 });
+  }
   bossPhase(boss, phase) {
     if (phase === 1) { this.ui.toast('보스 2페이즈!', 'red'); audio.voice(`${this.bossKey}_phase`); this.fx.shockTex(boss.pos, 0xff3030, { r1: 9, life: 0.8 }); }
     else { this.ui.toast(`${boss.def.name} 광폭화!`, 'red'); audio.voice(`${this.bossKey}_enrage`); this.fx.firePillar(boss.pos, { height: 11, width: 3.5, life: 1.2, color: 0xff2020 }); this.renderer.flashScreen(0.4, 0xff2020); this.renderer.shake(0.8); audio.boom({ vol: 0.8, dur: 0.8 }); }
@@ -453,6 +510,7 @@ export class Battle {
     this.input.update();
     if (this.active) this.player.handleInput(this.input, dt);
     this.player.update(dt);
+    if (this.portal) { const P = this.portal; P.t += dt; P.mesh.rotation.z += dt * 1.5; P.mesh.material.opacity = 0.6 + Math.sin(P.t * 5) * 0.25; if (Math.random() < dt * 10) this.fx.embers(P.pos, 0xff6080, { n: 1, radius: 1.2, life: 0.8, size: 0.3, rise: 2.5 }); if (P.t > 0.8 && this.player.alive && this.player.distTo({ pos: P.pos }) < 1.4) this.usePortal(); }
     let alive = 0;
     for (let i = this.enemies.length - 1; i >= 0; i--) { const e = this.enemies[i]; e.update(dt); if (e.dead) { e.dispose(); this.enemies.splice(i, 1); } else if (e.alive && !e.spawning) alive++; }
     if (alive > this.peakAlive) this.peakAlive = alive;   // 층 내 동시 생존 최대 (하네스 maxAliveSeen)
