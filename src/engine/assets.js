@@ -9,7 +9,16 @@ loader.setMeshoptDecoder(MeshoptDecoder);
 
 const cache = new Map();
 
-export const MODEL_LIST = ['Knight', 'Barbarian', 'Mage', 'Rogue', 'Skeleton_Minion', 'Skeleton_Warrior', 'Skeleton_Rogue', 'Skeleton_Mage', 'dungeon', 'skel_weapons'];
+export const HERO_MODELS = ['Knight', 'Barbarian', 'Mage', 'Rogue'];
+export const MONSTER_MODELS = [
+  'Skeleton_Minion', 'Skeleton_Warrior', 'Skeleton_Rogue', 'Skeleton_Mage',
+  'Big_Orc', 'Big_Orc_Skull', 'Big_Demon', 'Big_BlueDemon', 'Big_Yeti', 'Big_MushroomKing',
+  'Big_Tribal', 'Big_Cactoro', 'Big_Alien', 'Big_Ninja',
+  'Blob_GreenBlob', 'Blob_PinkBlob', 'Blob_GreenSpikyBlob', 'Blob_Mushnub', 'Blob_Mushnub_Evolved', 'Blob_Orc',
+  'Flying_Ghost', 'Flying_Ghost_Skull', 'Flying_Dragon', 'Flying_Dragon_Evolved',
+  'Flying_Armabee', 'Flying_Armabee_Evolved', 'Flying_Hywirl', 'Flying_Squidle', 'Flying_Glub', 'Flying_Goleling_Evolved',
+];
+export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, 'dungeon', 'skel_weapons'];
 
 export async function loadModel(name) {
   if (cache.has(name)) return cache.get(name);

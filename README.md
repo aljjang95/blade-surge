@@ -34,9 +34,13 @@ npx wrangler login && npx wrangler deploy   # Cloudflare Workers Static Assets
   동시 생존 상한은 그래픽 설정에 연동(낮음 16 / 보통 24 / 높음 34).
 - **진공(vacuum)**: 방패 강타·회오리·대지 분쇄·빙결 폭풍·환영 난무 등 다수 스킬이
   적을 중심으로 끌어당긴 뒤 때린다. 기본 콤보 3타(마무리)도 약하게 끌어당긴다.
-- **엘리트 3종**: 해골 대장/암살단장/대주술사 — 크고 단단하며 장비 **확정 드랍**.
-- **보스 3종**(챕터별): 해골 군주(회전·강타·소환) / 리치 왕(소울레인·부채꼴 탄막·소환) /
-  사신 그림자(대시·회전·소환). 60%·30%에서 페이즈 전환, 30%부터 광폭화.
+- **몬스터 34종 · 챕터마다 다른 로스터** (KayKit + Quaternius Ultimate Monsters, 둘 다 CC0)
+  · 1장 언데드: 해골 병사/자객/주술사 · 원령 · 해골 망령 · 부패 슬라임 · 뼈 오크
+  · 2장 오크·악마: 오크 전사/꼬마 오크 · 부족 전사 · 가시 수호병 · 임프 · 화염 정령 · 독침벌
+  · 3장 이계·용: 심연/가시 슬라임 · 이계 침입자 · 부유 촉수 · 포자 괴물 · 그림자 닌자 · 심연 눈알
+- **엘리트 9종**(챕터당 3): 크고 단단하며 장비 **확정 드랍**. 발밑 금색 링으로 난전 중 식별.
+- **보스 3종**: 해골 군주(회전·강타·소환) / 심연의 대악마(대시·회전·소환) /
+  고대 용 발카르(브레스 부채꼴·강타·소환). 60%·30%에서 페이즈 전환, 30%부터 광폭화. 붉은 링 표시.
 - 적 밀도에 따라 카메라가 자동으로 줌아웃하고, 자동전투는 **가장 밀집한 무리**를 조준한다.
 
 ## 성장 / 과금 (전부 목업)
@@ -72,7 +76,10 @@ src/game/
   battle.js           웨이브·지속 스폰, 히트 판정, 진공, 투사체, 히트스탑, 승패
   arena.js            KayKit Dungeon 파츠 조립(InstancedMesh), 테마 조명, 횃불
   economy.js          세이브, 화폐/에너지, 성장, 세트 보너스, 강화, 가챠, 상점, 패스
-src/data/             영웅·장비(세트/강화)·스테이지·상점 데이터
+src/data/
+  rigs.js             리그별 애니메이션 맵 (KayKit ↔ Quaternius 클립 이름 번역)
+  stages.js           챕터별 몬스터 로스터·웨이브·보스
+  heroes/items/shop   영웅·장비(세트/강화)·상점 데이터
 src/ui/               HUD·결과·모달·목업 결제 / 로비 탭·강화 패널·소환 연출
 public/models/        KayKit CC0 GLB (meshopt)
 public/img/vfx/       GPT 생성 VFX 텍스처 10종
@@ -80,7 +87,9 @@ public/bgm, sfx/      Flow Music BGM 6곡, Kenney CC0 SFX
 ```
 
 ## 에셋 라이선스
-- 3D: **KayKit** Adventurers / Skeletons / Dungeon Remastered — Kay Lousberg, **CC0**
+- 3D 캐릭터: **KayKit** Adventurers / Skeletons — Kay Lousberg, **CC0**
+- 3D 몬스터 26종: **Quaternius** Ultimate Monsters — **CC0**
+- 3D 배경: **KayKit** Dungeon Remastered — **CC0**
 - SFX: **Kenney** Impact / Interface / Casino / Music Jingles — **CC0**
 - BGM: **Google Flow Music** 생성 (전투2·보스2·로비·가챠)
 - 이미지/VFX: **ChatGPT** 이미지 생성 (프로젝트 전용)

@@ -100,7 +100,7 @@ export class Battle {
     if (def.boss) { this.boss = e; this.ui.showBoss(def.name, true, def.portrait); }
     return e;
   }
-  summonMinions(boss, n) { for (let i = 0; i < n; i++) this.after(i * 0.12, () => this.spawnEnemy('minion', boss.pos)); this.ui.toast(`${boss.def.name}이(가) 병사를 소환했다!`, 'red'); audio.magic({ vol: 0.4, base: 150, notes: [0, -2, -4], step: 0.12, type: 'sawtooth' }); }
+  summonMinions(boss, n) { const t = boss.def.summon || 'skel_minion'; for (let i = 0; i < n; i++) this.after(i * 0.12, () => this.spawnEnemy(t, boss.pos)); this.ui.toast(`${boss.def.name}이(가) 병사를 소환했다!`, 'red'); audio.magic({ vol: 0.4, base: 150, notes: [0, -2, -4], step: 0.12, type: 'sawtooth' }); }
   bossPhase(boss, phase) {
     if (phase === 1) { this.ui.toast('보스 2페이즈!', 'red'); this.fx.shockTex(boss.pos, 0xff3030, { r1: 9, life: 0.8 }); }
     else { this.ui.toast(`${boss.def.name} 광폭화!`, 'red'); this.fx.firePillar(boss.pos, { height: 11, width: 3.5, life: 1.2, color: 0xff2020 }); this.renderer.flashScreen(0.4, 0xff2020); this.renderer.shake(0.8); audio.boom({ vol: 0.8, dur: 0.8 }); }

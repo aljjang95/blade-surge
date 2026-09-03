@@ -9,6 +9,7 @@ import { Economy } from './game/economy.js';
 import { Battle } from './game/battle.js';
 import { Arena } from './game/arena.js';
 import { HEROES } from './data/heroes.js';
+import { ENEMIES, stageDef } from './data/stages.js';
 import { UI, $ } from './ui/ui.js';
 import { Meta } from './ui/meta.js';
 
@@ -122,4 +123,5 @@ class App {
 
 const app = new App();
 window.app = app;
+window.__EN = ENEMIES; window.__stageDef = stageDef; window.__THREE = THREE;
 app.boot().catch((e) => { console.error(e); $('boot-msg').textContent = '로딩 실패: ' + e.message; });
