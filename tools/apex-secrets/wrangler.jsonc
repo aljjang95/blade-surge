@@ -1,0 +1,20 @@
+{
+  // apex-secrets — 세션이 Cloudflare Secrets Store 의 값을 꺼내 가는 유일한 통로.
+  // 게이트: Authorization: Bearer <CF API 토큰> 의 sha256 이 APEX_GATE_SHA256 과 같아야 한다.
+  // 배포: cd tools/apex-secrets && npx wrangler deploy   (CLOUDFLARE_API_TOKEN 필요)
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "apex-secrets",
+  "main": "src/index.js",
+  "compatibility_date": "2025-06-01",
+  "observability": { "enabled": true },
+  "secrets_store_secrets": [
+    { "binding": "APEX_GATE_SHA256", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "APEX_GATE_SHA256" },
+    { "binding": "GITHUB_DEPLOY_KEY_BLADE_SURGE_B64", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "GITHUB_DEPLOY_KEY_BLADE_SURGE_B64" },
+    { "binding": "FISH_API_KEY", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "FISH_API_KEY" },
+    { "binding": "ADMIN_API_TOKEN", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "ADMIN_API_TOKEN" },
+    { "binding": "TAVILY_API_KEY", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "TAVILY_API_KEY" },
+    { "binding": "PEXELS_API_KEY", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "PEXELS_API_KEY" },
+    { "binding": "PIXABAY_API_KEY", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "PIXABAY_API_KEY" },
+    { "binding": "BROWSERBASE_API_KEY", "store_id": "3d9b8481f988422895d49b3460b76b5e", "secret_name": "BROWSERBASE_API_KEY" }
+  ]
+}

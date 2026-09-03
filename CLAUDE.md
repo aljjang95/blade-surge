@@ -39,11 +39,10 @@ export LD_LIBRARY_PATH=/tmp/libs/usr/lib/x86_64-linux-gnu
 ```
 `package.json` 의 playwright 버전과 브라우저 캐시 빌드가 어긋나면 실행이 죽는다 — `LESSONS.md` 참조.
 
-### 푸시하려면 — 디바이스 플로우 아니고 **드라이브의 deploy key** (2026-09-03 부터)
-구글 드라이브 `env` 폴더(folder id `1OTXsIE1saKr1mhNpkmRR-96wYmbM6nYD`)의
-**`github-deploy-blade-surge.env`** (file id `1m1a5PQulhpx2zp1HEIVgIdESYyw1d9U3`) 에 이 레포 전용 쓰기 deploy key 가 있다.
-대표님 승인 없이 세션 첫 호출에서 바로 푸시 권한이 선다. `§자격증명 → GitHub` 참조.
-**읽기만 할 거면 인증 없이 클론된다.**
+### 푸시·배포·API 키 — 전부 `session-auth` 스킬 한 번으로
+`session-auth` 스킬(보스님 계정에만 있는 파일)에 뿌리 토큰과 부트스트랩 스크립트가 있다. 그걸 읽고 실행하면
+deploy key·Cloudflare 토큰·Fish Audio 키가 세션 디스크에 풀린다. **이 레포는 public 이다 — 여기엔 어떤 키도 적지 않는다.**
+읽기만 할 거면 인증 없이 클론된다.
 
 ## 무엇인가
 
@@ -66,49 +65,22 @@ node tools/metrics.mjs   # 자동 채점 하네스 (RSI 게이트 A)
 ## 자격증명 — 절대 규칙
 
 **토큰 값을 채팅·로그·커밋·스크린샷·에코에 한 글자도 출력하지 않는다.**
-`sed -E 's/(gh[pousr]_[A-Za-z0-9]+)/[HIDDEN]/g'` 같은 마스킹을 항상 파이프로 건다.
+`sed -E 's/(gh[pousr]_[A-Za-z0-9]+|cfut_[A-Za-z0-9_-]+)/[HIDDEN]/g'` 같은 마스킹을 항상 파이프로 건다.
 
-### GitHub — 드라이브 deploy key (세션마다 30초, 사람 승인 불필요)
-레포 전용 ed25519 deploy key(write). 이 레포에만 push 된다. 폐기는 github.com/aljjang95/blade-surge/settings/keys.
+### 어디서 오나 (2026-09-03 v3)
+- **뿌리**: Cloudflare 사용자 API 토큰 — `session-auth` 스킬에만 있다.
+- **금고**: Cloudflare Secrets Store `apex-shared-apis` (write-only). GitHub deploy key(base64)·Fish Audio 키 등.
+- **통로**: 워커 `apex-secrets` (`tools/apex-secrets/`, https://apex-secrets.affinity-agent-studio.workers.dev).
+  `Authorization: Bearer <뿌리>` 의 sha256 이 `APEX_GATE_SHA256` 과 같을 때만 `/v1/secrets?names=…` 로 값을 준다.
+- 구글 드라이브는 쓰지 않는다 — PC 쪽 APEX 가 평문을 한 시간 안에 지운다(실제로 당했다).
+- 새 키를 넣는 법·워커 바인딩 추가·토큰 교체 절차는 `session-auth` 스킬에.
 
-```bash
-# 1) Google Drive MCP download_file_content(fileId="1m1a5PQulhpx2zp1HEIVgIdESYyw1d9U3") → content(base64) 를 파일로
-#    (드라이브 검색: parentId = '1OTXsIE1saKr1mhNpkmRR-96wYmbM6nYD', 제목 github-deploy-blade-surge.env)
-K=/sessions/$SESSION/gh; mkdir -p $K
-base64 -d $K/drive.b64 > $K/deploy.env            # KEY=value 3줄. 값을 echo 하지 마라
-python3 -c "import base64;d=dict(l.split('=',1) for l in open('$K/deploy.env') if '=' in l and not l.startswith('#'));open('$K/key','wb').write(base64.b64decode(d['GITHUB_DEPLOY_KEY_B64'].strip()))"
-chmod 600 $K/key
-# 2) 이후 모든 git 원격 명령
-export GIT_SSH_COMMAND="ssh -i $K/key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new"
-git push git@github.com:aljjang95/blade-surge.git HEAD:main
-```
+### GitHub
+deploy key 로 push (`GIT_SSH_COMMAND`, 원격은 `git@github.com:aljjang95/blade-surge.git`). 계정 OAuth 토큰은 새 레포에 deploy key 를 등록할 때만 1회.
 
-> 키가 죽었으면(401/Permission denied) 아래 **예비 경로**: OAuth 디바이스 플로우. 대표님 승인 필요.
-> ```bash
-> curl -sS -X POST https://github.com/login/device/code -H "Accept: application/json" \
->   -d "client_id=178c6fc778ccc68e1d6a" -d "scope=repo workflow"      # user_code 를 대표님께
-> # device_code 는 파일에 저장, 승인 후 1회 교환:
-> curl -sS -X POST https://github.com/login/oauth/access_token -H "Accept: application/json" \
->   -d "client_id=178c6fc778ccc68e1d6a" -d "device_code=$(cat device_code)" \
->   -d "grant_type=urn:ietf:params:oauth:grant-type:device_code"
-> # 토큰 사용: export 먼저 하고 URL 에 넣어라 — `GH_TOKEN=... git push "https://x-access-token:${GH_TOKEN}@..."` 는
-> # 접두 대입이 URL 확장보다 늦어 빈 토큰이 들어간다(실제로 당했다)
-> ```
-> 그리고 새 deploy key 를 만들어(`ssh-keygen -t ed25519`, `POST /repos/aljjang95/blade-surge/keys` read_only=false)
-> 드라이브에 같은 형식으로 다시 올려라. OAuth 토큰 자체는 드라이브에 올리지 않는다 — 전 레포 권한이라 범위가 너무 넓다.
-
-> **함정**: `gh auth login --web` 을 백그라운드로 띄우면 bash 호출이 끝날 때 프로세스가 죽는다(`setsid` 도 소용없음 — 호출마다 bwrap 샌드박스).
-
-### Cloudflare — 드라이브 `cloudflare.env` (사람 승인 불필요)
-드라이브 `env` 폴더의 **`cloudflare.env`** (file id `1N-chIyf2f7KkiwQkAIpc-Few2P2driop`): `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN`(cfut_, 2026-09-03 검증).
-```bash
-# Drive MCP download_file_content(fileId="1N-chIyf2f7KkiwQkAIpc-Few2P2driop") → content(base64) 를 파일로 → 디코드
-C=/sessions/$SESSION/cf; mkdir -p $C && chmod 700 $C; base64 -d $C/drive.b64 > $C/cloudflare.env; chmod 600 $C/cloudflare.env
-set -a; . $C/cloudflare.env; set +a          # 값을 echo 하지 마라
-npm run deploy                               # = vite build && wrangler deploy → https://blade-surge.affinity-agent-studio.workers.dev
-```
-401 이 나면 토큰이 폐기된 것 — 대표님께 **첨부 파일**로 새 토큰을 받아 같은 파일을 덮어쓴다(채팅 본문에 붙이지 않게).
-세션이 끝나면 `$C` 를 지운다.
+### Cloudflare
+`npm run deploy` = `vite build && wrangler deploy`. `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` 는 부트스트랩이 export 한다.
+`apex-secrets` 워커는 `cd tools/apex-secrets && npx wrangler deploy`.
 
 ### .gitignore 불변식
 `.env`, `*.token`, `cf.token` 은 커밋에 절대 들어가지 않는다.
