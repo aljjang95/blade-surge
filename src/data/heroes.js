@@ -12,10 +12,14 @@ export const HEROES = {
     weapon: '1h', color: '#ffcf5a', accent: '#fff3c0',
     show: ['1H_Sword', 'Round_Shield'],
     base: { hp: 1400, atk: 120, def: 40, crit: 0.15, critDmg: 1.6, spd: 6.2 },
+    // 6타: 베기 → 베기 → 찌르기(돌진) → 회전베기(2연타·진공) → 베기 → 내려찍기(마무리)
     combo: [
-      { anim: '1H_Melee_Attack_Slice_Horizontal', hitAt: 0.42, dmg: 1.0, range: 2.6, arc: 140, kb: 1.5, dur: 0.55 },
-      { anim: '1H_Melee_Attack_Slice_Diagonal',   hitAt: 0.40, dmg: 1.1, range: 2.6, arc: 120, kb: 1.5, dur: 0.55 },
-      { anim: '1H_Melee_Attack_Chop',             hitAt: 0.45, dmg: 1.7, range: 2.8, arc: 160, kb: 4.5, dur: 0.7, finisher: true },
+      { anim: '1H_Melee_Attack_Slice_Horizontal', hitAt: 0.42, dmg: 0.9,  range: 2.6, arc: 140, kb: 1.5, dur: 0.5 },
+      { anim: '1H_Melee_Attack_Slice_Diagonal',   hitAt: 0.40, dmg: 0.95, range: 2.6, arc: 120, kb: 1.5, dur: 0.5 },
+      { anim: '1H_Melee_Attack_Stab',             hitAt: 0.38, dmg: 1.1,  range: 3.0, arc: 70,  kb: 2.5, dur: 0.5, move: 'lunge', lunge: 3.5 },
+      { anim: '2H_Melee_Attack_Spin',             hitAt: 0.40, dmg: 0.7,  range: 3.2, arc: 360, kb: 2.0, dur: 0.7, move: 'spin', ticks: 2 },
+      { anim: '1H_Melee_Attack_Slice_Horizontal', hitAt: 0.40, dmg: 1.0,  range: 2.7, arc: 150, kb: 2.0, dur: 0.5 },
+      { anim: '1H_Melee_Attack_Chop',             hitAt: 0.45, dmg: 1.9,  range: 2.9, arc: 160, kb: 5.0, dur: 0.72, finisher: true },
     ],
     skills: [
       { id: 'holy_slash',  name: '성검 일섬', icon: '/img/sk_knight_1.webp', cd: 5,  anim: '1H_Melee_Attack_Slice_Horizontal', castAt: 0.4, dmg: 3.2, desc: '전방으로 거대한 빛의 참격을 날려 관통 피해' },
@@ -29,10 +33,13 @@ export const HEROES = {
     weapon: '2h', color: '#ff5a3c', accent: '#ffd0b0',
     show: ['2H_Axe'],
     base: { hp: 1800, atk: 150, def: 30, crit: 0.20, critDmg: 1.8, spd: 5.8 },
+    // 5타: 베기 → 찌르기(돌진) → 회오리(3연타·진공) → 내려찍기 → 도약 강타(마무리·충격파)
     combo: [
-      { anim: '2H_Melee_Attack_Slice', hitAt: 0.45, dmg: 1.2, range: 3.0, arc: 160, kb: 2.0, dur: 0.65 },
-      { anim: '2H_Melee_Attack_Stab',  hitAt: 0.42, dmg: 1.2, range: 3.2, arc: 80,  kb: 2.0, dur: 0.6 },
-      { anim: '2H_Melee_Attack_Chop',  hitAt: 0.5,  dmg: 2.2, range: 3.0, arc: 170, kb: 6.0, dur: 0.85, finisher: true },
+      { anim: '2H_Melee_Attack_Slice',    hitAt: 0.45, dmg: 1.1, range: 3.0, arc: 160, kb: 2.0, dur: 0.6 },
+      { anim: '2H_Melee_Attack_Stab',     hitAt: 0.40, dmg: 1.2, range: 3.4, arc: 80,  kb: 3.0, dur: 0.55, move: 'lunge', lunge: 4 },
+      { anim: '2H_Melee_Attack_Spinning', hitAt: 0.30, dmg: 0.6, range: 3.4, arc: 360, kb: 1.5, dur: 0.85, move: 'spin', ticks: 3 },
+      { anim: '2H_Melee_Attack_Chop',     hitAt: 0.5,  dmg: 1.6, range: 3.0, arc: 170, kb: 3.0, dur: 0.7 },
+      { anim: 'Jump_Full_Short',          hitAt: 0.62, dmg: 2.4, range: 4.5, arc: 360, kb: 7.0, dur: 0.9, move: 'slam', finisher: true },
     ],
     skills: [
       { id: 'whirlwind',  name: '회오리 참격', icon: '/img/sk_barb_1.webp', cd: 7,  anim: '2H_Melee_Attack_Spin', castAt: 0.3, dmg: 0.9, ticks: 5, desc: '도끼를 휘돌려 주변 적을 연속으로 베어냄' },
@@ -46,10 +53,13 @@ export const HEROES = {
     weapon: 'staff', color: '#4cc3ff', accent: '#d0f0ff', ranged: true,
     show: ['2H_Staff'],
     base: { hp: 1000, atk: 170, def: 20, crit: 0.12, critDmg: 1.7, spd: 5.6 },
+    // 5타: 화살 → 화살 → 부채꼴 3발 → 관통 대화살 → 노바(마무리·주변 흡인 후 폭발)
     combo: [
-      { anim: 'Spellcast_Shoot', hitAt: 0.35, dmg: 0.9, range: 9, arc: 30, kb: 0.8, dur: 0.5, projectile: 'bolt' },
-      { anim: 'Spellcast_Shoot', hitAt: 0.35, dmg: 0.9, range: 9, arc: 30, kb: 0.8, dur: 0.5, projectile: 'bolt' },
-      { anim: 'Spellcast_Long',  hitAt: 0.5,  dmg: 1.8, range: 9, arc: 40, kb: 3.0, dur: 0.8, projectile: 'bigbolt', finisher: true },
+      { anim: 'Spellcast_Shoot', hitAt: 0.35, dmg: 0.85, range: 9, arc: 30, kb: 0.8, dur: 0.45, projectile: 'bolt' },
+      { anim: 'Spellcast_Shoot', hitAt: 0.35, dmg: 0.85, range: 9, arc: 30, kb: 0.8, dur: 0.45, projectile: 'bolt' },
+      { anim: 'Spellcast_Long',  hitAt: 0.45, dmg: 0.7,  range: 9, arc: 60, kb: 1.5, dur: 0.6, projectile: 'bolt', move: 'fan' },
+      { anim: 'Spellcast_Shoot', hitAt: 0.35, dmg: 1.4,  range: 9, arc: 30, kb: 2.5, dur: 0.5, projectile: 'bigbolt' },
+      { anim: 'Spellcast_Raise', hitAt: 0.5,  dmg: 1.8,  range: 4.5, arc: 360, kb: 4.0, dur: 0.8, move: 'nova', finisher: true },
     ],
     skills: [
       { id: 'fireball',   name: '화염구',     icon: '/img/sk_mage_1.webp', cd: 5,  anim: 'Spellcast_Shoot', castAt: 0.35, dmg: 3.5, desc: '폭발하는 화염구를 발사해 광역 피해' },
@@ -63,10 +73,14 @@ export const HEROES = {
     weapon: 'dual', color: '#b26bff', accent: '#e8d0ff',
     show: ['Knife', 'Knife_Offhand'],
     base: { hp: 1100, atk: 135, def: 25, crit: 0.35, critDmg: 2.0, spd: 7.2 },
+    // 6타: 베기 → 찍기 → 베기 → 그림자 관통(적을 뚫고 지나가며 베기) → 찍기 → 쌍검 찌르기(마무리)
     combo: [
-      { anim: 'Dualwield_Melee_Attack_Slice', hitAt: 0.35, dmg: 0.8, range: 2.3, arc: 120, kb: 1.0, dur: 0.4 },
-      { anim: 'Dualwield_Melee_Attack_Chop',  hitAt: 0.35, dmg: 0.8, range: 2.3, arc: 120, kb: 1.0, dur: 0.4 },
-      { anim: 'Dualwield_Melee_Attack_Stab',  hitAt: 0.4,  dmg: 1.6, range: 2.6, arc: 90,  kb: 3.5, dur: 0.55, finisher: true },
+      { anim: 'Dualwield_Melee_Attack_Slice', hitAt: 0.35, dmg: 0.75, range: 2.3, arc: 120, kb: 1.0, dur: 0.38 },
+      { anim: 'Dualwield_Melee_Attack_Chop',  hitAt: 0.35, dmg: 0.75, range: 2.3, arc: 120, kb: 1.0, dur: 0.38 },
+      { anim: 'Dualwield_Melee_Attack_Slice', hitAt: 0.35, dmg: 0.8,  range: 2.3, arc: 120, kb: 1.0, dur: 0.38 },
+      { anim: 'Dodge_Forward',                hitAt: 0.35, dmg: 1.1,  range: 2.4, arc: 360, kb: 1.5, dur: 0.45, move: 'lunge', lunge: 5, through: true },
+      { anim: 'Dualwield_Melee_Attack_Chop',  hitAt: 0.35, dmg: 0.85, range: 2.3, arc: 120, kb: 1.2, dur: 0.38 },
+      { anim: 'Dualwield_Melee_Attack_Stab',  hitAt: 0.4,  dmg: 1.7,  range: 2.7, arc: 90,  kb: 3.5, dur: 0.55, finisher: true },
     ],
     skills: [
       { id: 'shadow_dash', name: '그림자 질주', icon: '/img/sk_rogue_1.webp', cd: 6,  anim: 'Dodge_Forward', castAt: 0.1, dmg: 2.6, desc: '적을 관통하며 질주해 경로상 모든 적을 베어냄' },

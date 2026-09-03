@@ -115,6 +115,7 @@ public/models,img,bgm,sfx/
 tools/metrics.mjs     자동 채점 하네스 (레벨 1 영웅 · 1층)
 tools/shot_seal.mjs   게이트 B 컷: 봉인 결계 / 포탈 / 보스 진입
 tools/shot_look.mjs   게이트 B 컷: 장비 외형 4영웅 × 3단계
+tools/shot_combo.mjs  게이트 B 컷: 기본 콤보 홀드 체인 (사람 입력 경로 — 하네스 AUTO 는 탭이라 못 잡는다)
 ```
 
 ## 코드 규칙
