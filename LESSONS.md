@@ -17,6 +17,15 @@
 > 회전 5 로 §4-1 장비 외형(무기·방패 메시 교체 + 등급 발광 + 강화 오라, `src/game/look.js`)을 닫았다. 다음 회전은 **§4-2 레벨 구간별 스킬**부터. 지표는 밴드 중앙 근처라 **회귀 감시**만 하면 된다.
 > 새 콘텐츠 회전에서 `drawCalls` 회귀 규칙(+20%)이 걸리면 기준선을 다시 박는다 (회전 3 교훈).
 
+## 보이스 (회전 7 — 영어 액션 VO, 2026-09-04)
+
+- **Fish Audio 는 크레딧 0 이라 무료 TTS 만 된다** — voice-design·레퍼런스 클로닝(`references`)·ASR 전부 402. 한국어 라이브러리 보이스는 대부분 오징어게임 배우 클론이라 못 쓴다. → **Runware** 로 갔다: `alibaba:qwen@3-tts-1.7b-voicedesign` (설명문 → 독자 목소리, $0.001) + `bytedance:seed-audio@1.0` (레퍼런스 `@Audio1` + 연기 지시문, $0.01~0.02). 115줄 ≈ $1.1
+- **Seed Audio 는 지시문을 따르는 모델이다.** `positivePrompt` 가 대사가 아니라 "Using the voice of @Audio1, say ONLY … , <연기>: "대사"" 형태. 레퍼런스 없이 지시문만 주면 딴소리를 한다 ("The game is over! The winner is…"). `inputs.referenceAudios` 는 base64 data URI 로 넣고 프롬프트에 `@Audio1` 이 반드시 있어야 한다
+- **소리를 못 들으니 ASR 로 대조한다** (faster-whisper base, `tools/voice/asr.py`). 외치는 대사는 "Heavens REEEAAAND" 처럼 늘여 전사되므로 단어 일치가 아니라 **글자 바이그램 Dice ≥0.35**. 기합은 ASR 대신 **길이**(0.2~1.2초)로 본다
+- **후처리 순서: 정규화 → 가장자리 무음만 제거.** -42dB 로 중간 무음까지 지웠더니 낮게 으르렁대는 악마 보스 대사가 0.3초로 잘렸다. 검증은 반드시 **최종 파일**로
+- `pip install` 을 하고 나니 `~/.cache/ms-playwright` 가 사라졌다 (`.cache` 가 12:08 에 새로 만들어짐). 하네스가 "Executable doesn't exist" 로 죽으면 `npx playwright install chromium` 다시
+- Runware 응답 URL 은 `am.runware.ai` 로, 세션 안에서 바로 받아야 한다. 레퍼런스 mp3 는 레포(`tools/voice/refs/`)에 커밋해 두어야 다음 세션에서 같은 목소리로 추가 대사를 뽑는다
+
 ## 손맛 (회전 6 — 기본 콤보, 2026-09-04)
 
 - **버튼을 '누르고 있는' 사람은 영원히 1타만 반복했다.** 다음 타 예약이 `consume('attack')` 탭에만, 그것도 hitDone 뒤에만 걸려 있었다. 홀드는 `attackHeld && state !== 'attack'` 이라 콤보 중엔 아무것도 안 하고, 끝나면 1타부터. 보스님이 "3타인데 끊긴다" 고 느낀 진범. AUTO 는 탭을 눌러서 하네스에는 안 잡혔다 — **하네스는 AUTO 를 재지 사람 입력을 재지 않는다.** 입력 경로는 `tools/shot_combo.mjs` 처럼 홀드로 따로 확인해라

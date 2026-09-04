@@ -116,6 +116,7 @@ tools/metrics.mjs     자동 채점 하네스 (레벨 1 영웅 · 1층)
 tools/shot_seal.mjs   게이트 B 컷: 봉인 결계 / 포탈 / 보스 진입
 tools/shot_look.mjs   게이트 B 컷: 장비 외형 4영웅 × 3단계
 tools/shot_combo.mjs  게이트 B 컷: 기본 콤보 홀드 체인 (사람 입력 경로 — 하네스 AUTO 는 탭이라 못 잡는다)
+tools/voice/          보이스 파이프라인 — lines.mjs(대본·목소리 설명) → gen.mjs refs|lines|report (Runware Qwen VoiceDesign + Seed Audio, ASR 대조). refs/ 는 목소리 정체성 — 지우지 마라
 ```
 
 ## 코드 규칙
@@ -135,6 +136,7 @@ tools/shot_combo.mjs  게이트 B 컷: 기본 콤보 홀드 체인 (사람 입�
 - 3D: KayKit (Adventurers/Skeletons/Dungeon Remastered), Quaternius (Ultimate Monsters) — 전부 CC0
 - SFX: Kenney — CC0
 - BGM: Google Flow Music 생성
+- 보이스: 자체 생성 (Runware Qwen VoiceDesign 으로 설명문에서 만든 독자 목소리 → Seed Audio 연기. 실존 인물 클론 없음). 영어 + 기합
 - 이미지/VFX: 자체 생성 (`parallel-gpt-image` 스킬)
 
 > Quaternius 미러 레포 중 "Patreon Exclusive" 폴더가 섞인 것이 있다. 공식 배포처에서만 받아라.

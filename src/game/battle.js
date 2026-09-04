@@ -81,7 +81,7 @@ export class Battle {
     audio.waveHorn({ vol: 0.45 });
     this.heroId = heroId; this.bossKey = stage.chapter.boss;
     this.after(0.25, () => { if (this.active) audio.voice(`hero_${heroId}_select`, { min: 20 }); });
-    this.after(3.2, () => { if (this.active) audio.voice('floor_start', { min: 30 }); });
+    this.after(3.2, () => { if (this.active) audio.voice('floor_start', { min: 30 }); });   // 층 시작 안내 ("The seal is broken" 는 unsealBoss 의 seal_break 가 맡는다)
     // 테마 세트가 켜져 있으면 알려준다 — 발동 효과는 눈에 띄어야 세트를 모을 이유가 된다
     const themed = this.setBonus.filter((a) => a.set.themed);
     themed.forEach((a, i) => this.after(1.2 + i * 0.9, () => { if (!this.active) return; this.ui.toast(`${a.set.name} ${a.tier}세트 발동 — ${a.set[a.tier === 4 ? 'four' : 'two'].text}`, 'gold'); this.fx.holyBurst(this.player.pos, { size: 6, life: 0.5, color: a.set.color }); audio.magic({ vol: 0.3, base: 440, notes: [0, 4, 7], step: 0.07 }); audio.voice('set_' + a.set.id, { min: 5 }); }));
@@ -258,7 +258,7 @@ export class Battle {
     if (!this.active || !this.world || !this.world.sealed) return;
     this.world.unseal(); this.arena.openSeal(this.fx);
     this.ui.toast('보스의 봉인이 풀렸다!', 'red'); this.ui.waveBanner('봉인 해제'); this.renderer.shake(0.5); this.renderer.flashScreen(0.25, 0xff3050);
-    audio.waveHorn({ vol: 0.5, boss: true }); audio.boom({ vol: 0.6, dur: 0.7, low: 60 }); audio.voice('floor_start', { min: 30 });
+    audio.waveHorn({ vol: 0.5, boss: true }); audio.boom({ vol: 0.6, dur: 0.7, low: 60 }); audio.voice('seal_break', { min: 30 });
     this.ui.setObjective(this.world);
     this.openPortal();
   }
@@ -275,7 +275,7 @@ export class Battle {
     mesh.rotation.x = -Math.PI / 2; mesh.position.set(px, 0.1, pz); mesh.renderOrder = 3; this.scene.add(mesh);
     this.portal = { pos: new THREE.Vector3(px, 0, pz), exit, mesh, t: 0, cd: 0 };
     this.fx.castCircle(this.portal.pos, 0xff4060, { radius: 2.2, life: 1.2, demon: true }); this.fx.firePillar(this.portal.pos, { height: 5, width: 2.4, life: 0.8, color: 0xff4060 });
-    this.ui.toast('보스방으로 가는 포탈이 열렸다', 'gold');
+    this.ui.toast('보스방으로 가는 포탈이 열렸다', 'gold'); this.after(2.5, () => audio.voice('portal', { min: 30 }));
   }
   usePortal() {
     const P = this.portal; if (!P) return;
@@ -355,7 +355,7 @@ export class Battle {
   onPlayerDeath() {
     this.renderer.desat = 0.7; this.timeCtl.slowmo(0.3, 1.5); this.renderer.shake(0.6); audio.playMusic(null);
     if (this.hasProc('phoenix_rebirth') && !this.rebirthUsed) { this.phoenixRebirth(); return; }
-    audio.voice('defeat');
+    audio.voice(`hero_${this.heroId}_death`); this.after(1.6, () => audio.voice('defeat'));
     this.after(1.8, () => { if (this.active) this.ui.showRevive(this); });
   }
   revivePlayer() {
@@ -486,7 +486,7 @@ export class Battle {
     this.fx.burst(p.pos.clone().setY(1), 0x9fe4ff, { n: 18, speed: 7, size: 0.35 });
     p.addUlt(14 * (p.stats.ultGain || 1));
     p.buffs.atk = Math.max(p.buffs.atk, 1.35); p.buffs.atkSpd = Math.max(p.buffs.atkSpd, 1.25); p.buffs.t = Math.max(p.buffs.t, 3);
-    this.ui.perfectDodge(); audio.voice('perfect', { min: 6, duck: 0.7, dur: 0.8 });
+    this.ui.perfectDodge(); audio.bark(`hero_${this.heroId}_perfect`, { vol: 0.95, min: 1.2 }); audio.voice('perfect', { min: 12, duck: 0.7, dur: 0.8 });
     audio.ice({ vol: 0.4, dur: 0.35 }); audio.ting({ vol: 0.45, freq: 2400 }); audio.vibe([15, 25, 40]);
   }
 
@@ -518,8 +518,7 @@ export class Battle {
     for (let i = this.holes.length - 1; i >= 0; i--) { const h = this.holes[i]; h.t -= dt; this.vacuum(h.pos, 7, 1.1); if (h.t <= 0) this.holes.splice(i, 1); }
     this.drops.update(dt);
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; this.ui.setCombo(0); } }
-    if (this.player.alive && this.player.hp < this.player.maxHp * 0.25) audio.voice('low_hp', { min: 15 });
-    else if (this.player.alive && this.player.hp < this.player.maxHp * 0.5) audio.voice(`hero_${this.heroId}_hurt`, { min: 14 });
+    if (this.player.alive && this.player.hp < this.player.maxHp * 0.25) { audio.voice(`hero_${this.heroId}_low_hp`, { min: 12 }); audio.voice('low_hp', { min: 25 }); }
     // 카메라: 적 밀도에 따라 살짝 줌아웃 (몹몰이 시야 확보)
     const rig = this.renderer.rig;
     // 카메라 리드: 진행 방향으로 살짝 앞서 보고, 락온 대상 쪽으로 조금 당긴다

@@ -20,7 +20,7 @@ class AudioSys {
     // 컴프레서로 타격음 펀치감
     const comp = this.ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 6; comp.attack.value = 0.002; comp.release.value = 0.12;
     this.sfxGain.disconnect(); this.sfxGain.connect(comp); comp.connect(this.master);
-    this.voiceGain = this.ctx.createGain(); this.voiceGain.gain.value = 1; this.voiceGain.connect(this.master);
+    this.voiceGain = this.ctx.createGain(); this.voiceGain.gain.value = 1; this.voiceGain.connect(this.master); this._barkLast = {};
     await Promise.all(SFX_FILES.map(async (n) => {
       try { const ab = await (await fetch(`/sfx/${n}.mp3`)).arrayBuffer(); this.buffers[n] = await this.ctx.decodeAudioData(ab); } catch (e) { console.warn('sfx fail', n); }
     }));
@@ -48,6 +48,19 @@ class AudioSys {
     this.duck(duck, Math.max(dur, b.duration + 0.4));
   }
   setVoiceOn(on) { this.voiceOn = on; if (!on && this._voiceSrc) { try { this._voiceSrc.stop(); } catch (e) {} } }
+  /** 기합·외침(bark) — /sfx/voice/<name><i>.mp3 변형 중 하나를 SFX 레이어로 겹쳐 재생. 나레이션과 달리 서로 끊지 않고, 덕킹도 없다.
+   *  n = 변형 수(name0..name{n-1}), n 이 없으면 name.mp3 하나. min = 같은 이름 최소 간격(초) */
+  bark(name, { n = 0, vol = 0.9, min = 0.25, rate = 1 } = {}) {
+    if (!this.voiceOn || !this.ctx) return;
+    const t = this.now(); if (this._barkLast[name] && t - this._barkLast[name] < min) return; this._barkLast[name] = t;
+    const key = n ? name + Math.floor(Math.random() * n) : name;
+    const b = this.voiceBuf[key];
+    if (b === undefined) { this.voiceBuf[key] = null; fetch(`/sfx/voice/${key}.mp3`).then((r) => r.arrayBuffer()).then((ab) => this.ctx.decodeAudioData(ab)).then((buf) => { this.voiceBuf[key] = buf; }).catch(() => {}); return; }
+    if (!b) return;
+    const src = this.ctx.createBufferSource(); src.buffer = b; src.playbackRate.value = rate; const g = this.ctx.createGain(); g.gain.value = vol; src.connect(g); g.connect(this.voiceGain); src.start();
+  }
+  /** 기합 미리 로드 — 첫 공격에서 소리가 비지 않게 */
+  preloadBarks(names) { for (const k of names) { if (this.voiceBuf[k] !== undefined || !this.ctx) continue; this.voiceBuf[k] = null; fetch(`/sfx/voice/${k}.mp3`).then((r) => r.arrayBuffer()).then((ab) => this.ctx.decodeAudioData(ab)).then((buf) => { this.voiceBuf[k] = buf; }).catch(() => {}); } }
 
   // ---------- 프로시저럴 SFX ----------
   _noise(dur) {

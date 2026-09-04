@@ -5,3 +5,5 @@ dist
 *.log
 
 .rsi/shots/
+tools/voice/.tmp/
+tools/voice/.fail.json
