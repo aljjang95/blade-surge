@@ -7,7 +7,7 @@
  * 키: RUNWARE_API_KEY 환경변수 (session-auth). bash 178초 상한 — 한 호출에 BATCH 개씩만.
  */
 import { VOICES, LINES } from './lines.mjs';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from 'fs';
 import { execFileSync } from 'child_process';
 import { resolve, dirname } from 'path';
 import { randomUUID } from 'crypto';
@@ -82,6 +82,7 @@ if (mode === 'lines') {
     let ok = true, why = '';
     if (l.maxSec && d > l.maxSec) { ok = false; why = `길이 ${d.toFixed(2)}s > ${l.maxSec}`; }
     if (l.kind === 'bark' && d < 0.2) { ok = false; why = `너무 짧음 ${d.toFixed(2)}s (빈 소리)`; }
+    if (!(d > 0) || statSync(dst).size < 1500) { ok = false; why = `깨진 파일 (${statSync(dst).size}B)`; }   // 트림 뒤 빈 mp3 는 ffprobe 가 NaN 을 뱉어 길이 검사를 통과했다
     if (l.kind === 'line') { const s = similar(l.text, asr[p] || ''); if (s < (l.maxSec ? 0.35 : 0.5)) { ok = false; why = `ASR 불일치 ${(s * 100) | 0}% "${asr[p]}"`; } }
     if (!ok) { fails[l.name] = { n: (fails[l.name]?.n || 0) + 1, last: why }; execFileSync('rm', ['-f', dst]); console.log('✗', l.name, why); }
     else { delete fails[l.name]; console.log('✓', l.name, `${d.toFixed(2)}s`, l.kind === 'line' ? `"${asr[p]}"` : ''); }

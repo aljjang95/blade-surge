@@ -4,15 +4,17 @@
  *   kind: 'bark' = 짧은 기합/외침(SFX 레이어, 겹쳐 재생, 1.2초 이내)  ·  'line' = 대사(나레이션 채널, 덕킹)
  *   text 는 ASR 로 대조한다. 기합은 길이로 대조한다.
  */
+// 목소리 정체성 — 한국 애니/게임 더빙 성우 결. 초상화(img/hero_*.webp)에 맞춘다: 금발 소년 기사 · 짐승 같은 광전사 · 은발 쿨뷰티 마도사 · 후드 쓴 소년 암살자.
+// (1차는 서양 판타지 트레일러 톤이라 "워크래프트 같다" 고 반려됐다 — 깊고 무거운 성인 남성 대신 젊고 맑고 에너지 높은 더빙 성우 톤으로)
 export const VOICES = {
-  knight:    { desc: 'Young heroic male knight, bright resonant baritone, noble and fearless, the voice of a champion who fights with his whole heart. Clean English, no accent.', ref: 'By my sword and by the light — I will not fall. Stand with me!' },
-  barbarian: { desc: 'Massive barbarian warrior. Deep, gravelly, chest-rumbling bass, wild and ferocious, always on the edge of a roar. English.', ref: 'Blood and thunder! Come on, then — I will split you in two!' },
-  mage:      { desc: 'Young woman archmage. Clear, crystalline, precise voice with calm authority that turns fierce and commanding when she casts. English.', ref: 'The stars answer to me. Burn, freeze, and fall — every one of you.' },
-  rogue:     { desc: 'Male assassin. Low, sly, whispery tenor, cold and quick, a blade in the dark who never raises his voice unless he is killing. English.', ref: 'You never saw me coming. Nobody ever does. Goodbye.' },
-  narrator:  { desc: 'Epic fantasy game announcer. Deep, dramatic, resonant male voice with gravitas, like a movie trailer narrator announcing a boss fight. English.', ref: 'The tower has no end. Climb, warrior — the castle is waiting for you.' },
-  boss_warlord: { desc: 'Undead skeleton warlord. Hollow, rasping, bone-dry voice that booms from an empty ribcage, ancient and hateful. English.', ref: 'Flesh. Warm flesh. You will join my legion, little knight.' },
-  boss_demon:   { desc: 'Archdemon of the abyss. Guttural, layered, growling voice, cruel and amused, every word dripping with malice. English.', ref: 'Your soul smells delicious. Come closer. Let me taste your fear.' },
-  boss_dragon:  { desc: 'Ancient colossal dragon. Slow, thunderous, immense voice, each word like a mountain moving, contemptuous of mortals. English.', ref: 'A thousand years I have slept. And you… wake me for this?' },
+  knight:    { desc: 'Korean anime-dub style young male voice actor playing the blond shonen hero knight: bright, clear, youthful tenor around 18 years old, earnest and hot-blooded, energy bursting on every shout, never deep or gravelly. Speaks English.', ref: 'I won\'t lose! Not to you, not to anyone — this sword protects everyone!' },
+  barbarian: { desc: 'Korean anime-dub style male voice actor playing a wild, bearded berserker: rough, hearty, big-brother "aniki" baritone, boisterous and laughing, more feral thug than fantasy king. Punchy anime delivery. Speaks English.', ref: 'Hahaha! Now THIS is a fight! Come on, hit me harder!' },
+  mage:      { desc: 'Korean anime-dub style female voice actress playing an elegant silver-haired ice sorceress: cool, composed, slightly husky alto "noona" voice, refined and confident, sharp and commanding when she casts. Speaks English.', ref: 'How careless of you. Freeze — and don\'t move until I say so.' },
+  rogue:     { desc: 'Korean anime-dub style young voice actor playing a small hooded assassin with glowing purple eyes: boyish, light, quick, slightly androgynous voice, cheeky and playful with a cold edge, whispers and sudden sharp bursts. Speaks English.', ref: 'Hehe… found you. Don\'t blink — you\'ll miss it.' },
+  narrator:  { desc: 'Korean game-announcer style male voice: clear, energetic, charismatic mid-range, like a hype caster in a Korean action RPG — dramatic but bright, not a movie-trailer growl. Speaks English.', ref: 'Welcome, warrior! The Endless Castle awaits — let\'s climb!' },
+  boss_warlord: { desc: 'Korean anime-dub style villain voice actor playing an undead skeleton warlord: theatrical, hollow, rasping, dramatic villain laugh, hammy and menacing. Speaks English.', ref: 'Kekeke… flesh! Warm flesh! You will join my legion, little knight!' },
+  boss_demon:   { desc: 'Korean anime-dub style villain voice actor playing an archdemon: smooth, seductive, cruel and amused, sliding from purr to sudden roar, charismatic anime final boss. Speaks English.', ref: 'Ahh… your soul smells delicious. Come closer. Let me taste your fear.' },
+  boss_dragon:  { desc: 'Korean anime-dub style elder voice actor playing an ancient dragon: slow, immense, contemptuous, gravel and echo, ancient god-beast looking down on insects. Speaks English.', ref: 'A thousand years I have slept… and you wake me for THIS?' },
 };
 
 const H = (voice, key, kind, text, act, opt = {}) => ({ name: key, voice, kind, text, act, ...opt });
@@ -37,7 +39,7 @@ for (const h of Object.keys(HERO)) {
   GRUNT[h].forEach((g, i) => LINES.push(H(h, `hero_${h}_atk${i}`, 'bark', g, 'a single, very short (half a second) explosive martial-arts attack grunt on a sword strike — pure exhale, no words, no trailing breath', { maxSec: 1.2 })));
   FIN[h].forEach((g, i) => LINES.push(H(h, `hero_${h}_fin${i}`, 'bark', g, 'a short, powerful finishing-blow shout at full force, under one second', { maxSec: 1.4 })));
   T.skills.forEach((g, i) => LINES.push(H(h, `hero_${h}_skill${i}`, 'bark', g, 'shouting the skill name as the attack is unleashed, fierce and punchy, under 1.5 seconds', { maxSec: 2.0 })));
-  LINES.push(H(h, `hero_${h}_ult`, 'line', T.ult, 'roaring the ultimate attack name at full power, epic, the biggest moment of the fight', { maxSec: 3.5 }));
+  LINES.push(H(h, `hero_${h}_ult`, 'line', T.ult, 'roaring the ultimate attack name at full power, epic, the biggest moment of the fight, fast and punchy', { maxSec: 4.2 }));
   HURT[h].forEach((g, i) => LINES.push(H(h, `hero_${h}_hurt${i}`, 'bark', g, 'a short pained grunt on taking a hit, half a second, no words', { maxSec: 1.2 })));
   LINES.push(H(h, `hero_${h}_low_hp`, 'line', T.low, 'wounded, breathing hard, through gritted teeth, but refusing to give up'));
   LINES.push(H(h, `hero_${h}_perfect`, 'bark', T.perfect, 'a quick cocky taunt right after dodging an attack perfectly', { maxSec: 2.0 }));
