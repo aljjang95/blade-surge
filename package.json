@@ -5,9 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
+    "build": "vite build && node tools/write-version.mjs",
     "preview": "vite preview --host",
-    "deploy": "vite build && wrangler deploy",
+    "deploy": "node tools/deploy-guard.mjs && npm run build && wrangler deploy",
     "metrics": "node tools/metrics.mjs"
   },
   "dependencies": {
