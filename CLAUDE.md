@@ -93,6 +93,23 @@ Cowork 클라우드 세션의 에이전트 프록시는 **세션에 인가된 �
 - 푸시가 필요하면: 세션에 저장소를 **push 권한으로** 붙여야 한다(앱에서 소스 추가). Claude Code(PC) 세션에는 이 제약이 없다.
 - 그때까지 **작업을 잃지 않는 법 → 아래 R2 인계 통로**.
 
+> **어느 세션이 푸시할 수 있나 (2026-09-04 실측)** — 프록시 제약은 세션 종류마다 다르다.
+> | 세션 | 푸시 |
+> |---|---|
+> | 데스크톱 앱 **로컬 Cowork** 세션 (작업폴더가 `…\local-agent-mode-sessions\…`) | **된다.** `session-auth` 의 deploy key + `GIT_SSH_COMMAND` 로 SSH 푸시 |
+> | 클라우드 Cowork 세션 · 예약 작업 | 막힌다 (위 표) |
+> | PC Claude Code | 된다 |
+>
+> 그래서 **클라우드/예약 회전은 R2 번들로 넘기고, 로컬 Cowork 세션이 받아서 민다.** 실제 복구 절차:
+> ```bash
+> curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+>   "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/r2/buckets/blade-surge-handoff/objects?per_page=50"   # 목록
+> curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+>   ".../objects/rotations%2F<sha>-....bundle" -o /tmp/bs.bundle    # 키의 / 는 %2F 로
+> git fetch /tmp/bs.bundle HEAD && git merge --ff-only FETCH_HEAD && git push origin HEAD:main
+> ```
+> 번들 전제 커밋이 현재 `origin/main` 이면 ff-only 로 그대로 얹힌다. 2026-09-04 에 회전 7·8(각성·세트·도구) 9커밋을 이 경로로 복구했다.
+
 
 ### 회전 축 선점 — 예약 세션끼리 안 겹치게 (필수, 2026-09-03)
 같은 날 세 세션이 각자 회전을 돌아 **서로 못 합치는 갈래가 셋** 생겼다.
