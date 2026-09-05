@@ -18,9 +18,9 @@ export function cloudflareQuery(env = process.env) {
   };
 }
 
-export async function acquireDeploymentLease(query, { head, axis = config.leaseAxis, owner = randomUUID() }) {
+export async function acquireDeploymentLease(query, { head, axis = config.leaseAxis, owner = randomUUID(), mustExist = false }) {
   const read = async () => (await query('SELECT session FROM rsi_claim WHERE repo = ? AND axis = ?', [config.repository, axis])).results[0]?.session;
-  try {
+  if (!mustExist) try {
     await query('INSERT INTO rsi_claim (repo, axis, session, base_sha, started_at, note) VALUES (?, ?, ?, ?, ?, ?)',
       [config.repository, axis, owner, head, new Date().toISOString(), '검증된 배포 전환 잠금']);
   } catch {
@@ -86,6 +86,13 @@ export const canReleaseDeploymentLease = (receipt) => !receipt?.persistenceUncer
 export const latestDeployment = (list) => [...list].sort((a, b) => Date.parse(b.created_on) - Date.parse(a.created_on))[0];
 
 export async function reconcileDeployment({ receipt, persist, observe, assertHeld, wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms)) }) {
+  await assertHeld();
+  // prepared는 원격 호출 직전의 deploying-unknown 저장 이전 상태다.
+  // 실행하지 않은 배포를 기다리지 않고 남은 자기 잠금만 해제할 수 있게 한다.
+  if (receipt.status === 'prepared') {
+    commitReceipt(receipt, persist, { status: 'aborted-before-deploy' });
+    return receipt;
+  }
   let last;
   for (let attempt = 0; attempt < 8; attempt++) {
     try {

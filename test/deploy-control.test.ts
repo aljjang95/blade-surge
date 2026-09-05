@@ -63,6 +63,42 @@ function fixture() {
   const states: string[] = [];
   return { head, receipt, old, current, states, persist: (value: typeof receipt) => { states.push(value.status); }, assertHeld: async () => {}, wait: async () => {} };
 }
+
+test('재조정은 없는 잠금을 생성하지 않으며 다른 소유자의 잠금도 보존한다', async () => {
+  for (const session of [undefined, 'other-owner']) {
+    const mutations: string[] = [];
+    const query = async (sql: string) => {
+      if (sql.startsWith('SELECT')) return { results: session ? [{ session }] : [], meta: { changes: 0 } };
+      mutations.push(sql); return { results: [], meta: { changes: 1 } };
+    };
+    await expect(acquireDeploymentLease(query, { head: 'a'.repeat(40), owner: crypto.randomUUID(), mustExist: true })).rejects.toThrow('소유권');
+    expect(mutations).toEqual([]);
+  }
+});
+
+test('준비 중 종료돼 남은 자기 잠금은 원격 호출 없이 안전하게 종료한다', async () => {
+  const f = fixture(); let observed = false;
+  const result = await reconcileDeployment({ ...f, observe: async () => { observed = true; return {}; } });
+  expect(result.status).toBe('aborted-before-deploy');
+  expect(canReleaseDeploymentLease(result)).toBe(true); expect(observed).toBe(false);
+});
+
+test('검증 영수증의 동일 소유자 잠금만 재개하여 재검증 후 삭제한다', async () => {
+  const owner = crypto.randomUUID(); let session: string | undefined = owner; const operations: string[] = [];
+  const query = async (sql: string) => {
+    operations.push(sql);
+    if (sql.startsWith('SELECT')) return { results: session ? [{ session }] : [], meta: { changes: 0 } };
+    if (sql.startsWith('DELETE')) { session = undefined; return { results: [], meta: { changes: 1 } }; }
+    throw new Error('Unexpected INSERT');
+  };
+  const lease = await acquireDeploymentLease(query, { head: 'a'.repeat(40), owner, mustExist: true });
+  const f = fixture(); f.receipt.status = 'version-verified';
+  const receipt = await reconcileDeployment({ ...f, assertHeld: lease.assertHeld,
+    observe: async () => ({ live: { sha: f.head, dirty: false }, tag: f.receipt.tag, deployments: [f.old, f.current] }) });
+  expect(receipt.status).toBe('version-verified');
+  if (canReleaseDeploymentLease(receipt)) await lease.release();
+  expect(session).toBeUndefined(); expect(operations.some((sql) => sql.startsWith('INSERT'))).toBe(false);
+});
 test('원격 반영 뒤 CLI가 throw해도 actual head·태그·deployment를 재조정한다', async () => {
   const f = fixture(); let deployed = false;
   const result = await deployAndReconcile({ ...f, deploy: async () => { deployed = true; throw new Error('connection lost'); },

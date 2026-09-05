@@ -24,7 +24,7 @@ try {
   if (recovering) {
     receipt = JSON.parse(readFileSync(receiptPath, 'utf8'));
     if (!['prepared', 'deploying-unknown', 'outcome-unknown', 'version-verified'].includes(receipt.status) || receipt.head !== head || receipt.target !== config.origin || !/^[a-f0-9-]{36}$/.test(receipt.leaseOwner)) throw new Error('재조정할 배포 영수증과 HEAD가 다릅니다.');
-    lease = await acquireDeploymentLease(query, { head, owner: receipt.leaseOwner });
+    lease = await acquireDeploymentLease(query, { head, owner: receipt.leaseOwner, mustExist: true });
   } else {
     lease = await acquireDeploymentLease(query, { head });
     const preflight = await guard();
