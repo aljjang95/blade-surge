@@ -305,7 +305,7 @@ export class Player extends Actor {
     const g = this.game, W = g.world; if (!W) return out;
     if (g.portal) { const dx = g.portal.pos.x - this.pos.x, dz = g.portal.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; return out; }   // 봉인 해제 포탈 → 보스방 앞
     let target = g.autoTarget;
-    if (!target || target.cleared) {
+    if (!target || target.cleared || !W.rooms.includes(target)) {
       const cands = W.rooms.filter((r) => !r.cleared && !(W.sealed && r === W.bossRoom));   // 봉인된 보스방은 못 들어간다
       if (!cands.length) return out;
       // 봉인이 풀린 보스방을 찾았으면 보스 우선, 아니면 가장 가까운 미클리어 방

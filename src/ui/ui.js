@@ -22,6 +22,7 @@ export class UI {
     $('btn-ignore-rotate').addEventListener('click', () => document.body.classList.remove('force-landscape'));
     this._bindGlobal();
     this.modalStack = [];
+    this.resultTimers = []; this.resultData = null; this.adTimer = null; this.adResult = null;
   }
   _bindGlobal() {
     // 모든 버튼 클릭음
@@ -47,7 +48,7 @@ export class UI {
     else el.innerHTML = `☠ 보스를 찾아라 · 남은 구역 <b>${left}</b>`;
   }
   showHud(on) { this.show(this.el.hud, on); if (!on) { $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
-  pause(on) { const b = this.app.battle; if (!b.player) return; b.paused = on; this.show(this.el.pause, on); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
+  pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; b.setPaused('manual', on); this.show(this.el.pause, on); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
   toast(msg, cls = '') { const d = document.createElement('div'); d.className = 'toast ' + cls; d.innerHTML = msg; this.el.toast.appendChild(d); setTimeout(() => d.remove(), 2200); while (this.el.toast.children.length > 4) this.el.toast.firstChild.remove(); }
@@ -143,7 +144,7 @@ export class UI {
     this.skillBtns.forEach((btn, i) => { const sk = p.def.skills[i]; if (!sk || btn.classList.contains('locked')) return; let pct; if (sk.ult) { pct = 1 - ult; btn.classList.toggle('ready', ult >= 1); } else pct = p.cds[i] / sk.cd; btn.querySelector('.cd').style.setProperty('--p', (pct * 100) + '%'); const wasReady = btn.dataset.ready === '1'; const ready = pct <= 0; if (ready && !wasReady && b.elapsed > 1) { btn.classList.remove('ready-flash'); void btn.offsetWidth; btn.classList.add('ready-flash'); audio.play('ui_pluck', { vol: 0.25 }); } btn.dataset.ready = ready ? '1' : '0'; });
     this.setGauge(b);
     if (b.boss && b.boss.alive) $('boss-hp').style.width = (b.boss.hp / b.boss.maxHp * 100) + '%';
-    if (this.hurtT > 0) { this.hurtT -= dt; } $('hud-vignette').style.opacity = Math.max(hp < 0.3 ? 0.5 + Math.sin(performance.now() / 150) * 0.2 : 0, this.hurtT > 0 ? this.hurtT * 1.6 : 0);
+    if (this.hurtT > 0) { this.hurtT -= dt; } $('hud-vignette').style.opacity = Math.max(hp < 0.3 ? 0.42 : 0, this.hurtT > 0 ? this.hurtT * 1.2 : 0);
   }
 
   /** 테마 세트 게이지 — 켜진 세트가 자원을 쓰면 그 상태를 HUD 에 띄운다 (룬 장전 / 포자 반경 / 얼음 기둥 / 사슬) */
@@ -169,7 +170,7 @@ export class UI {
       ${gems < cost ? '<button class="btn btn-blue" id="r-shop" style="width:100%;margin-top:8px">보석 충전하기</button>' : ''}`, {
       onOpen: (box) => {
         box.querySelector('#r-no').onclick = () => { this.closeModal(); b.defeat(); };
-        box.querySelector('#r-yes').onclick = () => { if (gems < cost) { this.toast('보석이 부족합니다', 'red'); audio.play('ui_error'); return; } this.eco.s.gems -= cost; this.eco.emit(); this.closeModal(); b.revivePlayer(); };
+        box.querySelector('#r-yes').onclick = () => { if (!b.active || b.player.alive) return; if (this.eco.s.gems < cost) { this.toast('보석이 부족합니다', 'red'); audio.play('ui_error'); return; } this.eco.s.gems -= cost; this.eco.emit(); this.closeModal(); b.revivePlayer(); };
         const sh = box.querySelector('#r-shop'); if (sh) sh.onclick = () => { this.closeModal(); b.defeat(); setTimeout(() => this.app.meta.openTab('shop', 'gem'), 300); };
       },
     });
@@ -177,7 +178,11 @@ export class UI {
 
   // ---------------- 결과 ----------------
   showResult(b, win) {
-    const r = b.result; const eco = this.eco; this.showHud(false); this.show(this.el.result, true);
+    const r = b.result;
+    if (!r || r.win !== win || (this.resultData === r && this.el.result.classList.contains('show'))) return;
+    this.hideResult(); this.resultData = r;
+    const later = (fn, ms) => { this.resultTimers.push(setTimeout(() => { if (this.resultData === r && this.app.battle.result === r) fn(); }, ms)); };
+    const eco = this.eco; this.showHud(false); this.show(this.el.pause, false); this.show(this.el.result, true);
     while (this.lootLayer.firstChild) this.lootLayer.firstChild.remove();
     const t = $('result-title'); t.textContent = win ? 'VICTORY' : 'DEFEAT'; t.classList.toggle('lose', !win);
     const stars = [...$('result-stars').children]; stars.forEach((s) => { s.className = ''; });
@@ -186,29 +191,45 @@ export class UI {
     $('btn-result-next').style.display = win ? '' : 'none'; $('btn-result-double').style.display = win ? '' : 'none';
     $('result-exp').style.width = '0%'; $('result-bp').style.width = '0%';
     if (win) {
-      this.lastReward = eco.completeStage(b.stage, r.stars, { fieldGold: b.drops.gold, fieldStones: b.drops.stones, fieldStones2: b.drops.stones2, fieldStones3: b.drops.stones3, fieldFragments: b.drops.fragments, fieldLoot: b.drops.loot }); const rw = this.lastReward;
-      stars.forEach((s, i) => { if (i < r.stars) setTimeout(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
+      r.reward ||= eco.completeStage(b.stage, r.stars, { fieldGold: b.drops.gold, fieldStones: b.drops.stones, fieldStones2: b.drops.stones2, fieldStones3: b.drops.stones3, fieldFragments: b.drops.fragments, fieldLoot: b.drops.loot });
+      this.lastReward = r.reward; const rw = r.reward;
+      stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
       const items = [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];
-      items.forEach((x, i) => setTimeout(() => {
+      items.forEach((x, i) => later(() => {
         const d = document.createElement('div');
         if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}`; d.innerHTML = `<img src="${ITEM_ICON(def)}" onerror="this.remove()"><div class="nm">${def.name}</div>`; if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); }
         else { const [nm, ic] = REWARD_LABEL[x.g.k] || [x.g.k, '']; d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(x.g.n)}</span><div class="nm">${nm}</div>`; audio.pick('coin', 2, { vol: 0.5 }); }
         loot.appendChild(d);
       }, 1200 + i * 220));
-      setTimeout(() => { const h = eco.hero(); const need = Math.max(1, (h.level ? require_(h.level) : 100)); $('result-exp').style.width = Math.min(100, h.exp / need * 100) + '%'; $('result-exp-txt').textContent = `Lv.${h.level} +${rw.exp}`; const pl = eco.passLevel; $('result-bp').style.width = ((eco.s.pass.xp % 100)) + '%'; $('result-bp-txt').textContent = `Lv.${pl} +${b.stage.rewards.bp}`; if (rw.ups) { this.toast(`영웅 레벨업! Lv.${h.level}`, 'gold'); audio.play('jingle_win1', { vol: 0.6 }); } if (rw.awakened && rw.awakened.length) setTimeout(() => this.awakenBanner(rw.awakened), 700); if (rw.passUps) this.toast(`시즌 패스 Lv.${pl} 달성!`, 'gold'); }, 1500);
-      if (rw.first) setTimeout(() => this.toast(`첫 클리어 보상! 보석 +${b.stage.rewards.firstGems}`, 'gold'), 1800);
+      later(() => { const h = eco.hero(); const need = Math.max(1, (h.level ? require_(h.level) : 100)); $('result-exp').style.width = Math.min(100, h.exp / need * 100) + '%'; $('result-exp-txt').textContent = `Lv.${h.level} +${rw.exp}`; const pl = eco.passLevel; $('result-bp').style.width = ((eco.s.pass.xp % 100)) + '%'; $('result-bp-txt').textContent = `Lv.${pl} +${b.stage.rewards.bp}`; if (rw.ups) { this.toast(`영웅 레벨업! Lv.${h.level}`, 'gold'); audio.play('jingle_win1', { vol: 0.6 }); } if (rw.awakened && rw.awakened.length) later(() => this.awakenBanner(rw.awakened), 700); if (rw.passUps) this.toast(`시즌 패스 Lv.${pl} 달성!`, 'gold'); }, 1500);
+      if (rw.first) later(() => this.toast(`첫 클리어 보상! 보석 +${b.stage.rewards.firstGems}`, 'gold'), 1800);
       const nx = eco.nextStage(); $('btn-result-next').querySelector('small').innerHTML = `<i class="ic ic-energy"></i> -${nx.energy}`;
-      $('btn-result-double').disabled = false;
+      $('btn-result-double').disabled = !!r.bonusClaimed;
     } else {
       audio.play('ui_error', { vol: 0.6, rate: 0.7 });
     }
     function require_(lv) { return Math.floor(100 * Math.pow(1.18, lv - 1)); }
   }
   watchAd() {
-    // 광고 시청 목업: 3초 대기 후 보상 2배
+    const result = this.resultData;
+    if (!result?.win || !result.reward || result.bonusPending || result.bonusClaimed || this.app.battle.result !== result || !this.el.result.classList.contains('show')) return;
+    // 화면과 지급이 같은 전투의 정산 영수증을 사용한다. 광고는 목업을 유지한다.
+    result.bonusPending = true; this.adResult = result;
     const btn = $('btn-result-double'); btn.disabled = true;
-    this.modal(`<h2>광고 시청 중</h2><p>리워드 광고 SDK(AdMob 등) 연결 지점 — 목업 3초</p><div class="pay-processing" id="ad-cnt">3</div>`);
-    let n = 3; const iv = setInterval(() => { n--; const c = $('ad-cnt'); if (c) c.textContent = n; if (n <= 0) { clearInterval(iv); this.closeModal(); const st = this.app.battle.stage; const got = this.eco.addRewards({ gold: st.rewards.gold, gems: 10 }); this.rewardToast(got); audio.play('jingle_win1', { vol: 0.7 }); } }, 1000);
+    this.modal('<h2>광고 시청 체험</h2><p>3초 후 이번 전투의 골드·강화 재료를 한 번 더 받습니다.</p><div class="pay-processing" id="ad-cnt">3</div><div class="modal-btns"><button class="btn btn-ghost" id="ad-cancel">취소</button></div>', { onOpen: (box) => { box.querySelector('#ad-cancel').onclick = () => { this.cancelAd(); this.closeModal(); }; } });
+    let n = 3;
+    this.adTimer = setInterval(() => {
+      const count = $('ad-cnt');
+      if (this.resultData !== result || this.app.battle.result !== result || !count || !this.el.modal.classList.contains('show')) { this.cancelAd(); return; }
+      count.textContent = String(--n);
+      if (n > 0) return;
+      clearInterval(this.adTimer); this.adTimer = null; this.adResult = null;
+      result.bonusPending = false;
+      const got = this.eco.doubleStageRewards(result.reward);
+      result.bonusClaimed = !!got; btn.disabled = result.bonusClaimed;
+      this.closeModal(); if (got) { this.rewardToast(got); audio.play('jingle_win1', { vol: 0.7 }); }
+    }, 1000);
   }
-  hideResult() { this.show(this.el.result, false); }
+  cancelAd() { if (this.adTimer) clearInterval(this.adTimer); this.adTimer = null; if (this.adResult) this.adResult.bonusPending = false; this.adResult = null; $('btn-result-double').disabled = !!this.resultData?.bonusClaimed; }
+  hideResult() { if (this.adResult) { this.cancelAd(); this.closeModal(); } for (const timer of this.resultTimers) clearTimeout(timer); this.resultTimers.length = 0; this.resultData = null; this.show(this.el.result, false); }
 }

@@ -32,13 +32,20 @@ export class Battle {
     this.timeCtl = new TimeCtl();
     this.enemies = []; this.projectiles = []; this.timers = [];
     this.drops = new DropSystem(this);
-    this.player = null; this.active = false; this.paused = false;
+    this.player = null; this.active = false; this.paused = false; this.pauseReasons = new Set();
     this.combo = 0; this.comboT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0;
     this.wave = 0; this.waveT = 0; this.stage = null; this.boss = null; this.result = null; this.revived = 0;
     this.pending = []; // 지속 스폰 큐
     this.maxAlive = 34; this.peakAlive = 0;
   }
   after(sec, fn) { this.timers.push({ t: sec, fn }); }
+  /** 정지 화면과 동행 대화는 각자 소유한 정지만 해제한다. */
+  setPaused(reason, on) {
+    if (on) this.pauseReasons.add(reason); else this.pauseReasons.delete(reason);
+    this.paused = this.pauseReasons.size > 0;
+    this.input.enabled = this.active && !!this.player?.alive && !this.paused;
+    this.input.clear();
+  }
   rollDrop(table) {
     const w = table === 'boss' ? RARITY_WEIGHT_BOSS : table === 'elite' ? RARITY_WEIGHT_ELITE : RARITY_WEIGHT_STAGE;
     const rar = pickWeighted(w);
@@ -47,7 +54,9 @@ export class Battle {
   }
 
   async start(stage, heroId, heroState, equipBonus) {
-    this.stage = stage; this.active = true; this.paused = false; this.result = null; this.revived = 0;
+    // 재도전/다음 층에서도 이전 액터·탐험 목표·시간 효과를 반드시 종료한다.
+    this.stop(); this.autoTarget = null; this.timeCtl = new TimeCtl();
+    this.stage = stage; this.active = true; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
     this.combo = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0;
     if (this.portal) { this.scene.remove(this.portal.mesh); this.portal = null; }
@@ -72,6 +81,7 @@ export class Battle {
     this.ui.setupHud(def, this.player);
     this.ui.setupMinimap(this.world);
     this.input.enabled = true; this.input.clear();
+    this.app.companionAgent?.startBattle(this);
     audio.playMusic(Math.random() < 0.5 ? 'bgm_battle' : 'bgm_battle2');
     this.ui.showHud(true);
     const q = this.app.eco.s.settings.quality;
@@ -143,7 +153,7 @@ export class Battle {
     const p = this.player; this.rebirthUsed = true;
     this.after(1.1, () => {
       if (!this.active) return;
-      p.revive(); p.hp = Math.floor(p.maxHp * 0.5); this.renderer.desat = 0; this.timeCtl.slowmo(0.4, 0.6);
+      p.revive(); this.input.enabled = this.active && !this.paused; this.input.clear(); p.hp = Math.floor(p.maxHp * 0.5); this.renderer.desat = 0; this.timeCtl.slowmo(0.4, 0.6);
       this.ui.toast('불사조의 부활!', 'gold'); audio.voice('rebirth'); this.after(2.2, () => audio.voice(`hero_${this.heroId}_revive`));
       this.fx.texFlash(p.pos, 'phoenix', 0xffc060, { size: 14, life: 0.9, grow: 1.6, y: 2.5 }); this.fx.holyBurst(p.pos, { size: 12, life: 0.7, color: 0xffa040 });
       this.hitRadius(p.pos, 8, p.atk * 2.5, { kb: 14, stun: 1.2, kind: 'magic', dirFrom: p.pos });
@@ -234,6 +244,7 @@ export class Battle {
   markCleared(room) {
     if (room.cleared) return;
     room.cleared = true; this.roomsCleared++;
+    this.app.companionAgent?.observe('room-clear', { roomsCleared: this.roomsCleared, id: `${this.stage.idx}:${this.roomsCleared}` });
     if (room.type !== ROOM_TYPE.START) {
       this.ui.toast(`${room.type === ROOM_TYPE.BOSS ? '보스방' : room.type === ROOM_TYPE.ELITE ? '엘리트 구역' : room.type === ROOM_TYPE.TREASURE ? '보물방' : '구역'} 클리어!`, 'gold');
       audio.play('jingle_win1', { vol: 0.45 });
@@ -290,7 +301,7 @@ export class Battle {
     this.scene.remove(P.mesh); this.portal = null;
   }
 
-  stop() { this.active = false; if (this.portal) { this.scene.remove(this.portal.mesh); this.portal = null; } this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) if (p.mesh) this.scene.remove(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; }
+  stop() { this.active = false; this.app.companionAgent?.endBattle(); if (this.portal) { this.scene.remove(this.portal.mesh); this.portal = null; } this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) if (p.mesh) this.scene.remove(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const def = ENEMIES[type]; if (!def) return; const gltf = this.app.models[def.model]; if (!gltf) return;
@@ -311,7 +322,7 @@ export class Battle {
     const e = new Enemy(this, gltf, this.weaponsGltf, def, this.stage.scale, pos);
     e.homeRoom = rm;
     this.enemies.push(e);
-    if (def.boss) { this.boss = e; this.ui.showBoss(def.name, true, def.portrait); }
+    if (def.boss) { this.boss = e; this.ui.showBoss(def.name, true, def.portrait); this.app.companionAgent?.observe('boss-spotted', { name: def.name, id: `${this.stage.idx}:${def.name}` }); }
     return e;
   }
   summonMinions(boss, n) { const t = boss.def.summon || 'skel_minion'; for (let i = 0; i < n; i++) this.after(i * 0.12, () => this.spawnEnemy(t, boss.pos)); this.ui.toast(`${boss.def.name}이(가) 병사를 소환했다!`, 'red'); audio.magic({ vol: 0.4, base: 150, notes: [0, -2, -4], step: 0.12, type: 'sawtooth' }); }
@@ -356,20 +367,24 @@ export class Battle {
     }
   }
   onPlayerDeath() {
+    this.input.enabled = false; this.input.clear();
+    this.app.companionAgent?.observe('low-hp', { floor: this.stage?.idx || 0 });
     this.renderer.desat = 0.7; this.timeCtl.slowmo(0.3, 1.5); this.renderer.shake(0.6); audio.playMusic(null);
     if (this.hasProc('phoenix_rebirth') && !this.rebirthUsed) { this.phoenixRebirth(); return; }
     audio.voice(`hero_${this.heroId}_death`); this.after(1.6, () => audio.voice('defeat'));
     this.after(1.8, () => { if (this.active) this.ui.showRevive(this); });
   }
   revivePlayer() {
-    this.player.revive(); this.renderer.desat = 0; this.revived++; audio.voice(`hero_${this.heroId}_revive`);
+    if (!this.active || this.player.alive) return;
+    this.player.revive(); this.input.enabled = !this.paused; this.input.clear(); this.renderer.desat = 0; this.revived++; audio.voice(`hero_${this.heroId}_revive`);
     this.fx.holyBurst(this.player.pos, { size: 9, life: 0.6 }); this.fx.shockTex(this.player.pos, 0xffd060, { r1: 9, life: 0.7 });
     this.hitRadius(this.player.pos, 7, 1, { kb: 14, stun: 1.5, kind: 'magic', source: this.player, dirFrom: this.player.pos });
     audio.playMusic(this.boss ? 'bgm_boss' : 'bgm_battle'); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12], step: 0.08 });
   }
-  defeat() { this.active = false; this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed }; this.ui.showResult(this, false); }
+  defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed }; this.ui.showResult(this, false); }
   victory() {
     if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear();
+    this.app.companionAgent?.observe('victory', { floor: this.stage?.idx || 0 });
     this.player.play('Cheer', { fade: 0.2 }); audio.playMusic(null); audio.play('jingle_win0', { vol: 0.9 }); this.ui.showBoss('', false); setTimeout(() => audio.voice(`hero_${this.heroId}_win`), 1200); setTimeout(() => audio.voice('floor_clear'), 3800);
     this.fx.burst(this.player.pos.clone().setY(1), 0xffd060, { n: 60, speed: 9, size: 0.5, up: 1.5, grav: 6, life: 1.2 }); this.fx.embers(this.player.pos, 0xffe080, { n: 40, radius: 2, life: 2, rise: 3 });
     // 남은 드랍 자동 수거
@@ -518,6 +533,7 @@ export class Battle {
     if (this.portal) { const P = this.portal; P.t += dt; P.mesh.rotation.z += dt * 1.5; P.mesh.material.opacity = 0.6 + Math.sin(P.t * 5) * 0.25; if (Math.random() < dt * 10) this.fx.embers(P.pos, 0xff6080, { n: 1, radius: 1.2, life: 0.8, size: 0.3, rise: 2.5 }); if (P.t > 0.8 && this.player.alive && this.player.distTo({ pos: P.pos }) < 1.4) this.usePortal(); }
     let alive = 0;
     for (let i = this.enemies.length - 1; i >= 0; i--) { const e = this.enemies[i]; e.update(dt); if (e.dead) { e.dispose(); this.enemies.splice(i, 1); } else if (e.alive && !e.spawning) alive++; }
+    this.app.companionAgent?.updateBattle(this, dt, realDt);
     if (alive > this.peakAlive) this.peakAlive = alive;   // 층 내 동시 생존 최대 (하네스 maxAliveSeen)
     this.updateProjectiles(dt);
     for (let i = this.holes.length - 1; i >= 0; i--) { const h = this.holes[i]; h.t -= dt; this.vacuum(h.pos, 7, 1.1); if (h.t <= 0) this.holes.splice(i, 1); }

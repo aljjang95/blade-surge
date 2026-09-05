@@ -1,0 +1,7 @@
+{
+  "repository": "aljjang95/blade-surge",
+  "worker": "blade-surge",
+  "origin": "https://blade-surge.affinity-agent-studio.workers.dev",
+  "leaseDatabaseId": "1e1295d4-01b8-4877-951e-8c100b4d7473",
+  "leaseAxis": "DEPLOY-blade-surge"
+}

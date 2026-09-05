@@ -1,27 +1,29 @@
 import * as THREE from 'three';
-import { spawnCharacter } from '../engine/assets.js';
+import { materialsOf, spawnCharacter } from '../engine/assets.js';
 import { RIGS } from '../data/rigs.js';
 
 const _v = new THREE.Vector3();
+const _weaponQuaternion = new THREE.Quaternion();
 export const ARENA_R = 15.5;
 
 export class Actor {
+  /** @param {*} game @param {*} gltf @param {{scale?: number, tint?: string|number|null, rig?: string}} options */
   constructor(game, gltf, { scale = 1, tint = null, rig = 'kaykit' } = {}) {
     this.rig = RIGS[rig] || RIGS.kaykit; this.rigName = rig;
     this.game = game;
     const { root, mixer, clips } = spawnCharacter(gltf);
     this.model = root; this.mixer = mixer; this.clips = clips;
-    this.root = new THREE.Group(); this.root.add(root); root.scale.setScalar(scale);
+    this.root = new THREE.Group(); this.root.add(root); root.scale.multiplyScalar(scale);
     this.scale = scale;
     this.pos = this.root.position; this.yaw = 0;
     this.vel = new THREE.Vector3(); this.kb = new THREE.Vector3();
     this.hp = 100; this.maxHp = 100; this.alive = true; this.dead = false;
     this.action = null; this.actionName = ''; this.flashT = 0; this.flashColor = new THREE.Color(1, 1, 1);
     this.stun = 0; this.slow = 0; this.slowT = 0; this.invuln = 0; this.radius = 0.7 * scale;
-    this.mats = []; this.model.traverse((o) => { if (o.isMesh) this.mats.push(o.material); });
+    this.mats = []; this.model.traverse((o) => { if (o.isMesh) this.mats.push(...materialsOf(o).filter((m) => m.emissive)); });
     // 틴트: 곱하면 Quaternius 텍스처가 통짜 색으로 뭉개진다 → 원래 색과 lerp
     // KayKit 은 밝은 아틀라스라 틴트가 잘 먹지만, Quaternius 는 채도가 높아 색을 건드리면 통짜로 뭉갠다.
-    if (tint && rig === 'kaykit') { const c = new THREE.Color(tint); for (const m of this.mats) m.color.lerp(c, 0.85); }
+    if (tint && rig === 'kaykit' && !this.model.userData.authoredContract) { const c = new THREE.Color(tint); for (const m of this.mats) m.color?.lerp(c, 0.85); }
     this.deathT = -1; this.hurtAnimT = 0;
     this.mixer.addEventListener('finished', (e) => this.onAnimFinished?.(e));
     game.scene.add(this.root);
@@ -84,14 +86,19 @@ export class Actor {
     this.play(Math.random() < 0.5 ? 'Death_A' : 'Death_B', { once: true, clamp: true, fade: 0.08 });
     for (const m of this.mats) { m.transparent = true; }
   }
-  dispose() { this.game.scene.remove(this.root); this.model.traverse((o) => { if (o.isMesh) o.material.dispose(); }); }
+  dispose() { this.game.scene.remove(this.root); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.mixer.getRoot()); this.model.traverse((o) => { if (o.isMesh) for (const material of materialsOf(o)) material.dispose(); }); }
   /** 무기 트레일용: 손 위치와 무기 끝 */
   /** GLTFLoader 는 노드 이름의 '.' 등을 제거함 → 원본/정제 이름 모두 검색 */
   node(name) { return this.model.getObjectByName(name) || this.model.getObjectByName(name.replace(/[^\w-]/g, '')); }
   weaponPoints(handName = 'handslot.r', len = 1.3) {
+    handName = this.model.userData.authoredContract?.sockets?.[handName] || handName;
     const h = this.node(handName); if (!h) return null;
     const a = new THREE.Vector3(); h.getWorldPosition(a);
-    const b = new THREE.Vector3(0, len * this.scale, 0); h.localToWorld(b);
+    const b = new THREE.Vector3(0, len * this.scale, 0);
+    if (this.model.userData.authoredContract) {
+      h.getWorldQuaternion(_weaponQuaternion);
+      b.applyQuaternion(_weaponQuaternion).add(a);
+    } else h.localToWorld(b);
     return [a, b];
   }
 }

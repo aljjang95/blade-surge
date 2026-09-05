@@ -4,11 +4,21 @@ three.js(WebGL2) 기반 **가로모드 모바일 3D 몹몰이 핵앤슬래시 �
 과금은 전부 **목업**(실제 결제 없음) — 결제 SDK 연결 지점만 만들어 둠.
 
 ```bash
-npm install
-npm run dev            # http://localhost:5173  (--host 로 폰에서 접속)
-npm run build          # dist/
-npx wrangler login && npx wrangler deploy   # Cloudflare Workers Static Assets
+bun install
+bun run dev           # http://localhost:5173  (--host 로 폰에서 접속)
+bun run check         # 타입검사 + 회귀 테스트 + dist/ 빌드
+apex-vault run cloudflare -- bun run deploy  # 잠금·버전 대조·복구 영수증을 포함한 배포
 ```
+
+## 네브 동행과 대화
+
+네브는 몰이·수호·파쇄 진형으로 함께 싸웁니다. 빠른 질문은 현재 전장과 장비를 즉시 읽고, 자유 대화는 같은 origin의 `/api/companion` Worker를 사용합니다. 응답에서 전술을 제안해도 플레이어가 선택하기 전에는 진형을 바꾸지 않습니다. 닫기·취소·다른 영웅 선택·전투 종료 후 도착한 응답은 폐기합니다.
+
+생성 기능은 기본 비활성입니다. 비용 승인을 받은 뒤 `DIALOGUE_ENABLED`, `DIALOGUE_APPROVAL_ID`, `DIALOGUE_APPROVAL_ISSUED_AT`, `DIALOGUE_APPROVAL_UNTIL`을 설정합니다. 같은 승인 ID의 기간 변경은 거부하며, 발급부터 최대 48시간·총 100회·UTC 일일 60회·시간당 12회·IP 일일 10회·15초 간격을 서버가 강제합니다. 실패·취소도 총량에 포함됩니다. 대화 원문은 서버 로그·DB에 기록하지 않습니다.
+
+배포는 기존 D1 `apex-rsi`의 전용 잠금을 사용합니다. `tools/release-config.json`이 대상과 DB를 정하고, 자격증명은 볼트에서만 주입합니다. 명령 결과가 불명확하면 잠금을 유지합니다. 같은 HEAD에서 `apex-vault run cloudflare -- node tools/deploy.mjs --reconcile`로 라이브 SHA·배포 ID·소유 태그를 다시 확인합니다. 원시 Wrangler 배포와 잠금 탈취를 병행하지 않습니다.
+
+전용 모델은 역할별 필수 클립·무기 소켓·단위 배율을 검증하고 원본 PBR과 재질 배열을 보존합니다. 현재 기본 외형은 KayKit이며, TLL 후보는 기술·미술·실전 검증 후 채택합니다. 모델 계약 테스트만으로 전용 외형이나 실기기 성능이 완성됐다고 판단하지 않습니다.
 
 ## 게임 루프
 ```
@@ -21,7 +31,7 @@ npx wrangler login && npx wrangler deploy   # Cloudflare Workers Static Assets
 | 입력 | 터치 | 키보드 |
 |---|---|---|
 | 이동 | 좌측 가상 조이스틱(터치한 곳에 생성) | WASD / 방향키 |
-| 공격 (3단 콤보) | 공격 버튼(홀드 가능) | J / Space |
+| 공격 (영웅별 5~6타 콤보) | 공격 버튼(홀드 가능) | J / Space |
 | 회피 (무적 0.4s) | 회피 | K / Shift |
 | 스킬 1~3 | 스킬 버튼 | 1 2 3 |
 | 궁극기 (게이지 100) | 금색 원형 버튼 | R |

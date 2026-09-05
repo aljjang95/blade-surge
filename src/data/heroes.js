@@ -23,7 +23,7 @@ export const HEROES = {
     ],
     skills: [
       { id: 'holy_slash',  name: '성검 일섬', icon: '/img/sk_knight_1.webp', cd: 5,  anim: '1H_Melee_Attack_Slice_Horizontal', castAt: 0.4, dmg: 3.2, desc: '전방으로 거대한 빛의 참격을 날려 관통 피해' },
-      { id: 'shield_bash', name: '철벽 강타', icon: '/img/sk_knight_2.webp', cd: 8,  anim: 'Block_Attack', castAt: 0.35, dmg: 2.4, desc: '방패로 지면을 강타해 주변 적을 기절시키고 밀쳐냄' },
+      { id: 'shield_bash', name: '철벽 강타', icon: '/img/sk_knight_2.webp', cd: 8,  anim: 'Block_Hit', castAt: 0.35, dmg: 2.4, desc: '방패로 지면을 강타해 주변 적을 기절시키고 밀쳐냄' },
       { id: 'judgment',    name: '심판의 빛', icon: '/img/sk_knight_3.webp', cd: 12, anim: 'Spellcast_Raise', castAt: 0.5, dmg: 2.0, desc: '주변 모든 적에게 빛의 기둥이 낙하' },
       { id: 'dragon_slash', name: '용살검 · 천공', icon: '/img/sk_knight_ult.webp', ult: true, anim: '2H_Melee_Attack_Chop', castAt: 0.55, dmg: 12, desc: '하늘을 가르는 일격. 전방 광역에 압도적인 피해' },
       // ── 각성 (레벨 구간 해금) ──

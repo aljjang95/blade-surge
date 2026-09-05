@@ -1,5 +1,14 @@
 # CLAUDE.md — 이 레포에서 일하는 법
 
+## 현재 Codex 로컬 실행
+
+- Windows의 지정된 체크아웃에서 기존 diff와 `_autopipe/release-goal.md`를 이어받는다. 아래 `/sessions` 부트스트랩은 과거 Cowork 컨테이너의 환경 기록이다.
+- 정적 게임과 `/api/companion` Worker를 함께 다룬다. `bun run check`가 현재 로컬 검증 명령이다.
+- 배포는 `apex-vault run cloudflare -- bun run deploy`로만 실행한다. `tools/deploy.mjs`가 기존 D1 `apex-rsi`의 `DEPLOY-blade-surge` 잠금을 공유해 호스트 간 배포를 직렬화한다. 원시 Wrangler 배포나 다른 회전의 잠금 해제로 이 절차를 우회하지 않는다.
+- 원격 결과가 불명확하면 잠금을 유지한다. 같은 HEAD에서 `apex-vault run cloudflare -- node tools/deploy.mjs --reconcile`로 실제 버전·배포·소유 태그를 대조한다. 자동 잠금 탈취와 무조건 재배포는 지원하지 않는다.
+- 자격증명은 현행 전역 볼트에서 자식 프로세스에만 주입한다. 아래 과거 `session-auth`·deploy-key·gh-push 예제를 현행 Git 전송 승인으로 해석하지 않는다. 검증된 커밋은 현행 create-only Git 전송을 따른다.
+- 실제 생성 호출은 별도 승인된 기간·총량 안에서만 활성화한다. viewport를 실기기 검증으로, 모델 계약 테스트를 전용 아트 완성으로 표시하지 않는다.
+
 새 세션이면 **여기부터 읽고**, 이어서 `PRD.md`(기준) → `RSI.md`(루프) → `LESSONS.md`(지뢰밭) 순으로 읽어라.
 
 ---

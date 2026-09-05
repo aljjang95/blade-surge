@@ -1,12 +1,25 @@
 {
-  // Cloudflare Workers Static Assets — `npm run build && npx wrangler deploy`
+  // 같은 origin의 동행 API와 정적 게임 자산. 승인된 기간·총량을 설정하기 전에는 생성 비활성.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "blade-surge",
+  "main": "worker/index.ts",
   "compatibility_date": "2025-06-01",
   "assets": {
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"],
     "directory": "./dist",
     "not_found_handling": "single-page-application",
     "html_handling": "auto-trailing-slash"
+  },
+  "ai": { "binding": "AI" },
+  "durable_objects": { "bindings": [{ "name": "DIALOGUE_BUDGET", "class_name": "DialogueBudget" }] },
+  "migrations": [{ "tag": "dialogue-budget-v1", "new_sqlite_classes": ["DialogueBudget"] }],
+  "vars": {
+    "APP_ORIGIN": "https://blade-surge.affinity-agent-studio.workers.dev",
+    "DIALOGUE_ENABLED": "false",
+    "DIALOGUE_APPROVAL_ID": "",
+    "DIALOGUE_APPROVAL_ISSUED_AT": "",
+    "DIALOGUE_APPROVAL_UNTIL": ""
   },
   "observability": { "enabled": true }
 }

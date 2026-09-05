@@ -10,7 +10,7 @@ const FinalShader = {
   uniforms: {
     tDiffuse: { value: null },
     uAberr: { value: 0 },      // 색수차 강도
-    uFlash: { value: 0 },      // 화면 플래시
+    uFlash: { value: 0 },      // 화면 가장자리 임팩트 틴트 (전면 플래시 금지)
     uFlashColor: { value: new THREE.Color(1, 1, 1) },
     uVignette: { value: 0.35 },
     uRadial: { value: 0 },     // 방사형 블러
@@ -37,7 +37,9 @@ const FinalShader = {
       float g = dot(col, vec3(0.299, 0.587, 0.114));
       col = mix(col, vec3(g), uDesat);
       col *= 1.0 - uVignette * smoothstep(0.35, 0.95, d);
-      col = mix(col, uFlashColor, clamp(uFlash, 0.0, 1.0));
+      // 전면 백색 플래시는 시야와 접근성을 해친다. 타격 색은 바깥 테두리에만 남긴다.
+      float impactEdge = smoothstep(0.42, 0.96, d);
+      col = mix(col, uFlashColor * 0.72, clamp(uFlash * impactEdge * 0.28, 0.0, 0.22));
       gl_FragColor = vec4(col, 1.0);
     }`,
 };
@@ -124,16 +126,16 @@ export class Renderer {
     const want = this.rig.fov + (window.innerWidth < window.innerHeight ? 14 : 0);
     if (Math.abs(this.camera.fov - want) > 0.05) { this.camera.fov += (want - this.camera.fov) * Math.min(1, realDt * 3); this.camera.updateProjectionMatrix(); }
   }
-  shake(amount) { this.rig.trauma = Math.min(1, this.rig.trauma + amount); }
+  // 호출부 호환 이름은 유지하되, 실제 동작은 노이즈 없는 단방향 임팩트다.
+  shake(amount) { this.rig.trauma = Math.min(1, Math.max(this.rig.trauma, amount)); }
   punch(z) { this.rig.zoom = Math.max(this.rig.zoom, z); }
-  flashScreen(strength = 1, color = 0xffffff) { this.flash = Math.max(this.flash, strength); this.u.uFlashColor.value.set(color); }
+  flashScreen(strength = 1, color = 0xffffff) { this.flash = Math.max(this.flash, Math.min(0.25, strength)); this.u.uFlashColor.value.set(color); }
   update(dt, realDt) {
     this.time += realDt;
     const rig = this.rig, cam = this.camera;
-    // 트라우마 기반 셰이크
-    rig.trauma = Math.max(0, rig.trauma - realDt * 2.2);
+    // 타격 카메라는 한 방향으로 밀렸다가 감쇠해 복귀한다. 진동·랜덤 노이즈는 금지한다.
+    rig.trauma = Math.max(0, rig.trauma - realDt * 3.4);
     const t = rig.trauma * rig.trauma;
-    const n = (f, s) => Math.sin(this.time * f + s) * Math.cos(this.time * f * 0.63 + s * 2.1);
     rig.zoom = Math.max(0, rig.zoom - realDt * 3);
     let desired;
     if (rig.mode === 'lobby') {
@@ -145,24 +147,22 @@ export class Renderer {
       cam.lookAt(rig.target.x, rig.target.y + 1.1, rig.target.z);
     } else {
       const off = rig.offset.clone().multiplyScalar(1 - rig.zoom * 0.18);
+      off.y += t * 0.22;
+      off.z += t * 0.36;
       off.x += rig.side;   // 액션 시점: 이동 방향 반대편으로 살짝 비켜서 진행 방향이 열린다
       desired = rig.target.clone().add(off);
       this._applyFov(realDt);
       rig.pos.lerp(desired, 1 - Math.exp(-realDt * rig.lag));
       cam.position.copy(rig.pos);
-      cam.position.x += n(31, 0) * t * 0.9;
-      cam.position.y += n(37, 1) * t * 0.7;
-      cam.position.z += n(29, 2) * t * 0.6;
       const look = rig.target.clone().add(rig.lookOffset);
       cam.lookAt(look);
-      cam.rotation.z += n(23, 3) * t * 0.03;
     }
     // 포스트 유니폼 감쇠
     this.flash = Math.max(0, this.flash - realDt * 5);
     this.aberr = Math.max(0, this.aberr - realDt * 1.6);
     this.radial = Math.max(0, this.radial - realDt * 1.2);
     this.u.uFlash.value = this.flash;
-    this.u.uAberr.value = this.aberr * 0.6 + t * 0.15;
+    this.u.uAberr.value = this.aberr * 0.2;
     this.u.uRadial.value = this.radial;
     this.u.uDesat.value = this.desat;
     this.u.uTime.value = this.time;

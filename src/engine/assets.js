@@ -3,11 +3,21 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { HEROES } from '../data/heroes.js';
 
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
 
 const cache = new Map();
+/** @typedef {{materials: string, role: string, heroId?: string, scale: number, aliases: Record<string, string>, sockets?: Record<string, string>}} ModelContract */
+
+export function requiredModelAliases(role, heroId) {
+  if (role === 'companion') return ['Idle', 'Idle_Combat', 'Running_A', 'Spellcast_Raise', 'Spellcast_Shoot', 'Hit_A', 'Hit_B', 'Death_A', 'Death_B'];
+  const hero = role === 'hero' && HEROES[heroId];
+  if (!hero) throw new Error('invalid model role');
+  return [...new Set(['Idle', 'Running_A', 'Dodge_Forward', 'Hit_A', 'Hit_B', 'Death_A', 'Death_B', 'Cheer', 'Interact',
+    ...hero.combo.map((step) => step.anim), ...hero.skills.map((skill) => skill.anim), ...(heroId === 'mage' ? ['Spellcasting'] : [])])];
+}
 
 export const HERO_MODELS = ['Knight', 'Barbarian', 'Mage', 'Rogue'];
 export const MONSTER_MODELS = [
@@ -20,38 +30,76 @@ export const MONSTER_MODELS = [
 ];
 export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, 'dungeon', 'skel_weapons'];
 
-export async function loadModel(name) {
-  if (cache.has(name)) return cache.get(name);
-  const p = new Promise((res, rej) => loader.load(`/models/${name}.glb`, (g) => {
-    g.scene.traverse((o) => {
-      if (o.isMesh) {
-        o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false;
-        const m = o.material;
-        if (m && m.map) { m.map.colorSpace = THREE.SRGBColorSpace; m.map.anisotropy = 4; }
-        if (m) { m.roughness = 0.85; m.metalness = 0.0; }
-      }
-    });
-    mergeSkinned(g.scene);
-    res(g);
-  }, undefined, rej));
-  cache.set(name, p);
-  return p;
+/** @param {string} name @param {ModelContract|null} contract */
+export async function loadModel(name, contract = null) {
+  const key = name + '|' + JSON.stringify(contract);
+  if (cache.has(key)) return cache.get(key);
+  const p = loader.loadAsync(`/models/${name}.glb`).then((gltf) => prepareModel(gltf, contract));
+  cache.set(key, p);
+  try { return await p; } catch (error) { cache.delete(key); throw error; }
+}
+
+export const materialsOf = (mesh) => (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).filter(Boolean);
+
+/** 전용 모델의 PBR·스킨 구조를 보존하며 필수 클립·소켓은 생성 전에 확인한다. */
+/** @param {{scene: THREE.Group, animations: THREE.AnimationClip[]}} gltf @param {ModelContract|null} contract */
+export function prepareModel(gltf, contract = null) {
+  if (contract) {
+    if (contract.materials !== 'authored' || !contract.aliases || !Number.isFinite(contract.scale) || contract.scale <= 0) throw new Error('invalid model contract');
+    for (const alias of requiredModelAliases(contract.role, contract.heroId)) {
+      if (!Object.hasOwn(contract.aliases, alias)) throw new Error(`missing required animation alias: ${alias}`);
+    }
+    if (contract.role === 'hero' && !contract.sockets?.['handslot.r']) throw new Error('missing required socket: handslot.r');
+    const names = new Set(gltf.animations.map((clip) => clip.name));
+    for (const [alias, name] of Object.entries(contract.aliases)) {
+      if (!alias || !names.has(name)) throw new Error(`missing authored animation: ${alias}`);
+    }
+    for (const name of Object.values(contract.sockets || {})) {
+      if (!gltf.scene.getObjectByName(name)) throw new Error(`missing authored socket: ${name}`);
+    }
+    gltf.scene.userData.authoredContract = structuredClone(contract);
+  }
+  gltf.scene.traverse((o) => {
+    if (!o.isMesh) return;
+    o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false;
+    if (contract) return;
+    for (const material of materialsOf(o)) {
+      if (material.map) { material.map.colorSpace = THREE.SRGBColorSpace; material.map.anisotropy = 4; }
+      material.roughness = 0.85; material.metalness = 0;
+    }
+  });
+  if (!contract) mergeSkinned(gltf.scene, gltf.animations);
+  return gltf;
 }
 
 /** 같은 스켈레톤·재질을 쓰는 스킨드 메시 파츠를 하나로 병합 → 드로우콜 1/8 (다수 몬스터용) */
-function mergeSkinned(scene) {
+export function mergeSkinned(scene, animations = []) {
   const groups = new Map();
-  scene.traverse((o) => { if (o.isSkinnedMesh) { const key = o.material.name + '|' + (o.skeleton.uuid); if (!groups.has(key)) groups.set(key, []); groups.get(key).push(o); } });
+  const animated = new Set(animations.flatMap((clip) => clip.tracks.map((track) => THREE.PropertyBinding.parseTrackName(track.name).nodeName)));
+  scene.updateMatrixWorld(true);
+  scene.traverse((o) => {
+    if (!o.isSkinnedMesh || Array.isArray(o.material) || Object.keys(o.geometry.morphAttributes).length) return;
+    if (animated.has(o.name) || animated.has(o.uuid)) return;
+    const movingParents = [];
+    for (let p = o.parent; p; p = p.parent) if (animated.has(p.name) || animated.has(p.uuid)) movingParents.push(p.uuid);
+    const key = [o.material.uuid, o.skeleton.uuid, movingParents.join(','), o.bindMode, o.bindMatrix.elements.join(','), o.matrixWorld.elements.join(',')].join('|');
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(o);
+  });
   for (const [key, list] of groups) {
     if (list.length < 2) continue;
     const base = list[0];
-    const geos = list.map((m) => { const g = m.geometry.clone(); for (const k of Object.keys(g.attributes)) { if (!base.geometry.attributes[k]) g.deleteAttribute(k); } for (const k of Object.keys(base.geometry.attributes)) { if (!g.attributes[k]) return null; } return g; });
-    if (geos.some((g) => !g)) continue;
-    let merged; try { merged = mergeGeometries(geos, false); } catch (e) { console.warn('merge fail', key, e); continue; }
+    const geos = list.map((m) => m.geometry.clone());
+    let merged;
+    try { merged = mergeGeometries(geos, false); }
+    catch (e) { console.warn('merge fail', key, e); }
+    finally { for (const geometry of geos) geometry.dispose(); }
     if (!merged) continue;
     const sm = new THREE.SkinnedMesh(merged, base.material); sm.name = base.name.replace(/_[A-Za-z]+$/, '') + '_Merged';
     sm.castShadow = true; sm.receiveShadow = true; sm.frustumCulled = false;
     sm.bind(base.skeleton, base.bindMatrix);
+    sm.position.copy(base.position); sm.quaternion.copy(base.quaternion); sm.scale.copy(base.scale);
+    sm.bindMode = base.bindMode;
     base.parent.add(sm);
     for (const m of list) { m.parent.remove(m); m.geometry.dispose(); }
   }
@@ -64,12 +112,32 @@ export async function preloadAll(onProgress) {
 
 /** 애니메이션 포함 캐릭터 인스턴스 생성 */
 export function spawnCharacter(gltf) {
-  const root = skeletonClone(gltf.scene);
-  const mixer = new THREE.AnimationMixer(root);
+  const rigRoot = skeletonClone(gltf.scene);
+  const contract = rigRoot.userData.authoredContract;
+  const root = contract ? new THREE.Group() : rigRoot;
+  if (contract) {
+    root.userData.authoredContract = structuredClone(contract);
+    root.scale.setScalar(contract.scale); root.add(rigRoot);
+  }
+  const mixer = new THREE.AnimationMixer(rigRoot);
+  /** @type {Record<string, THREE.AnimationClip>} */
   const clips = {};
   for (const c of gltf.animations) clips[c.name] = c;
+  for (const [alias, name] of Object.entries(contract?.aliases || {})) clips[alias] = clips[name];
   // 히트 플래시용: 재질을 개별 복제 (emissive 조절)
-  root.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); o.material.emissive = new THREE.Color(0); } });
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    const clone = (material) => {
+      const next = material.clone();
+      if (next.emissive) {
+        if (!contract) next.emissive.setScalar(0);
+        next.userData.authoredEmissive = next.emissive.clone();
+        next.userData.baseEmissive = next.emissive.clone();
+      }
+      return next;
+    };
+    o.material = Array.isArray(o.material) ? o.material.map(clone) : clone(o.material);
+  });
   return { root, mixer, clips };
 }
 

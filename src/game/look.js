@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RARITY_INFO, ITEM_BY_ID } from '../data/items.js';
+import { materialsOf } from '../engine/assets.js';
 
 /**
  * 장비 외형 (PRD §4-1) — 무기·방어구 장착이 실제 모델에 반영된다.
@@ -61,13 +62,17 @@ export function applyLook(model, def, equip = {}) {
   const sGlow = a ? WEAPON_GLOW[a.rarity] * 0.6 + Math.min(20, equip.armor.enh || 0) * 0.02 : 0;   // 방패·보조
   const wNodes = new Set(L ? L.weaponNodes : []), aNodes = new Set(L ? L.armorNodes : []);
   model.traverse((o) => {
-    if (!o.isMesh || !o.material || !o.material.emissive) return;
+    if (!o.isMesh) return;
     let owner = null; for (let p = o; p && p !== model; p = p.parent) { if (wNodes.has(p.name)) { owner = 'w'; break; } if (aNodes.has(p.name)) { owner = 'a'; break; } }
-    const base = o.material.userData.baseEmissive || (o.material.userData.baseEmissive = new THREE.Color(0));
-    if (owner === 'w') base.copy(wCol || new THREE.Color(0)).multiplyScalar(wGlow);
-    else if (owner === 'a') base.copy(aCol || new THREE.Color(0)).multiplyScalar(sGlow);
-    else base.copy(aCol || new THREE.Color(0)).multiplyScalar(aGlow);
-    o.material.emissive.copy(base);
+    for (const material of materialsOf(o)) {
+      if (!material.emissive) continue;
+      const base = material.userData.baseEmissive || (material.userData.baseEmissive = new THREE.Color(0));
+      if (model.userData.authoredContract) base.copy(material.userData.authoredEmissive || new THREE.Color(0));
+      else if (owner === 'w') base.copy(wCol || new THREE.Color(0)).multiplyScalar(wGlow);
+      else if (owner === 'a') base.copy(aCol || new THREE.Color(0)).multiplyScalar(sGlow);
+      else base.copy(aCol || new THREE.Color(0)).multiplyScalar(aGlow);
+      material.emissive.copy(base);
+    }
   });
   const enhMax = Math.max(...['weapon', 'armor', 'ring', 'boots'].map((s) => equip[s]?.enh || 0));
   const auraCol = enhMax >= 15 ? 0xffd060 : enhMax >= 10 ? (wCol ? wCol.getHex() : def.color) : null;
