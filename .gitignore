@@ -1,6 +1,8 @@
 node_modules
 dist
 .wrangler
+.apex/
+_autopipe/evidence/
 .env
 *.log
 

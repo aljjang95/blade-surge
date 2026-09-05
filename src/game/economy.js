@@ -3,13 +3,14 @@ import { HEROES, HERO_ORDER, levelExp, levelGold, starShards, skillUpGold, heroS
 import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, itemStats, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
 import { SKUS, GACHA, BATTLE_PASS, ENERGY, DAILY_REWARDS, PASS_TRACK } from '../data/shop.js';
 import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
+import { normalizeSave } from './save.js';
 
 const KEY = 'bladesurge_save_v1';
 const now = () => Date.now();
 const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
 
 export class Economy {
-  constructor() { this.s = this.load(); this.listeners = []; this.tickEnergy(); }
+  constructor() { this.storageStatus = 'ready'; this.s = this.load(); this._lastGoodSave = JSON.stringify(this.s); this.listeners = []; this.bonusReceipts = new WeakSet(); this.tickEnergy(); }
   onChange(fn) { this.listeners.push(fn); }
   emit() { this.save(); for (const f of this.listeners) f(this.s); }
   fresh() {
@@ -24,14 +25,37 @@ export class Economy {
       quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto' }, limitedStart: now(),
     };
   }
-  load() { try { const raw = localStorage.getItem(KEY); if (raw) { const s = JSON.parse(raw); return this.migrate({ ...this.fresh(), ...s }); } } catch (e) {} return this.fresh(); }
+  load() {
+    for (const key of [KEY, KEY + '_backup']) {
+      try {
+        const raw = localStorage.getItem(key); if (!raw) continue;
+        try {
+          const s = this.migrate(JSON.parse(raw));
+          if (key !== KEY) this.storageStatus = 'recovered';
+          return s;
+        } catch {
+          this.storageStatus = 'recovery-needed';
+          // 읽지 못한 원본을 보존한 뒤 마지막 정상 저장을 시도한다.
+          if (!localStorage.getItem(KEY + '_recovery')) localStorage.setItem(KEY + '_recovery', raw);
+        }
+      } catch { this.storageStatus = 'unavailable'; }
+    }
+    return this.fresh();
+  }
   /** 구 세이브 보정 — 각성 슬롯이 늘어나면 스킬 레벨 배열도 늘려 준다 */
   migrate(s) {
-    for (const id in s.heroes) { const h = s.heroes[id]; const need = (HEROES[id]?.skills.length) || 4; if (!Array.isArray(h.skills)) h.skills = []; while (h.skills.length < need) h.skills.push(1); }
-    return s;
+    return normalizeSave(s, this.fresh());
   }
-  save() { try { localStorage.setItem(KEY, JSON.stringify(this.s)); } catch (e) {} }
-  reset() { localStorage.removeItem(KEY); this.s = this.fresh(); this.emit(); }
+  save() {
+    try {
+      const raw = JSON.stringify(this.s);
+      // 현재 진행 저장이 우선이다. 백업 공간 부족이 정상 저장을 막지 않는다.
+      localStorage.setItem(KEY, raw);
+      try { if (this._lastGoodSave) localStorage.setItem(KEY + '_backup', this._lastGoodSave); } catch {}
+      this._lastGoodSave = raw; this.storageStatus = 'ready'; return true;
+    } catch { this.storageStatus = 'unavailable'; return false; }
+  }
+  reset() { this.s = this.fresh(); this._lastGoodSave = JSON.stringify(this.s); this.emit(); }
 
   // ---------- 화폐 ----------
   get isVip() { return this.s.vipUntil > now(); }
@@ -45,7 +69,7 @@ export class Economy {
   spendEnergy(n) { this.tickEnergy(); if (this.s.energy < n) return false; if (this.s.energy >= this.energyMax) this.s.energyT = now(); this.s.energy -= n; this.emit(); return true; }
   addRewards(r, opts = {}) {
     const s = this.s; const got = [];
-    if (r.gold) { const g = Math.floor(r.gold * (this.isVip ? 1.3 : 1)); s.gold += g; got.push({ k: 'gold', n: g }); }
+    if (r.gold) { const g = Math.floor(r.gold * (this.isVip && opts.applyVip !== false ? 1.3 : 1)); s.gold += g; got.push({ k: 'gold', n: g }); }
     if (r.gems) { s.gems += r.gems; got.push({ k: 'gems', n: r.gems }); }
     if (r.energy) { s.energy = Math.min(this.energyMax + 200, s.energy + r.energy); got.push({ k: 'energy', n: r.energy }); }
     if (r.tickets) { s.tickets += r.tickets; got.push({ k: 'tickets', n: r.tickets }); }
@@ -95,6 +119,7 @@ export class Economy {
   upgradeSkill(id, i) { const h = this.hero(id); const cost = skillUpGold(h.skills[i]); if (this.s.gold < cost || h.skills[i] >= 10) return false; this.s.gold -= cost; h.skills[i]++; this.emit(); return true; }
   grantHero(id) { if (this.s.heroes[id]) { this.s.heroes[id].shards += 10; return { dup: true }; } this.s.heroes[id] = { level: 1, exp: 0, star: 1, shards: 0, skills: [1, 1, 1, 1, 1, 1], equip: { weapon: null, armor: null, ring: null, boots: null } }; return { dup: false }; }
   // ---------- 장비 ----------
+  /** @param {string} rarity @param {string|null} slot */
   addItem(rarity, slot = null) {
     slot = slot || SLOTS[Math.floor(Math.random() * SLOTS.length)];
     if (GACHA_ITEM_RARITY[rarity]) rarity = GACHA_ITEM_RARITY[rarity];   // 가챠 등급(R/SR/SSR) → 장비 등급
@@ -149,11 +174,22 @@ export class Economy {
     const awakened = (HEROES[s.selected].skills || []).filter((k) => k.unlock && prevLv < k.unlock && nowLv >= k.unlock);
     const passUps = this.addPassXp(r.bp);
     s.quests.stages++; this.emit();
-    return { got, loot, ups, passUps, first, exp: r.exp * m, awakened };
+    const receipt = { got, loot, ups, passUps, first, exp: r.exp * m, awakened };
+    this.bonusReceipts.add(receipt);
+    return receipt;
+  }
+  /** 결과에 표시된 골드·재료의 실지급량만 한 번 더 준다. 첫 클리어 보석/경험치는 제외. */
+  doubleStageRewards(receipt) {
+    if (!receipt || !this.bonusReceipts.has(receipt)) return null;
+    this.bonusReceipts.delete(receipt);
+    const rewards = {};
+    for (const reward of receipt.got) if (['gold', 'stones', 'stones2', 'stones3', 'fragments'].includes(reward.k)) rewards[reward.k] = (rewards[reward.k] || 0) + reward.n;
+    return this.addRewards(rewards, { applyVip: false });
   }
   sweep(stage) { const s = this.s; if (s.sweep <= 0 || (s.progress.stars[this.stageKey(stage.ch, stage.st)] || 0) < 3) return null; if (!this.spendEnergy(stage.energy)) return null; s.sweep--; return this.completeStage(stage, 3); }
   // ---------- 가챠 ----------
   pull(n) {
+    if (n !== 1 && n !== 10) return null;
     const s = this.s; const cost = n === 10 ? GACHA.ten : GACHA.single;
     if (n === 1 && s.tickets > 0) s.tickets--; else if (n === 10 && s.tickets >= 10) s.tickets -= 10; else { if (s.gems < cost) return null; s.gems -= cost; }
     const results = []; let srGuaranteed = false;
@@ -196,7 +232,7 @@ export class Economy {
   get passLevel() { return Math.min(BATTLE_PASS.maxLevel, Math.floor(this.s.pass.xp / BATTLE_PASS.xpPerLevel) + 1); }
   addPassXp(xp) { const before = this.passLevel; this.s.pass.xp += xp; return this.passLevel - before; }
   buyPass() { this.s.pass.premium = true; this.s.spentKRW += BATTLE_PASS.price; this.s.purchases.push('pass'); this.emit(); }
-  claimPass(lv, prem) { const p = this.s.pass; const arr = prem ? p.claimedPrem : p.claimedFree; if (arr.includes(lv) || lv > this.passLevel || (prem && !p.premium)) return null; arr.push(lv); const r = PASS_TRACK[lv - 1][prem ? 'prem' : 'free']; return this.addRewards(r); }
+  claimPass(lv, prem) { const p = this.s.pass; const arr = prem ? p.claimedPrem : p.claimedFree; if (!Number.isInteger(lv) || !PASS_TRACK[lv - 1] || arr.includes(lv) || lv > this.passLevel || (prem && !p.premium)) return null; arr.push(lv); const r = PASS_TRACK[lv - 1][prem ? 'prem' : 'free']; return this.addRewards(r); }
   passClaimable() { const p = this.s.pass; let n = 0; for (let lv = 1; lv <= this.passLevel; lv++) { if (!p.claimedFree.includes(lv)) n++; if (p.premium && !p.claimedPrem.includes(lv)) n++; } return n; }
   // ---------- 출석 ----------
   dailyAvailable() { const d = Math.floor(now() / 86400000); return this.s.daily.last !== d; }

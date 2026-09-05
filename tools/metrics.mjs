@@ -13,42 +13,25 @@ import { CHROME } from './chrome.mjs';
 import { spawn } from 'child_process';
 import { mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { dirname, resolve } from 'path';
-
-// ---------- PRD §2 목표 밴드 ----------
-const BANDS = {
-  errors:             { max: 0,                 label: '콘솔 에러' },
-  bootMs:             { max: 12000,             label: '부트 시간(ms)' },
-  floorClearSec:      { min: 150, max: 420,     label: '층 클리어(초)' },
-  killsPerFloor:      { min: 35,                label: '층당 처치' },
-  maxAliveSeen:       { min: 14,                label: '동시 생존 최대' },
-  dropsPerFloor:      { min: 8,                 label: '층당 드랍' },
-  longestDryStreakSec:{ max: 35,                label: '무보상 최장(초)' },
-  hitTakenRatio:      { min: 0.05, max: 0.45,   label: '피격 비율' },
-  avgFrameMs:         { max: 42,                label: '평균 프레임(ms)' },
-  p95FrameMs:         { max: 90,                label: 'p95 프레임(ms)' },
-  rhythmBeats:        { min: 6,                 label: '도파민 8박자 발화' },
-  drawCalls:          { max: 420,               label: '드로우콜' },
-};
-// 기준선 대비 회귀 허용치
-const REGRESSION = { avgFrameMs: 1.15, drawCalls: 1.20 };
+import { fileURLToPath } from 'node:url';
+import { BANDS, REGRESSION, assessMetrics, compareMetrics } from './metrics-contract.mjs';
 
 const args = process.argv.slice(2);
 const arg = (k, d) => { const i = args.indexOf(k); return i < 0 ? d : args[i + 1]; };
-const PROJ = resolve(new URL('..', import.meta.url).pathname);
+const PROJ = fileURLToPath(new URL('..', import.meta.url));
 
 // ---------- --compare 모드 ----------
 if (args.includes('--compare')) {
   const i = args.indexOf('--compare');
   const base = JSON.parse(readFileSync(args[i + 1], 'utf8'));
   const head = JSON.parse(readFileSync(args[i + 2], 'utf8'));
-  let bad = 0;
+  const bad = compareMetrics(base, head).length;
   console.log('지표            기준선 →   이번      판정');
   for (const k of Object.keys(BANDS)) {
     const b = base[k], h = head[k];
-    if (b == null || h == null) continue;
+    if (!Number.isFinite(b) || !Number.isFinite(h)) { console.log(`${k}: 유효한 표본 누락`); continue; }
     const lim = REGRESSION[k];
     const regressed = lim && b > 0 && h > b * lim;
-    if (regressed) bad++;
     const arrow = h === b ? '=' : h > b ? '▲' : '▼';
     console.log(`${BANDS[k].label.padEnd(16)}${String(b).padStart(7)} → ${String(h).padStart(7)}  ${arrow}${regressed ? '  회귀!' : ''}`);
   }
@@ -61,17 +44,26 @@ const OUT = arg('--out', '.rsi/head.json');
 const SHOTS = arg('--shots', '.rsi/shots');
 const PORT = Number(arg('--port', '4193'));
 const FLOOR_TIMEOUT_SEC = Number(arg('--timeout', '600'));
+const SEED = Number(arg('--seed', '20260905'));
+if (!Number.isSafeInteger(SEED) || SEED < 0 || SEED > 0xffffffff) throw new Error('--seed must be a uint32');
 
 mkdirSync(resolve(PROJ, dirname(OUT)), { recursive: true });
 mkdirSync(resolve(PROJ, SHOTS), { recursive: true });
 
-const srv = spawn('npx', ['vite', 'preview', '--port', String(PORT), '--host'], { cwd: PROJ, stdio: 'ignore' });
+let serverReady = false, serverError = '';
+const srv = spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.js'), 'preview', '--port', String(PORT), '--strictPort', '--host', '127.0.0.1'], { cwd: PROJ, stdio: ['ignore', 'pipe', 'pipe'] });
+srv.stdout.on('data', (chunk) => { if (String(chunk).includes(`http://127.0.0.1:${PORT}/`)) serverReady = true; });
+srv.stderr.on('data', (chunk) => { serverError = (serverError + String(chunk)).slice(-500); });
+srv.on('error', (error) => { serverError = error.message; });
 const bail = async (msg, br) => { console.error('실패: ' + msg); try { await br?.close(); } catch {} srv.kill(); process.exit(1); };
 
+let served = false;
 for (let i = 0; i < 60; i++) {
-  try { const r = await fetch(`http://localhost:${PORT}/`); if (r.ok) break; } catch {}
+  if (srv.exitCode !== null) await bail('측정 서버 시작 실패: ' + serverError);
+  if (serverReady) try { const r = await fetch(`http://127.0.0.1:${PORT}/`); if (r.ok) { served = true; break; } } catch {}
   await new Promise((r) => setTimeout(r, 500));
 }
+if (!served) await bail('측정 서버 준비 시간초과: ' + serverError);
 
 const br = await chromium.launch({ ...(CHROME ? { executablePath: CHROME } : {}), args: [
   '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
@@ -98,10 +90,14 @@ await page.click('#boot-start', { force: true });
 await page.waitForTimeout(1500);
 await page.evaluate(() => window.app.ui.closeModal());
 
-const started = await page.evaluate(async () => {
+const started = await page.evaluate(async (seed) => {
+  // 지형 장식과 몹 표본을 동일한 시작 조건으로 비교한다. 테스트 브라우저 안에서만 적용.
+  let state = seed >>> 0;
+  Math.random = () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
+  window.app.testPause = true;
   try { await window.app.startStage(window.app.eco.nextStage()); return true; }
   catch (e) { return String(e.message); }
-});
+}, SEED);
 if (started !== true) await bail('startStage: ' + started, br);
 await page.waitForTimeout(1200);
 
@@ -153,6 +149,7 @@ for (let k = 0; k < maxChunks; k++) {
       calls: app.renderer?.r?.info?.render?.calls ?? 0,
       rendered: doRender,
       active: b.active,
+      won: b.result?.win === true,
       alive: b.enemies.filter((e) => e.alive).length,
       peak: b.peakAlive ?? 0,   // 게임 쪽 프레임 단위 누적 — 2초 샘플링이 놓치는 피크
       kills: b.kills,
@@ -182,7 +179,7 @@ for (let k = 0; k < maxChunks; k++) {
   if (r.bossFound) beats.bossFound = true;
   if (r.inBoss && r.alive > 0) sawBossFight = true;
   if (sawBossFight && r.clr === r.rooms) beats.bossKill = true;
-  if (!r.active) beats.floorClear = true;
+  if (r.won) beats.floorClear = true;
   prevLoot = r.loot;
   if (r.maxHp > 0) hpLow = Math.max(hpLow, 1 - r.hp / r.maxHp);   // 이번 층에서 가장 많이 깎였던 지점
 
@@ -216,7 +213,9 @@ const m = {
   drawCalls: Math.max(...drawCalls),
   _beats: beats,
   _roomsCleared: `${s.clr}/${s.rooms}`,
-  _endReason: s.active ? '시간초과' : (s.clr >= s.rooms ? '전구역클리어' : '보스처치'),
+  _won: s.won,
+  _seed: SEED,
+  _endReason: s.active ? '시간초과' : !s.won ? '패배' : (s.clr >= s.rooms ? '전구역클리어' : '보스처치'),
   _avgAlive: round(aliveSeen.reduce((a, b) => a + b, 0) / aliveSeen.length, 1),
   _errorSamples: errors.slice(0, 5),
   _at: new Date().toISOString(),
@@ -226,18 +225,19 @@ writeFileSync(resolve(PROJ, OUT), JSON.stringify(m, null, 2));
 await br.close(); srv.kill();
 
 // ---------- 판정 ----------
-let failed = 0;
+const failures = assessMetrics(m);
+const failed = failures.length;
 console.log('\n지표                     값        밴드            판정');
 for (const [k, band] of Object.entries(BANDS)) {
   const v = m[k];
   const lo = band.min ?? -Infinity, hi = band.max ?? Infinity;
   const ok = v >= lo && v <= hi;
-  if (!ok) failed++;
   const range = `${band.min ?? ''}${band.min != null && band.max != null ? '~' : ''}${band.max != null ? (band.min != null ? band.max : '≤' + band.max) : '≥' + band.min}`;
   console.log(`${band.label.padEnd(18)}${String(v).padStart(9)}   ${range.padEnd(14)}  ${ok ? 'OK' : '벗어남'}`);
 }
 console.log(`\n박자: ${Object.entries(beats).filter(([, v]) => v).map(([k]) => k).join(' · ') || '없음'}`);
 console.log(`구역: ${m._roomsCleared}   스크린샷: ${SHOTS}/`);
+if (!m._won) console.log('실제 승리 없음 — 완주 게이트 실패');
 if (m.errors) console.log('에러:\n  ' + m._errorSamples.join('\n  '));
 console.log(failed ? `\n${failed}개 지표가 밴드를 벗어났다 — 이번 회전은 실패다.` : '\n전 지표 통과.');
 process.exit(failed ? 1 : 0);

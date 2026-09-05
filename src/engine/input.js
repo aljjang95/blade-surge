@@ -9,9 +9,9 @@ export class Input {
     this.el = { area: document.getElementById('joy'), base: document.querySelector('.joy-base'), knob: document.getElementById('joy-knob') };
     this._bind();
   }
-  press(a) { if (this.enabled) this.queue.push(a); }
+  press(a) { if (this.enabled && !this.queue.includes(a)) this.queue.push(a); }
   consume(a) { const i = this.queue.indexOf(a); if (i >= 0) { this.queue.splice(i, 1); return true; } return false; }
-  clear() { this.queue.length = 0; this.attackHeld = false; this.move.x = this.move.y = 0; this._resetJoy(); }
+  clear() { this.queue.length = 0; this.attackHeld = false; this.keys = {}; this.move.x = this.move.y = 0; this._resetJoy(); }
   _resetJoy() { this.joy.active = false; this.joy.id = null; this.move.x = this.move.y = 0; this.el.knob.style.transform = 'translate(-50%,-50%)'; this.el.base.style.left = ''; this.el.base.style.bottom = ''; this.el.base.style.top = ''; this.el.base.style.transform = ''; }
   _bind() {
     const area = this.el.area;
@@ -49,7 +49,7 @@ export class Input {
     const btn = (id, down, up) => {
       const el = typeof id === 'string' ? document.getElementById(id) : id;
       if (!el) return;
-      const d = (e) => { e.preventDefault(); e.stopPropagation(); down(); }; const u = (e) => { e.preventDefault(); up && up(); };
+      const d = (e) => { if (!this.enabled) return; e.preventDefault(); e.stopPropagation(); down(); }; const u = (e) => { e.preventDefault(); up && up(); };
       el.addEventListener('touchstart', d, { passive: false }); el.addEventListener('touchend', u); el.addEventListener('touchcancel', u);
       el.addEventListener('mousedown', d); el.addEventListener('mouseup', u); el.addEventListener('mouseleave', () => up && up());
     };
@@ -58,16 +58,21 @@ export class Input {
     document.querySelectorAll('.skill-btn').forEach((b) => btn(b, () => this.press('skill' + b.dataset.skill)));
 
     window.addEventListener('keydown', (e) => {
+      if (!this.enabled || e.target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      if (!/^(Key[WASDJKRQE]|Arrow(Left|Right|Up|Down)|Space|ShiftLeft|Digit[1-6])$/.test(e.code)) return;
+      e.preventDefault();
       if (e.repeat) return; this.keys[e.code] = true;
-      if (!this.enabled) return;
       if (e.code === 'KeyJ' || e.code === 'Space') { this.attackHeld = true; this.press('attack'); }
       if (e.code === 'KeyK' || e.code === 'ShiftLeft') this.press('dodge');
       if (e.code === 'Digit1') this.press('skill0'); if (e.code === 'Digit2') this.press('skill1'); if (e.code === 'Digit3') this.press('skill2'); if (e.code === 'KeyR' || e.code === 'Digit4') this.press('skill3');
       if (e.code === 'KeyQ' || e.code === 'Digit5') this.press('skill4'); if (e.code === 'KeyE' || e.code === 'Digit6') this.press('skill5');
     });
     window.addEventListener('keyup', (e) => { this.keys[e.code] = false; if (e.code === 'KeyJ' || e.code === 'Space') this.attackHeld = false; });
+    window.addEventListener('blur', () => this.clear());
+    document.addEventListener('visibilitychange', () => { if (document.hidden) this.clear(); });
   }
   update() {
+    if (!this.enabled) { this.move.x = this.move.y = 0; return; }
     if (!this.joy.active) {
       let x = 0, y = 0; const k = this.keys;
       if (k.KeyA || k.ArrowLeft) x -= 1; if (k.KeyD || k.ArrowRight) x += 1; if (k.KeyW || k.ArrowUp) y -= 1; if (k.KeyS || k.ArrowDown) y += 1;

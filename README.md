@@ -4,9 +4,9 @@ three.js(WebGL2) 기반 **가로모드 모바일 3D 몹몰이 핵앤슬래시 �
 과금은 전부 **목업**(실제 결제 없음) — 결제 SDK 연결 지점만 만들어 둠.
 
 ```bash
-npm install
-npm run dev            # http://localhost:5173  (--host 로 폰에서 접속)
-npm run build          # dist/
+bun install
+bun run dev           # http://localhost:5173  (--host 로 폰에서 접속)
+bun run check         # 타입검사 + 회귀 테스트 + dist/ 빌드
 npx wrangler login && npx wrangler deploy   # Cloudflare Workers Static Assets
 ```
 
@@ -21,7 +21,7 @@ npx wrangler login && npx wrangler deploy   # Cloudflare Workers Static Assets
 | 입력 | 터치 | 키보드 |
 |---|---|---|
 | 이동 | 좌측 가상 조이스틱(터치한 곳에 생성) | WASD / 방향키 |
-| 공격 (3단 콤보) | 공격 버튼(홀드 가능) | J / Space |
+| 공격 (영웅별 5~6타 콤보) | 공격 버튼(홀드 가능) | J / Space |
 | 회피 (무적 0.4s) | 회피 | K / Shift |
 | 스킬 1~3 | 스킬 버튼 | 1 2 3 |
 | 궁극기 (게이지 100) | 금색 원형 버튼 | R |

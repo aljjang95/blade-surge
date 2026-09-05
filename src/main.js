@@ -12,6 +12,7 @@ import { HEROES } from './data/heroes.js';
 import { ENEMIES, stageDef } from './data/stages.js';
 import { UI, $ } from './ui/ui.js';
 import { Meta } from './ui/meta.js';
+import { createCompanion } from './companion/bootstrap.ts';
 const BOOT_TIPS = [
   '<b>진공기</b>로 적을 끌어모은 뒤 한 번에 쓸어담는 것이 몹몰이의 기본이다.',
   '적의 공격 직전 <b>회피</b>하면 퍼펙트 회피 — 시간이 느려지고 반격 창이 열린다.',
@@ -66,6 +67,7 @@ class App {
     clearInterval(this._tipTimer);
     const bootEl = $('boot'); bootEl.classList.add('leaving');
     this.toLobby(true);
+    if (!this.companionAgent) this.companionAgent = createCompanion(this);
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
     document.addEventListener('visibilitychange', () => { if (document.hidden) { if (this.mode === 'battle') this.ui.pause(true); } else audio.resume(); });
     requestAnimationFrame((t) => this.loop(t));
@@ -76,6 +78,7 @@ class App {
     if (!q || q === 'auto') { const cores = navigator.hardwareConcurrency || 4; const mem = navigator.deviceMemory || 4; q = (cores <= 4 || mem <= 3) ? 'mid' : 'high'; st.quality = q; }
     this.renderer.setQuality(q); this.fx.setQuality(q);
     this.renderer.setCameraPreset(st.camera || 'auto');
+    this.companionAgent?.syncQuality();
   }
   // ---------- 로비 ----------
   async showcaseHero(id, first = false) {
