@@ -1,8 +1,20 @@
 import { expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { materialsOf, mergeSkinned, prepareModel, requiredModelAliases, spawnCharacter } from '../src/engine/assets.js';
 import { Actor } from '../src/game/actor.js';
 import { applyLook } from '../src/game/look.js';
+import { HEROES } from '../src/data/heroes.js';
+
+test('모든 영웅의 콤보·스킬·상태 동작이 배송 GLB에 실제로 존재한다', () => {
+  for (const hero of Object.values(HEROES)) {
+    const bytes = readFileSync(new URL(`../public/models/${hero.model}.glb`, import.meta.url));
+    const gltf = JSON.parse(bytes.subarray(20, 20 + bytes.readUInt32LE(12)).toString());
+    const names = new Set(gltf.animations.map((clip: { name: string }) => clip.name));
+    const missing = requiredModelAliases('hero', hero.id).filter((name: string) => !names.has(name));
+    expect({ hero: hero.id, missing }).toEqual({ hero: hero.id, missing: [] });
+  }
+});
 
 const aliases = () => Object.fromEntries(requiredModelAliases('hero', 'knight').map((name) => [name, name.startsWith('Death_') ? 'death' : 'idle']));
 
