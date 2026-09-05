@@ -113,6 +113,11 @@ export function CompanionPanel({ director }: CompanionPanelProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const wasOpen = useRef(false);
+  const logRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [snapshot.messages, snapshot.dialoguePending]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -134,8 +139,9 @@ export function CompanionPanel({ director }: CompanionPanelProps) {
 
   const send = (value: string) => {
     if (!value.trim()) return;
-    director.reply(value);
-    setInput('');
+    if (snapshot.dialoguePending) return;
+    void director.ask(value);
+    if (director.getSnapshot().dialoguePending) setInput('');
   };
 
   return (
@@ -192,17 +198,22 @@ export function CompanionPanel({ director }: CompanionPanelProps) {
             ))}
           </div>
 
-          <div className="companion-log" aria-live="polite" aria-label="대화 기록">
+          <div ref={logRef} className="companion-log" aria-live="polite" aria-label="대화 기록" aria-busy={snapshot.dialoguePending}>
             {snapshot.messages.slice(-7).map((message) => (
               <p key={message.id} className={message.role}>
                 <span>{message.role === 'companion' ? '네브' : '나'}</span>
                 {message.text}
               </p>
             ))}
+            {snapshot.dialoguePending && <p className="companion"><span>네브</span>계약자의 말을 듣고 있습니다…</p>}
+            {snapshot.dialogueError && <p role="status" className="companion">{snapshot.dialogueError}</p>}
+            {snapshot.proposedTactic && <button className="companion-proposal" type="button" onClick={() => director.applyProposal()}>
+              {TACTICS.find((tactic) => tactic.id === snapshot.proposedTactic)?.label} 진형으로 함께하기
+            </button>}
           </div>
 
           <div className="companion-quick" aria-label="빠른 질문">
-            {QUICK_LINES.map((line) => <button type="button" key={line} onClick={() => send(line)}>{line}</button>)}
+            {QUICK_LINES.map((line) => <button type="button" key={line} disabled={snapshot.dialoguePending} onClick={() => director.reply(line)}>{line}</button>)}
           </div>
 
           <form className="companion-form" onSubmit={(event) => { event.preventDefault(); send(input); }}>
@@ -217,8 +228,11 @@ export function CompanionPanel({ director }: CompanionPanelProps) {
                 autoComplete="off"
                 placeholder="예: 적을 한곳에 몰아줘"
               />
-              <button type="submit" disabled={!input.trim()}>전송</button>
+              {snapshot.dialoguePending
+                ? <button type="button" onClick={() => director.cancelDialogue()}>취소</button>
+                : <button type="submit" disabled={!input.trim()}>전송</button>}
             </div>
+            <small className="companion-privacy">대화는 응답을 위해 Cloudflare로 전송됩니다.</small>
           </form>
         </section>
       )}

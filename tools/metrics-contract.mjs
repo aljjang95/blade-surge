@@ -15,6 +15,7 @@ export function assessMetrics(metrics) {
 }
 export function compareMetrics(base, head) {
   const failures = Object.keys(BANDS).filter((key) => !Number.isFinite(base[key]) || !Number.isFinite(head[key]) || (REGRESSION[key] && base[key] > 0 && head[key] > base[key] * REGRESSION[key]));
-  if (base._seed !== head._seed) failures.push('seed-mismatch');
-  return failures;
+  failures.push(...assessMetrics(head));
+  if (!Number.isSafeInteger(base._seed) || base._seed < 0 || base._seed > 0xffffffff || base._seed !== head._seed) failures.push('seed-mismatch');
+  return [...new Set(failures)];
 }

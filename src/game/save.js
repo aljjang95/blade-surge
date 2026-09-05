@@ -45,7 +45,14 @@ export function normalizeSave(raw, fresh) {
     if (!item || ITEM_BY_ID[item.id].slot !== slot || equipped.has(item.uid)) h.equip[slot] = null;
     else equipped.add(item.uid);
   }
-  s.invSeq = s.inventory.reduce((next, item) => Math.max(next, item.uid + 1), Math.max(1, s.invSeq));
+  s.invSeq = s.inventory.reduce((next, item) => Math.max(next, item.uid + 1), 1);
+  // 이후 드랍에 쓸 순번을 확보하고, 전투 시작 전 장착 참조까지 함께 재배정한다.
+  if (s.invSeq > Number.MAX_SAFE_INTEGER - 1000000) {
+    const remap = new Map(s.inventory.map((item, index) => [item.uid, index + 1]));
+    for (const h of Object.values(s.heroes)) for (const slot of SLOTS) h.equip[slot] = remap.get(h.equip[slot]) ?? null;
+    for (const item of s.inventory) item.uid = remap.get(item.uid);
+    s.invSeq = s.inventory.length + 1;
+  }
   const floors = CHAPTERS.length * STAGES_PER_CHAPTER;
   s.progress.unlocked = integer(s.progress.unlocked, 1, 1, floors);
   s.progress.stars = {};

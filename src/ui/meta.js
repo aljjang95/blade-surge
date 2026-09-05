@@ -44,7 +44,7 @@ export class Meta {
     if (tab === 'home') this.refreshHome();
   }
   refreshTop() {
-    const s = this.eco.s; this.eco.tickEnergy();
+    const s = this.eco.s;
     const status = this.eco.storageStatus;
     if (status !== 'ready' && this._storageNotice !== status) {
       this._storageNotice = status;
@@ -332,7 +332,7 @@ export class Meta {
       b.querySelectorAll('.toggle').forEach((t) => t.onclick = () => { const k = t.dataset.k; st[k] = !st[k]; t.classList.toggle('on', st[k]); this.app.applySettings(); this.eco.save(); });
       b.querySelectorAll('[data-cam]').forEach((c) => c.onclick = () => { st.camera = c.dataset.cam; b.querySelectorAll('[data-cam]').forEach((x) => x.classList.toggle('on', x === c)); b.querySelector('#cam-desc').textContent = CAM_DESC[st.camera]; this.app.applySettings(); this.eco.save(); audio.play('ui_open', { vol: 0.3 }); });
       b.querySelectorAll('[data-q]').forEach((q) => q.onclick = () => { st.quality = q.dataset.q; b.querySelectorAll('[data-q]').forEach((x) => x.classList.toggle('on', x === q)); this.app.applySettings(); this.eco.save(); });
-      b.querySelector('#m-reset').onclick = async () => { if (await this.ui.confirm('초기화', '모든 진행 데이터가 삭제됩니다. 계속할까요?', { okCls: 'btn-red' })) { this.eco.reset(); location.reload(); } };
+      b.querySelector('#m-reset').onclick = async () => { if (await this.ui.confirm('초기화', '모든 진행 데이터가 삭제됩니다. 계속할까요?', { okCls: 'btn-red' })) { if (this.app.resetProgress()) location.reload(); else this.ui.toast('저장 공간을 초기화하지 못했습니다. 브라우저의 저장 권한을 확인해 주세요.', 'red'); } };
     } });
   }
   showProfile() {
@@ -341,7 +341,7 @@ export class Meta {
   }
   /** 로비 진입 시 자동 팝업: 출석 → 스타터팩 */
   autoPopups() {
-    if (this.app.mode !== 'lobby' || document.getElementById('modal').classList.contains('show')) return;
+    if (this.app.mode !== 'lobby' || this.app.companionAgent?.getSnapshot().open || document.getElementById('modal').classList.contains('show')) return;
     if (this.eco.dailyAvailable()) { this.showDaily(); return; }
     if (!this.eco.s.purchases.includes('starter') && Math.random() < 0.5) this.buy('starter');
   }

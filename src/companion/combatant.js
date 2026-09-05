@@ -23,6 +23,7 @@ export class CompanionCombatant extends Actor {
       if (!node.isMesh || !node.material) return;
       node.castShadow = false;
       node.receiveShadow = true;
+      if (this.model.userData.authoredContract) return;
       node.material.roughness = 0.72;
       node.material.metalness = 0.08;
       node.material.emissive?.set(0x062d35);

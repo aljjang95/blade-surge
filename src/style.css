@@ -316,7 +316,7 @@ b { font-weight: 900; }
 @keyframes readyFlash { 0% { filter: brightness(3); transform: scale(1.2) } 100% { filter: none; transform: none } }
 
 .ult-cinema { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
-.ult-cinema::before, .ult-cinema::after { content: ''; position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height .25s; }
+.ult-cinema::before, .ult-cinema::after { content: ''; position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height .25s; z-index: -1; }
 .ult-cinema::before { top: 0 } .ult-cinema::after { bottom: 0 }
 .ult-cinema.on { opacity: 1; }
 .ult-cinema.on::before, .ult-cinema.on::after { height: 12%; }

@@ -17,6 +17,49 @@ beforeEach(() => {
 afterEach(() => { if (oldStorage) Object.defineProperty(globalThis, 'localStorage', oldStorage); else Reflect.deleteProperty(globalThis, 'localStorage'); });
 
 describe('진행 저장 복구', () => {
+  test('실패 환급은 primary·backup·복구 원본 값 모두 차감 전 상태를 보존한다', () => {
+    const eco = new Economy(); eco.s.energy = 350; eco.s.energyT = 123456; eco.save();
+    const snapshot = { energy: eco.s.energy, energyT: eco.s.energyT };
+    eco.spendEnergy(6); expect(eco.s.energy).toBe(344);
+    expect(eco.rollbackEnergy(snapshot)).toBe(true);
+    for (const saved of [values.get(key)!, values.get(key + '_backup')!, eco._lastGoodSave]) {
+      expect(JSON.parse(saved).energy).toBe(350); expect(JSON.parse(saved).energyT).toBe(123456);
+    }
+    values.set(key, '{broken'); const recovered = new Economy();
+    expect(recovered.s.energy).toBe(350); expect(recovered.storageStatus).toBe('recovered');
+    // 생성자의 정상 시간 진행 이전에 읽은 복구 데이터의 시각도 보존된다.
+    expect(recovered.load().energyT).toBe(123456);
+  });
+  test('환급 백업 기록 실패는 성공이 아니며 기존 차감 백업을 제거한다', () => {
+    const eco = new Economy(); eco.s.energy = 350; eco.s.energyT = 123456; eco.save(); eco.spendEnergy(6);
+    Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: {
+      getItem: (k: string) => values.get(k) ?? null, removeItem: (k: string) => values.delete(k),
+      setItem: (k: string, value: string) => { if (k.endsWith('_backup')) throw new Error('quota'); values.set(k, value); },
+    } });
+    expect(eco.rollbackEnergy({ energy: 350, energyT: 123456 })).toBe(false);
+    expect(values.has(key + '_backup')).toBe(false); expect(eco.storageStatus).toBe('unavailable');
+  });
+  test('손상된 장비 순번과 안전 정수 끝의 UID를 복구한 뒤 새 드랍도 유지한다', () => {
+    const source = new Economy(); const item = source.addItem('N', 'weapon'); source.equip('knight', item.uid);
+    for (const nearLimit of [false, true]) {
+      const raw = structuredClone(source.s); raw.invSeq = Number.MAX_SAFE_INTEGER;
+      if (nearLimit) { raw.inventory[0].uid = Number.MAX_SAFE_INTEGER - 1; raw.heroes.knight.equip.weapon = Number.MAX_SAFE_INTEGER - 1; }
+      values.set(key, JSON.stringify(raw));
+      const recovered = new Economy();
+      expect(recovered.hero().equip.weapon).toBe(recovered.s.inventory[0].uid);
+      expect(recovered.s.invSeq).toBe(2);
+      const drop = recovered.addItem('N', 'weapon'); recovered.save();
+      const reload = new Economy();
+      expect(reload.s.inventory.some((entry: { uid: number }) => entry.uid === drop.uid)).toBe(true);
+      expect(reload.s.inventory.length).toBe(2);
+    }
+  });
+  test('전체 초기화는 복구 원본까지 지우고 실패를 숨기지 않는다', () => {
+    const eco = new Economy(); values.set(key + '_recovery', 'old-private-save');
+    expect(eco.reset()).toBe(true); expect(values.has(key + '_recovery')).toBe(false);
+    Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { removeItem() { throw new Error('blocked'); }, setItem() { throw new Error('blocked'); } } });
+    expect(eco.reset()).toBe(false);
+  });
   test('부분 구형 저장은 유효 진행을 보존하며 빠진 중첩 구조만 채운다', () => {
     values.set(key, JSON.stringify({ gold: 23456, heroes: { knight: { level: 17, skills: [3, 2, 2, 1] } }, progress: { unlocked: 4 }, settings: { music: false } }));
     const eco = new Economy();

@@ -11,7 +11,7 @@
     "test": "bun test",
     "check": "bun run typecheck && bun test && bun run build",
     "preview": "vite preview --host",
-    "deploy": "node tools/deploy-guard.mjs && bun run build && wrangler deploy",
+    "deploy": "node tools/deploy.mjs",
     "metrics": "node tools/metrics.mjs"
   },
   "dependencies": {

@@ -83,6 +83,7 @@ class App {
   // ---------- 로비 ----------
   async showcaseHero(id, first = false) {
     const def = HEROES[id];
+    this.companionAgent?.cancelDialogue();
     if (this.showcase) { this.scene.remove(this.showcase.root); this.showcase = null; }
     if (first || this.mode === 'lobby') this.arena.buildLobby();
     const { root, mixer, clips } = spawnCharacter(this.models[def.model]);
@@ -91,6 +92,7 @@ class App {
     const a = mixer.clipAction(clips['Idle']); a.play();
     this.scene.add(root);
     this.showcase = { root, mixer, clips, def, look, t: 0, next: 4 + Math.random() * 3, auraT: 0 };
+    this.companionAgent?.syncLobbyContext();
     if (!first) { this.fx.pillar(new THREE.Vector3(0, 0, 0), def.color, { radius: 1.2, height: 8, life: 0.8 }); this.fx.burst(new THREE.Vector3(0, 1, 0), def.color, { n: 40, speed: 6, size: 0.4, up: 1 }); audio.magic({ vol: 0.3, base: 440, notes: [0, 4, 7, 12] }); }
     this.renderer.rig.mode = 'lobby'; this.renderer.rig.target.set(0, 0, 0);
   }
@@ -106,14 +108,40 @@ class App {
     this.meta.openTab('home'); this.meta.refreshTop();
     if (first) setTimeout(() => this.meta.autoPopups(), 600);
   }
+  resetProgress() {
+    if (this.stageStarting) return false;
+    const companionReset = this.companionAgent?.reset() ?? true;
+    const gameReset = this.eco.reset();
+    this.toLobby();
+    return companionReset && gameReset;
+  }
   async startStage(stage) {
-    if (!this.eco.spendEnergy(stage.energy)) { audio.play('ui_error'); const ok = await this.ui.confirm('에너지 부족', `에너지 ${stage.energy}가 필요합니다. 보석으로 충전할까요?`, { ok: '충전' }); if (ok) this.meta.openTab('shop', 'energy'); return; }
-    this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
-    if (this.showcase) { this.scene.remove(this.showcase.root); this.showcase = null; }
-    this.mode = 'battle';
-    const id = this.eco.s.selected;
-    await this.battle.start(stage, id, this.eco.hero(id), this.eco.heroEquipBonus(id));
-    this.battle.player.auto = this._auto || false; $('btn-auto').classList.toggle('on', !!this._auto);
+    if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
+    this.stageStarting = true;
+    let spent = false;
+    const energyBefore = { energy: this.eco.s.energy, energyT: this.eco.s.energyT };
+    try {
+      spent = this.eco.spendEnergy(stage.energy);
+      if (!spent) {
+        audio.play('ui_error');
+        const ok = await this.ui.confirm('에너지 부족', `에너지 ${stage.energy}가 필요합니다. 보석으로 충전할까요?`, { ok: '충전' });
+        if (ok) this.meta.openTab('shop', 'energy');
+        return false;
+      }
+      this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
+      if (this.showcase) { this.scene.remove(this.showcase.root); this.showcase = null; }
+      this.mode = 'battle';
+      const id = this.eco.s.selected;
+      await this.battle.start(stage, id, this.eco.hero(id), this.eco.heroEquipBonus(id));
+      this.battle.player.auto = this._auto || false; $('btn-auto').classList.toggle('on', !!this._auto);
+      return true;
+    } catch (error) {
+      const rollbackSaved = !spent || this.eco.rollbackEnergy(energyBefore);
+      this.toLobby();
+      this.ui.toast(rollbackSaved ? '던전을 준비하지 못했습니다. 에너지는 복구됐습니다. 다시 출격해 주세요.' : '현재 창의 에너지는 복구했지만 저장하지 못했습니다. 저장 권한을 확인해 주세요.', 'red');
+      console.warn('stage preparation failed', error?.message);
+      return false;
+    } finally { this.stageStarting = false; }
   }
   // ---------- 루프 ----------
   loop(t) {

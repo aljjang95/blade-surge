@@ -208,6 +208,9 @@
 .companion-form input::placeholder { color: #64777b; }
 .companion-form button { color: #081013; background: var(--nev-cyan); border: 0; font-weight: 900; cursor: pointer; }
 .companion-form button:disabled { color: #718083; background: #263237; cursor: not-allowed; }
+.companion-privacy { display: block; margin-top: 5px; color: #9bb1b5; font-size: 9px; }
+.companion-proposal { flex-shrink: 0; min-height: 44px; padding: 8px; color: #ecffff; background: #193d43; border: 1px solid var(--nev-cyan); border-radius: 5px; cursor: pointer; }
+.companion-quick button:disabled { opacity: .5; cursor: wait; }
 
 @media (orientation: landscape) and (max-height: 480px) {
   .companion-launcher { top: calc(64px + env(safe-area-inset-top, 0px)); min-width: 132px; }
@@ -240,4 +243,11 @@
   .companion-ui *,
   .companion-ui *::before,
   .companion-ui *::after { scroll-behavior: auto !important; transition-duration: .001ms !important; animation: none !important; }
+}
+
+@media (orientation: landscape) {
+  .companion-ui:not(.is-connected) .companion-launcher {
+    left: calc(76px + env(safe-area-inset-left, 0px));
+    bottom: calc(116px + env(safe-area-inset-bottom, 0px));
+  }
 }

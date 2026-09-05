@@ -2,6 +2,26 @@ import { describe, expect, test } from 'bun:test';
 import { CompanionDirector } from '../src/companion/director';
 import { Battle } from '../src/game/battle.js';
 
+test('localStorage getter가 거부돼도 동행 생성은 부팅을 중단하지 않는다', () => {
+  const prior = Object.getOwnPropertyDescriptor(globalThis, 'window');
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { get localStorage() { throw new DOMException('denied', 'SecurityError'); } } });
+  try { expect(() => new CompanionDirector({ mode: 'lobby', models: {} })).not.toThrow(); }
+  finally { if (prior) Object.defineProperty(globalThis, 'window', prior); else Reflect.deleteProperty(globalThis, 'window'); }
+});
+
+test('로비 대화는 선택 영웅과 강화 후 실제 전투력을 읽는다', () => {
+  let power = 3200;
+  const app = { mode: 'lobby' as const, models: {}, showcase: { def: { name: '검성 아르카' } },
+    eco: { s: { selected: 'knight' }, heroPower: () => power, nextStage: () => ({ idx: 3 }) } };
+  const director = new CompanionDirector(app);
+  director.setOpen(true);
+  expect(director.getSnapshot().context.heroName).toBe('검성 아르카');
+  expect(director.getSnapshot().context.floor).toBe(3);
+  power = 4200; director.reply('장비 조언해줘');
+  expect(director.getSnapshot().context.power).toBe(4200);
+  expect(director.getSnapshot().messages.at(-1)?.text).toContain('4,200');
+});
+
 test('로비 첫 대화와 설정 변경에도 동행이 저전력 설정을 따른다', () => {
   const settings: { quality: 'low' | 'high' } = { quality: 'low' };
   const director = new CompanionDirector({ mode: 'lobby', models: {}, eco: { s: { settings } } });

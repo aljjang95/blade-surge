@@ -31,6 +31,9 @@ export interface CompanionSnapshot {
   quality: 'high' | 'mid' | 'low';
   messages: readonly CompanionMessage[];
   context: CompanionContext;
+  dialoguePending: boolean;
+  dialogueError: string;
+  proposedTactic: CompanionTactic | null;
 }
 
 interface PersistedCompanionState {
@@ -50,6 +53,7 @@ interface CompanionAgentOptions {
 }
 
 const STORAGE_KEY = 'blade-surge.companion.v1';
+const GREETING = '봉인 해독자 네브입니다. 전장과 장비를 함께 읽겠습니다. 몰이, 수호, 파쇄 중 하나를 명령해 주세요.';
 const VALID_TACTICS = new Set<CompanionTactic>(['gather', 'guard', 'break']);
 
 const EMPTY_CONTEXT: CompanionContext = {
@@ -110,7 +114,7 @@ export class CompanionAgent {
     const messages = restored?.messages.length ? restored.messages : [{
       id: 1,
       role: 'companion' as const,
-      text: '봉인 해독자 네브입니다. 전장과 장비를 함께 읽겠습니다. 몰이, 수호, 파쇄 중 하나를 명령해 주세요.',
+      text: GREETING,
       at: now(),
     }];
     this.nextMessageId = messages.reduce((max, message) => Math.max(max, message.id), 0) + 1;
@@ -124,6 +128,9 @@ export class CompanionAgent {
       quality: 'high',
       messages,
       context: EMPTY_CONTEXT,
+      dialoguePending: false,
+      dialogueError: '',
+      proposedTactic: null,
     };
   }
 
@@ -160,6 +167,30 @@ export class CompanionAgent {
     this.commit({ context });
   }
 
+  beginDialogue(input: string): void {
+    this.addMessage('player', input);
+    this.commit({ dialoguePending: true, dialogueError: '', proposedTactic: null });
+  }
+
+  finishDialogue(reply: string, proposedTactic: CompanionTactic | null): void {
+    this.addMessage('companion', reply);
+    this.commit({ dialoguePending: false, dialogueError: '', proposedTactic, bond: Math.min(100, this.snapshot.bond + 1) });
+  }
+
+  resetDialogue(error = ''): void {
+    this.commit({ dialoguePending: false, dialogueError: error, proposedTactic: null });
+  }
+
+  reset(): boolean {
+    this.seenEvents.clear(); this.nextMessageId = 2;
+    this.snapshot = { ...this.snapshot, open: false, connected: false, tactic: 'gather', bond: 1, status: '봉인 대기',
+      messages: [{ id: 1, role: 'companion', text: GREETING, at: this.now() }], context: { ...EMPTY_CONTEXT },
+      dialoguePending: false, dialogueError: '', proposedTactic: null };
+    const saved = this.persist();
+    for (const listener of this.listeners) listener();
+    return saved;
+  }
+
   reply(rawInput: string): string | null {
     const input = rawInput.trim().slice(0, 240);
     if (!input) return null;
@@ -179,6 +210,7 @@ export class CompanionAgent {
     if (!repeatable) this.seenEvents.add(key);
 
     if (event === 'battle-start') {
+      this.seenEvents.clear();
       this.addMessage('companion', `${this.snapshot.context.floor || detail.floor || 1}층 봉인과 동기화했습니다. ${TACTIC_COPY[this.snapshot.tactic].status}으로 따라붙겠습니다.`);
     } else if (event === 'boss-spotted') {
       this.addMessage('companion', `${String(detail.name || '보스')}의 핵이 드러났습니다. 파쇄 진형으로 바꾸면 경직 창을 더 자주 열 수 있습니다.`);
@@ -246,8 +278,8 @@ export class CompanionAgent {
     }
   }
 
-  private persist(): void {
-    if (!this.storage || !this.snapshot) return;
+  private persist(): boolean {
+    if (!this.storage || !this.snapshot) return false;
     try {
       const value: PersistedCompanionState = {
         tactic: this.snapshot.tactic,
@@ -255,8 +287,10 @@ export class CompanionAgent {
         messages: [...this.snapshot.messages].slice(-18),
       };
       this.storage.setItem(STORAGE_KEY, JSON.stringify(value));
+      return true;
     } catch {
       // Storage can be unavailable in privacy mode; the live companion remains usable.
+      return false;
     }
   }
 }

@@ -29,6 +29,25 @@ class MemoryStorage {
   }
 }
 
+test('동행 초기화 후 재로딩해도 이전 대화·유대·전술이 남지 않는다', () => {
+  const storage = new MemoryStorage(), agent = new CompanionAgent({ storage });
+  agent.reply('나를 수호해줘'); agent.reply('이 대화는 초기화 대상입니다'); agent.setOpen(true);
+  expect(agent.reset()).toBe(true);
+  const reloaded = new CompanionAgent({ storage });
+  expect(reloaded.getSnapshot().tactic).toBe('gather'); expect(reloaded.getSnapshot().bond).toBe(1);
+  expect(reloaded.getSnapshot().messages.length).toBe(1);
+  expect(storage.getItem('blade-surge.companion.v1')).not.toContain('초기화 대상');
+  expect(agent.getSnapshot().open).toBe(false);
+});
+
+test('같은 층 재도전에서는 관측 대화를 다시 알린다', () => {
+  const agent = new CompanionAgent();
+  agent.observe('boss-spotted', { id: 'boss', name: '군주' });
+  agent.observe('battle-start', { floor: 1 });
+  agent.observe('boss-spotted', { id: 'boss', name: '군주' });
+  expect(agent.getSnapshot().messages.filter((message) => message.text.includes('군주의 핵')).length).toBe(2);
+});
+
 const COMBAT_CONTEXT: CompanionContext = {
   mode: 'battle',
   heroName: '검성 아르카',

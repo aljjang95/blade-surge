@@ -39,6 +39,10 @@ const headSha = () => { try { return execFileSync('git', ['rev-parse', 'HEAD']).
 
 const [cmd, axis, ...rest] = process.argv.slice(2);
 const note = rest.join(' ') || null;
+if (axis?.startsWith('DEPLOY-') && cmd !== 'status') {
+  console.error('DEPLOY 축은 tools/deploy.mjs가 소유합니다. 일반 회전 명령으로 회수·해제할 수 없습니다.');
+  process.exitCode = 1;
+} else {
 
 if (cmd === 'status' || !cmd) {
   const cl = await q('SELECT axis, session, started_at, note FROM rsi_claim WHERE repo = ? ORDER BY started_at', [REPO]);
@@ -92,3 +96,4 @@ if (cmd === 'done' || cmd === 'fail') {
 
 console.error('알 수 없는 명령. status | claim | done | fail | steal');
 process.exit(1);
+}

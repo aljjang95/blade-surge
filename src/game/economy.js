@@ -55,7 +55,27 @@ export class Economy {
       this._lastGoodSave = raw; this.storageStatus = 'ready'; return true;
     } catch { this.storageStatus = 'unavailable'; return false; }
   }
-  reset() { this.s = this.fresh(); this._lastGoodSave = JSON.stringify(this.s); this.emit(); }
+  reset() {
+    let cleared = true;
+    try { for (const key of [KEY, KEY + '_backup', KEY + '_recovery']) localStorage.removeItem(key); }
+    catch { cleared = false; }
+    this.s = this.fresh(); this._lastGoodSave = JSON.stringify(this.s); this.bonusReceipts = new WeakSet(); this.emit();
+    return cleared && this.storageStatus === 'ready';
+  }
+  rollbackEnergy(snapshot) {
+    Object.assign(this.s, { energy: snapshot.energy, energyT: snapshot.energyT });
+    const raw = JSON.stringify(this.s);
+    this._lastGoodSave = raw;
+    try {
+      localStorage.setItem(KEY, raw);
+      localStorage.setItem(KEY + '_backup', raw);
+      this.storageStatus = 'ready'; return true;
+    } catch {
+      // 취소된 차감 상태가 복구 경로에서 되살아나지 않도록 낡은 백업을 제거한다.
+      try { localStorage.removeItem(KEY + '_backup'); } catch {}
+      this.storageStatus = 'unavailable'; return false;
+    }
+  }
 
   // ---------- 화폐 ----------
   get isVip() { return this.s.vipUntil > now(); }
