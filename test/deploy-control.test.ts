@@ -3,7 +3,7 @@ import { Database } from 'bun:sqlite';
 import { mkdtempSync, readFileSync, readdirSync, unlinkSync, rmdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { acquireDeploymentLease, canReleaseDeploymentLease, deployAndReconcile, persistDeployment, reconcileDeployment } from '../tools/deploy-control.mjs';
+import { acquireDeploymentLease, canReleaseDeploymentLease, deployAndReconcile, persistDeployment, reconcileDeployment, RECONCILABLE_STATUSES } from '../tools/deploy-control.mjs';
 
 test('rename 후 EIO는 정본과 메모리를 맞추고 배포 잠금을 유지한다', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'blade-sync-')), path = join(directory, 'receipt.json');
@@ -27,6 +27,35 @@ test('영수증 교체 전 쓰기 실패에도 이전 재조정 영수증은 온
     expect(() => persistDeployment(path, { status: 'version-verified' }, () => { throw new Error('disk full'); })).toThrow('disk full');
     expect(JSON.parse(readFileSync(path, 'utf8'))).toEqual({ status: 'deploying-unknown', leaseOwner: 'retained' });
     expect(readdirSync(directory)).toEqual(['receipt.json']);
+  } finally { unlinkSync(path); rmdirSync(directory); }
+});
+
+test('종료 상태 저장 후 EIO로 남은 잠금도 새 프로세스에서 원격 호출 없이 해제한다', async () => {
+  const directory = mkdtempSync(join(tmpdir(), 'blade-aborted-')), path = join(directory, 'receipt.json');
+  const owner = crypto.randomUUID(); let session: string | undefined = owner;
+  const mutations: string[] = []; let observations = 0;
+  const query = async (sql: string) => {
+    if (sql.startsWith('SELECT')) return { results: session ? [{ session }] : [], meta: { changes: 0 } };
+    mutations.push(sql);
+    if (sql.startsWith('DELETE')) { session = undefined; return { results: [], meta: { changes: 1 } }; }
+    throw new Error('Unexpected INSERT');
+  };
+  const observe = async () => { observations++; return {}; };
+  try {
+    const receipt = { status: 'prepared', leaseOwner: owner };
+    const lease = await acquireDeploymentLease(query, { head: 'a'.repeat(40), owner, mustExist: true });
+    await expect(reconcileDeployment({ receipt, assertHeld: lease.assertHeld, observe,
+      persist: (value: typeof receipt) => persistDeployment(path, value, writeFileSync, () => { throw Object.assign(new Error('EIO'), { code: 'EIO' }); }),
+    })).rejects.toThrow('정본은 교체');
+    expect(receipt.status).toBe('aborted-before-deploy'); expect(canReleaseDeploymentLease(receipt)).toBe(false);
+    expect(mutations).toEqual([]); expect(session).toBe(owner);
+    const recovered = JSON.parse(readFileSync(path, 'utf8'));
+    expect(RECONCILABLE_STATUSES).toContain(recovered.status);
+    const resumed = await acquireDeploymentLease(query, { head: 'a'.repeat(40), owner: recovered.leaseOwner, mustExist: true });
+    await reconcileDeployment({ receipt: recovered, assertHeld: resumed.assertHeld, observe, persist: (value: typeof receipt) => persistDeployment(path, value) });
+    expect(canReleaseDeploymentLease(recovered)).toBe(true);
+    await resumed.release(); expect(session).toBeUndefined();
+    expect(mutations.length).toBe(1); expect(mutations[0].startsWith('DELETE')).toBe(true); expect(observations).toBe(0);
   } finally { unlinkSync(path); rmdirSync(directory); }
 });
 

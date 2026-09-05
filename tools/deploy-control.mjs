@@ -82,6 +82,7 @@ function commitReceipt(receipt, persist, patch) {
 }
 
 export const canReleaseDeploymentLease = (receipt) => !receipt?.persistenceUncertain && !['deploying-unknown', 'outcome-unknown'].includes(receipt?.status);
+export const RECONCILABLE_STATUSES = ['prepared', 'aborted-before-deploy', 'deploying-unknown', 'outcome-unknown', 'version-verified'];
 
 export const latestDeployment = (list) => [...list].sort((a, b) => Date.parse(b.created_on) - Date.parse(a.created_on))[0];
 
@@ -89,7 +90,7 @@ export async function reconcileDeployment({ receipt, persist, observe, assertHel
   await assertHeld();
   // prepared는 원격 호출 직전의 deploying-unknown 저장 이전 상태다.
   // 실행하지 않은 배포를 기다리지 않고 남은 자기 잠금만 해제할 수 있게 한다.
-  if (receipt.status === 'prepared') {
+  if (['prepared', 'aborted-before-deploy'].includes(receipt.status)) {
     commitReceipt(receipt, persist, { status: 'aborted-before-deploy' });
     return receipt;
   }

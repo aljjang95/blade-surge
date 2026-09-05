@@ -3,7 +3,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { guard, readVersion } from './deploy-guard.mjs';
-import { acquireDeploymentLease, canReleaseDeploymentLease, cloudflareQuery, deployAndReconcile, latestDeployment, persistDeployment, reconcileDeployment } from './deploy-control.mjs';
+import { acquireDeploymentLease, canReleaseDeploymentLease, cloudflareQuery, deployAndReconcile, latestDeployment, persistDeployment, reconcileDeployment, RECONCILABLE_STATUSES } from './deploy-control.mjs';
 import config from './release-config.json' with { type: 'json' };
 
 process.chdir(fileURLToPath(new URL('..', import.meta.url)));
@@ -23,7 +23,7 @@ try {
   const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   if (recovering) {
     receipt = JSON.parse(readFileSync(receiptPath, 'utf8'));
-    if (!['prepared', 'deploying-unknown', 'outcome-unknown', 'version-verified'].includes(receipt.status) || receipt.head !== head || receipt.target !== config.origin || !/^[a-f0-9-]{36}$/.test(receipt.leaseOwner)) throw new Error('재조정할 배포 영수증과 HEAD가 다릅니다.');
+    if (!RECONCILABLE_STATUSES.includes(receipt.status) || receipt.head !== head || receipt.target !== config.origin || !/^[a-f0-9-]{36}$/.test(receipt.leaseOwner)) throw new Error('재조정할 배포 영수증과 HEAD가 다릅니다.');
     lease = await acquireDeploymentLease(query, { head, owner: receipt.leaseOwner, mustExist: true });
   } else {
     lease = await acquireDeploymentLease(query, { head });
