@@ -1,7 +1,14 @@
 import * as THREE from 'three';
 import { softCircleTex, sparkTex, ringTex, slashTex, smokeTex, VFX_TEX } from './assets.js';
+import { ImpactLights } from './impact-lights.js';
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
+
+async function waitForCompilation(compiling) {
+  let timer;
+  try { return await Promise.race([compiling, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('render preparation timeout')), 30000); })]); }
+  finally { clearTimeout(timer); }
+}
 
 // ============ GPU Points 파티클 풀 ============
 class ParticlePool {
@@ -67,36 +74,128 @@ export class FX {
     this.glow = new ParticlePool(scene, { max: 1200, texture: softCircleTex() });
     this.smoke = new ParticlePool(scene, { max: 400, texture: smokeTex(), blending: THREE.NormalBlending });
     this.items = []; // {obj, t, life, update}
-    this.lights = []; // 임시 포인트라이트
+    this.impactLights = new ImpactLights(scene);
+    this.lights = this.impactLights.slots;
     this.dmgLayer = document.getElementById('dmg-layer');
     this.dmgPool = []; this.maxDmg = 40;
     this.quality = 'high';
     this._mats = {};
+    this._transparentMats = new Map();
+    this._depthMats = new Map();
+    this.plane1 = new THREE.PlaneGeometry(1, 1);
+    this.plane2 = new THREE.PlaneGeometry(2, 2);
+    this.fireTextures = [];
     this.trails = [];
   }
-  setQuality(q) { this.quality = q; }
+  setQuality(q) { this.quality = q; this.impactLights.setEnabled(q !== 'low'); }
   get lite() { return this.quality === 'low'; }
   add(obj, life, update, onEnd) { this.scene.add(obj); this.items.push({ obj, t: 0, life, update, onEnd }); return obj; }
   update(dt) {
     this.sparks.update(dt); this.glow.update(dt); this.smoke.update(dt);
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i]; it.t += dt; const k = it.t / it.life;
-      if (k >= 1) { this.scene.remove(it.obj); it.onEnd?.(); it.obj.traverse?.((o) => { if (o.geometry && o.userData.ownGeo) o.geometry.dispose(); }); this.items.splice(i, 1); continue; }
+      if (k >= 1) { this._finishItem(i); continue; }
       it.update?.(k, it.t, dt);
     }
-    for (let i = this.lights.length - 1; i >= 0; i--) {
-      const l = this.lights[i]; l.t += dt; const k = l.t / l.life;
-      if (k >= 1) { this.scene.remove(l.light); this.lights.splice(i, 1); continue; }
-      l.light.intensity = l.i0 * (1 - k) * (1 - k);
-    }
+    this.impactLights.update(dt);
     for (let i = this.trails.length - 1; i >= 0; i--) { const tr = this.trails[i]; tr.update(dt); if (tr.dead) { this.scene.remove(tr.mesh); this.trails.splice(i, 1); } }
   }
   light(pos, color, intensity = 6, dist = 9, life = 0.35) {
-    if (this.lite || this.lights.length > 6) return;
-    const l = new THREE.PointLight(color, intensity * 2.5, dist, 2); l.position.copy(pos); l.position.y += 1; this.scene.add(l);
-    this.lights.push({ light: l, t: 0, life, i0: intensity * 2.5 });
+    this.impactLights.emit(pos, color, intensity * 2.5, dist, life);
   }
   _mat(key, make) { return this._mats[key] || (this._mats[key] = make()); }
+  _keep(material) {
+    // These are the program-affecting features used by this FX module. Color,
+    // opacity, texture identity and animation frames are uniforms, not cache keys.
+    const key = [material.type, material.blending, material.side, material.transparent, material.fog, material.toneMapped,
+      !!material.map, material.vertexShader || '', material.fragmentShader || ''].join('|');
+    this._mat(key, () => material.clone());
+    return material;
+  }
+  _finishItem(index) {
+    const [it] = this.items.splice(index, 1);
+    this.scene.remove(it.obj); it.onEnd?.();
+    it.obj.traverse?.((o) => { if (o.geometry && o.userData.ownGeo) o.geometry.dispose(); });
+  }
+  async prepare(renderer, models, renderTarget) {
+    // Run while stageStarting blocks game frames/input. compileAsync must finish
+    // with the battle's actual lights/fog/shadows before any combat draw uses it.
+    await new Promise((resolve) => requestAnimationFrame(resolve));
+    if (!this._primed) {
+      const p = new THREE.Vector3(), mark = this.items.length;
+      this.flash(p, 0xffffff); this.ring(p, 0xffffff); this.pillar(p, 0xffffff);
+      this.flipbook(p, 'explosion'); this.flipbook(p, 'dust', { blending: THREE.NormalBlending });
+      this._keep(new THREE.MeshBasicMaterial({ color: 0xffffff } )).dispose();
+      this._keep(new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })).dispose();
+      this._keep(new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })).dispose();
+      this._keep(new THREE.MeshBasicMaterial({ map: softCircleTex(), transparent: true, depthWrite: false })).dispose();
+      // Coins/material drops use untextured PBR, unlike the textured model atlases.
+      this._keep(new THREE.MeshStandardMaterial()).dispose();
+      while (this.items.length > mark) this._finishItem(this.items.length - 1);
+      if (VFX_TEX.fire_pillar) for (let i = 0; i < 32; i++) {
+        const texture = VFX_TEX.fire_pillar.clone(); texture.wrapT = THREE.RepeatWrapping; texture.needsUpdate = true;
+        this.fireTextures.push(texture);
+      }
+      this._primed = true;
+    }
+    const warm = new THREE.Scene();
+    for (const material of Object.values(this._mats)) warm.add(material.isSpriteMaterial ? new THREE.Sprite(material) : new THREE.Mesh(this.plane1, material));
+    for (const gltf of Object.values(models)) {
+      warm.add(gltf.scene.clone(true));
+      // Ghostly/dead actors switch to transparent materials. Keep those programs
+      // ready too, so an otherwise smooth first hit does not hitch on its kill.
+      gltf.scene.traverse((o) => {
+        if (!o.isSkinnedMesh) return;
+        const transparent = (source) => {
+          if (!this._transparentMats.has(source)) { const m = source.clone(); m.transparent = true; this._transparentMats.set(source, m); }
+          return this._transparentMats.get(source);
+        };
+        const ghost = o.clone(); ghost.material = Array.isArray(o.material) ? o.material.map(transparent) : transparent(o.material);
+        warm.add(ghost);
+      });
+    }
+    const textures = new Set([...Object.values(VFX_TEX), ...this.fireTextures, sparkTex(), softCircleTex(), ringTex(), slashTex(), smokeTex()]);
+    warm.traverse((o) => {
+      for (const m of (Array.isArray(o.material) ? o.material : [o.material])) if (m) {
+        for (const value of Object.values(m)) if (value?.isTexture) textures.add(value);
+        for (const uniform of Object.values(m.uniforms || {})) if (uniform.value?.isTexture) textures.add(uniform.value);
+      }
+    });
+    for (const texture of textures) if (texture) renderer.initTexture(texture);
+    // RenderPass draws into the composer's linear target, not the sRGB screen.
+    // Preparing against the screen would retain different programs and still
+    // force compilation when a skill reaches the actual battle render target.
+    const previousTarget = renderer.getRenderTarget();
+    renderer.setRenderTarget(renderTarget);
+    try {
+      await waitForCompilation(renderer.compileAsync(this.scene, this.camera));
+      await waitForCompilation(renderer.compileAsync(warm, this.camera, this.scene));
+      if (renderer.shadowMap.enabled) {
+        // The shadow renderer uses a fog-free scene and depth materials of its
+        // own. Color-material compilation alone misses the first monster shadow.
+        const shadowTarget = new THREE.Scene(), shadowWarm = new THREE.Scene();
+        this.scene.traverseVisible((o) => { if (o.isLight) shadowTarget.add(o.clone()); });
+        const addShadow = (o) => {
+          if (!o.isMesh || !o.castShadow) return;
+          const depth = (source) => {
+            const side = source.shadowSide ?? (source.side === THREE.FrontSide ? THREE.BackSide : source.side === THREE.BackSide ? THREE.FrontSide : THREE.DoubleSide);
+            const key = [!!o.isSkinnedMesh, !!o.isInstancedMesh, !!o.instanceColor, !!o.morphTexture,
+              JSON.stringify(Object.fromEntries(Object.entries(o.geometry.morphAttributes).map(([k, v]) => [k, v.length]))),
+              side, !!source.map, source.map?.channel, !!source.alphaMap, source.alphaMap?.channel, source.alphaTest > 0, source.alphaHash, !!source.displacementMap].join('|');
+            if (!this._depthMats.has(key)) this._depthMats.set(key, new THREE.MeshDepthMaterial({
+              depthPacking: THREE.RGBADepthPacking, side, map: source.map ?? null, alphaMap: source.alphaMap ?? null,
+              alphaTest: source.alphaTest, alphaHash: source.alphaHash, displacementMap: source.displacementMap ?? null,
+              displacementScale: source.displacementScale ?? 1, displacementBias: source.displacementBias ?? 0,
+            }));
+            return this._depthMats.get(key);
+          };
+          const object = o.clone(false); object.material = Array.isArray(o.material) ? o.material.map(depth) : depth(o.material); shadowWarm.add(object);
+        };
+        this.scene.traverse(addShadow); warm.traverse(addShadow);
+        await waitForCompilation(renderer.compileAsync(shadowWarm, this.camera, shadowTarget));
+      }
+    } finally { renderer.setRenderTarget(previousTarget); }
+  }
 
   // ---------- 파티클 프리셋 ----------
   burst(pos, color, { n = 18, speed = 7, size = 0.35, life = 0.5, grav = 12, up = 0.5, pool = 'sparks', spread = 1, shrink = 0.2 } = {}) {
@@ -127,16 +226,15 @@ export class FX {
 
   // ---------- 스프라이트 플래시 ----------
   flash(pos, color, { size = 2.2, life = 0.18, tex = 'spark' } = {}) {
-    const m = new THREE.SpriteMaterial({ map: tex === 'spark' ? sparkTex() : softCircleTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 1 });
+    const m = this._keep(new THREE.SpriteMaterial({ map: tex === 'spark' ? sparkTex() : softCircleTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 1 }));
     const s = new THREE.Sprite(m); s.position.copy(pos); s.scale.setScalar(size * 0.3); s.material.rotation = Math.random() * Math.PI; s.renderOrder = 11;
     this.add(s, life, (k) => { s.scale.setScalar(size * (0.3 + k * 1.2)); m.opacity = 1 - k; }, () => m.dispose());
   }
   // ---------- 지면 충격파 링 ----------
   ring(pos, color, { r0 = 0.3, r1 = 4, life = 0.45, width = 0.5, y = 0.08, vertical = false, thick = 1 } = {}) {
-    const m = new THREE.MeshBasicMaterial({ map: ringTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 1 });
-    const geo = new THREE.PlaneGeometry(2, 2); const mesh = new THREE.Mesh(geo, m); mesh.position.copy(pos); mesh.position.y += y; mesh.renderOrder = 9;
+    const m = this._keep(new THREE.MeshBasicMaterial({ map: ringTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 1 }));
+    const mesh = new THREE.Mesh(this.plane2, m); mesh.position.copy(pos); mesh.position.y += y; mesh.renderOrder = 9;
     if (vertical) mesh.lookAt(this.camera.position); else mesh.rotation.x = -Math.PI / 2;
-    mesh.userData.ownGeo = true;
     this.add(mesh, life, (k) => { const e = 1 - Math.pow(1 - k, 3); const r = r0 + (r1 - r0) * e; mesh.scale.set(r, r, r * thick); m.opacity = (1 - k) * 1.2; }, () => m.dispose());
   }
   // ---------- 참격 아크 (지면 평행, 캐릭터 전방) ----------
@@ -146,7 +244,7 @@ export class FX {
     // uv: u 를 각도 방향으로
     const uv = geo.attributes.uv; const p = geo.attributes.position;
     for (let i = 0; i < uv.count; i++) { const x = p.getX(i), y = p.getY(i); const ang = Math.atan2(y, x); const rr = Math.hypot(x, y); uv.setXY(i, (ang + a / 2) / a, (rr - radius * (1 - thickness)) / (radius * thickness)); }
-    const m = new THREE.MeshBasicMaterial({ map: slashTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 1 });
+    const m = this._keep(new THREE.MeshBasicMaterial({ map: slashTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 1 }));
     const mesh = new THREE.Mesh(geo, m); mesh.userData.ownGeo = true; mesh.renderOrder = 12;
     mesh.position.copy(pos); mesh.position.y += height;
     mesh.rotation.order = 'YXZ'; mesh.rotation.y = yaw - Math.PI / 2 + (flip ? 0 : 0); mesh.rotation.x = -Math.PI / 2 + tilt * (flip ? -1 : 1);
@@ -158,7 +256,7 @@ export class FX {
     const geo = new THREE.RingGeometry(size * 0.55, size, 32, 1, Math.PI * 0.2, Math.PI * 0.6);
     const uv = geo.attributes.uv; const p = geo.attributes.position; const a0 = Math.PI * 0.2, a = Math.PI * 0.6;
     for (let i = 0; i < uv.count; i++) { const x = p.getX(i), y = p.getY(i); const ang = Math.atan2(y, x); uv.setXY(i, (ang - a0) / a, (Math.hypot(x, y) - size * 0.55) / (size * 0.45)); }
-    const m = new THREE.MeshBasicMaterial({ map: slashTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+    const m = this._keep(new THREE.MeshBasicMaterial({ map: slashTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
     const mesh = new THREE.Mesh(geo, m); mesh.userData.ownGeo = true; mesh.renderOrder = 12; mesh.position.copy(pos);
     const d = dir.clone().normalize();
     // 진행 방향에 수직인 평면(로컬 +Z = 진행 방향) + 카메라 쪽으로 기울임
@@ -169,19 +267,19 @@ export class FX {
   // ---------- 빛의 기둥 ----------
   pillar(pos, color, { radius = 0.9, height = 9, life = 0.6, delay = 0 } = {}) {
     const geo = new THREE.CylinderGeometry(radius, radius * 1.15, height, 16, 1, true);
-    const m = new THREE.ShaderMaterial({
+    const m = this._keep(new THREE.ShaderMaterial({
       uniforms: { uColor: { value: new THREE.Color(color) }, uK: { value: 0 } },
       vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
       fragmentShader: `uniform vec3 uColor; uniform float uK; varying vec2 vUv; void main(){ float a = pow(1.0 - vUv.y, 1.6) * smoothstep(0.0, 0.1, vUv.y); float edge = pow(abs(sin(vUv.x * 6.283 * 4.0 + uK * 6.0)), 3.0) * 0.5 + 0.5; a *= edge * (1.0 - uK) * 0.42; gl_FragColor = vec4(uColor, a); }`,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
-    });
+    }));
     const mesh = new THREE.Mesh(geo, m); mesh.userData.ownGeo = true; mesh.position.copy(pos); mesh.position.y += height / 2; mesh.scale.set(0.1, 1, 0.1); mesh.renderOrder = 8;
     this.add(mesh, life + delay, (k, t) => { const kk = Math.max(0, (t - delay) / life); mesh.visible = t >= delay; const s = kk < 0.2 ? kk / 0.2 : 1 - (kk - 0.2) / 0.8 * 0.6; mesh.scale.set(s, 1, s); m.uniforms.uK.value = kk; }, () => m.dispose());
   }
   // ---------- 번개 ----------
   lightning(from, to, color = 0x9ad8ff, { life = 0.28, width = 0.16, segs = 12, jitter = 0.7, branches = 2 } = {}) {
     const group = new THREE.Group();
-    const m = new THREE.MeshBasicMaterial({ color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide });
+    const m = this._keep(new THREE.MeshBasicMaterial({ color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
     const build = () => {
       while (group.children.length) { const c = group.children.pop(); c.geometry.dispose(); }
       const mk = (a, b, w, n) => {
@@ -207,14 +305,14 @@ export class FX {
   // ---------- 발광 구체 (투사체 본체) ----------
   orb(color, size = 0.4) {
     const g = new THREE.Group();
-    const core = new THREE.Mesh(new THREE.SphereGeometry(size * 0.5, 12, 10), new THREE.MeshBasicMaterial({ color: 0xffffff }));
-    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: softCircleTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true })); halo.scale.setScalar(size * 4);
+    const core = new THREE.Mesh(new THREE.SphereGeometry(size * 0.5, 12, 10), this._keep(new THREE.MeshBasicMaterial({ color: 0xffffff })));
+    const halo = new THREE.Sprite(this._keep(new THREE.SpriteMaterial({ map: softCircleTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }))); halo.scale.setScalar(size * 4);
     g.add(core, halo); g.userData.halo = halo; g.userData.core = core; return g;
   }
   // ---------- 그을음 데칼 ----------
   scorch(pos, { radius = 2, life = 4, color = 0x000000 } = {}) {
     if (this.lite) return;
-    const m = new THREE.MeshBasicMaterial({ map: softCircleTex(), color, transparent: true, depthWrite: false, opacity: 0.7 });
+    const m = this._keep(new THREE.MeshBasicMaterial({ map: softCircleTex(), color, transparent: true, depthWrite: false, opacity: 0.7 }));
     const mesh = new THREE.Mesh(new THREE.PlaneGeometry(radius * 2, radius * 2), m); mesh.userData.ownGeo = true; mesh.rotation.x = -Math.PI / 2; mesh.position.copy(pos); mesh.position.y = 0.04; mesh.renderOrder = 1;
     this.add(mesh, life, (k) => { m.opacity = 0.7 * (1 - k); }, () => m.dispose());
   }
@@ -231,30 +329,30 @@ export class FX {
       if (!o.isSkinnedMesh) return;
       const src = o.geometry; const cnt = src.attributes.position.count; const arr = new Float32Array(cnt * 3);
       for (let i = 0; i < cnt; i++) { o.getVertexPosition(i, _v); _v.applyMatrix4(o.matrixWorld); arr[i * 3] = _v.x; arr[i * 3 + 1] = _v.y; arr[i * 3 + 2] = _v.z; }
-      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3)); if (src.index) g.setIndex(src.index);
+      const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(arr, 3)); if (src.index) g.setIndex(src.index.clone());
       parts.push(g);
     });
     if (!parts.length) return;
-    const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false });
+    const m = this._keep(new THREE.MeshBasicMaterial({ color, transparent: true, opacity, blending: THREE.AdditiveBlending, depthWrite: false }));
     const grp = new THREE.Group(); for (const g of parts) { const mm = new THREE.Mesh(g, m); mm.userData.ownGeo = true; grp.add(mm); }
     if (at) { root.getWorldPosition(_v); grp.position.set(at.x - _v.x, 0, at.z - _v.z); }   // 분신: 지오메트리가 월드 좌표로 구워져 있어 그룹 오프셋으로 옮긴다
     this.add(grp, life, (k) => { m.opacity = opacity * (1 - k); }, () => m.dispose());
   }
   // ========== GPT 생성 VFX 텍스처 기반 이펙트 ==========
-  _addMat(tex, color, { blending = THREE.AdditiveBlending } = {}) { return new THREE.MeshBasicMaterial({ map: tex, color, blending, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 1 }); }
+  _addMat(tex, color, { blending = THREE.AdditiveBlending } = {}) { return this._keep(new THREE.MeshBasicMaterial({ map: tex, color, blending, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 1 })); }
   /** 카메라를 향하는 텍스처 플래시 (holy_burst, ice, shockwave 등) */
   texFlash(pos, name, color = 0xffffff, { size = 3, life = 0.35, spin = 0, grow = 1.3, y = 1 } = {}) {
     const tex = VFX_TEX[name]; if (!tex) return this.flash(pos, color, { size, life });
-    const m = new THREE.SpriteMaterial({ map: tex, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, rotation: Math.random() * Math.PI * 2 });
+    const m = this._keep(new THREE.SpriteMaterial({ map: tex, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, rotation: Math.random() * Math.PI * 2 }));
     const sp = new THREE.Sprite(m); sp.position.copy(pos); sp.position.y += y; sp.scale.setScalar(size * 0.4); sp.renderOrder = 11;
-    this.add(sp, life, (k) => { const e = 1 - Math.pow(1 - k, 2); sp.scale.setScalar(size * (0.4 + e * grow)); m.opacity = k < 0.25 ? k / 0.25 : 1 - (k - 0.25) / 0.75; m.rotation += spin * 0.016; }, () => m.dispose());
+    this.add(sp, life, (k, t, dt) => { const e = 1 - Math.pow(1 - k, 2); sp.scale.setScalar(size * (0.4 + e * grow)); m.opacity = k < 0.25 ? k / 0.25 : 1 - (k - 0.25) / 0.75; m.rotation += spin * dt; }, () => m.dispose());
     return sp;
   }
   /** 지면 텍스처 (마법진 / 충격파 링). 회전·확대·페이드 */
   groundTex(pos, name, color = 0xffffff, { r0 = 0.2, r1 = 4, life = 0.5, spin = 1, y = 0.06, fadeIn = 0.15, hold = 0 } = {}) {
     const tex = VFX_TEX[name]; if (!tex) return this.ring(pos, color, { r0, r1, life, y });
     const m = this._addMat(tex, color);
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), m); mesh.userData.ownGeo = true; mesh.rotation.x = -Math.PI / 2; mesh.position.copy(pos); mesh.position.y = y; mesh.renderOrder = 8;
+    const mesh = new THREE.Mesh(this.plane2, m); mesh.rotation.x = -Math.PI / 2; mesh.position.copy(pos); mesh.position.y = y; mesh.renderOrder = 8;
     this.add(mesh, life, (k, t, dt) => { const e = 1 - Math.pow(1 - k, 3); const r = r0 + (r1 - r0) * e; mesh.scale.set(r, r, 1); mesh.rotation.z += spin * dt; m.opacity = k < fadeIn ? k / fadeIn : (hold > 0 ? (k < 0.65 ? 1 : 1 - (k - 0.65) / 0.35) : 1 - (k - fadeIn) / (1 - fadeIn)); }, () => m.dispose());
     return mesh;
   }
@@ -265,14 +363,14 @@ export class FX {
   /** 플립북 (explosion / dust 4x4 아틀라스) — 빌보드 셰이더 */
   flipbook(pos, name, { size = 3, life = 0.6, color = 0xffffff, cols = 4, rows = 4, y = 1, blending = THREE.AdditiveBlending, opacity = 1 } = {}) {
     const tex = VFX_TEX[name]; if (!tex) return this.burst(pos, color, { n: 20 });
-    const m = new THREE.ShaderMaterial({
+    const m = this._keep(new THREE.ShaderMaterial({
       uniforms: { uTex: { value: tex }, uFrame: { value: 0 }, uGrid: { value: new THREE.Vector2(cols, rows) }, uColor: { value: new THREE.Color(color) }, uScale: { value: size }, uAlpha: { value: opacity } },
       vertexShader: `uniform float uScale; varying vec2 vUv; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(0.0,0.0,0.0,1.0); mv.xy += position.xy * uScale; gl_Position = projectionMatrix * mv; }`,
       fragmentShader: `uniform sampler2D uTex; uniform float uFrame, uAlpha; uniform vec2 uGrid; uniform vec3 uColor; varying vec2 vUv;
         void main(){ float f = floor(uFrame); float cx = mod(f, uGrid.x); float cy = floor(f / uGrid.x); vec2 uv = (vUv + vec2(cx, uGrid.y - 1.0 - cy)) / uGrid; vec4 t = texture2D(uTex, uv); float lum = max(t.r, max(t.g, t.b)); gl_FragColor = vec4(t.rgb * uColor, lum * uAlpha); }`,
       transparent: true, depthWrite: false, blending, side: THREE.DoubleSide,
-    });
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), m); mesh.userData.ownGeo = true; mesh.position.copy(pos); mesh.position.y += y; mesh.renderOrder = 12; mesh.frustumCulled = false;
+    }));
+    const mesh = new THREE.Mesh(this.plane1, m); mesh.position.copy(pos); mesh.position.y += y; mesh.renderOrder = 12; mesh.frustumCulled = false;
     const frames = cols * rows;
     this.add(mesh, life, (k) => { m.uniforms.uFrame.value = Math.min(frames - 1, k * frames); m.uniforms.uAlpha.value = opacity * (k > 0.85 ? (1 - k) / 0.15 : 1); }, () => m.dispose());
     return mesh;
@@ -282,10 +380,11 @@ export class FX {
   /** 화염 기둥: 교차 2장 + UV 스크롤 */
   firePillar(pos, { height = 6, width = 2.2, life = 0.8, color = 0xffb060 } = {}) {
     const tex = VFX_TEX.fire_pillar; if (!tex) return this.pillar(pos, color, { radius: width / 2, height, life });
+    if (this.fireTextures.length < 2) return;
     const g = new THREE.Group(); g.position.copy(pos); g.renderOrder = 12;
     const mats = [];
-    for (let i = 0; i < 2; i++) { const t = tex.clone(); t.needsUpdate = true; t.wrapT = THREE.RepeatWrapping; const m = this._addMat(t, color); const p = new THREE.Mesh(new THREE.PlaneGeometry(width, height), m); p.userData.ownGeo = true; p.position.y = height / 2; p.rotation.y = i * Math.PI / 2; g.add(p); mats.push(m); }
-    this.add(g, life, (k, t, dt) => { const s = k < 0.15 ? k / 0.15 : 1; g.scale.set(s, k < 0.15 ? k / 0.15 : 1 + k * 0.1, s); for (const m of mats) { m.map.offset.y -= dt * 1.6; m.opacity = k > 0.6 ? (1 - k) / 0.4 : 1; } }, () => mats.forEach((m) => { m.map.dispose(); m.dispose(); }));
+    for (let i = 0; i < 2; i++) { const t = this.fireTextures.pop(); t.offset.set(0, 0); const m = this._addMat(t, color); const p = new THREE.Mesh(this.plane1, m); p.scale.set(width, height, 1); p.position.y = height / 2; p.rotation.y = i * Math.PI / 2; g.add(p); mats.push(m); }
+    this.add(g, life, (k, t, dt) => { const s = k < 0.15 ? k / 0.15 : 1; g.scale.set(s, k < 0.15 ? k / 0.15 : 1 + k * 0.1, s); for (const m of mats) { m.map.offset.y -= dt * 1.6; m.opacity = k > 0.6 ? (1 - k) / 0.4 : 1; } }, () => mats.forEach((m) => { this.fireTextures.push(m.map); m.dispose(); }));
   }
   /** 텍스처 번개: 두 점 사이 빌보드 스트립 */
   boltTex(from, to, color = 0x9ad8ff, { width = 1.6, life = 0.25 } = {}) {
@@ -326,7 +425,14 @@ export class FX {
     el.addEventListener('animationend', done);
   }
   clearDamage() { while (this.dmgLayer.firstChild) this.dmgLayer.removeChild(this.dmgLayer.firstChild); }
-  clearAll() { for (const it of this.items) this.scene.remove(it.obj); this.items.length = 0; for (const l of this.lights) this.scene.remove(l.light); this.lights.length = 0; for (const t of this.trails) this.scene.remove(t.mesh); this.trails.length = 0; this.sparks.n = this.glow.n = this.smoke.n = 0; this.clearDamage(); }
+  clearAll() {
+    while (this.items.length) this._finishItem(this.items.length - 1);
+    this.impactLights.clear();
+    for (const t of this.trails) { this.scene.remove(t.mesh); if (!t.dead) { t.geo.dispose(); t.mat.dispose(); t.dead = true; } }
+    this.trails.length = 0;
+    for (const pool of [this.sparks, this.glow, this.smoke]) { pool.n = 0; pool.geo.setDrawRange(0, 0); }
+    this.clearDamage();
+  }
 }
 
 class WeaponTrail {

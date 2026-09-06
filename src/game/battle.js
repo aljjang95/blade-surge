@@ -56,7 +56,7 @@ export class Battle {
   async start(stage, heroId, heroState, equipBonus) {
     // 재도전/다음 층에서도 이전 액터·탐험 목표·시간 효과를 반드시 종료한다.
     this.stop(); this.autoTarget = null; this.timeCtl = new TimeCtl();
-    this.stage = stage; this.active = true; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0;
+    this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
     this.combo = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0;
     if (this.portal) { this.scene.remove(this.portal.mesh); this.portal = null; }
@@ -75,12 +75,13 @@ export class Battle {
     this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], this.app.eco.heroEquipInsts(heroId), heroState.level || 1);
     const sr = this.world.startRoom;
     this.player.pos.set(sr.x, 0, sr.z); this.player.yaw = 0;
+    await this.fx.prepare(this.renderer.r, this.app.models, this.renderer.composer.readBuffer);
     this.drops.setup(this.app.models.dungeon);
     this.renderer.rig.mode = 'battle'; this.renderer.rig.target.copy(this.player.pos); this.renderer.rig.pos.copy(this.player.pos).add(this.renderer.rig.offset);
     this.weaponsGltf = await loadModel('skel_weapons');
     this.ui.setupHud(def, this.player);
     this.ui.setupMinimap(this.world);
-    this.input.enabled = true; this.input.clear();
+    this.active = true; this.input.enabled = true; this.input.clear();
     this.app.companionAgent?.startBattle(this);
     audio.playMusic(Math.random() < 0.5 ? 'bgm_battle' : 'bgm_battle2');
     this.ui.showHud(true);
