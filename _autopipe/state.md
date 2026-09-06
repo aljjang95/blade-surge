@@ -1,5 +1,7 @@
 # 블레이드 서지 도그푸딩 패치 — 2026-09-05
 
+2026-09-06 스킬 끊김 후속: 아래 기존 배포 이력 이후, a4c3e8c의 실제 첫 스킬/궁극기 렌더 호출 429.9/703.8ms를 재현했다. 조명 수 고정, GPU 프로그램 유지, 텍스처 재사용, 전투 색상·그림자 사전 준비와 실패 복귀를 수정했다. 80 tests/510 assertions 및 전체 11구역 승리 회귀 PASS. 실제 시전 구간의 새 프로그램 생성 0, 최종 새 전투의 첫 궁극기 RAF 최대16.7ms/렌더12.2ms. 독립 검토·머지·배포와 최신 SHA는 생성 영수증 및 실제 live로 최종 대조한다. 상세 검증 경계는 `_autopipe/skill-lag.md`를 따른다.
+
 현재 후속 Goal은 `_autopipe/release-goal.md`를 따른다. 대표님이 commit/push/PR review/merge/deploy를 승인했고, 실행 훅 제거 후 작업을 재개했다. 코드 75 tests/484 assertions 및 독립 Pro C0/H0/M0 PASS. PR #4를 머지·배포하고 라이브에서 161처치/41드랍/257초 승리와 정산을 확인했다. 많은 보상이 버튼을 덮던 후속 CSS 수정은 4개 viewport에서 검증했다. 최신 배포 SHA·rollback·잠금 상태는 `_autopipe/evidence/release-deployment.json`과 실제 `/version.json`으로 대조한다. 전용 아트 채택·실제 AI 활성화·실기기 검증은 미완료다. 아래는 앞선 PR #2의 이력이다.
 
 - 요청: 게임의 시작 배경과 대표님 요구를 복구하고, 실제 플레이로 문제를 재현하여 업그레이드한다.

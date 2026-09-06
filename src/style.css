@@ -250,6 +250,8 @@ b { font-weight: 900; }
 .pass-labels { position: absolute; left: 4px; top: 66px; display: flex; flex-direction: column; gap: 6px; font-size: 9px; color: var(--muted); pointer-events: none; }
 
 /* ---------- HUD ---------- */
+#stage-loading { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: rgba(8,6,16,.96); color: var(--gold); font-size: 22px; font-weight: 900; }
+#stage-loading[hidden] { display: none; }
 #hud { }
 .hud-top { position: absolute; top: calc(6px + var(--sat)); left: 8px; right: 8px; display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
 .hud-player { display: flex; gap: 6px; align-items: center; }

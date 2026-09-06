@@ -59,9 +59,10 @@ class App {
     this.arena = new Arena(this.scene, this.models.dungeon, this.renderer);
     this.battle = new Battle(this);
     await this.showcaseHero(this.eco.s.selected, true);
-    setP(1, '준비 완료');
+    setP(0.95, '게임 화면 준비 중…');
     // 셰이더 프리컴파일 (첫 프레임 끊김 방지)
-    this.renderer.r.compile(this.scene, this.renderer.camera);
+    await this.fx.prepare(this.renderer.r, this.models, this.renderer.composer.readBuffer);
+    setP(1, '준비 완료');
     const start = $('boot-start'); start.classList.remove('hidden'); msg.textContent = '';
     await new Promise((res) => { const go = async () => { start.disabled = true; start.textContent = '사운드 준비 중…'; await audio.init(); audio.resume(); res(); }; start.addEventListener('click', go, { once: true }); });
     clearInterval(this._tipTimer);
@@ -129,6 +130,7 @@ class App {
         return false;
       }
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
+      $('stage-loading').hidden = false;
       if (this.showcase) { this.scene.remove(this.showcase.root); this.showcase = null; }
       this.mode = 'battle';
       const id = this.eco.s.selected;
@@ -141,13 +143,13 @@ class App {
       this.ui.toast(rollbackSaved ? '던전을 준비하지 못했습니다. 에너지는 복구됐습니다. 다시 출격해 주세요.' : '현재 창의 에너지는 복구했지만 저장하지 못했습니다. 저장 권한을 확인해 주세요.', 'red');
       console.warn('stage preparation failed', error?.message);
       return false;
-    } finally { this.stageStarting = false; }
+    } finally { $('stage-loading').hidden = true; this.stageStarting = false; }
   }
   // ---------- 루프 ----------
   loop(t) {
     requestAnimationFrame((tt) => this.loop(tt));
     let realDt = Math.min(0.05, (t - this.last) / 1000); this.last = t;
-    if (this.testPause) return;
+    if (this.testPause || this.stageStarting) return;
     this.step(realDt);
   }
   /** 한 프레임 진행 (테스트 시 고정 dt로 호출 가능) */
