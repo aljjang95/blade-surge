@@ -37,8 +37,8 @@ export async function loadModel(name, contract = null) {
   if (cache.has(key)) return cache.get(key);
   const p = loader.loadAsync(`/models/${name}.glb`).then(async (gltf) => {
     if (!contract && HERO_MODELS.includes(name)) {
-      const authored = await loader.loadAsync(`/models/tll/${name.toLowerCase()}-oath-v1.glb`);
-      assembleHeroIdentity(gltf, authored, name);
+      const authored = await loader.loadAsync(`/models/tll/${name.toLowerCase()}-casual-v2.glb`);
+      assembleHeroIdentity(gltf, authored, name, 'casual-v2');
     }
     return prepareModel(gltf, contract);
   });

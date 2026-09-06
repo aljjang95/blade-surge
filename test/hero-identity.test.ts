@@ -27,16 +27,16 @@ function sourceRig(name: string) {
   return { scene, animations: [] as THREE.AnimationClip[] };
 }
 
-for (const name of ['Knight', 'Barbarian', 'Mage', 'Rogue']) {
-  test(`${name}: 실제 authored GLB가 기존 관절에 연결되고 복제·정리 뒤 원본을 보존한다`, async () => {
-    const bytes = readFileSync(new URL(`../public/models/tll/${name.toLowerCase()}-oath-v1.glb`, import.meta.url));
+for (const name of ['Knight', 'Barbarian', 'Mage', 'Rogue']) for (const style of ['oath-v1', 'casual-v2']) {
+  test(`${name}/${style}: 실제 authored GLB가 기존 관절에 연결되고 복제·정리 뒤 원본을 보존한다`, async () => {
+    const bytes = readFileSync(new URL(`../public/models/tll/${name.toLowerCase()}-${style}.glb`, import.meta.url));
     const array = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
     const authored = await new GLTFLoader().parseAsync(array, '');
     const gltf = sourceRig(name);
-    assembleHeroIdentity(gltf, authored, name); prepareModel(gltf);
+    assembleHeroIdentity(gltf, authored, name, style); prepareModel(gltf);
     const skins: THREE.SkinnedMesh[] = [];
     gltf.scene.traverse((o) => { if (o instanceof THREE.SkinnedMesh && o.name.startsWith('TLL_')) skins.push(o); });
-    expect(skins.length).toBe(2);
+    expect(skins.length).toBe(style === 'casual-v2' ? 1 : 2);
     for (const skin of skins) {
       expect(skin.geometry.attributes.position.count).toBeLessThan(25000);
       expect(skin.geometry.attributes.position.array.every(Number.isFinite)).toBe(true);
@@ -45,7 +45,8 @@ for (const name of ['Knight', 'Barbarian', 'Mage', 'Rogue']) {
       expect(bound.distanceTo(p)).toBeLessThan(.0001);
       const material = skin.material as THREE.MeshStandardMaterial;
       expect(material.userData.tllAuthored).toBe(true);
-      expect(material.metalness).toBe(skin.name.endsWith('_1') ? .64 : 0);
+      expect(material.metalness).toBe(style === 'casual-v2' ? 0 : skin.name.endsWith('_1') ? .64 : 0);
+      if (style === 'casual-v2') expect(material.roughness).toBe(.85);
     }
     const clone = spawnCharacter(gltf); const cloneSkin = clone.root.getObjectByName(skins[0]!.name) as THREE.SkinnedMesh;
     expect(cloneSkin.skeleton.bones[0]).not.toBe(skins[0]!.skeleton.bones[0]);

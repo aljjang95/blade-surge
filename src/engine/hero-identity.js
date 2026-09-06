@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /** Bind separately authored Blender surfaces to the shipped combat rig. */
-export function assembleHeroIdentity(gltf, authored, modelName) {
+export function assembleHeroIdentity(gltf, authored, modelName, style = 'oath-v1') {
   gltf.scene.updateMatrixWorld(true); authored.scene.updateMatrixWorld(true);
   let sourceSkeleton;
   gltf.scene.traverse((o) => { if (o.isSkinnedMesh && !sourceSkeleton) sourceSkeleton = o.skeleton; });
@@ -41,7 +41,8 @@ export function assembleHeroIdentity(gltf, authored, modelName) {
     if (!groups[i].length) continue;
     const geometry = mergeGeometries(groups[i]);
     for (const part of groups[i]) part.dispose();
-    const material = new THREE.MeshStandardMaterial({ vertexColors: true, metalness: i ? .64 : 0, roughness: i ? .36 : .73 });
+    const casual = style === 'casual-v2';
+    const material = new THREE.MeshStandardMaterial({ vertexColors: true, metalness: casual ? 0 : i ? .64 : 0, roughness: casual ? .85 : i ? .36 : .73 });
     material.name = `TLL_${i ? 'forged' : 'skin-cloth'}`; material.userData.tllAuthored = true;
     const mesh = new THREE.SkinnedMesh(geometry, material); mesh.name = `TLL_${modelName}_${i}`;
     mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
@@ -51,6 +52,6 @@ export function assembleHeroIdentity(gltf, authored, modelName) {
   const materials = new Set();
   authored.scene.traverse((o) => { if (o.isMesh) { o.geometry.dispose(); materials.add(o.material); } });
   for (const material of materials) material.dispose();
-  gltf.scene.userData.tllIdentity = 'oath-v1';
+  gltf.scene.userData.tllIdentity = style;
   return gltf;
 }

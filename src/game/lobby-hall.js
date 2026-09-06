@@ -5,11 +5,11 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 export function buildOathHall() {
   const group = new THREE.Group(); group.name = 'TLL_OathHall';
   const materials = [
-    new THREE.MeshStandardMaterial({ color: 0x18242a, roughness: .78, metalness: .16 }),
-    new THREE.MeshStandardMaterial({ color: 0x374249, roughness: .48, metalness: .4 }),
-    new THREE.MeshStandardMaterial({ color: 0xa88952, roughness: .34, metalness: .72 }),
-    new THREE.MeshStandardMaterial({ color: 0x163c43, roughness: .94, metalness: 0, side: THREE.DoubleSide }),
-    new THREE.MeshStandardMaterial({ color: 0xaccbd1, emissive: 0x77a6ae, emissiveIntensity: .55, roughness: .6 }),
+    new THREE.MeshStandardMaterial({ color: 0x426b60, roughness: .9, metalness: 0 }),
+    new THREE.MeshStandardMaterial({ color: 0x96b09a, roughness: .85, metalness: 0 }),
+    new THREE.MeshStandardMaterial({ color: 0xdfb879, roughness: .8, metalness: 0 }),
+    new THREE.MeshStandardMaterial({ color: 0x4d9179, roughness: .94, metalness: 0, side: THREE.DoubleSide }),
+    new THREE.MeshStandardMaterial({ color: 0xffefd5, emissive: 0xe6c99a, emissiveIntensity: .1, roughness: .8 }),
   ];
   const batches = materials.map(() => []);
   const transform = new THREE.Object3D();
@@ -20,7 +20,7 @@ export function buildOathHall() {
   const box = (w, h, d, m, x, y, z, ry = 0) => add(new THREE.BoxGeometry(w, h, d), m, x, y, z, 0, ry);
   const ring = (r, tube, m, x, y, z, rx = -Math.PI / 2) => add(new THREE.TorusGeometry(r, tube, 4, 64), m, x, y, z, rx);
   box(34, .3, 28, 0, 0, -.4, -4);
-  add(new THREE.CylinderGeometry(2.05, 2.2, .18, 12), 1, 0, -.16, 0);
+  add(new THREE.CylinderGeometry(2.05, 2.2, .18, 48), 1, 0, -.16, 0);
   add(new THREE.CylinderGeometry(1.9, 1.97, .08, 64), 0, 0, -.03, 0);
   ring(1.86, .018, 2, 0, .018, 0); ring(2.12, .026, 2, 0, -.08, 0);
   // Stone joints converge on the dais, without objects crossing the hero.
@@ -30,21 +30,18 @@ export function buildOathHall() {
   }
   // Receding pointed arches are the room's silhouette.
   const arch = (cx, z, width, height, depth) => {
-    const r = width / 2, shoulder = height * .66;
+    const r = width / 2, shoulder = height - r;
     for (const side of [-1, 1]) {
       box(.3, shoulder, depth, 1, cx + side * r, shoulder / 2 - .2, z);
       box(.46, .2, depth + .15, 2, cx + side * r, .1, z);
       box(.4, .12, depth + .08, 2, cx + side * r, shoulder - .35, z);
-      const a = new THREE.Vector3(cx + side * r, shoulder - .2, z);
-      const b = new THREE.Vector3(cx, height - .2, z);
-      const mid = a.clone().add(b).multiplyScalar(.5), delta = b.clone().sub(a);
-      add(new THREE.BoxGeometry(.3, delta.length(), depth), 1, mid.x, mid.y, mid.z, 0, 0, -Math.atan2(delta.x, delta.y));
-      add(new THREE.BoxGeometry(.035, delta.length(), depth + .012), 2, mid.x, mid.y, mid.z + .02, 0, 0, -Math.atan2(delta.x, delta.y));
     }
+    add(new THREE.TorusGeometry(r, .2, 8, 40, Math.PI), 1, cx, shoulder - .2, z);
+    add(new THREE.TorusGeometry(r, .025, 6, 40, Math.PI), 2, cx, shoulder - .2, z + .195);
   };
-  arch(0, -4.8, 5.6, 6.4, .42);
-  arch(0, -8.1, 5.6, 6.4, .42);
-  arch(-6.5, -5.5, 4, 6.1, .42); arch(6.5, -5.5, 4, 6.1, .42);
+  arch(0, -4.8, 5.6, 5, .42);
+  arch(0, -8.1, 5.6, 5.2, .42);
+  arch(-6.5, -5.5, 4, 4.7, .42); arch(6.5, -5.5, 4, 4.7, .42);
   box(32, 8, .5, 0, 0, 3.6, -11);
   // Tall slit windows supply a calm rim rather than full-screen glow.
   for (const x of [-7.8, -5.2, -1.35, 1.35, 5.2, 7.8]) {

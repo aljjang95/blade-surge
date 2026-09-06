@@ -6,6 +6,7 @@ from mathutils import Vector
 parser=argparse.ArgumentParser()
 parser.add_argument('--masters',required=True,help='Directory for editable Blender masters')
 parser.add_argument('--output',default=os.path.abspath(os.path.join(os.path.dirname(__file__),'../../public/models/tll')))
+parser.add_argument('--casual',action='store_true',help='Rounded matte casual-v2 appearance')
 args=parser.parse_args(sys.argv[sys.argv.index('--')+1:] if '--' in sys.argv else [])
 BASE=os.path.abspath(args.masters);OUT=os.path.abspath(args.output)
 if os.path.exists(BASE) and os.listdir(BASE):
@@ -126,6 +127,11 @@ for hero in ['knight','barbarian','mage','rogue']:
  dark=material('Lash and pupil',(.012,.016,.02),0,.8)
  eye=material('Eye',(.71,.69,.58),0,.36)
  gem=material('House gemstone',{'knight':(.03,.36,.33),'barbarian':(.43,.06,.02),'mage':(.075,.27,.65),'rogue':(.29,.075,.38)}[hero],.4,.2)
+ if args.casual:
+  palette=[(steel,(.18,.29,.34)),(ivory,(.88,.80,.60)),(brass,(.70,.43,.18)),(cloth,{'knight':(.20,.48,.39),'barbarian':(.56,.22,.12),'mage':(.27,.38,.65),'rogue':(.36,.23,.46)}[hero])]
+  for mat,col in palette:
+   mat.diffuse_color=(*col,1);bs=mat.node_tree.nodes.get('Principled BSDF');bs.inputs['Base Color'].default_value=(*col,1);bs.inputs['Metallic'].default_value=0;bs.inputs['Roughness'].default_value=.85
+  gem.node_tree.nodes.get('Principled BSDF').inputs['Metallic'].default_value=0
  ellipsoid('Neck',(0,1.335,-.025),(.135,.19,.13),skin,'chest')
  ellipsoid('Padded torso',(0,.975,-.02),(.34 if hero=='barbarian' else .25 if hero=='rogue' else .28,.29,.22),skin if hero=='barbarian' else cloth,'chest')
  ellipsoid('Waist',(0,.715,-.015),(.25,.105,.19),steel,'hips')
@@ -223,6 +229,31 @@ for hero in ['knight','barbarian','mage','rogue']:
   if o.get('tllBone')=='head':
    bpy.data.objects.remove(o,do_unlink=True)
  fitted_headwear(hero,steel,ivory,brass,cloth,hair,gem)
+ if args.casual:
+  removed=('Ivory oath crest','Attached crown wing','Attached crimson crest','War circlet clasp','Joined star setting','Set astral stone','Cuirass','Breastplate facet','Laminated pauldron','Astral chest stone','Mask oath mark')
+  for o in list(bpy.data.objects):
+   if any(o.name==name or o.name.startswith(name+'.') for name in removed):bpy.data.objects.remove(o,do_unlink=True)
+  if hero=='knight':
+   plate('Soft three-lobed crown',[(-.18,2.12,.49),(-.18,2.24,.49),(-.14,2.26,.49),(-.07,2.21,.49),(0,2.32,.49),(.07,2.21,.49),(.14,2.26,.49),(.18,2.24,.49),(.18,2.12,.49)],.04,brass,bevel=.025)
+   for x,y in [(-.14,2.26),(0,2.32),(.14,2.26)]:ellipsoid('Crown rounded tip',(x,y,.49),(.035,.035,.025),brass)
+  elif hero=='barbarian':
+   ellipsoid('Round headband clasp',(0,2.075,.403),(.10,.065,.027),brass)
+  elif hero=='mage':
+   for i in range(5):
+    a=i*2*math.pi/5;ellipsoid('Astral flower petal',(math.sin(a)*.072,2.13+math.cos(a)*.072,.415),(.052,.055,.022),ivory)
+   ellipsoid('Astral flower center',(0,2.13,.445),(.043,.043,.02),gem)
+  else:
+   ellipsoid('Scarf button',(0,1.385,.54),(.027,.027,.012),brass)
+  if hero!='barbarian':
+   ellipsoid('Quilted jacket',(0,.98,-.005),(.29,.285,.23),cloth,'chest')
+   ellipsoid('Soft chest patch',(0,1.025,.235),(.18,.195,.05),ivory if hero=='knight' else cloth,'chest')
+  for s,side in [(1,'l'),(-1,'r')]:
+   if hero=='barbarian' and s==-1:continue
+   ellipsoid('Padded shoulder',(s*.29,1.15,0),(.17,.145,.17),ivory if hero=='knight' else cloth,'upperarm.'+side)
+  if hero=='mage':ellipsoid('Robe brooch',(0,1.07,.297),(.06,.075,.025),gem,'chest')
+  for o in bpy.data.objects:
+   if o.type=='MESH' and o.name.startswith('Astral robe'):
+    for poly in o.data.polygons:poly.use_smooth=True
  # Join by bone: the runtime binds these authored surfaces into one batched skin.
  groups={}
  for o in list(bpy.data.objects):
@@ -232,6 +263,7 @@ for hero in ['knight','barbarian','mage','rogue']:
   for o in objects:o.select_set(True)
   bpy.context.view_layer.objects.active=objects[0];bpy.ops.object.join()
   o=bpy.context.object;o.name='TLL_'+bone.replace('.','');o['tllBone']=bone
- bpy.ops.wm.save_as_mainfile(filepath=os.path.join(BASE,hero+'-oath-v1.blend'))
- bpy.ops.export_scene.gltf(filepath=os.path.join(OUT,hero+'-oath-v1.glb'),export_format='GLB',export_extras=True,export_animations=False)
+ version='casual-v2' if args.casual else 'oath-v1'
+ bpy.ops.wm.save_as_mainfile(filepath=os.path.join(BASE,hero+'-'+version+'.blend'))
+ bpy.ops.export_scene.gltf(filepath=os.path.join(OUT,hero+'-'+version+'.glb'),export_format='GLB',export_extras=True,export_animations=False)
  print('TLL_AUTHORED',hero)
