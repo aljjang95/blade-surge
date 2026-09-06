@@ -339,7 +339,12 @@ b { font-weight: 900; }
 /* ---------- result ---------- */
 #result { display: none; align-items: center; justify-content: center; background: rgba(4,3,10,.75); backdrop-filter: blur(4px); }
 #result.show { display: flex; }
-.result-box { width: min(92vw, 420px); background: var(--panel2); border: 1px solid var(--line); border-radius: 22px; padding: 20px 16px calc(16px + var(--sab)); display: flex; flex-direction: column; align-items: center; gap: 10px; animation: boxIn .5s cubic-bezier(.2,1.4,.3,1) both; }
+.result-box { width: min(92vw, 420px); max-height: 96vh; max-height: 96dvh; overflow-y: auto; background: var(--panel2); border: 1px solid var(--line); border-radius: 22px; padding: 20px 16px calc(16px + var(--sab)); display: flex; flex-direction: column; align-items: center; gap: 10px; animation: boxIn .5s cubic-bezier(.2,1.4,.3,1) both; }
+.result-box > * { flex-shrink: 0; }
+.result-box .loot { flex: 0 1 auto; min-height: 72px; width: 100%; padding: 4px; overflow-y: auto; align-content: flex-start; overscroll-behavior: contain; }
+.result-box .loot-item { flex: 0 0 64px; width: 64px; height: 68px; padding: 3px; gap: 2px; justify-content: flex-start; }
+.result-box .loot-item img { width: 32px; height: 32px; }
+.result-box .loot-item .nm { position: static; order: -1; max-width: 100%; font-size: 10px; line-height: 12px; overflow: hidden; text-overflow: ellipsis; }
 @keyframes boxIn { from { transform: scale(.6) translateY(40px); opacity: 0 } to { transform: none; opacity: 1 } }
 .result-title { font-family: var(--disp); font-size: 48px; color: var(--gold); text-shadow: 0 0 24px rgba(255,170,40,.7), 0 4px 0 #7a3a00; letter-spacing: .1em; }
 .result-title.lose { color: #ff5a7a; text-shadow: 0 0 24px rgba(255,60,90,.6), 0 4px 0 #500; }
@@ -348,7 +353,7 @@ b { font-weight: 900; }
 .stars i.on { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23ffcf5a' stroke='%23c77a12' stroke-width='1' d='M12 2l2.5 6.5L21 9l-5 4.5L17.5 21 12 17.5 6.5 21 8 13.5 3 9l6.5-.5z'/%3E%3C/svg%3E"); filter: drop-shadow(0 0 8px var(--gold)); }
 .stars i.pop { animation: starPop .5s cubic-bezier(.2,1.6,.3,1) forwards; }
 @keyframes starPop { from { transform: scale(2.5) rotate(-30deg); opacity: 0 } to { transform: scale(1); opacity: 1 } }
-.result-stats { display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+.result-stats { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; font-size: 12px; color: var(--muted); }
 .result-stats b { color: var(--txt); }
 .loot { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; min-height: 64px; }
 .loot-item { width: 60px; height: 60px; border-radius: 12px; background: rgba(0,0,0,.4); border: 2px solid var(--r-n); display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; transform: scale(0); animation: lootIn .45s cubic-bezier(.2,1.6,.3,1) forwards; }
@@ -538,6 +543,7 @@ b { font-weight: 900; }
   .result-btns { margin-top: 2px; } .result-btns .btn { padding: 9px 6px; font-size: 14px; }
   .btn-ad { margin-top: 4px; padding: 7px 16px; font-size: 13px; }
   .result-title { font-size: 36px; }
+  .result-box .stars { height: 36px; }
   .stars i { width: 34px; height: 34px; }
   .loot { min-height: 52px; }
   .loot-item { width: 52px; height: 52px; }
@@ -567,6 +573,13 @@ b { font-weight: 900; }
   .skill-btn[data-skill="5"] { right: 156px; bottom: 94px; }
   .result-title { font-size: 30px; }
   .combo b { font-size: 38px; }
+}
+
+@media (orientation: landscape) and (max-height: 360px) {
+  .result-box { gap: 3px; padding-top: 6px; padding-bottom: calc(6px + var(--sab)); }
+  .result-box .result-title { font-size: 28px; line-height: 1.1; }
+  .result-box .stars { height: 28px; }
+  .result-box .stars i { width: 26px; height: 26px; }
 }
 
 /* ---------- 드랍 팝업 (필드 득템) ---------- */
