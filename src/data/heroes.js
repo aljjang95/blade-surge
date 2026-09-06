@@ -8,7 +8,7 @@ export const RARITY = {
 
 export const HEROES = {
   knight: {
-    id: 'knight', name: '검성 아르카', title: '성검의 계승자', rarity: 'SSR', model: 'Knight', portrait: '/img/hero_knight.webp',
+    id: 'knight', name: '검성 아르카', title: '성검의 계승자', rarity: 'SSR', model: 'Knight', portrait: '/img/tll/knight-oath-v1.png',
     weapon: '1h', color: '#ffcf5a', accent: '#fff3c0',
     show: ['1H_Sword', 'Round_Shield'],
     base: { hp: 1400, atk: 120, def: 40, crit: 0.15, critDmg: 1.6, spd: 6.2 },
@@ -32,7 +32,7 @@ export const HEROES = {
     ],
   },
   barbarian: {
-    id: 'barbarian', name: '광전사 드라칸', title: '피의 도끼', rarity: 'SSR', model: 'Barbarian', portrait: '/img/hero_barbarian.webp',
+    id: 'barbarian', name: '광전사 드라칸', title: '피의 도끼', rarity: 'SSR', model: 'Barbarian', portrait: '/img/tll/barbarian-oath-v1.png',
     weapon: '2h', color: '#ff5a3c', accent: '#ffd0b0',
     show: ['2H_Axe'],
     base: { hp: 1800, atk: 150, def: 30, crit: 0.20, critDmg: 1.8, spd: 5.8 },
@@ -55,7 +55,7 @@ export const HEROES = {
     ],
   },
   mage: {
-    id: 'mage', name: '대마도사 리아', title: '별을 부르는 자', rarity: 'SR', model: 'Mage', portrait: '/img/hero_mage.webp',
+    id: 'mage', name: '대마도사 리아', title: '별을 부르는 자', rarity: 'SR', model: 'Mage', portrait: '/img/tll/mage-oath-v1.png',
     weapon: 'staff', color: '#4cc3ff', accent: '#d0f0ff', ranged: true,
     show: ['2H_Staff'],
     base: { hp: 1000, atk: 170, def: 20, crit: 0.12, critDmg: 1.7, spd: 5.6 },
@@ -78,7 +78,7 @@ export const HEROES = {
     ],
   },
   rogue: {
-    id: 'rogue', name: '암살자 카인', title: '그림자 속의 칼날', rarity: 'SR', model: 'Rogue', portrait: '/img/hero_rogue.webp',
+    id: 'rogue', name: '암살자 카인', title: '그림자 속의 칼날', rarity: 'SR', model: 'Rogue', portrait: '/img/tll/rogue-oath-v1.png',
     weapon: 'dual', color: '#b26bff', accent: '#e8d0ff',
     show: ['Knife', 'Knife_Offhand'],
     base: { hp: 1100, atk: 135, def: 25, crit: 0.35, critDmg: 2.0, spd: 7.2 },
