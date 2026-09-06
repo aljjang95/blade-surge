@@ -86,7 +86,18 @@ export class Actor {
     this.play(Math.random() < 0.5 ? 'Death_A' : 'Death_B', { once: true, clamp: true, fade: 0.08 });
     for (const m of this.mats) { m.transparent = true; }
   }
-  dispose() { this.game.scene.remove(this.root); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.mixer.getRoot()); this.model.traverse((o) => { if (o.isMesh) for (const material of materialsOf(o)) material.dispose(); }); }
+  dispose() {
+    if (this.disposed) return; this.disposed = true;
+    this.game.scene.remove(this.root); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.mixer.getRoot());
+    const skeletons = new Set(), materials = new Set();
+    this.model.traverse((o) => {
+      if (o.isSkinnedMesh) skeletons.add(o.skeleton);
+      if (o.isMesh) for (const material of materialsOf(o)) materials.add(material);
+    });
+    // spawnCharacter가 복제한 스켈레톤의 전용 boneTexture만 정리한다.
+    for (const skeleton of skeletons) skeleton.dispose();
+    for (const material of materials) material.dispose();
+  }
   /** 무기 트레일용: 손 위치와 무기 끝 */
   /** GLTFLoader 는 노드 이름의 '.' 등을 제거함 → 원본/정제 이름 모두 검색 */
   node(name) { return this.model.getObjectByName(name) || this.model.getObjectByName(name.replace(/[^\w-]/g, '')); }

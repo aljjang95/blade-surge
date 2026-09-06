@@ -110,9 +110,9 @@ export class Economy {
   // ---------- 영웅 ----------
   hero(id = this.s.selected) { return this.s.heroes[id]; }
   ownHero(id) { return !!this.s.heroes[id]; }
-  heroEquipBonus(id) {
-    const h = this.hero(id); const b = { atk: 0, hp: 0, def: 0, crit: 0, atkPct: 0, hpPct: 0, critDmg: 0, ultGain: 0, sets: {}, procs: [] };
-    for (const sl of SLOTS) { const iid = h.equip[sl]; const inst = this.s.inventory.find((x) => x.uid === iid); if (inst) { const st = itemStats(inst); b.atk += st.atk; b.hp += st.hp; b.def += st.def; b.crit += st.crit; const set = ITEM_BY_ID[inst.id].set; b.sets[set] = (b.sets[set] || 0) + 1; } }
+  heroEquipBonus(id, equipment = this.hero(id).equip) {
+    const b = { atk: 0, hp: 0, def: 0, crit: 0, atkPct: 0, hpPct: 0, critDmg: 0, ultGain: 0, sets: {}, procs: [] };
+    for (const sl of SLOTS) { const iid = equipment[sl]; const inst = this.s.inventory.find((x) => x.uid === iid); if (inst) { const st = itemStats(inst); b.atk += st.atk; b.hp += st.hp; b.def += st.def; b.crit += st.crit; const set = ITEM_BY_ID[inst.id].set; b.sets[set] = (b.sets[set] || 0) + 1; } }
     b.active = [];
     for (const sid in b.sets) {
       const n = b.sets[sid]; const S = SETS[sid]; if (!S) continue;
@@ -120,6 +120,17 @@ export class Economy {
       if (n >= 4) apply(S.four, 4); else if (n >= 2) apply(S.two, 2);
     }
     return b;
+  }
+  /** 세이브를 건드리지 않고 실제 장착/해제 계산으로 비교한다. */
+  previewItem(heroId, uid) {
+    const h = this.hero(heroId), inst = this.s.inventory.find((x) => x.uid === uid);
+    if (!h || !inst || !ITEM_BY_ID[inst.id]) return null;
+    const slot = ITEM_BY_ID[inst.id].slot, remove = h.equip[slot] === uid;
+    const beforeBonus = this.heroEquipBonus(heroId);
+    const afterBonus = this.heroEquipBonus(heroId, { ...h.equip, [slot]: remove ? null : uid });
+    const owner = Object.keys(this.s.heroes).find((id) => this.s.heroes[id].equip[slot] === uid);
+    return { slot, remove, owner, current: this.s.inventory.find((x) => x.uid === h.equip[slot]) || null,
+      before: heroStats(HEROES[heroId], h, beforeBonus), after: heroStats(HEROES[heroId], h, afterBonus), beforeBonus, afterBonus };
   }
   /** 출전 영웅에게 켜진 세트 효과 수 (하네스 setProgress 박자) */
   setCount() { return this.heroEquipBonus(this.s.selected).active.length; }

@@ -10,6 +10,9 @@
   font-family: 'Noto Sans KR', system-ui, sans-serif;
 }
 
+/* 가방을 살필 때 고정 동행 버튼이 장비·출격 버튼을 덮지 않게 한다. */
+body:has(#tab-heroes.show) .companion-ui:not(.is-connected) .companion-launcher { display: none; }
+
 .companion-launcher {
   position: absolute;
   top: calc(76px + env(safe-area-inset-top, 0px));
@@ -233,6 +236,7 @@
 
 @media (orientation: portrait), (max-width: 600px) {
   .companion-launcher { top: auto; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); left: calc(10px + env(safe-area-inset-left, 0px)); min-width: 130px; }
+  .companion-ui.is-connected .companion-launcher { top: calc(64px + env(safe-area-inset-top, 0px)); bottom: auto; }
   .companion-panel { top: max(8px, env(safe-area-inset-top, 0px)); right: 8px; width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
   .companion-hero { min-height: 132px; }
   .companion-portrait-canvas,

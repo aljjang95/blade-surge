@@ -1,8 +1,29 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { ImpactLights } from '../src/engine/impact-lights.js';
-import { FX } from '../src/engine/fx.js';
+import { FX, ParticlePool } from '../src/engine/fx.js';
 import { VFX_TEX } from '../src/engine/assets.js';
+
+test('입자 부분 업로드는 생성·swap 제거·빈 풀·재발사에서도 그리는 구간과 일치한다', () => {
+  const pool = new ParticlePool(new THREE.Scene(), { max: 8, texture: new THREE.Texture() });
+  const attributes = pool.geo.attributes as Record<string, THREE.BufferAttribute>;
+  const version = attributes.position.version;
+  pool.update(.1); expect(attributes.position.version).toBe(version);
+  pool.emit(0, 1, 0, 1, 0, 0, new THREE.Color(0xff0000), 1, .15, { grav: 0, drag: 1 });
+  pool.emit(5, 1, 0, 2, 0, 0, new THREE.Color(0x00ff00), 1, 2, { grav: 0, drag: 1 });
+  pool.update(.1);
+  expect(pool.geo.drawRange.count).toBe(2);
+  for (const a of Object.values(attributes)) expect(a.updateRanges).toEqual([{ start: 0, count: 2 * a.itemSize }]);
+  pool.update(.1); expect(pool.n).toBe(1); expect(pool.pos[0]).toBeCloseTo(5.4, 5);
+  expect(pool.col[0]).toBe(0); expect(pool.col[1]).toBe(1);
+  for (const a of Object.values(attributes)) expect(a.updateRanges).toEqual([{ start: 0, count: a.itemSize }]);
+  pool.update(3); expect(pool.geo.drawRange.count).toBe(0);
+  const emptyVersion = attributes.position.version; pool.update(.1);
+  expect(attributes.position.version).toBe(emptyVersion);
+  pool.emit(9, 1, 0, 0, 0, 0, new THREE.Color(0x0000ff), 2, 1, { grav: 0, drag: 1 });
+  pool.update(.01); expect(pool.n).toBe(1); expect(pool.pos[0]).toBe(9); expect(pool.col[2]).toBe(1);
+  pool.geo.dispose(); pool.mat.dispose();
+});
 
 test('타격 조명은 생성·소멸·포화·전투 초기화 뒤에도 같은 네 노드를 유지한다', () => {
   const scene = new THREE.Scene(), pool = new ImpactLights(scene);

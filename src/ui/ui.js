@@ -138,7 +138,12 @@ export class UI {
   updateHud(b, dt) {
     const p = b.player; if (!p) return;
     this.miniT -= dt; if (this.miniT <= 0) { this.miniT = 1 / 20; this.minimap.draw(b); }
-    const hp = Math.max(0, p.hp / p.maxHp); $('hud-hp').style.width = hp * 100 + '%'; $('hud-hp-txt').textContent = `${fmt(p.hp)} / ${fmt(p.maxHp)}`;
+    const hp = Math.max(0, p.hp / p.maxHp); $('hud-hp').style.width = hp * 100 + '%';
+    const hpValue = Math.floor(p.hp), maxHpValue = Math.floor(p.maxHp);
+    if (this._hpValue !== hpValue || this._maxHpValue !== maxHpValue) {
+      this._hpValue = hpValue; this._maxHpValue = maxHpValue;
+      $('hud-hp-txt').textContent = `${fmt(hpValue)} / ${fmt(maxHpValue)}`;
+    }
     $('hud-hp').style.background = hp < 0.3 ? 'linear-gradient(90deg,#ff2d55,#ff8aa0)' : 'linear-gradient(90deg,#2bd46a,#a6ff5a)';
     const ult = p.ult / p.ultMax; $('hud-ult').style.width = ult * 100 + '%'; $('hud-ult').parentElement.classList.toggle('full', ult >= 1);
     this.skillBtns.forEach((btn, i) => { const sk = p.def.skills[i]; if (!sk || btn.classList.contains('locked')) return; let pct; if (sk.ult) { pct = 1 - ult; btn.classList.toggle('ready', ult >= 1); } else pct = p.cds[i] / sk.cd; btn.querySelector('.cd').style.setProperty('--p', (pct * 100) + '%'); const wasReady = btn.dataset.ready === '1'; const ready = pct <= 0; if (ready && !wasReady && b.elapsed > 1) { btn.classList.remove('ready-flash'); void btn.offsetWidth; btn.classList.add('ready-flash'); audio.play('ui_pluck', { vol: 0.25 }); } btn.dataset.ready = ready ? '1' : '0'; });
@@ -196,7 +201,18 @@ export class UI {
       stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
       const items = [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];
       items.forEach((x, i) => later(() => {
-        const d = document.createElement('div');
+        const d = document.createElement(x.it ? 'button' : 'div');
+        if (x.it) {
+          d.type = 'button'; d.setAttribute('aria-label', `${ITEM_BY_ID[x.it.id].name} 장비 비교`);
+          d.title = '이 장비 비교하기';
+          d.onclick = () => {
+            if (this.resultData !== r || this.app.battle.result !== r) return;
+            const heroId = eco.s.selected;
+            this.app.toLobby(); this.app.meta.heroSel = heroId;
+            this.app.meta.bagSlot = ITEM_BY_ID[x.it.id].slot;
+            this.app.meta.openTab('heroes'); this.app.meta.showItem(x.it.uid, heroId);
+          };
+        }
         if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}`; d.innerHTML = `<img src="${ITEM_ICON(def)}" onerror="this.remove()"><div class="nm">${def.name}</div>`; if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); }
         else { const [nm, ic] = REWARD_LABEL[x.g.k] || [x.g.k, '']; d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(x.g.n)}</span><div class="nm">${nm}</div>`; audio.pick('coin', 2, { vol: 0.5 }); }
         loot.appendChild(d);
