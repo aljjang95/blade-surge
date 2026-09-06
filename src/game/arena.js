@@ -106,9 +106,9 @@ export class Arena {
   buildLobby() {
     this.clear();
     const T = THEMES.lobby;
-    this.scene.background = new THREE.Color(0x090f16); this.scene.fog.color.set(0x090f16); this.scene.fog.density = 0.025;
-    const hemi = new THREE.HemisphereLight(0xb2c8de, 0x19222a, 1.3); this.scene.add(hemi); this.lights.push(hemi);
-    const sun = new THREE.DirectionalLight(0xffe4ba, 3.3); sun.position.set(-3, 4, 6); sun.castShadow = true;
+    this.scene.background = new THREE.Color(0x304e48); this.scene.fog.color.set(0x304e48); this.scene.fog.density = 0.025;
+    const hemi = new THREE.HemisphereLight(0xeaf3df, 0x4e6656, .7); this.scene.add(hemi); this.lights.push(hemi);
+    const sun = new THREE.DirectionalLight(0xffe8c7, 2.1); sun.position.set(-3, 4, 6); sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = sun.shadow.camera.bottom = -5; sun.shadow.camera.right = sun.shadow.camera.top = 5;
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 50; sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.02;
     this.scene.add(sun); this.lights.push(sun);

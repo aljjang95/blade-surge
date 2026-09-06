@@ -1,5 +1,7 @@
 # Oathbound appearance, v1
 
+The current game uses **casual-v2**: rounded headwear and padding, matte pastel surfaces, and one batched fitting mesh. Generate it with the same command below plus `--casual`, using a new masters directory. Oath-v1 files and the default legacy recipe remain available for recovery. Faces, rigs and weapon contracts are unchanged.
+
 TLL-authored headwear, armour, clothing and articulated limbs, produced in Blender 5.1 by `tools/art/author-identity.py`.
 These GLBs are fittings, not standalone animated characters. `assembleHeroIdentity` binds them to the original shipped skeleton.
 
