@@ -4,7 +4,7 @@ import { Renderer } from './engine/renderer.js';
 import { FX } from './engine/fx.js';
 import { Input } from './engine/input.js';
 import { audio } from './engine/audio.js';
-import { preloadAll, preloadVfx, loadModel, MODEL_LIST, spawnCharacter } from './engine/assets.js';
+import { preloadAll, preloadVfx, loadModel, MODEL_LIST, spawnCharacter, disposeCharacter } from './engine/assets.js';
 import { Economy } from './game/economy.js';
 import { Battle } from './game/battle.js';
 import { Arena } from './game/arena.js';
@@ -41,6 +41,7 @@ class App {
     this.models = {};
     this.mode = 'boot'; this.showcase = null; this.lobbyVisible = true;
     this.last = performance.now();
+    this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.applySettings();
   }
   async boot() {
@@ -55,6 +56,11 @@ class App {
     setP(0.72, '이펙트 텍스처 로딩 중…');
     await preloadVfx();
     for (const n of MODEL_LIST) this.models[n] = await loadModel(n);
+    for (const gltf of Object.values(this.models)) gltf.scene.traverse((o) => {
+      if (o.isMesh && o.material?.userData.tllAuthored) {
+        o.material.envMap = this.renderer.characterEnvironment.texture; o.material.envMapIntensity = .7;
+      }
+    });
     setP(0.85, '월드 구성 중…');
     this.arena = new Arena(this.scene, this.models.dungeon, this.renderer);
     this.battle = new Battle(this);
@@ -85,12 +91,14 @@ class App {
   async showcaseHero(id, first = false) {
     const def = HEROES[id];
     this.companionAgent?.cancelDialogue();
-    if (this.showcase) { this.scene.remove(this.showcase.root); this.showcase = null; }
-    if (first || this.mode === 'lobby') this.arena.buildLobby();
+    if (this.showcase) { disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
+    if (!this.arena.lobbyHall) this.arena.buildLobby();
     const { root, mixer, clips } = spawnCharacter(this.models[def.model]);
     root.rotation.y = Math.PI * 0.15;
     const look = applyLook(root, def, this.eco.heroEquipInsts(id));   // 로비 쇼케이스도 장착 장비대로
     const a = mixer.clipAction(clips['Idle']); a.play();
+    // Establish the authored idle pose even when reduced motion stops later ticks.
+    mixer.update(0);
     this.scene.add(root);
     this.showcase = { root, mixer, clips, def, look, t: 0, next: 4 + Math.random() * 3, auraT: 0 };
     this.companionAgent?.syncLobbyContext();
@@ -131,7 +139,7 @@ class App {
       }
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
       $('stage-loading').hidden = false;
-      if (this.showcase) { this.scene.remove(this.showcase.root); this.showcase = null; }
+      if (this.showcase) { disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
       this.mode = 'battle';
       const id = this.eco.s.selected;
       await this.battle.start(stage, id, this.eco.hero(id), this.eco.heroEquipBonus(id));
@@ -163,10 +171,27 @@ class App {
       this.renderer.update(dt, realDt); if (render) this.renderer.render();
     } else if (this.mode === 'lobby') {
       if (this.showcase) {
-        const s = this.showcase; s.mixer.update(realDt); s.t += realDt;
-        if (s.t > s.next) { s.t = 0; s.next = 5 + Math.random() * 4; const pool = ['Cheer', 'Interact', 'Idle']; const nm = pool[Math.floor(Math.random() * pool.length)]; const a = s.mixer.clipAction(s.clips[nm]); if (nm !== 'Idle') { a.reset().setLoop(THREE.LoopOnce).play(); const idle = s.mixer.clipAction(s.clips['Idle']); a.crossFadeFrom(idle, 0.2); setTimeout(() => { idle.reset().play(); idle.crossFadeFrom(a, 0.3); }, s.clips[nm].duration * 1000 - 300); } }
-        if (Math.random() < realDt * 3) this.fx.embers(new THREE.Vector3(0, 0.2, 0), s.def.color, { n: 1, radius: 1.2, life: 1.5, size: 0.25, rise: 1.2 });
-        if (s.look?.aura) { s.auraT -= realDt; if (s.auraT <= 0) { s.auraT = 0.2; this.fx.aura(s.root.position, s.look.aura, 1); } }
+        const s = this.showcase;
+        if (!this.reducedMotion.matches) {
+          s.mixer.update(realDt); s.t += realDt;
+          if (s.gesture) {
+            s.gestureT -= realDt;
+            if (s.gestureT <= 0) {
+              const idle = s.mixer.clipAction(s.clips.Idle); idle.reset().play().crossFadeFrom(s.gesture, .3);
+              s.gesture = null;
+            }
+          } else if (s.t > s.next) {
+            s.t = 0; s.next = 5 + Math.random() * 4;
+            const clip = s.clips[Math.random() < .5 ? 'Cheer' : 'Interact'];
+            s.gesture = s.mixer.clipAction(clip).reset().setLoop(THREE.LoopOnce).play();
+            s.gesture.crossFadeFrom(s.mixer.clipAction(s.clips.Idle), .2);
+            s.gestureT = Math.max(.1, clip.duration - .3);
+          }
+          if (Math.random() < realDt * 3) this.fx.embers(new THREE.Vector3(0, .2, 0), s.def.color, { n: 1, radius: 1.2, life: 1.5, size: .25, rise: 1.2 });
+        } else if (s.gesture) {
+          s.gesture.stop(); s.gesture = null; s.mixer.clipAction(s.clips.Idle).reset().play(); s.mixer.update(0);
+        }
+        if (s.look?.aura && !this.reducedMotion.matches) { s.auraT -= realDt; if (s.auraT <= 0) { s.auraT = 0.2; this.fx.aura(s.root.position, s.look.aura, 1); } }
       }
       this.arena.update(realDt, this.fx, this.showcase ? this.showcase.root.position : null); this.fx.update(realDt);
       this.renderer.update(realDt, realDt);

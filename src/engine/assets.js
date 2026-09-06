@@ -4,6 +4,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { HEROES } from '../data/heroes.js';
+import { assembleHeroIdentity } from './hero-identity.js';
 
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
@@ -34,7 +35,13 @@ export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, 'dungeon', 'skel_w
 export async function loadModel(name, contract = null) {
   const key = name + '|' + JSON.stringify(contract);
   if (cache.has(key)) return cache.get(key);
-  const p = loader.loadAsync(`/models/${name}.glb`).then((gltf) => prepareModel(gltf, contract));
+  const p = loader.loadAsync(`/models/${name}.glb`).then(async (gltf) => {
+    if (!contract && HERO_MODELS.includes(name)) {
+      const authored = await loader.loadAsync(`/models/tll/${name.toLowerCase()}-oath-v1.glb`);
+      assembleHeroIdentity(gltf, authored, name);
+    }
+    return prepareModel(gltf, contract);
+  });
   cache.set(key, p);
   try { return await p; } catch (error) { cache.delete(key); throw error; }
 }
@@ -65,7 +72,7 @@ export function prepareModel(gltf, contract = null) {
     if (contract) return;
     for (const material of materialsOf(o)) {
       if (material.map) { material.map.colorSpace = THREE.SRGBColorSpace; material.map.anisotropy = 4; }
-      material.roughness = 0.85; material.metalness = 0;
+      if (!material.userData.tllAuthored) { material.roughness = 0.85; material.metalness = 0; }
     }
   });
   if (!contract) mergeSkinned(gltf.scene, gltf.animations);
@@ -139,6 +146,18 @@ export function spawnCharacter(gltf) {
     o.material = Array.isArray(o.material) ? o.material.map(clone) : clone(o.material);
   });
   return { root, mixer, clips };
+}
+
+/** Release instance-owned skin textures/materials; preserve shared source geometry. */
+export function disposeCharacter(root, mixer) {
+  root.removeFromParent(); mixer.stopAllAction(); mixer.uncacheRoot(mixer.getRoot());
+  const skeletons = new Set(), materials = new Set();
+  root.traverse((o) => {
+    if (o.isSkinnedMesh) skeletons.add(o.skeleton);
+    if (o.isMesh) for (const material of materialsOf(o)) materials.add(material);
+  });
+  for (const skeleton of skeletons) skeleton.dispose();
+  for (const material of materials) material.dispose();
 }
 
 /** dungeon.glb / skel_weapons.glb 등 합본에서 이름으로 파트 추출 (복제) */

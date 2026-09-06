@@ -4,6 +4,8 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 // 최종 합성 셰이더: 색수차 · 비네트 · 히트 플래시 · 방사형 블러(궁극기) · 색보정
 const FinalShader = {
@@ -61,6 +63,9 @@ export class Renderer {
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
     this.r = r;
+    const studio = new RoomEnvironment(), pmrem = new THREE.PMREMGenerator(r);
+    this.characterEnvironment = pmrem.fromScene(studio, .04, .1, 100);
+    studio.dispose(); pmrem.dispose();
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0b0a12);
     this.scene.fog = new THREE.FogExp2(0x0b0a12, 0.028);
@@ -84,6 +89,8 @@ export class Renderer {
     this.finalPass = new ShaderPass(FinalShader);
     this.composer.addPass(this.finalPass);
     this.composer.addPass(new OutputPass());
+    this.lobbyAA = new ShaderPass(FXAAShader); this.lobbyAA.enabled = false;
+    this.composer.addPass(this.lobbyAA);
     this.u = this.finalPass.uniforms;
     this.flash = 0; this.aberr = 0; this.radial = 0; this.desat = 0;
 
@@ -102,6 +109,7 @@ export class Renderer {
     const w = window.innerWidth, h = window.innerHeight;
     this.r.setSize(w, h, false);
     this.composer.setSize(w, h);
+    this.lobbyAA.uniforms.resolution.value.set(1 / (w * this.r.getPixelRatio()), 1 / (h * this.r.getPixelRatio()));
     this.camera.aspect = w / h;
     // 세로 화면이면 시야를 넓혀 전장 확보
     this.camera.fov = (this.rig?.fov ?? 46) + (w < h ? 14 : 0);
@@ -139,9 +147,8 @@ export class Renderer {
     rig.zoom = Math.max(0, rig.zoom - realDt * 3);
     let desired;
     if (rig.mode === 'lobby') {
-      rig.orbit += realDt * 0.12;
-      const rad = 6.5;
-      desired = new THREE.Vector3(Math.sin(rig.orbit) * rad, 2.6, Math.cos(rig.orbit) * rad).add(rig.target);
+      // Fixed portrait composition keeps the hero and equipment readable.
+      desired = new THREE.Vector3(1.8, 2.1, 5.1).add(rig.target);
       rig.pos.lerp(desired, 1 - Math.exp(-realDt * 3));
       cam.position.copy(rig.pos);
       cam.lookAt(rig.target.x, rig.target.y + 1.1, rig.target.z);
@@ -167,5 +174,5 @@ export class Renderer {
     this.u.uDesat.value = this.desat;
     this.u.uTime.value = this.time;
   }
-  render() { this.composer.render(); }
+  render() { this.lobbyAA.enabled = this.rig.mode === 'lobby'; this.composer.render(); }
 }

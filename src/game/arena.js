@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { VFX_TEX } from '../engine/assets.js';
 import { getPart } from '../engine/assets.js';
 import { ROOM_TYPE } from './world.js';
+import { buildOathHall } from './lobby-hall.js';
 
 const THEMES = {
   crypt:  { fog: 0x0b0a16, bg: 0x0b0a16, hemi: [0x5a6aa0, 0x1a1420], sun: 0xb8c4ff, sunI: 2.6, torch: 0xff8a2a, tint: 0xd8dcff },
@@ -12,6 +13,16 @@ const THEMES = {
 const TILE = 4;
 const rnd = (a, b) => a + Math.random() * (b - a);
 
+// A seal owns its three generated meshes. Texture maps remain shared VFX assets.
+function disposeSeal(seal) {
+  seal.removeFromParent();
+  seal.traverse((node) => {
+    if (!node.isMesh) return;
+    node.geometry.dispose();
+    for (const material of Array.isArray(node.material) ? node.material : [node.material]) material.dispose();
+  });
+}
+
 export class Arena {
   constructor(scene, dungeonGltf, renderer) {
     this.scene = scene; this.gltf = dungeonGltf; this.renderer = renderer;
@@ -21,7 +32,7 @@ export class Arena {
   }
   /** 보스 봉인 결계 — 복도 입구를 막는 붉은 룬 장막. 구역을 전부 정화하면 openSeal 로 깨진다 */
   buildSeals(floorData) {
-    for (const s of this.seals) this.group.remove(s); this.seals.length = 0;
+    for (const s of this.seals) disposeSeal(s); this.seals.length = 0;
     if (!floorData.sealed) return;
     for (const g of floorData.gates) {
       // 장막(반투명 검붉은 판) + 마법진(circle_demon, 회전) + 발밑 룬. 가산 판 하나로는 밝은 바닥 위에서 거의 안 보였다 (스크린샷 대조)
@@ -43,13 +54,15 @@ export class Arena {
     for (const s of this.seals) {
       const p = s.position.clone().setY(0);
       fx?.shockTex(p, 0xff4060, { r1: 8, life: 0.7 }); fx?.firePillar(p, { height: 8, width: 3.2, life: 0.9, color: 0xff4060 }); fx?.burst(p.clone().setY(1.5), 0xff8090, { n: 30, speed: 9, size: 0.45, up: 1 });
-      this.group.remove(s);
+      disposeSeal(s);
     }
     this.seals.length = 0;
   }
   clear() {
+    this.lobbyHall?.userData.dispose(); this.lobbyHall = null;
+    for (const s of this.seals) disposeSeal(s);
     while (this.group.children.length) { const c = this.group.children.pop(); c.traverse?.((o) => { if (o.isInstancedMesh) o.dispose(); }); }
-    for (const l of this.lights) this.scene.remove(l);
+    for (const l of this.lights) { l.shadow?.dispose(); this.scene.remove(l); }
     this.lights.length = 0; this.torches.length = 0; this.torchPos.length = 0; this.doors.length = 0; this.seals.length = 0;
   }
   _meshOf(name) { const p = this.gltf.scene.getObjectByName(name); let m = null; p?.traverse((o) => { if (!m && o.isMesh) m = o; }); return { mesh: m, part: p }; }
@@ -93,23 +106,16 @@ export class Arena {
   buildLobby() {
     this.clear();
     const T = THEMES.lobby;
-    this.scene.background = new THREE.Color(T.bg); this.scene.fog.color.set(T.fog); this.scene.fog.density = 0.035;
-    const hemi = new THREE.HemisphereLight(T.hemi[0], T.hemi[1], 1.7); this.scene.add(hemi); this.lights.push(hemi);
-    const sun = new THREE.DirectionalLight(T.sun, T.sunI); sun.position.set(8, 18, 6); sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = sun.shadow.camera.bottom = -18; sun.shadow.camera.right = sun.shadow.camera.top = 18;
+    this.scene.background = new THREE.Color(0x090f16); this.scene.fog.color.set(0x090f16); this.scene.fog.density = 0.025;
+    const hemi = new THREE.HemisphereLight(0xb2c8de, 0x19222a, 1.3); this.scene.add(hemi); this.lights.push(hemi);
+    const sun = new THREE.DirectionalLight(0xffe4ba, 3.3); sun.position.set(-3, 4, 6); sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = sun.shadow.camera.bottom = -5; sun.shadow.camera.right = sun.shadow.camera.top = 5;
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 50; sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.02;
     this.scene.add(sun); this.lights.push(sun);
-    const floors = [];
-    for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) floors.push({ x: i * TILE, z: j * TILE, ry: Math.floor(Math.random() * 4) * Math.PI / 2 });
-    this.instanced('floor_tile_large', floors, T.tint, { castShadow: false });
-    const R = 10, walls = [];
-    for (let i = -2; i <= 2; i++) { walls.push({ x: i * TILE, z: -R, ry: 0 }, { x: i * TILE, z: R, ry: Math.PI }, { x: -R, z: i * TILE, ry: Math.PI / 2 }, { x: R, z: i * TILE, ry: -Math.PI / 2 }); }
-    this.instanced('wall', walls, T.tint);
-    this.instanced('pillar_decorated', [[-R, -R], [R, -R], [-R, R], [R, R]].map(([x, z]) => ({ x, z })), T.tint);
-    this.place('chest_gold', 2.6, -1.4, -0.6, 1.1); this.place('coin_stack_large', -2.4, -1.8, 0.4);
-    this.place('coin_stack_medium', 3.4, 0.8, 1); this.place('sword_shield_gold', 0, -3.2, 0, 1).position.y = 0.9;
-    const spot = new THREE.SpotLight(0xffe0b0, 120, 22, 0.5, 0.6, 1.5); spot.position.set(0, 9, 3); spot.target.position.set(0, 0, 0);
-    this.scene.add(spot, spot.target); this.lights.push(spot, spot.target);
+    this.lobbyHall = buildOathHall(); this.group.add(this.lobbyHall);
+    this.lobbyHall.traverse((o) => { if (o.isMesh) { o.material.envMap = this.renderer.characterEnvironment.texture; o.material.envMapIntensity = .3; } });
+    const rim = new THREE.DirectionalLight(0x83c7db, 2.4); rim.position.set(2, 4, -4);
+    this.scene.add(rim); this.lights.push(rim);
     this.floorData = null;
   }
 
