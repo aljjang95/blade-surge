@@ -53,6 +53,10 @@ export class Enemy extends Actor {
     }
   }
   get player() { return this.game.player; }
+  dispose() {
+    if (this.marker) { this.marker.geometry.dispose(); this.marker.material.dispose(); this.marker = null; }
+    super.dispose();
+  }
   /** 몹몰이: 중심으로 끌어당김 */
   pull(cx, cz, force) { const dx = cx - this.pos.x, dz = cz - this.pos.z; const d = Math.hypot(dx, dz) || 1; if (d < 0.8) return; const f = force * (this.isBoss ? 0.15 : this.isElite ? 0.5 : 1); this.kb.x += dx / d * f; this.kb.z += dz / d * f; }
   hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false } = {}) {

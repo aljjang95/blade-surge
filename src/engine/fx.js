@@ -11,7 +11,8 @@ async function waitForCompilation(compiling) {
 }
 
 // ============ GPU Points 파티클 풀 ============
-class ParticlePool {
+export class ParticlePool {
+  /** @param {THREE.Scene} scene @param {{max?: number, texture?: THREE.Texture, blending?: THREE.Blending, depthWrite?: boolean}} [options] */
   constructor(scene, { max = 1500, texture, blending = THREE.AdditiveBlending, depthWrite = false } = {}) {
     this.max = max; this.n = 0;
     this.pos = new Float32Array(max * 3); this.vel = new Float32Array(max * 3); this.col = new Float32Array(max * 3);
@@ -58,7 +59,12 @@ class ParticlePool {
     }
     this.n = n;
     this.geo.setDrawRange(0, n);
-    const a = this.geo.attributes; a.position.needsUpdate = a.aColor.needsUpdate = a.aSize.needsUpdate = a.aAlpha.needsUpdate = true;
+    // 그리는 입자 구간만 전송한다. 0개일 때는 drawRange만 닫으면 된다.
+    if (n > 0) for (const attribute of Object.values(this.geo.attributes)) {
+      attribute.clearUpdateRanges();
+      attribute.addUpdateRange(0, n * attribute.itemSize);
+      attribute.needsUpdate = true;
+    }
   }
   _copy(from, to) {
     for (let k = 0; k < 3; k++) { this.pos[to * 3 + k] = this.pos[from * 3 + k]; this.vel[to * 3 + k] = this.vel[from * 3 + k]; this.col[to * 3 + k] = this.col[from * 3 + k]; }
@@ -145,7 +151,9 @@ export class FX {
       // Ghostly/dead actors switch to transparent materials. Keep those programs
       // ready too, so an otherwise smooth first hit does not hitch on its kill.
       gltf.scene.traverse((o) => {
-        if (!o.isSkinnedMesh) return;
+        // 사망 시 정적 장식 메시도 투명해진다(해골 자객의 양면 메시 등).
+        // 스킨 메시만 준비하면 그 장식의 앞/뒷면 셰이더가 처치마다 재생성된다.
+        if (!o.isMesh) return;
         const transparent = (source) => {
           if (!this._transparentMats.has(source)) { const m = source.clone(); m.transparent = true; this._transparentMats.set(source, m); }
           return this._transparentMats.get(source);

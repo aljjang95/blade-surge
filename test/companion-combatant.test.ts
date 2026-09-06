@@ -43,6 +43,27 @@ function makeGame() {
 }
 
 describe('CompanionCombatant', () => {
+  test('동행 종료는 부모 정리를 실행하고 복제 뼈·재질을 한 번만 회수한다', () => {
+    const { game } = makeGame(), gltf = makeGltf(), bone = new THREE.Bone();
+    const sourceMaterial = new THREE.MeshStandardMaterial(), geometry = new THREE.BufferGeometry();
+    const mesh = new THREE.SkinnedMesh(geometry, sourceMaterial);
+    gltf.scene.add(bone, mesh); mesh.bind(new THREE.Skeleton([bone])); mesh.skeleton.computeBoneTexture();
+    let sourceCount = 0, boneCount = 0, materialCount = 0;
+    mesh.skeleton.boneTexture!.addEventListener('dispose', () => sourceCount++);
+    const companion = new CompanionCombatant(game, gltf, () => undefined);
+    const materials = new Set<THREE.Material>();
+    companion.model.traverse((o: THREE.Object3D) => {
+      if (o instanceof THREE.SkinnedMesh) { o.skeleton.computeBoneTexture(); o.skeleton.boneTexture!.addEventListener('dispose', () => boneCount++); }
+      if (o instanceof THREE.Mesh) for (const m of Array.isArray(o.material) ? o.material : [o.material]) materials.add(m);
+    });
+    for (const m of materials) m.addEventListener('dispose', () => materialCount++);
+    expect(companion.root.parent).toBe(game.scene); expect(materials.size).toBeGreaterThan(0);
+    companion.dispose();
+    expect(companion.disposed).toBe(true); expect(companion.root.parent).toBeNull();
+    expect(boneCount).toBe(1); expect(sourceCount).toBe(0); expect(materialCount).toBe(materials.size);
+    companion.dispose(); expect(boneCount).toBe(1); expect(materialCount).toBe(materials.size);
+    mesh.skeleton.dispose(); geometry.dispose(); sourceMaterial.dispose();
+  });
   test('몰이 진형은 적을 견인하고 Battle 피해 경계를 사용한다', () => {
     const { game, timers, calls } = makeGame();
     const enemy = {

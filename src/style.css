@@ -198,6 +198,32 @@ b { font-weight: 900; }
 .hero-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .hero-actions .btn { flex: 1; min-width: 120px; }
 .inv-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 8px; }
+.bag-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.bag-filters button { min-height: 44px; flex: 1; padding: 6px; border: 1px solid var(--line, #665b76); border-radius: 8px; background: rgba(255,255,255,.06); color: var(--text, #eee); font: inherit; font-size: 12px; cursor: pointer; }
+.bag-filters button[aria-pressed="true"] { border-color: var(--gold); color: var(--gold); background: rgba(255,190,60,.12); }
+.inventory-item { aspect-ratio: auto; min-height: 96px; padding: 5px 3px; gap: 3px; cursor: pointer; font-family: inherit; }
+.inventory-item img { width: 40px; height: 40px; flex: 0 0 40px; }
+.inventory-name { color: var(--text, #eee); font-size: 11px; line-height: 14px; min-height: 28px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.inventory-level { color: var(--gold); font-size: 10px; }
+.bag-empty { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+.next-challenge { margin: 16px 0 8px; padding: 12px; border: 1px solid rgba(255,190,60,.35); border-radius: 12px; background: rgba(255,190,60,.05); }
+.next-challenge p { margin: 5px 0; font-size: 12px; }
+.next-challenge small { color: var(--muted); font-size: 11px; }
+.next-challenge .btn { width: 100%; margin-top: 10px; }
+.item-comparison { margin-top: 14px; font-size: 12px; }
+.item-comparison h3 { margin: 0 0 6px; font-size: 14px; }
+.item-comparison p { font-size: 12px; margin: 6px 0; }
+.item-comparison table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.item-comparison th, .item-comparison td { padding: 6px 3px; border-bottom: 1px solid rgba(255,255,255,.1); text-align: right; }
+.item-comparison th:first-child { text-align: left; }
+.item-comparison ul { padding-left: 16px; margin: 10px 0; }
+.item-comparison li { margin: 8px 0; }
+.item-comparison li small { display: block; margin-top: 4px; color: var(--muted); }
+.stat-up { color: var(--green); }
+.stat-down { color: #ff9aab; }
+.modal-btns.item-actions .btn { min-height: 44px; font-size: 13px; }
+.inventory-item:focus-visible, .bag-filters button:focus-visible, button.loot-item:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+button.loot-item { font-family: inherit; cursor: pointer; }
 
 /* gacha */
 .gacha-wrap { position: absolute; left: 0; right: 0; top: calc(64px + var(--sat)); bottom: calc(64px + var(--sab)); display: flex; flex-direction: column; justify-content: flex-end; padding: 12px; gap: 10px; background: radial-gradient(ellipse at 50% 20%, rgba(80,30,140,.6), transparent 60%); }

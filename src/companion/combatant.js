@@ -172,8 +172,4 @@ export class CompanionCombatant extends Actor {
     });
   }
 
-  dispose() {
-    this.disposed = true;
-    super.dispose();
-  }
 }
