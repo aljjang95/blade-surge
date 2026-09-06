@@ -641,8 +641,13 @@ b { font-weight: 900; }
   #objective { font-size: 9px; max-width: 160px; }
 }
 @media (orientation: portrait) {
+  .hud-top { display: grid; grid-template-columns: minmax(0, 1fr) auto 116px; }
+  .hud-player, .hud-bars { min-width: 0; }
+  .hud-bars { width: auto; flex: 1; }
+  .hud-portrait { flex: 0 0 42px; width: 42px; height: 42px; }
+  .hud-right { width: 116px; min-width: 0; }
   #minimap { width: 92px; height: 92px; }
-  #objective { font-size: 9px; max-width: 150px; }
+  #objective { font-size: 9px; max-width: 116px; white-space: normal; }
 }
 
 /* ---------- 컨트롤 손맛: 락온 / 퍼펙트 회피 ---------- */
