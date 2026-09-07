@@ -1,0 +1,57 @@
+[
+  {
+    "id": "knight",
+    "file": "knight-original-v1.webp",
+    "dimensions": [
+      1122,
+      1402
+    ],
+    "sourceSha256": "a638ee06e32b2e8bdddfe94da342923c51ebd30c411570e6c3a811f3768ecab0",
+    "sha256": "fa7a28c784c198e8c5f7f052f919515f485a4ede55a939d0004038db87e27cf7",
+    "bytes": 184072
+  },
+  {
+    "id": "barbarian",
+    "file": "barbarian-original-v1.webp",
+    "dimensions": [
+      1122,
+      1402
+    ],
+    "sourceSha256": "76a8ef6e43eb5023e114735e59c052c56ea4e9e20b6a8522898fbda3f364a4d5",
+    "sha256": "1abe9dd36a60e00140deda6143126e81144485825564af697a7e9e1ccf8abd7d",
+    "bytes": 259380
+  },
+  {
+    "id": "mage",
+    "file": "mage-original-v1.webp",
+    "dimensions": [
+      1122,
+      1402
+    ],
+    "sourceSha256": "16b952466033a5473f9346f36f3d7e208a63b6f6fa6145e5438d80d2b1afbeb7",
+    "sha256": "5a3dfbc3761debf0eddf47a34ec09fd052ce6e3eebc8f6f77f1e11ca7f690e5d",
+    "bytes": 225768
+  },
+  {
+    "id": "rogue",
+    "file": "rogue-original-v1.webp",
+    "dimensions": [
+      1122,
+      1402
+    ],
+    "sourceSha256": "2eb334e74a635b2651caffc8fd3c9fa702c6f7072da822eed3d66f425ace8751",
+    "sha256": "373727c95a38283f40e22be44bb99f630722b50a47cf8676816bc0a324728ed2",
+    "bytes": 147804
+  },
+  {
+    "id": "neve",
+    "file": "neve-original-v1.webp",
+    "dimensions": [
+      1122,
+      1402
+    ],
+    "sourceSha256": "ef2d6c8bf666eb0c99c0085cd888a1cdc71441d01261323aa9e3d0754dd32b3c",
+    "sha256": "2becca8c886ab8bacb14ed499006f8146a8821a6d66f4c83608ab12c51fdaf16",
+    "bytes": 200132
+  }
+]

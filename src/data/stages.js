@@ -1,53 +1,44 @@
-// 챕터/스테이지 — 몹몰이형 대규모 웨이브, 챕터마다 완전히 다른 몬스터 로스터
+import { stageStory } from './campaign-story.js';
+
+// 지역별 맹세와 기믹은 모험 화면과 전투가 함께 사용한다.
 export const CHAPTERS = [
-  { id: 1, name: '어둠의 지하묘지', theme: 'crypt',  color: '#4cc3ff', boss: 'boss_warlord' },
-  { id: 2, name: '불타는 왕좌',     theme: 'throne', color: '#ff5a3c', boss: 'boss_demon' },
-  { id: 3, name: '심연의 제단',     theme: 'abyss',  color: '#b26bff', boss: 'boss_dragon' },
+  { id: 1, name: '잊힌 종의 정원', theme: 'garden', color: '#87cbb0', boss: 'garden_finalboss', tagline: '누군가 이름을 부르는 동안, 우리는 사라지지 않는다.', summary: '아르카의 이름이 새겨진 묘비에서 시작된 원정. 침묵한 종을 깨워 망각에 묶인 첫 왕을 찾는다.', oath: '잊힌 이름을 다시 부르겠다는 맹세', mechanic: { name: '종의 공명', description: '방 중앙에서 순서대로 퍼지는 고리의 경고를 확인하고 빛나는 띠 밖으로 피하세요.' } },
+  { id: 2, name: '불씨 왕국의 용광로', theme: 'forge', color: '#ed925d', boss: 'forge_finalboss', tagline: '살아 돌아오라는 말이, 가장 오래 타는 불이다.', summary: '드라칸의 고향은 끝없는 노동에 갇혔다. 생명을 연료 삼는 용광로를 멈추고 빼앗긴 온기를 돌려준다.', oath: '온기를 빼앗지 않고 나누겠다는 맹세', mechanic: { name: '냉각로 과열', description: '가로와 세로의 세 화염 띠가 번갈아 솟습니다. 붉은 경고선 사이로 이동하세요.' } },
+  { id: 3, name: '거꾸로 흐르는 서리 도서관', theme: 'frost', color: '#a3ceef', boss: 'frost_finalboss', tagline: '지워 버린 실패의 끝에서, 다른 내일을 읽는다.', summary: '리아의 잃어버린 제자와 쓰이지 않은 일기가 기다린다. 금지된 기록을 열어 순환의 기원을 추적한다.', oath: '아픈 진실도 지우지 않겠다는 맹세', mechanic: { name: '지연 기록', description: '발밑과 주변에 남은 원이 잠시 뒤 폭발하며 느려집니다. 기록된 자리에서 즉시 이동하세요.' } },
+  { id: 4, name: '별이 잠긴 심해', theme: 'tide', color: '#65c5d1', boss: 'tide_finalboss', tagline: '돌아갈 곳은 땅이 아니라, 기다리는 사람이다.', summary: '카인이 잃어버린 항로를 따라 가라앉은 선단을 구한다. 서로의 이름으로 등대를 이어 해왕의 사슬을 끊는다.', oath: '붙잡지 않고 귀환을 믿겠다는 맹세', mechanic: { name: '밀물', description: '세 물결 띠가 방을 순서대로 휩쓸며 밀쳐 냅니다. 다음 경고선을 보고 빈 구역으로 이동하세요.' } },
+  { id: 5, name: '새벽을 먹는 왕관', theme: 'crown', color: '#e0c184', boss: 'crown_finalboss', tagline: '세상을 구하기 위해, 너를 잃어야 한다는 거짓말.', summary: '네브의 기억을 노리는 왕관으로 향한다. 누군가의 희생에 기대는 승리 대신 함께 살아갈 내일을 선택한다.', oath: '한 사람의 짐을 함께 나누겠다는 맹세', mechanic: { name: '왕관의 심판', description: '대각선 십자 경고 뒤에 빛이 떨어집니다. 중앙의 작은 안전 원이나 십자 밖으로 피하세요.' } },
 ];
 export const STAGES_PER_CHAPTER = 10;
-
-// 챕터별 잡몹 / 엘리트 풀 — 겹치지 않게 짜서 스테이지마다 그림이 바뀐다
 const ROSTER = {
-  crypt:  { trash: ['skel_minion', 'skel_rogue', 'ghost', 'bomb_slime', 'skel_shield', 'bone_orc'],
-            ranged: ['skel_mage', 'ghost_skull', 'skel_priest'],
-            elite: ['elite_skel_captain', 'elite_bone_lord', 'elite_wraith'] },
-  throne: { trash: ['orc', 'orc_blob', 'tribal', 'cacto_wall', 'bomb_imp', 'imp'],
-            ranged: ['hywirl', 'armabee', 'tribal_shaman'],
-            elite: ['elite_orc_chief', 'elite_yeti', 'elite_bluedemon'] },
-  abyss:  { trash: ['blob_pink', 'bomb_abyss', 'alien', 'golem_guard', 'mushnub', 'ninja'],
-            ranged: ['glub', 'armabee_evo', 'abyss_seer'],
-            elite: ['elite_mushroom_king', 'elite_golem', 'elite_dragonling'] },
+  garden: { trash: ['skel_minion', 'skel_rogue', 'ghost', 'bomb_slime', 'skel_shield', 'bone_orc'], ranged: ['skel_mage', 'ghost_skull', 'skel_priest'], elite: ['elite_skel_captain', 'elite_bone_lord', 'elite_wraith'] },
+  forge: { trash: ['orc', 'orc_blob', 'tribal', 'cacto_wall', 'bomb_imp', 'imp'], ranged: ['hywirl', 'armabee', 'tribal_shaman'], elite: ['elite_orc_chief', 'elite_bluedemon'] },
+  frost: { trash: ['ghost', 'skel_shield', 'blob_green', 'bone_orc', 'skel_rogue', 'golem_guard'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_yeti', 'elite_wraith', 'elite_golem'] },
+  tide: { trash: ['squidle', 'blob_pink', 'alien', 'mushnub', 'bomb_abyss', 'golem_guard'], ranged: ['glub', 'abyss_seer', 'armabee_evo'], elite: ['elite_golem', 'elite_mushroom_king', 'elite_dragonling'] },
+  crown: { trash: ['ninja', 'skel_shield', 'alien', 'bomb_abyss', 'bone_orc', 'imp'], ranged: ['abyss_seer', 'tribal_shaman', 'hywirl'], elite: ['elite_bluedemon', 'elite_skel_captain', 'elite_dragonling'] },
 };
-
+const RANK_LABELS = { captain: '관문 대장', warden: '수문장', midboss: '중간 보스', finalboss: '최종 보스' };
 export function stageDef(ch, st) {
-  const chapter = CHAPTERS[ch - 1];
-  const idx = (ch - 1) * STAGES_PER_CHAPTER + st; // 1..30
-  const boss = st === 5 || st === 10;
-  const scale = Math.pow(1.12, idx - 1);
-  const R = ROSTER[chapter.theme];
+  if (!Number.isInteger(ch) || !Number.isInteger(st) || ch < 1 || ch > CHAPTERS.length || st < 1 || st > STAGES_PER_CHAPTER) throw new RangeError('스테이지는 1-1부터 5-10까지입니다.');
+  const chapter = CHAPTERS[ch - 1], idx = (ch - 1) * STAGES_PER_CHAPTER + st;
+  const rank = st === 10 ? 'finalboss' : st === 5 ? 'midboss' : st === 3 || st === 7 ? 'warden' : 'captain';
+  const boss = rank !== 'captain', scale = Math.pow(1.12, Math.min(idx - 1, 19)) * (1 + Math.max(0, idx - 20) * 0.045);
+  const R = ROSTER[chapter.theme], scene = stageStory(ch, st), enemyId = chapter.theme + '_' + rank;
   const waves = [];
-  const wcount = boss ? 2 : 3;
-  for (let w = 0; w < wcount; w++) {
-    const n = Math.min(28, 10 + Math.floor(idx * 0.6) + w * 4);
-    const list = [];
-    for (let i = 0; i < n; i++) {
-      // 6:1 비율로 원거리 섞기
-      const pool = (i % 7 === 6) ? R.ranged : R.trash;
-      list.push(pool[(i * 3 + w + st) % pool.length]);
-    }
-    const elites = 1 + Math.floor(w / 1.5) + (idx > 10 ? 1 : 0);
-    for (let e = 0; e < elites; e++) list.push(R.elite[(e + st + w) % R.elite.length]);
+  for (let w = 0; w < (boss ? 2 : 3); w++) {
+    const list = [], n = Math.min(28, 10 + Math.floor(idx * 0.6) + w * 4);
+    for (let i = 0; i < n; i++) { const pool = i % 7 === 6 ? R.ranged : R.trash; list.push(pool[(i + w + st) % pool.length]); }
+    for (let e = 0; e < 1 + Math.floor(w / 1.5) + (idx > 10 ? 1 : 0); e++) list.push(R.elite[(e + st + w) % R.elite.length]);
     waves.push(list);
   }
-  const energy = 6 + Math.floor(idx / 6);
+  const enemy = ENEMIES[enemyId];
   return {
-    ch, st, idx, boss, chapter, name: `${idx}층 · ${chapter.name}`, waves, scale, energy,
-    rosterFor: () => R,
-    recPower: Math.floor(2600 * Math.pow(1.12, idx - 1)),
-    rewards: {
-      gold: Math.floor(400 * scale), exp: Math.floor(110 * scale), bp: 60 + (boss ? 60 : 0),
-      firstGems: boss ? 300 : 60, dropChance: boss ? 1 : 0.6, stones: 2 + (boss ? 4 : 0),
-    },
+    ch, st, idx, code: `${ch}-${st}`, title: scene.title, chapter, name: `${ch}-${st} · ${scene.title}`,
+    boss, finale: ch === 5 && st === 10, waves, scale, energy: 6 + Math.floor(idx / 6),
+    rosterFor: () => R, recPower: Math.floor(2600 * scale),
+    encounter: { rank, label: RANK_LABELS[rank], name: enemy.name, enemyId, tactic: enemy.tactic },
+    story: { opening: scene.opening, revelation: scene.revelation, aftermath: scene.aftermath },
+    objective: `전투 방을 정리해 봉인을 해제하고 ${enemy.name} 처치`,
+    rewards: { gold: Math.floor(400 * scale), exp: Math.floor(110 * scale), bp: 60 + (boss ? 60 : 0), firstGems: rank === 'finalboss' ? 300 : boss ? 150 : 60, dropChance: boss ? 1 : 0.6, stones: 2 + (boss ? 4 : 0) },
   };
 }
 
@@ -110,3 +101,59 @@ export const ENEMIES = {
   boss_demon:   { name: '심연의 대악마', model: 'Big_Demon', hp: 33600, atk: 51, spd: 4.0, range: 3.4, atkTime: 1.6, exp: 175, scale: 2.3, boss: true, armor: 0.2, gold: 45, portrait: '/img/boss_lich.webp', kit: 'reaper', summon: 'imp' },
   boss_dragon:  { name: '고대 용 발카르', model: 'Flying_Dragon_Evolved', hp: 37200, atk: 56, spd: 4.6, range: 3.2, atkTime: 1.5, exp: 200, scale: 2.6, boss: true, armor: 0.2, gold: 55, portrait: '/img/boss_reaper.webp', kit: 'dragon', summon: 'squidle', projColor: 0xff7a30 },
 };
+
+// 검수된 기존 리그만 재사용한다. 전용 원화의 3D 모델이 완성됐다는 뜻은 아니다.
+const CAMPAIGN_ENCOUNTERS = {
+  garden: {
+    captain: ['elite_skel_captain', '장례 행렬 대장', ['slam'], '강타의 원을 벗어난 뒤 후방을 공격하세요.'],
+    warden: ['elite_bone_lord', '침묵의 종지기', ['slam', 'spin'], '중앙의 공명 고리와 회전 공격 사이의 빈 곳을 찾으세요.'],
+    midboss: ['boss_warlord', '애도의 기사 세렌', ['spin', 'slam', 'summon'], '소환된 병사를 먼저 모아 처리하고 강타 뒤에 반격하세요.'],
+    finalboss: ['boss_warlord', '종왕 에일른', ['slam', 'summon', 'spin', 'slam'], '종의 공명 띠를 피하면서 소환과 회전 공격의 순서를 읽으세요.'],
+  },
+  forge: {
+    captain: ['elite_orc_chief', '화구 경비대장', ['slam'], '과열 경고선에서 벗어난 뒤 느린 강타의 빈틈을 노리세요.'],
+    warden: ['elite_bluedemon', '재의 감독관', ['dash', 'slam'], '돌진의 옆으로 피하고 다음 화염 띠까지 확인하세요.'],
+    midboss: ['elite_orc_chief', '대장장이 이그란', ['slam', 'spin', 'slam'], '망치의 넓은 강타를 연달아 피한 뒤 접근하세요.'],
+    finalboss: ['boss_demon', '화왕 발드', ['fan', 'dash', 'summon', 'spin'], '부채꼴 화염을 옆으로 피하고 소환 중에 적을 몰아 처리하세요.'],
+  },
+  frost: {
+    captain: ['elite_wraith', '서고 경비대장', ['fan'], '탄막 사이를 통과하며 기록된 발밑 원에서 이동하세요.'],
+    warden: ['elite_yeti', '백지의 검열관', ['slam', 'soulrain'], '낙하 경고가 생기면 같은 위치에서 공격을 계속하지 마세요.'],
+    midboss: ['elite_golem', '기록관 오르딘', ['soulrain', 'fan', 'slam'], '지연 기록과 낙하 원을 벗어난 뒤 부채꼴 탄막의 옆으로 돌아가세요.'],
+    finalboss: ['boss_demon', '서리왕 이셀', ['soulrain', 'summon', 'fan', 'soulrain'], '추적 기록을 한 방향으로 유도하고 소환된 적부터 정리하세요.'],
+  },
+  tide: {
+    captain: ['elite_golem', '침몰 선단 대장', ['slam'], '밀물이 닿기 전에 빈 띠로 이동하고 강타 후 반격하세요.'],
+    warden: ['elite_dragonling', '해구의 추격자', ['dash', 'fan'], '밀물 방향을 확인하며 돌진과 탄막을 옆으로 피하세요.'],
+    midboss: ['elite_mushroom_king', '등대지기 마렌', ['fan', 'summon', 'soulrain'], '부유하는 적을 먼저 처리하고 등대의 낙하 경고에서 빠져나오세요.'],
+    finalboss: ['boss_dragon', '해왕 네레이스', ['fan', 'dash', 'slam', 'summon'], '파도에 밀릴 곳을 미리 비우고 돌진이 끝난 왕의 뒤를 잡으세요.'],
+  },
+  crown: {
+    captain: ['elite_skel_captain', '왕관의 근위대장', ['spin', 'slam'], '십자 심판의 안전 구역을 확인하고 회전 후 강타까지 피하세요.'],
+    warden: ['elite_bluedemon', '새벽의 집행관', ['dash', 'soulrain', 'spin'], '돌진 이후 바로 멈추지 말고 낙하 원 밖으로 이동하세요.'],
+    midboss: ['boss_warlord', '첫 기사 아스텔', ['spin', 'dash', 'summon', 'slam'], '소환 병사를 정리한 뒤 회전과 돌진이 끝나는 순간을 노리세요.'],
+    finalboss: ['boss_dragon', '새벽을 먹는 빈 왕관', ['slam', 'fan', 'soulrain', 'dash', 'summon', 'spin'], '다섯 왕의 공격이 순서대로 이어집니다. 십자 심판의 중앙 안전 원을 활용하세요.'],
+  },
+};
+const RANK_STATS = {
+  captain: { hp: 13000, atk: 40, scale: 1.45, exp: 90, gold: 20 },
+  warden: { hp: 19000, atk: 44, scale: 1.7, exp: 120, gold: 28 },
+  midboss: { hp: 27000, atk: 48, scale: 1.95, exp: 160, gold: 40 },
+  finalboss: { hp: 35000, atk: 53, scale: 2.25, exp: 220, gold: 55 },
+};
+for (const chapter of CHAPTERS) {
+  const theme = chapter.theme;
+  const summon = ROSTER[theme].trash[0];
+  for (const [rank, [baseId, name, pattern, tactic]] of Object.entries(CAMPAIGN_ENCOUNTERS[theme])) {
+    const base = ENEMIES[baseId];
+    ENEMIES[theme + '_' + rank] = {
+      ...base, ...RANK_STATS[rank], name, boss: true, elite: false, ranged: false,
+      behavior: undefined, rank, pattern, tactic, summon, tint: chapter.color, range: 3.2,
+      armor: rank === 'captain' ? 0.12 : 0.2, atkTime: rank === 'finalboss' ? 1.7 : 1.9,
+      kit: theme === 'garden' || theme === 'crown' ? 'warlord' : theme === 'frost' ? 'lich' : theme === 'tide' ? 'dragon' : 'reaper',
+      voiceKey: theme === 'garden' || theme === 'crown' ? 'boss_warlord' : theme === 'tide' ? 'boss_dragon' : 'boss_demon',
+      portrait: base.portrait || (theme === 'garden' ? '/img/boss_warlord.webp' : theme === 'tide' ? '/img/boss_reaper.webp' : '/img/boss_lich.webp'),
+      projColor: Number.parseInt(chapter.color.slice(1), 16),
+    };
+  }
+}

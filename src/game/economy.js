@@ -186,7 +186,7 @@ export class Economy {
   // ---------- 스테이지 ----------
   stageKey(ch, st) { return `${ch}-${st}`; }
   stageIndex(ch, st) { return (ch - 1) * STAGES_PER_CHAPTER + st; }
-  isUnlocked(ch, st) { return this.stageIndex(ch, st) <= this.s.progress.unlocked; }
+  isUnlocked(ch, st) { return Number.isInteger(ch) && Number.isInteger(st) && ch >= 1 && ch <= CHAPTERS.length && st >= 1 && st <= STAGES_PER_CHAPTER && this.stageIndex(ch, st) <= this.s.progress.unlocked; }
   nextStage() { const idx = Math.min(this.s.progress.unlocked, CHAPTERS.length * STAGES_PER_CHAPTER); const ch = Math.ceil(idx / STAGES_PER_CHAPTER), st = ((idx - 1) % STAGES_PER_CHAPTER) + 1; return stageDef(ch, st); }
   completeStage(stage, stars, { double = false, fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [] } = {}) {
     const s = this.s; const key = this.stageKey(stage.ch, stage.st); const first = !s.progress.stars[key];

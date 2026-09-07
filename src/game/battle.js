@@ -10,6 +10,7 @@ import { loadModel } from '../engine/assets.js';
 import { RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_BOSS } from '../data/items.js';
 import { audio } from '../engine/audio.js';
 import { SetProcs } from './setprocs.js';
+import { RegionHazards } from './region-hazards.js';
 
 const _v = new THREE.Vector3();
 const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
@@ -56,7 +57,7 @@ export class Battle {
   async start(stage, heroId, heroState, equipBonus) {
     // 재도전/다음 층에서도 이전 액터·탐험 목표·시간 효과를 반드시 종료한다.
     this.stop(); this.autoTarget = null; this.timeCtl = new TimeCtl();
-    this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0;
+    this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0; this.bossDefeated = false;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
     this.combo = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0;
     if (this.portal) { this.scene.remove(this.portal.mesh); this.portal = null; }
@@ -89,10 +90,13 @@ export class Battle {
     this.maxAlive = q === 'low' ? 16 : q === 'mid' ? 24 : 34;
     this.curRoom = sr; sr.discovered = true;
     this.ui.setObjective(this.world);
-    this.ui.setFloorLabel(stage.idx, this.world);
-    this.ui.waveBanner(`${stage.idx}층`);
+    this.ui.setFloorLabel(stage.idx, this.world, stage);
+    this.ui.waveBanner(stage.code || `${stage.idx}층`);
     audio.waveHorn({ vol: 0.45 });
-    this.heroId = heroId; this.bossKey = stage.chapter.boss;
+    this.heroId = heroId;
+    this.bossKey = ENEMIES[stage.encounter?.enemyId || stage.chapter.boss]?.voiceKey || stage.chapter.boss;
+    this.hazards = new RegionHazards(this);
+    this.after(1.2, () => { if (this.active && stage.objective) this.ui.toast(stage.objective, 'gold'); });
     this.after(0.25, () => { if (this.active) audio.voice(`hero_${heroId}_select`, { min: 20 }); });
     this.after(3.2, () => { if (this.active) audio.voice('floor_start', { min: 30 }); });   // 층 시작 안내 ("The seal is broken" 는 unsealBoss 의 seal_break 가 맡는다)
     // 테마 세트가 켜져 있으면 알려준다 — 발동 효과는 눈에 띄어야 세트를 모을 이유가 된다
@@ -182,7 +186,7 @@ export class Battle {
     for (let i = 0; i < n; i++) list.push((i % 6 === 5 ? R.ranged : R.trash)[(i * 3 + room.id) % (i % 6 === 5 ? R.ranged.length : R.trash.length)]);
     if (room.type === ROOM_TYPE.ELITE) { list.push(R.elite[room.id % R.elite.length]); if (this.stage.idx > 8) list.push(R.elite[(room.id + 1) % R.elite.length]); }
     else if (room.type === ROOM_TYPE.NORMAL && Math.random() < 0.35) list.push(R.elite[room.id % R.elite.length]);
-    if (room.type === ROOM_TYPE.BOSS) list.push(this.stage.chapter.boss, R.trash[0], R.trash[1], R.trash[0], R.trash[2], R.ranged[0], R.trash[1]);
+    if (room.type === ROOM_TYPE.BOSS) list.push(this.stage.encounter?.enemyId || this.stage.chapter.boss, R.trash[0], R.trash[1], R.trash[0], R.trash[2], R.ranged[0], R.trash[1]);
     return list;
   }
   /** 증원 — 이웃 방의 무리가 싸움 소리를 듣고 복도로 몰려온다. 이웃 정원에서 미리 뺀 몫이라 층 총량은 같다 */
@@ -227,7 +231,8 @@ export class Battle {
     if (!list.length) { this.markCleared(room); return; }
     const isBoss = room.type === ROOM_TYPE.BOSS;
     if (isBoss) {
-      audio.playMusic(Math.random() < 0.5 ? 'bgm_boss' : 'bgm_boss2'); this.ui.waveBanner('BOSS'); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 }));
+      audio.playMusic(Math.random() < 0.5 ? 'bgm_boss' : 'bgm_boss2'); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 }));
+      if (this.stage.encounter?.tactic) this.ui.toast(this.stage.encounter.tactic, 'gold');
       // 보스방 입구의 제물 — 봉인 뒤 가장 먼 방까지 걸어오는 20초 + 보스전 초반 20초가 무보상 40초로 이어졌다 (longestDryStreakSec 실측)
       const p = this.player.pos, dx = room.x - p.x, dz = room.z - p.z, l = Math.hypot(dx, dz) || 1;
       const at = new THREE.Vector3(p.x + dx / l * 3.5, 0.6, p.z + dz / l * 3.5);
@@ -302,7 +307,7 @@ export class Battle {
     this.scene.remove(P.mesh); this.portal = null;
   }
 
-  stop() { this.active = false; this.app.companionAgent?.endBattle(); if (this.portal) { this.scene.remove(this.portal.mesh); this.portal = null; } this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) if (p.mesh) this.scene.remove(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; }
+  stop() { this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); if (this.portal) { this.scene.remove(this.portal.mesh); this.portal = null; } this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) if (p.mesh) this.scene.remove(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const def = ENEMIES[type]; if (!def) return; const gltf = this.app.models[def.model]; if (!gltf) return;
@@ -326,7 +331,16 @@ export class Battle {
     if (def.boss) { this.boss = e; this.ui.showBoss(def.name, true, def.portrait); this.app.companionAgent?.observe('boss-spotted', { name: def.name, id: `${this.stage.idx}:${def.name}` }); }
     return e;
   }
-  summonMinions(boss, n) { const t = boss.def.summon || 'skel_minion'; for (let i = 0; i < n; i++) this.after(i * 0.12, () => this.spawnEnemy(t, boss.pos)); this.ui.toast(`${boss.def.name}이(가) 병사를 소환했다!`, 'red'); audio.magic({ vol: 0.4, base: 150, notes: [0, -2, -4], step: 0.12, type: 'sawtooth' }); }
+  summonMinions(boss, n) {
+    if (!this.active || !boss.alive || this.bossDefeated) return;
+    const t = boss.def.summon || 'skel_minion', room = boss.homeRoom;
+    // 소환은 추가 병력이다. 전투 정원을 가득 채우면 남는 소환을 취소한다.
+    for (let i = 0; i < n; i++) this.after(i * .12, () => {
+      if (!this.active || !boss.alive || this.bossDefeated || room?.cleared || this.enemies.filter(e => e.alive).length >= this.maxAlive) return;
+      this.spawnEnemy(t, boss.pos, room);
+    });
+    this.ui.toast(`${boss.def.name}이(가) 병사를 소환했다!`, 'red'); audio.magic({ vol: .4, base: 150, notes: [0, -2, -4], step: .12, type: 'sawtooth' });
+  }
   /** 보스 갑옷 파편 — HP 20% 마다 장비·재화가 튄다. 50초 보스전에 60/30% 페이즈 드랍만으로는 보상 공백이 36초까지 벌어졌다 (하네스 실측) */
   bossShed(boss) {
     const at = boss.pos.clone().setY(0.6);
@@ -354,6 +368,9 @@ export class Battle {
     if (this.pending.length && this.active) this.after(0.5 + Math.random() * 0.5, () => { if (this.pending.length && this.active) { const n = this.pending.shift(); this.spawnEnemy(n.t, null, n.room); } });
     if (e.isBoss) {
       this.ui.showBoss('', false); this.boss = null;
+      this.bossDefeated = true; this.hazards?.clear();
+      // 처치 연출과 결과 사이에 잔여 기믹이 승리를 뒤집지 않는다.
+      if (this.player.alive) this.player.invuln = Math.max(this.player.invuln, 4);
       this.timeCtl.slowmo(0.15, 1.8); this.renderer.punch(1.4); this.renderer.flashScreen(0.9, 0xffffff); this.renderer.aberr = 2; this.renderer.shake(1);
       this.fx.explosion(e.pos, { size: 12, life: 0.8, color: 0xffd0a0 }); this.fx.holyBurst(e.pos, { size: 14, life: 0.7 });
       this.fx.burst(e.pos.clone().setY(1.5), 0xff5050, { n: 80, speed: 14, size: 0.6, up: 1 }); this.fx.shockTex(e.pos, 0xffd060, { r1: 16, life: 0.9 });
@@ -381,10 +398,11 @@ export class Battle {
     this.fx.holyBurst(this.player.pos, { size: 9, life: 0.6 }); this.fx.shockTex(this.player.pos, 0xffd060, { r1: 9, life: 0.7 });
     this.hitRadius(this.player.pos, 7, 1, { kb: 14, stun: 1.5, kind: 'magic', source: this.player, dirFrom: this.player.pos });
     audio.playMusic(this.boss ? 'bgm_boss' : 'bgm_battle'); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12], step: 0.08 });
+    if (this.bossDefeated) this.after(.8, () => this.victory());
   }
   defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed }; this.ui.showResult(this, false); }
   victory() {
-    if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear();
+    if (!this.active || !this.player?.alive) return; this.active = false; this.input.enabled = false; this.input.clear();
     this.app.companionAgent?.observe('victory', { floor: this.stage?.idx || 0 });
     this.player.play('Cheer', { fade: 0.2 }); audio.playMusic(null); audio.play('jingle_win0', { vol: 0.9 }); this.ui.showBoss('', false); setTimeout(() => audio.voice(`hero_${this.heroId}_win`), 1200); setTimeout(() => audio.voice('floor_clear'), 3800);
     this.fx.burst(this.player.pos.clone().setY(1), 0xffd060, { n: 60, speed: 9, size: 0.5, up: 1.5, grav: 6, life: 1.2 }); this.fx.embers(this.player.pos, 0xffe080, { n: 40, radius: 2, life: 2, rise: 3 });
@@ -471,7 +489,8 @@ export class Battle {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
       const p = this.projectiles[i]; p.t += dt; p.pos.addScaledVector(p.dir, p.speed * dt); if (p.mesh) { p.mesh.position.copy(p.pos); p.mesh.rotation.y += dt * 8; }
       if (p.trail) this.fx.embers(p.pos, p.trail, { n: 2, radius: 0.15, life: 0.35, size: 0.35, rise: 0.5 });
-      let done = p.t >= p.life || Math.hypot(p.pos.x, p.pos.z) > 17;
+      // 이동 던전은 원점에서 수백 유닛까지 이어진다. 발사체 수명으로 회수한다.
+      let done = p.t >= p.life;
       if (p.hostile) {
         const pl = this.player; if (pl && pl.alive && Math.hypot(pl.pos.x - p.pos.x, pl.pos.z - p.pos.z) < p.radius + 0.6) { pl.hurt(p.dmg, { dirx: p.dir.x, dirz: p.dir.z, kb: p.kb, kind: p.kind }); done = true; this.fx.burst(p.pos, p.color, { n: 12, speed: 5, size: 0.3 }); }
       } else {
@@ -531,6 +550,7 @@ export class Battle {
     this.input.update();
     if (this.active) this.player.handleInput(this.input, dt);
     this.player.update(dt);
+    this.hazards?.update(dt);
     if (this.portal) { const P = this.portal; P.t += dt; P.mesh.rotation.z += dt * 1.5; P.mesh.material.opacity = 0.6 + Math.sin(P.t * 5) * 0.25; if (Math.random() < dt * 10) this.fx.embers(P.pos, 0xff6080, { n: 1, radius: 1.2, life: 0.8, size: 0.3, rise: 2.5 }); if (P.t > 0.8 && this.player.alive && this.player.distTo({ pos: P.pos }) < 1.4) this.usePortal(); }
     let alive = 0;
     for (let i = this.enemies.length - 1; i >= 0; i--) { const e = this.enemies[i]; e.update(dt); if (e.dead) { e.dispose(); this.enemies.splice(i, 1); } else if (e.alive && !e.spawning) alive++; }

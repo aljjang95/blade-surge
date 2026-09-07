@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { lobbyCameraPosition } from './lobby-camera.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -147,8 +148,10 @@ export class Renderer {
     rig.zoom = Math.max(0, rig.zoom - realDt * 3);
     let desired;
     if (rig.mode === 'lobby') {
-      // Fixed portrait composition keeps the hero and equipment readable.
-      desired = new THREE.Vector3(1.8, 2.1, 5.1).add(rig.target);
+      const p = lobbyCameraPosition(this.lobbyCamera);
+      desired = new THREE.Vector3(p.x, p.y, p.z).add(rig.target);
+      const lobbyFov = 46 + (window.innerWidth < window.innerHeight ? 14 : 0);
+      if (cam.fov !== lobbyFov) { cam.fov = lobbyFov; cam.updateProjectionMatrix(); }
       rig.pos.lerp(desired, 1 - Math.exp(-realDt * 3));
       cam.position.copy(rig.pos);
       cam.lookAt(rig.target.x, rig.target.y + 1.1, rig.target.z);
