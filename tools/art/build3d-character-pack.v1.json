@@ -1,0 +1,143 @@
+{
+  "schema": "tll.blade-surge.build3d-character-pack.v1",
+  "status": "preflight-ready",
+  "createdFor": "BLADE SURGE",
+  "generatorDoctrine": "Build 3D Game Rooms",
+  "targetRuntime": {
+    "engine": "three.js",
+    "format": "glb",
+    "productionCamera": "landscape gameplay camera is authoritative",
+    "assembly": "src/engine/hero-identity.js#assembleHeroIdentity",
+    "rigPolicy": "preserve shipped hero skeleton, animation clips and weapon sockets",
+    "sourceRigRoot": "/models",
+    "fittingRoot": "/models/tll"
+  },
+  "qualityGates": {
+    "identity": "must preserve approved original-v1 character identity",
+    "authoredVerticesPerSkinMax": 25000,
+    "meshReadyReferenceRequired": true,
+    "referenceImageApprovalRequired": true,
+    "meshy": {
+      "enabled": false,
+      "reason": "paid-generation requires explicit owner spend approval and an execution environment with MESHY_API_KEY",
+      "aiModel": "meshy-5",
+      "modelType": "standard",
+      "topology": "triangle",
+      "textures": true,
+      "pbr": true,
+      "textureResolution": "2k",
+      "chargedAttemptsPerAssetMax": 2,
+      "apiKeyPolicy": "environment-only; never persist or print",
+      "inputDisclosure": "approved source image leaves the local environment for Meshy"
+    },
+    "runtimeAcceptance": [
+      "all required combo/skill/state animation aliases remain present",
+      "handslot.r socket remains resolvable for playable heroes",
+      "authored fitting binds to the source skeleton without replacing combat animation authority",
+      "no NaN/Inf positions after assembly",
+      "clone/dispose does not dispose shared source geometry",
+      "real landscape gameplay camera review required before promotion"
+    ]
+  },
+  "characters": [
+    {
+      "id": "knight",
+      "name": "검성 아르카",
+      "model": "Knight",
+      "approvedSource": "/img/tll/knight-original-v1.webp",
+      "approvedSourceSha256": "fa7a28c784c198e8c5f7f052f919515f485a4ede55a939d0004038db87e27cf7",
+      "sourceRig": "/models/Knight.glb",
+      "baselineFitting": "/models/tll/knight-casual-v2.glb",
+      "recoveryFitting": "/models/tll/knight-oath-v1.glb",
+      "identityLocks": ["ivory crown", "split cuirass", "handsome adult knight identity", "one-handed sword", "round shield"],
+      "semanticFront": "+Z",
+      "attachment": "tllBone extras -> existing source skeleton",
+      "meshReferenceStatus": "needs-isolated-full-body-reference",
+      "meshyStatus": "blocked-by-spend-and-execution-gate",
+      "rejectionCriteria": [
+        "big-headed toy redesign",
+        "face/hairstyle/crown identity drift",
+        "cropped feet or supports",
+        "fused sword/shield into body mesh",
+        "changed adult proportions",
+        "missing or ambiguous front",
+        "runtime silhouette worse than casual-v2 baseline"
+      ]
+    },
+    {
+      "id": "barbarian",
+      "name": "광전사 드라칸",
+      "model": "Barbarian",
+      "approvedSource": "/img/tll/barbarian-original-v1.webp",
+      "approvedSourceSha256": "1abe9dd36a60e00140deda6143126e81144485825564af697a7e9e1ccf8abd7d",
+      "sourceRig": "/models/Barbarian.glb",
+      "baselineFitting": "/models/tll/barbarian-casual-v2.glb",
+      "recoveryFitting": "/models/tll/barbarian-oath-v1.glb",
+      "identityLocks": ["exposed torso", "war harness", "asymmetric shoulder armour", "two-handed axe"],
+      "semanticFront": "+Z",
+      "attachment": "tllBone extras -> existing source skeleton",
+      "meshReferenceStatus": "needs-isolated-full-body-reference",
+      "meshyStatus": "blocked-by-spend-and-execution-gate",
+      "rejectionCriteria": [
+        "generic barbarian face or silhouette",
+        "symmetrized shoulder armour",
+        "cropped feet or supports",
+        "axe fused into torso/limbs",
+        "excessively realistic gore or skin treatment",
+        "runtime silhouette worse than casual-v2 baseline"
+      ]
+    },
+    {
+      "id": "mage",
+      "name": "대마도사 리아",
+      "model": "Mage",
+      "approvedSource": "/img/tll/mage-original-v1.webp",
+      "approvedSourceSha256": "5a3dfbc3761debf0eddf47a34ec09fd052ce6e3eebc8f6f77f1e11ca7f690e5d",
+      "sourceRig": "/models/Mage.glb",
+      "baselineFitting": "/models/tll/mage-casual-v2.glb",
+      "recoveryFitting": "/models/tll/mage-oath-v1.glb",
+      "identityLocks": ["long astral robe", "star diadem", "adult mage identity", "two-handed staff"],
+      "semanticFront": "+Z",
+      "attachment": "tllBone extras -> existing source skeleton",
+      "meshReferenceStatus": "needs-isolated-full-body-reference",
+      "meshyStatus": "blocked-by-spend-and-execution-gate",
+      "rejectionCriteria": [
+        "generic witch/wizard redesign",
+        "star diadem drift",
+        "robe fused across legs so movement cannot read",
+        "staff fused into body",
+        "cropped feet or supports",
+        "runtime silhouette worse than casual-v2 baseline"
+      ]
+    },
+    {
+      "id": "rogue",
+      "name": "암살자 카인",
+      "model": "Rogue",
+      "approvedSource": "/img/tll/rogue-original-v1.webp",
+      "approvedSourceSha256": "373727c95a38283f40e22be44bb99f630722b50a47cf8676816bc0a324728ed2",
+      "sourceRig": "/models/Rogue.glb",
+      "baselineFitting": "/models/tll/rogue-casual-v2.glb",
+      "recoveryFitting": "/models/tll/rogue-oath-v1.glb",
+      "identityLocks": ["dark hood", "lower-face mask", "diagonal baldric", "adult assassin identity"],
+      "semanticFront": "+Z",
+      "attachment": "tllBone extras -> existing source skeleton",
+      "meshReferenceStatus": "needs-isolated-full-body-reference",
+      "meshyStatus": "blocked-by-spend-and-execution-gate",
+      "rejectionCriteria": [
+        "generic ninja redesign",
+        "hood/mask/baldric identity drift",
+        "cropped feet or supports",
+        "weapons fused into limbs",
+        "childlike/chibi proportion drift",
+        "runtime silhouette worse than casual-v2 baseline"
+      ]
+    }
+  ],
+  "pilot": {
+    "characterId": "knight",
+    "reason": "representative silhouette with face, crown, armour, sword and shield constraints",
+    "nextGate": "create and explicitly approve one isolated full-body mesh-ready reference before any paid Meshy call",
+    "paidGeneration": "not-authorized"
+  }
+}
