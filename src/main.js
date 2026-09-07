@@ -1,6 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
 import { Renderer } from './engine/renderer.js';
+import { LobbyCameraControls } from './engine/lobby-camera.js';
 import { FX } from './engine/fx.js';
 import { Input } from './engine/input.js';
 import { audio } from './engine/audio.js';
@@ -40,6 +41,7 @@ class App {
     this.meta = new Meta(this);
     this.models = {};
     this.mode = 'boot'; this.showcase = null; this.lobbyVisible = true;
+    this.lobbyCameraControls = new LobbyCameraControls(this);
     this.last = performance.now();
     this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.applySettings();
@@ -85,6 +87,7 @@ class App {
     if (!q || q === 'auto') { const cores = navigator.hardwareConcurrency || 4; const mem = navigator.deviceMemory || 4; q = (cores <= 4 || mem <= 3) ? 'mid' : 'high'; st.quality = q; }
     this.renderer.setQuality(q); this.fx.setQuality(q);
     this.renderer.setCameraPreset(st.camera || 'auto');
+    this.lobbyCameraControls?.sync();
     this.companionAgent?.syncQuality();
   }
   // ---------- 로비 ----------
@@ -126,6 +129,9 @@ class App {
   }
   async startStage(stage) {
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
+    if (!stage || !this.eco.isUnlocked(stage.ch, stage.st)) { this.ui.toast('이전 스테이지를 먼저 클리어하세요.', 'red'); return false; }
+    // 미리보기에서 넘긴 객체 대신 검증된 현재 스테이지 정의로 출격한다.
+    stage = stageDef(stage.ch, stage.st);
     this.stageStarting = true;
     let spent = false;
     const energyBefore = { energy: this.eco.s.energy, energyT: this.eco.s.energyT };

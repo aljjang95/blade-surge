@@ -5,6 +5,7 @@ import { ITEM_BY_ID, ITEM_ICON, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST,
 import { SKUS, SHOP_TABS, GACHA, BATTLE_PASS, PASS_TRACK, DAILY_REWARDS } from '../data/shop.js';
 import { CHAPTERS, STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
 import { REWARD_LABEL } from '../game/economy.js';
+import { storyText, encounterLabel, journalHtml } from './campaign.js';
 const CAM_DESC = { auto: '상황에 맞춰 자동 — 탐험은 액션, 난전은 탑다운, 보스는 시네마틱', top: '높이서 내려다보는 클래식 시점 — 몹몰이 파악이 쉽다', action: '낮고 가까운 시점 — 타격감과 속도감이 크다', wide: '멀고 넓은 시점 — 전장 전체와 보스 패턴이 보인다' };
 
 const RC = { N: 'var(--r-n)', R: 'var(--r-r)', SR: 'var(--r-sr)', SSR: 'var(--r-ssr)' };
@@ -18,6 +19,7 @@ export class Meta {
     document.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); const k = b.dataset.open; if (k === 'energy') this.openTab('shop', 'energy'); else if (k === 'shop-gold') this.openTab('shop', 'gold'); else this.openTab('shop', 'gem'); }));
     $('btn-battle').addEventListener('click', () => this.app.startStage(this.eco.nextStage()));
     $('stage-pill').addEventListener('click', () => this.openTab('stage'));
+    $('btn-campaign-journal').addEventListener('click', () => this.ui.modal(journalHtml(this.eco.s.progress), { onOpen: (box) => { box.querySelector('#journal-close').onclick = () => this.ui.closeModal(); } }));
     $('btn-daily').addEventListener('click', () => this.showDaily());
     $('btn-mail').addEventListener('click', () => this.showMail());
     $('btn-quest').addEventListener('click', () => this.showQuests());
@@ -75,23 +77,33 @@ export class Meta {
 
   // ================= 스테이지 =================
   renderStages() {
-    const tabs = $('chapter-tabs'); tabs.innerHTML = CHAPTERS.map((c) => `<button data-ch="${c.id}" class="${c.id === this.chapter ? 'on' : ''} ${this.eco.isUnlocked(c.id, 1) ? '' : 'lock'}">${c.id}장 ${c.name}</button>`).join('');
-    tabs.querySelectorAll('button').forEach((b) => b.onclick = () => { const ch = +b.dataset.ch; if (!this.eco.isUnlocked(ch, 1)) { this.ui.toast('이전 챕터를 먼저 클리어하세요', 'red'); return; } this.chapter = ch; this.renderStages(); });
+    const tabs = $('chapter-tabs'); tabs.innerHTML = CHAPTERS.map((c) => `<button type="button" data-ch="${c.id}" aria-pressed="${c.id === this.chapter}" class="${c.id === this.chapter ? 'on' : ''} ${this.eco.isUnlocked(c.id, 1) ? '' : 'lock'}"><small>REGION 0${c.id}${this.eco.isUnlocked(c.id, 1) ? '' : ' · 미개방'}</small>${storyText(c.name)}</button>`).join('');
+    tabs.querySelectorAll('button').forEach((b) => b.onclick = () => { this.chapter = +b.dataset.ch; this.renderStages(); tabs.querySelector(`[data-ch="${this.chapter}"]`)?.focus({ preventScroll: true }); });
     const grid = $('stage-grid'); grid.innerHTML = '';
     const next = this.eco.nextStage(); if (!this.stage || this.stage.ch !== this.chapter) this.stage = (next.ch === this.chapter) ? next : stageDef(this.chapter, 1);
+    const chapter = CHAPTERS[this.chapter - 1];
+    const chapterCast = [HEROES.knight, HEROES.barbarian, HEROES.mage, HEROES.rogue, { name: '기억의 동행 네브', portrait: '/img/tll/neve-original-v1.webp' }][this.chapter - 1];
+    const cleared = Array.from({ length: STAGES_PER_CHAPTER }, (_, i) => this.eco.s.progress.stars[`${this.chapter}-${i + 1}`] || 0).filter(Boolean).length;
+    const total = CHAPTERS.reduce((n, c) => n + Array.from({ length: STAGES_PER_CHAPTER }, (_, i) => this.eco.s.progress.stars[`${c.id}-${i + 1}`] || 0).filter(Boolean).length, 0);
+    $('tab-stage').dataset.region = chapter.theme;
+    $('chapter-brief').innerHTML = `<div class="chapter-copy"><span class="campaign-eyebrow">${storyText(chapter.tagline)}</span><h3>${storyText(chapter.name)}</h3><p>${storyText(chapter.summary)}</p></div><div class="campaign-progress"><b>${cleared}<small> / ${STAGES_PER_CHAPTER}</small></b><span>지역 정복 · 전체 ${total}/50</span><progress value="${cleared}" max="${STAGES_PER_CHAPTER}" aria-label="${storyText(chapter.name)} 클리어 진행도"></progress></div><figure class="chapter-cast"><img src="${chapterCast.portrait}" width="1122" height="1402" alt="${storyText(chapterCast.name)}" decoding="async"><figcaption>${storyText(chapterCast.name)}</figcaption></figure>`;
     for (let st = 1; st <= STAGES_PER_CHAPTER; st++) {
       const d = stageDef(this.chapter, st); const unlocked = this.eco.isUnlocked(this.chapter, st); const stars = this.eco.s.progress.stars[`${this.chapter}-${st}`] || 0;
-      const cell = document.createElement('div'); cell.className = 'stage-cell' + (d.boss ? ' boss' : '') + (unlocked ? '' : ' lock') + (this.stage.st === st ? ' on' : '');
-      cell.innerHTML = `<span>${st}</span><span class="st ${stars ? '' : 'none'}">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</span>${d.boss ? '<em class="tag">BOSS</em>' : ''}`;
-      cell.onclick = () => { if (!unlocked) { this.ui.toast('잠겨 있습니다', 'red'); audio.play('ui_error'); return; } this.stage = d; this.renderStages(); };
+      const cell = document.createElement('button'); cell.type = 'button'; cell.className = 'stage-cell' + (d.boss ? ' boss' : '') + (unlocked ? '' : ' lock') + (this.stage.st === st ? ' on' : '');
+      cell.dataset.stage = d.code; cell.dataset.rank = d.encounter?.rank || 'captain'; cell.setAttribute('aria-pressed', String(this.stage.st === st));
+      cell.setAttribute('aria-label', `${d.code} ${d.title} · ${encounterLabel(d)} · ${unlocked ? stars ? `별 ${stars}개` : '도전 가능' : '미개방, 소개 보기'}`);
+      cell.innerHTML = `<span class="stage-code">${d.code}</span><span class="stage-rank">${storyText(encounterLabel(d))}</span><span aria-hidden="true" class="st ${stars ? '' : 'none'}">${unlocked ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : '미개방'}</span>`;
+      cell.onclick = () => { this.stage = d; this.renderStages(); grid.querySelector(`[data-stage="${d.code}"]`)?.focus({ preventScroll: true }); };
       grid.appendChild(cell);
     }
     const d = this.stage; const stars = this.eco.s.progress.stars[`${d.ch}-${d.st}`] || 0; const power = this.eco.heroPower(this.eco.s.selected);
-    $('stage-detail').innerHTML = `<h3>${d.name} ${d.boss ? '<span style="color:var(--red)">· 보스전</span>' : ''}</h3>
-      <div class="meta"><span>권장 전투력 <b style="color:${power >= d.recPower ? 'var(--green)' : 'var(--red)'}">${fmt(d.recPower)}</b> (내 전투력 ${fmt(power)})</span><span>웨이브 ${d.waves.length}</span><span>에너지 <i class="ic ic-energy"></i>${d.energy}</span></div>
+    const unlocked = this.eco.isUnlocked(d.ch, d.st);
+    $('stage-detail').innerHTML = `<div class="stage-narrative"><span class="campaign-eyebrow">${d.code} · ${storyText(encounterLabel(d))}</span><h3>${storyText(d.title)}</h3><p class="stage-opening">${storyText(d.story?.opening)}</p><p class="stage-objective"><b>목표</b> ${storyText(d.objective)}</p><div class="stage-tactics"><p><b>${storyText(chapter.mechanic?.name)}</b> ${storyText(chapter.mechanic?.description)}</p><p><b>${storyText(d.encounter?.name)}</b> ${storyText(d.encounter?.tactic)}</p></div></div><div class="stage-launch">
+      <div class="meta"><span>권장 전투력 <b style="color:${power >= d.recPower ? 'var(--green)' : 'var(--red)'}">${fmt(d.recPower)}</b></span><span>내 전투력 ${fmt(power)}</span></div>
       <div class="rewards"><span class="reward-chip"><i class="ic ic-gold"></i> ${fmt(d.rewards.gold)}</span><span class="reward-chip">EXP ${d.rewards.exp}</span><span class="reward-chip">장비 ${Math.round(d.rewards.dropChance * 100)}%</span>${!stars ? `<span class="reward-chip"><i class="ic ic-gem"></i> ${d.rewards.firstGems} 첫클리어</span>` : ''}</div>
-      <div class="row"><button class="btn btn-ghost" id="st-sweep" ${stars < 3 ? 'disabled' : ''}>소탕 <small>티켓 ${this.eco.s.sweep}</small></button><button class="btn btn-gold" id="st-go">출격 <small><i class="ic ic-energy"></i> -${d.energy}</small></button></div>`;
-    $('st-go').onclick = () => this.app.startStage(d);
+      ${unlocked ? '' : `<p class="stage-lock-note">${d.st === 1 ? `${d.ch - 1}-10` : `${d.ch}-${d.st - 1}`} 클리어 후 출격할 수 있습니다.</p>`}
+      <div class="row"><button class="btn btn-ghost" id="st-sweep" ${stars < 3 || !unlocked ? 'disabled' : ''}>소탕 <small>티켓 ${this.eco.s.sweep}</small></button><button class="btn btn-gold" id="st-go" ${unlocked ? '' : 'disabled'}>${unlocked ? '출격' : '미개방'} <small><i class="ic ic-energy"></i> -${d.energy}</small></button></div></div>`;
+    $('st-go').onclick = () => { if (this.eco.isUnlocked(d.ch, d.st)) this.app.startStage(d); };
     $('st-sweep').onclick = () => { const r = this.eco.sweep(d); if (!r) { this.ui.toast('소탕권/에너지 부족', 'red'); return; } audio.play('jingle_win0', { vol: 0.5 }); this.ui.rewardToast([...r.got, ...r.loot.map((it) => ({ k: 'item', item: it }))]); if (r.awakened && r.awakened.length) this.ui.awakenBanner(r.awakened); this.renderStages(); };
   }
 

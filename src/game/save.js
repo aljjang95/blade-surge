@@ -2,6 +2,7 @@ import { HEROES } from '../data/heroes.js';
 import { ITEM_BY_ID, SLOTS, ENH_MAX } from '../data/items.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { BATTLE_PASS } from '../data/shop.js';
+import { normalizeLobbyCamera } from '../engine/lobby-camera.js';
 
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const integer = (value, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) =>
@@ -60,6 +61,8 @@ export function normalizeSave(raw, fresh) {
     const parts = /^(\d+)-(\d+)$/.exec(key);
     if (!parts || +parts[1] < 1 || +parts[1] > CHAPTERS.length || +parts[2] < 1 || +parts[2] > STAGES_PER_CHAPTER) continue;
     s.progress.stars[key] = integer(stars, 0, 0, 3);
+    // 이전 마지막 층(3-10)을 완료한 저장도 새 4장으로 바로 이어진다.
+    if (s.progress.stars[key] > 0) s.progress.unlocked = Math.max(s.progress.unlocked, Math.min(floors, (+parts[1] - 1) * STAGES_PER_CHAPTER + +parts[2] + 1));
   }
   for (const key of ['claimedFree', 'claimedPrem']) s.pass[key] = [...new Set(s.pass[key].filter((v) => Number.isInteger(v) && v >= 1 && v <= BATTLE_PASS.maxLevel))];
   s.quests.claimed = s.quests.claimed.filter((id) => ['k30', 'k100', 's3', 's10', 'p10'].includes(id));
@@ -69,6 +72,7 @@ export function normalizeSave(raw, fresh) {
   s.mail = fresh.mail.map((mail) => ({ ...mail, read: s.mail.some((saved) => saved?.id === mail.id && saved.read === true) }));
   if (!['auto', 'low', 'mid', 'high'].includes(s.settings.quality)) s.settings.quality = 'auto';
   if (!['auto', 'top', 'action', 'wide'].includes(s.settings.camera)) s.settings.camera = 'auto';
+  s.settings.lobbyCamera = normalizeLobbyCamera(raw.settings?.lobbyCamera);
   s.name = s.name.trim().slice(0, 20) || fresh.name;
   return s;
 }

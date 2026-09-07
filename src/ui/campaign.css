@@ -1,0 +1,103 @@
+#tab-stage { --region-glow: #6a9983; --campaign-gold: #d9c5a0; }
+/* 모험 소개를 읽을 때 닫힌 동행 버튼만 숨긴다. 열린 대화와 전투 중 접근은 유지한다. */
+body:has(#meta.show #tab-stage.show) #companion-root .companion-launcher:not([aria-expanded="true"]),
+body:has(#result.show) #companion-root .companion-launcher:not([aria-expanded="true"]) { display: none; }
+#tab-stage[data-region="forge"] { --region-glow: #c57552; }
+#tab-stage[data-region="frost"] { --region-glow: #7aa7c3; }
+#tab-stage[data-region="tide"] { --region-glow: #529da6; }
+#tab-stage[data-region="crown"] { --region-glow: #9881b8; }
+#tab-stage .panel { background: #101723; color: #ede6d8; }
+#tab-stage .campaign-heading { flex-shrink: 0; border-bottom: 0; padding: 14px 24px 10px; }
+#tab-stage .campaign-heading h2 { font-family: var(--font); font-size: 19px; font-weight: 700; letter-spacing: .05em; }
+#tab-stage #chapter-tabs { padding: 0 24px 12px; gap: 8px; flex-shrink: 0; display: grid; grid-template-columns: repeat(5,minmax(0,1fr)); }
+#tab-stage #chapter-tabs button { padding: 10px 12px; border: 1px solid #ffffff18; border-radius: 4px; color: #b9bdc8; background: #1a2230; font-size: 12px; white-space: normal; line-height: 1.5; text-align: left; }
+#tab-stage #chapter-tabs button small { display: block; font-size: 9px; letter-spacing: .08em; opacity: .75; }
+#tab-stage #chapter-tabs button.on { border-color: var(--campaign-gold); color: #f2e4c9; background: #c2a97b13; }
+#tab-stage #chapter-tabs button.lock { opacity: .7; }
+#tab-stage button:focus-visible, .campaign-journal button:focus-visible { outline: 2px solid #f1d59c; outline-offset: 2px; }
+.campaign-scroll { overflow: auto; overscroll-behavior: contain; min-height: 0; padding: 0 24px 20px; scrollbar-width: thin; }
+.chapter-brief { display: flex; justify-content: space-between; gap: 24px; padding: 22px; border: 1px solid #ffffff12; border-left: 3px solid var(--region-glow); border-radius: 4px; background: linear-gradient(110deg,color-mix(in srgb,var(--region-glow) 17%,#101723),#101723 85%); }
+.campaign-eyebrow { font-size: 10px; letter-spacing: .08em; color: #d9c5a0; }
+.chapter-brief h3 { font-size: 25px; margin: 6px 0; font-weight: 600; }
+.chapter-brief p { max-width: 740px; margin: 0; font-size: 12px; color: #b7beca; line-height: 1.7; word-break: keep-all; }
+.chapter-copy { flex: 1; min-width: 0; align-self: center; }
+.chapter-cast { flex: 0 0 132px; margin: -10px -10px -10px 0; position: relative; overflow: hidden; border-radius: 3px; background: #d9d1c6; }
+.chapter-cast img { display: block; width: 100%; height: 165px; object-fit: contain; }
+.chapter-cast figcaption { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px 3px 5px; font-size: 9px; text-align: center; color: #f7ecda; background: linear-gradient(transparent,#101723e8); }
+.campaign-progress { min-width: 145px; display: flex; flex-direction: column; justify-content: center; gap: 7px; }
+.campaign-progress b { font-size: 29px; color: #e1d5bd; }
+.campaign-progress b small { font-size: 14px; color: #a3aab6; font-weight: 400; }
+.campaign-progress span { color: #a3aab6; font-size: 10px; }
+.campaign-progress progress { width: 100%; height: 3px; accent-color: #d9c5a0; border: 0; }
+#tab-stage .stage-grid { overflow: visible; grid-template-columns: repeat(10,minmax(0,1fr)); padding: 16px 0; gap: 7px; }
+#tab-stage .stage-cell { aspect-ratio: auto; min-width: 0; min-height: 91px; padding: 12px 3px 8px; border: 1px solid #ffffff1f; border-radius: 4px; background: #192230; box-shadow: none; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #e3dfd4; opacity: 1; }
+#tab-stage .stage-cell.on { border-color: #d9c5a0; background: #d9c5a018; transform: none; }
+#tab-stage .stage-cell.lock { color: #99a0ae; background: #111b28; }
+#tab-stage .stage-cell .stage-code { font: 600 19px var(--font); }
+#tab-stage .stage-cell .stage-rank { font-size: 9px; color: #aab2c0; white-space: nowrap; }
+#tab-stage .stage-cell[data-rank="warden"] .stage-rank { color: #96bcba; }
+#tab-stage .stage-cell[data-rank="midboss"] .stage-rank { color: #dbb98b; }
+#tab-stage .stage-cell[data-rank="finalboss"] { border-top: 2px solid #bd8f7c; }
+#tab-stage .stage-cell[data-rank="finalboss"] .stage-rank { color: #e2aa98; }
+#tab-stage .stage-cell .st { position: static; font-size: 10px; color: #d9c5a0; letter-spacing: 1px; }
+#tab-stage .stage-cell .st.none { color: #808998; }
+#tab-stage .stage-detail { display: grid; grid-template-columns: minmax(0,1.5fr) minmax(240px,1fr); align-items: start; gap: 24px; padding: 18px 0 0; background: transparent; border-color: #ffffff19; }
+#tab-stage .stage-detail h3 { font-size: 21px; margin: 5px 0 8px; }
+.stage-opening, .stage-objective, .stage-tactics p { font-size: 12px; line-height: 1.7; margin: 5px 0; color: #b7beca; word-break: keep-all; }
+.stage-objective b, .stage-tactics b { color: #ded6c7; margin-right: 7px; font-weight: 500; }
+.stage-tactics { border-left: 2px solid var(--region-glow); padding-left: 10px; margin-top: 12px; }
+#tab-stage .stage-detail .rewards { flex-wrap: wrap; gap: 5px; margin: 12px 0; }
+#tab-stage .reward-chip { font-size: 10px; border-radius: 4px; }
+#tab-stage .stage-launch .row { margin-top: 12px; }
+#tab-stage .stage-launch .btn { border-radius: 4px; }
+.stage-lock-note { color: #b5a084; font-size: 11px; }
+.campaign-journal > p, .campaign-journal article p { font-size: 13px; line-height: 1.8; color: #b9c0cb; white-space: pre-line; word-break: keep-all; }
+.journal-toolbar { position: sticky; top: -18px; z-index: 1; padding: 8px 0; background: var(--panel2); display: flex; justify-content: space-between; align-items: center; }
+.campaign-journal article { border-top: 1px solid #ffffff20; padding: 18px 0; }
+.campaign-journal article h3 { color: #e4d6ba; font-size: 16px; margin: 6px 0; }
+.campaign-journal blockquote, .campaign-result blockquote { margin: 12px 0 0; border-left: 2px solid #b49a68; padding-left: 12px; color: #deccaa; font-size: 12px; line-height: 1.7; }
+.campaign-result { align-self: stretch; flex-shrink: 0; text-align: left; padding: 12px 16px; border: 1px solid #d9c5a02a; border-radius: 4px; background: #101723; }
+.campaign-result[hidden] { display: none; }
+.campaign-result h3 { margin: 4px 0; font-size: 14px; color: #e4d6ba; }
+.campaign-result p { margin: 4px 0; font-size: 11px; line-height: 1.7; color: #b9c0cb; white-space: pre-line; }
+.campaign-ending { border-top: 1px solid #d9c5a02a; padding-top: 12px; margin-top: 12px; }
+@media (max-width: 900px) {
+  #tab-stage .campaign-heading { padding: 10px 14px 7px; }
+  #tab-stage #chapter-tabs { padding: 0 14px 9px; gap: 5px; }
+  #tab-stage #chapter-tabs button { font-size: 10px; padding: 6px; }
+  #tab-stage #chapter-tabs button small { font-size: 8px; letter-spacing: 0; }
+  .campaign-scroll { padding: 0 14px 16px; }
+  .chapter-brief { padding: 12px; gap: 12px; }
+  .chapter-brief h3 { font-size: 20px; }
+  .chapter-brief p { font-size: 11px; }
+  .campaign-progress { min-width: 112px; }
+  #tab-stage .stage-grid { gap: 4px; padding: 10px 0; }
+  #tab-stage .stage-cell { min-height: 70px; padding: 6px 1px; gap: 3px; }
+  #tab-stage .stage-cell .stage-code { font-size: 15px; }
+  #tab-stage .stage-cell .stage-rank { font-size: 8px; }
+  #tab-stage .stage-detail { grid-template-columns: minmax(0,1.2fr) minmax(200px,1fr); gap: 15px; padding-top: 12px; }
+  #tab-stage .stage-detail h3 { font-size: 17px; }
+}
+@media (max-width: 600px) {
+  #tab-stage #chapter-tabs { display: flex; overflow-x: auto; }
+  #tab-stage #chapter-tabs button { min-width: 125px; }
+  .chapter-brief { flex-direction: column; }
+  .chapter-cast { flex: auto; width: 112px; margin: 0; align-self: center; }
+  .chapter-cast img { height: 140px; }
+  .campaign-progress { min-width: 0; display: grid; grid-template-columns: auto 1fr; align-items: center; }
+  .campaign-progress progress { grid-column: 1/-1; }
+  #tab-stage .stage-grid { grid-template-columns: repeat(5,minmax(0,1fr)); }
+  #tab-stage .stage-detail { grid-template-columns: 1fr; gap: 10px; }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  #tab-stage .campaign-heading { padding-top: 7px; padding-bottom: 5px; }
+  #tab-stage .campaign-heading h2 { font-size: 15px; }
+  #tab-stage .campaign-heading button { padding: 5px 10px; min-height: 28px; }
+  #tab-stage #chapter-tabs { padding-bottom: 7px; }
+  .chapter-brief { padding: 10px 12px; }
+  .chapter-cast { flex-basis: 96px; margin: -4px -6px -4px 0; }
+  .chapter-cast img { height: 120px; }
+  .chapter-brief h3 { font-size: 18px; margin: 3px 0; }
+  .campaign-progress b { font-size: 22px; }
+  .campaign-result { padding: 8px 12px; }
+}

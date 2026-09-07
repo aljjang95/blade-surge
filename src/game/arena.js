@@ -1,10 +1,16 @@
 import * as THREE from 'three';
 import { VFX_TEX } from '../engine/assets.js';
 import { getPart } from '../engine/assets.js';
-import { ROOM_TYPE } from './world.js';
+import { buildRegionArchitecture } from './region-architecture.js';
+import { ROOM_TYPE, mulberry32 } from './world.js';
 import { buildOathHall } from './lobby-hall.js';
 
 const THEMES = {
+  garden: { fog: 0x172b2b, bg: 0x172b2b, hemi: [0xa0b5ae, 0x283930], sun: 0xffedca, sunI: 2.3, torch: 0x8adbd0, tint: 0xcbd0b8 },
+  forge:  { fog: 0x201818, bg: 0x201818, hemi: [0x9b8a81, 0x251c1b], sun: 0xffd4ae, sunI: 2.2, torch: 0xff833c, tint: 0xa3a2a4 },
+  frost:  { fog: 0x172535, bg: 0x172535, hemi: [0xb4cfe1, 0x233445], sun: 0xe5f1ff, sunI: 2.2, torch: 0x94e4ff, tint: 0xb9c9e0 },
+  tide:   { fog: 0x102930, bg: 0x102930, hemi: [0x82b2c5, 0x122935], sun: 0xc9f0f1, sunI: 2.3, torch: 0x66dccb, tint: 0x9ab8bb },
+  crown:  { fog: 0x2b2734, bg: 0x2b2734, hemi: [0xc9b8ca, 0x342b3c], sun: 0xffebc8, sunI: 2.4, torch: 0xffd99b, tint: 0xe1d5c1 },
   crypt:  { fog: 0x0b0a16, bg: 0x0b0a16, hemi: [0x5a6aa0, 0x1a1420], sun: 0xb8c4ff, sunI: 2.6, torch: 0xff8a2a, tint: 0xd8dcff },
   throne: { fog: 0x160a08, bg: 0x160a08, hemi: [0xa06040, 0x201008], sun: 0xffc090, sunI: 2.5, torch: 0xff6a20, tint: 0xffd8c0 },
   abyss:  { fog: 0x0e0716, bg: 0x0e0716, hemi: [0x7a40a0, 0x150a20], sun: 0xd0a0ff, sunI: 2.4, torch: 0xa060ff, tint: 0xe0c8ff },
@@ -28,7 +34,7 @@ export class Arena {
     this.scene = scene; this.gltf = dungeonGltf; this.renderer = renderer;
     this.group = new THREE.Group(); scene.add(this.group);
     this.lights = []; this.torches = []; this.torchPos = []; this.t = 0;
-    this.doors = []; this.seals = [];
+    this.doors = []; this.seals = []; this.ownedMaterials = new Set(); this.ownedGeometry = new Set();
   }
   /** 보스 봉인 결계 — 복도 입구를 막는 붉은 룬 장막. 구역을 전부 정화하면 openSeal 로 깨진다 */
   buildSeals(floorData) {
@@ -60,6 +66,9 @@ export class Arena {
   }
   clear() {
     this.lobbyHall?.userData.dispose(); this.lobbyHall = null;
+    this.regionArchitecture?.userData.dispose(); this.regionArchitecture = null;
+    for (const material of this.ownedMaterials) material.dispose(); this.ownedMaterials.clear();
+    for (const geometry of this.ownedGeometry) geometry.dispose(); this.ownedGeometry.clear();
     for (const s of this.seals) disposeSeal(s);
     while (this.group.children.length) { const c = this.group.children.pop(); c.traverse?.((o) => { if (o.isInstancedMesh) o.dispose(); }); }
     for (const l of this.lights) { l.shadow?.dispose(); this.scene.remove(l); }
@@ -76,7 +85,7 @@ export class Arena {
     if (!transforms.length) return;
     const { mesh: src, part } = this._meshOf(name); if (!src) return;
     const { castShadow = true, chunk = 44 } = opts;
-    const mat = src.material.clone(); if (tint) mat.color.multiply(new THREE.Color(tint));
+    const mat = src.material.clone(); this.ownedMaterials.add(mat); if (tint) mat.color.multiply(new THREE.Color(tint));
     part.updateWorldMatrix(true, true);
     const local = new THREE.Matrix4().copy(part.matrixWorld).invert().multiply(src.matrixWorld);
 
@@ -98,7 +107,7 @@ export class Arena {
   }
   place(name, x, z, ry = 0, s = 1, tint) {
     const p = getPart(this.gltf, name); p.position.set(x, 0, z); p.rotation.y = ry; p.scale.setScalar(s);
-    p.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; if (tint) { o.material = o.material.clone(); o.material.color.multiply(new THREE.Color(tint)); } } });
+    p.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; if (tint) { o.material = o.material.clone(); this.ownedMaterials.add(o.material); o.material.color.multiply(new THREE.Color(tint)); } } });
     this.group.add(p); return p;
   }
 
@@ -124,6 +133,8 @@ export class Arena {
     this.clear();
     this.floorData = floorData;
     const T = THEMES[theme] || THEMES.crypt;
+    const random = mulberry32((floorData.seed || floorData.floor * 7919) ^ 0x51a7);
+    const rnd = (a, b) => a + random() * (b - a);
     this.scene.background = new THREE.Color(T.bg); this.scene.fog.color.set(T.fog); this.scene.fog.density = 0.026;
 
     const hemi = new THREE.HemisphereLight(T.hemi[0], T.hemi[1], 1.5); this.scene.add(hemi); this.lights.push(hemi);
@@ -140,9 +151,9 @@ export class Arena {
       const x0 = Math.floor((rect.x - rect.w / 2) / TILE), x1 = Math.ceil((rect.x + rect.w / 2) / TILE);
       const z0 = Math.floor((rect.z - rect.h / 2) / TILE), z1 = Math.ceil((rect.z + rect.h / 2) / TILE);
       for (let i = x0; i < x1; i++) for (let j = z0; j < z1; j++) {
-        const k = Math.random();
-        const key = boss ? 'floor_tile_large' : k < 0.75 ? 'floor_tile_large' : k < 0.9 ? 'floor_tile_large_rocks' : 'floor_dirt_large';
-        floors[key].push({ x: i * TILE + TILE / 2, z: j * TILE + TILE / 2, ry: Math.floor(Math.random() * 4) * Math.PI / 2 });
+        const k = random();
+        const key = boss || floorData.layout ? 'floor_tile_large' : k < 0.75 ? 'floor_tile_large' : k < 0.9 ? 'floor_tile_large_rocks' : 'floor_dirt_large';
+        floors[key].push({ x: i * TILE + TILE / 2, z: j * TILE + TILE / 2, ry: Math.floor(random() * 4) * Math.PI / 2 });
       }
     };
     for (const r of floorData.rooms) put(r, r.type === ROOM_TYPE.BOSS);
@@ -167,7 +178,7 @@ export class Arena {
           if (W.walkable(nx, nz)) continue;
           const kk = `${Math.round(cx)}_${Math.round(cz)}_${dx}_${dz}`;
           if (seen.has(kk)) continue; seen.add(kk);
-          const v = variants[Math.floor(Math.random() * variants.length)];
+          const v = variants[Math.floor(random() * variants.length)];
           walls[v].push({ x: cx + dx * step / 2, z: cz + dz * step / 2, ry });
         }
       }
@@ -182,14 +193,14 @@ export class Arena {
       for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) pillars.push({ x: r.x + sx * hw, z: r.z + sz * hh, s: r.type === ROOM_TYPE.BOSS ? 1.25 : 1 });
       if (r.type === ROOM_TYPE.BOSS) {
         banners.push({ x: r.x - 5, z: r.z - r.h / 2 + 0.6, ry: 0 }, { x: r.x + 5, z: r.z - r.h / 2 + 0.6, ry: 0 });
-        this.place('stairs_wide', r.x, r.z - r.h / 2 + 2.2, 0, 1, T.tint);
+        if (!floorData.layout) this.place('stairs_wide', r.x, r.z - r.h / 2 + 2.2, 0, 1, T.tint);
       }
       if (r.type === ROOM_TYPE.TREASURE) { this.place('chest_gold', r.x, r.z, rnd(0, 6.28), 1.2); this.place('coin_stack_large', r.x + 1.6, r.z + 1.2, 0, 1); this.place('coin_stack_medium', r.x - 1.7, r.z + 0.9, 0, 1); }
-      const n = 2 + Math.floor(Math.random() * 3);
+      const n = floorData.layout ? 0 : 2 + Math.floor(random() * 3);
       for (let i = 0; i < n; i++) {
         const px = r.x + rnd(-1, 1) * (r.w / 2 - 2.2), pz = r.z + rnd(-1, 1) * (r.h / 2 - 2.2);
         if (Math.hypot(px - r.x, pz - r.z) < 3.5) continue;
-        this.place(props[Math.floor(Math.random() * props.length)], px, pz, rnd(0, 6.28), rnd(0.9, 1.1));
+        this.place(props[Math.floor(random() * props.length)], px, pz, rnd(0, 6.28), rnd(0.9, 1.1));
       }
       // 방마다 횃불 2개
       for (const [ox, oz] of [[-hw, 0], [hw, 0]]) {
@@ -205,11 +216,14 @@ export class Arena {
         const col = r.type === ROOM_TYPE.BOSS ? 0xff3040 : r.type === ROOM_TYPE.ELITE ? 0xffc040 : 0x60ffc0;
         const ring = new THREE.Mesh(new THREE.RingGeometry(r.w * 0.28, r.w * 0.32, 40),
           new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false }));
+        this.ownedGeometry.add(ring.geometry); this.ownedMaterials.add(ring.material);
         ring.rotation.x = -Math.PI / 2; ring.position.set(r.x, 0.06, r.z); this.group.add(ring);
       }
     }
     this.instanced('pillar_decorated', pillars, T.tint);
     this.instanced('banner_shield_red', banners);
+    this.regionArchitecture = buildRegionArchitecture(floorData, theme);
+    this.group.add(this.regionArchitecture);
     this.buildSeals(floorData);
   }
 

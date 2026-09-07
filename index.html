@@ -54,6 +54,19 @@
 
     <!-- lobby -->
     <div id="tab-home" class="tab show">
+      <div id="lobby-camera-pad" tabindex="0" role="group" aria-label="영웅 둘러보기. 드래그로 회전, 휠로 확대. 방향키로 회전과 높이, 더하기 빼기로 확대, Home으로 초기화."></div>
+      <div class="lobby-camera-tools">
+        <button type="button" id="lobby-camera-toggle" aria-expanded="false" aria-controls="lobby-camera-panel">시점 조작</button>
+        <div id="lobby-camera-panel" hidden>
+          <div class="lobby-view-presets" role="group" aria-label="로비 시점">
+            <button type="button" data-lobby-view="oath">기본</button><button type="button" data-lobby-view="front">정면</button><button type="button" data-lobby-view="side">측면</button><button type="button" data-lobby-view="back">뒷모습</button>
+          </div>
+          <label>회전 <input type="range" name="yaw" min="-180" max="180" value="19"></label>
+          <label>높이 <input type="range" name="pitch" min="8" max="42" value="11"></label>
+          <label>확대 <input type="range" name="zoom" min="75" max="135" value="100"></label>
+          <small>영웅을 드래그해 둘러보세요 · 휠로 확대</small>
+        </div>
+      </div>
       <div class="lobby-left">
         <button class="sq-btn" id="btn-daily"><i class="ic ic-gift"></i><span>출석</span><em class="dot" id="dot-daily"></em></button>
         <button class="sq-btn" id="btn-mail"><i class="ic ic-mail"></i><span>우편</span><em class="dot" id="dot-mail"></em></button>
@@ -74,9 +87,13 @@
     <!-- stage select -->
     <div id="tab-stage" class="tab">
       <div class="panel">
-        <div class="panel-head"><h2>모험</h2><div class="chapter-tabs" id="chapter-tabs"></div></div>
-        <div class="stage-grid" id="stage-grid"></div>
-        <div class="stage-detail" id="stage-detail"></div>
+        <div class="panel-head campaign-heading"><h2>다섯 왕의 서약</h2><button type="button" class="btn btn-ghost btn-sm" id="btn-campaign-journal">기억의 기록</button></div>
+        <div class="chapter-tabs" id="chapter-tabs" role="group" aria-label="지역 선택"></div>
+        <div class="campaign-scroll">
+          <section id="chapter-brief" class="chapter-brief" aria-label="지역 소개"></section>
+          <div class="stage-grid" id="stage-grid" role="group" aria-label="스테이지 선택"></div>
+          <div class="stage-detail" id="stage-detail" aria-live="polite"></div>
+        </div>
       </div>
     </div>
 
@@ -184,6 +201,7 @@
       <div class="result-title" id="result-title">VICTORY</div>
       <div class="stars" id="result-stars"><i></i><i></i><i></i></div>
       <div class="result-stats" id="result-stats"></div>
+      <section class="campaign-result" id="result-story" aria-label="전투 후 이야기" hidden></section>
       <div class="loot" id="result-loot"></div>
       <div class="exp-row"><span>영웅 EXP</span><div class="bar"><div id="result-exp"></div></div><b id="result-exp-txt"></b></div>
       <div class="exp-row"><span>패스 XP</span><div class="bar bar-pass"><div id="result-bp"></div></div><b id="result-bp-txt"></b></div>

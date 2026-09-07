@@ -4,6 +4,8 @@ import { ITEM_BY_ID, ITEM_ICON, RARITY_COLOR } from '../data/items.js';
 import { REWARD_LABEL } from '../game/economy.js';
 import { Minimap } from './minimap.js';
 import { ROOM_TYPE } from '../game/world.js';
+import { resultStoryHtml } from './campaign.js';
+import './campaign.css';
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => Math.floor(n).toLocaleString('ko-KR');
@@ -33,7 +35,7 @@ export class UI {
     $('btn-auto').addEventListener('click', () => { const p = this.app.battle.player; if (!p) return; p.auto = !p.auto; $('btn-auto').classList.toggle('on', p.auto); this.toast(p.auto ? '자동 전투 ON' : '자동 전투 OFF'); });
     $('btn-result-lobby').addEventListener('click', () => this.app.toLobby());
     $('btn-result-retry').addEventListener('click', () => this.app.startStage(this.app.battle.stage));
-    $('btn-result-next').addEventListener('click', () => this.app.startStage(this.eco.nextStage()));
+    $('btn-result-next').addEventListener('click', () => { if (this.resultData?.win && !this.app.battle.stage?.finale) this.app.startStage(this.eco.nextStage()); });
     $('btn-result-double').addEventListener('click', () => this.watchAd());
   }
   show(el, on) { el.classList.toggle('show', on); }
@@ -126,9 +128,9 @@ export class UI {
     audio.play('jingle_win1', { vol: 0.7 });
     if (list.length > 1) setTimeout(() => this.toast(`Lv.${list[1].unlock} 각성! <b style="color:#ff9ad8">${list[1].name}</b> 해금`, 'gold'), 900);
   }
-  setFloorLabel(floorNum, floor) {
+  setFloorLabel(floorNum, floor, stage = this.app.battle?.stage) {
     const clr = floor.rooms.filter((r) => r.cleared).length, tot = floor.rooms.length;
-    $('hud-wave').textContent = `${floorNum}층`;
+    $('hud-wave').textContent = stage?.code || `${floorNum}층`;
     $('hud-stage').textContent = `구역 ${clr}/${tot}`;
   }
   waveBanner(text) { const b = $('wave-banner'); b.textContent = text; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); }
@@ -189,11 +191,12 @@ export class UI {
     const later = (fn, ms) => { this.resultTimers.push(setTimeout(() => { if (this.resultData === r && this.app.battle.result === r) fn(); }, ms)); };
     const eco = this.eco; this.showHud(false); this.show(this.el.pause, false); this.show(this.el.result, true);
     while (this.lootLayer.firstChild) this.lootLayer.firstChild.remove();
-    const t = $('result-title'); t.textContent = win ? 'VICTORY' : 'DEFEAT'; t.classList.toggle('lose', !win);
+    const t = $('result-title'); t.textContent = win ? b.stage.finale ? '새벽의 귀환' : 'VICTORY' : 'DEFEAT'; t.classList.toggle('lose', !win);
+    const story = $('result-story'); story.hidden = !win; story.innerHTML = win ? resultStoryHtml(b.stage) : '';
     const stars = [...$('result-stars').children]; stars.forEach((s) => { s.className = ''; });
     $('result-stats').innerHTML = `<span>처치 <b>${b.kills}</b></span><span>최대 콤보 <b>${b.maxCombo}</b></span><span>피해량 <b>${fmt(b.dmgDealt)}</b></span><span>시간 <b>${Math.floor(b.elapsed)}s</b></span><span>득템 <b>${b.drops.loot.length}</b></span>`;
     const loot = $('result-loot'); loot.innerHTML = '';
-    $('btn-result-next').style.display = win ? '' : 'none'; $('btn-result-double').style.display = win ? '' : 'none';
+    $('btn-result-next').style.display = win && !b.stage.finale ? '' : 'none'; $('btn-result-double').style.display = win ? '' : 'none';
     $('result-exp').style.width = '0%'; $('result-bp').style.width = '0%';
     if (win) {
       r.reward ||= eco.completeStage(b.stage, r.stars, { fieldGold: b.drops.gold, fieldStones: b.drops.stones, fieldStones2: b.drops.stones2, fieldStones3: b.drops.stones3, fieldFragments: b.drops.fragments, fieldLoot: b.drops.loot });

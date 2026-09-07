@@ -18,11 +18,19 @@ export const ROOM_TYPE = { START: 'start', NORMAL: 'normal', ELITE: 'elite', TRE
 
 const CELL = 1;              // 마스크 셀 크기(유닛)
 const MACRO = 34;            // 매크로 그리드 간격
+// 지역마다 동선·방 비례·통로 폭이 다르며 기존 세 테마는 원래 생성기를 유지한다.
+export const REGION_LAYOUTS = {
+  garden: { spacing: [34, 34], size: [20, 24], width: 6, cells: [[0,0],[1,0],[2,0],[2,1],[2,2],[1,2],[0,2],[0,1],[1,1],[1,3],[1,4]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,0],[1,8],[5,9],[9,10]] },
+  forge: { spacing: [38, 30], size: [24, 16], width: 8, cells: [[0,0],[1,0],[2,0],[3,0],[4,0],[0,1],[1,1],[2,1],[3,1],[4,1],[5,1]], edges: [[0,1],[1,2],[2,3],[3,4],[0,5],[5,6],[6,7],[7,8],[8,9],[2,7],[4,9],[9,10]] },
+  frost: { spacing: [30, 40], size: [16, 28], width: 6, cells: [[0,0],[1,0],[2,0],[2,1],[1,1],[0,1],[0,2],[1,2],[2,2],[2,3],[1,3],[0,3]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,10],[10,11]] },
+  tide: { spacing: [36, 36], size: [24, 24], width: 8, cells: [[0,0],[1,0],[2,0],[3,0],[3,1],[3,2],[2,2],[1,2],[0,2],[0,1],[1,3],[1,4]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[8,9],[9,0],[7,10],[10,11]] },
+  crown: { spacing: [38, 38], size: [24, 20], width: 8, cells: [[2,0],[2,1],[2,2],[1,2],[0,2],[3,2],[4,2],[2,3],[1,3],[3,3],[2,4],[2,5]], edges: [[0,1],[1,2],[2,3],[3,4],[2,5],[5,6],[2,7],[7,8],[7,9],[7,10],[10,11]] },
+};
 const TILE = 4;              // 던전 킷 바닥 타일 크기
 
 export class Floor {
   constructor(floorNum, theme, seed = floorNum * 7919 + 13) {
-    this.floor = floorNum; this.theme = theme;
+    this.floor = floorNum; this.theme = theme; this.seed = seed; this.layout = REGION_LAYOUTS[theme];
     this.rand = mulberry32(seed);
     this.rooms = []; this.corridors = [];
     this.generate();
@@ -36,14 +44,14 @@ export class Floor {
     const want = 11 + Math.min(4, Math.floor(this.floor / 4));  // 층이 오를수록 방이 많다 (9→11: 봉인+포탈 도입 후 1층 130초, 밴드 하한 150 에 모자랐다)
     const visited = new Set();
     const order = [];
-    const key = (x, y) => y * G + x;
+    const key = (x, y) => `${x},${y}`;
     const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
     // 프론티어에서 무작위로 자라게 하면 한 줄로 늘어지지 않고 덩어리진 층이 나온다
     let cx = this.ri(1, G - 2), cy = this.ri(1, G - 2);
     visited.add(key(cx, cy)); order.push([cx, cy]);
     this.linkPending = [];
     let guard = 0;
-    while (order.length < want && guard++ < 600) {
+    while (!this.layout && order.length < want && guard++ < 600) {
       const frontier = [];
       for (const [px, py] of order) for (const [dx, dy] of dirs) {
         const nx = px + dx, ny = py + dy;
@@ -57,7 +65,7 @@ export class Floor {
     }
     // 순환 통로 1~2개 (막다른 길만 있으면 길찾기가 지루하다)
     const extra = 1 + (this.rand() < 0.5 ? 1 : 0);
-    for (let e = 0; e < extra; e++) {
+    for (let e = 0; !this.layout && e < extra; e++) {
       const cands = [];
       for (const [ax, ay] of order) for (const [dx, dy] of dirs) {
         const bx = ax + dx, by = ay + dy;
@@ -67,6 +75,11 @@ export class Floor {
       }
       if (cands.length) this.linkPending.push(cands[this.ri(0, cands.length - 1)]);
     }
+    if (this.layout) {
+      order.length = 0;
+      order.push(...this.layout.cells);
+      this.linkPending = this.layout.edges.map(([a, b]) => [order[a], order[b]]);
+    }
     // 매크로 좌표 → 월드 방
     const cells = new Map();
     order.forEach(([gx, gy], i) => {
@@ -74,8 +87,12 @@ export class Floor {
       const big = isStart ? 0 : this.rand();
       let w = Math.round(this.r(14, 24) / TILE) * TILE;
       let h = Math.round(this.r(14, 24) / TILE) * TILE;
-      const wx = (gx - (G - 1) / 2) * MACRO + this.r(-3, 3);
-      const wz = (gy - (G - 1) / 2) * MACRO + this.r(-3, 3);
+      if (this.layout) {
+        w = this.layout.size[0] + this.ri(-1, 1) * TILE;
+        h = this.layout.size[1] + this.ri(-1, 1) * TILE;
+      }
+      const wx = (gx - (G - 1) / 2) * (this.layout?.spacing[0] || MACRO) + this.r(this.layout ? -2 : -3, this.layout ? 2 : 3);
+      const wz = (gy - (G - 1) / 2) * (this.layout?.spacing[1] || MACRO) + this.r(this.layout ? -2 : -3, this.layout ? 2 : 3);
       const room = { id: i, gx, gy, x: wx, z: wz, w, h, type: isStart ? ROOM_TYPE.START : ROOM_TYPE.NORMAL,
         cleared: isStart, discovered: isStart, spawned: false, enemies: [], pathLen: 0 };
       this.rooms.push(room); cells.set(key(gx, gy), room);
@@ -93,6 +110,11 @@ export class Floor {
     while (q.length) { const cur = q.shift(); for (const nid of (cur.links || [])) { if (dist.has(nid)) continue; dist.set(nid, dist.get(cur.id) + 1); q.push(this.rooms[nid]); } }
     for (const rm of this.rooms) rm.pathLen = dist.get(rm.id) ?? 99;
     const far = this.rooms.slice(1).sort((a, b) => b.pathLen - a.pathLen);
+    // 봉인이 다른 미정화 방의 유일한 길을 끊지 않도록 캠페인 보스는 말단 방에 둔다.
+    if (this.layout) {
+      const terminal = far.findIndex((r) => r.links.length === 1);
+      if (terminal > 0) far.unshift(...far.splice(terminal, 1));
+    }
     if (far[0]) { far[0].type = ROOM_TYPE.BOSS; far[0].w = Math.max(far[0].w, 28); far[0].h = Math.max(far[0].h, 28); }
     // 엘리트 2~3, 보물 1
     const rest = far.slice(1);
@@ -110,11 +132,11 @@ export class Floor {
       if (!A || !C || (A !== B && C !== B)) continue;
       const vertical = ax === bx;   // lShape: 가로(z=A.z, A.x→C.x) 다음 세로(x=C.x, A.z→C.z)
       if (C === B) {
-        if (vertical) this.gates.push({ x: C.x, z: C.z - Math.sign(C.z - A.z) * C.h / 2, w: 8, h: 2, axis: 'x' });
-        else this.gates.push({ x: C.x - Math.sign(C.x - A.x) * C.w / 2, z: A.z, w: 2, h: 8, axis: 'z' });
+        if (vertical) this.gates.push({ x: C.x, z: C.z - Math.sign(C.z - A.z) * C.h / 2, w: (this.layout ? this.layout.width + 4 : 8), h: 2, axis: 'x' });
+        else this.gates.push({ x: C.x - Math.sign(C.x - A.x) * C.w / 2, z: A.z, w: 2, h: (this.layout ? this.layout.width + 4 : 8), axis: 'z' });
       } else {
-        if (vertical) this.gates.push({ x: C.x, z: A.z + Math.sign(C.z - A.z) * A.h / 2, w: 8, h: 2, axis: 'x' });
-        else this.gates.push({ x: A.x + Math.sign(C.x - A.x) * A.w / 2, z: A.z, w: 2, h: 8, axis: 'z' });
+        if (vertical) this.gates.push({ x: C.x, z: A.z + Math.sign(C.z - A.z) * A.h / 2, w: (this.layout ? this.layout.width + 4 : 8), h: 2, axis: 'x' });
+        else this.gates.push({ x: A.x + Math.sign(C.x - A.x) * A.w / 2, z: A.z, w: 2, h: (this.layout ? this.layout.width + 4 : 8), axis: 'z' });
       }
     }
     this.sealed = this.gates.length > 0 && this.rooms.some((rm) => rm.type !== ROOM_TYPE.START && rm.type !== ROOM_TYPE.BOSS);
@@ -128,7 +150,7 @@ export class Floor {
   }
   /** 두 방을 잇는 L자 복도(폭 6) */
   lShape(A, B) {
-    const w = 6, half = w / 2;
+    const w = this.layout?.width || 6, half = w / 2;
     const ax = A.x, az = A.z, bx = B.x, bz = B.z;
     const segs = [];
     // 가로 먼저

@@ -5,6 +5,14 @@ import { audio } from '../engine/audio.js';
 import { rigOf, RIGS } from '../data/rigs.js';
 
 const _v = new THREE.Vector3();
+const PATTERN_ANIMS = { basic: 'attack', spin: 'attackSpin', slam: 'attackJump', summon: 'summon', fan: 'cast', soulrain: 'raise', dash: 'dash' };
+
+/** 보스별 순서를 읽어 회피 타이밍을 학습할 수 있게 한다. 후반 페이즈는 순서를 변주한다. */
+export function nextBossPattern(def, turn, phase = 0) {
+  if (!Array.isArray(def.pattern) || !def.pattern.length) return null;
+  const pattern = def.pattern[(turn + phase) % def.pattern.length];
+  return Object.hasOwn(PATTERN_ANIMS, pattern) ? pattern : 'basic';
+}
 
 export class Enemy extends Actor {
   constructor(game, gltf, weaponsGltf, def, scaleMult, pos) {
@@ -33,6 +41,7 @@ export class Enemy extends Actor {
     this.state = 'spawn'; this.stateT = 0; this.spawning = true; this.telegraph = 0;
     this.atkCd = 0.6 + Math.random() * 1.2; this.hitAt = 0.5; this.attackDur = def.atkTime; this.attackDone = false;
     this.stagger = 0; this.poison = 0; this.poisonT = 0; this.phase = 0; this.enraged = false; this.special = null;
+    this.patternTurn = 0;
     // 행동형 (bomber / shaman / shield)
     this.behavior = def.behavior || null; this.fuse = -1; this.healT = 4 + Math.random() * 2; this.summonT = 7 + Math.random() * 3; this.blocks = 0; this.guardBroken = 0;
     this.radius = 0.7 * def.scale;
@@ -159,9 +168,11 @@ export class Enemy extends Actor {
       }
     } else if (this.state === 'attack') {
       this.vel.set(0, 0, 0);
-      if (this.special === 'dash' && this.dashV) { this.vel.copy(this.dashV); }
+      // 돌진은 예고가 끝난 뒤 전진한다. 도형이 뜨는 동안 먼저 움직이면 회피를 읽을 수 없다.
+      if (this.special === 'dash' && this.dashV && this.stateT / this.attackDur >= .45) { this.vel.copy(this.dashV); }
       const t = this.stateT / this.attackDur;
-      if (!this.attackDone && t < this.hitAt && this.special !== 'dash') { const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z; this.faceDir(dx, dz); this.telegraph = this.hitAt * this.attackDur - this.stateT; }
+      if (!this.attackDone && t < this.hitAt && this.special !== 'dash') { const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z; if (!this.def.pattern) this.faceDir(dx, dz); this.telegraph = this.hitAt * this.attackDur - this.stateT; }
+      if (this.special === 'dash') this.telegraph = Math.max(0, this.attackDur * .45 - this.stateT);
       if (!this.attackDone && t >= this.hitAt) { this.attackDone = true; this.telegraph = 0; this.doAttack(); }
       if (t >= 1) { this.state = 'chase'; this.dashV = null; this.atkCd = (this.def.atkTime * 0.6 + Math.random() * 0.8) * (this.enraged ? 0.6 : 1); this.play(this.A('idleCombat'), { fade: 0.15 }); }
     }
@@ -184,14 +195,17 @@ export class Enemy extends Actor {
       else if (kit === 'lich') { if (r < 0.35) { anim = this.A('raise'); this.special = 'soulrain'; } else if (this.phase >= 1 && r < 0.55) { anim = this.A('summon'); this.special = 'summon'; } else { this.special = 'fan'; } }
       else if (kit === 'reaper') { if (r < 0.45 && d > 3) { anim = this.A('dash'); this.special = 'dash'; } else if (r < 0.7) { anim = this.A('attackSpin'); this.special = 'spin'; } else if (this.phase >= 1 && r < 0.8) { anim = this.A('summon'); this.special = 'summon'; } }
       else if (kit === 'dragon') { if (r < 0.35) { anim = this.A('attackHeavy'); this.special = 'fan'; } else if (r < 0.6) { anim = this.A('attackHeavy'); this.special = 'slam'; } else if (this.phase >= 1 && r < 0.75) { anim = this.A('summon'); this.special = 'summon'; } }
+      const pattern = nextBossPattern(this.def, this.patternTurn++, this.phase);
+      if (pattern) { this.special = pattern === 'basic' ? null : pattern; anim = this.A(PATTERN_ANIMS[pattern]); }
     }
     if (this.isElite && !this.isBoss && Math.random() < 0.3) { anim = this.A('attackHeavy'); this.special = 'spin'; }
     let dur = (this.def.atkTime) * (this.enraged ? 0.75 : 1) * (this.special === 'spin' ? 1.4 : this.special === 'dash' ? 0.9 : 1);
-    this.attackDur = dur; this.hitAt = this.special === 'spin' ? 0.55 : this.special === 'summon' ? 0.6 : this.special === 'dash' ? 0.5 : this.special === 'soulrain' ? 0.6 : 0.52;
+    this.attackDur = dur; this.hitAt = this.special === 'spin' ? 0.55 : this.special === 'summon' ? 0.6 : this.special === 'dash' ? 0.85 : this.special === 'soulrain' ? 0.6 : 0.52;
     this.playTimed(anim, dur, { fade: 0.08 });
     const f = this.forward(_v.clone()); const g = this.game;
-    if (this.special === 'dash') { const p = this.player; const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z; const dd = Math.hypot(dx, dz) || 1; const travel = Math.min(9, dd + 1.5); this.dashV = new THREE.Vector3(dx / dd, 0, dz / dd).multiplyScalar(travel / (dur * this.hitAt)); this.faceDir(dx, dz); g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: travel, arc: 30, height: 0.1, life: dur * this.hitAt, thickness: 1 }); audio.whoosh({ vol: 0.5, pitch: 0.5, dur: 0.5 }); }
-    else if (this.def.ranged) { g.fx.flash(this.pos.clone().setY(1.6 * this.def.scale), this.isBoss ? 0xa0ff90 : 0xa0ff90, { size: 1.5 * this.def.scale, life: dur * this.hitAt }); if (this.isBoss) audio.magic({ vol: 0.25, base: 200, notes: [0, 1, 0], step: 0.1, type: 'square' }); }
+    if (this.special === 'dash') { const p = this.player; const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z; const dd = Math.hypot(dx, dz) || 1; const travel = Math.min(9, dd + 1.5); this.dashV = new THREE.Vector3(dx / dd, 0, dz / dd).multiplyScalar(travel / (dur * .4)); this.faceDir(dx, dz); this.telegraph = dur * .45; g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: travel, arc: 30, height: 0.1, life: dur * this.hitAt, thickness: 1 }); audio.whoosh({ vol: 0.5, pitch: 0.5, dur: 0.5 }); }
+    else if (this.def.ranged && !this.special) { g.fx.flash(this.pos.clone().setY(1.6 * this.def.scale), 0xa0ff90, { size: 1.5 * this.def.scale, life: dur * this.hitAt }); if (this.isBoss) audio.magic({ vol: 0.25, base: 200, notes: [0, 1, 0], step: 0.1, type: 'square' }); }
+    else if (this.special === 'fan') g.fx.slashArc(this.pos, this.yaw, this.def.projColor || 0x80ff90, { radius: 14, arc: 80, height: 0.1, life: dur * this.hitAt, thickness: .6 });
     else if (this.special === 'spin') g.fx.ring(this.pos, 0xff3030, { r0: 4.2, r1: 4.8, life: dur * this.hitAt, y: 0.06, width: 1 });
     else if (this.special === 'slam') g.fx.ring(this.pos.clone().addScaledVector(f, 2), 0xff3030, { r0: 3.6, r1: 4.2, life: dur * this.hitAt, y: 0.06 });
     else if (this.special === 'summon') { g.fx.castCircle(this.pos, 0xff3030, { radius: 4, life: dur, demon: true }); }
@@ -209,10 +223,10 @@ export class Enemy extends Actor {
     }
     if (this.special === 'fan') {
       const pc2 = this.def.projColor || 0x60ff80;
-      for (let i = -2; i <= 2; i++) { const dir = p.pos.clone().setY(1.2).sub(this.pos.clone().setY(1.5)).normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.28); const sp = this.pos.clone().addScaledVector(f, 0.8).setY(1.5 * this.def.scale); g.spawnProjectile({ pos: sp, dir, speed: 13, radius: 0.75, dmg: dmg * 0.7, color: pc2, size: 0.6, owner: this, kb: 3, kind: 'magic', life: 1.8, trail: pc2, hostile: true }); }
+      for (let i = -2; i <= 2; i++) { const dir = (this.def.pattern ? f.clone().setY(0) : p.pos.clone().setY(1.2).sub(this.pos.clone().setY(1.5)).normalize()).applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.28); const sp = this.pos.clone().addScaledVector(f, 0.8).setY(1.5 * this.def.scale); g.spawnProjectile({ pos: sp, dir, speed: 13, radius: 0.75, dmg: dmg * 0.7, color: pc2, size: 0.6, owner: this, kb: 3, kind: 'magic', life: this.def.pattern ? 1 : 1.8, trail: pc2, hostile: true }); }
       audio.magic({ vol: 0.3, base: 300, notes: [0, -5, -7], step: 0.05, type: 'square' }); return;
     }
-    if (this.def.ranged) {
+    if (this.def.ranged && !this.special) {
       const sp = this.pos.clone().addScaledVector(f, 0.8).setY(1.5 * this.def.scale); const dir = p.pos.clone().setY(1.2).sub(sp).normalize();
       const pc = this.def.projColor || 0x60ff80;
       g.spawnProjectile({ pos: sp, dir, speed: 11, radius: 0.7, dmg, color: pc, size: 0.5, owner: this, kb: 3, kind: 'magic', life: 1.6, trail: pc, hostile: true });

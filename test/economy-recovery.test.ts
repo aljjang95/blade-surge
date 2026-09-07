@@ -17,6 +17,18 @@ beforeEach(() => {
 afterEach(() => { if (oldStorage) Object.defineProperty(globalThis, 'localStorage', oldStorage); else Reflect.deleteProperty(globalThis, 'localStorage'); });
 
 describe('진행 저장 복구', () => {
+  test('구형 3-10 완료 저장은 4-1을 열고 5-10 이후에도 50범위를 지킨다', () => {
+    const eco = new Economy(); const raw = structuredClone(eco.s);
+    raw.progress = { unlocked: 30, stars: { '3-10': 3 } };
+    values.set(key, JSON.stringify(raw));
+    const migrated = new Economy();
+    expect(migrated.nextStage().code).toBe('4-1');
+    expect(migrated.isUnlocked(4, 1)).toBe(true); expect(migrated.isUnlocked(4, 2)).toBe(false);
+    for (const pair of [[0, 1], [1, 0], [1, 11], [6, 1], [1.5, 1]]) expect(migrated.isUnlocked(...pair)).toBe(false);
+    migrated.s.progress.unlocked = 50; const last = migrated.nextStage();
+    migrated.completeStage(last, 3);
+    expect(migrated.nextStage().code).toBe('5-10'); expect(migrated.s.progress.unlocked).toBe(50);
+  });
   test('실패 환급은 primary·backup·복구 원본 값 모두 차감 전 상태를 보존한다', () => {
     const eco = new Economy(); eco.s.energy = 350; eco.s.energyT = 123456; eco.save();
     const snapshot = { energy: eco.s.energy, energyT: eco.s.energyT };
