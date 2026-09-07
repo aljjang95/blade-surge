@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { materialsOf, spawnCharacter } from '../engine/assets.js';
 import { RIGS } from '../data/rigs.js';
+import { attackPhase, attackBody } from './combat-motion.js';
 
 const _v = new THREE.Vector3();
 const _weaponQuaternion = new THREE.Quaternion();
@@ -13,7 +14,10 @@ export class Actor {
     this.game = game;
     const { root, mixer, clips } = spawnCharacter(gltf);
     this.model = root; this.mixer = mixer; this.clips = clips;
-    this.root = new THREE.Group(); this.root.add(root); root.scale.multiplyScalar(scale);
+    this.root = new THREE.Group();
+    // Render-only pivot: preserve authored bones, sockets, scale and collision root.
+    this.motionRoot = new THREE.Group(); this.root.add(this.motionRoot); this.motionRoot.add(root); root.scale.multiplyScalar(scale);
+    this._attackMotion = null; this._impact = null;
     this.scale = scale;
     this.pos = this.root.position; this.yaw = 0;
     this.vel = new THREE.Vector3(); this.kb = new THREE.Vector3();
@@ -45,6 +49,7 @@ export class Actor {
   setVisibleParts(show, all) { for (const n of all) { const o = this.model.getObjectByName(n); if (o) o.visible = show.includes(n); } }
   play(name, { loop = true, fade = 0.12, speed = 1, once = false, clamp = false, restart = true } = {}) {
     const clip = this.clips[name]; if (!clip) return null;
+    this._attackMotion = null;
     const a = this.mixer.clipAction(clip);
     if (this.action === a && !restart) { a.timeScale = speed; return a; }
     if (this.action && this.action !== a) this.action.fadeOut(fade);
@@ -52,7 +57,48 @@ export class Actor {
     this.action = a; this.actionName = name; return a;
   }
   /** duration(초)에 맞춰 애니 속도 조정해서 재생 */
-  playTimed(name, duration, opts = {}) { const clip = this.clips[name]; if (!clip) return null; return this.play(name, { ...opts, once: true, speed: clip.duration / duration }); }
+  playTimed(name, duration, opts = {}) {
+    const clip = this.clips[name]; if (!clip) return null;
+    const action = this.play(name, { ...opts, once: true, speed: clip.duration / duration });
+    // Multi-hit/spin clips retain linear timing. Other basic combos pin their original hitAt.
+    if (action && this.state === 'attack' && this.def?.combo?.includes(this.current) && !this.current.ticks && this.current.move !== 'spin') {
+      this._attackMotion = { action, combo: this.current, clip };
+      action.timeScale = 0;
+    }
+    return action;
+  }
+  receiveImpact(dirx, dirz, strength = 0.5) {
+    if (this.game.app?.reducedMotion?.matches) return;
+    const angle = (Math.hypot(dirx, dirz) > 0 ? Math.atan2(dirx, dirz) : this.yaw) - this.yaw - (this.rig.faceFlip ? Math.PI : 0);
+    this._impact = { t: 0, strength: Math.min(1, Math.max(0, strength)), x: Math.sin(angle), z: Math.cos(angle) };
+  }
+  updateCombatPose(dt) {
+    const pivot = this.motionRoot, reduced = this.game.app?.reducedMotion?.matches;
+    pivot.position.set(0, 0, 0); pivot.rotation.set(0, 0, 0);
+    const motion = this._attackMotion;
+    if (motion && this.state === 'attack' && this.current === motion.combo && this.action === motion.action) {
+      const c = motion.combo;
+      const expires = this.buffs?.t > 0 && this.buffs.t <= dt;
+      const speed = (expires ? 1 : (this.buffs?.atkSpd || 1)) * (this.stormT > dt ? 1.4 : 1);
+      const t = Math.min(1, (this.stateT + dt) / (c.dur / speed));
+      motion.action.time = attackPhase(t, c.hitAt) * motion.clip.duration;
+      this.mixer.update(0);
+      if (!reduced) {
+        const pose = attackBody(t, c.hitAt, this.def.weapon, this.def.ranged);
+        pivot.rotation.x = pose.pitch; pivot.rotation.y = pose.yaw; pivot.position.z = pose.forward;
+      }
+    }
+    if (this._impact) {
+      const i = this._impact; i.t += dt;
+      if (i.t >= 0.22 || reduced) this._impact = null;
+      else {
+        const decay = (1 - i.t / 0.22) ** 2 * i.strength;
+        pivot.rotation.x += i.z * decay * 0.2;
+        pivot.rotation.z -= i.x * decay * 0.2;
+        pivot.position.x += i.x * decay * 0.08; pivot.position.z += i.z * decay * 0.08;
+      }
+    }
+  }
   face(x, z) { this.yaw = Math.atan2(x - this.pos.x, z - this.pos.z); }
   faceDir(dx, dz) { if (dx || dz) this.yaw = Math.atan2(dx, dz); }
   forward(out = new THREE.Vector3()) { return out.set(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
@@ -61,6 +107,7 @@ export class Actor {
   knockback(dirx, dirz, force) { const l = Math.hypot(dirx, dirz) || 1; this.kb.x += dirx / l * force; this.kb.z += dirz / l * force; }
   update(dt) {
     this.mixer.update(dt);
+    this.updateCombatPose(dt);
     // 넉백 감쇠
     const fx0 = this.pos.x, fz0 = this.pos.z;
     if (this.kb.lengthSq() > 0.0001) { this.pos.addScaledVector(this.kb, dt); this.kb.multiplyScalar(Math.pow(0.02, dt)); }

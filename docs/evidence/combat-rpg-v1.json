@@ -1,0 +1,118 @@
+{
+  "goal_id": "bladesurge-combat-rpg-20260908",
+  "base_commit": "068e1fc2344fa62d8b2fb899d06bce340221691d",
+  "base_tree": "a2278fd102c9a75488a2df43338622187428cce8",
+  "status": "review-required",
+  "execution_surface": "ChatGPT sandbox / Node 22.16.0, not owner Codex",
+  "tests": {
+    "command": "node --test tools/tests/rpg-*.test.mjs",
+    "pure": 30,
+    "fake_boundary": 10,
+    "pass": 40,
+    "fail": 0,
+    "log_sha256": "672ab80f535399f41ea10272e51e027a53b58e11220e9317f022342915693d5a"
+  },
+  "unverified": [
+    "full existing test suite",
+    "TypeScript",
+    "Vite build",
+    "browser component (Chromium startup timeout)",
+    "Three.js gameplay",
+    "mobile frame time",
+    "independent reviewer",
+    "signed proof"
+  ],
+  "protected_actions_performed": [],
+  "source_files": [
+    {
+      "path": "docs/COMBAT_RPG_PATCH_V1.md",
+      "bytes": 5692,
+      "sha256": "1a5b33c403572423183f30a695c6f193cc34755852100e27cf7f9e1e2c16258e",
+      "git_blob_sha": "c92a88a5b736e597ee265547a93892c16f456c4c"
+    },
+    {
+      "path": "src/game/actor.js",
+      "bytes": 10042,
+      "sha256": "22c55c13252df7b4325e10a7c0eb92a6c0e0f993bec401f780cf323b137187cc",
+      "git_blob_sha": "d134e39e3e7b90d2c774ab37fad69e81c0cf359e"
+    },
+    {
+      "path": "src/game/battle.js",
+      "bytes": 168,
+      "sha256": "337d1d018f81edb6c11334a780c8b10b0ea77bfeebf2e86ba8bbe211617a00e7",
+      "git_blob_sha": "2c85cf62b32c22d5a0bae291fc572c97574ffaab"
+    },
+    {
+      "path": "src/game/combat-motion.js",
+      "bytes": 3066,
+      "sha256": "d9dc54386beb3fc1e5a51f02b60f285b2331b100cbca776981cfd9dc8ef18218",
+      "git_blob_sha": "f3749a038988867bb3292388b209eb467f692c53"
+    },
+    {
+      "path": "src/game/rpg-battle.js",
+      "bytes": 6886,
+      "sha256": "0816fb70abb68b1bf547c06f5aa103577c41297317fbcd4f983b7d92c846f9b7",
+      "git_blob_sha": "969ff07af50e08784b7e05058634823c198390d0"
+    },
+    {
+      "path": "src/game/rpg-catalogue.js",
+      "bytes": 1261,
+      "sha256": "129a29f3dc5d9898096f855bc0d6db72c38c365d7be77fb831710cd67e758435",
+      "git_blob_sha": "adeb528efed9cabe7a02f893bbdd71fed9d51d3f"
+    },
+    {
+      "path": "src/game/rpg-core.js",
+      "bytes": 4130,
+      "sha256": "203493360deff2f929aa33ed62a4a1df5b3cb07be6d23aa5833b635d87f31afa",
+      "git_blob_sha": "88e1c99c03fa24e42b79bd4684d9f8c948d8cc2d"
+    },
+    {
+      "path": "src/game/save.js",
+      "bytes": 434,
+      "sha256": "37edf7e8e6fa578ce4949841edafb8b9c3a2202b8aa83e6f4762673614b0c8c5",
+      "git_blob_sha": "bf30c4b4d2b6b7580cb2487657bbff7941ad5b23"
+    },
+    {
+      "path": "src/ui/rpg.css",
+      "bytes": 4545,
+      "sha256": "623519690a50a23ccb3998eebce6c7f17e3668dc50885f40487bc3a3725e77f9",
+      "git_blob_sha": "6338b91cdf4f89c8538c131458b5c2039e5d9d82"
+    },
+    {
+      "path": "src/ui/rpg.js",
+      "bytes": 12187,
+      "sha256": "48a51f35d23ef6bd135ef76114a57c224fbb02cc45e32d38e6683adb013a827c",
+      "git_blob_sha": "4e39528b7107c6dbee07e31d5e201d4f078bed28"
+    },
+    {
+      "path": "tools/tests/rpg-battle-contract.test.mjs",
+      "bytes": 5596,
+      "sha256": "bf16435655eea4f5ed04fdf2d5f427358246279527787a98237731f71e624940",
+      "git_blob_sha": "38307aba4f956f2f7b5bf0f4224cfde7aa021469"
+    },
+    {
+      "path": "tools/tests/rpg-foundation.test.mjs",
+      "bytes": 7774,
+      "sha256": "4cb57e3cfb3fbb8069e8c22395d77f033ac03bf34c00924abb9a9c99bfb70612",
+      "git_blob_sha": "a02534ede3b82f7806e57e96806cd80e7df5f18e"
+    },
+    {
+      "path": "tools/tests/rpg-view.fixture.html",
+      "bytes": 4985,
+      "sha256": "d93f40e1fe20390b54c9e92eb3cf0e5226032c4c1155c0f04c48d8014dba0816",
+      "git_blob_sha": "5b0169db45a30214af70078a950ae01ec3c31806"
+    }
+  ],
+  "unchanged_source_relocations": [
+    {
+      "from": "src/game/battle.js",
+      "to": "src/game/battle-base.js",
+      "git_blob_sha": "9caec8380a913c23380fbd9bd0cba7750bdb959a"
+    },
+    {
+      "from": "src/game/save.js",
+      "to": "src/game/save-base.js",
+      "git_blob_sha": "5f12edbbdc7728bfd117eb4a61ad2392506b77e9"
+    }
+  ]
+}
