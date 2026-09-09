@@ -2,7 +2,7 @@
 
 ## 제품 기준
 
-대표님 요청에 따라 현재 서비스의 casual-v2 캐릭터 정체성과 전투 리그를 유지한다. GitHub main에서 2026-09-09 확인한 `068e1fc2344fa62d8b2fb899d06bce340221691d`(PR11, 다섯 지역 캠페인/로비 카메라)를 기준으로 분기했다. 실제 라이브 로비에서 둥근 왕관, 민트 의상, KayKit 얼굴과 전당을 확인했다. `/version.json` IAB 열람은 ERR_BLOCKED_BY_CLIENT로 실패했으므로 실제 배포 SHA와 GitHub HEAD의 동일성은 별도 미확인이다.
+대표님 요청에 따라 현재 서비스의 casual-v2 캐릭터 정체성과 전투 리그를 유지한다. GitHub main에서 2026-09-09 확인한 `068e1fc2344fa62d8b2fb899d06bce340221691d`(PR11, 다섯 지역 캠페인/로비 카메라)를 기준으로 분기했다. 실제 라이브 로비에서 둥근 왕관, 민트 의상, KayKit 얼굴과 전당을 확인했다. 초기 IAB 버전 조회는 차단됐지만, 브라우저 지침 정정 후 배포 도구로 운영 SHA가 기준 커밋과 같음을 확인했다. PR14 머지 후 최초 확장 운영 SHA는 `a7fdba6e45f1d78860cb6ae3a942789a91425dd7`이며 후속 배포의 정본은 생성 영수증 `_autopipe/evidence/release-deployment.json`과 운영 `/version.json`이다.
 
 AI3D 제작 브랜치 `codex/blade-ai3d-20260909`의 `f71f39a54cb0780d5c9e8f05d7aeb01fe18e8456`와 원본 작업물은 다른 게임의 재사용 자산으로 보존한다. 이 확장 브랜치에는 해당 변경을 병합하지 않는다. 기존 canonical checkout의 미커밋 변경도 보존한다. 이미 서비스에 포함된 `public/models/tll/*-casual-v2.glb`는 현행 정체성의 일부이므로 제거하지 않는다.
 

@@ -18,7 +18,7 @@ export class Economy {
     return {
       expedition: normalizeExpedition(),
       created: now(), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: now(), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
-      heroes: { knight: { level: 1, exp: 0, star: 1, shards: 0, skills: [1, 1, 1, 1, 1, 1], equip: { weapon: null, armor: null, ring: null, boots: null } } },
+      heroes: Object.fromEntries(['knight', 'ranger'].map(id => [id, { level: 1, exp: 0, star: 1, shards: 0, skills: [1, 1, 1, 1, 1, 1], equip: { weapon: null, armor: null, ring: null, boots: null } }])),
       selected: 'knight', inventory: [], invSeq: 1,
       progress: { unlocked: 1, stars: {} }, // stars['1-1'] = 3
       pity: 0, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,

@@ -128,9 +128,9 @@ class AudioSys {
     o.connect(g); g.connect(this.sfxGain); o.start(t); o.stop(t + 0.32);
   }
   /** 타격 복합음: 샘플 + 저역 + (크리티컬 시) 팅 */
-  hit(kind = 'slash', { crit = false, heavy = false } = {}) {
+  hit(kind = 'slash', { crit = false, heavy = false, finisher = heavy && !crit } = {}) {
     if (!this.enabled || !this.ctx) return;
-    const event = { kind, crit, heavy, priority: (heavy ? 2 : 0) + (crit ? 1 : 0) };
+    const event = { kind, crit, heavy, finisher, priority: (finisher ? 4 : 0) + (heavy ? 2 : 0) + (crit ? 1 : 0) };
     if (!this._hitPending || event.priority >= this._hitPending.priority) this._hitPending = event;
     this._flushHit();
   }
@@ -147,7 +147,7 @@ class AudioSys {
     const event = this._hitPending; this._hitPending = null; this._hitLast = this.now();
     this._renderHit(event.kind, event);
   }
-  _renderHit(kind, { crit, heavy }) {
+  _renderHit(kind, { crit, heavy, finisher }) {
     if (kind === 'slash') { this.pick('hit_metal', 3, { vol: heavy ? 1 : 0.7, rate: heavy ? 0.85 : 1.1, vary: 0.12 }); this.pick('hit_punch', 3, { vol: heavy ? 0.9 : 0.55, rate: 1.2 }); }
     else if (kind === 'blunt') { this.pick('hit_punch', 3, { vol: 1, rate: heavy ? 0.8 : 1 }); this.play('hit_wood', { vol: 0.5 }); }
     else if (kind === 'magic') { this.pick('hit_soft', 2, { vol: 0.8, rate: 1.3 }); this.play('hit_glass', { vol: 0.3, rate: 1.4 }); }
@@ -155,7 +155,10 @@ class AudioSys {
     this.thump({ vol: heavy ? 0.9 : 0.45, freq: heavy ? 60 : 100, dur: heavy ? 0.28 : 0.14 });
     if (crit) this.ting({ vol: 0.45, freq: 1500 + Math.random() * 600 });
     // Flow Music score-derived impact accent; 기본 CC0 타격음에만 낮게 겹친다.
-    if (heavy || crit) this.play(`expansion/flow-impact-${heavy ? 'heavy' : 'light'}`, { vol: heavy ? 0.16 : 0.12, vary: 0, min: 0.05 });
+    if (heavy || crit) {
+      const weight = finisher || !crit ? 'heavy' : 'light';
+      this.play(`expansion/flow-impact-${weight}`, { vol: weight === 'heavy' ? 0.16 : 0.12, vary: 0, min: 0.05 });
+    }
   }
 
   // ================= 확장 SFX 라이브러리 (프로시저럴) =================

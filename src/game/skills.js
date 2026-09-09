@@ -4,6 +4,16 @@ import { audio } from '../engine/audio.js';
 const _v = new THREE.Vector3();
 const fwd = (p, d = 1) => p.forward(new THREE.Vector3()).multiplyScalar(d).add(p.pos);
 const targets = (game, p, max = 6, range = 10) => game.enemies.filter((e) => e.alive && !e.spawning && p.distTo(e) < range).sort((a, b) => p.distTo(a) - p.distTo(b)).slice(0, max);
+const rangerOrigin = (p, dir) => p.def?.weapon === 'bow' && p.arrowOrigin ? p.arrowOrigin(dir) : p.pos.clone().addScaledVector(dir, .9).setY(1.2);
+function rangerArrows(game, p, dmg, count = 1, options = {}) {
+  const f = p.forward(new THREE.Vector3());
+  for (let i = 0; i < count; i++) {
+    const dir = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (i - (count - 1) / 2) * .18);
+    game.spawnProjectile({ pos: rangerOrigin(p, dir), dir, speed: 28, radius: .7, dmg, color: 0x7feac0,
+      size: .45, owner: p, kb: 3, kind: 'slash', pierce: true, life: .75, visual: 'arrow', ...options });
+  }
+  audio.whoosh({ vol: .4, pitch: 1.5, dur: .2 });
+}
 /** 적이 가장 밀집한 지점 (몹몰이 조준 보정) */
 function densest(game, p, range = 11, radius = 3.5) {
   const list = game.enemies.filter((e) => e.alive && !e.spawning && p.distTo(e) < range);
@@ -34,8 +44,8 @@ export const SKILLS = {
     cast(game, p, c) {
       const empowered = (p.jobResource || 0) >= 3;
       if (empowered) p.jobResource = 0;
-      const dir = p.forward(new THREE.Vector3()), pos = p.pos.clone().addScaledVector(dir, .9).setY(1.2);
-      game.spawnProjectile({ pos, dir, speed: 27, radius: empowered ? 1.3 : .65, dmg: c.dmg * (empowered ? 2 : 1), color: 0x7feac0, size: .45, owner: p, kb: 4, kind: 'slash', pierce: true, life: .85 });
+      const dir = p.forward(new THREE.Vector3()), pos = rangerOrigin(p, dir);
+      game.spawnProjectile({ pos, dir, speed: 27, radius: empowered ? 1.3 : .65, dmg: c.dmg * (empowered ? 2 : 1), color: 0x7feac0, size: .45, owner: p, kb: 4, kind: 'slash', pierce: true, life: .85, visual: p.def?.weapon === 'bow' ? 'arrow' : undefined });
       audio.whoosh({ vol: .4, pitch: 1.5, dur: .2 });
     },
   },
@@ -45,9 +55,43 @@ export const SKILLS = {
       const f = p.forward(new THREE.Vector3());
       for (let i = -1; i <= 1; i++) {
         const dir = f.clone().applyAxisAngle(new THREE.Vector3(0,1,0), i * .24);
-        game.spawnProjectile({ pos: p.pos.clone().addScaledVector(dir,.8).setY(1.2), dir, speed: 23, radius: .8, dmg: c.dmg, color: 0x7feac0, size: .35, owner: p, kb: 2, kind: 'slash', pierce: true, slow: 2, life: .8 });
+        game.spawnProjectile({ pos: rangerOrigin(p, dir), dir, speed: 23, radius: .8, dmg: c.dmg, color: 0x7feac0, size: .35, owner: p, kb: 2, kind: 'slash', pierce: true, slow: 2, life: .8, visual: p.def?.weapon === 'bow' ? 'arrow' : undefined });
       }
       audio.whoosh({ vol: .4, pitch: 1.7, dur: .3 });
+    },
+  },
+  ranger_retreat: {
+    dur: .7,
+    cast(game, p, c) {
+      rangerArrows(game, p, c.dmg);
+      p.vel.copy(p.forward(new THREE.Vector3())).multiplyScalar(-8);
+      p.invuln = Math.max(p.invuln || 0, .6); p.gainJobResource(1);
+    },
+    end(_game, p) { p.vel.set(0, 0, 0); },
+  },
+  ranger_tempest: {
+    dur: 1,
+    cast(game, p, c) {
+      const empowered = (p.jobResource || 0) >= 3;
+      if (empowered) p.jobResource = 0;
+      rangerArrows(game, p, c.dmg * (empowered ? 1.5 : 1), 7, { radius: 1.1, kb: 6, size: .65 });
+    },
+  },
+  ranger_quickshot: {
+    dur: .8,
+    cast(game, p, c) {
+      rangerArrows(game, p, c.dmg); p.gainJobResource(1);
+      for (const delay of [.12, .24]) game.after(delay, () => {
+        if (game.active && game.player === p && p.alive) rangerArrows(game, p, c.dmg);
+      });
+    },
+  },
+  ranger_binding: {
+    dur: .8,
+    cast(game, p, c) {
+      const empowered = (p.jobResource || 0) >= 3;
+      if (empowered) p.jobResource = 0;
+      rangerArrows(game, p, c.dmg * (empowered ? 2 : 1), 5, { slow: 4, kb: 1 });
     },
   },
   // ================= 검성 (성스러운 빛 · 몹몰이 심판) =================

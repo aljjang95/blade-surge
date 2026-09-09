@@ -101,9 +101,31 @@ export const HEROES = {
       { id: 'void_step',   name: '공허 보법',   icon: '/img/sk_rg_a2.webp', cd: 25, unlock: 20, awaken: 2, anim: 'Dodge_Forward', castAt: 0.1, dmg: 1.2, desc: '공허에 잠겨 무적이 된 채 적들 사이를 12번 순간이동하며 베고, 마지막 적에서 터져 나온다' },
     ],
   },
+  // A distinct free adventurer; the Rogue's ranger job remains unchanged.
+  ranger: {
+  id: 'ranger', name: '바람추적자 실바', title: '숲의 명사수', rarity: 'SR', model: 'Ranger',
+  portrait: '/img/ranger-portrait.webp', voiceId: 'rogue', weapon: 'bow', ranged: true, jobId: 'ranger',
+  color: '#7feac0', accent: '#d4ffdb', show: ['Bow'],
+  base: { hp: 1120, atk: 145, def: 24, crit: .25, critDmg: 1.8, spd: 6.6 },
+  combo: [
+    { anim: 'Bow_Shoot', hitAt: .42, dmg: .85, range: 12, arc: 20, kb: 1, dur: .46, projectile: 'arrow', jobGain: 1 },
+    { anim: 'Bow_Shoot', hitAt: .42, dmg: .95, range: 12, arc: 20, kb: 1, dur: .43, projectile: 'arrow', jobGain: 1 },
+    { anim: 'Bow_Shoot', hitAt: .42, dmg: .65, range: 12, arc: 40, kb: 1.5, dur: .60, projectile: 'arrow', arrowCount: 3, jobGain: 1 },
+    { anim: 'Bow_Shoot', hitAt: .42, dmg: 1.45, range: 14, arc: 20, kb: 3, dur: .62, projectile: 'arrow', pierce: true, jobGain: 1 },
+    { anim: 'Bow_Shoot', hitAt: .42, dmg: 2.1, range: 14, arc: 20, kb: 5, dur: .78, projectile: 'arrow', pierce: true, finisher: true, jobGain: 1 },
+  ],
+  skills: [
+    { id: 'ranger_pierce', name: '바람 관통화살', icon: '/img/expansion/ranger.webp', cd: 4, anim: 'Bow_Shoot', castAt: .42, dmg: 2.8, desc: '관통 화살. 집중 3을 소비하면 피해 2배와 판정 확대' },
+    { id: 'ranger_volley', name: '삼중 추적화살', icon: '/img/expansion/ranger.webp', cd: 8, anim: 'Bow_Shoot', castAt: .42, dmg: 2, desc: '부채꼴 관통 화살 3발. 적을 2초간 둔화' },
+    { id: 'ranger_retreat', name: '바람의 이탈', icon: '/img/ranger-portrait.webp', cd: 10, anim: 'Bow_Shoot', castAt: .42, dmg: 2.2, desc: '화살을 쏘며 짧게 후퇴. 0.6초 무적과 집중 +1' },
+    { id: 'ranger_tempest', name: '궁극 · 폭풍의 일곱 화살', icon: '/img/ranger-portrait.webp', ult: true, anim: 'Bow_Shoot', castAt: .42, dmg: 2.4, desc: '넓은 부채꼴 관통 화살 7발. 집중 3을 소비하면 각 화살 피해 50% 증가' },
+    { id: 'ranger_quickshot', name: '각성 · 연속 관통', icon: '/img/expansion/ranger.webp', cd: 12, unlock: 10, awaken: 1, anim: 'Bow_Shoot', castAt: .42, dmg: 1.6, desc: '정면으로 관통 화살 3발을 연속 발사하고 집중 +1' },
+    { id: 'ranger_binding', name: '각성 · 숲의 속박', icon: '/img/expansion/ranger.webp', cd: 20, unlock: 20, awaken: 2, anim: 'Bow_Shoot', castAt: .42, dmg: 3.4, desc: '관통 화살 5발로 적을 4초간 둔화. 집중 3을 소비하면 피해 2배' },
+  ],
+  },
 };
 
-export const HERO_ORDER = ['knight', 'barbarian', 'mage', 'rogue'];
+export const HERO_ORDER = ['knight', 'barbarian', 'mage', 'rogue', 'ranger'];
 
 // 레벨업 필요 EXP / 골드
 export const levelExp = (lv) => Math.floor(100 * Math.pow(1.18, lv - 1));

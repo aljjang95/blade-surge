@@ -20,7 +20,7 @@ export function requiredModelAliases(role, heroId) {
     ...hero.combo.map((step) => step.anim), ...hero.skills.map((skill) => skill.anim), ...(heroId === 'mage' ? ['Spellcasting'] : [])])];
 }
 
-export const HERO_MODELS = ['Knight', 'Barbarian', 'Mage', 'Rogue'];
+export const HERO_MODELS = ['Knight', 'Barbarian', 'Mage', 'Rogue', 'Ranger'];
 export const MONSTER_MODELS = [
   'Skeleton_Minion', 'Skeleton_Warrior', 'Skeleton_Rogue', 'Skeleton_Mage',
   'Big_Orc', 'Big_Orc_Skull', 'Big_Demon', 'Big_BlueDemon', 'Big_Yeti', 'Big_MushroomKing',
@@ -36,7 +36,13 @@ export async function loadModel(name, contract = null) {
   const key = name + '|' + JSON.stringify(contract);
   if (cache.has(key)) return cache.get(key);
   const p = loader.loadAsync(`/models/${name}.glb`).then(async (gltf) => {
-    if (!contract && HERO_MODELS.includes(name)) {
+    if (!contract && name === 'Ranger') {
+      // Silva ships as one Blender-authored skin on the same KayKit medium rig.
+      gltf.scene.userData.tllIdentity = 'casual-v2';
+      gltf.scene.traverse((o) => {
+        if (o.isMesh && o.name.startsWith('TLL_')) for (const m of materialsOf(o)) m.userData.tllAuthored = true;
+      });
+    } else if (!contract && HERO_MODELS.includes(name)) {
       const authored = await loader.loadAsync(`/models/tll/${name.toLowerCase()}-casual-v2.glb`);
       assembleHeroIdentity(gltf, authored, name, 'casual-v2');
     }
@@ -74,6 +80,9 @@ export function prepareModel(gltf, contract = null) {
       if (material.map) { material.map.colorSpace = THREE.SRGBColorSpace; material.map.anisotropy = 4; }
       if (!material.userData.tllAuthored) { material.roughness = 0.85; material.metalness = 0; }
     }
+    if (o.name.startsWith('TLL_Silva_') && materialsOf(o).every((m) => !m.map)) {
+      o.geometry.deleteAttribute('uv'); o.geometry.deleteAttribute('tangent');
+    }
   });
   if (!contract) mergeSkinned(gltf.scene, gltf.animations);
   return gltf;
@@ -85,7 +94,7 @@ export function mergeSkinned(scene, animations = []) {
   const animated = new Set(animations.flatMap((clip) => clip.tracks.map((track) => THREE.PropertyBinding.parseTrackName(track.name).nodeName)));
   scene.updateMatrixWorld(true);
   scene.traverse((o) => {
-    if (!o.isSkinnedMesh || Array.isArray(o.material) || Object.keys(o.geometry.morphAttributes).length) return;
+    if (!o.isSkinnedMesh || o.userData.characterFace || Array.isArray(o.material) || Object.keys(o.geometry.morphAttributes).length) return;
     if (animated.has(o.name) || animated.has(o.uuid)) return;
     const movingParents = [];
     for (let p = o.parent; p; p = p.parent) if (animated.has(p.name) || animated.has(p.uuid)) movingParents.push(p.uuid);
