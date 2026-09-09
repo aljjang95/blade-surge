@@ -1,4 +1,5 @@
 // 장비·세트·강화 정의
+import { EXPEDITION_SETS, EXPEDITION_ITEMS } from './expedition-items.js';
 export const SLOTS = ['weapon', 'armor', 'ring', 'boots'];
 export const SLOT_NAME = { weapon: '무기', armor: '방어구', ring: '반지', boots: '신발' };
 
@@ -121,6 +122,8 @@ export const ITEM_POOL = {
   ],
 };
 export const ITEM_BY_ID = {};
+for (const set of EXPEDITION_SETS) SETS[set.id] = set;
+for (const item of EXPEDITION_ITEMS) ITEM_POOL[item.slot].push(item);
 for (const s of SLOTS) { const seen = {}; ITEM_POOL[s].forEach((it) => {
   const k = seen[it.rarity] = (seen[it.rarity] ?? -1) + 1;   // 등급 안에서 몇 번째 디자인인지 → 시트 아이콘
   const sheetIcon = it.set ? null : it.rarity === 'U' ? `/img/it_u_${s}.webp` : `/img/it_${it.rarity.toLowerCase()}_${s}_${Math.min(3, k)}.webp`;

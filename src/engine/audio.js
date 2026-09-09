@@ -1,13 +1,15 @@
 // Web Audio: 샘플(Kenney CC0) + 프로시저럴 합성 SFX + BGM 크로스페이드 + 햅틱
 const SFX_FILES = ['hit_punch0', 'hit_punch1', 'hit_punch2', 'hit_metal0', 'hit_metal1', 'hit_metal2', 'hit_soft0', 'hit_soft1', 'hit_bell', 'hit_mining', 'hit_wood', 'hit_plate', 'hit_glass',
   'ui_click', 'ui_confirm', 'ui_select', 'ui_back', 'ui_error', 'ui_open', 'ui_close', 'ui_max', 'ui_drop', 'ui_bong', 'ui_glass', 'ui_pluck',
-  'coin0', 'coin1', 'coin_stack', 'pack_open', 'card_fan', 'card_place', 'jingle_win0', 'jingle_win1', 'jingle_legend'];
+  'coin0', 'coin1', 'coin_stack', 'pack_open', 'card_fan', 'card_place', 'jingle_win0', 'jingle_win1', 'jingle_legend',
+  'expansion/flow-impact-light', 'expansion/flow-impact-heavy'];
 
 class AudioSys {
   constructor() {
     this.ctx = null; this.buffers = {}; this.enabled = true; this.musicOn = true; this.haptics = true;
     this.music = null; this.musicName = null; this.musicGain = null; this.sfxGain = null; this.master = null;
     this.lastPlay = {};
+    this._hitLast = -Infinity; this._hitPending = null; this._hitTimer = null;
     this.voiceOn = true; this.voiceBuf = {}; this._voiceSrc = null; this._voiceLast = {};
   }
   async init() {
@@ -127,12 +129,33 @@ class AudioSys {
   }
   /** 타격 복합음: 샘플 + 저역 + (크리티컬 시) 팅 */
   hit(kind = 'slash', { crit = false, heavy = false } = {}) {
+    if (!this.enabled || !this.ctx) return;
+    const event = { kind, crit, heavy, priority: (heavy ? 2 : 0) + (crit ? 1 : 0) };
+    if (!this._hitPending || event.priority >= this._hitPending.priority) this._hitPending = event;
+    this._flushHit();
+  }
+  /** 50ms마다 하나만 출력. 대기 중인 일반 타격은 강타/크리티컬이 대체한다. */
+  _flushHit() {
+    if (this._hitTimer !== null) return;
+    if (!this.enabled || !this.ctx || this.ctx.state === 'suspended') { this._hitPending = null; return; }
+    if (!this._hitPending) return;
+    const remaining = 0.05 - (this.now() - this._hitLast);
+    if (remaining > 0.0001) {
+      this._hitTimer = setTimeout(() => { this._hitTimer = null; this._flushHit(); }, Math.ceil(remaining * 1000));
+      return;
+    }
+    const event = this._hitPending; this._hitPending = null; this._hitLast = this.now();
+    this._renderHit(event.kind, event);
+  }
+  _renderHit(kind, { crit, heavy }) {
     if (kind === 'slash') { this.pick('hit_metal', 3, { vol: heavy ? 1 : 0.7, rate: heavy ? 0.85 : 1.1, vary: 0.12 }); this.pick('hit_punch', 3, { vol: heavy ? 0.9 : 0.55, rate: 1.2 }); }
     else if (kind === 'blunt') { this.pick('hit_punch', 3, { vol: 1, rate: heavy ? 0.8 : 1 }); this.play('hit_wood', { vol: 0.5 }); }
     else if (kind === 'magic') { this.pick('hit_soft', 2, { vol: 0.8, rate: 1.3 }); this.play('hit_glass', { vol: 0.3, rate: 1.4 }); }
     else if (kind === 'hurt') { this.pick('hit_soft', 2, { vol: 0.9, rate: 0.8 }); }
     this.thump({ vol: heavy ? 0.9 : 0.45, freq: heavy ? 60 : 100, dur: heavy ? 0.28 : 0.14 });
     if (crit) this.ting({ vol: 0.45, freq: 1500 + Math.random() * 600 });
+    // Flow Music score-derived impact accent; 기본 CC0 타격음에만 낮게 겹친다.
+    if (heavy || crit) this.play(`expansion/flow-impact-${heavy ? 'heavy' : 'light'}`, { vol: heavy ? 0.16 : 0.12, vary: 0, min: 0.05 });
   }
 
   // ================= 확장 SFX 라이브러리 (프로시저럴) =================
@@ -257,7 +280,7 @@ class AudioSys {
     g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0.55 * amount, t + 0.1); g.linearRampToValueAtTime(0.55, t + dur);
   }
   setMusicOn(on) { this.musicOn = on; if (!on) { const n = this.musicName; this.playMusic(null); this.musicName = null; this._pendingMusic = n; } else if (this._pendingMusic) { this.playMusic(this._pendingMusic); } }
-  setSfxOn(on) { this.enabled = on; }
+  setSfxOn(on) { this.enabled = on; if (!on) { clearTimeout(this._hitTimer); this._hitTimer = null; this._hitPending = null; } }
 
   // ---------- 햅틱 ----------
   vibe(pattern) { if (this.haptics && navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) {} } }

@@ -38,10 +38,14 @@ export class Meta {
     setInterval(() => this.tick(), 1000);
   }
   openTab(tab, sub) {
+    if (this.app.expeditionUI?.result?.saveError && (tab !== 'stage' || sub !== 'dungeons')) { this.ui.toast('전리품 정산을 먼저 저장해 주세요.', 'red'); return; }
+    if (this.app.expeditionUI?.result && (tab !== 'stage' || !sub || sub === 'campaign')) { this.app.expeditionUI.result = null; this.app.toLobby(); }
     this.tab = tab; audio.play('ui_select', { vol: 0.4 });
     document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('show', t.id === 'tab-' + tab));
     document.querySelectorAll('.bottomnav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
     this.app.setLobbyVisible(tab === 'home');
+    this.app.expeditionUI?.syncTab(tab, sub);
+    if (tab !== 'heroes') this.app.wardrobe?.hide();
     if (tab === 'stage') this.renderStages(); if (tab === 'heroes') this.renderHeroes(); if (tab === 'shop') { if (sub) this.shopTab = sub; this.renderShop(); } if (tab === 'pass') this.renderPass(); if (tab === 'gacha') this.refreshGacha();
     if (tab === 'home') this.refreshHome();
   }
@@ -157,7 +161,7 @@ export class Meta {
   }
   renderHeroes() {
     const list = $('hero-list'); list.innerHTML = '';
-    if (!this.eco.ownHero(this.heroSel)) this.heroSel = this.eco.s.selected;
+    if (!HEROES[this.heroSel]) this.heroSel = this.eco.s.selected;
     for (const id of HERO_ORDER) {
       const def = HEROES[id]; const own = this.eco.ownHero(id); const h = this.eco.hero(id);
       const c = document.createElement('div'); c.className = `hero-card rar-${def.rarity}` + (own ? '' : ' lock') + (this.heroSel === id ? ' on' : '');
@@ -166,6 +170,7 @@ export class Meta {
       list.appendChild(c);
     }
     const id = this.heroSel; const def = HEROES[id]; const own = this.eco.ownHero(id); const det = $('hero-detail');
+    this.app.wardrobe?.show(id);
     if (!own) { det.innerHTML = `<h2>${def.name}</h2><div class="sub">${def.title} · ${def.rarity}</div><p style="color:var(--muted);font-size:13px">${def.skills.map((s) => s.name).join(' · ')}</p><button class="btn btn-gold" id="h-summon">소환으로 획득</button>`; $('h-summon').onclick = () => this.openTab('gacha'); return; }
     const h = this.eco.hero(id); const st = heroStats(def, h, this.eco.heroEquipBonus(id)); const sel = this.eco.s.selected === id;
     det.innerHTML = `<h2>${def.name} <small style="font-size:12px;color:${RC[def.rarity]}">${def.rarity}</small></h2><div class="sub">${def.title} · Lv.${h.level} · ${'★'.repeat(h.star)}${'☆'.repeat(5 - h.star)} · 전투력 <b style="color:var(--gold)">${fmt(st.power)}</b></div>
@@ -195,7 +200,7 @@ export class Meta {
       const S = SETS[sid]; const on2 = n >= 2, on4 = n >= 4; const col = S.themed ? '#' + S.color.toString(16).padStart(6, '0') : RARITY_COLOR[{ recruit: 'N', merc: 'S', knight: 'E', dragon: 'L' }[sid]];
       return `<div class="set-row ${on2 ? '' : 'off'}"><img src="${S.icon}" onerror="this.remove()"><div style="flex:1"><div class="sr-name" style="color:${col}">${S.name} (${n}/4)${S.themed ? ' <small style="color:var(--muted);font-weight:400">테마</small>' : ''}</div><div class="${on2 ? 'sr-eff' : ''}" style="font-size:10px">2세트: ${pct(S.two)}</div><div class="${on4 ? 'sr-eff' : ''}" style="font-size:10px;${on4 ? '' : 'color:var(--muted)'}">4세트: ${pct(S.four)}</div></div></div>`;
     }).filter(Boolean).join('');
-    return `<div class="set-list">${rows || '<div style="font-size:11px;color:var(--muted)">같은 등급 장비 2/4개 = 스탯 세트 · 테마 세트 8종(폭풍·흡혈·중력·불사조·서리결정·역병포자·룬각인·심연사슬)은 플레이 방식이 바뀝니다</div>'}<button class="btn btn-ghost btn-sm" id="h-craft" style="align-self:flex-start">세트 제작 <small><img src="/img/icon_fragment.webp" style="width:12px;height:12px;vertical-align:-2px"> ${this.eco.s.fragments || 0}</small></button></div>`;
+    return `<div class="set-list">${rows || '<div style="font-size:11px;color:var(--muted)">같은 등급 장비 2/4개 = 스탯 세트 · 테마 세트와 원정 전용 세트는 2/4개 장착 시 전투 효과가 발동합니다</div>'}<button class="btn btn-ghost btn-sm" id="h-craft" style="align-self:flex-start">세트 제작 <small><img src="/img/icon_fragment.webp" style="width:12px;height:12px;vertical-align:-2px"> ${this.eco.s.fragments || 0}</small></button></div>`;
   }
   /** 세트 조각으로 테마 세트 장비 제작 — 엘리트/보스가 떨군다 */
   showCraft(heroId) {

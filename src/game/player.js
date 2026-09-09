@@ -3,6 +3,7 @@ import { Actor } from './actor.js';
 import { audio } from '../engine/audio.js';
 import { SKILLS } from './skills.js';
 import { applyLook } from './look.js';
+import { materialsOf } from '../engine/assets.js';
 
 const _v = new THREE.Vector3();
 
@@ -13,6 +14,10 @@ export class Player extends Actor {
     this.heroLevel = heroLevel;   // 각성 스킬 해금 판정용
     this.maxHp = stats.hp; this.hp = stats.hp;
     this.look = applyLook(this.model, def, equip);   // 장비 외형: 무기/방패 메시 + 등급 발광 + 궤적색
+    // The outfit is attached after Actor construction; include it in hit/death/revive effects.
+    const dressedMaterials = new Set();
+    this.model.traverse(o => { if (o.isMesh) for (const m of materialsOf(o)) if (m.emissive) dressedMaterials.add(m); });
+    this.mats = [...dressedMaterials];
     this.auraT = 0;
     this.state = 'idle'; this.stateT = 0;
     this.comboIdx = 0; this.comboQueued = false; this.hitDone = false; this.comboWindow = 0;
@@ -27,7 +32,13 @@ export class Player extends Actor {
     this.footT = 0;
     audio.preloadBarks([0, 1, 2, 3].map((i) => `hero_${def.id}_atk${i}`).concat([0, 1].map((i) => `hero_${def.id}_fin${i}`), [0, 1, 2].map((i) => `hero_${def.id}_hurt${i}`), [0, 1, 2].map((i) => `hero_${def.id}_skill${i}`), [`hero_${def.id}_perfect`]));
   }
-  get atk() { return this.stats.atk * this.buffs.atk * (this.game.hasProc?.('blood_rage') && this.hp < this.maxHp * 0.5 ? 1.5 : 1); }
+  get atk() { return this.stats.atk * this.buffs.atk * ((this.tonicAtkT || 0) > 0 ? 1.25 : 1) * (this.game.hasProc?.('blood_rage') && this.hp < this.maxHp * 0.5 ? 1.5 : 1); }
+  gainJobResource(n) {
+    if (!this.def.jobId) return;
+    const old = this.jobResource || 0;
+    this.jobResource = Math.min(3, old + n);
+    if (old < 3 && this.jobResource === 3) this.game.ui.toast(this.def.jobId === 'guardian' ? '결의 충만 · 결의의 반격 강화' : '집중 충만 · 바람 관통탄 강화', 'gold');
+  }
   get busy() { return this.state === 'attack' || this.state === 'skill' || this.state === 'dodge' || this.state === 'ult' || this.state === 'hurt'; }
   addUlt(n) { this.ult = Math.min(this.ultMax, this.ult + n); }
 
@@ -122,6 +133,7 @@ export class Player extends Actor {
   stopTrail() { if (this.trail) { this.trail.stop(); this.trail = null; } }
   doComboHit(tick = 0) {
     const c = this.current; const dmg = this.atk * c.dmg;
+    if (!tick && c.jobGain) this.gainJobResource(c.jobGain);
     const f = this.forward(_v.clone());
     const gravity = this.game.hasProc('gravity_pull');
     if (c.move === 'fan') {   // 부채꼴 3발
@@ -187,6 +199,7 @@ export class Player extends Actor {
   dodge(dir) {
     this.stopTrail(); this.state = 'dodge'; this.stateT = 0; this.invuln = 0.4;
     this.perfectWindow = 0.28;   // 이 안에 피격 판정이 스치면 퍼펙트
+    if (this.def.jobId === 'ranger') this.gainJobResource(1);
     const d = dir ? dir.clone().normalize() : this.forward(_v.clone());
     this.faceDir(d.x, d.z);
     this.vel.copy(d).multiplyScalar(19);
@@ -229,6 +242,16 @@ export class Player extends Actor {
   // ---------------- 피격 ----------------
   hurt(dmg, { dirx = 0, dirz = 0, kb = 2, kind = 'blunt' } = {}) {
     if (!this.alive) return false;
+    if ((this.guardT || 0) > 0 && this.def.jobId === 'guardian') {
+      const perfect = this.guardT > .45;
+      this.guardT = 0;
+      this.gainJobResource(perfect ? 2 : 1);
+      this.game.ui.toast(perfect ? '완벽한 방어 · 반격!' : '방패 방어', 'gold');
+      this.game.hitRadius(this.pos, 4, this.atk * (perfect ? 2.8 : 1.2), { kb: 5, stun: .8, kind: 'blunt', source: this, dirFrom: this.pos });
+      this.game.fx.shockTex(this.pos, 0x9fd0ff, { r1: 4, life: .35 });
+      if (perfect) { this.addUlt(12); return false; }
+      dmg *= .3;
+    }
     if (this.invuln > 0) {
       // 회피 직후 스치면 퍼펙트 — 슬로우모 + 궁극기 게이지 + 반격 버프
       if (this.perfectWindow > 0 && this.perfectCd <= 0) {
@@ -244,6 +267,7 @@ export class Player extends Actor {
       red = Math.max(1, Math.round(red * (1 - this.dr)));
       this.game.fx.holyBurst(this.pos.clone().setY(1.1), { size: 2.6, life: 0.25 });
     }
+    if ((this.tonicGuardT || 0) > 0) red = Math.max(1, Math.round(red * .7));
     this.hp -= red;
     this.flash(0xff4040, 0.15);
     this.game.fx.damage(this.pos, red, { kind: 'self' });
@@ -277,9 +301,10 @@ export class Player extends Actor {
       const cluster = list.reduce((a, x) => a + (x.distTo(e) < 4.5 ? 1 : 0), 0);
       for (let i = this.def.skills.length - 1; i >= 0; i--) {
         const sk = this.def.skills[i]; if (!this.unlocked(i)) continue;
+        if (sk.id === 'guardian_guard' && !(e.telegraph > 0 && d < 5)) continue;
         const ready = sk.ult ? this.ult >= this.ultMax : this.cds[i] <= 0;
         if (!ready) continue;
-        const wantCluster = sk.ult ? 3 : sk.awaken ? 2 : i === 0 ? 1 : 2;
+        const wantCluster = this.game.stage?.expedition?.kind === 'arena' ? 1 : sk.ult ? 3 : sk.awaken ? 2 : i === 0 ? 1 : 2;
         if (cluster >= wantCluster && d < (this.def.ranged ? 11 : 8)) { this.game.input.press('skill' + i); return out; }
       }
       if (d > want + 0.4) {
@@ -324,6 +349,9 @@ export class Player extends Actor {
   // ---------------- 업데이트 ----------------
   update(dt) {
     super.update(dt);
+    this.guardT = Math.max(0, (this.guardT || 0) - dt);
+    this.tonicAtkT = Math.max(0, (this.tonicAtkT || 0) - dt);
+    this.tonicGuardT = Math.max(0, (this.tonicGuardT || 0) - dt);
     if (this.perfectWindow > 0) this.perfectWindow -= dt;
     if (this.stormT > 0) { this.stormT -= dt; this.game.fx.aura(this.pos, 0x7fd9ff, 1.5); if (this.stormT <= 0 && this.buffs.t <= 0) this.tintEmissive = null; }
     if (this.perfectCd > 0) this.perfectCd -= dt;

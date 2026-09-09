@@ -105,6 +105,7 @@ export class UI {
     this.skillBtns.forEach((b, i) => {
       const sk = def.skills[i];
       if (!sk) { b.style.display = 'none'; return; }
+      b.title = sk.name; b.setAttribute('aria-label', sk.name);
       const img = b.querySelector('img'); img.src = sk.icon; img.style.display = '';
       img.onerror = () => { img.style.display = 'none'; b.style.background = `linear-gradient(135deg, ${def.color}, #222)`; };
       b.style.display = '';
@@ -139,6 +140,7 @@ export class UI {
   ultCinema(name, def) { const c = $('ult-cinema'); $('ult-name').textContent = name; $('ult-name').style.textShadow = `0 0 20px ${def.color}, 0 4px 0 #000`; c.classList.remove('on'); void c.offsetWidth; c.classList.add('on'); setTimeout(() => c.classList.remove('on'), 1700); }
   updateHud(b, dt) {
     const p = b.player; if (!p) return;
+    this.app.expeditionUI?.updateCombatStatus(b);
     this.miniT -= dt; if (this.miniT <= 0) { this.miniT = 1 / 20; this.minimap.draw(b); }
     const hp = Math.max(0, p.hp / p.maxHp); $('hud-hp').style.width = hp * 100 + '%';
     const hpValue = Math.floor(p.hp), maxHpValue = Math.floor(p.maxHp);
@@ -185,6 +187,7 @@ export class UI {
 
   // ---------------- 결과 ----------------
   showResult(b, win) {
+    if (b.stage?.expedition) { this.app.expeditionUI.showResult(b, win); return; }
     const r = b.result;
     if (!r || r.win !== win || (this.resultData === r && this.el.result.classList.contains('show'))) return;
     this.hideResult(); this.resultData = r;
@@ -200,6 +203,11 @@ export class UI {
     $('result-exp').style.width = '0%'; $('result-bp').style.width = '0%';
     if (win) {
       r.reward ||= eco.completeStage(b.stage, r.stars, { fieldGold: b.drops.gold, fieldStones: b.drops.stones, fieldStones2: b.drops.stones2, fieldStones3: b.drops.stones3, fieldFragments: b.drops.fragments, fieldLoot: b.drops.loot });
+      if (this.app.expedition && !r.expeditionRecorded) {
+        r.receiptId ||= globalThis.crypto?.randomUUID?.() || `campaign-${Date.now()}-${Math.random()}`;
+        const recorded = this.app.expedition.recordCampaign(r, b.stage);
+        r.expeditionRecorded = recorded.ok;
+      }
       this.lastReward = r.reward; const rw = r.reward;
       stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
       const items = [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];

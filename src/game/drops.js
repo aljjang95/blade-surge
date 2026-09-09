@@ -5,6 +5,9 @@ import { RARITY_COLOR, ITEM_BY_ID, ITEM_ICON } from '../data/items.js';
 
 const _v = new THREE.Vector3();
 
+// Free AI practice pays its catalog reward only; it never creates field loot.
+export const fieldDropsAllowed = stage => stage?.expedition?.kind !== 'arena';
+
 /**
  * 필드 드랍: 코인/장비/강화석이 3D 로 튀어나오고, 플레이어가 가까이 가면 자석처럼 빨려온다.
  * 몹몰이 → 광역 처치 → 드랍 비처럼 쏟아지는 도파민 루프의 핵심.
@@ -33,6 +36,7 @@ export class DropSystem {
   }
   /** kind: 'gold' | 'stone' | 'item' */
   spawn(pos, kind, payload, { count = 1, spread = 1 } = {}) {
+    if (!fieldDropsAllowed(this.game.stage)) return;
     for (let i = 0; i < count; i++) {
       let mesh;
       if (kind === 'gold') { mesh = new THREE.Mesh(this._geoCoin, this._matCoin); mesh.scale.setScalar(1.1); }
@@ -88,6 +92,7 @@ export class DropSystem {
   }
   _remove(i) { const it = this.items[i]; this.scene.remove(it.mesh); if (it.mesh.userData.own) it.mesh.geometry.dispose(); if (it.beam) { this.scene.remove(it.beam); it.beam.material.dispose(); } this.items.splice(i, 1); }
   collect(it) {
+    if (!fieldDropsAllowed(this.game.stage)) return;
     const g = this.game; const p = g.player;
     const pos = p.pos.clone().setY(1.3);
     if (it.kind === 'gold') {
@@ -117,6 +122,7 @@ export class DropSystem {
   }
   /** 적 처치 시 드랍 롤 */
   onKill(enemy, stage) {
+    if (!fieldDropsAllowed(stage) || !fieldDropsAllowed(this.game.stage)) return;
     const pos = enemy.pos.clone();
     const g = enemy.def.gold || 1;
     const goldAmt = Math.max(1, Math.floor(g * stage.scale * (0.8 + Math.random() * 0.5)));

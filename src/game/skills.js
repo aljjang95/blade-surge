@@ -14,6 +14,42 @@ function densest(game, p, range = 11, radius = 3.5) {
 }
 
 export const SKILLS = {
+  guardian_guard: {
+    dur: .3, total: .4,
+    start(game, p) { p.guardT = .75; game.fx.castCircle(p.pos, 0x9fd0ff, { radius: 2.5, life: .75 }); },
+    cast() {},
+  },
+  guardian_rebuke: {
+    dur: .6,
+    cast(game, p, c) {
+      const empowered = (p.jobResource || 0) >= 3;
+      if (empowered) p.jobResource = 0;
+      game.hitRadius(p.pos, empowered ? 6 : 4, c.dmg * (empowered ? 2 : 1), { kb: 8, stun: 1.2, kind: 'blunt', source: p, dirFrom: p.pos });
+      game.fx.shockTex(p.pos, 0x9fd0ff, { r1: empowered ? 7 : 4, life: .5 });
+      audio.boom({ vol: .45, dur: .3, low: 90 });
+    },
+  },
+  ranger_pierce: {
+    dur: .45,
+    cast(game, p, c) {
+      const empowered = (p.jobResource || 0) >= 3;
+      if (empowered) p.jobResource = 0;
+      const dir = p.forward(new THREE.Vector3()), pos = p.pos.clone().addScaledVector(dir, .9).setY(1.2);
+      game.spawnProjectile({ pos, dir, speed: 27, radius: empowered ? 1.3 : .65, dmg: c.dmg * (empowered ? 2 : 1), color: 0x7feac0, size: .45, owner: p, kb: 4, kind: 'slash', pierce: true, life: .85 });
+      audio.whoosh({ vol: .4, pitch: 1.5, dur: .2 });
+    },
+  },
+  ranger_volley: {
+    dur: .65,
+    cast(game, p, c) {
+      const f = p.forward(new THREE.Vector3());
+      for (let i = -1; i <= 1; i++) {
+        const dir = f.clone().applyAxisAngle(new THREE.Vector3(0,1,0), i * .24);
+        game.spawnProjectile({ pos: p.pos.clone().addScaledVector(dir,.8).setY(1.2), dir, speed: 23, radius: .8, dmg: c.dmg, color: 0x7feac0, size: .35, owner: p, kb: 2, kind: 'slash', pierce: true, slow: 2, life: .8 });
+      }
+      audio.whoosh({ vol: .4, pitch: 1.7, dur: .3 });
+    },
+  },
   // ================= 검성 (성스러운 빛 · 몹몰이 심판) =================
   holy_slash: {
     dur: 0.6,
