@@ -16,7 +16,7 @@
 
 New equipment lives in `src/data/expedition-items.js`: glasswarden, emberknight, starreader each have four pieces, existing illustrated icons and combinations of established proc handlers. They are registered into existing item catalog and save validation. No new art provenance or new proc implementation is claimed.
 
-Verification: `bun run typecheck`; `bun test test/expedition-economy.test.ts test/economy-recovery.test.ts`. Actual installed runtime: Bun1.3.13; package manifest requests1.4.0. Browser/combat integration is separately owned and must be verified after wiring the UI.
+Verification: `bun run typecheck`; `bun test test/expedition-economy.test.ts test/economy-recovery.test.ts`. The initial implementation used Bun1.3.13; final integration was checked with actual Bun1.4.2, matching package.json. Browser/combat and operating deployment evidence is recorded in docs/EXPANSION_VERIFICATION.md and the release receipt.
 
 ### Field settlement integration
 

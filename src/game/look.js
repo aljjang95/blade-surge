@@ -15,6 +15,11 @@ export const ALL_WEAPON_NODES = ['1H_Sword_Offhand', 'Badge_Shield', 'Rectangle_
 
 // 영웅별: 무기 슬롯이 다루는 노드 그룹 / 방어구 슬롯이 다루는 노드 그룹, 등급별 조합
 export const LOOKS = {
+  ranger: {
+    weaponNodes: ['Bow', 'Arrow'], armorNodes: [],
+    weapon: { N: ['Bow'], S: ['Bow'], E: ['Bow'], U: ['Bow'], L: ['Bow'] },
+    armor: { N: [], S: [], E: [], U: [], L: [] },
+  },
   knight: {
     weaponNodes: ['1H_Sword', '2H_Sword', '1H_Sword_Offhand'], armorNodes: ['Round_Shield', 'Badge_Shield', 'Rectangle_Shield', 'Spike_Shield'],
     weapon: { N: ['1H_Sword'], S: ['1H_Sword'], E: ['1H_Sword'], U: ['2H_Sword'], L: ['2H_Sword'] },
@@ -56,7 +61,7 @@ export function applyLook(model, def, equip = {}) {
     if (w) { for (const n of L.weaponNodes) show.delete(n); for (const n of L.weapon[w.rarity] || []) show.add(n); }
     if (a) { for (const n of L.armorNodes) show.delete(n); for (const n of L.armor[a.rarity] || []) show.add(n); }
   }
-  for (const n of ALL_WEAPON_NODES) { const o = model.getObjectByName(n); if (o) o.visible = show.has(n); }
+  for (const n of [...ALL_WEAPON_NODES, 'Bow', 'Arrow']) { const o = model.getObjectByName(n); if (o) o.visible = show.has(n); }
   // 발광 — 무기 메시는 등급색, 몸통은 방어구 등급색을 아주 약하게. Actor.update 가 flash 뒤에 baseEmissive 로 되돌린다
   const wCol = w ? new THREE.Color(RARITY_INFO[w.rarity].color) : null, aCol = a ? new THREE.Color(RARITY_INFO[a.rarity].color) : null;
   const wGlow = w ? WEAPON_GLOW[w.rarity] + Math.min(20, equip.weapon.enh || 0) * 0.025 : 0;

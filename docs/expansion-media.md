@@ -26,9 +26,9 @@ SHA-256:
 - light: `6F4355FB53D24E87AA312EB81025724E9098E16F5DAA0FA85A5C292101143923`
 - heavy: `B9BA049D045249EF91B45C383828C79A9A0B68CB3C1641037D197131A80BB743`
 
-Both files fully decode in FFmpeg. They layer only on critical/heavy hits at gains 0.12/0.16 through the existing SFX gain and compressor. Normal hits use original sounds. Hit bursts coalesce to one composite hit per 50ms; pending heavy/critical events replace lower-priority events. Muting clears pending events. Existing BGM, voice, haptics and compressor settings are unchanged.
+Both files fully decode in FFmpeg. They layer only on critical/heavy hits at gains 0.12/0.16 through the existing SFX gain and compressor. Normal hits use original sounds. The final damage path preserves the separate finisher flag: a non-finishing critical selects light, while finishers and other heavy attacks select heavy. Hit bursts coalesce to one composite hit per 50ms; finishers outrank later critical events. Muting clears pending events. Voice, haptics and compressor settings are unchanged. Expedition start, boss entry and revival keep the Flow combat track; campaign music selection remains unchanged.
 
-Verification: JavaScript syntax check passed. Deterministic focused checks passed for burst coalescing, heavy priority, 50ms spacing, mute cancellation and re-enable. The actual browser AudioContext was running and both buffers decoded; the production build loaded the BGM and both accents without browser errors. Subjective listening and fit have not been verified.
+Verification: JavaScript syntax check passed. The committed expedition audio regression test exercises the real Battle damage dispatch, burst coalescing, finisher priority, 50ms spacing, mute cancellation and boss/revival music routes. The actual browser AudioContext was running and both buffers decoded; the production build loaded the BGM and both accents without browser errors. Subjective listening and fit have not been verified.
 
 ## Flow garden entrance video
 

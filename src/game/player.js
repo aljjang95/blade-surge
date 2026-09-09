@@ -30,7 +30,7 @@ export class Player extends Actor {
     this.moveDir = new THREE.Vector3();
     this.play('Idle');
     this.footT = 0;
-    audio.preloadBarks([0, 1, 2, 3].map((i) => `hero_${def.id}_atk${i}`).concat([0, 1].map((i) => `hero_${def.id}_fin${i}`), [0, 1, 2].map((i) => `hero_${def.id}_hurt${i}`), [0, 1, 2].map((i) => `hero_${def.id}_skill${i}`), [`hero_${def.id}_perfect`]));
+    audio.preloadBarks([0, 1, 2, 3].map((i) => `hero_${def.voiceId || def.id}_atk${i}`).concat([0, 1].map((i) => `hero_${def.voiceId || def.id}_fin${i}`), [0, 1, 2].map((i) => `hero_${def.voiceId || def.id}_hurt${i}`), [0, 1, 2].map((i) => `hero_${def.voiceId || def.id}_skill${i}`), [`hero_${def.voiceId || def.id}_perfect`]));
   }
   get atk() { return this.stats.atk * this.buffs.atk * ((this.tonicAtkT || 0) > 0 ? 1.25 : 1) * (this.game.hasProc?.('blood_rage') && this.hp < this.maxHp * 0.5 ? 1.5 : 1); }
   gainJobResource(n) {
@@ -120,7 +120,7 @@ export class Player extends Actor {
     } else if (!this.def.ranged) { const d = target ? Math.max(0, Math.min(2.2, this.distTo(target) - 1.6)) : 0.6; this.vel.copy(f).multiplyScalar(d / Math.max(0.15, c.hitAt * dur)); }   // 근접이면 살짝 전진(러쉬감)
     audio.whoosh({ vol: 0.35 + idx * 0.08, pitch: this.def.ranged ? 1.6 : (c.move === 'slam' ? 0.6 : 1 + idx * 0.12), dur: c.move === 'spin' ? 0.4 : 0.22 });
     // 기합 — 던파식. 마무리 타는 항상, 일반 타는 확률로 (매 타마다 지르면 시끄럽다)
-    const V = `hero_${this.def.id}_`;
+    const V = `hero_${this.def.voiceId || this.def.id}_`;
     if (c.finisher) audio.bark(V + 'fin', { n: 2, vol: 0.95, min: 0.6 });
     else if (c.move || Math.random() < 0.45) audio.bark(V + 'atk', { n: 4, vol: 0.75, min: 0.35 });
     if (!this.def.ranged) this.startTrail();
@@ -131,11 +131,28 @@ export class Player extends Actor {
     this.trail = this.game.fx.trail(() => this.weaponPoints(hand, len), this.look.trailColor, { segs: 14, life: 0.2 });
   }
   stopTrail() { if (this.trail) { this.trail.stop(); this.trail = null; } }
+  arrowOrigin(dir = this.forward(new THREE.Vector3())) {
+    const bow = this.model?.getObjectByName('Bow');
+    if (bow) { this.model.updateWorldMatrix(true, true); return bow.getWorldPosition(new THREE.Vector3()).addScaledVector(dir, .35); }
+    return this.pos.clone().addScaledVector(dir, .8).setY(1.3);
+  }
   doComboHit(tick = 0) {
     const c = this.current; const dmg = this.atk * c.dmg;
     if (!tick && c.jobGain) this.gainJobResource(c.jobGain);
     const f = this.forward(_v.clone());
     const gravity = this.game.hasProc('gravity_pull');
+    if (c.projectile === 'arrow') {
+      const count = c.arrowCount || 1;
+      for (let i = 0; i < count; i++) {
+        const dir = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (i - (count - 1) / 2) * .22);
+        this.game.spawnProjectile({ pos: this.arrowOrigin(dir), dir, speed: 27, radius: c.finisher ? .85 : .55, dmg,
+          color: this.def.color, size: c.finisher ? .65 : .4, owner: this, kb: c.kb, kind: 'slash',
+          pierce: !!c.pierce, finisher: !!c.finisher, life: c.range / 27, visual: 'arrow' });
+      }
+      audio.whoosh({ vol: .32, pitch: 1.6, dur: .18 });
+      this.game.sp?.onComboHit(1);
+      return;
+    }
     if (c.move === 'fan') {   // 부채꼴 3발
       for (let i = -1; i <= 1; i++) { const dir = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.3); const spawn = this.pos.clone().add(dir.clone().multiplyScalar(0.8)); spawn.y = 1.3; this.game.spawnProjectile({ pos: spawn, dir, speed: 20, radius: 0.6, dmg, color: this.def.color, size: 0.4, owner: this, kb: c.kb, kind: 'magic' }); }
       audio.magic({ vol: 0.25, base: 520, notes: [0, 4, 7], step: 0.03 }); this.game.fx.flash(this.pos.clone().addScaledVector(f, 0.8).setY(1.3), this.def.color, { size: 1.6, life: 0.15 });
@@ -232,8 +249,9 @@ export class Player extends Actor {
     const lvMult = 1 + (this.skillLevels[i] - 1) * 0.12;
     this.skillCtx = { sk, impl, t: 0, cast: false, done: false, dmg: this.atk * sk.dmg * lvMult, level: this.skillLevels[i], data: {} };
     if (sk.anim) this.playTimed(sk.anim, impl.dur || 0.8, { fade: 0.06 });
-    if (!sk.ult) audio.bark(`hero_${this.def.id}_skill${i}`, { vol: 0.95, min: 1.5 });   // 스킬 이름 외침
-    if (sk.ult) { this.game.ultCinematic(sk, this); audio.charge({ vol: 0.35, dur: 0.7 }); audio.voice(`hero_${this.def.id}_ult`, { min: 8, duck: 0.5, dur: 1.6 }); if (this.game.hasProc('phoenix_burn')) this.game.after(0.35, () => this.game.phoenixBurn(this)); }
+    if (!sk.ult && this.def.id === 'ranger') audio.whoosh({ vol: .45, pitch: 1.6, dur: .2 });
+    else if (!sk.ult) audio.bark(`hero_${this.def.voiceId || this.def.id}_skill${i}`, { vol: 0.95, min: 1.5 });   // 스킬 이름 외침
+    if (sk.ult) { this.game.ultCinematic(sk, this); audio.charge({ vol: 0.35, dur: 0.7 }); if (this.def.id !== 'ranger') audio.voice(`hero_${this.def.voiceId || this.def.id}_ult`, { min: 8, duck: 0.5, dur: 1.6 }); if (this.game.hasProc('phoenix_burn')) this.game.after(0.35, () => this.game.phoenixBurn(this)); }
     else if (this.game.hasProc('gravity_hole')) { const t = this.lockTarget && this.lockTarget.alive ? this.lockTarget.pos.clone() : this.pos.clone().addScaledVector(this.forward(_v.clone()), 4); this.game.singularity(t); }
     if (!sk.ult) this.game.sp?.onSkillCast(i, sk);   // 룬 4세트: 만장전이면 과부하 — 이 스킬의 쿨타임이 0이 된다
     impl.start?.(this.game, this, this.skillCtx);
@@ -273,7 +291,7 @@ export class Player extends Actor {
     this.game.fx.damage(this.pos, red, { kind: 'self' });
     this.game.fx.burst(this.pos.clone().setY(1.2), 0xff5a5a, { n: 8, speed: 5, size: 0.3 });
     this.game.renderer.shake(0.3); this.game.renderer.flashScreen(0.18, 0xff2040); this.game.ui.hurtVignette();
-    audio.hit('hurt'); audio.vibe([30, 20, 30]); audio.bark(`hero_${this.def.id}_hurt`, { n: 3, vol: 0.8, min: 0.7 });
+    audio.hit('hurt'); audio.vibe([30, 20, 30]); audio.bark(`hero_${this.def.voiceId || this.def.id}_hurt`, { n: 3, vol: 0.8, min: 0.7 });
     this.knockback(dirx, dirz, kb);
     if (this.game.hasProc('blood_rage') && (this._bloodCd || 0) <= this.game.elapsed) { this._bloodCd = this.game.elapsed + 1.5; this.game.bloodBurst(this); }
     // 스킬/궁극기 중엔 슈퍼아머. 기본 콤보 중에도 경타(kb<6)는 끊지 못한다 — 무리 속에서 잡몹 한 대마다 콤보가 1타로 돌아가던 것이 '끊김'의 절반

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createArrowVisual, releaseProjectileVisual } from '../engine/arrow-visual.js';
 import { CAMERA_PRESETS } from '../engine/renderer.js';
 import { Player } from './player.js';
 import { Enemy } from './enemies.js';
@@ -9,6 +10,7 @@ import { HEROES, heroStats } from '../data/heroes.js';
 import { loadModel } from '../engine/assets.js';
 import { RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_BOSS } from '../data/items.js';
 import { audio } from '../engine/audio.js';
+import { heroVoiceName } from '../engine/hero-voice.js';
 import { SetProcs } from './setprocs.js';
 import { RegionHazards } from './region-hazards.js';
 import { resolveJobHero } from '../data/jobs.js';
@@ -88,7 +90,7 @@ export class Battle {
     this.ui.setupMinimap(this.world);
     this.active = true; this.input.enabled = true; this.input.clear();
     if (stage.expedition?.kind !== 'arena') this.app.companionAgent?.startBattle(this);
-    audio.playMusic(Math.random() < 0.5 ? 'bgm_battle' : 'bgm_battle2');
+    audio.playMusic(stage.expedition ? 'expansion/flow-combat' : Math.random() < 0.5 ? 'bgm_battle' : 'bgm_battle2', stage.expedition ? { fade: .7, volume: .68 } : undefined);
     this.ui.showHud(true);
     const q = this.app.eco.s.settings.quality;
     this.maxAlive = q === 'low' ? 16 : q === 'mid' ? 24 : 34;
@@ -101,7 +103,7 @@ export class Battle {
     this.bossKey = ENEMIES[stage.encounter?.enemyId || stage.chapter.boss]?.voiceKey || stage.chapter.boss;
     this.hazards = stage.expedition?.kind === 'arena' ? null : new RegionHazards(this);
     this.after(1.2, () => { if (this.active && stage.objective) this.ui.toast(stage.objective, 'gold'); });
-    this.after(0.25, () => { if (this.active) audio.voice(`hero_${heroId}_select`, { min: 20 }); });
+    this.after(0.25, () => { if (this.active) audio.voice(heroVoiceName(heroId, 'select'), { min: 20 }); });
     this.after(3.2, () => { if (this.active) audio.voice('floor_start', { min: 30 }); });   // 층 시작 안내 ("The seal is broken" 는 unsealBoss 의 seal_break 가 맡는다)
     // 테마 세트가 켜져 있으면 알려준다 — 발동 효과는 눈에 띄어야 세트를 모을 이유가 된다
     const themed = this.setBonus.filter((a) => a.set.themed);
@@ -180,7 +182,7 @@ export class Battle {
     this.after(1.1, () => {
       if (!this.active) return;
       p.revive(); this.input.enabled = this.active && !this.paused; this.input.clear(); p.hp = Math.floor(p.maxHp * 0.5); this.renderer.desat = 0; this.timeCtl.slowmo(0.4, 0.6);
-      this.ui.toast('불사조의 부활!', 'gold'); audio.voice('rebirth'); this.after(2.2, () => audio.voice(`hero_${this.heroId}_revive`));
+      this.ui.toast('불사조의 부활!', 'gold'); audio.voice('rebirth'); this.after(2.2, () => audio.voice(heroVoiceName(this.heroId, 'revive')));
       this.fx.texFlash(p.pos, 'phoenix', 0xffc060, { size: 14, life: 0.9, grow: 1.6, y: 2.5 }); this.fx.holyBurst(p.pos, { size: 12, life: 0.7, color: 0xffa040 });
       this.hitRadius(p.pos, 8, p.atk * 2.5, { kb: 14, stun: 1.2, kind: 'magic', dirFrom: p.pos });
       audio.playMusic(this.boss ? 'bgm_boss' : 'bgm_battle'); audio.boom({ vol: 0.9, dur: 1, low: 45 }); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12, 16], step: 0.07 }); audio.vibe([60, 40, 120]);
@@ -253,7 +255,7 @@ export class Battle {
     if (!list.length) { this.markCleared(room); return; }
     const isBoss = room.type === ROOM_TYPE.BOSS;
     if (isBoss) {
-      audio.playMusic(Math.random() < 0.5 ? 'bgm_boss' : 'bgm_boss2'); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 }));
+      audio.playMusic(this.stage.expedition ? 'expansion/flow-combat' : Math.random() < 0.5 ? 'bgm_boss' : 'bgm_boss2', this.stage.expedition ? { fade: .7, volume: .68 } : undefined); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 }));
       if (this.stage.encounter?.tactic) this.ui.toast(this.stage.encounter.tactic, 'gold');
       // 보스방 입구의 제물 — 봉인 뒤 가장 먼 방까지 걸어오는 20초 + 보스전 초반 20초가 무보상 40초로 이어졌다 (longestDryStreakSec 실측)
       const p = this.player.pos, dx = room.x - p.x, dz = room.z - p.z, l = Math.hypot(dx, dz) || 1;
@@ -350,7 +352,7 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) if (p.mesh) this.scene.remove(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; }
+  stop() { this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const def = this.stage.expedition && type === this.stage.encounter.enemyId ? this.stage.expeditionEnemy : ENEMIES[type]; if (!def) return; const gltf = this.app.models[def.model]; if (!gltf) return;
@@ -434,22 +436,22 @@ export class Battle {
     this.app.companionAgent?.observe('low-hp', { floor: this.stage?.idx || 0 });
     this.renderer.desat = 0.7; this.timeCtl.slowmo(0.3, 1.5); this.renderer.shake(0.6); audio.playMusic(null);
     if (this.hasProc('phoenix_rebirth') && !this.rebirthUsed) { this.phoenixRebirth(); return; }
-    audio.voice(`hero_${this.heroId}_death`); this.after(1.6, () => audio.voice('defeat'));
+    audio.voice(heroVoiceName(this.heroId, 'death')); this.after(1.6, () => audio.voice('defeat'));
     this.after(1.8, () => { if (this.active) this.ui.showRevive(this); });
   }
   revivePlayer() {
     if (!this.active || this.player.alive) return;
-    this.player.revive(); this.input.enabled = !this.paused; this.input.clear(); this.renderer.desat = 0; this.revived++; audio.voice(`hero_${this.heroId}_revive`);
+    this.player.revive(); this.input.enabled = !this.paused; this.input.clear(); this.renderer.desat = 0; this.revived++; audio.voice(heroVoiceName(this.heroId, 'revive'));
     this.fx.holyBurst(this.player.pos, { size: 9, life: 0.6 }); this.fx.shockTex(this.player.pos, 0xffd060, { r1: 9, life: 0.7 });
     this.hitRadius(this.player.pos, 7, 1, { kb: 14, stun: 1.5, kind: 'magic', source: this.player, dirFrom: this.player.pos });
-    audio.playMusic(this.boss ? 'bgm_boss' : 'bgm_battle'); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12], step: 0.08 });
+    audio.playMusic(this.stage?.expedition ? 'expansion/flow-combat' : this.boss ? 'bgm_boss' : 'bgm_battle', this.stage?.expedition ? { fade: .7, volume: .68 } : undefined); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12], step: 0.08 });
     if (this.bossDefeated) this.after(.8, () => this.victory());
   }
   defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, expedition: this.stage?.expedition || null }; this.ui.showResult(this, false); }
   victory() {
     if (!this.active || !this.player?.alive) return; this.active = false; this.input.enabled = false; this.input.clear();
     this.app.companionAgent?.observe('victory', { floor: this.stage?.idx || 0 });
-    this.player.play('Cheer', { fade: 0.2 }); audio.playMusic(null); audio.play('jingle_win0', { vol: 0.9 }); this.ui.showBoss('', false); this.after(1.2, () => audio.voice(`hero_${this.heroId}_win`)); this.after(3.8, () => audio.voice('floor_clear'));
+    this.player.play('Cheer', { fade: 0.2 }); audio.playMusic(null); audio.play('jingle_win0', { vol: 0.9 }); this.ui.showBoss('', false); this.after(1.2, () => audio.voice(heroVoiceName(this.heroId, 'win'))); this.after(3.8, () => audio.voice('floor_clear'));
     this.fx.burst(this.player.pos.clone().setY(1), 0xffd060, { n: 60, speed: 9, size: 0.5, up: 1.5, grav: 6, life: 1.2 }); this.fx.embers(this.player.pos, 0xffe080, { n: 40, radius: 2, life: 2, rise: 3 });
     // 남은 드랍 자동 수거
     this.player.magnetMul = 99;
@@ -517,7 +519,7 @@ export class Battle {
       this.fx.flash(hitPos, color, { size: crit ? 3 : 1.8, life: 0.14 });
       this.fx.directional(hitPos, _v.set(dirx, 0, dirz).normalize(), color, { n: crit ? 18 : 8, speed: crit ? 12 : 8 });
       if (crit) { this.fx.texFlash(hitPos, 'holy_burst', 0xffd040, { size: 2.6, life: 0.22, y: 0, grow: 1.4 }); this.fx.light(e.pos, 0xffd040, 6, 6, 0.25); }
-      audio.hit(opts.kind || 'slash', { crit, heavy });
+      audio.hit(opts.kind || 'slash', { crit, heavy, finisher: !!opts.finisher });
       if (!opts.quietStop) this.timeCtl.hitstop(opts.finisher ? 0.1 : crit ? 0.06 : 0.035);
       this.renderer.shake(opts.finisher ? 0.5 : crit ? 0.3 : 0.12);
       if (heavy) audio.vibe(crit ? [10, 10, 25] : 20);
@@ -525,14 +527,14 @@ export class Battle {
   }
 
   // ---------------- 투사체 ----------------
-  spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0 }) {
+  spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false }) {
     let mesh = null;
-    if (visual !== null && size > 0) { mesh = this.fx.orb(color, size); mesh.position.copy(pos); this.scene.add(mesh); }
-    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, kind, life, t: 0, pierce, hit: new Set(), mesh, trail, explode, hostile, slow });
+    if (visual !== null && size > 0) { mesh = visual === 'arrow' ? createArrowVisual(color, size, dir) : this.fx.orb(color, size); mesh.position.copy(pos); this.scene.add(mesh); }
+    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, kind, life, t: 0, pierce, hit: new Set(), mesh, trail, explode, hostile, slow, finisher });
   }
   updateProjectiles(dt) {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
-      const p = this.projectiles[i]; p.t += dt; p.pos.addScaledVector(p.dir, p.speed * dt); if (p.mesh) { p.mesh.position.copy(p.pos); p.mesh.rotation.y += dt * 8; }
+      const p = this.projectiles[i]; p.t += dt; p.pos.addScaledVector(p.dir, p.speed * dt); if (p.mesh) { p.mesh.position.copy(p.pos); if (!p.mesh.userData.arrowVisual) p.mesh.rotation.y += dt * 8; }
       if (p.trail) this.fx.embers(p.pos, p.trail, { n: 2, radius: 0.15, life: 0.35, size: 0.35, rise: 0.5 });
       // 이동 던전은 원점에서 수백 유닛까지 이어진다. 발사체 수명으로 회수한다.
       let done = p.t >= p.life;
@@ -544,12 +546,12 @@ export class Battle {
           if (Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z) < p.radius + e.radius) {
             p.hit.add(e);
             if (p.explode) { this.explode(p); done = true; break; }
-            this.damageEnemy(e, p.dmg, { kb: p.kb, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow });
+            this.damageEnemy(e, p.dmg, { kb: p.kb, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher });
             if (!p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); break; }
           }
         }
       }
-      if (done) { if (p.explode && p.t >= p.life && !p.hit.size) this.explode(p); if (p.mesh) this.scene.remove(p.mesh); this.projectiles.splice(i, 1); }
+      if (done) { if (p.explode && p.t >= p.life && !p.hit.size) this.explode(p); releaseProjectileVisual(p.mesh); this.projectiles.splice(i, 1); }
     }
   }
   explode(p) {
@@ -571,7 +573,7 @@ export class Battle {
     this.fx.burst(p.pos.clone().setY(1), 0x9fe4ff, { n: 18, speed: 7, size: 0.35 });
     p.addUlt(14 * (p.stats.ultGain || 1));
     p.buffs.atk = Math.max(p.buffs.atk, 1.35); p.buffs.atkSpd = Math.max(p.buffs.atkSpd, 1.25); p.buffs.t = Math.max(p.buffs.t, 3);
-    this.ui.perfectDodge(); audio.bark(`hero_${this.heroId}_perfect`, { vol: 0.95, min: 1.2 }); audio.voice('perfect', { min: 12, duck: 0.7, dur: 0.8 });
+    this.ui.perfectDodge(); audio.bark(`hero_${this.player?.def.voiceId || this.heroId}_perfect`, { vol: 0.95, min: 1.2 }); audio.voice('perfect', { min: 12, duck: 0.7, dur: 0.8 });
     audio.ice({ vol: 0.4, dur: 0.35 }); audio.ting({ vol: 0.45, freq: 2400 }); audio.vibe([15, 25, 40]);
   }
 
@@ -607,7 +609,7 @@ export class Battle {
     if (this.sp) this.sp.update(dt);
     this.drops.update(dt);
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; this.ui.setCombo(0); } }
-    if (this.player.alive && this.player.hp < this.player.maxHp * 0.25) { audio.voice(`hero_${this.heroId}_low_hp`, { min: 12 }); audio.voice('low_hp', { min: 25 }); }
+    if (this.player.alive && this.player.hp < this.player.maxHp * 0.25) { audio.voice(heroVoiceName(this.heroId, 'low_hp'), { min: 12 }); audio.voice('low_hp', { min: 25 }); }
     // 카메라: 적 밀도에 따라 살짝 줌아웃 (몹몰이 시야 확보)
     const rig = this.renderer.rig;
     // 카메라 리드: 진행 방향으로 살짝 앞서 보고, 락온 대상 쪽으로 조금 당긴다
