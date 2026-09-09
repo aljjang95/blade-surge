@@ -4,6 +4,7 @@ import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, itemStats, enhanceCost, enhanceSton
 import { SKUS, GACHA, BATTLE_PASS, ENERGY, DAILY_REWARDS, PASS_TRACK } from '../data/shop.js';
 import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 import { normalizeSave } from './save.js';
+import { normalizeExpedition } from './expedition-economy.js';
 
 const KEY = 'bladesurge_save_v1';
 const now = () => Date.now();
@@ -15,6 +16,7 @@ export class Economy {
   emit() { this.save(); for (const f of this.listeners) f(this.s); }
   fresh() {
     return {
+      expedition: normalizeExpedition(),
       created: now(), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: now(), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
       heroes: { knight: { level: 1, exp: 0, star: 1, shards: 0, skills: [1, 1, 1, 1, 1, 1], equip: { weapon: null, armor: null, ring: null, boots: null } } },
       selected: 'knight', inventory: [], invSeq: 1,
@@ -144,7 +146,7 @@ export class Economy {
   /** 슬롯별 장착 인스턴스 (외형용) */
   heroEquipInsts(id) { const h = this.hero(id); const o = {}; for (const sl of SLOTS) o[sl] = this.s.inventory.find((x) => x.uid === h.equip[sl]) || null; return o; }
   heroPower(id) { return heroStats(HEROES[id], this.hero(id), this.heroEquipBonus(id)).power; }
-  addHeroExp(id, exp) { const h = this.hero(id); h.exp += exp; let ups = 0; while (h.exp >= levelExp(h.level) && h.level < 80) { h.exp -= levelExp(h.level); h.level++; ups++; } this.emit(); return ups; }
+  addHeroExp(id, exp, { silent = false } = {}) { const h = this.hero(id); h.exp += exp; let ups = 0; while (h.exp >= levelExp(h.level) && h.level < 80) { h.exp -= levelExp(h.level); h.level++; ups++; } if (!silent) this.emit(); return ups; }
   levelUpHero(id) { const h = this.hero(id); const cost = levelGold(h.level); if (this.s.gold < cost || h.level >= 80) return false; this.s.gold -= cost; h.level++; this.emit(); return true; }
   promoteHero(id) { const h = this.hero(id); const need = starShards(h.star); if (h.shards < need || h.star >= 5) return false; h.shards -= need; h.star++; this.emit(); return true; }
   upgradeSkill(id, i) { const h = this.hero(id); const cost = skillUpGold(h.skills[i]); if (this.s.gold < cost || h.skills[i] >= 10) return false; this.s.gold -= cost; h.skills[i]++; this.emit(); return true; }

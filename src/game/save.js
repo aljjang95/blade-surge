@@ -3,6 +3,7 @@ import { ITEM_BY_ID, SLOTS, ENH_MAX } from '../data/items.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { BATTLE_PASS } from '../data/shop.js';
 import { normalizeLobbyCamera } from '../engine/lobby-camera.js';
+import { normalizeExpedition } from './expedition-economy.js';
 
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const integer = (value, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) =>
@@ -74,5 +75,6 @@ export function normalizeSave(raw, fresh) {
   if (!['auto', 'top', 'action', 'wide'].includes(s.settings.camera)) s.settings.camera = 'auto';
   s.settings.lobbyCamera = normalizeLobbyCamera(raw.settings?.lobbyCamera);
   s.name = s.name.trim().slice(0, 20) || fresh.name;
+  s.expedition = normalizeExpedition(raw.expedition);
   return s;
 }

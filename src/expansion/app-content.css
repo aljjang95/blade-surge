@@ -1,0 +1,95 @@
+/* Expedition content lives inside the existing game menu and resource bar. */
+#campaign-view { display:flex; flex-direction:column; flex:1; min-height:0; }
+#campaign-view[hidden], #expedition-root[hidden] { display:none!important; }
+#tab-stage #expedition-root { position:relative; inset:auto; z-index:auto; width:100%; height:auto; flex:1; min-height:0; pointer-events:auto; }
+#tab-stage .exp-shell { position:relative; inset:auto; width:100%; height:100%; background:transparent; color:var(--text); font-family:var(--font); }
+.adventure-nav { display:flex; flex-shrink:0; padding:8px 12px; gap:6px; border-bottom:1px solid var(--line); background:#141321; }
+.adventure-nav button { flex:1; min-width:0; border:1px solid transparent; border-radius:8px; padding:10px 6px; color:var(--muted); font-size:12px; font-weight:800; }
+.adventure-nav button.on { background:#343023; border-color:#a489464d; color:var(--gold); }
+.adventure-nav button:disabled { opacity:.4; }
+#tab-stage .exp-header { padding:12px 18px; min-height:58px; gap:14px; background:none; }
+#tab-stage .exp-brand h1 { font:700 19px/1.3 var(--font); letter-spacing:0; }
+#tab-stage .exp-account { margin-left:auto; min-width:115px; font-size:10px; }
+#tab-stage .exp-account b { font-size:16px; }
+#tab-stage .exp-close { font-size:11px; border:1px solid var(--line); }
+#tab-stage .exp-scroll { padding:12px 18px 22px; }
+#tab-stage .exp-film-link { margin:0 0 10px auto; padding:6px 12px; font-size:10px; }
+.exp-loadout-strip { display:flex; align-items:center; gap:10px; padding:9px 12px; margin-bottom:14px; background:#222034; border:1px solid var(--line); border-radius:10px; font-size:11px; }
+.exp-loadout-strip img { width:32px; height:32px; object-fit:cover; border-radius:6px; }
+.exp-loadout-strip span { flex:1; }
+.exp-loadout-strip button { border:1px solid #a28d5355; background:#302b21; color:var(--gold); border-radius:7px; padding:7px 10px; white-space:nowrap; }
+#tab-stage .exp-dungeon-grid { gap:12px; }
+#tab-stage .exp-dungeon-art { height:150px; }
+#tab-stage .exp-card-body { padding:13px; }
+#tab-stage .exp-card-body h3 { font:800 19px/1.3 var(--font); letter-spacing:0; }
+#tab-stage .exp-card-body p { font-size:11px; min-height:30px; line-height:1.5; }
+#tab-stage .exp-card-body > small { display:none; }
+#tab-stage .exp-material-reward { margin:12px 0; }
+#tab-stage .exp-number { font-size:32px; }
+#tab-stage .exp-primary { font-size:12px; padding:10px 12px; border-radius:8px; }
+#tab-stage .exp-section-heading { margin:0 0 15px; }
+#tab-stage .exp-section-heading h2, #tab-stage .exp-arena-banner h2 { font:800 22px/1.3 var(--font); letter-spacing:0; }
+#tab-stage .exp-section-heading p { font-size:11px; margin-top:6px; }
+#tab-stage .exp-eyebrow { display:none; }
+#tab-stage .exp-footer { font-size:9px; padding:8px 16px; min-height:32px; }
+#tab-stage .exp-journal-art { height:90px; margin-bottom:12px; }
+#tab-stage .exp-job > img { height:190px; }
+#tab-stage .exp-job h3 { font:800 21px/1.3 var(--font); letter-spacing:0; }
+#tab-stage .exp-arena-banner { min-height:180px; margin-bottom:14px; }
+#tab-stage .exp-arena-banner > div { padding:20px; }
+#tab-stage .exp-rivals article { padding:14px; }
+#tab-stage .exp-rivals h3 { font-size:19px; }
+#tab-stage .exp-rivals img { height:100px; }
+#btn-expedition[data-ready]:not([data-ready="0"])::after { content:attr(data-ready); position:absolute; top:7px; right:calc(50% - 24px); min-width:14px; padding:1px 3px; border-radius:9px; background:#eec05a; color:#2c2011; font-size:9px; }
+#hero-wardrobe { flex:0 0 30%; min-width:180px; position:relative; overflow:hidden; border-right:1px solid var(--line); background:radial-gradient(ellipse at 50% 42%,#386051 0,#172e29 42%,#141822 77%); }
+.wardrobe-view { position:absolute; inset:0; display:flex; flex-direction:column; }
+.wardrobe-view h3 { text-align:center; color:#f1dfae; font-size:13px; margin:16px 0 0; }
+.wardrobe-canvas { flex:1; min-height:0; touch-action:none; }
+.wardrobe-controls { display:flex; justify-content:center; gap:8px; padding:6px; }
+.wardrobe-controls button { border:1px solid #aac8b946; border-radius:8px; padding:7px 12px; background:#17342b; color:#e1ebda; font-size:11px; }
+.wardrobe-caption { font-size:10px; text-align:center; padding:0 10px 14px; color:#b4c7bb; }
+@media(max-width:900px) {
+  #tab-stage .exp-dungeon-grid { grid-template-columns:1fr; }
+  #tab-stage .exp-dungeon { display:grid; grid-template-columns:35% 1fr; }
+  #tab-stage .exp-dungeon-art { height:100%; min-height:175px; }
+  #tab-stage .exp-dungeon-badges { flex-direction:column; align-items:flex-start; gap:4px; }
+  #tab-stage .exp-dungeon-badges span { font-size:9px; }
+  #tab-stage .exp-card-body p { min-height:0; }
+  #tab-stage .exp-material-reward { font-size:10px; margin:10px 0; }
+  #tab-stage .exp-material-reward img { width:22px; height:22px; }
+  #hero-wardrobe { flex-basis:26%; min-width:155px; }
+}
+@media(max-width:600px) {
+  .topbar { gap:5px; padding-left:6px; padding-right:6px; }
+  .profile { gap:4px; }
+  .avatar { width:32px; height:36px; border-radius:8px; }
+  .prof-name { font-size:11px; }
+  .prof-lv { font-size:9px; }
+  .currencies { gap:3px; }
+  .cur { min-width:0; gap:2px; padding:4px; font-size:10px; }
+  .cur .ic { width:14px; height:14px; }
+  .cur .plus { width:16px; height:16px; line-height:16px; margin-left:1px; }
+  .adventure-nav { gap:3px; padding:7px; }
+  .adventure-nav button { font-size:10px; padding:9px 4px; }
+  #tab-stage .exp-header { padding:9px 12px; min-height:52px; }
+  #tab-stage .exp-brand h1 { font-size:16px; }
+  #tab-stage .exp-scroll { padding:10px 12px 18px; }
+  #tab-stage .exp-account { min-width:95px; }
+  #tab-stage .exp-dungeon-grid { gap:10px; }
+  #tab-stage .exp-dungeon-art { min-height:168px; }
+  #tab-stage .exp-card-body { padding:11px; }
+  #tab-stage .exp-card-body h3 { font-size:17px; }
+  #tab-stage .exp-card-body p { font-size:10px; }
+  #tab-stage .exp-material-reward span { font-size:10px; }
+  #tab-stage .exp-material-reward em { font-size:9px; }
+  .exp-loadout-strip { padding:7px; gap:7px; font-size:10px; }
+  #tab-stage .exp-job > img { height:150px; }
+  .panel-heroes { display:grid; grid-template-columns:68px 1fr; grid-template-rows:210px minmax(0,1fr); }
+  .panel-heroes .hero-list { grid-row:1/3; width:auto; padding:5px; }
+  #hero-wardrobe { min-width:0; border-right:0; border-bottom:1px solid var(--line); }
+  .panel-heroes .hero-detail { min-height:0; padding:10px; }
+  .wardrobe-view h3 { position:absolute; z-index:1; left:10px; top:8px; margin:0; font-size:11px; }
+  .wardrobe-controls { position:absolute; right:6px; bottom:4px; padding:0; gap:4px; }
+  .wardrobe-controls button { padding:6px 9px; }
+  .wardrobe-caption { position:absolute; left:10px; bottom:8px; padding:0; max-width:48%; text-align:left; font-size:9px; }
+}

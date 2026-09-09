@@ -1,14 +1,15 @@
 import * as THREE from 'three';
 import { RARITY_INFO, ITEM_BY_ID } from '../data/items.js';
 import { materialsOf } from '../engine/assets.js';
+import { applyArmorAppearance } from './armor-appearance.js';
 
 /**
  * 장비 외형 (PRD §4-1) — 무기·방어구 장착이 실제 모델에 반영된다.
  *  · 무기 등급 → 보이는 무기 메시가 바뀐다 (KayKit Adventurers 는 리그마다 무기 메시를 2~4종 품고 있다)
- *  · 방어구 등급 → 방패/보조 메시
- *  · 등급 → 무기 발광색(N 없음 → L 주황), 강화 +마다 더 밝게. 몸통은 방어구 등급색을 아주 약하게
+ *  · 방어구 → casual-v2 관절에 착용하는 흉갑·어깨·허리 의상 + 방패/보조 메시
+ *  · 등급 → 무기 발광색(N 없음 → L 주황), 강화 +마다 더 밝게. 캐주얼 얼굴·피부 색은 유지
  *  · +10 이상이면 오라(잔불) — 성능 영향 없는 순수 외형
- * 뼈대는 규칙(등급표), 외형은 모델에 이미 있는 메시라 새 에셋이 없다.
+ * 무기는 기존 모델 메시, 의상은 원본 체형에 맞춘 프로젝트 자체 지오메트리다.
  */
 export const ALL_WEAPON_NODES = ['1H_Sword_Offhand', 'Badge_Shield', 'Rectangle_Shield', 'Round_Shield', 'Spike_Shield', '1H_Sword', '2H_Sword', 'Spellbook', 'Spellbook_open', '1H_Wand', '2H_Staff', 'Knife_Offhand', '1H_Crossbow', '2H_Crossbow', 'Knife', 'Throwable', '1H_Axe_Offhand', 'Barbarian_Round_Shield', '1H_Axe', '2H_Axe', 'Mug'];
 
@@ -48,6 +49,7 @@ const BODY_GLOW = { N: 0, S: 0.02, E: 0.035, U: 0.05, L: 0.07 };
 export function applyLook(model, def, equip = {}) {
   const L = LOOKS[def.id];
   const w = equip.weapon ? ITEM_BY_ID[equip.weapon.id] : null, a = equip.armor ? ITEM_BY_ID[equip.armor.id] : null;
+  applyArmorAppearance(model, def, a?.slot === 'armor' ? a : null);
   // 보일 노드: 슬롯이 비었으면 def.show 중 그 그룹 것, 있으면 등급표
   let show = new Set(def.show);
   if (L) {
@@ -70,6 +72,7 @@ export function applyLook(model, def, equip = {}) {
       if (model.userData.authoredContract) base.copy(material.userData.authoredEmissive || new THREE.Color(0));
       else if (owner === 'w') base.copy(wCol || new THREE.Color(0)).multiplyScalar(wGlow);
       else if (owner === 'a') base.copy(aCol || new THREE.Color(0)).multiplyScalar(sGlow);
+      else if (model.userData.tllIdentity === 'casual-v2') base.setScalar(0);
       else base.copy(aCol || new THREE.Color(0)).multiplyScalar(aGlow);
       material.emissive.copy(base);
     }

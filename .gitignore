@@ -9,3 +9,6 @@ _autopipe/evidence/
 .rsi/shots/
 tools/voice/.tmp/
 tools/voice/.fail.json
+
+# Local verification, downloaded originals and portable runtime
+work/

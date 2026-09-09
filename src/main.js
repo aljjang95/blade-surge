@@ -14,6 +14,11 @@ import { ENEMIES, stageDef } from './data/stages.js';
 import { UI, $ } from './ui/ui.js';
 import { Meta } from './ui/meta.js';
 import { createCompanion } from './companion/bootstrap.ts';
+import { ExpeditionEconomy } from './game/expedition-economy.js';
+import { buildExpeditionStage } from './game/expedition-combat.js';
+import { ExpeditionUI } from './expansion/hub.jsx';
+import { playExpeditionIntro } from './expansion/cinematic.js';
+import { Wardrobe } from './expansion/wardrobe.jsx';
 const BOOT_TIPS = [
   '<b>진공기</b>로 적을 끌어모은 뒤 한 번에 쓸어담는 것이 몹몰이의 기본이다.',
   '적의 공격 직전 <b>회피</b>하면 퍼펙트 회피 — 시간이 느려지고 반격 창이 열린다.',
@@ -39,7 +44,10 @@ class App {
     this.eco = new Economy();
     this.ui = new UI(this);
     this.meta = new Meta(this);
+    this.expedition = new ExpeditionEconomy(this.eco);
+    this.expeditionUI = new ExpeditionUI(this);
     this.models = {};
+    this.wardrobe = new Wardrobe(this);
     this.mode = 'boot'; this.showcase = null; this.lobbyVisible = true;
     this.lobbyCameraControls = new LobbyCameraControls(this);
     this.last = performance.now();
@@ -110,6 +118,15 @@ class App {
   }
   setLobbyVisible(v) { this.lobbyVisible = v; }
   toLobby(first = false) {
+    if (this.expeditionTicket && this.battle?.result?.win && !this.battle.result.expeditionReceipt?.ok) { this.expeditionUI.showResult(this.battle, true); return; }
+    if (this.expeditionRefundPending && this.expeditionTicket) {
+      const refund = this.expedition.abandon(this.expeditionTicket);
+      if (refund.ok) { this.expeditionTicket = null; this.expeditionRefundPending = false; }
+    }
+    if (this.expeditionTicket && !this.expeditionRefundPending) {
+      const outcome = this.expedition.settle(this.expeditionTicket, { win: false });
+      if (outcome.ok) this.expeditionTicket = null;
+    }
     if (this.mode === 'battle') { this.battle.stop(); }
     this.ui.hideResult(); this.mode = 'lobby';
     if (first) setTimeout(() => audio.voice('welcome', { vol: 0.9 }), 900);
@@ -128,6 +145,7 @@ class App {
     return companionReset && gameReset;
   }
   async startStage(stage) {
+    if (stage?.expedition) return this.startExpedition(stage.expedition.kind, stage.expedition.id);
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
     if (!stage || !this.eco.isUnlocked(stage.ch, stage.st)) { this.ui.toast('이전 스테이지를 먼저 클리어하세요.', 'red'); return false; }
     // 미리보기에서 넘긴 객체 대신 검증된 현재 스테이지 정의로 출격한다.
@@ -159,6 +177,44 @@ class App {
       return false;
     } finally { $('stage-loading').hidden = true; this.stageStarting = false; }
   }
+  async startExpedition(kind, id) {
+    if (this.expeditionUI.result?.saveError) { this.ui.toast('전리품 정산을 먼저 저장해 주세요.', 'red'); return false; }
+    if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
+    if (this.expeditionRefundPending) {
+      const refund = this.expedition.abandon(this.expeditionTicket);
+      if (!refund.ok) { this.ui.toast('이전 출격의 에너지 복구를 저장하지 못했습니다. 저장 공간을 확인해 주세요.', 'red'); return false; }
+      this.expeditionTicket = null; this.expeditionRefundPending = false;
+    }
+    let stage;
+    try { stage = buildExpeditionStage(kind, id, this.eco); }
+    catch (error) { this.ui.toast(error.message, 'red'); return false; }
+    const begin = this.expedition.begin(kind, id);
+    if (!begin.ok) { this.ui.toast(begin.error, 'red'); return false; }
+    this.expeditionTicket = begin.ticket;
+    this.stageStarting = true;
+    try {
+      this.expeditionUI.result = null; this.expeditionUI.close();
+      this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
+      $('stage-loading').hidden = false;
+      if (this.showcase) { disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
+      this.mode = 'battle';
+      const heroId = this.eco.s.selected;
+      await this.battle.start(stage, heroId, this.eco.hero(heroId), this.eco.heroEquipBonus(heroId));
+      this.battle.player.auto = this._auto || false; $('btn-auto').classList.toggle('on', !!this._auto);
+      this.expeditionUI.refreshPotions();
+      if (kind === 'dungeon') await playExpeditionIntro(this, id);
+      audio.playMusic('expansion/flow-combat', { fade: .7, volume: .68 });
+      return true;
+    } catch (error) {
+      const refund = this.expedition.abandon(begin.ticket);
+      if (refund.ok) this.expeditionTicket = null;
+      this.expeditionRefundPending = !refund.ok;
+      this.toLobby();
+      this.ui.toast(refund.ok ? '던전을 준비하지 못했습니다. 에너지를 복구했습니다.' : '출격 준비가 실패했습니다. 저장 상태를 확인해 주세요.', 'red');
+      console.warn('expedition preparation failed', error?.message);
+      return false;
+    } finally { $('stage-loading').hidden = true; this.stageStarting = false; }
+  }
   // ---------- 루프 ----------
   loop(t) {
     requestAnimationFrame((tt) => this.loop(tt));
@@ -168,6 +224,7 @@ class App {
   }
   /** 한 프레임 진행 (테스트 시 고정 dt로 호출 가능) */
   step(realDt, render = true) {
+    if (this.expeditionUI?.opened) return;
     if (this.mode === 'battle') {
       this.battle.update(realDt);
       const dt = realDt * this.battle.timeCtl.scale;

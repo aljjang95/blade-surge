@@ -29,8 +29,8 @@ export const REGION_LAYOUTS = {
 const TILE = 4;              // 던전 킷 바닥 타일 크기
 
 export class Floor {
-  constructor(floorNum, theme, seed = floorNum * 7919 + 13) {
-    this.floor = floorNum; this.theme = theme; this.seed = seed; this.layout = REGION_LAYOUTS[theme];
+  constructor(floorNum, theme, seed = floorNum * 7919 + 13, layout = null) {
+    this.floor = floorNum; this.theme = theme; this.seed = seed; this.layout = layout || REGION_LAYOUTS[theme];
     this.rand = mulberry32(seed);
     this.rooms = []; this.corridors = [];
     this.generate();
@@ -121,6 +121,8 @@ export class Floor {
     const nElite = Math.min(rest.length, 2 + (this.floor > 3 ? 1 : 0));
     for (let i = 0; i < nElite; i++) rest[i].type = ROOM_TYPE.ELITE;
     if (rest[nElite]) rest[nElite].type = ROOM_TYPE.TREASURE;
+    // Short expeditions supply explicit room roles while sharing collision and minimap data.
+    if (this.layout?.types) this.rooms.forEach((room, i) => { room.type = this.layout.types[i]; });
     this.bossRoom = this.rooms.find((rm) => rm.type === ROOM_TYPE.BOSS) || this.rooms[this.rooms.length - 1];
     this.startRoom = start;
     // 보스 봉인 — 보스방으로 들어가는 복도 입구마다 결계. 다른 구역을 전부 정화해야 풀린다
