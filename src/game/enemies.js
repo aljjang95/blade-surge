@@ -187,6 +187,7 @@ export class Enemy extends Actor {
     this.hp = 0; this.kill(0, 0, 3);
   }
   startAttack(d) {
+    this.attackSequence=(this.attackSequence||0)+1;
     this.state = 'attack'; this.stateT = 0; this.attackDone = false;
     let anim = this.def.ranged ? this.A('cast') : this.A('attack'); this.special = null;
     if (this.isBoss) {
@@ -214,6 +215,7 @@ export class Enemy extends Actor {
     if (this.isBoss && this.special !== 'dash') audio.whoosh({ vol: 0.4, pitch: 0.5, dur: 0.5 });
   }
   doAttack() {
+    this.completedAttackSequence=this.attackSequence;
     const p = this.player; const g = this.game; const f = this.forward(_v.clone());
     const dmg = this.atk * (this.special === 'slam' ? 1.6 : this.special === 'spin' ? 1.2 : this.special === 'dash' ? 1.5 : 1);
     if (this.special === 'summon') { g.summonMinions(this, this.isBoss ? 4 : 2); return; }
