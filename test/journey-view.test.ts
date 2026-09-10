@@ -60,3 +60,28 @@ test('sweep completion reports only the level-up gold actually returned by settl
   view.app.expedition.sweepDungeon=()=>({ok:false,error:'저장 실패',rewards:{levelGold:300}});
   view.sweep('glass_garden');expect(view.notice.textContent).toBe('저장 실패');
 });
+
+class JourneyElement {
+  children:JourneyElement[]=[];className='';textContent='';style:any={};dataset:any={};attrs:any={};disabled=false;src='';alt='';open=false;value:any;max:any;
+  constructor(public tagName:string){}append(...nodes:JourneyElement[]){this.children.push(...nodes);}setAttribute(k:string,v:string){this.attrs[k]=v;}addEventListener(){}
+  all():JourneyElement[]{return this.children.flatMap(c=>[c,...c.all()]);}text():string{return this.textContent+this.children.map(c=>c.text()).join('');}
+}
+function withJourneyDOM(fn:()=>void){const descriptor=Object.getOwnPropertyDescriptor(globalThis,'document');Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement:(t:string)=>new JourneyElement(t)}});try{fn();}finally{if(descriptor)Object.defineProperty(globalThis,'document',descriptor);else Reflect.deleteProperty(globalThis,'document');}}
+test('journey cards show illustrated rewards with exact counts, real progress and visible prerequisites',()=>withJourneyDOM(()=>{
+ const {view}=fixture();view.tab='journey';view.content=new JourneyElement('div');
+ view.renderSteps({steps:[{id:'first',name:'첫 준비',description:'전투 방식을 선택하세요.',action:'prepare',claimed:false,complete:false,ready:false,rewards:{gold:240,materials:{glass_leaf:2},consumables:{hp_tonic:1}}}]});
+ const nodes=view.content.all(),srcs=nodes.filter((n:JourneyElement)=>n.tagName==='img').map((n:JourneyElement)=>n.src);
+ expect(srcs).toContain('/img/ui-crafted/loadout.webp');expect(srcs).toContain('/img/ui-crafted/gold.webp');expect(srcs).toContain('/img/ui-crafted/material-leaf.webp');expect(srcs).toContain('/img/ui-crafted/potion-health.webp');
+ expect(view.content.text()).toContain('골드 240');expect(view.content.text()).toContain('유리 잎 2');expect(view.content.text()).toContain('앞 단계 보상과 목표 완료 필요');
+ expect(nodes.find((n:JourneyElement)=>n.tagName==='progress').value).toBe(0);expect(nodes.find((n:JourneyElement)=>n.dataset.control==='claim-step-first').disabled).toBe(true);
+ expect(nodes.filter((n:JourneyElement)=>n.tagName==='details').every((n:JourneyElement)=>!n.open)).toBe(true);
+}));
+test('illustrated supply keeps expenditure, insufficient balance and disabled sweep outside folded rules',()=>withJourneyDOM(()=>{
+ const {view}=fixture();view.tab='supply';view.content=new JourneyElement('div');view.app.eco.s.energy=1;view.app.eco.s.sweep=0;
+ view.app.expedition.sweepPreview=()=>({ok:true,affordable:false,energy:4,tickets:1,rewards:{gold:360,xp:100,materials:{glass_leaf:3}}});
+ view.renderSupply({autoBattle:false});const nodes=view.content.all();
+ expect(view.content.text()).toContain('사용: 에너지 4 · 소탕권 1');expect(view.content.text()).toContain('에너지 또는 소탕권이 부족합니다.');
+ expect(nodes.filter((n:JourneyElement)=>n.dataset.control?.startsWith('sweep-')).every((n:JourneyElement)=>n.disabled)).toBe(true);
+ expect(nodes.filter((n:JourneyElement)=>n.className==='journey-reward-icons')[0].text()).toContain('원정 EXP 100');
+ const banner=nodes.find((n:JourneyElement)=>n.tagName==='details');expect(banner.text()).toContain('영웅 EXP');expect(banner.open).toBe(false);
+}));

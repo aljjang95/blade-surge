@@ -9,6 +9,10 @@ import './arsenal.css';
 const el=(tag,cls='',text='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=text;return e;};
 const btn=(label,fn,cls='arsenal-action')=>{const b=el('button',cls,label);b.type='button';b.onclick=fn;return b;};
 const fmt=n=>Math.round(n).toLocaleString('ko-KR');
+const artImage=(id,cls='')=>{const image=el('img',cls);image.src=`/img/ui-crafted/${id}.webp`;image.alt='';image.setAttribute('aria-hidden','true');return image;};
+const detail=(label,text)=>{const d=el('details','arsenal-details');d.append(el('summary','',label),el('p','arsenal-copy',text));return d;};
+const artEffects={rupture:'광역 파열',aegis:'보호막 12%',flow:'대기시간 −2초'};
+const gearStrip=(equipment,compact=false)=>{const strip=el('div',`arsenal-equipped${compact?' compact':''}`);for(const slot of SLOTS){const r=equipment?.[slot],item=r&&ITEM_BY_ID[r.id],cell=el('div');const image=item?el('img'):artImage(`slot-${slot}`);if(item){image.src=ITEM_ICON(item);image.alt='';}cell.setAttribute('aria-label',`${SLOT_NAME[slot]} · ${item?.name||'미착용'}`);cell.title=`${SLOT_NAME[slot]} · ${item?.name||'미착용'}`;cell.append(image);if(!compact)cell.append(el('small','',SLOT_NAME[slot]),el('span','',item?.name||'미착용'));strip.append(cell);}return strip;};
 export class ArsenalView {
   constructor(app){
     this.app=app;this.previewIndex=null;
@@ -27,23 +31,28 @@ export class ArsenalView {
   render(){
     const app=this.app,svc=app.arsenal,id=app.eco.s.selected,current=svc.current(id),scroll=this.body.scrollTop;this.body.replaceChildren();
     const hero=el('div','arsenal-hero'),portrait=el('img');portrait.src=HEROES[id].portrait;portrait.alt=HEROES[id].name;const text=el('div');text.append(el('h3','',HEROES[id].name),el('p','',`${JOBS.find(j=>j.id===current.jobId)?.name||'기본 직업'} · ${PATHS.find(p=>p.id===current.pathId)?.name||'균형'}`));hero.append(portrait,text);this.body.append(hero);
-    this.body.append(el('h3','','균형 파괴, 그 다음 한 수'),el('p','arsenal-copy','보스·정예의 강공격이 끝난 빈틈에 마무리를 맞히면 균형 피해가 15 추가됩니다. 균형이 무너진 적에게 다음 마무리를 맞혀 선택한 기예를 발동하세요. 한 번의 붕괴마다 1회. 모든 기예는 무료로 전환합니다.'));
+    this.body.append(el('h3','','전투 기예'));
     if(svc.blocked)this.body.append(el('p','arsenal-warning','이번 전투의 기예는 출격 시 고정됩니다. 정비는 전투와 저장을 마친 뒤 가능합니다.'));
     const grid=el('div','arsenal-arts');
-    for(const [i,art] of COMBAT_ARTS.entries()){
+    for(const art of COMBAT_ARTS){
       const card=btn('',()=>this.act(()=>svc.setArt(art.id),`${art.name} 기예를 준비했습니다.`),'arsenal-art');card.dataset.art=art.id;card.setAttribute('aria-pressed',String(current.artId===art.id));card.disabled=svc.blocked;
-      card.append(el('span','arsenal-rune',['✦','◇','↻'][i]),el('strong','',art.name),el('span','',art.description),el('small','',current.artId===art.id?'선택 중':'이 기예 준비'));grid.append(card);
+      card.setAttribute('aria-label',`${art.name} · ${artEffects[art.id]}${current.artId===art.id?' · 선택 중':''}`);
+      card.append(artImage(`art-${art.id}`,'arsenal-art-image'),el('strong','',art.name),el('span','arsenal-effect',artEffects[art.id]),el('small','',current.artId===art.id?'선택 중':'무료 전환'));grid.append(card);
     }
-    this.body.append(grid,el('h3','','영웅별 장비 구성'),el('p','arsenal-copy','장비 4부위·전직·전투 방식·서약·기예를 함께 저장합니다. 강화 수치는 현재 장비를 따릅니다. 불러오기 전에 변경 능력치와 다른 영웅에게서 옮겨올 장비를 확인할 수 있습니다.'));
-    const equipped=el('div','arsenal-equipped');for(const slot of SLOTS){const r=current.equipment[slot],item=r&&ITEM_BY_ID[r.id],cell=el('div');if(item){const img=el('img');img.src=ITEM_ICON(item);img.alt='';cell.append(img);}cell.append(el('small','',SLOT_NAME[slot]),el('span','',item?.name||'미착용'));equipped.append(cell);}this.body.append(equipped);
+    this.body.append(grid);
+    const guide=detail('발동 조건 · 상세 효과','보스·정예의 강공격이 끝난 빈틈에 마무리를 맞히면 균형 피해가 15 추가됩니다. 균형이 무너진 적에게 다음 마무리를 맞혀 선택한 기예를 발동하세요. 한 번의 붕괴마다 1회. 모든 기예는 무료로 전환합니다. AI 결투장에는 기예·후딜 공략이 적용되지 않습니다.');
+    guide.append(artImage('posture-break','arsenal-guide-image'));for(const art of COMBAT_ARTS)guide.append(el('p','arsenal-copy',`${art.name} · ${art.description}`));
+    this.body.append(guide,el('h3','','장비 구성'),gearStrip(current.equipment));
     const presets=el('div','arsenal-presets');svc.s.heroes[id].presets.forEach((p,i)=>{
-      const card=el('article'),label=el('label','','구성 이름'),input=el('input');input.type='text';input.maxLength=20;input.value=p?.name||`구성 ${i+1}`;input.setAttribute('aria-label',`구성 ${i+1} 이름`);input.disabled=svc.blocked;label.append(input);card.append(label);
-      card.append(el('p','',p?`${COMBAT_ARTS.find(a=>a.id===p.artId)?.name} · ${PATHS.find(x=>x.id===p.pathId)?.name} · 서약 ${p.challengeIds.length}`:'현재 영웅의 준비를 저장하세요.'));
-      const save=btn(p?'현재 구성으로 덮어쓰기':'현재 구성 저장',()=>{this.previewIndex=null;this.act(()=>svc.savePreset(i,input.value),`${input.value||`구성 ${i+1}`} 저장 완료`);});save.disabled=svc.blocked;card.append(save);
-      const view=btn('변경 비교',()=>{this.previewIndex=i;this.render();this.body.querySelector('.arsenal-preview')?.scrollIntoView({block:'nearest'});});view.disabled=!p||svc.blocked;card.append(view);presets.append(card);
+      const card=el('article'),label=el('label','arsenal-preset-label'),input=el('input');input.type='text';input.maxLength=20;input.value=p?.name||`구성 ${i+1}`;input.setAttribute('aria-label',`구성 ${i+1} 이름`);input.disabled=svc.blocked;label.append(input);
+      card.append(artImage(p?`art-${p.artId}`:'loadout','arsenal-preset-art'),label,gearStrip(p?.equipment,true));
+      card.append(el('p','arsenal-preset-summary',p?`${JOBS.find(j=>j.id===p.jobId)?.name||'기본 직업'} · ${PATHS.find(x=>x.id===p.pathId)?.name} · 서약 ${p.challengeIds.length}`:'빈 구성'));
+      const save=btn(p?'현재 구성으로 덮어쓰기':'현재 구성 저장',()=>{this.previewIndex=null;this.act(()=>svc.savePreset(i,input.value),`${input.value||`구성 ${i+1}`} 저장 완료`);},p?'arsenal-action':'arsenal-primary');save.disabled=svc.blocked;
+      if(p){const view=btn('변경 비교',()=>{this.previewIndex=i;this.render();this.body.querySelector('.arsenal-preview')?.scrollIntoView({block:'nearest'});},'arsenal-primary');view.disabled=svc.blocked;card.append(view);const manage=el('details','arsenal-details arsenal-manage');manage.append(el('summary','','구성 관리'),save);card.append(manage);}else card.append(save);presets.append(card);
     });this.body.append(presets);
     if(this.previewIndex!==null)this.renderPreview(this.previewIndex,id);
-    const footer=el('div','arsenal-links');footer.append(btn('장비 · 강화',()=>this.navigate('heroes')),btn('전직',()=>this.navigate('jobs')),btn('전투 방식 · 서약',()=>this.navigate('mastery')));this.body.append(footer,el('p','arsenal-copy','AI 결투장은 공통 규칙을 사용하므로 기예·후딜 공략은 적용되지 않습니다.'));this.body.scrollTop=scroll;
+    this.body.append(detail('구성 저장 안내','장비 4부위·전직·전투 방식·서약·기예를 함께 저장합니다. 강화 수치는 현재 장비를 따릅니다. 변경 비교에서 능력치와 다른 영웅에게서 옮겨올 장비를 확인하세요.'));
+    const footer=el('div','arsenal-links');for(const [label,where,image] of [['장비 · 강화','heroes','nav-forge'],['전직','jobs','nav-jobs'],['전투 방식 · 서약','mastery',current.pathId==='hunter'?'path-stalker':`path-${current.pathId}`]]){const link=btn('',()=>this.navigate(where));link.append(artImage(image),el('span','',label));footer.append(link);}this.body.append(footer);this.body.scrollTop=scroll;
   }
   renderPreview(index,id){
     const svc=this.app.arsenal,p=svc.preview(index,id);if(!p)return;const box=el('section','arsenal-preview');box.append(el('h3','',`${p.preset.name} 변경 비교`));

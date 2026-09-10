@@ -4,6 +4,7 @@ import {Economy} from '../src/game/economy.js';
 import {ExpeditionEconomy} from '../src/game/expedition-economy.js';
 import {MasterworksService} from '../src/game/masterworks-service.js';
 import {ArsenalService} from '../src/game/arsenal-service.js';
+import {COMBAT_ARTS} from '../src/data/combat-arts.js';
 class Element {
   children:Element[]=[];className='';id='';dataset:any={};disabled=false;hidden=false;open=false;value='';scrollTop=0;isConnected=true;writes=0;focused=false;onclick:(()=>void)|null=null;attrs:any={};listeners:any={};private text='';
   constructor(public tagName:string){}
@@ -27,6 +28,23 @@ function fixture(){
 }
 const buttons=(root:Element,label:string)=>root.all().filter(n=>n.tagName==='button'&&n.textContent===label);
 const art=(view:any,id:string)=>view.body.all().find((e:Element)=>e.dataset.art===id)!;
+const visibleText=(root:Element):string=>root.tagName==='details'&&!root.open?(root.children.find(c=>c.tagName==='summary')?.textContent||''):root.children.length?root.children.map(visibleText).join(''):root.textContent;
+
+test('illustrated arts keep short DOM labels and native collapsed rules preserve exact effects',()=>{
+ const {view}=fixture();
+ for(const def of COMBAT_ARTS){const card=art(view,def.id);expect(card.querySelector('img').src).toBe(`/img/ui-crafted/art-${def.id}.webp`);expect(card.textContent).toContain(def.name);expect(card.textContent).not.toContain(def.description);expect(view.body.textContent).toContain(def.description);}
+ const visible=visibleText(view.body);expect(visible).not.toContain('AI 결투장');expect(visible).not.toContain('반경 5');expect(visible).not.toContain('✦');expect(visible).not.toContain('◇');expect(visible).not.toContain('↻');
+ expect(visible.length).toBeLessThan(view.body.textContent.length/2);
+ const guides=view.body.all().filter((node:Element)=>node.tagName==='details');expect(guides.every((node:Element)=>!node.open)).toBe(true);expect(guides.every((node:Element)=>node.children[0].tagName==='summary')).toBe(true);
+});
+
+test('each saved card has four illustrated slots and one visible primary action with overwrite behind details',()=>{
+ const {app,view}=fixture();app.arsenal.savePreset(0,'방패 구성');view.render();
+ const cards=view.body.all().filter((node:Element)=>node.tagName==='article');expect(cards).toHaveLength(3);
+ for(const card of cards){expect(card.querySelector('.compact')!.children).toHaveLength(4);expect(card.all().filter((node:Element)=>node.className==='arsenal-primary')).toHaveLength(1);}
+ expect(visibleText(cards[0])).toContain('변경 비교');expect(visibleText(cards[0])).not.toContain('덮어쓰기');
+ const empty=cards[1].querySelector('.compact')!;expect(empty.children.map((cell:Element)=>(cell.querySelector('img') as any).src)).toEqual(['/img/ui-crafted/slot-weapon.webp','/img/ui-crafted/slot-armor.webp','/img/ui-crafted/slot-ring.webp','/img/ui-crafted/slot-boots.webp']);
+});
 test('real DOM handlers select/save/compare/apply a real service build and render item names without UID',()=>{
  const {app,view,calls}=fixture();art(view,'aegis').click();expect(app.arsenal.artForHero()).toBe('aegis');
  const input=view.body.querySelector('input');input.value='선봉 구성';buttons(view.body,'현재 구성 저장')[0].click();expect(app.arsenal.s.heroes.knight.presets[0].name).toBe('선봉 구성');

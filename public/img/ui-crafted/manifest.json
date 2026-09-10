@@ -1,0 +1,873 @@
+{
+  "schema": 1,
+  "source": "Original GUI-generated artwork for BLADE SURGE",
+  "generatedDates": [
+    "2026-09-10",
+    "2026-09-11"
+  ],
+  "sets": [
+    {
+      "id": "set-01",
+      "accepted": 10,
+      "batchRequests": 1,
+      "repairBatchRequests": 0,
+      "candidateOutputs": 10,
+      "rejectedCandidates": 0,
+      "observedUiImages": 31,
+      "modeDisplayed": "High",
+      "modelDisplayed": "unknown"
+    },
+    {
+      "id": "set-02",
+      "accepted": 10,
+      "batchRequests": 1,
+      "repairBatchRequests": 0,
+      "candidateOutputs": 10,
+      "rejectedCandidates": 0,
+      "observedUiImages": 31,
+      "modeDisplayed": "High",
+      "modelDisplayed": "unknown"
+    },
+    {
+      "id": "set-03",
+      "accepted": 10,
+      "batchRequests": 1,
+      "repairBatchRequests": 1,
+      "candidateOutputs": 19,
+      "rejectedCandidates": 9,
+      "observedUiImages": 59,
+      "modeDisplayed": "High",
+      "modelDisplayed": "unknown"
+    },
+    {
+      "id": "set-04",
+      "accepted": 10,
+      "batchRequests": 1,
+      "repairBatchRequests": 0,
+      "candidateOutputs": 10,
+      "rejectedCandidates": 0,
+      "observedUiImages": 31,
+      "modeDisplayed": "매우 높음 (observed after generation)",
+      "modelDisplayed": "unknown"
+    },
+    {
+      "id": "set-05",
+      "accepted": 10,
+      "batchRequests": 1,
+      "repairBatchRequests": 1,
+      "candidateOutputs": 15,
+      "rejectedCandidates": 5,
+      "observedUiImages": 47,
+      "modeDisplayed": "매우 높음",
+      "modelDisplayed": "unknown"
+    }
+  ],
+  "acceptedOriginals": 50,
+  "totalCandidateOutputs": 64,
+  "runtimeBytes": 856482,
+  "runtimeEncoding": "384x384 WebP quality 86",
+  "model": "unknown",
+  "note": "One isolated original per accepted asset. Review contact sheets excluded. Set 3 kept one valid original and repaired nine subject mismatches in the same chat.",
+  "assets": [
+    {
+      "id": "art-rupture",
+      "set": "set-01",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "151e9810333e41a9a74fe64bc6989b4069ee351bcd13e0e0c52ff7993a445313",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 25890,
+      "runtimeSha256": "c356e44a8568096789fb4e763cf80adb13f4c293d93a0e59cc3b7d8ce32a21bf"
+    },
+    {
+      "id": "art-aegis",
+      "set": "set-01",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "309f0a7c24d55f9f28975c5d0510fa11565acaf2295512a918bde838a1ed2acd",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 25530,
+      "runtimeSha256": "04d9f03e858e00e77e7980067563bda82c545d126d21a363a35fa0e109ee4a17"
+    },
+    {
+      "id": "art-flow",
+      "set": "set-01",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "585da54669220c0f64d2ce35bff47b149992400dbd17dd91cfd68b5a054e000e",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 20280,
+      "runtimeSha256": "3f1734088e1b501f23cca921448f5783f526c0b0804e7b8ce6b4647a62b9c8aa"
+    },
+    {
+      "id": "path-balanced",
+      "set": "set-01",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "8ce73de3cd4f6f3593eab7df6e9dbf3c88defc3d9ce71cca68f872d78f1f3dc4",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 12340,
+      "runtimeSha256": "8ce87151700a42e180f35857bd8e5092dfb5277aae18d38550c7ef1f973f26ce"
+    },
+    {
+      "id": "path-vanguard",
+      "set": "set-01",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "6718de3653ef3671b4b4a7c5ee501d900c82d389d467e8419dfc20e5f5a6fd5d",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 17820,
+      "runtimeSha256": "07665ed119b5718eb0f2d0c9560f818253548f6871e180ace37fd50faf86e0e7"
+    },
+    {
+      "id": "path-stalker",
+      "set": "set-01",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "a674d1bc124fb8014ef2a9c9c98a6d0c9395a596a529124a22e1e92cbb58ad0f",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 15538,
+      "runtimeSha256": "01c6ea3a9cefa4ee54f5bd9e44811a6073db3ed59304032aeac24defcab9dd46"
+    },
+    {
+      "id": "vow-iron",
+      "set": "set-01",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "e43a013cd1d557a6a605348eeebad434f960b91244b73ddcf977f96c55e30144",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 18518,
+      "runtimeSha256": "219000b8c62818afcd0c42829862eb5d5c50d3e7a701ab08ae53db8d59f4a5c8"
+    },
+    {
+      "id": "vow-fury",
+      "set": "set-01",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "22cc7267d3beb72b595849e54024f9ca5b8c9eb08f004c9cfa30abfdc449fc19",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 16646,
+      "runtimeSha256": "f1adb9c6b1932129b76f83b6b378dbd43770e9ef6b7e271b9756120c07199c47"
+    },
+    {
+      "id": "vow-surrounded",
+      "set": "set-01",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "f9506f433a312fc90a33c6071dabc99b853b85fcc7083852dc4b258a0c33c717",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 15346,
+      "runtimeSha256": "2d8571b410a704863b3bc6a9fa5e0a1a3383ffdb899c911c3850c207e0394e6d"
+    },
+    {
+      "id": "posture-break",
+      "set": "set-01",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "7eb5bbdf4f023a95b4f59aa3ecf0a2ca553731f7f2d8ffc0068043712ca833d7",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 19584,
+      "runtimeSha256": "718c6e155c34dc256c5aefc0ab1aa0935a797dbc40d795e9a9b5d0a4dcec16f5"
+    },
+    {
+      "id": "slot-weapon",
+      "set": "set-02",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "80a4871e652d2bc3f5012af22e66ff8326dd022500356c31e50fa203a938bbeb",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 9168,
+      "runtimeSha256": "63546705d083b8bd9c9c92470e63d5ca03836dc58a37af71369ebbbe16522ced"
+    },
+    {
+      "id": "slot-armor",
+      "set": "set-02",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "7dea092fbae00080144541a869048de197cd3b9839dc957c84a532c8b09264f6",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 17262,
+      "runtimeSha256": "0a0c5fa577b1c40b98cb9c16ca30363ca8c3922453552ebb3c45d1cae91e68c4"
+    },
+    {
+      "id": "slot-ring",
+      "set": "set-02",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "7958001606922c46640be67118c793d7662484930738b75288b0df0f08ea7663",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 12134,
+      "runtimeSha256": "bec4f37685809c270ad6f73d45abccb70c45225a545a32d438454c2495e2508b"
+    },
+    {
+      "id": "slot-boots",
+      "set": "set-02",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "25488351cf797ba9faf46cd8e62a76f2699be49832c9e14d0142e74f3d0488e6",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 14030,
+      "runtimeSha256": "b178bced31256ca18128b83670d08a4da79dd7abcd6ab7e5dc3e6c9cada2079e"
+    },
+    {
+      "id": "material-leaf",
+      "set": "set-02",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "5e9f8f0862e5e901caf2f896eff68b74a3fdfd4505ca12efcdfb82a223c87625",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 10290,
+      "runtimeSha256": "b9b5b98954ceb43cef4e484ae57ce4ff33b21f3531377181418f8c3e65be63cf"
+    },
+    {
+      "id": "material-ember",
+      "set": "set-02",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "bb1f63fd7ffc91e265e19667c3b715568a2177a7eb7b5d90b133ff06ca9d1062",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 11638,
+      "runtimeSha256": "dd7cd9f44f1b385351dc88b355b1f3b4411dbd5c409f93a986942ead6ce5af2b"
+    },
+    {
+      "id": "material-stardust",
+      "set": "set-02",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "27851f264ac4898481d07e6e9778ee85a65cc899a31d76cd855788ba8abd03ef",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 13542,
+      "runtimeSha256": "2b3d60101da53e6894b144084df0b7328846eaddf2fe57c3a84085d5a24a1705"
+    },
+    {
+      "id": "material-stone",
+      "set": "set-02",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "303d3d1212c64a2c1bf71d9362230c4cdff96eb9f699e82013011d65e4ff14c1",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 10018,
+      "runtimeSha256": "708a212b4ea51e9eec7470de44278adefd8a6653b512797567c8ab77c3f97b0d"
+    },
+    {
+      "id": "material-guard-stone",
+      "set": "set-02",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "536ca65e1f3f153aa0aeec190e4eb4cd1cb20cc43704017dc141e950979d7d8d",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 9924,
+      "runtimeSha256": "acb10052b135277c43c788740099e83d833289f18a13ff3f22c95a7d80cdf1bf"
+    },
+    {
+      "id": "material-essence",
+      "set": "set-02",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "c0b1c201e2605be76d9dba51cc4370324e46cb4e965f13aec993b30bd6548156",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 12988,
+      "runtimeSha256": "55397a7e9a6b96ec21f5c9e13be80999a266ea498f1baf6d12a5e452735a7bf0"
+    },
+    {
+      "id": "potion-health",
+      "set": "set-03",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "20b5abb1e499bdd057f5c518eb1ed2519decbb1192dddea04221cab9df5e91fc",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 13996,
+      "runtimeSha256": "5edc2569d3ffbbe2d32df639ecef42f5646cad89a5d1f77b2d1a2f5259e7d010"
+    },
+    {
+      "id": "potion-power",
+      "set": "set-03",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "b682a44323244156804bfbe3717002569659607e7706f8bcf64e04af821349e1",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 15244,
+      "runtimeSha256": "583963e11dd72a13788a759117bad9465375e69456cfb7e56b9cc16e6768f883"
+    },
+    {
+      "id": "potion-guard",
+      "set": "set-03",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "9e0e9683d43a8f3aa54f39b7d2599de84f166d4392210daf631f790306906f6b",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 18600,
+      "runtimeSha256": "24544e4ace5c470a7d8f2e9c478820cdb33d2c2b56780f8b81eac134f1054869"
+    },
+    {
+      "id": "gold",
+      "set": "set-03",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "6c34fedecf554c6e6ab2fdd88e8bafa9255d42c1ed26a9848cdc784db946bf68",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 13190,
+      "runtimeSha256": "e22dd7dae8c54a42de30944dd5889ac6310d0e7924dc6f5c84bfc317dd48ac21"
+    },
+    {
+      "id": "gems",
+      "set": "set-03",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "e6da013ba98c9a51096e7c1ec7eecfb4818c1fef614ee3c8ca7b08441534f1ed",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 20212,
+      "runtimeSha256": "cfb188d1d344b3133e7d198f36dd3043647c728031d9425ef4d22c0de6cef566"
+    },
+    {
+      "id": "energy",
+      "set": "set-03",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "92ec204b62979ad6a53e430d9fb255f1f3b7aa0c2ddeccba5150dcc7bfc36463",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 11878,
+      "runtimeSha256": "c2730005e322baec934a614b3d4a689a907ce2952a480321790c0eb1b1cbfc6e"
+    },
+    {
+      "id": "hero-xp",
+      "set": "set-03",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "f745a96109acf9b2565f1e7844bcf16f3407dc8a0a63ae89e32bc1daa14efad7",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 19934,
+      "runtimeSha256": "84d59a012ef6c7321e8ed6d6ee5d8a10976b1b5df869bf277549d56314cee694"
+    },
+    {
+      "id": "renown",
+      "set": "set-03",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "c18e8dc4aa13b2cc56fbcffc1e8d22cb69c6100637aa4647e234fe947e60b53d",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 16366,
+      "runtimeSha256": "79553415205cfd3a0af481d3a8b967ba628f6db064a76b8d651e35048a04a3a9"
+    },
+    {
+      "id": "sweep-ticket",
+      "set": "set-03",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "32f17d7d03d53df20c104950ee2e3d31e1904307e81a20d5d74e8c704bfda0c6",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 14278,
+      "runtimeSha256": "bc4597a9bc12f483e8e9e0a4f30c58ff00f50f9cc615b9deea4884fa3eb4f082"
+    },
+    {
+      "id": "treasure-chest",
+      "set": "set-03",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "1ad31eb439a79864dc0b5ce3da973c088e66b9a5b84ce4da0e56f837a426769e",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 20012,
+      "runtimeSha256": "bc25b004adec24f34ce21353e17e86fadc95198dba93961d718b339a69b7b11b"
+    },
+    {
+      "id": "nav-arsenal",
+      "set": "set-04",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "8b3ae371ad33b3491e7c3ad4637ff4c9794d8d519407b8593c3c67057ea1e2c5",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 19280,
+      "runtimeSha256": "33ab45891c56865731f13f5ca33c94832bce36fa5703f71b802a3636128857de"
+    },
+    {
+      "id": "nav-heroes",
+      "set": "set-04",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "955f2ad3a13b5327b2174514c113598cbf1e16b9dd52632f711e46e28f2bcf4b",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 14860,
+      "runtimeSha256": "3b687b58df6e986f1195bac7b9de9ec23c83327051c1e72493992e7bc696e092"
+    },
+    {
+      "id": "nav-dungeon",
+      "set": "set-04",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "37ec6caa4f4f91eb99e14ff653563cf5c45d869f46ef608fec9b825deb8efaae",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 20790,
+      "runtimeSha256": "c26dacf9556b7943b714614f77541d699e9ecd1e75e4a9bafe8b4e45a7edeb16"
+    },
+    {
+      "id": "nav-arena",
+      "set": "set-04",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "ef9766323cba305064a1e7c043fe21432da698ad2574af1e0dbea9794a5a7f5a",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 20448,
+      "runtimeSha256": "fb337816edb250079c652da20c7c91aeddcfc0191cd3b07d178e6a8be020d526"
+    },
+    {
+      "id": "nav-forge",
+      "set": "set-04",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "5fab6ad968fe4c4e276ea5e02912aa640531610d349b8f45dfc94c75c7bb91ac",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 14438,
+      "runtimeSha256": "8d8e01ddc1652d57ad4599d36b43ea5bd4f871cd642ebfae9a391a4c0340cc6d"
+    },
+    {
+      "id": "nav-jobs",
+      "set": "set-04",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "2537b5c61ea8e3cebf34e9e6ad8a79e6b61061cd715b80f67791845530b92b20",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 18316,
+      "runtimeSha256": "ffb4db1c82373acf48cce30d6bcd703527ebf192d288858db17a43503274e8d3"
+    },
+    {
+      "id": "nav-quests",
+      "set": "set-04",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "109f967f11318018c9e6f18d00ce5713e4f432a9c8b6c54bfe3fdec54e5366a7",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 14378,
+      "runtimeSha256": "9983eecca5df59feee1532a1b58fa7d0b51e3f750a933ad57891ba9cc918286b"
+    },
+    {
+      "id": "nav-journey",
+      "set": "set-04",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "ce7f1079be04254dd076fcf740de4f118a713fc1ea3216567fffc0be068c0bb1",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 19050,
+      "runtimeSha256": "b384e74450eeafee7d78bbbb1e8fdeb141e65e3613fae703240b17edb8b4ea5c"
+    },
+    {
+      "id": "nav-mastery",
+      "set": "set-04",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "c9809b6e0e776ab9cdb270810f53e9b393b55c15ffd39ed459c904c080c32cc8",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 18912,
+      "runtimeSha256": "dcfc10465a3b6a7cb5c06927d23db32c048da41c2bf3a9411700901ef82946eb"
+    },
+    {
+      "id": "nav-journal",
+      "set": "set-04",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "9af834c1965d176e905da74b52421276da4c3a51d6d3070807da22887a41f2bc",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 14462,
+      "runtimeSha256": "d876ecc56652233de2a65f0526035d8c47509b350748d8bb2f7b611d7cc364d6"
+    },
+    {
+      "id": "boon-ember",
+      "set": "set-05",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "4e052462663ccc28365cc32a066369a423555de7d33755f1cba895b6b8b84ebb",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 22394,
+      "runtimeSha256": "754f04b60c7678c6b49588bf4aa2e99589797139e969cd06af4b03f45e1aa4b5"
+    },
+    {
+      "id": "boon-storm",
+      "set": "set-05",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "db382e650135805091bc90aaa11587793c4d85e529f0bcd6506d556d0a96a4b7",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 21354,
+      "runtimeSha256": "fce079ddce8ad500e099c704426aefbf89aaeacf42b801440f081ec97859e930"
+    },
+    {
+      "id": "boon-tide",
+      "set": "set-05",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "4e129aacb33d965f8acf2f645e2447020b5339671c39559952236ccf205606ab",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 24206,
+      "runtimeSha256": "994084d325a0405153b01a82e2d2330f3f3cd2c8f5a600f3f03ceaf7b946504b"
+    },
+    {
+      "id": "boon-stone",
+      "set": "set-05",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "113228aa6bd1736c541bf5b30d7649d2975c7fde093c787ff7f504f760e07d69",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 24030,
+      "runtimeSha256": "43ef0267494e76807ee4ce57dda6de0909e3745d80f84136703c6eca6553ae9d"
+    },
+    {
+      "id": "quest-daily",
+      "set": "set-05",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "6c8c240950ef0f6a6675dfe0c130f090af059820a2bef9a583b3a259438b3d5c",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 21140,
+      "runtimeSha256": "5b7442e81a796eccf9cf7f617a9588e9e94070a72022f213ecdacf35a0ceb149"
+    },
+    {
+      "id": "quest-weekly",
+      "set": "set-05",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "a02f29933a4c347d096c51c85257ff34e57a69ad7ab5eec24c28aafc70cd3625",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 16088,
+      "runtimeSha256": "6987d8ef08da701e3a84cbcd36f56b1aff395cca1126b04ef0b6f11124755483"
+    },
+    {
+      "id": "loadout",
+      "set": "set-05",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "62592c56d330542229d4875df1371534b478feaa001dc53db5b0713d582e3edf",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 25702,
+      "runtimeSha256": "8baf065df27ce6b73996c6c3ba41198de1daaeadf6234f777e6f691c86fbf6aa"
+    },
+    {
+      "id": "settings",
+      "set": "set-05",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "6e745ad1a2ba5274aa1fcaad4693a002a089dd665bf2f3e35bfdfa25e88ab2b2",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 22010,
+      "runtimeSha256": "2553cfedaddc8e2231385f866ed01e92cc9d26c4117955ea99308c839f9471ec"
+    },
+    {
+      "id": "mail",
+      "set": "set-05",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "70a0526a4f9a218586f8c071843446ab45f37584bf33d7606be7751adbbeda49",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 11062,
+      "runtimeSha256": "efee01cbb3c11f205bd499f312723f13d2e2bd9293117c4656c3d00e3e6c5846"
+    },
+    {
+      "id": "calendar",
+      "set": "set-05",
+      "source": "ChatGPT GUI / IAB",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalSha256": "19e748709acdd6d059fad13e367731f3f2844b8d90d952adb2f50d484ddcb399",
+      "runtimePixels": [
+        384,
+        384
+      ],
+      "runtimeBytes": 21366,
+      "runtimeSha256": "bcaccb2ed16a2b3093d07246c59c1c339c4b063ab74b88f6020218b4a2483d42"
+    }
+  ]
+}

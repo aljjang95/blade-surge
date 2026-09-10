@@ -9,13 +9,12 @@ const node=(tag,cls='',text='')=>{const e=document.createElement(tag);e.classNam
 const button=(text,fn,key,cls='journey-action')=>{const e=node('button',cls,text);e.type='button';e.dataset.control=key;e.addEventListener('click',fn);return e;};
 const fmt=v=>Math.round(v||0).toLocaleString('ko-KR');
 const name=id=>MATERIALS.find(m=>m.id===id)?.name||CONSUMABLES.find(c=>c.id===id)?.name||id;
+const illustration=id=>{const e=node('img','journey-illustration');e.src=`/img/ui-crafted/${id}.webp`;e.alt='';e.loading='lazy';return e;};
+const detail=(text,label='자세히')=>{const e=node('details','journey-details');e.append(node('summary','',label),node('p','',text));return e;};
+const resourceArt={gold:'gold',stones:'material-stone',xp:'hero-xp',glass_leaf:'material-leaf',ember_core:'material-ember',star_dust:'material-stardust',hp_tonic:'potion-health',overdrive:'potion-power',aegis:'potion-guard'};
+function rewardIcons(r={}) {const box=node('div','journey-reward-icons');const entries=[...['gold','stones','xp'].map(key=>[key,r[key]]),...Object.entries(r.materials||{}),...Object.entries(r.consumables||{})];for(const [id,count] of entries){if(!count)continue;const label={gold:'골드',stones:'강화석',xp:'원정 EXP'}[id]||name(id),chip=node('span','journey-reward');chip.append(illustration(resourceArt[id]||'treasure-chest'),node('span','',`${label} ${fmt(count)}`));box.append(chip);}return box;}
 const errors={claimed:'이미 받은 보상입니다.',incomplete:'목표를 먼저 완료해 주세요.',prerequisite:'앞 단계 보상을 먼저 받아 주세요.',unknown:'선택을 다시 확인해 주세요.'};
 const tabs=[['journey','성장 여정'],['contracts','오늘의 의뢰'],['target','목표 장비'],['supply','빠른 보급']];
-function rewardText(r={}) {
-  const out=[];for(const [key,label] of [['gold','골드'],['stones','강화석'],['xp','원정 EXP']])if(r[key])out.push(`${label} ${fmt(r[key])}`);
-  for(const key of ['materials','consumables'])for(const [id,count] of Object.entries(r[key]||{}))out.push(`${name(id)} ${fmt(count)}`);
-  return out.join(' · ');
-}
 
 export class JourneyView {
   constructor(app) {
@@ -24,7 +23,7 @@ export class JourneyView {
     const header=node('header','journey-header'),title=node('div');title.append(node('small','journey-eyebrow','한 걸음이 다음 모험을 바꾼다'));
     const h=node('h2','','성장 여정');h.id='journey-title';title.append(h);header.append(title,button('닫기',()=>this.close(),'close','journey-close'));
     this.nav=node('nav','journey-tabs');this.nav.setAttribute('aria-label','성장 여정 메뉴');
-    for(const [id,label] of tabs)this.nav.append(button(label,()=>{this.tab=id;this.render();},`tab-${id}`));
+    for(const [id,label] of tabs){const b=button('',()=>{this.tab=id;this.render();},`tab-${id}`);b.append(illustration({journey:'nav-journey',contracts:'nav-quests',target:'nav-forge',supply:'sweep-ticket'}[id]),node('span','',label));this.nav.append(b);}
     this.notice=node('p','journey-notice');this.notice.setAttribute('role','status');this.content=node('div','journey-content');
     this.dialog.append(header,this.nav,this.notice,this.content);document.body.append(this.dialog);
     this.dialog.addEventListener('cancel',e=>{e.preventDefault();this.close();});
@@ -88,49 +87,51 @@ export class JourneyView {
     if(focus)[...this.content.querySelectorAll('[data-control]')].find(e=>e.dataset.control===focus)?.focus({preventScroll:true});
     this.content.scrollTop=scroll;
   }
-  banner(title,text,art='guild_map') {const e=node('section','journey-banner');e.style.backgroundImage=`linear-gradient(90deg,#102124ef,#10212460),url('/img/expansion/${art}.webp')`;e.append(node('h3','',title),node('p','',text));this.content.append(e);}
+  banner(title,text,art='guild_map') {const e=node('section','journey-banner');e.style.backgroundImage=`linear-gradient(90deg,#102124ef,#10212460),url('/img/expansion/${art}.webp')`;e.append(illustration({journey:'nav-journey',contracts:'nav-quests',target:'nav-forge',supply:'nav-dungeon'}[this.tab]||'nav-journey'),node('h3','',title),detail(text,'안내'));this.content.append(e);}
   renderSteps(snap) {
-    const done=snap.steps.filter(s=>s.claimed).length;this.banner(`${done} / 6 · 나만의 모험을 시작하다`,'서약부터 숙련까지, 실제 플레이로 한 단계씩 완성하세요. 완료한 단계의 보상은 순서대로 받습니다.');
+    const done=snap.steps.filter(s=>s.claimed).length;this.banner(`성장 여정 ${done} / 6`,'서약부터 숙련까지, 실제 플레이로 한 단계씩 완성하세요. 완료한 단계의 보상은 순서대로 받습니다.');
     const list=node('div','journey-grid');
-    snap.steps.forEach((s,i)=>{const card=node('article',`journey-card ${s.claimed?'is-complete':''}`);card.append(node('small','journey-eyebrow',`${i+1}단계 · ${s.claimed?'보상 수령 완료':s.complete?'조건 달성':'진행 중'}`),node('h3','',s.name),node('p','',s.description),node('p','journey-rewards',rewardText(s.rewards)));
-      const actions=node('div','journey-actions'),claim=button(s.claimed?'수령 완료':s.ready?'보상 받기':'앞 단계와 목표를 완료하세요',()=>this.act(()=>this.app.journey.claimStep(s.id)),`claim-step-${s.id}`);claim.disabled=this.blocked||!s.ready;
-      actions.append(claim);if(!s.claimed){const go=button('목표로 이동',()=>this.navigate(s.action),`go-step-${s.id}`,'journey-secondary');go.disabled=this.blocked;actions.append(go);}card.append(actions);list.append(card);});this.content.append(list);
+    snap.steps.forEach((s,i)=>{const card=node('article',`journey-card ${s.claimed?'is-complete':''}`);card.append(illustration({prepare:'loadout',dungeons:'nav-dungeon',forge:'nav-forge',heroes:'loadout',mastery:'nav-mastery',quests:'nav-quests'}[s.action]||'nav-journey'),node('small','journey-eyebrow',`${i+1}단계 · ${s.claimed?'보상 수령 완료':s.complete?'조건 달성':'진행 중'}`),node('h3','',s.name),node('p','',s.description),rewardIcons(s.rewards));
+      const progress=node('progress');progress.max=1;progress.value=s.complete?1:0;progress.setAttribute('aria-label',`${s.name} 목표`);card.append(progress);
+      const actions=node('div','journey-actions'),claim=button(s.claimed?'수령 완료':s.ready?'보상 받기':'진행 중',()=>this.act(()=>this.app.journey.claimStep(s.id)),`claim-step-${s.id}`);claim.disabled=this.blocked||!s.ready;
+      if(!s.claimed&&!s.ready)card.append(node('small','journey-muted','앞 단계 보상과 목표 완료 필요'));actions.append(claim);if(!s.claimed){const go=button('목표로 이동',()=>this.navigate(s.action),`go-step-${s.id}`,'journey-secondary');go.disabled=this.blocked;actions.append(go);}card.append(actions);list.append(card);});this.content.append(list);
   }
   renderContracts(snap) {
     const c=snap.contracts,d=DUNGEONS.find(d=>d.id===c.rotationDungeonId),rift=riftForDay(this.app.journey.s.day);
     this.banner(`${d.name} · ${rift.name}`,`${rift.description} 균열 실전 승리 추가 보상: 골드 200 · 해당 재료 2. 일반 던전 승리도 의뢰에 집계됩니다.`,d.id);
+    this.content.append(node('p','journey-rewards','균열 승리 추가 보상'),rewardIcons({gold:200,materials:Object.fromEntries(Object.keys(d.rewards.materials).map(id=>[id,2]))}));
     const launch=button('균열 도전',()=>this.launchRift(d.id),'launch-rift');const access=this.app.expedition.dungeonAccess(d.id);launch.disabled=this.blocked||!access.ok;this.content.append(launch);
     if(!access.ok)this.content.append(node('p','journey-muted',access.error));
     const reset=new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false}).format(c.nextResetAt);
-    this.content.append(node('p','journey-muted',`매일 한국시간 05:00 갱신 · 다음 ${reset} · 주간은 월요일 05:00. 시작한 기간에만 집계되며 소탕은 제외됩니다.`));
+    this.content.append(detail(`매일 한국시간 05:00 갱신 · 다음 ${reset} · 주간은 월요일 05:00. 시작한 기간에만 집계되며 소탕은 제외됩니다.`,'의뢰 갱신 · 집계 규칙'));
     for(const [kind,label] of [['daily','오늘의 의뢰'],['weekly','이번 주의 의뢰']]){this.content.append(node('h3','journey-section',label));const list=node('div','journey-grid');
       for(const row of c[kind]){const card=node('article','journey-card'),progress=node('progress');progress.max=row.target;progress.value=Math.min(row.cur,row.target);progress.setAttribute('aria-label',row.name);
-        card.append(node('h3','',row.name),node('p','',`${row.description}${row.dungeonId?' · '+d.name:''}`),progress,node('p','',`${fmt(Math.min(row.cur,row.target))} / ${row.target}`),node('p','journey-rewards',rewardText(row.rewards)));
+        card.append(illustration(kind==='daily'?'quest-daily':'quest-weekly'),node('h3','',row.name),node('p','',`${row.description}${row.dungeonId?' · '+d.name:''}`),progress,node('p','',`${fmt(Math.min(row.cur,row.target))} / ${row.target}`),rewardIcons(row.rewards));
         const claim=button(row.claimed?'수령 완료':row.ready?'보상 받기':'진행 중',()=>this.act(()=>this.app.journey.claim(kind,row.id)),`claim-${kind}-${row.id}`);claim.disabled=this.blocked||!row.ready;card.append(claim);list.append(card);}this.content.append(list);}
   }
   renderTarget(snap) {
-    this.banner('원하는 장비까지, 남은 한 걸음','목표를 정하면 필요한 재료와 다음 던전이 보입니다. 같은 장비를 보유했다면 새로 만들지 않고 장착할 수 있습니다.','star_archive');
+    this.banner('목표 장비','목표를 정하면 필요한 재료와 다음 던전이 보입니다. 같은 장비를 보유했다면 새로 만들지 않고 장착할 수 있습니다.','star_archive');
     const label=node('label','journey-select-label','제작 목표'),select=node('select','journey-select');select.dataset.control='target-recipe';select.setAttribute('aria-label','목표 장비 선택');
     const blank=node('option','','목표 장비를 선택하세요');blank.value='';select.append(blank);
     for(const r of RECIPES.filter(r=>r.itemId)){const o=node('option','',ITEM_BY_ID[r.itemId].name);o.value=r.id;select.append(o);}select.value=snap.target?.recipe.id||'';select.disabled=this.blocked;
     select.addEventListener('change',()=>this.act(()=>this.app.journey.track(select.value||null),'목표 장비를 저장했습니다.'));label.append(select);this.content.append(label);
     const t=snap.target;if(!t){this.content.append(node('p','journey-muted','공방의 실제 제작 장비 중 하나를 골라 주세요.'));return;}
     const card=node('article','journey-card journey-target'),img=node('img','journey-item');img.src=ITEM_ICON(t.item);img.alt=t.item.name;card.append(img,node('h3','',t.item.name));
-    const set=SETS[t.item.set];if(set)card.append(node('p','journey-rewards',set.name),node('p','',`2개: ${set.two?.text||'세트 능력치 강화'} · 4개: ${set.four?.text||'세트 능력치 강화'}`));
-    card.append(node('p','',`골드 ${fmt(this.app.eco.s.gold)} / ${fmt(t.recipe.gold)}${t.goldMissing?' · '+fmt(t.goldMissing)+' 부족':' · 준비 완료'}`));
-    for(const m of t.materials){card.append(node('p','',`${name(m.id)} ${fmt(m.have)} / ${fmt(m.need)}${m.missing?' · '+fmt(m.missing)+' 부족':' · 준비 완료'}`));
+    const set=SETS[t.item.set];if(set)card.append(node('p','journey-rewards',set.name),detail(`2개: ${set.two?.text||'세트 능력치 강화'} · 4개: ${set.four?.text||'세트 능력치 강화'}`,'세트 효과'));
+    card.append(illustration('gold'),node('p','',`골드 ${fmt(this.app.eco.s.gold)} / ${fmt(t.recipe.gold)}${t.goldMissing?' · '+fmt(t.goldMissing)+' 부족':' · 준비 완료'}`));
+    for(const m of t.materials){card.append(illustration(resourceArt[m.id]||'treasure-chest'),node('p','',`${name(m.id)} ${fmt(m.have)} / ${fmt(m.need)}${m.missing?' · '+fmt(m.missing)+' 부족':' · 준비 완료'}`));
       const d=DUNGEONS.find(d=>d.id===m.dungeonId);if(d){const access=this.app.expedition.dungeonAccess(d.id),go=button(access.ok?`${d.name} · 기본 보상 기준 ${m.runs}회`:`${d.name} · 탐험 레벨 ${d.minLevel} 필요`,()=>this.navigate('dungeons'),`target-dungeon-${d.id}`,'journey-secondary');go.disabled=this.blocked||!access.ok;card.append(go);}}
     if(t.owned){card.append(node('p','journey-rewards',`보유 장비 +${t.owned.enh} · ${t.owner?(HEROES[t.owner]?.name||t.owner)+' 착용 중':'미장착'}`));const equip=button(t.equipped?'현재 영웅 착용 중':'보유한 이 장비 장착',()=>this.equipTarget(),'equip-target');equip.disabled=this.blocked||t.equipped;card.append(equip);}
     const craft=button(t.owned?'같은 장비 추가 제작':'목표 장비 제작',()=>this.craftTarget(),'craft-target');craft.disabled=this.blocked||!t.ready;card.append(craft);this.content.append(card);
   }
   renderSupply(snap) {
-    this.banner('반복 보급은 짧게, 도전은 직접','실전에서 한 번 완료한 던전만 소탕할 수 있습니다. 고정 골드·재료·원정 EXP·물약을 받으며 영웅 EXP·장비·실전 의뢰 진척은 지급하지 않습니다.','glass_garden');
+    this.banner('빠른 보급','실전에서 한 번 완료한 던전만 소탕할 수 있습니다. 고정 골드·재료·원정 EXP·물약을 받으며 영웅 EXP·장비·실전 의뢰 진척은 지급하지 않습니다.','glass_garden');
     const auto=node('label','journey-auto'),check=node('input');check.type='checkbox';check.checked=snap.autoBattle;check.dataset.control='auto-battle';check.disabled=this.blocked;check.addEventListener('change',()=>this.act(()=>this.app.journey.setAuto(check.checked),'다음 출격의 자동 전투 설정을 저장했습니다.'));auto.append(check,node('span','','출격할 때 자동 전투 켜기'));this.content.append(auto);
     this.content.append(node('p','journey-rewards',`에너지 ${fmt(this.app.eco.s.energy)} · 소탕권 ${fmt(this.app.eco.s.sweep)}`));
-    const list=node('div','journey-grid');for(const d of DUNGEONS){const card=node('article','journey-card');card.append(node('h3','',d.name));const choices=node('div','journey-actions');
+    const list=node('div','journey-grid');for(const d of DUNGEONS){const card=node('article','journey-card');card.append(illustration('nav-dungeon'),node('h3','',d.name));const choices=node('div','journey-actions');
       for(const count of [1,3]){const b=button(`${count}회`,()=>{this.counts[d.id]=count;this.render();},`count-${d.id}-${count}`,'journey-secondary');b.setAttribute('aria-pressed',String((this.counts[d.id]||1)===count));choices.append(b);}card.append(choices);
       const preview=this.app.expedition.sweepPreview(d.id,this.counts[d.id]||1);
-      if(preview.ok)card.append(node('p','',`사용: 에너지 ${preview.energy} · 소탕권 ${preview.tickets}`),node('p','journey-rewards',`고정 보급: ${rewardText(preview.rewards)}`),node('p','journey-muted','원정 레벨업 보너스 별도'));else card.append(node('p','journey-muted',preview.error));
+      if(preview.ok)card.append(node('p','',`사용: 에너지 ${preview.energy} · 소탕권 ${preview.tickets}`),rewardIcons(preview.rewards),node('p','journey-muted','원정 레벨업 보너스 별도'));else card.append(node('p','journey-muted',preview.error));
       const execute=button('소탕 실행',()=>this.sweep(d.id),`sweep-${d.id}`);execute.disabled=this.blocked||!preview.ok||!preview.affordable;card.append(execute);if(preview.ok&&!preview.affordable)card.append(node('p','journey-muted','에너지 또는 소탕권이 부족합니다.'));list.append(card);}this.content.append(list);
   }
 }

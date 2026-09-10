@@ -31,3 +31,28 @@ test('failed settlement preserves its result, ticket and journal and explains re
   result.saveError=false;expect(view.openExpedition('forge').ok).toBe(true);
   expect(calls).toEqual(['close','clear-result','lobby','open:forge']);
 });
+
+// Minimal DOM boundary: verify actual render output without a browser or new dependency.
+class MWElement {
+  children:MWElement[]=[];className='';textContent='';style:any={};dataset:any={};attrs:any={};disabled=false;src='';alt='';open=false;value:any;max:any;
+  constructor(public tagName:string){}append(...nodes:MWElement[]){this.children.push(...nodes);}setAttribute(k:string,v:string){this.attrs[k]=v;}addEventListener(){}
+  all():MWElement[]{return this.children.flatMap(c=>[c,...c.all()]);}text():string{return this.textContent+this.children.map(c=>c.text()).join('');}
+}
+function renderFixture(run=false){
+  const v:any=Object.create(MasterworksView.prototype);v.tab=run?'run':'mastery';v.content=new MWElement('div');v.app={};
+  v.battle={active:false,masterworks:{s:{renown:3,discoveries:[],unlocked:[],path:'balanced',challengeIds:[],presets:[]}},run:{enabled:true,picked:[],queue:[]},currentOffer:()=>({kind:'boon',ids:['ember_edge','tide_breath','storm_eye']})};return v;
+}
+function withMWDOM(fn:()=>void){const descriptor=Object.getOwnPropertyDescriptor(globalThis,'document');Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement:(t:string)=>new MWElement(t)}});try{fn();}finally{if(descriptor)Object.defineProperty(globalThis,'document',descriptor);else Reflect.deleteProperty(globalThis,'document');}}
+test('illustrated mastery keeps exact effects, cost and prerequisite while folding introductory rules',()=>withMWDOM(()=>{
+ const view=renderFixture();view.renderMastery();const nodes=view.content.all();
+ expect(nodes.filter((n:MWElement)=>n.tagName==='img'&&n.src.includes('/img/ui-crafted/')).length).toBeGreaterThan(9);
+ expect(nodes.filter((n:MWElement)=>n.tagName==='img').every((n:MWElement)=>n.alt==='')).toBe(true);
+ const details=nodes.filter((n:MWElement)=>n.tagName==='details');expect(details.length).toBeGreaterThan(0);expect(details.every((n:MWElement)=>!n.open)).toBe(true);
+ expect(view.content.text()).toContain('공격력 +2%');expect(view.content.text()).toContain('명성 6');expect(view.content.text()).toContain('이전 단계 필요');
+ expect(nodes.filter((n:MWElement)=>n.tagName==='button').every((n:MWElement)=>n.disabled)).toBe(true);
+}));
+test('boon choice artwork follows actual family and keeps chain cap directly on choice',()=>withMWDOM(()=>{
+ const view=renderFixture(true);view.renderRun();const cards=view.content.all().filter((n:MWElement)=>n.dataset.boon);
+ expect(cards).toHaveLength(3);expect(cards.map((n:MWElement)=>n.children[0].src)).toEqual(['/img/ui-crafted/boon-ember.webp','/img/ui-crafted/boon-tide.webp','/img/ui-crafted/boon-storm.webp']);
+ expect(cards[2].text()).toContain('최대 2명');expect(cards[0].text()).toContain('공격력 +5%');expect(cards.every((n:MWElement)=>n.tagName==='button')).toBe(true);
+}));
