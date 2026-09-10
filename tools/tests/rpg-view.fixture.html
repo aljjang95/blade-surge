@@ -17,7 +17,7 @@ const skeleton={id:'skel_minion',def:{name:'해골 병사'},rank:'일반',level:
 const ghost={...skeleton,id:'ghost',def:{name:'숨겨진 원령'}};
 const captain={...skeleton,id:'elite_skel_captain',def:{name:'해골 대장',behavior:'shield'},rank:'정예',level:3,stats:{hp:5600,atk:51,armor:.25,speed:3.6,range:2.6},xp:60};
 const stats={hp:3200,atk:278,def:46,crit:.15,critDmg:1.8,spd:6,power:3850};
-const view=new RpgView(app,battle,[skeleton,ghost,captain],{HEROES:{knight:{name:'검성 아르카'}},heroStats:()=>stats,levelExp:lv=>Math.floor(100*1.18**(lv-1))});
+const view=new RpgView(app,battle,[skeleton,ghost,captain],{HEROES:{knight:{name:'검성 아르카',portrait:'/img/tll/knight-original-v1.webp'}},heroStats:()=>stats,levelExp:lv=>Math.floor(100*1.18**(lv-1))});
 try{
  assert(view.xpText.textContent.includes('Lv.3'),'HUD reads existing hero level');
  view.open(view.hudButton);assert(view.dialog.open,'Native modal opens');assert(pauses.has('rpg-codex'),'Codex owns a pause reason');
@@ -27,6 +27,9 @@ try{
  view.search.value='없는 몬스터';view.search.dispatchEvent(new Event('input'));assert(view.list.textContent.includes('조건에 맞는'),'Empty search explained');
  view.search.value='해골';view.search.dispatchEvent(new Event('input'));assert(view.list.querySelectorAll('button').length===2,'Discovered name filter');
  view.setTab('hero');assert(view.content.textContent.includes('3,200'),'Hero sheet shows current stats');
+ assert(view.content.querySelector('.rpg-hero-portrait')?.getAttribute('src')==='/img/tll/knight-original-v1.webp','Original hero portrait retained');
+ assert(view.content.querySelector('details')&&!view.content.querySelector('details').open,'Long hero rules start collapsed');
+ assert(view.content.querySelector('.rpg-growth progress')?.value===hero.exp/(Math.floor(100*1.18**(hero.level-1))),'Illustrated growth strip preserves actual XP ratio');
  view.close();await new Promise(resolve=>setTimeout(resolve,30));assert(!pauses.has('rpg-codex')&&pauses.has('manual'),'Closing codex preserves other pause owner');
  assert(document.activeElement===view.hudButton,'Focus returns to opener');
  hero.level=80;hero.exp=999;view.refresh();assert(view.xpText.textContent.includes('MAX')&&view.xpBar.value===1,'Level cap HUD');

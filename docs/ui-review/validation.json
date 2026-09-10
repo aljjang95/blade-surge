@@ -1,0 +1,334 @@
+{
+  "date": "2026-09-11",
+  "environment": "Local production build in Codex IAB; viewport emulation",
+  "checks": {
+    "command": "bun run check",
+    "bun": "1.4.2",
+    "tests": 367,
+    "assertions": 9612,
+    "typecheck": "pass",
+    "build": "pass"
+  },
+  "art": {
+    "acceptedOriginals": 50,
+    "candidateFiles": 64,
+    "bytes": 856482
+  },
+  "runtimeErrors": 0,
+  "fixtures": [
+    {
+      "viewport": [
+        1280,
+        720
+      ],
+      "passed": 21
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ],
+      "passed": 21
+    },
+    {
+      "viewport": [
+        844,
+        390
+      ],
+      "passed": 21
+    }
+  ],
+  "settings": {
+    "before": "true",
+    "afterClick": "false",
+    "afterKeyboard": "true",
+    "restored": true,
+    "mix": [
+      {
+        "key": "sfx",
+        "value": "72"
+      },
+      {
+        "key": "music",
+        "value": "38"
+      },
+      {
+        "key": "voice",
+        "value": "84"
+      }
+    ]
+  },
+  "supersededObservation": "During generation, the development quests-mobile check saw missing mail.webp. The final quests-built-mobile check below passed after all 50 assets were installed.",
+  "panels": [
+    {
+      "bounds": {
+        "height": 662.390625,
+        "width": 960,
+        "x": 160,
+        "y": 28.796875
+      },
+      "brokenVisibleImages": [],
+      "closedDetails": 5,
+      "details": 5,
+      "horizontalOverflow": false,
+      "offscreen": false,
+      "pendingVisibleImages": 0,
+      "scrollContainers": [
+        "arsenal-body"
+      ],
+      "viewport": [
+        1280,
+        720
+      ],
+      "visibleImages": 9,
+      "name": "arsenal-built-desktop"
+    },
+    {
+      "bounds": {
+        "height": 660.375,
+        "width": 1000,
+        "x": 140,
+        "y": 29.8125
+      },
+      "brokenVisibleImages": [],
+      "closedDetails": 2,
+      "details": 2,
+      "horizontalOverflow": false,
+      "offscreen": false,
+      "pendingVisibleImages": 0,
+      "scrollContainers": [
+        "mw-content"
+      ],
+      "viewport": [
+        1280,
+        720
+      ],
+      "visibleImages": 8,
+      "name": "masterworks-built-desktop"
+    },
+    {
+      "bounds": {
+        "height": 763.046875,
+        "width": 356,
+        "x": 17,
+        "y": 40.46875
+      },
+      "brokenVisibleImages": [],
+      "closedDetails": 2,
+      "details": 2,
+      "horizontalOverflow": false,
+      "offscreen": false,
+      "pendingVisibleImages": 0,
+      "scrollContainers": [
+        "mw-content"
+      ],
+      "viewport": [
+        390,
+        844
+      ],
+      "visibleImages": 8,
+      "name": "masterworks-built-mobile"
+    },
+    {
+      "bounds": {
+        "height": 763.046875,
+        "width": 356,
+        "x": 17,
+        "y": 40.46875
+      },
+      "brokenVisibleImages": [],
+      "closedDetails": 1,
+      "details": 1,
+      "horizontalOverflow": false,
+      "offscreen": false,
+      "pendingVisibleImages": 0,
+      "scrollContainers": [
+        "mw-content"
+      ],
+      "viewport": [
+        390,
+        844
+      ],
+      "visibleImages": 10,
+      "name": "mastery-built-mobile"
+    },
+    {
+      "bounds": {
+        "height": 759.25,
+        "width": 356,
+        "x": 17,
+        "y": 42.375
+      },
+      "brokenVisibleImages": [],
+      "closedDetails": 1,
+      "details": 1,
+      "horizontalOverflow": false,
+      "offscreen": false,
+      "pendingVisibleImages": 0,
+      "scrollContainers": [
+        "journey-content"
+      ],
+      "viewport": [
+        390,
+        844
+      ],
+      "visibleImages": 11,
+      "name": "journey-built-mobile"
+    },
+    {
+      "bounds": {
+        "height": 759.25,
+        "width": 356,
+        "x": 17,
+        "y": 42.375
+      },
+      "brokenVisibleImages": [],
+      "closedDetails": 2,
+      "details": 2,
+      "horizontalOverflow": false,
+      "offscreen": false,
+      "pendingVisibleImages": 0,
+      "scrollContainers": [
+        "journey-content"
+      ],
+      "viewport": [
+        390,
+        844
+      ],
+      "visibleImages": 10,
+      "name": "contracts-built-mobile"
+    },
+    {
+      "bounds": {
+        "height": 685.8172607421875,
+        "width": 362.399169921875,
+        "x": 13.792587280273438,
+        "y": 78.07730102539062
+      },
+      "brokenVisibleImages": [],
+      "closedDetails": 0,
+      "details": 0,
+      "horizontalOverflow": false,
+      "offscreen": false,
+      "pendingVisibleImages": 0,
+      "scrollContainers": [],
+      "viewport": [
+        390,
+        844
+      ],
+      "visibleImages": 1,
+      "name": "settings-built-mobile"
+    },
+    {
+      "bounds": {
+        "height": 358.796875,
+        "width": 560,
+        "x": 142,
+        "y": 15.59375
+      },
+      "brokenVisibleImages": [],
+      "closedDetails": 0,
+      "details": 0,
+      "horizontalOverflow": false,
+      "offscreen": false,
+      "pendingVisibleImages": 0,
+      "scrollContainers": [],
+      "viewport": [
+        844,
+        390
+      ],
+      "visibleImages": 1,
+      "name": "settings-built-landscape"
+    },
+    {
+      "bounds": {
+        "height": 651,
+        "width": 390,
+        "x": 0,
+        "y": 129
+      },
+      "brokenVisibleImages": [],
+      "closedDetails": 0,
+      "details": 0,
+      "horizontalOverflow": false,
+      "offscreen": false,
+      "pendingVisibleImages": 0,
+      "scrollContainers": [
+        "exp-scroll"
+      ],
+      "viewport": [
+        390,
+        844
+      ],
+      "visibleImages": 10,
+      "name": "quests-built-mobile"
+    },
+    {
+      "bounds": {
+        "height": 414.7375183105469,
+        "width": 362.4041748046875,
+        "x": 13.790115356445312,
+        "y": 213.60794067382812
+      },
+      "brokenVisibleImages": [],
+      "closedDetails": 0,
+      "details": 0,
+      "horizontalOverflow": false,
+      "offscreen": false,
+      "pendingVisibleImages": 0,
+      "scrollContainers": [],
+      "viewport": [
+        390,
+        844
+      ],
+      "visibleImages": 8,
+      "name": "daily-built-mobile"
+    },
+    {
+      "bounds": {
+        "height": 776.46875,
+        "width": 352,
+        "x": 19,
+        "y": 33.765625
+      },
+      "brokenVisibleImages": [],
+      "closedDetails": 5,
+      "details": 5,
+      "horizontalOverflow": false,
+      "offscreen": false,
+      "pendingVisibleImages": 0,
+      "scrollContainers": [
+        "arsenal-body"
+      ],
+      "viewport": [
+        390,
+        844
+      ],
+      "visibleImages": 14,
+      "name": "arsenal-built-mobile"
+    },
+    {
+      "bounds": {
+        "height": 759.25,
+        "width": 356,
+        "x": 17,
+        "y": 42.375
+      },
+      "brokenVisibleImages": [],
+      "closedDetails": 2,
+      "details": 2,
+      "horizontalOverflow": false,
+      "offscreen": false,
+      "pendingVisibleImages": 0,
+      "scrollContainers": [
+        "journey-content"
+      ],
+      "viewport": [
+        390,
+        844
+      ],
+      "visibleImages": 10,
+      "name": "contracts-final-mobile"
+    }
+  ]
+}

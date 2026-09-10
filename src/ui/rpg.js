@@ -14,6 +14,12 @@ function statGrid(values) {
   for (const [key, value] of values) { const item = node('div'); item.append(node('dt', '', key), node('dd', '', value)); dl.append(item); }
   return dl;
 }
+function illustration(id,cls='rpg-illustration') { const image=node('img',cls);image.src=`/img/ui-crafted/${id}.webp`;image.alt='';image.setAttribute('aria-hidden','true');return image; }
+function portraitOf(def,cls) {
+  if(typeof def?.portrait!=='string'||!/^\/img\/[\w/.-]+\.(webp|png|jpg)$/.test(def.portrait))return null;
+  const image=node('img',cls);image.src=def.portrait;image.alt=def.name;image.loading='lazy';image.addEventListener('error',()=>image.remove(),{once:true});return image;
+}
+function folded(label,text) {const section=node('details','rpg-notes');section.append(node('summary','',label),node('p','rpg-muted',text));return section;}
 
 /** DOM-only view. Data is rendered as text; native dialog owns focus and Escape. */
 export class RpgView {
@@ -27,6 +33,7 @@ export class RpgView {
     const tabs = node('nav', 'rpg-tabs'); tabs.setAttribute('aria-label', '원정 기록 메뉴');
     this.heroTab = button('영웅 능력치', () => this.setTab('hero'));
     this.monsterTab = button('몬스터 도감', () => this.setTab('bestiary'));
+    this.heroTab.append(illustration('nav-heroes','rpg-tab-art'));this.monsterTab.append(illustration('nav-journal','rpg-tab-art'));
     tabs.append(this.heroTab, this.monsterTab);
     this.content = node('div', 'rpg-content');
     this.dialog.append(head, tabs, this.content); document.body.append(this.dialog);
@@ -75,19 +82,21 @@ export class RpgView {
     const { hero, def, stats } = this.heroData();
     const capped = hero.level >= HERO_LEVEL_CAP, need = this.rules.levelExp(hero.level);
     const box = node('section', 'rpg-hero');
-    box.append(node('p', 'rpg-eyebrow', '함께 성장하는 원정'), node('h3', '', `Lv.${hero.level} ${def.name}`),
-      node('p', 'rpg-muted', capped ? '최고 레벨 달성' : `EXP ${number(hero.exp)} / ${number(need)} · 다음 레벨까지 ${number(Math.max(0, need - hero.exp))}`));
+    const cover=node('div','rpg-hero-cover'),portrait=portraitOf(def,'rpg-hero-portrait'),identity=node('div');
+    if(portrait)cover.append(portrait);
+    identity.append(node('h3','',`Lv.${hero.level} ${def.name}`),node('p','rpg-muted',capped?'최고 레벨':`EXP ${number(hero.exp)} / ${number(need)}`));cover.append(identity);box.append(cover);
+    const growth=node('div','rpg-growth'),progress=node('progress');progress.max=1;progress.value=capped?1:Math.max(0,Math.min(1,hero.exp/need));progress.setAttribute('aria-label','다음 레벨까지의 경험치');
+    growth.append(illustration('hero-xp'),progress,node('span','',capped?'MAX':`다음 레벨 ${number(Math.max(0,need-hero.exp))}`));box.append(growth);
     box.append(statGrid([['전투력', number(stats.power)], ['최대 체력', number(stats.hp)], ['공격력', number(stats.atk)],
       ['방어력', number(stats.def)], ['치명타 확률', `${Math.round(stats.crit * 100)}%`], ['치명타 피해', `${Math.round(stats.critDmg * 100)}%`],
       ['이동 속도', String(stats.spd)], ['승급', `${hero.star}성`]]));
-    box.append(node('p', 'rpg-muted', '장착 장비와 레벨을 반영한 기본 능력치입니다. 전투 중 일시 강화 효과는 제외합니다.'),
-      node('p', 'rpg-rule', '몬스터 처치 경험치는 즉시 반영됩니다. 스테이지 완료 경험치는 별도 보상이며, 소환된 몬스터는 처치 경험치를 주지 않습니다.'));
+    box.append(node('p','rpg-reference','장비 · 레벨 기준'),folded('능력치 · 경험치 기준','장착 장비와 레벨을 반영한 기본 능력치입니다. 전투 중 일시 강화 효과는 제외합니다. 몬스터 처치 경험치는 즉시 반영됩니다. 스테이지 완료 경험치는 별도 보상이며, 소환된 몬스터는 처치 경험치를 주지 않습니다.'));
     this.content.append(box);
   }
   renderBestiary() {
     const records = this.battle.ensureRpg().bestiary;
     const discovered = this.catalogue.filter(entry => records[entry.id]?.seen).length;
-    this.content.append(node('p', 'rpg-summary', `발견 ${discovered} / ${this.catalogue.length}종 · 실제 만난 몬스터만 기록됩니다.`));
+    const cover=node('div','rpg-book-cover');cover.append(illustration('nav-journal'),node('p','rpg-summary',`발견 ${discovered} / ${this.catalogue.length}`));this.content.append(cover);
     const filters = node('div', 'rpg-filters');
     this.search = node('input'); this.search.type = 'search'; this.search.placeholder = '발견한 몬스터 검색'; this.search.value = this.query;
     this.search.setAttribute('aria-label', '발견한 몬스터 이름 검색');
@@ -109,10 +118,11 @@ export class RpgView {
     if (!filtered.some(entry => entry.id === this.selected)) this.selected = filtered.find(entry => records[entry.id]?.seen)?.id || filtered[0]?.id || null;
     for (const entry of filtered) {
       const record = records[entry.id], found = !!record?.seen;
-      const item = button('', () => { this.selected = entry.id; this.renderList(); }); item.dataset.monster = entry.id;
+      const item = button('', () => { this.selected = entry.id; this.renderList(); this.detail.scrollIntoView?.({block:'nearest',behavior:'auto'}); }); item.dataset.monster = entry.id;
       item.setAttribute('aria-pressed', String(entry.id === this.selected));
-      item.append(node('span', 'rpg-rank', entry.rank), node('strong', '', found ? entry.def.name : '미발견 몬스터'),
-        node('small', '', found ? `${masteryLabel(record)} · ${number(record.kills)}회 처치` : '원정에서 만나면 기록이 열립니다'));
+      const portrait=found?portraitOf(entry.def,'rpg-list-portrait'):null;
+      if(portrait)item.append(portrait);
+      const label=node('div','rpg-list-label');label.append(node('span','rpg-rank',entry.rank),node('strong','',found?entry.def.name:'미발견'),node('small','',found?`${masteryLabel(record)} · ${number(record.kills)}회`:'기록 잠김'));item.append(label);
       this.list.append(item);
     }
     if (!filtered.length) this.list.append(node('p', 'rpg-empty', '조건에 맞는 발견 기록이 없습니다.'));
@@ -122,13 +132,10 @@ export class RpgView {
     this.detail.replaceChildren();
     if (!entry) { this.detail.append(node('p', 'rpg-empty', '다른 검색어나 등급을 선택하세요.')); return; }
     const record = records[entry.id];
-    if (!record?.seen) { this.detail.append(node('p', 'rpg-eyebrow', '아직 열리지 않은 기록'), node('h3', '', '미발견 몬스터'), node('p', 'rpg-muted', '이 몬스터와 조우하면 이름, 능력치, 출현 지역과 처치 기록이 공개됩니다.')); return; }
+    if (!record?.seen) { this.detail.append(illustration('nav-journal','rpg-locked-art'), node('h3', '', '미발견 몬스터'), node('p', 'rpg-muted', '조우하면 기록이 열립니다.')); return; }
     this.detail.append(node('p', 'rpg-eyebrow', `${entry.rank} · ${masteryLabel(record)}`), node('h3', '', entry.def.name),
       node('p', 'rpg-muted', `최고 조우 Lv.${record.highestLevel} · ${number(record.kills)}회 처치`));
-    if (typeof entry.def.portrait === 'string' && /^\/img\/[\w/.-]+\.(webp|png|jpg)$/.test(entry.def.portrait)) {
-      const portrait = node('img', 'rpg-portrait'); portrait.src = entry.def.portrait; portrait.alt = entry.def.name; portrait.loading = 'lazy';
-      portrait.addEventListener('error', () => portrait.remove(), { once: true }); this.detail.append(portrait);
-    }
+    const portrait=portraitOf(entry.def,'rpg-portrait');if(portrait)this.detail.append(portrait);
     this.detail.append(node('p', 'rpg-reference', `${entry.reference} · Lv.${entry.level}`), statGrid([
       ['체력', number(entry.stats.hp)], ['공격력', number(entry.stats.atk)], ['피해 감소', `${Math.round(entry.stats.armor * 100)}%`],
       ['처치 EXP', number(entry.xp)], ['이동 속도', String(entry.stats.speed)], ['공격 거리', String(entry.stats.range)]
@@ -141,8 +148,8 @@ export class RpgView {
     if (entry.def.behavior === 'bomber') facts.push('접근 후 자폭');
     if (entry.def.behavior === 'shaman') facts.push('주변 아군 회복 및 소환');
     if (entry.def.tactic) facts.push(entry.def.tactic);
-    this.detail.append(node('h4', '', '전투 특징'), node('p', '', facts.join(' · ') || '접근 공격과 공격 예고를 확인하세요.'),
-      node('p', 'rpg-rule', '능력치는 표시된 기준 구역의 값입니다. 진행 구역에 따라 달라지며, 도감 연구 단계 자체는 추가 보상을 지급하지 않습니다.'));
+    const tactics=folded('전투 특징',facts.join(' · ')||'접근 공격과 공격 예고를 확인하세요.');tactics.append(illustration('posture-break','rpg-tactic-art'));
+    this.detail.append(tactics,folded('기록 기준','능력치는 표시된 기준 구역의 값입니다. 진행 구역에 따라 달라지며, 도감 연구 단계 자체는 추가 보상을 지급하지 않습니다.'));
   }
   levelUp(level, count) {
     this.announcement.textContent = `LEVEL UP · Lv.${level}${count > 1 ? ` (+${count})` : ''}`;
