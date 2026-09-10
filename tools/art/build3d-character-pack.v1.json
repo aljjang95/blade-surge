@@ -1,0 +1,172 @@
+{
+  "schema": "tll.blade-surge.build3d-character-pack.v1",
+  "status": "preflight-ready",
+  "createdFor": "BLADE SURGE",
+  "generatorDoctrine": "Build 3D Game Rooms",
+  "strategy": {
+    "mode": "rigid-identity-parts-first",
+    "reason": "Build3D Image-to-3D is suitable for isolated rigid fittings; deforming body, hair and cloth stay on the authored Blender fitting and shipped combat rig.",
+    "identitySource": "approved original-v1 portraits",
+    "meshyInput": "new isolated part reference only; never send the whole gameplay character as an unsegmented replacement",
+    "promotion": "accepted part -> Blender fit/scale/orient -> tllBone metadata -> assembleHeroIdentity -> real gameplay-camera review"
+  },
+  "targetRuntime": {
+    "engine": "three.js",
+    "format": "glb",
+    "productionCamera": "landscape gameplay camera is authoritative",
+    "assembly": "src/engine/hero-identity.js#assembleHeroIdentity",
+    "rigPolicy": "preserve shipped hero skeleton, animation clips and weapon sockets",
+    "sourceRigRoot": "/models",
+    "fittingRoot": "/models/tll"
+  },
+  "qualityGates": {
+    "identity": "must preserve approved original-v1 character identity and head-to-body ratio",
+    "authoredVerticesPerSkinMax": 25000,
+    "meshReadyReferenceRequired": true,
+    "referenceImageApprovalRequired": true,
+    "wholeCharacterMeshyReplacementAllowed": false,
+    "meshy": {
+      "enabled": false,
+      "reason": "paid generation requires explicit owner spend approval",
+      "aiModel": "meshy-5",
+      "modelType": "standard",
+      "topology": "triangle",
+      "textures": true,
+      "pbr": true,
+      "textureResolution": "2k",
+      "chargedAttemptsPerAssetMax": 2,
+      "apiKeyPolicy": "environment-only; never persist or print",
+      "inputDisclosure": "approved isolated part reference leaves the local environment for Meshy",
+      "pricingSnapshot": {
+        "checkedAt": "2026-09-08",
+        "source": "https://docs.meshy.ai/en/api/pricing",
+        "meshy5ImageTo3DWithTextureCreditsPerCall": 15,
+        "mustRecheckImmediatelyBeforeSubmission": true
+      }
+    },
+    "runtimeAcceptance": [
+      "all required combo/skill/state animation aliases remain present",
+      "handslot.r socket remains resolvable for playable heroes",
+      "authored fitting binds to the source skeleton without replacing combat animation authority",
+      "no NaN/Inf positions after assembly",
+      "clone/dispose does not dispose shared source geometry",
+      "part scale and silhouette beat the casual-v2 baseline in the real landscape gameplay camera",
+      "rollback path to casual-v2 remains intact"
+    ]
+  },
+  "characters": [
+    {
+      "id": "knight",
+      "name": "검성 아르카",
+      "model": "Knight",
+      "approvedSource": "/img/tll/knight-original-v1.webp",
+      "approvedSourceSha256": "fa7a28c784c198e8c5f7f052f919515f485a4ede55a939d0004038db87e27cf7",
+      "sourceRig": "/models/Knight.glb",
+      "baselineFitting": "/models/tll/knight-casual-v2.glb",
+      "recoveryFitting": "/models/tll/knight-oath-v1.glb",
+      "identityLocks": ["ivory crown", "split cuirass", "approved face/hair identity", "approved head-to-body ratio"],
+      "weaponContract": ["1H_Sword", "Round_Shield"],
+      "meshyParts": [
+        {
+          "id": "arca-crown",
+          "function": "identity-defining head fitting",
+          "attachmentBone": "head",
+          "semanticFront": "+Z",
+          "polygonTarget": 3500,
+          "reuseClass": "hero-unique",
+          "imagePrompt": "Single isolated coronet from the approved Arca knight identity: elegant ivory enamel crown with restrained brushed pale-gold structure, slender tips and a centered oath crest. No head, face, hair, body, weapon, text or logo. Entire object uncropped with visible inner band, thickness and rear construction, clean three-quarter front view, neutral perspective, soft even studio light, plain light-gray background, game-ready PBR material readability, no glow and no floating pieces.",
+          "rejectionCriteria": ["generic royal crown", "chunky toy crown", "closed helmet", "floating disconnected tips", "cropped rear/underside", "identity silhouette drift"]
+        },
+        {
+          "id": "arca-split-cuirass",
+          "function": "identity-defining chest armour fitting",
+          "attachmentBone": "chest",
+          "semanticFront": "+Z",
+          "polygonTarget": 7000,
+          "reuseClass": "hero-unique",
+          "imagePrompt": "Single isolated split ivory cuirass from the approved Arca knight identity. Refined ivory enamel plate armour with restrained pale-gold fasteners, clearly separated left and right breastplate language, readable side depth and back fastening, premium stylized game asset. No person, head, arms, cape, sword, shield, text or logo. Entire object uncropped, clean three-quarter front view, neutral perspective, soft even studio light, plain light-gray background, no glow, no fused neighboring props.",
+          "rejectionCriteria": ["generic full plate armour", "single solid barrel chest", "ornament overload", "cropped side/back construction", "weapon fused into armour", "silhouette worse than casual-v2"]
+        }
+      ]
+    },
+    {
+      "id": "barbarian",
+      "name": "광전사 드라칸",
+      "model": "Barbarian",
+      "approvedSource": "/img/tll/barbarian-original-v1.webp",
+      "approvedSourceSha256": "1abe9dd36a60e00140deda6143126e81144485825564af697a7e9e1ccf8abd7d",
+      "sourceRig": "/models/Barbarian.glb",
+      "baselineFitting": "/models/tll/barbarian-casual-v2.glb",
+      "recoveryFitting": "/models/tll/barbarian-oath-v1.glb",
+      "identityLocks": ["exposed torso", "war harness", "asymmetric shoulder armour", "approved head-to-body ratio"],
+      "weaponContract": ["2H_Axe"],
+      "meshyParts": [
+        {
+          "id": "drakan-asymmetric-pauldron",
+          "function": "identity-defining shoulder armour fitting",
+          "attachmentBone": "chest",
+          "semanticFront": "+Z",
+          "polygonTarget": 4500,
+          "reuseClass": "hero-unique",
+          "imagePrompt": "Single isolated asymmetric shoulder armour piece from the approved Drakan barbarian identity: rugged dark forged plate, compact layered profile, restrained brass fastening and a deliberate one-sided silhouette. No body, skin, arm, axe, blood, text or logo. Entire object uncropped, visible underside strap path and side thickness, clean three-quarter view, neutral perspective, even studio light, plain light-gray background, premium stylized game PBR material.",
+          "rejectionCriteria": ["symmetrical pair", "generic spiked MMO pauldron", "gore", "oversized silhouette that hides the head", "cropped underside", "floating fragments"]
+        }
+      ]
+    },
+    {
+      "id": "mage",
+      "name": "대마도사 리아",
+      "model": "Mage",
+      "approvedSource": "/img/tll/mage-original-v1.webp",
+      "approvedSourceSha256": "5a3dfbc3761debf0eddf47a34ec09fd052ce6e3eebc8f6f77f1e11ca7f690e5d",
+      "sourceRig": "/models/Mage.glb",
+      "baselineFitting": "/models/tll/mage-casual-v2.glb",
+      "recoveryFitting": "/models/tll/mage-oath-v1.glb",
+      "identityLocks": ["long astral robe stays Blender-authored", "star diadem", "approved face/hair identity", "approved head-to-body ratio"],
+      "weaponContract": ["2H_Staff"],
+      "meshyParts": [
+        {
+          "id": "ria-star-diadem",
+          "function": "identity-defining head fitting",
+          "attachmentBone": "head",
+          "semanticFront": "+Z",
+          "polygonTarget": 3000,
+          "reuseClass": "hero-unique",
+          "imagePrompt": "Single isolated star diadem from the approved Ria mage identity: delicate dark-blue and pale-gold astral circlet with one integrated star-shaped setting and restrained blue gemstone. No head, face, hair, robe, staff, text or logo. Entire circlet uncropped with rear band and real thickness visible, clean three-quarter front view, neutral perspective, soft even studio light, plain light-gray background, premium stylized game PBR material, no magical glow.",
+          "rejectionCriteria": ["generic tiara", "oversized princess crown", "floating star pieces", "neon glow hiding geometry", "cropped rear band", "identity drift"]
+        }
+      ]
+    },
+    {
+      "id": "rogue",
+      "name": "암살자 카인",
+      "model": "Rogue",
+      "approvedSource": "/img/tll/rogue-original-v1.webp",
+      "approvedSourceSha256": "373727c95a38283f40e22be44bb99f630722b50a47cf8676816bc0a324728ed2",
+      "sourceRig": "/models/Rogue.glb",
+      "baselineFitting": "/models/tll/rogue-casual-v2.glb",
+      "recoveryFitting": "/models/tll/rogue-oath-v1.glb",
+      "identityLocks": ["dark hood stays Blender-authored", "lower-face mask", "diagonal baldric", "approved head-to-body ratio"],
+      "weaponContract": ["Knife", "Knife_Offhand"],
+      "meshyParts": [
+        {
+          "id": "cain-half-mask",
+          "function": "identity-defining face fitting",
+          "attachmentBone": "head",
+          "semanticFront": "+Z",
+          "polygonTarget": 2500,
+          "reuseClass": "hero-unique",
+          "imagePrompt": "Single isolated lower-face mask from the approved Cain rogue identity: compact dark woven-and-reinforced half mask with a restrained diagonal fastening language and one subtle oath detail. No head, face, hood, body, knives, text or logo. Entire mask uncropped with inner contour and side wraps visible, clean three-quarter front view, neutral perspective, soft even studio light, plain light-gray background, premium stylized game material, no spikes or cyberpunk elements.",
+          "rejectionCriteria": ["generic ninja mask", "cyberpunk respirator", "full-face helmet", "oversized mask", "cropped side wraps", "identity drift"]
+        }
+      ]
+    }
+  ],
+  "pilot": {
+    "characterId": "knight",
+    "partId": "arca-crown",
+    "reason": "small rigid identity-critical part can prove source fidelity, orientation, scale normalization and bone attachment without risking the combat rig",
+    "nextGate": "generate one isolated arca-crown reference image, obtain explicit image approval, then obtain explicit 15-credit Meshy spend approval before submission",
+    "paidGeneration": "not-authorized"
+  }
+}
