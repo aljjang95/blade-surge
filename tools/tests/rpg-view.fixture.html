@@ -1,0 +1,43 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RPG component fixture — not gameplay</title><link rel="stylesheet" href="../../src/ui/rpg.css"><style>body{margin:0;background:#263537;color:#eee;font-family:sans-serif}#fixture-note{padding:10px;font-size:12px}.hud-bars{width:190px}.hud-top{display:flex;justify-content:space-between;gap:10px}.hud-right-top{display:flex;gap:10px}#hud{padding:12px}.lobby-left{position:fixed;bottom:10px;left:10px}#test-result{display:none}</style></head><body>
+<div id="fixture-note">컴포넌트 검증용 화면 · 실제 전투 장면 아님</div>
+<div id="hud"><div class="hud-top"><div class="hud-bars"></div><div class="hud-center"></div><div class="hud-right-top"></div></div></div><div class="lobby-left"></div><div class="result-stats"></div><pre id="test-result"></pre>
+<script type="module">
+import {RpgView} from '../../src/ui/rpg.js';
+import {normalizeRpg,recordMonster} from '../../src/game/rpg-core.js';
+const results=[];const assert=(condition,name)=>{results.push({name,pass:!!condition});if(!condition)throw Error(name)};
+const rpg=normalizeRpg(null,['skel_minion','ghost','elite_skel_captain']);
+recordMonster(rpg,'skel_minion',3,3);recordMonster(rpg,'skel_minion',3,3,true);
+recordMonster(rpg,'elite_skel_captain',5,3);
+const hero={level:3,exp:28,star:1},s={selected:'knight',rpg};
+const app={mode:'battle',stageStarting:false,eco:{s,hero:()=>hero,heroEquipBonus:()=>({})}};
+const pauses=new Set(['manual']);
+const battle={heroId:'knight',active:true,player:{distTo:()=>3},combatXp:240,result:null,
+ ensureRpg:()=>s.rpg,setPaused:(reason,on)=>on?pauses.add(reason):pauses.delete(reason)};
+const skeleton={id:'skel_minion',def:{name:'해골 병사'},rank:'일반',level:1,stats:{hp:490,atk:20,armor:0,speed:4.6,range:1.9},xp:8,reference:'1-1 기준',locations:[{chapter:'잊힌 종의 정원'}]};
+const ghost={...skeleton,id:'ghost',def:{name:'숨겨진 원령'}};
+const captain={...skeleton,id:'elite_skel_captain',def:{name:'해골 대장',behavior:'shield'},rank:'정예',level:3,stats:{hp:5600,atk:51,armor:.25,speed:3.6,range:2.6},xp:60};
+const stats={hp:3200,atk:278,def:46,crit:.15,critDmg:1.8,spd:6,power:3850};
+const view=new RpgView(app,battle,[skeleton,ghost,captain],{HEROES:{knight:{name:'검성 아르카'}},heroStats:()=>stats,levelExp:lv=>Math.floor(100*1.18**(lv-1))});
+try{
+ assert(view.xpText.textContent.includes('Lv.3'),'HUD reads existing hero level');
+ view.open(view.hudButton);assert(view.dialog.open,'Native modal opens');assert(pauses.has('rpg-codex'),'Codex owns a pause reason');
+ assert(!view.content.textContent.includes('숨겨진 원령'),'Undiscovered name not leaked');
+ assert(view.content.textContent.includes('490'),'Actual reference stats shown');
+ view.selected='ghost';view.renderList();assert(!view.detail.textContent.includes('490'),'Undiscovered detail hides stats');
+ view.search.value='없는 몬스터';view.search.dispatchEvent(new Event('input'));assert(view.list.textContent.includes('조건에 맞는'),'Empty search explained');
+ view.search.value='해골';view.search.dispatchEvent(new Event('input'));assert(view.list.querySelectorAll('button').length===2,'Discovered name filter');
+ view.setTab('hero');assert(view.content.textContent.includes('3,200'),'Hero sheet shows current stats');
+ view.close();await new Promise(resolve=>setTimeout(resolve,30));assert(!pauses.has('rpg-codex')&&pauses.has('manual'),'Closing codex preserves other pause owner');
+ assert(document.activeElement===view.hudButton,'Focus returns to opener');
+ hero.level=80;hero.exp=999;view.refresh();assert(view.xpText.textContent.includes('MAX')&&view.xpBar.value===1,'Level cap HUD');
+ battle.lastTarget={alive:true,spawning:false,level:5,def:{name:'해골 대장'},hp:1400,maxHp:5600};view.refresh();assert(view.target.textContent.includes('Lv.5')&&!view.target.hidden,'Target level and HP exposed');
+ battle.lastTarget.alive=false;view.refresh();assert(view.target.hidden,'Dead target card cleared');
+ battle.result={win:false};view.refresh();assert(view.result.textContent.includes('이미 반영'),'Result never offers XP twice');
+ hero.level=3;hero.exp=28;view.tab='bestiary';view.query='';view.rank='';view.selected='elite_skel_captain';view.open(view.hudButton);
+ await new Promise(resolve=>setTimeout(resolve,30));
+ assert(view.dialog.getBoundingClientRect().width<=innerWidth,'Dialog fits viewport');
+ assert(document.documentElement.scrollWidth<=innerWidth,'No horizontal document overflow');
+ const rect=view.dialog.getBoundingClientRect();assert(rect.top>=0&&rect.bottom<=innerHeight+1,'Dialog fits height');
+ document.getElementById('test-result').textContent=JSON.stringify({fixture:true,viewport:[innerWidth,innerHeight],results,pass:results.every(x=>x.pass)});
+}catch(e){document.getElementById('test-result').textContent=JSON.stringify({pass:false,error:String(e),results});}
+</script></body></html>
