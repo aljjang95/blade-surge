@@ -243,7 +243,7 @@ export class Player extends Actor {
     if (this.state === 'skill' && this.skillCtx && !this.skillCtx.done) return false;
     this.stopTrail();
     const impl = SKILLS[sk.id]; if (!impl) return false;
-    if (sk.ult) { this.ult = 0; this.state = 'ult'; } else { this.cds[i] = sk.cd; this.state = 'skill'; }
+    if (sk.ult) { this.ult = 0; this.state = 'ult'; } else { this.cds[i] = this.game.skillCooldown?.(sk.cd) ?? sk.cd; this.state = 'skill'; }
     this.stateT = 0; this.vel.set(0, 0, 0);
     this.autoAim(12);
     const lvMult = 1 + (this.skillLevels[i] - 1) * 0.12;
@@ -286,6 +286,8 @@ export class Player extends Actor {
       this.game.fx.holyBurst(this.pos.clone().setY(1.1), { size: 2.6, life: 0.25 });
     }
     if ((this.tonicGuardT || 0) > 0) red = Math.max(1, Math.round(red * .7));
+    red = this.game.absorbDamage?.(red) ?? red;
+    if (red <= 0) { this.game.fx.damage(this.pos,0,{text:'보호막'}); return false; }
     this.hp -= red;
     this.flash(0xff4040, 0.15);
     this.game.fx.damage(this.pos, red, { kind: 'self' });
