@@ -415,10 +415,9 @@ export class Meta {
     const s = this.eco.s; const vipNext = [0, 1, 20000, 50000, 100000, 300000];
     this.ui.modal(`<h2 id="profile-name"></h2><p>VIP ${s.vip} · 누적 결제 ₩${fmt(s.spentKRW)} (목업)<br>${s.vip < 5 ? `다음 VIP까지 ₩${fmt(vipNext[s.vip + 1] - s.spentKRW)}` : '최고 등급'}</p><p>VIP 혜택: 에너지 최대 +50 · 골드 +30% · 소탕권 매일 5장${this.eco.isVip ? ' <b style="color:var(--green)">(활성)</b>' : ' <b style="color:var(--red)">(VIP 멤버십 필요)</b>'}</p><p>총 소환 ${s.totalPulls}회 · 처치 ${s.quests.kills} · 클리어 ${s.quests.stages}</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-vip">VIP 멤버십</button></div>`, { onOpen: (b) => { b.querySelector('#profile-name').textContent = s.name; b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-vip').onclick = () => { this.ui.closeModal(); this.buy('vip_pass'); }; } });
   }
-  /** 로비 진입 시 자동 팝업: 출석 → 스타터팩 */
+  /** 로비 진입 시 받을 수 있는 무료 출석 보상만 안내한다. */
   autoPopups() {
-    if (this.app.mode !== 'lobby' || this.app.companionAgent?.getSnapshot().open || document.getElementById('modal').classList.contains('show')) return;
+    if (this.app.mode !== 'lobby' || this.app.companionAgent?.getSnapshot().open || document.querySelector('dialog[open]') || document.getElementById('modal').classList.contains('show')) return;
     if (this.eco.dailyAvailable()) { this.showDaily(); return; }
-    if (!this.eco.s.purchases.includes('starter') && Math.random() < 0.5) this.buy('starter');
   }
 }

@@ -1,5 +1,7 @@
 import { DUNGEONS, ARENA_RIVALS, MATERIALS, MATERIAL_REFINING, CONSUMABLES, JOBS, RECIPES, EXPEDITION_QUESTS, accountLevelXp } from '../data/expansion.js';
 import { ITEM_BY_ID } from '../data/items.js';
+import { normalizeJourney, refreshPeriods, recordJourneyWin } from './journey-core.js';
+import { riftForDay, riftBonus } from './journey-rifts.js';
 const find = (list, id) => list.find(x => x.id === id);
 const obj = x => x && typeof x === 'object' && !Array.isArray(x) ? x : {};
 const num = (x, fallback = 0) => Number.isSafeInteger(x) && x >= 0 ? Math.min(x, 100000000) : fallback;
@@ -20,6 +22,7 @@ export class ExpeditionEconomy {
   constructor(eco) {
     this.eco = eco; this.receipts = new WeakSet();
     eco.s.expedition = normalizeExpedition(eco.s.expedition);
+    eco.s.journey = normalizeJourney(eco.s.journey);
     // A page reload cancels an unfinished start once; no durable payable ticket survives.
     if (this.s.pending) { this.s.seq = Math.max(this.s.seq, this.s.pending.id); this.eco.s.energy += this.s.pending.energy; this.s.pending = null; this.eco.rollbackEnergy({ energy: eco.s.energy, energyT: eco.s.energyT }); }
   }
@@ -40,17 +43,22 @@ export class ExpeditionEconomy {
     return result;
   }
   dungeonAccess(id) { const d = find(DUNGEONS, id); return { ok: !!d && this.s.level >= d.minLevel, error: !d ? '알 수 없는 던전입니다.' : this.s.level < d.minLevel ? `탐험 레벨 ${d.minLevel} 필요` : null }; }
-  begin(kind, id) {
+  begin(kind, id, { rift = false } = {}) {
     const d = find(kind === 'dungeon' ? DUNGEONS : kind === 'arena' ? ARENA_RIVALS : [], id);
     if (!d) return { ok: false, error: '알 수 없는 전투입니다.' };
     if (this.s.pending) return { ok: false, error: '진행 중인 전투를 먼저 마쳐 주세요.' };
     if (this.s.level < d.minLevel) return { ok: false, error: `탐험 레벨 ${d.minLevel} 필요` };
     return this.transact(() => {
+      const period = refreshPeriods(this.eco.s.journey, Date.now());
+      const rotation = DUNGEONS[((period.day % 3) + 3) % 3].id;
+      if (rift && (kind !== 'dungeon' || id !== rotation)) return { ok: false, error: '오늘의 회전 던전에서 균열에 도전해 주세요.' };
       this.eco.tickEnergy();
       if (this.eco.s.energy < d.energy) return { ok: false, error: '에너지가 부족합니다.' };
       if (this.eco.s.energy >= this.eco.energyMax) this.eco.s.energyT = Date.now();
       this.eco.s.energy -= d.energy;
       const ticket = { id: ++this.s.seq, kind, target: id, energy: d.energy, heroId: this.eco.s.selected };
+      ticket.journeyPeriod = { day: period.day, week: period.week };
+      if (rift) ticket.riftId = riftForDay(period.day).id;
       this.s.pending = ticket;
       return { ok: true, ticket: { ...ticket } };
     });
@@ -80,6 +88,15 @@ export class ExpeditionEconomy {
       this.s.stats[p.kind === 'dungeon' ? 'dungeonWins' : 'arenaWins']++;
       if (p.kind === 'dungeon') this.s.stats[p.target]++;
       const rewards = this.reward(def.rewards);
+      if (p.kind === 'dungeon') {
+        refreshPeriods(this.eco.s.journey, Date.now());
+        recordJourneyWin(this.eco.s.journey, { receiptId: `dungeon:${p.id}`, dungeonId: p.target, ...p.journeyPeriod });
+        if (p.riftId) {
+          const bonus = this.reward(riftBonus(p.target)); rewards.gold += bonus.gold;
+          for (const [key, count] of Object.entries(bonus.materials)) rewards.materials[key] = (rewards.materials[key] || 0) + count;
+          rewards.riftId = p.riftId;
+        }
+      }
       // Field gear is allocated by Battle.rollDrop already. Only collected field
       // currency is paid here; bounded inputs cannot produce NaN/negative grants.
       // Free AI practice never pays campaign boss drops, even if an old or
@@ -116,6 +133,31 @@ export class ExpeditionEconomy {
     const out = this.transact(() => { this.s.campaignReceipts.push(id); this.s.stats.campaignWins++; return { ok: true, rewards: this.reward({ xp: 35 }) }; });
     if (out.ok) this.receipts.add(result);
     return out;
+  }
+  sweepPreview(id, count = 1) {
+    const d = find(DUNGEONS, id);
+    if (!d || !Number.isInteger(count) || count < 1 || count > 3) return { ok: false, error: '소탕 횟수는 1~3회입니다.' };
+    if (!this.s.stats[id]) return { ok: false, error: '이 던전을 실전에서 먼저 클리어해 주세요.' };
+    if (this.s.pending) return { ok: false, error: '진행 중인 전투를 먼저 마쳐 주세요.' };
+    const rewards = { gold: d.rewards.gold * count, xp: d.rewards.xp * count,
+      materials: Object.fromEntries(Object.entries(d.rewards.materials).map(([k, v]) => [k, v * count])),
+      consumables: Object.fromEntries(Object.entries(d.rewards.consumables).map(([k, v]) => [k, v * count])) };
+    return { ok: true, id, count, energy: d.energy * count, tickets: count, rewards,
+      affordable: this.eco.s.energy >= d.energy * count && this.eco.s.sweep >= count };
+  }
+  sweepDungeon(id, count = 1) {
+    return this.transact(() => {
+      this.eco.tickEnergy();
+      const p = this.sweepPreview(id, count);
+      if (!p.ok) return p;
+      if (!p.affordable) return { ok: false, error: '에너지 또는 소탕권이 부족합니다.' };
+      if (this.eco.s.energy >= this.eco.energyMax) this.eco.s.energyT = Date.now();
+      this.eco.s.energy -= p.energy; this.eco.s.sweep -= p.tickets;
+      const rewards = this.reward(p.rewards);
+      // Supply runs pay fixed materials, account XP and consumables only.
+      // No field rolls, hero XP, combat contracts, story or mastery progress.
+      return { ok: true, count, energy: p.energy, tickets: p.tickets, rewards };
+    });
   }
   claimQuest(id) {
     const q = find(EXPEDITION_QUESTS, id);
