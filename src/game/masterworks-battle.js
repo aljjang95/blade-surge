@@ -120,7 +120,7 @@ export class Battle extends RpgBattle {
     }
     this.player.chronicleShield=Math.round(this.player.maxHp*Math.min(.25,this.effects.shield||0));
     // Wait for the clearing blow to finish; the native pause owner freezes the same simulation.
-    this.after(.45,()=>{ if(this.active&&this.player.alive)this.chronicle.offer(); });
+    this.after(.45,()=>{ if(this.active&&this.player.alive&&this.currentOffer())this.chronicle.offer(); });
   }
   onPerfectDodge(p) {
     super.onPerfectDodge(p);

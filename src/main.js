@@ -2,6 +2,8 @@ import './style.css';
 import * as THREE from 'three';
 import { Renderer } from './engine/renderer.js';
 import { LobbyCameraControls } from './engine/lobby-camera.js';
+import { CameraControls } from './engine/camera-control.js';
+import { setupPwa } from './platform/pwa.js';
 import { FX } from './engine/fx.js';
 import { Input } from './engine/input.js';
 import { audio } from './engine/audio.js';
@@ -59,6 +61,8 @@ class App {
     this.wardrobe = new Wardrobe(this);
     this.mode = 'boot'; this.showcase = null; this.lobbyVisible = true;
     this.lobbyCameraControls = new LobbyCameraControls(this);
+    this.cameraControls = new CameraControls(this);
+    this.pwa = setupPwa();
     this.last = performance.now();
     this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.applySettings();

@@ -164,7 +164,7 @@ b { font-weight: 900; }
 /* heroes */
 .panel-heroes { flex-direction: row; }
 .hero-list { width: 96px; overflow-y: auto; padding: 8px; display: flex; flex-direction: column; gap: 8px; border-right: 1px solid var(--line); }
-.hero-card { position: relative; border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,.12); background: #111; aspect-ratio: 3/4; }
+.hero-card { position: relative; flex-shrink:0; padding:0; border-radius: 12px; overflow: hidden; border: 2px solid rgba(255,255,255,.12); background: #111; aspect-ratio: 3/4; }
 .hero-card img { width: 100%; height: 100%; object-fit: cover; }
 .hero-card.on { border-color: var(--gold); box-shadow: 0 0 12px rgba(255,207,90,.6); }
 .hero-card.lock img { filter: grayscale(1) brightness(.4); }
@@ -720,9 +720,9 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 #lobby-camera-pad { position:absolute; left:30%; right:25%; top:18%; bottom:24%; touch-action:none; cursor:grab; border-radius:32px; }
 #lobby-camera-pad:active { cursor:grabbing; }
 #lobby-camera-pad:focus-visible { outline:2px solid var(--gold); outline-offset:-5px; }
-.lobby-camera-tools { position:absolute; top:76px; right:160px; z-index:4; width:240px; text-align:right; }
-#lobby-camera-toggle { min-height:40px; padding:8px 16px; border:1px solid #dfbd7d80; border-radius:20px; background:#15372ded; color:#fff0c9; font-weight:800; }
-#lobby-camera-panel { margin-top:6px; padding:12px; border:1px solid #759686; border-radius:18px; background:#15372df5; box-shadow:0 8px 28px #0005; text-align:left; }
+.lobby-camera-tools { position:absolute; bottom:calc(230px + var(--sab)); right:12px; z-index:4; width:240px; max-width:calc(100vw - 24px); text-align:right; pointer-events:none; }
+#lobby-camera-toggle { pointer-events:auto; min-height:44px; padding:8px 12px; border:1px solid #dfbd7d80; border-radius:10px; background:#15372ded; color:#fff0c9; font-weight:800; }
+#lobby-camera-panel { pointer-events:auto; position:absolute; right:0; bottom:50px; width:100%; max-height:calc(100dvh - 180px); overflow:auto; padding:12px; border:1px solid #759686; border-radius:18px; background:#15372df5; box-shadow:0 8px 28px #0005; text-align:left; }
 #lobby-camera-panel[hidden] { display:none; }
 .lobby-view-presets { display:flex; gap:4px; }
 .lobby-view-presets button { flex:1; min-height:38px; font-size:12px; border-radius:8px; background:#ffffff16; }
@@ -730,5 +730,5 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 #lobby-camera-panel label { display:flex; align-items:center; gap:12px; margin-top:8px; font-size:12px; }
 #lobby-camera-panel input { flex:1; min-width:0; height:28px; accent-color:#dfbd7d; }
 #lobby-camera-panel small { display:block; font-size:10px; color:#c7d8c7; margin-top:7px; }
-@media (orientation:landscape) and (max-height:500px) { .lobby-camera-tools { top:61px; right:115px; width:224px; } #lobby-camera-toggle { min-height:36px; padding:6px 12px; } #lobby-camera-panel { padding:8px 10px; } #lobby-camera-panel label { margin-top:2px; } }
-@media (orientation:portrait) { .lobby-camera-tools { top:78px; right:14px; width:215px; } #lobby-camera-pad { left:24%; right:24%; } }
+@media (orientation:landscape) and (max-height:550px) { .lobby-camera-tools { bottom:calc(84px + var(--sab)); right:12px; width:224px; } #lobby-camera-panel { padding:8px 10px; } #lobby-camera-panel label { margin-top:2px; } }
+@media (orientation:portrait) { .lobby-camera-tools { bottom:calc(250px + var(--sab)); right:12px; width:215px; } #lobby-camera-pad { left:24%; right:24%; } }

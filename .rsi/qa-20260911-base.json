@@ -1,0 +1,43 @@
+{
+  "bootMs": 1397.4,
+  "floorClearSec": 112.85000000000002,
+  "killsPerFloor": 168,
+  "maxAliveSeen": 21,
+  "dropsPerFloor": 36,
+  "longestDryStreakSec": 18,
+  "hitTakenRatio": 0.059,
+  "avgFrameMs": 0.23,
+  "p95FrameMs": 0.6,
+  "rhythmBeats": 7,
+  "drawCalls": 265,
+  "_beats": {
+    "explore": true,
+    "encounter": true,
+    "vacuum": true,
+    "drop": true,
+    "setProgress": false,
+    "bossFound": true,
+    "bossKill": true,
+    "floorClear": true
+  },
+  "_won": true,
+  "_seed": 20260905,
+  "_hero": "knight",
+  "_roomsCleared": "11/11",
+  "_at": "2026-09-10T17:28:53.067Z",
+  "_sampleFrames": 6771,
+  "errors": 0,
+  "_choices": [
+    "boon:ember_hunt",
+    "boon:storm_step",
+    "boon:storm_eye",
+    "story:lantern:guide",
+    "boon:storm_edge",
+    "boon:ember_hunt",
+    "boon:tide_breath"
+  ],
+  "_heroLevelStart": 1,
+  "_heroLevelEnd": 11,
+  "_traceSource": "7 actual UI selections in canonicalRuns[0].choices",
+  "_measurement": "Native IAB same host; prior fixed 2s peak HP sampling"
+}

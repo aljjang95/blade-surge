@@ -15,6 +15,8 @@ import { mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'node:url';
 import { BANDS, REGRESSION, assessMetrics, compareMetrics } from './metrics-contract.mjs';
+import { installMetricsDriver } from './metrics-driver.mjs';
+import { STORY_EVENTS } from '../src/data/masterworks.js';
 
 const args = process.argv.slice(2);
 const arg = (k, d) => { const i = args.indexOf(k); return i < 0 ? d : args[i + 1]; };
@@ -25,7 +27,10 @@ if (args.includes('--compare')) {
   const i = args.indexOf('--compare');
   const base = JSON.parse(readFileSync(args[i + 1], 'utf8'));
   const head = JSON.parse(readFileSync(args[i + 2], 'utf8'));
-  const bad = compareMetrics(base, head).length;
+  const failures = compareMetrics(base, head);
+  if (!Array.isArray(base._choices) || !Array.isArray(head._choices) || JSON.stringify(base._choices) !== JSON.stringify(head._choices)) failures.push('choice-trace-mismatch');
+  if (base._heroLevelStart !== 1 || head._heroLevelStart !== 1) failures.push('start-level-mismatch');
+  const bad = new Set(failures).size;
   console.log('지표            기준선 →   이번      판정');
   for (const k of Object.keys(BANDS)) {
     const b = base[k], h = head[k];
@@ -35,6 +40,8 @@ if (args.includes('--compare')) {
     const arrow = h === b ? '=' : h > b ? '▲' : '▼';
     console.log(`${BANDS[k].label.padEnd(16)}${String(b).padStart(7)} → ${String(h).padStart(7)}  ${arrow}${regressed ? '  회귀!' : ''}`);
   }
+  console.log(`선택 기록       ${JSON.stringify(base._choices)} → ${JSON.stringify(head._choices)}${failures.includes('choice-trace-mismatch') ? '  불일치!' : ''}`);
+  console.log(`영웅 레벨       ${base._heroLevelStart}→${base._heroLevelEnd} / ${head._heroLevelStart}→${head._heroLevelEnd}`);
   console.log(bad ? `\n회귀 ${bad}건 — 이번 회전은 실패다.` : '\n회귀 없음.');
   process.exit(bad ? 1 : 0);
 }
@@ -84,8 +91,14 @@ try { await page.waitForSelector('#boot-start:not(.hidden)', { timeout: 90000 })
 catch { await bail('부트 실패\n' + errors.slice(0, 10).join('\n'), br); }
 const bootMs = Date.now() - t0;
 
-// 일일보상/모달을 치운다. 영웅은 레벨 1(첫 플레이어 그대로) — 레벨 30 으로 재던 때는 1층을 11배 초과 전력으로 돌아 피격 0·1분 클리어가 나왔다 (window.__LV 로 바꿀 수 있다)
-await page.evaluate(() => { const e = window.app.eco; e.s.daily.last = Math.floor(Date.now() / 86400000); e.hero().level = Number(window.__LV || 1); e.save(); });
+// 저장소와 Masterworks runSeq까지 명시적으로 새 게임으로 격리한다.
+const startLevel = await page.evaluate(() => {
+  const e = window.app.eco;
+  if (!e.reset()) throw new Error('새 저장 격리에 실패했습니다.');
+  e.s.daily.last = Math.floor(Date.now() / 86400000);
+  e.s.selected = 'knight'; e.hero('knight').level = 1; e.hero('knight').exp = 0; e.save();
+  return e.hero('knight').level;
+});
 await page.click('#boot-start', { force: true });
 await page.waitForTimeout(1500);
 await page.evaluate(() => window.app.ui.closeModal());
@@ -103,28 +116,10 @@ await page.waitForTimeout(1200);
 
 // 결정적 스텝으로 전환 + AUTO
 await page.evaluate(() => { window.app.testPause = true; window.app.battle.player.auto = true; });
+await page.evaluate(installMetricsDriver, { storyEvents: STORY_EVENTS.map(({ id, choices }) => ({ id, choices: choices.map(({ id }) => ({ id })) })) });
 
-// 워밍업: 이 층 로스터의 적 타입을 전부 한 번씩 그려 셰이더를 미리 컴파일한다.
-// SwiftShader 는 새 프로그램 변종을 처음 만나는 프레임에서 수 초~수십 초를 멈추는데, 그건 렌더 비용이 아니라 컴파일 비용이다.
-// 밀도 복구 후 한 층이 178초 호출 상한을 넘겨 측정이 불가능해져 넣었다. 측정 창 밖이라 avgFrameMs 는 기준선(컴파일 포함)보다 낮게 나온다.
-const warm = await page.evaluate(() => {
-  const app = window.app, b = app.battle, R = b.stage.rosterFor('normal');
-  const types = [...new Set([...R.trash, ...R.ranged, ...R.elite, b.stage.chapter.boss])];
-  const before = b.enemies.length;
-  const made = types.map((t) => b.spawnEnemy(t, null, b.world.startRoom)).filter(Boolean);
-  const auto = b.player.auto; b.player.auto = false; b.input.enabled = false;
-  const t0 = performance.now();
-  for (let i = 0; i < 40; i++) app.step(1 / 60, i === 20 || i === 39);
-  const ms = performance.now() - t0;
-  for (const e of made) { e.dispose(); const i = b.enemies.indexOf(e); if (i >= 0) b.enemies.splice(i, 1); }
-  for (const p of b.projectiles) if (p.mesh) b.scene.remove(p.mesh);
-  b.projectiles.length = 0; b.boss = null; app.ui.showBoss('', false); b.fx.clearAll(); b.timers.length = 0; b.pending.length = 0;
-  b.peakAlive = 0; b.elapsed = 0; b.kills = 0; b.combo = 0; b.maxCombo = 0; b.dmgDealt = 0;
-  b.player.hp = b.player.maxHp; b.player.kb.set(0, 0, 0); b.player.stun = 0;
-  b.player.auto = auto; b.input.enabled = true;
-  return { types: made.length, leftover: b.enemies.length - before, ms: Math.round(ms) };
-});
-console.log(`워밍업: 적 ${warm.types}종 셰이더 컴파일 ${warm.ms}ms${warm.leftover ? ' (잔여 ' + warm.leftover + ')' : ''}`);
+// 전투 객체를 직접 변형하던 셰이더 워밍업은 표본 오염을 피하려고 제거했다.
+// 프레임 지표는 이제 첫 플레이어가 실제로 겪는 최초 컴파일 비용까지 포함한다.
 
 const DT = 1 / 60, CHUNK = 120;   // 한 번에 2초씩 밟는다
 // 렌더는 청크 RENDER_EVERY 개마다 한 번. SwiftShader 는 난전 프레임 하나에 벽시계 5~30초를 태운다(JS 쪽 frameMs 에는 안 잡힌다 —
@@ -142,7 +137,12 @@ for (let k = 0; k < maxChunks; k++) {
     const app = window.app, t = [];
     const info = app.renderer?.r?.info;
     if (info) { info.autoReset = false; info.reset(); }
-    for (let i = 0; i < n; i++) { const a = performance.now(); app.step(dt, doRender && i === n - 1); t.push(performance.now() - a); }
+    let advanced = 0, peakMissingHealth = 0;
+    for (let i = 0; i < n && app.battle.active; i++) {
+      const a = performance.now(); advanced += globalThis.__metricsDriver.step(dt, doRender && i === n - 1); t.push(performance.now() - a);
+      const player = app.battle.player;
+      if (player.maxHp > 0) peakMissingHealth = Math.max(peakMissingHealth, 1 - player.hp / player.maxHp);
+    }
     const b = app.battle, W = b.world;
     return {
       frames: t,
@@ -161,19 +161,21 @@ for (let k = 0; k < maxChunks; k++) {
       bossFound: !!b.bossFound,
       inBoss: b.curRoom?.type === 'boss',
       sets: (() => { try { return app.eco.setCount?.() ?? 0; } catch { return 0; } })(),
+      advanced,
+      peakMissingHealth,
     };
   }, { dt: DT, n: CHUNK, doRender });
 
   frameMs.push(...r.frames);
   if (r.rendered) drawCalls.push(r.calls);
   aliveSeen.push(r.alive);
-  gameSec += CHUNK * DT;
+  gameSec += r.advanced;
 
   // 도파민 8박자 발화 감지
   if (r.disc > 1) beats.explore = true;
   if (r.alive > 0) beats.encounter = true;
   if (r.alive >= 6) beats.vacuum = true;              // 무리가 실제로 깔렸다
-  if (r.loot > prevLoot) { beats.drop = true; dryFrames = 0; } else dryFrames += CHUNK;
+  if (r.loot > prevLoot) { beats.drop = true; dryFrames = 0; } else dryFrames += r.advanced / DT;
   longestDry = Math.max(longestDry, dryFrames);
   if (r.sets > 0) beats.setProgress = true;
   if (r.bossFound) beats.bossFound = true;
@@ -181,7 +183,7 @@ for (let k = 0; k < maxChunks; k++) {
   if (sawBossFight && r.clr === r.rooms) beats.bossKill = true;
   if (r.won) beats.floorClear = true;
   prevLoot = r.loot;
-  if (r.maxHp > 0) hpLow = Math.max(hpLow, 1 - r.hp / r.maxHp);   // 이번 층에서 가장 많이 깎였던 지점
+  hpLow = Math.max(hpLow, r.peakMissingHealth); // 청크 사이 피격 후 회복도 놓치지 않는다.
 
   // 무리가 실제로 깔린 순간 — 밀도 회전의 게이트 B 는 이 한 장으로 본다
   if (!denseShot && r.rendered && r.alive >= 10) { denseShot = true; const a = Date.now(); await page.screenshot({ path: resolve(PROJ, SHOTS, 'dense.png') }); if (args.includes('--verbose')) console.error(`  shot dense ${Date.now() - a}ms`); }
@@ -215,6 +217,9 @@ const m = {
   _roomsCleared: `${s.clr}/${s.rooms}`,
   _won: s.won,
   _seed: SEED,
+  _choices: await page.evaluate(() => globalThis.__metricsDriver.snapshot().choices),
+  _heroLevelStart: startLevel,
+  _heroLevelEnd: await page.evaluate(() => window.app.eco.hero('knight').level),
   _endReason: s.active ? '시간초과' : !s.won ? '패배' : (s.clr >= s.rooms ? '전구역클리어' : '보스처치'),
   _avgAlive: round(aliveSeen.reduce((a, b) => a + b, 0) / aliveSeen.length, 1),
   _errorSamples: errors.slice(0, 5),

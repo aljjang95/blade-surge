@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { audio } from '../engine/audio.js';
 import { getPart, softCircleTex } from '../engine/assets.js';
 import { RARITY_COLOR, ITEM_BY_ID, ITEM_ICON } from '../data/items.js';
+import { createLootVisual } from './loot-visual.js';
 
 const _v = new THREE.Vector3();
 
@@ -20,6 +21,7 @@ export class DropSystem {
     this.pickR = 1.1;
     this.gold = 0; this.stones = 0; this.stones2 = 0; this.stones3 = 0; this.fragments = 0; this.loot = [];
     this._geoCoin = null; this._matCache = {};
+    this._lootMaterials = new Map();
     this.beamMat = new THREE.SpriteMaterial({ map: softCircleTex(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true });
   }
   setup(dungeonGltf) {
@@ -44,11 +46,11 @@ export class DropSystem {
       else if (kind === 'stone2') { mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.28), this._mat(0x3a7bff, 2.0)); mesh.userData.own = true; }
       else if (kind === 'stone3') { mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.34), this._mat(0xffd35a, 2.4)); mesh.userData.own = true; }
       else if (kind === 'frag') { mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.1, 6), this._mat(0xb26bff, 2.0)); mesh.userData.own = true; }
-      else { const c = RARITY_COLOR[payload.rarity] || '#fff'; mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 0), this._mat(new THREE.Color(c).getHex(), 1.4)); mesh.userData.own = true; }
+      else { mesh = createLootVisual(payload, this._lootMaterials); }
       mesh.position.copy(pos); mesh.position.y = 0.6 + Math.random() * 0.3;
       mesh.castShadow = false;
       const a = Math.random() * Math.PI * 2, s = (1.5 + Math.random() * 2.5) * spread;
-      const it = { mesh, kind, payload, vx: Math.cos(a) * s, vy: 4 + Math.random() * 3, vz: Math.sin(a) * s, t: 0, state: 'fly', spin: (Math.random() - 0.5) * 8 };
+      const it = { mesh, kind, payload, restY: kind === 'item' ? .72 : .28, vx: Math.cos(a) * s, vy: 4 + Math.random() * 3, vz: Math.sin(a) * s, t: 0, state: 'fly', spin: (Math.random() - 0.5) * 8 };
       this.scene.add(mesh); this.items.push(it);
       // 희귀 장비는 기둥 빔
       if (kind === 'item' && ['E', 'U', 'L'].includes(payload.rarity)) {
@@ -71,11 +73,11 @@ export class DropSystem {
         it.vy -= 22 * dt;
         m.position.x += it.vx * dt; m.position.y += it.vy * dt; m.position.z += it.vz * dt;
         it.vx *= Math.pow(0.1, dt); it.vz *= Math.pow(0.1, dt);
-        if (m.position.y <= 0.28) { m.position.y = 0.28; it.state = 'idle'; it.vy = 0; }
+        if (m.position.y <= it.restY) { m.position.y = it.restY; it.state = 'idle'; it.vy = 0; if (it.kind === 'item') m.rotation.x = -.3; }
         m.rotation.y += it.spin * dt; m.rotation.x += it.spin * 0.5 * dt;
       } else if (it.state === 'idle') {
         m.rotation.y += 2.2 * dt;
-        m.position.y = 0.28 + Math.sin(it.t * 3.2) * 0.12;
+        m.position.y = it.restY + Math.sin(it.t * 3.2) * 0.12;
         const d = Math.hypot(p.pos.x - m.position.x, p.pos.z - m.position.z);
         if (d < magnet) { it.state = 'magnet'; }
         else if (it.t > 22) { this._remove(i); continue; }  // 오래된 드랍 정리

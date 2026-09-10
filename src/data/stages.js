@@ -136,10 +136,12 @@ const CAMPAIGN_ENCOUNTERS = {
   },
 };
 const RANK_STATS = {
-  captain: { hp: 13000, atk: 40, scale: 1.45, exp: 90, gold: 20 },
-  warden: { hp: 19000, atk: 44, scale: 1.7, exp: 120, gold: 28 },
-  midboss: { hp: 27000, atk: 48, scale: 1.95, exp: 160, gold: 40 },
-  finalboss: { hp: 35000, atk: 53, scale: 2.25, exp: 220, gold: 55 },
+  // 관문도 궁극기 한 번 뒤에 패턴을 보여줄 체력이 필요하다.
+  // 기존 첫 보스(31,200)를 기준으로 계급 간 6k/8k/8k 차이를 보존한다.
+  captain: { hp: 31200, atk: 40, scale: 1.45, exp: 90, gold: 20 },
+  warden: { hp: 37200, atk: 44, scale: 1.7, exp: 120, gold: 28 },
+  midboss: { hp: 45200, atk: 48, scale: 1.95, exp: 160, gold: 40 },
+  finalboss: { hp: 53200, atk: 53, scale: 2.25, exp: 220, gold: 55 },
 };
 for (const chapter of CHAPTERS) {
   const theme = chapter.theme;

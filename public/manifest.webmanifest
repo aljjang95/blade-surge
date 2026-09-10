@@ -1,1 +1,14 @@
-{ "name": "BLADE SURGE", "short_name": "BladeSurge", "start_url": "/", "display": "fullscreen", "orientation": "any", "background_color": "#0b0a12", "theme_color": "#0b0a12", "icons": [{ "src": "/img/icon.png", "sizes": "512x512", "type": "image/png" }] }
+{
+  "id": "/",
+  "name": "BLADE SURGE",
+  "short_name": "BladeSurge",
+  "description": "다섯 영웅과 탐험하는 액션 RPG. 플레이에는 인터넷 연결이 필요합니다.",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b0a12",
+  "theme_color": "#0b0a12",
+  "icons": [{ "src": "/img/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }]
+}

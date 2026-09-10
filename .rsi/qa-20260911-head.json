@@ -1,0 +1,42 @@
+{
+  "bootMs": 1717.6,
+  "floorClearSec": 163.15,
+  "killsPerFloor": 204,
+  "maxAliveSeen": 22,
+  "dropsPerFloor": 48,
+  "longestDryStreakSec": 14,
+  "hitTakenRatio": 0.128,
+  "avgFrameMs": 0.22,
+  "p95FrameMs": 0.6,
+  "rhythmBeats": 7,
+  "drawCalls": 297,
+  "_beats": {
+    "explore": true,
+    "encounter": true,
+    "vacuum": true,
+    "drop": true,
+    "setProgress": false,
+    "bossFound": true,
+    "bossKill": true,
+    "floorClear": true
+  },
+  "_won": true,
+  "_seed": 20260905,
+  "_hero": "knight",
+  "_roomsCleared": "13/13",
+  "_at": "2026-09-10T17:50:59.716Z",
+  "_sampleFrames": 9789,
+  "_heroLevelStart": 1,
+  "_heroLevelEnd": 4,
+  "_choices": [
+    "boon:ember_hunt",
+    "boon:storm_step",
+    "boon:storm_eye",
+    "story:lantern:guide",
+    "boon:storm_edge",
+    "boon:ember_hunt",
+    "boon:tide_breath"
+  ],
+  "errors": 0,
+  "_measurement": "Native IAB GPU, JS CPU submit time; not SwiftShader or device FPS"
+}

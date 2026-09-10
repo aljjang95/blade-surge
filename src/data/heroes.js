@@ -115,12 +115,12 @@ export const HEROES = {
     { anim: 'Bow_Shoot', hitAt: .42, dmg: 2.1, range: 14, arc: 20, kb: 5, dur: .78, projectile: 'arrow', pierce: true, finisher: true, jobGain: 1 },
   ],
   skills: [
-    { id: 'ranger_pierce', name: '바람 관통화살', icon: '/img/expansion/ranger.webp', cd: 4, anim: 'Bow_Shoot', castAt: .42, dmg: 2.8, desc: '관통 화살. 집중 3을 소비하면 피해 2배와 판정 확대' },
-    { id: 'ranger_volley', name: '삼중 추적화살', icon: '/img/expansion/ranger.webp', cd: 8, anim: 'Bow_Shoot', castAt: .42, dmg: 2, desc: '부채꼴 관통 화살 3발. 적을 2초간 둔화' },
-    { id: 'ranger_retreat', name: '바람의 이탈', icon: '/img/ranger-portrait.webp', cd: 10, anim: 'Bow_Shoot', castAt: .42, dmg: 2.2, desc: '화살을 쏘며 짧게 후퇴. 0.6초 무적과 집중 +1' },
-    { id: 'ranger_tempest', name: '궁극 · 폭풍의 일곱 화살', icon: '/img/ranger-portrait.webp', ult: true, anim: 'Bow_Shoot', castAt: .42, dmg: 2.4, desc: '넓은 부채꼴 관통 화살 7발. 집중 3을 소비하면 각 화살 피해 50% 증가' },
-    { id: 'ranger_quickshot', name: '각성 · 연속 관통', icon: '/img/expansion/ranger.webp', cd: 12, unlock: 10, awaken: 1, anim: 'Bow_Shoot', castAt: .42, dmg: 1.6, desc: '정면으로 관통 화살 3발을 연속 발사하고 집중 +1' },
-    { id: 'ranger_binding', name: '각성 · 숲의 속박', icon: '/img/expansion/ranger.webp', cd: 20, unlock: 20, awaken: 2, anim: 'Bow_Shoot', castAt: .42, dmg: 3.4, desc: '관통 화살 5발로 적을 4초간 둔화. 집중 3을 소비하면 피해 2배' },
+    { id: 'ranger_pierce', name: '바람 관통화살', icon: '/img/skills-crafted/ranger-pierce.webp', cd: 4, anim: 'Bow_Shoot', castAt: .42, dmg: 2.8, desc: '관통 화살. 집중 3을 소비하면 피해 2배와 판정 확대' },
+    { id: 'ranger_volley', name: '삼중 추적화살', icon: '/img/skills-crafted/ranger-volley.webp', cd: 8, anim: 'Bow_Shoot', castAt: .42, dmg: 2, desc: '부채꼴 관통 화살 3발. 적을 2초간 둔화' },
+    { id: 'ranger_retreat', name: '바람의 이탈', icon: '/img/skills-crafted/ranger-retreat.webp', cd: 10, anim: 'Bow_Shoot', castAt: .42, dmg: 2.2, desc: '화살을 쏘며 짧게 후퇴. 0.6초 무적과 집중 +1' },
+    { id: 'ranger_tempest', name: '궁극 · 폭풍의 일곱 화살', icon: '/img/skills-crafted/ranger-tempest.webp', ult: true, anim: 'Bow_Shoot', castAt: .42, dmg: 2.4, desc: '넓은 부채꼴 관통 화살 7발. 집중 3을 소비하면 각 화살 피해 50% 증가' },
+    { id: 'ranger_quickshot', name: '각성 · 연속 관통', icon: '/img/skills-crafted/ranger-quickshot.webp', cd: 12, unlock: 10, awaken: 1, anim: 'Bow_Shoot', castAt: .42, dmg: 1.6, desc: '정면으로 관통 화살 3발을 연속 발사하고 집중 +1' },
+    { id: 'ranger_binding', name: '각성 · 숲의 속박', icon: '/img/skills-crafted/ranger-binding.webp', cd: 20, unlock: 20, awaken: 2, anim: 'Bow_Shoot', castAt: .42, dmg: 3.4, desc: '관통 화살 5발로 적을 4초간 둔화. 집중 3을 소비하면 피해 2배' },
   ],
   },
 };

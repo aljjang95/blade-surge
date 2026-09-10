@@ -122,7 +122,7 @@ export class Arena {
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 50; sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.02;
     this.scene.add(sun); this.lights.push(sun);
     this.lobbyHall = buildOathHall(); this.group.add(this.lobbyHall);
-    this.lobbyHall.traverse((o) => { if (o.isMesh) { o.material.envMap = this.renderer.characterEnvironment.texture; o.material.envMapIntensity = .3; } });
+    this.lobbyHall.traverse((o) => { if (o.isMesh && o.material.isMeshStandardMaterial) { o.material.envMap = this.renderer.characterEnvironment.texture; o.material.envMapIntensity = .3; } });
     const rim = new THREE.DirectionalLight(0x83c7db, 2.4); rim.position.set(2, 4, -4);
     this.scene.add(rim); this.lights.push(rim);
     this.floorData = null;

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { applySurfaceDetail } from '../engine/surface-textures.js';
 
 // Original, fitted costume surfaces for the shipped casual-v2 silhouettes.
 // Coordinates are in the authored GLB bind pose, never the current animation pose.
@@ -74,6 +75,8 @@ export function applyArmorAppearance(model, hero, item) {
   const trim = new THREE.MeshStandardMaterial({ color: style.trim, roughness: .52, metalness: .25 });
   const accent = new THREE.MeshStandardMaterial({ color: style.accent, roughness: .38, metalness: .12 });
   for (const material of [body, trim, accent]) material.userData.armorSurface = true;
+  applySurfaceDetail(body, metal ? 'metal' : 'cloth');
+  applySurfaceDetail(trim, 'metal');
   const add = (name, boneName, geometry, material, position, scale = [1, 1, 1]) => {
     const index = skeleton.bones.findIndex((b) => b.name.replaceAll('.', '') === boneName.replaceAll('.', ''));
     if (index < 0) { geometry.dispose(); return; }
