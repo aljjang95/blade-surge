@@ -4,13 +4,17 @@ const SFX_FILES = ['hit_punch0', 'hit_punch1', 'hit_punch2', 'hit_metal0', 'hit_
   'coin0', 'coin1', 'coin_stack', 'pack_open', 'card_fan', 'card_place', 'jingle_win0', 'jingle_win1', 'jingle_legend',
   'expansion/flow-impact-light', 'expansion/flow-impact-heavy'];
 
-class AudioSys {
+export class AudioSys {
   constructor() {
     this.ctx = null; this.buffers = {}; this.enabled = true; this.musicOn = true; this.haptics = true;
     this.music = null; this.musicName = null; this.musicGain = null; this.sfxGain = null; this.master = null;
     this.lastPlay = {};
     this._hitLast = -Infinity; this._hitPending = null; this._hitTimer = null;
     this.voiceOn = true; this.voiceBuf = {}; this._voiceSrc = null; this._voiceLast = {};
+    this._barkLast = {}; this._voiceEpoch = 0; this._voiceLoads = new Map();
+    this.mix = { music: 0.55, sfx: 0.9, voice: 1 };
+    this._voices = new Set(); this.voiceLimits = { sfx: 16, bark: 4, narration: 1 };
+    this._musicTracks = new Set(); this._ducks = []; this._combatLevel = 1;
   }
   async init() {
     if (this.ctx) return;
@@ -18,51 +22,104 @@ class AudioSys {
     this.ctx = new AC({ latencyHint: 'interactive' });
     this.master = this.ctx.createGain(); this.master.connect(this.ctx.destination);
     this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = 0.9; this.sfxGain.connect(this.master);
-    this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = 0.55; this.musicGain.connect(this.master);
+    this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = 0.55;
+    this.musicDuckGain = this.ctx.createGain(); this.musicGain.connect(this.musicDuckGain); this.musicDuckGain.connect(this.master);
     // 컴프레서로 타격음 펀치감
     const comp = this.ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 6; comp.attack.value = 0.002; comp.release.value = 0.12;
     this.sfxGain.disconnect(); this.sfxGain.connect(comp); comp.connect(this.master);
     this.voiceGain = this.ctx.createGain(); this.voiceGain.gain.value = 1; this.voiceGain.connect(this.master); this._barkLast = {};
+    this.setMix(this.mix);
     await Promise.all(SFX_FILES.map(async (n) => {
       try { const ab = await (await fetch(`/sfx/${n}.mp3`)).arrayBuffer(); this.buffers[n] = await this.ctx.decodeAudioData(ab); } catch (e) { console.warn('sfx fail', n); }
     }));
   }
   resume() { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume(); }
   now() { return this.ctx ? this.ctx.currentTime : 0; }
+  getMix() { return { ...this.mix }; }
+  getDiagnostics() {
+    const counts = { sfx: 0, bark: 0, narration: 0 };
+    for (const v of this._voices) counts[v.group]++;
+    return { voices: counts, limits: { ...this.voiceLimits }, musicTracks: this._musicTracks.size, voiceLoads: this._voiceLoads.size, ducks: this._ducks.filter(d => d.end > this.now()).length, combatLevel: this._combatLevel, mix: this.getMix() };
+  }
+  _loadVoice(name) {
+    if (this.voiceBuf[name]) return Promise.resolve(this.voiceBuf[name]);
+    if (this._voiceLoads.has(name)) return this._voiceLoads.get(name);
+    const pending = fetch(`/sfx/voice/${name}.mp3`).then(r => r.arrayBuffer()).then(ab => this.ctx.decodeAudioData(ab))
+      .then(buffer => { this.voiceBuf[name] = buffer; return buffer; }).catch(() => null)
+      .finally(() => this._voiceLoads.delete(name));
+    this._voiceLoads.set(name, pending); return pending;
+  }
+  setMix(values = {}) {
+    for (const key of ['music', 'sfx', 'voice']) if (Number.isFinite(values[key])) this.mix[key] = Math.max(0, Math.min(1, values[key]));
+    if (this.sfxGain) this.sfxGain.gain.setValueAtTime(this.enabled ? this.mix.sfx : 0, this.now());
+    if (this.voiceGain) this.voiceGain.gain.setValueAtTime(this.voiceOn ? this.mix.voice : 0, this.now());
+    if (this.musicGain) this.musicGain.gain.setValueAtTime(this.musicOn ? this.mix.music * this._combatLevel : 0, this.now());
+    if (!this.mix.voice) { this._voiceEpoch++; this._stopVoices('bark'); this._stopVoices('narration'); }
+    if (!this.mix.sfx) this._stopVoices('sfx');
+    return this.getMix();
+  }
+  /** Caller supplies unscaled seconds once per render frame (including pause/menu).
+   * No private clock/RAF. A resumed-frame gap is capped at 100ms; music pitch never changes. */
+  updateCombatMix(dt, { active = false, paused = false, boss = false, intensity = 0 } = {}) {
+    const step = Number.isFinite(dt) ? Math.max(0, Math.min(0.1, dt)) : 0;
+    const energy = Number.isFinite(intensity) ? Math.max(0, Math.min(1, intensity)) : 0;
+    const target = paused ? 0.72 : active ? 0.9 + energy * 0.08 + (boss ? 0.02 : 0) : 1;
+    this._combatLevel += (target - this._combatLevel) * (1 - Math.exp(-step * 3));
+    if (this.musicGain) this.musicGain.gain.setValueAtTime(this.musicOn ? this.mix.music * this._combatLevel : 0, this.now());
+    this._ducks = this._ducks.filter(d => d.end > this.now());
+  }
+  _stopVoice(v) { try { v.src.stop(); } catch {} v.cleanup(); }
+  _stopVoices(group) { for (const v of [...this._voices]) if (v.group === group) this._stopVoice(v); }
+  _sample(buffer, { group, priority = 1, vol = 1, rate = 1, delay = 0 }) {
+    const peers = [...this._voices].filter(v => v.group === group);
+    if (peers.length >= this.voiceLimits[group]) {
+      const victim = peers.reduce((a, b) => a.priority <= b.priority ? a : b);
+      if (victim.priority > priority) return null;
+      this._stopVoice(victim);
+    }
+    const src = this.ctx.createBufferSource(), gain = this.ctx.createGain();
+    src.buffer = buffer; src.playbackRate.value = rate; gain.gain.value = vol;
+    src.connect(gain); gain.connect(group === 'sfx' ? this.sfxGain : this.voiceGain);
+    const voice = { src, gain, group, priority, cleanup: () => {
+      src.onended = null; src.disconnect(); gain.disconnect(); this._voices.delete(voice);
+      if (this._voiceSrc === src) this._voiceSrc = null;
+    } };
+    src.onended = voice.cleanup; this._voices.add(voice); src.start(this.now() + Math.max(0, delay));
+    return src;
+  }
   /** 샘플 재생 (피치 랜덤, 볼륨, 최소 간격) */
-  play(name, { vol = 1, rate = 1, vary = 0.08, min = 0.03, delay = 0 } = {}) {
-    if (!this.enabled || !this.ctx) return;
+  play(name, { vol = 1, rate = 1, vary = 0.08, min = 0.03, delay = 0, priority = name.startsWith('ui_') ? 4 : name.includes('flow-impact-heavy') ? 5 : name.includes('flow-impact') ? 3 : 1 } = {}) {
+    if (!this.enabled || !this.mix.sfx || !this.ctx) return;
     const b = this.buffers[name]; if (!b) return;
-    const t = this.now(); if (this.lastPlay[name] && t - this.lastPlay[name] < min) return; this.lastPlay[name] = t;
-    const s = this.ctx.createBufferSource(); s.buffer = b; s.playbackRate.value = rate * (1 + (Math.random() * 2 - 1) * vary);
-    const g = this.ctx.createGain(); g.gain.value = vol; s.connect(g); g.connect(this.sfxGain); s.start(t + delay);
+    const t = this.now(); if (this.lastPlay[name] !== undefined && t - this.lastPlay[name] < min) return; this.lastPlay[name] = t;
+    return this._sample(b, { group: 'sfx', priority, vol, rate: rate * (1 + (Math.random() * 2 - 1) * vary), delay });
   }
   pick(prefix, n, opts) { this.play(prefix + Math.floor(Math.random() * n), opts); }
   /** 나레이션(TTS, /sfx/voice/*.mp3 — edge-tts InJoon 생성). 새 대사가 이전 대사를 끊고, BGM 을 잠깐 덕킹한다. min 은 같은 대사 최소 간격(초) */
   async voice(name, { vol = 1, min = 2, duck = 0.45, dur = 1.6 } = {}) {
-    if (!this.voiceOn || !this.ctx) return;
-    const t = this.now(); if (this._voiceLast[name] && t - this._voiceLast[name] < min) return; this._voiceLast[name] = t;
+    if (!this.voiceOn || !this.mix.voice || !this.ctx) return;
+    const t = this.now(); if (this._voiceLast[name] !== undefined && t - this._voiceLast[name] < min) return; this._voiceLast[name] = t;
+    const epoch = ++this._voiceEpoch;
     let b = this.voiceBuf[name];
-    if (!b) { try { const ab = await (await fetch(`/sfx/voice/${name}.mp3`)).arrayBuffer(); b = this.voiceBuf[name] = await this.ctx.decodeAudioData(ab); } catch (e) { this.voiceBuf[name] = null; return; } }
-    if (!b || !this.voiceOn) return;
-    if (this._voiceSrc) { try { this._voiceSrc.stop(); } catch (e) {} }
-    const src = this.ctx.createBufferSource(); src.buffer = b; const g = this.ctx.createGain(); g.gain.value = vol; src.connect(g); g.connect(this.voiceGain); src.start(); this._voiceSrc = src;
+    if (!b) b = await this._loadVoice(name);
+    if (!b || !this.voiceOn || !this.mix.voice || epoch !== this._voiceEpoch) return;
+    this._stopVoices('narration');
+    this._voiceSrc = this._sample(b, { group: 'narration', priority: 5, vol });
     this.duck(duck, Math.max(dur, b.duration + 0.4));
   }
-  setVoiceOn(on) { this.voiceOn = on; if (!on && this._voiceSrc) { try { this._voiceSrc.stop(); } catch (e) {} } }
+  setVoiceOn(on) { this.voiceOn = !!on; if (!on) { this._voiceEpoch++; this._stopVoices('narration'); this._stopVoices('bark'); } this.setMix(); }
   /** 기합·외침(bark) — /sfx/voice/<name><i>.mp3 변형 중 하나를 SFX 레이어로 겹쳐 재생. 나레이션과 달리 서로 끊지 않고, 덕킹도 없다.
    *  n = 변형 수(name0..name{n-1}), n 이 없으면 name.mp3 하나. min = 같은 이름 최소 간격(초) */
-  bark(name, { n = 0, vol = 0.9, min = 0.25, rate = 1 } = {}) {
-    if (!this.voiceOn || !this.ctx) return;
-    const t = this.now(); if (this._barkLast[name] && t - this._barkLast[name] < min) return; this._barkLast[name] = t;
+  bark(name, { n = 0, vol = 0.9, min = 0.25, rate = 1, priority = 1 } = {}) {
+    if (!this.voiceOn || !this.mix.voice || !this.ctx) return;
+    const t = this.now(); if (this._barkLast[name] !== undefined && t - this._barkLast[name] < min) return; this._barkLast[name] = t;
     const key = n ? name + Math.floor(Math.random() * n) : name;
     const b = this.voiceBuf[key];
-    if (b === undefined) { this.voiceBuf[key] = null; fetch(`/sfx/voice/${key}.mp3`).then((r) => r.arrayBuffer()).then((ab) => this.ctx.decodeAudioData(ab)).then((buf) => { this.voiceBuf[key] = buf; }).catch(() => {}); return; }
-    if (!b) return;
-    const src = this.ctx.createBufferSource(); src.buffer = b; src.playbackRate.value = rate; const g = this.ctx.createGain(); g.gain.value = vol; src.connect(g); g.connect(this.voiceGain); src.start();
+    if (!b) { this._loadVoice(key); return; }
+    return this._sample(b, { group: 'bark', vol, rate, priority });
   }
   /** 기합 미리 로드 — 첫 공격에서 소리가 비지 않게 */
-  preloadBarks(names) { for (const k of names) { if (this.voiceBuf[k] !== undefined || !this.ctx) continue; this.voiceBuf[k] = null; fetch(`/sfx/voice/${k}.mp3`).then((r) => r.arrayBuffer()).then((ab) => this.ctx.decodeAudioData(ab)).then((buf) => { this.voiceBuf[k] = buf; }).catch(() => {}); } }
+  preloadBarks(names) { if (this.ctx) for (const k of names) this._loadVoice(k); }
 
   // ---------- 프로시저럴 SFX ----------
   _noise(dur) {
@@ -265,25 +322,67 @@ class AudioSys {
   }
 
   // ---------- BGM ----------
+  _disposeMusic(track) {
+    clearTimeout(track.timer); track.el.pause(); track.src.disconnect(); track.gain.disconnect();
+    this._musicTracks.delete(track);
+  }
   playMusic(name, { fade = 1.2, volume = 0.55 } = {}) {
     if (!this.ctx) return;
-    if (this.musicName === name) return;
+    if (!this.musicOn) { this._pendingMusic = name; this._pendingMusicOptions = { fade, volume }; return; }
+    if (this.musicName === name && this.music) return;
+    fade = Number.isFinite(fade) ? Math.max(0, Math.min(10, fade)) : 1.2;
+    volume = Number.isFinite(volume) ? Math.max(0, Math.min(1, volume)) : 0.55;
     this.musicName = name;
     const old = this.music;
-    if (old) { const g = old.gain; g.gain.cancelScheduledValues(this.now()); g.gain.setValueAtTime(g.gain.value, this.now()); g.gain.linearRampToValueAtTime(0, this.now() + fade); setTimeout(() => { try { old.el.pause(); } catch (e) {} }, fade * 1000 + 100); }
-    if (!name || !this.musicOn) { this.music = null; return; }
+    // Keep only one fading tail even under rapid scene changes.
+    for (const track of [...this._musicTracks]) if (track !== old) this._disposeMusic(track);
+    if (old) { const g = old.gain; g.gain.cancelScheduledValues(this.now()); g.gain.setValueAtTime(g.gain.value, this.now()); g.gain.linearRampToValueAtTime(0, this.now() + fade); old.timer = setTimeout(() => this._disposeMusic(old), fade * 1000 + 100); }
+    if (!name) { this.music = null; return; }
     const el = new Audio(`/bgm/${name}.mp3`); el.loop = true; el.crossOrigin = 'anonymous'; el.preload = 'auto';
     const src = this.ctx.createMediaElementSource(el); const g = this.ctx.createGain(); g.gain.value = 0; src.connect(g); g.connect(this.musicGain);
     el.play().catch(() => {});
     g.gain.linearRampToValueAtTime(volume, this.now() + fade);
-    this.music = { el, gain: g, src };
+    this.music = { el, gain: g, src, volume };
+    this._musicTracks.add(this.music);
   }
   duck(amount = 0.25, dur = 1.5) {
-    if (!this.musicGain) return; const t = this.now(); const g = this.musicGain.gain;
-    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0.55 * amount, t + 0.1); g.linearRampToValueAtTime(0.55, t + dur);
+    if (!this.musicDuckGain) return;
+    const t = this.now(), g = this.musicDuckGain.gain;
+    amount = Number.isFinite(amount) ? Math.max(0, Math.min(1, amount)) : 1;
+    dur = Number.isFinite(dur) ? Math.max(0.11, Math.min(30, dur)) : 1.5;
+    this._ducks = this._ducks.filter(d => d.end > t);
+    this._ducks.push({ start: t, attack: t + 0.1, end: t + dur, amount });
+    // At most 32 envelopes; merge excess into a conservative stronger tail.
+    if (this._ducks.length > 32) {
+      const merged = this._ducks.splice(0, 2);
+      this._ducks.unshift({ start: t - 0.1, attack: t, end: Math.max(...merged.map(d => d.end)), amount: Math.min(...merged.map(d => d.amount)) });
+    }
+    const value = (d, at) => at <= d.start || at >= d.end ? 1 : at < d.attack ? 1 + (d.amount - 1) * (at - d.start) / (d.attack - d.start) : d.amount + (1 - d.amount) * (at - d.attack) / (d.end - d.attack);
+    const level = at => Math.min(1, ...this._ducks.map(d => value(d, at)));
+    const bounds = [...new Set([t, ...this._ducks.flatMap(d => [d.attack, d.end]).filter(x => x > t)])].sort((a, b) => a - b);
+    const times = [...bounds];
+    // Add crossings, so a weaker newer duck cannot erase a stronger older one.
+    for (let k = 1; k < bounds.length; k++) {
+      const a = bounds[k - 1], b = bounds[k];
+      for (let i = 0; i < this._ducks.length; i++) for (let j = i + 1; j < this._ducks.length; j++) {
+        const da = value(this._ducks[i], a) - value(this._ducks[j], a), db = value(this._ducks[i], b) - value(this._ducks[j], b);
+        if (da * db < 0) times.push(a + (b - a) * da / (da - db));
+      }
+    }
+    g.cancelScheduledValues(t); g.setValueAtTime(level(t), t);
+    for (const at of [...new Set(times)].sort((a, b) => a - b)) if (at > t) g.linearRampToValueAtTime(level(at), at);
   }
-  setMusicOn(on) { this.musicOn = on; if (!on) { const n = this.musicName; this.playMusic(null); this.musicName = null; this._pendingMusic = n; } else if (this._pendingMusic) { this.playMusic(this._pendingMusic); } }
-  setSfxOn(on) { this.enabled = on; if (!on) { clearTimeout(this._hitTimer); this._hitTimer = null; this._hitPending = null; } }
+  setMusicOn(on) {
+    if (this.musicOn === !!on) return;
+    this.musicOn = !!on;
+    if (!on) {
+      this._pendingMusic = this.musicName; this._pendingMusicOptions = { volume: this.music?.volume ?? 0.55 };
+      for (const track of [...this._musicTracks]) this._disposeMusic(track);
+      this.music = null; this.musicName = null;
+    } else if (this._pendingMusic) this.playMusic(this._pendingMusic, this._pendingMusicOptions);
+    this.setMix();
+  }
+  setSfxOn(on) { this.enabled = !!on; if (!on) { clearTimeout(this._hitTimer); this._hitTimer = null; this._hitPending = null; this._stopVoices('sfx'); } this.setMix(); }
 
   // ---------- 햅틱 ----------
   vibe(pattern) { if (this.haptics && navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) {} } }

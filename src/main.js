@@ -22,6 +22,8 @@ import { Wardrobe } from './expansion/wardrobe.jsx';
 import { JourneyService } from './game/journey-service.js';
 import { JourneyView } from './ui/journey.js';
 import { applyRiftStage } from './game/journey-rifts.js';
+import { ArsenalService } from './game/arsenal-service.js';
+import { ArsenalView } from './ui/arsenal.js';
 import './ui/mobile-combat.css';
 const BOOT_TIPS = [
   '<b>진공기</b>로 적을 끌어모은 뒤 한 번에 쓸어담는 것이 몹몰이의 기본이다.',
@@ -51,6 +53,7 @@ class App {
     this.expedition = new ExpeditionEconomy(this.eco);
     this.expeditionUI = new ExpeditionUI(this);
     this.journey = new JourneyService(this);
+    this.arsenal = new ArsenalService(this);
     this.models = {};
     this.wardrobe = new Wardrobe(this);
     this.mode = 'boot'; this.showcase = null; this.lobbyVisible = true;
@@ -80,6 +83,7 @@ class App {
     this.arena = new Arena(this.scene, this.models.dungeon, this.renderer);
     this.battle = new Battle(this);
     this.journeyView = new JourneyView(this);
+    this.arsenalView = new ArsenalView(this);
     await this.showcaseHero(this.eco.s.selected, true);
     setP(0.95, '게임 화면 준비 중…');
     // 셰이더 프리컴파일 (첫 프레임 끊김 방지)
@@ -97,6 +101,7 @@ class App {
   }
   applySettings() {
     const st = this.eco.s.settings; audio.setSfxOn(st.sfx); audio.setMusicOn(st.music); audio.haptics = st.haptics; audio.setVoiceOn(st.voice !== false);
+    audio.setMix(this.arsenal.s.mix);
     let q = st.quality;
     if (!q || q === 'auto') { const cores = navigator.hardwareConcurrency || 4; const mem = navigator.deviceMemory || 4; q = (cores <= 4 || mem <= 3) ? 'mid' : 'high'; st.quality = q; }
     this.renderer.setQuality(q); this.fx.setQuality(q);
@@ -232,6 +237,9 @@ class App {
   }
   /** 한 프레임 진행 (테스트 시 고정 dt로 호출 가능) */
   step(realDt, render = true) {
+    const battle=this.battle, combat=this.mode==='battle'&&battle?.active;
+    audio.updateCombatMix(realDt,{active:combat,paused:!!(battle?.paused||this.expeditionUI?.opened),boss:!!(combat&&battle.enemies.some(e=>e.alive&&e.isBoss)),intensity:combat?Math.min(1,(battle.combo||0)/30):0});
+    this.arsenalView?.update();
     if (this.expeditionUI?.opened) return;
     if (this.mode === 'battle') {
       this.battle.update(realDt);

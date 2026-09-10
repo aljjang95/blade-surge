@@ -77,7 +77,7 @@ export class Battle extends BaseBattle {
       this.rpgDirty = true;
       if (award.levels) {
         const p = this.player, oldMax = p.maxHp;
-        const nextStats = heroStats(HEROES[this.heroId], hero, this.app.eco.heroEquipBonus(this.heroId));
+        const nextStats = heroStats(p.def || HEROES[this.heroId], hero, this.app.eco.heroEquipBonus(this.heroId));
         p.stats = this.upgradeHeroStats?.(nextStats) || nextStats;
         p.maxHp = p.stats.hp; p.heroLevel = hero.level;
         for (const [i, button] of (this.ui.skillBtns || []).entries()) if (p.def.skills[i]) button.classList.toggle('locked', !p.unlocked(i));
