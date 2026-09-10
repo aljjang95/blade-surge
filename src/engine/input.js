@@ -1,7 +1,9 @@
+import { cameraRelativeMove } from './camera-control.js';
 // 가상 조이스틱 + 액션 버튼 + 키보드
 export class Input {
   constructor() {
     this.move = { x: 0, y: 0 }; // -1..1 (x: 좌우, y: 앞뒤 — 화면 기준)
+    this.screenMove = { x: 0, y: 0 };
     this.attackHeld = false; this.queue = [];
     this.enabled = false;
     this.keys = {};
@@ -16,10 +18,11 @@ export class Input {
   _bind() {
     const area = this.el.area;
     const start = (e) => {
-      if (!this.enabled) return;
+      if (!this.enabled || (!e.changedTouches && e.button !== 0)) return;
       const t = e.changedTouches ? e.changedTouches[0] : e;
       if (this.joy.active) return;
       this.joy.active = true; this.joy.id = e.changedTouches ? t.identifier : 'mouse';
+      this.screenMove.x = this.screenMove.y = 0;
       this.joy.cx = t.clientX; this.joy.cy = t.clientY;
       const b = this.el.base; b.style.left = t.clientX + 'px'; b.style.top = t.clientY + 'px'; b.style.bottom = 'auto'; b.style.transform = 'translate(-50%,-50%)';
       e.preventDefault();
@@ -34,6 +37,7 @@ export class Input {
       this.el.knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
       const dead = 0.12; const nx = dx / r, ny = dy / r; const m = Math.hypot(nx, ny);
       if (m < dead) { this.move.x = this.move.y = 0; } else { const k = Math.min(1, (m - dead) / (1 - dead)) / m; this.move.x = nx * k; this.move.y = ny * k; }
+      this.screenMove.x = this.move.x; this.screenMove.y = this.move.y;
       e.preventDefault();
     };
     const end = (e) => {
@@ -49,7 +53,7 @@ export class Input {
     const btn = (id, down, up) => {
       const el = typeof id === 'string' ? document.getElementById(id) : id;
       if (!el) return;
-      const d = (e) => { if (!this.enabled) return; e.preventDefault(); e.stopPropagation(); down(); }; const u = (e) => { e.preventDefault(); up && up(); };
+      const d = (e) => { if (!this.enabled || (!e.changedTouches && e.button !== 0)) return; e.preventDefault(); e.stopPropagation(); down(); }; const u = (e) => { e.preventDefault(); up && up(); };
       el.addEventListener('touchstart', d, { passive: false }); el.addEventListener('touchend', u); el.addEventListener('touchcancel', u);
       el.addEventListener('mousedown', d); el.addEventListener('mouseup', u); el.addEventListener('mouseleave', () => up && up());
     };
@@ -58,7 +62,7 @@ export class Input {
     document.querySelectorAll('.skill-btn').forEach((b) => btn(b, () => this.press('skill' + b.dataset.skill)));
 
     window.addEventListener('keydown', (e) => {
-      if (!this.enabled || e.target?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      if (!this.enabled || e.target?.closest?.('input, textarea, select, [contenteditable="true"], #battle-camera-controls')) return;
       if (!/^(Key[WASDJKRQE]|Arrow(Left|Right|Up|Down)|Space|ShiftLeft|Digit[1-6])$/.test(e.code)) return;
       e.preventDefault();
       if (e.repeat) return; this.keys[e.code] = true;
@@ -78,6 +82,10 @@ export class Input {
       if (k.KeyA || k.ArrowLeft) x -= 1; if (k.KeyD || k.ArrowRight) x += 1; if (k.KeyW || k.ArrowUp) y -= 1; if (k.KeyS || k.ArrowDown) y += 1;
       const m = Math.hypot(x, y); if (m > 0) { x /= m; y /= m; }
       this.move.x = x; this.move.y = y;
+    } else {
+      this.move.x = this.screenMove.x; this.move.y = this.screenMove.y;
     }
+    const world = cameraRelativeMove(this.move.x, this.move.y, this.getCameraYaw?.() ?? 0);
+    this.move.x = world.x; this.move.y = world.y;
   }
 }

@@ -1,0 +1,145 @@
+{
+  "route": "chatgpt-web-iab",
+  "chatUrl": "https://chatgpt.com/c/6aa2e039-fc58-83ee-bede-84e575ce4fca",
+  "plan": "Pro",
+  "modelLabel": "unknown",
+  "directorImageCount": 10,
+  "browserTabsUsed": 1,
+  "chatSessionsUsed": 1,
+  "batchRequestCount": 1,
+  "repairBatchRequestCount": 0,
+  "independentFileCount": 10,
+  "uniqueShaCount": 10,
+  "images": [
+    {
+      "shot": 1,
+      "name": "ranger-pierce",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalBytes": 2084852,
+      "originalSha256": "0ac156cc006f4150ca0146faf1d707ca50c598a13029d80a88ce93fc0aff3055",
+      "path": "public/img/skills-crafted/ranger-pierce.webp",
+      "bytes": 59138,
+      "sha256": "39d3c4d77865069d0f09e9354baef2d2500b712ad8063451265f045ffd10cf7b"
+    },
+    {
+      "shot": 2,
+      "name": "ranger-volley",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalBytes": 2200533,
+      "originalSha256": "9efaa7db28cf772b27cd9b18865097250e4425d32a523f85f0e51d0f547da87e",
+      "path": "public/img/skills-crafted/ranger-volley.webp",
+      "bytes": 65110,
+      "sha256": "ac62284383ac3ecf4112460f51c5516a23391374fad489d8f45dcf0b746528f5"
+    },
+    {
+      "shot": 3,
+      "name": "ranger-retreat",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalBytes": 2245185,
+      "originalSha256": "7af59af7f088b84a8dcb39c25749476264a0dd6037788425dac1a939e27e091e",
+      "path": "public/img/skills-crafted/ranger-retreat.webp",
+      "bytes": 63320,
+      "sha256": "47ce636202cec4e103affce828b490070ce40436f871c804cf35cd1e03f5ad31"
+    },
+    {
+      "shot": 4,
+      "name": "ranger-tempest",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalBytes": 2410282,
+      "originalSha256": "acace3a99a51052eea7682846148f6fd4547a66be3695cfb494c924b4df39feb",
+      "path": "public/img/skills-crafted/ranger-tempest.webp",
+      "bytes": 82930,
+      "sha256": "0bd3f4144d0c770ce781dbbed123d717eb20230ecc79abd222a806123b4e4572"
+    },
+    {
+      "shot": 5,
+      "name": "ranger-quickshot",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalBytes": 1887530,
+      "originalSha256": "d3889310d6fc5c3d2c84083b061c1e4a15c9b0840094e95fe03c8a0b46d9c90a",
+      "path": "public/img/skills-crafted/ranger-quickshot.webp",
+      "bytes": 53596,
+      "sha256": "22421743dda087637f13ff9ce9f3d8545bb8ec5bae824e6eea730d57e53a8157"
+    },
+    {
+      "shot": 6,
+      "name": "ranger-binding",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalBytes": 2729024,
+      "originalSha256": "3666d1ab2e700f74537deb8bec0577e7b2ae54d4d4627a5446678e24b4ae3e21",
+      "path": "public/img/skills-crafted/ranger-binding.webp",
+      "bytes": 88442,
+      "sha256": "a5bb0ff8f41a39375fc8d807e45d14ee9a97e41af5e1004df917f23e48f7248a"
+    },
+    {
+      "shot": 7,
+      "name": "oath-sanctum",
+      "originalPixels": [
+        1672,
+        941
+      ],
+      "originalBytes": 2952109,
+      "originalSha256": "50c49cb004e8a957b084b98d87c11f56ca5b3a4b838b29c2f641a187b4a877b3",
+      "path": "public/img/materials-crafted/oath-sanctum.webp",
+      "bytes": 527040,
+      "sha256": "bd3c9067976b51b503417b5415c92ed4968c2a876804fffbf729649f171f5b67"
+    },
+    {
+      "shot": 8,
+      "name": "sanctum-stone",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalBytes": 3070684,
+      "originalSha256": "2f8bd9c2335b7d41b0b5d236bc3ba0de6c5863bf57954b0ed8ce70efa62c5130",
+      "path": "public/img/materials-crafted/sanctum-stone.webp",
+      "bytes": 199756,
+      "sha256": "1439fbe9bcab634e25cda6c39c0ed96beeca6708bc4b6c311ed44fdb464aef66"
+    },
+    {
+      "shot": 9,
+      "name": "hero-weave",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalBytes": 3458891,
+      "originalSha256": "22000ccbdb6944cbdd03b02d49eb03bb75e937657d70829b96903ec8eab9a7a9",
+      "path": "public/img/materials-crafted/hero-weave.webp",
+      "bytes": 265002,
+      "sha256": "f94bb4409ff8dcc79409dea9c2440ab6bb0c661d0e8ce744a8be9d9968f0cb41"
+    },
+    {
+      "shot": 10,
+      "name": "forged-metal",
+      "originalPixels": [
+        1254,
+        1254
+      ],
+      "originalBytes": 3495280,
+      "originalSha256": "d8b360bfccb8a312de4e51f98fae8a38c6067e57c29d4ef36ae4ec6ed40c8183",
+      "path": "public/img/materials-crafted/forged-metal.webp",
+      "bytes": 248538,
+      "sha256": "97f68ce74d65c97670a2654dfcf265f188419d1de34678f13e7268884939885f"
+    }
+  ]
+}

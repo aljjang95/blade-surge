@@ -5,6 +5,7 @@ import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { HEROES } from '../data/heroes.js';
 import { assembleHeroIdentity } from './hero-identity.js';
+import { preloadSurfaceTextures, projectSurfaceUV, surfaceRole, applySurfaceDetail } from './surface-textures.js';
 
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
@@ -81,7 +82,8 @@ export function prepareModel(gltf, contract = null) {
       if (!material.userData.tllAuthored) { material.roughness = 0.85; material.metalness = 0; }
     }
     if (o.name.startsWith('TLL_Silva_') && materialsOf(o).every((m) => !m.map)) {
-      o.geometry.deleteAttribute('uv'); o.geometry.deleteAttribute('tangent');
+      projectSurfaceUV(o.geometry);
+      for (const material of materialsOf(o)) applySurfaceDetail(material, surfaceRole(material.name));
     }
   });
   if (!contract) mergeSkinned(gltf.scene, gltf.animations);
@@ -98,7 +100,9 @@ export function mergeSkinned(scene, animations = []) {
     if (animated.has(o.name) || animated.has(o.uuid)) return;
     const movingParents = [];
     for (let p = o.parent; p; p = p.parent) if (animated.has(p.name) || animated.has(p.uuid)) movingParents.push(p.uuid);
-    const key = [o.material.uuid, o.skeleton.uuid, movingParents.join(','), o.bindMode, o.bindMatrix.elements.join(','), o.matrixWorld.elements.join(',')].join('|');
+    const layout = Object.entries(o.geometry.attributes).sort(([a], [b]) => a.localeCompare(b))
+      .map(([name, attr]) => `${name}:${attr.itemSize}:${attr.normalized}:${attr.array.constructor.name}`).join(',');
+    const key = [o.material.uuid, o.skeleton.uuid, layout, !!o.geometry.index, movingParents.join(','), o.bindMode, o.bindMatrix.elements.join(','), o.matrixWorld.elements.join(',')].join('|');
     if (!groups.has(key)) groups.set(key, []);
     groups.get(key).push(o);
   });
@@ -122,6 +126,7 @@ export function mergeSkinned(scene, animations = []) {
 }
 
 export async function preloadAll(onProgress) {
+  await preloadSurfaceTextures();
   let done = 0;
   await Promise.all(MODEL_LIST.map(async (n) => { await loadModel(n); done++; onProgress?.(done / MODEL_LIST.length); }));
 }

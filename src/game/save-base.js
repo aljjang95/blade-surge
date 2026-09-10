@@ -28,7 +28,6 @@ export function normalizeSave(raw, fresh) {
   const s = fill(fresh, raw), sourceHeroes = record(raw.heroes) ? raw.heroes : {};
   s.heroes = {};
   for (const id of Object.keys(HEROES)) {
-    if (id !== 'knight' && id !== 'ranger' && !record(sourceHeroes[id])) continue;
     const h = fill(fresh.heroes.knight, sourceHeroes[id]);
     h.level = integer(h.level, 1, 1, 80); h.star = integer(h.star, 1, 1, 5);
     h.skills = HEROES[id].skills.map((_, i) => integer(h.skills[i], 1, 1, 10));

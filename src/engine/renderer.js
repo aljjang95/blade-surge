@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { lobbyCameraPosition } from './lobby-camera.js';
+import { battleCameraOffset } from './camera-control.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -160,6 +161,8 @@ export class Renderer {
       off.y += t * 0.22;
       off.z += t * 0.36;
       off.x += rig.side;   // 액션 시점: 이동 방향 반대편으로 살짝 비켜서 진행 방향이 열린다
+      const controlled = battleCameraOffset(off, this.battleCamera);
+      off.set(controlled.x, controlled.y, controlled.z);
       desired = rig.target.clone().add(off);
       this._applyFov(realDt);
       rig.pos.lerp(desired, 1 - Math.exp(-realDt * rig.lag));

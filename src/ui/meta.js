@@ -74,7 +74,7 @@ export class Meta {
   }
   tick() {
     const s = this.eco.s; this.eco.tickEnergy(); $('v-energy').textContent = s.energy; $('v-energy-timer').textContent = this.eco.energyTimer();
-    const st = this.eco.sku('starter'); $('promo-timer').textContent = hms(this.eco.limitedLeft(st));
+    $('promo-timer').textContent = '결제 연결 준비 중';
     $('banner-timer').textContent = hms(this.eco.s.limitedStart + 7 * 86400000 - Date.now());
     if (this.tab === 'shop') document.querySelectorAll('[data-timer]').forEach((el) => { el.textContent = '남은 시간 ' + hms(this.eco.limitedLeft(this.eco.sku(el.dataset.timer))); });
     // 월정액 자동 지급
@@ -161,14 +161,31 @@ export class Meta {
         return `<tr><th>${name}</th><td>${number(key, p.before[key])}</td><td>${number(key, p.after[key])}</td><td class="${delta > 0 ? 'stat-up' : delta < 0 ? 'stat-down' : ''}">${delta > 0 ? '+' : delta < 0 ? '−' : ''}${number(key, Math.abs(delta))}</td></tr>`;
       }).join('')}</tbody></table><ul>${sets || '<li>세트 구성 변화 없음</li>'}</ul><small>전투력과 세트 효과를 함께 비교해 선택하세요.</small></section>`;
   }
+  selectHero(id, restoreKeyboardFocus = false) {
+    if (!HEROES[id] || !this.eco.ownHero(id)) return false;
+    this.heroSel = id;
+    if (this.eco.s.selected !== id) {
+      this.eco.s.selected = id;
+      this.eco.emit();
+      this.app.showcaseHero(id);
+      this.ui.toast(`${HEROES[id].name} 출전!`, 'gold');
+      audio.voice(heroVoiceName(id, 'select'), { min: 1 });
+    }
+    this.renderHeroes();
+    if (restoreKeyboardFocus) $('hero-list').querySelector(`[data-hero-id="${id}"]`)?.focus({ preventScroll: true });
+    return true;
+  }
   renderHeroes() {
     const list = $('hero-list'); list.innerHTML = '';
     if (!HEROES[this.heroSel]) this.heroSel = this.eco.s.selected;
     for (const id of HERO_ORDER) {
       const def = HEROES[id]; const own = this.eco.ownHero(id); const h = this.eco.hero(id);
-      const c = document.createElement('div'); c.className = `hero-card rar-${def.rarity}` + (own ? '' : ' lock') + (this.heroSel === id ? ' on' : '');
+      const c = document.createElement('button'); c.type = 'button'; c.className = `hero-card rar-${def.rarity}` + (own ? '' : ' lock') + (this.heroSel === id ? ' on' : '');
+      c.dataset.heroId = id;
+      c.setAttribute('aria-label', `${def.name}${own ? ' 출전 선택' : ' 미보유 정보'}`);
+      c.setAttribute('aria-pressed', String(this.eco.s.selected === id));
       c.innerHTML = `<img src="${def.portrait}" onerror="this.style.background='${def.color}'"><span class="rar bg-${def.rarity}">${def.rarity}</span>${own ? `<span class="lv">Lv.${h.level} ${'★'.repeat(h.star)}</span>` : '<span class="lockt">미보유</span>'}`;
-      c.onclick = () => { this.heroSel = id; this.renderHeroes(); };
+      c.onclick = (event) => { if (own) this.selectHero(id, event.detail === 0 && document.activeElement === c); else { this.heroSel = id; this.renderHeroes(); } };
       list.appendChild(c);
     }
     const id = this.heroSel; const def = HEROES[id]; const own = this.eco.ownHero(id); const det = $('hero-detail');
@@ -188,7 +205,7 @@ export class Meta {
     $('h-next').onclick = () => this.app.startStage(this.eco.nextStage());
     $('h-lv').onclick = () => { if (this.eco.levelUpHero(id)) { audio.levelUp({ vol: 0.42 }); audio.vibe(20); this.ui.toast(`Lv.${this.eco.hero(id).level} 달성!`, 'gold'); this.renderHeroes(); } else { this.ui.toast('골드 부족', 'red'); audio.play('ui_error'); this.offerGold(); } };
     $('h-star').onclick = () => { if (this.eco.promoteHero(id)) { audio.play('jingle_legend', { vol: 0.7 }); this.ui.toast('승급 성공! ★' + this.eco.hero(id).star, 'gold'); this.renderHeroes(); } else { this.ui.toast('영웅 조각 부족 — 소환에서 중복 획득 시 조각 +10', 'red'); } };
-    const hs = $('h-sel'); if (hs) hs.onclick = () => { this.eco.s.selected = id; this.eco.emit(); this.app.showcaseHero(id); this.renderHeroes(); this.ui.toast(`${def.name} 출전!`, 'gold'); audio.voice(heroVoiceName(id, 'select'), { min: 1 }); };
+    const hs = $('h-sel'); if (hs) hs.onclick = () => this.selectHero(id);
     det.querySelectorAll('[data-sk]').forEach((el) => el.onclick = () => this.showSkill(id, +el.dataset.sk));
     const hc = $('h-craft'); if (hc) hc.onclick = () => this.showCraft(id);
     det.querySelectorAll('.equip-slot[data-slot]').forEach((el) => el.onclick = () => { const uid = el.dataset.uid; if (uid) this.showItem(+uid, id); else this.ui.toast('가방에서 장비를 선택해 장착하세요'); });
@@ -409,6 +426,19 @@ export class Meta {
       <div class="modal-btns"><button class="btn btn-red btn-sm" id="m-reset">데이터 초기화</button><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {
       b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
       b.querySelector('.modal-btns').insertAdjacentHTML('beforebegin',mixRows+'<p id="mix-notice" role="status"></p>');
+      const pwa = this.app.pwa, pwaState = pwa?.getState();
+      if (pwaState) {
+        b.querySelector('.modal-btns').insertAdjacentHTML('beforebegin', '<div class="setting-row"><span>게임 앱</span><button class="btn btn-ghost btn-sm" id="pwa-install">홈 화면에 설치</button></div><p id="pwa-notice" role="status" style="font-size:12px;color:var(--muted)"></p>');
+        const install = b.querySelector('#pwa-install'), notice = b.querySelector('#pwa-notice');
+        install.textContent = pwaState.updateAvailable ? '업데이트 적용' : pwaState.installed ? '설치됨' : '홈 화면에 설치';
+        install.disabled = pwaState.installed && !pwaState.updateAvailable;
+        notice.textContent = '온라인 플레이 · 진행은 이 기기에 저장됩니다.';
+        install.onclick = async () => {
+          if (pwa.getState().updateAvailable) { pwa.applyUpdate(); return; }
+          const result = await pwa.install();
+          notice.textContent = result.outcome === 'accepted' ? '설치를 진행합니다.' : result.outcome === 'dismissed' ? '설치를 취소했습니다.' : '브라우저 메뉴에서 앱 설치 또는 홈 화면에 추가를 선택해 주세요.';
+        };
+      }
       b.querySelectorAll('[data-mix]').forEach(input=>{input.oninput=()=>{input.nextElementSibling.textContent=input.value+'%';audio.setMix({...this.app.arsenal.s.mix,[input.dataset.mix]:Number(input.value)/100});};input.onchange=()=>{const r=this.app.arsenal.setMix({[input.dataset.mix]:Number(input.value)/100});audio.setMix(this.app.arsenal.s.mix);b.querySelector('#mix-notice').textContent=r.ok?'음량이 저장되었습니다.':r.error;input.value=String(Math.round(this.app.arsenal.s.mix[input.dataset.mix]*100));input.nextElementSibling.textContent=input.value+'%';};});
       b.querySelectorAll('.toggle').forEach((t) => t.onclick = () => { const k = t.dataset.k; st[k] = !st[k]; t.classList.toggle('on', st[k]); t.setAttribute('aria-checked',String(st[k])); this.app.applySettings(); this.eco.save(); });
       b.querySelectorAll('[data-cam]').forEach((c) => c.onclick = () => { st.camera = c.dataset.cam; b.querySelectorAll('[data-cam]').forEach((x) => x.classList.toggle('on', x === c)); b.querySelector('#cam-desc').textContent = CAM_DESC[st.camera]; this.app.applySettings(); this.eco.save(); audio.play('ui_open', { vol: 0.3 }); });

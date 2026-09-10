@@ -20,6 +20,11 @@ export class UI {
     this.lootLayer = $('loot-layer'); this.lootQueue = [];
     this.minimap = new Minimap($('minimap'));
     this.miniT = 0;
+    const cameraControls = document.createElement('div');
+    cameraControls.id = 'battle-camera-controls';
+    cameraControls.setAttribute('aria-label', '전투 시점 조작');
+    cameraControls.innerHTML = '<div id="battle-camera-pad" tabindex="0" role="group" aria-label="드래그 또는 방향키로 시점 회전, 더하기 빼기로 확대 축소, Home으로 복원"><span>시점 회전</span><small>드래그 ↔ ↕</small></div><div class="battle-camera-buttons"><button type="button" id="battle-camera-zoom-in" aria-label="시점 확대">+</button><button type="button" id="battle-camera-reset">복원</button><button type="button" id="battle-camera-zoom-out" aria-label="시점 축소">−</button></div>';
+    this.el.hud.append(cameraControls);
     document.body.classList.add('force-landscape');
     $('btn-ignore-rotate').addEventListener('click', () => document.body.classList.remove('force-landscape'));
     this._bindGlobal();
@@ -72,20 +77,12 @@ export class UI {
   confirm(title, body, { ok = '확인', cancel = '취소', okCls = 'btn-gold' } = {}) {
     return new Promise((res) => { this.modal(`<h2>${title}</h2><p>${body}</p><div class="modal-btns">${cancel ? `<button class="btn btn-ghost" id="m-cancel">${cancel}</button>` : ''}<button class="btn ${okCls}" id="m-ok">${ok}</button></div>`, { onOpen: (b) => { b.querySelector('#m-ok').onclick = () => { this.closeModal(); res(true); }; const c = b.querySelector('#m-cancel'); if (c) c.onclick = () => { this.closeModal(); res(false); }; } }); });
   }
-  /** 목업 결제 시트 */
+  /** No store billing provider is connected. Never resolve a simulated purchase success. */
   paySheet(sku) {
-    return new Promise((res) => {
-      this.modal(`<div class="pay-sheet"><div class="pay-store"><i></i> Google Play · 결제 확인 (목업)</div>
-        <div class="pay-item"><img src="${sku.icon}" onerror="this.remove()"><div><div style="font-weight:900">${sku.name}</div><div style="font-size:11px;color:var(--muted)">${sku.desc || (sku.gems ? `보석 ${fmt(sku.gems)}` + (sku.bonus ? ` (+${fmt(sku.bonus)} 보너스)` : '') : '')}</div></div></div>
-        <div class="pay-price">${sku.priceLabel}</div>
-        <div class="pay-fine">BLADE SURGE 목업 결제 — 실제 청구되지 않습니다. 실제 서비스 시 결제 SDK(Google Play Billing / App Store / PG)를 이 지점에 연결합니다.</div>
-        <div class="modal-btns"><button class="btn btn-ghost" id="p-cancel">취소</button><button class="btn btn-gold" id="p-ok">결제하기</button></div></div>`, {
-        onOpen: (b) => {
-          b.querySelector('#p-cancel').onclick = () => { this.closeModal(); res(false); };
-          b.querySelector('#p-ok').onclick = () => { b.innerHTML = '<div class="pay-processing">결제 처리 중…</div>'; audio.play('ui_confirm', { vol: 0.6 }); setTimeout(() => { this.closeModal(); res(true); }, 900); };
-        },
-      });
+    this.modal('<div class="pay-sheet"><h2>유료 구매 준비 중</h2><p>현재 버전은 스토어 결제가 연결되지 않아 유료 상품과 프리미엄 패스를 구매할 수 없습니다.</p><p>기본 플레이와 획득한 재화 사용은 계속 이용할 수 있습니다.</p><div class="modal-btns"><button class="btn btn-gold" id="p-cancel">돌아가기</button></div></div>', {
+      onOpen: (box) => { box.querySelector('#p-cancel').onclick = () => this.closeModal(); },
     });
+    return Promise.resolve(false);
   }
   /** 구매 완료 축하 팝업 */
   purchaseDone(sku, got, extra = '') {
@@ -240,22 +237,10 @@ export class UI {
   watchAd() {
     const result = this.resultData;
     if (!result?.win || !result.reward || result.bonusPending || result.bonusClaimed || this.app.battle.result !== result || !this.el.result.classList.contains('show')) return;
-    // 화면과 지급이 같은 전투의 정산 영수증을 사용한다. 광고는 목업을 유지한다.
-    result.bonusPending = true; this.adResult = result;
-    const btn = $('btn-result-double'); btn.disabled = true;
-    this.modal('<h2>광고 시청 체험</h2><p>3초 후 이번 전투의 골드·강화 재료를 한 번 더 받습니다.</p><div class="pay-processing" id="ad-cnt">3</div><div class="modal-btns"><button class="btn btn-ghost" id="ad-cancel">취소</button></div>', { onOpen: (box) => { box.querySelector('#ad-cancel').onclick = () => { this.cancelAd(); this.closeModal(); }; } });
-    let n = 3;
-    this.adTimer = setInterval(() => {
-      const count = $('ad-cnt');
-      if (this.resultData !== result || this.app.battle.result !== result || !count || !this.el.modal.classList.contains('show')) { this.cancelAd(); return; }
-      count.textContent = String(--n);
-      if (n > 0) return;
-      clearInterval(this.adTimer); this.adTimer = null; this.adResult = null;
-      result.bonusPending = false;
-      const got = this.eco.doubleStageRewards(result.reward);
-      result.bonusClaimed = !!got; btn.disabled = result.bonusClaimed;
-      this.closeModal(); if (got) { this.rewardToast(got); audio.play('jingle_win1', { vol: 0.7 }); }
-    }, 1000);
+    this.modal('<h2>광고 보너스 준비 중</h2><p>현재 버전은 광고 시청을 지원하지 않아 추가 보상을 받을 수 없습니다.</p><p>이번 전투의 기본 보상은 그대로 유지됩니다. 다음 전투를 계속 진행해 주세요.</p><div class="modal-btns"><button class="btn btn-gold" id="ad-cancel">돌아가기</button></div>', {
+      onOpen: (box) => { box.querySelector('#ad-cancel').onclick = () => this.closeModal(); },
+    });
+    return false;
   }
   cancelAd() { if (this.adTimer) clearInterval(this.adTimer); this.adTimer = null; if (this.adResult) this.adResult.bonusPending = false; this.adResult = null; $('btn-result-double').disabled = !!this.resultData?.bonusClaimed; }
   hideResult() { if (this.adResult) { this.cancelAd(); this.closeModal(); } for (const timer of this.resultTimers) clearTimeout(timer); this.resultTimers.length = 0; this.resultData = null; this.show(this.el.result, false); }

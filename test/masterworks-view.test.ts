@@ -32,6 +32,19 @@ test('failed settlement preserves its result, ticket and journal and explains re
   expect(calls).toEqual(['close','clear-result','lobby','open:forge']);
 });
 
+test('close synchronously releases only the masterworks pause before the native close event',()=>{
+  const reasons=new Set(['catalogue','masterworks']);const calls:string[]=[];
+  const battle:any={paused:true,setPaused(reason:string,on:boolean){if(on)reasons.add(reason);else reasons.delete(reason);this.paused=reasons.size>0;calls.push(`pause:${reason}:${on}`);}};
+  const dialog:any={open:true,close(){calls.push(`dialog:${battle.paused}`);this.open=false;}};
+  const view:any=Object.assign(Object.create(MasterworksView.prototype),{battle,dialog});
+  view.close();
+  expect(calls).toEqual(['pause:masterworks:false','dialog:true']);
+  expect(reasons).toEqual(new Set(['catalogue']));expect(battle.paused).toBe(true);
+  // The native close listener repeats this operation; it must stay idempotent.
+  battle.setPaused('masterworks',false);
+  expect(reasons).toEqual(new Set(['catalogue']));
+});
+
 // Minimal DOM boundary: verify actual render output without a browser or new dependency.
 class MWElement {
   children:MWElement[]=[];className='';textContent='';style:any={};dataset:any={};attrs:any={};disabled=false;src='';alt='';open=false;value:any;max:any;

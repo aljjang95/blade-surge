@@ -39,7 +39,13 @@ export class MasterworksView {
     if(this.battle.active)this.battle.setPaused('masterworks',true);
     if(!this.dialog.open)this.dialog.showModal();
   }
-  close(){if(this.dialog.open)this.dialog.close();}
+  close(){
+    // HTMLDialogElement dispatches `close` asynchronously. Release this view's
+    // pause ownership now so a semantic selection can resume the same tick.
+    // setPaused is reason-scoped, so companion/catalogue pauses remain held.
+    this.battle?.setPaused?.('masterworks',false);
+    if(this.dialog.open)this.dialog.close();
+  }
   openExpedition(tab) {
     const controller=this.app.expeditionUI;
     if(controller.result?.saveError) {

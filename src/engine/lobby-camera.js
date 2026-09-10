@@ -31,19 +31,26 @@ export class LobbyCameraControls {
     });
     this.panel.querySelectorAll('input').forEach(input => input.addEventListener('input', () => this.set({ ...this.value, [input.name]: Number(input.value) })));
     this.pad.addEventListener('pointerdown', event => {
-      if (!this.active || event.button !== 0) return;
+      if (!this.active || this.drag || (event.button !== 0 && event.button !== 2)) return;
       this.drag = { id: event.pointerId, x: event.clientX, y: event.clientY, ...this.value };
       this.pad.setPointerCapture(event.pointerId); event.preventDefault();
     });
     this.pad.addEventListener('pointermove', event => {
-      if (!this.active || !this.drag || this.drag.id !== event.pointerId) return;
+      if (!this.drag || this.drag.id !== event.pointerId) return;
+      if (!this.active) { finish(); return; }
       const yaw = this.drag.yaw - (event.clientX - this.drag.x) * .45;
       this.set({ ...this.value, yaw: ((yaw + 540) % 360) - 180, pitch: this.drag.pitch + (event.clientY - this.drag.y) * .14 }, false);
     });
-    const finish = () => { if (this.drag) this.app.eco.save(); this.drag = null; };
-    this.pad.addEventListener('pointerup', finish);
-    this.pad.addEventListener('pointercancel', finish);
-    this.pad.addEventListener('lostpointercapture', finish);
+    const finish = () => {
+      const drag = this.drag; this.drag = null;
+      if (drag) { this.app.eco.save(); if (this.pad.hasPointerCapture(drag.id)) this.pad.releasePointerCapture(drag.id); }
+    };
+    this.pad.addEventListener('contextmenu', event => { if (this.active) event.preventDefault(); });
+    window.addEventListener('blur', finish);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) finish(); });
+    for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) this.pad.addEventListener(name, event => {
+      if (this.drag?.id === event.pointerId) finish();
+    });
     this.pad.addEventListener('wheel', event => {
       if (!this.active) return;
       event.preventDefault(); this.set({ ...this.value, zoom: this.value.zoom - Math.sign(event.deltaY) * 5 });

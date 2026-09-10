@@ -138,6 +138,14 @@ test('short dungeon final approach does not produce story or discovery after set
   game.markCleared(room);expect(game.run.queue).toHaveLength(0);expect(state.discoveries).toHaveLength(0);expect(state.renown).toBe(0);
 });
 
+test('cleared rooms do not reopen an empty chronicle after all offers are exhausted',()=>{
+  const {game}=fixture();game.stage=buildExpeditionStage('dungeon','glass_garden',{});game.world=buildExpeditionWorld(game.stage);
+  game.run.round=6;game.run.storySeen=true;game.ui.waveBanner=noop;game.spawnEnemy=noop;
+  const scheduled:Function[]=[];let opened=0;game.after=(_sec:number,fn:Function)=>scheduled.push(fn);game.chronicle.offer=()=>opened++;
+  const room=game.world.rooms.find((r:any)=>r.type==='normal');game.markCleared(room);
+  expect(game.currentOffer()).toBeUndefined();for(const fn of scheduled)fn();expect(opened).toBe(0);
+});
+
 function damageFixture() {
   const {game}=fixture(),bolts:any[]=[];
   Object.assign(game,{elapsed:10,counterUntil:0,chainUntil:0,feedbackSound:true,feedbackCount:0,dmgDealt:0,combo:0,maxCombo:0,timeCtl:{hitstop:noop}});

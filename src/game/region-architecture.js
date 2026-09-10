@@ -1,7 +1,11 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { applySurfaceDetail } from '../engine/surface-textures.js';
 
 const PALETTES = {
+  crypt: [0x8e98ae, 0x938269, 0x749ebd],
+  throne: [0xab9480, 0xc6a061, 0xd9a26f],
+  abyss: [0x817a98, 0xa497b7, 0x9c85cf],
   garden: [0x939d87, 0xc7ac68, 0x7fb8a0],
   forge: [0x353a42, 0xa78556, 0xff7638],
   frost: [0x788caa, 0xc6c9d5, 0x86d9eb],
@@ -28,6 +32,7 @@ export function buildRegionArchitecture(floor, theme) {
     new THREE.MeshStandardMaterial({ color: colors[1], roughness: .36, metalness: .72 }),
     new THREE.MeshStandardMaterial({ color: colors[2], emissive: colors[2], emissiveIntensity: .42, roughness: .4, metalness: .2 }),
   );
+  applySurfaceDetail(materials[0], 'stone'); applySurfaceDetail(materials[1], 'metal');
   group.userData.landmarks = [];
   for (const room of floor.rooms) {
     const chunks = [[], [], []];
@@ -75,7 +80,46 @@ export function buildRegionArchitecture(floor, theme) {
     const rear = z - hh - 2.2;
     const crownRoom = room.type === 'boss';
     const height = crownRoom ? 1.2 : 1;
-    if (theme === 'garden') {
+    const tower = ['crypt','throne','abyss'].includes(theme);
+    if (tower) {
+      // A wall niche, not loose props: paired piers, capitals, recessed effigy and cornice.
+      // Rotate the entire structure onto a disconnected wall; crossing rooms retain only floor work.
+      buildingLandmark=true;
+      const span = crownRoom ? 4.2 : 3.2;
+      box(x,.38,rear,span*2+1.4,.75,2.8);
+      for (const side of [-1,1]) {
+        const px=x+side*span;
+        box(px,2.4,rear,.75,4.8,1.5);
+        box(px,.75,rear,1.1,.28,1.8,1);
+        box(px,4.75,rear,1.15,.28,1.85,1);
+        box(px,2.65,rear+.8,.18,2.8,.08,1);
+      }
+      box(x,5.05,rear,span*2+1.5,.35,1.9,1);
+      box(x,5.36,rear,span*2+1,.25,1.55);
+      if(theme==='crypt') {
+        // Hooded custodian relief, robe, shoulders, face and a vertical staff.
+        cylinder(x,1.85,rear,.34,.94,2.5,0,8);
+        box(x,2.78,rear,1.5,.48,.72);
+        add(new THREE.SphereGeometry(.33,8,6),1,x,3.32,rear+.2);
+        add(new THREE.ConeGeometry(.55,.9,8),0,x,3.62,rear-.05);
+        cylinder(x+1.06,2.4,rear+.35,.065,.065,3.5,1,6);
+        ring(x+1.06,4.15,rear+.35,.24,.06,1,0);
+      } else if(theme==='throne') {
+        // Ceremonial high-backed seat with stepped arms and three heraldic teeth.
+        box(x,1.3,rear,2.2,.4,1.7,1);
+        box(x,2.5,rear-.5,2.1,2.6,.35);
+        for(const side of [-1,1]) box(x+side*1.1,1.8,rear,.32,1.1,1.8,1);
+        for(let i=-1;i<=1;i++) add(new THREE.ConeGeometry(.38,.9,4),1,x+i*.75,4.13,rear-.5,0,Math.PI/4);
+      } else {
+        // Split celestial dial held by an architectural cradle; no floating clutter.
+        cylinder(x,1.1,rear,.55,.9,1.4);
+        ring(x,2.9,rear,1.35,.14,1,0);
+        ring(x,2.9,rear,1.02,.07,2,0);
+        box(x,2.9,rear,.12,2.5,.14,1,0,.6);
+        box(x,2.9,rear,2.5,.12,.14,1,0,.6);
+      }
+      buildingLandmark=false;
+    } else if (theme === 'garden') {
       for (const side of [-1,1]) {
         const px = x + side*(hw-2.5);
         box(px, .3, rear, 4, .6, 4);
@@ -189,7 +233,62 @@ export function buildRegionArchitecture(floor, theme) {
     };
     const slab = (px,pz,w,d,color,ry=0) => inlay(new THREE.PlaneGeometry(w,d),px,pz,color,ry);
     const radius=Math.min(hw,hh)-2.3;
-    if(theme==='garden') {
+    if(tower) {
+      const dark = theme==='crypt' ? 0x404a60 : theme==='throne' ? 0x59463e : 0x423b58;
+      const light = theme==='crypt' ? 0x8290a1 : theme==='throne' ? 0xac9575 : 0x8b809f;
+      // Continuous framed aisles make the playable footprint legible without adding colliders.
+      for(const side of [-1,1]) {
+        slab(x+side*(hw-1.4),z,.65,room.h-2.1,dark);
+        slab(x,z+side*(hh-1.4),room.w-2.1,.65,dark);
+        box(x+side*(hw-1.4),.055,z,.08,.02,room.h-2.1,1);
+        box(x,.055,z+side*(hh-1.4),room.w-2.1,.02,.08,1);
+      }
+      const role=room.type;
+      const sides=theme==='abyss'?6:theme==='throne'?8:12;
+      const emblemRadius=radius*(role==='boss'?.86:role==='elite'?.74:.59);
+      if(role==='start' || role==='treasure') {
+        // Arrival compass / treasury diamond have distinct silhouettes from encounter circles.
+        slab(x,z,emblemRadius*1.5,emblemRadius*1.5,dark,Math.PI/4);
+        for(const side of [-1,1]) {
+          box(x+side*emblemRadius*.7,.055,z,.10,.02,emblemRadius*1.4,1);
+          box(x,.055,z+side*emblemRadius*.7,emblemRadius*1.4,.02,.10,1);
+        }
+        const count=role==='treasure'?4:8;
+        for(let i=0;i<count;i++) {
+          const a=i*Math.PI*2/count;
+          slab(x+Math.sin(a)*emblemRadius*.4,z+Math.cos(a)*emblemRadius*.4,.55,1.3,light,a);
+        }
+      } else {
+        inlay(new THREE.RingGeometry(emblemRadius*.61,emblemRadius,sides),x,z,dark);
+        ring(x,.065,z,emblemRadius,.06,1);
+        if(role==='boss') ring(x,.065,z,emblemRadius*.6,.07,1);
+        const count=role==='elite'?6:sides;
+        const phase=(room.id%3)*Math.PI/count;
+        for(let i=0;i<count;i++) {
+          const a=i*Math.PI*2/count+phase;
+          slab(x+Math.sin(a)*emblemRadius*.8,z+Math.cos(a)*emblemRadius*.8,.48,emblemRadius*.29,light,a);
+        }
+      }
+      // Door sills use actual corridor rectangles, so offset L-shaped entries stay aligned.
+      const sills=new Set();
+      for(const corridor of floor.corridors || []) for(const axis of ['x','z']) for(const side of [-1,1]) {
+        const edge=(axis==='x'?x+side*hw:z+side*hh);
+        const c=axis==='x'?corridor.x:corridor.z, half=(axis==='x'?corridor.w:corridor.h)/2;
+        if(c-half>=edge || c+half<=edge) continue;
+        const cross=axis==='x'?corridor.z:corridor.x, crossHalf=(axis==='x'?corridor.h:corridor.w)/2;
+        const center=axis==='x'?z:x, roomHalf=axis==='x'?hh:hw;
+        const lo=Math.max(cross-crossHalf,center-roomHalf+.5), hi=Math.min(cross+crossHalf,center+roomHalf-.5);
+        if(hi-lo<1) continue;
+        const key=`${axis}:${side}:${lo.toFixed(1)}:${hi.toFixed(1)}`;
+        if(sills.has(key)) continue; sills.add(key);
+        const mid=(lo+hi)/2;
+        slab(axis==='x'?edge:mid,axis==='x'?mid:edge,axis==='x'?1.1:hi-lo,axis==='x'?hi-lo:1.1,dark);
+        for(const step of [-.32,.32]) box(axis==='x'?edge+step:mid,.055,axis==='x'?mid:edge+step,
+          axis==='x'?.08:hi-lo,.02,axis==='x'?hi-lo:.08,1);
+      }
+      group.userData.roomDetails ||= [];
+      group.userData.roomDetails.push({roomId:room.id,theme,role,thresholds:sills.size,landmark:!!freeSide});
+    } else if(theme==='garden') {
       inlay(new THREE.RingGeometry(radius*.62,radius*.92,48),x,z,0x455d45);
       ring(x,.065,z,radius*.62,.10,1);
       ring(x,.065,z,radius*.92,.10,1);

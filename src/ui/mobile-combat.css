@@ -1,4 +1,43 @@
-/* Portrait-only information layout. Combat inputs, map dimensions and landscape stay owned by their existing styles. */
+/* A dedicated orbit pad keeps camera gestures separate from combat movement. */
+#battle-camera-controls { position:absolute; left:calc(10px + var(--sal,0px)); top:42%; width:128px; pointer-events:auto; }
+#battle-camera-pad { touch-action:none; user-select:none; cursor:grab; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:52px; border:1px solid #c8d8bd55; border-radius:10px; background:#142621ba; color:#f1edcf; font-size:11px; }
+#battle-camera-pad small { margin-top:3px; color:#b5c9ba; font-size:9px; }
+#battle-camera-pad:active { cursor:grabbing; background:#234538ed; }
+#battle-camera-pad:focus-visible,.battle-camera-buttons button:focus-visible { outline:2px solid var(--gold); }
+.battle-camera-buttons { display:flex; gap:3px; margin-top:3px; }
+.battle-camera-buttons button { flex:1; min-height:36px; padding:0; background:#142621cf; border:1px solid #c8d8bd44; border-radius:7px; font-size:12px; }
+@media(orientation:portrait) { #battle-camera-controls { top:auto; bottom:calc(230px + var(--sab)); width:110px; } }
+@media(orientation:landscape) and (max-height:550px) { #battle-camera-controls { top:37%; width:116px; } #battle-camera-pad { min-height:44px; } .battle-camera-buttons button { min-height:32px; } }
+/* Explicit columns stop long floor/target labels from borrowing menu or HP space. */
+@media (orientation:landscape) {
+  #hud .hud-top { display:grid; grid-template-columns:minmax(200px,280px) minmax(0,1fr) 224px; align-items:start; gap:16px; }
+  #hud .hud-player { min-width:0; align-items:flex-start; }
+  #hud .hud-portrait { flex:0 0 42px; }
+  #hud .hud-bars { flex:1; width:auto; min-width:0; max-width:none; gap:3px; }
+  #hud .rpg-xp { min-width:0; margin-top:0; }
+  #hud .rpg-xp span,#hud .mw-run-strip { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #hud .mw-run-strip { max-width:100%; margin-top:0; line-height:14px; }
+  #hud .hud-center { min-width:0; display:flex; flex-direction:column; gap:3px; }
+  #hud .hud-center .wave,#hud .hud-center .stage-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:18px; }
+  #hud .rpg-target,#hud .mw-posture { max-width:100%; margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:15px; padding:2px 6px; }
+  #hud .hud-right { min-width:0; width:224px; }
+  #hud .hud-right-top { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; width:100%; }
+  #hud .hud-right-top .hud-btn { min-width:0; min-height:36px; padding:0 4px; white-space:nowrap; }
+  #hud .bossbar { top:calc(100px + var(--sat)); left:calc(306px + var(--sal,0px)); right:250px; }
+  #hud:has(.bossbar:not(.hidden)) .rpg-target { display:none; }
+  #hud .boss-name { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #hud .bb-body { min-width:0; }
+}
+@media (orientation:landscape) and (max-width:900px) {
+  #hud .hud-top { grid-template-columns:220px minmax(0,1fr) 208px; gap:10px; }
+  #hud .hud-right { width:208px; }
+  #hud .hud-portrait { flex-basis:34px; width:34px; height:34px; }
+  #hud .hud-right-top .hud-btn { font-size:11px; }
+  #hud .bossbar { left:240px; right:228px; }
+  #hud .bossbar img { width:28px; height:28px; }
+  #hud .boss-name { font-size:11px; }
+}
+/* Portrait-only information layout. */
 @media (max-width:620px) and (orientation:portrait) {
   #hud .hud-top {
     display:grid;

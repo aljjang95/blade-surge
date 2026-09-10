@@ -45,8 +45,8 @@ test('displayed monster HP and attack use the exact baseline scaling formula', (
     assert.equal(s.armor,0.15); assert.equal(s.speed,4.6);
   }
 });
-test('summons grant no XP; normal monsters reuse authored experience', () => {
-  assert.equal(monsterXp({exp:8},1),8); assert.equal(monsterXp({exp:8},1.12),8); assert.equal(monsterXp({exp:60},2),120);
+test('summons grant no XP; authored rewards retain rank and floor scaling at the combat rate', () => {
+  assert.equal(monsterXp({exp:8},1),1); assert.equal(monsterXp({exp:8},1.12),1); assert.equal(monsterXp({exp:60},2),24);
   assert.equal(monsterXp({exp:999},2,true),0);
 });
 test('invalid experience rewards fail closed', () => {

@@ -36,7 +36,7 @@ for (const name of ['Knight', 'Barbarian', 'Mage', 'Rogue']) for (const style of
     assembleHeroIdentity(gltf, authored, name, style); prepareModel(gltf);
     const skins: THREE.SkinnedMesh[] = [];
     gltf.scene.traverse((o) => { if (o instanceof THREE.SkinnedMesh && o.name.startsWith('TLL_')) skins.push(o); });
-    expect(skins.length).toBe(style === 'casual-v2' ? 1 : 2);
+    expect(skins.length).toBe(style === 'casual-v2' ? 3 : 2);
     for (const skin of skins) {
       expect(skin.geometry.attributes.position.count).toBeLessThan(25000);
       expect(skin.geometry.attributes.position.array.every(Number.isFinite)).toBe(true);

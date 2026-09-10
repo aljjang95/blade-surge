@@ -1,6 +1,8 @@
 /** Pure RPG rules. The existing hero curve and stage difficulty remain authoritative. */
 export const HERO_LEVEL_CAP = 80;
 export const RPG_SAVE_VERSION = 1;
+// 처치 보상은 즉시 성장하되, 첫 층에서 각성 구간까지 건너뛰지 않는다.
+export const COMBAT_XP_RATE = 0.20;
 const MAX_COUNTER = 1_000_000_000;
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 export const boundedInt = (value, fallback = 0, min = 0, max = MAX_COUNTER) =>
@@ -43,7 +45,7 @@ export function monsterStats(def, scale = 1) {
 
 export function monsterXp(def, scale = 1, summoned = false) {
   if (summoned || !Number.isFinite(scale) || scale <= 0 || !Number.isFinite(def?.exp) || def.exp <= 0) return 0;
-  return Math.min(1_000_000, Math.max(1, Math.floor(def.exp * scale)));
+  return Math.min(1_000_000, Math.max(1, Math.floor(def.exp * scale * COMBAT_XP_RATE)));
 }
 
 /** Mutates the existing hero record, never creates a parallel character/account level. */
