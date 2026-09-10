@@ -1,0 +1,63 @@
+/* Portrait-only information layout. Combat inputs, map dimensions and landscape stay owned by their existing styles. */
+@media (max-width:620px) and (orientation:portrait) {
+  #hud .hud-top {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) 116px;
+    align-items:start;
+    gap:8px;
+    top:calc(6px + var(--sat));
+    left:8px;
+    right:8px;
+    padding-top:50px;
+  }
+  #hud .hud-player { grid-column:1; grid-row:1; width:100%; min-width:0; align-items:flex-start; gap:5px; }
+  #hud .hud-portrait { flex:0 0 32px; width:32px; height:32px; border-radius:8px; }
+  #hud .hud-bars { flex:1; width:100%; min-width:0; max-width:none; gap:2px; }
+  #hud .hpbar { height:17px; flex-shrink:0; }
+  #hud .hpbar span { font-size:10px; line-height:16px; white-space:nowrap; }
+  #hud .ultbar { height:4px; flex-shrink:0; }
+  #hud .setgauge { min-height:0; height:9px; margin:0; line-height:9px; }
+  #hud .sg-label { display:none; }
+  #hud .rpg-xp { min-width:0; width:100%; margin-top:0; gap:2px; font-size:10px; line-height:12px; }
+  #hud .rpg-xp span { white-space:nowrap; }
+  #hud .rpg-xp progress { height:3px; }
+  #hud .mw-run-strip { width:100%; max-width:none; margin-top:0; font-size:9px; line-height:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #hud .hud-right { grid-column:2; grid-row:1; width:116px; gap:4px; }
+  #hud .hud-right-top { position:absolute; top:0; right:0; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:4px; width:calc(100% - 132px); max-width:244px; }
+  #hud .hud-right-top .hud-btn { min-width:0; width:100%; height:44px; min-height:44px; padding:0 3px; font-size:10px; line-height:14px; white-space:nowrap; border-radius:8px; }
+  #hud .hud-right-top #btn-auto { font-size:11px; }
+  #hud .hud-center { position:absolute; top:0; left:0; width:124px; min-width:0; text-align:left; }
+  #hud .hud-center .wave { font-size:13px; line-height:19px; letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #hud .hud-center .stage-name { font-size:10px; line-height:15px; white-space:nowrap; }
+  #hud .mw-posture { position:absolute; top:114px; left:0; width:calc(100vw - 140px); max-width:480px; margin:0; padding:2px 5px; font-size:10px; line-height:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #hud .rpg-target { position:absolute; top:136px; left:0; width:calc(100vw - 140px); max-width:480px; margin:0; padding:3px 5px; font-size:10px; line-height:14px; }
+  /* The boss already has an authoritative name/HP bar; omit its duplicate target label. */
+  #hud:has(.bossbar:not(.hidden)) .rpg-target { display:none; }
+  #hud .bossbar { top:calc(140px + var(--sat)); left:8px; right:132px; gap:5px; text-align:left; }
+  #hud .bossbar img { width:28px; height:28px; border-radius:7px; border-width:1px; }
+  #hud .bossbar .bb-body { min-width:0; }
+  #hud .boss-name { font-size:11px; line-height:16px; letter-spacing:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #hud .boss-hp { height:9px; }
+  /* Region danger copy sits below the fixed information rows, away from the minimap. */
+  body:has(#hud.show) #toast-layer { top:calc(174px + var(--sat)); left:8px; right:132px; align-items:stretch; gap:3px; }
+  body:has(#hud.show) #toast-layer .toast { padding:4px 6px; border-radius:7px; font-size:10px; line-height:14px; overflow-wrap:anywhere; }
+  body:has(#hud.show) #toast-layer:has(.toast.red) .toast:not(.red) { display:none; }
+  body:has(#hud.show) #toast-layer .toast.red { order:-1; }
+  /* Keep the chat entry available without placing a suggestion card over HP or the hero. */
+  body:has(#hud.show) .companion-ui .companion-launcher {
+    top:auto;
+    bottom:calc(260px + env(safe-area-inset-bottom,0px));
+    left:auto;
+    right:8px;
+    width:44px;
+    min-width:44px;
+    height:44px;
+    padding:5px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  body:has(#hud.show) .companion-launcher-mark { width:28px; height:28px; font-size:16px; }
+  body:has(#hud.show) .companion-launcher-copy,
+  body:has(#hud.show) .companion-launcher>.companion-link-dot { display:none; }
+}

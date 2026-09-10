@@ -19,6 +19,10 @@ import { buildExpeditionStage } from './game/expedition-combat.js';
 import { ExpeditionUI } from './expansion/hub.jsx';
 import { playExpeditionIntro } from './expansion/cinematic.js';
 import { Wardrobe } from './expansion/wardrobe.jsx';
+import { JourneyService } from './game/journey-service.js';
+import { JourneyView } from './ui/journey.js';
+import { applyRiftStage } from './game/journey-rifts.js';
+import './ui/mobile-combat.css';
 const BOOT_TIPS = [
   '<b>진공기</b>로 적을 끌어모은 뒤 한 번에 쓸어담는 것이 몹몰이의 기본이다.',
   '적의 공격 직전 <b>회피</b>하면 퍼펙트 회피 — 시간이 느려지고 반격 창이 열린다.',
@@ -46,6 +50,7 @@ class App {
     this.meta = new Meta(this);
     this.expedition = new ExpeditionEconomy(this.eco);
     this.expeditionUI = new ExpeditionUI(this);
+    this.journey = new JourneyService(this);
     this.models = {};
     this.wardrobe = new Wardrobe(this);
     this.mode = 'boot'; this.showcase = null; this.lobbyVisible = true;
@@ -74,6 +79,7 @@ class App {
     setP(0.85, '월드 구성 중…');
     this.arena = new Arena(this.scene, this.models.dungeon, this.renderer);
     this.battle = new Battle(this);
+    this.journeyView = new JourneyView(this);
     await this.showcaseHero(this.eco.s.selected, true);
     setP(0.95, '게임 화면 준비 중…');
     // 셰이더 프리컴파일 (첫 프레임 끊김 방지)
@@ -145,7 +151,7 @@ class App {
     return companionReset && gameReset;
   }
   async startStage(stage) {
-    if (stage?.expedition) return this.startExpedition(stage.expedition.kind, stage.expedition.id);
+    if (stage?.expedition) return this.startExpedition(stage.expedition.kind, stage.expedition.id, { rift: !!stage.riftId });
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
     if (!stage || !this.eco.isUnlocked(stage.ch, stage.st)) { this.ui.toast('이전 스테이지를 먼저 클리어하세요.', 'red'); return false; }
     // 미리보기에서 넘긴 객체 대신 검증된 현재 스테이지 정의로 출격한다.
@@ -167,7 +173,7 @@ class App {
       this.mode = 'battle';
       const id = this.eco.s.selected;
       await this.battle.start(stage, id, this.eco.hero(id), this.eco.heroEquipBonus(id));
-      this.battle.player.auto = this._auto || false; $('btn-auto').classList.toggle('on', !!this._auto);
+      this.battle.player.auto = this.journey.s.autoBattle; $('btn-auto').classList.toggle('on', this.battle.player.auto);
       return true;
     } catch (error) {
       const rollbackSaved = !spent || this.eco.rollbackEnergy(energyBefore);
@@ -177,7 +183,7 @@ class App {
       return false;
     } finally { $('stage-loading').hidden = true; this.stageStarting = false; }
   }
-  async startExpedition(kind, id) {
+  async startExpedition(kind, id, options = {}) {
     if (this.expeditionUI.result?.saveError) { this.ui.toast('전리품 정산을 먼저 저장해 주세요.', 'red'); return false; }
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
     if (this.expeditionRefundPending) {
@@ -188,19 +194,21 @@ class App {
     let stage;
     try { stage = buildExpeditionStage(kind, id, this.eco); }
     catch (error) { this.ui.toast(error.message, 'red'); return false; }
-    const begin = this.expedition.begin(kind, id);
+    const begin = this.expedition.begin(kind, id, options);
     if (!begin.ok) { this.ui.toast(begin.error, 'red'); return false; }
     this.expeditionTicket = begin.ticket;
+    stage = applyRiftStage(stage, begin.ticket);
     this.stageStarting = true;
     try {
       this.expeditionUI.result = null; this.expeditionUI.close();
+      this.journeyView?.close();
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
       $('stage-loading').hidden = false;
       if (this.showcase) { disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
       this.mode = 'battle';
       const heroId = this.eco.s.selected;
       await this.battle.start(stage, heroId, this.eco.hero(heroId), this.eco.heroEquipBonus(heroId));
-      this.battle.player.auto = this._auto || false; $('btn-auto').classList.toggle('on', !!this._auto);
+      this.battle.player.auto = this.journey.s.autoBattle; $('btn-auto').classList.toggle('on', this.battle.player.auto);
       this.expeditionUI.refreshPotions();
       if (kind === 'dungeon') await playExpeditionIntro(this, id);
       audio.playMusic('expansion/flow-combat', { fade: .7, volume: .68 });

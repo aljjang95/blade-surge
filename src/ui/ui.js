@@ -32,7 +32,7 @@ export class UI {
     $('btn-pause').addEventListener('click', () => this.pause(true));
     $('btn-resume').addEventListener('click', () => this.pause(false));
     $('btn-giveup').addEventListener('click', () => { this.pause(false); this.app.battle.defeat(); });
-    $('btn-auto').addEventListener('click', () => { const p = this.app.battle.player; if (!p) return; p.auto = !p.auto; $('btn-auto').classList.toggle('on', p.auto); this.toast(p.auto ? '자동 전투 ON' : '자동 전투 OFF'); });
+    $('btn-auto').addEventListener('click', () => { const p = this.app.battle.player; if (!p) return; const next = !p.auto; const saved = this.app.journey?.setAuto(next); if (saved?.ok === false) { this.toast(saved.error, 'red'); return; } p.auto = next; this.app._auto = next; $('btn-auto').classList.toggle('on', p.auto); this.toast(p.auto ? '자동 전투 ON · 다음 출격에도 적용' : '자동 전투 OFF · 다음 출격에도 적용'); });
     $('btn-result-lobby').addEventListener('click', () => this.app.toLobby());
     $('btn-result-retry').addEventListener('click', () => this.app.startStage(this.app.battle.stage));
     $('btn-result-next').addEventListener('click', () => { if (this.resultData?.win && !this.app.battle.stage?.finale) this.app.startStage(this.eco.nextStage()); });

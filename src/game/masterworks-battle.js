@@ -5,6 +5,7 @@ import { BOONS, STORY_EVENTS } from '../data/masterworks.js';
 import { boonChoices, boonEffects, masteryEffects, difficultyEffects, recordProgress, recordDiscovery, grantRenown, resolveStory } from './masterworks-core.js';
 import { applyBuildStats, postureHit, tickPosture } from './masterworks-combat.js';
 import { audio } from '../engine/audio.js';
+import { applyRiftEnemy } from './journey-rifts.js';
 
 export class Battle extends RpgBattle {
   constructor(app) {
@@ -81,6 +82,7 @@ export class Battle extends RpgBattle {
     const e = super.spawnEnemy(...args); if (!e) return e;
     const d = this.run?.difficulty;
     if (d && this.run.enabled) { e.maxHp = Math.round(e.maxHp*d.enemyHp); e.hp=e.maxHp; e.atk*=d.enemyAtk; }
+    applyRiftEnemy(e, this.stage);
     e.posture=0; e.postureMax=e.isBoss?150:e.isElite?110:80; e.breakT=0;
     return e;
   }
