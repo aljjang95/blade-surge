@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { Enemy } from '../src/game/enemies.js';
 import { ENEMIES } from '../src/data/stages.js';
-import { Battle } from '../src/game/battle.js';
+import { Battle } from '../src/game/battle-base.js';
 
 function fanFixture(yaw: number) {
   const warnings: Array<{ yaw: number; radius: number; arc: number }> = [];

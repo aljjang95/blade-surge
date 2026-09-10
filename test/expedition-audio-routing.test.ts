@@ -18,9 +18,9 @@ for (const [crit,finisher,accent] of [[false,false,null],[true,false,'light'],[f
     spyOn(audio,'hit').mockImplementation(sound.hit.bind(sound));
     spyOn(audio,'vibe').mockImplementation(() => {});
     const noop=()=>{};
-    const game:any={player:{stats:{crit:crit?1:0,critDmg:1.5},addUlt:noop},dmgDealt:0,combo:0,maxCombo:0,ui:{setCombo:noop},
+    const game:any={feedbackCount:0,feedbackSound:false,player:{stats:{crit:crit?1:0,critDmg:1.5},addUlt:noop},dmgDealt:0,combo:0,maxCombo:0,ui:{setCombo:noop},
       fx:{dmgLayer:{children:[]},damage:noop,flash:noop,directional:noop,texFlash:noop,light:noop},timeCtl:{hitstop:noop},renderer:{shake:noop}};
-    Battle.prototype.damageEnemy.call(game,{hurt:()=>10,pos:new THREE.Vector3(),def:{scale:1}},10,{finisher});
+    Battle.prototype.damageEnemy.call(game,{alive:true,spawning:false,receiveImpact:noop,hurt:()=>10,pos:new THREE.Vector3(),def:{scale:1}},10,{finisher});
     expect(game.dmgDealt).toBe(10);
     expect(heard).toEqual(accent ? [`expansion/flow-impact-${accent}`] : []);
   });

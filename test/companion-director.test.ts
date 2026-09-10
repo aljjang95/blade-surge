@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { CompanionDirector } from '../src/companion/director';
-import { Battle } from '../src/game/battle.js';
+import { Battle } from '../src/game/battle-base.js';
 
 test('localStorage getter가 거부돼도 동행 생성은 부팅을 중단하지 않는다', () => {
   const prior = Object.getOwnPropertyDescriptor(globalThis, 'window');
