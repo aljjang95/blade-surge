@@ -1,0 +1,11 @@
+{
+  "appId": "com.theluxurylord.bladesurge",
+  "appName": "블레이드 서지",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false,
+    "backgroundColor": "#090d19"
+  }
+}

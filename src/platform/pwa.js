@@ -1,5 +1,5 @@
 /** Install/update state only; a worker update never silently reloads an active game. */
-export function setupPwa() {
+export function setupPwa({ native = false } = {}) {
   let registration = null, installPrompt = null, requestedUpdate = false;
   const state = { supported: 'serviceWorker' in navigator, canInstall: false, updateAvailable: false,
     installed: window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true, status: 'idle' };
@@ -20,7 +20,7 @@ export function setupPwa() {
       try { await registration?.update(); } catch { state.status = 'offline'; publish(); }
     },
   };
-  if (!import.meta.env.PROD || !state.supported || !window.isSecureContext) { state.status = 'unavailable'; return api; }
+  if (native || !import.meta.env.PROD || !state.supported || !window.isSecureContext) { state.supported = !native && state.supported; state.status = 'unavailable'; return api; }
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault(); installPrompt = event; state.canInstall = true; publish();
   });
