@@ -4,6 +4,7 @@ import { Renderer } from './engine/renderer.js';
 import { LobbyCameraControls } from './engine/lobby-camera.js';
 import { CameraControls } from './engine/camera-control.js';
 import { setupPwa } from './platform/pwa.js';
+import { isNativeApp, setupNativeApp } from './platform/native-app.js';
 import { FX } from './engine/fx.js';
 import { Input } from './engine/input.js';
 import { audio } from './engine/audio.js';
@@ -62,7 +63,8 @@ class App {
     this.mode = 'boot'; this.showcase = null; this.lobbyVisible = true;
     this.lobbyCameraControls = new LobbyCameraControls(this);
     this.cameraControls = new CameraControls(this);
-    this.pwa = setupPwa();
+    this.pwa = isNativeApp() ? null : setupPwa();
+    this.nativeApp = setupNativeApp(this);
     this.last = performance.now();
     this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.applySettings();
@@ -101,7 +103,7 @@ class App {
     this.toLobby(true);
     if (!this.companionAgent) this.companionAgent = createCompanion(this);
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
-    document.addEventListener('visibilitychange', () => { if (document.hidden) { if (this.mode === 'battle') this.ui.pause(true); } else audio.resume(); });
+    document.addEventListener('visibilitychange', () => { if (isNativeApp()) this.nativeApp?.setVisible(!document.hidden); else if (document.hidden && this.mode === 'battle') this.ui.pause(true); if (!document.hidden) audio.resume(); });
     requestAnimationFrame((t) => this.loop(t));
   }
   applySettings() {
@@ -242,6 +244,7 @@ class App {
   }
   /** 한 프레임 진행 (테스트 시 고정 dt로 호출 가능) */
   step(realDt, render = true) {
+    this.nativeApp?.sync();
     const battle=this.battle, combat=this.mode==='battle'&&battle?.active;
     audio.updateCombatMix(realDt,{active:combat,paused:!!(battle?.paused||this.expeditionUI?.opened),boss:!!(combat&&battle.enemies.some(e=>e.alive&&e.isBoss)),intensity:combat?Math.min(1,(battle.combo||0)/30):0});
     this.arsenalView?.update();

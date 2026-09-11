@@ -15,12 +15,16 @@
     "metrics": "node tools/metrics.mjs"
   },
   "dependencies": {
+    "@capacitor/android": "8.5.1",
+    "@capacitor/app": "8.1.1",
+    "@capacitor/core": "8.5.1",
     "@react-three/fiber": "9.7.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "three": "^0.170.0"
   },
   "devDependencies": {
+    "@capacitor/cli": "8.5.1",
     "@types/bun": "^1.4.1",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
