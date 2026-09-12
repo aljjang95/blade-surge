@@ -80,8 +80,6 @@
   /* Region danger copy sits below the fixed information rows, away from the minimap. */
   body:has(#hud.show) #toast-layer { top:calc(174px + var(--sat)); left:8px; right:132px; align-items:stretch; gap:3px; }
   body:has(#hud.show) #toast-layer .toast { padding:4px 6px; border-radius:7px; font-size:10px; line-height:14px; overflow-wrap:anywhere; }
-  body:has(#hud.show) #toast-layer:has(.toast.red) .toast:not(.red) { display:none; }
-  body:has(#hud.show) #toast-layer .toast.red { order:-1; }
   /* Keep the chat entry available without placing a suggestion card over HP or the hero. */
   body:has(#hud.show) .companion-ui .companion-launcher {
     top:auto;
