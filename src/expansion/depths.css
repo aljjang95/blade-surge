@@ -8,4 +8,17 @@
 .exp-dungeon .exp-primary{min-height:44px;white-space:normal;line-height:1.5;overflow-wrap:anywhere}
 .exp-first-clear{color:#f2d38f!important;font-weight:700}
 .btn-battle>small[hidden]{display:none!important}
+.exp-conquest-total{color:#e6d3a4;font-size:13px}
+.exp-conquest-region{border:1px solid #c5b17c35;border-radius:14px;overflow:hidden;background:#111b1b}
+.exp-conquest-art{display:block;width:100%;height:150px;object-fit:cover}
+.exp-conquest-task{padding:18px 0;border-top:1px solid #aebda025}
+.exp-conquest-task h4{margin:8px 0;font-size:18px;color:#f1dfb8}
+.exp-conquest-task small{color:#b9d2c2}
+.exp-conquest-task p{font-size:13px;line-height:1.65;overflow-wrap:anywhere}
+.exp-conquest-task .exp-primary{width:100%;margin-top:12px;min-height:44px;white-space:normal;line-height:1.5;overflow-wrap:anywhere}
+.exp-conquest-task summary{min-height:44px;display:flex;align-items:center}
+.exp-conquest-result{padding:16px;border:1px solid #e2c88850;border-radius:12px;text-align:left;margin:16px 0}
+.exp-conquest-result h3{color:#f0d493}
+.exp-conquest-result .exp-primary{min-height:44px;white-space:normal;line-height:1.5;max-width:100%}
+.conquest-hint{display:block;color:#efcf8d;font-size:10px;line-height:1.5;white-space:normal;overflow-wrap:anywhere}
 @media(max-width:480px){.exp-route-tabs button{padding:10px 12px}.exp-depth-intro{font-size:12px}.exp-dungeon[data-depth="deep"] h3{font-size:19px}}

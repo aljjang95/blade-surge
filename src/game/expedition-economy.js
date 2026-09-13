@@ -4,6 +4,8 @@ import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { normalizeJourney, refreshPeriods, recordJourneyWin } from './journey-core.js';
 import { riftForDay, riftBonus } from './journey-rifts.js';
 import { EXPEDITION_DEPTHS, expeditionDepth } from '../data/expedition-depths.js';
+import { EXPEDITION_CONQUESTS, expeditionConquest, conquestForRun } from '../data/expedition-conquests.js';
+import { readConquestOutcome } from './expedition-conquests.js';
 const find = (list, id) => list.find(x => x.id === id);
 const obj = x => x && typeof x === 'object' && !Array.isArray(x) ? x : {};
 const num = (x, fallback = 0) => Number.isSafeInteger(x) && x >= 0 ? Math.min(x, 100000000) : fallback;
@@ -29,14 +31,15 @@ export function normalizeExpedition(raw) {
     materials: counts(MATERIALS, r.materials), consumables: raw ? counts(CONSUMABLES, r.consumables) : { hp_tonic: 3, overdrive: 1, aegis: 1 },
     stats: Object.fromEntries(statKeys.map(k => [k, k === 'welcome' ? 1 : num(obj(r.stats)[k])])),
     depthWins: counts(EXPEDITION_DEPTHS, r.depthWins),
+    conquests: EXPEDITION_CONQUESTS.filter(c => Array.isArray(r.conquests) && r.conquests.includes(c.id)).map(c => c.id),
     claimed: EXPEDITION_QUESTS.filter(q => Array.isArray(r.claimed) && r.claimed.includes(q.id)).map(q => q.id), unlockedJobs,
     selectedJob: unlockedJobs.includes(r.selectedJob) ? r.selectedJob : null, seq: num(r.seq),
     campaignReceipts: [...new Set((Array.isArray(r.campaignReceipts) ? r.campaignReceipts : []).filter(x => typeof x === 'string' && x.length <= 120))],
-    pending: Number.isSafeInteger(p.id) && p.id > 0 && ['dungeon', 'arena'].includes(p.kind) && pendingDef && !(depth === 'deep' && p.riftId) ? { id: p.id, kind: p.kind, target: p.target, depth, energy: pendingDef.energy } : null };
+    pending: Number.isSafeInteger(p.id) && p.id > 0 && ['dungeon', 'arena'].includes(p.kind) && pendingDef && !(depth === 'deep' && p.riftId) && (p.conquestId == null || conquestForRun(p.target, depth, p.conquestId)) ? { id: p.id, kind: p.kind, target: p.target, depth, energy: pendingDef.energy, ...(p.conquestId ? { conquestId: p.conquestId } : {}) } : null };
 }
 export class ExpeditionEconomy {
   constructor(eco) {
-    this.eco = eco; this.receipts = new WeakSet();
+    this.eco = eco; this.receipts = new WeakSet(); this.conquestTickets = new WeakSet();
     eco.s.expedition = normalizeExpedition(eco.s.expedition);
     eco.s.journey = normalizeJourney(eco.s.journey);
     // A page reload cancels an unfinished start once; no durable payable ticket survives.
@@ -66,14 +69,28 @@ export class ExpeditionEconomy {
       : depth === 'deep' && !this.s.stats[id] ? '기본 원정을 먼저 클리어해 주세요.' : null;
     return { ok: !error, error };
   }
-  begin(kind, id, { rift = false, depth = 'standard' } = {}) {
+  conquestAccess(conquestId) {
+    const c = expeditionConquest(conquestId);
+    if (!c) return { ok: false, error: '알 수 없는 전술 공략입니다.' };
+    const access = this.dungeonAccess(c.dungeonId, { depth: 'deep' });
+    if (!access.ok) return access;
+    const error = !this.s.depthWins[c.dungeonId] ? '이 지역의 심층 원정 클리어 필요'
+      : c.previous && !this.s.conquests.includes(c.previous) ? `먼저 「${expeditionConquest(c.previous).name}」 달성` : null;
+    return { ok: !error, error };
+  }
+  /** @param {string} kind @param {string} id @param {{rift?: boolean, depth?: string, conquestId?: string|null}} [options] */
+  begin(kind, id, { rift = false, depth = 'standard', conquestId = null } = {}) {
     if (!validDepth(depth) || (depth === 'deep' && (kind !== 'dungeon' || rift))) return { ok: false, error: '지원하지 않는 원정 단계 조합입니다.' };
+    if (conquestId !== null) {
+      if (kind !== 'dungeon' || rift || !conquestForRun(id, depth, conquestId)) return { ok: false, error: '전술 공략과 원정 정보가 맞지 않습니다.' };
+      const access = this.conquestAccess(conquestId); if (!access.ok) return access;
+    }
     const d = depth === 'deep' ? expeditionDepth(id) : find(kind === 'dungeon' ? DUNGEONS : kind === 'arena' ? ARENA_RIVALS : [], id);
     if (!d) return { ok: false, error: '알 수 없는 전투입니다.' };
     if (this.s.pending) return { ok: false, error: '진행 중인 전투를 먼저 마쳐 주세요.' };
     if (kind === 'dungeon') { const access = this.dungeonAccess(id, { depth }); if (!access.ok) return access; }
     if (this.s.level < d.minLevel) return { ok: false, error: `탐험 레벨 ${d.minLevel} 필요` };
-    return this.transact(() => {
+    const started = this.transact(() => {
       const period = refreshPeriods(this.eco.s.journey, Date.now());
       const rotation = DUNGEONS[((period.day % 3) + 3) % 3].id;
       if (rift && (kind !== 'dungeon' || id !== rotation)) return { ok: false, error: '오늘의 회전 던전에서 균열에 도전해 주세요.' };
@@ -82,13 +99,16 @@ export class ExpeditionEconomy {
       if (this.eco.s.energy >= this.eco.energyMax) this.eco.s.energyT = Date.now();
       this.eco.s.energy -= d.energy;
       const ticket = { id: ++this.s.seq, kind, target: id, depth, energy: d.energy, heroId: this.eco.s.selected };
+      if (conquestId) ticket.conquestId = conquestId;
       ticket.journeyPeriod = { day: period.day, week: period.week };
       if (rift) ticket.riftId = riftForDay(period.day).id;
       this.s.pending = ticket;
       return { ok: true, ticket: { ...ticket } };
     });
+    if (started.ok && conquestId) this.conquestTickets.add(started.ticket);
+    return started;
   }
-  valid(ticket) { const p = this.s.pending; return !!p && p.id === ticket?.id && p.kind === ticket?.kind && p.target === ticket?.target && validDepth(ticket?.depth) && mode(p.depth) === mode(ticket?.depth); }
+  valid(ticket) { const p = this.s.pending; return !!p && p.id === ticket?.id && p.kind === ticket?.kind && p.target === ticket?.target && validDepth(ticket?.depth) && mode(p.depth) === mode(ticket?.depth) && (p.conquestId ?? null) === (ticket?.conquestId ?? null) && (!p.conquestId || this.conquestTickets.has(ticket)); }
   abandon(ticket) {
     if (!this.valid(ticket)) return { ok: false, error: '이미 종료된 전투입니다.' };
     return this.transact(() => { this.eco.s.energy += this.s.pending.energy; this.s.pending = null; return { ok: true }; });
@@ -106,6 +126,9 @@ export class ExpeditionEconomy {
   settle(ticket, result) {
     if (!this.valid(ticket)) return { ok: false, error: '이미 종료된 전투입니다.' };
     if (typeof result?.win !== 'boolean') return { ok: false, error: '전투 결과가 필요합니다.' };
+    const conquest = this.s.pending.conquestId ? expeditionConquest(this.s.pending.conquestId) : null;
+    const outcome = conquest ? readConquestOutcome(result.conquest, ticket, result.win) : null;
+    if (conquest && result.win && !outcome) return { ok: false, error: '이 출격의 전술 공략 결과가 필요합니다.' };
     return this.transact(() => {
       const p = this.s.pending, deep = p.depth === 'deep', def = deep ? expeditionDepth(p.target) : find(p.kind === 'dungeon' ? DUNGEONS : ARENA_RIVALS, p.target);
       this.s.pending = null;
@@ -113,7 +136,11 @@ export class ExpeditionEconomy {
       this.s.stats[p.kind === 'dungeon' ? 'dungeonWins' : 'arenaWins']++;
       if (p.kind === 'dungeon') this.s.stats[p.target]++;
       const firstClear = deep && this.s.depthWins[p.target] === 0;
-      const rewards = this.reward(deep ? depthRewards(def, firstClear) : def.rewards);
+      let payout = deep ? depthRewards(def, firstClear) : def.rewards;
+      const firstConquest = !!outcome?.complete && !this.s.conquests.includes(conquest.id);
+      if (firstConquest) { payout = depthRewards({ rewards: payout, firstRewards: conquest.firstRewards }, true); this.s.conquests.push(conquest.id); }
+      const rewards = this.reward(payout);
+      if (conquest) rewards.conquest = { id: conquest.id, complete: outcome.complete, firstClear: firstConquest, mark: conquest.mark };
       rewards.firstClear = firstClear;
       if (deep) this.s.depthWins[p.target]++;
       if (p.kind === 'dungeon') {

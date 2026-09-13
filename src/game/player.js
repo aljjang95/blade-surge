@@ -314,12 +314,17 @@ export class Player extends Actor {
     if (!list.length) return this.autoExplore(dt);
     let hub = null, bestN = -1;
     for (const c of list) { let n = 0; for (const e of list) { const dx = e.pos.x - c.pos.x, dz = e.pos.z - c.pos.z; if (dx * dx + dz * dz < 16) n += e.isBoss ? 5 : e.isElite ? 2 : 1; } const dist = this.distTo(c); const score = n - dist * 0.35; if (score > bestN) { bestN = score; hub = c; } }
-    const e = hub || list[0];
-    const d = this.distTo(e); const want = this.def.ranged ? 7 : 1.9;
+    const priority = this.game.conquest?.autoEnemy(list);
+    const e = priority || hub || list[0];
+    if (priority) this.lockTarget = priority;
+    const precision = this.game.conquest?.precisionNeeded(e);
+    // Move past the escort line before firing at an ordered target. Ranged
+    // bolts still collide normally; AUTO does not make other enemies immune.
+    const d = this.distTo(e); const want = this.def.ranged ? (precision ? 2.8 : 7) : 1.9;
     if (this.state === 'idle' || this.state === 'move') {
       // 스킬 우선: 적이 3마리 이상 뭉쳤을 때 광역기 우선
       const cluster = list.reduce((a, x) => a + (x.distTo(e) < 4.5 ? 1 : 0), 0);
-      for (let i = this.def.skills.length - 1; i >= 0; i--) {
+      for (let i = this.def.skills.length - 1; !precision && i >= 0; i--) {
         const sk = this.def.skills[i]; if (!this.unlocked(i)) continue;
         if (sk.id === 'guardian_guard' && !(e.telegraph > 0 && d < 5)) continue;
         const ready = sk.ult ? this.ult >= this.ultMax : this.cds[i] <= 0;
@@ -336,7 +341,7 @@ export class Player extends Actor {
       }
       else if (this.def.ranged && d < want - 3) { const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = -dx / l; out.y = -dz / l; }
       else this.game.input.press('attack');
-    } else if (this.state === 'attack' && d < want + 2.5) this.game.input.press('attack');   // 사거리 밖(물러서는 원거리 몹)이면 콤보를 끊고 이동으로 돌아간다 — 안 끊으면 허공 콤보가 영원히 이어진다
+    } else if (!precision && this.state === 'attack' && d < want + 2.5) this.game.input.press('attack');   // 사거리 밖(물러서는 원거리 몹)이면 콤보를 끊고 이동으로 돌아간다 — 안 끊으면 허공 콤보가 영원히 이어진다
     // 예고 회피 — 콤보 중에도 타격이 끝났으면 캔슬해서 구른다. 보스·엘리트의 큰 예고는 거의 확실히, 잡몹은 절반쯤 (적 위협 회전: 콤보 중 회피 불가라 보스전에서 HP 의 30% 를 그냥 맞았다)
     if (this.state === 'idle' || this.state === 'move' || (this.state === 'attack' && this.hitDone)) {
       const threat = list.find((x) => x.telegraph > 0 && this.distTo(x) < (x.isBoss ? 5.5 : x.isElite ? 5 : 4));
@@ -349,7 +354,7 @@ export class Player extends Actor {
     const out = { x: 0, y: 0 };
     const g = this.game, W = g.world; if (!W) return out;
     if (g.portal && (!g.stage?.party || !this.partyPortaled)) { const dx = g.portal.pos.x - this.pos.x, dz = g.portal.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; return out; }   // 봉인 해제 포탈 → 보스방 앞
-    let target = g.autoTarget;
+    let target = g.conquest?.autoRoom() || g.autoTarget;
     if (!target || target.cleared || !W.rooms.includes(target)) {
       const cands = W.rooms.filter((r) => !r.cleared && !(W.sealed && r === W.bossRoom));   // 봉인된 보스방은 못 들어간다
       if (!cands.length) return out;
