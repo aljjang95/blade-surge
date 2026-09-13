@@ -72,10 +72,14 @@ body:has(#tab-heroes.show) .companion-ui:not(.is-connected) .companion-launcher 
 .companion-battle-launcher .companion-launcher-copy,
 .companion-battle-launcher .companion-link-dot { display: none; }
 
-body:has(dialog[open]) .companion-launcher,
-body:has(#modal.show) .companion-launcher,
-body:has(#pause-overlay.show) .companion-launcher,
+body:has(dialog[open]) .companion-launcher:not(.companion-pause-launcher),
+body:has(#modal.show) .companion-launcher:not(.companion-pause-launcher),
+body:has(#pause-overlay.show) .companion-launcher:not(.companion-pause-launcher),
 body.party-playing .companion-launcher { display: none; }
+
+.pause-btns .companion-pause-launcher { position:relative;inset:auto;display:flex;justify-content:center;gap:9px;min-width:0;width:100%;min-height:44px;padding:8px;text-align:center; }
+.pause-btns .companion-pause-launcher .companion-launcher-mark { width:24px;height:24px;font-size:13px; }
+.pause-btns .companion-pause-launcher .companion-launcher-copy small,.pause-btns .companion-pause-launcher .companion-link-dot { display:none; }
 
 .companion-launcher:focus-visible,
 .companion-panel button:focus-visible,
@@ -127,12 +131,16 @@ body.party-playing .companion-launcher { display: none; }
 }
 
 .companion-panel {
-  position: absolute;
+  position: fixed;
   top: max(10px, env(safe-area-inset-top, 0px));
   right: max(12px, env(safe-area-inset-right, 0px));
   display: flex;
   width: min(390px, calc(100vw - 24px));
-  max-height: calc(100dvh - 20px);
+  height: min(650px, calc(var(--app-height, 100dvh) - 24px));
+  max-height: calc(var(--app-height, 100dvh) - 24px);
+  box-sizing: border-box;
+  margin: 0 0 0 auto;
+  padding: 0;
   flex-direction: column;
   overflow: hidden;
   color: #eaf5f4;
@@ -145,6 +153,10 @@ body.party-playing .companion-launcher { display: none; }
   box-shadow: 0 24px 80px rgba(0, 0, 0, .62), inset 0 0 0 1px rgba(255, 255, 255, .025);
   pointer-events: auto;
 }
+.companion-panel::backdrop { background:rgba(3,9,17,.65); }
+.companion-body { min-height:0;flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain; }
+.companion-head,.companion-form { flex-shrink:0; }
+.companion-panel .companion-quick button { min-height:44px; }
 
 .companion-head {
   display: flex;
@@ -280,7 +292,7 @@ body.party-playing .companion-launcher { display: none; }
 @media (orientation: portrait), (max-width: 600px) {
   .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher) { top: auto; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); left: calc(10px + env(safe-area-inset-left, 0px)); min-width: 130px; }
   .companion-ui.is-connected .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher) { top: calc(64px + env(safe-area-inset-top, 0px)); bottom: auto; }
-  .companion-panel { top: max(8px, env(safe-area-inset-top, 0px)); right: 8px; width: calc(100vw - 16px); max-height: calc(100dvh - 16px); }
+  .companion-panel { top: max(8px, env(safe-area-inset-top, 0px)); right: 8px; width: calc(100vw - 16px); }
   .companion-hero { min-height: 132px; }
   .companion-portrait-canvas,
   .companion-portrait-fallback { min-height: 132px; }
