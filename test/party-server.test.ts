@@ -26,6 +26,44 @@ function snapshot(room: PartyState, tick = 1) {
     enemies: [], rooms: [{ id: 0, discovered: true, cleared: false, activated: true }], roomsCleared: 0,
     bossDefeated: false, portal: null, events: [] };
 }
+describe('party connection heartbeat', () => {
+  test('lobby and running pings reply only to the sender without changing party state', () => {
+    for (const setup of [lobby, running]) {
+      const {room,host,guest}=setup();
+      if (room.status==='lobby') send(room,host,{type:'ready',ready:true});
+      const before=structuredClone(room.view());
+      for (const id of [host,guest]) expect(send(room,id,{type:'ping'})).toEqual([{to:id,message:{type:'pong'}}]);
+      expect(room.view()).toEqual(before);
+      send(room,guest,{type:'ping'},room.expiresAt-1);
+      expect(room.expiresAt).toBe(before.expiresAt);
+      expect(() => send(room,guest,{type:'ping'},room.expiresAt)).toThrow('expired');
+    }
+  });
+  test('ping accepts only its exact key and still enforces membership and byte limits', () => {
+    const {room,host}=lobby();
+    for (const extra of [{seq:1},{playerId:host},{ready:true},{payload:null}]) {
+      expect(() => send(room,host,{type:'ping',...extra})).toThrow('ping-schema');
+    }
+    expect(() => send(room,'unknown',{type:'ping'})).toThrow('member');
+    expect(() => room.receive(host,'{',now)).toThrow('json');
+    expect(() => room.receive(host,JSON.stringify({type:'ping',data:'x'.repeat(PARTY_LIMITS.bytes)}),now)).toThrow('size');
+  });
+  test('ping is counted by the existing per-connection message rate', () => {
+    const {room,host}=lobby();
+    for(let i=0;i<PARTY_LIMITS.messagesPerSecond;i++) send(room,host,{type:'ping'});
+    expect(() => send(room,host,{type:'ping'})).toThrow('rate');
+    expect(send(room,host,{type:'ping'},now+1000)).toEqual([{to:host,message:{type:'pong'}}]);
+  });
+  test('ping cannot advance or reset snapshot and input sequences', () => {
+    const {room,host,guest}=running();
+    send(room,host,{type:'snapshot',seq:1,snapshot:snapshot(room)});
+    send(room,guest,{type:'input',seq:1,x:0,y:0,attack:false,actions:[]});
+    send(room,host,{type:'ping'}); send(room,guest,{type:'ping'});
+    expect(() => send(room,host,{type:'snapshot',seq:1,snapshot:snapshot(room,2)})).toThrow('sequence');
+    expect(() => send(room,guest,{type:'input',seq:1,x:0,y:0,attack:false,actions:[]})).toThrow('sequence');
+    expect(send(room,host,{type:'snapshot',seq:2,snapshot:snapshot(room,2)})).toHaveLength(1);
+  });
+});
 describe('party state membership and lifecycle', () => {
   test('server-issued id and host ticket; fake ticket cannot become host', () => {
     const {room, host} = lobby();

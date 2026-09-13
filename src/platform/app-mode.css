@@ -1,0 +1,14 @@
+.lobby-left .app-mode-open::before{content:'▣';display:grid;place-items:center;color:#f3d895;font-size:25px}
+.app-mode-dialog{box-sizing:border-box;width:min(480px,calc(100vw - 24px));max-height:calc(var(--app-height,100dvh) - 24px);overflow:auto;padding:22px;border:1px solid #b49b6288;border-radius:16px;background:linear-gradient(145deg,#182e34,#10151f);color:#eff3df;box-shadow:0 24px 80px #000a}
+.app-mode-dialog::backdrop{background:#050b16c9}
+.app-mode-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;color:#bba77e}
+.app-mode-dialog h2{font-size:25px;margin:18px 0 10px}
+.app-mode-dialog p,.app-mode-dialog li{font-size:13px;line-height:1.7;overflow-wrap:anywhere}
+.app-mode-dialog ol{padding-left:22px}.app-mode-dialog li+li{margin-top:8px}
+.app-mode-dialog button{min-height:44px;padding:10px 14px;border:1px solid #d8bb7977;border-radius:8px;background:#d8bb79;color:#122026;font-weight:800}
+.app-mode-dialog button[hidden],.app-mode-dialog ol[hidden]{display:none}
+.app-mode-dialog header button{color:#f1ead9;background:#ffffff10}
+.app-mode-actions{display:grid;gap:8px;margin:18px 0}
+.app-mode-dialog .app-mode-fine{font-size:11px;color:#9fb4b5}
+#app-mode-status{color:#f2d89b}
+@media(orientation:landscape) and (max-height:500px){.app-mode-dialog{padding:14px 18px}.app-mode-dialog h2{font-size:21px;margin:10px 0}.app-mode-actions{grid-template-columns:1fr 1fr;margin:10px 0}}

@@ -34,6 +34,13 @@ function createLauncher(host: HTMLElement, director: CompanionDirector): () => v
 
   const sync = () => {
     const snapshot = director.getSnapshot();
+    const lobby = snapshot.context.mode === 'lobby';
+    const target = lobby ? document.querySelector<HTMLElement>('.lobby-left') : host;
+    if (target && button.parentElement !== target) target.appendChild(button);
+    button.classList.toggle('sq-btn', lobby);
+    button.classList.toggle('companion-lobby-launcher', lobby);
+    button.classList.toggle('companion-battle-launcher', !lobby);
+    button.classList.toggle('is-connected', snapshot.connected);
     status.textContent = snapshot.status;
     host.classList.toggle('is-connected', snapshot.connected);
     button.setAttribute('aria-label', `네브와 대화하기. 현재 ${snapshot.status}`);
@@ -51,6 +58,7 @@ function createLauncher(host: HTMLElement, director: CompanionDirector): () => v
     try {
       const { mountCompanionPanel } = await import('./mount');
       unsubscribe();
+      button.remove(); // The lobby bootstrap button is outside the React host.
       mountCompanionPanel(host, director);
     } catch (error) {
       director.setOpen(false);

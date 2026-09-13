@@ -8,5 +8,5 @@ export function mountCompanionPanel(host: HTMLElement, director: CompanionDirect
   host.className = '';
   host.replaceChildren();
   companionRoot = createRoot(host);
-  companionRoot.render(<CompanionPanel director={director} />);
+  companionRoot.render(<CompanionPanel director={director} host={host} />);
 }

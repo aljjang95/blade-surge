@@ -1,0 +1,1371 @@
+{
+  "started": "2026-09-13T11:31:31.918Z",
+  "target": "http://127.0.0.1:5225/",
+  "scope": "Local Chromium/Firefox/WebKit engines; real UI, fullscreen API and viewport changes. No installed-app or physical-device claim.",
+  "build": {
+    "sha": "c48b5b69f62cf517fe48c9daa23774cd449cdec9",
+    "dirty": true,
+    "builtAt": "2026-09-13T11:31:31.613Z",
+    "pwaRelease": "7245624016d7da5a64fb"
+  },
+  "engines": [
+    {
+      "engine": "chromium",
+      "version": "151.0.7922.34",
+      "errors": [],
+      "layouts": [
+        {
+          "buttons": [
+            {
+              "x": 8,
+              "y": 60,
+              "right": 60,
+              "bottom": 108,
+              "width": 52,
+              "height": 48,
+              "name": "출석",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 66,
+              "y": 60,
+              "right": 118,
+              "bottom": 108,
+              "width": 52,
+              "height": 48,
+              "name": "우편",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 124,
+              "y": 60,
+              "right": 176,
+              "bottom": 108,
+              "width": 52,
+              "height": 48,
+              "name": "임무",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 112,
+              "right": 60,
+              "bottom": 160,
+              "width": 52,
+              "height": 48,
+              "name": "설정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 66,
+              "y": 112,
+              "right": 118,
+              "bottom": 160,
+              "width": 52,
+              "height": 48,
+              "name": "주소창 없이 플레이",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 124,
+              "y": 112,
+              "right": 176,
+              "bottom": 160,
+              "width": 52,
+              "height": 48,
+              "name": "도감 · 능력치",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 164,
+              "right": 60,
+              "bottom": 212,
+              "width": 52,
+              "height": 48,
+              "name": "성장 · 각인",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 66,
+              "y": 164,
+              "right": 118,
+              "bottom": 212,
+              "width": 52,
+              "height": 48,
+              "name": "성장 여정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 124,
+              "y": 164,
+              "right": 176,
+              "bottom": 212,
+              "width": 52,
+              "height": 48,
+              "name": "전투 설계",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 216,
+              "right": 60,
+              "bottom": 264,
+              "width": 52,
+              "height": 48,
+              "name": "네브와 대화하기. 현재 봉인 대기",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 66,
+              "y": 216,
+              "right": 118,
+              "bottom": 264,
+              "width": 52,
+              "height": 48,
+              "name": "파티 던전",
+              "hit": true,
+              "inside": true
+            }
+          ],
+          "neve": {
+            "x": 8,
+            "y": 216,
+            "right": 60,
+            "bottom": 264,
+            "width": 52,
+            "height": 48
+          },
+          "battle": {
+            "x": 48,
+            "y": 428,
+            "right": 272,
+            "bottom": 492,
+            "width": 224,
+            "height": 64
+          },
+          "neveOverlapsDeparture": false,
+          "overflow": false,
+          "viewport": {
+            "width": 320,
+            "height": 568
+          }
+        },
+        {
+          "buttons": [
+            {
+              "x": 8,
+              "y": 64,
+              "right": 68,
+              "bottom": 123.5,
+              "width": 60,
+              "height": 59.5,
+              "name": "출석",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 64,
+              "right": 134,
+              "bottom": 123.5,
+              "width": 60,
+              "height": 59.5,
+              "name": "우편",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 129.5,
+              "right": 68,
+              "bottom": 189,
+              "width": 60,
+              "height": 59.5,
+              "name": "임무",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 129.5,
+              "right": 134,
+              "bottom": 189,
+              "width": 60,
+              "height": 59.5,
+              "name": "설정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 195,
+              "right": 68,
+              "bottom": 270,
+              "width": 60,
+              "height": 75,
+              "name": "주소창 없이 플레이",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 195,
+              "right": 134,
+              "bottom": 270,
+              "width": 60,
+              "height": 75,
+              "name": "도감 · 능력치",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 276,
+              "right": 68,
+              "bottom": 335.5,
+              "width": 60,
+              "height": 59.5,
+              "name": "성장 · 각인",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 276,
+              "right": 134,
+              "bottom": 335.5,
+              "width": 60,
+              "height": 59.5,
+              "name": "성장 여정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 341.5,
+              "right": 68,
+              "bottom": 403.140625,
+              "width": 60,
+              "height": 61.640625,
+              "name": "전투 설계",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 341.5,
+              "right": 134,
+              "bottom": 403.140625,
+              "width": 60,
+              "height": 61.640625,
+              "name": "네브와 대화하기. 현재 봉인 대기",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 409.140625,
+              "right": 68,
+              "bottom": 468.140625,
+              "width": 60,
+              "height": 59,
+              "name": "파티 던전",
+              "hit": true,
+              "inside": true
+            }
+          ],
+          "neve": {
+            "x": 74,
+            "y": 341.5,
+            "right": 134,
+            "bottom": 403.140625,
+            "width": 60,
+            "height": 61.640625
+          },
+          "battle": {
+            "x": 58.5,
+            "y": 688,
+            "right": 331.5,
+            "bottom": 768,
+            "width": 273,
+            "height": 80
+          },
+          "neveOverlapsDeparture": false,
+          "overflow": false,
+          "viewport": {
+            "width": 390,
+            "height": 844
+          }
+        },
+        {
+          "buttons": [
+            {
+              "x": 71,
+              "y": 55,
+              "right": 132,
+              "bottom": 109.140625,
+              "width": 61,
+              "height": 54.140625,
+              "name": "출석",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 137,
+              "y": 55,
+              "right": 198,
+              "bottom": 109.140625,
+              "width": 61,
+              "height": 54.140625,
+              "name": "우편",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 203,
+              "y": 55,
+              "right": 264,
+              "bottom": 109.140625,
+              "width": 61,
+              "height": 54.140625,
+              "name": "임무",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 269,
+              "y": 55,
+              "right": 330,
+              "bottom": 109.140625,
+              "width": 61,
+              "height": 54.140625,
+              "name": "설정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 71,
+              "y": 114.140625,
+              "right": 132,
+              "bottom": 182.421875,
+              "width": 61,
+              "height": 68.28125,
+              "name": "주소창 없이 플레이",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 137,
+              "y": 114.140625,
+              "right": 198,
+              "bottom": 182.421875,
+              "width": 61,
+              "height": 68.28125,
+              "name": "도감 · 능력치",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 203,
+              "y": 114.140625,
+              "right": 264,
+              "bottom": 182.421875,
+              "width": 61,
+              "height": 68.28125,
+              "name": "성장 · 각인",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 269,
+              "y": 114.140625,
+              "right": 330,
+              "bottom": 182.421875,
+              "width": 61,
+              "height": 68.28125,
+              "name": "성장 여정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 71,
+              "y": 187.421875,
+              "right": 132,
+              "bottom": 249.0625,
+              "width": 61,
+              "height": 61.640625,
+              "name": "전투 설계",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 137,
+              "y": 187.421875,
+              "right": 198,
+              "bottom": 249.0625,
+              "width": 61,
+              "height": 61.640625,
+              "name": "네브와 대화하기. 현재 봉인 대기",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 203,
+              "y": 187.421875,
+              "right": 264,
+              "bottom": 249.0625,
+              "width": 61,
+              "height": 61.640625,
+              "name": "파티 던전",
+              "hit": true,
+              "inside": true
+            }
+          ],
+          "neve": {
+            "x": 137,
+            "y": 187.421875,
+            "right": 198,
+            "bottom": 249.0625,
+            "width": 61,
+            "height": 61.640625
+          },
+          "battle": {
+            "x": 471,
+            "y": 300,
+            "right": 651,
+            "bottom": 361,
+            "width": 180,
+            "height": 61
+          },
+          "neveOverlapsDeparture": false,
+          "overflow": false,
+          "viewport": {
+            "width": 667,
+            "height": 375
+          }
+        }
+      ],
+      "fullscreen": "entered-via-user-tap",
+      "neve": "actual open-close-focus return",
+      "script": "/assets/index-u0Ly9OFo.js",
+      "status": "pass"
+    },
+    {
+      "engine": "firefox",
+      "version": "153.0",
+      "errors": [],
+      "layouts": [
+        {
+          "buttons": [
+            {
+              "x": 8,
+              "y": 60,
+              "right": 60,
+              "bottom": 108,
+              "width": 52,
+              "height": 48,
+              "name": "출석",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 66,
+              "y": 60,
+              "right": 118,
+              "bottom": 108,
+              "width": 52,
+              "height": 48,
+              "name": "우편",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 124,
+              "y": 60,
+              "right": 176,
+              "bottom": 108,
+              "width": 52,
+              "height": 48,
+              "name": "임무",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 112,
+              "right": 60,
+              "bottom": 160,
+              "width": 52,
+              "height": 48,
+              "name": "설정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 66,
+              "y": 112,
+              "right": 118,
+              "bottom": 160,
+              "width": 52,
+              "height": 48,
+              "name": "주소창 없이 플레이",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 124,
+              "y": 112,
+              "right": 176,
+              "bottom": 160,
+              "width": 52,
+              "height": 48,
+              "name": "도감 · 능력치",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 164,
+              "right": 60,
+              "bottom": 212,
+              "width": 52,
+              "height": 48,
+              "name": "성장 · 각인",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 66,
+              "y": 164,
+              "right": 118,
+              "bottom": 212,
+              "width": 52,
+              "height": 48,
+              "name": "성장 여정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 124,
+              "y": 164,
+              "right": 176,
+              "bottom": 212,
+              "width": 52,
+              "height": 48,
+              "name": "전투 설계",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 216,
+              "right": 60,
+              "bottom": 264,
+              "width": 52,
+              "height": 48,
+              "name": "네브와 대화하기. 현재 봉인 대기",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 66,
+              "y": 216,
+              "right": 118,
+              "bottom": 264,
+              "width": 52,
+              "height": 48,
+              "name": "파티 던전",
+              "hit": true,
+              "inside": true
+            }
+          ],
+          "neve": {
+            "x": 8,
+            "y": 216,
+            "right": 60,
+            "bottom": 264,
+            "width": 52,
+            "height": 48
+          },
+          "battle": {
+            "x": 48,
+            "y": 428,
+            "right": 272,
+            "bottom": 492,
+            "width": 224,
+            "height": 64
+          },
+          "neveOverlapsDeparture": false,
+          "overflow": false,
+          "viewport": {
+            "width": 320,
+            "height": 568
+          }
+        },
+        {
+          "buttons": [
+            {
+              "x": 8,
+              "y": 64,
+              "right": 68,
+              "bottom": 123.5,
+              "width": 60,
+              "height": 59.5,
+              "name": "출석",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 64,
+              "right": 134,
+              "bottom": 123.5,
+              "width": 60,
+              "height": 59.5,
+              "name": "우편",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 129.5,
+              "right": 68,
+              "bottom": 189,
+              "width": 60,
+              "height": 59.5,
+              "name": "임무",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 129.5,
+              "right": 134,
+              "bottom": 189,
+              "width": 60,
+              "height": 59.5,
+              "name": "설정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 195,
+              "right": 68,
+              "bottom": 270,
+              "width": 60,
+              "height": 75,
+              "name": "주소창 없이 플레이",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 195,
+              "right": 134,
+              "bottom": 270,
+              "width": 60,
+              "height": 75,
+              "name": "도감 · 능력치",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 276,
+              "right": 68,
+              "bottom": 335.5,
+              "width": 60,
+              "height": 59.5,
+              "name": "성장 · 각인",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 276,
+              "right": 134,
+              "bottom": 335.5,
+              "width": 60,
+              "height": 59.5,
+              "name": "성장 여정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 341.5,
+              "right": 68,
+              "bottom": 403.1499938964844,
+              "width": 60,
+              "height": 61.649993896484375,
+              "name": "전투 설계",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 341.5,
+              "right": 134,
+              "bottom": 403.1499938964844,
+              "width": 60,
+              "height": 61.649993896484375,
+              "name": "네브와 대화하기. 현재 봉인 대기",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 409.1499938964844,
+              "right": 68,
+              "bottom": 468.1499938964844,
+              "width": 60,
+              "height": 59,
+              "name": "파티 던전",
+              "hit": true,
+              "inside": true
+            }
+          ],
+          "neve": {
+            "x": 74,
+            "y": 341.5,
+            "right": 134,
+            "bottom": 403.1499938964844,
+            "width": 60,
+            "height": 61.649993896484375
+          },
+          "battle": {
+            "x": 58.5,
+            "y": 688,
+            "right": 331.5,
+            "bottom": 768,
+            "width": 273,
+            "height": 80
+          },
+          "neveOverlapsDeparture": false,
+          "overflow": false,
+          "viewport": {
+            "width": 390,
+            "height": 844
+          }
+        },
+        {
+          "buttons": [
+            {
+              "x": 71,
+              "y": 55,
+              "right": 132,
+              "bottom": 109.14999389648438,
+              "width": 61,
+              "height": 54.149993896484375,
+              "name": "출석",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 137,
+              "y": 55,
+              "right": 198,
+              "bottom": 109.14999389648438,
+              "width": 61,
+              "height": 54.149993896484375,
+              "name": "우편",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 203,
+              "y": 55,
+              "right": 264,
+              "bottom": 109.14999389648438,
+              "width": 61,
+              "height": 54.149993896484375,
+              "name": "임무",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 269,
+              "y": 55,
+              "right": 330,
+              "bottom": 109.14999389648438,
+              "width": 61,
+              "height": 54.149993896484375,
+              "name": "설정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 71,
+              "y": 114.14999389648438,
+              "right": 132,
+              "bottom": 182.4499969482422,
+              "width": 61,
+              "height": 68.30000305175781,
+              "name": "주소창 없이 플레이",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 137,
+              "y": 114.14999389648438,
+              "right": 198,
+              "bottom": 182.4499969482422,
+              "width": 61,
+              "height": 68.30000305175781,
+              "name": "도감 · 능력치",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 203,
+              "y": 114.14999389648438,
+              "right": 264,
+              "bottom": 182.4499969482422,
+              "width": 61,
+              "height": 68.30000305175781,
+              "name": "성장 · 각인",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 269,
+              "y": 114.14999389648438,
+              "right": 330,
+              "bottom": 182.4499969482422,
+              "width": 61,
+              "height": 68.30000305175781,
+              "name": "성장 여정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 71,
+              "y": 187.4499969482422,
+              "right": 132,
+              "bottom": 249.10000610351562,
+              "width": 61,
+              "height": 61.65000915527344,
+              "name": "전투 설계",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 137,
+              "y": 187.4499969482422,
+              "right": 198,
+              "bottom": 249.10000610351562,
+              "width": 61,
+              "height": 61.65000915527344,
+              "name": "네브와 대화하기. 현재 봉인 대기",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 203,
+              "y": 187.4499969482422,
+              "right": 264,
+              "bottom": 249.10000610351562,
+              "width": 61,
+              "height": 61.65000915527344,
+              "name": "파티 던전",
+              "hit": true,
+              "inside": true
+            }
+          ],
+          "neve": {
+            "x": 137,
+            "y": 187.4499969482422,
+            "right": 198,
+            "bottom": 249.10000610351562,
+            "width": 61,
+            "height": 61.65000915527344
+          },
+          "battle": {
+            "x": 471,
+            "y": 300,
+            "right": 651,
+            "bottom": 361,
+            "width": 180,
+            "height": 61
+          },
+          "neveOverlapsDeparture": false,
+          "overflow": false,
+          "viewport": {
+            "width": 667,
+            "height": 375
+          }
+        }
+      ],
+      "fullscreen": "entered-via-user-tap",
+      "neve": "actual open-close-focus return",
+      "script": "/assets/index-u0Ly9OFo.js",
+      "status": "pass"
+    },
+    {
+      "engine": "webkit",
+      "version": "26.5",
+      "errors": [],
+      "layouts": [
+        {
+          "buttons": [
+            {
+              "x": 8,
+              "y": 60,
+              "right": 60,
+              "bottom": 108,
+              "width": 52,
+              "height": 48,
+              "name": "출석",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 66,
+              "y": 60,
+              "right": 118,
+              "bottom": 108,
+              "width": 52,
+              "height": 48,
+              "name": "우편",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 124,
+              "y": 60,
+              "right": 176,
+              "bottom": 108,
+              "width": 52,
+              "height": 48,
+              "name": "임무",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 112,
+              "right": 60,
+              "bottom": 160,
+              "width": 52,
+              "height": 48,
+              "name": "설정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 66,
+              "y": 112,
+              "right": 118,
+              "bottom": 160,
+              "width": 52,
+              "height": 48,
+              "name": "주소창 없이 플레이",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 124,
+              "y": 112,
+              "right": 176,
+              "bottom": 160,
+              "width": 52,
+              "height": 48,
+              "name": "도감 · 능력치",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 164,
+              "right": 60,
+              "bottom": 212,
+              "width": 52,
+              "height": 48,
+              "name": "성장 · 각인",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 66,
+              "y": 164,
+              "right": 118,
+              "bottom": 212,
+              "width": 52,
+              "height": 48,
+              "name": "성장 여정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 124,
+              "y": 164,
+              "right": 176,
+              "bottom": 212,
+              "width": 52,
+              "height": 48,
+              "name": "전투 설계",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 216,
+              "right": 60,
+              "bottom": 264,
+              "width": 52,
+              "height": 48,
+              "name": "네브와 대화하기. 현재 봉인 대기",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 66,
+              "y": 216,
+              "right": 118,
+              "bottom": 264,
+              "width": 52,
+              "height": 48,
+              "name": "파티 던전",
+              "hit": true,
+              "inside": true
+            }
+          ],
+          "neve": {
+            "x": 8,
+            "y": 216,
+            "right": 60,
+            "bottom": 264,
+            "width": 52,
+            "height": 48
+          },
+          "battle": {
+            "x": 48,
+            "y": 428,
+            "right": 272,
+            "bottom": 492,
+            "width": 224,
+            "height": 64
+          },
+          "neveOverlapsDeparture": false,
+          "overflow": false,
+          "viewport": {
+            "width": 320,
+            "height": 568
+          }
+        },
+        {
+          "buttons": [
+            {
+              "x": 8,
+              "y": 64,
+              "right": 68,
+              "bottom": 123.5,
+              "width": 60,
+              "height": 59.5,
+              "name": "출석",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 64,
+              "right": 134,
+              "bottom": 123.5,
+              "width": 60,
+              "height": 59.5,
+              "name": "우편",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 129.5,
+              "right": 68,
+              "bottom": 189,
+              "width": 60,
+              "height": 59.5,
+              "name": "임무",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 129.5,
+              "right": 134,
+              "bottom": 189,
+              "width": 60,
+              "height": 59.5,
+              "name": "설정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 195,
+              "right": 68,
+              "bottom": 270,
+              "width": 60,
+              "height": 75,
+              "name": "주소창 없이 플레이",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 195,
+              "right": 134,
+              "bottom": 270,
+              "width": 60,
+              "height": 75,
+              "name": "도감 · 능력치",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 276,
+              "right": 68,
+              "bottom": 335.5,
+              "width": 60,
+              "height": 59.5,
+              "name": "성장 · 각인",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 276,
+              "right": 134,
+              "bottom": 335.5,
+              "width": 60,
+              "height": 59.5,
+              "name": "성장 여정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 341.5,
+              "right": 68,
+              "bottom": 403.140625,
+              "width": 60,
+              "height": 61.640625,
+              "name": "전투 설계",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 74,
+              "y": 341.5,
+              "right": 134,
+              "bottom": 403.140625,
+              "width": 60,
+              "height": 61.640625,
+              "name": "네브와 대화하기. 현재 봉인 대기",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 8,
+              "y": 409.140625,
+              "right": 68,
+              "bottom": 468.140625,
+              "width": 60,
+              "height": 59,
+              "name": "파티 던전",
+              "hit": true,
+              "inside": true
+            }
+          ],
+          "neve": {
+            "x": 74,
+            "y": 341.5,
+            "right": 134,
+            "bottom": 403.140625,
+            "width": 60,
+            "height": 61.640625
+          },
+          "battle": {
+            "x": 58.5,
+            "y": 688,
+            "right": 331.5,
+            "bottom": 768,
+            "width": 273,
+            "height": 80
+          },
+          "neveOverlapsDeparture": false,
+          "overflow": false,
+          "viewport": {
+            "width": 390,
+            "height": 844
+          }
+        },
+        {
+          "buttons": [
+            {
+              "x": 71,
+              "y": 55,
+              "right": 132,
+              "bottom": 109.140625,
+              "width": 61,
+              "height": 54.140625,
+              "name": "출석",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 137,
+              "y": 55,
+              "right": 198,
+              "bottom": 109.140625,
+              "width": 61,
+              "height": 54.140625,
+              "name": "우편",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 203,
+              "y": 55,
+              "right": 264,
+              "bottom": 109.140625,
+              "width": 61,
+              "height": 54.140625,
+              "name": "임무",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 269,
+              "y": 55,
+              "right": 330,
+              "bottom": 109.140625,
+              "width": 61,
+              "height": 54.140625,
+              "name": "설정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 71,
+              "y": 114.140625,
+              "right": 132,
+              "bottom": 182.421875,
+              "width": 61,
+              "height": 68.28125,
+              "name": "주소창 없이 플레이",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 137,
+              "y": 114.140625,
+              "right": 198,
+              "bottom": 182.421875,
+              "width": 61,
+              "height": 68.28125,
+              "name": "도감 · 능력치",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 203,
+              "y": 114.140625,
+              "right": 264,
+              "bottom": 182.421875,
+              "width": 61,
+              "height": 68.28125,
+              "name": "성장 · 각인",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 269,
+              "y": 114.140625,
+              "right": 330,
+              "bottom": 182.421875,
+              "width": 61,
+              "height": 68.28125,
+              "name": "성장 여정",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 71,
+              "y": 187.421875,
+              "right": 132,
+              "bottom": 249.0625,
+              "width": 61,
+              "height": 61.640625,
+              "name": "전투 설계",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 137,
+              "y": 187.421875,
+              "right": 198,
+              "bottom": 249.0625,
+              "width": 61,
+              "height": 61.640625,
+              "name": "네브와 대화하기. 현재 봉인 대기",
+              "hit": true,
+              "inside": true
+            },
+            {
+              "x": 203,
+              "y": 187.421875,
+              "right": 264,
+              "bottom": 249.0625,
+              "width": 61,
+              "height": 61.640625,
+              "name": "파티 던전",
+              "hit": true,
+              "inside": true
+            }
+          ],
+          "neve": {
+            "x": 137,
+            "y": 187.421875,
+            "right": 198,
+            "bottom": 249.0625,
+            "width": 61,
+            "height": 61.640625
+          },
+          "battle": {
+            "x": 471,
+            "y": 300,
+            "right": 651,
+            "bottom": 361,
+            "width": 180,
+            "height": 61
+          },
+          "neveOverlapsDeparture": false,
+          "overflow": false,
+          "viewport": {
+            "width": 667,
+            "height": 375
+          }
+        }
+      ],
+      "fullscreen": "unsupported-install-guide-shown",
+      "neve": "actual open-close-focus return",
+      "script": "/assets/index-u0Ly9OFo.js",
+      "status": "pass"
+    }
+  ],
+  "status": "pass",
+  "finished": "2026-09-13T11:32:48.060Z"
+}

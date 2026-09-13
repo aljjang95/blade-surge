@@ -8,7 +8,8 @@ export function setupPwa({ native = false, canApplyUpdate = () => true } = {}) {
   let registration = null, installPrompt = null, requestedUpdate = false, reloadDeferred = false;
   const device=platform();
   const state = { supported: 'serviceWorker' in navigator, canInstall: false, updateAvailable: false,
-    installed: window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true,
+    installed: window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true
+      || (window.matchMedia('(display-mode: fullscreen)').matches && !globalThis.document?.fullscreenElement),
     platform:device,manualInstall:device==='ios'||device==='android',online:navigator.onLine!==false,status:navigator.onLine===false?'offline':'idle' };
   const publish = () => window.dispatchEvent(new CustomEvent('bladesurge:pwa-state', { detail: { ...state } }));
   const syncWaiting = () => {

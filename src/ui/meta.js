@@ -438,7 +438,7 @@ export class Meta {
           else if(state.status==='update-deferred')notice.textContent='전투를 마친 뒤 업데이트를 적용할 수 있습니다.';
           else if(state.status==='update-check-failed')notice.textContent='온라인 상태지만 업데이트를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.';
           else if(state.updateAvailable)notice.textContent='새 버전이 준비됐습니다. 로비에서 적용하면 페이지가 다시 열립니다.';
-          else if(state.installed)notice.textContent='앱으로 실행 중 · 플레이와 동기화에는 인터넷 연결이 필요합니다.';
+          else if(state.installed)notice.textContent='홈 화면의 BladeSurge 앱 아이콘으로 실행하면 주소창 없이 즐길 수 있습니다.';
           else if(state.canInstall)notice.textContent='브라우저의 실제 설치 창을 열 수 있습니다.';
           else if(state.platform==='ios')notice.textContent='Safari 공유 버튼을 누른 뒤 “홈 화면에 추가”를 선택하세요.';
           else if(state.platform==='android')notice.textContent='브라우저 메뉴에서 “앱 설치” 또는 “홈 화면에 추가”를 선택하세요.';

@@ -1,0 +1,797 @@
+{
+  "build": {
+    "sha": "c48b5b69f62cf517fe48c9daa23774cd449cdec9",
+    "dirty": true,
+    "builtAt": "2026-09-13T11:09:52.802Z",
+    "pwaRelease": "926972d168969cf25f07"
+  },
+  "idle": {
+    "durationMs": 181395,
+    "samples": [
+      [
+        {
+          "mode": "lobby",
+          "elapsed": 0,
+          "status": {
+            "kind": "connected"
+          },
+          "text": "",
+          "noticeHidden": true,
+          "partyStatus": "lobby",
+          "hidden": false
+        },
+        {
+          "mode": "lobby",
+          "elapsed": 0,
+          "status": {
+            "kind": "connected"
+          },
+          "text": "",
+          "noticeHidden": true,
+          "partyStatus": "lobby",
+          "hidden": false
+        }
+      ],
+      [
+        {
+          "mode": "lobby",
+          "elapsed": 0,
+          "status": {
+            "kind": "connected"
+          },
+          "text": "",
+          "noticeHidden": true,
+          "partyStatus": "lobby",
+          "hidden": false
+        },
+        {
+          "mode": "lobby",
+          "elapsed": 0,
+          "status": {
+            "kind": "connected"
+          },
+          "text": "",
+          "noticeHidden": true,
+          "partyStatus": "lobby",
+          "hidden": false
+        }
+      ],
+      [
+        {
+          "mode": "lobby",
+          "elapsed": 0,
+          "status": {
+            "kind": "connected"
+          },
+          "text": "",
+          "noticeHidden": true,
+          "partyStatus": "lobby",
+          "hidden": false
+        },
+        {
+          "mode": "lobby",
+          "elapsed": 0,
+          "status": {
+            "kind": "connected"
+          },
+          "text": "",
+          "noticeHidden": true,
+          "partyStatus": "lobby",
+          "hidden": false
+        }
+      ],
+      [
+        {
+          "mode": "lobby",
+          "elapsed": 0,
+          "status": {
+            "kind": "connected"
+          },
+          "text": "",
+          "noticeHidden": true,
+          "partyStatus": "lobby",
+          "hidden": false
+        },
+        {
+          "mode": "lobby",
+          "elapsed": 0,
+          "status": {
+            "kind": "connected"
+          },
+          "text": "",
+          "noticeHidden": true,
+          "partyStatus": "lobby",
+          "hidden": false
+        }
+      ],
+      [
+        {
+          "mode": "lobby",
+          "elapsed": 0,
+          "status": {
+            "kind": "connected"
+          },
+          "text": "",
+          "noticeHidden": true,
+          "partyStatus": "lobby",
+          "hidden": false
+        },
+        {
+          "mode": "lobby",
+          "elapsed": 0,
+          "status": {
+            "kind": "connected"
+          },
+          "text": "",
+          "noticeHidden": true,
+          "partyStatus": "lobby",
+          "hidden": false
+        }
+      ],
+      [
+        {
+          "mode": "lobby",
+          "elapsed": 0,
+          "status": {
+            "kind": "connected"
+          },
+          "text": "",
+          "noticeHidden": true,
+          "partyStatus": "lobby",
+          "hidden": false
+        },
+        {
+          "mode": "lobby",
+          "elapsed": 0,
+          "status": {
+            "kind": "connected"
+          },
+          "text": "",
+          "noticeHidden": true,
+          "partyStatus": "lobby",
+          "hidden": false
+        }
+      ]
+    ],
+    "frames": [
+      {
+        "sent": {
+          "ping": 44
+        },
+        "received": {
+          "welcome": 1,
+          "party": 2,
+          "pong": 44
+        },
+        "dropped": {}
+      },
+      {
+        "sent": {
+          "ping": 41
+        },
+        "received": {
+          "welcome": 1,
+          "party": 1,
+          "pong": 41
+        },
+        "dropped": {}
+      }
+    ]
+  },
+  "checks": [
+    {
+      "name": "host-pause-guest-notice-clock-and-layout",
+      "status": "pass",
+      "evidence": {
+        "before": {
+          "mode": "battle",
+          "elapsed": 0.49999999999999994,
+          "finishing": false,
+          "ready": true,
+          "status": {
+            "kind": "host-paused"
+          },
+          "text": "방장이 원정을 일시 정지했습니다.",
+          "noticeHidden": false,
+          "partyStatus": "running",
+          "hidden": false
+        },
+        "after": {
+          "mode": "battle",
+          "elapsed": 0.49999999999999994,
+          "finishing": false,
+          "ready": true,
+          "status": {
+            "kind": "host-paused"
+          },
+          "text": "방장이 원정을 일시 정지했습니다.",
+          "noticeHidden": false,
+          "partyStatus": "running",
+          "hidden": false
+        },
+        "layouts": [
+          {
+            "viewport": {
+              "width": 320,
+              "height": 568
+            },
+            "labels": [
+              {
+                "id": "presence-0",
+                "x": 128,
+                "y": 215,
+                "right": 217,
+                "bottom": 250,
+                "width": 89,
+                "height": 35,
+                "inside": true
+              },
+              {
+                "id": "presence-1",
+                "x": 223,
+                "y": 215,
+                "right": 312,
+                "bottom": 250,
+                "width": 89,
+                "height": 35,
+                "inside": true
+              },
+              {
+                "id": "presence-2",
+                "x": 128,
+                "y": 256,
+                "right": 300,
+                "bottom": 286.5,
+                "width": 172,
+                "height": 30.5,
+                "inside": true
+              }
+            ],
+            "controls": [
+              {
+                "id": "#battle-camera-controls",
+                "x": 10,
+                "y": 209,
+                "right": 120,
+                "bottom": 300,
+                "width": 110,
+                "height": 91,
+                "inside": true
+              },
+              {
+                "id": "#btn-attack",
+                "x": 232,
+                "y": 472,
+                "right": 312,
+                "bottom": 552,
+                "width": 80,
+                "height": 80,
+                "inside": true
+              },
+              {
+                "id": "#btn-dodge",
+                "x": 156,
+                "y": 482,
+                "right": 216,
+                "bottom": 542,
+                "width": 60,
+                "height": 60,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"0\"]",
+                "x": 140,
+                "y": 412,
+                "right": 192,
+                "bottom": 464,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"1\"]",
+                "x": 200,
+                "y": 412,
+                "right": 252,
+                "bottom": 464,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"2\"]",
+                "x": 260,
+                "y": 412,
+                "right": 312,
+                "bottom": 464,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"3\"]",
+                "x": 140,
+                "y": 352,
+                "right": 192,
+                "bottom": 404,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"4\"]",
+                "x": 200,
+                "y": 352,
+                "right": 252,
+                "bottom": 404,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"5\"]",
+                "x": 260,
+                "y": 352,
+                "right": 312,
+                "bottom": 404,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              }
+            ],
+            "overlaps": []
+          },
+          {
+            "viewport": {
+              "width": 390,
+              "height": 844
+            },
+            "labels": [
+              {
+                "id": "presence-0",
+                "x": 8,
+                "y": 215,
+                "right": 115,
+                "bottom": 250,
+                "width": 107,
+                "height": 35,
+                "inside": true
+              },
+              {
+                "id": "presence-1",
+                "x": 121,
+                "y": 215,
+                "right": 228,
+                "bottom": 250,
+                "width": 107,
+                "height": 35,
+                "inside": true
+              },
+              {
+                "id": "presence-2",
+                "x": 8,
+                "y": 256,
+                "right": 180,
+                "bottom": 286.5,
+                "width": 172,
+                "height": 30.5,
+                "inside": true
+              }
+            ],
+            "controls": [
+              {
+                "id": "#battle-camera-controls",
+                "x": 10,
+                "y": 485,
+                "right": 120,
+                "bottom": 576,
+                "width": 110,
+                "height": 91,
+                "inside": true
+              },
+              {
+                "id": "#btn-attack",
+                "x": 302,
+                "y": 748,
+                "right": 382,
+                "bottom": 828,
+                "width": 80,
+                "height": 80,
+                "inside": true
+              },
+              {
+                "id": "#btn-dodge",
+                "x": 226,
+                "y": 758,
+                "right": 286,
+                "bottom": 818,
+                "width": 60,
+                "height": 60,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"0\"]",
+                "x": 210,
+                "y": 688,
+                "right": 262,
+                "bottom": 740,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"1\"]",
+                "x": 270,
+                "y": 688,
+                "right": 322,
+                "bottom": 740,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"2\"]",
+                "x": 330,
+                "y": 688,
+                "right": 382,
+                "bottom": 740,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"3\"]",
+                "x": 210,
+                "y": 628,
+                "right": 262,
+                "bottom": 680,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"4\"]",
+                "x": 270,
+                "y": 628,
+                "right": 322,
+                "bottom": 680,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"5\"]",
+                "x": 330,
+                "y": 628,
+                "right": 382,
+                "bottom": 680,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              }
+            ],
+            "overlaps": []
+          },
+          {
+            "viewport": {
+              "width": 667,
+              "height": 375
+            },
+            "labels": [
+              {
+                "id": "presence-0",
+                "x": 145,
+                "y": 284,
+                "right": 215,
+                "bottom": 313,
+                "width": 70,
+                "height": 29,
+                "inside": true
+              },
+              {
+                "id": "presence-1",
+                "x": 221,
+                "y": 284,
+                "right": 291,
+                "bottom": 313,
+                "width": 70,
+                "height": 29,
+                "inside": true
+              },
+              {
+                "id": "presence-2",
+                "x": 145,
+                "y": 231,
+                "right": 291,
+                "bottom": 278,
+                "width": 146,
+                "height": 47,
+                "inside": true
+              }
+            ],
+            "controls": [
+              {
+                "id": "#battle-camera-controls",
+                "x": 10,
+                "y": 138.75,
+                "right": 126,
+                "bottom": 217.75,
+                "width": 116,
+                "height": 79,
+                "inside": true
+              },
+              {
+                "id": "#btn-attack",
+                "x": 573,
+                "y": 285,
+                "right": 653,
+                "bottom": 365,
+                "width": 80,
+                "height": 80,
+                "inside": true
+              },
+              {
+                "id": "#btn-dodge",
+                "x": 497,
+                "y": 295,
+                "right": 557,
+                "bottom": 355,
+                "width": 60,
+                "height": 60,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"0\"]",
+                "x": 481,
+                "y": 225,
+                "right": 533,
+                "bottom": 277,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"1\"]",
+                "x": 541,
+                "y": 225,
+                "right": 593,
+                "bottom": 277,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"2\"]",
+                "x": 601,
+                "y": 225,
+                "right": 653,
+                "bottom": 277,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"3\"]",
+                "x": 481,
+                "y": 165,
+                "right": 533,
+                "bottom": 217,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"4\"]",
+                "x": 541,
+                "y": 165,
+                "right": 593,
+                "bottom": 217,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              },
+              {
+                "id": ".skill-btn[data-skill=\"5\"]",
+                "x": 601,
+                "y": 165,
+                "right": 653,
+                "bottom": 217,
+                "width": 52,
+                "height": 52,
+                "inside": true
+              }
+            ],
+            "overlaps": []
+          }
+        ]
+      }
+    },
+    {
+      "name": "host-resume-guest-clock",
+      "status": "pass",
+      "evidence": {
+        "before": {
+          "mode": "battle",
+          "elapsed": 0.49999999999999994,
+          "finishing": false,
+          "ready": true,
+          "status": {
+            "kind": "host-paused"
+          },
+          "text": "방장이 원정을 일시 정지했습니다.",
+          "noticeHidden": false,
+          "partyStatus": "running",
+          "hidden": false
+        },
+        "after": {
+          "mode": "battle",
+          "elapsed": 0.8000000000000002,
+          "finishing": false,
+          "ready": true,
+          "status": {
+            "kind": "connected"
+          },
+          "text": "",
+          "noticeHidden": true,
+          "partyStatus": "running",
+          "hidden": false
+        }
+      }
+    },
+    {
+      "name": "snapshot-only-drop-pong-live-host-waiting-and-sixty-second-timeout",
+      "status": "pass",
+      "evidence": {
+        "fault": "server connection stays open; only guest inbound snapshot frames dropped",
+        "waitingMs": 3057,
+        "waiting": {
+          "mode": "battle",
+          "elapsed": 1.4500000000000006,
+          "finishing": false,
+          "ready": true,
+          "status": {
+            "kind": "host-waiting"
+          },
+          "text": "방장 응답 대기 · 전투 정보가 도착하면 이어집니다.",
+          "noticeHidden": false,
+          "partyStatus": "running",
+          "hidden": false
+        },
+        "durationMs": 61926,
+        "ended": {
+          "mode": "battle",
+          "elapsed": 1.4500000000000006,
+          "finishing": true,
+          "ready": false,
+          "status": {
+            "kind": "connected"
+          },
+          "text": "방장 응답 대기 · 전투 정보가 도착하면 이어집니다.",
+          "noticeHidden": false,
+          "partyStatus": "running",
+          "hidden": false
+        },
+        "text": "BLADE SURGE · 함께 걷는 원정\n닫기\n함께, 던전 끝까지\n\n친구에게 초대 링크를 보내고 2~4명이 같은 던전에서 함께 싸우세요.\n\n다음 원정에서 다시 만나요\n\n방장에게서 60초 동안 전투 정보가 도착하지 않아 원정을 종료했습니다.\n\n로비로 돌아가기\n\n연결 종료와 실패는 클리어로 기록하지 않습니다.\n\n방장 응답 대기 · 전투 정보가 도착하면 이어집니다.",
+        "pongDelta": 13,
+        "dropped": {
+          "snapshot": 47
+        }
+      }
+    },
+    {
+      "name": "fresh-party-all-inbound-drop-sixteen-second-transport-timeout",
+      "status": "pass",
+      "evidence": {
+        "fault": "all guest inbound frames dropped; actual server connection retained",
+        "durationMs": 16428,
+        "text": "BLADE SURGE · 함께 걷는 원정\n닫기\n함께, 던전 끝까지\n\n친구에게 초대 링크를 보내고 2~4명이 같은 던전에서 함께 싸우세요.\n\n다음 원정에서 다시 만나요\n\n파티 서버의 응답이 없습니다. 연결을 확인한 뒤 다시 참가해 주세요.\n\n로비로 돌아가기\n\n연결 종료와 실패는 클리어로 기록하지 않습니다.\n\n연결 확인 중 · 잠시 기다려 주세요.",
+        "dropped": {
+          "snapshot": 11,
+          "pong": 4
+        }
+      }
+    }
+  ],
+  "errors": [
+    {
+      "console": 0,
+      "page": 0,
+      "close": [
+        {
+          "side": "server",
+          "code": 1000,
+          "reason": "party-ended"
+        },
+        {
+          "side": "client"
+        },
+        {
+          "side": "client",
+          "code": 1000,
+          "reason": "party-ended"
+        },
+        {
+          "side": "client"
+        },
+        {
+          "side": "server"
+        }
+      ]
+    },
+    {
+      "console": 0,
+      "page": 0,
+      "close": [
+        {
+          "side": "client"
+        },
+        {
+          "side": "server",
+          "code": 1000,
+          "reason": "disconnected"
+        },
+        {
+          "side": "client",
+          "code": 1000,
+          "reason": "disconnected"
+        },
+        {
+          "side": "client"
+        },
+        {
+          "side": "server"
+        }
+      ]
+    },
+    {
+      "console": 0,
+      "page": 0,
+      "close": [
+        {
+          "side": "server",
+          "code": 1000,
+          "reason": "party-ended"
+        },
+        {
+          "side": "client"
+        },
+        {
+          "side": "client",
+          "code": 1000,
+          "reason": "party-ended"
+        },
+        {
+          "side": "client"
+        },
+        {
+          "side": "server"
+        }
+      ]
+    },
+    {
+      "console": 0,
+      "page": 0,
+      "close": [
+        {
+          "side": "client"
+        },
+        {
+          "side": "server",
+          "code": 1000,
+          "reason": "disconnected"
+        },
+        {
+          "side": "client",
+          "code": 1000,
+          "reason": "disconnected"
+        },
+        {
+          "side": "client"
+        },
+        {
+          "side": "server"
+        }
+      ]
+    }
+  ]
+}

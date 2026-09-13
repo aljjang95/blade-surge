@@ -4,6 +4,7 @@ import { Renderer } from './engine/renderer.js';
 import { LobbyCameraControls } from './engine/lobby-camera.js';
 import { CameraControls } from './engine/camera-control.js';
 import { setupPwa } from './platform/pwa.js';
+import { AppModeView } from './platform/app-mode.js';
 import { resolveQuality } from './platform/mobile-display.js';
 import { isNativeApp, setupNativeApp } from './platform/native-app.js';
 import { FX } from './engine/fx.js';
@@ -66,6 +67,7 @@ class App {
     this.lobbyCameraControls = new LobbyCameraControls(this);
     this.cameraControls = new CameraControls(this);
     this.pwa = isNativeApp() ? null : setupPwa({ canApplyUpdate: () => this.mode === 'lobby' && !this.stageStarting && !this.party?.run });
+    if (this.pwa) this.appModeView = new AppModeView(this);
     this.nativeApp = setupNativeApp(this);
     this.last = performance.now();
     this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');

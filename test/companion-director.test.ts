@@ -89,7 +89,7 @@ describe('CompanionDirector', () => {
     expect(clearCount).toBe(2);
   });
 
-  test('로비 대화를 연 채 출격해도 입력 잠금과 복구 순서가 유지된다', () => {
+  test('로비 대화를 연 채 출격하면 큰 패널을 닫고 전투를 시작한다', () => {
     let clearCount = 0;
     const input = { enabled: true, clear: () => { clearCount += 1; } };
     const battle = {
@@ -119,14 +119,10 @@ describe('CompanionDirector', () => {
     director.setOpen(true);
     director.startBattle(battle);
 
-    expect(battle.paused).toBe(true);
-    expect(input.enabled).toBe(false);
-    expect(clearCount).toBe(1);
-
-    director.setOpen(false);
+    expect(director.getSnapshot().open).toBe(false);
     expect(battle.paused).toBe(false);
     expect(input.enabled).toBe(true);
-    expect(clearCount).toBe(2);
+    expect(clearCount).toBe(0);
   });
 });
 

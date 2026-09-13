@@ -178,10 +178,9 @@ export class CompanionDirector {
 
   startBattle(battle: BattleLike): void {
     this.endBattle(false);
+    // A lobby conversation must not arrive as a full-screen interruption in combat.
+    this.setOpen(false);
     this.battle = battle;
-    if (this.mind.getSnapshot().open && battle.player) {
-      battle.setPaused('dialogue', true);
-    }
     this.syncQuality();
     this.mind.setConnected(true);
     this.updateTelemetry(battle);
