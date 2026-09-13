@@ -1,4 +1,5 @@
 import { HERO_LEVEL_CAP, masteryLabel } from '../game/rpg-core.js';
+import { encounterLocationLabel, encounterLevelLabel } from '../game/rpg-encounters.js';
 
 const number = value => Math.round(Number.isFinite(value) ? value : 0).toLocaleString('ko-KR');
 function node(tag, cls, text) {
@@ -133,15 +134,19 @@ export class RpgView {
     if (!entry) { this.detail.append(node('p', 'rpg-empty', '다른 검색어나 등급을 선택하세요.')); return; }
     const record = records[entry.id];
     if (!record?.seen) { this.detail.append(illustration('nav-journal','rpg-locked-art'), node('h3', '', '미발견 몬스터'), node('p', 'rpg-muted', '조우하면 기록이 열립니다.')); return; }
+    const location = encounterLocationLabel(record.lastEncounter);
+    const nonCampaign = location && record.lastEncounter.kind !== 'campaign';
     this.detail.append(node('p', 'rpg-eyebrow', `${entry.rank} · ${masteryLabel(record)}`), node('h3', '', entry.def.name),
-      node('p', 'rpg-muted', `최고 조우 Lv.${record.highestLevel} · ${number(record.kills)}회 처치`));
+      node('p', 'rpg-muted', `${nonCampaign ? '' : '최고 레벨 기록 Lv.' + record.highestLevel + ' · '}${number(record.kills)}회 처치`));
+    // Old saves did not identify expedition locations; never infer one retrospectively.
+    if (location) this.detail.append(node('p', 'rpg-encounter-location', '마지막 조우 장소 · ' + location));
     const portrait=portraitOf(entry.def,'rpg-portrait');if(portrait)this.detail.append(portrait);
-    this.detail.append(node('p', 'rpg-reference', `${entry.reference} · Lv.${entry.level}`), statGrid([
+    this.detail.append(node('p', 'rpg-reference', `캠페인 ${entry.reference} · Lv.${entry.level}`), statGrid([
       ['체력', number(entry.stats.hp)], ['공격력', number(entry.stats.atk)], ['피해 감소', `${Math.round(entry.stats.armor * 100)}%`],
       ['처치 EXP', number(entry.xp)], ['이동 속도', String(entry.stats.speed)], ['공격 거리', String(entry.stats.range)]
     ]));
     const places = [...new Set(entry.locations.map(location => location.chapter))];
-    this.detail.append(node('h4', '', '출현 지역'), node('p', '', places.join(' · ') || '고정 출현 구역 없음'));
+    this.detail.append(node('h4', '', '캠페인 출현 지역'), node('p', '', places.join(' · ') || '고정 출현 구역 없음'));
     const facts = [];
     if (entry.def.ranged) facts.push('원거리 공격');
     if (entry.def.behavior === 'shield') facts.push('정면 방패 방어와 가드 브레이크');
@@ -164,7 +169,7 @@ export class RpgView {
     const battle = this.battle, candidate = battle.player?.lockTarget || battle.lastTarget;
     const visible = this.app.mode === 'battle' && candidate?.alive && !candidate.spawning && battle.player?.distTo(candidate) <= 14;
     this.target.hidden = !visible;
-    if (visible) this.target.textContent = `${battle.stage?.party ? '파티' : `Lv.${candidate.level || 1}`} ${candidate.def.name} · HP ${number(candidate.hp)} / ${number(candidate.maxHp)}`;
+    if (visible) this.target.textContent = `${encounterLevelLabel(battle.stage, candidate.level)} ${candidate.def.name} · HP ${number(candidate.hp)} / ${number(candidate.maxHp)}`;
     this.result.hidden = !battle.result;
     if (battle.result) this.result.textContent = `처치 EXP +${number(battle.combatXp)} · 전투 중 이미 반영됨`;
     if (this.dialog.open && this.tab === 'hero' && this.heroSignature !== text) { this.heroSignature = text; this.content.replaceChildren(); this.renderHero(); }

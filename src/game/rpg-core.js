@@ -1,4 +1,5 @@
 /** Pure RPG rules. The existing hero curve and stage difficulty remain authoritative. */
+import { CAMPAIGN_FLOOR_CAP, normalizeEncounter, normalizeExpeditionEncounter } from './rpg-encounters.js';
 export const HERO_LEVEL_CAP = 80;
 export const RPG_SAVE_VERSION = 1;
 // 처치 보상은 즉시 성장하되, 첫 층에서 각성 구간까지 건너뛰지 않는다.
@@ -16,26 +17,38 @@ export function normalizeRpg(raw, allowedIds) {
     if (['__proto__', 'constructor', 'prototype'].includes(id) || !Object.hasOwn(source, id) || !object(source[id])) continue;
     const r = source[id], kills = boundedInt(r.kills), seen = Math.max(boundedInt(r.seen), kills > 0 ? 1 : 0);
     if (!seen) continue;
-    bestiary[id] = { seen, kills, highestLevel: boundedInt(r.highestLevel, 1, 1, HERO_LEVEL_CAP), lastFloor: boundedInt(r.lastFloor, 1, 1, 50) };
+    bestiary[id] = { seen, kills, highestLevel: boundedInt(r.highestLevel, 1, 1, HERO_LEVEL_CAP), lastFloor: boundedInt(r.lastFloor, 1, 1, CAMPAIGN_FLOOR_CAP) };
+    const encounter = normalizeEncounter(r.lastEncounter);
+    if (encounter) bestiary[id].lastEncounter = encounter;
   }
   return { version: RPG_SAVE_VERSION, bestiary, combatXp: boundedInt(raw?.combatXp) };
 }
 
-export function recordMonster(rpg, id, level, floor, defeated = false) {
+/** @param {unknown} expedition Optional untrusted expedition location; null means campaign. */
+export function recordMonster(rpg, id, level, floor, defeated = false, expedition = null) {
   if (!object(rpg?.bestiary) || typeof id !== 'string' || ['__proto__', 'constructor', 'prototype'].includes(id)) return null;
+  const encounter = normalizeExpeditionEncounter(expedition);
+  if (expedition != null && !encounter) return null;
   const old = Object.hasOwn(rpg.bestiary, id) ? rpg.bestiary[id] : null;
   const entry = old || { seen: 0, kills: 0, highestLevel: 1, lastFloor: 1 };
   if (defeated) { entry.kills = add(entry.kills, 1); entry.seen = Math.max(1, entry.seen); }
   else entry.seen = add(entry.seen, 1);
-  entry.highestLevel = Math.max(entry.highestLevel, boundedInt(level, 1, 1, HERO_LEVEL_CAP));
-  entry.lastFloor = boundedInt(floor, 1, 1, 50);
+  if (encounter) {
+    // A template stage is not an actual campaign visit or a difficulty level.
+    // Keep legacy numeric fields intact; a first expedition has no numeric claim in the UI.
+    entry.lastEncounter = encounter;
+  } else {
+    entry.highestLevel = Math.max(entry.highestLevel, boundedInt(level, 1, 1, HERO_LEVEL_CAP));
+    entry.lastFloor = boundedInt(floor, 1, 1, CAMPAIGN_FLOOR_CAP);
+    entry.lastEncounter = { kind: 'campaign', floor: entry.lastFloor };
+  }
   rpg.bestiary[id] = entry;
   return entry;
 }
 
 export function monsterLevel(floor, def) {
   // Rank is already priced into the authored HP/ATK. Do NOT multiply difficulty a second time.
-  return Math.min(HERO_LEVEL_CAP, boundedInt(floor, 1, 1, 50) + (def?.boss ? 4 : def?.elite ? 2 : 0));
+  return Math.min(HERO_LEVEL_CAP, boundedInt(floor, 1, 1, CAMPAIGN_FLOOR_CAP) + (def?.boss ? 4 : def?.elite ? 2 : 0));
 }
 
 export function monsterStats(def, scale = 1) {

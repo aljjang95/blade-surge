@@ -7,6 +7,7 @@ import { ImpactClock } from './combat-motion.js';
 import { contactFeedback } from './apex-combat.js';
 import { normalizeRpg, recordMonster, monsterLevel, monsterXp, grantCombatXp, KillLedger } from './rpg-core.js';
 import { buildCatalogue } from './rpg-catalogue.js';
+import { stageExpeditionEncounter, encounterLevelLabel } from './rpg-encounters.js';
 import { RpgView } from '../ui/rpg.js';
 import '../ui/rpg.css';
 
@@ -58,19 +59,20 @@ export class Battle extends BaseBattle {
   spawnEnemy(type, near = null, room = null, at = null) {
     const enemy = super.spawnEnemy(type, near, room, at);
     if (!enemy) return enemy;
-    enemy.speciesId = type; enemy.level = monsterLevel(this.stage.idx, enemy.def);
+    const encounter = stageExpeditionEncounter(this.stage);
+    enemy.speciesId = type; enemy.level = encounter ? null : monsterLevel(this.stage.idx, enemy.def);
     enemy.summoned = !!near;
     enemy.xpReward = monsterXp(enemy.def, this.stage.scale, enemy.summoned);
-    recordMonster(this.ensureRpg(), type, enemy.level, this.stage.idx);
+    recordMonster(this.ensureRpg(), type, enemy.level, this.stage.idx, false, encounter);
     this.rpgDirty = true;
-    if (enemy.isBoss) this.ui.showBoss(`Lv.${enemy.level} ${enemy.def.name}`, true, enemy.def.portrait);
+    if (enemy.isBoss) this.ui.showBoss(`${encounterLevelLabel(this.stage, enemy.level)} ${enemy.def.name}`, true, enemy.def.portrait);
     return enemy;
   }
   onEnemyDeath(enemy) {
     if (!this.killLedger.claim(enemy)) return;
     const rpg = this.ensureRpg();
     if (enemy.speciesId && Object.hasOwn(ENEMIES, enemy.speciesId)) {
-      recordMonster(rpg, enemy.speciesId, enemy.level, this.stage.idx, true);
+      recordMonster(rpg, enemy.speciesId, enemy.level, this.stage.idx, true, stageExpeditionEncounter(this.stage));
       const hero = this.app.eco.hero(this.heroId);
       const award = grantCombatXp(hero, enemy.xpReward || 0, levelExp);
       this.combatXp = Math.min(1e9, this.combatXp + award.gained);
