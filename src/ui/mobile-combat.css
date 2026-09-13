@@ -80,8 +80,6 @@
   /* Region danger copy sits below the fixed information rows, away from the minimap. */
   body:has(#hud.show) #toast-layer { top:calc(174px + var(--sat)); left:8px; right:132px; align-items:stretch; gap:3px; }
   body:has(#hud.show) #toast-layer .toast { padding:4px 6px; border-radius:7px; font-size:10px; line-height:14px; overflow-wrap:anywhere; }
-  body:has(#hud.show) #toast-layer:has(.toast.red) .toast:not(.red) { display:none; }
-  body:has(#hud.show) #toast-layer .toast.red { order:-1; }
   /* Keep the chat entry available without placing a suggestion card over HP or the hero. */
   body:has(#hud.show) .companion-ui .companion-launcher {
     top:auto;
@@ -100,3 +98,10 @@
   body:has(#hud.show) .companion-launcher-copy,
   body:has(#hud.show) .companion-launcher>.companion-link-dot { display:none; }
 }
+
+/* Keep the cinematic heading below the measured combat notice, even when its copy wraps. */
+#hud .wave-banner { top:max(30%,calc(var(--combat-notice-bottom,0px) + 14px)); transform-origin:center top; }
+@media (orientation:landscape) and (max-height:550px) {
+  #hud .wave-banner { top:max(26%,calc(var(--combat-notice-bottom,0px) + 14px)); }
+}
+#hud .hud-right-top .hud-btn { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
