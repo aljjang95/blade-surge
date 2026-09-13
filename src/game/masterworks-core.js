@@ -1,5 +1,6 @@
 import { BOONS, SYNERGIES, MASTERY_NODES, PATHS, CHALLENGES, STORY_EVENTS, BOUNTIES } from '../data/masterworks.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
+import { expeditionDepth } from '../data/expedition-depths.js';
 const CAMPAIGN_STAGE_COUNT = CHAPTERS.length * STAGES_PER_CHAPTER;
 const MAX = 1000000;
 const obj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
@@ -12,6 +13,8 @@ const discoveryKey = key => {
   if (typeof key !== 'string') return false;
   const campaign = /^(?:campaign:([1-9][0-9]*)|room:([1-9][0-9]*):([0-9]|1[0-9]|20))$/.exec(key);
   if (campaign) return Number(campaign[1] || campaign[2]) <= CAMPAIGN_STAGE_COUNT;
+  const deep = /^expedition:(glass_garden|ember_vault|star_archive):deep:([0-9]|1[0-9]|20)$/.exec(key);
+  if (deep) return Number(deep[2]) < expeditionDepth(deep[1]).layout.cells.length;
   return /^expedition:(glass_garden|ember_vault|star_archive):([0-9]|1[0-9]|20)$/.test(key);
 };
 const err = error => ({ok:false,error});

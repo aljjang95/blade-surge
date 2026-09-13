@@ -147,7 +147,8 @@ export class Battle extends RpgBattle {
     const was = room.cleared; super.markCleared(room);
     if (was || !room.cleared || !this.active || this.run?.settled || !this.run?.enabled || room.type==='start') return;
     const index=this.world.rooms.indexOf(room);
-    const key=this.stage.expedition ? `expedition:${this.stage.expedition.id}:${index}` : `room:${this.stage.idx}:${index}`;
+    const deep=this.stage.expedition?.depth==='deep';
+    const key=this.stage.expedition ? `expedition:${this.stage.expedition.id}:${deep?'deep:':''}${index}` : `room:${this.stage.idx}:${index}`;
     const discovery=recordDiscovery(this.masterworks.s,key);
     if (discovery.ok) { this.run.renown+=discovery.renown||0; this.ui.toast('새 길의 기록 · 명성 +3','gold'); }
     this.rpgDirty=true; this.flushRpg();
@@ -155,9 +156,13 @@ export class Battle extends RpgBattle {
     const lastApproach=this.stage.expedition?.kind==='dungeon' && this.world.rooms.every(r=>r.cleared || r.type==='start' || r.type==='boss');
     // Six rewards remain available. Only the third/sixth reward or the final approach asks the player;
     // routine room rewards take a deterministic default and never pause combat.
-    const checkpoint=lastApproach || this.run.round===2 || this.run.round===5;
-    const boon=this.grantBoonReward({automatic:!checkpoint});
-    if (!this.run.storySeen && (room.type==='treasure' || this.roomsCleared>=2 || lastApproach)) {
+    const checkpoint=lastApproach || (!deep && (this.run.round===2 || this.run.round===5));
+    // The entry boon also uses a slot. Keep the sixth slot for the final
+    // approach instead of exhausting every choice in the earlier rooms.
+    const boon=deep&&!checkpoint&&this.run.round>=5 ? {ok:false} : this.grantBoonReward({automatic:!checkpoint});
+    // Deep missions carry their own route objective; replaying an unrelated base
+    // encounter here would interrupt the same short run twice.
+    if (!deep && !this.run.storySeen && (room.type==='treasure' || this.roomsCleared>=2 || lastApproach)) {
       const idx=this.stage.expedition ? ['glass_garden','ember_vault','star_archive'].indexOf(this.stage.expedition.id) : (this.stage.ch-1)%3;
       this.run.queue.push({kind:'story',id:STORY_EVENTS[Math.max(0,idx)].id}); this.run.storySeen=true;
     }

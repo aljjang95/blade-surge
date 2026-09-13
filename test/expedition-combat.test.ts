@@ -81,7 +81,7 @@ test('altar requires uninterrupted center presence and AI timeout uses supplied 
 
 test('forge keeps its room uncleared through two real reinforcement waves', () => {
   const room:any={type:'elite',cleared:false}, spawns:string[]=[];
-  const g:any={stage:buildExpeditionStage('dungeon','ember_vault',{}),ui:{waveBanner(){}},spawnEnemy(id:string,_near:any,r:any){expect(r).toBe(room);spawns.push(id);}};
+  const g:any={stage:buildExpeditionStage('dungeon','ember_vault',{}),enemies:[],maxAlive:16,pending:[],ui:{waveBanner(){}},spawnEnemy(id:string,_near:any,r:any){expect(r).toBe(room);spawns.push(id);}};
   Battle.prototype.markCleared.call(g,room); expect(room.forgeWave).toBe(1); expect(room.cleared).toBe(false);
   Battle.prototype.markCleared.call(g,room); expect(room.forgeWave).toBe(2); expect(room.cleared).toBe(false); expect(spawns.length).toBe(8);
 });

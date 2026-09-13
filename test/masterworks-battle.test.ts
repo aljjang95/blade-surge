@@ -63,6 +63,23 @@ test('routine rewards auto-apply while only the third and sixth rewards become c
   expect(game.run.autoPicked).toBe(4);expect(game.run.queue).toHaveLength(1);
 });
 
+test('deep routes ask once before the boss and discover their own rooms without a base story popup',()=>{
+  for(const id of ['glass_garden','ember_vault','star_archive']){
+    const {game,state}=fixture();game.stage=buildExpeditionStage('dungeon',id,{}, {depth:'deep'});game.world=buildExpeditionWorld(game.stage);
+    game.grantBoonReward({automatic:true}); // The real start schedules this entry reward.
+    state.discoveries.push(`expedition:${id}:1`);
+    const rooms=game.world.rooms.filter((r:any)=>!['start','boss'].includes(r.type));
+    for(const [i,room] of rooms.entries()){
+      room.attuned=true;room.forgeWave=1;game.markCleared(room);
+      expect(game.run.queue).toHaveLength(i===rooms.length-1?1:0);
+    }
+    expect(game.currentOffer().kind).toBe('boon');
+    expect(game.run.autoPicked).toBe(Math.min(5,rooms.length));
+    expect(state.discoveries.filter((key:string)=>key.includes(':deep:'))).toHaveLength(rooms.length);
+    const restored=normalizeMasterworks(state);expect(restored.discoveries).toEqual(state.discoveries);
+  }
+});
+
 test('party stages disable personal masterworks progression and offers',()=>{
   const {game}=fixture();game.stage.party={code:'party'};game.run.enabled=!game.stage.party;
   expect(game.grantBoonReward({automatic:true}).ok).toBe(false);expect(game.run.round).toBe(0);expect(game.run.queue).toHaveLength(0);

@@ -8,6 +8,7 @@ import { ITEM_BY_ID, ITEM_ICON, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST,
 import { SKUS, SHOP_TABS, GACHA, BATTLE_PASS, PASS_TRACK, DAILY_REWARDS } from '../data/shop.js';
 import { CHAPTERS, STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
 import { REWARD_LABEL } from '../game/economy.js';
+import { campaignFinished } from '../data/expedition-depths.js';
 import { storyText, encounterLabel, journalHtml, dungeonBriefHtml } from './campaign.js';
 const CAM_DESC = { auto: '상황에 맞춰 자동 — 탐험은 액션, 난전은 탑다운, 보스는 시네마틱', top: '높이서 내려다보는 클래식 시점 — 몹몰이 파악이 쉽다', action: '낮고 가까운 시점 — 타격감과 속도감이 크다', wide: '멀고 넓은 시점 — 전장 전체와 보스 패턴이 보인다' };
 
@@ -20,7 +21,7 @@ export class Meta {
     this.tab = 'home'; this.chapter = 1; this.stage = null; this.shopTab = 'hot'; this.heroSel = this.eco.s.selected;
     document.querySelectorAll('.bottomnav button').forEach((b) => b.addEventListener('click', () => this.openTab(b.dataset.tab)));
     document.querySelectorAll('[data-open]').forEach((b) => b.addEventListener('click', (e) => { e.stopPropagation(); const k = b.dataset.open; if (k === 'energy') this.openTab('shop', 'energy'); else if (k === 'shop-gold') this.openTab('shop', 'gold'); else this.openTab('shop', 'gem'); }));
-    $('btn-battle').addEventListener('click', () => this.app.startStage(this.eco.nextStage()));
+    $('btn-battle').addEventListener('click', () => this.launchNextChallenge());
     $('stage-pill').addEventListener('click', () => this.openTab('stage'));
     $('btn-campaign-journal').addEventListener('click', () => this.ui.modal(journalHtml(this.eco.s.progress), { onOpen: (box) => { box.querySelector('#journal-close').onclick = () => this.ui.closeModal(); } }));
     $('btn-daily').addEventListener('click', () => this.showDaily());
@@ -71,7 +72,14 @@ export class Meta {
   refreshHome() {
     const s = this.eco.s; const def = HEROES[s.selected]; const nx = this.eco.nextStage();
     $('lobby-hero-name').textContent = def.name; $('lobby-rarity').textContent = def.rarity; $('lobby-rarity').style.background = RC[def.rarity]; $('lobby-power').textContent = fmt(this.eco.heroPower(s.selected));
-    $('stage-pill-txt').textContent = nx.name; $('battle-cost').textContent = nx.energy;
+    const complete = campaignFinished(s.progress);
+    $('stage-pill-txt').textContent = complete ? '캠페인 완주 · 새로운 원정' : nx.name; $('battle-cost').textContent = nx.energy;
+    $('btn-battle').firstElementChild.textContent = complete ? '심층 원정' : '출 격';
+    $('btn-battle').querySelector('small').hidden = complete;
+  }
+  launchNextChallenge() {
+    if (campaignFinished(this.eco.s.progress)) return this.app.expeditionUI.open('dungeons', { depth: 'deep' });
+    return this.app.startStage(this.eco.nextStage());
   }
   tick() {
     const s = this.eco.s; this.eco.tickEnergy(); $('v-energy').textContent = s.energy; $('v-energy-timer').textContent = this.eco.energyTimer();
@@ -138,6 +146,7 @@ export class Meta {
   }
   nextChallengeHtml() {
     const next = this.eco.nextStage(), power = this.eco.heroPower(this.eco.s.selected);
+    if (campaignFinished(this.eco.s.progress)) return `<section class="next-challenge" aria-label="캠페인 이후 원정"><div><b>구한 세계에 남은 이야기</b><p>심층 원정의 새로운 동선과 수호자에 도전하고 제작 재료를 모으세요.</p><small>3개 원정 · 최초 정복 보상</small></div><button type="button" class="btn btn-gold" id="h-next">심층 원정 보기</button></section>`;
     return `<section class="next-challenge" aria-label="다음 층 도전"><div><b>${next.name}</b><p>구역을 정화해 봉인을 풀고, 보스를 처치하세요.</p><small>권장 전투력 ${fmt(next.recPower)} · 출전 ${HEROES[this.eco.s.selected].name} ${fmt(power)}</small></div><button type="button" class="btn btn-gold" id="h-next">정비 마치고 출격 <small>에너지 -${next.energy}</small></button></section>`;
   }
   itemComparisonHtml(heroId, uid) {
@@ -203,7 +212,7 @@ export class Meta {
       <h3 style="margin:12px 0 6px;font-size:14px">장비</h3><div class="equip-grid">${SLOTS.map((sl) => { const uid = h.equip[sl]; const inst = this.eco.s.inventory.find((x) => x.uid === uid); if (!inst) return `<div class="equip-slot" data-slot="${sl}"><img class="empty-equip-art" src="${uiArt(`slot-${sl}`)}" alt=""><small>${SLOT_NAME[sl]}</small></div>`; const it = ITEM_BY_ID[inst.id]; return `<div class="equip-slot has rar-${it.rarity}" data-slot="${sl}" data-uid="${uid}"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><span class="plus">+${inst.enh}</span></div>`; }).join('')}</div>
       <h3 style="margin:12px 0 6px;font-size:14px">가방 <small style="color:var(--muted)">${this.eco.s.inventory.length}개</small></h3><div id="hero-bag"></div>${this.nextChallengeHtml()}`;
     this.renderInventory(id);
-    $('h-next').onclick = () => this.app.startStage(this.eco.nextStage());
+    $('h-next').onclick = () => this.launchNextChallenge();
     $('h-lv').onclick = () => { if (this.eco.levelUpHero(id)) { audio.levelUp({ vol: 0.42 }); audio.vibe(20); this.ui.toast(`Lv.${this.eco.hero(id).level} 달성!`, 'gold'); this.renderHeroes(); } else { this.ui.toast('골드 부족', 'red'); audio.play('ui_error'); this.offerGold(); } };
     $('h-star').onclick = () => { if (this.eco.promoteHero(id)) { audio.play('jingle_legend', { vol: 0.7 }); this.ui.toast('승급 성공! ★' + this.eco.hero(id).star, 'gold'); this.renderHeroes(); } else { this.ui.toast('영웅 조각 부족 — 소환에서 중복 획득 시 조각 +10', 'red'); } };
     const hs = $('h-sel'); if (hs) hs.onclick = () => this.selectHero(id);
