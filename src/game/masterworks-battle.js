@@ -6,6 +6,7 @@ import { boonChoices, boonEffects, masteryEffects, difficultyEffects, recordProg
 import { applyBuildStats, postureHit, tickPosture } from './masterworks-combat.js';
 import { audio } from '../engine/audio.js';
 import { applyRiftEnemy } from './journey-rifts.js';
+import { RiftEncounters, RIFT_REINFORCEMENT, isRiftDungeon } from './rift-encounters.js';
 
 export class Battle extends RpgBattle {
   constructor(app) {
@@ -15,6 +16,7 @@ export class Battle extends RpgBattle {
     app.eco.onChange(() => this.chronicle.refresh());
   }
   async start(...args) {
+    this.riftEncounter?.dispose();this.riftEncounter=null;
     await super.start(...args);
     // Party runs are server-scoped and must not write or depend on a personal save.
     const ticket = this.stage?.party
@@ -27,11 +29,12 @@ export class Battle extends RpgBattle {
     this.run.difficulty = difficultyEffects(this.run.enabled ? this.run.challenges : []);
     this.buildBase = {...this.player.stats}; this.effects = {}; this.applyBuild();
     this.runKills = new WeakSet(); this.counterUntil = 0; this.chainUntil = 0;
+    if(isRiftDungeon(this.stage))this.riftEncounter=new RiftEncounters(this);
     // The opening reward remains, but it no longer interrupts the first combat input.
     this.after(1.4, () => { if (this.run?.enabled && this.active) this.grantBoonReward({automatic:true}); });
     this.chronicle.refresh();
   }
-  stop() { this.chronicle?.close(); super.stop(); this.run = null; this.effects = {}; this.chronicle?.refresh(); }
+  stop() { this.riftEncounter?.dispose();this.riftEncounter=null;this.chronicle?.close(); super.stop(); this.run = null; this.effects = {}; this.chronicle?.refresh(); }
   applyBuild() {
     const p = this.player; if (!p || !this.run) return;
     const temporary = boonEffects(this.run.picked), permanent = this.run.permanent;
@@ -100,7 +103,14 @@ export class Battle extends RpgBattle {
     this.ui.toast(result.consequence || '당신의 선택이 기록되었습니다.','gold'); return result;
   }
   spawnEnemy(...args) {
+    const reinforcement=typeof args[0]==='string'&&args[0].startsWith(RIFT_REINFORCEMENT);
+    if(reinforcement){
+      if(!isRiftDungeon(this.stage)||this.stage.riftId!=='siege'||!this.active||this.bossDefeated||args[2]?.cleared)return;
+      if(this.enemies.filter(e=>e.alive).length>=this.maxAlive){this.pending.push({t:args[0],room:args[2]});return;}
+      args[0]=args[0].slice(RIFT_REINFORCEMENT.length);
+    }
     const e = super.spawnEnemy(...args); if (!e) return e;
+    if(reinforcement){e.riftReinforcement=true;e.summoned=true;e.xpReward=0;}
     const d = this.run?.difficulty;
     if (d && this.run.enabled) { e.maxHp = Math.round(e.maxHp*d.enemyHp); e.hp=e.maxHp; e.atk*=d.enemyAtk; }
     applyRiftEnemy(e, this.stage);
@@ -111,6 +121,15 @@ export class Battle extends RpgBattle {
     if (this.runKills?.has(e)) return;
     if (e?.alive !== false) return;
     this.runKills?.add(e);
+    if(e.riftReinforcement){
+      if(!this.enemies.includes(e))return;
+      // Reinforcements participate in room completion, never kill/drop/XP ledgers.
+      if(this.active&&!this.run?.settled){
+        if(this.pending.length)this.after(.5,()=>{if(this.active&&this.pending.length){const n=this.pending.shift();this.spawnEnemy(n.t,null,n.room);}});
+        const room=e.homeRoom;if(room&&!room.cleared&&!this.enemies.some(x=>x.alive&&x.homeRoom===room)&&!this.pending.some(n=>n.room===room))this.markCleared(room);
+      }
+      return;
+    }
     const earn=this.active && this.run && !this.run.settled;
     super.onEnemyDeath(e);
     if (!this.run) return;
@@ -187,6 +206,7 @@ export class Battle extends RpgBattle {
   settleChronicle(outcome) {
     if (!this.run || this.run.settled) return;
     this.run.settled=true; this.run.queue.length=0; this.chronicle.close();
+    this.riftEncounter?.dispose();this.riftEncounter=null;
     const s=this.masterworks.s;
     if (this.run.enabled) {
       if(outcome==='victory') {
@@ -209,6 +229,7 @@ export class Battle extends RpgBattle {
     const dt=Math.max(0,this.elapsed-before);
     if(dt>0&&this.active&&this.run?.enabled) {
       for(const e of this.enemies)if(e.alive)tickPosture(e,dt);
+      this.riftEncounter?.update(dt);
       // Closing a checkpoint does not throw its reward away. Eight active seconds later,
       // an untouched boon receives the deterministic first choice and combat continues.
       for(const offer of [...this.run.queue])if(offer.kind==='boon'&&Number.isFinite(offer.autoAt)&&this.elapsed>=offer.autoAt) {

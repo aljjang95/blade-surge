@@ -24,7 +24,7 @@ export const RIGS = {
     spawn: null, dodge: 'Jump',
     attack: 'Punch', attackHeavy: 'Weapon', attackSpin: 'Weapon',
     attackJump: 'Jump', cast: 'Punch', summon: 'Weapon', raise: 'Weapon', dash: 'Run',
-    scale: 0.6, hover: 0, faceFlip: true,
+    scale: 0.6, hover: 0, faceFlip: false,
   },
   // ---- Quaternius Blob (작고 통통, 물어뜯음) ----
   blob: {
@@ -34,7 +34,7 @@ export const RIGS = {
     spawn: null, dodge: 'Jump',
     attack: 'Bite_Front', attackHeavy: 'Bite_Front', attackSpin: 'Jump',
     attackJump: 'Jump', cast: 'Bite_Front', summon: 'Jump', raise: 'Jump', dash: 'Jump',
-    scale: 0.85, hover: 0, faceFlip: true,
+    scale: 0.85, hover: 0, faceFlip: false,
   },
   // ---- Quaternius Flying (공중, 걷기 없음) ----
   flying: {
@@ -44,10 +44,12 @@ export const RIGS = {
     spawn: null, dodge: 'Fast_Flying',
     attack: 'Punch', attackHeavy: 'Headbutt', attackSpin: 'Headbutt',
     attackJump: 'Headbutt', cast: 'Punch', summon: 'Punch', raise: 'Punch', dash: 'Fast_Flying',
-    scale: 0.62, hover: 0.5, faceFlip: true,
+    scale: 0.62, hover: 0.5, faceFlip: false,
   },
 };
 
+// All 26 shipped Quaternius GLBs face +Z in idle/run/attack, like KayKit.
+// Actor and party replicas must not add a second 180-degree facing correction.
 /** 모델 파일명 → 리그 추론 */
 export function rigOf(model) {
   if (model.startsWith('Big_')) return 'big';

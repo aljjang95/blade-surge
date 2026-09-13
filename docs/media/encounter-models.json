@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-13",
+  "scope": "Six Blender-authored visual variants assembled onto unchanged licensed game rigs, textures and animation clips.",
+  "authoring": {
+    "application": "Blender",
+    "version": "5.1",
+    "script": "tools/art/author-encounters.py",
+    "sourceHashes": "tools/art/encounter-sources.json",
+    "masters": "work/encounter-models/rev-04",
+    "revision": 4
+  },
+  "totalDeliveryBytes": 875200,
+  "assets": [
+    {
+      "model": "Skeleton_BellKing",
+      "base": "Skeleton_Warrior",
+      "encounter": "garden_finalboss",
+      "path": "public/models/tll/encounters/bell-king-v1.glb",
+      "bytes": 372396,
+      "sha256": "4274670b1ebcdf3d42b1485b16144d65c0a360e3b64cd640382ebaaf0ce265c8",
+      "materials": 3,
+      "triangles": 6120
+    },
+    {
+      "model": "Big_KilnTyrant",
+      "base": "Big_Demon",
+      "encounter": "forge_finalboss",
+      "path": "public/models/tll/encounters/kiln-tyrant-v1.glb",
+      "bytes": 150836,
+      "sha256": "ee7363d9de14bddac772e2540dcdace837fb8c01ed6ab6528299b5983bb77d68",
+      "materials": 3,
+      "triangles": 2332
+    },
+    {
+      "model": "Big_ArchiveMonarch",
+      "base": "Big_Yeti",
+      "encounter": "frost_finalboss",
+      "path": "public/models/tll/encounters/archive-monarch-v1.glb",
+      "bytes": 105624,
+      "sha256": "886609ea595610921b916c1dd37fdd2ebe0c9cfb63a0a22aaf604449f9116eab",
+      "materials": 3,
+      "triangles": 1460
+    },
+    {
+      "model": "Flying_AbyssRegent",
+      "base": "Flying_Dragon_Evolved",
+      "encounter": "tide_finalboss",
+      "path": "public/models/tll/encounters/abyss-regent-v1.glb",
+      "bytes": 103048,
+      "sha256": "088d33ee8fde63d648d927a9088747c750f7912952c064f2b3eef397e19552d3",
+      "materials": 3,
+      "triangles": 1592
+    },
+    {
+      "model": "Skeleton_HollowRegent",
+      "base": "Skeleton_Warrior",
+      "encounter": "crown_finalboss",
+      "path": "public/models/tll/encounters/hollow-regent-v1.glb",
+      "bytes": 76132,
+      "sha256": "c23800c061e65bb4ca97f11d3a61e67e750841193019f12097ed6ed1cf5d9dfd",
+      "materials": 3,
+      "triangles": 1228
+    },
+    {
+      "model": "Skeleton_OathRemnant",
+      "base": "Skeleton_Warrior",
+      "encounter": "homecoming_finalboss",
+      "path": "public/models/tll/encounters/oath-remnant-v1.glb",
+      "bytes": 67164,
+      "sha256": "5833b37ba04cea21f1949f4d622b67e3db3de769cfa9b7641c741af2ea4bd01b",
+      "materials": 3,
+      "triangles": 1080
+    }
+  ]
+}

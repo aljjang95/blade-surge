@@ -1,0 +1,702 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-13",
+  "scope": "Source-bound release candidate proof, independent visual review and controlled real app/browser regression. Full product goal remains incomplete.",
+  "sourceHashEncoding": "UTF-8 with LF newlines",
+  "sourceSha256": {
+    "src/data/encounter-models.js": "cf36149f85e9e9e465c12701c60c2967fea55baa8eaec31273278a99461e7031",
+    "src/data/rigs.js": "6ea6bbd4f5f998b9e8b4a14607dcd4ed42fc0aca88e9eb058288c477a04a74d8",
+    "src/data/stages.js": "a909919479c86a1fb6246b876dde0343effc09834eaa6b74c394f39f1e16fc97",
+    "src/engine/assets.js": "5ef75a41019cf27f8ae874f581ab6e246d1cb6f08c102bdd98adfb7e3deadffc",
+    "src/engine/encounter-identity.js": "61cbfe91574354118a48a097d945b41650feda09a1712ed7ee533a031a4da6fb",
+    "src/game/actor.js": "9e06858f53ede8310bcddb55af58fe490cb4695bdfaa86a3bebad1804c6fa4dd",
+    "src/game/journey-rifts.js": "c3eff847775d2797333685dbe98d5642192921261fde1ef9184f5517cac2730d",
+    "src/game/rift-encounters.js": "6da6160052b80565e2e849011cb056b1cab87ffaaaf607bd2e66d2bdcf1245ba",
+    "src/game/masterworks-battle.js": "1986011db4a3f2146c510a74e9d6c682e79282ef4adb7b19be3b97f785e2aff3",
+    "tools/encounter-runtime-qa.mjs": "ac160d680d44faf63d78979b791e8ceb5c1890ed87cdd143e5444798bf3c43a7",
+    "tools/rift-runtime-qa.mjs": "4a08d520b90d388e8b96cd971374588f0ceabd6c51891c41b291d4cd325f6da7",
+    "tools/art/encounter-preview.mjs": "276cf85f2f321c6180503425d6381d0ce006590280158f8b1a059cd7e9322c22",
+    "tools/art/author-encounters.py": "8a13d33dca81fbdb65e219d9644a7c648c820e83fa1619e685879ee5b1cd2cf1"
+  },
+  "artifact": {
+    "entry": "/assets/index-CY8bzxcz.js",
+    "entrySha256": "f7000794a2de1a161581669901e712e1a6fe869fd993f985433b1ef17027315a",
+    "modelManifest": {
+      "path": "docs/media/encounter-models.json",
+      "sha256": "7f2feef6b5a8623d725cb97908c4e388fb16e48b5ddefd9bea8d3c2a8fa1e617"
+    }
+  },
+  "checks": {
+    "command": "bun run check",
+    "tests": 597,
+    "failed": 0,
+    "assertions": 59331,
+    "files": 73,
+    "typecheck": "pass",
+    "build": "pass",
+    "log": {
+      "path": "work/rift-models-check.log",
+      "sha256": "2ca86531ae29ad840d81eb6584146473b6e8a78c5a8789b773fa6d9cdc8b43d0"
+    }
+  },
+  "renderedModels": {
+    "report": {
+      "path": "work/encounter-models/preview/report-36models.json",
+      "sha256": "737e1ce880d31d871d298e5065e971f58ae98a2c31e31ef6a1f96bf40c013137"
+    },
+    "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "software": true,
+    "models": [
+      {
+        "name": "Skeleton_Minion",
+        "clips": 23,
+        "samples": 115,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Skeleton_Warrior",
+        "clips": 23,
+        "samples": 115,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Skeleton_Rogue",
+        "clips": 23,
+        "samples": 115,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Skeleton_Mage",
+        "clips": 23,
+        "samples": 115,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Big_Orc",
+        "clips": 8,
+        "samples": 40,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Big_Orc_Skull",
+        "clips": 8,
+        "samples": 40,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Big_Demon",
+        "clips": 8,
+        "samples": 40,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Big_BlueDemon",
+        "clips": 8,
+        "samples": 40,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Big_Yeti",
+        "clips": 8,
+        "samples": 40,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Big_MushroomKing",
+        "clips": 8,
+        "samples": 40,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Big_Tribal",
+        "clips": 8,
+        "samples": 40,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Big_Cactoro",
+        "clips": 8,
+        "samples": 40,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Big_Alien",
+        "clips": 8,
+        "samples": 40,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Big_Ninja",
+        "clips": 8,
+        "samples": 40,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Blob_GreenBlob",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Blob_PinkBlob",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Blob_GreenSpikyBlob",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Blob_Mushnub",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Blob_Mushnub_Evolved",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Blob_Orc",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Flying_Ghost",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Flying_Ghost_Skull",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Flying_Dragon",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Flying_Dragon_Evolved",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Flying_Armabee",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Flying_Armabee_Evolved",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Flying_Hywirl",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Flying_Squidle",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Flying_Glub",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Flying_Goleling_Evolved",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Skeleton_BellKing",
+        "clips": 23,
+        "samples": 115,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Big_KilnTyrant",
+        "clips": 8,
+        "samples": 40,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Big_ArchiveMonarch",
+        "clips": 8,
+        "samples": 40,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Flying_AbyssRegent",
+        "clips": 6,
+        "samples": 30,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Skeleton_HollowRegent",
+        "clips": 23,
+        "samples": 115,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      },
+      {
+        "name": "Skeleton_OathRemnant",
+        "clips": 23,
+        "samples": 115,
+        "views": [
+          "front",
+          "three-quarter",
+          "profile",
+          "clay",
+          "run",
+          "attack"
+        ]
+      }
+    ],
+    "totalPoseSamples": 1795,
+    "errors": []
+  },
+  "runtime": {
+    "report": {
+      "path": "work/encounter-runtime-qa/report.json",
+      "sha256": "96822b4e8a2bc0c6794a24536a9970bbf5ee53cf7338f357e4e9f8039457c8ed"
+    },
+    "started": "2026-09-13T14:38:40.035Z",
+    "finished": "2026-09-13T14:42:04.583Z",
+    "status": "pass",
+    "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "scope": "Real app, original character loader, campaign boss-room spawn, actual fixed 50ms app.step. QA opens the seal and relocates player; not natural completion, rewards, mobile GPU or FPS proof.",
+    "bosses": [
+      {
+        "chapter": 1,
+        "enemy": "garden_finalboss",
+        "model": "Skeleton_BellKing",
+        "identity": "Skeleton_BellKing",
+        "meshes": 3,
+        "clips": 23,
+        "alive": true
+      },
+      {
+        "chapter": 2,
+        "enemy": "forge_finalboss",
+        "model": "Big_KilnTyrant",
+        "identity": "Big_KilnTyrant",
+        "meshes": 3,
+        "clips": 8,
+        "alive": true
+      },
+      {
+        "chapter": 3,
+        "enemy": "frost_finalboss",
+        "model": "Big_ArchiveMonarch",
+        "identity": "Big_ArchiveMonarch",
+        "meshes": 3,
+        "clips": 8,
+        "alive": true
+      },
+      {
+        "chapter": 4,
+        "enemy": "tide_finalboss",
+        "model": "Flying_AbyssRegent",
+        "identity": "Flying_AbyssRegent",
+        "meshes": 3,
+        "clips": 6,
+        "alive": true
+      },
+      {
+        "chapter": 5,
+        "enemy": "crown_finalboss",
+        "model": "Skeleton_HollowRegent",
+        "identity": "Skeleton_HollowRegent",
+        "meshes": 3,
+        "clips": 23,
+        "alive": true
+      },
+      {
+        "chapter": 6,
+        "enemy": "homecoming_finalboss",
+        "model": "Skeleton_OathRemnant",
+        "identity": "Skeleton_OathRemnant",
+        "meshes": 3,
+        "clips": 23,
+        "alive": true
+      }
+    ],
+    "errors": []
+  },
+  "rifts": {
+    "report": {
+      "path": "work/rift-runtime-qa/report.json",
+      "sha256": "c68f355ad8c6a55e871b876f9e76e8acf9797131182e585e6816488acfadd0df"
+    },
+    "status": "pass",
+    "started": "2026-09-13T14:38:40.036Z",
+    "finished": "2026-09-13T14:42:04.591Z"
+  },
+  "browserUI": {
+    "report": {
+      "path": "work/app-screen-qa.json",
+      "sha256": "fd8754779da6b7b60c78c40a456f1611636d669098383abc54780015010ccc44"
+    },
+    "started": "2026-09-13T14:41:23.482Z",
+    "finished": "2026-09-13T14:43:19.389Z",
+    "engines": [
+      {
+        "engine": "chromium",
+        "version": "151.0.7922.34",
+        "status": "pass",
+        "viewports": [
+          {
+            "width": 320,
+            "height": 568
+          },
+          {
+            "width": 390,
+            "height": 844
+          },
+          {
+            "width": 667,
+            "height": 375
+          }
+        ],
+        "errors": [],
+        "entry": "/assets/index-CY8bzxcz.js"
+      },
+      {
+        "engine": "firefox",
+        "version": "153.0",
+        "status": "pass",
+        "viewports": [
+          {
+            "width": 320,
+            "height": 568
+          },
+          {
+            "width": 390,
+            "height": 844
+          },
+          {
+            "width": 667,
+            "height": 375
+          }
+        ],
+        "errors": [],
+        "entry": "/assets/index-CY8bzxcz.js"
+      },
+      {
+        "engine": "webkit",
+        "version": "26.5",
+        "status": "pass",
+        "viewports": [
+          {
+            "width": 320,
+            "height": 568
+          },
+          {
+            "width": 390,
+            "height": 844
+          },
+          {
+            "width": 667,
+            "height": 375
+          }
+        ],
+        "errors": [],
+        "entry": "/assets/index-CY8bzxcz.js"
+      }
+    ],
+    "scope": "Local Chromium/Firefox/WebKit engines; real UI, fullscreen API and viewport changes. No installed-app or physical-device claim."
+  },
+  "review": {
+    "reviewer": "content_audit",
+    "scope": "Independent rendered PNG review; no owner approval or premium-quality claim",
+    "findingsFixed": [
+      "Abyss wing and kiln shin overbright reflections corrected by retaining authored roughness",
+      "Hollow mask narrowed to expose eyes",
+      "All 26 original Quaternius models show +Z front; removed incorrect 180-degree local/party turn"
+    ],
+    "evidence": "work/encounter-models/preview/*.png; Blob full views used because face camera crops too high"
+  },
+  "tllReimport": {
+    "job": "3369af24-7242-4bda-b9c1-cdf5acb61198",
+    "status": "READY",
+    "sourceSha256": "c615143092eef5d14ece2a1339798ab5cf8311a2b79f6369964fdb04258f8ee7",
+    "outputSha256": "590141dabd45ac7c6666fbdaa2f66294bc762315a389156a85f035a6061aca3b",
+    "triangles": 11224,
+    "meshes": 5,
+    "bones": 41,
+    "clips": 23,
+    "images": 2,
+    "observed": "Actual Studio preview of assembled Bell King, Running_A and 1H_Melee_Attack_Chop"
+  },
+  "limitations": [
+    "Six visual variants reuse original rigging/animation; not six new skeletons or an authored year of content",
+    "Controlled seal opening, positioning and 50ms time steps are not an organic completion/reward test",
+    "SwiftShader and local browser engines are not physical Android/iPhone, installed PWA, thermal or FPS certification",
+    "New full-score Flow BGM was released previously; provider lacks isolated dry SFX generation",
+    "Evidence under work is preserved locally and intentionally not distributed in Git"
+  ]
+}
