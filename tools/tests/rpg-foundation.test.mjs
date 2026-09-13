@@ -24,7 +24,7 @@ test('corrupt records, fractional counters and out-of-range values normalize saf
 test('codex survives JSON save and reload', () => {
   const r = normalizeRpg(null, ['a']); recordMonster(r,'a',7,4); recordMonster(r,'a',7,4,true);
   const reloaded = normalizeRpg(JSON.parse(JSON.stringify(r)), ['a']);
-  assert.deepEqual(reloaded.bestiary.a, { seen: 1, kills: 1, highestLevel: 7, lastFloor: 4 });
+  assert.deepEqual(reloaded.bestiary.a, { seen: 1, kills: 1, highestLevel: 7, lastFloor: 4, lastEncounter: { kind: 'campaign', floor: 4 } });
 });
 test('high-water level is monotonic; last floor is an actual encounter', () => {
   const r = normalizeRpg(null, ['a']); recordMonster(r,'a',20,20); recordMonster(r,'a',3,3);
