@@ -1,0 +1,90 @@
+{
+  "checkedAt": "2026-09-13T05:15:36.5264321Z",
+  "testedGameCommit": "9b8f371c5d34d91a96ff92a5834ab60f7ee6a4b2",
+  "tests": 421,
+  "assertions": 18533,
+  "focusedTests": 7,
+  "focusedAssertions": 34,
+  "typecheck": "pass",
+  "build": "pass",
+  "independentReview": "No new P1/P2",
+  "run": {
+    "errors": 0,
+    "bootMs": 1113.9000000059605,
+    "floorClearSec": 157.12,
+    "killsPerFloor": 202,
+    "maxAliveSeen": 18,
+    "dropsPerFloor": 40,
+    "longestDryStreakSec": 12,
+    "hitTakenRatio": 0.08,
+    "avgFrameMs": 0.24,
+    "p95FrameMs": 0.7,
+    "rhythmBeats": 7,
+    "drawCalls": 281,
+    "_beats": {
+      "explore": true,
+      "encounter": true,
+      "vacuum": true,
+      "drop": true,
+      "setProgress": false,
+      "bossFound": true,
+      "bossKill": true,
+      "floorClear": true
+    },
+    "_won": true,
+    "_seed": 20260905,
+    "_hero": "knight",
+    "_roomsCleared": "13/13",
+    "_sampleFrames": 9427,
+    "_heroLevelStart": 1,
+    "_heroLevelEnd": 4,
+    "_choices": [
+      "boon:ember_hunt",
+      "boon:storm_step",
+      "boon:storm_eye",
+      "story:lantern:guide",
+      "boon:storm_edge",
+      "boon:ember_hunt",
+      "boon:tide_breath"
+    ],
+    "_at": "2026-09-13T04:55:48.257Z",
+    "_viewport": {
+      "width": 1934,
+      "height": 1272
+    },
+    "_measurement": "Native IAB GPU, JS CPU submit time; not device FPS",
+    "_errorSamples": [],
+    "_sourceCommit": "9b8f371c5d34d91a96ff92a5834ab60f7ee6a4b2",
+    "_sourceBundle": "index-D7HdAJML.js",
+    "_isolation": "Origin 53179 localStorage and sessionStorage verified empty before app load; no reset/deletion used"
+  },
+  "combatNotices": {
+    "maxVisible": 1,
+    "portalNoticeStartedMs": 2202,
+    "portalCreated": true,
+    "queueEmptyMs": 4402
+  },
+  "screenshots": [
+    {
+      "menuScrollWidth": 47,
+      "menuClientWidth": 47,
+      "sha256": "640fe04f56416a37109717b44c194c1a15eaec7e69a539cdc18f880699334e3e",
+      "gap": 15.939079284667969,
+      "height": 360,
+      "width": 740,
+      "file": "bladesurge-pr23-landscape.png"
+    },
+    {
+      "menuScrollWidth": 56,
+      "menuClientWidth": 56,
+      "sha256": "fcd0b9d4b23b261547c91fe51758c9201f4a7595d2a0e15319d4f44ccc63a4da",
+      "gap": 57.1265869140625,
+      "height": 844,
+      "width": 390,
+      "file": "bladesurge-pr23-portrait.png"
+    }
+  ],
+  "visualFixture": "Local simulation paused, notice held and CSS animations fixed at 500ms for layout only; real notice lifetime measured separately",
+  "mage": "Actual hero card selection, lobby identity, 1-2 battle, six class skills and pending-boon menu verified",
+  "limitations": "CPU submit metrics are not mobile device FPS. Baseline viewport was not recorded."
+}
