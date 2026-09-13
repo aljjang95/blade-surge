@@ -98,3 +98,10 @@
   body:has(#hud.show) .companion-launcher-copy,
   body:has(#hud.show) .companion-launcher>.companion-link-dot { display:none; }
 }
+
+/* Keep the cinematic heading below the measured combat notice, even when its copy wraps. */
+#hud .wave-banner { top:max(30%,calc(var(--combat-notice-bottom,0px) + 14px)); transform-origin:center top; }
+@media (orientation:landscape) and (max-height:550px) {
+  #hud .wave-banner { top:max(26%,calc(var(--combat-notice-bottom,0px) + 14px)); }
+}
+#hud .hud-right-top .hud-btn { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

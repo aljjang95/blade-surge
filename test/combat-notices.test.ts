@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, spyOn, test } from 'bun:test';
 import { CombatNoticeQueue } from '../src/ui/combat-notices.js';
 
 function fixture() {
@@ -83,4 +83,29 @@ test('leaving or restarting a battle discards its notices and ignores stale call
   f.queue.push('새 전투'); stale(); expect(f.visible).toEqual(['새 전투']);
   f.advance(2200); expect(f.visible).toEqual([]);
   expect(f.seen.map(({ message }) => message)).toEqual(['이전 경고', '새 전투']);
+});
+
+test('default timers respect browser receivers during scheduling, preemption and cleanup', () => {
+  const timers = new Map<number, () => void>();
+  let nextId = 1;
+  const visible: string[] = [];
+  const schedule = spyOn(globalThis, 'setTimeout').mockImplementation(function (this: unknown, callback: () => void, delay: number) {
+    if (this !== undefined && this !== globalThis) throw new TypeError('Illegal invocation');
+    expect(delay).toBe(2200);
+    const id = nextId++; timers.set(id, callback); return id;
+  } as any);
+  const cancel = spyOn(globalThis, 'clearTimeout').mockImplementation(function (this: unknown, id: number) {
+    if (this !== undefined && this !== globalThis) throw new TypeError('Illegal invocation');
+    timers.delete(id);
+  } as any);
+  try {
+    const queue = new CombatNoticeQueue({ show: ({ message }: { message: string }) => {
+      visible.push(message); return () => { visible.splice(visible.indexOf(message), 1); };
+    } });
+    queue.push('목표', 'gold'); queue.push('경고', 'red');
+    expect(visible).toEqual(['경고']); expect(timers.size).toBe(1);
+    const [id, fire] = [...timers][0]; timers.delete(id); fire();
+    expect(visible).toEqual(['목표']); expect(timers.size).toBe(1);
+    queue.clear(); expect(visible).toEqual([]); expect(timers.size).toBe(0);
+  } finally { schedule.mockRestore(); cancel.mockRestore(); }
 });

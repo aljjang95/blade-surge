@@ -21,6 +21,14 @@ export class UI {
       notice.innerHTML = message; this.el.toast.appendChild(notice);
       return () => notice.remove();
     } });
+    // The announcement must clear the actual notice height, including wrapped copy and rotation.
+    this.combatNoticeResize = new ResizeObserver(() => {
+      const bottom = this.el.hud.classList.contains('show') && this.el.toast.childElementCount
+        ? this.el.toast.getBoundingClientRect().bottom : 0;
+      this.el.hud.style.setProperty('--combat-notice-bottom', `${bottom}px`);
+    });
+    this.combatNoticeResize.observe(this.el.toast);
+    this.combatNoticeResize.observe(this.el.hud);
     this.skillBtns = [...document.querySelectorAll('.skill-btn')];
     this.hurtT = 0; this.comboEl = $('combo'); this.comboN = $('combo-n');
     this.lootLayer = $('loot-layer'); this.lootQueue = [];

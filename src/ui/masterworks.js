@@ -135,7 +135,8 @@ export class MasterworksView {
   }
   refresh() {
     const r=this.battle.run,active=this.battle.active;
-    this.hud.textContent=r?.queue.length?`각인 선택 ${r.queue.length}`:`각인 ${r?.picked.length||0}`;
+    this.hud.textContent=r?.queue.length?`각인 +${r.queue.length}`:`각인 ${r?.picked.length||0}`;
+    this.hud.setAttribute('aria-label',r?.queue.length?`각인 선택 ${r.queue.length}개 대기`:`원정 각인 ${r?.picked.length||0}개 보기`);
     this.hud.classList.toggle('mw-ready',!!r?.queue.length);
     this.strip.hidden=!active||!r?.enabled;
     if(r)this.strip.textContent=`명성 +${r.renown} · 각인 ${r.picked.length} · ${this.battle.elapsed<this.battle.counterUntil?'반격 준비':'마무리 공격으로 균형 파괴'}`;

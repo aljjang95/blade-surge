@@ -1,6 +1,6 @@
 /** One visible combat notice; waiting notices receive their full display time. */
 export class CombatNoticeQueue {
-  constructor({ show, schedule = setTimeout, cancel = clearTimeout, duration = 2200, limit = 4 }) {
+  constructor({ show, schedule = (fn, delay) => setTimeout(fn, delay), cancel = (timer) => clearTimeout(timer), duration = 2200, limit = 4 }) {
     this.show = show; this.schedule = schedule; this.cancel = cancel;
     this.duration = duration; this.limit = limit;
     this.pending = []; this.current = null; this.timer = null; this.remove = null; this.revision = 0;
