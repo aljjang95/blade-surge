@@ -105,7 +105,7 @@ export class DropSystem {
       this.stones += it.payload; g.ui.flyReward(pos, `강화석 +${it.payload}`, g.renderer.camera, 'stone');
       audio.ice({ vol: 0.3, dur: 0.3 }); g.fx.burst(pos, 0x4cc3ff, { n: 5, speed: 4, size: 0.25, life: 0.35 });
     } else if (it.kind === 'stone2' || it.kind === 'stone3') {
-      const hi = it.kind === 'stone3'; this[it.kind] += it.payload;
+      const hi = it.kind === 'stone3'; this[hi ? 'stones3' : 'stones2'] += it.payload;
       g.ui.flyReward(pos, `${hi ? '전설' : '상급'} 강화석 +${it.payload}`, g.renderer.camera, 'stone');
       audio.ice({ vol: 0.4, dur: 0.4 }); if (hi) audio.play('ui_glass', { vol: 0.5, rate: 1.4 });
       g.fx.burst(pos, hi ? 0xffd35a : 0x3a7bff, { n: 9, speed: 5, size: 0.3, life: 0.4 });
