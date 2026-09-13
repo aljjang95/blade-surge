@@ -50,8 +50,9 @@ interface AppLike {
   mode: 'boot' | 'lobby' | 'battle';
   battle?: BattleLike;
   models: Record<string, unknown>;
+  renderer?: { quality?: CompanionSnapshot['quality'] };
   showcase?: { def?: { name?: string } };
-  eco?: { s?: { selected?: string; settings?: { quality?: CompanionSnapshot['quality'] } }; heroPower?: (id: string) => number; nextStage?: () => { idx: number } };
+  eco?: { s?: { selected?: string; settings?: { quality?: CompanionSnapshot['quality'] | 'auto' } }; heroPower?: (id: string) => number; nextStage?: () => { idx: number } };
 }
 
 export class CompanionDirector {
@@ -75,7 +76,7 @@ export class CompanionDirector {
   }
 
   syncQuality(): void {
-    const quality = this.app.eco?.s?.settings?.quality;
+    const quality = this.app.renderer?.quality || this.app.eco?.s?.settings?.quality;
     this.mind.setQuality(quality === 'low' || quality === 'mid' ? quality : 'high');
   }
 

@@ -14,7 +14,7 @@ export class Input {
   press(a) { if (this.enabled && !this.queue.includes(a)) this.queue.push(a); }
   consume(a) { const i = this.queue.indexOf(a); if (i >= 0) { this.queue.splice(i, 1); return true; } return false; }
   clear() { this.queue.length = 0; this.attackHeld = false; this.keys = {}; this.move.x = this.move.y = 0; this._resetJoy(); }
-  _resetJoy() { this.joy.active = false; this.joy.id = null; this.move.x = this.move.y = 0; this.el.knob.style.transform = 'translate(-50%,-50%)'; this.el.base.style.left = ''; this.el.base.style.bottom = ''; this.el.base.style.top = ''; this.el.base.style.transform = ''; }
+  _resetJoy() { this.joy.active = false; this.joy.id = null; this.move.x = this.move.y = this.screenMove.x = this.screenMove.y = 0; this.el.knob.style.transform = 'translate(-50%,-50%)'; this.el.base.style.left = ''; this.el.base.style.bottom = ''; this.el.base.style.top = ''; this.el.base.style.transform = ''; }
   _bind() {
     const area = this.el.area;
     const start = (e) => {
@@ -24,7 +24,8 @@ export class Input {
       this.joy.active = true; this.joy.id = e.changedTouches ? t.identifier : 'mouse';
       this.screenMove.x = this.screenMove.y = 0;
       this.joy.cx = t.clientX; this.joy.cy = t.clientY;
-      const b = this.el.base; b.style.left = t.clientX + 'px'; b.style.top = t.clientY + 'px'; b.style.bottom = 'auto'; b.style.transform = 'translate(-50%,-50%)';
+      const bounds = area.getBoundingClientRect();
+      const b = this.el.base; b.style.left = (t.clientX - bounds.left) + 'px'; b.style.top = (t.clientY - bounds.top) + 'px'; b.style.bottom = 'auto'; b.style.transform = 'translate(-50%,-50%)';
       e.preventDefault();
     };
     const move = (e) => {
@@ -73,6 +74,9 @@ export class Input {
     });
     window.addEventListener('keyup', (e) => { this.keys[e.code] = false; if (e.code === 'KeyJ' || e.code === 'Space') this.attackHeld = false; });
     window.addEventListener('blur', () => this.clear());
+    window.addEventListener('pagehide', () => this.clear());
+    window.addEventListener('orientationchange', () => this.clear());
+    window.addEventListener('resize', () => this.clear());
     document.addEventListener('visibilitychange', () => { if (document.hidden) this.clear(); });
   }
   update() {

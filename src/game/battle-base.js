@@ -92,7 +92,7 @@ export class Battle {
     if (!stage.party && stage.expedition?.kind !== 'arena') this.app.companionAgent?.startBattle(this);
     audio.playMusic(stage.expedition ? 'expansion/flow-combat' : Math.random() < 0.5 ? 'bgm_battle' : 'bgm_battle2', stage.expedition ? { fade: .7, volume: .68 } : undefined);
     this.ui.showHud(true);
-    const q = this.app.eco.s.settings.quality;
+    const q = this.app.renderer?.quality || this.app.eco.s.settings.quality;
     this.maxAlive = q === 'low' ? 16 : q === 'mid' ? 24 : 34;
     this.curRoom = sr; sr.discovered = true;
     this.ui.setObjective(this.world);

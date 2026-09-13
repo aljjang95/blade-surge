@@ -1,4 +1,36 @@
 /* A dedicated orbit pad keeps camera gestures separate from combat movement. */
+#hud { touch-action:none; }
+#render-recovery:not([hidden]) { position:fixed; inset:0; z-index:90; display:grid; place-items:center; padding:24px; background:#070a16eb; text-align:center; }
+#render-recovery h2 { font-size:22px; color:var(--gold); }
+#render-recovery p,#render-recovery small { display:block; line-height:1.7; color:#d5d3e1; }
+#render-reload { margin-top:20px; min-height:48px; }
+/* Browser bars and the on-screen keyboard must leave dismiss/join buttons reachable. */
+#modal .modal-box,#pause-overlay .modal-box,.result-box,dialog[open] { max-height:calc(var(--app-height,100dvh) - var(--sat) - var(--sab) - 24px); overscroll-behavior:contain; }
+dialog[open] { top:var(--sat); bottom:auto; margin-top:12px; overflow-y:auto; }
+.modal-box,.hero-detail,.hero-list,.stage-grid,.shop-grid { overscroll-behavior:contain; }
+@media (pointer:coarse) {
+  input:not([type=range]),textarea,select { font-size:16px !important; }
+  .setting-row .seg button { min-height:44px; }
+  .setting-row { gap:8px; }
+  .setting-row > span { flex-shrink:0; }
+  input,textarea { user-select:text; -webkit-user-select:text; }
+}
+/* Nine lobby actions must fit above the hero caption and departure controls. */
+@media (orientation:portrait) and (max-width:360px) {
+  #meta .topbar .cur .ic { width:16px; height:16px; }
+}
+@media (orientation:portrait) and (max-width:620px) and (max-height:700px) {
+  #tab-home .lobby-left { grid-template-columns:repeat(3,52px); gap:6px; top:calc(60px + var(--sat)); }
+  #tab-home .lobby-left .sq-btn { width:52px; min-height:60px; height:60px; padding:4px 2px; font-size:9px!important; line-height:1.2; }
+  #tab-home .lobby-left .ic,#tab-home .lobby-left .sq-btn::before { width:24px; height:24px; }
+  #tab-home .lobby-hero-name { bottom:calc(228px + var(--sab)); }
+  #tab-home #lobby-hero-name { font-size:24px; }
+  #tab-home .lobby-bottom { gap:6px; }
+  #tab-home .btn-battle { height:64px; padding:6px; font-size:24px; }
+  body:has(#meta.show #tab-home.show) #companion-root.companion-ui:not(.is-connected) .companion-launcher { top:calc(320px + var(--sat)); bottom:auto; left:auto; right:calc(8px + var(--sar)); min-width:44px; min-height:44px; width:44px; height:44px; padding:5px; }
+  body:has(#meta.show #tab-home.show) #companion-root.companion-ui:not(.is-connected) .companion-launcher-copy { display:none; }
+  body:has(#meta.show #tab-home.show) #companion-root.companion-ui:not(.is-connected) .companion-launcher-mark { width:32px; height:32px; }
+}
 #battle-camera-controls { position:absolute; left:calc(10px + var(--sal,0px)); top:42%; width:128px; pointer-events:auto; }
 #battle-camera-pad { touch-action:none; user-select:none; cursor:grab; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:52px; border:1px solid #c8d8bd55; border-radius:10px; background:#142621ba; color:#f1edcf; font-size:11px; }
 #battle-camera-pad small { margin-top:3px; color:#b5c9ba; font-size:9px; }
@@ -9,6 +41,40 @@
 @media(orientation:portrait) { #battle-camera-controls { top:auto; bottom:calc(230px + var(--sab)); width:110px; } }
 @media(orientation:landscape) and (max-height:550px) { #battle-camera-controls { top:37%; width:116px; } #battle-camera-pad { min-height:44px; } .battle-camera-buttons button { min-height:32px; } }
 /* Explicit columns stop long floor/target labels from borrowing menu or HP space. */
+/* Six skills occupy two rows; movement, consumables and dodge each keep their own touch space. */
+@media (orientation:portrait) and (max-width:620px), (orientation:landscape) and (max-height:550px) {
+  #hud .actions { right:calc(8px + var(--sar)); bottom:calc(16px + var(--sab)); width:192px; height:200px; }
+  #hud .skill-btn { width:52px; height:52px; }
+  #hud .skill-btn[data-skill="0"] { right:120px; bottom:88px; }
+  #hud .skill-btn[data-skill="1"] { right:60px; bottom:88px; }
+  #hud .skill-btn[data-skill="2"] { right:0; bottom:88px; }
+  #hud .skill-btn[data-skill="3"] { right:120px; bottom:148px; }
+  #hud .skill-btn[data-skill="4"] { right:60px; bottom:148px; }
+  #hud .skill-btn[data-skill="5"] { right:0; bottom:148px; }
+  #hud .attack-btn { width:80px; height:80px; }
+  #hud .dodge-btn { right:96px; bottom:10px; width:60px; height:60px; }
+  #hud .exp-potions { left:8px; bottom:calc(220px + var(--sab)); transform:none; gap:4px; }
+  #hud .exp-potions button { width:44px; height:44px; min-width:44px; padding:3px; }
+}
+@media (orientation:portrait) and (max-width:620px) {
+  #hud .joy-base { left:54px; bottom:calc(64px + var(--sab)); width:88px; height:88px; }
+  #hud #battle-camera-controls { bottom:calc(268px + var(--sab)); }
+  body:has(#hud.show) .companion-ui .companion-launcher { bottom:calc(268px + var(--sab)); }
+}
+@media (orientation:landscape) and (max-height:550px) {
+  #hud .actions { right:calc(14px + var(--sar)); bottom:calc(10px + var(--sab)); }
+  #hud .exp-potions { left:calc(150px + var(--sal)); bottom:calc(10px + var(--sab)); }
+}
+@media (orientation:landscape) and (max-height:360px) {
+  #hud #minimap { width:72px; height:72px; }
+  #hud .skill-btn { width:48px; height:48px; }
+  #hud .skill-btn[data-skill="0"] { right:112px; bottom:82px; }
+  #hud .skill-btn[data-skill="1"] { right:56px; bottom:82px; }
+  #hud .skill-btn[data-skill="2"] { right:0; bottom:82px; }
+  #hud .skill-btn[data-skill="3"] { right:112px; bottom:138px; }
+  #hud .skill-btn[data-skill="4"] { right:56px; bottom:138px; }
+  #hud .skill-btn[data-skill="5"] { right:0; bottom:138px; }
+}
 @media (orientation:landscape) {
   #hud .hud-top { display:grid; grid-template-columns:minmax(200px,280px) minmax(0,1fr) 224px; align-items:start; gap:16px; }
   #hud .hud-player { min-width:0; align-items:flex-start; }

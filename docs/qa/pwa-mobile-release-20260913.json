@@ -1,0 +1,76 @@
+{
+  "summary": {
+    "pass": 6,
+    "fail": 0,
+    "unsupported": 0
+  },
+  "buildVersion": {
+    "sha": "c551dc24f565436098a23c60d7d00d4dc408edfc",
+    "dirty": true,
+    "builtAt": "2026-09-13T10:40:47.537Z",
+    "pwaRelease": "48f6586f247a8db1daa4"
+  },
+  "started": "2026-09-13T10:41:47.009Z",
+  "finished": "2026-09-13T10:44:15.802Z",
+  "checks": 57,
+  "consoleErrors": 0,
+  "pageErrors": 0,
+  "requestFailures": 0,
+  "engines": [
+    {
+      "engine": "chromium",
+      "version": "151.0.7922.34",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "status": "pass"
+    },
+    {
+      "engine": "chromium",
+      "version": "151.0.7922.34",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "status": "pass"
+    },
+    {
+      "engine": "firefox",
+      "version": "153.0",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "status": "pass"
+    },
+    {
+      "engine": "firefox",
+      "version": "153.0",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "status": "pass"
+    },
+    {
+      "engine": "webkit",
+      "version": "26.5",
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "status": "pass"
+    },
+    {
+      "engine": "webkit",
+      "version": "26.5",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "status": "pass"
+    }
+  ],
+  "sha256": "9a6bb82b3c5eb4563e796dd160441d296a23677c237b82c5ac1df68f5f83db0f"
+}

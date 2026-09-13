@@ -17,9 +17,11 @@ export class AudioSys {
     this._musicTracks = new Set(); this._ducks = []; this._combatLevel = 1;
   }
   async init() {
-    if (this.ctx) return;
+    if (this.ctx) return true;
     const AC = window.AudioContext || window.webkitAudioContext;
-    this.ctx = new AC({ latencyHint: 'interactive' });
+    if (typeof AC !== 'function') { this.unavailable = true; return false; }
+    try { this.ctx = new AC({ latencyHint: 'interactive' }); }
+    catch { this.unavailable = true; return false; }
     this.master = this.ctx.createGain(); this.master.connect(this.ctx.destination);
     this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = 0.9; this.sfxGain.connect(this.master);
     this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = 0.55;
@@ -30,10 +32,14 @@ export class AudioSys {
     this.voiceGain = this.ctx.createGain(); this.voiceGain.gain.value = 1; this.voiceGain.connect(this.master); this._barkLast = {};
     this.setMix(this.mix);
     await Promise.all(SFX_FILES.map(async (n) => {
-      try { const ab = await (await fetch(`/sfx/${n}.mp3`)).arrayBuffer(); this.buffers[n] = await this.ctx.decodeAudioData(ab); } catch (e) { console.warn('sfx fail', n); }
+      const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 8000);
+      try { const ab = await (await fetch(`/sfx/${n}.mp3`, { signal: controller.signal })).arrayBuffer(); this.buffers[n] = await this.ctx.decodeAudioData(ab); }
+      catch (e) { console.warn('sfx fail', n); }
+      finally { clearTimeout(timeout); }
     }));
+    return true;
   }
-  resume() { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume(); }
+  resume() { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); }
   now() { return this.ctx ? this.ctx.currentTime : 0; }
   getMix() { return { ...this.mix }; }
   getDiagnostics() {
