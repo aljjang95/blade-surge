@@ -113,16 +113,18 @@ export function CompanionPanel({ director, host }: CompanionPanelProps) {
   const [input, setInput] = useState('');
   const launcherRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const wasOpen = useRef(false);
   const logRef = useRef<HTMLDivElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
   const lobby = snapshot.context.mode === 'lobby';
-  const lobbyTarget = lobby ? document.querySelector<HTMLElement>('.lobby-left') : null;
+  const launcherTarget = document.querySelector<HTMLElement>(lobby ? '.lobby-left' : '.pause-btns');
 
   const launcher = (
     <button
       ref={launcherRef}
-      className={`companion-launcher ${lobby ? 'sq-btn companion-lobby-launcher' : 'companion-battle-launcher'} ${snapshot.connected ? 'is-connected' : ''}`}
+      className={`companion-launcher ${lobby ? 'sq-btn companion-lobby-launcher' : 'btn btn-ghost companion-pause-launcher'} ${snapshot.connected ? 'is-connected' : ''}`}
       type="button"
       aria-expanded={snapshot.open}
       aria-controls="companion-panel"
@@ -136,19 +138,13 @@ export function CompanionPanel({ director, host }: CompanionPanelProps) {
   );
 
   useEffect(() => {
-    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+    const body = bodyRef.current, log = logRef.current;
+    if (body && log) body.scrollTop += log.getBoundingClientRect().bottom - body.getBoundingClientRect().bottom;
   }, [snapshot.messages, snapshot.dialoguePending]);
 
   useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && snapshot.open) director.setOpen(false);
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [director, snapshot.open]);
-
-  useEffect(() => {
     if (snapshot.open) {
+      dialogRef.current?.showModal();
       const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
       if (coarsePointer) closeRef.current?.focus({ preventScroll: true });
       else inputRef.current?.focus({ preventScroll: true });
@@ -166,10 +162,18 @@ export function CompanionPanel({ director, host }: CompanionPanelProps) {
 
   return (
     <div className={`companion-ui ${snapshot.connected ? 'is-connected' : ''}`}>
-      {lobbyTarget ? createPortal(launcher, lobbyTarget) : launcher}
+      {launcherTarget ? createPortal(launcher, launcherTarget) : null}
 
       {snapshot.open && (
-        <section id="companion-panel" className="companion-panel" role="dialog" aria-label="네브 동행 전술 대화">
+        <dialog ref={dialogRef} id="companion-panel" className="companion-panel" aria-label="네브 동행 전술 대화"
+          onCancel={event => { event.preventDefault(); director.setOpen(false); }}
+          onKeyDown={event => {
+            if (event.key !== 'Tab') return;
+            const controls = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),[tabindex="0"]')).filter(el => el.getClientRects().length);
+            const first = controls[0], last = controls[controls.length - 1];
+            if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+            else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+          }}>
           <header className="companion-head">
             <div>
               <span className="companion-kicker">PACT // FIELD LINK</span>
@@ -178,6 +182,7 @@ export function CompanionPanel({ director, host }: CompanionPanelProps) {
             <button ref={closeRef} type="button" className="companion-close" onClick={() => director.setOpen(false)} aria-label="대화 닫기">×</button>
           </header>
 
+          <div ref={bodyRef} className="companion-body">
           <div className="companion-hero">
             <Portrait3D quality={snapshot.quality} />
             <div className="companion-readout">
@@ -223,6 +228,7 @@ export function CompanionPanel({ director, host }: CompanionPanelProps) {
           <div className="companion-quick" aria-label="빠른 질문">
             {QUICK_LINES.map((line) => <button type="button" key={line} disabled={snapshot.dialoguePending} onClick={() => director.reply(line)}>{line}</button>)}
           </div>
+          </div>
 
           <form className="companion-form" onSubmit={(event) => { event.preventDefault(); send(input); }}>
             <label htmlFor="companion-input">네브에게 말하기</label>
@@ -242,7 +248,7 @@ export function CompanionPanel({ director, host }: CompanionPanelProps) {
             </div>
             <small className="companion-privacy">대화는 응답을 위해 Cloudflare로 전송됩니다.</small>
           </form>
-        </section>
+        </dialog>
       )}
     </div>
   );

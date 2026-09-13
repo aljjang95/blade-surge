@@ -3,6 +3,7 @@ import { stageStory } from './campaign-story.js';
 import { ENCOUNTER_ART } from './encounter-art.js';
 import { CAMPAIGN_MODELS } from './encounter-models.js';
 import { BOSS_ENCOUNTERS } from './boss-encounters.js';
+import { MOB_ROLE_ENEMIES } from './mob-roles.js';
 
 // 지역별 맹세와 기믹은 모험 화면과 전투가 함께 사용한다.
 export const CHAPTERS = [
@@ -174,3 +175,4 @@ for (const [id, encounter] of Object.entries(BOSS_ENCOUNTERS)) {
 // The empty crown now has its own humanoid silhouette and real rig weapon socket.
 ENEMIES.crown_finalboss.weapon = 'Skeleton_Blade';
 ENEMIES.crown_finalboss.shield = 'Skeleton_Shield_Large_A';
+for (const [id,role] of Object.entries(MOB_ROLE_ENEMIES)) ENEMIES[id].meleeRole = role;

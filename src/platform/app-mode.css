@@ -1,4 +1,11 @@
-.lobby-left .app-mode-open::before{content:'▣';display:grid;place-items:center;color:#f3d895;font-size:25px}
+.lobby-left .app-mode-open::before{content:'▣';display:grid;place-items:center;color:#f3d895;font-size:20px;line-height:1}
+.app-mode-entry{position:relative;z-index:1;display:grid;gap:6px;text-align:center;color:#f2dfb0;font-size:11px;pointer-events:auto}
+.app-mode-entry>div{display:flex;gap:8px;justify-content:center}
+.app-mode-entry button{min-height:44px;min-width:100px;padding:8px 16px;border:1px solid #d8bb7988;border-radius:9px;background:#101b29ed;color:#f7e9c7;font-size:13px;font-weight:700}
+.app-mode-entry[hidden],.app-mode-entry button[hidden]{display:none}
+.app-mode-entry button:focus-visible{outline:2px solid #fff2c2;outline-offset:3px}
+#boot-start.hidden~.app-mode-entry{display:none}
+@media(max-height:600px){#boot .app-mode-entry{display:flex;align-items:center;gap:10px}#boot .app-mode-entry[hidden]{display:none}#boot .app-mode-entry button{min-width:88px;padding-inline:10px}#boot-start{margin-top:0}#boot .boot-tip{display:none}}
 .app-mode-dialog{box-sizing:border-box;width:min(480px,calc(100vw - 24px));max-height:calc(var(--app-height,100dvh) - 24px);overflow:auto;padding:22px;border:1px solid #b49b6288;border-radius:16px;background:linear-gradient(145deg,#182e34,#10151f);color:#eff3df;box-shadow:0 24px 80px #000a}
 .app-mode-dialog::backdrop{background:#050b16c9}
 .app-mode-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:11px;color:#bba77e}

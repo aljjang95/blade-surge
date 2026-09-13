@@ -35,11 +35,13 @@ function createLauncher(host: HTMLElement, director: CompanionDirector): () => v
   const sync = () => {
     const snapshot = director.getSnapshot();
     const lobby = snapshot.context.mode === 'lobby';
-    const target = lobby ? document.querySelector<HTMLElement>('.lobby-left') : host;
+    const target = document.querySelector<HTMLElement>(lobby ? '.lobby-left' : '.pause-btns');
     if (target && button.parentElement !== target) target.appendChild(button);
     button.classList.toggle('sq-btn', lobby);
     button.classList.toggle('companion-lobby-launcher', lobby);
-    button.classList.toggle('companion-battle-launcher', !lobby);
+    button.classList.toggle('companion-pause-launcher', !lobby);
+    button.classList.toggle('btn', !lobby);
+    button.classList.toggle('btn-ghost', !lobby);
     button.classList.toggle('is-connected', snapshot.connected);
     status.textContent = snapshot.status;
     host.classList.toggle('is-connected', snapshot.connected);

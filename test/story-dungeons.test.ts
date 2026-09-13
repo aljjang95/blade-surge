@@ -29,13 +29,13 @@ for(const chapter of CHAPTERS) for(let st=1;st<=10;st++) {
     }
   });
 }
-test('six routes have distinct graphs, geometry and story landmarks used by real campaign stages', () => {
+test('twelve routes have distinct graphs and reuse six supported story landmarks', () => {
   const maps=Object.values(STORY_DUNGEONS);
-  expect(maps).toHaveLength(6);
-  expect(new Set(maps.map(m=>JSON.stringify([m.layout.cells,m.layout.edges]))).size).toBe(6);
+  expect(maps).toHaveLength(12);
+  expect(new Set(maps.map(m=>JSON.stringify([m.layout.cells,m.layout.edges]))).size).toBe(12);
   expect(new Set(maps.map(m=>m.landmark)).size).toBe(6);
   const used=new Set(CHAPTERS.flatMap(c=>Array.from({length:10},(_,i)=>stageDef(c.id,i+1).dungeon.id)));
-  expect(used.size).toBe(6);
+  expect(used.size).toBe(12);
   for(const map of maps) {
     const f=new Floor(51,'garden',undefined,map.layout as any), g=buildRegionArchitecture(f,'garden');
     expect(g.userData.landmarks.every((l:any)=>l.kind===map.landmark)).toBe(true);
@@ -68,4 +68,34 @@ for (const map of Object.values(STORY_DUNGEONS)) test(`${map.id}: AUTO radius co
   };
   for(const room of floor.rooms) if(room!==floor.bossRoom) walkTo(room);
   floor.unseal(); walkTo(floor.bossRoom);
+});
+
+// Distance/degree fingerprints ignore room numbering, translation, rotation and reflection.
+// Distinct fingerprints prove these are different connectivity graphs, not renamed geometry.
+test('six added graphs differ topologically from each other and the original routes', () => {
+  const fingerprint=(m:any)=>{
+    const n=m.layout.cells.length,adj=Array.from({length:n},()=>[] as number[]);
+    for(const [a,b] of m.layout.edges){adj[a].push(b);adj[b].push(a);}
+    return JSON.stringify(adj.map((_,start)=>{
+      const d=Array(n).fill(-1),q=[start];d[start]=0;
+      for(const a of q)for(const b of adj[a])if(d[b]<0){d[b]=d[a]+1;q.push(b);}
+      return JSON.stringify(d.map((distance,i)=>[distance,adj[i].length]).sort((a,b)=>a[0]-b[0]||a[1]-b[1]));
+    }).sort());
+  };
+  const maps=Object.values(STORY_DUNGEONS);
+  expect(new Set(maps.map(fingerprint)).size).toBe(12);
+  for(const m of maps.slice(6)){
+    expect(m.layout.cells.length).toBeGreaterThanOrEqual(10);expect(m.layout.cells.length).toBeLessThanOrEqual(14);
+    expect(m.layout.width).toBe(8);
+    expect(new Set(m.layout.cells.map((c:number[])=>c.join(','))).size).toBe(m.layout.cells.length);
+    for(const [a,b] of m.layout.edges){const p=m.layout.cells[a],q=m.layout.cells[b];expect(Math.abs(p[0]-q[0])+Math.abs(p[1]-q[1])).toBe(1);}
+    expect(m.layout.sizes.every((size:number[])=>size.every((v:number)=>v>=16))).toBe(true);
+  }
+});
+test('new maps follow their six intermediate scenes and preserve entry and finale baselines',()=>{
+  const selections=[[1,4,'greenhouse'],[2,4,'uprising'],[3,8,'reverseRiver'],[4,8,'lostShip'],[5,4,'emptyThrones'],[6,3,'addresses']] as const;
+  for(const [ch,st,id] of selections)expect(stageDef(ch,st).dungeon.id).toBe(id);
+  const entries=['procession','kiln','archive','beacon','tribunal','procession'];
+  const finales=['procession','kiln','archive','beacon','tribunal','confluence'];
+  for(let ch=1;ch<=6;ch++){expect(stageDef(ch,1).dungeon.id).toBe(entries[ch-1]);expect(stageDef(ch,10).dungeon.id).toBe(finales[ch-1]);}
 });

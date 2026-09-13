@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 
 test('manifest keeps install identity and does not prefer an external store app',()=>{
   const manifest=JSON.parse(readFileSync(new URL('../public/manifest.webmanifest',import.meta.url),'utf8'));
-  expect(manifest).toMatchObject({id:'/',start_url:'/',scope:'/',display:'standalone',prefer_related_applications:false});
+  expect(manifest).toMatchObject({id:'/',start_url:'/',scope:'/',display:'fullscreen',prefer_related_applications:false});
   expect(manifest.display_override).toContain('standalone');
   expect(manifest.icons).toEqual(expect.arrayContaining([expect.objectContaining({src:'/img/icon.png',sizes:'512x512'})]));
 });

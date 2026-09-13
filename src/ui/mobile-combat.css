@@ -34,6 +34,12 @@ dialog[open] { top:var(--sat); bottom:auto; margin-top:12px; overflow-y:auto; }
 }
 /* Goal and stage copy may wrap; the hero caption follows their measured height. */
 #tab-home .journey-strip { min-height:44px; }
+/* Keep the hero and camera action clear; preparation offers remain in the shop. */
+@media (orientation:portrait) and (max-width:620px), (orientation:landscape) and (max-height:550px) {
+  #tab-home .lobby-right { display:none; }
+  #tab-home .lobby-camera-tools { top:calc(70px + var(--sat));bottom:auto;right:calc(8px + var(--sar)); }
+  #tab-home #lobby-camera-panel { top:50px;bottom:auto;max-height:calc(var(--app-height,100dvh) - 150px - var(--sat) - var(--sab)); }
+}
 @media (orientation:portrait) {
   #tab-home .lobby-hero-name { bottom:var(--lobby-caption-bottom,calc(280px + var(--sab))); }
 }

@@ -5,6 +5,7 @@ import { audio } from '../engine/audio.js';
 import { rigOf, RIGS } from '../data/rigs.js';
 import { BOSS_SIGNATURES, isBossSignature } from '../data/boss-encounters.js';
 import { BossSignatures } from './boss-signatures.js';
+import { MobRole } from './mob-roles.js';
 
 const _v = new THREE.Vector3();
 const areaPlayers = game => [...new Set(game.stage?.party ? game.app.party.livingPlayers() : [game.player])].filter(p => p?.alive);
@@ -47,6 +48,7 @@ export class Enemy extends Actor {
     this.stagger = 0; this.poison = 0; this.poisonT = 0; this.phase = 0; this.enraged = false; this.special = null;
     this.patternTurn = 0;
     this.signatures = def.signatureBoss ? new BossSignatures(this) : null;
+    this.mobRole = def.meleeRole && !def.boss && !def.elite ? new MobRole(this) : null;
     // 행동형 (bomber / shaman / shield)
     this.behavior = def.behavior || null; this.fuse = -1; this.healT = 4 + Math.random() * 2; this.summonT = 7 + Math.random() * 3; this.blocks = 0; this.guardBroken = 0;
     this.radius = 0.7 * def.scale;
@@ -69,6 +71,7 @@ export class Enemy extends Actor {
   get player() { return this.game.player; }
   dispose() {
     this.signatures?.dispose();
+    this.mobRole?.dispose();
     if (this.marker) { this.marker.geometry.dispose(); this.marker.material.dispose(); this.marker = null; }
     super.dispose();
   }
@@ -99,23 +102,26 @@ export class Enemy extends Actor {
     const resist = this.isBoss ? 0.25 : this.isElite ? 0.5 : 1;
     this.knockback(dirx, dirz, kb * resist * (this.def.armor ? 0.6 : 1));
     if (stun > 0) this.stun = Math.max(this.stun, stun * (this.isBoss ? 0.4 : 1));
+    if (this.stun > 0) this.mobRole?.cancel();
     if (slow > 0) { this.slow = 0.5; this.slowT = slow; }
     if (poison) { this.poison = 4; }
     const staggerOK = (!this.isBoss || crit || kb >= 6) && (!this.isElite || crit || kb >= 4); const warrior = this.def.armor && !crit && kb < 4;
     if (staggerOK && !warrior && this.state !== 'dead') {
-      if (this.state !== 'attack' || kb >= 4) { this.signatures?.clear(); this.state = 'hurt'; this.stateT = 0; this.stagger = 0.22 + Math.min(0.4, kb * 0.03); this.play(this.A('hit'), { once: true, fade: 0.04, speed: 1.8 }); this.telegraph = 0; this.attackDone = false; }
+      if (this.state !== 'attack' || kb >= 4) { this.signatures?.clear(); this.mobRole?.clear(); this.state = 'hurt'; this.stateT = 0; this.stagger = 0.22 + Math.min(0.4, kb * 0.03); this.play(this.A('hit'), { once: true, fade: 0.04, speed: 1.8 }); this.telegraph = 0; this.attackDone = false; }
     }
     if (this.hp <= 0) { this.hp = 0; this.kill(dirx, dirz, kb); }
     return dmg;
   }
   kill(dirx, dirz, kb) {
     this.signatures?.clear();
+    this.mobRole?.clear();
     this.die(); this.state = 'dead'; this.telegraph = 0;
     this.kb.set(dirx, 0, dirz).normalize().multiplyScalar(Math.max(4, kb * 1.5));
     if (this.eyeMat) this.eyeMat.emissiveIntensity = 0;
     this.game.onEnemyDeath(this);
   }
   update(dt) {
+    this.mobRole?.beforeStep(dt);
     super.update(dt);
     if(this.signatures){
       if(this.alive&&dt>0)this.signatures.remember(dt);
@@ -141,6 +147,7 @@ export class Enemy extends Actor {
     }
     if (this.state === 'hurt') { this.vel.set(0, 0, 0); if (this.stateT > this.stagger) { this.state = 'chase'; this.play(this.A('idleCombat'), { fade: 0.12 }); } return; }
     if (this.state === 'dodge') { if (this.stateT > 0.4) { this.state = 'chase'; this.play(this.A('idle'), { fade: 0.1 }); } return; }
+    if (this.mobRole?.update()) return;
     // ---- 행동형 ----
     if (this.guardBroken > 0) { this.guardBroken -= dt; if (this.guardBroken <= 0 && this.marker) this.marker.material.color.set(0x60a0ff); }
     if (this.behavior === 'bomber') {
@@ -163,6 +170,7 @@ export class Enemy extends Actor {
 
     if (this.state === 'chase') {
       this.atkCd -= dt;
+      if (this.mobRole && this.atkCd <= 0 && p.alive && this.mobRole.available(d)) { this.mobRole.start(); return; }
       const range = this.def.range;
       const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z;
       this.faceDir(dx, dz);
@@ -200,8 +208,9 @@ export class Enemy extends Actor {
     for (const o of this.game.enemies) { if (o === this || !o.alive || o.spawning) continue; const dx = o.pos.x - c.x, dz = o.pos.z - c.z; if (Math.hypot(dx, dz) > 3.4) continue; o.hurt(this.atk * 3, { dirx: dx, dirz: dz, kb: 7, kind: 'blunt' }); if (o.behavior === 'bomber' && o.fuse < 0 && o.alive) o.fuse = 0.5; }
     this.hp = 0; this.kill(0, 0, 3);
   }
-  getPartyWarnings() { return isBossSignature(this.special) ? this.signatures?.warnings() || [] : enemyPartyWarnings(this); }
+  getPartyWarnings() { return this.mobRole ? this.mobRole.warnings() : isBossSignature(this.special) ? this.signatures?.warnings() || [] : enemyPartyWarnings(this); }
   startAttack(d) {
+    if (this.mobRole) { if (this.mobRole.available(d)) this.mobRole.start(); return; }
     this.signatures?.clear();
     this.attackSequence=(this.attackSequence||0)+1; this.partyDashWarning = null;
     this.state = 'attack'; this.stateT = 0; this.attackDone = false;
@@ -235,6 +244,7 @@ export class Enemy extends Actor {
     if (this.isBoss && this.special !== 'dash') audio.whoosh({ vol: 0.4, pitch: 0.5, dur: 0.5 });
   }
   doAttack() {
+    if (this.mobRole) return;
     if(isBossSignature(this.special))return;
     this.completedAttackSequence=this.attackSequence;
     const p = this.player; const g = this.game; const f = this.forward(_v.clone());
