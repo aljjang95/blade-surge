@@ -16,6 +16,12 @@ dialog[open] { top:var(--sat); bottom:auto; margin-top:12px; overflow-y:auto; }
   input,textarea { user-select:text; -webkit-user-select:text; }
 }
 /* Eleven lobby actions fit four rows above the hero caption on short phones. */
+.setting-row > .setting-help { flex:1 1 0; min-width:0; max-width:100%; white-space:normal; overflow-wrap:anywhere; font-size:11px; line-height:1.65; color:var(--muted); }
+.setting-row:has(.setting-help) { gap:10px; }
+.setting-row.setting-description { border-bottom:0; padding-top:0; }
+.setting-row:has(.setting-mix) { flex-wrap:wrap; gap:8px; }
+.setting-row:has(.setting-mix) > label { flex-shrink:0; }
+.setting-mix { min-width:0; max-width:100%; margin-left:auto; }
 @media (orientation:portrait) and (max-width:360px) {
   #meta .topbar .cur .ic { width:16px; height:16px; }
 }
