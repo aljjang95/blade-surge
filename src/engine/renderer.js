@@ -8,6 +8,8 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { displaySize, renderPixelRatio } from '../platform/mobile-display.js';
+import { rebindEnvironment } from './environment.js';
 
 // 최종 합성 셰이더: 색수차 · 비네트 · 히트 플래시 · 방사형 블러(궁극기) · 색보정
 const FinalShader = {
@@ -65,9 +67,7 @@ export class Renderer {
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
     this.r = r;
-    const studio = new RoomEnvironment(), pmrem = new THREE.PMREMGenerator(r);
-    this.characterEnvironment = pmrem.fromScene(studio, .04, .1, 100);
-    studio.dispose(); pmrem.dispose();
+    this.rebuildEnvironment();
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0b0a12);
     this.scene.fog = new THREE.FogExp2(0x0b0a12, 0.028);
@@ -96,19 +96,38 @@ export class Renderer {
     this.u = this.finalPass.uniforms;
     this.flash = 0; this.aberr = 0; this.radial = 0; this.desat = 0;
 
-    window.addEventListener('resize', () => this.resize());
+    const scheduleResize = () => {
+      if (this._resizeFrame) return;
+      this._resizeFrame = requestAnimationFrame(() => { this._resizeFrame = 0; this.resize(); });
+    };
+    window.addEventListener('resize', scheduleResize);
+    window.visualViewport?.addEventListener('resize', scheduleResize);
     this.resize();
   }
   setQuality(q) {
     this.quality = q;
-    const pr = q === 'low' ? Math.min(this.pixelRatio, 1) : q === 'mid' ? Math.min(this.pixelRatio, 1.5) : this.pixelRatio;
-    this.r.setPixelRatio(pr); this.composer.setPixelRatio(pr);
     this.bloom.enabled = q !== 'low';
     this.r.shadowMap.enabled = q !== 'low';
-    this.resize();
+    this.resize(true);
   }
-  resize() {
-    const w = window.innerWidth, h = window.innerHeight;
+  rebuildEnvironment(templates = []) {
+    const previous = this.characterEnvironment;
+    const studio = new RoomEnvironment(), pmrem = new THREE.PMREMGenerator(this.r);
+    this.characterEnvironment = pmrem.fromScene(studio, .04, .1, 100);
+    studio.dispose(); pmrem.dispose();
+    // Render-target textures have no image to re-upload after WebGL context restoration.
+    for (const root of [this.scene, ...templates]) rebindEnvironment(root, previous?.texture, this.characterEnvironment.texture);
+    previous?.dispose();
+  }
+  resize(force = false) {
+    const { width: w, height: h } = displaySize(window);
+    const pr = renderPixelRatio({ width: w, height: h, dpr: window.devicePixelRatio, quality: this.quality,
+      touch: window.matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints > 0 });
+    document.documentElement.style.setProperty('--app-height', h + 'px');
+    if (!force && this._width === w && this._height === h && this.r.getPixelRatio() === pr) return;
+    this._width = w; this._height = h;
+    this.pixelRatio = pr;
+    this.r.setPixelRatio(pr); this.composer.setPixelRatio(pr);
     this.r.setSize(w, h, false);
     this.composer.setSize(w, h);
     this.lobbyAA.uniforms.resolution.value.set(1 / (w * this.r.getPixelRatio()), 1 / (h * this.r.getPixelRatio()));
@@ -133,7 +152,7 @@ export class Renderer {
   }
   /** 프레임마다 목표 fov 로 보간 (배틀이 rig.fov 를 바꾼다) */
   _applyFov(realDt) {
-    const want = this.rig.fov + (window.innerWidth < window.innerHeight ? 14 : 0);
+    const want = this.rig.fov + (this._width < this._height ? 14 : 0);
     if (Math.abs(this.camera.fov - want) > 0.05) { this.camera.fov += (want - this.camera.fov) * Math.min(1, realDt * 3); this.camera.updateProjectionMatrix(); }
   }
   // 호출부 호환 이름은 유지하되, 실제 동작은 노이즈 없는 단방향 임팩트다.

@@ -4,7 +4,8 @@ import './companion.css';
 interface AppWithCompanion {
   mode: 'boot' | 'lobby' | 'battle';
   models: Record<string, unknown>;
-  eco?: { s?: { settings?: { quality?: 'high' | 'mid' | 'low' } } };
+  renderer?: { quality?: 'high' | 'mid' | 'low' };
+  eco?: { s?: { settings?: { quality?: 'auto' | 'high' | 'mid' | 'low' } } };
 }
 
 function createLauncher(host: HTMLElement, director: CompanionDirector): () => void {

@@ -1,0 +1,214 @@
+{
+  "schema": 1,
+  "status": "pass",
+  "scope": "Four real isolated browser contexts, local Chromium engine, real server/WebSockets; no state/stat/clock/layout fixtures; not physical-device certification",
+  "build": {
+    "sha": "c551dc24f565436098a23c60d7d00d4dc408edfc",
+    "dirty": true,
+    "builtAt": "2026-09-13T10:28:21.513Z",
+    "pwaRelease": "e33b240c172bbd5afc0f"
+  },
+  "started": "2026-09-13T10:31:41.527Z",
+  "finished": "2026-09-13T10:40:16.642Z",
+  "browserVersion": "151.0.7922.34",
+  "clientCount": 4,
+  "layoutCount": 12,
+  "consoleErrorCount": 0,
+  "pageErrorCount": 0,
+  "clients": [
+    {
+      "name": "긴이름협동원정모험가테스트1",
+      "hero": "knight",
+      "webSockets": [
+        {
+          "sent": 48,
+          "received": 215
+        }
+      ]
+    },
+    {
+      "name": "긴이름협동원정모험가테스트2",
+      "hero": "barbarian",
+      "webSockets": [
+        {
+          "sent": 70,
+          "received": 56
+        }
+      ]
+    },
+    {
+      "name": "긴이름협동원정모험가테스트3",
+      "hero": "mage",
+      "webSockets": [
+        {
+          "sent": 69,
+          "received": 55
+        }
+      ]
+    },
+    {
+      "name": "긴이름협동원정모험가테스트4",
+      "hero": "rogue",
+      "webSockets": [
+        {
+          "sent": 69,
+          "received": 54
+        }
+      ]
+    }
+  ],
+  "layouts": [
+    {
+      "client": 0,
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "chipCount": 4,
+      "chipsInside": true,
+      "overlaps": [],
+      "mode": "battle",
+      "hudHidden": false
+    },
+    {
+      "client": 1,
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "chipCount": 4,
+      "chipsInside": true,
+      "overlaps": [],
+      "mode": "battle",
+      "hudHidden": false
+    },
+    {
+      "client": 2,
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "chipCount": 4,
+      "chipsInside": true,
+      "overlaps": [],
+      "mode": "battle",
+      "hudHidden": false
+    },
+    {
+      "client": 3,
+      "viewport": {
+        "width": 320,
+        "height": 568
+      },
+      "chipCount": 4,
+      "chipsInside": true,
+      "overlaps": [],
+      "mode": "battle",
+      "hudHidden": false
+    },
+    {
+      "client": 0,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "chipCount": 4,
+      "chipsInside": true,
+      "overlaps": [],
+      "mode": "battle",
+      "hudHidden": false
+    },
+    {
+      "client": 1,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "chipCount": 4,
+      "chipsInside": true,
+      "overlaps": [],
+      "mode": "battle",
+      "hudHidden": false
+    },
+    {
+      "client": 2,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "chipCount": 4,
+      "chipsInside": true,
+      "overlaps": [],
+      "mode": "battle",
+      "hudHidden": false
+    },
+    {
+      "client": 3,
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "chipCount": 4,
+      "chipsInside": true,
+      "overlaps": [],
+      "mode": "battle",
+      "hudHidden": false
+    },
+    {
+      "client": 0,
+      "viewport": {
+        "width": 667,
+        "height": 375
+      },
+      "chipCount": 4,
+      "chipsInside": true,
+      "overlaps": [],
+      "mode": "battle",
+      "hudHidden": false
+    },
+    {
+      "client": 1,
+      "viewport": {
+        "width": 667,
+        "height": 375
+      },
+      "chipCount": 4,
+      "chipsInside": true,
+      "overlaps": [],
+      "mode": "battle",
+      "hudHidden": false
+    },
+    {
+      "client": 2,
+      "viewport": {
+        "width": 667,
+        "height": 375
+      },
+      "chipCount": 4,
+      "chipsInside": true,
+      "overlaps": [],
+      "mode": "battle",
+      "hudHidden": false
+    },
+    {
+      "client": 3,
+      "viewport": {
+        "width": 667,
+        "height": 375
+      },
+      "chipCount": 4,
+      "chipsInside": true,
+      "overlaps": [],
+      "mode": "battle",
+      "hudHidden": false
+    }
+  ],
+  "sourceReport": "work/pwa-party-final.json",
+  "sourceReportSha256": "ee20335f235b55c4bd1561c995f12fb0b7e4bf47cb496ed74ef110f198e7d704",
+  "limits": [
+    "Four local Chromium browser contexts, not physical phones.",
+    "Party creation and joining at 390x844, then combat resized to the three tested viewports.",
+    "No full dungeon clear, audible-output, thermal or internet-latency claim.",
+    "No game-state, stat, clock or layout fixtures."
+  ]
+}

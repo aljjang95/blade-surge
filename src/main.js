@@ -4,6 +4,7 @@ import { Renderer } from './engine/renderer.js';
 import { LobbyCameraControls } from './engine/lobby-camera.js';
 import { CameraControls } from './engine/camera-control.js';
 import { setupPwa } from './platform/pwa.js';
+import { resolveQuality } from './platform/mobile-display.js';
 import { isNativeApp, setupNativeApp } from './platform/native-app.js';
 import { FX } from './engine/fx.js';
 import { Input } from './engine/input.js';
@@ -64,11 +65,24 @@ class App {
     this.mode = 'boot'; this.showcase = null; this.lobbyVisible = true;
     this.lobbyCameraControls = new LobbyCameraControls(this);
     this.cameraControls = new CameraControls(this);
-    this.pwa = isNativeApp() ? null : setupPwa();
+    this.pwa = isNativeApp() ? null : setupPwa({ canApplyUpdate: () => this.mode === 'lobby' && !this.stageStarting && !this.party?.run });
     this.nativeApp = setupNativeApp(this);
     this.last = performance.now();
     this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.applySettings();
+    this.canvas.addEventListener('webglcontextlost', event => {
+      event.preventDefault(); this.contextLost = true; this.input.clear();
+      if (this.battle?.active) this.ui.pause(true);
+      $('render-recovery').hidden = false;
+    });
+    this.canvas.addEventListener('webglcontextrestored', () => {
+      try {
+        this.renderer.rebuildEnvironment(Object.values(this.models).map(gltf => gltf.scene)); this.renderer.resize(true);
+        this.contextLost = false; this.last = performance.now(); $('render-recovery').hidden = true;
+        if (this.battle?.active) this.ui.toast('화면이 복구됐습니다. 계속 버튼으로 전투를 재개하세요.');
+      } catch (error) { console.error('Graphics recovery failed', error); }
+    });
+    $('render-reload').addEventListener('click', () => location.reload());
   }
   async boot() {
     const fill = $('boot-fill'), msg = $('boot-msg'), pct = $('boot-pct');
@@ -102,17 +116,22 @@ class App {
     clearInterval(this._tipTimer);
     const bootEl = $('boot'); bootEl.classList.add('leaving');
     this.toLobby(true);
+    if (audio.unavailable) this.ui.toast('이 브라우저에서는 소리를 사용할 수 없어 무음으로 시작합니다.');
     if (!this.companionAgent) this.companionAgent = createCompanion(this);
     this.party = new PartySession(this);
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
-    document.addEventListener('visibilitychange', () => { if (isNativeApp()) this.nativeApp?.setVisible(!document.hidden); else if (document.hidden && this.mode === 'battle') this.ui.pause(true); if (!document.hidden) audio.resume(); });
+    // Mutations already persist at their owning action. An idle PWA/tab must not overwrite a newer tab's save.
+    const suspend = () => { this.input.clear(); if (this.mode === 'battle') this.ui.pause(true); };
+    document.addEventListener('visibilitychange', () => { if (isNativeApp()) this.nativeApp?.setVisible(!document.hidden); else if (document.hidden) suspend(); if (!document.hidden) { this.last = performance.now(); audio.resume(); } });
+    window.addEventListener('pagehide', suspend);
+    window.addEventListener('pageshow', () => { this.last = performance.now(); this.input.clear(); this.renderer.resize(); audio.resume(); });
     requestAnimationFrame((t) => this.loop(t));
   }
   applySettings() {
     const st = this.eco.s.settings; audio.setSfxOn(st.sfx); audio.setMusicOn(st.music); audio.haptics = st.haptics; audio.setVoiceOn(st.voice !== false);
     audio.setMix(this.arsenal.s.mix);
-    let q = st.quality;
-    if (!q || q === 'auto') { const cores = navigator.hardwareConcurrency || 4; const mem = navigator.deviceMemory || 4; q = (cores <= 4 || mem <= 3) ? 'mid' : 'high'; st.quality = q; }
+    const q = resolveQuality(st.quality, { cores: navigator.hardwareConcurrency || 4, memory: navigator.deviceMemory || 4,
+      touch: window.matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints > 0 });
     this.renderer.setQuality(q); this.fx.setQuality(q);
     this.renderer.setCameraPreset(st.camera || 'auto');
     this.lobbyCameraControls?.sync();
@@ -243,7 +262,7 @@ class App {
   loop(t) {
     requestAnimationFrame((tt) => this.loop(tt));
     let realDt = Math.min(0.05, (t - this.last) / 1000); this.last = t;
-    if (this.testPause || this.stageStarting) return;
+    if (this.testPause || this.stageStarting || this.contextLost || document.hidden) return;
     this.step(realDt);
   }
   /** 한 프레임 진행 (테스트 시 고정 dt로 호출 가능) */
@@ -292,7 +311,15 @@ class App {
   }
 }
 
-const app = new App();
-window.app = app;
-window.__EN = ENEMIES; window.__stageDef = stageDef; window.__THREE = THREE;
-app.boot().catch((e) => { console.error(e); $('boot-msg').textContent = '로딩 실패: ' + e.message; });
+function bootFailure(error) {
+  console.error(error);
+  $('boot-msg').textContent = '게임 화면을 준비하지 못했습니다. 인터넷 연결과 브라우저의 WebGL 2 지원을 확인해 주세요.';
+  const retry = $('boot-start'); retry.disabled = false; retry.classList.remove('hidden'); retry.textContent = '다시 시도';
+  retry.onclick = () => location.reload();
+}
+try {
+  const app = new App();
+  window.app = app;
+  window.__EN = ENEMIES; window.__stageDef = stageDef; window.__THREE = THREE;
+  app.boot().catch(bootFailure);
+} catch (error) { bootFailure(error); }

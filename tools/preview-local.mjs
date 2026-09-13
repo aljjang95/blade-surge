@@ -8,6 +8,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '../dist');
 const port = Number(process.env.BLADE_PREVIEW_PORT || 5196);
 if (!Number.isInteger(port) || port < 1024 || port > 65535) throw new Error('Invalid BLADE_PREVIEW_PORT');
 const types = { '.html':'text/html; charset=utf-8', '.js':'text/javascript', '.css':'text/css', '.json':'application/json', '.png':'image/png', '.webp':'image/webp', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.svg':'image/svg+xml', '.glb':'model/gltf-binary', '.mp3':'audio/mpeg', '.mp4':'video/mp4', '.ogg':'audio/ogg', '.wav':'audio/wav', '.woff2':'font/woff2', '.woff':'font/woff', '.ttf':'font/ttf', '.ico':'image/x-icon' };
+types['.webmanifest'] = 'application/manifest+json';
 http.createServer(async (req,res) => {
   if (!['GET','HEAD'].includes(req.method)) { res.writeHead(405); res.end(); return; }
   let file;

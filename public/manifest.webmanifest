@@ -7,8 +7,11 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "any",
   "background_color": "#0b0a12",
   "theme_color": "#0b0a12",
+  "categories": ["games", "entertainment"],
+  "prefer_related_applications": false,
   "icons": [{ "src": "/img/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }]
 }

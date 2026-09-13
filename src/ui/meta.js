@@ -422,7 +422,7 @@ export class Meta {
     const row = (k, label) => `<div class="setting-row"><span>${label}</span><button type="button" class="toggle ${st[k] ? 'on' : ''}" data-k="${k}" role="switch" aria-label="${label}" aria-checked="${!!st[k]}"></button></div>`;
     const mix=this.app.arsenal.s.mix;
     const mixRows=[['sfx','효과음 음량'],['music','배경음악 음량'],['voice','목소리 음량']].map(([key,label])=>`<div class="setting-row"><label for="mix-${key}">${label}</label><div class="setting-mix"><input id="mix-${key}" data-mix="${key}" type="range" min="0" max="100" step="1" value="${Math.round(mix[key]*100)}"><output for="mix-${key}">${Math.round(mix[key]*100)}%</output></div></div>`).join('');
-    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('settings')}" alt="">설정</h2>${row('sfx', '효과음')}${row('music', '배경음악')}${row('voice', '나레이션')}${row('haptics', '진동')}<div class="setting-row"><span>그래픽</span><div class="seg">${['low', 'mid', 'high'].map((q) => `<button data-q="${q}" class="${st.quality === q ? 'on' : ''}">${{ low: '낮음', mid: '보통', high: '높음' }[q]}</button>`).join('')}</div></div><div class="setting-row"><span>카메라</span><div class="seg">${['auto', 'top', 'action', 'wide'].map((c) => `<button data-cam="${c}" class="${(st.camera || 'auto') === c ? 'on' : ''}">${{ auto: 'AUTO', top: '탑다운', action: '액션', wide: '시네마틱' }[c]}</button>`).join('')}</div></div><div class="setting-row" style="border-bottom:0;padding-top:0"><span id="cam-desc" style="font-size:11px;color:var(--muted)">${CAM_DESC[st.camera || 'auto']}</span></div><div class="setting-row"><span>조작</span><span style="font-size:11px;color:var(--muted)">이동 WASD · 공격 J/Space · 회피 K · 스킬 1~3 · 궁극기 R</span></div>
+    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('settings')}" alt="">설정</h2>${row('sfx', '효과음')}${row('music', '배경음악')}${row('voice', '나레이션')}${row('haptics', '진동')}<div class="setting-row"><span>그래픽</span><div class="seg">${['auto','low', 'mid', 'high'].map((q) => `<button data-q="${q}" class="${(st.quality||'auto') === q ? 'on' : ''}">${{auto:'자동',low: '낮음', mid: '보통', high: '높음' }[q]}</button>`).join('')}</div></div><div class="setting-row"><span>카메라</span><div class="seg">${['auto', 'top', 'action', 'wide'].map((c) => `<button data-cam="${c}" class="${(st.camera || 'auto') === c ? 'on' : ''}">${{ auto: 'AUTO', top: '탑다운', action: '액션', wide: '시네마틱' }[c]}</button>`).join('')}</div></div><div class="setting-row" style="border-bottom:0;padding-top:0"><span id="cam-desc" style="font-size:11px;color:var(--muted)">${CAM_DESC[st.camera || 'auto']}</span></div><div class="setting-row"><span>조작</span><span style="font-size:11px;color:var(--muted)">이동 WASD · 공격 J/Space · 회피 K · 스킬 1~3 · 궁극기 R</span></div>
       <div class="modal-btns"><button class="btn btn-red btn-sm" id="m-reset">데이터 초기화</button><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {
       b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
       b.querySelector('.modal-btns').insertAdjacentHTML('beforebegin',mixRows+'<p id="mix-notice" role="status"></p>');
@@ -430,13 +430,30 @@ export class Meta {
       if (pwaState) {
         b.querySelector('.modal-btns').insertAdjacentHTML('beforebegin', '<div class="setting-row"><span>게임 앱</span><button class="btn btn-ghost btn-sm" id="pwa-install">홈 화면에 설치</button></div><p id="pwa-notice" role="status" style="font-size:12px;color:var(--muted)"></p>');
         const install = b.querySelector('#pwa-install'), notice = b.querySelector('#pwa-notice');
-        install.textContent = pwaState.updateAvailable ? '업데이트 적용' : pwaState.installed ? '설치됨' : '홈 화면에 설치';
-        install.disabled = pwaState.installed && !pwaState.updateAvailable;
-        notice.textContent = '온라인 플레이 · 진행은 이 기기에 저장됩니다.';
+        const renderPwa = state => {
+          if(!install.isConnected)return window.removeEventListener('bladesurge:pwa-state',onPwaState);
+          install.textContent = state.updateAvailable ? '업데이트 적용' : state.installed ? '설치됨' : state.canInstall ? '앱 설치' : '설치 방법';
+          install.disabled = state.installed&&!state.updateAvailable;
+          if(!state.online)notice.textContent='오프라인 상태입니다. 설치된 앱도 플레이와 동기화에는 인터넷 연결이 필요합니다.';
+          else if(state.status==='update-deferred')notice.textContent='전투를 마친 뒤 업데이트를 적용할 수 있습니다.';
+          else if(state.status==='update-check-failed')notice.textContent='온라인 상태지만 업데이트를 확인하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+          else if(state.updateAvailable)notice.textContent='새 버전이 준비됐습니다. 로비에서 적용하면 페이지가 다시 열립니다.';
+          else if(state.installed)notice.textContent='앱으로 실행 중 · 플레이와 동기화에는 인터넷 연결이 필요합니다.';
+          else if(state.canInstall)notice.textContent='브라우저의 실제 설치 창을 열 수 있습니다.';
+          else if(state.platform==='ios')notice.textContent='Safari 공유 버튼을 누른 뒤 “홈 화면에 추가”를 선택하세요.';
+          else if(state.platform==='android')notice.textContent='브라우저 메뉴에서 “앱 설치” 또는 “홈 화면에 추가”를 선택하세요.';
+          else notice.textContent='지원 브라우저 메뉴에서 “앱 설치”를 선택하세요. 플레이에는 인터넷 연결이 필요합니다.';
+        };
+        if(this._pwaStateListener)window.removeEventListener('bladesurge:pwa-state',this._pwaStateListener);
+        const onPwaState=e=>{if(!install.isConnected){window.removeEventListener('bladesurge:pwa-state',onPwaState);if(this._pwaStateListener===onPwaState)this._pwaStateListener=null;return;}renderPwa(e.detail);};
+        this._pwaStateListener=onPwaState;window.addEventListener('bladesurge:pwa-state',onPwaState);renderPwa(pwaState);
+        b.querySelector('#m-cancel').onclick=()=>{window.removeEventListener('bladesurge:pwa-state',onPwaState);if(this._pwaStateListener===onPwaState)this._pwaStateListener=null;this.ui.closeModal();};
         install.onclick = async () => {
-          if (pwa.getState().updateAvailable) { pwa.applyUpdate(); return; }
+          if (pwa.getState().updateAvailable) { if(!pwa.applyUpdate())renderPwa(pwa.getState());return; }
           const result = await pwa.install();
-          notice.textContent = result.outcome === 'accepted' ? '설치를 진행합니다.' : result.outcome === 'dismissed' ? '설치를 취소했습니다.' : '브라우저 메뉴에서 앱 설치 또는 홈 화면에 추가를 선택해 주세요.';
+          if(result.outcome==='accepted')notice.textContent='브라우저가 설치를 진행합니다.';
+          else if(result.outcome==='dismissed')notice.textContent='설치를 취소했습니다. 언제든 다시 선택할 수 있습니다.';
+          else renderPwa(pwa.getState());
         };
       }
       b.querySelectorAll('[data-mix]').forEach(input=>{input.oninput=()=>{input.nextElementSibling.textContent=input.value+'%';audio.setMix({...this.app.arsenal.s.mix,[input.dataset.mix]:Number(input.value)/100});};input.onchange=()=>{const r=this.app.arsenal.setMix({[input.dataset.mix]:Number(input.value)/100});audio.setMix(this.app.arsenal.s.mix);b.querySelector('#mix-notice').textContent=r.ok?'음량이 저장되었습니다.':r.error;input.value=String(Math.round(this.app.arsenal.s.mix[input.dataset.mix]*100));input.nextElementSibling.textContent=input.value+'%';};});
