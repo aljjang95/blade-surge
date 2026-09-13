@@ -52,6 +52,10 @@ export class PartyState {
     let m: any;
     try { m = JSON.parse(text); } catch { throw new PartyError('json'); }
     if (!m || typeof m !== 'object' || Array.isArray(m)) throw new PartyError('schema');
+    if (m.type === 'ping') {
+      if (Object.keys(m).length !== 1) throw new PartyError('ping-schema');
+      return [{ to: id, message: { type: 'pong' } }];
+    }
     if (m.type === 'ready') {
       if (this.status !== 'lobby' || typeof m.ready !== 'boolean') throw new PartyError('ready');
       member.ready = m.ready;
