@@ -61,7 +61,7 @@ export function normalizeSave(raw, fresh) {
     const parts = /^(\d+)-(\d+)$/.exec(key);
     if (!parts || +parts[1] < 1 || +parts[1] > CHAPTERS.length || +parts[2] < 1 || +parts[2] > STAGES_PER_CHAPTER) continue;
     s.progress.stars[key] = integer(stars, 0, 0, 3);
-    // 이전 마지막 층(3-10)을 완료한 저장도 새 4장으로 바로 이어진다.
+    // 장 확장 뒤에도 이전 마지막 관문의 실제 완료 별점으로 다음 장을 연다.
     if (s.progress.stars[key] > 0) s.progress.unlocked = Math.max(s.progress.unlocked, Math.min(floors, (+parts[1] - 1) * STAGES_PER_CHAPTER + +parts[2] + 1));
   }
   for (const key of ['claimedFree', 'claimedPrem']) s.pass[key] = [...new Set(s.pass[key].filter((v) => Number.isInteger(v) && v >= 1 && v <= BATTLE_PASS.maxLevel))];

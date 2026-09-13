@@ -1,4 +1,6 @@
 import { DIALOGUE_MODEL, REPLY_SCHEMA, dialogueMessages, parseDialogueReply, parseDialogueRequest } from '../src/companion/dialogue-contract';
+import { handlePartyRequest, PartyRoom } from './party';
+export { PartyRoom };
 
 interface Store {
   get<T>(key: string): Promise<T | undefined>;
@@ -10,6 +12,7 @@ interface Env {
   AI: { run(model: string, input: unknown): Promise<unknown> };
   DIALOGUE_BUDGET: { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } };
   APP_ORIGIN: string;
+  PARTIES?: { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } };
   DIALOGUE_ENABLED: string;
   DIALOGUE_APPROVAL_UNTIL?: string;
   DIALOGUE_APPROVAL_ID?: string;
@@ -93,6 +96,11 @@ export class DialogueBudget {
 
 export async function handleRequest(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
+  if (url.pathname === '/api/party' || url.pathname.startsWith('/api/party/')) {
+    if (!env.PARTIES) return json({ error:'unavailable' },503);
+    const origin = url.origin === 'https://blade.tllhouse.com' ? url.origin : env.APP_ORIGIN;
+    return handlePartyRequest(request, { ...env, PARTIES:env.PARTIES, APP_ORIGIN:origin });
+  }
   if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
   if (url.pathname !== '/api/companion') return json({ error: 'not-found' }, 404);
   if (request.method !== 'POST') return json({ error: 'method' }, 405);

@@ -4,14 +4,15 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as core from '../../src/game/rpg-core.js';
 import * as motion from '../../src/game/combat-motion.js';
+import * as apex from '../../src/game/apex-combat.js';
 class Vector { set(x,y,z){this.x=x;this.y=y;this.z=z;return this} normalize(){return this} clone(){return new Vector().set(this.x||0,this.y||0,this.z||0)} setY(y){this.y=y;return this} }
 class Base { onEnemyDeath(){this.baseDeaths=(this.baseDeaths||0)+1} }
 const ENEMIES={a:{exp:8,hp:490,atk:20}};
 const HEROES={knight:{skills:[{unlock:10}]}};
 let played=0;const audio={hit:()=>played++,vibe:()=>{}};
 const source=readFileSync(new URL('../../src/game/rpg-battle.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replace('export class Battle','class Battle');
-const names=['THREE','BaseBattle','ENEMIES','HEROES','heroStats','levelExp','audio','ImpactClock','impactStrength','normalizeRpg','recordMonster','monsterLevel','monsterXp','grantCombatXp','KillLedger','buildCatalogue','RpgView'];
-const Battle=new Function(...names,source+'\nreturn Battle;')({Vector3:Vector},Base,ENEMIES,HEROES,(_d,h)=>({hp:100+h.level*10,atk:h.level*2,crit:0,critDmg:1.5,ultGain:1}),()=>100,audio,motion.ImpactClock,motion.impactStrength,core.normalizeRpg,core.recordMonster,core.monsterLevel,core.monsterXp,core.grantCombatXp,core.KillLedger,()=>[],class{});
+const names=['THREE','BaseBattle','ENEMIES','HEROES','heroStats','levelExp','audio','ImpactClock','contactFeedback','normalizeRpg','recordMonster','monsterLevel','monsterXp','grantCombatXp','KillLedger','buildCatalogue','RpgView'];
+const Battle=new Function(...names,source+'\nreturn Battle;')({Vector3:Vector},Base,ENEMIES,HEROES,(_d,h)=>({hp:100+h.level*10,atk:h.level*2,crit:0,critDmg:1.5,ultGain:1}),()=>100,audio,motion.ImpactClock,apex.contactFeedback,core.normalizeRpg,core.recordMonster,core.monsterLevel,core.monsterXp,core.grantCombatXp,core.KillLedger,()=>[],class{});
 function setup(){
  const h={level:1,exp:95},s={heroes:{knight:h},rpg:core.normalizeRpg(null,['a'])};
  const b=Object.create(Battle.prototype);let saves=0,warnings=0,notices=0,flashes=0;
@@ -19,7 +20,7 @@ function setup(){
  app:{eco:{s,hero:()=>h,heroEquipBonus:()=>({}),save:()=>{saves++;return true}}},
  player:{maxHp:110,hp:80,alive:true,heroLevel:1,def:HEROES.knight,cds:[3,2],stats:{crit:0,critDmg:1.5},unlocked(){return this.heroLevel>=10},addUlt(){}},
  ui:{toast:()=>warnings++,setCombo(){},skillBtns:[],awakenBanner(){}},rpgView:{levelUp:()=>notices++},
- fx:{dmgLayer:{children:[]},damage(){},flash:()=>flashes++,directional(){}},
+ fx:{dmgLayer:{children:[]},damage(){},contact:()=>flashes++},
  timeCtl:new motion.ImpactClock(),dmgDealt:0,combo:0,maxCombo:0,feedbackCount:0,feedbackSound:false});
  return {b,h,s,counts:()=>({saves,warnings,notices,flashes})};
 }

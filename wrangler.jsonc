@@ -12,8 +12,8 @@
     "html_handling": "auto-trailing-slash"
   },
   "ai": { "binding": "AI" },
-  "durable_objects": { "bindings": [{ "name": "DIALOGUE_BUDGET", "class_name": "DialogueBudget" }] },
-  "migrations": [{ "tag": "dialogue-budget-v1", "new_sqlite_classes": ["DialogueBudget"] }],
+  "durable_objects": { "bindings": [{ "name": "DIALOGUE_BUDGET", "class_name": "DialogueBudget" }, { "name": "PARTIES", "class_name": "PartyRoom" }] },
+  "migrations": [{ "tag": "dialogue-budget-v1", "new_sqlite_classes": ["DialogueBudget"] }, { "tag": "party-dungeons-v1", "new_sqlite_classes": ["PartyRoom"] }],
   "vars": {
     "APP_ORIGIN": "https://blade-surge.affinity-agent-studio.workers.dev",
     "DIALOGUE_ENABLED": "false",

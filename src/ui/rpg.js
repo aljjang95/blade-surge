@@ -164,7 +164,7 @@ export class RpgView {
     const battle = this.battle, candidate = battle.player?.lockTarget || battle.lastTarget;
     const visible = this.app.mode === 'battle' && candidate?.alive && !candidate.spawning && battle.player?.distTo(candidate) <= 14;
     this.target.hidden = !visible;
-    if (visible) this.target.textContent = `Lv.${candidate.level || 1} ${candidate.def.name} · HP ${number(candidate.hp)} / ${number(candidate.maxHp)}`;
+    if (visible) this.target.textContent = `${battle.stage?.party ? '파티' : `Lv.${candidate.level || 1}`} ${candidate.def.name} · HP ${number(candidate.hp)} / ${number(candidate.maxHp)}`;
     this.result.hidden = !battle.result;
     if (battle.result) this.result.textContent = `처치 EXP +${number(battle.combatXp)} · 전투 중 이미 반영됨`;
     if (this.dialog.open && this.tab === 'hero' && this.heroSignature !== text) { this.heroSignature = text; this.content.replaceChildren(); this.renderHero(); }

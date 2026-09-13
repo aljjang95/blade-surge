@@ -16,15 +16,19 @@ export class Battle extends RpgBattle {
   }
   async start(...args) {
     await super.start(...args);
-    const ticket = this.masterworks.transact(s => { s.runSeq++; return {ok:true,id:s.runSeq}; }, {duringBattle:true});
+    // Party runs are server-scoped and must not write or depend on a personal save.
+    const ticket = this.stage?.party
+      ? {ok:true,id:this.stage.party.runId || `party:${this.stage.code}`}
+      : this.masterworks.transact(s => { s.runSeq++; return {ok:true,id:s.runSeq}; }, {duringBattle:true});
     if (!ticket.ok) throw new Error(ticket.error);
     const s = this.masterworks.s;
-    this.run = {id:ticket.id,picked:[],round:0,queue:[],storySeen:false,settled:false,renown:0,perfects:0,breaks:0,
-      enabled:this.stage.expedition?.kind !== 'arena', challenges:[...s.challengeIds], permanent:masteryEffects(s)};
+    this.run = {id:ticket.id,picked:[],autoPicked:0,round:0,queue:[],storySeen:false,settled:false,renown:0,perfects:0,breaks:0,
+      enabled:!this.stage.party && this.stage.expedition?.kind !== 'arena', challenges:[...s.challengeIds], permanent:masteryEffects(s)};
     this.run.difficulty = difficultyEffects(this.run.enabled ? this.run.challenges : []);
     this.buildBase = {...this.player.stats}; this.effects = {}; this.applyBuild();
     this.runKills = new WeakSet(); this.counterUntil = 0; this.chainUntil = 0;
-    this.after(1.4, () => { if (this.run?.enabled && this.active) { this.queueBoon(); this.chronicle.offer(); } });
+    // The opening reward remains, but it no longer interrupts the first combat input.
+    this.after(1.4, () => { if (this.run?.enabled && this.active) this.grantBoonReward({automatic:true}); });
     this.chronicle.refresh();
   }
   stop() { this.chronicle?.close(); super.stop(); this.run = null; this.effects = {}; this.chronicle?.refresh(); }
@@ -50,16 +54,33 @@ export class Battle extends RpgBattle {
     }
     return offer;
   }
-  queueBoon() {
+  queueBoon({autoAt=null}={}) {
     if (!this.run?.enabled || this.run.round >= 6) return;
     const choices = boonChoices(`${this.stage.code}:${this.run.id}`,this.run.picked,this.run.round++);
-    if (choices.length) this.run.queue.push({kind:'boon',ids:choices.map(b=>b.id),round:this.run.round-1});
+    if (choices.length) {
+      const offer={kind:'boon',ids:choices.map(b=>b.id),round:this.run.round-1};
+      if(Number.isFinite(autoAt))offer.autoAt=autoAt;
+      this.run.queue.push(offer); return offer;
+    }
+  }
+  applyBoonOffer(offer,id,{automatic=false}={}) {
+    if (!offer?.ids?.includes(id) || this.run.picked.filter(x=>x===id).length>=3) return {ok:false,error:'선택할 수 없는 각인입니다.'};
+    const index=this.run.queue.indexOf(offer);if(index>=0)this.run.queue.splice(index,1);
+    this.run.picked.push(id);if(automatic)this.run.autoPicked++;
+    this.applyBuild();audio.play('ui_glass',{vol:automatic?.28:.5});
+    const boon=BOONS.find(b=>b.id===id);
+    if(automatic)this.ui.toast(`각인 보상 자동 적용 · ${boon?.name||id}`,'gold');
+    return {ok:true,id,name:boon?.name||id,automatic};
+  }
+  grantBoonReward({automatic=false,autoDelay=8}={}) {
+    const offer=this.queueBoon({autoAt:automatic?null:this.elapsed+autoDelay});
+    if(!offer)return {ok:false,error:'각인 보상이 모두 적용되었습니다.'};
+    return automatic?this.applyBoonOffer(offer,offer.ids[0],{automatic:true}):{ok:true,offer};
   }
   selectBoon(id) {
     const offer = this.currentOffer();
     if (!this.active || !this.player?.alive || offer?.kind !== 'boon' || !offer.ids.includes(id) || this.run.picked.filter(x=>x===id).length>=3) return {ok:false,error:'선택할 수 없는 각인입니다.'};
-    this.run.picked.push(id); this.run.queue.shift(); this.applyBuild();
-    audio.play('ui_glass',{vol:.5}); this.chronicle.selectionDone(); return {ok:true};
+    const result=this.applyBoonOffer(offer,id);if(result.ok)this.chronicle.selectionDone();return result;
   }
   selectStory(choiceId) {
     const offer = this.run?.queue[0];
@@ -112,15 +133,18 @@ export class Battle extends RpgBattle {
     if (discovery.ok) { this.run.renown+=discovery.renown||0; this.ui.toast('새 길의 기록 · 명성 +3','gold'); }
     this.rpgDirty=true; this.flushRpg();
     if (room.type==='boss' || this.bossDefeated) return;
-    this.queueBoon();
     const lastApproach=this.stage.expedition?.kind==='dungeon' && this.world.rooms.every(r=>r.cleared || r.type==='start' || r.type==='boss');
+    // Six rewards remain available. Only the third/sixth reward or the final approach asks the player;
+    // routine room rewards take a deterministic default and never pause combat.
+    const checkpoint=lastApproach || this.run.round===2 || this.run.round===5;
+    const boon=this.grantBoonReward({automatic:!checkpoint});
     if (!this.run.storySeen && (room.type==='treasure' || this.roomsCleared>=2 || lastApproach)) {
       const idx=this.stage.expedition ? ['glass_garden','ember_vault','star_archive'].indexOf(this.stage.expedition.id) : (this.stage.ch-1)%3;
       this.run.queue.push({kind:'story',id:STORY_EVENTS[Math.max(0,idx)].id}); this.run.storySeen=true;
     }
     this.player.chronicleShield=Math.round(this.player.maxHp*Math.min(.25,this.effects.shield||0));
     // Wait for the clearing blow to finish; the native pause owner freezes the same simulation.
-    this.after(.45,()=>{ if(this.active&&this.player.alive&&this.currentOffer())this.chronicle.offer(); });
+    if(checkpoint&&boon.ok)this.after(.45,()=>{ if(this.active&&this.player.alive&&this.currentOffer())this.chronicle.offer(); });
   }
   onPerfectDodge(p) {
     super.onPerfectDodge(p);
@@ -132,6 +156,7 @@ export class Battle extends RpgBattle {
   }
   damageEnemy(e,dmg,opts={}) {
     if (!this.run?.enabled || opts.masterworksProc) return super.damageEnemy(e,dmg,opts);
+    const source=opts.source?.stats?opts.source:this.player;
     const before=e?.hp||0, counter=this.elapsed<this.counterUntil && !opts.quiet;
     let mult=1+(opts.finisher?Math.min(.7,this.effects.finisher||0):0)+(e?.breakT>0?.3:0)+(counter?.35:0);
     super.damageEnemy(e,dmg*mult,opts);
@@ -148,7 +173,7 @@ export class Battle extends RpgBattle {
       for (const other of this.enemies) {
         if (other===e||!other.alive||other.spawning||other.pos.distanceToSquared(e.pos)>42)continue;
         this.fx.boltTex(e.pos.clone().setY(1),other.pos.clone().setY(1),0x9edaff,{life:.22});
-        super.damageEnemy(other,this.player.atk*.55,{kind:'magic',noProc:true,quiet:true,masterworksProc:true});
+        super.damageEnemy(other,source.atk*.55,{kind:'magic',noProc:true,quiet:true,masterworksProc:true,source});
         if(++count>=Math.min(2,this.effects.chain))break;
       }
     }
@@ -182,7 +207,14 @@ export class Battle extends RpgBattle {
   update(realDt) {
     const before=this.elapsed; super.update(realDt);
     const dt=Math.max(0,this.elapsed-before);
-    if(dt>0&&this.active&&this.run?.enabled) for(const e of this.enemies)if(e.alive)tickPosture(e,dt);
+    if(dt>0&&this.active&&this.run?.enabled) {
+      for(const e of this.enemies)if(e.alive)tickPosture(e,dt);
+      // Closing a checkpoint does not throw its reward away. Eight active seconds later,
+      // an untouched boon receives the deterministic first choice and combat continues.
+      for(const offer of [...this.run.queue])if(offer.kind==='boon'&&Number.isFinite(offer.autoAt)&&this.elapsed>=offer.autoAt) {
+        this.currentOffer();this.applyBoonOffer(offer,offer.ids[0],{automatic:true});
+      }
+    }
     this.chronicle?.tick(realDt);
   }
 }

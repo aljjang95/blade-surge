@@ -92,7 +92,7 @@ export class ExpeditionUI {
     const label=parts.join(' · ');if(this.combatStatus.textContent!==label)this.combatStatus.textContent=label;
     this.combatStatus.hidden=!label;
   }
-  usePotion(id){const app=this.app,n=app.expedition.snapshot().consumables[id];if(!n||!app.battle.active||app.battle.paused||app.ui.el.modal.classList.contains('show'))return;if(!app.battle.canApplyConsumable(id))return;const r=app.expedition.consume(id);if(r.ok){app.battle.applyConsumable(id);audio.magic({vol:.24,notes:[0,7,12],step:.05});app.ui.toast(CONSUMABLES.find(c=>c.id===id).name+' 사용','gold');}else app.ui.toast(r.error,'red');this.refreshPotions();}
+  usePotion(id){const app=this.app;if(app.battle.stage?.party)return;const n=app.expedition.snapshot().consumables[id];if(!n||!app.battle.active||app.battle.paused||app.ui.el.modal.classList.contains('show'))return;if(!app.battle.canApplyConsumable(id))return;const r=app.expedition.consume(id);if(r.ok){app.battle.applyConsumable(id);audio.magic({vol:.24,notes:[0,7,12],step:.05});app.ui.toast(CONSUMABLES.find(c=>c.id===id).name+' 사용','gold');}else app.ui.toast(r.error,'red');this.refreshPotions();}
   syncTab(tab,section='campaign'){
     const show=tab==='stage'&&section!=='campaign';
     this.opened=show;this.host.hidden=!show;this.campaign.hidden=show;

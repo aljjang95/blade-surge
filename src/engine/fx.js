@@ -222,6 +222,12 @@ export class FX {
       this.sparks.emit(pos.x, pos.y, pos.z, _v.x, _v.y, _v.z, c, size * (0.6 + Math.random() * 0.8), life * (0.6 + Math.random() * 0.8), { grav: 14, shrink: 0.1 });
     }
   }
+  /** Bounded contact cue: pooled sparks, one short flash, and a heavy-only pooled light. */
+  contact(pos, dir, color, { size=1.6, particles=5, light=false }={}) {
+    this.flash(pos,color,{size,life:.11});
+    if(particles>0)this.directional(pos,dir,color,{n:particles,speed:particles>5?11:7,size:particles>5?.28:.22,life:.22,spread:.38});
+    if(light)this.light(pos,color,3.2,3.5,.1);
+  }
   dust(pos, { n = 10, color = 0x8a7a6a, size = 1.4, life = 0.9, speed = 2.5 } = {}) {
     const c = new THREE.Color(color); if (this.lite) n = Math.ceil(n / 2);
     for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, s = speed * (0.3 + Math.random()); this.smoke.emit(pos.x, pos.y + 0.2, pos.z, Math.cos(a) * s, 0.6 + Math.random(), Math.sin(a) * s, c, size * (0.6 + Math.random() * 0.8), life * (0.7 + Math.random() * 0.6), { grav: -0.6, drag: 0.94, shrink: 1.8 }); }

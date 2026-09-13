@@ -92,9 +92,11 @@ export class Floor {
         w = this.layout.size[0] + this.ri(-1, 1) * TILE;
         h = this.layout.size[1] + this.ri(-1, 1) * TILE;
       }
+      if (this.layout?.sizes?.[i]) [w, h] = this.layout.sizes[i];
       const wx = (gx - (G - 1) / 2) * (this.layout?.spacing[0] || MACRO) + this.r(this.layout ? -2 : -3, this.layout ? 2 : 3);
       const wz = (gy - (G - 1) / 2) * (this.layout?.spacing[1] || MACRO) + this.r(this.layout ? -2 : -3, this.layout ? 2 : 3);
       const room = { id: i, gx, gy, x: wx, z: wz, w, h, type: isStart ? ROOM_TYPE.START : ROOM_TYPE.NORMAL,
+        label: this.layout?.labels?.[i] || '', landmark: this.layout?.landmark || '',
         cleared: isStart, discovered: isStart, spawned: false, enemies: [], pathLen: 0 };
       this.rooms.push(room); cells.set(key(gx, gy), room);
     });
@@ -123,7 +125,10 @@ export class Floor {
     for (let i = 0; i < nElite; i++) rest[i].type = ROOM_TYPE.ELITE;
     if (rest[nElite]) rest[nElite].type = ROOM_TYPE.TREASURE;
     // Short expeditions supply explicit room roles while sharing collision and minimap data.
-    if (this.layout?.types) this.rooms.forEach((room, i) => { room.type = this.layout.types[i]; });
+    if (this.layout?.types) this.rooms.forEach((room, i) => {
+      room.type = this.layout.types[i];
+      if (room.type === ROOM_TYPE.BOSS) { room.w = Math.max(room.w, 28); room.h = Math.max(room.h, 28); }
+    });
     this.bossRoom = this.rooms.find((rm) => rm.type === ROOM_TYPE.BOSS) || this.rooms[this.rooms.length - 1];
     this.startRoom = start;
     // 보스 봉인 — 보스방으로 들어가는 복도 입구마다 결계. 다른 구역을 전부 정화해야 풀린다

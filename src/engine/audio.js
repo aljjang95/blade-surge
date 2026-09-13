@@ -210,12 +210,22 @@ export class AudioSys {
     else if (kind === 'magic') { this.pick('hit_soft', 2, { vol: 0.8, rate: 1.3 }); this.play('hit_glass', { vol: 0.3, rate: 1.4 }); }
     else if (kind === 'hurt') { this.pick('hit_soft', 2, { vol: 0.9, rate: 0.8 }); }
     this.thump({ vol: heavy ? 0.9 : 0.45, freq: heavy ? 60 : 100, dur: heavy ? 0.28 : 0.14 });
+    this.contactSnap({vol:heavy?.18:.1,freq:heavy?1250:1900});
     if (crit) this.ting({ vol: 0.45, freq: 1500 + Math.random() * 600 });
     // Flow Music score-derived impact accent; 기본 CC0 타격음에만 낮게 겹친다.
     if (heavy || crit) {
       const weight = finisher || !crit ? 'heavy' : 'light';
       this.play(`expansion/flow-impact-${weight}`, { vol: weight === 'heavy' ? 0.16 : 0.12, vary: 0, min: 0.05 });
     }
+  }
+
+  /** Very short filtered transient separates weapon contact from the longer body thump. */
+  contactSnap({vol=.1,freq=1800}={}) {
+    if(!this.enabled||!this.ctx)return;const t=this.now(),dur=.035;
+    const n=this._noise(dur),f=this.ctx.createBiquadFilter(),g=this.ctx.createGain();
+    f.type='bandpass';f.frequency.value=freq;f.Q.value=1.6;
+    g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+    n.connect(f);f.connect(g);g.connect(this.sfxGain);n.start(t);n.stop(t+dur);
   }
 
   // ================= 확장 SFX 라이브러리 (프로시저럴) =================

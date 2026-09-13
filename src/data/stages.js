@@ -1,3 +1,4 @@
+import { dungeonForStage } from './story-dungeons.js';
 import { stageStory } from './campaign-story.js';
 
 // 지역별 맹세와 기믹은 모험 화면과 전투가 함께 사용한다.
@@ -7,6 +8,7 @@ export const CHAPTERS = [
   { id: 3, name: '거꾸로 흐르는 서리 도서관', theme: 'frost', color: '#a3ceef', boss: 'frost_finalboss', tagline: '지워 버린 실패의 끝에서, 다른 내일을 읽는다.', summary: '리아의 잃어버린 제자와 쓰이지 않은 일기가 기다린다. 금지된 기록을 열어 순환의 기원을 추적한다.', oath: '아픈 진실도 지우지 않겠다는 맹세', mechanic: { name: '지연 기록', description: '발밑과 주변에 남은 원이 잠시 뒤 폭발하며 느려집니다. 기록된 자리에서 즉시 이동하세요.' } },
   { id: 4, name: '별이 잠긴 심해', theme: 'tide', color: '#65c5d1', boss: 'tide_finalboss', tagline: '돌아갈 곳은 땅이 아니라, 기다리는 사람이다.', summary: '카인이 잃어버린 항로를 따라 가라앉은 선단을 구한다. 서로의 이름으로 등대를 이어 해왕의 사슬을 끊는다.', oath: '붙잡지 않고 귀환을 믿겠다는 맹세', mechanic: { name: '밀물', description: '세 물결 띠가 방을 순서대로 휩쓸며 밀쳐 냅니다. 다음 경고선을 보고 빈 구역으로 이동하세요.' } },
   { id: 5, name: '새벽을 먹는 왕관', theme: 'crown', color: '#e0c184', boss: 'crown_finalboss', tagline: '세상을 구하기 위해, 너를 잃어야 한다는 거짓말.', summary: '네브의 기억을 노리는 왕관으로 향한다. 누군가의 희생에 기대는 승리 대신 함께 살아갈 내일을 선택한다.', oath: '한 사람의 짐을 함께 나누겠다는 맹세', mechanic: { name: '왕관의 심판', description: '대각선 십자 경고 뒤에 빛이 떨어집니다. 중앙의 작은 안전 원이나 십자 밖으로 피하세요.' } },
+  { id: 6, name: '함께 잇는 귀환로', theme: 'garden', encounterPrefix: 'homecoming', color: '#87cbb0', boss: 'homecoming_finalboss', tagline: '구한 세계를, 함께 살아갈 곳으로.', summary: '왕관이 부서진 다음 날. 다섯 지역에 남은 명령의 잔향을 걷어 내고 사람들의 귀환로를 연결한다.', oath: '돌아오는 누구도 홀로 남겨 두지 않겠다는 약속', mechanic: { name: '귀환의 공명', description: '남겨진 명령이 공명 고리로 번집니다. 경고 띠 밖으로 이동하며 귀환문을 지키세요.' } },
 ];
 export const STAGES_PER_CHAPTER = 10;
 const ROSTER = {
@@ -18,11 +20,11 @@ const ROSTER = {
 };
 const RANK_LABELS = { captain: '관문 대장', warden: '수문장', midboss: '중간 보스', finalboss: '최종 보스' };
 export function stageDef(ch, st) {
-  if (!Number.isInteger(ch) || !Number.isInteger(st) || ch < 1 || ch > CHAPTERS.length || st < 1 || st > STAGES_PER_CHAPTER) throw new RangeError('스테이지는 1-1부터 5-10까지입니다.');
+  if (!Number.isInteger(ch) || !Number.isInteger(st) || ch < 1 || ch > CHAPTERS.length || st < 1 || st > STAGES_PER_CHAPTER) throw new RangeError(`스테이지는 1-1부터 ${CHAPTERS.length}-${STAGES_PER_CHAPTER}까지입니다.`);
   const chapter = CHAPTERS[ch - 1], idx = (ch - 1) * STAGES_PER_CHAPTER + st;
   const rank = st === 10 ? 'finalboss' : st === 5 ? 'midboss' : st === 3 || st === 7 ? 'warden' : 'captain';
   const boss = rank !== 'captain', scale = Math.pow(1.12, Math.min(idx - 1, 19)) * (1 + Math.max(0, idx - 20) * 0.045);
-  const R = ROSTER[chapter.theme], scene = stageStory(ch, st), enemyId = chapter.theme + '_' + rank;
+  const R = ROSTER[chapter.theme], scene = stageStory(ch, st), enemyId = (chapter.encounterPrefix || chapter.theme) + '_' + rank;
   const waves = [];
   for (let w = 0; w < (boss ? 2 : 3); w++) {
     const list = [], n = Math.min(28, 10 + Math.floor(idx * 0.6) + w * 4);
@@ -33,11 +35,12 @@ export function stageDef(ch, st) {
   const enemy = ENEMIES[enemyId];
   return {
     ch, st, idx, code: `${ch}-${st}`, title: scene.title, chapter, name: `${ch}-${st} · ${scene.title}`,
+    dungeon: dungeonForStage(ch, st), epilogueFinale: ch === 6 && st === 10,
     boss, finale: ch === 5 && st === 10, waves, scale, energy: 6 + Math.floor(idx / 6),
     rosterFor: () => R, recPower: Math.floor(2600 * scale),
     encounter: { rank, label: RANK_LABELS[rank], name: enemy.name, enemyId, tactic: enemy.tactic },
     story: { opening: scene.opening, revelation: scene.revelation, aftermath: scene.aftermath },
-    objective: `전투 방을 정리해 봉인을 해제하고 ${enemy.name} 처치`,
+    objective: `${dungeonForStage(ch, st).name}의 전투 방을 정리해 봉인을 해제하고 ${enemy.name} 처치`,
     rewards: { gold: Math.floor(400 * scale), exp: Math.floor(110 * scale), bp: 60 + (boss ? 60 : 0), firstGems: rank === 'finalboss' ? 300 : boss ? 150 : 60, dropChance: boss ? 1 : 0.6, stones: 2 + (boss ? 4 : 0) },
   };
 }
@@ -148,8 +151,8 @@ for (const chapter of CHAPTERS) {
   const summon = ROSTER[theme].trash[0];
   for (const [rank, [baseId, name, pattern, tactic]] of Object.entries(CAMPAIGN_ENCOUNTERS[theme])) {
     const base = ENEMIES[baseId];
-    ENEMIES[theme + '_' + rank] = {
-      ...base, ...RANK_STATS[rank], name, boss: true, elite: false, ranged: false,
+    ENEMIES[(chapter.encounterPrefix || theme) + '_' + rank] = {
+      ...base, ...RANK_STATS[rank], name: chapter.id === 6 ? ({ captain: '귀환로를 막는 잔병장', warden: '끊어진 명령의 파수꾼', midboss: '공허한 서약의 잔향', finalboss: '마지막 고립의 잔향' })[rank] : name, boss: true, elite: false, ranged: false,
       behavior: undefined, rank, pattern, tactic, summon, tint: chapter.color, range: 3.2,
       armor: rank === 'captain' ? 0.12 : 0.2, atkTime: rank === 'finalboss' ? 1.7 : 1.9,
       kit: theme === 'garden' || theme === 'crown' ? 'warlord' : theme === 'frost' ? 'lich' : theme === 'tide' ? 'dragon' : 'reaper',

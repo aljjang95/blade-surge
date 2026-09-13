@@ -3,7 +3,8 @@ import { Battle as BaseBattle } from './battle-base.js';
 import { ENEMIES } from '../data/stages.js';
 import { HEROES, heroStats, levelExp } from '../data/heroes.js';
 import { audio } from '../engine/audio.js';
-import { ImpactClock, impactStrength } from './combat-motion.js';
+import { ImpactClock } from './combat-motion.js';
+import { contactFeedback } from './apex-combat.js';
 import { normalizeRpg, recordMonster, monsterLevel, monsterXp, grantCombatXp, KillLedger } from './rpg-core.js';
 import { buildCatalogue } from './rpg-catalogue.js';
 import { RpgView } from '../ui/rpg.js';
@@ -102,7 +103,7 @@ export class Battle extends BaseBattle {
     if (this.viewT >= 0.1) { this.viewT = 0; this.rpgView.refresh(); }
   }
   damageEnemy(enemy, dmg, opts = {}) {
-    const p = this.player;
+    const p = opts.source?.stats ? opts.source : this.player;
     if (!p || !enemy?.alive || enemy.spawning || !Number.isFinite(dmg) || dmg <= 0) return;
     const crit = Math.random() < p.stats.crit;
     let amount = dmg * (0.9 + Math.random() * 0.2) * (crit ? p.stats.critDmg : 1);
@@ -117,20 +118,20 @@ export class Battle extends BaseBattle {
     const hitPos = enemy.pos.clone().setY(1.1 * enemy.def.scale);
     if (this.fx.dmgLayer.children.length < 26 || crit) this.fx.damage(hitPos, dealt, { crit, kind: opts.kind === 'magic' ? 'skill' : '' });
     if (opts.quiet) return;
-    const heavy = !!opts.finisher || crit;
     const dx = opts.dirx || 0, dz = opts.dirz || 0;
-    enemy.receiveImpact(dx, dz, impactStrength({ finisher: opts.finisher, crit, boss: enemy.isBoss, elite: enemy.isElite }));
+    const feedback=contactFeedback({finisher:opts.finisher,crit,boss:enemy.isBoss,elite:enemy.isElite,reduced:!!this.app.reducedMotion?.matches});
+    enemy.receiveImpact(dx, dz, feedback.recoil);
     const color = opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
     // The entire pack shares a small per-frame budget, rather than 30 stacked impacts.
     if (this.feedbackCount++ < 6) {
-      this.fx.flash(hitPos, color, { size: heavy ? 2.5 : 1.6, life: 0.12 });
-      this.fx.directional(hitPos, direction.set(dx, 0, dz).normalize(), color, { n: heavy ? 10 : 5, speed: heavy ? 11 : 7 });
+      this.fx.contact(hitPos,direction.set(dx,0,dz).normalize(),color,{size:feedback.flashSize,particles:feedback.particles,light:feedback.light});
     }
-    if (!this.feedbackSound) {
-      this.feedbackSound = true; audio.hit(opts.kind || 'slash', { crit, heavy, finisher: !!opts.finisher });
-      if (heavy) audio.vibe(20);
+    const soundPriority=(opts.finisher?4:0)+(feedback.heavy?2:0)+(crit?1:0);
+    if (!this.feedbackSound || soundPriority>this.feedbackSound) {
+      this.feedbackSound = soundPriority||1; audio.hit(opts.kind || 'slash', { crit, heavy:feedback.heavy, finisher: !!opts.finisher });
+      if (feedback.heavy) audio.vibe(20);
     }
-    if (!opts.quietStop) this.timeCtl.hitstop(opts.finisher ? 0.09 : crit ? 0.055 : 0.035);
+    if (!opts.quietStop && feedback.hitstop>0) this.timeCtl.hitstop(feedback.hitstop);
     // Directional body recoil carries ordinary hits. No added random camera shake.
   }
 }

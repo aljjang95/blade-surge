@@ -58,7 +58,8 @@ export class MasterworksView {
     return {ok:true};
   }
   offer(){this.open('run',this.hud);}
-  selectionDone(){if(this.battle.run.queue.length)this.render();else{this.close();this.refresh();}}
+  // One deliberate choice per visit. Further earned rewards remain on the truthful HUD badge.
+  selectionDone(){this.close();this.refresh();}
   act(fn,success='저장되었습니다.'){const r=fn();this.notice.textContent=r?.ok===false?(err[r.error]||r.error):success;this.render();return r;}
   render() {
     const offer=this.tab==='run'?this.battle.currentOffer():null;
@@ -127,7 +128,8 @@ export class MasterworksView {
       this.intro(event.name,remembered?remembered.consequence:event.description,offer.id==='bridge'?'ember_vault':'glass_garden');
       if(remembered)this.content.append(btn(`잠시 쉬어 간다 · 체력 ${remembered.effects.heal?12:6}% 회복`,()=>this.act(()=>this.battle.selectStory(remembered.id)),'mw-primary'));
       else{const choices=n('div','mw-story-choices');for(const c of event.choices){const b=btn('',()=>this.act(()=>this.battle.selectStory(c.id)),'mw-card');b.append(n('h4','',c.name),n('p','',c.description));choices.append(b);}this.content.append(choices);}
-    } else this.content.append(n('h3','mw-choice-title',run.enabled?'함께 울리는 각인':'AI 결투 규칙'),n('p','mw-muted',run.enabled?'구역을 정화하면 새 각인을 선택할 수 있습니다.':'결투장에서는 각인과 서약 없이 기존 규칙으로 대결합니다.'));
+    } else this.content.append(n('h3','mw-choice-title',run.enabled?'함께 울리는 각인':'공용 전투 규칙'),n('p','mw-muted',run.enabled?'중요한 체크포인트에서는 직접 고르고, 흐름 중 얻은 보상은 자동 적용됩니다.':'AI 결투와 파티에서는 개인 각인과 서약 없이 공용 규칙으로 대결합니다.'));
+    if(run.autoPicked)this.content.append(n('p','mw-muted',`전투 흐름을 멈추지 않고 자동 적용된 각인 ${run.autoPicked}회`));
     const picked=n('div','mw-picked');for(const b of BOONS){const rank=run.picked.filter(id=>id===b.id).length;if(rank){const chip=n('span',`mw-chip ${b.family}`);chip.append(art(`boon-${b.family}`),n('span','',`${b.name} ${rank}`));picked.append(chip);}}this.content.append(picked);
     const families=new Set(run.picked.map(id=>BOONS.find(b=>b.id===id)?.family));const combos=SYNERGIES.filter(s=>s.families.every(f=>families.has(f)));
     if(combos.length){this.content.append(n('h3','mw-section-title','발현한 조합'));for(const s of combos)this.content.append(n('p','mw-synergy',`${s.name} · ${s.description}`));}
