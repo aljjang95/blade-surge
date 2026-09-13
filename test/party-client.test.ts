@@ -2,6 +2,28 @@ import {expect,test} from 'bun:test';
 import {RemoteInput,canonicalPartyCode,normalizedPartyStats} from '../src/party/replication.js';
 import {Battle as PartyBattle} from '../src/party/battle.js';
 import {fieldDropsAllowed} from '../src/game/drops.js';
+import {PartySession} from '../src/party/session.js';
+import {PartyPresence} from '../src/party/presence.js';
+
+test('a returning guest sends neutral input until both connection checking and fresh-world wait clear',()=>{
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { hidden: false } });
+  try {
+    const now = performance.now(), presence = new PartyPresence(now), sent:any[]=[];
+    const input = { update(){}, consume(){return true;}, move:{x:1,y:-1}, attackHeld:true, queue:['skill0'] };
+    const session:any = { run:{}, ready:true, finishing:false, app:{battle:{paused:false},input}, sendT:1,seq:0,snapshot:null,presence,
+      connectionStatus:()=>presence.status(performance.now(),{running:true}), send:(packet:any)=>sent.push(packet) };
+    presence.resume(now);
+    PartySession.prototype.updateGuest.call(session,.1);
+    expect(sent[0]).toMatchObject({x:0,y:0,attack:false,actions:[]});
+    presence.reply(performance.now()); input.queue=['skill0'];
+    PartySession.prototype.updateGuest.call(session,.1);
+    expect(sent[1]).toMatchObject({x:0,y:0,attack:false,actions:[]});
+    presence.snapshot(performance.now()); input.queue=['skill0'];
+    PartySession.prototype.updateGuest.call(session,.1);
+    expect(sent[2]).toMatchObject({x:1,y:-1,attack:true,actions:['skill0']});
+  } finally { if (previous) Object.defineProperty(globalThis,'document',previous); else Reflect.deleteProperty(globalThis,'document'); }
+});
 
 test('remote input normalizes identifiers and expires held and queued input after 350ms',()=>{
   expect(canonicalPartyCode(' abcd-1234 efgh-5678 ')).toBe('ABCD1234EFGH5678');

@@ -15,14 +15,14 @@ dialog[open] { top:var(--sat); bottom:auto; margin-top:12px; overflow-y:auto; }
   .setting-row > span { flex-shrink:0; }
   input,textarea { user-select:text; -webkit-user-select:text; }
 }
-/* Nine lobby actions must fit above the hero caption and departure controls. */
+/* Eleven lobby actions fit four rows above the hero caption on short phones. */
 @media (orientation:portrait) and (max-width:360px) {
   #meta .topbar .cur .ic { width:16px; height:16px; }
 }
 @media (orientation:portrait) and (max-width:620px) and (max-height:700px) {
-  #tab-home .lobby-left { grid-template-columns:repeat(3,52px); gap:6px; top:calc(60px + var(--sat)); }
-  #tab-home .lobby-left .sq-btn { width:52px; min-height:60px; height:60px; padding:4px 2px; font-size:9px!important; line-height:1.2; }
-  #tab-home .lobby-left .ic,#tab-home .lobby-left .sq-btn::before { width:24px; height:24px; }
+  #tab-home .lobby-left { grid-template-columns:repeat(3,52px); gap:4px 6px; top:calc(60px + var(--sat)); }
+  #tab-home .lobby-left .sq-btn { width:52px; min-height:48px; height:48px; padding:2px; gap:2px; font-size:9px!important; line-height:1.2; }
+  #tab-home .lobby-left .ic,#tab-home .lobby-left .sq-btn::before { width:20px; height:20px; }
   #tab-home .lobby-hero-name { bottom:calc(228px + var(--sab)); }
   #tab-home #lobby-hero-name { font-size:24px; }
   #tab-home .lobby-bottom { gap:6px; }

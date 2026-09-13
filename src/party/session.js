@@ -11,6 +11,7 @@ import { PartyView } from './view.js';
 import { capturePartyWarnings, PartyCombatEffects } from './combat-effects.js';
 import { queuePartyVisual } from './visual-protocol.js';
 import { capturePartyEffects, PartyVisualPlayer } from './visual-effects.js';
+import { PartyPresence } from './presence.js';
 
 const ERRORS = { 'not-ready':'모두 준비를 마쳐야 출격할 수 있습니다.', 'not-host':'방장만 출격할 수 있습니다.',
   'full':'파티가 가득 찼습니다.', 'running':'이미 출격한 파티입니다.', 'expired':'초대가 만료됐습니다. 새 파티를 만들어 주세요.',
@@ -22,13 +23,34 @@ export class PartySession {
     this.heroId = app.eco.s.selected;
     this.inviteCode = canonicalPartyCode(new URL(location.href).searchParams.get('party'));
     this.view = new PartyView(this); this.generation = 0; this.actorSeq = 0;
-    this._health = setInterval(() => {
-      if (this.run && !this.finishing && performance.now() - this.lastMessage > 12000) this.abort('연결 응답이 없습니다. 원정을 종료했습니다.');
-    }, 2000);
+    this.presence = new PartyPresence(performance.now());
+    this._health = setInterval(() => this.checkConnection(), 1000);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && this.party && !this.finishing) { this.presence.resume(performance.now()); this.checkConnection(); }
+    });
     window.addEventListener('pagehide', () => this.socket?.close(1000, 'page left'));
     if (PARTY_CODE.test(this.inviteCode)) this.view.open();
   }
   get isHost() { return !!this.playerId && this.party?.hostId === this.playerId; }
+  connectionStatus() { return this.presence.status(performance.now(), { running: !!this.run && this.ready,
+    isHost: this.isHost, paused: !!this.snapshot?.paused }); }
+  checkConnection() {
+    if (!this.party || this.finishing || this.socket?.readyState !== WebSocket.OPEN) return;
+    const now = performance.now();
+    if (this.presence.shouldPing(now)) this.send({ type: 'ping' });
+    // Mobile browsers can suspend timers. Recheck on return instead of treating
+    // time spent suspended as proof of a broken connection.
+    if (document.hidden) return;
+    const status = this.connectionStatus();
+    if (status.kind === 'ended') {
+      const reason = status.reason === 'host-timeout' ? '방장에게서 60초 동안 전투 정보가 도착하지 않아 원정을 종료했습니다.'
+        : '파티 서버의 응답이 없습니다. 연결을 확인한 뒤 다시 참가해 주세요.';
+      if (this.run) this.abort(reason);
+      else { this.leave(); this.view.message(reason); }
+      return;
+    }
+    this.view.updatePresence(status);
+  }
   send(message) { if (this.socket?.readyState === WebSocket.OPEN && this.socket.bufferedAmount < 128 * 1024) { this.socket.send(JSON.stringify(message)); return true; } return false; }
   inviteUrl() { const url = new URL(location.href); url.search = ''; url.hash = ''; url.searchParams.set('party', this.party.code); return url.href; }
   async create() {
@@ -56,22 +78,23 @@ export class PartySession {
     url.searchParams.set('name', this.name); url.searchParams.set('hero', this.heroId);
     url.searchParams.set('visuals', '1');
     if (ticket) url.searchParams.set('ticket', ticket);
-    const socket = this.socket = new WebSocket(url); this.lastMessage = performance.now();
+    const socket = this.socket = new WebSocket(url); this.lastMessage = performance.now(); this.presence.reset(this.lastMessage);
     return new Promise((resolve, reject) => {
       let welcomed = false;
       const timeout = setTimeout(() => { socket.close(); reject(new Error('파티 연결 시간이 초과됐습니다.')); }, 10000);
       socket.addEventListener('message', e => {
         if (generation !== this.generation) return;
-        this.lastMessage = performance.now();
         let message; try { message = JSON.parse(e.data); } catch { return; }
+        this.lastMessage = performance.now(); this.presence.reply(this.lastMessage);
         if (message.type === 'welcome') { welcomed = true; clearTimeout(timeout); resolve(); }
         this.receive(message);
       });
-      socket.addEventListener('close', () => {
+      socket.addEventListener('close', event => {
         clearTimeout(timeout); if (generation !== this.generation) return;
+        this.lastClose = { code: event.code, reason: event.reason, at: new Date().toISOString() };
         if (!welcomed) reject(new Error('파티에 참가하지 못했습니다. 코드·인원·출격 여부를 확인해 주세요.'));
         else if (this.run && !this.finishing) this.abort('파티 연결이 끊겼습니다. 다시 파티를 만들어 주세요.');
-        else if (!this.finishing) { this.party = null; this.view.render(); this.view.message('파티 연결이 종료됐습니다.'); }
+        else if (!this.finishing) { this.party = null; this.view.render(); this.view.message('파티 연결이 종료됐습니다. 새 파티를 만들거나 초대 코드로 다시 참가해 주세요.'); }
       });
       socket.addEventListener('error', () => { clearTimeout(timeout); if (!welcomed) reject(new Error('파티 서버에 연결하지 못했습니다.')); });
     });
@@ -84,10 +107,15 @@ export class PartySession {
       const input = this.inputs.get(message.playerId); if (input) { input.receive(message, performance.now()); this.loaded.add(message.playerId); }
     } else if (message.type === 'snapshot' && !this.isHost && this.run && validPartySnapshot(message.snapshot)) {
       if (message.seq <= (this.snapshotSeq ?? -1)) return; this.snapshotSeq = message.seq; this.snapshot = message.snapshot;
+      this.presence.snapshot(performance.now());
       this.pendingEvents.push(...message.snapshot.events); this.pendingEvents = this.pendingEvents.slice(-64);
       for (const visual of message.snapshot.visuals || []) queuePartyVisual(this.pendingVisuals,visual);
     } else if (message.type === 'finish' && this.run?.runId === message.runId) this.complete(message.win, message.stats);
-    else if (message.type === 'abort') this.abort('파티원이 연결을 종료해 원정을 마쳤습니다.');
+    else if (message.type === 'abort') {
+      const reason = message.reason === 'expired' ? '파티 유효 시간 45분이 지나 원정을 종료했습니다.'
+        : message.reason === 'host-left' ? '방장의 연결이 종료됐습니다. 새 파티를 만들어 주세요.' : '파티원의 연결이 종료돼 원정을 마쳤습니다.';
+      if (this.run) this.abort(reason); else { this.leave(); this.view.message(reason); }
+    }
     else if (message.type === 'error') this.view.message(ERRORS[message.error] || '요청을 처리하지 못했습니다. 준비 상태를 확인해 주세요.');
   }
   start() {
@@ -100,7 +128,7 @@ export class PartySession {
     this.run = run; this.members = members; this.finishing = false; this.finishSent = false; this.snapshot = null; this.snapshotSeq = -1;
     this.seq = 0; this.tick = 0; this.sendT = 0; this.hudT = 0; this.events = []; this.pendingEvents = []; this.loaded = new Set();
     this.visuals=[]; this.pendingVisuals=[];
-    this.loadStarted = performance.now(); this.lastMessage = performance.now(); this.view.dialog.close();
+    this.loadStarted = performance.now(); this.lastMessage = performance.now(); this.presence.reset(this.lastMessage); this.view.dialog.close();
     const app = this.app; app.stageStarting = true;
     try {
       app.ui.hideResult(); app.ui.closeModal(); app.journeyView?.close(); app.arsenalView?.close(); app.ui.show(document.getElementById('meta'), false);
@@ -114,6 +142,7 @@ export class PartySession {
       app.battle.player.auto = false; document.getElementById('btn-auto').classList.remove('on');
       app.battle.chronicle.hud.hidden = true; app.battle.rpgView.hudButton.hidden = true;
       this.loaded.add(this.playerId); this.ready = true;
+      this.presence.resume(performance.now());
       if (this.isHost) app.battle.setPaused('party-loading', true);
       this.view.updateHud();
       app.ui.toast(this.isHost ? '파티원들의 던전 입장을 기다립니다.' : '파티 던전 입장 · 함께 길을 여세요.', 'gold');
@@ -197,7 +226,6 @@ export class PartySession {
         if (this.loaded.size === this.members.length) { b.setPaused('party-loading',false); this.app.ui.toast('모두 입장했습니다. 함께 출격!', 'gold'); }
         else if (performance.now() - this.loadStarted > 25000) { this.abort('파티원 입장 시간이 초과됐습니다.'); this.socket?.close(); return; }
       }
-      // Incoming guest inputs keep the host connection alive too.
       this.sendT += dt;
       if (this.sendT >= .12) { this.sendT = 0; this.send({type:'snapshot',seq:++this.seq,snapshot:this.snapshotOf()}); }
     }
@@ -208,7 +236,8 @@ export class PartySession {
     const b = this.app.battle, input = this.app.input;
     input.update(); this.sendT += dt;
     if (this.sendT >= .06) {
-      this.sendT = 0; const paused = b.paused || document.hidden || this.snapshot?.paused;
+      this.sendT = 0; const paused = b.paused || document.hidden || this.snapshot?.paused
+        || this.connectionStatus().kind === 'checking' || this.presence.worldWaiting(performance.now());
       const attack = input.attackHeld || input.consume('attack');
       const actions = input.queue.splice(0).filter(a => PARTY_ACTIONS.includes(a));
       this.send({type:'input',seq:++this.seq,x:paused?0:input.move.x,y:paused?0:input.move.y,attack:!paused&&attack,actions:paused?[]:actions});
@@ -291,6 +320,7 @@ export class PartySession {
   }
   leave() {
     ++this.generation;this.socket?.close(1000,'left');this.socket=null;this.run=null;this.finishing=false;this.party=null;this.view.hud.hidden=true;
+    this.presence.reset(performance.now()); this.view.updatePresence({kind:'connected'});
     document.body.classList.remove('party-playing');
     if(this.app.mode==='battle')this.app.toLobby();this.view.message('');this.view.render();
   }

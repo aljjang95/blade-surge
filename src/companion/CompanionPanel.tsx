@@ -4,6 +4,7 @@ import { AnimationMixer } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { clone as cloneSkeleton } from 'three/addons/utils/SkeletonUtils.js';
+import { createPortal } from 'react-dom';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import type { CompanionTactic } from './companion-agent';
 import type { CompanionDirector } from './director';
@@ -18,6 +19,7 @@ const QUICK_LINES = ['지금 어디로?', '장비 조언해줘', '상태 보고'
 
 interface CompanionPanelProps {
   director: CompanionDirector;
+  host: HTMLElement;
 }
 
 interface PortraitBoundaryState {
@@ -106,7 +108,7 @@ function Portrait3D({ quality }: { quality: 'high' | 'mid' | 'low' }) {
   );
 }
 
-export function CompanionPanel({ director }: CompanionPanelProps) {
+export function CompanionPanel({ director, host }: CompanionPanelProps) {
   const snapshot = useSyncExternalStore(director.subscribe, director.getSnapshot, director.getSnapshot);
   const [input, setInput] = useState('');
   const launcherRef = useRef<HTMLButtonElement>(null);
@@ -114,6 +116,24 @@ export function CompanionPanel({ director }: CompanionPanelProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const wasOpen = useRef(false);
   const logRef = useRef<HTMLDivElement>(null);
+  const lobby = snapshot.context.mode === 'lobby';
+  const lobbyTarget = lobby ? document.querySelector<HTMLElement>('.lobby-left') : null;
+
+  const launcher = (
+    <button
+      ref={launcherRef}
+      className={`companion-launcher ${lobby ? 'sq-btn companion-lobby-launcher' : 'companion-battle-launcher'} ${snapshot.connected ? 'is-connected' : ''}`}
+      type="button"
+      aria-expanded={snapshot.open}
+      aria-controls="companion-panel"
+      aria-label={`네브와 대화하기. 현재 ${snapshot.status}`}
+      onClick={() => director.toggleOpen()}
+    >
+      <span className="companion-launcher-mark" aria-hidden="true">N</span>
+      <span className="companion-launcher-copy"><b>네브</b><small>{snapshot.status}</small></span>
+      <span className="companion-link-dot" aria-hidden="true" />
+    </button>
+  );
 
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
@@ -146,19 +166,7 @@ export function CompanionPanel({ director }: CompanionPanelProps) {
 
   return (
     <div className={`companion-ui ${snapshot.connected ? 'is-connected' : ''}`}>
-      <button
-        ref={launcherRef}
-        className="companion-launcher"
-        type="button"
-        aria-expanded={snapshot.open}
-        aria-controls="companion-panel"
-        aria-label={`네브와 대화하기. 현재 ${snapshot.status}`}
-        onClick={() => director.toggleOpen()}
-      >
-        <span className="companion-launcher-mark" aria-hidden="true">N</span>
-        <span className="companion-launcher-copy"><b>네브</b><small>{snapshot.status}</small></span>
-        <span className="companion-link-dot" aria-hidden="true" />
-      </button>
+      {lobbyTarget ? createPortal(launcher, lobbyTarget) : launcher}
 
       {snapshot.open && (
         <section id="companion-panel" className="companion-panel" role="dialog" aria-label="네브 동행 전술 대화">

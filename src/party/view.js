@@ -16,7 +16,10 @@ export class PartyView {
     this.body = node('div'); this.dialog.append(this.body); document.body.append(this.dialog);
     this.dialog.addEventListener('cancel', event => { if (this.session.run) event.preventDefault(); });
     this.notice = node('p', 'party-message'); this.notice.setAttribute('role', 'status'); this.dialog.append(this.notice);
+    this.connectionNote = node('p', 'party-message'); this.connectionNote.setAttribute('role', 'status'); this.connectionNote.hidden = true; this.dialog.append(this.connectionNote);
     this.hud = node('div', 'party-hud'); this.hud.setAttribute('aria-label', '파티원 상태'); this.hud.hidden = true; document.body.append(this.hud);
+    this.hpList = node('div', 'party-health-list'); this.battleNotice = node('div', 'party-presence');
+    this.battleNotice.setAttribute('role', 'status'); this.battleNotice.hidden = true; this.hud.append(this.hpList, this.battleNotice);
     this.render();
   }
   open() { this.render(); if (!this.dialog.open) this.dialog.showModal(); }
@@ -24,6 +27,7 @@ export class PartyView {
   button(text, action, parent = this.body) { const b = node('button', 'party-button', text); b.type = 'button'; b.onclick = action; parent.append(b); return b; }
   render() {
     const s = this.session, party = s.party; this.body.replaceChildren();
+    if (!party) this.updatePresence({ kind: 'connected' });
     if (!party || party.status === 'closed') {
       const label = node('label', '', '모험가 이름'); const name = node('input'); name.maxLength = 20; name.value = s.name; name.setAttribute('aria-label', '모험가 이름'); label.append(name); this.body.append(label);
       const heroLabel = node('label', '', '함께할 영웅'); const hero = node('select'); hero.setAttribute('aria-label', '파티 영웅');
@@ -37,7 +41,7 @@ export class PartyView {
     }
     const invite = node('div', 'party-invite'); const code = node('input'); code.value = party.code.match(/.{1,5}/g).join('-'); code.readOnly = true; code.setAttribute('aria-label', '파티 초대 코드'); invite.append(code);
     this.button('초대 링크 복사', async () => { try { await navigator.clipboard.writeText(s.inviteUrl()); this.message('초대 링크를 복사했습니다.'); } catch { code.value = s.inviteUrl(); code.select(); this.message('초대 링크를 선택했습니다. 복사해 친구에게 보내 주세요.'); } }, invite); this.body.append(invite);
-    this.body.append(node('p', 'party-fine', '방장이 같은 세계를 진행합니다. 방장이 화면을 떠나거나 메뉴를 열면 잠시 멈출 수 있습니다. 연결이 끊기면 원정이 종료됩니다.'));
+    this.body.append(node('p', 'party-fine', '방장이 같은 세계를 진행합니다. 방장이 메뉴를 열면 일시 정지하며, 화면을 떠나 전투 정보가 멈추면 최대 60초 동안 기다립니다. 파티는 생성 후 45분 동안 유효합니다.'));
     const list = node('ul', 'party-members');
     for (const m of party.members) {
       const li = node('li'); const img = node('img'); img.src = HEROES[m.heroId].portrait; img.alt = '';
@@ -63,14 +67,25 @@ export class PartyView {
   updateHud() {
     const s = this.session; this.hud.hidden = !s.run || s.finishing;
     if (this.hud.hidden) return;
-    this.hud.replaceChildren();
+    this.hpList.replaceChildren();
     for (const member of s.members) {
       const p = s.players.get(member.id); if (!p) continue;
       const chip = node('div', 'party-chip'); const bar = node('progress'); bar.max = p.maxHp; bar.value = p.hp;
-      chip.append(node('span', '', member.name + (p.hp <= 0 ? ' · 합류 대기' : '')), bar); this.hud.append(chip);
+      chip.append(node('span', '', member.name + (p.hp <= 0 ? ' · 합류 대기' : '')), bar); this.hpList.append(chip);
+    }
+    this.updatePresence(s.connectionStatus());
+  }
+  updatePresence(status) {
+    const text = { checking: '연결 확인 중 · 잠시 기다려 주세요.',
+      'host-waiting': '방장 응답 대기 · 전투 정보가 도착하면 이어집니다.',
+      'host-paused': '방장이 원정을 일시 정지했습니다.' }[status.kind] || '';
+    for (const note of [this.connectionNote, this.battleNotice]) {
+      if (note.textContent !== text) note.textContent = text;
+      note.hidden = !text;
     }
   }
   result(win, stats, reason) {
+    this.updatePresence({ kind: 'connected' });
     this.hud.hidden = true; this.body.replaceChildren();
     this.body.append(node('h3', '', win ? '함께 이뤄낸 승리' : '다음 원정에서 다시 만나요'));
     this.body.append(node('p', '', reason || `${stats.roomsCleared}개 구역 · ${stats.kills}마리 처치 · ${Math.round(stats.elapsed)}초`));

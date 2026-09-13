@@ -50,8 +50,12 @@ try {
   assert.notEqual(hw.playerId, gw.playerId); assert.equal(gw.party.hostId, hw.playerId);
   guest.send({ type: 'start', stageIdx: 1, seed: 123 });
   assert.equal((await guest.wait('error')).error, 'host-only');
+  host.send({ type: 'ping' });
+  assert.deepEqual(await host.wait('pong'), { type: 'pong' });
   host.send({ type: 'stage', stageIdx: 60 });
   for (;;) { const message = await guest.wait('party'); if (message.party.stageIdx === 60) { assert.equal(message.party.members.every(p => !p.ready), true); break; } }
+  // The later stage broadcast is an ordered delivery barrier; no sleep needed.
+  assert.equal(guest.messages.some(m => m.type === 'pong'), false);
   host.send({ type: 'ready', ready: true }); guest.send({ type: 'ready', ready: true });
   // Each queue contains old membership events; wait until both ready changes arrived.
   for (;;) { const message = await host.wait('party'); if (message.party.members.length === 2 && message.party.members.every(p => p.ready)) break; }
@@ -59,8 +63,12 @@ try {
   const hs = await host.wait('start'), gs = await guest.wait('start');
   assert.equal(hs.run.runId, gs.run.runId);
   assert.equal(gs.run.stageIdx, 60);
+  guest.send({ type: 'ping' });
+  assert.deepEqual(await guest.wait('pong'), { type: 'pong' });
   guest.send({ type: 'input', seq: 1, x: 1, y: 0, attack: true, actions: ['skill4'] });
   assert.equal((await host.wait('input')).playerId, gw.playerId);
+  // The later input reaches host after any incorrectly broadcast guest pong.
+  assert.equal(host.messages.some(m => m.type === 'pong'), false);
   const snapshot = { tick: 1, elapsed: 0.1, players: hs.members.map(p => ({ id: p.id, heroId: p.heroId,
     x: 0, z: 0, yaw: 0, hp: 100, maxHp: 100, state: 'idle', anim: 'Idle', ult: 0, cds: [0,0,0,0,0,0] })),
     enemies: [], rooms: [], roomsCleared: 0, bossDefeated: false, portal: null, events: [], projectiles: [],
@@ -91,7 +99,7 @@ try {
   console.log(JSON.stringify({ ok: true, runtime: 'local-workerd', origin: 'denied-cross-origin',
     players: 2, hostTicket: 'verified-no-secret-output', inputRelay: true, snapshotRelay: true,
     forgedHostDenied: true, midRunJoinDenied: true, lobbyStageSync: true, visualRelay: true, legacyVisualCompatibility: true,
-    hostDisconnect: 'abort-no-reward', sharedFinish: true }));
+    hostDisconnect: 'abort-no-reward', sharedFinish: true, lobbyPong: true, runningPong: true, pongNotBroadcast: true }));
 } finally {
   for (const socket of sockets) { try { socket.close(1000, 'proof-complete'); } catch {} }
   await mf.dispose();
