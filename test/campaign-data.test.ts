@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { CHAPTERS, ENEMIES, stageDef } from '../src/data/stages.js';
 import { CAMPAIGN, CHAPTER_SCENES, journalEntries } from '../src/data/campaign-story.js';
 import { MODEL_LIST } from '../src/engine/assets.js';
+import { BOSS_SIGNATURES } from '../src/data/boss-encounters.js';
 
 const stages = CHAPTERS.flatMap(ch => Array.from({ length: 10 }, (_, i) => stageDef(ch.id, i + 1)));
 const enemies = ENEMIES as Record<string, any>;
@@ -40,13 +41,14 @@ describe('다섯 맹세 캠페인 데이터', () => {
   });
   test('모든 웨이브·로스터·소환·패턴은 존재하는 런타임 자산을 가리킨다', () => {
     const loadedModels = new Set(MODEL_LIST);
-    const patterns = new Set(['spin', 'slam', 'summon', 'fan', 'soulrain', 'dash']);
+    const patterns = new Set(['spin', 'slam', 'summon', 'fan', 'soulrain', 'dash', ...Object.keys(BOSS_SIGNATURES)]);
     for (const stage of stages) {
       const enemy = enemies[stage.encounter.enemyId];
       expect(enemy.boss).toBe(true);
       expect(loadedModels.has(enemy.model)).toBe(true);
       expect(enemies[enemy.summon]).toBeDefined();
       expect(enemy.pattern.every((key: string) => patterns.has(key))).toBe(true);
+      if (enemy.phasePatterns) expect(enemy.phasePatterns.flat().every((key: string) => patterns.has(key))).toBe(true);
       expect(['boss_warlord', 'boss_demon', 'boss_dragon']).toContain(enemy.voiceKey);
       const roster = stage.rosterFor();
       for (const id of [...stage.waves.flat(), ...roster.trash, ...roster.ranged, ...roster.elite]) expect(enemies[id]).toBeDefined();

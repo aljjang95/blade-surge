@@ -102,6 +102,8 @@ export class RegionHazards {
     const room = g.world.roomAt(anchor.pos.x, anchor.pos.z);
     if (room !== this.room) { this.room = room; this.cooldown = 5; this.clear(); }
     if (!room || room.cleared || !room.spawned || room.type === 'start' || room.type === 'treasure') { this.clear(); return; }
+    // The finale owns its readable cast schedule. Do not stack unrelated room hazards on it.
+    if(g.enemies?.some(e=>e.alive&&e.def?.signatureBoss&&e.homeRoom===room)){this.clear();this.cooldown=5;return;}
     this.cooldown -= dt;
     if (this.cooldown <= 0) { this.spawn(room, anchor); this.cooldown = this.rule.period + (room.type === 'boss' ? 0 : 3); }
     for (const s of this.slots) {

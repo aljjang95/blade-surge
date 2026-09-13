@@ -1,5 +1,6 @@
 import { DUNGEONS, ARENA_RIVALS, MATERIALS, MATERIAL_REFINING, CONSUMABLES, JOBS, RECIPES, EXPEDITION_QUESTS, accountLevelXp } from '../data/expansion.js';
 import { ITEM_BY_ID } from '../data/items.js';
+import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { normalizeJourney, refreshPeriods, recordJourneyWin } from './journey-core.js';
 import { riftForDay, riftBonus } from './journey-rifts.js';
 const find = (list, id) => list.find(x => x.id === id);
@@ -127,7 +128,8 @@ export class ExpeditionEconomy {
   recordCampaign(result, stage) {
     if (!result || typeof result !== 'object' || result.win !== true || this.receipts.has(result)) return { ok: false, error: '기록할 새 승리가 없습니다.' };
     const code = stage?.code || `${stage?.ch}-${stage?.st}`;
-    if (!/^[1-5]-(?:[1-9]|10)$/.test(code)) return { ok: false, error: '캠페인 스테이지가 아닙니다.' };
+    const match = typeof code === 'string' && /^([1-9]\d*)-([1-9]\d*)$/.exec(code);
+    if (!match || match[0] !== code || !CHAPTERS.some(ch => ch.id === Number(match[1])) || Number(match[2]) > STAGES_PER_CHAPTER || stage?.expedition) return { ok: false, error: '캠페인 스테이지가 아닙니다.' };
     const id = typeof result.receiptId === 'string' && result.receiptId.length > 0 && result.receiptId.length <= 100 ? `run:${result.receiptId}` : `first:${code}`;
     if (this.s.campaignReceipts.includes(id)) return { ok: false, error: '이미 기록한 승리입니다.' };
     const out = this.transact(() => { this.s.campaignReceipts.push(id); this.s.stats.campaignWins++; return { ok: true, rewards: this.reward({ xp: 35 }) }; });

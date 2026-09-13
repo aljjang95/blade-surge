@@ -22,9 +22,12 @@ for(const [engine,launcher] of Object.entries({chromium,firefox,webkit})){
     const rect=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height};};
     const buttons=[...document.querySelectorAll('.lobby-left button')].map(e=>{const r=rect(e),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {...r,name:e.getAttribute('aria-label')||e.textContent,hit:hit===e||e.contains(hit),inside:r.x>=0&&r.y>=0&&r.right<=innerWidth+1&&r.bottom<=innerHeight+1};});
     const neve=document.querySelector('.companion-lobby-launcher'),battle=document.querySelector('#btn-battle'),a=rect(neve),b=rect(battle);
-    return {buttons,neve:a,battle:b,neveOverlapsDeparture:Math.min(a.right,b.right)>Math.max(a.x,b.x)&&Math.min(a.bottom,b.bottom)>Math.max(a.y,b.y),overflow:document.documentElement.scrollWidth>innerWidth+1};
+    const caption=rect(document.querySelector('.lobby-hero-name')),goal=rect(document.querySelector('.journey-strip')),stage=rect(document.querySelector('#stage-pill'));
+    const overlaps=(a,b)=>Math.min(a.right,b.right)-Math.max(a.x,b.x)>1&&Math.min(a.bottom,b.bottom)-Math.max(a.y,b.y)>1;
+    return {buttons,neve:a,battle:b,caption,goal,stage,captionOverlaps:buttons.some(r=>overlaps(caption,r))||[goal,stage,b].some(r=>overlaps(caption,r)),neveOverlapsDeparture:overlaps(a,b),overflow:document.documentElement.scrollWidth>innerWidth+1};
    });
    layout.viewport=size;r.layouts.push(layout);assert(layout.buttons.length===11,'Expected 11 menu actions');assert(layout.buttons.every(b=>b.inside&&b.hit&&b.width>=44&&b.height>=44),'Blocked or clipped menu action '+JSON.stringify(layout.buttons.filter(b=>!b.inside||!b.hit)));assert(!layout.neveOverlapsDeparture&&!layout.overflow,'Neve overlap or page overflow');
+   assert(!layout.captionOverlaps&&layout.caption.y>=0&&layout.caption.bottom<=size.height&&layout.goal.height>=44,'Hero caption overlaps goal, stage or menu: '+JSON.stringify(layout));
    await page.locator('#app-mode-open').tap();await page.locator('#app-mode-dialog[open]').waitFor();
    assert(await page.locator('#app-mode-guide li').count()===3,'Install steps missing');
    await page.screenshot({path:`${dir}/${engine}-${size.width}-app.png`});await page.getByRole('button',{name:'앱 화면 안내 닫기',exact:true}).tap();
