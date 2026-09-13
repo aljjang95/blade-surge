@@ -5,6 +5,8 @@ import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { HEROES } from '../data/heroes.js';
 import { assembleHeroIdentity } from './hero-identity.js';
+import { assembleEncounterIdentity } from './encounter-identity.js';
+import { ENCOUNTER_MODELS } from '../data/encounter-models.js';
 import { preloadSurfaceTextures, projectSurfaceUV, surfaceRole, applySurfaceDetail } from './surface-textures.js';
 
 const loader = new GLTFLoader();
@@ -30,13 +32,17 @@ export const MONSTER_MODELS = [
   'Flying_Ghost', 'Flying_Ghost_Skull', 'Flying_Dragon', 'Flying_Dragon_Evolved',
   'Flying_Armabee', 'Flying_Armabee_Evolved', 'Flying_Hywirl', 'Flying_Squidle', 'Flying_Glub', 'Flying_Goleling_Evolved',
 ];
-export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, 'dungeon', 'skel_weapons'];
+export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, ...Object.keys(ENCOUNTER_MODELS), 'dungeon', 'skel_weapons'];
 
 /** @param {string} name @param {ModelContract|null} contract */
 export async function loadModel(name, contract = null) {
   const key = name + '|' + JSON.stringify(contract);
   if (cache.has(key)) return cache.get(key);
-  const p = loader.loadAsync(`/models/${name}.glb`).then(async (gltf) => {
+  const variant = !contract && ENCOUNTER_MODELS[name];
+  const p = (variant ? Promise.all([loadModel(variant.base), loader.loadAsync(`/models/tll/encounters/${variant.file}.glb`)]).then(([base, authored]) => {
+    // Skeleton clone keeps the cached original unchanged. Immutable base buffers/textures are shared.
+    return assembleEncounterIdentity({ scene: skeletonClone(base.scene), animations: base.animations }, authored, name, variant);
+  }) : loader.loadAsync(`/models/${name}.glb`)).then(async (gltf) => {
     if (!contract && name === 'Ranger') {
       // Silva ships as one Blender-authored skin on the same KayKit medium rig.
       gltf.scene.userData.tllIdentity = 'casual-v2';
@@ -151,7 +157,7 @@ export function spawnCharacter(gltf) {
     const clone = (material) => {
       const next = material.clone();
       if (next.emissive) {
-        if (!contract) next.emissive.setScalar(0);
+        if (!contract && !next.userData.tllAuthored) next.emissive.setScalar(0);
         next.userData.authoredEmissive = next.emissive.clone();
         next.userData.baseEmissive = next.emissive.clone();
       }

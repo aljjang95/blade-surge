@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-09-13",
+  "command": "node tools/rift-runtime-qa.mjs",
+  "sourceSha256": {
+    "src/game/journey-rifts.js": "c3eff847775d2797333685dbe98d5642192921261fde1ef9184f5517cac2730d",
+    "src/game/rift-encounters.js": "6da6160052b80565e2e849011cb056b1cab87ffaaaf607bd2e66d2bdcf1245ba",
+    "src/game/masterworks-battle.js": "1986011db4a3f2146c510a74e9d6c682e79282ef4adb7b19be3b97f785e2aff3",
+    "test/rift-encounters.test.ts": "41b2325e2f136a1610ed38a61a05dd1a50237b14f104390eed3cbb8edeff2c20",
+    "test/journey-service.test.ts": "6e23db63210fb3a68a4fdec32c19aca80d1bdbd2e66b4a5167ce5a2a29aacc5f",
+    "tools/rift-runtime-qa.mjs": "4a08d520b90d388e8b96cd971374588f0ceabd6c51891c41b291d4cd325f6da7"
+  },
+  "tests": {
+    "failed": 0,
+    "command": "bun test test/rift-encounters.test.ts test/journey-service.test.ts test/masterworks-battle.test.ts",
+    "typecheck": "bun run typecheck: passed",
+    "passed": 38,
+    "assertions": 266
+  },
+  "runtime": {
+    "started": "2026-09-13T14:38:40.036Z",
+    "observed": [
+      "iron: 6 live enemies, 6 armor wrappers",
+      "fury: fixed radius 3 warning, one resolved avoidance and caster BREAK",
+      "siege: two actual reinforcements, zero XP, summoned and homeRoom flags, 8 alive under maxAlive 34",
+      "all three: runtime and scene group removed on lobby return"
+    ],
+    "browser": "151.0.7922.34",
+    "status": "pass",
+    "gpu": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+    "report": "work/rift-runtime-qa/report.json",
+    "finished": "2026-09-13T14:42:04.591Z",
+    "errors": [],
+    "screenshots": [
+      "work/rift-runtime-qa/iron.png",
+      "work/rift-runtime-qa/fury.png",
+      "work/rift-runtime-qa/siege.png"
+    ]
+  },
+  "reproduction": "Install project dependencies and Playwright Chromium, then run the command from the repository. The canonical tool was executed successfully on the final candidate. Starts and closes an owned loopback Vite server/browser and writes report.json and three PNGs under work/rift-runtime-qa.",
+  "limitations": [
+    "Software GPU, controlled production app.step at fixed 50 ms; not natural playthrough or device performance proof",
+    "Isolated browser save and fixture rift selection; no paid settlement or durable page reload resume",
+    "Source hashes identify this snapshot; future edits require rerun"
+  ],
+  "contracts": [
+    "All nine dungeon/rule combinations per nine-day window",
+    "Serialized ticket riftId is not recalculated at midnight",
+    "Existing reload refund/cancel behavior retained",
+    "Reinforcement reward bypass, maxAlive/pending and room completion enforced",
+    "Pause and teardown covered by targeted regression tests"
+  ],
+  "sourceHashEncoding": "UTF-8 with LF newlines"
+}

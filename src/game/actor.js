@@ -27,7 +27,7 @@ export class Actor {
     this.mats = []; this.model.traverse((o) => { if (o.isMesh) this.mats.push(...materialsOf(o).filter((m) => m.emissive)); });
     // 틴트: 곱하면 Quaternius 텍스처가 통짜 색으로 뭉개진다 → 원래 색과 lerp
     // KayKit 은 밝은 아틀라스라 틴트가 잘 먹지만, Quaternius 는 채도가 높아 색을 건드리면 통짜로 뭉갠다.
-    if (tint && rig === 'kaykit' && !this.model.userData.authoredContract) { const c = new THREE.Color(tint); for (const m of this.mats) m.color?.lerp(c, 0.85); }
+    if (tint && rig === 'kaykit' && !this.model.userData.authoredContract) { const c = new THREE.Color(tint); for (const m of this.mats) if (!m.userData.tllAuthored) m.color?.lerp(c, 0.85); }
     this.deathT = -1; this.hurtAnimT = 0;
     this.mixer.addEventListener('finished', (e) => this.onAnimFinished?.(e));
     game.scene.add(this.root);

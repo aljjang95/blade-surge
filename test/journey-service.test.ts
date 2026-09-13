@@ -71,7 +71,7 @@ test('rift ticket is bound to the current rotation; payout includes visible fixe
   const out=a.expedition.settle(b.ticket,{win:true});expect(out.rewards.gold).toBe(rotation.rewards.gold+200);
   expect(Object.values(out.rewards.materials)).toEqual([5]);expect(a.journey.s.daily.wins).toBe(1);
 });
-test('every rift modifies real enemy stats and never leaks into the AI arena',()=>{
+test('rift encounters preserve baseline stats and never leak into the AI arena',()=>{
   for(const rule of RIFT_RULES){const e={maxHp:100,hp:100,atk:10};applyRiftEnemy(e,{riftId:rule.id,expedition:{kind:'dungeon'}});expect(e.maxHp).toBe(Math.round(100*rule.hp));expect(e.atk).toBe(10*rule.atk);
     const ai={maxHp:100,hp:100,atk:10};applyRiftEnemy(ai,{riftId:rule.id,expedition:{kind:'arena'}});expect(ai).toEqual({maxHp:100,hp:100,atk:10});}
 });
