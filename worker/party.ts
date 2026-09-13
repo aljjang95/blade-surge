@@ -1,4 +1,5 @@
 import { PARTY_CODE, PARTY_LIMITS } from '../src/party/protocol.js';
+import { partyVisualMessage } from '../src/party/visual-protocol.js';
 import { PartyError, PartyState, type Effect } from './party-state';
 
 interface Storage {
@@ -45,7 +46,7 @@ export async function handlePartyRequest(request: Request, env: PartyEnv): Promi
   }
   const room = env.PARTIES.get(env.PARTIES.idFromName(`room:${code}`));
   const joinUrl = new URL('https://party.internal/join');
-  for (const key of ['name', 'hero', 'ticket']) {
+  for (const key of ['name', 'hero', 'ticket', 'visuals']) {
     const value = url.searchParams.get(key);
     if (value !== null) joinUrl.searchParams.set(key, value);
   }
@@ -57,6 +58,7 @@ export async function handlePartyRequest(request: Request, env: PartyEnv): Promi
 export class PartyRoom {
   private room?: PartyState;
   private sockets = new Map<string, Socket>();
+  private visualClients = new Set<string>();
   constructor(private readonly ctx: { storage: Storage }) {}
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url), now = Date.now();
@@ -94,6 +96,7 @@ export class PartyRoom {
       const result = this.room.join(url.searchParams.get('name') ?? '', url.searchParams.get('hero') ?? '', url.searchParams.get('ticket'), now);
       const pair = new WebSocketPair(), server = pair[1];
       server.accept(); this.sockets.set(result.id, server);
+      if (url.searchParams.get('visuals') === '1') this.visualClients.add(result.id);
       server.addEventListener('message', event => {
         try {
           if (Date.now() >= this.room!.expiresAt) { this.end('expired'); return; }
@@ -118,9 +121,10 @@ export class PartyRoom {
     const failed: string[] = [];
     for (const effect of effects) {
       const text = JSON.stringify(effect.message);
+      const legacyText = JSON.stringify(partyVisualMessage(effect.message, false));
       for (const [id, socket] of this.sockets) {
         if ((effect.to && effect.to !== id) || effect.except === id) continue;
-        try { socket.send(text); } catch { failed.push(id); }
+        try { socket.send(this.visualClients.has(id) ? text : legacyText); } catch { failed.push(id); }
       }
     }
     for (const id of new Set(failed)) this.drop(id, 'send-failed');
@@ -130,11 +134,12 @@ export class PartyRoom {
     const socket = this.sockets.get(id);
     if (!socket) return;
     this.sockets.delete(id);
+    this.visualClients.delete(id);
     try { socket.close(1000, reason); } catch { /* already closed */ }
     if (this.room) this.dispatch(this.room.disconnect(id));
   }
   private closeAll() {
-    const sockets = [...this.sockets.values()]; this.sockets.clear();
+    const sockets = [...this.sockets.values()]; this.sockets.clear(); this.visualClients.clear();
     for (const socket of sockets) { try { socket.close(1000, 'party-ended'); } catch { /* already closed */ } }
   }
   private end(reason: string) { if (this.room) this.dispatch(this.room.abort(reason)); this.closeAll(); }

@@ -1,0 +1,54 @@
+{
+  "date": "2026-09-13",
+  "scope": "Party combat visual readability",
+  "base": "02998468ec351223d01ce45b98bd30cd58e352c3",
+  "branch": "codex/party-skill-visibility-20260913",
+  "buildBundle": "index-BUAuZoDm.js",
+  "reproduction": {
+    "runtime": "Actual IAB clients connected to local Wrangler and SQLite Durable Object at 127.0.0.1:5198",
+    "before": "Knight sanctuary visible on host screenshot; the mage guest sees bare floor at the same party location",
+    "after": "Actual sanctuary button shows the gold ground circle on both clients; actual guest Blizzard button shows its ground circle on both clients",
+    "players": ["knight", "mage"],
+    "stage": "1-1",
+    "viewport": "1280x720",
+    "method": "Visible UI create, code join, ready, start and skill buttons; no injected game-state drivers or damage overrides",
+    "teardown": "Guest pause/give-up ends both clients; both return to lobby; host starts ordinary 1-2, shield-bash FX and AUTO work with ordinary progression HUD. Solo stopped via give-up after 68 kills / 59 max combo / 214677 damage / 51 displayed seconds, then returned to lobby; both local test tabs closed",
+    "screenshots": "Before/after images inspected directly in the Codex RSI conversation; no separate screenshot file artifact"
+  },
+  "checks": {
+    "command": "bun run check",
+    "tests": 542,
+    "assertions": 58282,
+    "failures": 0,
+    "typecheck": "pass",
+    "build": "pass",
+    "log": "work/party-visual-check.log",
+    "relayCommand": "node tools/party-relay-proof.mjs",
+    "relayLog": "work/party-visual-relay.log",
+    "realWorkerdVisualRelay": true,
+    "realWorkerdLegacyCompatibility": true,
+    "hostOnlySnapshots": true,
+    "disconnectAbortNoReward": true
+  },
+  "bounds": {
+    "allowedVisualMethods": 10,
+    "eventsPerSnapshot": 24,
+    "guestRenderWeight": 48,
+    "groundCueReserve": 12,
+    "maxLifetimeSeconds": 8,
+    "expiredEventsSkipped": true,
+    "reducedMotionStationaryGroundOnly": "unit verified"
+  },
+  "independentReview": {
+    "reviewer": "party_server",
+    "mode": "Read-only diff and call-path review; no duplicated full QA",
+    "confirmedP1P2": 0,
+    "checked": ["actual sanctuary calls", "no nested capture duplication", "vector copy", "queue consumption and lifetime", "render budget", "legacy field stripping without mutation", "proxy restoration and FX cleanup"]
+  },
+  "limits": [
+    "This iteration verifies party visual regression and solo return; full cooperative victory is the prior release's evidence",
+    "No physical-device FPS, four-client performance or external-network latency certification",
+    "Minor particles, model ghosts, sound and camera cinematics are not newly replicated by this patch",
+    "Dedicated browser console diagnostics were not collected during this iteration"
+  ]
+}

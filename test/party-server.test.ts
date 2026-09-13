@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { PartyState } from '../worker/party-state';
 import { handlePartyRequest, PartyRoom } from '../worker/party';
 import { PARTY_LIMITS, sanitizePartyName, validPartySnapshot } from '../src/party/protocol.js';
+import { capturePartyVisual } from '../src/party/visual-protocol.js';
 
 const now = 100000;
 function lobby() {
@@ -167,6 +168,16 @@ describe('bounded relay protocol', () => {
       for(const value of values) expect(valid([{...base,[key]:value}])).toBe(false);
     }
     expect(valid('not-array')).toBe(false);
+  });
+  test('cosmetic visuals relay only within bounded snapshots and never replace combat authority', () => {
+    const {room,host,guest}=running();
+    const visual=capturePartyVisual('castCircle',[{x:0,y:0,z:0},0xffd060,{radius:8,life:7}],.05);
+    const packet={...snapshot(room),visuals:[visual]};
+    expect(validPartySnapshot(packet)).toBe(true);
+    expect(validPartySnapshot({...packet,visuals:Array(25).fill(visual)})).toBe(false);
+    expect(validPartySnapshot({...packet,visuals:[{...visual,at:1}]})).toBe(false);
+    expect(() => send(room,guest,{type:'snapshot',seq:1,snapshot:packet})).toThrow('host-only');
+    expect((send(room,host,{type:'snapshot',seq:1,snapshot:packet})[0].message.snapshot as any).visuals).toEqual([visual]);
   });
   test('snapshot seq and simulation tick are monotonic', () => {
     const {room,host}=running();

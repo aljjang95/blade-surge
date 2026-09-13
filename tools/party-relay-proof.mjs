@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import { build } from 'esbuild';
 import { Miniflare, convertV4MiniflareOptions } from 'miniflare';
+import { capturePartyVisual } from '../src/party/visual-protocol.js';
 
 const bundle = await build({ stdin: { contents: `import { PartyRoom, handlePartyRequest } from './worker/party.ts';
 export { PartyRoom }; export default { fetch: handlePartyRequest };`, resolveDir: process.cwd(), loader: 'ts' },
@@ -12,8 +13,9 @@ const mf = new Miniflare(convertV4MiniflareOptions({ name: 'party-proof', module
   durableObjects: { PARTIES: { className: 'PartyRoom', useSQLite: true } } }));
 const headers = { Origin: 'https://game.example' };
 const sockets = [];
-async function join(code, hero, ticket) {
+async function join(code, hero, ticket, visuals = true) {
   const query = new URLSearchParams({ hero, name: hero });
+  if (visuals) query.set('visuals', '1');
   if (ticket) query.set('ticket', ticket);
   const response = await mf.dispatchFetch(`https://game.example/api/party/${code}?${query}`, {
     headers: { ...headers, Upgrade: 'websocket' },
@@ -61,15 +63,18 @@ try {
   assert.equal((await host.wait('input')).playerId, gw.playerId);
   const snapshot = { tick: 1, elapsed: 0.1, players: hs.members.map(p => ({ id: p.id, heroId: p.heroId,
     x: 0, z: 0, yaw: 0, hp: 100, maxHp: 100, state: 'idle', anim: 'Idle', ult: 0, cds: [0,0,0,0,0,0] })),
-    enemies: [], rooms: [], roomsCleared: 0, bossDefeated: false, portal: null, events: [], projectiles: [] };
+    enemies: [], rooms: [], roomsCleared: 0, bossDefeated: false, portal: null, events: [], projectiles: [],
+    visuals: [capturePartyVisual('castCircle',[{x:3,y:0,z:-4},0x80e0ff,{radius:7,life:3.2}],.05)] };
   guest.send({ type: 'snapshot', seq: 1, snapshot }); assert.equal((await guest.wait('error')).error, 'host-only');
-  host.send({ type: 'snapshot', seq: 1, snapshot }); assert.equal((await guest.wait('snapshot')).snapshot.tick, 1);
+  host.send({ type: 'snapshot', seq: 1, snapshot });
+  const relayed = (await guest.wait('snapshot')).snapshot;
+  assert.equal(relayed.tick, 1); assert.deepEqual(relayed.visuals, snapshot.visuals);
   const late = await join(code, 'mage'); assert.equal(late.response.status, 409);
   host.socket.close(1000, 'proof-disconnect');
   assert.equal((await guest.wait('abort')).reason, 'host-left');
   assert.equal(guest.messages.some(m => m.type === 'finish'), false);
   const second = await (await mf.dispatchFetch('https://game.example/api/party', { method: 'POST', headers })).json();
-  const h2 = await join(second.code, 'knight', second.hostTicket), g2 = await join(second.code, 'ranger');
+  const h2 = await join(second.code, 'knight', second.hostTicket), g2 = await join(second.code, 'ranger', null, false);
   await h2.wait('welcome'); await g2.wait('welcome');
   h2.send({ type: 'ready', ready: true }); g2.send({ type: 'ready', ready: true });
   for (;;) { const m = await h2.wait('party'); if (m.party.members.length === 2 && m.party.members.every(p => p.ready)) break; }
@@ -77,13 +82,16 @@ try {
   const r2 = await h2.wait('start'); await g2.wait('start');
   const finalSnapshot = { ...snapshot, bossDefeated: true, roomsCleared: 1,
     players: r2.members.map((p, i) => ({ ...snapshot.players[i], id: p.id, heroId: p.heroId })) };
-  h2.send({ type: 'snapshot', seq: 1, snapshot: finalSnapshot }); await g2.wait('snapshot');
+  h2.send({ type: 'snapshot', seq: 1, snapshot: finalSnapshot });
+  const legacySnapshot = (await g2.wait('snapshot')).snapshot;
+  assert.equal(Object.hasOwn(legacySnapshot,'visuals'),false); assert.deepEqual(legacySnapshot.players,finalSnapshot.players);
   h2.send({ type: 'finish', runId: r2.run.runId, win: true, stats: { elapsed: 30, kills: 5, roomsCleared: 1 } });
   const hf = await h2.wait('finish'), gf = await g2.wait('finish');
   assert.deepEqual(hf, gf); assert.equal(gf.win, true);
   console.log(JSON.stringify({ ok: true, runtime: 'local-workerd', origin: 'denied-cross-origin',
     players: 2, hostTicket: 'verified-no-secret-output', inputRelay: true, snapshotRelay: true,
-    forgedHostDenied: true, midRunJoinDenied: true, lobbyStageSync: true, hostDisconnect: 'abort-no-reward', sharedFinish: true }));
+    forgedHostDenied: true, midRunJoinDenied: true, lobbyStageSync: true, visualRelay: true, legacyVisualCompatibility: true,
+    hostDisconnect: 'abort-no-reward', sharedFinish: true }));
 } finally {
   for (const socket of sockets) { try { socket.close(1000, 'proof-complete'); } catch {} }
   await mf.dispose();
