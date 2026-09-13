@@ -62,14 +62,15 @@ test('overlapping ducks follow minimum active envelope and recover while combat 
   }
   const events=JSON.stringify(g.events);s.setMix({music:.3});s.updateCombatMix(.03,{active:true,boss:true,intensity:1});expect(JSON.stringify(g.events)).toBe(events);
 });
-test('rapid music crossfades stay bounded; toggle stops all tails and resumes latest requested Flow route',()=>{
+test('rapid music crossfades stay bounded; toggle stops all tails and resumes latest requested region',()=>{
   const s=fixture();const elements:any[]=[];
   const Original=(globalThis as any).Audio;
   (globalThis as any).Audio=class {paused=false;constructor(public url:string){elements.push(this);}play(){return Promise.resolve();}pause(){this.paused=true;}};
   try {
-    s.playMusic('a');s.playMusic('b');s.playMusic('expansion/flow-combat',{volume:.68});expect(s._musicTracks.size).toBe(2);expect(elements[0].paused).toBe(true);
+    s.playMusic('regions/lobby');s.playMusic('regions/garden');s.playMusic('regions/boss',{volume:.55});expect(s._musicTracks.size).toBe(2);expect(elements[0].paused).toBe(true);
     s.setMusicOn(false);expect(s._musicTracks.size).toBe(0);expect(elements.every(e=>e.paused)).toBe(true);
-    s.playMusic('expansion/flow-combat',{volume:.68});s.setMusicOn(true);expect(s.music.el.url).toBe('/bgm/expansion/flow-combat.mp3');expect(s.music.volume).toBe(.68);expect(s._musicTracks.size).toBe(1);
+    s.playMusic('regions/forge',{volume:.55});s.playMusic('regions/arena',{volume:.55});s.setMusicOn(true);expect(s.music.el.url).toBe('/bgm/regions/arena.mp3');expect(s.music.volume).toBe(.55);expect(s._musicTracks.size).toBe(1);
+    const count=elements.length;s.playMusic('regions/arena',{volume:.55});expect(elements).toHaveLength(count);
     s.setMusicOn(false);
   } finally {(globalThis as any).Audio=Original;}
 });

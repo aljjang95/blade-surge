@@ -43,6 +43,23 @@ for(const [engine,launcher] of Object.entries({chromium,firefox,webkit})){
   await page.setViewportSize({width:390,height:844});await page.locator('.companion-lobby-launcher').tap();await page.getByRole('dialog',{name:'네브 동행 전술 대화',exact:true}).waitFor({timeout:120000});
   await page.getByRole('button',{name:'대화 닫기',exact:true}).tap();await page.getByRole('dialog',{name:'네브 동행 전술 대화',exact:true}).waitFor({state:'hidden'});
   assert(await page.locator('.companion-lobby-launcher').evaluate(e=>document.activeElement===e),'Neve focus did not return');r.neve='actual open-close-focus return';
+  await page.locator('#btn-expedition').tap();await page.getByRole('button',{name:'결투장',exact:true}).tap();
+  await page.waitForFunction(()=>[...document.querySelectorAll('.exp-rivals article > img')].length===3&&[...document.querySelectorAll('.exp-rivals article > img')].every(e=>e.complete&&e.naturalWidth===768),null,{timeout:30000});
+  r.arena=[];
+  for(const size of [{width:320,height:568},{width:390,height:844},{width:667,height:375}]){
+   await page.setViewportSize(size);if(await page.locator('#btn-ignore-rotate').isVisible())await page.locator('#btn-ignore-rotate').tap();
+   const arena=await page.evaluate(()=>{
+    const portraits=[...document.querySelectorAll('.exp-rivals article > img')].map(e=>({src:e.getAttribute('src'),width:e.naturalWidth,height:e.naturalHeight,fallback:!!e.dataset.fallback}));
+    const rewards=[...document.querySelectorAll('.exp-rivals .exp-chips img')].map(e=>({width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height}));
+    const buttons=[...document.querySelectorAll('.exp-rivals button')].map(e=>({height:e.getBoundingClientRect().height}));
+    const cards=[...document.querySelectorAll('.exp-rivals article')].map(e=>{const b=e.getBoundingClientRect();return {left:b.left,right:b.right};});
+    return {portraits,rewards,buttons,cards,viewport:{width:innerWidth,height:innerHeight},overflow:document.documentElement.scrollWidth>innerWidth+1};
+   });
+   assert(new Set(arena.portraits.map(p=>p.src)).size===3&&arena.portraits.every(p=>!p.fallback&&p.width===768),'Duplicate or fallback arena portraits');
+   assert(arena.rewards.length===6&&arena.rewards.every(i=>i.width>0&&i.width<=36&&i.height>0&&i.height<=36),'Portrait sizing leaked into reward icons');
+   assert(arena.buttons.every(b=>b.height>=44)&&arena.cards.every(c=>c.left>=0&&c.right<=size.width+1)&&!arena.overflow,'Arena touch target or horizontal overflow');
+   r.arena.push(arena);await page.screenshot({path:`${dir}/${engine}-${size.width}-arena.png`});
+  }
   r.script=await page.locator('script[type=module][src]').getAttribute('src');assert(!r.errors.length,'Browser errors: '+r.errors.join('; '));r.status='pass';
  }catch(e){r.status='fail';r.error=String(e.stack||e);}
  finally{await browser.close();await save();console.log(engine+': '+r.status);}

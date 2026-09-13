@@ -1,5 +1,6 @@
 import { dungeonForStage } from './story-dungeons.js';
 import { stageStory } from './campaign-story.js';
+import { ENCOUNTER_ART } from './encounter-art.js';
 
 // 지역별 맹세와 기믹은 모험 화면과 전투가 함께 사용한다.
 export const CHAPTERS = [
@@ -157,8 +158,10 @@ for (const chapter of CHAPTERS) {
       armor: rank === 'captain' ? 0.12 : 0.2, atkTime: rank === 'finalboss' ? 1.7 : 1.9,
       kit: theme === 'garden' || theme === 'crown' ? 'warlord' : theme === 'frost' ? 'lich' : theme === 'tide' ? 'dragon' : 'reaper',
       voiceKey: theme === 'garden' || theme === 'crown' ? 'boss_warlord' : theme === 'tide' ? 'boss_dragon' : 'boss_demon',
-      portrait: base.portrait || (theme === 'garden' ? '/img/boss_warlord.webp' : theme === 'tide' ? '/img/boss_reaper.webp' : '/img/boss_lich.webp'),
+      portrait: ENCOUNTER_ART[(chapter.encounterPrefix || theme) + '_' + rank],
       projColor: Number.parseInt(chapter.color.slice(1), 16),
     };
   }
 }
+
+for (const id of ['boss_warlord', 'boss_demon', 'boss_dragon']) ENEMIES[id].portrait = ENCOUNTER_ART[id];

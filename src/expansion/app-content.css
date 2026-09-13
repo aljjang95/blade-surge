@@ -39,7 +39,8 @@
 #tab-stage .exp-arena-banner > div { padding:20px; }
 #tab-stage .exp-rivals article { padding:14px; }
 #tab-stage .exp-rivals h3 { font-size:19px; }
-#tab-stage .exp-rivals img { height:100px; }
+#tab-stage .exp-rivals article > img { height:100px; }
+#tab-stage .exp-rivals button { min-height:44px; }
 #btn-expedition[data-ready]:not([data-ready="0"])::after { content:attr(data-ready); position:absolute; top:7px; right:calc(50% - 24px); min-width:14px; padding:1px 3px; border-radius:9px; background:#eec05a; color:#2c2011; font-size:9px; }
 #hero-wardrobe { flex:0 0 30%; min-width:180px; position:relative; overflow:hidden; border-right:1px solid var(--line); background:radial-gradient(ellipse at 50% 42%,#386051 0,#172e29 42%,#141822 77%); }
 .wardrobe-view { position:absolute; inset:0; display:flex; flex-direction:column; }

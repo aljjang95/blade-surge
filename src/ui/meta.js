@@ -1,6 +1,7 @@
 import { $, fmt } from './ui.js';
 import { uiArt, resourceArt, RESOURCE_ART } from './illustrated.js';
 import { audio } from '../engine/audio.js';
+import { musicForScene, MUSIC_MIX } from '../data/music.js';
 import { heroVoiceName } from '../engine/hero-voice.js';
 import { HEROES, HERO_ORDER, RARITY, heroStats, levelExp, levelGold, starShards, skillUpGold } from '../data/heroes.js';
 import { ITEM_BY_ID, ITEM_ICON, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST, craftable, itemStats, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, enhanceMult, ENH_MAX, RARITY_COLOR , RARITY_INFO, rarityRank, enhanceDown} from '../data/items.js';
@@ -341,7 +342,7 @@ export class Meta {
     const R = $('reveal'); this.ui.show(R, true); this.app.setLobbyVisible(false);
     const stage = $('reveal-stage'), cards = $('reveal-cards'); stage.innerHTML = ''; cards.innerHTML = ''; $('reveal-foot').classList.add('hidden'); $('btn-reveal-skip').classList.remove('hidden');
     const best = results.some((r) => r.rar === 'SSR') ? 'SSR' : results.some((r) => r.rar === 'SR') ? 'SR' : 'R';
-    audio.playMusic('bgm_gacha', { fade: 0.5, volume: 0.5 }); audio.play('pack_open', { vol: 0.8 }); audio.magic({ vol: 0.4, base: 392, notes: [0, 4, 7, 12, 16, 19], step: 0.09 });
+    audio.playMusic(musicForScene({ scene: 'gacha' }), MUSIC_MIX); audio.play('pack_open', { vol: 0.8 }); audio.magic({ vol: 0.4, base: 392, notes: [0, 4, 7, 12, 16, 19], step: 0.09 });
     const beamColor = { R: '#4cc3ff', SR: '#b26bff', SSR: '#ffcf5a' }[best];
     // 광선 연출: 등급 예고 (SSR이면 금색 빔 + 화면 흔들림)
     setTimeout(() => { for (let i = 0; i < (best === 'SSR' ? 7 : best === 'SR' ? 4 : 2); i++) { const b = document.createElement('div'); b.className = 'beam'; b.style.setProperty('--c', beamColor); b.style.left = (50 + (i - 3) * 8) + '%'; b.style.animationDelay = i * 0.08 + 's'; stage.appendChild(b); } audio.play('ui_max', { vol: 0.7, rate: best === 'SSR' ? 0.6 : 1 }); if (best === 'SSR') { audio.vibe([50, 50, 50, 50, 200]); } }, 500);
@@ -359,7 +360,7 @@ export class Meta {
   }
   revealSkip() { this._revealTimers.forEach(clearTimeout); document.querySelectorAll('.rcard').forEach((c) => c.classList.add('flip')); audio.play('card_fan', { vol: 0.6 }); this.revealDone(); }
   revealDone() { $('reveal-foot').classList.remove('hidden'); $('btn-reveal-skip').classList.add('hidden'); const s = this.eco.s; $('btn-reveal-again').disabled = s.gems < GACHA.ten && s.tickets < 10; }
-  revealClose() { this.ui.show($('reveal'), false); this.app.setLobbyVisible(this.tab === 'home'); audio.playMusic('bgm_lobby'); this.refreshTop(); if (this._revealResults?.some((r) => r.type === 'hero' && !r.dup)) this.ui.toast('새 영웅 획득! 영웅 탭에서 출전 설정', 'gold'); }
+  revealClose() { this.ui.show($('reveal'), false); this.app.setLobbyVisible(this.tab === 'home'); audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX); this.refreshTop(); if (this._revealResults?.some((r) => r.type === 'hero' && !r.dup)) this.ui.toast('새 영웅 획득! 영웅 탭에서 출전 설정', 'gold'); }
   showRates() { this.ui.modal(`<h2>소환 확률</h2><table class="rates-table"><tr><td>SSR 영웅 (픽업 50%)</td><td style="color:var(--r-ssr)">1.5%</td></tr><tr><td>SSR 장비</td><td style="color:var(--r-ssr)">0.5%</td></tr><tr><td>SR 영웅</td><td style="color:var(--r-sr)">6.0%</td></tr><tr><td>SR 장비</td><td style="color:var(--r-sr)">6.0%</td></tr><tr><td>R 장비</td><td>86.0%</td></tr></table><p>${GACHA.pity}회 내 SSR 확정 · ${GACHA.softPity}회부터 확률 상승 · 10연차 SR 이상 1장 보장 · 중복 영웅은 조각 +10</p>${this.eco.s.ssrTickets ? `<button class="btn btn-gold" style="width:100%" id="m-ssr">SSR 확정권 사용 (${this.eco.s.ssrTickets})</button>` : ''}<div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); const s = b.querySelector('#m-ssr'); if (s) s.onclick = () => { this.ui.closeModal(); this.pullSSR(); }; } }); }
 
   // ================= 상점 =================

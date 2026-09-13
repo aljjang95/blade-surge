@@ -1,4 +1,6 @@
 import { BOONS, SYNERGIES, MASTERY_NODES, PATHS, CHALLENGES, STORY_EVENTS, BOUNTIES } from '../data/masterworks.js';
+import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
+const CAMPAIGN_STAGE_COUNT = CHAPTERS.length * STAGES_PER_CHAPTER;
 const MAX = 1000000;
 const obj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const int = (v, max = MAX) => Number.isSafeInteger(v) ? Math.min(max, Math.max(0,v)) : 0;
@@ -6,7 +8,12 @@ const list = v => Array.isArray(v) ? v : [];
 const ids = (v, defs) => [...new Set(list(v).filter(id => defs.some(d=>d.id===id)))];
 const pathId = v => PATHS.some(p=>p.id===v) ? v : 'balanced';
 const stats = ['kills','clears','eliteKills','perfects'];
-const discoveryKey = key => typeof key === 'string' && (/^campaign:([1-9]|[1-4][0-9]|50)$/.test(key) || /^room:([1-9]|[1-4][0-9]|50):([0-9]|1[0-9]|20)$/.test(key) || /^expedition:(glass_garden|ember_vault|star_archive):([0-9]|1[0-9]|20)$/.test(key));
+const discoveryKey = key => {
+  if (typeof key !== 'string') return false;
+  const campaign = /^(?:campaign:([1-9][0-9]*)|room:([1-9][0-9]*):([0-9]|1[0-9]|20))$/.exec(key);
+  if (campaign) return Number(campaign[1] || campaign[2]) <= CAMPAIGN_STAGE_COUNT;
+  return /^expedition:(glass_garden|ember_vault|star_archive):([0-9]|1[0-9]|20)$/.test(key);
+};
 const err = error => ({ok:false,error});
 
 export function normalizeMasterworks(raw) {
@@ -31,7 +38,7 @@ export function normalizeMasterworks(raw) {
     path:pathId(r.path), presets:Array.from({length:3},(_,i)=>({name:typeof r.presets?.[i]?.name === 'string' ? r.presets[i].name.replace(/[\x00-\x1f]/g,'').slice(0,24) : `준비 ${i+1}`,path:pathId(r.presets?.[i]?.path),challengeIds:ids(r.presets?.[i]?.challengeIds,CHALLENGES)})),
     activePreset:int(r.activePreset,2), challengeIds:ids(r.challengeIds,CHALLENGES), bounties:{counts,claimed},
     discoveries:[...new Set(list(r.discoveries).filter(discoveryKey))].slice(0,1200), story,
-    history:list(r.history).filter(h=>obj(h)&&['victory','defeat'].includes(h.outcome)).slice(-20).map(h=>({runId:int(h.runId),floor:Math.max(1,int(h.floor,50)),outcome:h.outcome,boonIds:ids(h.boonIds,BOONS)})),runSeq:int(r.runSeq),
+    history:list(r.history).filter(h=>obj(h)&&['victory','defeat'].includes(h.outcome)).slice(-20).map(h=>({runId:int(h.runId),floor:Math.max(1,int(h.floor,CAMPAIGN_STAGE_COUNT)),outcome:h.outcome,boonIds:ids(h.boonIds,BOONS)})),runSeq:int(r.runSeq),
   };
 }
 function ranks(picked) {

@@ -1,0 +1,743 @@
+{
+  "createdAt": "2026-09-13T13:17:52.973Z",
+  "scope": "Regional media release; local desktop browser engines and mobile viewports. Not physical mobile certification.",
+  "unit": {
+    "command": "bun run check",
+    "status": "pass",
+    "tests": 580,
+    "assertions": 58990,
+    "files": 70,
+    "sourceLog": "work/media-20260913/check.log"
+  },
+  "sources": {
+    "src/engine/fx.js": "14c618b43653d065ec6b9c751be46c9569e5e93fd5c30d7a0bd94ff98f2edb4f",
+    "src/engine/audio.js": "b0d51b41b46bc97b1b95997f89f243019a497077bf7169b3d782925ad744f83f",
+    "src/data/music.js": "8157b041c2bf025813d5cc5cfa1206396349a5782e36ea731e245987ec1bd975",
+    "src/data/encounter-art.js": "181f365dfd6fe02463d25d23978257d76b434c697a0204cafbda2f16a3567d32",
+    "src/data/stages.js": "d035c95c8fd0970c773ca96da6fc7a52a363f5e1bce6178cc2d1cac698350059",
+    "src/game/masterworks-core.js": "b9af9a148f01e86cfbfe06b411e4d1219045ea5e6f13d35d55da36eaac8a7855",
+    "src/game/expedition-combat.js": "cb4b11636183652e5a534428cfad17628954d427a3061d4c8da7daeb6f4a1754",
+    "src/expansion/hub.jsx": "c6bd444a5806153a078debe645edebb1e3523ff014d98d753dfb48986864829e",
+    "src/expansion/hub.css": "9ed9de300480a6d1eb35fa1012e34341d9de6524bd860b1abeeabe47280a6df6",
+    "src/expansion/app-content.css": "21f31dbf2fce8ff042ca011588fd7f523cb518f21a331e29d091ad60a471901d"
+  },
+  "ui": {
+    "status": "pass",
+    "finished": "2026-09-13T13:16:06.842Z",
+    "engines": [
+      {
+        "engine": "chromium",
+        "version": "151.0.7922.34",
+        "status": "pass",
+        "viewports": [
+          {
+            "width": 320,
+            "height": 568
+          },
+          {
+            "width": 390,
+            "height": 844
+          },
+          {
+            "width": 667,
+            "height": 375
+          }
+        ],
+        "arenaViewports": [
+          {
+            "width": 320,
+            "height": 568
+          },
+          {
+            "width": 390,
+            "height": 844
+          },
+          {
+            "width": 667,
+            "height": 375
+          }
+        ],
+        "fullscreen": "entered-via-user-tap",
+        "neve": "actual open-close-focus return",
+        "errors": [],
+        "entry": "/assets/index-Cn1hpP4c.js"
+      },
+      {
+        "engine": "firefox",
+        "version": "153.0",
+        "status": "pass",
+        "viewports": [
+          {
+            "width": 320,
+            "height": 568
+          },
+          {
+            "width": 390,
+            "height": 844
+          },
+          {
+            "width": 667,
+            "height": 375
+          }
+        ],
+        "arenaViewports": [
+          {
+            "width": 320,
+            "height": 568
+          },
+          {
+            "width": 390,
+            "height": 844
+          },
+          {
+            "width": 667,
+            "height": 375
+          }
+        ],
+        "fullscreen": "entered-via-user-tap",
+        "neve": "actual open-close-focus return",
+        "errors": [],
+        "entry": "/assets/index-Cn1hpP4c.js"
+      },
+      {
+        "engine": "webkit",
+        "version": "26.5",
+        "status": "pass",
+        "viewports": [
+          {
+            "width": 320,
+            "height": 568
+          },
+          {
+            "width": 390,
+            "height": 844
+          },
+          {
+            "width": 667,
+            "height": 375
+          }
+        ],
+        "arenaViewports": [
+          {
+            "width": 320,
+            "height": 568
+          },
+          {
+            "width": 390,
+            "height": 844
+          },
+          {
+            "width": 667,
+            "height": 375
+          }
+        ],
+        "fullscreen": "unsupported-install-guide-shown",
+        "neve": "actual open-close-focus return",
+        "errors": [],
+        "entry": "/assets/index-Cn1hpP4c.js"
+      }
+    ],
+    "evidence": "work/app-screen-qa.json",
+    "reportSha256": "29a03dc6a0882142b822c686ca3ed71afbb8ef4d2ecacd6b0f8d5a2041059a86"
+  },
+  "fx": {
+    "started": "2026-09-13T12:59:37.630Z",
+    "status": "pass",
+    "scope": "Isolated local Chromium WebGL, real asset/FX.prepare/render; synthetic 40-pillar scene, not production gameplay or physical Android performance.",
+    "consoleErrors": [],
+    "pageErrors": [],
+    "checks": [
+      {
+        "name": "context available after actual compileAsync",
+        "pass": true
+      },
+      {
+        "name": "40 simultaneous pillars retain 80 crossed planes",
+        "pass": true
+      },
+      {
+        "name": "all pillars sample the original texture",
+        "pass": true
+      },
+      {
+        "name": "four independent age/UV offsets coexist",
+        "pass": true
+      },
+      {
+        "name": "rendered pillars produce visible pixels against baseline",
+        "pass": true
+      },
+      {
+        "name": "first pillar draw reuses warmed shader programs",
+        "pass": true
+      },
+      {
+        "name": "later rendered frame changes with independent scrolling",
+        "pass": true
+      },
+      {
+        "name": "all mixed lifetimes expire and dispose exactly once",
+        "pass": true
+      },
+      {
+        "name": "clear removes active effects but preserves shared plane",
+        "pass": true
+      },
+      {
+        "name": "shared texture survives draws and clear unchanged",
+        "pass": true
+      },
+      {
+        "name": "idempotent teardown disposes plane but preserves source texture",
+        "pass": true
+      },
+      {
+        "name": "no WebGL error or unexpected context loss",
+        "pass": true
+      }
+    ],
+    "src/engine/fx.js": "14c618b43653d065ec6b9c751be46c9569e5e93fd5c30d7a0bd94ff98f2edb4f",
+    "public/img/vfx/fire_pillar.webp": "466c93e7c2678afd4042790ec2d17f607e647ee891c00625c12901a22ce4eac8",
+    "url": "http://127.0.0.1:5173/work/fx-runtime-qa/index.html",
+    "browser": "151.0.7922.34",
+    "gpu": {
+      "vendor": "Google Inc. (Google)",
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+      "software": true
+    },
+    "compileMs": 81.89999997615814,
+    "initial": {
+      "count": 40,
+      "planes": 80,
+      "litPixels": 43751,
+      "offsets": [
+        -0.288,
+        -0.41600000000000004,
+        -0.5439999999999999,
+        -0.672
+      ],
+      "programsAfterWarm": 11,
+      "programsAfterDraw": 11
+    },
+    "motion": {
+      "changedPixels": 31959
+    },
+    "comparison": {
+      "timeSeconds": 0.4,
+      "offset": -0.64,
+      "method": "Same original texture, tint, 2 planes and dimensions; legacy repeat / initial fract wrap / fixed anchored traveling UV distortion. Texture clone exists only to reproduce the legacy QA reference."
+    },
+    "contextLosses": 0,
+    "memory": {
+      "geometries": 1,
+      "textures": 7
+    },
+    "frameSyncReadbackMs": {
+      "min": 8.100000023841858,
+      "max": 10.799999952316284,
+      "mean": 8.966666668653488,
+      "samples": 12,
+      "limitation": "Includes synchronous readPixels, gl.finish, and display pass; not game FPS or mobile performance."
+    },
+    "finished": "2026-09-13T12:59:49.514Z",
+    "evidence": "work/fx-runtime-qa/report.json",
+    "reportSha256": "f8dc5ef8d7004c8e5ef3245c4eed70b971b001794fc450b90019e759a5fce7d3"
+  },
+  "audio": {
+    "aggregate": "partial-capability",
+    "finished": "2026-09-13T13:09:58.231Z",
+    "engines": [
+      {
+        "name": "chromium",
+        "status": "pass",
+        "files": [
+          {
+            "name": "regions/lobby",
+            "url": "http://127.0.0.1:5173/bgm/regions/lobby.mp3",
+            "startTime": 0.8,
+            "endTime": 1.312,
+            "advancedSeconds": 0.512,
+            "maxPeak": 0.0718478187918663,
+            "duration": 170.965333,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/garden",
+            "url": "http://127.0.0.1:5173/bgm/regions/garden.mp3",
+            "startTime": 0.832,
+            "endTime": 1.341333,
+            "advancedSeconds": 0.5093330000000001,
+            "maxPeak": 0.04089183732867241,
+            "duration": 146.56,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/forge",
+            "url": "http://127.0.0.1:5173/bgm/regions/forge.mp3",
+            "startTime": 0.810667,
+            "endTime": 1.322667,
+            "advancedSeconds": 0.512,
+            "maxPeak": 0.06443409621715546,
+            "duration": 179.178667,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/frost",
+            "url": "http://127.0.0.1:5173/bgm/regions/frost.mp3",
+            "startTime": 0.84,
+            "endTime": 1.344,
+            "advancedSeconds": 0.5040000000000001,
+            "maxPeak": 0.012784702703356743,
+            "duration": 171.648,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/tide",
+            "url": "http://127.0.0.1:5173/bgm/regions/tide.mp3",
+            "startTime": 0.832,
+            "endTime": 1.33957,
+            "advancedSeconds": 0.50757,
+            "maxPeak": 0.03578202426433563,
+            "duration": 177.386667,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/crown",
+            "url": "http://127.0.0.1:5173/bgm/regions/crown.mp3",
+            "startTime": 0.842667,
+            "endTime": 1.346672,
+            "advancedSeconds": 0.504005,
+            "maxPeak": 0.04666980355978012,
+            "duration": 177.130667,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/homecoming",
+            "url": "http://127.0.0.1:5173/bgm/regions/homecoming.mp3",
+            "startTime": 0.829755,
+            "endTime": 1.330667,
+            "advancedSeconds": 0.500912,
+            "maxPeak": 0.06348928064107895,
+            "duration": 162.56,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/arena",
+            "url": "http://127.0.0.1:5173/bgm/regions/arena.mp3",
+            "startTime": 0.84,
+            "endTime": 1.344,
+            "advancedSeconds": 0.5040000000000001,
+            "maxPeak": 0.06799846887588501,
+            "duration": 176.490667,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/boss",
+            "url": "http://127.0.0.1:5173/bgm/regions/boss.mp3",
+            "startTime": 0.829333,
+            "endTime": 1.340676,
+            "advancedSeconds": 0.511343,
+            "maxPeak": 0.05328703671693802,
+            "duration": 168.213333,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          }
+        ],
+        "consoleErrors": [],
+        "pageErrors": [],
+        "version": "151.0.7922.34",
+        "capabilities": {
+          "audioContext": "function",
+          "webkitAudioContext": "undefined",
+          "mp3": "probably",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.7922.34 Safari/537.36"
+        },
+        "transitions": {
+          "routes": [
+            {
+              "input": {
+                "scene": "lobby"
+              },
+              "expected": "regions/lobby",
+              "actual": "regions/lobby"
+            },
+            {
+              "input": {
+                "stage": {
+                  "ch": 6,
+                  "chapter": {
+                    "theme": "garden"
+                  }
+                }
+              },
+              "expected": "regions/homecoming",
+              "actual": "regions/homecoming"
+            },
+            {
+              "input": {
+                "stage": {
+                  "chapter": {
+                    "theme": "forge"
+                  }
+                },
+                "boss": true
+              },
+              "expected": "regions/boss",
+              "actual": "regions/boss"
+            },
+            {
+              "input": {
+                "stage": {
+                  "expedition": {
+                    "kind": "arena"
+                  }
+                },
+                "boss": true
+              },
+              "expected": "regions/arena",
+              "actual": "regions/arena"
+            }
+          ],
+          "trackCounts": [
+            2,
+            2,
+            2,
+            2
+          ],
+          "afterFade": 1,
+          "muted": {
+            "tracks": 0,
+            "gain": 0.550000011920929,
+            "allPaused": true,
+            "peak": 0
+          },
+          "resumed": {
+            "name": "regions/arena",
+            "url": "http://127.0.0.1:5173/bgm/regions/arena.mp3",
+            "startTime": 0.853333,
+            "endTime": 1.362667,
+            "advancedSeconds": 0.5093340000000001,
+            "maxPeak": 0.06799846887588501,
+            "duration": 176.490667,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          "stopped": {
+            "tracks": 0,
+            "peak": 0
+          },
+          "mediaErrors": []
+        }
+      },
+      {
+        "name": "firefox",
+        "status": "pass",
+        "files": [
+          {
+            "name": "regions/lobby",
+            "url": "http://127.0.0.1:5173/bgm/regions/lobby.mp3",
+            "startTime": 0.772063,
+            "endTime": 1.381587,
+            "advancedSeconds": 0.6095239999999998,
+            "maxPeak": 0.08084641396999359,
+            "duration": 170.965333,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/garden",
+            "url": "http://127.0.0.1:5173/bgm/regions/garden.mp3",
+            "startTime": 0.801088,
+            "endTime": 1.410612,
+            "advancedSeconds": 0.609524,
+            "maxPeak": 0.040893927216529846,
+            "duration": 146.56,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/forge",
+            "url": "http://127.0.0.1:5173/bgm/regions/forge.mp3",
+            "startTime": 0.812698,
+            "endTime": 1.422222,
+            "advancedSeconds": 0.6095240000000001,
+            "maxPeak": 0.06540203839540482,
+            "duration": 179.178666,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/frost",
+            "url": "http://127.0.0.1:5173/bgm/regions/frost.mp3",
+            "startTime": 0.809795,
+            "endTime": 1.419319,
+            "advancedSeconds": 0.609524,
+            "maxPeak": 0.012769676744937897,
+            "duration": 171.648,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/tide",
+            "url": "http://127.0.0.1:5173/bgm/regions/tide.mp3",
+            "startTime": 0.809795,
+            "endTime": 1.422222,
+            "advancedSeconds": 0.612427,
+            "maxPeak": 0.03578942269086838,
+            "duration": 177.386666,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/crown",
+            "url": "http://127.0.0.1:5173/bgm/regions/crown.mp3",
+            "startTime": 0.812698,
+            "endTime": 1.340952,
+            "advancedSeconds": 0.5282539999999999,
+            "maxPeak": 0.04667656123638153,
+            "duration": 177.130666,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/homecoming",
+            "url": "http://127.0.0.1:5173/bgm/regions/homecoming.mp3",
+            "startTime": 0.809795,
+            "endTime": 1.329342,
+            "advancedSeconds": 0.519547,
+            "maxPeak": 0.06571467220783234,
+            "duration": 162.56,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/arena",
+            "url": "http://127.0.0.1:5173/bgm/regions/arena.mp3",
+            "startTime": 0.809795,
+            "endTime": 1.410612,
+            "advancedSeconds": 0.6008169999999999,
+            "maxPeak": 0.0680219903588295,
+            "duration": 176.490666,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          {
+            "name": "regions/boss",
+            "url": "http://127.0.0.1:5173/bgm/regions/boss.mp3",
+            "startTime": 0.809795,
+            "endTime": 1.419319,
+            "advancedSeconds": 0.609524,
+            "maxPeak": 0.05331376940011978,
+            "duration": 168.213333,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          }
+        ],
+        "consoleErrors": [],
+        "pageErrors": [],
+        "version": "153.0",
+        "capabilities": {
+          "audioContext": "function",
+          "webkitAudioContext": "undefined",
+          "mp3": "maybe",
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:153.0) Gecko/20100101 Firefox/153.0"
+        },
+        "transitions": {
+          "routes": [
+            {
+              "input": {
+                "scene": "lobby"
+              },
+              "expected": "regions/lobby",
+              "actual": "regions/lobby"
+            },
+            {
+              "input": {
+                "stage": {
+                  "ch": 6,
+                  "chapter": {
+                    "theme": "garden"
+                  }
+                }
+              },
+              "expected": "regions/homecoming",
+              "actual": "regions/homecoming"
+            },
+            {
+              "input": {
+                "stage": {
+                  "chapter": {
+                    "theme": "forge"
+                  }
+                },
+                "boss": true
+              },
+              "expected": "regions/boss",
+              "actual": "regions/boss"
+            },
+            {
+              "input": {
+                "stage": {
+                  "expedition": {
+                    "kind": "arena"
+                  }
+                },
+                "boss": true
+              },
+              "expected": "regions/arena",
+              "actual": "regions/arena"
+            }
+          ],
+          "trackCounts": [
+            2,
+            2,
+            2,
+            2
+          ],
+          "afterFade": 1,
+          "muted": {
+            "tracks": 0,
+            "gain": 0,
+            "allPaused": true,
+            "peak": 0
+          },
+          "resumed": {
+            "name": "regions/arena",
+            "url": "http://127.0.0.1:5173/bgm/regions/arena.mp3",
+            "startTime": 0.801088,
+            "endTime": 1.329342,
+            "advancedSeconds": 0.528254,
+            "maxPeak": 0.0680219903588295,
+            "duration": 176.490666,
+            "paused": false,
+            "readyState": 4,
+            "contextState": "running",
+            "mediaError": null
+          },
+          "stopped": {
+            "tracks": 0,
+            "peak": 0
+          },
+          "mediaErrors": []
+        }
+      },
+      {
+        "name": "webkit",
+        "status": "unsupported",
+        "files": [],
+        "consoleErrors": [],
+        "pageErrors": [],
+        "version": "26.5",
+        "capabilities": {
+          "audioContext": "undefined",
+          "webkitAudioContext": "undefined",
+          "mp3": "probably",
+          "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.5 Safari/605.1.15"
+        },
+        "error": "Error: Error: AudioContext unavailable\n@http://127.0.0.1:5173/work/region-audio-qa/harness.js:8:29\n    at file:///C:/Users/Administrator/Documents/Codex/2026-09-11/new-chat/work/blade-surge-android/tools/region-audio-qa.mjs:64:86"
+      }
+    ],
+    "files": [
+      {
+        "cue": "lobby",
+        "bytes": 3391052,
+        "sha256": "300c53d884d6b4e7e1899dcdd8d8e2cee8b883c5eac4a367dd3c817b9ddaa928"
+      },
+      {
+        "cue": "garden",
+        "bytes": 3095612,
+        "sha256": "5d991e09cfe72ddc746ecdd40713d8360303a9f1e5cdd229523588b6093719fc"
+      },
+      {
+        "cue": "forge",
+        "bytes": 3686468,
+        "sha256": "42256e9a8e61de095e3bfb4cbef3098f9c2bfead7567c343713bfac574702dc0"
+      },
+      {
+        "cue": "frost",
+        "bytes": 3605012,
+        "sha256": "edcdcb4f57ceb68116a52bb98758f934dbc0ac3d1b3c90ca61505231a9663c38"
+      },
+      {
+        "cue": "tide",
+        "bytes": 3663548,
+        "sha256": "27d4a9b58cd676020afbc563e7085a96ffc33714fbae6a089c5e9843e452d55c"
+      },
+      {
+        "cue": "crown",
+        "bytes": 3690332,
+        "sha256": "4fb081397ee712f11bb672089e093e67c8fce1cd5a9bbdec010db406b898cd33"
+      },
+      {
+        "cue": "homecoming",
+        "bytes": 3480452,
+        "sha256": "85f57cbfcc3a0159df5d9b6e774599783c01e6e0e228bdcb0eee73adc02e3c62"
+      },
+      {
+        "cue": "arena",
+        "bytes": 3763556,
+        "sha256": "ee82c0797f34b567f2ea000143f0dce62535692453e5c90f37997518429f2f49"
+      },
+      {
+        "cue": "boss",
+        "bytes": 3497876,
+        "sha256": "4bc8903236ce805da19ed5b8d8b79daf565647f23390b99b6583c7209bba6443"
+      }
+    ],
+    "evidence": "work/region-audio-qa/report.json",
+    "reportSha256": "765ba96aef5e12789f985f2227b05980fa8ddaf33140cc59a4b86c3b6896f5f1"
+  },
+  "limitations": [
+    "WebKit 26.5 on this host exposes neither AudioContext nor webkitAudioContext; all-engine audio check is not an overall PASS.",
+    "No physical iOS/Android install, thermal/FPS or subjective listening claim.",
+    "Thirty 2D portraits are not thirty new animated 3D actors.",
+    "New boss behavior/content depth and long-term progression remain active-goal work."
+  ]
+}

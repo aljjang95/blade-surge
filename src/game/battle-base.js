@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { musicForScene, MUSIC_MIX } from '../data/music.js';
 import { createArrowVisual, releaseProjectileVisual } from '../engine/arrow-visual.js';
 import { CAMERA_PRESETS } from '../engine/renderer.js';
 import { Player } from './player.js';
@@ -90,7 +91,7 @@ export class Battle {
     this.ui.setupMinimap(this.world);
     this.active = true; this.input.enabled = true; this.input.clear();
     if (!stage.party && stage.expedition?.kind !== 'arena') this.app.companionAgent?.startBattle(this);
-    audio.playMusic(stage.expedition ? 'expansion/flow-combat' : Math.random() < 0.5 ? 'bgm_battle' : 'bgm_battle2', stage.expedition ? { fade: .7, volume: .68 } : undefined);
+    audio.playMusic(musicForScene({ stage }), MUSIC_MIX);
     this.ui.showHud(true);
     const q = this.app.renderer?.quality || this.app.eco.s.settings.quality;
     this.maxAlive = q === 'low' ? 16 : q === 'mid' ? 24 : 34;
@@ -185,7 +186,7 @@ export class Battle {
       this.ui.toast('불사조의 부활!', 'gold'); audio.voice('rebirth'); this.after(2.2, () => audio.voice(heroVoiceName(this.heroId, 'revive')));
       this.fx.texFlash(p.pos, 'phoenix', 0xffc060, { size: 14, life: 0.9, grow: 1.6, y: 2.5 }); this.fx.holyBurst(p.pos, { size: 12, life: 0.7, color: 0xffa040 });
       this.hitRadius(p.pos, 8, p.atk * 2.5, { kb: 14, stun: 1.2, kind: 'magic', dirFrom: p.pos });
-      audio.playMusic(this.boss ? 'bgm_boss' : 'bgm_battle'); audio.boom({ vol: 0.9, dur: 1, low: 45 }); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12, 16], step: 0.07 }); audio.vibe([60, 40, 120]);
+      audio.playMusic(musicForScene({ stage: this.stage, boss: !!this.boss }), MUSIC_MIX); audio.boom({ vol: 0.9, dur: 1, low: 45 }); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12, 16], step: 0.07 }); audio.vibe([60, 40, 120]);
       this.renderer.flashScreen(0.6, 0xffc060); this.renderer.shake(0.7);
     });
   }
@@ -255,7 +256,7 @@ export class Battle {
     if (!list.length) { this.markCleared(room); return; }
     const isBoss = room.type === ROOM_TYPE.BOSS;
     if (isBoss) {
-      audio.playMusic(this.stage.expedition ? 'expansion/flow-combat' : Math.random() < 0.5 ? 'bgm_boss' : 'bgm_boss2', this.stage.expedition ? { fade: .7, volume: .68 } : undefined); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 }));
+      audio.playMusic(musicForScene({ stage: this.stage, boss: true }), MUSIC_MIX); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 }));
       if (this.stage.encounter?.tactic) this.ui.toast(this.stage.encounter.tactic, 'gold');
       // 보스방 입구의 제물 — 봉인 뒤 가장 먼 방까지 걸어오는 20초 + 보스전 초반 20초가 무보상 40초로 이어졌다 (longestDryStreakSec 실측)
       const p = this.player.pos, dx = room.x - p.x, dz = room.z - p.z, l = Math.hypot(dx, dz) || 1;
@@ -445,7 +446,7 @@ export class Battle {
     this.player.revive(); this.input.enabled = !this.paused; this.input.clear(); this.renderer.desat = 0; this.revived++; audio.voice(heroVoiceName(this.heroId, 'revive'));
     this.fx.holyBurst(this.player.pos, { size: 9, life: 0.6 }); this.fx.shockTex(this.player.pos, 0xffd060, { r1: 9, life: 0.7 });
     this.hitRadius(this.player.pos, 7, 1, { kb: 14, stun: 1.5, kind: 'magic', source: this.player, dirFrom: this.player.pos });
-    audio.playMusic(this.stage?.expedition ? 'expansion/flow-combat' : this.boss ? 'bgm_boss' : 'bgm_battle', this.stage?.expedition ? { fade: .7, volume: .68 } : undefined); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12], step: 0.08 });
+    audio.playMusic(musicForScene({ stage: this.stage, boss: !!this.boss }), MUSIC_MIX); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12], step: 0.08 });
     if (this.bossDefeated) this.after(.8, () => this.victory());
   }
   defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, expedition: this.stage?.expedition || null }; this.ui.showResult(this, false); }

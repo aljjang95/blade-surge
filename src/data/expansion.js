@@ -1,5 +1,6 @@
 import { stageDef } from './stages.js';
 import { EXPEDITION_ITEMS, EXPEDITION_SETS } from './expedition-items.js';
+import { ENCOUNTER_ART } from './encounter-art.js';
 
 export const MATERIALS = [
   { id: 'glass_leaf', name: '유리 잎', description: '유리 정원에서 얻는 바람의 결정' },
@@ -60,5 +61,5 @@ export const ARENA_RIVALS = [
   { id: 'rookie', name: '연습 기사', heroId: 'knight', minLevel: 1, rating: 100, scale: 0.9 },
   { id: 'duelist', name: '바람의 결투가', heroId: 'rogue', minLevel: 2, rating: 300, scale: 1.25 },
   { id: 'champion', name: '서리의 챔피언', heroId: 'mage', minLevel: 4, rating: 600, scale: 1.7 },
-].map(r => ({ ...r, description: 'AI 상대 연습 결투 · 에너지 무료', energy: 0, stage: { ...stageDef(1, 1), code: `arena_${r.id}`, name: r.name, scale: r.scale }, rewards: { gold: 60, xp: 25, rating: 15 } }));
+].map(r => ({ ...r, portrait: ENCOUNTER_ART[`arena_${r.id}`], description: 'AI 상대 연습 결투 · 에너지 무료', energy: 0, stage: { ...stageDef(1, 1), code: `arena_${r.id}`, name: r.name, scale: r.scale }, rewards: { gold: 60, xp: 25, rating: 15 } }));
 export const accountLevelXp = level => 150 + (level - 1) * 75;

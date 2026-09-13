@@ -90,7 +90,6 @@ export class FX {
     this._depthMats = new Map();
     this.plane1 = new THREE.PlaneGeometry(1, 1);
     this.plane2 = new THREE.PlaneGeometry(2, 2);
-    this.fireTextures = [];
     this.trails = [];
   }
   setQuality(q) { this.quality = q; this.impactLights.setEnabled(q !== 'low'); }
@@ -129,7 +128,7 @@ export class FX {
     await new Promise((resolve) => requestAnimationFrame(resolve));
     if (!this._primed) {
       const p = new THREE.Vector3(), mark = this.items.length;
-      this.flash(p, 0xffffff); this.ring(p, 0xffffff); this.pillar(p, 0xffffff);
+      this.flash(p, 0xffffff); this.ring(p, 0xffffff); this.pillar(p, 0xffffff); this.firePillar(p);
       this.flipbook(p, 'explosion'); this.flipbook(p, 'dust', { blending: THREE.NormalBlending });
       this._keep(new THREE.MeshBasicMaterial({ color: 0xffffff } )).dispose();
       this._keep(new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })).dispose();
@@ -138,10 +137,6 @@ export class FX {
       // Coins/material drops use untextured PBR, unlike the textured model atlases.
       this._keep(new THREE.MeshStandardMaterial()).dispose();
       while (this.items.length > mark) this._finishItem(this.items.length - 1);
-      if (VFX_TEX.fire_pillar) for (let i = 0; i < 32; i++) {
-        const texture = VFX_TEX.fire_pillar.clone(); texture.wrapT = THREE.RepeatWrapping; texture.needsUpdate = true;
-        this.fireTextures.push(texture);
-      }
       this._primed = true;
     }
     const warm = new THREE.Scene();
@@ -162,7 +157,7 @@ export class FX {
         warm.add(ghost);
       });
     }
-    const textures = new Set([...Object.values(VFX_TEX), ...this.fireTextures, sparkTex(), softCircleTex(), ringTex(), slashTex(), smokeTex()]);
+    const textures = new Set([...Object.values(VFX_TEX), sparkTex(), softCircleTex(), ringTex(), slashTex(), smokeTex()]);
     warm.traverse((o) => {
       for (const m of (Array.isArray(o.material) ? o.material : [o.material])) if (m) {
         for (const value of Object.values(m)) if (value?.isTexture) textures.add(value);
@@ -392,13 +387,32 @@ export class FX {
   explosion(pos, { size = 4, color = 0xffffff, life = 0.55 } = {}) { this.flipbook(pos, 'explosion', { size, life, color, y: size * 0.35 }); }
   dustPuff(pos, { size = 3, life = 0.9, color = 0xa89880 } = {}) { this.flipbook(pos, 'dust', { size, life, color, y: size * 0.3, blending: THREE.NormalBlending, opacity: 0.75 }); }
   /** 화염 기둥: 교차 2장 + UV 스크롤 */
+  _fireMaterial(tex, color) {
+    const make = () => {
+      // Retain MeshBasic's alpha, fog and output transforms; only scrolling differs.
+      const uniforms = THREE.UniformsUtils.clone(THREE.ShaderLib.basic.uniforms);
+      uniforms.map.value = tex; uniforms.diffuse.value.set(color); uniforms.uOffset = { value: 0 };
+      return new THREE.ShaderMaterial({
+        uniforms, defines: { USE_MAP: '', MAP_UV: 'uv' },
+        vertexShader: THREE.ShaderLib.basic.vertexShader,
+        fragmentShader: 'uniform float uOffset;\n' + THREE.ShaderLib.basic.fragmentShader.replace('#include <map_fragment>',
+          // The authored flame is not vertically tileable. A traveling distortion
+          // flows upward while anchoring all four edges, keeping its base and tip.
+          THREE.ShaderChunk.map_fragment.replace('texture2D( map, vMapUv )',
+            'texture2D( map, vMapUv + vec2( sin( vMapUv.y * 16.0 + uOffset * 6.283185 ) * 0.022, sin( vMapUv.y * 12.0 + uOffset * 6.283185 ) * 0.035 ) * sin( vMapUv.y * 3.141593 ) * sin( vMapUv.x * 3.141593 ) )')),
+        transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: true,
+      });
+    };
+    // _keep clones texture uniforms. This program keeps the asset itself shared.
+    this._mat('firePillar', make);
+    return make();
+  }
   firePillar(pos, { height = 6, width = 2.2, life = 0.8, color = 0xffb060 } = {}) {
     const tex = VFX_TEX.fire_pillar; if (!tex) return this.pillar(pos, color, { radius: width / 2, height, life });
-    if (this.fireTextures.length < 2) return;
     const g = new THREE.Group(); g.position.copy(pos); g.renderOrder = 12;
-    const mats = [];
-    for (let i = 0; i < 2; i++) { const t = this.fireTextures.pop(); t.offset.set(0, 0); const m = this._addMat(t, color); const p = new THREE.Mesh(this.plane1, m); p.scale.set(width, height, 1); p.position.y = height / 2; p.rotation.y = i * Math.PI / 2; g.add(p); mats.push(m); }
-    this.add(g, life, (k, t, dt) => { const s = k < 0.15 ? k / 0.15 : 1; g.scale.set(s, k < 0.15 ? k / 0.15 : 1 + k * 0.1, s); for (const m of mats) { m.map.offset.y -= dt * 1.6; m.opacity = k > 0.6 ? (1 - k) / 0.4 : 1; } }, () => mats.forEach((m) => { this.fireTextures.push(m.map); m.dispose(); }));
+    const m = this._fireMaterial(tex, color);
+    for (let i = 0; i < 2; i++) { const p = new THREE.Mesh(this.plane1, m); p.scale.set(width, height, 1); p.position.y = height / 2; p.rotation.y = i * Math.PI / 2; g.add(p); }
+    return this.add(g, life, (k, t) => { const s = k < 0.15 ? k / 0.15 : 1; g.scale.set(s, k < 0.15 ? k / 0.15 : 1 + k * 0.1, s); m.uniforms.uOffset.value = -t * 1.6; m.uniforms.opacity.value = k > 0.6 ? (1 - k) / 0.4 : 1; }, () => m.dispose());
   }
   /** 텍스처 번개: 두 점 사이 빌보드 스트립 */
   boltTex(from, to, color = 0x9ad8ff, { width = 1.6, life = 0.25 } = {}) {
@@ -446,6 +460,16 @@ export class FX {
     this.trails.length = 0;
     for (const pool of [this.sparks, this.glow, this.smoke]) { pool.n = 0; pool.geo.setDrawRange(0, 0); }
     this.clearDamage();
+  }
+  dispose() {
+    if (this._disposed) return;
+    this._disposed = true; this.clearAll();
+    for (const pool of [this.sparks, this.glow, this.smoke]) { this.scene.remove(pool.mesh); pool.geo.dispose(); pool.mat.dispose(); }
+    for (const slot of this.impactLights.slots) this.scene.remove(slot.light);
+    this.plane1.dispose(); this.plane2.dispose();
+    for (const material of new Set([...Object.values(this._mats), ...this._transparentMats.values(), ...this._depthMats.values()])) material.dispose();
+    this._mats = {}; this._transparentMats.clear(); this._depthMats.clear();
+    // Asset and particle textures belong to the shared asset cache.
   }
 }
 

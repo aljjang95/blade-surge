@@ -91,3 +91,78 @@ test('프레임 속도가 바뀌어도 텍스처 효과는 같은 시간 동안 
     }
   } finally { delete textures.test_rotation; texture.dispose(); }
 });
+
+function fireFixture() {
+  const fx:any=Object.create(FX.prototype);
+  Object.assign(fx,{scene:new THREE.Scene(),camera:new THREE.PerspectiveCamera(),items:[],_mats:{},_transparentMats:new Map(),_depthMats:new Map(),
+    plane1:new THREE.PlaneGeometry(1,1),plane2:new THREE.PlaneGeometry(2,2),trails:[],clearDamage:()=>{}});
+  fx.impactLights=new ImpactLights(fx.scene);
+  for(const key of ['sparks','glow','smoke'])fx[key]={n:0,geo:new THREE.BufferGeometry(),mat:new THREE.ShaderMaterial(),mesh:new THREE.Object3D(),update:()=>{}};
+  return fx;
+}
+
+test('동시 화염 40개는 원본 텍스처를 복제하지 않고 교차면과 독립 수명을 유지한다',()=>{
+  const textures=VFX_TEX as Record<string,THREE.Texture>,old=textures.fire_pillar,texture=new THREE.Texture();textures.fire_pillar=texture;
+  texture.clone=()=>{throw new Error('fire texture must stay shared');};
+  const original={offset:texture.offset.clone(),wrap:texture.wrapT,version:texture.version};
+  let textureDisposals=0;texture.addEventListener('dispose',()=>textureDisposals++);
+  const fx=fireFixture(),materials:THREE.ShaderMaterial[]=[],disposed=new Map<THREE.ShaderMaterial,number>();
+  let planeDisposals=0;fx.plane1.addEventListener('dispose',()=>planeDisposals++);
+  try {
+    for(let i=0;i<40;i++) {
+      const group=fx.firePillar(new THREE.Vector3(i,0,0),{height:8,width:3,life:i<20?.5:2,color:i%2?0xff0000:0x00ff00});
+      expect(group.children).toHaveLength(2);
+      const [a,b]=group.children as THREE.Mesh<THREE.PlaneGeometry,THREE.ShaderMaterial>[];
+      expect(a.geometry).toBe(fx.plane1);expect(b.geometry).toBe(fx.plane1);expect(a.material).toBe(b.material);
+      expect(a.scale.toArray()).toEqual([3,8,1]);expect(a.position.y).toBe(4);expect(b.rotation.y).toBeCloseTo(Math.PI/2);
+      expect(a.material.uniforms.map.value).toBe(texture);expect(a.material.uniforms.diffuse.value.getHex()).toBe(i%2?0xff0000:0x00ff00);
+      materials.push(a.material);disposed.set(a.material,0);a.material.addEventListener('dispose',()=>disposed.set(a.material,disposed.get(a.material)!+1));
+    }
+    expect(fx.items).toHaveLength(40);expect(new Set(materials).size).toBe(40);expect(Object.keys(fx._mats)).toEqual(['firePillar']);
+    fx.update(.2);expect(materials[0].uniforms.uOffset.value).toBeCloseTo(-.32);
+    fx.update(.4);expect(fx.items).toHaveLength(20);
+    expect(materials.slice(0,20).every(m=>disposed.get(m)===1)).toBe(true);
+    const fresh=fx.firePillar(new THREE.Vector3(),{life:3});
+    fx.update(.1);expect(fresh.children[0].material.uniforms.uOffset.value).toBeCloseTo(-.16);
+    expect(materials[20].uniforms.uOffset.value).toBeCloseTo(-1.12);
+    fx.clearAll();fx.clearAll();expect(fx.items).toHaveLength(0);expect([...disposed.values()].every(n=>n===1)).toBe(true);
+    expect(planeDisposals).toBe(0);expect(textureDisposals).toBe(0);
+    expect(texture.offset.equals(original.offset)).toBe(true);expect(texture.wrapT).toBe(original.wrap);expect(texture.version).toBe(original.version);
+    let warmDisposed=0;fx._mats.firePillar.addEventListener('dispose',()=>warmDisposed++);
+    fx.dispose();fx.dispose();expect(planeDisposals).toBe(1);expect(warmDisposed).toBe(1);expect(textureDisposals).toBe(0);expect(fx.scene.children).toHaveLength(0);
+  } finally {fx.dispose();if(old)textures.fire_pillar=old;else delete textures.fire_pillar;texture.dispose();}
+});
+
+test('화염 UV와 크기·소멸 곡선은 30/60/120Hz에서 같은 경과시간으로 갱신된다',()=>{
+  const textures=VFX_TEX as Record<string,THREE.Texture>,old=textures.fire_pillar;textures.fire_pillar=new THREE.Texture();
+  try {
+    for(const hz of [30,60,120]) {
+      const fx=fireFixture(),group=fx.firePillar(new THREE.Vector3(),{life:1});
+      for(let i=0;i<hz*.8;i++)fx.update(1/hz);
+      const material=group.children[0].material;
+      expect(material.uniforms.uOffset.value).toBeCloseTo(-1.28,7);expect(material.uniforms.opacity.value).toBeCloseTo(.5,7);
+      expect(group.scale.y).toBeCloseTo(1.08,7);fx.update(.3);expect(fx.items).toHaveLength(0);fx.dispose();
+    }
+  } finally {textures.fire_pillar.dispose();if(old)textures.fire_pillar=old;else delete textures.fire_pillar;}
+});
+
+test('prepare는 공유 화염 셰이더를 실제 컴파일 호출에 포함하고 렌더 타깃을 복원한다',async()=>{
+  const root=globalThis as any,oldDocument=root.document,oldRaf=root.requestAnimationFrame;
+  const gradient={addColorStop:()=>{}},context={createRadialGradient:()=>gradient,createLinearGradient:()=>gradient,fillRect:()=>{},clearRect:()=>{}};
+  root.document={createElement:()=>({getContext:()=>context})};root.requestAnimationFrame=(fn:any)=>{fn(0);return 1;};
+  const textures=VFX_TEX as Record<string,THREE.Texture>,old=textures.fire_pillar,texture=new THREE.Texture();textures.fire_pillar=texture;
+  texture.clone=()=>{throw new Error('warmup must not clone fire texture');};
+  const fx=fireFixture();for(const method of ['flash','ring','pillar','flipbook'])fx[method]=()=>{};
+  const previous={},target={},compiled:THREE.ShaderMaterial[]=[],initialized:THREE.Texture[]=[];let current=previous;
+  const renderer={getRenderTarget:()=>current,setRenderTarget:(t:any)=>{current=t;},shadowMap:{enabled:false},initTexture:(t:THREE.Texture)=>initialized.push(t),
+    compileAsync:async(scene:THREE.Scene)=>{expect(current).toBe(target);scene.traverse((o:any)=>{if(o.material?.uniforms?.uOffset)compiled.push(o.material);});}};
+  try {
+    await fx.prepare(renderer,{},target);
+    expect(compiled).toHaveLength(1);expect(compiled[0]).toBe(fx._mats.firePillar);expect(compiled[0].uniforms.map.value).toBe(texture);
+    expect(compiled[0].fragmentShader).not.toContain('fract( vMapUv.y + uOffset )');
+    expect(compiled[0].fragmentShader).toContain('sin( vMapUv.y * 3.141593 ) * sin( vMapUv.x * 3.141593 )');
+    expect(compiled[0].fragmentShader).toContain('#include <fog_fragment>');
+    expect(initialized.filter(t=>t===texture)).toHaveLength(1);expect(fx.items).toHaveLength(0);expect(current).toBe(previous);
+    expect(fx.firePillar(new THREE.Vector3()).children).toHaveLength(2);
+  } finally {fx.dispose();root.document=oldDocument;root.requestAnimationFrame=oldRaf;if(old)textures.fire_pillar=old;else delete textures.fire_pillar;texture.dispose();}
+});

@@ -10,6 +10,7 @@ import { isNativeApp, setupNativeApp } from './platform/native-app.js';
 import { FX } from './engine/fx.js';
 import { Input } from './engine/input.js';
 import { audio } from './engine/audio.js';
+import { musicForScene, musicAfterIntro, MUSIC_MIX } from './data/music.js';
 import { preloadAll, preloadVfx, loadModel, MODEL_LIST, spawnCharacter, disposeCharacter } from './engine/assets.js';
 import { Economy } from './game/economy.js';
 import { Battle } from './game/battle.js';
@@ -174,7 +175,7 @@ class App {
     this.ui.show($('meta'), true);
     this.showcaseHero(this.eco.s.selected, true);
     this.renderer.desat = 0; this.renderer.rig.mode = 'lobby';
-    audio.playMusic('bgm_lobby');
+    audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX);
     this.meta.openTab('home'); this.meta.refreshTop();
     if (first) setTimeout(() => this.meta.autoPopups(), 600);
   }
@@ -248,7 +249,8 @@ class App {
       this.battle.player.auto = this.journey.s.autoBattle; $('btn-auto').classList.toggle('on', this.battle.player.auto);
       this.expeditionUI.refreshPotions();
       if (kind === 'dungeon') await playExpeditionIntro(this, id);
-      audio.playMusic('expansion/flow-combat', { fade: .7, volume: .68 });
+      const resumedMusic = musicAfterIntro({ mode: this.mode, active: this.battle.active, stage: this.battle.stage, expectedStage: stage, boss: !!this.battle.boss });
+      if (resumedMusic) audio.playMusic(resumedMusic, MUSIC_MIX);
       return true;
     } catch (error) {
       const refund = this.expedition.abandon(begin.ticket);

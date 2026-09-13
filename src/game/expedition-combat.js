@@ -28,6 +28,7 @@ export function buildExpeditionStage(kind, id, eco) {
   const duel = kind === 'arena' ? DUELS[id] : null;
   const enemyId = duel?.enemyId || base.encounter.enemyId;
   const enemy = { ...ENEMIES[enemyId], ...(duel || {}), name: kind === 'arena' ? `${def.name} · AI` : `${def.name} 수호자`, summon: undefined };
+  if (duel) enemy.portrait = def.portrait;
   if (!duel) enemy.hp = id === 'ember_vault' ? 10500 : id === 'star_archive' ? 11500 : 8500;
   const stage = { ...base, boss: true, finale: false, story: null, expedition: { kind, id },
     code: def.name, name: def.name, title: def.name,
