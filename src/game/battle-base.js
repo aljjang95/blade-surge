@@ -16,6 +16,7 @@ import { SetProcs } from './setprocs.js';
 import { RegionHazards } from './region-hazards.js';
 import { resolveJobHero } from '../data/jobs.js';
 import { buildExpeditionWorld, expeditionRoster, applyBattleConsumable, canApplyBattleConsumable } from './expedition-combat.js';
+import { ConquestRun } from './expedition-conquests.js';
 
 const _v = new THREE.Vector3();
 const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
@@ -76,6 +77,7 @@ export class Battle {
 
     // ---- 무한의 성: 한 층 절차 생성 ----
     this.world = stage.expedition ? buildExpeditionWorld(stage) : new Floor(stage.idx, stage.chapter.theme, stage.party?.seed, stage.dungeon?.layout);
+    this.conquest = stage.expedition?.conquestId ? new ConquestRun(stage, this.world, this.app.expeditionTicket) : null;
     this.arena.buildFloor(this.world, stage.chapter.theme);
     this.roomsCleared = 0; this.bossFound = false;
 
@@ -115,6 +117,7 @@ export class Battle {
   canApplyConsumable(id) { return canApplyBattleConsumable(this, id); }
   updateExpedition(dt) {
     if (this.bossDefeated || !this.player.alive) return;
+    this.conquest?.update(this, dt);
     if (this.stage.expedition.kind === 'arena') {
       if (this.bossFound) this.duelElapsed += dt;
       if (this.duelElapsed >= 150) { this.ui.toast('AI 결투 제한시간 종료', 'red'); this.defeat(); return; }
@@ -125,7 +128,7 @@ export class Battle {
       room.attunementT = inside ? room.attunementT + dt : 0;
       room.attunementFx = (room.attunementFx || 0) - dt;
       if (room.attunementFx <= 0) { room.attunementFx = 1.8; this.fx.castCircle(new THREE.Vector3(room.x,0,room.z), 0x87cbb0, { radius: 3, life: 2 }); }
-      if (room.attunementT >= 2) { room.attuned = true; room.attunementPending = false; this.markCleared(room); }
+      if (room.attunementT >= 2) { room.attuned = true; room.attunementPending = false; this.conquest?.attune(room); this.markCleared(room); }
     }
   }
 
@@ -258,6 +261,7 @@ export class Battle {
     if (room.cleared || room.spawned) return;
     room.spawned = true;
     const list = this.roomRoster(room);
+    this.conquest?.prepareRoom(room, list);
     if (!list.length) { this.markCleared(room); return; }
     const isBoss = room.type === ROOM_TYPE.BOSS;
     if (isBoss) {
@@ -282,12 +286,13 @@ export class Battle {
     if (this.stage.expedition?.mechanics?.attunement && room.type === ROOM_TYPE.TREASURE && !room.attuned) {
       if (!room.attunementPending) {
         room.attunementPending = true; room.attunementT = 0;
-        this.ui.toast(this.stage.expedition.id === 'star_archive' ? '제단 중심의 빛 안에 2초 머물러 귀환 기록을 복원하세요.' : '제단 중심의 빛 안에 2초 머물러 유리 잎을 회수하세요.', 'gold');
+        this.ui.toast(room.conquestLabel ? `${room.conquestLabel} 제단 · 중심에서 2초 공명 · ${this.conquest.hint()}` : this.stage.expedition.id === 'star_archive' ? '제단 중심의 빛 안에 2초 머물러 귀환 기록을 복원하세요.' : '제단 중심의 빛 안에 2초 머물러 유리 잎을 회수하세요.', 'gold');
         this.fx.castCircle(new THREE.Vector3(room.x, 0, room.z), 0x87cbb0, { radius: 3, life: 3 });
       }
       return;
     }
-    const reinforcementWaves = this.stage.expedition?.mechanics?.reinforcements || 0;
+    const baseWaves = this.stage.expedition?.mechanics?.reinforcements || 0;
+    const reinforcementWaves = this.conquest ? this.conquest.reinforcementWaves(room, baseWaves) : baseWaves;
     if (room.type === ROOM_TYPE.ELITE && (room.forgeWave || 0) < reinforcementWaves) {
       room.forgeWave = (room.forgeWave || 0) + 1;
       const R = this.stage.rosterFor(room.type);
@@ -362,11 +367,15 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; }
+  stop() { this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
-    const def = this.stage.expedition && type === this.stage.encounter.enemyId ? this.stage.expeditionEnemy : ENEMIES[type]; if (!def) return; const gltf = this.app.models[def.model]; if (!gltf) return;
+    let def = this.stage.expedition && type === this.stage.encounter.enemyId ? this.stage.expeditionEnemy : ENEMIES[type]; if (!def) return; const gltf = this.app.models[def.model]; if (!gltf) return;
     const rm = room || this.curRoom || this.world?.startRoom;
+    if (this.conquest) {
+      def = this.conquest.enemyDefinition(type, def, rm);
+      const pattern = def.boss && this.conquest.bossPattern(); if (pattern) def = { ...def, pattern };
+    }
     let pos;
     if (at) { const [x, z] = this.world ? this.world.resolve(rm.x, rm.z, at.x, at.z, 0.6) : [at.x, at.z]; pos = new THREE.Vector3(x, 0, z); }
     else if (near) { const a = Math.random() * Math.PI * 2; pos = near.clone().add(new THREE.Vector3(Math.cos(a) * 3, 0, Math.sin(a) * 3)); }
@@ -382,6 +391,7 @@ export class Battle {
     } else { const a = Math.random() * Math.PI * 2, r = 11; pos = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r); }
     const e = new Enemy(this, gltf, this.weaponsGltf, def, this.stage.scale, pos);
     e.homeRoom = rm;
+    this.conquest?.spawn(e, type, rm);
     this.enemies.push(e);
     if (def.boss) { this.boss = e; this.ui.showBoss(def.name, true, def.portrait); this.app.companionAgent?.observe('boss-spotted', { name: def.name, id: `${this.stage.idx}:${def.name}` }); }
     return e;
@@ -412,6 +422,7 @@ export class Battle {
     else { this.ui.toast(hint?`광폭화 · ${hint}`:`${boss.def.name} 광폭화!`, 'red'); audio.voice(`${this.bossKey}_enrage`); this.fx.firePillar(boss.pos, { height: 11, width: 3.5, life: 1.2, color: 0xff2020 }); this.renderer.flashScreen(0.4, 0xff2020); this.renderer.shake(0.8); audio.boom({ vol: 0.8, dur: 0.8 }); }
   }
   onEnemyDeath(e) {
+    if (this.conquest?.death(e)) { this.ui.toast(this.conquest.hint(), 'gold'); this.ui.setObjective(this.world); }
     this.kills++; this.waveKilled++; this.player.addUlt(e.isBoss ? 30 : e.isElite ? 16 : 5);
     if (this.sp) this.sp.onKill(e);
     if (this.hasProc('blood_leech') && this.player.alive) { const heal = Math.floor(this.player.maxHp * 0.03); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); this.fx.embers(this.player.pos, 0xff3a5a, { n: 4, radius: 0.6, life: 0.6, rise: 2 }); if (this.fx.dmgLayer.children.length < 20) this.fx.damage(this.player.pos, heal, { kind: 'heal', text: '+' + heal }); }
@@ -458,7 +469,7 @@ export class Battle {
     audio.playMusic(musicForScene({ stage: this.stage, boss: !!this.boss }), MUSIC_MIX); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12], step: 0.08 });
     if (this.bossDefeated) this.after(.8, () => this.victory());
   }
-  defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, expedition: this.stage?.expedition || null }; this.ui.showResult(this, false); }
+  defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, expedition: this.stage?.expedition || null, conquest: this.conquest?.finish(false) || null }; this.ui.showResult(this, false); }
   victory() {
     if (!this.active || !this.player?.alive) return; this.active = false; this.input.enabled = false; this.input.clear();
     this.app.companionAgent?.observe('victory', { floor: this.stage?.idx || 0 });
@@ -469,7 +480,7 @@ export class Battle {
     const explored = this.world ? this.world.rooms.filter((r) => r.cleared).length / this.world.rooms.length : 1;
     const hpRatio = this.player.hp / this.player.maxHp;
     const stars = this.revived ? 1 : (hpRatio > 0.6 && explored > 0.8) ? 3 : (hpRatio > 0.3 || explored > 0.6) ? 2 : 1;
-    this.result = { win: true, stars, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, rooms: this.roomsCleared, totalRooms: this.world ? this.world.rooms.length : 0, expedition: this.stage.expedition || null };
+    this.result = { win: true, stars, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, rooms: this.roomsCleared, totalRooms: this.world ? this.world.rooms.length : 0, expedition: this.stage.expedition || null, conquest: this.conquest?.finish(true) || null };
     this.after(1.6, () => this.ui.showResult(this, true));
   }
 

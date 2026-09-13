@@ -35,7 +35,7 @@ export class Minimap {
     for (const r of f.rooms) {
       const [x, y] = this.px(r.x - r.w / 2, r.z - r.h / 2);
       const w = r.w * this.scale, h = r.h * this.scale;
-      if (!r.discovered) { g.fillStyle = 'rgba(90,90,120,.18)'; g.fillRect(x, y, w, h); continue; }
+      if (!r.discovered && !r.conquestLabel) { g.fillStyle = 'rgba(90,90,120,.18)'; g.fillRect(x, y, w, h); continue; }
       let col = r.cleared ? 'rgba(120,130,170,.55)' : 'rgba(180,190,230,.75)';
       if (r.type === ROOM_TYPE.BOSS) col = r.cleared ? 'rgba(120,60,70,.6)' : 'rgba(255,60,90,.85)';
       else if (r.type === ROOM_TYPE.ELITE) col = r.cleared ? 'rgba(130,110,60,.55)' : 'rgba(255,200,70,.8)';
@@ -45,7 +45,10 @@ export class Minimap {
         // 미클리어 방은 테두리 강조
         g.strokeStyle = col.replace(/[\d.]+\)$/, '1)'); g.lineWidth = 1.4; g.strokeRect(x, y, w, h);
       }
-      if (r.type === ROOM_TYPE.BOSS) {
+      if (r.conquestLabel) {
+        const [cx, cy] = this.px(r.x, r.z);
+        g.fillStyle = r.cleared ? '#c4e9d5' : '#091b15'; g.font = 'bold 11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(r.conquestLabel, cx, cy);
+      } else if (r.type === ROOM_TYPE.BOSS) {
         const [cx, cy] = this.px(r.x, r.z);
         g.fillStyle = '#fff'; g.font = 'bold 11px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
         g.fillText('☠', cx, cy);

@@ -181,16 +181,18 @@ export class Battle extends RpgBattle {
   damageEnemy(e,dmg,opts={}) {
     if (!this.run?.enabled || opts.masterworksProc) return super.damageEnemy(e,dmg,opts);
     const source=opts.source?.stats?opts.source:this.player;
-    const before=e?.hp||0, counter=this.elapsed<this.counterUntil && !opts.quiet;
+    const before=e?.hp||0, counter=this.elapsed<this.counterUntil && !opts.quiet, opening=e?.breakT>0;
     let mult=1+(opts.finisher?Math.min(.7,this.effects.finisher||0):0)+(e?.breakT>0?.3:0)+(counter?.35:0);
     super.damageEnemy(e,dmg*mult,opts);
     const dealt=before-(e?.hp||0);
     if (!(dealt>0)) return;
     if (counter) { this.counterUntil=0; this.ui.toast('빈틈 반격 · 피해 +35%','gold'); }
-    if (postureHit(e,dealt,{...opts,breakPower:this.effects.breakPower||0})) {
+    const broke=postureHit(e,dealt,{...opts,breakPower:this.effects.breakPower||0});
+    if (broke) {
       this.run.breaks++; this.fx.damage(e.pos,0,{text:'BREAK'});
       this.fx.shockTex(e.pos,0xffd180,{r1:3.5,life:.3}); audio.play('hit_metal0',{vol:.4});
     }
+    if (this.conquest?.bossHit(e,{broke,opening,direct:source===this.player&&!opts.quiet})) this.ui.setObjective(this.world);
     if (opts.finisher && !opts.quiet && this.effects.chain && this.elapsed>=this.chainUntil) {
       this.chainUntil=this.elapsed+.65;
       let count=0;
