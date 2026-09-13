@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { Battle } from '../src/game/masterworks-battle.js';
+import { Battle as RpgBattle } from '../src/game/rpg-battle.js';
 import { normalizeMasterworks } from '../src/game/masterworks-core.js';
 import { KillLedger } from '../src/game/rpg-core.js';
 import { HEROES, heroStats, levelExp } from '../src/data/heroes.js';
@@ -15,7 +16,7 @@ function fixture() {
   Object.assign(game,{
     active:true,paused:false,pauseReasons:new Set(),elapsed:0,kills:0,waveKilled:0,combatXp:0,roomsCleared:0,runKills:new WeakSet(),killLedger:new KillLedger(),enemies:[],pending:[],effects:{},buildBase:stats,
     stage:{idx:1,ch:1,code:'1-1',scale:1},heroId:'knight',world:{rooms:[],remaining:2,bossRoom:{cleared:false}},
-    run:{id:1,enabled:true,settled:false,permanent:{},picked:[],queue:[],round:0,renown:0,perfects:0,breaks:0,difficulty:{rewardMul:1}},
+    run:{id:1,enabled:true,settled:false,permanent:{},picked:[],queue:[],round:0,autoPicked:0,renown:0,perfects:0,breaks:0,difficulty:{rewardMul:1}},
     player:{stats,maxHp:stats.hp,hp:stats.hp,alive:true,def:HEROES.knight,pos:new THREE.Vector3(),addUlt:noop,forward:(v:any)=>v.set(0,0,1)},
     app:{eco:{s:{quests:{kills:0}},hero:()=>hero,heroEquipBonus:()=>({})}},
     masterworks:{s:state,transact:(fn:any)=>fn(state)},ensureRpg:()=>rpg,flushRpg:()=>true,
@@ -47,6 +48,37 @@ test('deferred max-rank offers refresh and stale selection cannot consume the ne
   expect(game.selectBoon('ember_edge').ok).toBe(false);expect(game.run.queue).toHaveLength(1);
   expect(game.run.picked.filter((id:string)=>id==='ember_edge')).toHaveLength(3);
   expect(game.selectBoon(game.currentOffer().ids[0]).ok).toBe(true);expect(game.run.queue).toHaveLength(0);
+});
+
+test('routine rewards auto-apply while only the third and sixth rewards become choices',()=>{
+  const {game}=fixture();
+  expect(game.grantBoonReward({automatic:true}).automatic).toBe(true);
+  expect(game.run).toMatchObject({round:1,autoPicked:1});expect(game.run.queue).toHaveLength(0);
+  expect(game.grantBoonReward({automatic:true}).automatic).toBe(true);
+  const checkpoint=game.grantBoonReward({automatic:false});
+  expect(checkpoint.ok).toBe(true);expect(game.currentOffer().kind).toBe('boon');expect(game.run.autoPicked).toBe(2);
+  expect(game.selectBoon(game.currentOffer().ids[0]).ok).toBe(true);
+  for(let i=0;i<2;i++)expect(game.grantBoonReward({automatic:true}).automatic).toBe(true);
+  expect(game.grantBoonReward({automatic:false}).ok).toBe(true);expect(game.run.round).toBe(6);
+  expect(game.run.autoPicked).toBe(4);expect(game.run.queue).toHaveLength(1);
+});
+
+test('party stages disable personal masterworks progression and offers',()=>{
+  const {game}=fixture();game.stage.party={code:'party'};game.run.enabled=!game.stage.party;
+  expect(game.grantBoonReward({automatic:true}).ok).toBe(false);expect(game.run.round).toBe(0);expect(game.run.queue).toHaveLength(0);
+});
+
+test('party start uses its server run id without mutating or persisting personal masterworks',async()=>{
+  const game:any=Object.create(Battle.prototype),state=normalizeMasterworks(null),before=structuredClone(state);
+  let transactions=0,scheduled=0;
+  Object.assign(game,{stage:{idx:1,ch:1,code:'1-1',party:{runId:'server-run'}},active:true,
+    player:{stats:{hp:100},maxHp:100,hp:100,alive:true},masterworks:{s:state,transact:()=>{transactions++;return {ok:false,error:'save-failed'};}},
+    chronicle:{refresh:noop},after:()=>scheduled++});
+  const original=RpgBattle.prototype.start;RpgBattle.prototype.start=async function(){};
+  try{await Battle.prototype.start.call(game);}finally{RpgBattle.prototype.start=original;}
+  expect(transactions).toBe(0);expect(state).toEqual(before);
+  expect(game.run).toMatchObject({id:'server-run',enabled:false,picked:[],queue:[],round:0});
+  expect(game.effects).toEqual({});expect(scheduled).toBe(1);
 });
 
 test('late deaths after result cannot pay progression and normal kills settle once',()=>{
@@ -150,7 +182,7 @@ function damageFixture() {
   const {game}=fixture(),bolts:any[]=[];
   Object.assign(game,{elapsed:10,counterUntil:0,chainUntil:0,feedbackSound:true,feedbackCount:0,dmgDealt:0,combo:0,maxCombo:0,timeCtl:{hitstop:noop}});
   game.player.atk=100;game.player.stats.crit=0;game.ui.setCombo=noop;
-  Object.assign(game.fx,{dmgLayer:{children:[]},damage:noop,flash:noop,directional:noop,shockTex:noop,boltTex:(...args:any[])=>bolts.push(args)});
+  Object.assign(game.fx,{dmgLayer:{children:[]},damage:noop,contact:noop,shockTex:noop,boltTex:(...args:any[])=>bolts.push(args)});
   const target=(x=0,z=0,extra:any={})=>({
     alive:true,spawning:false,hp:10000,maxHp:10000,pos:new THREE.Vector3(x,0,z),def:{scale:1},posture:0,breakT:0,
     hits:[] as any[],receiveImpact:noop,
@@ -177,6 +209,18 @@ test('real finisher chain hits at most two eligible nearby targets with 55% atta
     game.damageEnemy(primary,10,{finisher:true,masterworksProc:true,quiet:true});expect(bolts).toHaveLength(2);
     game.damageEnemy(primary,10,{finisher:true});expect(bolts).toHaveLength(4);
     expect(first.hp).toBe(9890);expect(edge.hp).toBe(9890);expect(third.hp).toBe(10000);
+  }finally{Math.random=random;}
+});
+
+test('remote attack source owns critical roll, ultimate gain, and masterworks chain damage',()=>{
+  const random=Math.random;Math.random=()=>0;
+  try{
+    const {game,target}=damageFixture(),ult:number[]=[];
+    game.effects={chain:1};game.player.atk=100;game.player.stats.crit=0;
+    const source={atk:240,stats:{crit:1,critDmg:2,ultGain:1.5},addUlt:(v:number)=>ult.push(v)};
+    const primary=target(),other=target(1);game.enemies=[primary,other];
+    game.damageEnemy(primary,100,{source,finisher:true});
+    expect(primary.hits[0].amount).toBe(180);expect(ult).toEqual([4.5,4.5]);expect(other.hits[0].amount).toBeCloseTo(237.6);
   }finally{Math.random=random;}
 });
 

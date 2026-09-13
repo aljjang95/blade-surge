@@ -43,8 +43,8 @@ export function hazardPattern(theme, room, player, cycle, full = true) {
 }
 
 // 여섯 장의 재사용 평면. 중앙 안전 영역과 고리 안쪽은 실제로 비워 둔다.
-const vertexShader = `varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
-const fragmentShader = `
+export const hazardVertexShader = `varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
+export const hazardFragmentShader = `
   varying vec2 vUv;
   uniform vec3 color;
   uniform vec2 size;
@@ -65,7 +65,7 @@ export class RegionHazards {
     this.geometry = new THREE.PlaneGeometry(1, 1); this.geometry.rotateX(-Math.PI / 2);
     this.group = new THREE.Group(); this.group.name = 'region-hazards'; game.scene.add(this.group);
     this.slots = Array.from({ length: 6 }, () => {
-      const material = new THREE.ShaderMaterial({ vertexShader, fragmentShader, transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      const material = new THREE.ShaderMaterial({ vertexShader: hazardVertexShader, fragmentShader: hazardFragmentShader, transparent: true, depthWrite: false, side: THREE.DoubleSide,
         uniforms: { color: { value: new THREE.Color(this.rule?.color || 0xffffff) }, size: { value: new THREE.Vector2(1, 1) }, shape: { value: 0 }, safeRadius: { value: 0 }, opacity: { value: 1 }, fired: { value: 0 } } });
       const mesh = new THREE.Mesh(this.geometry, material); mesh.visible = false; mesh.renderOrder = 2; this.group.add(mesh);
       return { mesh, hazard: null, age: 0, hit: false };
@@ -73,9 +73,9 @@ export class RegionHazards {
   }
   clear() { for (const s of this.slots) { s.hazard = null; s.mesh.visible = false; } }
   dispose() { this.clear(); this.group.removeFromParent(); this.geometry.dispose(); for (const s of this.slots) s.mesh.material.dispose(); }
-  spawn(room) {
+  spawn(room, anchor = this.game.player) {
     const g = this.game, theme = g.stage.chapter.theme;
-    const pattern = hazardPattern(theme, room, g.player.pos, this.cycle++, room.type === 'boss' && g.stage.encounter?.rank !== 'captain');
+    const pattern = hazardPattern(theme, room, anchor.pos, this.cycle++, room.type === 'boss' && g.stage.encounter?.rank !== 'captain');
     this.clear(); this.triggered++;
     for (let i = 0; i < pattern.length; i++) {
       const s = this.slots[i], h = pattern[i], m = s.mesh, u = m.material.uniforms;
@@ -87,14 +87,23 @@ export class RegionHazards {
     }
     if (this.triggered === 1 || room.type === 'boss') g.ui.toast(this.rule.name, 'red');
   }
+  getPartyWarnings() {
+    return this.slots.flatMap((s, i) => {
+      const h = s.hazard; if (!h || s.age > h.delay + .5) return [];
+      return [{id:`region:${this.cycle}:${i}`,kind:h.type,x:h.x,z:h.z,radius:h.radius || 0,width:h.width || 0,length:h.length || 0,angle:h.angle || 0,safeRadius:h.safeRadius || 0,remaining:Math.max(0,h.delay-s.age),duration:h.delay,color:this.rule?.color || 0xffffff}];
+    });
+  }
   update(dt) {
-    const g = this.game, p = g.player;
-    if (!this.rule || !g.active || !p?.alive || g.paused || g.bossDefeated) { this.clear(); return; }
-    const room = g.world.roomAt(p.pos.x, p.pos.z);
+    const g = this.game;
+    const targets = g.stage.party ? g.app.party.livingPlayers() : [g.player].filter(p => p?.alive);
+    if (!this.rule || !g.active || !targets.length || g.paused || g.bossDefeated) { this.clear(); return; }
+    const eligible = p => { const r = g.world.roomAt(p.pos.x,p.pos.z); return r && r.spawned && !r.cleared && !['start','treasure'].includes(r.type); };
+    const anchor = targets.find(p => eligible(p) && g.world.roomAt(p.pos.x,p.pos.z) === this.room) || targets.find(eligible) || targets[0];
+    const room = g.world.roomAt(anchor.pos.x, anchor.pos.z);
     if (room !== this.room) { this.room = room; this.cooldown = 5; this.clear(); }
     if (!room || room.cleared || !room.spawned || room.type === 'start' || room.type === 'treasure') { this.clear(); return; }
     this.cooldown -= dt;
-    if (this.cooldown <= 0) { this.spawn(room); this.cooldown = this.rule.period + (room.type === 'boss' ? 0 : 3); }
+    if (this.cooldown <= 0) { this.spawn(room, anchor); this.cooldown = this.rule.period + (room.type === 'boss' ? 0 : 3); }
     for (const s of this.slots) {
       const h = s.hazard; if (!h) continue;
       s.age += dt;
@@ -103,7 +112,7 @@ export class RegionHazards {
       s.mesh.material.uniforms.opacity.value = fired ? Math.max(0, 1 - (s.age - h.delay) / .5) : .65 + .25 * s.age / h.delay;
       if (fired && !s.hit) {
         s.hit = true;
-        if (hazardContains(h, p.pos.x, p.pos.z)) {
+        for (const p of targets) if (hazardContains(h, p.pos.x, p.pos.z)) {
           const hit = p.hurt(p.maxHp * .06, { dirx: p.pos.x - h.x || .1, dirz: p.pos.z - h.z || .1, kb: h.push, kind: 'magic' });
           if (hit) { this.hits++; if (h.slow) { p.slow = .5; p.slowT = Math.max(p.slowT || 0, 1.2); } }
         }

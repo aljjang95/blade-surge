@@ -1,5 +1,5 @@
 import {test,expect} from 'bun:test';
-import {isRecoveryOpportunity,longestRegularCooldown} from '../src/game/apex-combat.js';
+import {contactFeedback,isRecoveryOpportunity,longestRegularCooldown} from '../src/game/apex-combat.js';
 import {Enemy} from '../src/game/enemies.js';
 import * as THREE from 'three';
 test('recovery requires the completed heavy attack sequence, not an interrupted telegraph',()=>{
@@ -18,4 +18,11 @@ test('real enemy attack records sequence only when execution reaches doAttack',(
 test('cooldown selection excludes ultimate and awakening and resolves ties stably',()=>{
   expect(longestRegularCooldown({def:{skills:[{}, {},{ult:true},{awaken:1},{unlock:10}]},cds:[4,4,99,99,99]})).toBe(0);
   expect(longestRegularCooldown({def:{skills:[{}]},cds:[0]})).toBe(-1);
+});
+test('contact feedback keeps recoil while reduced motion removes freezes and particles',()=>{
+  const regular=contactFeedback(),heavy=contactFeedback({finisher:true}),boss=contactFeedback({finisher:true,boss:true}),reduced=contactFeedback({crit:true,reduced:true});
+  expect(regular).toMatchObject({heavy:false,hitstop:.035,particles:5,light:false});
+  expect(heavy.hitstop).toBe(.09);expect(heavy.particles).toBe(10);expect(heavy.light).toBe(true);expect(heavy.recoil).toBeGreaterThan(regular.recoil);
+  expect(boss.recoil).toBeLessThan(regular.recoil);expect(boss.recoil).toBeGreaterThan(0);
+  expect(reduced).toMatchObject({heavy:true,hitstop:0,particles:0,light:false});expect(reduced.recoil).toBeGreaterThan(0);
 });

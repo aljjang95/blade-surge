@@ -68,6 +68,15 @@ export class Minimap {
     g.fillStyle = 'rgba(255,220,120,.9)';
     for (const it of battle.drops.items) { if (it.kind !== 'item') continue; const [x, y] = this.px(it.mesh.position.x, it.mesh.position.z); g.beginPath(); g.arc(x, y, 2, 0, 6.283); g.fill(); }
     // 플레이어 (방향 삼각형)
+    if (battle.stage?.party) {
+      const party = battle.app.party;
+      for (const member of party.members) {
+        const ally = party.players.get(member.id); if (!ally || ally === p) continue;
+        const [x,y] = this.px(ally.pos.x,ally.pos.z);
+        g.fillStyle = ally.alive ? '#78ddff' : '#c3a091'; g.beginPath(); g.arc(x,y,3.3,0,6.283); g.fill();
+        g.strokeStyle = '#102c36'; g.lineWidth=1; g.stroke();
+      }
+    }
     const [px, py] = this.px(p.pos.x, p.pos.z);
     g.save(); g.translate(px, py); g.rotate(-p.yaw + Math.PI);
     g.fillStyle = '#6bff8f'; g.beginPath(); g.moveTo(0, -5); g.lineTo(3.6, 4); g.lineTo(-3.6, 4); g.closePath(); g.fill();

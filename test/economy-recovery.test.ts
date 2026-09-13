@@ -17,17 +17,47 @@ beforeEach(() => {
 afterEach(() => { if (oldStorage) Object.defineProperty(globalThis, 'localStorage', oldStorage); else Reflect.deleteProperty(globalThis, 'localStorage'); });
 
 describe('진행 저장 복구', () => {
-  test('구형 3-10 완료 저장은 4-1을 열고 5-10 이후에도 50범위를 지킨다', () => {
+  test('구형 3-10 완료 저장은 4-1을 열고 6-10 이후에도 60범위를 지킨다', () => {
     const eco = new Economy(); const raw = structuredClone(eco.s);
     raw.progress = { unlocked: 30, stars: { '3-10': 3 } };
     values.set(key, JSON.stringify(raw));
     const migrated = new Economy();
     expect(migrated.nextStage().code).toBe('4-1');
     expect(migrated.isUnlocked(4, 1)).toBe(true); expect(migrated.isUnlocked(4, 2)).toBe(false);
-    for (const pair of [[0, 1], [1, 0], [1, 11], [6, 1], [1.5, 1]]) expect(migrated.isUnlocked(...pair)).toBe(false);
-    migrated.s.progress.unlocked = 50; const last = migrated.nextStage();
+    for (const pair of [[0, 1], [1, 0], [1, 11], [7, 1], [1.5, 1]]) expect(migrated.isUnlocked(...pair)).toBe(false);
+    migrated.s.progress.unlocked = 60; const last = migrated.nextStage();
     migrated.completeStage(last, 3);
-    expect(migrated.nextStage().code).toBe('5-10'); expect(migrated.s.progress.unlocked).toBe(50);
+    expect(migrated.nextStage().code).toBe('6-10'); expect(migrated.s.progress.unlocked).toBe(60);
+  });
+  test('구형 50층 완주 저장은 정규화에서 51층을 열고 기록과 재시작 진행을 보존한다', () => {
+    const fresh = new Economy().s;
+    const raw = structuredClone(fresh);
+    raw.progress = { unlocked: 50, stars: { '1-1': 2, '5-10': 3 } };
+    const normalized = normalizeSave(raw, fresh);
+    expect(normalized.progress.unlocked).toBe(51);
+    expect(normalized.progress.stars).toEqual(raw.progress.stars);
+    expect(normalizeSave(normalized, fresh).progress).toEqual(normalized.progress);
+    values.set(key, JSON.stringify(raw));
+    const loaded = new Economy();
+    expect(loaded.nextStage().code).toBe('6-1');
+    expect(loaded.isUnlocked(6, 1)).toBe(true);
+    expect(loaded.isUnlocked(6, 2)).toBe(false);
+    loaded.save();
+    expect(new Economy().nextStage().code).toBe('6-1');
+  });
+  test('50층 미완료 저장은 귀환 후일담을 열지 않으며 60층 기록은 상한에서 유지된다', () => {
+    const fresh = new Economy().s;
+    for(const stars of [0, '3', NaN, Infinity]) {
+      const raw = structuredClone(fresh);
+      raw.progress = { unlocked: 50, stars: { '5-10': stars } };
+      const normalized = normalizeSave(raw, fresh);
+      expect(normalized.progress.unlocked).toBe(50);
+    }
+    const raw = structuredClone(fresh);
+    raw.progress = { unlocked: 999, stars: { '6-10': 3, '7-1': 3 } };
+    const normalized = normalizeSave(raw, fresh);
+    expect(normalized.progress.unlocked).toBe(60);
+    expect(normalized.progress.stars).toEqual({ '6-10': 3 });
   });
   test('실패 환급은 primary·backup·복구 원본 값 모두 차감 전 상태를 보존한다', () => {
     const eco = new Economy(); eco.s.energy = 350; eco.s.energyT = 123456; eco.save();

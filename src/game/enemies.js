@@ -5,6 +5,7 @@ import { audio } from '../engine/audio.js';
 import { rigOf, RIGS } from '../data/rigs.js';
 
 const _v = new THREE.Vector3();
+const areaPlayers = game => [...new Set(game.stage?.party ? game.app.party.livingPlayers() : [game.player])].filter(p => p?.alive);
 const PATTERN_ANIMS = { basic: 'attack', spin: 'attackSpin', slam: 'attackJump', summon: 'summon', fan: 'cast', soulrain: 'raise', dash: 'dash' };
 
 /** 보스별 순서를 읽어 회피 타이밍을 학습할 수 있게 한다. 후반 페이즈는 순서를 변주한다. */
@@ -182,12 +183,13 @@ export class Enemy extends Actor {
     const g = this.game, p = this.player; const c = this.pos.clone();
     g.fx.explosion(c, { size: 5.5, color: 0xff7a30, life: 0.5 }); g.fx.shockTex(c, 0xff8a40, { r1: 6, life: 0.45 }); g.fx.burst(c.clone().setY(0.8), 0xffa040, { n: 26, speed: 10, size: 0.4, up: 1 }); g.fx.dustPuff(c, { size: 4, life: 0.6 });
     audio.boom({ vol: 0.7, dur: 0.5, low: 70 }); g.renderer.shake(0.5); audio.vibe(40);
-    if (p.alive && Math.hypot(p.pos.x - c.x, p.pos.z - c.z) < 3.4) p.hurt(this.atk * 2.5, { dirx: p.pos.x - c.x, dirz: p.pos.z - c.z, kb: 9, kind: 'blunt' });
+    for (const p of areaPlayers(g)) if (Math.hypot(p.pos.x - c.x, p.pos.z - c.z) < 3.4) p.hurt(this.atk * 2.5, { dirx: p.pos.x - c.x, dirz: p.pos.z - c.z, kb: 9, kind: 'blunt' });
     for (const o of this.game.enemies) { if (o === this || !o.alive || o.spawning) continue; const dx = o.pos.x - c.x, dz = o.pos.z - c.z; if (Math.hypot(dx, dz) > 3.4) continue; o.hurt(this.atk * 3, { dirx: dx, dirz: dz, kb: 7, kind: 'blunt' }); if (o.behavior === 'bomber' && o.fuse < 0 && o.alive) o.fuse = 0.5; }
     this.hp = 0; this.kill(0, 0, 3);
   }
+  getPartyWarnings() { return enemyPartyWarnings(this); }
   startAttack(d) {
-    this.attackSequence=(this.attackSequence||0)+1;
+    this.attackSequence=(this.attackSequence||0)+1; this.partyDashWarning = null;
     this.state = 'attack'; this.stateT = 0; this.attackDone = false;
     let anim = this.def.ranged ? this.A('cast') : this.A('attack'); this.special = null;
     if (this.isBoss) {
@@ -204,7 +206,7 @@ export class Enemy extends Actor {
     this.attackDur = dur; this.hitAt = this.special === 'spin' ? 0.55 : this.special === 'summon' ? 0.6 : this.special === 'dash' ? 0.85 : this.special === 'soulrain' ? 0.6 : 0.52;
     this.playTimed(anim, dur, { fade: 0.08 });
     const f = this.forward(_v.clone()); const g = this.game;
-    if (this.special === 'dash') { const p = this.player; const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z; const dd = Math.hypot(dx, dz) || 1; const travel = Math.min(9, dd + 1.5); this.dashV = new THREE.Vector3(dx / dd, 0, dz / dd).multiplyScalar(travel / (dur * .4)); this.faceDir(dx, dz); this.telegraph = dur * .45; g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: travel, arc: 30, height: 0.1, life: dur * this.hitAt, thickness: 1 }); audio.whoosh({ vol: 0.5, pitch: 0.5, dur: 0.5 }); }
+    if (this.special === 'dash') { const p = this.player; const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z; const dd = Math.hypot(dx, dz) || 1; const travel = Math.min(9, dd + 1.5); this.partyDashWarning = {x:this.pos.x+dx/dd*travel/2,z:this.pos.z+dz/dd*travel/2,length:travel+6.4,width:6.4,angle:Math.atan2(dz,dx)}; this.dashV = new THREE.Vector3(dx / dd, 0, dz / dd).multiplyScalar(travel / (dur * .4)); this.faceDir(dx, dz); this.telegraph = dur * .45; g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: travel, arc: 30, height: 0.1, life: dur * this.hitAt, thickness: 1 }); audio.whoosh({ vol: 0.5, pitch: 0.5, dur: 0.5 }); }
     else if (this.def.ranged && !this.special) { g.fx.flash(this.pos.clone().setY(1.6 * this.def.scale), 0xa0ff90, { size: 1.5 * this.def.scale, life: dur * this.hitAt }); if (this.isBoss) audio.magic({ vol: 0.25, base: 200, notes: [0, 1, 0], step: 0.1, type: 'square' }); }
     else if (this.special === 'fan') g.fx.slashArc(this.pos, this.yaw, this.def.projColor || 0x80ff90, { radius: 14, arc: 80, height: 0.1, life: dur * this.hitAt, thickness: .6 });
     else if (this.special === 'spin') g.fx.ring(this.pos, 0xff3030, { r0: 4.2, r1: 4.8, life: dur * this.hitAt, y: 0.06, width: 1 });
@@ -220,7 +222,12 @@ export class Enemy extends Actor {
     const dmg = this.atk * (this.special === 'slam' ? 1.6 : this.special === 'spin' ? 1.2 : this.special === 'dash' ? 1.5 : 1);
     if (this.special === 'summon') { g.summonMinions(this, this.isBoss ? 4 : 2); return; }
     if (this.special === 'soulrain') {
-      for (const pt of this.rainPts || []) { g.fx.firePillar(pt, { height: 6, width: 2.2, life: 0.6, color: 0x80ff90 }); g.fx.burst(pt.clone().setY(0.5), 0x80ff90, { n: 12, speed: 6, size: 0.3 }); if (Math.hypot(p.pos.x - pt.x, p.pos.z - pt.z) < 2.2) p.hurt(dmg, { dirx: p.pos.x - pt.x, dirz: p.pos.z - pt.z, kb: 6, kind: 'magic' }); }
+      for (const pt of this.rainPts || []) { g.fx.firePillar(pt, { height: 6, width: 2.2, life: 0.6, color: 0x80ff90 }); g.fx.burst(pt.clone().setY(0.5), 0x80ff90, { n: 12, speed: 6, size: 0.3 }); }
+      // One strike per actor even when several rain circles overlap; hurt owns invulnerability.
+      for (const target of areaPlayers(g)) {
+        const pt = (this.rainPts || []).find(pt => Math.hypot(target.pos.x-pt.x,target.pos.z-pt.z)<2.2);
+        if (pt) target.hurt(dmg,{dirx:target.pos.x-pt.x,dirz:target.pos.z-pt.z,kb:6,kind:'magic'});
+      }
       audio.boom({ vol: 0.6, dur: 0.6, low: 70 }); g.renderer.shake(0.4); return;
     }
     if (this.special === 'fan') {
@@ -237,13 +244,13 @@ export class Enemy extends Actor {
     }
     if (this.special === 'spin') {
       g.fx.slashArc(this.pos, this.yaw, 0xff5050, { radius: 4.8, arc: 330, height: 1.2, life: 0.35, thickness: 0.5 }); g.fx.dust(this.pos, { n: 14, size: 2 }); g.renderer.shake(0.4);
-      if (p.distTo(this) < 4.8) p.hurt(dmg, { dirx: p.pos.x - this.pos.x, dirz: p.pos.z - this.pos.z, kb: 9, kind: 'blunt' });
+      for (const p of areaPlayers(g)) if (p.distTo(this) < 4.8) p.hurt(dmg, { dirx: p.pos.x - this.pos.x, dirz: p.pos.z - this.pos.z, kb: 9, kind: 'blunt' });
       return;
     }
     if (this.special === 'slam') {
       const c = this.pos.clone().addScaledVector(f, 2);
       g.fx.shockTex(c, 0xff6a3a, { r1: 5.5, life: 0.5 }); g.fx.dustPuff(c, { size: 5 }); g.fx.burst(c.clone().setY(0.4), 0xff7a40, { n: 24, speed: 9, size: 0.4 }); g.renderer.shake(0.7); audio.boom({ vol: 0.7, dur: 0.5, low: 50 });
-      if (Math.hypot(p.pos.x - c.x, p.pos.z - c.z) < 4.2) p.hurt(dmg, { dirx: p.pos.x - c.x, dirz: p.pos.z - c.z, kb: 10, kind: 'blunt' });
+      for (const p of areaPlayers(g)) if (Math.hypot(p.pos.x - c.x, p.pos.z - c.z) < 4.2) p.hurt(dmg, { dirx: p.pos.x - c.x, dirz: p.pos.z - c.z, kb: 10, kind: 'blunt' });
       return;
     }
     if (this.special === 'dash') {
@@ -256,4 +263,26 @@ export class Enemy extends Actor {
     const ang = Math.atan2(dx, dz); let diff = Math.abs(ang - this.yaw); diff = Math.min(diff, Math.PI * 2 - diff);
     if (d < this.def.range + 0.6 && diff < 1.1) { p.hurt(dmg, { dirx: dx, dirz: dz, kb: this.isBoss ? 6 : 3, kind: 'blunt' }); g.fx.slashArc(this.pos, this.yaw, 0xff5050, { radius: this.def.range, arc: 110, height: 1.2, life: 0.2, tilt: 0.8 }); }
   }
+}
+
+/** Presentation-only shapes. No damage, RNG or simulation timer advances here. */
+export function enemyPartyWarnings(enemy) {
+  if (!enemy.alive || enemy.spawning || !enemy.partyId) return [];
+  const base = {id:`${enemy.partyId}:${enemy.attackSequence || 0}`,kind:'disk',x:enemy.pos.x,z:enemy.pos.z,radius:0,width:0,length:0,angle:0,safeRadius:0,remaining:0,duration:1,color:0xff6040};
+  if (enemy.behavior === 'bomber' && enemy.fuse >= 0 && enemy.fuse < .7) return [{...base,id:`${enemy.partyId}:fuse`,radius:3.4,duration:.7,remaining:.7-enemy.fuse}];
+  if (enemy.state !== 'attack' || enemy.attackDone) return [];
+  const duration = enemy.attackDur * enemy.hitAt, remaining = Math.max(0,duration-enemy.stateT);
+  if (!remaining) return [];
+  Object.assign(base,{duration,remaining});
+  const forward = {x:Math.sin(enemy.yaw),z:Math.cos(enemy.yaw)};
+  if (enemy.special === 'soulrain') return (enemy.rainPts || []).map((pt,i)=>({...base,id:`${base.id}:${i}`,x:pt.x,z:pt.z,radius:2.2,color:0x80ff90}));
+  if (enemy.special === 'summon') return [];
+  if (enemy.special === 'slam') return [{...base,x:base.x+forward.x*2,z:base.z+forward.z*2,radius:4.2}];
+  if (enemy.special === 'spin') return [{...base,radius:4.8}];
+  if (enemy.special === 'dash' && enemy.partyDashWarning) return [{...base,kind:'lane',...enemy.partyDashWarning}];
+  if (enemy.special === 'fan' || enemy.def.ranged) {
+    const angles = enemy.special === 'fan' ? [-.56,-.28,0,.28,.56] : [0];
+    return angles.map((a,i)=>{const yaw=enemy.yaw+a;return {...base,id:`${base.id}:${i}`,kind:'lane',x:base.x+Math.sin(yaw)*7,z:base.z+Math.cos(yaw)*7,width:1.5,length:14,angle:Math.PI/2-yaw};});
+  }
+  return [{...base,radius:enemy.def.range+.6}];
 }

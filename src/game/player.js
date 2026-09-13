@@ -302,7 +302,7 @@ export class Player extends Actor {
       if (this.state === 'attack') { this.comboResume = { idx: Math.min(this.comboIdx + 1, this.def.combo.length - 1), t: 1.2 }; }   // 강타에 끊겨도 1.2초 안에 다시 누르면 이어서
       this.stopTrail(); this.state = 'hurt'; this.stateT = 0; this.play(Math.random() < 0.5 ? 'Hit_A' : 'Hit_B', { once: true, fade: 0.05, speed: 1.6 });
     }
-    if (this.hp <= 0) { this.hp = 0; this.stopTrail(); this.state = 'dead'; this.die(); this.game.onPlayerDeath(); }
+    if (this.hp <= 0) { this.hp = 0; this.stopTrail(); this.state = 'dead'; this.die(); this.game.onPlayerDeath(this); }
     return true;
   }
   revive() { this.alive = true; this.dead = false; this.deathT = -1; this.hp = this.maxHp; this.state = 'idle'; this.invuln = 2; this.pos.y = 0; for (const m of this.mats) m.transparent = false; this.play('Idle'); }
@@ -348,7 +348,7 @@ export class Player extends Actor {
   autoExplore(dt) {
     const out = { x: 0, y: 0 };
     const g = this.game, W = g.world; if (!W) return out;
-    if (g.portal) { const dx = g.portal.pos.x - this.pos.x, dz = g.portal.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; return out; }   // 봉인 해제 포탈 → 보스방 앞
+    if (g.portal && (!g.stage?.party || !this.partyPortaled)) { const dx = g.portal.pos.x - this.pos.x, dz = g.portal.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; return out; }   // 봉인 해제 포탈 → 보스방 앞
     let target = g.autoTarget;
     if (!target || target.cleared || !W.rooms.includes(target)) {
       const cands = W.rooms.filter((r) => !r.cleared && !(W.sealed && r === W.bossRoom));   // 봉인된 보스방은 못 들어간다

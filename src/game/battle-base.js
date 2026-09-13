@@ -67,19 +67,19 @@ export class Battle {
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
     this.combo = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0;
     this.clearPortal();
-    const def = resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = heroStats(def, heroState, equipBonus);
+    const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = heroStats(def, heroState, equipBonus);
     this.setBonus = equipBonus.active || [];
     this.procs = new Set(equipBonus.procs || []);   // 테마 세트 발동 효과 (items.js SETS.*.procs)
     this.holes = []; this.rebirthUsed = false;
     this.sp = this.sp || new SetProcs(this); this.sp.clear();   // 회전 8 테마 세트 (서리·역병·룬·사슬)
 
     // ---- 무한의 성: 한 층 절차 생성 ----
-    this.world = stage.expedition ? buildExpeditionWorld(stage) : new Floor(stage.idx, stage.chapter.theme);
+    this.world = stage.expedition ? buildExpeditionWorld(stage) : new Floor(stage.idx, stage.chapter.theme, stage.party?.seed, stage.dungeon?.layout);
     this.arena.buildFloor(this.world, stage.chapter.theme);
     this.roomsCleared = 0; this.bossFound = false;
 
     const gltf = await loadModel(def.model);
-    this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], this.app.eco.heroEquipInsts(heroId), heroState.level || 1);
+    this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], stage.party ? {} : this.app.eco.heroEquipInsts(heroId), heroState.level || 1);
     const sr = this.world.startRoom;
     this.player.pos.set(sr.x, 0, sr.z); this.player.yaw = 0;
     await this.fx.prepare(this.renderer.r, this.app.models, this.renderer.composer.readBuffer);
@@ -89,7 +89,7 @@ export class Battle {
     this.ui.setupHud(def, this.player);
     this.ui.setupMinimap(this.world);
     this.active = true; this.input.enabled = true; this.input.clear();
-    if (stage.expedition?.kind !== 'arena') this.app.companionAgent?.startBattle(this);
+    if (!stage.party && stage.expedition?.kind !== 'arena') this.app.companionAgent?.startBattle(this);
     audio.playMusic(stage.expedition ? 'expansion/flow-combat' : Math.random() < 0.5 ? 'bgm_battle' : 'bgm_battle2', stage.expedition ? { fade: .7, volume: .68 } : undefined);
     this.ui.showHud(true);
     const q = this.app.eco.s.settings.quality;
@@ -340,10 +340,11 @@ export class Battle {
     const p = this.player;
     this.fx.firePillar(p.pos, { height: 6, width: 2.4, life: 0.5, color: 0xff4060 }); this.fx.ghost(p.model, 0xff4060, { life: 0.4, opacity: 0.6 });
     p.pos.copy(P.exit); p.kb.set(0, 0, 0); p.vel.set(0, 0, 0); p.invuln = Math.max(p.invuln || 0, 1);
+    if (this.stage?.party) p.partyPortaled = true;
     const rig = this.renderer.rig; rig.target.copy(p.pos); rig.pos.copy(p.pos).add(rig.offset);
     this.fx.castCircle(P.exit, 0xff4060, { radius: 2.4, life: 1, demon: true }); this.fx.burst(P.exit.clone().setY(1.2), 0xff8090, { n: 24, speed: 7, size: 0.4, up: 1 });
     this.renderer.flashScreen(0.5, 0xff3050); audio.whoosh({ vol: 0.6, pitch: 0.6, dur: 0.6 }); audio.vibe(30);
-    this.clearPortal();
+    if (!this.stage?.party) this.clearPortal();
   }
 
   clearPortal() {
@@ -404,7 +405,7 @@ export class Battle {
     this.kills++; this.waveKilled++; this.player.addUlt(e.isBoss ? 30 : e.isElite ? 16 : 5);
     if (this.sp) this.sp.onKill(e);
     if (this.hasProc('blood_leech') && this.player.alive) { const heal = Math.floor(this.player.maxHp * 0.03); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); this.fx.embers(this.player.pos, 0xff3a5a, { n: 4, radius: 0.6, life: 0.6, rise: 2 }); if (this.fx.dmgLayer.children.length < 20) this.fx.damage(this.player.pos, heal, { kind: 'heal', text: '+' + heal }); }
-    this.app.eco.s.quests.kills++;
+    if (!this.stage.party) this.app.eco.s.quests.kills++;
     this.drops.onKill(e, this.stage);
     const big = e.isBoss || e.isElite;
     this.fx.burst(e.pos.clone().setY(1), 0xe0e0ff, { n: big ? 40 : 12, speed: 8, size: 0.4, up: 1 });
@@ -500,7 +501,7 @@ export class Battle {
     return n;
   }
   damageEnemy(e, dmg, opts = {}) {
-    const p = this.player; const crit = Math.random() < p.stats.crit;
+    const p = opts.source?.stats ? opts.source : this.player; const crit = Math.random() < p.stats.crit;
     let amount = dmg * (0.9 + Math.random() * 0.2) * (crit ? p.stats.critDmg : 1);
     if (this.sp) amount *= this.sp.dmgMul(e);   // 서리 세트: 결정화된 적은 받는 피해 +30%
     const dealt = e.hurt(amount, { ...opts, crit });
@@ -539,7 +540,8 @@ export class Battle {
       // 이동 던전은 원점에서 수백 유닛까지 이어진다. 발사체 수명으로 회수한다.
       let done = p.t >= p.life;
       if (p.hostile) {
-        const pl = this.player; if (pl && pl.alive && Math.hypot(pl.pos.x - p.pos.x, pl.pos.z - p.pos.z) < p.radius + 0.6) { pl.hurt(p.dmg, { dirx: p.dir.x, dirz: p.dir.z, kb: p.kb, kind: p.kind }); done = true; this.fx.burst(p.pos, p.color, { n: 12, speed: 5, size: 0.3 }); }
+        const targets = this.stage?.party ? this.app.party.livingPlayers() : [this.player];
+        for (const pl of targets) if (pl && pl.alive && Math.hypot(pl.pos.x - p.pos.x, pl.pos.z - p.pos.z) < p.radius + 0.6) { pl.hurt(p.dmg, { dirx: p.dir.x, dirz: p.dir.z, kb: p.kb, kind: p.kind }); done = true; this.fx.burst(p.pos, p.color, { n: 12, speed: 5, size: 0.3 }); break; }
       } else {
         for (const e of this.enemies) {
           if (!e.alive || e.spawning || p.hit.has(e)) continue;
@@ -597,12 +599,13 @@ export class Battle {
     this.input.update();
     if (this.active) this.player.handleInput(this.input, dt);
     this.player.update(dt);
+    if (this.stage.party) this.app.party.updateHostActors(dt);
     if (this.active && this.stage.expedition) this.updateExpedition(dt);
     this.hazards?.update(dt);
     if (this.portal) { const P = this.portal; P.t += dt; P.mesh.rotation.z += dt * 1.5; P.mesh.material.opacity = 0.6 + Math.sin(P.t * 5) * 0.25; if (Math.random() < dt * 10) this.fx.embers(P.pos, 0xff6080, { n: 1, radius: 1.2, life: 0.8, size: 0.3, rise: 2.5 }); if (P.t > 0.8 && this.player.alive && this.player.distTo({ pos: P.pos }) < 1.4) this.usePortal(); }
     let alive = 0;
     for (let i = this.enemies.length - 1; i >= 0; i--) { const e = this.enemies[i]; e.update(dt); if (e.dead) { e.dispose(); this.enemies.splice(i, 1); } else if (e.alive && !e.spawning) alive++; }
-    if (this.stage.expedition?.kind !== 'arena') this.app.companionAgent?.updateBattle(this, dt, realDt);
+    if (!this.stage.party && this.stage.expedition?.kind !== 'arena') this.app.companionAgent?.updateBattle(this, dt, realDt);
     if (alive > this.peakAlive) this.peakAlive = alive;   // 층 내 동시 생존 최대 (하네스 maxAliveSeen)
     this.updateProjectiles(dt);
     for (let i = this.holes.length - 1; i >= 0; i--) { const h = this.holes[i]; h.t -= dt; this.vacuum(h.pos, 7, 1.1); if (h.t <= 0) this.holes.splice(i, 1); }

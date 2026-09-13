@@ -1,0 +1,44 @@
+{
+  "date": "2026-09-13",
+  "baseCommit": "ee5e849fefcaae25ebe311cfac9574f391600669",
+  "branch": "codex/story-party-dungeons-20260913",
+  "check": {"tests":534,"assertions":58235,"failed":0,"typecheck":"pass","build":"pass"},
+  "content": {"chapters":6,"stages":60,"newStages":10,"authoredLayouts":6,"connectivityAndBossGateTests":"pass"},
+  "server": {"runtime":"local-workerd with SQLite Durable Object","realWebSocketClients":2,"inputRelay":true,"snapshotRelay":true,"lobbyStageSync":true,"forgedHostDenied":true,"midRunJoinDenied":true,"disconnect":"abort without clear","sharedFinish":true},
+  "iabParty": {
+    "origin":"http://127.0.0.1:5198",
+    "heroes":["knight","mage"],
+    "stage":"6-10",
+    "runId":"15b70d1c-92d4-4829-8a87-3fba2ca74770",
+    "entry":"Real UI create, paste invite, select hero, select stage, both ready, host start",
+    "movement":"Guest touch joystick changed position on both clients",
+    "focusedCombat":"UI skills from knight and mage damaged the same enemy, with matching replicated HP",
+    "completeRun":"Existing normal auto input logic drove both clients through the real shared simulation; no HP, damage, room or victory override",
+    "win":true,"elapsed":139.14370999998673,"kills":242,"roomsCleared":10,
+    "sameResultOnBothClients":true,
+    "landedHitsBySource":{"knight":374,"mage":137},
+    "peakSnapshotEnemiesIncludingCorpses":55,"peakWarningsOnBothClients":4,
+    "personalRecordChangesExcludingEnergyTimestamp":[],
+    "consoleErrors":0,
+    "guestForfeit":"Actual pause and give-up UI stopped both clients and showed disconnect result"
+  },
+  "iabSolo": {
+    "stage":"1-1","driver":"Fixed 1/60 app steps with normal auto input and visible choice buttons; no save reset",
+    "win":true,"roomsCleared":11,"kills":191,"simulationElapsed":201.7040333333871,
+    "displayedResultSeconds":203,"drops":49,"stars":3,
+    "dialogs":[{"kind":"boon","time":77.42216666666761},{"kind":"story","time":101.12216666666538}],
+    "initialBoonAutomatic":true,"automaticBoons":5,"totalBoons":6,
+    "nextStageButton":"Entered 1-2 successfully"
+  },
+  "mobile": {
+    "portrait":[390,844],"landscape":[740,360],
+    "clippedCombatControls":0,"objectiveSkillOverlapsAfterFix":0,
+    "portraitPartyResult":{"clientWidth":350,"scrollWidth":350,"height":442},
+    "landscapeObjective":{"left":145,"top":239,"width":150.453125,"height":19},
+    "finalGameBundle":"index-CUEHNkH6.js",
+    "finalCompanionHudOverlap":false,"finalConsoleErrors":0
+  },
+  "review": "Independent reviews found and fixed missing shared hazard warnings, single-target AoE, personal runSeq writes, and unsynchronized lobby stage selection.",
+  "finalDelta": "After the full party run, freeze the result clock and adjust short-landscape objective/companion layout. Full check remains passing; final UI smoke performed on the resulting build.",
+  "limits": ["Two local IAB clients, not physical-device or internet-latency evidence", "Party is cooperative normalized play without individual progression rewards", "Host browser simulates damage; no competitive server authority or host migration", "Store launch, ads/IAP/provider media work are separate from this patch"]
+}

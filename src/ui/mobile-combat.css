@@ -105,3 +105,10 @@
   #hud .wave-banner { top:max(26%,calc(var(--combat-notice-bottom,0px) + 14px)); }
 }
 #hud .hud-right-top .hud-btn { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* Short landscape screens need the objective above the party/status row, outside skill controls. */
+@media (orientation:landscape) and (max-height:550px) {
+  #hud #objective { position:fixed; left:calc(145px + var(--sal,0px)); right:auto; top:auto; bottom:calc(102px + var(--sab,0px)); max-width:calc(100vw - 390px); white-space:normal; text-align:left; }
+  body:has(#hud.show) .companion-ui .companion-launcher { top:37%; bottom:auto; left:calc(134px + var(--sal,0px)); right:auto; width:44px; min-width:44px; height:44px; padding:5px; display:flex; align-items:center; justify-content:center; }
+  body:has(#hud.show) .companion-launcher-mark { width:28px; height:28px; font-size:16px; }
+  body:has(#hud.show) .companion-launcher-copy,body:has(#hud.show) .companion-launcher>.companion-link-dot { display:none; }
+}

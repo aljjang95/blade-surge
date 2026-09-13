@@ -27,6 +27,7 @@ import { JourneyView } from './ui/journey.js';
 import { applyRiftStage } from './game/journey-rifts.js';
 import { ArsenalService } from './game/arsenal-service.js';
 import { ArsenalView } from './ui/arsenal.js';
+import { PartySession } from './party/session.js';
 import './ui/mobile-combat.css';
 import './ui/illustrated.css';
 const BOOT_TIPS = [
@@ -102,6 +103,7 @@ class App {
     const bootEl = $('boot'); bootEl.classList.add('leaving');
     this.toLobby(true);
     if (!this.companionAgent) this.companionAgent = createCompanion(this);
+    this.party = new PartySession(this);
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
     document.addEventListener('visibilitychange', () => { if (isNativeApp()) this.nativeApp?.setVisible(!document.hidden); else if (document.hidden && this.mode === 'battle') this.ui.pause(true); if (!document.hidden) audio.resume(); });
     requestAnimationFrame((t) => this.loop(t));
@@ -163,6 +165,7 @@ class App {
     return companionReset && gameReset;
   }
   async startStage(stage) {
+    if (this.party?.party?.status === 'lobby') { this.party.view.open(); this.party.view.message('파티에서 준비를 마치고 함께 출격하세요.'); return false; }
     if (stage?.expedition) return this.startExpedition(stage.expedition.kind, stage.expedition.id, { rift: !!stage.riftId });
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
     if (!stage || !this.eco.isUnlocked(stage.ch, stage.st)) { this.ui.toast('이전 스테이지를 먼저 클리어하세요.', 'red'); return false; }
@@ -196,6 +199,7 @@ class App {
     } finally { $('stage-loading').hidden = true; this.stageStarting = false; }
   }
   async startExpedition(kind, id, options = {}) {
+    if (this.party?.party?.status === 'lobby') { this.party.view.open(); return false; }
     if (this.expeditionUI.result?.saveError) { this.ui.toast('전리품 정산을 먼저 저장해 주세요.', 'red'); return false; }
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
     if (this.expeditionRefundPending) {
@@ -251,6 +255,7 @@ class App {
     if (this.expeditionUI?.opened) return;
     if (this.mode === 'battle') {
       this.battle.update(realDt);
+      this.party?.update(realDt);
       const dt = realDt * this.battle.timeCtl.scale;
       this.fx.update(dt);
       if (this.battle.player) { this._auto = this.battle.player.auto; }

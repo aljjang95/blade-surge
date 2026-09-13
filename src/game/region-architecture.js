@@ -358,6 +358,57 @@ export function buildRegionArchitecture(floor, theme) {
         }
       }
     }
+    // Story structures are wall-mounted outside the playable rectangles. They add no hidden
+    // collision: room/corridor rectangles remain the single map and AUTO authority.
+    if (room.landmark && freeSide && ['start','elite','boss'].includes(room.type)) {
+      buildingLandmark = true;
+      const mark = room.landmark;
+      if (mark === 'memorial') {
+        for (let i=-2;i<=2;i++) {
+          box(x+i*1.5,1.5,rear,1.05,3,.42);
+          box(x+i*1.5,2.1,rear+.26,.12,.8,.08,2);
+          box(x+i*1.5,1.6,rear+.26,.54,.09,.08,1);
+        }
+        box(x,.2,rear,9,.4,2,1);
+      } else if (mark === 'kiln') {
+        for (const side of [-1,1]) {
+          cylinder(x+side*2.8,2.2,rear,1.1,1.5,4.4,0,8);
+          ring(x+side*2.8,3.9,rear,1.18,.13,2);
+          box(x+side*2.8,1.6,rear+1.3,1.3,1.5,.12,2);
+        }
+        box(x,4.4,rear,8,.4,.7,1);
+      } else if (mark === 'archive') {
+        for(let i=-1;i<=1;i++) {
+          box(x+i*2.5,2.4,rear,2.1,4.8,.6);
+          for(let shelf=1;shelf<=4;shelf++) {
+            box(x+i*2.5,shelf,rear+.5,2.2,.12,.9,1);
+            for(let book=0;book<4;book++) box(x+i*2.5-.7+book*.45,shelf+.35,rear+.5,.22,.58,.42,book%2+1);
+          }
+        }
+      } else if (mark === 'beacon') {
+        cylinder(x,2.8,rear,1,1.8,5.6,0,12);
+        cylinder(x,5.8,rear,1.5,1.5,.35,1,12);
+        cylinder(x,6.6,rear,.7,.7,1.3,2,8);
+        add(new THREE.ConeGeometry(1.5,1.1,12),1,x,7.8,rear);
+        for(const side of [-1,1]) box(x+side*3,1,rear,2,.35,2,1);
+      } else if (mark === 'tribunal') {
+        for(const side of [-1,1]) {
+          cylinder(x+side*3.2,2.4,rear,.45,.6,4.8,0,8);
+          box(x+side*3.2,4.9,rear,1.2,.3,1.2,1);
+        }
+        box(x,5.2,rear,8,.35,1.3,1);
+        ring(x,3.3,rear,1.3,.1,2,0);
+        box(x,1.1,rear,2.6,.5,1.6,1);
+      } else if (mark === 'confluence') {
+        for(let i=-1;i<=1;i++) {
+          add(new THREE.TorusGeometry(1,.16,6,18,Math.PI),1,x+i*2.6,3.2,rear);
+          for(const side of [-1,1]) box(x+i*2.6+side,1.6,rear,.25,3.2,.6);
+          box(x+i*2.6,.22,rear,1.5,.15,2.2,2);
+        }
+        box(x,4.5,rear,8.5,.5,1,1);
+      }
+      buildingLandmark = false;
+    }
     for(let i=0;i<chunks.length;i++) {
       if(!chunks[i].length) continue;
       const geometry=mergeGeometries(chunks[i],false);
@@ -369,7 +420,7 @@ export function buildRegionArchitecture(floor, theme) {
       mesh.castShadow=i!==2; mesh.receiveShadow=true;
       geometry.computeBoundingSphere(); group.add(mesh);
     }
-    group.userData.landmarks.push({roomId:room.id,theme,x,z:rear});
+    group.userData.landmarks.push({roomId:room.id,theme,kind:room.landmark || theme,label:room.label || '',role:room.type,x:freeSide ? x+freeSide[0]*(hw+2.2) : x,z:freeSide ? z+freeSide[1]*(hh+2.2) : z});
   }
   return group;
 }

@@ -5,21 +5,22 @@ import { CAMPAIGN, CHAPTER_SCENES, journalEntries } from '../src/data/campaign-s
 const stages = CHAPTERS.flatMap(ch => Array.from({ length: 10 }, (_, i) => stageDef(ch.id, i + 1)));
 const enemies = ENEMIES as Record<string, any>;
 describe('다섯 맹세 캠페인 데이터', () => {
-  test('50개 관문과 고유 장면은 빠짐없이 이어지고 마지막만 결말이다', () => {
-    expect(stages).toHaveLength(50);
-    expect(stages.map(s => s.idx)).toEqual(Array.from({ length: 50 }, (_, i) => i + 1));
-    expect(new Set(stages.map(s => s.code)).size).toBe(50);
-    expect(new Set(stages.map(s => s.title)).size).toBe(50);
+  test('60개 관문과 고유 장면은 원결말 뒤 귀환 후일담으로 이어진다', () => {
+    expect(stages).toHaveLength(60);
+    expect(stages.map(s => s.idx)).toEqual(Array.from({ length: 60 }, (_, i) => i + 1));
+    expect(new Set(stages.map(s => s.code)).size).toBe(60);
+    expect(new Set(stages.map(s => s.title)).size).toBe(60);
     for (const field of ['opening', 'revelation', 'aftermath'] as const) {
-      expect(new Set(stages.map(s => s.story[field])).size).toBe(50);
+      expect(new Set(stages.map(s => s.story[field])).size).toBe(60);
       expect(stages.every(s => s.story[field].length > 15)).toBe(true);
     }
-    expect(CHAPTER_SCENES.map(s => s.length)).toEqual([10, 10, 10, 10, 10]);
+    expect(CHAPTER_SCENES.map(s => s.length)).toEqual([10, 10, 10, 10, 10, 10]);
     expect(stages.filter(s => s.finale).map(s => s.code)).toEqual(['5-10']);
+    expect(stages.filter(s => s.epilogueFinale).map(s => s.code)).toEqual(['6-10']);
     expect(CAMPAIGN.ending).toContain('네브 한 사람에게');
   });
   test('없는 관문과 소수·문자열 인수는 전투 데이터가 되지 않는다', () => {
-    for (const [ch, st] of [[0, 1], [6, 1], [1, 0], [1, 11], [1.5, 1], [1, NaN], [Infinity, 1]]) {
+    for (const [ch, st] of [[0, 1], [7, 1], [1, 0], [1, 11], [1.5, 1], [1, NaN], [Infinity, 1]]) {
       expect(() => stageDef(ch, st)).toThrow(RangeError);
     }
     expect(() => stageDef('1' as any, 1)).toThrow(RangeError);
@@ -31,7 +32,7 @@ describe('다섯 맹세 캠페인 데이터', () => {
       const ids = new Set(Array.from({ length: 10 }, (_, i) => stageDef(chapter.id, i + 1).encounter.enemyId));
       expect(ids.size).toBe(4);
       expect(chapter.boss).toBe(stageDef(chapter.id, 10).encounter.enemyId);
-      const hp = ['captain', 'warden', 'midboss', 'finalboss'].map(rank => enemies[chapter.theme + '_' + rank].hp);
+      const hp = ['captain', 'warden', 'midboss', 'finalboss'].map(rank => enemies[(chapter.encounterPrefix || chapter.theme) + '_' + rank].hp);
       expect(hp).toEqual([...hp].sort((a, b) => a - b));
       expect(new Set(hp).size).toBe(4);
     }
@@ -60,7 +61,7 @@ describe('다섯 맹세 캠페인 데이터', () => {
   });
   test('기록은 실제 클리어한 장면만 열리며 해금 수치로 결말을 노출하지 않는다', () => {
     expect(journalEntries({ unlocked: 50 } as any)).toEqual([]);
-    const entries = journalEntries({ stars: { '1-1': 1, '3-5': 3, '5-10': 0, '2-1': NaN, '2-2': '3', '6-1': 3 } });
+    const entries = journalEntries({ stars: { '1-1': 1, '3-5': 3, '5-10': 0, '2-1': NaN, '2-2': '3', '7-1': 3 } });
     expect(entries.map(e => e.code)).toEqual(['1-1', '3-5']);
     expect(entries[1].aftermath).toBe(stageDef(3, 5).story.aftermath);
     expect(journalEntries({ stars: { '5-10': 1 } })[0].code).toBe('5-10');
