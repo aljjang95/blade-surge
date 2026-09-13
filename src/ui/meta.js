@@ -304,7 +304,7 @@ export class Meta {
         </div>
         <div class="enh-cost"><span class="${s.gold < cost ? 'lack' : ''}"><i class="ic ic-gold"></i> ${fmt(cost)}</span>${stones ? `<span class="${(s[skey] || 0) < stones ? 'lack' : ''}"><img src="${resourceArt(skey)}" style="width:14px;height:14px;vertical-align:-2px" onerror="this.remove()"> ${STONE_NAME[tier]} ${stones} <span style="color:var(--muted)">(보유 ${s[skey] || 0})</span></span>` : ''}</div>`}
         <div class="modal-btns"><button class="btn btn-ghost" id="e-close">닫기</button>${maxed ? '' : '<button class="btn btn-gold" id="e-go">강화하기</button>'}</div>
-        <p style="font-size:10px">+7까지 100% · +10부터 실패 시 하락 · +12부터 파괴 위험 · 강화는 등급과 무관하게 붙는다(흰 무기 +10 &gt; 레전드리 +0) · 비석 3종: 강화석(+9까지) · 상급(엘리트 드랍, +14까지) · 전설(보스 드랍, +15↑)</p>
+        <p style="font-size:10px">+8 달성까지 성공 100% · 현재 +10부터 실패 시 하락 · 현재 +12부터 파괴 위험 · 비석 3종: 강화석(현재 +9까지) · 상급(현재 +14까지) · 전설(현재 +15↑)</p>
       </div>`;
       this.ui.modal(html, { onOpen: (b) => {
         const opts = { bless: false, protect: false };

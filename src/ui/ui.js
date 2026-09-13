@@ -6,6 +6,7 @@ import { Minimap } from './minimap.js';
 import { CombatNoticeQueue } from './combat-notices.js';
 import { ROOM_TYPE } from '../game/world.js';
 import { resultStoryHtml } from './campaign.js';
+import { renderGrowthPreparation } from './growth.js';
 import './campaign.css';
 
 const $ = (id) => document.getElementById(id);
@@ -189,14 +190,14 @@ export class UI {
     if (this._sgN !== n || this._sgL !== g.label) { this._sgN = n; this._sgL = g.label; for (let i = 0; i < g.max; i++) pips.children[i].classList.toggle('on', i < n); }
   }
 
-  // ---------------- 부활 (과금 유도) ----------------
+  // ---------------- 부활 또는 전투 후 정비 ----------------
   showRevive(b) {
     const cost = 50 * (b.revived + 1); const gems = this.eco.s.gems;
     this.modal(`<h2 style="color:#ff5a7a">쓰러졌다…</h2><p>보석 <b style="color:var(--gold)">${cost}</b>개로 그 자리에서 부활합니다.<br>부활 시 주변 적 넉백 + 2초 무적</p><p style="font-size:11px">보유 보석 ${fmt(gems)}</p>
-      <div class="modal-btns"><button class="btn btn-ghost" id="r-no">포기</button><button class="btn btn-gold" id="r-yes"><span>부활</span><small><i class="ic ic-gem"></i> ${cost}</small></button></div>
+      <div class="modal-btns"><button class="btn btn-ghost" id="r-no"><span>${b.stage?.expedition ? '전투 마치기' : '정비하기'}</span><small>부활 없이 전투 종료</small></button><button class="btn btn-gold" id="r-yes"><span>부활</span><small><i class="ic ic-gem"></i> ${cost}</small></button></div>
       ${gems < cost ? '<button class="btn btn-blue" id="r-shop" style="width:100%;margin-top:8px">보석 충전하기</button>' : ''}`, {
       onOpen: (box) => {
-        box.querySelector('#r-no').onclick = () => { this.closeModal(); b.defeat(); };
+        box.querySelector('#r-no').onclick = () => { if (!b.active || b.player.alive) return; this.closeModal(); b.defeat(); };
         box.querySelector('#r-yes').onclick = () => { if (!b.active || b.player.alive) return; if (this.eco.s.gems < cost) { this.toast('보석이 부족합니다', 'red'); audio.play('ui_error'); return; } this.eco.s.gems -= cost; this.eco.emit(); this.closeModal(); b.revivePlayer(); };
         const sh = box.querySelector('#r-shop'); if (sh) sh.onclick = () => { this.closeModal(); b.defeat(); setTimeout(() => this.app.meta.openTab('shop', 'gem'), 300); };
       },
@@ -211,6 +212,9 @@ export class UI {
     this.hideResult(); this.resultData = r;
     const later = (fn, ms) => { this.resultTimers.push(setTimeout(() => { if (this.resultData === r && this.app.battle.result === r) fn(); }, ms)); };
     const eco = this.eco; this.showHud(false); this.show(this.el.pause, false); this.show(this.el.result, true);
+    this.el.result.classList.toggle('is-defeat', !win);
+    const growth = $('result-growth'); growth.hidden = win;
+    if (win) growth.replaceChildren(); else renderGrowthPreparation(growth, this.app, r);
     while (this.lootLayer.firstChild) this.lootLayer.firstChild.remove();
     const t = $('result-title'); t.textContent = win ? b.stage.finale ? '새벽의 귀환' : 'VICTORY' : 'DEFEAT'; t.classList.toggle('lose', !win);
     const story = $('result-story'); story.hidden = !win; story.innerHTML = win ? resultStoryHtml(b.stage) : '';
@@ -219,6 +223,7 @@ export class UI {
     const loot = $('result-loot'); loot.innerHTML = '';
     $('btn-result-next').style.display = win && !b.stage.finale ? '' : 'none'; $('btn-result-double').style.display = win ? '' : 'none';
     $('result-exp').style.width = '0%'; $('result-bp').style.width = '0%';
+    $('result-exp-txt').textContent = ''; $('result-bp-txt').textContent = '';
     if (win) {
       r.reward ||= eco.completeStage(b.stage, r.stars, { fieldGold: b.drops.gold, fieldStones: b.drops.stones, fieldStones2: b.drops.stones2, fieldStones3: b.drops.stones3, fieldFragments: b.drops.fragments, fieldLoot: b.drops.loot });
       if (this.app.expedition && !r.expeditionRecorded) {
@@ -254,6 +259,7 @@ export class UI {
       $('btn-result-double').disabled = !!r.bonusClaimed;
     } else {
       audio.play('ui_error', { vol: 0.6, rate: 0.7 });
+      later(() => (growth.querySelector('button') || $('btn-result-lobby')).focus(), 520);
     }
     function require_(lv) { return Math.floor(100 * Math.pow(1.18, lv - 1)); }
   }
