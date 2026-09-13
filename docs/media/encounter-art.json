@@ -1,0 +1,533 @@
+{
+  "createdAt": "2026-09-13T13:03:46.608Z",
+  "status": "verified",
+  "scope": "2D UI portraits only. Animated 3D actor diversity remains a separate deliverable.",
+  "sets": [
+    {
+      "id": "set-01",
+      "chatUrl": "https://chatgpt.com/c/6aa69788-9db4-83ee-b4f6-849b418ae402",
+      "route": "chatgpt-web-iab",
+      "downloadRoute": "Authenticated IAB pageAssets bundle",
+      "modelDisplayed": "6 Pro",
+      "modelDisplayedAfterGeneration": "GPT-5.6 Luna",
+      "modelIdentity": "UI labels only; actual image engine is not exposed",
+      "accountPlanDisplayed": "Pro",
+      "batchRequestCount": 1,
+      "repairBatchRequestCount": 0,
+      "uiRenderedImageElements": 31,
+      "uniqueContentAssets": 10,
+      "originalPixelSize": "1254x1254"
+    },
+    {
+      "id": "set-02",
+      "chatUrl": "https://chatgpt.com/c/6aa699da-690c-83e8-a4d9-ad629444ea0e",
+      "route": "chatgpt-web-iab",
+      "downloadRoute": "Authenticated IAB pageAssets bundle",
+      "modelDisplayed": "6 Pro",
+      "modelIdentity": "UI label only; actual image engine is not exposed",
+      "accountPlanDisplayed": "Pro",
+      "batchRequestCount": 1,
+      "repairBatchRequestCount": 0,
+      "uiRenderedImageElements": 31,
+      "uniqueContentAssets": 10,
+      "originalPixelSize": "1254x1254"
+    },
+    {
+      "id": "set-03",
+      "chatUrl": "https://chatgpt.com/c/6aa69d8a-236c-83e9-b708-ae3d300628f4",
+      "route": "chatgpt-web-iab",
+      "downloadRoute": "Authenticated IAB pageAssets bundle",
+      "modelDisplayed": "6 Pro",
+      "modelDisplayedAfterGeneration": "GPT-5.6 Luna",
+      "modelIdentity": "UI label only; actual image engine is not exposed",
+      "accountPlanDisplayed": "Pro",
+      "batchRequestCount": 1,
+      "repairBatchRequestCount": 0,
+      "uiRenderedImageElements": 31,
+      "uniqueContentAssets": 10,
+      "originalPixelSize": "1254x1254"
+    }
+  ],
+  "assets": [
+    {
+      "id": "arena_rookie",
+      "set": "set-01",
+      "shot": 1,
+      "path": "public/img/encounters/arena_rookie.webp",
+      "pixelSize": "768x768",
+      "bytes": 160598,
+      "sha256": "204782660274d2fec9fb749a0849852dc0563b2a66173f87c5f808a4e6660a9e",
+      "original": {
+        "path": "work/media-20260913/sets/set-01/originals/shot-01.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2616684,
+        "sha256": "aaa0c23a383ec5cfcc06737512d54418561f10c763d8ec477a239cb5f019dc4b"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "arena_duelist",
+      "set": "set-01",
+      "shot": 2,
+      "path": "public/img/encounters/arena_duelist.webp",
+      "pixelSize": "768x768",
+      "bytes": 160968,
+      "sha256": "cacc6f9f909f75883f3970d5626520544e59803353a2a1842772a0d6d16cea3b",
+      "original": {
+        "path": "work/media-20260913/sets/set-01/originals/shot-02.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2658671,
+        "sha256": "70b3d1ae107279e964fe085365e2e5cc20c1229e20fa9f47eb77da8531d5fd48"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "arena_champion",
+      "set": "set-01",
+      "shot": 3,
+      "path": "public/img/encounters/arena_champion.webp",
+      "pixelSize": "768x768",
+      "bytes": 177228,
+      "sha256": "56916887fb39550d06312facc04433f7b6e0872efc462a7e189dcc0bacd822dc",
+      "original": {
+        "path": "work/media-20260913/sets/set-01/originals/shot-03.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2807765,
+        "sha256": "02e655b11d7f2d97f6ad81caa3ffa868de3695315a7b22900045f286c1781e46"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "garden_finalboss",
+      "set": "set-01",
+      "shot": 4,
+      "path": "public/img/encounters/garden_finalboss.webp",
+      "pixelSize": "768x768",
+      "bytes": 208158,
+      "sha256": "9853f32b8fad21e2f19cafb87712ef5276cebf01900ef2f8573f0672186f9c5d",
+      "original": {
+        "path": "work/media-20260913/sets/set-01/originals/shot-04.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2882659,
+        "sha256": "87c2a6aa88ad9b3f6d4bf8a392a8349ec5b2d58865b959fcd5778f468125c33f"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "forge_finalboss",
+      "set": "set-01",
+      "shot": 5,
+      "path": "public/img/encounters/forge_finalboss.webp",
+      "pixelSize": "768x768",
+      "bytes": 226784,
+      "sha256": "b065a138a0c0be08952f7bdd22425b7af169c59e5d699c07b827dae770131140",
+      "original": {
+        "path": "work/media-20260913/sets/set-01/originals/shot-05.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2930998,
+        "sha256": "11c23667b1ecb7dab66d599700c1049a71686c2cf1a5dec0240344c6d002a542"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "frost_finalboss",
+      "set": "set-01",
+      "shot": 6,
+      "path": "public/img/encounters/frost_finalboss.webp",
+      "pixelSize": "768x768",
+      "bytes": 174148,
+      "sha256": "d2edeaac7cb8b5685b0fa45b612afae7fc61a5fb06486c0fed488b419bb1b798",
+      "original": {
+        "path": "work/media-20260913/sets/set-01/originals/shot-06.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2722383,
+        "sha256": "02d0f8bead41059ea68a481e06c592cf436a24f4aba53b06027c772c5c781a23"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "tide_finalboss",
+      "set": "set-01",
+      "shot": 7,
+      "path": "public/img/encounters/tide_finalboss.webp",
+      "pixelSize": "768x768",
+      "bytes": 195298,
+      "sha256": "345b7646798cd3d8b129cdfb9075ef2fedfd3dc93cbc12d0903faad3f9b9aed2",
+      "original": {
+        "path": "work/media-20260913/sets/set-01/originals/shot-07.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2885140,
+        "sha256": "a7f575fc57559b0f6366cdb8fd9db43c0ccec1b35bba3e62604225cb0d3725eb"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "crown_finalboss",
+      "set": "set-01",
+      "shot": 8,
+      "path": "public/img/encounters/crown_finalboss.webp",
+      "pixelSize": "768x768",
+      "bytes": 170194,
+      "sha256": "d9c5c5a966ecbd6ecf5d1a1a0c34d810f6e5b3ff685f68aee3fe5c600af8ea49",
+      "original": {
+        "path": "work/media-20260913/sets/set-01/originals/shot-08.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2558982,
+        "sha256": "ee556e54e5a21b236886f0781852679369915d4a9086671b25e7b0b222130d09"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "homecoming_finalboss",
+      "set": "set-01",
+      "shot": 9,
+      "path": "public/img/encounters/homecoming_finalboss.webp",
+      "pixelSize": "768x768",
+      "bytes": 159372,
+      "sha256": "8ff07af3a53e666ebfe7ffe72ba25f81480a13307a1a9edde45848429a682902",
+      "original": {
+        "path": "work/media-20260913/sets/set-01/originals/shot-09.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2623669,
+        "sha256": "34e3b1f6321cbefcb45e1c7f81c8c9daf314b23f1606f9f8a26f1f030c0d9301"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "frost_midboss",
+      "set": "set-01",
+      "shot": 10,
+      "path": "public/img/encounters/frost_midboss.webp",
+      "pixelSize": "768x768",
+      "bytes": 192962,
+      "sha256": "21adc513cdc2c5afc15dcaddeff556d4eea85aee8e6eb1dcb7d99ddc4d449845",
+      "original": {
+        "path": "work/media-20260913/sets/set-01/originals/shot-10.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2894600,
+        "sha256": "300dc88db09dfe2aa9bcab3a1516f0ae9e74c95b0cb823980d022786a8788b03"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "garden_captain",
+      "set": "set-02",
+      "shot": 1,
+      "path": "public/img/encounters/garden_captain.webp",
+      "pixelSize": "768x768",
+      "bytes": 200398,
+      "sha256": "40cab55c7c1f22bed431dc61b75b78b54f3b6df9a3fca4324b4f59adf799637a",
+      "original": {
+        "path": "work/media-20260913/sets/set-02/originals/shot-01.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2785861,
+        "sha256": "6e04e956f3b389ef8fe9acc4f5825d5eaa0708731d006f6c5dcb1ef7d60ffad7"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "garden_warden",
+      "set": "set-02",
+      "shot": 2,
+      "path": "public/img/encounters/garden_warden.webp",
+      "pixelSize": "768x768",
+      "bytes": 233866,
+      "sha256": "ba45a0a7070f5a03c60bb8562ad5bf5bd192a541bc0fb10a5dc2d9652b9df102",
+      "original": {
+        "path": "work/media-20260913/sets/set-02/originals/shot-02.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2942684,
+        "sha256": "6516838376f08f9cee9b2ccd206947606562cce241c0eb62c869856bdecb6814"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "garden_midboss",
+      "set": "set-02",
+      "shot": 3,
+      "path": "public/img/encounters/garden_midboss.webp",
+      "pixelSize": "768x768",
+      "bytes": 210848,
+      "sha256": "e6283b7c7a4e8e011ec187e63b217bf050d2b9c0f06e265b449a1beba527358a",
+      "original": {
+        "path": "work/media-20260913/sets/set-02/originals/shot-03.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2909011,
+        "sha256": "d8f011abe8e368a134dac694b8ab3f5e1d7b991f0d94e7125f0a3a80a828720e"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "forge_captain",
+      "set": "set-02",
+      "shot": 4,
+      "path": "public/img/encounters/forge_captain.webp",
+      "pixelSize": "768x768",
+      "bytes": 237380,
+      "sha256": "92052cf4e5160e143b0ae3b1861f7f7453af11740d400dfb14ab44c8680a816c",
+      "original": {
+        "path": "work/media-20260913/sets/set-02/originals/shot-04.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2874259,
+        "sha256": "b567f0f38992770ed302e7e6a61b6ede0b3a7797d3c5f51a995decfd89710f3e"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "forge_warden",
+      "set": "set-02",
+      "shot": 5,
+      "path": "public/img/encounters/forge_warden.webp",
+      "pixelSize": "768x768",
+      "bytes": 220110,
+      "sha256": "6befa6329ba6ca2e93a5aec5b75d13a07c4d57b6f9a13230e0ae211cf026656c",
+      "original": {
+        "path": "work/media-20260913/sets/set-02/originals/shot-05.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2740283,
+        "sha256": "e02d04b702d6237fb94a1701bf1db44dc94896e8b76aea1d011b7206ce49782f"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "forge_midboss",
+      "set": "set-02",
+      "shot": 6,
+      "path": "public/img/encounters/forge_midboss.webp",
+      "pixelSize": "768x768",
+      "bytes": 232540,
+      "sha256": "c39a6dcf5dbcc5fe84f882239dab39d18e7003457d493db22ece7b208a6bc6f4",
+      "original": {
+        "path": "work/media-20260913/sets/set-02/originals/shot-06.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2829777,
+        "sha256": "090c96675683f7f33077225499a7f746b445b7679563e308ea5a1d61de6a9943"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "frost_captain",
+      "set": "set-02",
+      "shot": 7,
+      "path": "public/img/encounters/frost_captain.webp",
+      "pixelSize": "768x768",
+      "bytes": 217596,
+      "sha256": "36a877bb7046ac243b27aa24b181ff6d51384a475e9d0ef484008f6ee0d4cc2f",
+      "original": {
+        "path": "work/media-20260913/sets/set-02/originals/shot-07.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2907178,
+        "sha256": "18008a163bea84663db9f91c04745fb6194f6fbdc69a42d8c75c586f5ccb5e01"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "frost_warden",
+      "set": "set-02",
+      "shot": 8,
+      "path": "public/img/encounters/frost_warden.webp",
+      "pixelSize": "768x768",
+      "bytes": 239996,
+      "sha256": "f7b6130959f928ed13a79e09eead52100bb31b21b08502f6bf36cb1064decd8f",
+      "original": {
+        "path": "work/media-20260913/sets/set-02/originals/shot-08.png",
+        "pixelSize": "1254x1254",
+        "bytes": 3166678,
+        "sha256": "839d97ef751c221f3e43b99620248118093e55300f3ee4086b980a3b3edaaf91"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "tide_captain",
+      "set": "set-02",
+      "shot": 9,
+      "path": "public/img/encounters/tide_captain.webp",
+      "pixelSize": "768x768",
+      "bytes": 242288,
+      "sha256": "3c6f13779e34fe8f32be5e392c4ad4ebe328abf787e0e8eeae8061f3e7272dde",
+      "original": {
+        "path": "work/media-20260913/sets/set-02/originals/shot-09.png",
+        "pixelSize": "1254x1254",
+        "bytes": 3102816,
+        "sha256": "1ed5c9bf483fd61c2e9204e22245695792a27f05d4c443d44ff10b4b32b92306"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "tide_warden",
+      "set": "set-02",
+      "shot": 10,
+      "path": "public/img/encounters/tide_warden.webp",
+      "pixelSize": "768x768",
+      "bytes": 240666,
+      "sha256": "fb636f083b98ca6cf22a8fe6d7758a78a661a0953d70312972b9e76f930736d2",
+      "original": {
+        "path": "work/media-20260913/sets/set-02/originals/shot-10.png",
+        "pixelSize": "1254x1254",
+        "bytes": 3100012,
+        "sha256": "41426ca36160bd6166472df1b07102b7001c246c8f725ae3947f855e6256d497"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "tide_midboss",
+      "set": "set-03",
+      "shot": 1,
+      "path": "public/img/encounters/tide_midboss.webp",
+      "pixelSize": "768x768",
+      "bytes": 230574,
+      "sha256": "a98a285c511b9444e42c9734f8bae24fc00326157964f8bab76078ec1e0dcae2",
+      "original": {
+        "path": "work/media-20260913/sets/set-03/originals/shot-01.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2976375,
+        "sha256": "5ed95d47160172f1cd82f257e8107cdf5282365c18099efd1953aa38c1bfda11"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "crown_captain",
+      "set": "set-03",
+      "shot": 2,
+      "path": "public/img/encounters/crown_captain.webp",
+      "pixelSize": "768x768",
+      "bytes": 218092,
+      "sha256": "119f46ac285530f60a9584a7eb700c8e304b8a299c0e18c0c345507de403878c",
+      "original": {
+        "path": "work/media-20260913/sets/set-03/originals/shot-02.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2883053,
+        "sha256": "b05e39bb2a5be1836ec38a75d52973fb389c45632fc6afb86826cbd4c4674823"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "crown_warden",
+      "set": "set-03",
+      "shot": 3,
+      "path": "public/img/encounters/crown_warden.webp",
+      "pixelSize": "768x768",
+      "bytes": 192402,
+      "sha256": "50b8cd4d63720410dca017c679e792e5db69ae3d43131f15f91b7d7b0051bafe",
+      "original": {
+        "path": "work/media-20260913/sets/set-03/originals/shot-03.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2773243,
+        "sha256": "f14f89c3f932a3b9b7d9a446741cc2c6c09041185b04dbd4805da783048af52f"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "crown_midboss",
+      "set": "set-03",
+      "shot": 4,
+      "path": "public/img/encounters/crown_midboss.webp",
+      "pixelSize": "768x768",
+      "bytes": 190328,
+      "sha256": "466ae32982ef5520813792f6bd79ae12dd53519df2a07a6c8949851736be7b2b",
+      "original": {
+        "path": "work/media-20260913/sets/set-03/originals/shot-04.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2713512,
+        "sha256": "9aafe901f5dbb4614cc83bea2e8800a0b85e5aacb8559f5ece5687167d46aa90"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "homecoming_captain",
+      "set": "set-03",
+      "shot": 5,
+      "path": "public/img/encounters/homecoming_captain.webp",
+      "pixelSize": "768x768",
+      "bytes": 269258,
+      "sha256": "c4a8b7a59f343d3d891923038d2284ed42d3ec944312316145e80ca8b33dc2c6",
+      "original": {
+        "path": "work/media-20260913/sets/set-03/originals/shot-05.png",
+        "pixelSize": "1254x1254",
+        "bytes": 3237191,
+        "sha256": "c62f45f27bc243cb504393a148699c368d426d3c076331017b573cdbf4059d26"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "homecoming_warden",
+      "set": "set-03",
+      "shot": 6,
+      "path": "public/img/encounters/homecoming_warden.webp",
+      "pixelSize": "768x768",
+      "bytes": 226244,
+      "sha256": "9acb9595663fa79ad960cea4f5f146e7fbf6bf35e0998746979a08ccda745c50",
+      "original": {
+        "path": "work/media-20260913/sets/set-03/originals/shot-06.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2979460,
+        "sha256": "0ce9bda6f2c1864c3ce028264b87d3ff6c83c446b3e396cfc74cbb671ca0a0de"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "homecoming_midboss",
+      "set": "set-03",
+      "shot": 7,
+      "path": "public/img/encounters/homecoming_midboss.webp",
+      "pixelSize": "768x768",
+      "bytes": 194600,
+      "sha256": "7770f29bdee9d84bf5d9a1f804f1a78d877993c0e5afcfa1e3158de68621f26e",
+      "original": {
+        "path": "work/media-20260913/sets/set-03/originals/shot-07.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2807120,
+        "sha256": "800140c86e945b6dfbdfc357bf433ab0cbb424e4c8bfe8f264d60b0411c41d13"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "boss_warlord",
+      "set": "set-03",
+      "shot": 8,
+      "path": "public/img/encounters/boss_warlord.webp",
+      "pixelSize": "768x768",
+      "bytes": 244262,
+      "sha256": "85ea630e50c9deb36446ca7f749861f934fe19e067146659f1cc59fdac4b619c",
+      "original": {
+        "path": "work/media-20260913/sets/set-03/originals/shot-08.png",
+        "pixelSize": "1254x1254",
+        "bytes": 3014448,
+        "sha256": "bd46aa5645ca0fd5cd0cfe85319347f3d448322d2423716f65047e7c233d61d0"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "boss_demon",
+      "set": "set-03",
+      "shot": 9,
+      "path": "public/img/encounters/boss_demon.webp",
+      "pixelSize": "768x768",
+      "bytes": 215180,
+      "sha256": "77d9b781f25d2bab8675c1e6d76ae35ac773a4850af99dd5d368bcd26b134d13",
+      "original": {
+        "path": "work/media-20260913/sets/set-03/originals/shot-09.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2877665,
+        "sha256": "2bcf6b49a40f382baefae26633a4c31db13cbf47d9f17dc8d69a72c27baa91da"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    },
+    {
+      "id": "boss_dragon",
+      "set": "set-03",
+      "shot": 10,
+      "path": "public/img/encounters/boss_dragon.webp",
+      "pixelSize": "768x768",
+      "bytes": 222472,
+      "sha256": "0c709b922a13dbfb8a9cd5559d8a7318f81b7333c9e7999fcb97cdf4fe247f14",
+      "original": {
+        "path": "work/media-20260913/sets/set-03/originals/shot-10.png",
+        "pixelSize": "1254x1254",
+        "bytes": 2851189,
+        "sha256": "91075cff8c82ec6246f81153daec116fcc808e82bb7ae6aedefe6ffce17ceb04"
+      },
+      "processing": "Whole independent original resized with Lanczos and WebP quality 90; no crop, reconstruction or collage split."
+    }
+  ]
+}

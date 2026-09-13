@@ -49,8 +49,8 @@ for(const kind of ['campaign','dungeon','arena']) test(`${kind}: boss entry and 
     player:{pos:new THREE.Vector3(),alive:false,revive(){this.alive=true;}},ui:{toast:noop,waveBanner:noop},renderer:{shake:noop},after:noop,
     active:true,paused:false,revived:0,input:{clear:noop},fx:{holyBurst:noop,shockTex:noop},hitRadius:noop,boss:{}};
   Battle.prototype.enterRoom.call(game,{type:'boss',x:10,z:0});
-  expect(kind==='campaign'?['bgm_boss','bgm_boss2']:['expansion/flow-combat']).toContain(music.mock.calls[0][0]);
+  expect(music.mock.calls[0][0]).toBe(kind==='arena'?'regions/arena':'regions/boss');
   Battle.prototype.revivePlayer.call(game);
-  expect(music.mock.calls[1][0]).toBe(kind==='campaign'?'bgm_boss':'expansion/flow-combat');
-  if(kind!=='campaign') expect(music.mock.calls[1][1]).toEqual({fade:.7,volume:.68});
+  expect(music.mock.calls[1][0]).toBe(kind==='arena'?'regions/arena':'regions/boss');
+  expect(music.mock.calls[1][1]).toEqual({fade:.7,volume:.55});
 });

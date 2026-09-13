@@ -1,11 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { BOONS, MASTERY_NODES } from '../src/data/masterworks.js';
+import { CHAPTERS, STAGES_PER_CHAPTER, stageDef } from '../src/data/stages.js';
 import { normalizeMasterworks, boonChoices, boonEffects, unlockMastery, grantRenown, choosePath, masteryEffects, toggleChallenge, difficultyEffects, recordProgress, claimBounty, recordDiscovery, resolveStory } from '../src/game/masterworks-core.js';
 
 describe('masterworks progression contracts',()=>{
   test('legacy and malicious input produce bounded whitelisted state without free unlocks',()=>{
     expect(normalizeMasterworks(null).renown).toBe(0);
-    const s=normalizeMasterworks({renown:99999,earnedRenown:6,unlocked:MASTERY_NODES.map(n=>n.id),path:'__proto__',challengeIds:['iron','iron','bad'],activePreset:999,presets:[{name:'a'.repeat(90),unlocked:['assault_3']}],discoveries:['room:51:1','campaign:50','__proto__'],story:{lantern:'fake'},history:[{outcome:'fake'}]});
+    const s=normalizeMasterworks({renown:99999,earnedRenown:6,unlocked:MASTERY_NODES.map(n=>n.id),path:'__proto__',challengeIds:['iron','iron','bad'],activePreset:999,presets:[{name:'a'.repeat(90),unlocked:['assault_3']}],discoveries:[`room:${CHAPTERS.length*STAGES_PER_CHAPTER+1}:1`,'campaign:50','__proto__'],story:{lantern:'fake'},history:[{outcome:'fake'}]});
     expect(s.unlocked).toEqual(['assault_1']);expect(s.renown).toBe(0);expect(s.path).toBe('balanced');expect(s.presets).toHaveLength(3);expect(s.presets[0].name).toHaveLength(24);expect(s.presets[0]).not.toHaveProperty('unlocked');expect(s.challengeIds).toEqual(['iron']);expect(s.discoveries).toEqual(['campaign:50']);expect(s.story).toEqual({});expect(s.history).toEqual([]);
     expect(normalizeMasterworks({unlocked:['assault_1'],renown:999}).unlocked).toEqual([]);
   });
@@ -33,6 +34,34 @@ describe('masterworks progression contracts',()=>{
   test('discoveries validate campaign and expedition ranges and pay once after reload',()=>{
     const s=normalizeMasterworks(null);expect(recordDiscovery(s,'room:1:21').ok).toBe(false);expect(recordDiscovery(s,'expedition:fake:1').ok).toBe(false);
     expect(recordDiscovery(s,'expedition:glass_garden:0').ok).toBe(true);expect(recordDiscovery(s,'campaign:1').ok).toBe(true);expect(recordDiscovery(normalizeMasterworks(s),'campaign:1').ok).toBe(false);expect(s.renown).toBe(6);
+  });
+  test('chapter six discoveries pay once and floors survive JSON save migration',()=>{
+    const s=normalizeMasterworks(null);
+    const floors=[stageDef(6,1).idx,stageDef(6,10).idx];
+    expect(floors).toEqual([51,60]);
+    const keys=floors.flatMap(floor=>[`campaign:${floor}`,`room:${floor}:0`,`room:${floor}:10`]);
+    for(const key of keys){
+      expect(recordDiscovery(s,key)).toEqual({ok:true,renown:3});
+      expect(recordDiscovery(s,key)).toEqual({ok:false,error:'discovered'});
+    }
+    s.history=floors.map((floor,i)=>({runId:i+1,floor,outcome:'victory',boonIds:[]}));
+    const loaded=normalizeMasterworks(JSON.parse(JSON.stringify(s)));
+    expect(loaded.history.map(h=>h.floor)).toEqual([51,60]);
+    expect(loaded.discoveries).toEqual(keys);
+    for(const key of keys)expect(recordDiscovery(loaded,key)).toEqual({ok:false,error:'discovered'});
+    expect(loaded.renown).toBe(keys.length*3);
+    expect(loaded.earnedRenown).toBe(keys.length*3);
+  });
+  test('discovery bounds follow the campaign catalog and reject malformed keys without rewards',()=>{
+    const s=normalizeMasterworks(null),last=CHAPTERS.length*STAGES_PER_CHAPTER;
+    const invalid=[`campaign:${last+1}`,`room:${last+1}:1`,'campaign:0','campaign:-1','campaign:01','campaign:1.5','campaign:1:0','room:0:0','room:1:-1','room:1:21','room:1:01','room:1','room:1:1:0','campaign:999999999999999999999','expedition:fake:0','__proto__'];
+    for(const key of invalid)expect(recordDiscovery(s,key)).toEqual({ok:false,error:'unknown'});
+    expect(s.renown).toBe(0);expect(s.discoveries).toEqual([]);
+    expect(normalizeMasterworks({discoveries:invalid}).discoveries).toEqual([]);
+    expect(recordDiscovery(s,`campaign:${last}`).ok).toBe(true);
+    expect(recordDiscovery(s,`room:${last}:20`).ok).toBe(true);
+    const bounded=normalizeMasterworks({history:[{floor:last+1,outcome:'victory'},{floor:0,outcome:'defeat'}]});
+    expect(bounded.history.map(h=>h.floor)).toEqual([last,1]);
   });
   test('story returns a one-time heal or settled renown with permanent consequence',()=>{
     const s=normalizeMasterworks(null);const r=resolveStory(s,'lantern','guide');expect(r.ok).toBe(true);if(!('effects' in r))throw new Error('Expected story settlement');expect(r.renown).toBe(6);expect(r.effects).toEqual({heal:0});expect(resolveStory(s,'lantern','mend').ok).toBe(false);

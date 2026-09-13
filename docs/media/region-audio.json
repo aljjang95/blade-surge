@@ -1,0 +1,533 @@
+{
+  "createdAt": "2026-09-13T13:04:59.484Z",
+  "status": "verified-files",
+  "provider": "FlowMusic",
+  "sessionUrl": "https://www.flowmusic.app/session/d9508e15-6385-441f-b246-2bf613a1a4c0?t=true",
+  "generationRoute": "FlowMusic GUI in authenticated Codex IAB; three requests for three distinct tracks each",
+  "accountPlanDisplayed": "PLUS",
+  "downloadRoute": "Exact public generated media URLs observed in the GUI audio elements, then transferred through authorized development artifact tools. Not an IAB native audio download.",
+  "newTracks": 9,
+  "uniqueSongIds": 9,
+  "isolatedSfx": {
+    "status": "provider-unsupported",
+    "checkedAt": "2026-09-13T13:04:59.486Z",
+    "evidence": "Provider explicitly stated its current tools generate musical compositions, not isolated dry short game SFX one-shots. No new isolated FlowMusic Foley is claimed."
+  },
+  "target": {
+    "integratedLufs": -18,
+    "truePeakDb": -1.5,
+    "loudnessRange": 11
+  },
+  "tracks": [
+    {
+      "id": "lobby",
+      "input": "work\\media-20260913\\audio\\originals\\lobby.m4a",
+      "output": "public\\bgm\\regions\\lobby.mp3",
+      "source": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "aac",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "171.008000",
+          "size": "2440753"
+        },
+        "sha256": "06f1a02b4d5f1cf77df037d8f5ea89b399b4f0a045ff653a3c63a701934106a9"
+      },
+      "encoded": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "mp3",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "171.000000",
+          "size": "3391052"
+        },
+        "sha256": "300c53d884d6b4e7e1899dcdd8d8e2cee8b883c5eac4a367dd3c817b9ddaa928"
+      },
+      "loudness": {
+        "input_i": "-18.00",
+        "input_tp": "-2.87",
+        "input_lra": "9.00",
+        "input_thresh": "-28.51",
+        "output_i": "-18.57",
+        "output_tp": "-2.72",
+        "output_lra": "7.40",
+        "output_thresh": "-28.91",
+        "normalization_type": "dynamic",
+        "target_offset": "0.57"
+      },
+      "fullDecode": "pass",
+      "processing": "Two-pass loudness normalization, stereo 48kHz MP3 VBR q3, 5ms click-prevention edge fades; full composition retained.",
+      "title": "Bladesurge - Sanctuary of Names",
+      "songId": "d24be309-4cff-4c75-a25b-74625e551d23",
+      "songUrl": "https://www.flowmusic.app/song/d24be309-4cff-4c75-a25b-74625e551d23",
+      "requestedBpm": 78,
+      "direction": "Felt piano, harp and warm bowed strings; safe preparation"
+    },
+    {
+      "id": "garden",
+      "input": "work\\media-20260913\\audio\\originals\\garden.m4a",
+      "output": "public\\bgm\\regions\\garden.mp3",
+      "source": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "aac",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "146.602667",
+          "size": "2505257"
+        },
+        "sha256": "df0cacc87d9e88a9a2e2ade850c15fe2356e75f50adaf81233a9aedbdca8497f"
+      },
+      "encoded": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "mp3",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "146.592000",
+          "size": "3095612"
+        },
+        "sha256": "5d991e09cfe72ddc746ecdd40713d8360303a9f1e5cdd229523588b6093719fc"
+      },
+      "loudness": {
+        "input_i": "-18.00",
+        "input_tp": "-1.65",
+        "input_lra": "10.80",
+        "input_thresh": "-28.56",
+        "output_i": "-16.17",
+        "output_tp": "-1.50",
+        "output_lra": "7.40",
+        "output_thresh": "-26.53",
+        "normalization_type": "dynamic",
+        "target_offset": "-1.83"
+      },
+      "fullDecode": "pass",
+      "processing": "Two-pass loudness normalization, stereo 48kHz MP3 VBR q3, 5ms click-prevention edge fades; full composition retained.",
+      "title": "Bladesurge - Glassbell Hunt",
+      "songId": "19cc790e-3eb4-4654-aded-1b1fa5843380",
+      "songUrl": "https://www.flowmusic.app/song/19cc790e-3eb4-4654-aded-1b1fa5843380",
+      "requestedBpm": 116,
+      "direction": "Pizzicato strings, glass marimba and light hand percussion"
+    },
+    {
+      "id": "forge",
+      "input": "work\\media-20260913\\audio\\originals\\forge.m4a",
+      "output": "public\\bgm\\regions\\forge.mp3",
+      "source": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "aac",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "179.221333",
+          "size": "2763410"
+        },
+        "sha256": "80486dd16130fa5df2b4659f8541be589c7cd184c9ca82c3afea976cb9b8bf95"
+      },
+      "encoded": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "mp3",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "179.208000",
+          "size": "3686468"
+        },
+        "sha256": "42256e9a8e61de095e3bfb4cbef3098f9c2bfead7567c343713bfac574702dc0"
+      },
+      "loudness": {
+        "input_i": "-18.00",
+        "input_tp": "-3.00",
+        "input_lra": "6.90",
+        "input_thresh": "-28.39",
+        "output_i": "-17.12",
+        "output_tp": "-1.50",
+        "output_lra": "5.10",
+        "output_thresh": "-27.41",
+        "normalization_type": "dynamic",
+        "target_offset": "-0.88"
+      },
+      "fullDecode": "pass",
+      "processing": "Two-pass loudness normalization, stereo 48kHz MP3 VBR q3, 5ms click-prevention edge fades; full composition retained.",
+      "title": "Bladesurge - Emberwork Pursuit",
+      "songId": "a00c37a0-2068-463f-b928-3ad619c60e69",
+      "songUrl": "https://www.flowmusic.app/song/a00c37a0-2068-463f-b928-3ad619c60e69",
+      "requestedBpm": 128,
+      "direction": "Metallic mallets, dulcimer and cello; industrial movement"
+    },
+    {
+      "id": "frost",
+      "input": "work\\media-20260913\\audio\\originals\\frost.m4a",
+      "output": "public\\bgm\\regions\\frost.mp3",
+      "source": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "aac",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "171.690667",
+          "size": "2340561"
+        },
+        "sha256": "21bf5a9c5a649b02c6abd03fae5745bdefcb61634419a915a95741919dd614e8"
+      },
+      "encoded": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "mp3",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "171.672000",
+          "size": "3605012"
+        },
+        "sha256": "edcdcb4f57ceb68116a52bb98758f934dbc0ac3d1b3c90ca61505231a9663c38"
+      },
+      "loudness": {
+        "input_i": "-18.21",
+        "input_tp": "-3.03",
+        "input_lra": "12.10",
+        "input_thresh": "-28.78",
+        "output_i": "-17.21",
+        "output_tp": "-1.50",
+        "output_lra": "9.80",
+        "output_thresh": "-27.41",
+        "normalization_type": "dynamic",
+        "target_offset": "-0.79"
+      },
+      "fullDecode": "pass",
+      "processing": "Two-pass loudness normalization, stereo 48kHz MP3 VBR q3, 5ms click-prevention edge fades; full composition retained.",
+      "title": "Bladesurge - Reversed Pages",
+      "songId": "3c75a342-6493-4e60-a04b-9922326427c9",
+      "songUrl": "https://www.flowmusic.app/song/3c75a342-6493-4e60-a04b-9922326427c9",
+      "requestedBpm": 104,
+      "direction": "Glass harmonics, celesta, reverse-piano swells and ticking"
+    },
+    {
+      "id": "tide",
+      "input": "work\\media-20260913\\audio\\originals\\tide.m4a",
+      "output": "public\\bgm\\regions\\tide.mp3",
+      "source": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "aac",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "177.429333",
+          "size": "2910468"
+        },
+        "sha256": "52166be3ec0ddc5c5f9b6e3e7adcc1ffc77103f18503806818e2060178b5206d"
+      },
+      "encoded": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "mp3",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "177.432000",
+          "size": "3663548"
+        },
+        "sha256": "27d4a9b58cd676020afbc563e7085a96ffc33714fbae6a089c5e9843e452d55c"
+      },
+      "loudness": {
+        "input_i": "-18.00",
+        "input_tp": "-1.97",
+        "input_lra": "9.70",
+        "input_thresh": "-28.31",
+        "output_i": "-16.58",
+        "output_tp": "-1.50",
+        "output_lra": "8.30",
+        "output_thresh": "-26.83",
+        "normalization_type": "dynamic",
+        "target_offset": "-1.42"
+      },
+      "fullDecode": "pass",
+      "processing": "Two-pass loudness normalization, stereo 48kHz MP3 VBR q3, 5ms click-prevention edge fades; full composition retained.",
+      "title": "Bladesurge - Drowned Constellations",
+      "songId": "7938cc07-0f11-4be5-99fd-567b199ec769",
+      "songUrl": "https://www.flowmusic.app/song/7938cc07-0f11-4be5-99fd-567b199ec769",
+      "requestedBpm": 112,
+      "direction": "Deep marimba, plucked bass, frame drums and waterphone"
+    },
+    {
+      "id": "crown",
+      "input": "work\\media-20260913\\audio\\originals\\crown.m4a",
+      "output": "public\\bgm\\regions\\crown.mp3",
+      "source": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "aac",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "177.173333",
+          "size": "2432325"
+        },
+        "sha256": "3a8293dfe8f996591ee925b6d2d819e30021232fa9d20115785183243abcd122"
+      },
+      "encoded": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "mp3",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "177.168000",
+          "size": "3690332"
+        },
+        "sha256": "4fb081397ee712f11bb672089e093e67c8fce1cd5a9bbdec010db406b898cd33"
+      },
+      "loudness": {
+        "input_i": "-17.99",
+        "input_tp": "-2.66",
+        "input_lra": "7.30",
+        "input_thresh": "-28.29",
+        "output_i": "-16.36",
+        "output_tp": "-1.50",
+        "output_lra": "4.50",
+        "output_thresh": "-26.59",
+        "normalization_type": "dynamic",
+        "target_offset": "-1.64"
+      },
+      "fullDecode": "pass",
+      "processing": "Two-pass loudness normalization, stereo 48kHz MP3 VBR q3, 5ms click-prevention edge fades; full composition retained.",
+      "title": "Bladesurge - Crown of the Unsaid",
+      "songId": "4ac5ce6b-0760-4358-8db0-feb2d206d87f",
+      "songUrl": "https://www.flowmusic.app/song/4ac5ce6b-0760-4358-8db0-feb2d206d87f",
+      "requestedBpm": 122,
+      "direction": "Violas, cittern and bronze percussion; regal tension"
+    },
+    {
+      "id": "homecoming",
+      "input": "work\\media-20260913\\audio\\originals\\homecoming.m4a",
+      "output": "public\\bgm\\regions\\homecoming.mp3",
+      "source": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "aac",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "162.602667",
+          "size": "2122812"
+        },
+        "sha256": "5c059ae3d6c1d46ce6409ad62388b1f8407bb9575e7ec369fafbbb018d6b9e12"
+      },
+      "encoded": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "mp3",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "162.600000",
+          "size": "3480452"
+        },
+        "sha256": "85f57cbfcc3a0159df5d9b6e774599783c01e6e0e228bdcb0eee73adc02e3c62"
+      },
+      "loudness": {
+        "input_i": "-18.00",
+        "input_tp": "-3.76",
+        "input_lra": "8.30",
+        "input_thresh": "-28.23",
+        "output_i": "-16.55",
+        "output_tp": "-1.50",
+        "output_lra": "7.50",
+        "output_thresh": "-26.73",
+        "normalization_type": "dynamic",
+        "target_offset": "-1.45"
+      },
+      "fullDecode": "pass",
+      "processing": "Two-pass loudness normalization, stereo 48kHz MP3 VBR q3, 5ms click-prevention edge fades; full composition retained.",
+      "title": "Bladesurge - Roads We Rebuild",
+      "songId": "61db4d11-7618-45bf-9e27-7710013162fe",
+      "songUrl": "https://www.flowmusic.app/song/61db4d11-7618-45bf-9e27-7710013162fe",
+      "requestedBpm": 118,
+      "direction": "Lute, chamber strings, frame drums and woodwind; hopeful action"
+    },
+    {
+      "id": "arena",
+      "input": "work\\media-20260913\\audio\\originals\\arena.m4a",
+      "output": "public\\bgm\\regions\\arena.mp3",
+      "source": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "aac",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "176.533333",
+          "size": "2727217"
+        },
+        "sha256": "dbb741b18f671674a03d8ce0250ec0ce0ae5a392f66c14dca614680d22dbc56d"
+      },
+      "encoded": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "mp3",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "176.520000",
+          "size": "3763556"
+        },
+        "sha256": "ee82c0797f34b567f2ea000143f0dce62535692453e5c90f37997518429f2f49"
+      },
+      "loudness": {
+        "input_i": "-18.00",
+        "input_tp": "-2.25",
+        "input_lra": "9.80",
+        "input_thresh": "-28.52",
+        "output_i": "-16.59",
+        "output_tp": "-1.50",
+        "output_lra": "5.60",
+        "output_thresh": "-26.80",
+        "normalization_type": "dynamic",
+        "target_offset": "-1.41"
+      },
+      "fullDecode": "pass",
+      "processing": "Two-pass loudness normalization, stereo 48kHz MP3 VBR q3, 5ms click-prevention edge fades; full composition retained.",
+      "title": "Bladesurge - Circle of Valor",
+      "songId": "31d8b5ba-3627-4ea4-98b0-96e4ed72ff4f",
+      "songUrl": "https://www.flowmusic.app/song/31d8b5ba-3627-4ea4-98b0-96e4ed72ff4f",
+      "requestedBpm": 142,
+      "direction": "Dry snare, toms, staccato strings and short brass"
+    },
+    {
+      "id": "boss",
+      "input": "work\\media-20260913\\audio\\originals\\boss.m4a",
+      "output": "public\\bgm\\regions\\boss.mp3",
+      "source": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "aac",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "168.256000",
+          "size": "2428893"
+        },
+        "sha256": "03bec25209e94e9953f8da63e1925c9de5c65b32ac6e349b2727c21bfd08b829"
+      },
+      "encoded": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "mp3",
+            "sample_rate": "48000",
+            "channels": 2
+          }
+        ],
+        "format": {
+          "duration": "168.240000",
+          "size": "3497876"
+        },
+        "sha256": "4bc8903236ce805da19ed5b8d8b79daf565647f23390b99b6583c7209bba6443"
+      },
+      "loudness": {
+        "input_i": "-17.99",
+        "input_tp": "-3.19",
+        "input_lra": "6.60",
+        "input_thresh": "-28.20",
+        "output_i": "-16.79",
+        "output_tp": "-1.50",
+        "output_lra": "5.30",
+        "output_thresh": "-26.93",
+        "normalization_type": "dynamic",
+        "target_offset": "-1.21"
+      },
+      "fullDecode": "pass",
+      "processing": "Two-pass loudness normalization, stereo 48kHz MP3 VBR q3, 5ms click-prevention edge fades; full composition retained.",
+      "title": "Bladesurge - Oathbreaker Reckoning",
+      "songId": "aff489c8-f754-4808-b205-756a2fd65fd4",
+      "songUrl": "https://www.flowmusic.app/song/aff489c8-f754-4808-b205-756a2fd65fd4",
+      "requestedBpm": 148,
+      "direction": "Articulated low strings, syncopated toms and bowed bass"
+    }
+  ],
+  "scope": "Full decode, duration, loudness and hashes. Musical loop seam and subjective listening are separate checks.",
+  "limitations": [
+    "BPM and instrumentation are requested directions, not independent musical analysis.",
+    "Technical decode and loudness checks do not establish subjective listening approval or seamless musical loops.",
+    "Existing score-derived Flow impact accents remain marked as musical accents; Kenney CC0 and procedural layers provide primary SFX."
+  ]
+}
