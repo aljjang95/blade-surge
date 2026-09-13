@@ -17,7 +17,7 @@ export class UI {
     this.app = app; this.eco = app.eco;
     this.el = { hud: $('hud'), meta: $('meta'), result: $('result'), modal: $('modal'), modalBox: $('modal-box'), toast: $('toast-layer'), boot: $('boot'), reveal: $('reveal'), pause: $('pause-overlay') };
     this.combatNotices = new CombatNoticeQueue({ show: ({ message, tone }) => {
-      const notice = document.createElement('div'); notice.className = 'toast ' + tone;
+      const notice = document.createElement('div'); notice.className = 'toast combat-notice ' + tone;
       notice.innerHTML = message; this.el.toast.appendChild(notice);
       return () => notice.remove();
     } });
@@ -29,6 +29,13 @@ export class UI {
     });
     this.combatNoticeResize.observe(this.el.toast);
     this.combatNoticeResize.observe(this.el.hud);
+    const lobby = $('tab-home'), lobbyBottom = lobby.querySelector('.lobby-bottom');
+    this.lobbyCaptionResize = new ResizeObserver(() => {
+      if (!lobby.offsetHeight || !lobbyBottom.offsetHeight) return;
+      const bottom = lobby.getBoundingClientRect().bottom - lobbyBottom.getBoundingClientRect().top + 12;
+      lobby.style.setProperty('--lobby-caption-bottom', `${bottom}px`);
+    });
+    this.lobbyCaptionResize.observe(lobby); this.lobbyCaptionResize.observe(lobbyBottom);
     this.skillBtns = [...document.querySelectorAll('.skill-btn')];
     this.hurtT = 0; this.comboEl = $('combo'); this.comboN = $('combo-n');
     this.lootLayer = $('loot-layer'); this.lootQueue = [];
@@ -72,7 +79,7 @@ export class UI {
   pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; b.setPaused('manual', on); this.show(this.el.pause, on); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
-  toast(msg, cls = '') { if (this.el.hud.classList.contains('show')) { this.combatNotices.push(msg, cls); return; } const d = document.createElement('div'); d.className = 'toast ' + cls; d.innerHTML = msg; this.el.toast.appendChild(d); setTimeout(() => d.remove(), 2200); while (this.el.toast.children.length > 4) this.el.toast.firstChild.remove(); }
+  toast(msg, cls = '', options = {}) { if (this.el.hud.classList.contains('show')) { this.combatNotices.push(msg, cls, options); return; } const d = document.createElement('div'); d.className = 'toast ' + cls; d.innerHTML = msg; this.el.toast.appendChild(d); setTimeout(() => d.remove(), 2200); while (this.el.toast.children.length > 4) this.el.toast.firstChild.remove(); }
   flyReward(worldPos, text, camera, kind = 'gold') { if (this.el.result.classList.contains('show') || document.querySelectorAll('.reward-fly').length > 8) return; const v = new THREE.Vector3().copy(worldPos).setY(1.5).project(camera); if (v.z > 1) return; const d = document.createElement('div'); d.className = 'reward-fly'; d.textContent = text; d.style.color = kind === 'stone' ? '#4cc3ff' : 'var(--gold)'; d.style.left = ((v.x * 0.5 + 0.5) * innerWidth) + 'px'; d.style.top = ((-v.y * 0.5 + 0.5) * innerHeight) + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 1000); }
   /** 필드 득템 팝업 */
   lootPopup(def, rarity) {
@@ -218,10 +225,12 @@ export class UI {
         r.receiptId ||= globalThis.crypto?.randomUUID?.() || `campaign-${Date.now()}-${Math.random()}`;
         const recorded = this.app.expedition.recordCampaign(r, b.stage);
         r.expeditionRecorded = recorded.ok;
+        if (recorded.ok) r.campaignReward = recorded.rewards;
       }
       this.lastReward = r.reward; const rw = r.reward;
       stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
       const items = [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];
+      if (r.campaignReward?.levelGold) items.push({ g: { k: 'gold', n: r.campaignReward.levelGold, label: '탐험 레벨업' } });
       items.forEach((x, i) => later(() => {
         const d = document.createElement(x.it ? 'button' : 'div');
         if (x.it) {
@@ -236,7 +245,7 @@ export class UI {
           };
         }
         if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}`; d.innerHTML = `<img src="${ITEM_ICON(def)}" onerror="this.remove()"><div class="nm">${def.name}</div>`; if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); }
-        else { const [nm, ic] = REWARD_LABEL[x.g.k] || [x.g.k, '']; d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(x.g.n)}</span><div class="nm">${nm}</div>`; audio.pick('coin', 2, { vol: 0.5 }); }
+        else { const [nm, ic] = REWARD_LABEL[x.g.k] || [x.g.k, '']; d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(x.g.n)}</span><div class="nm">${x.g.label || nm}</div>`; audio.pick('coin', 2, { vol: 0.5 }); }
         loot.appendChild(d);
       }, 1200 + i * 220));
       later(() => { const h = eco.hero(); const need = Math.max(1, (h.level ? require_(h.level) : 100)); $('result-exp').style.width = Math.min(100, h.exp / need * 100) + '%'; $('result-exp-txt').textContent = `Lv.${h.level} +${rw.exp}`; const pl = eco.passLevel; $('result-bp').style.width = ((eco.s.pass.xp % 100)) + '%'; $('result-bp-txt').textContent = `Lv.${pl} +${b.stage.rewards.bp}`; if (rw.ups) { this.toast(`영웅 레벨업! Lv.${h.level}`, 'gold'); audio.play('jingle_win1', { vol: 0.6 }); } if (rw.awakened && rw.awakened.length) later(() => this.awakenBanner(rw.awakened), 700); if (rw.passUps) this.toast(`시즌 패스 Lv.${pl} 달성!`, 'gold'); }, 1500);

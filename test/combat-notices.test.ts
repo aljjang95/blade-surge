@@ -65,6 +65,28 @@ test('queued danger precedes routine guidance without removing that guidance', (
   f.advance(2200); expect(f.visible).toEqual(['포탈']);
 });
 
+test('a fresh cast replaces stale danger immediately and preserves routine guidance', () => {
+  const f = fixture();
+  f.queue.push('이전 기술', 'red'); f.queue.push('봉인 경고', 'red'); f.queue.push('전투 목표', 'gold');
+  const stale = [...f.timers.values()][0].fn;
+  f.advance(500); f.queue.push('귀환의 쉼터', 'red', { replaceUrgent: true });
+  expect(f.visible).toEqual(['귀환의 쉼터']); expect(f.timers.size).toBe(1);
+  stale(); expect(f.visible).toEqual(['귀환의 쉼터']);
+  f.advance(2200); expect(f.visible).toEqual(['전투 목표']);
+  f.advance(2200); expect(f.visible).toEqual([]);
+  expect(f.seen.map(({ message }) => message)).toEqual(['이전 기술', '귀환의 쉼터', '전투 목표']);
+});
+
+test('only an explicit fresh urgent cast restarts the same cue', () => {
+  const f = fixture();
+  f.queue.push('귀환의 쉼터', 'red'); f.advance(1000);
+  expect(f.queue.push('귀환의 쉼터', 'red', { replaceUrgent: true })).toBe(true);
+  f.advance(1200); expect(f.visible).toEqual(['귀환의 쉼터']);
+  f.queue.push('포탈', 'gold', { replaceUrgent: true });
+  expect(f.visible).toEqual(['귀환의 쉼터']);
+  f.advance(1000); expect(f.visible).toEqual(['포탈']);
+});
+
 test('bursts stay bounded, preserve danger, and keep the newest routine guidance', () => {
   const f = fixture();
   f.queue.push('보스 경고', 'red'); f.queue.push('낙석', 'red');

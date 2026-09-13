@@ -3,6 +3,8 @@ import { Actor } from './actor.js';
 import { getPart } from '../engine/assets.js';
 import { audio } from '../engine/audio.js';
 import { rigOf, RIGS } from '../data/rigs.js';
+import { BOSS_SIGNATURES, isBossSignature } from '../data/boss-encounters.js';
+import { BossSignatures } from './boss-signatures.js';
 
 const _v = new THREE.Vector3();
 const areaPlayers = game => [...new Set(game.stage?.party ? game.app.party.livingPlayers() : [game.player])].filter(p => p?.alive);
@@ -10,9 +12,10 @@ const PATTERN_ANIMS = { basic: 'attack', spin: 'attackSpin', slam: 'attackJump',
 
 /** 보스별 순서를 읽어 회피 타이밍을 학습할 수 있게 한다. 후반 페이즈는 순서를 변주한다. */
 export function nextBossPattern(def, turn, phase = 0) {
-  if (!Array.isArray(def.pattern) || !def.pattern.length) return null;
-  const pattern = def.pattern[(turn + phase) % def.pattern.length];
-  return Object.hasOwn(PATTERN_ANIMS, pattern) ? pattern : 'basic';
+  const sequence=def.phasePatterns?.[Math.max(0,Math.min(2,phase))]||def.pattern;
+  if (!Array.isArray(sequence) || !sequence.length) return null;
+  const pattern = sequence[(turn + (def.phasePatterns?0:phase)) % sequence.length];
+  return Object.hasOwn(PATTERN_ANIMS, pattern) || isBossSignature(pattern) ? pattern : 'basic';
 }
 
 export class Enemy extends Actor {
@@ -43,6 +46,7 @@ export class Enemy extends Actor {
     this.atkCd = 0.6 + Math.random() * 1.2; this.hitAt = 0.5; this.attackDur = def.atkTime; this.attackDone = false;
     this.stagger = 0; this.poison = 0; this.poisonT = 0; this.phase = 0; this.enraged = false; this.special = null;
     this.patternTurn = 0;
+    this.signatures = def.signatureBoss ? new BossSignatures(this) : null;
     // 행동형 (bomber / shaman / shield)
     this.behavior = def.behavior || null; this.fuse = -1; this.healT = 4 + Math.random() * 2; this.summonT = 7 + Math.random() * 3; this.blocks = 0; this.guardBroken = 0;
     this.radius = 0.7 * def.scale;
@@ -64,6 +68,7 @@ export class Enemy extends Actor {
   }
   get player() { return this.game.player; }
   dispose() {
+    this.signatures?.dispose();
     if (this.marker) { this.marker.geometry.dispose(); this.marker.material.dispose(); this.marker = null; }
     super.dispose();
   }
@@ -98,12 +103,13 @@ export class Enemy extends Actor {
     if (poison) { this.poison = 4; }
     const staggerOK = (!this.isBoss || crit || kb >= 6) && (!this.isElite || crit || kb >= 4); const warrior = this.def.armor && !crit && kb < 4;
     if (staggerOK && !warrior && this.state !== 'dead') {
-      if (this.state !== 'attack' || kb >= 4) { this.state = 'hurt'; this.stateT = 0; this.stagger = 0.22 + Math.min(0.4, kb * 0.03); this.play(this.A('hit'), { once: true, fade: 0.04, speed: 1.8 }); this.telegraph = 0; this.attackDone = false; }
+      if (this.state !== 'attack' || kb >= 4) { this.signatures?.clear(); this.state = 'hurt'; this.stateT = 0; this.stagger = 0.22 + Math.min(0.4, kb * 0.03); this.play(this.A('hit'), { once: true, fade: 0.04, speed: 1.8 }); this.telegraph = 0; this.attackDone = false; }
     }
     if (this.hp <= 0) { this.hp = 0; this.kill(dirx, dirz, kb); }
     return dmg;
   }
   kill(dirx, dirz, kb) {
+    this.signatures?.clear();
     this.die(); this.state = 'dead'; this.telegraph = 0;
     this.kb.set(dirx, 0, dirz).normalize().multiplyScalar(Math.max(4, kb * 1.5));
     if (this.eyeMat) this.eyeMat.emissiveIntensity = 0;
@@ -111,6 +117,10 @@ export class Enemy extends Actor {
   }
   update(dt) {
     super.update(dt);
+    if(this.signatures){
+      if(this.alive&&dt>0)this.signatures.remember(dt);
+      if(!this.alive||this.state!=='attack'||this.stun>0)this.signatures.clear();
+    }
     if (this.marker) { if (this.alive) { this.marker.rotation.z += dt * 1.2; this.marker.material.opacity = 0.5 + Math.sin(this.game.elapsed * 3) * 0.18; } else this.marker.visible = false; }
     if (this.poison > 0) { this.poison -= dt; this.poisonT -= dt; if (this.poisonT <= 0) { this.poisonT = 0.5; if (this.alive) { const d = this.maxHp * 0.02 + 8; this.hp -= d; this.game.fx.damage(this.pos, d, { kind: 'skill' }); this.game.fx.embers(this.pos, 0x80ff90, { n: 3, radius: 0.5, life: 0.6 }); if (this.hp <= 0) { this.hp = 0; this.kill(0, 0, 2); } } } this.tintEmissive = new THREE.Color(0, 0.25, 0.05); }
     else if (this.tintEmissive && !this.enraged && !this.isElite && !(this._crystal > 0)) this.tintEmissive = null;   // 결정화 틴트는 세트 쪽이 되돌린다
@@ -126,8 +136,8 @@ export class Enemy extends Actor {
     if (this.isBoss) {
       const q = Math.floor((1 - this.hp / this.maxHp) * 5);   // 20% 마다 파편(장비) — 보스전 중 보상 공백 방지
       if (q > (this.shed || 0) && q < 5) { this.shed = q; this.game.bossShed(this); }
-      if (this.phase === 0 && this.hp < this.maxHp * 0.6) { this.phase = 1; this.game.bossPhase(this, 1); }
-      if (this.phase === 1 && this.hp < this.maxHp * 0.3) { this.phase = 2; this.enraged = true; this.tintEmissive = new THREE.Color(0.4, 0.02, 0.02); this.game.bossPhase(this, 2); }
+      if (this.phase === 0 && this.hp < this.maxHp * 0.6) { this.phase = 1; if(this.def.phasePatterns)this.patternTurn=0; this.game.bossPhase(this, 1); }
+      if (this.phase === 1 && this.hp < this.maxHp * 0.3) { this.phase = 2; if(this.def.phasePatterns)this.patternTurn=0; this.enraged = true; this.tintEmissive = new THREE.Color(0.4, 0.02, 0.02); this.game.bossPhase(this, 2); }
     }
     if (this.state === 'hurt') { this.vel.set(0, 0, 0); if (this.stateT > this.stagger) { this.state = 'chase'; this.play(this.A('idleCombat'), { fade: 0.12 }); } return; }
     if (this.state === 'dodge') { if (this.stateT > 0.4) { this.state = 'chase'; this.play(this.A('idle'), { fade: 0.1 }); } return; }
@@ -172,10 +182,13 @@ export class Enemy extends Actor {
       // 돌진은 예고가 끝난 뒤 전진한다. 도형이 뜨는 동안 먼저 움직이면 회피를 읽을 수 없다.
       if (this.special === 'dash' && this.dashV && this.stateT / this.attackDur >= .45) { this.vel.copy(this.dashV); }
       const t = this.stateT / this.attackDur;
-      if (!this.attackDone && t < this.hitAt && this.special !== 'dash') { const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z; if (!this.def.pattern) this.faceDir(dx, dz); this.telegraph = this.hitAt * this.attackDur - this.stateT; }
-      if (this.special === 'dash') this.telegraph = Math.max(0, this.attackDur * .45 - this.stateT);
-      if (!this.attackDone && t >= this.hitAt) { this.attackDone = true; this.telegraph = 0; this.doAttack(); }
-      if (t >= 1) { this.state = 'chase'; this.dashV = null; this.atkCd = (this.def.atkTime * 0.6 + Math.random() * 0.8) * (this.enraged ? 0.6 : 1); this.play(this.A('idleCombat'), { fade: 0.15 }); }
+      if(isBossSignature(this.special))this.signatures?.update(this.stateT);
+      else {
+        if (!this.attackDone && t < this.hitAt && this.special !== 'dash') { const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z; if (!this.def.pattern) this.faceDir(dx, dz); this.telegraph = this.hitAt * this.attackDur - this.stateT; }
+        if (this.special === 'dash') this.telegraph = Math.max(0, this.attackDur * .45 - this.stateT);
+        if (!this.attackDone && t >= this.hitAt) { this.attackDone = true; this.telegraph = 0; this.doAttack(); }
+      }
+      if (t >= 1) { this.signatures?.clear(); this.state = 'chase'; this.dashV = null; this.atkCd = (this.def.atkTime * 0.6 + Math.random() * 0.8) * (this.enraged ? 0.6 : 1); this.play(this.A('idleCombat'), { fade: 0.15 }); }
     }
   }
   /** 자폭 — 플레이어와 주변 적 모두에게. 무리 속에서 터지면 연쇄 */
@@ -187,8 +200,9 @@ export class Enemy extends Actor {
     for (const o of this.game.enemies) { if (o === this || !o.alive || o.spawning) continue; const dx = o.pos.x - c.x, dz = o.pos.z - c.z; if (Math.hypot(dx, dz) > 3.4) continue; o.hurt(this.atk * 3, { dirx: dx, dirz: dz, kb: 7, kind: 'blunt' }); if (o.behavior === 'bomber' && o.fuse < 0 && o.alive) o.fuse = 0.5; }
     this.hp = 0; this.kill(0, 0, 3);
   }
-  getPartyWarnings() { return enemyPartyWarnings(this); }
+  getPartyWarnings() { return isBossSignature(this.special) ? this.signatures?.warnings() || [] : enemyPartyWarnings(this); }
   startAttack(d) {
+    this.signatures?.clear();
     this.attackSequence=(this.attackSequence||0)+1; this.partyDashWarning = null;
     this.state = 'attack'; this.stateT = 0; this.attackDone = false;
     let anim = this.def.ranged ? this.A('cast') : this.A('attack'); this.special = null;
@@ -199,7 +213,11 @@ export class Enemy extends Actor {
       else if (kit === 'reaper') { if (r < 0.45 && d > 3) { anim = this.A('dash'); this.special = 'dash'; } else if (r < 0.7) { anim = this.A('attackSpin'); this.special = 'spin'; } else if (this.phase >= 1 && r < 0.8) { anim = this.A('summon'); this.special = 'summon'; } }
       else if (kit === 'dragon') { if (r < 0.35) { anim = this.A('attackHeavy'); this.special = 'fan'; } else if (r < 0.6) { anim = this.A('attackHeavy'); this.special = 'slam'; } else if (this.phase >= 1 && r < 0.75) { anim = this.A('summon'); this.special = 'summon'; } }
       const pattern = nextBossPattern(this.def, this.patternTurn++, this.phase);
-      if (pattern) { this.special = pattern === 'basic' ? null : pattern; anim = this.A(PATTERN_ANIMS[pattern]); }
+      if (pattern) { this.special = pattern === 'basic' ? null : pattern; anim = this.A(BOSS_SIGNATURES[pattern]?.anim||PATTERN_ANIMS[pattern]); }
+    }
+    if(this.signatures&&isBossSignature(this.special)){
+      const plan=this.signatures.start(this.special);this.attackDur=plan.duration;this.hitAt=plan.lastStrike/plan.duration;
+      this.telegraph=plan.lastStrike;this.dashV=null;this.playTimed(anim,plan.lastStrike,{fade:.1});return;
     }
     if (this.isElite && !this.isBoss && Math.random() < 0.3) { anim = this.A('attackHeavy'); this.special = 'spin'; }
     let dur = (this.def.atkTime) * (this.enraged ? 0.75 : 1) * (this.special === 'spin' ? 1.4 : this.special === 'dash' ? 0.9 : 1);
@@ -217,6 +235,7 @@ export class Enemy extends Actor {
     if (this.isBoss && this.special !== 'dash') audio.whoosh({ vol: 0.4, pitch: 0.5, dur: 0.5 });
   }
   doAttack() {
+    if(isBossSignature(this.special))return;
     this.completedAttackSequence=this.attackSequence;
     const p = this.player; const g = this.game; const f = this.forward(_v.clone());
     const dmg = this.atk * (this.special === 'slam' ? 1.6 : this.special === 'spin' ? 1.2 : this.special === 'dash' ? 1.5 : 1);

@@ -5,10 +5,15 @@ export class CombatNoticeQueue {
     this.duration = duration; this.limit = limit;
     this.pending = []; this.current = null; this.timer = null; this.remove = null; this.revision = 0;
   }
-  push(message, tone = '') {
+  push(message, tone = '', { replaceUrgent = false } = {}) {
+    const notice = { message, tone, urgent: tone.split(/\s+/).includes('red') };
+    // A new cast supersedes older danger cues; routine guidance can still resume.
+    if (notice.urgent && replaceUrgent) {
+      this.pending = this.pending.filter((item) => !item.urgent);
+      if (this.current?.urgent) this.stop();
+    }
     const duplicate = (notice) => notice?.message === message && notice.tone === tone;
     if (duplicate(this.current) || this.pending.some(duplicate)) return false;
-    const notice = { message, tone, urgent: tone.split(/\s+/).includes('red') };
     // A danger cue must be visible immediately; interrupted information resumes afterward.
     if (notice.urgent && this.current && !this.current.urgent) {
       const interrupted = this.current;

@@ -4,6 +4,7 @@ import { ExpeditionEconomy, normalizeExpedition } from '../src/game/expedition-e
 import { DUNGEONS, RECIPES, ARENA_RIVALS } from '../src/data/expansion.js';
 import { EXPEDITION_ITEMS } from '../src/data/expedition-items.js';
 import { ITEM_BY_ID, SETS } from '../src/data/items.js';
+import { CHAPTERS, stageDef } from '../src/data/stages.js';
 const old = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 let values: Map<string, string>;
 beforeEach(() => { values = new Map(); Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: (k:string) => values.get(k) ?? null, setItem: (k:string,v:string) => values.set(k,v), removeItem: (k:string) => values.delete(k) } }); });
@@ -52,6 +53,22 @@ test('campaign idempotency excludes base rewards and failed result', () => {
   expect(x.recordCampaign(r,{code:'1-1'}).ok).toBe(true); expect(x.recordCampaign(r,{code:'1-1'}).ok).toBe(false);
   expect(make().x.recordCampaign({...r},{code:'1-1'}).ok).toBe(false); expect(eco.s.gold).toBe(gold);
   expect(x.recordCampaign({win:false},{code:'1-2'}).ok).toBe(false);
+});
+
+test('every authored chapter including homecoming records one persisted campaign win', () => {
+  const { x } = make();
+  for (const chapter of CHAPTERS) {
+    const stage = stageDef(chapter.id, 10), result = { win: true, receiptId: `finale-${chapter.id}` };
+    expect(x.recordCampaign(result, stage).ok).toBe(true);
+    expect(x.recordCampaign(result, stage).ok).toBe(false);
+    expect(make().x.recordCampaign({ ...result }, stage).ok).toBe(false);
+  }
+  expect(make().x.s.stats.campaignWins).toBe(CHAPTERS.length);
+  for (const code of ['0-1', '7-1', '6-0', '6-11', '06-1', '6-1.5', '6-1x', '1-1\n']) {
+    expect(x.recordCampaign({ win: true }, { code }).ok).toBe(false);
+  }
+  expect(x.recordCampaign({ win: true }, { code: '6-1', expedition: { kind: 'dungeon' } }).ok).toBe(false);
+  expect(x.s.stats.campaignWins).toBe(CHAPTERS.length);
 });
 test('normalization rejects malformed counts, IDs and selection; save failure rolls back', () => {
   const s=normalizeExpedition({ materials:{glass_leaf:-5},consumables:{hp_tonic:Infinity},selectedJob:'evil',level:-10,claimed:['evil'],pending:{id:2,kind:'bad'} });

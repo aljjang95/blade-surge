@@ -1,10 +1,11 @@
 import { impactStrength } from './combat-motion.js';
+import { isBossSignature } from '../data/boss-encounters.js';
 
 const HEAVY = new Set(['spin','slam','dash','fan','soulrain']);
 export const RECOVERY_POSTURE = 15;
 export function isRecoveryOpportunity(enemy) {
   return !!(enemy?.alive && !enemy.spawning && (enemy.isBoss || enemy.isElite) &&
-    enemy.state==='attack' && enemy.attackDone && HEAVY.has(enemy.special) &&
+    enemy.state==='attack' && enemy.attackDone && (HEAVY.has(enemy.special)||isBossSignature(enemy.special)) &&
     enemy.attackSequence>0 && enemy.completedAttackSequence===enemy.attackSequence &&
     !(enemy.telegraph>0) && !(enemy.stun>0) && !(enemy.breakT>0) &&
     enemy.stateT>=enemy.attackDur*enemy.hitAt && enemy.stateT<enemy.attackDur);

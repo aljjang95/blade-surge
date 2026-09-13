@@ -208,7 +208,12 @@ export class Battle {
     // 증원으로 이미 달려나간 만큼은 정원에서 뺀다 (총량 보존)
     const n = Math.max(0, this.rosterSize(room) - (room.reinforced || 0));
     const list = [];
-    for (let i = 0; i < n; i++) list.push((i % 6 === 5 ? R.ranged : R.trash)[(i * 3 + room.id) % (i % 6 === 5 ? R.ranged.length : R.trash.length)]);
+    // Step 3 in a six-entry pool visits only two species; ranged slots were also constant.
+    let meleeTurn=0,rangedTurn=0;
+    for (let i = 0; i < n; i++) {
+      const ranged=i%6===5,pool=ranged?R.ranged:R.trash,turn=ranged?rangedTurn++:meleeTurn++;
+      list.push(pool[(turn+room.id+this.stage.idx)%pool.length]);
+    }
     if (room.type === ROOM_TYPE.ELITE) { list.push(R.elite[room.id % R.elite.length]); if (this.stage.idx > 8) list.push(R.elite[(room.id + 1) % R.elite.length]); }
     else if (room.type === ROOM_TYPE.NORMAL && Math.random() < 0.35) list.push(R.elite[room.id % R.elite.length]);
     if (room.type === ROOM_TYPE.BOSS) list.push(this.stage.encounter?.enemyId || this.stage.chapter.boss, R.trash[0], R.trash[1], R.trash[0], R.trash[2], R.ranged[0], R.trash[1]);
@@ -399,8 +404,9 @@ export class Battle {
     this.fx.burst(at.clone().setY(1.6 * boss.def.scale), 0xffd080, { n: 16, speed: 7, size: 0.4, up: 1 }); audio.play('hit_plate', { vol: 0.5, rate: 0.8 });
   }
   bossPhase(boss, phase) {
-    if (phase === 1) { this.ui.toast('보스 2페이즈!', 'red'); audio.voice(`${this.bossKey}_phase`); this.fx.shockTex(boss.pos, 0xff3030, { r1: 9, life: 0.8 }); }
-    else { this.ui.toast(`${boss.def.name} 광폭화!`, 'red'); audio.voice(`${this.bossKey}_enrage`); this.fx.firePillar(boss.pos, { height: 11, width: 3.5, life: 1.2, color: 0xff2020 }); this.renderer.flashScreen(0.4, 0xff2020); this.renderer.shake(0.8); audio.boom({ vol: 0.8, dur: 0.8 }); }
+    const hint=boss.def.phaseHints?.[phase];
+    if (phase === 1) { this.ui.toast(hint?`2페이즈 · ${hint}`:'보스 2페이즈!', 'red'); audio.voice(`${this.bossKey}_phase`); this.fx.shockTex(boss.pos, 0xff3030, { r1: 9, life: 0.8 }); }
+    else { this.ui.toast(hint?`광폭화 · ${hint}`:`${boss.def.name} 광폭화!`, 'red'); audio.voice(`${this.bossKey}_enrage`); this.fx.firePillar(boss.pos, { height: 11, width: 3.5, life: 1.2, color: 0xff2020 }); this.renderer.flashScreen(0.4, 0xff2020); this.renderer.shake(0.8); audio.boom({ vol: 0.8, dur: 0.8 }); }
   }
   onEnemyDeath(e) {
     this.kills++; this.waveKilled++; this.player.addUlt(e.isBoss ? 30 : e.isElite ? 16 : 5);
