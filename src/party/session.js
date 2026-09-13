@@ -9,6 +9,8 @@ import { PARTY_CODE, PARTY_ACTIONS, sanitizePartyName, validPartySnapshot } from
 import { RemoteInput, actorSnapshot, partyHeroState, normalizedPartyStats, canonicalPartyCode } from './replication.js';
 import { PartyView } from './view.js';
 import { capturePartyWarnings, PartyCombatEffects } from './combat-effects.js';
+import { queuePartyVisual } from './visual-protocol.js';
+import { capturePartyEffects, PartyVisualPlayer } from './visual-effects.js';
 
 const ERRORS = { 'not-ready':'모두 준비를 마쳐야 출격할 수 있습니다.', 'not-host':'방장만 출격할 수 있습니다.',
   'full':'파티가 가득 찼습니다.', 'running':'이미 출격한 파티입니다.', 'expired':'초대가 만료됐습니다. 새 파티를 만들어 주세요.',
@@ -52,6 +54,7 @@ export class PartySession {
     this.playerId = null; this.party = null; this.name = sanitizePartyName(this.name);
     const url = new URL(`/api/party/${code}`, location.href); url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     url.searchParams.set('name', this.name); url.searchParams.set('hero', this.heroId);
+    url.searchParams.set('visuals', '1');
     if (ticket) url.searchParams.set('ticket', ticket);
     const socket = this.socket = new WebSocket(url); this.lastMessage = performance.now();
     return new Promise((resolve, reject) => {
@@ -82,6 +85,7 @@ export class PartySession {
     } else if (message.type === 'snapshot' && !this.isHost && this.run && validPartySnapshot(message.snapshot)) {
       if (message.seq <= (this.snapshotSeq ?? -1)) return; this.snapshotSeq = message.seq; this.snapshot = message.snapshot;
       this.pendingEvents.push(...message.snapshot.events); this.pendingEvents = this.pendingEvents.slice(-64);
+      for (const visual of message.snapshot.visuals || []) queuePartyVisual(this.pendingVisuals,visual);
     } else if (message.type === 'finish' && this.run?.runId === message.runId) this.complete(message.win, message.stats);
     else if (message.type === 'abort') this.abort('파티원이 연결을 종료해 원정을 마쳤습니다.');
     else if (message.type === 'error') this.view.message(ERRORS[message.error] || '요청을 처리하지 못했습니다. 준비 상태를 확인해 주세요.');
@@ -95,6 +99,7 @@ export class PartySession {
     if (this.run || !Number.isInteger(run.stageIdx) || run.stageIdx < 1 || run.stageIdx > CHAPTERS.length * STAGES_PER_CHAPTER) return;
     this.run = run; this.members = members; this.finishing = false; this.finishSent = false; this.snapshot = null; this.snapshotSeq = -1;
     this.seq = 0; this.tick = 0; this.sendT = 0; this.hudT = 0; this.events = []; this.pendingEvents = []; this.loaded = new Set();
+    this.visuals=[]; this.pendingVisuals=[];
     this.loadStarted = performance.now(); this.lastMessage = performance.now(); this.view.dialog.close();
     const app = this.app; app.stageStarting = true;
     try {
@@ -133,6 +138,12 @@ export class PartySession {
     }
     battle.buildBase = { ...battle.player.stats }; battle.appliedStats = battle.player.stats;
     battle.ui.setupHud(battle.player.def, battle.player);
+    if (this.isHost) {
+      this.originalFx=battle.fx;
+      this.capturedFx=battle.fx=capturePartyEffects(battle.fx,visual=>{
+        if (battle.active && !this.finishing) queuePartyVisual(this.visuals,visual);
+      },()=>battle.elapsed);
+    } else this.visualPlayer=new PartyVisualPlayer(battle.fx);
     // Guest replicas do not simulate hazards, NPC allies, loot or combat timers.
     if (!this.isHost) { battle.hazards?.dispose(); battle.hazards = null; battle.timers.length = 0; this.combatEffects = new PartyCombatEffects(this.app.scene); }
   }
@@ -170,7 +181,7 @@ export class PartySession {
   hitEvent(enemy, value) { if (this.events.length < 32) this.events.push({type:'hit',id:enemy.partyId,x:enemy.pos.x,z:enemy.pos.z,value:Math.round(value)}); }
   snapshotOf() {
     const b = this.app.battle;
-    return { tick:++this.tick,elapsed:b.elapsed,paused:b.paused,warnings:capturePartyWarnings(b),
+    return { tick:++this.tick,elapsed:b.elapsed,paused:b.paused,warnings:capturePartyWarnings(b),visuals:this.visuals.splice(0),
       players:this.members.map(m => { const p = this.players.get(m.id); return {...actorSnapshot(p,m.id),heroId:m.heroId,ult:p.ult,cds:p.cds.map(v => Math.max(0,v))}; }),
       enemies:b.enemies.filter(e => e.partyId).slice(0,180).map(e => ({...actorSnapshot(e,e.partyId),key:e.speciesId,boss:e.isBoss,elite:e.isElite})),
       rooms:b.world.rooms.map((r,i) => ({id:i,discovered:!!r.discovered,cleared:!!r.cleared,activated:!!r.spawned})), roomsCleared:b.roomsCleared,
@@ -222,6 +233,8 @@ export class PartySession {
     b.ui.showBoss(b.boss?.def.name || '',!!b.boss,b.boss?.def.portrait);
     this.renderProjectiles(state.projectiles || []);
     this.combatEffects?.update(state.warnings || []);
+    this.visualPlayer?.update(dt);
+    this.visualPlayer?.play(this.pendingVisuals.splice(0),state.elapsed,this.app.reducedMotion.matches);
     for (const event of this.pendingEvents.splice(0)) if (event.type === 'hit') {
       const pos = new THREE.Vector3(event.x,1,event.z), target = this.replicas.get(event.id);
       if (!this.app.reducedMotion.matches) { b.fx.flash(pos,0xffd080,{size:1.8,life:.12}); target?.flash(0xffffff); target?.receiveImpact(0,1,.5); }
@@ -270,6 +283,9 @@ export class PartySession {
     for(const e of this.replicas.values())e.dispose();
     this.orbMesh?.removeFromParent();this.orbMesh?.dispose();this.orbGeo?.dispose();this.orbMat?.dispose();this.orbMesh=null;
     this.combatEffects?.dispose();this.combatEffects=null;
+    this.visualPlayer?.clear();this.visualPlayer=null;this.visuals=[];this.pendingVisuals=[];
+    if (this.app.battle?.fx===this.capturedFx) this.app.battle.fx=this.originalFx;
+    this.capturedFx=null;this.originalFx=null;
     const b = this.app.battle; if (b?.chronicle?.hud) b.chronicle.hud.hidden = false; if (b?.rpgView?.hudButton) b.rpgView.hudButton.hidden = false;
     this.players.clear();this.inputs.clear();this.replicas.clear();this.ready=false;
   }
