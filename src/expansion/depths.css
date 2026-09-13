@@ -1,0 +1,11 @@
+.exp-route-tabs{display:flex;gap:8px;margin:18px 0 12px;flex-wrap:wrap}
+.exp-route-tabs button{min-height:44px;flex:1;max-width:220px}
+.exp-route-tabs button[aria-pressed="true"]{color:#f7e3b6;border-color:#d2b77b;background:#dac39318}
+.exp-route-tabs small{margin-left:8px;font-size:11px;opacity:.8}
+.exp-depth-intro{max-width:680px;margin-bottom:20px!important}
+.exp-depth-power{display:block;margin:12px 0;color:#c4d5c7}
+.exp-dungeon[data-depth="deep"] .exp-dungeon-art img{object-position:center 25%}
+.exp-dungeon .exp-primary{min-height:44px;white-space:normal;line-height:1.5;overflow-wrap:anywhere}
+.exp-first-clear{color:#f2d38f!important;font-weight:700}
+.btn-battle>small[hidden]{display:none!important}
+@media(max-width:480px){.exp-route-tabs button{padding:10px 12px}.exp-depth-intro{font-size:12px}.exp-dungeon[data-depth="deep"] h3{font-size:19px}}

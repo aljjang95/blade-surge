@@ -188,7 +188,7 @@ class App {
   }
   async startStage(stage) {
     if (this.party?.party?.status === 'lobby') { this.party.view.open(); this.party.view.message('파티에서 준비를 마치고 함께 출격하세요.'); return false; }
-    if (stage?.expedition) return this.startExpedition(stage.expedition.kind, stage.expedition.id, { rift: !!stage.riftId });
+    if (stage?.expedition) return this.startExpedition(stage.expedition.kind, stage.expedition.id, { rift: !!stage.riftId, depth: stage.expedition.depth });
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
     if (!stage || !this.eco.isUnlocked(stage.ch, stage.st)) { this.ui.toast('이전 스테이지를 먼저 클리어하세요.', 'red'); return false; }
     // 미리보기에서 넘긴 객체 대신 검증된 현재 스테이지 정의로 출격한다.
@@ -229,15 +229,12 @@ class App {
       if (!refund.ok) { this.ui.toast('이전 출격의 에너지 복구를 저장하지 못했습니다. 저장 공간을 확인해 주세요.', 'red'); return false; }
       this.expeditionTicket = null; this.expeditionRefundPending = false;
     }
-    let stage;
-    try { stage = buildExpeditionStage(kind, id, this.eco); }
-    catch (error) { this.ui.toast(error.message, 'red'); return false; }
     const begin = this.expedition.begin(kind, id, options);
     if (!begin.ok) { this.ui.toast(begin.error, 'red'); return false; }
     this.expeditionTicket = begin.ticket;
-    stage = applyRiftStage(stage, begin.ticket);
     this.stageStarting = true;
     try {
+      const stage = applyRiftStage(buildExpeditionStage(kind, id, this.eco, { depth: begin.ticket.depth }), begin.ticket);
       this.expeditionUI.result = null; this.expeditionUI.close();
       this.journeyView?.close();
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();

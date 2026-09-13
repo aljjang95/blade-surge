@@ -6,8 +6,11 @@ import { HEROES } from '../data/heroes.js';
 import { audio } from '../engine/audio.js';
 import { playExpeditionIntro } from './cinematic.js';
 import { uiArt, resourceArt } from '../ui/illustrated.js';
+import { EXPEDITION_DEPTHS, campaignFinished } from '../data/expedition-depths.js';
+import { ENCOUNTER_ART } from '../data/encounter-art.js';
 import './hub.css';
 import './app-content.css';
+import './depths.css';
 
 const fmt = n => Math.floor(n || 0).toLocaleString('ko-KR');
 const MATERIAL_ART = Object.fromEntries(MATERIALS.map(m=>[m.id,resourceArt(m.id)]));
@@ -33,6 +36,35 @@ function LootReveal({loot=[]}) {
   return <div className="exp-loot-reveal" aria-label="획득 장비"><p>이번 원정의 전리품</p><div>{best.map((i,n)=><article key={i.uid} style={{'--loot-color':RARITY_COLOR[i.def.rarity],'--loot-delay':`${n*65}ms`}}><small>{i.def.rarity}</small><Art src={ITEM_ICON(i.def)} alt=""/><b>{i.def.name}</b></article>)}</div>{loot.length>6&&<small>외 {loot.length-6}개 · 모든 장비가 가방에 보관되었습니다</small>}</div>;
 }
 
+function DungeonRoutes({app, service, launch, controller}) {
+  const [depth, setDepth] = useState(controller.dungeonDepth || (campaignFinished(app.eco.s.progress) ? 'deep' : 'standard'));
+  const deep = depth === 'deep', s = service.snapshot();
+  const choose = value => { setDepth(value); controller.dungeonDepth = value; };
+  return <>
+    <div className="exp-route-tabs" role="group" aria-label="원정 구분">
+      <button aria-pressed={!deep} onClick={()=>choose('standard')}>기본 원정</button>
+      <button aria-pressed={deep} onClick={()=>choose('deep')}>심층 원정 <small>{EXPEDITION_DEPTHS.filter(d=>service.dungeonAccess(d.id,{depth:'deep'}).ok).length}/3</small></button>
+    </div>
+    {deep && <p className="exp-depth-intro">캠페인에서 구한 지역의 남은 이야기를 이어갑니다. 처음 정복하면 추가 보상을 받고, 다시 도전하면 더 많은 제작 재료를 얻습니다.</p>}
+    <div className="exp-dungeon-grid">{(deep ? EXPEDITION_DEPTHS : DUNGEONS).map((d,i)=>{
+      const access=service.dungeonAccess(d.id,{depth}), locked=!access.ok;
+      const wins=deep ? s.depthWins?.[d.id]||0 : s.stats[d.id];
+      const art=deep ? ENCOUNTER_ART[['garden_midboss','tide_midboss','homecoming_finalboss'][i]] : ART[d.id];
+      return <article key={`${depth}:${d.id}`} className="exp-dungeon" data-depth={depth} data-dungeon={d.id} style={{'--exp-accent':COLORS[d.id]}}>
+        <div className="exp-dungeon-art"><Art src={art} alt={d.name+(deep?' 수호자':' 던전 원화')} loading="lazy" decoding="async"/><span className="exp-number">0{i+1}</span>
+          <div className="exp-dungeon-badges"><span>{deep ? `캠페인 ${d.unlockCode} 이후` : `원정 Lv.${d.minLevel}`}</span><span className="ui-resource"><Icon id="energy"/>에너지 {d.energy}</span></div>
+        </div>
+        <div className="exp-card-body"><small>{deep ? (wins ? `${wins}회 정복` : '첫 정복 보상 미획득') : SUBTITLES[d.id]}</small><h3>{d.name}</h3><p>{deep ? d.objective : OBJECTIVES[d.id]}</p>
+          {deep && <Detail label="이야기 · 첫 정복 보상"><p>{d.description}</p>{!wins ? <RewardChips rewards={d.firstRewards}/> : <p>첫 정복 보상을 받았습니다.</p>}</Detail>}
+          <div className="exp-material-reward">{MATERIALS.filter(m=>d.rewards.materials?.[m.id]).map(m=><React.Fragment key={m.id}><img src={MATERIAL_ART[m.id]} alt=""/><span>{m.name}<b>확정 +{d.rewards.materials[m.id]}</b></span></React.Fragment>)}<em>EXP +{d.rewards.xp}</em></div>
+          {deep && <small className="exp-depth-power">권장 전투력 {fmt(2600*d.scale)} · {d.layout.cells.length}개 구역</small>}
+          <button className="exp-primary" disabled={locked||app.stageStarting} onClick={()=>launch('dungeon',d.id,{depth})}>{locked ? access.error : deep ? '심층 원정 출격' : '던전 입장'}</button>
+        </div>
+      </article>;
+    })}</div>
+  </>;
+}
+
 function Panel({controller, revision}) {
   const app=controller.app, service=app.expedition, s=service.snapshot();
   const tab=controller.initialTab||'dungeons';
@@ -50,8 +82,8 @@ function Panel({controller, revision}) {
     {app.journeyView && <button className="exp-film-link" disabled={!!result?.saveError} onClick={()=>app.journeyView.open(result?'contracts':'journey')}><Icon id="nav-journey"/>성장 여정 · 의뢰 보상</button>}
     {result && <RunGrowth app={app}/>}
     {!result && tab==='dungeons' && <button className="exp-film-link" onClick={()=>playExpeditionIntro(app,'glass_garden',{force:true})}><Icon id="nav-dungeon"/>유리 정원 · 지역 영상</button>}
-    {result ? <div className="exp-outcome"><span className="exp-eyebrow">{result.win?'EXPEDITION COMPLETE':'A NEW ATTEMPT AWAITS'}</span><h2>{result.win?'다시, 한 걸음 더.':'다음 도전을 준비하세요.'}</h2><p>{result.name}</p><div className="exp-outcome-stats"><span><b>{result.kills}</b>처치</span><span><b>{result.combo}</b>최대 콤보</span><span><b>{Math.floor(result.time)}초</b>전투 시간</span></div><RewardChips rewards={result.rewards}/>{!result.saveError&&<LootReveal loot={result.rewards.loot}/>}{result.saveError?<div role="alert"><p>아직 정산을 저장하지 못했습니다. 이 창을 유지하고 저장 공간을 확인해 주세요.</p><button className="exp-primary" onClick={()=>controller.showResult(app.battle,result.win)}>정산 다시 저장</button></div>:result.win&&<><div className="exp-chips"><span><Icon id="hero-xp"/>영웅 EXP +{result.rewards.heroExp||0}</span><span><Icon id="slot-armor"/>장비 {result.rewards.loot?.length||0}개</span><span><Icon id="material-stone"/>강화석 +{result.rewards.stones||0}</span></div><p>전리품이 가방에 저장되었습니다.</p></>}<div className="exp-actions" inert={result.saveError?true:undefined}><button className="exp-primary" onClick={()=>launch(result.kind,result.id,{rift:!!result.riftId})}>다시 도전</button><button onClick={()=>{controller.result=null;app.toLobby();controller.open('forge');}}>전리품 정비</button><button onClick={()=>{controller.result=null;app.toLobby();controller.open('quests');}}>퀘스트 확인</button></div></div> : <>
-    {tab==='dungeons'&&<><div className="exp-loadout-strip"><Art src={HEROES[app.eco.s.selected].portrait} alt="출전 영웅"/><span><b>{HEROES[app.eco.s.selected].name}</b> · {JOBS.find(j=>j.id===s.selectedJob&&j.heroId===app.eco.s.selected)?.name||'기본 직업'} · Lv.{app.eco.hero().level}</span><button onClick={()=>app.meta.openTab('heroes')}>장비 관리</button></div><div className="exp-dungeon-grid">{DUNGEONS.map((d,i)=>{const access=service.dungeonAccess(d.id);const locked=access?.ok===false;return <article key={d.id} className="exp-dungeon" style={{'--exp-accent':COLORS[d.id]}}><div className="exp-dungeon-art"><Art src={ART[d.id]} alt={d.name+' 던전 원화'}/><span className="exp-number">0{i+1}</span><div className="exp-dungeon-badges"><span>원정 Lv.{d.minLevel}</span><span className="ui-resource"><Icon id="energy"/>에너지 {d.energy}</span></div></div><div className="exp-card-body"><small>{SUBTITLES[d.id]}</small><h3>{d.name}</h3><p>{OBJECTIVES[d.id]}</p><div className="exp-material-reward">{MATERIALS.filter(m=>d.rewards.materials?.[m.id]).map(m=><React.Fragment key={m.id}><img src={MATERIAL_ART[m.id]} alt=""/><span>{m.name}<b>확정 +{d.rewards.materials[m.id]}</b></span></React.Fragment>)}<em>EXP +{d.rewards.xp}</em></div><button className="exp-primary" disabled={locked||app.stageStarting} onClick={()=>launch('dungeon',d.id)}>{locked?`원정 Lv.${d.minLevel}에 해금`:'던전 입장'}</button></div></article>;})}</div></>}
+    {result ? <div className="exp-outcome"><span className="exp-eyebrow">{result.win?'EXPEDITION COMPLETE':'A NEW ATTEMPT AWAITS'}</span><h2>{result.win?'다시, 한 걸음 더.':'다음 도전을 준비하세요.'}</h2><p>{result.name}</p><div className="exp-outcome-stats"><span><b>{result.kills}</b>처치</span><span><b>{result.combo}</b>최대 콤보</span><span><b>{Math.floor(result.time)}초</b>전투 시간</span></div><RewardChips rewards={result.rewards}/>{result.rewards.firstClear&&<p className="exp-first-clear">첫 정복 보상까지 받았습니다.</p>}{!result.saveError&&<LootReveal loot={result.rewards.loot}/>}{result.saveError?<div role="alert"><p>아직 정산을 저장하지 못했습니다. 이 창을 유지하고 저장 공간을 확인해 주세요.</p><button className="exp-primary" onClick={()=>controller.showResult(app.battle,result.win)}>정산 다시 저장</button></div>:result.win&&<><div className="exp-chips"><span><Icon id="hero-xp"/>영웅 EXP +{result.rewards.heroExp||0}</span><span><Icon id="slot-armor"/>장비 {result.rewards.loot?.length||0}개</span><span><Icon id="material-stone"/>강화석 +{result.rewards.stones||0}</span></div><p>전리품이 가방에 저장되었습니다.</p></>}<div className="exp-actions" inert={result.saveError?true:undefined}><button className="exp-primary" onClick={()=>launch(result.kind,result.id,{rift:!!result.riftId,depth:result.depth})}>다시 도전</button><button onClick={()=>{controller.result=null;app.toLobby();controller.open('forge');}}>전리품 정비</button><button onClick={()=>{controller.result=null;app.toLobby();controller.open('quests');}}>퀘스트 확인</button></div></div> : <>
+    {tab==='dungeons'&&<><div className="exp-loadout-strip"><Art src={HEROES[app.eco.s.selected].portrait} alt="출전 영웅"/><span><b>{HEROES[app.eco.s.selected].name}</b> · {JOBS.find(j=>j.id===s.selectedJob&&j.heroId===app.eco.s.selected)?.name||'기본 직업'} · Lv.{app.eco.hero().level}</span><button onClick={()=>app.meta.openTab('heroes')}>장비 관리</button></div><DungeonRoutes app={app} service={service} launch={launch} controller={controller}/></>}
     {tab==='forge'&&<><div className="exp-section-heading"><div><span className="exp-eyebrow">THE ART OF FORGING</span><h2>전리품에, 쓰임을.</h2><p>원정 재료로 원하는 장비를 확정 제작합니다.</p></div><button onClick={()=>{controller.close();app.meta.openTab('heroes');}}>장착 · 강화</button></div><div className="exp-forge-layout"><aside className="exp-forge-aside"><ForgePreview app={app}/><h3>원정 재료 보관함</h3>{MATERIALS.map(m=><div className="exp-material-line" key={m.id}><img src={MATERIAL_ART[m.id]} alt=""/><span>{m.name}<small>{m.description}</small></span><b>{fmt(s.materials[m.id])}</b></div>)}<h3>강화석 정련</h3><div className="exp-refining">{MATERIAL_REFINING.map(r=><button key={r.id} disabled={!s.materials[r.id]||app.eco.s.gold<r.gold} onClick={()=>run(()=>service.refineMaterial(r.id))}><img src={MATERIAL_ART[r.id]} alt=""/><span>{r.name} · {r.stones||r.stones2||r.stones3}개<small>{MATERIALS.find(m=>m.id===r.id)?.name} 1개 · 골드 {fmt(r.gold)}</small></span><b>정련</b></button>)}</div><Detail label="재료 획득처"><p>재료는 던전과 퀘스트에서 획득합니다. 제작한 장비는 영웅의 가방에 보관됩니다.</p>{MATERIALS.map(m=><p key={m.id}>{m.name} · {m.description}</p>)}</Detail></aside><div><div className="exp-filter">{[['all','전체'],['gear','장비'],['potion','소모품']].map(([v,n])=><button key={v} className={craftFilter===v?'active':''} onClick={()=>setCraftFilter(v)}>{n}</button>)}</div><div className="exp-recipe-grid">{RECIPES.filter(r=>craftFilter==='all'||(craftFilter==='gear'?r.itemId:!r.itemId)).map(r=>{const enough=app.eco.s.gold>=r.gold&&Object.entries(r.materials||{}).every(([k,n])=>s.materials[k]>=n);const item=ITEM_BY_ID[r.itemId];const potion=CONSUMABLES.find(c=>r.consumables?.[c.id]);return <article key={r.id} className="exp-recipe"><Art src={item?ITEM_ICON(item):resourceArt(potion?.id)} fallback={item?'/img/icon_chest.webp':'/img/icon_bless.webp'} alt=""/><div><small>{item?(SETS[item.set]?.name||'원정 장비'):'전투 소모품'}</small><h3>{r.name}</h3><Detail><p>{item?SETS[item.set]?.four?.text:potion?.description}</p></Detail><div className="exp-cost">{Object.entries(r.materials||{}).map(([k,n])=><span key={k} className={s.materials[k]<n?'short':''}><img src={resourceArt(k)} alt=""/>{MATERIALS.find(m=>m.id===k)?.name} {s.materials[k]}/{n}</span>)}<span className={app.eco.s.gold<r.gold?"short":""}><Icon id="gold"/>골드 {fmt(r.gold)}</span></div></div><button disabled={!enough} onClick={()=>run(()=>service.craft(r.id))}>제작</button></article>;})}</div></div></div></>}
     {tab==='jobs'&&<><div className="exp-section-heading"><div><span className="exp-eyebrow">SAME HERO. NEW INSTINCT.</span><h2>전투의 방식을 고르세요.</h2></div><button onClick={()=>selectJob(null)}>기본 직업으로</button></div><div className="exp-jobs">{JOBS.map(j=>{const unlocked=s.unlockedJobs.includes(j.id),eligible=s.claimed.includes(j.questId),selected=s.selectedJob===j.id;return <article key={j.id} className={'exp-job '+(selected?'selected':'')}><Art src={`/img/expansion/${j.id}.webp`} fallback={HEROES[j.heroId].portrait} alt={j.name+' 문장'}/><div><small>{HEROES[j.heroId].name} / {j.id==='guardian'?'GUARDIAN':'RANGER'}</small><h3>{j.name}</h3><p>{j.id==='guardian'?'방패로 버티고 묵직하게 반격합니다.':'거리를 벌리고 관통 사격을 연결합니다.'}</p><Detail label="전직 효과"><ul>{(j.id==='guardian'?['방패 반격 · 밀집한 적을 제압','짧고 묵직한 타격 리듬','결의 3중첩으로 강화 반격']:['관통 사격 · 거리를 이용한 전투','기동과 연사로 만드는 공격 창','집중 3중첩으로 관통탄 강화']).map(t=><li key={t}>{t}</li>)}</ul></Detail><button className="exp-primary" disabled={selected||(!unlocked&&!eligible)} onClick={()=>unlocked?selectJob(j.id):run(()=>service.unlockJob(j.id))}>{selected?'현재 선택한 직업':unlocked?'이 직업으로 전직':eligible?'직업 해금':j.id==='guardian'?'서약 퀘스트 보상을 받으세요':'유리 정원 퀘스트를 완료하세요'}</button></div></article>;})}</div></>}
     {tab==='quests'&&<><div className="exp-section-heading"><div><span className="exp-eyebrow">EVERY STEP MATTERS</span><h2>완료한 모험의 보상을 받으세요.</h2></div><span className="exp-pill">{s.claimed.length} / {s.quests.length} 완료</span></div><div className="exp-journal-art"><Art src={ART.guild_map} alt="유리 정원과 잿불 금고, 별빛 서고의 모험 지도"/></div><div className="exp-quests">{s.quests.map((q,i)=><article key={q.id} className={'exp-quest '+(q.claimed?'claimed':q.ready?'ready':'')}><span className="exp-quest-index"><Icon id={q.claimed?"mail":"nav-quests"}/></span><div><h3>{q.name}</h3><RewardChips rewards={q.rewards}/><div className="exp-progress"><i style={{width:`${Math.min(100,q.cur/q.target*100)}%`}}/></div><small>{Math.min(q.cur,q.target)} / {q.target}</small></div><button className={q.ready&&!q.claimed?'exp-primary':''} disabled={q.claimed||!q.ready} onClick={()=>run(()=>service.claimQuest(q.id))}>{q.claimed?'수령 완료':q.ready?'보상 받기':'진행 중'}</button></article>)}</div></>}
@@ -100,8 +132,9 @@ export class ExpeditionUI {
     document.body.classList.toggle('expedition-open',show);
     if(show){this.initialTab=section;this.viewSeq=(this.viewSeq||0)+1;this.render();}else this.root.render(null);
   }
-  open(tab='dungeons'){
+  open(tab='dungeons', {depth}={}){
     if(this.app.mode==='battle'&&this.app.battle.active)return;
+    if (['standard','deep'].includes(depth)) this.dungeonDepth=depth;
     this.app.ui.closeModal();this.app.ui.hideResult();this.app.ui.show(document.getElementById('meta'),true);
     this.app.meta.openTab('stage',tab);
   }
@@ -115,7 +148,7 @@ export class ExpeditionUI {
     const r=b.result;if(!r)return;
     if(!r.expeditionReceipt?.ok){r.expeditionReceipt=this.app.expedition.settle(this.app.expeditionTicket,{win,kills:b.kills,fieldRewards:{fieldGold:b.drops.gold,fieldStones:b.drops.stones,fieldStones2:b.drops.stones2,fieldStones3:b.drops.stones3,fieldFragments:b.drops.fragments},fieldLoot:b.drops.loot});if(r.expeditionReceipt.ok)this.app.expeditionTicket=null;}
     this.app.ui.showHud(false);this.app.ui.show(this.app.ui.el.pause,false);this.app.ui.closeModal();
-    this.result={win,kind:b.stage.expedition.kind,id:b.stage.expedition.id,riftId:b.stage.riftId||null,name:b.stage.title||b.stage.name,kills:b.kills,combo:b.maxCombo,time:b.elapsed,rewards:r.expeditionReceipt.rewards||{},saveError:!r.expeditionReceipt.ok?r.expeditionReceipt.error:null};
+    this.result={win,kind:b.stage.expedition.kind,id:b.stage.expedition.id,depth:b.stage.expedition.depth||'standard',riftId:b.stage.riftId||null,name:b.stage.title||b.stage.name,kills:b.kills,combo:b.maxCombo,time:b.elapsed,rewards:r.expeditionReceipt.rewards||{},saveError:!r.expeditionReceipt.ok?r.expeditionReceipt.error:null};
     this.open('dungeons');audio.play(win?'jingle_win1':'ui_error',{vol:.5});
   }
 }

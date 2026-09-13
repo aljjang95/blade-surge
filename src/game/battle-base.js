@@ -279,19 +279,22 @@ export class Battle {
   }
   markCleared(room) {
     if (room.cleared) return;
-    if (this.stage.expedition?.id === 'glass_garden' && room.type === ROOM_TYPE.TREASURE && !room.attuned) {
+    if (this.stage.expedition?.mechanics?.attunement && room.type === ROOM_TYPE.TREASURE && !room.attuned) {
       if (!room.attunementPending) {
         room.attunementPending = true; room.attunementT = 0;
-        this.ui.toast('제단 중심의 빛 안에 2초 머물러 유리 잎을 회수하세요.', 'gold');
+        this.ui.toast(this.stage.expedition.id === 'star_archive' ? '제단 중심의 빛 안에 2초 머물러 귀환 기록을 복원하세요.' : '제단 중심의 빛 안에 2초 머물러 유리 잎을 회수하세요.', 'gold');
         this.fx.castCircle(new THREE.Vector3(room.x, 0, room.z), 0x87cbb0, { radius: 3, life: 3 });
       }
       return;
     }
-    if (this.stage.expedition?.id === 'ember_vault' && room.type === ROOM_TYPE.ELITE && (room.forgeWave || 0) < 2) {
+    const reinforcementWaves = this.stage.expedition?.mechanics?.reinforcements || 0;
+    if (room.type === ROOM_TYPE.ELITE && (room.forgeWave || 0) < reinforcementWaves) {
       room.forgeWave = (room.forgeWave || 0) + 1;
       const R = this.stage.rosterFor(room.type);
-      this.ui.waveBanner(`금고 증원 ${room.forgeWave}/2`);
-      [R.trash[0], R.trash[2], R.ranged[0], R.trash[4]].forEach(t => this.spawnEnemy(t, null, room));
+      this.ui.waveBanner(`금고 증원 ${room.forgeWave}/${reinforcementWaves}`);
+      const reinforcements = [R.trash[0], R.trash[2], R.ranged[0], R.trash[4]];
+      const available = Math.max(0, this.maxAlive - this.enemies.filter(e => e.alive).length);
+      reinforcements.forEach((t, i) => { if (i < available) this.spawnEnemy(t, null, room); else this.pending.push({ t, room }); });
       return;
     }
     room.cleared = true; this.roomsCleared++;
@@ -420,7 +423,7 @@ export class Battle {
     else this.fx.dustPuff(e.pos, { size: 2, life: 0.6 });
     audio.play('hit_wood', { vol: 0.3, rate: 1.35, min: 0.05 }); if (big) audio.dark({ vol: 0.4, base: 200, dur: 0.5 });
     // 지속 스폰: 죽은 만큼 큐에서 보충
-    if (this.pending.length && this.active) this.after(0.5 + Math.random() * 0.5, () => { if (this.pending.length && this.active) { const n = this.pending.shift(); this.spawnEnemy(n.t, null, n.room); } });
+    if (this.pending.length && this.active) this.after(0.5 + Math.random() * 0.5, () => { if (this.pending.length && this.active && this.enemies.filter(e => e.alive).length < this.maxAlive) { const n = this.pending.shift(); this.spawnEnemy(n.t, null, n.room); } });
     if (e.isBoss) {
       this.ui.showBoss('', false); this.boss = null;
       this.bossDefeated = true; this.hazards?.clear();

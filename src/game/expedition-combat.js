@@ -1,6 +1,7 @@
 import { DUNGEONS, ARENA_RIVALS } from '../data/expansion.js';
 import { ENEMIES } from '../data/stages.js';
 import { Floor } from './world.js';
+import { expeditionDepth, depthStage } from '../data/expedition-depths.js';
 
 export const EXPEDITION_LAYOUTS = {
   glass_garden: { spacing: [30, 30], size: [20, 20], width: 6, cells: [[0,0],[1,0],[1,-1],[2,0],[3,0]], edges: [[0,1],[1,2],[1,3],[3,4]], types: ['start','normal','treasure','normal','boss'] },
@@ -20,20 +21,24 @@ const DUELS = {
 };
 
 /** Accept IDs only: caller-provided scale, rewards and encounter data cannot replace the catalog. */
-export function buildExpeditionStage(kind, id, eco) {
+export function buildExpeditionStage(kind, id, eco, { depth = 'standard' } = {}) {
   const catalog = kind === 'dungeon' ? DUNGEONS : kind === 'arena' ? ARENA_RIVALS : null;
   const def = catalog?.find(d => d.id === id);
   if (!def) throw new RangeError('알 수 없는 탐험입니다.');
-  const base = def.stage;
+  if (!['standard', 'deep'].includes(depth) || (depth === 'deep' && kind !== 'dungeon')) throw new RangeError('알 수 없는 원정 난이도입니다.');
+  const deep = depth === 'deep' ? expeditionDepth(id) : null;
+  const base = deep ? depthStage(id) : def.stage;
   const duel = kind === 'arena' ? DUELS[id] : null;
   const enemyId = duel?.enemyId || base.encounter.enemyId;
-  const enemy = { ...ENEMIES[enemyId], ...(duel || {}), name: kind === 'arena' ? `${def.name} · AI` : `${def.name} 수호자`, summon: undefined };
+  const enemy = { ...ENEMIES[enemyId], ...(duel || {}), name: deep?.bossName || (kind === 'arena' ? `${def.name} · AI` : `${def.name} 수호자`) };
+  if (!deep) enemy.summon = undefined;
   if (duel) enemy.portrait = def.portrait;
-  if (!duel) enemy.hp = id === 'ember_vault' ? 10500 : id === 'star_archive' ? 11500 : 8500;
-  const stage = { ...base, boss: true, finale: false, story: null, expedition: { kind, id },
-    code: def.name, name: def.name, title: def.name,
-    objective: duel ? `AI 모의 결투 · 150초 제한 · ${duel.tactic}` : TACTICS[id],
-    encounter: { ...base.encounter, enemyId, name: enemy.name, label: kind === 'arena' ? 'AI DUEL' : 'DUNGEON BOSS', tactic: duel?.tactic || TACTICS[id] },
+  if (!duel) enemy.hp = deep?.bossHp || (id === 'ember_vault' ? 10500 : id === 'star_archive' ? 11500 : 8500);
+  const stage = { ...base, boss: true, finale: false, story: null, expedition: { kind, id, depth,
+    mechanics: deep?.mechanics || { attunement: id === 'glass_garden', reinforcements: id === 'ember_vault' ? 2 : 0 } },
+    code: deep?.name || def.name, name: deep?.name || def.name, title: deep?.name || def.name,
+    objective: deep?.objective || (duel ? `AI 모의 결투 · 150초 제한 · ${duel.tactic}` : TACTICS[id]),
+    encounter: { ...base.encounter, enemyId, name: enemy.name, label: deep ? 'DEEP EXPEDITION' : kind === 'arena' ? 'AI DUEL' : 'DUNGEON BOSS', tactic: deep ? base.encounter.tactic : duel?.tactic || TACTICS[id] },
     expeditionEnemy: enemy,
   };
   // AI arena uses the matching atmosphere with the already-loaded original rigs.
@@ -42,10 +47,10 @@ export function buildExpeditionStage(kind, id, eco) {
 }
 
 export function buildExpeditionWorld(stage) {
-  const { kind, id } = stage.expedition;
-  const layout = EXPEDITION_LAYOUTS[kind === 'arena' ? 'arena' : id];
+  const { kind, id, depth } = stage.expedition;
+  const layout = depth === 'deep' ? expeditionDepth(id)?.layout : EXPEDITION_LAYOUTS[kind === 'arena' ? 'arena' : id];
   if (!layout) throw new RangeError('탐험 동선이 없습니다.');
-  const seed = [...id].reduce((n, c) => n * 31 + c.charCodeAt(0), 17) >>> 0;
+  const seed = [...(id + (depth === 'deep' ? ':deep' : ''))].reduce((n, c) => n * 31 + c.charCodeAt(0), 17) >>> 0;
   return new Floor(stage.idx, stage.chapter.theme, seed, layout);
 }
 
@@ -53,6 +58,13 @@ export function expeditionRoster(stage, room) {
   if (room.type === 'start') return [];
   if (room.type === 'boss') return [stage.encounter.enemyId];
   const R = stage.rosterFor(room.type), id = stage.expedition.id;
+  if (stage.expedition.depth === 'deep') {
+    if (room.type === 'treasure') return [R.trash[1],R.trash[4],R.ranged[0],R.ranged[1]];
+    if (room.type === 'elite') return [R.elite[0],R.trash[0],R.trash[2],R.trash[5],R.ranged[0]];
+    return id === 'star_archive'
+      ? [R.trash[1],R.trash[4],R.trash[5],R.ranged[0],R.ranged[1],R.ranged[2]]
+      : [R.trash[0],R.trash[1],R.trash[2],R.trash[4],R.trash[5],R.ranged[0],R.ranged[1]];
+  }
   if (id === 'glass_garden') return room.type === 'treasure' ? [R.trash[0],R.trash[2],R.ranged[0]] : [R.trash[0],R.trash[1],R.trash[2],R.trash[0],R.ranged[0],R.trash[4]];
   if (id === 'ember_vault') return [R.elite[0],R.trash[0],R.trash[1],R.trash[3],R.ranged[0],R.trash[4]];
   return [R.ranged[0],R.ranged[1],R.ranged[2],R.trash[1],R.trash[5],...(room.type === 'elite' ? [R.elite[0]] : [])];
