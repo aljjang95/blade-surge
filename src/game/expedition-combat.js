@@ -14,6 +14,9 @@ export const EXPEDITION_LAYOUTS = {
   eclipse_hydra_vault: { spacing: [31, 29], size: [22, 20], width: 8, cells: [[0,0],[1,0],[1,-1],[2,-1],[2,0],[2,1],[3,1],[4,1],[4,0]], edges: [[0,1],[1,2],[1,4],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]], types: ['start','normal','treasure','normal','elite','treasure','normal','elite','boss'] },
   ashforge_catacomb: { spacing: [34, 25], size: [24, 17], width: 8, cells: [[0,0],[1,0],[2,0],[2,1],[3,1],[3,0],[4,0],[5,0]], edges: [[0,1],[1,2],[2,3],[2,5],[3,4],[4,6],[5,6],[6,7]], types: ['start','normal','elite','normal','treasure','elite','treasure','boss'] },
   astral_leviathan_spire: { spacing: [28, 34], size: [18, 24], width: 7, cells: [[0,0],[0,1],[1,1],[1,2],[0,2],[-1,2],[-1,3],[0,3],[1,3]], edges: [[0,1],[1,2],[2,3],[1,4],[4,5],[5,6],[6,7],[7,8],[3,8]], types: ['start','normal','treasure','normal','elite','treasure','normal','elite','boss'] },
+  verdigris_sanctum: { spacing: [30, 28], size: [20, 20], width: 7, cells: [[0,0],[1,0],[1,-1],[2,-1],[2,0],[2,1],[3,1],[4,1],[5,1]], edges: [[0,1],[1,2],[1,4],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]], types: ['start','normal','treasure','normal','elite','treasure','normal','elite','boss'] },
+  sable_mirage_basin: { spacing: [31, 27], size: [22, 18], width: 7, cells: [[0,0],[0,1],[1,1],[1,0],[2,0],[2,-1],[3,-1],[3,0],[4,0]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[2,6]], types: ['start','normal','elite','normal','treasure','elite','normal','treasure','boss'] },
+  comet_bastion: { spacing: [29, 32], size: [20, 24], width: 7, cells: [[0,0],[1,0],[1,1],[2,1],[2,0],[3,0],[3,-1],[4,-1],[5,-1]], edges: [[0,1],[1,2],[1,3],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]], types: ['start','normal','treasure','normal','elite','normal','elite','treasure','boss'] },
   arena: { spacing: [32, 32], size: [24, 24], width: 8, cells: [[0,0],[1,0]], edges: [[0,1]], types: ['start','boss'] },
 };
 const TACTICS = {
@@ -26,6 +29,9 @@ const TACTICS = {
   eclipse_hydra_vault: '물결이 지나간 통로가 잠시 안전합니다. 세 머리가 동시에 들리면 중앙에서 벗어나세요.',
   ashforge_catacomb: '사슬이 끌리는 방향의 반대편으로 이동한 뒤 망치 충격파가 지나가면 냉각로를 활성화하세요.',
   astral_leviathan_spire: '모래시계가 가리킨 별자리만 밟고, 기록 파편이 모이면 외곽 고리로 빠져나오세요.',
+  verdigris_sanctum: '뿌리 문양이 켜진 순서대로 제단을 밟고, 포자 폭발 전에 외곽 수로로 빠지세요.',
+  sable_mirage_basin: '모래 발자국이 사라지는 쪽은 환영입니다. 보라색 모래시계가 멈춘 순간만 공격하세요.',
+  comet_bastion: '푸른 궤도선 안쪽은 안전합니다. 유성 경고가 겹치면 중앙을 버리고 고리 바깥을 도세요.',
 };
 const DUELS = {
   rookie: { enemyId: 'garden_captain', pattern: ['slam','spin'], behavior: 'shield', hp: 6500, tactic: '푸른 가드 때 공격을 멈추고 강타 뒤 반격하세요. 강한 타격 4회로 방패를 깰 수 있습니다.' },
@@ -57,6 +63,7 @@ export function buildExpeditionStage(kind, id, eco, { depth = 'standard', conque
   if (!duel) enemy.hp = deep?.bossHp || def.bossHp || (id === 'ember_vault' ? 10500 : id === 'star_archive' ? 11500 : 8500);
   const stage = { ...base, boss: true, finale: false, story: null, expedition: { kind, id, depth, ...(def.rosterMode ? { rosterMode: def.rosterMode } : {}), ...(conquest ? { conquestId } : {}),
     mechanics: deep?.mechanics || { attunement: id === 'glass_garden' || id === 'bellfall_crypt', reinforcements: id === 'ember_vault' || id === 'cinder_tide_lock' ? 2 : 0 } },
+    theme: def.theme,
     code: deep?.name || def.name, name: deep?.name || def.name, title: conquest ? `${deep.name} · ${conquest.name}` : deep?.name || def.name,
     objective: conquest?.objective || deep?.objective || (duel ? `AI 모의 결투 · 150초 제한 · ${duel.tactic}` : def.objective || TACTICS[id]),
     encounter: { ...base.encounter, enemyId, name: enemy.name, label: deep ? 'DEEP EXPEDITION' : kind === 'arena' ? 'AI DUEL' : 'DUNGEON BOSS', tactic: deep ? base.encounter.tactic : duel?.tactic || def.tactic || TACTICS[id] },
@@ -73,7 +80,7 @@ export function buildExpeditionWorld(stage) {
   const layout = depth === 'deep' ? expeditionDepth(id)?.layout : EXPEDITION_LAYOUTS[kind === 'arena' ? 'arena' : id];
   if (!layout) throw new RangeError('탐험 동선이 없습니다.');
   const seed = [...(id + (depth === 'deep' ? ':deep' : ''))].reduce((n, c) => n * 31 + c.charCodeAt(0), 17) >>> 0;
-  return new Floor(stage.idx, stage.chapter.theme, seed, layout);
+  return new Floor(stage.idx, stage.theme || stage.chapter.theme, seed, layout);
 }
 
 export function expeditionRoster(stage, room) {

@@ -20,7 +20,7 @@ test('twelve monthly frontiers resolve deterministic routes and readable modifie
 });
 
 test('season routes have authored nine-room maps, roster variety and signature bosses', () => {
-  const ids = ['eclipse_hydra_vault', 'ashforge_catacomb', 'astral_leviathan_spire'];
+  const ids = ['eclipse_hydra_vault', 'ashforge_catacomb', 'astral_leviathan_spire', 'verdigris_sanctum', 'sable_mirage_basin', 'comet_bastion'];
   for (const id of ids) {
     const route = DUNGEONS.find(d => d.id === id)! as any;
     const stage = buildExpeditionStage('dungeon', id, {});
