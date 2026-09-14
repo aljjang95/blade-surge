@@ -1,6 +1,6 @@
 import { dungeonForStage } from './story-dungeons.js';
 import { stageStory } from './campaign-story.js';
-import { ENCOUNTER_ART } from './encounter-art.js';
+import { ENCOUNTER_ART, RIFT_ART } from './encounter-art.js';
 import { CAMPAIGN_MODELS } from './encounter-models.js';
 import { BOSS_ENCOUNTERS } from './boss-encounters.js';
 import { MOB_ROLE_ENEMIES } from './mob-roles.js';
@@ -107,6 +107,34 @@ export const ENEMIES = {
   boss_warlord: { name: '해골 군주', model: 'Skeleton_Warrior', hp: 31200, atk: 45, spd: 3.6, range: 3.2, atkTime: 1.8, weapon: 'Skeleton_Axe', shield: 'Skeleton_Shield_Large_A', exp: 150, scale: 2.2, boss: true, armor: 0.25, gold: 40, portrait: '/img/boss_warlord.webp', kit: 'warlord', summon: 'skel_minion' },
   boss_demon:   { name: '심연의 대악마', model: 'Big_Demon', hp: 33600, atk: 51, spd: 4.0, range: 3.4, atkTime: 1.6, exp: 175, scale: 2.3, boss: true, armor: 0.2, gold: 45, portrait: '/img/boss_lich.webp', kit: 'reaper', summon: 'imp' },
   boss_dragon:  { name: '고대 용 발카르', model: 'Flying_Dragon_Evolved', hp: 37200, atk: 56, spd: 4.6, range: 3.2, atkTime: 1.5, exp: 200, scale: 2.6, boss: true, armor: 0.2, gold: 55, portrait: '/img/boss_reaper.webp', kit: 'dragon', summon: 'squidle', projColor: 0xff7a30 },
+
+  // ================= 종락·재의 밀물·밤유리 원정 =================
+  // These encounters reuse verified rigs with authored phase signatures and
+  // dedicated portrait/colour identity; they are not claimed as new GLB files.
+  glass_shardling: { name: '유리 파편충', model: 'Blob_GreenSpikyBlob', hp: 760, atk: 31, spd: 5.8, range: 1.7, atkTime: 1.0, exp: 16, scale: 0.55, gold: 2, behavior: 'bomber', tint: '#7fffe1' },
+  bell_wisp: { name: '종의 잔영', model: 'Flying_Ghost', hp: 610, atk: 28, spd: 5.8, range: 2.2, atkTime: 1.0, exp: 16, scale: 1.3, gold: 2, ghostly: true, dodge: 0.12, tint: '#b4fff3' },
+  glass_tollmage: { name: '시계종 주술사', model: 'Skeleton_Mage', hp: 720, atk: 23, spd: 3.3, range: 8.5, atkTime: 2.1, ranged: true, exp: 21, scale: 1.08, gold: 3, projColor: 0x7fe8ff, behavior: 'shaman', summon: 'glass_shardling', tint: '#b8f5ff' },
+  glass_warden: { name: '유리 회랑 감시자', model: 'Skeleton_Warrior', hp: 6400, atk: 55, spd: 3.5, range: 2.8, atkTime: 1.5, exp: 72, scale: 1.5, armor: 0.27, elite: true, behavior: 'shield', weapon: 'Skeleton_Axe', shield: 'Skeleton_Shield_Large_A', tint: '#8fffe2', gold: 10 },
+  cinderling: { name: '재의 파편', model: 'Blob_Mushnub', hp: 820, atk: 38, spd: 5.5, range: 1.7, atkTime: 1.0, exp: 17, scale: 1.0, gold: 2, behavior: 'bomber', tint: '#ff9c66' },
+  chain_forger: { name: '사슬 벼림꾼', model: 'Big_Orc', hp: 1320, atk: 39, spd: 3.6, range: 2.4, atkTime: 1.5, exp: 20, scale: 1.05, armor: 0.18, behavior: 'shield', tint: '#ffc078', gold: 3 },
+  ember_scribe: { name: '불씨 기록술사', model: 'Flying_Hywirl', hp: 850, atk: 31, spd: 3.8, range: 8.5, atkTime: 2.0, ranged: true, exp: 23, scale: 1.05, gold: 3, projColor: 0xff7540, behavior: 'shaman', summon: 'cinderling', tint: '#ffd09b' },
+  slag_colossus: { name: '슬래그 거수', model: 'Big_BlueDemon', hp: 7600, atk: 62, spd: 3.0, range: 3.0, atkTime: 1.8, exp: 78, scale: 1.45, armor: 0.3, elite: true, tint: '#ff9b66', gold: 11 },
+  nightglass_page: { name: '밤유리 서기관', model: 'Flying_Ghost_Skull', hp: 780, atk: 30, spd: 3.4, range: 9.0, atkTime: 2.0, ranged: true, exp: 22, scale: 1.25, gold: 3, projColor: 0x8ad9ff, behavior: 'shaman', summon: 'frost_mirror', tint: '#bde9ff' },
+  frost_mirror: { name: '서리 거울벌', model: 'Blob_GreenBlob', hp: 1180, atk: 34, spd: 3.7, range: 1.8, atkTime: 1.4, exp: 19, scale: 1.05, armor: 0.16, behavior: 'shield', tint: '#99d8ff', gold: 3 },
+  archive_scribe: { name: '되감기 기록자', model: 'Skeleton_Mage', hp: 900, atk: 27, spd: 3.2, range: 8.5, atkTime: 2.2, ranged: true, exp: 24, scale: 1.1, gold: 3, projColor: 0x9fbdff, behavior: 'shaman', summon: 'frost_mirror', tint: '#d2ddff' },
+  archive_warden: { name: '밤유리 수문장', model: 'Big_Yeti', hp: 8200, atk: 59, spd: 3.1, range: 3.0, atkTime: 1.8, exp: 82, scale: 1.6, armor: 0.31, elite: true, behavior: 'shield', tint: '#a7d7ff', gold: 11 },
+  glass_hour_sovereign: { name: '시계유리의 주권자', model: 'Skeleton_BellKing', hp: 14500, atk: 62, spd: 3.8, range: 3.2, atkTime: 1.65, exp: 240, scale: 2.25, boss: true, armor: 0.23, gold: 48, kit: 'warlord', summon: 'bell_wisp', portrait: RIFT_ART.glass_hour_sovereign, signatureBoss: true,
+    phasePatterns: [['bell_toll','slam','bell_clap','spin'], ['bell_clap','summon','bell_toll','slam'], ['bell_toll','bell_clap','spin']],
+    phaseHints: ['세 종의 빛이 켜지는 순서를 읽으세요.', '양옆 종 뒤 중앙의 공명을 피하세요.', '마지막 울림 뒤에만 긴 반격 창이 열립니다.'],
+    tactic: '종문이 켜진 순서를 기억해 반대쪽 안전 지대로 이동하세요. 마지막 공명 뒤에만 긴 반격 창이 열립니다.', projColor: 0x86e4d0 },
+  cinder_chain_executor: { name: '쇠사슬의 집행자', model: 'Big_KilnTyrant', hp: 15800, atk: 66, spd: 3.8, range: 3.4, atkTime: 1.6, exp: 255, scale: 2.3, boss: true, armor: 0.24, gold: 52, kit: 'reaper', summon: 'chain_forger', signatureBoss: true,
+    phasePatterns: [['kiln_vents','slam','kiln_hammer','fan'], ['kiln_hammer','kiln_vents','summon','slam'], ['kiln_vents','kiln_hammer','dash']],
+    phaseHints: ['중앙 냉각선 옆으로 이동하세요.', '망치가 닿은 자리 뒤에 충격파가 옵니다.', '과열 통로의 방향이 바뀝니다.'],
+    tactic: '밸브가 번갈아 과열됩니다. 경고선 바깥에서 증원을 끊고, 망치가 떨어진 뒤 중앙을 가로지르세요.', projColor: 0xff9b64 },
+  nightglass_archivist: { name: '밤유리의 기록관', model: 'Big_ArchiveMonarch', hp: 17200, atk: 68, spd: 3.4, range: 3.2, atkTime: 1.7, exp: 270, scale: 2.35, boss: true, armor: 0.25, gold: 56, kit: 'lich', summon: 'nightglass_page', signatureBoss: true,
+    phasePatterns: [['archive_retrace','fan','archive_hourglass','slam'], ['archive_hourglass','archive_retrace','summon','fan'], ['archive_retrace','archive_hourglass','soulrain']],
+    phaseHints: ['지나온 길이 역순으로 터집니다.', '바깥 고리 다음은 안쪽 원입니다.', '네 번째 기록과 마지막 공명까지 확인하세요.'],
+    tactic: '방금 지나온 세 자리가 역순으로 폭발합니다. 모래시계가 닫히기 전에 바깥 고리로 이동하세요.', projColor: 0x9ed5ff },
 };
 
 // 검수된 기존 리그만 재사용한다. 전용 원화의 3D 모델이 완성됐다는 뜻은 아니다.
