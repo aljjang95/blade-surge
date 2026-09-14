@@ -4,6 +4,20 @@ import { ImpactLights } from './impact-lights.js';
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
 
+/**
+ * Authored ability signatures keep the silhouette of each school distinct while
+ * reusing the existing pooled particles and VFX atlas. Values are immutable so
+ * a party client cannot mutate another skill's visual contract at runtime.
+ */
+export const ABILITY_VFX_PROFILES = Object.freeze({
+  steel: Object.freeze({ ground: 'circle_gold', flash: 'holy_burst', color: 0xffd060, accent: 0xffffff, radius: 2.8, burst: 14, light: 0.9 }),
+  fire: Object.freeze({ ground: 'circle_demon', flash: 'explosion', color: 0xff7228, accent: 0xffd060, radius: 3.6, burst: 20, light: 1.2, pillar: true }),
+  frost: Object.freeze({ ground: 'circle_gold', flash: 'ice', color: 0x72dfff, accent: 0xdff8ff, radius: 3.4, burst: 16, light: 1.0 }),
+  arcane: Object.freeze({ ground: 'circle_gold', flash: 'lightning_chain', color: 0x70b8ff, accent: 0xd7f4ff, radius: 3.0, burst: 15, light: 1.0 }),
+  nature: Object.freeze({ ground: 'circle_gold', flash: 'holy_burst', color: 0x63e08a, accent: 0xd7ff9d, radius: 3.3, burst: 18, light: 0.85 }),
+  void: Object.freeze({ ground: 'circle_demon', flash: 'singularity', color: 0x8f55ff, accent: 0xd5a6ff, radius: 3.2, burst: 18, light: 1.1 }),
+});
+
 async function waitForCompilation(compiling) {
   let timer;
   try { return await Promise.race([compiling, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('render preparation timeout')), 30000); })]); }
@@ -222,6 +236,47 @@ export class FX {
     this.flash(pos,color,{size,life:.11});
     if(particles>0)this.directional(pos,dir,color,{n:particles,speed:particles>5?11:7,size:particles>5?.28:.22,life:.22,spread:.38});
     if(light)this.light(pos,color,3.2,3.5,.1);
+  }
+  /**
+   * A bounded, authored impact language for skills. It deliberately composes
+   * the existing atlas/particle pool instead of allocating a new GPU system per
+   * hit. The same elapsed-time FX scheduler handles pause, cleanup and mobile
+   * quality reduction for every part of the signature.
+   */
+  abilitySignature(pos, profile = 'arcane', { scale = 1, life = 0.48, heavy = false } = {}) {
+    const spec = ABILITY_VFX_PROFILES[profile] || ABILITY_VFX_PROFILES.arcane;
+    const k = Math.max(0.35, Math.min(2.4, Number.isFinite(scale) ? scale : 1));
+    const t = Math.max(0.18, Math.min(2.2, Number.isFinite(life) ? life : 0.48));
+    const anchor = pos.clone();
+    this.groundTex(anchor, spec.ground, spec.color, {
+      r0: spec.radius * 0.18 * k,
+      r1: spec.radius * k,
+      life: t,
+      spin: profile === 'void' ? -1.8 : profile === 'frost' ? 0.8 : 1.25,
+      y: 0.075,
+      fadeIn: 0.08,
+      hold: heavy ? t * 0.24 : 0,
+    });
+    this.ring(anchor, spec.accent, { r0: spec.radius * 0.22 * k, r1: spec.radius * 1.16 * k, life: Math.min(t, 0.56), width: heavy ? 0.72 : 0.48 });
+    this.texFlash(anchor.clone().setY(anchor.y + 0.6), spec.flash, spec.color, {
+      size: spec.radius * (heavy ? 1.45 : 1.05) * k,
+      life: Math.min(t, heavy ? 0.7 : 0.42),
+      spin: profile === 'void' ? 1.35 : profile === 'arcane' ? 0.7 : 0.35,
+      grow: heavy ? 1.6 : 1.2,
+      y: 0,
+    });
+    this.burst(anchor.clone().setY(anchor.y + 0.55), spec.accent, {
+      n: Math.round(spec.burst * (heavy ? 1.35 : 1)),
+      speed: (heavy ? 13 : 8) * k,
+      size: (heavy ? 0.42 : 0.28) * k,
+      life: Math.min(t, heavy ? 0.72 : 0.42),
+      up: heavy ? 1.1 : 0.55,
+      grav: profile === 'frost' ? 5 : 13,
+      spread: profile === 'void' ? 0.72 : 1,
+    });
+    if (spec.pillar && !this.lite) this.firePillar(anchor, { height: 4.2 * k, width: 1.05 * k, life: Math.min(t, 0.65), color: spec.color });
+    this.light(anchor, spec.color, (heavy ? 10 : 5) * spec.light * k, (heavy ? 12 : 7) * k, Math.min(t, 0.45));
+    return spec;
   }
   dust(pos, { n = 10, color = 0x8a7a6a, size = 1.4, life = 0.9, speed = 2.5 } = {}) {
     const c = new THREE.Color(color); if (this.lite) n = Math.ceil(n / 2);

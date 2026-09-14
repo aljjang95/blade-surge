@@ -580,10 +580,17 @@ export class Battle {
   explode(p) {
     const c = p.pos.clone().setY(0); const ex = p.explode;
     this.hitRadius(c, ex.radius, p.dmg, { kb: p.kb, kind: 'magic', up: true, source: p.owner, dirFrom: c });
-    this.fx.explosion(c, { size: ex.radius * 2.2, color: ex.color, life: 0.55 });
-    this.fx.shockTex(c, ex.color, { r1: ex.radius * 1.8, life: 0.45 });
-    this.fx.burst(c.clone().setY(0.6), ex.color, { n: 30, speed: 11, size: 0.5, up: 1.2, grav: 14 });
-    this.fx.dustPuff(c, { size: ex.radius * 1.6 }); this.fx.light(c, ex.color, 12, 12, 0.5); this.fx.scorch(c, { radius: ex.radius * 0.8, life: 4 });
+    if (ex.profile && this.fx.abilitySignature) {
+      // A profile owns its silhouette and atlas flash; do not stack the old
+      // generic explosion on top of it, which made elemental hits read alike.
+      this.fx.abilitySignature(c, ex.profile, { scale: ex.radius / 4.2, life: 0.62, heavy: true });
+      if (ex.profile === 'fire') this.fx.scorch(c, { radius: ex.radius * 0.8, life: 4 });
+    } else {
+      this.fx.explosion(c, { size: ex.radius * 2.2, color: ex.color, life: 0.55 });
+      this.fx.shockTex(c, ex.color, { r1: ex.radius * 1.8, life: 0.45 });
+      this.fx.burst(c.clone().setY(0.6), ex.color, { n: 30, speed: 11, size: 0.5, up: 1.2, grav: 14 });
+      this.fx.dustPuff(c, { size: ex.radius * 1.6 }); this.fx.light(c, ex.color, 12, 12, 0.5); this.fx.scorch(c, { radius: ex.radius * 0.8, life: 4 });
+    }
     this.renderer.shake(0.6); this.renderer.punch(0.6); audio.boom({ vol: 0.8, dur: 0.6, low: 60 }); audio.fire({ vol: 0.3, dur: 0.5 }); audio.vibe([40, 20, 50]);
   }
 
