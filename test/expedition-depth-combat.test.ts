@@ -10,12 +10,14 @@ for (const d of EXPEDITION_DEPTHS) test(`${d.id}: deep routes preserve every obj
   const stage = buildExpeditionStage('dungeon',d.id,{}, {depth:'deep'});
   const base = buildExpeditionStage('dungeon',d.id,{});
   expect(stage.expeditionEnemy.hp).toBe(d.bossHp);
-  expect(stage.encounter.enemyId).not.toBe(base.encounter.enemyId);
-  expect(stage.expeditionEnemy.pattern).not.toEqual(base.expeditionEnemy.pattern);
+  expect(stage.encounter.enemyId).toBeTruthy();
+  if (d.bossEnemy) expect(stage.encounter.enemyId).toBe(d.bossEnemy);
+  expect(stage.expeditionEnemy.signatureBoss).toBe(true);
+  expect(stage.expeditionEnemy.phasePatterns?.length).toBeGreaterThanOrEqual(3);
   expect(stage.finale).toBe(false); expect(stage.epilogueFinale).toBe(false); expect(stage.story).toBeNull();
   expect(buildExpeditionWorld(stage).rooms).toHaveLength(d.layout.cells.length);
   for (let seed=1;seed<=24;seed++) {
-    const w=new Floor(stage.idx,stage.chapter.theme,seed*701,d.layout as any);
+    const w=new Floor(stage.idx,stage.theme || stage.chapter.theme,seed*701,d.layout as any);
     const closed=w.buildFlow(w.startRoom.x,w.startRoom.z)!;
     for (const r of w.rooms) {
       expect(closed[cell(w,r)]>=0).toBe(r!==w.bossRoom);

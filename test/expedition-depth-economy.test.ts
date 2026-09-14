@@ -51,7 +51,8 @@ test('pending deep reload refunds catalog six energy exactly once and never resu
  const f=make();unlock(f,EXPEDITION_DEPTHS[0]);const energy=f.eco.s.energy,ticket=f.x.begin('dungeon','glass_garden',{depth:'deep'}).ticket;
  const g=make();expect(g.eco.s.energy).toBe(energy);expect(g.x.s.pending).toBeNull();expect(g.x.settle(ticket,{win:true}).ok).toBe(false);expect(make().eco.s.energy).toBe(energy);
  const raw=normalizeExpedition({pending:{...ticket,energy:999999},depthWins:{glass_garden:2,ember_vault:-1,star_archive:NaN,unknown:99}});
- expect(raw.pending?.energy).toBe(EXPEDITION_DEPTHS[0].energy);expect(raw.depthWins).toEqual({glass_garden:2,ember_vault:0,star_archive:0});
+ expect(raw.pending?.energy).toBe(EXPEDITION_DEPTHS[0].energy);
+ expect(raw.depthWins).toEqual(Object.fromEntries(EXPEDITION_DEPTHS.map(def=>[def.id,def.id==='glass_garden'?2:0])));
 });
 test('standard supply retains base price/reward and never grants deep or combat progress',()=>{
  const f=make();unlock(f,EXPEDITION_DEPTHS[0]);f.eco.s.sweep=1;const p=f.x.sweepPreview('glass_garden');expect(p.energy).toBe(4);expect(p.rewards?.gold).toBe(DUNGEONS[0].rewards.gold);

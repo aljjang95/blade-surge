@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { BOONS, MASTERY_NODES } from '../src/data/masterworks.js';
 import { CHAPTERS, STAGES_PER_CHAPTER, stageDef } from '../src/data/stages.js';
+import { DUNGEONS } from '../src/data/expansion.js';
+import { EXPEDITION_DEPTHS } from '../src/data/expedition-depths.js';
 import { normalizeMasterworks, boonChoices, boonEffects, unlockMastery, grantRenown, choosePath, masteryEffects, toggleChallenge, difficultyEffects, recordProgress, claimBounty, recordDiscovery, resolveStory } from '../src/game/masterworks-core.js';
 
 describe('masterworks progression contracts',()=>{
@@ -34,6 +36,16 @@ describe('masterworks progression contracts',()=>{
   test('discoveries validate campaign and expedition ranges and pay once after reload',()=>{
     const s=normalizeMasterworks(null);expect(recordDiscovery(s,'room:1:21').ok).toBe(false);expect(recordDiscovery(s,'expedition:fake:1').ok).toBe(false);
     expect(recordDiscovery(s,'expedition:glass_garden:0').ok).toBe(true);expect(recordDiscovery(s,'campaign:1').ok).toBe(true);expect(recordDiscovery(normalizeMasterworks(s),'campaign:1').ok).toBe(false);expect(s.renown).toBe(6);
+  });
+  test('all standard and deep expedition catalogues accept only their real discovery ranges',()=>{
+    const s=normalizeMasterworks(null);
+    for (const dungeon of DUNGEONS) expect(recordDiscovery(s,`expedition:${dungeon.id}:0`).ok).toBe(true);
+    for (const depth of EXPEDITION_DEPTHS) {
+      expect(recordDiscovery(s,`expedition:${depth.id}:deep:0`).ok).toBe(true);
+      const last=depth.layout.cells.length;
+      expect(recordDiscovery(s,`expedition:${depth.id}:deep:${last}`).ok).toBe(false);
+    }
+    expect(s.discoveries).toHaveLength(DUNGEONS.length + EXPEDITION_DEPTHS.length);
   });
   test('chapter six discoveries pay once and floors survive JSON save migration',()=>{
     const s=normalizeMasterworks(null);

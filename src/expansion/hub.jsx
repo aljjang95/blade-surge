@@ -59,7 +59,7 @@ function DungeonRoutes({app, service, launch, controller}) {
     <div className="exp-dungeon-grid">{(deep ? EXPEDITION_DEPTHS : DUNGEONS).map((d,i)=>{
       const access=service.dungeonAccess(d.id,{depth}), locked=!access.ok;
       const wins=deep ? s.depthWins?.[d.id]||0 : s.stats[d.id];
-      const art=deep ? ENCOUNTER_ART[['garden_midboss','tide_midboss','homecoming_finalboss'][i]] : d.art || ART[d.id];
+      const art=deep ? d.art || ENCOUNTER_ART[['garden_midboss','tide_midboss','homecoming_finalboss'][i]] : d.art || ART[d.id];
       return <article key={`${depth}:${d.id}`} className="exp-dungeon" data-depth={depth} data-dungeon={d.id} style={{'--exp-accent':d.accent || COLORS[d.id] || '#b7d8bd'}}>
         <div className="exp-dungeon-art"><Art src={art} alt={d.name+(deep?' 수호자':' 던전 원화')} loading="lazy" decoding="async"/><span className="exp-number">0{i+1}</span>
           <div className="exp-dungeon-badges"><span>{deep ? `캠페인 ${d.unlockCode} 이후` : `원정 Lv.${d.minLevel}`}</span><span className="ui-resource"><Icon id="energy"/>에너지 {d.energy}</span></div>

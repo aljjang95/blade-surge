@@ -1,7 +1,10 @@
 import { BOONS, SYNERGIES, MASTERY_NODES, PATHS, CHALLENGES, STORY_EVENTS, BOUNTIES } from '../data/masterworks.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
-import { expeditionDepth } from '../data/expedition-depths.js';
+import { DUNGEONS } from '../data/expansion.js';
+import { EXPEDITION_DEPTHS, expeditionDepth } from '../data/expedition-depths.js';
 const CAMPAIGN_STAGE_COUNT = CHAPTERS.length * STAGES_PER_CHAPTER;
+const EXPEDITION_IDS = new Set(DUNGEONS.map(d => d.id));
+const DEEP_EXPEDITION_IDS = new Set(EXPEDITION_DEPTHS.map(d => d.id));
 const MAX = 1000000;
 const obj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 const int = (v, max = MAX) => Number.isSafeInteger(v) ? Math.min(max, Math.max(0,v)) : 0;
@@ -13,9 +16,13 @@ const discoveryKey = key => {
   if (typeof key !== 'string') return false;
   const campaign = /^(?:campaign:([1-9][0-9]*)|room:([1-9][0-9]*):([0-9]|1[0-9]|20))$/.exec(key);
   if (campaign) return Number(campaign[1] || campaign[2]) <= CAMPAIGN_STAGE_COUNT;
-  const deep = /^expedition:(glass_garden|ember_vault|star_archive):deep:([0-9]|1[0-9]|20)$/.exec(key);
-  if (deep) return Number(deep[2]) < expeditionDepth(deep[1]).layout.cells.length;
-  return /^expedition:(glass_garden|ember_vault|star_archive):([0-9]|1[0-9]|20)$/.test(key);
+  const expedition = /^expedition:([^:]+):(deep:)?([0-9]|1[0-9]|20)$/.exec(key);
+  if (!expedition || !EXPEDITION_IDS.has(expedition[1])) return false;
+  if (expedition[2]) {
+    const deep = expeditionDepth(expedition[1]);
+    return DEEP_EXPEDITION_IDS.has(expedition[1]) && Number(expedition[3]) < deep.layout.cells.length;
+  }
+  return true;
 };
 const err = error => ({ok:false,error});
 
