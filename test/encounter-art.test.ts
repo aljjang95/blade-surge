@@ -10,7 +10,7 @@ const enemyById=ENEMIES as unknown as Record<string,{portrait:string}>;
 
 test('all campaign encounter and arena identities retain distinct portrait files',()=>{
   const paths=Object.values(ENCOUNTER_ART);
-  const expected=6+9+CHAPTERS.length*4;
+  const expected=6+11+CHAPTERS.length*4;
   expect(paths).toHaveLength(expected);expect(new Set(paths).size).toBe(expected);
   const hashes=paths.map(path=>createHash('sha256').update(readFileSync(`public${path}`)).digest('hex'));
   expect(new Set(hashes).size).toBe(expected);
@@ -25,6 +25,7 @@ test('all campaign encounter and arena identities retain distinct portrait files
   }
   for(const id of ['boss_warlord','boss_demon','boss_dragon']) expect(enemyById[id].portrait).toBe(ENCOUNTER_ART[id]);
   for(const id of ['verdigris_sentinel','sable_mirage_empress','comet_bastion']) expect(enemyById[id].portrait).toBe(ENCOUNTER_ART[`boss_${id}`]);
+  for(const id of ['cinder_chain_executor','nightglass_archivist']) expect(enemyById[id].portrait).toBe(ENCOUNTER_ART[`boss_${id}`]);
   expect(enemyById[stageDef(6,10).encounter.enemyId].portrait).toBe(ENCOUNTER_ART.homecoming_finalboss);
 });
 

@@ -46,14 +46,14 @@ export const DUNGEONS = [
     roster: { trash: ['glass_shardling', 'bell_wisp', 'skel_shield', 'bomb_slime', 'glass_shardling', 'bone_orc'], ranged: ['glass_tollmage', 'ghost_skull', 'skel_priest'], elite: ['glass_warden', 'elite_bone_lord', 'elite_wraith'] },
   }),
   dungeon('cinder_tide_lock', '재의 밀물 수문', 'forge', 2, 2, 'ember_core', '용광로와 바다가 맞닿은 수문에서 꺼지지 않는 불씨를 회수하세요.', {
-    art: '/img/encounters/tide_midboss.webp', accent: '#ff9b64', subtitle: 'CINDER TIDE LOCK',
+    art: ENCOUNTER_ART.boss_cinder_chain_executor, accent: '#ff9b64', subtitle: 'CINDER TIDE LOCK',
     objective: '수문 양쪽의 냉각 밸브를 지키고 쇠사슬의 집행자를 격파하세요.',
     tactic: '밸브가 번갈아 과열됩니다. 경고선 바깥에서 증원을 끊고, 망치가 떨어진 뒤 중앙을 가로지르세요.',
     bossEnemy: 'cinder_chain_executor', bossHp: 15800, bossName: '쇠사슬의 집행자', rosterMode: 'cinderlock',
     roster: { trash: ['cinderling', 'chain_forger', 'orc_blob', 'bomb_imp', 'cinderling', 'imp'], ranged: ['ember_scribe', 'hywirl', 'armabee'], elite: ['slag_colossus', 'elite_orc_chief', 'elite_bluedemon'] },
   }),
   dungeon('nightglass_observatory', '밤유리 관측소', 'frost', 3, 3, 'star_dust', '거꾸로 흐르는 별빛을 관측해 사라진 귀환 좌표를 복원하세요.', {
-    art: '/img/encounters/frost_midboss.webp', accent: '#9ed5ff', subtitle: 'NIGHTGLASS OBSERVATORY',
+    art: ENCOUNTER_ART.boss_nightglass_archivist, accent: '#9ed5ff', subtitle: 'NIGHTGLASS OBSERVATORY',
     objective: '되감긴 기록 세 장을 복원하고 밤유리의 기록관을 잠재우세요.',
     tactic: '방금 지나온 세 자리가 역순으로 폭발합니다. 모래시계가 닫히기 전에 바깥 고리로 이동하세요.',
     bossEnemy: 'nightglass_archivist', bossHp: 17200, bossName: '밤유리의 기록관', rosterMode: 'nightglass',

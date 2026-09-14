@@ -23,7 +23,7 @@ test('hero skill and dropped-gear portraits are shipped, decodable image files',
 
 test('seasonal encounter manifest hashes match the shipped originals', () => {
   const manifest = JSON.parse(readFileSync('docs/media/seasonal-encounter-art.json', 'utf8'));
-  expect(manifest.assets.length).toBe(21);
+  expect(manifest.assets.length).toBe(29);
   for (const asset of manifest.assets) {
     const bytes = readFileSync(`public${asset.file}`);
     expect(bytes.byteLength).toBeGreaterThan(100);

@@ -1,10 +1,11 @@
 # Regional music and encounter art
 
-This release replaces repeated arena and campaign portraits with 30 independent GUI-generated illustrations and gives the lobby, six campaign regions, arena and boss combat nine distinct FlowMusic tracks. It also preserves chapter-six discovery/floor progress after reload and fixes missing or horizontally split fire pillars during dense combat.
+This release replaces repeated arena and campaign portraits with 30 independent GUI-generated illustrations plus eight new Codex imagegen originals for seasonal mobs and bosses. The lobby, six campaign regions, arena and boss combat use nine distinct FlowMusic tracks. It also preserves chapter-six discovery/floor progress after reload and fixes missing or horizontally split fire pillars during dense combat.
 
 ## Media provenance
 
 - [Portrait manifest](media/encounter-art.json): 3 GUI batches of 10 independent originals, authenticated IAB downloads, shot-to-encounter mapping, dimensions and source/output SHA-256. Each 1254×1254 original is preserved under `work/media-20260913/sets/`; production uses whole-image 768×768 WebP quality 90. Inspection contact sheets are review artifacts only.
+- [Seasonal portrait manifest](media/seasonal-encounter-art.json): the original 21 verified seasonal files plus eight 768×768 WebP originals for Bell Wisp, Cinderling, Archive Scribe, Eclipse Tidecaller, Frost Mirror, Astral Pagelet, Cinder Chain Executor and Nightglass Archivist. Their source/output hashes and generated-image provenance are recorded separately; no GUI export is claimed for these eight.
 - [Audio manifest](media/region-audio.json): nine separate FlowMusic song IDs, source/output hashes, full decode results, duration and measured final loudness. Complete compositions are retained, normalized around −18 LUFS, and encoded as stereo 48 kHz MP3. The 5 ms edge fades prevent clicks; they are not evidence of a seamless musical loop.
 - FlowMusic generation used its authenticated GUI. IAB could not export its audio media through `pageAssets`; the exact public generated file URLs observed in audio elements were transferred with authorized development tools. The image assets used authenticated IAB `pageAssets` throughout.
 - FlowMusic explicitly confirmed on 2026-09-13 that its current generation tools cannot create isolated dry short game SFX one-shots. Existing score-derived impact accents remain musical accents; primary hit sounds remain Kenney CC0 samples plus procedural transients. No new isolated FlowMusic Foley is claimed.

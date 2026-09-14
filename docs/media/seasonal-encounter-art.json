@@ -4,28 +4,187 @@
   "route": "Codex imagegen brand-new independent originals",
   "guiRouteStatus": "unavailable-in-current-toolset",
   "originalsPreservedUnder": "C:/Users/Administrator/.codex/generated_images/01a08c36-bc0b-7990-a96f-8e58bb40f1e8",
-  "production": { "pixelSize": "768x768", "format": "WebP", "quality": 90 },
+  "production": {
+    "pixelSize": "768x768",
+    "format": "WebP",
+    "quality": 90
+  },
   "assets": [
-    { "id": "arena_thunder_lancer", "file": "/img/encounters/arena_thunder_lancer.webp", "sourceSha256": "276fd891af9166570ba243feb838f292215a4473eae7dd8538220dce0b32d573", "sha256": "ba9ef46a0ad8feedeef8ce2c424f6933961bd296973e71e03035d1fa0be039bd" },
-    { "id": "arena_sunwarden", "file": "/img/encounters/arena_sunwarden.webp", "sourceSha256": "d051be196ee8aa241976e69a25f92fe85826897bfb5b9cbc57b9836211aed1b1", "sha256": "2d38c74b5f3349d305179afd9efce8adb5df8ef203f2d29961776bd8ea85cb0d" },
-    { "id": "arena_void_oracle", "file": "/img/encounters/arena_void_oracle.webp", "sourceSha256": "d856ec63deaef9acf4327fff8e7be5dc1bbac0639ddcdf7ce9f72f61ace3512a", "sha256": "8392c68dbd7abe9efaee6989247df9f3bebf19d2168782a09573989a4073509e" },
-    { "id": "boss_obsidian_hydra", "file": "/img/encounters/boss_obsidian_hydra.webp", "sourceSha256": "a2e3516274fa8628a016cab7787dace3939ad390b61e70e9b1ee9e3ab331f405", "sha256": "fe47764a88f01b1f199336ee6e33ea98efa7f2d6bcd06200c46d575444dbc489" },
-    { "id": "boss_ash_colossus", "file": "/img/encounters/boss_ash_colossus.webp", "sourceSha256": "7d6c431167a932c48e691973c11b4e484d229cb94d1d8761127bfa8b4dd4cbea", "sha256": "1eed249a09cbfe730ba0ffbbf985957881ce91cddc526985dd2ba772accd6e10" },
-    { "id": "boss_astral_leviathan", "file": "/img/encounters/boss_astral_leviathan.webp", "sourceSha256": "e33e9ead179fa82628342f0dec26e31007e8cd7951a7707214e82dd35ddd9d5c", "sha256": "dbb75de4dc2a96bb18d661fdb9f31636fa7b9ccdaaa7b4f067f807ab3c428ea0" },
-    { "id": "mob_glass_shardling", "file": "/img/encounters/mob_glass_shardling.webp", "sourceSha256": "197b3adb3516f7dee925374b8a3ae152ef0a59f6a12b8258e8f7411385ac3d7f", "sha256": "b72554571076dbf5cdfd138bc1f605f5ccc198040a1a93c75c572d1a9db437c3" },
-    { "id": "mob_ember_chain_forger", "file": "/img/encounters/mob_ember_chain_forger.webp", "sourceSha256": "825f7c8f11a4b3020c9b5993a90cc586658ab30bfe7509299e41ea14958671ab", "sha256": "4f44dec9cf1f7555ed15125c8f0f4c1105c090ce54297c3e5401858a125736d3" },
-    { "id": "mob_nightglass_page", "file": "/img/encounters/mob_nightglass_page.webp", "sourceSha256": "b78150eb8fc5184ba5811f7f68a580cd2f80ff9b8ad5fd25a5d4f3a84c5ff8ef", "sha256": "6de964b6f0d5b93fe47b4588ebc6350e41a4a699c63baf733b681c8728a2436e" },
-    { "id": "boss_verdigris_sentinel", "file": "/img/encounters/boss_verdigris_sentinel.webp", "sourceSha256": "eaf9e2b905ffe1654104c04423c86a856043891f11b389a03b77dcfbf614a57e", "sha256": "3fe5a1d668ed01062525734b03d59bab714a572415188b75ddc03697d695fc0e" },
-    { "id": "boss_sable_mirage_empress", "file": "/img/encounters/boss_sable_mirage_empress.webp", "sourceSha256": "e4c5d340d043735cca12a576b4e4c7dccde73e021f8d2cf823fc90c47f133742", "sha256": "b0f689e12b5b38a5de1a8860c0890e2316022bfd07dfb419b33becd9c7b898b4" },
-    { "id": "boss_comet_bastion", "file": "/img/encounters/boss_comet_bastion.webp", "sourceSha256": "52a9210a67d83d56ec4c26ab07831d71e0f82ad6722c037ebd86b18b2df9447a", "sha256": "336f15f7f727352350e9f309d4e338971d9e90ae82ace3f72abe4ebca8e464ae" },
-    { "id": "mob_mossbound_scout", "file": "/img/encounters/mob_mossbound_scout.webp", "sourceSha256": "f1b268c9a214cbbdddfe6be6156a33949a852e53d2a067c4c3084d8d7d3231f5", "sha256": "13616aec4306720a7eab3026a57dac780e9a0f226b3ec4eb66e7c96e0562eabb" },
-    { "id": "mob_verdigris_rootcaller", "file": "/img/encounters/mob_verdigris_rootcaller.webp", "sourceSha256": "1b33efca2114d5106b2714ca63de398811fe28fa3ab89709b1c998bbdbb28e6b", "sha256": "2eb7a5dbf459cac4421ba80cfebb8b24604f7110c4fb954899677f53227c4cd9" },
-    { "id": "mob_ironbark_bulwark", "file": "/img/encounters/mob_ironbark_bulwark.webp", "sourceSha256": "3aac8282e27d9309a1e5090b0b0962b3b454573d21db7f9e13a69a38c69a5b79", "sha256": "495ee05907337e0c2f4493109e6de1eaf5b09e79924405c2a9be0d23d3d6c63d" },
-    { "id": "mob_mirage_hound", "file": "/img/encounters/mob_mirage_hound.webp", "sourceSha256": "a37f08a4f5b0e1272c2fc306fee819ad797ee76df388ee50bef8ba5b36294df0", "sha256": "ea9944c705765e41b3f37484c08dff804eefb7b2a6012050fe30ce13251beaaa" },
-    { "id": "mob_sandglass_seer", "file": "/img/encounters/mob_sandglass_seer.webp", "sourceSha256": "b33f51fef9120c1b27571dfab149fcc0955d3821819a3e78e52dddfe99b7c304", "sha256": "1d9b0951c28ca6f1358fb0425b6a249b62c007590eba194487a9f65b36f246c4" },
-    { "id": "mob_mirage_colossus", "file": "/img/encounters/mob_mirage_colossus.webp", "sourceSha256": "e980ca8fa8225770da0d022f975484fcf458c2b3dd5a90733dd8de848ac2d522", "sha256": "4c31e2f260a9f396c1f263098c57e15ee85306ac99017b33fa2ce6244a46fdbf" },
-    { "id": "mob_comet_spark", "file": "/img/encounters/mob_comet_spark.webp", "sourceSha256": "149ee2de42fe4edd0048dc7e14e8905cbc09ea263e72284caf8c92768ea2f002", "sha256": "7ef557377b14de8da9187cc4eaa0535e9af868c6b2c4af5e15bebac767c65753" },
-    { "id": "mob_comet_orbit_mote", "file": "/img/encounters/mob_comet_orbit_mote.webp", "sourceSha256": "f9d41747e91a578bd8b0273b0ef5907f1b687264a0129194d0346b4f2a5e7150", "sha256": "0e150599f80488271d5f2e59a0b5890e69fafc7423c51a70674363508456f1f6" },
-    { "id": "mob_comet_bastion_warden", "file": "/img/encounters/mob_comet_bastion_warden.webp", "sourceSha256": "f84bad7d497571c47dcfdb87a15199e0e7e40d0f61cb6cd7b3a971ee1399308b", "sha256": "62fa517c7bc462ec15e5888cfd77047d519220e35b559c0abbe2fd8b4118cfc7" }
-  ]
+    {
+      "id": "arena_thunder_lancer",
+      "file": "/img/encounters/arena_thunder_lancer.webp",
+      "sourceSha256": "276fd891af9166570ba243feb838f292215a4473eae7dd8538220dce0b32d573",
+      "sha256": "ba9ef46a0ad8feedeef8ce2c424f6933961bd296973e71e03035d1fa0be039bd"
+    },
+    {
+      "id": "arena_sunwarden",
+      "file": "/img/encounters/arena_sunwarden.webp",
+      "sourceSha256": "d051be196ee8aa241976e69a25f92fe85826897bfb5b9cbc57b9836211aed1b1",
+      "sha256": "2d38c74b5f3349d305179afd9efce8adb5df8ef203f2d29961776bd8ea85cb0d"
+    },
+    {
+      "id": "arena_void_oracle",
+      "file": "/img/encounters/arena_void_oracle.webp",
+      "sourceSha256": "d856ec63deaef9acf4327fff8e7be5dc1bbac0639ddcdf7ce9f72f61ace3512a",
+      "sha256": "8392c68dbd7abe9efaee6989247df9f3bebf19d2168782a09573989a4073509e"
+    },
+    {
+      "id": "boss_obsidian_hydra",
+      "file": "/img/encounters/boss_obsidian_hydra.webp",
+      "sourceSha256": "a2e3516274fa8628a016cab7787dace3939ad390b61e70e9b1ee9e3ab331f405",
+      "sha256": "fe47764a88f01b1f199336ee6e33ea98efa7f2d6bcd06200c46d575444dbc489"
+    },
+    {
+      "id": "boss_ash_colossus",
+      "file": "/img/encounters/boss_ash_colossus.webp",
+      "sourceSha256": "7d6c431167a932c48e691973c11b4e484d229cb94d1d8761127bfa8b4dd4cbea",
+      "sha256": "1eed249a09cbfe730ba0ffbbf985957881ce91cddc526985dd2ba772accd6e10"
+    },
+    {
+      "id": "boss_astral_leviathan",
+      "file": "/img/encounters/boss_astral_leviathan.webp",
+      "sourceSha256": "e33e9ead179fa82628342f0dec26e31007e8cd7951a7707214e82dd35ddd9d5c",
+      "sha256": "dbb75de4dc2a96bb18d661fdb9f31636fa7b9ccdaaa7b4f067f807ab3c428ea0"
+    },
+    {
+      "id": "mob_glass_shardling",
+      "file": "/img/encounters/mob_glass_shardling.webp",
+      "sourceSha256": "197b3adb3516f7dee925374b8a3ae152ef0a59f6a12b8258e8f7411385ac3d7f",
+      "sha256": "b72554571076dbf5cdfd138bc1f605f5ccc198040a1a93c75c572d1a9db437c3"
+    },
+    {
+      "id": "mob_ember_chain_forger",
+      "file": "/img/encounters/mob_ember_chain_forger.webp",
+      "sourceSha256": "825f7c8f11a4b3020c9b5993a90cc586658ab30bfe7509299e41ea14958671ab",
+      "sha256": "4f44dec9cf1f7555ed15125c8f0f4c1105c090ce54297c3e5401858a125736d3"
+    },
+    {
+      "id": "mob_nightglass_page",
+      "file": "/img/encounters/mob_nightglass_page.webp",
+      "sourceSha256": "b78150eb8fc5184ba5811f7f68a580cd2f80ff9b8ad5fd25a5d4f3a84c5ff8ef",
+      "sha256": "6de964b6f0d5b93fe47b4588ebc6350e41a4a699c63baf733b681c8728a2436e"
+    },
+    {
+      "id": "boss_verdigris_sentinel",
+      "file": "/img/encounters/boss_verdigris_sentinel.webp",
+      "sourceSha256": "eaf9e2b905ffe1654104c04423c86a856043891f11b389a03b77dcfbf614a57e",
+      "sha256": "3fe5a1d668ed01062525734b03d59bab714a572415188b75ddc03697d695fc0e"
+    },
+    {
+      "id": "boss_sable_mirage_empress",
+      "file": "/img/encounters/boss_sable_mirage_empress.webp",
+      "sourceSha256": "e4c5d340d043735cca12a576b4e4c7dccde73e021f8d2cf823fc90c47f133742",
+      "sha256": "b0f689e12b5b38a5de1a8860c0890e2316022bfd07dfb419b33becd9c7b898b4"
+    },
+    {
+      "id": "boss_comet_bastion",
+      "file": "/img/encounters/boss_comet_bastion.webp",
+      "sourceSha256": "52a9210a67d83d56ec4c26ab07831d71e0f82ad6722c037ebd86b18b2df9447a",
+      "sha256": "336f15f7f727352350e9f309d4e338971d9e90ae82ace3f72abe4ebca8e464ae"
+    },
+    {
+      "id": "mob_mossbound_scout",
+      "file": "/img/encounters/mob_mossbound_scout.webp",
+      "sourceSha256": "f1b268c9a214cbbdddfe6be6156a33949a852e53d2a067c4c3084d8d7d3231f5",
+      "sha256": "13616aec4306720a7eab3026a57dac780e9a0f226b3ec4eb66e7c96e0562eabb"
+    },
+    {
+      "id": "mob_verdigris_rootcaller",
+      "file": "/img/encounters/mob_verdigris_rootcaller.webp",
+      "sourceSha256": "1b33efca2114d5106b2714ca63de398811fe28fa3ab89709b1c998bbdbb28e6b",
+      "sha256": "2eb7a5dbf459cac4421ba80cfebb8b24604f7110c4fb954899677f53227c4cd9"
+    },
+    {
+      "id": "mob_ironbark_bulwark",
+      "file": "/img/encounters/mob_ironbark_bulwark.webp",
+      "sourceSha256": "3aac8282e27d9309a1e5090b0b0962b3b454573d21db7f9e13a69a38c69a5b79",
+      "sha256": "495ee05907337e0c2f4493109e6de1eaf5b09e79924405c2a9be0d23d3d6c63d"
+    },
+    {
+      "id": "mob_mirage_hound",
+      "file": "/img/encounters/mob_mirage_hound.webp",
+      "sourceSha256": "a37f08a4f5b0e1272c2fc306fee819ad797ee76df388ee50bef8ba5b36294df0",
+      "sha256": "ea9944c705765e41b3f37484c08dff804eefb7b2a6012050fe30ce13251beaaa"
+    },
+    {
+      "id": "mob_sandglass_seer",
+      "file": "/img/encounters/mob_sandglass_seer.webp",
+      "sourceSha256": "b33f51fef9120c1b27571dfab149fcc0955d3821819a3e78e52dddfe99b7c304",
+      "sha256": "1d9b0951c28ca6f1358fb0425b6a249b62c007590eba194487a9f65b36f246c4"
+    },
+    {
+      "id": "mob_mirage_colossus",
+      "file": "/img/encounters/mob_mirage_colossus.webp",
+      "sourceSha256": "e980ca8fa8225770da0d022f975484fcf458c2b3dd5a90733dd8de848ac2d522",
+      "sha256": "4c31e2f260a9f396c1f263098c57e15ee85306ac99017b33fa2ce6244a46fdbf"
+    },
+    {
+      "id": "mob_comet_spark",
+      "file": "/img/encounters/mob_comet_spark.webp",
+      "sourceSha256": "149ee2de42fe4edd0048dc7e14e8905cbc09ea263e72284caf8c92768ea2f002",
+      "sha256": "7ef557377b14de8da9187cc4eaa0535e9af868c6b2c4af5e15bebac767c65753"
+    },
+    {
+      "id": "mob_comet_orbit_mote",
+      "file": "/img/encounters/mob_comet_orbit_mote.webp",
+      "sourceSha256": "f9d41747e91a578bd8b0273b0ef5907f1b687264a0129194d0346b4f2a5e7150",
+      "sha256": "0e150599f80488271d5f2e59a0b5890e69fafc7423c51a70674363508456f1f6"
+    },
+    {
+      "id": "mob_comet_bastion_warden",
+      "file": "/img/encounters/mob_comet_bastion_warden.webp",
+      "sourceSha256": "f84bad7d497571c47dcfdb87a15199e0e7e40d0f61cb6cd7b3a971ee1399308b",
+      "sha256": "62fa517c7bc462ec15e5888cfd77047d519220e35b559c0abbe2fd8b4118cfc7"
+    },
+    {
+      "id": "mob_bell_wisp",
+      "file": "/img/encounters/mob_bell_wisp.webp",
+      "sourceSha256": "3df92ea52f3d2b7c7ff7b30326429e5322c07a19a77ca958a9c694b1b88a9243",
+      "sha256": "423a3f858e1de36a76caba9409373ee9635720104680d24740aa3b52b0e3c52c"
+    },
+    {
+      "id": "mob_cinderling",
+      "file": "/img/encounters/mob_cinderling.webp",
+      "sourceSha256": "cb44bcd125ca9a2fd96210fd6c97328ff1ddc2c8d780d7abbad1b0b4d3bce6e0",
+      "sha256": "ad63744a1cdf26a759839766a9e7410f539a2dd9a01aa939189a6d98d6541cb8"
+    },
+    {
+      "id": "mob_archive_scribe",
+      "file": "/img/encounters/mob_archive_scribe.webp",
+      "sourceSha256": "1f73603920262ac54f3bdaadf0c4ae1a64d6cae0b0c00ddd05aadf43258e6637",
+      "sha256": "0bc278c47c1c92f85112a7e0f48b033af5f09d2d26095a13323c3e239f3b4558"
+    },
+    {
+      "id": "mob_eclipse_tidecaller",
+      "file": "/img/encounters/mob_eclipse_tidecaller.webp",
+      "sourceSha256": "714c9dae6b864f23a4c55c6bc0461870d447f18b8d0dc05cf445158d9978228f",
+      "sha256": "ea0aeb73c18cd5158119f735e6f0fb20d5fa7d1824274bd8b849b506b1bf4b04"
+    },
+    {
+      "id": "mob_frost_mirror",
+      "file": "/img/encounters/mob_frost_mirror.webp",
+      "sourceSha256": "b6cee5d5e14580ed4a39a756b07bf97f4df0420cd3d0eb762d21eb04aa0de4a1",
+      "sha256": "66065463c5316965729eaa75f14418af3e632a7d25025d85fa07cc5c74dda315"
+    },
+    {
+      "id": "mob_astral_pagelet",
+      "file": "/img/encounters/mob_astral_pagelet.webp",
+      "sourceSha256": "6746e64aa20dbc1422bf0f5d48011f2b88cf2e7133429c94ad87b4a0a08da707",
+      "sha256": "d207e03494d7c89a553eb158fdae3ecd538202a099ac294a429e3bba3e43716a"
+    },
+    {
+      "id": "boss_cinder_chain_executor",
+      "file": "/img/encounters/boss_cinder_chain_executor.webp",
+      "sourceSha256": "5674e0f717d3755f53ed71c2101b85f0159e79dbdceed19181478428328f79a7",
+      "sha256": "3dc657fd9beaa89bf59aae1537cc651e174ef6d3e59291eddd028861945415bb"
+    },
+    {
+      "id": "boss_nightglass_archivist",
+      "file": "/img/encounters/boss_nightglass_archivist.webp",
+      "sourceSha256": "fd769dfa3b08eaadb03d500d330da87405494825fd71cc5551a9e8233c05356c",
+      "sha256": "43a6d78ed97ad7e5f69bb5fb0b5e683bc3349a0aebc8c0020391477d17759705"
+    }
+  ],
+  "updatedAt": "2026-09-14",
+  "notes": "Added eight distinct generated portraits for previously reused seasonal mob and boss identities."
 }

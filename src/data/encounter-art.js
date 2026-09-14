@@ -7,6 +7,7 @@ const ids = [
   'boss_warlord', 'boss_demon', 'boss_dragon',
   'boss_obsidian_hydra', 'boss_ash_colossus', 'boss_astral_leviathan',
   'boss_verdigris_sentinel', 'boss_sable_mirage_empress', 'boss_comet_bastion',
+  'boss_cinder_chain_executor', 'boss_nightglass_archivist',
   ...['garden', 'forge', 'frost', 'tide', 'crown', 'homecoming'].flatMap(region =>
     ['captain', 'warden', 'midboss', 'finalboss'].map(rank => `${region}_${rank}`)),
 ];
@@ -18,6 +19,12 @@ export const MOB_ART = Object.freeze({
   glass_shardling: '/img/encounters/mob_glass_shardling.webp',
   chain_forger: '/img/encounters/mob_ember_chain_forger.webp',
   nightglass_page: '/img/encounters/mob_nightglass_page.webp',
+  bell_wisp: '/img/encounters/mob_bell_wisp.webp',
+  cinderling: '/img/encounters/mob_cinderling.webp',
+  archive_scribe: '/img/encounters/mob_archive_scribe.webp',
+  eclipse_tidecaller: '/img/encounters/mob_eclipse_tidecaller.webp',
+  frost_mirror: '/img/encounters/mob_frost_mirror.webp',
+  astral_pagelet: '/img/encounters/mob_astral_pagelet.webp',
   mossbound_scout: '/img/encounters/mob_mossbound_scout.webp',
   verdigris_rootcaller: '/img/encounters/mob_verdigris_rootcaller.webp',
   ironbark_bulwark: '/img/encounters/mob_ironbark_bulwark.webp',
