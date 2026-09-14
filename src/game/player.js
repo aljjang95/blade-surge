@@ -4,6 +4,7 @@ import { audio } from '../engine/audio.js';
 import { SKILLS } from './skills.js';
 import { applyLook } from './look.js';
 import { materialsOf } from '../engine/assets.js';
+import { HeroBeacon } from './hero-beacon.js';
 
 const _v = new THREE.Vector3();
 
@@ -14,6 +15,7 @@ export class Player extends Actor {
     this.heroLevel = heroLevel;   // 각성 스킬 해금 판정용
     this.maxHp = stats.hp; this.hp = stats.hp;
     this.look = applyLook(this.model, def, equip);   // 장비 외형: 무기/방패 메시 + 등급 발광 + 궤적색
+    this.beacon = new HeroBeacon(this.root, this.model);
     // The outfit is attached after Actor construction; include it in hit/death/revive effects.
     const dressedMaterials = new Set();
     this.model.traverse(o => { if (o.isMesh) for (const m of materialsOf(o)) if (m.emissive) dressedMaterials.add(m); });
@@ -41,6 +43,7 @@ export class Player extends Actor {
   }
   get busy() { return this.state === 'attack' || this.state === 'skill' || this.state === 'dodge' || this.state === 'ult' || this.state === 'hurt'; }
   addUlt(n) { this.ult = Math.min(this.ultMax, this.ult + n); }
+  dispose() { this.beacon?.dispose(); super.dispose(); }
 
   // ---------------- 입력 처리 ----------------
   handleInput(input, dt) {
@@ -281,8 +284,11 @@ export class Player extends Actor {
     // 비율 경감만. 정액 차감(dmg - def*0.5)은 레벨 1 방어 40 이 1층 잡몹 공격 18 을 통째로 먹어 모든 피격이 1 이 됐다 (hitTakenRatio 0 의 진범)
     let red = Math.max(1, Math.round(dmg * (1 - Math.min(0.6, this.stats.def / (this.stats.def + 250)))));
     // 성역 안: 받는 피해 감소 (검성 각성 2)
-    if (this.dr > 0 && this.drT > 0 && (!this.sanctum || Math.hypot(this.pos.x - this.sanctum.pos.x, this.pos.z - this.sanctum.pos.z) < this.sanctum.r)) {
-      red = Math.max(1, Math.round(red * (1 - this.dr)));
+    const legacyDr = this.dr > 0 && this.drT > 0 && (!this.sanctum || Math.hypot(this.pos.x - this.sanctum.pos.x, this.pos.z - this.sanctum.pos.z) < this.sanctum.r) ? this.dr : 0;
+    const armory = this.game.sp?.armory;
+    const reduction = Math.max(legacyDr, armory?.aegisUntil > this.game.elapsed ? armory.aegis : 0);
+    if (reduction > 0) {
+      red = Math.max(1, Math.round(red * (1 - reduction)));
       this.game.fx.holyBurst(this.pos.clone().setY(1.1), { size: 2.6, life: 0.25 });
     }
     if ((this.tonicGuardT || 0) > 0) red = Math.max(1, Math.round(red * .7));
@@ -374,6 +380,7 @@ export class Player extends Actor {
   // ---------------- 업데이트 ----------------
   update(dt) {
     super.update(dt);
+    this.beacon.update(this.alive, this.yaw);
     this.guardT = Math.max(0, (this.guardT || 0) - dt);
     this.tonicAtkT = Math.max(0, (this.tonicAtkT || 0) - dt);
     this.tonicGuardT = Math.max(0, (this.tonicGuardT || 0) - dt);

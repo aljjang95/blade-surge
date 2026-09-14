@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RARITY_INFO, ITEM_BY_ID } from '../data/items.js';
 import { materialsOf } from '../engine/assets.js';
 import { applyArmorAppearance } from './armor-appearance.js';
+import { applyArmoryAppearance } from '../engine/armory-assets.js';
 
 /**
  * 장비 외형 (PRD §4-1) — 무기·방어구 장착이 실제 모델에 반영된다.
@@ -55,6 +56,7 @@ export function applyLook(model, def, equip = {}) {
   const L = LOOKS[def.id];
   const w = equip.weapon ? ITEM_BY_ID[equip.weapon.id] : null, a = equip.armor ? ITEM_BY_ID[equip.armor.id] : null;
   applyArmorAppearance(model, def, a?.slot === 'armor' ? a : null);
+  applyArmoryAppearance(model, equip, ITEM_BY_ID, def);
   // 보일 노드: 슬롯이 비었으면 def.show 중 그 그룹 것, 있으면 등급표
   let show = new Set(def.show);
   if (L) {
@@ -62,6 +64,9 @@ export function applyLook(model, def, equip = {}) {
     if (a) { for (const n of L.armorNodes) show.delete(n); for (const n of L.armor[a.rarity] || []) show.add(n); }
   }
   for (const n of [...ALL_WEAPON_NODES, 'Bow', 'Arrow']) { const o = model.getObjectByName(n); if (o) o.visible = show.has(n); }
+  if (w?.modelNode && ['knight', 'barbarian'].includes(def.id) && model.userData.armoryAppearance?.includes(w.id)) {
+    for (const n of L.weaponNodes) { const o = model.getObjectByName(n); if (o) o.visible = false; }
+  }
   // 발광 — 무기 메시는 등급색, 몸통은 방어구 등급색을 아주 약하게. Actor.update 가 flash 뒤에 baseEmissive 로 되돌린다
   const wCol = w ? new THREE.Color(RARITY_INFO[w.rarity].color) : null, aCol = a ? new THREE.Color(RARITY_INFO[a.rarity].color) : null;
   const wGlow = w ? WEAPON_GLOW[w.rarity] + Math.min(20, equip.weapon.enh || 0) * 0.025 : 0;

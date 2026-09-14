@@ -176,9 +176,8 @@ export class Renderer {
       cam.position.copy(rig.pos);
       cam.lookAt(rig.target.x, rig.target.y + 1.1, rig.target.z);
     } else {
-      const off = rig.offset.clone().multiplyScalar(1 - rig.zoom * 0.18);
-      off.y += t * 0.22;
-      off.z += t * 0.36;
+      // Hits never displace or pulse the whole camera; preserve user framing.
+      const off = rig.offset.clone();
       off.x += rig.side;   // 액션 시점: 이동 방향 반대편으로 살짝 비켜서 진행 방향이 열린다
       const controlled = battleCameraOffset(off, this.battleCamera);
       off.set(controlled.x, controlled.y, controlled.z);

@@ -5,6 +5,7 @@ import { HEROES, heroStats, levelExp } from '../data/heroes.js';
 import { audio } from '../engine/audio.js';
 import { ImpactClock } from './combat-motion.js';
 import { contactFeedback } from './apex-combat.js';
+import { contactProfile, contactBudget } from './combat-contact.js';
 import { normalizeRpg, recordMonster, monsterLevel, monsterXp, grantCombatXp, KillLedger } from './rpg-core.js';
 import { buildCatalogue } from './rpg-catalogue.js';
 import { stageExpeditionEncounter, encounterLevelLabel } from './rpg-encounters.js';
@@ -112,28 +113,32 @@ export class Battle extends BaseBattle {
     if (this.sp) amount *= this.sp.dmgMul(enemy);
     const dealt = enemy.hurt(amount, { ...opts, crit });
     if (!(dealt > 0)) return;
-    if (this.sp && !opts.noProc) this.sp.onHit(enemy);
+    if (this.sp && !opts.noProc) this.sp.onHit(enemy, opts);
     this.dmgDealt += dealt; this.combo++; this.comboT = 2.5;
     this.maxCombo = Math.max(this.maxCombo, this.combo); this.ui.setCombo(this.combo);
     p.addUlt((crit ? 3 : 2) * (p.stats.ultGain || 1));
     this.lastTarget = enemy;
     const hitPos = enemy.pos.clone().setY(1.1 * enemy.def.scale);
     if (this.fx.dmgLayer.children.length < 26 || crit) this.fx.damage(hitPos, dealt, { crit, kind: opts.kind === 'magic' ? 'skill' : '' });
-    if (opts.quiet) return;
+    const contact = this.paused ? null : contactProfile(opts, crit, enemy.isBoss, !!this.app.reducedMotion?.matches);
+    if (!contact) return;
     const dx = opts.dirx || 0, dz = opts.dirz || 0;
     const feedback=contactFeedback({finisher:opts.finisher,crit,boss:enemy.isBoss,elite:enemy.isElite,reduced:!!this.app.reducedMotion?.matches});
     enemy.receiveImpact(dx, dz, feedback.recoil);
+    // Every eligible hit recoils; only expensive contact feedback shares the time budget.
+    const budget = contactBudget(this._contactBudget, this.elapsed, contact);
+    if (!budget) return;
+    this._contactBudget = budget; this._contactAt = budget.at;
     const color = opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
     // The entire pack shares a small per-frame budget, rather than 30 stacked impacts.
-    if (this.feedbackCount++ < 6) {
-      this.fx.contact(hitPos,direction.set(dx,0,dz).normalize(),color,{size:feedback.flashSize,particles:feedback.particles,light:feedback.light});
+    if (budget.emit && this.feedbackCount++ < 6) {
+      this.fx.contact(hitPos,direction.set(dx,0,dz).normalize(),color,{size:contact.size,particles:contact.particles,light:false});
     }
-    const soundPriority=(opts.finisher?4:0)+(feedback.heavy?2:0)+(crit?1:0);
-    if (!this.feedbackSound || soundPriority>this.feedbackSound) {
-      this.feedbackSound = soundPriority||1; audio.hit(opts.kind || 'slash', { crit, heavy:feedback.heavy, finisher: !!opts.finisher });
+    {
+      audio.hit(opts.kind || 'slash', { crit, heavy:contact.heavy, finisher: !!opts.finisher });
       if (feedback.heavy) audio.vibe(20);
     }
-    if (!opts.quietStop && feedback.hitstop>0) this.timeCtl.hitstop(feedback.hitstop);
+    if (contact.stop>0) this.timeCtl.hitstop(contact.stop);
     // Directional body recoil carries ordinary hits. No added random camera shake.
   }
 }

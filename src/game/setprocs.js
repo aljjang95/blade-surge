@@ -6,6 +6,7 @@
 //   사슬 — 락온한 적과 **사슬로 이어져** 있고 질주하면 감아 끌어온다      → 원을 그리는 새 이동 패턴
 import * as THREE from 'three';
 import { audio } from '../engine/audio.js';
+import { ArmoryProcs } from './armory-procs.js';
 
 const CAP = { pillars: 6, clouds: 5 };
 const CRYSTAL_LOCKOUT = 8;    // 한 놈을 다시 결정화하기까지. 없으면 2세트만으로 방 전체가 영구 스턴이 된다
@@ -16,6 +17,7 @@ const FROST_TINT = new THREE.Color(0.12, 0.3, 0.42);
 export class SetProcs {
   constructor(game) {
     this.g = game;
+    this.armory = new ArmoryProcs(game);
     this.pillars = [];        // 서리 4세트: 얼음 기둥
     this.clouds = [];         // 역병 2세트: 포자 구름
     this.runes = 0;           // 룬 2세트: 장전
@@ -29,6 +31,7 @@ export class SetProcs {
   has(n) { return this.g.hasProc(n); }
   /** HUD 게이지에 무엇을 띄울지 — 켜진 세트가 있을 때만 */
   gauge() {
+    const armoryGauge = this.armory.gauge(); if (armoryGauge) return armoryGauge;
     if (this.has('rune_charge')) return { n: this.runes, max: this.runeMax, color: '#ffc94a', label: '룬', full: this.runes >= this.runeMax && this.has('rune_overload') };
     if (this.has('plague_spore')) { const c = this.biggestCloud(); return { n: c ? Math.round(c.r) : 0, max: 8, color: '#9ade5a', label: '포자' }; }
     if (this.has('frost_pillar')) return { n: this.pillars.length, max: CAP.pillars, color: '#8fd8e8', label: '결정' };
@@ -309,13 +312,14 @@ export class SetProcs {
   }
 
   // ─────────────────────── 훅 ───────────────────────
-  onHit(e) { if (this.has('frost_shatter')) this.frostStack(e); }
+  onHit(e, opts = {}) { this.armory.onHit(e, opts); if (this.has('frost_shatter')) this.frostStack(e); }
   onComboHit(hits) { if (hits > 0) this.charge(1); }
   onDodge(dir) {
+    this.armory.onDodge();
     if (this.has('rune_charge')) this.discharge(dir);
     if (this.has('abyss_reel')) this.reel();
   }
-  onSkillCast(i, sk) { if (!sk.ult) return this.overload(i); return false; }
+  onSkillCast(i, sk) { this.armory.onSkill(sk); if (!sk.ult) return this.overload(i); return false; }
   onKill(e) {
     if (e._crystal > 0 && this.has('frost_shatter')) this.frostDeath(e);
     if (this.has('plague_spore')) this.spore(e);
@@ -324,6 +328,7 @@ export class SetProcs {
   dmgMul(e) { return e._crystal > 0 ? 1.3 : 1; }
 
   update(dt) {
+    this.armory.update();
     const p = this.g.player; if (!p) return;
     // 결정/서리 중첩 지속
     if (this.has('frost_shatter')) for (const e of this.g.enemies) {
@@ -371,5 +376,5 @@ export class SetProcs {
     this.updateSummons(dt);
     if (this.has('abyss_tether')) this.tetherUpdate(dt);
   }
-  clear() { this.pillars.length = 0; this.clouds.length = 0; this.runes = 0; this.tether = null; this.bloomed = 0; this.tetherHits = 0; this.crystals = 0; this.cloudsMade = 0; this.chainMax = 0; this.summons.length = 0; this._clearSummonVisuals(); }
+  clear() { this.armory.clear(); this.pillars.length = 0; this.clouds.length = 0; this.runes = 0; this.tether = null; this.bloomed = 0; this.tetherHits = 0; this.crystals = 0; this.cloudsMade = 0; this.chainMax = 0; this.summons.length = 0; this._clearSummonVisuals(); }
 }

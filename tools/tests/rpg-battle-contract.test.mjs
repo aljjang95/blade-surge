@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 import * as core from '../../src/game/rpg-core.js';
 import * as motion from '../../src/game/combat-motion.js';
 import * as apex from '../../src/game/apex-combat.js';
+import {contactProfile,contactBudget} from '../../src/game/combat-contact.js';
 import * as encounters from '../../src/game/rpg-encounters.js';
 class Vector { set(x,y,z){this.x=x;this.y=y;this.z=z;return this} normalize(){return this} clone(){return new Vector().set(this.x||0,this.y||0,this.z||0)} setY(y){this.y=y;return this} }
 class Base { onEnemyDeath(){this.baseDeaths=(this.baseDeaths||0)+1} }
@@ -12,12 +13,12 @@ const ENEMIES={a:{exp:8,hp:490,atk:20}};
 const HEROES={knight:{skills:[{unlock:10}]}};
 let played=0;const audio={hit:()=>played++,vibe:()=>{}};
 const source=readFileSync(new URL('../../src/game/rpg-battle.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replace('export class Battle','class Battle');
-const names=['THREE','BaseBattle','ENEMIES','HEROES','heroStats','levelExp','audio','ImpactClock','contactFeedback','normalizeRpg','recordMonster','monsterLevel','monsterXp','grantCombatXp','KillLedger','buildCatalogue','RpgView','stageExpeditionEncounter','encounterLevelLabel'];
-const Battle=new Function(...names,source+'\nreturn Battle;')({Vector3:Vector},Base,ENEMIES,HEROES,(_d,h)=>({hp:100+h.level*10,atk:h.level*2,crit:0,critDmg:1.5,ultGain:1}),()=>100,audio,motion.ImpactClock,apex.contactFeedback,core.normalizeRpg,core.recordMonster,core.monsterLevel,core.monsterXp,core.grantCombatXp,core.KillLedger,()=>[],class{},encounters.stageExpeditionEncounter,encounters.encounterLevelLabel);
+const names=['THREE','BaseBattle','ENEMIES','HEROES','heroStats','levelExp','audio','ImpactClock','contactFeedback','contactProfile','contactBudget','normalizeRpg','recordMonster','monsterLevel','monsterXp','grantCombatXp','KillLedger','buildCatalogue','RpgView','stageExpeditionEncounter','encounterLevelLabel'];
+const Battle=new Function(...names,source+'\nreturn Battle;')({Vector3:Vector},Base,ENEMIES,HEROES,(_d,h)=>({hp:100+h.level*10,atk:h.level*2,crit:0,critDmg:1.5,ultGain:1}),()=>100,audio,motion.ImpactClock,apex.contactFeedback,contactProfile,contactBudget,core.normalizeRpg,core.recordMonster,core.monsterLevel,core.monsterXp,core.grantCombatXp,core.KillLedger,()=>[],class{},encounters.stageExpeditionEncounter,encounters.encounterLevelLabel);
 function setup(){
  const h={level:1,exp:95},s={heroes:{knight:h},rpg:core.normalizeRpg(null,['a'])};
  const b=Object.create(Battle.prototype);let saves=0,warnings=0,notices=0,flashes=0;
- Object.assign(b,{heroId:'knight',stage:{idx:1},combatXp:0,rpgDirty:false,saveT:0,killLedger:new core.KillLedger(),
+ Object.assign(b,{heroId:'knight',stage:{idx:1},elapsed:0,paused:false,_contactAt:-Infinity,combatXp:0,rpgDirty:false,saveT:0,killLedger:new core.KillLedger(),
  app:{eco:{s,hero:()=>h,heroEquipBonus:()=>({}),save:()=>{saves++;return true}}},
  player:{maxHp:110,hp:80,alive:true,heroLevel:1,def:HEROES.knight,cds:[3,2],stats:{crit:0,critDmg:1.5},unlocked(){return this.heroLevel>=10},addUlt(){}},
  ui:{toast:()=>warnings++,setCombo(){},skillBtns:[],awakenBanner(){}},rpgView:{levelUp:()=>notices++},
@@ -48,19 +49,34 @@ test('reset selects new save records, never reattaches old discoveries',()=>{
  const {b,s}=setup();b.ensureRpg();core.recordMonster(s.rpg,'a',1,1);b.app.eco.s={};assert.deepEqual(Object.keys(b.ensureRpg().bestiary),[]);
 });
 test('zero damage or a dodge causes no contact sound, stop or recoil',()=>{
- const {b}=setup();let recoil=0;played=0;
+ const {b,counts}=setup();let recoil=0;played=0;
  const enemy={alive:true,spawning:false,hurt:()=>0,receiveImpact:()=>recoil++};
- b.damageEnemy(enemy,40);assert.equal(b.combo,0);assert.equal(played,0);assert.equal(b.timeCtl.stop,0);assert.equal(recoil,0);
+ b.damageEnemy(enemy,40);assert.equal(b.combo,0);assert.equal(b.dmgDealt,0);assert.equal(counts().flashes,0);assert.equal(played,0);assert.equal(b.timeCtl.stop,0);assert.equal(recoil,0);
 });
 test('crowd damage retains all hits but bounds impact VFX and sound',()=>{
  const {b,counts}=setup();played=0;let impacts=0;
  for(let i=0;i<30;i++)b.damageEnemy({alive:true,spawning:false,def:{scale:1},pos:new Vector(),hurt:()=>10,receiveImpact:()=>impacts++},10,{dirx:1,dirz:0});
- assert.equal(b.combo,30);assert.equal(b.dmgDealt,300);assert.equal(impacts,30);assert.equal(counts().flashes,6);assert.equal(played,1);assert.equal(b.timeCtl.stop,.035);
+ const profile=contactProfile({},false,false,false);assert.equal(profile.stop,.022);
+ assert.equal(b.combo,30);assert.equal(b.dmgDealt,300);assert.equal(impacts,30);assert.equal(counts().flashes,1);assert.equal(played,1);assert.equal(b.timeCtl.stop,profile.stop);
+ // Advance the real clock through stop consumption and rearm, and reset the per-frame budget.
+ b.elapsed+=b.timeCtl.step(.03);b.elapsed+=b.timeCtl.step(.06);
+ assert.ok(b.elapsed>=.06);assert.equal(b.timeCtl.stop,0);
+ b.feedbackCount=0;b.feedbackSound=false;
+ b.damageEnemy({alive:true,spawning:false,def:{scale:1},pos:new Vector(),hurt:()=>10,receiveImpact:()=>impacts++},10,{dirx:1,dirz:0});
+ assert.equal(b.combo,31);assert.equal(b.dmgDealt,310);assert.equal(impacts,31);assert.equal(counts().flashes,2);assert.equal(played,2);assert.equal(b.timeCtl.stop,profile.stop);
 });
-test('quiet status damage keeps damage accounting without impact feedback',()=>{
- const {b,counts}=setup();played=0;
- b.damageEnemy({alive:true,spawning:false,def:{scale:1},pos:new Vector(),hurt:()=>10},10,{quiet:true});
- assert.equal(b.dmgDealt,10);assert.equal(counts().flashes,0);assert.equal(played,0);assert.equal(b.timeCtl.stop,0);
+test('quiet, noProc and paused hits keep damage accounting without impact feedback',()=>{
+ for(const opts of [{quiet:true},{noProc:true},{}]){
+ const {b,counts}=setup();played=0;let impacts=0;b.paused=!opts.quiet&&!opts.noProc;
+ b.damageEnemy({alive:true,spawning:false,def:{scale:1},pos:new Vector(),hurt:()=>10,receiveImpact:()=>impacts++},10,opts);
+ assert.equal(b.dmgDealt,10);assert.equal(b.combo,1);assert.equal(impacts,0);assert.equal(counts().flashes,0);assert.equal(played,0);assert.equal(b.timeCtl.stop,0);assert.equal(b._contactAt,-Infinity);
+ }
+});
+test('reduced motion preserves body reactions with no contact particles, lights or hitstop',()=>{
+ const {b}=setup();let impacts=0;const emissions=[];played=0;b.app.reducedMotion={matches:true};
+ b.fx.contact=(_pos,_dir,_color,opts)=>emissions.push(opts);
+ for(let i=0;i<30;i++)b.damageEnemy({alive:true,spawning:false,def:{scale:1},pos:new Vector(),hurt:()=>10,receiveImpact:()=>impacts++},10);
+ assert.equal(b.dmgDealt,300);assert.equal(b.combo,30);assert.equal(impacts,30);assert.equal(emissions.length,1);assert.equal(emissions[0].particles,0);assert.equal(emissions[0].light,false);assert.equal(played,1);assert.equal(b.timeCtl.stop,0);
 });
 test('awakened skill unlocks immediately without setupHud resetting cooldowns',()=>{
  const {b,h}=setup();h.level=9;h.exp=95;b.player.heroLevel=9;

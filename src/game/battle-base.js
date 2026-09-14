@@ -13,6 +13,8 @@ import { RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_BOSS } from '..
 import { audio } from '../engine/audio.js';
 import { heroVoiceName } from '../engine/hero-voice.js';
 import { SetProcs } from './setprocs.js';
+import { contactProfile, contactBudget } from './combat-contact.js';
+import { ImpactClock } from './combat-motion.js';
 import { RegionHazards } from './region-hazards.js';
 import { resolveJobHero } from '../data/jobs.js';
 import { buildExpeditionWorld, expeditionRoster, applyBattleConsumable, canApplyBattleConsumable } from './expedition-combat.js';
@@ -22,16 +24,7 @@ const _v = new THREE.Vector3();
 const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
 
 /** 히트스탑 / 슬로우모션 타임 컨트롤 */
-export class TimeCtl {
-  constructor() { this.stop = 0; this.slow = 1; this.slowT = 0; this.scale = 1; }
-  hitstop(sec) { this.stop = Math.max(this.stop, sec); }
-  slowmo(scale, sec) { this.slow = Math.min(this.slow, scale); this.slowT = Math.max(this.slowT, sec); }
-  step(realDt) {
-    if (this.stop > 0) { this.stop -= realDt; this.scale = 0; return 0; }
-    if (this.slowT > 0) { this.slowT -= realDt; if (this.slowT <= 0) this.slow = 1; }
-    this.scale = this.slow; return realDt * this.slow;
-  }
-}
+export class TimeCtl extends ImpactClock {}
 
 export class Battle {
   constructor(app) {
@@ -65,6 +58,7 @@ export class Battle {
   async start(stage, heroId, heroState, equipBonus) {
     // 재도전/다음 층에서도 이전 액터·탐험 목표·시간 효과를 반드시 종료한다.
     this.stop(); this.autoTarget = null; this.timeCtl = new TimeCtl();
+    this._contactAt = -Infinity; this._contactBudget = null;
     this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0; this.bossDefeated = false;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
     this.combo = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0;
@@ -455,6 +449,7 @@ export class Battle {
     }
   }
   onPlayerDeath() {
+    this.sp?.armory.clear();
     this.input.enabled = false; this.input.clear();
     this.app.companionAgent?.observe('low-hp', { floor: this.stage?.idx || 0 });
     this.renderer.desat = 0.7; this.timeCtl.slowmo(0.3, 1.5); this.renderer.shake(0.6); audio.playMusic(null);
@@ -528,7 +523,7 @@ export class Battle {
     if (this.sp) amount *= this.sp.dmgMul(e);   // 서리 세트: 결정화된 적은 받는 피해 +30%
     const dealt = e.hurt(amount, { ...opts, crit });
     if (dealt <= 0) return;
-    if (this.sp && !opts.noProc) this.sp.onHit(e);
+    if (this.sp && !opts.noProc) this.sp.onHit(e, opts);
     this.dmgDealt += dealt;
     this.combo++; this.comboT = 2.5; this.maxCombo = Math.max(this.maxCombo, this.combo); this.ui.setCombo(this.combo);
     p.addUlt((crit ? 3 : 2) * (p.stats.ultGain || 1));
@@ -537,15 +532,15 @@ export class Battle {
     if (this.fx.dmgLayer.children.length < 26 || crit) this.fx.damage(hitPos, dealt, { crit, kind: opts.kind === 'magic' ? 'skill' : '' });
     const dirx = opts.dirx || 0, dirz = opts.dirz || 0;
     const color = opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
-    if (!opts.quiet) {
-      const heavy = opts.finisher || crit;
-      this.fx.flash(hitPos, color, { size: crit ? 3 : 1.8, life: 0.14 });
-      this.fx.directional(hitPos, _v.set(dirx, 0, dirz).normalize(), color, { n: crit ? 18 : 8, speed: crit ? 12 : 8 });
-      if (crit) { this.fx.texFlash(hitPos, 'holy_burst', 0xffd040, { size: 2.6, life: 0.22, y: 0, grow: 1.4 }); this.fx.light(e.pos, 0xffd040, 6, 6, 0.25); }
-      audio.hit(opts.kind || 'slash', { crit, heavy, finisher: !!opts.finisher });
-      if (!opts.quietStop) this.timeCtl.hitstop(opts.finisher ? 0.1 : crit ? 0.06 : 0.035);
-      this.renderer.shake(opts.finisher ? 0.5 : crit ? 0.3 : 0.12);
-      if (heavy) audio.vibe(crit ? [10, 10, 25] : 20);
+    const contact = this.paused ? null : contactProfile(opts, crit, e.isBoss, this.app?.reducedMotion?.matches);
+    const budget = contactBudget(this._contactBudget, this.elapsed, contact);
+    if (budget) {
+      this._contactBudget = budget; this._contactAt = budget.at;
+      if (budget.emit) this.fx.flash(hitPos, color, { size: contact.size, life: .10 });
+      if (budget.emit && contact.particles) this.fx.directional(hitPos, _v.set(dirx, 0, dirz).normalize(), color, { n: contact.particles, speed: contact.heavy ? 9 : 6 });
+      audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy, finisher: !!opts.finisher });
+      if (contact.stop) this.timeCtl.hitstop(contact.stop);
+      if (contact.heavy) audio.vibe(12);
     }
   }
 
