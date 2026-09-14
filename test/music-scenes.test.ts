@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import { musicForScene, musicAfterIntro, MUSIC_MIX, FLOWMUSIC_CUE_PLAN, flowMusicBriefForRoute } from '../src/data/music.js';
 import { CHAPTERS, stageDef } from '../src/data/stages.js';
 import { DUNGEONS, ARENA_RIVALS } from '../src/data/expansion.js';
+import { EXPEDITION_DEPTHS, depthStage } from '../src/data/expedition-depths.js';
 
 test('lobby, gacha and all authored campaign regions resolve exact AudioSys paths', () => {
   expect(`/bgm/${musicForScene({scene:'lobby'})}.mp3`).toBe('/bgm/regions/lobby.mp3');
@@ -61,11 +62,21 @@ test('a completed intro resumes only its still-active battle and uses the curren
 });
 
 test('new seasonal routes carry a distinct FlowMusic brief with a verified fallback cue', () => {
-  expect(FLOWMUSIC_CUE_PLAN.length).toBeGreaterThanOrEqual(9);
-  for (const route of ['eclipse_hydra_vault', 'ashforge_catacomb', 'astral_leviathan_spire', 'verdigris_sanctum', 'sable_mirage_basin', 'comet_bastion']) {
+  expect(FLOWMUSIC_CUE_PLAN.length).toBeGreaterThanOrEqual(15);
+  for (const route of EXPEDITION_DEPTHS.map(depth => depth.id)) {
     const brief = flowMusicBriefForRoute(route);
     expect(brief?.status).toBe('external-gui-pending');
     expect(brief?.fallback).toMatch(/^regions\//);
     expect(brief?.target).toBeTruthy();
+  }
+});
+
+test('every deep expedition uses its explicit cue slot while boss state keeps the boss mix', () => {
+  for (const depth of EXPEDITION_DEPTHS) {
+    const stage = { ...depthStage(depth.id), expedition: { kind: 'dungeon', id: depth.id, depth: 'deep' } };
+    const brief = flowMusicBriefForRoute(depth.id);
+    if (!brief) throw new Error(`missing FlowMusic cue for ${depth.id}`);
+    expect(musicForScene({ stage })).toBe(brief.fallback);
+    expect(musicForScene({ stage, boss: true })).toBe('regions/boss');
   }
 });
