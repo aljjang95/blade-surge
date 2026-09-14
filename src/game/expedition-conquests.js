@@ -81,6 +81,14 @@ export class ConquestRun {
     const state = this.rooms.get(enemy?.homeRoom);
     return !!state?.target?.alive && state.deaths < state.expected - 1 && (this.def.priority === 'last' || state.deaths === 0);
   }
+  // 소환수의 자동 공격만 처치 순서를 따른다. 직접 공격의 피해·실패 규칙은 바꾸지 않는다.
+  allowsSummonTarget(enemy) {
+    const state = this.rooms.get(enemy?.homeRoom);
+    if (this.def.kind !== 'priority' || this.failed || this.report || !state || (state.target && !state.target.alive)) return true;
+    return this.def.priority === 'first'
+      ? state.deaths > 0 || enemy === state.target
+      : enemy !== state.target || state.deaths >= state.expected - 1;
+  }
   hint() {
     if (this.failed) return '전술 조건 미달 · 원정은 계속 진행';
     if (this.progress >= this.def.target) return '전술 조건 달성 · 보스 처치 후 기록';

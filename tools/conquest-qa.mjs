@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { EXPEDITION_CONQUESTS } from '../src/data/expedition-conquests.js';
+import { SUMMON_GEAR } from '../src/data/summon-gear.js';
 import { EXPEDITION_DEPTHS } from '../src/data/expedition-depths.js';
 import { STORY_EVENTS } from '../src/data/masterworks.js';
 import { installMetricsDriver } from './metrics-driver.mjs';
@@ -12,6 +13,7 @@ import { installConquestMediaObserver, classifyMediaCancellations } from './conq
 
 const root = path.resolve(import.meta.dirname, '..');
 const arg = key => process.argv.find(a => a.startsWith('--' + key + '='))?.slice(key.length + 3) || '';
+const summonOrder = process.argv.includes('--summon-order');
 const tag = arg('tag'); if (tag && !/^[a-z0-9-]{1,35}$/.test(tag)) throw Error('Invalid evidence tag');
 const out = path.join(root, 'work/conquest-qa' + (tag ? '-' + tag : ''));
 const seed = Number(arg('seed') || 20261104); if (!Number.isSafeInteger(seed) || seed < 0 || seed > 0xffffffff) throw Error('Expected uint32 seed');
@@ -23,12 +25,22 @@ assert(hash(bytes) === '93ef4b18a148b9f343228324e6d22142b11b65fd1d01ebf9bfe5344b
 assert(acquired.save.spentKRW === 0 && !acquired.save.purchases.length && !acquired.save.expedition.pending, 'Expected settled free-play save');
 const parent = JSON.parse(await fs.readFile(path.join(root, path.dirname(relative), 'report.json'), 'utf8'));
 assert(parent.status === 'pass' && parent.runs.some(r => r.checkpointAfter?.sha256 === hash(bytes) && r.checkpointAfter.path.replaceAll('\\', '/') === relative), 'Missing prior acquisition proof');
+// 소환 장비 회귀만 분리한다. 장비는 격리 QA 세이브에만 넣으며 획득 증거로 취급하지 않는다.
+const syntheticEquipment = summonOrder ? SUMMON_GEAR.filter(item => item.rarity === 'U') : [];
+if (summonOrder) {
+  const save = acquired.save; save.selected = 'mage';
+  let uid = Math.max(save.invSeq, 1 + Math.max(0, ...save.inventory.map(item => item.uid)));
+  for (const def of syntheticEquipment) {
+    save.inventory.push({ uid, id: def.id, enh: 0 }); save.heroes.mage.equip[def.slot] = uid++;
+  }
+  save.invSeq = uid;
+}
 const sources = execFileSync('rg', ['--files', 'src'], { cwd: root, encoding: 'utf8' }).trim().split(/\r?\n/).map(f => f.replaceAll('\\', '/'));
 sources.push('tools/conquest-qa.mjs', 'tools/metrics-driver.mjs', 'tools/conquest-media-observer.mjs');
 await fs.mkdir(out, { recursive: true });
 const report = { status: 'running', started: new Date().toISOString(), head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
   scope: 'Compiled local build. Existing acquired free mage checkpoint on bc345e8 is restored once in an isolated save. Actual departures, AUTO and first native offered choice at fixed 1/60s; no combat position, HP, damage, kill, mark or victory edits. Owned free gems may fund the catalogued energy refill, recorded below. Prior acquisition is separate evidence. Mobile UI/touch emulation is not physical-phone, OS installation, thermal or manual combat proof.',
-  acquisition: { path: relative, sha256: hash(bytes), head: acquired.head }, seed, runs: [], ui: [], errors: [], requestFailures: [], httpErrors: [], media: [], mediaRequests: [],
+  acquisition: { path: relative, sha256: hash(bytes), head: acquired.head }, syntheticEquipment: syntheticEquipment.map(item => item.id), seed, runs: [], ui: [], errors: [], requestFailures: [], httpErrors: [], media: [], mediaRequests: [],
   sources: Object.fromEntries(await Promise.all(sources.map(async f => [f, hash((await fs.readFile(path.join(root, f), 'utf8')).replaceAll('\r\n', '\n'))]))) };
 const save = () => fs.writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
 await fs.copyFile(import.meta.filename, path.join(out, 'driver.mjs'));
@@ -62,7 +74,7 @@ try {
     await page.addInitScript(installConquestMediaObserver);
     await page.addInitScript(s => { if (!localStorage.getItem('bladesurge_save_v1')) localStorage.setItem('bladesurge_save_v1', JSON.stringify(s)); }, acquired.save);
     await boot(page, url);
-    for (const [index, c] of EXPEDITION_CONQUESTS.entries()) {
+    for (const [index, c] of EXPEDITION_CONQUESTS.filter(c => !summonOrder || c.kind === 'priority').entries()) {
       const run = { id: c.id, status: 'running' }; report.runs.push(run); await save();
       run.before = await page.evaluate(() => {
         const a = window.app; a.expeditionUI.close(); a.toLobby(); a.ui.closeModal(); a.testPause = true;
@@ -90,6 +102,10 @@ try {
         b.onEnemyDeath = function(e) { const result = death.call(this,e); if(e.conquestInitial) window.__conquestDeaths.push({room:e.homeRoom.id,target:!!e.conquestTarget,name:e.def.name,maxHp:e.maxHp,hit:lastHit.get(e),pos:{x:e.pos.x,z:e.pos.z},progress:this.conquest.progress}); return result; };
         b._qaConquestRestore = () => { b.onEnemyDeath = death; b.damageEnemy = damage; delete b._qaConquestRestore; };
       });
+      if (summonOrder) {
+        run.summons = await page.evaluate(() => window.app.battle.sp.summons.map(s => s.id));
+        assert(run.summons.length === 4, 'Expected four equipped combat familiars');
+      }
       await page.evaluate(installMetricsDriver, { storyEvents: STORY_EVENTS.map(({ id, choices }) => ({ id, choices: choices.map(({ id }) => ({ id })) })) });
       run.pause = await page.evaluate(() => {
         const b = window.app.battle, before = { elapsed: b.elapsed, progress: b.conquest.progress, markerT: b.conquest.markerT };
