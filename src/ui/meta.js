@@ -146,7 +146,7 @@ export class Meta {
   }
   nextChallengeHtml() {
     const next = this.eco.nextStage(), power = this.eco.heroPower(this.eco.s.selected);
-    if (campaignFinished(this.eco.s.progress)) return `<section class="next-challenge" aria-label="캠페인 이후 원정"><div><b>구한 세계에 남은 이야기</b><p>심층 원정의 새로운 동선과 수호자에 도전하고 제작 재료를 모으세요.</p><small>3개 원정 · 최초 정복 보상</small></div><button type="button" class="btn btn-gold" id="h-next">심층 원정 보기</button></section>`;
+    if (campaignFinished(this.eco.s.progress)) return `<section class="next-challenge" aria-label="캠페인 이후 원정"><div><b>구한 세계에 남은 이야기</b><p>심층 원정의 새로운 동선과 수호자에 도전하고 제작 재료를 모으세요.</p><small>12개 원정 · 최초 정복 보상</small></div><button type="button" class="btn btn-gold" id="h-next">심층 원정 보기</button></section>`;
     return `<section class="next-challenge" aria-label="다음 층 도전"><div><b>${next.name}</b><p>구역을 정화해 봉인을 풀고, 보스를 처치하세요.</p><small>권장 전투력 ${fmt(next.recPower)} · 출전 ${HEROES[this.eco.s.selected].name} ${fmt(power)}</small></div><button type="button" class="btn btn-gold" id="h-next">정비 마치고 출격 <small>에너지 -${next.energy}</small></button></section>`;
   }
   itemComparisonHtml(heroId, uid) {

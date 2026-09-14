@@ -66,7 +66,7 @@ export function buildExpeditionStage(kind, id, eco, { depth = 'standard', conque
     theme: def.theme,
     code: deep?.name || def.name, name: deep?.name || def.name, title: conquest ? `${deep.name} · ${conquest.name}` : deep?.name || def.name,
     objective: conquest?.objective || deep?.objective || (duel ? `AI 모의 결투 · 150초 제한 · ${duel.tactic}` : def.objective || TACTICS[id]),
-    encounter: { ...base.encounter, enemyId, name: enemy.name, label: deep ? 'DEEP EXPEDITION' : kind === 'arena' ? 'AI DUEL' : 'DUNGEON BOSS', tactic: deep ? base.encounter.tactic : duel?.tactic || def.tactic || TACTICS[id] },
+    encounter: { ...base.encounter, enemyId, name: enemy.name, label: deep ? 'DEEP EXPEDITION' : kind === 'arena' ? 'AI DUEL' : 'DUNGEON BOSS', tactic: deep ? deep.tactic || base.encounter.tactic : duel?.tactic || def.tactic || TACTICS[id] },
     expeditionEnemy: enemy,
   };
   if (def.roster) stage.rosterFor = () => def.roster;

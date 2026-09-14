@@ -140,11 +140,11 @@ export class Floor {
       if (!A || !C || (A !== B && C !== B)) continue;
       const vertical = ax === bx;   // lShape: 가로(z=A.z, A.x→C.x) 다음 세로(x=C.x, A.z→C.z)
       if (C === B) {
-        if (vertical) this.gates.push({ x: C.x, z: C.z - Math.sign(C.z - A.z) * C.h / 2, w: (this.layout ? this.layout.width + 4 : 8), h: 2, axis: 'x' });
-        else this.gates.push({ x: C.x - Math.sign(C.x - A.x) * C.w / 2, z: A.z, w: 2, h: (this.layout ? this.layout.width + 4 : 8), axis: 'z' });
+        if (vertical) this.gates.push({ x: C.x, z: C.z - Math.sign(C.z - A.z) * C.h / 2, w: Math.max(this.layout ? this.layout.width + 4 : 8, C.w + 2), h: 2, axis: 'x' });
+        else this.gates.push({ x: C.x - Math.sign(C.x - A.x) * C.w / 2, z: A.z, w: 2, h: Math.max(this.layout ? this.layout.width + 4 : 8, C.h + 2), axis: 'z' });
       } else {
-        if (vertical) this.gates.push({ x: C.x, z: A.z + Math.sign(C.z - A.z) * A.h / 2, w: (this.layout ? this.layout.width + 4 : 8), h: 2, axis: 'x' });
-        else this.gates.push({ x: A.x + Math.sign(C.x - A.x) * A.w / 2, z: A.z, w: 2, h: (this.layout ? this.layout.width + 4 : 8), axis: 'z' });
+        if (vertical) this.gates.push({ x: C.x, z: A.z + Math.sign(C.z - A.z) * A.h / 2, w: Math.max(this.layout ? this.layout.width + 4 : 8, A.w + 2), h: 2, axis: 'x' });
+        else this.gates.push({ x: A.x + Math.sign(C.x - A.x) * A.w / 2, z: A.z, w: 2, h: Math.max(this.layout ? this.layout.width + 4 : 8, A.h + 2), axis: 'z' });
       }
     }
     this.sealed = this.gates.length > 0 && this.rooms.some((rm) => rm.type !== ROOM_TYPE.START && rm.type !== ROOM_TYPE.BOSS);
