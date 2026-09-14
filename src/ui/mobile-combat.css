@@ -76,7 +76,9 @@ dialog[open] { top:var(--sat); bottom:auto; margin-top:12px; overflow-y:auto; }
 }
 @media (orientation:portrait) and (max-width:620px) {
   #hud .joy-base { left:54px; bottom:calc(64px + var(--sab)); width:88px; height:88px; }
-  #hud #battle-camera-controls { bottom:calc(268px + var(--sab)); }
+  /* Keep the camera pad below the status HUD and above the movement/action lanes. */
+  #hud #battle-camera-controls { top:calc(194px + var(--sat)); bottom:auto; }
+  #hud .joystick { width:calc(50% - 8px); }
   body:has(#hud.show) .companion-ui .companion-launcher { bottom:calc(268px + var(--sab)); }
 }
 @media (orientation:landscape) and (max-height:550px) {
