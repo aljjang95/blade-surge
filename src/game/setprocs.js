@@ -24,6 +24,7 @@ export class SetProcs {
     this.tickT = 0; this.lineT = 0;
     this.frostCd = new WeakMap();
     this.bloomed = 0; this.tetherHits = 0; this.crystals = 0; this.cloudsMade = 0; this.chainMax = 0;
+    this.summons = []; this.familiars = [];
   }
   has(n) { return this.g.hasProc(n); }
   /** HUD 게이지에 무엇을 띄울지 — 켜진 세트가 있을 때만 */
@@ -38,6 +39,62 @@ export class SetProcs {
   /** audio.shatter 는 매 호출마다 33k 샘플 노이즈를 만든다 — 한 프레임에 12마리가 얼면 프레임이 튄다 */
   shatterSfx(vol) { const t = this.g.elapsed; if (t - (this._shSfx || -9) < 0.14) return; this._shSfx = t; audio.shatter({ vol }); }
   biggestCloud() { let b = null; for (const c of this.clouds) if (!b || c.r > b.r) b = c; return b; }
+
+  // ─────────────────────── 소환 장비 ───────────────────────
+  _clearSummonVisuals() {
+    for (const familiar of this.familiars) {
+      this.g.scene.remove(familiar.root);
+      familiar.root.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material?.dispose) o.material.dispose(); });
+    }
+    this.familiars.length = 0;
+  }
+  /** 장착된 소환 장비를 전투 시작 시 전용 궤도 수호체로 배치한다. */
+  configureSummons(defs = []) {
+    this._clearSummonVisuals();
+    this.summons = defs.filter((def) => def?.id && Number.isFinite(def.interval) && Number.isFinite(def.ratio)).slice(0, 4).map((def, index) => ({
+      ...def, phase: index * Math.PI * 0.5, cooldown: 0.8 + index * 0.35, vfxT: index * 0.12,
+    }));
+    for (const def of this.summons) {
+      const root = this.g.fx.orb(def.color, 0.22 + Math.min(0.12, def.ratio * 0.08));
+      root.userData.gearSummon = def.id; this.g.scene.add(root); this.familiars.push({ root, def });
+    }
+    if (this.summons.length) this.g.ui.toast(`${this.summons.map((def) => def.name).join(' · ')} 소환`, 'gold');
+  }
+  updateSummons(dt) {
+    const p = this.g.player; if (!p?.alive || !this.summons.length) return;
+    for (let i = 0; i < this.summons.length; i++) {
+      const summon = this.summons[i], familiar = this.familiars[i];
+      if (!familiar) continue;
+      const angle = this.g.elapsed * (0.72 + Math.min(0.5, summon.ratio * 0.3)) + summon.phase;
+      const pos = p.pos.clone().add(new THREE.Vector3(Math.cos(angle) * (summon.orbit || 1.4), summon.height || 1.4, Math.sin(angle) * (summon.orbit || 1.4)));
+      familiar.root.position.copy(pos); familiar.root.rotation.y = -angle; familiar.root.scale.setScalar(0.9 + Math.sin(this.g.elapsed * 5 + i) * 0.08);
+      summon.vfxT -= dt; summon.cooldown -= dt;
+      if (summon.vfxT <= 0) {
+        summon.vfxT = 0.62;
+        this.g.fx.texFlash(pos, summon.flash, summon.color, { size: 0.7, life: 0.28, spin: 0.8, grow: 0.7, y: 0 });
+      }
+      if (summon.cooldown > 0) continue;
+      summon.cooldown = summon.interval;
+      let target = null, best = summon.radius || 6;
+      for (const enemy of this.g.enemies) {
+        if (!enemy.alive || enemy.spawning) continue;
+        const distance = Math.hypot(enemy.pos.x - pos.x, enemy.pos.z - pos.z);
+        if (distance < best) { best = distance; target = enemy; }
+      }
+      if (!target) continue;
+      const hit = target.pos.clone().setY(1.05 * target.def.scale);
+      this.g.damageEnemy(target, p.atk * summon.ratio, { kind: 'magic', source: p, quiet: true, quietStop: true, noProc: true });
+      this.g.fx.boltTex(pos, hit, summon.color, { width: 0.9, life: 0.18 });
+      this.g.fx.burst(hit, summon.color, { n: 6, speed: 5, size: 0.24, life: 0.28, up: 0.4 });
+      this.g.fx.light(hit, summon.color, 3, 4, 0.12);
+      if (summon.heal) {
+        const amount = Math.floor(p.maxHp * summon.heal);
+        p.hp = Math.min(p.maxHp, p.hp + amount);
+        if (amount > 0 && this.g.fx.dmgLayer.children.length < 20) this.g.fx.damage(p.pos, amount, { kind: 'heal', text: '+' + amount });
+      }
+      audio.play('ui_pluck', { vol: 0.22, rate: 1.2 + i * 0.08 });
+    }
+  }
 
   // ─────────────────────── 서리결정 ───────────────────────
   /** 2세트: 타격마다 서리 중첩, 5중첩에서 결정화(정지 + 받는 피해 30%↑) */
@@ -310,7 +367,8 @@ export class SetProcs {
       if (c.t <= 0) deadCloud = true;
     }
     if (deadCloud) this.clouds = this.clouds.filter((c) => c.t > 0);
+    this.updateSummons(dt);
     if (this.has('abyss_tether')) this.tetherUpdate(dt);
   }
-  clear() { this.pillars.length = 0; this.clouds.length = 0; this.runes = 0; this.tether = null; this.bloomed = 0; this.tetherHits = 0; this.crystals = 0; this.cloudsMade = 0; this.chainMax = 0; }
+  clear() { this.pillars.length = 0; this.clouds.length = 0; this.runes = 0; this.tether = null; this.bloomed = 0; this.tetherHits = 0; this.crystals = 0; this.cloudsMade = 0; this.chainMax = 0; this.summons.length = 0; this._clearSummonVisuals(); }
 }

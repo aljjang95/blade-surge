@@ -136,7 +136,7 @@ export class Meta {
     bag.innerHTML = `<div class="bag-filters" role="group" aria-label="장비 부위 필터">${['all', ...SLOTS].map((s) => `<button type="button" data-bag-slot="${s}" aria-pressed="${s === slot}">${s === 'all' ? '전체' : SLOT_NAME[s]}</button>`).join('')}</div>
       <div class="inv-list">${items.map((inst) => {
         const it = ITEM_BY_ID[inst.id], eq = equipped.has(inst.uid);
-        return `<button type="button" class="equip-slot has inventory-item rar-${it.rarity}" data-inv="${inst.uid}" aria-label="${it.name} +${inst.enh}${eq ? ' 장착 중' : ''}" title="${it.name}"><img src="${ITEM_ICON(it)}" alt=""><span class="inventory-name">${it.name}</span><span class="inventory-level">+${inst.enh}${eq ? ' · 장착 중' : ''}</span></button>`;
+        return `<button type="button" class="equip-slot has inventory-item rar-${it.rarity}" data-inv="${inst.uid}" aria-label="${it.name} +${inst.enh}${eq ? ' 장착 중' : ''}" title="${it.name}"><img src="${ITEM_ICON(it)}" alt=""><span class="inventory-name">${it.name}</span><span class="inventory-level">+${inst.enh}${it.summon ? ' · ✦ 소환' : ''}${eq ? ' · 장착 중' : ''}</span></button>`;
       }).join('') || '<p class="bag-empty">이 부위의 장비가 없습니다. 던전에서 전리품을 모아 보세요.</p>'}</div>`;
     bag.querySelectorAll('[data-bag-slot]').forEach((button) => button.onclick = () => {
       this.bagSlot = button.dataset.bagSlot; this.renderInventory(heroId);
@@ -260,7 +260,7 @@ export class Meta {
     const st = itemStats(inst);
     const statTxt = [st.atk ? `공격력 +${st.atk}` : '', st.hp ? `HP +${st.hp}` : '', st.def ? `방어 +${st.def}` : '', st.crit ? `치명 +${Math.round(st.crit * 100)}%` : ''].filter(Boolean).join(' · ');
     const set = it.set ? SETS[it.set] : null;
-    this.ui.modal(`<div class="item-detail"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><div><div style="font-weight:900;font-size:16px;color:${RARITY_COLOR[it.rarity]}">${it.name} <span style="color:var(--gold)">+${inst.enh}</span></div><div style="font-size:12px;color:var(--muted)"><b style="color:${RARITY_COLOR[it.rarity]}">${RARITY_INFO[it.rarity].name}</b> · ${SLOT_NAME[it.slot]}${set ? ' · ' + set.name : ''}</div><div style="font-size:13px;margin-top:4px">${statTxt}</div></div></div>
+    this.ui.modal(`<div class="item-detail"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><div><div style="font-weight:900;font-size:16px;color:${RARITY_COLOR[it.rarity]}">${it.name} <span style="color:var(--gold)">+${inst.enh}</span></div><div style="font-size:12px;color:var(--muted)"><b style="color:${RARITY_COLOR[it.rarity]}">${RARITY_INFO[it.rarity].name}</b> · ${SLOT_NAME[it.slot]}${set ? ' · ' + set.name : ''}</div><div style="font-size:13px;margin-top:4px">${statTxt}</div>${it.summon ? `<div style="margin-top:7px;color:${RARITY_COLOR[it.rarity]};font-weight:900">✦ ${it.summon.name} 소환 · ${it.summon.interval}초마다 ${Math.round(it.summon.ratio * 100)}% 공격</div><small style="color:var(--muted)">장착 중인 모든 소환 장비가 함께 궤도를 돌며 전투를 돕습니다.</small>` : ''}</div></div>
       ${this.itemComparisonHtml(heroId, uid)}
       <div class="modal-btns item-actions"><button class="btn btn-ghost btn-sm" id="i-close">닫기</button><button class="btn btn-ghost btn-sm" id="i-sell">판매</button><button class="btn btn-blue btn-sm" id="i-enh">강화</button><button class="btn btn-gold btn-sm" id="i-eq">${equipped ? '해제' : '장착'}</button></div>`, { onOpen: (b) => {
       b.querySelector('#i-close').onclick = () => { this.ui.closeModal(); this.focusInventory(uid, it.slot); };

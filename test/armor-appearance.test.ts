@@ -119,6 +119,8 @@ test('named armor uses its material identity across classes; expedition styles r
     expect(armorStyle(items.exp_glasswarden_armor, hero).cut).toBe('crystal');
     expect(armorStyle(items.exp_emberknight_armor, hero).cut).toBe('plate');
     expect(armorStyle(items.exp_starreader_armor, hero).cut).toBe('robe');
+    expect(armorStyle(items.sg_moonward_aegis, hero)).toMatchObject({ body: 0x233c5c, trim: 0x8fd8e8, cut: 'crystal' });
+    expect(armorStyle(items.sg_abyss_husk, hero)).toMatchObject({ body: 0x2b1644, trim: 0xb26bff, cut: 'plate' });
   }
 });
 

@@ -83,6 +83,7 @@ export class Battle {
 
     const gltf = await loadModel(def.model);
     this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], stage.party ? {} : this.app.eco.heroEquipInsts(heroId), heroState.level || 1);
+    this.sp.configureSummons?.(equipBonus.summons || []);
     const sr = this.world.startRoom;
     this.player.pos.set(sr.x, 0, sr.z); this.player.yaw = 0;
     await this.fx.prepare(this.renderer.r, this.app.models, this.renderer.composer.readBuffer);
