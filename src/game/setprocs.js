@@ -78,6 +78,7 @@ export class SetProcs {
       let target = null, best = summon.radius || 6;
       for (const enemy of this.g.enemies) {
         if (!enemy.alive || enemy.spawning) continue;
+        if (this.g.conquest && !this.g.conquest.allowsSummonTarget(enemy)) continue;
         const distance = Math.hypot(enemy.pos.x - pos.x, enemy.pos.z - pos.z);
         if (distance < best) { best = distance; target = enemy; }
       }
