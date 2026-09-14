@@ -39,10 +39,12 @@ test('tutorial and dungeon quests unlock real base heroes and persisted jobs', (
   expect(x.unlockJob('ranger').ok).toBe(true); expect(x.selectJob('ranger').ok).toBe(true); expect(eco.s.selected).toBe('rogue');
   expect(make().x.s.selectedJob).toBe('ranger');
 });
-test('progression reaches every dungeon without paid resources, crafts actual unique item', () => {
+test('progression gates authored dungeons without paid resources, crafts actual unique item', () => {
   const {eco,x}=make(); x.claimQuest('first_oath');
   for(let i=0;i<6;i++) x.settle(x.begin('dungeon','glass_garden').ticket,{win:true});
-  expect(x.s.level).toBeGreaterThanOrEqual(3); expect(DUNGEONS.every(d=>x.dungeonAccess(d.id).ok)).toBe(true);
+  expect(x.s.level).toBeGreaterThanOrEqual(3);
+  expect(DUNGEONS.filter(d=>d.minLevel<=x.s.level).every(d=>x.dungeonAccess(d.id).ok)).toBe(true);
+  expect(DUNGEONS.filter(d=>d.minLevel>x.s.level).every(d=>!x.dungeonAccess(d.id).ok)).toBe(true);
   const recipe=RECIPES.find(r=>r.itemId==='exp_glasswarden_weapon')!;
   eco.s.gold=recipe.gold; const c=x.craft(recipe.id); expect(c.ok).toBe(true); expect(c.item?.id).toBe(recipe.itemId);
   expect(make().eco.s.inventory.some((i: {id:string})=>i.id===recipe.itemId)).toBe(true);
@@ -77,7 +79,7 @@ test('normalization rejects malformed counts, IDs and selection; save failure ro
   expect(x.begin('dungeon','glass_garden').ok).toBe(false); expect(eco.s).toEqual(before);
 });
 test('content has distinct playable themes, actual new gear and bounded rewards', () => {
-  expect(new Set(DUNGEONS.map(d=>d.theme)).size).toBe(4); expect(ARENA_RIVALS.length).toBeGreaterThanOrEqual(6);
+  expect(new Set(DUNGEONS.map(d=>d.theme)).size).toBe(5); expect(ARENA_RIVALS.length).toBeGreaterThanOrEqual(6);
   expect(EXPEDITION_ITEMS.length).toBe(12);
   for(const item of EXPEDITION_ITEMS) { expect((ITEM_BY_ID as Record<string, unknown>)[item.id]).toBeTruthy(); expect((SETS as Record<string, any>)[item.set].four.procs.length).toBe(2); }
   for(const d of DUNGEONS) { expect(d.energy).toBe(4); expect(d.rewards.materials).toBeTruthy(); expect(d.stage.scale).toBeLessThan(2); }

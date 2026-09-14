@@ -1,6 +1,6 @@
 # Seasonal FlowMusic brief
 
-The runtime now has six replacement cue slots: lobby, tide eclipse, ash forge, astral frost, six-rank arena, and the signature-boss set. The current shipped mix keeps each scene on a verified, non-overlapping regional fallback while a new master is exported.
+The runtime now has nine replacement cue slots: lobby, tide eclipse, ash forge, astral frost, verdigris garden, sable crown, comet frost, six-rank arena, and the signature-boss set. The current shipped mix keeps each scene on a verified, non-overlapping regional fallback while a new master is exported.
 
 | Slot | Runtime fallback | FLOW target | Musical brief |
 | --- | --- | --- | --- |
@@ -8,6 +8,9 @@ The runtime now has six replacement cue slots: lobby, tide eclipse, ash forge, a
 | 일식의 심연 수문 | `regions/tide` | `tide` | 128 BPM undertow percussion, teal choir, one readable boss lift |
 | 재벼림 지하 제련소 | `regions/forge` | `forge` | 138 BPM anvil pulse, clipped chain hits, molten sub impact |
 | 성운의 레비아탄 첨탑 | `regions/frost` | `frost` | 112 BPM frozen piano, granular page turns, wide star swell |
+| 녹청의 성역 | `regions/garden` | `garden` | 118 BPM leaf percussion, root chimes, a warm sanctuary lift |
+| 흑사막 환영 분지 | `regions/crown` | `crown` | 124 BPM mirrored hand drums, glass arpeggios, one false-court stinger |
+| 혜성의 유성 요새 | `regions/frost` | `frost` | 136 BPM orbital pulse, comet risers, a wide blue impact tail |
 | 결투장 6계급 | `regions/arena` | `arena` | 132 BPM short competitive motif, clear one-bar transition |
 | 시그니처 보스 3종 | `regions/boss` | `boss` | 96 BPM threat ostinato, three phase stingers, no loudness jump |
 

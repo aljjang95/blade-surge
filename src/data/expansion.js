@@ -21,7 +21,7 @@ export const MATERIAL_REFINING = [
 const dungeon = (id, name, theme, ch, minLevel, material, description, options = {}) => {
   const base = stageDef(ch, 1);
   return { id, name, theme, minLevel, energy: 4, description, ...options,
-    stage: { ...base, code: id, name, title: name, scale: 1 + (minLevel - 1) * 0.18, energy: 4, recPower: 2600 + (minLevel - 1) * 450,
+    stage: { ...base, theme, code: id, name, title: name, scale: 1 + (minLevel - 1) * 0.18, energy: 4, recPower: 2600 + (minLevel - 1) * 450,
       waves: base.waves.slice(0, 2).map(w => w.slice(0, 9)), objective: description },
     rewards: { gold: 280 + minLevel * 80, xp: 80 + minLevel * 20, materials: { [material]: 3 }, consumables: { hp_tonic: 1 } } };
 };
@@ -79,6 +79,27 @@ export const DUNGEONS = [
     tactic: '모래시계가 가리킨 별자리만 밟고, 기록 파편이 모이면 외곽 고리로 빠져나오세요.',
     bossEnemy: 'astral_leviathan', bossHp: 22400, bossName: '성운의 레비아탄', rosterMode: 'astral',
     roster: { trash: ['astral_pagelet', 'nightglass_page', 'frost_mirror', 'astral_orbitling', 'ghost_skull', 'star_wisp'], ranged: ['archive_scribe', 'astral_pagelet', 'skel_mage'], elite: ['celestial_warden', 'archive_warden', 'elite_wraith'] },
+  }),
+  dungeon('verdigris_sanctum', '녹청의 성역', 'garden', 4, 4, 'glass_leaf', '잠든 성역의 뿌리 심장을 되살리고 녹청의 수호자를 깨우세요.', {
+    art: ENCOUNTER_ART.boss_verdigris_sentinel, accent: '#72e6ae', subtitle: 'VERDIGRIS SANCTUM',
+    objective: '세 개의 생명 제단을 정화하고 녹청의 성역 거수를 쓰러뜨리세요.',
+    tactic: '뿌리 문양이 켜진 순서대로 제단을 밟고, 포자 폭발 전에 외곽 수로로 빠지세요.',
+    bossEnemy: 'verdigris_sentinel', bossHp: 23800, bossName: '녹청의 성역 거수', rosterMode: 'verdigris',
+    roster: { trash: ['mossbound_scout', 'verdigris_rootcaller', 'blob_green', 'mossbound_scout', 'bomb_slime', 'bell_wisp'], ranged: ['verdigris_rootcaller', 'skel_priest', 'glub'], elite: ['ironbark_bulwark', 'glass_warden', 'elite_golem'] },
+  }),
+  dungeon('sable_mirage_basin', '흑사막 환영 분지', 'crown', 5, 5, 'star_dust', '거울 모래폭풍 속에서 환영 여왕의 진짜 왕좌를 찾아내세요.', {
+    art: ENCOUNTER_ART.boss_sable_mirage_empress, accent: '#d9a1ff', subtitle: 'SABLE MIRAGE BASIN',
+    objective: '세 개의 가짜 왕좌를 깨뜨리고 흑사막 환영 여왕의 본체를 노출하세요.',
+    tactic: '모래 발자국이 사라지는 쪽은 환영입니다. 보라색 모래시계가 멈춘 순간만 공격하세요.',
+    bossEnemy: 'sable_mirage_empress', bossHp: 25800, bossName: '흑사막 환영 여왕', rosterMode: 'sable',
+    roster: { trash: ['mirage_hound', 'sandglass_seer', 'ninja', 'mirage_hound', 'bomb_abyss', 'squidle'], ranged: ['sandglass_seer', 'abyss_seer', 'glub'], elite: ['mirage_colossus', 'elite_bluedemon', 'elite_wraith'] },
+  }),
+  dungeon('comet_bastion', '혜성의 유성 요새', 'frost', 6, 6, 'ember_core', '부서진 혜성 요새의 궤도를 다시 맞추고 유성 기사단장을 격파하세요.', {
+    art: ENCOUNTER_ART.boss_comet_bastion, accent: '#82bfff', subtitle: 'COMET BASTION',
+    objective: '궤도 고리 네 개를 정렬하고 혜성의 유성 요새 수문장을 돌파하세요.',
+    tactic: '푸른 궤도선 안쪽은 안전합니다. 유성 경고가 겹치면 중앙을 버리고 고리 바깥을 도세요.',
+    bossEnemy: 'comet_bastion', bossHp: 28200, bossName: '혜성의 유성 기사단장', rosterMode: 'comet',
+    roster: { trash: ['comet_spark', 'comet_orbit_mote', 'astral_pagelet', 'comet_spark', 'ghost_skull', 'frost_mirror'], ranged: ['comet_orbit_mote', 'archive_scribe', 'astral_pagelet'], elite: ['comet_bastion_warden', 'celestial_warden', 'elite_yeti'] },
   }),
 ];
 export const JOBS = [

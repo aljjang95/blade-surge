@@ -61,8 +61,8 @@ test('a completed intro resumes only its still-active battle and uses the curren
 });
 
 test('new seasonal routes carry a distinct FlowMusic brief with a verified fallback cue', () => {
-  expect(FLOWMUSIC_CUE_PLAN.length).toBeGreaterThanOrEqual(6);
-  for (const route of ['eclipse_hydra_vault', 'ashforge_catacomb', 'astral_leviathan_spire']) {
+  expect(FLOWMUSIC_CUE_PLAN.length).toBeGreaterThanOrEqual(9);
+  for (const route of ['eclipse_hydra_vault', 'ashforge_catacomb', 'astral_leviathan_spire', 'verdigris_sanctum', 'sable_mirage_basin', 'comet_bastion']) {
     const brief = flowMusicBriefForRoute(route);
     expect(brief?.status).toBe('external-gui-pending');
     expect(brief?.fallback).toMatch(/^regions\//);
