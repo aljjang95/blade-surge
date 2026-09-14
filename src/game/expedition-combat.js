@@ -8,12 +8,18 @@ export const EXPEDITION_LAYOUTS = {
   glass_garden: { spacing: [30, 30], size: [20, 20], width: 6, cells: [[0,0],[1,0],[1,-1],[2,0],[3,0]], edges: [[0,1],[1,2],[1,3],[3,4]], types: ['start','normal','treasure','normal','boss'] },
   ember_vault: { spacing: [34, 26], size: [24, 16], width: 8, cells: [[0,0],[1,0],[2,0]], edges: [[0,1],[1,2]], types: ['start','elite','boss'] },
   star_archive: { spacing: [28, 34], size: [16, 24], width: 6, cells: [[0,0],[0,1],[1,1],[1,2]], edges: [[0,1],[1,2],[2,3]], types: ['start','normal','elite','boss'] },
+  bellfall_crypt: { spacing: [28, 30], size: [18, 18], width: 7, cells: [[0,0],[1,0],[1,-1],[1,1],[2,-1],[2,1],[3,0],[4,0]], edges: [[0,1],[1,2],[1,3],[2,4],[3,5],[4,6],[5,6],[6,7]], types: ['start','normal','treasure','normal','elite','treasure','normal','boss'] },
+  cinder_tide_lock: { spacing: [32, 24], size: [22, 16], width: 8, cells: [[0,0],[1,0],[2,0],[2,1],[3,1],[4,1],[4,0]], edges: [[0,1],[1,2],[2,3],[2,4],[3,4],[4,5],[5,6]], types: ['start','normal','elite','treasure','normal','elite','boss'] },
+  nightglass_observatory: { spacing: [27, 32], size: [18, 22], width: 7, cells: [[0,0],[0,1],[-1,1],[1,1],[-1,2],[1,2],[0,2],[0,3]], edges: [[0,1],[1,2],[1,3],[2,4],[3,5],[4,6],[5,6],[6,7]], types: ['start','normal','treasure','normal','elite','treasure','normal','boss'] },
   arena: { spacing: [32, 32], size: [24, 24], width: 8, cells: [[0,0],[1,0]], edges: [[0,1]], types: ['start','boss'] },
 };
 const TACTICS = {
   glass_garden: '정화 후 옆길 제단 중심에 2초 머물러 유리 잎을 회수하고 수호자를 처치하세요.',
   ember_vault: '좁은 제련로에서 두 차례 증원을 격파하고 과열 경고선을 피해 금고 수호자를 처치하세요.',
   star_archive: '긴 서가의 원거리 수호자를 먼저 격파하고 지연 폭발을 피해 기록관을 처치하세요.',
+  bellfall_crypt: '종문이 켜진 순서를 기억해 반대쪽 안전 지대로 이동하세요. 마지막 공명 뒤에만 긴 반격 창이 열립니다.',
+  cinder_tide_lock: '밸브가 번갈아 과열됩니다. 경고선 바깥에서 증원을 끊고 망치가 떨어진 뒤 중앙을 가로지르세요.',
+  nightglass_observatory: '방금 지나온 세 자리가 역순으로 폭발합니다. 모래시계가 닫히기 전에 바깥 고리로 이동하세요.',
 };
 const DUELS = {
   rookie: { enemyId: 'garden_captain', pattern: ['slam','spin'], behavior: 'shield', hp: 6500, tactic: '푸른 가드 때 공격을 멈추고 강타 뒤 반격하세요. 강한 타격 4회로 방패를 깰 수 있습니다.' },
@@ -35,18 +41,19 @@ export function buildExpeditionStage(kind, id, eco, { depth = 'standard', conque
   if (conquestId !== null && (!conquest || kind !== 'dungeon')) throw new RangeError('알 수 없는 전술 공략입니다.');
   const base = deep ? depthStage(id) : def.stage;
   const duel = kind === 'arena' ? DUELS[id] : null;
-  const enemyId = duel?.enemyId || base.encounter.enemyId;
-  const enemy = { ...ENEMIES[enemyId], ...(duel || {}), name: deep?.bossName || (kind === 'arena' ? `${def.name} · AI` : `${def.name} 수호자`) };
+  const enemyId = duel?.enemyId || deep?.bossEnemy || def.bossEnemy || base.encounter.enemyId;
+  const enemy = { ...ENEMIES[enemyId], ...(duel || {}), name: deep?.bossName || def.bossName || (kind === 'arena' ? `${def.name} · AI` : `${def.name} 수호자`) };
   if (!deep) enemy.summon = undefined;
   if (duel) enemy.portrait = def.portrait;
-  if (!duel) enemy.hp = deep?.bossHp || (id === 'ember_vault' ? 10500 : id === 'star_archive' ? 11500 : 8500);
-  const stage = { ...base, boss: true, finale: false, story: null, expedition: { kind, id, depth, ...(conquest ? { conquestId } : {}),
-    mechanics: deep?.mechanics || { attunement: id === 'glass_garden', reinforcements: id === 'ember_vault' ? 2 : 0 } },
+  if (!duel) enemy.hp = deep?.bossHp || def.bossHp || (id === 'ember_vault' ? 10500 : id === 'star_archive' ? 11500 : 8500);
+  const stage = { ...base, boss: true, finale: false, story: null, expedition: { kind, id, depth, ...(def.rosterMode ? { rosterMode: def.rosterMode } : {}), ...(conquest ? { conquestId } : {}),
+    mechanics: deep?.mechanics || { attunement: id === 'glass_garden' || id === 'bellfall_crypt', reinforcements: id === 'ember_vault' || id === 'cinder_tide_lock' ? 2 : 0 } },
     code: deep?.name || def.name, name: deep?.name || def.name, title: conquest ? `${deep.name} · ${conquest.name}` : deep?.name || def.name,
-    objective: conquest?.objective || deep?.objective || (duel ? `AI 모의 결투 · 150초 제한 · ${duel.tactic}` : TACTICS[id]),
-    encounter: { ...base.encounter, enemyId, name: enemy.name, label: deep ? 'DEEP EXPEDITION' : kind === 'arena' ? 'AI DUEL' : 'DUNGEON BOSS', tactic: deep ? base.encounter.tactic : duel?.tactic || TACTICS[id] },
+    objective: conquest?.objective || deep?.objective || (duel ? `AI 모의 결투 · 150초 제한 · ${duel.tactic}` : def.objective || TACTICS[id]),
+    encounter: { ...base.encounter, enemyId, name: enemy.name, label: deep ? 'DEEP EXPEDITION' : kind === 'arena' ? 'AI DUEL' : 'DUNGEON BOSS', tactic: deep ? base.encounter.tactic : duel?.tactic || def.tactic || TACTICS[id] },
     expeditionEnemy: enemy,
   };
+  if (def.roster) stage.rosterFor = () => def.roster;
   // AI arena uses the matching atmosphere with the already-loaded original rigs.
   if (id === 'champion') stage.chapter = { ...base.chapter, theme: 'frost' };
   return stage;
@@ -74,6 +81,11 @@ export function expeditionRoster(stage, room) {
     return id === 'star_archive'
       ? [R.trash[1],R.trash[4],R.trash[5],R.ranged[0],R.ranged[1],R.ranged[2]]
       : [R.trash[0],R.trash[1],R.trash[2],R.trash[4],R.trash[5],R.ranged[0],R.ranged[1]];
+  }
+  if (stage.expedition.rosterMode) {
+    if (room.type === 'treasure') return [R.trash[0], R.trash[2], R.ranged[0], R.trash[4]];
+    if (room.type === 'elite') return [R.elite[0], R.trash[0], R.trash[2], R.trash[5], R.ranged[0]];
+    return [R.trash[0], R.trash[1], R.trash[2], R.trash[3], R.ranged[0], R.ranged[1], R.elite[0]];
   }
   if (id === 'glass_garden') return room.type === 'treasure' ? [R.trash[0],R.trash[2],R.ranged[0]] : [R.trash[0],R.trash[1],R.trash[2],R.trash[0],R.ranged[0],R.trash[4]];
   if (id === 'ember_vault') return [R.elite[0],R.trash[0],R.trash[1],R.trash[3],R.ranged[0],R.trash[4]];

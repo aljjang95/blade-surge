@@ -15,7 +15,7 @@ import './depths.css';
 
 const fmt = n => Math.floor(n || 0).toLocaleString('ko-KR');
 const MATERIAL_ART = Object.fromEntries(MATERIALS.map(m=>[m.id,resourceArt(m.id)]));
-const ART = { glass_garden: '/img/expansion/glass_garden.webp', ember_vault: '/img/expansion/ember_vault.webp', star_archive: '/img/expansion/star_archive.webp', arena: '/img/expansion/arena.webp', guild_map: '/img/expansion/guild_map.webp' };
+const ART = { arena: '/img/expansion/arena.webp', guild_map: '/img/expansion/guild_map.webp' };
 const COLORS = { glass_garden: '#9be1ba', ember_vault: '#ffad6e', star_archive: '#9bbdff' };
 const SUBTITLES = { glass_garden: 'GLASS CONSERVATORY', ember_vault: 'EMBER TREASURY', star_archive: 'ASTRAL ARCHIVE' };
 const OBJECTIVES = { glass_garden: '갈림길을 돌파하고 정원의 수호자를 정화하세요.', ember_vault: '좁은 제련 통로에서 화염 경고를 피하세요.', star_archive: '서리 기록을 피해 별빛 지식을 되찾으세요.' };
@@ -44,7 +44,7 @@ function DungeonRoutes({app, service, launch, controller}) {
   return <>
     <div className="exp-route-tabs" role="group" aria-label="원정 구분">
       <button aria-pressed={depth==='standard'} onClick={()=>choose('standard')}>기본 원정</button>
-      <button aria-pressed={deep} onClick={()=>choose('deep')}>심층 원정 <small>{EXPEDITION_DEPTHS.filter(d=>service.dungeonAccess(d.id,{depth:'deep'}).ok).length}/3</small></button>
+      <button aria-pressed={deep} onClick={()=>choose('deep')}>심층 원정 <small>{EXPEDITION_DEPTHS.filter(d=>service.dungeonAccess(d.id,{depth:'deep'}).ok).length}/{EXPEDITION_DEPTHS.length}</small></button>
       <button aria-pressed={depth==='conquests'} onClick={()=>choose('conquests')}>전술 공략 <small>{s.conquests.length}/6</small></button>
     </div>
     {depth==='conquests' ? <ConquestRoutes service={service} launch={launch} starting={app.stageStarting}/> : <>
@@ -52,12 +52,12 @@ function DungeonRoutes({app, service, launch, controller}) {
     <div className="exp-dungeon-grid">{(deep ? EXPEDITION_DEPTHS : DUNGEONS).map((d,i)=>{
       const access=service.dungeonAccess(d.id,{depth}), locked=!access.ok;
       const wins=deep ? s.depthWins?.[d.id]||0 : s.stats[d.id];
-      const art=deep ? ENCOUNTER_ART[['garden_midboss','tide_midboss','homecoming_finalboss'][i]] : ART[d.id];
-      return <article key={`${depth}:${d.id}`} className="exp-dungeon" data-depth={depth} data-dungeon={d.id} style={{'--exp-accent':COLORS[d.id]}}>
+      const art=deep ? ENCOUNTER_ART[['garden_midboss','tide_midboss','homecoming_finalboss'][i]] : d.art || ART[d.id];
+      return <article key={`${depth}:${d.id}`} className="exp-dungeon" data-depth={depth} data-dungeon={d.id} style={{'--exp-accent':d.accent || COLORS[d.id] || '#b7d8bd'}}>
         <div className="exp-dungeon-art"><Art src={art} alt={d.name+(deep?' 수호자':' 던전 원화')} loading="lazy" decoding="async"/><span className="exp-number">0{i+1}</span>
           <div className="exp-dungeon-badges"><span>{deep ? `캠페인 ${d.unlockCode} 이후` : `원정 Lv.${d.minLevel}`}</span><span className="ui-resource"><Icon id="energy"/>에너지 {d.energy}</span></div>
         </div>
-        <div className="exp-card-body"><small>{deep ? (wins ? `${wins}회 정복` : '첫 정복 보상 미획득') : SUBTITLES[d.id]}</small><h3>{d.name}</h3><p>{deep ? d.objective : OBJECTIVES[d.id]}</p>
+        <div className="exp-card-body"><small>{deep ? (wins ? `${wins}회 정복` : '첫 정복 보상 미획득') : d.subtitle || SUBTITLES[d.id] || d.theme.toUpperCase()}</small><h3>{d.name}</h3><p>{deep ? d.objective : d.objective || OBJECTIVES[d.id] || d.description}</p>
           {deep && <Detail label="이야기 · 첫 정복 보상"><p>{d.description}</p>{!wins ? <RewardChips rewards={d.firstRewards}/> : <p>첫 정복 보상을 받았습니다.</p>}</Detail>}
           <div className="exp-material-reward">{MATERIALS.filter(m=>d.rewards.materials?.[m.id]).map(m=><React.Fragment key={m.id}><img src={MATERIAL_ART[m.id]} alt=""/><span>{m.name}<b>확정 +{d.rewards.materials[m.id]}</b></span></React.Fragment>)}<em>EXP +{d.rewards.xp}</em></div>
           {deep && <small className="exp-depth-power">권장 전투력 {fmt(2600*d.scale)} · {d.layout.cells.length}개 구역</small>}
