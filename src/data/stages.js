@@ -1,6 +1,6 @@
 import { dungeonForStage } from './story-dungeons.js';
 import { stageStory } from './campaign-story.js';
-import { ENCOUNTER_ART, RIFT_ART } from './encounter-art.js';
+import { ENCOUNTER_ART, MOB_ART, RIFT_ART } from './encounter-art.js';
 import { CAMPAIGN_MODELS } from './encounter-models.js';
 import { BOSS_ENCOUNTERS } from './boss-encounters.js';
 import { MOB_ROLE_ENEMIES } from './mob-roles.js';
@@ -123,6 +123,29 @@ export const ENEMIES = {
   frost_mirror: { name: '서리 거울벌', model: 'Blob_GreenBlob', hp: 1180, atk: 34, spd: 3.7, range: 1.8, atkTime: 1.4, exp: 19, scale: 1.05, armor: 0.16, behavior: 'shield', tint: '#99d8ff', gold: 3 },
   archive_scribe: { name: '되감기 기록자', model: 'Skeleton_Mage', hp: 900, atk: 27, spd: 3.2, range: 8.5, atkTime: 2.2, ranged: true, exp: 24, scale: 1.1, gold: 3, projColor: 0x9fbdff, behavior: 'shaman', summon: 'frost_mirror', tint: '#d2ddff' },
   archive_warden: { name: '밤유리 수문장', model: 'Big_Yeti', hp: 8200, atk: 59, spd: 3.1, range: 3.0, atkTime: 1.8, exp: 82, scale: 1.6, armor: 0.31, elite: true, behavior: 'shield', tint: '#a7d7ff', gold: 11 },
+  // ================= 시즌 전선 · 일식·재벼림·성운 =================
+  eclipse_scalelet: { name: '일식 비늘새끼', model: 'Flying_Dragon', hp: 880, atk: 36, spd: 5.2, range: 2.1, atkTime: 1.15, exp: 19, scale: 0.9, gold: 2, behavior: 'bomber', tint: '#63e7dd' },
+  eclipse_tidecaller: { name: '역류 조율사', model: 'Flying_Squidle', hp: 920, atk: 29, spd: 3.6, range: 8.5, atkTime: 2.0, ranged: true, exp: 24, scale: 1.05, gold: 3, projColor: 0x54d8d2, behavior: 'shaman', summon: 'eclipse_scalelet', tint: '#9effef' },
+  hydra_scaleguard: { name: '삼두룡 비늘수호자', model: 'Big_Alien', hp: 8600, atk: 64, spd: 3.1, range: 3.0, atkTime: 1.75, exp: 86, scale: 1.55, armor: 0.28, elite: true, behavior: 'shield', tint: '#75d8d0', gold: 12 },
+  ash_chainling: { name: '잿불 사슬꾼', model: 'Blob_Orc', hp: 900, atk: 41, spd: 5.0, range: 2.0, atkTime: 1.05, exp: 18, scale: 1.0, gold: 2, behavior: 'bomber', tint: '#ff9b66' },
+  ash_smith: { name: '재벼림 주조사', model: 'Big_Orc', hp: 1020, atk: 30, spd: 3.5, range: 8.0, atkTime: 2.1, ranged: true, exp: 24, scale: 1.05, gold: 3, projColor: 0xff7849, behavior: 'shaman', summon: 'ash_chainling', tint: '#ffc08a' },
+  foundry_bulwark: { name: '지하 제련 방벽', model: 'Big_BlueDemon', hp: 8900, atk: 67, spd: 2.9, range: 3.2, atkTime: 1.9, exp: 90, scale: 1.58, armor: 0.32, elite: true, behavior: 'shield', tint: '#ffad72', gold: 12 },
+  astral_pagelet: { name: '성운 쪽지령', model: 'Flying_Ghost_Skull', hp: 840, atk: 32, spd: 4.0, range: 8.5, atkTime: 1.9, ranged: true, exp: 23, scale: 1.2, gold: 3, projColor: 0x9bcaff, behavior: 'shaman', summon: 'astral_orbitling', tint: '#d2e8ff' },
+  astral_orbitling: { name: '궤도 파편', model: 'Blob_GreenBlob', hp: 980, atk: 35, spd: 4.2, range: 1.8, atkTime: 1.3, exp: 19, scale: 1.0, gold: 3, behavior: 'shield', tint: '#83baff' },
+  star_wisp: { name: '별빛 잔영', model: 'Flying_Ghost', hp: 680, atk: 30, spd: 5.6, range: 2.2, atkTime: 1.0, exp: 18, scale: 1.25, gold: 2, ghostly: true, tint: '#c0e4ff' },
+  celestial_warden: { name: '천체 서고 수문장', model: 'Big_Yeti', hp: 9400, atk: 65, spd: 3.0, range: 3.1, atkTime: 1.8, exp: 94, scale: 1.62, armor: 0.3, elite: true, behavior: 'shield', tint: '#accfff', gold: 13 },
+  obsidian_hydra: { name: '흑요의 삼두룡', model: 'Flying_AbyssRegent', hp: 18800, atk: 72, spd: 4.2, range: 3.4, atkTime: 1.55, exp: 300, scale: 2.5, boss: true, armor: 0.27, gold: 62, kit: 'dragon', portrait: ENCOUNTER_ART.boss_obsidian_hydra, signatureBoss: true,
+    phasePatterns: [['tide_sweep','fan','tide_undertow','slam'], ['tide_undertow','tide_sweep','summon','fan'], ['tide_sweep','tide_undertow','dash']],
+    phaseHints: ['먼저 지나간 물결 뒤로 이동하세요.', '세 머리가 들리면 중앙에서 벗어나세요.', '역류가 닫히기 전에 마지막 틈을 찾으세요.'],
+    tactic: '물결이 지나간 통로가 잠시 안전합니다. 세 머리가 동시에 고개를 들면 중앙에서 벗어나세요.', projColor: 0x63e7dd },
+  ash_colossus: { name: '잿빛 재벼림 거수', model: 'Skeleton_OathRemnant', hp: 20400, atk: 75, spd: 3.4, range: 3.6, atkTime: 1.6, exp: 320, scale: 2.45, boss: true, armor: 0.29, gold: 66, kit: 'reaper', portrait: ENCOUNTER_ART.boss_ash_colossus, signatureBoss: true,
+    phasePatterns: [['kiln_vents','slam','kiln_hammer','fan'], ['kiln_hammer','kiln_vents','summon','slam'], ['kiln_vents','kiln_hammer','dash']],
+    phaseHints: ['중앙 과열선 옆으로 이동하세요.', '사슬이 당기는 반대편으로 빠지세요.', '마지막 망치 뒤 냉각로가 열립니다.'],
+    tactic: '사슬이 끌리는 방향의 반대편으로 이동한 뒤 망치 충격파가 지나가면 냉각로를 활성화하세요.', projColor: 0xff9b66 },
+  astral_leviathan: { name: '성운의 레비아탄', model: 'Big_ArchiveMonarch', hp: 22400, atk: 78, spd: 3.2, range: 3.5, atkTime: 1.7, exp: 340, scale: 2.55, boss: true, armor: 0.3, gold: 70, kit: 'lich', summon: 'astral_pagelet', portrait: ENCOUNTER_ART.boss_astral_leviathan, signatureBoss: true,
+    phasePatterns: [['archive_retrace','fan','archive_hourglass','slam'], ['archive_hourglass','archive_retrace','summon','fan'], ['archive_retrace','archive_hourglass','soulrain']],
+    phaseHints: ['지나온 별자리를 역순으로 피하세요.', '모래시계의 바깥과 안쪽을 번갈아 이동하세요.', '마지막 기록 파편이 닫힐 때 반격하세요.'],
+    tactic: '모래시계가 가리킨 별자리만 밟고, 기록 파편이 모이면 외곽 고리로 빠져나오세요.', projColor: 0x9bcaff },
   glass_hour_sovereign: { name: '시계유리의 주권자', model: 'Skeleton_BellKing', hp: 14500, atk: 62, spd: 3.8, range: 3.2, atkTime: 1.65, exp: 240, scale: 2.25, boss: true, armor: 0.23, gold: 48, kit: 'warlord', summon: 'bell_wisp', portrait: RIFT_ART.glass_hour_sovereign, signatureBoss: true,
     phasePatterns: [['bell_toll','slam','bell_clap','spin'], ['bell_clap','summon','bell_toll','slam'], ['bell_toll','bell_clap','spin']],
     phaseHints: ['세 종의 빛이 켜지는 순서를 읽으세요.', '양옆 종 뒤 중앙의 공명을 피하세요.', '마지막 울림 뒤에만 긴 반격 창이 열립니다.'],
@@ -196,6 +219,7 @@ for (const chapter of CHAPTERS) {
 }
 
 for (const id of ['boss_warlord', 'boss_demon', 'boss_dragon']) ENEMIES[id].portrait = ENCOUNTER_ART[id];
+for (const [id, portrait] of Object.entries(MOB_ART)) if (ENEMIES[id]) ENEMIES[id].portrait = portrait;
 for (const [id, model] of Object.entries(CAMPAIGN_MODELS)) ENEMIES[id].model = model;
 for (const [id, encounter] of Object.entries(BOSS_ENCOUNTERS)) {
   Object.assign(ENEMIES[id], { signatureBoss:true, pattern:encounter.phases[0], phasePatterns:encounter.phases, phaseHints:encounter.phaseHints, tactic:encounter.tactic });

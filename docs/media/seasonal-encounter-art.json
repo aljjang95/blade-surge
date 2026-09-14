@@ -1,0 +1,19 @@
+{
+  "createdAt": "2026-09-14",
+  "status": "verified-files",
+  "route": "Codex imagegen brand-new independent originals",
+  "guiRouteStatus": "unavailable-in-current-toolset",
+  "originalsPreservedUnder": "C:/Users/Administrator/.codex/generated_images/01a08c36-bc0b-7990-a96f-8e58bb40f1e8",
+  "production": { "pixelSize": "768x768", "format": "WebP", "quality": 90 },
+  "assets": [
+    { "id": "arena_thunder_lancer", "file": "/img/encounters/arena_thunder_lancer.webp", "sourceSha256": "276fd891af9166570ba243feb838f292215a4473eae7dd8538220dce0b32d573", "sha256": "ba9ef46a0ad8feedeef8ce2c424f6933961bd296973e71e03035d1fa0be039bd" },
+    { "id": "arena_sunwarden", "file": "/img/encounters/arena_sunwarden.webp", "sourceSha256": "d051be196ee8aa241976e69a25f92fe85826897bfb5b9cbc57b9836211aed1b1", "sha256": "2d38c74b5f3349d305179afd9efce8adb5df8ef203f2d29961776bd8ea85cb0d" },
+    { "id": "arena_void_oracle", "file": "/img/encounters/arena_void_oracle.webp", "sourceSha256": "d856ec63deaef9acf4327fff8e7be5dc1bbac0639ddcdf7ce9f72f61ace3512a", "sha256": "8392c68dbdabe9efaee6989247df9f3bebf19d2168782a09573989a4073509e" },
+    { "id": "boss_obsidian_hydra", "file": "/img/encounters/boss_obsidian_hydra.webp", "sourceSha256": "a2e3516274fa8628a016cab7787dace3939ad390b61e70e9b1ee9e3ab331f405", "sha256": "fe47764a88f01b1f199336ee6e33ea98efa7f2d6bcd06200c46d575444dbc489" },
+    { "id": "boss_ash_colossus", "file": "/img/encounters/boss_ash_colossus.webp", "sourceSha256": "7d6c431167a932c48e691973c11b4e484d229cb94d1d8761127bfa8b4dd4cbea", "sha256": "1eed249a09cbfe730ba0ffbbf985957881ce91cddc526985dd2ba772accd6e10" },
+    { "id": "boss_astral_leviathan", "file": "/img/encounters/boss_astral_leviathan.webp", "sourceSha256": "e33e9ead179fa82628342f0dec26e31007e8cd7951a7707214e82dd35ddd9d5c", "sha256": "dbb75de4dc2a96bb18d661fdb9f31636fa7b9ccdaaa7b4f067f807ab3c428ea0" },
+    { "id": "mob_glass_shardling", "file": "/img/encounters/mob_glass_shardling.webp", "sourceSha256": "197b3adb3516f7dee925374b8a3ae152ef0a59f6a12b8258e8f7411385ac3d7f", "sha256": "b72554571076dbf5cdfd138bc1f605f5ccc198040a1a93c75c572d1a9db437c3" },
+    { "id": "mob_ember_chain_forger", "file": "/img/encounters/mob_ember_chain_forger.webp", "sourceSha256": "825f7c8f11a4b3020c9b5993a90cc586658ab30bfe7509299e41ea14958671ab", "sha256": "4f44dec9cf1f7555ed15125c8f0f4c1105c090ce54297c3e5401858a125736d3" },
+    { "id": "mob_nightglass_page", "file": "/img/encounters/mob_nightglass_page.webp", "sourceSha256": "b78150eb8fc5184ba5811f7f68a580cd2f80ff9b8ad5fd25a5d4f3a84c5ff8ef", "sha256": "6de964b6f0d5b93fe47b4588ebc6350e41a4a699c63baf733b681c8728a2436e" }
+  ]
+}

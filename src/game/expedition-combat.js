@@ -11,6 +11,9 @@ export const EXPEDITION_LAYOUTS = {
   bellfall_crypt: { spacing: [28, 30], size: [18, 18], width: 7, cells: [[0,0],[1,0],[1,-1],[1,1],[2,-1],[2,1],[3,0],[4,0]], edges: [[0,1],[1,2],[1,3],[2,4],[3,5],[4,6],[5,6],[6,7]], types: ['start','normal','treasure','normal','elite','treasure','normal','boss'] },
   cinder_tide_lock: { spacing: [32, 24], size: [22, 16], width: 8, cells: [[0,0],[1,0],[2,0],[2,1],[3,1],[4,1],[4,0]], edges: [[0,1],[1,2],[2,3],[2,4],[3,4],[4,5],[5,6]], types: ['start','normal','elite','treasure','normal','elite','boss'] },
   nightglass_observatory: { spacing: [27, 32], size: [18, 22], width: 7, cells: [[0,0],[0,1],[-1,1],[1,1],[-1,2],[1,2],[0,2],[0,3]], edges: [[0,1],[1,2],[1,3],[2,4],[3,5],[4,6],[5,6],[6,7]], types: ['start','normal','treasure','normal','elite','treasure','normal','boss'] },
+  eclipse_hydra_vault: { spacing: [31, 29], size: [22, 20], width: 8, cells: [[0,0],[1,0],[1,-1],[2,-1],[2,0],[2,1],[3,1],[4,1],[4,0]], edges: [[0,1],[1,2],[1,4],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]], types: ['start','normal','treasure','normal','elite','treasure','normal','elite','boss'] },
+  ashforge_catacomb: { spacing: [34, 25], size: [24, 17], width: 8, cells: [[0,0],[1,0],[2,0],[2,1],[3,1],[3,0],[4,0],[5,0]], edges: [[0,1],[1,2],[2,3],[2,5],[3,4],[4,6],[5,6],[6,7]], types: ['start','normal','elite','normal','treasure','elite','treasure','boss'] },
+  astral_leviathan_spire: { spacing: [28, 34], size: [18, 24], width: 7, cells: [[0,0],[0,1],[1,1],[1,2],[0,2],[-1,2],[-1,3],[0,3],[1,3]], edges: [[0,1],[1,2],[2,3],[1,4],[4,5],[5,6],[6,7],[7,8],[3,8]], types: ['start','normal','treasure','normal','elite','treasure','normal','elite','boss'] },
   arena: { spacing: [32, 32], size: [24, 24], width: 8, cells: [[0,0],[1,0]], edges: [[0,1]], types: ['start','boss'] },
 };
 const TACTICS = {
@@ -20,11 +23,17 @@ const TACTICS = {
   bellfall_crypt: '종문이 켜진 순서를 기억해 반대쪽 안전 지대로 이동하세요. 마지막 공명 뒤에만 긴 반격 창이 열립니다.',
   cinder_tide_lock: '밸브가 번갈아 과열됩니다. 경고선 바깥에서 증원을 끊고 망치가 떨어진 뒤 중앙을 가로지르세요.',
   nightglass_observatory: '방금 지나온 세 자리가 역순으로 폭발합니다. 모래시계가 닫히기 전에 바깥 고리로 이동하세요.',
+  eclipse_hydra_vault: '물결이 지나간 통로가 잠시 안전합니다. 세 머리가 동시에 들리면 중앙에서 벗어나세요.',
+  ashforge_catacomb: '사슬이 끌리는 방향의 반대편으로 이동한 뒤 망치 충격파가 지나가면 냉각로를 활성화하세요.',
+  astral_leviathan_spire: '모래시계가 가리킨 별자리만 밟고, 기록 파편이 모이면 외곽 고리로 빠져나오세요.',
 };
 const DUELS = {
   rookie: { enemyId: 'garden_captain', pattern: ['slam','spin'], behavior: 'shield', hp: 6500, tactic: '푸른 가드 때 공격을 멈추고 강타 뒤 반격하세요. 강한 타격 4회로 방패를 깰 수 있습니다.' },
   duelist: { enemyId: 'garden_captain', pattern: ['dash','spin','dash'], dodge: 0.22, hp: 8500, tactic: '회피하는 결투사의 돌진을 옆으로 피하세요. 회전이 끝나는 순간이 빈틈입니다.' },
   champion: { enemyId: 'frost_captain', pattern: ['fan','soulrain','slam'], dodge: 0.08, hp: 10500, tactic: '탄막과 낙하 원을 피해 접근하세요. 체력이 줄면 공격 순서가 바뀝니다.' },
+  thunder_lancer: { enemyId: 'tide_captain', pattern: ['dash','tide_sweep','slam'], dodge: 0.14, hp: 12000, tactic: '번개 창의 직선 경고를 옆으로 피하고 돌진이 끝난 뒤 반격하세요.' },
+  sunwarden: { enemyId: 'forge_captain', pattern: ['kiln_vents','slam','spin'], behavior: 'shield', hp: 13800, tactic: '빛의 고리 바깥에서 과열선을 피한 뒤 방패가 열린 순간에 집중하세요.' },
+  void_oracle: { enemyId: 'frost_captain', pattern: ['archive_retrace','fan','archive_hourglass'], dodge: 0.16, hp: 15800, tactic: '보랏빛 파편이 멈춘 자리만 밟고, 되감긴 기록 경로로 돌아가지 마세요.' },
 };
 
 /** Accept IDs only: caller-provided scale, rewards and encounter data cannot replace the catalog.

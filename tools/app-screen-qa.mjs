@@ -106,7 +106,10 @@ for(const [engine,launcher] of Object.entries({chromium,firefox,webkit})){
   await page.locator('#btn-pause').tap();await page.locator('#btn-giveup').tap();await page.locator('#btn-result-lobby').tap();
   await page.waitForFunction(()=>window.app.mode==='lobby');
   await page.locator('#btn-expedition').tap();await page.getByRole('button',{name:'결투장',exact:true}).tap();
-  await page.waitForFunction(()=>[...document.querySelectorAll('.exp-rivals article > img')].length===3&&[...document.querySelectorAll('.exp-rivals article > img')].every(e=>e.complete&&e.naturalWidth===768),null,{timeout:30000});
+  const arenaCount=6;
+  const arenaImages=page.locator('.exp-rivals article > img');
+  for(let i=0;i<arenaCount;i++){await arenaImages.nth(i).scrollIntoViewIfNeeded();await page.waitForTimeout(80);}
+  await page.waitForFunction(count=>[...document.querySelectorAll('.exp-rivals article > img')].length===count&&[...document.querySelectorAll('.exp-rivals article > img')].every(e=>e.complete&&e.naturalWidth===768),arenaCount,{timeout:30000});
   r.arena=[];
   for(const size of [{width:320,height:568},{width:390,height:844},{width:667,height:375}]){
    await page.setViewportSize(size);if(await page.locator('#btn-ignore-rotate').isVisible())await page.locator('#btn-ignore-rotate').tap();
@@ -117,8 +120,8 @@ for(const [engine,launcher] of Object.entries({chromium,firefox,webkit})){
     const cards=[...document.querySelectorAll('.exp-rivals article')].map(e=>{const b=e.getBoundingClientRect();return {left:b.left,right:b.right};});
     return {portraits,rewards,buttons,cards,viewport:{width:innerWidth,height:innerHeight},overflow:document.documentElement.scrollWidth>innerWidth+1};
    });
-   assert(new Set(arena.portraits.map(p=>p.src)).size===3&&arena.portraits.every(p=>!p.fallback&&p.width===768),'Duplicate or fallback arena portraits');
-   assert(arena.rewards.length===6&&arena.rewards.every(i=>i.width>0&&i.width<=36&&i.height>0&&i.height<=36),'Portrait sizing leaked into reward icons');
+   assert(new Set(arena.portraits.map(p=>p.src)).size===arenaCount&&arena.portraits.length===arenaCount&&arena.portraits.every(p=>!p.fallback&&p.width===768),'Duplicate or fallback arena portraits');
+   assert(arena.rewards.length===arenaCount*2&&arena.rewards.every(i=>i.width>0&&i.width<=36&&i.height>0&&i.height<=36),'Portrait sizing leaked into reward icons');
    assert(arena.buttons.every(b=>b.height>=44)&&arena.cards.every(c=>c.left>=0&&c.right<=size.width+1)&&!arena.overflow,'Arena touch target or horizontal overflow');
    r.arena.push(arena);await page.screenshot({path:`${dir}/${engine}-${size.width}-arena.png`});
   }
