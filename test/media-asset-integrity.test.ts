@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { HEROES } from '../src/data/heroes.js';
 import { ITEM_BY_ID } from '../src/data/items.js';
 
@@ -17,5 +18,15 @@ test('hero skill and dropped-gear portraits are shipped, decodable image files',
     const bytes = readFileSync(file);
     expect(bytes.byteLength).toBeGreaterThan(100);
     expect(isImage(bytes)).toBe(true);
+  }
+});
+
+test('seasonal encounter manifest hashes match the shipped originals', () => {
+  const manifest = JSON.parse(readFileSync('docs/media/seasonal-encounter-art.json', 'utf8'));
+  expect(manifest.assets.length).toBe(9);
+  for (const asset of manifest.assets) {
+    const bytes = readFileSync(`public${asset.file}`);
+    expect(bytes.byteLength).toBeGreaterThan(100);
+    expect(createHash('sha256').update(bytes).digest('hex')).toBe(asset.sha256);
   }
 });
