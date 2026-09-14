@@ -250,16 +250,16 @@ export const SKILLS = {
   // ================= 대마도사 (원소 · 광역 몹몰이) =================
   fireball: {
     dur: 0.6,
-    start(game, p) { game.fx.castCircle(p.pos, 0xff7a20, { radius: 2.4, life: 0.5 }); },
+    start(game, p) { game.fx.castCircle(p.pos, 0xff7a20, { radius: 2.4, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 0.62, life: 0.42 }); },
     cast(game, p, c) {
       const f = p.forward(new THREE.Vector3()); const sp = fwd(p, 1); sp.y = 1.4;
-      game.spawnProjectile({ pos: sp, dir: f, speed: 15, radius: 1.0, dmg: c.dmg, color: 0xff7a20, size: 0.9, owner: p, kb: 5, kind: 'magic', life: 1.0, trail: 0xff7a20, explode: { radius: 4.2, color: 0xff7a20 } });
+      game.spawnProjectile({ pos: sp, dir: f, speed: 15, radius: 1.0, dmg: c.dmg, color: 0xff7a20, size: 0.9, owner: p, kb: 5, kind: 'magic', life: 1.0, trail: 0xff7a20, explode: { radius: 4.2, color: 0xff7a20, profile: 'fire' } });
       game.fx.flash(sp, 0xff9a40, { size: 2.4 }); audio.fire({ vol: 0.5, dur: 0.5 }); audio.whoosh({ vol: 0.4, pitch: 0.6, dur: 0.4 });
     },
   },
   chain: {
     dur: 0.9,
-    start(game, p) { game.fx.castCircle(p.pos, 0xa0e0ff, { radius: 3, life: 0.8 }); },
+    start(game, p) { game.fx.castCircle(p.pos, 0xa0e0ff, { radius: 3, life: 0.8 }); game.fx.abilitySignature?.(p.pos, 'arcane', { scale: 0.72, life: 0.58 }); },
     cast(game, p, c) {
       let from = p.pos.clone().setY(1.6); let cur = p; const hit = new Set(); const chainN = 10;
       let step = 0;
@@ -269,7 +269,7 @@ export const SKILLS = {
         if (!best) return;
         hit.add(best); const to = best.pos.clone().setY(1.2);
         game.fx.boltTex(from, to, 0xa0e0ff, { width: 1.8, life: 0.28 });
-        game.fx.flash(to, 0xc0f0ff, { size: 2.4 }); game.fx.burst(to, 0xa0e0ff, { n: 10, speed: 7, size: 0.3 });
+        game.fx.flash(to, 0xc0f0ff, { size: 2.4 }); game.fx.burst(to, 0xa0e0ff, { n: 10, speed: 7, size: 0.3 }); game.fx.abilitySignature?.(to, 'arcane', { scale: 0.38, life: 0.24 });
         if (step < 4) game.fx.light(to, 0x80c0ff, 8, 8, 0.3);
         game.damageEnemy(best, c.dmg * (1 - step * 0.05), { kind: 'magic', kb: 1, stun: 0.4, source: p, dirx: to.x - from.x, dirz: to.z - from.z, quietStop: step > 2 });
         audio.zap({ vol: 0.4, dur: 0.22 }); game.renderer.shake(0.15); if (step < 2) audio.vibe(20);
@@ -281,7 +281,7 @@ export const SKILLS = {
   },
   blizzard: {
     dur: 1.0, total: 3.4,
-    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x80e0ff, { radius: 7, life: 3.2 }); },
+    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x80e0ff, { radius: 7, life: 3.2 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 1.65, life: 1.1, heavy: true }); },
     update(game, p, c, dt) {
       const m = game.input.move; const spd = p.stats.spd * 0.5; p.vel.set(m.x * spd, 0, m.y * spd);
       if (c.t > 0.6 && p.actionName !== 'Spellcasting') p.play('Spellcasting', { fade: 0.2 });
@@ -291,7 +291,7 @@ export const SKILLS = {
       if (c.data.tick <= 0) {
         c.data.tick = 0.4; const i = c.data.n = (c.data.n || 0) + 1;
         game.hitRadius(p.pos, 6.8, c.dmg, { kb: 0.5, kind: 'magic', slow: 1.2, source: p, dirFrom: p.pos, quietStop: true });
-        game.fx.shockTex(p.pos, 0xc0f0ff, { r1: 7.5, life: 0.5 });
+        game.fx.shockTex(p.pos, 0xc0f0ff, { r1: 7.5, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 0.55, life: 0.32 });
         const a = Math.random() * Math.PI * 2, r = 1 + Math.random() * 4;
         game.fx.iceBurst(p.pos.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)), { size: 4, life: 0.45 });
         game.fx.burst(p.pos.clone().setY(0.3), 0xd0f4ff, { n: 20, speed: 8, size: 0.35, up: 0.6, spread: 0.6 });
@@ -301,7 +301,7 @@ export const SKILLS = {
   },
   meteor: {
     dur: 1.0, total: 3.0,
-    start(game, p, c) { audio.magic({ vol: 0.5, base: 261, notes: [0, 7, 12, 19, 24, 31], step: 0.1, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff9a40, { radius: 6, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 8, width: 2, life: 0.9, color: 0xff9a40 }); },
+    start(game, p, c) { audio.magic({ vol: 0.5, base: 261, notes: [0, 7, 12, 19, 24, 31], step: 0.1, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff9a40, { radius: 6, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 8, width: 2, life: 0.9, color: 0xff9a40 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 1.35, life: 0.78, heavy: true }); },
     cast(game, p, c) {
       const focus = densest(game, p, 15, 5) || fwd(p, 4);
       const pts = [];
@@ -313,10 +313,8 @@ export const SKILLS = {
         game.after(0.4, () => {
           game.vacuum(pt, 6, 8);
           game.hitRadius(pt, 4.2, c.dmg, { kb: 7, kind: 'magic', up: true, source: p, dirFrom: pt, quietStop: i > 1 });
-          game.fx.explosion(pt, { size: 7, color: 0xffa060, life: 0.55 });
-          game.fx.shockTex(pt, 0xffa040, { r1: 6, life: 0.5 });
-          game.fx.burst(pt.clone().setY(0.5), 0xff8a30, { n: 26, speed: 12, size: 0.5, up: 1.3, grav: 16 });
-          game.fx.dustPuff(pt, { size: 5 }); if (i < 3) game.fx.light(pt, 0xff7a20, 14, 14, 0.6); game.fx.scorch(pt, { radius: 3.2, life: 6 });
+          game.fx.abilitySignature?.(pt, 'fire', { scale: 1.05, life: 0.56, heavy: i === 0 });
+          game.fx.dustPuff(pt, { size: 5 }); game.fx.scorch(pt, { radius: 3.2, life: 6 });
           game.renderer.shake(0.7); game.renderer.punch(0.6); if (i === 0) game.renderer.flashScreen(0.3, 0xffa060); game.timeCtl.hitstop(0.05);
           audio.boom({ vol: 0.85, dur: 0.7, low: 50 }); audio.vibe([50, 20, 50]);
         });
@@ -332,6 +330,7 @@ export const SKILLS = {
       const t = densest(game, p, 13, 3.5); if (t) p.face(t.x, t.z);
       const f = p.forward(new THREE.Vector3()); p.vel.copy(f).multiplyScalar(28); p.invuln = 0.6; c.data.hit = new Set(); c.data.g = 0;
       audio.whoosh({ vol: 0.7, pitch: 0.5, dur: 0.5 }); game.fx.dustPuff(p.pos, { size: 2.5, life: 0.5 }); game.fx.flash(p.pos.clone().setY(1), 0xb26bff, { size: 3.5 });
+      game.fx.abilitySignature?.(p.pos, 'void', { scale: 0.72, life: 0.38 });
       game.renderer.aberr = 0.9; game.renderer.radial = 0.4; audio.vibe(30);
     },
     update(game, p, c, dt) {
@@ -339,7 +338,7 @@ export const SKILLS = {
       for (const e of game.enemies) { if (!e.alive || c.data.hit.has(e)) continue; if (p.distTo(e) < 2.6) { c.data.hit.add(e); game.damageEnemy(e, c.dmg, { kind: 'slash', kb: 2, stun: 0.5, source: p, dirx: p.vel.x, dirz: p.vel.z, quietStop: c.data.hit.size > 2 }); game.fx.slashSprite(e.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0xd0a0ff, { size: 3, life: 0.22, tilt: -1.2 }); } }
       if (c.t > 0.42) p.vel.multiplyScalar(Math.pow(0.001, dt));
     },
-    end(game, p, c) { p.vel.set(0, 0, 0); game.fx.slashSprite(p.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0xd0a0ff, { size: 4.5, life: 0.3, tilt: -1.4 }); game.fx.shockTex(p.pos, 0xb26bff, { r1: 4, life: 0.3 }); audio.whoosh({ vol: 0.5, pitch: 1.4, dur: 0.2 }); },
+    end(game, p, c) { p.vel.set(0, 0, 0); game.fx.slashSprite(p.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0xd0a0ff, { size: 4.5, life: 0.3, tilt: -1.4 }); game.fx.shockTex(p.pos, 0xb26bff, { r1: 4, life: 0.3 }); game.fx.abilitySignature?.(p.pos, 'void', { scale: 0.85, life: 0.42, heavy: true }); audio.whoosh({ vol: 0.5, pitch: 1.4, dur: 0.2 }); },
   },
   poison_bomb: {
     dur: 0.8, total: 0.8,
@@ -351,7 +350,7 @@ export const SKILLS = {
       audio.whoosh({ vol: 0.3, pitch: 1.5, dur: 0.3 });
       game.after(fl, () => {
         audio.play('hit_glass', { vol: 0.7, rate: 0.8 }); audio.fire({ vol: 0.3, dur: 0.8 });
-        game.fx.explosion(target, { size: 5, color: 0x80ff90, life: 0.5 });
+        game.fx.abilitySignature?.(target, 'nature', { scale: 1.15, life: 0.58, heavy: true });
         game.fx.castCircle(target, 0x60ff80, { radius: 4.5, life: 4.2, demon: true });
         let ticks = 9; const tick = () => {
           if (ticks-- <= 0) return;
@@ -656,7 +655,7 @@ export const SKILLS = {
   // ── 대마도사 Lv.20 : 시간 정지 + 각인 (멈춘 동안 준 피해가 해제 순간 터진다) ──
   chrono_seal: {
     dur: 1.0,
-    start(game, p) { game.fx.castCircle(p.pos, 0xc0d8ff, { radius: 8, life: 1.0 }); audio.magic({ vol: 0.5, base: 392, notes: [0, 5, 10, 14, 19], step: 0.09, type: 'triangle' }); audio.charge({ vol: 0.4, dur: 0.9 }); },
+    start(game, p) { game.fx.castCircle(p.pos, 0xc0d8ff, { radius: 8, life: 1.0 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 1.65, life: 0.85, heavy: true }); audio.magic({ vol: 0.5, base: 392, notes: [0, 5, 10, 14, 19], step: 0.09, type: 'triangle' }); audio.charge({ vol: 0.4, dur: 0.9 }); },
     cast(game, p, c) {
       const center = p.pos.clone(); const R = 9.5, FREEZE = 3.0;
       const sealed = game.enemies.filter((e) => e.alive && !e.spawning && p.distTo(e) < R).slice(0, 24).map((e) => ({ e, hp: e.hp }));
@@ -682,7 +681,7 @@ export const SKILLS = {
       // 해제 — 각인된 피해가 터진다
       game.after(FREEZE, () => {
         if (!game.active) return;
-        game.renderer.flashScreen(0.45, 0xdfe8ff); game.timeCtl.slowmo(0.35, 0.5); game.renderer.shake(0.9); game.renderer.punch(1.2);
+        game.renderer.flashScreen(0.45, 0xdfe8ff); game.fx.abilitySignature?.(center, 'frost', { scale: 1.8, life: 0.62, heavy: true }); game.timeCtl.slowmo(0.35, 0.5); game.renderer.shake(0.9); game.renderer.punch(1.2);
         audio.boom({ vol: 1, dur: 0.9, low: 55 }); audio.shatter({ vol: 0.7 }); audio.vibe([90, 40, 120]);
         sealed.forEach((s, i) => game.after(i * 0.05, () => {
           const taken = Math.max(0, s.hp - (s.e.alive ? s.e.hp : 0));
