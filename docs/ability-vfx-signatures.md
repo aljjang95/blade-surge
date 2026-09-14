@@ -1,13 +1,16 @@
 # Ability VFX signatures
 
 Elemental skills now use a small authored signature table in `src/engine/fx.js`.
-Each school selects its own atlas pair, palette, radius and particle profile while
+Each school selects its own primary/secondary atlas pair, palette, radius and particle profile while
 reusing the existing FX scheduler, particle pools and VFX textures.
 
 ## Runtime contract
 
 - `FX.prototype.abilitySignature(position, profile, options)` clamps scale and
   lifetime so scripted skill data cannot create unbounded effects.
+- Every cast has a primary and smaller secondary atlas cue so steel, fire, frost,
+  arcane, nature and void keep distinct silhouettes when several party members
+  hit the same target. The secondary cue stays enabled on the lite tier.
 - Heavy casts add a larger ring, flash and light cue. Fire may add the existing
   fire pillar on the normal quality tier; the low quality tier omits that pillar.
 - Projectile impacts pass `explode.profile` to `Battle.explode`, so legacy

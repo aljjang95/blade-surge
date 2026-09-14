@@ -38,6 +38,8 @@ const ITEM_STYLES = {
   a_titan: [0x555e66, 0xb0a17a, 0x8e9ca4, 'plate'],
   a_sun: [0xa57228, 0xffdc8b, 0xe8ae47, 'plate'],
   a_king: [0x713b57, 0xebc873, 0xb66479, 'plate'],
+  sg_moonward_aegis: [0x233c5c, 0x8fd8e8, 0x72dfff, 'crystal'],
+  sg_abyss_husk: [0x2b1644, 0xb26bff, 0xd5a6ff, 'plate'],
 };
 
 export function armorStyle(item, heroId) {

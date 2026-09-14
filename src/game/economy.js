@@ -113,8 +113,8 @@ export class Economy {
   hero(id = this.s.selected) { return this.s.heroes[id]; }
   ownHero(id) { return !!this.s.heroes[id]; }
   heroEquipBonus(id, equipment = this.hero(id).equip) {
-    const b = { atk: 0, hp: 0, def: 0, crit: 0, atkPct: 0, hpPct: 0, critDmg: 0, ultGain: 0, sets: {}, procs: [] };
-    for (const sl of SLOTS) { const iid = equipment[sl]; const inst = this.s.inventory.find((x) => x.uid === iid); if (inst) { const st = itemStats(inst); b.atk += st.atk; b.hp += st.hp; b.def += st.def; b.crit += st.crit; const set = ITEM_BY_ID[inst.id].set; b.sets[set] = (b.sets[set] || 0) + 1; } }
+    const b = { atk: 0, hp: 0, def: 0, crit: 0, atkPct: 0, hpPct: 0, critDmg: 0, ultGain: 0, sets: {}, procs: [], summons: [] };
+    for (const sl of SLOTS) { const iid = equipment[sl]; const inst = this.s.inventory.find((x) => x.uid === iid); if (inst) { const def = ITEM_BY_ID[inst.id]; const st = itemStats(inst); b.atk += st.atk; b.hp += st.hp; b.def += st.def; b.crit += st.crit; const set = def.set; b.sets[set] = (b.sets[set] || 0) + 1; for (const proc of def.procs || []) if (!b.procs.includes(proc)) b.procs.push(proc); if (def.summon && !b.summons.some((summon) => summon.id === def.summon.id)) b.summons.push({ ...def.summon, itemId: def.id }); } }
     b.active = [];
     for (const sid in b.sets) {
       const n = b.sets[sid]; const S = SETS[sid]; if (!S) continue;
