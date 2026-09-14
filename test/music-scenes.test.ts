@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { musicForScene, musicAfterIntro, MUSIC_MIX } from '../src/data/music.js';
+import { musicForScene, musicAfterIntro, MUSIC_MIX, FLOWMUSIC_CUE_PLAN, flowMusicBriefForRoute } from '../src/data/music.js';
 import { CHAPTERS, stageDef } from '../src/data/stages.js';
 import { DUNGEONS, ARENA_RIVALS } from '../src/data/expansion.js';
 
@@ -58,4 +58,14 @@ test('a completed intro resumes only its still-active battle and uses the curren
   expect(musicAfterIntro({...current,stage:{...stage}})).toBeNull();
   const arena={...stage,expedition:{kind:'arena'}};
   expect(musicAfterIntro({...current,stage:arena,expectedStage:arena,boss:true})).toBe('regions/arena');
+});
+
+test('new seasonal routes carry a distinct FlowMusic brief with a verified fallback cue', () => {
+  expect(FLOWMUSIC_CUE_PLAN.length).toBeGreaterThanOrEqual(6);
+  for (const route of ['eclipse_hydra_vault', 'ashforge_catacomb', 'astral_leviathan_spire']) {
+    const brief = flowMusicBriefForRoute(route);
+    expect(brief?.status).toBe('external-gui-pending');
+    expect(brief?.fallback).toMatch(/^regions\//);
+    expect(brief?.target).toBeTruthy();
+  }
 });

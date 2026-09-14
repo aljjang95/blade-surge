@@ -77,7 +77,7 @@ test('normalization rejects malformed counts, IDs and selection; save failure ro
   expect(x.begin('dungeon','glass_garden').ok).toBe(false); expect(eco.s).toEqual(before);
 });
 test('content has distinct playable themes, actual new gear and bounded rewards', () => {
-  expect(new Set(DUNGEONS.map(d=>d.theme)).size).toBe(3); expect(ARENA_RIVALS.length).toBeGreaterThanOrEqual(3);
+  expect(new Set(DUNGEONS.map(d=>d.theme)).size).toBe(4); expect(ARENA_RIVALS.length).toBeGreaterThanOrEqual(6);
   expect(EXPEDITION_ITEMS.length).toBe(12);
   for(const item of EXPEDITION_ITEMS) { expect((ITEM_BY_ID as Record<string, unknown>)[item.id]).toBeTruthy(); expect((SETS as Record<string, any>)[item.set].four.procs.length).toBe(2); }
   for(const d of DUNGEONS) { expect(d.energy).toBe(4); expect(d.rewards.materials).toBeTruthy(); expect(d.stage.scale).toBeLessThan(2); }

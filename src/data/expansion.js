@@ -59,6 +59,27 @@ export const DUNGEONS = [
     bossEnemy: 'nightglass_archivist', bossHp: 17200, bossName: '밤유리의 기록관', rosterMode: 'nightglass',
     roster: { trash: ['nightglass_page', 'frost_mirror', 'ghost', 'skel_rogue', 'frost_mirror', 'golem_guard'], ranged: ['archive_scribe', 'ghost_skull', 'skel_mage'], elite: ['archive_warden', 'elite_yeti', 'elite_golem'] },
   }),
+  dungeon('eclipse_hydra_vault', '일식의 심연 수문', 'tide', 4, 1, 'glass_leaf', '검은 파도가 잠시 멈춘 수문에서 세 머리의 맹세를 끊으세요.', {
+    art: ENCOUNTER_ART.boss_obsidian_hydra, accent: '#72e0d3', subtitle: 'ECLIPSE HYDRA VAULT',
+    objective: '세 개의 역류 밸브를 잠그고 흑요의 삼두룡을 쓰러뜨리세요.',
+    tactic: '물결이 지나간 통로가 잠시 안전합니다. 세 머리가 동시에 고개를 들면 중앙에서 벗어나세요.',
+    bossEnemy: 'obsidian_hydra', bossHp: 18800, bossName: '흑요의 삼두룡', rosterMode: 'eclipse',
+    roster: { trash: ['eclipse_scalelet', 'glass_shardling', 'bomb_abyss', 'eclipse_tidecaller', 'squidle', 'blob_spiky'], ranged: ['abyss_seer', 'eclipse_tidecaller', 'glub'], elite: ['hydra_scaleguard', 'elite_dragonling', 'elite_golem'] },
+  }),
+  dungeon('ashforge_catacomb', '재벼림 지하 제련소', 'forge', 2, 2, 'ember_core', '꺼지지 않는 망치 소리를 따라가 재벼림의 심장을 회수하세요.', {
+    art: ENCOUNTER_ART.boss_ash_colossus, accent: '#ff9b66', subtitle: 'ASHFORGE CATACOMB',
+    objective: '과열된 용광로 네 곳을 식히고 잿빛 거수의 사슬을 끊으세요.',
+    tactic: '사슬이 끌리는 방향의 반대편으로 이동한 뒤 망치 충격파가 지나가면 냉각로를 활성화하세요.',
+    bossEnemy: 'ash_colossus', bossHp: 20400, bossName: '잿빛 재벼림 거수', rosterMode: 'ashforge',
+    roster: { trash: ['ash_chainling', 'chain_forger', 'bomb_imp', 'ash_smith', 'orc_blob', 'cinderling'], ranged: ['ember_scribe', 'ash_smith', 'tribal_shaman'], elite: ['foundry_bulwark', 'slag_colossus', 'elite_orc_chief'] },
+  }),
+  dungeon('astral_leviathan_spire', '성운의 레비아탄 첨탑', 'frost', 3, 3, 'star_dust', '별의 잔해가 쌓인 첨탑에서 귀환 좌표를 삼킨 레비아탄을 추적하세요.', {
+    art: ENCOUNTER_ART.boss_astral_leviathan, accent: '#9ccaff', subtitle: 'ASTRAL LEVIATHAN SPIRE',
+    objective: '무너지는 별자리 네 개를 복원하고 서고의 레비아탄을 봉인하세요.',
+    tactic: '모래시계가 가리킨 별자리만 밟고, 기록 파편이 모이면 외곽 고리로 빠져나오세요.',
+    bossEnemy: 'astral_leviathan', bossHp: 22400, bossName: '성운의 레비아탄', rosterMode: 'astral',
+    roster: { trash: ['astral_pagelet', 'nightglass_page', 'frost_mirror', 'astral_orbitling', 'ghost_skull', 'star_wisp'], ranged: ['archive_scribe', 'astral_pagelet', 'skel_mage'], elite: ['celestial_warden', 'archive_warden', 'elite_wraith'] },
+  }),
 ];
 export const JOBS = [
   { id: 'guardian', name: '수호 기사', heroId: 'knight', baseHero: 'knight', questId: 'first_oath', description: '기사 기반 · 생존과 보호에 특화' },
@@ -88,8 +109,11 @@ export const EXPEDITION_QUESTS = [
   quest('expedition_veteran', '탐험 던전 10회 클리어', 'dungeonWins', 10, { gold: 1200, xp: 180 }),
 ];
 export const ARENA_RIVALS = [
-  { id: 'rookie', name: '연습 기사', heroId: 'knight', minLevel: 1, rating: 100, scale: 0.9 },
-  { id: 'duelist', name: '바람의 결투가', heroId: 'rogue', minLevel: 2, rating: 300, scale: 1.25 },
-  { id: 'champion', name: '서리의 챔피언', heroId: 'mage', minLevel: 4, rating: 600, scale: 1.7 },
-].map(r => ({ ...r, portrait: ENCOUNTER_ART[`arena_${r.id}`], description: 'AI 상대 연습 결투 · 에너지 무료', energy: 0, stage: { ...stageDef(1, 1), code: `arena_${r.id}`, name: r.name, scale: r.scale }, rewards: { gold: 60, xp: 25, rating: 15 } }));
+  { id: 'rookie', name: '연습 기사', heroId: 'knight', minLevel: 1, rating: 100, scale: 0.9, rank: 'I', description: '방패와 강타의 빈틈을 찾고 첫 승리를 기록하세요.' },
+  { id: 'duelist', name: '바람의 결투가', heroId: 'rogue', minLevel: 2, rating: 300, scale: 1.25, rank: 'II', description: '빠른 돌진 이후의 공격 창을 읽어 측면을 잡으세요.' },
+  { id: 'champion', name: '서리의 챔피언', heroId: 'mage', minLevel: 4, rating: 600, scale: 1.7, rank: 'III', description: '서리 경고를 읽고 탄막 사이의 짧은 틈을 좁히세요.' },
+  { id: 'thunder_lancer', name: '검은 번개의 창', heroId: 'knight', minLevel: 5, rating: 900, scale: 1.9, rank: 'IV', description: '번개 창이 땅에 박힌 순간, 창끝 바깥으로 파고드세요.' },
+  { id: 'sunwarden', name: '태양의 수문장', heroId: 'barbarian', minLevel: 6, rating: 1250, scale: 2.05, rank: 'V', description: '빛의 고리 바깥에서 강타를 피하고 회복 창을 끊으세요.' },
+  { id: 'void_oracle', name: '공허유리의 예언자', heroId: 'mage', minLevel: 7, rating: 1650, scale: 2.2, rank: 'VI', description: '보랏빛 파편이 멈춘 짧은 순간에만 안전하게 접근하세요.' },
+].map(r => ({ ...r, portrait: r.portrait || ENCOUNTER_ART[`arena_${r.id}`], description: r.description || 'AI 상대 연습 결투 · 에너지 무료', energy: 0, stage: { ...stageDef(1, 1), code: `arena_${r.id}`, name: r.name, scale: r.scale }, rewards: { gold: 60, xp: 25, rating: 15 } }));
 export const accountLevelXp = level => 150 + (level - 1) * 75;
