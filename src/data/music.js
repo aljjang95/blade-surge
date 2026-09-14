@@ -6,6 +6,12 @@ const REGIONS = new Set(['garden', 'forge', 'frost', 'tide', 'crown', 'homecomin
 // pending cue must never become a broken URL in a live build.
 export const FLOWMUSIC_CUE_PLAN = Object.freeze([
   { id: 'lobby-aurora-20260914', scene: 'lobby', target: 'lobby', fallback: 'regions/lobby', status: 'external-gui-pending' },
+  { id: 'dungeon-garden-glass-20260914', scene: 'dungeon', route: 'glass_garden', target: 'garden', fallback: 'regions/garden', status: 'external-gui-pending' },
+  { id: 'dungeon-forge-ember-20260914', scene: 'dungeon', route: 'ember_vault', target: 'forge', fallback: 'regions/forge', status: 'external-gui-pending' },
+  { id: 'dungeon-frost-star-20260914', scene: 'dungeon', route: 'star_archive', target: 'frost', fallback: 'regions/frost', status: 'external-gui-pending' },
+  { id: 'dungeon-garden-bellfall-20260914', scene: 'dungeon', route: 'bellfall_crypt', target: 'garden', fallback: 'regions/garden', status: 'external-gui-pending' },
+  { id: 'dungeon-tide-cinder-20260914', scene: 'dungeon', route: 'cinder_tide_lock', target: 'tide', fallback: 'regions/tide', status: 'external-gui-pending' },
+  { id: 'dungeon-frost-nightglass-20260914', scene: 'dungeon', route: 'nightglass_observatory', target: 'frost', fallback: 'regions/frost', status: 'external-gui-pending' },
   { id: 'dungeon-tide-eclipse-20260914', scene: 'dungeon', route: 'eclipse_hydra_vault', target: 'tide', fallback: 'regions/tide', status: 'external-gui-pending' },
   { id: 'dungeon-forge-ash-20260914', scene: 'dungeon', route: 'ashforge_catacomb', target: 'forge', fallback: 'regions/forge', status: 'external-gui-pending' },
   { id: 'dungeon-frost-astral-20260914', scene: 'dungeon', route: 'astral_leviathan_spire', target: 'frost', fallback: 'regions/frost', status: 'external-gui-pending' },
@@ -30,6 +36,10 @@ export function musicForScene({ scene = 'battle', stage = null, boss = false } =
   if (scene === 'lobby') return 'regions/lobby';
   if (stage?.expedition?.kind === 'arena') return 'regions/arena';
   if (boss) return 'regions/boss';
+  if (stage?.expedition?.kind === 'dungeon' && stage?.expedition?.depth === 'deep') {
+    const routeCue = flowMusicBriefForRoute(stage.expedition.id);
+    if (routeCue?.fallback) return routeCue.fallback;
+  }
   if (stage?.expedition?.kind === 'dungeon' && REGIONS.has(stage?.theme)) return `regions/${stage.theme}`;
   if (stage?.ch === 6 || stage?.chapter?.id === 6 || stage?.encounterPrefix === 'homecoming' || stage?.chapter?.encounterPrefix === 'homecoming') return 'regions/homecoming';
   const theme = stage?.theme || stage?.chapter?.theme;
