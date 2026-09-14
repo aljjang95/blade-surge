@@ -119,7 +119,7 @@ export const SKILLS = {
       game.fx.explosion(center, { size: 4.5, color: 0xffe0b0, life: 0.45 });
       game.fx.dustPuff(center, { size: 5 }); game.fx.burst(center.clone().setY(0.5), 0xffd080, { n: 26, speed: 9, size: 0.4 });
       game.fx.light(center, 0xffd080, 12, 14, 0.4);
-      game.renderer.shake(0.8); game.renderer.punch(1); game.timeCtl.hitstop(0.09);
+      game.renderer.shake(0.8); game.renderer.punch(1);
       audio.boom({ vol: 0.8, dur: 0.5, low: 70 }); audio.play('hit_plate', { vol: 0.9, rate: 0.8 }); audio.vibe([40, 30, 60]);
     },
   },
@@ -168,7 +168,7 @@ export const SKILLS = {
       game.fx.shockTex(hitC, 0xffd060, { r1: 14, life: 0.7 }); game.fx.holyBurst(hitC, { size: 12, life: 0.5 });
       game.fx.dustPuff(hitC, { size: 8 }); game.fx.burst(hitC.setY(1), 0xffe080, { n: 50, speed: 14, size: 0.5, up: 0.8 });
       game.fx.light(fwd(p, 3), 0xffd060, 16, 18, 0.6);
-      game.renderer.shake(1); game.renderer.punch(1.5); game.renderer.flashScreen(0.45, 0xfff0c0); game.renderer.aberr = 1.2; game.timeCtl.hitstop(0.16); game.timeCtl.slowmo(0.35, 0.5);
+      game.renderer.shake(1); game.renderer.punch(1.5); game.renderer.flashScreen(0.45, 0xfff0c0); game.renderer.aberr = 1.2; game.timeCtl.slowmo(0.35, 0.5);
       audio.boom({ vol: 1, dur: 0.9, low: 50 }); audio.bladeWave({ vol: 1 }); audio.holy({ vol: 0.45, base: 523, dur: 1.1 }); audio.vibe([80, 40, 120]);
     },
   },
@@ -203,7 +203,7 @@ export const SKILLS = {
       game.fx.scorch(center, { radius: 4.5, life: 5 }); game.fx.dustPuff(center, { size: 7, life: 1.1 });
       game.fx.burst(center.clone().setY(0.4), 0xff8040, { n: 40, speed: 12, size: 0.5, up: 1.5, grav: 20 });
       game.fx.light(center, 0xff8040, 14, 16, 0.5);
-      game.renderer.shake(1); game.renderer.punch(1.2); game.timeCtl.hitstop(0.12); game.renderer.flashScreen(0.3, 0xffa060);
+      game.renderer.shake(1); game.renderer.punch(1.2); game.renderer.flashScreen(0.3, 0xffa060);
       audio.boom({ vol: 1, dur: 0.8, low: 45 }); audio.play('hit_mining', { vol: 1, rate: 0.7 }); audio.vibe([60, 30, 90]);
     },
   },
@@ -241,7 +241,7 @@ export const SKILLS = {
         game.fx.burst(target.clone().setY(0.5), 0xff7a20, { n: 70, speed: 16, size: 0.6, up: 1.4, grav: 18 });
         game.fx.dustPuff(target, { size: 10, life: 1.4 }); game.fx.embers(target, 0xff6020, { n: 60, radius: 5, life: 2.2, rise: 4 });
         game.fx.light(target, 0xff6020, 20, 22, 1);
-        game.renderer.shake(1); game.renderer.punch(1.6); game.renderer.flashScreen(0.5, 0xffa060); game.renderer.aberr = 1.2; game.timeCtl.hitstop(0.18); game.timeCtl.slowmo(0.3, 0.6);
+        game.renderer.shake(1); game.renderer.punch(1.6); game.renderer.flashScreen(0.5, 0xffa060); game.renderer.aberr = 1.2; game.timeCtl.slowmo(0.3, 0.6);
         audio.boom({ vol: 1, dur: 1.2, low: 40 }); audio.play('hit_mining', { vol: 1, rate: 0.5 }); audio.fire({ vol: 0.5, dur: 1.5 }); audio.vibe([100, 50, 150]);
       });
     },
@@ -315,7 +315,7 @@ export const SKILLS = {
           game.hitRadius(pt, 4.2, c.dmg, { kb: 7, kind: 'magic', up: true, source: p, dirFrom: pt, quietStop: i > 1 });
           game.fx.abilitySignature?.(pt, 'fire', { scale: 1.05, life: 0.56, heavy: i === 0 });
           game.fx.dustPuff(pt, { size: 5 }); game.fx.scorch(pt, { radius: 3.2, life: 6 });
-          game.renderer.shake(0.7); game.renderer.punch(0.6); if (i === 0) game.renderer.flashScreen(0.3, 0xffa060); game.timeCtl.hitstop(0.05);
+          game.renderer.shake(0.7); game.renderer.punch(0.6); if (i === 0) game.renderer.flashScreen(0.3, 0xffa060);
           audio.boom({ vol: 0.85, dur: 0.7, low: 50 }); audio.vibe([50, 20, 50]);
         });
       }));
@@ -377,7 +377,7 @@ export const SKILLS = {
         game.fx.slashSprite(p.pos.clone().setY(0.9 + (i % 3) * 0.35), p.forward(new THREE.Vector3()), 0xd0a0ff, { size: 3.2, life: 0.18, tilt: (i % 2 ? 0.6 : -1.6), flip: i % 2 === 1 });
         if (i % 2 === 0) game.fx.ghost(p.model, 0xb26bff, { life: 0.25, opacity: 0.4 });
         audio.whoosh({ vol: 0.32, pitch: 1.3 + i * 0.07, dur: 0.12 });
-        if (i === 9) { game.hitArea(p, p.pos, p.yaw, 4, 180, c.dmg * 2.5, { kb: 6, kind: 'slash', finisher: true, source: p }); game.fx.explosion(fwd(p, 1.5), { size: 5, color: 0xd0a0ff, life: 0.4 }); game.fx.shockTex(p.pos, 0xb26bff, { r1: 5, life: 0.4 }); game.renderer.shake(0.5); game.timeCtl.hitstop(0.08); }
+        if (i === 9) { game.hitArea(p, p.pos, p.yaw, 4, 180, c.dmg * 2.5, { kb: 6, kind: 'slash', finisher: true, source: p }); game.fx.explosion(fwd(p, 1.5), { size: 5, color: 0xd0a0ff, life: 0.4 }); game.fx.shockTex(p.pos, 0xb26bff, { r1: 5, life: 0.4 }); game.renderer.shake(0.5); }
       }
     },
     end(game, p) { p.stopTrail(); },
@@ -448,7 +448,7 @@ export const SKILLS = {
         game.fx.holyBurst(center, { size: 9, life: 0.45 });
         game.fx.burst(center.clone().setY(0.8), 0xfff0c0, { n: 46, speed: 13, size: 0.45, up: 1.1 });
         game.fx.light(center, 0xffd060, 15, 16, 0.5);
-        game.renderer.shake(0.8); game.renderer.punch(1); game.timeCtl.hitstop(0.1); game.renderer.flashScreen(0.35, 0xfff0c0);
+        game.renderer.shake(0.8); game.renderer.punch(1); game.renderer.flashScreen(0.35, 0xfff0c0);
         audio.boom({ vol: 0.9, dur: 0.7, low: 60 }); audio.holy({ vol: 0.4, base: 660, dur: 0.8 }); audio.vibe([60, 30, 90]);
       });
     },
@@ -538,7 +538,7 @@ export const SKILLS = {
       game.fx.scorch(center, { radius: 4, life: 5 }); game.fx.dustPuff(center, { size: 7, life: 1.1 });
       game.fx.burst(center.clone().setY(0.6), 0xff8040, { n: 44, speed: 14, size: 0.5, up: 1.4, grav: 18 });
       game.fx.light(center, 0xff8040, 14, 15, 0.5);
-      game.renderer.shake(0.9); game.renderer.punch(1.1); game.timeCtl.hitstop(0.12); game.renderer.flashScreen(0.28, 0xffa060);
+      game.renderer.shake(0.9); game.renderer.punch(1.1); game.renderer.flashScreen(0.28, 0xffa060);
       audio.boom({ vol: 0.95, dur: 0.7, low: 50 }); audio.play('hit_mining', { vol: 0.9, rate: 0.75 }); audio.vibe([70, 30, 100]);
     },
   },
@@ -644,7 +644,7 @@ export const SKILLS = {
           game.fx.explosion(state.pos, { size: 7, color: 0xbfeaff, life: 0.5 });
           game.fx.shockTex(state.pos.clone().setY(0), 0x9fd8ff, { r1: 6, life: 0.5 });
           game.fx.burst(state.pos.clone(), 0xdff4ff, { n: 36, speed: 13, size: 0.4 });
-          game.renderer.shake(0.6); game.timeCtl.hitstop(0.08); audio.boom({ vol: 0.7, dur: 0.5, low: 90 }); audio.vibe([40, 20, 60]);
+          game.renderer.shake(0.6); audio.boom({ vol: 0.7, dur: 0.5, low: 90 }); audio.vibe([40, 20, 60]);
           state.done = true; lance.visible = false;
         }
       }, disposeLance);
@@ -732,7 +732,7 @@ export const SKILLS = {
           game.fx.explosion(hub, { size: 7, color: 0xd0a0ff, life: 0.5 });
           game.fx.shockTex(hub, 0xb26bff, { r1: 6.5, life: 0.5 });
           game.fx.burst(hub.clone().setY(0.8), 0xd0a0ff, { n: 40, speed: 12, size: 0.42 });
-          game.renderer.shake(0.7); game.renderer.punch(0.9); game.timeCtl.hitstop(0.1); game.renderer.flashScreen(0.3, 0xd0a0ff);
+          game.renderer.shake(0.7); game.renderer.punch(0.9); game.renderer.flashScreen(0.3, 0xd0a0ff);
           audio.boom({ vol: 0.8, dur: 0.6, low: 70 }); audio.dark({ vol: 0.4, base: 120, dur: 0.6 }); audio.vibe([60, 30, 80]);
         });
       });
@@ -787,7 +787,7 @@ export const SKILLS = {
       game.fx.shockTex(at, 0x8a4aff, { r1: 9, life: 0.6 });
       game.fx.burst(at.clone().setY(1), 0xd0a0ff, { n: 60, speed: 15, size: 0.5, up: 0.9 });
       game.fx.light(at, 0xb26bff, 16, 18, 0.6);
-      game.renderer.shake(1); game.renderer.punch(1.4); game.renderer.flashScreen(0.4, 0xd0a0ff); game.timeCtl.hitstop(0.14); game.timeCtl.slowmo(0.35, 0.5);
+      game.renderer.shake(1); game.renderer.punch(1.4); game.renderer.flashScreen(0.4, 0xd0a0ff); game.timeCtl.slowmo(0.35, 0.5);
       audio.boom({ vol: 1, dur: 0.9, low: 50 }); audio.bladeWave({ vol: 0.8 }); audio.vibe([90, 40, 130]);
     },
   },

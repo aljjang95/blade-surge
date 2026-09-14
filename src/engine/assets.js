@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { preloadArmory } from './armory-assets.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
@@ -133,6 +134,7 @@ export function mergeSkinned(scene, animations = []) {
 
 export async function preloadAll(onProgress) {
   await preloadSurfaceTextures();
+  await preloadArmory();
   let done = 0;
   await Promise.all(MODEL_LIST.map(async (n) => { await loadModel(n); done++; onProgress?.(done / MODEL_LIST.length); }));
 }

@@ -1,13 +1,17 @@
 #!/usr/bin/env node
 import { execFileSync } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
+import { devNull } from 'node:os';
+import { deploymentQuery } from './deploy-wrangler-oauth.mjs';
 import { mkdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { guard, readVersion } from './deploy-guard.mjs';
-import { acquireDeploymentLease, canReleaseDeploymentLease, cloudflareQuery, deployAndReconcile, latestDeployment, persistDeployment, reconcileDeployment, RECONCILABLE_STATUSES } from './deploy-control.mjs';
+import { acquireDeploymentLease, canReleaseDeploymentLease, deployAndReconcile, latestDeployment, persistDeployment, reconcileDeployment, RECONCILABLE_STATUSES } from './deploy-control.mjs';
 import config from './release-config.json' with { type: 'json' };
 
 process.chdir(fileURLToPath(new URL('..', import.meta.url)));
-const run = (file, args = [], capture = false) => execFileSync(process.execPath, [file, ...args], {
+const run = (file, args = [], capture = false) => execFileSync(process.execPath, [file, ...args,
+  ...(file === wrangler && process.argv.includes('--auth=wrangler') ? ['--env-file', devNull] : [])], {
   encoding: 'utf8', stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit', timeout: 120000,
 });
 const wrangler = 'node_modules/wrangler/bin/wrangler.js';
@@ -17,16 +21,18 @@ mkdirSync('_autopipe/evidence', { recursive: true });
 const persist = (receipt) => persistDeployment(receiptPath, receipt);
 let query, lease, receipt;
 try {
-  query = cloudflareQuery();
   if (process.argv.includes('--force')) throw new Error('force 우회는 지원하지 않습니다.');
   const recovering = process.argv.includes('--reconcile');
   const head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
   if (recovering) {
     receipt = JSON.parse(readFileSync(receiptPath, 'utf8'));
     if (!RECONCILABLE_STATUSES.includes(receipt.status) || receipt.head !== head || receipt.target !== config.origin || !/^[a-f0-9-]{36}$/.test(receipt.leaseOwner)) throw new Error('재조정할 배포 영수증과 HEAD가 다릅니다.');
+    query = deploymentQuery({ args: process.argv.slice(2), head, owner: receipt.leaseOwner });
     lease = await acquireDeploymentLease(query, { head, owner: receipt.leaseOwner, mustExist: true });
   } else {
-    lease = await acquireDeploymentLease(query, { head });
+    const owner = randomUUID();
+    query = deploymentQuery({ args: process.argv.slice(2), head, owner });
+    lease = await acquireDeploymentLease(query, { head, owner });
     const preflight = await guard();
     if (preflight.head !== head) throw new Error('잠금 획득 중 HEAD가 바뀌었습니다.');
     const previous = latestDeployment(deployments());
@@ -34,7 +40,7 @@ try {
     receipt = { ...preflight, status: 'prepared', preparedAt: new Date().toISOString(), leaseOwner: lease.owner,
       tag: 'bs-' + lease.owner.replaceAll('-', '').slice(0, 20), rollbackDeploymentId: previous.id, rollbackVersionId: previous.versions[0].version_id };
     persist(receipt);
-    run('node_modules/vite/bin/vite.js', ['build']); run('tools/write-version.mjs');
+    run('node_modules/vite/bin/vite.js', ['build', '--configLoader', 'native']); run('tools/write-version.mjs');
     const artifact = JSON.parse(readFileSync('dist/version.json', 'utf8'));
     if (artifact.sha !== head || artifact.dirty !== false) throw new Error('빌드와 검증한 커밋이 다릅니다.');
     const finalGuard = await guard(preflight.live);
