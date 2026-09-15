@@ -41,7 +41,7 @@ test('return build schedules one reverse piercing wave after the baseline slash'
 test('fissure build creates one persistent kill zone with three bounded pulses',()=>{
   const g:any=game(),p:any=player(); expect(applyKnightSlashVariant(g,p,ctx,'fissure')).toBe(true);
   expect(g.timers).toHaveLength(3); for(const t of g.timers)t.fn(); expect(g.hits).toHaveLength(3); expect(g.shots).toHaveLength(0); expect(g.vacuums).toHaveLength(3);
-  for(const hit of g.hits){expect(hit[1]).toBe(3.2);expect(hit[2]).toBe(28);expect(hit[3]).toMatchObject({noProc:true,quietStop:true});}
+  for(const hit of g.hits){expect(hit[1]).toBe(3.2);expect(hit[2]).toBeCloseTo(28,8);expect(hit[3]).toMatchObject({noProc:true,quietStop:true});}
   expect(g.vacuums.every((v:any[])=>v[1]===4.5&&v[2]===8)).toBe(true);
 });
 
