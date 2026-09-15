@@ -23,8 +23,9 @@ function equipEcho(app:any){
 
 test('legacy arsenal preset gains safe Q/E fallback without inventing equipment',()=>{
   const state=normalizeArsenal({heroes:{knight:{presets:[{name:'legacy',equipment:{}}]}}});
-  expect(state.heroes.knight.presets[0].skillLoadout).toEqual([4,5]);
-  expect(Object.values(state.heroes.knight.presets[0].equipment)).toEqual([null,null,null,null]);
+  const preset=state.heroes.knight.presets[0]; expect(preset).not.toBeNull();
+  expect(preset!.skillLoadout).toEqual([4,5]);
+  expect(Object.values(preset!.equipment)).toEqual([null,null,null,null]);
 });
 
 test('four-piece echo set exposes returning slash identity while two-piece stays classic',()=>{
