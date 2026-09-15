@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
-import { KNIGHT_SLASH_BUILD_IDS, KNIGHT_SLASH_VARIANTS, applyKnightSlashVariant, normalizeKnightSlashVariant } from '../src/game/knight-builds.js';
+import { KNIGHT_SLASH_BUILD_IDS, KNIGHT_SLASH_VARIANTS, applyKnightSlashVariant, knightSlashVariantFromBonus, normalizeKnightSlashVariant } from '../src/game/knight-builds.js';
 
 const player = () => ({ alive:true, def:{id:'knight'}, pos:new THREE.Vector3(), forward:(v:THREE.Vector3)=>v.set(0,0,1) });
 const ctx = { sk:{id:'holy_slash'}, dmg:100 };
@@ -11,12 +11,16 @@ const game = () => {
     hitRadius:(...args:any[])=>hits.push(args), fx:{ slashSprite(){}, shockTex(){} } };
 };
 
-test('knight exposes exactly three selectable build identities while legacy stays classic',()=>{
+test('knight exposes exactly three complete-set build identities while legacy stays classic',()=>{
   expect(KNIGHT_SLASH_BUILD_IDS).toEqual(['return','fissure','pierce']);
-  expect(KNIGHT_SLASH_BUILD_IDS.map(id=>KNIGHT_SLASH_VARIANTS[id].setId)).toEqual(['echo','anchor','aegis']);
+  expect(KNIGHT_SLASH_BUILD_IDS.map(id=>KNIGHT_SLASH_VARIANTS[id].setId)).toEqual(['arm_echo','arm_anchor','arm_aegis']);
   expect(normalizeKnightSlashVariant(undefined)).toBe('classic');
   expect(normalizeKnightSlashVariant('classic')).toBe('classic');
   expect(normalizeKnightSlashVariant('return')).toBe('return');
+  expect(knightSlashVariantFromBonus({procs:['arm_echo']})).toBe('classic');
+  expect(knightSlashVariantFromBonus({procs:['arm_echo','arm_echo_master']})).toBe('return');
+  expect(knightSlashVariantFromBonus({procs:['arm_anchor_master']})).toBe('fissure');
+  expect(knightSlashVariantFromBonus({procs:['arm_aegis_master']})).toBe('pierce');
 });
 
 test('classic and unrelated casts preserve the current skill without additive effects',()=>{
