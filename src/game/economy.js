@@ -1,10 +1,11 @@
 // 경제·진행 상태 (localStorage 저장). 결제는 전부 목업.
 import { HEROES, HERO_ORDER, levelExp, levelGold, starShards, skillUpGold, heroStats } from '../data/heroes.js';
-import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, itemStats, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
+import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, itemStats, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
 import { SKUS, GACHA, BATTLE_PASS, ENERGY, DAILY_REWARDS, PASS_TRACK } from '../data/shop.js';
 import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 import { normalizeSave } from './save.js';
 import { normalizeExpedition } from './expedition-economy.js';
+import { normalizeSkillLoadout } from './progression.js';
 
 const KEY = 'bladesurge_save_v1';
 const now = () => Date.now();
@@ -18,7 +19,7 @@ export class Economy {
     return {
       expedition: normalizeExpedition(),
       created: now(), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: now(), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
-      heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, { level: 1, exp: 0, star: 1, shards: 0, skills: [1, 1, 1, 1, 1, 1], equip: { weapon: null, armor: null, ring: null, boots: null } }])),
+      heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, { level: 1, exp: 0, star: 1, shards: 0, skills: HEROES[id].skills.map(() => 1), skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } }])),
       selected: 'knight', inventory: [], invSeq: 1,
       progress: { unlocked: 1, stars: {} }, // stars['1-1'] = 3
       pity: 0, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
@@ -150,7 +151,8 @@ export class Economy {
   levelUpHero(id) { const h = this.hero(id); const cost = levelGold(h.level); if (this.s.gold < cost || h.level >= 80) return false; this.s.gold -= cost; h.level++; this.emit(); return true; }
   promoteHero(id) { const h = this.hero(id); const need = starShards(h.star); if (h.shards < need || h.star >= 5) return false; h.shards -= need; h.star++; this.emit(); return true; }
   upgradeSkill(id, i) { const h = this.hero(id); const cost = skillUpGold(h.skills[i]); if (this.s.gold < cost || h.skills[i] >= 10) return false; this.s.gold -= cost; h.skills[i]++; this.emit(); return true; }
-  grantHero(id) { if (this.s.heroes[id]) { this.s.heroes[id].shards += 10; return { dup: true }; } this.s.heroes[id] = { level: 1, exp: 0, star: 1, shards: 0, skills: [1, 1, 1, 1, 1, 1], equip: { weapon: null, armor: null, ring: null, boots: null } }; return { dup: false }; }
+  setSkillLoadout(id, slot, skillIndex) { const h = this.hero(id), def = HEROES[id]; if (!h || !def || ![0,1].includes(slot) || !Number.isInteger(skillIndex) || skillIndex < 4 || skillIndex >= def.skills.length) return false; const sk = def.skills[skillIndex]; if (sk.unlock && h.level < sk.unlock) return false; const next = normalizeSkillLoadout(def, h.skillLoadout); if (next[slot] === skillIndex) return false; const other = 1 - slot; if (next[other] === skillIndex) [next[slot], next[other]] = [skillIndex, next[slot]]; else next[slot] = skillIndex; h.skillLoadout = next; this.emit(); return true; }
+  grantHero(id) { if (this.s.heroes[id]) { this.s.heroes[id].shards += 10; return { dup: true }; } this.s.heroes[id] = { level: 1, exp: 0, star: 1, shards: 0, skills: HEROES[id].skills.map(() => 1), skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } }; return { dup: false }; }
   // ---------- 장비 ----------
   /** @param {string} rarity @param {string|null} slot */
   addItem(rarity, slot = null) {
@@ -190,24 +192,27 @@ export class Economy {
   stageIndex(ch, st) { return (ch - 1) * STAGES_PER_CHAPTER + st; }
   isUnlocked(ch, st) { return Number.isInteger(ch) && Number.isInteger(st) && ch >= 1 && ch <= CHAPTERS.length && st >= 1 && st <= STAGES_PER_CHAPTER && this.stageIndex(ch, st) <= this.s.progress.unlocked; }
   nextStage() { const idx = Math.min(this.s.progress.unlocked, CHAPTERS.length * STAGES_PER_CHAPTER); const ch = Math.ceil(idx / STAGES_PER_CHAPTER), st = ((idx - 1) % STAGES_PER_CHAPTER) + 1; return stageDef(ch, st); }
-  completeStage(stage, stars, { double = false, fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [] } = {}) {
+  completeStage(stage, stars, { double = false, fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [], fullClear = false } = {}) {
     const s = this.s; const key = this.stageKey(stage.ch, stage.st); const first = !s.progress.stars[key];
     s.progress.stars[key] = Math.max(s.progress.stars[key] || 0, stars);
     if (stage.idx >= s.progress.unlocked) s.progress.unlocked = Math.min(CHAPTERS.length * STAGES_PER_CHAPTER, stage.idx + 1);
     const m = double ? 2 : 1; const r = stage.rewards; const loot = [];
+    const fullClearBonus = fullClear ? { exp: Math.floor(r.exp * 0.5), gold: Math.floor(r.gold * 0.4), fragments: 10, eliteGear: 1 } : null;
     // 필드 드랍(전투 중 획득한 골드/강화석)은 여기서 정산. 장비는 이미 인벤토리에 들어감.
-    const got = this.addRewards({ gold: r.gold * m + fieldGold * m, gems: first ? r.firstGems : 0, stones: (r.stones || 0) * m + fieldStones, stones2: fieldStones2 * m, stones3: fieldStones3 * m, fragments: fieldFragments * m + (stage.boss ? 5 : 0) }, { silent: true });
+    const got = this.addRewards({ gold: r.gold * m + fieldGold * m + (fullClearBonus?.gold || 0), gems: first ? r.firstGems : 0, stones: (r.stones || 0) * m + fieldStones, stones2: fieldStones2 * m, stones3: fieldStones3 * m, fragments: fieldFragments * m + (stage.boss ? 5 : 0) + (fullClearBonus?.fragments || 0) }, { silent: true });
     for (const l of fieldLoot) loot.push(l);
+    if (fullClearBonus) loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_ELITE)));
     if (double && Math.random() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE))); }
     if (stage.boss && Math.random() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
     const prevLv = this.hero(s.selected).level;
-    const ups = this.addHeroExp(s.selected, r.exp * m);
+    const stageExp = r.exp * m + (fullClearBonus?.exp || 0);
+    const ups = this.addHeroExp(s.selected, stageExp);
     const nowLv = this.hero(s.selected).level;
     // 이번 판에 넘긴 각성 구간
     const awakened = (HEROES[s.selected].skills || []).filter((k) => k.unlock && prevLv < k.unlock && nowLv >= k.unlock);
     const passUps = this.addPassXp(r.bp);
     s.quests.stages++; this.emit();
-    const receipt = { got, loot, ups, passUps, first, exp: r.exp * m, awakened };
+    const receipt = { got, loot, ups, passUps, first, exp: stageExp, awakened, fullClearBonus };
     this.bonusReceipts.add(receipt);
     return receipt;
   }

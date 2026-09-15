@@ -106,7 +106,8 @@ describe('진행 저장 복구', () => {
     values.set(key, JSON.stringify({ gold: 23456, heroes: { knight: { level: 17, skills: [3, 2, 2, 1] } }, progress: { unlocked: 4 }, settings: { music: false } }));
     const eco = new Economy();
     expect(eco.s.gold).toBe(23456); expect(eco.hero().level).toBe(17);
-    expect(eco.hero().skills).toEqual([3, 2, 2, 1, 1, 1]);
+    expect(eco.hero().skills).toEqual([3, 2, 2, 1, 1, 1, 1, 1]);
+    expect(eco.hero().skillLoadout).toEqual([4, 5]);
     expect(eco.s.progress.stars).toEqual({}); expect(eco.s.settings.sfx).toBe(true);
     expect(eco.heroPower('knight')).toBeGreaterThan(0);
   });

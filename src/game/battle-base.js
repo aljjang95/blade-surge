@@ -76,7 +76,7 @@ export class Battle {
     this.roomsCleared = 0; this.bossFound = false;
 
     const gltf = await loadModel(def.model);
-    this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], stage.party ? {} : this.app.eco.heroEquipInsts(heroId), heroState.level || 1);
+    this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], stage.party ? {} : this.app.eco.heroEquipInsts(heroId), heroState.level || 1, heroState.skillLoadout || [4, 5]);
     this.sp.configureSummons?.(equipBonus.summons || []);
     const sr = this.world.startRoom;
     this.player.pos.set(sr.x, 0, sr.z); this.player.yaw = 0;
@@ -329,6 +329,15 @@ export class Battle {
     this.ui.setObjective(this.world);
     this.openPortal();
   }
+  canBossShortcut() {
+    return !!(this.active && this.world?.sealed && !this.stage?.expedition && !this.stage?.party && !this.conquest && !this.world?.bossRoom?.cleared && !this.enemies?.some((e) => e.alive) && !(this.pending?.length));
+  }
+  shortcutBoss() {
+    if (!this.canBossShortcut()) return false;
+    this.world.unseal(); this.arena.openSeal(this.fx); this.ui.setObjective(this.world); this.openPortal();
+    this.ui.toast('보스 직행 · 미정복 구역은 그대로 남습니다', 'gold');
+    return true;
+  }
   /** 봉인 해제 포탈 — 마지막 구역에서 보스방 문 앞까지. 가장 먼 방까지 20초 넘게 걷는 동안 보상이 끊겼다 (longestDryStreakSec 40~44 실측) */
   openPortal() {
     const W = this.world, B = W.bossRoom, g = W.gates[0]; if (!g) return;
@@ -418,7 +427,7 @@ export class Battle {
   }
   onEnemyDeath(e) {
     if (this.conquest?.death(e)) { this.ui.toast(this.conquest.hint(), 'gold'); this.ui.setObjective(this.world); }
-    this.kills++; this.waveKilled++; this.player.addUlt(e.isBoss ? 30 : e.isElite ? 16 : 5);
+    this.kills++; this.waveKilled++; this.player.addUlt(e.isBoss ? 30 : e.isElite ? 16 : 5); this.player.addMp?.(2);
     if (this.sp) this.sp.onKill(e);
     if (this.hasProc('blood_leech') && this.player.alive) { const heal = Math.floor(this.player.maxHp * 0.03); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); this.fx.embers(this.player.pos, 0xff3a5a, { n: 4, radius: 0.6, life: 0.6, rise: 2 }); if (this.fx.dmgLayer.children.length < 20) this.fx.damage(this.player.pos, heal, { kind: 'heal', text: '+' + heal }); }
     if (!this.stage.party) this.app.eco.s.quests.kills++;
@@ -476,7 +485,10 @@ export class Battle {
     const explored = this.world ? this.world.rooms.filter((r) => r.cleared).length / this.world.rooms.length : 1;
     const hpRatio = this.player.hp / this.player.maxHp;
     const stars = this.revived ? 1 : (hpRatio > 0.6 && explored > 0.8) ? 3 : (hpRatio > 0.3 || explored > 0.6) ? 2 : 1;
-    this.result = { win: true, stars, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, rooms: this.roomsCleared, totalRooms: this.world ? this.world.rooms.length : 0, expedition: this.stage.expedition || null, conquest: this.conquest?.finish(true) || null };
+    const optional = this.world ? this.world.rooms.filter((r) => r.type !== ROOM_TYPE.START && r.type !== ROOM_TYPE.BOSS) : [];
+    const optionalCleared = optional.filter((r) => r.cleared).length;
+    const fullClear = optional.length > 0 && optionalCleared === optional.length;
+    this.result = { win: true, stars, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, rooms: this.roomsCleared, totalRooms: this.world ? this.world.rooms.length : 0, optionalRooms: optional.length, optionalCleared, fullClear, expedition: this.stage.expedition || null, conquest: this.conquest?.finish(true) || null };
     this.after(1.6, () => this.ui.showResult(this, true));
   }
 
@@ -597,7 +609,7 @@ export class Battle {
     this.fx.shockTex(p.pos, 0x9fe4ff, { r1: 4.5, life: 0.4 });
     this.fx.ghost(p.model, 0x9fe4ff, { life: 0.5, opacity: 0.7 });
     this.fx.burst(p.pos.clone().setY(1), 0x9fe4ff, { n: 18, speed: 7, size: 0.35 });
-    p.addUlt(14 * (p.stats.ultGain || 1));
+    p.addUlt(14 * (p.stats.ultGain || 1)); p.addMp?.(8);
     p.buffs.atk = Math.max(p.buffs.atk, 1.35); p.buffs.atkSpd = Math.max(p.buffs.atkSpd, 1.25); p.buffs.t = Math.max(p.buffs.t, 3);
     this.ui.perfectDodge(); audio.bark(`hero_${this.player?.def.voiceId || this.heroId}_perfect`, { vol: 0.95, min: 1.2 }); audio.voice('perfect', { min: 12, duck: 0.7, dur: 0.8 });
     audio.ice({ vol: 0.4, dur: 0.35 }); audio.ting({ vol: 0.45, freq: 2400 }); audio.vibe([15, 25, 40]);

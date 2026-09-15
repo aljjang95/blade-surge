@@ -5,14 +5,15 @@ import { SKILLS } from './skills.js';
 import { applyLook } from './look.js';
 import { materialsOf } from '../engine/assets.js';
 import { HeroBeacon } from './hero-beacon.js';
+import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC } from './progression.js';
 
 const _v = new THREE.Vector3();
 
 export class Player extends Actor {
-  constructor(game, gltf, def, stats, skillLevels = [1, 1, 1, 1, 1, 1], equip = {}, heroLevel = 1) {
+  constructor(game, gltf, def, stats, skillLevels = [1, 1, 1, 1, 1, 1], equip = {}, heroLevel = 1, skillLoadout = [4, 5]) {
     super(game, gltf, { scale: 1.0 });
-    this.def = def; this.stats = stats; this.skillLevels = skillLevels;
-    this.heroLevel = heroLevel;   // 각성 스킬 해금 판정용
+    this.def = def; this.stats = stats; this.skillLevels = def.skills.map((_, i) => skillLevels[i] || 1);
+    this.heroLevel = heroLevel; this.skillLoadout = normalizeSkillLoadout(def, skillLoadout);   // 각성 스킬 해금 판정용
     this.maxHp = stats.hp; this.hp = stats.hp;
     this.look = applyLook(this.model, def, equip);   // 장비 외형: 무기/방패 메시 + 등급 발광 + 궤적색
     this.beacon = new HeroBeacon(this.root, this.model);
@@ -24,6 +25,7 @@ export class Player extends Actor {
     this.state = 'idle'; this.stateT = 0;
     this.comboIdx = 0; this.comboQueued = false; this.hitDone = false; this.comboWindow = 0;
     this.cds = def.skills.map(() => 0); this.ult = 0; this.ultMax = 100;
+    this.maxMp = MP_BASE; this.mp = MP_BASE; this.mpRegen = MP_REGEN_PER_SEC; this.dodgeCd = 0;
     this.dr = 0; this.drT = 0; this.sanctum = null;   // 성역: 피해 감소
     this.buffs = { atk: 1, spd: 1, atkSpd: 1, t: 0 }; this.stormT = 0;
     this.auto = false; this.autoT = 0; this.magnetMul = 1;
@@ -43,6 +45,10 @@ export class Player extends Actor {
   }
   get busy() { return this.state === 'attack' || this.state === 'skill' || this.state === 'dodge' || this.state === 'ult' || this.state === 'hurt'; }
   addUlt(n) { this.ult = Math.min(this.ultMax, this.ult + n); }
+  addMp(n) { this.mp = Math.max(0, Math.min(this.maxMp, this.mp + n)); return this.mp; }
+  combatSkillIndex(slot) { return skillIndexForCombatSlot(this.skillLoadout, slot); }
+  combatSkill(slot) { const index = this.combatSkillIndex(slot); return { index, skill: this.def.skills[index] }; }
+  tryCastCombatSkill(slot) { const index = this.combatSkillIndex(slot); return index >= 0 && this.tryCastSkill(index); }
   dispose() { this.beacon?.dispose(); super.dispose(); }
 
   // ---------------- 입력 처리 ----------------
@@ -55,9 +61,9 @@ export class Player extends Actor {
     const wantMove = this.moveDir.lengthSq() > 0.01;
 
     // 회피
-    if (input.consume('dodge') && this.state !== 'dodge' && this.state !== 'ult' && this.stun <= 0) return this.dodge(wantMove ? this.moveDir : null);
-    // 스킬
-    for (let i = 0; i < this.def.skills.length; i++) if (input.consume('skill' + i)) { if (this.tryCastSkill(i)) return; }
+    if (input.consume('dodge') && this.dodgeCd <= 0 && this.state !== 'dodge' && this.state !== 'ult' && this.stun <= 0) return this.dodge(wantMove ? this.moveDir : null);
+    // 전투 입력은 0~3 고정 + Q/E 장착 슬롯 4/5만 노출한다.
+    for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot)) return; }
     // 공격
     // 선입력: 콤보 중 누르거나 '누르고 있으면' 다음 타 예약. 이전엔 hitDone 뒤의 '탭'만 받아서 — 버튼을 누르고 있는 사람은 영원히 1타만 반복했다 (끊기는 느낌의 진범)
     if (input.consume('attack') || input.attackHeld) {
@@ -217,7 +223,7 @@ export class Player extends Actor {
   }
   // ---------------- 회피 ----------------
   dodge(dir) {
-    this.stopTrail(); this.state = 'dodge'; this.stateT = 0; this.invuln = 0.4;
+    this.stopTrail(); this.state = 'dodge'; this.stateT = 0; this.invuln = 0.4; this.dodgeCd = DODGE_COOLDOWN_SEC;
     this.perfectWindow = 0.28;   // 이 안에 피격 판정이 스치면 퍼펙트
     if (this.def.jobId === 'ranger') this.gainJobResource(1);
     const d = dir ? dir.clone().normalize() : this.forward(_v.clone());
@@ -246,7 +252,9 @@ export class Player extends Actor {
     if (this.state === 'skill' && this.skillCtx && !this.skillCtx.done) return false;
     this.stopTrail();
     const impl = SKILLS[sk.id]; if (!impl) return false;
-    if (sk.ult) { this.ult = 0; this.state = 'ult'; } else { this.cds[i] = this.game.skillCooldown?.(sk.cd) ?? sk.cd; this.state = 'skill'; }
+    const mpCost = skillMpCost(sk), currentMp = Number.isFinite(this.mp) ? this.mp : MP_BASE;
+    if (mpCost > currentMp) { this.game.ui.toast(`MP 부족 · ${mpCost} 필요`, 'red'); audio.play('ui_error', { vol: 0.5 }); return false; }
+    if (sk.ult) { this.ult = 0; this.state = 'ult'; } else { this.mp = currentMp - mpCost; this.cds[i] = this.game.skillCooldown?.(sk.cd) ?? sk.cd; this.state = 'skill'; }
     this.stateT = 0; this.vel.set(0, 0, 0);
     this.autoAim(12);
     const lvMult = 1 + (this.skillLevels[i] - 1) * 0.12;
@@ -330,13 +338,13 @@ export class Player extends Actor {
     if (this.state === 'idle' || this.state === 'move') {
       // 스킬 우선: 적이 3마리 이상 뭉쳤을 때 광역기 우선
       const cluster = list.reduce((a, x) => a + (x.distTo(e) < 4.5 ? 1 : 0), 0);
-      for (let i = this.def.skills.length - 1; !precision && i >= 0; i--) {
-        const sk = this.def.skills[i]; if (!this.unlocked(i)) continue;
+      for (let slot = 5; !precision && slot >= 0; slot--) {
+        const i = skillIndexForCombatSlot(this.skillLoadout, slot), sk = this.def.skills[i]; if (!sk || !this.unlocked(i)) continue;
         if (sk.id === 'guardian_guard' && !(e.telegraph > 0 && d < 5)) continue;
-        const ready = sk.ult ? this.ult >= this.ultMax : this.cds[i] <= 0;
+        const ready = sk.ult ? this.ult >= this.ultMax : this.cds[i] <= 0 && skillMpCost(sk) <= (this.mp ?? MP_BASE);
         if (!ready) continue;
-        const wantCluster = this.game.stage?.expedition?.kind === 'arena' ? 1 : sk.ult ? 3 : sk.awaken ? 2 : i === 0 ? 1 : 2;
-        if (cluster >= wantCluster && d < (this.def.ranged ? 11 : 8)) { this.game.input.press('skill' + i); return out; }
+        const wantCluster = this.game.stage?.expedition?.kind === 'arena' ? 1 : sk.ult ? 3 : sk.awaken ? 2 : slot === 0 ? 1 : 2;
+        if (cluster >= wantCluster && d < (this.def.ranged ? 11 : 8)) { this.game.input.press('skill' + slot); return out; }
       }
       if (d > want + 0.4) {
         const W = this.game.world; const er = W && W.roomAt(e.pos.x, e.pos.z), pr = W && W.roomAt(this.pos.x, this.pos.z);
@@ -351,7 +359,7 @@ export class Player extends Actor {
     // 예고 회피 — 콤보 중에도 타격이 끝났으면 캔슬해서 구른다. 보스·엘리트의 큰 예고는 거의 확실히, 잡몹은 절반쯤 (적 위협 회전: 콤보 중 회피 불가라 보스전에서 HP 의 30% 를 그냥 맞았다)
     if (this.state === 'idle' || this.state === 'move' || (this.state === 'attack' && this.hitDone)) {
       const threat = list.find((x) => x.telegraph > 0 && this.distTo(x) < (x.isBoss ? 5.5 : x.isElite ? 5 : 4));
-      if (threat && Math.random() < dt * (threat.isBoss || threat.isElite ? 9 : 3)) this.game.input.press('dodge');
+      if (threat && (this.dodgeCd || 0) <= 0 && Math.random() < dt * (threat.isBoss || threat.isElite ? 9 : 3)) this.game.input.press('dodge');
     }
     return out;
   }
@@ -384,6 +392,8 @@ export class Player extends Actor {
     this.guardT = Math.max(0, (this.guardT || 0) - dt);
     this.tonicAtkT = Math.max(0, (this.tonicAtkT || 0) - dt);
     this.tonicGuardT = Math.max(0, (this.tonicGuardT || 0) - dt);
+    this.dodgeCd = Math.max(0, (this.dodgeCd || 0) - dt);
+    if (this.alive) this.addMp(this.mpRegen * dt);
     if (this.perfectWindow > 0) this.perfectWindow -= dt;
     if (this.stormT > 0) { this.stormT -= dt; this.game.fx.aura(this.pos, 0x7fd9ff, 1.5); if (this.stormT <= 0 && this.buffs.t <= 0) this.tintEmissive = null; }
     if (this.perfectCd > 0) this.perfectCd -= dt;

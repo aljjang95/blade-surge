@@ -36,7 +36,7 @@ test('jobs retain hero/model identity and every skill resolves without mutating 
   for (const [hero,id] of [['knight','guardian'],['rogue','ranger']]) {
     const base = (HEROES as any)[hero], job = resolveJobHero(base,id);
     expect(job.id).toBe(base.id); expect(job.model).toBe(base.model); expect(job.portrait).toBe(base.portrait);
-    expect(job.skills.length).toBe(6); expect(job.combo.length).toBe(3);
+    expect(job.skills.length).toBe(8); expect(job.combo.length).toBe(3);
     for (const skill of job.skills) expect((SKILLS as any)[skill.id]).toBeDefined();
   }
   expect(resolveJobHero(HEROES.mage,'guardian')).toBe(HEROES.mage); expect(JSON.stringify(HEROES)).toBe(before);
