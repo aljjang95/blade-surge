@@ -16,17 +16,17 @@ function gear(a:any){a.eco.s.inventory.push({uid:31,id:'exp_glasswarden_armor',e
 test('arsenal additive migration validates IDs, slots and floating mix without altering legacy equipment',()=>{
  const s=normalizeArsenal({mix:{music:.32,sfx:5,voice:NaN},heroes:{knight:{artId:'unknown',presets:[{name:'<strong>my build</strong>',jobId:'ranger',pathId:'unknown',challengeIds:['iron','fake','iron'],equipment:{armor:{uid:31,id:'exp_glasswarden_weapon'},weapon:{uid:-1,id:'exp_glasswarden_weapon'}}}]}}});
  expect(s.mix).toEqual({music:.32,sfx:1,voice:1});expect(Object.keys(s.heroes)).toHaveLength(5);expect(s.heroes.knight.artId).toBe('rupture');
- expect(s.heroes.knight.presets[0]).toMatchObject({jobId:null,pathId:'balanced',challengeIds:['iron'],equipment:{armor:null,weapon:null}});
+ expect(s.heroes.knight.presets[0]).toMatchObject({jobId:null,pathId:'balanced',skillLoadout:[4,5],challengeIds:['iron'],equipment:{armor:null,weapon:null}});
  const a=make();gear(a);a.eco.save();const b=make();expect(b.eco.s.inventory).toEqual(a.eco.s.inventory);expect(b.eco.s.heroes).toEqual(a.eco.s.heroes);
 });
-test('saved build restores real enhanced equipment, job, path, vows and art atomically across reload',()=>{
- const a=make();gear(a);a.eco.s.expedition.unlockedJobs=['guardian'];a.eco.s.expedition.selectedJob='guardian';a.masterworks.s.path='vanguard';a.masterworks.s.challengeIds=['iron'];a.arsenal.setArt('aegis');
+test('saved build restores real enhanced equipment, Q E loadout, job, path, vows and art atomically across reload',()=>{
+ const a=make();gear(a);a.eco.hero().level=50;a.eco.hero().skillLoadout=[6,7];a.eco.s.expedition.unlockedJobs=['guardian'];a.eco.s.expedition.selectedJob='guardian';a.masterworks.s.path='vanguard';a.masterworks.s.challengeIds=['iron'];a.arsenal.setArt('aegis');
  expect(a.arsenal.savePreset(0,'보호 선봉').ok).toBe(true);const inventory=structuredClone(a.eco.s.inventory),gold=a.eco.s.gold;
- a.eco.s.heroes.knight.equip={weapon:null,armor:null,ring:null,boots:null};a.eco.s.heroes.ranger.equip.armor=31;a.eco.s.expedition.selectedJob=null;a.masterworks.s.path='balanced';a.masterworks.s.challengeIds=[];a.arsenal.setArt('flow');
- const preview=a.arsenal.preview(0);expect(preview.valid).toBe(true);expect(preview.transfers).toEqual([{uid:31,item:'유리 파수꾼의 갑옷',owner:'ranger'}]);
+ a.eco.s.heroes.knight.equip={weapon:null,armor:null,ring:null,boots:null};a.eco.s.heroes.knight.skillLoadout=[4,5];a.eco.s.heroes.ranger.equip.armor=31;a.eco.s.expedition.selectedJob=null;a.masterworks.s.path='balanced';a.masterworks.s.challengeIds=[];a.arsenal.setArt('flow');
+ const preview=a.arsenal.preview(0);expect(preview.valid).toBe(true);expect(preview.transfers).toEqual([{uid:31,item:'유리 파수꾼의 갑옷',owner:'ranger'}]);expect(preview.preset.skillLoadout).toEqual([6,7]);
  const expected=applyBuildStats(heroStats(resolveJobHero(HEROES.knight,'guardian'),a.eco.hero(),a.eco.heroEquipBonus('knight',{weapon:32,armor:31,ring:null,boots:null})),masteryEffects({...a.masterworks.s,path:'vanguard'}));expect(preview.after.stats).toEqual(expected);
- expect(a.arsenal.applyPreset(0).ok).toBe(true);expect(a.eco.hero().equip.armor).toBe(31);expect(a.eco.s.heroes.ranger.equip.armor).toBe(null);expect(a.eco.s.expedition.selectedJob).toBe('guardian');expect(a.masterworks.s.path).toBe('vanguard');expect(a.masterworks.s.challengeIds).toEqual(['iron']);expect(a.arsenal.artForHero()).toBe('aegis');expect(a.eco.s.inventory).toEqual(inventory);expect(a.eco.s.gold).toBe(gold);
- const b=make();expect(b.arsenal.s).toEqual(a.arsenal.s);expect(b.eco.hero().equip).toEqual(a.eco.hero().equip);expect(b.arsenal.preview(0).after.stats).toEqual(expected);
+ expect(a.arsenal.applyPreset(0).ok).toBe(true);expect(a.eco.hero().equip.armor).toBe(31);expect(a.eco.hero().skillLoadout).toEqual([6,7]);expect(a.eco.s.heroes.ranger.equip.armor).toBe(null);expect(a.eco.s.expedition.selectedJob).toBe('guardian');expect(a.masterworks.s.path).toBe('vanguard');expect(a.masterworks.s.challengeIds).toEqual(['iron']);expect(a.arsenal.artForHero()).toBe('aegis');expect(a.eco.s.inventory).toEqual(inventory);expect(a.eco.s.gold).toBe(gold);
+ const b=make();expect(b.arsenal.s).toEqual(a.arsenal.s);expect(b.eco.hero().equip).toEqual(a.eco.hero().equip);expect(b.eco.hero().skillLoadout).toEqual([6,7]);expect(b.arsenal.preview(0).after.stats).toEqual(expected);
 });
 test('missing, recycled or wrong-slot equipment blocks the entire saved build without silently substituting gear',()=>{
  const a=make();gear(a);a.arsenal.savePreset(0);a.eco.s.inventory=a.eco.s.inventory.filter((i:any)=>i.uid!==31);a.eco.s.heroes.knight.equip.armor=null;const before=structuredClone(a.eco.s);
