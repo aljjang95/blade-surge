@@ -46,3 +46,18 @@ test('preset restore is atomic for equipment-driven slash identity and Q/E under
   expect(app.arsenal.variantForHero('knight')).toBe('return');
   expect(Object.values(app.eco.s.heroes.knight.equip)).toEqual([900,901,902,903]);
 });
+
+test('guardian preview cannot advertise a Holy Slash variant it cannot cast',()=>{
+ const app=make();equipEcho(app);app.eco.s.expedition.unlockedJobs=['guardian'];app.eco.s.expedition.selectedJob='guardian';
+ expect(app.arsenal.variantForHero('knight')).toBe('classic');
+ app.eco.s.expedition.selectedJob=null;expect(app.arsenal.variantForHero('knight')).toBe('return');
+});
+test('failed save rolls back Q/E and variant equipment together',()=>{
+ const app=make();equipEcho(app);app.eco.hero().level=50;app.eco.hero().skillLoadout=[6,7];app.arsenal.savePreset(0,'return');
+ app.eco.hero().skillLoadout=[5,4];app.eco.hero().equip={weapon:null,armor:null,ring:null,boots:null};app.eco.save();
+ const before=structuredClone(app.eco.s),storage=globalThis.localStorage,original=storage.setItem;
+ storage.setItem=()=>{throw Error('quota');};
+ try{expect(app.arsenal.applyPreset(0).ok).toBe(false);expect(app.eco.s).toEqual(before);}
+ finally{storage.setItem=original;}
+ expect(app.arsenal.applyPreset(0).ok).toBe(true);expect(app.eco.hero().skillLoadout).toEqual([6,7]);expect(app.arsenal.variantForHero()).toBe('return');
+});

@@ -1,7 +1,3 @@
-import { installKnightBuildVariants } from './knight-builds.js';
-
-installKnightBuildVariants();
-
 export const DEFAULT_SKILL_LOADOUT = Object.freeze([4, 5]);
 export const MP_BASE = 100;
 export const MP_REGEN_PER_SEC = 4;

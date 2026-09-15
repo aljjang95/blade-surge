@@ -319,6 +319,7 @@ export class Player extends Actor {
     if (this.hp <= 0) { this.hp = 0; this.stopTrail(); this.state = 'dead'; this.die(); this.game.onPlayerDeath(this); }
     return true;
   }
+  die() { if (this.alive) this.knightLifeEpoch = (this.knightLifeEpoch || 0) + 1; super.die(); }
   revive() { this.alive = true; this.dead = false; this.deathT = -1; this.hp = this.maxHp; this.state = 'idle'; this.invuln = 2; this.pos.y = 0; for (const m of this.mats) m.transparent = false; this.play('Idle'); }
 
   // ---------------- 자동 전투 ----------------

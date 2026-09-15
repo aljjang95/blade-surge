@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { audio } from '../engine/audio.js';
+import { applyKnightSlashVariant, knightSlashVariantForBattle } from './knight-builds.js';
 
 const _v = new THREE.Vector3();
 const fwd = (p, d = 1) => p.forward(new THREE.Vector3()).multiplyScalar(d).add(p.pos);
@@ -99,6 +100,8 @@ export const SKILLS = {
     dur: 0.6,
     start(game, p) { game.fx.castCircle(p.pos, 0xffd060, { radius: 2.6, life: 0.5 }); },
     cast(game, p, c) {
+      const variant = knightSlashVariantForBattle(game, p);
+      if (variant === 'pierce') return applyKnightSlashVariant(game, p, c, variant);
       const f = p.forward(new THREE.Vector3()); const spawn = fwd(p, 1); spawn.y = 1.2;
       game.fx.slashSprite(spawn, f, 0xfff0a0, { size: 4.2, life: 0.7, speed: 22, tilt: -0.5 });
       game.fx.slashSprite(spawn, f, 0xffffff, { size: 3.0, life: 0.55, speed: 24, tilt: -0.5 });
@@ -106,6 +109,7 @@ export const SKILLS = {
       audio.bladeWave({ vol: 0.7 }); audio.holy({ vol: 0.3, base: 880, dur: 0.6 });
       game.renderer.shake(0.25); audio.vibe(30);
       game.spawnProjectile({ pos: spawn.clone(), dir: f, speed: 22, radius: 2.0, dmg: c.dmg, color: 0xfff0a0, size: 0, owner: p, kb: 5, kind: 'slash', pierce: true, life: 0.7, visual: null });
+      applyKnightSlashVariant(game, p, c, variant);
     },
   },
   shield_bash: {

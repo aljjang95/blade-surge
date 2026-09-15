@@ -31,7 +31,7 @@ export class ArsenalService {
       equipment:Object.fromEntries(SLOTS.map(slot=>{const i=eco.s.inventory.find(x=>x.uid===h.equip[slot]);return [slot,i?{uid:i.uid,id:i.id}:null];}))};
   }
   variantForConfig(config,heroId=this.app.eco.s.selected){
-    if(heroId!=='knight'||!config)return 'classic';
+    if(heroId!=='knight'||!config||!resolveJobHero(HEROES[heroId],config.jobId).skills.some(sk=>sk.id==='holy_slash'))return 'classic';
     const equipment=Object.fromEntries(SLOTS.map(slot=>[slot,config.equipment?.[slot]?.uid||null]));
     return knightSlashVariantFromBonus(this.app.eco.heroEquipBonus(heroId,equipment));
   }
