@@ -5,6 +5,7 @@ import { COMBAT_ARTS } from '../data/combat-arts.js';
 import { JOBS, resolveJobHero } from '../data/jobs.js';
 import { masteryEffects, normalizeMasterworks } from './masterworks-core.js';
 import { applyBuildStats } from './masterworks-combat.js';
+import { knightSlashVariantFromBonus } from './knight-builds.js';
 
 /** Real inventory references, never equipment copies or currency grants. */
 export class ArsenalService {
@@ -26,9 +27,15 @@ export class ArsenalService {
     const eco=this.app.eco,h=eco.hero(heroId);if(!h)return null;
     const m=this.app.masterworks?.s||normalizeMasterworks(eco.s.masterworks);
     const job=JOBS.find(j=>j.id===eco.s.expedition.selectedJob&&j.baseHero===heroId);
-    return {artId:this.artForHero(heroId),jobId:job?.id||null,pathId:m.path,challengeIds:[...m.challengeIds],
+    return {artId:this.artForHero(heroId),jobId:job?.id||null,pathId:m.path,challengeIds:[...m.challengeIds],skillLoadout:[...(h.skillLoadout||[4,5])],
       equipment:Object.fromEntries(SLOTS.map(slot=>{const i=eco.s.inventory.find(x=>x.uid===h.equip[slot]);return [slot,i?{uid:i.uid,id:i.id}:null];}))};
   }
+  variantForConfig(config,heroId=this.app.eco.s.selected){
+    if(heroId!=='knight'||!config)return 'classic';
+    const equipment=Object.fromEntries(SLOTS.map(slot=>[slot,config.equipment?.[slot]?.uid||null]));
+    return knightSlashVariantFromBonus(this.app.eco.heroEquipBonus(heroId,equipment));
+  }
+  variantForHero(heroId=this.app.eco.s.selected){return this.variantForConfig(this.current(heroId),heroId);}
   savePreset(index,name,heroId=this.app.eco.s.selected){
     if(!Number.isInteger(index)||index<0||index>2||!this.app.eco.hero(heroId))return {ok:false,error:'사용 가능한 영웅과 구성 슬롯을 선택해 주세요.'};
     return this.transact(s=>{s.heroes[heroId].presets[index]={...this.current(heroId),name:typeof name==='string'?name.trim().slice(0,20)||`구성 ${index+1}`:`구성 ${index+1}`};return {ok:true};});
@@ -58,6 +65,7 @@ export class ArsenalService {
       const eco=this.app.eco,p=preview.preset,ids=new Set(SLOTS.map(slot=>p.equipment[slot]?.uid).filter(Boolean));
       for(const [id,h] of Object.entries(eco.s.heroes))if(id!==heroId)for(const slot of SLOTS)if(ids.has(h.equip[slot]))h.equip[slot]=null;
       eco.s.heroes[heroId].equip=Object.fromEntries(SLOTS.map(slot=>[slot,p.equipment[slot]?.uid||null]));
+      eco.s.heroes[heroId].skillLoadout=[...p.skillLoadout];
       eco.s.selected=heroId;eco.s.expedition.selectedJob=p.jobId;s.heroes[heroId].artId=p.artId;
       const m=this.app.masterworks?.s||(eco.s.masterworks=normalizeMasterworks(eco.s.masterworks));m.path=p.pathId;m.challengeIds=[...p.challengeIds];m.activePreset=-1;
       return {ok:true,heroId,transfers:preview.transfers};
