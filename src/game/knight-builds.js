@@ -27,7 +27,7 @@ export function applyKnightSlashVariant(game, player, ctx, variantId) {
       if (!game.active || !player.alive) return;
       const dir = player.pos.clone().setY(1.2).sub(end).normalize();
       game.fx.slashSprite?.(end, dir, 0xfff0a0, { size:3.4, life:.55, speed:24, tilt:.5 });
-      game.spawnProjectile({ pos:end.clone(), dir, speed:24, radius:1.55, dmg:ctx.dmg*.48, color:0xffe29a, size:0, owner:player, kb:3, kind:'slash', pierce:true, life:.75, visual:null, noProc:true });
+      game.spawnProjectile({ pos:end.clone(), dir, speed:24, radius:1.55, dmg:ctx.dmg*.48, color:0xffe29a, size:0, owner:player, kb:3, kind:'slash', pierce:true, life:.75, visual:null });
     });
     return true;
   }
@@ -43,7 +43,7 @@ export function applyKnightSlashVariant(game, player, ctx, variantId) {
     return true;
   }
   const start = player.pos.clone().addScaledVector(forward, 1).setY(1.2);
-  game.spawnProjectile({ pos:start, dir:forward, speed:30, radius:.85, dmg:ctx.dmg*.72, color:0xffffff, size:0, owner:player, kb:2, kind:'slash', pierce:true, life:.85, visual:null, noProc:true });
+  game.spawnProjectile({ pos:start, dir:forward, speed:30, radius:.85, dmg:ctx.dmg*.72, color:0xffffff, size:0, owner:player, kb:2, kind:'slash', pierce:true, life:.85, visual:null });
   return true;
 }
 
