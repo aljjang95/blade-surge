@@ -33,10 +33,10 @@ test('missing, recycled or wrong-slot equipment blocks the entire saved build wi
  expect(a.arsenal.preview(0).valid).toBe(false);expect(a.arsenal.applyPreset(0).ok).toBe(false);expect(a.eco.s).toEqual(before);
  a.eco.s.inventory.push({uid:31,id:'w_storm',enh:9});expect(a.arsenal.applyPreset(0).ok).toBe(false);
 });
-test('save failure rolls back build swaps, mix and art and retry succeeds',()=>{
- const a=make();gear(a);a.arsenal.savePreset(0);a.eco.s.heroes.knight.equip.armor=null;a.eco.s.heroes.ranger.equip.armor=31;a.arsenal.setArt('flow');const before=structuredClone(a.eco.s);fail=true;
- expect(a.arsenal.applyPreset(0).ok).toBe(false);expect(a.eco.s).toEqual(before);expect(a.arsenal.setArt('aegis').ok).toBe(false);expect(a.arsenal.s).toEqual(before.arsenal);expect(a.arsenal.setMix({music:.13}).ok).toBe(false);expect(a.arsenal.s.mix).toEqual(before.arsenal.mix);
- fail=false;expect(a.arsenal.applyPreset(0).ok).toBe(true);expect(a.eco.s.heroes.ranger.equip.armor).toBe(null);expect(make().eco.hero().equip.armor).toBe(31);
+test('save failure rolls back equipment and Q E atomically, then retry succeeds',()=>{
+ const a=make();gear(a);a.eco.hero().level=50;a.eco.hero().skillLoadout=[6,7];a.arsenal.savePreset(0);a.eco.hero().skillLoadout=[4,5];a.eco.s.heroes.knight.equip.armor=null;a.eco.s.heroes.ranger.equip.armor=31;a.arsenal.setArt('flow');const before=structuredClone(a.eco.s);fail=true;
+ expect(a.arsenal.applyPreset(0).ok).toBe(false);expect(a.eco.s).toEqual(before);expect(a.eco.hero().skillLoadout).toEqual([4,5]);expect(a.arsenal.setArt('aegis').ok).toBe(false);expect(a.arsenal.s).toEqual(before.arsenal);expect(a.arsenal.setMix({music:.13}).ok).toBe(false);expect(a.arsenal.s.mix).toEqual(before.arsenal.mix);
+ fail=false;expect(a.arsenal.applyPreset(0).ok).toBe(true);expect(a.eco.hero().skillLoadout).toEqual([6,7]);expect(a.eco.s.heroes.ranger.equip.armor).toBe(null);expect(make().eco.hero().equip.armor).toBe(31);
 });
 test('locked job, invalid slots and battle or unsaved settlement cannot change loadouts',()=>{
  const a=make();gear(a);expect(a.arsenal.savePreset(9).ok).toBe(false);expect(a.arsenal.setArt('hack').ok).toBe(false);a.arsenal.savePreset(0);a.arsenal.s.heroes.knight.presets[0].jobId='guardian';expect(a.arsenal.applyPreset(0).ok).toBe(false);a.arsenal.s.heroes.knight.presets[0].jobId=null;
