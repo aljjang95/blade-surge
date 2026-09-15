@@ -21,10 +21,10 @@ function equipEcho(app:any){
   slots.forEach((slot,index)=>app.eco.s.heroes.knight.equip[slot]=900+index);app.eco.s.invSeq=904;
 }
 
-test('legacy arsenal preset gains safe Q/E fallback without inventing equipment',()=>{
+test('legacy arsenal preset preserves missing Q/E without inventing equipment',()=>{
   const state=normalizeArsenal({heroes:{knight:{presets:[{name:'legacy',equipment:{}}]}}});
   const preset=state.heroes.knight.presets[0]; expect(preset).not.toBeNull();
-  expect(preset!.skillLoadout).toEqual([4,5]);
+  expect(preset!.skillLoadout).toBeNull();
   expect(Object.values(preset!.equipment)).toEqual([null,null,null,null]);
 });
 

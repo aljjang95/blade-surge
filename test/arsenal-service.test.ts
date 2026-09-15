@@ -16,7 +16,7 @@ function gear(a:any){a.eco.s.inventory.push({uid:31,id:'exp_glasswarden_armor',e
 test('arsenal additive migration validates IDs, slots and floating mix without altering legacy equipment',()=>{
  const s=normalizeArsenal({mix:{music:.32,sfx:5,voice:NaN},heroes:{knight:{artId:'unknown',presets:[{name:'<strong>my build</strong>',jobId:'ranger',pathId:'unknown',challengeIds:['iron','fake','iron'],equipment:{armor:{uid:31,id:'exp_glasswarden_weapon'},weapon:{uid:-1,id:'exp_glasswarden_weapon'}}}]}}});
  expect(s.mix).toEqual({music:.32,sfx:1,voice:1});expect(Object.keys(s.heroes)).toHaveLength(5);expect(s.heroes.knight.artId).toBe('rupture');
- expect(s.heroes.knight.presets[0]).toMatchObject({jobId:null,pathId:'balanced',skillLoadout:[4,5],challengeIds:['iron'],equipment:{armor:null,weapon:null}});
+ expect(s.heroes.knight.presets[0]).toMatchObject({jobId:null,pathId:'balanced',skillLoadout:null,challengeIds:['iron'],equipment:{armor:null,weapon:null}});
  const a=make();gear(a);a.eco.save();const b=make();expect(b.eco.s.inventory).toEqual(a.eco.s.inventory);expect(b.eco.s.heroes).toEqual(a.eco.s.heroes);
 });
 test('saved build restores real enhanced equipment, Q E loadout, job, path, vows and art atomically across reload',()=>{

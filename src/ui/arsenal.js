@@ -16,6 +16,7 @@ const artEffects={rupture:'광역 파열',aegis:'보호막 12%',flow:'대기시�
 const supportsSlash=(id,config)=>id==='knight'&&resolveJobHero(HEROES[id],config?.jobId).skills.some(sk=>sk.id==='holy_slash');
 const gearStrip=(equipment,compact=false)=>{const strip=el('div',`arsenal-equipped${compact?' compact':''}`);for(const slot of SLOTS){const r=equipment?.[slot],item=r&&ITEM_BY_ID[r.id],cell=el('div');const image=item?el('img'):artImage(`slot-${slot}`);if(item){image.src=ITEM_ICON(item);image.alt='';}cell.setAttribute('aria-label',`${SLOT_NAME[slot]} · ${item?.name||'미착용'}`);cell.title=`${SLOT_NAME[slot]} · ${item?.name||'미착용'}`;cell.append(image);if(!compact)cell.append(el('small','',SLOT_NAME[slot]),el('span','',item?.name||'미착용'));strip.append(cell);}return strip;};
 const skillPair=(hero,loadout=[4,5])=>({q:hero.skills[loadout?.[0]??4]?.name||'미지정',e:hero.skills[loadout?.[1]??5]?.name||'미지정'});
+const skillSummary=(hero,loadout)=>{if(!Array.isArray(loadout))return 'Q/E 현재 설정 유지';const pair=skillPair(hero,loadout);return `Q ${pair.q} · E ${pair.e}`;};
 export class ArsenalView {
   constructor(app){
     this.app=app;this.previewIndex=null;
@@ -55,12 +56,12 @@ export class ArsenalView {
     const presets=el('div','arsenal-presets');svc.s.heroes[id].presets.forEach((p,i)=>{
       const card=el('article'),label=el('label','arsenal-preset-label'),input=el('input');input.type='text';input.maxLength=20;input.value=p?.name||`구성 ${i+1}`;input.setAttribute('aria-label',`구성 ${i+1} 이름`);input.disabled=svc.blocked;label.append(input);
       card.append(artImage(p?`art-${p.artId}`:'loadout','arsenal-preset-art'),label,gearStrip(p?.equipment,true));
-      if(p){const pair=skillPair(HEROES[id],p.skillLoadout),variant=supportsSlash(id,p)?` · ${knightSlashVariantInfo(svc.variantForConfig(p,id)).name}`:'';card.append(el('p','arsenal-preset-summary',`${JOBS.find(j=>j.id===p.jobId)?.name||'기본 직업'} · ${PATHS.find(x=>x.id===p.pathId)?.name} · Q ${pair.q} · E ${pair.e}${variant}`));}else card.append(el('p','arsenal-preset-summary','빈 구성'));
+      if(p){const variant=supportsSlash(id,p)?` · ${knightSlashVariantInfo(svc.variantForConfig(p,id)).name}`:'';card.append(el('p','arsenal-preset-summary',`${JOBS.find(j=>j.id===p.jobId)?.name||'기본 직업'} · ${PATHS.find(x=>x.id===p.pathId)?.name} · ${skillSummary(HEROES[id],p.skillLoadout)}${variant}`));}else card.append(el('p','arsenal-preset-summary','빈 구성'));
       const save=btn(p?'현재 구성으로 덮어쓰기':'현재 구성 저장',()=>{this.previewIndex=null;this.act(()=>svc.savePreset(i,input.value),`${input.value||`구성 ${i+1}`} 저장 완료`);},p?'arsenal-action':'arsenal-primary');save.disabled=svc.blocked;
       if(p){const view=btn('변경 비교',()=>{this.previewIndex=i;this.render();this.body.querySelector('.arsenal-preview')?.scrollIntoView({block:'nearest'});},'arsenal-primary');view.disabled=svc.blocked;card.append(view);const manage=el('details','arsenal-details arsenal-manage');manage.append(el('summary','','구성 관리'),save);card.append(manage);}else card.append(save);presets.append(card);
     });this.body.append(presets);
     if(this.previewIndex!==null)this.renderPreview(this.previewIndex,id);
-    this.body.append(detail('구성 저장 안내','장비 4부위·Q/E 스킬·전직·전투 방식·서약·기예를 함께 저장합니다. 검성은 저장된 장비 세트에 따라 성검 일섬 전투 변형도 함께 복원됩니다. 강화 수치는 현재 장비를 따릅니다.'));
+    this.body.append(detail('구성 저장 안내','장비 4부위·Q/E 스킬·전직·전투 방식·서약·기예를 함께 저장합니다. 검성은 저장된 장비 세트에 따라 성검 일섬 전투 변형도 함께 복원됩니다. Q/E 기록이 없는 구형 구성은 현재 Q/E를 유지합니다. 강화 수치는 현재 장비를 따릅니다.'));
     const footer=el('div','arsenal-links');for(const [label,where,image] of [['장비 · 강화','heroes','nav-forge'],['전직','jobs','nav-jobs'],['전투 방식 · 서약','mastery',current.pathId==='hunter'?'path-stalker':`path-${current.pathId}`]]){const link=btn('',()=>this.navigate(where));link.append(artImage(image),el('span','',label));footer.append(link);}this.body.append(footer);this.body.scrollTop=scroll;
   }
   renderPreview(index,id){
@@ -69,8 +70,8 @@ export class ArsenalView {
     else {
       const rows=el('div','arsenal-stats');for(const [key,label] of [['hp','체력'],['atk','공격력'],['def','방어력'],['power','전투력']]){const before=p.before.stats[key],after=p.after.stats[key];rows.append(el('span','',`${label} ${fmt(before)} → ${fmt(after)} (${after>=before?'+':''}${fmt(after-before)})`));}box.append(rows);
       const sets=p.after.sets.map(s=>`${s.set.name} ${s.tier}세트`).join(' · ');box.append(el('p','',`적용 후 세트: ${sets||'없음'}`));
-      const pair=skillPair(HEROES[id],p.preset.skillLoadout),variant=supportsSlash(id,p.preset)?` · 일섬: ${knightSlashVariantInfo(svc.variantForConfig(p.preset,id)).name}`:'';
-      box.append(el('p','',`전직: ${JOBS.find(j=>j.id===p.preset.jobId)?.name||'기본 직업'} · 기예: ${COMBAT_ARTS.find(a=>a.id===p.preset.artId)?.name} · Q: ${pair.q} · E: ${pair.e}${variant} · 서약: ${p.preset.challengeIds.map(x=>CHALLENGES.find(c=>c.id===x)?.name).join(', ')||'없음'}`));
+      const variant=supportsSlash(id,p.preset)?` · 일섬: ${knightSlashVariantInfo(svc.variantForConfig(p.preset,id)).name}`:'';
+      box.append(el('p','',`전직: ${JOBS.find(j=>j.id===p.preset.jobId)?.name||'기본 직업'} · 기예: ${COMBAT_ARTS.find(a=>a.id===p.preset.artId)?.name} · ${skillSummary(HEROES[id],p.preset.skillLoadout)}${variant} · 서약: ${p.preset.challengeIds.map(x=>CHALLENGES.find(c=>c.id===x)?.name).join(', ')||'없음'}`));
       for(const transfer of p.transfers)box.append(el('p','arsenal-warning',`${HEROES[transfer.owner].name}의 ${transfer.item}을 옮겨옵니다.`));
       box.append(el('p','arsenal-copy','원정 출격 기준 예상치입니다. 출격 중 각인·물약은 제외합니다.'));
     }

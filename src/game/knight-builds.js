@@ -29,7 +29,7 @@ export function applyKnightSlashVariant(game, player, ctx, variantId) {
     game.after(.34, () => {
       if (!valid()) return;
       const dir = player.pos.clone().setY(1.2).sub(end).normalize();
-      game.fx.slashSprite?.(end, dir, 0xfff0a0, { size:3.4, life:.55, speed:26, tilt:.5 });
+      game.fx.slashSprite?.(end, dir, 0xfff0a0, { size:3.4, life:.78, speed:26, tilt:.5 });
       game.spawnProjectile({ pos:end.clone(), dir, speed:26, radius:1.45, dmg:ctx.dmg*.48, color:0xffe29a, size:0, owner:player, kb:3, kind:'slash', pierce:true, life:.78, visual:null });
       audio.whoosh({ vol:.32, pitch:1.45, dur:.2 });
     });
@@ -47,7 +47,7 @@ export function applyKnightSlashVariant(game, player, ctx, variantId) {
     return true;
   }
   const start = player.pos.clone().addScaledVector(forward, 1).setY(1.2);
-  game.fx.slashSprite?.(start, forward, 0xfff3b0, { size:3.1, life:.55, speed:30, tilt:-.5 });
+  game.fx.slashSprite?.(start, forward, 0xfff3b0, { size:3.1, life:.85, speed:32, tilt:-.5 });
   game.fx.light?.(start, 0xffd060, 8, 10, .35);
   audio.bladeWave({ vol:.66 }); audio.holy({ vol:.24, base:980, dur:.45 }); audio.vibe(24);
   game.spawnProjectile({ pos:start, dir:forward, speed:32, radius:.72, dmg:ctx.dmg*1.35, color:0xfff3b0, size:0, owner:player, kb:9, kind:'slash', pierce:true, life:.85, visual:null });

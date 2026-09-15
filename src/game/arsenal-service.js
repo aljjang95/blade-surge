@@ -65,7 +65,7 @@ export class ArsenalService {
       const eco=this.app.eco,p=preview.preset,ids=new Set(SLOTS.map(slot=>p.equipment[slot]?.uid).filter(Boolean));
       for(const [id,h] of Object.entries(eco.s.heroes))if(id!==heroId)for(const slot of SLOTS)if(ids.has(h.equip[slot]))h.equip[slot]=null;
       eco.s.heroes[heroId].equip=Object.fromEntries(SLOTS.map(slot=>[slot,p.equipment[slot]?.uid||null]));
-      eco.s.heroes[heroId].skillLoadout=[...p.skillLoadout];
+      if(Array.isArray(p.skillLoadout))eco.s.heroes[heroId].skillLoadout=[...p.skillLoadout];
       eco.s.selected=heroId;eco.s.expedition.selectedJob=p.jobId;s.heroes[heroId].artId=p.artId;
       const m=this.app.masterworks?.s||(eco.s.masterworks=normalizeMasterworks(eco.s.masterworks));m.path=p.pathId;m.challengeIds=[...p.challengeIds];m.activePreset=-1;
       return {ok:true,heroId,transfers:preview.transfers};
