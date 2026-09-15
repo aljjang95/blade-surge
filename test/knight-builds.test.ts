@@ -15,7 +15,7 @@ const game = (procs:string[] = []) => {
 
 test('knight exposes exactly three complete-set build identities while legacy stays classic',()=>{
   expect(KNIGHT_SLASH_BUILD_IDS).toEqual(['return','fissure','pierce']);
-  expect(KNIGHT_SLASH_BUILD_IDS.map(id=>KNIGHT_SLASH_VARIANTS[id].setId)).toEqual(['arm_echo','arm_anchor','arm_aegis']);
+  expect(KNIGHT_SLASH_BUILD_IDS.map(id=>KNIGHT_SLASH_VARIANTS[id as keyof typeof KNIGHT_SLASH_VARIANTS].setId)).toEqual(['arm_echo','arm_anchor','arm_aegis']);
   expect(normalizeKnightSlashVariant(undefined)).toBe('classic');
   expect(normalizeKnightSlashVariant('classic')).toBe('classic');
   expect(normalizeKnightSlashVariant('return')).toBe('return');
