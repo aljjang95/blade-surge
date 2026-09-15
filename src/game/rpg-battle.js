@@ -84,7 +84,7 @@ export class Battle extends BaseBattle {
         const nextStats = heroStats(p.def || HEROES[this.heroId], hero, this.app.eco.heroEquipBonus(this.heroId));
         p.stats = this.upgradeHeroStats?.(nextStats) || nextStats;
         p.maxHp = p.stats.hp; p.heroLevel = hero.level;
-        for (const [i, button] of (this.ui.skillBtns || []).entries()) if (p.def.skills[i]) button.classList.toggle('locked', !p.unlocked(i));
+        for (const [slot, button] of (this.ui.skillBtns || []).entries()) { const i = p.combatSkillIndex ? p.combatSkillIndex(slot) : slot; if (p.def.skills[i]) button.classList.toggle('locked', !p.unlocked(i)); }
         const awakened = p.def.skills.filter(skill => skill.unlock > award.beforeLevel && skill.unlock <= hero.level);
         if (awakened.length) this.ui.awakenBanner(awakened);
         // Preserve missing health, never revive a dead hero or reset skill cooldowns.

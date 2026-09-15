@@ -27,8 +27,10 @@ export const HEROES = {
       { id: 'judgment',    name: '심판의 빛', icon: '/img/sk_knight_3.webp', cd: 12, anim: 'Spellcast_Raise', castAt: 0.5, dmg: 2.0, desc: '주변 모든 적에게 빛의 기둥이 낙하' },
       { id: 'dragon_slash', name: '용살검 · 천공', icon: '/img/sk_knight_ult.webp', ult: true, anim: '2H_Melee_Attack_Chop', castAt: 0.55, dmg: 12, desc: '하늘을 가르는 일격. 전방 광역에 압도적인 피해' },
       // ── 각성 (레벨 구간 해금) ──
-      { id: 'chain_bind',  name: '성쇄 · 결박', icon: '/img/sk_kn_a1.webp', cd: 11, unlock: 10, awaken: 1, anim: 'Spellcast_Raise', castAt: 0.35, dmg: 3.0, desc: '빛의 사슬이 주변 적을 끌어와 2초간 결박한다. 사슬이 끊기며 폭발' },
-      { id: 'sanctuary',   name: '천상의 성역', icon: '/img/sk_kn_a2.webp', cd: 22, unlock: 20, awaken: 2, anim: 'Spellcast_Raise', castAt: 0.4,  dmg: 0.9, desc: '7초간 성역 전개. 적은 밖으로 나갈 수 없고 지속 피해, 나는 받는 피해 35% 감소' },
+      { id: 'chain_bind',  name: '성쇄 · 결박', icon: '/img/sk_kn_a1.webp', cd: 11, mp: 26, unlock: 10, awaken: 1, anim: 'Spellcast_Raise', castAt: 0.35, dmg: 3.0, desc: '빛의 사슬이 주변 적을 끌어와 2초간 결박한다. 사슬이 끊기며 폭발' },
+      { id: 'sanctuary',   name: '천상의 성역', icon: '/img/sk_kn_a2.webp', cd: 22, mp: 34, unlock: 20, awaken: 2, anim: 'Spellcast_Raise', castAt: 0.4,  dmg: 0.9, desc: '7초간 성역 전개. 적은 밖으로 나갈 수 없고 지속 피해, 나는 받는 피해 35% 감소' },
+      { id: 'sunbreaker', name: '성검 · 태양파쇄', icon: '/img/sk_kn_a1.webp', cd: 18, mp: 38, unlock: 35, awaken: 3, anim: '2H_Melee_Attack_Chop', castAt: 0.45, dmg: 5.8, desc: '성검으로 전방을 가르는 태양 충격파를 연속 폭발시킨다' },
+      { id: 'heavenfall', name: '천상 · 신벌강림', icon: '/img/sk_kn_a2.webp', cd: 28, mp: 52, unlock: 50, awaken: 4, anim: 'Spellcast_Raise', castAt: 0.5, dmg: 8.4, desc: '주변 적을 끌어 모은 뒤 거대한 성광을 떨어뜨린다' },
     ],
   },
   barbarian: {
@@ -50,8 +52,10 @@ export const HEROES = {
       { id: 'berserk',    name: '광폭화',   icon: '/img/sk_barb_3.webp', cd: 16, anim: 'Cheer', castAt: 0.2, dmg: 0, desc: '8초간 공격력 +60%, 공격속도 +30%' },
       { id: 'hell_axe',   name: '지옥의 도끼', icon: '/img/sk_barb_ult.webp', ult: true, anim: 'Jump_Full_Short', castAt: 0.5, dmg: 14, desc: '불타는 거대 도끼를 낙하시켜 전장을 불태움' },
       // ── 각성 (레벨 구간 해금) ──
-      { id: 'bull_rush',   name: '광란의 돌진', icon: '/img/sk_bb_a1.webp', cd: 9,  unlock: 10, awaken: 1, anim: '2H_Melee_Attack_Stab', castAt: 0.1, dmg: 2.4, desc: '적을 앞으로 밀어 모으며 돌진하고, 벽처럼 뭉친 적을 끝에서 폭발시킨다' },
-      { id: 'magma_zone',  name: '용암 분출 · 진', icon: '/img/sk_bb_a2.webp', cd: 24, unlock: 20, awaken: 2, anim: '2H_Melee_Attack_Chop', castAt: 0.45, dmg: 1.8, desc: '주변에 용암 기둥이 차례로 솟아 적을 띄우고, 갈라진 균열이 9초간 남아 지진다' },
+      { id: 'bull_rush',   name: '광란의 돌진', icon: '/img/sk_bb_a1.webp', cd: 9, mp: 26,  unlock: 10, awaken: 1, anim: '2H_Melee_Attack_Stab', castAt: 0.1, dmg: 2.4, desc: '적을 앞으로 밀어 모으며 돌진하고, 벽처럼 뭉친 적을 끝에서 폭발시킨다' },
+      { id: 'magma_zone',  name: '용암 분출 · 진', icon: '/img/sk_bb_a2.webp', cd: 24, mp: 34, unlock: 20, awaken: 2, anim: '2H_Melee_Attack_Chop', castAt: 0.45, dmg: 1.8, desc: '주변에 용암 기둥이 차례로 솟아 적을 띄우고, 갈라진 균열이 9초간 남아 지진다' },
+      { id: 'bloodquake', name: '혈왕 · 대지붕괴', icon: '/img/sk_bb_a1.webp', cd: 18, mp: 38, unlock: 35, awaken: 3, anim: '2H_Melee_Attack_Chop', castAt: 0.42, dmg: 6.2, desc: '적을 끌어당기고 대지를 두 번 붕괴시킨다' },
+      { id: 'cataclysm', name: '종말 · 화산심장', icon: '/img/sk_bb_a2.webp', cd: 28, mp: 52, unlock: 50, awaken: 4, anim: 'Jump_Full_Short', castAt: 0.55, dmg: 9.2, desc: '도약 후 전장을 뒤엎는 화산 폭발을 일으킨다' },
     ],
   },
   mage: {
@@ -73,8 +77,10 @@ export const HEROES = {
       { id: 'blizzard',   name: '빙결 폭풍',  icon: '/img/sk_mage_3.webp', cd: 13, anim: 'Spellcast_Long', castAt: 0.5, dmg: 0.8, ticks: 6, desc: '주변에 얼음 폭풍을 일으켜 지속 피해와 둔화' },
       { id: 'meteor',     name: '메테오 스톰', icon: '/img/sk_mage_ult.webp', ult: true, anim: 'Spellcast_Raise', castAt: 0.5, dmg: 4.5, ticks: 5, desc: '하늘에서 운석이 쏟아져 전장을 초토화' },
       // ── 각성 (레벨 구간 해금) ──
-      { id: 'arc_reflect', name: '프리즘 난반사', icon: '/img/sk_mg_a1.webp', cd: 10, unlock: 10, awaken: 1, anim: 'Spellcast_Shoot', castAt: 0.35, dmg: 1.6, desc: '빛의 창이 적과 벽을 튕기며 최대 12회 반사. 반사마다 피해가 커진다' },
-      { id: 'chrono_seal', name: '시간 봉인',   icon: '/img/sk_mg_a2.webp', cd: 26, unlock: 20, awaken: 2, anim: 'Spellcast_Raise', castAt: 0.4, dmg: 0.6, desc: '주변 적의 시간을 3초간 멈춘다. 멈춘 동안 준 피해가 각인되어 해제 순간 터진다' },
+      { id: 'arc_reflect', name: '프리즘 난반사', icon: '/img/sk_mg_a1.webp', cd: 10, mp: 26, unlock: 10, awaken: 1, anim: 'Spellcast_Shoot', castAt: 0.35, dmg: 1.6, desc: '빛의 창이 적과 벽을 튕기며 최대 12회 반사. 반사마다 피해가 커진다' },
+      { id: 'chrono_seal', name: '시간 봉인',   icon: '/img/sk_mg_a2.webp', cd: 26, mp: 34, unlock: 20, awaken: 2, anim: 'Spellcast_Raise', castAt: 0.4, dmg: 0.6, desc: '주변 적의 시간을 3초간 멈춘다. 멈춘 동안 준 피해가 각인되어 해제 순간 터진다' },
+      { id: 'star_prison', name: '성좌 · 별감옥', icon: '/img/sk_mg_a1.webp', cd: 18, mp: 38, unlock: 35, awaken: 3, anim: 'Spellcast_Long', castAt: 0.45, dmg: 5.5, desc: '별의 중력으로 적을 한 점에 가둔 뒤 폭발시킨다' },
+      { id: 'absolute_zero', name: '절대영도 · 종언', icon: '/img/sk_mg_a2.webp', cd: 28, mp: 52, unlock: 50, awaken: 4, anim: 'Spellcast_Raise', castAt: 0.5, dmg: 8.8, desc: '넓은 구역을 얼린 뒤 지연 폭발로 파쇄한다' },
     ],
   },
   rogue: {
@@ -97,8 +103,10 @@ export const HEROES = {
       { id: 'flurry',      name: '환영 난무',   icon: '/img/sk_rogue_3.webp', cd: 11, anim: 'Dualwield_Melee_Attack_Stab', castAt: 0.2, dmg: 0.7, ticks: 8, desc: '잔상을 남기며 8연속 찌르기' },
       { id: 'thousand',    name: '천 개의 칼날', icon: '/img/sk_rogue_ult.webp', ult: true, anim: 'Spellcast_Raise', castAt: 0.4, dmg: 1.4, ticks: 10, desc: '하늘에서 수천의 칼날이 쏟아짐' },
       // ── 각성 (레벨 구간 해금) ──
-      { id: 'shadow_mark', name: '그림자 표식', icon: '/img/sk_rg_a1.webp', cd: 10, unlock: 10, awaken: 1, anim: 'Dualwield_Melee_Attack_Stab', castAt: 0.3, dmg: 1.5, desc: '최대 8명에게 표식을 새기고 분신이 차례로 순간이동해 벤다. 표식은 서로를 끌어당기며 터진다' },
-      { id: 'void_step',   name: '공허 보법',   icon: '/img/sk_rg_a2.webp', cd: 25, unlock: 20, awaken: 2, anim: 'Dodge_Forward', castAt: 0.1, dmg: 1.2, desc: '공허에 잠겨 무적이 된 채 적들 사이를 12번 순간이동하며 베고, 마지막 적에서 터져 나온다' },
+      { id: 'shadow_mark', name: '그림자 표식', icon: '/img/sk_rg_a1.webp', cd: 10, mp: 26, unlock: 10, awaken: 1, anim: 'Dualwield_Melee_Attack_Stab', castAt: 0.3, dmg: 1.5, desc: '최대 8명에게 표식을 새기고 분신이 차례로 순간이동해 벤다. 표식은 서로를 끌어당기며 터진다' },
+      { id: 'void_step',   name: '공허 보법',   icon: '/img/sk_rg_a2.webp', cd: 25, mp: 34, unlock: 20, awaken: 2, anim: 'Dodge_Forward', castAt: 0.1, dmg: 1.2, desc: '공허에 잠겨 무적이 된 채 적들 사이를 12번 순간이동하며 베고, 마지막 적에서 터져 나온다' },
+      { id: 'night_parade', name: '야행 · 그림자연무', icon: '/img/sk_rg_a1.webp', cd: 18, mp: 38, unlock: 35, awaken: 3, anim: 'Dualwield_Melee_Attack_Slice', castAt: 0.3, dmg: 5.6, desc: '그림자 분신과 함께 주변 적을 베고 중심으로 끌어모은다' },
+      { id: 'eclipse_edge', name: '일식 · 무영절명', icon: '/img/sk_rg_a2.webp', cd: 28, mp: 52, unlock: 50, awaken: 4, anim: 'Dodge_Forward', castAt: 0.1, dmg: 8.6, desc: '적을 연쇄 베기한 뒤 마지막 지점에서 일식 폭발을 일으킨다' },
     ],
   },
   // A distinct free adventurer; the Rogue's ranger job remains unchanged.
@@ -119,8 +127,10 @@ export const HEROES = {
     { id: 'ranger_volley', name: '삼중 추적화살', icon: '/img/skills-crafted/ranger-volley.webp', cd: 8, anim: 'Bow_Shoot', castAt: .42, dmg: 2, desc: '부채꼴 관통 화살 3발. 적을 2초간 둔화' },
     { id: 'ranger_retreat', name: '바람의 이탈', icon: '/img/skills-crafted/ranger-retreat.webp', cd: 10, anim: 'Bow_Shoot', castAt: .42, dmg: 2.2, desc: '화살을 쏘며 짧게 후퇴. 0.6초 무적과 집중 +1' },
     { id: 'ranger_tempest', name: '궁극 · 폭풍의 일곱 화살', icon: '/img/skills-crafted/ranger-tempest.webp', ult: true, anim: 'Bow_Shoot', castAt: .42, dmg: 2.4, desc: '넓은 부채꼴 관통 화살 7발. 집중 3을 소비하면 각 화살 피해 50% 증가' },
-    { id: 'ranger_quickshot', name: '각성 · 연속 관통', icon: '/img/skills-crafted/ranger-quickshot.webp', cd: 12, unlock: 10, awaken: 1, anim: 'Bow_Shoot', castAt: .42, dmg: 1.6, desc: '정면으로 관통 화살 3발을 연속 발사하고 집중 +1' },
-    { id: 'ranger_binding', name: '각성 · 숲의 속박', icon: '/img/skills-crafted/ranger-binding.webp', cd: 20, unlock: 20, awaken: 2, anim: 'Bow_Shoot', castAt: .42, dmg: 3.4, desc: '관통 화살 5발로 적을 4초간 둔화. 집중 3을 소비하면 피해 2배' },
+    { id: 'ranger_quickshot', name: '각성 · 연속 관통', icon: '/img/skills-crafted/ranger-quickshot.webp', cd: 12, mp: 26, unlock: 10, awaken: 1, anim: 'Bow_Shoot', castAt: .42, dmg: 1.6, desc: '정면으로 관통 화살 3발을 연속 발사하고 집중 +1' },
+    { id: 'ranger_binding', name: '각성 · 숲의 속박', icon: '/img/skills-crafted/ranger-binding.webp', cd: 20, mp: 34, unlock: 20, awaken: 2, anim: 'Bow_Shoot', castAt: .42, dmg: 3.4, desc: '관통 화살 5발로 적을 4초간 둔화. 집중 3을 소비하면 피해 2배' },
+    { id: 'gale_hunt', name: '질풍 · 사냥각인', icon: '/img/skills-crafted/ranger-quickshot.webp', cd: 18, mp: 38, unlock: 35, awaken: 3, anim: 'Bow_Shoot', castAt: .42, dmg: 5.4, desc: '관통 화살을 연속 발사해 전방 무리를 꿰뚫는다' },
+    { id: 'skyfall_arrows', name: '천궁 · 유성화살비', icon: '/img/skills-crafted/ranger-binding.webp', cd: 28, mp: 52, unlock: 50, awaken: 4, anim: 'Bow_Shoot', castAt: .42, dmg: 8.2, desc: '유성처럼 낙하하는 화살이 넓은 지역을 연속 폭격한다' },
   ],
   },
 };

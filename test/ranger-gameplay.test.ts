@@ -49,7 +49,7 @@ test('Ranger catalog is playable and does not replace the Rogue ranger job', () 
   expect(HERO_ORDER).toContain('ranger');
   expect(HEROES.ranger).toMatchObject({ model: 'Ranger', rarity: 'SR', ranged: true, weapon: 'bow' });
   expect(HEROES.ranger.combo).toHaveLength(5);
-  expect(HEROES.ranger.skills).toHaveLength(6);
+  expect(HEROES.ranger.skills).toHaveLength(8);
   for (const sk of HEROES.ranger.skills) expect((SKILLS as any)[sk.id]).toBeDefined();
   expect(resolveJobHero(HEROES.rogue, 'ranger').id).toBe('rogue');
   expect(resolveJobHero(HEROES.ranger, 'guardian')).toBe(HEROES.ranger);

@@ -13,7 +13,7 @@ export class RemoteInput {
   expire(now) { if (now - this.last > 350) this.clear(); }
 }
 
-export function partyHeroState() { return { level: 20, star: 1, skills: [1, 1, 1, 1, 1, 1] }; }
+export function partyHeroState() { return { level: 20, star: 1, skills: [1, 1, 1, 1, 1, 1, 1, 1], skillLoadout: [4, 5] }; }
 export function normalizedPartyStats(base, scale) {
   return { ...base, hp: Math.round(base.hp * Math.pow(scale, .7)), atk: Math.round(base.atk * scale), def: Math.round(base.def * Math.pow(scale, .7)) };
 }

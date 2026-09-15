@@ -4,6 +4,7 @@ import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { BATTLE_PASS } from '../data/shop.js';
 import { normalizeLobbyCamera } from '../engine/lobby-camera.js';
 import { normalizeExpedition } from './expedition-economy.js';
+import { normalizeSkillLoadout } from './progression.js';
 
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const integer = (value, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) =>
@@ -31,6 +32,7 @@ export function normalizeSave(raw, fresh) {
     const h = fill(fresh.heroes.knight, sourceHeroes[id]);
     h.level = integer(h.level, 1, 1, 80); h.star = integer(h.star, 1, 1, 5);
     h.skills = HEROES[id].skills.map((_, i) => integer(h.skills[i], 1, 1, 10));
+    h.skillLoadout = normalizeSkillLoadout(HEROES[id], h.skillLoadout);
     s.heroes[id] = h;
   }
   if (!Object.hasOwn(s.heroes, s.selected)) s.selected = 'knight';

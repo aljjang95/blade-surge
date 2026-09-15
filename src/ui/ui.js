@@ -6,6 +6,7 @@ import { Minimap } from './minimap.js';
 import { CombatNoticeQueue } from './combat-notices.js';
 import { ROOM_TYPE } from '../game/world.js';
 import { resultStoryHtml } from './campaign.js';
+import { levelExp } from '../data/heroes.js';
 import { renderGrowthPreparation } from './growth.js';
 import './campaign.css';
 
@@ -59,6 +60,7 @@ export class UI {
     $('btn-pause').addEventListener('click', () => this.pause(true));
     $('btn-resume').addEventListener('click', () => this.pause(false));
     $('btn-giveup').addEventListener('click', () => { this.pause(false); this.app.battle.defeat(); });
+    $('btn-boss-shortcut').addEventListener('click', () => { const b = this.app.battle; if (b?.shortcutBoss()) { $('btn-boss-shortcut').hidden = true; this.setObjective(b.world); } });
     $('btn-auto').addEventListener('click', () => { const p = this.app.battle.player; if (!p) return; const next = !p.auto; const saved = this.app.journey?.setAuto(next); if (saved?.ok === false) { this.toast(saved.error, 'red'); return; } p.auto = next; this.app._auto = next; $('btn-auto').classList.toggle('on', p.auto); this.toast(p.auto ? '자동 전투 ON · 다음 출격에도 적용' : '자동 전투 OFF · 다음 출격에도 적용'); });
     $('btn-result-lobby').addEventListener('click', () => this.app.toLobby());
     $('btn-result-retry').addEventListener('click', () => this.app.startStage(this.app.battle.stage));
@@ -90,10 +92,10 @@ export class UI {
   /** 필드 득템 팝업 */
   lootPopup(def, rarity) {
     if (this.app.battle?.result || this.el.result.classList.contains('show')) return;
-    if (this.lootLayer.children.length > 4) this.lootLayer.firstChild.remove();
+    while (this.lootLayer.children.length >= 2) this.lootLayer.firstChild.remove();
     const d = document.createElement('div'); d.className = 'loot-pop'; d.style.setProperty('--rc', RARITY_COLOR[rarity] || '#9aa3b2');
     d.innerHTML = `<span class="lp-rar">${rarity}</span><img src="${ITEM_ICON(def)}" onerror="this.remove()"><span>${def.name}</span>`;
-    this.lootLayer.appendChild(d); setTimeout(() => d.remove(), 1800);
+    this.lootLayer.appendChild(d); setTimeout(() => d.remove(), 1250);
   }
   rewardHtml(got) { return got.map((g) => { if (g.k === 'item') { const it = ITEM_BY_ID[g.item.id]; return `<span class="reward-chip rar-${it.rarity}" style="border:1px solid"><img src="${ITEM_ICON(it)}" style="width:18px;height:18px" onerror="this.remove()"> ${it.name}</span>`; } const [nm, ic] = REWARD_LABEL[g.k] || [g.k, '']; return `<span class="reward-chip"><img src="${ic}" style="width:18px;height:18px" onerror="this.remove()"> ${nm} +${fmt(g.n)}</span>`; }).join(''); }
   rewardToast(got, cls = 'gold') { if (got && got.length) this.toast(this.rewardHtml(got), cls); }
@@ -126,20 +128,17 @@ export class UI {
   // ---------------- HUD ----------------
   setupHud(def, player) {
     $('hud-portrait').src = def.portrait; $('hud-stage').textContent = '';
-    this.skillBtns.forEach((b, i) => {
-      const sk = def.skills[i];
+    this.skillBtns.forEach((b, slot) => {
+      const { index, skill: sk } = player.combatSkill(slot);
       if (!sk) { b.style.display = 'none'; return; }
-      b.title = sk.name; b.setAttribute('aria-label', sk.name);
+      b.dataset.skillIndex = String(index); b.title = `${sk.name}${sk.mp ? ` · MP ${sk.mp}` : ''}`; b.setAttribute('aria-label', b.title);
       const img = b.querySelector('img'); img.src = sk.icon; img.style.display = '';
       img.onerror = () => { img.style.display = 'none'; b.style.background = `linear-gradient(135deg, ${def.color}, #222)`; };
-      b.style.display = '';
-      // 각성 슬롯: 잠겨 있으면 흑백 + 해금 레벨 배지 (해금 동기 = 과금 동기)
-      const locked = !player.unlocked(i);
-      b.classList.toggle('locked', locked);
-      // 버튼 DOM 은 전투마다 재사용된다 — 이전 영웅의 쿨타임 채움과 ready 플래그를 지우지 않으면 그대로 남는다
+      b.style.display = ''; b.classList.toggle('locked', !player.unlocked(index));
       b.querySelector('.cd').style.setProperty('--p', '0%'); b.dataset.ready = '0'; b.classList.remove('ready', 'ready-flash');
-      const lk = b.querySelector('.lock b'); if (lk && sk.unlock) lk.textContent = sk.unlock;
+      const lk = b.querySelector('.lock b'); if (lk) lk.textContent = sk.unlock || '';
     });
+    $('btn-boss-shortcut').hidden = !this.app.battle?.canBossShortcut?.();
     $('btn-auto').classList.toggle('on', !!player.auto);
     this.setCombo(0); $('hud-ult').parentElement.classList.remove('full');
   }
@@ -173,8 +172,12 @@ export class UI {
       $('hud-hp-txt').textContent = `${fmt(hpValue)} / ${fmt(maxHpValue)}`;
     }
     $('hud-hp').style.background = hp < 0.3 ? 'linear-gradient(90deg,#ff2d55,#ff8aa0)' : 'linear-gradient(90deg,#2bd46a,#a6ff5a)';
+    const mp = Math.max(0, p.mp / p.maxMp); $('hud-mp').style.width = mp * 100 + '%'; $('hud-mp-txt').textContent = `MP ${Math.floor(p.mp)} / ${p.maxMp}`;
+    const hero = this.eco.hero(b.heroId), need = levelExp(hero.level); $('hud-exp').style.width = Math.min(100, hero.exp / Math.max(1, need) * 100) + '%'; $('hud-exp-txt').textContent = `EXP ${hero.exp} / ${need}`;
+    const dodge = $('btn-dodge'), dodgeCd = dodge.querySelector('.dodge-cd'); dodge.classList.toggle('cooling', p.dodgeCd > .01); dodgeCd.hidden = p.dodgeCd <= .01; if (!dodgeCd.hidden) dodgeCd.textContent = p.dodgeCd.toFixed(1);
+    $('btn-boss-shortcut').hidden = !b.canBossShortcut?.();
     const ult = p.ult / p.ultMax; $('hud-ult').style.width = ult * 100 + '%'; $('hud-ult').parentElement.classList.toggle('full', ult >= 1);
-    this.skillBtns.forEach((btn, i) => { const sk = p.def.skills[i]; if (!sk || btn.classList.contains('locked')) return; let pct; if (sk.ult) { pct = 1 - ult; btn.classList.toggle('ready', ult >= 1); } else pct = p.cds[i] / sk.cd; btn.querySelector('.cd').style.setProperty('--p', (pct * 100) + '%'); const wasReady = btn.dataset.ready === '1'; const ready = pct <= 0; if (ready && !wasReady && b.elapsed > 1) { btn.classList.remove('ready-flash'); void btn.offsetWidth; btn.classList.add('ready-flash'); audio.play('ui_pluck', { vol: 0.25 }); } btn.dataset.ready = ready ? '1' : '0'; });
+    this.skillBtns.forEach((btn, slot) => { const i = p.combatSkillIndex(slot), sk = p.def.skills[i]; if (!sk) return; const locked = !p.unlocked(i); btn.classList.toggle('locked', locked); if (locked) return; let pct; if (sk.ult) { pct = 1 - ult; btn.classList.toggle('ready', ult >= 1); } else { pct = p.cds[i] / sk.cd; btn.classList.toggle('ready', false); } btn.querySelector('.cd').style.setProperty('--p', (Math.max(0,pct) * 100) + '%'); const wasReady = btn.dataset.ready === '1'; const ready = pct <= 0 && (!sk.mp || p.mp >= sk.mp); if (ready && !wasReady && b.elapsed > 1) { btn.classList.remove('ready-flash'); void btn.offsetWidth; btn.classList.add('ready-flash'); audio.play('ui_pluck', { vol: 0.25 }); } btn.dataset.ready = ready ? '1' : '0'; });
     this.setGauge(b);
     if (b.boss && b.boss.alive) $('boss-hp').style.width = (b.boss.hp / b.boss.maxHp * 100) + '%';
     if (this.hurtT > 0) { this.hurtT -= dt; } $('hud-vignette').style.opacity = Math.max(hp < 0.3 ? 0.42 : 0, this.hurtT > 0 ? this.hurtT * 1.2 : 0);
@@ -230,7 +233,7 @@ export class UI {
     $('result-exp').style.width = '0%'; $('result-bp').style.width = '0%';
     $('result-exp-txt').textContent = ''; $('result-bp-txt').textContent = '';
     if (win) {
-      r.reward ||= eco.completeStage(b.stage, r.stars, { fieldGold: b.drops.gold, fieldStones: b.drops.stones, fieldStones2: b.drops.stones2, fieldStones3: b.drops.stones3, fieldFragments: b.drops.fragments, fieldLoot: b.drops.loot });
+      r.reward ||= eco.completeStage(b.stage, r.stars, { fieldGold: b.drops.gold, fieldStones: b.drops.stones, fieldStones2: b.drops.stones2, fieldStones3: b.drops.stones3, fieldFragments: b.drops.fragments, fieldLoot: b.drops.loot, fullClear: !!r.fullClear });
       if (this.app.expedition && !r.expeditionRecorded) {
         r.receiptId ||= globalThis.crypto?.randomUUID?.() || `campaign-${Date.now()}-${Math.random()}`;
         const recorded = this.app.expedition.recordCampaign(r, b.stage);

@@ -5,7 +5,7 @@ import { Player } from '../game/player.js';
 import { Enemy } from '../game/enemies.js';
 import { loadModel, disposeCharacter } from '../engine/assets.js';
 import { audio } from '../engine/audio.js';
-import { PARTY_CODE, PARTY_ACTIONS, sanitizePartyName, validPartySnapshot } from './protocol.js';
+import { PARTY_CODE, PARTY_ACTIONS, PARTY_LIMITS, sanitizePartyName, validPartySnapshot } from './protocol.js';
 import { RemoteInput, actorSnapshot, partyHeroState, normalizedPartyStats, canonicalPartyCode } from './replication.js';
 import { PartyView } from './view.js';
 import { capturePartyWarnings, PartyCombatEffects } from './combat-effects.js';
@@ -158,7 +158,7 @@ export class PartySession {
       if (member.id === this.playerId) player = battle.player;
       else {
         const proxy = new Proxy(battle, {get:(target, key) => key === 'player' ? player : key === 'input' ? input : key === 'onPlayerDeath' ? p => this.playerDown(p) : Reflect.get(target, key), set:(target,key,value)=>Reflect.set(target,key,value)});
-        player = new Player(proxy, await loadModel(def.model), def, heroStats(def, partyHeroState(), {}), [1,1,1,1,1,1], {}, 20);
+        player = new Player(proxy, await loadModel(def.model), def, heroStats(def, partyHeroState(), {}), [1,1,1,1,1,1,1,1], {}, 20, [4,5]);
       }
       player.partyId = member.id; player.stats = normalizedPartyStats(heroStats(def, partyHeroState(), {}), battle.stage.scale);
       player.maxHp = player.hp = player.stats.hp; player.heroLevel = 20; player.auto = false;
@@ -210,11 +210,13 @@ export class PartySession {
   hitEvent(enemy, value) { if (this.events.length < 32) this.events.push({type:'hit',id:enemy.partyId,x:enemy.pos.x,z:enemy.pos.z,value:Math.round(value)}); }
   snapshotOf() {
     const b = this.app.battle;
+    const mpEvents = this.members.map(m => { const p = this.players.get(m.id); return p ? {type:'mp',id:m.id,value:Math.max(0,p.mp)} : null; }).filter(Boolean);
+    const events = this.events.splice(0, Math.max(0, PARTY_LIMITS.events - mpEvents.length)); events.push(...mpEvents);
     return { tick:++this.tick,elapsed:b.elapsed,paused:b.paused,warnings:capturePartyWarnings(b),visuals:this.visuals.splice(0),
       players:this.members.map(m => { const p = this.players.get(m.id); return {...actorSnapshot(p,m.id),heroId:m.heroId,ult:p.ult,cds:p.cds.map(v => Math.max(0,v))}; }),
       enemies:b.enemies.filter(e => e.partyId).slice(0,180).map(e => ({...actorSnapshot(e,e.partyId),key:e.speciesId,boss:e.isBoss,elite:e.isElite})),
       rooms:b.world.rooms.map((r,i) => ({id:i,discovered:!!r.discovered,cleared:!!r.cleared,activated:!!r.spawned})), roomsCleared:b.roomsCleared,
-      bossDefeated:!!b.bossDefeated,portal:b.portal ? {x:b.portal.pos.x,z:b.portal.pos.z} : null,events:this.events.splice(0),
+      bossDefeated:!!b.bossDefeated,portal:b.portal ? {x:b.portal.pos.x,z:b.portal.pos.z} : null,events,
       projectiles:b.projectiles.slice(0,160).map((p,i)=>({id:'p'+i,x:p.pos.x,y:p.pos.y,z:p.pos.z,yaw:Math.atan2(p.dir.x,p.dir.z)})) };
   }
   update(dt) {
@@ -246,7 +248,7 @@ export class PartySession {
     b.elapsed = state.elapsed; b.roomsCleared = state.roomsCleared; b.bossDefeated = state.bossDefeated;
     for (const room of state.rooms) { const local = b.world.rooms[room.id]; if (local) Object.assign(local,{discovered:room.discovered,cleared:room.cleared,spawned:room.activated}); }
     if ((state.portal || state.bossDefeated) && b.world.sealed) { b.world.unseal(); b.arena.openSeal(b.fx); }
-    for (const member of state.players) { const p = this.players.get(member.id); if (p) { this.applyPose(p,member,dt); p.ult=member.ult; p.cds=member.cds; } }
+    for (const member of state.players) { const p = this.players.get(member.id); if (p) { this.applyPose(p,member,dt); p.ult=member.ult; p.cds=member.cds; if (member.mp !== undefined) p.mp=member.mp; if (member.maxMp !== undefined) p.maxMp=member.maxMp; } }
     const ids = new Set();
     for (const item of state.enemies) {
       ids.add(item.id); let enemy = this.replicas.get(item.id);
@@ -264,12 +266,12 @@ export class PartySession {
     this.combatEffects?.update(state.warnings || []);
     this.visualPlayer?.update(dt);
     this.visualPlayer?.play(this.pendingVisuals.splice(0),state.elapsed,this.app.reducedMotion.matches);
-    for (const event of this.pendingEvents.splice(0)) if (event.type === 'hit') {
+    for (const event of this.pendingEvents.splice(0)) { if (event.type === 'mp') { const p=this.players.get(event.id); if(p){p.mp=event.value;p.maxMp=100;} continue; } if (event.type === 'hit') {
       const pos = new THREE.Vector3(event.x,1,event.z), target = this.replicas.get(event.id);
       if (!this.app.reducedMotion.matches) { b.fx.flash(pos,0xffd080,{size:1.8,life:.12}); target?.flash(0xffffff); target?.receiveImpact(0,1,.5); }
       b.fx.damage(pos,event.value,{kind:'skill'});
       audio.hit('slash',{heavy:event.value>1000});
-    }
+    } }
     b.renderer.rig.target.lerp(b.player.pos,1-Math.exp(-dt*10)); b.arena.update(dt,b.fx,b.player.pos);
     b.ui.setObjective(b.world); b.ui.updateHud(b,dt);
   }

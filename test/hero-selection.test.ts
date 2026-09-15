@@ -35,7 +35,7 @@ test('legacy roster migration adds missing classes and preserves trained hero an
   raw.gold=321; raw.gems=87; raw.tickets=2;
   const result=eco.migrate(raw);
   expect(Object.keys(result.heroes)).toEqual(Object.keys(HEROES));
-  expect(result.heroes.mage).toEqual(raw.heroes.mage);
+  expect(result.heroes.mage).toMatchObject({level:24,exp:83,star:3,shards:17,skills:[4,3,2,1,2,1,1,1],skillLoadout:[4,5]});
   expect(result.selected).toBe('mage');
   expect([result.gold,result.gems,result.tickets]).toEqual([321,87,2]);
   expect(result.heroes.barbarian.level).toBe(1);
@@ -56,9 +56,10 @@ test('hero choice updates persisted launch identity, showcased model and reload 
   expect(eco.s.selected).toBe('ranger');
 });
 
-test('every skill has a unique art identity including the six ranger abilities', () => {
-  const icons=Object.values(HEROES).flatMap(h=>h.skills.map(s=>s.icon));
+test('original six abilities per hero keep their unique art identity while advanced skills reuse compatible art', () => {
+  const icons=Object.values(HEROES).flatMap(h=>h.skills.slice(0,6).map(s=>s.icon));
   expect(new Set(icons).size).toBe(30);
+  expect(Object.values(HEROES).every(h=>h.skills.length===8)).toBe(true);
 });
 
 test('keyboard selection restores focus to the replacement card, pointer selection does not', () => {
