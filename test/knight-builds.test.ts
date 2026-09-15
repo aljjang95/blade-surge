@@ -55,3 +55,10 @@ test('installed pierce variant replaces the wide baseline holy slash in actual s
   SKILLS.holy_slash.cast(g,p,ctx as any);
   expect(g.shots).toHaveLength(1); expect(g.shots[0]).toMatchObject({radius:.72,dmg:135});
 });
+
+test('party stage preserves the baseline wide holy slash even with full Aegis proc',()=>{
+  installKnightBuildVariants(); const g:any=game(['arm_aegis_master']),p:any=player();g.stage.party={runId:'party'};
+  SKILLS.holy_slash.cast(g,p,ctx as any);
+  expect(g.shots).toHaveLength(1);expect(g.shots[0]).toMatchObject({radius:2,dmg:100,pierce:true});
+  expect(g.shots.some((shot:any)=>shot.radius===.72)).toBe(false);
+});
