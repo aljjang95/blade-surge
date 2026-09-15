@@ -75,3 +75,10 @@ test('HUD avoids text rewrites for unchanged snapshots and hides disabled arena 
  state={...state,state:'proc',shield:25};view.update();expect(view.hud.writes).toBe(writes+1);expect(view.hud.textContent).toContain('보호막 25');
  state={enabled:false};view.update();expect(view.hud.hidden).toBe(true);expect(view.hud.writes).toBe(writes+1);
 });
+
+test('guardian UI does not advertise an unavailable Holy Slash transformation',()=>{
+ const {app,view}=fixture();app.eco.s.expedition.selectedJob='guardian';view.render();
+ expect(view.body.querySelector('.arsenal-build-identity')).toBeNull();
+ expect(view.body.textContent).toContain('전직 기술에는 일섬 변형 미적용');
+ app.eco.s.expedition.selectedJob=null;view.render();expect(view.body.querySelector('.arsenal-build-identity')).not.toBeNull();
+});

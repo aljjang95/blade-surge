@@ -1,13 +1,13 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { SKILLS } from '../src/game/skills.js';
-import { KNIGHT_SLASH_BUILD_IDS, KNIGHT_SLASH_VARIANTS, applyKnightSlashVariant, installKnightBuildVariants, knightSlashVariantFromBonus, normalizeKnightSlashVariant } from '../src/game/knight-builds.js';
+import { KNIGHT_SLASH_BUILD_IDS, KNIGHT_SLASH_VARIANTS, applyKnightSlashVariant, knightSlashVariantFromBonus, normalizeKnightSlashVariant } from '../src/game/knight-builds.js';
 
 const player = () => ({ alive:true, def:{id:'knight'}, pos:new THREE.Vector3(), forward:(v:THREE.Vector3)=>v.set(0,0,1) });
 const ctx = { sk:{id:'holy_slash'}, dmg:100 };
 const game = (procs:string[] = []) => {
   const timers:any[] = [], shots:any[] = [], hits:any[] = [], vacuums:any[] = [];
-  return { active:true, stage:{}, timers, shots, hits, vacuums, app:{eco:{heroEquipBonus:()=>({procs})}},
+  return { active:true, stage:{}, procs:new Set(procs), timers, shots, hits, vacuums, app:{eco:{heroEquipBonus:()=>({procs})}},
     after:(delay:number,fn:()=>void)=>timers.push({delay,fn}), spawnProjectile:(shot:any)=>shots.push(shot),
     hitRadius:(...args:any[])=>hits.push(args), vacuum:(...args:any[])=>vacuums.push(args), renderer:{shake(){}},
     fx:{ castCircle(){}, slashSprite(){}, holyBurst(){}, light(){}, shockTex(){}, groundTex(){} } };
@@ -51,13 +51,13 @@ test('pierce build is a replacement shot, not baseline plus free extra damage',(
 });
 
 test('installed pierce variant replaces the wide baseline holy slash in actual skill dispatch',()=>{
-  installKnightBuildVariants(); const g:any=game(['arm_aegis_master']),p:any=player();
+  const g:any=game(['arm_aegis_master']),p:any=player();
   SKILLS.holy_slash.cast(g,p,ctx as any);
   expect(g.shots).toHaveLength(1); expect(g.shots[0]).toMatchObject({radius:.72,dmg:135});
 });
 
 test('party stage preserves the baseline wide holy slash even with full Aegis proc',()=>{
-  installKnightBuildVariants(); const g:any=game(['arm_aegis_master']),p:any=player();g.stage.party={runId:'party'};
+  const g:any=game(['arm_aegis_master']),p:any=player();g.stage.party={runId:'party'};
   SKILLS.holy_slash.cast(g,p,ctx as any);
   expect(g.shots).toHaveLength(1);expect(g.shots[0]).toMatchObject({radius:2,dmg:100,pierce:true});
   expect(g.shots.some((shot:any)=>shot.radius===.72)).toBe(false);
