@@ -1,8 +1,9 @@
-import { HERO_ORDER } from '../data/heroes.js';
+import { HERO_ORDER, HEROES } from '../data/heroes.js';
 import { SLOTS, ITEM_BY_ID } from '../data/items.js';
 import { COMBAT_ARTS } from '../data/combat-arts.js';
 import { PATHS, CHALLENGES } from '../data/masterworks.js';
 import { JOBS } from '../data/jobs.js';
+import { normalizeSkillLoadout } from './progression.js';
 
 const record = v => v && typeof v === 'object' && !Array.isArray(v) ? v : {};
 export const DEFAULT_MIX = { music: .55, sfx: .9, voice: 1 };
@@ -18,6 +19,7 @@ export function normalizeArsenal(raw) {
       return {name:typeof p.name==='string'?p.name.trim().slice(0,20)||`구성 ${index+1}`:`구성 ${index+1}`,
         artId:validArt(p.artId),pathId:PATHS.some(x=>x.id===p.pathId)?p.pathId:'balanced',
         jobId:JOBS.some(j=>j.id===p.jobId&&j.baseHero===id)?p.jobId:null,
+        skillLoadout:normalizeSkillLoadout(HEROES[id],p.skillLoadout),
         challengeIds:CHALLENGES.filter(c=>Array.isArray(p.challengeIds)&&p.challengeIds.includes(c.id)).map(c=>c.id),
         equipment:Object.fromEntries(SLOTS.map(slot=>{const e=record(p.equipment?.[slot]);return [slot,Number.isSafeInteger(e.uid)&&e.uid>0&&ITEM_BY_ID[e.id]?.slot===slot?{uid:e.uid,id:e.id}:null];}))};
     });
