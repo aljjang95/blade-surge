@@ -119,7 +119,7 @@ export class Battle extends BaseBattle {
     p.addUlt((crit ? 3 : 2) * (p.stats.ultGain || 1));
     this.lastTarget = enemy;
     const hitPos = enemy.pos.clone().setY(1.1 * enemy.def.scale);
-    if (this.fx.dmgLayer.children.length < 26 || crit) this.fx.damage(hitPos, dealt, { crit, kind: opts.kind === 'magic' ? 'skill' : '' });
+    if (this.fx.dmgLayer.children.length < (crit||opts.finisher?14:8)) this.fx.damage(hitPos, dealt, { crit, kind: opts.kind === 'magic' ? 'skill' : '' });
     const contact = this.paused ? null : contactProfile(opts, crit, enemy.isBoss, !!this.app.reducedMotion?.matches);
     if (!contact) return;
     const dx = opts.dirx || 0, dz = opts.dirz || 0;

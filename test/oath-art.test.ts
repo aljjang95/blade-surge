@@ -51,3 +51,10 @@ test('distant colour planes skip dynamic shadows while source materials remain u
  });
  expect(distant).toBe(1);expect(stone).toBe(4);copy.userData.dispose();
 });
+
+test('Sanctuary 통합 후에도 기존 Oath Hall V2 메타데이터를 유지한다',async()=>{
+ const source=(await parse()).scene,copy=cloneOathHall(source)!;
+ expect(copy.name).toBe('TLL_OathHall_BlenderV2');
+ expect(copy.userData.visualVersion).toBe('oathhall-v2');
+ copy.userData.dispose();
+});

@@ -36,6 +36,7 @@ import './ui/progression.css';
 import './ui/illustrated.css';
 import './ui/oath-visual.css';
 import { OathShell } from './ui/oath-shell.js';
+import { ExperienceView } from './ui/experience-view.js';
 import { preloadOathHall } from './engine/oathhall-asset.js';
 const BOOT_TIPS = [
   '<b>진공기</b>로 적을 끌어모은 뒤 한 번에 쓸어담는 것이 몹몰이의 기본이다.',
@@ -129,6 +130,7 @@ class App {
     if (!this.companionAgent) this.companionAgent = createCompanion(this);
     this.party = new PartySession(this);
     this.oathShell = new OathShell(this);
+    this.experienceView = new ExperienceView(this);
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
     // Mutations already persist at their owning action. An idle PWA/tab must not overwrite a newer tab's save.
     const suspend = () => { this.input.clear(); if (this.mode === 'battle') this.ui.pause(true); };
@@ -279,6 +281,7 @@ class App {
     const battle=this.battle, combat=this.mode==='battle'&&battle?.active;
     audio.updateCombatMix(realDt,{active:combat,paused:!!(battle?.paused||this.expeditionUI?.opened),boss:!!(combat&&battle.enemies.some(e=>e.alive&&e.isBoss)),intensity:combat?Math.min(1,(battle.combo||0)/30):0});
     this.arsenalView?.update();
+    this.experienceView?.update();
     if (this.expeditionUI?.opened) return;
     if (this.mode === 'battle') {
       this.battle.update(realDt);

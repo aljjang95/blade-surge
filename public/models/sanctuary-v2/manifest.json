@@ -1,0 +1,14 @@
+{
+  "blender": "5.2.1 LTS",
+  "generator": "tools\\art\\build-sanctuary-v2.py",
+  "licence": "Original authored for TLL; no external models or textures",
+  "mesh_batches": 8,
+  "materials": 8,
+  "triangles": 35371,
+  "bytes": 3353184,
+  "sha256": "c71449a6e0c234099171c8c2f01549aee3ab05804bc14124172cc5ee5d045075",
+  "editable": "art\\sanctuary-v2\\sanctuary-v2.blend",
+  "source_object_count": 588,
+  "hero_modified": false,
+  "vertex_shading": "Per-face five-ray geometric occlusion with large-scale material variation"
+}
