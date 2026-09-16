@@ -1,0 +1,13 @@
+{
+  "blender": "5.2.1 LTS",
+  "generator": "tools\\art\\build-oathhall-v2.py",
+  "licence": "Original authored for TLL; no external assets",
+  "mesh_batches": 8,
+  "materials": 8,
+  "triangles": 26622,
+  "bytes": 1853340,
+  "sha256": "d59a700720ae6cca310c2b2204cca1847c94b1bf6ba0312e8238c14382f1be3b",
+  "editable": "art\\oathhall-v2\\oathhall-v2.blend",
+  "source_object_count": 298,
+  "hero_modified": false
+}
