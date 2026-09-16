@@ -1,6 +1,6 @@
 import { MeshBasicMaterial, FrontSide } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-const ASSET='/models/oathhall-v1/oathhall-v1.glb';
+const ASSET='/models/oathhall-v2/oathhall-v2.glb';
 let template=null, pending=null;
 /** Optional visual enhancement. A bounded failure never prevents playing. */
 export function preloadOathHall(fetcher=globalThis.fetch) {
@@ -19,7 +19,7 @@ export function preloadOathHall(fetcher=globalThis.fetch) {
 export function cloneOathHall(source=template) {
  if(!source)return null;
  const root=source.clone(true),geometries=new Map(),materials=new Map();
- root.name='TLL_OathHall_BlenderV1';root.userData.visualVersion='oathhall-v1';
+ root.name='TLL_OathHall_BlenderV2';root.userData.visualVersion='oathhall-v2';
  root.traverse(o=>{if(!o.isMesh)return;
   if(!geometries.has(o.geometry))geometries.set(o.geometry,o.geometry.clone());o.geometry=geometries.get(o.geometry);
   const clone=m=>{

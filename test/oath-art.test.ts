@@ -5,8 +5,8 @@ import * as THREE from 'three';
 import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
 import {cloneOathHall,preloadOathHall} from '../src/engine/oathhall-asset.js';
 import {finishOathKnightMaterial} from '../src/engine/hero-surface-finish.js';
-const bytes=readFileSync(new URL('../public/models/oathhall-v1/oathhall-v1.glb',import.meta.url));
-const manifest=JSON.parse(readFileSync(new URL('../public/models/oathhall-v1/manifest.json',import.meta.url),'utf8'));
+const bytes=readFileSync(new URL('../public/models/oathhall-v2/oathhall-v2.glb',import.meta.url));
+const manifest=JSON.parse(readFileSync(new URL('../public/models/oathhall-v2/manifest.json',import.meta.url),'utf8'));
 const doc=JSON.parse(bytes.subarray(20,20+bytes.readUInt32LE(12)).toString());
 const parse=()=>new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
 test('real Blender export matches its manifest and fits eight material / 40k triangle budget',()=>{
