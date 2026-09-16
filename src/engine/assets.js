@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { preloadArmory } from './armory-assets.js';
+import { finishOathKnightMaterial } from './hero-surface-finish.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
@@ -142,6 +143,7 @@ export async function preloadAll(onProgress) {
 /** 애니메이션 포함 캐릭터 인스턴스 생성 */
 export function spawnCharacter(gltf) {
   const rigRoot = skeletonClone(gltf.scene);
+  const oathKnight = !!rigRoot.getObjectByName('TLL_Knight_0');
   const contract = rigRoot.userData.authoredContract;
   const root = contract ? new THREE.Group() : rigRoot;
   if (contract) {
@@ -158,6 +160,7 @@ export function spawnCharacter(gltf) {
     if (!o.isMesh) return;
     const clone = (material) => {
       const next = material.clone();
+      if (oathKnight) finishOathKnightMaterial(next);
       if (next.emissive) {
         if (!contract && !next.userData.tllAuthored) next.emissive.setScalar(0);
         next.userData.authoredEmissive = next.emissive.clone();

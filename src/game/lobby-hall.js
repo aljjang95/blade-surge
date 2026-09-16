@@ -1,9 +1,11 @@
 import * as THREE from 'three';
+import { cloneOathHall } from '../engine/oathhall-asset.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { applySurfaceDetail, projectSurfaceUV, SURFACE_TEXTURES } from '../engine/surface-textures.js';
 
 /** The oath hall: fixed architecture, batched by material, owned by one lobby. */
-export function buildOathHall() {
+export function buildOathHall() { return cloneOathHall() || buildLegacyOathHall(); }
+export function buildLegacyOathHall() {
   const group = new THREE.Group(); group.name = 'TLL_OathHall';
   const materials = [
     new THREE.MeshStandardMaterial({ color: 0x789288, roughness: .7, metalness: .04 }),

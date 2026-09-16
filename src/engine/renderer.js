@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { lobbyCameraPosition } from './lobby-camera.js';
+import { lobbyCameraPosition, lobbyCompositionShift } from './lobby-camera.js';
 import { battleCameraOffset } from './camera-control.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -174,7 +174,9 @@ export class Renderer {
       if (cam.fov !== lobbyFov) { cam.fov = lobbyFov; cam.updateProjectionMatrix(); }
       rig.pos.lerp(desired, 1 - Math.exp(-realDt * 3));
       cam.position.copy(rig.pos);
-      cam.lookAt(rig.target.x, rig.target.y + 1.1, rig.target.z);
+      // Editorial offset reserves the right-hand destination panel, without moving the hero.
+      const editorialShift = lobbyCompositionShift(p, this._width >= this._height);
+      cam.lookAt(rig.target.x + editorialShift.x, rig.target.y + 1.1, rig.target.z + editorialShift.z);
     } else {
       // Hits never displace or pulse the whole camera; preserve user framing.
       const off = rig.offset.clone();
@@ -193,8 +195,8 @@ export class Renderer {
     this.aberr = Math.max(0, this.aberr - realDt * 1.6);
     this.radial = Math.max(0, this.radial - realDt * 1.2);
     this.u.uFlash.value = this.flash;
-    this.u.uAberr.value = this.aberr * 0.2;
-    this.u.uRadial.value = this.radial;
+    this.u.uAberr.value = 0; // Preserve clear attack silhouettes in every quality mode.
+    this.u.uRadial.value = 0; // No fullscreen blur; gameplay dt and contact feedback remain unchanged.
     this.u.uDesat.value = this.desat;
     this.u.uTime.value = this.time;
   }
