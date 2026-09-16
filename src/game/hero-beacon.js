@@ -8,7 +8,10 @@ export class HeroBeacon {
     if (model) {
       const groups = new Map();
       model.traverse(o => {
-        if (!o.isSkinnedMesh || !o.name.startsWith('TLL_') || !o.visible) return;
+        if (!o.isSkinnedMesh || !o.visible) return;
+        let head = false;
+        for (let p = o; p && p !== model; p = p.parent) if (/_Head$/.test(p.name)) head = true;
+        if (!o.name.startsWith('TLL_') && !head) return;
         o.updateMatrix();
         const key = [o.skeleton.uuid, o.parent.uuid, o.bindMode, o.bindMatrix.elements.join(','), o.matrix.elements.join(','), Object.keys(o.geometry.attributes).sort().join(','), !!o.geometry.index].join('|');
         if (!groups.has(key)) groups.set(key, []); groups.get(key).push(o);
@@ -36,6 +39,20 @@ export class HeroBeacon {
     shape.moveTo(-.28, -.91); shape.lineTo(0, -1.35); shape.lineTo(.28, -.91); shape.lineTo(0, -1.06); shape.closePath();
     this.arrow = add(new THREE.ShapeGeometry(shape), 0xffe6a0, 992);
     this.root.position.y = .08;
+    // One crisp, camera-facing locator. No text, pulses or lighting cost.
+    // A fixed projected size survives manual zoom and a crowded ground plane.
+    const pixels = new Uint8Array(32 * 32 * 4);
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+      const d = Math.abs(x - 15.5) + Math.abs(y - 15.5), i = (y * 32 + x) * 4;
+      if (d > 15) continue;
+      const color = d > 11 ? [8, 22, 29] : d > 7 ? [128, 242, 221] : [242, 255, 250];
+      pixels.set([...color, 255], i);
+    }
+    this.locatorTexture = new THREE.DataTexture(pixels, 32, 32);
+    this.locatorTexture.colorSpace = THREE.SRGBColorSpace; this.locatorTexture.needsUpdate = true;
+    this.locator = new THREE.Sprite(new THREE.SpriteMaterial({map:this.locatorTexture, depthTest:false, depthWrite:false, toneMapped:false, sizeAttenuation:false}));
+    this.locator.name = 'PlayerLocator'; this.locator.position.y = 2.72;
+    this.locator.scale.set(.027,.034,1); this.locator.renderOrder = 998; this.root.add(this.locator);
   }
   update(alive, yaw) {
     this.root.visible = alive;
@@ -47,6 +64,7 @@ export class HeroBeacon {
     if (this.disposed) return; this.disposed = true;
     for (const { mesh } of this.occluded) { mesh.removeFromParent(); mesh.geometry.dispose(); }
     this.occluded.length = 0; this.occlusionMaterial?.dispose();
+    this.locator.material.dispose(); this.locatorTexture.dispose();
     this.root.removeFromParent(); this.root.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
   }
 }

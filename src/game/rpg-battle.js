@@ -132,7 +132,7 @@ export class Battle extends BaseBattle {
     const color = opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
     // The entire pack shares a small per-frame budget, rather than 30 stacked impacts.
     if (budget.emit && this.feedbackCount++ < 6) {
-      this.fx.contact(hitPos,direction.set(dx,0,dz).normalize(),color,{size:contact.size*(this.combo%10===0?1.35:1),particles:contact.particles,light:false});
+      this.fx.contact(hitPos,direction.set(dx,0,dz).normalize(),color,{size:contact.size,particles:contact.particles,light:false,kind:opts.kind||'slash',tier:contact.tier});
     }
     {
       audio.hit(opts.kind || 'slash', { crit, heavy:contact.heavy, finisher: !!opts.finisher });

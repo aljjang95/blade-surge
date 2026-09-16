@@ -235,9 +235,12 @@ export class FX {
     }
   }
   /** Bounded contact cue: pooled sparks, one short flash, and a heavy-only pooled light. */
-  contact(pos, dir, color, { size=1.6, particles=5, light=false }={}) {
-    this.flash(pos,color,{size,life:.11});
-    if(particles>0)this.directional(pos,dir,color,{n:particles,speed:particles>5?11:7,size:particles>5?.28:.22,life:.22,spread:.38});
+  contact(pos, dir, color, { size=1.6, particles=5, light=false, kind='slash', tier='light' }={}) {
+    const e=this.camera?.matrixWorld.elements;
+    const angle=e && dir.lengthSq()>0 ? Math.atan2(dir.x*e[4]+dir.y*e[5]+dir.z*e[6],dir.x*e[0]+dir.y*e[1]+dir.z*e[2]) : -.65;
+    const shaped=particles>0 && kind!=='magic';
+    this.flash(pos,color,{size,life:particles===0?.08:tier==='finisher'?.14:.10,angle,stretch:shaped?2.15:1,contact:true});
+    if(particles>0)this.directional(pos,dir,color,{n:this.lite?Math.min(3,particles):particles,speed:particles>5?11:7,size:particles>5?.25:.18,life:.18,spread:.26});
     if(light)this.light(pos,color,3.2,3.5,.1);
   }
   /**
@@ -302,10 +305,13 @@ export class FX {
   aura(pos, color, n = 3) { this.embers(pos, color, { n, radius: 0.8, life: 0.8, size: 0.3, rise: 2 }); }
 
   // ---------- 스프라이트 플래시 ----------
-  flash(pos, color, { size = 2.2, life = 0.18, tex = 'spark' } = {}) {
+  flash(pos, color, { size = 2.2, life = 0.18, tex = 'spark', angle = null, stretch = 1, contact = false } = {}) {
     const m = this._keep(new THREE.SpriteMaterial({ map: tex === 'spark' ? sparkTex() : softCircleTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 1 }));
-    const s = new THREE.Sprite(m); s.position.copy(pos); s.scale.setScalar(size * 0.3); s.material.rotation = Math.random() * Math.PI; s.renderOrder = 11;
-    this.add(s, life, (k) => { s.scale.setScalar(size * (0.3 + k * 1.2)); m.opacity = 1 - k; }, () => m.dispose());
+    const s = new THREE.Sprite(m); s.position.copy(pos); s.scale.set(size*.3*stretch,size*.3/stretch,1); s.material.rotation = angle ?? Math.random() * Math.PI; s.renderOrder = 11;
+    this.add(s, life, (k) => {
+      const radius=size*(contact ? .45+.55*Math.min(1,k/.18) : .3+k*1.2);
+      s.scale.set(radius*stretch,radius/stretch,1); m.opacity = contact ? (1-k)**1.7 : 1-k;
+    }, () => m.dispose());
   }
   // ---------- 지면 충격파 링 ----------
   ring(pos, color, { r0 = 0.3, r1 = 4, life = 0.45, width = 0.5, y = 0.08, vertical = false, thick = 1 } = {}) {

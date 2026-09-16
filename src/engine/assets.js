@@ -51,9 +51,17 @@ export async function loadModel(name, contract = null) {
       gltf.scene.traverse((o) => {
         if (o.isMesh && o.name.startsWith('TLL_')) for (const m of materialsOf(o)) m.userData.tllAuthored = true;
       });
+      const fitting = await loader.loadAsync('/models/heroes-v3/ranger-v3.glb').catch(() => null);
+      if (fitting) assembleHeroIdentity(gltf, fitting, name, 'expedition-v3');
+      else gltf.scene.userData.identityFallback = 'ranger-casual-v2';
     } else if (!contract && HERO_MODELS.includes(name)) {
-      const authored = await loader.loadAsync(`/models/tll/${name.toLowerCase()}-casual-v2.glb`);
-      assembleHeroIdentity(gltf, authored, name, 'casual-v2');
+      let style = 'expedition-v3';
+      const authored = await loader.loadAsync(`/models/heroes-v3/${name.toLowerCase()}-v3.glb`).catch(async () => {
+        style = 'casual-v2';
+        gltf.scene.userData.identityFallback = style;
+        return loader.loadAsync(`/models/tll/${name.toLowerCase()}-casual-v2.glb`);
+      });
+      assembleHeroIdentity(gltf, authored, name, style);
     }
     return prepareModel(gltf, contract);
   });

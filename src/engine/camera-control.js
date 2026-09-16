@@ -1,5 +1,6 @@
 const clamp = (value, fallback, min, max) => Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
 export function normalizeBattleCamera(value = {}) {
+  value = value || {};
   return { yaw: Number.isFinite(value.yaw) ? ((value.yaw + 180) % 360 + 360) % 360 - 180 : 0,
     pitch: clamp(value.pitch, 0, -18, 20), zoom: clamp(value.zoom, 100, 70, 140) };
 }
@@ -22,6 +23,9 @@ export class CameraControls {
     this.pad = document.getElementById('battle-camera-pad');
     this.value = normalizeBattleCamera();
     app.renderer.battleCamera = this.value;
+    // Battle pause, death, modal and stage transitions already clear gameplay input.
+    // End capture at that same boundary, even if no pointer event arrives while paused.
+    app.input.onClear?.(() => this.finish());
     app.input.getCameraYaw = () => {
       const e = app.renderer.camera.matrixWorld.elements;
       return Math.atan2(-e[2], e[0]);
@@ -33,7 +37,7 @@ export class CameraControls {
       if (onPad && event.button !== 0 && event.button !== 2) return;
       const surface = onPad ? this.pad : event.target;
       this.drag = { id: event.pointerId, x: event.clientX, y: event.clientY, ...this.value, surface };
-      surface.setPointerCapture?.(event.pointerId);
+      try { surface.setPointerCapture?.(event.pointerId); } catch { this.drag = null; return; }
       event.preventDefault();
     });
     document.addEventListener('pointermove', event => {
@@ -47,12 +51,13 @@ export class CameraControls {
       if (this.drag?.id === event.pointerId) this.finish();
     });
     window.addEventListener('blur', () => this.finish());
+    for (const name of ['pagehide', 'resize', 'orientationchange']) window.addEventListener(name, () => this.finish());
     document.addEventListener('visibilitychange', () => { if (document.hidden) this.finish(); });
     document.addEventListener('contextmenu', event => {
       if (this.active && (!event.target.closest?.(ui) || this.pad?.contains(event.target))) event.preventDefault();
     });
     document.addEventListener('wheel', event => {
-      if (!this.active || (event.target.closest?.(ui) && !this.pad?.contains(event.target))) return;
+      if (!this.active || event.ctrlKey || event.metaKey || !Number.isFinite(event.deltaY) || event.deltaY === 0 || (event.target.closest?.(ui) && !this.pad?.contains(event.target))) return;
       event.preventDefault(); this.set({ ...this.value, zoom: this.value.zoom - Math.sign(event.deltaY) * 5 });
     }, { passive: false });
     for (const [id, action] of Object.entries({ 'battle-camera-reset': () => this.reset(),
@@ -61,7 +66,7 @@ export class CameraControls {
       document.getElementById(id)?.addEventListener('click', () => { if (this.active) action(); });
     }
     this.pad?.addEventListener('keydown', event => {
-      if (!this.active) return;
+      if (!this.active || event.ctrlKey || event.metaKey || event.altKey) return;
       const v = { ...this.value };
       if (event.key === 'ArrowLeft') v.yaw -= 8;
       else if (event.key === 'ArrowRight') v.yaw += 8;
@@ -69,9 +74,9 @@ export class CameraControls {
       else if (event.key === 'ArrowDown') v.pitch -= 3;
       else if (event.key === '+' || event.key === '=') v.zoom += 5;
       else if (event.key === '-') v.zoom -= 5;
-      else if (event.key === 'Home') { event.preventDefault(); this.reset(); return; }
+      else if (event.key === 'Home') { event.preventDefault(); event.stopPropagation(); this.reset(); return; }
       else return;
-      event.preventDefault(); this.set(v);
+      event.preventDefault(); event.stopPropagation(); this.set(v);
     });
   }
   get active() { return this.app.mode === 'battle' && !!this.app.battle?.active && !this.app.battle.paused && !document.getElementById('modal')?.classList.contains('show'); }
