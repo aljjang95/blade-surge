@@ -1,6 +1,6 @@
-import { MeshBasicMaterial, FrontSide } from 'three';
+import { MeshBasicMaterial, MeshLambertMaterial, FrontSide } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-const ASSET='/models/oathhall-v1/oathhall-v1.glb';
+const ASSET='/models/sanctuary-v2/sanctuary-v2.glb';
 let template=null, pending=null;
 /** Optional visual enhancement. A bounded failure never prevents playing. */
 export function preloadOathHall(fetcher=globalThis.fetch) {
@@ -19,22 +19,26 @@ export function preloadOathHall(fetcher=globalThis.fetch) {
 export function cloneOathHall(source=template) {
  if(!source)return null;
  const root=source.clone(true),geometries=new Map(),materials=new Map();
- root.name='TLL_OathHall_BlenderV1';root.userData.visualVersion='oathhall-v1';
+ const v2=!!root.getObjectByName('TLL_SanctuaryV2_0');
+ root.name=v2?'TLL_SanctuaryV2':'TLL_OathHall_BlenderV1';root.userData.visualVersion=v2?'sanctuary-v2':'oathhall-v1';
  root.traverse(o=>{if(!o.isMesh)return;
   if(!geometries.has(o.geometry))geometries.set(o.geometry,o.geometry.clone());o.geometry=geometries.get(o.geometry);
   const clone=m=>{
    if(!materials.has(m)){
     // Distant silhouettes are authored colour planes, not dynamic-light surfaces.
-    const next=/^08 /.test(m.name)?new MeshBasicMaterial({color:m.color,side:m.side,fog:true}):m.clone();
+    const unlit=/^08 |Amber lamps|Glass and distant light/.test(m.name);
+    const stone=/Night limestone|Ivory carved stone|Blue shadow stone/.test(m.name);
+    const opts={color:m.color,side:m.side,vertexColors:m.vertexColors,fog:true};
+    const next=unlit?new MeshBasicMaterial(opts):stone?new MeshLambertMaterial(opts):m.clone();
     next.name=m.name;
     // Closed stonework needs no back faces. Cloth/heraldry/foliage stay two-sided.
-    if(/^(01|02|05|06) /.test(m.name))next.side=FrontSide;
+    if(/^(01|02|05|06) |Night limestone|Ivory carved stone|Blue shadow stone/.test(m.name))next.side=FrontSide;
     materials.set(m,next);
    }return materials.get(m);
   };
   o.material=Array.isArray(o.material)?o.material.map(clone):clone(o.material);
   const first=Array.isArray(o.material)?o.material[0]:o.material;
-  o.castShadow=!/^(07|08) /.test(first.name);o.receiveShadow=!first.isMeshBasicMaterial;
+  o.castShadow=!/^(07|08) |Evergreen|Amber lamps|Glass and distant light/.test(first.name);o.receiveShadow=!first.isMeshBasicMaterial;
  });
  let disposed=false;root.userData.dispose=()=>{if(disposed)return;disposed=true;for(const g of geometries.values())g.dispose();for(const m of materials.values())m.dispose();root.removeFromParent();};
  return root;

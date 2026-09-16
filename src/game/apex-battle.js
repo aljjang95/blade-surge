@@ -3,18 +3,37 @@ import { postureHit } from './masterworks-combat.js';
 import { COMBAT_ARTS } from '../data/combat-arts.js';
 import { RECOVERY_POSTURE, isRecoveryOpportunity, longestRegularCooldown } from './apex-combat.js';
 import { audio } from '../engine/audio.js';
+import { ComboLink } from './combo-link.js';
 
 export class Battle extends MasterworksBattle {
   async start(...args) { await super.start(...args); this.bindCombatArt(); }
   bindCombatArt() {
+    this.comboLink=new ComboLink();
     const selected=this.app.arsenal?.artForHero(this.heroId);
     const art=COMBAT_ARTS.find(a=>a.id===(typeof selected==='string'?selected:selected?.id));
     this.apex={art:this.run?.enabled&&this.stage?.expedition?.kind!=='arena'?art:null,
       recovery:new WeakMap(),breaks:new WeakMap(),procCount:0,procUntil:0,shield:0,shieldUntil:0};
   }
   apexEnabled() { return !!(this.apex?.art && this.run?.enabled && !this.run.settled && this.active && this.player?.alive && this.stage?.expedition?.kind!=='arena'); }
-  stop() { this.apex=null; super.stop(); }
-  settleChronicle(outcome) { if(this.apex) {this.apex.shield=0;this.apex.shieldUntil=0;} super.settleChronicle(outcome); }
+  stop() { this.comboLink=null;this.apex=null; super.stop(); }
+  comboLinkEnabled() { return !!(this.comboLink&&this.apexEnabled()&&!this.paused&&!this.stage?.expedition&&!this.stage?.party&&!this.conquest); }
+  getComboLinkSnapshot() {
+    const enabled=this.comboLinkEnabled(),state=this.comboLink?.snapshot(this.elapsed,this.player);
+    return {enabled,ready:enabled&&!!state?.ready,remaining:enabled?(state?.remaining||0):0,cooldown:state?.cooldown||0,activations:state?.activations||0,artName:this.apex?.art?.name||'',artId:this.apex?.art?.id||''};
+  }
+  onSkillReleased(player,context) {
+    if(!this.comboLinkEnabled()||player!==this.player||player.skillCtx!==context||!context.cast)return false;
+    // A break-triggered art from this same skill already owns the feedback/effect.
+    if(this.apex.procUntil>this.elapsed){this.comboLink.cancel();return false;}
+    const anchor=this.comboLink.consume({player,context,now:this.elapsed});if(!anchor)return false;
+    this.activateCombatArt(anchor);
+    if(!this.app.reducedMotion?.matches){
+      const colour=this.apex.art.id==='rupture'?0xffc578:this.apex.art.id==='aegis'?0x83d5ed:0xb6e6ba;
+      this.fx.shockTex(player.pos,colour,{r0:.35,r1:2.4,life:.3});
+    }
+    return true;
+  }
+  settleChronicle(outcome) { this.comboLink?.cancel();if(this.apex) {this.apex.shield=0;this.apex.shieldUntil=0;} super.settleChronicle(outcome); }
   damageEnemy(enemy,dmg,opts={}) {
     if(!this.apex || !this.apexEnabled?.() || this.paused || opts.apexProc) return super.damageEnemy(enemy,dmg,opts);
     const direct=!!opts.finisher&&!opts.quiet&&!opts.masterworksProc;
@@ -24,6 +43,8 @@ export class Battle extends MasterworksBattle {
     const token=enemy&&(this.apex.breaks.get(enemy)||{generation:0,consumed:false});
     super.damageEnemy(enemy,dmg,opts);
     if(!this.apexEnabled() || !(before-(enemy?.hp||0)>0)) return;
+    if(opts.comboToken&&!opts.quiet&&!opts.noProc&&!opts.masterworksProc&&this.comboLinkEnabled()&&this.elapsed>=this.apex.procUntil)
+      this.comboLink.arm({token:opts.comboToken,source:opts.source||this.player,player:this.player,enemy,now:this.elapsed});
     if(opportunity && enemy.alive && !(enemy.breakT>0)) {
       this.apex.recovery.set(enemy,sequence);
       // Magic contact contributes exactly 15 posture, using the existing break contract.
@@ -42,6 +63,7 @@ export class Battle extends MasterworksBattle {
   activateCombatArt(enemy) {
     if(!this.apexEnabled()) return;
     const a=this.apex,art=a.art,p=this.player;
+    this.comboLink?.cancel();
     a.procCount++;a.procUntil=this.elapsed+1.4;
     this.fx.shockTex(enemy.pos,art.id==='rupture'?0xffac70:art.id==='aegis'?0x80d8ff:0x9fffc8,{r1:art.id==='rupture'?art.radius:2.5,life:.35});
     this.fx.damage(enemy.pos,0,{text:art.name});
