@@ -87,3 +87,10 @@ export class LobbyCameraControls {
     }
   }
 }
+
+/** Keep the hero left of centre in camera-local space even when the owner orbits. */
+export function lobbyCompositionShift(position, landscape) {
+ const length=Math.hypot(position?.x,position?.z);
+ if(!landscape||!Number.isFinite(length)||length<=0)return {x:0,z:0};
+ return {x:.9*position.z/length,z:-.9*position.x/length};
+}

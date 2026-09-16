@@ -9,8 +9,11 @@ import { STORY_EVENTS } from '../src/data/masterworks.js';
 import { ARMORY_ITEMS } from '../src/data/armory.js';
 const root=path.resolve(import.meta.dirname,'..'),out=path.join(root,'work','live-release-qa',Date.now().toString());
 const head=process.argv[2];if(!/^[a-f0-9]{40}$/.test(head||''))throw Error('Exact release head required');
-const origin='https://blade-surge.affinity-agent-studio.workers.dev';
+const liveOrigin='https://blade-surge.affinity-agent-studio.workers.dev';
+const origin=process.argv[3]||liveOrigin;
+if(origin!==liveOrigin&&!/^http:\/\/127\.0\.0\.1:\d+$/.test(origin))throw Error('Only the owned production or local loopback preview is allowed');
 const report={job:'blade-surge-release-rsi-20260915',head,origin,status:'running',scope:'Public deployed assets and isolated new desktop Chromium save; UI departure, keyboard movement, fixed-step AUTO complete floor and persisted reward; actual delayed victory panel and next-stage persistence; not physical-device FPS or manual completion',errors:[],httpErrors:[],blockedWrites:[],external:[],assets:[]};
+if(origin!==liveOrigin)report.scope=report.scope.replace('Public deployed assets','Local preview assets');
 await fs.mkdir(out,{recursive:true});const save=()=>fs.writeFile(path.join(out,'report.json'),JSON.stringify(report,null,2));
 const hash=b=>createHash('sha256').update(b).digest('hex');let browser;
 try{
@@ -19,7 +22,7 @@ try{
  report.version=await(await fetch(origin+'/version.json?dogfood='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(20000)})).json();
  if(report.version.sha!==head||report.version.dirty||report.version.pwaRelease!==local.pwaRelease)throw Error('Public version mismatch');
  const html=await fs.readFile(path.join(root,'dist/index.html'),'utf8');
- const files=new Set(['index.html','version.json','manifest.webmanifest','sw.js']);
+ const files=new Set(['index.html','version.json','manifest.webmanifest','sw.js','models/oathhall-v1/oathhall-v1.glb','models/oathhall-v1/manifest.json']);
  for(const m of html.matchAll(/(?:src|href)="(\/assets\/[^"?#]+\.(?:js|css))"/g))files.add(m[1].slice(1));
  for(const item of ARMORY_ITEMS){files.add(item.icon.slice(1));files.add('models/armory-v1/'+item.modelNode+'.glb');}
  const list=[...files];for(let i=0;i<list.length;i+=4)await Promise.all(list.slice(i,i+4).map(async name=>{
@@ -34,6 +37,10 @@ try{
  await page.goto(origin+'/',{waitUntil:'domcontentloaded',timeout:60000});await page.locator('#boot-start:not(.hidden)').waitFor({timeout:90000});await page.click('#boot-start');await page.waitForFunction(()=>window.app?.mode==='lobby');
  await page.screenshot({path:path.join(out,'live-lobby.png')});
  report.before=await page.evaluate(()=>{app.ui.closeModal();app.testPause=true;let s=20260905;Math.random=()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};return {nextStage:app.eco.nextStage().idx,level:app.eco.hero('knight').level,inventory:app.eco.s.inventory.length,spentKRW:app.eco.s.spentKRW};});
+ await page.waitForFunction(()=>!document.querySelector('#boot').classList.contains('show'));
+ report.hall=await page.evaluate(()=>({name:app.arena.lobbyHall?.name,meshes:app.arena.lobbyHall?.children.length}));
+ if(report.hall.name!=='TLL_OathHall_BlenderV1')throw Error('New lobby asset failed to mount');
+ await page.evaluate(()=>app.step(0,true));await page.screenshot({path:path.join(out,'live-lobby-ready.png')});
  await page.click('#btn-battle');await page.waitForFunction(()=>app.battle?.active&&!app.stageStarting,null,{timeout:60000});
  await page.evaluate(installMetricsDriver,{storyEvents:STORY_EVENTS.map(({id,choices})=>({id,choices:choices.map(({id})=>({id}))}))});
  const before=await page.evaluate(()=>({x:app.battle.player.pos.x,z:app.battle.player.pos.z}));await page.keyboard.down('w');
