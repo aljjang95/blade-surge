@@ -63,7 +63,7 @@ test('enemy death grants exactly two MP without changing the existing ultimate g
 test('perfect dodge grants the control-first MP and ultimate reward',()=>{
   let mp=0,ult=0; const p:any={pos:new THREE.Vector3(),model:new THREE.Group(),stats:{ultGain:1},buffs:{atk:1,atkSpd:1,t:0},addUlt:(n:number)=>ult+=n,addMp:(n:number)=>mp+=n};
   const g:any={timeCtl:{slowmo(){}},renderer:{punch(){},aberr:0,flashScreen(){}},fx:{shockTex(){},ghost(){},burst(){}},ui:{perfectDodge(){}},player:{def:{voiceId:'ranger'}},heroId:'ranger'};
-  Battle.prototype.onPerfectDodge.call(g,p); expect(mp).toBe(12); expect(ult).toBe(18);
+  Battle.prototype.onPerfectDodge.call(g,p); expect(mp).toBe(12); expect(ult).toBe(18); expect(p.counterWindow).toBe(2.4);
 });
 
 test('campaign boss shortcut only unseals and opens portal, preserving optional flags and excluding other modes',()=>{

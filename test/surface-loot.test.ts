@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { createLootVisual } from '../src/game/loot-visual.js';
-import { projectSurfaceUV, surfaceRole, applySurfaceDetail, SURFACE_TEXTURES } from '../src/engine/surface-textures.js';
+import { projectSurfaceUV, surfaceRole, applyDungeonStoneDetail, applySurfaceDetail, SURFACE_TEXTURES } from '../src/engine/surface-textures.js';
 import { mergeSkinned } from '../src/engine/assets.js';
 
 test('all four field equipment slots have distinct readable geometry and share resources per slot', () => {
@@ -33,6 +33,21 @@ test('bind-pose UV and GUI material maps preserve face/skin colors and texture o
   const skin = new THREE.MeshStandardMaterial(); applySurfaceDetail(skin,'skin'); expect(skin.bumpMap).toBeNull();
   let disposed = false; texture.addEventListener('dispose',()=>{disposed=true;}); cloth.dispose(); expect(disposed).toBe(false);
   delete SURFACE_TEXTURES['hero-weave']; geometry.dispose(); skin.dispose(); texture.dispose();
+});
+
+
+
+test('CC0 dungeon stone owns PBR bindings without transferring shared texture ownership', () => {
+  const diffuse = new THREE.Texture(), normal = new THREE.Texture(), roughness = new THREE.Texture();
+  SURFACE_TEXTURES['dungeon-stone-diffuse'] = diffuse; SURFACE_TEXTURES['dungeon-stone-normal'] = normal; SURFACE_TEXTURES['dungeon-stone-roughness'] = roughness;
+  const material = new THREE.MeshStandardMaterial({ color: 0x8e98ae }); const color = material.color.getHex();
+  applyDungeonStoneDetail(material);
+  expect(material.map).toBe(diffuse); expect(material.normalMap).toBe(normal); expect(material.roughnessMap).toBe(roughness);
+  expect(material.userData.surfaceTexture).toBe('polyhaven-medieval-wall-02'); expect(material.color.getHex()).toBe(color);
+  let disposed = 0; for (const texture of [diffuse, normal, roughness]) texture.addEventListener('dispose', () => disposed++);
+  material.dispose(); expect(disposed).toBe(0);
+  delete SURFACE_TEXTURES['dungeon-stone-diffuse']; delete SURFACE_TEXTURES['dungeon-stone-normal']; delete SURFACE_TEXTURES['dungeon-stone-roughness'];
+  diffuse.dispose(); normal.dispose(); roughness.dispose();
 });
 
 test('mixed imported UV/tangent layouts are never sent to an incompatible skin merge', () => {

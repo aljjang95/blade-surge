@@ -81,6 +81,14 @@ test('five actual combo steps emit seven arrows and earn capped focus', () => {
   expect(p.jobResource).toBe(3);
 });
 
+test('perfect-dodge counter turns the Ranger finisher into a piercing crowd break', () => {
+  const { p, shots } = archer(); p.counterWindow = 2.4;
+  p.current = HEROES.ranger.combo.at(-1); Player.prototype.doComboHit.call(p);
+  expect(p.counterWindow).toBe(0); expect(shots).toHaveLength(1);
+  expect(shots[0]).toMatchObject({ finisher: true, pierce: true, stun: .4 });
+  expect(shots[0].kb).toBeGreaterThan(p.current.kb);
+});
+
 test('bow world transform defines the launch position and equipment never reveals a loose Arrow', () => {
   const { p } = archer();
   p.model.position.set(5, 0, 8);

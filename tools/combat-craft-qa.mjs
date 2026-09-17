@@ -1,0 +1,44 @@
+import { chromium } from 'playwright';
+import { preview } from 'vite';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import { launchOpts } from './chrome.mjs';
+
+const root=path.resolve(import.meta.dirname,'..'),out=path.join(root,'work','combat-craft-v2');
+const report={status:'running',started:new Date().toISOString(),sha:execFileSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8'}).trim(),checks:[],errors:[],consoleErrors:[],externalRequests:[]};
+const check=(ok,name,evidence)=>{report.checks.push({name,pass:!!ok,evidence});if(!ok)throw Error(name+': '+JSON.stringify(evidence));};
+let browser,server;await mkdir(out,{recursive:true});
+try{
+ console.log('QA_M1_PREVIEW');
+ server=await preview({root,configFile:false,preview:{host:'127.0.0.1',port:0},logLevel:'error'});const origin=`http://127.0.0.1:${server.httpServer.address().port}`;
+ console.log('QA_M2_PREVIEW_READY');
+ browser=await chromium.launch(launchOpts({headless:true}));const context=await browser.newContext({viewport:{width:880,height:400},hasTouch:true,serviceWorkers:'block'});
+ await context.route('**/*',route=>{const u=route.request().url();if(u.startsWith(origin+'/')||/^(data|blob):/.test(u))return route.continue();report.externalRequests.push({url:u,method:route.request().method()});return route.abort();});
+ const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));page.on('console',m=>{if(m.type()==='error')report.consoleErrors.push(m.text());});
+ console.log('QA_M3_BROWSER_READY');
+ await page.goto(origin,{waitUntil:'domcontentloaded',timeout:120000});await page.locator('#boot-start:not(.hidden)').waitFor({timeout:120000});await page.click('#boot-start');
+ await page.waitForFunction(()=>window.app?.mode==='lobby'&&!document.querySelector('#boot').classList.contains('show'));
+ console.log('QA_M5_LOBBY_READY');
+ await page.evaluate(async()=>{app.testPause=true;app.ui.closeModal();app.eco.s.energy=100;app.eco.s.selected='knight';if(!await app.startStage(app.eco.nextStage()))throw Error('stage start failed');app.battle.player.auto=false;app.battle.player.invuln=10000;app.companionAgent?.endBattle();for(let i=0;i<120;i++)app.step(1/60,i===119);});
+ console.log('QA_M6_STAGE_READY');
+ const stone=await page.evaluate(()=>{let bound=0,names=new Set();app.arena.regionArchitecture?.traverse?.(o=>{if(!o.isMesh)return;const mats=Array.isArray(o.material)?o.material:[o.material];for(const m of mats)if(m?.userData?.surfaceTexture==='polyhaven-medieval-wall-02'){bound++;names.add(m.map?.name);names.add(m.normalMap?.name);names.add(m.roughnessMap?.name);}});return{bound,names:[...names].filter(Boolean)};});
+ check(stone.bound>0&&stone.names.includes('CC0_dungeon-stone-diffuse')&&stone.names.includes('CC0_dungeon-stone-normal')&&stone.names.includes('CC0_dungeon-stone-roughness'),'CC0 dungeon PBR is bound in compiled stage',stone);
+ console.log('QA_M7_STONE_OK');
+ const setup=await page.evaluate(()=>{const g=app.battle,p=g.player;for(const e of [...g.enemies])e.dispose();g.enemies.length=0;p.pos.set(g.curRoom?.x||0,0,g.curRoom?.z||0);p.vel.set(0,0,0);p.state='idle';p.invuln=10000;const spawned=[];for(let i=0;i<8;i++){const a=i*Math.PI*2/8,r=2.45;const e=g.spawnEnemy('skel_minion',null,g.curRoom,p.pos.clone().add(new __THREE.Vector3(Math.sin(a)*r,0,Math.cos(a)*r)));e.spawning=false;e.state='chase';e.atkCd=0;e.hp=e.maxHp=100000;e.stun=0;spawned.push(e);}window.__craftMobs=spawned;return{count:spawned.length,roles:spawned.map(e=>e.mobRole?.key||null)};});
+ check(setup.count===8&&setup.roles.every(x=>x===null),'Eight ordinary melee enemies isolated for pack probe',setup);
+ console.log('QA_M8_PACK_SETUP');
+ const metrics=await page.evaluate(()=>{const g=app.battle,p=g.player,mobs=window.__craftMobs;let maxActive=0,maxPenetration=0,severeFrames=0,samples=0,minGap=99;for(let frame=0;frame<720;frame++){app.step(1/60,frame%60===0);const active=mobs.filter(e=>e.alive&&e.state==='attack'&&!e.mobRole&&p.pos.distanceTo(e.pos)<=6.5).length;maxActive=Math.max(maxActive,active);let severe=false;for(let i=0;i<mobs.length;i++)for(let j=i+1;j<mobs.length;j++){const a=mobs[i],b=mobs[j],d=a.pos.distanceTo(b.pos),min=a.radius+b.radius+.22,pen=Math.max(0,min-d);maxPenetration=Math.max(maxPenetration,pen);minGap=Math.min(minGap,d-(a.radius+b.radius));if(pen>.45)severe=true;}if(severe)severeFrames++;samples++;}return{maxActive,maxPenetration,severeFrames,samples,severeRate:severeFrames/samples,minGap,positions:mobs.map(e=>[e.pos.x,e.pos.z]),states:mobs.map(e=>e.state)};});
+ check(metrics.maxActive<=3,'Ordinary melee attack concurrency stays readable',metrics);
+ check(metrics.severeRate<.08&&metrics.maxPenetration<.9,'Pack separation prevents sustained body stacking',metrics);
+ console.log('QA_M9_PACK_OK');
+ await page.screenshot({path:path.join(out,'pack-spacing.png')});
+ console.log('QA_M10_COUNTER');
+ const counter=await page.evaluate(()=>{const g=app.battle,p=g.player,mobs=window.__craftMobs;p.invuln=0;p.state='idle';p.dodgeCd=0;p.pos.set(g.curRoom?.x||0,0,g.curRoom?.z||0);for(const e of mobs){e.pos.set(p.pos.x+1.5+(Math.random()-.5)*.3,0,p.pos.z+(Math.random()-.5)*1.2);e.state='chase';e.atkCd=10;e.stun=0;e.hp=e.maxHp=100000;}p.dodge(new __THREE.Vector3(1,0,0));const avoided=p.hurt(30,{dirx:-1,dirz:0,kb:3});p.pos.set(g.curRoom?.x||0,0,g.curRoom?.z||0);p.vel.set(0,0,0);p.state='idle';const original=g.damageEnemy;window.__counterHits=[];g.damageEnemy=function(enemy,dmg,opts={}){if(opts.source===p&&p.state==='attack')window.__counterHits.push({finisher:!!opts.finisher,stun:opts.stun||0,kb:opts.kb||0});return original.call(this,enemy,dmg,opts);};return{avoided,counterWindow:p.counterWindow};});
+ check(counter.avoided===false&&counter.counterWindow>=2.39,'Actual dodge hurt path arms counter window',counter);
+ await page.keyboard.down('j');await page.evaluate(()=>{for(let i=0;i<150;i++)app.step(1/60,i===149);});await page.keyboard.up('j');
+ const counterHit=await page.evaluate(()=>{const hits=window.__counterHits;app.battle.damageEnemy=Object.getPrototypeOf(Object.getPrototypeOf(app.battle)).damageEnemy?.bind(app.battle)||app.battle.damageEnemy;return{hits,counterWindow:app.battle.player.counterWindow,finisher:hits.find(h=>h.finisher&&h.stun>=.39&&h.kb>=2)};});
+ check(!!counterHit.finisher&&counterHit.counterWindow===0,'Perfect-dodge counter is consumed by a real basic finisher with crowd break',counterHit);
+ console.log('QA_M11_COUNTER_DONE');
+ const unexpectedConsole=report.consoleErrors.filter(message=>!message.includes('net::ERR_FAILED'));check(report.errors.length===0&&unexpectedConsole.length===0,'No uncaught browser errors',{pageErrors:report.errors,unexpectedConsole,externalRequests:report.externalRequests});report.status='pass';
+}catch(e){report.status='fail';report.failure=String(e.stack||e);process.exitCode=1;}finally{report.finished=new Date().toISOString();const file=path.join(out,'report.json');await writeFile(file,JSON.stringify(report,null,2));console.log(JSON.stringify({status:report.status,checks:report.checks.length,failure:report.failure,report:file}));const delay=ms=>new Promise(r=>setTimeout(r,ms));if(browser)await Promise.race([browser.close(),delay(3000)]);if(server){server.httpServer.closeAllConnections?.();await Promise.race([new Promise(r=>server.httpServer.close(r)),delay(3000)]);}}

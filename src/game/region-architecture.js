@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { applySurfaceDetail } from '../engine/surface-textures.js';
+import { applyDungeonStoneDetail, applySurfaceDetail } from '../engine/surface-textures.js';
 
 const PALETTES = {
   crypt: [0x8e98ae, 0x938269, 0x749ebd],
@@ -32,7 +32,7 @@ export function buildRegionArchitecture(floor, theme) {
     new THREE.MeshStandardMaterial({ color: colors[1], roughness: .36, metalness: .72 }),
     new THREE.MeshStandardMaterial({ color: colors[2], emissive: colors[2], emissiveIntensity: .42, roughness: .4, metalness: .2 }),
   );
-  applySurfaceDetail(materials[0], 'stone'); applySurfaceDetail(materials[1], 'metal');
+  applyDungeonStoneDetail(materials[0]); applySurfaceDetail(materials[1], 'metal');
   group.userData.landmarks = [];
   for (const room of floor.rooms) {
     const chunks = [[], [], []];

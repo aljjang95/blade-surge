@@ -6,6 +6,7 @@ import { rigOf, RIGS } from '../data/rigs.js';
 import { BOSS_SIGNATURES, isBossSignature } from '../data/boss-encounters.js';
 import { BossSignatures } from './boss-signatures.js';
 import { MobRole } from './mob-roles.js';
+import { canCommitMelee, packSeparation, packSteer } from './combat-craft.js';
 
 const _v = new THREE.Vector3();
 const areaPlayers = game => [...new Set(game.stage?.party ? game.app.party.livingPlayers() : [game.player])].filter(p => p?.alive);
@@ -49,6 +50,7 @@ export class Enemy extends Actor {
     this.patternTurn = 0;
     this.signatures = def.signatureBoss ? new BossSignatures(this) : null;
     this.mobRole = def.meleeRole && !def.boss && !def.elite ? new MobRole(this) : null;
+    this.packSide = ((game._packSpawnSeq = (game._packSpawnSeq || 0) + 1) & 1) ? 1 : -1;
     // 행동형 (bomber / shaman / shield)
     this.behavior = def.behavior || null; this.fuse = -1; this.healT = 4 + Math.random() * 2; this.summonT = 7 + Math.random() * 3; this.blocks = 0; this.guardBroken = 0;
     this.radius = 0.7 * def.scale;
@@ -165,8 +167,10 @@ export class Enemy extends Actor {
       if (this.summonT <= 0) { this.summonT = 9; const alive = this.game.enemies.filter((e) => e.alive).length; if (alive < this.game.maxAlive - 3) { this.game.summonMinions(this, 2); this.play(this.A('cast'), { once: true, fade: 0.1 }); } }
     }
     // 분리 (몹몰이 시 겹침 방지, 가까운 것만)
-    let sx = 0, sz = 0; let cnt = 0;
-    for (const o of this.game.enemies) { if (o === this || !o.alive) continue; const dx = this.pos.x - o.pos.x; if (dx > 2.5 || dx < -2.5) continue; const dz = this.pos.z - o.pos.z; if (dz > 2.5 || dz < -2.5) continue; const dd = Math.hypot(dx, dz); const min = this.radius + o.radius + 0.2; if (dd < min && dd > 0.001) { sx += dx / dd * (min - dd) * 5; sz += dz / dd * (min - dd) * 5; if (++cnt > 6) break; } }
+    const separation = packSeparation(this, this.game.enemies);
+    const canCommit = canCommitMelee(this, this.game.enemies, p);
+    const steer = packSteer(this, p, separation, canCommit);
+    const sx = steer.x, sz = steer.z;
 
     if (this.state === 'chase') {
       this.atkCd -= dt;
@@ -182,7 +186,8 @@ export class Enemy extends Actor {
         const spd = this.def.spd * 0.8; this.vel.set(-dx / d * spd + sx, 0, -dz / d * spd + sz); if (this.actionName !== this.A('back')) this.play(this.A('back'), { fade: 0.15 });
       } else {
         this.vel.set(sx, 0, sz);
-        if (this.atkCd <= 0 && p.alive) this.startAttack(d);
+        if (this.atkCd <= 0 && p.alive && canCommit) this.startAttack(d);
+        else if (this.atkCd <= 0 && !canCommit) this.atkCd = .16;
         else if (this.actionName !== this.rig.idleCombat && this.actionName !== this.rig.idle) this.play(this.A('idleCombat'), { fade: 0.15 });
       }
     } else if (this.state === 'attack') {
@@ -211,6 +216,7 @@ export class Enemy extends Actor {
   getPartyWarnings() { return this.mobRole ? this.mobRole.warnings() : isBossSignature(this.special) ? this.signatures?.warnings() || [] : enemyPartyWarnings(this); }
   startAttack(d) {
     if (this.mobRole) { if (this.mobRole.available(d)) this.mobRole.start(); return; }
+    if (!canCommitMelee(this, this.game.enemies, this.player)) { this.atkCd = Math.max(this.atkCd, .16); return; }
     this.signatures?.clear();
     this.attackSequence=(this.attackSequence||0)+1; this.partyDashWarning = null;
     this.state = 'attack'; this.stateT = 0; this.attackDone = false;
