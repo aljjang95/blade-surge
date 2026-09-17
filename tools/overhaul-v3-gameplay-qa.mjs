@@ -119,6 +119,38 @@ try {
   check(contact.some(hit => hit.loss > 0), 'Manual held attack causes direct-contact damage', contact);
   await page.screenshot({ path: path.join(out, 'contact.png') });
 
+  // The rogue's Void Step used to make the real hero 35% opaque. Re-enter an
+  // isolated run and verify the authored materials remain unchanged while the
+  // dedicated focus ring and after-images carry the phase/stealth language.
+  await page.evaluate(async () => {
+    app.toLobby(); app.testPause = true; app.ui.closeModal(); app.eco.s.energy = 100;
+    app.eco.s.selected = 'rogue'; app.eco.hero('rogue').level = 50;
+    if (!await app.startStage(app.eco.nextStage())) throw Error('Rogue stage did not start');
+    const p = app.battle.player; p.auto = false; p.invuln = 10000; app.companionAgent?.endBattle();
+    for (let i = 0; i < 90; i++) app.step(1 / 60, i === 89);
+    for (const enemy of app.battle.enemies) enemy.stun = 10000;
+    const skill = p.def.skills.findIndex(s => s.id === 'void_step');
+    if (skill < 0) throw Error('Void Step missing from rogue');
+    window.__voidMaterialBaseline = p.mats.map(m => ({ opacity: m.opacity, transparent: m.transparent }));
+    if (!p.tryCastSkill(skill)) throw Error('Void Step did not cast');
+  });
+  await step(36);
+  const voidStep = await page.evaluate(() => {
+    const p = app.battle.player;
+    return {
+      baseline: window.__voidMaterialBaseline,
+      during: p.mats.map(m => ({ opacity: m.opacity, transparent: m.transparent })),
+      focusVisible: p.beacon.focusRing.visible, focusColor: p.beacon.focusRing.material.color.getHex(),
+      heroVisible: p.model.visible && p.root.visible, state: p.state, desat: app.renderer.desat,
+    };
+  });
+  check(JSON.stringify(voidStep.during) === JSON.stringify(voidStep.baseline) && voidStep.heroVisible && voidStep.focusVisible && voidStep.state === 'skill', 'Void Step keeps the real hero fully rendered', voidStep);
+  check(voidStep.desat < .2, 'Void Step keeps scene contrast instead of washing out the hero', voidStep);
+  await page.screenshot({ path: path.join(out, 'void-step-solid.png') });
+  await step(100);
+  const voidEnded = await page.evaluate(() => ({ state: app.battle.player.state, focusVisible: app.battle.player.beacon.focusRing.visible, focused: app.battle.player.beacon.focused }));
+  check(voidEnded.state !== 'skill' && !voidEnded.focused, 'Void Step focus state clears after the skill', voidEnded);
+
   for (const [width, height] of [[880, 400], [640, 360]]) for (const low of [false, true]) {
     await page.setViewportSize({ width, height });
     await page.emulateMedia({ reducedMotion: low ? 'reduce' : 'no-preference' });

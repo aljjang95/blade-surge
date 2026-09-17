@@ -27,14 +27,14 @@ export function battleFraming({ player, enemies = [], boss, preset = 'auto', pre
   const bossWeight = boss?.alive && !boss.spawning && boss.pos ? proximity(distance(p, boss.pos), 6, 14) : 0;
   const automatic = !presets[preset];
   const crowd = automatic ? clamp01(pressure / 12) : 0;
-  const base = automatic ? (pressure === 0 && speed > 2 ? presets.action : presets.top) : presets[preset];
+  const base = automatic ? presets.action : presets[preset];
   const desired = { ...base };
   if (automatic) for (const key of ['y', 'z', 'fov', 'lookY', 'lag']) desired[key] += (presets.wide[key] - desired[key]) * bossWeight;
   return {
     target: { x: finite(p.x) + x, y: finite(p.y), z: finite(p.z) + z },
     desired, crowd, bossWeight,
     // One modest density allowance; boss composition never stacks a second pullback.
-    extraY: crowd * .65, extraZ: crowd * .55, extraFov: crowd * 1.2,
+    extraY: crowd * .35, extraZ: crowd * .28, extraFov: crowd * .7,
   };
 }
 
