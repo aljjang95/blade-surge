@@ -748,11 +748,10 @@ export const SKILLS = {
     dur: 0.45, total: 2.0,
     start(game, p, c) {
       c.data.n = 0; c.data.tick = 0; c.data.last = null;
-      p.invuln = 2.1; p.startTrail();
-      for (const m of p.mats) { m.transparent = true; m.opacity = 0.35; }
+      p.invuln = 2.1; p.startTrail(); p.beacon?.setFocus(true, 0xd0a0ff);
       game.fx.texFlash(p.pos, 'singularity', 0x8a4aff, { size: 8, life: 0.5, spin: 0.8, grow: 1.4, y: 0.5 });
       game.fx.shockTex(p.pos, 0x8a4aff, { r1: 5, life: 0.4 });
-      game.renderer.aberr = 1.1; game.renderer.radial = 0.5; game.renderer.desat = 0.45;
+      game.renderer.aberr = 0.55; game.renderer.radial = 0.22; game.renderer.desat = 0.12;
       audio.dark({ vol: 0.6, base: 70, dur: 1.4 }); audio.suck({ vol: 0.4, dur: 1.2 }); audio.vibe([60, 30, 30]);
     },
     update(game, p, c, dt) {
@@ -769,7 +768,8 @@ export const SKILLS = {
       // 순간이동 — 반드시 걸을 수 있는 칸으로. 벽 안으로 뛰면 resolve 가 못 빼내서 층이 끝날 때까지 갇힌다
       const W = game.world;
       if (W && !W.walkable(at.x, at.z)) { at.set(e.pos.x, 0, e.pos.z); if (!W.walkable(at.x, at.z)) { c.data.n++; return; } }
-      game.fx.ghost(p.model, 0x8a4aff, { life: 0.28, opacity: 0.5 });
+      // Keep the real rogue visually solid; motion is sold by a directional streak, not a translucent body clone.
+      game.fx.boltTex(from.clone().setY(.45), at.clone().setY(.45), 0x8a4aff, { width: .62, life: .12 });
       p.pos.set(at.x, 0, at.z); p.face(e.pos.x, e.pos.z);
       p.playTimed(c.data.n % 2 ? 'Dualwield_Melee_Attack_Slice' : 'Dualwield_Melee_Attack_Stab', 0.2, { fade: 0.03 });   // dur(0.5) 로 한 번 재생하면 나머지 1.5초는 마지막 프레임에서 멈춰 있다
       game.fx.boltTex(from.clone().setY(1), p.pos.clone().setY(1), 0xb26bff, { width: 1.6, life: 0.18 });
@@ -781,8 +781,7 @@ export const SKILLS = {
       c.data.n++; c.data.last = e;
     },
     end(game, p, c) {
-      p.stopTrail();
-      for (const m of p.mats) { m.opacity = 1; m.transparent = false; }
+      p.stopTrail(); p.beacon?.setFocus(false);
       game.renderer.desat = 0;
       const at = p.pos.clone();
       game.hitRadius(at, 7.5, c.dmg * 3.2, { kb: 12, kind: 'slash', up: true, finisher: true, skillCast:c, source: p, dirFrom: at });

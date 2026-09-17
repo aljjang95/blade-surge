@@ -3,7 +3,7 @@
 ## Owner correction and scope
 
 대표님은 V1의 그래픽과 재미 향상이 체감되지 않는다고 평가했다. V1의 기술 PASS를 미적 만족이나 재미의 증명으로 재사용하지 않는다.
-최초 시각 후보의 역사적 기준은 main `9dc60d2c50cec28b70d137f41b3a7f252cb32e4d`다. 이번 릴리스 검증·병합 기준은 main `2dd1918c0471f2e207de1f925e2622f6d65b9ab3`이며, 실제 rollback 기준은 배포 영수증의 직전 운영 버전이다. 같은 모바일 가로 화면과 같은 캐릭터·플레이 단계에서 비교한다.
+최초 시각 후보의 역사적 기준은 main `9dc60d2c50cec28b70d137f41b3a7f252cb32e4d`다. 이번 릴리스 검증·병합 기준은 main `c5e3e88bf0978f204a31141762f2ab25f5a53283` (PR #60의 영웅 불투명 유지·전투 가독성 개선 포함)이며, 실제 rollback 기준은 배포 영수증의 직전 운영 버전이다. 같은 모바일 가로 화면과 같은 캐릭터·플레이 단계에서 비교한다.
 APEX Universal Harness 안의 현재 Blade Surge 작업만 수행한다. 이전 owner-goal와 Living Constitution을 상속한다. 타 프로젝트/새 provider/권한/가격/과금 변경은 없다.
 기존 전투·Blender 도구와 QA 어댑터를 재사용한다. 새 외부 하네스나 배경 감독자는 만들지 않는다.
 

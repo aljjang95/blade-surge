@@ -137,7 +137,7 @@ export class Player extends Actor {
   startTrail() {
     if (this.trail) this.trail.stop();
     const hand = this.def.weapon === 'dual' ? 'handslot.r' : 'handslot.r'; const len = this.def.weapon === '2h' ? 1.6 : 1.2;
-    this.trail = this.game.fx.trail(() => this.weaponPoints(hand, len), this.look.trailColor, { segs: 14, life: 0.2 });
+    this.trail = this.game.fx.trail(() => this.weaponPoints(hand, len), this.look.trailColor, { segs: 18, life: 0.26 });
   }
   stopTrail() { if (this.trail) { this.trail.stop(); this.trail = null; } }
   arrowOrigin(dir = this.forward(new THREE.Vector3())) {
@@ -320,8 +320,8 @@ export class Player extends Actor {
     if (this.hp <= 0) { this.hp = 0; this.stopTrail(); this.state = 'dead'; this.die(); this.game.onPlayerDeath(this); }
     return true;
   }
-  die() { if (this.alive) this.knightLifeEpoch = (this.knightLifeEpoch || 0) + 1; super.die(); }
-  revive() { this.alive = true; this.dead = false; this.deathT = -1; this.hp = this.maxHp; this.state = 'idle'; this.invuln = 2; this.pos.y = 0; for (const m of this.mats) m.transparent = false; this.play('Idle'); }
+  die() { if (this.alive) this.knightLifeEpoch = (this.knightLifeEpoch || 0) + 1; this.beacon?.setFocus(false); super.die(); }
+  revive() { this.beacon?.setFocus(false); this.alive = true; this.dead = false; this.deathT = -1; this.hp = this.maxHp; this.state = 'idle'; this.invuln = 2; this.pos.y = 0; for (const m of this.mats) m.transparent = false; this.play('Idle'); }
 
   // ---------------- 자동 전투 ----------------
   autoMove(dt) {
@@ -390,7 +390,7 @@ export class Player extends Actor {
   // ---------------- 업데이트 ----------------
   update(dt) {
     super.update(dt);
-    this.beacon.update(this.alive, this.yaw);
+    this.beacon.update(this.alive, this.yaw, { state: this.state, color: this.def.accent || this.def.color, reduced: !!this.game.app?.reducedMotion?.matches });
     this.guardT = Math.max(0, (this.guardT || 0) - dt);
     this.tonicAtkT = Math.max(0, (this.tonicAtkT || 0) - dt);
     this.tonicGuardT = Math.max(0, (this.tonicGuardT || 0) - dt);

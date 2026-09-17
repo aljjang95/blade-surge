@@ -36,3 +36,10 @@ test('실제 피해 경로에서 발사 주체가 없거나 다르면 연계를 
  for(const source of [undefined,null,{}]){g.damageEnemy(g.enemies[0],10,{source,comboToken:{owner:p,epoch:0}});expect(g.comboLink.snapshot(g.elapsed,p).ready).toBe(false);}
  g.damageEnemy(g.enemies[0],10,{source:p,comboToken:{owner:p,epoch:0}});expect(g.comboLink.snapshot(g.elapsed,p).ready).toBe(true);
 });
+test('최신 가독성 투사체 잔상과 정확한 연계 cast 식별자가 함께 보존된다',()=>{
+ const {g,p,arm}=fixture();g.projectiles=[];g.scene={add:noop};g.fx.contact=noop;g.feedbackCount=0;const trailColors:number[]=[];g.fx.embers=(_pos:any,color:number)=>trailColors.push(color);
+ const token={owner:p,epoch:0};arm();expect(g.onSkillReleased(p,p.skillCtx)).toBe(true);
+ g.spawnProjectile({pos:new THREE.Vector3(0,0,1.95),dir:new THREE.Vector3(0,0,1),speed:1,radius:1,dmg:20,owner:p,color:0xabcdef,visual:null,pierce:true,finisher:true,comboToken:token,skillCast:p.skillCtx});
+ expect(g.projectiles[0].trail).toBe(0xabcdef);expect(g.projectiles[0].comboToken).toBe(token);expect(g.projectiles[0].skillCast).toBe(p.skillCtx);
+ g.updateProjectiles(.01);expect(trailColors).toEqual([0xabcdef]);expect(g.apex.procCount).toBe(1);expect(g.enemies[0].hp).toBeLessThan(1000);
+});
