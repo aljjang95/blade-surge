@@ -30,7 +30,7 @@ export class Player extends Actor {
     this.dr = 0; this.drT = 0; this.sanctum = null;   // 성역: 피해 감소
     this.buffs = { atk: 1, spd: 1, atkSpd: 1, t: 0 }; this.stormT = 0;
     this.auto = false; this.autoT = 0; this.magnetMul = 1;
-    this.sprint = 0; this.sprintT = 0; this.lockTarget = null; this.perfectWindow = 0; this.perfectCd = 0;
+    this.sprint = 0; this.sprintT = 0; this.lockTarget = null; this.perfectWindow = 0; this.perfectCd = 0; this.counterWindow = 0;
     this.trail = null; this.current = null; this.skillCtx = null;
     this.moveDir = new THREE.Vector3();
     this.play('Idle');
@@ -151,6 +151,8 @@ export class Player extends Actor {
   }
   doComboHit(tick = 0) {
     const c = this.current; const dmg = this.atk * c.dmg;
+    const counterFinisher = tick === 0 && !!c.finisher && (this.counterWindow || 0) > 0;
+    if (counterFinisher) this.counterWindow = 0;
     const comboToken=(c.finisher||c.move==='nova'||c.move==='slam')?(tick===0?(this.comboLinkToken={owner:this,epoch:this.knightLifeEpoch||0}):this.comboLinkToken):null;
     if (!tick && c.jobGain) this.gainJobResource(c.jobGain);
     const f = this.forward(_v.clone());
@@ -160,9 +162,10 @@ export class Player extends Actor {
       for (let i = 0; i < count; i++) {
         const dir = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (i - (count - 1) / 2) * .22);
         this.game.spawnProjectile({ pos: this.arrowOrigin(dir), dir, speed: 27, radius: c.finisher ? .85 : .55, dmg,
-          color: this.def.color, size: c.finisher ? .65 : .4, owner: this, kb: c.kb, kind: 'slash',
+          color: this.def.color, size: c.finisher ? .65 : .4, owner: this, kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'slash',
           pierce: !!c.pierce, finisher: !!c.finisher, comboToken, basic: true, life: c.range / 27, visual: 'arrow' });
       }
+      if (counterFinisher) { this.game.ui.toast('완벽 회피 연계 · 관통 붕괴', 'gold'); audio.ting({ vol: .5, freq: 2100 }); }
       audio.whoosh({ vol: .32, pitch: 1.6, dur: .18 });
       this.game.sp?.onComboHit(1);
       return;
@@ -175,7 +178,7 @@ export class Player extends Actor {
     }
     if (c.move === 'nova') {   // 노바: 끌어모아 터뜨린다
       this.game.vacuum(this.pos.clone(), c.range + 2, gravity ? 14 : 9);
-      const hits = this.game.hitRadius(this.pos, c.range, dmg, { kb: c.kb, kind: 'magic', finisher: true, comboToken, source: this, basic: true });
+      const hits = this.game.hitRadius(this.pos, c.range, dmg, { kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'magic', finisher: true, comboToken, source: this, basic: true });
       this.game.sp?.onComboHit(hits);
       this.game.fx.holyBurst(this.pos, { size: c.range * 2.4, life: 0.45, color: this.def.accent }); this.game.fx.shockTex(this.pos, this.def.color, { r1: c.range * 1.6, life: 0.4 }); this.game.fx.ring(this.pos, this.def.color, { r0: 0.5, r1: c.range + 1, life: 0.35, vertical: false });
       this.game.renderer.shake(0.4); audio.magic({ vol: 0.4, base: 330, notes: [0, 7, 12], step: 0.04 }); audio.boom({ vol: 0.4, dur: 0.4, low: 90 });
@@ -184,7 +187,7 @@ export class Player extends Actor {
     }
     if (c.move === 'slam') {   // 도약 강타: 착지점 반경
       const cpos = this.pos.clone().addScaledVector(f, 0.8);
-      const hits = this.game.hitRadius(cpos, c.range, dmg, { kb: c.kb, kind: 'blunt', finisher: true, comboToken, source: this, basic: true });
+      const hits = this.game.hitRadius(cpos, c.range, dmg, { kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'blunt', finisher: true, comboToken, source: this, basic: true });
       this.game.sp?.onComboHit(hits);
       this.game.fx.shockTex(cpos, this.def.color, { r1: c.range * 1.5, life: 0.45 }); this.game.fx.dustPuff(cpos, { size: c.range * 1.2, life: 0.6 }); this.game.fx.explosion(cpos, { size: 4, color: this.def.accent, life: 0.4 }); this.game.fx.burst(cpos.clone().setY(0.4), this.def.color, { n: 20, speed: 8, size: 0.4 });
       this.game.renderer.shake(0.7); this.game.renderer.punch(0.5); audio.boom({ vol: 0.7, dur: 0.5, low: 55 }); audio.vibe(30);
@@ -208,7 +211,7 @@ export class Player extends Actor {
       this.game.fx.flash(spawn, this.def.color, { size: 1.2, life: 0.15 });
       this.game.sp?.onComboHit(1);
     } else {
-      const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, c.arc, dmg, { kb: c.kb, kind: 'slash', finisher: c.finisher, comboToken, source: this, basic: true });
+      const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, c.arc, dmg, { kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'slash', finisher: c.finisher, comboToken, source: this, basic: true });
       this.game.sp?.onComboHit(hits);
       if (c.through) { this.game.fx.ghost(this.model, this.def.color, { life: 0.3, opacity: 0.5 }); this.game.fx.slashArc(this.pos, this.yaw, this.def.color, { radius: c.range, arc: 300, height: 1, life: 0.2 }); }   // 관통: 지나온 자리에 잔상
       if (gravity && !c.finisher) this.game.vacuum(this.pos.clone().addScaledVector(f, 1.5), 6, 5);   // 중력 2세트: 모든 타격이 끌어당긴다
@@ -218,7 +221,8 @@ export class Player extends Actor {
       this.game.fx.slashSprite(sp, f, this.def.color, { size: c.range * 1.7, life: c.finisher ? 0.32 : 0.22, tilt, flip: this.comboIdx % 2 === 1 });
       if (c.finisher) {
         // 마무리 타격: 살짝 몹몰이 + 충격파
-        this.game.vacuum(this.pos.clone().addScaledVector(f, 1.5), gravity ? 11 : 5.5, gravity ? 16 : 8);
+        this.game.vacuum(this.pos.clone().addScaledVector(f, counterFinisher ? 2.3 : 1.5), gravity ? 11 : counterFinisher ? 6.5 : 5.5, gravity ? 16 : counterFinisher ? 11 : 8);
+        if (counterFinisher) { this.game.ui.toast('완벽 회피 연계 · 군중 붕괴', 'gold'); audio.ting({ vol: .5, freq: 2100 }); }
         this.game.fx.shockTex(this.pos.clone().addScaledVector(f, 1.2), this.def.color, { r1: 4.2, life: 0.35 });
         this.game.fx.explosion(this.pos.clone().addScaledVector(f, 1.6), { size: 3.2, color: this.def.accent, life: 0.35 });
         this.game.renderer.shake(0.35); this.game.fx.dustPuff(this.pos.clone().addScaledVector(f, 1.5), { size: 2.4, life: 0.5 });
@@ -409,6 +413,7 @@ export class Player extends Actor {
     this.ultGainLock = Math.max(0, (this.ultGainLock || 0) - dt);
     if (this.alive) this.addMp(this.mpRegen * dt);
     if (this.perfectWindow > 0) this.perfectWindow -= dt;
+    if (this.counterWindow > 0) this.counterWindow = Math.max(0, this.counterWindow - dt);
     if (this.stormT > 0) { this.stormT -= dt; this.game.fx.aura(this.pos, 0x7fd9ff, 1.5); if (this.stormT <= 0 && this.buffs.t <= 0) this.tintEmissive = null; }
     if (this.perfectCd > 0) this.perfectCd -= dt;
     if (this.drT > 0) { this.drT -= dt; if (this.drT <= 0) { this.dr = 0; this.sanctum = null; } }

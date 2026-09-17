@@ -7,14 +7,25 @@ let pending;
 export function preloadSurfaceTextures() {
   if (pending) return pending;
   const loader = new THREE.TextureLoader();
-  pending = Promise.all(['sanctum-stone', 'hero-weave', 'forged-metal', 'oath-sanctum'].map(async name => {
+  const crafted = ['sanctum-stone', 'hero-weave', 'forged-metal', 'oath-sanctum'].map(async name => {
     const texture = await loader.loadAsync(`/img/materials-crafted/${name}.webp`);
     texture.name = `GUI_${name}`;
     texture.wrapS = texture.wrapT = name === 'oath-sanctum' ? THREE.ClampToEdgeWrapping : THREE.RepeatWrapping;
     texture.anisotropy = 4;
     texture.colorSpace = ['sanctum-stone', 'oath-sanctum'].includes(name) ? THREE.SRGBColorSpace : THREE.NoColorSpace;
     SURFACE_TEXTURES[name] = texture;
-  }));
+  });
+  const dungeon = [
+    ['dungeon-stone-diffuse', 'polyhaven-medieval-wall-02-diffuse-1k.jpg', THREE.SRGBColorSpace],
+    ['dungeon-stone-normal', 'polyhaven-medieval-wall-02-normal-gl-1k.jpg', THREE.NoColorSpace],
+    ['dungeon-stone-roughness', 'polyhaven-medieval-wall-02-rough-1k.jpg', THREE.NoColorSpace],
+  ].map(async ([name, file, colorSpace]) => {
+    const texture = await loader.loadAsync(`/img/materials-cc0/${file}`);
+    texture.name = `CC0_${name}`; texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(1.35, 1.35); texture.anisotropy = 4; texture.colorSpace = colorSpace;
+    SURFACE_TEXTURES[name] = texture;
+  });
+  pending = Promise.all([...crafted, ...dungeon]);
   return pending;
 }
 
@@ -47,6 +58,19 @@ export function applySurfaceDetail(material, role = 'cloth') {
   material.bumpMap = texture;
   material.bumpScale = role === 'stone' ? .045 : role === 'metal' ? .018 : .028;
   material.userData.surfaceTexture = key;
+  material.needsUpdate = true;
+  return material;
+}
+
+
+export function applyDungeonStoneDetail(material) {
+  const diffuse = SURFACE_TEXTURES['dungeon-stone-diffuse'];
+  const normal = SURFACE_TEXTURES['dungeon-stone-normal'];
+  const roughness = SURFACE_TEXTURES['dungeon-stone-roughness'];
+  if (!diffuse || !normal || !roughness) return applySurfaceDetail(material, 'stone');
+  material.map = diffuse; material.normalMap = normal; material.roughnessMap = roughness;
+  material.normalScale?.set(.45, .45); material.roughness = .88; material.metalness = .02;
+  material.userData.surfaceTexture = 'polyhaven-medieval-wall-02';
   material.needsUpdate = true;
   return material;
 }
