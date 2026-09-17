@@ -13,7 +13,7 @@ const report={sha,status:'running',scope:'Isolated synthetic Lv50 save, real com
 const check=(v,m)=>{if(!v)throw Error(m);};let browser,server;
 try{
  if(!live)server=await preview({root,configFile:false,preview:{host:'127.0.0.1',port:0},logLevel:'error'});
- const origin=live?'https://blade-surge.affinity-agent-studio.workers.dev':`http://127.0.0.1:${server.httpServer.address().port}`;report.origin=origin;
+ const origin=live?'https://blade.tllhouse.com':`http://127.0.0.1:${server.httpServer.address().port}`;report.origin=origin;
  browser=await chromium.launch(launchOpts({headless:true}));report.browser=browser.version();
  const context=await browser.newContext({viewport:{width:880,height:400},hasTouch:true,serviceWorkers:'block'}),page=await context.newPage();
  await page.route('**/*',r=>{if(!['GET','HEAD','OPTIONS'].includes(r.request().method())){report.blockedWrites.push(r.request().url());return r.abort();}return r.continue();});

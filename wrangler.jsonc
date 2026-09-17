@@ -3,6 +3,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "blade-surge",
   "main": "worker/index.ts",
+  "routes": [{ "pattern": "blade.tllhouse.com", "custom_domain": true }],
   "compatibility_date": "2025-06-01",
   "assets": {
     "binding": "ASSETS",
@@ -15,7 +16,7 @@
   "durable_objects": { "bindings": [{ "name": "DIALOGUE_BUDGET", "class_name": "DialogueBudget" }, { "name": "PARTIES", "class_name": "PartyRoom" }] },
   "migrations": [{ "tag": "dialogue-budget-v1", "new_sqlite_classes": ["DialogueBudget"] }, { "tag": "party-dungeons-v1", "new_sqlite_classes": ["PartyRoom"] }],
   "vars": {
-    "APP_ORIGIN": "https://blade-surge.affinity-agent-studio.workers.dev",
+    "APP_ORIGIN": "https://blade.tllhouse.com",
     "DIALOGUE_ENABLED": "false",
     "DIALOGUE_APPROVAL_ID": "",
     "DIALOGUE_APPROVAL_ISSUED_AT": "",

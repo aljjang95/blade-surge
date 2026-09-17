@@ -60,7 +60,7 @@ deploy key·Cloudflare 토큰·Fish Audio 키가 세션 디스크에 풀린다. 
 가로모드 웹앱 3D 몹몰이 핵앤슬래시 가챠 RPG. three.js r0.170 + WebGL2 + Vite 6.
 빌드 산출물을 Cloudflare Workers Static Assets로 서빙한다. 백엔드 없음, 세이브는 localStorage.
 
-- 라이브: https://blade-surge.affinity-agent-studio.workers.dev
+- 라이브: https://blade.tllhouse.com
 - 레포: https://github.com/aljjang95/blade-surge
 
 ## 명령

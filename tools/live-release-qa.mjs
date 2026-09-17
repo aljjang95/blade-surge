@@ -9,7 +9,7 @@ import { STORY_EVENTS } from '../src/data/masterworks.js';
 import { ARMORY_ITEMS } from '../src/data/armory.js';
 const root=path.resolve(import.meta.dirname,'..'),out=path.join(root,'work','live-release-qa',Date.now().toString());
 const head=process.argv[2];if(!/^[a-f0-9]{40}$/.test(head||''))throw Error('Exact release head required');
-const liveOrigin='https://blade-surge.affinity-agent-studio.workers.dev';
+const liveOrigin='https://blade.tllhouse.com';
 const origin=process.argv[3]||liveOrigin;
 if(origin!==liveOrigin&&!/^http:\/\/127\.0\.0\.1:\d+$/.test(origin))throw Error('Only the owned production or local loopback preview is allowed');
 const report={job:'blade-surge-release-rsi-20260915',head,origin,status:'running',scope:'Public deployed assets and isolated new desktop Chromium save; UI departure, keyboard movement, fixed-step AUTO complete floor and persisted reward; actual delayed victory panel and next-stage persistence; not physical-device FPS or manual completion',errors:[],httpErrors:[],blockedWrites:[],external:[],assets:[]};

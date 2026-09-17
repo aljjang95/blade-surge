@@ -8,7 +8,7 @@ import { MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC, skillIndexForCombatSlot 
 function ranger(overrides:any={}) {
   const p:any=Object.create(Player.prototype);
   Object.assign(p,{def:HEROES.ranger,heroLevel:50,skillLoadout:[6,7],skillLevels:Array(8).fill(1),cds:Array(8).fill(0),
-    state:'idle',stun:0,ult:0,ultMax:100,mp:MP_BASE,maxMp:MP_BASE,stats:{atk:100,ultGain:1},buffs:{atk:1,spd:1,atkSpd:1,t:0},hp:100,maxHp:100,vel:new THREE.Vector3(),pos:new THREE.Vector3(),model:new THREE.Group(),mats:[],
+    state:'idle',stun:0,ult:0,ultMax:100,ultGainLock:0,mp:MP_BASE,maxMp:MP_BASE,stats:{atk:100,ultGain:1},buffs:{atk:1,spd:1,atkSpd:1,t:0},hp:100,maxHp:100,vel:new THREE.Vector3(),pos:new THREE.Vector3(),model:new THREE.Group(),mats:[],
     game:{ui:{toast(){}},skillCooldown:(v:number)=>v,hasProc:()=>false,sp:null,ultCinematic(){},fx:{dust(){}},after(){}},
     stopTrail(){},autoAim(){},playTimed(){},faceDir(){},play(){},forward:(v:THREE.Vector3)=>v.set(0,0,1),...overrides});
   return p;
@@ -37,12 +37,12 @@ test('Q cast spends MP and starts cooldown on underlying skill index',()=>{
 test('ultimate still consumes gauge instead of MP',()=>{
   const p=ranger({ult:100,mp:7,skillLoadout:[4,5]});
   expect(Player.prototype.tryCastSkill.call(p,3)).toBe(true);
-  expect(p.ult).toBe(0); expect(p.mp).toBe(7); expect(p.state).toBe('ult');
+  expect(p.ult).toBe(0); expect(p.mp).toBe(7); expect(p.state).toBe('ult'); expect(p.ultGainLock).toBeGreaterThan(1);
 });
 
-test('MP pool uses base 100, regen contract 4 per second, and clamps gain',()=>{
+test('MP pool uses base 100, slower passive regen, and clamps gain',()=>{
   const p:any={mp:98,maxMp:MP_BASE};
-  expect(MP_REGEN_PER_SEC).toBe(4); expect(Player.prototype.addMp.call(p,MP_REGEN_PER_SEC)).toBe(100);
+  expect(MP_REGEN_PER_SEC).toBe(2); expect(Player.prototype.addMp.call(p,MP_REGEN_PER_SEC)).toBe(100);
   expect(Player.prototype.addMp.call(p,-150)).toBe(0);
 });
 
@@ -57,13 +57,13 @@ test('enemy death grants exactly two MP without changing the existing ultimate g
   const g:any={conquest:null,kills:0,waveKilled:0,player:{alive:true,addUlt:(n:number)=>ult+=n,addMp:(n:number)=>mp+=n},sp:null,
     hasProc:()=>false,stage:{party:true},drops:{onKill(){}},fx:{burst(){},dustPuff(){},explosion(){}},renderer:{shake(){}},pending:[],active:true,enemies:[e],after(){}};
   Battle.prototype.onEnemyDeath.call(g,e);
-  expect(mp).toBe(2); expect(ult).toBe(5); expect(g.kills).toBe(1);
+  expect(mp).toBe(2); expect(ult).toBe(1); expect(g.kills).toBe(1);
 });
 
-test('perfect dodge grants its one-shot eight MP reward',()=>{
-  let mp=0; const p:any={pos:new THREE.Vector3(),model:new THREE.Group(),stats:{ultGain:1},buffs:{atk:1,atkSpd:1,t:0},addUlt(){},addMp:(n:number)=>mp+=n};
+test('perfect dodge grants the control-first MP and ultimate reward',()=>{
+  let mp=0,ult=0; const p:any={pos:new THREE.Vector3(),model:new THREE.Group(),stats:{ultGain:1},buffs:{atk:1,atkSpd:1,t:0},addUlt:(n:number)=>ult+=n,addMp:(n:number)=>mp+=n};
   const g:any={timeCtl:{slowmo(){}},renderer:{punch(){},aberr:0,flashScreen(){}},fx:{shockTex(){},ghost(){},burst(){}},ui:{perfectDodge(){}},player:{def:{voiceId:'ranger'}},heroId:'ranger'};
-  Battle.prototype.onPerfectDodge.call(g,p); expect(mp).toBe(8);
+  Battle.prototype.onPerfectDodge.call(g,p); expect(mp).toBe(12); expect(ult).toBe(18);
 });
 
 test('campaign boss shortcut only unseals and opens portal, preserving optional flags and excluding other modes',()=>{

@@ -24,7 +24,7 @@ try{
     if(approached&&nearest){p.auto=false;a.input.joy.active=true;const delta=nearest.pos.clone().sub(p.pos),d=delta.length();const yaw=a.input.getCameraYaw(),c=Math.cos(yaw),s=Math.sin(yaw);delta.normalize();a.input.screenMove.x=d>2?delta.x*c-delta.z*s:0;a.input.screenMove.y=d>2?delta.x*s+delta.z*c:0;a.input.attackHeld=true;}
     else if(!nearest){p.auto=true;approached=false;a.input.clear();}
     a.step(1/60,frame%30===0);
-    if(g.getComboLinkSnapshot().ready){a.input.clear();p.auto=false;a.step(0,true);return {ready:true,elapsed:g.elapsed,level:p.heroLevel,hp:p.hp,maxHp:p.maxHp,kills:g.kills,link:g.getComboLinkSnapshot()};}
+    if(g.getComboLinkSnapshot().ready){a.input.clear();p.auto=false;a.step(0,true);return {ready:true,elapsed:g.elapsed,level:p.heroLevel,hp:p.hp,maxHp:p.maxHp,kills:g.kills,ult:p.ult,link:g.getComboLinkSnapshot()};}
     if(frame%120===0)await new Promise(r=>setTimeout(r,0));
    }
    return {ready:false,elapsed:g.elapsed,hp:p.hp,kills:g.kills,state:p.state,level:p.heroLevel};
@@ -57,9 +57,11 @@ try{
       return result;
     };
 g.onSkillReleased=function(p,c){const before={cds:[...p.cds],shield:g.apex.shield,procs:g.apex.procCount};const applied=fn.call(this,p,c);window.__linkEvidence.push({skill:c.sk.id,applied,before,after:{cds:[...p.cds],shield:g.apex.shield,procs:g.apex.procCount},count:g.comboLink.activations});return applied;};});
+  await page.evaluate(()=>{const p=app.battle.player,add=p.addUlt.bind(p);window.__skillUltEvents=[];p.addUlt=function(n){window.__skillUltEvents.push(n);return add(n);};});
   await page.locator('#hud .skill-btn[data-skill="0"]').click();
-  const after=await page.evaluate(()=>{for(let i=0;i<80;i++)app.step(1/60,i===79);return {link:app.battle.getComboLinkSnapshot(),events:window.__linkEvidence,apexDamage:window.__linkDamage,hp:app.battle.player.hp,alive:app.battle.player.alive,kills:app.battle.kills,receivedText:document.querySelector('.experience-link').textContent};});
+  const after=await page.evaluate(()=>{for(let i=0;i<80;i++)app.step(1/60,i===79);return {link:app.battle.getComboLinkSnapshot(),events:window.__linkEvidence,apexDamage:window.__linkDamage,hp:app.battle.player.hp,alive:app.battle.player.alive,kills:app.battle.kills,ult:app.battle.player.ult,ultEvents:window.__skillUltEvents,receivedText:document.querySelector('.experience-link').textContent};});
   assert(after.link.activations===1&&after.events.some(e=>e.applied),'Actual skill did not activate '+JSON.stringify(after));
+  assert(after.ultEvents.length<=Math.max(0,after.kills-ready.kills),'Regular skill hits refilled ultimate instead of control actions '+JSON.stringify({ready:ready.ult,after:after.ult,events:after.ultEvents,kills:[ready.kills,after.kills]}));
   await page.screenshot({path:path.join(out,`${hero}-${art}-released.png`)});
   if(art==='rupture')assert(validateRuptureEvidence(after.apexDamage),'No actual bounded rupture damage '+JSON.stringify(after.apexDamage));
   const event=after.events.find(e=>e.applied);if(art==='aegis')assert(event.after.shield>0,'No actual shield');if(art==='flow')assert(event.before.cds.some((v,i)=>event.after.cds[i]<v),'No cooldown reduction');

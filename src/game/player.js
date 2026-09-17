@@ -5,6 +5,7 @@ import { SKILLS } from './skills.js';
 import { applyLook } from './look.js';
 import { materialsOf } from '../engine/assets.js';
 import { HeroBeacon } from './hero-beacon.js';
+import { CONTROL_ULT_GAIN, ultimateLockDuration } from './control-rewards.js';
 import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC } from './progression.js';
 
 const _v = new THREE.Vector3();
@@ -24,7 +25,7 @@ export class Player extends Actor {
     this.auraT = 0;
     this.state = 'idle'; this.stateT = 0;
     this.comboIdx = 0; this.comboQueued = false; this.hitDone = false; this.comboWindow = 0;
-    this.cds = def.skills.map(() => 0); this.ult = 0; this.ultMax = 100;
+    this.cds = def.skills.map(() => 0); this.ult = 0; this.ultMax = 100; this.ultGainLock = 0;
     this.maxMp = MP_BASE; this.mp = MP_BASE; this.mpRegen = MP_REGEN_PER_SEC; this.dodgeCd = 0;
     this.dr = 0; this.drT = 0; this.sanctum = null;   // 성역: 피해 감소
     this.buffs = { atk: 1, spd: 1, atkSpd: 1, t: 0 }; this.stormT = 0;
@@ -44,7 +45,10 @@ export class Player extends Actor {
     if (old < 3 && this.jobResource === 3) this.game.ui.toast(this.def.jobId === 'guardian' ? '결의 충만 · 결의의 반격 강화' : '집중 충만 · 바람 관통탄 강화', 'gold');
   }
   get busy() { return this.state === 'attack' || this.state === 'skill' || this.state === 'dodge' || this.state === 'ult' || this.state === 'hurt'; }
-  addUlt(n) { this.ult = Math.min(this.ultMax, this.ult + n); }
+  addUlt(n) {
+    if ((this.ultGainLock || 0) > 0 || !Number.isFinite(n) || n <= 0) return this.ult;
+    this.ult = Math.min(this.ultMax, this.ult + n); return this.ult;
+  }
   addMp(n) { this.mp = Math.max(0, Math.min(this.maxMp, this.mp + n)); return this.mp; }
   combatSkillIndex(slot) { return skillIndexForCombatSlot(this.skillLoadout, slot); }
   combatSkill(slot) { const index = this.combatSkillIndex(slot); return { index, skill: this.def.skills[index] }; }
@@ -157,21 +161,21 @@ export class Player extends Actor {
         const dir = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (i - (count - 1) / 2) * .22);
         this.game.spawnProjectile({ pos: this.arrowOrigin(dir), dir, speed: 27, radius: c.finisher ? .85 : .55, dmg,
           color: this.def.color, size: c.finisher ? .65 : .4, owner: this, kb: c.kb, kind: 'slash',
-          pierce: !!c.pierce, finisher: !!c.finisher, comboToken, life: c.range / 27, visual: 'arrow' });
+          pierce: !!c.pierce, finisher: !!c.finisher, comboToken, basic: true, life: c.range / 27, visual: 'arrow' });
       }
       audio.whoosh({ vol: .32, pitch: 1.6, dur: .18 });
       this.game.sp?.onComboHit(1);
       return;
     }
     if (c.move === 'fan') {   // 부채꼴 3발
-      for (let i = -1; i <= 1; i++) { const dir = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.3); const spawn = this.pos.clone().add(dir.clone().multiplyScalar(0.8)); spawn.y = 1.3; this.game.spawnProjectile({ pos: spawn, dir, speed: 20, radius: 0.6, dmg, color: this.def.color, size: 0.4, owner: this, kb: c.kb, kind: 'magic' }); }
+      for (let i = -1; i <= 1; i++) { const dir = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.3); const spawn = this.pos.clone().add(dir.clone().multiplyScalar(0.8)); spawn.y = 1.3; this.game.spawnProjectile({ pos: spawn, dir, speed: 20, radius: 0.6, dmg, color: this.def.color, size: 0.4, owner: this, kb: c.kb, kind: 'magic', basic: true }); }
       audio.magic({ vol: 0.25, base: 520, notes: [0, 4, 7], step: 0.03 }); this.game.fx.flash(this.pos.clone().addScaledVector(f, 0.8).setY(1.3), this.def.color, { size: 1.6, life: 0.15 });
       this.game.sp?.onComboHit(1);   // 투사체는 나중에 맞으므로 시전 시점에 장전한다 (원거리 영웅이 세트를 못 쓰던 구멍)
       return;
     }
     if (c.move === 'nova') {   // 노바: 끌어모아 터뜨린다
       this.game.vacuum(this.pos.clone(), c.range + 2, gravity ? 14 : 9);
-      const hits = this.game.hitRadius(this.pos, c.range, dmg, { kb: c.kb, kind: 'magic', finisher: true,comboToken,source:this });
+      const hits = this.game.hitRadius(this.pos, c.range, dmg, { kb: c.kb, kind: 'magic', finisher: true, comboToken, source: this, basic: true });
       this.game.sp?.onComboHit(hits);
       this.game.fx.holyBurst(this.pos, { size: c.range * 2.4, life: 0.45, color: this.def.accent }); this.game.fx.shockTex(this.pos, this.def.color, { r1: c.range * 1.6, life: 0.4 }); this.game.fx.ring(this.pos, this.def.color, { r0: 0.5, r1: c.range + 1, life: 0.35, vertical: false });
       this.game.renderer.shake(0.4); audio.magic({ vol: 0.4, base: 330, notes: [0, 7, 12], step: 0.04 }); audio.boom({ vol: 0.4, dur: 0.4, low: 90 });
@@ -180,7 +184,7 @@ export class Player extends Actor {
     }
     if (c.move === 'slam') {   // 도약 강타: 착지점 반경
       const cpos = this.pos.clone().addScaledVector(f, 0.8);
-      const hits = this.game.hitRadius(cpos, c.range, dmg, { kb: c.kb, kind: 'blunt', finisher: true,comboToken,source:this });
+      const hits = this.game.hitRadius(cpos, c.range, dmg, { kb: c.kb, kind: 'blunt', finisher: true, comboToken, source: this, basic: true });
       this.game.sp?.onComboHit(hits);
       this.game.fx.shockTex(cpos, this.def.color, { r1: c.range * 1.5, life: 0.45 }); this.game.fx.dustPuff(cpos, { size: c.range * 1.2, life: 0.6 }); this.game.fx.explosion(cpos, { size: 4, color: this.def.accent, life: 0.4 }); this.game.fx.burst(cpos.clone().setY(0.4), this.def.color, { n: 20, speed: 8, size: 0.4 });
       this.game.renderer.shake(0.7); this.game.renderer.punch(0.5); audio.boom({ vol: 0.7, dur: 0.5, low: 55 }); audio.vibe(30);
@@ -188,7 +192,7 @@ export class Player extends Actor {
       return;
     }
     if (c.move === 'spin') {   // 회전베기: 360°, ticks 연타
-      const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, 360, dmg, { kb: c.kb, kind: 'slash', quietStop: tick > 0 });
+      const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, 360, dmg, { kb: c.kb, kind: 'slash', quietStop: tick > 0, source: this, basic: true });
       if (tick === 0) this.game.sp?.onComboHit(hits);
       this.game.fx.slashArc(this.pos, this.yaw + tick * 2.1, this.def.color, { radius: c.range + 0.3, arc: 300, height: 1.1, life: 0.22, thickness: 0.6 });
       this.game.fx.dust(this.pos, { n: 4, size: 1.2 });
@@ -199,12 +203,12 @@ export class Player extends Actor {
     }
     if (c.projectile) {
       const spawn = this.pos.clone().add(f.clone().multiplyScalar(0.8)); spawn.y = 1.3;
-      this.game.spawnProjectile({ pos: spawn, dir: f, speed: 22, radius: 0.7, dmg, color: this.def.color, size: c.projectile === 'bigbolt' ? 0.7 : 0.4, owner: this, kb: c.kb, kind: 'magic', pierce: c.projectile === 'bigbolt' });
+      this.game.spawnProjectile({ pos: spawn, dir: f, speed: 22, radius: 0.7, dmg, color: this.def.color, size: c.projectile === 'bigbolt' ? 0.7 : 0.4, owner: this, kb: c.kb, kind: 'magic', pierce: c.projectile === 'bigbolt', basic: true });
       audio.magic({ vol: 0.2, base: 660, notes: [0, 7], step: 0.03 });
       this.game.fx.flash(spawn, this.def.color, { size: 1.2, life: 0.15 });
       this.game.sp?.onComboHit(1);
     } else {
-      const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, c.arc, dmg, { kb: c.kb, kind: 'slash', finisher: c.finisher,comboToken,source:this });
+      const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, c.arc, dmg, { kb: c.kb, kind: 'slash', finisher: c.finisher, comboToken, source: this, basic: true });
       this.game.sp?.onComboHit(hits);
       if (c.through) { this.game.fx.ghost(this.model, this.def.color, { life: 0.3, opacity: 0.5 }); this.game.fx.slashArc(this.pos, this.yaw, this.def.color, { radius: c.range, arc: 300, height: 1, life: 0.2 }); }   // 관통: 지나온 자리에 잔상
       if (gravity && !c.finisher) this.game.vacuum(this.pos.clone().addScaledVector(f, 1.5), 6, 5);   // 중력 2세트: 모든 타격이 끌어당긴다
@@ -255,7 +259,7 @@ export class Player extends Actor {
     const impl = SKILLS[sk.id]; if (!impl) return false;
     const mpCost = skillMpCost(sk), currentMp = Number.isFinite(this.mp) ? this.mp : MP_BASE;
     if (mpCost > currentMp) { this.game.ui.toast(`MP 부족 · ${mpCost} 필요`, 'red'); audio.play('ui_error', { vol: 0.5 }); return false; }
-    if (sk.ult) { this.ult = 0; this.state = 'ult'; } else { this.mp = currentMp - mpCost; this.cds[i] = this.game.skillCooldown?.(sk.cd) ?? sk.cd; this.state = 'skill'; }
+    if (sk.ult) { this.ult = 0; this.ultGainLock = ultimateLockDuration(impl); this.state = 'ult'; } else { this.mp = currentMp - mpCost; this.cds[i] = this.game.skillCooldown?.(sk.cd) ?? sk.cd; this.state = 'skill'; }
     this.stateT = 0; this.vel.set(0, 0, 0);
     this.autoAim(12);
     const lvMult = 1 + (this.skillLevels[i] - 1) * 0.12;
@@ -279,7 +283,7 @@ export class Player extends Actor {
       this.game.ui.toast(perfect ? '완벽한 방어 · 반격!' : '방패 방어', 'gold');
       this.game.hitRadius(this.pos, 4, this.atk * (perfect ? 2.8 : 1.2), { kb: 5, stun: .8, kind: 'blunt', source: this, dirFrom: this.pos });
       this.game.fx.shockTex(this.pos, 0x9fd0ff, { r1: 4, life: .35 });
-      if (perfect) { this.addUlt(12); return false; }
+      if (perfect) { this.addUlt(CONTROL_ULT_GAIN.perfectGuard * (this.stats?.ultGain || 1)); return false; }
       dmg *= .3;
     }
     if (this.invuln > 0) {
@@ -345,7 +349,14 @@ export class Player extends Actor {
         if (sk.id === 'guardian_guard' && !(e.telegraph > 0 && d < 5)) continue;
         const ready = sk.ult ? this.ult >= this.ultMax : this.cds[i] <= 0 && skillMpCost(sk) <= (this.mp ?? MP_BASE);
         if (!ready) continue;
-        const wantCluster = this.game.stage?.expedition?.kind === 'arena' ? 1 : sk.ult ? 3 : sk.awaken ? 2 : slot === 0 ? 1 : 2;
+        const boss = e.isBoss ? e : list.find(x => x.isBoss && x.alive);
+        const bossFinish = !!boss && boss === e && boss.hp / Math.max(1, boss.maxHp) <= .35;
+        const emergencyCrowd = cluster >= 8 && this.hp / Math.max(1, this.maxHp) <= .45;
+        const linkReady = !!this.game.getComboLinkSnapshot?.().ready;
+        const controlOpening = linkReady || e.breakT > 0 || (e.telegraph > 0 && d < 5);
+        if (sk.ult && !bossFinish && !emergencyCrowd) continue;
+        if (!sk.ult && !controlOpening && cluster < 5) continue;
+        const wantCluster = this.game.stage?.expedition?.kind === 'arena' ? 1 : sk.ult ? 1 : sk.awaken ? 2 : 1;
         if (cluster >= wantCluster && d < (this.def.ranged ? 11 : 8)) { this.game.input.press('skill' + slot); return out; }
       }
       if (d > want + 0.4) {
@@ -395,6 +406,7 @@ export class Player extends Actor {
     this.tonicAtkT = Math.max(0, (this.tonicAtkT || 0) - dt);
     this.tonicGuardT = Math.max(0, (this.tonicGuardT || 0) - dt);
     this.dodgeCd = Math.max(0, (this.dodgeCd || 0) - dt);
+    this.ultGainLock = Math.max(0, (this.ultGainLock || 0) - dt);
     if (this.alive) this.addMp(this.mpRegen * dt);
     if (this.perfectWindow > 0) this.perfectWindow -= dt;
     if (this.stormT > 0) { this.stormT -= dt; this.game.fx.aura(this.pos, 0x7fd9ff, 1.5); if (this.stormT <= 0 && this.buffs.t <= 0) this.tintEmissive = null; }

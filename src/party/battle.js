@@ -1,6 +1,7 @@
 import { Battle as SoloBattle } from '../game/apex-battle.js';
 import { Battle as BaseBattle } from '../game/battle-base.js';
 import { Battle as RpgBattle } from '../game/rpg-battle.js';
+import { ultKillGain } from '../game/control-rewards.js';
 
 /** One host advances the shared world; guests only render its snapshots. */
 export class Battle extends SoloBattle {
@@ -26,7 +27,7 @@ export class Battle extends SoloBattle {
     if (enemy.partyCounted) return;
     enemy.partyCounted = true;
     BaseBattle.prototype.onEnemyDeath.call(this, enemy);
-    for (const player of this.app.party.livingPlayers()) if (player !== this.player) player.addUlt(enemy.isBoss ? 30 : 5);
+    for (const player of this.app.party.livingPlayers()) if (player !== this.player) player.addUlt(ultKillGain(enemy));
   }
   damageEnemy(enemy, damage, options = {}) {
     if (!this.stage?.party) return super.damageEnemy(enemy, damage, options);

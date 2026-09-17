@@ -6,6 +6,7 @@ import { audio } from '../engine/audio.js';
 import { ImpactClock } from './combat-motion.js';
 import { contactFeedback } from './apex-combat.js';
 import { contactProfile, contactBudget } from './combat-contact.js';
+import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain } from './control-rewards.js';
 import { normalizeRpg, recordMonster, monsterLevel, monsterXp, grantCombatXp, KillLedger } from './rpg-core.js';
 import { buildCatalogue } from './rpg-catalogue.js';
 import { stageExpeditionEncounter, encounterLevelLabel } from './rpg-encounters.js';
@@ -116,7 +117,12 @@ export class Battle extends BaseBattle {
     if (this.sp && !opts.noProc) this.sp.onHit(enemy, opts);
     this.dmgDealt += dealt; this.combo++; this.comboT = 2.5;
     this.maxCombo = Math.max(this.maxCombo, this.combo); this.ui.setCombo(this.combo);
-    p.addUlt((crit ? 3 : 2) * (p.stats.ultGain || 1));
+    const gain = ultHitGain({ basic: opts.basic === true, crit });
+    if (gain) p.addUlt(gain * (p.stats.ultGain || 1));
+    const finisherTokens = this.controlFinisherTokens || (this.controlFinisherTokens = new WeakSet());
+    if (opts.basic && opts.finisher && opts.comboToken && !finisherTokens.has(opts.comboToken)) {
+      finisherTokens.add(opts.comboToken); p.addUlt(CONTROL_ULT_GAIN.comboFinisher * (p.stats.ultGain || 1)); p.addMp?.(CONTROL_MP_GAIN.comboFinisher);
+    }
     this.lastTarget = enemy;
     const hitPos = enemy.pos.clone().setY(1.1 * enemy.def.scale);
     if (this.fx.dmgLayer.children.length < (crit||opts.finisher?8:4)) this.fx.damage(hitPos, dealt, { crit, kind: opts.kind === 'magic' ? 'skill' : '' });

@@ -236,8 +236,8 @@ test('remote attack source owns critical roll, ultimate gain, and masterworks ch
     game.effects={chain:1};game.player.atk=100;game.player.stats.crit=0;
     const source={atk:240,stats:{crit:1,critDmg:2,ultGain:1.5},addUlt:(v:number)=>ult.push(v)};
     const primary=target(),other=target(1);game.enemies=[primary,other];
-    game.damageEnemy(primary,100,{source,finisher:true});
-    expect(primary.hits[0].amount).toBe(180);expect(ult).toEqual([4.5,4.5]);expect(other.hits[0].amount).toBeCloseTo(237.6);
+    const comboToken={};game.damageEnemy(primary,100,{source,finisher:true,basic:true,comboToken});
+    expect(primary.hits[0].amount).toBe(180);expect(ult).toHaveLength(2);expect(ult[0]).toBeCloseTo(2.1);expect(ult[1]).toBeCloseTo(10.5);expect(other.hits[0].amount).toBeCloseTo(237.6);
   }finally{Math.random=random;}
 });
 

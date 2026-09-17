@@ -20,6 +20,7 @@ import { RegionHazards } from './region-hazards.js';
 import { resolveJobHero } from '../data/jobs.js';
 import { buildExpeditionWorld, expeditionRoster, applyBattleConsumable, canApplyBattleConsumable } from './expedition-combat.js';
 import { ConquestRun } from './expedition-conquests.js';
+import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
 
 const _v = new THREE.Vector3();
 const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
@@ -37,7 +38,7 @@ export class Battle {
     this.combo = 0; this.comboT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0;
     this.wave = 0; this.waveT = 0; this.stage = null; this.boss = null; this.result = null; this.revived = 0;
     this.pending = []; // 지속 스폰 큐
-    this.maxAlive = 34; this.peakAlive = 0;
+    this.maxAlive = 34; this.peakAlive = 0; this.controlFinisherTokens = new WeakSet();
   }
   after(sec, fn) { this.timers.push({ t: sec, fn }); }
   /** 정지 화면과 동행 대화는 각자 소유한 정지만 해제한다. */
@@ -62,7 +63,7 @@ export class Battle {
     this._contactAt = -Infinity; this._contactBudget = null;
     this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0; this.bossDefeated = false;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
-    this.combo = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0;
+    this.combo = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.controlFinisherTokens = new WeakSet();
     this.clearPortal();
     const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = heroStats(def, heroState, equipBonus);
     this.setBonus = equipBonus.active || [];
@@ -428,7 +429,7 @@ export class Battle {
   }
   onEnemyDeath(e) {
     if (this.conquest?.death(e)) { this.ui.toast(this.conquest.hint(), 'gold'); this.ui.setObjective(this.world); }
-    this.kills++; this.waveKilled++; this.player.addUlt(e.isBoss ? 30 : e.isElite ? 16 : 5); this.player.addMp?.(2);
+    this.kills++; this.waveKilled++; this.player.addUlt(ultKillGain(e)); this.player.addMp?.(2);
     if (this.sp) this.sp.onKill(e);
     if (this.hasProc('blood_leech') && this.player.alive) { const heal = Math.floor(this.player.maxHp * 0.03); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); this.fx.embers(this.player.pos, 0xff3a5a, { n: 4, radius: 0.6, life: 0.6, rise: 2 }); if (this.fx.dmgLayer.children.length < 20) this.fx.damage(this.player.pos, heal, { kind: 'heal', text: '+' + heal }); }
     if (!this.stage.party) this.app.eco.s.quests.kills++;
@@ -539,7 +540,12 @@ export class Battle {
     if (this.sp && !opts.noProc) this.sp.onHit(e, opts);
     this.dmgDealt += dealt;
     this.combo++; this.comboT = 2.5; this.maxCombo = Math.max(this.maxCombo, this.combo); this.ui.setCombo(this.combo);
-    p.addUlt((crit ? 3 : 2) * (p.stats.ultGain || 1));
+    const gain = ultHitGain({ basic: opts.basic === true, crit });
+    if (gain) p.addUlt(gain * (p.stats.ultGain || 1));
+    const finisherTokens = this.controlFinisherTokens || (this.controlFinisherTokens = new WeakSet());
+    if (opts.basic && opts.finisher && opts.comboToken && !finisherTokens.has(opts.comboToken)) {
+      finisherTokens.add(opts.comboToken); p.addUlt(CONTROL_ULT_GAIN.comboFinisher * (p.stats.ultGain || 1)); p.addMp?.(CONTROL_MP_GAIN.comboFinisher);
+    }
     const hitPos = e.pos.clone().setY(1.1 * e.def.scale);
     // 다수 타격 시 데미지 숫자 솎아내기 (성능)
     if (this.fx.dmgLayer.children.length < 26 || crit) this.fx.damage(hitPos, dealt, { crit, kind: opts.kind === 'magic' ? 'skill' : '' });
@@ -558,11 +564,11 @@ export class Battle {
   }
 
   // ---------------- 투사체 ----------------
-  spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false, comboToken = null, skillCast = null }) {
+  spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false, comboToken = null, skillCast = null, basic = false }) {
     let mesh = null;
     if (visual !== null && size > 0) { mesh = visual === 'arrow' ? createArrowVisual(color, size, dir) : this.fx.orb(color, size); mesh.position.copy(pos); this.scene.add(mesh); }
     const readableTrail = trail ?? (!hostile && kind === 'magic' ? color : null);
-    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, comboToken, skillCast });
+    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, comboToken, skillCast, basic });
   }
   updateProjectiles(dt) {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -579,7 +585,7 @@ export class Battle {
           if (Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z) < p.radius + e.radius) {
             p.hit.add(e);
             if (p.explode) { this.explode(p); done = true; break; }
-            this.damageEnemy(e, p.dmg, { kb: p.kb, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, comboToken:p.comboToken, skillCast:p.skillCast });
+            this.damageEnemy(e, p.dmg, { kb: p.kb, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, comboToken:p.comboToken, skillCast:p.skillCast, basic:p.basic });
             if (!p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); break; }
           }
         }
@@ -611,7 +617,7 @@ export class Battle {
     this.fx.shockTex(p.pos, 0x9fe4ff, { r1: 4.5, life: 0.4 });
     this.fx.ghost(p.model, 0x9fe4ff, { life: 0.5, opacity: 0.7 });
     this.fx.burst(p.pos.clone().setY(1), 0x9fe4ff, { n: 18, speed: 7, size: 0.35 });
-    p.addUlt(14 * (p.stats.ultGain || 1)); p.addMp?.(8);
+    p.addUlt(CONTROL_ULT_GAIN.perfectDodge * (p.stats.ultGain || 1)); p.addMp?.(CONTROL_MP_GAIN.perfectDodge);
     p.buffs.atk = Math.max(p.buffs.atk, 1.35); p.buffs.atkSpd = Math.max(p.buffs.atkSpd, 1.25); p.buffs.t = Math.max(p.buffs.t, 3);
     this.ui.perfectDodge(); audio.bark(`hero_${this.player?.def.voiceId || this.heroId}_perfect`, { vol: 0.95, min: 1.2 }); audio.voice('perfect', { min: 12, duck: 0.7, dur: 0.8 });
     audio.ice({ vol: 0.4, dur: 0.35 }); audio.ting({ vol: 0.45, freq: 2400 }); audio.vibe([15, 25, 40]);
@@ -624,7 +630,7 @@ export class Battle {
     audio.duck(0.2, 2.5); audio.play('ui_max', { vol: 0.8, rate: 0.6 }); audio.vibe([60, 30, 60, 30, 120]);
     this.fx.castCircle(p.pos, p.def.color, { radius: 5, life: 1.2 });
     this.fx.light(p.pos, p.def.color, 12, 14, 1.2);
-    for (const e of this.enemies) if (e.alive) e.stun = Math.max(e.stun, 0.8);
+    for (const e of this.enemies) if (e.alive && !e.isBoss && e.pos.distanceToSquared(p.pos) <= 4.5 ** 2) e.stun = Math.max(e.stun, 0.3);
   }
 
   // ---------------- 프레임 ----------------
