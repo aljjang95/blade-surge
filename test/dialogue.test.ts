@@ -3,7 +3,7 @@ import { CompanionDirector } from '../src/companion/director';
 import { DialogueBudget, boundedJson, handleRequest, validApprovalWindow } from '../worker/index';
 import { dialogueMessages, parseDialogueReply, parseDialogueRequest, type DialogueRequest } from '../src/companion/dialogue-contract';
 
-const origin = 'https://blade-surge.affinity-agent-studio.workers.dev';
+const origin = 'https://blade.tllhouse.com';
 function body(): DialogueRequest {
   return { requestId: crypto.randomUUID(), input: '네브, 처음 성에 들어왔을 때 어땠어?', history: [],
     context: { mode: 'battle', heroName: '아르카', floor: 1, hpRatio: 0.4, enemiesNear: 9, combo: 6, roomsCleared: 1, totalRooms: 11, bossName: '', power: 3200 } };

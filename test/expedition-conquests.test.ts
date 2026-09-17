@@ -165,12 +165,14 @@ test('real AUTO requests use precision approach without skills/chains, then rest
     // conquest predicate: first target dead / last target's four guards dead.
     for(const e of c.priority==='first'?[enemies[0]]:enemies.slice(1))kill(r.run,e);
     expect(r.run.precisionNeeded(r.run.autoEnemy(enemies.filter(e=>e.alive)))).toBe(false);
-    p.pos.x=0;p.state='idle';step();expect(requests).toEqual(['skill0']);
-    p.cds[0]=1;expect(step()).toEqual({x:0,y:0});expect(requests).toEqual(['attack']);
+    // Ordinary combat now keeps basic attacks as the default instead of firing a skill on cooldown.
+    p.pos.x=0;p.state='idle';step();expect(requests).toEqual(['attack']);
+    g.getComboLinkSnapshot=()=>({ready:true});step();expect(requests).toEqual(['skill0']);
+    g.getComboLinkSnapshot=()=>({ready:false});p.cds[0]=1;expect(step()).toEqual({x:0,y:0});expect(requests).toEqual(['attack']);
     p.state='attack';step();expect(requests).toEqual(['attack']);
-    const boss:any={alive:true,isBoss:true,pos:new Vector3(5,0,0),homeRoom:r.world.bossRoom,distTo(other:any){return this.pos.distanceTo(other.pos);}};
-    g.enemies=[boss];p.state='idle';p.cds[0]=0;step();expect(requests).toEqual(['skill0']);
+    const boss:any={alive:true,isBoss:true,hp:100,maxHp:100,pos:new Vector3(5,0,0),homeRoom:r.world.bossRoom,distTo(other:any){return this.pos.distanceTo(other.pos);}};
+    g.enemies=[boss];p.state='idle';p.cds[0]=0;step();expect(requests).toEqual(['attack']);
     p.state='attack';step();expect(requests).toEqual(['attack']);
-    g.conquest=null;g.enemies=enemies.filter(e=>e.alive);p.state='idle';step();expect(requests).toEqual(['skill0']);
+    g.conquest=null;g.enemies=enemies.filter(e=>e.alive);p.state='idle';step();expect(requests).toEqual(['attack']);
   }
 });

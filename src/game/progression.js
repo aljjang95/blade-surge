@@ -1,6 +1,6 @@
 export const DEFAULT_SKILL_LOADOUT = Object.freeze([4, 5]);
 export const MP_BASE = 100;
-export const MP_REGEN_PER_SEC = 4;
+export const MP_REGEN_PER_SEC = 2;
 export const DODGE_COOLDOWN_SEC = 1.35;
 
 export function normalizeSkillLoadout(def, value) {

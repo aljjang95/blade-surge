@@ -75,7 +75,7 @@ export const SKILLS = {
     cast(game, p, c) {
       const empowered = (p.jobResource || 0) >= 3;
       if (empowered) p.jobResource = 0;
-      rangerArrows(game, p, c.dmg * (empowered ? 1.5 : 1), 7, { radius: 1.1, kb: 6, size: .65 });
+      rangerArrows(game, p, c.dmg * (empowered ? 1.35 : 1), 6, { radius: .95, kb: 5, size: .58 });
     },
   },
   ranger_quickshot: {
@@ -159,13 +159,13 @@ export const SKILLS = {
     update(game, p, c, dt) { c.data.vac -= dt; if (c.data.vac <= 0 && c.t < 1.1) { c.data.vac = 0.1; game.vacuum(p.pos, 12, 9); } },
     cast(game, p, c) {
       const f = p.forward(new THREE.Vector3());
-      game.hitArea(p, p.pos, p.yaw, 10, 220, c.dmg, { kb: 12, kind: 'slash', finisher: true, skillCast:c, up: true, source: p });
+      game.hitArea(p, p.pos, p.yaw, 7.2, 130, c.dmg, { kb: 10, kind: 'slash', finisher: true, skillCast:c, up: true, source: p });
       // 3중 참격 + 관통 파동
       for (let i = -1; i <= 1; i++) {
         const d = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.32);
         const sp = p.pos.clone().addScaledVector(d, 1.5).setY(1.3);
         game.fx.slashSprite(sp, d, i === 0 ? 0xffffff : 0xffe080, { size: 5.5, life: 0.8, speed: 20, tilt: -0.5 + i * 0.25 });
-        game.spawnProjectile({ pos: sp.clone(), dir: d, speed: 20, radius: 2.2, dmg: c.dmg * 0.5, color: 0xffe080, size: 0, owner: p, kb: 6, kind: 'slash', pierce: true, life: 0.8, visual: null });
+        game.spawnProjectile({ pos: sp.clone(), dir: d, speed: 20, radius: 1.5, dmg: c.dmg * 0.35, color: 0xffe080, size: 0, owner: p, kb: 6, kind: 'slash', pierce: true, life: 0.8, visual: null });
       }
       const hitC = fwd(p, 3.5);
       game.fx.explosion(hitC, { size: 11, color: 0xffe0a0, life: 0.7 });
@@ -236,9 +236,9 @@ export const SKILLS = {
       const fall = 0.5;
       game.fx.add(orb, fall, (k) => { orb.position.y = 16 * (1 - k * k); orb.children[1].scale.setScalar(7 * (1 + k)); game.fx.embers(orb.position, 0xff7a30, { n: 3, radius: 0.5, life: 0.5, rise: -2 }); });
       // 낙하 중 진공
-      let vt = 0; game.fx.add(new THREE.Object3D(), fall, (k, t, dt) => { vt -= dt; if (vt <= 0) { vt = 0.08; game.vacuum(target, 10, 16); } });
+      let vt = 0; game.fx.add(new THREE.Object3D(), fall, (k, t, dt) => { vt -= dt; if (vt <= 0) { vt = 0.08; game.vacuum(target, 7.5, 12); } });
       game.after(fall, () => {
-        game.hitRadius(target, 8.5, c.dmg, { kb: 11, kind: 'blunt', up: true, stun: 1, source: p, dirFrom: target });
+        game.hitRadius(target, 6, c.dmg, { kb: 10, kind: 'blunt', up: true, stun: .7, source: p, dirFrom: target });
         game.fx.explosion(target, { size: 14, color: 0xffb070, life: 0.8 });
         game.fx.scorch(target, { radius: 6, life: 8 });
         [0, 0.1, 0.2].forEach((d, i) => game.after(d, () => game.fx.shockTex(target, i === 1 ? 0xffffff : 0xff6a20, { r1: 7 + i * 4, life: 0.6 })));
@@ -309,14 +309,14 @@ export const SKILLS = {
     cast(game, p, c) {
       const focus = densest(game, p, 15, 5) || fwd(p, 4);
       const pts = [];
-      for (let i = 0; i < 7; i++) { const a = (i / 7) * Math.PI * 2 + Math.random(); const r = i === 0 ? 0 : 1.5 + Math.random() * 4; pts.push(focus.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r))); }
+      for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 + Math.random(); const r = i === 0 ? 0 : 1.2 + Math.random() * 3.2; pts.push(focus.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r))); }
       pts.forEach((pt, i) => game.after(i * 0.19, () => {
         const orb = game.fx.orb(0xff6a20, 1.3); const start = pt.clone().add(new THREE.Vector3(6, 18, 4)); orb.position.copy(start); game.scene.add(orb);
         game.fx.castCircle(pt, 0xff6a20, { radius: 4, life: 0.5, demon: true });
         game.fx.add(orb, 0.4, (k) => { orb.position.lerpVectors(start, pt, k * k); game.fx.embers(orb.position, 0xff8a30, { n: 3, radius: 0.4, life: 0.5, rise: 1 }); });
         game.after(0.4, () => {
           game.vacuum(pt, 6, 8);
-          game.hitRadius(pt, 4.2, c.dmg, { kb: 7, kind: 'magic', up: true, source: p, dirFrom: pt, quietStop: i > 1 });
+          game.hitRadius(pt, 3.4, c.dmg, { kb: 6, kind: 'magic', up: true, source: p, dirFrom: pt, quietStop: i > 1 });
           game.fx.abilitySignature?.(pt, 'fire', { scale: 1.05, life: 0.56, heavy: i === 0 });
           game.fx.dustPuff(pt, { size: 5 }); game.fx.scorch(pt, { radius: 3.2, life: 6 });
           game.renderer.shake(0.7); game.renderer.punch(0.6); if (i === 0) game.renderer.flashScreen(0.3, 0xffa060);
@@ -392,13 +392,13 @@ export const SKILLS = {
     cast(game, p, c) {
       let wave = 0;
       const tick = () => {
-        if (wave++ >= 12) { game.fx.shockTex(p.pos, 0xb26bff, { r1: 15, life: 0.8 }); game.fx.explosion(p.pos, { size: 10, color: 0xd0a0ff, life: 0.6 }); game.renderer.shake(0.8); game.timeCtl.slowmo(0.35, 0.5); audio.boom({ vol: 0.7, dur: 0.7 }); return; }
-        game.vacuum(p.pos, 12, 7);
-        const ts = targets(game, p, 5, 10); const pts = ts.length ? ts.map((e) => e.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.5, 0, (Math.random() - 0.5) * 1.5))) : [fwd(p, 3 + Math.random() * 3)];
+        if (wave++ >= 8) { game.fx.shockTex(p.pos, 0xb26bff, { r1: 15, life: 0.8 }); game.fx.explosion(p.pos, { size: 10, color: 0xd0a0ff, life: 0.6 }); game.renderer.shake(0.8); game.timeCtl.slowmo(0.35, 0.5); audio.boom({ vol: 0.7, dur: 0.7 }); return; }
+        game.vacuum(p.pos, 8, 5);
+        const ts = targets(game, p, 3, 8); const pts = ts.length ? ts.map((e) => e.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.5, 0, (Math.random() - 0.5) * 1.5))) : [fwd(p, 3 + Math.random() * 3)];
         for (const pt of pts) {
           const dir = new THREE.Vector3(0.15, -1, 0.1).normalize(); const sp = pt.clone().add(new THREE.Vector3(-1.2, 8, -0.8));
           game.fx.slashSprite(sp, dir, 0xd0a0ff, { size: 2.2, life: 0.16, speed: 52, tilt: 0 });
-          game.after(0.13, () => { game.hitRadius(pt, 2.2, c.dmg, { kb: 1.5, kind: 'slash', source: p, dirFrom: pt, quietStop: true }); game.fx.burst(pt.clone().setY(0.4), 0xd0a0ff, { n: 8, speed: 7, size: 0.3 }); game.fx.flash(pt.clone().setY(0.6), 0xe0c0ff, { size: 2.2, life: 0.15 }); game.fx.shockTex(pt, 0xb26bff, { r1: 2.4, life: 0.28 }); audio.clang({ vol: 0.32, freq: 2600, dur: 0.25 }); game.renderer.shake(0.12); });
+          game.after(0.13, () => { game.hitRadius(pt, 1.8, c.dmg, { kb: 1.2, kind: 'slash', source: p, dirFrom: pt, quietStop: true }); game.fx.burst(pt.clone().setY(0.4), 0xd0a0ff, { n: 8, speed: 7, size: 0.3 }); game.fx.flash(pt.clone().setY(0.6), 0xe0c0ff, { size: 2.2, life: 0.15 }); game.fx.shockTex(pt, 0xb26bff, { r1: 2.4, life: 0.28 }); audio.clang({ vol: 0.32, freq: 2600, dur: 0.25 }); game.renderer.shake(0.12); });
         }
         audio.whoosh({ vol: 0.28, pitch: 1.6, dur: 0.15 });
         game.after(0.15, tick);

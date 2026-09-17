@@ -55,7 +55,7 @@ test('party death path excludes personal campaign, codex, masterworks and field 
     kills:0,waveKilled:0,pending:[],active:true,after(){},drops:{onKill(){baseDeaths++;}},fx:{burst(){},dustPuff(){}},ui:{showBoss(){}},hasProc:()=>false};
   const enemy:any={alive:false,partyCounted:false,isBoss:false,isElite:false,pos:{clone:()=>({setY(){return this;}})}};
   PartyBattle.prototype.onEnemyDeath.call(game,enemy);
-  expect(game.kills).toBe(1);expect(baseDeaths).toBe(1);expect(guestUlt).toBe(5);expect(enemy.partyCounted).toBe(true);
-  PartyBattle.prototype.onEnemyDeath.call(game,enemy);expect(game.kills).toBe(1);expect(baseDeaths).toBe(1);expect(guestUlt).toBe(5);
+  expect(game.kills).toBe(1);expect(baseDeaths).toBe(1);expect(guestUlt).toBe(1);expect(enemy.partyCounted).toBe(true);
+  PartyBattle.prototype.onEnemyDeath.call(game,enemy);expect(game.kills).toBe(1);expect(baseDeaths).toBe(1);expect(guestUlt).toBe(1);
   expect(fieldDropsAllowed(game.stage)).toBe(false);
 });
