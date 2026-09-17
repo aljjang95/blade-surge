@@ -57,12 +57,7 @@ try{
  }
  await page.evaluate(async()=>{await app.showcaseHero('knight',true);app.reducedMotion.matches;for(let i=0;i<120;i++)app.step(1/60,true);});
  await page.emulateMedia({reducedMotion:'reduce'});
- report.frameTiming=await page.evaluate(async()=>{
-  const r=app.renderer.r,gl=r.getContext(),times=[];r.info.autoReset=false;
-  for(let i=0;i<50;i++){app.step(1/60,true);gl.finish();}
-  for(let i=0;i<150;i++){const start=performance.now();r.info.reset();app.step(1/60,true);gl.finish();times.push(performance.now()-start);if(i%30===0)await new Promise(resolve=>setTimeout(resolve,0));}
-  times.sort((a,b)=>a-b);const ext=gl.getExtension('WEBGL_debug_renderer_info');const value={median:times[75],p95:times[142],samples:150,frameDrawCalls:r.info.render.calls,frameTriangles:r.info.render.triangles,geometry:r.info.memory.geometries,textures:r.info.memory.textures,programs:r.info.programs.length,renderer:gl.getParameter(ext?.UNMASKED_RENDERER_WEBGL||gl.RENDERER),metric:'fixed frame submit + gl.finish milliseconds, not display FPS'};r.info.autoReset=true;return value;
- });
+ report.frameTiming={status:'not_measured',use:'oath-performance-qa.mjs paired render/readPixels only'};
  for(let i=0;i<10;i++){
   const cycle=await page.evaluate(async()=>{
    app.eco.s.energy=100;const started=await app.startStage(app.eco.nextStage());if(!started)throw Error('Cycle start failed');

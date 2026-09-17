@@ -3,18 +3,43 @@ import { postureHit } from './masterworks-combat.js';
 import { COMBAT_ARTS } from '../data/combat-arts.js';
 import { RECOVERY_POSTURE, isRecoveryOpportunity, longestRegularCooldown } from './apex-combat.js';
 import { audio } from '../engine/audio.js';
+import { ComboLink } from './combo-link.js';
 
 export class Battle extends MasterworksBattle {
   async start(...args) { await super.start(...args); this.bindCombatArt(); }
   bindCombatArt() {
+    this.comboLink=new ComboLink();
     const selected=this.app.arsenal?.artForHero(this.heroId);
     const art=COMBAT_ARTS.find(a=>a.id===(typeof selected==='string'?selected:selected?.id));
     this.apex={art:this.run?.enabled&&this.stage?.expedition?.kind!=='arena'?art:null,
-      recovery:new WeakMap(),breaks:new WeakMap(),procCount:0,procUntil:0,shield:0,shieldUntil:0};
+      recovery:new WeakMap(),breaks:new WeakMap(),linkedCasts:new WeakSet(),procCount:0,procUntil:0,shield:0,shieldUntil:0};
   }
   apexEnabled() { return !!(this.apex?.art && this.run?.enabled && !this.run.settled && this.active && this.player?.alive && this.stage?.expedition?.kind!=='arena'); }
-  stop() { this.apex=null; super.stop(); }
-  settleChronicle(outcome) { if(this.apex) {this.apex.shield=0;this.apex.shieldUntil=0;} super.settleChronicle(outcome); }
+  stop() { this.comboLink=null;this.apex=null; super.stop(); }
+  setPaused(reason,on) {
+    // 모든 정지 소유자가 지난 연계 기회를 즉시 취소하되 재사용 간격은 보존한다.
+    if(on)this.comboLink?.cancel();
+    super.setPaused(reason,on);
+  }
+  comboLinkEnabled() { return !!(this.comboLink&&this.apexEnabled()&&!this.paused&&!this.stage?.expedition&&!this.stage?.party&&!this.conquest); }
+  getComboLinkSnapshot() {
+    const enabled=this.comboLinkEnabled(),state=this.comboLink?.snapshot(this.elapsed,this.player);
+    return {enabled,ready:enabled&&!!state?.ready,remaining:enabled?(state?.remaining||0):0,cooldown:state?.cooldown||0,activations:state?.activations||0,artName:this.apex?.art?.name||'',artId:this.apex?.art?.id||''};
+  }
+  onSkillReleased(player,context) {
+    if(!this.comboLinkEnabled()||player!==this.player||player.skillCtx!==context||!context.cast)return false;
+    // A break-triggered art from this same skill already owns the feedback/effect.
+    if(this.apex.procUntil>this.elapsed){this.comboLink.cancel();return false;}
+    const anchor=this.comboLink.consume({player,context,now:this.elapsed});if(!anchor)return false;
+    this.apex.linkedCasts.add(context); // Reserve this exact cast before any recursive damage.
+    this.activateCombatArt(anchor);
+    if(!this.app.reducedMotion?.matches){
+      const colour=this.apex.art.id==='rupture'?0xffc578:this.apex.art.id==='aegis'?0x83d5ed:0xb6e6ba;
+      this.fx.shockTex(player.pos,colour,{r0:.35,r1:2.4,life:.3});
+    }
+    return true;
+  }
+  settleChronicle(outcome) { this.comboLink?.cancel();if(this.apex) {this.apex.shield=0;this.apex.shieldUntil=0;} super.settleChronicle(outcome); }
   damageEnemy(enemy,dmg,opts={}) {
     if(!this.apex || !this.apexEnabled?.() || this.paused || opts.apexProc) return super.damageEnemy(enemy,dmg,opts);
     const direct=!!opts.finisher&&!opts.quiet&&!opts.masterworksProc;
@@ -24,6 +49,8 @@ export class Battle extends MasterworksBattle {
     const token=enemy&&(this.apex.breaks.get(enemy)||{generation:0,consumed:false});
     super.damageEnemy(enemy,dmg,opts);
     if(!this.apexEnabled() || !(before-(enemy?.hp||0)>0)) return;
+    if(opts.comboToken&&!opts.quiet&&!opts.noProc&&!opts.masterworksProc&&this.comboLinkEnabled()&&this.elapsed>=this.apex.procUntil)
+      this.comboLink.arm({token:opts.comboToken,source:opts.source,player:this.player,enemy,now:this.elapsed});
     if(opportunity && enemy.alive && !(enemy.breakT>0)) {
       this.apex.recovery.set(enemy,sequence);
       // Magic contact contributes exactly 15 posture, using the existing break contract.
@@ -34,7 +61,7 @@ export class Battle extends MasterworksBattle {
     }
     if(!broken && enemy.breakT>0) {token.generation++;token.consumed=false;}
     this.apex.breaks.set(enemy,token);
-    if(direct && broken && !token.consumed) {
+    if(direct && broken && !token.consumed && !this.apex.linkedCasts?.has(opts.skillCast)) {
       token.consumed=true; // Reserve before damage callbacks to prevent recursive activation.
       this.activateCombatArt(enemy);
     }
@@ -42,12 +69,14 @@ export class Battle extends MasterworksBattle {
   activateCombatArt(enemy) {
     if(!this.apexEnabled()) return;
     const a=this.apex,art=a.art,p=this.player;
+    this.comboLink?.cancel();
     a.procCount++;a.procUntil=this.elapsed+1.4;
     this.fx.shockTex(enemy.pos,art.id==='rupture'?0xffac70:art.id==='aegis'?0x80d8ff:0x9fffc8,{r1:art.id==='rupture'?art.radius:2.5,life:.35});
     this.fx.damage(enemy.pos,0,{text:art.name});
     audio.play('ui_glass',{vol:.4});
     if(art.id==='rupture') {
-      const targets=this.enemies.filter(e=>e!==enemy&&e.alive&&!e.spawning&&e.pos.distanceToSquared(enemy.pos)<=art.radius**2)
+      const excludedTarget=enemy.excludeTarget??enemy; // 연계를 만든 적도 기존 파열과 동일하게 제외한다.
+      const targets=this.enemies.filter(e=>e!==excludedTarget&&e.alive&&!e.spawning&&e.pos.distanceToSquared(enemy.pos)<=art.radius**2)
         .sort((x,y)=>x.pos.distanceToSquared(enemy.pos)-y.pos.distanceToSquared(enemy.pos)).slice(0,art.targets);
       for(const e of targets) this.damageEnemy(e,p.atk*art.damage,{kind:'magic',kb:art.push,dirx:e.pos.x-enemy.pos.x,dirz:e.pos.z-enemy.pos.z,noProc:true,quiet:true,masterworksProc:true,apexProc:true});
     } else if(art.id==='aegis') { a.shield=p.maxHp*art.shield;a.shieldUntil=this.elapsed+art.duration; }
