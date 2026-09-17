@@ -36,6 +36,56 @@ afterEach(() => {
 });
 
 describe('사람 입력 수명주기', () => {
+  test('카메라 우클릭 해제는 왼쪽 버튼 공격을 끊지 않는다', () => {
+    const down = new Event('mousedown',{cancelable:true});
+    Object.defineProperty(down,'button',{value:0}); elements.get('btn-attack')!.dispatchEvent(down);
+    const rightUp = new Event('mouseup'); Object.defineProperty(rightUp,'button',{value:2}); host.dispatchEvent(rightUp);
+    expect(input.attackHeld).toBe(true);
+    const leftUp = new Event('mouseup'); Object.defineProperty(leftUp,'button',{value:0}); host.dispatchEvent(leftUp);
+    expect(input.attackHeld).toBe(false);
+  });
+  test('터치 이동은 별도 마우스 이동과 해제에 소유권을 빼앗기지 않는다', () => {
+    const start = new Event('touchstart', {cancelable:true});
+    Object.defineProperty(start, 'changedTouches', {value:[{identifier:7,clientX:80,clientY:550}]});
+    elements.get('joy')!.dispatchEvent(start);
+    const move = new Event('mousemove', {cancelable:true});
+    Object.defineProperties(move, {clientX:{value:300},clientY:{value:300}});
+    host.dispatchEvent(move); host.dispatchEvent(new Event('mouseup'));
+    expect(input.joy.active).toBe(true);
+    expect(input.screenMove).toEqual({x:0,y:0});
+  });
+  test('공격 키 두 개 중 하나를 놓아도 나머지 홀드는 유지한다', () => {
+    key('keydown','KeyJ'); key('keydown','Space'); key('keyup','KeyJ');
+    expect(input.attackHeld).toBe(true);
+    key('keyup','Space'); expect(input.attackHeld).toBe(false);
+  });
+  test('공격 터치의 소유자가 아닌 손가락과 마우스는 홀드를 해제하지 않는다', () => {
+    const touch = (type:string, id:number) => {
+      const event = new Event(type, {cancelable:true});
+      Object.defineProperty(event,'changedTouches',{value:[{identifier:id}]});
+      elements.get('btn-attack')!.dispatchEvent(event);
+    };
+    touch('touchstart',9); touch('touchend',8); host.dispatchEvent(new Event('mouseup'));
+    expect(input.attackHeld).toBe(true);
+    key('keydown','KeyJ'); touch('touchend',9); expect(input.attackHeld).toBe(true);
+    key('keyup','KeyJ'); expect(input.attackHeld).toBe(false);
+  });
+  test('카메라 패드로 포커스 이동 시 키 이동만 멈추고 터치는 유지한다', () => {
+    key('keydown','KeyW'); key('keydown','KeyJ');
+    Object.assign(input.joy, {active:true,id:7}); input.screenMove.x = 1;
+    const focus = new Event('focusin');
+    Object.defineProperty(focus,'target',{value:{closest:()=>({})}});
+    document.dispatchEvent(focus);
+    expect(input.keys).toEqual({}); expect(input.attackHeld).toBe(false);
+    expect(input.joy.active).toBe(true); expect(input.screenMove.x).toBe(1);
+  });
+  test('브라우저 단축키와 이미 처리한 카메라 키는 게임에 전달하지 않는다', () => {
+    for (const property of ['ctrlKey','metaKey','altKey','defaultPrevented']) {
+      const event = new Event('keydown',{cancelable:true});
+      Object.defineProperties(event,{code:{value:'KeyW'},[property]:{value:true}});
+      host.dispatchEvent(event); input.update(); expect(input.move.y).toBe(0);
+    }
+  });
   test('터치 조이스틱 중심은 화면 좌표를 부모 영역 좌표로 변환한다', () => {
     const touch = (type:string, identifier:number, clientX:number, clientY:number) => {
       const e = new Event(type, {cancelable:true});

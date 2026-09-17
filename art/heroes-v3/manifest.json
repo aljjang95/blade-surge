@@ -1,0 +1,125 @@
+{
+  "blender": "5.2.1 LTS",
+  "build_hash": "9e2066aef7ef",
+  "assets": [
+    {
+      "hero": "knight",
+      "path": "public/models/heroes-v3/knight-v3.glb",
+      "sha256": "1a462698a80c3205ad400a8215cae24720caf9369454e4f935174be51e1f0a99",
+      "bytes": 466288,
+      "source": "public/models/tll/knight-casual-v2.glb",
+      "source_sha256": "c5898f8b7f4365e8cd67e2a75c0e42f169044260ee4d0bd6b1d6a9e54ea54235",
+      "vertices": 10642,
+      "bones": [
+        "chest",
+        "foot.l",
+        "foot.r",
+        "hand.l",
+        "hand.r",
+        "head",
+        "hips",
+        "lowerarm.l",
+        "lowerarm.r",
+        "lowerleg.l",
+        "lowerleg.r",
+        "upperarm.l",
+        "upperarm.r",
+        "upperleg.l",
+        "upperleg.r"
+      ]
+    },
+    {
+      "hero": "barbarian",
+      "path": "public/models/heroes-v3/barbarian-v3.glb",
+      "sha256": "f6eaa6efc41aa78fdc558dd1f6a9ea4dd90201ccb3b8043d22efb624b6309d04",
+      "bytes": 402860,
+      "source": "public/models/tll/barbarian-casual-v2.glb",
+      "source_sha256": "22bf9b3db78e5455c8925f31b20d9b72c9e9d5b31e17c130ec9c463f2099d7e7",
+      "vertices": 9258,
+      "bones": [
+        "chest",
+        "foot.l",
+        "foot.r",
+        "hand.l",
+        "hand.r",
+        "head",
+        "hips",
+        "lowerarm.l",
+        "lowerarm.r",
+        "lowerleg.l",
+        "lowerleg.r",
+        "upperarm.l",
+        "upperarm.r",
+        "upperleg.l",
+        "upperleg.r"
+      ]
+    },
+    {
+      "hero": "mage",
+      "path": "public/models/heroes-v3/mage-v3.glb",
+      "sha256": "ef437a50724928a8e22c75d5ff7ddf5d4b7d061ba3e38553c2d2094bb60d1fac",
+      "bytes": 518784,
+      "source": "public/models/tll/mage-casual-v2.glb",
+      "source_sha256": "d9a76c02d9d837a2376e2408dc144629100b468716487506484a6f7f52d4a504",
+      "vertices": 12102,
+      "bones": [
+        "chest",
+        "foot.l",
+        "foot.r",
+        "hand.l",
+        "hand.r",
+        "head",
+        "hips",
+        "lowerarm.l",
+        "lowerarm.r",
+        "lowerleg.l",
+        "lowerleg.r",
+        "upperarm.l",
+        "upperarm.r",
+        "upperleg.l",
+        "upperleg.r"
+      ]
+    },
+    {
+      "hero": "rogue",
+      "path": "public/models/heroes-v3/rogue-v3.glb",
+      "sha256": "cf16c0e0c4cc226f32f60909f694f696394479048f6a97b76af14ce5cba04648",
+      "bytes": 375156,
+      "source": "public/models/tll/rogue-casual-v2.glb",
+      "source_sha256": "036b80d2843c2b163ae7443c612c6757519ec509dcb348bc8a784f69d64faf0c",
+      "vertices": 8534,
+      "bones": [
+        "chest",
+        "foot.l",
+        "foot.r",
+        "hand.l",
+        "hand.r",
+        "head",
+        "hips",
+        "lowerarm.l",
+        "lowerarm.r",
+        "lowerleg.l",
+        "lowerleg.r",
+        "upperarm.l",
+        "upperarm.r",
+        "upperleg.l",
+        "upperleg.r"
+      ]
+    },
+    {
+      "hero": "ranger",
+      "path": "public/models/heroes-v3/ranger-v3.glb",
+      "sha256": "25a4ff71bf959bd9ffa41cd4c068a13f47eb6992502a09b764266345b7cb948b",
+      "bytes": 43552,
+      "source": "public/models/Ranger.glb",
+      "source_sha256": "4a1db924132836b29b1a63f55b8031e06eb6ec103037017864859786982727cb",
+      "vertices": 392,
+      "bones": [
+        "chest",
+        "upperarm.l",
+        "upperarm.r"
+      ]
+    }
+  ],
+  "scope": "Fitted costume revision; retained original faces, rigs and animations. Blender studio renders are not game QA."
+}

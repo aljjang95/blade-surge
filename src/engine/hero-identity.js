@@ -10,7 +10,8 @@ export function assembleHeroIdentity(gltf, authored, modelName, style = 'oath-v1
   if (!sourceSkeleton) throw new Error(`Missing hero skeleton: ${modelName}`);
   const bones = sourceSkeleton.bones;
   const normalized = (s) => s.replaceAll('.', '');
-  const casualStyle = style === 'casual-v2';
+  const expeditionStyle = style === 'expedition-v3';
+  const casualStyle = style === 'casual-v2' || expeditionStyle;
   const groups = casualStyle ? [[], [], []] : [[], []];
   authored.scene.traverse((o) => {
     if (!o.isMesh) return;
@@ -51,6 +52,14 @@ export function assembleHeroIdentity(gltf, authored, modelName, style = 'oath-v1
     if (casualStyle) {
       material.name = `TLL_${['woven-cloth', 'forged-metal', 'skin'][i]}`;
       applySurfaceDetail(material, ['cloth', 'metal', 'skin'][i]);
+    }
+    if (expeditionStyle) {
+      material.name = `TLL_V3_${['woven-cloth', 'forged-metal', 'skin'][i]}`;
+      material.metalness = i === 1 ? .48 : 0;
+      material.roughness = [ .88, .38, .82 ][i];
+      material.envMapIntensity = i === 1 ? .75 : .35;
+      material.bumpScale = i === 1 ? .007 : .009;
+      material.userData.expeditionFinish = 'v3';
     }
     const mesh = new THREE.SkinnedMesh(geometry, material); mesh.name = `TLL_${modelName}_${i}`;
     mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false;
