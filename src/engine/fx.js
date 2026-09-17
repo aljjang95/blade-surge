@@ -240,6 +240,8 @@ export class FX {
     const angle=e && dir.lengthSq()>0 ? Math.atan2(dir.x*e[4]+dir.y*e[5]+dir.z*e[6],dir.x*e[0]+dir.y*e[1]+dir.z*e[2]) : -.65;
     const shaped=particles>0 && kind!=='magic';
     this.flash(pos,color,{size,life:particles===0?.08:tier==='finisher'?.14:.10,angle,stretch:shaped?2.15:1,contact:true});
+    this.flash(pos,0xffffff,{size:size*.56,life:particles===0?.055:.07,angle,stretch:shaped?1.6:1,contact:true});
+    if((tier==='finisher'||particles>5)&&!this.lite)this.texFlash(pos,'slash',0xffffff,{size:size*.9,life:.13,spin:0,grow:.42,y:0});
     if(particles>0)this.directional(pos,dir,color,{n:this.lite?Math.min(3,particles):particles,speed:particles>5?11:7,size:particles>5?.25:.18,life:.18,spread:.26});
     if(light)this.light(pos,color,3.2,3.5,.1);
   }
@@ -557,8 +559,11 @@ class WeaponTrail {
     g.setAttribute('uv', new THREE.BufferAttribute(this.uv, 2).setUsage(THREE.DynamicDrawUsage));
     const idx = []; for (let i = 0; i < segs - 1; i++) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
     g.setIndex(idx); g.setDrawRange(0, 0);
-    const m = new THREE.MeshBasicMaterial({ map: slashTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide });
-    this.mesh = new THREE.Mesh(g, m); this.mesh.frustumCulled = false; this.mesh.renderOrder = 12; this.geo = g; this.mat = m;
+    const m = new THREE.MeshBasicMaterial({ map: slashTex(), color, blending: THREE.AdditiveBlending, transparent: true, opacity: .86, depthWrite: false, side: THREE.DoubleSide });
+    const core = new THREE.MeshBasicMaterial({ map: slashTex(), color: 0xffffff, blending: THREE.AdditiveBlending, transparent: true, opacity: .28, depthWrite: false, side: THREE.DoubleSide });
+    this.mesh = new THREE.Mesh(g, m); this.mesh.frustumCulled = false; this.mesh.renderOrder = 12;
+    this.core = new THREE.Mesh(g, core); this.core.frustumCulled = false; this.core.renderOrder = 13; this.mesh.add(this.core);
+    this.geo = g; this.mat = m; this.coreMat = core;
   }
   stop() { this.active = false; }
   update(dt) {
@@ -567,7 +572,7 @@ class WeaponTrail {
     for (const h of this.hist) h.t += dt;
     while (this.hist.length > this.segs) this.hist.pop();
     while (this.hist.length && this.hist[this.hist.length - 1].t > this.life) this.hist.pop();
-    if (!this.active && !this.hist.length) { this.dead = true; this.geo.dispose(); this.mat.dispose(); return; }
+    if (!this.active && !this.hist.length) { this.dead = true; this.geo.dispose(); this.mat.dispose(); this.coreMat.dispose(); return; }
     const n = this.hist.length;
     for (let i = 0; i < n; i++) { const h = this.hist[i]; this.pos.set([h.a.x, h.a.y, h.a.z, h.b.x, h.b.y, h.b.z], i * 6); const u = 1 - i / Math.max(1, n - 1); this.uv.set([u, 0, u, 1], i * 4); }
     this.geo.setDrawRange(0, Math.max(0, (n - 1) * 6));

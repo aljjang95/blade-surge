@@ -26,7 +26,7 @@ test('near boss framing fades continuously and has no stacked boss distance pena
 });
 test('crowd expansion saturates and ignores far or spawning enemies',()=>{
   const dense=frame({enemies:Array.from({length:40},()=>enemy(3))});
-  expect(dense.extraY).toBe(.65); expect(dense.extraZ).toBe(.55); expect(dense.extraFov).toBe(1.2);
+  expect(dense.extraY).toBe(.35); expect(dense.extraZ).toBe(.28); expect(dense.extraFov).toBe(.7);
   expect(frame({enemies:[enemy(10),enemy(0,0,{spawning:true})]})).toEqual(frame());
 });
 test('explicit presets retain their selected lens even during a boss crowd',()=>{

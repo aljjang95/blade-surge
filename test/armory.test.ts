@@ -1,4 +1,4 @@
-import { test, expect } from 'bun:test';
+﻿import { test, expect } from 'bun:test';
 import { readFileSync, existsSync } from 'node:fs';
 import { ARMORY_ITEMS, ARMORY_SETS } from '../src/data/armory.js';
 import { ITEM_BY_ID, ITEM_POOL, ITEMS_OF, THEMED_SETS, craftable, CRAFT_COST } from '../src/data/items.js';
@@ -155,22 +155,25 @@ test('beacon persists through occlusion without animation and disposes each reso
   b.locatorTexture.addEventListener('dispose',()=>locatorTextures++);
   expect(b.locator.material.sizeAttenuation).toBe(false);
   b.root.traverse((o:any)=>{if(o.isMesh){expect(o.material.depthTest).toBe(false);o.geometry.addEventListener('dispose',()=>released++);o.material.addEventListener('dispose',()=>released++);}});
-  b.update(true,1);expect(b.root.rotation.y).toBe(1);expect(b.root.children).toHaveLength(4);
-  b.update(false,1);expect(b.root.visible).toBe(false);b.dispose();b.dispose();expect(root.children).toHaveLength(0);expect(released).toBe(6);
+  b.update(true,1,{state:'attack',color:0xff8844});expect(b.root.rotation.y).toBe(1);expect(b.root.children).toHaveLength(5);
+  expect(b.focusRing.visible).toBe(true);expect(b.primaryRing.material.color.getHex()).toBe(0xffffff);
+  b.setFocus(true,0x8844ff);b.update(true,1,{state:'idle',color:0xff8844});expect(b.focusRing.visible).toBe(true);expect(b.focusRing.material.color.getHex()).toBe(0x8844ff);
+  b.setFocus(false);b.update(true,1,{state:'idle'});expect(b.focusRing.visible).toBe(false);
+  b.update(false,1);expect(b.root.visible).toBe(false);b.dispose();b.dispose();expect(root.children).toHaveLength(0);expect(released).toBe(8);
   expect(locatorMaterials).toBe(1);expect(locatorTextures).toBe(1);
 });
 
-test('the unnamed skinned child of an original Head group remains visible through occluders',()=>{
+test('hero beacon never adds a translucent body duplicate through occluders',()=>{
   const root=new Group(),model=new Group(),head=new Group(),bone=new Bone();
   head.name='Knight_Head';root.add(model);model.add(head,bone);
   const geometry=new BoxGeometry(),n=geometry.attributes.position.count;
   geometry.setAttribute('skinIndex',new Uint16BufferAttribute(new Uint16Array(n*4),4));
   const weights=new Float32Array(n*4);for(let i=0;i<n;i++)weights[i*4]=1;
   geometry.setAttribute('skinWeight',new Float32BufferAttribute(weights,4));
-  const source=new SkinnedMesh(geometry,new MeshBasicMaterial());head.add(source);source.bind(new Skeleton([bone]));
+  const source=new SkinnedMesh(geometry,new MeshBasicMaterial({transparent:false,opacity:1}));head.add(source);source.bind(new Skeleton([bone]));
   const b=new HeroBeacon(root,model as any);
-  expect(b.occluded).toHaveLength(1);b.update(true,0);expect(b.occluded[0]!.mesh.visible).toBe(true);
-  source.visible=false;b.update(true,0);expect(b.occluded[0]!.mesh.visible).toBe(false);
+  expect(b.occluded).toHaveLength(0); b.update(true,0);
+  expect(source.material.transparent).toBe(false); expect(source.material.opacity).toBe(1);
   b.dispose();geometry.dispose();source.material.dispose();source.skeleton.dispose();
 });
 
@@ -202,22 +205,20 @@ test('ghost cleanup and Actor disposal preserve source skins and release beacon 
     geometry.setAttribute('skinWeight',new Float32BufferAttribute(weights,4));
     const skeleton=new Skeleton([bone]), source=new SkinnedMesh(geometry,new MeshBasicMaterial());
     source.name='TLL_fixture';model.add(source);source.bind(skeleton);
-    const b=new HeroBeacon(root,model as any);expect(b.occluded).toHaveLength(1);
-    const merged=b.occluded[0].mesh.geometry, originalPositions=Array.from(geometry.attributes.position.array);
-    let sourceDisposals=0,mergedDisposals=0,ghostDisposals=0;
+    const b=new HeroBeacon(root,model as any);expect(b.occluded).toHaveLength(0);
+    const originalPositions=Array.from(geometry.attributes.position.array);
+    let sourceDisposals=0,ghostDisposals=0;
     geometry.addEventListener('dispose',()=>sourceDisposals++);
-    merged.addEventListener('dispose',()=>mergedDisposals++);
-    expect(merged).not.toBe(geometry);
     const fx:any={lite:false,items:[],scene,_keep:(m:any)=>m,
       add(obj:any,life:number,update:any,onEnd:any){scene.add(obj);this.items.push({obj,onEnd});}};
     FX.prototype.ghost.call(fx,model,0xffffff);
-    const ghost=fx.items[0].obj;expect(ghost.children).toHaveLength(2);
-    ghost.traverse((o:any)=>{if(o.isMesh){expect(o.geometry).not.toBe(geometry);expect(o.geometry).not.toBe(merged);o.geometry.addEventListener('dispose',()=>ghostDisposals++);}});
+    const ghost=fx.items[0].obj;expect(ghost.children).toHaveLength(1);
+    ghost.traverse((o:any)=>{if(o.isMesh){expect(o.geometry).not.toBe(geometry);o.geometry.addEventListener('dispose',()=>ghostDisposals++);}});
     const actor:any={game:{scene},root,model,mixer:new AnimationMixer(model)};
     if(ghostFirst)FX.prototype._finishItem.call(fx,0);
     b.dispose();b.dispose();Actor.prototype.dispose.call(actor);Actor.prototype.dispose.call(actor);
     if(!ghostFirst)FX.prototype._finishItem.call(fx,0);
-    expect(sourceDisposals).toBe(0);expect(mergedDisposals).toBe(1);expect(ghostDisposals).toBe(2);
+    expect(sourceDisposals).toBe(0);expect(ghostDisposals).toBe(1);
     expect(Array.from(geometry.attributes.position.array)).toEqual(originalPositions);
     expect(model.children).toContain(source);expect(b.occluded).toHaveLength(0);
     geometry.dispose();
@@ -276,3 +277,5 @@ test('pure contact budget allows only one upgrade without moving the ordinary em
  expect(contactBudget(upgrade,.02,fin)).toBeNull();expect(contactBudget(upgrade,.059,light)).toBeNull();
  expect(contactBudget(upgrade,.06,light)).toMatchObject({at:.06,emit:true});expect(contactBudget(first,0,null)).toBeNull();
 });
+
+

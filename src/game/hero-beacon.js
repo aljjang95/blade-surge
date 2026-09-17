@@ -1,43 +1,23 @@
-import * as THREE from 'three';
-import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+﻿import * as THREE from 'three';
 
-// Static ground ring and facing chevron: three draws, no lights or animation.
+// Static readability marker: opaque authored hero, ground rings and locator; no lights or animation.
 export class HeroBeacon {
   constructor(root, model = null) {
+    // Keep the authored hero fully opaque. Readability is carried by the locator/rings,
+    // never by a translucent duplicate drawn through occluders.
     this.occluded = [];
-    if (model) {
-      const groups = new Map();
-      model.traverse(o => {
-        if (!o.isSkinnedMesh || !o.visible) return;
-        let head = false;
-        for (let p = o; p && p !== model; p = p.parent) if (/_Head$/.test(p.name)) head = true;
-        if (!o.name.startsWith('TLL_') && !head) return;
-        o.updateMatrix();
-        const key = [o.skeleton.uuid, o.parent.uuid, o.bindMode, o.bindMatrix.elements.join(','), o.matrix.elements.join(','), Object.keys(o.geometry.attributes).sort().join(','), !!o.geometry.index].join('|');
-        if (!groups.has(key)) groups.set(key, []); groups.get(key).push(o);
-      });
-      this.occlusionMaterial = new THREE.MeshBasicMaterial({ color: 0x9ee5d7, transparent: true, opacity: .48, depthFunc: THREE.GreaterDepth, depthWrite: false, toneMapped: false });
-      for (const sources of groups.values()) {
-        const source = sources[0], geometry = mergeGeometries(sources.map(o => o.geometry), false);
-        if (!geometry) continue;
-        const mesh = new THREE.SkinnedMesh(geometry, this.occlusionMaterial);
-        mesh.name = 'HeroOccludedSilhouette'; mesh.bindMode = source.bindMode;
-        mesh.bind(source.skeleton, source.bindMatrix); mesh.bindMatrixInverse.copy(source.bindMatrixInverse);
-        mesh.position.copy(source.position); mesh.quaternion.copy(source.quaternion); mesh.scale.copy(source.scale);
-        mesh.renderOrder = 980; mesh.frustumCulled = false; source.parent.add(mesh);
-        this.occluded.push({ mesh, source });
-      }
-    }
     this.root = new THREE.Group(); this.root.name = 'HeroBeacon'; root.add(this.root);
     const add = (geometry, color, order) => {
       const mesh = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false, side: THREE.DoubleSide, toneMapped: false }));
       mesh.renderOrder = order; mesh.rotation.x = -Math.PI / 2; this.root.add(mesh); return mesh;
     };
-    add(new THREE.RingGeometry(.66, .92, 32), 0x10252c, 990);
-    add(new THREE.RingGeometry(.73, .84, 32), 0xb9ffee, 991);
+    this.shadowRing = add(new THREE.RingGeometry(.66, .92, 32), 0x10252c, 990);
+    this.primaryRing = add(new THREE.RingGeometry(.73, .84, 32), 0xb9ffee, 991);
+    this.focusRing = add(new THREE.RingGeometry(.9, 1.06, 32), 0xffe6a0, 992);
+    this.focusRing.visible = false; this.focused = false; this.focusColor = new THREE.Color(0xffe6a0);
     const shape = new THREE.Shape();
     shape.moveTo(-.28, -.91); shape.lineTo(0, -1.35); shape.lineTo(.28, -.91); shape.lineTo(0, -1.06); shape.closePath();
-    this.arrow = add(new THREE.ShapeGeometry(shape), 0xffe6a0, 992);
+    this.arrow = add(new THREE.ShapeGeometry(shape), 0xffe6a0, 993);
     this.root.position.y = .08;
     // One crisp, camera-facing locator. No text, pulses or lighting cost.
     // A fixed projected size survives manual zoom and a crowded ground plane.
@@ -54,17 +34,28 @@ export class HeroBeacon {
     this.locator.name = 'PlayerLocator'; this.locator.position.y = 2.72;
     this.locator.scale.set(.027,.034,1); this.locator.renderOrder = 998; this.root.add(this.locator);
   }
-  update(alive, yaw) {
+  setFocus(active, color = 0xffe6a0) {
+    this.focused = !!active; this.focusColor.set(color);
+  }
+  update(alive, yaw, { state = 'idle', color = 0xb9ffee, reduced = false } = {}) {
     this.root.visible = alive;
     // Actor already applies yaw and the rig's faceFlip to our parent.
     this.root.rotation.y = yaw - (this.root.parent?.rotation.y || 0);
-    for (const { mesh, source } of this.occluded) mesh.visible = alive && source.visible;
+    const action = state === 'attack' || state === 'skill' || state === 'ult' || state === 'dodge';
+    const emphasized = alive && (this.focused || action);
+    this.focusRing.visible = emphasized;
+    this.primaryRing.material.color.set(emphasized ? 0xffffff : 0xb9ffee);
+    this.arrow.material.color.set(emphasized ? 0xffffff : 0xffe6a0);
+    if (emphasized) {
+      this.focusRing.material.color.set(this.focused ? this.focusColor : color);
+      this.focusRing.scale.setScalar(reduced ? 1 : (this.focused || state === 'ult' ? 1.12 : 1.06));
+    }
   }
   dispose() {
     if (this.disposed) return; this.disposed = true;
-    for (const { mesh } of this.occluded) { mesh.removeFromParent(); mesh.geometry.dispose(); }
-    this.occluded.length = 0; this.occlusionMaterial?.dispose();
+    this.occluded.length = 0;
     this.locator.material.dispose(); this.locatorTexture.dispose();
     this.root.removeFromParent(); this.root.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
   }
 }
+

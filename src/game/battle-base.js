@@ -561,7 +561,8 @@ export class Battle {
   spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false }) {
     let mesh = null;
     if (visual !== null && size > 0) { mesh = visual === 'arrow' ? createArrowVisual(color, size, dir) : this.fx.orb(color, size); mesh.position.copy(pos); this.scene.add(mesh); }
-    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, kind, life, t: 0, pierce, hit: new Set(), mesh, trail, explode, hostile, slow, finisher });
+    const readableTrail = trail ?? (!hostile && kind === 'magic' ? color : null);
+    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher });
   }
   updateProjectiles(dt) {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
