@@ -1,6 +1,7 @@
 export const LOBBY_VIEWS = {
   oath: { label: '기본', yaw: 19, pitch: 11, zoom: 100 },
-  front: { label: '정면', yaw: 27, pitch: 8, zoom: 112 },
+  front: { label: '정면', yaw: 27, pitch: 11, zoom: 90 },
+  city: { label: '성채', yaw: 180, pitch: 12, zoom: 78 },
   side: { label: '측면', yaw: 85, pitch: 16, zoom: 100 },
   back: { label: '뒷모습', yaw: -153, pitch: 16, zoom: 100 },
 };

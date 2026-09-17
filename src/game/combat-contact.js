@@ -3,7 +3,8 @@ export function contactProfile(opts, crit, boss, reduced) {
   if (opts.quiet || opts.noProc) return null;
   const tier = opts.finisher ? 'finisher' : boss ? 'boss' : (opts.kb || 0) >= 6 ? 'heavy' : 'light';
   return { tier, heavy: tier !== 'light',
-    stop: reduced || opts.quietStop ? 0 : tier === 'finisher' ? .065 : tier === 'boss' ? .045 : tier === 'heavy' ? .05 : crit ? .032 : .022,
+    stop: reduced || opts.quietStop ? 0 : tier === 'finisher' ? .065 : tier === 'boss' ? .045 : tier === 'heavy' ? .05 : crit ? .032 : opts.basic ? .032 : .022,
+    haptic: opts.basic ? (tier === 'finisher' ? [18,12,36] : crit ? 22 : 14) : (tier !== 'light' ? 20 : 0),
     particles: reduced ? 0 : tier === 'light' ? 4 : 7,
     size: reduced ? .7 : tier === 'light' ? 1 : 1.45,
   };

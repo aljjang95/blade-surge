@@ -142,7 +142,8 @@ export class Battle extends BaseBattle {
     }
     {
       audio.hit(opts.kind || 'slash', { crit, heavy:contact.heavy, finisher: !!opts.finisher });
-      if (feedback.heavy) audio.vibe(20);
+      if (p === this.player && !p.auto && contact.haptic) audio.vibe(contact.haptic);
+      if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);
     }
     if (contact.stop>0) this.timeCtl.hitstop(contact.stop);
     // Directional body recoil carries ordinary hits. No added random camera shake.

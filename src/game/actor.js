@@ -72,9 +72,12 @@ export class Actor {
     const angle = (Math.hypot(dirx, dirz) > 0 ? Math.atan2(dirx, dirz) : this.yaw) - this.yaw - (this.rig.faceFlip ? Math.PI : 0);
     this._impact = { t: 0, strength: Math.min(1, Math.max(0, strength)), x: Math.sin(angle), z: Math.cos(angle) };
   }
+  receiveStrikeRecoil(strength = .5) {
+    if (!this.game.app?.reducedMotion?.matches) this._strikeRecoil = {t:0,strength:Math.min(1,Math.max(0,strength))};
+  }
   updateCombatPose(dt) {
     const pivot = this.motionRoot, reduced = this.game.app?.reducedMotion?.matches;
-    pivot.position.set(0, 0, 0); pivot.rotation.set(0, 0, 0);
+    pivot.position.set(0, 0, 0); pivot.rotation.set(0, 0, 0); pivot.scale.set(1,1,1);
     const motion = this._attackMotion;
     if (motion && this.state === 'attack' && this.current === motion.combo && this.action === motion.action) {
       const c = motion.combo;
@@ -88,14 +91,23 @@ export class Actor {
         pivot.rotation.x = pose.pitch; pivot.rotation.y = pose.yaw; pivot.position.z = pose.forward;
       }
     }
+    if (this._strikeRecoil) {
+      const s = this._strikeRecoil; s.t += dt;
+      if (s.t >= .16 || reduced) this._strikeRecoil = null;
+      else { const kick = (1 - s.t / .16) ** 2 * s.strength;
+        pivot.position.z -= kick * .11; pivot.rotation.x -= kick * .09;
+      }
+    }
     if (this._impact) {
       const i = this._impact; i.t += dt;
       if (i.t >= 0.22 || reduced) this._impact = null;
       else {
         const decay = (1 - i.t / 0.22) ** 2 * i.strength;
-        pivot.rotation.x += i.z * decay * 0.2;
-        pivot.rotation.z -= i.x * decay * 0.2;
-        pivot.position.x += i.x * decay * 0.08; pivot.position.z += i.z * decay * 0.08;
+        pivot.rotation.x += i.z * decay * 0.32;
+        pivot.rotation.z -= i.x * decay * 0.32;
+        pivot.position.x += i.x * decay * .2; pivot.position.z += i.z * decay * .2;
+        const squash = Math.min(.075, decay * .075);
+        pivot.scale.set(1 + squash*.55, 1 - squash, 1 + squash*.55);
       }
     }
   }

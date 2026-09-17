@@ -232,6 +232,9 @@ export class Player extends Actor {
   }
   // ---------------- 회피 ----------------
   dodge(dir) {
+    // Evade without throwing away the earned combo. A cancelled windup repeats
+    // its own step; it cannot skip ahead to a free finishing blow.
+    if (this.state === 'attack' && this.current) this.comboResume = {idx:this.hitDone?(this.comboIdx+1)%this.def.combo.length:this.comboIdx,t:1.25};
     this.stopTrail(); this.state = 'dodge'; this.stateT = 0; this.invuln = 0.4; this.dodgeCd = DODGE_COOLDOWN_SEC;
     this.perfectWindow = 0.28;   // 이 안에 피격 판정이 스치면 퍼펙트
     if (this.def.jobId === 'ranger') this.gainJobResource(1);

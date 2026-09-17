@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { lobbyCameraPosition, lobbyCompositionShift } from './lobby-camera.js';
+import { LobbySightline } from './lobby-sightline.js';
 import { battleCameraOffset } from './camera-control.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -170,6 +171,8 @@ export class Renderer {
     if (rig.mode === 'lobby') {
       const p = lobbyCameraPosition(this.lobbyCamera);
       desired = new THREE.Vector3(p.x, p.y, p.z).add(rig.target);
+      this.lobbySightline ??= new LobbySightline();
+      desired.y += this.lobbySightline.solve(desired,rig.target,this.lobbyOccluders,performance.now());
       const lobbyFov = 46 + (window.innerWidth < window.innerHeight ? 14 : 0);
       if (cam.fov !== lobbyFov) { cam.fov = lobbyFov; cam.updateProjectionMatrix(); }
       rig.pos.lerp(desired, 1 - Math.exp(-realDt * 3));

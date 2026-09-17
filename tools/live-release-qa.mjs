@@ -1,4 +1,5 @@
 import { captureVictory, captureCrowd } from './release-qa-capture.mjs';
+import { releaseRequestPolicy } from './release-network-policy.mjs';
 import { launchOpts } from './chrome.mjs';
 import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
@@ -12,7 +13,7 @@ const head=process.argv[2];if(!/^[a-f0-9]{40}$/.test(head||''))throw Error('Exac
 const liveOrigin='https://blade.tllhouse.com';
 const origin=process.argv[3]||liveOrigin;
 if(origin!==liveOrigin&&!/^http:\/\/127\.0\.0\.1:\d+$/.test(origin))throw Error('Only the owned production or local loopback preview is allowed');
-const report={job:'blade-surge-release-rsi-20260915',head,origin,status:'running',scope:'Public deployed assets and isolated new desktop Chromium save; UI departure, keyboard movement, fixed-step AUTO complete floor and persisted reward; actual delayed victory panel and next-stage persistence; not physical-device FPS or manual completion',errors:[],httpErrors:[],blockedWrites:[],external:[],assets:[]};
+const report={job:'blade-surge-release-rsi-20260915',head,origin,status:'running',scope:'Public deployed assets and isolated new desktop Chromium save; UI departure, keyboard movement, fixed-step AUTO complete floor and persisted reward; actual delayed victory panel and next-stage persistence; not physical-device FPS or manual completion',errors:[],httpErrors:[],blockedWrites:[],telemetryRequests:[],external:[],assets:[]};
 if(origin!==liveOrigin)report.scope=report.scope.replace('Public deployed assets','Local preview assets');
 await fs.mkdir(out,{recursive:true});const save=()=>fs.writeFile(path.join(out,'report.json'),JSON.stringify(report,null,2));
 const hash=b=>createHash('sha256').update(b).digest('hex');let browser;
@@ -33,7 +34,7 @@ try{
  browser=await chromium.launch({...launchOpts(),headless:true});
  report.browser=browser.version();const page=await browser.newPage({viewport:{width:880,height:400},hasTouch:true});
  page.on('pageerror',e=>report.errors.push(e.message));page.on('console',m=>{if(m.type()==='error')report.errors.push(m.text());});page.on('response',r=>{if(r.status()>=400)report.httpErrors.push({url:r.url(),status:r.status()});});
- await page.route('**/*',route=>{const r=route.request(),u=new URL(r.url());if(!['GET','HEAD'].includes(r.method())){report.blockedWrites.push({url:r.url(),method:r.method()});return route.abort();}if(u.origin===origin||['data:','blob:'].includes(u.protocol))return route.continue();report.external.push(u.origin);return route.fulfill({status:200,body:'',contentType:'text/css'});});
+ await page.route('**/*',route=>{const r=route.request(),u=new URL(r.url());const policy=releaseRequestPolicy(r.url(),r.method(),origin);if(policy==='block'){report.blockedWrites.push({url:r.url(),method:r.method()});return route.abort();}if(policy==='telemetry'){report.telemetryRequests.push({url:r.url(),method:r.method()});return route.continue();}if(u.origin===origin||['data:','blob:'].includes(u.protocol))return route.continue();report.external.push(u.origin);return route.continue();});
  await page.goto(origin+'/',{waitUntil:'domcontentloaded',timeout:60000});await page.locator('#boot-start:not(.hidden)').waitFor({timeout:90000});await page.click('#boot-start');await page.waitForFunction(()=>window.app?.mode==='lobby');
  await page.screenshot({path:path.join(out,'live-lobby.png')});
  report.before=await page.evaluate(()=>{app.ui.closeModal();app.testPause=true;let s=20260905;Math.random=()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};return {nextStage:app.eco.nextStage().idx,level:app.eco.hero('knight').level,inventory:app.eco.s.inventory.length,spentKRW:app.eco.s.spentKRW};});

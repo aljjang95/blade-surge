@@ -6,3 +6,35 @@
 /* Illustrated cards keep effects and purchase conditions as real text. */
 .mw-illustration{display:block;width:100%;height:126px;object-fit:contain;filter:drop-shadow(0 7px 12px #0008);margin:0 auto 10px;pointer-events:none}.mw-banner{position:relative;min-height:134px;padding-right:140px}.mw-banner>.mw-illustration{position:absolute;right:14px;top:10px;width:116px;height:116px}.mw-banner h3{font-size:24px}.mw-dialog button,.mw-details summary{min-height:48px}.mw-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible}.mw-tabs button{display:flex;align-items:center;justify-content:center;gap:6px;padding:6px;min-width:0}.mw-tabs .mw-illustration{width:30px;height:30px;margin:0}.mw-details{color:#b9cbc5;font-size:12px;clear:both}.mw-details summary{display:list-item;align-content:center;cursor:pointer;color:#ddc79d;padding:10px 0}.mw-details p{margin:0 0 12px;line-height:1.65}.mw-card p{color:#e0e8df;min-height:34px}.mw-card>h4{margin-bottom:6px}.mw-tree .mw-illustration{height:92px}.mw-cost{display:flex;align-items:center;gap:6px;font-size:12px;color:#dfc995}.mw-cost .mw-illustration{width:27px;height:27px;margin:0}.mw-presets .mw-illustration{width:58px;height:58px;margin:0}.mw-story-record>.mw-illustration{float:right;width:76px;height:76px}.mw-boon>.mw-illustration{height:170px;object-fit:contain;margin:0 0 10px}.mw-chip{display:inline-flex;align-items:center;gap:6px}.mw-chip .mw-illustration{width:28px;height:28px;margin:0}.mw-content{overflow-x:hidden}.mw-dialog progress{height:9px}.mw-content>h3{clear:both}
 @media(max-width:620px){.mw-banner{padding:14px 108px 12px 14px;min-height:120px}.mw-banner>.mw-illustration{width:90px;height:96px;right:8px}.mw-banner h3{font-size:21px}.mw-grid:not(.mw-choices){grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mw-card{padding:12px}.mw-card h4{font-size:16px}.mw-illustration{height:106px}.mw-grid>.mw-tree{grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.mw-tree>h3{grid-column:1/-1}.mw-tree .mw-card{margin:0}.mw-boon{grid-template-columns:112px 1fr;padding:0}.mw-boon>.mw-illustration{width:112px;height:100%;min-height:148px;margin:0}.mw-boon>p{min-height:0}.mw-tabs button{font-size:12px;gap:3px}.mw-tabs .mw-illustration{width:26px;height:26px}.mw-presets>div{display:grid;grid-template-columns:50px 1fr 1fr}.mw-presets .mw-illustration{grid-row:1/4;width:46px}.mw-presets strong,.mw-presets small{grid-column:2/4}.mw-presets button{padding:6px}.mw-content{max-height:calc(92dvh - 166px)}}
+
+/* One bounded scroll owner, not nested vh boxes. Native modal remains above the HUD. */
+#masterworks[open]{position:fixed;inset:auto;top:calc(var(--sat,0px) + 8px);left:calc(var(--sal,0px) + 8px);margin:0;width:calc(100% - var(--sal,0px) - var(--sar,0px) - 16px);max-width:1000px;height:calc(var(--app-height,100dvh) - var(--sat,0px) - var(--sab,0px) - 16px);max-height:calc(var(--app-height,100dvh) - var(--sat,0px) - var(--sab,0px) - 16px);display:flex;flex-direction:column;overflow:hidden;touch-action:pan-y;border-radius:12px}
+#masterworks .mw-header,#masterworks .mw-tabs,#masterworks .mw-notice{flex:none}
+#masterworks .mw-header{padding:8px 14px;min-height:56px;gap:12px}
+#masterworks .mw-header h2{font-size:19px;line-height:1.25}
+#masterworks .mw-close{min-width:64px;flex:none;padding:6px 12px}
+#masterworks .mw-content{flex:1 1 auto;min-height:0;max-height:none;overflow:auto;touch-action:pan-y;padding:8px 14px 16px;scroll-padding:12px;overscroll-behavior:contain}
+#masterworks[data-offer=boon] .mw-content>.mw-eyebrow{margin:0;font-size:10px}
+#masterworks[data-offer=boon] .mw-choice-title{font-size:20px;line-height:1.3;margin:2px 0 10px}
+#masterworks .mw-boon{touch-action:pan-y}
+#masterworks .mw-boon h4,#masterworks .mw-boon p{overflow-wrap:anywhere}
+@media(min-width:1030px){#masterworks[open]{left:calc(50% - 500px)}}
+@media(orientation:landscape) and (max-height:540px){
+ #masterworks[data-offer=boon] .mw-header{min-height:48px;padding:3px 12px}
+ #masterworks[data-offer=boon] .mw-header small{display:none}
+ #masterworks[data-offer=boon] .mw-content{padding:5px 10px 12px}
+ #masterworks[data-offer=boon] .mw-choice-title{font-size:16px;margin:0 0 6px}
+ #masterworks[data-offer=boon] .mw-choices{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+ #masterworks[data-offer=boon] .mw-boon{display:flex;flex-direction:column;padding:8px;min-height:0;gap:2px}
+ #masterworks[data-offer=boon] .mw-boon>.mw-illustration{width:100%;height:48px;min-height:0;margin:0;object-fit:contain;filter:none}
+ #masterworks[data-offer=boon] .mw-boon>.mw-eyebrow,#masterworks[data-offer=boon] .mw-boon>h4,#masterworks[data-offer=boon] .mw-boon>p,#masterworks[data-offer=boon] .mw-boon>.mw-pick{margin:0}
+ #masterworks[data-offer=boon] .mw-boon h4{font-size:14px;line-height:1.3}
+ #masterworks[data-offer=boon] .mw-boon p{font-size:11px;line-height:1.4;min-height:31px;flex:1}
+ #masterworks[data-offer=boon] .mw-boon .mw-pick{font-size:11px;line-height:1.4;color:#ffe3aa}
+}
+@media(orientation:portrait) and (max-width:620px){
+ #masterworks[data-offer=boon] .mw-boon{grid-template-columns:72px minmax(0,1fr);min-height:106px}
+ #masterworks[data-offer=boon] .mw-boon>.mw-illustration{width:72px;height:100%;min-height:106px;filter:none}
+ #masterworks[data-offer=boon] .mw-boon>.mw-eyebrow,#masterworks[data-offer=boon] .mw-boon>h4,#masterworks[data-offer=boon] .mw-boon>p,#masterworks[data-offer=boon] .mw-boon>.mw-pick{margin-left:8px;margin-right:8px}
+ #masterworks[data-offer=boon] .mw-boon h4{font-size:15px}
+}
