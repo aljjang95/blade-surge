@@ -6,6 +6,7 @@ export function validateRuptureEvidence(rows) {
     if (!Number.isInteger(row.targetId) || row.targetId <= 0) return false;
     if (![row.before, row.after, row.delta].every(Number.isFinite)) return false;
     if (row.before <= 0 || row.after < 0 || row.delta !== row.before - row.after) return false;
+    if (row.isLinkPrimary !== false) return false;
     if (row.quiet !== true || row.noProc !== true || row.apexProc !== true) return false;
     if (row.delta > 0) return true;
     return row.delta === 0 && row.missObserved === true && row.beforeState === 'chase'

@@ -16,6 +16,11 @@ export class Battle extends MasterworksBattle {
   }
   apexEnabled() { return !!(this.apex?.art && this.run?.enabled && !this.run.settled && this.active && this.player?.alive && this.stage?.expedition?.kind!=='arena'); }
   stop() { this.comboLink=null;this.apex=null; super.stop(); }
+  setPaused(reason,on) {
+    // 모든 정지 소유자가 지난 연계 기회를 즉시 취소하되 재사용 간격은 보존한다.
+    if(on)this.comboLink?.cancel();
+    super.setPaused(reason,on);
+  }
   comboLinkEnabled() { return !!(this.comboLink&&this.apexEnabled()&&!this.paused&&!this.stage?.expedition&&!this.stage?.party&&!this.conquest); }
   getComboLinkSnapshot() {
     const enabled=this.comboLinkEnabled(),state=this.comboLink?.snapshot(this.elapsed,this.player);
@@ -45,7 +50,7 @@ export class Battle extends MasterworksBattle {
     super.damageEnemy(enemy,dmg,opts);
     if(!this.apexEnabled() || !(before-(enemy?.hp||0)>0)) return;
     if(opts.comboToken&&!opts.quiet&&!opts.noProc&&!opts.masterworksProc&&this.comboLinkEnabled()&&this.elapsed>=this.apex.procUntil)
-      this.comboLink.arm({token:opts.comboToken,source:opts.source||this.player,player:this.player,enemy,now:this.elapsed});
+      this.comboLink.arm({token:opts.comboToken,source:opts.source,player:this.player,enemy,now:this.elapsed});
     if(opportunity && enemy.alive && !(enemy.breakT>0)) {
       this.apex.recovery.set(enemy,sequence);
       // Magic contact contributes exactly 15 posture, using the existing break contract.
@@ -70,7 +75,8 @@ export class Battle extends MasterworksBattle {
     this.fx.damage(enemy.pos,0,{text:art.name});
     audio.play('ui_glass',{vol:.4});
     if(art.id==='rupture') {
-      const targets=this.enemies.filter(e=>e!==enemy&&e.alive&&!e.spawning&&e.pos.distanceToSquared(enemy.pos)<=art.radius**2)
+      const excludedTarget=enemy.excludeTarget??enemy; // 연계를 만든 적도 기존 파열과 동일하게 제외한다.
+      const targets=this.enemies.filter(e=>e!==excludedTarget&&e.alive&&!e.spawning&&e.pos.distanceToSquared(enemy.pos)<=art.radius**2)
         .sort((x,y)=>x.pos.distanceToSquared(enemy.pos)-y.pos.distanceToSquared(enemy.pos)).slice(0,art.targets);
       for(const e of targets) this.damageEnemy(e,p.atk*art.damage,{kind:'magic',kb:art.push,dirx:e.pos.x-enemy.pos.x,dirz:e.pos.z-enemy.pos.z,noProc:true,quiet:true,masterworksProc:true,apexProc:true});
     } else if(art.id==='aegis') { a.shield=p.maxHp*art.shield;a.shieldUntil=this.elapsed+art.duration; }

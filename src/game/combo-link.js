@@ -7,7 +7,7 @@ export class ComboLink {
   if(!token||typeof token!=='object'||this.seen.has(token)||!Number.isFinite(now)||!player?.alive||source!==player||token.owner!==player||token.epoch!==(player.knightLifeEpoch||0))return false;
   this.seen.add(token);if(now<this.cooldownUntil||!enemy?.pos)return false;
   // All targets of a single finishing blow share one token and one deadline.
-  this.ready={token,player,epoch:token.epoch,until:now+COMBO_LINK_WINDOW,anchor:enemy.pos.clone()};return true;
+  this.ready={token,player,epoch:token.epoch,until:now+COMBO_LINK_WINDOW,anchor:enemy.pos.clone(),target:enemy};return true;
  }
  snapshot(now,player){
   const r=this.ready,valid=!!r&&r.player===player&&player?.alive&&r.epoch===(player.knightLifeEpoch||0)&&Number.isFinite(now)&&now<r.until;
@@ -17,7 +17,7 @@ export class ComboLink {
   if(!this.snapshot(now,player).ready||now<this.cooldownUntil||!context?.cast||!context.sk||context.sk.ult||context.sk.awaken)return null;
   const r=this.ready;this.ready=null;
   if(!player.pos||r.anchor.distanceToSquared(player.pos)>144)return null;
-  this.cooldownUntil=now+COMBO_LINK_COOLDOWN;this.activations++;return {pos:r.anchor,alive:false};
+  this.cooldownUntil=now+COMBO_LINK_COOLDOWN;this.activations++;return {pos:r.anchor,alive:false,excludeTarget:r.target};
  }
  cancel(){this.ready=null;}
 }

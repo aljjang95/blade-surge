@@ -37,7 +37,7 @@ try{
   });assert(layout.visible&&!layout.overlaps.length,'Link prompt overlaps gameplay '+JSON.stringify(layout));
   await page.screenshot({path:path.join(out,`${hero}-${art}-ready.png`)});
   await page.evaluate(()=>{const g=app.battle,fn=g.onSkillReleased;window.__linkEvidence=[];window.__linkDamage=[];
-    const originalDamage=g.damageEnemy, targets=new Map();
+    const originalDamage=g.damageEnemy, targets=new Map(), linkedPrimary=g.comboLink.ready?.target;
     g.damageEnemy=function(enemy,amount,opts={}) {
       const before=enemy.hp, beforeState=enemy.state, beforeStun=enemy.stun||0;
       const dodgeChance=enemy.def?.dodge||0, originalFeedback=g.fx.damage;
@@ -52,7 +52,7 @@ try{
         if(!targets.has(enemy)) targets.set(enemy,targets.size+1);
         window.__linkDamage.push({targetId:targets.get(enemy),target:enemy.def?.name,
           before,after:enemy.hp,delta:before-enemy.hp,beforeState,afterState:enemy.state,
-          beforeStun,dodgeChance,missObserved,quiet:opts.quiet,noProc:opts.noProc,apexProc:true});
+          beforeStun,dodgeChance,missObserved,isLinkPrimary:enemy===linkedPrimary,quiet:opts.quiet,noProc:opts.noProc,apexProc:true});
       }
       return result;
     };
