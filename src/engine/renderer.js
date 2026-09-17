@@ -52,9 +52,9 @@ const FinalShader = {
 
 /** 카메라 프리셋 — y/z 는 타겟 기준 오프셋, fov 는 가로모드 기준(세로는 +14), lookY 는 시선 높이, lag 는 추적 탄성 */
 export const CAMERA_PRESETS = {
-  top:    { y: 13.5, z: 7.5,  fov: 44, lookY: 0.8, lag: 6,   name: '탑다운',   desc: '높이서 내려다보는 클래식 시점 — 몹몰이 파악이 쉽다' },
-  action: { y: 8.5,  z: 10.5, fov: 54, lookY: 1.5, lag: 7.5, name: '액션',     desc: '낮고 가까운 시점 — 타격감과 속도감이 크다' },
-  wide:   { y: 16.5, z: 13,   fov: 38, lookY: 0.6, lag: 4.5, name: '시네마틱', desc: '멀고 넓은 시점 — 전장 전체와 보스 패턴이 보인다' },
+  top:    { y: 8.2, z: 7.4, fov: 42, lookY: 0.85, lag: 6, name: '탑다운', desc: '전투 범위와 캐릭터 실루엣을 함께 보는 기본 시점' },
+  action: { y: 6.8, z: 8.4, fov: 43, lookY: 1.1, lag: 7.5, name: '액션', desc: '낮고 가까운 시점 — 타격 동작을 선명하게' },
+  wide:   { y: 9.4, z: 9.2, fov: 40, lookY: 0.8, lag: 5, name: '시네마틱', desc: '가까운 보스와 패턴을 함께 보는 넓은 시점' },
 };
 export class Renderer {
   constructor(canvas) {

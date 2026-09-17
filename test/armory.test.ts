@@ -150,9 +150,28 @@ test('contact tiers, reduced motion, quiet/noProc and stop recovery are bounded'
 });
 test('beacon persists through occlusion without animation and disposes each resource once',()=>{
   const root=new Group(),b=new HeroBeacon(root);let released=0;
+  let locatorMaterials=0,locatorTextures=0;
+  b.locator.material.addEventListener('dispose',()=>locatorMaterials++);
+  b.locatorTexture.addEventListener('dispose',()=>locatorTextures++);
+  expect(b.locator.material.sizeAttenuation).toBe(false);
   b.root.traverse((o:any)=>{if(o.isMesh){expect(o.material.depthTest).toBe(false);o.geometry.addEventListener('dispose',()=>released++);o.material.addEventListener('dispose',()=>released++);}});
-  b.update(true,1);expect(b.root.rotation.y).toBe(1);expect(b.root.children).toHaveLength(3);
+  b.update(true,1);expect(b.root.rotation.y).toBe(1);expect(b.root.children).toHaveLength(4);
   b.update(false,1);expect(b.root.visible).toBe(false);b.dispose();b.dispose();expect(root.children).toHaveLength(0);expect(released).toBe(6);
+  expect(locatorMaterials).toBe(1);expect(locatorTextures).toBe(1);
+});
+
+test('the unnamed skinned child of an original Head group remains visible through occluders',()=>{
+  const root=new Group(),model=new Group(),head=new Group(),bone=new Bone();
+  head.name='Knight_Head';root.add(model);model.add(head,bone);
+  const geometry=new BoxGeometry(),n=geometry.attributes.position.count;
+  geometry.setAttribute('skinIndex',new Uint16BufferAttribute(new Uint16Array(n*4),4));
+  const weights=new Float32Array(n*4);for(let i=0;i<n;i++)weights[i*4]=1;
+  geometry.setAttribute('skinWeight',new Float32BufferAttribute(weights,4));
+  const source=new SkinnedMesh(geometry,new MeshBasicMaterial());head.add(source);source.bind(new Skeleton([bone]));
+  const b=new HeroBeacon(root,model as any);
+  expect(b.occluded).toHaveLength(1);b.update(true,0);expect(b.occluded[0]!.mesh.visible).toBe(true);
+  source.visible=false;b.update(true,0);expect(b.occluded[0]!.mesh.visible).toBe(false);
+  b.dispose();geometry.dispose();source.material.dispose();source.skeleton.dispose();
 });
 
 test('beacon arrow follows Actor.forward in world space for both rig orientations',()=>{

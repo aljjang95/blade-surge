@@ -57,3 +57,18 @@
 @media(orientation:landscape) and (max-width:700px){.oath-visual #tab-home .oath-build-entry{top:164px;min-height:42px;height:44px}}
 
 .oath-menu-offers{margin:0 16px 14px;border-top:1px solid #c6b27633;color:#b9caba;font-size:12px}.oath-menu-offers summary{min-height:44px;padding:12px 4px;cursor:pointer}.oath-menu-offers>div{display:grid;grid-template-columns:1fr 1fr;gap:8px}.oath-menu-offers .promo-btn{position:relative;width:100%;height:auto;min-height:72px;display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid #c3cdac24;border-radius:6px;background:#20362e;padding:8px;color:#e4e7ce}.oath-menu-offers .promo-btn img{width:24px;height:24px;position:static}.oath-menu-offers .promo-tag{display:none}.oath-menu-offers .promo-btn em{font-size:10px;font-style:normal}
+
+/* Visual coherence recovery: keep combat readable before decorative feedback. */
+.oath-visual #hud .combo{right:10px;top:46%;opacity:.78;text-shadow:none}
+.oath-visual #hud .combo b{font-size:28px;line-height:1;color:#e4c18d;-webkit-text-stroke:0;text-shadow:0 2px 5px #000b}
+.oath-visual #hud .combo span{font-size:9px;letter-spacing:.14em;color:#cbd6cd;text-shadow:0 1px 3px #000b}
+.oath-visual #hud #wave-banner{font-size:15px;max-width:36%;left:32%;letter-spacing:.05em;color:#e9e4d6;text-shadow:0 2px 5px #000c}
+.oath-visual #toast-layer{top:64px;gap:3px}
+.oath-visual #toast-layer .toast.combat-notice{max-width:min(42vw,320px);padding:5px 9px;border-radius:5px;background:#0b1718df;border-color:#c0aa7255;color:#d9dfd7;font-size:10px;font-weight:600;line-height:1.25;box-shadow:none}
+.oath-visual #hud .arsenal-hud:not([data-state=ready]):not([data-state=proc]){display:none}
+.oath-visual #hud .oath-run-details>summary{min-height:14px;padding:1px 0;border:0;background:transparent;font-size:9px;line-height:12px;opacity:.65}
+.oath-visual #hud .skill-btn{box-shadow:0 1px 3px #0007}
+.oath-visual #hud .hud-center{opacity:.84}
+.oath-visual #hud #minimap-wrap{opacity:.9}
+@media(orientation:landscape) and (max-width:700px){.oath-visual #hud .combo b{font-size:24px}.oath-visual #hud #wave-banner{font-size:14px;max-width:34%;left:33%}.oath-visual #toast-layer{top:58px}.oath-visual #toast-layer .toast.combat-notice{max-width:44vw;font-size:9px}}
+@media(orientation:portrait){.oath-visual #hud .combo b{font-size:24px}.oath-visual #hud #wave-banner{font-size:14px;max-width:54%;left:23%}.oath-visual #toast-layer .toast.combat-notice{max-width:calc(100vw - 156px)}}

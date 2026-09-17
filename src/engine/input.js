@@ -5,6 +5,7 @@ export class Input {
     this.move = { x: 0, y: 0 }; // -1..1 (x: 좌우, y: 앞뒤 — 화면 기준)
     this.screenMove = { x: 0, y: 0 };
     this.attackHeld = false; this.queue = [];
+    this.attackSources = new Set(); this.clearListeners = new Set();
     this.enabled = false;
     this.keys = {};
     this.joy = { active: false, id: null, cx: 0, cy: 0, radius: 52 };
@@ -13,7 +14,9 @@ export class Input {
   }
   press(a) { if (this.enabled && !this.queue.includes(a)) this.queue.push(a); }
   consume(a) { const i = this.queue.indexOf(a); if (i >= 0) { this.queue.splice(i, 1); return true; } return false; }
-  clear() { this.queue.length = 0; this.attackHeld = false; this.keys = {}; this.move.x = this.move.y = 0; this._resetJoy(); }
+  onClear(listener) { this.clearListeners.add(listener); return () => this.clearListeners.delete(listener); }
+  _attack(source, held) { if (held) this.attackSources.add(source); else this.attackSources.delete(source); this.attackHeld = this.attackSources.size > 0; }
+  clear() { this.queue.length = 0; this.attackSources.clear(); this.attackHeld = false; this.keys = {}; this.move.x = this.move.y = 0; this._resetJoy(); for (const listener of this.clearListeners) listener(); }
   _resetJoy() { this.joy.active = false; this.joy.id = null; this.move.x = this.move.y = this.screenMove.x = this.screenMove.y = 0; this.el.knob.style.transform = 'translate(-50%,-50%)'; this.el.base.style.left = ''; this.el.base.style.bottom = ''; this.el.base.style.top = ''; this.el.base.style.transform = ''; }
   _bind() {
     const area = this.el.area;
@@ -29,7 +32,7 @@ export class Input {
       e.preventDefault();
     };
     const move = (e) => {
-      if (!this.joy.active) return;
+      if (!this.joy.active || !this.enabled || (!e.changedTouches && this.joy.id !== 'mouse')) return;
       let t = null;
       if (e.changedTouches) { for (const c of e.changedTouches) if (c.identifier === this.joy.id) t = c; if (!t) return; } else t = e;
       let dx = t.clientX - this.joy.cx, dy = t.clientY - this.joy.cy;
@@ -42,7 +45,8 @@ export class Input {
       e.preventDefault();
     };
     const end = (e) => {
-      if (!this.joy.active) return;
+      if (!this.joy.active || (!e.changedTouches && this.joy.id !== 'mouse')) return;
+      if (!e.changedTouches && e.button !== undefined && e.button !== 0) return;
       if (e.changedTouches) { let hit = false; for (const c of e.changedTouches) if (c.identifier === this.joy.id) hit = true; if (!hit) return; }
       this._resetJoy();
     };
@@ -54,25 +58,40 @@ export class Input {
     const btn = (id, down, up) => {
       const el = typeof id === 'string' ? document.getElementById(id) : id;
       if (!el) return;
-      const d = (e) => { if (!this.enabled || (!e.changedTouches && e.button !== 0)) return; e.preventDefault(); e.stopPropagation(); down(); }; const u = (e) => { e.preventDefault(); up && up(); };
+      let owner = null;
+      const d = (e) => {
+        if (!this.enabled || owner !== null || (!e.changedTouches && e.button !== 0)) return;
+        owner = e.changedTouches ? e.changedTouches[0].identifier : 'mouse';
+        e.preventDefault(); e.stopPropagation(); down();
+      };
+      const u = (e) => {
+        if (owner === null || (e.changedTouches ? !Array.from(e.changedTouches).some(t => t.identifier === owner) : owner !== 'mouse')) return;
+        if (e.type === 'mouseup' && e.button !== undefined && e.button !== 0) return;
+        owner = null; e.preventDefault(); up && up();
+      };
+      this.onClear(() => { owner = null; });
       el.addEventListener('touchstart', d, { passive: false }); el.addEventListener('touchend', u); el.addEventListener('touchcancel', u);
-      el.addEventListener('mousedown', d); el.addEventListener('mouseup', u); el.addEventListener('mouseleave', () => up && up());
+      el.addEventListener('mousedown', d); window.addEventListener('mouseup', u); el.addEventListener('mouseleave', u);
     };
-    btn('btn-attack', () => { this.attackHeld = true; this.press('attack'); }, () => { this.attackHeld = false; });
+    btn('btn-attack', () => { this._attack('button', true); this.press('attack'); }, () => { this._attack('button', false); });
     btn('btn-dodge', () => this.press('dodge'));
     document.querySelectorAll('.skill-btn').forEach((b) => btn(b, () => this.press('skill' + b.dataset.skill)));
 
     window.addEventListener('keydown', (e) => {
-      if (!this.enabled || e.target?.closest?.('input, textarea, select, [contenteditable="true"], #battle-camera-controls')) return;
+      if (!this.enabled || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.target?.closest?.('button, input, textarea, select, [contenteditable], [role="dialog"], dialog, #battle-camera-controls')) return;
       if (!/^(Key[WASDJKRQE]|Arrow(Left|Right|Up|Down)|Space|ShiftLeft|Digit[1-6])$/.test(e.code)) return;
       e.preventDefault();
       if (e.repeat) return; this.keys[e.code] = true;
-      if (e.code === 'KeyJ' || e.code === 'Space') { this.attackHeld = true; this.press('attack'); }
+      if (e.code === 'KeyJ' || e.code === 'Space') { this._attack(e.code, true); this.press('attack'); }
       if (e.code === 'KeyK' || e.code === 'ShiftLeft') this.press('dodge');
       if (e.code === 'Digit1') this.press('skill0'); if (e.code === 'Digit2') this.press('skill1'); if (e.code === 'Digit3') this.press('skill2'); if (e.code === 'KeyR' || e.code === 'Digit4') this.press('skill3');
       if (e.code === 'KeyQ' || e.code === 'Digit5') this.press('skill4'); if (e.code === 'KeyE' || e.code === 'Digit6') this.press('skill5');
     });
-    window.addEventListener('keyup', (e) => { this.keys[e.code] = false; if (e.code === 'KeyJ' || e.code === 'Space') this.attackHeld = false; });
+    window.addEventListener('keyup', (e) => { this.keys[e.code] = false; if (e.code === 'KeyJ' || e.code === 'Space') this._attack(e.code, false); });
+    document.addEventListener('focusin', e => {
+      if (!e.target?.closest?.('button, input, textarea, select, [contenteditable], [role="dialog"], dialog, #battle-camera-controls')) return;
+      this.keys = {}; this._attack('KeyJ', false); this._attack('Space', false);
+    });
     window.addEventListener('blur', () => this.clear());
     window.addEventListener('pagehide', () => this.clear());
     window.addEventListener('orientationchange', () => this.clear());

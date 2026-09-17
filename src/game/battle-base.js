@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { musicForScene, MUSIC_MIX } from '../data/music.js';
 import { createArrowVisual, releaseProjectileVisual } from '../engine/arrow-visual.js';
 import { CAMERA_PRESETS } from '../engine/renderer.js';
+import { battleFraming, framingBlend } from '../engine/battle-framing.js';
 import { Player } from './player.js';
 import { Enemy } from './enemies.js';
 import { DropSystem, fieldDropsAllowed } from './drops.js';
@@ -649,33 +650,21 @@ export class Battle {
     this.drops.update(dt);
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; this.ui.setCombo(0); } }
     if (this.player.alive && this.player.hp < this.player.maxHp * 0.25) { audio.voice(heroVoiceName(this.heroId, 'low_hp'), { min: 12 }); audio.voice('low_hp', { min: 25 }); }
-    // 카메라: 적 밀도에 따라 살짝 줌아웃 (몹몰이 시야 확보)
+    // Local threat framing preserves readable heroes and explicit user presets.
     const rig = this.renderer.rig;
-    // 카메라 리드: 진행 방향으로 살짝 앞서 보고, 락온 대상 쪽으로 조금 당긴다
-    _v.copy(this.player.pos);
-    const mv = this.player.vel; const sp = Math.hypot(mv.x, mv.z);
-    if (sp > 0.5) _v.x += mv.x / sp * Math.min(3.2, sp * 0.42), _v.z += mv.z / sp * Math.min(3.2, sp * 0.42);
-    const lt = this.player.lockTarget;
-    if (lt && lt.alive) { _v.x += (lt.pos.x - this.player.pos.x) * 0.12; _v.z += (lt.pos.z - this.player.pos.z) * 0.12; }
-    rig.target.lerp(_v, 1 - Math.exp(-realDt * 7));
-    const near = this.enemies.reduce((a, e) => a + (e.alive && e.distTo(this.player) < 9 ? 1 : 0), 0);
-    const zoomOut = Math.min(1, near / 14);
-    const bossUp = !!(this.boss && this.boss.alive);
-    // AUTO 카메라: 탐험(적 없음·이동 중) → 액션, 난전 → 탑다운, 보스 → 시네마틱. 목표 프리셋을 정하고 base 를 그쪽으로 천천히 보간
+    const framing = battleFraming({ player: this.player, enemies: this.enemies, boss: this.boss, preset: rig.preset, presets: CAMERA_PRESETS });
+    _v.set(framing.target.x, framing.target.y, framing.target.z);
+    rig.target.lerp(_v, framingBlend(realDt, 7));
     if (rig.preset === 'auto') {
-      const want = bossUp ? CAMERA_PRESETS.wide : (near === 0 && sp > 2) ? CAMERA_PRESETS.action : CAMERA_PRESETS.top;
-      const k = Math.min(1, realDt * 1.2);
-      for (const key of ['y', 'z', 'fov', 'lookY', 'lag']) rig.base[key] += (want[key] - rig.base[key]) * k;
+      const k = framingBlend(realDt, 1.2);
+      for (const key of ['y', 'z', 'fov', 'lookY', 'lag']) rig.base[key] += (framing.desired[key] - rig.base[key]) * k;
     }
     const b = rig.base;
-    const wantY = b.y + zoomOut * 2.2 + (bossUp ? 1.2 : 0), wantZ = b.z + zoomOut * 1.8 + (bossUp ? 1.0 : 0);
-    rig.offset.y += (wantY - rig.offset.y) * Math.min(1, realDt * 2);
-    rig.offset.z += (wantZ - rig.offset.z) * Math.min(1, realDt * 2);
-    rig.fov = b.fov + zoomOut * 3; rig.lag = b.lag; rig.lookOffset.y = b.lookY;
-    // 액션 시점일수록 이동 방향으로 살짝 옆에서 본다 (낮은 카메라에서 정면 이동은 캐릭터가 화면을 가린다)
-    const actionK = Math.max(0, Math.min(1, (11 - rig.offset.y) / 3));
-    const wantSide = sp > 0.5 ? -(mv.x / sp) * 1.6 * actionK : 0;
-    rig.side += (wantSide - rig.side) * Math.min(1, realDt * 1.5);
+    rig.offset.y += (b.y + framing.extraY - rig.offset.y) * framingBlend(realDt, 2);
+    rig.offset.z += (b.z + framing.extraZ - rig.offset.z) * framingBlend(realDt, 2);
+    rig.fov = b.fov + framing.extraFov; rig.lag = b.lag; rig.lookOffset.y = b.lookY;
+    // Anticipation lives in the bounded target; no additional direction-dependent sway.
+    rig.side += (0 - rig.side) * framingBlend(realDt, 1.5);
     if (this.world && this.active) {
       const rm = this.world.roomAt(this.player.pos.x, this.player.pos.z);
       if (rm && rm !== this.curRoom) this.enterRoom(rm);
