@@ -40,3 +40,14 @@ Blender 5.2.1 LTS로 다섯 영웅의 별도 복장을 제작했다. 원본 얼�
 IAB를 사용할 수 있으면 해당 브라우저에서 검증한다. 로컬 Playwright 예외가 승인되면 `node tools/oath-behavior-qa.mjs --baseline --source=work/overhaul-v3/baseline`, `node tools/oath-behavior-qa.mjs`, `node tools/knight-build-qa.mjs`, 관련 실제 카메라/타격 입력 추가 검사와 캡처를 실행한다. 실패는 기준을 낮추지 않고 후보를 수정한다.
 
 관련 검증과 독립 검토 후 clean commit/PR merge, `node tools/deploy.mjs --auth=wrangler` 및 live 버전·실제 플레이 확인으로 이어간다. Wrangler 인증/lease는 실행 시 다시 확인하며 확인하지 않은 계정 상태를 준비 완료로 주장하지 않는다.
+
+## 2026-09-17 승인 후 실제 브라우저 검증 추가
+
+기존 “IAB 사용 불가로 실제 게임 검증 미수행” 기록은 당시 사실로 보존한다. 이후 사용자 승인 아래 로컬 설치 Chrome을 명시해 동일 후보 HEAD `a30a3ec8fcba6e46cf9290c64ea5a19cb1a5950e`를 추가 검증했다.
+
+- `tools/overhaul-v3-gameplay-qa.mjs`: 23/23 PASS, browser exception 0. 카메라 회전/줌, 네 방향 yaw의 camera-relative 수동 이동, pause/capture 정리, 독립 공격 입력, 근접 실피해, 880×400·640×360 high/low/reduced-motion 가시성을 실행했다.
+- `tools/knight-build-qa.mjs`: 세 전투 build의 실제 스킬 피해·보스전 승리 3/3 PASS, browser error 0, 외부 write 0. GPU는 이 환경의 Chrome/ANGLE SwiftShader로 기록되므로 실제 단말 GPU 성능 증거로 확대하지 않는다.
+- Blender 5.2.1 LTS 재오픈/GLB import/hash 검증 5/5 PASS.
+- `bun run check`: typecheck + **896 pass / 1 skip / 0 fail (102 files)** + production build PASS.
+
+이로써 로컬 자동화로 확인 가능한 실제 입력/전투/작은 화면/저품질·reduced-motion 게이트는 증거가 생겼다. 물리 기기 멀티터치·발열·주관적 오디오/FELT, 장시간 실제 GPU 성능 및 운영 배포 후 live 검증은 계속 분리한다. 운영 승격은 clean commit/merge 및 기존 lease/live-SHA/rollback 가드를 통과한 뒤 판단한다.
