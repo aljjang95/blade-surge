@@ -115,15 +115,15 @@ export class Arena {
   buildLobby() {
     this.clear();
     const T = THEMES.lobby;
-    this.scene.background = new THREE.Color(0x91a99a); this.scene.fog.color.set(0x91a99a); this.scene.fog.density = 0.023;
-    const hemi = new THREE.HemisphereLight(0xeaf3df, 0x4e6656, 1.15); this.scene.add(hemi); this.lights.push(hemi);
-    const sun = new THREE.DirectionalLight(0xffe8c7, 2.5); sun.position.set(-3, 4, 6); sun.castShadow = true;
+    this.scene.background = new THREE.Color(0x172c36); this.scene.fog.color.set(0x172c36); this.scene.fog.density = 0.034;
+    const hemi = new THREE.HemisphereLight(0x9dc6d7, 0x263f32, .8); this.scene.add(hemi); this.lights.push(hemi);
+    const sun = new THREE.DirectionalLight(0xffdca9, 2.6); sun.position.set(-3, 4, 6); sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = sun.shadow.camera.bottom = -5; sun.shadow.camera.right = sun.shadow.camera.top = 5;
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 50; sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.02;
     this.scene.add(sun); this.lights.push(sun);
     this.lobbyHall = buildOathHall(); this.group.add(this.lobbyHall);
     this.lobbyHall.traverse((o) => { if (o.isMesh && o.material.isMeshStandardMaterial) { o.material.envMap = this.renderer.characterEnvironment.texture; o.material.envMapIntensity = .3; } });
-    const rim = new THREE.DirectionalLight(0x9bbcaf, 1.1); rim.position.set(2, 4, -4);
+    const rim = new THREE.DirectionalLight(0x83c9e0, 1.8); rim.position.set(2, 4, -4);
     this.scene.add(rim); this.lights.push(rim);
     this.floorData = null;
   }

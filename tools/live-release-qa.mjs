@@ -22,7 +22,7 @@ try{
  report.version=await(await fetch(origin+'/version.json?dogfood='+Date.now(),{cache:'no-store',signal:AbortSignal.timeout(20000)})).json();
  if(report.version.sha!==head||report.version.dirty||report.version.pwaRelease!==local.pwaRelease)throw Error('Public version mismatch');
  const html=await fs.readFile(path.join(root,'dist/index.html'),'utf8');
- const files=new Set(['index.html','version.json','manifest.webmanifest','sw.js','models/oathhall-v2/oathhall-v2.glb','models/oathhall-v2/manifest.json']);
+ const files=new Set(['index.html','version.json','manifest.webmanifest','sw.js','models/sanctuary-v2/sanctuary-v2.glb','models/sanctuary-v2/manifest.json']);
  for(const m of html.matchAll(/(?:src|href)="(\/assets\/[^"?#]+\.(?:js|css))"/g))files.add(m[1].slice(1));
  for(const item of ARMORY_ITEMS){files.add(item.icon.slice(1));files.add('models/armory-v1/'+item.modelNode+'.glb');}
  const list=[...files];for(let i=0;i<list.length;i+=4)await Promise.all(list.slice(i,i+4).map(async name=>{
@@ -39,7 +39,7 @@ try{
  report.before=await page.evaluate(()=>{app.ui.closeModal();app.testPause=true;let s=20260905;Math.random=()=>{s=(Math.imul(s,1664525)+1013904223)>>>0;return s/4294967296;};return {nextStage:app.eco.nextStage().idx,level:app.eco.hero('knight').level,inventory:app.eco.s.inventory.length,spentKRW:app.eco.s.spentKRW};});
  await page.waitForFunction(()=>!document.querySelector('#boot').classList.contains('show'));
  report.hall=await page.evaluate(()=>({name:app.arena.lobbyHall?.name,meshes:app.arena.lobbyHall?.children.length}));
- if(report.hall.name!=='TLL_OathHall_BlenderV2')throw Error('New lobby asset failed to mount');
+ if(report.hall.name!=='TLL_SanctuaryV2')throw Error('New lobby asset failed to mount');
  await page.evaluate(()=>app.step(0,true));await page.screenshot({path:path.join(out,'live-lobby-ready.png')});
  await page.click('#btn-battle');await page.waitForFunction(()=>app.battle?.active&&!app.stageStarting,null,{timeout:60000});
  await page.evaluate(installMetricsDriver,{storyEvents:STORY_EVENTS.map(({id,choices})=>({id,choices:choices.map(({id})=>({id}))}))});
