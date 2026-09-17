@@ -20,6 +20,7 @@ import { RegionHazards } from './region-hazards.js';
 import { resolveJobHero } from '../data/jobs.js';
 import { buildExpeditionWorld, expeditionRoster, applyBattleConsumable, canApplyBattleConsumable } from './expedition-combat.js';
 import { ConquestRun } from './expedition-conquests.js';
+import { resolveCrowdContacts } from './crowd-contact.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
 
 const _v = new THREE.Vector3();
@@ -43,7 +44,7 @@ export class Battle {
   after(sec, fn) { this.timers.push({ t: sec, fn }); }
   /** 정지 화면과 동행 대화는 각자 소유한 정지만 해제한다. */
   setPaused(reason, on) {
-    if (on) this.pauseReasons.add(reason); else this.pauseReasons.delete(reason);
+    if (on) { this.pauseReasons.add(reason); audio.vibe(0); } else this.pauseReasons.delete(reason);
     this.paused = this.pauseReasons.size > 0;
     this.input.enabled = this.active && !!this.player?.alive && !this.paused;
     this.input.clear();
@@ -559,7 +560,8 @@ export class Battle {
       if (budget.emit && contact.particles) this.fx.directional(hitPos, _v.set(dirx, 0, dirz).normalize(), color, { n: contact.particles, speed: contact.heavy ? 9 : 6 });
       audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy, finisher: !!opts.finisher });
       if (contact.stop) this.timeCtl.hitstop(contact.stop);
-      if (contact.heavy) audio.vibe(12);
+      if (p === this.player && !p.auto && contact.haptic) audio.vibe(contact.haptic);
+      if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);
     }
   }
 
@@ -650,6 +652,7 @@ export class Battle {
     if (this.portal) { const P = this.portal; P.t += dt; P.mesh.rotation.z += dt * 1.5; P.mesh.material.opacity = 0.6 + Math.sin(P.t * 5) * 0.25; if (Math.random() < dt * 10) this.fx.embers(P.pos, 0xff6080, { n: 1, radius: 1.2, life: 0.8, size: 0.3, rise: 2.5 }); if (P.t > 0.8 && this.player.alive && this.player.distTo({ pos: P.pos }) < 1.4) this.usePortal(); }
     let alive = 0;
     for (let i = this.enemies.length - 1; i >= 0; i--) { const e = this.enemies[i]; e.update(dt); if (e.dead) { e.dispose(); this.enemies.splice(i, 1); } else if (e.alive && !e.spawning) alive++; }
+    if (this.active) this.crowdContacts = resolveCrowdContacts(this.enemies, this.player, this.world, dt);
     if (!this.stage.party && this.stage.expedition?.kind !== 'arena') this.app.companionAgent?.updateBattle(this, dt, realDt);
     if (alive > this.peakAlive) this.peakAlive = alive;   // 층 내 동시 생존 최대 (하네스 maxAliveSeen)
     this.updateProjectiles(dt);

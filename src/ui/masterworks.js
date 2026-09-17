@@ -66,6 +66,7 @@ export class MasterworksView {
     const sameView=this.renderedTab===this.tab&&this.renderedOffer===offer;
     const scrollTop=sameView?this.content.scrollTop:0;
     this.renderedTab=this.tab;this.renderedOffer=offer;
+    this.dialog.dataset.offer=offer?.kind||'';
     const run=this.tab==='run';this.nav.hidden=run;this.title.textContent=run?'이번 원정의 각인':'모험가의 길';
     [...this.nav.children].forEach((e,i)=>e.setAttribute('aria-pressed',String(['build','mastery','quests','journal'][i]===this.tab)));
     this.content.replaceChildren();
@@ -121,8 +122,8 @@ export class MasterworksView {
     const run=this.battle.run;if(!run){this.content.append(n('p','','출격하면 이번 원정의 각인을 선택할 수 있습니다.'));return;}
     const offer=this.battle.currentOffer();
     if(offer?.kind==='boon') {
-      this.content.append(n('p','mw-eyebrow',`각인 선택 ${run.picked.length+1} · 세 가지 가능성`),n('h3','mw-choice-title','이번 싸움을 바꿀 힘'),details('서로 다른 계열을 모으면 조합 효과가 열립니다. 같은 각인은 3단계까지 강화됩니다.','각인 조합 규칙'));
-      const cards=n('div','mw-grid mw-choices');for(const id of offer.ids){const b=BOONS.find(x=>x.id===id),rank=run.picked.filter(x=>x===id).length;const card=btn('',()=>this.act(()=>this.battle.selectBoon(id),'이번 원정에 적용했습니다.'),'mw-card mw-boon');card.dataset.boon=id;card.dataset.family=b.family;const illustration=art(`boon-${b.family}`);illustration.className+=' mw-boon-art';card.append(illustration,n('small','mw-eyebrow',`${family[b.family][0]} · ${rank?`강화 ${rank} → ${rank+1}`:'새 각인'}`),n('h4','',b.name),n('p','',b.description),n('strong','mw-pick','이 각인 선택'));cards.append(card);}this.content.append(cards);
+      this.content.append(n('p','mw-eyebrow',`각인 선택 ${run.picked.length+1} · 세 가지 가능성`),n('h3','mw-choice-title','이번 싸움을 바꿀 힘'));
+      const cards=n('div','mw-grid mw-choices');for(const id of offer.ids){const b=BOONS.find(x=>x.id===id),rank=run.picked.filter(x=>x===id).length;const card=btn('',()=>this.act(()=>this.battle.selectBoon(id),'이번 원정에 적용했습니다.'),'mw-card mw-boon');card.dataset.boon=id;card.dataset.family=b.family;const illustration=art(`boon-${b.family}`);illustration.className+=' mw-boon-art';card.append(illustration,n('small','mw-eyebrow',`${family[b.family][0]} · ${rank?`강화 ${rank} → ${rank+1}`:'새 각인'}`),n('h4','',b.name),n('p','',b.description),n('strong','mw-pick','이 각인 선택'));cards.append(card);}this.content.append(cards,details('서로 다른 계열을 모으면 조합 효과가 열립니다. 같은 각인은 3단계까지 강화됩니다.','각인 조합 규칙'));
     } else if(offer?.kind==='story') {
       const event=STORY_EVENTS.find(e=>e.id===offer.id),remembered=event.choices.find(c=>c.id===this.state.story[event.id]);
       this.intro(event.name,remembered?remembered.consequence:event.description,offer.id==='bridge'?'ember_vault':'glass_garden');

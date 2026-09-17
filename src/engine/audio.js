@@ -401,7 +401,21 @@ export class AudioSys {
   setSfxOn(on) { this.enabled = !!on; if (!on) { clearTimeout(this._hitTimer); this._hitTimer = null; this._hitPending = null; this._stopVoices('sfx'); } this.setMix(); }
 
   // ---------- 햅틱 ----------
-  vibe(pattern) { if (this.haptics && navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) {} } }
+  vibe(pattern) {
+    // A crowd is one short pulse, not dozens of calls restarting the motor.
+    try {
+      if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return false;
+      if (pattern === 0) { this._vibeAt = -Infinity; return navigator.vibrate(0); }
+      if (!this.haptics || (typeof document !== 'undefined' && document.hidden)) return false;
+      const values = (Array.isArray(pattern) ? pattern : [pattern]).slice(0,5);
+      if (!values.length || values.some(v => !Number.isFinite(v) || v < 0)) return false;
+      const now = performance.now(); if (now - (this._vibeAt ?? -Infinity) < 85) return false;
+      const safe = values.map(v => Math.min(60, Math.round(v)));
+      const accepted = navigator.vibrate(safe.length === 1 ? safe[0] : safe);
+      if (accepted) this._vibeAt = now;
+      return accepted;
+    } catch { return false; }
+  }
 }
 
 export const audio = new AudioSys();

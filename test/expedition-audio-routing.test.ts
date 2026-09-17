@@ -16,7 +16,7 @@ for (const [crit,finisher,accent] of [[false,false,null],[true,false,'light'],[f
   test(`real damage path: critical=${crit}, finisher=${finisher} reaches ${accent ?? 'no'} Flow accent`, () => {
     const {sound,heard} = soundFixture();
     spyOn(audio,'hit').mockImplementation(sound.hit.bind(sound));
-    spyOn(audio,'vibe').mockImplementation(() => {});
+    spyOn(audio,'vibe').mockImplementation(() => false);
     const noop=()=>{};
     const game:any={stage:{},app:{},feedbackCount:0,feedbackSound:false,player:{stats:{crit:crit?1:0,critDmg:1.5},addUlt:noop},dmgDealt:0,combo:0,maxCombo:0,ui:{setCombo:noop},
       fx:{dmgLayer:{children:[]},damage:noop,contact:noop,texFlash:noop,light:noop},timeCtl:{hitstop:noop},renderer:{shake:noop}};

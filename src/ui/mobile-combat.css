@@ -198,3 +198,11 @@ dialog[open] { top:var(--sat); bottom:auto; margin-top:12px; overflow-y:auto; }
   body:has(#hud.show) .companion-launcher-mark { width:28px; height:28px; font-size:16px; }
   body:has(#hud.show) .companion-launcher-copy,body:has(#hud.show) .companion-launcher>.companion-link-dot { display:none; }
 }
+
+/* Short landscape: preparation button and hero identity must not share a row. */
+@media(orientation:landscape) and (max-height:360px){
+ .experience-v2 #tab-home .lobby-hero-name{position:absolute;top:214px;bottom:auto;left:20px;width:156px;display:grid;grid-template-columns:auto 1fr;gap:0 5px;align-items:center}
+ .experience-v2 #tab-home #lobby-hero-name{font-size:16px;line-height:22px;margin:0}
+ .experience-v2 #tab-home #lobby-rarity{margin:0}
+ .experience-v2 #tab-home .lobby-power{grid-column:1/-1;font-size:12px;line-height:18px}
+}
