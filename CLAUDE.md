@@ -233,7 +233,8 @@ tools/chrome.mjs      헤드리스 크롬 경로 해결 — 컨테이너의 /opt
 - **프레임 루프에서 할당하지 마라.** 벡터는 재사용, 파티클은 풀에서 꺼내 swap-remove 로 되돌린다
 - 새 렌더 오브젝트는 인스턴싱하거나 머지한다. `drawCalls` 밴드가 이걸 감시한다
 - `app.step(dt, render)` 의 결정성을 깨지 마라 — 하네스 전체가 여기 의존한다.
-  게임 로직에서 `performance.now()`/`Date.now()` 를 직접 읽지 말고 넘겨받은 `dt` 를 써라
+ 게임 로직에서 `performance.now()`/`Date.now()` 를 직접 읽지 말고 넘겨받은 `dt` 를 써라.
+ **연출(`engine/fx.js`·`engine/audio.js`)은 `Math.random` 대신 `engine/prng.js` 의 `prand()` 를 쓴다** — 벽시계 게이트(오디오 최소 간격, animationend 로 지워지는 DOM 개수) 뒤에서 게임 난수를 소비하면 같은 시드에서도 층이 ±20초 흔들린다 (2026-09-18 실측, `test/presentation-rng.test.ts`)
 - 새 애니메이션 클립은 `src/data/rigs.js` 의 논리 키(`idle`/`run`/`hit`/`death`...)로 접근한다.
   KayKit 과 Quaternius 는 클립 이름이 다르고, GLTFLoader 는 노드 이름의 `.` 을 지운다
 
