@@ -90,12 +90,14 @@ export class UI {
   toast(msg, cls = '', options = {}) { if (this.el.hud.classList.contains('show')) { this.combatNotices.push(msg, cls, options); return; } const d = document.createElement('div'); d.className = 'toast ' + cls; d.innerHTML = msg; this.el.toast.appendChild(d); setTimeout(() => d.remove(), 2200); while (this.el.toast.children.length > 4) this.el.toast.firstChild.remove(); }
   flyReward(worldPos, text, camera, kind = 'gold') { if (this.app.battle?.result || this.el.result.classList.contains('show') || document.querySelectorAll('.reward-fly').length > 8) return; const v = new THREE.Vector3().copy(worldPos).setY(1.5).project(camera); if (v.z > 1) return; const d = document.createElement('div'); d.className = 'reward-fly'; d.textContent = text; d.style.color = kind === 'stone' ? '#4cc3ff' : 'var(--gold)'; d.style.left = ((v.x * 0.5 + 0.5) * innerWidth) + 'px'; d.style.top = ((-v.y * 0.5 + 0.5) * innerHeight) + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 1000); }
   /** 필드 득템 팝업 */
-  lootPopup(def, rarity) {
+  lootPopup(def, rarity, worn = null) {
     if (this.app.battle?.result || this.el.result.classList.contains('show')) return;
     while (this.lootLayer.children.length >= 2) this.lootLayer.firstChild.remove();
-    const d = document.createElement('div'); d.className = 'loot-pop'; d.style.setProperty('--rc', RARITY_COLOR[rarity] || '#9aa3b2');
-    d.innerHTML = `<span class="lp-rar">${rarity}</span><img src="${ITEM_ICON(def)}" onerror="this.remove()"><span>${def.name}</span>`;
-    this.lootLayer.appendChild(d); setTimeout(() => d.remove(), 1250);
+    const d = document.createElement('div'); d.className = 'loot-pop' + (worn ? ' worn' : ''); d.style.setProperty('--rc', RARITY_COLOR[rarity] || '#9aa3b2');
+    // 자동 장착된 드랍은 '장착' 배지와 세트 진행("신병 세트 2/4")을 함께 띄운다 — 세트 한 칸 채움이 눈에 보여야 진전이다
+    const setLine = worn?.progress ? `<span class="lp-set" style="--sc:${worn.progress.set.themed ? '#' + worn.progress.set.color.toString(16).padStart(6, '0') : 'var(--rc)'}">${worn.progress.set.name} <b>${worn.progress.n}/4</b>${worn.progress.tier ? ` · ${worn.progress.tier}세트` : ''}</span>` : '';
+    d.innerHTML = `<span class="lp-rar">${rarity}</span><img src="${ITEM_ICON(def)}" onerror="this.remove()"><span class="lp-body"><span>${def.name}${worn ? `<span class="lp-equip">${worn.reason === 'better' ? '교체' : '장착'}</span>` : ''}</span>${setLine}</span>`;
+    this.lootLayer.appendChild(d); setTimeout(() => d.remove(), worn ? 2200 : 1250);
   }
   rewardHtml(got) { return got.map((g) => { if (g.k === 'item') { const it = ITEM_BY_ID[g.item.id]; return `<span class="reward-chip rar-${it.rarity}" style="border:1px solid"><img src="${ITEM_ICON(it)}" style="width:18px;height:18px" onerror="this.remove()"> ${it.name}</span>`; } const [nm, ic] = REWARD_LABEL[g.k] || [g.k, '']; return `<span class="reward-chip"><img src="${ic}" style="width:18px;height:18px" onerror="this.remove()"> ${nm} +${fmt(g.n)}</span>`; }).join(''); }
   rewardToast(got, cls = 'gold') { if (got && got.length) this.toast(this.rewardHtml(got), cls); }

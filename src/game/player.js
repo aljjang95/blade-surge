@@ -50,6 +50,14 @@ export class Player extends Actor {
     this.ult = Math.min(this.ultMax, this.ult + n); return this.ult;
   }
   addMp(n) { this.mp = Math.max(0, Math.min(this.maxMp, this.mp + n)); return this.mp; }
+  /** 전투 중 장착이 바뀌면 무기·의상 메시와 발광을 다시 입힌다. 새 의상 재질도 히트플래시 목록에 넣는다 */
+  refreshLook(equip = {}) {
+    this.look = applyLook(this.model, this.def, equip);
+    const dressedMaterials = new Set();
+    this.model.traverse(o => { if (o.isMesh) for (const m of materialsOf(o)) if (m.emissive) dressedMaterials.add(m); });
+    this.mats = [...dressedMaterials]; this._emDirty = true;
+    return this.look;
+  }
   combatSkillIndex(slot) { return skillIndexForCombatSlot(this.skillLoadout, slot); }
   combatSkill(slot) { const index = this.combatSkillIndex(slot); return { index, skill: this.def.skills[index] }; }
   tryCastCombatSkill(slot) { const index = this.combatSkillIndex(slot); return index >= 0 && this.tryCastSkill(index); }

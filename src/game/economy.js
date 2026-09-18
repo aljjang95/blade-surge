@@ -25,7 +25,7 @@ export class Economy {
       pity: 0, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
       daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false }],
-      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto' }, limitedStart: now(),
+      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', autoEquip: 'empty' }, limitedStart: now(),
     };
   }
   load() {
@@ -186,7 +186,7 @@ export class Economy {
   }
   sellItem(uid) { const i = this.s.inventory.findIndex((x) => x.uid === uid); if (i < 0) return; const inst = this.s.inventory[i]; const r = ITEM_BY_ID[inst.id].rarity; const gold = RARITY_INFO[r]?.sell || 200; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } this.s.inventory.splice(i, 1); this.s.gold += gold; this.emit(); return gold; }
   /** 필드 드랍 아이템 (즉시 인벤토리) */
-  fieldDrop(rarity) { const it = this.addItem(rarity); this.save(); return it; }
+  fieldDrop(rarity, slot = null) { const it = this.addItem(rarity, slot); this.save(); return it; }
   // ---------- 스테이지 ----------
   stageKey(ch, st) { return `${ch}-${st}`; }
   stageIndex(ch, st) { return (ch - 1) * STAGES_PER_CHAPTER + st; }

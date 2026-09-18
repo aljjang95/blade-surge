@@ -5,6 +5,7 @@ import { BATTLE_PASS } from '../data/shop.js';
 import { normalizeLobbyCamera } from '../engine/lobby-camera.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
+import { normalizeAutoEquip } from './field-equip.js';
 
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const integer = (value, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) =>
@@ -74,6 +75,7 @@ export function normalizeSave(raw, fresh) {
   s.mail = fresh.mail.map((mail) => ({ ...mail, read: s.mail.some((saved) => saved?.id === mail.id && saved.read === true) }));
   if (!['auto', 'low', 'mid', 'high'].includes(s.settings.quality)) s.settings.quality = 'auto';
   if (!['auto', 'top', 'action', 'wide'].includes(s.settings.camera)) s.settings.camera = 'auto';
+  s.settings.autoEquip = normalizeAutoEquip(s.settings.autoEquip);
   s.settings.lobbyCamera = normalizeLobbyCamera(raw.settings?.lobbyCamera);
   s.name = s.name.trim().slice(0, 20) || fresh.name;
   s.expedition = normalizeExpedition(raw.expedition);

@@ -22,6 +22,7 @@ import { buildExpeditionWorld, expeditionRoster, applyBattleConsumable, canApply
 import { ConquestRun } from './expedition-conquests.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
+import { applyFieldEquip, recomputeHeroStats } from './field-equip.js';
 
 const _v = new THREE.Vector3();
 const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
@@ -111,6 +112,32 @@ export class Battle {
     themed.forEach((a, i) => this.after(1.2 + i * 0.9, () => { if (!this.active) return; this.ui.toast(`${a.set.name} ${a.tier}세트 발동 — ${a.set[a.tier === 4 ? 'four' : 'two'].text}`, 'gold'); this.fx.holyBurst(this.player.pos, { size: 6, life: 0.5, color: a.set.color }); audio.magic({ vol: 0.3, base: 440, notes: [0, 4, 7], step: 0.07 }); if (a.set.voiced) audio.voice('set_' + a.set.id, { min: 5 }); }));
   }
   hasProc(name) { return this.procs && this.procs.has(name); }
+  /** 장착이 바뀐 뒤 스탯·세트 발동·소환·외형을 현재 장비대로 다시 맞춘다 (필드 자동 장착) */
+  refreshHeroLoadout() {
+    const bonus = recomputeHeroStats(this); if (!bonus) return null;
+    this.setBonus = bonus.active || []; this.procs = new Set(bonus.procs || []);
+    const summonIds = (bonus.summons || []).map((s) => s.id).join('|');
+    if (this.sp && summonIds !== (this.sp.summons || []).map((s) => s.id).join('|')) this.sp.configureSummons?.(bonus.summons || []);
+    this.player.refreshLook?.(this.app.eco.heroEquipInsts(this.heroId));
+    return bonus;
+  }
+  /** 장비 드랍을 집은 순간 — 빈 슬롯이면(설정에 따라 더 강하면) 그 자리에서 장착하고 세트 진전을 알린다 */
+  onLootPickup(inst) {
+    if (!this.active || !this.player?.alive || this.stage?.party) return null;
+    const r = applyFieldEquip(this, inst);
+    if (!r?.equipped) return r;
+    const at = this.player.pos.clone().setY(0.05);
+    this.fx.groundTex(at, 'circle_gold', 0xfff0b0, { r0: 0.4, r1: 2.6, life: 0.5, spin: 2 });
+    audio.play('ui_glass', { vol: 0.45, rate: 1.35 }); audio.vibe(15);
+    for (const [i, a] of r.activated.entries()) this.after(0.35 + i * 0.9, () => {
+      if (!this.active) return;
+      this.ui.toast(`<b>${a.set.name} ${a.tier}세트 발동</b> — ${a.text}`, 'gold');
+      this.fx.holyBurst(this.player.pos, { size: a.tier >= 4 ? 7 : 5, life: 0.5, color: a.set.color || 0xffd060 });
+      audio.magic({ vol: 0.35, base: a.tier >= 4 ? 523 : 440, notes: [0, 4, 7, 12], step: 0.06 });
+      if (a.set.voiced) audio.voice('set_' + a.set.id, { min: 5 });
+    });
+    return r;
+  }
   applyConsumable(id) { return applyBattleConsumable(this, id); }
   canApplyConsumable(id) { return canApplyBattleConsumable(this, id); }
   updateExpedition(dt) {
