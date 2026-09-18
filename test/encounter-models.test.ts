@@ -37,7 +37,7 @@ describe('Source-bound regional encounter geometry',()=>{
     for(let chapter=1;chapter<=6;chapter++){
       const stage=stageDef(chapter,10),def=enemies[stage.encounter.enemyId];
       expect(variants[def.model]).toBeDefined();expect(def.boss).toBe(true);
-      expect(def.hp).toBe(53200);expect(def.atk).toBe(53);expect(def.scale).toBe(2.25);
+      expect(def.hp).toBe(106400);expect(def.atk).toBe(53);expect(def.scale).toBe(2.25);
     }
     expect(enemies.crown_finalboss.weapon).toBe('Skeleton_Blade');
   });
