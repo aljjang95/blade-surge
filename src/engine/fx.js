@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { softCircleTex, sparkTex, ringTex, slashTex, smokeTex, VFX_TEX } from './assets.js';
 import { ImpactLights } from './impact-lights.js';
+import { prand } from './prng.js';
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
 
@@ -53,7 +54,7 @@ export class ParticlePool {
   }
   emit(x, y, z, vx, vy, vz, color, size, life, { grav = 9, drag = 0.98, shrink = 1 } = {}) {
     let i;
-    if (this.n < this.max) i = this.n++; else i = Math.floor(Math.random() * this.max);
+    if (this.n < this.max) i = this.n++; else i = Math.floor(prand() * this.max);
     this.pos[i * 3] = x; this.pos[i * 3 + 1] = y; this.pos[i * 3 + 2] = z;
     this.vel[i * 3] = vx; this.vel[i * 3 + 1] = vy; this.vel[i * 3 + 2] = vz;
     this.col[i * 3] = color.r; this.col[i * 3 + 1] = color.g; this.col[i * 3 + 2] = color.b;
@@ -222,16 +223,16 @@ export class FX {
     const p = this[pool]; const c = new THREE.Color(color);
     if (this.lite) n = Math.ceil(n / 2);
     for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2, e = (Math.random() - 0.5) * Math.PI * spread, s = speed * (0.4 + Math.random() * 0.8);
-      p.emit(pos.x, pos.y, pos.z, Math.cos(a) * Math.cos(e) * s, Math.sin(e) * s + up * speed, Math.sin(a) * Math.cos(e) * s, c, size * (0.6 + Math.random() * 0.8), life * (0.6 + Math.random() * 0.8), { grav, shrink });
+      const a = prand() * Math.PI * 2, e = (prand() - 0.5) * Math.PI * spread, s = speed * (0.4 + prand() * 0.8);
+      p.emit(pos.x, pos.y, pos.z, Math.cos(a) * Math.cos(e) * s, Math.sin(e) * s + up * speed, Math.sin(a) * Math.cos(e) * s, c, size * (0.6 + prand() * 0.8), life * (0.6 + prand() * 0.8), { grav, shrink });
     }
   }
   directional(pos, dir, color, { n = 14, speed = 9, size = 0.3, life = 0.4, spread = 0.5 } = {}) {
     const c = new THREE.Color(color); if (this.lite) n = Math.ceil(n / 2);
     for (let i = 0; i < n; i++) {
-      const s = speed * (0.5 + Math.random());
-      _v.set(dir.x + (Math.random() - 0.5) * spread, 0.25 + Math.random() * 0.5, dir.z + (Math.random() - 0.5) * spread).normalize().multiplyScalar(s);
-      this.sparks.emit(pos.x, pos.y, pos.z, _v.x, _v.y, _v.z, c, size * (0.6 + Math.random() * 0.8), life * (0.6 + Math.random() * 0.8), { grav: 14, shrink: 0.1 });
+      const s = speed * (0.5 + prand());
+      _v.set(dir.x + (prand() - 0.5) * spread, 0.25 + prand() * 0.5, dir.z + (prand() - 0.5) * spread).normalize().multiplyScalar(s);
+      this.sparks.emit(pos.x, pos.y, pos.z, _v.x, _v.y, _v.z, c, size * (0.6 + prand() * 0.8), life * (0.6 + prand() * 0.8), { grav: 14, shrink: 0.1 });
     }
   }
   /** Bounded contact cue: pooled sparks, one short flash, and a heavy-only pooled light. */
@@ -298,18 +299,18 @@ export class FX {
   }
   dust(pos, { n = 10, color = 0x8a7a6a, size = 1.4, life = 0.9, speed = 2.5 } = {}) {
     const c = new THREE.Color(color); if (this.lite) n = Math.ceil(n / 2);
-    for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, s = speed * (0.3 + Math.random()); this.smoke.emit(pos.x, pos.y + 0.2, pos.z, Math.cos(a) * s, 0.6 + Math.random(), Math.sin(a) * s, c, size * (0.6 + Math.random() * 0.8), life * (0.7 + Math.random() * 0.6), { grav: -0.6, drag: 0.94, shrink: 1.8 }); }
+    for (let i = 0; i < n; i++) { const a = prand() * Math.PI * 2, s = speed * (0.3 + prand()); this.smoke.emit(pos.x, pos.y + 0.2, pos.z, Math.cos(a) * s, 0.6 + prand(), Math.sin(a) * s, c, size * (0.6 + prand() * 0.8), life * (0.7 + prand() * 0.6), { grav: -0.6, drag: 0.94, shrink: 1.8 }); }
   }
   embers(pos, color, { n = 8, radius = 1, life = 1.2, size = 0.22, rise = 2.5 } = {}) {
     const c = new THREE.Color(color); if (this.lite) n = Math.ceil(n / 2);
-    for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, r = Math.random() * radius; this.glow.emit(pos.x + Math.cos(a) * r, pos.y + Math.random() * 0.5, pos.z + Math.sin(a) * r, (Math.random() - 0.5) * 1.2, rise * (0.5 + Math.random()), (Math.random() - 0.5) * 1.2, c, size * (0.5 + Math.random()), life * (0.6 + Math.random() * 0.8), { grav: -1, drag: 0.97, shrink: 0.2 }); }
+    for (let i = 0; i < n; i++) { const a = prand() * Math.PI * 2, r = prand() * radius; this.glow.emit(pos.x + Math.cos(a) * r, pos.y + prand() * 0.5, pos.z + Math.sin(a) * r, (prand() - 0.5) * 1.2, rise * (0.5 + prand()), (prand() - 0.5) * 1.2, c, size * (0.5 + prand()), life * (0.6 + prand() * 0.8), { grav: -1, drag: 0.97, shrink: 0.2 }); }
   }
   aura(pos, color, n = 3) { this.embers(pos, color, { n, radius: 0.8, life: 0.8, size: 0.3, rise: 2 }); }
 
   // ---------- 스프라이트 플래시 ----------
   flash(pos, color, { size = 2.2, life = 0.18, tex = 'spark', angle = null, stretch = 1, contact = false } = {}) {
     const m = this._keep(new THREE.SpriteMaterial({ map: tex === 'spark' ? sparkTex() : softCircleTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 1 }));
-    const s = new THREE.Sprite(m); s.position.copy(pos); s.scale.set(size*.3*stretch,size*.3/stretch,1); s.material.rotation = angle ?? Math.random() * Math.PI; s.renderOrder = 11;
+    const s = new THREE.Sprite(m); s.position.copy(pos); s.scale.set(size*.3*stretch,size*.3/stretch,1); s.material.rotation = angle ?? prand() * Math.PI; s.renderOrder = 11;
     this.add(s, life, (k) => {
       const radius=size*(contact ? .45+.55*Math.min(1,k/.18) : .3+k*1.2);
       s.scale.set(radius*stretch,radius/stretch,1); m.opacity = contact ? (1-k)**1.7 : 1-k;
@@ -369,7 +370,7 @@ export class FX {
       while (group.children.length) { const c = group.children.pop(); c.geometry.dispose(); }
       const mk = (a, b, w, n) => {
         const pts = [a.clone()]; const d = b.clone().sub(a); const len = d.length(); const perp = new THREE.Vector3(-d.z, 0, d.x).normalize();
-        for (let i = 1; i < n; i++) { const t = i / n; const p = a.clone().addScaledVector(d, t); p.addScaledVector(perp, (Math.random() - 0.5) * jitter * len * 0.25); p.y += (Math.random() - 0.5) * jitter * len * 0.2; pts.push(p); }
+        for (let i = 1; i < n; i++) { const t = i / n; const p = a.clone().addScaledVector(d, t); p.addScaledVector(perp, (prand() - 0.5) * jitter * len * 0.25); p.y += (prand() - 0.5) * jitter * len * 0.2; pts.push(p); }
         pts.push(b.clone());
         const pos = []; const camDir = this.camera.position.clone().sub(a).normalize();
         for (let i = 0; i < pts.length - 1; i++) {
@@ -382,7 +383,7 @@ export class FX {
         return pts;
       };
       const pts = mk(from, to, width, segs);
-      for (let b = 0; b < branches; b++) { const i = 1 + Math.floor(Math.random() * (pts.length - 2)); const p = pts[i]; const end = p.clone().add(new THREE.Vector3((Math.random() - 0.5) * 3, -1 - Math.random() * 2, (Math.random() - 0.5) * 3)); mk(p, end, width * 0.5, 5); }
+      for (let b = 0; b < branches; b++) { const i = 1 + Math.floor(prand() * (pts.length - 2)); const p = pts[i]; const end = p.clone().add(new THREE.Vector3((prand() - 0.5) * 3, -1 - prand() * 2, (prand() - 0.5) * 3)); mk(p, end, width * 0.5, 5); }
     };
     build(); let acc = 0;
     this.add(group, life, (k, t, dt) => { acc += dt; if (acc > 0.05) { acc = 0; build(); } m.opacity = 1 - k * k; }, () => { m.dispose(); group.children.forEach((c) => c.geometry.dispose()); });
@@ -428,7 +429,7 @@ export class FX {
   /** 카메라를 향하는 텍스처 플래시 (holy_burst, ice, shockwave 등) */
   texFlash(pos, name, color = 0xffffff, { size = 3, life = 0.35, spin = 0, grow = 1.3, y = 1 } = {}) {
     const tex = VFX_TEX[name]; if (!tex) return this.flash(pos, color, { size, life });
-    const m = this._keep(new THREE.SpriteMaterial({ map: tex, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, rotation: Math.random() * Math.PI * 2 }));
+    const m = this._keep(new THREE.SpriteMaterial({ map: tex, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, rotation: prand() * Math.PI * 2 }));
     const sp = new THREE.Sprite(m); sp.position.copy(pos); sp.position.y += y; sp.scale.setScalar(size * 0.4); sp.renderOrder = 11;
     this.add(sp, life, (k, t, dt) => { const e = 1 - Math.pow(1 - k, 2); sp.scale.setScalar(size * (0.4 + e * grow)); m.opacity = k < 0.25 ? k / 0.25 : 1 - (k - 0.25) / 0.75; m.rotation += spin * dt; }, () => m.dispose());
     return sp;
@@ -499,7 +500,7 @@ export class FX {
     // 로컬 +Y 를 d 방향으로, 평면 법선은 카메라 쪽으로
     const up = d.clone().normalize(); const toCam = this.camera.position.clone().sub(mid).normalize(); const right = new THREE.Vector3().crossVectors(up, toCam).normalize(); const normal = new THREE.Vector3().crossVectors(right, up);
     const basis = new THREE.Matrix4().makeBasis(right, up, normal); mesh.quaternion.setFromRotationMatrix(basis);
-    let acc = 0; this.add(mesh, life, (k, t, dt) => { acc += dt; if (acc > 0.05) { acc = 0; mesh.scale.x = 0.7 + Math.random() * 0.6; m.map = tex; } m.opacity = 1 - k * k; }, () => m.dispose());
+    let acc = 0; this.add(mesh, life, (k, t, dt) => { acc += dt; if (acc > 0.05) { acc = 0; mesh.scale.x = 0.7 + prand() * 0.6; m.map = tex; } m.opacity = 1 - k * k; }, () => m.dispose());
   }
   /** 텍스처 참격 (slash.webp) — 진행방향에 수직, 이동 */
   slashSprite(pos, dir, color = 0xfff0a0, { size = 3, life = 0.5, speed = 0, tilt = -0.6, flip = false } = {}) {
@@ -521,7 +522,7 @@ export class FX {
     if (this.dmgLayer.children.length > this.maxDmg) { const old = this.dmgLayer.firstChild; if (old) { this.dmgLayer.removeChild(old); this.dmgPool.push(old); } }
     el.className = 'dmg' + (crit ? ' crit' : '') + (kind ? ' ' + kind : '');
     el.textContent = text ?? (crit ? `${Math.round(value)}!` : Math.round(value));
-    _v.copy(worldPos); _v.y += 1.9 + Math.random() * 0.5; _v.x += (Math.random() - 0.5) * 0.8; _v.project(this.camera);
+    _v.copy(worldPos); _v.y += 1.9 + prand() * 0.5; _v.x += (prand() - 0.5) * 0.8; _v.project(this.camera);
     const x = (_v.x * 0.5 + 0.5) * window.innerWidth, y = (-_v.y * 0.5 + 0.5) * window.innerHeight;
     el.style.left = x + 'px'; el.style.top = y + 'px';
     this.dmgLayer.appendChild(el);

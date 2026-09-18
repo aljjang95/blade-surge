@@ -1,17 +1,17 @@
 {
   "errors": 0,
-  "bootMs": 2617,
-  "floorClearSec": 190.6,
-  "killsPerFloor": 191,
-  "maxAliveSeen": 24,
-  "_maxAliveSampled": 24,
-  "dropsPerFloor": 37,
-  "longestDryStreakSec": 12,
-  "hitTakenRatio": 0.199,
-  "avgFrameMs": 0.52,
+  "bootMs": 2532,
+  "floorClearSec": 197.9,
+  "killsPerFloor": 192,
+  "maxAliveSeen": 21,
+  "_maxAliveSampled": 21,
+  "dropsPerFloor": 39,
+  "longestDryStreakSec": 24,
+  "hitTakenRatio": 0.158,
+  "avgFrameMs": 0.51,
   "p95FrameMs": 1.6,
   "rhythmBeats": 8,
-  "drawCalls": 262,
+  "drawCalls": 256,
   "_beats": {
     "explore": true,
     "encounter": true,
@@ -33,7 +33,7 @@
   "_heroLevelStart": 1,
   "_heroLevelEnd": 4,
   "_endReason": "전구역클리어",
-  "_avgAlive": 3.5,
+  "_avgAlive": 3.3,
   "_errorSamples": [],
-  "_at": "2026-09-18T06:23:18.963Z"
+  "_at": "2026-09-18T06:32:40.420Z"
 }
