@@ -208,6 +208,7 @@ src/game/
   look.js             장비 외형 — 등급별 무기/방패 메시, 발광, 강화 오라 (전투·로비 공용)
   skills.js           스킬 16종 — 진공·텍스처 VFX
   setprocs.js         테마 세트 발동 효과 — 서리결정/역병포자/룬각인/심연사슬 (회전 8)
+  field-equip.js      필드 자동 장착 — 드랍 수거 즉시 빈 부위 장착(설정 3단), 전투 중 스탯·외형·세트 갱신
   enemies.js          잡몹/엘리트/보스 AI, 보스 패턴 킷 3종
   drops.js            3D 필드 드랍 + 자석 흡수 + 희귀도 연출
   battle.js           방 진입/클리어, 히트 판정, 진공, 투사체, 히트스탑, 승패
@@ -221,6 +222,7 @@ tools/shot_look.mjs   게이트 B 컷: 장비 외형 4영웅 × 3단계
 tools/shot_combo.mjs  게이트 B 컷: 기본 콤보 홀드 체인 (사람 입력 경로 — 하네스 AUTO 는 탭이라 못 잡는다)
 tools/voice/          보이스 파이프라인 — lines.mjs(대본·목소리 설명) → gen.mjs refs|lines|report (Runware Qwen VoiceDesign + Seed Audio, ASR 대조). refs/ 는 목소리 정체성 — 지우지 마라
 tools/shot_sets.mjs   게이트 B 컷+단언: 테마 세트 4종이 실제로 발화하는지 (하네스는 장비 없이 돌아 세트를 못 본다)
+tools/shot_equip.mjs  게이트 B 컷+단언: 필드 자동 장착 — 드랍→자석→수거 경로에서 장착·세트 발동·외형·설정 3단이 실제로 도는지
 tools/chrome.mjs      헤드리스 크롬 경로 해결 — 컨테이너의 /opt/pw-browsers/chromium 을 먼저 쓴다
 ```
 
@@ -231,7 +233,8 @@ tools/chrome.mjs      헤드리스 크롬 경로 해결 — 컨테이너의 /opt
 - **프레임 루프에서 할당하지 마라.** 벡터는 재사용, 파티클은 풀에서 꺼내 swap-remove 로 되돌린다
 - 새 렌더 오브젝트는 인스턴싱하거나 머지한다. `drawCalls` 밴드가 이걸 감시한다
 - `app.step(dt, render)` 의 결정성을 깨지 마라 — 하네스 전체가 여기 의존한다.
-  게임 로직에서 `performance.now()`/`Date.now()` 를 직접 읽지 말고 넘겨받은 `dt` 를 써라
+ 게임 로직에서 `performance.now()`/`Date.now()` 를 직접 읽지 말고 넘겨받은 `dt` 를 써라.
+ **연출(`engine/fx.js`·`engine/audio.js`)은 `Math.random` 대신 `engine/prng.js` 의 `prand()` 를 쓴다** — 벽시계 게이트(오디오 최소 간격, animationend 로 지워지는 DOM 개수) 뒤에서 게임 난수를 소비하면 같은 시드에서도 층이 ±20초 흔들린다 (2026-09-18 실측, `test/presentation-rng.test.ts`)
 - 새 애니메이션 클립은 `src/data/rigs.js` 의 논리 키(`idle`/`run`/`hit`/`death`...)로 접근한다.
   KayKit 과 Quaternius 는 클립 이름이 다르고, GLTFLoader 는 노드 이름의 `.` 을 지운다
 

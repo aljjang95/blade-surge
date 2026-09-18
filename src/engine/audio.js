@@ -1,4 +1,5 @@
 // Web Audio: 샘플(Kenney CC0) + 프로시저럴 합성 SFX + BGM 크로스페이드 + 햅틱
+import { prand } from './prng.js';
 const SFX_FILES = ['hit_punch0', 'hit_punch1', 'hit_punch2', 'hit_metal0', 'hit_metal1', 'hit_metal2', 'hit_soft0', 'hit_soft1', 'hit_bell', 'hit_mining', 'hit_wood', 'hit_plate', 'hit_glass',
   'ui_click', 'ui_confirm', 'ui_select', 'ui_back', 'ui_error', 'ui_open', 'ui_close', 'ui_max', 'ui_drop', 'ui_bong', 'ui_glass', 'ui_pluck',
   'coin0', 'coin1', 'coin_stack', 'pack_open', 'card_fan', 'card_place', 'jingle_win0', 'jingle_win1', 'jingle_legend',
@@ -98,9 +99,9 @@ export class AudioSys {
     if (!this.enabled || !this.mix.sfx || !this.ctx) return;
     const b = this.buffers[name]; if (!b) return;
     const t = this.now(); if (this.lastPlay[name] !== undefined && t - this.lastPlay[name] < min) return; this.lastPlay[name] = t;
-    return this._sample(b, { group: 'sfx', priority, vol, rate: rate * (1 + (Math.random() * 2 - 1) * vary), delay });
+    return this._sample(b, { group: 'sfx', priority, vol, rate: rate * (1 + (prand() * 2 - 1) * vary), delay });
   }
-  pick(prefix, n, opts) { this.play(prefix + Math.floor(Math.random() * n), opts); }
+  pick(prefix, n, opts) { this.play(prefix + Math.floor(prand() * n), opts); }
   /** 나레이션(TTS, /sfx/voice/*.mp3 — edge-tts InJoon 생성). 새 대사가 이전 대사를 끊고, BGM 을 잠깐 덕킹한다. min 은 같은 대사 최소 간격(초) */
   async voice(name, { vol = 1, min = 2, duck = 0.45, dur = 1.6 } = {}) {
     if (!this.voiceOn || !this.mix.voice || !this.ctx) return;
@@ -119,7 +120,7 @@ export class AudioSys {
   bark(name, { n = 0, vol = 0.9, min = 0.25, rate = 1, priority = 1 } = {}) {
     if (!this.voiceOn || !this.mix.voice || !this.ctx) return;
     const t = this.now(); if (this._barkLast[name] !== undefined && t - this._barkLast[name] < min) return; this._barkLast[name] = t;
-    const key = n ? name + Math.floor(Math.random() * n) : name;
+    const key = n ? name + Math.floor(prand() * n) : name;
     const b = this.voiceBuf[key];
     if (!b) { this._loadVoice(key); return; }
     return this._sample(b, { group: 'bark', vol, rate, priority });
@@ -130,7 +131,7 @@ export class AudioSys {
   // ---------- 프로시저럴 SFX ----------
   _noise(dur) {
     const sr = this.ctx.sampleRate, len = Math.floor(sr * dur), buf = this.ctx.createBuffer(1, len, sr), d = buf.getChannelData(0);
-    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    for (let i = 0; i < len; i++) d[i] = prand() * 2 - 1;
     const s = this.ctx.createBufferSource(); s.buffer = buf; return s;
   }
   /** 검 휘두름 */
@@ -160,7 +161,7 @@ export class AudioSys {
   zap({ vol = 0.5, dur = 0.3 } = {}) {
     if (!this.enabled || !this.ctx) return; const t = this.now();
     const o = this.ctx.createOscillator(); o.type = 'sawtooth';
-    const steps = 12; for (let i = 0; i < steps; i++) o.frequency.setValueAtTime(300 + Math.random() * 2400, t + (dur * i) / steps);
+    const steps = 12; for (let i = 0; i < steps; i++) o.frequency.setValueAtTime(300 + prand() * 2400, t + (dur * i) / steps);
     const f = this.ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 900;
     const g = this.ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     o.connect(f); f.connect(g); g.connect(this.sfxGain); o.start(t); o.stop(t + dur);
@@ -217,7 +218,7 @@ export class AudioSys {
     else if (kind === 'hurt') { this.pick('hit_soft', 2, { vol: 0.9, rate: 0.8 }); }
     this.thump({ vol: heavy ? 0.9 : 0.45, freq: heavy ? 60 : 100, dur: heavy ? 0.28 : 0.14 });
     this.contactSnap({vol:heavy?.18:.1,freq:heavy?1250:1900});
-    if (crit) this.ting({ vol: 0.45, freq: 1500 + Math.random() * 600 });
+    if (crit) this.ting({ vol: 0.45, freq: 1500 + prand() * 600 });
     // Flow Music score-derived impact accent; 기본 CC0 타격음에만 낮게 겹친다.
     if (heavy || crit) {
       const weight = finisher || !crit ? 'heavy' : 'light';
@@ -241,7 +242,7 @@ export class AudioSys {
   clang({ vol = 0.5, freq = 2400, dur = 0.35 } = {}) {
     if (!this.enabled || !this.ctx) return; const t = this.now();
     for (const [m, v] of [[1, 1], [1.51, 0.5], [2.11, 0.3], [3.07, 0.18]]) {
-      const o = this.ctx.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(freq * m * (0.97 + Math.random() * 0.06), t);
+      const o = this.ctx.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(freq * m * (0.97 + prand() * 0.06), t);
       const g = this.ctx.createGain(); this._env(g, t, 0.002, dur * (1 / m), vol * v);
       o.connect(g); g.connect(this.sfxGain); o.start(t); o.stop(t + dur + 0.05);
     }
@@ -249,7 +250,7 @@ export class AudioSys {
   /** 얼음 결정 (고음 반짝 + 크랙) */
   ice({ vol = 0.45, dur = 0.45 } = {}) {
     if (!this.enabled || !this.ctx) return; const t = this.now();
-    for (let i = 0; i < 5; i++) { const st = t + i * 0.025; const o = this.ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(2600 + Math.random() * 2600, st); const g = this.ctx.createGain(); this._env(g, st, 0.003, dur * 0.6, vol * (0.5 + Math.random() * 0.5)); o.connect(g); g.connect(this.sfxGain); o.start(st); o.stop(st + dur); }
+    for (let i = 0; i < 5; i++) { const st = t + i * 0.025; const o = this.ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(2600 + prand() * 2600, st); const g = this.ctx.createGain(); this._env(g, st, 0.003, dur * 0.6, vol * (0.5 + prand() * 0.5)); o.connect(g); g.connect(this.sfxGain); o.start(st); o.stop(st + dur); }
     const n = this._noise(dur * 0.5); const f = this.ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 3000;
     const g2 = this.ctx.createGain(); this._env(g2, t, 0.004, dur * 0.4, vol * 0.5); n.connect(f); f.connect(g2); g2.connect(this.sfxGain); n.start(t); n.stop(t + dur);
   }

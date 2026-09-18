@@ -637,6 +637,13 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .loot-pop { display: flex; align-items: center; gap: 6px; padding: 5px 12px 5px 6px; border-radius: 10px; background: rgba(8,6,16,.88); border: 2px solid var(--rc, #9aa3b2); font-size: 12px; font-weight: 900; animation: lootPop 1.8s cubic-bezier(.1,.9,.3,1) forwards; box-shadow: 0 0 14px var(--rc); }
 .loot-pop img { width: 26px; height: 26px; object-fit: contain; }
 .loot-pop .lp-rar { font-family: var(--disp); font-size: 11px; padding: 0 5px; border-radius: 4px; background: var(--rc); color: #111; }
+/* 필드 자동 장착 — '장착' 배지 + 세트 진행 한 줄 */
+.loot-pop .lp-body { display: flex; flex-direction: column; gap: 2px; line-height: 1.15; }
+.loot-pop .lp-body > span { display: inline-flex; align-items: center; gap: 6px; }
+.loot-pop .lp-equip { font-family: var(--disp); font-size: 10px; letter-spacing: .04em; padding: 1px 6px; border-radius: 4px; background: var(--gold); color: #1a1206; box-shadow: 0 0 8px rgba(255,208,96,.7); }
+.loot-pop .lp-set { font-size: 10px; font-weight: 700; color: var(--sc, var(--rc)); opacity: .95; }
+.loot-pop .lp-set b { font-family: var(--disp); font-size: 11px; }
+.loot-pop.worn { animation-duration: 2.2s; border-color: var(--gold); box-shadow: 0 0 16px var(--rc), 0 0 6px var(--gold); }
 @keyframes lootPop { 0% { transform: translateY(16px) scale(.7); opacity: 0 } 12% { transform: none; opacity: 1 } 75% { opacity: 1 } 100% { transform: translateY(-22px); opacity: 0 } }
 
 /* ---------- 세트 효과 표시 ---------- */

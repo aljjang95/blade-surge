@@ -115,7 +115,9 @@ export class DropSystem {
     } else {
       this.loot.push(it.payload);
       const def = ITEM_BY_ID[it.payload.id];
-      g.ui.lootPopup(def, it.payload.rarity);
+      // 필드 자동 장착 — 빈 슬롯이면 집는 순간 몸에 붙고, 세트 진행이 팝업에 함께 뜬다
+      const worn = g.onLootPickup?.(it.payload) || null;
+      g.ui.lootPopup(def, it.payload.rarity, worn?.equipped ? worn : null);
       audio.loot(it.payload.rarity);
       g.fx.burst(pos, RARITY_COLOR[it.payload.rarity], { n: 14, speed: 6, size: 0.35, life: 0.5 });
       audio.vibe(it.payload.rarity === 'L' ? [40, 30, 90] : it.payload.rarity === 'U' ? [30, 20, 50] : 20);

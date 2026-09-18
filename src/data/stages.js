@@ -216,11 +216,14 @@ const CAMPAIGN_ENCOUNTERS = {
 };
 const RANK_STATS = {
   // 관문도 궁극기 한 번 뒤에 패턴을 보여줄 체력이 필요하다.
-  // 기존 첫 보스(31,200)를 기준으로 계급 간 6k/8k/8k 차이를 보존한다.
-  captain: { hp: 31200, atk: 40, scale: 1.45, exp: 90, gold: 20 },
-  warden: { hp: 37200, atk: 44, scale: 1.7, exp: 120, gold: 28 },
-  midboss: { hp: 45200, atk: 48, scale: 1.95, exp: 160, gold: 40 },
-  finalboss: { hp: 53200, atk: 53, scale: 2.25, exp: 220, gold: 55 },
+  // 기존 첫 보스(31,200)를 기준으로 계급 간 12k/16k/16k 차이를 보존한다.
+  // 2026-09-18 재중심화: 연계·조작 보상·동행·층 중 레벨업·필드 자동 장착으로 영웅이 세진 뒤
+  // 1층 관문 보스가 18~20초에 죽어 60%·30% 페이즈를 보여 주지 못했다(설계 45~55초, LESSONS 회전 4).
+  // 계급 체력을 2배로 올려 보스전을 설계 길이로 되돌리고 층 클리어를 밴드 하한(150초)에서 떼어 놓는다.
+  captain: { hp: 62400, atk: 40, scale: 1.45, exp: 90, gold: 20 },
+  warden: { hp: 74400, atk: 44, scale: 1.7, exp: 120, gold: 28 },
+  midboss: { hp: 90400, atk: 48, scale: 1.95, exp: 160, gold: 40 },
+  finalboss: { hp: 106400, atk: 53, scale: 2.25, exp: 220, gold: 55 },
 };
 for (const chapter of CHAPTERS) {
   const theme = chapter.theme;

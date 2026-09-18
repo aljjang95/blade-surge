@@ -1,17 +1,17 @@
 {
   "errors": 0,
-  "bootMs": 2342,
-  "floorClearSec": 180,
-  "killsPerFloor": 162,
-  "maxAliveSeen": 21,
-  "_maxAliveSampled": 21,
-  "dropsPerFloor": 41,
-  "longestDryStreakSec": 16,
-  "hitTakenRatio": 0.233,
-  "avgFrameMs": 5.06,
-  "p95FrameMs": 1.5,
+  "bootMs": 3387,
+  "floorClearSec": 150.4,
+  "killsPerFloor": 190,
+  "maxAliveSeen": 25,
+  "_maxAliveSampled": 25,
+  "dropsPerFloor": 34,
+  "longestDryStreakSec": 14,
+  "hitTakenRatio": 0.19,
+  "avgFrameMs": 0.65,
+  "p95FrameMs": 1.4,
   "rhythmBeats": 7,
-  "drawCalls": 270,
+  "drawCalls": 265,
   "_beats": {
     "explore": true,
     "encounter": true,
@@ -22,9 +22,18 @@
     "bossKill": true,
     "floorClear": true
   },
-  "_roomsCleared": "11/11",
+  "_roomsCleared": "12/12",
+  "_won": true,
+  "_seed": 20260905,
+  "_choices": [
+    "boon:storm_eye",
+    "story:lantern:guide",
+    "boon:tide_breath"
+  ],
+  "_heroLevelStart": 1,
+  "_heroLevelEnd": 4,
   "_endReason": "전구역클리어",
-  "_avgAlive": 3,
+  "_avgAlive": 4,
   "_errorSamples": [],
-  "_at": "2026-09-03T19:47:28.375Z"
+  "_at": "2026-09-18T05:45:45.773Z"
 }
