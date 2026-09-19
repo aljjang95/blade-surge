@@ -1,0 +1,24 @@
+{
+  "blender": "5.2.1 LTS",
+  "image_reference": "public/img/it_frost_armor.webp",
+  "reference_sha256": "55ac9ebd447a8047dc8ffe414e3379e32607a28ce9b420fcb8a3284fffaf2b6e",
+  "retained_source": "art/heroes-v3/knight-v3.blend",
+  "retained_source_sha256": "526e1744f71386eb05a27ddfeb7ce702c116d27ebb7208fbddbc7c556091a76c",
+  "output": "public/models/frost-armor-v1/knight-rime.glb",
+  "sha256": "a7e5d3686a0f26e70d61acf4ef1f8e99f5798a3edbfff704de29364d4350ee5e",
+  "bytes": 238480,
+  "meshes": 33,
+  "vertices": 2188,
+  "bones": [
+    "chest",
+    "hips",
+    "upperarm.l",
+    "upperarm.r"
+  ],
+  "materials": [
+    "Frost_darksteel",
+    "Frost_silver",
+    "Frost_crystal"
+  ],
+  "scope": "Authored armor only. Original face, hair, rig and animations retained. Studio images are not game screenshots."
+}
