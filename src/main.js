@@ -158,6 +158,9 @@ class App {
     const { root, mixer, clips } = spawnCharacter(this.models[def.model]);
     root.rotation.y = Math.PI * 0.15;
     const look = applyLook(root, def, this.eco.heroEquipInsts(id));   // 로비 쇼케이스도 장착 장비대로
+    const unavailable = root.userData.equipmentAppearanceError;
+    if (unavailable && this._armorNotice !== unavailable) this.ui.toast('장비 외형을 불러오지 못해 기본 모습으로 표시합니다.');
+    this._armorNotice = unavailable || null;
     const a = mixer.clipAction(clips['Idle']); a.play();
     // Establish the authored idle pose even when reduced motion stops later ticks.
     mixer.update(0);

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RARITY_INFO, ITEM_BY_ID } from '../data/items.js';
 import { materialsOf } from '../engine/assets.js';
 import { applyArmorAppearance } from './armor-appearance.js';
+import { applyEquipmentAppearance } from '../engine/equipment-appearance.js';
 import { applyArmoryAppearance } from '../engine/armory-assets.js';
 
 /**
@@ -55,7 +56,9 @@ const BODY_GLOW = { N: 0, S: 0.02, E: 0.035, U: 0.05, L: 0.07 };
 export function applyLook(model, def, equip = {}) {
   const L = LOOKS[def.id];
   const w = equip.weapon ? ITEM_BY_ID[equip.weapon.id] : null, a = equip.armor ? ITEM_BY_ID[equip.armor.id] : null;
-  applyArmorAppearance(model, def, a?.slot === 'armor' ? a : null);
+  applyArmorAppearance(model, def, null);
+  if (!applyEquipmentAppearance(model, def, a?.slot === 'armor' ? a : null))
+    applyArmorAppearance(model, def, a?.slot === 'armor' ? a : null);
   applyArmoryAppearance(model, equip, ITEM_BY_ID, def);
   // 보일 노드: 슬롯이 비었으면 def.show 중 그 그룹 것, 있으면 등급표
   let show = new Set(def.show);
@@ -79,7 +82,7 @@ export function applyLook(model, def, equip = {}) {
     for (const material of materialsOf(o)) {
       if (!material.emissive) continue;
       const base = material.userData.baseEmissive || (material.userData.baseEmissive = new THREE.Color(0));
-      if (model.userData.authoredContract) base.copy(material.userData.authoredEmissive || new THREE.Color(0));
+      if (model.userData.authoredContract || material.userData.equipmentAuthored) base.copy(material.userData.authoredEmissive || new THREE.Color(0));
       else if (owner === 'w') base.copy(wCol || new THREE.Color(0)).multiplyScalar(wGlow);
       else if (owner === 'a') base.copy(aCol || new THREE.Color(0)).multiplyScalar(sGlow);
       else if (model.userData.tllIdentity === 'casual-v2') base.setScalar(0);
