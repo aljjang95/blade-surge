@@ -1,0 +1,14 @@
+{
+  "schema": "tll.armor-recipes/v1",
+  "source": "source-r2.blend",
+  "hero": "knight",
+  "variants": [
+    {"id":"a_leather","rank":0,"label":"가죽 갑옷","rarity":"N","body":[0.17,0.065,0.027],"trim":[0.30,0.17,0.065],"cloth":[0.036,0.025,0.018],"layers":0,"crystals":false,"engraving":false,"royal":false},
+    {"id":"a_bronze","rank":1,"label":"청동 흉갑","rarity":"S","body":[0.21,0.09,0.032],"trim":[0.52,0.29,0.08],"cloth":[0.045,0.055,0.025],"layers":1,"crystals":false,"engraving":false,"royal":false},
+    {"id":"a_knight","rank":2,"label":"기사의 판금","rarity":"E","body":[0.11,0.24,0.34],"trim":[0.58,0.68,0.73],"cloth":[0.015,0.044,0.09],"layers":2,"crystals":false,"engraving":true,"royal":false},
+    {"id":"a_rime","rank":3,"label":"결정 갑주","rarity":"U","body":[0.02,0.11,0.20],"trim":[0.57,0.67,0.72],"cloth":[0.012,0.055,0.095],"layers":3,"crystals":true,"engraving":true,"royal":false},
+    {"id":"a_king","rank":4,"label":"왕의 갑주","rarity":"L","body":[0.13,0.014,0.038],"trim":[0.72,0.46,0.15],"cloth":[0.055,0.007,0.024],"layers":3,"crystals":true,"engraving":true,"royal":true}
+  ],
+  "constraints": {"max_variants":5,"max_materials":12,"max_vertices":25000,"face_rig_socket_changes":false,"item_stats_changes":false},
+  "notes":"기존 아이템에 외형을 연결한다. 등급별 형태 차이는 부품 구성으로 만들며 가격·스탯을 변경하지 않는다."
+}
