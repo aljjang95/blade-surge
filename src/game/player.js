@@ -10,8 +10,11 @@ import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, M
 
 const _v = new THREE.Vector3();
 const ATTACK_INPUT_BUFFER_SEC = 0.14;
+const DODGE_INPUT_BUFFER_SEC = 0.12;
 const ATTACK_CANCEL_EARLY = 0.16;
 const ATTACK_CANCEL_RECOVERY = 0.12;
+const COMBO_QUEUE_OPEN = 0.28;
+const SKILL_CANCEL_AFTER_HIT = 0.05;
 
 export class Player extends Actor {
   constructor(game, gltf, def, stats, skillLevels = [1, 1, 1, 1, 1, 1], equip = {}, heroLevel = 1, skillLoadout = [4, 5]) {
@@ -27,7 +30,7 @@ export class Player extends Actor {
     this.mats = [...dressedMaterials];
     this.auraT = 0;
     this.state = 'idle'; this.stateT = 0;
-    this.comboIdx = 0; this.comboQueued = false; this.attackBufferT = 0; this.hitDone = false; this.comboWindow = 0;
+    this.comboIdx = 0; this.comboQueued = false; this.attackBufferT = 0; this.dodgeBufferT = 0; this.hitDone = false; this.comboWindow = 0;
     this.cds = def.skills.map(() => 0); this.ult = 0; this.ultMax = 100; this.ultGainLock = 0;
     this.maxMp = MP_BASE; this.mp = MP_BASE; this.mpRegen = MP_REGEN_PER_SEC; this.dodgeCd = 0;
     this.dr = 0; this.drT = 0; this.sanctum = null;   // 성역: 피해 감소
@@ -67,18 +70,25 @@ export class Player extends Actor {
     this.moveDir.set(mx, 0, my);
     const wantMove = this.moveDir.lengthSq() > 0.01;
 
-    // 회피
-    if (input.consume('dodge') && this.dodgeCd <= 0 && this.state !== 'dodge' && this.state !== 'ult' && this.stun <= 0 && this.canDodgeCancel()) return this.dodge(wantMove ? this.moveDir : null);
+    // 회피는 즉시 실행하고, 공격 중 이른 입력만 짧게 보존한다. 입력이
+    // 공격의 commit 경계를 넘어서면 다음 프레임에 바로 굴러야 한다.
+    if (input.consume('dodge')) {
+      if (this.dodgeCd <= 0 && this.state !== 'dodge' && this.state !== 'ult' && this.stun <= 0 && this.canDodgeCancel()) return this.dodge(wantMove ? this.moveDir : null);
+      if (this.state === 'attack' && this.dodgeCd <= 0) this.dodgeBufferT = DODGE_INPUT_BUFFER_SEC;
+    }
+    if (this.dodgeBufferT > 0 && this.dodgeCd <= 0 && this.state === 'attack' && this.canDodgeCancel()) return this.dodge(wantMove ? this.moveDir : null);
     // 전투 입력은 0~3 고정 + Q/E 장착 슬롯 4/5만 노출한다.
     for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot)) return; }
     // 공격: 입력 버퍼는 버튼을 누른 순간의 의도를 보존하지만, 버튼 홀드 자체는
     // 다음 콤보를 예약하지 않는다. 수동 전투에서 타이밍을 직접 결정하게 하는 경계다.
     if (input.consume('attack')) {
       this.attackBufferT = ATTACK_INPUT_BUFFER_SEC;
-      if (this.state === 'attack') this.comboQueued = true;
+      if (this.state === 'attack' && this.canQueueCombo()) this.comboQueued = true;
     }
     if ((this.state === 'idle' || this.state === 'move') && this.attackBufferT > 0) {
-      this.attackBufferT = 0; this.startCombo(0);
+      this.attackBufferT = 0;
+      if (!this.auto && wantMove) this.faceDir(mx, my);
+      this.startCombo(0);
     }
     // 이동
     if (this.state === 'idle' || this.state === 'move') {
@@ -172,7 +182,7 @@ export class Player extends Actor {
         const dir = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (i - (count - 1) / 2) * .22);
         this.game.spawnProjectile({ pos: this.arrowOrigin(dir), dir, speed: 27, radius: c.finisher ? .85 : .55, dmg,
           color: this.def.color, size: c.finisher ? .65 : .4, owner: this, kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'slash',
-          pierce: !!c.pierce, finisher: !!c.finisher, comboToken, basic: true, life: c.range / 27, visual: 'arrow' });
+          pierce: !!c.pierce, finisher: !!c.finisher, counter: counterFinisher, comboToken, basic: true, life: c.range / 27, visual: 'arrow' });
       }
       if (counterFinisher) { this.game.ui.toast('완벽 회피 연계 · 관통 붕괴', 'gold'); audio.ting({ vol: .5, freq: 2100 }); }
       audio.whoosh({ vol: .32, pitch: 1.6, dur: .18 });
@@ -220,7 +230,7 @@ export class Player extends Actor {
       this.game.fx.flash(spawn, this.def.color, { size: 1.2, life: 0.15 });
       this.game.sp?.onComboHit(1);
     } else {
-      const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, c.arc, dmg, { kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'slash', finisher: c.finisher, comboToken, source: this, basic: true, precision: !this.auto, hitReact: true });
+      const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, c.arc, dmg, { kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'slash', finisher: c.finisher, counter: counterFinisher, comboToken, source: this, basic: true, precision: !this.auto, hitReact: true });
       this.game.sp?.onComboHit(hits);
       if (c.through) { this.game.fx.ghost(this.model, this.def.color, { life: 0.3, opacity: 0.5 }); this.game.fx.slashArc(this.pos, this.yaw, this.def.color, { radius: c.range, arc: 300, height: 1, life: 0.2 }); }   // 관통: 지나온 자리에 잔상
       if (gravity && !c.finisher) this.game.vacuum(this.pos.clone().addScaledVector(f, 1.5), 6, 5);   // 중력 2세트: 모든 타격이 끌어당긴다
@@ -248,13 +258,27 @@ export class Player extends Actor {
     if (!this.hitDone) return t >= ATTACK_CANCEL_EARLY && t < c.hitAt - 0.04;
     return t >= c.hitAt + ATTACK_CANCEL_RECOVERY && t < Math.min(0.92, c.hitAt + 0.26);
   }
+  attackProgress() {
+    if (this.state !== 'attack' || !this.current) return 1;
+    const dur = this.current.dur / ((this.buffs?.atkSpd || 1) * (this.stormT > 0 ? 1.4 : 1));
+    return this.stateT / Math.max(0.01, dur);
+  }
+  canQueueCombo() {
+    if (this.state !== 'attack' || !this.current) return false;
+    return this.hitDone || this.attackProgress() >= Math.max(COMBO_QUEUE_OPEN, this.current.hitAt - 0.12);
+  }
+  canSkillCancel() {
+    if (this.state !== 'attack' || !this.current) return true;
+    const t = this.attackProgress();
+    return this.hitDone && t >= this.current.hitAt + SKILL_CANCEL_AFTER_HIT && t < 0.9;
+  }
 
   // ---------------- 회피 ----------------
   dodge(dir) {
     // Evade without throwing away the earned combo. A cancelled windup repeats
     // its own step; it cannot skip ahead to a free finishing blow.
     if (this.state === 'attack' && this.current) this.comboResume = {idx:this.hitDone?(this.comboIdx+1)%this.def.combo.length:this.comboIdx,t:1.25};
-    this.stopTrail(); this.state = 'dodge'; this.stateT = 0; this.invuln = 0.4; this.dodgeCd = DODGE_COOLDOWN_SEC;
+    this.dodgeBufferT = 0; this.stopTrail(); this.state = 'dodge'; this.stateT = 0; this.invuln = 0.4; this.dodgeCd = DODGE_COOLDOWN_SEC;
     this.perfectWindow = 0.28;   // 이 안에 피격 판정이 스치면 퍼펙트
     if (this.def.jobId === 'ranger') this.gainJobResource(1);
     const d = dir ? dir.clone().normalize() : this.forward(_v.clone());
@@ -280,6 +304,7 @@ export class Player extends Actor {
     if (sk.ult) { if (this.ult < this.ultMax) { this.game.ui.toast('궁극기 게이지 부족', 'red'); audio.play('ui_error', { vol: 0.5 }); return false; } }
     else if (this.cds[i] > 0) return false;
     if (this.state === 'ult' || this.state === 'dodge' || this.stun > 0) return false;
+    if (!this.auto && this.state === 'attack' && !this.canSkillCancel()) return false;
     if (this.state === 'skill' && this.skillCtx && !this.skillCtx.done) return false;
     this.stopTrail();
     const impl = SKILLS[sk.id]; if (!impl) return false;
@@ -428,6 +453,7 @@ export class Player extends Actor {
   update(dt) {
     super.update(dt);
     this.attackBufferT = Math.max(0, (this.attackBufferT || 0) - dt);
+    this.dodgeBufferT = Math.max(0, (this.dodgeBufferT || 0) - dt);
     this.beacon.update(this.alive, this.yaw, { state: this.state, color: this.def.accent || this.def.color, reduced: !!this.game.app?.reducedMotion?.matches });
     this.guardT = Math.max(0, (this.guardT || 0) - dt);
     this.tonicAtkT = Math.max(0, (this.tonicAtkT || 0) - dt);

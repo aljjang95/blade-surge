@@ -44,6 +44,13 @@ test('dash anticipation and lock bias remain bounded for retained and holdout di
   }
   expect(frame({player:player({x:0,z:0},enemy(1000))}).target).toEqual({x:0,y:0,z:0});
 });
+test('manual contact briefly biases the target toward the struck enemy without replacing player framing',()=>{
+  const ordinary=frame(), contact=frame({impactTarget:enemy(3,3),impactWeight:1});
+  expect(contact.target.x).toBeGreaterThan(ordinary.target.x);
+  expect(contact.target.z).toBeGreaterThan(ordinary.target.z);
+  expect(Math.hypot(contact.target.x,contact.target.z)).toBeLessThanOrEqual(1.50000001);
+  expect(frame({impactTarget:enemy(3,3),impactWeight:0})).toEqual(ordinary);
+});
 test('default 2.3u hero is readable at 400px and crowd remains at least 70px',()=>{
   const regular=projectedHeight(frame());
   expect(regular).toBeGreaterThanOrEqual(80); expect(regular).toBeLessThan(100);

@@ -43,6 +43,34 @@ test('held attack does not reserve the entire combo; a fresh press does', () => 
   expect(started).toEqual([0]);
 });
 
+test('manual attack captures the current movement direction and respects the combo commit boundary', () => {
+  const p = manualPlayer({
+    stats: { spd: 1 },
+    action: { timeScale: 1 },
+    faceDir: (x: number, z: number) => { p.yaw = Math.atan2(x, z); },
+    startCombo: (index: number) => { p.started = index; },
+  });
+  const input = { move: { x: 1, y: 0 }, attackHeld: false, consume: (name: string) => name === 'attack' };
+  Player.prototype.handleInput.call(p, input, 0.016);
+  expect(p.yaw).toBe(Math.PI / 2);
+  expect(p.started).toBe(0);
+
+  const attack = manualPlayer({ state: 'attack', current: HEROES.knight.combo[0], hitDone: false, stateT: 0.05 });
+  const early = { move: { x: 0, y: 0 }, attackHeld: false, consume: (name: string) => name === 'attack' };
+  Player.prototype.handleInput.call(attack, early, 0.016);
+  expect(attack.comboQueued).toBe(false);
+  attack.stateT = attack.current.dur * Math.max(0.32, attack.current.hitAt - 0.1);
+  Player.prototype.handleInput.call(attack, early, 0.016);
+  expect(attack.comboQueued).toBe(true);
+});
+
+test('manual skills only cancel after the weapon contact has committed', () => {
+  const p = manualPlayer({ state: 'attack', current: HEROES.knight.combo[0], hitDone: false, stateT: 0.2 });
+  expect(Player.prototype.canSkillCancel.call(p)).toBe(false);
+  p.hitDone = true; p.stateT = p.current.dur * (p.current.hitAt + 0.08);
+  expect(Player.prototype.canSkillCancel.call(p)).toBe(true);
+});
+
 test('dodge cancel opens after anticipation and briefly after contact, with recovery risk between', () => {
   const p = manualPlayer({ state: 'attack', current: HEROES.knight.combo[0] });
   p.stateT = 0.05; expect(Player.prototype.canDodgeCancel.call(p)).toBe(false);

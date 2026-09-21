@@ -10,9 +10,11 @@ class ElementStub extends EventTarget {
 
 const oldWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
 const oldDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+const oldNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
 let host: EventTarget;
 let elements: Map<string, ElementStub>;
 let input: Input;
+let gamepad: any = null;
 
 function key(type: string, code: string) {
   const event = new Event(type, { cancelable: true });
@@ -22,17 +24,19 @@ function key(type: string, code: string) {
 }
 
 beforeEach(() => {
-  elements = new Map(); host = new EventTarget();
+  elements = new Map(); host = new EventTarget(); gamepad = null;
   const find = (id: string) => { if (!elements.has(id)) elements.set(id, new ElementStub()); return elements.get(id); };
   const documentStub = Object.assign(new EventTarget(), { hidden: false, getElementById: find, querySelector: find, querySelectorAll: () => [] });
   Object.defineProperty(globalThis, 'window', { configurable: true, value: host });
   Object.defineProperty(globalThis, 'document', { configurable: true, value: documentStub });
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { getGamepads: () => gamepad ? [gamepad] : [] } });
   input = new Input(); input.enabled = true;
 });
 
 afterEach(() => {
   if (oldWindow) Object.defineProperty(globalThis, 'window', oldWindow); else Reflect.deleteProperty(globalThis, 'window');
   if (oldDocument) Object.defineProperty(globalThis, 'document', oldDocument); else Reflect.deleteProperty(globalThis, 'document');
+  if (oldNavigator) Object.defineProperty(globalThis, 'navigator', oldNavigator); else Reflect.deleteProperty(globalThis, 'navigator');
 });
 
 describe('사람 입력 수명주기', () => {
@@ -128,6 +132,18 @@ describe('사람 입력 수명주기', () => {
   test('공격 Space는 브라우저 버튼 활성화에 중복 전달하지 않는다', () => {
     expect(key('keydown', 'Space').defaultPrevented).toBe(true);
     expect(input.queue).toEqual(['attack']);
+  });
+  test('표준 게임패드는 키보드·터치와 같은 명령 큐와 공격 홀드 경로를 사용한다', () => {
+    gamepad = { connected: true, axes: [.8, 0], buttons: [{ pressed: true, value: 1 }] };
+    input.update();
+    expect(input.move.x).toBeGreaterThan(.7);
+    expect(input.queue).toEqual(['attack']);
+    expect(input.attackHeld).toBe(true);
+    input.update();
+    expect(input.queue).toEqual(['attack']);
+    gamepad.buttons[0] = { pressed: false, value: 0 };
+    input.update();
+    expect(input.attackHeld).toBe(false);
   });
   test('회전과 페이지 이탈은 터치 조이스틱과 공격을 남기지 않는다', () => {
     for (const type of ['resize','orientationchange','pagehide']) {

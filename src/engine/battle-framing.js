@@ -6,8 +6,8 @@ const proximity = (d, inner, outer) => {
   return t * t * (3 - 2 * t);
 };
 
-/** Pure framing policy: local threats only, bounded anticipation, no impact motion. */
-export function battleFraming({ player, enemies = [], boss, preset = 'auto', presets }) {
+/** Pure framing policy: local threats, bounded anticipation and short impact focus. */
+export function battleFraming({ player, enemies = [], boss, impactTarget = null, impactWeight = 0, preset = 'auto', presets }) {
   const p = player.pos, vx = finite(player.vel?.x), vz = finite(player.vel?.z), speed = Math.hypot(vx, vz);
   let x = 0, z = 0;
   if (speed > .5) {
@@ -19,6 +19,13 @@ export function battleFraming({ player, enemies = [], boss, preset = 'auto', pre
     const d = distance(p, lock.pos);
     const bias = Math.min(.65, d * .1) * proximity(d, 8, 18);
     if (d > 0) { x += (lock.pos.x - p.x) / d * bias; z += (lock.pos.z - p.z) / d * bias; }
+  }
+  // 기본 타격 순간에는 시선을 영웅과 접촉 지점 사이로 아주 짧게 당긴다.
+  // 화면 흔들림으로 위치를 잃게 하지 않고, 공격 방향과 적 반응을 한 프레임에 읽게 한다.
+  if (impactTarget?.pos && impactWeight > 0) {
+    const ix = finite(impactTarget.pos.x) - finite(p.x), iz = finite(impactTarget.pos.z) - finite(p.z);
+    const d = Math.hypot(ix, iz);
+    if (d > 0) { const bias = Math.min(.58, .22 * Math.min(1, impactWeight) * Math.min(1.6, d)); x += ix / d * bias; z += iz / d * bias; }
   }
   const lead = Math.hypot(x, z);
   if (lead > 1.5) { x *= 1.5 / lead; z *= 1.5 / lead; }

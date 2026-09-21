@@ -140,6 +140,7 @@ export class Battle extends BaseBattle {
     const dx = opts.dirx || 0, dz = opts.dirz || 0;
     const feedback=contactFeedback({finisher:opts.finisher,crit,boss:enemy.isBoss,elite:enemy.isElite,reduced:!!this.app.reducedMotion?.matches});
     enemy.receiveImpact(dx, dz, feedback.recoil);
+    if (opts.basic && p === this.player && !p.auto) { this.impactTarget = enemy; this.impactT = .16; }
     // Every eligible hit recoils; only expensive contact feedback shares the time budget.
     const budget = contactBudget(this._contactBudget, this.elapsed, contact);
     if (!budget) return;

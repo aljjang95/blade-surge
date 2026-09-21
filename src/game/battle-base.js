@@ -15,6 +15,7 @@ import { audio } from '../engine/audio.js';
 import { heroVoiceName } from '../engine/hero-voice.js';
 import { SetProcs } from './setprocs.js';
 import { contactProfile, contactBudget } from './combat-contact.js';
+import { contactFeedback } from './apex-combat.js';
 import { ImpactClock } from './combat-motion.js';
 import { RegionHazards } from './region-hazards.js';
 import { resolveJobHero } from '../data/jobs.js';
@@ -37,7 +38,7 @@ export class Battle {
     this.enemies = []; this.projectiles = []; this.timers = [];
     this.drops = new DropSystem(this);
     this.player = null; this.active = false; this.paused = false; this.pauseReasons = new Set();
-    this.combo = 0; this.comboT = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0;
+    this.combo = 0; this.comboT = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0;
     this.wave = 0; this.waveT = 0; this.stage = null; this.boss = null; this.result = null; this.revived = 0;
     this.pending = []; // 지속 스폰 큐
     this.maxAlive = 34; this.peakAlive = 0; this.controlFinisherTokens = new WeakSet();
@@ -65,7 +66,7 @@ export class Battle {
     this._contactAt = -Infinity; this._contactBudget = null;
     this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0; this.bossDefeated = false;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
-    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false;
+    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false;
     this.clearPortal();
     const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = heroStats(def, heroState, equipBonus);
     this.setBonus = equipBonus.active || [];
@@ -571,6 +572,8 @@ export class Battle {
     const dirx = opts.dirx || 0, dirz = opts.dirz || 0;
     const color = opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
     const contact = this.paused ? null : contactProfile(opts, crit, e.isBoss, this.app?.reducedMotion?.matches);
+    if (contact) e.receiveImpact?.(dirx, dirz, contactFeedback({ finisher: opts.finisher, crit, boss: e.isBoss, elite: e.isElite, reduced: !!this.app?.reducedMotion?.matches }).recoil);
+    if (opts.basic && p === this.player && !p.auto) { this.impactTarget = e; this.impactT = .16; }
     const budget = contactBudget(this._contactBudget, this.elapsed, contact);
     if (budget) {
       this._contactBudget = budget; this._contactAt = budget.at;
@@ -585,11 +588,11 @@ export class Battle {
   }
 
   // ---------------- 투사체 ----------------
-  spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, stun = 0, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false, comboToken = null, skillCast = null, basic = false }) {
+  spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, stun = 0, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false, counter = false, comboToken = null, skillCast = null, basic = false }) {
     let mesh = null;
     if (visual !== null && size > 0) { mesh = visual === 'arrow' ? createArrowVisual(color, size, dir) : this.fx.orb(color, size); mesh.position.copy(pos); this.scene.add(mesh); }
     const readableTrail = trail ?? (!hostile && kind === 'magic' ? color : null);
-    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, stun, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, comboToken, skillCast, basic });
+    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, stun, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, counter, comboToken, skillCast, basic });
   }
   updateProjectiles(dt) {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -606,7 +609,7 @@ export class Battle {
           if (Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z) < p.radius + e.radius) {
             p.hit.add(e);
             if (p.explode) { this.explode(p); done = true; break; }
-            this.damageEnemy(e, p.dmg, { kb: p.kb, stun: p.stun, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, comboToken:p.comboToken, skillCast:p.skillCast, basic:p.basic });
+            this.damageEnemy(e, p.dmg, { kb: p.kb, stun: p.stun, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, counter: p.counter, comboToken:p.comboToken, skillCast:p.skillCast, basic:p.basic });
             if (!p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); break; }
           }
         }
@@ -661,6 +664,7 @@ export class Battle {
     if (this.paused) return;
     const dt = this.timeCtl.step(realDt);
     this.elapsed += dt;
+    this.impactT = Math.max(0, this.impactT - dt);
     for (let i = this.timers.length - 1; i >= 0; i--) { const t = this.timers[i]; t.t -= dt; if (t.t <= 0) { this.timers.splice(i, 1); t.fn(); } }
     this.input.update();
     if (this.active) this.player.handleInput(this.input, dt);
@@ -683,7 +687,7 @@ export class Battle {
     if (this.player.alive && this.player.hp < this.player.maxHp * 0.25) { audio.voice(heroVoiceName(this.heroId, 'low_hp'), { min: 12 }); audio.voice('low_hp', { min: 25 }); }
     // Local threat framing preserves readable heroes and explicit user presets.
     const rig = this.renderer.rig;
-    const framing = battleFraming({ player: this.player, enemies: this.enemies, boss: this.boss, preset: rig.preset, presets: CAMERA_PRESETS });
+    const framing = battleFraming({ player: this.player, enemies: this.enemies, boss: this.boss, impactTarget: this.impactTarget, impactWeight: this.impactT > 0 ? this.impactT / .16 : 0, preset: rig.preset, presets: CAMERA_PRESETS });
     _v.set(framing.target.x, framing.target.y, framing.target.z);
     rig.target.lerp(_v, framingBlend(realDt, 7));
     if (rig.preset === 'auto') {
