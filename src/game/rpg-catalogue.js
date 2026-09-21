@@ -6,7 +6,7 @@ export function buildCatalogue() {
   const entries = new Map(Object.entries(ENEMIES).map(([id, def]) => [id, { id, def, locations: [] }]));
   for (const ch of CHAPTERS) for (let st = 1; st <= STAGES_PER_CHAPTER; st++) {
     const stage = stageDef(ch.id, st), roster = stage.rosterFor();
-    const ids = new Set([...roster.trash, ...roster.ranged, ...roster.elite, stage.encounter.enemyId]);
+    const ids = new Set([...roster.trash, ...roster.ranged, ...roster.elite, stage.encounter.enemyId, stage.dungeonBossId]);
     for (const id of ids) {
       const entry = entries.get(id);
       if (entry) entry.locations.push({ floor: stage.idx, code: stage.code, chapter: ch.name, chapterId: ch.id, scale: stage.scale });

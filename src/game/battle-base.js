@@ -101,7 +101,7 @@ export class Battle {
     this.ui.waveBanner(stage.code || `${stage.idx}층`);
     audio.waveHorn({ vol: 0.45 });
     this.heroId = heroId;
-    this.bossKey = ENEMIES[stage.encounter?.enemyId || stage.chapter.boss]?.voiceKey || stage.chapter.boss;
+    this.bossKey = ENEMIES[stage.dungeonBossId || stage.encounter?.enemyId || stage.chapter.boss]?.voiceKey || stage.chapter.boss;
     this.hazards = stage.expedition?.kind === 'arena' ? null : new RegionHazards(this);
     this.after(1.2, () => { if (this.active && stage.objective) this.ui.toast(stage.objective, 'gold'); });
     this.after(0.25, () => { if (this.active) audio.voice(heroVoiceName(heroId, 'select'), { min: 20 }); });
@@ -382,7 +382,8 @@ export class Battle {
   stop() { this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
-    let def = this.stage.expedition && type === this.stage.encounter.enemyId ? this.stage.expeditionEnemy : ENEMIES[type]; if (!def) return; const gltf = this.app.models[def.model]; if (!gltf) return;
+    const runtimeType = !this.stage.expedition && type === this.stage.encounter?.enemyId && this.stage.dungeonBossId ? this.stage.dungeonBossId : type;
+    let def = this.stage.expedition && type === this.stage.encounter.enemyId ? this.stage.expeditionEnemy : ENEMIES[runtimeType]; if (!def) return; const gltf = this.app.models[def.model]; if (!gltf) return;
     const rm = room || this.curRoom || this.world?.startRoom;
     if (this.conquest) {
       def = this.conquest.enemyDefinition(type, def, rm);
@@ -403,7 +404,8 @@ export class Battle {
     } else { const a = Math.random() * Math.PI * 2, r = 11; pos = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r); }
     const e = new Enemy(this, gltf, this.weaponsGltf, def, this.stage.scale, pos);
     e.homeRoom = rm;
-    this.conquest?.spawn(e, type, rm);
+    e.runtimeSpeciesId = runtimeType;
+    this.conquest?.spawn(e, runtimeType, rm);
     this.enemies.push(e);
     if (def.boss) { this.boss = e; this.ui.showBoss(def.name, true, def.portrait); this.app.companionAgent?.observe('boss-spotted', { name: def.name, id: `${this.stage.idx}:${def.name}` }); }
     return e;

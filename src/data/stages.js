@@ -22,13 +22,44 @@ const ROSTER = {
   tide: { trash: ['squidle', 'blob_pink', 'alien', 'mushnub', 'bomb_abyss', 'golem_guard'], ranged: ['glub', 'abyss_seer', 'armabee_evo'], elite: ['elite_golem', 'elite_mushroom_king', 'elite_dragonling'] },
   crown: { trash: ['ninja', 'skel_shield', 'alien', 'bomb_abyss', 'bone_orc', 'imp'], ranged: ['abyss_seer', 'tribal_shaman', 'hywirl'], elite: ['elite_bluedemon', 'elite_skel_captain', 'elite_dragonling'] },
 };
+// The dungeon route is also a combat identity. Each authored layout gets its own
+// pack composition so a different map changes the pressure, silhouettes and ranged mix.
+const DUNGEON_ROSTERS = {
+  procession: { trash: ['skel_minion', 'ghost', 'skel_rogue', 'skel_shield', 'bomb_slime', 'bone_orc'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_skel_captain', 'elite_wraith', 'elite_bone_lord'] },
+  greenhouse: { trash: ['ghost', 'bomb_slime', 'skel_rogue', 'skel_minion', 'skel_shield', 'bone_orc'], ranged: ['skel_priest', 'ghost_skull', 'skel_mage'], elite: ['elite_wraith', 'elite_bone_lord', 'elite_skel_captain'] },
+  tribunal: { trash: ['skel_shield', 'bone_orc', 'skel_minion', 'ghost', 'bomb_slime', 'skel_rogue'], ranged: ['skel_mage', 'skel_priest', 'ghost_skull'], elite: ['elite_bone_lord', 'elite_skel_captain', 'elite_wraith'] },
+  confluence: { trash: ['squidle', 'ghost', 'alien', 'mushnub', 'bomb_abyss', 'skel_minion'], ranged: ['glub', 'ghost_skull', 'abyss_seer'], elite: ['elite_golem', 'elite_skel_captain', 'elite_dragonling'] },
+  kiln: { trash: ['orc', 'orc_blob', 'tribal', 'cacto_wall', 'bomb_imp', 'imp'], ranged: ['tribal_shaman', 'hywirl', 'armabee'], elite: ['elite_orc_chief', 'elite_bluedemon', 'elite_orc_chief'] },
+  uprising: { trash: ['orc_blob', 'bomb_imp', 'orc', 'imp', 'tribal', 'cacto_wall'], ranged: ['hywirl', 'tribal_shaman', 'armabee'], elite: ['elite_bluedemon', 'elite_orc_chief', 'elite_bluedemon'] },
+  archive: { trash: ['ghost', 'blob_green', 'skel_shield', 'bone_orc', 'skel_rogue', 'golem_guard'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_wraith', 'elite_yeti', 'elite_golem'] },
+  reverseRiver: { trash: ['blob_green', 'golem_guard', 'ghost', 'skel_rogue', 'skel_shield', 'bone_orc'], ranged: ['skel_mage', 'ghost_skull', 'skel_priest'], elite: ['elite_golem', 'elite_wraith', 'elite_yeti'] },
+  beacon: { trash: ['squidle', 'blob_pink', 'alien', 'mushnub', 'bomb_abyss', 'golem_guard'], ranged: ['abyss_seer', 'glub', 'armabee_evo'], elite: ['elite_dragonling', 'elite_golem', 'elite_mushroom_king'] },
+  lostShip: { trash: ['blob_pink', 'squidle', 'bomb_abyss', 'alien', 'golem_guard', 'mushnub'], ranged: ['glub', 'armabee_evo', 'abyss_seer'], elite: ['elite_mushroom_king', 'elite_dragonling', 'elite_golem'] },
+  emptyThrones: { trash: ['ninja', 'skel_shield', 'alien', 'bomb_abyss', 'bone_orc', 'imp'], ranged: ['abyss_seer', 'tribal_shaman', 'hywirl'], elite: ['elite_bluedemon', 'elite_dragonling', 'elite_skel_captain'] },
+  addresses: { trash: ['skel_rogue', 'ghost', 'imp', 'bomb_slime', 'ninja', 'bone_orc'], ranged: ['ghost_skull', 'tribal_shaman', 'skel_mage'], elite: ['elite_wraith', 'elite_bluedemon', 'elite_skel_captain'] },
+};
+const DUNGEON_BOSS_BASE = {
+  procession: 'glass_hour_sovereign', greenhouse: 'verdigris_sentinel', tribunal: 'sable_mirage_empress', confluence: 'comet_bastion',
+  kiln: 'cinder_chain_executor', uprising: 'ash_colossus', archive: 'nightglass_archivist', reverseRiver: 'astral_leviathan',
+  beacon: 'obsidian_hydra', lostShip: 'obsidian_hydra', emptyThrones: 'sable_mirage_empress', addresses: 'comet_bastion',
+};
+const DUNGEON_BOSS_NAMES = {
+  procession: '시계종의 주권자', greenhouse: '녹청 온실의 성역수', tribunal: '왕좌를 삼킨 환영왕', confluence: '합류 수로의 유성기사',
+  kiln: '쌍화구 쇠사슬 집행자', uprising: '탈출 작업장의 재벼림 거수', archive: '밤유리 기록관', reverseRiver: '역류를 거스르는 레비아탄',
+  beacon: '귀항 등대의 흑요룡', lostShip: '선실을 지키는 흑요룡', emptyThrones: '네 왕좌의 환영 여왕', addresses: '귀환문 앞 혜성 기사',
+};
 const RANK_LABELS = { captain: '관문 대장', warden: '수문장', midboss: '중간 보스', finalboss: '최종 보스' };
 export function stageDef(ch, st) {
   if (!Number.isInteger(ch) || !Number.isInteger(st) || ch < 1 || ch > CHAPTERS.length || st < 1 || st > STAGES_PER_CHAPTER) throw new RangeError(`스테이지는 1-1부터 ${CHAPTERS.length}-${STAGES_PER_CHAPTER}까지입니다.`);
   const chapter = CHAPTERS[ch - 1], idx = (ch - 1) * STAGES_PER_CHAPTER + st;
+  const dungeon = dungeonForStage(ch, st);
   const rank = st === 10 ? 'finalboss' : st === 5 ? 'midboss' : st === 3 || st === 7 ? 'warden' : 'captain';
   const boss = rank !== 'captain', scale = Math.pow(1.12, Math.min(idx - 1, 19)) * (1 + Math.max(0, idx - 20) * 0.045);
-  const R = ROSTER[chapter.theme], scene = stageStory(ch, st), enemyId = (chapter.encounterPrefix || chapter.theme) + '_' + rank;
+  const R = DUNGEON_ROSTERS[dungeon.id] || ROSTER[chapter.theme], scene = stageStory(ch, st);
+  const dungeonBossId = DUNGEON_BOSS_BASE[dungeon.id] ? `dungeon_${dungeon.id}_${rank}` : null;
+  // Keep the campaign contract stable for saves/catalogue data. Battle.start
+  // resolves this id to dungeonBossId at the actual spawn boundary.
+  const enemyId = (chapter.encounterPrefix || chapter.theme) + '_' + rank;
   const waves = [];
   for (let w = 0; w < (boss ? 2 : 3); w++) {
     const list = [], n = Math.min(28, 10 + Math.floor(idx * 0.6) + w * 4);
@@ -37,14 +68,15 @@ export function stageDef(ch, st) {
     waves.push(list);
   }
   const enemy = ENEMIES[enemyId];
+  const dungeonBoss = (dungeonBossId && ENEMIES[dungeonBossId]) || enemy;
   return {
     ch, st, idx, code: `${ch}-${st}`, title: scene.title, chapter, name: `${ch}-${st} · ${scene.title}`,
-    dungeon: dungeonForStage(ch, st), epilogueFinale: ch === 6 && st === 10,
+    dungeon, dungeonBossId, epilogueFinale: ch === 6 && st === 10,
     boss, finale: ch === 5 && st === 10, waves, scale, energy: 6 + Math.floor(idx / 6),
     rosterFor: () => R, recPower: Math.floor(2600 * scale),
-    encounter: { rank, label: RANK_LABELS[rank], name: enemy.name, enemyId, tactic: enemy.tactic },
+    encounter: { rank, label: RANK_LABELS[rank], name: dungeonBoss.name, enemyId, dungeonBossId, tactic: dungeonBoss.tactic || enemy.tactic },
     story: { opening: scene.opening, revelation: scene.revelation, aftermath: scene.aftermath },
-    objective: `${dungeonForStage(ch, st).name}의 전투 방을 정리해 봉인을 해제하고 ${enemy.name} 처치`,
+    objective: `${dungeon.name}의 전투 방을 정리해 봉인을 해제하고 ${enemy.name} 처치`,
     rewards: { gold: Math.floor(400 * scale), exp: Math.floor(110 * scale), bp: 60 + (boss ? 60 : 0), firstGems: rank === 'finalboss' ? 300 : boss ? 150 : 60, dropChance: boss ? 1 : 0.6, stones: 2 + (boss ? 4 : 0) },
   };
 }
@@ -249,3 +281,25 @@ for (const [id, encounter] of Object.entries(BOSS_ENCOUNTERS)) {
 ENEMIES.crown_finalboss.weapon = 'Skeleton_Blade';
 ENEMIES.crown_finalboss.shield = 'Skeleton_Shield_Large_A';
 for (const [id,role] of Object.entries(MOB_ROLE_ENEMIES)) ENEMIES[id].meleeRole = role;
+
+// Keep each authored dungeon's boss silhouette and attack vocabulary distinct.
+// The source rigs are existing verified assets; the dungeon identity is layered
+// with a dedicated name, rank stats, portrait, tint and phase signature.
+for (const [dungeonId, sourceId] of Object.entries(DUNGEON_BOSS_BASE)) {
+  const source = ENEMIES[sourceId];
+  if (!source) continue;
+  for (const [rank, stats] of Object.entries(RANK_STATS)) {
+    const id = `dungeon_${dungeonId}_${rank}`;
+    ENEMIES[id] = {
+      ...source, ...stats,
+      name: `${DUNGEON_BOSS_NAMES[dungeonId]} · ${RANK_LABELS[rank]}`,
+      boss: true, elite: false, ranged: false, rank,
+      pattern: source.phasePatterns?.[0] || source.pattern || [],
+      phasePatterns: source.phasePatterns,
+      phaseHints: source.phaseHints,
+      tactic: source.tactic,
+      voiceKey: source.voiceKey || sourceId,
+      signatureBoss: true,
+    };
+  }
+}

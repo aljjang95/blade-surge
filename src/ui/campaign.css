@@ -6,6 +6,7 @@ body:has(#result.show) #companion-root .companion-launcher:not([aria-expanded="t
 #tab-stage[data-region="frost"] { --region-glow: #7aa7c3; }
 #tab-stage[data-region="tide"] { --region-glow: #529da6; }
 #tab-stage[data-region="crown"] { --region-glow: #9881b8; }
+#tab-stage[data-region="homecoming"] { --region-glow: #87cbb0; }
 #tab-stage .panel { background: #101723; color: #ede6d8; }
 #tab-stage .campaign-heading { flex-shrink: 0; border-bottom: 0; padding: 14px 24px 10px; }
 #tab-stage .campaign-heading h2 { font-family: var(--font); font-size: 19px; font-weight: 700; letter-spacing: .05em; }
@@ -140,6 +141,8 @@ body:has(#result.show) #companion-root .companion-launcher:not([aria-expanded="t
 .chapter-map-caption { position: absolute; right: 10px; bottom: 7px; color: #8fa0a2; font-size: 9px; letter-spacing: .06em; }
 #tab-stage .chapter-cast { align-self: stretch; width: auto; min-width: 0; margin: 0; border: 1px solid #ffffff17; border-radius: 9px; background: #0c141b; }
 #tab-stage .chapter-cast img { height: 100%; min-height: 158px; object-fit: cover; object-position: center top; opacity: .9; }
+#tab-stage .chapter-dungeon-art img { object-position: center 55%; }
+#tab-stage .chapter-dungeon-art figcaption { background: linear-gradient(transparent,#081217ed); }
 #tab-stage .chapter-cast figcaption { padding: 24px 5px 7px; font-size: 10px; }
 #tab-stage .chapter-cast figcaption small { display: block; margin-top: 2px; color: #adbbb6; font-size: 8px; }
 #tab-stage .campaign-progress { min-width: 0; justify-content: center; padding: 0 4px; }
@@ -154,6 +157,11 @@ body:has(#result.show) #companion-root .companion-launcher:not([aria-expanded="t
 .stage-connector { position: absolute; z-index: -1; top: 70px; left: calc(100% + 1px); width: 10px; height: 2px; background: color-mix(in srgb, var(--region-glow) 52%, #ffffff18); }
 .stage-node { position: relative; display: grid; width: 52px; height: 52px; place-items: center; margin-bottom: 4px; border: 1px solid color-mix(in srgb, var(--region-glow) 42%, #ffffff20); border-radius: 50%; background: #0b161c; box-shadow: inset 0 0 0 4px #0b161c, 0 0 13px color-mix(in srgb, var(--region-glow) 24%, transparent); }
 .stage-node img { width: 35px; height: 35px; object-fit: cover; border-radius: 50%; filter: saturate(.84); }
+.stage-node-map { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 50%; background: #071218; color: var(--region-glow); }
+.stage-node-map .dungeon-map-svg { width: 36px; height: 36px; }
+.stage-node-map .dungeon-map-lines { stroke-width: 2.5; }
+.stage-node-map .dungeon-map-node circle { stroke-width: 1.7; }
+.stage-node-map .dungeon-map-node-core { display: none; }
 .stage-node.boss { border-radius: 13px; border-color: #d3a47b; box-shadow: inset 0 0 0 3px #0b161c, 0 0 16px #c9805344; }
 .stage-node.boss img { width: 44px; height: 44px; border-radius: 10px; }
 .stage-node-mark, .stage-node-lock { position: absolute; right: -8px; bottom: -5px; padding: 2px 4px; border: 1px solid #9bd0a188; border-radius: 4px; background: #183429; color: #c9f1c8; font-size: 7px; font-style: normal; }
@@ -178,6 +186,27 @@ body:has(#result.show) #companion-root .companion-launcher:not([aria-expanded="t
 .stage-route-summary > b { color: #e9d4aa; font-size: 12px; }
 .stage-route-summary p { margin: 4px 0; color: #bbc5c5; font-size: 11px; line-height: 1.55; }
 .stage-route-summary small { color: #829295; font-size: 9px; }
+.dungeon-map { display: grid; grid-template-columns: 118px minmax(0, 1fr); grid-template-rows: auto auto; gap: 9px 12px; align-items: center; margin-top: 10px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--dungeon-accent) 30%, #ffffff12); border-radius: 9px; background: radial-gradient(circle at 30% 25%, color-mix(in srgb, var(--dungeon-accent) 18%, transparent), transparent 58%), #091319d9; }
+.dungeon-map-svg { display: block; width: 118px; height: 118px; overflow: visible; color: color-mix(in srgb, var(--dungeon-accent) 72%, #ffffff); }
+.dungeon-map-lines { fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-dasharray: 1 1.5; opacity: .58; }
+.dungeon-map-node { color: #83939c; }
+.dungeon-map-node circle { fill: #15232a; stroke: currentColor; stroke-width: 1.7; }
+.dungeon-map-node-core { fill: currentColor !important; stroke: none !important; opacity: .8; }
+.dungeon-map-node.start { color: #a6e6bc; }
+.dungeon-map-node.elite { color: #7ed5d0; }
+.dungeon-map-node.treasure { color: #f0c677; }
+.dungeon-map-node.boss { color: #e69b79; }
+.dungeon-map-node.boss circle:first-child { fill: color-mix(in srgb, currentColor 25%, #15232a); }
+.dungeon-map-caption { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.dungeon-map-caption b { overflow: hidden; color: #ead7b5; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.dungeon-map-caption span { color: #94a3a7; font-size: 10px; line-height: 1.45; }
+.dungeon-map-legend { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 7px 10px; color: #8d9ca0; font-size: 9px; }
+.dungeon-map-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.dungeon-map-legend i { display: inline-block; width: 7px; height: 7px; border: 1px solid currentColor; border-radius: 50%; background: #15232a; }
+.dungeon-map-legend i.start { color: #a6e6bc; background: #a6e6bc; }
+.dungeon-map-legend i.elite { color: #7ed5d0; }
+.dungeon-map-legend i.treasure { color: #f0c677; }
+.dungeon-map-legend i.boss { color: #e69b79; border-radius: 2px; background: #e69b79; }
 .stage-tactics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
 .stage-tactics p { margin: 0; padding: 8px 9px; border: 1px solid #ffffff12; border-radius: 7px; background: #0c151d88; font-size: 10px; line-height: 1.5; }
 #tab-stage .stage-launch { position: sticky; top: 8px; align-self: start; padding: 14px; border: 1px solid color-mix(in srgb, var(--region-glow) 40%, #ffffff1b); border-radius: 12px; background: linear-gradient(155deg, #1a2b2c, #101a24 60%, #0e151e); box-shadow: 0 14px 28px #0003; }
@@ -217,6 +246,8 @@ body:has(#result.show) #companion-root .companion-launcher:not([aria-expanded="t
   .stage-hero-card, .stage-hero-card > img { min-height: 190px; height: 190px; }
   .stage-hero-shade { padding: 14px; }
   .stage-tactics { gap: 6px; }
+  .dungeon-map { grid-template-columns: 96px minmax(0, 1fr); padding: 8px 10px; gap: 8px 10px; }
+  .dungeon-map-svg { width: 96px; height: 96px; }
 }
 @media (max-width: 430px) {
   #tab-stage .chapter-brief { grid-template-columns: 1fr; }

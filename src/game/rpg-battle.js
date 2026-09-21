@@ -62,7 +62,7 @@ export class Battle extends BaseBattle {
     const enemy = super.spawnEnemy(type, near, room, at);
     if (!enemy) return enemy;
     const encounter = stageExpeditionEncounter(this.stage);
-    enemy.speciesId = type; enemy.level = encounter ? null : monsterLevel(this.stage.idx, enemy.def);
+    enemy.speciesId = enemy.runtimeSpeciesId || type; enemy.level = encounter ? null : monsterLevel(this.stage.idx, enemy.def);
     enemy.summoned = !!near;
     enemy.xpReward = monsterXp(enemy.def, this.stage.scale, enemy.summoned);
     recordMonster(this.ensureRpg(), type, enemy.level, this.stage.idx, false, encounter);

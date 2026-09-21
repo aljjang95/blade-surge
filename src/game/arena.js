@@ -17,6 +17,16 @@ const THEMES = {
   abyss:  { fog: 0x0e0716, bg: 0x0e0716, hemi: [0x7a40a0, 0x150a20], sun: 0xd0a0ff, sunI: 2.4, torch: 0xa060ff, tint: 0xe0c8ff },
   lobby:  { fog: 0x0a0812, bg: 0x0a0812, hemi: [0x6a5a90, 0x1a1420], sun: 0xffe0c0, sunI: 3.4, torch: 0xffa040, tint: 0xffffff },
 };
+// Region themes set the broad palette; authored dungeon landmarks add the
+// readable in-game identity that the campaign map promises.
+const DUNGEON_ATMOSPHERES = {
+  memorial: { fog: 0x122526, bg: 0x0d1b1d, hemi: [0xaed8c5, 0x203b35], sun: 0xffedc9, sunI: 2.5, torch: 0x86e1c5, tint: 0xb5d8bf },
+  kiln: { fog: 0x261716, bg: 0x160d0d, hemi: [0xc99a7d, 0x311717], sun: 0xffc18c, sunI: 2.5, torch: 0xff7034, tint: 0xd8a28b },
+  archive: { fog: 0x18263c, bg: 0x0e1727, hemi: [0xb8d8f2, 0x233752], sun: 0xd8edff, sunI: 2.5, torch: 0x86d7ff, tint: 0xb7cbed },
+  beacon: { fog: 0x0d3037, bg: 0x08212b, hemi: [0x80d2d2, 0x123643], sun: 0xb5f6ef, sunI: 2.55, torch: 0x4be6d2, tint: 0x9adbd1 },
+  tribunal: { fog: 0x2a2139, bg: 0x171323, hemi: [0xd1b7d6, 0x342743], sun: 0xffe1bd, sunI: 2.65, torch: 0xf5a2d4, tint: 0xd5c0d8 },
+  confluence: { fog: 0x19312b, bg: 0x0d211d, hemi: [0xb5dbc3, 0x204139], sun: 0xffe8b9, sunI: 2.55, torch: 0x9be6ba, tint: 0xb8d2ac },
+};
 const TILE = 4;
 const rnd = (a, b) => a + Math.random() * (b - a);
 
@@ -136,7 +146,7 @@ export class Arena {
   buildFloor(floorData, theme = 'crypt') {
     this.clear();
     this.floorData = floorData;
-    const T = THEMES[theme] || THEMES.crypt;
+    const T = { ...(THEMES[theme] || THEMES.crypt), ...(DUNGEON_ATMOSPHERES[floorData.layout?.landmark] || {}) };
     const random = mulberry32((floorData.seed || floorData.floor * 7919) ^ 0x51a7);
     const rnd = (a, b) => a + random() * (b - a);
     this.scene.background = new THREE.Color(T.bg); this.scene.fog.color.set(T.fog); this.scene.fog.density = 0.026;

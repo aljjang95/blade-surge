@@ -15,10 +15,45 @@ import { availableDifficulties } from '../game/difficulty.js';
 const CAM_DESC = { auto: '상황에 맞춰 자동 — 탐험은 액션, 난전은 탑다운, 보스는 시네마틱', top: '높이서 내려다보는 클래식 시점 — 몹몰이 파악이 쉽다', action: '낮고 가까운 시점 — 타격감과 속도감이 크다', wide: '멀고 넓은 시점 — 전장 전체와 보스 패턴이 보인다' };
 const DUNGEON_ICON = '/img/ui-crafted/nav-dungeon.webp';
 const DUNGEON_GATE = '/img/ui-crafted/dungeon-gate.svg';
+const REGION_DUNGEON_ART = {
+  garden: '/img/ui-crafted/dungeon-garden-keyart.png',
+  forge: '/img/ui-crafted/dungeon-forge-keyart.png',
+  frost: '/img/ui-crafted/dungeon-frost-keyart.png',
+  tide: '/img/ui-crafted/dungeon-tide-keyart.png',
+  crown: '/img/ui-crafted/dungeon-crown-keyart.png',
+  homecoming: '/img/ui-crafted/dungeon-homecoming-keyart.png',
+};
+const dungeonMapSvg = (stage, { compact = false } = {}) => {
+  const dungeon = stage?.dungeon;
+  const layout = dungeon?.layout;
+  if (!layout?.cells?.length) return '';
+  const xs = layout.cells.map(([x]) => x), ys = layout.cells.map(([, y]) => y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  const spanX = Math.max(1, maxX - minX), spanY = Math.max(1, maxY - minY);
+  const base = layout.cells.map(([x, y]) => [10 + ((x - minX) / spanX) * 80, 10 + ((y - minY) / spanY) * 80]);
+  const variant = ((stage.ch - 1) * 10 + stage.st - 1) % 8;
+  const transform = ([x, y]) => ([
+    [x, y], [100 - x, y], [x, 100 - y], [100 - x, 100 - y],
+    [y, x], [100 - y, x], [y, 100 - x], [100 - y, 100 - x],
+  ][variant]);
+  const points = base.map(transform);
+  const lineHtml = (layout.edges || []).map(([from, to]) => {
+    const a = points[from], b = points[to];
+    return a && b ? `<line x1="${a[0].toFixed(2)}" y1="${a[1].toFixed(2)}" x2="${b[0].toFixed(2)}" y2="${b[1].toFixed(2)}" />` : '';
+  }).join('');
+  const nodeHtml = points.map(([x, y], i) => {
+    const type = layout.types?.[i] || 'normal';
+    const label = layout.labels?.[i] || `${dungeon.name} · ${i + 1}구역`;
+    return `<g class="dungeon-map-node ${type}" transform="translate(${x.toFixed(2)} ${y.toFixed(2)})"><title>${storyText(label)}</title><circle r="${type === 'boss' ? 5 : type === 'treasure' ? 4.5 : 3.7}" /><circle class="dungeon-map-node-core" r="${type === 'boss' ? 2 : 1.7}" /></g>`;
+  }).join('');
+  const svg = `<svg class="dungeon-map-svg" viewBox="0 0 100 100" aria-hidden="${compact ? 'true' : 'false'}" focusable="false"><g class="dungeon-map-lines">${lineHtml}</g><g class="dungeon-map-nodes">${nodeHtml}</g></svg>`;
+  if (compact) return svg;
+  return `<section class="dungeon-map" style="--dungeon-accent:${stage.chapter?.color || '#d9c5a0'}" aria-label="${storyText(dungeon.name)} ${layout.cells.length}개 구역 지도">${svg}<div class="dungeon-map-caption"><b>${storyText(dungeon.name)}</b><span>${layout.cells.length}개 구역 · ${variant + 1}번 원정 동선</span></div><div class="dungeon-map-legend"><span><i class="start"></i>출발</span><span><i class="elite"></i>정예</span><span><i class="treasure"></i>보상</span><span><i class="boss"></i>봉인</span></div></section>`;
+};
 const stageKeyArt = (stage, chapter, chapterCast) => {
   const prefix = chapter.encounterPrefix || chapter.theme;
   const suffix = stage.encounter?.rank === 'midboss' ? 'midboss' : stage.encounter?.rank === 'finalboss' ? 'finalboss' : '';
-  return suffix ? `/img/encounters/${prefix}_${suffix}.webp` : chapterCast.portrait;
+  return suffix ? `/img/encounters/${prefix}_${suffix}.webp` : (REGION_DUNGEON_ART[prefix] || chapterCast.portrait);
 };
 
 const RC = { N: 'var(--r-n)', R: 'var(--r-r)', SR: 'var(--r-sr)', SSR: 'var(--r-ssr)' };
@@ -110,19 +145,21 @@ export class Meta {
     const chapterCast = [HEROES.knight, HEROES.barbarian, HEROES.mage, HEROES.rogue, { name: '기억의 동행 네브', portrait: '/img/tll/neve-original-v1.webp' }, HEROES.ranger][this.chapter - 1] || HEROES.knight;
     const cleared = Array.from({ length: STAGES_PER_CHAPTER }, (_, i) => this.eco.s.progress.stars[`${this.chapter}-${i + 1}`] || 0).filter(Boolean).length;
     const total = CHAPTERS.reduce((n, c) => n + Array.from({ length: STAGES_PER_CHAPTER }, (_, i) => this.eco.s.progress.stars[`${c.id}-${i + 1}`] || 0).filter(Boolean).length, 0);
-    $('tab-stage').dataset.region = chapter.theme;
+    $('tab-stage').dataset.region = chapter.encounterPrefix || chapter.theme;
     const mapStops = [1, 3, 5, 7, 10].map((stop) => {
       const stopStage = stageDef(this.chapter, stop), stopStars = this.eco.s.progress.stars[stopStage.code] || 0;
       return `<span class="chapter-route-node${stopStars ? ' done' : ''}${stopStage.boss ? ' boss' : ''}" title="${storyText(stopStage.title)}"><i>${String(stop).padStart(2, '0')}</i><small>${stopStage.boss ? '보스' : '관문'}</small></span>`;
     }).join('');
-    $('chapter-brief').innerHTML = `<div class="chapter-copy"><span class="campaign-eyebrow">${storyText(chapter.tagline)}</span><h3>${storyText(chapter.name)}</h3><p>${storyText(chapter.summary)}</p><div class="chapter-facts"><span><b>${cleared}</b><small>정화된 관문</small></span><span><b>${total}/${CHAPTERS.length * STAGES_PER_CHAPTER}</b><small>전체 기록</small></span><span><b>${storyText(chapter.mechanic.name)}</b><small>지역 기믹</small></span></div></div><div class="chapter-map-scene" aria-label="${storyText(chapter.name)} 원정 지도"><div class="chapter-map-glow"></div><img class="chapter-map-gate" src="${DUNGEON_GATE}" alt="" width="96" height="96"><img class="chapter-map-icon" src="${DUNGEON_ICON}" alt="" width="32" height="32"><div class="chapter-route">${mapStops}</div><span class="chapter-map-caption">정화 루트 · 10개 관문</span></div><figure class="chapter-cast"><img src="${chapterCast.portrait}" width="1122" height="1402" alt="${storyText(chapterCast.name)}" decoding="async"><figcaption>${storyText(chapterCast.name)}<small>원정의 길잡이</small></figcaption></figure><div class="campaign-progress"><b>${cleared}<small> / ${STAGES_PER_CHAPTER}</small></b><span>지역 정복 · 전체 ${total}/${CHAPTERS.length * STAGES_PER_CHAPTER}</span><progress value="${cleared}" max="${STAGES_PER_CHAPTER}" aria-label="${storyText(chapter.name)} 클리어 진행도"></progress></div>`;
+    const regionArt = REGION_DUNGEON_ART[chapter.encounterPrefix || chapter.theme] || chapterCast.portrait;
+    $('chapter-brief').innerHTML = `<div class="chapter-copy"><span class="campaign-eyebrow">${storyText(chapter.tagline)}</span><h3>${storyText(chapter.name)}</h3><p>${storyText(chapter.summary)}</p><div class="chapter-facts"><span><b>${cleared}</b><small>정화된 관문</small></span><span><b>${total}/${CHAPTERS.length * STAGES_PER_CHAPTER}</b><small>전체 기록</small></span><span><b>${storyText(chapter.mechanic.name)}</b><small>지역 기믹</small></span></div></div><div class="chapter-map-scene" aria-label="${storyText(chapter.name)} 원정 지도"><div class="chapter-map-glow"></div><img class="chapter-map-gate" src="${DUNGEON_GATE}" alt="" width="96" height="96"><img class="chapter-map-icon" src="${DUNGEON_ICON}" alt="" width="32" height="32"><div class="chapter-route">${mapStops}</div><span class="chapter-map-caption">정화 루트 · 10개 관문</span></div><figure class="chapter-cast chapter-dungeon-art"><img src="${regionArt}" width="1680" height="944" alt="${storyText(chapter.name)} 전용 던전 키아트" decoding="async"><figcaption>${storyText(chapter.name)}<small>지역 전용 던전 키아트</small></figcaption></figure><div class="campaign-progress"><b>${cleared}<small> / ${STAGES_PER_CHAPTER}</small></b><span>지역 정복 · 전체 ${total}/${CHAPTERS.length * STAGES_PER_CHAPTER}</span><progress value="${cleared}" max="${STAGES_PER_CHAPTER}" aria-label="${storyText(chapter.name)} 클리어 진행도"></progress></div>`;
     for (let st = 1; st <= STAGES_PER_CHAPTER; st++) {
       const d = stageDef(this.chapter, st); const unlocked = this.eco.isUnlocked(this.chapter, st); const stars = this.eco.s.progress.stars[`${this.chapter}-${st}`] || 0;
       const cell = document.createElement('button'); cell.type = 'button'; cell.className = 'stage-cell' + (d.boss ? ' boss' : '') + (unlocked ? '' : ' lock') + (this.stage.st === st ? ' on' : '');
       cell.dataset.stage = d.code; cell.dataset.rank = d.encounter?.rank || 'captain'; cell.setAttribute('aria-pressed', String(this.stage.st === st));
       cell.setAttribute('aria-label', `${d.code} ${d.title} · ${encounterLabel(d)} · ${unlocked ? stars ? `별 ${stars}개` : '도전 가능' : '미개방, 소개 보기'}`);
       const cardArt = stageKeyArt(d, chapter, chapterCast);
-      cell.innerHTML = `<span class="stage-connector" aria-hidden="true"></span><span class="stage-node${d.boss ? ' boss' : ''}"><img src="${d.boss ? cardArt : DUNGEON_ICON}" alt="" width="48" height="48" loading="lazy" onerror="this.onerror=null;this.src='${DUNGEON_ICON}'">${unlocked ? '<i class="stage-node-mark">입장</i>' : '<i class="stage-node-lock">봉인</i>'}</span><span class="stage-code">${d.code}</span><span class="stage-title">${storyText(d.title)}</span><span class="stage-rank">${storyText(encounterLabel(d))}</span><span aria-hidden="true" class="st ${stars ? '' : 'none'}">${unlocked ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : '미개방'}</span>`;
+      const nodeArt = d.boss ? `<img src="${cardArt}" alt="" width="48" height="48" loading="lazy" onerror="this.onerror=null;this.src='${regionArt}'">` : `<span class="stage-node-map">${dungeonMapSvg(d, { compact: true })}</span>`;
+      cell.innerHTML = `<span class="stage-connector" aria-hidden="true"></span><span class="stage-node${d.boss ? ' boss' : ''}">${nodeArt}${unlocked ? '<i class="stage-node-mark">입장</i>' : '<i class="stage-node-lock">봉인</i>'}</span><span class="stage-code">${d.code}</span><span class="stage-title">${storyText(d.title)}</span><span class="stage-rank">${storyText(encounterLabel(d))}</span><span aria-hidden="true" class="st ${stars ? '' : 'none'}">${unlocked ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : '미개방'}</span>`;
       cell.onclick = () => { this.stage = d; this.renderStages(); grid.querySelector(`[data-stage="${d.code}"]`)?.focus({ preventScroll: true }); };
       grid.appendChild(cell);
     }
@@ -134,7 +171,7 @@ export class Meta {
     const difficultyRequirement = (item) => item.id === 'adept' ? '1개 스테이지 클리어' : item.id === 'nightmare' ? '이 스테이지 ★3' : '기본 난이도';
     const difficultyHtml = difficulties.map((item) => `<button type="button" class="difficulty-card tone-${item.tone}${item.id === selectedDifficulty.id ? ' on' : ''}${item.unlocked ? '' : ' locked'}" data-difficulty="${item.id}" aria-pressed="${item.id === selectedDifficulty.id}" ${item.unlocked ? '' : 'disabled'}><img src="/img/ui/difficulty-${item.id}.svg" alt=""><span class="difficulty-copy"><b>${item.name}</b><small>${item.description}</small></span><span class="difficulty-reward">보상 ×${item.rewardMul.toFixed(2)}</span>${item.unlocked ? '' : `<em>🔒 ${difficultyRequirement(item)}</em>`}</button>`).join('');
     const detailArt = stageKeyArt(d, chapter, chapterCast);
-    $('stage-detail').innerHTML = `<div class="stage-narrative"><div class="stage-hero-card"><img src="${detailArt}" alt="${storyText(d.title)}" width="1122" height="1402" loading="lazy" onerror="this.onerror=null;this.src='${chapterCast.portrait}'"><div class="stage-hero-shade"><span class="campaign-eyebrow">${d.code} · ${storyText(encounterLabel(d))}</span><h3>${storyText(d.title)}</h3><p>${storyText(d.story?.opening)}</p><span class="stage-hero-gate"><img src="${DUNGEON_ICON}" alt="" width="18" height="18">${storyText(d.dungeon?.name || '미지의 던전')}</span></div></div><p class="stage-objective"><b>이번 원정의 목표</b> ${storyText(d.objective)}</p>${dungeonBriefHtml(d)}<div class="stage-tactics"><p><b>${storyText(chapter.mechanic?.name)}</b> ${storyText(chapter.mechanic?.description)}</p><p><b>${storyText(d.encounter?.name)}</b> ${storyText(d.encounter?.tactic)}</p></div></div><div class="stage-launch"><div class="launch-kicker"><span>출격 준비</span><b>${unlocked ? '입장 가능한 던전' : '봉인된 던전'}</b></div>
+    $('stage-detail').innerHTML = `<div class="stage-narrative"><div class="stage-hero-card"><img src="${detailArt}" alt="${storyText(d.title)}" width="1680" height="944" loading="lazy" onerror="this.onerror=null;this.src='${regionArt}'"><div class="stage-hero-shade"><span class="campaign-eyebrow">${d.code} · ${storyText(encounterLabel(d))}</span><h3>${storyText(d.title)}</h3><p>${storyText(d.story?.opening)}</p><span class="stage-hero-gate"><img src="${DUNGEON_ICON}" alt="" width="18" height="18">${storyText(d.dungeon?.name || '미지의 던전')}</span></div></div><p class="stage-objective"><b>이번 원정의 목표</b> ${storyText(d.objective)}</p>${dungeonBriefHtml(d)}${dungeonMapSvg(d)}<div class="stage-tactics"><p><b>${storyText(chapter.mechanic?.name)}</b> ${storyText(chapter.mechanic?.description)}</p><p><b>${storyText(d.encounter?.name)}</b> ${storyText(d.encounter?.tactic)}</p></div></div><div class="stage-launch"><div class="launch-kicker"><span>출격 준비</span><b>${unlocked ? '입장 가능한 던전' : '봉인된 던전'}</b></div>
       <div class="meta"><span>권장 전투력 <b style="color:${power >= d.recPower ? 'var(--green)' : 'var(--red)'}">${fmt(d.recPower)}</b></span><span>내 전투력 ${fmt(power)}</span></div>
       <div class="difficulty-picker" role="group" aria-label="전투 난이도"><div class="difficulty-heading"><b>전투 난이도</b><span>${selectedDifficulty.name} · 보상과 적 압박이 함께 증가합니다</span></div>${difficultyHtml}</div>
       <div class="rewards"><span class="reward-chip"><i class="ic ic-gold"></i> ${fmt(Math.floor(d.rewards.gold * selectedDifficulty.rewardMul))}</span><span class="reward-chip">EXP ${Math.floor(d.rewards.exp * selectedDifficulty.expMul)}</span><span class="reward-chip">장비 ${Math.round(Math.min(1, d.rewards.dropChance * (0.9 + selectedDifficulty.rewardMul * 0.1)) * 100)}%</span>${!stars ? `<span class="reward-chip"><i class="ic ic-gem"></i> ${d.rewards.firstGems} 첫클리어</span>` : ''}</div>
