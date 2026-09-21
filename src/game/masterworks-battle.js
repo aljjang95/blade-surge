@@ -228,6 +228,8 @@ export class Battle extends RpgBattle {
       s.history=s.history.slice(-20); this.rpgDirty=true; this.flushRpg();
     }
     if(this.result) this.result.masterworks={renown:this.run.renown,breaks:this.run.breaks,perfects:this.run.perfects,boons:[...this.run.picked]};
+    // Defeat presents its result synchronously, before this final history save.
+    if(!this.stage.expedition&&this.result)this.ui.refreshResultGrowth?.(this.result);
     if(this.app.expeditionUI?.result)this.app.expeditionUI.render();
     this.chronicle.refresh();
   }

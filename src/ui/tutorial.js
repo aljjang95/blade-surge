@@ -22,6 +22,7 @@ export class BattleTutorial {
     if (stage?.code !== '1-1' || stage.difficultyId !== 'story' || save.tutorial?.completed || !this.root) return false;
     const battle = this.app.battle;
     this.battle = battle; this.phase = 'attack'; this.beforeAuto = !!battle.player.auto; battle.player.auto = false;
+    document.getElementById('btn-auto')?.classList.toggle('on', false);
     this.show('attack', true);
     return true;
   }
@@ -63,7 +64,11 @@ export class BattleTutorial {
     if (!this.phase) return;
     const battle = this.battle;
     battle?.setPaused('tutorial', false);
-    if (battle?.player) battle.player.auto = this.beforeAuto;
+    const preference = this.app.journey?.s.autoBattle;
+    const auto = typeof preference === 'boolean' ? preference : this.beforeAuto;
+    if (battle?.player) battle.player.auto = auto;
+    this.app._auto = auto;
+    document.getElementById('btn-auto')?.classList.toggle('on', auto);
     this.app.eco.s.tutorial = { completed: true };
     this.app.eco.emit();
     document.querySelectorAll('.tutorial-focus').forEach((el) => el.classList.remove('tutorial-focus'));

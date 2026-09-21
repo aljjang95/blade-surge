@@ -1,5 +1,5 @@
 // 경제·진행 상태 (localStorage 저장). 결제는 전부 목업.
-import { HEROES, HERO_ORDER, levelExp, levelGold, starShards, skillUpGold, heroStats } from '../data/heroes.js';
+import { HEROES, HERO_ORDER, levelExp, starShards, skillUpGold, heroStats } from '../data/heroes.js';
 import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, itemStats, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
 import { SKUS, GACHA, BATTLE_PASS, ENERGY, DAILY_REWARDS, PASS_TRACK } from '../data/shop.js';
 import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
@@ -7,6 +7,7 @@ import { normalizeSave } from './save.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { resolveDifficulty } from './difficulty.js';
+import { heroTrainingQuote } from './hero-training.js';
 
 const KEY = 'bladesurge_save_v1';
 const now = () => Date.now();
@@ -15,7 +16,7 @@ const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + 
 export class Economy {
   constructor() { this.storageStatus = 'ready'; this.s = this.load(); this._lastGoodSave = JSON.stringify(this.s); this.listeners = []; this.bonusReceipts = new WeakSet(); this.tickEnergy(); }
   onChange(fn) { this.listeners.push(fn); }
-  emit() { this.save(); for (const f of this.listeners) f(this.s); }
+  emit() { const saved = this.save(); for (const f of this.listeners) f(this.s); return saved; }
   fresh() {
     return {
       expedition: normalizeExpedition(),
@@ -149,7 +150,19 @@ export class Economy {
   heroEquipInsts(id) { const h = this.hero(id); const o = {}; for (const sl of SLOTS) o[sl] = this.s.inventory.find((x) => x.uid === h.equip[sl]) || null; return o; }
   heroPower(id) { return heroStats(HEROES[id], this.hero(id), this.heroEquipBonus(id)).power; }
   addHeroExp(id, exp, { silent = false } = {}) { const h = this.hero(id); h.exp += exp; let ups = 0; while (h.exp >= levelExp(h.level) && h.level < 80) { h.exp -= levelExp(h.level); h.level++; ups++; } if (!silent) this.emit(); return ups; }
-  levelUpHero(id) { const h = this.hero(id); const cost = levelGold(h.level); if (this.s.gold < cost || h.level >= 80) return false; this.s.gold -= cost; h.level++; this.emit(); return true; }
+  trainingQuote(id) { return heroTrainingQuote(this.s.heroes[id], this.s.gold); }
+  levelUpHero(id) {
+    const quote = this.trainingQuote(id); this.lastTrainingError = quote.reason;
+    if (!quote.ok) return false;
+    const h = this.s.heroes[id], before = { level: h.level, exp: h.exp, gold: this.s.gold };
+    this.s.gold -= quote.cost; h.level++; h.exp = 0;
+    if (!this.save()) {
+      h.level = before.level; h.exp = before.exp; this.s.gold = before.gold;
+      this.lastTrainingError = 'storage'; return false;
+    }
+    for (const listener of this.listeners) listener(this.s);
+    return true;
+  }
   promoteHero(id) { const h = this.hero(id); const need = starShards(h.star); if (h.shards < need || h.star >= 5) return false; h.shards -= need; h.star++; this.emit(); return true; }
   upgradeSkill(id, i) { const h = this.hero(id), sk = HEROES[id]?.skills[i]; if (!h || !sk || (sk.unlock && h.level < sk.unlock)) return false; const cost = skillUpGold(h.skills[i]); if (this.s.gold < cost || h.skills[i] >= 10) return false; this.s.gold -= cost; h.skills[i]++; this.emit(); return true; }
   setSkillLoadout(id, slot, skillIndex) { const h = this.hero(id), def = HEROES[id]; if (!h || !def || ![0,1].includes(slot) || !Number.isInteger(skillIndex) || skillIndex < 4 || skillIndex >= def.skills.length) return false; const sk = def.skills[skillIndex]; if (sk.unlock && h.level < sk.unlock) return false; const next = normalizeSkillLoadout(def, h.skillLoadout); if (next[slot] === skillIndex) return false; const other = 1 - slot; if (next[other] === skillIndex) [next[slot], next[other]] = [skillIndex, next[slot]]; else next[slot] = skillIndex; h.skillLoadout = next; this.emit(); return true; }
@@ -214,13 +227,14 @@ export class Economy {
     if (stage.boss && Math.random() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
     const prevLv = this.hero(s.selected).level;
     const stageExp = r.exp * m + (fullClearBonus?.exp || 0);
-    const ups = this.addHeroExp(s.selected, stageExp);
+    const ups = this.addHeroExp(s.selected, stageExp, { silent: true });
     const nowLv = this.hero(s.selected).level;
     // 이번 판에 넘긴 각성 구간
     const awakened = (HEROES[s.selected].skills || []).filter((k) => k.unlock && prevLv < k.unlock && nowLv >= k.unlock);
     const passUps = this.addPassXp(r.bp);
-    s.quests.stages++; this.emit();
-    const receipt = { got, loot, ups, passUps, first, exp: stageExp, awakened, fullClearBonus };
+    s.quests.stages++; const saved = this.emit();
+    const receipt = { got, loot, ups, passUps, first, exp: stageExp, awakened, fullClearBonus,
+      ok: saved, saveError: !saved };
     this.bonusReceipts.add(receipt);
     return receipt;
   }

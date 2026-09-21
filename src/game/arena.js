@@ -5,6 +5,7 @@ import { buildRegionArchitecture } from './region-architecture.js';
 import { ROOM_TYPE, mulberry32 } from './world.js';
 import { buildOathHall } from './lobby-hall.js';
 import { buildLobbyWorld } from './lobby-world.js';
+import { BattleOcclusion } from '../engine/battle-occlusion.js';
 
 const THEMES = {
   garden: { fog: 0x172b2b, bg: 0x172b2b, hemi: [0xa0b5ae, 0x283930], sun: 0xffedca, sunI: 2.3, torch: 0x8adbd0, tint: 0xcbd0b8 },
@@ -43,6 +44,7 @@ function disposeSeal(seal) {
 export class Arena {
   constructor(scene, dungeonGltf, renderer) {
     this.scene = scene; this.gltf = dungeonGltf; this.renderer = renderer;
+    this.occlusion = renderer.battleOcclusion ??= new BattleOcclusion();
     this.group = new THREE.Group(); scene.add(this.group);
     this.lights = []; this.torches = []; this.torchPos = []; this.t = 0;
     this.doors = []; this.seals = []; this.ownedMaterials = new Set(); this.ownedGeometry = new Set();
@@ -76,6 +78,7 @@ export class Arena {
     this.seals.length = 0;
   }
   clear() {
+    this.occlusion.reset();
     this.lobbyHall?.userData.dispose(); this.lobbyHall = null;
     this.lobbyWorld?.userData.dispose(); this.lobbyWorld = null; this.renderer.lobbyOccluders = [];
     this.regionArchitecture?.userData.dispose(); this.regionArchitecture = null;
@@ -98,6 +101,7 @@ export class Arena {
     const { mesh: src, part } = this._meshOf(name); if (!src) return;
     const { castShadow = true, chunk = 44 } = opts;
     const mat = src.material.clone(); this.ownedMaterials.add(mat); if (tint) mat.color.multiply(new THREE.Color(tint));
+    if (opts.cutaway) this.occlusion.bind(mat);
     part.updateWorldMatrix(true, true);
     const local = new THREE.Matrix4().copy(part.matrixWorld).invert().multiply(src.matrixWorld);
 
@@ -197,7 +201,7 @@ export class Arena {
         }
       }
     }
-    for (const k in walls) this.instanced(k, walls[k], T.tint);
+    for (const k in walls) this.instanced(k, walls[k], T.tint, { cutaway: true });
 
     // ---- 방 장식 ----
     const pillars = [], banners = [];
@@ -234,14 +238,18 @@ export class Arena {
         ring.rotation.x = -Math.PI / 2; ring.position.set(r.x, 0.06, r.z); this.group.add(ring);
       }
     }
-    this.instanced('pillar_decorated', pillars, T.tint);
+    this.instanced('pillar_decorated', pillars, T.tint, { cutaway: true });
     this.instanced('banner_shield_red', banners);
     this.regionArchitecture = buildRegionArchitecture(floorData, theme);
+    this.regionArchitecture.traverse(node => {
+      if (node.isMesh) for (const material of Array.isArray(node.material) ? node.material : [node.material]) this.occlusion.bind(material);
+    });
     this.group.add(this.regionArchitecture);
     this.buildSeals(floorData);
   }
 
   update(dt, fx, playerPos) {
+    this.occlusion.setTarget(this.floorData ? playerPos : null);
     this.t += dt;
     for (const s of this.seals) { s.material.opacity = 0.5 + Math.sin(this.t * 4) * 0.08; const r = s.userData.rune, g = s.userData.sigil; if (r) { r.rotation.z += dt * 0.8; r.material.opacity = 0.55 + Math.sin(this.t * 6) * 0.2; } if (g) { g.rotation.z -= dt * 0.5; g.material.opacity = 0.8 + Math.sin(this.t * 5) * 0.15; } }
     for (const t of this.torches) t.l.intensity = t.i0 * (0.85 + Math.sin(this.t * 13 + t.seed) * 0.08 + Math.sin(this.t * 31 + t.seed * 3) * 0.07);

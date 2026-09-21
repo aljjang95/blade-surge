@@ -7,7 +7,7 @@ import { CombatNoticeQueue } from './combat-notices.js';
 import { ROOM_TYPE } from '../game/world.js';
 import { resultStoryHtml } from './campaign.js';
 import { levelExp } from '../data/heroes.js';
-import { renderGrowthPreparation } from './growth.js';
+import { renderGrowthPreparation, canPrepareGrowth } from './growth.js';
 import './campaign.css';
 
 const $ = (id) => document.getElementById(id);
@@ -62,9 +62,9 @@ export class UI {
     $('btn-giveup').addEventListener('click', () => { this.pause(false); this.app.battle.defeat(); });
     $('btn-boss-shortcut').addEventListener('click', () => { const b = this.app.battle; if (b?.shortcutBoss()) { $('btn-boss-shortcut').hidden = true; this.setObjective(b.world); } });
     $('btn-auto').addEventListener('click', () => { const p = this.app.battle.player; if (!p) return; const next = !p.auto; const saved = this.app.journey?.setAuto(next); if (saved?.ok === false) { this.toast(saved.error, 'red'); return; } p.auto = next; this.app._auto = next; $('btn-auto').classList.toggle('on', p.auto); this.toast(p.auto ? '자동 전투 ON · 다음 출격에도 적용' : '자동 전투 OFF · 다음 출격에도 적용'); });
-    $('btn-result-lobby').addEventListener('click', () => this.app.toLobby());
-    $('btn-result-retry').addEventListener('click', () => this.app.startStage(this.app.battle.stage));
-    $('btn-result-next').addEventListener('click', () => { if (this.resultData?.win && !this.app.battle.stage?.finale) this.app.startStage(this.eco.nextStage()); });
+    $('btn-result-lobby').addEventListener('click', () => { if (canPrepareGrowth(this.app, this.resultData)) this.app.toLobby(); });
+    $('btn-result-retry').addEventListener('click', () => { if (canPrepareGrowth(this.app, this.resultData)) this.app.startStage(this.app.battle.stage); });
+    $('btn-result-next').addEventListener('click', () => { if (canPrepareGrowth(this.app, this.resultData) && this.resultData.win && !this.app.battle.stage?.finale) this.app.startStage(this.eco.nextStage()); });
     $('btn-result-double').addEventListener('click', () => this.watchAd());
   }
   show(el, on) { el.classList.toggle('show', on); }
@@ -221,19 +221,75 @@ export class UI {
   }
 
   // ---------------- 결과 ----------------
+  refreshResultGrowth(result) {
+    if (this.resultData !== result || this.app.battle.result !== result) return;
+    const ready = canPrepareGrowth(this.app, result);
+    for (const id of ['btn-result-lobby', 'btn-result-retry', 'btn-result-next', 'btn-result-double']) {
+      $(id).disabled = !ready || (id === 'btn-result-double' && !!result.bonusClaimed);
+    }
+    for (const item of $('result-loot').querySelectorAll('button')) item.disabled = !ready;
+    renderGrowthPreparation($('result-growth'), this.app, result);
+  }
+  retryResultSave(result) {
+    const b = this.app.battle;
+    if (this.resultData !== result || b.result !== result || b.active || this.app.stageStarting
+      || !this.el.result.classList.contains('show') || b.stage?.expedition) return false;
+    // Rewards are already in memory. Retry persistence only, never completeStage.
+    let saved = this.eco.save();
+    if (saved && b.rpgDirty) saved = b.flushRpg();
+    if (saved && result.win && this.app.expedition && !result.expeditionRecorded) {
+      const recorded = this.app.expedition.recordCampaign(result, b.stage);
+      result.expeditionRecorded = recorded.ok;
+      if (recorded.ok) result.campaignReward = recorded.rewards;
+      saved = recorded.ok;
+    }
+    if (result.reward) { result.reward.ok = !!saved; result.reward.saveError = !saved; }
+    result.saveError = !saved;
+    this.refreshResultGrowth(result);
+    this.toast(saved ? '성장 기록과 보상을 저장했습니다.' : '저장하지 못했습니다. 저장 공간과 권한을 확인한 뒤 다시 시도해 주세요.', saved ? 'gold' : 'red');
+    ($('result-growth').querySelector('button') || $('btn-result-lobby'))?.focus();
+    return !!saved;
+  }
+  prepareResultLayout() {
+    const box = this.el.result.querySelector('.result-box');
+    if (box.querySelector('.result-scroll')) return;
+    const scroll = document.createElement('div'); scroll.className = 'result-scroll';
+    scroll.tabIndex = 0; scroll.setAttribute('aria-label', '사냥 결과와 성장 준비');
+    const buttons = box.querySelector('.result-btns');
+    const fold = (id, title) => {
+      const details = document.createElement('details'); details.id = id; details.className = 'result-details';
+      const summary = document.createElement('summary'); summary.textContent = title;
+      details.append(summary); return details;
+    };
+    for (const child of [...box.children]) {
+      if (child === buttons) continue;
+      if (child.id === 'result-story') {
+        const details = fold('result-story-details', '되찾은 이야기'); details.append(child); scroll.append(details);
+      } else if (child.id === 'result-loot') {
+        const details = fold('result-loot-details', '획득 보상'); details.append(child); scroll.append(details);
+      } else scroll.append(child);
+    }
+    // Growth stays ahead of optional story and loot, with one independently scrolling body.
+    scroll.insertBefore(scroll.querySelector('#result-growth'), scroll.querySelector('#result-stats'));
+    box.replaceChildren(scroll, buttons);
+  }
   showResult(b, win) {
     if (b.stage?.expedition) { this.app.expeditionUI.showResult(b, win); return; }
     const r = b.result;
-    if (!r || r.win !== win || (this.resultData === r && this.el.result.classList.contains('show'))) return;
+    if (!r || b !== this.app.battle || b.active || this.app.stageStarting || r.win !== win
+      || (this.resultData === r && this.el.result.classList.contains('show'))) return;
     this.hideResult(); this.resultData = r;
+    this.prepareResultLayout();
     const later = (fn, ms) => { this.resultTimers.push(setTimeout(() => { if (this.resultData === r && this.app.battle.result === r) fn(); }, ms)); };
     const eco = this.eco; this.showHud(false); this.show(this.el.pause, false); this.show(this.el.result, true);
     this.el.result.classList.toggle('is-defeat', !win);
-    const growth = $('result-growth'); growth.hidden = win;
-    if (win) growth.replaceChildren(); else renderGrowthPreparation(growth, this.app, r);
+    const growth = $('result-growth'); growth.hidden = true; growth.replaceChildren();
     while (this.lootLayer.firstChild) this.lootLayer.firstChild.remove();
     const t = $('result-title'); t.textContent = win ? b.stage.finale ? '새벽의 귀환' : 'VICTORY' : 'DEFEAT'; t.classList.toggle('lose', !win);
     const story = $('result-story'); story.hidden = !win; story.innerHTML = win ? resultStoryHtml(b.stage) : '';
+    const storyDetails = $('result-story-details'); storyDetails.hidden = !win; storyDetails.open = !!b.stage.finale;
+    const lootDetails = $('result-loot-details'); lootDetails.hidden = !win; lootDetails.open = false;
+    this.el.result.querySelector('.result-scroll').scrollTop = 0;
     const stars = [...$('result-stars').children]; stars.forEach((s) => { s.className = ''; });
     $('result-stats').innerHTML = `<span>처치 <b>${b.kills}</b></span><span>최대 콤보 <b>${b.maxCombo}</b></span><span>피해량 <b>${fmt(b.dmgDealt)}</b></span><span>시간 <b>${Math.floor(b.elapsed)}s</b></span><span>득템 <b>${b.drops.loot.length}</b></span>`;
     const loot = $('result-loot'); loot.innerHTML = '';
@@ -242,25 +298,29 @@ export class UI {
     $('result-exp-txt').textContent = ''; $('result-bp-txt').textContent = '';
     if (win) {
       r.reward ||= eco.completeStage(b.stage, r.stars, { fieldGold: b.drops.gold, fieldStones: b.drops.stones, fieldStones2: b.drops.stones2, fieldStones3: b.drops.stones3, fieldFragments: b.drops.fragments, fieldLoot: b.drops.loot, fullClear: !!r.fullClear });
-      if (this.app.expedition && !r.expeditionRecorded) {
-        r.receiptId ||= globalThis.crypto?.randomUUID?.() || `campaign-${Date.now()}-${Math.random()}`;
+      r.receiptId ||= globalThis.crypto?.randomUUID?.() || `campaign-${Date.now()}-${Math.random()}`;
+      if (r.reward.ok !== false && !r.reward.saveError && this.app.expedition && !r.expeditionRecorded) {
         const recorded = this.app.expedition.recordCampaign(r, b.stage);
         r.expeditionRecorded = recorded.ok;
         if (recorded.ok) r.campaignReward = recorded.rewards;
       }
       this.lastReward = r.reward; const rw = r.reward;
+      // completeStage and recordCampaign must settle before affordability is calculated.
+      this.refreshResultGrowth(r);
       stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
       const items = [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];
+      lootDetails.querySelector('summary').textContent = `획득 보상 · 장비 ${rw.loot.length}개 · 펼쳐서 비교`;
       if (r.campaignReward?.levelGold) items.push({ g: { k: 'gold', n: r.campaignReward.levelGold, label: '탐험 레벨업' } });
       items.forEach((x, i) => later(() => {
         const d = document.createElement(x.it ? 'button' : 'div');
         if (x.it) {
           d.type = 'button'; d.setAttribute('aria-label', `${ITEM_BY_ID[x.it.id].name} 장비 비교`);
+          d.disabled = !canPrepareGrowth(this.app, r);
           d.title = '이 장비 비교하기';
           d.onclick = () => {
-            if (this.resultData !== r || this.app.battle.result !== r) return;
+            if (!canPrepareGrowth(this.app, r)) return;
             const heroId = eco.s.selected;
-            this.app.toLobby(); this.app.meta.heroSel = heroId;
+            this.app.toLobby(); if (this.app.mode !== 'lobby') return; this.app.meta.heroSel = heroId;
             this.app.meta.bagSlot = ITEM_BY_ID[x.it.id].slot;
             this.app.meta.openTab('heroes'); this.app.meta.showItem(x.it.uid, heroId);
           };
@@ -268,20 +328,32 @@ export class UI {
         if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}`; d.innerHTML = `<img src="${ITEM_ICON(def)}" onerror="this.remove()"><div class="nm">${def.name}</div>`; if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); }
         else { const [nm, ic] = REWARD_LABEL[x.g.k] || [x.g.k, '']; d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(x.g.n)}</span><div class="nm">${x.g.label || nm}</div>`; audio.pick('coin', 2, { vol: 0.5 }); }
         loot.appendChild(d);
-      }, 1200 + i * 220));
-      later(() => { const h = eco.hero(); const need = Math.max(1, (h.level ? require_(h.level) : 100)); $('result-exp').style.width = Math.min(100, h.exp / need * 100) + '%'; $('result-exp-txt').textContent = `Lv.${h.level} +${rw.exp}`; const pl = eco.passLevel; $('result-bp').style.width = ((eco.s.pass.xp % 100)) + '%'; $('result-bp-txt').textContent = `Lv.${pl} +${b.stage.rewards.bp}`; if (rw.ups) { this.toast(`영웅 레벨업! Lv.${h.level}`, 'gold'); audio.play('jingle_win1', { vol: 0.6 }); } if (rw.awakened && rw.awakened.length) later(() => this.awakenBanner(rw.awakened), 700); if (rw.passUps) this.toast(`시즌 패스 Lv.${pl} 달성!`, 'gold'); }, 1500);
-      if (rw.first) later(() => this.toast(`첫 클리어 보상! 보석 +${b.stage.rewards.firstGems}`, 'gold'), 1800);
+      }, 300 + Math.min(i * 60, 600)));
+      later(() => {
+        if (!canPrepareGrowth(this.app, r)) return;
+        const h = eco.hero(b.heroId), need = levelExp(h.level);
+        $('result-exp').style.width = Math.min(100, h.exp / Math.max(1, need) * 100) + '%';
+        $('result-exp-txt').textContent = `Lv.${h.level} +${rw.exp}`;
+        const pl = eco.passLevel; $('result-bp').style.width = (eco.s.pass.xp % 100) + '%';
+        $('result-bp-txt').textContent = `Lv.${pl} +${b.stage.rewards.bp}`;
+        if (rw.ups) { this.toast(`영웅 레벨업! Lv.${h.level}`, 'gold'); audio.play('jingle_win1', { vol: 0.6 }); }
+        if (rw.awakened?.length) later(() => { if (canPrepareGrowth(this.app, r)) this.awakenBanner(rw.awakened); }, 700);
+        if (rw.passUps) this.toast(`시즌 패스 Lv.${pl} 달성!`, 'gold');
+      }, 1500);
+      if (rw.first) later(() => { if (canPrepareGrowth(this.app, r)) this.toast(`첫 클리어 보상! 보석 +${b.stage.rewards.firstGems}`, 'gold'); }, 1800);
       const nx = eco.nextStage(); $('btn-result-next').querySelector('small').innerHTML = `<i class="ic ic-energy"></i> -${nx.energy}`;
-      $('btn-result-double').disabled = !!r.bonusClaimed;
     } else {
+      this.refreshResultGrowth(r);
       audio.play('ui_error', { vol: 0.6, rate: 0.7 });
       later(() => (growth.querySelector('button') || $('btn-result-lobby')).focus(), 520);
     }
-    function require_(lv) { return Math.floor(100 * Math.pow(1.18, lv - 1)); }
   }
   watchAd() {
     const result = this.resultData;
-    if (!result?.win || !result.reward || result.bonusPending || result.bonusClaimed || this.app.battle.result !== result || !this.el.result.classList.contains('show')) return;
+    if (!result?.win || !result.reward || result.saveError || result.reward.saveError || result.reward.ok === false
+      || this.eco.storageStatus === 'unavailable' || this.app.battle.active || this.app.stageStarting
+      || this.app.battle.rpgDirty || result.expeditionRecorded === false || result.bonusPending || result.bonusClaimed
+      || this.app.battle.result !== result || !this.el.result.classList.contains('show')) return;
     this.modal('<h2>광고 보너스 준비 중</h2><p>현재 버전은 광고 시청을 지원하지 않아 추가 보상을 받을 수 없습니다.</p><p>이번 전투의 기본 보상은 그대로 유지됩니다. 다음 전투를 계속 진행해 주세요.</p><div class="modal-btns"><button class="btn btn-gold" id="ad-cancel">돌아가기</button></div>', {
       onOpen: (box) => { box.querySelector('#ad-cancel').onclick = () => this.closeModal(); },
     });

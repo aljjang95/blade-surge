@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { Economy } from '../src/game/economy.js';
-import { growthOptions } from '../src/game/growth-options.js';
+import { growthOptions, growthSummary } from '../src/game/growth-options.js';
+import { HEROES, levelExp } from '../src/data/heroes.js';
 import { normalizeMasterworks, unlockMastery } from '../src/game/masterworks-core.js';
 import { ITEM_BY_ID, enhanceCost, enhanceStones } from '../src/data/items.js';
 
@@ -97,4 +98,33 @@ test('an empty or invalid current context cannot advertise a purchase', () => {
   expect(growthOptions(save)).toEqual([]);
   expect(growthOptions(null)).toEqual([]);
   save.selected = 'missing'; expect(growthOptions(save)).toEqual([]);
+});
+
+test('a first unclaimed drop offers free comparison for an empty slot even with no gold', () => {
+  const eco = new Economy(); eco.s.gold = 0;
+  const low = eco.addItem('N', 'weapon'), high = eco.addItem('R', 'weapon');
+  const before = JSON.stringify(eco.s);
+  const option = growthOptions(eco.s).find(o => o.kind === 'equipment');
+  expect(option).toMatchObject({ mode: 'equip', uid: high.uid, slot: 'weapon', gold: 0, stones: 0 });
+  expect(JSON.stringify(eco.s)).toBe(before);
+  eco.hero('mage').equip.weapon = high.uid;
+  expect(growthOptions(eco.s).find(o => o.kind === 'equipment')).toMatchObject({ uid: low.uid, mode: 'equip' });
+  eco.hero().equip.weapon = low.uid;
+  expect(growthOptions(eco.s).some(o => o.kind === 'equipment')).toBe(false);
+});
+
+test('hunt summary uses observed levels and XP, including crossed unlocks and the exact next milestone', () => {
+  const summary: any = growthSummary({ heroId: 'mage', before: { heroId: 'mage', level: 9, exp: 42 },
+    after: { level: 11, exp: 25 }, combatXp: 700, clearXp: 310 });
+  expect(summary).toMatchObject({ beforeLevel: 9, level: 11, levels: 2, combatXp: 700, clearXp: 310 });
+  expect(summary.unlocked.map((skill: any) => skill.name)).toEqual(HEROES.mage.skills.filter(skill => skill.unlock === 10).map(skill => skill.name));
+  expect(summary.next).toMatchObject({ level: 20, remaining: Array.from({ length: 9 }, (_, i) => levelExp(11 + i)).reduce((a, b) => a + b, 0) - 25 });
+});
+
+test('summary never invents gains for missing or foreign snapshots, unknown XP or max-level overflow', () => {
+  const input: any = { heroId: 'mage', before: { heroId: 'knight', level: 1 }, after: { level: 80, exp: 123 }, combatXp: undefined, clearXp: -1 };
+  expect(growthSummary(input)).toMatchObject({ levels: null, beforeLevel: null, combatXp: null, clearXp: null, unlocked: [], need: null, next: null });
+  input.after = { level: NaN, exp: 0 }; expect(growthSummary(input)).toBeNull();
+  input.after = { level: 1, exp: 0 }; input.before = { heroId: 'mage', level: 1 }; input.combatXp = 0;
+  expect(growthSummary(input)).toMatchObject({ levels: 0, combatXp: 0, unlocked: [] });
 });

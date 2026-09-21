@@ -44,7 +44,10 @@ export class Battle extends BaseBattle {
     return saved;
   }
   async start(...args) {
+    const [, heroId, hero] = args;
+    const growthStart = hero ? Object.freeze({ heroId, level: hero.level, exp: hero.exp }) : null;
     await super.start(...args);
+    this.growthStart = growthStart;
     this.timeCtl = new ImpactClock(); this.killLedger = new KillLedger();
     this.combatXp = 0; this.saveT = 0; this.viewT = 0; this.lastTarget = null;
     this.ensureRpg(); this.rpgView?.refresh();
@@ -96,8 +99,8 @@ export class Battle extends BaseBattle {
     }
     super.onEnemyDeath(enemy);
   }
-  victory() { this.flushRpg(); super.victory(); if (this.result) this.result.combatXp = this.combatXp; this.rpgView?.refresh(); }
-  defeat() { this.flushRpg(); super.defeat(); if (this.result) this.result.combatXp = this.combatXp; this.rpgView?.refresh(); }
+  victory() { this.flushRpg(); super.victory(); if (this.result) { this.result.combatXp = this.combatXp; this.result.growthStart = this.growthStart; } this.rpgView?.refresh(); }
+  defeat() { this.flushRpg(); super.defeat(); if (this.result) { this.result.combatXp = this.combatXp; this.result.growthStart = this.growthStart; } this.rpgView?.refresh(); }
   update(realDt) {
     this.feedbackCount = 0; this.feedbackSound = false;
     super.update(realDt);

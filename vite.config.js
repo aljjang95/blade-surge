@@ -3,6 +3,7 @@ import { existsSync, realpathSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const projectRoot = fileURLToPath(new URL('.', import.meta.url));
+const scratchRoot = path.resolve(projectRoot, 'work');
 export default defineConfig({
   plugins: [{
     name: 'refresh-engraving-assets', apply: 'build',
@@ -19,5 +20,8 @@ export default defineConfig({
   }],
   build: { target: 'es2020', outDir: 'dist', emptyOutDir: false, assetsInlineLimit: 0, chunkSizeWarningLimit: 1500,
     rollupOptions: { output: { manualChunks: { three: ['three'] } } } },
-  server: { host: true, port: 5173 },
+  server: { host: true, port: 5173, watch: { ignored: file => {
+    const relative = path.relative(scratchRoot, path.resolve(file));
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  } } },
 });

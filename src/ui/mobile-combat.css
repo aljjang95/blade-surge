@@ -185,6 +185,38 @@ dialog[open] { top:var(--sat); bottom:auto; margin-top:12px; overflow-y:auto; }
   body:has(#hud.show) .companion-launcher>.companion-link-dot { display:none; }
 }
 
+/* The unlocked boss shortcut adds a fifth button. Keep it on the same row as
+ * pause, rather than wrapping pause over the hero's HP and growth summary. */
+@media (max-width:620px) and (orientation:portrait) {
+  .experience-v2 #hud .hud-top:has(#btn-boss-shortcut:not([hidden])) .hud-right-top {
+    grid-template-columns:repeat(5,minmax(0,1fr)); width:calc(100% - 110px); max-width:none;
+  }
+  .experience-v2 #hud .hud-top:has(#btn-boss-shortcut:not([hidden])) .hud-center { width:104px; }
+  .experience-v2.oath-visual #hud .combo, .experience-v2.oath-visual #hud .kill-streak { top:calc(208px + var(--sat)); }
+  .experience-v2.oath-visual #hud .oath-camera-details { top:auto; bottom:calc(284px + var(--sab)); }
+  .experience-v2.oath-visual #hud .oath-camera-details > summary { min-height:44px; }
+  .experience-v2.oath-visual #hud .oath-camera-details #battle-camera-controls { width:156px; }
+  .experience-v2.oath-visual #hud .oath-camera-details button { min-width:44px; min-height:44px; }
+}
+@media (max-width:620px) and (max-height:750px) and (orientation:portrait) {
+  .experience-v2.oath-visual #hud .oath-camera-details { bottom:calc(128px + var(--sab)); }
+  /* Use the minimap's non-interactive column while expanded, preserving HP,
+   * potions and skills. The closed launcher stays beside the combat controls. */
+  .experience-v2.oath-visual #hud .oath-camera-details[open] { top:calc(62px + var(--sat)); bottom:auto; left:auto; right:14px; width:116px; }
+  .experience-v2.oath-visual #hud .oath-camera-details[open] #battle-camera-controls { width:116px; }
+  .experience-v2.oath-visual #hud .oath-camera-details[open] #battle-camera-pad { min-height:44px; }
+  .experience-v2.oath-visual #hud .oath-camera-details[open] .battle-camera-buttons { flex-wrap:wrap; }
+  .experience-v2.oath-visual #hud .oath-camera-details[open] button { flex:1 1 44px; }
+  .experience-v2.oath-visual #hud:has(.oath-camera-details[open]) .kill-streak { visibility:hidden; }
+}
+@media (max-width:374px) and (orientation:portrait) {
+  .experience-v2 #hud .hud-right-top { width:calc(100% - 82px); }
+  .experience-v2 #hud .hud-center { width:76px; }
+  .experience-v2 #hud .hud-top:has(#btn-boss-shortcut:not([hidden])) .hud-right-top { width:calc(100% - 56px); }
+  .experience-v2 #hud .hud-top:has(#btn-boss-shortcut:not([hidden])) .hud-center { width:50px; }
+  .experience-v2 #hud .hud-center .stage-name { overflow:hidden; text-overflow:ellipsis; }
+}
+
 /* Keep the cinematic heading below the measured combat notice, even when its copy wraps. */
 #hud .wave-banner { top:max(30%,calc(var(--combat-notice-bottom,0px) + 14px)); transform-origin:center top; }
 @media (orientation:landscape) and (max-height:550px) {

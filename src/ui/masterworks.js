@@ -68,7 +68,8 @@ export class MasterworksView {
     const scrollTop=sameView?this.content.scrollTop:0;
     this.renderedTab=this.tab;this.renderedOffer=offer;
     this.dialog.dataset.offer=offer?.kind||'';
-    const run=this.tab==='run';this.nav.hidden=run;this.title.textContent=run?'이번 원정의 각인':'모험가의 길';
+    const run=this.tab==='run';this.dialog.dataset.view=this.tab;this.nav.hidden=run;
+    this.title.textContent=!run?'모험가의 길':offer?.kind==='boon'?'원정 각인 선택':offer?.kind==='story'?'길 위의 만남':'원정 각인 현황';
     [...this.nav.children].forEach((e,i)=>e.setAttribute('aria-pressed',String(['build','mastery','quests','journal'][i]===this.tab)));
     this.content.replaceChildren();
     if(run)this.renderRun();else if(this.tab==='mastery')this.renderMastery();else if(this.tab==='quests')this.renderQuests();else if(this.tab==='journal')this.renderJournal();else this.renderBuild();
@@ -120,22 +121,64 @@ export class MasterworksView {
     for(const h of [...this.state.history].reverse().slice(0,6))this.content.append(n('p','mw-history',`${h.outcome==='victory'?'승리':'재도전'} · ${h.floor}층 · ${h.boonIds.map(id=>BOONS.find(x=>x.id===id)?.name).join(' / ')||'각인 없음'}`));
   }
   renderRun() {
-    const run=this.battle.run;if(!run){this.content.append(n('p','','출격하면 이번 원정의 각인을 선택할 수 있습니다.'));return;}
-    const offer=this.battle.currentOffer();
+    const run=this.battle.run,offer=this.battle.currentOffer();
+    if(!run||!run.enabled) {
+      this.runIntro(!run?'출격 후 각인이 모입니다':'공용 전투 규칙',!run?'캠페인·재료 던전에서 얻은 각인과 선택할 보상을 이곳에서 확인하세요.':'AI 결투와 파티에서는 개인 각인과 서약 없이 공용 규칙으로 대결합니다.','원정 안내','nav-journey');
+      this.content.append(btn(this.battle.active?'전투로 돌아가기':'닫기',()=>this.close(),'mw-primary mw-run-return'));
+      return;
+    }
+    const pending=n('section','mw-pending');pending.setAttribute('aria-label','선택 대기 중인 보상');
+    if(offer) {
+      const status=n('div','mw-run-status');status.append(n('strong','','선택 대기'),n('span','',`${run.queue.length}건 · 아직 적용 전`));pending.append(status);
+      this.content.append(pending);
+    }
     if(offer?.kind==='boon') {
-      this.content.append(n('p','mw-eyebrow',`각인 선택 ${run.picked.length+1} · 세 가지 가능성`),n('h3','mw-choice-title','이번 싸움을 바꿀 힘'));
-      const cards=n('div','mw-grid mw-choices');for(const id of offer.ids){const b=BOONS.find(x=>x.id===id),rank=run.picked.filter(x=>x===id).length;const card=btn('',()=>this.act(()=>this.battle.selectBoon(id),'이번 원정에 적용했습니다.'),'mw-card mw-boon');card.dataset.boon=id;card.dataset.family=b.family;const illustration=art(`boon-${b.id}`);illustration.className+=' mw-boon-art';card.append(illustration,n('small','mw-eyebrow',`${family[b.family][0]} · ${rank?`강화 ${rank} → ${rank+1}`:'새 각인'}`),n('h4','',b.name),n('p','',b.description),n('strong','mw-pick','이 각인 선택'));cards.append(card);}this.content.append(cards,details('서로 다른 계열을 모으면 조합 효과가 열립니다. 같은 각인은 3단계까지 강화됩니다.','각인 조합 규칙'));
+      this.runIntro('이번 싸움을 바꿀 힘',`${offer.ids.length}개 중 하나를 선택하면 이번 출격에 즉시 적용됩니다.`,'각인 보상','loadout',pending);
+      const cards=n('div','mw-grid mw-choices');
+      for(const id of offer.ids) {
+        const b=BOONS.find(x=>x.id===id),rank=run.picked.filter(x=>x===id).length;
+        const card=btn('',()=>this.act(()=>this.battle.selectBoon(id),'이번 원정에 적용했습니다.'),'mw-card mw-boon');card.dataset.boon=id;card.dataset.family=b.family;
+        const illustration=art(`boon-${b.id}`);illustration.className+=' mw-boon-art';
+        card.append(illustration,n('small','mw-eyebrow',`${family[b.family][0]} · ${rank?`강화 ${rank} → ${rank+1}`:'새 각인'}`),n('h4','',b.name),n('p','mw-choice-effect',b.description),n('strong','mw-pick',rank?'이 각인 강화':'이 각인 적용'));cards.append(card);
+      }
+      pending.append(cards,details('서로 다른 계열을 모으면 조합 효과가 열립니다. 같은 각인은 3단계까지 강화됩니다.','각인 조합 규칙'));
     } else if(offer?.kind==='story') {
       const event=STORY_EVENTS.find(e=>e.id===offer.id),remembered=event.choices.find(c=>c.id===this.state.story[event.id]);
-      this.intro(event.name,remembered?remembered.consequence:event.description,offer.id==='bridge'?'ember_vault':'glass_garden');
-      if(remembered)this.content.append(btn(`잠시 쉬어 간다 · 체력 ${remembered.effects.heal?12:6}% 회복`,()=>this.act(()=>this.battle.selectStory(remembered.id)),'mw-primary'));
-      else{const choices=n('div','mw-story-choices');for(const c of event.choices){const b=btn('',()=>this.act(()=>this.battle.selectStory(c.id)),'mw-card');b.append(n('h4','',c.name),n('p','',c.description));choices.append(b);}this.content.append(choices);}
-    } else this.content.append(n('h3','mw-choice-title',run.enabled?'함께 울리는 각인':'공용 전투 규칙'),n('p','mw-muted',run.enabled?'중요한 체크포인트에서는 직접 고르고, 흐름 중 얻은 보상은 자동 적용됩니다.':'AI 결투와 파티에서는 개인 각인과 서약 없이 공용 규칙으로 대결합니다.'));
-    if(run.autoPicked)this.content.append(n('p','mw-muted',`전투 흐름을 멈추지 않고 자동 적용된 각인 ${run.autoPicked}회`));
-    const picked=n('div','mw-picked');for(const b of BOONS){const rank=run.picked.filter(id=>id===b.id).length;if(rank){const chip=n('span',`mw-chip ${b.family}`);chip.append(art(`boon-${b.id}`),n('span','',`${b.name} ${rank}`));picked.append(chip);}}this.content.append(picked);
+      this.runIntro(event.name,remembered?remembered.consequence:event.description,remembered?'다시 만난 인연 · 선택 기록 있음':'길 위의 만남 · 행동 하나 선택','nav-journal',pending,offer.id==='bridge'?'ember_vault':offer.id==='archive'?'star_archive':'glass_garden');
+      const choices=n('div',`mw-story-choices${remembered?' mw-revisit':''}`);
+      for(const c of remembered?[remembered]:event.choices) {
+        const heal=remembered?(c.effects.heal ? .12 : .06):c.effects.heal;
+        const reward=heal?`체력 ${Math.round(heal*100)}% 회복`:`명성 +${fmt(c.effects.renown)}`;
+        const card=btn('',()=>this.act(()=>this.battle.selectStory(c.id),'선택을 기록하고 보상을 적용했습니다.'),'mw-card mw-story-choice');card.dataset.storyChoice=c.id;card.dataset.reward=heal?'heal':'renown';
+        const body=n('span','mw-choice-body');
+        body.append(n('small','mw-eyebrow',remembered?'재방문 보상':heal?'생존을 위한 선택':'성장을 위한 선택'),n('h4','',remembered?'잠시 쉬어 간다':c.name),n('strong','mw-choice-reward',reward),n('p','',remembered?`지난 선택: ${c.name} · 선택 기록은 유지됩니다.`:c.consequence),n('small','mw-reward-scope',heal?'최대 체력 기준 · 선택 즉시 회복':'영구 숙련에 사용할 명성 · 선택 기록 저장'),n('strong','mw-pick',remembered?'회복하고 돌아가기':'이 행동 선택'));
+        card.append(art(heal?'potion-health':'renown'),body);choices.append(card);
+      }
+      pending.append(choices);
+    } else this.runIntro('현재 선택할 보상이 없습니다','지금 적용 중인 힘을 확인하고 전투를 이어가세요. 다음 보상을 얻으면 상단 각인 버튼에서 확인할 수 있습니다.','이번 출격의 기록','loadout');
+    if(offer&&run.queue.length>1)pending.append(n('p','mw-muted',`이번 보상 하나를 고르면 전투로 돌아갑니다. 남은 ${run.queue.length-1}건은 상단 각인 버튼에서 확인하세요.`));
+    const owned=n('section','mw-owned');owned.setAttribute('aria-label','이미 적용된 원정 각인');
+    const heading=n('div','mw-owned-heading');heading.append(n('h3','mw-section-title','적용 중인 각인'),n('span','mw-applied',`${new Set(run.picked).size}종 · 총 ${run.picked.length}회 획득`));owned.append(heading);
+    const picked=n('div','mw-picked');
+    for(const b of BOONS) {
+      const rank=run.picked.filter(id=>id===b.id).length;
+      if(rank) {
+        const chip=n('article',`mw-chip ${b.family}`);chip.dataset.ownedBoon=b.id;
+        const body=n('div');body.append(n('strong','',b.name),n('small','mw-applied',`적용 중 · ${rank}단계`),n('p','',`${rank>1?'단계당 · ':''}${b.description}`));
+        chip.append(art(`boon-${b.id}`),body);picked.append(chip);
+      }
+    }
+    if(!run.picked.length)owned.append(n('p','mw-muted',offer?.kind==='boon'?'아직 적용된 각인이 없습니다. 위에서 하나를 고르면 이 출격의 힘이 됩니다.':'아직 획득한 각인이 없습니다. 전투에서 각인 보상을 얻으면 이곳에 표시됩니다.'));
+    else owned.append(picked);
+    if(run.autoPicked)owned.append(n('p','mw-muted',`획득 내역에 자동 적용 보상 ${run.autoPicked}회 포함`));
     const families=new Set(run.picked.map(id=>BOONS.find(b=>b.id===id)?.family));const combos=SYNERGIES.filter(s=>s.families.every(f=>families.has(f)));
-    if(combos.length){this.content.append(n('h3','mw-section-title','발현한 조합'));for(const s of combos)this.content.append(n('p','mw-synergy',`${s.name} · ${s.description}`));}
-    this.content.append(details('각인은 이번 출격에만 유지됩니다. 명성·영구 숙련·도감·선택 기록은 귀환하거나 패배해도 남습니다. 닫아도 대기 중인 선택은 상단 각인 버튼에서 이어갈 수 있습니다.','유지되는 성장'));
+    if(combos.length){owned.append(n('h4','mw-combo-title','조합 효과 적용 중'));for(const s of combos)owned.append(n('p','mw-synergy',`${s.name} · ${s.description}`));}
+    this.content.append(owned,details(`길드 명성 ${fmt(this.state.renown)} · 영구 숙련 ${this.state.unlocked.length}개 · 발견 ${this.state.discoveries.length}곳. 각인은 이번 출격에만 유지됩니다. 명성·영구 숙련·도감·선택 기록은 귀환하거나 패배해도 남습니다.`,'귀환 후에도 남는 성장'),btn(this.battle.active?'전투로 돌아가기':'닫기',()=>this.close(),'mw-close mw-run-return'));
+  }
+  runIntro(title,text,eyebrow,image,target=this.content,backdrop=null) {
+    const intro=n('section','mw-run-intro');
+    if(backdrop)intro.style.backgroundImage=`linear-gradient(90deg,#101e20f5,#101e20b8),url('/img/expansion/${backdrop}.webp')`;
+    const body=n('div');body.append(n('small','mw-eyebrow',eyebrow),n('h3','mw-choice-title',title),n('p','',text));intro.append(art(image),body);target.append(intro);
   }
   refresh() {
     const r=this.battle.run,active=this.battle.active;
