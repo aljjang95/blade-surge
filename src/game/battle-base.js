@@ -84,6 +84,7 @@ export class Battle {
     this.autoTarget = this.routeObjectives?.autoRoom() || null;
     this.visual = dungeonVisualFor(stage);
     this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
+    await this.routeObjectives?.prepareView?.(this.scene);
     this.renderer.setBattleVisual?.(this.visual);
     this.roomsCleared = 0; this.bossFound = false;
 
@@ -293,7 +294,8 @@ export class Battle {
   }
   markCleared(room) {
     if (room.cleared) return;
-    if (this.routeObjectives?.beforeClear(this, room)) return;
+    // Do not begin a reinforcement wave while initial delayed spawns remain.
+    if (this.routeObjectives?.combatPending(this, room)) return;
     if (!this.routeObjectives && this.stage.expedition?.mechanics?.attunement && room.type === ROOM_TYPE.TREASURE && !room.attuned) {
       if (!room.attunementPending) {
         room.attunementPending = true; room.attunementT = 0;
@@ -313,6 +315,8 @@ export class Battle {
       reinforcements.forEach((t, i) => { if (i < available) this.spawnEnemy(t, null, room); else this.pending.push({ t, room }); });
       return;
     }
+    // Valve operation becomes available only AFTER all authored reinforcements.
+    if (this.routeObjectives?.beforeClear(this, room)) return;
     room.cleared = true; this.roomsCleared++;
     this.app.companionAgent?.observe('room-clear', { roomsCleared: this.roomsCleared, id: `${this.stage.idx}:${this.roomsCleared}` });
     if (room.type !== ROOM_TYPE.START) {

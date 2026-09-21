@@ -50,8 +50,8 @@ export const DUNGEONS = [
   }),
   dungeon('cinder_tide_lock', '재의 밀물 수문', 'forge', 2, 2, 'ember_core', '용광로와 바다가 맞닿은 수문에서 꺼지지 않는 불씨를 회수하세요.', {
     art: ENCOUNTER_ART.boss_cinder_chain_executor, accent: '#ff9b64', subtitle: 'CINDER TIDE LOCK',
-    objective: '정예방 2곳의 증원 각 2회 격파 → 모든 구역 정화 → 쇠사슬의 집행자 처치',
-    tactic: `각 정예방에서 적과 2회 증원을 격파하고 모든 구역을 정화하세요. ${ENEMIES.cinder_chain_executor.tactic}`,
+    objective: '정예방 2곳의 증원 각 2회 격파 → 냉각 밸브 2개 순서대로 개방 → 모든 구역 정화 → 쇠사슬의 집행자 처치',
+    tactic: `1번 서쪽 수문 → 2번 동쪽 수문의 적과 각 2회 증원을 처치하세요. 붉은 과열 띠는 1.4초 예고 뒤 피해를 주며 매 분출 뒤 좌우가 바뀝니다. 반대편 청록 조작판에서 공격하지 않고 2초 유지하면 밸브가 열립니다. 이탈·피격·일시정지는 조작을 중단하며 다시 시도할 수 있습니다. ${ENEMIES.cinder_chain_executor.tactic}`,
     bossEnemy: 'cinder_chain_executor', bossHp: 15800, bossName: '쇠사슬의 집행자', rosterMode: 'cinderlock',
     roster: { trash: ['cinderling', 'chain_forger', 'orc_blob', 'bomb_imp', 'cinderling', 'imp'], ranged: ['ember_scribe', 'hywirl', 'armabee'], elite: ['slag_colossus', 'elite_orc_chief', 'elite_bluedemon'] },
   }),

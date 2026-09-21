@@ -35,7 +35,8 @@ export const MONSTER_MODELS = [
   'Flying_Armabee', 'Flying_Armabee_Evolved', 'Flying_Hywirl', 'Flying_Squidle', 'Flying_Glub', 'Flying_Goleling_Evolved',
 ];
 export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, ...Object.keys(ENCOUNTER_MODELS), 'dungeon', 'tllDungeonLandmarks', 'skel_weapons'];
-const SPECIAL_MODELS = Object.freeze({ tllDungeonLandmarks: '/models/tll/dungeons/dungeon-landmarks-v1.glb' });
+const SPECIAL_MODELS = Object.freeze({ tllDungeonLandmarks: '/models/tll/dungeons/dungeon-landmarks-v1.glb',
+  tllCoolingValve: '/models/tll/props/cooling-valve-v1.glb' });
 
 /** @param {string} name @param {ModelContract|null} contract */
 export async function loadModel(name, contract = null) {
@@ -64,6 +65,17 @@ export async function loadModel(name, contract = null) {
       });
       assembleHeroIdentity(gltf, authored, name, style);
     }
+    if (name === 'tllCoolingValve') gltf.scene.traverse(o => {
+      if (o.isMesh) for (const m of materialsOf(o)) {
+        m.userData.tllAuthored = true;
+        if (/iron|brass/i.test(m.name)) {
+          applySurfaceDetail(m, 'metal');
+          // This room has a warm key, not the bright lobby environment. Keep
+          // authored albedo/roughness while reusing the GUI metal bump detail.
+          m.map = null; m.roughnessMap = null;
+        }
+      }
+    });
     return prepareModel(gltf, contract);
   });
   cache.set(key, p);

@@ -13,7 +13,7 @@ const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   ember_vault: { standard: [0, 2], deep: [0, 2] },
   star_archive: { standard: [0, 0], deep: [2, 0] },
   bellfall_crypt: { standard: [3, 0], deep: [2, 2] },
-  cinder_tide_lock: { standard: [0, 4], deep: [0, 4] },
+  cinder_tide_lock: { standard: [2, 4], deep: [3, 4] },
   nightglass_observatory: { standard: [0, 0], deep: [2, 0] },
   eclipse_hydra_vault: { standard: [0, 0], deep: [0, 4] },
   ashforge_catacomb: { standard: [0, 0], deep: [0, 4] },
@@ -53,7 +53,11 @@ for (const [id, contract] of Object.entries(contracts)) {
       // Parse the numerical promises instead of snapshotting complete sentences.
       const altarCount = stage.objective.match(/보물방\s*(\d+)곳/);
       expect(Number(altarCount?.[1] || 0)).toBe(route ? 0 : holds);
-      if (holds) {
+      if (id === 'cinder_tide_lock') {
+        expect(Number(stage.objective.match(/냉각 밸브\s*(\d+)개/)?.[1])).toBe(holds);
+        expect(stage.encounter.tactic).toMatch(/1\.4초 예고/);
+        expect(stage.encounter.tactic).toMatch(/청록 조작판.*2초 유지/);
+      } else if (holds) {
         expect(stage.encounter.tactic).toMatch(/적.*처치.*중심.*2초.*공명/);
         if (!route) expect(stage.objective).toMatch(/2초\s*공명/);
       }
@@ -67,7 +71,7 @@ for (const [id, contract] of Object.entries(contracts)) {
       expect(stage.objective).toMatch(/모든 구역.*정화/);
       expect(stage.objective).toMatch(/처치|쓰러뜨리/);
       for (const copy of [definition.objective, definition.tactic, stage.objective, stage.encounter.tactic]) {
-        expect(copy).not.toMatch(unsupportedInstructions);
+        expect(id === 'cinder_tide_lock' ? copy.replaceAll('밸브', '') : copy).not.toMatch(unsupportedInstructions);
       }
 
       const enemy = (ENEMIES as Record<string, any>)[stage.encounter.enemyId];

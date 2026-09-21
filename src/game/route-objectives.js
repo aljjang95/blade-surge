@@ -1,5 +1,6 @@
 import { Vector3 } from 'three';
 import { routeObjectiveForStage } from '../data/route-objectives.js';
+import { CoolingValves } from './cooling-valves.js';
 
 /** @typedef {{id:number, x:number, z:number, type:string, label:string, spawned:boolean, cleared:boolean, discovered:boolean}} Room */
 /** @typedef {{rooms:Room[], startRoom:Room, bossRoom:Room, sealed?:boolean, minX?:number, minZ?:number, cols?:number, buildFlow:(x:number,z:number)=>Int32Array|null|undefined}} World */
@@ -9,7 +10,7 @@ import { routeObjectiveForStage } from '../data/route-objectives.js';
 /** @param {any} stage @param {World} world */
 export function createRouteObjectives(stage, world) {
   const def = routeObjectiveForStage(stage);
-  return def ? new RouteObjectives(def, world) : null;
+  return def ? ('kind' in def && def.kind === 'cooling' ? new CoolingValves(def, world) : new RouteObjectives(def, world)) : null;
 }
 
 // Combat-cleared gates remain unfinished rooms until their ordered hold is done.
@@ -57,6 +58,10 @@ export class RouteObjectives {
   enemiesCleared(game, gate) {
     return gate.prepared && gate.room.spawned && gate.spawned >= gate.expected &&
       !game.enemies.some(e => e.alive && e.homeRoom === gate.room) && !game.pending.some(n => n.room === gate.room);
+  }
+  combatPending(game, room) {
+    const gate = this.gates.find(g => g.room === room);
+    return !!gate && !this.enemiesCleared(game, gate);
   }
   /** Return true while this room must wait for its bell, including out-of-order clears.
    * @param {Game} game @param {Room} room */

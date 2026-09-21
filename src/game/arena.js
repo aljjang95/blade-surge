@@ -190,7 +190,8 @@ export class Arena {
     if (!this.landmarkGltf || !visual?.landmark) return;
     const source = this.landmarkGltf.scene.getObjectByName(`TLL_Dungeon_${visual.landmark}_Landmark`);
     if (!source) return;
-    const slots = floorData.rooms.filter((room) => room.type === ROOM_TYPE.BOSS || room.type === ROOM_TYPE.ELITE || room.type === ROOM_TYPE.TREASURE).slice(0, 4);
+    const slots = floorData.rooms.filter((room) => !room.objectiveProp &&
+      (room.type === ROOM_TYPE.BOSS || room.type === ROOM_TYPE.ELITE || room.type === ROOM_TYPE.TREASURE)).slice(0, 4);
     for (const room of slots) {
       const landmark = source.clone(true); landmark.position.set(room.x, 0, room.z - room.h / 2 + 2.6); landmark.rotation.y = (room.id % 4) * Math.PI / 2; landmark.scale.setScalar(room.type === ROOM_TYPE.BOSS ? 1.18 : .72); landmark.name = `${source.name}-${room.id}`; this.group.add(landmark);
     }
@@ -263,7 +264,7 @@ export class Arena {
         banners.push({ x: r.x - 5, z: r.z - r.h / 2 + 0.6, ry: 0 }, { x: r.x + 5, z: r.z - r.h / 2 + 0.6, ry: 0 });
         if (!floorData.layout) this.place('stairs_wide', r.x, r.z - r.h / 2 + 2.2, 0, 1, T.tint);
       }
-      if (r.type === ROOM_TYPE.TREASURE) { this.place('chest_gold', r.x, r.z, rnd(0, 6.28), 1.2); this.place('coin_stack_large', r.x + 1.6, r.z + 1.2, 0, 1); this.place('coin_stack_medium', r.x - 1.7, r.z + 0.9, 0, 1); }
+      if (r.type === ROOM_TYPE.TREASURE && !r.objectiveProp) { this.place('chest_gold', r.x, r.z, rnd(0, 6.28), 1.2); this.place('coin_stack_large', r.x + 1.6, r.z + 1.2, 0, 1); this.place('coin_stack_medium', r.x - 1.7, r.z + 0.9, 0, 1); }
       const n = floorData.layout ? 0 : 2 + Math.floor(random() * 3);
       for (let i = 0; i < n; i++) {
         const px = r.x + rnd(-1, 1) * (r.w / 2 - 2.2), pz = r.z + rnd(-1, 1) * (r.h / 2 - 2.2);
@@ -280,7 +281,7 @@ export class Arena {
         }
       }
       // 방 타입 표식 (바닥 링)
-      if (r.type === ROOM_TYPE.ELITE || r.type === ROOM_TYPE.BOSS || r.type === ROOM_TYPE.TREASURE) {
+      if (!r.objectiveProp && (r.type === ROOM_TYPE.ELITE || r.type === ROOM_TYPE.BOSS || r.type === ROOM_TYPE.TREASURE)) {
         const col = r.type === ROOM_TYPE.BOSS ? 0xff3040 : r.type === ROOM_TYPE.ELITE ? 0xffc040 : 0x60ffc0;
         const ring = new THREE.Mesh(new THREE.RingGeometry(r.w * 0.28, r.w * 0.32, 40),
           new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false }));

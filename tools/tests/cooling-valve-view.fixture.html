@@ -1,0 +1,54 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>개발용 냉각 밸브 표시 검사</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101a22;color:#fff;font:14px system-ui}canvas{position:fixed;inset:0;width:100%;height:100%}header,footer{position:fixed;z-index:2;left:8px;right:8px;padding:8px;background:#101a22ed;border:1px solid #798b92;border-radius:8px}header{top:8px}footer{bottom:8px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}h1{font-size:16px;margin:0 0 4px}p{margin:3px 0;font-size:12px}button,select{min-height:44px;padding:6px 10px;background:#23423f;color:#fff;border:1px solid #89c9c1;border-radius:5px}output{display:block;color:#89eddb;margin-top:4px}#status{font-size:12px}#loading{color:#ffe29c}
+</style>
+<canvas id="gl" aria-label="실제 던전 바닥과 밸브 모델"></canvas>
+<header><h1>개발용 냉각 밸브 표시 검사</h1><p>실제 모델·바닥·표시 코드. 적·보상·저장 없음. 시험 이동은 정상 플레이 증거가 아닙니다.</p><output id="status">로딩 중</output><span id="loading"></span></header>
+<footer><select id="depth" aria-label="원정 난이도"><option value="standard">일반 · 2개</option><option value="deep">심층 · 3개</option></select><button id="spawn">적·증원 종료 조건</button><button id="safe">청록판 위치</button><button id="hot">과열 띠 위치</button><button id="step">시간 +1초</button><button id="reset">다시 시작</button></footer>
+<script type="module">
+import * as THREE from 'three';
+import { Renderer } from '/src/engine/renderer.js';
+import { Arena } from '/src/game/arena.js';
+import { loadModel } from '/src/engine/assets.js';
+import { preloadSurfaceTextures } from '/src/engine/surface-textures.js';
+import { buildExpeditionStage, buildExpeditionWorld } from '/src/game/expedition-combat.js';
+import { createRouteObjectives } from '/src/game/route-objectives.js';
+import { dungeonVisualFor } from '/src/data/dungeon-visuals.js';
+const el = id => document.getElementById(id), renderer = new Renderer(el('gl')); renderer.setQuality('mid');
+renderer.r.info.autoReset=false;
+let route, world, game, arena, damage = 0;
+const markerGeo = new THREE.CylinderGeometry(.3,.3,.08,16), markerMat = new THREE.MeshBasicMaterial({color:0xffffff});
+const marker = new THREE.Mesh(markerGeo,markerMat); renderer.scene.add(marker);
+const ui = {toast: text => {el('loading').textContent = text;}, setObjective: () => sync()};
+function sync(){
+  if(!route)return;
+  const gate=route.gates[Math.min(route.progress,route.gates.length-1)],p=gate.pos;
+  renderer.camera.position.set(p.x+5,p.y+11,p.z+14);renderer.camera.lookAt(p.x,.6,p.z);
+  marker.position.copy(game.player.pos);marker.position.y=.16;
+  route.view.update(route); arena.update(0,null,game.player.pos); renderer.r.info.reset(); renderer.render();
+  el('status').textContent = `${route.hint()} · 시험 피해 ${damage} · 장면 드로우 제출 ${renderer.r.info.render.calls} (적 없음)`;
+}
+async function reset(){
+  el('loading').textContent='모델 준비 중';route?.stop();arena?.clear();damage=0;
+  const stage=buildExpeditionStage('dungeon','cinder_tide_lock',null,{depth:el('depth').value});
+  world=buildExpeditionWorld(stage); const visual=dungeonVisualFor(stage);
+  arena??=new Arena(renderer.scene,await loadModel('dungeon'),renderer,await loadModel('tllDungeonLandmarks'));
+  route=createRouteObjectives(stage,world);
+  arena.buildFloor(world,stage.chapter.theme,visual);renderer.setBattleVisual(visual);
+  await route.prepareView(renderer.scene);
+  for(const gate of route.gates)gate.room.discovered=true;
+  game={world,active:true,paused:false,bossDefeated:false,enemies:[],pending:[],autoTarget:null,ui,
+    fx:{damage:()=>{}},player:{alive:true,maxHp:100,state:'idle',pos:route.gates[0].pos.clone(),hurt:n=>{damage+=n;return true;}},
+    markCleared:room=>{if(!route.beforeClear(game,room))room.cleared=true;}};
+  el('loading').textContent='테스트 조건을 선택하세요';sync();
+}
+el('spawn').onclick=()=>{const g=route.gates[route.progress];if(g){g.room.spawned=true;route.prepareRoom(g.room,0);game.markCleared(g.room);sync();}};
+el('safe').onclick=()=>{const g=route.gates[route.progress];if(g){game.player.pos.copy(g.pad);sync();}};
+el('hot').onclick=()=>{const g=route.gates[route.progress];if(g){game.player.pos.set(g.room.x+g.side*3.5,0,g.room.z);sync();}};
+el('step').onclick=()=>{route.update(game,1);sync();};
+el('depth').onchange=()=>reset().catch(fail);el('reset').onclick=()=>reset().catch(fail);
+function fail(e){el('loading').textContent=`FAIL: ${e.message}`;console.error(e);}
+window.addEventListener('resize',()=>requestAnimationFrame(()=>{renderer.resize();sync();}));
+await preloadSurfaceTextures();await reset().catch(fail);
+</script></html>

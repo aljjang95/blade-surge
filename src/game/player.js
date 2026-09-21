@@ -457,10 +457,12 @@ export class Player extends Actor {
         : cands.sort((a, b) => Math.hypot(a.x - this.pos.x, a.z - this.pos.z) - Math.hypot(b.x - this.pos.x, b.z - this.pos.z))[0];
       g.autoTarget = target;
     }
-    const flow = W.buildFlow(target.x, target.z);
+    const point = g.routeObjectives?.autoPoint?.(target) || target;
+    if (point !== target && Math.hypot(point.x - this.pos.x, point.z - this.pos.z) < .65) return out;
+    const flow = W.buildFlow(point.x, point.z);
     const d = W.flowDir(flow, this.pos.x, this.pos.z);
     if (d) { out.x = d[0]; out.y = d[1]; }
-    else { const dx = target.x - this.pos.x, dz = target.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; }
+    else { const dx = point.x - this.pos.x, dz = point.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; }
     return out;
   }
 

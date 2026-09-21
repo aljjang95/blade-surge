@@ -114,6 +114,8 @@ export class RegionHazards {
     const room = g.world.roomAt(anchor.pos.x, anchor.pos.z);
     if (room !== this.room) { this.room = room; this.cooldown = 5; this.clear(); }
     if (!room || room.cleared || !room.spawned || room.type === 'start' || room.type === 'treasure') { this.clear(); return; }
+    // The authored cooling line owns this room's warning/hit schedule.
+    if (g.routeObjectives?.ownsHazards?.(room)) { this.clear(); this.cooldown = 5; return; }
     // The finale owns its readable cast schedule. Do not stack unrelated room hazards on it.
     if(g.enemies?.some(e=>e.alive&&e.def?.signatureBoss&&e.homeRoom===room)){this.clear();this.cooldown=5;return;}
     this.cooldown -= dt;
