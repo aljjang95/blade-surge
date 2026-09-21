@@ -336,6 +336,10 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .kill-streak em { color: #ffae6e; font-size: 9px; font-style: normal; }
 .kill-streak.hot { border-color: #ff5a7a; box-shadow: 0 0 28px rgba(255,40,88,.45); }
 .kill-streak.hot b { color: #ff9eae; text-shadow: 0 0 15px #ff2658; }
+.combat-cue { position: absolute; left: 50%; top: calc(23% + var(--sat)); z-index: 8; min-width: 132px; padding: 7px 14px 8px; border: 1px solid rgba(255,75,99,.8); border-radius: 999px; background: linear-gradient(180deg, rgba(64,10,22,.92), rgba(18,7,14,.86)); color: #ffd9de; font-size: 12px; font-weight: 900; letter-spacing: .12em; text-align: center; text-shadow: 0 1px 4px #000; box-shadow: 0 0 18px rgba(255,52,79,.35); opacity: 0; transform: translate(-50%, -10px) scale(.88); pointer-events: none; }
+.combat-cue[data-tone="gold"] { border-color: rgba(255,207,90,.9); background: linear-gradient(180deg, rgba(71,42,8,.94), rgba(22,12,6,.88)); color: #fff0bd; box-shadow: 0 0 18px rgba(255,190,60,.35); }
+.combat-cue.on { animation: combatCueIn .72s cubic-bezier(.18,.9,.28,1) both; }
+@keyframes combatCueIn { 0% { opacity: 0; transform: translate(-50%, -12px) scale(.82); } 18% { opacity: 1; transform: translate(-50%, 0) scale(1.08); } 78% { opacity: 1; transform: translate(-50%, 0) scale(1); } 100% { opacity: 0; transform: translate(-50%, -6px) scale(.96); } }
 
 .joystick { position: absolute; left: 0; bottom: 0; width: 50%; height: 55%; }
 .joy-base { position: absolute; left: 60px; bottom: calc(80px + var(--sab)); width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.25); transform: translate(-50%, 50%); opacity: .8; }

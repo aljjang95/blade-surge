@@ -170,6 +170,7 @@ export class Player extends Actor {
   }
   doComboHit(tick = 0) {
     const c = this.current; const dmg = this.atk * c.dmg;
+    if (tick === 0) audio.attackRelease({ weapon: this.def.weapon, finisher: !!c.finisher, ranged: !!this.def.ranged });
     const counterFinisher = tick === 0 && !!c.finisher && (this.counterWindow || 0) > 0;
     if (counterFinisher) this.counterWindow = 0;
     const comboToken=(c.finisher||c.move==='nova'||c.move==='slam')?(tick===0?(this.comboLinkToken={owner:this,epoch:this.knightLifeEpoch||0}):this.comboLinkToken):null;
@@ -285,7 +286,7 @@ export class Player extends Actor {
     this.faceDir(d.x, d.z);
     this.vel.copy(d).multiplyScalar(19);
     this.play('Dodge_Forward', { once: true, fade: 0.05, speed: 1.6 });
-    audio.whoosh({ vol: 0.5, pitch: 0.7, dur: 0.3 }); audio.vibe(15);
+    audio.dodgeRelease();
     this.game.fx.dust(this.pos, { n: 8, size: 1.2 });
     this.ghostT = 0;
     this.game.sp?.onDodge(d);   // 룬 세트: 장전 방출 / 사슬 세트: 감아 끌어오기
@@ -318,6 +319,7 @@ export class Player extends Actor {
     if (sk.anim) this.playTimed(sk.anim, impl.dur || 0.8, { fade: 0.06 });
     if (!sk.ult && this.def.id === 'ranger') audio.whoosh({ vol: .45, pitch: 1.6, dur: .2 });
     else if (!sk.ult) audio.bark(`hero_${this.def.voiceId || this.def.id}_skill${i}`, { vol: 0.95, min: 1.5 });   // 스킬 이름 외침
+    audio.skillRelease({ ult: !!sk.ult, school: sk.id || 'arcane' });
     if (sk.ult) { this.game.ultCinematic(sk, this); audio.charge({ vol: 0.35, dur: 0.7 }); if (this.def.id !== 'ranger') audio.voice(`hero_${this.def.voiceId || this.def.id}_ult`, { min: 8, duck: 0.5, dur: 1.6 }); if (this.game.hasProc('phoenix_burn')) this.game.after(0.35, () => this.game.phoenixBurn(this)); }
     else if (this.game.hasProc('gravity_hole')) { const t = this.lockTarget && this.lockTarget.alive ? this.lockTarget.pos.clone() : this.pos.clone().addScaledVector(this.forward(_v.clone()), 4); this.game.singularity(t); }
     if (!sk.ult) this.game.sp?.onSkillCast(i, sk);   // 룬 4세트: 만장전이면 과부하 — 이 스킬의 쿨타임이 0이 된다

@@ -1,6 +1,6 @@
 ﻿import * as THREE from 'three';
 
-// Static readability marker: opaque authored hero, ground rings and locator; no lights or animation.
+// Readability marker: opaque authored hero, strong ground rings and locator; no body duplicate or occluder bypass.
 export class HeroBeacon {
   constructor(root, model = null) {
     // Keep the authored hero fully opaque. Readability is carried by the locator/rings,
@@ -30,9 +30,9 @@ export class HeroBeacon {
     }
     this.locatorTexture = new THREE.DataTexture(pixels, 32, 32);
     this.locatorTexture.colorSpace = THREE.SRGBColorSpace; this.locatorTexture.needsUpdate = true;
-    this.locator = new THREE.Sprite(new THREE.SpriteMaterial({map:this.locatorTexture, depthTest:false, depthWrite:false, toneMapped:false, sizeAttenuation:false}));
+    this.locator = new THREE.Sprite(new THREE.SpriteMaterial({map:this.locatorTexture, depthTest:false, depthWrite:false, toneMapped:false, sizeAttenuation:false, transparent:true, opacity:.92}));
     this.locator.name = 'PlayerLocator'; this.locator.position.y = 2.72;
-    this.locator.scale.set(.027,.034,1); this.locator.renderOrder = 998; this.root.add(this.locator);
+    this.locator.scale.set(.044,.054,1); this.locator.renderOrder = 998; this.root.add(this.locator);
   }
   setFocus(active, color = 0xffe6a0) {
     this.focused = !!active; this.focusColor.set(color);
@@ -44,11 +44,16 @@ export class HeroBeacon {
     const action = state === 'attack' || state === 'skill' || state === 'ult' || state === 'dodge';
     const emphasized = alive && (this.focused || action);
     this.focusRing.visible = emphasized;
+    this.primaryRing.scale.setScalar(action ? 1.08 : 1);
     this.primaryRing.material.color.set(emphasized ? 0xffffff : 0xb9ffee);
+    this.primaryRing.material.opacity = action ? 0.96 : 0.82;
     this.arrow.material.color.set(emphasized ? 0xffffff : 0xffe6a0);
+    this.locator.material.opacity = action ? 1 : 0.9;
+    this.locator.scale.set(action ? .052 : .044, action ? .064 : .054, 1);
     if (emphasized) {
       this.focusRing.material.color.set(this.focused ? this.focusColor : color);
       this.focusRing.scale.setScalar(reduced ? 1 : (this.focused || state === 'ult' ? 1.12 : 1.06));
+      this.focusRing.material.opacity = state === 'ult' ? 0.98 : 0.86;
     }
   }
   dispose() {

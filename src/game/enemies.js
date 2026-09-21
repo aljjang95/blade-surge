@@ -12,6 +12,16 @@ const _v = new THREE.Vector3();
 const areaPlayers = game => [...new Set(game.stage?.party ? game.app.party.livingPlayers() : [game.player])].filter(p => p?.alive);
 const PATTERN_ANIMS = { basic: 'attack', spin: 'attackSpin', slam: 'attackJump', summon: 'summon', fan: 'cast', soulrain: 'raise', dash: 'dash' };
 
+export function enemySkillLabel(enemy) {
+  const key = enemy?.special || enemy?.mobRole?.key || (enemy?.def?.ranged ? 'magic' : 'melee');
+  return ({
+    melee: '적의 공격', magic: '적의 주문', spin: '회전 강타', slam: '지면 강타', dash: '돌진',
+    fan: '부채꼴 탄막', soulrain: '영혼비', summon: '지원 소환', bomber: '자폭 경고',
+    crusher: '분쇄 강타', charger: '돌진', flanker: '측면 습격', 'role:crusher': '분쇄 강타',
+    'role:charger': '돌진', 'role:flanker': '측면 습격',
+  })[key] || '적 기술';
+}
+
 /** 보스별 순서를 읽어 회피 타이밍을 학습할 수 있게 한다. 후반 페이즈는 순서를 변주한다. */
 export function nextBossPattern(def, turn, phase = 0) {
   const sequence=def.phasePatterns?.[Math.max(0,Math.min(2,phase))]||def.pattern;
@@ -69,16 +79,39 @@ export class Enemy extends Actor {
       mk.rotation.x = -Math.PI / 2; mk.position.y = 0.07; mk.renderOrder = 3;
       this.root.add(mk); this.marker = mk;
     }
+    this.telegraphRing = new THREE.Mesh(new THREE.RingGeometry(.68, .9, 32), new THREE.MeshBasicMaterial({ color: 0xff6040, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+    this.telegraphRing.name = 'EnemySkillTelegraph'; this.telegraphRing.rotation.x = -Math.PI / 2; this.telegraphRing.position.y = .09; this.telegraphRing.renderOrder = 5; this.telegraphRing.visible = false; this.root.add(this.telegraphRing);
   }
   get player() { return this.game.player; }
   dispose() {
     this.signatures?.dispose();
     this.mobRole?.dispose();
     if (this.marker) { this.marker.geometry.dispose(); this.marker.material.dispose(); this.marker = null; }
+    if (this.telegraphRing) { this.telegraphRing.geometry.dispose(); this.telegraphRing.material.dispose(); this.telegraphRing = null; }
     super.dispose();
   }
   /** 몹몰이: 중심으로 끌어당김 */
   pull(cx, cz, force) { const dx = cx - this.pos.x, dz = cz - this.pos.z; const d = Math.hypot(dx, dz) || 1; if (d < 0.8) return; const f = force * (this.isBoss ? 0.15 : this.isElite ? 0.5 : 1); this.kb.x += dx / d * f; this.kb.z += dz / d * f; }
+  announceSkill() {
+    const kind = this.special || this.mobRole?.key || (this.def.ranged ? 'magic' : 'melee');
+    this.game.ui?.combatCue?.(`${this.isBoss ? '보스 · ' : ''}${enemySkillLabel({ ...this, special: this.special || kind })}`, 'red');
+    audio.enemyTelegraph({ kind, boss: this.isBoss, urgent: this.isBoss || this.isElite });
+  }
+  updateSkillTelegraph() {
+    const ring = this.telegraphRing;
+    if (!ring) return;
+    const active = this.alive && !this.spawning && this.telegraph > 0;
+    ring.visible = active;
+    if (!active) return;
+    const kind = this.special || this.mobRole?.key || (this.def.ranged ? 'magic' : 'melee');
+    const danger = kind === 'soulrain' || kind === 'fan' || kind === 'magic' ? 0x86f7b2 : kind === 'slam' || kind === 'crusher' ? 0xffb04c : 0xff4b63;
+    ring.material.color.set(danger);
+    const max = Math.max(.22, (this.attackDur || 1) * (this.hitAt || .5));
+    const remaining = Math.max(0, Math.min(1, this.telegraph / max));
+    const pulse = Math.abs(Math.sin((this.game.elapsed || 0) * 18));
+    ring.scale.setScalar(1.02 + (1 - remaining) * .22 + pulse * .06);
+    ring.material.opacity = .35 + (1 - remaining) * .42 + pulse * .12;
+  }
   hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false } = {}) {
     if (!this.alive || this.spawning) return 0;
     if (this.def.dodge && Math.random() < this.def.dodge && this.state === 'chase' && !this.stun) {
@@ -132,6 +165,7 @@ export class Enemy extends Actor {
       if(!this.alive||this.state!=='attack'||this.stun>0)this.signatures.clear();
     }
     if (this.marker) { if (this.alive) { this.marker.rotation.z += dt * 1.2; this.marker.material.opacity = 0.5 + Math.sin(this.game.elapsed * 3) * 0.18; } else this.marker.visible = false; }
+    this.updateSkillTelegraph();
     if (this.poison > 0) { this.poison -= dt; this.poisonT -= dt; if (this.poisonT <= 0) { this.poisonT = 0.5; if (this.alive) { const d = this.maxHp * 0.02 + 8; this.hp -= d; this.game.fx.damage(this.pos, d, { kind: 'skill' }); this.game.fx.embers(this.pos, 0x80ff90, { n: 3, radius: 0.5, life: 0.6 }); if (this.hp <= 0) { this.hp = 0; this.kill(0, 0, 2); } } } this.tintEmissive = new THREE.Color(0, 0.25, 0.05); }
     else if (this.tintEmissive && !this.enraged && !this.isElite && !(this._crystal > 0)) this.tintEmissive = null;   // 결정화 틴트는 세트 쪽이 되돌린다
     if (!this.alive) return;
@@ -161,12 +195,12 @@ export class Enemy extends Actor {
         if (this.fuse >= 0.7) this.explode();
         return;
       }
-      if (d < 2.2 && this.state === 'chase') { this.fuse = 0; this.telegraph = 0.7; this.game.fx.ring(this.pos, 0xff6030, { r0: 3.3, r1: 3.6, life: 0.7, y: 0.06, width: 1 }); audio.charge({ vol: 0.3, dur: 0.6 }); return; }
+      if (d < 2.2 && this.state === 'chase') { this.fuse = 0; this.special = 'bomber'; this.telegraph = 0.7; this.game.fx.ring(this.pos, 0xff6030, { r0: 3.3, r1: 3.6, life: 0.7, y: 0.06, width: 1 }); this.announceSkill(); audio.charge({ vol: 0.3, dur: 0.6 }); return; }
     } else if (this.behavior === 'shaman') {
       this.healT -= dt; this.summonT -= dt;
       if (this.healT <= 0) { this.healT = 6; let n = 0; for (const o of this.game.enemies) { if (!o.alive || o === this || o.distTo(this) > 6 || o.hp >= o.maxHp) continue; o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.15); this.game.fx.embers(o.pos, 0x80ff90, { n: 4, radius: 0.5, life: 0.7, rise: 2.5 }); n++; }
         if (n) { this.game.fx.groundTex(this.pos, 'circle_gold', 0x80ff90, { r0: 1, r1: 7, life: 0.8, spin: 1, fadeIn: 0.1 }); this.game.fx.damage(this.pos, 0, { text: '치유 ×' + n }); audio.magic({ vol: 0.3, base: 392, notes: [0, 4, 7], step: 0.06 }); } }
-      if (this.summonT <= 0) { this.summonT = 9; const alive = this.game.enemies.filter((e) => e.alive).length; if (alive < this.game.maxAlive - 3) { this.game.summonMinions(this, 2); this.play(this.A('cast'), { once: true, fade: 0.1 }); } }
+      if (this.summonT <= 0) { this.summonT = 9; const alive = this.game.enemies.filter((e) => e.alive).length; if (alive < this.game.maxAlive - 3) { this.special = 'summon'; this.announceSkill(); this.game.summonMinions(this, 2); this.play(this.A('cast'), { once: true, fade: 0.1 }); } }
     }
     // 분리 (몹몰이 시 겹침 방지, 가까운 것만)
     const separation = packSeparation(this, this.game.enemies);
@@ -217,7 +251,7 @@ export class Enemy extends Actor {
   }
   getPartyWarnings() { return this.mobRole ? this.mobRole.warnings() : isBossSignature(this.special) ? this.signatures?.warnings() || [] : enemyPartyWarnings(this); }
   startAttack(d) {
-    if (this.mobRole) { if (this.mobRole.available(d)) this.mobRole.start(); return; }
+    if (this.mobRole) { if (this.mobRole.available(d)) { this.mobRole.start(); this.announceSkill(); } return; }
     if (!canCommitMelee(this, this.game.enemies, this.player)) { this.atkCd = Math.max(this.atkCd, .16); return; }
     this.signatures?.clear();
     this.attackSequence=(this.attackSequence||0)+1; this.partyDashWarning = null;
@@ -233,6 +267,7 @@ export class Enemy extends Actor {
       if (pattern) { this.special = pattern === 'basic' ? null : pattern; anim = this.A(BOSS_SIGNATURES[pattern]?.anim||PATTERN_ANIMS[pattern]); }
     }
     if(this.signatures&&isBossSignature(this.special)){
+      this.announceSkill();
       const plan=this.signatures.start(this.special);this.attackDur=plan.duration;this.hitAt=plan.lastStrike/plan.duration;
       this.telegraph=plan.lastStrike;this.dashV=null;this.playTimed(anim,plan.lastStrike,{fade:.1});return;
     }
@@ -240,6 +275,7 @@ export class Enemy extends Actor {
     let dur = (this.def.atkTime) * (this.enraged ? 0.75 : 1) * (this.special === 'spin' ? 1.4 : this.special === 'dash' ? 0.9 : 1);
     this.attackDur = dur; this.hitAt = this.special === 'spin' ? 0.55 : this.special === 'summon' ? 0.6 : this.special === 'dash' ? 0.85 : this.special === 'soulrain' ? 0.6 : 0.52;
     this.playTimed(anim, dur, { fade: 0.08 });
+    this.announceSkill();
     const f = this.forward(_v.clone()); const g = this.game;
     if (this.special === 'dash') { const p = this.player; const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z; const dd = Math.hypot(dx, dz) || 1; const travel = Math.min(9, dd + 1.5); this.partyDashWarning = {x:this.pos.x+dx/dd*travel/2,z:this.pos.z+dz/dd*travel/2,length:travel+6.4,width:6.4,angle:Math.atan2(dz,dx)}; this.dashV = new THREE.Vector3(dx / dd, 0, dz / dd).multiplyScalar(travel / (dur * .4)); this.faceDir(dx, dz); this.telegraph = dur * .45; g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: travel, arc: 30, height: 0.1, life: dur * this.hitAt, thickness: 1 }); audio.whoosh({ vol: 0.5, pitch: 0.5, dur: 0.5 }); }
     else if (this.def.ranged && !this.special) { g.fx.flash(this.pos.clone().setY(1.6 * this.def.scale), 0xa0ff90, { size: 1.5 * this.def.scale, life: dur * this.hitAt }); if (this.isBoss) audio.magic({ vol: 0.25, base: 200, notes: [0, 1, 0], step: 0.1, type: 'square' }); }
@@ -254,6 +290,7 @@ export class Enemy extends Actor {
   doAttack() {
     if (this.mobRole) return;
     if(isBossSignature(this.special))return;
+    audio.enemyRelease({ kind: this.special || (this.def.ranged ? 'magic' : 'melee'), boss: this.isBoss, heavy: this.special === 'slam' || this.special === 'spin' });
     this.completedAttackSequence=this.attackSequence;
     const p = this.player; const g = this.game; const f = this.forward(_v.clone());
     const dmg = this.atk * (this.special === 'slam' ? 1.6 : this.special === 'spin' ? 1.2 : this.special === 'dash' ? 1.5 : 1);

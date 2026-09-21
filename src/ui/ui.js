@@ -39,7 +39,7 @@ export class UI {
     });
     this.lobbyCaptionResize.observe(lobby); this.lobbyCaptionResize.observe(lobbyBottom);
     this.skillBtns = [...document.querySelectorAll('.skill-btn')];
-    this.hurtT = 0; this.comboEl = $('combo'); this.comboN = $('combo-n'); this.killStreakEl = $('kill-streak'); this.killStreakN = $('kill-streak-n'); this.killStreakTier = $('kill-streak-tier');
+    this.hurtT = 0; this.combatCueEl = $('combat-cue'); this.combatCueTimer = null; this.comboEl = $('combo'); this.comboN = $('combo-n'); this.killStreakEl = $('kill-streak'); this.killStreakN = $('kill-streak-n'); this.killStreakTier = $('kill-streak-tier');
     this.lootLayer = $('loot-layer'); this.lootQueue = [];
     this.minimap = new Minimap($('minimap'));
     this.miniT = 0;
@@ -83,7 +83,7 @@ export class UI {
       el.append(hint);
     }
   }
-  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
+  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
   pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; b.setPaused('manual', on); this.show(this.el.pause, on); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
@@ -119,6 +119,11 @@ export class UI {
     this.modal(`<div class="levelup-pop"><div class="big">구매 완료!</div><p>${sku.name}</p><div class="loot" style="margin:10px 0">${this.rewardHtml(got)}</div>${extra}<div class="modal-btns"><button class="btn btn-gold" id="m-ok">받기</button></div></div>`, { onOpen: (b) => { b.querySelector('#m-ok').onclick = () => this.closeModal(); } });
   }
   hurtVignette() { this.hurtT = 0.5; }
+  combatCue(label, tone = 'red', duration = 720) {
+    const el = this.combatCueEl; if (!el || !label) return;
+    clearTimeout(this.combatCueTimer); el.textContent = label; el.dataset.tone = tone; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+    this.combatCueTimer = setTimeout(() => { el.classList.remove('on'); }, duration);
+  }
   perfectDodge() {
     const f = $('perfect-flash'), l = $('perfect-label');
     f.classList.remove('on'); l.classList.remove('on'); void f.offsetWidth; void l.offsetWidth;

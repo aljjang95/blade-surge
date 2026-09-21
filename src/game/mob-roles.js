@@ -110,6 +110,7 @@ export class MobRole {
         p.struck.add(player);const dealt=player.hurt(e.atk*d.damage,{dirx:p.fx,dirz:p.fz,kb:d.kb,kind:'blunt'});if(dealt)this.hits++;
       }
       if(first){
+        audio.enemyRelease({kind:this.key,boss:e.isBoss,heavy:this.key==='crusher'});
         if(this.key==='charger')e.play(e.A('run'),{fade:.04,speed:1.8});
         else {
           g.fx.shockTex(this.impact,d.color,{r1:d.radius,life:.3});

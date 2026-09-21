@@ -346,6 +346,52 @@ export class AudioSys {
     this.thump({ vol: vol * (boss ? 1.4 : 0.7), freq: boss ? 45 : 70, dur: dur * 0.6 });
   }
 
+  /** 공격 시작과 접촉 사이를 분리해 입력 순간과 실제 타격 순간을 귀로 읽게 한다. */
+  attackRelease({ weapon = 'blade', finisher = false, ranged = false } = {}) {
+    if (this.enabled && this.ctx) {
+      const pitch = ranged ? 1.55 : weapon === '2h' ? 0.72 : weapon === 'dual' ? 1.22 : 1;
+      this.whoosh({ vol: finisher ? 0.7 : 0.42, pitch, dur: finisher ? 0.32 : 0.2 });
+      if (finisher) this.clang({ vol: 0.36, freq: ranged ? 2100 : 1700, dur: 0.22 });
+      else this.contactSnap({ vol: 0.08, freq: ranged ? 2400 : 1850 });
+    }
+    this.vibe(finisher ? [16, 12, 34] : 8);
+  }
+
+  /** 스킬 발동 시전음. 일반 공격과 다른 상승음으로 기술 입력을 구분한다. */
+  skillRelease({ ult = false, school = 'arcane' } = {}) {
+    if (this.enabled && this.ctx) {
+      const base = school.includes('fire') ? 210 : school.includes('ice') ? 520 : school.includes('void') ? 150 : 360;
+      if (ult) { this.charge({ vol: 0.5, dur: 0.52 }); this.thump({ vol: 0.5, freq: 52, dur: 0.24 }); }
+      else this.magic({ vol: 0.24, base, notes: [0, 3, 7], step: 0.035, type: school.includes('void') ? 'sawtooth' : 'triangle' });
+    }
+    this.vibe(ult ? [20, 16, 42] : 10);
+  }
+
+  /** 몹 기술의 예고는 낮게, 짧게 울려 위험 인지를 먼저 전달한다. */
+  enemyTelegraph({ kind = 'melee', boss = false, urgent = false } = {}) {
+    if (this.enabled && this.ctx) {
+      if (kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind.startsWith('role:')) this.charge({ vol: boss ? 0.34 : 0.18, dur: boss ? 0.58 : 0.36 });
+      else if (kind === 'slam' || kind === 'crusher') this.thump({ vol: boss ? 0.34 : 0.18, freq: boss ? 54 : 76, dur: 0.24 });
+      else this.whoosh({ vol: boss ? 0.3 : 0.14, pitch: 0.55, dur: 0.26 });
+    }
+    this.vibe(urgent || boss ? [10, 14, 24] : 7);
+  }
+
+  /** 예고가 끝나고 실제 판정이 발생하는 순간의 release. */
+  enemyRelease({ kind = 'melee', boss = false, heavy = false } = {}) {
+    if (this.enabled && this.ctx) {
+      if (kind === 'soulrain' || kind === 'fan' || kind === 'magic') this.zap({ vol: boss ? 0.34 : 0.18, dur: 0.22 });
+      else if (heavy || kind === 'slam' || kind === 'crusher') this.boom({ vol: boss ? 0.54 : 0.26, dur: 0.34, low: boss ? 48 : 68 });
+      else this.whoosh({ vol: boss ? 0.42 : 0.22, pitch: 0.62, dur: 0.18 });
+    }
+    this.vibe(boss || heavy ? [18, 12, 38] : 12);
+  }
+
+  dodgeRelease({ perfect = false } = {}) {
+    if (this.enabled && this.ctx) this.whoosh({ vol: perfect ? 0.62 : 0.48, pitch: perfect ? 1.05 : 0.72, dur: 0.24 });
+    this.vibe(perfect ? [12, 20, 32] : 15);
+  }
+
   // ---------- BGM ----------
   _disposeMusic(track) {
     clearTimeout(track.timer); track.el.pause(); track.src.disconnect(); track.gain.disconnect();
