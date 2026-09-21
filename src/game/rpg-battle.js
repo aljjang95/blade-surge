@@ -74,6 +74,8 @@ export class Battle extends BaseBattle {
     return enemy;
   }
   onEnemyDeath(enemy) {
+    // Result presentation keeps animation timers alive, but its reward ledger is closed.
+    if (!this.active) return;
     if (!this.killLedger.claim(enemy)) return;
     const rpg = this.ensureRpg();
     if (enemy.speciesId && Object.hasOwn(ENEMIES, enemy.speciesId)) {
@@ -110,6 +112,7 @@ export class Battle extends BaseBattle {
     if (this.viewT >= 0.1) { this.viewT = 0; this.rpgView.refresh(); }
   }
   damageEnemy(enemy, dmg, opts = {}) {
+    if (!this.active) return;
     const p = opts.source?.stats ? opts.source : this.player;
     if (!p || !enemy?.alive || enemy.spawning || !Number.isFinite(dmg) || dmg <= 0) return;
     const crit = Math.random() < p.stats.crit;

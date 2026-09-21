@@ -125,7 +125,7 @@ test('actual damage hook excludes quiet/companion hits and counts direct posture
     const c=EXPEDITION_CONQUESTS.find(c=>c.id===id)!,r=runFor(c,{conquestId:id});
     const player={stats:{crit:0,critDmg:1.5},addUlt(){}},companion={stats:{crit:0,critDmg:1.5},addUlt(){}};
     const e:any={isBoss:true,alive:true,hp:100000,posture:140,breakT:id==='archive_opening'?1:0,pos:new Vector3(),def:{scale:1},receiveImpact(){},hurt(n:number){this.hp-=n;return n;}};
-    const g:any={player,conquest:r.run,run:{enabled:true,breaks:0},effects:{},elapsed:10,counterUntil:0,feedbackCount:99,feedbackSound:99,dmgDealt:0,combo:0,maxCombo:0,
+    const g:any={active:true,player,conquest:r.run,run:{enabled:true,breaks:0},effects:{},elapsed:10,counterUntil:0,feedbackCount:99,feedbackSound:99,dmgDealt:0,combo:0,maxCombo:0,
       fx:{dmgLayer:{children:Array(30)},damage(){},shockTex(){}},ui:{setCombo(){},setObjective(){}},app:{},timeCtl:{hitstop(){}}};
     MasterworksBattle.prototype.damageEnemy.call(g,e,1,{source:player,quiet:true});expect(r.run.progress).toBe(0);
     MasterworksBattle.prototype.damageEnemy.call(g,e,1,{source:companion});expect(r.run.progress).toBe(0);
