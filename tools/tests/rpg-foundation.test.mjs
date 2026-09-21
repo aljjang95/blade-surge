@@ -90,6 +90,13 @@ test('body motion returns to neutral and uses distinct weapon weights', () => {
   for(const weapon of ['1h','2h','dual']) { const pose=attackBody(1,.4,weapon);close(pose.pitch,0);close(pose.yaw,0);close(pose.forward,0); }
   assert.ok(attackBody(.4,.4,'2h').pitch>attackBody(.4,.4,'dual').pitch);
 });
+test('body motion has readable anticipation, impact snap and roll recovery', () => {
+  const windup=attackBody(.2,.4,'1h'), contact=attackBody(.4,.4,'1h'), settle=attackBody(.7,.4,'1h');
+  assert.ok(windup.pitch<0 && windup.forward<0);
+  assert.ok(contact.pitch>0 && contact.forward>0 && contact.roll<0);
+  assert.ok(Math.abs(settle.pitch)<contact.pitch && Math.abs(settle.forward)<contact.forward);
+  assert.equal(attackBody(1,.4,'1h').roll,0);
+});
 test('boss and elite recoil stay smaller than normal enemies', () => {
   assert.ok(impactStrength({boss:true})<impactStrength({elite:true}));assert.ok(impactStrength({elite:true})<impactStrength());
   assert.ok(impactStrength({finisher:true})>impactStrength());

@@ -560,7 +560,10 @@ export class Battle {
     }
     const hitPos = e.pos.clone().setY(1.1 * e.def.scale);
     // 다수 타격 시 데미지 숫자 솎아내기 (성능)
-    if (this.fx.dmgLayer.children.length < 26 || crit) this.fx.damage(hitPos, dealt, { crit, kind: opts.kind === 'magic' ? 'skill' : '' });
+    if (this.fx.dmgLayer.children.length < 26 || crit) this.fx.damage(hitPos, dealt, {
+      crit, kind: opts.kind === 'magic' ? 'skill' : '', finisher: !!opts.finisher, boss: !!e.isBoss,
+      heavy: contactProfile(opts, crit, e.isBoss, true)?.heavy,
+    });
     const dirx = opts.dirx || 0, dirz = opts.dirz || 0;
     const color = opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
     const contact = this.paused ? null : contactProfile(opts, crit, e.isBoss, this.app?.reducedMotion?.matches);
@@ -569,7 +572,7 @@ export class Battle {
       this._contactBudget = budget; this._contactAt = budget.at;
       if (budget.emit) this.fx.flash(hitPos, color, { size: contact.size, life: .10 });
       if (budget.emit && contact.particles) this.fx.directional(hitPos, _v.set(dirx, 0, dirz).normalize(), color, { n: contact.particles, speed: contact.heavy ? 9 : 6 });
-      audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy, finisher: !!opts.finisher });
+      audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy || crit || !!e.isBoss, finisher: !!opts.finisher, boss: !!e.isBoss });
       if (contact.stop) this.timeCtl.hitstop(contact.stop);
       if (p === this.player && !p.auto && contact.haptic) audio.vibe(contact.haptic);
       if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);

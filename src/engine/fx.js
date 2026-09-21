@@ -101,6 +101,7 @@ export class FX {
     this.lights = this.impactLights.slots;
     this.dmgLayer = document.getElementById('dmg-layer');
     this.dmgPool = []; this.maxDmg = 40;
+    this._damageRecent = []; this._damageSerial = 0;
     this.quality = 'high';
     this._mats = {};
     this._transparentMats = new Map();
@@ -516,16 +517,56 @@ export class FX {
   shockTex(pos, color = 0xffe080, { r1 = 6, life = 0.45 } = {}) { this.groundTex(pos, 'shockwave', color, { r0: 0.5, r1, life, spin: 0.4, y: 0.1, fadeIn: 0.05 }); }
 
   // ---------- 데미지 숫자 ----------
-  damage(worldPos, value, { crit = false, kind = '', text = null } = {}) {
+  damage(worldPos, value, { crit = false, kind = '', text = null, finisher = false, boss = false, heavy = false } = {}) {
     const el = this.dmgPool.length ? this.dmgPool.pop() : document.createElement('div');
-    if (this.dmgLayer.children.length > this.maxDmg) { const old = this.dmgLayer.firstChild; if (old) { this.dmgLayer.removeChild(old); this.dmgPool.push(old); } }
-    el.className = 'dmg' + (crit ? ' crit' : '') + (kind ? ' ' + kind : '');
+    if (el._dmgDone) { el.removeEventListener('animationend', el._dmgDone); el._dmgDone = null; }
+    if (this.dmgLayer.children.length >= this.maxDmg) {
+      const old = this.dmgLayer.firstChild;
+      if (old) {
+        if (old._dmgDone) { old.removeEventListener('animationend', old._dmgDone); old._dmgDone = null; }
+        this.dmgLayer.removeChild(old); this.dmgPool.push(old);
+      }
+    }
+    const status = text !== null;
+    const classes = ['dmg'];
+    if (crit) classes.push('crit');
+    if (kind) classes.push(kind);
+    if (finisher) classes.push('finisher');
+    else if (boss) classes.push('boss');
+    else if (heavy) classes.push('heavy');
+    if (status) classes.push('status');
+    el.className = classes.join(' ');
     el.textContent = text ?? (crit ? `${Math.round(value)}!` : Math.round(value));
+    const tag = status ? '' : finisher ? 'FINISH' : crit ? 'CRIT' : boss ? 'BOSS' : kind === 'skill' ? 'SKILL' : heavy ? 'HEAVY' : '';
+    el.dataset.tag = tag;
+    el.setAttribute('aria-hidden', 'true');
+    const vw = Math.max(1, window.innerWidth || 1), vh = Math.max(1, window.innerHeight || 1);
     _v.copy(worldPos); _v.y += 1.9 + Math.random() * 0.5; _v.x += (Math.random() - 0.5) * 0.8; _v.project(this.camera);
-    const x = (_v.x * 0.5 + 0.5) * window.innerWidth, y = (-_v.y * 0.5 + 0.5) * window.innerHeight;
-    el.style.left = x + 'px'; el.style.top = y + 'px';
+    const projectedX = (_v.x * 0.5 + 0.5) * vw, projectedY = (-_v.y * 0.5 + 0.5) * vh;
+    const portrait = vh > vw;
+    const safeTop = portrait ? Math.min(170, vh * 0.24) : Math.min(104, vh * 0.18);
+    const safeBottom = portrait ? Math.min(320, vh * 0.28) : Math.min(126, vh * 0.2);
+    const x = Math.max(26, Math.min(vw - 26, projectedX));
+    const y = Math.max(safeTop, Math.min(vh - safeBottom, projectedY));
+    const now = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+    this._damageRecent = this._damageRecent.filter((entry) => now - entry.t < 620);
+    const patterns = [[0, 0], [-22, -8], [22, -18], [-30, 16], [30, 10], [0, -26]];
+    let offset = patterns[this._damageSerial++ % patterns.length];
+    for (const candidate of patterns) {
+      const crowded = this._damageRecent.some((entry) => Math.hypot(entry.x - (x + candidate[0]), entry.y - (y + candidate[1])) < 36);
+      if (!crowded) { offset = candidate; break; }
+    }
+    const placedX = Math.max(24, Math.min(vw - 24, x + offset[0]));
+    const placedY = Math.max(safeTop, Math.min(vh - safeBottom, y + offset[1]));
+    this._damageRecent.push({ x: placedX, y: placedY, t: now });
+    const lift = finisher ? -112 : crit ? -92 : heavy || boss ? -78 : kind === 'heal' ? -58 : -68;
+    el.style.left = placedX + 'px'; el.style.top = placedY + 'px';
+    el.style.setProperty('--dmg-x', offset[0] + 'px');
+    el.style.setProperty('--dmg-lift', lift + 'px');
+    el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
     this.dmgLayer.appendChild(el);
-    const done = () => { if (el.parentNode) el.parentNode.removeChild(el); this.dmgPool.push(el); el.removeEventListener('animationend', done); };
+    const done = () => { if (el.parentNode) el.parentNode.removeChild(el); this.dmgPool.push(el); el.removeEventListener('animationend', done); el._dmgDone = null; };
+    el._dmgDone = done;
     el.addEventListener('animationend', done);
   }
   clearDamage() { while (this.dmgLayer.firstChild) this.dmgLayer.removeChild(this.dmgLayer.firstChild); }

@@ -15,9 +15,19 @@ export function attackPhase(t, contact = 0.4) {
 export function attackBody(t, contact, weapon = '1h', ranged = false) {
   t = clamp01(t); contact = Math.max(0.1, Math.min(0.85, contact || 0.4));
   const weight = ranged ? 0.45 : weapon === '2h' ? 1.15 : weapon === 'dual' ? 0.7 : 1;
+  // The render pivot carries a readable anticipation and a sharper impact
+  // snap. The authored clip still owns the hit frame; this only adds weight
+  // around that frame and always settles back to a neutral pose.
   const before = t < contact;
-  const pulse = before ? -Math.sin(Math.PI * t / contact) * 0.6 : (1 - (t - contact) / (1 - contact)) ** 2;
-  return { pitch: pulse * 0.085 * weight, yaw: pulse * 0.075 * weight, forward: before ? pulse * 0.045 : pulse * 0.085 * weight };
+  const anticipation = before ? Math.sin(Math.PI * t / contact) : 0;
+  const recovery = before ? 0 : Math.max(0, 1 - (t - contact) / (1 - contact));
+  const snap = recovery ** 1.65;
+  return {
+    pitch: (-anticipation * 0.135 + snap * 0.19) * weight,
+    yaw: (-anticipation * 0.105 + snap * 0.115) * weight,
+    roll: (anticipation * 0.075 - snap * 0.06) * weight,
+    forward: -anticipation * 0.075 + snap * 0.14 * weight,
+  };
 }
 
 export function impactStrength({ finisher = false, crit = false, boss = false, elite = false } = {}) {

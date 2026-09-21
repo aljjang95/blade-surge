@@ -125,7 +125,10 @@ export class Battle extends BaseBattle {
     }
     this.lastTarget = enemy;
     const hitPos = enemy.pos.clone().setY(1.1 * enemy.def.scale);
-    if (this.fx.dmgLayer.children.length < (crit||opts.finisher?8:4)) this.fx.damage(hitPos, dealt, { crit, kind: opts.kind === 'magic' ? 'skill' : '' });
+    if (this.fx.dmgLayer.children.length < (crit||opts.finisher?8:4)) this.fx.damage(hitPos, dealt, {
+      crit, kind: opts.kind === 'magic' ? 'skill' : '', finisher: !!opts.finisher, boss: !!enemy.isBoss,
+      heavy: contactProfile(opts, crit, enemy.isBoss, true)?.heavy,
+    });
     const contact = this.paused ? null : contactProfile(opts, crit, enemy.isBoss, !!this.app.reducedMotion?.matches);
     if (!contact) return;
     const dx = opts.dirx || 0, dz = opts.dirz || 0;
@@ -141,7 +144,7 @@ export class Battle extends BaseBattle {
       this.fx.contact(hitPos,direction.set(dx,0,dz).normalize(),color,{size:contact.size,particles:contact.particles,light:false,kind:opts.kind||'slash',tier:contact.tier});
     }
     {
-      audio.hit(opts.kind || 'slash', { crit, heavy:contact.heavy, finisher: !!opts.finisher });
+      audio.hit(opts.kind || 'slash', { crit, heavy:contact.heavy || crit || !!enemy.isBoss, finisher: !!opts.finisher, boss: !!enemy.isBoss });
       if (p === this.player && !p.auto && contact.haptic) audio.vibe(contact.haptic);
       if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);
     }

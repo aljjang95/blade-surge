@@ -43,6 +43,16 @@ test('mute cancels a queued critical accent before it can sound',()=>{
   sound.ctx.currentTime+=.1; timer();
   expect(heard).toHaveLength(0);
 });
+test('hit tiers change the physical punch profile while retaining a short contact snap',()=>{
+  const {sound}=soundFixture(); const thumps:any[]=[]; const snaps:any[]=[];
+  sound.thump=(opts:any)=>thumps.push(opts); sound.contactSnap=(opts:any)=>snaps.push(opts); sound.ting=()=>{};
+  sound._renderHit('slash',{crit:false,heavy:false,finisher:false,boss:false});
+  sound._renderHit('slash',{crit:false,heavy:true,finisher:false,boss:false});
+  sound._renderHit('slash',{crit:true,heavy:true,finisher:true,boss:true});
+  expect(thumps.map((hit)=>hit.freq)).toEqual([102,68,48]);
+  expect(snaps.map((hit)=>hit.freq)).toEqual([1900,1260,980,620]);
+  expect(thumps[2].dur).toBeGreaterThan(thumps[0].dur);
+});
 for(const kind of ['campaign','dungeon','arena']) test(`${kind}: boss entry and revive retain the correct music route`,()=>{
   const music=spyOn(audio,'playMusic').mockImplementation(()=>{}), noop=()=>{};
   const game:any={stage:kind==='campaign'?{}:{expedition:{kind}},roomRoster:()=>['skeleton'],maxAlive:16,enemies:[],pending:[],

@@ -190,10 +190,10 @@ export class AudioSys {
     const g = this.ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
     o.connect(g); g.connect(this.sfxGain); o.start(t); o.stop(t + 0.32);
   }
-  /** 타격 복합음: 샘플 + 저역 + (크리티컬 시) 팅 */
-  hit(kind = 'slash', { crit = false, heavy = false, finisher = heavy && !crit } = {}) {
+  /** 타격 복합음: 재질 샘플 + 저역 펀치 + 짧은 접촉 스냅 + 크리티컬 링 */
+  hit(kind = 'slash', { crit = false, heavy = false, finisher = heavy && !crit, boss = false } = {}) {
     if (!this.enabled || !this.ctx) return;
-    const event = { kind, crit, heavy, finisher, priority: (finisher ? 4 : 0) + (heavy ? 2 : 0) + (crit ? 1 : 0) };
+    const event = { kind, crit, heavy, finisher, boss, priority: (finisher ? 4 : 0) + (heavy ? 2 : 0) + (crit ? 1 : 0) + (boss ? 1 : 0) };
     if (!this._hitPending || event.priority >= this._hitPending.priority) this._hitPending = event;
     this._flushHit();
   }
@@ -210,14 +210,23 @@ export class AudioSys {
     const event = this._hitPending; this._hitPending = null; this._hitLast = this.now();
     this._renderHit(event.kind, event);
   }
-  _renderHit(kind, { crit, heavy, finisher }) {
-    if (kind === 'slash') { this.pick('hit_metal', 3, { vol: heavy ? 1 : 0.7, rate: heavy ? 0.85 : 1.1, vary: 0.12 }); this.pick('hit_punch', 3, { vol: heavy ? 0.9 : 0.55, rate: 1.2 }); }
-    else if (kind === 'blunt') { this.pick('hit_punch', 3, { vol: 1, rate: heavy ? 0.8 : 1 }); this.play('hit_wood', { vol: 0.5 }); }
-    else if (kind === 'magic') { this.pick('hit_soft', 2, { vol: 0.8, rate: 1.3 }); this.play('hit_glass', { vol: 0.3, rate: 1.4 }); }
-    else if (kind === 'hurt') { this.pick('hit_soft', 2, { vol: 0.9, rate: 0.8 }); }
-    this.thump({ vol: heavy ? 0.9 : 0.45, freq: heavy ? 60 : 100, dur: heavy ? 0.28 : 0.14 });
-    this.contactSnap({vol:heavy?.18:.1,freq:heavy?1250:1900});
-    if (crit) this.ting({ vol: 0.45, freq: 1500 + Math.random() * 600 });
+  _renderHit(kind, { crit, heavy, finisher, boss }) {
+    const accent = finisher ? 1.12 : boss ? 1.05 : heavy ? 1 : 0.9;
+    if (kind === 'slash') {
+      this.pick('hit_metal', 3, { vol: (heavy ? 1 : 0.7) * accent, rate: heavy ? 0.82 : 1.1, vary: 0.12 });
+      this.pick('hit_punch', 3, { vol: (heavy ? 0.88 : 0.52) * accent, rate: heavy ? 1.05 : 1.2 });
+    } else if (kind === 'blunt') {
+      this.pick('hit_punch', 3, { vol: (heavy ? 1.05 : 0.85) * accent, rate: heavy ? 0.76 : 1 });
+      this.play('hit_wood', { vol: (heavy ? 0.62 : 0.45) * accent, rate: heavy ? 0.88 : 1 });
+    } else if (kind === 'magic') {
+      this.pick('hit_soft', 2, { vol: (heavy ? 0.92 : 0.72) * accent, rate: 1.3 });
+      this.play('hit_glass', { vol: (heavy ? 0.38 : 0.28) * accent, rate: 1.4 });
+    } else if (kind === 'hurt') this.pick('hit_soft', 2, { vol: 0.9, rate: 0.8 });
+    const low = finisher ? 48 : boss ? 56 : heavy ? 68 : crit ? 84 : 102;
+    this.thump({ vol: (finisher ? 1.05 : heavy ? 0.9 : 0.46) * accent, freq: low, dur: finisher ? 0.34 : heavy ? 0.28 : 0.14 });
+    this.contactSnap({ vol: finisher ? 0.27 : heavy ? 0.2 : 0.11, freq: finisher ? 980 : heavy ? 1260 : 1900 });
+    if (finisher) this.contactSnap({ vol: 0.1, freq: 620 });
+    if (crit) this.ting({ vol: finisher ? 0.6 : 0.46, freq: 1500 + Math.random() * 600 });
     // Flow Music score-derived impact accent; 기본 CC0 타격음에만 낮게 겹친다.
     if (heavy || crit) {
       const weight = finisher || !crit ? 'heavy' : 'light';

@@ -89,24 +89,25 @@ export class Actor {
       if (!reduced) {
         const pose = attackBody(t, c.hitAt, this.def.weapon, this.def.ranged);
         pivot.rotation.x = pose.pitch; pivot.rotation.y = pose.yaw; pivot.position.z = pose.forward;
+        pivot.rotation.z = pose.roll || 0;
       }
     }
     if (this._strikeRecoil) {
       const s = this._strikeRecoil; s.t += dt;
-      if (s.t >= .16 || reduced) this._strikeRecoil = null;
-      else { const kick = (1 - s.t / .16) ** 2 * s.strength;
-        pivot.position.z -= kick * .11; pivot.rotation.x -= kick * .09;
+      if (s.t >= .21 || reduced) this._strikeRecoil = null;
+      else { const kick = (1 - s.t / .21) ** 2 * s.strength;
+        pivot.position.z -= kick * .16; pivot.rotation.x -= kick * .12; pivot.rotation.z += kick * .035;
       }
     }
     if (this._impact) {
       const i = this._impact; i.t += dt;
-      if (i.t >= 0.22 || reduced) this._impact = null;
+      if (i.t >= 0.24 || reduced) this._impact = null;
       else {
-        const decay = (1 - i.t / 0.22) ** 2 * i.strength;
-        pivot.rotation.x += i.z * decay * 0.32;
-        pivot.rotation.z -= i.x * decay * 0.32;
-        pivot.position.x += i.x * decay * .2; pivot.position.z += i.z * decay * .2;
-        const squash = Math.min(.075, decay * .075);
+        const decay = (1 - i.t / 0.24) ** 2 * i.strength;
+        pivot.rotation.x += i.z * decay * 0.38;
+        pivot.rotation.z -= i.x * decay * 0.38;
+        pivot.position.x += i.x * decay * .24; pivot.position.z += i.z * decay * .24;
+        const squash = Math.min(.09, decay * .09);
         pivot.scale.set(1 + squash*.55, 1 - squash, 1 + squash*.55);
       }
     }
