@@ -60,6 +60,7 @@
   #tab-stage .exp-material-reward img { width:22px; height:22px; }
   #hero-wardrobe { flex-basis:26%; min-width:155px; }
 }
+
 @media(max-width:600px) {
   .topbar { gap:5px; padding-left:6px; padding-right:6px; }
   .profile { gap:4px; }
@@ -93,4 +94,56 @@
   .wardrobe-controls { position:absolute; right:6px; bottom:4px; padding:0; gap:4px; }
   .wardrobe-controls button { padding:6px 9px; }
   .wardrobe-caption { position:absolute; left:10px; bottom:8px; padding:0; max-width:48%; text-align:left; font-size:9px; }
+}
+
+/* Match the mounted result only. Removing/hiding it restores the normal menu without a body flag. */
+#meta.show:has(#tab-stage.show #expedition-root:not([hidden]) > .exp-result-shell) > .topbar,
+#meta.show:has(#tab-stage.show #expedition-root:not([hidden]) > .exp-result-shell) > .bottomnav,
+#tab-stage:has(#expedition-root:not([hidden]) > .exp-result-shell) > .panel > .adventure-nav { display:none; }
+#meta #tab-stage:has(#expedition-root:not([hidden]) > .exp-result-shell) { inset:0!important; }
+#meta #tab-stage:has(#expedition-root:not([hidden]) > .exp-result-shell) > .panel { inset:0!important; padding:0; }
+#tab-stage .exp-result-shell { display:flex; flex-direction:column; min-height:0; overflow:hidden; background:radial-gradient(ellipse at 8% 0%,#25403866,transparent 60%),#101723; }
+#tab-stage .exp-result-shell button,
+#tab-stage .exp-result-shell summary { min-height:44px; min-width:44px; }
+#tab-stage .exp-result-header { flex:0 0 auto; min-height:0; gap:12px; padding:calc(6px + var(--sat)) max(16px,var(--sar)) 6px max(16px,var(--sal)); }
+#tab-stage .exp-result-header .exp-brand { gap:8px; min-width:0; }
+#tab-stage .exp-result-header .exp-brand img { width:32px; height:32px; }
+#tab-stage .exp-result-header h1 { font-size:15px; margin:0; }
+#tab-stage .exp-result-header .exp-close { font-size:13px!important; }
+#tab-stage .exp-result-scroll { flex:1 1 0; min-height:0; overflow:auto; padding:14px max(18px,var(--sar)) 18px max(18px,var(--sal)); }
+#tab-stage .exp-result-content { width:100%; max-width:960px; margin:0 auto; }
+#tab-stage .exp-result-summary { display:flex; align-items:center; justify-content:space-between; gap:12px 24px; }
+#tab-stage .exp-result-heading { min-width:0; }
+#tab-stage .exp-result-heading h2 { margin:0 0 4px; font:800 clamp(24px,3.5vw,32px)/1.2 var(--font); letter-spacing:0; color:#f3dfac; }
+#tab-stage .exp-result-shell[data-outcome="defeat"] h2 { color:#e2c6ba; }
+#tab-stage .exp-result-route { margin:0; font-size:15px; line-height:1.5; color:#eee6d7; overflow-wrap:anywhere; }
+#tab-stage .exp-result-heading small { font-size:11px; color:#b9c8bf; }
+#tab-stage .exp-result-shell .exp-outcome-stats { flex-shrink:0; gap:24px; margin:0; text-align:center; color:#b9c8bf; }
+#tab-stage .exp-result-shell .exp-outcome-stats span { gap:3px; }
+#tab-stage .exp-result-shell .exp-outcome-stats b { font-size:23px; }
+#tab-stage .exp-result-save { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:10px 0; padding:8px 12px; border:1px solid #b7ccbd24; border-radius:8px; background:#bddc9b09; font-size:12px; }
+#tab-stage .exp-result-save p { margin:0; color:#c2d9c9; font-size:12px; line-height:1.5; }
+#tab-stage .exp-result-save[data-save="error"] { border-color:#e6ba7780; background:#53382140; }
+#tab-stage .exp-result-save[data-save="error"] p { color:#ecd2b5; }
+#tab-stage .exp-result-save button { flex-shrink:0; }
+#tab-stage .exp-result-rewards { display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+#tab-stage .exp-result-shell .exp-chips { gap:6px; font-size:12px; }
+#tab-stage .exp-result-shell .exp-chips > span { padding:5px 8px; }
+#tab-stage .exp-result-shell .exp-chips img { width:23px; height:23px; }
+#tab-stage .exp-result-rewards > p { flex-basis:100%; margin:0; }
+#tab-stage .exp-result-shell .ui-details { margin-top:10px; padding-top:0; }
+#tab-stage .exp-result-shell .ui-details > summary { padding:11px 4px; line-height:22px; font-size:13px; }
+#tab-stage .exp-result-shell .ui-details > summary:focus-visible { outline:2px solid #f5d496; outline-offset:2px; }
+#tab-stage .exp-result-shell .exp-loot-reveal { width:100%; margin:4px 0 14px; text-align:center; }
+#tab-stage .exp-result-shell .exp-growth { padding:6px 0 12px; }
+#tab-stage .exp-result-shell .exp-film-link { margin:0 0 10px; font-size:12px; }
+#tab-stage .exp-result-shell .exp-result-message { color:#f3dfac; }
+#tab-stage .exp-result-footer { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); flex:0 0 auto; gap:8px; padding:8px max(16px,var(--sar)) calc(8px + var(--sab)) max(16px,var(--sal)); border-top:1px solid #b7ccbd38; background:#14201f; }
+#tab-stage .exp-result-footer button { padding:8px; font-size:13px; line-height:1.4; overflow-wrap:anywhere; }
+@media(max-width:520px) {
+  #tab-stage .exp-result-summary { flex-direction:column; align-items:stretch; gap:12px; }
+  #tab-stage .exp-result-shell .exp-outcome-stats { justify-content:space-around; gap:10px; }
+  #tab-stage .exp-result-save { flex-wrap:wrap; }
+  #tab-stage .exp-result-footer { gap:6px; }
+  #tab-stage .exp-result-footer button { font-size:12px; }
 }
