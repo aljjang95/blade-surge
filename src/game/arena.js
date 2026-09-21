@@ -6,6 +6,7 @@ import { ROOM_TYPE, mulberry32 } from './world.js';
 import { buildOathHall } from './lobby-hall.js';
 import { buildLobbyWorld } from './lobby-world.js';
 import { BattleOcclusion } from '../engine/battle-occlusion.js';
+import { softCircleTex } from '../engine/assets.js';
 
 const THEMES = {
   garden: { fog: 0x172b2b, bg: 0x172b2b, hemi: [0xa0b5ae, 0x283930], sun: 0xffedca, sunI: 2.3, torch: 0x8adbd0, tint: 0xcbd0b8 },
@@ -42,8 +43,8 @@ function disposeSeal(seal) {
 }
 
 export class Arena {
-  constructor(scene, dungeonGltf, renderer) {
-    this.scene = scene; this.gltf = dungeonGltf; this.renderer = renderer;
+  constructor(scene, dungeonGltf, renderer, landmarkGltf = null) {
+    this.scene = scene; this.gltf = dungeonGltf; this.renderer = renderer; this.landmarkGltf = landmarkGltf;
     this.occlusion = renderer.battleOcclusion ??= new BattleOcclusion();
     this.group = new THREE.Group(); scene.add(this.group);
     this.lights = []; this.torches = []; this.torchPos = []; this.t = 0;
@@ -77,8 +78,15 @@ export class Arena {
     }
     this.seals.length = 0;
   }
+  clearSky() {
+    if (!this.skyGroup) return;
+    this.skyGroup.removeFromParent();
+    this.skyGroup.traverse((node) => { if (node.geometry) node.geometry.dispose(); if (node.material) { for (const m of Array.isArray(node.material) ? node.material : [node.material]) m.dispose(); } });
+    this.skyGroup = null;
+  }
   clear() {
     this.occlusion.reset();
+    this.clearSky();
     this.lobbyHall?.userData.dispose(); this.lobbyHall = null;
     this.lobbyWorld?.userData.dispose(); this.lobbyWorld = null; this.renderer.lobbyOccluders = [];
     this.regionArchitecture?.userData.dispose(); this.regionArchitecture = null;
@@ -147,13 +155,55 @@ export class Arena {
   }
 
   // ================= 무한의 성 — 한 층 전체 =================
-  buildFloor(floorData, theme = 'crypt') {
+  buildSky(visual, seed = 1) {
+    const sky = visual?.sky || { top: 0x101828, horizon: 0x64778a, ground: 0x18202c, stars: 0xcfe8ff, celestial: 0xffd9a2, density: .25 };
+    const group = this.skyGroup = new THREE.Group(); group.name = `sky-${visual?.key || 'memorial'}`; group.renderOrder = -10;
+    const geometry = new THREE.SphereGeometry(105, 32, 18);
+    const colors = [];
+    const top = new THREE.Color(sky.top), horizon = new THREE.Color(sky.horizon), ground = new THREE.Color(sky.ground);
+    const position = geometry.getAttribute('position');
+    for (let i = 0; i < position.count; i++) {
+      const y = position.getY(i) / 105;
+      const t = Math.max(0, Math.min(1, (y + .05) / 1.05));
+      const color = y < .05 ? ground.clone().lerp(horizon, Math.max(0, (y + 1) / 1.05)) : horizon.clone().lerp(top, t);
+      colors.push(color.r, color.g, color.b);
+    }
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    group.add(new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, depthWrite: false, fog: false })));
+    const random = mulberry32((seed || 1) ^ 0x7f31);
+    const points = [];
+    for (let i = 0; i < Math.floor(220 * (sky.density || .25)); i++) {
+      const theta = random() * Math.PI * 2, y = .16 + random() * .78, radius = 96;
+      const ring = Math.sqrt(1 - y * y); points.push(Math.cos(theta) * ring * radius, y * radius, Math.sin(theta) * ring * radius);
+    }
+    const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
+    group.add(new THREE.Points(starGeometry, new THREE.PointsMaterial({ color: sky.stars, size: .34, transparent: true, opacity: .8, depthWrite: false, fog: false })));
+    // The browser receives the authored glow texture; headless Bun tests do not
+    // expose a canvas/document, so keep the procedural sky itself test-safe.
+    if (typeof document !== 'undefined') {
+      const celestial = new THREE.Sprite(new THREE.SpriteMaterial({ map: softCircleTex(), color: sky.celestial, transparent: true, opacity: .9, depthWrite: false, fog: false }));
+      celestial.position.set(-36, 42, -76); celestial.scale.setScalar(8); group.add(celestial);
+    }
+    this.scene.add(group);
+  }
+  mountLandmarks(floorData, visual) {
+    if (!this.landmarkGltf || !visual?.landmark) return;
+    const source = this.landmarkGltf.scene.getObjectByName(`TLL_Dungeon_${visual.landmark}_Landmark`);
+    if (!source) return;
+    const slots = floorData.rooms.filter((room) => room.type === ROOM_TYPE.BOSS || room.type === ROOM_TYPE.ELITE || room.type === ROOM_TYPE.TREASURE).slice(0, 4);
+    for (const room of slots) {
+      const landmark = source.clone(true); landmark.position.set(room.x, 0, room.z - room.h / 2 + 2.6); landmark.rotation.y = (room.id % 4) * Math.PI / 2; landmark.scale.setScalar(room.type === ROOM_TYPE.BOSS ? 1.18 : .72); landmark.name = `${source.name}-${room.id}`; this.group.add(landmark);
+    }
+  }
+  buildFloor(floorData, theme = 'crypt', visual = null) {
     this.clear();
     this.floorData = floorData;
-    const T = { ...(THEMES[theme] || THEMES.crypt), ...(DUNGEON_ATMOSPHERES[floorData.layout?.landmark] || {}) };
+    const visualKey = visual?.landmark || floorData.layout?.landmark || 'crypt';
+    const T = { ...(THEMES[theme] || THEMES.crypt), ...(DUNGEON_ATMOSPHERES[visualKey] || {}) };
     const random = mulberry32((floorData.seed || floorData.floor * 7919) ^ 0x51a7);
     const rnd = (a, b) => a + random() * (b - a);
     this.scene.background = new THREE.Color(T.bg); this.scene.fog.color.set(T.fog); this.scene.fog.density = 0.026;
+    this.buildSky(visual, floorData.seed || floorData.floor || 1);
 
     const hemi = new THREE.HemisphereLight(T.hemi[0], T.hemi[1], 1.5); this.scene.add(hemi); this.lights.push(hemi);
     // 넓은 맵이라 태양 그림자 카메라는 플레이어를 따라다니게 (update 에서 갱신)
@@ -245,10 +295,12 @@ export class Arena {
       if (node.isMesh) for (const material of Array.isArray(node.material) ? node.material : [node.material]) this.occlusion.bind(material);
     });
     this.group.add(this.regionArchitecture);
+    this.mountLandmarks(floorData, visual || { landmark: visualKey });
     this.buildSeals(floorData);
   }
 
   update(dt, fx, playerPos) {
+    if (this.skyGroup && playerPos) this.skyGroup.position.set(playerPos.x, 0, playerPos.z);
     this.occlusion.setTarget(this.floorData ? playerPos : null);
     this.t += dt;
     for (const s of this.seals) { s.material.opacity = 0.5 + Math.sin(this.t * 4) * 0.08; const r = s.userData.rune, g = s.userData.sigil; if (r) { r.rotation.z += dt * 0.8; r.material.opacity = 0.55 + Math.sin(this.t * 6) * 0.2; } if (g) { g.rotation.z -= dt * 0.5; g.material.opacity = 0.8 + Math.sin(this.t * 5) * 0.15; } }

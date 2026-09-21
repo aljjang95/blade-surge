@@ -22,6 +22,7 @@ import { buildExpeditionWorld, expeditionRoster, applyBattleConsumable, canApply
 import { ConquestRun } from './expedition-conquests.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
+import { dungeonVisualFor } from '../data/dungeon-visuals.js';
 
 const _v = new THREE.Vector3();
 const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
@@ -75,7 +76,9 @@ export class Battle {
     // ---- 무한의 성: 한 층 절차 생성 ----
     this.world = stage.expedition ? buildExpeditionWorld(stage) : new Floor(stage.idx, stage.chapter.theme, stage.party?.seed, stage.dungeon?.layout);
     this.conquest = stage.expedition?.conquestId ? new ConquestRun(stage, this.world, this.app.expeditionTicket) : null;
-    this.arena.buildFloor(this.world, stage.chapter.theme);
+    this.visual = dungeonVisualFor(stage);
+    this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
+    this.renderer.setBattleVisual?.(this.visual);
     this.roomsCleared = 0; this.bossFound = false;
 
     const gltf = await loadModel(def.model);
@@ -685,7 +688,13 @@ export class Battle {
     rig.target.lerp(_v, framingBlend(realDt, 7));
     if (rig.preset === 'auto') {
       const k = framingBlend(realDt, 1.2);
-      for (const key of ['y', 'z', 'fov', 'lookY', 'lag']) rig.base[key] += (framing.desired[key] - rig.base[key]) * k;
+      const profile = this.visual?.camera;
+      for (const key of ['y', 'z', 'fov', 'lookY', 'lag']) {
+        // Preserve the threat/boss framing blend, then add the dungeon's own
+        // composition delta relative to the action baseline.
+        const delta = profile && Number.isFinite(profile[key]) ? profile[key] - CAMERA_PRESETS.action[key] : 0;
+        rig.base[key] += (framing.desired[key] + delta - rig.base[key]) * k;
+      }
     }
     const b = rig.base;
     rig.offset.y += (b.y + framing.extraY - rig.offset.y) * framingBlend(realDt, 2);

@@ -34,7 +34,8 @@ export const MONSTER_MODELS = [
   'Flying_Ghost', 'Flying_Ghost_Skull', 'Flying_Dragon', 'Flying_Dragon_Evolved',
   'Flying_Armabee', 'Flying_Armabee_Evolved', 'Flying_Hywirl', 'Flying_Squidle', 'Flying_Glub', 'Flying_Goleling_Evolved',
 ];
-export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, ...Object.keys(ENCOUNTER_MODELS), 'dungeon', 'skel_weapons'];
+export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, ...Object.keys(ENCOUNTER_MODELS), 'dungeon', 'tllDungeonLandmarks', 'skel_weapons'];
+const SPECIAL_MODELS = Object.freeze({ tllDungeonLandmarks: '/models/tll/dungeons/dungeon-landmarks-v1.glb' });
 
 /** @param {string} name @param {ModelContract|null} contract */
 export async function loadModel(name, contract = null) {
@@ -44,7 +45,7 @@ export async function loadModel(name, contract = null) {
   const p = (variant ? Promise.all([loadModel(variant.base), loader.loadAsync(`/models/tll/encounters/${variant.file}.glb`)]).then(([base, authored]) => {
     // Skeleton clone keeps the cached original unchanged. Immutable base buffers/textures are shared.
     return assembleEncounterIdentity({ scene: skeletonClone(base.scene), animations: base.animations }, authored, name, variant);
-  }) : loader.loadAsync(`/models/${name}.glb`)).then(async (gltf) => {
+  }) : loader.loadAsync(SPECIAL_MODELS[name] || `/models/${name}.glb`)).then(async (gltf) => {
     if (!contract && name === 'Ranger') {
       // Silva ships as one Blender-authored skin on the same KayKit medium rig.
       gltf.scene.userData.tllIdentity = 'casual-v2';

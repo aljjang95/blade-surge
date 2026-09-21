@@ -154,6 +154,14 @@ export class Renderer {
     const rig = this.rig; rig.preset = CAMERA_PRESETS[name] ? name : 'auto';
     if (rig.preset !== 'auto') Object.assign(rig.base, CAMERA_PRESETS[rig.preset]);
   }
+  setBattleVisual(visual = null) {
+    this.battleVisual = visual;
+    const c = visual?.camera;
+    if (!c) return;
+    this.rig.environmentCamera = c;
+    this.battleCamera = { yaw: c.yaw, pitch: c.pitch, zoom: c.zoom };
+    this.rig.environmentSide = c.side || 0;
+  }
   /** 프레임마다 목표 fov 로 보간 (배틀이 rig.fov 를 바꾼다) */
   _applyFov(realDt) {
     const want = this.rig.fov + (this._width < this._height ? 14 : 0);
@@ -186,7 +194,7 @@ export class Renderer {
     } else {
       // Hits never displace or pulse the whole camera; preserve user framing.
       const off = rig.offset.clone();
-      off.x += rig.side;   // 액션 시점: 이동 방향 반대편으로 살짝 비켜서 진행 방향이 열린다
+      off.x += rig.side + (rig.environmentSide || 0);   // 지역마다 전투 중심을 여는 비대칭 구도
       const controlled = battleCameraOffset(off, this.battleCamera);
       off.set(controlled.x, controlled.y, controlled.z);
       desired = rig.target.clone().add(off);

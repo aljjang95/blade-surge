@@ -115,7 +115,7 @@ class App {
     });
     await oathHallReady;
     setP(0.85, '월드 구성 중…');
-    this.arena = new Arena(this.scene, this.models.dungeon, this.renderer);
+    this.arena = new Arena(this.scene, this.models.dungeon, this.renderer, this.models.tllDungeonLandmarks);
     this.battle = new Battle(this);
     this.journeyView = new JourneyView(this);
     this.arsenalView = new ArsenalView(this);

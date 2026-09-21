@@ -1,0 +1,20 @@
+{
+  "blender": "5.2.1 LTS",
+  "generator": "tools\\art\\build-dungeon-landmarks-v1.py",
+  "licence": "Original authored TLL environment geometry; no external models or textures",
+  "landmarks": [
+    "memorial",
+    "kiln",
+    "archive",
+    "beacon",
+    "tribunal",
+    "confluence"
+  ],
+  "object_count": 6,
+  "triangles": 17260,
+  "bytes": 1137764,
+  "sha256": "3671da556b52265ee9b502265e6aaef1515c056b11ebc9c1534fe31f21f23596",
+  "editable": "art\\dungeon-landmarks-v1\\dungeon-landmarks-v1.blend",
+  "runtime": "public\\models\\tll\\dungeons\\dungeon-landmarks-v1.glb",
+  "heroes_modified": false
+}
