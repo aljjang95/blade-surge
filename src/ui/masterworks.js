@@ -2,12 +2,13 @@ import { BOONS, SYNERGIES, MASTERY_NODES, PATHS, CHALLENGES, STORY_EVENTS, BOUNT
 import { difficultyEffects } from '../game/masterworks-core.js';
 import { DUNGEONS } from '../data/expansion.js';
 import { EXPEDITION_SETS } from '../data/expedition-items.js';
+import { uiArt } from './illustrated.js';
 import './masterworks.css';
 
 const family = {ember:['잿불','ember_vault'],tide:['물결','glass_garden'],storm:['폭풍','ranger'],stone:['바위','star_archive']};
 const n=(tag,cls='',text='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=text;return e;};
 const btn=(text,fn,cls='')=>{const e=n('button',cls,text);e.type='button';e.addEventListener('click',fn);return e;};
-const art=(id)=>{const e=n('img','mw-illustration');e.src=`/img/ui-crafted/${id}.webp`;e.alt='';e.loading='lazy';return e;};
+const art=(id)=>{const e=n('img','mw-illustration');e.src=uiArt(id);e.alt='';e.loading='lazy';return e;};
 const details=(text,label='자세히')=>{const e=n('details','mw-details');e.append(n('summary','',label),n('p','',text));return e;};
 const fmt=v=>Math.round(v||0).toLocaleString('ko-KR');
 const err={unknown:'선택을 확인해 주세요.',owned:'이미 배운 숙련입니다.',prerequisite:'앞 단계 숙련을 먼저 배워 주세요.',renown:'명성이 부족합니다.',claimed:'이미 받은 보상입니다.',incomplete:'의뢰 목표를 먼저 달성해 주세요.'};
@@ -123,7 +124,7 @@ export class MasterworksView {
     const offer=this.battle.currentOffer();
     if(offer?.kind==='boon') {
       this.content.append(n('p','mw-eyebrow',`각인 선택 ${run.picked.length+1} · 세 가지 가능성`),n('h3','mw-choice-title','이번 싸움을 바꿀 힘'));
-      const cards=n('div','mw-grid mw-choices');for(const id of offer.ids){const b=BOONS.find(x=>x.id===id),rank=run.picked.filter(x=>x===id).length;const card=btn('',()=>this.act(()=>this.battle.selectBoon(id),'이번 원정에 적용했습니다.'),'mw-card mw-boon');card.dataset.boon=id;card.dataset.family=b.family;const illustration=art(`boon-${b.family}`);illustration.className+=' mw-boon-art';card.append(illustration,n('small','mw-eyebrow',`${family[b.family][0]} · ${rank?`강화 ${rank} → ${rank+1}`:'새 각인'}`),n('h4','',b.name),n('p','',b.description),n('strong','mw-pick','이 각인 선택'));cards.append(card);}this.content.append(cards,details('서로 다른 계열을 모으면 조합 효과가 열립니다. 같은 각인은 3단계까지 강화됩니다.','각인 조합 규칙'));
+      const cards=n('div','mw-grid mw-choices');for(const id of offer.ids){const b=BOONS.find(x=>x.id===id),rank=run.picked.filter(x=>x===id).length;const card=btn('',()=>this.act(()=>this.battle.selectBoon(id),'이번 원정에 적용했습니다.'),'mw-card mw-boon');card.dataset.boon=id;card.dataset.family=b.family;const illustration=art(`boon-${b.id}`);illustration.className+=' mw-boon-art';card.append(illustration,n('small','mw-eyebrow',`${family[b.family][0]} · ${rank?`강화 ${rank} → ${rank+1}`:'새 각인'}`),n('h4','',b.name),n('p','',b.description),n('strong','mw-pick','이 각인 선택'));cards.append(card);}this.content.append(cards,details('서로 다른 계열을 모으면 조합 효과가 열립니다. 같은 각인은 3단계까지 강화됩니다.','각인 조합 규칙'));
     } else if(offer?.kind==='story') {
       const event=STORY_EVENTS.find(e=>e.id===offer.id),remembered=event.choices.find(c=>c.id===this.state.story[event.id]);
       this.intro(event.name,remembered?remembered.consequence:event.description,offer.id==='bridge'?'ember_vault':'glass_garden');
@@ -131,7 +132,7 @@ export class MasterworksView {
       else{const choices=n('div','mw-story-choices');for(const c of event.choices){const b=btn('',()=>this.act(()=>this.battle.selectStory(c.id)),'mw-card');b.append(n('h4','',c.name),n('p','',c.description));choices.append(b);}this.content.append(choices);}
     } else this.content.append(n('h3','mw-choice-title',run.enabled?'함께 울리는 각인':'공용 전투 규칙'),n('p','mw-muted',run.enabled?'중요한 체크포인트에서는 직접 고르고, 흐름 중 얻은 보상은 자동 적용됩니다.':'AI 결투와 파티에서는 개인 각인과 서약 없이 공용 규칙으로 대결합니다.'));
     if(run.autoPicked)this.content.append(n('p','mw-muted',`전투 흐름을 멈추지 않고 자동 적용된 각인 ${run.autoPicked}회`));
-    const picked=n('div','mw-picked');for(const b of BOONS){const rank=run.picked.filter(id=>id===b.id).length;if(rank){const chip=n('span',`mw-chip ${b.family}`);chip.append(art(`boon-${b.family}`),n('span','',`${b.name} ${rank}`));picked.append(chip);}}this.content.append(picked);
+    const picked=n('div','mw-picked');for(const b of BOONS){const rank=run.picked.filter(id=>id===b.id).length;if(rank){const chip=n('span',`mw-chip ${b.family}`);chip.append(art(`boon-${b.id}`),n('span','',`${b.name} ${rank}`));picked.append(chip);}}this.content.append(picked);
     const families=new Set(run.picked.map(id=>BOONS.find(b=>b.id===id)?.family));const combos=SYNERGIES.filter(s=>s.families.every(f=>families.has(f)));
     if(combos.length){this.content.append(n('h3','mw-section-title','발현한 조합'));for(const s of combos)this.content.append(n('p','mw-synergy',`${s.name} · ${s.description}`));}
     this.content.append(details('각인은 이번 출격에만 유지됩니다. 명성·영구 숙련·도감·선택 기록은 귀환하거나 패배해도 남습니다. 닫아도 대기 중인 선택은 상단 각인 버튼에서 이어갈 수 있습니다.','유지되는 성장'));

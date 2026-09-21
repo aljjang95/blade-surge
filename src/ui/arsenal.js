@@ -5,12 +5,13 @@ import { PATHS, CHALLENGES } from '../data/masterworks.js';
 import { JOBS, resolveJobHero } from '../data/jobs.js';
 import { KNIGHT_SLASH_VARIANTS, knightSlashVariantInfo } from '../game/knight-builds.js';
 import { audio } from '../engine/audio.js';
+import { uiArt } from './illustrated.js';
 import './arsenal.css';
 
 const el=(tag,cls='',text='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=text;return e;};
 const btn=(label,fn,cls='arsenal-action')=>{const b=el('button',cls,label);b.type='button';b.onclick=fn;return b;};
 const fmt=n=>Math.round(n).toLocaleString('ko-KR');
-const artImage=(id,cls='')=>{const image=el('img',cls);image.src=`/img/ui-crafted/${id}.webp`;image.alt='';image.setAttribute('aria-hidden','true');return image;};
+const artImage=(id,cls='')=>{const image=el('img',cls);image.src=uiArt(id);image.alt='';image.setAttribute('aria-hidden','true');return image;};
 const detail=(label,text)=>{const d=el('details','arsenal-details');d.append(el('summary','',label),el('p','arsenal-copy',text));return d;};
 const artEffects={rupture:'광역 파열',aegis:'보호막 12%',flow:'대기시간 −2초'};
 const supportsSlash=(id,config)=>id==='knight'&&resolveJobHero(HEROES[id],config?.jobId).skills.some(sk=>sk.id==='holy_slash');

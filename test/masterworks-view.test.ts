@@ -1,5 +1,7 @@
 import { expect, test } from 'bun:test';
 import { MasterworksView } from '../src/ui/masterworks.js';
+import { BOONS } from '../src/data/masterworks.js';
+import { uiArt } from '../src/ui/illustrated.js';
 
 function fixture(result:any=null) {
   const calls:string[]=[],ticket={id:7};
@@ -64,8 +66,27 @@ test('illustrated mastery keeps exact effects, cost and prerequisite while foldi
  expect(view.content.text()).toContain('공격력 +2%');expect(view.content.text()).toContain('명성 6');expect(view.content.text()).toContain('이전 단계 필요');
  expect(nodes.filter((n:MWElement)=>n.tagName==='button').every((n:MWElement)=>n.disabled)).toBe(true);
 }));
-test('boon choice artwork follows actual family and keeps chain cap directly on choice',()=>withMWDOM(()=>{
+test('boon choice artwork follows its ID and keeps chain cap directly on choice',()=>withMWDOM(()=>{
  const view=renderFixture(true);view.renderRun();const cards=view.content.all().filter((n:MWElement)=>n.dataset.boon);
- expect(cards).toHaveLength(3);expect(cards.map((n:MWElement)=>n.children[0].src)).toEqual(['/img/ui-crafted/boon-ember.webp','/img/ui-crafted/boon-tide.webp','/img/ui-crafted/boon-storm.webp']);
+ expect(cards).toHaveLength(3);expect(cards.map((n:MWElement)=>n.children[0].src)).toEqual(['/img/ui-crafted/engraving/ember_edge.webp','/img/ui-crafted/engraving/tide_breath.webp','/img/ui-crafted/engraving/storm_eye.webp']);
  expect(cards[2].text()).toContain('최대 2명');expect(cards[0].text()).toContain('공격력 +5%');expect(cards.every((n:MWElement)=>n.tagName==='button')).toBe(true);
 }));
+
+for(const family of new Set(BOONS.map(b=>b.family)))test(`${family} boons have distinct per-ID artwork shared by choices and picked chips`,()=>withMWDOM(()=>{
+ const boons=BOONS.filter(b=>b.family===family),view=renderFixture(true),ids=boons.map(b=>b.id);
+ view.battle.currentOffer=()=>({kind:'boon',ids});view.battle.run.picked=ids.flatMap((id,i)=>Array(i%2+1).fill(id));
+ view.renderRun();const nodes:MWElement[]=view.content.all(),cards=nodes.filter(n=>n.dataset.boon),chips=nodes.filter(n=>n.className.split(' ').includes('mw-chip'));
+ const expected=ids.map(id=>`/img/ui-crafted/engraving/${id}.webp`),sources=cards.map(n=>n.children[0].src);
+ expect(sources).toEqual(expected);expect(new Set(sources).size).toBe(boons.length);
+ expect(chips.map(n=>n.children[0].src)).toEqual(expected);
+ boons.forEach((boon,i)=>{
+  const rank=i%2+1;expect(cards[i].dataset.family).toBe(family);expect(cards[i].text()).toContain(String(boon.description));
+  expect(cards[i].text()).toContain(`강화 ${rank} → ${rank+1}`);expect(chips[i].text()).toBe(`${boon.name} ${rank}`);
+  expect(cards[i].children[0].alt).toBe('');expect(chips[i].children[0].alt).toBe('');
+ });
+}));
+
+test('art resolver accepts exact own registry keys and preserves the original fallback',()=>{
+ expect(uiArt('boon-ember_edge')).toBe('/img/ui-crafted/engraving/ember_edge.webp');
+ for(const id of ['loadout','gold','boon-ember','boon-EMBER_EDGE','boon-missing','constructor','toString','__proto__'])expect(uiArt(id)).toBe(`/img/ui-crafted/${id}.webp`);
+});

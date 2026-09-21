@@ -1,5 +1,7 @@
-// Original ChatGPT GUI artwork; visible names stay real, selectable interface text.
-export const uiArt = id => `/img/ui-crafted/${id}.webp`;
+import { ENGRAVING_ART } from '../data/engraving-art.js';
+
+// Authored engravings and original GUI artwork; visible names stay selectable interface text.
+export const uiArt = id => Object.hasOwn(ENGRAVING_ART,id)?ENGRAVING_ART[id]:`/img/ui-crafted/${id}.webp`;
 export const RESOURCE_ART = {
   gold:'gold', gems:'gems', gem:'gems', energy:'energy', xp:'hero-xp', heroExp:'hero-xp', renown:'renown',
   glass_leaf:'material-leaf', ember_core:'material-ember', star_dust:'material-stardust',

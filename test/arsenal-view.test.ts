@@ -1,15 +1,17 @@
 import {beforeEach,afterEach,expect,test} from 'bun:test';
 import {ArsenalView} from '../src/ui/arsenal.js';
+import {ExperienceView} from '../src/ui/experience-view.js';
 import {Economy} from '../src/game/economy.js';
 import {ExpeditionEconomy} from '../src/game/expedition-economy.js';
 import {MasterworksService} from '../src/game/masterworks-service.js';
 import {ArsenalService} from '../src/game/arsenal-service.js';
 import {COMBAT_ARTS} from '../src/data/combat-arts.js';
 class Element {
-  children:Element[]=[];className='';id='';dataset:any={};disabled=false;hidden=false;open=false;value='';scrollTop=0;isConnected=true;writes=0;focused=false;onclick:(()=>void)|null=null;attrs:any={};listeners:any={};private text='';
+  children:Element[]=[];className='';id='';src='';dataset:any={};disabled=false;hidden=false;open=false;value='';scrollTop=0;isConnected=true;writes=0;focused=false;onclick:(()=>void)|null=null;attrs:any={};listeners:any={};private text='';
   constructor(public tagName:string){}
   set textContent(v:string){this.text=v;this.children=[];this.writes++;}get textContent():string{return this.text+this.children.map(c=>c.textContent).join('');}
   append(...nodes:Element[]){this.children.push(...nodes);}replaceChildren(){this.text='';this.children=[];}setAttribute(k:string,v:string){this.attrs[k]=v;}
+  insertBefore(node:Element,reference:Element|null){const index=reference?this.children.indexOf(reference):-1;this.children.splice(index<0?this.children.length:index,0,node);}
   addEventListener(k:string,fn:any){(this.listeners[k]??=[]).push(fn);}emit(k:string){for(const fn of this.listeners[k]??[])fn({preventDefault(){}});}
   click(){if(!this.disabled)this.onclick?.();}showModal(){this.open=true;}close(){this.open=false;this.emit('close');}focus(){this.focused=true;}scrollIntoView(){}
   querySelector(selector:string):Element|null{return this.all().find(n=>selector.startsWith('.')?n.className.split(' ').includes(selector.slice(1)):n.tagName===selector)||null;}
@@ -32,7 +34,7 @@ const visibleText=(root:Element):string=>root.tagName==='details'&&!root.open?(r
 
 test('illustrated arts keep short DOM labels and native collapsed rules preserve exact effects',()=>{
  const {view}=fixture();
- for(const def of COMBAT_ARTS){const card=art(view,def.id);expect(card.querySelector('img').src).toBe(`/img/ui-crafted/art-${def.id}.webp`);expect(card.textContent).toContain(def.name);expect(card.textContent).not.toContain(def.description);expect(view.body.textContent).toContain(def.description);}
+ for(const def of COMBAT_ARTS){const card=art(view,def.id);expect(card.querySelector('img').src).toBe(`/img/ui-crafted/engraving/art_${def.id}.webp`);expect(card.textContent).toContain(def.name);expect(card.textContent).not.toContain(def.description);expect(view.body.textContent).toContain(def.description);}
  const visible=visibleText(view.body);expect(visible).not.toContain('AI 결투장');expect(visible).not.toContain('반경 5');expect(visible).not.toContain('✦');expect(visible).not.toContain('◇');expect(visible).not.toContain('↻');
  expect(visible.length).toBeLessThan(view.body.textContent.length/2);
  const guides=view.body.all().filter((node:Element)=>node.tagName==='details');expect(guides.every((node:Element)=>!node.open)).toBe(true);expect(guides.every((node:Element)=>node.children[0].tagName==='summary')).toBe(true);
@@ -44,6 +46,34 @@ test('each saved card has four illustrated slots and one visible primary action 
  for(const card of cards){expect(card.querySelector('.compact')!.children).toHaveLength(4);expect(card.all().filter((node:Element)=>node.className==='arsenal-primary')).toHaveLength(1);}
  expect(visibleText(cards[0])).toContain('변경 비교');expect(visibleText(cards[0])).not.toContain('덮어쓰기');
  const empty=cards[1].querySelector('.compact')!;expect(empty.children.map((cell:Element)=>(cell.querySelector('img') as any).src)).toEqual(['/img/ui-crafted/slot-weapon.webp','/img/ui-crafted/slot-armor.webp','/img/ui-crafted/slot-ring.webp','/img/ui-crafted/slot-boots.webp']);
+});
+
+test('saved presets keep the matching art icon when the current combat art changes',()=>{
+ const {app,view}=fixture();
+ expect(view.body.all().filter((node:Element)=>node.className==='arsenal-preset-art').map((node:Element)=>node.src)).toEqual(Array(3).fill('/img/ui-crafted/loadout.webp'));
+ COMBAT_ARTS.forEach((def,index)=>{expect(app.arsenal.setArt(def.id).ok).toBe(true);expect(app.arsenal.savePreset(index,def.name).ok).toBe(true);});
+ expect(app.arsenal.setArt(COMBAT_ARTS[0].id).ok).toBe(true);view.render();
+ const cards:Element[]=view.body.all().filter((node:Element)=>node.tagName==='article');
+ expect(cards).toHaveLength(COMBAT_ARTS.length);
+ COMBAT_ARTS.forEach((def,index)=>{
+  const image=cards[index].querySelector('.arsenal-preset-art')!;
+  expect(image.src).toBe(`/img/ui-crafted/engraving/art_${def.id}.webp`);expect(image.src).toBe(art(view,def.id).querySelector('img').src);
+ });
+});
+
+test('lobby art buttons share arsenal icons and retain selection handlers and labels',()=>{
+ const {app,view}=fixture(),destination=new Element('section'),battleButton=new Element('button'),hud=new Element('div');destination.append(battleButton);
+ doc.documentElement={classList:{add(){}}};
+ const targets:Record<string,Element>={'.oath-destination':destination,'#btn-battle':battleButton,'#hud .hud-bars':hud};doc.querySelector=(selector:string)=>targets[selector]??null;
+ const lobby=new ExperienceView(app);
+ expect(destination.children).toEqual([lobby.panel,battleButton]);expect(lobby.buttons).toHaveLength(COMBAT_ARTS.length);
+ COMBAT_ARTS.forEach((def,index)=>{
+  const button=lobby.buttons[index],image=button.querySelector('img')!;
+  expect(image.src).toBe(`/img/ui-crafted/engraving/art_${def.id}.webp`);expect(image.src).toBe(art(view,def.id).querySelector('img').src);
+  expect(button.textContent).toBe(def.name);expect(button.attrs['aria-label']).toBe(`${def.name} · ${def.description}`);
+  button.click();expect(app.arsenal.artForHero()).toBe(def.id);
+  expect(lobby.buttons.map(b=>b.attrs['aria-pressed'])).toEqual(COMBAT_ARTS.map(a=>String(a.id===def.id)));
+ });
 });
 test('real DOM handlers select/save/compare/apply a real service build and render item names without UID',()=>{
  const {app,view,calls}=fixture();art(view,'aegis').click();expect(app.arsenal.artForHero()).toBe('aegis');

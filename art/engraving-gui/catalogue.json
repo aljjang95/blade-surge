@@ -1,0 +1,754 @@
+{
+  "originals": [
+    {
+      "path": "/img/ui-crafted/boon-ember.webp",
+      "sha256": "754f04b60c7678c6b49588bf4aa2e99589797139e969cd06af4b03f45e1aa4b5"
+    },
+    {
+      "path": "/img/ui-crafted/boon-tide.webp",
+      "sha256": "994084d325a0405153b01a82e2d2330f3f3cd2c8f5a600f3f03ceaf7b946504b"
+    },
+    {
+      "path": "/img/ui-crafted/boon-storm.webp",
+      "sha256": "fce079ddce8ad500e099c704426aefbf89aaeacf42b801440f081ec97859e930"
+    },
+    {
+      "path": "/img/ui-crafted/boon-stone.webp",
+      "sha256": "43ef0267494e76807ee4ce57dda6de0909e3745d80f84136703c6eca6553ae9d"
+    },
+    {
+      "path": "/img/ui-crafted/art-rupture.webp",
+      "sha256": "c356e44a8568096789fb4e763cf80adb13f4c293d93a0e59cc3b7d8ce32a21bf"
+    },
+    {
+      "path": "/img/ui-crafted/art-aegis.webp",
+      "sha256": "04d9f03e858e00e77e7980067563bda82c545d126d21a363a35fa0e109ee4a17"
+    },
+    {
+      "path": "/img/ui-crafted/art-flow.webp",
+      "sha256": "3f1734088e1b501f23cca921448f5783f526c0b0804e7b8ce6b4647a62b9c8aa"
+    }
+  ],
+  "assets": [
+    {
+      "id": "ember_edge",
+      "name": "잿불 칼날",
+      "family": "ember",
+      "role": "runtime"
+    },
+    {
+      "id": "ember_hunt",
+      "name": "불씨 사냥",
+      "family": "ember",
+      "role": "runtime"
+    },
+    {
+      "id": "ember_feast",
+      "name": "잔열 회수",
+      "family": "ember",
+      "role": "runtime"
+    },
+    {
+      "id": "ember_heart",
+      "name": "화로의 심장",
+      "family": "ember",
+      "role": "reserve"
+    },
+    {
+      "id": "ember_crown",
+      "name": "재의 왕관",
+      "family": "ember",
+      "role": "reserve"
+    },
+    {
+      "id": "ember_ward",
+      "name": "불꽃 방패",
+      "family": "ember",
+      "role": "reserve"
+    },
+    {
+      "id": "ember_spark",
+      "name": "발화",
+      "family": "ember",
+      "role": "reserve"
+    },
+    {
+      "id": "ember_forge",
+      "name": "불씨 모루",
+      "family": "ember",
+      "role": "reserve"
+    },
+    {
+      "id": "ember_vial",
+      "name": "불씨 약병",
+      "family": "ember",
+      "role": "reserve"
+    },
+    {
+      "id": "ember_sun",
+      "name": "붉은 해",
+      "family": "ember",
+      "role": "reserve"
+    },
+    {
+      "id": "ember_spear",
+      "name": "잿불 창",
+      "family": "ember",
+      "role": "reserve"
+    },
+    {
+      "id": "ember_hour",
+      "name": "재의 모래시계",
+      "family": "ember",
+      "role": "reserve"
+    },
+    {
+      "id": "tide_guard",
+      "name": "물결 갑주",
+      "family": "tide",
+      "role": "runtime"
+    },
+    {
+      "id": "tide_breath",
+      "name": "깊은 호흡",
+      "family": "tide",
+      "role": "runtime"
+    },
+    {
+      "id": "tide_return",
+      "name": "돌아오는 물결",
+      "family": "tide",
+      "role": "runtime"
+    },
+    {
+      "id": "tide_anchor",
+      "name": "심해 닻",
+      "family": "tide",
+      "role": "reserve"
+    },
+    {
+      "id": "tide_pearl",
+      "name": "고요한 진주",
+      "family": "tide",
+      "role": "reserve"
+    },
+    {
+      "id": "tide_chalice",
+      "name": "샘의 잔",
+      "family": "tide",
+      "role": "reserve"
+    },
+    {
+      "id": "tide_moon",
+      "name": "밀물의 달",
+      "family": "tide",
+      "role": "reserve"
+    },
+    {
+      "id": "tide_step",
+      "name": "파도 걸음",
+      "family": "tide",
+      "role": "reserve"
+    },
+    {
+      "id": "tide_heart",
+      "name": "해류의 심장",
+      "family": "tide",
+      "role": "reserve"
+    },
+    {
+      "id": "tide_bell",
+      "name": "바다의 종",
+      "family": "tide",
+      "role": "reserve"
+    },
+    {
+      "id": "tide_key",
+      "name": "가라앉은 열쇠",
+      "family": "tide",
+      "role": "reserve"
+    },
+    {
+      "id": "tide_balance",
+      "name": "수평선의 저울",
+      "family": "tide",
+      "role": "reserve"
+    },
+    {
+      "id": "storm_step",
+      "name": "번개 걸음",
+      "family": "storm",
+      "role": "runtime"
+    },
+    {
+      "id": "storm_eye",
+      "name": "폭풍의 눈",
+      "family": "storm",
+      "role": "runtime"
+    },
+    {
+      "id": "storm_edge",
+      "name": "바람 칼끝",
+      "family": "storm",
+      "role": "runtime"
+    },
+    {
+      "id": "storm_spark",
+      "name": "천둥의 창",
+      "family": "storm",
+      "role": "reserve"
+    },
+    {
+      "id": "storm_feather",
+      "name": "질풍 깃털",
+      "family": "storm",
+      "role": "reserve"
+    },
+    {
+      "id": "storm_bow",
+      "name": "구름 사냥꾼",
+      "family": "storm",
+      "role": "reserve"
+    },
+    {
+      "id": "storm_crown",
+      "name": "돌풍의 왕관",
+      "family": "storm",
+      "role": "reserve"
+    },
+    {
+      "id": "storm_return",
+      "name": "되감는 바람",
+      "family": "storm",
+      "role": "reserve"
+    },
+    {
+      "id": "storm_star",
+      "name": "번개의 별",
+      "family": "storm",
+      "role": "reserve"
+    },
+    {
+      "id": "storm_bell",
+      "name": "천둥의 종",
+      "family": "storm",
+      "role": "reserve"
+    },
+    {
+      "id": "storm_spear",
+      "name": "폭풍 찌르기",
+      "family": "storm",
+      "role": "reserve"
+    },
+    {
+      "id": "storm_hour",
+      "name": "찰나의 틈",
+      "family": "storm",
+      "role": "reserve"
+    },
+    {
+      "id": "stone_root",
+      "name": "바위 뿌리",
+      "family": "stone",
+      "role": "runtime"
+    },
+    {
+      "id": "stone_plate",
+      "name": "산맥의 결",
+      "family": "stone",
+      "role": "runtime"
+    },
+    {
+      "id": "stone_reserve",
+      "name": "광맥 비축",
+      "family": "stone",
+      "role": "runtime"
+    },
+    {
+      "id": "stone_tower",
+      "name": "산성의 맹세",
+      "family": "stone",
+      "role": "reserve"
+    },
+    {
+      "id": "stone_shield",
+      "name": "현무암 방패",
+      "family": "stone",
+      "role": "reserve"
+    },
+    {
+      "id": "stone_anvil",
+      "name": "대지의 모루",
+      "family": "stone",
+      "role": "reserve"
+    },
+    {
+      "id": "stone_heart",
+      "name": "암석의 심장",
+      "family": "stone",
+      "role": "reserve"
+    },
+    {
+      "id": "stone_key",
+      "name": "석문의 열쇠",
+      "family": "stone",
+      "role": "reserve"
+    },
+    {
+      "id": "stone_scales",
+      "name": "균형의 돌",
+      "family": "stone",
+      "role": "reserve"
+    },
+    {
+      "id": "stone_crown",
+      "name": "바위 왕관",
+      "family": "stone",
+      "role": "reserve"
+    },
+    {
+      "id": "stone_book",
+      "name": "오래된 석서",
+      "family": "stone",
+      "role": "reserve"
+    },
+    {
+      "id": "stone_anchor",
+      "name": "흔들림 없는 닻",
+      "family": "stone",
+      "role": "reserve"
+    },
+    {
+      "id": "art_rupture",
+      "name": "파열",
+      "family": "art",
+      "role": "runtime"
+    },
+    {
+      "id": "art_aegis",
+      "name": "수호",
+      "family": "art",
+      "role": "runtime"
+    },
+    {
+      "id": "art_flow",
+      "name": "순환",
+      "family": "art",
+      "role": "runtime"
+    },
+    {
+      "id": "art_counter",
+      "name": "반격 문양",
+      "family": "art",
+      "role": "reserve"
+    },
+    {
+      "id": "art_focus",
+      "name": "집중 문양",
+      "family": "art",
+      "role": "reserve"
+    },
+    {
+      "id": "art_guard",
+      "name": "철벽 문양",
+      "family": "art",
+      "role": "reserve"
+    },
+    {
+      "id": "art_pursuit",
+      "name": "추격 문양",
+      "family": "art",
+      "role": "reserve"
+    },
+    {
+      "id": "art_tempo",
+      "name": "박자 문양",
+      "family": "art",
+      "role": "reserve"
+    },
+    {
+      "id": "art_balance",
+      "name": "균형 문양",
+      "family": "art",
+      "role": "reserve"
+    },
+    {
+      "id": "art_resolve",
+      "name": "결의 문양",
+      "family": "art",
+      "role": "reserve"
+    },
+    {
+      "id": "art_precision",
+      "name": "명중 문양",
+      "family": "art",
+      "role": "reserve"
+    },
+    {
+      "id": "art_pulse",
+      "name": "맥동 문양",
+      "family": "art",
+      "role": "reserve"
+    },
+    {
+      "id": "frost_edge",
+      "name": "빙결 칼날",
+      "family": "frost",
+      "role": "reserve"
+    },
+    {
+      "id": "frost_crystal",
+      "name": "서리 결정",
+      "family": "frost",
+      "role": "reserve"
+    },
+    {
+      "id": "frost_snow",
+      "name": "눈의 봉인",
+      "family": "frost",
+      "role": "reserve"
+    },
+    {
+      "id": "frost_crown",
+      "name": "빙하 왕관",
+      "family": "frost",
+      "role": "reserve"
+    },
+    {
+      "id": "frost_heart",
+      "name": "겨울의 심장",
+      "family": "frost",
+      "role": "reserve"
+    },
+    {
+      "id": "frost_shield",
+      "name": "동토 방패",
+      "family": "frost",
+      "role": "reserve"
+    },
+    {
+      "id": "frost_bell",
+      "name": "설원의 종",
+      "family": "frost",
+      "role": "reserve"
+    },
+    {
+      "id": "frost_moon",
+      "name": "겨울달",
+      "family": "frost",
+      "role": "reserve"
+    },
+    {
+      "id": "frost_breath",
+      "name": "차가운 숨",
+      "family": "frost",
+      "role": "reserve"
+    },
+    {
+      "id": "frost_anchor",
+      "name": "빙하 닻",
+      "family": "frost",
+      "role": "reserve"
+    },
+    {
+      "id": "frost_tower",
+      "name": "얼음 성채",
+      "family": "frost",
+      "role": "reserve"
+    },
+    {
+      "id": "frost_hour",
+      "name": "멈춘 계절",
+      "family": "frost",
+      "role": "reserve"
+    },
+    {
+      "id": "grove_root",
+      "name": "숲의 뿌리",
+      "family": "grove",
+      "role": "reserve"
+    },
+    {
+      "id": "grove_leaf",
+      "name": "첫 잎",
+      "family": "grove",
+      "role": "reserve"
+    },
+    {
+      "id": "grove_bow",
+      "name": "숲의 시선",
+      "family": "grove",
+      "role": "reserve"
+    },
+    {
+      "id": "grove_heart",
+      "name": "새싹의 심장",
+      "family": "grove",
+      "role": "reserve"
+    },
+    {
+      "id": "grove_vial",
+      "name": "이슬 약병",
+      "family": "grove",
+      "role": "reserve"
+    },
+    {
+      "id": "grove_feather",
+      "name": "초록 깃털",
+      "family": "grove",
+      "role": "reserve"
+    },
+    {
+      "id": "grove_crown",
+      "name": "가시 왕관",
+      "family": "grove",
+      "role": "reserve"
+    },
+    {
+      "id": "grove_chalice",
+      "name": "샘물의 잔",
+      "family": "grove",
+      "role": "reserve"
+    },
+    {
+      "id": "grove_shield",
+      "name": "나무껍질 방패",
+      "family": "grove",
+      "role": "reserve"
+    },
+    {
+      "id": "grove_eye",
+      "name": "숲의 눈",
+      "family": "grove",
+      "role": "reserve"
+    },
+    {
+      "id": "grove_spear",
+      "name": "가지 창",
+      "family": "grove",
+      "role": "reserve"
+    },
+    {
+      "id": "grove_sun",
+      "name": "봄의 해",
+      "family": "grove",
+      "role": "reserve"
+    },
+    {
+      "id": "astral_star",
+      "name": "길잡이 별",
+      "family": "astral",
+      "role": "reserve"
+    },
+    {
+      "id": "astral_orb",
+      "name": "천구",
+      "family": "astral",
+      "role": "reserve"
+    },
+    {
+      "id": "astral_book",
+      "name": "성좌 기록",
+      "family": "astral",
+      "role": "reserve"
+    },
+    {
+      "id": "astral_eye",
+      "name": "관측자의 눈",
+      "family": "astral",
+      "role": "reserve"
+    },
+    {
+      "id": "astral_moon",
+      "name": "푸른 달",
+      "family": "astral",
+      "role": "reserve"
+    },
+    {
+      "id": "astral_hour",
+      "name": "별의 시간",
+      "family": "astral",
+      "role": "reserve"
+    },
+    {
+      "id": "astral_key",
+      "name": "별문 열쇠",
+      "family": "astral",
+      "role": "reserve"
+    },
+    {
+      "id": "astral_crown",
+      "name": "천상의 관",
+      "family": "astral",
+      "role": "reserve"
+    },
+    {
+      "id": "astral_scales",
+      "name": "운명의 저울",
+      "family": "astral",
+      "role": "reserve"
+    },
+    {
+      "id": "astral_crystal",
+      "name": "별빛 결정",
+      "family": "astral",
+      "role": "reserve"
+    },
+    {
+      "id": "astral_return",
+      "name": "공전 문양",
+      "family": "astral",
+      "role": "reserve"
+    },
+    {
+      "id": "astral_spear",
+      "name": "유성의 창",
+      "family": "astral",
+      "role": "reserve"
+    },
+    {
+      "id": "shadow_mask",
+      "name": "황혼 가면",
+      "family": "shadow",
+      "role": "reserve"
+    },
+    {
+      "id": "shadow_dagger",
+      "name": "그림자 칼끝",
+      "family": "shadow",
+      "role": "reserve"
+    },
+    {
+      "id": "shadow_moon",
+      "name": "그믐달",
+      "family": "shadow",
+      "role": "reserve"
+    },
+    {
+      "id": "shadow_eye",
+      "name": "밤의 눈",
+      "family": "shadow",
+      "role": "reserve"
+    },
+    {
+      "id": "shadow_feather",
+      "name": "까마귀 깃털",
+      "family": "shadow",
+      "role": "reserve"
+    },
+    {
+      "id": "shadow_key",
+      "name": "비밀 열쇠",
+      "family": "shadow",
+      "role": "reserve"
+    },
+    {
+      "id": "shadow_boot",
+      "name": "조용한 걸음",
+      "family": "shadow",
+      "role": "reserve"
+    },
+    {
+      "id": "shadow_book",
+      "name": "봉인된 기록",
+      "family": "shadow",
+      "role": "reserve"
+    },
+    {
+      "id": "shadow_chalice",
+      "name": "밤의 잔",
+      "family": "shadow",
+      "role": "reserve"
+    },
+    {
+      "id": "shadow_hunt",
+      "name": "그늘 사냥",
+      "family": "shadow",
+      "role": "reserve"
+    },
+    {
+      "id": "shadow_tower",
+      "name": "밤의 탑",
+      "family": "shadow",
+      "role": "reserve"
+    },
+    {
+      "id": "shadow_flow",
+      "name": "그림자 순환",
+      "family": "shadow",
+      "role": "reserve"
+    },
+    {
+      "id": "dawn_sun",
+      "name": "첫 햇살",
+      "family": "dawn",
+      "role": "reserve"
+    },
+    {
+      "id": "dawn_sword",
+      "name": "여명의 칼날",
+      "family": "dawn",
+      "role": "reserve"
+    },
+    {
+      "id": "dawn_shield",
+      "name": "새벽 수호",
+      "family": "dawn",
+      "role": "reserve"
+    },
+    {
+      "id": "dawn_crown",
+      "name": "빛의 왕관",
+      "family": "dawn",
+      "role": "reserve"
+    },
+    {
+      "id": "dawn_heart",
+      "name": "온기의 심장",
+      "family": "dawn",
+      "role": "reserve"
+    },
+    {
+      "id": "dawn_bell",
+      "name": "새벽종",
+      "family": "dawn",
+      "role": "reserve"
+    },
+    {
+      "id": "dawn_star",
+      "name": "희망의 별",
+      "family": "dawn",
+      "role": "reserve"
+    },
+    {
+      "id": "dawn_feather",
+      "name": "빛의 깃털",
+      "family": "dawn",
+      "role": "reserve"
+    },
+    {
+      "id": "dawn_book",
+      "name": "서약의 기록",
+      "family": "dawn",
+      "role": "reserve"
+    },
+    {
+      "id": "dawn_scales",
+      "name": "광휘의 저울",
+      "family": "dawn",
+      "role": "reserve"
+    },
+    {
+      "id": "dawn_chalice",
+      "name": "축복의 잔",
+      "family": "dawn",
+      "role": "reserve"
+    },
+    {
+      "id": "dawn_return",
+      "name": "다시 오는 아침",
+      "family": "dawn",
+      "role": "reserve"
+    }
+  ]
+}

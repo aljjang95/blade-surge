@@ -1,4 +1,5 @@
 import {COMBAT_ARTS} from '../data/combat-arts.js';
+import {uiArt} from './illustrated.js';
 import './experience-v2.css';
 const node=(tag,cls,text)=>{const e=document.createElement(tag);e.className=cls;if(text)e.textContent=text;return e;};
 export class ExperienceView {
@@ -8,7 +9,7 @@ export class ExperienceView {
   this.panel.append(node('div','experience-arts-title','이번 전투 기예'));
   const row=node('div','experience-art-row');this.buttons=[];
   for(const art of COMBAT_ARTS){
-   const button=node('button','experience-art'),img=node('img','');img.src=`/img/ui-crafted/art-${art.id}.webp`;img.alt='';button.type='button';button.dataset.art=art.id;
+   const button=node('button','experience-art'),img=node('img','');img.src=uiArt(`art-${art.id}`);img.alt='';button.type='button';button.dataset.art=art.id;
    button.append(img,node('span','',art.name));button.setAttribute('aria-label',`${art.name} · ${art.description}`);
    button.onclick=()=>{if(app.mode!=='lobby'||app.stageStarting)return;const result=app.arsenal.setArt(art.id);if(result.ok)this.refreshArts();else app.ui.toast(result.error||'기예를 저장하지 못했습니다','red');};
    row.append(button);this.buttons.push(button);
