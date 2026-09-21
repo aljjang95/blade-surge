@@ -1,0 +1,15 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="a" cx="0" cy="0" r="1" gradientTransform="translate(96 88) rotate(90) scale(84)"><stop stop-color="#F6D98D" stop-opacity=".42"/><stop offset="1" stop-color="#4C7769" stop-opacity="0"/></radialGradient>
+    <linearGradient id="b" x1="36" y1="34" x2="153" y2="159" gradientUnits="userSpaceOnUse"><stop stop-color="#EED397"/><stop offset=".52" stop-color="#8F7D54"/><stop offset="1" stop-color="#2C493E"/></linearGradient>
+    <filter id="c" x="0" y="0" width="192" height="192" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="5"/></filter>
+  </defs>
+  <circle cx="96" cy="92" r="78" fill="url(#a)"/>
+  <circle cx="96" cy="92" r="61" stroke="#EED397" stroke-opacity=".35" stroke-width="2" stroke-dasharray="3 7"/>
+  <path d="M43 151V82c0-29 23-52 53-52s53 23 53 52v69" stroke="#192E2A" stroke-width="17" stroke-linecap="round" filter="url(#c)"/>
+  <path d="M43 151V82c0-29 23-52 53-52s53 23 53 52v69" stroke="url(#b)" stroke-width="9" stroke-linecap="round"/>
+  <path d="M57 151V85c0-21 17-38 39-38s39 17 39 38v66" fill="#0A1717" stroke="#EED397" stroke-opacity=".45" stroke-width="3"/>
+  <path d="M96 65v54M77 85h38M78 116h36" stroke="#EED397" stroke-opacity=".55" stroke-width="3"/>
+  <circle cx="96" cy="65" r="5" fill="#EED397"/>
+  <path d="M34 154h124" stroke="#EED397" stroke-opacity=".52" stroke-width="3" stroke-linecap="round"/>
+</svg>

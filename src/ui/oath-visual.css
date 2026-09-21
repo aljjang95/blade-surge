@@ -72,3 +72,22 @@
 .oath-visual #hud #minimap-wrap{opacity:.9}
 @media(orientation:landscape) and (max-width:700px){.oath-visual #hud .combo b{font-size:24px}.oath-visual #hud #wave-banner{font-size:14px;max-width:34%;left:33%}.oath-visual #toast-layer{top:58px}.oath-visual #toast-layer .toast.combat-notice{max-width:44vw;font-size:9px}}
 @media(orientation:portrait){.oath-visual #hud .combo b{font-size:24px}.oath-visual #hud #wave-banner{font-size:14px;max-width:54%;left:23%}.oath-visual #toast-layer .toast.combat-notice{max-width:calc(100vw - 156px)}}
+
+/* Combat feedback stays in the header safe zone. The playfield centre remains clear for the hero and telegraphs. */
+.oath-visual #hud .combo { top: calc(122px + var(--sat)); right: auto; left: calc(14px + var(--sal)); z-index: 12; display: flex; align-items: baseline; gap: 6px; padding: 5px 9px; border: 1px solid #d8b4725c; border-radius: 8px; background: #0a1718c9; opacity: .92; text-align: left; }
+.oath-visual #hud .combo b { display: inline; font-size: 28px; line-height: 1; }
+.oath-visual #hud .combo span { font-size: 9px; letter-spacing: .12em; }
+.oath-visual #hud .kill-streak { top: calc(122px + var(--sat)); left: 50%; right: auto; z-index: 12; min-width: 126px; padding: 6px 10px; border-color: #d8b47266; border-radius: 8px; background: #0a1718d9; box-shadow: 0 6px 18px #0003; transform: translate(-50%, -4px) scale(.92); }
+.oath-visual #hud .kill-streak.show { transform: translate(-50%, 0) scale(1); }
+.oath-visual #hud .kill-streak b { font-size: 25px; }
+.oath-visual #hud .kill-streak span { font-size: 8px; letter-spacing: .12em; }
+.oath-visual #hud .kill-streak em { font-size: 8px; }
+@media(orientation:landscape) and (max-height:550px) {
+  .oath-visual #hud .combo, .oath-visual #hud .kill-streak { top: calc(92px + var(--sat)); }
+  .oath-visual #hud .combo b { font-size: 22px; }
+  .oath-visual #hud .kill-streak { min-width: 110px; padding: 4px 8px; }
+}
+@media(orientation:portrait) {
+  .oath-visual #hud .combo { top: calc(116px + var(--sat)); }
+  .oath-visual #hud .kill-streak { top: calc(116px + var(--sat)); }
+}
