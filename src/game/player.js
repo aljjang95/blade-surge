@@ -6,6 +6,7 @@ import { applyLook } from './look.js';
 import { materialsOf } from '../engine/assets.js';
 import { HeroBeacon } from './hero-beacon.js';
 import { CONTROL_ULT_GAIN, ultimateLockDuration } from './control-rewards.js';
+import { frontierEffectForStage } from '../data/seasonal-content.js';
 import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC } from './progression.js';
 
 const _v = new THREE.Vector3();
@@ -96,7 +97,9 @@ export class Player extends Actor {
         // 계속 달리면 스프린트로 가속 (넓은 필드 이동 스트레스 완화)
         this.sprintT = Math.min(1.6, this.sprintT + dt);
         this.sprint = this.sprintT > 0.7 ? Math.min(1, (this.sprintT - 0.7) / 0.6) : 0;
-        const spd = this.stats.spd * this.buffs.spd * (this.slow ? 0.5 : 1) * (1 + this.sprint * 0.45);
+        const frontier = frontierEffectForStage(this.game.stage);
+        const frontierSpeed = frontier?.kind === 'moveSpeedMultiplier' ? frontier.value : 1;
+        const spd = this.stats.spd * this.buffs.spd * frontierSpeed * (this.slow ? 0.5 : 1) * (1 + this.sprint * 0.45);
         this.vel.copy(this.moveDir).multiplyScalar(spd);
         this.faceDir(this.moveDir.x, this.moveDir.z);
         if (this.state !== 'move') { this.state = 'move'; this.play('Running_A', { fade: 0.15 }); }
@@ -343,11 +346,21 @@ export class Player extends Actor {
       // 회피 직후 스치면 퍼펙트 — 슬로우모 + 궁극기 게이지 + 반격 버프
       if (this.perfectWindow > 0 && this.perfectCd <= 0) {
         this.perfectWindow = 0; this.perfectCd = 1.2;
+        const frontier = frontierEffectForStage(this.game.stage);
+        if (frontier?.kind === 'perfectCooldownReduction') this.def.skills.forEach((skill, i) => {
+          if (!skill.ult && this.cds[i] > 0) this.cds[i] = Math.max(0, this.cds[i] - frontier.value);
+        });
         this.game.onPerfectDodge(this);
       }
       return false;
     }
     // 비율 경감만. 정액 차감(dmg - def*0.5)은 레벨 1 방어 40 이 1층 잡몹 공격 18 을 통째로 먹어 모든 피격이 1 이 됐다 (hitTakenRatio 0 의 진범)
+    const frontier = frontierEffectForStage(this.game.stage);
+    if (frontier?.kind === 'firstRoomDamageMultiplier') {
+      const world = this.game.world, room = world?.roomAt(this.pos.x, this.pos.z);
+      const combatRoom = r => r && ['normal', 'elite', 'boss'].includes(r.type);
+      if (combatRoom(room) && room.spawned && !room.cleared && world.rooms?.every(r => !combatRoom(r) || !r.cleared)) dmg *= frontier.value;
+    }
     let red = Math.max(1, Math.round(dmg * (1 - Math.min(0.6, this.stats.def / (this.stats.def + 250)))));
     // 성역 안: 받는 피해 감소 (검성 각성 2)
     const legacyDr = this.dr > 0 && this.drT > 0 && (!this.sanctum || Math.hypot(this.pos.x - this.sanctum.pos.x, this.pos.z - this.sanctum.pos.z) < this.sanctum.r) ? this.dr : 0;

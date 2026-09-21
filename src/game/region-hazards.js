@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { frontierEffectForStage } from '../data/seasonal-content.js';
 
 const RULES = {
   garden: { color: 0xe8be74, name: '종의 공명 · 고리 사이로 이동', period: 12 },
@@ -77,12 +78,23 @@ export class RegionHazards {
     const g = this.game, theme = g.stage.chapter.theme;
     const pattern = hazardPattern(theme, room, anchor.pos, this.cycle++, room.type === 'boss' && g.stage.encounter?.rank !== 'captain');
     this.clear(); this.triggered++;
+    const frontier = frontierEffectForStage(g.stage);
+    const radiusMul = frontier?.kind === 'hazardRadiusMultiplier' ? frontier.value : 1;
+    const lead = frontier?.kind === 'telegraphLead' ? frontier.value : 0;
+    const frontierColor = frontier?.kind === 'warningColor' ? frontier.value : this.rule?.color || 0xffffff;
     for (let i = 0; i < pattern.length; i++) {
-      const s = this.slots[i], h = pattern[i], m = s.mesh, u = m.material.uniforms;
+      const source = pattern[i], h = { ...source, delay: source.delay + lead };
+      if (h.type === 'lane') h.width *= radiusMul;
+      else {
+        h.radius *= radiusMul;
+        // Shrinking a ring must not move its inner edge into previously safe ground.
+        if (h.type === 'ring' && radiusMul < 1) h.safeRadius = Math.max(h.safeRadius, source.radius * .78);
+      }
+      const s = this.slots[i], m = s.mesh, u = m.material.uniforms;
       s.hazard = h; s.age = 0; s.hit = false; m.visible = true;
       const x = h.type === 'lane' ? h.length : h.radius * 2, z = h.type === 'lane' ? h.width : h.radius * 2;
       m.position.set(h.x, .11, h.z); m.rotation.y = -h.angle; m.scale.set(x, 1, z);
-      u.size.value.set(x, z); u.shape.value = h.type === 'disk' ? 0 : h.type === 'ring' ? 1 : 2; u.safeRadius.value = h.safeRadius;
+      u.size.value.set(x, z); u.shape.value = h.type === 'disk' ? 0 : h.type === 'ring' ? 1 : 2; u.safeRadius.value = h.safeRadius; u.color.value.setHex(frontierColor);
       u.fired.value = 0; u.opacity.value = .8;
     }
     if (this.triggered === 1 || room.type === 'boss') g.ui.toast(this.rule.name, 'red');
@@ -90,7 +102,7 @@ export class RegionHazards {
   getPartyWarnings() {
     return this.slots.flatMap((s, i) => {
       const h = s.hazard; if (!h || s.age > h.delay + .5) return [];
-      return [{id:`region:${this.cycle}:${i}`,kind:h.type,x:h.x,z:h.z,radius:h.radius || 0,width:h.width || 0,length:h.length || 0,angle:h.angle || 0,safeRadius:h.safeRadius || 0,remaining:Math.max(0,h.delay-s.age),duration:h.delay,color:this.rule?.color || 0xffffff}];
+      return [{id:`region:${this.cycle}:${i}`,kind:h.type,x:h.x,z:h.z,radius:h.radius || 0,width:h.width || 0,length:h.length || 0,angle:h.angle || 0,safeRadius:h.safeRadius || 0,remaining:Math.max(0,h.delay-s.age),duration:h.delay,color:s.mesh.material.uniforms.color.value.getHex()}];
     });
   }
   update(dt) {

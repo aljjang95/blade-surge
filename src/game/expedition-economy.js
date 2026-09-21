@@ -6,12 +6,18 @@ import { riftForDay, riftBonus } from './journey-rifts.js';
 import { EXPEDITION_DEPTHS, expeditionDepth } from '../data/expedition-depths.js';
 import { EXPEDITION_CONQUESTS, expeditionConquest, conquestForRun } from '../data/expedition-conquests.js';
 import { readConquestOutcome } from './expedition-conquests.js';
+import { applyFrontierRewards, frontierForRoute, frontierFromSnapshot, frontierSnapshot } from '../data/seasonal-content.js';
 const find = (list, id) => list.find(x => x.id === id);
 const obj = x => x && typeof x === 'object' && !Array.isArray(x) ? x : {};
 const num = (x, fallback = 0) => Number.isSafeInteger(x) && x >= 0 ? Math.min(x, 100000000) : fallback;
 const counts = (defs, raw) => Object.fromEntries(defs.map(x => [x.id, num(obj(raw)[x.id])]));
 const mode = depth => depth === undefined ? 'standard' : depth;
 const validDepth = depth => ['standard', 'deep'].includes(mode(depth));
+const ticketFrontier = ticket => {
+  if (ticket?.kind !== 'dungeon' || mode(ticket.depth) !== 'standard' || ticket.riftId || ticket.conquestId) return null;
+  const frontier = frontierFromSnapshot(ticket.frontier);
+  return frontier?.routeId === ticket.target ? frontier : null;
+};
 function depthRewards(def, firstClear) {
   const rewards = structuredClone(def.rewards);
   if (firstClear) for (const [key, value] of Object.entries(def.firstRewards)) {
@@ -35,7 +41,7 @@ export function normalizeExpedition(raw) {
     claimed: EXPEDITION_QUESTS.filter(q => Array.isArray(r.claimed) && r.claimed.includes(q.id)).map(q => q.id), unlockedJobs,
     selectedJob: unlockedJobs.includes(r.selectedJob) ? r.selectedJob : null, seq: num(r.seq),
     campaignReceipts: [...new Set((Array.isArray(r.campaignReceipts) ? r.campaignReceipts : []).filter(x => typeof x === 'string' && x.length <= 120))],
-    pending: Number.isSafeInteger(p.id) && p.id > 0 && ['dungeon', 'arena'].includes(p.kind) && pendingDef && !(depth === 'deep' && p.riftId) && (p.conquestId == null || conquestForRun(p.target, depth, p.conquestId)) ? { id: p.id, kind: p.kind, target: p.target, depth, energy: pendingDef.energy, ...(p.conquestId ? { conquestId: p.conquestId } : {}) } : null };
+    pending: Number.isSafeInteger(p.id) && p.id > 0 && ['dungeon', 'arena'].includes(p.kind) && pendingDef && !(depth === 'deep' && p.riftId) && (p.conquestId == null || conquestForRun(p.target, depth, p.conquestId)) ? { id: p.id, kind: p.kind, target: p.target, depth, energy: pendingDef.energy, ...(p.conquestId ? { conquestId: p.conquestId } : {}), ...(frontierFromSnapshot(p.frontier) ? { frontier: frontierSnapshot(p.frontier) } : {}) } : null };
 }
 export class ExpeditionEconomy {
   constructor(eco) {
@@ -78,8 +84,8 @@ export class ExpeditionEconomy {
       : c.previous && !this.s.conquests.includes(c.previous) ? `먼저 「${expeditionConquest(c.previous).name}」 달성` : null;
     return { ok: !error, error };
   }
-  /** @param {string} kind @param {string} id @param {{rift?: boolean, depth?: string, conquestId?: string|null}} [options] */
-  begin(kind, id, { rift = false, depth = 'standard', conquestId = null } = {}) {
+  /** @param {string} kind @param {string} id @param {{rift?: boolean, depth?: string, conquestId?: string|null, expectedFrontier?: object|null}} [options] */
+  begin(kind, id, { rift = false, depth = 'standard', conquestId = null, expectedFrontier = undefined } = {}) {
     if (!validDepth(depth) || (depth === 'deep' && (kind !== 'dungeon' || rift))) return { ok: false, error: '지원하지 않는 원정 단계 조합입니다.' };
     if (conquestId !== null) {
       if (kind !== 'dungeon' || rift || !conquestForRun(id, depth, conquestId)) return { ok: false, error: '전술 공략과 원정 정보가 맞지 않습니다.' };
@@ -91,6 +97,11 @@ export class ExpeditionEconomy {
     if (kind === 'dungeon') { const access = this.dungeonAccess(id, { depth }); if (!access.ok) return access; }
     if (this.s.level < d.minLevel) return { ok: false, error: `탐험 레벨 ${d.minLevel} 필요` };
     const started = this.transact(() => {
+      const frontier = kind === 'dungeon' && depth === 'standard' && !rift ? frontierForRoute(id) : null;
+      if (expectedFrontier !== undefined && (!frontier || !frontierSnapshot(expectedFrontier) ||
+          JSON.stringify(frontierSnapshot(expectedFrontier)) !== JSON.stringify(frontierSnapshot(frontier)))) {
+        return { ok: false, error: '주간 원정이 갱신됐습니다. 새 지역과 효과를 확인한 뒤 출격해 주세요.' };
+      }
       const period = refreshPeriods(this.eco.s.journey, Date.now());
       const rotation = DUNGEONS[((period.day % 3) + 3) % 3].id;
       if (rift && (kind !== 'dungeon' || id !== rotation)) return { ok: false, error: '오늘의 회전 던전에서 균열에 도전해 주세요.' };
@@ -102,8 +113,9 @@ export class ExpeditionEconomy {
       if (conquestId) ticket.conquestId = conquestId;
       ticket.journeyPeriod = { day: period.day, week: period.week };
       if (rift) ticket.riftId = riftForDay(period.day).id;
+      if (frontier) ticket.frontier = frontierSnapshot(frontier);
       this.s.pending = ticket;
-      return { ok: true, ticket: { ...ticket } };
+      return { ok: true, ticket: structuredClone(ticket) };
     });
     if (started.ok && conquestId) this.conquestTickets.add(started.ticket);
     return started;
@@ -137,8 +149,10 @@ export class ExpeditionEconomy {
       if (p.kind === 'dungeon') this.s.stats[p.target]++;
       const firstClear = deep && this.s.depthWins[p.target] === 0;
       let payout = deep ? depthRewards(def, firstClear) : def.rewards;
+      const frontier = ticketFrontier(p);
       const firstConquest = !!outcome?.complete && !this.s.conquests.includes(conquest.id);
       if (firstConquest) { payout = depthRewards({ rewards: payout, firstRewards: conquest.firstRewards }, true); this.s.conquests.push(conquest.id); }
+      payout = applyFrontierRewards(payout, frontier, { treasureRooms: result.treasureRooms });
       const rewards = this.reward(payout);
       if (conquest) rewards.conquest = { id: conquest.id, complete: outcome.complete, firstClear: firstConquest, mark: conquest.mark };
       rewards.firstClear = firstClear;
@@ -174,7 +188,7 @@ export class ExpeditionEconomy {
         seen.add(item.uid); return true;
       }).map(item => ({ ...inventory.get(item.uid) }));
       const heroId = this.eco.s.heroes[p.heroId] ? p.heroId : this.eco.s.selected;
-      const heroExp = def.rewards.xp;
+      const heroExp = applyFrontierRewards(def.rewards, frontier).xp;
       const ups = this.eco.addHeroExp(heroId, heroExp, { silent: true });
       return { ok: true, win: true, rewards: { ...rewards, got, loot, heroExp, ups, heroId } };
     });
@@ -195,10 +209,14 @@ export class ExpeditionEconomy {
     if (!d || !Number.isInteger(count) || count < 1 || count > 3) return { ok: false, error: '소탕 횟수는 1~3회입니다.' };
     if (!this.s.stats[id]) return { ok: false, error: '이 던전을 실전에서 먼저 클리어해 주세요.' };
     if (this.s.pending) return { ok: false, error: '진행 중인 전투를 먼저 마쳐 주세요.' };
-    const rewards = { gold: d.rewards.gold * count, xp: d.rewards.xp * count,
-      materials: Object.fromEntries(Object.entries(d.rewards.materials).map(([k, v]) => [k, v * count])),
-      consumables: Object.fromEntries(Object.entries(d.rewards.consumables).map(([k, v]) => [k, v * count])) };
-    return { ok: true, id, count, energy: d.energy * count, tickets: count, rewards,
+    const frontier = frontierForRoute(id);
+    // A supply run earns completion bonuses once per run, but never claims rooms
+    // that were not played. Treasure-room and combat bonuses are live-run only.
+    const one = applyFrontierRewards(d.rewards, frontier);
+    const rewards = { gold: one.gold * count, xp: one.xp * count,
+      materials: Object.fromEntries(Object.entries(one.materials).map(([k, v]) => [k, v * count])),
+      consumables: Object.fromEntries(Object.entries(one.consumables).map(([k, v]) => [k, v * count])) };
+    return { ok: true, id, count, energy: d.energy * count, tickets: count, frontier: frontierSnapshot(frontier), rewards,
       affordable: this.eco.s.energy >= d.energy * count && this.eco.s.sweep >= count };
   }
   sweepDungeon(id, count = 1) {

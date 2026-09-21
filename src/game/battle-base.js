@@ -21,9 +21,11 @@ import { RegionHazards } from './region-hazards.js';
 import { resolveJobHero } from '../data/jobs.js';
 import { buildExpeditionWorld, expeditionRoster, applyBattleConsumable, canApplyBattleConsumable } from './expedition-combat.js';
 import { ConquestRun } from './expedition-conquests.js';
+import { createRouteObjectives } from './route-objectives.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
 import { dungeonVisualFor } from '../data/dungeon-visuals.js';
+import { frontierEffectForStage } from '../data/seasonal-content.js';
 
 const _v = new THREE.Vector3();
 const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
@@ -39,7 +41,7 @@ export class Battle {
     this.drops = new DropSystem(this);
     this.player = null; this.active = false; this.paused = false; this.pauseReasons = new Set();
     this.combo = 0; this.comboT = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0;
-    this.wave = 0; this.waveT = 0; this.stage = null; this.boss = null; this.result = null; this.revived = 0;
+    this.wave = 0; this.waveT = 0; this.stage = null; this.boss = null; this.result = null; this.revived = 0; this.treasureRooms = 0;
     this.pending = []; // 지속 스폰 큐
     this.maxAlive = 34; this.peakAlive = 0; this.controlFinisherTokens = new WeakSet();
   }
@@ -48,6 +50,7 @@ export class Battle {
   setPaused(reason, on) {
     if (on) { this.pauseReasons.add(reason); audio.vibe(0); } else this.pauseReasons.delete(reason);
     this.paused = this.pauseReasons.size > 0;
+    if (this.paused) this.routeObjectives?.interrupt();
     this.input.enabled = this.active && !!this.player?.alive && !this.paused;
     this.input.clear();
   }
@@ -66,7 +69,7 @@ export class Battle {
     this._contactAt = -Infinity; this._contactBudget = null;
     this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0; this.bossDefeated = false;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
-    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false;
+    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.treasureRooms = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false;
     this.clearPortal();
     const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = heroStats(def, heroState, equipBonus);
     this.setBonus = equipBonus.active || [];
@@ -77,6 +80,8 @@ export class Battle {
     // ---- 무한의 성: 한 층 절차 생성 ----
     this.world = stage.expedition ? buildExpeditionWorld(stage) : new Floor(stage.idx, stage.chapter.theme, stage.party?.seed, stage.dungeon?.layout);
     this.conquest = stage.expedition?.conquestId ? new ConquestRun(stage, this.world, this.app.expeditionTicket) : null;
+    this.routeObjectives = createRouteObjectives(stage, this.world);
+    this.autoTarget = this.routeObjectives?.autoRoom() || null;
     this.visual = dungeonVisualFor(stage);
     this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
     this.renderer.setBattleVisual?.(this.visual);
@@ -118,6 +123,7 @@ export class Battle {
   applyConsumable(id) { return applyBattleConsumable(this, id); }
   canApplyConsumable(id) { return canApplyBattleConsumable(this, id); }
   updateExpedition(dt) {
+    if (this.routeObjectives) { this.routeObjectives.update(this, dt); return; }
     if (this.bossDefeated || !this.player.alive) return;
     this.conquest?.update(this, dt);
     if (this.stage.expedition.kind === 'arena') {
@@ -264,6 +270,7 @@ export class Battle {
     if (room.cleared || room.spawned) return;
     room.spawned = true;
     const list = this.roomRoster(room);
+    this.routeObjectives?.prepareRoom(room, list.length);
     this.conquest?.prepareRoom(room, list);
     if (!list.length) { this.markCleared(room); return; }
     const isBoss = room.type === ROOM_TYPE.BOSS;
@@ -286,7 +293,8 @@ export class Battle {
   }
   markCleared(room) {
     if (room.cleared) return;
-    if (this.stage.expedition?.mechanics?.attunement && room.type === ROOM_TYPE.TREASURE && !room.attuned) {
+    if (this.routeObjectives?.beforeClear(this, room)) return;
+    if (!this.routeObjectives && this.stage.expedition?.mechanics?.attunement && room.type === ROOM_TYPE.TREASURE && !room.attuned) {
       if (!room.attunementPending) {
         room.attunementPending = true; room.attunementT = 0;
         this.ui.toast(room.conquestLabel ? `${room.conquestLabel} 제단 · 중심에서 2초 공명 · ${this.conquest.hint()}` : this.stage.expedition.id === 'star_archive' ? '제단 중심의 빛 안에 2초 머물러 귀환 기록을 복원하세요.' : '제단 중심의 빛 안에 2초 머물러 유리 잎을 회수하세요.', 'gold');
@@ -320,6 +328,7 @@ export class Battle {
       }
       // 보물방은 클리어 시 장비 상자
       if (fieldDropsAllowed(this.stage) && room.type === ROOM_TYPE.TREASURE) {
+        this.treasureRooms++;
         for (let i = 0; i < 3; i++) { const inst = this.rollDrop('elite'); if (inst) this.drops.spawn(new THREE.Vector3(room.x, 0.6, room.z), 'item', inst, { count: 1, spread: 1.6 }); }
         this.drops.spawn(new THREE.Vector3(room.x, 0.6, room.z), 'stone', 8, { count: 3, spread: 2 });
       }
@@ -331,6 +340,7 @@ export class Battle {
   /** 보스 봉인 해제 — 마지막 구역을 정화한 순간. 결계가 깨지고 AUTO 도 이제 보스방을 목표로 잡는다 */
   unsealBoss() {
     if (!this.active || !this.world || !this.world.sealed) return;
+    if (this.routeObjectives && (this.paused || !this.routeObjectives.canUnseal())) return;
     this.world.unseal(); this.arena.openSeal(this.fx);
     this.ui.toast('보스의 봉인이 풀렸다!', 'red'); this.ui.waveBanner('봉인 해제'); this.renderer.shake(0.5); this.renderer.flashScreen(0.25, 0xff3050);
     audio.waveHorn({ vol: 0.5, boss: true }); audio.boom({ vol: 0.6, dur: 0.7, low: 60 }); audio.voice('seal_break', { min: 30 });
@@ -383,7 +393,7 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
+  stop() { this.routeObjectives?.stop(); this.routeObjectives = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const runtimeType = !this.stage.expedition && type === this.stage.encounter?.enemyId && this.stage.dungeonBossId ? this.stage.dungeonBossId : type;
@@ -410,6 +420,7 @@ export class Battle {
     e.homeRoom = rm;
     e.runtimeSpeciesId = runtimeType;
     this.conquest?.spawn(e, runtimeType, rm);
+    this.routeObjectives?.spawn(rm);
     this.enemies.push(e);
     if (def.boss) { this.boss = e; this.ui.showBoss(def.name, true, def.portrait); this.app.companionAgent?.observe('boss-spotted', { name: def.name, id: `${this.stage.idx}:${def.name}` }); }
     return e;
@@ -492,8 +503,9 @@ export class Battle {
     audio.playMusic(musicForScene({ stage: this.stage, boss: !!this.boss }), MUSIC_MIX); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12], step: 0.08 });
     if (this.bossDefeated) this.after(.8, () => this.victory());
   }
-  defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, expedition: this.stage?.expedition || null, conquest: this.conquest?.finish(false) || null }; this.ui.showResult(this, false); }
+  defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, expedition: this.stage?.expedition || null, conquest: this.conquest?.finish(false) || null, routeObjective: this.routeObjectives?.finish(false) || null, treasureRooms: this.treasureRooms }; this.ui.showResult(this, false); }
   victory() {
+    if (this.routeObjectives && (this.paused || !this.bossDefeated || !this.routeObjectives.canWin())) return;
     if (!this.active || !this.player?.alive) return; this.active = false; this.input.enabled = false; this.input.clear();
     this.app.companionAgent?.observe('victory', { floor: this.stage?.idx || 0 });
     this.player.play('Cheer', { fade: 0.2 }); audio.playMusic(null); audio.play('jingle_win0', { vol: 0.9 }); this.ui.showBoss('', false); this.after(1.2, () => audio.voice(heroVoiceName(this.heroId, 'win'))); this.after(3.8, () => audio.voice('floor_clear'));
@@ -506,7 +518,7 @@ export class Battle {
     const optional = this.world ? this.world.rooms.filter((r) => r.type !== ROOM_TYPE.START && r.type !== ROOM_TYPE.BOSS) : [];
     const optionalCleared = optional.filter((r) => r.cleared).length;
     const fullClear = optional.length > 0 && optionalCleared === optional.length;
-    this.result = { win: true, stars, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, rooms: this.roomsCleared, totalRooms: this.world ? this.world.rooms.length : 0, optionalRooms: optional.length, optionalCleared, fullClear, expedition: this.stage.expedition || null, conquest: this.conquest?.finish(true) || null };
+    this.result = { win: true, stars, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, rooms: this.roomsCleared, totalRooms: this.world ? this.world.rooms.length : 0, optionalRooms: optional.length, optionalCleared, fullClear, treasureRooms: this.treasureRooms, expedition: this.stage.expedition || null, conquest: this.conquest?.finish(true) || null, routeObjective: this.routeObjectives?.finish(true) || null };
     this.after(1.6, () => this.ui.showResult(this, true));
   }
 
@@ -589,6 +601,8 @@ export class Battle {
 
   // ---------------- 투사체 ----------------
   spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, stun = 0, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false, counter = false, comboToken = null, skillCast = null, basic = false }) {
+    const effect = frontierEffectForStage(this.stage);
+    if (hostile && effect?.kind === 'projectileDamageMultiplier') dmg *= effect.value;
     let mesh = null;
     if (visual !== null && size > 0) { mesh = visual === 'arrow' ? createArrowVisual(color, size, dir) : this.fx.orb(color, size); mesh.position.copy(pos); this.scene.add(mesh); }
     const readableTrail = trail ?? (!hostile && kind === 'magic' ? color : null);
@@ -642,7 +656,9 @@ export class Battle {
     this.fx.ghost(p.model, 0x9fe4ff, { life: 0.5, opacity: 0.7 });
     this.fx.burst(p.pos.clone().setY(1), 0x9fe4ff, { n: 18, speed: 7, size: 0.35 });
     p.addUlt(CONTROL_ULT_GAIN.perfectDodge * (p.stats.ultGain || 1)); p.addMp?.(CONTROL_MP_GAIN.perfectDodge);
-    p.counterWindow = Math.max(p.counterWindow || 0, 2.4);
+    const effect = frontierEffectForStage(this.stage);
+    const counterBonus = effect?.kind === 'bossCounterWindow' ? effect.value : 0;
+    p.counterWindow = Math.max(p.counterWindow || 0, 2.4 + counterBonus);
     p.buffs.atk = Math.max(p.buffs.atk, 1.35); p.buffs.atkSpd = Math.max(p.buffs.atkSpd, 1.25); p.buffs.t = Math.max(p.buffs.t, 3);
     this.ui.perfectDodge(); audio.bark(`hero_${this.player?.def.voiceId || this.heroId}_perfect`, { vol: 0.95, min: 1.2 }); audio.voice('perfect', { min: 12, duck: 0.7, dur: 0.8 });
     audio.ice({ vol: 0.4, dur: 0.35 }); audio.ting({ vol: 0.45, freq: 2400 }); audio.vibe([15, 25, 40]);

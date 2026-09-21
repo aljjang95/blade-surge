@@ -1,4 +1,4 @@
-import { stageDef } from './stages.js';
+import { ENEMIES, stageDef } from './stages.js';
 import { EXPEDITION_ITEMS, EXPEDITION_SETS } from './expedition-items.js';
 import { ENCOUNTER_ART, RIFT_ART } from './encounter-art.js';
 
@@ -22,82 +22,85 @@ const dungeon = (id, name, theme, ch, minLevel, material, description, options =
   const base = stageDef(ch, 1);
   return { id, name, theme, minLevel, energy: 4, description, ...options,
     stage: { ...base, theme, code: id, name, title: name, scale: 1 + (minLevel - 1) * 0.18, energy: 4, recPower: 2600 + (minLevel - 1) * 450,
-      waves: base.waves.slice(0, 2).map(w => w.slice(0, 9)), objective: description },
+      waves: base.waves.slice(0, 2).map(w => w.slice(0, 9)), objective: options.objective || description },
     rewards: { gold: 280 + minLevel * 80, xp: 80 + minLevel * 20, materials: { [material]: 3 }, consumables: { hp_tonic: 1 } } };
 };
 export const DUNGEONS = [
   dungeon('glass_garden', '유리 정원', 'garden', 1, 1, 'glass_leaf', '정원의 망령을 정화하고 유리 잎을 회수하세요.', {
     art: '/img/expansion/glass_garden.webp', accent: '#9be1ba', subtitle: 'GLASS CONSERVATORY',
-    objective: '갈림길을 돌파하고 정원의 수호자를 정화하세요.', tactic: '정화 후 옆길 제단 중심에 2초 머물러 유리 잎을 회수하고 수호자를 처치하세요.',
+    objective: '보물방 1곳에서 적 처치 후 중심 2초 공명 → 모든 구역 정화 → 정원의 수호자 처치',
+    tactic: `옆길 보물방의 적을 처치하고 제단 중심의 빛 안에서 2초간 공명하세요. 모든 구역을 정화하면 보스 봉인이 풀립니다. ${ENEMIES.garden_captain.tactic}`,
   }),
   dungeon('ember_vault', '잿불 금고', 'forge', 2, 2, 'ember_core', '제련소의 오크를 돌파하고 잿불 핵을 확보하세요.', {
     art: '/img/expansion/ember_vault.webp', accent: '#ffad6e', subtitle: 'EMBER TREASURY',
-    objective: '좁은 제련 통로에서 화염 경고를 피하세요.', tactic: '좁은 제련로에서 두 차례 증원을 격파하고 과열 경고선을 피해 금고 수호자를 처치하세요.',
+    objective: '정예방 1곳의 증원 각 2회 격파 → 모든 구역 정화 → 금고 수호자 처치',
+    tactic: `정예방의 적과 2회 증원을 격파하면 보스 봉인이 풀립니다. ${ENEMIES.forge_captain.tactic}`,
   }),
   dungeon('star_archive', '별빛 서고', 'frost', 3, 3, 'star_dust', '얼어붙은 서고의 수호자를 물리치세요.', {
     art: '/img/expansion/star_archive.webp', accent: '#9bbdff', subtitle: 'ASTRAL ARCHIVE',
-    objective: '서리 기록을 피해 별빛 지식을 되찾으세요.', tactic: '긴 서가의 원거리 수호자를 먼저 격파하고 지연 폭발을 피해 기록관을 처치하세요.',
+    objective: '모든 구역 정화 → 별빛 서고 수호자 처치',
+    tactic: `긴 서가의 원거리 수호자를 먼저 격파하고 모든 구역을 정화하세요. ${ENEMIES.frost_captain.tactic}`,
   }),
   dungeon('bellfall_crypt', '종락의 지하 회랑', 'garden', 1, 2, 'glass_leaf', '멈춘 종 아래의 회랑을 열고, 시간을 삼킨 수호자를 깨우세요.', {
     art: RIFT_ART.glass_hour_sovereign, accent: '#86e4d0', subtitle: 'BELLFALL CRYPT',
-    objective: '세 개의 종문을 순서대로 공명시키고 시계유리의 주권자를 쓰러뜨리세요.',
-    tactic: '종문이 켜진 순서를 기억해 반대쪽 안전 지대로 이동하세요. 마지막 공명 뒤에만 긴 반격 창이 열립니다.',
+    objective: '세 개의 종문을 순서대로 공명시키고 모든 구역을 정화한 뒤 시계유리의 주권자를 쓰러뜨리세요.',
+    tactic: `각 종문의 적을 처치한 뒤 1번 → 2번 → 3번 순서로 중심의 빛 안에서 각각 연속 2초간 공명하세요. 순서가 아닌 종문은 기다리며, 종문 3곳과 모든 구역을 정화하면 보스 봉인이 풀립니다. ${ENEMIES.glass_hour_sovereign.tactic}`,
     bossEnemy: 'glass_hour_sovereign', bossHp: 14500, bossName: '시계유리의 주권자', rosterMode: 'bellfall',
     roster: { trash: ['glass_shardling', 'bell_wisp', 'skel_shield', 'bomb_slime', 'glass_shardling', 'bone_orc'], ranged: ['glass_tollmage', 'ghost_skull', 'skel_priest'], elite: ['glass_warden', 'elite_bone_lord', 'elite_wraith'] },
   }),
   dungeon('cinder_tide_lock', '재의 밀물 수문', 'forge', 2, 2, 'ember_core', '용광로와 바다가 맞닿은 수문에서 꺼지지 않는 불씨를 회수하세요.', {
     art: ENCOUNTER_ART.boss_cinder_chain_executor, accent: '#ff9b64', subtitle: 'CINDER TIDE LOCK',
-    objective: '수문 양쪽의 냉각 밸브를 지키고 쇠사슬의 집행자를 격파하세요.',
-    tactic: '밸브가 번갈아 과열됩니다. 경고선 바깥에서 증원을 끊고, 망치가 떨어진 뒤 중앙을 가로지르세요.',
+    objective: '정예방 2곳의 증원 각 2회 격파 → 모든 구역 정화 → 쇠사슬의 집행자 처치',
+    tactic: `각 정예방에서 적과 2회 증원을 격파하고 모든 구역을 정화하세요. ${ENEMIES.cinder_chain_executor.tactic}`,
     bossEnemy: 'cinder_chain_executor', bossHp: 15800, bossName: '쇠사슬의 집행자', rosterMode: 'cinderlock',
     roster: { trash: ['cinderling', 'chain_forger', 'orc_blob', 'bomb_imp', 'cinderling', 'imp'], ranged: ['ember_scribe', 'hywirl', 'armabee'], elite: ['slag_colossus', 'elite_orc_chief', 'elite_bluedemon'] },
   }),
-  dungeon('nightglass_observatory', '밤유리 관측소', 'frost', 3, 3, 'star_dust', '거꾸로 흐르는 별빛을 관측해 사라진 귀환 좌표를 복원하세요.', {
+  dungeon('nightglass_observatory', '밤유리 관측소', 'frost', 3, 3, 'star_dust', '거꾸로 흐르는 별빛 너머로 사라진 귀환 좌표의 흔적이 남아 있습니다.', {
     art: ENCOUNTER_ART.boss_nightglass_archivist, accent: '#9ed5ff', subtitle: 'NIGHTGLASS OBSERVATORY',
-    objective: '되감긴 기록 세 장을 복원하고 밤유리의 기록관을 잠재우세요.',
-    tactic: '방금 지나온 세 자리가 역순으로 폭발합니다. 모래시계가 닫히기 전에 바깥 고리로 이동하세요.',
+    objective: '모든 구역 정화 → 밤유리의 기록관 처치',
+    tactic: `서가의 적을 처치하고 모든 구역을 정화하세요. ${ENEMIES.nightglass_archivist.tactic}`,
     bossEnemy: 'nightglass_archivist', bossHp: 17200, bossName: '밤유리의 기록관', rosterMode: 'nightglass',
     roster: { trash: ['nightglass_page', 'frost_mirror', 'ghost', 'skel_rogue', 'frost_mirror', 'golem_guard'], ranged: ['archive_scribe', 'ghost_skull', 'skel_mage'], elite: ['archive_warden', 'elite_yeti', 'elite_golem'] },
   }),
-  dungeon('eclipse_hydra_vault', '일식의 심연 수문', 'tide', 4, 1, 'glass_leaf', '검은 파도가 잠시 멈춘 수문에서 세 머리의 맹세를 끊으세요.', {
+  dungeon('eclipse_hydra_vault', '일식의 심연 수문', 'tide', 4, 1, 'glass_leaf', '검은 파도가 잠시 멈춘 수문에는 세 머리의 맹세가 남아 있습니다.', {
     art: ENCOUNTER_ART.boss_obsidian_hydra, accent: '#72e0d3', subtitle: 'ECLIPSE HYDRA VAULT',
-    objective: '세 개의 역류 밸브를 잠그고 흑요의 삼두룡을 쓰러뜨리세요.',
-    tactic: '물결이 지나간 통로가 잠시 안전합니다. 세 머리가 동시에 고개를 들면 중앙에서 벗어나세요.',
+    objective: '모든 구역 정화 → 흑요의 삼두룡 처치',
+    tactic: `수문의 적을 처치하고 모든 구역을 정화하세요. ${ENEMIES.obsidian_hydra.tactic}`,
     bossEnemy: 'obsidian_hydra', bossHp: 18800, bossName: '흑요의 삼두룡', rosterMode: 'eclipse',
     roster: { trash: ['eclipse_scalelet', 'glass_shardling', 'bomb_abyss', 'eclipse_tidecaller', 'squidle', 'blob_spiky'], ranged: ['abyss_seer', 'eclipse_tidecaller', 'glub'], elite: ['hydra_scaleguard', 'elite_dragonling', 'elite_golem'] },
   }),
   dungeon('ashforge_catacomb', '재벼림 지하 제련소', 'forge', 2, 2, 'ember_core', '꺼지지 않는 망치 소리를 따라가 재벼림의 심장을 회수하세요.', {
     art: ENCOUNTER_ART.boss_ash_colossus, accent: '#ff9b66', subtitle: 'ASHFORGE CATACOMB',
-    objective: '과열된 용광로 네 곳을 식히고 잿빛 거수의 사슬을 끊으세요.',
-    tactic: '사슬이 끌리는 방향의 반대편으로 이동한 뒤 망치 충격파가 지나가면 냉각로를 활성화하세요.',
+    objective: '모든 구역 정화 → 잿빛 재벼림 거수 처치',
+    tactic: `제련소의 적을 처치하고 모든 구역을 정화하세요. ${ENEMIES.ash_colossus.tactic}`,
     bossEnemy: 'ash_colossus', bossHp: 20400, bossName: '잿빛 재벼림 거수', rosterMode: 'ashforge',
     roster: { trash: ['ash_chainling', 'chain_forger', 'bomb_imp', 'ash_smith', 'orc_blob', 'cinderling'], ranged: ['ember_scribe', 'ash_smith', 'tribal_shaman'], elite: ['foundry_bulwark', 'slag_colossus', 'elite_orc_chief'] },
   }),
   dungeon('astral_leviathan_spire', '성운의 레비아탄 첨탑', 'frost', 3, 3, 'star_dust', '별의 잔해가 쌓인 첨탑에서 귀환 좌표를 삼킨 레비아탄을 추적하세요.', {
     art: ENCOUNTER_ART.boss_astral_leviathan, accent: '#9ccaff', subtitle: 'ASTRAL LEVIATHAN SPIRE',
-    objective: '무너지는 별자리 네 개를 복원하고 서고의 레비아탄을 봉인하세요.',
-    tactic: '모래시계가 가리킨 별자리만 밟고, 기록 파편이 모이면 외곽 고리로 빠져나오세요.',
+    objective: '모든 구역 정화 → 성운의 레비아탄 처치',
+    tactic: `첨탑의 적을 처치하고 모든 구역을 정화하세요. ${ENEMIES.astral_leviathan.tactic}`,
     bossEnemy: 'astral_leviathan', bossHp: 22400, bossName: '성운의 레비아탄', rosterMode: 'astral',
     roster: { trash: ['astral_pagelet', 'nightglass_page', 'frost_mirror', 'astral_orbitling', 'ghost_skull', 'star_wisp'], ranged: ['archive_scribe', 'astral_pagelet', 'skel_mage'], elite: ['celestial_warden', 'archive_warden', 'elite_wraith'] },
   }),
-  dungeon('verdigris_sanctum', '녹청의 성역', 'garden', 4, 4, 'glass_leaf', '잠든 성역의 뿌리 심장을 되살리고 녹청의 수호자를 깨우세요.', {
+  dungeon('verdigris_sanctum', '녹청의 성역', 'garden', 4, 4, 'glass_leaf', '잠든 성역의 뿌리 심장에 녹청의 수호자가 깃들어 있습니다.', {
     art: ENCOUNTER_ART.boss_verdigris_sentinel, accent: '#72e6ae', subtitle: 'VERDIGRIS SANCTUM',
-    objective: '세 개의 생명 제단을 정화하고 녹청의 성역 거수를 쓰러뜨리세요.',
-    tactic: '뿌리 문양이 켜진 순서대로 제단을 밟고, 포자 폭발 전에 외곽 수로로 빠지세요.',
+    objective: '모든 구역 정화 → 녹청의 성역 거수 처치',
+    tactic: `성역의 적을 처치하고 모든 구역을 정화하세요. ${ENEMIES.verdigris_sentinel.tactic}`,
     bossEnemy: 'verdigris_sentinel', bossHp: 23800, bossName: '녹청의 성역 거수', rosterMode: 'verdigris',
     roster: { trash: ['mossbound_scout', 'verdigris_rootcaller', 'blob_green', 'mossbound_scout', 'bomb_slime', 'bell_wisp'], ranged: ['verdigris_rootcaller', 'skel_priest', 'glub'], elite: ['ironbark_bulwark', 'glass_warden', 'elite_golem'] },
   }),
-  dungeon('sable_mirage_basin', '흑사막 환영 분지', 'crown', 5, 5, 'star_dust', '거울 모래폭풍 속에서 환영 여왕의 진짜 왕좌를 찾아내세요.', {
+  dungeon('sable_mirage_basin', '흑사막 환영 분지', 'crown', 5, 5, 'star_dust', '거울 모래폭풍 속 왕좌에 흑사막 환영 여왕이 기다립니다.', {
     art: ENCOUNTER_ART.boss_sable_mirage_empress, accent: '#d9a1ff', subtitle: 'SABLE MIRAGE BASIN',
-    objective: '세 개의 가짜 왕좌를 깨뜨리고 흑사막 환영 여왕의 본체를 노출하세요.',
-    tactic: '모래 발자국이 사라지는 쪽은 환영입니다. 보라색 모래시계가 멈춘 순간만 공격하세요.',
+    objective: '모든 구역 정화 → 흑사막 환영 여왕 처치',
+    tactic: `분지의 적을 처치하고 모든 구역을 정화하세요. ${ENEMIES.sable_mirage_empress.tactic}`,
     bossEnemy: 'sable_mirage_empress', bossHp: 25800, bossName: '흑사막 환영 여왕', rosterMode: 'sable',
     roster: { trash: ['mirage_hound', 'sandglass_seer', 'ninja', 'mirage_hound', 'bomb_abyss', 'squidle'], ranged: ['sandglass_seer', 'abyss_seer', 'glub'], elite: ['mirage_colossus', 'elite_bluedemon', 'elite_wraith'] },
   }),
-  dungeon('comet_bastion', '혜성의 유성 요새', 'frost', 6, 6, 'ember_core', '부서진 혜성 요새의 궤도를 다시 맞추고 유성 기사단장을 격파하세요.', {
+  dungeon('comet_bastion', '혜성의 유성 요새', 'frost', 6, 6, 'ember_core', '부서진 혜성 요새에는 유성 기사단장의 맹세가 남아 있습니다.', {
     art: ENCOUNTER_ART.boss_comet_bastion, accent: '#82bfff', subtitle: 'COMET BASTION',
-    objective: '궤도 고리 네 개를 정렬하고 혜성의 유성 요새 수문장을 돌파하세요.',
-    tactic: '푸른 궤도선 안쪽은 안전합니다. 유성 경고가 겹치면 중앙을 버리고 고리 바깥을 도세요.',
+    objective: '모든 구역 정화 → 혜성의 유성 기사단장 처치',
+    tactic: `요새의 적을 처치하고 모든 구역을 정화하세요. ${ENEMIES.comet_bastion.tactic}`,
     bossEnemy: 'comet_bastion', bossHp: 28200, bossName: '혜성의 유성 기사단장', rosterMode: 'comet',
     roster: { trash: ['comet_spark', 'comet_orbit_mote', 'astral_pagelet', 'comet_spark', 'ghost_skull', 'frost_mirror'], ranged: ['comet_orbit_mote', 'archive_scribe', 'astral_pagelet'], elite: ['comet_bastion_warden', 'celestial_warden', 'elite_yeti'] },
   }),

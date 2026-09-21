@@ -11,6 +11,7 @@ import { normalizeRpg, recordMonster, monsterLevel, monsterXp, grantCombatXp, Ki
 import { buildCatalogue } from './rpg-catalogue.js';
 import { stageExpeditionEncounter, encounterLevelLabel } from './rpg-encounters.js';
 import { RpgView } from '../ui/rpg.js';
+import { frontierEffectForStage } from '../data/seasonal-content.js';
 import '../ui/rpg.css';
 
 const direction = new THREE.Vector3();
@@ -68,7 +69,9 @@ export class Battle extends BaseBattle {
     enemy.speciesId = enemy.runtimeSpeciesId || type; enemy.level = encounter ? null : monsterLevel(this.stage.idx, enemy.def);
     enemy.summoned = !!near;
     enemy.xpReward = monsterXp(enemy.def, this.stage.scale, enemy.summoned);
-    recordMonster(this.ensureRpg(), type, enemy.level, this.stage.idx, false, encounter);
+    const effect = frontierEffectForStage(this.stage);
+    if (enemy.isElite && effect?.kind === 'eliteXpMultiplier') enemy.xpReward = Math.floor(enemy.xpReward * effect.value);
+    recordMonster(this.ensureRpg(), enemy.speciesId, enemy.level, this.stage.idx, false, encounter);
     this.rpgDirty = true;
     if (enemy.isBoss) this.ui.showBoss(`${encounterLevelLabel(this.stage, enemy.level)} ${enemy.def.name}`, true, enemy.def.portrait);
     return enemy;

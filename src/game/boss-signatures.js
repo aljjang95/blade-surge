@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BOSS_SIGNATURES } from '../data/boss-encounters.js';
+import { frontierEffectForStage } from '../data/seasonal-content.js';
 import { hazardContains, hazardVertexShader, hazardFragmentShader } from './region-hazards.js';
 import { audio } from '../engine/audio.js';
 
@@ -92,8 +93,13 @@ export class BossSignatures {
   dispose(){if(this.disposed)return;this.disposed=true;this.clear();this.group.removeFromParent();this.geometry.dispose();for(const s of this.slots)s.mesh.material.dispose();}
   start(key) {
     this.clear();const e=this.enemy,g=e.game;
-    this.plan=planBossSignature(key,{room:e.homeRoom,origin:e.pos,target:e.player.pos,history:this.history,phase:e.phase,turn:e.patternTurn});this.age=0;
-    if(!this.plan)throw Error(`Unknown boss signature: ${key}`);
+    const plan=planBossSignature(key,{room:e.homeRoom,origin:e.pos,target:e.player.pos,history:this.history,phase:e.phase,turn:e.patternTurn});
+    if(!plan)throw Error(`Unknown boss signature: ${key}`);
+    const frontier=frontierEffectForStage(g.stage);
+    const lead=frontier?.kind==='bossSignatureLead'||frontier?.kind==='telegraphLead'?frontier.value:0;
+    // Keep every warning's start, including the first at zero, and delay actual strikes.
+    this.plan={...plan,color:frontier?.kind==='warningColor'?frontier.value:plan.color,
+      events:plan.events.map(event=>({...event,at:event.at+lead})),lastStrike:plan.lastStrike+lead,duration:plan.duration+lead};this.age=0;
     for(let i=0;i<this.plan.events.length;i++){
       const s=this.slots[i],h=this.plan.events[i],m=s.mesh,u=m.material.uniforms;s.event=h;s.hit=false;
       const width=h.type==='lane'?h.length:h.radius*2,height=h.type==='lane'?h.width:h.radius*2;

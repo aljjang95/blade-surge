@@ -250,7 +250,7 @@ class App {
     this.expeditionTicket = begin.ticket;
     this.stageStarting = true;
     try {
-      const stage = applyRiftStage(buildExpeditionStage(kind, id, this.eco, { depth: begin.ticket.depth, conquestId: begin.ticket.conquestId }), begin.ticket);
+      const stage = applyRiftStage(buildExpeditionStage(kind, id, this.eco, { depth: begin.ticket.depth, conquestId: begin.ticket.conquestId, frontier: begin.ticket.frontier }), begin.ticket);
       this.expeditionUI.result = null; this.expeditionUI.close();
       this.journeyView?.close();
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();

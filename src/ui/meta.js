@@ -7,7 +7,8 @@ import { HEROES, HERO_ORDER, RARITY, heroStats, levelExp, starShards, skillUpGol
 import { heroProgressionHtml, trainingButtonLabel } from './hero-progression.js';
 import { ITEM_BY_ID, ITEM_ICON, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST, craftable, itemStats, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, enhanceMult, ENH_MAX, RARITY_COLOR , RARITY_INFO, rarityRank, enhanceDown} from '../data/items.js';
 import { SKUS, SHOP_TABS, GACHA, BATTLE_PASS, PASS_TRACK, DAILY_REWARDS } from '../data/shop.js';
-import { CHAPTERS, STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
+import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../data/stages.js';
+import { resolveEnemyPortrait } from '../data/encounter-art.js';
 import { REWARD_LABEL } from '../game/economy.js';
 import { campaignFinished } from '../data/expedition-depths.js';
 import { storyText, encounterLabel, journalHtml, dungeonBriefHtml } from './campaign.js';
@@ -51,10 +52,9 @@ const dungeonMapSvg = (stage, { compact = false } = {}) => {
   if (compact) return svg;
   return `<section class="dungeon-map" style="--dungeon-accent:${stage.chapter?.color || '#d9c5a0'}" aria-label="${storyText(dungeon.name)} ${layout.cells.length}개 구역 지도">${svg}<div class="dungeon-map-caption"><b>${storyText(dungeon.name)}</b><span>${layout.cells.length}개 구역 · ${variant + 1}번 원정 동선</span></div><div class="dungeon-map-legend"><span><i class="start"></i>출발</span><span><i class="elite"></i>정예</span><span><i class="treasure"></i>보상</span><span><i class="boss"></i>봉인</span></div></section>`;
 };
-const stageKeyArt = (stage, chapter, chapterCast) => {
-  const prefix = chapter.encounterPrefix || chapter.theme;
-  const suffix = stage.encounter?.rank === 'midboss' ? 'midboss' : stage.encounter?.rank === 'finalboss' ? 'finalboss' : '';
-  return suffix ? `/img/encounters/${prefix}_${suffix}.webp` : (REGION_DUNGEON_ART[prefix] || chapterCast.portrait);
+export const stageKeyArt = (stage) => {
+  const id = stage.dungeonBossId || stage.encounter?.dungeonBossId || stage.encounter?.enemyId;
+  return resolveEnemyPortrait(id, ENEMIES[id]);
 };
 
 const RC = { N: 'var(--r-n)', R: 'var(--r-r)', SR: 'var(--r-sr)', SSR: 'var(--r-ssr)' };
@@ -158,8 +158,8 @@ export class Meta {
       const cell = document.createElement('button'); cell.type = 'button'; cell.className = 'stage-cell' + (d.boss ? ' boss' : '') + (unlocked ? '' : ' lock') + (this.stage.st === st ? ' on' : '');
       cell.dataset.stage = d.code; cell.dataset.rank = d.encounter?.rank || 'captain'; cell.setAttribute('aria-pressed', String(this.stage.st === st));
       cell.setAttribute('aria-label', `${d.code} ${d.title} · ${encounterLabel(d)} · ${unlocked ? stars ? `별 ${stars}개` : '도전 가능' : '미개방, 소개 보기'}`);
-      const cardArt = stageKeyArt(d, chapter, chapterCast);
-      const nodeArt = d.boss ? `<img src="${cardArt}" alt="" width="48" height="48" loading="lazy" onerror="this.onerror=null;this.src='${regionArt}'">` : `<span class="stage-node-map">${dungeonMapSvg(d, { compact: true })}</span>`;
+      const cardArt = stageKeyArt(d);
+      const nodeArt = cardArt ? `<img src="${cardArt}" alt="${storyText(d.encounter.name)} 아트" width="48" height="48" loading="lazy" onerror="this.hidden=true">` : `<span class="stage-node-map">${dungeonMapSvg(d, { compact: true })}</span>`;
       cell.innerHTML = `<span class="stage-connector" aria-hidden="true"></span><span class="stage-node${d.boss ? ' boss' : ''}">${nodeArt}${unlocked ? '<i class="stage-node-mark">입장</i>' : '<i class="stage-node-lock">봉인</i>'}</span><span class="stage-code">${d.code}</span><span class="stage-title">${storyText(d.title)}</span><span class="stage-rank">${storyText(encounterLabel(d))}</span><span aria-hidden="true" class="st ${stars ? '' : 'none'}">${unlocked ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : '미개방'}</span>`;
       cell.onclick = () => { this.stage = d; this.renderStages(); grid.querySelector(`[data-stage="${d.code}"]`)?.focus({ preventScroll: true }); };
       grid.appendChild(cell);
@@ -171,8 +171,8 @@ export class Meta {
     this.selectedDifficulty = selectedDifficulty.id;
     const difficultyRequirement = (item) => item.id === 'adept' ? '1개 스테이지 클리어' : item.id === 'nightmare' ? '이 스테이지 ★3' : '기본 난이도';
     const difficultyHtml = difficulties.map((item) => `<button type="button" class="difficulty-card tone-${item.tone}${item.id === selectedDifficulty.id ? ' on' : ''}${item.unlocked ? '' : ' locked'}" data-difficulty="${item.id}" aria-pressed="${item.id === selectedDifficulty.id}" ${item.unlocked ? '' : 'disabled'}><img src="/img/ui/difficulty-${item.id}.svg" alt=""><span class="difficulty-copy"><b>${item.name}</b><small>${item.description}</small></span><span class="difficulty-reward">보상 ×${item.rewardMul.toFixed(2)}</span>${item.unlocked ? '' : `<em>🔒 ${difficultyRequirement(item)}</em>`}</button>`).join('');
-    const detailArt = stageKeyArt(d, chapter, chapterCast);
-    $('stage-detail').innerHTML = `<div class="stage-narrative"><div class="stage-hero-card"><img src="${detailArt}" alt="${storyText(d.title)}" width="1680" height="944" loading="lazy" onerror="this.onerror=null;this.src='${regionArt}'"><div class="stage-hero-shade"><span class="campaign-eyebrow">${d.code} · ${storyText(encounterLabel(d))}</span><h3>${storyText(d.title)}</h3><p>${storyText(d.story?.opening)}</p><span class="stage-hero-gate"><img src="${DUNGEON_ICON}" alt="" width="18" height="18">${storyText(d.dungeon?.name || '미지의 던전')}</span></div></div><p class="stage-objective"><b>이번 원정의 목표</b> ${storyText(d.objective)}</p>${dungeonBriefHtml(d)}${dungeonMapSvg(d)}<div class="stage-tactics"><p><b>${storyText(chapter.mechanic?.name)}</b> ${storyText(chapter.mechanic?.description)}</p><p><b>${storyText(d.encounter?.name)}</b> ${storyText(d.encounter?.tactic)}</p></div></div><div class="stage-launch"><div class="launch-kicker"><span>출격 준비</span><b>${unlocked ? '입장 가능한 던전' : '봉인된 던전'}</b></div>
+    const detailArt = stageKeyArt(d);
+    $('stage-detail').innerHTML = `<div class="stage-narrative"><div class="stage-hero-card">${detailArt ? `<img src="${detailArt}" alt="${storyText(d.encounter.name)} 아트" width="1680" height="944" loading="lazy" onerror="this.hidden=true">` : ''}<div class="stage-hero-shade"><span class="campaign-eyebrow">${d.code} · ${storyText(encounterLabel(d))}</span><h3>${storyText(d.title)}</h3><p>${storyText(d.story?.opening)}</p><span class="stage-hero-gate"><img src="${DUNGEON_ICON}" alt="" width="18" height="18">${storyText(d.dungeon?.name || '미지의 던전')}</span></div></div><p class="stage-objective"><b>이번 원정의 목표</b> ${storyText(d.objective)}</p>${dungeonBriefHtml(d)}${dungeonMapSvg(d)}<div class="stage-tactics"><p><b>${storyText(chapter.mechanic?.name)}</b> ${storyText(chapter.mechanic?.description)}</p><p><b>${storyText(d.encounter?.name)}</b> ${storyText(d.encounter?.tactic)}</p></div></div><div class="stage-launch"><div class="launch-kicker"><span>출격 준비</span><b>${unlocked ? '입장 가능한 던전' : '봉인된 던전'}</b></div>
       <div class="meta"><span>권장 전투력 <b style="color:${power >= d.recPower ? 'var(--green)' : 'var(--red)'}">${fmt(d.recPower)}</b></span><span>내 전투력 ${fmt(power)}</span></div>
       <div class="difficulty-picker" role="group" aria-label="전투 난이도"><div class="difficulty-heading"><b>전투 난이도</b><span>${selectedDifficulty.name} · 보상과 적 압박이 함께 증가합니다</span></div>${difficultyHtml}</div>
       <div class="rewards"><span class="reward-chip"><i class="ic ic-gold"></i> ${fmt(Math.floor(d.rewards.gold * selectedDifficulty.rewardMul))}</span><span class="reward-chip">완료 EXP ${Math.floor(d.rewards.exp * selectedDifficulty.expMul)}</span><span class="reward-chip">정예 처치 · 장비 2개</span>${!stars ? `<span class="reward-chip"><i class="ic ic-gem"></i> ${d.rewards.firstGems} 첫클리어</span>` : ''}</div>

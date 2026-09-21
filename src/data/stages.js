@@ -2,7 +2,7 @@ import { dungeonForStage } from './story-dungeons.js';
 import { stageStory } from './campaign-story.js';
 import { ENCOUNTER_ART, MOB_ART, RIFT_ART } from './encounter-art.js';
 import { CAMPAIGN_MODELS } from './encounter-models.js';
-import { BOSS_ENCOUNTERS } from './boss-encounters.js';
+import { BOSS_ENCOUNTERS, BOSS_SIGNATURES } from './boss-encounters.js';
 import { MOB_ROLE_ENEMIES } from './mob-roles.js';
 
 // 지역별 맹세와 기믹은 모험 화면과 전투가 함께 사용한다.
@@ -56,7 +56,10 @@ export function stageDef(ch, st) {
   const rank = st === 10 ? 'finalboss' : st === 5 ? 'midboss' : st === 3 || st === 7 ? 'warden' : 'captain';
   const boss = rank !== 'captain', scale = Math.pow(1.12, Math.min(idx - 1, 19)) * (1 + Math.max(0, idx - 20) * 0.045);
   const R = DUNGEON_ROSTERS[dungeon.id] || ROSTER[chapter.theme], scene = stageStory(ch, st);
-  const dungeonBossId = DUNGEON_BOSS_BASE[dungeon.id] ? `dungeon_${dungeon.id}_${rank}` : null;
+  // Named story encounters retain their authored identity, portrait and finale rig.
+  // Dungeon variants belong to the intervening captains and wardens.
+  const storyBoss = rank === 'midboss' || rank === 'finalboss';
+  const dungeonBossId = !storyBoss && DUNGEON_BOSS_BASE[dungeon.id] ? `dungeon_${dungeon.id}_${rank}` : null;
   // Keep the campaign contract stable for saves/catalogue data. Battle.start
   // resolves this id to dungeonBossId at the actual spawn boundary.
   const enemyId = (chapter.encounterPrefix || chapter.theme) + '_' + rank;
@@ -76,7 +79,7 @@ export function stageDef(ch, st) {
     rosterFor: () => R, recPower: Math.floor(2600 * scale),
     encounter: { rank, label: RANK_LABELS[rank], name: dungeonBoss.name, enemyId, dungeonBossId, tactic: dungeonBoss.tactic || enemy.tactic },
     story: { opening: scene.opening, revelation: scene.revelation, aftermath: scene.aftermath },
-    objective: `${dungeon.name}의 전투 방을 정리해 봉인을 해제하고 ${enemy.name} 처치`,
+    objective: `${dungeon.name}의 전투 방을 정리해 봉인을 해제하고 ${dungeonBoss.name} 처치`,
     rewards: { gold: Math.floor(400 * scale), exp: Math.floor(110 * scale), bp: 60 + (boss ? 60 : 0), firstGems: rank === 'finalboss' ? 300 : boss ? 150 : 60, dropChance: boss ? 1 : 0.6, stones: 2 + (boss ? 4 : 0) },
   };
 }
@@ -281,6 +284,16 @@ for (const [id, encounter] of Object.entries(BOSS_ENCOUNTERS)) {
 ENEMIES.crown_finalboss.weapon = 'Skeleton_Blade';
 ENEMIES.crown_finalboss.shield = 'Skeleton_Shield_Large_A';
 for (const [id,role] of Object.entries(MOB_ROLE_ENEMIES)) ENEMIES[id].meleeRole = role;
+
+// These variant encounters reuse real phase attacks, not their illustration's
+// imagined altars, spores or valves. Keep advice bound to the executable cues.
+const signatureAdvice = patterns => [...new Set(patterns)].filter(key => BOSS_SIGNATURES[key])
+  .map(key => `${BOSS_SIGNATURES[key].name}: ${BOSS_SIGNATURES[key].cue}`).join(' · ');
+for (const id of new Set(Object.values(DUNGEON_BOSS_BASE))) {
+  const def = ENEMIES[id];
+  def.tactic = signatureAdvice(def.phasePatterns.flat());
+  def.phaseHints = def.phasePatterns.map(signatureAdvice);
+}
 
 // Keep each authored dungeon's boss silhouette and attack vocabulary distinct.
 // The source rigs are existing verified assets; the dungeon identity is layered
