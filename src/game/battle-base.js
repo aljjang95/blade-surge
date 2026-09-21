@@ -36,7 +36,7 @@ export class Battle {
     this.enemies = []; this.projectiles = []; this.timers = [];
     this.drops = new DropSystem(this);
     this.player = null; this.active = false; this.paused = false; this.pauseReasons = new Set();
-    this.combo = 0; this.comboT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0;
+    this.combo = 0; this.comboT = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0;
     this.wave = 0; this.waveT = 0; this.stage = null; this.boss = null; this.result = null; this.revived = 0;
     this.pending = []; // 지속 스폰 큐
     this.maxAlive = 34; this.peakAlive = 0; this.controlFinisherTokens = new WeakSet();
@@ -64,7 +64,7 @@ export class Battle {
     this._contactAt = -Infinity; this._contactBudget = null;
     this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0; this.bossDefeated = false;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
-    this.combo = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.controlFinisherTokens = new WeakSet();
+    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false;
     this.clearPortal();
     const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = heroStats(def, heroState, equipBonus);
     this.setBonus = equipBonus.active || [];
@@ -201,7 +201,8 @@ export class Battle {
     const base = room.type === ROOM_TYPE.ELITE ? 6 + Math.round(area / 50)
       : room.type === ROOM_TYPE.TREASURE ? 4 + Math.round(area / 70)
       : 8 + Math.round(area / 40);
-    return Math.min(24, base + Math.floor(this.stage.idx * 0.45));
+    const density = this.stage.campaignDifficulty?.enemyDensity || 1;
+    return Math.min(24, Math.ceil((base + Math.floor(this.stage.idx * 0.45)) * density));
   }
   roomRoster(room) {
     if (this.stage.expedition) return expeditionRoster(this.stage, room);
@@ -337,6 +338,9 @@ export class Battle {
   }
   shortcutBoss() {
     if (!this.canBossShortcut()) return false;
+    this.bossRush = true;
+    this.autoTarget = this.world.bossRoom;
+    this.world.bossRoom.discovered = true;
     this.world.unseal(); this.arena.openSeal(this.fx); this.ui.setObjective(this.world); this.openPortal();
     this.ui.toast('보스 직행 · 미정복 구역은 그대로 남습니다', 'gold');
     return true;
@@ -361,6 +365,7 @@ export class Battle {
     const p = this.player;
     this.fx.firePillar(p.pos, { height: 6, width: 2.4, life: 0.5, color: 0xff4060 }); this.fx.ghost(p.model, 0xff4060, { life: 0.4, opacity: 0.6 });
     p.pos.copy(P.exit); p.kb.set(0, 0, 0); p.vel.set(0, 0, 0); p.invuln = Math.max(p.invuln || 0, 1);
+    if (this.bossRush) { this.autoTarget = this.world.bossRoom; this.world.bossRoom.discovered = true; }
     if (this.stage?.party) p.partyPortaled = true;
     const rig = this.renderer.rig; rig.target.copy(p.pos); rig.pos.copy(p.pos).add(rig.offset);
     this.fx.castCircle(P.exit, 0xff4060, { radius: 2.4, life: 1, demon: true }); this.fx.burst(P.exit.clone().setY(1.2), 0xff8090, { n: 24, speed: 7, size: 0.4, up: 1 });
@@ -430,7 +435,11 @@ export class Battle {
   }
   onEnemyDeath(e) {
     if (this.conquest?.death(e)) { this.ui.toast(this.conquest.hint(), 'gold'); this.ui.setObjective(this.world); }
-    this.kills++; this.waveKilled++; this.player.addUlt(ultKillGain(e)); this.player.addMp?.(2);
+    this.kills++; this.waveKilled++; this.killStreak++; this.killStreakT = 3.4;
+    const streakTier = this.killStreak >= 20 ? '전장의 지배자' : this.killStreak >= 10 ? '광란' : '사냥 본능';
+    this.ui?.setKillStreak?.(this.killStreak, streakTier);
+    if ([5, 10, 20, 30].includes(this.killStreak)) this.ui.toast(`${this.killStreak}연속 처치 · ${streakTier}`, this.killStreak >= 20 ? 'red' : 'gold');
+    this.player.addUlt(ultKillGain(e)); this.player.addMp?.(2);
     if (this.sp) this.sp.onKill(e);
     if (this.hasProc('blood_leech') && this.player.alive) { const heal = Math.floor(this.player.maxHp * 0.03); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); this.fx.embers(this.player.pos, 0xff3a5a, { n: 4, radius: 0.6, life: 0.6, rise: 2 }); if (this.fx.dmgLayer.children.length < 20) this.fx.damage(this.player.pos, heal, { kind: 'heal', text: '+' + heal }); }
     if (!this.stage.party) this.app.eco.s.quests.kills++;
@@ -660,6 +669,7 @@ export class Battle {
     if (this.sp) this.sp.update(dt);
     this.drops.update(dt);
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; this.ui.setCombo(0); } }
+    if (this.killStreakT > 0) { this.killStreakT -= dt; if (this.killStreakT <= 0) { this.killStreak = 0; this.ui?.setKillStreak?.(0); } }
     if (this.player.alive && this.player.hp < this.player.maxHp * 0.25) { audio.voice(heroVoiceName(this.heroId, 'low_hp'), { min: 12 }); audio.voice('low_hp', { min: 25 }); }
     // Local threat framing preserves readable heroes and explicit user presets.
     const rig = this.renderer.rig;

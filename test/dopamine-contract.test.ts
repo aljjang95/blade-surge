@@ -85,3 +85,16 @@ test('full clear bonuses are additive and normal clears keep base rewards', () =
   expect(full.fullClearBonus).toMatchObject({fragments:10,eliteGear:1});
   expect(normal.fullClearBonus).toBeNull();
 });
+
+test('locked awakening skills cannot consume gold through the economy service', () => {
+  const eco = new Economy();
+  const hero = eco.hero('knight');
+  const before = { gold: eco.s.gold, level: hero.level, skill: hero.skills[4] };
+  expect(eco.upgradeSkill('knight', 4)).toBe(false);
+  expect(eco.s.gold).toBe(before.gold);
+  expect(hero.level).toBe(before.level);
+  expect(hero.skills[4]).toBe(before.skill);
+  hero.level = 10;
+  expect(eco.upgradeSkill('knight', 4)).toBe(true);
+  expect(hero.skills[4]).toBe(before.skill + 1);
+});

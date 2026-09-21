@@ -6,6 +6,7 @@ import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 import { normalizeSave } from './save.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
+import { resolveDifficulty } from './difficulty.js';
 
 const KEY = 'bladesurge_save_v1';
 const now = () => Date.now();
@@ -21,11 +22,11 @@ export class Economy {
       created: now(), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: now(), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, { level: 1, exp: 0, star: 1, shards: 0, skills: HEROES[id].skills.map(() => 1), skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } }])),
       selected: 'knight', inventory: [], invSeq: 1,
-      progress: { unlocked: 1, stars: {} }, // stars['1-1'] = 3
+      progress: { unlocked: 1, stars: {}, difficulty: 'story' }, // stars['1-1'] = 3
       pity: 0, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
       daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false }],
-      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto' }, limitedStart: now(),
+      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto' }, limitedStart: now(),
     };
   }
   load() {
@@ -150,7 +151,7 @@ export class Economy {
   addHeroExp(id, exp, { silent = false } = {}) { const h = this.hero(id); h.exp += exp; let ups = 0; while (h.exp >= levelExp(h.level) && h.level < 80) { h.exp -= levelExp(h.level); h.level++; ups++; } if (!silent) this.emit(); return ups; }
   levelUpHero(id) { const h = this.hero(id); const cost = levelGold(h.level); if (this.s.gold < cost || h.level >= 80) return false; this.s.gold -= cost; h.level++; this.emit(); return true; }
   promoteHero(id) { const h = this.hero(id); const need = starShards(h.star); if (h.shards < need || h.star >= 5) return false; h.shards -= need; h.star++; this.emit(); return true; }
-  upgradeSkill(id, i) { const h = this.hero(id); const cost = skillUpGold(h.skills[i]); if (this.s.gold < cost || h.skills[i] >= 10) return false; this.s.gold -= cost; h.skills[i]++; this.emit(); return true; }
+  upgradeSkill(id, i) { const h = this.hero(id), sk = HEROES[id]?.skills[i]; if (!h || !sk || (sk.unlock && h.level < sk.unlock)) return false; const cost = skillUpGold(h.skills[i]); if (this.s.gold < cost || h.skills[i] >= 10) return false; this.s.gold -= cost; h.skills[i]++; this.emit(); return true; }
   setSkillLoadout(id, slot, skillIndex) { const h = this.hero(id), def = HEROES[id]; if (!h || !def || ![0,1].includes(slot) || !Number.isInteger(skillIndex) || skillIndex < 4 || skillIndex >= def.skills.length) return false; const sk = def.skills[skillIndex]; if (sk.unlock && h.level < sk.unlock) return false; const next = normalizeSkillLoadout(def, h.skillLoadout); if (next[slot] === skillIndex) return false; const other = 1 - slot; if (next[other] === skillIndex) [next[slot], next[other]] = [skillIndex, next[slot]]; else next[slot] = skillIndex; h.skillLoadout = next; this.emit(); return true; }
   grantHero(id) { if (this.s.heroes[id]) { this.s.heroes[id].shards += 10; return { dup: true }; } this.s.heroes[id] = { level: 1, exp: 0, star: 1, shards: 0, skills: HEROES[id].skills.map(() => 1), skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } }; return { dup: false }; }
   // ---------- 장비 ----------
@@ -190,6 +191,13 @@ export class Economy {
   // ---------- 스테이지 ----------
   stageKey(ch, st) { return `${ch}-${st}`; }
   stageIndex(ch, st) { return (ch - 1) * STAGES_PER_CHAPTER + st; }
+  difficultyFor(ch, st, requested = this.s.progress.difficulty || 'story') { return resolveDifficulty(this.s, ch, st, requested); }
+  setDifficulty(id, ch = 1, st = 1) {
+    const next = resolveDifficulty(this.s, ch, st, id);
+    this.s.progress.difficulty = next.id;
+    this.emit();
+    return next;
+  }
   isUnlocked(ch, st) { return Number.isInteger(ch) && Number.isInteger(st) && ch >= 1 && ch <= CHAPTERS.length && st >= 1 && st <= STAGES_PER_CHAPTER && this.stageIndex(ch, st) <= this.s.progress.unlocked; }
   nextStage() { const idx = Math.min(this.s.progress.unlocked, CHAPTERS.length * STAGES_PER_CHAPTER); const ch = Math.ceil(idx / STAGES_PER_CHAPTER), st = ((idx - 1) % STAGES_PER_CHAPTER) + 1; return stageDef(ch, st); }
   completeStage(stage, stars, { double = false, fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [], fullClear = false } = {}) {

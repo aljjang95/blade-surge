@@ -71,6 +71,7 @@
         <button class="sq-btn" id="btn-daily"><i class="ic ic-gift"></i><span>출석</span><em class="dot" id="dot-daily"></em></button>
         <button class="sq-btn" id="btn-mail"><i class="ic ic-mail"></i><span>우편</span><em class="dot" id="dot-mail"></em></button>
         <button class="sq-btn" id="btn-quest"><i class="ic ic-quest"></i><span>임무</span><em class="dot" id="dot-quest"></em></button>
+        <button class="sq-btn" id="btn-guide"><i class="ic ic-pass"></i><span>안내</span></button>
         <button class="sq-btn" id="btn-settings"><i class="ic ic-gear"></i><span>설정</span></button>
       </div>
       <div class="lobby-right">
@@ -171,7 +172,7 @@
       <div class="hud-center"><div class="wave" id="hud-wave">WAVE 1/3</div><div class="stage-name" id="hud-stage">1-1</div></div>
       <div class="hud-right">
         <div class="hud-right-top">
-          <button class="hud-btn" id="btn-boss-shortcut" hidden>BOSS</button>
+          <button class="hud-btn" id="btn-boss-shortcut" hidden>보스 직행</button>
           <button class="hud-btn" id="btn-auto">AUTO</button>
           <button class="hud-btn" id="btn-pause">❚❚</button>
         </div>
@@ -180,6 +181,7 @@
     </div>
     <div class="bossbar hidden" id="bossbar"><img id="boss-portrait" alt="" /><div class="bb-body"><div class="boss-name" id="boss-name">해골 군주</div><div class="boss-hp"><div id="boss-hp"></div></div></div></div>
     <div class="combo hidden" id="combo"><b id="combo-n">0</b><span>COMBO</span></div>
+    <div class="kill-streak" id="kill-streak"><b id="kill-streak-n">0</b><span>연속 처치</span><em id="kill-streak-tier">사냥 본능</em></div>
     <div class="joystick" id="joy"><div class="joy-base"><div class="joy-knob" id="joy-knob"></div></div></div>
     <div class="actions">
       <button class="skill-btn" data-skill="0"><img alt="" /><div class="cd"></div><span class="key">1</span></button>
@@ -198,6 +200,13 @@
     <div class="hud-vignette" id="hud-vignette"></div>
     <div id="dmg-layer"></div>
     <div class="wave-banner" id="wave-banner"></div>
+    <section id="battle-tutorial" hidden aria-live="polite" aria-label="첫 전투 튜토리얼">
+      <div class="tutorial-card">
+        <div class="tutorial-art" aria-hidden="true"><img src="/img/ui/tutorial-blade.svg" alt=""></div>
+        <div class="tutorial-copy-wrap"><span id="tutorial-step">01 / 04</span><h2 id="tutorial-title"></h2><p id="tutorial-copy"></p></div>
+        <div class="tutorial-actions"><button type="button" class="btn btn-gold" id="tutorial-next">전투 시작</button><button type="button" class="btn btn-ghost" id="tutorial-skip">건너뛰기</button></div>
+      </div>
+    </section>
   </div>
 
   <!-- ===== RESULT ===== -->

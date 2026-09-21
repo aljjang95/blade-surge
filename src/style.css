@@ -161,6 +161,25 @@ b { font-weight: 900; }
 .reward-chip { display: flex; align-items: center; gap: 4px; background: rgba(255,255,255,.08); border-radius: 8px; padding: 4px 8px; font-size: 12px; font-weight: 700; }
 .stage-detail .row { display: flex; gap: 8px; }
 .stage-detail .row .btn { flex: 1; }
+.difficulty-picker { margin: 10px 0 12px; padding: 10px; border: 1px solid rgba(255,207,90,.18); border-radius: 14px; background: linear-gradient(135deg, rgba(30,55,49,.78), rgba(11,18,25,.8)); }
+.difficulty-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.difficulty-heading b { color: var(--gold); font-size: 13px; }
+.difficulty-heading span { color: var(--muted); font-size: 10px; text-align: right; }
+.difficulty-card { position: relative; min-height: 58px; display: grid; grid-template-columns: 34px minmax(0,1fr) auto; align-items: center; gap: 8px; width: 100%; padding: 7px 9px; margin-top: 6px; border: 1px solid rgba(255,255,255,.14); border-radius: 11px; background: rgba(255,255,255,.055); text-align: left; color: var(--text); transition: border-color .18s, background .18s, transform .18s, box-shadow .18s; }
+.difficulty-card:first-of-type { margin-top: 0; }
+.difficulty-card img { width: 32px; height: 32px; object-fit: contain; filter: drop-shadow(0 0 6px rgba(255,207,90,.2)); }
+.difficulty-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.difficulty-copy b { font-size: 12px; }
+.difficulty-copy small { color: var(--muted); font-size: 10px; line-height: 1.35; overflow-wrap: anywhere; }
+.difficulty-reward { align-self: start; padding: 3px 5px; border-radius: 6px; color: var(--gold); background: rgba(255,207,90,.1); font-size: 10px; font-weight: 900; white-space: nowrap; }
+.difficulty-card em { grid-column: 2 / -1; color: #ffb1c0; font-size: 9px; font-style: normal; margin-top: -3px; }
+.difficulty-card.on { border-color: var(--gold); background: linear-gradient(100deg, rgba(255,207,90,.16), rgba(255,255,255,.06)); box-shadow: 0 0 16px rgba(255,183,62,.16); }
+.difficulty-card.on .difficulty-copy b { color: var(--gold); }
+.difficulty-card.tone-ember.on { border-color: #ff9b5d; box-shadow: 0 0 16px rgba(255,113,55,.22); }
+.difficulty-card.tone-void.on { border-color: #d5a4ff; box-shadow: 0 0 18px rgba(166,105,255,.25); }
+.difficulty-card.locked { opacity: .52; filter: saturate(.55); }
+.difficulty-card:disabled { cursor: not-allowed; }
+.difficulty-card:not(:disabled):active { transform: translateY(1px) scale(.99); }
 
 /* heroes */
 .panel-heroes { flex-direction: row; }
@@ -310,6 +329,13 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .combo.hot b { color: #ff5a7a; -webkit-text-stroke: 1px #6b0018; }
 .combo.pop { animation: comboPop .18s ease-out; }
 @keyframes comboPop { 0% { transform: scale(1.4) rotate(-4deg) } 100% { transform: none } }
+.kill-streak { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(.86); display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 16px 9px; border: 1px solid rgba(255,177,92,.65); border-radius: 14px; background: linear-gradient(135deg, rgba(63,22,13,.88), rgba(21,11,16,.82)); box-shadow: 0 0 22px rgba(255,117,43,.3); opacity: 0; pointer-events: none; transition: opacity .16s, transform .16s; }
+.kill-streak.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+.kill-streak b { color: #ffd27d; font-family: var(--disp); font-size: 32px; line-height: .9; text-shadow: 0 0 12px #ff6d25; }
+.kill-streak span { color: #fff2dc; font-size: 10px; font-weight: 900; letter-spacing: .16em; }
+.kill-streak em { color: #ffae6e; font-size: 9px; font-style: normal; }
+.kill-streak.hot { border-color: #ff5a7a; box-shadow: 0 0 28px rgba(255,40,88,.45); }
+.kill-streak.hot b { color: #ff9eae; text-shadow: 0 0 15px #ff2658; }
 
 .joystick { position: absolute; left: 0; bottom: 0; width: 50%; height: 55%; }
 .joy-base { position: absolute; left: 60px; bottom: calc(80px + var(--sab)); width: 120px; height: 120px; border-radius: 50%; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.25); transform: translate(-50%, 50%); opacity: .8; }
@@ -343,6 +369,23 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 @keyframes ultReady { from { box-shadow: 0 0 8px var(--gold) } to { box-shadow: 0 0 26px var(--gold), 0 0 50px rgba(255,170,40,.6) } }
 .skill-btn.ready-flash { animation: readyFlash .4s ease-out; }
 @keyframes readyFlash { 0% { filter: brightness(3); transform: scale(1.2) } 100% { filter: none; transform: none } }
+
+/* ---------- 첫 전투 튜토리얼 ---------- */
+#battle-tutorial { position: absolute; inset: 0; z-index: 42; display: grid; place-items: start center; padding: calc(94px + var(--sat)) 16px 16px; pointer-events: none; background: radial-gradient(ellipse at 50% 20%, rgba(9,18,25,.38), transparent 55%); }
+#battle-tutorial[hidden] { display: none; }
+.tutorial-card { pointer-events: auto; width: min(560px, calc(100vw - 32px)); display: grid; grid-template-columns: 58px minmax(0,1fr) auto; align-items: center; gap: 12px; padding: 13px 15px; border: 1px solid rgba(255,207,90,.55); border-radius: 16px; background: linear-gradient(130deg, rgba(14,36,34,.97), rgba(18,19,31,.96)); box-shadow: 0 16px 48px rgba(0,0,0,.5), 0 0 28px rgba(255,180,65,.18); }
+.tutorial-art { position: relative; display: grid; place-items: center; width: 54px; height: 54px; border-radius: 14px; overflow: hidden; background: radial-gradient(circle, #ffcf65 0 4%, #d44b47 32%, #251c38 70%); }
+.tutorial-art::after { content: ''; position: absolute; inset: 8px; border: 1px solid rgba(255,244,192,.6); border-radius: 50%; transform: rotate(32deg) skewX(-18deg); }
+.tutorial-art img { position: relative; z-index: 1; width: 42px; height: 42px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(255,220,132,.7)); }
+.tutorial-copy-wrap { min-width: 0; }
+.tutorial-copy-wrap > span { color: var(--gold); font-size: 10px; letter-spacing: .14em; font-weight: 900; }
+.tutorial-copy-wrap h2 { margin: 2px 0 3px; font-family: var(--disp); font-size: 20px; font-weight: 400; color: #fff3d1; }
+.tutorial-copy-wrap p { margin: 0; color: #c9d3cb; font-size: 11px; line-height: 1.55; }
+.tutorial-actions { display: flex; flex-direction: column; gap: 5px; min-width: 92px; }
+.tutorial-actions .btn { min-height: 38px; padding: 6px 10px; white-space: nowrap; }
+.tutorial-actions .btn-ghost { font-size: 10px; opacity: .8; }
+.tutorial-focus { position: relative; z-index: 46; animation: tutorialFocus 1s ease-in-out infinite alternate; }
+@keyframes tutorialFocus { from { box-shadow: 0 0 0 3px rgba(255,207,90,.35), 0 0 10px rgba(255,150,30,.35); } to { box-shadow: 0 0 0 7px rgba(255,207,90,.08), 0 0 26px rgba(255,150,30,.8); } }
 
 .ult-cinema { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
 .ult-cinema::before, .ult-cinema::after { content: ''; position: absolute; left: 0; right: 0; height: 0; background: #000; transition: height .25s; z-index: -1; }
@@ -450,6 +493,39 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .modal-box p { margin: 6px 0; font-size: 13px; color: var(--muted); line-height: 1.5; text-align: center; }
 .modal-btns { display: flex; gap: 8px; margin-top: 14px; }
 .modal-btns .btn { flex: 1; padding: 12px 6px; font-size: 15px; }
+
+/* 모험 안내서 — 첫 출격 이후에도 메뉴에서 다시 열 수 있는 짧은 플레이 가이드 */
+.field-guide { text-align: left; }
+.guide-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.guide-heading h2 { text-align: left; margin: 2px 0 0; }
+.guide-kicker { color: var(--gold); font-size: 10px; letter-spacing: .12em; font-weight: 900; }
+.guide-hero-badge { flex: 0 0 auto; border: 1px solid rgba(255,207,90,.35); border-radius: 999px; color: var(--gold); padding: 5px 8px; font-size: 10px; white-space: nowrap; }
+.guide-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-bottom: 12px; }
+.guide-tab { min-height: 40px; border: 1px solid rgba(255,255,255,.12); border-radius: 9px; background: rgba(255,255,255,.06); color: var(--muted); font-weight: 900; }
+.guide-tab.on { border-color: var(--gold); background: rgba(255,190,60,.14); color: var(--gold); }
+.guide-panel h3 { margin: 0 0 10px; font-size: 16px; }
+.guide-panel p { text-align: left; }
+.guide-steps, .guide-points, .guide-checklist { list-style: none; padding: 0; margin: 0; }
+.guide-steps { display: grid; gap: 7px; counter-reset: guide-step; }
+.guide-steps > li, .guide-points > li { display: flex; align-items: flex-start; gap: 9px; padding: 9px; border: 1px solid rgba(255,255,255,.1); border-radius: 10px; background: rgba(255,255,255,.045); }
+.guide-point-icon { flex: 0 0 24px; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: rgba(255,207,90,.14); color: var(--gold); font-size: 10px; }
+.guide-steps strong, .guide-points strong, .guide-checklist strong { display: block; font-size: 12px; }
+.guide-steps p, .guide-points p { margin: 3px 0 0; font-size: 11px; line-height: 1.45; }
+.guide-next { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 10px; padding: 10px; border-radius: 10px; border: 1px solid rgba(76,195,255,.35); background: linear-gradient(110deg, rgba(76,195,255,.12), rgba(178,107,255,.08)); }
+.guide-next span:first-child { display: block; color: var(--blue); font-size: 10px; font-weight: 900; }
+.guide-next strong { display: block; margin-top: 2px; font-size: 13px; }
+.guide-next p { margin: 3px 0 0; font-size: 11px; }
+.guide-power { flex: 0 0 auto; text-align: right; color: var(--gold); font-size: 11px; font-weight: 900; }
+.guide-power small { color: var(--muted); font-weight: 400; }
+.guide-checklist { display: grid; gap: 7px; }
+.guide-checklist li { display: flex; align-items: flex-start; gap: 8px; padding: 8px 9px; border-radius: 9px; background: rgba(255,255,255,.045); }
+.guide-checklist li > span { color: var(--muted); font-size: 16px; line-height: 1; }
+.guide-checklist li.done { border: 1px solid rgba(92,224,122,.28); }
+.guide-checklist li.done > span { color: var(--green); }
+.guide-checklist small { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+.guide-footnote { margin-top: 10px !important; font-size: 11px !important; }
+.guide-actions { margin-top: 12px; }
+.guide-actions .btn { min-height: 44px; }
 .pause-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .pay-sheet { text-align: center; }
 .pay-sheet .pay-store { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
@@ -698,6 +774,24 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .hud-right { width: 116px; min-width: 0; }
   #minimap { width: 92px; height: 92px; }
   #objective { font-size: 9px; max-width: 116px; white-space: normal; }
+}
+
+@media (orientation: portrait) and (max-width: 620px) {
+  .difficulty-picker { margin-top: 8px; padding: 8px; }
+  .difficulty-heading { align-items: flex-start; flex-direction: column; gap: 2px; }
+  .difficulty-heading span { text-align: left; }
+  .difficulty-card { min-height: 54px; grid-template-columns: 32px minmax(0,1fr) auto; padding: 7px; }
+  .difficulty-card img { width: 30px; height: 30px; }
+  .difficulty-copy small { font-size: 9px; }
+  .tutorial-card { grid-template-columns: 42px minmax(0,1fr); gap: 8px 10px; padding: 10px; }
+  .tutorial-art { width: 42px; height: 42px; border-radius: 11px; }
+  .tutorial-art img { width: 34px; height: 34px; }
+  .tutorial-copy-wrap h2 { font-size: 17px; }
+  .tutorial-copy-wrap p { font-size: 10px; }
+  .tutorial-actions { grid-column: 1 / -1; flex-direction: row; }
+  .tutorial-actions .btn { flex: 1; min-height: 42px; }
+  .kill-streak { top: 37%; padding: 6px 12px 7px; }
+  .kill-streak b { font-size: 27px; }
 }
 
 /* ---------- 컨트롤 손맛: 락온 / 퍼펙트 회피 ---------- */

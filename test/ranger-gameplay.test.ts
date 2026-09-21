@@ -112,7 +112,7 @@ test('focus empowers piercing fire, ultimate and binding while retreat and quick
   expect(p.vel.z).toBeLessThan(0); expect(p.invuln).toBe(.6); expect(p.jobResource).toBe(1);
   SKILLS.ranger_retreat.end(game, p); expect(p.vel.length()).toBe(0);
   p.jobResource = 3; SKILLS.ranger_tempest.cast(game, p, { dmg: 100 } as any);
-  expect(p.jobResource).toBe(0); expect(shots.slice(-6)).toHaveLength(6); expect(shots.slice(-6).every(s => s.dmg === 135)).toBe(true);
+  expect(p.jobResource).toBe(0); expect(shots.slice(-7)).toHaveLength(7); expect(shots.slice(-7).every(s => s.dmg === 150)).toBe(true);
   const count = shots.length;
   SKILLS.ranger_quickshot.cast(game, p, { dmg: 100 } as any); timers.splice(0).forEach(fn => fn());
   expect(shots.length - count).toBe(3); expect(p.jobResource).toBe(1);

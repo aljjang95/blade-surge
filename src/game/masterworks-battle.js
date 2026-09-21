@@ -112,7 +112,9 @@ export class Battle extends RpgBattle {
     const e = super.spawnEnemy(...args); if (!e) return e;
     if(reinforcement){e.riftReinforcement=true;e.summoned=true;e.xpReward=0;}
     const d = this.run?.difficulty;
+    const campaign = this.stage?.campaignDifficulty;
     if (d && this.run.enabled) { e.maxHp = Math.round(e.maxHp*d.enemyHp); e.hp=e.maxHp; e.atk*=d.enemyAtk; }
+    if (campaign && this.run?.enabled) { e.maxHp = Math.round(e.maxHp * campaign.enemyHp); e.hp=e.maxHp; e.atk*=campaign.enemyAtk; }
     applyRiftEnemy(e, this.stage);
     e.posture=0; e.postureMax=e.isBoss?150:e.isElite?110:80; e.breakT=0;
     return e;

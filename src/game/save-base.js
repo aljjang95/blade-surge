@@ -66,6 +66,7 @@ export function normalizeSave(raw, fresh) {
     // 장 확장 뒤에도 이전 마지막 관문의 실제 완료 별점으로 다음 장을 연다.
     if (s.progress.stars[key] > 0) s.progress.unlocked = Math.max(s.progress.unlocked, Math.min(floors, (+parts[1] - 1) * STAGES_PER_CHAPTER + +parts[2] + 1));
   }
+  if (!['story', 'adept', 'nightmare'].includes(s.progress.difficulty)) s.progress.difficulty = 'story';
   for (const key of ['claimedFree', 'claimedPrem']) s.pass[key] = [...new Set(s.pass[key].filter((v) => Number.isInteger(v) && v >= 1 && v <= BATTLE_PASS.maxLevel))];
   s.quests.claimed = s.quests.claimed.filter((id) => ['k30', 'k100', 's3', 's10', 'p10'].includes(id));
   s.purchases = s.purchases.filter((id) => typeof id === 'string');

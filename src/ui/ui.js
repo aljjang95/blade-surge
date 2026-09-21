@@ -39,7 +39,7 @@ export class UI {
     });
     this.lobbyCaptionResize.observe(lobby); this.lobbyCaptionResize.observe(lobbyBottom);
     this.skillBtns = [...document.querySelectorAll('.skill-btn')];
-    this.hurtT = 0; this.comboEl = $('combo'); this.comboN = $('combo-n');
+    this.hurtT = 0; this.comboEl = $('combo'); this.comboN = $('combo-n'); this.killStreakEl = $('kill-streak'); this.killStreakN = $('kill-streak-n'); this.killStreakTier = $('kill-streak-tier');
     this.lootLayer = $('loot-layer'); this.lootQueue = [];
     this.minimap = new Minimap($('minimap'));
     this.miniT = 0;
@@ -83,7 +83,7 @@ export class UI {
       el.append(hint);
     }
   }
-  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
+  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
   pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; b.setPaused('manual', on); this.show(this.el.pause, on); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
@@ -131,7 +131,7 @@ export class UI {
     this.skillBtns.forEach((b, slot) => {
       const { index, skill: sk } = player.combatSkill(slot);
       if (!sk) { b.style.display = 'none'; return; }
-      b.dataset.skillIndex = String(index); b.title = `${sk.name}${sk.mp ? ` · MP ${sk.mp}` : ''}`; b.setAttribute('aria-label', b.title);
+      b.dataset.skillIndex = String(index); b.title = `${sk.name} · ${sk.desc}${sk.ult ? ' · 궁극기 게이지 100' : sk.mp ? ` · MP ${sk.mp}` : ''}`; b.setAttribute('aria-label', b.title);
       const img = b.querySelector('img'); img.src = sk.icon; img.style.display = '';
       img.onerror = () => { img.style.display = 'none'; b.style.background = `linear-gradient(135deg, ${def.color}, #222)`; };
       b.style.display = ''; b.classList.toggle('locked', !player.unlocked(index));
@@ -155,11 +155,19 @@ export class UI {
   setFloorLabel(floorNum, floor, stage = this.app.battle?.stage) {
     const clr = floor.rooms.filter((r) => r.cleared).length, tot = floor.rooms.length;
     $('hud-wave').textContent = stage?.code || `${floorNum}층`;
-    $('hud-stage').textContent = `구역 ${clr}/${tot}`;
+    $('hud-stage').textContent = `구역 ${clr}/${tot}${stage?.difficultyName ? ` · ${stage.difficultyName}` : ''}`;
   }
   waveBanner(text) { const b = $('wave-banner'); b.textContent = text; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); }
   showBoss(name, on, portrait) { $('bossbar').classList.toggle('hidden', !on); $('boss-name').textContent = name; const im = $('boss-portrait'); if (portrait) { im.src = portrait; im.style.display = ''; } else im.style.display = 'none'; }
   setCombo(n) { if (n <= 1) { this.comboEl.classList.add('hidden'); return; } this.comboEl.classList.remove('hidden'); this.comboN.textContent = n; this.comboEl.classList.toggle('hot', n >= 30); this.comboEl.classList.remove('pop'); void this.comboEl.offsetWidth; this.comboEl.classList.add('pop'); }
+  setKillStreak(n, tier = '') {
+    if (!this.killStreakEl) return;
+    if (n <= 1) { this.killStreakEl.classList.remove('show', 'hot'); return; }
+    this.killStreakN.textContent = n;
+    this.killStreakTier.textContent = tier || (n >= 20 ? '전장의 지배자' : n >= 10 ? '광란' : '사냥 본능');
+    this.killStreakEl.classList.toggle('hot', n >= 20);
+    this.killStreakEl.classList.remove('show'); void this.killStreakEl.offsetWidth; this.killStreakEl.classList.add('show');
+  }
   ultCinema(name, def) { const c = $('ult-cinema'); $('ult-name').textContent = name; $('ult-name').style.textShadow = `0 0 20px ${def.color}, 0 4px 0 #000`; c.classList.remove('on'); void c.offsetWidth; c.classList.add('on'); setTimeout(() => c.classList.remove('on'), 1700); }
   updateHud(b, dt) {
     const p = b.player; if (!p) return;

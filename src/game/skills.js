@@ -75,7 +75,7 @@ export const SKILLS = {
     cast(game, p, c) {
       const empowered = (p.jobResource || 0) >= 3;
       if (empowered) p.jobResource = 0;
-      rangerArrows(game, p, c.dmg * (empowered ? 1.35 : 1), 6, { radius: .95, kb: 5, size: .58 });
+      rangerArrows(game, p, c.dmg * (empowered ? 1.5 : 1), 7, { radius: .95, kb: 5, size: .58 });
     },
   },
   ranger_quickshot: {

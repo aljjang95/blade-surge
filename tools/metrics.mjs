@@ -96,7 +96,9 @@ const startLevel = await page.evaluate(() => {
   const e = window.app.eco;
   if (!e.reset()) throw new Error('새 저장 격리에 실패했습니다.');
   e.s.daily.last = Math.floor(Date.now() / 86400000);
-  e.s.selected = 'knight'; e.hero('knight').level = 1; e.hero('knight').exp = 0; e.save();
+  e.s.selected = 'knight'; e.hero('knight').level = 1; e.hero('knight').exp = 0;
+  // 자동 지표는 튜토리얼 입력을 측정하는 게이트가 아니므로, 결정적 AUTO 전투만 시작한다.
+  e.s.tutorial = { completed: true }; e.save();
   return e.hero('knight').level;
 });
 await page.click('#boot-start', { force: true });

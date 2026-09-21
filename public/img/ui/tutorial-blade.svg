@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="빛나는 검">
+  <defs>
+    <linearGradient id="blade" x1="0" y1="1" x2="1" y2="0"><stop stop-color="#fff7c2"/><stop offset=".5" stop-color="#ffcf5a"/><stop offset="1" stop-color="#ff7c49"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <g filter="url(#glow)" transform="rotate(-32 48 48)">
+    <path d="M48 10 57 58 48 76 39 58Z" fill="url(#blade)" stroke="#fff6d5" stroke-width="2"/>
+    <path d="M39 56h18l-9 11Z" fill="#d84b4b" stroke="#ffbe73" stroke-width="2"/>
+    <path d="M29 68h38" stroke="#ffe3a1" stroke-width="6" stroke-linecap="round"/>
+    <path d="M38 74 58 63" stroke="#ff7b5f" stroke-width="4" stroke-linecap="round"/>
+  </g>
+  <path d="M13 23 27 19M70 18l12-6M13 73l13-5M72 75l12 5" stroke="#fff0bd" stroke-width="3" stroke-linecap="round" opacity=".8"/>
+</svg>

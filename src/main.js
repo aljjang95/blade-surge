@@ -37,6 +37,8 @@ import './ui/illustrated.css';
 import './ui/oath-visual.css';
 import { OathShell } from './ui/oath-shell.js';
 import { ExperienceView } from './ui/experience-view.js';
+import { BattleTutorial } from './ui/tutorial.js';
+import { applyDifficulty } from './game/difficulty.js';
 import { preloadOathHall } from './engine/oathhall-asset.js';
 const BOOT_TIPS = [
   '<b>진공기</b>로 적을 끌어모은 뒤 한 번에 쓸어담는 것이 몹몰이의 기본이다.',
@@ -63,6 +65,7 @@ class App {
     this.eco = new Economy();
     this.ui = new UI(this);
     this.meta = new Meta(this);
+    this.tutorial = new BattleTutorial(this);
     this.expedition = new ExpeditionEconomy(this.eco);
     this.expeditionUI = new ExpeditionUI(this);
     this.journey = new JourneyService(this);
@@ -179,6 +182,7 @@ class App {
       if (outcome.ok) this.expeditionTicket = null;
     }
     if (this.mode === 'battle') { this.battle.stop(); }
+    this.tutorial.end();
     this.ui.hideResult(); this.mode = 'lobby';
     if (first) setTimeout(() => audio.voice('welcome', { vol: 0.9 }), 900);
     this.ui.show($('meta'), true);
@@ -201,7 +205,9 @@ class App {
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
     if (!stage || !this.eco.isUnlocked(stage.ch, stage.st)) { this.ui.toast('이전 스테이지를 먼저 클리어하세요.', 'red'); return false; }
     // 미리보기에서 넘긴 객체 대신 검증된 현재 스테이지 정의로 출격한다.
-    stage = stageDef(stage.ch, stage.st);
+      stage = stageDef(stage.ch, stage.st);
+      const difficulty = this.eco.difficultyFor(stage.ch, stage.st, stage.difficultyId || this.eco.s.progress.difficulty || 'story');
+      stage = applyDifficulty(stage, difficulty);
     this.stageStarting = true;
     let spent = false;
     const energyBefore = { energy: this.eco.s.energy, energyT: this.eco.s.energyT };
@@ -220,6 +226,7 @@ class App {
       const id = this.eco.s.selected;
       await this.battle.start(stage, id, this.eco.hero(id), this.eco.heroEquipBonus(id));
       this.battle.player.auto = this.journey.s.autoBattle; $('btn-auto').classList.toggle('on', this.battle.player.auto);
+      this.tutorial.begin(stage);
       return true;
     } catch (error) {
       const rollbackSaved = !spent || this.eco.rollbackEnergy(energyBefore);
@@ -285,6 +292,7 @@ class App {
     if (this.expeditionUI?.opened) return;
     if (this.mode === 'battle') {
       this.battle.update(realDt);
+      this.tutorial.update();
       this.party?.update(realDt);
       const dt = realDt * this.battle.timeCtl.scale;
       this.fx.update(dt);

@@ -71,6 +71,7 @@ test('campaign boss shortcut only unseals and opens portal, preserving optional 
   const g:any={active:true,stage:{},conquest:null,enemies:[],pending:[],world:{sealed:true,bossRoom:{cleared:false},rooms,unseal(){this.sealed=false;}},arena:{openSeal(){sealFx++;}},fx:{},ui:{setObjective(){},toast(){}},openPortal(){opened++;},canBossShortcut:Battle.prototype.canBossShortcut};
   expect(Battle.prototype.canBossShortcut.call(g)).toBe(true); expect(Battle.prototype.shortcutBoss.call(g)).toBe(true);
   expect(JSON.stringify(rooms)).toBe(before); expect(opened).toBe(1); expect(sealFx).toBe(1);
+  expect(g.bossRush).toBe(true); expect(g.autoTarget).toBe(g.world.bossRoom); expect(g.world.bossRoom.discovered).toBe(true);
   g.world.sealed=true; g.enemies=[{alive:true}]; expect(Battle.prototype.canBossShortcut.call(g)).toBe(false); g.enemies=[]; g.pending=[{t:'queued'}]; expect(Battle.prototype.canBossShortcut.call(g)).toBe(false); g.pending=[];
   for(const blocked of [{stage:{expedition:{}},conquest:null},{stage:{party:{}},conquest:null},{stage:{},conquest:{}}]) {
     Object.assign(g,blocked,{active:true}); g.world.sealed=true; expect(Battle.prototype.canBossShortcut.call(g)).toBe(false);

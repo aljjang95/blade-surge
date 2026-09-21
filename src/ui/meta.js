@@ -10,6 +10,8 @@ import { CHAPTERS, STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
 import { REWARD_LABEL } from '../game/economy.js';
 import { campaignFinished } from '../data/expedition-depths.js';
 import { storyText, encounterLabel, journalHtml, dungeonBriefHtml } from './campaign.js';
+import { guideHtml } from './guide.js';
+import { availableDifficulties } from '../game/difficulty.js';
 const CAM_DESC = { auto: '상황에 맞춰 자동 — 탐험은 액션, 난전은 탑다운, 보스는 시네마틱', top: '높이서 내려다보는 클래식 시점 — 몹몰이 파악이 쉽다', action: '낮고 가까운 시점 — 타격감과 속도감이 크다', wide: '멀고 넓은 시점 — 전장 전체와 보스 패턴이 보인다' };
 
 const RC = { N: 'var(--r-n)', R: 'var(--r-r)', SR: 'var(--r-sr)', SSR: 'var(--r-ssr)' };
@@ -28,6 +30,7 @@ export class Meta {
     $('btn-mail').addEventListener('click', () => this.showMail());
     $('btn-quest').addEventListener('click', () => this.showQuests());
     $('btn-settings').addEventListener('click', () => this.showSettings());
+    $('btn-guide').addEventListener('click', (event) => { event.stopPropagation(); setTimeout(() => this.showGuide(), 0); });
     $('btn-profile').addEventListener('click', () => this.showProfile());
     $('promo-starter').addEventListener('click', () => this.buy('starter'));
     $('promo-monthly').addEventListener('click', () => this.buy('monthly'));
@@ -113,12 +116,25 @@ export class Meta {
     }
     const d = this.stage; const stars = this.eco.s.progress.stars[`${d.ch}-${d.st}`] || 0; const power = this.eco.heroPower(this.eco.s.selected);
     const unlocked = this.eco.isUnlocked(d.ch, d.st);
+    const difficulties = availableDifficulties(this.eco.s, d.ch, d.st);
+    const selectedDifficulty = this.eco.difficultyFor(d.ch, d.st, this.eco.s.progress.difficulty || 'story');
+    this.selectedDifficulty = selectedDifficulty.id;
+    const difficultyRequirement = (item) => item.id === 'adept' ? '1개 스테이지 클리어' : item.id === 'nightmare' ? '이 스테이지 ★3' : '기본 난이도';
+    const difficultyHtml = difficulties.map((item) => `<button type="button" class="difficulty-card tone-${item.tone}${item.id === selectedDifficulty.id ? ' on' : ''}${item.unlocked ? '' : ' locked'}" data-difficulty="${item.id}" aria-pressed="${item.id === selectedDifficulty.id}" ${item.unlocked ? '' : 'disabled'}><img src="/img/ui/difficulty-${item.id}.svg" alt=""><span class="difficulty-copy"><b>${item.name}</b><small>${item.description}</small></span><span class="difficulty-reward">보상 ×${item.rewardMul.toFixed(2)}</span>${item.unlocked ? '' : `<em>🔒 ${difficultyRequirement(item)}</em>`}</button>`).join('');
     $('stage-detail').innerHTML = `<div class="stage-narrative"><span class="campaign-eyebrow">${d.code} · ${storyText(encounterLabel(d))}</span><h3>${storyText(d.title)}</h3><p class="stage-opening">${storyText(d.story?.opening)}</p><p class="stage-objective"><b>목표</b> ${storyText(d.objective)}</p>${dungeonBriefHtml(d)}<div class="stage-tactics"><p><b>${storyText(chapter.mechanic?.name)}</b> ${storyText(chapter.mechanic?.description)}</p><p><b>${storyText(d.encounter?.name)}</b> ${storyText(d.encounter?.tactic)}</p></div></div><div class="stage-launch">
       <div class="meta"><span>권장 전투력 <b style="color:${power >= d.recPower ? 'var(--green)' : 'var(--red)'}">${fmt(d.recPower)}</b></span><span>내 전투력 ${fmt(power)}</span></div>
-      <div class="rewards"><span class="reward-chip"><i class="ic ic-gold"></i> ${fmt(d.rewards.gold)}</span><span class="reward-chip">EXP ${d.rewards.exp}</span><span class="reward-chip">장비 ${Math.round(d.rewards.dropChance * 100)}%</span>${!stars ? `<span class="reward-chip"><i class="ic ic-gem"></i> ${d.rewards.firstGems} 첫클리어</span>` : ''}</div>
+      <div class="difficulty-picker" role="group" aria-label="전투 난이도"><div class="difficulty-heading"><b>전투 난이도</b><span>${selectedDifficulty.name} · 보상과 적 압박이 함께 증가합니다</span></div>${difficultyHtml}</div>
+      <div class="rewards"><span class="reward-chip"><i class="ic ic-gold"></i> ${fmt(Math.floor(d.rewards.gold * selectedDifficulty.rewardMul))}</span><span class="reward-chip">EXP ${Math.floor(d.rewards.exp * selectedDifficulty.expMul)}</span><span class="reward-chip">장비 ${Math.round(Math.min(1, d.rewards.dropChance * (0.9 + selectedDifficulty.rewardMul * 0.1)) * 100)}%</span>${!stars ? `<span class="reward-chip"><i class="ic ic-gem"></i> ${d.rewards.firstGems} 첫클리어</span>` : ''}</div>
       ${unlocked ? '' : `<p class="stage-lock-note">${d.st === 1 ? `${d.ch - 1}-10` : `${d.ch}-${d.st - 1}`} 클리어 후 출격할 수 있습니다.</p>`}
       <div class="row"><button class="btn btn-ghost" id="st-sweep" ${stars < 3 || !unlocked ? 'disabled' : ''}>소탕 <small>티켓 ${this.eco.s.sweep}</small></button><button class="btn btn-gold" id="st-go" ${unlocked ? '' : 'disabled'}>${unlocked ? '출격' : '미개방'} <small><i class="ic ic-energy"></i> -${d.energy}</small></button></div></div>`;
-    $('st-go').onclick = () => { if (this.eco.isUnlocked(d.ch, d.st)) this.app.startStage(d); };
+    $('stage-detail').querySelectorAll('[data-difficulty]').forEach((button) => button.onclick = () => {
+      const next = this.eco.setDifficulty(button.dataset.difficulty, d.ch, d.st);
+      this.selectedDifficulty = next.id;
+      audio.play('ui_select', { vol: 0.35 });
+      this.renderStages();
+      $('stage-detail')?.querySelector(`[data-difficulty="${next.id}"]`)?.focus({ preventScroll: true });
+    });
+    $('st-go').onclick = () => { if (this.eco.isUnlocked(d.ch, d.st)) this.app.startStage({ ...d, difficultyId: this.selectedDifficulty }); };
     $('st-sweep').onclick = () => { const r = this.eco.sweep(d); if (!r) { this.ui.toast('소탕권/에너지 부족', 'red'); return; } audio.play('jingle_win0', { vol: 0.5 }); this.ui.rewardToast([...r.got, ...r.loot.map((it) => ({ k: 'item', item: it }))]); if (r.awakened && r.awakened.length) this.ui.awakenBanner(r.awakened); this.renderStages(); };
   }
 
@@ -207,7 +223,7 @@ export class Meta {
       <div class="stat-grid"><div class="stat">HP <b>${fmt(st.hp)}</b></div><div class="stat">공격력 <b>${fmt(st.atk)}</b></div><div class="stat">방어력 <b>${st.def}</b></div><div class="stat">치명타 <b>${Math.round(st.crit * 100)}%</b></div></div>
       <div class="hero-actions"><button class="btn btn-blue btn-sm" id="h-lv">레벨업 <small><i class="ic ic-gold"></i> ${fmt(levelGold(h.level))}</small></button><button class="btn btn-gold btn-sm" id="h-star" ${h.star >= 5 ? 'disabled' : ''}>승급 <small>조각 ${h.shards}/${starShards(h.star)}</small></button>${sel ? '<button class="btn btn-ghost btn-sm" disabled>출전 중</button>' : '<button class="btn btn-ghost btn-sm" id="h-sel">출전 영웅으로</button>'}</div>
       <h3 style="margin:12px 0 6px;font-size:14px">스킬북 <small style="color:#ff9ad8">Q / E 빌드</small></h3>
-      <div class="skill-book">${def.skills.map((sk, i) => { const ok = !sk.unlock || h.level >= sk.unlock; const loadout = h.skillLoadout || [4,5]; const equipped = loadout.includes(i); return `<div class="skill-book-card${ok ? '' : ' locked'}${equipped ? ' equipped' : ''}" data-skill-card="${i}"><button type="button" class="skill-book-icon" data-sk="${i}" style="border-color:${ok ? def.color : 'rgba(255,255,255,.18)'}"><img src="${sk.icon}" onerror="this.style.display='none';this.parentNode.style.background='${def.color}'"></button><div class="skill-book-main"><b>${sk.name}</b><small>${i < 4 ? (sk.ult ? '고정 · 궁극기' : `?? ?? ? MP ${sk.mp || 0}`) : ok ? `Lv.${h.skills[i] || 1} · MP ${sk.mp || 0}` : `해금 Lv.${sk.unlock}`}</small></div>${i >= 4 ? `<div class="skill-equip"><button type="button" data-equip="0:${i}" class="${loadout[0] === i ? 'on' : ''}" ${ok ? '' : 'disabled'}>Q</button><button type="button" data-equip="1:${i}" class="${loadout[1] === i ? 'on' : ''}" ${ok ? '' : 'disabled'}>E</button></div>` : ''}</div>`; }).join('')}</div>
+      <div class="skill-book">${def.skills.map((sk, i) => { const ok = !sk.unlock || h.level >= sk.unlock; const loadout = h.skillLoadout || [4,5]; const equipped = loadout.includes(i); const info = i < 4 ? (sk.ult ? '고정 · 궁극기' : `기본 스킬 · 쿨타임 ${sk.cd}초 · MP ${sk.mp || 0}`) : ok ? `각성 Lv.${h.skills[i] || 1} · MP ${sk.mp || 0}` : `해금 Lv.${sk.unlock}`; return `<div class="skill-book-card${ok ? '' : ' locked'}${equipped ? ' equipped' : ''}" data-skill-card="${i}"><button type="button" class="skill-book-icon" data-sk="${i}" aria-label="${sk.name} 설명 보기" style="border-color:${ok ? def.color : 'rgba(255,255,255,.18)'}"><img src="${sk.icon}" onerror="this.style.display='none';this.parentNode.style.background='${def.color}'"></button><div class="skill-book-main"><b>${sk.name}</b><small>${info}</small></div>${i >= 4 ? `<div class="skill-equip"><button type="button" data-equip="0:${i}" class="${loadout[0] === i ? 'on' : ''}" ${ok ? '' : 'disabled'}>Q</button><button type="button" data-equip="1:${i}" class="${loadout[1] === i ? 'on' : ''}" ${ok ? '' : 'disabled'}>E</button></div>` : ''}</div>`; }).join('')}</div>
       <div class="awk-note">${(() => { const nx = def.skills.find((sk) => sk.unlock && h.level < sk.unlock); return nx ? `다음 해금 Lv.${nx.unlock} · <b style="color:#ff9ad8">${nx.name}</b>` : '모든 고위 스킬 해금 완료'; })()}</div>
       <h3 style="margin:12px 0 6px;font-size:14px">세트 효과</h3>${this.setListHtml(id)}
       <h3 style="margin:12px 0 6px;font-size:14px">장비</h3><div class="equip-grid">${SLOTS.map((sl) => { const uid = h.equip[sl]; const inst = this.eco.s.inventory.find((x) => x.uid === uid); if (!inst) return `<div class="equip-slot" data-slot="${sl}"><img class="empty-equip-art" src="${uiArt(`slot-${sl}`)}" alt=""><small>${SLOT_NAME[sl]}</small></div>`; const it = ITEM_BY_ID[inst.id]; return `<div class="equip-slot has rar-${it.rarity}" data-slot="${sl}" data-uid="${uid}"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><span class="plus">+${inst.enh}</span></div>`; }).join('')}</div>
@@ -252,9 +268,10 @@ export class Meta {
   }
   showSkill(id, i) {
     const def = HEROES[id]; const sk = def.skills[i]; const h = this.eco.hero(id); const lv = h.skills[i]; const cost = skillUpGold(lv);
-    const lockNote = sk.unlock && h.level < sk.unlock ? `<p style="color:#ff9ad8;font-weight:900">영웅 Lv.${sk.unlock} 달성 시 해금 (현재 Lv.${h.level})</p>` : '';
+    const locked = !!(sk.unlock && h.level < sk.unlock);
+    const lockNote = locked ? `<p style="color:#ff9ad8;font-weight:900">영웅 Lv.${sk.unlock} 달성 시 해금 (현재 Lv.${h.level})</p>` : '';
     this.ui.modal(`<h2>${sk.name} ${sk.unlock ? '<small style="font-size:11px;color:#ff9ad8">각성</small>' : ''} <small style="font-size:12px">Lv.${lv}</small></h2><p>${sk.desc}</p>${lockNote}<p>피해 배율 <b style="color:var(--gold)">${(sk.dmg * (1 + (lv - 1) * 0.12)).toFixed(1)}x${sk.ticks ? ` × ${sk.ticks}회` : ''}</b> ${sk.ult ? '· 궁극기 (게이지 100)' : `· 쿨타임 ${sk.cd}초 · MP ${sk.mp || 0}`}</p>
-      <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-up" ${lv >= 10 ? 'disabled' : ''}>강화 <small><i class="ic ic-gold"></i> ${fmt(cost)}</small></button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-up').onclick = () => { if (this.eco.upgradeSkill(id, i)) { audio.play('jingle_win1', { vol: 0.5 }); this.ui.closeModal(); this.renderHeroes(); this.ui.toast(`${sk.name} Lv.${lv + 1}!`, 'gold'); } else { this.ui.toast('골드 부족', 'red'); this.offerGold(); } }; } });
+      <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-up" ${lv >= 10 || locked ? 'disabled' : ''}>${locked ? `Lv.${sk.unlock}에 해금` : '강화'} <small>${locked ? '' : `<i class="ic ic-gold"></i> ${fmt(cost)}`}</small></button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-up').onclick = () => { if (locked) return; if (this.eco.upgradeSkill(id, i)) { audio.play('jingle_win1', { vol: 0.5 }); this.ui.closeModal(); this.renderHeroes(); this.ui.toast(`${sk.name} Lv.${lv + 1}!`, 'gold'); } else { this.ui.toast('골드 부족', 'red'); this.offerGold(); } }; } });
   }
   showItem(uid, heroId) {
     const inst = this.eco.s.inventory.find((x) => x.uid === uid); if (!inst) return;
@@ -484,7 +501,25 @@ export class Meta {
     const s = this.eco.s; const vipNext = [0, 1, 20000, 50000, 100000, 300000];
     this.ui.modal(`<h2 id="profile-name"></h2><p>VIP ${s.vip} · 누적 결제 ₩${fmt(s.spentKRW)} (목업)<br>${s.vip < 5 ? `다음 VIP까지 ₩${fmt(vipNext[s.vip + 1] - s.spentKRW)}` : '최고 등급'}</p><p>VIP 혜택: 에너지 최대 +50 · 골드 +30% · 소탕권 매일 5장${this.eco.isVip ? ' <b style="color:var(--green)">(활성)</b>' : ' <b style="color:var(--red)">(VIP 멤버십 필요)</b>'}</p><p>총 소환 ${s.totalPulls}회 · 처치 ${s.quests.kills} · 클리어 ${s.quests.stages}</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-vip">VIP 멤버십</button></div>`, { onOpen: (b) => { b.querySelector('#profile-name').textContent = s.name; b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-vip').onclick = () => { this.ui.closeModal(); this.buy('vip_pass'); }; } });
   }
-  /** 로비 진입 시 받을 수 있는 무료 출석 보상만 안내한다. */
+  showGuide({ first = false } = {}) {
+    const s = this.eco.s, heroId = s.selected, def = HEROES[heroId], hero = this.eco.hero(heroId);
+    const next = this.eco.nextStage(), power = this.eco.heroPower(heroId), completed = campaignFinished(s.progress);
+    const nextAwaken = def.skills.find((skill) => skill.unlock && hero.level < skill.unlock)?.unlock;
+    const touch = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+    if (!s.guide) s.guide = { seen: false };
+    if (!s.guide.seen) { s.guide.seen = true; this.eco.emit(); }
+    this.ui.modal(guideHtml({ touch, first, heroName: def.name, heroLevel: hero.level, nextName: next?.name || '다음 원정', nextEnergy: next?.energy || 0, nextPower: next?.recPower || power, power, completed, inventoryCount: s.inventory.length, setCount: this.eco.setCount(), nextAwakening: nextAwaken ? `Lv.${nextAwaken}` : '모든 각성 해금' }), {
+      onOpen: (box) => {
+        const tabs = [...box.querySelectorAll('[data-guide-tab]')], panels = [...box.querySelectorAll('[data-guide-panel]')];
+        const activate = (id) => { tabs.forEach((tab) => { const active = tab.dataset.guideTab === id; tab.classList.toggle('on', active); tab.setAttribute('aria-selected', String(active)); }); panels.forEach((panel) => { panel.hidden = panel.dataset.guidePanel !== id; }); };
+        tabs.forEach((tab) => { tab.onclick = () => activate(tab.dataset.guideTab); });
+        box.querySelector('#m-guide-close').onclick = () => this.ui.closeModal();
+        box.querySelector('#m-guide-next').onclick = () => { this.ui.closeModal(); if (completed) this.app.expeditionUI.open('dungeons', { depth: 'deep' }); else this.openTab('stage'); };
+        box.querySelector('#m-guide-close').focus();
+      },
+    });
+  }
+  /** 로비 진입 시 첫 모험과 받을 수 있는 무료 출석 보상을 안내한다. */
   autoPopups() {
     if (this.app.mode !== 'lobby' || this.app.companionAgent?.getSnapshot().open || document.querySelector('dialog[open]') || document.getElementById('modal').classList.contains('show')) return;
     if (this.eco.dailyAvailable()) { this.showDaily(); return; }
