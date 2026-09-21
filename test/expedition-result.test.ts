@@ -55,6 +55,16 @@ test('defeat reports the actual route and no clear rewards', () => {
   expect(text(f.view)).not.toContain('영웅 EXP +'); expect(f.button('다시 도전').props.disabled).toBe(false);
 });
 
+test('record result shows only the frozen restored pages, including partial defeat', () => {
+  const report = Object.freeze({ progress: 1, target: 3, complete: false,
+    pages: Object.freeze([Object.freeze({ pageId: 3, label: '3쪽 · 귀환 경로' })]) });
+  const f = fixture({ win: false, routeObjective: report, rewards: {} });
+  expect(text(f.view)).toContain('기록 복원 1/3');
+  expect(text(f.view)).toContain('3쪽 · 귀환 경로');
+  expect(text(f.view)).not.toContain('1쪽 · 출발 좌표');
+  expect(f.result.routeObjective).toBe(report);
+});
+
 test('failed save disables every departure, blocks direct callbacks and exposes only the existing save retry', () => {
   const f = fixture({ saveError: 'storage' });
   const save = f.button('정산 다시 저장'); expect(save).toBeDefined();

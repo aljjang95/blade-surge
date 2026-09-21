@@ -1,6 +1,7 @@
 import { Vector3 } from 'three';
 import { routeObjectiveForStage } from '../data/route-objectives.js';
 import { CoolingValves } from './cooling-valves.js';
+import { NightglassRecords } from './nightglass-records.js';
 
 /** @typedef {{id:number, x:number, z:number, type:string, label:string, spawned:boolean, cleared:boolean, discovered:boolean}} Room */
 /** @typedef {{rooms:Room[], startRoom:Room, bossRoom:Room, sealed?:boolean, minX?:number, minZ?:number, cols?:number, buildFlow:(x:number,z:number)=>Int32Array|null|undefined}} World */
@@ -10,7 +11,9 @@ import { CoolingValves } from './cooling-valves.js';
 /** @param {any} stage @param {World} world */
 export function createRouteObjectives(stage, world) {
   const def = routeObjectiveForStage(stage);
-  return def ? ('kind' in def && def.kind === 'cooling' ? new CoolingValves(def, world) : new RouteObjectives(def, world)) : null;
+  if (!def) return null;
+  if ('kind' in def && def.kind === 'records') return new NightglassRecords(def, world);
+  return 'kind' in def && def.kind === 'cooling' ? new CoolingValves(def, world) : new RouteObjectives(def, world);
 }
 
 // Combat-cleared gates remain unfinished rooms until their ordered hold is done.

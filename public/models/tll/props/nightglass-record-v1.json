@@ -1,0 +1,297 @@
+{
+  "asset": "nightglass-record-v1",
+  "status": "generated-and-structurally-verified",
+  "proofScope": "GEOMETRY_AND_RENDER_ONLY",
+  "createdUtc": "2026-09-21T19:27:24.603349+00:00",
+  "blender": "5.2.1 LTS",
+  "blenderBuildHash": "9e2066aef7ef",
+  "generator": "tools/art/build-nightglass-record-v1.py",
+  "generatorSha256": "7aaff5ee948dc073579f0dc9daa61966ddf82d866f3c568f46bf692fd368fe6a",
+  "runtime": "public/models/tll/props/nightglass-record-v1.glb",
+  "editable": "public/models/tll/props/nightglass-record-v1.blend",
+  "license": "Original TLL self-authored geometry/PBR (no external models/textures)",
+  "provenance": {
+    "geometry": "Original curved sheets, book covers, turned pedestal, swept braces, astrolabe and inlaid asterisms authored in this script",
+    "materials": "Five original PBR materials; frost leaf vertex pigments retained",
+    "externalReferences": [],
+    "externalTextures": [],
+    "paidGeneration": false
+  },
+  "units": "meters",
+  "up": "Y",
+  "front": "+Z",
+  "origin": [
+    0,
+    0,
+    0
+  ],
+  "dimensions": {
+    "width": 2.2360000610351562,
+    "height": 2.4100000858306885,
+    "depth": 1.2999999523162842
+  },
+  "boundsYUp": {
+    "min": [
+      -1.1180000305175781,
+      0,
+      -0.6499999761581421
+    ],
+    "max": [
+      1.1180000305175781,
+      2.4100000858306885,
+      0.6499999761581421
+    ],
+    "size": [
+      2.2360000610351562,
+      2.4100000858306885,
+      1.2999999523162842
+    ]
+  },
+  "scatteredBoundsYUp": {
+    "min": [
+      -1.1217174530029297,
+      0,
+      -0.6499999761581421
+    ],
+    "max": [
+      1.1180000305175781,
+      2.578504800796509,
+      0.7663047909736633
+    ],
+    "size": [
+      2.239717483520508,
+      2.578504800796509,
+      1.4163047671318054
+    ]
+  },
+  "interface": {
+    "root": "TLL_NightglassRecord_v1",
+    "scale": 1,
+    "defaultPose": "restored",
+    "transformSpace": "Absolute local transforms relative to identity root, glTF Y-up, quaternion [x,y,z,w]",
+    "animation": "Lerp scattered.translation to restored.translation and slerp scattered.quaternionXYZW to restored.quaternionXYZW; scale stays [1,1,1]. No baked clips.",
+    "materialSharing": "Clone hierarchy per instance; share geometry. Clone StateLens material before mutation. Keep leaf COLOR_0 / vertexColors and original PBR. Optional existing surface bump must not replace baseColor.",
+    "loadNameSuggestion": "tllNightglassRecord",
+    "nodes": {
+      "LeafA": {
+        "type": "Mesh",
+        "recordIndex": 0,
+        "pivot": [
+          -0.6800000071525574,
+          1.6851999759674072,
+          0.550000011920929
+        ],
+        "restored": {
+          "translation": [
+            -0.6800000071525574,
+            1.6851999759674072,
+            0.550000011920929
+          ],
+          "quaternionXYZW": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "scattered": {
+          "translation": [
+            -0.8400000071525574,
+            1.8651999759674072,
+            0.670000011920929
+          ],
+          "quaternionXYZW": [
+            -0.08849435299634933,
+            -0.09547910839319229,
+            -0.11179167032241821,
+            0.9851675629615784
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "LeafB": {
+        "type": "Mesh",
+        "recordIndex": 1,
+        "pivot": [
+          0,
+          1.590000033378601,
+          0.550000011920929
+        ],
+        "restored": {
+          "translation": [
+            0,
+            1.590000033378601,
+            0.550000011920929
+          ],
+          "quaternionXYZW": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "scattered": {
+          "translation": [
+            0.025,
+            1.850000033378601,
+            0.48000001192092895
+          ],
+          "quaternionXYZW": [
+            0.11843670904636383,
+            0.05168187618255615,
+            0.06386770308017731,
+            0.9895567893981934
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "LeafC": {
+        "type": "Mesh",
+        "recordIndex": 2,
+        "pivot": [
+          0.6800000071525574,
+          1.6851999759674072,
+          0.550000011920929
+        ],
+        "restored": {
+          "translation": [
+            0.6800000071525574,
+            1.6851999759674072,
+            0.550000011920929
+          ],
+          "quaternionXYZW": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "scattered": {
+          "translation": [
+            0.8400000071525574,
+            1.8051999759674073,
+            0.6500000119209289
+          ],
+          "quaternionXYZW": [
+            -0.07397425919771194,
+            0.11400072276592255,
+            0.1195419579744339,
+            0.9834842681884766
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "StateLens": {
+        "type": "Mesh",
+        "pivot": [
+          0,
+          2.2100000381469727,
+          -0.27000001072883606
+        ],
+        "control": "Clone material per instance, then edit emissive/color"
+      }
+    }
+  },
+  "verification": {
+    "triangles": 4992,
+    "primitiveSubmissionsPerInstance": 7,
+    "materials": 5,
+    "meshNodes": [
+      "LeafA",
+      "LeafB",
+      "LeafC",
+      "StateLens",
+      "TLL_Record_BookBlock",
+      "TLL_Record_Brass",
+      "TLL_Record_Nightglass"
+    ],
+    "allSingleMaterialMeshNodes": true,
+    "embeddedBuffersOnly": true,
+    "noCamerasLightsSkinsAnimationsTextures": true,
+    "blenderReimport": "PASS",
+    "sourceReimportBoundsAndTriangleParity": "PASS",
+    "restoredScatteredPoseRoundtrip": "PASS",
+    "meshCount": 7,
+    "zeroAreaTriangles": 0
+  },
+  "bytes": 387672,
+  "sha256": "9a26296ee5cfcf9845620c128ffb7bae572d79eb1442626e2b0789f8129bd00e",
+  "blendSha256": "03c486f6e3be9749441395033902e186c00784724220a23928ef14d9453cdaac",
+  "renders": [
+    {
+      "path": "work/nightglass-record-proof/asset-restored-beauty.png",
+      "pose": "restored",
+      "width": 1000,
+      "height": 1000,
+      "sha256": "3b67db6d48d3af6b3052e458f92c7a927110bf52b1cfadd1e1291523ba8afdef",
+      "subject": "Reimported delivery GLB; studio geometry/render proof only"
+    },
+    {
+      "path": "work/nightglass-record-proof/asset-restored-front.png",
+      "pose": "restored",
+      "width": 1000,
+      "height": 1000,
+      "sha256": "8c492c42abfac3801cc179c3557a50298f0889a7628d3eaad991262c1fb4c6a3",
+      "subject": "Reimported delivery GLB; studio geometry/render proof only"
+    },
+    {
+      "path": "work/nightglass-record-proof/asset-restored-back.png",
+      "pose": "restored",
+      "width": 1000,
+      "height": 1000,
+      "sha256": "0a68ccd51c98abfa453bbac3c287ce6201f98de6cfdad6502492f69d6e10f303",
+      "subject": "Reimported delivery GLB; studio geometry/render proof only"
+    },
+    {
+      "path": "work/nightglass-record-proof/asset-scattered-beauty.png",
+      "pose": "scattered",
+      "width": 1000,
+      "height": 1000,
+      "sha256": "14c474b4ba2a1ce4d41bf57eb1ba28291773e897fcf7363e40bef490d1fcbf86",
+      "subject": "Reimported delivery GLB; studio geometry/render proof only"
+    },
+    {
+      "path": "work/nightglass-record-proof/asset-restored-detail.png",
+      "pose": "restored",
+      "width": 1000,
+      "height": 1000,
+      "sha256": "646ca1b8c7b51e1cdb8d24179af66ee269fecfbf2fb851ecf4d80ad14c1ec6b9",
+      "subject": "Reimported delivery GLB; studio geometry/render proof only"
+    }
+  ],
+  "limitations": [
+    "Geometry/render evidence only. No playable integration, GUI, game screenshot, or performance proof.",
+    "Primitive submission count is structural, per instance per pass; renderer passes/shadows may add submissions.",
+    "No runtime/source/assets.js registration, gameplay integration, browser operation, or production work performed.",
+    "Independent art review and same-view Dream Loop target/FPS remain integration-owner gates.",
+    "UVs provided for optional existing bump detail; no image textures generated or downloaded."
+  ],
+  "provenanceUpdatedUtc": "2026-09-21T19:28:19.954Z"
+}

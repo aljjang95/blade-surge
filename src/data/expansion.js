@@ -57,8 +57,8 @@ export const DUNGEONS = [
   }),
   dungeon('nightglass_observatory', '밤유리 관측소', 'frost', 3, 3, 'star_dust', '거꾸로 흐르는 별빛 너머로 사라진 귀환 좌표의 흔적이 남아 있습니다.', {
     art: ENCOUNTER_ART.boss_nightglass_archivist, accent: '#9ed5ff', subtitle: 'NIGHTGLASS OBSERVATORY',
-    objective: '모든 구역 정화 → 밤유리의 기록관 처치',
-    tactic: `서가의 적을 처치하고 모든 구역을 정화하세요. ${ENEMIES.nightglass_archivist.tactic}`,
+    objective: '기록 3장 순서대로 복원 → 모든 구역 정화 → 밤유리의 기록관 처치',
+    tactic: `적을 처치한 뒤 기록대 앞 빛 안에서 행동 없이 2초 유지하세요. 출발 좌표 1번 → 잃어버린 항로 2번 → 귀환 좌표 3번 순서입니다. 이탈·공격·회피·피격·일시정지하면 유지 시간이 초기화됩니다. ${ENEMIES.nightglass_archivist.tactic}`,
     bossEnemy: 'nightglass_archivist', bossHp: 17200, bossName: '밤유리의 기록관', rosterMode: 'nightglass',
     roster: { trash: ['nightglass_page', 'frost_mirror', 'ghost', 'skel_rogue', 'frost_mirror', 'golem_guard'], ranged: ['archive_scribe', 'ghost_skull', 'skel_mage'], elite: ['archive_warden', 'elite_yeti', 'elite_golem'] },
   }),

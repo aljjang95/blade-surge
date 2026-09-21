@@ -66,6 +66,7 @@ export class Battle {
   async start(stage, heroId, heroState, equipBonus) {
     // 재도전/다음 층에서도 이전 액터·탐험 목표·시간 효과를 반드시 종료한다.
     this.stop(); this.autoTarget = null; this.timeCtl = new TimeCtl();
+    const startGeneration = this._startGeneration;
     this._contactAt = -Infinity; this._contactBudget = null;
     this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0; this.bossDefeated = false;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
@@ -85,18 +86,23 @@ export class Battle {
     this.visual = dungeonVisualFor(stage);
     this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
     await this.routeObjectives?.prepareView?.(this.scene);
+    if (this._startGeneration !== startGeneration) return;
     this.renderer.setBattleVisual?.(this.visual);
     this.roomsCleared = 0; this.bossFound = false;
 
     const gltf = await loadModel(def.model);
+    if (this._startGeneration !== startGeneration) return;
     this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], stage.party ? {} : this.app.eco.heroEquipInsts(heroId), heroState.level || 1, heroState.skillLoadout || [4, 5]);
     this.sp.configureSummons?.(equipBonus.summons || []);
     const sr = this.world.startRoom;
     this.player.pos.set(sr.x, 0, sr.z); this.player.yaw = 0;
     await this.fx.prepare(this.renderer.r, this.app.models, this.renderer.composer.readBuffer);
+    if (this._startGeneration !== startGeneration) return;
     this.drops.setup(this.app.models.dungeon);
     this.renderer.rig.mode = 'battle'; this.renderer.rig.target.copy(this.player.pos); this.renderer.rig.pos.copy(this.player.pos).add(this.renderer.rig.offset);
-    this.weaponsGltf = await loadModel('skel_weapons');
+    const weaponsGltf = await loadModel('skel_weapons');
+    if (this._startGeneration !== startGeneration) return;
+    this.weaponsGltf = weaponsGltf;
     this.ui.setupHud(def, this.player);
     this.ui.setupMinimap(this.world);
     this.active = true; this.input.enabled = true; this.input.clear();
@@ -124,7 +130,12 @@ export class Battle {
   applyConsumable(id) { return applyBattleConsumable(this, id); }
   canApplyConsumable(id) { return canApplyBattleConsumable(this, id); }
   updateExpedition(dt) {
-    if (this.routeObjectives) { this.routeObjectives.update(this, dt); return; }
+    if (this.routeObjectives) {
+      this.routeObjectives.update(this, dt);
+      // 기록 복원은 심층 보물 제단과 공존한다. 종문/냉각선의 대체 규칙은 유지한다.
+      if (!this.routeObjectives.coexistsAttunement) return;
+      if (this.routeObjectives.closed || !this.routeObjectives.holdingAllowed || this.world !== this.routeObjectives.world) return;
+    }
     if (this.bossDefeated || !this.player.alive) return;
     this.conquest?.update(this, dt);
     if (this.stage.expedition.kind === 'arena') {
@@ -133,11 +144,17 @@ export class Battle {
     }
     for (const room of this.world.rooms) {
       if (!room.attunementPending || room.attuned) continue;
+      if (this.routeObjectives && (!this.routeObjectives.allowsAttunement(room) || this.routeObjectives.combatPending(this, room))) {
+        room.attunementT = 0; continue;
+      }
       const inside = Math.hypot(this.player.pos.x - room.x, this.player.pos.z - room.z) <= 3;
       room.attunementT = inside ? room.attunementT + dt : 0;
       room.attunementFx = (room.attunementFx || 0) - dt;
       if (room.attunementFx <= 0) { room.attunementFx = 1.8; this.fx.castCircle(new THREE.Vector3(room.x,0,room.z), 0x87cbb0, { radius: 3, life: 2 }); }
-      if (room.attunementT >= 2) { room.attuned = true; room.attunementPending = false; this.conquest?.attune(room); this.markCleared(room); }
+      if (room.attunementT + 1e-9 >= 2) {
+        room.attuned = true; room.attunementPending = false; this.conquest?.attune(room); this.markCleared(room);
+        if (this.routeObjectives) { this.autoTarget = this.routeObjectives.autoRoom(); this.routeObjectives.refreshHint(this); }
+      }
     }
   }
 
@@ -296,11 +313,12 @@ export class Battle {
     if (room.cleared) return;
     // Do not begin a reinforcement wave while initial delayed spawns remain.
     if (this.routeObjectives?.combatPending(this, room)) return;
-    if (!this.routeObjectives && this.stage.expedition?.mechanics?.attunement && room.type === ROOM_TYPE.TREASURE && !room.attuned) {
+    if ((!this.routeObjectives || this.routeObjectives.allowsAttunement?.(room)) && this.stage.expedition?.mechanics?.attunement && room.type === ROOM_TYPE.TREASURE && !room.attuned) {
       if (!room.attunementPending) {
         room.attunementPending = true; room.attunementT = 0;
-        this.ui.toast(room.conquestLabel ? `${room.conquestLabel} 제단 · 중심에서 2초 공명 · ${this.conquest.hint()}` : this.stage.expedition.id === 'star_archive' ? '제단 중심의 빛 안에 2초 머물러 귀환 기록을 복원하세요.' : '제단 중심의 빛 안에 2초 머물러 유리 잎을 회수하세요.', 'gold');
+        this.ui.toast(room.conquestLabel ? `${room.conquestLabel} 제단 · 중심에서 2초 공명 · ${this.conquest.hint()}` : ['star_archive', 'nightglass_observatory'].includes(this.stage.expedition.id) ? '제단 중심의 빛 안에 2초 머물러 귀환 기록을 복원하세요.' : '제단 중심의 빛 안에 2초 머물러 유리 잎을 회수하세요.', 'gold');
         this.fx.castCircle(new THREE.Vector3(room.x, 0, room.z), 0x87cbb0, { radius: 3, life: 3 });
+        if (this.routeObjectives) this.autoTarget = this.routeObjectives.autoRoom();
       }
       return;
     }
@@ -397,7 +415,7 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this.routeObjectives?.stop(); this.routeObjectives = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
+  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.routeObjectives?.stop(); this.routeObjectives = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const runtimeType = !this.stage.expedition && type === this.stage.encounter?.enemyId && this.stage.dungeonBossId ? this.stage.dungeonBossId : type;
@@ -687,7 +705,9 @@ export class Battle {
     this.impactT = Math.max(0, this.impactT - dt);
     for (let i = this.timers.length - 1; i >= 0; i--) { const t = this.timers[i]; t.t -= dt; if (t.t <= 0) { this.timers.splice(i, 1); t.fn(); } }
     this.input.update();
+    this.routeObjectives?.observePlayer?.(this.player);
     if (this.active) this.player.handleInput(this.input, dt);
+    this.routeObjectives?.observePlayer?.(this.player);
     this.player.update(dt);
     if (this.stage.party) this.app.party.updateHostActors(dt);
     if (this.active && this.stage.expedition) this.updateExpedition(dt);
@@ -699,6 +719,7 @@ export class Battle {
     if (!this.stage.party && this.stage.expedition?.kind !== 'arena') this.app.companionAgent?.updateBattle(this, dt, realDt);
     if (alive > this.peakAlive) this.peakAlive = alive;   // 층 내 동시 생존 최대 (하네스 maxAliveSeen)
     this.updateProjectiles(dt);
+    this.routeObjectives?.observePlayer?.(this.player);
     for (let i = this.holes.length - 1; i >= 0; i--) { const h = this.holes[i]; h.t -= dt; this.vacuum(h.pos, 7, 1.1); if (h.t <= 0) this.holes.splice(i, 1); }
     if (this.sp) this.sp.update(dt);
     this.drops.update(dt);

@@ -14,7 +14,7 @@ const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   star_archive: { standard: [0, 0], deep: [2, 0] },
   bellfall_crypt: { standard: [3, 0], deep: [2, 2] },
   cinder_tide_lock: { standard: [2, 4], deep: [3, 4] },
-  nightglass_observatory: { standard: [0, 0], deep: [2, 0] },
+  nightglass_observatory: { standard: [3, 0], deep: [5, 0] },
   eclipse_hydra_vault: { standard: [0, 0], deep: [0, 4] },
   ashforge_catacomb: { standard: [0, 0], deep: [0, 4] },
   astral_leviathan_spire: { standard: [0, 0], deep: [2, 2] },
@@ -44,7 +44,8 @@ for (const [id, contract] of Object.entries(contracts)) {
       const treasure = world.rooms.filter(r => r.type === 'treasure').length;
       const elites = world.rooms.filter(r => r.type === 'elite').length;
       const { attunement, reinforcements } = stage.expedition.mechanics;
-      const holds = route ? route.gates.length : attunement ? treasure : 0;
+      const altarHolds = attunement && (!route || ('coexistAttunement' in route && route.coexistAttunement)) ? treasure : 0;
+      const holds = (route?.gates.length || 0) + altarHolds;
       expect([holds, elites * reinforcements]).toEqual(contract[depth]);
       expect(stage.objective).toBe(definition.objective);
       expect(stage.encounter.tactic).toBe(definition.tactic);
@@ -52,11 +53,16 @@ for (const [id, contract] of Object.entries(contracts)) {
 
       // Parse the numerical promises instead of snapshotting complete sentences.
       const altarCount = stage.objective.match(/보물방\s*(\d+)곳/);
-      expect(Number(altarCount?.[1] || 0)).toBe(route ? 0 : holds);
+      expect(Number(altarCount?.[1] || 0)).toBe(altarHolds);
       if (id === 'cinder_tide_lock') {
         expect(Number(stage.objective.match(/냉각 밸브\s*(\d+)개/)?.[1])).toBe(holds);
         expect(stage.encounter.tactic).toMatch(/1\.4초 예고/);
         expect(stage.encounter.tactic).toMatch(/청록 조작판.*2초 유지/);
+      } else if (id === 'nightglass_observatory') {
+        expect(Number(stage.objective.match(/기록\s*(\d+)장/)?.[1])).toBe(3);
+        expect(stage.encounter.tactic).toMatch(/적.*처치.*빛 안.*2초 유지/);
+        expect(stage.encounter.tactic.match(/\d번/g)).toEqual(depth === 'deep' ? ['3번', '2번', '1번'] : ['1번', '2번', '3번']);
+        if (depth === 'deep') expect(stage.objective).toMatch(/역순.*보물방 2곳/);
       } else if (holds) {
         expect(stage.encounter.tactic).toMatch(/적.*처치.*중심.*2초.*공명/);
         if (!route) expect(stage.objective).toMatch(/2초\s*공명/);
@@ -71,7 +77,9 @@ for (const [id, contract] of Object.entries(contracts)) {
       expect(stage.objective).toMatch(/모든 구역.*정화/);
       expect(stage.objective).toMatch(/처치|쓰러뜨리/);
       for (const copy of [definition.objective, definition.tactic, stage.objective, stage.encounter.tactic]) {
-        expect(id === 'cinder_tide_lock' ? copy.replaceAll('밸브', '') : copy).not.toMatch(unsupportedInstructions);
+        const checked = id === 'cinder_tide_lock' ? copy.replaceAll('밸브', '')
+          : id === 'nightglass_observatory' ? copy.replace(/기록\s*3장/g, '') : copy;
+        expect(checked).not.toMatch(unsupportedInstructions);
       }
 
       const enemy = (ENEMIES as Record<string, any>)[stage.encounter.enemyId];

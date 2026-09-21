@@ -56,6 +56,7 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
           <div className="exp-result-heading"><h2>{result.win?'원정 승리':'원정 패배'}</h2><p className="exp-result-route">{result.name}</p><small>{result.kind==='arena'?'결투장':result.depth==='deep'?'심층 원정':'기본 원정'}{result.riftId?' · 균열':''}{result.conquestId?' · 전술 공략':''}</small></div>
           <div className="exp-outcome-stats"><span><b>{result.kills}</b>처치</span><span><b>{result.combo}</b>최대 콤보</span><span><b>{Math.floor(result.time)}초</b>전투 시간</span></div>
         </div>
+        {result.routeObjective?.pages && <p aria-label="기록 복원 결과">기록 복원 {result.routeObjective.progress}/{result.routeObjective.target} · {result.routeObjective.pages.map(page=>page.label).join(' → ') || '복원한 기록 없음'}</p>}
         <div className="exp-result-save" data-save={result.saveError?'error':'saved'} role={result.saveError?'alert':'status'}>
           {result.saveError?<><div><strong>정산 저장 실패</strong><p>저장 공간을 확인한 뒤 다시 저장해 주세요. 저장 전에는 이동할 수 없습니다.</p></div><button ref={focusRef} className="exp-primary" onClick={retrySave}>정산 다시 저장</button></>:<p>{result.win?'정산 저장 완료 · 보상을 보관했습니다.':'결과 저장 완료 · 다시 도전할 수 있습니다.'}</p>}
         </div>
@@ -203,7 +204,7 @@ export class ExpeditionUI {
     const r=b.result;if(!r)return;
     if(!r.expeditionReceipt?.ok){r.expeditionReceipt=this.app.expedition.settle(this.app.expeditionTicket,{win,conquest:r.conquest,kills:b.kills,treasureRooms:r.treasureRooms,fieldRewards:{fieldGold:b.drops.gold,fieldStones:b.drops.stones,fieldStones2:b.drops.stones2,fieldStones3:b.drops.stones3,fieldFragments:b.drops.fragments},fieldLoot:b.drops.loot});if(r.expeditionReceipt.ok)this.app.expeditionTicket=null;}
     this.app.ui.showHud(false);this.app.ui.show(this.app.ui.el.pause,false);this.app.ui.closeModal();
-    this.result={win,kind:b.stage.expedition.kind,id:b.stage.expedition.id,depth:b.stage.expedition.depth||'standard',conquestId:b.stage.expedition.conquestId||null,conquest:r.conquest,riftId:b.stage.riftId||null,name:b.stage.title||b.stage.name,kills:b.kills,combo:b.maxCombo,time:b.elapsed,rewards:r.expeditionReceipt.rewards||{},saveError:!r.expeditionReceipt.ok?r.expeditionReceipt.error:null};
+    this.result={win,kind:b.stage.expedition.kind,id:b.stage.expedition.id,depth:b.stage.expedition.depth||'standard',conquestId:b.stage.expedition.conquestId||null,conquest:r.conquest,routeObjective:r.routeObjective,riftId:b.stage.riftId||null,name:b.stage.title||b.stage.name,kills:b.kills,combo:b.maxCombo,time:b.elapsed,rewards:r.expeditionReceipt.rewards||{},saveError:!r.expeditionReceipt.ok?r.expeditionReceipt.error:null};
     this.open('dungeons');audio.play(win?'jingle_win1':'ui_error',{vol:.5});
   }
 }

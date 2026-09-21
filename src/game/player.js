@@ -374,6 +374,7 @@ export class Player extends Actor {
     red = this.game.absorbDamage?.(red) ?? red;
     if (red <= 0) { this.game.fx.damage(this.pos,0,{text:'보호막'}); return false; }
     this.hp -= red;
+    this.game.routeObjectives?.interrupt();
     this.flash(0xff4040, 0.15);
     this.game.fx.damage(this.pos, red, { kind: 'self' });
     this.game.fx.burst(this.pos.clone().setY(1.2), 0xff5a5a, { n: 8, speed: 5, size: 0.3 });

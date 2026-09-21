@@ -36,7 +36,8 @@ export const MONSTER_MODELS = [
 ];
 export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, ...Object.keys(ENCOUNTER_MODELS), 'dungeon', 'tllDungeonLandmarks', 'skel_weapons'];
 const SPECIAL_MODELS = Object.freeze({ tllDungeonLandmarks: '/models/tll/dungeons/dungeon-landmarks-v1.glb',
-  tllCoolingValve: '/models/tll/props/cooling-valve-v1.glb' });
+  tllCoolingValve: '/models/tll/props/cooling-valve-v1.glb',
+  tllNightglassRecord: '/models/tll/props/nightglass-record-v1.glb' });
 
 /** @param {string} name @param {ModelContract|null} contract */
 export async function loadModel(name, contract = null) {
@@ -65,7 +66,7 @@ export async function loadModel(name, contract = null) {
       });
       assembleHeroIdentity(gltf, authored, name, style);
     }
-    if (name === 'tllCoolingValve') gltf.scene.traverse(o => {
+    if (name === 'tllCoolingValve' || name === 'tllNightglassRecord') gltf.scene.traverse(o => {
       if (o.isMesh) for (const m of materialsOf(o)) {
         m.userData.tllAuthored = true;
         if (/iron|brass/i.test(m.name)) {

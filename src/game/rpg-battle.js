@@ -47,7 +47,12 @@ export class Battle extends BaseBattle {
   async start(...args) {
     const [, heroId, hero] = args;
     const growthStart = hero ? Object.freeze({ heroId, level: hero.level, exp: hero.exp }) : null;
-    await super.start(...args);
+    const pendingStart = super.start(...args);
+    const generation = this._startGeneration;
+    await pendingStart;
+    // A cancelled model load may finish after a newer run is already fighting.
+    // Do not replace that run's XP ledger or growth snapshot from the old call.
+    if (generation !== this._startGeneration) return;
     this.growthStart = growthStart;
     this.timeCtl = new ImpactClock(); this.killLedger = new KillLedger();
     this.combatXp = 0; this.saveT = 0; this.viewT = 0; this.lastTarget = null;
