@@ -79,7 +79,7 @@ export class Enemy extends Actor {
   }
   /** 몹몰이: 중심으로 끌어당김 */
   pull(cx, cz, force) { const dx = cx - this.pos.x, dz = cz - this.pos.z; const d = Math.hypot(dx, dz) || 1; if (d < 0.8) return; const f = force * (this.isBoss ? 0.15 : this.isElite ? 0.5 : 1); this.kb.x += dx / d * f; this.kb.z += dz / d * f; }
-  hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false } = {}) {
+  hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false } = {}) {
     if (!this.alive || this.spawning) return 0;
     if (this.def.dodge && Math.random() < this.def.dodge && this.state === 'chase' && !this.stun) {
       this.play(this.A('dodge'), { once: true, fade: 0.05, speed: 1.5 }); this.state = 'dodge'; this.stateT = 0; this.kb.set(-dirx, 0, -dirz).normalize().multiplyScalar(-8);
@@ -109,7 +109,9 @@ export class Enemy extends Actor {
     if (poison) { this.poison = 4; }
     const staggerOK = (!this.isBoss || crit || kb >= 6) && (!this.isElite || crit || kb >= 4); const warrior = this.def.armor && !crit && kb < 4;
     if (staggerOK && !warrior && this.state !== 'dead') {
-      if (this.state !== 'attack' || kb >= 4) { this.signatures?.clear(); this.mobRole?.clear(); this.state = 'hurt'; this.stateT = 0; this.stagger = 0.22 + Math.min(0.4, kb * 0.03); this.play(this.A('hit'), { once: true, fade: 0.04, speed: 1.8 }); this.telegraph = 0; this.attackDone = false; }
+      // 일반 몹은 수동 기본 공격의 접촉에서 공격을 끊는다. 보스/엘리트의
+      // 슈퍼아머는 유지해 강적과 잡몹의 타격 언어를 구분한다.
+      if (this.state !== 'attack' || kb >= 4 || (hitReact && !this.isBoss && !this.isElite)) { this.signatures?.clear(); this.mobRole?.clear(); this.state = 'hurt'; this.stateT = 0; this.stagger = 0.22 + Math.min(0.4, kb * 0.03); this.play(this.A('hit'), { once: true, fade: 0.04, speed: 1.8 }); this.telegraph = 0; this.attackDone = false; }
     }
     if (this.hp <= 0) { this.hp = 0; this.kill(dirx, dirz, kb); }
     return dmg;

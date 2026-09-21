@@ -9,6 +9,9 @@ import { CONTROL_ULT_GAIN, ultimateLockDuration } from './control-rewards.js';
 import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC } from './progression.js';
 
 const _v = new THREE.Vector3();
+const ATTACK_INPUT_BUFFER_SEC = 0.14;
+const ATTACK_CANCEL_EARLY = 0.16;
+const ATTACK_CANCEL_RECOVERY = 0.12;
 
 export class Player extends Actor {
   constructor(game, gltf, def, stats, skillLevels = [1, 1, 1, 1, 1, 1], equip = {}, heroLevel = 1, skillLoadout = [4, 5]) {
@@ -24,7 +27,7 @@ export class Player extends Actor {
     this.mats = [...dressedMaterials];
     this.auraT = 0;
     this.state = 'idle'; this.stateT = 0;
-    this.comboIdx = 0; this.comboQueued = false; this.hitDone = false; this.comboWindow = 0;
+    this.comboIdx = 0; this.comboQueued = false; this.attackBufferT = 0; this.hitDone = false; this.comboWindow = 0;
     this.cds = def.skills.map(() => 0); this.ult = 0; this.ultMax = 100; this.ultGainLock = 0;
     this.maxMp = MP_BASE; this.mp = MP_BASE; this.mpRegen = MP_REGEN_PER_SEC; this.dodgeCd = 0;
     this.dr = 0; this.drT = 0; this.sanctum = null;   // 성역: 피해 감소
@@ -65,14 +68,17 @@ export class Player extends Actor {
     const wantMove = this.moveDir.lengthSq() > 0.01;
 
     // 회피
-    if (input.consume('dodge') && this.dodgeCd <= 0 && this.state !== 'dodge' && this.state !== 'ult' && this.stun <= 0) return this.dodge(wantMove ? this.moveDir : null);
+    if (input.consume('dodge') && this.dodgeCd <= 0 && this.state !== 'dodge' && this.state !== 'ult' && this.stun <= 0 && this.canDodgeCancel()) return this.dodge(wantMove ? this.moveDir : null);
     // 전투 입력은 0~3 고정 + Q/E 장착 슬롯 4/5만 노출한다.
     for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot)) return; }
-    // 공격
-    // 선입력: 콤보 중 누르거나 '누르고 있으면' 다음 타 예약. 이전엔 hitDone 뒤의 '탭'만 받아서 — 버튼을 누르고 있는 사람은 영원히 1타만 반복했다 (끊기는 느낌의 진범)
-    if (input.consume('attack') || input.attackHeld) {
+    // 공격: 입력 버퍼는 버튼을 누른 순간의 의도를 보존하지만, 버튼 홀드 자체는
+    // 다음 콤보를 예약하지 않는다. 수동 전투에서 타이밍을 직접 결정하게 하는 경계다.
+    if (input.consume('attack')) {
+      this.attackBufferT = ATTACK_INPUT_BUFFER_SEC;
       if (this.state === 'attack') this.comboQueued = true;
-      else if (this.state === 'idle' || this.state === 'move') this.startCombo(0);
+    }
+    if ((this.state === 'idle' || this.state === 'move') && this.attackBufferT > 0) {
+      this.attackBufferT = 0; this.startCombo(0);
     }
     // 이동
     if (this.state === 'idle' || this.state === 'move') {
@@ -113,14 +119,17 @@ export class Player extends Actor {
     const c = this.def.combo[idx]; if (!c) return;
     this.state = 'attack'; this.stateT = 0; this.comboIdx = idx; this.comboQueued = false; this.hitDone = false; this.current = c;
     this.vel.set(0, 0, 0);
-    const target = this.autoAim(this.def.ranged ? 12 : 7);
+    // AUTO만 적을 향해 몸을 돌린다. 수동 공격은 현재 바라보는 방향을
+    // 그대로 사용해야 거리와 방향을 읽고 맞출 수 있다.
+    const target = this.auto ? this.autoAim(this.def.ranged ? 12 : 7) : null;
     const dur = c.dur / (this.buffs.atkSpd * (this.stormT > 0 ? 1.4 : 1));
     this.playTimed(c.anim, dur, { fade: 0.06 });
     this.ticksLeft = c.ticks ? c.ticks - 1 : 0; this.nextTick = 0; this.through = null;
     const f = this.forward(_v);
     if (c.move === 'lunge') {
-      // 돌진: 대상까지(없으면 절반) 타격 시점에 도착. through 면 적을 뚫고 지나가 뒤에서 벤다 (도적)
-      const dist = target ? Math.max(1, Math.min(c.lunge, this.distTo(target) - (c.through ? -1.6 : 1.3))) : c.lunge * 0.5;
+      // 돌진: AUTO는 대상 거리까지, 수동은 현재 방향으로 고정 거리만 이동한다.
+      // through 면 적을 뚫고 지나가 뒤에서 벤다 (도적)
+      const dist = target ? Math.max(1, Math.min(c.lunge, this.distTo(target) - (c.through ? -1.6 : 1.3))) : c.lunge;
       this.vel.copy(f).multiplyScalar(dist / Math.max(0.12, c.hitAt * dur)); this.invuln = Math.max(this.invuln, c.through ? c.hitAt * dur + 0.1 : 0);
       this.game.fx.dust(this.pos, { n: 5, size: 1 }); if (c.through) this.ghostT = 0;
     } else if (c.move === 'slam') {
@@ -130,7 +139,7 @@ export class Player extends Actor {
     } else if (c.move === 'spin') {
       this.game.vacuum(this.pos.clone(), c.range + 1.5, 7);   // 회전베기: 먼저 끌어모은다
       this.vel.copy(f).multiplyScalar(0.8);
-    } else if (!this.def.ranged) { const d = target ? Math.max(0, Math.min(2.2, this.distTo(target) - 1.6)) : 0.6; this.vel.copy(f).multiplyScalar(d / Math.max(0.15, c.hitAt * dur)); }   // 근접이면 살짝 전진(러쉬감)
+    } else if (!this.def.ranged && this.auto) { const d = target ? Math.max(0, Math.min(2.2, this.distTo(target) - 1.6)) : 0.6; this.vel.copy(f).multiplyScalar(d / Math.max(0.15, c.hitAt * dur)); }   // AUTO만 적에게 붙는다
     audio.whoosh({ vol: 0.35 + idx * 0.08, pitch: this.def.ranged ? 1.6 : (c.move === 'slam' ? 0.6 : 1 + idx * 0.12), dur: c.move === 'spin' ? 0.4 : 0.22 });
     // 기합 — 던파식. 마무리 타는 항상, 일반 타는 확률로 (매 타마다 지르면 시끄럽다)
     const V = `hero_${this.def.voiceId || this.def.id}_`;
@@ -195,7 +204,7 @@ export class Player extends Actor {
       return;
     }
     if (c.move === 'spin') {   // 회전베기: 360°, ticks 연타
-      const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, 360, dmg, { kb: c.kb, kind: 'slash', quietStop: tick > 0, source: this, basic: true });
+      const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, 360, dmg, { kb: c.kb, kind: 'slash', quietStop: tick > 0, source: this, basic: true, precision: !this.auto, hitReact: true });
       if (tick === 0) this.game.sp?.onComboHit(hits);
       this.game.fx.slashArc(this.pos, this.yaw + tick * 2.1, this.def.color, { radius: c.range + 0.3, arc: 300, height: 1.1, life: 0.22, thickness: 0.6 });
       this.game.fx.dust(this.pos, { n: 4, size: 1.2 });
@@ -211,7 +220,7 @@ export class Player extends Actor {
       this.game.fx.flash(spawn, this.def.color, { size: 1.2, life: 0.15 });
       this.game.sp?.onComboHit(1);
     } else {
-      const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, c.arc, dmg, { kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'slash', finisher: c.finisher, comboToken, source: this, basic: true });
+      const hits = this.game.hitArea(this, this.pos, this.yaw, c.range, c.arc, dmg, { kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'slash', finisher: c.finisher, comboToken, source: this, basic: true, precision: !this.auto, hitReact: true });
       this.game.sp?.onComboHit(hits);
       if (c.through) { this.game.fx.ghost(this.model, this.def.color, { life: 0.3, opacity: 0.5 }); this.game.fx.slashArc(this.pos, this.yaw, this.def.color, { radius: c.range, arc: 300, height: 1, life: 0.2 }); }   // 관통: 지나온 자리에 잔상
       if (gravity && !c.finisher) this.game.vacuum(this.pos.clone().addScaledVector(f, 1.5), 6, 5);   // 중력 2세트: 모든 타격이 끌어당긴다
@@ -230,6 +239,16 @@ export class Player extends Actor {
       if (!hits) audio.whoosh({ vol: 0.15, pitch: 1.8, dur: 0.12 });
     }
   }
+  canDodgeCancel() {
+    if (this.state !== 'attack') return true;
+    const c = this.current;
+    if (!c) return false;
+    const dur = c.dur / ((this.buffs?.atkSpd || 1) * (this.stormT > 0 ? 1.4 : 1));
+    const t = this.stateT / Math.max(0.01, dur);
+    if (!this.hitDone) return t >= ATTACK_CANCEL_EARLY && t < c.hitAt - 0.04;
+    return t >= c.hitAt + ATTACK_CANCEL_RECOVERY && t < Math.min(0.92, c.hitAt + 0.26);
+  }
+
   // ---------------- 회피 ----------------
   dodge(dir) {
     // Evade without throwing away the earned combo. A cancelled windup repeats
@@ -268,7 +287,7 @@ export class Player extends Actor {
     if (mpCost > currentMp) { this.game.ui.toast(`MP 부족 · ${mpCost} 필요`, 'red'); audio.play('ui_error', { vol: 0.5 }); return false; }
     if (sk.ult) { this.ult = 0; this.ultGainLock = ultimateLockDuration(impl); this.state = 'ult'; } else { this.mp = currentMp - mpCost; this.cds[i] = this.game.skillCooldown?.(sk.cd) ?? sk.cd; this.state = 'skill'; }
     this.stateT = 0; this.vel.set(0, 0, 0);
-    this.autoAim(12);
+    if (this.auto) this.autoAim(12);
     const lvMult = 1 + (this.skillLevels[i] - 1) * 0.12;
     this.skillCtx = { sk, impl, t: 0, cast: false, done: false, dmg: this.atk * sk.dmg * lvMult, level: this.skillLevels[i], data: {} };
     if (sk.anim) this.playTimed(sk.anim, impl.dur || 0.8, { fade: 0.06 });
@@ -408,6 +427,7 @@ export class Player extends Actor {
   // ---------------- 업데이트 ----------------
   update(dt) {
     super.update(dt);
+    this.attackBufferT = Math.max(0, (this.attackBufferT || 0) - dt);
     this.beacon.update(this.alive, this.yaw, { state: this.state, color: this.def.accent || this.def.color, reduced: !!this.game.app?.reducedMotion?.matches });
     this.guardT = Math.max(0, (this.guardT || 0) - dt);
     this.tonicAtkT = Math.max(0, (this.tonicAtkT || 0) - dt);
@@ -438,11 +458,11 @@ export class Player extends Actor {
       // 콤보 연계 창: 타격 직후부터 (0.18 → 0.1: 타 사이 공백이 '끊김'으로 읽혔다). 연타 중엔 마지막 tick 뒤
       const chainAt = c.ticks ? this.nextTick - 0.02 : c.hitAt + 0.1;
       if (this.hitDone && this.comboQueued && !this.ticksLeft && t >= chainAt) { const next = this.comboIdx + 1; if (next < this.def.combo.length) { this.startCombo(next); return; } else if (t >= c.hitAt + 0.3) { this.startCombo(0); return; } }   // 마무리 뒤에도 idle 을 거치지 않고 1타로
-      if (t >= 1) { this.stopTrail(); this.state = 'idle'; this.play('Idle', { fade: 0.2 }); this.vel.set(0, 0, 0); if (this.comboQueued || this.game.input.attackHeld) this.startCombo(0); }
+      if (t >= 1) { this.stopTrail(); this.state = 'idle'; this.play('Idle', { fade: 0.2 }); this.vel.set(0, 0, 0); if (this.comboQueued) this.startCombo(0); }
     } else if (this.state === 'dodge') {
       this.ghostT += dt; if (this.ghostT > 0.05) { this.ghostT = 0; this.game.fx.ghost(this.model, this.def.color, { life: 0.3, opacity: 0.5 }); }
       this.vel.multiplyScalar(Math.pow(0.02, dt));
-      if (this.stateT > 0.32) { this.state = 'idle'; this.vel.set(0, 0, 0); this.play('Idle', { fade: 0.15 }); }
+      if (this.stateT > 0.32) { this.state = 'idle'; this.vel.set(0, 0, 0); this.play('Idle', { fade: 0.15 }); if (this.attackBufferT > 0) { this.attackBufferT = 0; this.startCombo(0); } }
     } else if (this.state === 'hurt') {
       this.vel.set(0, 0, 0);
       if (this.stateT > 0.32) { this.state = 'idle'; this.play('Idle', { fade: 0.15 }); }

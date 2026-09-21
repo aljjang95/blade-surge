@@ -509,15 +509,16 @@ export class Battle {
   // ---------------- 히트 판정 ----------------
   hitArea(src, pos, yaw, range, arcDeg, dmg, opts = {}) {
     const half = THREE.MathUtils.degToRad(arcDeg) / 2; let n = 0;
-    const r2 = (range + 1.5) * (range + 1.5);
+    const reachPad = opts.precision ? 0.35 : 1.5;
+    const r2 = (range + reachPad) * (range + reachPad);
     for (const e of this.enemies) {
       if (!e.alive || e.spawning) continue;
       const dx = e.pos.x - pos.x, dz = e.pos.z - pos.z;
       if (dx * dx + dz * dz > r2) continue;
-      const d = Math.hypot(dx, dz) - e.radius * 0.6;
+      const d = Math.hypot(dx, dz) - e.radius * (opts.precision ? 0.35 : 0.6);
       if (d > range) continue;
       const ang = Math.atan2(dx, dz); let diff = Math.abs(ang - yaw); diff = Math.min(diff, Math.PI * 2 - diff);
-      if (diff > half && d > 0.9) continue;
+      if (diff > half && (opts.precision || d > 0.9)) continue;
       this.damageEnemy(e, dmg, { ...opts, dirx: dx, dirz: dz }); n++;
       if (n >= 24) break;
     }
@@ -574,6 +575,7 @@ export class Battle {
       if (budget.emit && contact.particles) this.fx.directional(hitPos, _v.set(dirx, 0, dirz).normalize(), color, { n: contact.particles, speed: contact.heavy ? 9 : 6 });
       audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy || crit || !!e.isBoss, finisher: !!opts.finisher, boss: !!e.isBoss });
       if (contact.stop) this.timeCtl.hitstop(contact.stop);
+      if (contact.tier !== 'light' || crit) { this.renderer?.shake?.(contact.tier === 'finisher' ? 0.16 : 0.055); this.renderer?.punch?.(contact.tier === 'finisher' ? 0.12 : 0.035); }
       if (p === this.player && !p.auto && contact.haptic) audio.vibe(contact.haptic);
       if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);
     }

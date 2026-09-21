@@ -155,6 +155,8 @@ export class Battle extends BaseBattle {
       if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);
     }
     if (contact.stop>0) this.timeCtl.hitstop(contact.stop);
-    // Directional body recoil carries ordinary hits. No added random camera shake.
+    if (feedback.heavy || crit) { this.renderer?.shake?.(opts.finisher ? 0.16 : 0.055); this.renderer?.punch?.(opts.finisher ? 0.12 : 0.035); }
+    // Directional body recoil carries ordinary hits; only heavy/critical contacts
+    // add a bounded camera response so light hits keep the view readable.
   }
 }
