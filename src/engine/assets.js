@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { preloadEquipmentAppearances, removeEquipmentAppearance } from './equipment-appearance.js';
 import { preloadArmory } from './armory-assets.js';
 import { finishOathKnightMaterial } from './hero-surface-finish.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -142,8 +143,7 @@ export function mergeSkinned(scene, animations = []) {
 }
 
 export async function preloadAll(onProgress) {
-  await preloadSurfaceTextures();
-  await preloadArmory();
+  await Promise.all([preloadSurfaceTextures(), preloadArmory(), preloadEquipmentAppearances()]);
   let done = 0;
   await Promise.all(MODEL_LIST.map(async (n) => { await loadModel(n); done++; onProgress?.(done / MODEL_LIST.length); }));
 }
@@ -183,6 +183,7 @@ export function spawnCharacter(gltf) {
 
 /** Release instance-owned skin textures/materials; preserve shared source geometry. */
 export function disposeCharacter(root, mixer) {
+  removeEquipmentAppearance(root);
   root.removeFromParent(); mixer.stopAllAction(); mixer.uncacheRoot(mixer.getRoot());
   const skeletons = new Set(), materials = new Set();
   root.traverse((o) => {

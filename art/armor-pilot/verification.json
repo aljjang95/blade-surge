@@ -1,0 +1,68 @@
+﻿{
+    "schema":  "tll.armor-pilot-evidence/v1",
+    "status":  "partial-verified-runtime-write-blocked",
+    "original_goal":  "Five visible armor grades, reusable production, real equip and animation validation",
+    "source_sha256":  "527f2ae6542ffabd9081de1c4f5b035b7b7840dd145de42e44d618c2e018c4bc",
+    "source_unchanged":  true,
+    "variants":  5,
+    "batch_seconds":  [
+                          1.702,
+                          1.069
+                      ],
+    "identical_replay_outputs":  5,
+    "pose_tests":  7,
+    "pose_samples":  1020,
+    "required_clips_per_variant":  17,
+    "phases_per_clip":  12,
+    "vertex_sampling":  "all garment vertices in each sampled pose",
+    "retained_original_clips":  40,
+    "gltf":  [
+                 {
+                     "file":  "a_leather.glb",
+                     "bytes":  574080,
+                     "errors":  0,
+                     "warnings":  0,
+                     "infos":  28
+                 },
+                 {
+                     "file":  "a_bronze.glb",
+                     "bytes":  906800,
+                     "errors":  0,
+                     "warnings":  0,
+                     "infos":  48
+                 },
+                 {
+                     "file":  "a_knight.glb",
+                     "bytes":  1163716,
+                     "errors":  0,
+                     "warnings":  0,
+                     "infos":  63
+                 },
+                 {
+                     "file":  "a_rime.glb",
+                     "bytes":  1947380,
+                     "errors":  0,
+                     "warnings":  16,
+                     "infos":  66
+                 },
+                 {
+                     "file":  "a_king.glb",
+                     "bytes":  1374148,
+                     "errors":  0,
+                     "warnings":  0,
+                     "infos":  91
+                 }
+             ],
+    "final_check_exit":  0,
+    "new_game_render_verified":  false,
+    "game_equip_integrated":  false,
+    "independent_review":  false,
+    "signed_proof":  false,
+    "production_changed":  false,
+    "blocked_operations":  [
+                               "write src/engine/equipment-appearance.js: security state could not be determined; 2 attempts",
+                               "write tools/art/render-armor-pilot.py: same tool error; 2 attempts"
+                           ],
+    "next_action":  "Resume material-preserving game equip integration through an authorized available write surface, then actual animation/render/lifecycle QA",
+    "created_utc":  "2026-09-20T04:52:17.4729568Z"
+}

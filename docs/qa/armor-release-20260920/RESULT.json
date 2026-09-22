@@ -1,0 +1,196 @@
+{
+  "schema": "tll.blade-surge-dogfood/v1",
+  "status": "qa-verified-deployment-blocked",
+  "createdAt": "2026-09-20T10:30:56.874377+00:00",
+  "request": "Deploy Blade Surge, dogfood it, and record an improvement/upgrade plan",
+  "application_head": "a050187ae232e915992f781c271fb1c8cf764f8b",
+  "deployed_version": {
+    "sha": "d50345c967d8da178a434e30d793994d440079f0",
+    "dirty": false,
+    "builtAt": "2026-09-17T08:57:09.728Z",
+    "pwaRelease": "3223e2812d35bfe03f65"
+  },
+  "deployment_executed": false,
+  "main_merged": false,
+  "new_version_postdeploy_qa": false,
+  "candidate_qa": {
+    "checks": 33,
+    "status": "pass",
+    "gpu": {
+      "api": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 (0x00002484) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "boot_seconds": 2.032,
+    "fallback": {
+      "pass": true,
+      "state": {
+        "equipped": 1,
+        "error": "a_rime",
+        "appearance": null,
+        "baseVisible": true,
+        "face": true,
+        "inventory": [
+          "a_rime"
+        ]
+      },
+      "notice": true,
+      "errors": []
+    },
+    "resource_cycles": [
+      {
+        "geometries": 67,
+        "textures": 85,
+        "programs": 113
+      },
+      {
+        "geometries": 67,
+        "textures": 85,
+        "programs": 113
+      },
+      {
+        "geometries": 67,
+        "textures": 85,
+        "programs": 113
+      },
+      {
+        "geometries": 67,
+        "textures": 85,
+        "programs": 113
+      },
+      {
+        "geometries": 67,
+        "textures": 85,
+        "programs": 113
+      }
+    ],
+    "uncaught_errors": [],
+    "intentional_font_console_errors": [
+      "Failed to load resource: net::ERR_FAILED",
+      "Failed to load resource: net::ERR_FAILED"
+    ]
+  },
+  "existing_live_qa": {
+    "checks": 16,
+    "status": "pass",
+    "gpu": {
+      "api": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+      "renderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 (0x00002484) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+    },
+    "boot_seconds": 7.223,
+    "combat": {
+      "active": false,
+      "won": true,
+      "elapsed": 175.237333333364,
+      "kills": 192,
+      "drops": 37,
+      "rooms": 12,
+      "totalRooms": 12,
+      "peakAlive": 23,
+      "alive": 0
+    },
+    "progress": {
+      "stage": 2,
+      "level": 5,
+      "items": 43
+    },
+    "uncaught_errors": [],
+    "http_errors": [],
+    "blocked_writes": [],
+    "assets": [
+      {
+        "file": "manifest.webmanifest",
+        "sha256": "9b217ccf30207af22100560be074ff54247c165770761a33748f4d4d9160c0e8",
+        "bytes": 603
+      },
+      {
+        "file": "sw.js",
+        "sha256": "932b524140e0be9653c016e9ef2df6e1b591f9ec0f95166aad0bfab6ad120a53",
+        "bytes": 3634
+      },
+      {
+        "file": "assets/index-COSpg59h.js",
+        "sha256": "e17858eb0a586ee2cbacd70387a5728542ecd99a97e5eb5af836abac20f889a6",
+        "bytes": 1254031
+      },
+      {
+        "file": "assets/three-BemGxdX7.js",
+        "sha256": "7faf036b6ec5364e86d29a8db7476360da1bcd3e7ee52606659258d527d5af67",
+        "bytes": 688334
+      },
+      {
+        "file": "assets/index-LPyVpj2v.css",
+        "sha256": "bf49da11404fcc1881bfbeed730676019a623a27a2ab0c305f934e8ad7323037",
+        "bytes": 189515
+      }
+    ]
+  },
+  "review_attempts": [
+    {
+      "status": "timeout",
+      "seconds": 180.6,
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "status": "timeout",
+      "seconds": 120.7,
+      "model": "gpt-6-astra",
+      "effort": "high",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "independent_review_verdict": null,
+  "signed_proof": false,
+  "authority_restored_sha256": "86b358d66325020b20abd1bd9143f25da9a57da20918443f0439e1ed1ccfc69b",
+  "portable_validation_exit": 0,
+  "remaining_blockers": [
+    "WSL Ubuntu CreateVm/HCS/ERROR_FILE_NOT_FOUND",
+    "trusted review/merge launcher absent",
+    "independent review and signed release Proof unavailable"
+  ],
+  "physical_phone_tested": false,
+  "prices_economy_payments_changed": false,
+  "evidence": [
+    {
+      "file": "work\\armor-dogfood\\2026-09-20T10-15-12-254Z\\report.json",
+      "sha256": "eac2eab71b505aac59c84a746bc6e5b3fb6ae5bcbc71d3cb957dc90300af8167"
+    },
+    {
+      "file": "work\\production-observation\\2026-09-20T10-17-37-410Z\\report.json",
+      "sha256": "8ec91cd251d9749517507ac488dc3eee7720fac19dfe66be241f1112521b0e1d"
+    }
+  ],
+  "screenshots": [
+    {
+      "file": "candidate-leather.png",
+      "sha256": "e9c56d374ff0f699b5fc363ec96deeade9eaf5aa3e28b757e2c265e938d71e47",
+      "source_sha256": "e9c56d374ff0f699b5fc363ec96deeade9eaf5aa3e28b757e2c265e938d71e47",
+      "modified": false
+    },
+    {
+      "file": "candidate-rime.png",
+      "sha256": "923907a61545a69589022a304b28eee644e067407787dda1aae175a0c8d2db20",
+      "source_sha256": "923907a61545a69589022a304b28eee644e067407787dda1aae175a0c8d2db20",
+      "modified": false
+    },
+    {
+      "file": "candidate-portrait.png",
+      "sha256": "c1d945eadd25335355a07af3b474ff542f246cd5881dd9aae6a1d77d402544c5",
+      "source_sha256": "c1d945eadd25335355a07af3b474ff542f246cd5881dd9aae6a1d77d402544c5",
+      "modified": false
+    },
+    {
+      "file": "candidate-fallback.png",
+      "sha256": "7b488cd4bcd39a764c11483a7992afc0fbb4886173fb46021656a93911535dba",
+      "source_sha256": "7b488cd4bcd39a764c11483a7992afc0fbb4886173fb46021656a93911535dba",
+      "modified": false
+    },
+    {
+      "file": "existing-live-victory.png",
+      "sha256": "93b603839706687beefe9de3fccc4994db58a07aadfe6008aa6cd77df846c708",
+      "source_sha256": "93b603839706687beefe9de3fccc4994db58a07aadfe6008aa6cd77df846c708",
+      "modified": false
+    }
+  ]
+}

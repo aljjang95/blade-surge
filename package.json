@@ -12,7 +12,9 @@
     "check": "bun run typecheck && bun test && bun run build",
     "preview": "vite preview --host",
     "deploy": "node tools/deploy.mjs",
-    "metrics": "node tools/metrics.mjs"
+    "metrics": "node tools/metrics.mjs",
+    "studio": "node tools/studio/blender-pipeline.mjs",
+    "studio:test": "node tools/studio/verify-adapter.mjs"
   },
   "dependencies": {
     "@capacitor/android": "8.5.1",
