@@ -1,0 +1,3 @@
+[submodule "dream-loop"]
+	path = .agents/skills/dream-loop
+	url = https://github.com/achimala/dream-loop.git

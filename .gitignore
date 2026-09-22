@@ -12,3 +12,6 @@ tools/voice/.fail.json
 
 # Local verification, downloaded originals and portable runtime
 work/
+
+# Dream Loop scratch captures; reviewed evidence belongs in docs/qa/.
+.dream-loop/

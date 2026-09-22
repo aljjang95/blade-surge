@@ -11,6 +11,7 @@ import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { displaySize, renderPixelRatio } from '../platform/mobile-display.js';
 import { rebindEnvironment } from './environment.js';
+import { bloomRenderSize, cameraBlend } from './render-math.js';
 
 // 최종 합성 셰이더: 색수차 · 비네트 · 히트 플래시 · 방사형 블러(궁극기) · 색보정
 const FinalShader = {
@@ -142,7 +143,7 @@ export class Renderer {
     // 밉 체인을 다시 잡아버려서, resolution 을 아무리 낮춰도 아무 효과가 없다.
     // 블룸은 5단 밉 × (가로+세로 블러) = 10회 풀스크린 패스라 해상도 제곱으로 비싸진다.
     // composer.setSize 뒤에 setSize 를 다시 불러 덮어써야 실제로 낮아진다.
-    const bw = Math.min(320, Math.round(w / 3)), bh = Math.min(320, Math.round(h / 3));
+    const { width: bw, height: bh } = bloomRenderSize(w, h);
     this.bloom.resolution.set(bw, bh);
     this.bloom.setSize(bw, bh);
   }
@@ -154,7 +155,7 @@ export class Renderer {
   /** 프레임마다 목표 fov 로 보간 (배틀이 rig.fov 를 바꾼다) */
   _applyFov(realDt) {
     const want = this.rig.fov + (this._width < this._height ? 14 : 0);
-    if (Math.abs(this.camera.fov - want) > 0.05) { this.camera.fov += (want - this.camera.fov) * Math.min(1, realDt * 3); this.camera.updateProjectionMatrix(); }
+    if (Math.abs(this.camera.fov - want) > 0.05) { this.camera.fov += (want - this.camera.fov) * cameraBlend(realDt, 3); this.camera.updateProjectionMatrix(); }
   }
   // 호출부 호환 이름은 유지하되, 실제 동작은 노이즈 없는 단방향 임팩트다.
   shake(amount) { this.rig.trauma = Math.min(1, Math.max(this.rig.trauma, amount)); }
