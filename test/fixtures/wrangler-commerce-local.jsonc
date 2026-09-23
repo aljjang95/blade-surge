@@ -1,0 +1,18 @@
+{
+  // Local-only fixture. No production route, account, secret or remote D1 ID.
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "blade-commerce-local-only",
+  "main": "../../worker/index.ts",
+  "compatibility_date": "2026-09-07",
+  "d1_databases": [
+    {
+      "binding": "COMMERCE_DB",
+      "database_name": "blade-commerce-local-only",
+      "database_id": "00000000-0000-4000-8000-000000000001"
+    }
+  ],
+  "vars": {
+    "APP_ORIGIN": "http://127.0.0.1:8789",
+    "COMMERCE_IDENTITY_ENABLED": "false"
+  }
+}
