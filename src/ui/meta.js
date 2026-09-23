@@ -442,7 +442,9 @@ export class Meta {
   async buyPass() {
     if (this.eco.s.pass.premium) return;
     const sku = { id: 'pass', name: '시즌 패스 프리미엄', priceLabel: '₩9,900', icon: '/img/icon_pass.webp', desc: '프리미엄 보상 30단계 해금 · SSR 확정권 3장 포함' };
-    const ok = await this.ui.paySheet(sku); if (!ok) return; this.eco.buyPass(); this.ui.purchaseDone(sku, [{ k: 'gems', n: 0 }].filter((x) => x.n)); this.renderPass();
+    const ok = await this.ui.paySheet(sku); if (!ok) return;
+    const granted = this.eco.buyPass(); if (!granted?.ok) return;
+    this.ui.purchaseDone(sku, [{ k: 'gems', n: 0 }].filter((x) => x.n)); this.renderPass();
   }
 
   // ================= 출석 / 우편 / 임무 / 설정 =================

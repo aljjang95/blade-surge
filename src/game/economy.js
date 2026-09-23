@@ -258,26 +258,23 @@ export class Economy {
     if (rar === 'SR') { if (Math.random() < 0.5) { const hs = heroesOf('SR'); const id = hs[Math.floor(Math.random() * hs.length)]; const g = this.grantHero(id); return { type: 'hero', rar, id, dup: g.dup, name: HEROES[id].name, img: HEROES[id].portrait }; } return { type: 'item', rar, item: this.addItem('SR') }; }
     return { type: 'item', rar: 'R', item: this.addItem('R') };
   }
-  // ---------- 상점 (목업 결제) ----------
+  // ---------- 상점 (유료 결제 미연결) ----------
   sku(id) { return SKUS.find((x) => x.id === id); }
   limitedLeft(sku) { if (!sku.limited) return 0; const end = this.s.limitedStart + sku.hours * 3600000; return Math.max(0, end - now()); }
   purchase(id) {
     const sku = this.sku(id); const s = this.s; if (!sku) return null;
-    if (sku.kind === 'gem') { if (s.gems < sku.price) return { ok: false, reason: 'gems' }; s.gems -= sku.price; const got = this.addRewards(sku.rewards); return { ok: true, got }; }
-    if (sku.once && s.purchases.includes(id)) return { ok: false, reason: 'once' };
-    // cash (목업): 첫 결제 2배 보너스
-    s.purchases.push(id); s.spentKRW += sku.price;
-    const vipBefore = s.vip; s.vip = s.spentKRW >= 300000 ? 5 : s.spentKRW >= 100000 ? 4 : s.spentKRW >= 50000 ? 3 : s.spentKRW >= 20000 ? 2 : s.spentKRW > 0 ? 1 : 0;
-    let got;
-    if (sku.gems) { const first = !s.firstPurchaseUsed[id]; s.firstPurchaseUsed[id] = true; got = this.addRewards({ gems: sku.gems + (first ? sku.bonus : Math.floor(sku.gems * 0.1)) }); got.first = first; }
-    else got = this.addRewards(sku.rewards);
-    this.emit(); return { ok: true, got, vipUp: s.vip > vipBefore ? s.vip : 0 };
+    // A client-side payment sheet cannot prove a charge. Cash grants require a server-owned ledger.
+    if (sku.kind !== 'gem') return { ok: false, reason: 'billing-unavailable' };
+    if (s.gems < sku.price) return { ok: false, reason: 'gems' };
+    s.gems -= sku.price;
+    const got = this.addRewards(sku.rewards);
+    return { ok: true, got };
   }
   claimMonthly() { const s = this.s; if (s.monthlyUntil < now()) return false; const day = Math.floor(now() / 86400000); if (s.monthlyClaimed === day) return false; s.monthlyClaimed = day; this.addRewards({ gems: 100 }); return true; }
   // ---------- 배틀패스 ----------
   get passLevel() { return Math.min(BATTLE_PASS.maxLevel, Math.floor(this.s.pass.xp / BATTLE_PASS.xpPerLevel) + 1); }
   addPassXp(xp) { const before = this.passLevel; this.s.pass.xp += xp; return this.passLevel - before; }
-  buyPass() { this.s.pass.premium = true; this.s.spentKRW += BATTLE_PASS.price; this.s.purchases.push('pass'); this.emit(); }
+  buyPass() { return { ok: false, reason: 'billing-unavailable' }; }
   claimPass(lv, prem) { const p = this.s.pass; const arr = prem ? p.claimedPrem : p.claimedFree; if (!Number.isInteger(lv) || !PASS_TRACK[lv - 1] || arr.includes(lv) || lv > this.passLevel || (prem && !p.premium)) return null; arr.push(lv); const r = PASS_TRACK[lv - 1][prem ? 'prem' : 'free']; return this.addRewards(r); }
   passClaimable() { const p = this.s.pass; let n = 0; for (let lv = 1; lv <= this.passLevel; lv++) { if (!p.claimedFree.includes(lv)) n++; if (p.premium && !p.claimedPrem.includes(lv)) n++; } return n; }
   // ---------- 출석 ----------
