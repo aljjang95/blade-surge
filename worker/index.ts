@@ -1,5 +1,6 @@
 import { DIALOGUE_MODEL, REPLY_SCHEMA, dialogueMessages, parseDialogueReply, parseDialogueRequest } from '../src/companion/dialogue-contract';
 import { handlePartyRequest, PartyRoom } from './party';
+import { handleCommerceRequest, type CommerceEnv } from './commerce';
 export { PartyRoom };
 
 interface Store {
@@ -7,7 +8,7 @@ interface Store {
   put(key: string, value: unknown): Promise<void>;
   transaction<T>(callback: (txn: Store) => Promise<T>): Promise<T>;
 }
-interface Env {
+interface Env extends CommerceEnv {
   ASSETS: { fetch(request: Request): Promise<Response> };
   AI: { run(model: string, input: unknown): Promise<unknown> };
   DIALOGUE_BUDGET: { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } };
@@ -96,6 +97,7 @@ export class DialogueBudget {
 
 export async function handleRequest(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
+  if (url.pathname === '/api/commerce' || url.pathname.startsWith('/api/commerce/')) return handleCommerceRequest(request, env);
   if (url.pathname === '/api/party' || url.pathname.startsWith('/api/party/')) {
     if (!env.PARTIES) return json({ error:'unavailable' },503);
     const origin = url.origin === 'https://blade.tllhouse.com' ? url.origin : env.APP_ORIGIN;
