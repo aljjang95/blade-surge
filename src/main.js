@@ -187,7 +187,7 @@ class App {
     if (first) setTimeout(() => audio.voice('welcome', { vol: 0.9 }), 900);
     this.ui.show($('meta'), true);
     this.showcaseHero(this.eco.s.selected, true);
-    this.renderer.desat = 0; this.renderer.rig.mode = 'lobby';
+    this.renderer.desat = 0; this.renderer.rig.mode = 'lobby'; this.renderer.rig.snapLobby = true;
     audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX);
     this.meta.openTab('home'); this.meta.refreshTop();
     if (first) setTimeout(() => this.meta.autoPopups(), 600);

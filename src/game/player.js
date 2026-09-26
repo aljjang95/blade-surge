@@ -65,9 +65,19 @@ export class Player extends Actor {
     const wantMove = this.moveDir.lengthSq() > 0.01;
 
     // 회피
-    if (input.consume('dodge') && this.dodgeCd <= 0 && this.state !== 'dodge' && this.state !== 'ult' && this.stun <= 0) return this.dodge(wantMove ? this.moveDir : null);
+    if (input.consume('dodge') && this.dodgeCd <= 0 && this.state !== 'dodge' && this.state !== 'ult' && this.stun <= 0) { this.skillBuffer = null; return this.dodge(wantMove ? this.moveDir : null); }
+    // 회피 끝자락에 누른 스킬은 회피가 끝나는 순간 발동한다. 이전엔 회피 중 입력을 소비만 하고 버려서 연계가 씹혔다.
+    if (this.skillBuffer && this.state !== 'dodge') { const slot = this.skillBuffer.slot; this.skillBuffer = null; if (this.tryCastCombatSkill(slot)) return; }
     // 전투 입력은 0~3 고정 + Q/E 장착 슬롯 4/5만 노출한다.
-    for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot)) return; }
+    if (this.state === 'dodge') {
+      // 같은 프레임에 여러 스킬이 들어오면 실제로 마지막에 누른 스킬을 남긴다 (슬롯 번호 순서가 아니라 입력 큐 순서).
+      let last = -1;
+      for (const action of input.queue || []) { const m = /^skill([0-5])$/.exec(action); if (m) last = Number(m[1]); }
+      for (let slot = 0; slot < 6; slot++) input.consume('skill' + slot);
+      if (last >= 0) this.skillBuffer = { slot: last };
+    } else {
+      for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot)) return; }
+    }
     // 공격
     // 선입력: 콤보 중 누르거나 '누르고 있으면' 다음 타 예약. 이전엔 hitDone 뒤의 '탭'만 받아서 — 버튼을 누르고 있는 사람은 영원히 1타만 반복했다 (끊기는 느낌의 진범)
     if (input.consume('attack') || input.attackHeld) {
@@ -332,7 +342,7 @@ export class Player extends Actor {
     return true;
   }
   die() { if (this.alive) this.knightLifeEpoch = (this.knightLifeEpoch || 0) + 1; this.beacon?.setFocus(false); super.die(); }
-  revive() { this.beacon?.setFocus(false); this.alive = true; this.dead = false; this.deathT = -1; this.hp = this.maxHp; this.state = 'idle'; this.invuln = 2; this.pos.y = 0; for (const m of this.mats) m.transparent = false; this.play('Idle'); }
+  revive() { this.beacon?.setFocus(false); this.alive = true; this.dead = false; this.deathT = -1; this.hp = this.maxHp; this.state = 'idle'; this.invuln = 2; this.pos.y = 0; this.skillBuffer = null; for (const m of this.mats) m.transparent = false; this.play('Idle'); }
 
   // ---------------- 자동 전투 ----------------
   autoMove(dt) {

@@ -175,7 +175,9 @@ export class Renderer {
       desired.y += this.lobbySightline.solve(desired,rig.target,this.lobbyOccluders,performance.now());
       const lobbyFov = 46 + (window.innerWidth < window.innerHeight ? 14 : 0);
       if (cam.fov !== lobbyFov) { cam.fov = lobbyFov; cam.updateProjectionMatrix(); }
-      rig.pos.lerp(desired, 1 - Math.exp(-realDt * 3));
+      // 전투에서 돌아온 첫 프레임은 로비 구도로 바로 둔다. 전투 카메라 위치에서 보간하면 약 1초 동안 성 외곽 지형이 비친다.
+      if (rig.snapLobby) { rig.pos.copy(desired); rig.snapLobby = false; }
+      else rig.pos.lerp(desired, 1 - Math.exp(-realDt * 3));
       cam.position.copy(rig.pos);
       // Editorial offset reserves the right-hand destination panel, without moving the hero.
       const editorialShift = lobbyCompositionShift(p, this._width >= this._height);
