@@ -18,6 +18,9 @@
 #masterworks[data-offer=boon] .mw-choice-title{font-size:20px;line-height:1.3;margin:2px 0 10px}
 #masterworks .mw-boon{touch-action:pan-y}
 #masterworks .mw-boon h4,#masterworks .mw-boon p{overflow-wrap:anywhere}
+#masterworks .mw-synergy-preview{display:flex;flex-direction:column;gap:3px;margin:0 17px 8px;padding:7px 9px;border-left:2px solid var(--mw-gold);border-radius:0 6px 6px 0;background:#dfc99510}
+#masterworks .mw-synergy-preview-label{font-size:10px;line-height:1.3;font-weight:800;color:#f0d7a6}
+#masterworks .mw-synergy-preview-item{font-size:11px;line-height:1.4;color:#e0e8df;overflow-wrap:anywhere}
 @media(min-width:1030px){#masterworks[open]{left:calc(50% - 500px)}}
 @media(orientation:landscape) and (max-height:540px){
  #masterworks[data-offer=boon] .mw-header{min-height:48px;padding:3px 12px}
@@ -28,6 +31,7 @@
  #masterworks[data-offer=boon] .mw-boon{display:flex;flex-direction:column;padding:8px;min-height:0;gap:2px}
  #masterworks[data-offer=boon] .mw-boon>.mw-illustration{width:100%;height:48px;min-height:0;margin:0;object-fit:contain;filter:none}
  #masterworks[data-offer=boon] .mw-boon>.mw-eyebrow,#masterworks[data-offer=boon] .mw-boon>h4,#masterworks[data-offer=boon] .mw-boon>p,#masterworks[data-offer=boon] .mw-boon>.mw-pick{margin:0}
+  #masterworks[data-offer=boon] .mw-boon>.mw-synergy-preview{margin:0;padding:5px 6px}
  #masterworks[data-offer=boon] .mw-boon h4{font-size:14px;line-height:1.3}
  #masterworks[data-offer=boon] .mw-boon p{font-size:11px;line-height:1.4;min-height:31px;flex:1}
  #masterworks[data-offer=boon] .mw-boon .mw-pick{font-size:11px;line-height:1.4;color:#ffe3aa}
@@ -35,6 +39,7 @@
 @media(orientation:portrait) and (max-width:620px){
  #masterworks[data-offer=boon] .mw-boon{grid-template-columns:72px minmax(0,1fr);min-height:106px}
  #masterworks[data-offer=boon] .mw-boon>.mw-illustration{width:72px;height:100%;min-height:106px;filter:none}
- #masterworks[data-offer=boon] .mw-boon>.mw-eyebrow,#masterworks[data-offer=boon] .mw-boon>h4,#masterworks[data-offer=boon] .mw-boon>p,#masterworks[data-offer=boon] .mw-boon>.mw-pick{margin-left:8px;margin-right:8px}
+  #masterworks[data-offer=boon] .mw-boon>.mw-eyebrow,#masterworks[data-offer=boon] .mw-boon>h4,#masterworks[data-offer=boon] .mw-boon>p,#masterworks[data-offer=boon] .mw-boon>.mw-pick,#masterworks[data-offer=boon] .mw-boon>.mw-synergy-preview{margin-left:8px;margin-right:8px}
+  #masterworks[data-offer=boon] .mw-boon.mw-has-synergy-preview>.mw-illustration{grid-row:1/6}
  #masterworks[data-offer=boon] .mw-boon h4{font-size:15px}
 }
