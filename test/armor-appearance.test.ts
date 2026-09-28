@@ -41,13 +41,14 @@ async function heroSource(name: string, style: 'casual-v2' | 'expedition-v3' = '
 }
 
 for (const id of ['knight', 'barbarian', 'mage', 'rogue', 'ranger'] as const) {
-  test(`${id}: shipped expedition-v3 identity visibly wears four distinct themed armors`, async () => {
+  test(`${id}: shipped expedition-v3 identity visibly wears eight distinct themed armors`, async () => {
     const def = HEROES[id], source = await heroSource(def.model, 'expedition-v3');
     const instance = spawnCharacter(source);
     const body = instance.root.getObjectByName(`TLL_${def.model}_0`) as THREE.SkinnedMesh;
     const bodyGeometry = body.geometry;
     const signatures = new Set<string>();
-    for (const [set, itemId] of Object.entries({ storm: 'a_storm', blood: 'a_blood', gravity: 'a_gravity', phoenix: 'a_phoenix' })) {
+    for (const [set, itemId] of Object.entries({ storm: 'a_storm', blood: 'a_blood', gravity: 'a_gravity', phoenix: 'a_phoenix',
+      frost: 'a_rime', plague: 'a_plague', rune: 'a_sigil', tether: 'a_bind' })) {
       applyLook(instance.root, def, { armor: { id: itemId, enh: 0 } });
       expect(body.geometry).toBe(bodyGeometry);
       expect(instance.root.userData.armorAppearance).toMatchObject({ itemId, identity: 'expedition-v3' });
@@ -74,7 +75,7 @@ for (const id of ['knight', 'barbarian', 'mage', 'rogue', 'ranger'] as const) {
       expect(disposed).toBe(meshes.length);
       expect(attachments(instance.root)).toHaveLength(0);
     }
-    expect(signatures.size).toBe(4);
+    expect(signatures.size).toBe(8);
     disposeCharacter(instance.root, instance.mixer);
   });
 }
