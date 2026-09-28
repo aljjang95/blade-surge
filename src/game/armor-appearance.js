@@ -64,8 +64,8 @@ export function removeArmorAppearance(model) {
   delete model.userData.armorAppearance;
 }
 
-// The first four themed sets share a plate cut, so each needs an actual
-// silhouette. These small original meshes follow the existing shoulder/chest
+// The themed sets need more than a palette/cut change. These original meshes
+// follow the existing shoulder/chest
 // bones; they do not replace the authored body or add another model download.
 function addThemeDetails(theme, add, accent, trim) {
   const put = (name, bone, geometry, material = accent) => add(`theme_${theme}_${name}`, bone, geometry, material, [0, 0, 0]);
@@ -112,6 +112,49 @@ function addThemeDetails(theme, add, accent, trim) {
       ], .025));
     }
     put('flame', 'chest', polygon([[-.095, 1.02], [-.01, 1.19], [.015, 1.08], [.07, 1.13], [.10, 1.025], [.01, .95]], .43), trim);
+  } else if (theme === 'frost') {
+    for (const side of [-1, 1]) {
+      const tall = new THREE.OctahedronGeometry(.19); tall.scale(.53, 1.45, .5); tall.translate(side * .50, 1.35, .02);
+      const outer = new THREE.OctahedronGeometry(.14); outer.scale(.55, 1.2, .5); outer.translate(side * .72, 1.30, .03);
+      const cluster = mergeGeometries([tall, outer]); tall.dispose(); outer.dispose();
+      put(side < 0 ? 'right_crystals' : 'left_crystals', 'chest', cluster);
+    }
+    put('snowflake', 'chest', polygon([[-.12, 1.09], [-.04, 1.12], [0, 1.21], [.04, 1.12], [.12, 1.09], [.04, 1.06], [0, .96], [-.04, 1.06]], .43), trim);
+  } else if (theme === 'plague') {
+    const profile = [[0, 0], [.045, 0], [.045, .16], [.15, .16], [.19, .20], [.14, .25], [.07, .275], [0, .28]];
+    for (const side of [-1, 1]) {
+      const cap = new THREE.LatheGeometry(profile.map(([x, y]) => new THREE.Vector2(x, y)), 12);
+      cap.translate(side * .63, 1.17, .02);
+      put(side < 0 ? 'right_sporecap' : 'left_sporecap', 'chest', cap);
+    }
+    const seed = new THREE.DodecahedronGeometry(.11); seed.scale(1, 1, .55); seed.translate(0, 1.07, .45);
+    put('seed', 'chest', seed, trim);
+  } else if (theme === 'rune') {
+    for (const side of [-1, 1]) {
+      const x = n => side * n;
+      put(side < 0 ? 'right_tablet' : 'left_tablet', 'chest', polygon([
+        [x(.46), 1.12], [x(.51), 1.45], [x(.68), 1.52], [x(.84), 1.36], [x(.80), 1.09],
+      ], .05));
+    }
+    put('sigil', 'chest', polygon([[-.13, 1.13], [0, 1.21], [.13, 1.13], [.065, 1.01], [0, .96], [-.065, 1.01]], .43), trim);
+  } else if (theme === 'tether') {
+    for (const side of [-1, 1]) {
+      const chain = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(side * .34, 1.34, .03), new THREE.Vector3(side * .75, 1.34, .04),
+        new THREE.Vector3(side * .82, 1.11, .055), new THREE.Vector3(side * .53, .96, .07),
+      ]);
+      const links = [];
+      for (let i = 0; i < 6; i++) {
+        const link = new THREE.TorusGeometry(.073, .019, 5, 10);
+        link.rotateY(i % 2 ? .72 : -.72);
+        const p = chain.getPoint((i + .5) / 6); link.translate(p.x, p.y, p.z);
+        links.push(link);
+      }
+      const linked = mergeGeometries(links); for (const link of links) link.dispose();
+      put(side < 0 ? 'right_chain' : 'left_chain', 'chest', linked);
+    }
+    const lock = new THREE.TorusGeometry(.11, .036, 6, 12); lock.translate(0, 1.07, .44);
+    put('lock', 'chest', lock, trim);
   }
 }
 
