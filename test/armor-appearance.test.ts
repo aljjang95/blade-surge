@@ -14,7 +14,7 @@ import { audio } from '../src/engine/audio.js';
 
 // Actual shipped node transforms/joints plus the actual casual GLB. Source GLB
 // embedded textures are irrelevant to fitting and need no browser image decoder.
-async function heroSource(name: string) {
+async function heroSource(name: string, style: 'casual-v2' | 'expedition-v3' = 'casual-v2') {
   const bytes = readFileSync(new URL(`../public/models/${name}.glb`, import.meta.url));
   const doc = JSON.parse(bytes.subarray(20, 20 + bytes.readUInt32LE(12)).toString());
   const joints = new Set<number>(doc.skins[0].joints);
@@ -33,9 +33,50 @@ async function heroSource(name: string) {
   const source = new THREE.SkinnedMesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial());
   source.name = `${name}_Body`; scene.add(source); source.bind(skeleton);
   const gltf = { scene, animations: [] as THREE.AnimationClip[] };
-  const casual = readFileSync(new URL(`../public/models/tll/${name.toLowerCase()}-casual-v2.glb`, import.meta.url));
-  const authored = await new GLTFLoader().parseAsync(casual.buffer.slice(casual.byteOffset, casual.byteOffset + casual.byteLength), '');
-  return prepareModel(assembleHeroIdentity(gltf, authored, name, 'casual-v2'));
+  const fitting = readFileSync(new URL(style === 'expedition-v3'
+    ? `../public/models/heroes-v3/${name.toLowerCase()}-v3.glb`
+    : `../public/models/tll/${name.toLowerCase()}-casual-v2.glb`, import.meta.url));
+  const authored = await new GLTFLoader().parseAsync(fitting.buffer.slice(fitting.byteOffset, fitting.byteOffset + fitting.byteLength), '');
+  return prepareModel(assembleHeroIdentity(gltf, authored, name, style));
+}
+
+for (const id of ['knight', 'barbarian', 'mage', 'rogue', 'ranger'] as const) {
+  test(`${id}: shipped expedition-v3 identity visibly wears four distinct themed armors`, async () => {
+    const def = HEROES[id], source = await heroSource(def.model, 'expedition-v3');
+    const instance = spawnCharacter(source);
+    const body = instance.root.getObjectByName(`TLL_${def.model}_0`) as THREE.SkinnedMesh;
+    const bodyGeometry = body.geometry;
+    const signatures = new Set<string>();
+    for (const [set, itemId] of Object.entries({ storm: 'a_storm', blood: 'a_blood', gravity: 'a_gravity', phoenix: 'a_phoenix' })) {
+      applyLook(instance.root, def, { armor: { id: itemId, enh: 0 } });
+      expect(body.geometry).toBe(bodyGeometry);
+      expect(instance.root.userData.armorAppearance).toMatchObject({ itemId, identity: 'expedition-v3' });
+      const meshes = attachments(instance.root), details = meshes.filter(m => m.name.startsWith(`Armor_theme_${set}_`));
+      expect(details).toHaveLength(3);
+      expect(meshes.every(m => m.parent instanceof THREE.Bone)).toBe(true);
+      expect(details.every(m => m.userData.equippedArmor === itemId)).toBe(true);
+      instance.root.updateMatrixWorld(true);
+      const bounds = new THREE.Box3();
+      for (const mesh of details) bounds.union(new THREE.Box3().setFromObject(mesh));
+      expect(bounds.min.y).toBeGreaterThan(.85);
+      expect(bounds.max.y).toBeLessThan(1.67);
+      expect(bounds.max.x - bounds.min.x).toBeLessThan(2.1);
+      const detail = details[0]!, bone = detail.parent as THREE.Bone;
+      const point = new THREE.Vector3().fromBufferAttribute(detail.geometry.attributes.position!, 0);
+      const before = point.clone().applyMatrix4(detail.matrixWorld), rotation = bone.quaternion.clone();
+      bone.rotateZ(.3); instance.root.updateMatrixWorld(true);
+      expect(point.clone().applyMatrix4(detail.matrixWorld).distanceTo(before)).toBeGreaterThan(.01);
+      bone.quaternion.copy(rotation); instance.root.updateMatrixWorld(true);
+      signatures.add(`${details.map(m => m.geometry.type).join('/')}:${details.map(m => m.geometry.attributes.position.count).join('/')}:${bounds.max.y.toFixed(3)}`);
+      let disposed = 0;
+      meshes.forEach(m => m.geometry.addEventListener('dispose', () => disposed++));
+      applyLook(instance.root, def, {});
+      expect(disposed).toBe(meshes.length);
+      expect(attachments(instance.root)).toHaveLength(0);
+    }
+    expect(signatures.size).toBe(4);
+    disposeCharacter(instance.root, instance.mixer);
+  });
 }
 function attachments(root: THREE.Object3D) {
   const result: THREE.Mesh[] = [];
