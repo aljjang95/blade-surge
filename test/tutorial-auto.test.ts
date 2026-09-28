@@ -22,6 +22,20 @@ test('first-stage heal reminder advances once at 55% and once at 30%', () => {
   expect(nextHealHintTier(50, 0, 0)).toBe(0);
 });
 
+test('explicit AUTO retry skips the tutorial for one run without marking it complete', () => {
+  const save = { tutorial: { completed: false } };
+  const tutorial: any = Object.assign(Object.create(BattleTutorial.prototype), {
+    app: { eco: { s: save } }, root: { hidden: false }, phase: 'clear', battle: {},
+    completedSteps: new Set(['attack']), skipOnceForAutoRetry: true,
+  });
+  expect(tutorial.begin({ code: '1-1', difficultyId: 'story' })).toBe(false);
+  expect(tutorial.root.hidden).toBe(true);
+  expect(tutorial.phase).toBeNull();
+  expect(tutorial.skipOnceForAutoRetry).toBe(false);
+  expect(save.tutorial.completed).toBe(false);
+  expect(tutorial.completedSteps.size).toBe(1);
+});
+
 for (const savedAuto of [true, false]) test(`tutorial exit respects latest saved AUTO ${savedAuto} and its button`, () => {
   const battle = { player: { auto: !savedAuto }, setPaused() {} };
   const tutorial: any = Object.assign(Object.create(BattleTutorial.prototype), {

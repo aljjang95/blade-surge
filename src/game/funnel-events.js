@@ -25,6 +25,7 @@ const SCHEMA = Object.freeze({
   tutorial_step: { required: { step: int(0, 50) }, optional: {} },
   tutorial_complete: { required: { steps: int(0, 50) }, optional: { skipped: bool } },
   heal_hint_shown: { required: { tier: oneOf(['early', 'critical']) }, optional: {} },
+  auto_retry_selected: { required: {}, optional: {} },
   reward_claim: {
     required: { source: oneOf(['daily', 'pass_free', 'quest', 'stage', 'achievement', 'offline', 'expedition', 'journey', 'mail']) },
     optional: { day: int(1, 31) },
