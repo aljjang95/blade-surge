@@ -115,7 +115,7 @@
           <div class="banner-txt">
             <div class="banner-kicker">픽업 소환 · 확률 UP</div>
             <h2 id="banner-title">광전사 드라칸</h2>
-            <div class="banner-sub">SSR 확률 <b>2.0%</b> · 픽업 시 50% · <b id="pity-left">80</b>회 천장</div>
+            <div class="banner-sub">SSR <b id="banner-ssr">2.0%</b> · SSR 중 픽업 <b id="banner-pickup">50%</b> · <b id="banner-soft">61</b>번째부터 확률 상승 · <b id="pity-left">80</b>회 안에 SSR 확정</div>
             <div class="banner-timer">남은 시간 <b id="banner-timer">2일 13:22:10</b></div>
           </div>
         </div>
@@ -124,6 +124,7 @@
           <button class="btn btn-gold" id="btn-pull10"><span>10회 소환</span><small><i class="ic ic-gem"></i> <s>3000</s> 2700 <em>SR 1장 보장</em></small></button>
         </div>
         <div class="gacha-foot"><button class="link" id="btn-rates">확률 정보</button><span>보유 티켓 <b id="v-ticket">0</b> · 누적 <b id="v-pity">0</b>회</span></div>
+        <p class="gacha-odds" id="gacha-odds" aria-live="off" style="margin:6px 0 0;font-size:12px;text-align:center;color:var(--muted)"></p>
       </div>
     </div>
 
@@ -131,6 +132,7 @@
     <div id="tab-shop" class="tab">
       <div class="panel">
         <div class="panel-head"><h2>상점</h2><div class="chapter-tabs" id="shop-tabs"></div></div>
+        <p class="shop-notice" id="shop-notice" role="note" style="margin:0 0 4px;font-size:10px;line-height:1.25;color:var(--muted)"></p>
         <div class="shop-grid" id="shop-grid"></div>
       </div>
     </div>

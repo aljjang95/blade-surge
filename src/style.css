@@ -882,3 +882,86 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 #lobby-camera-panel small { display:block; font-size:10px; color:#c7d8c7; margin-top:7px; }
 @media (orientation:landscape) and (max-height:550px) { .lobby-camera-tools { bottom:calc(84px + var(--sab)); right:12px; width:224px; } #lobby-camera-panel { padding:8px 10px; } #lobby-camera-panel label { margin-top:2px; } }
 @media (orientation:portrait) { .lobby-camera-tools { bottom:calc(250px + var(--sab)); right:12px; width:215px; } #lobby-camera-pad { left:24%; right:24%; } }
+/* 짧은 가로 화면에서도 상품의 실제 가격 버튼을 첫 화면 안에 둔다. */
+@media (orientation:landscape) and (max-height:420px) {
+  .shop-grid { gap:6px; padding:6px 8px 12px; }
+  .shop-item { gap:2px; padding:5px 4px; }
+  .shop-item img { width:40px; height:40px; }
+  .shop-item .si-desc { font-size:9px; }
+  .shop-item .si-bonus { font-size:10px; }
+  .shop-item .btn { margin-top:2px; padding:4px 3px; font-size:11px; }
+  .shop-item .badge { font-size:8px; }
+}
+/* 가챠: 오스 셸이 이미 탭을 위아래 58px 안쪽으로 두므로 wrap의 64px 여백이 겹치면 픽업 배너가 접힌다. */
+.oath-visual #tab-gacha .gacha-wrap { inset: 0; padding: 10px 12px; }
+/* 짧은 가로 화면: 배너는 왼쪽 전체 높이, 소환 버튼·천장·확률은 오른쪽 패널에 모은다. */
+@media (orientation: landscape) and (max-height: 500px) {
+  #tab-gacha .gacha-wrap { display: grid; grid-template-columns: minmax(0, 1fr) clamp(236px, 34%, 300px); grid-template-rows: minmax(0, 1fr) auto auto auto; column-gap: 12px; row-gap: 8px; }
+  #tab-gacha .gacha-wrap::before { content: ''; grid-column: 2; grid-row: 1 / -1; margin: 0 -8px; border-radius: 14px; background: rgba(12, 8, 24, .78); border: 1px solid rgba(255, 207, 90, .22); }
+  #tab-gacha .gacha-banner { grid-column: 1; grid-row: 1 / -1; min-height: 0; }
+  #tab-gacha .gacha-btns { grid-column: 2; grid-row: 2; flex-direction: column; gap: 8px; }
+  #tab-gacha .gacha-btns .btn { padding: 9px 12px; font-size: 16px; }
+  #tab-gacha .gacha-foot { grid-column: 2; grid-row: 3; align-items: center; gap: 8px; }
+  #tab-gacha .gacha-odds { grid-column: 2; grid-row: 4; margin: 0 0 4px !important; line-height: 1.35; color: #cfc6e6 !important; }
+  #tab-gacha .banner-txt { padding: 10px 12px; }
+  #tab-gacha .banner-txt h2 { font-size: 26px; }
+}
+@media (orientation: landscape) and (max-height: 380px) {
+  #tab-gacha .gacha-btns .btn { padding: 7px 10px; font-size: 15px; }
+  #tab-gacha .gacha-btns .btn small { font-size: 11px; }
+  #tab-gacha .gacha-odds { font-size: 11px !important; }
+  #tab-gacha .banner-txt h2 { font-size: 22px; }
+  #tab-gacha .banner-sub, #tab-gacha .banner-timer { font-size: 11px; }
+}
+/* 영웅 상세: 첫 강화 버튼(성장 훈련·승급)을 스크롤 없이 이름 바로 아래에 둔다. */
+.hero-actions-top { margin: 4px 0 2px; }
+/* 하단 메뉴 버튼 점: 메뉴 안에 받을 소환권·보상이 있음을 알린다. */
+#meta .bottomnav .oath-nav-menu { position: relative; }
+#meta .bottomnav .oath-nav-menu .dot { top: 8px; right: calc(50% - 30px); }
+@media (orientation: landscape) and (max-height: 420px) {
+  .hero-actions-top .btn { min-width: 0; padding: 6px 8px; font-size: 13px; }
+  .hero-actions-top .btn small { font-size: 10px; }
+}
+/* 소환 구성품 · 무기 외형 미리보기 */
+.gc-wrap, .wp-wrap { text-align: left; }
+.modal-box:has(.gc-wrap), .modal-box:has(.wp-wrap) { width: min(94vw, 760px); }
+.gc-tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 6px 0 4px; }
+.gc-tabs button { padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 800; min-height: 32px; }
+.gc-tabs button.on { background: var(--gold); color: #2a1a00; }
+.gc-grade { margin: 10px 0 4px; font-size: 13px; }
+.gc-grade.gc-SSR { color: var(--r-ssr, #ffcf5a); } .gc-grade.gc-SR { color: var(--r-sr, #b26bff); } .gc-grade.gc-R { color: var(--r-r, #4cc3ff); }
+.gc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.gc-item { display: grid; grid-template-columns: 40px 1fr auto; grid-template-rows: auto auto; column-gap: 7px; align-items: center; padding: 6px 7px; border-radius: 9px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); text-align: left; min-height: 52px; color: inherit; }
+.gc-item[data-preview] { cursor: pointer; }
+.gc-item[data-preview]:hover, .gc-item[data-preview]:focus-visible { border-color: var(--gold); background: rgba(255,207,90,.08); }
+.gc-item:disabled { opacity: 1; cursor: default; }
+.gc-item img { grid-row: 1 / 3; width: 40px; height: 40px; object-fit: contain; }
+.gc-name { font-size: 12px; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gc-note { grid-column: 2 / 4; font-size: 10px; color: var(--muted); line-height: 1.3; }
+.gc-p { grid-column: 3; grid-row: 1; font-size: 11px; color: #e8dcae; }
+.wp-body { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 10px; align-items: stretch; }
+.wp-stage { min-height: 230px; height: 42vh; border-radius: 12px; overflow: hidden; background: radial-gradient(ellipse at 50% 42%, #386051 0, #172e29 45%, #141822 80%); }
+.wp-side { display: flex; flex-direction: column; gap: 6px; }
+.wp-look { display: grid; grid-template-columns: 12px 1fr; column-gap: 8px; align-items: center; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.06); }
+.wp-look i { grid-row: 1 / 3; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 8px currentColor; }
+.wp-look b { font-size: 13px; } .wp-look span { font-size: 12px; color: #e8e3cf; }
+.wp-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.wp-seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.wp-seg button { padding: 6px 9px; min-height: 34px; border-radius: 8px; background: rgba(255,255,255,.08); font-size: 12px; font-weight: 800; }
+.wp-seg button.on { background: var(--gold); color: #2a1a00; }
+.wp-hint { font-size: 10px !important; text-align: left !important; margin: 2px 0 0 !important; }
+.wp-side .modal-btns { margin-top: auto; }
+.item-look { margin-top: 5px; font-size: 12px; font-weight: 800; color: var(--wl, #e8e3cf); }
+@media (orientation: landscape) and (max-height: 420px) {
+  /* 짧은 가로 화면: 제목·안내를 한 줄로 줄이고 3D 무대를 모달 높이에 맞춰 크게 쓴다. */
+  .modal-box:has(.wp-wrap) { width: min(96vw, 820px); padding: 8px 10px; }
+  .wp-wrap h2 { font-size: 18px; margin: 0 0 2px; }
+  .wp-wrap > .setting-help { margin: 0 0 4px; font-size: 11px; }
+  .wp-stage { min-height: 0; height: calc(var(--app-height, 100dvh) - var(--sat, 0px) - var(--sab, 0px) - 92px); }
+  .wp-look { padding: 6px 8px; } .wp-seg button { min-height: 32px; padding: 5px 8px; }
+  .wp-side { gap: 4px; }
+  .wp-side .modal-btns { gap: 6px; } .wp-side .modal-btns .btn { padding: 7px 8px; font-size: 13px; }
+  .gc-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .gc-item { min-height: 46px; padding: 4px 6px; }
+  .gc-item img { width: 34px; height: 34px; }
+}

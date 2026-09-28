@@ -8,23 +8,93 @@ import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { resolveDifficulty } from './difficulty.js';
 import { heroTrainingQuote } from './hero-training.js';
+import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
 
 const KEY = 'bladesurge_save_v1';
 const now = () => Date.now();
-const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
+const pickWeighted = (w, rng = Math.random) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = rng() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
+
+/** 가챠 전용 결정적 RNG (mulberry32). 전투·드랍 RNG는 그대로 Math.random을 쓴다. */
+export function createSeededRng(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+/** pity = 마지막 SSR 이후 이번 소환의 순번(1부터). softPity회 연속 미당첨 뒤, 즉 softPity+1번째 소환부터 SSR 가중치가 오른다. */
+export function gachaSsrWeight(pity) { return GACHA.rates.SSR + (pity > GACHA.softPity ? (pity - GACHA.softPity) * GACHA.softPityStep : 0); }
+export function gachaChances(pity) {
+  if (pity >= GACHA.pity) return { R: 0, SR: 0, SSR: 1 };
+  const ssr = gachaSsrWeight(pity), tot = GACHA.rates.R + GACHA.rates.SR + ssr;
+  return { R: GACHA.rates.R / tot, SR: GACHA.rates.SR / tot, SSR: ssr / tot };
+}
+export function rollGachaRarity(pity, rng = Math.random) {
+  return pity >= GACHA.pity ? 'SSR' : pickWeighted({ R: GACHA.rates.R, SR: GACHA.rates.SR, SSR: gachaSsrWeight(pity) }, rng);
+}
+const heroesOf = (r) => HERO_ORDER.filter((h) => HEROES[h].rarity === r);
+/** 픽업을 제외한 SSR 영웅 풀. 'other' 분배는 이 풀에서만 뽑아 픽업 확률이 정확히 ssrSplit.featured가 된다. */
+const otherSsrHeroes = () => heroesOf('SSR').filter((h) => h !== GACHA.featured);
+/** 실제 소환 코드와 같은 식으로 계산한 공개 확률표 (단일 소환 기준, 10연 SR 보장 보정 제외). */
+export function gachaRates() {
+  const ssrByPull = Array.from({ length: GACHA.pity }, (_, i) => gachaChances(i + 1).SSR);
+  let survive = 1, expected = 0;
+  ssrByPull.forEach((p, i) => { expected += (i + 1) * survive * p; survive *= 1 - p; });
+  // 다른 SSR 영웅이 없으면 그 몫은 픽업으로 간다 (rollResult와 같은 규칙).
+  const others = otherSsrHeroes(), { featured, pool, gear } = GACHA.ssrSplit;
+  return {
+    base: gachaChances(1), softPityFrom: GACHA.softPity, hardPity: GACHA.pity, ssrByPull,
+    expectedPullsPerSsr: expected, consolidatedSsr: 1 / expected,
+    ssrSplit: { featuredHero: others.length ? featured : featured + pool, otherSsrHero: others.length ? pool : 0, ssrGear: gear, otherHeroes: others },
+    srSplit: { ...GACHA.srSplit }, tenPullSrPlus: 1, dupShards: GACHA.dupShards,
+    rSplit: { ...GACHA.rSplit }, materials: structuredClone(GACHA.materials),
+  };
+}
+
+/**
+ * 소환 구성품 전체와 1회 소환 기준 개별 확률(기본 확률, 61번째 상승·10연 보장 보정 제외).
+ * rollResult/addItem과 같은 규칙: 장비는 슬롯 4개 중 하나를 고른 뒤 그 슬롯의 같은 등급 장비 중 하나를 고른다.
+ * @returns {Array<{ kind: 'hero'|'gear'|'material', grade: 'SSR'|'SR'|'R', id: string, p: number, slot?: string, rarity?: string, n?: number }>}
+ */
+export function gachaContents() {
+  const rates = gachaRates(), base = rates.base, out = [];
+  const gear = (grade, p) => {
+    const rarity = GACHA_ITEM_RARITY[grade];
+    for (const slot of SLOTS) {
+      const pool = ITEM_POOL[slot].filter((x) => x.rarity === rarity);
+      for (const it of pool) out.push({ kind: 'gear', grade, id: it.id, slot, rarity, p: p / SLOTS.length / pool.length });
+    }
+  };
+  const heroes = (grade, ids, p) => { for (const id of ids) out.push({ kind: 'hero', grade, id, p: p / ids.length }); };
+  const mats = (grade) => { for (const m of rates.materials[grade] || []) out.push({ kind: 'material', grade, id: m.k, n: m.n, p: base[grade] * m.w }); };
+  heroes('SSR', [GACHA.featured], base.SSR * rates.ssrSplit.featuredHero);
+  if (rates.ssrSplit.otherSsrHero) heroes('SSR', rates.ssrSplit.otherHeroes, base.SSR * rates.ssrSplit.otherSsrHero);
+  gear('SSR', base.SSR * rates.ssrSplit.ssrGear);
+  heroes('SR', heroesOf('SR'), base.SR * rates.srSplit.hero);
+  gear('SR', base.SR * rates.srSplit.gear); mats('SR');
+  gear('R', base.R * rates.rSplit.gear); mats('R');
+  return out;
+}
 
 export class Economy {
-  constructor() { this.storageStatus = 'ready'; this.s = this.load(); this._lastGoodSave = JSON.stringify(this.s); this.listeners = []; this.bonusReceipts = new WeakSet(); this.tickEnergy(); }
+  /** @param {{ gachaRng?: () => number, gachaSeed?: number }} [options] 가챠 RNG 주입(테스트·재현용) */
+  constructor(options = {}) {
+    this.gachaRng = typeof options.gachaRng === 'function' ? options.gachaRng : Number.isInteger(options.gachaSeed) ? createSeededRng(options.gachaSeed) : Math.random;
+    this.storageStatus = 'ready'; this.hasStoredSave = false; this.lastGachaError = null; this.s = this.load(); this._lastGoodSave = JSON.stringify(this.s); this.listeners = []; this.bonusReceipts = new WeakSet(); this.tickEnergy();
+  }
   onChange(fn) { this.listeners.push(fn); }
   emit() { const saved = this.save(); for (const f of this.listeners) f(this.s); return saved; }
+  recordJourneyAction(stat, amount = 1) {
+    const s = this.s; s.journey = normalizeJourney(s.journey);
+    const at = now(), period = periodAt(at); refreshPeriods(s.journey, at);
+    s.actionSequence = (Number.isSafeInteger(s.actionSequence) ? s.actionSequence : 0) + 1;
+    return recordJourneyActionCore(s.journey, { receiptId: `action:${s.actionSequence}`, stat, amount, day: period.day, week: period.week });
+  }
   fresh() {
     return {
-      expedition: normalizeExpedition(),
-      created: now(), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: now(), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
+      expedition: normalizeExpedition(), journey: normalizeJourney(), actionSequence: 0,
+      schemaVersion: 1, created: now(), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: now(), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, { level: 1, exp: 0, star: 1, shards: 0, skills: HEROES[id].skills.map(() => 1), skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } }])),
       selected: 'knight', inventory: [], invSeq: 1,
       progress: { unlocked: 1, stars: {}, difficulty: 'story' }, // stars['1-1'] = 3
-      pity: 0, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
+      pity: 0, gacha: { pity: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
       daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false }],
       quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto' }, limitedStart: now(),
@@ -34,6 +104,7 @@ export class Economy {
     for (const key of [KEY, KEY + '_backup']) {
       try {
         const raw = localStorage.getItem(key); if (!raw) continue;
+        this.hasStoredSave = true;
         try {
           const s = this.migrate(JSON.parse(raw));
           if (key !== KEY) this.storageStatus = 'recovered';
@@ -166,14 +237,14 @@ export class Economy {
   promoteHero(id) { const h = this.hero(id); const need = starShards(h.star); if (h.shards < need || h.star >= 5) return false; h.shards -= need; h.star++; this.emit(); return true; }
   upgradeSkill(id, i) { const h = this.hero(id), sk = HEROES[id]?.skills[i]; if (!h || !sk || (sk.unlock && h.level < sk.unlock)) return false; const cost = skillUpGold(h.skills[i]); if (this.s.gold < cost || h.skills[i] >= 10) return false; this.s.gold -= cost; h.skills[i]++; this.emit(); return true; }
   setSkillLoadout(id, slot, skillIndex) { const h = this.hero(id), def = HEROES[id]; if (!h || !def || ![0,1].includes(slot) || !Number.isInteger(skillIndex) || skillIndex < 4 || skillIndex >= def.skills.length) return false; const sk = def.skills[skillIndex]; if (sk.unlock && h.level < sk.unlock) return false; const next = normalizeSkillLoadout(def, h.skillLoadout); if (next[slot] === skillIndex) return false; const other = 1 - slot; if (next[other] === skillIndex) [next[slot], next[other]] = [skillIndex, next[slot]]; else next[slot] = skillIndex; h.skillLoadout = next; this.emit(); return true; }
-  grantHero(id) { if (this.s.heroes[id]) { this.s.heroes[id].shards += 10; return { dup: true }; } this.s.heroes[id] = { level: 1, exp: 0, star: 1, shards: 0, skills: HEROES[id].skills.map(() => 1), skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } }; return { dup: false }; }
+  grantHero(id) { if (this.s.heroes[id]) { this.s.heroes[id].shards += GACHA.dupShards; return { dup: true, shards: GACHA.dupShards }; } this.s.heroes[id] = { level: 1, exp: 0, star: 1, shards: 0, skills: HEROES[id].skills.map(() => 1), skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } }; return { dup: false, shards: 0 }; }
   // ---------- 장비 ----------
   /** @param {string} rarity @param {string|null} slot */
-  addItem(rarity, slot = null) {
-    slot = slot || SLOTS[Math.floor(Math.random() * SLOTS.length)];
+  addItem(rarity, slot = null, rng = Math.random) {
+    slot = slot || SLOTS[Math.floor(rng() * SLOTS.length)];
     if (GACHA_ITEM_RARITY[rarity]) rarity = GACHA_ITEM_RARITY[rarity];   // 가챠 등급(R/SR/SSR) → 장비 등급
     const pool = ITEM_POOL[slot].filter((x) => x.rarity === rarity);
-    const def = pool.length ? pool[Math.floor(Math.random() * pool.length)] : ITEM_POOL[slot][0];
+    const def = pool.length ? pool[Math.floor(rng() * pool.length)] : ITEM_POOL[slot][0];
     const inst = { uid: this.s.invSeq++, id: def.id, enh: 0 }; this.s.inventory.push(inst); return inst;
   }
   equip(heroId, uid) { const inst = this.s.inventory.find((x) => x.uid === uid); if (!inst) return; const slot = ITEM_BY_ID[inst.id].slot; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; if (e[slot] === uid) e[slot] = null; } this.hero(heroId).equip[slot] = uid; this.emit(); }
@@ -196,6 +267,7 @@ export class Economy {
       else if (enhanceDown(lv)) { down = enhanceDown(lv); inst.enh -= down; }
     }
     this.s.quests.enh = (this.s.quests.enh || 0) + 1;
+    this.recordJourneyAction('upgrades');
     this.emit(); return { ok: true, success, destroyed, down, enh: destroyed ? lv : inst.enh, chance };
   }
   sellItem(uid) { const i = this.s.inventory.findIndex((x) => x.uid === uid); if (i < 0) return; const inst = this.s.inventory[i]; const r = ITEM_BY_ID[inst.id].rarity; const gold = RARITY_INFO[r]?.sell || 200; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } this.s.inventory.splice(i, 1); this.s.gold += gold; this.emit(); return gold; }
@@ -220,7 +292,8 @@ export class Economy {
     const m = double ? 2 : 1; const r = stage.rewards; const loot = [];
     const fullClearBonus = fullClear ? { exp: Math.floor(r.exp * 0.5), gold: Math.floor(r.gold * 0.4), fragments: 10, eliteGear: 1 } : null;
     // 필드 드랍(전투 중 획득한 골드/강화석)은 여기서 정산. 장비는 이미 인벤토리에 들어감.
-    const got = this.addRewards({ gold: r.gold * m + fieldGold * m + (fullClearBonus?.gold || 0), gems: first ? r.firstGems : 0, stones: (r.stones || 0) * m + fieldStones, stones2: fieldStones2 * m, stones3: fieldStones3 * m, fragments: fieldFragments * m + (stage.boss ? 5 : 0) + (fullClearBonus?.fragments || 0) }, { silent: true });
+    const milestone = first && stage.st % 5 === 0 ? { tickets: stage.st % 10 === 0 ? 2 : 1 } : {};
+    const got = this.addRewards({ gold: r.gold * m + fieldGold * m + (fullClearBonus?.gold || 0), gems: first ? r.firstGems : 0, stones: (r.stones || 0) * m + fieldStones, stones2: fieldStones2 * m, stones3: fieldStones3 * m, fragments: fieldFragments * m + (stage.boss ? 5 : 0) + (fullClearBonus?.fragments || 0), ...milestone }, { silent: true });
     for (const l of fieldLoot) loot.push(l);
     if (fullClearBonus) loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_ELITE)));
     if (double && Math.random() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE))); }
@@ -249,35 +322,70 @@ export class Economy {
   sweep(stage) { const s = this.s; if (s.sweep <= 0 || (s.progress.stars[this.stageKey(stage.ch, stage.st)] || 0) < 3) return null; if (!this.spendEnergy(stage.energy)) return null; s.sweep--; return this.completeStage(stage, 3); }
   // ---------- 가챠 ----------
   pull(n) {
-    if (n !== 1 && n !== 10) return null;
-    const s = this.s; const cost = n === 10 ? GACHA.ten : GACHA.single;
-    if (n === 1 && s.tickets > 0) s.tickets--; else if (n === 10 && s.tickets >= 10) s.tickets -= 10; else { if (s.gems < cost) return null; s.gems -= cost; }
-    const results = []; let srGuaranteed = false;
+    this.lastGachaError = null;
+    if (n !== 1 && n !== 10) { this.lastGachaError = 'invalid-count'; return null; }
+    const before = structuredClone(this.s); const s = this.s; const cost = n === 10 ? GACHA.ten : GACHA.single;
+    if (n === 1 && s.tickets > 0) s.tickets--; else if (n === 10 && s.tickets >= 10) s.tickets -= 10; else { if (s.gems < cost) { this.lastGachaError = 'insufficient-funds'; return null; } s.gems -= cost; }
+    const results = []; let srGuaranteed = false; const rng = this.gachaRng;
     for (let i = 0; i < n; i++) {
-      s.pity++; s.totalPulls++; s.quests.pulls++;
-      let rar; const soft = s.pity > GACHA.softPity ? (s.pity - GACHA.softPity) * 6 : 0;
-      if (s.pity >= GACHA.pity) rar = 'SSR'; else rar = pickWeighted({ R: RARITY_WEIGHT_GACHA.R, SR: RARITY_WEIGHT_GACHA.SR, SSR: RARITY_WEIGHT_GACHA.SSR + soft });
+      s.gacha.pity++; s.totalPulls++; s.quests.pulls++;
+      let rar = rollGachaRarity(s.gacha.pity, rng);
       if (n === 10 && i === 9 && !srGuaranteed && rar === 'R') rar = 'SR';
       if (rar !== 'R') srGuaranteed = true;
-      if (rar === 'SSR') s.pity = 0;
+      if (rar === 'SSR') s.gacha.pity = 0;
+      s.pity = s.gacha.pity; // 기존 UI가 읽는 레거시 미러
       results.push(this.rollResult(rar));
     }
-    this.emit(); return results;
+    this.recordJourneyAction('pulls', n);
+    if (!this.save()) { this.s = before; this.lastGachaError = 'storage'; return null; }
+    for (const listener of this.listeners) listener(this.s);
+    return results;
   }
-  pullSSR() { const s = this.s; if (s.ssrTickets <= 0) return null; s.ssrTickets--; const r = this.rollResult('SSR', true); this.emit(); return [r]; }
+  pullSSR() {
+    this.lastGachaError = null;
+    const before = structuredClone(this.s), s = this.s; if (s.ssrTickets <= 0) { this.lastGachaError = 'no-ssr-ticket'; return null; }
+    s.ssrTickets--; const r = this.rollResult('SSR', true); this.recordJourneyAction('pulls');
+    if (!this.save()) { this.s = before; this.lastGachaError = 'storage'; return null; }
+    for (const listener of this.listeners) listener(this.s);
+    return [r];
+  }
   rollResult(rar, heroOnly = false) {
-    // SSR: 50% 픽업 영웅, 25% 다른 SSR 영웅, 25% SSR 장비 / SR: 50% 영웅, 50% 장비 / R: 장비
-    const heroesOf = (r) => HERO_ORDER.filter((h) => HEROES[h].rarity === r);
-    if (rar === 'SSR') { const r = Math.random(); if (heroOnly || r < 0.75) { const id = (r < 0.5 || heroOnly) ? GACHA.featured : heroesOf('SSR')[Math.floor(Math.random() * heroesOf('SSR').length)]; const g = this.grantHero(id); return { type: 'hero', rar, id, dup: g.dup, name: HEROES[id].name, img: HEROES[id].portrait }; } return { type: 'item', rar, item: this.addItem('SSR') }; }
-    if (rar === 'SR') { if (Math.random() < 0.5) { const hs = heroesOf('SR'); const id = hs[Math.floor(Math.random() * hs.length)]; const g = this.grantHero(id); return { type: 'hero', rar, id, dup: g.dup, name: HEROES[id].name, img: HEROES[id].portrait }; } return { type: 'item', rar, item: this.addItem('SR') }; }
-    return { type: 'item', rar: 'R', item: this.addItem('R') };
+    // 분배 비율은 GACHA.ssrSplit / srSplit (gachaRates()와 같은 값). 중복 영웅은 grantHero에서 조각으로 바뀐다.
+    const rng = this.gachaRng;
+    const hero = (id) => { const g = this.grantHero(id); return { type: 'hero', rar, id, dup: g.dup, shards: g.shards, name: HEROES[id].name, img: HEROES[id].portrait }; };
+    if (rar === 'SSR') {
+      const r = rng(), { featured, pool } = GACHA.ssrSplit;
+      if (heroOnly || r < featured) return hero(GACHA.featured);
+      if (r < featured + pool) { const hs = otherSsrHeroes(); return hero(hs.length ? hs[Math.floor(rng() * hs.length)] : GACHA.featured); }
+      return { type: 'item', rar, item: this.addItem('SSR', null, rng) };
+    }
+    if (rar === 'SR') {
+      const r = rng(), { hero: heroShare, gear } = GACHA.srSplit;
+      if (r < heroShare) { const hs = heroesOf('SR'); return hero(hs[Math.floor(rng() * hs.length)]); }
+      if (r < heroShare + gear) return { type: 'item', rar, item: this.addItem('SR', null, rng) };
+      return this.rollMaterial('SR', r, heroShare + gear);
+    }
+    const r = rng();
+    if (r < GACHA.rSplit.gear) return { type: 'item', rar: 'R', item: this.addItem('R', null, rng) };
+    return this.rollMaterial('R', r, GACHA.rSplit.gear);
   }
-  // ---------- 상점 (목업 결제) ----------
+  /** 강화 재료 결과. r은 이미 뽑은 [from, 1) 구간의 값이며 재료 목록의 누적 비율로 고른다. */
+  rollMaterial(rar, r, from) {
+    const list = GACHA.materials[rar] || [];
+    let acc = from, pick = list[list.length - 1];
+    for (const m of list) { acc += m.w; if (r < acc) { pick = m; break; } }
+    this.addRewards({ [pick.k]: pick.n }, { silent: true, applyVip: false });
+    return { type: 'material', rar, k: pick.k, n: pick.n };
+  }
+  // ---------- 상점 ----------
   sku(id) { return SKUS.find((x) => x.id === id); }
   limitedLeft(sku) { if (!sku.limited) return 0; const end = this.s.limitedStart + sku.hours * 3600000; return Math.max(0, end - now()); }
+  /** 현금 결제는 실제 스토어 SDK와 영수증 검증이 연결되기 전까지 상태를 바꾸거나 보상을 주지 않는다 (PRD §3.3). */
+  paymentAvailable() { return false; }
   purchase(id) {
     const sku = this.sku(id); const s = this.s; if (!sku) return null;
     if (sku.kind === 'gem') { if (s.gems < sku.price) return { ok: false, reason: 'gems' }; s.gems -= sku.price; const got = this.addRewards(sku.rewards); return { ok: true, got }; }
+    if (!this.paymentAvailable()) return { ok: false, reason: 'payment-unavailable' };
     if (sku.once && s.purchases.includes(id)) return { ok: false, reason: 'once' };
     // cash (목업): 첫 결제 2배 보너스
     s.purchases.push(id); s.spentKRW += sku.price;
@@ -291,7 +399,12 @@ export class Economy {
   // ---------- 배틀패스 ----------
   get passLevel() { return Math.min(BATTLE_PASS.maxLevel, Math.floor(this.s.pass.xp / BATTLE_PASS.xpPerLevel) + 1); }
   addPassXp(xp) { const before = this.passLevel; this.s.pass.xp += xp; return this.passLevel - before; }
-  buyPass() { this.s.pass.premium = true; this.s.spentKRW += BATTLE_PASS.price; this.s.purchases.push('pass'); this.emit(); }
+  /** 프리미엄 패스도 현금 상품이다. 검증된 영수증 없이 premium을 켜지 않는다. */
+  buyPass() {
+    if (this.s.pass.premium) return { ok: false, reason: 'owned' };
+    if (!this.paymentAvailable()) return { ok: false, reason: 'payment-unavailable' };
+    this.s.pass.premium = true; this.s.spentKRW += BATTLE_PASS.price; this.s.purchases.push('pass'); this.emit(); return { ok: true };
+  }
   claimPass(lv, prem) { const p = this.s.pass; const arr = prem ? p.claimedPrem : p.claimedFree; if (!Number.isInteger(lv) || !PASS_TRACK[lv - 1] || arr.includes(lv) || lv > this.passLevel || (prem && !p.premium)) return null; arr.push(lv); const r = PASS_TRACK[lv - 1][prem ? 'prem' : 'free']; return this.addRewards(r); }
   passClaimable() { const p = this.s.pass; let n = 0; for (let lv = 1; lv <= this.passLevel; lv++) { if (!p.claimedFree.includes(lv)) n++; if (p.premium && !p.claimedPrem.includes(lv)) n++; } return n; }
   // ---------- 출석 ----------

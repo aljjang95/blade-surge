@@ -54,6 +54,7 @@ const BOOT_TIPS = [
 ];
 
 import { applyLook } from './game/look.js';
+import { createFunnelLog, sessionOpenEvents } from './game/funnel-events.js';
 
 class App {
   constructor() {
@@ -63,6 +64,8 @@ class App {
     this.fx = new FX(this.scene, this.renderer.camera);
     this.input = new Input();
     this.eco = new Economy();
+    this.funnel = createFunnelLog();
+    for (const [name, payload] of sessionOpenEvents({ hasStoredSave: this.eco.hasStoredSave, previousSession: this.funnel.latestSession(), now: Date.now() })) this.funnel.track(name, payload);
     this.ui = new UI(this);
     this.meta = new Meta(this);
     this.tutorial = new BattleTutorial(this);
@@ -133,6 +136,7 @@ class App {
     if (!this.companionAgent) this.companionAgent = createCompanion(this);
     this.party = new PartySession(this);
     this.oathShell = new OathShell(this);
+    this.meta.refreshMenuBadge();
     this.experienceView = new ExperienceView(this);
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
     // Mutations already persist at their owning action. An idle PWA/tab must not overwrite a newer tab's save.
@@ -182,6 +186,7 @@ class App {
       if (outcome.ok) this.expeditionTicket = null;
     }
     if (this.mode === 'battle') { this.battle.stop(); }
+    this._bossAttemptTracked = false;
     this.tutorial.end();
     this.ui.hideResult(); this.mode = 'lobby';
     if (first) setTimeout(() => audio.voice('welcome', { vol: 0.9 }), 900);
@@ -196,6 +201,11 @@ class App {
     if (this.stageStarting) return false;
     const companionReset = this.companionAgent?.reset() ?? true;
     const gameReset = this.eco.reset();
+    if (gameReset) {
+      this.funnel.clear();
+      this.funnel.track('first_run');
+      this.funnel.track('session_start');
+    }
     this.toLobby();
     return companionReset && gameReset;
   }
@@ -223,6 +233,7 @@ class App {
       $('stage-loading').hidden = false;
       if (this.showcase) { disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
       this.mode = 'battle';
+      this._bossAttemptTracked = false;
       const id = this.eco.s.selected;
       await this.battle.start(stage, id, this.eco.hero(id), this.eco.heroEquipBonus(id));
       this.battle.player.auto = this.journey.s.autoBattle; $('btn-auto').classList.toggle('on', this.battle.player.auto);
@@ -257,6 +268,7 @@ class App {
       $('stage-loading').hidden = false;
       if (this.showcase) { disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
       this.mode = 'battle';
+      this._bossAttemptTracked = false;
       const heroId = this.eco.s.selected;
       await this.battle.start(stage, heroId, this.eco.hero(heroId), this.eco.heroEquipBonus(heroId));
       this.battle.player.auto = this.journey.s.autoBattle; $('btn-auto').classList.toggle('on', this.battle.player.auto);
@@ -292,6 +304,11 @@ class App {
     if (this.expeditionUI?.opened) return;
     if (this.mode === 'battle') {
       this.battle.update(realDt);
+      if (this.battle.active && this.battle.boss?.alive && !this._bossAttemptTracked) {
+        this._bossAttemptTracked = true;
+        this.eco.recordJourneyAction('bossAttempts'); this.eco.emit();
+      }
+      if (!this.battle.active) this._bossAttemptTracked = false;
       this.tutorial.update();
       this.party?.update(realDt);
       const dt = realDt * this.battle.timeCtl.scale;

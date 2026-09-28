@@ -315,6 +315,10 @@ export class UI {
         if (recorded.ok) r.campaignReward = recorded.rewards;
       }
       this.lastReward = r.reward; const rw = r.reward;
+      if (!rw.saveError && rw.ok !== false && !r.funnelRewardRecorded) {
+        this.app.funnel?.track('reward_claim', { source: 'stage' }); r.funnelRewardRecorded = true;
+        if (rw.ups) this.app.funnel?.track('hero_level_up', { source: 'stage', level: Math.min(200, Math.max(1, this.eco.hero(b.heroId)?.level || 1)) });
+      }
       // completeStage and recordCampaign must settle before affordability is calculated.
       this.refreshResultGrowth(r);
       stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });

@@ -94,6 +94,7 @@ export class Battle extends BaseBattle {
       rpg.combatXp = Math.min(1e9, rpg.combatXp + award.gained);
       this.rpgDirty = true;
       if (award.levels) {
+        this.app.funnel?.track('hero_level_up', { source: 'combat', level: hero.level });
         const p = this.player, oldMax = p.maxHp;
         const nextStats = heroStats(p.def || HEROES[this.heroId], hero, this.app.eco.heroEquipBonus(this.heroId));
         p.stats = this.upgradeHeroStats?.(nextStats) || nextStats;

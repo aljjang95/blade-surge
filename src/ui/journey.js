@@ -103,7 +103,7 @@ export class JourneyView {
     const list=node('div','journey-grid');
     snap.steps.forEach((s,i)=>{const card=node('article',`journey-card ${s.claimed?'is-complete':''}`);card.append(illustration({prepare:'loadout',dungeons:'nav-dungeon',forge:'nav-forge',heroes:'loadout',mastery:'nav-mastery',quests:'nav-quests'}[s.action]||'nav-journey'),node('small','journey-eyebrow',`${i+1}단계 · ${s.claimed?'보상 수령 완료':s.complete?'조건 달성':'진행 중'}`),node('h3','',s.name),node('p','',s.description),rewardIcons(s.rewards));
       const progress=node('progress');progress.max=1;progress.value=s.complete?1:0;progress.setAttribute('aria-label',`${s.name} 목표`);card.append(progress);
-      const actions=node('div','journey-actions'),claim=button(s.claimed?'수령 완료':s.ready?'보상 받기':'진행 중',()=>this.act(()=>this.app.journey.claimStep(s.id)),`claim-step-${s.id}`);claim.disabled=this.blocked||!s.ready;
+      const actions=node('div','journey-actions'),claim=button(s.claimed?'수령 완료':s.ready?'보상 받기':'진행 중',()=>this.act(()=>{const r=this.app.journey.claimStep(s.id);if(r.ok)this.app.funnel?.track('reward_claim',{source:'journey'});return r;}),`claim-step-${s.id}`);claim.disabled=this.blocked||!s.ready;
       if(!s.claimed&&!s.ready)card.append(node('small','journey-muted','앞 단계 보상과 목표 완료 필요'));actions.append(claim);if(!s.claimed){const go=button('목표로 이동',()=>this.navigate(s.action),`go-step-${s.id}`,'journey-secondary');go.disabled=this.blocked;actions.append(go);}card.append(actions);list.append(card);});this.content.append(list);
   }
   renderContracts(snap) {
@@ -121,7 +121,7 @@ export class JourneyView {
     for(const [kind,label] of [['daily','오늘의 의뢰'],['weekly','이번 주의 의뢰']]){this.content.append(node('h3','journey-section',label));const list=node('div','journey-grid');
       for(const row of c[kind]){const card=node('article','journey-card'),progress=node('progress');progress.max=row.target;progress.value=Math.min(row.cur,row.target);progress.setAttribute('aria-label',row.name);
         card.append(illustration(kind==='daily'?'quest-daily':'quest-weekly'),node('h3','',row.name),node('p','',`${row.description}${row.dungeonId?' · '+d.name:''}`),progress,node('p','',`${fmt(Math.min(row.cur,row.target))} / ${row.target}`),rewardIcons(row.rewards));
-        const claim=button(row.claimed?'수령 완료':row.ready?'보상 받기':'진행 중',()=>this.act(()=>this.app.journey.claim(kind,row.id)),`claim-${kind}-${row.id}`);claim.disabled=this.blocked||!row.ready;card.append(claim);list.append(card);}this.content.append(list);}
+        const claim=button(row.claimed?'수령 완료':row.ready?'보상 받기':'진행 중',()=>this.act(()=>{const r=this.app.journey.claim(kind,row.id);if(r.ok)this.app.funnel?.track('reward_claim',{source:'journey'});return r;}),`claim-${kind}-${row.id}`);claim.disabled=this.blocked||!row.ready;card.append(claim);list.append(card);}this.content.append(list);}
   }
   renderTarget(snap) {
     this.banner('목표 장비','목표를 정하면 필요한 재료와 다음 던전이 보입니다. 같은 장비를 보유했다면 새로 만들지 않고 장착할 수 있습니다.','star_archive');

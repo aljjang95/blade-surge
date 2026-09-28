@@ -3,6 +3,8 @@ import { RARITY_INFO, ITEM_BY_ID } from '../data/items.js';
 import { materialsOf } from '../engine/assets.js';
 import { applyArmorAppearance } from './armor-appearance.js';
 import { applyArmoryAppearance } from '../engine/armory-assets.js';
+import { weaponLook, WEAPON_GLOW } from '../data/weapon-looks.js';
+const wLookEarly = (heroId, inst) => weaponLook(heroId, inst, LOOKS);
 
 /**
  * 장비 외형 (PRD §4-1) — 무기·방어구 장착이 실제 모델에 반영된다.
@@ -43,7 +45,7 @@ export const LOOKS = {
   },
 };
 // 발광 강도 — 블룸이 걸려 있어 1.5 를 넘으면 무기가 형체 없는 덩어리가 되고, 몸통 0.19 는 통짜로 바랜다 (스크린샷 대조)
-const WEAPON_GLOW = { N: 0, S: 0.45, E: 0.75, U: 0.95, L: 1.15 };
+// 무기 발광 표(WEAPON_GLOW)와 무기별 속성색은 data/weapon-looks.js 가 정본이다 (소환 구성품·미리보기 화면과 공유).
 const BODY_GLOW = { N: 0, S: 0.02, E: 0.035, U: 0.05, L: 0.07 };
 
 /**
@@ -62,14 +64,17 @@ export function applyLook(model, def, equip = {}) {
   if (L) {
     if (w) { for (const n of L.weaponNodes) show.delete(n); for (const n of L.weapon[w.rarity] || []) show.add(n); }
     if (a) { for (const n of L.armorNodes) show.delete(n); for (const n of L.armor[a.rarity] || []) show.add(n); }
+    // 양손 무기는 두 손으로 쥐므로 방패를 들지 않는다 (방어구 방패 메시는 방어구가 있을 때도 양손이면 숨긴다).
+    if (wLookEarly(def.id, equip.weapon)?.twoHanded) for (const n of L.armorNodes) if (/Shield/.test(n)) show.delete(n);
   }
   for (const n of [...ALL_WEAPON_NODES, 'Bow', 'Arrow']) { const o = model.getObjectByName(n); if (o) o.visible = show.has(n); }
   if (w?.modelNode && ['knight', 'barbarian'].includes(def.id) && model.userData.armoryAppearance?.includes(w.id)) {
     for (const n of L.weaponNodes) { const o = model.getObjectByName(n); if (o) o.visible = false; }
   }
   // 발광 — 무기 메시는 등급색, 몸통은 방어구 등급색을 아주 약하게. Actor.update 가 flash 뒤에 baseEmissive 로 되돌린다
-  const wCol = w ? new THREE.Color(RARITY_INFO[w.rarity].color) : null, aCol = a ? new THREE.Color(RARITY_INFO[a.rarity].color) : null;
-  const wGlow = w ? WEAPON_GLOW[w.rarity] + Math.min(20, equip.weapon.enh || 0) * 0.025 : 0;
+  const wLook = weaponLook(def.id, equip.weapon, LOOKS);
+  const wCol = w ? new THREE.Color(wLook?.color || RARITY_INFO[w.rarity].color) : null, aCol = a ? new THREE.Color(RARITY_INFO[a.rarity].color) : null;
+  const wGlow = w ? (wLook ? wLook.glow : WEAPON_GLOW[w.rarity] + Math.min(20, equip.weapon.enh || 0) * 0.025) : 0;
   const aGlow = a ? BODY_GLOW[a.rarity] + Math.min(20, equip.armor.enh || 0) * 0.0015 : 0;
   const sGlow = a ? WEAPON_GLOW[a.rarity] * 0.6 + Math.min(20, equip.armor.enh || 0) * 0.02 : 0;   // 방패·보조
   const wNodes = new Set(L ? L.weaponNodes : []), aNodes = new Set(L ? L.armorNodes : []);
@@ -79,7 +84,11 @@ export function applyLook(model, def, equip = {}) {
     for (const material of materialsOf(o)) {
       if (!material.emissive) continue;
       const base = material.userData.baseEmissive || (material.userData.baseEmissive = new THREE.Color(0));
-      if (model.userData.authoredContract) base.copy(material.userData.authoredEmissive || new THREE.Color(0));
+      if (model.userData.authoredContract) {
+        base.copy(material.userData.authoredEmissive || new THREE.Color(0));
+        // 전용 모델도 무기만은 등급·속성색으로 물든다. 원본 발광을 45% 속성색 쪽으로 옮기고 세기는 등급·강화에 비례.
+        if (owner === 'w' && wCol && wGlow > 0) base.lerp(wCol, 0.45).multiplyScalar(0.6 + Math.min(1.6, wGlow) * 0.2);
+      }
       else if (owner === 'w') base.copy(wCol || new THREE.Color(0)).multiplyScalar(wGlow);
       else if (owner === 'a') base.copy(aCol || new THREE.Color(0)).multiplyScalar(sGlow);
       else if (model.userData.tllIdentity === 'casual-v2') base.setScalar(0);
@@ -88,6 +97,6 @@ export function applyLook(model, def, equip = {}) {
     }
   });
   const enhMax = Math.max(...['weapon', 'armor', 'ring', 'boots'].map((s) => equip[s]?.enh || 0));
-  const auraCol = enhMax >= 15 ? 0xffd060 : enhMax >= 10 ? (wCol ? wCol.getHex() : def.color) : null;
-  return { trailColor: w && w.rarity !== 'N' ? wCol.getHex() : new THREE.Color(def.color).getHex(), aura: auraCol, enhMax };
+  const auraCol = enhMax >= 20 ? 0xff8af0 : enhMax >= 15 ? 0xffd060 : enhMax >= 10 ? (wCol ? wCol.getHex() : def.color) : null;
+  return { trailColor: w && w.rarity !== 'N' ? wCol.getHex() : new THREE.Color(def.color).getHex(), aura: auraCol, enhMax, weapon: wLook };
 }

@@ -77,7 +77,9 @@ test('unique real-dungeon receipts count daily and weekly thresholds without app
   const s=current();expect(win(s,'bad','rookie').ok).toBe(false);expect(win(s,'bad','invented').ok).toBe(false);
   for(let i=0;i<7;i++)expect(win(s,`win:${i}`,DUNGEONS[i%3].id).ok).toBe(true);
   expect(win(s,'win:0').ok).toBe(false);expect(s.daily.wins).toBe(7);expect(s.weekly.wins).toBe(7);
-  const rows=contractRows(s,MONDAY);expect(rows.daily.every(r=>r.ready)).toBe(true);expect(rows.weekly.every(r=>r.ready)).toBe(true);
+  const dungeonRow=(r:any)=>['wins','rotation','distinct'].includes(r.stat);
+  const rows=contractRows(s,MONDAY);expect(rows.daily.filter(dungeonRow).every(r=>r.ready)).toBe(true);expect(rows.weekly.filter(dungeonRow).every(r=>r.ready)).toBe(true);
+  expect([...rows.daily,...rows.weekly].filter(r=>!dungeonRow(r)).every(r=>r.cur===0&&!r.ready)).toBe(true);
   expect(rows.weekly.find(r=>r.id==='diverse_dungeons')?.cur).toBe(3);
   expect(claimContract(s,'weekly','seven_dungeons').ok).toBe(true);expect(claimContract(normalizeJourney(s),'weekly','seven_dungeons').ok).toBe(false);
   expect(claimContract(s,'daily','fake').ok).toBe(false);expect(claimContract(s,'monthly','rotation').ok).toBe(false);expect(s).not.toHaveProperty('gold');
