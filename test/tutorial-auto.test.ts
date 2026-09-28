@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { BattleTutorial } from '../src/ui/tutorial.js';
+import { BattleTutorial, nextHealHintTier } from '../src/ui/tutorial.js';
 
 const original = Object.getOwnPropertyDescriptor(globalThis, 'document');
 let buttonOn: boolean;
@@ -11,6 +11,16 @@ beforeEach(() => {
   } });
 });
 afterEach(() => { if (original) Object.defineProperty(globalThis, 'document', original); else Reflect.deleteProperty(globalThis, 'document'); });
+
+test('first-stage heal reminder advances once at 55% and once at 30%', () => {
+  expect(nextHealHintTier(56, 100, 0)).toBe(0);
+  expect(nextHealHintTier(55, 100, 0)).toBe(1);
+  expect(nextHealHintTier(54, 100, 1)).toBe(0);
+  expect(nextHealHintTier(30, 100, 1)).toBe(2);
+  expect(nextHealHintTier(5, 100, 2)).toBe(0);
+  expect(nextHealHintTier(25, 100, 0)).toBe(2);
+  expect(nextHealHintTier(50, 0, 0)).toBe(0);
+});
 
 for (const savedAuto of [true, false]) test(`tutorial exit respects latest saved AUTO ${savedAuto} and its button`, () => {
   const battle = { player: { auto: !savedAuto }, setPaused() {} };

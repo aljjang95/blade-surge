@@ -979,6 +979,9 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   content: ''; position: absolute; bottom: calc(100% - 4px); left: 15px;
   border: 6px solid transparent; border-top-color: #f5d17d;
 }
+#hud .exp-potions[data-heal-tier="critical"]::before { border-color: #ff7c96; background: #3b1d29f2; color: #fff5f6; }
+#hud .exp-potions[data-heal-tier="critical"]::after { border-top-color: #ff7c96; }
 @media (orientation: landscape) and (max-height: 420px) {
   #hud .exp-potions[data-heal-hint]::before { font-size: 11px; padding: 6px 8px; }
 }
+.heal-hint-live { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
