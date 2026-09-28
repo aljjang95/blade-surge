@@ -11,6 +11,7 @@ export class BattleTutorial {
     this.next = document.getElementById('tutorial-next');
     this.skip = document.getElementById('tutorial-skip');
     this.phase = null;
+    this.completedSteps = new Set();
     this.beforeAuto = false;
     this.onNext = () => this.resumeCurrent();
     this.next?.addEventListener('click', this.onNext);
@@ -22,6 +23,7 @@ export class BattleTutorial {
     if (stage?.code !== '1-1' || stage.difficultyId !== 'story' || save.tutorial?.completed || !this.root) return false;
     const battle = this.app.battle;
     this.battle = battle; this.phase = 'attack'; this.beforeAuto = !!battle.player.auto; battle.player.auto = false;
+    document.getElementById('btn-auto')?.classList.toggle('on', false);
     this.show('attack', true);
     return true;
   }
@@ -31,10 +33,14 @@ export class BattleTutorial {
       attack: { n: '01 / 04', title: '첫 칼을 뽑아라', copy: '오른쪽의 공격 버튼을 눌러 기본 콤보를 시작하세요. 키보드는 J 또는 Space입니다.', target: '#btn-attack', button: '전투 시작' },
       dodge: { n: '02 / 04', title: '붉은 예고를 피하라', copy: '적의 공격이 닿기 직전에 회피를 눌러 퍼펙트 회피를 노리세요.', target: '#btn-dodge', button: '회피 연습' },
       skill: { n: '03 / 04', title: '스킬로 무리를 무너뜨려라', copy: '화면 오른쪽의 스킬 중 하나를 눌러 MP를 사용하세요. 궁극기는 게이지가 차면 R로 발동합니다.', target: '#hud .skill-btn[data-skill="0"]', button: '스킬 연습' },
-      clear: { n: '04 / 04', title: '방을 정화하면 길이 열린다', copy: '이제 직접 이동하고 공격해 첫 방을 모두 정리하세요. 미니맵의 다음 방을 따라가면 됩니다.', target: null, button: '전투 계속' },
+      clear: { n: '04 / 04', title: '방을 정화하면 길이 열린다', copy: '이제 직접 이동하고 공격해 첫 방을 모두 정리하세요. 미니맵의 다음 방을 따라가면 됩니다. 방을 정리하면 각인 선택 창이 뜹니다. 하나를 고르면 전투가 이어집니다.', target: null, button: '전투 계속' },
     }[phase];
     if (!data) return;
     this.phase = phase;
+    if (!this.completedSteps.has(phase)) {
+      this.completedSteps.add(phase);
+      this.app.funnel?.track('tutorial_step', { step: this.completedSteps.size });
+    }
     this.app.battle?.setPaused('tutorial', paused);
     this.root.hidden = false; this.root.classList.toggle('waiting', paused);
     this.stepLabel.textContent = data.n; this.title.textContent = data.title; this.copy.textContent = data.copy; this.next.textContent = data.button;
@@ -63,11 +69,16 @@ export class BattleTutorial {
     if (!this.phase) return;
     const battle = this.battle;
     battle?.setPaused('tutorial', false);
-    if (battle?.player) battle.player.auto = this.beforeAuto;
+    const preference = this.app.journey?.s.autoBattle;
+    const auto = typeof preference === 'boolean' ? preference : this.beforeAuto;
+    if (battle?.player) battle.player.auto = auto;
+    this.app._auto = auto;
+    document.getElementById('btn-auto')?.classList.toggle('on', auto);
     this.app.eco.s.tutorial = { completed: true };
     this.app.eco.emit();
+    this.app.funnel?.track('tutorial_complete', { steps: this.completedSteps?.size || 0, skipped: !!skipped });
     document.querySelectorAll('.tutorial-focus').forEach((el) => el.classList.remove('tutorial-focus'));
-    this.root.hidden = true; this.phase = null; this.battle = null;
+    this.root.hidden = true; this.phase = null; this.battle = null; this.completedSteps?.clear();
     this.app.ui.toast(skipped ? '튜토리얼을 건너뛰었습니다. 안내서에서 다시 확인할 수 있어요.' : '전투 튜토리얼 완료 · 이제 던전을 정복하세요!', 'gold');
   }
 

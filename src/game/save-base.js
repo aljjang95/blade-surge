@@ -1,7 +1,7 @@
 import { HEROES } from '../data/heroes.js';
 import { ITEM_BY_ID, SLOTS, ENH_MAX } from '../data/items.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
-import { BATTLE_PASS } from '../data/shop.js';
+import { BATTLE_PASS, GACHA } from '../data/shop.js';
 import { normalizeLobbyCamera } from '../engine/lobby-camera.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
@@ -9,6 +9,9 @@ import { normalizeSkillLoadout } from './progression.js';
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const integer = (value, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) =>
   Number.isSafeInteger(value) ? Math.max(min, Math.min(max, value)) : fallback;
+
+/** 저장 스키마 버전. 이전(버전 없음) 저장은 필드 추가만으로 이관하며 여러 번 적용해도 결과가 같다. */
+export const SAVE_SCHEMA_VERSION = 1;
 
 // 기본 구조를 기준으로 필드를 복구한다. 저장 데이터의 프로토타입/미지 필드는 복사하지 않는다.
 function fill(template, source) {
@@ -78,5 +81,11 @@ export function normalizeSave(raw, fresh) {
   s.settings.lobbyCamera = normalizeLobbyCamera(raw.settings?.lobbyCamera);
   s.name = s.name.trim().slice(0, 20) || fresh.name;
   s.expedition = normalizeExpedition(raw.expedition);
+  // 천장 카운터는 0..pity-1 범위만 의미가 있다. 범위 밖 값은 확정 천장을 건너뛰게 만들 수 있어 보정한다.
+  // 스키마 1부터 gacha.pity가 정본이고, 버전 없는 저장은 레거시 pity에서 옮긴다. s.pity는 미러로 남긴다.
+  const legacyPity = integer(raw.pity, 0, 0, GACHA.pity - 1);
+  const pity = record(raw.gacha) && Number.isSafeInteger(raw.gacha.pity) ? integer(raw.gacha.pity, legacyPity, 0, GACHA.pity - 1) : legacyPity;
+  s.gacha = { pity }; s.pity = pity;
+  s.schemaVersion = SAVE_SCHEMA_VERSION;
   return s;
 }

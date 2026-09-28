@@ -36,6 +36,11 @@ export const MOB_ART = Object.freeze({
   comet_bastion_warden: '/img/encounters/mob_comet_bastion_warden.webp',
 });
 
+// Only explicit identity bindings are portraits. A shared rig is not an art identity.
+export function resolveEnemyPortrait(id, def) {
+  return def?.portrait || MOB_ART[id] || ENCOUNTER_ART[id] || null;
+}
+
 // Endgame expedition art is kept separate from the campaign identity catalog:
 // the portrait is a generated encounter asset and does not replace a campaign
 // boss portrait or rig.  The original is preserved under .codex/generated_images.

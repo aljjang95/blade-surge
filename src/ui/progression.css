@@ -1,4 +1,14 @@
 .mpbar,.expbar{position:relative;height:7px;border-radius:5px;background:#0009;border:1px solid #ffffff26;overflow:hidden}
+.hero-hunt-progress{margin:12px 0;padding:14px;border:1px solid #bba47755;border-radius:12px;background:linear-gradient(135deg,#213a36,#102026);color:var(--txt)}
+.hero-hunt-heading,.hero-hunt-meter{display:flex;justify-content:space-between;gap:12px;align-items:baseline;flex-wrap:wrap}
+.hero-hunt-heading span{font-size:12px;color:#d6c39a}.hero-hunt-heading strong{font-size:21px;color:#ffe0a0}
+.hero-hunt-progress progress{display:block;width:100%;height:9px;margin:10px 0 7px;accent-color:#d8b878;border:0;border-radius:5px;overflow:hidden}
+.hero-hunt-progress progress::-webkit-progress-bar{background:#060e1399}.hero-hunt-progress progress::-webkit-progress-value{background:linear-gradient(90deg,#589c89,#e7c27e)}
+.hero-hunt-meter{font-size:11px}.hero-hunt-meter span{color:#b5c4bf}.hero-hunt-progress p{font-size:11px;line-height:1.6;color:#c0ccc7;margin:10px 0 0}
+.hero-unlock-goal{display:flex;gap:12px;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid #ffffff16}
+.hero-unlock-goal img{width:58px;height:58px;object-fit:cover;border-radius:10px;border:1px solid #ccad6960;flex:none}
+.hero-unlock-goal div{display:grid;gap:4px}.hero-unlock-goal small{font-size:11px;color:#d9bd81}.hero-unlock-goal strong{font-size:17px}.hero-unlock-goal span{font-size:11px;color:#c0ccc7}
+.stage-loot-guide{font-size:12px;line-height:1.65;color:#bac8c2;margin:0 0 12px}
 .mpbar>div{height:100%;width:100%;background:linear-gradient(90deg,#246bff,#71d7ff);transition:width .12s}
 .expbar>div{height:100%;width:0;background:linear-gradient(90deg,#8f63ff,#e18dff);transition:width .16s}
 .mpbar span,.expbar span{position:absolute;inset:0;font-size:7px;line-height:6px;text-align:center;font-weight:900;text-shadow:0 1px 2px #000}

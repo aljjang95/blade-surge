@@ -1,5 +1,6 @@
 import { HERO_LEVEL_CAP, masteryLabel } from '../game/rpg-core.js';
 import { encounterLocationLabel, encounterLevelLabel } from '../game/rpg-encounters.js';
+import { mountEnemyPreview } from './enemy-preview.js';
 
 const number = value => Math.round(Number.isFinite(value) ? value : 0).toLocaleString('ko-KR');
 function node(tag, cls, text) {
@@ -22,11 +23,11 @@ function portraitOf(def,cls) {
 }
 function folded(label,text) {const section=node('details','rpg-notes');section.append(node('summary','',label),node('p','rpg-muted',text));return section;}
 
-/** DOM-only view. Data is rendered as text; native dialog owns focus and Escape. */
+/** Data is rendered as text; native dialog owns focus and Escape. */
 export class RpgView {
   constructor(app, battle, catalogue, rules) {
     this.app = app; this.battle = battle; this.catalogue = catalogue; this.rules = rules;
-    this.tab = 'bestiary'; this.selected = null; this.query = ''; this.rank = '';
+    this.tab = 'bestiary'; this.selected = null; this.query = ''; this.rank = ''; this.listPage = 0;
     this.dialog = node('dialog', 'rpg-dialog'); this.dialog.id = 'rpg-codex';
     this.dialog.setAttribute('aria-labelledby', 'rpg-title');
     const head = node('header', 'rpg-heading'), title = node('h2', '', '원정 기록'); title.id = 'rpg-title';
@@ -39,6 +40,7 @@ export class RpgView {
     this.content = node('div', 'rpg-content');
     this.dialog.append(head, tabs, this.content); document.body.append(this.dialog);
     this.dialog.addEventListener('close', () => {
+      this.clearPreview();
       this.battle.setPaused('rpg-codex', false);
       if (this.trigger?.isConnected) this.trigger.focus();
     });
@@ -64,11 +66,13 @@ export class RpgView {
     this.battle.ensureRpg(); this.render();
     if (this.app.mode === 'battle' && this.battle.active) this.battle.setPaused('rpg-codex', true);
     try { this.dialog.showModal(); }
-    catch (error) { this.battle.setPaused('rpg-codex', false); throw error; }
+    catch (error) { this.clearPreview(); this.battle.setPaused('rpg-codex', false); throw error; }
   }
-  close() { if (this.dialog.open) this.dialog.close(); }
+  close() { this.clearPreview(); if (this.dialog.open) this.dialog.close(); }
+  clearPreview() { this.preview?.dispose(); this.preview = null; }
   setTab(tab) { this.tab = tab; this.render(); }
   render() {
+    this.clearPreview();
     this.heroTab.setAttribute('aria-pressed', String(this.tab === 'hero'));
     this.monsterTab.setAttribute('aria-pressed', String(this.tab === 'bestiary'));
     this.content.replaceChildren();
@@ -104,12 +108,15 @@ export class RpgView {
     const select = node('select'); select.setAttribute('aria-label', '몬스터 등급');
     for (const label of ['', '일반', '정예', '보스']) { const option = node('option', '', label || '모든 등급'); option.value = label; select.append(option); }
     select.value = this.rank;
-    this.search.addEventListener('input', () => { this.query = this.search.value; this.renderList(); });
-    select.addEventListener('change', () => { this.rank = select.value; this.renderList(); });
+    this.search.addEventListener('input', () => { this.query = this.search.value; this.listPage = 0; this.renderList(); });
+    select.addEventListener('change', () => { this.rank = select.value; this.listPage = 0; this.renderList(); });
     filters.append(this.search, select); this.content.append(filters);
     const split = node('div', 'rpg-split'); this.list = node('div', 'rpg-list'); this.list.setAttribute('aria-label', '몬스터 목록');
     this.detail = node('section', 'rpg-detail'); this.detail.setAttribute('aria-label', '몬스터 상세');
-    split.append(this.list, this.detail); this.content.append(split); this.renderList();
+    const index = node('div', 'rpg-index');
+    this.pagination = node('nav', 'rpg-pagination'); this.pagination.setAttribute('aria-label', '몬스터 목록 페이지');
+    index.append(this.pagination, this.list);
+    split.append(index, this.detail); this.content.append(split); this.renderList();
   }
   renderList() {
     const records = this.battle.ensureRpg().bestiary, q = this.query.trim().toLocaleLowerCase('ko-KR');
@@ -117,9 +124,21 @@ export class RpgView {
       (!q || (records[entry.id]?.seen && entry.def.name.toLocaleLowerCase('ko-KR').includes(q))));
     this.list.replaceChildren();
     if (!filtered.some(entry => entry.id === this.selected)) this.selected = filtered.find(entry => records[entry.id]?.seen)?.id || filtered[0]?.id || null;
-    for (const entry of filtered) {
+    const pageCount = Math.max(1, Math.ceil(filtered.length / 8));
+    this.listPage = Math.max(0, Math.min(this.listPage || 0, pageCount - 1));
+    const changePage = delta => {
+      this.listPage += delta; this.renderList();
+      const preferred = this.pagination.querySelector(delta > 0 ? '.rpg-page-next' : '.rpg-page-prev');
+      (preferred?.disabled ? this.pagination.querySelector('button:not(:disabled)') : preferred)?.focus({preventScroll:true});
+      this.pagination.scrollIntoView?.({block:'start',behavior:'auto'});
+    };
+    const previous = button('이전', () => changePage(-1), 'rpg-page-prev'); previous.disabled = this.listPage === 0;
+    const next = button('다음', () => changePage(1), 'rpg-page-next'); next.disabled = this.listPage === pageCount - 1;
+    const pageLabel = node('span', '', `${this.listPage + 1} / ${pageCount}`); pageLabel.setAttribute('aria-live', 'polite');
+    this.pagination.replaceChildren(previous, pageLabel, next);
+    for (const entry of filtered.slice(this.listPage * 8, (this.listPage + 1) * 8)) {
       const record = records[entry.id], found = !!record?.seen;
-      const item = button('', () => { this.selected = entry.id; this.renderList(); this.detail.scrollIntoView?.({block:'nearest',behavior:'auto'}); }); item.dataset.monster = entry.id;
+      const item = button('', () => { this.selected = entry.id; this.renderList(); this.list.querySelector(`[data-monster="${entry.id}"]`)?.focus({preventScroll:true}); this.detail.scrollIntoView?.({block:'start',behavior:'auto'}); }); item.dataset.monster = entry.id;
       item.setAttribute('aria-pressed', String(entry.id === this.selected));
       const portrait=found?portraitOf(entry.def,'rpg-list-portrait'):null;
       if(portrait)item.append(portrait);
@@ -130,6 +149,7 @@ export class RpgView {
     this.renderDetail(filtered.find(entry => entry.id === this.selected), records);
   }
   renderDetail(entry, records) {
+    this.clearPreview();
     this.detail.replaceChildren();
     if (!entry) { this.detail.append(node('p', 'rpg-empty', '다른 검색어나 등급을 선택하세요.')); return; }
     const record = records[entry.id];
@@ -140,8 +160,15 @@ export class RpgView {
       node('p', 'rpg-muted', `${nonCampaign ? '' : '최고 레벨 기록 Lv.' + record.highestLevel + ' · '}${number(record.kills)}회 처치`));
     // Old saves did not identify expedition locations; never infer one retrospectively.
     if (location) this.detail.append(node('p', 'rpg-encounter-location', '마지막 조우 장소 · ' + location));
-    const portrait=portraitOf(entry.def,'rpg-portrait');if(portrait)this.detail.append(portrait);
-    this.detail.append(node('p', 'rpg-reference', `캠페인 ${entry.reference} · Lv.${entry.level}`), statGrid([
+    const model = node('figure', 'rpg-model'), preview = node('div', 'rpg-enemy-preview');
+    model.append(preview, node('figcaption', '', '실제 전투 모델 · 대기 자세')); this.detail.append(model);
+    this.preview = mountEnemyPreview(preview, entry.def);
+    const portrait=portraitOf(entry.def,'rpg-portrait');
+    if(portrait){
+      const art=node('details','rpg-notes rpg-enemy-art');portrait.alt=`${entry.def.name} 캐릭터 아트`;
+      art.append(node('summary','','캐릭터 아트'),portrait);this.detail.append(art);
+    }
+    this.detail.append(node('p', 'rpg-reference', `${entry.locations.length ? '캠페인 ' : ''}${entry.reference} · Lv.${entry.level}`), statGrid([
       ['체력', number(entry.stats.hp)], ['공격력', number(entry.stats.atk)], ['피해 감소', `${Math.round(entry.stats.armor * 100)}%`],
       ['처치 EXP', number(entry.xp)], ['이동 속도', String(entry.stats.speed)], ['공격 거리', String(entry.stats.range)]
     ]));

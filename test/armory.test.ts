@@ -255,7 +255,7 @@ test('death synchronously cancels anchor and counters before any revive branch; 
 for(const Battle of [BaseBattle,RpgBattle])test(Battle===BaseBattle?'base contact upgrade bounded':'RPG contact upgrade bounded',()=>{
  let emissions=0,particles=0,bodies=0,sounds=0;const original=audio.hit;audio.hit=()=>{sounds++;};
  try{
- const g:any={elapsed:1,paused:false,player:{stats:{crit:0,ultGain:1},addUlt(){}},app:{reducedMotion:{matches:false}},dmgDealt:0,combo:0,maxCombo:0,feedbackCount:0,feedbackSound:false,ui:{setCombo(){}},timeCtl:new TimeCtl(),fx:{dmgLayer:{children:[]},damage(){},flash(){emissions++;},directional(){particles++;},contact(_p:any,_d:any,_c:any,o:any){emissions++;if(o.particles)particles++;}}};
+ const g:any={active:true,elapsed:1,paused:false,player:{stats:{crit:0,ultGain:1},addUlt(){}},app:{reducedMotion:{matches:false}},dmgDealt:0,combo:0,maxCombo:0,feedbackCount:0,feedbackSound:false,ui:{setCombo(){}},timeCtl:new TimeCtl(),fx:{dmgLayer:{children:[]},damage(){},flash(){emissions++;},directional(){particles++;},contact(_p:any,_d:any,_c:any,o:any){emissions++;if(o.particles)particles++;}}};
  const e:any={alive:true,pos:new Vector3(),def:{scale:1},hurt:()=>10,receiveImpact(){bodies++;}};
  Battle.prototype.damageEnemy.call(g,e,10,{quietStop:true});
  for(let i=0;i<30;i++)Battle.prototype.damageEnemy.call(g,e,10,{finisher:true});

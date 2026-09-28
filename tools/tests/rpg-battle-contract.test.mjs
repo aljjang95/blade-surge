@@ -19,7 +19,7 @@ const Battle=new Function(...names,source+'\nreturn Battle;')({Vector3:Vector},B
 function setup(){
  const h={level:1,exp:95},s={heroes:{knight:h},rpg:core.normalizeRpg(null,['a'])};
  const b=Object.create(Battle.prototype);let saves=0,warnings=0,notices=0,flashes=0;
- Object.assign(b,{heroId:'knight',stage:{idx:1},elapsed:0,paused:false,_contactAt:-Infinity,combatXp:0,rpgDirty:false,saveT:0,killLedger:new core.KillLedger(),
+ Object.assign(b,{active:true,heroId:'knight',stage:{idx:1},elapsed:0,paused:false,_contactAt:-Infinity,combatXp:0,rpgDirty:false,saveT:0,killLedger:new core.KillLedger(),
  app:{eco:{s,hero:()=>h,heroEquipBonus:()=>({}),save:()=>{saves++;return true}}},
  player:{maxHp:110,hp:80,alive:true,heroLevel:1,def:HEROES.knight,cds:[3,2],stats:{crit:0,critDmg:1.5},unlocked(){return this.heroLevel>=10},addUlt(){}},
  ui:{toast:()=>warnings++,setCombo(){},skillBtns:[],awakenBanner(){}},rpgView:{levelUp:()=>notices++},
@@ -37,6 +37,22 @@ test('mid-battle level-up preserves missing HP and cooldowns',()=>{
 });
 test('poison kill after hero death cannot revive the hero',()=>{
  const {b}=setup();b.player.alive=false;b.player.hp=0;b.onEnemyDeath(dead());assert.equal(b.player.hp,0);assert.equal(b.player.alive,false);
+});
+test('late death callbacks after either result cannot add XP, codex kills or loot',()=>{
+ for(const win of [false,true]){
+  const {b,h,s}=setup();b.onEnemyDeath(dead(2));b.flushRpg();
+  b.active=false;b.result={win,combatXp:b.combatXp};
+  const before=JSON.stringify({h,s,result:b.result,combatXp:b.combatXp,baseDeaths:b.baseDeaths});
+  b.onEnemyDeath(dead(8));
+  assert.equal(JSON.stringify({h,s,result:b.result,combatXp:b.combatXp,baseDeaths:b.baseDeaths}),before);
+  assert.equal(b.rpgDirty,false);
+ }
+});
+test('lingering hits after settlement cause no damage, growth or combat feedback',()=>{
+ const {b,counts}=setup();b.active=false;b.result={win:false};let hits=0;
+ const enemy={alive:true,spawning:false,hp:1,def:{scale:1},pos:new Vector(),hurt:()=>{hits++;return 1},receiveImpact(){}};
+ b.damageEnemy(enemy,100,{quiet:true,noProc:true});
+ assert.equal(hits,0);assert.equal(b.dmgDealt,0);assert.equal(b.combo,0);assert.equal(counts().flashes,0);
 });
 test('summoned enemies keep codex and original drops but have no combat XP',()=>{
  const {b,h,s}=setup();b.onEnemyDeath(dead(0));assert.equal(h.level,1);assert.equal(h.exp,95);assert.equal(b.combatXp,0);assert.equal(s.rpg.bestiary.a.kills,1);assert.equal(b.baseDeaths,1);

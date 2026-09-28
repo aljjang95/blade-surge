@@ -50,7 +50,17 @@ export const SKUS = [
   { id: 'en2', tab: 'energy', kind: 'gem', name: '에너지 120', price: 100, icon: '/img/icon_energy.webp', desc: '즉시 에너지 120 회복', rewards: { energy: 120 }, badge: '+20%' },
 ];
 
-export const GACHA = { single: 300, ten: 2700, pity: 80, softPity: 60, featured: 'barbarian', rates: { R: 86, SR: 12, SSR: 2 } };
+// 가중치 단위. softPity회 연속 미당첨 뒤(softPity+1번째)부터 SSR 가중치가 매 회 softPityStep씩 오르고 pity번째는 SSR 확정.
+// SSR 결과: 픽업 영웅 50% · 픽업을 제외한 다른 SSR 영웅 풀 25% · SSR 장비 25%
+// SR 결과: 영웅 40% · 장비 40% · 강화 재료 20% / R 결과: 장비 55% · 강화 재료 45%
+// materials는 등급별 재료 몫(w는 그 등급 안에서의 비율). 등급마다 영웅 + 장비 + 재료 비율의 합은 1이다.
+export const GACHA = { single: 300, ten: 2700, pity: 80, softPity: 60, softPityStep: 6, featured: 'barbarian', rates: { R: 86, SR: 12, SSR: 2 },
+  ssrSplit: { featured: 0.5, pool: 0.25, gear: 0.25 }, srSplit: { hero: 0.4, gear: 0.4 }, rSplit: { gear: 0.55 },
+  materials: {
+    SR: [{ k: 'stones2', n: 5, w: 0.12 }, { k: 'protect', n: 1, w: 0.08 }],
+    R: [{ k: 'stones', n: 10, w: 0.35 }, { k: 'bless', n: 1, w: 0.10 }],
+  },
+  dupShards: 10 };
 export const BATTLE_PASS = { price: 9900, maxLevel: 30, xpPerLevel: 100 };
 export const ENERGY = { max: 100, regenSec: 180 };
 

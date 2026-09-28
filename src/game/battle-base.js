@@ -15,13 +15,17 @@ import { audio } from '../engine/audio.js';
 import { heroVoiceName } from '../engine/hero-voice.js';
 import { SetProcs } from './setprocs.js';
 import { contactProfile, contactBudget } from './combat-contact.js';
+import { contactFeedback } from './apex-combat.js';
 import { ImpactClock } from './combat-motion.js';
 import { RegionHazards } from './region-hazards.js';
 import { resolveJobHero } from '../data/jobs.js';
 import { buildExpeditionWorld, expeditionRoster, applyBattleConsumable, canApplyBattleConsumable } from './expedition-combat.js';
 import { ConquestRun } from './expedition-conquests.js';
+import { createRouteObjectives } from './route-objectives.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
+import { dungeonVisualFor } from '../data/dungeon-visuals.js';
+import { frontierEffectForStage } from '../data/seasonal-content.js';
 
 const _v = new THREE.Vector3();
 const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
@@ -36,8 +40,8 @@ export class Battle {
     this.enemies = []; this.projectiles = []; this.timers = [];
     this.drops = new DropSystem(this);
     this.player = null; this.active = false; this.paused = false; this.pauseReasons = new Set();
-    this.combo = 0; this.comboT = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0;
-    this.wave = 0; this.waveT = 0; this.stage = null; this.boss = null; this.result = null; this.revived = 0;
+    this.combo = 0; this.comboT = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0;
+    this.wave = 0; this.waveT = 0; this.stage = null; this.boss = null; this.result = null; this.revived = 0; this.treasureRooms = 0;
     this.pending = []; // 지속 스폰 큐
     this.maxAlive = 34; this.peakAlive = 0; this.controlFinisherTokens = new WeakSet();
   }
@@ -46,6 +50,7 @@ export class Battle {
   setPaused(reason, on) {
     if (on) { this.pauseReasons.add(reason); audio.vibe(0); } else this.pauseReasons.delete(reason);
     this.paused = this.pauseReasons.size > 0;
+    if (this.paused) this.routeObjectives?.interrupt();
     this.input.enabled = this.active && !!this.player?.alive && !this.paused;
     this.input.clear();
   }
@@ -61,10 +66,11 @@ export class Battle {
   async start(stage, heroId, heroState, equipBonus) {
     // 재도전/다음 층에서도 이전 액터·탐험 목표·시간 효과를 반드시 종료한다.
     this.stop(); this.autoTarget = null; this.timeCtl = new TimeCtl();
+    const startGeneration = this._startGeneration;
     this._contactAt = -Infinity; this._contactBudget = null;
     this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0; this.bossDefeated = false;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
-    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false;
+    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.treasureRooms = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false;
     this.clearPortal();
     const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = heroStats(def, heroState, equipBonus);
     this.setBonus = equipBonus.active || [];
@@ -75,18 +81,28 @@ export class Battle {
     // ---- 무한의 성: 한 층 절차 생성 ----
     this.world = stage.expedition ? buildExpeditionWorld(stage) : new Floor(stage.idx, stage.chapter.theme, stage.party?.seed, stage.dungeon?.layout);
     this.conquest = stage.expedition?.conquestId ? new ConquestRun(stage, this.world, this.app.expeditionTicket) : null;
-    this.arena.buildFloor(this.world, stage.chapter.theme);
+    this.routeObjectives = createRouteObjectives(stage, this.world);
+    this.autoTarget = this.routeObjectives?.autoRoom() || null;
+    this.visual = dungeonVisualFor(stage);
+    this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
+    await this.routeObjectives?.prepareView?.(this.scene);
+    if (this._startGeneration !== startGeneration) return;
+    this.renderer.setBattleVisual?.(this.visual);
     this.roomsCleared = 0; this.bossFound = false;
 
     const gltf = await loadModel(def.model);
+    if (this._startGeneration !== startGeneration) return;
     this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], stage.party ? {} : this.app.eco.heroEquipInsts(heroId), heroState.level || 1, heroState.skillLoadout || [4, 5]);
     this.sp.configureSummons?.(equipBonus.summons || []);
     const sr = this.world.startRoom;
     this.player.pos.set(sr.x, 0, sr.z); this.player.yaw = 0;
     await this.fx.prepare(this.renderer.r, this.app.models, this.renderer.composer.readBuffer);
+    if (this._startGeneration !== startGeneration) return;
     this.drops.setup(this.app.models.dungeon);
     this.renderer.rig.mode = 'battle'; this.renderer.rig.target.copy(this.player.pos); this.renderer.rig.pos.copy(this.player.pos).add(this.renderer.rig.offset);
-    this.weaponsGltf = await loadModel('skel_weapons');
+    const weaponsGltf = await loadModel('skel_weapons');
+    if (this._startGeneration !== startGeneration) return;
+    this.weaponsGltf = weaponsGltf;
     this.ui.setupHud(def, this.player);
     this.ui.setupMinimap(this.world);
     this.active = true; this.input.enabled = true; this.input.clear();
@@ -101,7 +117,7 @@ export class Battle {
     this.ui.waveBanner(stage.code || `${stage.idx}층`);
     audio.waveHorn({ vol: 0.45 });
     this.heroId = heroId;
-    this.bossKey = ENEMIES[stage.encounter?.enemyId || stage.chapter.boss]?.voiceKey || stage.chapter.boss;
+    this.bossKey = ENEMIES[stage.dungeonBossId || stage.encounter?.enemyId || stage.chapter.boss]?.voiceKey || stage.chapter.boss;
     this.hazards = stage.expedition?.kind === 'arena' ? null : new RegionHazards(this);
     this.after(1.2, () => { if (this.active && stage.objective) this.ui.toast(stage.objective, 'gold'); });
     this.after(0.25, () => { if (this.active) audio.voice(heroVoiceName(heroId, 'select'), { min: 20 }); });
@@ -114,6 +130,12 @@ export class Battle {
   applyConsumable(id) { return applyBattleConsumable(this, id); }
   canApplyConsumable(id) { return canApplyBattleConsumable(this, id); }
   updateExpedition(dt) {
+    if (this.routeObjectives) {
+      this.routeObjectives.update(this, dt);
+      // 기록 복원은 심층 보물 제단과 공존한다. 종문/냉각선의 대체 규칙은 유지한다.
+      if (!this.routeObjectives.coexistsAttunement) return;
+      if (this.routeObjectives.closed || !this.routeObjectives.holdingAllowed || this.world !== this.routeObjectives.world) return;
+    }
     if (this.bossDefeated || !this.player.alive) return;
     this.conquest?.update(this, dt);
     if (this.stage.expedition.kind === 'arena') {
@@ -122,11 +144,17 @@ export class Battle {
     }
     for (const room of this.world.rooms) {
       if (!room.attunementPending || room.attuned) continue;
+      if (this.routeObjectives && (!this.routeObjectives.allowsAttunement(room) || this.routeObjectives.combatPending(this, room))) {
+        room.attunementT = 0; continue;
+      }
       const inside = Math.hypot(this.player.pos.x - room.x, this.player.pos.z - room.z) <= 3;
       room.attunementT = inside ? room.attunementT + dt : 0;
       room.attunementFx = (room.attunementFx || 0) - dt;
       if (room.attunementFx <= 0) { room.attunementFx = 1.8; this.fx.castCircle(new THREE.Vector3(room.x,0,room.z), 0x87cbb0, { radius: 3, life: 2 }); }
-      if (room.attunementT >= 2) { room.attuned = true; room.attunementPending = false; this.conquest?.attune(room); this.markCleared(room); }
+      if (room.attunementT + 1e-9 >= 2) {
+        room.attuned = true; room.attunementPending = false; this.conquest?.attune(room); this.markCleared(room);
+        if (this.routeObjectives) { this.autoTarget = this.routeObjectives.autoRoom(); this.routeObjectives.refreshHint(this); }
+      }
     }
   }
 
@@ -260,6 +288,7 @@ export class Battle {
     if (room.cleared || room.spawned) return;
     room.spawned = true;
     const list = this.roomRoster(room);
+    this.routeObjectives?.prepareRoom(room, list.length);
     this.conquest?.prepareRoom(room, list);
     if (!list.length) { this.markCleared(room); return; }
     const isBoss = room.type === ROOM_TYPE.BOSS;
@@ -282,11 +311,14 @@ export class Battle {
   }
   markCleared(room) {
     if (room.cleared) return;
-    if (this.stage.expedition?.mechanics?.attunement && room.type === ROOM_TYPE.TREASURE && !room.attuned) {
+    // Do not begin a reinforcement wave while initial delayed spawns remain.
+    if (this.routeObjectives?.combatPending(this, room)) return;
+    if ((!this.routeObjectives || this.routeObjectives.allowsAttunement?.(room)) && this.stage.expedition?.mechanics?.attunement && room.type === ROOM_TYPE.TREASURE && !room.attuned) {
       if (!room.attunementPending) {
         room.attunementPending = true; room.attunementT = 0;
-        this.ui.toast(room.conquestLabel ? `${room.conquestLabel} 제단 · 중심에서 2초 공명 · ${this.conquest.hint()}` : this.stage.expedition.id === 'star_archive' ? '제단 중심의 빛 안에 2초 머물러 귀환 기록을 복원하세요.' : '제단 중심의 빛 안에 2초 머물러 유리 잎을 회수하세요.', 'gold');
+        this.ui.toast(room.conquestLabel ? `${room.conquestLabel} 제단 · 중심에서 2초 공명 · ${this.conquest.hint()}` : ['star_archive', 'nightglass_observatory'].includes(this.stage.expedition.id) ? '제단 중심의 빛 안에 2초 머물러 귀환 기록을 복원하세요.' : '제단 중심의 빛 안에 2초 머물러 유리 잎을 회수하세요.', 'gold');
         this.fx.castCircle(new THREE.Vector3(room.x, 0, room.z), 0x87cbb0, { radius: 3, life: 3 });
+        if (this.routeObjectives) this.autoTarget = this.routeObjectives.autoRoom();
       }
       return;
     }
@@ -301,6 +333,8 @@ export class Battle {
       reinforcements.forEach((t, i) => { if (i < available) this.spawnEnemy(t, null, room); else this.pending.push({ t, room }); });
       return;
     }
+    // Valve operation becomes available only AFTER all authored reinforcements.
+    if (this.routeObjectives?.beforeClear(this, room)) return;
     room.cleared = true; this.roomsCleared++;
     this.app.companionAgent?.observe('room-clear', { roomsCleared: this.roomsCleared, id: `${this.stage.idx}:${this.roomsCleared}` });
     if (room.type !== ROOM_TYPE.START) {
@@ -316,6 +350,7 @@ export class Battle {
       }
       // 보물방은 클리어 시 장비 상자
       if (fieldDropsAllowed(this.stage) && room.type === ROOM_TYPE.TREASURE) {
+        this.treasureRooms++;
         for (let i = 0; i < 3; i++) { const inst = this.rollDrop('elite'); if (inst) this.drops.spawn(new THREE.Vector3(room.x, 0.6, room.z), 'item', inst, { count: 1, spread: 1.6 }); }
         this.drops.spawn(new THREE.Vector3(room.x, 0.6, room.z), 'stone', 8, { count: 3, spread: 2 });
       }
@@ -327,6 +362,7 @@ export class Battle {
   /** 보스 봉인 해제 — 마지막 구역을 정화한 순간. 결계가 깨지고 AUTO 도 이제 보스방을 목표로 잡는다 */
   unsealBoss() {
     if (!this.active || !this.world || !this.world.sealed) return;
+    if (this.routeObjectives && (this.paused || !this.routeObjectives.canUnseal())) return;
     this.world.unseal(); this.arena.openSeal(this.fx);
     this.ui.toast('보스의 봉인이 풀렸다!', 'red'); this.ui.waveBanner('봉인 해제'); this.renderer.shake(0.5); this.renderer.flashScreen(0.25, 0xff3050);
     audio.waveHorn({ vol: 0.5, boss: true }); audio.boom({ vol: 0.6, dur: 0.7, low: 60 }); audio.voice('seal_break', { min: 30 });
@@ -379,10 +415,11 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
+  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.routeObjectives?.stop(); this.routeObjectives = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
-    let def = this.stage.expedition && type === this.stage.encounter.enemyId ? this.stage.expeditionEnemy : ENEMIES[type]; if (!def) return; const gltf = this.app.models[def.model]; if (!gltf) return;
+    const runtimeType = !this.stage.expedition && type === this.stage.encounter?.enemyId && this.stage.dungeonBossId ? this.stage.dungeonBossId : type;
+    let def = this.stage.expedition && type === this.stage.encounter.enemyId ? this.stage.expeditionEnemy : ENEMIES[runtimeType]; if (!def) return; const gltf = this.app.models[def.model]; if (!gltf) return;
     const rm = room || this.curRoom || this.world?.startRoom;
     if (this.conquest) {
       def = this.conquest.enemyDefinition(type, def, rm);
@@ -403,7 +440,9 @@ export class Battle {
     } else { const a = Math.random() * Math.PI * 2, r = 11; pos = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r); }
     const e = new Enemy(this, gltf, this.weaponsGltf, def, this.stage.scale, pos);
     e.homeRoom = rm;
-    this.conquest?.spawn(e, type, rm);
+    e.runtimeSpeciesId = runtimeType;
+    this.conquest?.spawn(e, runtimeType, rm);
+    this.routeObjectives?.spawn(rm);
     this.enemies.push(e);
     if (def.boss) { this.boss = e; this.ui.showBoss(def.name, true, def.portrait); this.app.companionAgent?.observe('boss-spotted', { name: def.name, id: `${this.stage.idx}:${def.name}` }); }
     return e;
@@ -486,8 +525,9 @@ export class Battle {
     audio.playMusic(musicForScene({ stage: this.stage, boss: !!this.boss }), MUSIC_MIX); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12], step: 0.08 });
     if (this.bossDefeated) this.after(.8, () => this.victory());
   }
-  defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, expedition: this.stage?.expedition || null, conquest: this.conquest?.finish(false) || null }; this.ui.showResult(this, false); }
+  defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, expedition: this.stage?.expedition || null, conquest: this.conquest?.finish(false) || null, routeObjective: this.routeObjectives?.finish(false) || null, treasureRooms: this.treasureRooms }; this.ui.showResult(this, false); }
   victory() {
+    if (this.routeObjectives && (this.paused || !this.bossDefeated || !this.routeObjectives.canWin())) return;
     if (!this.active || !this.player?.alive) return; this.active = false; this.input.enabled = false; this.input.clear();
     this.app.companionAgent?.observe('victory', { floor: this.stage?.idx || 0 });
     this.player.play('Cheer', { fade: 0.2 }); audio.playMusic(null); audio.play('jingle_win0', { vol: 0.9 }); this.ui.showBoss('', false); this.after(1.2, () => audio.voice(heroVoiceName(this.heroId, 'win'))); this.after(3.8, () => audio.voice('floor_clear'));
@@ -500,22 +540,23 @@ export class Battle {
     const optional = this.world ? this.world.rooms.filter((r) => r.type !== ROOM_TYPE.START && r.type !== ROOM_TYPE.BOSS) : [];
     const optionalCleared = optional.filter((r) => r.cleared).length;
     const fullClear = optional.length > 0 && optionalCleared === optional.length;
-    this.result = { win: true, stars, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, rooms: this.roomsCleared, totalRooms: this.world ? this.world.rooms.length : 0, optionalRooms: optional.length, optionalCleared, fullClear, expedition: this.stage.expedition || null, conquest: this.conquest?.finish(true) || null };
+    this.result = { win: true, stars, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, rooms: this.roomsCleared, totalRooms: this.world ? this.world.rooms.length : 0, optionalRooms: optional.length, optionalCleared, fullClear, treasureRooms: this.treasureRooms, expedition: this.stage.expedition || null, conquest: this.conquest?.finish(true) || null, routeObjective: this.routeObjectives?.finish(true) || null };
     this.after(1.6, () => this.ui.showResult(this, true));
   }
 
   // ---------------- 히트 판정 ----------------
   hitArea(src, pos, yaw, range, arcDeg, dmg, opts = {}) {
     const half = THREE.MathUtils.degToRad(arcDeg) / 2; let n = 0;
-    const r2 = (range + 1.5) * (range + 1.5);
+    const reachPad = opts.precision ? 0.35 : 1.5;
+    const r2 = (range + reachPad) * (range + reachPad);
     for (const e of this.enemies) {
       if (!e.alive || e.spawning) continue;
       const dx = e.pos.x - pos.x, dz = e.pos.z - pos.z;
       if (dx * dx + dz * dz > r2) continue;
-      const d = Math.hypot(dx, dz) - e.radius * 0.6;
+      const d = Math.hypot(dx, dz) - e.radius * (opts.precision ? 0.35 : 0.6);
       if (d > range) continue;
       const ang = Math.atan2(dx, dz); let diff = Math.abs(ang - yaw); diff = Math.min(diff, Math.PI * 2 - diff);
-      if (diff > half && d > 0.9) continue;
+      if (diff > half && (opts.precision || d > 0.9)) continue;
       this.damageEnemy(e, dmg, { ...opts, dirx: dx, dirz: dz }); n++;
       if (n >= 24) break;
     }
@@ -558,28 +599,36 @@ export class Battle {
     }
     const hitPos = e.pos.clone().setY(1.1 * e.def.scale);
     // 다수 타격 시 데미지 숫자 솎아내기 (성능)
-    if (this.fx.dmgLayer.children.length < 26 || crit) this.fx.damage(hitPos, dealt, { crit, kind: opts.kind === 'magic' ? 'skill' : '' });
+    if (this.fx.dmgLayer.children.length < 26 || crit) this.fx.damage(hitPos, dealt, {
+      crit, kind: opts.kind === 'magic' ? 'skill' : '', finisher: !!opts.finisher, boss: !!e.isBoss,
+      heavy: contactProfile(opts, crit, e.isBoss, true)?.heavy,
+    });
     const dirx = opts.dirx || 0, dirz = opts.dirz || 0;
     const color = opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
     const contact = this.paused ? null : contactProfile(opts, crit, e.isBoss, this.app?.reducedMotion?.matches);
+    if (contact) e.receiveImpact?.(dirx, dirz, contactFeedback({ finisher: opts.finisher, crit, boss: e.isBoss, elite: e.isElite, reduced: !!this.app?.reducedMotion?.matches }).recoil);
+    if (opts.basic && p === this.player && !p.auto) { this.impactTarget = e; this.impactT = .16; }
     const budget = contactBudget(this._contactBudget, this.elapsed, contact);
     if (budget) {
       this._contactBudget = budget; this._contactAt = budget.at;
       if (budget.emit) this.fx.flash(hitPos, color, { size: contact.size, life: .10 });
       if (budget.emit && contact.particles) this.fx.directional(hitPos, _v.set(dirx, 0, dirz).normalize(), color, { n: contact.particles, speed: contact.heavy ? 9 : 6 });
-      audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy, finisher: !!opts.finisher });
+      audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy || crit || !!e.isBoss, finisher: !!opts.finisher, boss: !!e.isBoss });
       if (contact.stop) this.timeCtl.hitstop(contact.stop);
+      if (contact.tier !== 'light' || crit) { this.renderer?.shake?.(contact.tier === 'finisher' ? 0.16 : 0.055); this.renderer?.punch?.(contact.tier === 'finisher' ? 0.12 : 0.035); }
       if (p === this.player && !p.auto && contact.haptic) audio.vibe(contact.haptic);
       if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);
     }
   }
 
   // ---------------- 투사체 ----------------
-  spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, stun = 0, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false, comboToken = null, skillCast = null, basic = false }) {
+  spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, stun = 0, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false, counter = false, comboToken = null, skillCast = null, basic = false }) {
+    const effect = frontierEffectForStage(this.stage);
+    if (hostile && effect?.kind === 'projectileDamageMultiplier') dmg *= effect.value;
     let mesh = null;
     if (visual !== null && size > 0) { mesh = visual === 'arrow' ? createArrowVisual(color, size, dir) : this.fx.orb(color, size); mesh.position.copy(pos); this.scene.add(mesh); }
     const readableTrail = trail ?? (!hostile && kind === 'magic' ? color : null);
-    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, stun, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, comboToken, skillCast, basic });
+    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, stun, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, counter, comboToken, skillCast, basic });
   }
   updateProjectiles(dt) {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -596,7 +645,7 @@ export class Battle {
           if (Math.hypot(e.pos.x - p.pos.x, e.pos.z - p.pos.z) < p.radius + e.radius) {
             p.hit.add(e);
             if (p.explode) { this.explode(p); done = true; break; }
-            this.damageEnemy(e, p.dmg, { kb: p.kb, stun: p.stun, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, comboToken:p.comboToken, skillCast:p.skillCast, basic:p.basic });
+            this.damageEnemy(e, p.dmg, { kb: p.kb, stun: p.stun, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, counter: p.counter, comboToken:p.comboToken, skillCast:p.skillCast, basic:p.basic });
             if (!p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); break; }
           }
         }
@@ -629,7 +678,9 @@ export class Battle {
     this.fx.ghost(p.model, 0x9fe4ff, { life: 0.5, opacity: 0.7 });
     this.fx.burst(p.pos.clone().setY(1), 0x9fe4ff, { n: 18, speed: 7, size: 0.35 });
     p.addUlt(CONTROL_ULT_GAIN.perfectDodge * (p.stats.ultGain || 1)); p.addMp?.(CONTROL_MP_GAIN.perfectDodge);
-    p.counterWindow = Math.max(p.counterWindow || 0, 2.4);
+    const effect = frontierEffectForStage(this.stage);
+    const counterBonus = effect?.kind === 'bossCounterWindow' ? effect.value : 0;
+    p.counterWindow = Math.max(p.counterWindow || 0, 2.4 + counterBonus);
     p.buffs.atk = Math.max(p.buffs.atk, 1.35); p.buffs.atkSpd = Math.max(p.buffs.atkSpd, 1.25); p.buffs.t = Math.max(p.buffs.t, 3);
     this.ui.perfectDodge(); audio.bark(`hero_${this.player?.def.voiceId || this.heroId}_perfect`, { vol: 0.95, min: 1.2 }); audio.voice('perfect', { min: 12, duck: 0.7, dur: 0.8 });
     audio.ice({ vol: 0.4, dur: 0.35 }); audio.ting({ vol: 0.45, freq: 2400 }); audio.vibe([15, 25, 40]);
@@ -651,9 +702,12 @@ export class Battle {
     if (this.paused) return;
     const dt = this.timeCtl.step(realDt);
     this.elapsed += dt;
+    this.impactT = Math.max(0, this.impactT - dt);
     for (let i = this.timers.length - 1; i >= 0; i--) { const t = this.timers[i]; t.t -= dt; if (t.t <= 0) { this.timers.splice(i, 1); t.fn(); } }
     this.input.update();
+    this.routeObjectives?.observePlayer?.(this.player);
     if (this.active) this.player.handleInput(this.input, dt);
+    this.routeObjectives?.observePlayer?.(this.player);
     this.player.update(dt);
     if (this.stage.party) this.app.party.updateHostActors(dt);
     if (this.active && this.stage.expedition) this.updateExpedition(dt);
@@ -665,6 +719,7 @@ export class Battle {
     if (!this.stage.party && this.stage.expedition?.kind !== 'arena') this.app.companionAgent?.updateBattle(this, dt, realDt);
     if (alive > this.peakAlive) this.peakAlive = alive;   // 층 내 동시 생존 최대 (하네스 maxAliveSeen)
     this.updateProjectiles(dt);
+    this.routeObjectives?.observePlayer?.(this.player);
     for (let i = this.holes.length - 1; i >= 0; i--) { const h = this.holes[i]; h.t -= dt; this.vacuum(h.pos, 7, 1.1); if (h.t <= 0) this.holes.splice(i, 1); }
     if (this.sp) this.sp.update(dt);
     this.drops.update(dt);
@@ -673,12 +728,18 @@ export class Battle {
     if (this.player.alive && this.player.hp < this.player.maxHp * 0.25) { audio.voice(heroVoiceName(this.heroId, 'low_hp'), { min: 12 }); audio.voice('low_hp', { min: 25 }); }
     // Local threat framing preserves readable heroes and explicit user presets.
     const rig = this.renderer.rig;
-    const framing = battleFraming({ player: this.player, enemies: this.enemies, boss: this.boss, preset: rig.preset, presets: CAMERA_PRESETS });
+    const framing = battleFraming({ player: this.player, enemies: this.enemies, boss: this.boss, impactTarget: this.impactTarget, impactWeight: this.impactT > 0 ? this.impactT / .16 : 0, preset: rig.preset, presets: CAMERA_PRESETS });
     _v.set(framing.target.x, framing.target.y, framing.target.z);
     rig.target.lerp(_v, framingBlend(realDt, 7));
     if (rig.preset === 'auto') {
       const k = framingBlend(realDt, 1.2);
-      for (const key of ['y', 'z', 'fov', 'lookY', 'lag']) rig.base[key] += (framing.desired[key] - rig.base[key]) * k;
+      const profile = this.visual?.camera;
+      for (const key of ['y', 'z', 'fov', 'lookY', 'lag']) {
+        // Preserve the threat/boss framing blend, then add the dungeon's own
+        // composition delta relative to the action baseline.
+        const delta = profile && Number.isFinite(profile[key]) ? profile[key] - CAMERA_PRESETS.action[key] : 0;
+        rig.base[key] += (framing.desired[key] + delta - rig.base[key]) * k;
+      }
     }
     const b = rig.base;
     rig.offset.y += (b.y + framing.extraY - rig.offset.y) * framingBlend(realDt, 2);

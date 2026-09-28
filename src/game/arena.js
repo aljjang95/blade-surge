@@ -5,6 +5,8 @@ import { buildRegionArchitecture } from './region-architecture.js';
 import { ROOM_TYPE, mulberry32 } from './world.js';
 import { buildOathHall } from './lobby-hall.js';
 import { buildLobbyWorld } from './lobby-world.js';
+import { BattleOcclusion } from '../engine/battle-occlusion.js';
+import { softCircleTex } from '../engine/assets.js';
 
 const THEMES = {
   garden: { fog: 0x172b2b, bg: 0x172b2b, hemi: [0xa0b5ae, 0x283930], sun: 0xffedca, sunI: 2.3, torch: 0x8adbd0, tint: 0xcbd0b8 },
@@ -16,6 +18,16 @@ const THEMES = {
   throne: { fog: 0x160a08, bg: 0x160a08, hemi: [0xa06040, 0x201008], sun: 0xffc090, sunI: 2.5, torch: 0xff6a20, tint: 0xffd8c0 },
   abyss:  { fog: 0x0e0716, bg: 0x0e0716, hemi: [0x7a40a0, 0x150a20], sun: 0xd0a0ff, sunI: 2.4, torch: 0xa060ff, tint: 0xe0c8ff },
   lobby:  { fog: 0x0a0812, bg: 0x0a0812, hemi: [0x6a5a90, 0x1a1420], sun: 0xffe0c0, sunI: 3.4, torch: 0xffa040, tint: 0xffffff },
+};
+// Region themes set the broad palette; authored dungeon landmarks add the
+// readable in-game identity that the campaign map promises.
+const DUNGEON_ATMOSPHERES = {
+  memorial: { fog: 0x122526, bg: 0x0d1b1d, hemi: [0xaed8c5, 0x203b35], sun: 0xffedc9, sunI: 2.5, torch: 0x86e1c5, tint: 0xb5d8bf },
+  kiln: { fog: 0x261716, bg: 0x160d0d, hemi: [0xc99a7d, 0x311717], sun: 0xffc18c, sunI: 2.5, torch: 0xff7034, tint: 0xd8a28b },
+  archive: { fog: 0x18263c, bg: 0x0e1727, hemi: [0xb8d8f2, 0x233752], sun: 0xd8edff, sunI: 2.5, torch: 0x86d7ff, tint: 0xb7cbed },
+  beacon: { fog: 0x0d3037, bg: 0x08212b, hemi: [0x80d2d2, 0x123643], sun: 0xb5f6ef, sunI: 2.55, torch: 0x4be6d2, tint: 0x9adbd1 },
+  tribunal: { fog: 0x2a2139, bg: 0x171323, hemi: [0xd1b7d6, 0x342743], sun: 0xffe1bd, sunI: 2.65, torch: 0xf5a2d4, tint: 0xd5c0d8 },
+  confluence: { fog: 0x19312b, bg: 0x0d211d, hemi: [0xb5dbc3, 0x204139], sun: 0xffe8b9, sunI: 2.55, torch: 0x9be6ba, tint: 0xb8d2ac },
 };
 const TILE = 4;
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -31,8 +43,9 @@ function disposeSeal(seal) {
 }
 
 export class Arena {
-  constructor(scene, dungeonGltf, renderer) {
-    this.scene = scene; this.gltf = dungeonGltf; this.renderer = renderer;
+  constructor(scene, dungeonGltf, renderer, landmarkGltf = null) {
+    this.scene = scene; this.gltf = dungeonGltf; this.renderer = renderer; this.landmarkGltf = landmarkGltf;
+    this.occlusion = renderer.battleOcclusion ??= new BattleOcclusion();
     this.group = new THREE.Group(); scene.add(this.group);
     this.lights = []; this.torches = []; this.torchPos = []; this.t = 0;
     this.doors = []; this.seals = []; this.ownedMaterials = new Set(); this.ownedGeometry = new Set();
@@ -65,7 +78,15 @@ export class Arena {
     }
     this.seals.length = 0;
   }
+  clearSky() {
+    if (!this.skyGroup) return;
+    this.skyGroup.removeFromParent();
+    this.skyGroup.traverse((node) => { if (node.geometry) node.geometry.dispose(); if (node.material) { for (const m of Array.isArray(node.material) ? node.material : [node.material]) m.dispose(); } });
+    this.skyGroup = null;
+  }
   clear() {
+    this.occlusion.reset();
+    this.clearSky();
     this.lobbyHall?.userData.dispose(); this.lobbyHall = null;
     this.lobbyWorld?.userData.dispose(); this.lobbyWorld = null; this.renderer.lobbyOccluders = [];
     this.regionArchitecture?.userData.dispose(); this.regionArchitecture = null;
@@ -88,6 +109,7 @@ export class Arena {
     const { mesh: src, part } = this._meshOf(name); if (!src) return;
     const { castShadow = true, chunk = 44 } = opts;
     const mat = src.material.clone(); this.ownedMaterials.add(mat); if (tint) mat.color.multiply(new THREE.Color(tint));
+    if (opts.cutaway) this.occlusion.bind(mat);
     part.updateWorldMatrix(true, true);
     const local = new THREE.Matrix4().copy(part.matrixWorld).invert().multiply(src.matrixWorld);
 
@@ -133,13 +155,56 @@ export class Arena {
   }
 
   // ================= 무한의 성 — 한 층 전체 =================
-  buildFloor(floorData, theme = 'crypt') {
+  buildSky(visual, seed = 1) {
+    const sky = visual?.sky || { top: 0x101828, horizon: 0x64778a, ground: 0x18202c, stars: 0xcfe8ff, celestial: 0xffd9a2, density: .25 };
+    const group = this.skyGroup = new THREE.Group(); group.name = `sky-${visual?.key || 'memorial'}`; group.renderOrder = -10;
+    const geometry = new THREE.SphereGeometry(105, 32, 18);
+    const colors = [];
+    const top = new THREE.Color(sky.top), horizon = new THREE.Color(sky.horizon), ground = new THREE.Color(sky.ground);
+    const position = geometry.getAttribute('position');
+    for (let i = 0; i < position.count; i++) {
+      const y = position.getY(i) / 105;
+      const t = Math.max(0, Math.min(1, (y + .05) / 1.05));
+      const color = y < .05 ? ground.clone().lerp(horizon, Math.max(0, (y + 1) / 1.05)) : horizon.clone().lerp(top, t);
+      colors.push(color.r, color.g, color.b);
+    }
+    geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+    group.add(new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, depthWrite: false, fog: false })));
+    const random = mulberry32((seed || 1) ^ 0x7f31);
+    const points = [];
+    for (let i = 0; i < Math.floor(220 * (sky.density || .25)); i++) {
+      const theta = random() * Math.PI * 2, y = .16 + random() * .78, radius = 96;
+      const ring = Math.sqrt(1 - y * y); points.push(Math.cos(theta) * ring * radius, y * radius, Math.sin(theta) * ring * radius);
+    }
+    const starGeometry = new THREE.BufferGeometry(); starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(points, 3));
+    group.add(new THREE.Points(starGeometry, new THREE.PointsMaterial({ color: sky.stars, size: .34, transparent: true, opacity: .8, depthWrite: false, fog: false })));
+    // The browser receives the authored glow texture; headless Bun tests do not
+    // expose a canvas/document, so keep the procedural sky itself test-safe.
+    if (typeof document !== 'undefined') {
+      const celestial = new THREE.Sprite(new THREE.SpriteMaterial({ map: softCircleTex(), color: sky.celestial, transparent: true, opacity: .9, depthWrite: false, fog: false }));
+      celestial.position.set(-36, 42, -76); celestial.scale.setScalar(8); group.add(celestial);
+    }
+    this.scene.add(group);
+  }
+  mountLandmarks(floorData, visual) {
+    if (!this.landmarkGltf || !visual?.landmark) return;
+    const source = this.landmarkGltf.scene.getObjectByName(`TLL_Dungeon_${visual.landmark}_Landmark`);
+    if (!source) return;
+    const slots = floorData.rooms.filter((room) => !room.objectiveProp &&
+      (room.type === ROOM_TYPE.BOSS || room.type === ROOM_TYPE.ELITE || room.type === ROOM_TYPE.TREASURE)).slice(0, 4);
+    for (const room of slots) {
+      const landmark = source.clone(true); landmark.position.set(room.x, 0, room.z - room.h / 2 + 2.6); landmark.rotation.y = (room.id % 4) * Math.PI / 2; landmark.scale.setScalar(room.type === ROOM_TYPE.BOSS ? 1.18 : .72); landmark.name = `${source.name}-${room.id}`; this.group.add(landmark);
+    }
+  }
+  buildFloor(floorData, theme = 'crypt', visual = null) {
     this.clear();
     this.floorData = floorData;
-    const T = THEMES[theme] || THEMES.crypt;
+    const visualKey = visual?.landmark || floorData.layout?.landmark || 'crypt';
+    const T = { ...(THEMES[theme] || THEMES.crypt), ...(DUNGEON_ATMOSPHERES[visualKey] || {}) };
     const random = mulberry32((floorData.seed || floorData.floor * 7919) ^ 0x51a7);
     const rnd = (a, b) => a + random() * (b - a);
     this.scene.background = new THREE.Color(T.bg); this.scene.fog.color.set(T.fog); this.scene.fog.density = 0.026;
+    this.buildSky(visual, floorData.seed || floorData.floor || 1);
 
     const hemi = new THREE.HemisphereLight(T.hemi[0], T.hemi[1], 1.5); this.scene.add(hemi); this.lights.push(hemi);
     // 넓은 맵이라 태양 그림자 카메라는 플레이어를 따라다니게 (update 에서 갱신)
@@ -187,7 +252,7 @@ export class Arena {
         }
       }
     }
-    for (const k in walls) this.instanced(k, walls[k], T.tint);
+    for (const k in walls) this.instanced(k, walls[k], T.tint, { cutaway: true });
 
     // ---- 방 장식 ----
     const pillars = [], banners = [];
@@ -199,7 +264,7 @@ export class Arena {
         banners.push({ x: r.x - 5, z: r.z - r.h / 2 + 0.6, ry: 0 }, { x: r.x + 5, z: r.z - r.h / 2 + 0.6, ry: 0 });
         if (!floorData.layout) this.place('stairs_wide', r.x, r.z - r.h / 2 + 2.2, 0, 1, T.tint);
       }
-      if (r.type === ROOM_TYPE.TREASURE) { this.place('chest_gold', r.x, r.z, rnd(0, 6.28), 1.2); this.place('coin_stack_large', r.x + 1.6, r.z + 1.2, 0, 1); this.place('coin_stack_medium', r.x - 1.7, r.z + 0.9, 0, 1); }
+      if (r.type === ROOM_TYPE.TREASURE && !r.objectiveProp) { this.place('chest_gold', r.x, r.z, rnd(0, 6.28), 1.2); this.place('coin_stack_large', r.x + 1.6, r.z + 1.2, 0, 1); this.place('coin_stack_medium', r.x - 1.7, r.z + 0.9, 0, 1); }
       const n = floorData.layout ? 0 : 2 + Math.floor(random() * 3);
       for (let i = 0; i < n; i++) {
         const px = r.x + rnd(-1, 1) * (r.w / 2 - 2.2), pz = r.z + rnd(-1, 1) * (r.h / 2 - 2.2);
@@ -216,7 +281,7 @@ export class Arena {
         }
       }
       // 방 타입 표식 (바닥 링)
-      if (r.type === ROOM_TYPE.ELITE || r.type === ROOM_TYPE.BOSS || r.type === ROOM_TYPE.TREASURE) {
+      if (!r.objectiveProp && (r.type === ROOM_TYPE.ELITE || r.type === ROOM_TYPE.BOSS || r.type === ROOM_TYPE.TREASURE)) {
         const col = r.type === ROOM_TYPE.BOSS ? 0xff3040 : r.type === ROOM_TYPE.ELITE ? 0xffc040 : 0x60ffc0;
         const ring = new THREE.Mesh(new THREE.RingGeometry(r.w * 0.28, r.w * 0.32, 40),
           new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false }));
@@ -224,14 +289,20 @@ export class Arena {
         ring.rotation.x = -Math.PI / 2; ring.position.set(r.x, 0.06, r.z); this.group.add(ring);
       }
     }
-    this.instanced('pillar_decorated', pillars, T.tint);
+    this.instanced('pillar_decorated', pillars, T.tint, { cutaway: true });
     this.instanced('banner_shield_red', banners);
     this.regionArchitecture = buildRegionArchitecture(floorData, theme);
+    this.regionArchitecture.traverse(node => {
+      if (node.isMesh) for (const material of Array.isArray(node.material) ? node.material : [node.material]) this.occlusion.bind(material);
+    });
     this.group.add(this.regionArchitecture);
+    this.mountLandmarks(floorData, visual || { landmark: visualKey });
     this.buildSeals(floorData);
   }
 
   update(dt, fx, playerPos) {
+    if (this.skyGroup && playerPos) this.skyGroup.position.set(playerPos.x, 0, playerPos.z);
+    this.occlusion.setTarget(this.floorData ? playerPos : null);
     this.t += dt;
     for (const s of this.seals) { s.material.opacity = 0.5 + Math.sin(this.t * 4) * 0.08; const r = s.userData.rune, g = s.userData.sigil; if (r) { r.rotation.z += dt * 0.8; r.material.opacity = 0.55 + Math.sin(this.t * 6) * 0.2; } if (g) { g.rotation.z -= dt * 0.5; g.material.opacity = 0.8 + Math.sin(this.t * 5) * 0.15; } }
     for (const t of this.torches) t.l.intensity = t.i0 * (0.85 + Math.sin(this.t * 13 + t.seed) * 0.08 + Math.sin(this.t * 31 + t.seed * 3) * 0.07);

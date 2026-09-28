@@ -3,6 +3,7 @@ import { audio } from '../engine/audio.js';
 import { getPart, softCircleTex } from '../engine/assets.js';
 import { RARITY_COLOR, ITEM_BY_ID, ITEM_ICON } from '../data/items.js';
 import { createLootVisual } from './loot-visual.js';
+import { frontierEffectForStage } from '../data/seasonal-content.js';
 
 const _v = new THREE.Vector3();
 
@@ -129,6 +130,8 @@ export class DropSystem {
     const g = enemy.def.gold || 1;
     const goldAmt = Math.max(1, Math.floor(g * stage.scale * (0.8 + Math.random() * 0.5)));
     this.spawn(pos, 'gold', goldAmt, { count: enemy.isBoss ? 8 : enemy.isElite ? 3 : 1, spread: enemy.isBoss ? 2 : 1 });
+    const frontier = frontierEffectForStage(stage);
+    if (!enemy.summoned && frontier?.kind === 'goldPerKill') this.spawn(pos, 'gold', frontier.value, { count: 1, spread: 0.7 });
     if (enemy.isBoss || enemy.isElite || Math.random() < 0.18) this.spawn(pos, 'stone', enemy.isBoss ? 5 : enemy.isElite ? 2 : 1, { count: 1 });
     // 비석 상위 등급: 엘리트 → 상급, 보스 → 전설. 세트 조각은 엘리트·보스에서만 (제작 30개)
     if (enemy.isElite) { this.spawn(pos, 'stone2', 1, { count: 1 }); if (Math.random() < 0.6) this.spawn(pos, 'frag', 2, { count: 1 }); }

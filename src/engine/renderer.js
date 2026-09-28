@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { lobbyCameraPosition, lobbyCompositionShift } from './lobby-camera.js';
 import { LobbySightline } from './lobby-sightline.js';
 import { battleCameraOffset } from './camera-control.js';
+import { BattleOcclusion } from './battle-occlusion.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -68,6 +69,8 @@ export class Renderer {
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
     this.r = r;
+    r.localClippingEnabled = true;
+    this.battleOcclusion = new BattleOcclusion();
     this.rebuildEnvironment();
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x0b0a12);
@@ -151,6 +154,14 @@ export class Renderer {
     const rig = this.rig; rig.preset = CAMERA_PRESETS[name] ? name : 'auto';
     if (rig.preset !== 'auto') Object.assign(rig.base, CAMERA_PRESETS[rig.preset]);
   }
+  setBattleVisual(visual = null) {
+    this.battleVisual = visual;
+    const c = visual?.camera;
+    if (!c) return;
+    this.rig.environmentCamera = c;
+    this.battleCamera = { yaw: c.yaw, pitch: c.pitch, zoom: c.zoom };
+    this.rig.environmentSide = c.side || 0;
+  }
   /** 프레임마다 목표 fov 로 보간 (배틀이 rig.fov 를 바꾼다) */
   _applyFov(realDt) {
     const want = this.rig.fov + (this._width < this._height ? 14 : 0);
@@ -183,7 +194,7 @@ export class Renderer {
     } else {
       // Hits never displace or pulse the whole camera; preserve user framing.
       const off = rig.offset.clone();
-      off.x += rig.side;   // 액션 시점: 이동 방향 반대편으로 살짝 비켜서 진행 방향이 열린다
+      off.x += rig.side + (rig.environmentSide || 0);   // 지역마다 전투 중심을 여는 비대칭 구도
       const controlled = battleCameraOffset(off, this.battleCamera);
       off.set(controlled.x, controlled.y, controlled.z);
       desired = rig.target.clone().add(off);
@@ -193,6 +204,8 @@ export class Renderer {
       const look = rig.target.clone().add(rig.lookOffset);
       cam.lookAt(look);
     }
+    // Arena supplies actual hero coordinates before this final camera update.
+    this.battleOcclusion.update(cam.position, rig.mode !== 'lobby');
     // 포스트 유니폼 감쇠
     this.flash = Math.max(0, this.flash - realDt * 5);
     this.aberr = Math.max(0, this.aberr - realDt * 1.6);

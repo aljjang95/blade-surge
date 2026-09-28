@@ -1,0 +1,96 @@
+{
+  "asset": "cooling-valve-v1",
+  "status": "generated-and-structurally-verified",
+  "createdUtc": "2026-09-21T18:38:45.621556+00:00",
+  "blender": "5.2.1 LTS",
+  "blenderBuildHash": "9e2066aef7ef",
+  "generator": "tools/art/build-cooling-valve-v1.py",
+  "runtime": "public/models/tll/props/cooling-valve-v1.glb",
+  "editable": "public/models/tll/props/cooling-valve-v1.blend",
+  "licence": "Original authored TLL geometry and PBR materials; no external models or textures",
+  "provenance": {
+    "geometry": "Authored cross-sections, extrusions, swept pipes, bevels and hardware in this script",
+    "materials": "Six original PBR materials",
+    "externalTextures": [],
+    "generatedTextures": false
+  },
+  "units": "meters",
+  "up": "Y",
+  "front": "+Z",
+  "origin": [
+    0,
+    0,
+    0
+  ],
+  "dimensions": {
+    "width": 3.1480000019073486,
+    "height": 2.4800000190734863,
+    "depth": 1.60999995470047
+  },
+  "boundsYUp": {
+    "min": [
+      -1.5740000009536743,
+      0.0,
+      -0.6699999570846558
+    ],
+    "max": [
+      1.5740000009536743,
+      2.4800000190734863,
+      0.9399999976158142
+    ]
+  },
+  "interface": {
+    "Wheel": {
+      "type": "Mesh",
+      "rotationAxis": "local Z",
+      "pivot": [
+        0,
+        1.690000057220459,
+        0.6499999761581421
+      ]
+    },
+    "StatusLens": {
+      "type": "Mesh",
+      "control": "Clone material per instance; edit emissive/color"
+    },
+    "loadName": "tllCoolingValve",
+    "scale": 1,
+    "materialSharing": "Object3D.clone shares materials; clone StatusLens material before mutation"
+  },
+  "verification": {
+    "triangles": 4892,
+    "materialDrawcalls": 7,
+    "materials": 6,
+    "meshNodes": [
+      "StatusLens",
+      "TLL_Valve_Amber",
+      "TLL_Valve_Brass",
+      "TLL_Valve_Dial",
+      "TLL_Valve_Enamel",
+      "TLL_Valve_Iron",
+      "Wheel",
+      "TLL_CoolingValve_v1"
+    ],
+    "wheelGltfTranslation": [
+      0,
+      1.690000057220459,
+      0.6499999761581421
+    ],
+    "wheelLocalRotationAxis": [
+      0,
+      0,
+      1
+    ],
+    "noCamerasLightsSkinsAnimationsTextures": true,
+    "blenderReimport": "PASS"
+  },
+  "bytes": 326312,
+  "sha256": "2b865c2a334347e5d92e55db0b1272fbc2053125e7077b15b5dbb042e8d125a0",
+  "blendSha256": "46ec19e96a5d1e5f09f8015861e2ba7ddcd1830c5143bce8ac89f92345ac968e",
+  "limitations": [
+    "Studio renders are asset previews, not game screenshots.",
+    "Runtime gameplay, FPS, draw submissions and independent art approval belong to integration owner.",
+    "Main owns tllCoolingValve SPECIAL_MODELS registration; load without hero/companion ModelContract.",
+    "UVs are provided for optional runtime surface maps; no texture has been generated or baked."
+  ]
+}

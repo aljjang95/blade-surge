@@ -1,5 +1,16 @@
 import { cameraRelativeMove } from './camera-control.js';
 // 가상 조이스틱 + 액션 버튼 + 키보드
+const GAMEPAD_DEADZONE = 0.16;
+const GAMEPAD_ACTIONS = ['attack', 'dodge', 'skill0', 'skill1', 'skill2', 'skill3', 'skill4', 'skill5'];
+
+function stick(value) {
+  const n = Number.isFinite(value) ? value : 0;
+  const sign = n < 0 ? -1 : 1;
+  const magnitude = Math.abs(n);
+  if (magnitude <= GAMEPAD_DEADZONE) return 0;
+  return sign * Math.min(1, (magnitude - GAMEPAD_DEADZONE) / (1 - GAMEPAD_DEADZONE));
+}
+
 export class Input {
   constructor() {
     this.move = { x: 0, y: 0 }; // -1..1 (x: 좌우, y: 앞뒤 — 화면 기준)
@@ -8,6 +19,9 @@ export class Input {
     this.attackSources = new Set(); this.clearListeners = new Set();
     this.enabled = false;
     this.keys = {};
+    this.gamepadMove = { x: 0, y: 0 };
+    this.gamepadButtons = new Uint8Array(GAMEPAD_ACTIONS.length);
+    this.gamepadConnected = false;
     this.joy = { active: false, id: null, cx: 0, cy: 0, radius: 52 };
     this.el = { area: document.getElementById('joy'), base: document.querySelector('.joy-base'), knob: document.getElementById('joy-knob') };
     this._bind();
@@ -16,8 +30,30 @@ export class Input {
   consume(a) { const i = this.queue.indexOf(a); if (i >= 0) { this.queue.splice(i, 1); return true; } return false; }
   onClear(listener) { this.clearListeners.add(listener); return () => this.clearListeners.delete(listener); }
   _attack(source, held) { if (held) this.attackSources.add(source); else this.attackSources.delete(source); this.attackHeld = this.attackSources.size > 0; }
-  clear() { this.queue.length = 0; this.attackSources.clear(); this.attackHeld = false; this.keys = {}; this.move.x = this.move.y = 0; this._resetJoy(); for (const listener of this.clearListeners) listener(); }
+  clear() { this.queue.length = 0; this.attackSources.clear(); this.attackHeld = false; this.keys = {}; this.gamepadButtons.fill(0); this.gamepadConnected = false; this.gamepadMove.x = this.gamepadMove.y = 0; this.move.x = this.move.y = 0; this._resetJoy(); for (const listener of this.clearListeners) listener(); }
   _resetJoy() { this.joy.active = false; this.joy.id = null; this.move.x = this.move.y = this.screenMove.x = this.screenMove.y = 0; this.el.knob.style.transform = 'translate(-50%,-50%)'; this.el.base.style.left = ''; this.el.base.style.bottom = ''; this.el.base.style.top = ''; this.el.base.style.transform = ''; }
+  _updateGamepad() {
+    if (!this.enabled) return;
+    const getGamepads = globalThis.navigator?.getGamepads;
+    if (typeof getGamepads !== 'function') return;
+    let pads;
+    try { pads = getGamepads.call(globalThis.navigator); } catch { return; }
+    let pad = null;
+    for (let i = 0; i < (pads?.length || 0); i++) if (pads[i]?.connected !== false) { pad = pads[i]; break; }
+    if (!pad) {
+      this.gamepadConnected = false; this.gamepadMove.x = this.gamepadMove.y = 0;
+      this._attack('gamepad', false); this.gamepadButtons.fill(0); return;
+    }
+    this.gamepadConnected = true;
+    this.gamepadMove.x = stick(pad.axes?.[0]); this.gamepadMove.y = stick(pad.axes?.[1]);
+    for (let i = 0; i < GAMEPAD_ACTIONS.length; i++) {
+      const button = pad.buttons?.[i];
+      const down = !!button && (button.pressed || button.value > 0.5);
+      if (down && !this.gamepadButtons[i]) this.press(GAMEPAD_ACTIONS[i]);
+      this.gamepadButtons[i] = down ? 1 : 0;
+    }
+    this._attack('gamepad', !!this.gamepadButtons[0]);
+  }
   _bind() {
     const area = this.el.area;
     const start = (e) => {
@@ -99,14 +135,17 @@ export class Input {
     document.addEventListener('visibilitychange', () => { if (document.hidden) this.clear(); });
   }
   update() {
+    this._updateGamepad();
     if (!this.enabled) { this.move.x = this.move.y = 0; return; }
-    if (!this.joy.active) {
+    if (this.joy.active) {
+      this.move.x = this.screenMove.x; this.move.y = this.screenMove.y;
+    } else if (this.gamepadConnected) {
+      this.move.x = this.gamepadMove.x; this.move.y = this.gamepadMove.y;
+    } else {
       let x = 0, y = 0; const k = this.keys;
       if (k.KeyA || k.ArrowLeft) x -= 1; if (k.KeyD || k.ArrowRight) x += 1; if (k.KeyW || k.ArrowUp) y -= 1; if (k.KeyS || k.ArrowDown) y += 1;
       const m = Math.hypot(x, y); if (m > 0) { x /= m; y /= m; }
       this.move.x = x; this.move.y = y;
-    } else {
-      this.move.x = this.screenMove.x; this.move.y = this.screenMove.y;
     }
     const world = cameraRelativeMove(this.move.x, this.move.y, this.getCameraYaw?.() ?? 0);
     this.move.x = world.x; this.move.y = world.y;

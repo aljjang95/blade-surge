@@ -35,7 +35,8 @@ describe('Source-bound regional encounter geometry',()=>{
   test('all six campaign finales actually select a distinct authored actor',()=>{
     expect(new Set(Object.values(CAMPAIGN_MODELS)).size).toBe(6);
     for(let chapter=1;chapter<=6;chapter++){
-      const stage=stageDef(chapter,10),def=enemies[stage.encounter.enemyId];
+      const stage=stageDef(chapter,10),def=enemies[stage.dungeonBossId || stage.encounter.enemyId];
+      expect(def.model).toBe((CAMPAIGN_MODELS as Record<string,string>)[stage.encounter.enemyId]);
       expect(variants[def.model]).toBeDefined();expect(def.boss).toBe(true);
       expect(def.hp).toBe(53200);expect(def.atk).toBe(53);expect(def.scale).toBe(2.25);
     }

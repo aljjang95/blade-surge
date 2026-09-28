@@ -18,7 +18,7 @@ for (const [crit,finisher,accent] of [[false,false,null],[true,false,'light'],[f
     spyOn(audio,'hit').mockImplementation(sound.hit.bind(sound));
     spyOn(audio,'vibe').mockImplementation(() => false);
     const noop=()=>{};
-    const game:any={stage:{},app:{},feedbackCount:0,feedbackSound:false,player:{stats:{crit:crit?1:0,critDmg:1.5},addUlt:noop},dmgDealt:0,combo:0,maxCombo:0,ui:{setCombo:noop},
+    const game:any={active:true,stage:{},app:{},feedbackCount:0,feedbackSound:false,player:{stats:{crit:crit?1:0,critDmg:1.5},addUlt:noop},dmgDealt:0,combo:0,maxCombo:0,ui:{setCombo:noop},
       fx:{dmgLayer:{children:[]},damage:noop,contact:noop,texFlash:noop,light:noop},timeCtl:{hitstop:noop},renderer:{shake:noop}};
     Battle.prototype.damageEnemy.call(game,{alive:true,spawning:false,receiveImpact:noop,hurt:()=>10,pos:new THREE.Vector3(),def:{scale:1}},10,{finisher});
     expect(game.dmgDealt).toBe(10);
@@ -42,6 +42,16 @@ test('mute cancels a queued critical accent before it can sound',()=>{
   sound.hit(); sound.hit('slash',{crit:true,heavy:true}); sound.setSfxOn(false);
   sound.ctx.currentTime+=.1; timer();
   expect(heard).toHaveLength(0);
+});
+test('hit tiers change the physical punch profile while retaining a short contact snap',()=>{
+  const {sound}=soundFixture(); const thumps:any[]=[]; const snaps:any[]=[];
+  sound.thump=(opts:any)=>thumps.push(opts); sound.contactSnap=(opts:any)=>snaps.push(opts); sound.ting=()=>{};
+  sound._renderHit('slash',{crit:false,heavy:false,finisher:false,boss:false});
+  sound._renderHit('slash',{crit:false,heavy:true,finisher:false,boss:false});
+  sound._renderHit('slash',{crit:true,heavy:true,finisher:true,boss:true});
+  expect(thumps.map((hit)=>hit.freq)).toEqual([102,68,48]);
+  expect(snaps.map((hit)=>hit.freq)).toEqual([1900,1260,980,620]);
+  expect(thumps[2].dur).toBeGreaterThan(thumps[0].dur);
 });
 for(const kind of ['campaign','dungeon','arena']) test(`${kind}: boss entry and revive retain the correct music route`,()=>{
   const music=spyOn(audio,'playMusic').mockImplementation(()=>{}), noop=()=>{};

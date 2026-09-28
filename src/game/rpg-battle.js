@@ -11,6 +11,7 @@ import { normalizeRpg, recordMonster, monsterLevel, monsterXp, grantCombatXp, Ki
 import { buildCatalogue } from './rpg-catalogue.js';
 import { stageExpeditionEncounter, encounterLevelLabel } from './rpg-encounters.js';
 import { RpgView } from '../ui/rpg.js';
+import { frontierEffectForStage } from '../data/seasonal-content.js';
 import '../ui/rpg.css';
 
 const direction = new THREE.Vector3();
@@ -44,7 +45,15 @@ export class Battle extends BaseBattle {
     return saved;
   }
   async start(...args) {
-    await super.start(...args);
+    const [, heroId, hero] = args;
+    const growthStart = hero ? Object.freeze({ heroId, level: hero.level, exp: hero.exp }) : null;
+    const pendingStart = super.start(...args);
+    const generation = this._startGeneration;
+    await pendingStart;
+    // A cancelled model load may finish after a newer run is already fighting.
+    // Do not replace that run's XP ledger or growth snapshot from the old call.
+    if (generation !== this._startGeneration) return;
+    this.growthStart = growthStart;
     this.timeCtl = new ImpactClock(); this.killLedger = new KillLedger();
     this.combatXp = 0; this.saveT = 0; this.viewT = 0; this.lastTarget = null;
     this.ensureRpg(); this.rpgView?.refresh();
@@ -62,15 +71,19 @@ export class Battle extends BaseBattle {
     const enemy = super.spawnEnemy(type, near, room, at);
     if (!enemy) return enemy;
     const encounter = stageExpeditionEncounter(this.stage);
-    enemy.speciesId = type; enemy.level = encounter ? null : monsterLevel(this.stage.idx, enemy.def);
+    enemy.speciesId = enemy.runtimeSpeciesId || type; enemy.level = encounter ? null : monsterLevel(this.stage.idx, enemy.def);
     enemy.summoned = !!near;
     enemy.xpReward = monsterXp(enemy.def, this.stage.scale, enemy.summoned);
-    recordMonster(this.ensureRpg(), type, enemy.level, this.stage.idx, false, encounter);
+    const effect = frontierEffectForStage(this.stage);
+    if (enemy.isElite && effect?.kind === 'eliteXpMultiplier') enemy.xpReward = Math.floor(enemy.xpReward * effect.value);
+    recordMonster(this.ensureRpg(), enemy.speciesId, enemy.level, this.stage.idx, false, encounter);
     this.rpgDirty = true;
     if (enemy.isBoss) this.ui.showBoss(`${encounterLevelLabel(this.stage, enemy.level)} ${enemy.def.name}`, true, enemy.def.portrait);
     return enemy;
   }
   onEnemyDeath(enemy) {
+    // Result presentation keeps animation timers alive, but its reward ledger is closed.
+    if (!this.active) return;
     if (!this.killLedger.claim(enemy)) return;
     const rpg = this.ensureRpg();
     if (enemy.speciesId && Object.hasOwn(ENEMIES, enemy.speciesId)) {
@@ -81,6 +94,7 @@ export class Battle extends BaseBattle {
       rpg.combatXp = Math.min(1e9, rpg.combatXp + award.gained);
       this.rpgDirty = true;
       if (award.levels) {
+        this.app.funnel?.track('hero_level_up', { source: 'combat', level: hero.level });
         const p = this.player, oldMax = p.maxHp;
         const nextStats = heroStats(p.def || HEROES[this.heroId], hero, this.app.eco.heroEquipBonus(this.heroId));
         p.stats = this.upgradeHeroStats?.(nextStats) || nextStats;
@@ -96,8 +110,8 @@ export class Battle extends BaseBattle {
     }
     super.onEnemyDeath(enemy);
   }
-  victory() { this.flushRpg(); super.victory(); if (this.result) this.result.combatXp = this.combatXp; this.rpgView?.refresh(); }
-  defeat() { this.flushRpg(); super.defeat(); if (this.result) this.result.combatXp = this.combatXp; this.rpgView?.refresh(); }
+  victory() { this.flushRpg(); super.victory(); if (this.result) { this.result.combatXp = this.combatXp; this.result.growthStart = this.growthStart; } this.rpgView?.refresh(); }
+  defeat() { this.flushRpg(); super.defeat(); if (this.result) { this.result.combatXp = this.combatXp; this.result.growthStart = this.growthStart; } this.rpgView?.refresh(); }
   update(realDt) {
     this.feedbackCount = 0; this.feedbackSound = false;
     super.update(realDt);
@@ -107,6 +121,7 @@ export class Battle extends BaseBattle {
     if (this.viewT >= 0.1) { this.viewT = 0; this.rpgView.refresh(); }
   }
   damageEnemy(enemy, dmg, opts = {}) {
+    if (!this.active) return;
     const p = opts.source?.stats ? opts.source : this.player;
     if (!p || !enemy?.alive || enemy.spawning || !Number.isFinite(dmg) || dmg <= 0) return;
     const crit = Math.random() < p.stats.crit;
@@ -125,12 +140,16 @@ export class Battle extends BaseBattle {
     }
     this.lastTarget = enemy;
     const hitPos = enemy.pos.clone().setY(1.1 * enemy.def.scale);
-    if (this.fx.dmgLayer.children.length < (crit||opts.finisher?8:4)) this.fx.damage(hitPos, dealt, { crit, kind: opts.kind === 'magic' ? 'skill' : '' });
+    if (this.fx.dmgLayer.children.length < (crit||opts.finisher?8:4)) this.fx.damage(hitPos, dealt, {
+      crit, kind: opts.kind === 'magic' ? 'skill' : '', finisher: !!opts.finisher, boss: !!enemy.isBoss,
+      heavy: contactProfile(opts, crit, enemy.isBoss, true)?.heavy,
+    });
     const contact = this.paused ? null : contactProfile(opts, crit, enemy.isBoss, !!this.app.reducedMotion?.matches);
     if (!contact) return;
     const dx = opts.dirx || 0, dz = opts.dirz || 0;
     const feedback=contactFeedback({finisher:opts.finisher,crit,boss:enemy.isBoss,elite:enemy.isElite,reduced:!!this.app.reducedMotion?.matches});
     enemy.receiveImpact(dx, dz, feedback.recoil);
+    if (opts.basic && p === this.player && !p.auto) { this.impactTarget = enemy; this.impactT = .16; }
     // Every eligible hit recoils; only expensive contact feedback shares the time budget.
     const budget = contactBudget(this._contactBudget, this.elapsed, contact);
     if (!budget) return;
@@ -141,11 +160,13 @@ export class Battle extends BaseBattle {
       this.fx.contact(hitPos,direction.set(dx,0,dz).normalize(),color,{size:contact.size,particles:contact.particles,light:false,kind:opts.kind||'slash',tier:contact.tier});
     }
     {
-      audio.hit(opts.kind || 'slash', { crit, heavy:contact.heavy, finisher: !!opts.finisher });
+      audio.hit(opts.kind || 'slash', { crit, heavy:contact.heavy || crit || !!enemy.isBoss, finisher: !!opts.finisher, boss: !!enemy.isBoss });
       if (p === this.player && !p.auto && contact.haptic) audio.vibe(contact.haptic);
       if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);
     }
     if (contact.stop>0) this.timeCtl.hitstop(contact.stop);
-    // Directional body recoil carries ordinary hits. No added random camera shake.
+    if (feedback.heavy || crit) { this.renderer?.shake?.(opts.finisher ? 0.16 : 0.055); this.renderer?.punch?.(opts.finisher ? 0.12 : 0.035); }
+    // Directional body recoil carries ordinary hits; only heavy/critical contacts
+    // add a bounded camera response so light hits keep the view readable.
   }
 }
