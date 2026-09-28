@@ -15,7 +15,7 @@ function memStorage(initial: Record<string, string> = {}) {
 const fixedClock = (start = 1_800_000_000_000) => { let t = start; return { now: () => t, advance: (ms: number) => { t += ms; } }; };
 
 test('exposes exactly the funnel events and no purchase/pass/ad success events', () => {
-  expect([...FUNNEL_EVENTS].sort()).toEqual(['first_run', 'gacha_pull', 'gacha_view', 'heal_hint_shown', 'hero_level_up', 'paysheet_open', 'return_session', 'reward_claim', 'session_start', 'shop_view', 'tutorial_complete', 'tutorial_step', 'upgrade'].sort());
+  expect([...FUNNEL_EVENTS].sort()).toEqual(['auto_retry_selected', 'first_run', 'gacha_pull', 'gacha_view', 'heal_hint_shown', 'hero_level_up', 'paysheet_open', 'return_session', 'reward_claim', 'session_start', 'shop_view', 'tutorial_complete', 'tutorial_step', 'upgrade'].sort());
   for (const name of ['purchase_success', 'purchase_complete', 'pass_purchase', 'ad_reward', 'ad_complete', 'grant']) {
     expect(validateFunnelEvent(name, {})).toEqual({ ok: false, reason: 'unknown_event' });
   }
@@ -26,6 +26,11 @@ test('heal hint exposure accepts fixed tiers and rejects arbitrary payloads', ()
   expect(validateFunnelEvent('heal_hint_shown', { tier: 'critical' }).ok).toBe(true);
   expect(validateFunnelEvent('heal_hint_shown', { tier: 'freeform' }).ok).toBe(false);
   expect(validateFunnelEvent('heal_hint_shown', { tier: 'early', note: 'private' }).ok).toBe(false);
+});
+
+test('AUTO retry choice is measurable without implying a completed stage or purchase', () => {
+  expect(validateFunnelEvent('auto_retry_selected', {}).ok).toBe(true);
+  expect(validateFunnelEvent('auto_retry_selected', { success: true }).ok).toBe(false);
 });
 
 test('valid events are recorded in order with deterministic clock and sequence', () => {

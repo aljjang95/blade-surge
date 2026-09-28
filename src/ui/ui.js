@@ -64,6 +64,24 @@ export class UI {
     $('btn-auto').addEventListener('click', () => { const p = this.app.battle.player; if (!p) return; const next = !p.auto; const saved = this.app.journey?.setAuto(next); if (saved?.ok === false) { this.toast(saved.error, 'red'); return; } p.auto = next; this.app._auto = next; $('btn-auto').classList.toggle('on', p.auto); this.toast(p.auto ? '자동 전투 ON · 다음 출격에도 적용' : '자동 전투 OFF · 다음 출격에도 적용'); });
     $('btn-result-lobby').addEventListener('click', () => { if (canPrepareGrowth(this.app, this.resultData)) this.app.toLobby(); });
     $('btn-result-retry').addEventListener('click', () => { if (canPrepareGrowth(this.app, this.resultData)) this.app.startStage(this.app.battle.stage); });
+    $('btn-result-auto-retry').addEventListener('click', async () => {
+      const stage = this.app.battle.stage;
+      if (!canPrepareGrowth(this.app, this.resultData) || this.resultData.win || stage?.code !== '1-1' || stage.difficultyId !== 'story') return;
+      const previousAuto = !!this.app.journey?.s.autoBattle;
+      const saved = this.app.journey?.setAuto(true);
+      if (saved?.ok !== true) { this.toast(saved?.error || 'AUTO 설정을 저장하지 못했습니다.', 'red'); return; }
+      const button = $('btn-result-auto-retry'); button.disabled = true;
+      if (!this.eco.s.tutorial?.completed) this.app.tutorial.skipOnceForAutoRetry = true;
+      let started = false;
+      try { started = await this.app.startStage(stage) === true; }
+      catch { this.toast('재도전을 시작하지 못했습니다. 다시 시도해 주세요.', 'red'); }
+      finally { this.app.tutorial.skipOnceForAutoRetry = false; button.disabled = false; }
+      if (started) this.app.funnel?.track('auto_retry_selected');
+      else {
+        const restored = this.app.journey.setAuto(previousAuto);
+        if (restored?.ok !== true) this.toast('출격이 취소됐습니다. AUTO 설정을 확인해 주세요.', 'red');
+      }
+    });
     $('btn-result-next').addEventListener('click', () => { if (canPrepareGrowth(this.app, this.resultData) && this.resultData.win && !this.app.battle.stage?.finale) this.app.startStage(this.eco.nextStage()); });
     $('btn-result-double').addEventListener('click', () => this.watchAd());
   }
@@ -304,6 +322,9 @@ export class UI {
     $('result-stats').innerHTML = `<span>처치 <b>${b.kills}</b></span><span>최대 콤보 <b>${b.maxCombo}</b></span><span>피해량 <b>${fmt(b.dmgDealt)}</b></span><span>시간 <b>${Math.floor(b.elapsed)}s</b></span><span>득템 <b>${b.drops.loot.length}</b></span>`;
     const loot = $('result-loot'); loot.innerHTML = '';
     $('btn-result-next').style.display = win && !b.stage.finale ? '' : 'none'; $('btn-result-double').style.display = win ? '' : 'none';
+    const autoRetry = $('btn-result-auto-retry'), showAutoRetry = !win && b.stage.code === '1-1' && b.stage.difficultyId === 'story';
+    autoRetry.hidden = !showAutoRetry; autoRetry.style.display = showAutoRetry ? '' : 'none'; autoRetry.disabled = false;
+    if (showAutoRetry) autoRetry.querySelector('small').textContent = `에너지 -${b.stage.energy} · 이후 출격에도 AUTO`;
     $('result-exp').style.width = '0%'; $('result-bp').style.width = '0%';
     $('result-exp-txt').textContent = ''; $('result-bp-txt').textContent = '';
     if (win) {

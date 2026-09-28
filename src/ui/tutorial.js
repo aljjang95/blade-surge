@@ -41,6 +41,12 @@ export class BattleTutorial {
   begin(stage) {
     const save = this.app.eco.s;
     if (stage?.code === '1-1' && stage.difficultyId === 'story') { this.healTipLevel = 0; this.clearHealTip(); }
+    if (this.skipOnceForAutoRetry) {
+      this.skipOnceForAutoRetry = false;
+      this.phase = null; this.battle = null; if (this.root) this.root.hidden = true;
+      document.querySelectorAll('.tutorial-focus').forEach((el) => el.classList.remove('tutorial-focus'));
+      return false;
+    }
     if (stage?.code !== '1-1' || stage.difficultyId !== 'story' || save.tutorial?.completed || !this.root) return false;
     const battle = this.app.battle;
     this.battle = battle; this.phase = 'attack'; this.beforeAuto = !!battle.player.auto; battle.player.auto = false;
@@ -51,10 +57,10 @@ export class BattleTutorial {
 
   show(phase, paused) {
     const data = {
-      attack: { n: '01 / 04', title: '첫 칼을 뽑아라', copy: '오른쪽의 공격 버튼을 눌러 기본 콤보를 시작하세요. 키보드는 J 또는 Space입니다.', target: '#btn-attack', button: '전투 시작' },
+      attack: { n: '01 / 04', title: '첫 칼을 뽑아라', copy: '공격을 누르고, 타격이 닿은 직후 다시 눌러 콤보를 이어가세요. 길게 누르기만 해서는 이어지지 않아요. 키보드는 J 또는 Space입니다.', target: '#btn-attack', button: '전투 시작' },
       dodge: { n: '02 / 04', title: '붉은 예고를 피하라', copy: '적의 공격이 닿기 직전에 회피를 눌러 퍼펙트 회피를 노리세요.', target: '#btn-dodge', button: '회피 연습' },
       skill: { n: '03 / 04', title: '스킬로 무리를 무너뜨려라', copy: '화면 오른쪽의 스킬 중 하나를 눌러 MP를 사용하세요. 궁극기는 게이지가 차면 R로 발동합니다.', target: '#hud .skill-btn[data-skill="0"]', button: '스킬 연습' },
-      clear: { n: '04 / 04', title: '방을 정화하면 길이 열린다', copy: '미니맵을 따라 첫 방을 정리하세요. 체력이 줄면 왼쪽 아래 빨간 물약으로 회복할 수 있습니다. 각인 선택 창이 뜨면 하나를 골라 전투를 이어가세요.', target: null, button: '전투 계속' },
+      clear: { n: '04 / 04', title: '방을 정화하면 길이 열린다', copy: '미니맵을 따라 방을 정리하세요. 체력이 줄면 빨간 물약을 누르세요. 수동 조작이 어렵다면 상단 AUTO를 켤 수 있습니다. 각인 창에서는 하나를 고르세요.', target: null, button: '전투 계속' },
     }[phase];
     if (!data) return;
     this.phase = phase;
