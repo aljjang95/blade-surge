@@ -45,7 +45,7 @@ function WardrobeView({ app, id, equipment }) {
   const armor = ITEM_BY_ID[equipment.armor?.id];
   return <div className="wardrobe-view"><h3>{HEROES[id].name} · 착용 모습</h3>
     <div className="wardrobe-canvas"><Canvas dpr={[1,1.5]} camera={{position:[0,1.5,5.4],fov:36}} frameloop={reduced?'demand':'always'} gl={{antialias:true,alpha:true,powerPreference:'low-power'}} onCreated={({camera})=>camera.lookAt(0,1.35,0)}>
-      <FitCamera/><ambientLight intensity={1.3}/><directionalLight position={[3,5,4]} intensity={2.5}/><directionalLight position={[-3,2,-2]} color="#97d9d2" intensity={1.6}/>
+      <FitCamera near={.62} lookY={1.25}/><ambientLight intensity={1.3}/><directionalLight position={[3,5,4]} intensity={2.5}/><directionalLight position={[-3,2,-2]} color="#97d9d2" intensity={1.6}/>
       <Character app={app} id={id} equipment={equipment} yaw={yaw} reduced={reduced}/>
       <mesh rotation={[-Math.PI/2,0,0]} position={[0,-.025,0]}><circleGeometry args={[1.25,48]}/><meshStandardMaterial color="#365849" roughness={.9}/></mesh>
     </Canvas></div>

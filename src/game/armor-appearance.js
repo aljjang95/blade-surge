@@ -3,7 +3,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { applySurfaceDetail } from '../engine/surface-textures.js';
 
-// Original, fitted costume surfaces for the shipped casual-v2 silhouettes.
+// Original, fitted costume surfaces for the shipped medium-rig hero silhouettes.
 // Coordinates are in the authored GLB bind pose, never the current animation pose.
 const THEMES = {
   glasswarden: [0x327d92, 0xd0faff, 0x5cdddd, 'crystal'],
@@ -64,9 +64,60 @@ export function removeArmorAppearance(model) {
   delete model.userData.armorAppearance;
 }
 
+// The first four themed sets share a plate cut, so each needs an actual
+// silhouette. These small original meshes follow the existing shoulder/chest
+// bones; they do not replace the authored body or add another model download.
+function addThemeDetails(theme, add, accent, trim) {
+  const put = (name, bone, geometry, material = accent) => add(`theme_${theme}_${name}`, bone, geometry, material, [0, 0, 0]);
+  const polygon = (points, z = .06) => {
+    const shape = new THREE.Shape();
+    points.forEach(([x, y], i) => i ? shape.lineTo(x, y) : shape.moveTo(x, y));
+    shape.closePath();
+    const geometry = new THREE.ExtrudeGeometry(shape, { depth: .035, bevelEnabled: false, curveSegments: 3 });
+    geometry.translate(0, 0, z);
+    return geometry;
+  };
+  if (theme === 'storm') {
+    for (const side of [-1, 1]) {
+      const x = n => side * n;
+      put(side < 0 ? 'right_fin' : 'left_fin', 'chest', polygon([
+        [x(.30), 1.15], [x(.51), 1.41], [x(.50), 1.27], [x(.81), 1.51],
+        [x(.70), 1.31], [x(.96), 1.34], [x(.72), 1.08], [x(.38), 1.09],
+      ], .035));
+    }
+    put('bolt', 'chest', polygon([[-.045, 1.19], [.065, 1.11], [.01, 1.10], [.075, .94], [-.08, 1.055], [-.02, 1.065]], .43), trim);
+  } else if (theme === 'blood') {
+    for (const side of [-1, 1]) {
+      const curve = new THREE.CatmullRomCurve3([
+        new THREE.Vector3(side * .34, 1.20, .04), new THREE.Vector3(side * .60, 1.35, .045),
+        new THREE.Vector3(side * .76, 1.56, .06),
+      ]);
+      put(side < 0 ? 'right_horn' : 'left_horn', 'chest', new THREE.TubeGeometry(curve, 8, .055, 5, false));
+    }
+    put('fang', 'chest', polygon([[-.13, 1.12], [0, 1.05], [.13, 1.12], [.07, .98], [0, .93], [-.07, .98]], .43), trim);
+  } else if (theme === 'gravity') {
+    for (const side of [-1, 1]) {
+      const ring = new THREE.TorusGeometry(.215, .035, 6, 24);
+      ring.rotateY(side * .28); ring.translate(side * .68, 1.25, .03);
+      put(side < 0 ? 'right_orbit' : 'left_orbit', 'chest', ring);
+    }
+    const core = new THREE.IcosahedronGeometry(.095, 0); core.scale(1, 1.15, .5); core.translate(0, 1.07, .45);
+    put('core', 'chest', core, trim);
+  } else if (theme === 'phoenix') {
+    for (const side of [-1, 1]) {
+      const x = n => side * n;
+      put(side < 0 ? 'right_feathers' : 'left_feathers', 'chest', polygon([
+        [x(.34), 1.10], [x(.42), 1.50], [x(.51), 1.27], [x(.67), 1.58],
+        [x(.67), 1.29], [x(.94), 1.42], [x(.81), 1.12], [x(.49), 1.08],
+      ], .025));
+    }
+    put('flame', 'chest', polygon([[-.095, 1.02], [-.01, 1.19], [.015, 1.08], [.07, 1.13], [.10, 1.025], [.01, .95]], .43), trim);
+  }
+}
+
 export function applyArmorAppearance(model, hero, item) {
   removeArmorAppearance(model);
-  if (!item || model.userData.tllIdentity !== 'casual-v2') return;
+  if (!item || !['casual-v2', 'expedition-v3'].includes(model.userData.tllIdentity)) return;
   let skin;
   model.traverse((o) => { if (o.isSkinnedMesh && o.name.startsWith('TLL_') && !skin) skin = o; });
   if (!skin) return;
@@ -137,5 +188,6 @@ export function applyArmorAppearance(model, hero, item) {
     add('robe_hem', 'hips', new THREE.CylinderGeometry(.473, .49, .045, 12, 1, true), trim, [0, .398, -.025], [1, 1, .87]);
     add('robe_stole', 'hips', rounded(.17, .36, .035, .015), accent, [0, .575, .377]);
   }
-  model.userData.armorAppearance = { itemId: item.id, cut: style.cut, identity: 'casual-v2' };
+  addThemeDetails(item.set, add, accent, trim);
+  model.userData.armorAppearance = { itemId: item.id, cut: style.cut, identity: model.userData.tllIdentity };
 }
