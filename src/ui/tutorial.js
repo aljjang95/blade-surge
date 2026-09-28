@@ -13,6 +13,8 @@ export class BattleTutorial {
     this.phase = null;
     this.completedSteps = new Set();
     this.beforeAuto = false;
+    this.healTipShown = false;
+    this.healTipUntil = 0;
     this.onNext = () => this.resumeCurrent();
     this.next?.addEventListener('click', this.onNext);
     this.skip?.addEventListener('click', () => this.finish(true));
@@ -20,6 +22,7 @@ export class BattleTutorial {
 
   begin(stage) {
     const save = this.app.eco.s;
+    if (stage?.code === '1-1' && stage.difficultyId === 'story') { this.healTipShown = false; this.clearHealTip(); }
     if (stage?.code !== '1-1' || stage.difficultyId !== 'story' || save.tutorial?.completed || !this.root) return false;
     const battle = this.app.battle;
     this.battle = battle; this.phase = 'attack'; this.beforeAuto = !!battle.player.auto; battle.player.auto = false;
@@ -33,7 +36,7 @@ export class BattleTutorial {
       attack: { n: '01 / 04', title: '첫 칼을 뽑아라', copy: '오른쪽의 공격 버튼을 눌러 기본 콤보를 시작하세요. 키보드는 J 또는 Space입니다.', target: '#btn-attack', button: '전투 시작' },
       dodge: { n: '02 / 04', title: '붉은 예고를 피하라', copy: '적의 공격이 닿기 직전에 회피를 눌러 퍼펙트 회피를 노리세요.', target: '#btn-dodge', button: '회피 연습' },
       skill: { n: '03 / 04', title: '스킬로 무리를 무너뜨려라', copy: '화면 오른쪽의 스킬 중 하나를 눌러 MP를 사용하세요. 궁극기는 게이지가 차면 R로 발동합니다.', target: '#hud .skill-btn[data-skill="0"]', button: '스킬 연습' },
-      clear: { n: '04 / 04', title: '방을 정화하면 길이 열린다', copy: '이제 직접 이동하고 공격해 첫 방을 모두 정리하세요. 미니맵의 다음 방을 따라가면 됩니다. 방을 정리하면 각인 선택 창이 뜹니다. 하나를 고르면 전투가 이어집니다.', target: null, button: '전투 계속' },
+      clear: { n: '04 / 04', title: '방을 정화하면 길이 열린다', copy: '미니맵을 따라 첫 방을 정리하세요. 체력이 줄면 왼쪽 아래 빨간 물약으로 회복할 수 있습니다. 각인 선택 창이 뜨면 하나를 골라 전투를 이어가세요.', target: null, button: '전투 계속' },
     }[phase];
     if (!data) return;
     this.phase = phase;
@@ -57,12 +60,34 @@ export class BattleTutorial {
   }
 
   update() {
+    this.updateHealTip();
     if (!this.battle?.active || !this.phase) return;
     const p = this.battle.player;
     if (this.phase === 'attack' && p?.state === 'attack') this.show('dodge', true);
     else if (this.phase === 'dodge' && p?.state === 'dodge') this.show('skill', true);
     else if (this.phase === 'skill' && (p?.state === 'skill' || p?.state === 'ult')) this.show('clear', false);
     else if (this.phase === 'clear' && this.battle.roomsCleared > 0) this.finish(false);
+  }
+
+  clearHealTip() {
+    const potion = document.querySelector?.('.exp-potions [data-potion="hp_tonic"]');
+    potion?.classList.remove('tutorial-focus');
+    potion?.removeAttribute?.('aria-description');
+    if (potion?.parentElement?.dataset) delete potion.parentElement.dataset.healHint;
+    this.healTipUntil = 0;
+  }
+
+  updateHealTip() {
+    const battle = this.app.battle, player = battle?.player;
+    if (this.healTipUntil && (performance.now() >= this.healTipUntil || !battle?.active || battle.paused || !player?.alive || player.hp / player.maxHp > .55 || document.querySelector?.('#modal.show, #masterworks[open]') || document.querySelector?.('.exp-potions [data-potion="hp_tonic"]')?.disabled)) this.clearHealTip();
+    if (this.phase || this.healTipShown || !battle?.active || battle.paused || !player?.alive || battle.stage?.code !== '1-1' || battle.stage?.difficultyId !== 'story' || player.hp / player.maxHp > .55 || document.querySelector?.('#modal.show, #masterworks[open]')) return;
+    const potion = document.querySelector?.('.exp-potions [data-potion="hp_tonic"]');
+    if (!potion || potion.disabled || !potion.parentElement?.dataset) return;
+    this.healTipShown = true;
+    this.healTipUntil = performance.now() + 8000;
+    potion.classList.add('tutorial-focus');
+    potion.setAttribute('aria-description', '체력이 낮을 때 누르면 체력이 회복됩니다.');
+    potion.parentElement.dataset.healHint = '체력 낮음! 빨간 물약 누르기';
   }
 
   finish(skipped) {
@@ -78,11 +103,13 @@ export class BattleTutorial {
     this.app.eco.emit();
     this.app.funnel?.track('tutorial_complete', { steps: this.completedSteps?.size || 0, skipped: !!skipped });
     document.querySelectorAll('.tutorial-focus').forEach((el) => el.classList.remove('tutorial-focus'));
+    this.clearHealTip();
     this.root.hidden = true; this.phase = null; this.battle = null; this.completedSteps?.clear();
     this.app.ui.toast(skipped ? '튜토리얼을 건너뛰었습니다. 안내서에서 다시 확인할 수 있어요.' : '전투 튜토리얼 완료 · 이제 던전을 정복하세요!', 'gold');
   }
 
   end() {
+    this.clearHealTip();
     if (this.phase) this.finish(true);
     else if (this.root) this.root.hidden = true;
   }
