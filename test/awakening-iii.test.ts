@@ -64,33 +64,83 @@ test('the wider lane reaches nearby flank enemies without becoming a radial hit'
   expect(hits.has(far)).toBe(false);
 });
 
-test('the first uncached skill shout plays once after loading, and never after battle exit', async () => {
+test('the first uncached shout plays only for its live cast and battle', async () => {
   const sound = audio as any;
-  const saved = { load: sound._loadVoice, bark: sound.bark, buffer: sound.voiceBuf.hero_knight_skill6 };
+  const saved = { load: sound._loadVoice, bark: sound.bark, buffer: sound.voiceBuf.hero_knight_skill6,
+    fallback: sound.voiceBuf.hero_knight_skill0 };
   const played: string[] = [];
   let finish!: (value: object) => void;
   try {
     delete sound.voiceBuf.hero_knight_skill6;
+    sound.voiceBuf.hero_knight_skill0 = {};
     sound._loadVoice = () => new Promise<object>(resolve => { finish = resolve; });
     sound.bark = (name: string) => played.push(name);
-    const game: any = { active: true };
-    const player: any = { alive: true, skillCtx: { sk: { id: 'sunbreaker' } } };
-    AWAKENING_III.sunbreaker.start(game, player);
+    const timers: (() => void)[] = [];
+    const cast: any = { sk: { id: 'sunbreaker' }, done: false };
+    const player: any = { alive: true, disposed: false, state: 'skill', skillCtx: cast };
+    const game: any = { active: true, player, _startGeneration: 1, after: (_s: number, run: () => void) => timers.push(run) };
+    AWAKENING_III.sunbreaker.start(game, player, cast);
     finish({}); await Promise.resolve();
     expect(played).toEqual(['hero_knight_skill6']);
+    timers.shift()?.();
+    expect(played).toHaveLength(1);
 
     sound.voiceBuf.hero_knight_skill6 = {};
-    AWAKENING_III.sunbreaker.start(game, player);
+    AWAKENING_III.sunbreaker.start(game, player, cast);
     expect(played).toHaveLength(1);
 
     delete sound.voiceBuf.hero_knight_skill6;
-    AWAKENING_III.sunbreaker.start(game, player);
+    AWAKENING_III.sunbreaker.start(game, player, cast);
     game.active = false;
+    game._startGeneration++;
+    player.disposed = true;
+    game.player = { alive: true, state: 'skill', skillCtx: { sk: { id: 'sunbreaker' } } };
+    game.active = true;
     finish({}); await Promise.resolve();
+    timers.shift()?.();
     expect(played).toHaveLength(1);
   } finally {
     sound._loadVoice = saved.load; sound.bark = saved.bark;
     if (saved.buffer) sound.voiceBuf.hero_knight_skill6 = saved.buffer;
     else delete sound.voiceBuf.hero_knight_skill6;
+    if (saved.fallback) sound.voiceBuf.hero_knight_skill0 = saved.fallback;
+    else delete sound.voiceBuf.hero_knight_skill0;
+  }
+});
+
+test('a delayed named bark falls back once and never follows a different skill', async () => {
+  const sound = audio as any;
+  const saved = { load: sound._loadVoice, bark: sound.bark, buffer: sound.voiceBuf.hero_knight_skill6,
+    fallback: sound.voiceBuf.hero_knight_skill0 };
+  const played: string[] = [];
+  let finish!: (value: object) => void;
+  try {
+    delete sound.voiceBuf.hero_knight_skill6;
+    sound.voiceBuf.hero_knight_skill0 = {};
+    sound._loadVoice = () => new Promise<object>(resolve => { finish = resolve; });
+    sound.bark = (name: string) => played.push(name);
+    const timers: (() => void)[] = [];
+    const cast: any = { sk: { id: 'sunbreaker' }, done: false };
+    const player: any = { alive: true, disposed: false, state: 'skill', skillCtx: cast };
+    const game: any = { active: true, player, _startGeneration: 1, after: (_s: number, run: () => void) => timers.push(run) };
+    AWAKENING_III.sunbreaker.start(game, player, cast);
+    timers.shift()?.();
+    expect(played).toEqual(['hero_knight_skill0']);
+    player.skillCtx = { sk: { id: 'sanctuary' } };
+    finish({}); await Promise.resolve();
+    expect(played).toEqual(['hero_knight_skill0']);
+
+    player.skillCtx = cast;
+    AWAKENING_III.sunbreaker.start(game, player, cast);
+    player.skillCtx = { sk: { id: 'sanctuary' } };
+    finish({}); await Promise.resolve();
+    timers.shift()?.();
+    expect(played).toEqual(['hero_knight_skill0']);
+  } finally {
+    sound._loadVoice = saved.load; sound.bark = saved.bark;
+    if (saved.buffer) sound.voiceBuf.hero_knight_skill6 = saved.buffer;
+    else delete sound.voiceBuf.hero_knight_skill6;
+    if (saved.fallback) sound.voiceBuf.hero_knight_skill0 = saved.fallback;
+    else delete sound.voiceBuf.hero_knight_skill0;
   }
 });

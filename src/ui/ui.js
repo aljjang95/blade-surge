@@ -107,7 +107,7 @@ export class UI {
     }
   }
   showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
-  pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; b.setPaused('manual', on); this.show(this.el.pause, on); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
+  pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; b.setPaused('manual', on); this.show(this.el.pause, on); if (!on && this.el.pause.contains(document.activeElement)) document.activeElement?.blur?.(); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
   toast(msg, cls = '', options = {}) { if (this.el.hud.classList.contains('show')) { this.combatNotices.push(msg, cls, options); return; } const d = document.createElement('div'); d.className = 'toast ' + cls; d.innerHTML = msg; this.el.toast.appendChild(d); setTimeout(() => d.remove(), 2200); while (this.el.toast.children.length > 4) this.el.toast.firstChild.remove(); }

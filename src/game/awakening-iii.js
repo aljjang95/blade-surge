@@ -26,16 +26,30 @@ function hitSolarPulse(game, player, ctx, at, seen, ratio, knockback) {
 export const AWAKENING_III = {
   sunbreaker: {
     dur: .9,
-    start(game, player) {
-      // Player's bark path loads uncached clips without playing the first cast.
-      // Play the first clip on the bark bus when that same pending load resolves.
-      // Later casts use Player's normal bark path and need no extra playback.
-      if (audio.voiceOn && audio.mix.voice && !audio.voiceBuf.hero_knight_skill6) {
-        audio._loadVoice('hero_knight_skill6').then(buffer => {
-          if (buffer && game.active && !game.paused && player.alive && player.skillCtx?.sk.id === 'sunbreaker')
-            audio.bark('hero_knight_skill6', { vol: .95, min: 0, priority: 3 });
-        });
-      }
+    start(game, player, ctx) {
+      // Player plays the cached bark synchronously. A cache miss must stay bound
+      // to this cast; the same Battle object can be reused after stop/start.
+      const key = 'hero_knight_skill6';
+      if (!audio.voiceOn || !audio.mix.voice || audio.voiceBuf[key]) return;
+      const generation = game._startGeneration;
+      const valid = () => game.active && !game.paused && game._startGeneration === generation
+        && game.player === player && player.alive && !player.disposed
+        && player.skillCtx === ctx && !ctx.done && player.state === 'skill'
+        && audio.voiceOn && audio.mix.voice;
+      let handled = false;
+      audio._loadVoice(key).then(buffer => {
+        if (!handled && buffer && valid()) {
+          handled = true;
+          audio.bark(key, { vol: .95, min: 0, priority: 3 });
+        }
+      });
+      // If the dedicated file is slow, give the first cast a cached shout
+      // while keeping the named take ready for later casts.
+      game.after(.35, () => {
+        if (handled || !valid() || !audio.voiceBuf.hero_knight_skill0) return;
+        handled = true;
+        audio.bark('hero_knight_skill0', { vol: .7, min: 0, priority: 2 });
+      });
     },
     cast(game, player, ctx) {
       const origin = player.pos.clone().setY(0);
