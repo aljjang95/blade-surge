@@ -43,9 +43,10 @@ node tools/metrics.mjs --compare .rsi/base.json .rsi/head.json
 
 ### 7. 밸런스 시뮬 (수치가 바뀐 회전에서만)
 ```bash
-node tools/metrics.mjs --sim 2000
+node tools/metrics.mjs --sim 2000 --skill sunbreaker --out .rsi/sunbreaker-sim.json
 ```
 DPS·생존시간·성장곡선·가챠 기댓값이 목표 밴드 안인지. 스킬/세트/직업/강화를 건드렸으면 필수.
+현재 `--skill sunbreaker`는 고정 시드 적 배치 2,000개의 충돌 기하와 피해 상한만 검사한다. 진공에 따른 적 이동, 실제 DPS·생존·성장·가챠는 측정하지 않는다. 다른 콘텐츠 축에는 해당 범위의 시뮬레이터를 추가해야 하며, 지원하지 않는 `--sim` 호출은 실패해야 한다.
 
 ### 8. 닫기
 ```bash

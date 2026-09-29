@@ -4,6 +4,7 @@
  *
  *   node tools/metrics.mjs --out .rsi/head.json --shots .rsi/shots
  *   node tools/metrics.mjs --compare .rsi/base.json .rsi/head.json
+ *   node tools/metrics.mjs --sim 2000 --skill sunbreaker --out .rsi/sunbreaker-sim.json
  *
  * 한 층을 AUTO 로 끝까지 자동 플레이시키면서 PRD §2 의 지표를 뽑고,
  * 밴드를 벗어나면 exit 1 로 떨어진다. 게임 시간은 app.step(dt) 로 결정적으로 밟는다.
@@ -21,6 +22,31 @@ import { STORY_EVENTS } from '../src/data/masterworks.js';
 const args = process.argv.slice(2);
 const arg = (k, d) => { const i = args.indexOf(k); return i < 0 ? d : args[i + 1]; };
 const PROJ = fileURLToPath(new URL('..', import.meta.url));
+
+// Simulation is skill-specific. An unsupported or missing --skill must fail
+// instead of silently running the ordinary first-floor metric path.
+if (args.includes('--sim')) {
+  const iterations = Number(arg('--sim', NaN));
+  const skill = arg('--skill', null);
+  const seed = Number(arg('--seed', '20260929'));
+  if (args.includes('--compare') || !Number.isSafeInteger(iterations) || iterations < 1 || iterations > 100000 || skill !== 'sunbreaker') {
+    console.error('사용법: node tools/metrics.mjs --sim 2000 --skill sunbreaker [--seed N] [--out file]');
+    process.exit(2);
+  }
+  const { simulateSunbreaker } = await import('./sunbreaker-sim.mjs');
+  let report;
+  try { report = simulateSunbreaker({ iterations, seed }); }
+  catch (error) { console.error(String(error)); process.exit(2); }
+  const output = resolve(PROJ, arg('--out', '.rsi/sunbreaker-sim.json'));
+  mkdirSync(dirname(output), { recursive: true });
+  writeFileSync(output, JSON.stringify(report, null, 2));
+  console.log(`태양파쇄 기하 시뮬 ${iterations}회 · 기준 ${report.baselineSha.slice(0, 7)}`);
+  console.log(`기존 대비 피해 중앙값 ${(report.headToOldRatio.median * 100).toFixed(1)}% · 피격 대상 중앙값 ${(report.coverage.newMedian * 100).toFixed(1)}% · 대상별 최대 ${report.maxPerTarget}`);
+  console.log(report.limitation);
+  console.log(report.failures.length ? `실패: ${report.failures.join(', ')}` : '범위 통과');
+  process.exit(report.failures.length ? 1 : 0);
+}
+if (args.includes('--skill')) { console.error('--skill requires --sim'); process.exit(2); }
 
 // ---------- --compare 모드 ----------
 if (args.includes('--compare')) {
