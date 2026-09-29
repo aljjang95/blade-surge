@@ -43,6 +43,7 @@ export class Player extends Actor {
     this.play('Idle');
     this.footT = 0;
     audio.preloadBarks([0, 1, 2, 3].map((i) => `hero_${def.voiceId || def.id}_atk${i}`).concat([0, 1].map((i) => `hero_${def.voiceId || def.id}_fin${i}`), [0, 1, 2].map((i) => `hero_${def.voiceId || def.id}_hurt${i}`), [0, 1, 2].map((i) => `hero_${def.voiceId || def.id}_skill${i}`), [`hero_${def.voiceId || def.id}_perfect`]));
+    if (def.id === 'knight') audio.preloadBarks(['hero_knight_skill6']);
   }
   get atk() { return this.stats.atk * this.buffs.atk * ((this.tonicAtkT || 0) > 0 ? 1.25 : 1) * (this.game.hasProc?.('blood_rage') && this.hp < this.maxHp * 0.5 ? 1.5 : 1); }
   gainJobResource(n) {

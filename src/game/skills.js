@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { audio } from '../engine/audio.js';
 import { applyKnightSlashVariant, knightSlashVariantForBattle } from './knight-builds.js';
+import { AWAKENING_III } from './awakening-iii.js';
 
 const _v = new THREE.Vector3();
 const fwd = (p, d = 1) => p.forward(new THREE.Vector3()).multiplyScalar(d).add(p.pos);
@@ -137,9 +138,12 @@ export const SKILLS = {
       pts.forEach((pt, i) => {
         const delay = i * 0.07;
         game.after(delay, () => {
-          game.fx.firePillar(pt, { height: 11, width: 2.0, life: 0.5, color: 0xfff0c0 });
+          // Keep all eight hits/particle cues; only the first four get the
+          // two-plane pillar so a dense Judgment stays within the render budget.
+          if (i < 4) game.fx.firePillar(pt, { height: 11, width: 2.0, life: 0.5, color: 0xfff0c0 });
           game.hitRadius(pt, 2.2, c.dmg, { kb: 2, kind: 'magic', up: true, source: p, quietStop: i > 1 });
-          game.fx.holyBurst(pt, { size: 3.5, life: 0.35 }); game.fx.burst(pt.clone().setY(0.6), 0xfff0c0, { n: 12, speed: 7, size: 0.35, up: 1.2 });
+          if (i < 5) game.fx.holyBurst(pt, { size: 3.5, life: 0.35 });
+          game.fx.burst(pt.clone().setY(0.6), 0xfff0c0, { n: 12, speed: 7, size: 0.35, up: 1.2 });
           if (i < 3) game.fx.light(pt, 0xfff0c0, 8, 8, 0.4);
           game.renderer.shake(0.22); audio.holy({ vol: 0.22, base: 659 + i * 40, dur: 0.5 }); audio.thump({ vol: 0.4, freq: 80 });
         });
@@ -806,5 +810,8 @@ export const SKILLS = {
   eclipse_edge: { dur:1, cast(game,p,c){ const at=densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); game.fx.castCircle(at,0xb26bff,{radius:7,life:.7}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xb26bff,life:.55});}); } },
   gale_hunt: { dur:.9, cast(game,p,c){ rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4}); for(const delay of [.12,.24])game.after(delay,()=>{if(game.active&&p.alive)rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4});}); } },
   skyfall_arrows: { dur:1.05, cast(game,p,c){ const at=densest(game,p,18,6)||fwd(p,7); game.fx.castCircle(at,0x7feac0,{radius:8,life:.8}); for(let i=0;i<5;i++)game.after(.16+i*.09,()=>{if(!game.active)return;const hit=at.clone().add(new THREE.Vector3(Math.cos(i*2.4)*2.2,0,Math.sin(i*2.4)*2.2));game.hitRadius(hit,4.2,c.dmg*.42,{kb:4,kind:'slash',source:p,dirFrom:hit,quietStop:i>1});game.fx.shockTex(hit,0x7feac0,{r1:3.8,life:.3});}); } },
+
+  // Mechanics live outside the visual session's FX/SFX edits in this file.
+  ...AWAKENING_III,
 
 };

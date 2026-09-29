@@ -11,15 +11,15 @@ test('all five heroes expose exactly eight skills', () => {
   expect(HERO_ORDER.map(id=>CAT[id].skills.length)).toEqual([8,8,8,8,8]);
 });
 
-test('advanced active unlocks are fixed at level 35 and 50', () => {
-  for(const id of HERO_ORDER) expect(CAT[id].skills.slice(6).map((s:any)=>s.unlock)).toEqual([35,50]);
+test('knight awakening III opens at PRD level 30; other advanced unlocks retain their progression', () => {
+  for(const id of HERO_ORDER) expect(CAT[id].skills.slice(6).map((s:any)=>s.unlock)).toEqual(id === 'knight' ? [30,50] : [35,50]);
 });
 
 test('awakening and advanced MP costs follow the progression contract', () => {
   for(const id of HERO_ORDER) expect(CAT[id].skills.slice(4).map((s:any)=>s.mp)).toEqual([26,34,38,52]);
 });
 
-test('all ten level 35 and 50 skill implementations resolve', () => {
+test('all ten advanced skill implementations resolve', () => {
   const ids=HERO_ORDER.flatMap(id=>CAT[id].skills.slice(6).map((s:any)=>s.id));
   expect(ids).toHaveLength(10);
   for(const id of ids) expect(IMPL[id]).toBeDefined();
@@ -65,7 +65,7 @@ test('unlocked Q and E selections persist as underlying indexes', () => {
 });
 
 test('loadout setter rejects locked skills and atomically swaps Q/E', () => {
-  const eco=new Economy(); eco.hero('knight').level=34;
+  const eco=new Economy(); eco.hero('knight').level=29;
   expect(eco.setSkillLoadout('knight',0,6)).toBe(false);
   eco.hero('knight').level=50;
   expect(eco.setSkillLoadout('knight',0,5)).toBe(true);

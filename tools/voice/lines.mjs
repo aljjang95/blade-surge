@@ -47,6 +47,9 @@ for (const h of Object.keys(HERO)) {
   LINES.push(H(h, `hero_${h}_death`, 'line', T.death, 'dying, weak, fading, last breath'));
   LINES.push(H(h, `hero_${h}_revive`, 'line', T.revive, 'bursting back to life with a defiant shout'));
 }
+// Lv.30 검성 각성 III — 기존 기본기와 구분되는 전용 외침.
+LINES.push(H('knight', 'hero_knight_skill6', 'bark', 'Sunbreaker!',
+  'a bright, explosive call as the solar blade travels out and pulls back', { maxSec: 1.4 }));
 // 보스
 const BOSS = {
   warlord: { appear: 'Another skull for my throne. Come, little knight.', phase: 'You dare wound ME?!', enrage: 'ENOUGH! Legion — RISE!', death: 'Impossible… my legion… crumbles…' },

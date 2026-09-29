@@ -26,9 +26,11 @@ npm run build && node tools/metrics.mjs --out .rsi/base.json
 npm run build && node tools/metrics.mjs --out .rsi/head.json --shots .rsi/shots
 node tools/metrics.mjs --compare .rsi/base.json .rsi/head.json
 ```
-- `PRD.md §2` 밴드를 **하나라도** 벗어나면 실패
+- `PRD.md §2` 밴드를 **하나라도** 벗어나면 실패. `longestDryStreakSec`는 실제로 수령한 골드·강화석·조각·장비 사이의 최장 공백을 프레임 단위로 센다. `dropsPerFloor`는 별도 장비 드랍 수를 유지한다. 예전 장비만 세던 결과는 새 측정과 섞어 승인하지 않는다.
 - `errors > 0` 이면 다른 건 볼 것도 없이 실패
 - 회귀 판정: 기준선 대비 `avgFrameMs` +15% 초과, 또는 `drawCalls` +20% 초과면 실패
+- 소프트웨어 렌더의 **기준선 중앙값 `avgFrameMs < 1`**이면 같은 바이너리도 상대 +15%를 넘을 수 있다. 실제 같은 빌드의 0.45→0.53ms 비교가 실패했다. 이 경우 출시 상대 성능 판정은 **사전에 정한 5개 연속 기준선→후보 쌍**으로 한다. 각 10회 실행의 위 절대 밴드는 모두 통과해야 하며, 어느 실패도 버리지 않는다. `paired-runs.json`을 빌드·측정 전에 작성한다: `schema:2`, 고유 `seriesId`, `createdAt`, `measurement:{seed:20260905,renderEvery:3,timeoutSec:600}`, `base`/`head` 각각 정확한 `sha`, 절대 `version`(`dist/version.json`) 경로, 고정 `runs` 5개 결과 경로. 각 측정은 `node tools/metrics.mjs --series-manifest paired-runs.json --series-run base-1|head-1 --project <해당 작업트리 절대경로> --port 4193`처럼 번갈아 실행한다. 측정기는 시작 즉시 결과 경로와 직렬 실행 잠금을 예약하고 완료·실패·중단 상태를 보존한다. 실패한 실행 ID는 재사용하지 않고 새 목록에서 처음부터 측정한다. 실제 서버의 clean 빌드 식별자·목록 해시·실행 ID·시작/종료 시각·렌더 주기를 원본 결과에 기록한다. `node tools/metrics-series.mjs --manifest paired-runs.json`은 비중첩 실행 순서·시드·선택 기록·레벨·빌드·측정 설정을 확인한 뒤 `avgFrameMs`·`drawCalls` 중앙값에 +15%/+20% 한도를 적용한다. 기준선 중앙값이 1ms 이상이면 중앙값 예외를 쓰지 않고 **5쌍 각각** 기존 상대 한도를 통과해야 한다. 모든 개별 `--compare` 결과와 원본 표본은 진단 근거로 보존한다.
+- **이미 존재하는 드로우콜 밴드 결함 수리**는 별도 `schema:3` 시리즈로 사전에 선언한다. `repair:{kind:"preexisting-drawcalls",baselineSha:<정확한 기준선 SHA>,report:<이전 실패 원본>,reportSha256:<해시>}`가 실제 기준선의 `drawCalls > 420` 실패를 입증해야 한다. 이 경우에만 기준선의 드로우콜 초과를 예외 목록에 남기고 비교를 계속한다. 기준선의 다른 모든 밴드, 후보의 **모든 밴드**, 5쌍의 순서·동일 조건·상대 성능 한도는 그대로 강제한다. 기준선의 실패 표본도 전부 포함하며 후보 5회가 모두 통과해야 한다. 결과는 `preexisting-drawcalls-repair` 게이트로만 보고하고, 위 기본 strict 게이트의 통과로 표기하지 않는다. 기존 실패 시리즈나 표본을 삭제·교체하지 않는다.
 
 ### 5. 스크린샷 대조 (게이트 B — 필수)
 `.rsi/shots/` 의 3~4장을 **직접 눈으로 본다.** 지표는 통과하는데 화면이 망가진 경우가 실제로 있었다
@@ -43,9 +45,10 @@ node tools/metrics.mjs --compare .rsi/base.json .rsi/head.json
 
 ### 7. 밸런스 시뮬 (수치가 바뀐 회전에서만)
 ```bash
-node tools/metrics.mjs --sim 2000
+node tools/metrics.mjs --sim 2000 --skill sunbreaker --out .rsi/sunbreaker-sim.json
 ```
 DPS·생존시간·성장곡선·가챠 기댓값이 목표 밴드 안인지. 스킬/세트/직업/강화를 건드렸으면 필수.
+현재 `--skill sunbreaker`는 고정 시드 적 배치 2,000개의 충돌 기하와 피해 상한만 검사한다. 진공에 따른 적 이동, 실제 DPS·생존·성장·가챠는 측정하지 않는다. 다른 콘텐츠 축에는 해당 범위의 시뮬레이터를 추가해야 하며, 지원하지 않는 `--sim` 호출은 실패해야 한다.
 
 ### 8. 닫기
 ```bash

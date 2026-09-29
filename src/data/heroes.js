@@ -29,7 +29,7 @@ export const HEROES = {
       // ── 각성 (레벨 구간 해금) ──
       { id: 'chain_bind',  name: '성쇄 · 결박', icon: '/img/sk_kn_a1.webp', cd: 11, mp: 26, unlock: 10, awaken: 1, anim: 'Spellcast_Raise', castAt: 0.35, dmg: 3.0, desc: '빛의 사슬이 주변 적을 끌어와 2초간 결박한다. 사슬이 끊기며 폭발' },
       { id: 'sanctuary',   name: '천상의 성역', icon: '/img/sk_kn_a2.webp', cd: 22, mp: 34, unlock: 20, awaken: 2, anim: 'Spellcast_Raise', castAt: 0.4,  dmg: 0.9, desc: '7초간 성역 전개. 적은 밖으로 나갈 수 없고 지속 피해, 나는 받는 피해 35% 감소' },
-      { id: 'sunbreaker', name: '성검 · 태양파쇄', icon: '/img/sk_kn_a1.webp', cd: 18, mp: 38, unlock: 35, awaken: 3, anim: '2H_Melee_Attack_Chop', castAt: 0.45, dmg: 5.8, desc: '성검으로 전방을 가르는 태양 충격파를 연속 폭발시킨다' },
+      { id: 'sunbreaker', name: '성검 · 태양파쇄', icon: '/img/sk_kn_a1.webp', cd: 18, mp: 38, unlock: 30, awaken: 3, anim: '2H_Melee_Attack_Chop', castAt: 0.45, dmg: 5.8, desc: '태양 충격파가 전진하며 적을 베고, 돌아오는 빛의 경로가 생존자를 끌어당긴다' },
       { id: 'heavenfall', name: '천상 · 신벌강림', icon: '/img/sk_kn_a2.webp', cd: 28, mp: 52, unlock: 50, awaken: 4, anim: 'Spellcast_Raise', castAt: 0.5, dmg: 6.4, desc: '주변 적을 끌어 모은 뒤 거대한 성광을 떨어뜨린다' },
     ],
   },
