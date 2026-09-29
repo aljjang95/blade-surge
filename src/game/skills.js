@@ -138,9 +138,12 @@ export const SKILLS = {
       pts.forEach((pt, i) => {
         const delay = i * 0.07;
         game.after(delay, () => {
-          game.fx.firePillar(pt, { height: 11, width: 2.0, life: 0.5, color: 0xfff0c0 });
+          // Keep all eight hits/particle cues; only the first four get the
+          // two-plane pillar so a dense Judgment stays within the render budget.
+          if (i < 4) game.fx.firePillar(pt, { height: 11, width: 2.0, life: 0.5, color: 0xfff0c0 });
           game.hitRadius(pt, 2.2, c.dmg, { kb: 2, kind: 'magic', up: true, source: p, quietStop: i > 1 });
-          game.fx.holyBurst(pt, { size: 3.5, life: 0.35 }); game.fx.burst(pt.clone().setY(0.6), 0xfff0c0, { n: 12, speed: 7, size: 0.35, up: 1.2 });
+          if (i < 5) game.fx.holyBurst(pt, { size: 3.5, life: 0.35 });
+          game.fx.burst(pt.clone().setY(0.6), 0xfff0c0, { n: 12, speed: 7, size: 0.35, up: 1.2 });
           if (i < 3) game.fx.light(pt, 0xfff0c0, 8, 8, 0.4);
           game.renderer.shake(0.22); audio.holy({ vol: 0.22, base: 659 + i * 40, dur: 0.5 }); audio.thump({ vol: 0.4, freq: 80 });
         });

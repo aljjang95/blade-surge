@@ -29,6 +29,7 @@ node tools/metrics.mjs --compare .rsi/base.json .rsi/head.json
 - `PRD.md §2` 밴드를 **하나라도** 벗어나면 실패
 - `errors > 0` 이면 다른 건 볼 것도 없이 실패
 - 회귀 판정: 기준선 대비 `avgFrameMs` +15% 초과, 또는 `drawCalls` +20% 초과면 실패
+- 소프트웨어 렌더의 **기준선 중앙값 `avgFrameMs < 1`**이면 같은 바이너리도 상대 +15%를 넘을 수 있다. 실제 같은 빌드의 0.45→0.53ms 비교가 실패했다. 이 경우 출시 상대 성능 판정은 **사전에 정한 5개 연속 기준선→후보 쌍**으로 한다. 각 10회 실행의 위 절대 밴드는 모두 통과해야 하며, 어느 실패도 버리지 않는다. `paired-runs.json`을 빌드·측정 전에 작성한다: `schema:1`, 고유 `seriesId`, `createdAt`, `base`/`head` 각각 정확한 `sha`, 절대 `version`(`dist/version.json`) 경로, 고정 `runs` 5개 결과 경로. 각 측정은 `node tools/metrics.mjs --series-manifest paired-runs.json --series-run base-1|head-1 --project <해당 작업트리 절대경로> --port 5174`처럼 번갈아 실행한다. 측정기가 실제 서버의 clean 빌드 식별자·목록 해시·실행 ID를 원본 결과에 기록하고, 기존 파일 덮어쓰기를 거부한다. `node tools/metrics-series.mjs --manifest paired-runs.json`은 순서·시드·선택 기록·레벨·빌드 식별자를 확인한 뒤 `avgFrameMs`·`drawCalls` 중앙값에 +15%/+20% 한도를 적용한다. 기준선 중앙값이 1ms 이상이면 중앙값 예외를 쓰지 않고 **5쌍 각각** 기존 상대 한도를 통과해야 한다. 모든 개별 `--compare` 결과와 원본 표본은 진단 근거로 보존한다.
 
 ### 5. 스크린샷 대조 (게이트 B — 필수)
 `.rsi/shots/` 의 3~4장을 **직접 눈으로 본다.** 지표는 통과하는데 화면이 망가진 경우가 실제로 있었다

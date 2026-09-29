@@ -12,16 +12,46 @@
 import { chromium } from 'playwright';
 import { CHROME } from './chrome.mjs';
 import { spawn } from 'child_process';
-import { mkdirSync, writeFileSync, readFileSync } from 'fs';
+import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'node:url';
+import { createHash } from 'node:crypto';
 import { BANDS, REGRESSION, assessMetrics, compareMetrics } from './metrics-contract.mjs';
 import { installMetricsDriver } from './metrics-driver.mjs';
 import { STORY_EVENTS } from '../src/data/masterworks.js';
 
 const args = process.argv.slice(2);
 const arg = (k, d) => { const i = args.indexOf(k); return i < 0 ? d : args[i + 1]; };
-const PROJ = fileURLToPath(new URL('..', import.meta.url));
+const SERIES_FILE = arg('--series-manifest', null), SERIES_RUN = arg('--series-run', null);
+if (!!SERIES_FILE !== !!SERIES_RUN || (!SERIES_FILE && args.includes('--project'))) {
+  console.error('--series-manifest and --series-run are required together; --project is series-only');
+  process.exit(2);
+}
+const PROJ = SERIES_FILE && args.includes('--project') ? resolve(arg('--project', '')) : fileURLToPath(new URL('..', import.meta.url));
+let series = null;
+if (SERIES_FILE) {
+  const file = resolve(SERIES_FILE), raw = readFileSync(file);
+  const manifest = JSON.parse(raw);
+  const match = /^(base|head)-([1-5])$/.exec(SERIES_RUN);
+  const section = match && manifest[match[1]];
+  if (!match || !section || args.includes('--sim') || args.includes('--compare')
+    || manifest.schema !== 1 || typeof manifest.seriesId !== 'string'
+    || !/^[a-zA-Z0-9_-]{8,80}$/.test(manifest.seriesId)
+    || !Number.isFinite(Date.parse(manifest.createdAt))
+    || !Array.isArray(section.runs) || section.runs.length !== 5
+    || !section.runs.every(item => typeof item === 'string' && item.endsWith('.json'))
+    || !/^[a-f0-9]{40}$/.test(section.sha || '')
+    || resolve(section.version) !== resolve(PROJ, 'dist/version.json')) {
+    console.error('invalid predeclared series manifest/run for this build');
+    process.exit(2);
+  }
+  const out = resolve(dirname(file), section.runs[Number(match[2]) - 1]);
+  if (existsSync(out)) { console.error('series result already exists; refusing overwrite'); process.exit(2); }
+  series = { out, shots: out.replace(/\.json$/, '-shots'), expectedSha: section.sha,
+    runId: `${manifest.seriesId}:${SERIES_RUN}`,
+    manifestSha256: createHash('sha256').update(raw).digest('hex'),
+    createdAt: manifest.createdAt };
+}
 
 // Simulation is skill-specific. An unsupported or missing --skill must fail
 // instead of silently running the ordinary first-floor metric path.
@@ -73,8 +103,8 @@ if (args.includes('--compare')) {
 }
 
 // ---------- 측정 모드 ----------
-const OUT = arg('--out', '.rsi/head.json');
-const SHOTS = arg('--shots', '.rsi/shots');
+const OUT = series?.out ?? arg('--out', '.rsi/head.json');
+const SHOTS = series?.shots ?? arg('--shots', '.rsi/shots');
 const PORT = Number(arg('--port', '4193'));
 const FLOOR_TIMEOUT_SEC = Number(arg('--timeout', '600'));
 const SEED = Number(arg('--seed', '20260905'));
@@ -97,6 +127,16 @@ for (let i = 0; i < 60; i++) {
   await new Promise((r) => setTimeout(r, 500));
 }
 if (!served) await bail('측정 서버 준비 시간초과: ' + serverError);
+let buildVersion;
+try {
+  const response = await fetch(`http://127.0.0.1:${PORT}/version.json?verify=${Date.now()}`, { cache: 'no-store' });
+  if (!response.ok) throw new Error(`version HTTP ${response.status}`);
+  buildVersion = await response.json();
+  if (series && (buildVersion.sha !== series.expectedSha || buildVersion.dirty !== false
+    || Date.parse(series.createdAt) > Date.parse(buildVersion.builtAt)
+    || JSON.stringify(buildVersion) !== JSON.stringify(JSON.parse(readFileSync(resolve(PROJ, 'dist/version.json'), 'utf8')))))
+    throw new Error('series build identity/manifest time mismatch');
+} catch (error) { await bail('빌드 식별 실패: ' + error.message); }
 
 const br = await chromium.launch({ ...(CHROME ? { executablePath: CHROME } : {}), args: [
   '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader',
@@ -252,9 +292,12 @@ const m = {
   _avgAlive: round(aliveSeen.reduce((a, b) => a + b, 0) / aliveSeen.length, 1),
   _errorSamples: errors.slice(0, 5),
   _at: new Date().toISOString(),
+  _build: buildVersion,
+  ...(series ? { _runId: series.runId, _seriesManifestSha256: series.manifestSha256 } : {}),
 };
 
-writeFileSync(resolve(PROJ, OUT), JSON.stringify(m, null, 2));
+if (series && existsSync(resolve(PROJ, OUT))) await bail('series result appeared during run; refusing overwrite', br);
+writeFileSync(resolve(PROJ, OUT), JSON.stringify(m, null, 2), { flag: series ? 'wx' : 'w' });
 await br.close(); srv.kill();
 
 // ---------- 판정 ----------
