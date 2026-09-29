@@ -15,7 +15,10 @@ export function assessMetrics(metrics) {
 }
 export function compareMetrics(base, head) {
   const failures = Object.keys(BANDS).filter((key) => !Number.isFinite(base[key]) || !Number.isFinite(head[key]) || (REGRESSION[key] && base[key] > 0 && head[key] > base[key] * REGRESSION[key]));
+  failures.push(...assessMetrics(base).map(key => `base:${key}`));
   failures.push(...assessMetrics(head));
+  if (base._dryRewardSource !== 'frame-collected-gold-stones-fragments-gear-v3'
+    || head._dryRewardSource !== base._dryRewardSource) failures.push('dry-reward-source-mismatch');
   if (!Number.isSafeInteger(base._seed) || base._seed < 0 || base._seed > 0xffffffff || base._seed !== head._seed) failures.push('seed-mismatch');
   return [...new Set(failures)];
 }

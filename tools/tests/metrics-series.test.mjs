@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { mkdtempSync, writeFileSync, readFileSync, unlinkSync, rmdirSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 function run(avgFrameMs, drawCalls, minute) {
   return {
@@ -153,6 +154,31 @@ test('a failed or interrupted attempt reserves its run id and cannot be retried'
     attempt.finalize('failed', { _failure: 'boot timeout' });
     expect(existsSync(join(directory, 'series.lock'))).toBe(false);
     expect(JSON.parse(readFileSync(manifest.base.runs[0], 'utf8'))._status).toBe('failed');
+    expect(() => reserveSeriesRun(file, 'base-1', project)).toThrow('attempt already exists');
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('real process exit preserves a failed attempt and releases only its series lock', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'blade-series-exit-'));
+  try {
+    const project = join(directory, 'base');
+    mkdirSync(join(project, 'dist'), { recursive: true });
+    const version = { sha: 'a'.repeat(40), dirty: false, builtAt: new Date(Date.now() - 1000).toISOString() };
+    const versionPath = join(project, 'dist', 'version.json');
+    writeFileSync(versionPath, JSON.stringify(version));
+    const manifest = {
+      schema: 2, seriesId: 'pr84exit001', createdAt: new Date(Date.now() - 2000).toISOString(),
+      measurement: { seed: 20260905, renderEvery: 3, timeoutSec: 600 },
+      base: { sha: version.sha, version: versionPath, runs: Array.from({ length: 5 }, (_, i) => join(directory, `base-${i + 1}.json`)) },
+      head: { sha: 'b'.repeat(40), version: join(directory, 'head-version.json'), runs: Array.from({ length: 5 }, (_, i) => join(directory, `head-${i + 1}.json`)) },
+    };
+    const file = join(directory, 'manifest.json');
+    writeFileSync(file, JSON.stringify(manifest));
+    const code = `import { reserveSeriesRun } from ${JSON.stringify(new URL('../metrics-series.mjs', import.meta.url).href)}; reserveSeriesRun(${JSON.stringify(file)}, 'base-1', ${JSON.stringify(project)}); process.exit(7);`;
+    const child = spawnSync('node', ['--input-type=module', '-e', code], { encoding: 'utf8', timeout: 5000 });
+    expect(child.status).toBe(7);
+    expect(JSON.parse(readFileSync(manifest.base.runs[0], 'utf8'))._status).toBe('failed');
+    expect(existsSync(join(directory, 'series.lock'))).toBe(false);
     expect(() => reserveSeriesRun(file, 'base-1', project)).toThrow('attempt already exists');
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

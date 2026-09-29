@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { assessMetrics, compareMetrics } from '../tools/metrics-contract.mjs';
 
-const valid = { errors: 0, bootMs: 1000, floorClearSec: 200, killsPerFloor: 100, maxAliveSeen: 20, dropsPerFloor: 12, longestDryStreakSec: 20, hitTakenRatio: 0.2, avgFrameMs: 10, p95FrameMs: 30, rhythmBeats: 7, drawCalls: 300, _won: true };
+const valid = { errors: 0, bootMs: 1000, floorClearSec: 200, killsPerFloor: 100, maxAliveSeen: 20, dropsPerFloor: 12, longestDryStreakSec: 20, hitTakenRatio: 0.2, avgFrameMs: 10, p95FrameMs: 30, rhythmBeats: 7, drawCalls: 300, _won: true, _dryRewardSource: 'frame-collected-gold-stones-fragments-gear-v3' };
 test('지표가 좋아도 패배 또는 승리 증거가 없으면 FAIL', () => {
   expect(assessMetrics(valid)).toEqual([]);
   expect(assessMetrics({ ...valid, _won: false })).toContain('floor-not-won');
@@ -24,4 +24,6 @@ test('비교 모드도 패배·시간초과·절대 밴드 이탈을 승인하�
   expect(compareMetrics(base, { ...base, _won: false })).toContain('floor-not-won');
   expect(compareMetrics(base, { ...base, floorClearSec: 600 })).toContain('floorClearSec');
   expect(compareMetrics(base, { ...base, errors: 1 })).toContain('errors');
+  expect(compareMetrics({ ...base, longestDryStreakSec: 36 }, base)).toContain('base:longestDryStreakSec');
+  expect(compareMetrics({ ...base, _dryRewardSource: undefined }, base)).toContain('dry-reward-source-mismatch');
 });
