@@ -50,6 +50,20 @@ test('delayed solar pulses stop after battle exit or player death', () => {
   expect(events).toEqual([]);
 });
 
+test('the wider lane reaches nearby flank enemies without becoming a radial hit', () => {
+  const near: any = { alive: true, spawning: 0, radius: .6, pos: new THREE.Vector3(3.1, 0, 5) };
+  const far: any = { alive: true, spawning: 0, radius: .6, pos: new THREE.Vector3(3.8, 0, 5) };
+  const player: any = { alive: true, pos: new THREE.Vector3(), forward: (out: THREE.Vector3) => out.set(0, 0, 1) };
+  const timers: { at: number; run: () => void }[] = [], hits = new Map<any, number>();
+  const game: any = { active: true, enemies: [near, far], after: (at: number, run: () => void) => timers.push({ at, run }),
+    damageEnemy: (enemy: any, dmg: number) => hits.set(enemy, (hits.get(enemy) || 0) + dmg), vacuum() {},
+    fx: { groundTex() {}, boltTex() {}, slashSprite() {}, shockTex() {}, holyBurst() {} } };
+  AWAKENING_III.sunbreaker.cast(game, player, { dmg: 100, data: {} });
+  timers.sort((a, b) => a.at - b.at).forEach(t => t.run());
+  expect(hits.get(near)).toBeCloseTo(175);
+  expect(hits.has(far)).toBe(false);
+});
+
 test('the first uncached skill shout plays once after loading, and never after battle exit', async () => {
   const sound = audio as any;
   const saved = { load: sound._loadVoice, bark: sound.bark, buffer: sound.voiceBuf.hero_knight_skill6 };

@@ -14,7 +14,7 @@ function hitSolarPulse(game, player, ctx, at, seen, ratio, knockback) {
   for (const enemy of game.enemies) {
     if (!enemy.alive || enemy.spawning || seen.has(enemy)) continue;
     const dx = enemy.pos.x - at.x, dz = enemy.pos.z - at.z;
-    if (Math.hypot(dx, dz) - (enemy.radius || 0) * .5 > 2.5) continue;
+    if (Math.hypot(dx, dz) - (enemy.radius || 0) * .5 > 3.2) continue;
     seen.add(enemy);
     game.damageEnemy(enemy, ctx.dmg * ratio, { kind: 'slash', kb: knockback, source: player,
       dirx: dx, dirz: dz, quietStop: hit > 0 });
@@ -51,7 +51,7 @@ export const AWAKENING_III = {
         game.fx.boltTex(from.clone().setY(.75), at.clone().setY(.75), 0xffe18a, { width: 1.7, life: .45 });
         game.fx.slashSprite(at.clone().setY(2.1), direction, 0xffefab,
           { size: 4.8, life: .48, speed: 3.2, tilt: -.2 });
-        game.fx.shockTex(at, 0xffd060, { r1: 2.8, life: .5 });
+        game.fx.shockTex(at, 0xffd060, { r1: 3.4, life: .5 });
         hitSolarPulse(game, player, ctx, at, forwardHit, 1, 4);
       }));
       [...nodes].reverse().forEach((at, i) => game.after(.48 + i * .1, () => {
@@ -60,7 +60,7 @@ export const AWAKENING_III = {
         game.fx.boltTex(at.clone().setY(.75), toward.clone().setY(.75), 0xffb84a, { width: 2.0, life: .35 });
         game.fx.slashSprite(at.clone().setY(2.1), direction.clone().negate(), 0xffa33e,
           { size: 4.4, life: .38, speed: 3.2, tilt: .2, flip: true });
-        game.fx.groundTex(at, 'circle_gold', 0xffc160, { r0: .4, r1: 2.7, life: .28, spin: -1, y: .08 });
+        game.fx.groundTex(at, 'circle_gold', 0xffc160, { r0: .4, r1: 3.2, life: .28, spin: -1, y: .08 });
         game.vacuum(toward, 4.5, 12);
         hitSolarPulse(game, player, ctx, at, returnHit, .75, 0);
         if (i === nodes.length - 1) game.fx.holyBurst(origin, { size: 4.2, life: .32 });
