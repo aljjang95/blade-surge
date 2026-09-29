@@ -42,6 +42,20 @@ test('one absolute band miss in any run fails even if all medians pass', () => {
   expect(assessSeries(base, head).failures).toContain('head-4:drawCalls');
 });
 
+test('a preexisting draw-call repair records only baseline draw-call exceptions', () => {
+  const { base, head } = sample();
+  base[4].drawCalls = 434;
+  expect(assessSeries(base, head).failures).toContain('base-5:drawCalls');
+  const repaired = assessSeries(base, head, { allowBaseDrawCallFailure: true });
+  expect(repaired.failures).toEqual([]);
+  expect(repaired.baselineExceptions).toEqual([{ run: 'base-5', band: 'drawCalls', value: 434 }]);
+  base[3].longestDryStreakSec = 36;
+  expect(assessSeries(base, head, { allowBaseDrawCallFailure: true }).failures).toContain('base-4:longestDryStreakSec');
+  base[3].longestDryStreakSec = 18;
+  head[4].drawCalls = 421;
+  expect(assessSeries(base, head, { allowBaseDrawCallFailure: true }).failures).toContain('head-5:drawCalls');
+});
+
 test('median frame regression and a mismatched choice trace both fail', () => {
   const { base, head } = sample();
   for (const report of head) report.avgFrameMs = 1;
@@ -180,5 +194,35 @@ test('real process exit preserves a failed attempt and releases only its series 
     expect(JSON.parse(readFileSync(manifest.base.runs[0], 'utf8'))._status).toBe('failed');
     expect(existsSync(join(directory, 'series.lock'))).toBe(false);
     expect(() => reserveSeriesRun(file, 'base-1', project)).toThrow('attempt already exists');
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test('repair mode requires a hashed failing report from its exact baseline SHA', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'blade-series-repair-'));
+  try {
+    const project = join(directory, 'base');
+    mkdirSync(join(project, 'dist'), { recursive: true });
+    const version = { sha: 'a'.repeat(40), dirty: false, builtAt: new Date(Date.now() - 1000).toISOString() };
+    const versionPath = join(project, 'dist', 'version.json');
+    writeFileSync(versionPath, JSON.stringify(version));
+    const evidence = join(directory, 'prior-failure.json');
+    const raw = JSON.stringify({ _status: 'completed', _build: version, drawCalls: 434 });
+    writeFileSync(evidence, raw);
+    const manifest = {
+      schema: 3, seriesId: 'pr84repair01', createdAt: new Date(Date.now() - 2000).toISOString(),
+      measurement: { seed: 20260905, renderEvery: 3, timeoutSec: 600 },
+      repair: { kind: 'preexisting-drawcalls', baselineSha: version.sha, report: evidence,
+        reportSha256: createHash('sha256').update(raw).digest('hex') },
+      base: { sha: version.sha, version: versionPath, runs: Array.from({ length: 5 }, (_, i) => join(directory, `base-${i + 1}.json`)) },
+      head: { sha: 'b'.repeat(40), version: join(directory, 'head-version.json'), runs: Array.from({ length: 5 }, (_, i) => join(directory, `head-${i + 1}.json`)) },
+    };
+    const file = join(directory, 'manifest.json');
+    writeFileSync(file, JSON.stringify(manifest));
+    writeFileSync(evidence, JSON.stringify({ _status: 'completed', _build: version, drawCalls: 420 }));
+    expect(() => reserveSeriesRun(file, 'base-1', project)).toThrow('preexisting draw-call failure evidence mismatch');
+    writeFileSync(evidence, raw);
+    const attempt = reserveSeriesRun(file, 'base-1', project);
+    attempt.finalize('failed', { _failure: 'test fixture' });
+    expect(existsSync(join(directory, 'series.lock'))).toBe(false);
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });

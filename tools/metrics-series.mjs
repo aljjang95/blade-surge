@@ -12,16 +12,21 @@ const median = values => {
   return sorted[Math.floor(sorted.length / 2)];
 };
 
-export function assessSeries(base, head) {
+export function assessSeries(base, head, { allowBaseDrawCallFailure = false } = {}) {
   const failures = [];
+  const baselineExceptions = [];
   if (!Array.isArray(base) || !Array.isArray(head) || base.length !== 5 || head.length !== 5)
-    return { failures: ['exactly-five-paired-runs-required'], medians: null, pairs: [] };
+    return { failures: ['exactly-five-paired-runs-required'], medians: null, pairs: [], baselineExceptions };
   const choices = JSON.stringify(base[0]?._choices);
   const seed = base[0]?._seed;
   for (let i = 0; i < base.length; i++) {
     for (const [kind, run] of [['base', base[i]], ['head', head[i]]]) {
       if (!run || typeof run !== 'object') { failures.push(`${kind}-${i + 1}:missing`); continue; }
-      for (const key of assessMetrics(run)) failures.push(`${kind}-${i + 1}:${key}`);
+      for (const key of assessMetrics(run)) {
+        if (allowBaseDrawCallFailure && kind === 'base' && key === 'drawCalls')
+          baselineExceptions.push({ run: `base-${i + 1}`, band: key, value: run.drawCalls });
+        else failures.push(`${kind}-${i + 1}:${key}`);
+      }
       if (!Number.isSafeInteger(run._seed) || run._seed !== seed) failures.push(`${kind}-${i + 1}:seed`);
       if (!Array.isArray(run._choices) || JSON.stringify(run._choices) !== choices) failures.push(`${kind}-${i + 1}:choices`);
       if (run._heroLevelStart !== 1 || !Number.isInteger(run._heroLevelEnd)) failures.push(`${kind}-${i + 1}:hero-level`);
@@ -52,7 +57,7 @@ export function assessSeries(base, head) {
   }
   if (!subMillisecond) for (const pair of pairs) for (const key of pair.individualRelativeFailures)
     failures.push(`pair-${pair.index}:${key}-regression`);
-  return { failures: [...new Set(failures)], mode: subMillisecond ? 'sub-ms-median' : 'per-pair', medians, pairs };
+  return { failures: [...new Set(failures)], mode: subMillisecond ? 'sub-ms-median' : 'per-pair', medians, pairs, baselineExceptions };
 }
 
 const sha = /^[a-f0-9]{40}$/;
@@ -61,7 +66,7 @@ const reportPath = (anchor, file) => isAbsolute(file) ? file : resolve(anchor, f
 function readManifest(path) {
   const raw = readFileSync(path);
   const manifest = JSON.parse(raw);
-  if (manifest.schema !== 2 || !/^[a-zA-Z0-9_-]{8,80}$/.test(manifest.seriesId || '')
+  if (![2, 3].includes(manifest.schema) || !/^[a-zA-Z0-9_-]{8,80}$/.test(manifest.seriesId || '')
     || !Number.isFinite(Date.parse(manifest.createdAt))
     || manifest.measurement?.seed !== 20260905 || manifest.measurement?.renderEvery !== 3
     || manifest.measurement?.timeoutSec !== 600)
@@ -73,12 +78,25 @@ function readManifest(path) {
       throw new Error(`${kind}: invalid predeclared paths or SHA`);
   }
   const anchor = dirname(resolve(path));
+  if (manifest.schema === 3) {
+    const repair = manifest.repair;
+    if (repair?.kind !== 'preexisting-drawcalls' || repair.baselineSha !== manifest.base.sha
+      || !/^[a-f0-9]{64}$/.test(repair.reportSha256 || '') || typeof repair.report !== 'string')
+      throw new Error('repair series requires exact baseline identity and prior failure evidence');
+    const rawReport = readFileSync(reportPath(anchor, repair.report));
+    const observed = JSON.parse(rawReport);
+    if (createHash('sha256').update(rawReport).digest('hex') !== repair.reportSha256
+      || observed?._build?.sha !== manifest.base.sha || observed?._status !== 'completed'
+      || !Number.isFinite(observed.drawCalls) || observed.drawCalls <= 420)
+      throw new Error('preexisting draw-call failure evidence mismatch');
+  } else if (manifest.repair != null) throw new Error('strict series cannot carry a repair exception');
   const paths = runNames.map(name => {
     const [kind, index] = name.split('-');
     return reportPath(anchor, manifest[kind].runs[Number(index) - 1]);
   });
   if (new Set(paths).size !== paths.length) throw new Error('report path reused across base/head');
-  return { manifest, paths, digest: createHash('sha256').update(raw).digest('hex'), anchor };
+  return { manifest, paths, digest: createHash('sha256').update(raw).digest('hex'), anchor,
+    allowBaseDrawCallFailure: manifest.schema === 3 };
 }
 
 function verifyReport(report, { manifest, digest, name, version }) {
@@ -95,7 +113,7 @@ function verifyReport(report, { manifest, digest, name, version }) {
 }
 
 export function loadSeriesManifest(path) {
-  const { manifest, paths, digest } = readManifest(path);
+  const { manifest, paths, digest, allowBaseDrawCallFailure } = readManifest(path);
   const read = file => JSON.parse(readFileSync(file, 'utf8'));
   const versions = {};
   const extract = kind => {
@@ -116,14 +134,15 @@ export function loadSeriesManifest(path) {
     if (interval.start <= previousEnd) throw new Error(`${name}: overlapping or reordered execution`);
     previousEnd = interval.end;
   }
-  return { ...assessSeries(base, head), baseCount: base.length, headCount: head.length,
-    baseSha: manifest.base.sha, headSha: manifest.head.sha };
+  return { ...assessSeries(base, head, { allowBaseDrawCallFailure }),
+    gate: allowBaseDrawCallFailure ? 'preexisting-drawcalls-repair' : 'strict',
+    baseCount: base.length, headCount: head.length, baseSha: manifest.base.sha, headSha: manifest.head.sha };
 }
 
 // Reserve the result before launching Vite. A failed or interrupted attempt stays on disk,
 // so an operator must create a new manifest/series instead of selecting successful retries.
 export function reserveSeriesRun(path, runName, project) {
-  const { manifest, paths, digest, anchor } = readManifest(path);
+  const { manifest, paths, digest, anchor, allowBaseDrawCallFailure } = readManifest(path);
   const index = runNames.indexOf(runName);
   if (index < 0) throw new Error('invalid series run');
   const [kind] = runName.split('-');
@@ -148,7 +167,8 @@ export function reserveSeriesRun(path, runName, project) {
       const priorVersion = JSON.parse(readFileSync(manifest[prevKind].version, 'utf8'));
       const report = JSON.parse(readFileSync(paths[i], 'utf8'));
       const interval = verifyReport(report, { manifest, digest, name: runNames[i], version: priorVersion });
-      if (interval.start <= previousEnd || assessMetrics(report).length) throw new Error(`${runNames[i]}: previous run failed or overlaps`);
+      const bad = assessMetrics(report).filter(key => !(allowBaseDrawCallFailure && prevKind === 'base' && key === 'drawCalls'));
+      if (interval.start <= previousEnd || bad.length) throw new Error(`${runNames[i]}: previous run failed or overlaps`);
       previousEnd = interval.end;
     }
     const out = paths[index], startedAt = new Date().toISOString();
