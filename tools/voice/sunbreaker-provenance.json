@@ -1,0 +1,12 @@
+{
+  "asset": "public/sfx/voice/hero_knight_skill6.mp3",
+  "line": "Sunbreaker!",
+  "voice": "knight",
+  "provider": "Fish Audio",
+  "model": "s2.1-pro-free",
+  "reference": "tools/voice/refs/knight.mp3",
+  "referenceSha256": "e26177fdf4d239316a8778d5cbab53fea40fc5f4c1127d0f5b93bfe839fa9bd5",
+  "assetSha256": "45ff2bb4d7d864735d099bbd50c9ec536c985897cba1e42bad6a8ec9f9037b52",
+  "durationSec": 0.826,
+  "generatedAt": "2026-09-28T23:57:59.136Z"
+}
