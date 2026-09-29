@@ -1,7 +1,7 @@
 import { test, expect } from 'bun:test';
-import { assessSeries, loadSeriesManifest } from '../metrics-series.mjs';
+import { assessSeries, loadSeriesManifest, reserveSeriesRun } from '../metrics-series.mjs';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, writeFileSync, unlinkSync, rmdirSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, readFileSync, unlinkSync, rmdirSync, mkdirSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -13,6 +13,9 @@ function run(avgFrameMs, drawCalls, minute) {
     _won: true, _seed: 20260905, _choices: ['boon:storm_eye'],
     _heroLevelStart: 1, _heroLevelEnd: 4,
     _at: new Date(Date.UTC(2026, 8, 29, 5, minute)).toISOString(),
+    _startedAt: new Date(Date.UTC(2026, 8, 29, 5, minute) - 30000).toISOString(),
+    _status: 'completed', _renderEvery: 3, _timeoutSec: 600,
+    _dryRewardSource: 'frame-collected-gold-stones-fragments-gear-v3',
   };
 }
 
@@ -54,6 +57,15 @@ test('a missing, reordered, or shortened series cannot pass', () => {
   expect(assessSeries(base, head).failures).toContain('pair-2:order');
 });
 
+test('overlapping start times fail even when completion timestamps are ordered', () => {
+  const { base, head } = sample();
+  head[0]._startedAt = base[0]._startedAt;
+  expect(assessSeries(base, head).failures).toContain('pair-1:order');
+  const second = sample();
+  second.base[1]._startedAt = second.head[0]._startedAt;
+  expect(assessSeries(second.base, second.head).failures).toContain('pair-2:order');
+});
+
 test('the series exception cannot hide a 20ms to 40ms regression', () => {
   const { base, head } = sample();
   for (const report of base) report.avgFrameMs = 20;
@@ -80,7 +92,8 @@ test('manifest loader binds every run to the observed clean build and run id', (
       head: { sha: 'b'.repeat(40), dirty: false, builtAt: '2026-09-29T04:00:00.000Z' },
     };
     const manifest = {
-      schema: 1, seriesId: 'pr84test01', createdAt: '2026-09-29T03:00:00.000Z',
+      schema: 2, seriesId: 'pr84test01', createdAt: '2026-09-29T03:00:00.000Z',
+      measurement: { seed: 20260905, renderEvery: 3, timeoutSec: 600 },
       base: { sha: versions.base.sha, version: save('base-version.json', versions.base), runs: base.map((_, i) => join(directory, `base-${i + 1}.json`)) },
       head: { sha: versions.head.sha, version: save('head-version.json', versions.head), runs: head.map((_, i) => join(directory, `head-${i + 1}.json`)) },
     };
@@ -97,6 +110,16 @@ test('manifest loader binds every run to the observed clean build and run id', (
       });
     }
     expect(loadSeriesManifest(manifestPath).failures).toEqual([]);
+    head[0]._renderEvery = 1000000;
+    writeFileSync(manifest.head.runs[0], JSON.stringify(head[0]));
+    expect(() => loadSeriesManifest(manifestPath)).toThrow('report does not match predeclared build/run/settings');
+    head[0]._renderEvery = 3;
+    writeFileSync(manifest.head.runs[0], JSON.stringify(head[0]));
+    head[0]._startedAt = base[0]._startedAt;
+    writeFileSync(manifest.head.runs[0], JSON.stringify(head[0]));
+    expect(() => loadSeriesManifest(manifestPath)).toThrow('overlapping or reordered execution');
+    head[0]._startedAt = new Date(Date.UTC(2026, 8, 29, 5, 1) - 30000).toISOString();
+    writeFileSync(manifest.head.runs[0], JSON.stringify(head[0]));
     writeFileSync(manifest.base.runs[1], JSON.stringify(base[0]));
     expect(() => loadSeriesManifest(manifestPath)).toThrow('report does not match predeclared build/run');
     writeFileSync(manifest.base.runs[1], JSON.stringify(base[1]));
@@ -106,4 +129,30 @@ test('manifest loader binds every run to the observed clean build and run id', (
     for (const file of files.reverse()) unlinkSync(file);
     rmdirSync(directory);
   }
+});
+
+test('a failed or interrupted attempt reserves its run id and cannot be retried', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'blade-series-reserve-'));
+  try {
+    const project = join(directory, 'base');
+    mkdirSync(join(project, 'dist'), { recursive: true });
+    const version = { sha: 'a'.repeat(40), dirty: false, builtAt: new Date(Date.now() - 1000).toISOString() };
+    const versionPath = join(project, 'dist', 'version.json');
+    writeFileSync(versionPath, JSON.stringify(version));
+    const manifest = {
+      schema: 2, seriesId: 'pr84reserve01', createdAt: new Date(Date.now() - 2000).toISOString(),
+      measurement: { seed: 20260905, renderEvery: 3, timeoutSec: 600 },
+      base: { sha: version.sha, version: versionPath, runs: Array.from({ length: 5 }, (_, i) => join(directory, `base-${i + 1}.json`)) },
+      head: { sha: 'b'.repeat(40), version: join(directory, 'head-version.json'), runs: Array.from({ length: 5 }, (_, i) => join(directory, `head-${i + 1}.json`)) },
+    };
+    const file = join(directory, 'manifest.json');
+    writeFileSync(file, JSON.stringify(manifest));
+    const attempt = reserveSeriesRun(file, 'base-1', project);
+    expect(existsSync(manifest.base.runs[0])).toBe(true);
+    expect(() => reserveSeriesRun(file, 'base-1', project)).toThrow();
+    attempt.finalize('failed', { _failure: 'boot timeout' });
+    expect(existsSync(join(directory, 'series.lock'))).toBe(false);
+    expect(JSON.parse(readFileSync(manifest.base.runs[0], 'utf8'))._status).toBe('failed');
+    expect(() => reserveSeriesRun(file, 'base-1', project)).toThrow('attempt already exists');
+  } finally { rmSync(directory, { recursive: true, force: true }); }
 });

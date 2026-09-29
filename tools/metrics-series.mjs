@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 // RSI relative-performance check for predeclared, sequential paired samples.
 // Every individual run must still pass every absolute PRD §2 band.
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, openSync, closeSync, unlinkSync } from 'node:fs';
 import { resolve, dirname, isAbsolute } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { assessMetrics, REGRESSION } from './metrics-contract.mjs';
 
 const median = values => {
@@ -27,10 +27,12 @@ export function assessSeries(base, head) {
       if (run._heroLevelStart !== 1 || !Number.isInteger(run._heroLevelEnd)) failures.push(`${kind}-${i + 1}:hero-level`);
     }
     if (base[i]?._heroLevelEnd !== head[i]?._heroLevelEnd) failures.push(`pair-${i + 1}:end-level`);
-    const before = Date.parse(base[i]?._at), after = Date.parse(head[i]?._at);
-    if (!Number.isFinite(before) || !Number.isFinite(after) || before >= after)
+    const baseStart = Date.parse(base[i]?._startedAt), before = Date.parse(base[i]?._at);
+    const headStart = Date.parse(head[i]?._startedAt), after = Date.parse(head[i]?._at);
+    if (![baseStart, before, headStart, after].every(Number.isFinite)
+      || baseStart >= before || before >= headStart || headStart >= after)
       failures.push(`pair-${i + 1}:order`);
-    if (i > 0 && Date.parse(head[i - 1]?._at) >= before) failures.push(`pair-${i + 1}:order`);
+    if (i > 0 && Date.parse(head[i - 1]?._at) >= baseStart) failures.push(`pair-${i + 1}:order`);
   }
   const pairs = base.map((run, i) => ({
     index: i + 1,
@@ -54,42 +56,130 @@ export function assessSeries(base, head) {
 }
 
 const sha = /^[a-f0-9]{40}$/;
-export function loadSeriesManifest(path) {
+const runNames = Array.from({ length: 5 }, (_, i) => [`base-${i + 1}`, `head-${i + 1}`]).flat();
+const reportPath = (anchor, file) => isAbsolute(file) ? file : resolve(anchor, file);
+function readManifest(path) {
   const raw = readFileSync(path);
   const manifest = JSON.parse(raw);
+  if (manifest.schema !== 2 || !/^[a-zA-Z0-9_-]{8,80}$/.test(manifest.seriesId || '')
+    || !Number.isFinite(Date.parse(manifest.createdAt))
+    || manifest.measurement?.seed !== 20260905 || manifest.measurement?.renderEvery !== 3
+    || manifest.measurement?.timeoutSec !== 600)
+    throw new Error('invalid series manifest or measurement settings');
+  for (const kind of ['base', 'head']) {
+    const section = manifest[kind];
+    if (!sha.test(section?.sha || '') || !Array.isArray(section.runs) || section.runs.length !== 5
+      || !section.runs.every(file => typeof file === 'string' && file.endsWith('.json')))
+      throw new Error(`${kind}: invalid predeclared paths or SHA`);
+  }
   const anchor = dirname(resolve(path));
-  const manifestSha256 = createHash('sha256').update(raw).digest('hex');
-  if (manifest.schema !== 1 || !/^[a-zA-Z0-9_-]{8,80}$/.test(manifest.seriesId || '')
-    || !Number.isFinite(Date.parse(manifest.createdAt))) throw new Error('invalid series manifest');
-  const read = file => JSON.parse(readFileSync(isAbsolute(file) ? file : resolve(anchor, file), 'utf8'));
+  const paths = runNames.map(name => {
+    const [kind, index] = name.split('-');
+    return reportPath(anchor, manifest[kind].runs[Number(index) - 1]);
+  });
+  if (new Set(paths).size !== paths.length) throw new Error('report path reused across base/head');
+  return { manifest, paths, digest: createHash('sha256').update(raw).digest('hex'), anchor };
+}
+
+function verifyReport(report, { manifest, digest, name, version }) {
+  if (report._status !== 'completed' || report._runId !== `${manifest.seriesId}:${name}`
+    || report._seriesManifestSha256 !== digest || JSON.stringify(report._build) !== JSON.stringify(version)
+    || report._renderEvery !== manifest.measurement.renderEvery
+    || report._timeoutSec !== manifest.measurement.timeoutSec || report._seed !== manifest.measurement.seed
+    || report._dryRewardSource !== 'frame-collected-gold-stones-fragments-gear-v3')
+    throw new Error(`${name}: report does not match predeclared build/run/settings`);
+  const start = Date.parse(report._startedAt), end = Date.parse(report._at);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || start <= Date.parse(version.builtAt) || end <= start)
+    throw new Error(`${name}: invalid execution interval or report predates exact clean build`);
+  return { start, end };
+}
+
+export function loadSeriesManifest(path) {
+  const { manifest, paths, digest } = readManifest(path);
+  const read = file => JSON.parse(readFileSync(file, 'utf8'));
+  const versions = {};
   const extract = kind => {
     const section = manifest[kind], version = section && read(section.version);
     if (!sha.test(section?.sha || '') || version?.sha !== section.sha || version?.dirty !== false
       || !Number.isFinite(Date.parse(version?.builtAt))
       || Date.parse(manifest.createdAt) >= Date.parse(version.builtAt))
       throw new Error(`${kind}: exact clean dist/version.json is required`);
-    if (!Array.isArray(section.runs) || section.runs.length !== 5) throw new Error(`${kind}: five runs required`);
-    const seen = new Set();
-    const reports = section.runs.map((file, i) => {
-      const absolute = isAbsolute(file) ? file : resolve(anchor, file);
-      if (seen.has(absolute)) throw new Error(`${kind}: duplicate report path`);
-      seen.add(absolute);
-      const report = read(absolute);
-      if (!Number.isFinite(Date.parse(report._at)) || Date.parse(report._at) <= Date.parse(version.builtAt))
-        throw new Error(`${kind}: report predates exact clean build`);
-      if (report._runId !== `${manifest.seriesId}:${kind}-${i + 1}`
-        || report._seriesManifestSha256 !== manifestSha256
-        || JSON.stringify(report._build) !== JSON.stringify(version))
-        throw new Error(`${kind}-${i + 1}: report does not match predeclared build/run`);
-      return report;
-    });
-    return reports;
+    versions[kind] = version;
+    return section.runs.map((_, i) => read(paths[runNames.indexOf(`${kind}-${i + 1}`)]));
   };
   const base = extract('base'), head = extract('head');
-  const allPaths = [...manifest.base.runs, ...manifest.head.runs].map(file => isAbsolute(file) ? file : resolve(anchor, file));
-  if (new Set(allPaths).size !== allPaths.length) throw new Error('report path reused across base/head');
+  let previousEnd = -Infinity;
+  for (const name of runNames) {
+    const [kind, index] = name.split('-');
+    const report = (kind === 'base' ? base : head)[Number(index) - 1];
+    const interval = verifyReport(report, { manifest, digest, name, version: versions[kind] });
+    if (interval.start <= previousEnd) throw new Error(`${name}: overlapping or reordered execution`);
+    previousEnd = interval.end;
+  }
   return { ...assessSeries(base, head), baseCount: base.length, headCount: head.length,
     baseSha: manifest.base.sha, headSha: manifest.head.sha };
+}
+
+// Reserve the result before launching Vite. A failed or interrupted attempt stays on disk,
+// so an operator must create a new manifest/series instead of selecting successful retries.
+export function reserveSeriesRun(path, runName, project) {
+  const { manifest, paths, digest, anchor } = readManifest(path);
+  const index = runNames.indexOf(runName);
+  if (index < 0) throw new Error('invalid series run');
+  const [kind] = runName.split('-');
+  if (resolve(manifest[kind].version) !== resolve(project, 'dist/version.json')) throw new Error('series project/version path mismatch');
+  const version = JSON.parse(readFileSync(manifest[kind].version, 'utf8'));
+  if (version.sha !== manifest[kind].sha || version.dirty !== false
+    || Date.parse(manifest.createdAt) >= Date.parse(version.builtAt)) throw new Error('series requires exact clean build after manifest');
+  const lock = resolve(anchor, 'series.lock');
+  const owner = randomUUID();
+  const fd = openSync(lock, 'wx');
+  let reserved = false;
+  try {
+    writeFileSync(fd, JSON.stringify({ owner, pid: process.pid, runName }));
+    let previousEnd = -Infinity;
+    for (let i = 0; i < paths.length; i++) {
+      if (i >= index) {
+        if (existsSync(paths[i])) throw new Error(`${runNames[i]}: attempt already exists or runs are out of order`);
+        continue;
+      }
+      if (!existsSync(paths[i])) throw new Error(`${runNames[i]}: previous run missing`);
+      const [prevKind] = runNames[i].split('-');
+      const priorVersion = JSON.parse(readFileSync(manifest[prevKind].version, 'utf8'));
+      const report = JSON.parse(readFileSync(paths[i], 'utf8'));
+      const interval = verifyReport(report, { manifest, digest, name: runNames[i], version: priorVersion });
+      if (interval.start <= previousEnd || assessMetrics(report).length) throw new Error(`${runNames[i]}: previous run failed or overlaps`);
+      previousEnd = interval.end;
+    }
+    const out = paths[index], startedAt = new Date().toISOString();
+    if (Date.parse(startedAt) <= previousEnd) throw new Error('new run overlaps previous run');
+    const identity = { _status: 'running', _runId: `${manifest.seriesId}:${runName}`,
+      _seriesManifestSha256: digest, _startedAt: startedAt,
+      _renderEvery: manifest.measurement.renderEvery, _timeoutSec: manifest.measurement.timeoutSec,
+      _seed: manifest.measurement.seed, _build: version };
+    writeFileSync(out, JSON.stringify(identity, null, 2), { flag: 'wx' });
+    reserved = true;
+    let finished = false;
+    const release = () => {
+      if (finished) return;
+      finished = true;
+      closeSync(fd);
+      try { if (JSON.parse(readFileSync(lock, 'utf8')).owner === owner) unlinkSync(lock); } catch {}
+      process.off('exit', abort);
+    };
+    const finalize = (status, data = {}) => {
+      if (finished) return;
+      writeFileSync(out, JSON.stringify({ ...data, ...identity, _status: status, _at: new Date().toISOString() }, null, 2));
+      release();
+    };
+    const abort = () => finalize('failed', { _failure: 'process exited before completed report' });
+    process.once('exit', abort);
+    return { ...identity, out, shots: out.replace(/\.json$/, '-shots'), expectedSha: manifest[kind].sha,
+      createdAt: manifest.createdAt, finalize };
+  } catch (error) {
+    if (!reserved) { closeSync(fd); try { if (JSON.parse(readFileSync(lock, 'utf8')).owner === owner) unlinkSync(lock); } catch {} }
+    throw error;
+  }
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

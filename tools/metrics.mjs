@@ -12,11 +12,11 @@
 import { chromium } from 'playwright';
 import { CHROME } from './chrome.mjs';
 import { spawn } from 'child_process';
-import { mkdirSync, writeFileSync, readFileSync, existsSync } from 'fs';
+import { mkdirSync, writeFileSync, readFileSync } from 'fs';
 import { dirname, resolve } from 'path';
 import { fileURLToPath } from 'node:url';
-import { createHash } from 'node:crypto';
 import { BANDS, REGRESSION, assessMetrics, compareMetrics } from './metrics-contract.mjs';
+import { reserveSeriesRun } from './metrics-series.mjs';
 import { installMetricsDriver } from './metrics-driver.mjs';
 import { STORY_EVENTS } from '../src/data/masterworks.js';
 
@@ -30,27 +30,12 @@ if (!!SERIES_FILE !== !!SERIES_RUN || (!SERIES_FILE && args.includes('--project'
 const PROJ = SERIES_FILE && args.includes('--project') ? resolve(arg('--project', '')) : fileURLToPath(new URL('..', import.meta.url));
 let series = null;
 if (SERIES_FILE) {
-  const file = resolve(SERIES_FILE), raw = readFileSync(file);
-  const manifest = JSON.parse(raw);
-  const match = /^(base|head)-([1-5])$/.exec(SERIES_RUN);
-  const section = match && manifest[match[1]];
-  if (!match || !section || args.includes('--sim') || args.includes('--compare')
-    || manifest.schema !== 1 || typeof manifest.seriesId !== 'string'
-    || !/^[a-zA-Z0-9_-]{8,80}$/.test(manifest.seriesId)
-    || !Number.isFinite(Date.parse(manifest.createdAt))
-    || !Array.isArray(section.runs) || section.runs.length !== 5
-    || !section.runs.every(item => typeof item === 'string' && item.endsWith('.json'))
-    || !/^[a-f0-9]{40}$/.test(section.sha || '')
-    || resolve(section.version) !== resolve(PROJ, 'dist/version.json')) {
-    console.error('invalid predeclared series manifest/run for this build');
+  if (['--sim', '--compare', '--render-every', '--seed', '--timeout', '--out', '--shots'].some(flag => args.includes(flag))) {
+    console.error('series measurement settings and paths are fixed by its manifest');
     process.exit(2);
   }
-  const out = resolve(dirname(file), section.runs[Number(match[2]) - 1]);
-  if (existsSync(out)) { console.error('series result already exists; refusing overwrite'); process.exit(2); }
-  series = { out, shots: out.replace(/\.json$/, '-shots'), expectedSha: section.sha,
-    runId: `${manifest.seriesId}:${SERIES_RUN}`,
-    manifestSha256: createHash('sha256').update(raw).digest('hex'),
-    createdAt: manifest.createdAt };
+  try { series = reserveSeriesRun(resolve(SERIES_FILE), SERIES_RUN, PROJ); }
+  catch (error) { console.error(String(error)); process.exit(2); }
 }
 
 // Simulation is skill-specific. An unsupported or missing --skill must fail
@@ -106,8 +91,8 @@ if (args.includes('--compare')) {
 const OUT = series?.out ?? arg('--out', '.rsi/head.json');
 const SHOTS = series?.shots ?? arg('--shots', '.rsi/shots');
 const PORT = Number(arg('--port', '4193'));
-const FLOOR_TIMEOUT_SEC = Number(arg('--timeout', '600'));
-const SEED = Number(arg('--seed', '20260905'));
+const FLOOR_TIMEOUT_SEC = series?._timeoutSec ?? Number(arg('--timeout', '600'));
+const SEED = series?._seed ?? Number(arg('--seed', '20260905'));
 if (!Number.isSafeInteger(SEED) || SEED < 0 || SEED > 0xffffffff) throw new Error('--seed must be a uint32');
 
 mkdirSync(resolve(PROJ, dirname(OUT)), { recursive: true });
@@ -118,7 +103,7 @@ const srv = spawn(process.execPath, [resolve(PROJ, 'node_modules/vite/bin/vite.j
 srv.stdout.on('data', (chunk) => { if (String(chunk).includes(`http://127.0.0.1:${PORT}/`)) serverReady = true; });
 srv.stderr.on('data', (chunk) => { serverError = (serverError + String(chunk)).slice(-500); });
 srv.on('error', (error) => { serverError = error.message; });
-const bail = async (msg, br) => { console.error('실패: ' + msg); try { await br?.close(); } catch {} srv.kill(); process.exit(1); };
+const bail = async (msg, br) => { console.error('실패: ' + msg); series?.finalize('failed', { _failure: msg }); try { await br?.close(); } catch {} srv.kill(); process.exit(1); };
 
 let served = false;
 for (let i = 0; i < 60; i++) {
@@ -192,9 +177,10 @@ await page.evaluate(installMetricsDriver, { storyEvents: STORY_EVENTS.map(({ id,
 const DT = 1 / 60, CHUNK = 120;   // 한 번에 2초씩 밟는다
 // 렌더는 청크 RENDER_EVERY 개마다 한 번. SwiftShader 는 난전 프레임 하나에 벽시계 5~30초를 태운다(JS 쪽 frameMs 에는 안 잡힌다 —
 // 래스터는 GPU 프로세스에서 비동기로 돈다). 밀도 복구 후 매 청크 렌더로는 한 층이 bash 178초 상한을 넘겨 측정이 끊겼다.
-const RENDER_EVERY = Number(arg('--render-every', '3'));
+const RENDER_EVERY = series?._renderEvery ?? Number(arg('--render-every', '3'));
+if (!Number.isSafeInteger(RENDER_EVERY) || RENDER_EVERY < 1) await bail('render-every must be a positive integer', br);
 const maxChunks = Math.ceil(FLOOR_TIMEOUT_SEC / (CHUNK * DT));
-let shots = 0, denseShot = false, sawBossFight = false, prevLoot = 0, dryFrames = 0, longestDry = 0;
+let shots = 0, denseShot = false, sawBossFight = false, prevLoot = 0, longestDry = 0;
 const frameMs = [], aliveSeen = [], drawCalls = [];
 const beats = { explore: false, encounter: false, vacuum: false, drop: false, setProgress: false, bossFound: false, bossKill: false, floorClear: false };
 let s = null, gameSec = 0, hpLow = 0;
@@ -206,8 +192,19 @@ for (let k = 0; k < maxChunks; k++) {
     const info = app.renderer?.r?.info;
     if (info) { info.autoReset = false; info.reset(); }
     let advanced = 0, peakMissingHealth = 0;
+    const rewardUnits = () => {
+      const d = app.battle.drops;
+      return (d?.gold ?? 0) + (d?.stones ?? 0) + (d?.stones2 ?? 0)
+        + (d?.stones3 ?? 0) + (d?.fragments ?? 0) + (d?.loot?.length ?? 0);
+    };
+    const rewardTracker = globalThis.__metricsRewardTracker ||= { count: rewardUnits(), dryFrames: 0, longestDryFrames: 0 };
     for (let i = 0; i < n && app.battle.active; i++) {
-      const a = performance.now(); advanced += globalThis.__metricsDriver.step(dt, doRender && i === n - 1); t.push(performance.now() - a);
+      const a = performance.now(); const stepped = globalThis.__metricsDriver.step(dt, doRender && i === n - 1); t.push(performance.now() - a);
+      advanced += stepped;
+      const collected = rewardUnits();
+      rewardTracker.longestDryFrames = Math.max(rewardTracker.longestDryFrames, rewardTracker.dryFrames + stepped / dt);
+      rewardTracker.dryFrames = collected > rewardTracker.count ? 0 : rewardTracker.dryFrames + stepped / dt;
+      rewardTracker.count = collected;
       const player = app.battle.player;
       if (player.maxHp > 0) peakMissingHealth = Math.max(peakMissingHealth, 1 - player.hp / player.maxHp);
     }
@@ -222,6 +219,8 @@ for (let k = 0; k < maxChunks; k++) {
       peak: b.peakAlive ?? 0,   // 게임 쪽 프레임 단위 누적 — 2초 샘플링이 놓치는 피크
       kills: b.kills,
       loot: b.drops?.loot?.length ?? 0,
+      rewardCount: rewardTracker.count,
+      longestDryFrames: rewardTracker.longestDryFrames,
       hp: b.player.hp, maxHp: b.player.maxHp,
       disc: W.rooms.filter((x) => x.discovered).length,
       clr: W.rooms.filter((x) => x.cleared).length,
@@ -243,8 +242,10 @@ for (let k = 0; k < maxChunks; k++) {
   if (r.disc > 1) beats.explore = true;
   if (r.alive > 0) beats.encounter = true;
   if (r.alive >= 6) beats.vacuum = true;              // 무리가 실제로 깔렸다
-  if (r.loot > prevLoot) { beats.drop = true; dryFrames = 0; } else dryFrames += r.advanced / DT;
-  longestDry = Math.max(longestDry, dryFrames);
+  if (r.loot > prevLoot) beats.drop = true;
+  // A collected coin or enhancement stone is also a real reward. Track at
+  // frame resolution; gear-only 2s samples mislabeled boss fights as dry.
+  longestDry = Math.max(longestDry, r.longestDryFrames);
   if (r.sets > 0) beats.setProgress = true;
   if (r.bossFound) beats.bossFound = true;
   if (r.inBoss && r.alive > 0) sawBossFight = true;
@@ -260,7 +261,7 @@ for (let k = 0; k < maxChunks; k++) {
     const a = Date.now(); await page.screenshot({ path: resolve(PROJ, SHOTS, `s${shots}.png`) }); shots++; if (args.includes('--verbose')) console.error(`  shot s${shots - 1} ${Date.now() - a}ms`);
   }
   s = r;
-  if (args.includes('--verbose')) console.error(`[${Math.round(gameSec)}s]${r.rendered ? 'R' : ' '} alive=${r.alive} peak=${r.peak} kills=${r.kills} loot=${r.loot} rooms=${r.clr}/${r.rooms} hp=${Math.round(r.hp)} calls=${r.calls} chunkMs=${Math.round(r.frames.reduce((a, b) => a + b, 0))} maxMs=${Math.round(Math.max(...r.frames))} wall=${Math.round((Date.now() - t0) / 1000)}s`);
+  if (args.includes('--verbose')) console.error(`[${Math.round(gameSec)}s]${r.rendered ? 'R' : ' '} alive=${r.alive} peak=${r.peak} kills=${r.kills} loot=${r.loot} reward=${r.rewardCount} rooms=${r.clr}/${r.rooms} hp=${Math.round(r.hp)} calls=${r.calls} chunkMs=${Math.round(r.frames.reduce((a, b) => a + b, 0))} maxMs=${Math.round(Math.max(...r.frames))} wall=${Math.round((Date.now() - t0) / 1000)}s`);
   if (!r.active) break;
 }
 await page.screenshot({ path: resolve(PROJ, SHOTS, `s${shots}.png`) });
@@ -293,11 +294,13 @@ const m = {
   _errorSamples: errors.slice(0, 5),
   _at: new Date().toISOString(),
   _build: buildVersion,
-  ...(series ? { _runId: series.runId, _seriesManifestSha256: series.manifestSha256 } : {}),
+  _dryRewardSource: 'frame-collected-gold-stones-fragments-gear-v3',
+  _renderEvery: RENDER_EVERY,
+  _timeoutSec: FLOOR_TIMEOUT_SEC,
 };
 
-if (series && existsSync(resolve(PROJ, OUT))) await bail('series result appeared during run; refusing overwrite', br);
-writeFileSync(resolve(PROJ, OUT), JSON.stringify(m, null, 2), { flag: series ? 'wx' : 'w' });
+if (series) series.finalize('completed', m);
+else writeFileSync(resolve(PROJ, OUT), JSON.stringify(m, null, 2));
 await br.close(); srv.kill();
 
 // ---------- 판정 ----------
