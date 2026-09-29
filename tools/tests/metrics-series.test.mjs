@@ -206,21 +206,35 @@ test('repair mode requires a hashed failing report from its exact baseline SHA',
     const versionPath = join(project, 'dist', 'version.json');
     writeFileSync(versionPath, JSON.stringify(version));
     const evidence = join(directory, 'prior-failure.json');
-    const raw = JSON.stringify({ _status: 'completed', _build: version, drawCalls: 434 });
-    writeFileSync(evidence, raw);
+    const prior = { _status: 'completed', _build: { ...version, builtAt: new Date(Date.now() - 5000).toISOString() },
+      _startedAt: new Date(Date.now() - 4000).toISOString(), _at: new Date(Date.now() - 3000).toISOString(),
+      _seed: 20260905, _renderEvery: 3, _timeoutSec: 600,
+      _dryRewardSource: 'frame-collected-gold-stones-fragments-gear-v3', drawCalls: 434 };
     const manifest = {
       schema: 3, seriesId: 'pr84repair01', createdAt: new Date(Date.now() - 2000).toISOString(),
       measurement: { seed: 20260905, renderEvery: 3, timeoutSec: 600 },
-      repair: { kind: 'preexisting-drawcalls', baselineSha: version.sha, report: evidence,
-        reportSha256: createHash('sha256').update(raw).digest('hex') },
+      repair: { kind: 'preexisting-drawcalls', baselineSha: version.sha, report: evidence, reportSha256: '' },
       base: { sha: version.sha, version: versionPath, runs: Array.from({ length: 5 }, (_, i) => join(directory, `base-${i + 1}.json`)) },
       head: { sha: 'b'.repeat(40), version: join(directory, 'head-version.json'), runs: Array.from({ length: 5 }, (_, i) => join(directory, `head-${i + 1}.json`)) },
     };
     const file = join(directory, 'manifest.json');
-    writeFileSync(file, JSON.stringify(manifest));
-    writeFileSync(evidence, JSON.stringify({ _status: 'completed', _build: version, drawCalls: 420 }));
+    const savePrior = value => {
+      const raw = JSON.stringify(value);
+      writeFileSync(evidence, raw);
+      manifest.repair.reportSha256 = createHash('sha256').update(raw).digest('hex');
+      writeFileSync(file, JSON.stringify(manifest));
+    };
+    savePrior({ ...prior, drawCalls: 420 });
     expect(() => reserveSeriesRun(file, 'base-1', project)).toThrow('preexisting draw-call failure evidence mismatch');
-    writeFileSync(evidence, raw);
+    savePrior({ ...prior, _build: { ...prior._build, dirty: true } });
+    expect(() => reserveSeriesRun(file, 'base-1', project)).toThrow('preexisting draw-call failure evidence mismatch');
+    savePrior({ ...prior, _renderEvery: 1 });
+    expect(() => reserveSeriesRun(file, 'base-1', project)).toThrow('preexisting draw-call failure evidence mismatch');
+    savePrior({ ...prior, _at: new Date(Date.now() + 1000).toISOString() });
+    expect(() => reserveSeriesRun(file, 'base-1', project)).toThrow('preexisting draw-call failure evidence mismatch');
+    savePrior({ ...prior, _startedAt: undefined });
+    expect(() => reserveSeriesRun(file, 'base-1', project)).toThrow('preexisting draw-call failure evidence mismatch');
+    savePrior(prior);
     const attempt = reserveSeriesRun(file, 'base-1', project);
     attempt.finalize('failed', { _failure: 'test fixture' });
     expect(existsSync(join(directory, 'series.lock'))).toBe(false);

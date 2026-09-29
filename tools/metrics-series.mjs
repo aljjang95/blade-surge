@@ -85,8 +85,17 @@ function readManifest(path) {
       throw new Error('repair series requires exact baseline identity and prior failure evidence');
     const rawReport = readFileSync(reportPath(anchor, repair.report));
     const observed = JSON.parse(rawReport);
+    const built = Date.parse(observed?._build?.builtAt);
+    const started = Date.parse(observed?._startedAt);
+    const ended = Date.parse(observed?._at);
     if (createHash('sha256').update(rawReport).digest('hex') !== repair.reportSha256
-      || observed?._build?.sha !== manifest.base.sha || observed?._status !== 'completed'
+      || observed?._build?.sha !== manifest.base.sha || observed?._build?.dirty !== false
+      || observed?._status !== 'completed' || observed?._seed !== manifest.measurement.seed
+      || observed?._renderEvery !== manifest.measurement.renderEvery
+      || observed?._timeoutSec !== manifest.measurement.timeoutSec
+      || observed?._dryRewardSource !== 'frame-collected-gold-stones-fragments-gear-v3'
+      || ![built, started, ended].every(Number.isFinite)
+      || built >= started || started >= ended || ended >= Date.parse(manifest.createdAt)
       || !Number.isFinite(observed.drawCalls) || observed.drawCalls <= 420)
       throw new Error('preexisting draw-call failure evidence mismatch');
   } else if (manifest.repair != null) throw new Error('strict series cannot carry a repair exception');
