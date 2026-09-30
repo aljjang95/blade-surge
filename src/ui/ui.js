@@ -62,6 +62,9 @@ export class UI {
     $('btn-giveup').addEventListener('click', () => { this.pause(false); this.app.battle.defeat(); });
     $('btn-boss-shortcut').addEventListener('click', () => { const b = this.app.battle; if (b?.shortcutBoss()) { $('btn-boss-shortcut').hidden = true; this.setObjective(b.world); } });
     $('btn-auto').addEventListener('click', () => { const p = this.app.battle.player; if (!p) return; const next = !p.auto; const saved = this.app.journey?.setAuto(next); if (saved?.ok === false) { this.toast(saved.error, 'red'); return; } p.auto = next; this.app._auto = next; $('btn-auto').classList.toggle('on', p.auto); this.toast(p.auto ? '자동 전투 ON · 다음 출격에도 적용' : '자동 전투 OFF · 다음 출격에도 적용'); });
+    // 전투 HUD 버튼을 마우스·터치로 누른 뒤 포커스가 남으면 J/K/숫자 입력이 버튼에 막히고 Space가 버튼을 다시 누른다.
+    // 키보드로 이동해 누른 경우(detail 0)는 포커스를 유지한다.
+    ['btn-auto', 'btn-pause', 'btn-boss-shortcut', 'battle-camera-zoom-in', 'battle-camera-reset', 'battle-camera-zoom-out'].forEach((id) => $(id)?.addEventListener('click', (e) => { if (e.detail > 0) $(id).blur(); }));
     $('btn-result-lobby').addEventListener('click', () => { if (canPrepareGrowth(this.app, this.resultData)) this.app.toLobby(); });
     $('btn-result-retry').addEventListener('click', () => { if (canPrepareGrowth(this.app, this.resultData)) this.app.startStage(this.app.battle.stage); });
     $('btn-result-auto-retry').addEventListener('click', async () => {

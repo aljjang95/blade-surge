@@ -29,3 +29,11 @@
 - 5186 실행 화면을 보호하기 위해 work/candidate의 codex/blade-oath-hall-20260907에서 수정·검증한다(5187).
 - 95 tests/656 assertions 및 최종 하네스 전 밴드 통과. 177 pose samples와 가로/low/reduced-motion 캡처 확인. 실제 승리155처치/36드랍/3별, 장비 비교·장착·복귀, 반복 자원40/74/72 고정. Pro 코드·시각 및 마지막 수명주기 델타 PASS.
 - 릴리스 SHA와 배포 ID의 정본은 _autopipe/evidence/lobby-identity의 생성 영수증이다. 기존 production 배포 잠금·exact version 대조 절차를 사용한다.
+
+## 2026-09-30 — 수동 10체 전투 슬라이스
+
+- 격리 전투 작업트리 `codex/playable-combat-slice-20260930`에서 main `da3e23a5`와 기존 PR75 입력 수정을 통합했다. 별도 character-pipeline 테스트는 소유권·세션·dirty 자산을 그대로 보존했고 PID3144를 종료하지 않았다.
+- 로비 메뉴의 전투 연습에 기존 기사/리그/던전/해골 10체, 조이스틱·키보드·수동 콤보·회피 연결·도감 정지·재도전·로비 복귀를 연결했다. 성장·소비·보상 경로를 격리하고 기존 장비의 흡혈/무료 부활은 유지한다.
+- 정본 설명/재현: `docs/qa/2026-09-30-playable-combat.md`. 타입/빌드 및 1231개 테스트 통과, 재열기 수정 후보 24개 실제 입력 검사 통과. RTX3070 844×390 적10체 표본 p95 16.8ms/draw134는 데스크톱 측정이며 폰 FPS가 아니다. 기존 탐색용 진단 skip 1개는 릴리스 증거에서 제외한다.
+- 독립 검토 지적을 수정하고 재검토한다. 최종 커밋의 로컬 실행 정본은 `work/combat-slice/final/report.json`; tracked/untracked 소스 해시와 빌드 SHA를 대조한다. 기존 캠페인 게이트와 새 QA를 최종 커밋에서 재실행한 뒤 PR75를 갱신한다.
+- 물리 Android·실제 오디오/FELT·새 캐릭터 미술 품질 수용은 미완료다. 정확한 CI/검토 조건 전 병합, production·스토어 공개·광고비 결제는 수행하지 않는다.

@@ -38,6 +38,7 @@ import './ui/oath-visual.css';
 import { OathShell } from './ui/oath-shell.js';
 import { ExperienceView } from './ui/experience-view.js';
 import { BattleTutorial } from './ui/tutorial.js';
+import { CombatPractice } from './ui/combat-practice.js';
 import { applyDifficulty } from './game/difficulty.js';
 import { preloadOathHall } from './engine/oathhall-asset.js';
 const BOOT_TIPS = [
@@ -136,6 +137,7 @@ class App {
     if (!this.companionAgent) this.companionAgent = createCompanion(this);
     this.party = new PartySession(this);
     this.oathShell = new OathShell(this);
+    this.combatPractice = new CombatPractice(this);
     this.meta.refreshMenuBadge();
     this.experienceView = new ExperienceView(this);
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
@@ -176,6 +178,7 @@ class App {
   }
   setLobbyVisible(v) { this.lobbyVisible = v; }
   toLobby(first = false) {
+    this.combatPractice?.release();
     if (this.expeditionTicket && this.battle?.result?.win && !this.battle.result.expeditionReceipt?.ok) { this.expeditionUI.showResult(this.battle, true); return; }
     if (this.expeditionRefundPending && this.expeditionTicket) {
       const refund = this.expedition.abandon(this.expeditionTicket);
@@ -192,7 +195,7 @@ class App {
     if (first) setTimeout(() => audio.voice('welcome', { vol: 0.9 }), 900);
     this.ui.show($('meta'), true);
     this.showcaseHero(this.eco.s.selected, true);
-    this.renderer.desat = 0; this.renderer.rig.mode = 'lobby';
+    this.renderer.desat = 0; this.renderer.rig.mode = 'lobby'; this.renderer.rig.snapLobby = true;
     audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX);
     this.meta.openTab('home'); this.meta.refreshTop();
     if (first) setTimeout(() => this.meta.autoPopups(), 600);
@@ -301,6 +304,7 @@ class App {
     audio.updateCombatMix(realDt,{active:combat,paused:!!(battle?.paused||this.expeditionUI?.opened),boss:!!(combat&&battle.enemies.some(e=>e.alive&&e.isBoss)),intensity:combat?Math.min(1,(battle.combo||0)/30):0});
     this.arsenalView?.update();
     this.experienceView?.update();
+    this.combatPractice?.update();
     if (this.expeditionUI?.opened) return;
     if (this.mode === 'battle') {
       this.battle.update(realDt);

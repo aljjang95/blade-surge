@@ -37,6 +37,8 @@ export class Player extends Actor {
     this.dr = 0; this.drT = 0; this.sanctum = null;   // 성역: 피해 감소
     this.buffs = { atk: 1, spd: 1, atkSpd: 1, t: 0 }; this.stormT = 0;
     this.auto = false; this.autoT = 0; this.magnetMul = 1;
+    this.skillBuffer = null;
+    this.removeInputClear = game.input?.onClear?.(() => { this.skillBuffer = null; this.attackBufferT = 0; this.dodgeBufferT = 0; });
     this.sprint = 0; this.sprintT = 0; this.lockTarget = null; this.perfectWindow = 0; this.perfectCd = 0; this.counterWindow = 0;
     this.trail = null; this.current = null; this.skillCtx = null;
     this.moveDir = new THREE.Vector3();
@@ -61,7 +63,7 @@ export class Player extends Actor {
   combatSkillIndex(slot) { return skillIndexForCombatSlot(this.skillLoadout, slot); }
   combatSkill(slot) { const index = this.combatSkillIndex(slot); return { index, skill: this.def.skills[index] }; }
   tryCastCombatSkill(slot) { const index = this.combatSkillIndex(slot); return index >= 0 && this.tryCastSkill(index); }
-  dispose() { this.beacon?.dispose(); super.dispose(); }
+  dispose() { this.removeInputClear?.(); this.beacon?.dispose(); super.dispose(); }
 
   // ---------------- 입력 처리 ----------------
   handleInput(input, dt) {
@@ -75,12 +77,22 @@ export class Player extends Actor {
     // 회피는 즉시 실행하고, 공격 중 이른 입력만 짧게 보존한다. 입력이
     // 공격의 commit 경계를 넘어서면 다음 프레임에 바로 굴러야 한다.
     if (input.consume('dodge')) {
-      if (this.dodgeCd <= 0 && this.state !== 'dodge' && this.state !== 'ult' && this.stun <= 0 && this.canDodgeCancel()) return this.dodge(wantMove ? this.moveDir : null);
+      if (this.dodgeCd <= 0 && this.state !== 'dodge' && this.state !== 'ult' && this.stun <= 0 && this.canDodgeCancel()) { this.skillBuffer = null; return this.dodge(wantMove ? this.moveDir : null); }
       if (this.state === 'attack' && this.dodgeCd <= 0) this.dodgeBufferT = DODGE_INPUT_BUFFER_SEC;
     }
-    if (this.dodgeBufferT > 0 && this.dodgeCd <= 0 && this.state === 'attack' && this.canDodgeCancel()) return this.dodge(wantMove ? this.moveDir : null);
+    if (this.dodgeBufferT > 0 && this.dodgeCd <= 0 && this.state === 'attack' && this.canDodgeCancel()) { this.skillBuffer = null; return this.dodge(wantMove ? this.moveDir : null); }
+    // 회피 끝자락에 누른 스킬은 회피가 끝나는 순간 발동한다. 이전엔 회피 중 입력을 소비만 하고 버려서 연계가 씹혔다.
+    if (this.skillBuffer && this.state !== 'dodge') { const slot = this.skillBuffer.slot; this.skillBuffer = null; if (this.tryCastCombatSkill(slot)) return; }
     // 전투 입력은 0~3 고정 + Q/E 장착 슬롯 4/5만 노출한다.
-    for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot)) return; }
+    if (this.state === 'dodge') {
+      // 같은 프레임에 여러 스킬이 들어오면 실제로 마지막에 누른 스킬을 남긴다 (슬롯 번호 순서가 아니라 입력 큐 순서).
+      let last = -1;
+      for (const action of input.queue || []) { const m = /^skill([0-5])$/.exec(action); if (m) last = Number(m[1]); }
+      for (let slot = 0; slot < 6; slot++) input.consume('skill' + slot);
+      if (last >= 0) this.skillBuffer = { slot: last };
+    } else {
+      for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot)) return; }
+    }
     // 공격: 입력 버퍼는 버튼을 누른 순간의 의도를 보존하지만, 버튼 홀드 자체는
     // 다음 콤보를 예약하지 않는다. 수동 전투에서 타이밍을 직접 결정하게 하는 경계다.
     if (input.consume('attack')) {
@@ -393,7 +405,7 @@ export class Player extends Actor {
     return true;
   }
   die() { if (this.alive) this.knightLifeEpoch = (this.knightLifeEpoch || 0) + 1; this.beacon?.setFocus(false); super.die(); }
-  revive() { this.beacon?.setFocus(false); this.alive = true; this.dead = false; this.deathT = -1; this.hp = this.maxHp; this.state = 'idle'; this.invuln = 2; this.pos.y = 0; for (const m of this.mats) m.transparent = false; this.play('Idle'); }
+  revive() { this.beacon?.setFocus(false); this.alive = true; this.dead = false; this.deathT = -1; this.hp = this.maxHp; this.state = 'idle'; this.invuln = 2; this.pos.y = 0; this.skillBuffer = null; for (const m of this.mats) m.transparent = false; this.play('Idle'); }
 
   // ---------------- 자동 전투 ----------------
   autoMove(dt) {

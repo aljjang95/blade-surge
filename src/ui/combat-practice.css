@@ -1,0 +1,15 @@
+#practice-status { position:absolute; left:50%; bottom:16px; transform:translateX(-50%); max-width:calc(100% - 400px); padding:8px 12px; border:1px solid #c9b57766; border-radius:10px; background:#102322e8; color:#f3dfb0; text-align:center; pointer-events:auto; }
+#practice-status[hidden] { display:none; }
+#practice-status b { display:block; font-size:12px; }
+#practice-status small { display:block; margin:3px 0 7px; font-size:10px; color:#b9cac4; }
+#practice-status div,#practice-result div { display:flex; justify-content:center; gap:8px; }
+#practice-status button,#practice-result button { min-height:36px; padding:6px 12px; border:1px solid #bfa97588; border-radius:7px; background:#213f36; color:#f8e6bb; cursor:pointer; }
+.combat-practice #btn-auto,.combat-practice .exp-potions,.combat-practice .oath-run-details,.combat-practice .mw-hud-entry,.combat-practice .arsenal-hud,.combat-practice #objective,.combat-practice .companion-ui,.combat-practice #minimap-wrap { display:none!important; }
+#practice-result { box-sizing:border-box; width:min(400px,calc(100% - 32px)); max-height:calc(100dvh - 24px); overflow:auto; border:1px solid #bfa975; border-radius:16px; padding:24px; background:linear-gradient(135deg,#203f35,#131e25); color:#f6e7c9; text-align:center; }
+#practice-result::backdrop { background:#040c12c9; }
+#practice-result h2 { margin:8px 0 12px; font-size:26px; }
+#practice-result p { font-size:13px; line-height:1.6; }
+#practice-result .practice-kicker { color:#cdb778; letter-spacing:.12em; }
+#practice-result button { min-height:44px; flex:1; }
+@media(orientation:portrait) { #practice-status { bottom:220px; max-width:calc(100% - 32px); width:230px; } }
+@media(orientation:landscape) and (max-height:360px) { #practice-status { bottom:8px; padding:5px 8px; } #practice-status small { display:none; } }

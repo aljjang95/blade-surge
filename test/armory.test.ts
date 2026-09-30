@@ -247,6 +247,7 @@ test('death synchronously cancels anchor and counters before any revive branch; 
  f.sp.onSkill({ult:false});f.sp.onDodge();f.sp.mark=f.e;f.sp.markHits=3;f.sp.markUntil=20;f.sp.light=5;
  const legacy={summon:42,armory:f.sp};g.sp=legacy;g.input={clear(){throw new Error('death entry observed');}};
  p.alive=false;g.elapsed+=.5;
+ g.preparePlayerDeath=BaseBattle.prototype.preparePlayerDeath;
  expect(()=>BaseBattle.prototype.onPlayerDeath.call(g)).toThrow('death entry observed');
  expect(f.sp.anchor).toBeNull();expect(f.sp.markHits).toBe(0);expect(f.sp.light).toBe(0);expect((f.sp as any).aegis).toBe(0);expect(legacy.summon).toBe(42);
  Object.assign(p,{mats:[],play(){}});Player.prototype.revive.call(p);g.elapsed+=2;f.sp.update();f.sp.onDodge();expect(f.pulls).toHaveLength(0);expect(f.hits).toHaveLength(0);
