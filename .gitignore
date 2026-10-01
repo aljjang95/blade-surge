@@ -4,6 +4,15 @@ dist
 .apex/
 _autopipe/evidence/
 .env
+.env.*
+!.env.example
+*.local.json
+*.dpapi
+*.token
+*.pem
+*password*.csv
+*Password*.csv
+*비밀번호*.csv
 *.log
 
 .rsi/shots/

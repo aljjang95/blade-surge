@@ -2,11 +2,14 @@
 
 ## 현재 Codex 로컬 실행
 
+- 원격 cloud 작업에서 PC의 현행 Wrangler 인증을 사용할 때는 [PC bridge](docs/pc-bridge.md)를 따른다. PC에서 `node tools/pc-bridge.mjs`의 고정 명령·명시 경로·정확한 HEAD 검사를 거쳐 기존 배포 도구의 `--auth=wrangler`로만 진입한다. 원시 Wrangler 배포나 토큰 fallback은 없다. 아래 기본 vault 경로와 별개의 명시 OAuth 진입점이다.
+- `.codex/config.toml`은 공식 Remote Desktop Commander HTTPS 주소의 프로젝트 설정이다. cloud 작업에 플러그인이 실제 노출되고 인증되어야 PC 실행이 가능하며 설정 파일만으로 연결이 활성화되지는 않는다. 로컬 profile/키/DPAPI/CSV 내용은 cloud나 Git에 내보내지 않는다.
+
 - Windows의 지정된 체크아웃에서 기존 diff와 `_autopipe/release-goal.md`를 이어받는다. 아래 `/sessions` 부트스트랩은 과거 Cowork 컨테이너의 환경 기록이다.
 - 정적 게임과 `/api/companion` Worker를 함께 다룬다. `bun run check`가 현재 로컬 검증 명령이다.
-- 배포는 `apex-vault run cloudflare -- bun run deploy`로만 실행한다. `tools/deploy.mjs`가 기존 D1 `apex-rsi`의 `DEPLOY-blade-surge` 잠금을 공유해 호스트 간 배포를 직렬화한다. 원시 Wrangler 배포나 다른 회전의 잠금 해제로 이 절차를 우회하지 않는다.
-- 원격 결과가 불명확하면 잠금을 유지한다. 같은 HEAD에서 `apex-vault run cloudflare -- node tools/deploy.mjs --reconcile`로 실제 버전·배포·소유 태그를 대조한다. 자동 잠금 탈취와 무조건 재배포는 지원하지 않는다.
-- 자격증명은 현행 전역 볼트에서 자식 프로세스에만 주입한다. 아래 과거 `session-auth`·deploy-key·gh-push 예제를 현행 Git 전송 승인으로 해석하지 않는다. 검증된 커밋은 현행 create-only Git 전송을 따른다.
+- 배포는 설치된 vault/token 경로의 `apex-vault run cloudflare -- bun run deploy` 또는 PC bridge의 명시 `--route=wrangler` → `tools/deploy.mjs --auth=wrangler` 경로로 실행한다. vault 미설치는 명시 OAuth 경로의 선행조건이 아니다. `tools/deploy.mjs`가 기존 D1 `apex-rsi`의 `DEPLOY-blade-surge` 잠금을 공유해 호스트 간 배포를 직렬화한다. 원시 Wrangler 배포나 다른 회전의 잠금 해제로 이 절차를 우회하지 않는다.
+- 원격 결과가 불명확하면 잠금을 유지한다. 같은 HEAD·같은 선택 인증 경로에서 `--reconcile`로 실제 버전·배포·소유 태그를 대조한다. vault/token 경로는 `apex-vault run cloudflare -- node tools/deploy.mjs --reconcile`, PC bridge 경로는 `reconcile --route=wrangler --expected-head=<40hex>`를 사용한다. 자동 잠금 탈취와 무조건 재배포는 지원하지 않는다.
+- token 경로의 자격증명은 설치된 현행 볼트에서 자식 프로세스에만 주입한다. 명시 OAuth 경로는 PC의 기존 Wrangler 세션을 사용하며 토큰을 추출하지 않는다. 아래 과거 `session-auth`·deploy-key·gh-push 예제를 현행 Git 전송 승인으로 해석하지 않는다. 검증된 커밋은 현행 create-only Git 전송을 따른다.
 - 실제 생성 호출은 별도 승인된 기간·총량 안에서만 활성화한다. viewport를 실기기 검증으로, 모델 계약 테스트를 전용 아트 완성으로 표시하지 않는다.
 
 새 세션이면 **여기부터 읽고**, 이어서 `PRD.md`(기준) → `RSI.md`(루프) → `LESSONS.md`(지뢰밭) 순으로 읽어라.

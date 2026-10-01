@@ -1,0 +1,7 @@
+# 설정만으로 클라우드 작업의 플러그인 노출/인증이나 PC 연결을 활성화하지 않는다.
+# 사용자가 확인한 공식 HTTPS 엔드포인트만 사용한다. 인증 값과 기기 ID는 넣지 않는다.
+[mcp_servers.remote_desktop_commander]
+url = "https://mcp.desktopcommander.app/mcp"
+enabled = true
+startup_timeout_sec = 20
+tool_timeout_sec = 60
