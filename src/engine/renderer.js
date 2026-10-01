@@ -95,8 +95,9 @@ export class Renderer {
     this.finalPass = new ShaderPass(FinalShader);
     this.composer.addPass(this.finalPass);
     this.composer.addPass(new OutputPass());
-    this.lobbyAA = new ShaderPass(FXAAShader); this.lobbyAA.enabled = false;
-    this.composer.addPass(this.lobbyAA);
+    // antialias:false 인 WebGL 캔버스는 후처리 뒤 가장자리가 계단처럼 보인다. 로비와 전투 모두 FXAA 로 다듬는다 (low 품질 제외).
+    this.fxaa = new ShaderPass(FXAAShader); this.fxaa.enabled = false;
+    this.composer.addPass(this.fxaa);
     this.u = this.finalPass.uniforms;
     this.flash = 0; this.aberr = 0; this.radial = 0; this.desat = 0;
 
@@ -134,7 +135,7 @@ export class Renderer {
     this.r.setPixelRatio(pr); this.composer.setPixelRatio(pr);
     this.r.setSize(w, h, false);
     this.composer.setSize(w, h);
-    this.lobbyAA.uniforms.resolution.value.set(1 / (w * this.r.getPixelRatio()), 1 / (h * this.r.getPixelRatio()));
+    this.fxaa.uniforms.resolution.value.set(1 / (w * this.r.getPixelRatio()), 1 / (h * this.r.getPixelRatio()));
     this.camera.aspect = w / h;
     // 세로 화면이면 시야를 넓혀 전장 확보
     this.camera.fov = (this.rig?.fov ?? 46) + (w < h ? 14 : 0);
@@ -216,5 +217,5 @@ export class Renderer {
     this.u.uDesat.value = this.desat;
     this.u.uTime.value = this.time;
   }
-  render() { this.lobbyAA.enabled = this.rig.mode === 'lobby'; this.composer.render(); }
+  render() { this.fxaa.enabled = this.rig.mode === 'lobby' || this.quality !== 'low'; this.composer.render(); }
 }
