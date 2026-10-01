@@ -40,13 +40,14 @@ export class RpgView {
     this.content = node('div', 'rpg-content');
     this.dialog.append(head, tabs, this.content); document.body.append(this.dialog);
     this.dialog.addEventListener('close', () => {
+      if (this.dialog.open) return; // 이전 close 이벤트가 새로 열린 창의 소유권을 풀지 않는다.
       this.clearPreview();
-      this.battle.setPaused('rpg-codex', false);
-      if (this.trigger?.isConnected) this.trigger.focus();
+      this.pausedBattle?.setPaused('rpg-codex', false); this.pausedBattle = null;
+      if (this.trigger?.isConnected) { if (this.keyboardLaunch) this.trigger.focus(); else this.trigger.blur(); }
     });
-    this.lobbyButton = button('도감 · 능력치', e => this.open(e.currentTarget), 'sq-btn rpg-open');
+    this.lobbyButton = button('도감 · 능력치', e => this.open(e.currentTarget, e.detail === 0), 'sq-btn rpg-open');
     document.querySelector('.lobby-left')?.append(this.lobbyButton);
-    this.hudButton = button('도감', e => this.open(e.currentTarget), 'hud-btn');
+    this.hudButton = button('도감', e => this.open(e.currentTarget, e.detail === 0), 'hud-btn');
     document.querySelector('.hud-right-top')?.prepend(this.hudButton);
     this.xp = node('div', 'rpg-xp'); this.xp.id = 'rpg-hud-xp';
     this.xpText = node('span'); this.xpBar = node('progress'); this.xpBar.max = 1;
@@ -60,15 +61,20 @@ export class RpgView {
     document.querySelector('.result-stats')?.after(this.result);
     this.refresh();
   }
-  open(trigger = null) {
+  open(trigger = null, keyboardLaunch = true) {
     if (this.app.mode === 'boot' || this.app.stageStarting || this.dialog.open) return;
-    this.trigger = trigger;
+    this.trigger = trigger; this.keyboardLaunch = keyboardLaunch;
     this.battle.ensureRpg(); this.render();
-    if (this.app.mode === 'battle' && this.battle.active) this.battle.setPaused('rpg-codex', true);
+    this.pausedBattle = this.app.battle || this.battle;
+    if (this.app.mode === 'battle' && this.pausedBattle.active) this.pausedBattle.setPaused('rpg-codex', true);
     try { this.dialog.showModal(); }
-    catch (error) { this.clearPreview(); this.battle.setPaused('rpg-codex', false); throw error; }
+    catch (error) { this.clearPreview(); this.pausedBattle.setPaused('rpg-codex', false); this.pausedBattle = null; throw error; }
   }
-  close() { this.clearPreview(); if (this.dialog.open) this.dialog.close(); }
+  close() {
+    this.clearPreview(); this.pausedBattle?.setPaused('rpg-codex', false); this.pausedBattle = null;
+    if (this.dialog.open) this.dialog.close();
+    if (!this.keyboardLaunch) this.trigger?.blur();
+  }
   clearPreview() { this.preview?.dispose(); this.preview = null; }
   setTab(tab) { this.tab = tab; this.render(); }
   render() {
@@ -79,7 +85,8 @@ export class RpgView {
     if (this.tab === 'hero') this.renderHero(); else this.renderBestiary();
   }
   heroData(withStats = true) {
-    const id = this.app.mode === 'battle' && this.battle.heroId ? this.battle.heroId : this.app.eco.s.selected;
+    const current = this.app.battle || this.battle;
+    const id = this.app.mode === 'battle' && current.heroId ? current.heroId : this.app.eco.s.selected;
     const hero = this.app.eco.hero(id), def = this.rules.HEROES[id];
     return { id, hero, def, stats: withStats ? this.rules.heroStats(def, hero, this.app.eco.heroEquipBonus(id)) : null };
   }

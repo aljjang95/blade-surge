@@ -54,6 +54,7 @@ test('party death path excludes personal campaign, codex, masterworks and field 
   const game:any={stage:{party:{runId:'run'}},player:host,app:{party:{livingPlayers:()=>[host,guest]}},
     kills:0,waveKilled:0,pending:[],active:true,after(){},drops:{onKill(){baseDeaths++;}},fx:{burst(){},dustPuff(){}},ui:{showBoss(){}},hasProc:()=>false};
   const enemy:any={alive:false,partyCounted:false,isBoss:false,isElite:false,pos:{clone:()=>({setY(){return this;}})}};
+  game.applyKillCombatEffects=PartyBattle.prototype.applyKillCombatEffects;
   PartyBattle.prototype.onEnemyDeath.call(game,enemy);
   expect(game.kills).toBe(1);expect(baseDeaths).toBe(1);expect(guestUlt).toBe(1);expect(enemy.partyCounted).toBe(true);
   PartyBattle.prototype.onEnemyDeath.call(game,enemy);expect(game.kills).toBe(1);expect(baseDeaths).toBe(1);expect(guestUlt).toBe(1);

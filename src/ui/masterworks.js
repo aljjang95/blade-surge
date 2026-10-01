@@ -25,17 +25,17 @@ export class MasterworksView {
     for(const [id,label] of [['build','준비'],['mastery','숙련'],['quests','의뢰'],['journal','기록']]){const tab=btn('',()=>{this.tab=id;this.render();});tab.append(art({build:'loadout',mastery:'nav-mastery',quests:'nav-quests',journal:'nav-journal'}[id]),n('span','',label));this.nav.append(tab);}
     this.content=n('div','mw-content');this.notice=n('p','mw-notice');this.notice.setAttribute('role','status');
     this.dialog.append(header,this.nav,this.notice,this.content);document.body.append(this.dialog);
-    this.dialog.addEventListener('close',()=>{this.battle.setPaused('masterworks',false);this.trigger?.isConnected&&this.trigger.focus();});
+    this.dialog.addEventListener('close',()=>{if(this.dialog.open)return;if(!this.app?.battle||this.app.battle===this.battle)this.battle.setPaused('masterworks',false);this.trigger?.isConnected&&this.trigger.focus();});
     this.lobby=btn('성장 · 각인',e=>this.open('build',e.currentTarget),'sq-btn mw-open');
     document.querySelector('.lobby-left')?.append(this.lobby);
-    this.hud=btn('각인',e=>this.open('run',e.currentTarget),'hud-btn');document.querySelector('.hud-right-top')?.prepend(this.hud);
+    this.hud=btn('각인',e=>this.open('run',e.currentTarget),'hud-btn mw-hud-entry');document.querySelector('.hud-right-top')?.prepend(this.hud);
     this.strip=n('div','mw-run-strip');this.strip.hidden=true;document.querySelector('.hud-bars')?.append(this.strip);
     this.posture=n('div','mw-posture');this.posture.hidden=true;document.querySelector('.hud-center')?.append(this.posture);
     this.result=n('p','mw-result');this.result.hidden=true;document.querySelector('.result-stats')?.after(this.result);
   }
   get state(){return this.battle.masterworks.s;}
   open(tab='build',trigger=null) {
-    if(this.app.mode==='boot'||this.app.stageStarting)return;
+    if(this.app.mode==='boot'||this.app.stageStarting||this.app.battle?.stage?.practice)return;
     this.tab=tab;this.trigger=trigger;this.notice.textContent='';this.render();
     if(this.battle.active)this.battle.setPaused('masterworks',true);
     if(!this.dialog.open)this.dialog.showModal();
@@ -44,7 +44,7 @@ export class MasterworksView {
     // HTMLDialogElement dispatches `close` asynchronously. Release this view's
     // pause ownership now so a semantic selection can resume the same tick.
     // setPaused is reason-scoped, so companion/catalogue pauses remain held.
-    this.battle?.setPaused?.('masterworks',false);
+    if(!this.app?.battle||this.app.battle===this.battle)this.battle?.setPaused?.('masterworks',false);
     if(this.dialog.open)this.dialog.close();
   }
   openExpedition(tab) {

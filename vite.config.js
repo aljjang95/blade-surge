@@ -2,10 +2,21 @@ import { defineConfig } from 'vite';
 import { existsSync, realpathSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { sourceSnapshot } from './tools/build-source.mjs';
 const projectRoot = fileURLToPath(new URL('.', import.meta.url));
 const scratchRoot = path.resolve(projectRoot, 'work');
+let sourceBefore;
 export default defineConfig({
   plugins: [{
+    name: 'bind-build-source', apply: 'build',
+    buildStart() {
+      sourceBefore = sourceSnapshot(projectRoot);
+      this.emitFile({ type: 'asset', fileName: 'build-source.json', source: JSON.stringify(sourceBefore) });
+    },
+    closeBundle() {
+      if (sourceSnapshot(projectRoot).digest !== sourceBefore.digest) throw new Error('Source changed during build; rebuild required');
+    },
+  }, {
     name: 'refresh-engraving-assets', apply: 'build',
     configResolved(config) {
       const out = path.resolve(config.root, config.build.outDir);

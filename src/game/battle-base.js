@@ -106,7 +106,7 @@ export class Battle {
     this.ui.setupHud(def, this.player);
     this.ui.setupMinimap(this.world);
     this.active = true; this.input.enabled = true; this.input.clear();
-    if (!stage.party && stage.expedition?.kind !== 'arena') this.app.companionAgent?.startBattle(this);
+    if (!stage.practice && !stage.party && stage.expedition?.kind !== 'arena') this.app.companionAgent?.startBattle(this);
     audio.playMusic(musicForScene({ stage }), MUSIC_MIX);
     this.ui.showHud(true);
     const q = this.app.renderer?.quality || this.app.eco.s.settings.quality;
@@ -478,9 +478,7 @@ export class Battle {
     const streakTier = this.killStreak >= 20 ? '전장의 지배자' : this.killStreak >= 10 ? '광란' : '사냥 본능';
     this.ui?.setKillStreak?.(this.killStreak, streakTier);
     if ([5, 10, 20, 30].includes(this.killStreak)) this.ui.toast(`${this.killStreak}연속 처치 · ${streakTier}`, this.killStreak >= 20 ? 'red' : 'gold');
-    this.player.addUlt(ultKillGain(e)); this.player.addMp?.(2);
-    if (this.sp) this.sp.onKill(e);
-    if (this.hasProc('blood_leech') && this.player.alive) { const heal = Math.floor(this.player.maxHp * 0.03); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); this.fx.embers(this.player.pos, 0xff3a5a, { n: 4, radius: 0.6, life: 0.6, rise: 2 }); if (this.fx.dmgLayer.children.length < 20) this.fx.damage(this.player.pos, heal, { kind: 'heal', text: '+' + heal }); }
+    this.applyKillCombatEffects(e);
     if (!this.stage.party) this.app.eco.s.quests.kills++;
     this.drops.onKill(e, this.stage);
     const big = e.isBoss || e.isElite;
@@ -508,11 +506,19 @@ export class Battle {
       if (!left) this.markCleared(rm);
     }
   }
-  onPlayerDeath() {
+  applyKillCombatEffects(e) {
+    this.player.addUlt(ultKillGain(e)); this.player.addMp?.(2);
+    this.sp?.onKill(e);
+    if (this.hasProc('blood_leech') && this.player.alive) { const heal = Math.floor(this.player.maxHp * 0.03); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); this.fx.embers(this.player.pos, 0xff3a5a, { n: 4, radius: 0.6, life: 0.6, rise: 2 }); if (this.fx.dmgLayer.children.length < 20) this.fx.damage(this.player.pos, heal, { kind: 'heal', text: '+' + heal }); }
+  }
+  preparePlayerDeath() {
     this.sp?.armory.clear();
     this.input.enabled = false; this.input.clear();
-    this.app.companionAgent?.observe('low-hp', { floor: this.stage?.idx || 0 });
     this.renderer.desat = 0.7; this.timeCtl.slowmo(0.3, 1.5); this.renderer.shake(0.6); audio.playMusic(null);
+  }
+  onPlayerDeath() {
+    this.preparePlayerDeath();
+    this.app.companionAgent?.observe('low-hp', { floor: this.stage?.idx || 0 });
     if (this.hasProc('phoenix_rebirth') && !this.rebirthUsed) { this.phoenixRebirth(); return; }
     audio.voice(heroVoiceName(this.heroId, 'death')); this.after(1.6, () => audio.voice('defeat'));
     this.after(1.8, () => { if (this.active) this.ui.showRevive(this); });
@@ -716,7 +722,7 @@ export class Battle {
     let alive = 0;
     for (let i = this.enemies.length - 1; i >= 0; i--) { const e = this.enemies[i]; e.update(dt); if (e.dead) { e.dispose(); this.enemies.splice(i, 1); } else if (e.alive && !e.spawning) alive++; }
     if (this.active) this.crowdContacts = resolveCrowdContacts(this.enemies, this.player, this.world, dt);
-    if (!this.stage.party && this.stage.expedition?.kind !== 'arena') this.app.companionAgent?.updateBattle(this, dt, realDt);
+    if (!this.stage.practice && !this.stage.party && this.stage.expedition?.kind !== 'arena') this.app.companionAgent?.updateBattle(this, dt, realDt);
     if (alive > this.peakAlive) this.peakAlive = alive;   // 층 내 동시 생존 최대 (하네스 maxAliveSeen)
     this.updateProjectiles(dt);
     this.routeObjectives?.observePlayer?.(this.player);

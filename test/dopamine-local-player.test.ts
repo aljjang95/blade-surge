@@ -56,6 +56,7 @@ test('enemy death grants exactly two MP without changing the existing ultimate g
   let ult=0,mp=0; const e:any={isBoss:false,isElite:false,homeRoom:null,pos:new THREE.Vector3(),alive:false};
   const g:any={conquest:null,kills:0,waveKilled:0,player:{alive:true,addUlt:(n:number)=>ult+=n,addMp:(n:number)=>mp+=n},sp:null,
     hasProc:()=>false,stage:{party:true},drops:{onKill(){}},fx:{burst(){},dustPuff(){},explosion(){}},renderer:{shake(){}},pending:[],active:true,enemies:[e],after(){}};
+  g.applyKillCombatEffects=Battle.prototype.applyKillCombatEffects;
   Battle.prototype.onEnemyDeath.call(g,e);
   expect(mp).toBe(2); expect(ult).toBe(1); expect(g.kills).toBe(1);
 });

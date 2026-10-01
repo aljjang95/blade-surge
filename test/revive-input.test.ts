@@ -8,6 +8,7 @@ test('사망 중 입력을 잠그고 부활 때 이전 예약을 비운다', () 
     player: { alive: false, pos: {}, revive() { this.alive = true; } },
     renderer: { desat: 0, shake() {} }, timeCtl: { slowmo() {} },
     hasProc() { return false; }, after() {}, hitRadius() {},
+    preparePlayerDeath: Battle.prototype.preparePlayerDeath,
     fx: { holyBurst() {}, shockTex() {} },
   };
   Battle.prototype.onPlayerDeath.call(battle);
