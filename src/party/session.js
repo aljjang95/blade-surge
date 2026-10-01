@@ -281,8 +281,7 @@ export class PartySession {
     actor.yaw = state.yaw; actor.hp = state.hp; actor.maxHp = state.maxHp; actor.alive = state.hp > 0; actor.state = state.state;
     if (state.anim && state.anim !== actor.actionName) actor.play(state.anim,{loop:['idle','move'].includes(state.state),fade:.06,once:!['idle','move'].includes(state.state)});
     actor.root.rotation.y=state.yaw+(actor.rig.faceFlip?Math.PI:0); actor.mixer.update(dt); actor.updateCombatPose(dt);
-    if (actor.flashT > 0) { actor.flashT = Math.max(0,actor.flashT-dt); for (const m of actor.mats) { m.emissive.copy(actor.flashColor).multiplyScalar(actor.flashT*10); if(m.userData.baseEmissive)m.emissive.add(m.userData.baseEmissive); } actor._emDirty=true; }
-    else if(actor._emDirty) { actor._emDirty=false; for(const m of actor.mats) { if(m.userData.baseEmissive)m.emissive.copy(m.userData.baseEmissive);else m.emissive.setScalar(0); } }
+    actor.updateHitFeedback(dt);
   }
   renderProjectiles(projectiles) {
     if (!this.orbMesh) {

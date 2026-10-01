@@ -1,0 +1,1378 @@
+{
+  "date": "2026-10-01",
+  "stage": "local-candidate",
+  "baseline": {
+    "errors": 0,
+    "bootMs": 9151,
+    "floorClearSec": 181.1,
+    "killsPerFloor": 194,
+    "maxAliveSeen": 24,
+    "_maxAliveSampled": 24,
+    "dropsPerFloor": 38,
+    "longestDryStreakSec": 19.8,
+    "hitTakenRatio": 0.152,
+    "avgFrameMs": 3.25,
+    "p95FrameMs": 4.7,
+    "rhythmBeats": 7,
+    "drawCalls": 380,
+    "_beats": {
+      "explore": true,
+      "encounter": true,
+      "vacuum": true,
+      "drop": true,
+      "setProgress": false,
+      "bossFound": true,
+      "bossKill": true,
+      "floorClear": true
+    },
+    "_roomsCleared": "12/12",
+    "_won": true,
+    "_seed": 20260905,
+    "_choices": [
+      "boon:storm_eye",
+      "story:lantern:guide",
+      "boon:tide_breath"
+    ],
+    "_heroLevelStart": 1,
+    "_heroLevelEnd": 4,
+    "_endReason": "전구역클리어",
+    "_avgAlive": 3.7,
+    "_errorSamples": [],
+    "_at": "2026-10-01T10:28:30.819Z",
+    "_build": {
+      "sha": "da3e23a5d4d1a00990dd57d8c97b26225af4c64d",
+      "dirty": false,
+      "builtAt": "2026-10-01T10:09:39.064Z",
+      "pwaRelease": "10044548f6e11d71ea49"
+    },
+    "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+    "_renderEvery": 3,
+    "_timeoutSec": 600
+  },
+  "candidate": {
+    "errors": 0,
+    "bootMs": 9903,
+    "floorClearSec": 181.2,
+    "killsPerFloor": 193,
+    "maxAliveSeen": 23,
+    "_maxAliveSampled": 21,
+    "dropsPerFloor": 46,
+    "longestDryStreakSec": 13.6,
+    "hitTakenRatio": 0.25,
+    "avgFrameMs": 2.8,
+    "p95FrameMs": 4.3,
+    "rhythmBeats": 7,
+    "drawCalls": 414,
+    "_beats": {
+      "explore": true,
+      "encounter": true,
+      "vacuum": true,
+      "drop": true,
+      "setProgress": false,
+      "bossFound": true,
+      "bossKill": true,
+      "floorClear": true
+    },
+    "_roomsCleared": "12/12",
+    "_won": true,
+    "_seed": 20260905,
+    "_choices": [
+      "boon:storm_eye",
+      "story:lantern:guide",
+      "boon:tide_breath"
+    ],
+    "_heroLevelStart": 1,
+    "_heroLevelEnd": 4,
+    "_endReason": "전구역클리어",
+    "_avgAlive": 3.8,
+    "_errorSamples": [],
+    "_at": "2026-10-01T10:42:47.880Z",
+    "_build": {
+      "sha": "da3e23a5d4d1a00990dd57d8c97b26225af4c64d",
+      "dirty": true,
+      "builtAt": "2026-10-01T10:39:38.469Z",
+      "pwaRelease": "8453e96db144d7e34656"
+    },
+    "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+    "_renderEvery": 3,
+    "_timeoutSec": 600
+  },
+  "colourDiagnostic": {
+    "roi": {
+      "left": 475,
+      "top": 150,
+      "width": 65,
+      "height": 100
+    },
+    "scope": "controlled enemy crop; RMS RGB distance from same-build unhit reference and pale RGB pixels (min>=190,max-min<=15)",
+    "cases": [
+      {
+        "mode": "normal",
+        "id": "hit",
+        "base": {
+          "pale": 3749,
+          "rmsDistance": 145.33
+        },
+        "head": {
+          "pale": 270,
+          "rmsDistance": 95.12
+        }
+      },
+      {
+        "mode": "normal",
+        "id": "critical",
+        "base": {
+          "pale": 37,
+          "rmsDistance": 133.2
+        },
+        "head": {
+          "pale": 0,
+          "rmsDistance": 68.38
+        }
+      },
+      {
+        "mode": "normal",
+        "id": "decay",
+        "base": {
+          "pale": 3063,
+          "rmsDistance": 110.79
+        },
+        "head": {
+          "pale": 0,
+          "rmsDistance": 49.3
+        }
+      },
+      {
+        "mode": "reduced",
+        "id": "hit",
+        "base": {
+          "pale": 3658,
+          "rmsDistance": 143.74
+        },
+        "head": {
+          "pale": 0,
+          "rmsDistance": 60.85
+        }
+      },
+      {
+        "mode": "reduced",
+        "id": "critical",
+        "base": {
+          "pale": 37,
+          "rmsDistance": 131.77
+        },
+        "head": {
+          "pale": 0,
+          "rmsDistance": 40.38
+        }
+      },
+      {
+        "mode": "reduced",
+        "id": "decay",
+        "base": {
+          "pale": 2988,
+          "rmsDistance": 108.68
+        },
+        "head": {
+          "pale": 0,
+          "rmsDistance": 27.42
+        }
+      }
+    ]
+  },
+  "controlledCandidate": {
+    "origin": "http://127.0.0.1:4193",
+    "hero": "knight",
+    "quality": "mid",
+    "controlledScene": true,
+    "cases": [
+      {
+        "mode": "normal",
+        "id": "rest",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.96100243590772,
+          0,
+          -36.6937350910157
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          }
+        ]
+      },
+      {
+        "mode": "normal",
+        "id": "hit",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.96100243590772,
+          0,
+          -36.6937350910157
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.38,
+              0.38
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.38,
+              0.38
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.38,
+              0.38
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.38,
+              0.38
+            ],
+            "intensity": 1
+          }
+        ]
+      },
+      {
+        "mode": "normal",
+        "id": "critical",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.96100243590772,
+          0,
+          -36.6937350910157
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.239687711808735,
+              0.01948239417950385
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.239687711808735,
+              0.01948239417950385
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.239687711808735,
+              0.01948239417950385
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.239687711808735,
+              0.01948239417950385
+            ],
+            "intensity": 1
+          }
+        ]
+      },
+      {
+        "mode": "normal",
+        "id": "decay",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.9832242693013,
+          0,
+          -36.79334344337007
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.095,
+              0.095,
+              0.095
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.095,
+              0.095,
+              0.095
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.095,
+              0.095,
+              0.095
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.095,
+              0.095,
+              0.095
+            ],
+            "intensity": 1
+          }
+        ]
+      },
+      {
+        "mode": "reduced",
+        "id": "rest",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.9832242693013,
+          0,
+          -36.79334344337007
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          }
+        ]
+      },
+      {
+        "mode": "reduced",
+        "id": "hit",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.9832242693013,
+          0,
+          -36.79334344337007
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.16,
+              0.16
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.16,
+              0.16
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.16,
+              0.16
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.16,
+              0.16
+            ],
+            "intensity": 1
+          }
+        ]
+      },
+      {
+        "mode": "reduced",
+        "id": "critical",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.9832242693013,
+          0,
+          -36.79334344337007
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.10092114181420421,
+              0.008203113338738462
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.10092114181420421,
+              0.008203113338738462
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.10092114181420421,
+              0.008203113338738462
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.10092114181420421,
+              0.008203113338738462
+            ],
+            "intensity": 1
+          }
+        ]
+      },
+      {
+        "mode": "reduced",
+        "id": "decay",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -72.00072461743177,
+          0,
+          -36.818833618309036
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.04,
+              0.04,
+              0.04
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.04,
+              0.04,
+              0.04
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.04,
+              0.04,
+              0.04
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.04,
+              0.04,
+              0.04
+            ],
+            "intensity": 1
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "build": {
+      "sha": "da3e23a5d4d1a00990dd57d8c97b26225af4c64d",
+      "dirty": true,
+      "builtAt": "2026-10-01T10:39:38.469Z",
+      "pwaRelease": "8453e96db144d7e34656"
+    },
+    "status": "pass"
+  },
+  "controlledHoldout": {
+    "origin": "http://127.0.0.1:4193",
+    "hero": "mage",
+    "quality": "low",
+    "controlledScene": true,
+    "cases": [
+      {
+        "mode": "normal",
+        "id": "rest",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.96100243590772,
+          0,
+          -36.6937350910157
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          }
+        ]
+      },
+      {
+        "mode": "normal",
+        "id": "hit",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.96100243590772,
+          0,
+          -36.6937350910157
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.38,
+              0.38
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.38,
+              0.38
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.38,
+              0.38
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.38,
+              0.38
+            ],
+            "intensity": 1
+          }
+        ]
+      },
+      {
+        "mode": "normal",
+        "id": "critical",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.96100243590772,
+          0,
+          -36.6937350910157
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.239687711808735,
+              0.01948239417950385
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.239687711808735,
+              0.01948239417950385
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.239687711808735,
+              0.01948239417950385
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.38,
+              0.239687711808735,
+              0.01948239417950385
+            ],
+            "intensity": 1
+          }
+        ]
+      },
+      {
+        "mode": "normal",
+        "id": "decay",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.9815983313541,
+          0,
+          -36.79801592048436
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.095,
+              0.095,
+              0.095
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.095,
+              0.095,
+              0.095
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.095,
+              0.095,
+              0.095
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.095,
+              0.095,
+              0.095
+            ],
+            "intensity": 1
+          }
+        ]
+      },
+      {
+        "mode": "reduced",
+        "id": "rest",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.9815983313541,
+          0,
+          -36.79801592048436
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0,
+              0,
+              0
+            ],
+            "intensity": 1
+          }
+        ]
+      },
+      {
+        "mode": "reduced",
+        "id": "hit",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.9815983313541,
+          0,
+          -36.79801592048436
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.16,
+              0.16
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.16,
+              0.16
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.16,
+              0.16
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.16,
+              0.16
+            ],
+            "intensity": 1
+          }
+        ]
+      },
+      {
+        "mode": "reduced",
+        "id": "critical",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.9815983313541,
+          0,
+          -36.79801592048436
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.10092114181420421,
+              0.008203113338738462
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.10092114181420421,
+              0.008203113338738462
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.10092114181420421,
+              0.008203113338738462
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.16,
+              0.10092114181420421,
+              0.008203113338738462
+            ],
+            "intensity": 1
+          }
+        ]
+      },
+      {
+        "mode": "reduced",
+        "id": "decay",
+        "type": "해골 자객",
+        "hp": 630,
+        "position": [
+          -71.99847756395766,
+          0,
+          -36.82087833499273
+        ],
+        "materials": [
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.04,
+              0.04,
+              0.04
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "Glow",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.04,
+              0.04,
+              0.04
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.04,
+              0.04,
+              0.04
+            ],
+            "intensity": 1
+          },
+          {
+            "name": "skeleton",
+            "color": [
+              1,
+              1,
+              1
+            ],
+            "emissive": [
+              0.04,
+              0.04,
+              0.04
+            ],
+            "intensity": 1
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "build": {
+      "sha": "da3e23a5d4d1a00990dd57d8c97b26225af4c64d",
+      "dirty": true,
+      "builtAt": "2026-10-01T10:39:38.469Z",
+      "pwaRelease": "8453e96db144d7e34656"
+    },
+    "status": "pass"
+  },
+  "sourceSha256": {
+    "src/game/actor.js": "6335ff3796cf6309f94c93d8780884e36754fdcf3adcdea6527c7a5808763c2a",
+    "src/party/session.js": "cd29ffc1f129f5a8295ec9cacc9f19b1c05d7d5288e15694103fd5565616300c"
+  },
+  "checks": {
+    "typecheck": "pass",
+    "tests": {
+      "pass": 1223,
+      "skip": 1,
+      "fail": 0
+    },
+    "build": "pass",
+    "metricBands": 12,
+    "comparison": "pass"
+  },
+  "limits": [
+    "SwiftShader JS step measurements, not physical mobile GPU FPS",
+    "controlled visual fixture is not gameplay completion",
+    "one baseline/candidate pair, no performance improvement claim",
+    "skill effects can still obscure the hero",
+    "GitHub API/live origin blocked; apex-vault absent; no merge/deploy",
+    "input smoke confirms attack state and one second of progression; AUTO metrics supply floor completion evidence"
+  ],
+  "inputSmoke": {
+    "origin": "http://127.0.0.1:8787",
+    "startedAt": "2026-10-01T10:44:58.377Z",
+    "status": "pass",
+    "pageErrors": [],
+    "localFailures": [],
+    "externalFailures": [
+      {
+        "path": "fonts.googleapis.com",
+        "error": "net::ERR_TUNNEL_CONNECTION_FAILED"
+      }
+    ],
+    "lobby": {
+      "mode": "lobby",
+      "hero": "knight",
+      "showcase": true,
+      "webgl2": true,
+      "drawCalls": 1
+    },
+    "attack": {
+      "state": "attack",
+      "hp": 2800
+    },
+    "battle": {
+      "mode": "battle",
+      "active": true,
+      "stage": "1-1",
+      "elapsed": 1.016666666666668,
+      "enemies": 0,
+      "hp": 2800,
+      "drawCalls": 1
+    },
+    "lobbyMediaServed": true,
+    "expectedMediaCancellations": [],
+    "finishedAt": "2026-10-01T10:45:31.742Z"
+  }
+}

@@ -182,7 +182,11 @@ test('Player outfit materials participate in hit flash, death and revive', async
   }
   player.flash(0xffffff);
   Actor.prototype.update.call(player, .016);
-  for (const material of outfitMaterials) expect(material.emissive.r).toBeGreaterThan(.5);
+  // 피격 신호는 남기면서 새 판독 계약의 제한 발광을 의상에도 적용한다.
+  for (const material of outfitMaterials) {
+    expect(material.emissive.r).toBeGreaterThan(.05);
+    expect(material.emissive.r).toBeLessThanOrEqual(.4);
+  }
   player.die();
   expect(player.alive).toBe(false);
   for (const material of outfitMaterials) expect(material.transparent).toBe(true);
