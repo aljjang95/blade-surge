@@ -1,0 +1,21 @@
+{
+  "date_kst": "2026-09-22",
+  "repository": "aljjang95/blade-surge",
+  "baseline_commit": "73cd2fc0f647828336a7cba87a75681d08c85dbe",
+  "upstream_skill_commit": "9bddb901f7d071cfefdd21e264267c757177a9df",
+  "status": "review-required",
+  "verification_surface": "ChatGPT Linux container / Node 22.16.0 / pure new rendering math only",
+  "test_command": "node --test tools/render-math.test.mjs",
+  "tests_passed": 16,
+  "tests_failed": 0,
+  "full_build_verified": false,
+  "target_runtime_verified": false,
+  "independent_review_verified": false,
+  "skill_checkout_initialized": false,
+  "skill_runtime_load_verified": false,
+  "session_dispatched": false,
+  "production_changed": false,
+  "model_effort": "unknown; unchanged",
+  "policy_id": "APEX task-effort-routing-v1",
+  "rollback_commit": "73cd2fc0f647828336a7cba87a75681d08c85dbe"
+}
