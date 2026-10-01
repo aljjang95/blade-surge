@@ -36,6 +36,6 @@ PRD 자동 밴드는 필요조건이다. 5영웅의 수동 전투, 보스 공략
 
 매 회전은 기준선→구현→전체 검사→실제 입력·완주→스크린샷 직접 검토→diff 검토→PR 머지→보호된 배포→라이브 SHA/핵심 플레이 확인을 기록한다. 리스크가 큰 전투·경제 변경은 해당 시뮬과 별도 검토가 필요하다. 검증되지 않은 후보를 main/production으로 승격하지 않는다.
 
-사용자는 이 게임의 commit/push/PR/merge/deploy와 필요한 에셋 통합을 승인했다. 배포 대상은 기존 `blade.tllhouse.com`이다. `CLAUDE.md`의 현행 create-only Git 전송과 `apex-vault run cloudflare -- bun run deploy`를 따른다. 잠금 우회·다른 호스트 잠금 탈취·이전 인증 방식 재활성화는 하지 않는다. 유료 생성 호출은 예산과 기간이 확인된 경우에만 사용한다.
+사용자는 이 게임의 commit/push/PR/merge/deploy와 필요한 에셋 통합을 승인했다. 배포 대상은 기존 `blade.tllhouse.com`이다. Git 전송은 새 브랜치의 create-only push를 사용한다. 현행 vault/PC bridge 경로와 별도로, 사용자가 저장한 플랫폼 Cloudflare 자격증명으로 이 클라우드의 기존 `tools/deploy.mjs` token 경로가 승인·검증되었다. 잠금 우회·다른 호스트 잠금 탈취·키의 평문 복사는 하지 않는다. 유료 생성 호출은 예산과 기간이 확인된 경우에만 사용한다.
 
-현재 클라우드는 Git HTTPS 읽기만 확인했다. GitHub API·라이브는 네트워크 차단, `apex-vault` 명령은 없음. 연결이 복구되기 전에는 로컬 후보·증거를 준비하고, 머지·배포·AAA 완료로 기록하지 않는다.
+2026-10-01 클라우드 연결이 복구되었다. GitHub PR #85 머지와 #86 이후 main `4c977602e1189526c23524ae1d37765ea88f7881`의 보호된 배포·라이브 입력 검사를 완료했다. `apex-vault`는 설치하지 않았으며 플랫폼의 호스트 제한 자격증명을 기존 배포 어댑터에 전달한다. `/workspace/.blade-surge-tools/env.sh`의 `NODE_USE_ENV_PROXY=1` 등 실행 설정을 사용한다. 이 환경의 성공을 다른 클라우드나 PC의 인증 상태로 일반화하지 않는다.

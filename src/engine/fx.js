@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { softCircleTex, sparkTex, ringTex, slashTex, smokeTex, VFX_TEX } from './assets.js';
 import { ImpactLights } from './impact-lights.js';
+import { RingPool } from './ring-pool.js';
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
 
@@ -108,6 +109,7 @@ export class FX {
     this._depthMats = new Map();
     this.plane1 = new THREE.PlaneGeometry(1, 1);
     this.plane2 = new THREE.PlaneGeometry(2, 2);
+    this.rings = new RingPool(scene, this.plane2, ringTex());
     this.trails = [];
   }
   setQuality(q) { this.quality = q; this.impactLights.setEnabled(q !== 'low'); }
@@ -115,6 +117,7 @@ export class FX {
   add(obj, life, update, onEnd) { this.scene.add(obj); this.items.push({ obj, t: 0, life, update, onEnd }); return obj; }
   update(dt) {
     this.sparks.update(dt); this.glow.update(dt); this.smoke.update(dt);
+    this.rings.update(dt);
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i]; it.t += dt; const k = it.t / it.life;
       if (k >= 1) { this._finishItem(i); continue; }
@@ -155,9 +158,11 @@ export class FX {
       // Coins/material drops use untextured PBR, unlike the textured model atlases.
       this._keep(new THREE.MeshStandardMaterial()).dispose();
       while (this.items.length > mark) this._finishItem(this.items.length - 1);
+      this.rings.clear();
       this._primed = true;
     }
     const warm = new THREE.Scene();
+    warm.add(this.rings.warmObject());
     for (const material of Object.values(this._mats)) warm.add(material.isSpriteMaterial ? new THREE.Sprite(material) : new THREE.Mesh(this.plane1, material));
     for (const gltf of Object.values(models)) {
       warm.add(gltf.scene.clone(true));
@@ -317,11 +322,8 @@ export class FX {
     }, () => m.dispose());
   }
   // ---------- 지면 충격파 링 ----------
-  ring(pos, color, { r0 = 0.3, r1 = 4, life = 0.45, width = 0.5, y = 0.08, vertical = false, thick = 1 } = {}) {
-    const m = this._keep(new THREE.MeshBasicMaterial({ map: ringTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 1 }));
-    const mesh = new THREE.Mesh(this.plane2, m); mesh.position.copy(pos); mesh.position.y += y; mesh.renderOrder = 9;
-    if (vertical) mesh.lookAt(this.camera.position); else mesh.rotation.x = -Math.PI / 2;
-    this.add(mesh, life, (k) => { const e = 1 - Math.pow(1 - k, 3); const r = r0 + (r1 - r0) * e; mesh.scale.set(r, r, r * thick); m.opacity = (1 - k) * 1.2; }, () => m.dispose());
+  ring(pos, color, options = {}) {
+    this.rings.emit(pos, color, options, this.camera);
   }
   // ---------- 참격 아크 (지면 평행, 캐릭터 전방) ----------
   slashArc(pos, yaw, color, { radius = 2.4, arc = 140, life = 0.22, height = 1.1, tilt = 0, flip = false, thickness = 0.55 } = {}) {
@@ -571,6 +573,7 @@ export class FX {
   }
   clearDamage() { while (this.dmgLayer.firstChild) this.dmgLayer.removeChild(this.dmgLayer.firstChild); }
   clearAll() {
+    this.rings.clear();
     while (this.items.length) this._finishItem(this.items.length - 1);
     this.impactLights.clear();
     for (const t of this.trails) { this.scene.remove(t.mesh); if (!t.dead) { t.geo.dispose(); t.mat.dispose(); t.dead = true; } }
@@ -581,6 +584,7 @@ export class FX {
   dispose() {
     if (this._disposed) return;
     this._disposed = true; this.clearAll();
+    this.rings.dispose();
     for (const pool of [this.sparks, this.glow, this.smoke]) { this.scene.remove(pool.mesh); pool.geo.dispose(); pool.mat.dispose(); }
     for (const slot of this.impactLights.slots) this.scene.remove(slot.light);
     this.plane1.dispose(); this.plane2.dispose();

@@ -1,0 +1,1259 @@
+{
+  "status": "local-candidate-not-release",
+  "recordedAt": "2026-10-01T17:29:04.279989+00:00",
+  "baseline": {
+    "status": "pass",
+    "startedAt": "2026-10-01T16:56:29.559Z",
+    "controlledRender": true,
+    "cases": [
+      {
+        "hero": "knight",
+        "quality": "mid",
+        "reduced": false,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 4.983333333333333
+        },
+        "restCalls": 104,
+        "ringCalls": 168,
+        "addedDrawCalls": 64,
+        "pooled": false,
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "warningsAfter": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "cleared": {
+          "calls": 104
+        },
+        "restarted": true
+      },
+      {
+        "hero": "mage",
+        "quality": "low",
+        "reduced": false,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 4.983333333333333
+        },
+        "restCalls": 103,
+        "ringCalls": 167,
+        "addedDrawCalls": 64,
+        "pooled": false,
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "warningsAfter": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "cleared": {
+          "calls": 103
+        },
+        "restarted": true
+      },
+      {
+        "hero": "ranger",
+        "quality": "mid",
+        "reduced": true,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 3.9833333333333334
+        },
+        "restCalls": 113,
+        "ringCalls": 177,
+        "addedDrawCalls": 64,
+        "pooled": false,
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "warningsAfter": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "cleared": {
+          "calls": 113
+        },
+        "restarted": true
+      }
+    ],
+    "errors": [],
+    "scope": "실제 키보드 스킬 입력 뒤, 기존 링 32개의 단일 장면 draw와 소멸·재시작을 측정. 자연 완주 및 실기기 성능은 별도.",
+    "build": {
+      "sha": "4c977602e1189526c23524ae1d37765ea88f7881",
+      "dirty": false,
+      "builtAt": "2026-10-01T16:56:29.169Z",
+      "pwaRelease": "e4663adcd02c5c9e9a40"
+    },
+    "lastSample": {
+      "hero": "ranger",
+      "quality": "mid",
+      "reduced": true,
+      "cast": {
+        "state": "skill",
+        "mp": 84.03333333333333,
+        "cooldown": 3.9833333333333334
+      },
+      "restCalls": 113,
+      "ringCalls": 177,
+      "addedDrawCalls": 64,
+      "pooled": false,
+      "warnings": [
+        {
+          "id": "region:1:0",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 3,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 1.5,
+          "duration": 1.5,
+          "color": 15253108
+        },
+        {
+          "id": "region:1:1",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 6,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 2.05,
+          "duration": 2.05,
+          "color": 15253108
+        }
+      ],
+      "warningsAfter": [
+        {
+          "id": "region:1:0",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 3,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 1.5,
+          "duration": 1.5,
+          "color": 15253108
+        },
+        {
+          "id": "region:1:1",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 6,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 2.05,
+          "duration": 2.05,
+          "color": 15253108
+        }
+      ],
+      "alive": true
+    },
+    "finishedAt": "2026-10-01T16:57:24.430Z"
+  },
+  "candidate": {
+    "status": "pass",
+    "startedAt": "2026-10-01T17:24:28.265Z",
+    "controlledRender": true,
+    "cases": [
+      {
+        "hero": "knight",
+        "quality": "mid",
+        "reduced": false,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 4.983333333333333
+        },
+        "restCalls": 104,
+        "ringCalls": 105,
+        "addedDrawCalls": 1,
+        "pooled": true,
+        "instances": 32,
+        "ringCompiles": {
+          "prepared": 1,
+          "afterDraw": 1
+        },
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "warningsAfter": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "cleared": {
+          "calls": 104,
+          "instances": 0,
+          "visible": false
+        },
+        "restarted": true
+      },
+      {
+        "hero": "mage",
+        "quality": "low",
+        "reduced": false,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 4.983333333333333
+        },
+        "restCalls": 103,
+        "ringCalls": 104,
+        "addedDrawCalls": 1,
+        "pooled": true,
+        "instances": 32,
+        "ringCompiles": {
+          "prepared": 1,
+          "afterDraw": 1
+        },
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "warningsAfter": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "cleared": {
+          "calls": 103,
+          "instances": 0,
+          "visible": false
+        },
+        "restarted": true
+      },
+      {
+        "hero": "ranger",
+        "quality": "mid",
+        "reduced": true,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 3.9833333333333334
+        },
+        "restCalls": 113,
+        "ringCalls": 114,
+        "addedDrawCalls": 1,
+        "pooled": true,
+        "instances": 32,
+        "ringCompiles": {
+          "prepared": 1,
+          "afterDraw": 1
+        },
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "warningsAfter": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "cleared": {
+          "calls": 113,
+          "instances": 0,
+          "visible": false
+        },
+        "restarted": true
+      }
+    ],
+    "errors": [],
+    "scope": "실제 키보드 스킬 입력 뒤, 기존 링 32개의 단일 장면 draw와 소멸·재시작을 측정. 자연 완주 및 실기기 성능은 별도.",
+    "build": {
+      "sha": "4c977602e1189526c23524ae1d37765ea88f7881",
+      "dirty": true,
+      "builtAt": "2026-10-01T17:15:16.451Z",
+      "pwaRelease": "3e3fcb33f4a939a02843"
+    },
+    "lastSample": {
+      "hero": "ranger",
+      "quality": "mid",
+      "reduced": true,
+      "cast": {
+        "state": "skill",
+        "mp": 84.03333333333333,
+        "cooldown": 3.9833333333333334
+      },
+      "restCalls": 113,
+      "ringCalls": 114,
+      "addedDrawCalls": 1,
+      "pooled": true,
+      "instances": 32,
+      "ringCompiles": {
+        "prepared": 1,
+        "afterDraw": 1
+      },
+      "warnings": [
+        {
+          "id": "region:1:0",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 3,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 1.5,
+          "duration": 1.5,
+          "color": 15253108
+        },
+        {
+          "id": "region:1:1",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 6,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 2.05,
+          "duration": 2.05,
+          "color": 15253108
+        }
+      ],
+      "warningsAfter": [
+        {
+          "id": "region:1:0",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 3,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 1.5,
+          "duration": 1.5,
+          "color": 15253108
+        },
+        {
+          "id": "region:1:1",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 6,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 2.05,
+          "duration": 2.05,
+          "color": 15253108
+        }
+      ],
+      "alive": true
+    },
+    "finishedAt": "2026-10-01T17:25:17.264Z"
+  },
+  "imageComparison": {
+    "scope": "고정 링 장면의 중앙 영역 비교; 외형 보존 진단이며 실기기 가독성 증명은 아님",
+    "samples": [
+      {
+        "hero": "knight",
+        "quality": "mid",
+        "region": {
+          "x": 245,
+          "y": 115,
+          "width": 390,
+          "height": 195
+        },
+        "meanAbsoluteChannelDifference": 0.002143326758711374,
+        "maximumChannelDifference": 1,
+        "pixelsDifferentByMoreThan2": 0,
+        "totalPixels": 76050
+      },
+      {
+        "hero": "mage",
+        "quality": "low",
+        "region": {
+          "x": 245,
+          "y": 115,
+          "width": 390,
+          "height": 195
+        },
+        "meanAbsoluteChannelDifference": 0.0020381328073635764,
+        "maximumChannelDifference": 1,
+        "pixelsDifferentByMoreThan2": 0,
+        "totalPixels": 76050
+      },
+      {
+        "hero": "ranger",
+        "quality": "mid",
+        "region": {
+          "x": 245,
+          "y": 115,
+          "width": 390,
+          "height": 195
+        },
+        "meanAbsoluteChannelDifference": 0.001989918912995836,
+        "maximumChannelDifference": 1,
+        "pixelsDifferentByMoreThan2": 0,
+        "totalPixels": 76050
+      }
+    ]
+  },
+  "preliminaryFloor": {
+    "errors": 0,
+    "bootMs": 5998,
+    "floorClearSec": 167.4,
+    "killsPerFloor": 198,
+    "maxAliveSeen": 24,
+    "_maxAliveSampled": 24,
+    "dropsPerFloor": 34,
+    "longestDryStreakSec": 8.8,
+    "hitTakenRatio": 0.157,
+    "avgFrameMs": 2.27,
+    "p95FrameMs": 2.4,
+    "rhythmBeats": 7,
+    "drawCalls": 389,
+    "_beats": {
+      "explore": true,
+      "encounter": true,
+      "vacuum": true,
+      "drop": true,
+      "setProgress": false,
+      "bossFound": true,
+      "bossKill": true,
+      "floorClear": true
+    },
+    "_roomsCleared": "12/12",
+    "_won": true,
+    "_seed": 20260905,
+    "_choices": [
+      "boon:storm_eye",
+      "story:lantern:guide",
+      "boon:tide_breath"
+    ],
+    "_heroLevelStart": 1,
+    "_heroLevelEnd": 4,
+    "_endReason": "전구역클리어",
+    "_avgAlive": 3.8,
+    "_errorSamples": [],
+    "_at": "2026-10-01T16:59:07.076Z",
+    "_build": {
+      "sha": "4c977602e1189526c23524ae1d37765ea88f7881",
+      "dirty": true,
+      "builtAt": "2026-10-01T16:54:50.007Z",
+      "pwaRelease": "9d0a1c2809ce39fc4053"
+    },
+    "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+    "_renderEvery": 3,
+    "_timeoutSec": 600
+  },
+  "firstBaselineFailure": {
+    "errors": 0,
+    "bootMs": 5470,
+    "floorClearSec": 181.4,
+    "killsPerFloor": 189,
+    "maxAliveSeen": 24,
+    "_maxAliveSampled": 24,
+    "dropsPerFloor": 34,
+    "longestDryStreakSec": 14.2,
+    "hitTakenRatio": 0.209,
+    "avgFrameMs": 1.89,
+    "p95FrameMs": 3,
+    "rhythmBeats": 7,
+    "drawCalls": 425,
+    "_beats": {
+      "explore": true,
+      "encounter": true,
+      "vacuum": true,
+      "drop": true,
+      "setProgress": false,
+      "bossFound": true,
+      "bossKill": true,
+      "floorClear": true
+    },
+    "_roomsCleared": "12/12",
+    "_won": true,
+    "_seed": 20260905,
+    "_choices": [
+      "boon:storm_eye",
+      "story:lantern:guide",
+      "boon:tide_breath"
+    ],
+    "_heroLevelStart": 1,
+    "_heroLevelEnd": 4,
+    "_endReason": "전구역클리어",
+    "_avgAlive": 3.9,
+    "_errorSamples": [],
+    "_at": "2026-10-01T16:01:05.884Z",
+    "_build": {
+      "sha": "4c977602e1189526c23524ae1d37765ea88f7881",
+      "dirty": false,
+      "builtAt": "2026-10-01T15:48:22.608Z",
+      "pwaRelease": "a134687c9f5fb6e5340b"
+    },
+    "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+    "_renderEvery": 3,
+    "_timeoutSec": 600
+  },
+  "rejectedReadability": {
+    "attempt1": "visual-candidate/report.json",
+    "attempt2": "visual-candidate-v2/report.json",
+    "secondErrorRatio": 0.9467637782381797,
+    "requiredMaximum": 0.72,
+    "sourceExcluded": true
+  },
+  "releaseSeries": "PR에 사전 선언한 clean 커밋 5쌍 검증 결과를 기록하기 전 승격 금지",
+  "images": {
+    "head-ranger-reduced.png": "62180b9d804b9211ff7bc4c53b73fd85d817edecbc61d02b8a4ecc0de3decb3a",
+    "head-knight.png": "e59e501b97648f5bd2f4b146cdb839a7a8e48420d7ac7c3f353b5c9f29f97692",
+    "base-knight.png": "1e19ea63ba9f20eb3041cc37d1cf135183f353238458bfa0f940eaf16b43a816",
+    "head-mage-low.png": "f8b1ec141a78eed8ff95e76aa4980e15b1b1136a21997f4494e85a6cccf3f770"
+  },
+  "firstCandidateControlledRender": {
+    "status": "pass",
+    "startedAt": "2026-10-01T16:54:50.407Z",
+    "controlledRender": true,
+    "cases": [
+      {
+        "hero": "knight",
+        "quality": "mid",
+        "reduced": false,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 4.983333333333333
+        },
+        "restCalls": 104,
+        "ringCalls": 105,
+        "addedDrawCalls": 1,
+        "pooled": true,
+        "instances": 32,
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "warningsAfter": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "cleared": {
+          "calls": 104,
+          "instances": 0,
+          "visible": false
+        },
+        "restarted": true
+      },
+      {
+        "hero": "mage",
+        "quality": "low",
+        "reduced": false,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 4.983333333333333
+        },
+        "restCalls": 103,
+        "ringCalls": 104,
+        "addedDrawCalls": 1,
+        "pooled": true,
+        "instances": 32,
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "warningsAfter": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "cleared": {
+          "calls": 103,
+          "instances": 0,
+          "visible": false
+        },
+        "restarted": true
+      },
+      {
+        "hero": "ranger",
+        "quality": "mid",
+        "reduced": true,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 3.9833333333333334
+        },
+        "restCalls": 113,
+        "ringCalls": 114,
+        "addedDrawCalls": 1,
+        "pooled": true,
+        "instances": 32,
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "warningsAfter": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "cleared": {
+          "calls": 113,
+          "instances": 0,
+          "visible": false
+        },
+        "restarted": true
+      }
+    ],
+    "errors": [],
+    "scope": "실제 키보드 스킬 입력 뒤, 기존 링 32개의 단일 장면 draw와 소멸·재시작을 측정. 자연 완주 및 실기기 성능은 별도.",
+    "build": {
+      "sha": "4c977602e1189526c23524ae1d37765ea88f7881",
+      "dirty": true,
+      "builtAt": "2026-10-01T16:54:50.007Z",
+      "pwaRelease": "9d0a1c2809ce39fc4053"
+    },
+    "lastSample": {
+      "hero": "ranger",
+      "quality": "mid",
+      "reduced": true,
+      "cast": {
+        "state": "skill",
+        "mp": 84.03333333333333,
+        "cooldown": 3.9833333333333334
+      },
+      "restCalls": 113,
+      "ringCalls": 114,
+      "addedDrawCalls": 1,
+      "pooled": true,
+      "instances": 32,
+      "warnings": [
+        {
+          "id": "region:1:0",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 3,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 1.5,
+          "duration": 1.5,
+          "color": 15253108
+        },
+        {
+          "id": "region:1:1",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 6,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 2.05,
+          "duration": 2.05,
+          "color": 15253108
+        }
+      ],
+      "warningsAfter": [
+        {
+          "id": "region:1:0",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 3,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 1.5,
+          "duration": 1.5,
+          "color": 15253108
+        },
+        {
+          "id": "region:1:1",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 6,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 2.05,
+          "duration": 2.05,
+          "color": 15253108
+        }
+      ],
+      "alive": true
+    },
+    "finishedAt": "2026-10-01T16:55:47.028Z"
+  },
+  "checks": {
+    "pass": 1248,
+    "skip": 2,
+    "fail": 0,
+    "typecheck": true,
+    "build": true
+  },
+  "failedFormalSeries": "attempt1-series.json",
+  "cpuDiagnostic": {
+    "scope": "동일 32링, 10000스텝, 360스텝마다 렌더 콜백; GPU 또는 자연 전투 성능이 아닌 CPU 진단",
+    "samples": [
+      {
+        "pair": 1,
+        "name": "before",
+        "elapsedMs": 36.405895,
+        "bufferVersion": 11032
+      },
+      {
+        "pair": 1,
+        "name": "after",
+        "elapsedMs": 1.7458739999999864,
+        "bufferVersion": 29
+      },
+      {
+        "pair": 2,
+        "name": "before",
+        "elapsedMs": 35.646916000000004,
+        "bufferVersion": 11032
+      },
+      {
+        "pair": 2,
+        "name": "after",
+        "elapsedMs": 2.1255079999999964,
+        "bufferVersion": 29
+      },
+      {
+        "pair": 3,
+        "name": "before",
+        "elapsedMs": 35.582358,
+        "bufferVersion": 11032
+      },
+      {
+        "pair": 3,
+        "name": "after",
+        "elapsedMs": 2.0200790000000097,
+        "bufferVersion": 29
+      },
+      {
+        "pair": 4,
+        "name": "before",
+        "elapsedMs": 34.485487000000006,
+        "bufferVersion": 11032
+      },
+      {
+        "pair": 4,
+        "name": "after",
+        "elapsedMs": 1.187197000000026,
+        "bufferVersion": 29
+      },
+      {
+        "pair": 5,
+        "name": "before",
+        "elapsedMs": 33.68949200000003,
+        "bufferVersion": 11032
+      },
+      {
+        "pair": 5,
+        "name": "after",
+        "elapsedMs": 1.3899850000000242,
+        "bufferVersion": 29
+      }
+    ]
+  },
+  "candidateSources": {
+    "src/engine/ring-pool.js": "f48ad5fea5d01f0edaadda39bb6a7d7145a942067e0a80bf420962f577ccd8e1",
+    "src/engine/fx.js": "5ac26b1af27d5f4afd68e1cc3e5a84777c9d7ea1152f40b37ea08ddd0c8c80cf",
+    "tools/ring-batch-proof.mjs": "a0deb03d5664421612a186160e76452e0eee3e1d505d8bbcfbffa027874d74ef"
+  }
+}

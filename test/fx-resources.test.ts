@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { ImpactLights } from '../src/engine/impact-lights.js';
+import { RingPool } from '../src/engine/ring-pool.js';
 import { FX, ParticlePool } from '../src/engine/fx.js';
 import { VFX_TEX } from '../src/engine/assets.js';
 
@@ -97,6 +98,7 @@ function fireFixture() {
   Object.assign(fx,{scene:new THREE.Scene(),camera:new THREE.PerspectiveCamera(),items:[],_mats:{},_transparentMats:new Map(),_depthMats:new Map(),
     plane1:new THREE.PlaneGeometry(1,1),plane2:new THREE.PlaneGeometry(2,2),trails:[],clearDamage:()=>{}});
   fx.impactLights=new ImpactLights(fx.scene);
+  fx.rings=new RingPool(fx.scene,fx.plane2,new THREE.Texture());
   for(const key of ['sparks','glow','smoke'])fx[key]={n:0,geo:new THREE.BufferGeometry(),mat:new THREE.ShaderMaterial(),mesh:new THREE.Object3D(),update:()=>{}};
   return fx;
 }
