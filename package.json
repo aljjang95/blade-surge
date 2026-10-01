@@ -12,6 +12,7 @@
     "check": "bun run typecheck && bun test && bun run build",
     "preview": "vite preview --host",
     "deploy": "node tools/deploy.mjs",
+    "pc:bridge": "node tools/pc-bridge.mjs",
     "metrics": "node tools/metrics.mjs"
   },
   "dependencies": {
