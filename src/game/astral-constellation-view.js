@@ -23,13 +23,16 @@ export class AstralConstellationView {
       g.rotateX(-Math.PI / 2); return g;
     });
     const label = (parent, x, y, z, width, height, compact = false) => {
-      const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 176;
+      const typography = compact
+        ? { width: 256, height: 88, titleSize: 32, subtitleSize: 28, titleY: 34, subtitleY: 70, boldSubtitle: true }
+        : { width: 512, height: 176, titleSize: 33, subtitleSize: 30, titleY: 66, subtitleY: 128, boldSubtitle: false };
+      const canvas = document.createElement('canvas'); canvas.width = typography.width; canvas.height = typography.height;
       const context = canvas.getContext('2d');
       if (!context) throw new Error('조율판 문자 표시를 준비하지 못했습니다.');
       const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; this.textures.add(texture);
       const material = ownMaterial(new THREE.SpriteMaterial({ map: texture, depthWrite: false }));
       const sprite = new THREE.Sprite(material); sprite.position.set(x, y, z); sprite.scale.set(width, height, 1); parent.add(sprite);
-      return { sprite, context, texture, compact, state: '' };
+      return { sprite, context, texture, typography, state: '' };
     };
     try {
     this.entries = route.gates.map((gate, index) => {
@@ -68,10 +71,12 @@ export class AstralConstellationView {
     const state = `${title}\n${subtitle}`;
     if (label.state === state) return;
     label.state = state;
-    const c = label.context; c.clearRect(0, 0, 512, 176);
-    c.fillStyle = '#101b2b'; c.fillRect(0, 0, 512, 176); c.textAlign = 'center';
-    c.fillStyle = '#ffe4b2'; c.font = label.compact ? 'bold 44px sans-serif' : 'bold 33px sans-serif'; c.fillText(title, 256, 66);
-    c.fillStyle = '#f2f5ff'; c.font = label.compact ? 'bold 38px sans-serif' : '30px sans-serif'; c.fillText(subtitle, 256, 128); label.texture.needsUpdate = true;
+    const c = label.context, t = label.typography, center = t.width / 2;
+    c.clearRect(0, 0, t.width, t.height);
+    c.fillStyle = '#101b2b'; c.fillRect(0, 0, t.width, t.height); c.textAlign = 'center';
+    c.fillStyle = '#ffe4b2'; c.font = `bold ${t.titleSize}px sans-serif`; c.fillText(title, center, t.titleY);
+    c.fillStyle = '#f2f5ff'; c.font = `${t.boldSubtitle ? 'bold ' : ''}${t.subtitleSize}px sans-serif`;
+    c.fillText(subtitle, center, t.subtitleY); label.texture.needsUpdate = true;
   }
   update(route = this.route) {
     if (this.disposed) return;

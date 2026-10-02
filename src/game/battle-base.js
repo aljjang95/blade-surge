@@ -87,7 +87,7 @@ export class Battle {
     this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
     await this.routeObjectives?.prepareView?.(this.scene);
     if (this._startGeneration !== startGeneration) return;
-    this.renderer.setBattleVisual?.(this.visual);
+    this.renderer.setBattleVisual?.(this.visual, stage);
     this.roomsCleared = 0; this.bossFound = false;
 
     const gltf = await loadModel(def.model);
@@ -415,7 +415,7 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.routeObjectives?.stop(); this.routeObjectives = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
+  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const runtimeType = !this.stage.expedition && type === this.stage.encounter?.enemyId && this.stage.dungeonBossId ? this.stage.dungeonBossId : type;

@@ -84,3 +84,34 @@ test('concurrent prepare shares one group, stopped late import never attaches, a
     expect(next.route.progress).toBe(0); expect(next.scene.children).toHaveLength(1); next.route.stop();
   } finally { restoreDocument(); }
 });
+
+
+test('PAD-only compact canvases retain full contrast drawing and identities without increasing texture count', () => {
+  const previous=Object.getOwnPropertyDescriptor(globalThis,'document');
+  const canvases:any[]=[];
+  Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement:()=>{
+    const canvas:any={width:0,height:0,rects:[],texts:[]};
+    const context:any={font:'',clearRect:(...rect:number[])=>canvas.rects.push(rect),fillRect:(...rect:number[])=>canvas.rects.push(rect),
+      fillText:(text:string,x:number,y:number)=>canvas.texts.push({text,x,y,font:context.font})};
+    canvas.getContext=()=>context;canvases.push(canvas);return canvas;
+  }}});
+  const f=fixture();let view:any;
+  try {
+    view=new AstralConstellationView(f.scene,f.route);f.route.view=view;
+    expect(view.textures.size).toBe(16);expect(canvases.filter(c=>c.width===512&&c.height===176)).toHaveLength(4);
+    const pads=canvases.filter(c=>c.width===256&&c.height===88);expect(pads).toHaveLength(12);
+    for(const canvas of pads) {
+      expect(canvas.rects.every((r:number[])=>r[0]===0&&r[1]===0&&r[2]===256&&r[3]===88)).toBe(true);
+      expect(canvas.texts.some((t:any)=>['A △','B ○','C ◇'].includes(t.text)&&t.font==='bold 32px sans-serif'&&t.x===128&&t.y===34)).toBe(true);
+      expect(canvas.texts.some((t:any)=>t.text==='1초 유지'&&t.font==='bold 28px sans-serif'&&t.x===128&&t.y===70)).toBe(true);
+    }
+    for(const canvas of canvases.filter(c=>c.width===512))expect(canvas.rects.every((r:number[])=>r[2]===512&&r[3]===176)).toBe(true);
+    for(const entry of view.entries)for(const pad of entry.pads)expect(Math.hypot(pad.text.sprite.position.x,pad.text.sprite.position.z)).toBeGreaterThan(f.route.def.radius);
+    f.route.update(f.game,1);f.game.player.pos.copy(f.gate.pads[0].pos);f.route.update(f.game,.3);
+    const drawn=view.entries[0].pads[0].text.texture.image.texts;
+    expect(drawn.some((t:any)=>t.text==='0.3 / 1초'&&t.font==='bold 28px sans-serif')).toBe(true);
+  } finally {
+    f.route.stop();view?.dispose();
+    if(previous)Object.defineProperty(globalThis,'document',previous);else Reflect.deleteProperty(globalThis,'document');
+  }
+});

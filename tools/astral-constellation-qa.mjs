@@ -29,11 +29,12 @@ if (acquisition.kind !== 'earned-expedition-save' || acquisition.status !== 'pas
 const report = { status: 'running', releaseApproved: false, base: '0cf61344eccfa08a05bc77303d7f1c1c87114cda',
   saveSha256: qaHash(bytes), acquisition: { path: acquisitionPath, sha256: qaHash(acquisitionBytes), head: acquisition.head,
     build: acquisition.build, runs: acquisition.runs.length, nativeSave: acquisition.earnedSave },
-  scope: 'Exact clean committed production preview/fixed release, restored exact naturally-earned free-Knight native save, actual standard dungeon UI admission, production AUTO combat/choices and keyboard input. Fixed 50ms app.step clock only. Reads displayed HUD clues; no hidden station answers/secrets, actor position/HP/enemy/room/progress/seal/unlock writes. Not a fresh-account Astral clear, physical phone, visual approval or FPS benchmark.',
+  scope: 'Exact clean committed production preview/fixed release, restored exact naturally-earned free-Knight native save, actual standard dungeon UI admission, production AUTO combat/choices and keyboard input. Fixed 50ms app.step clock only. Reads displayed HUD clues; native RAF settles production camera rendering after actual resize with no simulation ticks and exact world-state invariants; no hidden station answers/secrets, actor position/HP/enemy/room/progress/seal/unlock writes. Not a fresh-account Astral clear, physical phone, visual approval or FPS benchmark.',
   required: {}, events: [], coverage: { damageDuringSelection: 'NOT_OBSERVED', physicalPhone: 'NOT_RUN', formalMetrics: 'NOT_RUN', visualApproval: 'NOT_RUN' } };
 const qa = await createExpeditionQa({ root, driver: import.meta.filename, report,
   sourceFiles: ['tools/astral-constellation-qa.mjs', 'tools/expedition-qa-runtime.mjs', 'tools/conquest-media-observer.mjs', 'tools/qa-media-checkpoints.mjs',
-    'src/game/astral-constellations.js', 'src/game/astral-constellation-view.js', 'src/data/route-objectives.js'] });
+    'src/game/astral-constellations.js', 'src/game/astral-constellation-view.js', 'src/data/route-objectives.js',
+    'src/engine/renderer.js', 'src/engine/battle-aspect-fit.js', 'src/game/battle-base.js'] });
 const out = qa.out;
 let page, lastHp = null, observedDamage = 0;
 const saveReport = qa.save;
@@ -87,9 +88,11 @@ async function renderCurrentFrame(label) {
   const before = await snapshot();
   await page.evaluate(() => window.app.renderer.render()); // No additional simulation tick.
   const after = await snapshot();
-  for (const key of ['elapsed', 'phase', 'progress', 'read', 'hold', 'mistakes', 'hp', 'paused']) {
+  for (const key of ['elapsed', 'phase', 'progress', 'read', 'hold', 'mistakes', 'hp', 'paused', 'state', 'mp', 'stats', 'ticket', 'kills', 'sealed', 'nonbossRemaining']) {
     assert(after[key] === before[key], `${label}: drawing advanced actual gameplay (${key})`);
   }
+  for (const key of ['currency', 'result', 'cds']) assert(JSON.stringify(after[key]) === JSON.stringify(before[key]), `${label}: rendering changed ${key}`);
+  assert(after.pos.x === before.pos.x && after.pos.z === before.pos.z, `${label}: drawing moved the actor`);
   report.events.push({ label: 'current GPU frame for ' + label, before, after });
   await saveReport();
   return after;
@@ -105,11 +108,46 @@ async function viewport(width, height, label) {
     await continueButton.click(); await continueButton.waitFor({ state: 'hidden' });
   }
   await page.waitForTimeout(150); // Real responsive resize/clear delivery.
+  const before = await snapshot();
+  const visualClock = await page.evaluate(async () => {
+    const renderer = window.app.renderer, camera = renderer.camera;
+    const from = { pos: camera.position.toArray(), fov: camera.fov, aspect: camera.aspect };
+    const started = performance.now(); let previous = null, stable = 0, frames = 0;
+    await new Promise((resolve, reject) => {
+      function frame(now) {
+        if (previous === null) { previous = now; requestAnimationFrame(frame); return; }
+        const position = camera.position.clone(), fov = camera.fov;
+        // Only the actual production renderer receives native elapsed time.
+        // No app.step, actor/controller tick, artificial clock or camera write.
+        const nativeDelta = (now - previous) / 1000;
+        if (!Number.isFinite(nativeDelta) || nativeDelta < 0) { reject(Error('Invalid native RAF clock delta')); return; }
+        renderer.update(0, nativeDelta); previous = now; frames++;
+        stable = camera.position.distanceTo(position) < .004 && Math.abs(camera.fov - fov) < .004 ? stable + 1 : 0;
+        if (stable >= 6) resolve(null);
+        else if (now - started > 6000) reject(Error('Native camera resize did not settle in six real seconds'));
+        else requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+    });
+    return { from, to: { pos: camera.position.toArray(), fov: camera.fov, aspect: camera.aspect },
+      nativeFrames: frames, actualWallMs: performance.now() - started, timeOrigin: performance.timeOrigin };
+  });
+  const after = await snapshot();
+  for (const key of ['elapsed', 'phase', 'progress', 'read', 'hold', 'mistakes', 'hp', 'paused', 'state', 'mp', 'stats', 'ticket', 'kills', 'sealed', 'nonbossRemaining']) {
+    assert(after[key] === before[key], `${label}: native renderer settling advanced gameplay (${key})`);
+  }
+  for (const key of ['currency', 'result', 'cds']) assert(JSON.stringify(after[key]) === JSON.stringify(before[key]), `${label}: rendering changed ${key}`);
+  assert(after.pos.x === before.pos.x && after.pos.z === before.pos.z, `${label}: native renderer settling moved the actor`);
+  report.events.push({ label: 'actual native RAF camera resize settling', visualClock, before, after });
   await focusGameplay(); return renderCurrentFrame(label);
 }
 async function until(predicate, budget, label, allowPendingVictory = false) {
+  // This is input/function QA, not a frame benchmark. Every simulation tick
+  // still runs; expensive software draws during AUTO are sampled, and every
+  // accepted observation explicitly draws the exact current GPU frame.
+  const renderEvery = label.startsWith('natural ') || label.includes('first-room combat') ? 90 : 10;
   for (let i = 0; i < budget; i++) {
-    const s = await steps(1, i % 10 === 0);
+    const s = await steps(1, i % renderEvery === 0);
     if (predicate(s)) return renderCurrentFrame(label);
     if (s.paused) {
       const offered = page.locator('#masterworks[open] .mw-choices button:not([disabled]), #masterworks[open] .mw-story-choices button:not([disabled])').first();

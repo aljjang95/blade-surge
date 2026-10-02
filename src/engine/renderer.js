@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { lobbyCameraPosition, lobbyCompositionShift } from './lobby-camera.js';
 import { LobbySightline } from './lobby-sightline.js';
 import { battleCameraOffset } from './camera-control.js';
+import { fitBattleCameraOffset, minimumBattleAspect } from './battle-aspect-fit.js';
 import { BattleOcclusion } from './battle-occlusion.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -83,6 +84,7 @@ export class Renderer {
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 120);
     this.camera.position.set(0, 12, 12);
     this.quality = 'high';
+    this.battleMinimumAspect = 0;
     this.pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
 
     // 카메라 리그
@@ -159,7 +161,10 @@ export class Renderer {
     const rig = this.rig; rig.preset = CAMERA_PRESETS[name] ? name : 'auto';
     if (rig.preset !== 'auto') Object.assign(rig.base, CAMERA_PRESETS[rig.preset]);
   }
-  setBattleVisual(visual = null) {
+  setBattleVisual(visual = null, stage = null) {
+    // Always reset before the optional camera early return; visual profiles can
+    // be shared by standard/deep routes and cannot own this scope.
+    this.battleMinimumAspect = minimumBattleAspect(stage);
     this.battleVisual = visual;
     const c = visual?.camera;
     if (!c) return;
@@ -201,7 +206,8 @@ export class Renderer {
       const off = rig.offset.clone();
       off.x += rig.side + (rig.environmentSide || 0);   // 지역마다 전투 중심을 여는 비대칭 구도
       const controlled = battleCameraOffset(off, this.battleCamera);
-      off.set(controlled.x, controlled.y, controlled.z);
+      const fitted = fitBattleCameraOffset(controlled, rig.lookOffset, cam.aspect, this.battleMinimumAspect);
+      off.set(fitted.x, fitted.y, fitted.z);
       desired = rig.target.clone().add(off);
       this._applyFov(realDt);
       rig.pos.lerp(desired, 1 - Math.exp(-realDt * rig.lag));
