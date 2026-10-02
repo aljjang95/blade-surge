@@ -1,10 +1,11 @@
 import { expect, test } from 'bun:test';
-import { Scene, Vector3 } from 'three';
+import { Group, Scene, Vector3 } from 'three';
 import { buildExpeditionStage, buildExpeditionWorld, expeditionRoster } from '../src/game/expedition-combat.js';
 import { createRouteObjectives } from '../src/game/route-objectives.js';
 import { AstralConstellations } from '../src/game/astral-constellations.js';
 import { Battle } from '../src/game/battle-base.js';
 import { Player } from '../src/game/player.js';
+import { Actor } from '../src/game/actor.js';
 import { Economy } from '../src/game/economy.js';
 import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
 
@@ -56,6 +57,43 @@ function select(f: Fixture, id: string, index = f.route.progress) {
 }
 function restore(f: Fixture, index = f.route.progress) { defend(f, f.route.gates[index].room.id); const gate = read(f, index); select(f, gate.answer, index); return gate; }
 function cell(world: any, point: any) { return Math.floor(point.z - world.minZ) * world.cols + Math.floor(point.x - world.minX); }
+
+function deathActor(f: Fixture, room: any) {
+  // No asset loading: production Actor.update, pose and hit feedback operate on
+  // fresh render groups against the real route and Floor from this fixture.
+  const actor: any = Object.create(Actor.prototype), root = new Group(), model = new Group(), motionRoot = new Group();
+  root.add(motionRoot); motionRoot.add(model); root.position.set(room.x, 0, room.z);
+  Object.assign(actor, { game: f.g, root, model, motionRoot, pos: root.position, mixer: { update: noop },
+    vel: new Vector3(), kb: new Vector3(), rig: { hover: 0 }, radius: .7, yaw: 0, stun: 0, slowT: 0,
+    invuln: 0, mats: [], flashT: 0, deathT: 0, alive: false, dead: false, homeRoom: room });
+  return actor;
+}
+
+test('quiet station hides its defeated model through Actor.update while normal sink and removal eligibility continue', () => {
+  const f = fixture(), gate = f.route.gates[0], corpse = deathActor(f, gate.room);
+  corpse.update(.05); expect(corpse.model.visible).toBe(true); expect(corpse.deathT).toBe(.05);
+  defend(f, gate.room.id); f.g.player.pos.copy(gate.pos); f.g.updateExpedition(.05);
+  expect(gate.available).toBe(true); expect(f.route.read).toBe(.05);
+  const progress = f.route.progress, kills = f.g.kills, rewardCount = f.drops.length;
+  corpse.update(.05); expect(corpse.model.visible).toBe(false); expect(corpse.alive).toBe(false);
+  expect(corpse.deathT).toBe(.1); expect(corpse.dead).toBe(false);
+  corpse.update(1.2); expect(corpse.pos.y).toBeCloseTo(-.15); expect(corpse.dead).toBe(false);
+  corpse.update(1.11); expect(corpse.dead).toBe(true); expect(corpse.model.visible).toBe(false);
+  expect(f.route.progress).toBe(progress); expect(f.g.kills).toBe(kills); expect(f.drops.length).toBe(rewardCount);
+});
+
+test('corpse presentation leaves alive actors, other rooms, combat, closed and unrelated routes visible', () => {
+  const f = fixture(), gate = f.route.gates[0]; defend(f, gate.room.id); read(f);
+  const live = deathActor(f, gate.room); live.alive = true; live.deathT = -1;
+  live.update(.05); expect(live.model.visible).toBe(true);
+  const remote = deathActor(f, f.world.rooms[2]); remote.update(.05); expect(remote.model.visible).toBe(true);
+  f.route.interrupt(); const interrupted = deathActor(f, gate.room);
+  interrupted.update(.05); expect(interrupted.model.visible).toBe(true);
+  read(f); f.route.stop(); const closed = deathActor(f, gate.room);
+  closed.update(.05); expect(closed.model.visible).toBe(true);
+  f.g.routeObjectives = { update: noop }; const unrelated = deathActor(f, gate.room);
+  unrelated.update(.05); expect(unrelated.model.visible).toBe(true); expect(unrelated.deathT).toBe(.05);
+});
 
 test('only solo standard Astral has four distinct stations; other modes and deep keep their existing contract', () => {
   const f = fixture(), base = f.g.stage;

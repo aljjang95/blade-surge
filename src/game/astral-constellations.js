@@ -72,6 +72,12 @@ export class AstralConstellations {
   // Generic frost disks must not turn a cleared station into an unannounced
   // damage test. Live enemies still suspend all interaction and visual clues.
   ownsHazards(room) { return !this.closed && this.gates.some(g => g.room === room && g.ready && !g.attuned); }
+  // A defeated model must not cover the hero's feet while a quiet station is
+  // readable. Actor keeps its normal death clock, sink and disposal lifecycle.
+  hidesCorpse(enemy) {
+    const gate = this.gates[this.#progress];
+    return !this.closed && enemy?.alive === false && !!gate?.ready && !!gate.available && enemy.homeRoom === gate.room;
+  }
   async prepareView(scene) {
     if (this.closed || this.view) return;
     if (!this.#viewPromise) this.#viewPromise = (async () => {

@@ -34,7 +34,7 @@ const report = { status: 'running', releaseApproved: false, base: '0cf61344eccfa
 const qa = await createExpeditionQa({ root, driver: import.meta.filename, report,
   sourceFiles: ['tools/astral-constellation-qa.mjs', 'tools/expedition-qa-runtime.mjs', 'tools/conquest-media-observer.mjs', 'tools/qa-media-checkpoints.mjs',
     'src/game/astral-constellations.js', 'src/game/astral-constellation-view.js', 'src/data/route-objectives.js',
-    'src/engine/renderer.js', 'src/engine/battle-aspect-fit.js', 'src/game/battle-base.js', 'src/ui/ui.js', 'src/ui/mobile-combat.css'] });
+    'src/engine/renderer.js', 'src/engine/battle-aspect-fit.js', 'src/game/battle-base.js', 'src/game/actor.js', 'src/ui/ui.js', 'src/ui/mobile-combat.css'] });
 const out = qa.out;
 let page, lastHp = null, observedDamage = 0;
 const saveReport = qa.save;
@@ -85,6 +85,10 @@ const snapshot = () => page.evaluate(() => {
       x: enemy.pos.x, z: enemy.pos.z, distance: Math.hypot(enemy.pos.x - p.pos.x, enemy.pos.z - p.pos.z),
       state: enemy.state, spawning: !!enemy.spawning,
     })),
+    currentRoomCorpses: g.enemies.filter(enemy => !enemy.alive && enemy.homeRoom === current?.room).map(enemy => ({
+      id: enemy.root?.uuid, modelId: enemy.model?.uuid, modelName: enemy.def?.model,
+      homeRoomId: enemy.homeRoom.id, alive: enemy.alive, deathT: enemy.deathT, modelVisible: enemy.model.visible,
+    })),
   };
 });
 async function focusGameplay() { const evidence = await nativeGameplayFocus(page); report.events.push({ label: 'native gameplay canvas focus', evidence }); return evidence; }
@@ -102,6 +106,12 @@ async function renderCurrentFrame(label) {
   }
   for (const key of ['currency', 'result', 'cds']) assert(JSON.stringify(after[key]) === JSON.stringify(before[key]), `${label}: rendering changed ${key}`);
   assert(after.pos.x === before.pos.x && after.pos.z === before.pos.z, `${label}: drawing moved the actor`);
+  assert(JSON.stringify(after.currentRoomCorpses) === JSON.stringify(before.currentRoomCorpses), `${label}: drawing changed corpse state`);
+  if (after.current?.available) {
+    assert(after.currentRoomCorpses.every(enemy => enemy.modelVisible === false), `${label}: readable quiet station retained a foot-covering defeated model`);
+    report.required.quietCorpsePresentation ||= { observed: [], scope: 'Actual defeated current-room models are hidden without advancing their death clocks for the screenshot. Empty observations alone do not prove corpse coverage.' };
+    if (after.currentRoomCorpses.length) report.required.quietCorpsePresentation.observed.push({ label, elapsed: after.elapsed, corpses: after.currentRoomCorpses });
+  }
   report.events.push({ label: 'current GPU frame for ' + label, before, after });
   await saveReport();
   return after;
