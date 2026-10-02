@@ -7,7 +7,8 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { launchOpts } from './chrome.mjs';
-import { installConquestMediaObserver, classifyMediaCancellations } from './conquest-media-observer.mjs';
+import { installConquestMediaObserver } from './conquest-media-observer.mjs';
+import { assessMediaObservations, createMediaCheckpoints } from './qa-media-checkpoints.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const argument = name => process.argv.find(v => v.startsWith(`--${name}=`))?.slice(name.length + 3);
@@ -21,20 +22,23 @@ await fs.mkdir(out); // Preserve every prior run; an existing output directory i
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const assert = (condition, message) => { if (!condition) throw Error(message); };
 const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
-const files = ['src/game/run-history.js', 'src/game/masterworks-core.js', 'src/game/masterworks-battle.js', 'src/ui/masterworks.js', 'src/ui/ui.js', 'src/expansion/hub.jsx', 'tools/replayability-qa.mjs', 'tools/conquest-media-observer.mjs'];
+const files = ['src/game/run-history.js', 'src/game/masterworks-core.js', 'src/game/masterworks-battle.js', 'src/ui/masterworks.js', 'src/ui/ui.js', 'src/expansion/hub.jsx', 'tools/replayability-qa.mjs', 'tools/conquest-media-observer.mjs', 'tools/qa-media-checkpoints.mjs'];
 const report = { status: 'running', started: new Date().toISOString(), head,
   scope: 'Exact clean production build at local preview or the fixed release origin; fresh isolated save and normal UI choices. Fixed 1/60s app.step replaces wall-clock pacing only. First departure uses native J input then native AUTO; later departures use persisted AUTO. Actual victories, local records, reload and the existing same-route retry button. No physical phone, manual victory, long-term retention or AAA-completion proof.',
   sources: Object.fromEntries(await Promise.all(files.map(async file => [file, hash(await fs.readFile(path.join(root, file)))]))),
-  runs: [], errors: [], requestFailures: [], httpErrors: [], media: [] };
+  runs: [], errors: [], requestFailures: [], httpErrors: [], media: [], mediaCheckpointDiagnostics: [], documents: [] };
 const save = () => fs.writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
 await fs.copyFile(import.meta.filename, path.join(out, 'driver.mjs')); await save();
 await fs.copyFile(path.join(root, 'tools/conquest-media-observer.mjs'), path.join(out, 'media-observer.mjs'));
-let server, browser, documentId = 0;
+await fs.copyFile(path.join(root, 'tools/qa-media-checkpoints.mjs'), path.join(out, 'media-checkpoints.mjs'));
+let server, browser, checkpoints, functionalComplete = false, documentId = 0;
 
 async function boot(page, url, reload = false) {
+  if (reload) await checkpoints.beforeNavigation(documentId);
   documentId++; // Each native navigation creates a new media-observer document lifetime.
   if (reload) await page.reload({ waitUntil: 'domcontentloaded', timeout: 120000 });
   else await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
+  await checkpoints.bindDocument(documentId);
   if (await page.locator('#btn-ignore-rotate').isVisible()) await page.locator('#btn-ignore-rotate').click();
   await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 }); await page.locator('#boot-start').click();
   await page.waitForFunction(() => window.app?.mode === 'lobby' && !document.querySelector('#boot.show'), null, { timeout: 120000 });
@@ -176,8 +180,10 @@ try {
   const page = await context.newPage(); page.setDefaultTimeout(30000); await page.addInitScript(installConquestMediaObserver);
   page.on('pageerror', e => report.errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') report.errors.push(m.text()); });
+  checkpoints = createMediaCheckpoints(page, report.media, report.mediaCheckpointDiagnostics, report.documents);
   const requests = new Map();
-  page.on('request', request => requests.set(request, { engine: 'chromium', documentId, url: request.url(),
+  page.on('request', request => requests.set(request, { engine: 'chromium', documentId,
+    documentTimeOrigin: report.documents.find(document => document.documentId === documentId)?.timeOrigin ?? null, url: request.url(),
     type: request.resourceType(), range: request.headers().range || null, started: Date.now() }));
   page.on('response', response => {
     const request = response.request(), row = requests.get(request), timing = request.timing();
@@ -191,8 +197,10 @@ try {
     if (row) Object.assign(row, { started: timing.startTime, timing,
       failedAt: timing.responseEnd >= 0 ? timing.startTime + timing.responseEnd : Date.now(),
       nodeFailureAt: Date.now(), error: request.failure()?.errorText });
-    report.requestFailures.push(row || { engine: 'chromium', documentId, url: request.url(),
-      error: request.failure()?.errorText, failedAt: Date.now() });
+    const failed = row || { engine: 'chromium', documentId, url: request.url(),
+      error: request.failure()?.errorText, failedAt: Date.now() };
+    report.requestFailures.push(failed);
+    checkpoints.capture(failed.documentId, 'native-requestfailed', failed.documentTimeOrigin ?? null);
   });
   await boot(page, url);
   report.initial = await page.evaluate(() => ({ selected: window.app.eco.s.selected, history: window.app.eco.s.masterworks.history.length, purchases: window.app.eco.s.purchases, spentKRW: window.app.eco.s.spentKRW }));
@@ -203,7 +211,7 @@ try {
   await page.locator('#btn-auto').click();
   const first = await complete(page, 'mixed'); report.firstJournal = await inspectJournal(page, first, true);
   const saved = await page.evaluate(() => structuredClone(window.app.eco.s.masterworks.history));
-  report.media.push({ engine: 'chromium', documentId, snapshot: await page.evaluate(() => window.__conquestMedia.snapshot()) });
+  await checkpoints.capture(documentId, 'normal-ui-checkpoint');
   await boot(page, url, true);
   report.reload = await page.evaluate(() => structuredClone(window.app.eco.s.masterworks.history));
   assert(JSON.stringify(report.reload) === JSON.stringify(saved), 'History changed on reload');
@@ -220,31 +228,29 @@ try {
   assert(report.retry.route.id === 'glass_garden' && report.retry.route.depth === 'standard' && !report.retry.route.conquestId && !report.retry.riftId, 'Retry changed the native destination');
   assert(report.retry.pending?.energy === 4 && report.retry.pending.id === before.seq + 1 && report.retry.energy === before.energy - 4, 'Existing retry did not charge its displayed catalog price exactly once');
   assert(JSON.stringify(report.retry.history) === JSON.stringify(before.history), 'Departure created a completed record or repaid a result');
-  report.media.push({ engine: 'chromium', documentId, snapshot: await page.evaluate(() => window.__conquestMedia.snapshot()) });
+  await checkpoints.capture(documentId, 'normal-ui-checkpoint');
   await boot(page, url, true);
   report.unfinishedReload = await page.evaluate(() => ({ energy: window.app.eco.s.energy, history: structuredClone(window.app.eco.s.masterworks.history), pending: window.app.expedition.s.pending }));
   assert(report.unfinishedReload.energy === before.energy && report.unfinishedReload.pending === null && JSON.stringify(report.unfinishedReload.history) === JSON.stringify(before.history), 'Unfinished native retry did not refund once without inventing completion');
   await boot(page, url, true);
   const again = await page.evaluate(() => ({ energy: window.app.eco.s.energy, history: structuredClone(window.app.eco.s.masterworks.history) }));
   assert(again.energy === report.unfinishedReload.energy && JSON.stringify(again.history) === JSON.stringify(before.history), 'Repeated reload duplicated refund or records');
-  report.media.push({ engine: 'chromium', documentId, snapshot: await page.evaluate(() => window.__conquestMedia.snapshot()) });
-  // Observer track IDs reset on a native reload. Preserve each actual document's
-  // identity rather than treating two independent lifetimes as duplicate instances.
-  // All failures remain subject to the unchanged strict lifecycle classifier.
-  report.mediaCancellations = { classified: [], unresolved: [], documents: [] };
-  for (const id of new Set(report.requestFailures.map(request => request.documentId))) {
-    const failures = report.requestFailures.filter(request => request.documentId === id);
-    const snapshots = report.media.filter(media => media.documentId === id);
-    const result = classifyMediaCancellations(failures, snapshots);
-    report.mediaCancellations.documents.push({ documentId: id, ...result });
-    report.mediaCancellations.classified.push(...result.classified);
-    report.mediaCancellations.unresolved.push(...result.unresolved);
-  }
-  assert(report.errors.length === 0 && report.httpErrors.length === 0 && report.mediaCancellations.unresolved.length === 0, 'Unresolved browser/runtime/network failures');
-  report.status = 'pass';
+  await checkpoints.capture(documentId, 'normal-ui-checkpoint');
+  await checkpoints.drain();
+  functionalComplete = true; report.status = 'functional-pass-pending-final-observation';
 } catch (error) {
   report.status = 'fail'; report.failure = String(error?.stack || error); process.exitCode = 1;
 } finally {
-  await browser?.close(); await new Promise(resolve => server?.httpServer.close(resolve) || resolve());
+  // Preserve observations arriving during cleanup, then classify the complete
+  // collected failure set. A late failure cannot retain an earlier PASS.
+  try { await checkpoints?.drain(); await browser?.close(); await checkpoints?.drain(); }
+  catch (error) { report.errors.push('QA cleanup: ' + String(error?.stack || error)); }
+  await new Promise(resolve => server?.httpServer.close(resolve) || resolve());
+  const assessment = assessMediaObservations(report); report.mediaCancellations = assessment.mediaCancellations;
+  if (functionalComplete) {
+    const passed = assessment.passed;
+    report.status = passed ? 'pass' : 'fail';
+    if (!passed) { report.failure = 'Unresolved browser/runtime/network or document-observation failures'; process.exitCode = 1; }
+  }
   report.finished = new Date().toISOString(); await save(); console.log(JSON.stringify({ status: report.status, path: path.join(out, 'report.json'), failure: report.failure }));
 }
