@@ -26,3 +26,13 @@ export function fitBattleCameraOffset(offset, lookOffset, aspect, minimumAspect 
     y: lookOffset.y + (offset.y - lookOffset.y) * scale,
     z: lookOffset.z + (offset.z - lookOffset.z) * scale };
 }
+
+// Resize the current pose along the same optical ray before the next input
+// frame. Ratio one preserves the exact object/values, including quality resizes.
+export function refitBattleCameraPosition(position, look, fromAspect, toAspect, minimumAspect = 0) {
+  const ratio = battleAspectScale(toAspect, minimumAspect) / battleAspectScale(fromAspect, minimumAspect);
+  if (ratio === 1) return position;
+  return { x: look.x + (position.x - look.x) * ratio,
+    y: look.y + (position.y - look.y) * ratio,
+    z: look.z + (position.z - look.z) * ratio };
+}

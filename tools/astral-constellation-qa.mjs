@@ -30,7 +30,7 @@ const report = { status: 'running', releaseApproved: false, base: '0cf61344eccfa
   saveSha256: qaHash(bytes), acquisition: { path: acquisitionPath, sha256: qaHash(acquisitionBytes), head: acquisition.head,
     build: acquisition.build, runs: acquisition.runs.length, nativeSave: acquisition.earnedSave },
   scope: 'Exact clean committed production preview/fixed release, restored exact naturally-earned free-Knight native save, actual standard dungeon UI admission, production AUTO combat/choices and keyboard input. Fixed 50ms app.step clock only. Reads displayed HUD clues; native RAF settles production camera rendering after actual resize with no simulation ticks and exact world-state invariants; no hidden station answers/secrets, actor position/HP/enemy/room/progress/seal/unlock writes. Not a fresh-account Astral clear, physical phone, visual approval or FPS benchmark.',
-  required: {}, events: [], coverage: { damageDuringSelection: 'NOT_OBSERVED', physicalPhone: 'NOT_RUN', formalMetrics: 'NOT_RUN', visualApproval: 'NOT_RUN' } };
+  required: {}, events: [], coverage: { damageDuringSelection: 'NOT_OBSERVED', neighborCombatInterruption: 'NOT_OBSERVED', damageAfterCombatInterruption: 'NOT_OBSERVED', readRecoveryAfterCombat: 'NOT_OBSERVED', physicalPhone: 'NOT_RUN', formalMetrics: 'NOT_RUN', visualApproval: 'NOT_RUN' } };
 const qa = await createExpeditionQa({ root, driver: import.meta.filename, report,
   sourceFiles: ['tools/astral-constellation-qa.mjs', 'tools/expedition-qa-runtime.mjs', 'tools/conquest-media-observer.mjs', 'tools/qa-media-checkpoints.mjs',
     'src/game/astral-constellations.js', 'src/game/astral-constellation-view.js', 'src/data/route-objectives.js',
@@ -76,6 +76,15 @@ const snapshot = () => page.evaluate(() => {
     report: g.result?.routeObjective, result: g.result && { win: g.result.win, paid: !!g.result.expeditionReceipt?.ok },
     currency: { gold: app.eco.s.gold, gems: app.eco.s.gems, energy: app.eco.s.energy },
     stats: app.expedition.s.stats.astral_leviathan_spire, ticket: app.expeditionTicket?.id,
+    // Public Floor/actor observations only; never read a hidden station answer.
+    currentRoomId: g.curRoom?.id, hazardHits: g.hazards?.hits ?? 0,
+    neighborRooms: (current?.room.links || []).map(id => g.world.rooms.find(room => room.id === id)).filter(Boolean)
+      .map(room => ({ id: room.id, type: room.type, x: room.x, z: room.z, cleared: room.cleared, spawned: room.spawned })),
+    combatEnemies: g.enemies.filter(enemy => enemy.alive).map(enemy => ({
+      id: enemy.root?.uuid, name: enemy.def?.name, homeRoomId: enemy.homeRoom?.id,
+      x: enemy.pos.x, z: enemy.pos.z, distance: Math.hypot(enemy.pos.x - p.pos.x, enemy.pos.z - p.pos.z),
+      state: enemy.state, spawning: !!enemy.spawning,
+    })),
   };
 });
 async function focusGameplay() { const evidence = await nativeGameplayFocus(page); report.events.push({ label: 'native gameplay canvas focus', evidence }); return evidence; }
@@ -145,6 +154,12 @@ async function viewport(width, height, label) {
   report.events.push({ label: 'actual native RAF camera resize settling', visualClock, before, after });
   await focusGameplay(); return renderCurrentFrame(label);
 }
+async function nativeOfferedChoice() {
+  const offered = page.locator('#masterworks[open] .mw-choices button:not([disabled]), #masterworks[open] .mw-story-choices button:not([disabled])').first();
+  if (!await offered.isVisible()) return false;
+  report.events.push({ label: 'native offered growth/story choice', text: await offered.innerText() });
+  await offered.click(); await focusGameplay(); return true;
+}
 async function until(predicate, budget, label, allowPendingVictory = false) {
   // This is input/function QA, not a frame benchmark. Every simulation tick
   // still runs; expensive software draws during AUTO are sampled, and every
@@ -153,13 +168,7 @@ async function until(predicate, budget, label, allowPendingVictory = false) {
   for (let i = 0; i < budget; i++) {
     const s = await steps(1, i % renderEvery === 0);
     if (predicate(s)) return renderCurrentFrame(label);
-    if (s.paused) {
-      const offered = page.locator('#masterworks[open] .mw-choices button:not([disabled]), #masterworks[open] .mw-story-choices button:not([disabled])').first();
-      if (await offered.isVisible()) {
-        report.events.push({ label: 'native offered growth/story choice', text: await offered.innerText() });
-        await offered.click(); await focusGameplay(); continue;
-      }
-    }
+    if (s.paused && await nativeOfferedChoice()) continue;
     const waitingForPaidWin = allowPendingVictory && s.result?.win === true && !s.result.paid && s.hp > 0;
     if ((!s.active || !(s.hp > 0)) && !waitingForPaidWin) throw Error(`${label}: expedition ended naturally before the required observation`);
     if (i % 120 === 0) { report.lastCheckpoint = { label, tick: i, state: s }; await saveReport(); }
@@ -170,7 +179,7 @@ async function auto(on) {
   if ((await snapshot()).auto !== on) await page.locator('#btn-auto').click();
   await focusGameplay(); assert((await snapshot()).auto === on, 'AUTO UI did not change production mode');
 }
-async function navigate(point, label, arrival = .4) {
+async function navigate(point, label, arrival = .4, observe = null) {
   const initial = (await snapshot()).pos; let held = [];
   try {
     for (let i = 0; i < 1800; i++) {
@@ -190,12 +199,14 @@ async function navigate(point, label, arrival = .4) {
         await page.keyboard.down(key); const accepted = await nativeInputObservation(page);
         assert(accepted.input.keys['Key' + key.toUpperCase()] && !accepted.focus.blocked, `${label}: real movement keydown was ignored`);
       }
-      held = keys; const s = await steps(1, i % 10 === 0); assert(s.active && s.hp > 0, `${label}: natural death during movement`);
+      held = keys; const s = await steps(1, i % 10 === 0); if (observe) await observe(s);
+      assert(s.active && s.hp > 0, `${label}: natural death during movement`);
       if (i % 100 === 0) { report.lastCheckpoint = { label, tick: i, nav, state: s }; await saveReport(); }
       if (i === 1799) throw Error(`${label}: actual keyboard movement failed to reach Floor target`);
     }
   } finally { for (const key of held) await page.keyboard.up(key); }
   const s = await steps(1), travel = Math.hypot(s.pos.x - initial.x, s.pos.z - initial.z);
+  if (observe) await observe(s);
   assert(Math.hypot(s.pos.x - point.x, s.pos.z - point.z) < (arrival > 1 ? 1.2 : .9), `${label}: keyboard input did not reach advertised pad`);
   report.events.push({ label, source: 'Playwright keyboard -> production Input -> Player -> Floor', travel, state: s });
   return s;
@@ -231,6 +242,96 @@ async function actionInterrupt(key, allowedStates, label) {
   assert(action.progress === 0 && action.read === 0 && action.hold === 0, `${label}: action failed to reset current read/choice`);
   report.required[label] = { partial, beforeInput, keyDown, action, keyUp };
   await until(s => ['idle', 'move'].includes(s.state), 160, `${label} real recovery`);
+}
+async function nativeNeighborCombat() {
+  await auto(false);
+  let s = await freshRead();
+  await navigate(visibleClue(s).pad, 'neighbor proof incomplete correct-pad approach', 1.17);
+  const partial = await partialChoice('neighbor proof actual partial hold');
+  const station = partial.current, priorProgress = partial.progress;
+  // Prefer the public treasure neighbor: a connected, unsealed room whose
+  // normal admission spawns its own roster. No room/spawn/actor state writes.
+  const neighbor = partial.neighborRooms.filter(room => !room.cleared && !['start', 'boss'].includes(room.type))
+    .sort((a, b) => Number(b.type === 'treasure') - Number(a.type === 'treasure') ||
+      Math.hypot(a.x - station.pos.x, a.z - station.pos.z) - Math.hypot(b.x - station.pos.x, b.z - station.pos.z))[0];
+  assert(neighbor, 'No real connected uncleared nonboss neighbor for natural combat proof');
+  const evidence = report.required.neighborCombat = { partial, neighbor, priorProgress,
+    scope: 'Native movement after partial hold -> public connected Floor room admission -> actual foreign-room alive enemy within22m blocks clue/pads/HUD -> real HP loss after combat interruption -> native AUTO cleanup and fresh read. Movement may reset the attempt before combat; this does not prove damage during selection or late-hold cancellation.',
+    movementReset: null, interrupted: null, damageAfterInterruption: null, recovered: null };
+  report.events.push({ label: 'native neighboring-room proof begins', evidence }); await saveReport();
+  let previous = partial;
+  const observe = async state => {
+    let changed = false;
+    assert(state.progress === priorProgress && state.current?.stationId === station.stationId && state.sealed,
+      'Neighbor combat proof unexpectedly restored a station or opened the boss seal');
+    const foreign = state.combatEnemies.filter(enemy => enemy.homeRoomId === neighbor.id && enemy.distance <= 22 && !enemy.spawning);
+    if (!evidence.movementReset && previous.hold > 0 && state.hold === 0 && !foreign.length) {
+      evidence.movementReset = { before: previous, after: state,
+        classification: 'Actual native movement left the pad/station before observed combat; not a combat-caused partial-hold reset' }; changed = true;
+    }
+    if (foreign.length) {
+      assert(state.phase === 'combat' && state.current.available === false && state.read === 0 && state.hold === 0 &&
+        state.clueVisible === false && state.padsVisible.length === 3 && state.padsVisible.every(visible => visible === false) &&
+        /전투 중.*단서 중단/.test(state.hud || ''), 'Actual foreign-room combat did not suspend clue/pads/HUD/read/hold together');
+      if (!evidence.interrupted) {
+        evidence.interrupted = { before: previous, after: state, actualForeignEnemies: foreign,
+          classification: 'Actual foreign-room alive enemy within22m; may follow an earlier movement reset' };
+        report.coverage.neighborCombatInterruption = 'OBSERVED'; changed = true;
+      }
+      // A frost hit in the neighboring room is not promoted to an enemy hit.
+      // No hurt callback is replaced and no HP, invulnerability or actor is written.
+      if (evidence.interrupted && evidence.interrupted.after.elapsed < state.elapsed && previous.phase === 'combat' &&
+          previous.read === 0 && previous.hold === 0 && !evidence.damageAfterInterruption &&
+          state.hp < previous.hp && state.hazardHits === previous.hazardHits) {
+        evidence.damageAfterInterruption = { before: previous, after: state, hpLost: previous.hp - state.hp,
+          classification: 'Native HP loss after actual combat interruption with no increase in region-hazard hits; exact attacker not asserted. Not damage during selection.' };
+        report.coverage.damageAfterCombatInterruption = 'OBSERVED'; changed = true;
+      }
+    }
+    previous = state;
+    if (changed) await saveReport();
+    // The treasure neighbor may expose a normal boon/story during companion
+    // combat. Resolve only an actual offered native control, never unpause by
+    // changing Battle state; an unrelated pause remains a real failed attempt.
+    if (state.paused) assert(await nativeOfferedChoice(), 'Unexpected pause without an actual offered choice during neighbor proof');
+  };
+  // Existing native keyboard -> Input -> Player -> Floor navigation owns every
+  // movement. Actual roomAt/enterRoom and its native delayed spawns own admission.
+  s = await navigate(neighbor, 'native connected neighboring-room admission', .4, observe);
+  assert(s.currentRoomId === neighbor.id && s.neighborRooms.some(room => room.id === neighbor.id && room.spawned),
+    'Native movement did not admit/spawn the real connected neighbor');
+  for (let tick = 0; tick < 240 && !(evidence.interrupted && evidence.damageAfterInterruption); tick++) {
+    s = await steps(1, tick % 10 === 0); await observe(s);
+    assert(s.active && s.hp > 0, 'Natural neighboring combat killed the earned character before proof');
+    if (tick % 40 === 0) { report.lastCheckpoint = { label: 'actual neighboring combat/HP loss', tick, state: s }; await saveReport(); }
+  }
+  assert(evidence.interrupted && evidence.damageAfterInterruption,
+    'No native foreign-room combat interruption plus subsequent non-frost HP loss observed in bounded12seconds; coverage remains incomplete');
+  s = await renderCurrentFrame('actual neighboring combat interruption and subsequent HP loss');
+  await page.screenshot({ path: path.join(out, '03-native-neighbor-combat.png') });
+  // Let normal combat and AUTO eliminate the activated enemy group and return
+  // to the same unfinished station. Observe each actual tick, then switch AUTO
+  // off on the FIRST available read frame, before any correct-pad completion.
+  await auto(true);
+  s = await until(state => {
+    assert(state.progress === priorProgress && state.sealed, 'AUTO restored the station before native read-recovery evidence');
+    const neighborCleared = state.neighborRooms.some(room => room.id === neighbor.id && room.cleared);
+    return neighborCleared && !state.combatEnemies.some(enemy => enemy.homeRoomId === neighbor.id) &&
+      state.current?.stationId === station.stationId && state.current.available && state.phase === 'read' && state.read > 0;
+  }, 12000, 'natural neighbor cleanup and first-station read recovery');
+  await auto(false); const recoveryStart = s;
+  s = await freshRead();
+  assert(s.progress === priorProgress && s.sealed && s.read >= 1 && s.hold === 0 && s.clueVisible && s.padsVisible.every(Boolean) &&
+    !s.combatEnemies.some(enemy => enemy.homeRoomId === station.roomId || enemy.distance <= 22),
+    'Fresh clue did not recover from actual neighboring combat without prior-progress loss');
+  assert(s.neighborRooms.some(room => room.id === neighbor.id && room.cleared) &&
+    !s.combatEnemies.some(enemy => enemy.homeRoomId === neighbor.id), 'Activated neighbor was not actually cleared by native combat');
+  evidence.recovered = { firstAvailableRead: recoveryStart, freshClue: s, actualNeighborCleared: true };
+  report.coverage.readRecoveryAfterCombat = 'OBSERVED';
+  // Keep the original stricter gate explicit. Neither moving off a pad nor a
+  // hit after combat already suspended the attempt proves last-hold damage.
+  assert(report.coverage.damageDuringSelection === 'NOT_OBSERVED', 'Neighbor proof relabeled unobserved selection damage');
+  report.events.push({ label: 'native neighboring combat and read recovery complete', evidence }); await saveReport();
 }
 async function enterFromUI() {
   await page.locator('#btn-expedition').click(); await page.locator('[data-section="dungeons"]').click();
@@ -271,6 +372,7 @@ try {
   s = await freshRead(); await navigate(visibleClue(s).pad, 'pause partial correct choice', 1.17); const partial = await partialChoice('pause incomplete manual hold');
   await page.locator('#btn-pause').click(); s = await steps(20); assert(s.paused && s.hold === 0 && s.read === 0, 'Actual pause did not reset choice');
   report.required.pause = { partial, paused: s }; await page.locator('#btn-resume').click(); await focusGameplay();
+  await nativeNeighborCombat();
   s = await freshRead(); await navigate(visibleClue(s).pad, 'actual correct-pad movement', 1.17);
   s = await until(s => s.progress === 1, 60, 'manual correct selection'); assert(s.sealed && s.nonbossRemaining > 0, '1/4 opened boss seal');
   report.required.manualCorrect = s; await page.screenshot({ path: path.join(out, '04-restored-1-of-4.png') });

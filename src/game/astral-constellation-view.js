@@ -61,7 +61,7 @@ export class AstralConstellationView {
         // Keep each panel outside its circle. The near B circle's panel
         // sits to its left, clearing both the bottom potion HUD and hero feet.
         const text = pad.id === 'circle'
-          ? label(padRoot, -2.8, 2.25, 0, 2.35, .80, true)
+          ? label(padRoot, -2.8, 1.0, 0, 2.35, .80, true)
           : label(padRoot, 0, 2.25, -1.75, 2.35, .80, true);
         return { root: padRoot, outline, glyph, material, text, choiceIndex };
       });

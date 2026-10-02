@@ -1,6 +1,6 @@
 import { expect, spyOn, test } from 'bun:test';
 import * as THREE from 'three';
-import { battleAspectScale, fitBattleCameraOffset, minimumBattleAspect } from '../src/engine/battle-aspect-fit.js';
+import { battleAspectScale, fitBattleCameraOffset, minimumBattleAspect, refitBattleCameraPosition } from '../src/engine/battle-aspect-fit.js';
 import { battleCameraOffset } from '../src/engine/camera-control.js';
 import { Renderer } from '../src/engine/renderer.js';
 import { Battle } from '../src/game/battle-base.js';
@@ -77,6 +77,53 @@ function rendererFixture() {
     u:Object.fromEntries(['uFlash','uAberr','uRadial','uDesat','uTime'].map(key=>[key,{value:0}]))
   }); return renderer;
 }
+
+function nativeResizeFixture(r:any, width:number, height:number) {
+  const globals = ['window', 'document', 'navigator'];
+  const descriptors = globals.map(key => Object.getOwnPropertyDescriptor(globalThis, key));
+  const values = [{innerWidth:width,innerHeight:height,devicePixelRatio:1,matchMedia:()=>({matches:false})},
+    {documentElement:{style:{setProperty:noop}}}, {maxTouchPoints:0}];
+  if (!r.r) {
+    let ratio = 1;
+    r.r = {setPixelRatio:(value:number)=>{ratio=value;},getPixelRatio:()=>ratio,setSize:noop};
+    r.composer = {setPixelRatio:noop,setSize:noop};
+    r.lobbyAA = {uniforms:{resolution:{value:new THREE.Vector2()}}};
+    r.bloom = {resolution:new THREE.Vector2(),setSize:noop}; r.quality='high';
+  }
+  try {
+    globals.forEach((key,i)=>Object.defineProperty(globalThis,key,{value:values[i],configurable:true}));
+    r.resize(true);
+  } finally {
+    globals.forEach((key,i)=>{
+      if (descriptors[i]) Object.defineProperty(globalThis,key,descriptors[i]!);
+      else delete (globalThis as any)[key];
+    });
+  }
+}
+
+test('native resize fits both live rig and camera before input and next lag frame, with exact disabled identity', () => {
+  const r=rendererFixture(); r.camera.aspect=1.5; r._width=1200; r._height=800;
+  r.setBattleVisual(dungeonVisualFor(standard()),standard());
+  for(let i=0;i<10;i++)r.update(0,1);
+  const original=r.camera.position.clone(),look=r.rig.target.clone().add(r.rig.lookOffset),direction=r.camera.quaternion.clone();
+  const controls={...r.battleCamera},offset=r.rig.offset.clone(),target=r.rig.target.clone();
+  nativeResizeFixture(r,390,844);
+  expect(r.camera.position.distanceTo(look)/original.distanceTo(look)).toBeCloseTo(.8/(390/844),12);
+  expect(r.camera.position.equals(r.rig.pos)).toBe(true);
+  expect(r.camera.quaternion.equals(direction)).toBe(true);
+  const fitted=r.camera.position.clone();r.update(0,1/60);
+  expect(r.camera.position.distanceTo(fitted)).toBeLessThan(1e-8); // Does not pull back into the old cropped pose.
+  nativeResizeFixture(r,390,844);expect(r.camera.position.equals(fitted)).toBe(true);
+  nativeResizeFixture(r,1200,800);expect(r.camera.position.distanceTo(original)).toBeLessThan(1e-10);
+  expect(r.battleCamera).toEqual(controls);expect(r.rig.offset.equals(offset)).toBe(true);expect(r.rig.target.equals(target)).toBe(true);
+  r.battleMinimumAspect=0; const before=r.camera.position.clone();nativeResizeFixture(r,390,844);
+  expect(r.camera.position.equals(before)).toBe(true);expect(r.rig.pos.equals(before)).toBe(true);
+  r.battleMinimumAspect=.8;r.rig.mode='lobby';nativeResizeFixture(r,1200,800);
+  expect(r.camera.position.equals(before)).toBe(true);
+  const point=Object.freeze({x:2,y:9,z:6}),anchor=Object.freeze({x:2,y:1,z:-4});
+  expect(refitBattleCameraPosition(point,anchor,.5,.5,.8)).toBe(point);
+  expect(refitBattleCameraPosition(point,anchor,1.5,.4,0)).toBe(point);
+});
 
 test('renderer pose adapts on portrait/landscape changes without accumulated zoom or threat/input writes', () => {
   const r=rendererFixture(); r.setBattleVisual(dungeonVisualFor(standard()),standard());

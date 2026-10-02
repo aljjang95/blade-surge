@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { lobbyCameraPosition, lobbyCompositionShift } from './lobby-camera.js';
 import { LobbySightline } from './lobby-sightline.js';
 import { battleCameraOffset } from './camera-control.js';
-import { fitBattleCameraOffset, minimumBattleAspect } from './battle-aspect-fit.js';
+import { fitBattleCameraOffset, minimumBattleAspect, refitBattleCameraPosition } from './battle-aspect-fit.js';
 import { BattleOcclusion } from './battle-occlusion.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -142,6 +142,14 @@ export class Renderer {
     this.r.setSize(w, h, false);
     this.composer.setSize(w, h);
     this.lobbyAA.uniforms.resolution.value.set(1 / (w * this.r.getPixelRatio()), 1 / (h * this.r.getPixelRatio()));
+    if (this.rig?.mode === 'battle' && this.battleMinimumAspect > 0) {
+      const look = this.rig.target.clone().add(this.rig.lookOffset);
+      const fitted = refitBattleCameraPosition(this.rig.pos, look, this.camera.aspect, w / h, this.battleMinimumAspect);
+      if (fitted !== this.rig.pos) {
+        this.rig.pos.set(fitted.x, fitted.y, fitted.z);
+        this.camera.position.copy(this.rig.pos);
+      }
+    }
     this.camera.aspect = w / h;
     // 세로 화면이면 시야를 넓혀 전장 확보
     this.camera.fov = (this.rig?.fov ?? 46) + (w < h ? 14 : 0);
