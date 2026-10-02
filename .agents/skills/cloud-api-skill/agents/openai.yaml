@@ -1,0 +1,6 @@
+interface:
+  display_name: "클라우드API스킬"
+  short_description: "Work 클라우드의 ENV·시크릿·MCP·배포 준비를 다른 저장소에도 재사용"
+  default_prompt: "Use $cloud-api-skill to configure this repository for Work cloud with safe credentials and verified setup."
+policy:
+  allow_implicit_invocation: true
