@@ -130,7 +130,7 @@ export class FX {
   _keep(material) {
     // These are the program-affecting features used by this FX module. Color,
     // opacity, texture identity and animation frames are uniforms, not cache keys.
-    const key = [material.type, material.blending, material.side, material.transparent, material.fog, material.toneMapped,
+    const key = [material.type, material.blending, material.side, material.forceSinglePass, material.transparent, material.fog, material.toneMapped,
       !!material.map, material.vertexShader || '', material.fragmentShader || ''].join('|');
     this._mat(key, () => material.clone());
     return material;
@@ -318,7 +318,8 @@ export class FX {
   }
   // ---------- 지면 충격파 링 ----------
   ring(pos, color, { r0 = 0.3, r1 = 4, life = 0.45, width = 0.5, y = 0.08, vertical = false, thick = 1 } = {}) {
-    const m = this._keep(new THREE.MeshBasicMaterial({ map: ringTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 1 }));
+    // 평면 링은 양면을 한 번에 그린다. 준비 단계에도 같은 패스 설정을 전달한다.
+    const m = this._keep(new THREE.MeshBasicMaterial({ map: ringTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, opacity: 1 }));
     const mesh = new THREE.Mesh(this.plane2, m); mesh.position.copy(pos); mesh.position.y += y; mesh.renderOrder = 9;
     if (vertical) mesh.lookAt(this.camera.position); else mesh.rotation.x = -Math.PI / 2;
     this.add(mesh, life, (k) => { const e = 1 - Math.pow(1 - k, 3); const r = r0 + (r1 - r0) * e; mesh.scale.set(r, r, r * thick); m.opacity = (1 - k) * 1.2; }, () => m.dispose());
