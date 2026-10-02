@@ -141,6 +141,7 @@ async function complete(page, expectedControl) {
   const record = run.after.history.at(-1);
   assert(record?.details?.route?.id === 'glass_garden' && record.details.route.depth === 'standard' && record.details.control === expectedControl, 'Route or actual control mode missing');
   for (const [key, value] of Object.entries(run.after.actual)) assert(record.details[key] === value, 'Observed record differs from real battle: ' + key);
+  assert(run.after.result.time === record.details.timeSec, 'Result UI and persisted history disagree on frozen combat duration');
   assert(record.outcome === 'victory' && record.details.heroId === 'knight', 'Default earned hero/outcome mismatch');
   await page.screenshot({ path: path.join(out, `result-${report.runs.length}.png`) });
   run.status = 'pass'; await save(); return record;

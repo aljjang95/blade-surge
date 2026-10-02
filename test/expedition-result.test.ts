@@ -115,11 +115,14 @@ test('controller retries a failed receipt but never settles an already successfu
     const app: any = { expeditionTicket: ticket, expedition: { settle: () => ++settlements === 1 ? { ok: false, error: 'storage' } : receipt },
       ui: { showHud() {}, show() {}, closeModal() {}, el: { pause: {} } } };
     const controller: any = Object.assign(Object.create(ExpeditionUI.prototype), { app, open() {} });
-    const battle: any = { result: {}, stage: { expedition: { kind: 'dungeon', id: 'glass_garden', depth: 'deep' }, title: '깊은 정원' },
+    const battle: any = { result: { time: 58.383333333 }, stage: { expedition: { kind: 'dungeon', id: 'glass_garden', depth: 'deep' }, title: '깊은 정원' },
       drops: { gold: 100, stones: 0, stones2: 0, stones3: 0, fragments: 0, loot: [] }, kills: 10, maxCombo: 5, elapsed: 60 };
     controller.showResult(battle, true); expect(controller.result.saveError).toBe('storage'); expect(app.expeditionTicket).toBe(ticket);
     controller.showResult(battle, true); expect(controller.result.saveError).toBeNull(); expect(app.expeditionTicket).toBeNull();
     controller.showResult(battle, true); expect(settlements).toBe(2); expect(battle.result.expeditionReceipt).toBe(receipt);
     expect(controller.result.rewards).toBe(receipt.rewards); expect(controller.result.depth).toBe('deep');
+    expect(controller.result.time).toBe(58.383333333); // terminal combat clock, not celebration/save retries
+    battle.elapsed = 150; controller.showResult(battle, true);
+    expect(controller.result.time).toBe(58.383333333); expect(settlements).toBe(2);
   } finally { played.mockRestore(); }
 });

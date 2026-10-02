@@ -206,7 +206,7 @@ export class ExpeditionUI {
     const r=b.result;if(!r)return;
     if(!r.expeditionReceipt?.ok){r.expeditionReceipt=this.app.expedition.settle(this.app.expeditionTicket,{win,conquest:r.conquest,kills:b.kills,treasureRooms:r.treasureRooms,fieldRewards:{fieldGold:b.drops.gold,fieldStones:b.drops.stones,fieldStones2:b.drops.stones2,fieldStones3:b.drops.stones3,fieldFragments:b.drops.fragments},fieldLoot:b.drops.loot});if(r.expeditionReceipt.ok)this.app.expeditionTicket=null;}
     this.app.ui.showHud(false);this.app.ui.show(this.app.ui.el.pause,false);this.app.ui.closeModal();
-    this.result={win,kind:b.stage.expedition.kind,id:b.stage.expedition.id,depth:b.stage.expedition.depth||'standard',conquestId:b.stage.expedition.conquestId||null,conquest:r.conquest,routeObjective:r.routeObjective,riftId:b.stage.riftId||null,name:b.stage.title||b.stage.name,kills:b.kills,combo:b.maxCombo,time:b.elapsed,rewards:r.expeditionReceipt.rewards||{},saveError:!r.expeditionReceipt.ok?r.expeditionReceipt.error:null};
+    this.result={win,kind:b.stage.expedition.kind,id:b.stage.expedition.id,depth:b.stage.expedition.depth||'standard',conquestId:b.stage.expedition.conquestId||null,conquest:r.conquest,routeObjective:r.routeObjective,riftId:b.stage.riftId||null,name:b.stage.title||b.stage.name,kills:b.kills,combo:b.maxCombo,time:r.time,rewards:r.expeditionReceipt.rewards||{},saveError:!r.expeditionReceipt.ok?r.expeditionReceipt.error:null};
     this.open('dungeons');audio.play(win?'jingle_win1':'ui_error',{vol:.5});
   }
 }
