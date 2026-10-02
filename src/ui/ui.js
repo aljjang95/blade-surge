@@ -17,6 +17,7 @@ export { $, fmt };
 export class UI {
   constructor(app) {
     this.app = app; this.eco = app.eco;
+    this._astralChoiceHud = false;
     this.el = { hud: $('hud'), meta: $('meta'), result: $('result'), modal: $('modal'), modalBox: $('modal-box'), toast: $('toast-layer'), boot: $('boot'), reveal: $('reveal'), pause: $('pause-overlay') };
     this.combatNotices = new CombatNoticeQueue({ show: ({ message, tone }) => {
       const notice = document.createElement('div'); notice.className = 'toast combat-notice ' + tone;
@@ -106,7 +107,7 @@ export class UI {
       el.append(hint);
     }
   }
-  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { this.el.hud.classList.remove('astral-choice-hud'); this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
+  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
   pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; b.setPaused('manual', on); this.show(this.el.pause, on); if (!on && this.el.pause.contains(document.activeElement)) document.activeElement?.blur?.(); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
@@ -155,6 +156,9 @@ export class UI {
 
   // ---------------- HUD ----------------
   setupHud(def, player) {
+    // Controls keep their children during combat; rebind on each hero/party setup.
+    this._skillCooldowns = this.skillBtns.map(btn => btn.querySelector('.cd'));
+    this._dodgeBtn = $('btn-dodge'); this._dodgeCd = this._dodgeBtn.querySelector('.dodge-cd');
     $('hud-portrait').src = def.portrait; $('hud-stage').textContent = '';
     this.skillBtns.forEach((b, slot) => {
       const { index, skill: sk } = player.combatSkill(slot);
@@ -163,7 +167,7 @@ export class UI {
       const img = b.querySelector('img'); img.src = sk.icon; img.style.display = '';
       img.onerror = () => { img.style.display = 'none'; b.style.background = `linear-gradient(135deg, ${def.color}, #222)`; };
       b.style.display = ''; b.classList.toggle('locked', !player.unlocked(index));
-      b.querySelector('.cd').style.setProperty('--p', '0%'); b.dataset.ready = '0'; b.classList.remove('ready', 'ready-flash');
+      this._skillCooldowns[slot].style.setProperty('--p', '0%'); b.dataset.ready = '0'; b.classList.remove('ready', 'ready-flash');
       const lk = b.querySelector('.lock b'); if (lk) lk.textContent = sk.unlock || '';
     });
     $('btn-boss-shortcut').hidden = !this.app.battle?.canBossShortcut?.();
@@ -198,7 +202,11 @@ export class UI {
   }
   ultCinema(name, def) { const c = $('ult-cinema'); $('ult-name').textContent = name; $('ult-name').style.textShadow = `0 0 20px ${def.color}, 0 4px 0 #000`; c.classList.remove('on'); void c.offsetWidth; c.classList.add('on'); setTimeout(() => c.classList.remove('on'), 1700); }
   updateHud(b, dt) {
-    this.el.hud.classList.toggle('astral-choice-hud', !!b.active && b.routeObjectives?.def?.id === 'astral_constellations_standard');
+    const astralChoice = !!b.active && b.routeObjectives?.def?.id === 'astral_constellations_standard';
+    if (this._astralChoiceHud !== astralChoice) {
+      this.el.hud.classList.toggle('astral-choice-hud', astralChoice);
+      this._astralChoiceHud = astralChoice;
+    }
     const p = b.player; if (!p) return;
     this.app.expeditionUI?.updateCombatStatus(b);
     this.miniT -= dt; if (this.miniT <= 0) { this.miniT = 1 / 20; this.minimap.draw(b); }
@@ -211,10 +219,10 @@ export class UI {
     $('hud-hp').style.background = hp < 0.3 ? 'linear-gradient(90deg,#ff2d55,#ff8aa0)' : 'linear-gradient(90deg,#2bd46a,#a6ff5a)';
     const mp = Math.max(0, p.mp / p.maxMp); $('hud-mp').style.width = mp * 100 + '%'; $('hud-mp-txt').textContent = `MP ${Math.floor(p.mp)} / ${p.maxMp}`;
     const hero = this.eco.hero(b.heroId), need = levelExp(hero.level); $('hud-exp').style.width = Math.min(100, hero.exp / Math.max(1, need) * 100) + '%'; $('hud-exp-txt').textContent = `EXP ${hero.exp} / ${need}`;
-    const dodge = $('btn-dodge'), dodgeCd = dodge.querySelector('.dodge-cd'); dodge.classList.toggle('cooling', p.dodgeCd > .01); dodgeCd.hidden = p.dodgeCd <= .01; if (!dodgeCd.hidden) dodgeCd.textContent = p.dodgeCd.toFixed(1);
+    const dodge = this._dodgeBtn, dodgeCd = this._dodgeCd; dodge.classList.toggle('cooling', p.dodgeCd > .01); dodgeCd.hidden = p.dodgeCd <= .01; if (!dodgeCd.hidden) dodgeCd.textContent = p.dodgeCd.toFixed(1);
     $('btn-boss-shortcut').hidden = !b.canBossShortcut?.();
     const ult = p.ult / p.ultMax; $('hud-ult').style.width = ult * 100 + '%'; $('hud-ult').parentElement.classList.toggle('full', ult >= 1);
-    this.skillBtns.forEach((btn, slot) => { const i = p.combatSkillIndex(slot), sk = p.def.skills[i]; if (!sk) return; const locked = !p.unlocked(i); btn.classList.toggle('locked', locked); if (locked) return; let pct; if (sk.ult) { pct = 1 - ult; btn.classList.toggle('ready', ult >= 1); } else { pct = p.cds[i] / sk.cd; btn.classList.toggle('ready', false); } btn.querySelector('.cd').style.setProperty('--p', (Math.max(0,pct) * 100) + '%'); const wasReady = btn.dataset.ready === '1'; const ready = pct <= 0 && (!sk.mp || p.mp >= sk.mp); if (ready && !wasReady && b.elapsed > 1) { btn.classList.remove('ready-flash'); void btn.offsetWidth; btn.classList.add('ready-flash'); audio.play('ui_pluck', { vol: 0.25 }); } btn.dataset.ready = ready ? '1' : '0'; });
+    this.skillBtns.forEach((btn, slot) => { const i = p.combatSkillIndex(slot), sk = p.def.skills[i]; if (!sk) return; const locked = !p.unlocked(i); btn.classList.toggle('locked', locked); if (locked) return; let pct; if (sk.ult) { pct = 1 - ult; btn.classList.toggle('ready', ult >= 1); } else { pct = p.cds[i] / sk.cd; btn.classList.toggle('ready', false); } this._skillCooldowns[slot].style.setProperty('--p', (Math.max(0,pct) * 100) + '%'); const wasReady = btn.dataset.ready === '1'; const ready = pct <= 0 && (!sk.mp || p.mp >= sk.mp); if (ready && !wasReady && b.elapsed > 1) { btn.classList.remove('ready-flash'); void btn.offsetWidth; btn.classList.add('ready-flash'); audio.play('ui_pluck', { vol: 0.25 }); } btn.dataset.ready = ready ? '1' : '0'; });
     this.setGauge(b);
     if (b.boss && b.boss.alive) $('boss-hp').style.width = (b.boss.hp / b.boss.maxHp * 100) + '%';
     if (this.hurtT > 0) { this.hurtT -= dt; } $('hud-vignette').style.opacity = Math.max(hp < 0.3 ? 0.42 : 0, this.hurtT > 0 ? this.hurtT * 1.2 : 0);

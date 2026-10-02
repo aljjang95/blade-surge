@@ -111,9 +111,9 @@ export class BattleTutorial {
     const currentCount = Number(this.healTipButton?.querySelector?.('b')?.textContent);
     const potionUsed = this.healTipPotionCount !== null && Number.isFinite(currentCount) && currentCount < this.healTipPotionCount;
     if (this.healTipUntil && (performance.now() >= this.healTipUntil || !battle?.active || battle.paused || !player?.alive || player.hp / player.maxHp > .55 || potionUsed || document.querySelector?.('#modal.show, #masterworks[open]') || this.healTipButton?.disabled)) this.clearHealTip();
-    if (this.phase || !battle?.active || battle.paused || !player?.alive || battle.stage?.code !== '1-1' || battle.stage?.difficultyId !== 'story' || document.querySelector?.('#modal.show, #masterworks[open]')) return;
+    if (this.phase || !battle?.active || battle.paused || !player?.alive || battle.stage?.code !== '1-1' || battle.stage?.difficultyId !== 'story') return;
     const tier = nextHealHintTier(player.hp, player.maxHp, this.healTipLevel);
-    if (!tier) return;
+    if (!tier || document.querySelector?.('#modal.show, #masterworks[open]')) return;
     const potion = document.querySelector?.('.exp-potions [data-potion="hp_tonic"]');
     if (!potion || potion.disabled || !potion.parentElement?.dataset) return;
     this.clearHealTip();

@@ -214,7 +214,8 @@ export class Renderer {
       const off = rig.offset.clone();
       off.x += rig.side + (rig.environmentSide || 0);   // 지역마다 전투 중심을 여는 비대칭 구도
       const controlled = battleCameraOffset(off, this.battleCamera);
-      const fitted = fitBattleCameraOffset(controlled, rig.lookOffset, cam.aspect, this.battleMinimumAspect);
+      const fitted = this.battleMinimumAspect > 0
+        ? fitBattleCameraOffset(controlled, rig.lookOffset, cam.aspect, this.battleMinimumAspect) : controlled;
       off.set(fitted.x, fitted.y, fitted.z);
       desired = rig.target.clone().add(off);
       this._applyFov(realDt);
