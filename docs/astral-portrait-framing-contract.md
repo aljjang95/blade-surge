@@ -33,3 +33,7 @@ The intermediate all-labels-raised candidate was rejected because its B board co
 ## Native resize boundary
 
 In the exact fitted battle scope, resize now applies the new/previous aspect-scale ratio to the current rig and camera positions around the unchanged look point before another input frame. Quaternion, target, lookOffset, base/controlled offsets, user controls and game clock/actors are unchanged. Ratio1, disabled routes, lobby and quality-only/same-aspect resize preserve the pose exactly; subsequent normal camera lag remains. This addresses orientation resize, not same-aspect battle entry. Earlier testPause first-resize PNGs are first GPU observations after native continuation, not proof of a normal-loop one-second occlusion. Fresh boundary and settled images must be reviewed separately.
+
+## Desktop HUD clearance
+
+The intermediate boundary candidate passed native neighboring combat/35HP loss/read recovery and the requested mobile image cases, but desktop medicine buttons covered the B circle edge. That original rejection is retained. Only the Astral-standard controller scopes a persistent HUD class, cleared when the HUD closes; landscape viewports at least800px wide and551px high place the existing medicine row at150px plus safe inset rather than at screen centre. Controls, items, cooldowns and phone layouts keep their owners. Fresh actual desktop/mobile images, observed DOM rectangle, lobby class cleanup and existing regressions remain required.

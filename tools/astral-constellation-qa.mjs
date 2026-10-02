@@ -34,7 +34,7 @@ const report = { status: 'running', releaseApproved: false, base: '0cf61344eccfa
 const qa = await createExpeditionQa({ root, driver: import.meta.filename, report,
   sourceFiles: ['tools/astral-constellation-qa.mjs', 'tools/expedition-qa-runtime.mjs', 'tools/conquest-media-observer.mjs', 'tools/qa-media-checkpoints.mjs',
     'src/game/astral-constellations.js', 'src/game/astral-constellation-view.js', 'src/data/route-objectives.js',
-    'src/engine/renderer.js', 'src/engine/battle-aspect-fit.js', 'src/game/battle-base.js'] });
+    'src/engine/renderer.js', 'src/engine/battle-aspect-fit.js', 'src/game/battle-base.js', 'src/ui/ui.js', 'src/ui/mobile-combat.css'] });
 const out = qa.out;
 let page, lastHp = null, observedDamage = 0;
 const saveReport = qa.save;
@@ -357,6 +357,13 @@ try {
   await observeResources('first actual Astral view', true);
   assert(combat.progress === 0, 'AUTO restored first station before manual proof'); report.required.naturalCombat = { combat, observedHpLoss: observedDamage };
   let s = await freshRead(); const clue = visibleClue(s), wrong = s.current.pads.find(pad => pad.code !== clue.code);
+  report.desktopHud = await page.evaluate(() => {
+    const element = document.querySelector('#hud .exp-potions'), rect = element.getBoundingClientRect();
+    return { scoped: document.querySelector('#hud').classList.contains('astral-choice-hud'),
+      potionRect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      viewport: { width: innerWidth, height: innerHeight } };
+  });
+  assert(report.desktopHud.scoped && report.desktopHud.potionRect.x < 300, 'Desktop Astral medicine row retained its circle-covering central location');
   await page.screenshot({ path: path.join(out, '01-desktop-clue.png') });
   await viewport(390, 844, 'small-screen actual clue'); await page.screenshot({ path: path.join(out, '02-small-clue.png') });
   await viewport(1200, 800, 'desktop after actual portrait continuation');
@@ -408,7 +415,10 @@ try {
   await page.locator('.exp-close').click(); s = await snapshot();
   assert(s.closed === undefined, 'Old route controller survived lobby stop');
   const cleaned = await page.evaluate(() => !window.app.scene.getObjectByName('TLL_AstralConstellations'));
-  assert(cleaned, 'Astral view survived actual lobby teardown'); report.required.cleaned = true;
+  assert(cleaned, 'Astral view survived actual lobby teardown');
+  const hudCleaned = await page.evaluate(() => !document.querySelector('#hud').classList.contains('astral-choice-hud'));
+  assert(hudCleaned, 'Astral HUD layout survived actual lobby teardown'); report.required.cleaned = true;
+  report.required.hudScopeCleaned = hudCleaned;
   const finalResources = await observeResources('actual lobby teardown');
   assert(finalResources.observations.length === 2 && finalResources.observations.every(row => Object.values(row.disposalCounts).every(count => count === 1)), 'Actual retry/lobby did not dispose both owned views exactly once');
   await qa.finishObservations(); await qa.close(); report.status = 'pass';
