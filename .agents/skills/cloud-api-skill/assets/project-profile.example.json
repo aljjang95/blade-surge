@@ -1,0 +1,16 @@
+{
+  "format": "cloud-api-skill/planning-profile/v1",
+  "purpose": "Non-secret planning template; not a Work import format",
+  "repository": { "remote": null, "ref": null, "verifiedHead": null },
+  "environment": { "existingName": null, "visibility": "private", "verifiedPublished": false },
+  "runtime": { "packageManager": null, "pinnedVersions": {}, "existingInstallScriptPreserved": true },
+  "directVariables": { "NODE_USE_ENV_PROXY": "1", "WRANGLER_SEND_METRICS": "false" },
+  "providers": {
+    "cloudflare": { "enabled": false, "accountId": null, "resources": [], "requiredSecretNames": ["CLOUDFLARE_API_TOKEN"], "allowedHttpsHosts": ["api.cloudflare.com"] },
+    "fishAudio": { "enabled": false, "model": null, "requiredSecretNames": ["FISH_API_KEY"], "allowedHttpsHosts": ["api.fish.audio"] }
+  },
+  "personalVault": { "selectedEnvironmentOnly": true, "keyNames": [] },
+  "connectors": { "required": [], "remotePcNeeded": false, "cloudExposureVerified": false },
+  "commands": { "check": null, "deploy": null, "rollback": null },
+  "verification": { "saved": false, "published": false, "cloudRuntime": false, "deployment": false }
+}
