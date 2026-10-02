@@ -22,14 +22,14 @@ export class AstralConstellationView {
       const g = ownGeometry(new THREE.CircleGeometry(route.def.radius * .42, segments));
       g.rotateX(-Math.PI / 2); return g;
     });
-    const label = (parent, x, y, z, width, height) => {
+    const label = (parent, x, y, z, width, height, compact = false) => {
       const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 176;
       const context = canvas.getContext('2d');
       if (!context) throw new Error('조율판 문자 표시를 준비하지 못했습니다.');
       const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; this.textures.add(texture);
       const material = ownMaterial(new THREE.SpriteMaterial({ map: texture, depthWrite: false }));
       const sprite = new THREE.Sprite(material); sprite.position.set(x, y, z); sprite.scale.set(width, height, 1); parent.add(sprite);
-      return { sprite, context, texture, state: '' };
+      return { sprite, context, texture, compact, state: '' };
     };
     try {
     this.entries = route.gates.map((gate, index) => {
@@ -52,7 +52,11 @@ export class AstralConstellationView {
         // ±X/±Z. A 45-degree rotation would turn it into the wrong square.
         if (pad.id === 'triangle') glyph.rotation.y = Math.PI / 2;
         padRoot.add(glyph);
-        const text = label(padRoot, 0, .48, 1.8, 2.8, .96);
+        // Keep each panel outside its circle. The near B circle's panel
+        // sits to its left, clearing both the bottom potion HUD and hero feet.
+        const text = pad.id === 'circle'
+          ? label(padRoot, -2.8, 1.0, 0, 2.35, .80, true)
+          : label(padRoot, 0, 1.0, -1.75, 2.35, .80, true);
         return { root: padRoot, outline, glyph, material, text, choiceIndex };
       });
       return { root, model, sand, title, pads, index };
@@ -66,8 +70,8 @@ export class AstralConstellationView {
     label.state = state;
     const c = label.context; c.clearRect(0, 0, 512, 176);
     c.fillStyle = '#101b2b'; c.fillRect(0, 0, 512, 176); c.textAlign = 'center';
-    c.fillStyle = '#ffe4b2'; c.font = 'bold 33px sans-serif'; c.fillText(title, 256, 66);
-    c.fillStyle = '#f2f5ff'; c.font = '30px sans-serif'; c.fillText(subtitle, 256, 128); label.texture.needsUpdate = true;
+    c.fillStyle = '#ffe4b2'; c.font = label.compact ? 'bold 44px sans-serif' : 'bold 33px sans-serif'; c.fillText(title, 256, 66);
+    c.fillStyle = '#f2f5ff'; c.font = label.compact ? 'bold 38px sans-serif' : '30px sans-serif'; c.fillText(subtitle, 256, 128); label.texture.needsUpdate = true;
   }
   update(route = this.route) {
     if (this.disposed) return;
@@ -90,8 +94,8 @@ export class AstralConstellationView {
         padEntry.root.visible = shown && route.phase !== 'read';
         const choosing = route.selected === pad.id;
         padEntry.material.color.setHex(choosing ? 0xfff0cb : 0xc6d9ec);
-        this.draw(padEntry.text, `${pad.code} ${pad.glyph} ${pad.name}`,
-          choosing ? `선택 ${route.hold.toFixed(1)}/1초` : '이 원 안에서 1초');
+        this.draw(padEntry.text, `${pad.code} ${pad.glyph}`,
+          choosing ? `${route.hold.toFixed(1)} / 1초` : '1초 유지');
       }
     }
   }

@@ -38,6 +38,28 @@ const out = qa.out;
 let page, lastHp = null, observedDamage = 0;
 const saveReport = qa.save;
 const assert = (condition, message) => { if (!condition) throw Error(message); };
+async function observeResources(label, watchOwned = false) {
+  const evidence = await page.evaluate(({ watchOwned }) => {
+    const a = window.app, r = a.renderer, view = a.battle.routeObjectives?.view;
+    const targets = [r.composer.renderTarget1, r.composer.renderTarget2, r.bloom.renderTargetBright,
+      ...r.bloom.renderTargetsHorizontal, ...r.bloom.renderTargetsVertical];
+    const observations = window.__astralQaResourceObservations ||= [];
+    if (watchOwned && view && !observations.some(row => row.viewId === view.group.uuid)) {
+      const owned = [...view.geometries, ...view.materials, ...view.textures];
+      const row = { viewId: view.group.uuid, geometries: view.geometries.size, materials: view.materials.size,
+        textures: view.textures.size, disposalCounts: Object.fromEntries(owned.map(item => [item.uuid, 0])) };
+      // Passive dispose events only; callbacks retain the plain record, not a
+      // resource/view/actor. The actual lobby/retry owns every disposal call.
+      for (const item of owned) { const id = item.uuid; item.addEventListener('dispose', () => row.disposalCounts[id]++); }
+      observations.push(row);
+    }
+    return { targets: targets.map(target => target.texture.uuid), memory: { ...r.r.info.memory },
+      programs: r.r.info.programs.length, viewPresent: !!view, observations: structuredClone(observations) };
+  }, { watchOwned });
+  report.resourceObservations ||= [];
+  if (report.resourceObservations.length) assert(JSON.stringify(evidence.targets) === JSON.stringify(report.resourceObservations[0].evidence.targets), `${label}: Astral added/replaced render targets`);
+  report.resourceObservations.push({ label, evidence }); await saveReport(); return evidence;
+}
 const snapshot = () => page.evaluate(() => {
   const app = window.app, g = app.battle, r = g.routeObjectives, p = g.player;
   const current = r?.gates[r.progress], entry = r?.view?.entries[r.progress];
@@ -69,7 +91,21 @@ async function renderCurrentFrame(label) {
     assert(after[key] === before[key], `${label}: drawing advanced actual gameplay (${key})`);
   }
   report.events.push({ label: 'current GPU frame for ' + label, before, after });
+  await saveReport();
   return after;
+}
+async function viewport(width, height, label) {
+  // Real resize boundaries clear production Input. Release actual browser
+  // keys and use the existing native portrait continuation before observing.
+  for (const key of ['w', 'a', 's', 'd', 'j', 'k', '1']) await page.keyboard.up(key);
+  await page.setViewportSize({ width, height });
+  const continueButton = page.locator('#btn-ignore-rotate');
+  if (await continueButton.isVisible()) {
+    report.events.push({ label: 'native portrait continuation', text: await continueButton.innerText() });
+    await continueButton.click(); await continueButton.waitFor({ state: 'hidden' });
+  }
+  await page.waitForTimeout(150); // Real responsive resize/clear delivery.
+  await focusGameplay(); return renderCurrentFrame(label);
 }
 async function until(predicate, budget, label, allowPendingVictory = false) {
   for (let i = 0; i < budget; i++) {
@@ -84,6 +120,7 @@ async function until(predicate, budget, label, allowPendingVictory = false) {
     }
     const waitingForPaidWin = allowPendingVictory && s.result?.win === true && !s.result.paid && s.hp > 0;
     if ((!s.active || !(s.hp > 0)) && !waitingForPaidWin) throw Error(`${label}: expedition ended naturally before the required observation`);
+    if (i % 120 === 0) { report.lastCheckpoint = { label, tick: i, state: s }; await saveReport(); }
   }
   throw Error(`${label}: production input did not reach target in ${budget} fixed ticks`);
 }
@@ -100,16 +137,19 @@ async function navigate(point, label, arrival = .4) {
         const direction = d > 3 ? g.world.flowDir(g.world.buildFlow(point.x, point.z), p.pos.x, p.pos.z) : null;
         const dx = direction?.[0] ?? point.x - p.pos.x, dz = direction?.[1] ?? point.z - p.pos.z;
         const yaw = app.input.getCameraYaw?.() || 0, c = Math.cos(yaw), s = Math.sin(yaw), length = Math.hypot(dx, dz) || 1;
-        return { distance: d, x: (dx * c - dz * s) / length, y: (dx * s + dz * c) / length };
+        return { distance: d, x: (dx * c - dz * s) / length, y: (dx * s + dz * c) / length,
+          keys: Object.fromEntries(['w', 'a', 's', 'd'].map(key => [key, !!app.input.keys['Key' + key.toUpperCase()]])) };
       }, point);
       if (nav.distance < arrival) break;
       const keys = [nav.x > .28 ? 'd' : nav.x < -.28 ? 'a' : null, nav.y > .28 ? 's' : nav.y < -.28 ? 'w' : null].filter(Boolean);
       for (const key of held) if (!keys.includes(key)) await page.keyboard.up(key);
-      for (const key of keys) if (!held.includes(key)) {
+      for (const key of keys) if (!held.includes(key) || !nav.keys[key]) {
+        if (held.includes(key) && !nav.keys[key]) await page.keyboard.up(key); // A new down must not be ignored as repeat.
         await page.keyboard.down(key); const accepted = await nativeInputObservation(page);
         assert(accepted.input.keys['Key' + key.toUpperCase()] && !accepted.focus.blocked, `${label}: real movement keydown was ignored`);
       }
       held = keys; const s = await steps(1, i % 10 === 0); assert(s.active && s.hp > 0, `${label}: natural death during movement`);
+      if (i % 100 === 0) { report.lastCheckpoint = { label, tick: i, nav, state: s }; await saveReport(); }
       if (i === 1799) throw Error(`${label}: actual keyboard movement failed to reach Floor target`);
     }
   } finally { for (const key of held) await page.keyboard.up(key); }
@@ -165,22 +205,24 @@ try {
     localStorage.setItem('bladesurge_save_v1', rawSave); sessionStorage.setItem('astral-qa-save-installed', '1');
   } }, rawSave);
   await qa.boot();
+  await observeResources('native earned lobby');
   report.access = await page.evaluate(() => ({ level: window.app.expedition.s.level,
     access: window.app.expedition.dungeonAccess('astral_leviathan_spire'), selected: window.app.eco.s.selected }));
   assert(report.access.level >= 3 && report.access.access.ok, 'Production service rejected supplied earned save');
   report.entry = await enterFromUI(); await auto(true);
   const combat = await until(s => s.kills > 0 && s.current.ready, 12000, 'natural first-room AUTO combat'); await auto(false);
+  await observeResources('first actual Astral view', true);
   assert(combat.progress === 0, 'AUTO restored first station before manual proof'); report.required.naturalCombat = { combat, observedHpLoss: observedDamage };
   let s = await freshRead(); const clue = visibleClue(s), wrong = s.current.pads.find(pad => pad.code !== clue.code);
   await page.screenshot({ path: path.join(out, '01-desktop-clue.png') });
-  await page.setViewportSize({ width: 390, height: 844 }); await steps(1); await page.screenshot({ path: path.join(out, '02-small-clue.png') });
-  await page.setViewportSize({ width: 1200, height: 800 }); await focusGameplay();
+  await viewport(390, 844, 'small-screen actual clue'); await page.screenshot({ path: path.join(out, '02-small-clue.png') });
+  await viewport(1200, 800, 'desktop after actual portrait continuation');
   await navigate(wrong, 'actual wrong-pad movement', 1.17); s = await until(s => s.mistakes === 1 && s.phase === 'retry', 60, 'wrong-pad confirmation');
   assert(s.progress === 0 && s.sealed, 'Wrong pad advanced objective or opened seal'); report.required.wrongRetry = s;
   await page.screenshot({ path: path.join(out, '03-wrong-retry.png') });
   s = await freshRead(); await navigate(visibleClue(s).pad, 'small-screen partial hold', 1.17); await partialChoice('small-screen incomplete hold');
-  await page.setViewportSize({ width: 390, height: 844 }); await steps(1); await page.screenshot({ path: path.join(out, '03-small-pad-hold.png') });
-  await page.setViewportSize({ width: 1200, height: 800 }); await focusGameplay();
+  await viewport(390, 844, 'small-screen actual partial hold'); await page.screenshot({ path: path.join(out, '03-small-pad-hold.png') });
+  await viewport(1200, 800, 'desktop after actual partial hold');
   await actionInterrupt('j', ['attack'], 'attack');
   await actionInterrupt('1', ['skill', 'ult'], 'skill');
   await actionInterrupt('k', ['dodge'], 'dodge');
@@ -198,6 +240,7 @@ try {
   }, 24000, 'natural AUTO completion and actual boss settlement', true);
   assert(s.result.win && s.report?.complete && s.report.progress === 4 && !s.sealed && s.bossDefeated && s.bossRoomCleared, 'Actual win omitted a station/seal/boss gate');
   report.required.actualWin = { progression, result: s }; await page.screenshot({ path: path.join(out, '05-natural-win-result.png') });
+  await observeResources('actual paid win');
   const duplicate = await page.evaluate(() => {
     const app = window.app, g = app.battle, before = { gold: app.eco.s.gold, gems: app.eco.s.gems, wins: app.expedition.s.stats.astral_leviathan_spire };
     // Deliberate duplicate UI delivery, through the existing result authority.
@@ -213,6 +256,7 @@ try {
   await page.waitForFunction(() => window.app?.battle?.active && !window.app.stageStarting, null, { timeout: 180000 }); await auto(false);
   s = await snapshot(); assert(s.progress === 0 && s.read === 0 && s.mistakes === 0 && s.sealed && s.ticket, 'Normal retry retained old run state');
   report.required.newRun = s; await auto(true); await until(s => s.current?.ready, 12000, 'second run first-room combat'); await auto(false);
+  await observeResources('actual fresh retry view', true);
   await freshRead(); const lossBefore = await snapshot(); await page.locator('#btn-pause').click(); await page.locator('#btn-giveup').click();
   s = await snapshot(); assert(s.result?.win === false && s.report?.complete === false && s.report.progress === 0 && s.read === 0 && s.hold === 0, 'Actual giveup failed to close partial selection');
   assert(s.currency.gold === lossBefore.currency.gold && s.stats === lossBefore.stats, 'Giveup paid a win reward'); report.required.lossReset = s;
@@ -221,6 +265,8 @@ try {
   assert(s.closed === undefined, 'Old route controller survived lobby stop');
   const cleaned = await page.evaluate(() => !window.app.scene.getObjectByName('TLL_AstralConstellations'));
   assert(cleaned, 'Astral view survived actual lobby teardown'); report.required.cleaned = true;
+  const finalResources = await observeResources('actual lobby teardown');
+  assert(finalResources.observations.length === 2 && finalResources.observations.every(row => Object.values(row.disposalCounts).every(count => count === 1)), 'Actual retry/lobby did not dispose both owned views exactly once');
   await qa.finishObservations(); await qa.close(); report.status = 'pass';
 } catch (error) { report.status = 'fail'; report.error = String(error.stack || error); process.exitCode = 1; }
 finally {
