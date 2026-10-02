@@ -10,6 +10,7 @@ import { EXPEDITION_DEPTHS, campaignFinished } from '../data/expedition-depths.j
 import { ENCOUNTER_ART } from '../data/encounter-art.js';
 import { weeklyFrontier } from '../data/seasonal-content.js';
 import { ConquestRoutes, ConquestResult } from './conquests.jsx';
+import { retryEnergyForResult } from '../game/run-history.js';
 import './hub.css';
 import './app-content.css';
 import './depths.css';
@@ -40,6 +41,7 @@ function LootReveal({loot=[]}) {
 
 export function ExpeditionResult({controller, launch, message, focusRef}) {
   const app=controller.app, result=controller.result, rewards=result.rewards;
+  const retryEnergy=retryEnergyForResult(result);
   const blocked=!!result.saveError || !!app.stageStarting;
   // Recheck the live receipt as well as disabling controls: old handlers must not leave a failed result.
   const depart=fn=>{if(controller.result!==result || result.saveError || app.stageStarting)return;return fn();};
@@ -76,7 +78,7 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
       </div>
     </div>
     <footer className="exp-result-footer" aria-label="다음 행동">
-      <button className="exp-primary" disabled={blocked} onClick={()=>depart(()=>launch(result.kind,result.id,{rift:!!result.riftId,depth:result.depth,conquestId:result.conquestId}))}>다시 도전</button>
+      <button className="exp-primary" disabled={blocked} onClick={()=>depart(()=>launch(result.kind,result.id,{rift:!!result.riftId,depth:result.depth,conquestId:result.conquestId}))}>다시 도전 · {retryEnergy===null?'비용 확인 필요':`에너지 ${retryEnergy}`}</button>
       <button disabled={blocked} onClick={()=>openTab('forge')}>전리품 정비</button>
       <button disabled={blocked} onClick={()=>openTab('quests')}>퀘스트 확인</button>
     </footer>

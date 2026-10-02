@@ -30,7 +30,7 @@ function fixture(overrides: any = {}) {
   const launch = (...args: any[]) => calls.push(['launch', ...args]);
   const render = () => expand(ExpeditionResult({ controller, launch, message: '', focusRef: { current: null } }))[0];
   const view = render(), nodes = all(view), buttons = nodes.filter(n => n.type === 'button');
-  const button = (label: string) => buttons.find(n => text(n) === label);
+  const button = (label: string) => buttons.find(n => text(n) === label || (label === '다시 도전' && text(n).startsWith('다시 도전 · ')));
   return { app, controller, result, calls, view, nodes, buttons, button, render };
 }
 
@@ -53,6 +53,12 @@ test('defeat reports the actual route and no clear rewards', () => {
   expect(text(f.view)).toContain('원정 패배'); expect(text(f.view)).toContain('연습 상대');
   expect(text(f.view)).toContain('결투장'); expect(text(f.view)).toContain('클리어 보상은 없습니다');
   expect(text(f.view)).not.toContain('영웅 EXP +'); expect(f.button('다시 도전').props.disabled).toBe(false);
+});
+
+for (const [kind,id,depth,energy] of [['dungeon','glass_garden','standard',4],['dungeon','glass_garden','deep',6],['dungeon','comet_bastion','deep',8],['arena','rookie','standard',0]] as const)
+test(`${kind}/${id}/${depth} retry displays the catalog cost without spending or altering its departure`,()=>{
+  const f=fixture({kind,id,depth});expect(text(f.button('다시 도전'))).toBe(`다시 도전 · 에너지 ${energy}`);expect(f.calls).toEqual([]);
+  f.button('다시 도전').props.onClick();expect(f.calls).toEqual([['launch',kind,id,{rift:false,depth,conquestId:undefined}]]);
 });
 
 test('record result shows only the frozen restored pages, including partial defeat', () => {

@@ -56,7 +56,7 @@ describe('masterworks progression contracts',()=>{
       expect(recordDiscovery(s,key)).toEqual({ok:true,renown:3});
       expect(recordDiscovery(s,key)).toEqual({ok:false,error:'discovered'});
     }
-    s.history=floors.map((floor,i)=>({runId:i+1,floor,outcome:'victory',boonIds:[]}));
+    s.history=floors.map((floor,i)=>({runId:i+1,floor,outcome:'victory',boonIds:[],details:null}));
     const loaded=normalizeMasterworks(JSON.parse(JSON.stringify(s)));
     expect(loaded.history.map(h=>h.floor)).toEqual([51,60]);
     expect(loaded.discoveries).toEqual(keys);

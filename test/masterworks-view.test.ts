@@ -75,6 +75,20 @@ test('illustrated mastery keeps exact effects, cost and prerequisite while foldi
  expect(view.content.text()).toContain('공격력 +2%');expect(view.content.text()).toContain('명성 6');expect(view.content.text()).toContain('이전 단계 필요');
  expect(nodes.filter((n:MWElement)=>n.tagName==='button').every((n:MWElement)=>n.disabled)).toBe(true);
 }));
+
+test('journal displays exact expedition, hero, mixed control and observed zeroes while preserving honest legacy history',()=>withMWDOM(()=>{
+  const view=renderFixture();view.battle.masterworks.s.history=[
+    {runId:1,floor:1,outcome:'defeat',boonIds:[],details:null},
+    {runId:2,floor:1,outcome:'victory',boonIds:['ember_edge'],details:{route:{kind:'dungeon',id:'bellfall_crypt',depth:'standard',conquestId:null,riftId:null},heroId:'mage',heroLevel:3,control:'mixed',perfects:0,breaks:4,timeSec:127.25}},
+  ];
+  const before=JSON.stringify(view.battle.masterworks.s);view.renderJournal();
+  const cards=view.content.all().filter((n:MWElement)=>n.dataset.runHistory);
+  expect(cards.map((n:MWElement)=>n.dataset.runHistory)).toEqual(['2','1']);
+  expect(cards[0].text()).toContain('종락의 지하 회랑');expect(cards[0].text()).toContain('대마도사 리아');expect(cards[0].text()).toContain('출격 Lv.3');
+  expect(cards[0].text()).toContain('수동·AUTO 혼합');expect(cards[0].text()).toContain('정확 회피 0');expect(cards[0].text()).toContain('균형 붕괴 4');expect(cards[0].text()).toContain('127초');
+  expect(cards[1].text()).toContain('패배');expect(cards[1].text()).toContain('경로 상세 없음');expect(cards[1].text()).toContain('상세 기록 없음');expect(cards[1].text()).not.toContain('정확 회피 0');
+  expect(JSON.stringify(view.battle.masterworks.s)).toBe(before);
+}));
 test('boon choice artwork follows its ID and keeps chain cap directly on choice',()=>withMWDOM(()=>{
  const view=renderFixture(true);view.renderRun();const cards=view.content.all().filter((n:MWElement)=>n.dataset.boon);
  expect(cards).toHaveLength(3);expect(cards.map((n:MWElement)=>n.children[0].src)).toEqual(['/img/ui-crafted/engraving/ember_edge.webp','/img/ui-crafted/engraving/tide_breath.webp','/img/ui-crafted/engraving/storm_eye.webp']);

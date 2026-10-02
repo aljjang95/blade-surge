@@ -2,6 +2,7 @@ import { BOONS, SYNERGIES, MASTERY_NODES, PATHS, CHALLENGES, STORY_EVENTS, BOUNT
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { DUNGEONS } from '../data/expansion.js';
 import { EXPEDITION_DEPTHS, expeditionDepth } from '../data/expedition-depths.js';
+import { normalizeRunDetails } from './run-history.js';
 const CAMPAIGN_STAGE_COUNT = CHAPTERS.length * STAGES_PER_CHAPTER;
 const EXPEDITION_IDS = new Set(DUNGEONS.map(d => d.id));
 const DEEP_EXPEDITION_IDS = new Set(EXPEDITION_DEPTHS.map(d => d.id));
@@ -48,7 +49,7 @@ export function normalizeMasterworks(raw) {
     path:pathId(r.path), presets:Array.from({length:3},(_,i)=>({name:typeof r.presets?.[i]?.name === 'string' ? r.presets[i].name.replace(/[\x00-\x1f]/g,'').slice(0,24) : `준비 ${i+1}`,path:pathId(r.presets?.[i]?.path),challengeIds:ids(r.presets?.[i]?.challengeIds,CHALLENGES)})),
     activePreset:int(r.activePreset,2), challengeIds:ids(r.challengeIds,CHALLENGES), bounties:{counts,claimed},
     discoveries:[...new Set(list(r.discoveries).filter(discoveryKey))].slice(0,1200), story,
-    history:list(r.history).filter(h=>obj(h)&&['victory','defeat'].includes(h.outcome)).slice(-20).map(h=>({runId:int(h.runId),floor:Math.max(1,int(h.floor,CAMPAIGN_STAGE_COUNT)),outcome:h.outcome,boonIds:ids(h.boonIds,BOONS)})),runSeq:int(r.runSeq),
+    history:list(r.history).filter(h=>obj(h)&&['victory','defeat'].includes(h.outcome)).slice(-20).map(h=>({runId:int(h.runId),floor:Math.max(1,int(h.floor,CAMPAIGN_STAGE_COUNT)),outcome:h.outcome,boonIds:ids(h.boonIds,BOONS),details:normalizeRunDetails(h.details)})),runSeq:int(r.runSeq),
   };
 }
 function ranks(picked) {

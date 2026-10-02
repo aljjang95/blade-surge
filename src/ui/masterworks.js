@@ -3,6 +3,7 @@ import { difficultyEffects } from '../game/masterworks-core.js';
 import { DUNGEONS } from '../data/expansion.js';
 import { EXPEDITION_SETS } from '../data/expedition-items.js';
 import { uiArt } from './illustrated.js';
+import { runRouteLabel, runDetailsLabel } from '../game/run-history.js';
 import './masterworks.css';
 
 const family = {ember:['잿불','ember_vault'],tide:['물결','glass_garden'],storm:['폭풍','ranger'],stone:['바위','star_archive']};
@@ -118,7 +119,12 @@ export class MasterworksView {
     for(const event of STORY_EVENTS){const c=event.choices.find(c=>c.id===this.state.story[event.id]);const card=n('article','mw-story-record');card.append(art('nav-journal'),n('small','mw-eyebrow',c?'남겨진 선택':'아직 만나지 않은 이야기'),n('h4','',event.name),details(c?c.consequence:'구역을 정화하며 길 위의 사람들을 만나세요.','이야기 읽기'));if(c)card.append(n('small','mw-muted',`당신의 선택: ${c.name} · 다시 만나면 체력 ${c.effects.heal?12:6}% 회복`));this.content.append(card);}
     this.content.append(n('h3','mw-section-title','최근 원정'));
     if(!this.state.history.length)this.content.append(n('p','mw-muted','첫 원정을 마치면 승리와 재도전의 기록이 남습니다.'));
-    for(const h of [...this.state.history].reverse().slice(0,6))this.content.append(n('p','mw-history',`${h.outcome==='victory'?'승리':'재도전'} · ${h.floor}층 · ${h.boonIds.map(id=>BOONS.find(x=>x.id===id)?.name).join(' / ')||'각인 없음'}`));
+    for(const h of [...this.state.history].reverse().slice(0,6)) {
+      const card=n('article','mw-history');card.dataset.runHistory=String(h.runId);card.setAttribute('aria-label','최근 출격 기록');
+      card.append(n('strong','',`${h.outcome==='victory'?'승리':'패배'} · ${runRouteLabel(h.details?.route)||`${h.floor}층 · 경로 상세 없음`}`),
+        n('p','mw-muted',runDetailsLabel(h.details)),n('small','mw-muted',`획득 각인 종류 · ${h.boonIds.map(id=>BOONS.find(x=>x.id===id)?.name).join(' / ')||'없음'}`));
+      this.content.append(card);
+    }
   }
   renderRun() {
     const run=this.battle.run,offer=this.battle.currentOffer();

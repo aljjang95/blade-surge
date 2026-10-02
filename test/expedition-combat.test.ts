@@ -88,8 +88,10 @@ test('forge keeps its room uncleared through two real reinforcement waves', () =
 
 test('paused battles never step consumable, arena or objective clocks; portals dispose once', () => {
   let steps=0;
-  Battle.prototype.update.call({player:{},paused:true,timeCtl:{step(){steps++;}}} as any,5);
-  expect(steps).toBe(0);
+  const paused = Object.assign(Object.create(Battle.prototype), {player:{alive:true,auto:false},active:true,paused:true,elapsed:0,
+    run:{enabled:true,settled:false,controlSeen:0},timeCtl:{step(){steps++;}}});
+  Battle.prototype.update.call(paused,5);
+  expect(steps).toBe(0); expect(paused.run.controlSeen).toBe(0);
   let disposed=0;
   const g:any={scene:{remove(){}},portal:{mesh:{geometry:{dispose(){disposed++;}},material:{dispose(){disposed++;}}}}};
   Battle.prototype.clearPortal.call(g); Battle.prototype.clearPortal.call(g); expect(disposed).toBe(2);

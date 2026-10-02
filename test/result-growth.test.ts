@@ -110,6 +110,7 @@ test('real defeat chain exposes a later chronicle save failure and retries witho
   f.eco.save = () => { storageFail = failChronicle && f.save.masterworks.history.length > 0; return save(); };
   f.battle.defeat();
   expect(f.save.masterworks.history).toHaveLength(1);
+  expect(f.save.masterworks.history[0].details).toMatchObject({route:{kind:'campaign',id:'1-1'},heroId:'mage',perfects:0,breaks:0,timeSec:30});
   expect(f.battle.rpgDirty).toBe(true);
   expect(f.action('save')).toBeDefined();
   expect(get('btn-result-lobby').disabled).toBe(true);
@@ -128,6 +129,7 @@ test('victory settles before offering affordable actions and shows actual hunt X
   expect(get('result-growth').textContent).toContain('Lv.1 →'); expect(get('result-growth').textContent).toContain('다음 해금 · Lv.10');
   const before = JSON.stringify(f.save); f.ui.showResult(f.battle, true);
   expect(f.settlements()).toBe(1); expect(JSON.stringify(f.save)).toBe(before);
+  expect(get('btn-result-retry').textContent).toBe(`다시 · 에너지 ${f.battle.stage.energy}`);
 });
 
 for (const kind of ['equipment', 'skill', 'mastery']) test(`victory ${kind} opens its real destination without consuming resources`, () => {
