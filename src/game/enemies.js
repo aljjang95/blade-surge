@@ -195,7 +195,7 @@ export class Enemy extends Actor {
         if (this.fuse >= 0.7) this.explode();
         return;
       }
-      if (d < 2.2 && this.state === 'chase') { this.fuse = 0; this.special = 'bomber'; this.telegraph = 0.7; this.game.fx.ring(this.pos, 0xff6030, { r0: 3.3, r1: 3.6, life: 0.7, y: 0.06, width: 1 }); this.announceSkill(); audio.charge({ vol: 0.3, dur: 0.6 }); return; }
+      if (d < 2.2 && this.state === 'chase') { this.fuse = 0; this.special = 'bomber'; this.telegraph = 0.7; this.game.fx.ring(this.pos, 0xff6030, { telegraph: true, r0: 3.3, r1: 3.6, life: 0.7, y: 0.06, width: 1 }); this.announceSkill(); audio.charge({ vol: 0.3, dur: 0.6 }); return; }
     } else if (this.behavior === 'shaman') {
       this.healT -= dt; this.summonT -= dt;
       if (this.healT <= 0) { this.healT = 6; let n = 0; for (const o of this.game.enemies) { if (!o.alive || o === this || o.distTo(this) > 6 || o.hp >= o.maxHp) continue; o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.15); this.game.fx.embers(o.pos, 0x80ff90, { n: 4, radius: 0.5, life: 0.7, rise: 2.5 }); n++; }
@@ -277,14 +277,14 @@ export class Enemy extends Actor {
     this.playTimed(anim, dur, { fade: 0.08 });
     this.announceSkill();
     const f = this.forward(_v.clone()); const g = this.game;
-    if (this.special === 'dash') { const p = this.player; const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z; const dd = Math.hypot(dx, dz) || 1; const travel = Math.min(9, dd + 1.5); this.partyDashWarning = {x:this.pos.x+dx/dd*travel/2,z:this.pos.z+dz/dd*travel/2,length:travel+6.4,width:6.4,angle:Math.atan2(dz,dx)}; this.dashV = new THREE.Vector3(dx / dd, 0, dz / dd).multiplyScalar(travel / (dur * .4)); this.faceDir(dx, dz); this.telegraph = dur * .45; g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: travel, arc: 30, height: 0.1, life: dur * this.hitAt, thickness: 1 }); audio.whoosh({ vol: 0.5, pitch: 0.5, dur: 0.5 }); }
-    else if (this.def.ranged && !this.special) { g.fx.flash(this.pos.clone().setY(1.6 * this.def.scale), 0xa0ff90, { size: 1.5 * this.def.scale, life: dur * this.hitAt }); if (this.isBoss) audio.magic({ vol: 0.25, base: 200, notes: [0, 1, 0], step: 0.1, type: 'square' }); }
-    else if (this.special === 'fan') g.fx.slashArc(this.pos, this.yaw, this.def.projColor || 0x80ff90, { radius: 14, arc: 80, height: 0.1, life: dur * this.hitAt, thickness: .6 });
-    else if (this.special === 'spin') g.fx.ring(this.pos, 0xff3030, { r0: 4.2, r1: 4.8, life: dur * this.hitAt, y: 0.06, width: 1 });
-    else if (this.special === 'slam') g.fx.ring(this.pos.clone().addScaledVector(f, 2), 0xff3030, { r0: 3.6, r1: 4.2, life: dur * this.hitAt, y: 0.06 });
-    else if (this.special === 'summon') { g.fx.castCircle(this.pos, 0xff3030, { radius: 4, life: dur, demon: true }); }
-    else if (this.special === 'soulrain') { const p = this.player; this.rainPts = []; for (let i = 0; i < 6; i++) { const pt = p.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 8, 0, (Math.random() - 0.5) * 8)); if (i === 0) pt.copy(p.pos); this.rainPts.push(pt); g.fx.ring(pt, 0x80ff90, { r0: 1.8, r1: 2.2, life: dur * this.hitAt, y: 0.06 }); } g.fx.castCircle(this.pos, 0x80ff90, { radius: 4, life: dur, demon: true }); }
-    else g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: this.def.range + 0.5, arc: 110, height: 0.1, life: dur * this.hitAt, tilt: 0, thickness: 0.9 });
+    if (this.special === 'dash') { const p = this.player; const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z; const dd = Math.hypot(dx, dz) || 1; const travel = Math.min(9, dd + 1.5); this.partyDashWarning = {x:this.pos.x+dx/dd*travel/2,z:this.pos.z+dz/dd*travel/2,length:travel+6.4,width:6.4,angle:Math.atan2(dz,dx)}; this.dashV = new THREE.Vector3(dx / dd, 0, dz / dd).multiplyScalar(travel / (dur * .4)); this.faceDir(dx, dz); this.telegraph = dur * .45; g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: travel, arc: 30, height: 0.1, telegraph: true, life: dur * this.hitAt, thickness: 1 }); audio.whoosh({ vol: 0.5, pitch: 0.5, dur: 0.5 }); }
+    else if (this.def.ranged && !this.special) { g.fx.flash(this.pos.clone().setY(1.6 * this.def.scale), 0xa0ff90, { size: 1.5 * this.def.scale, telegraph: true, life: dur * this.hitAt }); if (this.isBoss) audio.magic({ vol: 0.25, base: 200, notes: [0, 1, 0], step: 0.1, type: 'square' }); }
+    else if (this.special === 'fan') g.fx.slashArc(this.pos, this.yaw, this.def.projColor || 0x80ff90, { radius: 14, arc: 80, height: 0.1, telegraph: true, life: dur * this.hitAt, thickness: .6 });
+    else if (this.special === 'spin') g.fx.ring(this.pos, 0xff3030, { r0: 4.2, r1: 4.8, telegraph: true, life: dur * this.hitAt, y: 0.06, width: 1 });
+    else if (this.special === 'slam') g.fx.ring(this.pos.clone().addScaledVector(f, 2), 0xff3030, { r0: 3.6, r1: 4.2, telegraph: true, life: dur * this.hitAt, y: 0.06 });
+    else if (this.special === 'summon') { g.fx.castCircle(this.pos, 0xff3030, { radius: 4, telegraph: true, life: dur, demon: true }); }
+    else if (this.special === 'soulrain') { const p = this.player; this.rainPts = []; for (let i = 0; i < 6; i++) { const pt = p.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 8, 0, (Math.random() - 0.5) * 8)); if (i === 0) pt.copy(p.pos); this.rainPts.push(pt); g.fx.ring(pt, 0x80ff90, { r0: 1.8, r1: 2.2, telegraph: true, life: dur * this.hitAt, y: 0.06 }); } g.fx.castCircle(this.pos, 0x80ff90, { radius: 4, telegraph: true, life: dur, demon: true }); }
+    else g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: this.def.range + 0.5, arc: 110, height: 0.1, telegraph: true, life: dur * this.hitAt, tilt: 0, thickness: 0.9 });
     if (this.isBoss && this.special !== 'dash') audio.whoosh({ vol: 0.4, pitch: 0.5, dur: 0.5 });
   }
   doAttack() {

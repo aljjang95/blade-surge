@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { softCircleTex, sparkTex, ringTex, slashTex, smokeTex, VFX_TEX } from './assets.js';
 import { ImpactLights } from './impact-lights.js';
+import { HeroEffectFocus } from './hero-effect-focus.js';
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
 
@@ -93,9 +94,11 @@ export class ParticlePool {
 export class FX {
   constructor(scene, camera) {
     this.scene = scene; this.camera = camera;
+    this.focus = new HeroEffectFocus();
     this.sparks = new ParticlePool(scene, { max: 1500, texture: sparkTex() });
     this.glow = new ParticlePool(scene, { max: 1200, texture: softCircleTex() });
     this.smoke = new ParticlePool(scene, { max: 400, texture: smokeTex(), blending: THREE.NormalBlending });
+    this.focus.bind(this.sparks.mat); this.focus.bind(this.glow.mat);
     this.items = []; // {obj, t, life, update}
     this.impactLights = new ImpactLights(scene);
     this.lights = this.impactLights.slots;
@@ -126,13 +129,18 @@ export class FX {
   light(pos, color, intensity = 6, dist = 9, life = 0.35) {
     this.impactLights.emit(pos, color, intensity * 2.5, dist, life);
   }
-  _mat(key, make) { return this._mats[key] || (this._mats[key] = make()); }
-  _keep(material) {
+  _mat(key, make, { telegraph = false } = {}) {
+    return this._mats[key] || (this._mats[key] = telegraph ? make() : this.focus.bind(make()));
+  }
+  _keep(material, { telegraph = false } = {}) {
     // These are the program-affecting features used by this FX module. Color,
     // opacity, texture identity and animation frames are uniforms, not cache keys.
     const key = [material.type, material.blending, material.side, material.forceSinglePass, material.transparent, material.fog, material.toneMapped,
-      !!material.map, material.vertexShader || '', material.fragmentShader || ''].join('|');
-    this._mat(key, () => material.clone());
+      !!material.map, material.vertexShader || '', material.fragmentShader || '', telegraph].join('|');
+    material.userData.telegraph = telegraph;
+    if (!telegraph) this.focus.bind(material);
+    // Material.clone does not retain shader callbacks. Rebind the prepared variant.
+    this._mat(key, () => material.clone(), { telegraph });
     return material;
   }
   _finishItem(index) {
@@ -147,6 +155,10 @@ export class FX {
     if (!this._primed) {
       const p = new THREE.Vector3(), mark = this.items.length;
       this.flash(p, 0xffffff); this.ring(p, 0xffffff); this.pillar(p, 0xffffff); this.firePillar(p);
+      this.slashArc(p, 0, 0xffffff); this.castCircle(p, 0xffffff);
+      // Enemy windups keep their original shader and must also be ready before combat.
+      this.flash(p, 0xffffff, { telegraph: true }); this.ring(p, 0xffffff, { telegraph: true });
+      this.slashArc(p, 0, 0xffffff, { telegraph: true }); this.castCircle(p, 0xffffff, { telegraph: true });
       this.flipbook(p, 'explosion'); this.flipbook(p, 'dust', { blending: THREE.NormalBlending });
       this._keep(new THREE.MeshBasicMaterial({ color: 0xffffff } )).dispose();
       this._keep(new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })).dispose();
@@ -308,8 +320,8 @@ export class FX {
   aura(pos, color, n = 3) { this.embers(pos, color, { n, radius: 0.8, life: 0.8, size: 0.3, rise: 2 }); }
 
   // ---------- 스프라이트 플래시 ----------
-  flash(pos, color, { size = 2.2, life = 0.18, tex = 'spark', angle = null, stretch = 1, contact = false } = {}) {
-    const m = this._keep(new THREE.SpriteMaterial({ map: tex === 'spark' ? sparkTex() : softCircleTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 1 }));
+  flash(pos, color, { size = 2.2, life = 0.18, tex = 'spark', angle = null, stretch = 1, contact = false, telegraph = false } = {}) {
+    const m = this._keep(new THREE.SpriteMaterial({ map: tex === 'spark' ? sparkTex() : softCircleTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 1 }), { telegraph });
     const s = new THREE.Sprite(m); s.position.copy(pos); s.scale.set(size*.3*stretch,size*.3/stretch,1); s.material.rotation = angle ?? Math.random() * Math.PI; s.renderOrder = 11;
     this.add(s, life, (k) => {
       const radius=size*(contact ? .45+.55*Math.min(1,k/.18) : .3+k*1.2);
@@ -317,21 +329,21 @@ export class FX {
     }, () => m.dispose());
   }
   // ---------- 지면 충격파 링 ----------
-  ring(pos, color, { r0 = 0.3, r1 = 4, life = 0.45, width = 0.5, y = 0.08, vertical = false, thick = 1 } = {}) {
+  ring(pos, color, { r0 = 0.3, r1 = 4, life = 0.45, width = 0.5, y = 0.08, vertical = false, thick = 1, telegraph = false } = {}) {
     // 평면 링은 양면을 한 번에 그린다. 준비 단계에도 같은 패스 설정을 전달한다.
-    const m = this._keep(new THREE.MeshBasicMaterial({ map: ringTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, opacity: 1 }));
+    const m = this._keep(new THREE.MeshBasicMaterial({ map: ringTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, opacity: 1 }), { telegraph });
     const mesh = new THREE.Mesh(this.plane2, m); mesh.position.copy(pos); mesh.position.y += y; mesh.renderOrder = 9;
     if (vertical) mesh.lookAt(this.camera.position); else mesh.rotation.x = -Math.PI / 2;
     this.add(mesh, life, (k) => { const e = 1 - Math.pow(1 - k, 3); const r = r0 + (r1 - r0) * e; mesh.scale.set(r, r, r * thick); m.opacity = (1 - k) * 1.2; }, () => m.dispose());
   }
   // ---------- 참격 아크 (지면 평행, 캐릭터 전방) ----------
-  slashArc(pos, yaw, color, { radius = 2.4, arc = 140, life = 0.22, height = 1.1, tilt = 0, flip = false, thickness = 0.55 } = {}) {
+  slashArc(pos, yaw, color, { radius = 2.4, arc = 140, life = 0.22, height = 1.1, tilt = 0, flip = false, thickness = 0.55, telegraph = false } = {}) {
     const a = THREE.MathUtils.degToRad(arc);
     const geo = new THREE.RingGeometry(radius * (1 - thickness), radius, 24, 1, -a / 2, a);
     // uv: u 를 각도 방향으로
     const uv = geo.attributes.uv; const p = geo.attributes.position;
     for (let i = 0; i < uv.count; i++) { const x = p.getX(i), y = p.getY(i); const ang = Math.atan2(y, x); const rr = Math.hypot(x, y); uv.setXY(i, (ang + a / 2) / a, (rr - radius * (1 - thickness)) / (radius * thickness)); }
-    const m = this._keep(new THREE.MeshBasicMaterial({ map: slashTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 1 }));
+    const m = this._keep(new THREE.MeshBasicMaterial({ map: slashTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 1 }), { telegraph });
     const mesh = new THREE.Mesh(geo, m); mesh.userData.ownGeo = true; mesh.renderOrder = 12;
     mesh.position.copy(pos); mesh.position.y += height;
     mesh.rotation.order = 'YXZ'; mesh.rotation.y = yaw - Math.PI / 2 + (flip ? 0 : 0); mesh.rotation.x = -Math.PI / 2 + tilt * (flip ? -1 : 1);
@@ -405,7 +417,9 @@ export class FX {
   }
   // ---------- 무기 트레일 (리본) ----------
   trail(getPoints, color, { segs = 16, life = 0.35 } = {}) {
-    const tr = new WeaponTrail(getPoints, color, segs, life); this.scene.add(tr.mesh); this.trails.push(tr); return tr;
+    const tr = new WeaponTrail(getPoints, color, segs, life);
+    this._keep(tr.mat); this._keep(tr.coreMat);
+    this.scene.add(tr.mesh); this.trails.push(tr); return tr;
   }
   // ---------- 잔상 (스킨드 메시 스냅샷) ----------
   ghost(root, color, { life = 0.45, opacity = 0.7, at = null } = {}) {
@@ -426,7 +440,7 @@ export class FX {
     this.add(grp, life, (k) => { m.opacity = opacity * (1 - k); }, () => m.dispose());
   }
   // ========== GPT 생성 VFX 텍스처 기반 이펙트 ==========
-  _addMat(tex, color, { blending = THREE.AdditiveBlending } = {}) { return this._keep(new THREE.MeshBasicMaterial({ map: tex, color, blending, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 1 })); }
+  _addMat(tex, color, { blending = THREE.AdditiveBlending, telegraph = false } = {}) { return this._keep(new THREE.MeshBasicMaterial({ map: tex, color, blending, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 1 }), { telegraph }); }
   /** 카메라를 향하는 텍스처 플래시 (holy_burst, ice, shockwave 등) */
   texFlash(pos, name, color = 0xffffff, { size = 3, life = 0.35, spin = 0, grow = 1.3, y = 1 } = {}) {
     const tex = VFX_TEX[name]; if (!tex) return this.flash(pos, color, { size, life });
@@ -436,16 +450,16 @@ export class FX {
     return sp;
   }
   /** 지면 텍스처 (마법진 / 충격파 링). 회전·확대·페이드 */
-  groundTex(pos, name, color = 0xffffff, { r0 = 0.2, r1 = 4, life = 0.5, spin = 1, y = 0.06, fadeIn = 0.15, hold = 0 } = {}) {
-    const tex = VFX_TEX[name]; if (!tex) return this.ring(pos, color, { r0, r1, life, y });
-    const m = this._addMat(tex, color);
+  groundTex(pos, name, color = 0xffffff, { r0 = 0.2, r1 = 4, life = 0.5, spin = 1, y = 0.06, fadeIn = 0.15, hold = 0, telegraph = false } = {}) {
+    const tex = VFX_TEX[name]; if (!tex) return this.ring(pos, color, { r0, r1, life, y, telegraph });
+    const m = this._addMat(tex, color, { telegraph });
     const mesh = new THREE.Mesh(this.plane2, m); mesh.rotation.x = -Math.PI / 2; mesh.position.copy(pos); mesh.position.y = y; mesh.renderOrder = 8;
     this.add(mesh, life, (k, t, dt) => { const e = 1 - Math.pow(1 - k, 3); const r = r0 + (r1 - r0) * e; mesh.scale.set(r, r, 1); mesh.rotation.z += spin * dt; m.opacity = k < fadeIn ? k / fadeIn : (hold > 0 ? (k < 0.65 ? 1 : 1 - (k - 0.65) / 0.35) : 1 - (k - fadeIn) / (1 - fadeIn)); }, () => m.dispose());
     return mesh;
   }
   /** 시전 마법진: 캐스터 아래에서 회전, 커졌다가 사라짐 */
-  castCircle(pos, color = 0xffd060, { radius = 2.4, life = 0.9, demon = false } = {}) {
-    return this.groundTex(pos, demon ? 'circle_demon' : 'circle_gold', color, { r0: radius * 0.4, r1: radius, life, spin: 1.6, y: 0.07, fadeIn: 0.2, hold: 0.35 });
+  castCircle(pos, color = 0xffd060, { radius = 2.4, life = 0.9, demon = false, telegraph = false } = {}) {
+    return this.groundTex(pos, demon ? 'circle_demon' : 'circle_gold', color, { r0: radius * 0.4, r1: radius, life, spin: 1.6, y: 0.07, fadeIn: 0.2, hold: 0.35, telegraph });
   }
   /** 플립북 (explosion / dust 4x4 아틀라스) — 빌보드 셰이더 */
   flipbook(pos, name, { size = 3, life = 0.6, color = 0xffffff, cols = 4, rows = 4, y = 1, blending = THREE.AdditiveBlending, opacity = 1 } = {}) {
@@ -483,7 +497,7 @@ export class FX {
     };
     // _keep clones texture uniforms. This program keeps the asset itself shared.
     this._mat('firePillar', make);
-    return make();
+    return this.focus.bind(make());
   }
   firePillar(pos, { height = 6, width = 2.2, life = 0.8, color = 0xffb060 } = {}) {
     const tex = VFX_TEX.fire_pillar; if (!tex) return this.pillar(pos, color, { radius: width / 2, height, life });

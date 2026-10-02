@@ -222,6 +222,11 @@ export class Renderer {
     this.u.uTime.value = this.time;
   }
   render() {
+    // Bind the live actor after camera movement; a new battle never inherits an old mask.
+    if (this.heroEffectFocus) {
+      this.heroEffectFocus.setTarget(this.heroEffectTarget?.());
+      this.heroEffectFocus.update(this.r, this.camera);
+    }
     this.lobbyAA.enabled = this.rig.mode === 'lobby'; this.composer.render();
     this.programValidator.validate(this.r);
   }

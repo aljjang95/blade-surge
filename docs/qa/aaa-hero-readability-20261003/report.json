@@ -1,0 +1,985 @@
+{
+  "scope": "Prefreeze controlled visual evidence; clean final commit formal QA is separate.",
+  "runtimeSourceSha256": {
+    "src/engine/hero-effect-focus.js": "5776843c9ae67ccf276dc78ff57c6cf830574c3065a4c04a96d1a9944fbe1fa2",
+    "src/engine/fx.js": "a099a85fbc54fd1df10d4f1494cfe1f8e594d8bc0d78405aa6035b624c15981d",
+    "src/engine/renderer.js": "79a3a5319deb0e620d6fa4cb55ce6015b60b5fe2be6aa4a7439d04bf3cc57576",
+    "src/main.js": "9255a5f8eecc9432e9be91d32afa1a6e6ad4d45205ef7fba6a7a0e5318513086",
+    "src/game/enemies.js": "b8aa0f21a43976e9bf0bddead1f4dc63e02a1c89db7bc570a001e94bd97cc723"
+  },
+  "visual": {
+    "status": "pass",
+    "startedAt": "2026-10-02T15:36:27.491Z",
+    "controlledRender": true,
+    "scope": "Same compiled game, actor, camera, warning, seed and effect clocks; focus disabled versus enabled against one neutral rest reference. RT and actor ownership assessed by code review, GPU allocation counts observed. No victory, progression or device claims.",
+    "cases": [
+      {
+        "hero": "knight",
+        "quality": "mid",
+        "reduced": false,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 4.983333333333333,
+          "skill": "holy_slash"
+        },
+        "heroRegionPixels": 3773,
+        "legacyError": 127.67656153370439,
+        "focusedError": 51.72161851753688,
+        "errorRatio": 0.405098773778328,
+        "warningGeometryUnchanged": true,
+        "focus": [
+          0.5,
+          0.5331361471372804,
+          0.04387982287399533,
+          0.1345970908332367
+        ],
+        "resourceObservation": {
+          "textures": 84,
+          "geometries": 55,
+          "programs": 142
+        },
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "active": true,
+        "mode": "battle",
+        "focusTargetPresent": true,
+        "viewport": [
+          880,
+          400
+        ],
+        "captures": {
+          "legacy": {
+            "sha256": "bec7f49e05c6b7a2e7b2e56cc597b0cd85a237214d0761abddc674a8e73ba502",
+            "file": "knight-mid-legacy.png"
+          },
+          "focused": {
+            "sha256": "450becbc9883ac71b7d08ce7d8f973dc132bb635fd3d8403decd4b67e26bd939",
+            "file": "knight-mid-focused.png"
+          }
+        }
+      },
+      {
+        "hero": "mage",
+        "quality": "low",
+        "reduced": false,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 4.983333333333333,
+          "skill": "fireball"
+        },
+        "heroRegionPixels": 3773,
+        "legacyError": 66.70474423535649,
+        "focusedError": 9.870571605265482,
+        "errorRatio": 0.1479740566943609,
+        "warningGeometryUnchanged": true,
+        "focus": [
+          0.5,
+          0.5331361471372804,
+          0.04387982287399533,
+          0.1345970908332367
+        ],
+        "resourceObservation": {
+          "textures": 72,
+          "geometries": 53,
+          "programs": 133
+        },
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "active": true,
+        "mode": "battle",
+        "focusTargetPresent": true,
+        "viewport": [
+          880,
+          400
+        ],
+        "captures": {
+          "legacy": {
+            "sha256": "033e0f6f7a0ca95916c5e096ca5edeb46f2ac3851bd31e7f8a2fcc15637333da",
+            "file": "mage-low-legacy.png"
+          },
+          "focused": {
+            "sha256": "0125c5a1f5e3e8804184e67f5ec303ad3b2440b5170710e3aa1269e2dfed2c49",
+            "file": "mage-low-focused.png"
+          }
+        }
+      },
+      {
+        "hero": "ranger",
+        "quality": "mid",
+        "reduced": true,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 3.9833333333333334,
+          "skill": "ranger_pierce"
+        },
+        "heroRegionPixels": 3773,
+        "legacyError": 149.17775421857056,
+        "focusedError": 51.805106458167685,
+        "errorRatio": 0.34727099043376447,
+        "warningGeometryUnchanged": true,
+        "focus": [
+          0.5,
+          0.5331361471372804,
+          0.04387982287399533,
+          0.1345970908332367
+        ],
+        "resourceObservation": {
+          "textures": 95,
+          "geometries": 64,
+          "programs": 142
+        },
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "active": true,
+        "mode": "battle",
+        "focusTargetPresent": true,
+        "viewport": [
+          880,
+          400
+        ],
+        "captures": {
+          "legacy": {
+            "sha256": "4aea499e9e8b7415382784bb16ffd1439d4aadb16b9f3c11df4932612abf8d59",
+            "file": "ranger-mid-legacy.png"
+          },
+          "focused": {
+            "sha256": "bde554766f8fe20053caff294e6eda2f71d1c7e173e23a0c81e5b35a28576764",
+            "file": "ranger-mid-focused.png"
+          }
+        }
+      }
+    ],
+    "errors": [],
+    "failures": [],
+    "build": {
+      "sha": "4ffc8eac7f910b6101f55146eb369184c12ef701",
+      "dirty": true,
+      "builtAt": "2026-10-02T15:36:27.132Z",
+      "pwaRelease": "59f19bb48c1dc500ff62"
+    },
+    "lastSample": {
+      "hero": "ranger",
+      "quality": "mid",
+      "geometry": {
+        "x": 440,
+        "top": 148.28922947844876,
+        "bottom": 225.20185281172687,
+        "halfWidth": 24.13390258069743,
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ]
+      },
+      "beforeError": 1688543,
+      "afterError": 586382,
+      "pixels": 3773,
+      "ratio": 0.34727099043376447,
+      "focus": [
+        0.5,
+        0.5331361471372804,
+        0.04387982287399533,
+        0.1345970908332367
+      ],
+      "resourceObservation": {
+        "textures": 95,
+        "geometries": 64,
+        "programs": 142
+      },
+      "warnings": [
+        {
+          "id": "region:1:0",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 3,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 1.5,
+          "duration": 1.5,
+          "color": 15253108
+        },
+        {
+          "id": "region:1:1",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 6,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 2.05,
+          "duration": 2.05,
+          "color": 15253108
+        }
+      ],
+      "alive": true,
+      "active": true,
+      "mode": "battle",
+      "focusTargetPresent": true,
+      "viewport": [
+        880,
+        400
+      ],
+      "programs": [
+        {
+          "key": "se,false,false,,true,false,0,,2,4,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,1025,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "viewport": [
+            1,
+            1
+          ]
+        },
+        {
+          "key": ",false,false,,false,false,0,,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0,1,0,srgb,onBeforeCompile(){}|hero-effect-focus-v3:bloom-rgb",
+          "focus": [
+            0.5,
+            0.5331361471372804,
+            0.04387982287399533,
+            0.1345970908332367
+          ]
+        },
+        {
+          "key": "lse,false,false,,true,true,0,,2,4,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,1027,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [],
+          "viewport": []
+        },
+        {
+          "key": "e,false,false,0,true,false,0,,2,4,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,3075,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [],
+          "viewport": []
+        },
+        {
+          "key": "se,false,false,,true,false,0,,2,4,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,3073,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [],
+          "viewport": []
+        },
+        {
+          "key": "se,false,false,,true,false,0,,2,4,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,3075,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [],
+          "viewport": []
+        },
+        {
+          "key": "e,false,false,0,true,false,0,,2,4,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,5123,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [],
+          "viewport": []
+        },
+        {
+          "key": "e,false,false,0,true,false,0,,2,4,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,1027,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [],
+          "viewport": []
+        },
+        {
+          "key": "se,false,false,,true,false,0,,2,4,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,3073,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [],
+          "viewport": []
+        },
+        {
+          "key": "e,false,false,0,true,false,0,,2,4,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,1027,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [],
+          "viewport": []
+        },
+        {
+          "key": "e,false,false,0,true,false,0,,2,4,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,5123,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [],
+          "viewport": []
+        },
+        {
+          "key": "e,false,false,,true,false,0,,1,18,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,1025,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [
+            0.5,
+            0.5331361471372804,
+            0.04387982287399533,
+            0.1345970908332367
+          ],
+          "viewport": [
+            880,
+            400
+          ]
+        },
+        {
+          "key": "se,false,false,,true,true,0,,1,18,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,1027,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [
+            0.5,
+            0.5331361471372804,
+            0.04387982287399533,
+            0.1345970908332367
+          ],
+          "viewport": [
+            880,
+            400
+          ]
+        },
+        {
+          "key": ",false,false,0,true,false,0,,1,18,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,3075,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [
+            0.5,
+            0.5331361471372804,
+            0.04387982287399533,
+            0.1345970908332367
+          ],
+          "viewport": [
+            880,
+            400
+          ]
+        },
+        {
+          "key": "e,false,false,,true,false,0,,1,18,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,3073,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [],
+          "viewport": []
+        },
+        {
+          "key": "e,false,false,,true,false,0,,1,18,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,3075,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [
+            0.5,
+            0.5331361471372804,
+            0.04387982287399533,
+            0.1345970908332367
+          ],
+          "viewport": [
+            880,
+            400
+          ]
+        },
+        {
+          "key": ",false,false,0,true,false,0,,1,18,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,5123,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [
+            0.5,
+            0.5331361471372804,
+            0.04387982287399533,
+            0.1345970908332367
+          ],
+          "viewport": [
+            880,
+            400
+          ]
+        },
+        {
+          "key": ",false,false,0,true,false,0,,1,18,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,1027,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [
+            0.5,
+            0.5331361471372804,
+            0.04387982287399533,
+            0.1345970908332367
+          ],
+          "viewport": [
+            880,
+            400
+          ]
+        },
+        {
+          "key": "e,false,false,,true,false,0,,1,18,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,3073,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [
+            0.5,
+            0.5331361471372804,
+            0.04387982287399533,
+            0.1345970908332367
+          ],
+          "viewport": [
+            880,
+            400
+          ]
+        },
+        {
+          "key": ",false,false,0,true,false,0,,1,18,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,1027,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [],
+          "viewport": []
+        },
+        {
+          "key": ",false,false,0,true,false,0,,1,18,0,0,1,0,1,0,0,0,0,2,0,0,0,0,1,5123,srgb,onBeforeCompile(){}|hero-effect-focus-v3:alpha",
+          "focus": [],
+          "viewport": []
+        }
+      ]
+    },
+    "finishedAt": "2026-10-02T15:37:17.776Z"
+  },
+  "telegraph": {
+    "status": "pass",
+    "startedAt": "2026-10-02T15:40:25.507Z",
+    "cases": [
+      {
+        "hero": "knight",
+        "quality": "mid",
+        "reduced": false,
+        "preparedPrograms": 141,
+        "skill": {
+          "state": "skill",
+          "programs": 141
+        },
+        "attack": {
+          "state": "attack",
+          "programs": 141
+        },
+        "warnings": [
+          {
+            "kind": "ring",
+            "directPixelInvariant": true,
+            "age": [
+              0.18
+            ],
+            "lifetime": [
+              1
+            ],
+            "materials": [
+              {
+                "protected": true,
+                "focus": false
+              }
+            ],
+            "targetIds": [
+              "63231a24-8469-4b74-9c62-9d022d7a7bd0",
+              "1e0bea9a-79a7-4122-8843-e016c7dd41a5",
+              "6c706047-7998-4feb-acc9-05720f00df4d",
+              "9dd5c652-2084-4499-bc6a-469d7da6c714",
+              "808a9ea0-6cd8-4b05-97c8-fb24be573cb5",
+              "a997686b-3b5f-4ee4-b9dd-c1ab47e53b63",
+              "d0384a2e-8d24-4ea6-b47a-97ff62893213",
+              "d040251d-dd40-49a2-8582-e25d44c24b08",
+              "ace3ea8f-e574-4187-ba12-6c123c08b8f3",
+              "4dfb5582-209f-418e-bd5c-5b4560baf00b",
+              "bead726f-26eb-43b5-854e-54e7126b90ad",
+              "060de0d9-4708-4daf-b946-843274caadbe",
+              "3a289f97-05a0-4032-8665-48b63821b38c"
+            ],
+            "programs": 141
+          },
+          {
+            "kind": "slashArc",
+            "directPixelInvariant": true,
+            "age": [
+              0.18
+            ],
+            "lifetime": [
+              1
+            ],
+            "materials": [
+              {
+                "protected": true,
+                "focus": false
+              }
+            ],
+            "targetIds": [
+              "63231a24-8469-4b74-9c62-9d022d7a7bd0",
+              "1e0bea9a-79a7-4122-8843-e016c7dd41a5",
+              "6c706047-7998-4feb-acc9-05720f00df4d",
+              "9dd5c652-2084-4499-bc6a-469d7da6c714",
+              "808a9ea0-6cd8-4b05-97c8-fb24be573cb5",
+              "a997686b-3b5f-4ee4-b9dd-c1ab47e53b63",
+              "d0384a2e-8d24-4ea6-b47a-97ff62893213",
+              "d040251d-dd40-49a2-8582-e25d44c24b08",
+              "ace3ea8f-e574-4187-ba12-6c123c08b8f3",
+              "4dfb5582-209f-418e-bd5c-5b4560baf00b",
+              "bead726f-26eb-43b5-854e-54e7126b90ad",
+              "060de0d9-4708-4daf-b946-843274caadbe",
+              "3a289f97-05a0-4032-8665-48b63821b38c"
+            ],
+            "programs": 141
+          },
+          {
+            "kind": "flash",
+            "directPixelInvariant": true,
+            "age": [
+              0.18
+            ],
+            "lifetime": [
+              1
+            ],
+            "materials": [
+              {
+                "protected": true,
+                "focus": false
+              }
+            ],
+            "targetIds": [
+              "63231a24-8469-4b74-9c62-9d022d7a7bd0",
+              "1e0bea9a-79a7-4122-8843-e016c7dd41a5",
+              "6c706047-7998-4feb-acc9-05720f00df4d",
+              "9dd5c652-2084-4499-bc6a-469d7da6c714",
+              "808a9ea0-6cd8-4b05-97c8-fb24be573cb5",
+              "a997686b-3b5f-4ee4-b9dd-c1ab47e53b63",
+              "d0384a2e-8d24-4ea6-b47a-97ff62893213",
+              "d040251d-dd40-49a2-8582-e25d44c24b08",
+              "ace3ea8f-e574-4187-ba12-6c123c08b8f3",
+              "4dfb5582-209f-418e-bd5c-5b4560baf00b",
+              "bead726f-26eb-43b5-854e-54e7126b90ad",
+              "060de0d9-4708-4daf-b946-843274caadbe",
+              "3a289f97-05a0-4032-8665-48b63821b38c"
+            ],
+            "programs": 141
+          },
+          {
+            "kind": "castCircle",
+            "directPixelInvariant": true,
+            "age": [
+              0.18
+            ],
+            "lifetime": [
+              1
+            ],
+            "materials": [
+              {
+                "protected": true,
+                "focus": false
+              }
+            ],
+            "targetIds": [
+              "63231a24-8469-4b74-9c62-9d022d7a7bd0",
+              "1e0bea9a-79a7-4122-8843-e016c7dd41a5",
+              "6c706047-7998-4feb-acc9-05720f00df4d",
+              "9dd5c652-2084-4499-bc6a-469d7da6c714",
+              "808a9ea0-6cd8-4b05-97c8-fb24be573cb5",
+              "a997686b-3b5f-4ee4-b9dd-c1ab47e53b63",
+              "d0384a2e-8d24-4ea6-b47a-97ff62893213",
+              "d040251d-dd40-49a2-8582-e25d44c24b08",
+              "ace3ea8f-e574-4187-ba12-6c123c08b8f3",
+              "4dfb5582-209f-418e-bd5c-5b4560baf00b",
+              "bead726f-26eb-43b5-854e-54e7126b90ad",
+              "060de0d9-4708-4daf-b946-843274caadbe",
+              "3a289f97-05a0-4032-8665-48b63821b38c"
+            ],
+            "programs": 141
+          }
+        ]
+      },
+      {
+        "hero": "mage",
+        "quality": "low",
+        "reduced": false,
+        "preparedPrograms": 132,
+        "skill": {
+          "state": "skill",
+          "programs": 132
+        },
+        "attack": {
+          "state": "attack",
+          "programs": 132
+        },
+        "warnings": [
+          {
+            "kind": "ring",
+            "directPixelInvariant": true,
+            "age": [
+              0.18
+            ],
+            "lifetime": [
+              1
+            ],
+            "materials": [
+              {
+                "protected": true,
+                "focus": false
+              }
+            ],
+            "targetIds": [
+              "03d379d8-3631-4152-b30c-aff42448ac3f",
+              "6055abe8-0116-4e8f-ae01-5b17f0b2b684",
+              "4f2361b9-8d7b-48fa-b6f9-0a99398b4f55",
+              "2a225e6f-59a6-4f69-995a-f704432ab687",
+              "8eeb6556-8b0d-4f12-8eee-5604570ebf33",
+              "641500a7-dfb3-4fdc-8012-89ea35d26ede",
+              "f8980df1-88ff-4b24-ac75-1eae74826d65",
+              "71db38fc-fa52-43f4-8453-1c46fcd484cf",
+              "6978f303-0d20-405e-b7f6-d764365a660d",
+              "9f3a3eb7-776f-4483-abd1-081cd0e5e054",
+              "f414d99a-6d6e-48fa-94ff-26ddbf2dc897",
+              "df2fb5bf-2d16-4d15-bc2c-2c4673e5ef25",
+              "fb570dcd-7593-4caf-9f05-d6e429a02f70"
+            ],
+            "programs": 132
+          },
+          {
+            "kind": "slashArc",
+            "directPixelInvariant": true,
+            "age": [
+              0.18
+            ],
+            "lifetime": [
+              1
+            ],
+            "materials": [
+              {
+                "protected": true,
+                "focus": false
+              }
+            ],
+            "targetIds": [
+              "03d379d8-3631-4152-b30c-aff42448ac3f",
+              "6055abe8-0116-4e8f-ae01-5b17f0b2b684",
+              "4f2361b9-8d7b-48fa-b6f9-0a99398b4f55",
+              "2a225e6f-59a6-4f69-995a-f704432ab687",
+              "8eeb6556-8b0d-4f12-8eee-5604570ebf33",
+              "641500a7-dfb3-4fdc-8012-89ea35d26ede",
+              "f8980df1-88ff-4b24-ac75-1eae74826d65",
+              "71db38fc-fa52-43f4-8453-1c46fcd484cf",
+              "6978f303-0d20-405e-b7f6-d764365a660d",
+              "9f3a3eb7-776f-4483-abd1-081cd0e5e054",
+              "f414d99a-6d6e-48fa-94ff-26ddbf2dc897",
+              "df2fb5bf-2d16-4d15-bc2c-2c4673e5ef25",
+              "fb570dcd-7593-4caf-9f05-d6e429a02f70"
+            ],
+            "programs": 132
+          },
+          {
+            "kind": "flash",
+            "directPixelInvariant": true,
+            "age": [
+              0.18
+            ],
+            "lifetime": [
+              1
+            ],
+            "materials": [
+              {
+                "protected": true,
+                "focus": false
+              }
+            ],
+            "targetIds": [
+              "03d379d8-3631-4152-b30c-aff42448ac3f",
+              "6055abe8-0116-4e8f-ae01-5b17f0b2b684",
+              "4f2361b9-8d7b-48fa-b6f9-0a99398b4f55",
+              "2a225e6f-59a6-4f69-995a-f704432ab687",
+              "8eeb6556-8b0d-4f12-8eee-5604570ebf33",
+              "641500a7-dfb3-4fdc-8012-89ea35d26ede",
+              "f8980df1-88ff-4b24-ac75-1eae74826d65",
+              "71db38fc-fa52-43f4-8453-1c46fcd484cf",
+              "6978f303-0d20-405e-b7f6-d764365a660d",
+              "9f3a3eb7-776f-4483-abd1-081cd0e5e054",
+              "f414d99a-6d6e-48fa-94ff-26ddbf2dc897",
+              "df2fb5bf-2d16-4d15-bc2c-2c4673e5ef25",
+              "fb570dcd-7593-4caf-9f05-d6e429a02f70"
+            ],
+            "programs": 132
+          },
+          {
+            "kind": "castCircle",
+            "directPixelInvariant": true,
+            "age": [
+              0.18
+            ],
+            "lifetime": [
+              1
+            ],
+            "materials": [
+              {
+                "protected": true,
+                "focus": false
+              }
+            ],
+            "targetIds": [
+              "03d379d8-3631-4152-b30c-aff42448ac3f",
+              "6055abe8-0116-4e8f-ae01-5b17f0b2b684",
+              "4f2361b9-8d7b-48fa-b6f9-0a99398b4f55",
+              "2a225e6f-59a6-4f69-995a-f704432ab687",
+              "8eeb6556-8b0d-4f12-8eee-5604570ebf33",
+              "641500a7-dfb3-4fdc-8012-89ea35d26ede",
+              "f8980df1-88ff-4b24-ac75-1eae74826d65",
+              "71db38fc-fa52-43f4-8453-1c46fcd484cf",
+              "6978f303-0d20-405e-b7f6-d764365a660d",
+              "9f3a3eb7-776f-4483-abd1-081cd0e5e054",
+              "f414d99a-6d6e-48fa-94ff-26ddbf2dc897",
+              "df2fb5bf-2d16-4d15-bc2c-2c4673e5ef25",
+              "fb570dcd-7593-4caf-9f05-d6e429a02f70"
+            ],
+            "programs": 132
+          }
+        ]
+      },
+      {
+        "hero": "ranger",
+        "quality": "mid",
+        "reduced": true,
+        "preparedPrograms": 141,
+        "skill": {
+          "state": "skill",
+          "programs": 141
+        },
+        "attack": {
+          "state": "attack",
+          "programs": 141
+        },
+        "warnings": [
+          {
+            "kind": "ring",
+            "directPixelInvariant": true,
+            "age": [
+              0.18
+            ],
+            "lifetime": [
+              1
+            ],
+            "materials": [
+              {
+                "protected": true,
+                "focus": false
+              }
+            ],
+            "targetIds": [
+              "475171c7-4e99-4636-aa56-afcab9ca872b",
+              "f42331fe-fe8f-460a-9194-7d0649d496f8",
+              "5f680be2-3ebf-4755-bb79-cda36cb271ee",
+              "5a04ae18-fc41-44c6-90a3-20f880f56233",
+              "ed968ca5-c4eb-4543-bf43-1cb53c2f2e11",
+              "20584cd4-4ef7-4938-9273-30751ab1df63",
+              "b744533b-b455-4db3-b227-6d633029359a",
+              "254937cc-d663-416b-839a-19e4b4794665",
+              "6183b85a-684f-49f9-8984-93ef913a00a2",
+              "705e007a-4dde-4441-82de-300fcc397408",
+              "504e478e-a54b-4e46-bbd7-8d5fa9d58146",
+              "58328691-1594-4c15-b6a3-e52fd69a9370",
+              "e08cfefd-5a8a-4c54-af06-05c56ebb4abf"
+            ],
+            "programs": 141
+          },
+          {
+            "kind": "slashArc",
+            "directPixelInvariant": true,
+            "age": [
+              0.18
+            ],
+            "lifetime": [
+              1
+            ],
+            "materials": [
+              {
+                "protected": true,
+                "focus": false
+              }
+            ],
+            "targetIds": [
+              "475171c7-4e99-4636-aa56-afcab9ca872b",
+              "f42331fe-fe8f-460a-9194-7d0649d496f8",
+              "5f680be2-3ebf-4755-bb79-cda36cb271ee",
+              "5a04ae18-fc41-44c6-90a3-20f880f56233",
+              "ed968ca5-c4eb-4543-bf43-1cb53c2f2e11",
+              "20584cd4-4ef7-4938-9273-30751ab1df63",
+              "b744533b-b455-4db3-b227-6d633029359a",
+              "254937cc-d663-416b-839a-19e4b4794665",
+              "6183b85a-684f-49f9-8984-93ef913a00a2",
+              "705e007a-4dde-4441-82de-300fcc397408",
+              "504e478e-a54b-4e46-bbd7-8d5fa9d58146",
+              "58328691-1594-4c15-b6a3-e52fd69a9370",
+              "e08cfefd-5a8a-4c54-af06-05c56ebb4abf"
+            ],
+            "programs": 141
+          },
+          {
+            "kind": "flash",
+            "directPixelInvariant": true,
+            "age": [
+              0.18
+            ],
+            "lifetime": [
+              1
+            ],
+            "materials": [
+              {
+                "protected": true,
+                "focus": false
+              }
+            ],
+            "targetIds": [
+              "475171c7-4e99-4636-aa56-afcab9ca872b",
+              "f42331fe-fe8f-460a-9194-7d0649d496f8",
+              "5f680be2-3ebf-4755-bb79-cda36cb271ee",
+              "5a04ae18-fc41-44c6-90a3-20f880f56233",
+              "ed968ca5-c4eb-4543-bf43-1cb53c2f2e11",
+              "20584cd4-4ef7-4938-9273-30751ab1df63",
+              "b744533b-b455-4db3-b227-6d633029359a",
+              "254937cc-d663-416b-839a-19e4b4794665",
+              "6183b85a-684f-49f9-8984-93ef913a00a2",
+              "705e007a-4dde-4441-82de-300fcc397408",
+              "504e478e-a54b-4e46-bbd7-8d5fa9d58146",
+              "58328691-1594-4c15-b6a3-e52fd69a9370",
+              "e08cfefd-5a8a-4c54-af06-05c56ebb4abf"
+            ],
+            "programs": 141
+          },
+          {
+            "kind": "castCircle",
+            "directPixelInvariant": true,
+            "age": [
+              0.18
+            ],
+            "lifetime": [
+              1
+            ],
+            "materials": [
+              {
+                "protected": true,
+                "focus": false
+              }
+            ],
+            "targetIds": [
+              "475171c7-4e99-4636-aa56-afcab9ca872b",
+              "f42331fe-fe8f-460a-9194-7d0649d496f8",
+              "5f680be2-3ebf-4755-bb79-cda36cb271ee",
+              "5a04ae18-fc41-44c6-90a3-20f880f56233",
+              "ed968ca5-c4eb-4543-bf43-1cb53c2f2e11",
+              "20584cd4-4ef7-4938-9273-30751ab1df63",
+              "b744533b-b455-4db3-b227-6d633029359a",
+              "254937cc-d663-416b-839a-19e4b4794665",
+              "6183b85a-684f-49f9-8984-93ef913a00a2",
+              "705e007a-4dde-4441-82de-300fcc397408",
+              "504e478e-a54b-4e46-bbd7-8d5fa9d58146",
+              "58328691-1594-4c15-b6a3-e52fd69a9370",
+              "e08cfefd-5a8a-4c54-af06-05c56ebb4abf"
+            ],
+            "programs": 141
+          }
+        ]
+      }
+    ],
+    "errors": [],
+    "scope": "Real 1/J keys; protected ring/slash/flash/circle overlap with bloom disabled verifies original direct pixels. Bloom-enabled warning captures are visual evidence, not pixel invariance or natural boss completion.",
+    "build": {
+      "sha": "4ffc8eac7f910b6101f55146eb369184c12ef701",
+      "dirty": true,
+      "builtAt": "2026-10-02T15:36:27.132Z",
+      "pwaRelease": "59f19bb48c1dc500ff62"
+    },
+    "finishedAt": "2026-10-02T15:41:21.729Z"
+  },
+  "telegraphMetadataCorrection": "This prefreeze report used a missing userData focus tag. The helper now observes customProgramCacheKey; direct pixel/lifetime/RT assertions were valid and will be repeated on clean final commit.",
+  "independentReview": {
+    "sourceRead": true,
+    "imagesOpened": true,
+    "remainingCodeBlockers": [],
+    "physicalDevice": "NOT_RUN",
+    "naturalBossCompletion": "NOT_RUN",
+    "artFinalPolish": "INCOMPLETE"
+  },
+  "fullCheck": {
+    "status": "pass",
+    "passed": 1253,
+    "skipped": 2,
+    "failed": 0,
+    "log": "work/aaa-20261003/visual-full-check-v2.log",
+    "originalFailureLog": "work/aaa-20261003/visual-full-check.log",
+    "repair": "Object.create(FX.prototype) test fixture now initializes actual HeroEffectFocus; assertions preserved; no runtime change"
+  }
+}
