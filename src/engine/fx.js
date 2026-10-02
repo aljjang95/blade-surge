@@ -163,6 +163,9 @@ export class FX {
       this._keep(new THREE.MeshBasicMaterial({ color: 0xffffff } )).dispose();
       this._keep(new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })).dispose();
       this._keep(new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false })).dispose();
+      // Curved weapon ribbons retain their original two-sided two-pass
+      // material. Flat effects no longer prime its mapped shader variant.
+      this._keep(new THREE.MeshBasicMaterial({ map: slashTex(), color: 0xffffff, transparent: true, side: THREE.DoubleSide, forceSinglePass: false, blending: THREE.AdditiveBlending, depthWrite: false })).dispose();
       this._keep(new THREE.MeshBasicMaterial({ map: softCircleTex(), transparent: true, depthWrite: false })).dispose();
       // Coins/material drops use untextured PBR, unlike the textured model atlases.
       this._keep(new THREE.MeshStandardMaterial()).dispose();
@@ -343,7 +346,7 @@ export class FX {
     // uv: u 를 각도 방향으로
     const uv = geo.attributes.uv; const p = geo.attributes.position;
     for (let i = 0; i < uv.count; i++) { const x = p.getX(i), y = p.getY(i); const ang = Math.atan2(y, x); const rr = Math.hypot(x, y); uv.setXY(i, (ang + a / 2) / a, (rr - radius * (1 - thickness)) / (radius * thickness)); }
-    const m = this._keep(new THREE.MeshBasicMaterial({ map: slashTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 1 }), { telegraph });
+    const m = this._keep(new THREE.MeshBasicMaterial({ map: slashTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, opacity: 1 }), { telegraph });
     const mesh = new THREE.Mesh(geo, m); mesh.userData.ownGeo = true; mesh.renderOrder = 12;
     mesh.position.copy(pos); mesh.position.y += height;
     mesh.rotation.order = 'YXZ'; mesh.rotation.y = yaw - Math.PI / 2 + (flip ? 0 : 0); mesh.rotation.x = -Math.PI / 2 + tilt * (flip ? -1 : 1);
@@ -355,7 +358,7 @@ export class FX {
     const geo = new THREE.RingGeometry(size * 0.55, size, 32, 1, Math.PI * 0.2, Math.PI * 0.6);
     const uv = geo.attributes.uv; const p = geo.attributes.position; const a0 = Math.PI * 0.2, a = Math.PI * 0.6;
     for (let i = 0; i < uv.count; i++) { const x = p.getX(i), y = p.getY(i); const ang = Math.atan2(y, x); uv.setXY(i, (ang - a0) / a, (Math.hypot(x, y) - size * 0.55) / (size * 0.45)); }
-    const m = this._keep(new THREE.MeshBasicMaterial({ map: slashTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+    const m = this._keep(new THREE.MeshBasicMaterial({ map: slashTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true }));
     const mesh = new THREE.Mesh(geo, m); mesh.userData.ownGeo = true; mesh.renderOrder = 12; mesh.position.copy(pos);
     const d = dir.clone().normalize();
     // 진행 방향에 수직인 평면(로컬 +Z = 진행 방향) + 카메라 쪽으로 기울임
@@ -440,7 +443,9 @@ export class FX {
     this.add(grp, life, (k) => { m.opacity = opacity * (1 - k); }, () => m.dispose());
   }
   // ========== GPT 생성 VFX 텍스처 기반 이펙트 ==========
-  _addMat(tex, color, { blending = THREE.AdditiveBlending, telegraph = false } = {}) { return this._keep(new THREE.MeshBasicMaterial({ map: tex, color, blending, transparent: true, depthWrite: false, side: THREE.DoubleSide, opacity: 1 }), { telegraph }); }
+  // This factory is used only by flat ground/cast/bolt/slash/shock planes. The back-face
+  // pass cannot contribute visible pixels, so retain both sides in one draw.
+  _addMat(tex, color, { blending = THREE.AdditiveBlending, telegraph = false } = {}) { return this._keep(new THREE.MeshBasicMaterial({ map: tex, color, blending, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, opacity: 1 }), { telegraph }); }
   /** 카메라를 향하는 텍스처 플래시 (holy_burst, ice, shockwave 등) */
   texFlash(pos, name, color = 0xffffff, { size = 3, life = 0.35, spin = 0, grow = 1.3, y = 1 } = {}) {
     const tex = VFX_TEX[name]; if (!tex) return this.flash(pos, color, { size, life });

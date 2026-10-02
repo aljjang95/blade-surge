@@ -34,7 +34,7 @@ const report = { status: 'running', releaseApproved: false, base: '0cf61344eccfa
 const qa = await createExpeditionQa({ root, driver: import.meta.filename, report,
   sourceFiles: ['tools/astral-constellation-qa.mjs', 'tools/expedition-qa-runtime.mjs', 'tools/conquest-media-observer.mjs', 'tools/qa-media-checkpoints.mjs',
     'src/game/astral-constellations.js', 'src/game/astral-constellation-view.js', 'src/data/route-objectives.js',
-    'src/engine/renderer.js', 'src/engine/battle-aspect-fit.js', 'src/game/battle-base.js', 'src/game/actor.js', 'src/ui/ui.js', 'src/ui/mobile-combat.css'] });
+    'src/engine/renderer.js', 'src/engine/battle-aspect-fit.js', 'src/engine/fx.js', 'src/game/battle-base.js', 'src/game/actor.js', 'src/ui/ui.js', 'src/ui/mobile-combat.css'] });
 const out = qa.out;
 let page, lastHp = null, observedDamage = 0;
 const saveReport = qa.save;

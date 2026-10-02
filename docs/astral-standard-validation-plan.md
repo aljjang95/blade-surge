@@ -22,6 +22,8 @@
 
 물리 휴대폰, 정상 실시간 루프의 모든 프레임, 마지막 유지 중 실제 투사체 취소, 1년 반복 재미/사용자 유지율, AAA 승인, PC 원본 맵 비교는 별도 미완료 항목이다. 각 작은 기능은 동결 SHA의 검증과 보호된 배포·동일 live 버전 검증까지 완료한 뒤 다음 기능으로 진행한다.
 
+2026-10-02 성능 사전 조건: 7f7fc33 후보의 기존 캠페인 두 번째 실행은 최대 draw421로 고정 상한420을 넘었다. 원본을 보존하고 후보를 거절했다. 평평한 slashArc/crescent RingGeometry와 `_addMat`의 ground/cast/bolt/slash/shock PlaneGeometry에 한해 투명 양면의 불필요한 뒷면 별도 패스를 제거한다. 실제 동일 프레임의 front/back 방향 GPU RGBA와 전체 compositor draw 수를 원래 두 패스와 비교해야 하며, 픽셀·도형·색·투명도·경고 시간은 그대로여야 한다. ShaderMaterial의 이미 기본 single-pass를 새 절감으로 세지 않고, 3D 기둥·ghost·actor 재질은 변경하지 않는다. 새로운 동결 후보의 전체 check/실제 QA/시각/두 성능 묶음이 모두 필요하며 기존 실패 SHA를 재실행해 승인하지 않는다.
+
 ## 독립 읽기 전용 검토
 
 `/root/combat_readability/astral_readonly_review`는 구현·계약·기존 훅·회귀·actual-input helper를 읽고, 완료 프레임 후반 피해, C마름모45도역전, 승리→1.6초 정산 대기의 조기 실패, 접근 중 유지시간 누적, 스킬CD/MP 준비 및 fixture 증거 표현을 지적했다. 각 항목을 수정한 마지막 소스에서 추가 확정 차단/숨은 정답/진행 조작 경로를 발견하지 않았다. 이는 정적 읽기 검토이며 실행 승인이나 통과 증거가 아니다. 검토 agent도 타입·테스트·빌드·browser·metrics를 실행하거나 파일을 변경하지 않았다.
