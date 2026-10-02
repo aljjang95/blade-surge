@@ -320,6 +320,7 @@ export class UI {
     this.el.result.querySelector('.result-scroll').scrollTop = 0;
     const stars = [...$('result-stars').children]; stars.forEach((s) => { s.className = ''; });
     $('result-stats').innerHTML = `<span>처치 <b>${b.kills}</b></span><span>최대 콤보 <b>${b.maxCombo}</b></span><span>피해량 <b>${fmt(b.dmgDealt)}</b></span><span>시간 <b>${Math.floor(b.elapsed)}s</b></span><span>득템 <b>${b.drops.loot.length}</b></span>`;
+    $('btn-result-retry').textContent = `다시 · 에너지 ${b.stage.energy}`;
     const loot = $('result-loot'); loot.innerHTML = '';
     $('btn-result-next').style.display = win && !b.stage.finale ? '' : 'none'; $('btn-result-double').style.display = win ? '' : 'none';
     const autoRetry = $('btn-result-auto-retry'), showAutoRetry = !win && b.stage.code === '1-1' && b.stage.difficultyId === 'story';

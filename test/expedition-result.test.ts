@@ -30,7 +30,7 @@ function fixture(overrides: any = {}) {
   const launch = (...args: any[]) => calls.push(['launch', ...args]);
   const render = () => expand(ExpeditionResult({ controller, launch, message: '', focusRef: { current: null } }))[0];
   const view = render(), nodes = all(view), buttons = nodes.filter(n => n.type === 'button');
-  const button = (label: string) => buttons.find(n => text(n) === label);
+  const button = (label: string) => buttons.find(n => text(n) === label || (label === '다시 도전' && text(n).startsWith('다시 도전 · ')));
   return { app, controller, result, calls, view, nodes, buttons, button, render };
 }
 
@@ -53,6 +53,12 @@ test('defeat reports the actual route and no clear rewards', () => {
   expect(text(f.view)).toContain('원정 패배'); expect(text(f.view)).toContain('연습 상대');
   expect(text(f.view)).toContain('결투장'); expect(text(f.view)).toContain('클리어 보상은 없습니다');
   expect(text(f.view)).not.toContain('영웅 EXP +'); expect(f.button('다시 도전').props.disabled).toBe(false);
+});
+
+for (const [kind,id,depth,energy] of [['dungeon','glass_garden','standard',4],['dungeon','glass_garden','deep',6],['dungeon','comet_bastion','deep',8],['arena','rookie','standard',0]] as const)
+test(`${kind}/${id}/${depth} retry displays the catalog cost without spending or altering its departure`,()=>{
+  const f=fixture({kind,id,depth});expect(text(f.button('다시 도전'))).toBe(`다시 도전 · 에너지 ${energy}`);expect(f.calls).toEqual([]);
+  f.button('다시 도전').props.onClick();expect(f.calls).toEqual([['launch',kind,id,{rift:false,depth,conquestId:undefined}]]);
 });
 
 test('record result shows only the frozen restored pages, including partial defeat', () => {
@@ -109,11 +115,14 @@ test('controller retries a failed receipt but never settles an already successfu
     const app: any = { expeditionTicket: ticket, expedition: { settle: () => ++settlements === 1 ? { ok: false, error: 'storage' } : receipt },
       ui: { showHud() {}, show() {}, closeModal() {}, el: { pause: {} } } };
     const controller: any = Object.assign(Object.create(ExpeditionUI.prototype), { app, open() {} });
-    const battle: any = { result: {}, stage: { expedition: { kind: 'dungeon', id: 'glass_garden', depth: 'deep' }, title: '깊은 정원' },
+    const battle: any = { result: { time: 58.383333333 }, stage: { expedition: { kind: 'dungeon', id: 'glass_garden', depth: 'deep' }, title: '깊은 정원' },
       drops: { gold: 100, stones: 0, stones2: 0, stones3: 0, fragments: 0, loot: [] }, kills: 10, maxCombo: 5, elapsed: 60 };
     controller.showResult(battle, true); expect(controller.result.saveError).toBe('storage'); expect(app.expeditionTicket).toBe(ticket);
     controller.showResult(battle, true); expect(controller.result.saveError).toBeNull(); expect(app.expeditionTicket).toBeNull();
     controller.showResult(battle, true); expect(settlements).toBe(2); expect(battle.result.expeditionReceipt).toBe(receipt);
     expect(controller.result.rewards).toBe(receipt.rewards); expect(controller.result.depth).toBe('deep');
+    expect(controller.result.time).toBe(58.383333333); // terminal combat clock, not celebration/save retries
+    battle.elapsed = 150; controller.showResult(battle, true);
+    expect(controller.result.time).toBe(58.383333333); expect(settlements).toBe(2);
   } finally { played.mockRestore(); }
 });

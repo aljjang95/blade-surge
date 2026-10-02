@@ -7,6 +7,7 @@ import { applyBuildStats, postureHit, tickPosture } from './masterworks-combat.j
 import { audio } from '../engine/audio.js';
 import { applyRiftEnemy } from './journey-rifts.js';
 import { RiftEncounters, RIFT_REINFORCEMENT, isRiftDungeon } from './rift-encounters.js';
+import { runHistoryContext, runDetailsForBattle } from './run-history.js';
 
 export class Battle extends RpgBattle {
   constructor(app) {
@@ -25,7 +26,8 @@ export class Battle extends RpgBattle {
     if (!ticket.ok) throw new Error(ticket.error);
     const s = this.masterworks.s;
     this.run = {id:ticket.id,picked:[],autoPicked:0,round:0,queue:[],storySeen:false,settled:false,renown:0,perfects:0,breaks:0,
-      enabled:!this.stage.party && this.stage.expedition?.kind !== 'arena', challenges:[...s.challengeIds], permanent:masteryEffects(s)};
+      enabled:!this.stage.party && this.stage.expedition?.kind !== 'arena', challenges:[...s.challengeIds], permanent:masteryEffects(s),
+      historyContext:runHistoryContext(this.stage,args[1],args[2]?.level),controlSeen:0};
     this.run.difficulty = difficultyEffects(this.run.enabled ? this.run.challenges : []);
     this.buildBase = {...this.player.stats}; this.effects = {}; this.applyBuild();
     this.runKills = new WeakSet(); this.counterUntil = 0; this.chainUntil = 0;
@@ -224,7 +226,7 @@ export class Battle extends RpgBattle {
         this.run.renown+=grantRenown(s,bonus);
         if(!this.stage.expedition) { const d=recordDiscovery(s,`campaign:${this.stage.idx}`);this.run.renown+=d.renown||0; }
       }
-      s.history.push({runId:this.run.id,floor:this.stage.idx,outcome,boonIds:[...new Set(this.run.picked)]});
+      s.history.push({runId:this.run.id,floor:this.stage.idx,outcome,boonIds:[...new Set(this.run.picked)],details:runDetailsForBattle(this)});
       s.history=s.history.slice(-20); this.rpgDirty=true; this.flushRpg();
     }
     if(this.result) this.result.masterworks={renown:this.run.renown,breaks:this.run.breaks,perfects:this.run.perfects,boons:[...this.run.picked]};
@@ -235,7 +237,13 @@ export class Battle extends RpgBattle {
   }
   victory() { const active=this.active;super.victory();if(active&&this.result?.win)this.settleChronicle('victory'); }
   defeat() { const active=this.active;super.defeat();if(active&&this.result&&!this.result.win)this.settleChronicle('defeat'); }
+  observeRunControl(realDt) {
+    // Record modes used during active simulation, not a last-minute result toggle.
+    if(this.active&&!this.paused&&this.run?.enabled&&!this.run.settled&&this.player?.alive&&Number.isFinite(realDt)&&realDt>0)
+      this.run.controlSeen=(this.run.controlSeen||0)|(this.player.auto===true?2:1);
+  }
   update(realDt) {
+    this.observeRunControl(realDt);
     const before=this.elapsed; super.update(realDt);
     const dt=Math.max(0,this.elapsed-before);
     if(dt>0&&this.active&&this.run?.enabled) {

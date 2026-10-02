@@ -138,6 +138,28 @@ test('story rewards match run totals and remembered visits give healing without 
   game.settleChronicle('defeat');expect(state.history).toHaveLength(1);
 });
 
+test('active control sampling records mixed AUTO honestly and ignores pauses, dead actors and settled results',()=>{
+  const {game}=fixture();game.run.controlSeen=0;game.player.auto=false;
+  game.observeRunControl(0);expect(game.run.controlSeen).toBe(0);
+  game.observeRunControl(1/60);expect(game.run.controlSeen).toBe(1);
+  game.player.auto=true;game.paused=true;game.observeRunControl(1/60);expect(game.run.controlSeen).toBe(1);
+  game.paused=false;game.player.alive=false;game.observeRunControl(1/60);expect(game.run.controlSeen).toBe(1);
+  game.player.alive=true;game.observeRunControl(1/60);expect(game.run.controlSeen).toBe(3);
+  game.run.settled=true;game.run.controlSeen=2;game.player.auto=false;game.observeRunControl(1/60);expect(game.run.controlSeen).toBe(2);
+});
+
+test('one settlement captures actual route and mastery metrics once, and a failed save retry cannot mint another record or reward',()=>{
+  const {game,state}=fixture();let saved=false,attempts=0;
+  game.stage=buildExpeditionStage('dungeon','bellfall_crypt',{});game.heroId='mage';game.growthStart={level:3};
+  Object.assign(game.run,{controlSeen:3,perfects:2,breaks:4});game.elapsed=127.25;game.result={win:false};
+  game.flushRpg=()=>{attempts++;game.rpgDirty=!saved;return saved;};
+  game.settleChronicle('defeat');const before=JSON.stringify(state);
+  expect(state.history).toHaveLength(1);expect(state.history[0].details).toMatchObject({route:{kind:'dungeon',id:'bellfall_crypt',depth:'standard'},heroId:'mage',heroLevel:3,control:'mixed',perfects:2,breaks:4,timeSec:127.25});
+  expect(game.rpgDirty).toBe(true);expect(state.renown).toBe(0);
+  game.elapsed=300;game.run.perfects=99;game.settleChronicle('defeat');expect(JSON.stringify(state)).toBe(before);expect(attempts).toBe(1);
+  saved=true;game.flushRpg();expect(game.rpgDirty).toBe(false);expect(state.history).toHaveLength(1);expect(JSON.stringify(state)).toBe(before);
+});
+
 test('pause ownership blocks simulation while another panel still holds a pause',()=>{
   const {game}=fixture();game.enemies=[{alive:true,posture:50,breakT:1}];
   game.setPaused('catalogue',true);game.setPaused('masterworks',true);game.setPaused('masterworks',false);

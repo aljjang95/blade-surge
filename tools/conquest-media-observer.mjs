@@ -26,8 +26,10 @@ export function installConquestMediaObserver() {
     track = { id: tracks.length + 1, ref: new WeakRef(el), nodes: [], last: null };
     tracks.push(track); elements.set(el, track); read(track);
     // Listeners close over weak metadata only, never the media element.
-    for (const kind of ['playing', 'pause', 'error', 'ended', 'emptied', 'loadedmetadata']) {
-      el.addEventListener(kind, () => eventFor(track, kind));
+    for (const kind of ['loadstart', 'playing', 'pause', 'error', 'ended', 'emptied', 'loadedmetadata']) {
+      el.addEventListener(kind, event => eventFor(track, kind, kind === 'loadstart'
+        ? { isTrusted: event.isTrusted, nativeTimeStamp: event.timeStamp,
+          nativeTimeOrigin: performance.timeOrigin, nativeAt: performance.timeOrigin + event.timeStamp } : {}));
     }
     return track;
   };
@@ -115,7 +117,8 @@ export function classifyMediaCancellations(failures, mediaSnapshots) {
     if (failures.filter(f => f.engine === failure.engine && f.url === failure.url).length !== 1) {
       reject('ambiguous-same-url-requests'); continue;
     }
-    const snapshots = mediaSnapshots.filter(s => s.engine === failure.engine).map(s => s.snapshot);
+    const observations = mediaSnapshots.filter(s => s.engine === failure.engine);
+    const snapshots = observations.map(s => s.snapshot);
     const latest = snapshots.filter(s => finite(s?.at) && s.at >= end).sort((a,b)=>b.at-a.at)[0];
     if (!latest || !Array.isArray(latest.events) || !Array.isArray(latest.tracks)
       || snapshots.some(s => s.droppedEvents !== 0 || s.events?.some(e => e.connectionAmbiguous || e.error || e.kind === 'error'))) {
@@ -123,7 +126,29 @@ export function classifyMediaCancellations(failures, mediaSnapshots) {
     }
     const events = latest.events;
     const created = events.filter(e => e.kind === 'source-created' && e.src === failure.url && e.at <= end);
-    const matches = created.filter(e => Math.abs(e.at-start) <= 250);
+    let matches = created.filter(e => Math.abs(e.at-start) <= 250);
+    let anchorKind = 'source-created', anchor = matches[0];
+    // AudioNode creation may precede the native resource-loading task. Accept
+    // actual initiation proof only when the old match is absent, never ambiguous.
+    // Keep the same 250ms bound and every response/closure/playback requirement.
+    if (matches.length === 0 && created.length === 1
+      && Number.isSafeInteger(failure.documentId) && failure.documentId > 0
+      && observations.every(observation => observation.documentId === failure.documentId)) {
+      const born = created[0];
+      const initiations = events.filter(event => event.kind === 'loadstart' && event.src === failure.url);
+      const firstPlay = events.filter(event => event.kind === 'playing' && event.id === born.id
+        && event.src === failure.url && finite(event.at)).sort((a, b) => a.at - b.at)[0];
+      const initiation = initiations[0];
+      if (initiations.length === 1 && initiation.id === born.id && initiation.isTrusted === true
+        && [initiation.at, initiation.nativeAt, initiation.nativeTimeStamp, initiation.nativeTimeOrigin, born.at].every(finite)
+        && initiation.nativeTimeStamp >= 0 && initiation.nativeTimeOrigin >= 0
+        && initiation.nativeAt === initiation.nativeTimeOrigin + initiation.nativeTimeStamp && firstPlay
+        && born.at <= initiation.nativeAt && initiation.nativeAt <= initiation.at
+        && initiation.at <= firstPlay.at && initiation.at <= end
+        && Math.abs(initiation.nativeAt - start) <= 250) {
+        matches = [born]; anchorKind = 'trusted-native-loadstart'; anchor = initiation;
+      }
+    }
     if (matches.length !== 1 || new Set(created.map(e=>e.id)).size !== created.length) {
       reject('ambiguous-or-missing-request-start-instance'); continue;
     }
@@ -147,7 +172,12 @@ export function classifyMediaCancellations(failures, mediaSnapshots) {
       && events.some(p => p.id === e.id && p.kind === 'playing' && p.at <= e.at));
     if (!replacement) { reject('no-replacement-playback-proof'); continue; }
     classified.push({ classification: 'observed-stopped-media-cancellation', request: { ...failure },
-      matchedInstanceId: matches[0].id, stoppedInstances: closures,
+      matchedInstanceId: matches[0].id, requestStartEvidence: { anchorKind, createdAt: matches[0].at,
+        nativeLoadstartAt: anchorKind === 'trusted-native-loadstart' ? anchor.nativeAt : null,
+        loadstartObservedAt: anchorKind === 'trusted-native-loadstart' ? anchor.at : null,
+        startDeltaMs: (anchorKind === 'trusted-native-loadstart' ? anchor.nativeAt : anchor.at) - start,
+        isTrusted: anchorKind === 'trusted-native-loadstart' ? anchor.isTrusted : null },
+      stoppedInstances: closures,
       replacement: { id: replacement.id, src: replacement.src, at: replacement.at, currentTime: replacement.currentTime, evidenceKind: replacement.kind },
       observationAt: latest.at, limitation: 'Lifecycle correlation; does not establish browser cancellation cause or audible output.' });
   }

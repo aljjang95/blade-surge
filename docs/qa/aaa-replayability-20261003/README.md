@@ -1,0 +1,47 @@
+# 최근 출격의 숙련 기록 후보
+
+기존 최근 원정 기록은 승패·층·각인 종류만 보관했다. 같은 캠페인 층 번호를 재사용하는 서로 다른 재료 던전과 심층·전술 공략은 구별할 수 없었고, 실제 정확 회피·균형 붕괴도 창을 다시 열면 읽을 수 없었다.
+
+이번 후보는 기존 최근 20회 저장·최근 6회 표시를 유지하며 카탈로그 경로, 출격 영웅·출격 레벨, 실제 활성 프레임에서 사용한 수동/AUTO/혼합, 전투 시간·정확 회피·균형 붕괴를 함께 남긴다. 기존 각인 ID 목록은 계속 종류 목록이며 강화 단계나 전체 빌드를 복원했다고 표시하지 않는다. 기록 화면에서 보상을 수령하거나 장비를 바꾸지 않는다.
+
+구형 기록은 승패·층·각인 종류를 보존하고 ‘상세 기록 없음’으로 표시한다. 저장에 없던 영웅·조작·시간·숙련 값을 추정하지 않는다. 경로는 실제 카탈로그와 조합을 확인하며, 잘못된 수치는 ‘미기록’이다. 0회는 실제 관측한 0회와 구분한다. 수동·AUTO 표시는 활성 시뮬레이션의 조작 모드이며 수동 완주나 실기기 인증은 아니다.
+
+기존 캠페인·원정 재도전 버튼에 에너지 비용을 표시한다. 캠페인은 현재 전투의 기존 에너지, 기본 원정은 4, 심층은 해당 카탈로그 6–8, AI 결투장은 0이다. 출격 목적지·해금·차감·환불·난이도·보상·최초 보상 정책을 변경하지 않는다. 이력은 기존 `rpgDirty` 저장·재시도 경로에 함께 보관하며 결과를 다시 표시하거나 저장을 재시도해도 이력을 추가하지 않는다.
+
+## 준비 단계 검사
+
+기준 `4ffc8eac7f910b6101f55146eb369184c12ef701`의 독립 일반 clone에서 준비했다. 공유 원본의 tracked 파일, 원격, 회전 축, 배포를 변경하지 않았다.
+
+- 타입 검사 통과. 최초 검사는 기존 정규화 이력 fixture의 신규 상세 필드 누락으로 실패했고 `details: null`을 명시한 뒤 통과했다. 기존 필드가 없는 저장의 이관은 별도 회귀가 검증한다.
+- 최종 좁은 9파일 회귀: 148 통과 / 0 건너뜀 / 0 실패, 1,535 assertions. `run-history`, `masterworks-core/battle/view`, `expedition-result`, `result-growth`, `expedition-economy/conquests`, `economy-recovery`. 최초 좁은 검사 1,529 assertions도 보존하며 독립 검토 뒤 새 검사의 결과를 최종 근거로 삼는다.
+- 추가 회귀는 서로 같은 층 번호인 던전 식별, 출격 시점 영웅·레벨 고정, 구형/잘못된 값, 정상 0과 미기록 구분, 활성 조작 모드·중단·결과, 실제 저장 실패 재시도/중복 결과, 전체 카탈로그 재도전 비용과 목적지를 검사한다.
+- 읽기 전용 독립 검토에서 비문자열 난이도 값의 객체 키 강제 변환이 저장 읽기를 깨뜨릴 수 있음을 확인했다. 문자열만 카탈로그 조회하도록 제한하고 객체·배열 입력 회귀를 추가했다. 결과 이후에도 `elapsed`가 진행될 수 있으므로 기록은 이미 확정된 `result.time`을 우선하며 두 값이 다른 회귀로 확인한다.
+- 전체 회귀·production build·정식 성능 비교·브라우저 완주·화면 직접 검토·머지·배포는 준비 단계에서 실행하지 않았다. 향후 최신 main에 적용한 정확한 후보에서 검증해야 한다.
+
+원본 로그는 `work/aaa-20261003/replayability-prepared-evidence/`에 인계한다. `typecheck-1.log`는 최초 실패, `typecheck-2.log`와 `narrow-1.log`는 중간 통과, `typecheck-3.log`와 `narrow-2.log`는 독립 검토 수정 후 최종 통과다. 실행 명령·원본 SHA·소스 및 패치 해시는 함께 둔 `manifest.json`에 남긴다. helper와 새 게임 모듈의 `node --check`, `git diff --check`도 통과했다. 브라우저 결과 파일은 없으며 이 경로의 로그를 실제 플레이 증거로 취급하지 않는다.
+
+## 실제 UI 검증 helper
+
+`node tools/replayability-qa.mjs --out=work/replayability-qa-<새 고유 ID>`
+
+깨끗한 커밋과 같은 SHA의 production build만 실행한다. 새 격리 브라우저의 기본 무료 기사로 기본 유리 정원을 UI에서 출격하고, 실제 J 입력 뒤 AUTO로 전투를 진행한다. 결과의 실제 수치와 저장 이력의 일치, 기존 성장·기록 화면, 리로드의 기록 보존, 두 번째 실제 원정과 기존 결과의 재도전 버튼으로 같은 경로 출격·가격 4 차감, 미완료 재로드의 1회 환불/완료 이력 미생성을 확인한다. 각인·이야기도 실제 선택 버튼을 누른다.
+
+프로필 복원, 장비/골드/에너지 지급, 좌표·체력·처치·승리 주입을 하지 않는다. `app.testPause`와 `app.step(1/60)`는 시뮬레이션 시간 진행만 제어한다. 매 실행은 새 출력 폴더를 만들며 실패한 원본을 덮어쓰지 않는다. helper는 작성·구문 검사만 완료했고 실행 결과는 아직 없다. 실제 UI 검증이 실패하면 원본 보고서를 보존하고 원인을 수정한 새 후보만 다시 검증한다.
+
+독립 소스 검토에서 승리 직후 `battle.active`가 false가 되어도 기본 결과 UI는 축하 연출의 지연 타이머 뒤에 열린다는 경계를 확인했다. helper는 비활성 전투 이후에도 기존 `app.step`을 진행해 이 타이머가 결과를 열게 하며 전투 시간 비교에는 `b.result.time`을 사용한다. 재로드 뒤 기존 `.mw-open`은 닫힌 메뉴 안에 있으므로 노출된 실제 ‘성장’ 버튼 `.oath-nav-growth`로 기록을 연다. 이 수정들은 소스와 구문 검사로만 확인했으며 정상 UI 완주를 통과했다고 보고하지 않는다.
+
+v2 helper는 출격 후 남은 버튼·dialog 포커스가 J를 무시할 수 있다는 추가 검토를 반영한다. 화면에서 실제 hit target이 `#gl`인 지점을 네이티브 클릭한 뒤 KeyJ 수락을 `attackHeld`·키 소스·공격 큐에서 관측한다. 다음 1프레임의 큐 소비·실제 공격 상태·진행 시간과 추가 프레임의 공격 진행을 AUTO 이전에 확인한다. 각 단계의 포커스·입력·플레이어 상태는 `report.json`의 `manualAttack`에 그대로 기록하고 키는 실패 때도 실제 keyup으로 해제한다. 게임 코드나 플레이어 상태·입력 큐를 강제로 변경하지 않는다. 수동 모드 관측만으로 입력 수락을 주장하지 않으며 이 helper도 아직 브라우저에서 실행하지 않았다. v1 패치·manifest·raw 로그는 보존하고 v2는 별도 파일로 인계한다.
+
+v2 추가 검증은 helper의 `node --check`, evaluate/waitForFunction 콜백 28개의 구문 컴파일, `git diff --check` 통과이며 콜백도 실행하지 않았다. 게임·회귀 파일은 v1 소스 해시와 같아 기존 검증을 인계하고 타입·게임 회귀는 다시 실행하지 않았다. v2 패치는 `work/aaa-20261003/replayability-prepared-v2.patch`, 추가 raw 로그·검토·소스 해시는 `work/aaa-20261003/replayability-prepared-v2-evidence/manifest.json`에 남긴다.
+
+이 기능은 기존 행동을 돌아보고 다시 시도할 근거를 남기는 작은 개선이다. 1년 재미·잔존율, 자연 획득한 최종 빌드 균형, 수동 전투 완주·물리 휴대전화 성능·AAA 완성을 증명하지 않는다.
+
+최신 적용 기준은 가독성 라이브 `ee010979ac01c94493d35ca37536428081fac300`이다. 전체 검사에서 plain `.call`로 실제 Battle 상속을 생략한 기존 paused fixture 한 건의 새 method 의존성 누락을 확인했다. 실제 prototype과 paused run을 초기화하고 기존 clock/dispose assertion을 보존·controlSeen 불변을 강화한 뒤 전체1266 pass / 2 skip / 0 fail을 확인했다. 원본 `replay-full-check.log`는 그대로 남긴다. 추가 `--origin=https://blade.tllhouse.com`은 기존 배포 대상만 허용하며 같은 clean SHA 검사를 거친 정상 UI journey를 라이브에서 재검증한다. 실행은 최종 커밋/검증 뒤 별도로 기록한다.
+
+첫 실제 UI 검증에서 두 원정 승리, 수동 J 수락·공격, 저장 이력 일치·재로드, 기존 same-route retry4 차감, 미완료4 환불/반복 reload 불변은 통과했다. 마지막 strict network 검사만 실패했다: helper가 request started/status/responseAt/content-range를 수집하지 않아 기존 classifier의 선행조건이 없었다. 실패원본 `work/aaa-20261003/replay-ui-clean-9b12a54/`와 로그를 그대로 보존한다. 기존 conquest collector와 동일한 native Request.timing/Response 관측을 추가하고, native reload마다 새 document lifetime을 보존해 같은 URL의 서로 다른 문서를 분리한다. 한 문서 내부 중복·불명확한 요청은 기존 classifier가 계속 거부하며 원래 HTTP/error/unresolved0 조건은 유지한다. classifier·게임·보상 코드는 변경하지 않는다. 수정 후 새 clean 후보에서 실제 실행을 다시 검증한다.
+
+두 번째 실제 후보 a215117도 기능 검사는 통과했으나 strict network 검사에서 실패했다. 문서2의 AudioNode 생성은 실제 Request.start보다1830ms 앞서며, 생성 시각만으로 같은 요청을 연결할 근거가 부족했다. 실패원본 `work/aaa-20261003/replay-ui-clean-a215117/`는 실패로 보존한다. 새 observer는 실제 `loadstart`의 isTrusted·native origin·timestamp·절대시각과 callback 관측 시각을 따로 남긴다. 기존 source-created 매칭이0이고 같은 문서·URL·source가 유일한 경우에만 정확한 native clock 및 생성≤native≤관측≤playing/abort, 기존250ms를 확인한다. 중복·synthetic·불명확한 clock·HTTP/range·미종료·미재생·replacement/error/dropped 거절은 유지한다. 늦게 전달된 오래된 native 사건도 거절한다. observer의 promise/value/throw/receiver/arguments 보존과 idempotence는 격리 VM 회귀로 확인하며 실제 browser trust는 새 후보에서 별도로 검증한다. 전체 타입·회귀·빌드1321 pass /2skip /0fail을 확인했다. 처음검사에서 인계 test.ts 복사본이 Bun에 발견된4module errors도 raw로 보존하고 인계파일을 소스 밖으로 옮겼으며 테스트 검색 규칙은 변경하지 않았다. 정식 성능은 두 실패 후보 모두0시도다.
+
+새 clean78dbce6 실제 UI는 기능·strict network 검사를 통과했다. 다만 독립 PNG 검토에서 기존 결과 화면이 축하 연출1.6167초를 전투 시간에 포함하고 기록은 확정 종료 시간을 보존하는 불일치를 발견했다. 결과 화면도 `b.result.time`을 사용하도록 맞추고 저장 재시도/나중 elapsed 증가에도 같은 종료 시간을 표시하는 회귀를 강화했다. 실제 helper는 결과 UI time과 이력 timeSec의 정확한 일치도 검사한다. 78db 정식 series는 이 finding 때문에 중단했고 완성된 첫쌍과 다음 시도 원본도 보존하며 통과 series로 사용하지 않는다. 수정한 새 clean 후보의 실제 UI·5쌍 전체 검증이 필요하다.
+
+1c97026 실제 결과/기록 시간은 정확히 일치했으나 doc2의 마지막 snapshot이 실제 요청 실패보다0.1631ms 빨라 strict gate가 거절했다. 실패원본과0시도 manifest를 보존했다. 관측은 실제performance.timeOrigin으로 문서·요청을 바인딩하고 requestfailed마다 native0ms task 뒤 원래 snapshot을 수집한다. reload 전 pending 큐를 모두 처리하고 문서 종료 전 실제 스냅샷을 추가한다. 다른 문서·context 소멸·capture 오류는 raw diagnostics이며 시각을 보정하거나 새 문서로 재라벨링하지 않는다. cleanup 중 추가되는 실패도 전부 수집한 뒤 마지막에 같은 classifier로 재판정해 이전 PASS가 남지 않도록 한다. latest.at>=failedAt,250ms 및 기존 strict 조건은 변경하지 않는다.
