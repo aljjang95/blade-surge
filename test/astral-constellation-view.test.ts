@@ -32,8 +32,9 @@ test('view projects numbered identity, advertised clue and circle geometry; comb
     expect(first.title.sprite.visible).toBe(true); expect(labels.some(s => s.includes('단서 A △ 삼각'))).toBe(true);
     expect(first.pads.every((p: any) => !p.root.visible)).toBe(true);
     f.route.update(f.game, .5); expect(first.pads.every((p: any) => p.root.visible)).toBe(true);
-    expect(labels).toEqual(expect.arrayContaining(['A △ 삼각', 'B ○ 원', 'C ◇ 마름모']));
+    expect(labels).toEqual(expect.arrayContaining(['A △', 'B ○', 'C ◇']));
     for (const [i, pad] of first.pads.entries()) {
+      expect(pad.text.state).toBe(`${f.gate.pads[i].code} ${f.gate.pads[i].glyph}\n1초 유지`);
       const worldPosition = new THREE.Vector3(); view.group.updateMatrixWorld(true); pad.root.getWorldPosition(worldPosition);
       expect(worldPosition.distanceTo(f.gate.pads[i].pos)).toBeLessThan(1e-8);
       expect(pad.outline.geometry.parameters.outerRadius).toBe(f.route.def.radius);
