@@ -21,13 +21,14 @@ await fs.mkdir(out); // Preserve every prior run; an existing output directory i
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const assert = (condition, message) => { if (!condition) throw Error(message); };
 const head = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim();
-const files = ['src/game/run-history.js', 'src/game/masterworks-core.js', 'src/game/masterworks-battle.js', 'src/ui/masterworks.js', 'src/ui/ui.js', 'src/expansion/hub.jsx', 'tools/replayability-qa.mjs'];
+const files = ['src/game/run-history.js', 'src/game/masterworks-core.js', 'src/game/masterworks-battle.js', 'src/ui/masterworks.js', 'src/ui/ui.js', 'src/expansion/hub.jsx', 'tools/replayability-qa.mjs', 'tools/conquest-media-observer.mjs'];
 const report = { status: 'running', started: new Date().toISOString(), head,
   scope: 'Exact clean production build at local preview or the fixed release origin; fresh isolated save and normal UI choices. Fixed 1/60s app.step replaces wall-clock pacing only. First departure uses native J input then native AUTO; later departures use persisted AUTO. Actual victories, local records, reload and the existing same-route retry button. No physical phone, manual victory, long-term retention or AAA-completion proof.',
   sources: Object.fromEntries(await Promise.all(files.map(async file => [file, hash(await fs.readFile(path.join(root, file)))]))),
   runs: [], errors: [], requestFailures: [], httpErrors: [], media: [] };
 const save = () => fs.writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
 await fs.copyFile(import.meta.filename, path.join(out, 'driver.mjs')); await save();
+await fs.copyFile(path.join(root, 'tools/conquest-media-observer.mjs'), path.join(out, 'media-observer.mjs'));
 let server, browser, documentId = 0;
 
 async function boot(page, url, reload = false) {
