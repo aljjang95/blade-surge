@@ -30,8 +30,11 @@ export class AstralConstellationView {
       const context = canvas.getContext('2d');
       if (!context) throw new Error('조율판 문자 표시를 준비하지 못했습니다.');
       const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; this.textures.add(texture);
-      const material = ownMaterial(new THREE.SpriteMaterial({ map: texture, depthWrite: false }));
+      const material = ownMaterial(new THREE.SpriteMaterial({ map: texture, depthWrite: false, depthTest: !compact }));
       const sprite = new THREE.Sprite(material); sprite.position.set(x, y, z); sprite.scale.set(width, height, 1); parent.add(sprite);
+      // Quiet-phase choice information must remain readable behind companions.
+      // Raised boards stay outside the circle/hero's feet; geometry keeps depth.
+      if (compact) sprite.renderOrder = 20;
       return { sprite, context, texture, typography, state: '' };
     };
     try {
@@ -58,8 +61,8 @@ export class AstralConstellationView {
         // Keep each panel outside its circle. The near B circle's panel
         // sits to its left, clearing both the bottom potion HUD and hero feet.
         const text = pad.id === 'circle'
-          ? label(padRoot, -2.8, 1.0, 0, 2.35, .80, true)
-          : label(padRoot, 0, 1.0, -1.75, 2.35, .80, true);
+          ? label(padRoot, -2.8, 2.25, 0, 2.35, .80, true)
+          : label(padRoot, 0, 2.25, -1.75, 2.35, .80, true);
         return { root: padRoot, outline, glyph, material, text, choiceIndex };
       });
       return { root, model, sand, title, pads, index };
