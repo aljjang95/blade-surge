@@ -62,6 +62,9 @@ class App {
     this.renderer = new Renderer(this.canvas);
     this.scene = this.renderer.scene;
     this.fx = new FX(this.scene, this.renderer.camera);
+    this.fx.focus.bindBloom(this.renderer.bloom);
+    this.renderer.heroEffectFocus = this.fx.focus;
+    this.renderer.heroEffectTarget = () => this.mode === 'battle' && this.battle?.active ? this.battle.player : null;
     this.input = new Input();
     this.eco = new Economy();
     this.funnel = createFunnelLog();

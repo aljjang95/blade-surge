@@ -3,6 +3,15 @@ import * as THREE from 'three';
 import { ImpactLights } from '../src/engine/impact-lights.js';
 import { FX, ParticlePool } from '../src/engine/fx.js';
 import { VFX_TEX } from '../src/engine/assets.js';
+import { HeroEffectFocus } from '../src/engine/hero-effect-focus.js';
+
+// These resource fixtures intentionally skip DOM/particle construction. Keep
+// the real renderer dependency that the FX constructor now initializes.
+function prototypeFixture(): any {
+  const fx = Object.create(FX.prototype);
+  fx.focus = new HeroEffectFocus();
+  return fx;
+}
 
 test('입자 부분 업로드는 생성·swap 제거·빈 풀·재발사에서도 그리는 구간과 일치한다', () => {
   const pool = new ParticlePool(new THREE.Scene(), { max: 8, texture: new THREE.Texture() });
@@ -41,7 +50,7 @@ test('타격 조명은 생성·소멸·포화·전투 초기화 뒤에도 같은
 });
 
 test('효과 색은 재질 보관 수를 늘리지 않고 서로의 색/투명도도 공유하지 않는다', () => {
-  const fx = Object.create(FX.prototype); fx._mats = {};
+  const fx = prototypeFixture(); fx._mats = {};
   const red = fx._keep(new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, side: THREE.DoubleSide }));
   const blue = fx._keep(new THREE.MeshBasicMaterial({ color: 0x0000ff, transparent: true, side: THREE.DoubleSide }));
   red.opacity = .2;
@@ -53,7 +62,7 @@ test('효과 색은 재질 보관 수를 늘리지 않고 서로의 색/투명�
 });
 
 test('효과 강제 종료는 종료 콜백과 전용 지오메트리를 한 번 정리하고 공유 면은 보존한다', () => {
-  const fx = Object.create(FX.prototype); fx.scene = new THREE.Scene(); fx.items = [];
+  const fx = prototypeFixture(); fx.scene = new THREE.Scene(); fx.items = [];
   const owned = new THREE.BufferGeometry(), shared = new THREE.BufferGeometry();
   let ownedDisposed = 0, sharedDisposed = 0, ended = 0;
   owned.addEventListener('dispose', () => ownedDisposed++); shared.addEventListener('dispose', () => sharedDisposed++);
@@ -66,7 +75,7 @@ test('효과 강제 종료는 종료 콜백과 전용 지오메트리를 한 번
 });
 
 test('잔상의 인덱스 버퍼는 원본 캐릭터의 GPU 자원과 독립적이다', () => {
-  const fx = Object.create(FX.prototype); fx.scene = new THREE.Scene(); fx.items = []; fx._mats = {}; fx.quality = 'high';
+  const fx = prototypeFixture(); fx.scene = new THREE.Scene(); fx.items = []; fx._mats = {}; fx.quality = 'high';
   const geometry = new THREE.BufferGeometry(); geometry.setAttribute('position', new THREE.Float32BufferAttribute([0,0,0,1,0,0,0,1,0],3)); geometry.setIndex([0,1,2]);
   const source = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial());
   Object.assign(source, { isSkinnedMesh: true, getVertexPosition: (i: number, out: THREE.Vector3) => out.fromBufferAttribute(geometry.attributes.position, i) });
@@ -82,7 +91,7 @@ test('프레임 속도가 바뀌어도 텍스처 효과는 같은 시간 동안 
   const texture = new THREE.Texture(), textures = VFX_TEX as Record<string, THREE.Texture>; textures.test_rotation = texture;
   try {
     for (const hz of [30,60,120]) {
-      const fx = Object.create(FX.prototype); fx.scene = new THREE.Scene(); fx.items = []; fx._mats = {};
+      const fx = prototypeFixture(); fx.scene = new THREE.Scene(); fx.items = []; fx._mats = {};
       const sprite = fx.texFlash(new THREE.Vector3(), 'test_rotation', 0xffffff, { spin: 1, life: 2 });
       const angle = sprite.material.rotation;
       for (let i=0;i<hz;i++) fx.items[0].update((i+1)/hz/2,(i+1)/hz,1/hz);
@@ -93,7 +102,7 @@ test('프레임 속도가 바뀌어도 텍스처 효과는 같은 시간 동안 
 });
 
 function fireFixture() {
-  const fx:any=Object.create(FX.prototype);
+  const fx:any=prototypeFixture();
   Object.assign(fx,{scene:new THREE.Scene(),camera:new THREE.PerspectiveCamera(),items:[],_mats:{},_transparentMats:new Map(),_depthMats:new Map(),
     plane1:new THREE.PlaneGeometry(1,1),plane2:new THREE.PlaneGeometry(2,2),trails:[],clearDamage:()=>{}});
   fx.impactLights=new ImpactLights(fx.scene);

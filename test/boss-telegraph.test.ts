@@ -48,6 +48,26 @@ test('캠페인 탄막 중심의 마지막 위치가 예고된 사거리를 넘�
   }
 });
 
+test('legacy enemy windups preserve their telegraph material and original attack deadline', () => {
+  for (const pattern of ['spin', 'slam', 'soulrain', 'dash', 'fan', 'basic', 'summon', 'ranged']) {
+    const { enemy } = fanFixture(0);
+    const warnings: Array<{ method: string; options: any }> = [];
+    enemy.def = { ...enemy.def, pattern: [pattern === 'ranged' ? 'basic' : pattern], phasePatterns: null,
+      ranged: pattern === 'ranged', kit: null };
+    enemy.isBoss = pattern !== 'ranged'; enemy.faceDir = () => {};
+    for (const method of ['ring', 'slashArc', 'flash', 'castCircle']) {
+      enemy.game.fx[method] = (...args: any[]) => warnings.push({ method, options: args.at(-1) });
+    }
+    enemy.startAttack(3);
+    expect(warnings.length).toBeGreaterThan(0);
+    for (const warning of warnings) {
+      expect(warning.options.telegraph).toBe(true);
+      expect(warning.options.life).toBeGreaterThan(0);
+      if (warning.method !== 'castCircle') expect(warning.options.life).toBeCloseTo(enemy.attackDur * enemy.hitAt, 8);
+    }
+  }
+});
+
 function summonFixture() {
   const timers: Array<() => void> = [], rooms: unknown[] = [];
   const room = { id: 8, cleared: false };
