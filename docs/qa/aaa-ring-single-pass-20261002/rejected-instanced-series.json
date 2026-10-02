@@ -1,0 +1,651 @@
+{
+  "manifest": {
+    "schema": 3,
+    "seriesId": "aaa-ring-resume-20261002T052353Z",
+    "createdAt": "2026-10-02T05:23:53.925814+00:00",
+    "measurement": {
+      "seed": 20260905,
+      "renderEvery": 3,
+      "timeoutSec": 600
+    },
+    "base": {
+      "sha": "4c977602e1189526c23524ae1d37765ea88f7881",
+      "version": "/workspace/.blade-surge-tools/ring-baseline-4c977602/dist/version.json",
+      "runs": [
+        "/workspace/blade-surge/work/aaa-20261002/ring-resume-20261002T052353Z/base-1.json",
+        "/workspace/blade-surge/work/aaa-20261002/ring-resume-20261002T052353Z/base-2.json",
+        "/workspace/blade-surge/work/aaa-20261002/ring-resume-20261002T052353Z/base-3.json",
+        "/workspace/blade-surge/work/aaa-20261002/ring-resume-20261002T052353Z/base-4.json",
+        "/workspace/blade-surge/work/aaa-20261002/ring-resume-20261002T052353Z/base-5.json"
+      ]
+    },
+    "head": {
+      "sha": "33f2188192f56d17103076533ca406d14c0c6dc9",
+      "version": "/workspace/blade-surge/dist/version.json",
+      "runs": [
+        "/workspace/blade-surge/work/aaa-20261002/ring-resume-20261002T052353Z/head-1.json",
+        "/workspace/blade-surge/work/aaa-20261002/ring-resume-20261002T052353Z/head-2.json",
+        "/workspace/blade-surge/work/aaa-20261002/ring-resume-20261002T052353Z/head-3.json",
+        "/workspace/blade-surge/work/aaa-20261002/ring-resume-20261002T052353Z/head-4.json",
+        "/workspace/blade-surge/work/aaa-20261002/ring-resume-20261002T052353Z/head-5.json"
+      ]
+    },
+    "repair": {
+      "kind": "preexisting-drawcalls",
+      "baselineSha": "4c977602e1189526c23524ae1d37765ea88f7881",
+      "report": "/workspace/blade-surge/work/aaa-20261001/readability/release-series-2/base-1.json",
+      "reportSha256": "e0a4193c7e6d4b11d6febad7768cca067c2522a9cb48f1c5b39e38417fdf5bf2"
+    }
+  },
+  "assessment": {
+    "failures": [
+      "pair-1:avgFrameMs-regression",
+      "pair-3:avgFrameMs-regression"
+    ],
+    "mode": "per-pair",
+    "medians": {
+      "avgFrameMs": {
+        "base": 1.82,
+        "head": 1.81
+      },
+      "drawCalls": {
+        "base": 393,
+        "head": 385
+      }
+    },
+    "pairs": [
+      {
+        "index": 1,
+        "avgFrameMs": [
+          1.53,
+          1.81
+        ],
+        "drawCalls": [
+          397,
+          391
+        ],
+        "individualRelativeFailures": [
+          "avgFrameMs"
+        ]
+      },
+      {
+        "index": 2,
+        "avgFrameMs": [
+          1.85,
+          1.83
+        ],
+        "drawCalls": [
+          371,
+          370
+        ],
+        "individualRelativeFailures": []
+      },
+      {
+        "index": 3,
+        "avgFrameMs": [
+          1.26,
+          1.61
+        ],
+        "drawCalls": [
+          393,
+          380
+        ],
+        "individualRelativeFailures": [
+          "avgFrameMs"
+        ]
+      },
+      {
+        "index": 4,
+        "avgFrameMs": [
+          1.86,
+          1.89
+        ],
+        "drawCalls": [
+          418,
+          390
+        ],
+        "individualRelativeFailures": []
+      },
+      {
+        "index": 5,
+        "avgFrameMs": [
+          1.82,
+          1.69
+        ],
+        "drawCalls": [
+          385,
+          385
+        ],
+        "individualRelativeFailures": []
+      }
+    ],
+    "baselineExceptions": [],
+    "gate": "preexisting-drawcalls-repair",
+    "baseCount": 5,
+    "headCount": 5,
+    "baseSha": "4c977602e1189526c23524ae1d37765ea88f7881",
+    "headSha": "33f2188192f56d17103076533ca406d14c0c6dc9"
+  },
+  "runs": {
+    "base-1": {
+      "errors": 0,
+      "bootMs": 4293,
+      "floorClearSec": 174,
+      "killsPerFloor": 195,
+      "maxAliveSeen": 23,
+      "_maxAliveSampled": 23,
+      "dropsPerFloor": 38,
+      "longestDryStreakSec": 14.1,
+      "hitTakenRatio": 0.229,
+      "avgFrameMs": 1.53,
+      "p95FrameMs": 2.4,
+      "rhythmBeats": 7,
+      "drawCalls": 397,
+      "_beats": {
+        "explore": true,
+        "encounter": true,
+        "vacuum": true,
+        "drop": true,
+        "setProgress": false,
+        "bossFound": true,
+        "bossKill": true,
+        "floorClear": true
+      },
+      "_roomsCleared": "12/12",
+      "_won": true,
+      "_seed": 20260905,
+      "_choices": [
+        "boon:storm_eye",
+        "story:lantern:guide",
+        "boon:tide_breath"
+      ],
+      "_heroLevelStart": 1,
+      "_heroLevelEnd": 4,
+      "_endReason": "전구역클리어",
+      "_avgAlive": 3.9,
+      "_errorSamples": [],
+      "_at": "2026-10-02T05:26:12.489Z",
+      "_build": {
+        "sha": "4c977602e1189526c23524ae1d37765ea88f7881",
+        "dirty": false,
+        "builtAt": "2026-10-02T05:24:03.422Z",
+        "pwaRelease": "eb7798e3429d3afed8f9"
+      },
+      "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+      "_renderEvery": 3,
+      "_timeoutSec": 600,
+      "_status": "completed",
+      "_runId": "aaa-ring-resume-20261002T052353Z:base-1",
+      "_seriesManifestSha256": "84e34bf7ca852b6fbd1401fed95e8d902f65a56769c9ced31515a769533892ba",
+      "_startedAt": "2026-10-02T05:25:32.317Z"
+    },
+    "head-1": {
+      "errors": 0,
+      "bootMs": 3828,
+      "floorClearSec": 191.1,
+      "killsPerFloor": 197,
+      "maxAliveSeen": 24,
+      "_maxAliveSampled": 22,
+      "dropsPerFloor": 44,
+      "longestDryStreakSec": 20,
+      "hitTakenRatio": 0.227,
+      "avgFrameMs": 1.81,
+      "p95FrameMs": 2,
+      "rhythmBeats": 7,
+      "drawCalls": 391,
+      "_beats": {
+        "explore": true,
+        "encounter": true,
+        "vacuum": true,
+        "drop": true,
+        "setProgress": false,
+        "bossFound": true,
+        "bossKill": true,
+        "floorClear": true
+      },
+      "_roomsCleared": "12/12",
+      "_won": true,
+      "_seed": 20260905,
+      "_choices": [
+        "boon:storm_eye",
+        "story:lantern:guide",
+        "boon:tide_breath"
+      ],
+      "_heroLevelStart": 1,
+      "_heroLevelEnd": 4,
+      "_endReason": "전구역클리어",
+      "_avgAlive": 3.2,
+      "_errorSamples": [],
+      "_at": "2026-10-02T05:26:58.433Z",
+      "_build": {
+        "sha": "33f2188192f56d17103076533ca406d14c0c6dc9",
+        "dirty": false,
+        "builtAt": "2026-10-02T05:23:58.910Z",
+        "pwaRelease": "94b5f1aca00e2a23d3e2"
+      },
+      "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+      "_renderEvery": 3,
+      "_timeoutSec": 600,
+      "_status": "completed",
+      "_runId": "aaa-ring-resume-20261002T052353Z:head-1",
+      "_seriesManifestSha256": "84e34bf7ca852b6fbd1401fed95e8d902f65a56769c9ced31515a769533892ba",
+      "_startedAt": "2026-10-02T05:26:13.232Z"
+    },
+    "base-2": {
+      "errors": 0,
+      "bootMs": 5405,
+      "floorClearSec": 173.3,
+      "killsPerFloor": 194,
+      "maxAliveSeen": 24,
+      "_maxAliveSampled": 24,
+      "dropsPerFloor": 46,
+      "longestDryStreakSec": 13.6,
+      "hitTakenRatio": 0.178,
+      "avgFrameMs": 1.85,
+      "p95FrameMs": 2.1,
+      "rhythmBeats": 7,
+      "drawCalls": 371,
+      "_beats": {
+        "explore": true,
+        "encounter": true,
+        "vacuum": true,
+        "drop": true,
+        "setProgress": false,
+        "bossFound": true,
+        "bossKill": true,
+        "floorClear": true
+      },
+      "_roomsCleared": "12/12",
+      "_won": true,
+      "_seed": 20260905,
+      "_choices": [
+        "boon:storm_eye",
+        "story:lantern:guide",
+        "boon:tide_breath"
+      ],
+      "_heroLevelStart": 1,
+      "_heroLevelEnd": 4,
+      "_endReason": "전구역클리어",
+      "_avgAlive": 3.7,
+      "_errorSamples": [],
+      "_at": "2026-10-02T05:27:40.369Z",
+      "_build": {
+        "sha": "4c977602e1189526c23524ae1d37765ea88f7881",
+        "dirty": false,
+        "builtAt": "2026-10-02T05:24:03.422Z",
+        "pwaRelease": "eb7798e3429d3afed8f9"
+      },
+      "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+      "_renderEvery": 3,
+      "_timeoutSec": 600,
+      "_status": "completed",
+      "_runId": "aaa-ring-resume-20261002T052353Z:base-2",
+      "_seriesManifestSha256": "84e34bf7ca852b6fbd1401fed95e8d902f65a56769c9ced31515a769533892ba",
+      "_startedAt": "2026-10-02T05:26:59.139Z"
+    },
+    "head-2": {
+      "errors": 0,
+      "bootMs": 3823,
+      "floorClearSec": 176,
+      "killsPerFloor": 197,
+      "maxAliveSeen": 23,
+      "_maxAliveSampled": 21,
+      "dropsPerFloor": 44,
+      "longestDryStreakSec": 9.3,
+      "hitTakenRatio": 0.218,
+      "avgFrameMs": 1.83,
+      "p95FrameMs": 2.1,
+      "rhythmBeats": 7,
+      "drawCalls": 370,
+      "_beats": {
+        "explore": true,
+        "encounter": true,
+        "vacuum": true,
+        "drop": true,
+        "setProgress": false,
+        "bossFound": true,
+        "bossKill": true,
+        "floorClear": true
+      },
+      "_roomsCleared": "12/12",
+      "_won": true,
+      "_seed": 20260905,
+      "_choices": [
+        "boon:storm_eye",
+        "story:lantern:guide",
+        "boon:tide_breath"
+      ],
+      "_heroLevelStart": 1,
+      "_heroLevelEnd": 4,
+      "_endReason": "전구역클리어",
+      "_avgAlive": 4,
+      "_errorSamples": [],
+      "_at": "2026-10-02T05:28:20.593Z",
+      "_build": {
+        "sha": "33f2188192f56d17103076533ca406d14c0c6dc9",
+        "dirty": false,
+        "builtAt": "2026-10-02T05:23:58.910Z",
+        "pwaRelease": "94b5f1aca00e2a23d3e2"
+      },
+      "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+      "_renderEvery": 3,
+      "_timeoutSec": 600,
+      "_status": "completed",
+      "_runId": "aaa-ring-resume-20261002T052353Z:head-2",
+      "_seriesManifestSha256": "84e34bf7ca852b6fbd1401fed95e8d902f65a56769c9ced31515a769533892ba",
+      "_startedAt": "2026-10-02T05:27:41.109Z"
+    },
+    "base-3": {
+      "errors": 0,
+      "bootMs": 3880,
+      "floorClearSec": 190.9,
+      "killsPerFloor": 198,
+      "maxAliveSeen": 23,
+      "_maxAliveSampled": 21,
+      "dropsPerFloor": 50,
+      "longestDryStreakSec": 19.4,
+      "hitTakenRatio": 0.291,
+      "avgFrameMs": 1.26,
+      "p95FrameMs": 2,
+      "rhythmBeats": 7,
+      "drawCalls": 393,
+      "_beats": {
+        "explore": true,
+        "encounter": true,
+        "vacuum": true,
+        "drop": true,
+        "setProgress": false,
+        "bossFound": true,
+        "bossKill": true,
+        "floorClear": true
+      },
+      "_roomsCleared": "12/12",
+      "_won": true,
+      "_seed": 20260905,
+      "_choices": [
+        "boon:storm_eye",
+        "story:lantern:guide",
+        "boon:tide_breath"
+      ],
+      "_heroLevelStart": 1,
+      "_heroLevelEnd": 4,
+      "_endReason": "전구역클리어",
+      "_avgAlive": 3.6,
+      "_errorSamples": [],
+      "_at": "2026-10-02T05:29:00.876Z",
+      "_build": {
+        "sha": "4c977602e1189526c23524ae1d37765ea88f7881",
+        "dirty": false,
+        "builtAt": "2026-10-02T05:24:03.422Z",
+        "pwaRelease": "eb7798e3429d3afed8f9"
+      },
+      "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+      "_renderEvery": 3,
+      "_timeoutSec": 600,
+      "_status": "completed",
+      "_runId": "aaa-ring-resume-20261002T052353Z:base-3",
+      "_seriesManifestSha256": "84e34bf7ca852b6fbd1401fed95e8d902f65a56769c9ced31515a769533892ba",
+      "_startedAt": "2026-10-02T05:28:21.303Z"
+    },
+    "head-3": {
+      "errors": 0,
+      "bootMs": 5170,
+      "floorClearSec": 181.3,
+      "killsPerFloor": 192,
+      "maxAliveSeen": 22,
+      "_maxAliveSampled": 22,
+      "dropsPerFloor": 31,
+      "longestDryStreakSec": 18.9,
+      "hitTakenRatio": 0.251,
+      "avgFrameMs": 1.61,
+      "p95FrameMs": 1.9,
+      "rhythmBeats": 7,
+      "drawCalls": 380,
+      "_beats": {
+        "explore": true,
+        "encounter": true,
+        "vacuum": true,
+        "drop": true,
+        "setProgress": false,
+        "bossFound": true,
+        "bossKill": true,
+        "floorClear": true
+      },
+      "_roomsCleared": "12/12",
+      "_won": true,
+      "_seed": 20260905,
+      "_choices": [
+        "boon:storm_eye",
+        "story:lantern:guide",
+        "boon:tide_breath"
+      ],
+      "_heroLevelStart": 1,
+      "_heroLevelEnd": 4,
+      "_endReason": "전구역클리어",
+      "_avgAlive": 3.5,
+      "_errorSamples": [],
+      "_at": "2026-10-02T05:29:41.737Z",
+      "_build": {
+        "sha": "33f2188192f56d17103076533ca406d14c0c6dc9",
+        "dirty": false,
+        "builtAt": "2026-10-02T05:23:58.910Z",
+        "pwaRelease": "94b5f1aca00e2a23d3e2"
+      },
+      "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+      "_renderEvery": 3,
+      "_timeoutSec": 600,
+      "_status": "completed",
+      "_runId": "aaa-ring-resume-20261002T052353Z:head-3",
+      "_seriesManifestSha256": "84e34bf7ca852b6fbd1401fed95e8d902f65a56769c9ced31515a769533892ba",
+      "_startedAt": "2026-10-02T05:29:01.568Z"
+    },
+    "base-4": {
+      "errors": 0,
+      "bootMs": 3694,
+      "floorClearSec": 178.1,
+      "killsPerFloor": 197,
+      "maxAliveSeen": 24,
+      "_maxAliveSampled": 24,
+      "dropsPerFloor": 44,
+      "longestDryStreakSec": 13.2,
+      "hitTakenRatio": 0.128,
+      "avgFrameMs": 1.86,
+      "p95FrameMs": 2.1,
+      "rhythmBeats": 7,
+      "drawCalls": 418,
+      "_beats": {
+        "explore": true,
+        "encounter": true,
+        "vacuum": true,
+        "drop": true,
+        "setProgress": false,
+        "bossFound": true,
+        "bossKill": true,
+        "floorClear": true
+      },
+      "_roomsCleared": "12/12",
+      "_won": true,
+      "_seed": 20260905,
+      "_choices": [
+        "boon:storm_eye",
+        "story:lantern:guide",
+        "boon:tide_breath"
+      ],
+      "_heroLevelStart": 1,
+      "_heroLevelEnd": 4,
+      "_endReason": "전구역클리어",
+      "_avgAlive": 3.6,
+      "_errorSamples": [],
+      "_at": "2026-10-02T05:30:21.456Z",
+      "_build": {
+        "sha": "4c977602e1189526c23524ae1d37765ea88f7881",
+        "dirty": false,
+        "builtAt": "2026-10-02T05:24:03.422Z",
+        "pwaRelease": "eb7798e3429d3afed8f9"
+      },
+      "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+      "_renderEvery": 3,
+      "_timeoutSec": 600,
+      "_status": "completed",
+      "_runId": "aaa-ring-resume-20261002T052353Z:base-4",
+      "_seriesManifestSha256": "84e34bf7ca852b6fbd1401fed95e8d902f65a56769c9ced31515a769533892ba",
+      "_startedAt": "2026-10-02T05:29:42.139Z"
+    },
+    "head-4": {
+      "errors": 0,
+      "bootMs": 5059,
+      "floorClearSec": 189.4,
+      "killsPerFloor": 193,
+      "maxAliveSeen": 23,
+      "_maxAliveSampled": 23,
+      "dropsPerFloor": 38,
+      "longestDryStreakSec": 13.5,
+      "hitTakenRatio": 0.223,
+      "avgFrameMs": 1.89,
+      "p95FrameMs": 2.2,
+      "rhythmBeats": 7,
+      "drawCalls": 390,
+      "_beats": {
+        "explore": true,
+        "encounter": true,
+        "vacuum": true,
+        "drop": true,
+        "setProgress": false,
+        "bossFound": true,
+        "bossKill": true,
+        "floorClear": true
+      },
+      "_roomsCleared": "12/12",
+      "_won": true,
+      "_seed": 20260905,
+      "_choices": [
+        "boon:storm_eye",
+        "story:lantern:guide",
+        "boon:tide_breath"
+      ],
+      "_heroLevelStart": 1,
+      "_heroLevelEnd": 4,
+      "_endReason": "전구역클리어",
+      "_avgAlive": 3.4,
+      "_errorSamples": [],
+      "_at": "2026-10-02T05:31:06.465Z",
+      "_build": {
+        "sha": "33f2188192f56d17103076533ca406d14c0c6dc9",
+        "dirty": false,
+        "builtAt": "2026-10-02T05:23:58.910Z",
+        "pwaRelease": "94b5f1aca00e2a23d3e2"
+      },
+      "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+      "_renderEvery": 3,
+      "_timeoutSec": 600,
+      "_status": "completed",
+      "_runId": "aaa-ring-resume-20261002T052353Z:head-4",
+      "_seriesManifestSha256": "84e34bf7ca852b6fbd1401fed95e8d902f65a56769c9ced31515a769533892ba",
+      "_startedAt": "2026-10-02T05:30:22.125Z"
+    },
+    "base-5": {
+      "errors": 0,
+      "bootMs": 4111,
+      "floorClearSec": 165.3,
+      "killsPerFloor": 189,
+      "maxAliveSeen": 23,
+      "_maxAliveSampled": 22,
+      "dropsPerFloor": 41,
+      "longestDryStreakSec": 10.2,
+      "hitTakenRatio": 0.142,
+      "avgFrameMs": 1.82,
+      "p95FrameMs": 2.1,
+      "rhythmBeats": 7,
+      "drawCalls": 385,
+      "_beats": {
+        "explore": true,
+        "encounter": true,
+        "vacuum": true,
+        "drop": true,
+        "setProgress": false,
+        "bossFound": true,
+        "bossKill": true,
+        "floorClear": true
+      },
+      "_roomsCleared": "12/12",
+      "_won": true,
+      "_seed": 20260905,
+      "_choices": [
+        "boon:storm_eye",
+        "story:lantern:guide",
+        "boon:tide_breath"
+      ],
+      "_heroLevelStart": 1,
+      "_heroLevelEnd": 4,
+      "_endReason": "전구역클리어",
+      "_avgAlive": 3.9,
+      "_errorSamples": [],
+      "_at": "2026-10-02T05:31:47.476Z",
+      "_build": {
+        "sha": "4c977602e1189526c23524ae1d37765ea88f7881",
+        "dirty": false,
+        "builtAt": "2026-10-02T05:24:03.422Z",
+        "pwaRelease": "eb7798e3429d3afed8f9"
+      },
+      "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+      "_renderEvery": 3,
+      "_timeoutSec": 600,
+      "_status": "completed",
+      "_runId": "aaa-ring-resume-20261002T052353Z:base-5",
+      "_seriesManifestSha256": "84e34bf7ca852b6fbd1401fed95e8d902f65a56769c9ced31515a769533892ba",
+      "_startedAt": "2026-10-02T05:31:07.193Z"
+    },
+    "head-5": {
+      "errors": 0,
+      "bootMs": 5123,
+      "floorClearSec": 178.6,
+      "killsPerFloor": 192,
+      "maxAliveSeen": 23,
+      "_maxAliveSampled": 23,
+      "dropsPerFloor": 46,
+      "longestDryStreakSec": 14,
+      "hitTakenRatio": 0.085,
+      "avgFrameMs": 1.69,
+      "p95FrameMs": 2.2,
+      "rhythmBeats": 7,
+      "drawCalls": 385,
+      "_beats": {
+        "explore": true,
+        "encounter": true,
+        "vacuum": true,
+        "drop": true,
+        "setProgress": false,
+        "bossFound": true,
+        "bossKill": true,
+        "floorClear": true
+      },
+      "_roomsCleared": "12/12",
+      "_won": true,
+      "_seed": 20260905,
+      "_choices": [
+        "boon:storm_eye",
+        "story:lantern:guide",
+        "boon:tide_breath"
+      ],
+      "_heroLevelStart": 1,
+      "_heroLevelEnd": 4,
+      "_endReason": "전구역클리어",
+      "_avgAlive": 3.6,
+      "_errorSamples": [],
+      "_at": "2026-10-02T05:32:29.601Z",
+      "_build": {
+        "sha": "33f2188192f56d17103076533ca406d14c0c6dc9",
+        "dirty": false,
+        "builtAt": "2026-10-02T05:23:58.910Z",
+        "pwaRelease": "94b5f1aca00e2a23d3e2"
+      },
+      "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+      "_renderEvery": 3,
+      "_timeoutSec": 600,
+      "_status": "completed",
+      "_runId": "aaa-ring-resume-20261002T052353Z:head-5",
+      "_seriesManifestSha256": "84e34bf7ca852b6fbd1401fed95e8d902f65a56769c9ced31515a769533892ba",
+      "_startedAt": "2026-10-02T05:31:48.173Z"
+    }
+  }
+}

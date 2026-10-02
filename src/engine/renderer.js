@@ -12,6 +12,7 @@ import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { displaySize, renderPixelRatio } from '../platform/mobile-display.js';
 import { rebindEnvironment } from './environment.js';
+import { ShaderProgramValidator } from './shader-program-validator.js';
 
 // 최종 합성 셰이더: 색수차 · 비네트 · 히트 플래시 · 방사형 블러(궁극기) · 색보정
 const FinalShader = {
@@ -62,6 +63,10 @@ export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
     const r = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false, depth: true });
+    // Development keeps full Three diagnostics. Production still rejects failed links,
+    // without synchronously fetching three success logs for every new program.
+    r.debug.checkShaderErrors = import.meta.env?.DEV !== false;
+    this.programValidator = new ShaderProgramValidator();
     this.isWebGL2 = r.capabilities.isWebGL2;
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.ACESFilmicToneMapping;
@@ -216,5 +221,8 @@ export class Renderer {
     this.u.uDesat.value = this.desat;
     this.u.uTime.value = this.time;
   }
-  render() { this.lobbyAA.enabled = this.rig.mode === 'lobby'; this.composer.render(); }
+  render() {
+    this.lobbyAA.enabled = this.rig.mode === 'lobby'; this.composer.render();
+    this.programValidator.validate(this.r);
+  }
 }

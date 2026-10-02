@@ -1,0 +1,507 @@
+{
+  "scope": "Pre-freeze source and explicit dirty build; actual production shader-link checks and development diagnostic mode. Profiling is diagnostic, not a release gate.",
+  "sourceSha256": {
+    "src/engine/fx.js": "72552bc0580f23a4d4ae4ca3054cf9a006db0bad9c1a3799d4aab8adfea30512",
+    "src/engine/renderer.js": "99f6202cf4dff682779c3c30f1b441f3e4b3a8a75e9364f5e50178c8f69d1ab9",
+    "src/engine/shader-program-validator.js": "8795b26e3d4f4ad30126a54a8a7f03657136b99c98dab477baab2a7d4238274b"
+  },
+  "tests": {
+    "passed": 1247,
+    "skipped": 2,
+    "failed": 0
+  },
+  "typecheck": "pass",
+  "build": "pass",
+  "productionBrowser": {
+    "status": "pass",
+    "startedAt": "2026-10-02T06:11:20.055Z",
+    "controlledRender": true,
+    "cases": [
+      {
+        "hero": "knight",
+        "quality": "mid",
+        "reduced": false,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 4.983333333333333
+        },
+        "restCalls": 104,
+        "ringCalls": 136,
+        "addedDrawCalls": 32,
+        "preparedPrograms": 127,
+        "afterRingPrograms": 127,
+        "shaderLinks": {
+          "successLogsEnabled": false,
+          "programs": 127,
+          "checked": 133,
+          "rejectsUnlinked": true,
+          "allLinked": true
+        },
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "warningsAfter": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "cleared": {
+          "calls": 104
+        },
+        "restarted": true
+      },
+      {
+        "hero": "mage",
+        "quality": "low",
+        "reduced": false,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 4.983333333333333
+        },
+        "restCalls": 103,
+        "ringCalls": 135,
+        "addedDrawCalls": 32,
+        "preparedPrograms": 118,
+        "afterRingPrograms": 118,
+        "shaderLinks": {
+          "successLogsEnabled": false,
+          "programs": 118,
+          "checked": 124,
+          "rejectsUnlinked": true,
+          "allLinked": true
+        },
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "warningsAfter": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "cleared": {
+          "calls": 103
+        },
+        "restarted": true
+      },
+      {
+        "hero": "ranger",
+        "quality": "mid",
+        "reduced": true,
+        "cast": {
+          "state": "skill",
+          "mp": 84.03333333333333,
+          "cooldown": 3.9833333333333334
+        },
+        "restCalls": 113,
+        "ringCalls": 145,
+        "addedDrawCalls": 32,
+        "preparedPrograms": 127,
+        "afterRingPrograms": 127,
+        "shaderLinks": {
+          "successLogsEnabled": false,
+          "programs": 127,
+          "checked": 133,
+          "rejectsUnlinked": true,
+          "allLinked": true
+        },
+        "warnings": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "warningsAfter": [
+          {
+            "id": "region:1:0",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 3,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 1.5,
+            "duration": 1.5,
+            "color": 15253108
+          },
+          {
+            "id": "region:1:1",
+            "kind": "ring",
+            "x": -73.61100243590772,
+            "z": -36.6937350910157,
+            "radius": 6,
+            "width": 0,
+            "length": 0,
+            "angle": 0,
+            "safeRadius": 0,
+            "remaining": 2.05,
+            "duration": 2.05,
+            "color": 15253108
+          }
+        ],
+        "alive": true,
+        "cleared": {
+          "calls": 113
+        },
+        "restarted": true
+      }
+    ],
+    "errors": [],
+    "scope": "실제 키보드 스킬 입력 뒤, 기존 링 32개의 양면 패스 감소와 소멸·재시작을 측정. 자연 완주 및 실기기 성능은 별도.",
+    "build": {
+      "sha": "9301c3cb1bad98e9aea0c8827a670ab37c231a84",
+      "dirty": true,
+      "builtAt": "2026-10-02T06:08:41.198Z",
+      "pwaRelease": "2ab32bb4e0070072ef98"
+    },
+    "lastSample": {
+      "hero": "ranger",
+      "quality": "mid",
+      "reduced": true,
+      "cast": {
+        "state": "skill",
+        "mp": 84.03333333333333,
+        "cooldown": 3.9833333333333334
+      },
+      "restCalls": 113,
+      "ringCalls": 145,
+      "addedDrawCalls": 32,
+      "preparedPrograms": 127,
+      "afterRingPrograms": 127,
+      "shaderLinks": {
+        "successLogsEnabled": false,
+        "programs": 127,
+        "checked": 133,
+        "rejectsUnlinked": true,
+        "allLinked": true
+      },
+      "warnings": [
+        {
+          "id": "region:1:0",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 3,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 1.5,
+          "duration": 1.5,
+          "color": 15253108
+        },
+        {
+          "id": "region:1:1",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 6,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 2.05,
+          "duration": 2.05,
+          "color": 15253108
+        }
+      ],
+      "warningsAfter": [
+        {
+          "id": "region:1:0",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 3,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 1.5,
+          "duration": 1.5,
+          "color": 15253108
+        },
+        {
+          "id": "region:1:1",
+          "kind": "ring",
+          "x": -73.61100243590772,
+          "z": -36.6937350910157,
+          "radius": 6,
+          "width": 0,
+          "length": 0,
+          "angle": 0,
+          "safeRadius": 0,
+          "remaining": 2.05,
+          "duration": 2.05,
+          "color": 15253108
+        }
+      ],
+      "alive": true
+    },
+    "finishedAt": "2026-10-02T06:12:02.925Z"
+  },
+  "developmentBrowser": {
+    "origin": "http://127.0.0.1:5173",
+    "startedAt": "2026-10-02T06:15:01.898Z",
+    "status": "pass",
+    "pageErrors": [],
+    "localFailures": [],
+    "externalFailures": [],
+    "lobby": {
+      "mode": "lobby",
+      "hero": "knight",
+      "showcase": true,
+      "webgl2": true,
+      "drawCalls": 1,
+      "successLogsEnabled": true,
+      "checkedPrograms": 68
+    },
+    "attack": {
+      "state": "attack",
+      "hp": 2800
+    },
+    "battle": {
+      "mode": "battle",
+      "active": true,
+      "stage": "1-1",
+      "elapsed": 1.016666666666668,
+      "enemies": 0,
+      "hp": 2800,
+      "drawCalls": 1
+    },
+    "lobbyMediaServed": true,
+    "expectedMediaCancellations": [],
+    "finishedAt": "2026-10-02T06:15:21.968Z"
+  },
+  "diagnosticBefore": {
+    "errors": 0,
+    "bootMs": 5405,
+    "floorClearSec": 171.3,
+    "killsPerFloor": 194,
+    "maxAliveSeen": 23,
+    "_maxAliveSampled": 21,
+    "dropsPerFloor": 36,
+    "longestDryStreakSec": 14.7,
+    "hitTakenRatio": 0.201,
+    "avgFrameMs": 2.11,
+    "p95FrameMs": 2.1,
+    "rhythmBeats": 7,
+    "drawCalls": 401,
+    "_beats": {
+      "explore": true,
+      "encounter": true,
+      "vacuum": true,
+      "drop": true,
+      "setProgress": false,
+      "bossFound": true,
+      "bossKill": true,
+      "floorClear": true
+    },
+    "_roomsCleared": "12/12",
+    "_won": true,
+    "_seed": 20260905,
+    "_choices": [
+      "boon:storm_eye",
+      "story:lantern:guide",
+      "boon:tide_breath"
+    ],
+    "_heroLevelStart": 1,
+    "_heroLevelEnd": 4,
+    "_endReason": "전구역클리어",
+    "_avgAlive": 3.8,
+    "_errorSamples": [],
+    "_at": "2026-10-02T06:00:24.508Z",
+    "_build": {
+      "sha": "9301c3cb1bad98e9aea0c8827a670ab37c231a84",
+      "dirty": false,
+      "builtAt": "2026-10-02T05:47:11.031Z",
+      "pwaRelease": "ea650404bbe08102047e"
+    },
+    "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+    "_renderEvery": 3,
+    "_timeoutSec": 600
+  },
+  "diagnosticAfter": {
+    "errors": 0,
+    "bootMs": 5132,
+    "floorClearSec": 179.1,
+    "killsPerFloor": 198,
+    "maxAliveSeen": 23,
+    "_maxAliveSampled": 22,
+    "dropsPerFloor": 42,
+    "longestDryStreakSec": 10.8,
+    "hitTakenRatio": 0.275,
+    "avgFrameMs": 1.05,
+    "p95FrameMs": 2.2,
+    "rhythmBeats": 7,
+    "drawCalls": 371,
+    "_beats": {
+      "explore": true,
+      "encounter": true,
+      "vacuum": true,
+      "drop": true,
+      "setProgress": false,
+      "bossFound": true,
+      "bossKill": true,
+      "floorClear": true
+    },
+    "_roomsCleared": "12/12",
+    "_won": true,
+    "_seed": 20260905,
+    "_choices": [
+      "boon:storm_eye",
+      "story:lantern:guide",
+      "boon:tide_breath"
+    ],
+    "_heroLevelStart": 1,
+    "_heroLevelEnd": 4,
+    "_endReason": "전구역클리어",
+    "_avgAlive": 4.1,
+    "_errorSamples": [],
+    "_at": "2026-10-02T06:17:33.610Z",
+    "_build": {
+      "sha": "9301c3cb1bad98e9aea0c8827a670ab37c231a84",
+      "dirty": true,
+      "builtAt": "2026-10-02T06:08:41.198Z",
+      "pwaRelease": "2ab32bb4e0070072ef98"
+    },
+    "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+    "_renderEvery": 3,
+    "_timeoutSec": 600
+  },
+  "formalSeries": "pending after freeze",
+  "aaaComplete": false,
+  "physicalDeviceVerified": false
+}
