@@ -8,6 +8,7 @@ import { launchOpts } from './chrome.mjs';
 
 const out = resolve(process.argv[2] || 'work/ring-single-pass');
 const baseline = process.argv.includes('--baseline');
+const linkValidation = process.argv.includes('--link-validation');
 const originArg = process.argv[3]?.startsWith('http') ? process.argv[3] : null;
 const report = { status: 'running', startedAt: new Date().toISOString(), controlledRender: true, cases: [], errors: [],
   scope: '실제 키보드 스킬 입력 뒤, 기존 링 32개의 양면 패스 감소와 소멸·재시작을 측정. 자연 완주 및 실기기 성능은 별도.' };
@@ -43,7 +44,7 @@ try {
     assert.equal(cast.state, 'skill'); assert.ok(cast.mp < before); assert.ok(cast.cooldown > 0);
     await page.evaluate(() => { for (let i = 0; i < 48; i++) app.step(1 / 60, i === 47); });
     await page.screenshot({ path: join(out, `${hero}-${quality}-real-skill.png`) });
-    const result = await page.evaluate(() => {
+    const result = await page.evaluate((checkLinks) => {
       const b = app.battle, p = b.player, r = app.renderer.r;
       const room = b.world.rooms.find(room => room.type === 'normal');
       p.pos.set(room.x, 0, room.z); p.yaw = 0; app.fx.clearAll(); b.hazards.spawn(room, p);
@@ -65,13 +66,31 @@ try {
           { r0: .25, r1: 2 + (i % 3) * .3, life: 1, y: .09 });
       }
       app.fx.update(.2); const ringCalls = count(); app.renderer.render();
+      let shaderLinks = null;
+      if (checkLinks) {
+        const gl = r.getContext(), validator = app.renderer.programValidator;
+        const unlinked = gl.createProgram(); let rejectsUnlinked = false;
+        try { validator.validate({ getContext: () => gl, info: { programs: [{ program: unlinked }] } }); }
+        catch (error) { rejectsUnlinked = error.message.includes('did not link'); }
+        finally { gl.deleteProgram(unlinked); }
+        shaderLinks = { successLogsEnabled: r.debug.checkShaderErrors,
+          programs: r.info.programs.length, checked: validator.checkedCount, rejectsUnlinked,
+          allLinked: r.info.programs.every(program => gl.getProgramParameter(program.program, gl.LINK_STATUS) === true) };
+      }
       return { restCalls, ringCalls, addedDrawCalls: ringCalls - restCalls,
         preparedPrograms, afterRingPrograms: r.info.programs.length,
+        shaderLinks,
         warnings, warningsAfter: b.hazards.getPartyWarnings(), alive: p.alive };
-    });
+    }, linkValidation);
     report.lastSample = { hero, quality, reduced, cast, ...result };
     assert.equal(result.addedDrawCalls, baseline ? 64 : 32);
     assert.equal(result.afterRingPrograms, result.preparedPrograms, '준비 이후 링 draw가 새 GPU 프로그램을 만들지 않는다');
+    if (linkValidation) {
+      assert.equal(result.shaderLinks.successLogsEnabled, false);
+      assert.equal(result.shaderLinks.allLinked, true);
+      assert.equal(result.shaderLinks.rejectsUnlinked, true);
+      assert.ok(result.shaderLinks.checked >= result.shaderLinks.programs);
+    }
     assert.deepEqual(result.warningsAfter, result.warnings); assert.equal(result.alive, true);
     await page.screenshot({ path: join(out, `${hero}-${quality}-stacked-rings.png`) });
     const cleared = await page.evaluate(() => {
