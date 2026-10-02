@@ -30,7 +30,7 @@ class El {
 }
 
 let nodes: Map<string, El>, originalDocument: PropertyDescriptor | undefined;
-function observeAudio() { return spyOn(audio, 'play').mockImplementation(() => {}); }
+function observeAudio() { return spyOn(audio, 'play').mockImplementation(() => undefined); }
 let play: ReturnType<typeof observeAudio>;
 const get = (id: string) => {
   if (!nodes.has(id)) nodes.set(id, new El());
