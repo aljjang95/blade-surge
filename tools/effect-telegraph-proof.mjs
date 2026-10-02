@@ -81,6 +81,7 @@ try {
       });
       assert.deepEqual(after.age, before.age); assert.deepEqual(after.lifetime, before.lifetime);
       assert.deepEqual(after.targetIds, before.targetIds); assert.equal(after.programs, before.programs);
+      assert.ok(before.materials.length > 0, `${hero}/${kind} must produce a real warning material`);
       assert.ok(before.materials.every(m => m.protected && !m.focus));
       await page.evaluate(q => { app.renderer.bloom.enabled = q !== 'low'; app.renderer.render(); }, quality);
       await capture(page, `${hero}-${kind}-configured-bloom-overlap.png`);
