@@ -108,6 +108,10 @@ async function viewport(width, height, label) {
     await continueButton.click(); await continueButton.waitFor({ state: 'hidden' });
   }
   await page.waitForTimeout(150); // Real responsive resize/clear delivery.
+  const firstFrame = await renderCurrentFrame(label + ' first native resize frame');
+  const firstFramePath = label.replace(/[^a-z0-9]+/gi, '-') + '-first-resize.png';
+  await page.screenshot({ path: path.join(out, firstFramePath) });
+  report.events.push({ label: 'first resize GPU frame before native camera settling', path: firstFramePath, state: firstFrame });
   const before = await snapshot();
   const visualClock = await page.evaluate(async () => {
     const renderer = window.app.renderer, camera = renderer.camera;
