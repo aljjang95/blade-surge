@@ -28,9 +28,10 @@ const report = { status: 'running', started: new Date().toISOString(), head,
   runs: [], errors: [], requestFailures: [], httpErrors: [], media: [] };
 const save = () => fs.writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
 await fs.copyFile(import.meta.filename, path.join(out, 'driver.mjs')); await save();
-let server, browser;
+let server, browser, documentId = 0;
 
 async function boot(page, url, reload = false) {
+  documentId++; // Each native navigation creates a new media-observer document lifetime.
   if (reload) await page.reload({ waitUntil: 'domcontentloaded', timeout: 120000 });
   else await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
   if (await page.locator('#btn-ignore-rotate').isVisible()) await page.locator('#btn-ignore-rotate').click();
@@ -152,11 +153,12 @@ async function inspectJournal(page, record, fromResult) {
   } else await page.locator('.oath-nav-growth').click();
   await page.locator('#masterworks .mw-tabs').getByRole('button', { name: '기록', exact: true }).click();
   const card = page.locator(`[data-run-history="${record.runId}"]`);
+  await card.scrollIntoViewIfNeeded();
   const text = await card.innerText();
   assert(text.includes('유리 정원') && text.includes('검성 아르카') && text.includes(`정확 회피 ${record.details.perfects}`) && text.includes(`균형 붕괴 ${record.details.breaks}`), 'Journal omitted actual route/hero/mastery');
   assert(text.includes(record.details.control === 'mixed' ? '수동·AUTO 혼합' : 'AUTO'), 'Journal mislabels AUTO');
   assert(await page.evaluate(before => JSON.stringify(window.app.eco.s) === before, before), 'Reading the journal spent resources or changed progression');
-  await page.screenshot({ path: path.join(out, `journal-${record.runId}.png`) });
+  await page.screenshot({ path: path.join(out, `journal-${record.runId}-document-${documentId}.png`) });
   await page.locator('#masterworks .mw-close').click(); return text;
 }
 
@@ -172,8 +174,24 @@ try {
   const page = await context.newPage(); page.setDefaultTimeout(30000); await page.addInitScript(installConquestMediaObserver);
   page.on('pageerror', e => report.errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') report.errors.push(m.text()); });
-  page.on('response', r => { if (r.status() >= 400) report.httpErrors.push({ url: r.url(), status: r.status() }); });
-  page.on('requestfailed', r => report.requestFailures.push({ engine: 'chromium', url: r.url(), type: r.resourceType(), range: r.headers().range || null, error: r.failure()?.errorText, failedAt: Date.now() }));
+  const requests = new Map();
+  page.on('request', request => requests.set(request, { engine: 'chromium', documentId, url: request.url(),
+    type: request.resourceType(), range: request.headers().range || null, started: Date.now() }));
+  page.on('response', response => {
+    const request = response.request(), row = requests.get(request), timing = request.timing();
+    if (row) Object.assign(row, { started: timing.startTime, status: response.status(),
+      responseAt: timing.responseStart >= 0 ? timing.startTime + timing.responseStart : Date.now(),
+      nodeResponseAt: Date.now(), contentRange: response.headers()['content-range'] || null });
+    if (response.status() >= 400) report.httpErrors.push({ url: response.url(), status: response.status() });
+  });
+  page.on('requestfailed', request => {
+    const row = requests.get(request), timing = request.timing();
+    if (row) Object.assign(row, { started: timing.startTime, timing,
+      failedAt: timing.responseEnd >= 0 ? timing.startTime + timing.responseEnd : Date.now(),
+      nodeFailureAt: Date.now(), error: request.failure()?.errorText });
+    report.requestFailures.push(row || { engine: 'chromium', documentId, url: request.url(),
+      error: request.failure()?.errorText, failedAt: Date.now() });
+  });
   await boot(page, url);
   report.initial = await page.evaluate(() => ({ selected: window.app.eco.s.selected, history: window.app.eco.s.masterworks.history.length, purchases: window.app.eco.s.purchases, spentKRW: window.app.eco.s.spentKRW }));
   assert(report.initial.selected === 'knight' && report.initial.history === 0 && report.initial.spentKRW === 0 && report.initial.purchases.length === 0, 'Expected untouched fresh free-play save');
@@ -183,7 +201,7 @@ try {
   await page.locator('#btn-auto').click();
   const first = await complete(page, 'mixed'); report.firstJournal = await inspectJournal(page, first, true);
   const saved = await page.evaluate(() => structuredClone(window.app.eco.s.masterworks.history));
-  report.media.push({ engine: 'chromium', snapshot: await page.evaluate(() => window.__conquestMedia.snapshot()) });
+  report.media.push({ engine: 'chromium', documentId, snapshot: await page.evaluate(() => window.__conquestMedia.snapshot()) });
   await boot(page, url, true);
   report.reload = await page.evaluate(() => structuredClone(window.app.eco.s.masterworks.history));
   assert(JSON.stringify(report.reload) === JSON.stringify(saved), 'History changed on reload');
@@ -200,15 +218,26 @@ try {
   assert(report.retry.route.id === 'glass_garden' && report.retry.route.depth === 'standard' && !report.retry.route.conquestId && !report.retry.riftId, 'Retry changed the native destination');
   assert(report.retry.pending?.energy === 4 && report.retry.pending.id === before.seq + 1 && report.retry.energy === before.energy - 4, 'Existing retry did not charge its displayed catalog price exactly once');
   assert(JSON.stringify(report.retry.history) === JSON.stringify(before.history), 'Departure created a completed record or repaid a result');
-  report.media.push({ engine: 'chromium', snapshot: await page.evaluate(() => window.__conquestMedia.snapshot()) });
+  report.media.push({ engine: 'chromium', documentId, snapshot: await page.evaluate(() => window.__conquestMedia.snapshot()) });
   await boot(page, url, true);
   report.unfinishedReload = await page.evaluate(() => ({ energy: window.app.eco.s.energy, history: structuredClone(window.app.eco.s.masterworks.history), pending: window.app.expedition.s.pending }));
   assert(report.unfinishedReload.energy === before.energy && report.unfinishedReload.pending === null && JSON.stringify(report.unfinishedReload.history) === JSON.stringify(before.history), 'Unfinished native retry did not refund once without inventing completion');
   await boot(page, url, true);
   const again = await page.evaluate(() => ({ energy: window.app.eco.s.energy, history: structuredClone(window.app.eco.s.masterworks.history) }));
   assert(again.energy === report.unfinishedReload.energy && JSON.stringify(again.history) === JSON.stringify(before.history), 'Repeated reload duplicated refund or records');
-  report.media.push({ engine: 'chromium', snapshot: await page.evaluate(() => window.__conquestMedia.snapshot()) });
-  report.mediaCancellations = classifyMediaCancellations(report.requestFailures, report.media);
+  report.media.push({ engine: 'chromium', documentId, snapshot: await page.evaluate(() => window.__conquestMedia.snapshot()) });
+  // Observer track IDs reset on a native reload. Preserve each actual document's
+  // identity rather than treating two independent lifetimes as duplicate instances.
+  // All failures remain subject to the unchanged strict lifecycle classifier.
+  report.mediaCancellations = { classified: [], unresolved: [], documents: [] };
+  for (const id of new Set(report.requestFailures.map(request => request.documentId))) {
+    const failures = report.requestFailures.filter(request => request.documentId === id);
+    const snapshots = report.media.filter(media => media.documentId === id);
+    const result = classifyMediaCancellations(failures, snapshots);
+    report.mediaCancellations.documents.push({ documentId: id, ...result });
+    report.mediaCancellations.classified.push(...result.classified);
+    report.mediaCancellations.unresolved.push(...result.unresolved);
+  }
   assert(report.errors.length === 0 && report.httpErrors.length === 0 && report.mediaCancellations.unresolved.length === 0, 'Unresolved browser/runtime/network failures');
   report.status = 'pass';
 } catch (error) {
