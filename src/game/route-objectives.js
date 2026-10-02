@@ -2,6 +2,7 @@ import { Vector3 } from 'three';
 import { routeObjectiveForStage } from '../data/route-objectives.js';
 import { CoolingValves } from './cooling-valves.js';
 import { NightglassRecords } from './nightglass-records.js';
+import { AstralConstellations } from './astral-constellations.js';
 
 /** @typedef {{id:number, x:number, z:number, type:string, label:string, spawned:boolean, cleared:boolean, discovered:boolean}} Room */
 /** @typedef {{rooms:Room[], startRoom:Room, bossRoom:Room, sealed?:boolean, minX?:number, minZ?:number, cols?:number, buildFlow:(x:number,z:number)=>Int32Array|null|undefined}} World */
@@ -12,6 +13,7 @@ import { NightglassRecords } from './nightglass-records.js';
 export function createRouteObjectives(stage, world) {
   const def = routeObjectiveForStage(stage);
   if (!def) return null;
+  if ('kind' in def && def.kind === 'constellations') return new AstralConstellations(def, world);
   if ('kind' in def && def.kind === 'records') return new NightglassRecords(def, world);
   return 'kind' in def && def.kind === 'cooling' ? new CoolingValves(def, world) : new RouteObjectives(def, world);
 }

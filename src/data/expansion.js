@@ -78,8 +78,8 @@ export const DUNGEONS = [
   }),
   dungeon('astral_leviathan_spire', '성운의 레비아탄 첨탑', 'frost', 3, 3, 'star_dust', '별의 잔해가 쌓인 첨탑에서 귀환 좌표를 삼킨 레비아탄을 추적하세요.', {
     art: ENCOUNTER_ART.boss_astral_leviathan, accent: '#9ccaff', subtitle: 'ASTRAL LEVIATHAN SPIRE',
-    objective: '모든 구역 정화 → 성운의 레비아탄 처치',
-    tactic: `첨탑의 적을 처치하고 모든 구역을 정화하세요. ${ENEMIES.astral_leviathan.tactic}`,
+    objective: '별자리 4개 순서대로 복원 → 모든 구역 정화 → 성운의 레비아탄 처치',
+    tactic: `적을 처치한 뒤 1번→2번→3번→4번 조율판의 모래시계 단서를 1초 읽고, 같은 문자·도형 판에서 1초 유지하세요. 오답은 판 밖에서 재시도하며 공격·회피·피격·전투 재개 때 현재 선택이 초기화됩니다. 별자리 4개 순서대로 복원하고 모든 구역을 정화해야 보스 봉인이 열립니다. ${ENEMIES.astral_leviathan.tactic}`,
     bossEnemy: 'astral_leviathan', bossHp: 22400, bossName: '성운의 레비아탄', rosterMode: 'astral',
     roster: { trash: ['astral_pagelet', 'nightglass_page', 'frost_mirror', 'astral_orbitling', 'ghost_skull', 'star_wisp'], ranged: ['archive_scribe', 'astral_pagelet', 'skel_mage'], elite: ['celestial_warden', 'archive_warden', 'elite_wraith'] },
   }),

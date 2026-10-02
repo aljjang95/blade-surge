@@ -126,3 +126,16 @@ test('controller retries a failed receipt but never settles an already successfu
     expect(controller.result.time).toBe(58.383333333); expect(settlements).toBe(2);
   } finally { played.mockRestore(); }
 });
+
+test('Astral result shows only frozen restored identities and wrong attempts, including zero and partial defeat', () => {
+  for (const progress of [0, 1, 4]) {
+    const report = Object.freeze({ progress, target: 4, complete: progress === 4, mistakes: 2,
+      constellations: Object.freeze(Array.from({ length: progress }, (_, i) => Object.freeze({ stationId: i + 1, label: `${i + 1}번 조율판` }))) });
+    const f = fixture({ win: progress === 4, routeObjective: report, rewards: {} });
+    expect(text(f.view)).toContain(`별자리 복원 ${progress}/4`); expect(text(f.view)).toContain('오답 2회');
+    expect(text(f.view)).not.toContain('기록 복원');
+    if (progress === 0) expect(text(f.view)).toContain('복원한 별자리 없음');
+    for (let i = 0; i < progress; i++) expect(text(f.view)).toContain(`${i + 1}번 조율판`);
+    if (progress < 4) expect(text(f.view)).not.toContain(`${progress + 1}번 조율판`);
+  }
+});
