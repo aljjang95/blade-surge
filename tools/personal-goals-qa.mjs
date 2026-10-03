@@ -50,7 +50,7 @@ const qa=await createExpeditionQa({root,driver:import.meta.filename,report,sourc
   'src/data/shop.js','src/data/expansion.js','src/data/seasonal-content.js']});
 let page;
 const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
-const withoutGoal=eco=>{const copy=structuredClone(eco);delete copy.masterworks.personalGoal;return copy;};
+const withoutGoalAndEnergy=eco=>{const copy=structuredClone(eco);delete copy.masterworks.personalGoal;delete copy.energy;delete copy.energyT;return copy;};
 async function state(){return page.evaluate(()=>{const a=window.app,b=a.battle;return{
   eco:structuredClone(a.eco.s),energy:a.eco.s.energy,energyT:a.eco.s.energyT,energyMax:a.eco.energyMax,observedAt:Date.now(),
   active:b.active,paused:b.paused,auto:b.player?.auto,dirty:!!b.rpgDirty,heroId:a.eco.s.selected,heroLevel:a.eco.hero().level,
@@ -90,14 +90,18 @@ async function select(metric,anchor){
   const preview=page.locator(`[data-goal-run="${anchor.runId}"]`);await preview.click();
   const panel=page.locator('.mw-personal-goal');await panel.locator(`[data-personal-goal-metric="${metric}"]`).click();
   const after=await state(),expected=structuredClone(before.eco.masterworks);
+  // UI save listeners use the original energy regeneration/cap clock. Keep
+  // their real zero-cost transition separate from the goal-only profile check.
+  report.events.push({label:'native metric choice before validation',metric,anchorRunId:anchor.runId,before,after});await qa.save();
+  const energy=energyTransition(before,after,0,'native metric choice');
   qaAssert(choosePersonalGoal(expected,anchor.runId,metric).ok&&equal(after.goal,expected.personalGoal),'Native metric selection differs from exact observed history context');
-  qaAssert(equal(withoutGoal(before.eco),withoutGoal(after.eco)),'Goal selection changed profile/economy/history or rewarded/charged');
+  qaAssert(equal(withoutGoalAndEnergy(before.eco),withoutGoalAndEnergy(after.eco)),'Goal selection changed profile/economy/history beyond the verified native zero-cost energy transition');
   const primary=JSON.parse(after.raw);qaAssert(equal(primary.masterworks.personalGoal,after.goal)&&equal(primary.masterworks.history,after.history),'Choice/history missing from actual native primary save');
   const capture=capturePersonalGoal(after.eco.masterworks);qaAssert(capture,'Observed anchor has no finite native baseline/target');
   qaAssert(await panel.locator(`[data-personal-goal-metric="${metric}"]`).getAttribute('aria-pressed')==='true','Actual saved metric is not pressed');
   const text=await panel.innerText();qaAssert(text.includes('최근 20개')&&text.includes(personalContextLabel(after.goal.context))&&text.includes(personalTargetLabel(capture))&&text.includes('에너지 4'),'Journal omits bounded history/condition/target/catalog cost');
   const summary=summarizePersonalRuns(after.history,after.goal.context);
-  report.events.push({label:'native metric choice',metric,anchorRunId:anchor.runId,before,after,capture,summary,text});await qa.save();return after;
+  report.events.push({label:'native metric choice',metric,anchorRunId:anchor.runId,before,after,capture,summary,text,energy});await qa.save();return after;
 }
 async function viewport(width,height,label){
   const before=await state();await page.setViewportSize({width,height});
