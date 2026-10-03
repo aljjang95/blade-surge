@@ -6,7 +6,8 @@ import { ENEMIES } from '../src/data/stages.js';
 import { routeObjectiveForStage } from '../src/data/route-objectives.js';
 import { buildExpeditionStage, buildExpeditionWorld } from '../src/game/expedition-combat.js';
 
-// Independent accepted totals: [required holds, total additional enemy waves].
+// Independent accepted totals: [existing altar/route holds, additional waves].
+// Astral choices have an independent four-confirmation contract below.
 // A treasure room alone is not an altar, and reinforcement counts are per elite.
 const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   glass_garden: { standard: [1, 0], deep: [2, 0] },
@@ -45,7 +46,10 @@ for (const [id, contract] of Object.entries(contracts)) {
       const elites = world.rooms.filter(r => r.type === 'elite').length;
       const { attunement, reinforcements } = stage.expedition.mechanics;
       const altarHolds = attunement && (!route || ('coexistAttunement' in route && route.coexistAttunement)) ? treasure : 0;
-      const holds = (route?.gates.length || 0) + altarHolds;
+      const selectionRoute = !!route && 'kind' in route && route.kind === 'constellations';
+      const holds = (selectionRoute ? 0 : route?.gates.length || 0) + altarHolds;
+      const selections = selectionRoute ? route!.gates.length : 0;
+      expect(selections).toBe(id === 'astral_leviathan_spire' && depth === 'standard' ? 4 : 0);
       expect([holds, elites * reinforcements]).toEqual(contract[depth]);
       expect(stage.objective).toBe(definition.objective);
       expect(stage.encounter.tactic).toBe(definition.tactic);
@@ -63,6 +67,11 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(stage.encounter.tactic).toMatch(/적.*처치.*빛 안.*2초 유지/);
         expect(stage.encounter.tactic.match(/\d번/g)).toEqual(depth === 'deep' ? ['3번', '2번', '1번'] : ['1번', '2번', '3번']);
         if (depth === 'deep') expect(stage.objective).toMatch(/역순.*보물방 2곳/);
+      } else if (id === 'astral_leviathan_spire' && depth === 'standard') {
+        expect(Number(stage.objective.match(/별자리\s*(\d+)개/)?.[1])).toBe(4);
+        expect(stage.encounter.tactic).toMatch(/모래시계 단서를 1초 읽고.*문자·도형 판에서 1초 유지/);
+        expect(stage.encounter.tactic).toMatch(/오답.*판 밖.*재시도/);
+        expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번', '4번']);
       } else if (holds) {
         expect(stage.encounter.tactic).toMatch(/적.*처치.*중심.*2초.*공명/);
         if (!route) expect(stage.objective).toMatch(/2초\s*공명/);
@@ -78,7 +87,9 @@ for (const [id, contract] of Object.entries(contracts)) {
       expect(stage.objective).toMatch(/처치|쓰러뜨리/);
       for (const copy of [definition.objective, definition.tactic, stage.objective, stage.encounter.tactic]) {
         const checked = id === 'cinder_tide_lock' ? copy.replaceAll('밸브', '')
-          : id === 'nightglass_observatory' ? copy.replace(/기록\s*3장/g, '') : copy;
+          : id === 'nightglass_observatory' ? copy.replace(/기록\s*3장/g, '')
+          : id === 'astral_leviathan_spire' && depth === 'standard' && selectionRoute
+            ? copy.replaceAll('별자리 4개 순서대로 복원', '') : copy;
         expect(checked).not.toMatch(unsupportedInstructions);
       }
 
@@ -118,5 +129,18 @@ test('standard bellfall promises three ordered gates, deep keeps two unordered t
 test('atmospheric descriptions do not retain removed interaction instructions', () => {
   for (const definition of [...DUNGEONS, ...EXPEDITION_DEPTHS]) {
     expect(definition.description).not.toMatch(/냉각선을 다시 잇|심장로를 식히|성좌를 다시 잇|궤도를 다시 맞추|진짜 왕좌를 찾아|본체를 드러내|고리가 무너지기 전에/);
+  }
+});
+
+test('Astral exact implemented standard promise does not permit deep or unsupported star interactions', () => {
+  const standard = buildExpeditionStage('dungeon', 'astral_leviathan_spire', null);
+  expect(routeObjectiveForStage(standard)?.gates.map(g => g.roomId)).toEqual([1, 3, 4, 6]);
+  const deep = buildExpeditionStage('dungeon', 'astral_leviathan_spire', null, { depth: 'deep' });
+  expect(routeObjectiveForStage(deep)).toBeNull();
+  expect(deep.objective).not.toMatch(/별자리|성좌/);
+  // The shared rejection stays intact: only the exact standard promise is
+  // stripped above. These fragments must still be rejected in every route.
+  for (const copy of ['별자리 5개 복원', '성좌 4곳 복원', '별자리를 밟으세요', '별자리 파편을 모아 복원']) {
+    expect(copy.replaceAll('별자리 4개 순서대로 복원', '')).toMatch(unsupportedInstructions);
   }
 });

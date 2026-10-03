@@ -16,6 +16,23 @@ const records = (depth, gates) => Object.freeze({
   coexistAttunement: depth === 'deep',
   gates: Object.freeze(gates.map(([roomId, pageId]) => Object.freeze({ roomId, ...RECORD_PAGES[pageId - 1] }))),
 });
+// A station identity and its three choices are independent of their color.
+export const ASTRAL_CHOICES = Object.freeze([
+  Object.freeze({ id: 'triangle', code: 'A', glyph: '△', name: '삼각', dx: -3.5, dz: 0 }),
+  Object.freeze({ id: 'circle', code: 'B', glyph: '○', name: '원', dx: 0, dz: 3.5 }),
+  Object.freeze({ id: 'diamond', code: 'C', glyph: '◇', name: '마름모', dx: 3.5, dz: 0 }),
+]);
+const constellations = Object.freeze({
+  id: 'astral_constellations_standard', kind: 'constellations', radius: 1.2,
+  readRadius: 8, readSeconds: 1, holdSeconds: 1, combatRadius: 22,
+  choices: ASTRAL_CHOICES,
+  gates: Object.freeze([
+    Object.freeze({ roomId: 1, stationId: 1, label: '1번 조율판 · 첫 항로', answer: 'triangle' }),
+    Object.freeze({ roomId: 3, stationId: 2, label: '2번 조율판 · 먼 좌표', answer: 'diamond' }),
+    Object.freeze({ roomId: 4, stationId: 3, label: '3번 조율판 · 귀환 별', answer: 'circle' }),
+    Object.freeze({ roomId: 6, stationId: 4, label: '4번 조율판 · 마지막 항로', answer: 'triangle' }),
+  ]),
+});
 export const ROUTE_OBJECTIVES = Object.freeze({
   bellfall_crypt: Object.freeze({
     id: 'bellfall_bell_gates', holdSeconds: 2, radius: 3,
@@ -29,6 +46,7 @@ export const ROUTE_OBJECTIVES = Object.freeze({
   cinder_deep: cooling('deep', [[2, '1번 밸브 · 상류 냉각선'], [5, '2번 밸브 · 하류 냉각선'], [6, '3번 밸브 · 귀환 냉각선']]),
   nightglass_standard: records('standard', [[2, 1], [5, 2], [6, 3]]),
   nightglass_deep: records('deep', [[6, 3], [4, 2], [1, 1]]),
+  astral_standard: constellations,
 });
 
 /** @param {any} stage */
@@ -36,6 +54,7 @@ export function routeObjectiveForStage(stage) {
   const expedition = stage?.expedition;
   if (stage?.party || stage?.riftId || expedition?.riftId || expedition?.conquestId ||
       expedition?.kind !== 'dungeon') return null;
+  if (expedition.id === 'astral_leviathan_spire') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.astral_standard : null;
   if (expedition.id === 'cinder_tide_lock') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.cinder_standard
     : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.cinder_deep : null;
   if (expedition.id === 'nightglass_observatory') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.nightglass_standard

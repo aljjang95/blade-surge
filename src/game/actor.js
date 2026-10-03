@@ -152,7 +152,12 @@ export class Actor {
     if (this.slowT > 0) { this.slowT -= dt; if (this.slowT <= 0) this.slow = 0; }
     if (this.invuln > 0) this.invuln -= dt;
     this.updateHitFeedback(dt);
-    if (this.deathT >= 0) { this.deathT += dt; if (this.deathT > 1.2) { this.pos.y = (this.rig.hover || 0) - (this.deathT - 1.2) * 1.5; } if (this.deathT > 2.4) this.dead = true; }
+    if (this.deathT >= 0) {
+      if (this.game.routeObjectives?.hidesCorpse?.(this)) this.model.visible = false;
+      this.deathT += dt;
+      if (this.deathT > 1.2) this.pos.y = (this.rig.hover || 0) - (this.deathT - 1.2) * 1.5;
+      if (this.deathT > 2.4) this.dead = true;
+    }
   }
   die() {
     if (!this.alive) return; this.alive = false; this.deathT = 0; this.vel.set(0, 0, 0);

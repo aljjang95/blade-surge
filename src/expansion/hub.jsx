@@ -59,6 +59,7 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
           <div className="exp-outcome-stats"><span><b>{result.kills}</b>처치</span><span><b>{result.combo}</b>최대 콤보</span><span><b>{Math.floor(result.time)}초</b>전투 시간</span></div>
         </div>
         {result.routeObjective?.pages && <p aria-label="기록 복원 결과">기록 복원 {result.routeObjective.progress}/{result.routeObjective.target} · {result.routeObjective.pages.map(page=>page.label).join(' → ') || '복원한 기록 없음'}</p>}
+        {result.routeObjective?.constellations && <p aria-label="별자리 복원 결과">별자리 복원 {result.routeObjective.progress}/{result.routeObjective.target} · {result.routeObjective.constellations.map(station=>station.label).join(' → ') || '복원한 별자리 없음'} · 오답 {result.routeObjective.mistakes}회</p>}
         <div className="exp-result-save" data-save={result.saveError?'error':'saved'} role={result.saveError?'alert':'status'}>
           {result.saveError?<><div><strong>정산 저장 실패</strong><p>저장 공간을 확인한 뒤 다시 저장해 주세요. 저장 전에는 이동할 수 없습니다.</p></div><button ref={focusRef} className="exp-primary" onClick={retrySave}>정산 다시 저장</button></>:<p>{result.win?'정산 저장 완료 · 보상을 보관했습니다.':'결과 저장 완료 · 다시 도전할 수 있습니다.'}</p>}
         </div>
