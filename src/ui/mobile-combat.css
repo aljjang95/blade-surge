@@ -193,8 +193,6 @@ dialog[open] { top:var(--sat); bottom:auto; margin-top:12px; overflow-y:auto; }
   }
   .experience-v2 #hud .hud-top:has(#btn-boss-shortcut:not([hidden])) .hud-center { width:104px; }
   .experience-v2.oath-visual #hud .combo, .experience-v2.oath-visual #hud .kill-streak { top:calc(208px + var(--sat)); }
-  /* Urgent warnings take priority over the overlapping streak celebration. */
-  .experience-v2.oath-visual #hud:has(.combat-cue.on) .kill-streak { visibility:hidden; }
   .experience-v2.oath-visual #hud .oath-camera-details { top:auto; bottom:calc(284px + var(--sab)); }
   .experience-v2.oath-visual #hud .oath-camera-details > summary { min-height:44px; }
   .experience-v2.oath-visual #hud .oath-camera-details #battle-camera-controls { width:156px; }
@@ -220,6 +218,8 @@ dialog[open] { top:var(--sat); bottom:auto; margin-top:12px; overflow-y:auto; }
 }
 
 /* Keep the cinematic heading below the measured combat notice, even when its copy wraps. */
+/* Urgent warnings take priority over streak celebrations in either orientation. */
+.experience-v2.oath-visual #hud:has(.combat-cue.on) .kill-streak { visibility:hidden; }
 #hud .wave-banner { top:max(30%,calc(var(--combat-notice-bottom,0px) + 14px)); transform-origin:center top; }
 @media (orientation:landscape) and (max-height:550px) {
   #hud .wave-banner { top:max(26%,calc(var(--combat-notice-bottom,0px) + 14px)); }
