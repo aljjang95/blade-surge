@@ -3,7 +3,7 @@ import { VFX_TEX } from '../engine/assets.js';
 import { getPart } from '../engine/assets.js';
 import { buildRegionArchitecture } from './region-architecture.js';
 import { ROOM_TYPE, mulberry32 } from './world.js';
-import { buildOathHall } from './lobby-hall.js';
+import { buildCitadelHubScene } from './citadel-hub-scene.js';
 import { buildLobbyWorld } from './lobby-world.js';
 import { BattleOcclusion } from '../engine/battle-occlusion.js';
 import { softCircleTex } from '../engine/assets.js';
@@ -43,8 +43,9 @@ function disposeSeal(seal) {
 }
 
 export class Arena {
-  constructor(scene, dungeonGltf, renderer, landmarkGltf = null) {
+  constructor(scene, dungeonGltf, renderer, landmarkGltf = null, hubModels = {}) {
     this.scene = scene; this.gltf = dungeonGltf; this.renderer = renderer; this.landmarkGltf = landmarkGltf;
+    this.hubModels = hubModels;
     this.occlusion = renderer.battleOcclusion ??= new BattleOcclusion();
     this.group = new THREE.Group(); scene.add(this.group);
     this.lights = []; this.torches = []; this.torchPos = []; this.t = 0;
@@ -141,11 +142,11 @@ export class Arena {
     const T = THEMES.lobby;
     this.scene.background = new THREE.Color(0x172c36); this.scene.fog.color.set(0x172c36); this.scene.fog.density = 0.017;
     const hemi = new THREE.HemisphereLight(0x9dc6d7, 0x263f32, .8); this.scene.add(hemi); this.lights.push(hemi);
-    const sun = new THREE.DirectionalLight(0xffdca9, 2.6); sun.position.set(-3, 4, 6); sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = sun.shadow.camera.bottom = -5; sun.shadow.camera.right = sun.shadow.camera.top = 5;
+    const sun = new THREE.DirectionalLight(0xffdca9, 2.6); sun.position.set(-8, 20, 14); sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = sun.shadow.camera.bottom = -15; sun.shadow.camera.right = sun.shadow.camera.top = 15;
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 50; sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.02;
     this.scene.add(sun); this.lights.push(sun);
-    this.lobbyHall = buildOathHall(); this.group.add(this.lobbyHall);
+    this.lobbyHall = buildCitadelHubScene({ models: this.hubModels, environmentTexture: this.renderer.characterEnvironment.texture, quality: this.renderer.quality }); this.group.add(this.lobbyHall);
     this.lobbyWorld = buildLobbyWorld(); this.group.add(this.lobbyWorld);
     this.renderer.lobbyOccluders = [];this.lobbyHall.traverse(o=>{if(o.isMesh)this.renderer.lobbyOccluders.push(o);});
     this.lobbyHall.traverse((o) => { if (o.isMesh && o.material.isMeshStandardMaterial) { o.material.envMap = this.renderer.characterEnvironment.texture; o.material.envMapIntensity = .3; } });

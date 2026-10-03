@@ -1,0 +1,44 @@
+.citadel-hub-ui{position:fixed;inset:0;z-index:25;pointer-events:none;color:#f2ecdf;font-family:var(--font-ui,system-ui,sans-serif);--citadel-near-accent:#d3c29c}
+.citadel-hub-ui[hidden]{display:none}
+.citadel-hub-place{position:absolute;left:28px;top:100px;display:grid;gap:4px;text-shadow:0 2px 12px #13232d}
+.citadel-hub-place small{font-size:9px;letter-spacing:3px;color:#d5c69f;font-weight:700}
+.citadel-hub-place strong{font-size:20px;letter-spacing:.03em;font-weight:600}
+.citadel-hub-place span{font-size:11px;color:#c1d2d3}
+.citadel-hub-hint{position:absolute;left:28px;bottom:206px;display:flex;gap:16px;font-size:11px;color:#cad8d7;text-shadow:0 2px 8px #152c38}
+.citadel-hub-ui kbd{font:600 10px system-ui,sans-serif;display:inline-grid;place-items:center;border:1px solid #bdd2cb4a;border-radius:4px;padding:3px 5px;background:#142c36b3;color:#f3eddf}
+.citadel-hub-near{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);width:min(520px,calc(100% - 50px));display:flex;align-items:center;justify-content:space-between;gap:18px;padding:14px 17px;border:1px solid #b5c4b846;border-top-color:var(--citadel-near-accent);border-radius:10px;background:linear-gradient(120deg,#142e37ed,#173440e8);box-shadow:0 10px 35px #051c2940;backdrop-filter:blur(12px);pointer-events:auto}
+.citadel-hub-near-copy{display:grid;gap:4px;min-width:0}
+.citadel-hub-near-copy small{font-size:8px;letter-spacing:2px;color:var(--citadel-near-accent)}
+.citadel-hub-near-name{font-size:15px;font-weight:600;line-height:1.25}
+.citadel-hub-near-detail{font-size:10px;color:#bececb;line-height:1.45}
+.citadel-hub-interact{flex:none;display:flex;align-items:center;gap:8px;border:1px solid #d1c2997a;border-radius:6px;padding:12px 15px;background:#c4b585;color:#18303a;font-size:12px;font-weight:700;cursor:pointer;min-height:44px}
+.citadel-hub-interact kbd{background:#18303a;color:#e9e1c9;border-color:#18303a}
+.citadel-hub-interact:disabled{background:#27424a;color:#94abaa;border-color:#829e9e3a;cursor:default}
+.citadel-hub-interact:focus-visible,.citadel-hub-dialog button:focus-visible{outline:3px solid #c7fff0;outline-offset:4px}
+.citadel-hub-stick{display:none;position:absolute;left:22px;bottom:220px;width:108px;height:108px;border:1px solid #dae0ce4d;border-radius:50%;background:radial-gradient(circle,#24485261,#132c3940);box-shadow:inset 0 0 0 12px #aec2b408;pointer-events:auto;touch-action:none;user-select:none;-webkit-user-select:none}
+.citadel-hub-knob{position:absolute;left:50%;top:50%;width:42px;height:42px;border:1px solid #e6d8b094;border-radius:50%;background:linear-gradient(130deg,#6b8b88db,#35545fdb);box-shadow:0 2px 12px #06192342;transform:translate(-50%,-50%);pointer-events:none}
+.citadel-hub-stick-cross::before,.citadel-hub-stick-cross::after{content:"";position:absolute;background:#bdceba30;left:50%;top:50%;transform:translate(-50%,-50%)}
+.citadel-hub-stick-cross::before{height:1px;width:72px}.citadel-hub-stick-cross::after{height:72px;width:1px}
+.citadel-hub-stick-label{position:absolute;top:calc(100% + 8px);left:0;right:0;text-align:center;font-size:10px;letter-spacing:.15em;color:#d7e3d6;pointer-events:none}
+.citadel-hub-dialog{width:min(560px,calc(100vw - 32px));padding:0;border:1px solid #bfc8ad66;border-radius:15px;background:#172d36;color:#eee9da;box-shadow:0 28px 90px #06131ddb;max-height:calc(100dvh - 48px);overflow:auto;font-family:var(--font-ui,system-ui,sans-serif)}
+.citadel-hub-dialog::backdrop{background:#081822b5;backdrop-filter:blur(5px)}
+.citadel-hub-destination-art{position:relative;height:180px;background-color:#2b4b51;background-size:cover;background-position:center;border-bottom:1px solid #a6b8a43d}
+.citadel-hub-destination-art::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,#172d36,transparent 80%)}
+.citadel-hub-destination-art>span{position:absolute;left:25px;bottom:16px;z-index:1;color:var(--citadel-near-accent);font-size:10px;letter-spacing:2.2px;font-weight:700}
+.citadel-hub-destination-body{padding:18px 26px 25px}
+.citadel-hub-eyebrow{color:var(--citadel-near-accent);font-size:10px;letter-spacing:.15em}
+.citadel-hub-dialog h2{margin:8px 0 12px;font-size:27px;font-weight:600;line-height:1.2}
+.citadel-hub-dialog p{font-size:13px;line-height:1.75;color:#c6d3d0;margin:0}
+.citadel-hub-destination-stats{display:flex;gap:0;margin:20px 0;border-top:1px solid #c4c7aa27;border-bottom:1px solid #c4c7aa27;padding:13px 0}
+.citadel-hub-destination-stats span{flex:1;display:grid;gap:6px;font-size:10px;color:#a8bbb8}
+.citadel-hub-destination-stats b{font-size:12px;font-weight:600;color:#ece9da}
+.citadel-hub-dialog .citadel-hub-objective{font-size:12px;color:#c8d6d0}
+.citadel-hub-dialog .citadel-hub-access{margin:16px 0;color:var(--citadel-near-accent);font-size:12px}
+.citadel-hub-destination-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+.citadel-hub-destination-actions button{border:1px solid #c7d6ca4a;border-radius:7px;background:#28444d;color:#e5e9dd;min-height:44px;padding:11px 17px;font:600 12px system-ui,sans-serif;cursor:pointer}
+.citadel-hub-destination-actions .citadel-hub-go{background:#c4b585;border-color:#d7c8a5;color:#1b333c}
+.citadel-hub-destination-actions button:disabled{opacity:.4;cursor:default}
+@media (any-pointer:coarse){.citadel-hub-stick{display:block}.citadel-hub-hint{display:none}.citadel-hub-interact kbd{display:none}}
+@media(max-width:600px){.citadel-hub-place{left:18px;top:88px}.citadel-hub-place strong{font-size:17px}.citadel-hub-place span{font-size:10px}.citadel-hub-near{bottom:calc(108px + env(safe-area-inset-bottom,0px));width:calc(100% - 30px);gap:10px;padding:12px 13px}.citadel-hub-near-name{font-size:13px}.citadel-hub-near-detail{font-size:9px}.citadel-hub-interact{padding:10px 13px;font-size:11px}.citadel-hub-stick{left:18px;bottom:calc(210px + env(safe-area-inset-bottom,0px));width:100px;height:100px}.citadel-hub-hint{left:18px;bottom:208px;font-size:9px;gap:10px}.citadel-hub-destination-art{height:150px}.citadel-hub-destination-body{padding:16px 20px 20px}.citadel-hub-dialog h2{font-size:24px}.citadel-hub-destination-stats b{font-size:11px}}
+@media(max-height:560px) and (orientation:landscape){.citadel-hub-place{top:75px}.citadel-hub-place span{display:none}.citadel-hub-near{bottom:96px;max-width:480px}.citadel-hub-stick{bottom:100px;width:90px;height:90px}.citadel-hub-hint{bottom:177px}.citadel-hub-destination-art{height:105px}}
+@media(prefers-reduced-motion:reduce){.citadel-hub-ui *,.citadel-hub-dialog *{scroll-behavior:auto;animation:none;transition:none}}

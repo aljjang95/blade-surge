@@ -198,17 +198,22 @@ export class Renderer {
     rig.zoom = Math.max(0, rig.zoom - realDt * 3);
     let desired;
     if (rig.mode === 'lobby') {
-      const p = lobbyCameraPosition(this.lobbyCamera);
+      const walking = this.lobbyNavigation;
+      const portrait = this._width < this._height;
+      // The walking plaza needs a clear view of the route ahead and nearby entrances.
+      const radius = portrait ? 16.5 : 15;
+      const pitch = (portrait ? 48 : 43) * Math.PI / 180;
+      const p = walking ? { x: 0, y: 1.1 + radius * Math.sin(pitch), z: radius * Math.cos(pitch) } : lobbyCameraPosition(this.lobbyCamera);
       desired = new THREE.Vector3(p.x, p.y, p.z).add(rig.target);
       this.lobbySightline ??= new LobbySightline();
-      desired.y += this.lobbySightline.solve(desired,rig.target,this.lobbyOccluders,performance.now());
+      if (!walking) desired.y += this.lobbySightline.solve(desired,rig.target,this.lobbyOccluders,performance.now());
       const lobbyFov = 46 + (window.innerWidth < window.innerHeight ? 14 : 0);
       if (cam.fov !== lobbyFov) { cam.fov = lobbyFov; cam.updateProjectionMatrix(); }
-      rig.pos.lerp(desired, 1 - Math.exp(-realDt * 3));
+      rig.pos.lerp(desired, 1 - Math.exp(-realDt * (walking ? 6 : 3)));
       cam.position.copy(rig.pos);
       // Editorial offset reserves the right-hand destination panel, without moving the hero.
-      const editorialShift = lobbyCompositionShift(p, this._width >= this._height);
-      cam.lookAt(rig.target.x + editorialShift.x, rig.target.y + 1.1, rig.target.z + editorialShift.z);
+      const editorialShift = walking ? { x: 0, z: 0 } : lobbyCompositionShift(p, this._width >= this._height);
+      cam.lookAt(rig.target.x + editorialShift.x, rig.target.y + (walking ? .6 : 1.1), rig.target.z + editorialShift.z);
     } else {
       // Hits never displace or pulse the whole camera; preserve user framing.
       const off = rig.offset.clone();

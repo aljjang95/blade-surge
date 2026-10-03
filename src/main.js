@@ -39,7 +39,13 @@ import { OathShell } from './ui/oath-shell.js';
 import { ExperienceView } from './ui/experience-view.js';
 import { BattleTutorial } from './ui/tutorial.js';
 import { applyDifficulty } from './game/difficulty.js';
-import { preloadOathHall } from './engine/oathhall-asset.js';
+import { CITADEL_HUB } from './data/citadel-hub.js';
+import { preloadCitadelHubAssets } from './game/citadel-hub-scene.js';
+import { HubMovement } from './game/hub-movement.js';
+import { HubControls } from './engine/hub-controls.js';
+import { CitadelHubUI } from './ui/citadel-hub.js';
+import { CitadelShop } from './ui/citadel-shop.js';
+import './ui/citadel-integration.css';
 const BOOT_TIPS = [
   '<b>진공기</b>로 적을 끌어모은 뒤 한 번에 쓸어담는 것이 몹몰이의 기본이다.',
   '적의 공격 직전 <b>회피</b>하면 퍼펙트 회피 — 시간이 느려지고 반격 창이 열린다.',
@@ -79,6 +85,13 @@ class App {
     this.models = {};
     this.wardrobe = new Wardrobe(this);
     this.mode = 'boot'; this.showcase = null; this.lobbyVisible = true;
+    this.hubMovement = new HubMovement(CITADEL_HUB);
+    this.citadel = { movement: this.hubMovement, clearInput: () => this.hubControls?.clear() };
+    this.citadelShop = new CitadelShop(this);
+    this.hubUI = new CitadelHubUI(this, { onInteract: spot => this.interactHub(spot) });
+    this.hubControls = new HubControls({ isActive: () => this.canWalkHub(), joystick: this.hubUI.touchStick, knob: this.hubUI.touchKnob });
+    this.canvas.tabIndex = 0;
+    this.canvas.setAttribute('aria-label', '성채와 던전 게임 화면');
     this.lobbyCameraControls = new LobbyCameraControls(this);
     this.cameraControls = new CameraControls(this);
     this.pwa = isNativeApp() ? null : setupPwa({ canApplyUpdate: () => this.mode === 'lobby' && !this.stageStarting && !this.party?.run });
@@ -88,7 +101,7 @@ class App {
     this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.applySettings();
     this.canvas.addEventListener('webglcontextlost', event => {
-      event.preventDefault(); this.contextLost = true; this.input.clear();
+      event.preventDefault(); this.contextLost = true; this.input.clear(); this.citadel.clearInput();
       if (this.battle?.active) this.ui.pause(true);
       $('render-recovery').hidden = false;
     });
@@ -102,7 +115,7 @@ class App {
     $('render-reload').addEventListener('click', () => location.reload());
   }
   async boot() {
-    const oathHallReady = preloadOathHall();
+    const citadelReady = preloadCitadelHubAssets({ quality: this.renderer.quality });
     const fill = $('boot-fill'), msg = $('boot-msg'), pct = $('boot-pct');
     const setP = (p, m) => { fill.style.width = (p * 100) + '%'; pct.textContent = Math.round(p * 100) + '%'; if (m) msg.textContent = m; };
     // 팁 로테이션 — 로딩 중에도 손이 배운다
@@ -119,9 +132,9 @@ class App {
         o.material.envMap = this.renderer.characterEnvironment.texture; o.material.envMapIntensity = .7;
       }
     });
-    await oathHallReady;
+    this.citadelAssets = await citadelReady;
     setP(0.85, '월드 구성 중…');
-    this.arena = new Arena(this.scene, this.models.dungeon, this.renderer, this.models.tllDungeonLandmarks);
+    this.arena = new Arena(this.scene, this.models.dungeon, this.renderer, this.models.tllDungeonLandmarks, this.models);
     this.battle = new Battle(this);
     this.journeyView = new JourneyView(this);
     this.arsenalView = new ArsenalView(this);
@@ -143,7 +156,7 @@ class App {
     this.experienceView = new ExperienceView(this);
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
     // Mutations already persist at their owning action. An idle PWA/tab must not overwrite a newer tab's save.
-    const suspend = () => { this.input.clear(); if (this.mode === 'battle') this.ui.pause(true); };
+    const suspend = () => { this.input.clear(); this.citadel.clearInput(); if (this.mode === 'battle') this.ui.pause(true); };
     document.addEventListener('visibilitychange', () => { if (isNativeApp()) this.nativeApp?.setVisible(!document.hidden); else if (document.hidden) suspend(); if (!document.hidden) { this.last = performance.now(); audio.resume(); } });
     window.addEventListener('pagehide', suspend);
     window.addEventListener('pageshow', () => { this.last = performance.now(); this.input.clear(); this.renderer.resize(); audio.resume(); });
@@ -160,10 +173,29 @@ class App {
     this.companionAgent?.syncQuality();
   }
   // ---------- 로비 ----------
+  canWalkHub() {
+    return this.mode === 'lobby' && this.meta.tab === 'home' && this.lobbyVisible && !this.stageStarting && !this.contextLost &&
+      !this.expeditionUI?.opened && !this.companionAgent?.getSnapshot().open &&
+      !document.querySelector('dialog[open], #modal.show');
+  }
+  interactHub(spot) {
+    if (!this.canWalkHub()) return false;
+    this.citadel.clearInput();
+    return this.hubUI.interact(spot);
+  }
+  syncHub() {
+    const surface = this.mode === 'lobby' && this.meta.tab === 'home' && this.lobbyVisible;
+    const visible = surface && !this.stageStarting && !this.expeditionUI?.opened && !this.companionAgent?.getSnapshot().open && !document.querySelector('#modal.show');
+    document.body.classList.toggle('citadel-hub-active', surface);
+    this.renderer.lobbyNavigation = this.mode === 'lobby';
+    if (this.hubUI.visible !== visible) this.hubUI.setVisible(visible);
+    if (!this.canWalkHub()) this.citadel.clearInput();
+    this.hubUI.update(this.hubMovement.nearest, { blocked: !this.canWalkHub() });
+  }
   async showcaseHero(id, first = false) {
     const def = HEROES[id];
     this.companionAgent?.cancelDialogue();
-    if (this.showcase) { disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
+    if (this.showcase) { this.hubMovement.detach(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
     if (!this.arena.lobbyHall) this.arena.buildLobby();
     const { root, mixer, clips } = spawnCharacter(this.models[def.model]);
     root.rotation.y = Math.PI * 0.15;
@@ -173,9 +205,11 @@ class App {
     mixer.update(0);
     this.scene.add(root);
     this.showcase = { root, mixer, clips, def, look, t: 0, next: 4 + Math.random() * 3, auraT: 0 };
+    this.hubMovement.attach(this.showcase);
     this.companionAgent?.syncLobbyContext();
-    if (!first) { this.fx.pillar(new THREE.Vector3(0, 0, 0), def.color, { radius: 1.2, height: 8, life: 0.8 }); this.fx.burst(new THREE.Vector3(0, 1, 0), def.color, { n: 40, speed: 6, size: 0.4, up: 1 }); audio.magic({ vol: 0.3, base: 440, notes: [0, 4, 7, 12] }); }
-    this.renderer.rig.mode = 'lobby'; this.renderer.rig.target.set(0, 0, 0);
+    if (!first) { this.fx.pillar(root.position, def.color, { radius: 1.2, height: 8, life: 0.8 }); this.fx.burst(root.position.clone().setY(1), def.color, { n: 40, speed: 6, size: 0.4, up: 1 }); audio.magic({ vol: 0.3, base: 440, notes: [0, 4, 7, 12] }); }
+    this.renderer.rig.mode = 'lobby'; this.renderer.rig.target.copy(root.position);
+    this.renderer.lobbyNavigation = true;
   }
   setLobbyVisible(v) { this.lobbyVisible = v; }
   toLobby(first = false) {
@@ -189,6 +223,7 @@ class App {
       if (outcome.ok) this.expeditionTicket = null;
     }
     if (this.mode === 'battle') { this.battle.stop(); }
+    this.citadel.clearInput(); this.hubUI.close(); this.citadelShop.close(); this.hubMovement.reset();
     this._bossAttemptTracked = false;
     this.tutorial.end();
     this.ui.hideResult(); this.mode = 'lobby';
@@ -198,6 +233,7 @@ class App {
     this.renderer.desat = 0; this.renderer.rig.mode = 'lobby';
     audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX);
     this.meta.openTab('home'); this.meta.refreshTop();
+    this.syncHub();
     if (first) setTimeout(() => this.meta.autoPopups(), 600);
   }
   resetProgress() {
@@ -222,6 +258,7 @@ class App {
       const difficulty = this.eco.difficultyFor(stage.ch, stage.st, stage.difficultyId || this.eco.s.progress.difficulty || 'story');
       stage = applyDifficulty(stage, difficulty);
     this.stageStarting = true;
+    this.citadel.clearInput(); this.syncHub();
     let spent = false;
     const energyBefore = { energy: this.eco.s.energy, energyT: this.eco.s.energyT };
     try {
@@ -234,7 +271,7 @@ class App {
       }
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
       $('stage-loading').hidden = false;
-      if (this.showcase) { disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
+      if (this.showcase) { this.hubMovement.detach(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
       this.mode = 'battle';
       this._bossAttemptTracked = false;
       const id = this.eco.s.selected;
@@ -263,13 +300,14 @@ class App {
     if (!begin.ok) { this.ui.toast(begin.error, 'red'); return false; }
     this.expeditionTicket = begin.ticket;
     this.stageStarting = true;
+    this.citadel.clearInput(); this.syncHub();
     try {
       const stage = applyRiftStage(buildExpeditionStage(kind, id, this.eco, { depth: begin.ticket.depth, conquestId: begin.ticket.conquestId, frontier: begin.ticket.frontier }), begin.ticket);
       this.expeditionUI.result = null; this.expeditionUI.close();
       this.journeyView?.close();
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
       $('stage-loading').hidden = false;
-      if (this.showcase) { disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
+      if (this.showcase) { this.hubMovement.detach(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
       this.mode = 'battle';
       this._bossAttemptTracked = false;
       const heroId = this.eco.s.selected;
@@ -304,6 +342,7 @@ class App {
     audio.updateCombatMix(realDt,{active:combat,paused:!!(battle?.paused||this.expeditionUI?.opened),boss:!!(combat&&battle.enemies.some(e=>e.alive&&e.isBoss)),intensity:combat?Math.min(1,(battle.combo||0)/30):0});
     this.arsenalView?.update();
     this.experienceView?.update();
+    this.syncHub();
     if (this.expeditionUI?.opened) return;
     if (this.mode === 'battle') {
       this.battle.update(realDt);
@@ -322,25 +361,16 @@ class App {
     } else if (this.mode === 'lobby') {
       if (this.showcase) {
         const s = this.showcase;
-        if (!this.reducedMotion.matches) {
-          s.mixer.update(realDt); s.t += realDt;
-          if (s.gesture) {
-            s.gestureT -= realDt;
-            if (s.gestureT <= 0) {
-              const idle = s.mixer.clipAction(s.clips.Idle); idle.reset().play().crossFadeFrom(s.gesture, .3);
-              s.gesture = null;
-            }
-          } else if (s.t > s.next) {
-            s.t = 0; s.next = 5 + Math.random() * 4;
-            const clip = s.clips[Math.random() < .5 ? 'Cheer' : 'Interact'];
-            s.gesture = s.mixer.clipAction(clip).reset().setLoop(THREE.LoopOnce).play();
-            s.gesture.crossFadeFrom(s.mixer.clipAction(s.clips.Idle), .2);
-            s.gestureT = Math.max(.1, clip.duration - .3);
-          }
-          if (Math.random() < realDt * 3) this.fx.embers(new THREE.Vector3(0, .2, 0), s.def.color, { n: 1, radius: 1.2, life: 1.5, size: .25, rise: 1.2 });
-        } else if (s.gesture) {
-          s.gesture.stop(); s.gesture = null; s.mixer.clipAction(s.clips.Idle).reset().play(); s.mixer.update(0);
-        }
+        const move = this.hubControls.update();
+        const camera = this.renderer.camera;
+        const yaw = Math.atan2(-camera.matrixWorld.elements[2], camera.matrixWorld.elements[0]);
+        this.hubMovement.update(realDt, move, yaw);
+        if (this.hubControls.consumeInteract()) this.interactHub(this.hubMovement.nearest);
+        // Walking animation remains functional when ambient motion is reduced.
+        if (!this.reducedMotion.matches || this.hubMovement.moving) s.mixer.update(realDt);
+        this.renderer.rig.target.copy(s.root.position);
+        this.hubUI.update(this.hubMovement.nearest, { blocked: !this.canWalkHub() });
+        this.arena.lobbyHall?.userData.update(realDt, { nearestId: this.hubMovement.nearest?.id, playerPosition: s.root.position, reducedMotion: this.reducedMotion.matches });
         if (s.look?.aura && !this.reducedMotion.matches) { s.auraT -= realDt; if (s.auraT <= 0) { s.auraT = 0.2; this.fx.aura(s.root.position, s.look.aura, 1); } }
       }
       this.arena.update(realDt, this.fx, this.showcase ? this.showcase.root.position : null); this.fx.update(realDt);

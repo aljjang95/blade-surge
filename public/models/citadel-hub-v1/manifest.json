@@ -1,0 +1,923 @@
+{
+  "version": "citadel-hub-v1",
+  "blender": "5.2.1 LTS",
+  "buildSeconds": 51.48,
+  "generator": "tools/build-citadel-assets.py",
+  "referenceSheets": [
+    {
+      "file": "docs/assets/citadel-hub-v1/reference-source/character-sheet-gpt.png",
+      "sha256": "6ca077df2b95d3769cf61c5b0a6484e8ff2ad09e0827b5c4ead1b1b85959e701"
+    },
+    {
+      "file": "docs/assets/citadel-hub-v1/reference-source/terrain-sheet-gpt.png",
+      "sha256": "22ed81d3599808230be32b311044703756fcc058f31b52b325ed995928d81c6b"
+    },
+    {
+      "file": "docs/assets/citadel-hub-v1/reference-source/glass-garden-trellis-reference.png",
+      "sha256": "2f2b397e30aa742346c1dea4097470667fddcf65984803c1359342880bf02fa0"
+    }
+  ],
+  "rights": "Original authored Blender geometry and generated visual references; no external geometry or textures imported",
+  "trellis": {
+    "localStatus": "unavailable",
+    "hostedStatus": "quota-blocked",
+    "outputGlb": null,
+    "reason": "No local TRELLIS/torch or GPU. One authorized anonymous official TRELLIS.2 run accepted and preprocessed reference, then image_to_3d failed provider quota; no GLB produced and no paid fallback used.",
+    "source": "https://microsoft-trellis-2.hf.space",
+    "spaceRevision": "ebf60b20fc5a4607f90a1c11c0aab0ceeda5429d",
+    "referenceSha256": "2f2b397e30aa742346c1dea4097470667fddcf65984803c1359342880bf02fa0",
+    "evidence": "/workspace/.blade-surge-tools/trellis-citadel/090408fc-b5ed-4408-975a-ed1f0c97804b/result.json"
+  },
+  "coordinateContract": {
+    "up": "+Y",
+    "forward": "+Z",
+    "origin": "ground center",
+    "units": "metres"
+  },
+  "npcRoles": {
+    "merchant": "merchant",
+    "alchemist": "trainer",
+    "arena-steward": "steward"
+  },
+  "sharedTextures": [
+    {
+      "file": "textures/214e9fcf73b39348dec2e0d0.png",
+      "bytes": 58142,
+      "sha256": "214e9fcf73b39348dec2e0d0134c304d8821dd124bcea79aa2740aeea8e8a75e"
+    },
+    {
+      "file": "textures/39e65f84f00c96c993c22e6c.png",
+      "bytes": 67807,
+      "sha256": "39e65f84f00c96c993c22e6cd592019e33badc056c42a0203819eabbb253a089"
+    },
+    {
+      "file": "textures/7978521f73efd40186cdb9aa.png",
+      "bytes": 87381,
+      "sha256": "7978521f73efd40186cdb9aa8f6c14711b151e66d6762f0f762d4cbca84e56e6"
+    },
+    {
+      "file": "textures/963524e1876b23e4af7cfcbd.png",
+      "bytes": 59546,
+      "sha256": "963524e1876b23e4af7cfcbd3b93ef469d829c95e243510f7330bbc475a87e6d"
+    },
+    {
+      "file": "textures/a590e638a914271bb5e2bc84.png",
+      "bytes": 49817,
+      "sha256": "a590e638a914271bb5e2bc849451c02a730d41115fa45a4697ab5c61c75998fd"
+    },
+    {
+      "file": "textures/addfac7d328da91a9c87b2cf.png",
+      "bytes": 49526,
+      "sha256": "addfac7d328da91a9c87b2cf0cb9194a5075917be229624132f9dc27e247e57f"
+    }
+  ],
+  "budgets": {
+    "fullMeshBytes": 3390652,
+    "lodMeshBytes": 1930732,
+    "sharedTextureBytes": 372219,
+    "gateMaxDraws": 6
+  },
+  "assets": [
+    {
+      "file": "gate-glass_garden.glb",
+      "root": "Citadel_Gate_glass_garden",
+      "triangles": 2588,
+      "draws": 4,
+      "bytes": 172308,
+      "sha256": "9c3f7b42b75e5648b9cb17b31c4d36d5e4327b4f308e9dca4e944e2a3045859b",
+      "boundsBlender": {
+        "min": [
+          -1.5,
+          -0.2750000059604645,
+          0.0
+        ],
+        "max": [
+          1.5,
+          0.2750000059604645,
+          3.4000000953674316
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "gate-glass_garden-lod1.glb",
+        "root": "Citadel_Gate_glass_garden",
+        "triangles": 1083,
+        "draws": 4,
+        "bytes": 93940,
+        "sha256": "51dac85662bde04e6839c31ffb7adb922301586d7ee2bf7d9ff6a6bfe2a41051",
+        "boundsBlender": {
+          "min": [
+            -1.5,
+            -0.2750000059604645,
+            0.0
+          ],
+          "max": [
+            1.5,
+            0.2750000059604645,
+            3.4000000953674316
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "gate-ember_vault.glb",
+      "root": "Citadel_Gate_ember_vault",
+      "triangles": 3048,
+      "draws": 4,
+      "bytes": 208048,
+      "sha256": "ee8d4954bbaa70a47c36c8a06b7a4a1d2fa1c73834075d98e59970271dd51846",
+      "boundsBlender": {
+        "min": [
+          -1.5,
+          -0.2750000059604645,
+          0.0
+        ],
+        "max": [
+          1.5,
+          0.2750000059604645,
+          3.4000000953674316
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "gate-ember_vault-lod1.glb",
+        "root": "Citadel_Gate_ember_vault",
+        "triangles": 1277,
+        "draws": 4,
+        "bytes": 114232,
+        "sha256": "34d1441eb70a6a78688435baf8a863035f6e9433403cdf39e72f84bb75cef8be",
+        "boundsBlender": {
+          "min": [
+            -1.5,
+            -0.2750000059604645,
+            0.0
+          ],
+          "max": [
+            1.5,
+            0.2750000059604645,
+            3.4000000953674316
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "gate-star_archive.glb",
+      "root": "Citadel_Gate_star_archive",
+      "triangles": 3082,
+      "draws": 4,
+      "bytes": 196500,
+      "sha256": "cc26a6f72bb1984688b1d64f0c1c603f30308632eff11a114cced58504d78bf0",
+      "boundsBlender": {
+        "min": [
+          -1.5,
+          -0.2750000059604645,
+          0.0
+        ],
+        "max": [
+          1.5,
+          0.2750000059604645,
+          3.4000000953674316
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "gate-star_archive-lod1.glb",
+        "root": "Citadel_Gate_star_archive",
+        "triangles": 1290,
+        "draws": 4,
+        "bytes": 106136,
+        "sha256": "1b8229399db43d71a354534ad102b853ebff76a59c54cb174b5488f1cdfb57aa",
+        "boundsBlender": {
+          "min": [
+            -1.5,
+            -0.2750000059604645,
+            0.0
+          ],
+          "max": [
+            1.5,
+            0.2750000059604645,
+            3.4000000953674316
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "gate-bellfall_crypt.glb",
+      "root": "Citadel_Gate_bellfall_crypt",
+      "triangles": 2968,
+      "draws": 5,
+      "bytes": 193416,
+      "sha256": "f57ada3099906c829b734d4f04f0297ea08b2c26e31b9a3d5697628bd9fc27e0",
+      "boundsBlender": {
+        "min": [
+          -1.5,
+          -0.2750000059604645,
+          0.0
+        ],
+        "max": [
+          1.5,
+          0.2750000059604645,
+          3.4000000953674316
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "gate-bellfall_crypt-lod1.glb",
+        "root": "Citadel_Gate_bellfall_crypt",
+        "triangles": 1241,
+        "draws": 5,
+        "bytes": 106412,
+        "sha256": "25c4dab03cd3fcff9cd515010e76c02fe35a54adda6a3355bc29e8fc9f293195",
+        "boundsBlender": {
+          "min": [
+            -1.5,
+            -0.2750000059604645,
+            0.0
+          ],
+          "max": [
+            1.5,
+            0.2750000059604645,
+            3.4000000953674316
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "gate-cinder_tide_lock.glb",
+      "root": "Citadel_Gate_cinder_tide_lock",
+      "triangles": 3436,
+      "draws": 4,
+      "bytes": 223340,
+      "sha256": "cb3bb6dcb67aee17f31c22c0acfd49b6e93a7e959ec73b6e97bf2ac10b9ba1be",
+      "boundsBlender": {
+        "min": [
+          -1.5,
+          -0.2750000059604645,
+          0.0
+        ],
+        "max": [
+          1.5,
+          0.2750000059604645,
+          3.4000000953674316
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "gate-cinder_tide_lock-lod1.glb",
+        "root": "Citadel_Gate_cinder_tide_lock",
+        "triangles": 1439,
+        "draws": 4,
+        "bytes": 116256,
+        "sha256": "c00492bb66912039d372fcf77091a2f83d250a0d6684fe83d26d15b2dfbac6d5",
+        "boundsBlender": {
+          "min": [
+            -1.5,
+            -0.2750000059604645,
+            0.0
+          ],
+          "max": [
+            1.5,
+            0.2750000059604645,
+            3.4000000953674316
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "gate-nightglass_observatory.glb",
+      "root": "Citadel_Gate_nightglass_observatory",
+      "triangles": 3340,
+      "draws": 4,
+      "bytes": 195508,
+      "sha256": "b5bc2e025198c5ae702f684c0d9e8c3845894f78fcfd347081d44e0b4d0c6148",
+      "boundsBlender": {
+        "min": [
+          -1.5,
+          -0.2750000059604645,
+          0.0
+        ],
+        "max": [
+          1.5,
+          0.2750000059604645,
+          3.4000000953674316
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "gate-nightglass_observatory-lod1.glb",
+        "root": "Citadel_Gate_nightglass_observatory",
+        "triangles": 1399,
+        "draws": 4,
+        "bytes": 105920,
+        "sha256": "a96f2bd12c335ceefa738c583daa46a926d98645698016d3b8b578124a138d12",
+        "boundsBlender": {
+          "min": [
+            -1.5,
+            -0.2750000059604645,
+            0.0
+          ],
+          "max": [
+            1.5,
+            0.2750000059604645,
+            3.4000000953674316
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "gate-eclipse_hydra_vault.glb",
+      "root": "Citadel_Gate_eclipse_hydra_vault",
+      "triangles": 3312,
+      "draws": 5,
+      "bytes": 209296,
+      "sha256": "89903418c45eba6302aef2e4db0495d6fd0344beb00e729f865c92984a3dd3e7",
+      "boundsBlender": {
+        "min": [
+          -1.5,
+          -0.2750000059604645,
+          0.0
+        ],
+        "max": [
+          1.5,
+          0.2750000059604645,
+          3.4000000953674316
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "gate-eclipse_hydra_vault-lod1.glb",
+        "root": "Citadel_Gate_eclipse_hydra_vault",
+        "triangles": 1387,
+        "draws": 5,
+        "bytes": 116236,
+        "sha256": "b8535e62d3a1a7a285d87eb06c688b15410b21cfda817bf75c8e8a2a40b01c9d",
+        "boundsBlender": {
+          "min": [
+            -1.5,
+            -0.2750000059604645,
+            0.0
+          ],
+          "max": [
+            1.5,
+            0.2750000059604645,
+            3.4000000953674316
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "gate-ashforge_catacomb.glb",
+      "root": "Citadel_Gate_ashforge_catacomb",
+      "triangles": 2904,
+      "draws": 5,
+      "bytes": 197720,
+      "sha256": "30bc8179ffcde8520d07447100f9a3ff1d576ecb862789b0f134574615b8b602",
+      "boundsBlender": {
+        "min": [
+          -1.5,
+          -0.2750000059604645,
+          0.0
+        ],
+        "max": [
+          1.5,
+          0.2750000059604645,
+          3.4000000953674316
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "gate-ashforge_catacomb-lod1.glb",
+        "root": "Citadel_Gate_ashforge_catacomb",
+        "triangles": 1214,
+        "draws": 5,
+        "bytes": 110272,
+        "sha256": "d79b235d2e68f7f62e87f69e5759203c93d95dc9dd81c80dc24740eeafbed54c",
+        "boundsBlender": {
+          "min": [
+            -1.5,
+            -0.2750000059604645,
+            0.0
+          ],
+          "max": [
+            1.5,
+            0.2750000059604645,
+            3.4000000953674316
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "gate-astral_leviathan_spire.glb",
+      "root": "Citadel_Gate_astral_leviathan_spire",
+      "triangles": 3008,
+      "draws": 4,
+      "bytes": 189100,
+      "sha256": "f6559d05f0d859624ec145a0fbc54f4c4ed1cec6709a82eefa1c420efd80a596",
+      "boundsBlender": {
+        "min": [
+          -1.5,
+          -0.2750000059604645,
+          0.0
+        ],
+        "max": [
+          1.5,
+          0.2750000059604645,
+          3.4000000953674316
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "gate-astral_leviathan_spire-lod1.glb",
+        "root": "Citadel_Gate_astral_leviathan_spire",
+        "triangles": 1258,
+        "draws": 4,
+        "bytes": 99908,
+        "sha256": "dc80b154476dd951b8448dfa44cbc91de292599c4db3dda43f906b368aa71aa1",
+        "boundsBlender": {
+          "min": [
+            -1.5,
+            -0.27543923258781433,
+            0.0
+          ],
+          "max": [
+            1.5,
+            0.2750000059604645,
+            3.4000000953674316
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "gate-verdigris_sanctum.glb",
+      "root": "Citadel_Gate_verdigris_sanctum",
+      "triangles": 2916,
+      "draws": 6,
+      "bytes": 197388,
+      "sha256": "3686c7861fcf1a9656b8f004909c9d4164d69bb40d217cb94b152bdf61abae3c",
+      "boundsBlender": {
+        "min": [
+          -1.5,
+          -0.2750000059604645,
+          0.0
+        ],
+        "max": [
+          1.5,
+          0.2750000059604645,
+          3.4000000953674316
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "gate-verdigris_sanctum-lod1.glb",
+        "root": "Citadel_Gate_verdigris_sanctum",
+        "triangles": 1217,
+        "draws": 6,
+        "bytes": 109080,
+        "sha256": "a0a9e645e756cc8a6b3fe1f99a6053bd9e6268d42f12d19f0883d3faca62a6ad",
+        "boundsBlender": {
+          "min": [
+            -1.5,
+            -0.2750000059604645,
+            0.0
+          ],
+          "max": [
+            1.5,
+            0.2750000059604645,
+            3.4000000953674316
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "gate-sable_mirage_basin.glb",
+      "root": "Citadel_Gate_sable_mirage_basin",
+      "triangles": 2660,
+      "draws": 4,
+      "bytes": 175752,
+      "sha256": "6be5616c089ed308d917b42155801c64aee8dda8d727c0b4ab3019a622b87d22",
+      "boundsBlender": {
+        "min": [
+          -1.5,
+          -0.2750000059604645,
+          0.0
+        ],
+        "max": [
+          1.5,
+          0.2750000059604645,
+          3.4000000953674316
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "gate-sable_mirage_basin-lod1.glb",
+        "root": "Citadel_Gate_sable_mirage_basin",
+        "triangles": 1113,
+        "draws": 4,
+        "bytes": 96768,
+        "sha256": "7a8175569bf38939696bc7abdea483b526597991bc630c5c252199568e3adea6",
+        "boundsBlender": {
+          "min": [
+            -1.5,
+            -0.2750000059604645,
+            0.0
+          ],
+          "max": [
+            1.5,
+            0.2750000059604645,
+            3.4000000953674316
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "gate-comet_bastion.glb",
+      "root": "Citadel_Gate_comet_bastion",
+      "triangles": 3092,
+      "draws": 4,
+      "bytes": 202596,
+      "sha256": "115f6bb8b0631ae24223e09d268292ba4fde6dfdafc65ac31e917712190d4f09",
+      "boundsBlender": {
+        "min": [
+          -1.5,
+          -0.2750000059604645,
+          0.0
+        ],
+        "max": [
+          1.5,
+          0.2750000059604645,
+          3.4000000953674316
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "gate-comet_bastion-lod1.glb",
+        "root": "Citadel_Gate_comet_bastion",
+        "triangles": 1293,
+        "draws": 4,
+        "bytes": 111900,
+        "sha256": "a879da17187cc61ce0f107536fcbc93b5a22f0be19e3490e8f7e990e1c1469a8",
+        "boundsBlender": {
+          "min": [
+            -1.5,
+            -0.2750000059604645,
+            0.0
+          ],
+          "max": [
+            1.5,
+            0.2750000059604645,
+            3.4000000953674316
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "merchant.glb",
+      "root": "Citadel_NPC_Merchant",
+      "triangles": 5620,
+      "draws": 8,
+      "bytes": 256132,
+      "sha256": "5f48ecdf19849441b351104d12ef480ff949e06dffd1dc45887e53d597de3590",
+      "boundsBlender": {
+        "min": [
+          -0.4398181438446045,
+          -0.29005521535873413,
+          0.0
+        ],
+        "max": [
+          0.4398181438446045,
+          0.19845883548259735,
+          1.75
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "merchant-lod1.glb",
+        "root": "Citadel_NPC_Merchant",
+        "triangles": 2692,
+        "draws": 8,
+        "bytes": 160080,
+        "sha256": "8f847dfcfa877232bbbd82b056df61751b7fa094bc4ad7653b8cb4984cf16df5",
+        "boundsBlender": {
+          "min": [
+            -0.4398181438446045,
+            -0.29005521535873413,
+            0.0
+          ],
+          "max": [
+            0.4398181438446045,
+            0.19845883548259735,
+            1.75
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "alchemist.glb",
+      "root": "Citadel_NPC_Alchemist",
+      "triangles": 6106,
+      "draws": 10,
+      "bytes": 270500,
+      "sha256": "a90ad72a24713d2aaf47975034bb4132cbc231083ba4efc0bee5362720ad328a",
+      "boundsBlender": {
+        "min": [
+          -0.4286015033721924,
+          -0.2826579809188843,
+          0.0
+        ],
+        "max": [
+          0.4286015033721924,
+          0.19339756667613983,
+          1.75
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "alchemist-lod1.glb",
+        "root": "Citadel_NPC_Alchemist",
+        "triangles": 2922,
+        "draws": 10,
+        "bytes": 169328,
+        "sha256": "f755fc159b4ab1cfd7bb6cd0c26df67da72ed55aecf8ecde13408409256307df",
+        "boundsBlender": {
+          "min": [
+            -0.4286015033721924,
+            -0.2826579809188843,
+            0.0
+          ],
+          "max": [
+            0.428918719291687,
+            0.19339756667613983,
+            1.750279426574707
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "arena-steward.glb",
+      "root": "Citadel_NPC_ArenaSteward",
+      "triangles": 5536,
+      "draws": 8,
+      "bytes": 249992,
+      "sha256": "1ec791f44e6f56f4ea3661ad1f0cb776e173ccb3e109547a49c2325a0b7e0d38",
+      "boundsBlender": {
+        "min": [
+          -0.5422764420509338,
+          -0.29005521535873413,
+          0.0
+        ],
+        "max": [
+          0.4398181438446045,
+          0.19845883548259735,
+          1.75
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "arena-steward-lod1.glb",
+        "root": "Citadel_NPC_ArenaSteward",
+        "triangles": 2652,
+        "draws": 8,
+        "bytes": 152312,
+        "sha256": "635685f0f494583d5cee5f143b88c313a3d657e50807bcd56eaab83cc35c4e39",
+        "boundsBlender": {
+          "min": [
+            -0.5422764420509338,
+            -0.29005521535873413,
+            0.0
+          ],
+          "max": [
+            0.4398181438446045,
+            0.19845883548259735,
+            1.75
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "paving.glb",
+      "root": "Citadel_Plaza_paving",
+      "triangles": 924,
+      "draws": 1,
+      "bytes": 71984,
+      "sha256": "a6880053471ad04f75065258e2b7dbd04543f2c3dc5a3a288eeb6fff0490c7f3",
+      "boundsBlender": {
+        "min": [
+          -1.2000000476837158,
+          -1.2000000476837158,
+          -0.14000001549720764
+        ],
+        "max": [
+          1.2000001668930054,
+          1.2000001668930054,
+          0.029000001028180122
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "paving-lod1.glb",
+        "root": "Citadel_Plaza_paving",
+        "triangles": 442,
+        "draws": 1,
+        "bytes": 45800,
+        "sha256": "80c142d62283f2c483e7932fc5a8ccf64a2ba07812df1a29595fdd9841e119e7",
+        "boundsBlender": {
+          "min": [
+            -1.2000000476837158,
+            -1.2000000476837158,
+            -0.14000001549720764
+          ],
+          "max": [
+            1.2000001668930054,
+            1.2000001668930054,
+            0.029000001028180122
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "planter.glb",
+      "root": "Citadel_Plaza_planter",
+      "triangles": 852,
+      "draws": 5,
+      "bytes": 64896,
+      "sha256": "3c6b98e1ce4cbeca0dd7b2222bb227099fbb31a039df3c72d248a8b3f256f23a",
+      "boundsBlender": {
+        "min": [
+          -1.024999976158142,
+          -0.3319999873638153,
+          0.0
+        ],
+        "max": [
+          1.0250000953674316,
+          0.29750001430511475,
+          0.9750000238418579
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "planter-lod1.glb",
+        "root": "Citadel_Plaza_planter",
+        "triangles": 401,
+        "draws": 5,
+        "bytes": 42696,
+        "sha256": "5bf66fc2f4c7b86ce419448494662c23688f0ebebe438d37813e75a5a524cde0",
+        "boundsBlender": {
+          "min": [
+            -1.024999976158142,
+            -0.3319999873638153,
+            0.0
+          ],
+          "max": [
+            1.0250000953674316,
+            0.29750001430511475,
+            0.9750000238418579
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "bench.glb",
+      "root": "Citadel_Plaza_bench",
+      "triangles": 448,
+      "draws": 3,
+      "bytes": 34364,
+      "sha256": "89112689c86c5b28aec5bc193c480c53d75b36c57863f4648d34c272706fe505",
+      "boundsBlender": {
+        "min": [
+          -1.005000114440918,
+          -0.2749999761581421,
+          0.05516308546066284
+        ],
+        "max": [
+          1.005000114440918,
+          0.3129454255104065,
+          0.9449999928474426
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "bench-lod1.glb",
+        "root": "Citadel_Plaza_bench",
+        "triangles": 209,
+        "draws": 3,
+        "bytes": 23792,
+        "sha256": "c7f3cccfa5367055388f3aa35bc2d870c2b32eda31ae8d33d619941acb65302e",
+        "boundsBlender": {
+          "min": [
+            -1.0059864521026611,
+            -0.2844736576080322,
+            0.05516308546066284
+          ],
+          "max": [
+            1.005000114440918,
+            0.316244900226593,
+            0.9513158202171326
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "lamp.glb",
+      "root": "Citadel_Plaza_lamp",
+      "triangles": 512,
+      "draws": 2,
+      "bytes": 29288,
+      "sha256": "ccd869d8512485deacb5de4b473f3fd745029e3bfa5c786e6421eb31ad9c2004",
+      "boundsBlender": {
+        "min": [
+          -0.75,
+          -0.15999998152256012,
+          -2.384185791015625e-07
+        ],
+        "max": [
+          0.1600000411272049,
+          0.1600000113248825,
+          2.4249229431152344
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "lamp-lod1.glb",
+        "root": "Citadel_Plaza_lamp",
+        "triangles": 244,
+        "draws": 2,
+        "bytes": 18708,
+        "sha256": "d74cd91f9f57f44693e41eb091ed4ad692411f46a10a1dd2637349135f79c869",
+        "boundsBlender": {
+          "min": [
+            -0.75,
+            -0.15999998152256012,
+            -5.2148676331853494e-05
+          ],
+          "max": [
+            0.1600000411272049,
+            0.1600000113248825,
+            2.425001859664917
+          ]
+        },
+        "lod": 1
+      }
+    },
+    {
+      "file": "stall.glb",
+      "root": "Citadel_Plaza_stall",
+      "triangles": 612,
+      "draws": 5,
+      "bytes": 52524,
+      "sha256": "51d82d8ea79aa352b2c7099487c0e5edb30c1e9e83024c8459a2a50d8d014113",
+      "boundsBlender": {
+        "min": [
+          -1.059999942779541,
+          -0.7059999704360962,
+          0.0
+        ],
+        "max": [
+          1.059999942779541,
+          0.40000003576278687,
+          2.2799999713897705
+        ]
+      },
+      "lod": 0,
+      "lod1": {
+        "file": "stall-lod1.glb",
+        "root": "Citadel_Plaza_stall",
+        "triangles": 280,
+        "draws": 5,
+        "bytes": 30956,
+        "sha256": "650cdfd9a43ae557eac088d4542c2b6f607456e69f69d9c319089b78dd0b33e3",
+        "boundsBlender": {
+          "min": [
+            -1.059999942779541,
+            -0.7059999704360962,
+            0.0
+          ],
+          "max": [
+            1.059999942779541,
+            0.40000003576278687,
+            2.2800002098083496
+          ]
+        },
+        "lod": 1
+      }
+    }
+  ],
+  "runtimeIntegration": "pending scene owner integration and walking camera observation"
+}

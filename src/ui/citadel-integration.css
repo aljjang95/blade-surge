@@ -1,0 +1,9 @@
+/* Keep the existing currency and navigation controls around the playable plaza. */
+.citadel-hub-active #tab-home .oath-destination,
+.citadel-hub-active #tab-home .lobby-hero-name,
+.citadel-hub-active #tab-home .lobby-camera-tools,
+.citadel-hub-active #tab-home #lobby-camera-pad,
+.citadel-hub-active #tab-home .oath-build-entry{display:none!important}
+.oath-visual .citadel-hub-active #tab-home .lobby-left{left:auto;right:20px;top:88px}
+@media(orientation:portrait){.oath-visual .citadel-hub-active #tab-home .lobby-left{right:16px;top:86px}}
+#gl:focus-visible{outline:2px solid #bde7d3;outline-offset:-2px}

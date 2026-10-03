@@ -6,6 +6,7 @@ import { riftForDay, riftBonus } from './journey-rifts.js';
 import { EXPEDITION_DEPTHS, expeditionDepth } from '../data/expedition-depths.js';
 import { EXPEDITION_CONQUESTS, expeditionConquest, conquestForRun } from '../data/expedition-conquests.js';
 import { readConquestOutcome } from './expedition-conquests.js';
+import { CITADEL_POTIONS } from '../data/citadel-shop.js';
 import { applyFrontierRewards, frontierForRoute, frontierFromSnapshot, frontierSnapshot } from '../data/seasonal-content.js';
 const find = (list, id) => list.find(x => x.id === id);
 const obj = x => x && typeof x === 'object' && !Array.isArray(x) ? x : {};
@@ -269,6 +270,19 @@ export class ExpeditionEconomy {
         this.eco.s[key] = (this.eco.s[key] || 0) + recipe[key]; got.push({ k: key, n: recipe[key] });
       }
       return { ok: true, got, materialId: id, materialSpent: 1, goldSpent: recipe.gold };
+    });
+  }
+  buyPotion(id) {
+    const potion = find(CITADEL_POTIONS, id);
+    if (!potion) return { ok: false, error: '알 수 없는 물약입니다.' };
+    if (this.s.pending) return { ok: false, error: '전투를 마친 뒤 물약을 구매해 주세요.' };
+    if (!Number.isSafeInteger(this.eco.s.gold) || this.eco.s.gold < potion.gold) return { ok: false, error: '골드가 부족합니다. 원정에서 골드를 모아 주세요.' };
+    const owned = this.s.consumables[id];
+    if (!Number.isSafeInteger(owned) || owned < 0 || owned >= 100000000) return { ok: false, error: '물약 보관함을 확인해 주세요.' };
+    return this.transact(() => {
+      this.eco.s.gold -= potion.gold;
+      this.s.consumables[id]++;
+      return { ok: true, potionId: id, goldSpent: potion.gold, count: 1 };
     });
   }
   consume(id) {
