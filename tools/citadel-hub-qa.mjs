@@ -19,6 +19,9 @@ const requestedQuality = argument('quality');
 if (requestedQuality && requestedQuality !== 'low') throw Error('Only --quality=low native fallback is supported');
 const recheck = argument('recheck');
 if (recheck && recheck !== 'labels') throw Error('Only --recheck=labels is supported');
+const resume = argument('resume');
+if (resume && resume !== 'routes') throw Error('Only --resume=routes is supported');
+const skipBlur = process.argv.includes('--skip-blur');
 if (!origin || !/^http:\/\/127\.0\.0\.1:\d+$/.test(origin)) throw Error('Supply --origin=http://127.0.0.1:PORT after candidate freeze; no server is started by this helper.');
 const runName = argument('run') || new Date().toISOString().replace(/[:.]/g, '-');
 if (!/^[a-zA-Z0-9_-]+$/.test(runName)) throw Error('Invalid run label');
@@ -29,6 +32,10 @@ const hash = value => createHash('sha256').update(value).digest('hex');
 const executedDriverBytes = await fs.readFile(import.meta.filename);
 const executedDriverSha256 = hash(executedDriverBytes);
 await fs.writeFile(path.join(out, 'driver.mjs'), executedDriverBytes, { flag: 'wx' });
+const checkpointPath = argument('storage');
+const checkpointBytes = checkpointPath ? await fs.readFile(checkpointPath) : null;
+const checkpointStorage = checkpointBytes ? JSON.parse(checkpointBytes) : null;
+if (checkpointStorage && (checkpointStorage.cookies.length || checkpointStorage.origins.length !== 1 || checkpointStorage.origins[0].origin !== origin)) throw Error('Checkpoint must contain only the exact local native context');
 const fixture = argument('save') || '/workspace/blade-surge/work/aaa-20261003/astral-earned-d376ee6/earned-save.json';
 const fixtureBytes = await fs.readFile(fixture);
 const fixtureReport = JSON.parse(await fs.readFile(path.join(path.dirname(fixture), 'report.json'), 'utf8'));
@@ -36,6 +43,7 @@ if (fixtureReport.status !== 'pass' || fixtureReport.naturalStart !== true || fi
 const fixtureSave = JSON.parse(fixtureBytes);
 const sources = ['src/main.js', 'src/engine/renderer.js', 'src/game/arena.js', 'src/data/citadel-hub.js', 'src/game/citadel-hub-scene.js', 'src/game/hub-movement.js', 'src/engine/hub-controls.js', 'src/ui/citadel-hub.js', 'src/ui/citadel-hub.css', 'src/ui/citadel-integration.css', 'src/ui/citadel-shop.js', 'src/ui/citadel-shop.css', 'src/game/expedition-economy.js', 'public/models/citadel-hub-v1/manifest.json'];
 const report = { status: 'running', scope: 'Native Chromium desktop keyboard and portrait emulated touch against the supplied compiled candidate. No physical-phone or subjective human-play claim.', origin, started: new Date().toISOString(), head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(), driverSha256: executedDriverSha256, fixture: { path: fixture, sha256: hash(fixtureBytes), sourceHead: fixtureReport.head, natural: true, level: fixtureSave.expedition.level }, sources: {}, errors: [], cases: [], screenshots: [], visualReview: 'pending independent image inspection' };
+if (checkpointBytes) report.actualCheckpoint = { path: checkpointPath, sha256: hash(checkpointBytes), exactBytes: true };
 for (const file of sources) report.sources[file] = hash(await fs.readFile(path.join(root, file)));
 const artifactIndex = await fs.readFile(path.join(root, 'dist/index.html'));
 const servedIndex = await (await fetch(origin, { cache: 'no-store' })).text();
@@ -108,7 +116,7 @@ async function selectLowGraphics(page, touch) {
 // Inverse camera transform chooses trusted native keyboard or touch input.
 // Reading coordinates only steers the input; no actor position is ever assigned.
 async function pulse(page, session, vector, milliseconds, touch) {
-  const clockBefore = await page.evaluate(() => window.app.renderer.time);
+  let clockBefore;
   const seconds = Math.max(.08, Math.min(.12, milliseconds / 1000));
   const observeProgress = () => page.waitForFunction(({ clockBefore, seconds }) => window.app.renderer.time - clockBefore >= seconds, { clockBefore, seconds }, { timeout: 25000 });
   if (touch) {
@@ -116,15 +124,18 @@ async function pulse(page, session, vector, milliseconds, touch) {
     assert(box, 'Touch joystick missing');
     const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
     const length = Math.hypot(vector.x, vector.y) || 1;
-    const radius = Math.min(box.width, box.height) * .34;
+    // Native CDP release latency can overshoot a short approach at full throw.
+    const radius = Math.min(box.width, box.height) * .34 * Math.max(.22, Math.min(1, milliseconds / 450));
     await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ ...center, id: 1 }] });
     await session.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: center.x + vector.x / length * radius, y: center.y + vector.y / length * radius, id: 1 }] });
+    clockBefore = await page.evaluate(() => window.app.renderer.time);
     try { await observeProgress(); }
     finally { await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); }
   } else {
     const angle = Math.atan2(vector.y, vector.x), x = Math.cos(Math.round(angle / (Math.PI / 4)) * Math.PI / 4), y = Math.sin(Math.round(angle / (Math.PI / 4)) * Math.PI / 4);
     const keys = [x > .3 ? 'KeyD' : x < -.3 ? 'KeyA' : null, y > .3 ? 'KeyS' : y < -.3 ? 'KeyW' : null].filter(Boolean);
     for (const key of keys) await page.keyboard.down(key);
+    clockBefore = await page.evaluate(() => window.app.renderer.time);
     try { await observeProgress(); }
     finally { for (const key of keys) await page.keyboard.up(key); }
   }
@@ -170,14 +181,19 @@ async function returnFromBattle(page, touch) {
 try {
   browser = await chromium.launch(launchOpts({ headless: true }));
   for (const config of [{ name: 'desktop', viewport: { width: 1440, height: 900 }, touch: false }, { name: 'portrait', viewport: { width: 390, height: 844 }, touch: true }].filter(config => selectedCases.includes(config.name))) {
-    const row = { name: config.name, status: 'running', walks: [], frames: [], checks: {} }; report.cases.push(row);
-    const context = await browser.newContext({ viewport: config.viewport, hasTouch: config.touch, isMobile: config.touch, serviceWorkers: 'block', storageState: { cookies: [], origins: [{ origin, localStorage: [{ name: 'bladesurge_save_v1', value: fixtureBytes.toString('utf8') }] }] } });
+    const row = { name: config.name, status: 'running', walks: [], frames: [], checks: {}, assetResponses: [] }; report.cases.push(row);
+    let documentPhase = 'initial-boot';
+    const context = await browser.newContext({ viewport: config.viewport, hasTouch: config.touch, isMobile: config.touch, serviceWorkers: 'block', storageState: checkpointStorage || { cookies: [], origins: [{ origin, localStorage: [{ name: 'bladesurge_save_v1', value: fixtureBytes.toString('utf8') }] }] } });
     const page = await context.newPage(), session = await context.newCDPSession(page);
     page.setDefaultTimeout(18000);
     page.on('pageerror', e => report.errors.push({ case: config.name, message: e.message }));
-    page.on('response', response => { if (response.status() >= 400 && /\.(glb|png|webp|js|css)(\?|$)/.test(response.url())) report.errors.push({ case: config.name, url: response.url(), status: response.status() }); });
+    page.on('response', response => {
+      if (/\/models\/citadel-hub-v1\/.*\.glb(\?|$)/.test(response.url())) row.assetResponses.push({ documentPhase, path: new URL(response.url()).pathname, status: response.status() });
+      if (response.status() >= 400 && /\.(glb|png|webp|js|css)(\?|$)/.test(response.url())) report.errors.push({ case: config.name, url: response.url(), status: response.status() });
+    });
     try {
       await boot(page);
+      row.renderingAtInitialBoot = (await state(page)).rendering;
       if (requestedQuality) { await selectLowGraphics(page, config.touch); row.graphicsSelectedNatively = 'low'; }
       await capture(page, config.name + '-spawn', row);
       const initial = await state(page);
@@ -185,11 +201,15 @@ try {
       if (recheck === 'labels') {
         const glass = spot('dungeon:glass_garden'), steward = spot('npc:arena-steward');
         await walk(page, session, { x: 0, z: 1 }, config.touch, row);
+        await walk(page, session, { x: -8.5, z: 1 }, config.touch, row);
+        await walk(page, session, { x: -8.5, z: glass.z + 1.05 }, config.touch, row);
         await walk(page, session, { x: glass.x, z: glass.z + 1.05 }, config.touch, row);
         await capture(page, config.name + '-glass-gate-label-recheck', row); await interact(page, config.touch);
         await page.locator('.citadel-hub-dialog[open]').waitFor();
         assert((await page.locator('#citadel-destination-title').textContent()) === glass.label, 'Recheck opened wrong gate');
         await capture(page, config.name + '-glass-confirm-label-recheck', row); await dismissDestination(page, config.touch);
+        await walk(page, session, { x: -8.5, z: glass.z + 1.05 }, config.touch, row);
+        await walk(page, session, { x: -8.5, z: 1 }, config.touch, row);
         await walk(page, session, { x: 0, z: 1 }, config.touch, row);
         await walk(page, session, { x: steward.x - 1.1, z: steward.z - .5 }, config.touch, row);
         await capture(page, config.name + '-steward-label-recheck', row);
@@ -198,6 +218,7 @@ try {
         row.status = 'native-checks-pass-awaiting-visual-review';
         continue;
       }
+      if (!resume) {
       const merchant = spot('npc:potion-merchant');
       await walk(page, session, { x: merchant.x + 1.1, z: merchant.z - .5 }, config.touch, row);
       await page.waitForTimeout(450); const nearby = await state(page); noSpend(initial, nearby, 'Merchant approach');
@@ -221,24 +242,31 @@ try {
       await capture(page, config.name + '-shop-purchased', row);
       row.checks.purchase = { goldBefore: modalAfter.gold, goldAfter: bought.gold, stockBefore: modalAfter.potions.hp_tonic, stockAfter: bought.potions.hp_tonic };
       if (config.touch) await page.locator('.citadel-shop-close').tap(); else await page.keyboard.press('Escape');
-      await boot(page, true);
+      documentPhase = 'reload-after-purchase'; await boot(page, true);
       const reload = await state(page); assert(reload.gold === bought.gold && reload.potions.hp_tonic === bought.potions.hp_tonic, 'Native purchase lost on reload'); row.checks.reloadPersistence = true;
-      if (!config.touch) {
+      } else row.resumeScope = 'Remaining native routes on unchanged earned fixture; merchant purchase/reload passed in the preceding independent receipt; no purchase replay or reconstructed storage.';
+      if (!config.touch && !skipBlur) {
         await focusWorld(page); await page.keyboard.down('KeyD'); await page.waitForTimeout(120);
         const other = await context.newPage(); await other.goto('about:blank'); await other.bringToFront(); await page.waitForTimeout(250); const blurred = await state(page);
         await page.bringToFront(); await page.waitForTimeout(250); const returned = await state(page);
         assert(blurred.keys?.length === 0 && distance(blurred.position, returned.position) < .02, 'Window blur retained held movement'); await page.keyboard.up('KeyD'); await other.close(); row.checks.blurHeldInput = true;
       }
+      if (!config.touch && skipBlur) row.checks.blurHeldInput = { status: 'unverified', reason: 'Bounded native headless tab switch and Browser.setWindowBounds minimize left both document.hasFocus=true and document.hidden=false; no actual blur transition was emitted.' };
       await walk(page, session, { x: 0, z: 3.6 }, config.touch, row);
       const locked = spot('dungeon:comet_bastion'), lockedBefore = await state(page);
+      await walk(page, session, { x: 0, z: 1 }, config.touch, row);
+      await walk(page, session, { x: 9, z: 1 }, config.touch, row);
+      await walk(page, session, { x: 9, z: locked.z }, config.touch, row);
       await walk(page, session, { x: locked.x - 1.05, z: locked.z }, config.touch, row); await capture(page, config.name + '-locked-gate', row); await interact(page, config.touch);
       await page.locator('.citadel-hub-dialog[open]').waitFor();
       const lockedState = await state(page), text = await page.locator('.citadel-hub-dialog').textContent();
       assert(text.includes(locked.label) && text.includes('탐험 Lv.' + locked.minLevel) && text.includes('에너지 ' + locked.energy) && await page.locator('.citadel-hub-go').isDisabled(), 'Locked exact route/cost/access missing'); noSpend(lockedBefore, lockedState, 'Locked gate');
       await capture(page, config.name + '-locked-dialog', row); row.checks.lockedGate = { route: locked.route, level: locked.minLevel, energy: locked.energy, blocked: true }; await dismissDestination(page, config.touch);
-      await walk(page, session, { x: 9, z: 2 }, config.touch, row);
+      await walk(page, session, { x: 9, z: 1 }, config.touch, row);
       await walk(page, session, { x: 0, z: 1 }, config.touch, row);
       const unlocked = spot('dungeon:glass_garden');
+      await walk(page, session, { x: -8.5, z: 1 }, config.touch, row);
+      await walk(page, session, { x: -8.5, z: unlocked.z + 1.05 }, config.touch, row);
       await walk(page, session, { x: unlocked.x, z: unlocked.z + 1.05 }, config.touch, row); await capture(page, config.name + '-glass-gate', row); const entryBefore = await state(page); await interact(page, config.touch);
       await page.locator('.citadel-hub-dialog[open]').waitFor(); const confirm = await state(page); noSpend(entryBefore, confirm, 'Unlocked gate confirmation');
       assert((await page.locator('#citadel-destination-title').textContent()) === unlocked.label && await page.locator('.citadel-hub-go').isEnabled(), 'Exact unlocked route is not enterable');
@@ -259,7 +287,7 @@ try {
       const menu = page.locator('.oath-nav-menu'); if (await menu.isVisible()) { if (config.touch) await menu.tap(); else await menu.click(); await capture(page, config.name + '-menu', row); await page.keyboard.press('Escape'); }
       row.status = 'native-checks-pass-awaiting-visual-review';
     } catch (error) { row.status = 'fail'; row.failure = String(error.stack || error); try { await capture(page, config.name + '-failure', row); } catch {} }
-    finally { await context.close(); await saveReport(); }
+    finally { await context.storageState({ path: path.join(out, config.name + '-actual-storage-state.json') }); await context.close(); await saveReport(); }
   }
   for (const file of sources) assert(report.sources[file] === hash(await fs.readFile(path.join(root, file))), 'Frozen product changed during QA: ' + file);
   assert(report.artifactIndexSha256 === hash(await fs.readFile(path.join(root, 'dist/index.html'))), 'Frozen build changed during QA');
