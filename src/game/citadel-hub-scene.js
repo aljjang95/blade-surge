@@ -291,15 +291,19 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     highlightHotspot(id) {
       if (id === nearestId) return; nearestId = id || null;
       for (const [key, marker] of markers) marker.material.opacity = key === nearestId ? .74 : .18;
-      for (const { sprite, spot, isNpc } of labels) sprite.material.opacity = spot.id === nearestId ? 1 : isNpc ? .6 : .84;
+      for (const { sprite, spot, isNpc } of labels) {
+        sprite.visible = !nearestId || (spot.id === nearestId && !isNpc);
+        sprite.material.opacity = spot.id === nearestId ? 1 : isNpc ? .6 : .84;
+      }
     },
-    update(dt, { nearestId: nextId, nearest, reducedMotion = false, playerPosition } = {}) {
+    update(dt, state = {}) {
       if (disposed) return;
-      if (nextId !== undefined || nearest !== undefined) this.highlightHotspot(nextId ?? nearest?.id ?? null);
+      const { nearestId: nextId, nearest, reducedMotion = false, playerPosition } = state;
+      if (Object.hasOwn(state, 'nearestId') || Object.hasOwn(state, 'nearest')) this.highlightHotspot(nextId ?? nearest?.id ?? null);
       if (!reducedMotion) for (const actor of characters) actor.mixer.update(Math.min(dt, .05));
       if (playerPosition) for (const { sprite, spot, isNpc } of labels) {
         const distance = Math.hypot(spot.x - playerPosition.x, spot.z - playerPosition.z), selected = spot.id === nearestId;
-        sprite.visible = selected || distance < (isNpc ? 9 : quality === 'low' ? 12 : 30);
+        sprite.visible = (!nearestId || (selected && !isNpc)) && (selected || distance < (isNpc ? 9 : quality === 'low' ? 12 : 30));
         if (isNpc) {
           sprite.material.opacity = selected ? 1 : Math.min(.65, Math.max(.2, (9 - distance) / 5));
           sprite.scale.set(selected ? 2.75 : 2.3, selected ? .645 : .539, 1);

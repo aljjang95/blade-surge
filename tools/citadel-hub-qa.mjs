@@ -13,6 +13,12 @@ import { ENERGY } from '../src/data/shop.js';
 const root = path.resolve(import.meta.dirname, '..');
 const argument = name => process.argv.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 const origin = argument('origin');
+const selectedCases = argument('cases')?.split(',') || ['desktop', 'portrait'];
+if (selectedCases.some(value => !['desktop', 'portrait'].includes(value))) throw Error('Cases must be desktop and/or portrait');
+const requestedQuality = argument('quality');
+if (requestedQuality && requestedQuality !== 'low') throw Error('Only --quality=low native fallback is supported');
+const recheck = argument('recheck');
+if (recheck && recheck !== 'labels') throw Error('Only --recheck=labels is supported');
 if (!origin || !/^http:\/\/127\.0\.0\.1:\d+$/.test(origin)) throw Error('Supply --origin=http://127.0.0.1:PORT after candidate freeze; no server is started by this helper.');
 const runName = argument('run') || new Date().toISOString().replace(/[:.]/g, '-');
 if (!/^[a-zA-Z0-9_-]+$/.test(runName)) throw Error('Invalid run label');
@@ -20,13 +26,16 @@ const out = path.join(root, 'work/qa/citadel-hub-v1', runName);
 await fs.mkdir(path.dirname(out), { recursive: true });
 await fs.mkdir(out); // Retain prior evidence.
 const hash = value => createHash('sha256').update(value).digest('hex');
+const executedDriverBytes = await fs.readFile(import.meta.filename);
+const executedDriverSha256 = hash(executedDriverBytes);
+await fs.writeFile(path.join(out, 'driver.mjs'), executedDriverBytes, { flag: 'wx' });
 const fixture = argument('save') || '/workspace/blade-surge/work/aaa-20261003/astral-earned-d376ee6/earned-save.json';
 const fixtureBytes = await fs.readFile(fixture);
 const fixtureReport = JSON.parse(await fs.readFile(path.join(path.dirname(fixture), 'report.json'), 'utf8'));
 if (fixtureReport.status !== 'pass' || fixtureReport.naturalStart !== true || fixtureReport.synthetic !== false || fixtureReport.earnedSave?.natural !== true || fixtureReport.earnedSave?.sha256 !== hash(fixtureBytes)) throw Error('Fixture must match its passing naturally-earned receipt.');
 const fixtureSave = JSON.parse(fixtureBytes);
-const sources = ['src/main.js', 'src/engine/renderer.js', 'src/game/arena.js', 'src/data/citadel-hub.js', 'src/game/citadel-hub-scene.js', 'src/game/hub-movement.js', 'src/engine/hub-controls.js', 'src/ui/citadel-hub.js', 'src/ui/citadel-hub.css', 'src/ui/citadel-integration.css', 'src/ui/citadel-shop.js', 'src/ui/citadel-shop.css', 'src/game/expedition-economy.js'];
-const report = { status: 'running', scope: 'Native Chromium desktop keyboard and portrait emulated touch against the supplied compiled candidate. No physical-phone or subjective human-play claim.', origin, started: new Date().toISOString(), head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(), fixture: { path: fixture, sha256: hash(fixtureBytes), sourceHead: fixtureReport.head, natural: true, level: fixtureSave.expedition.level }, sources: {}, errors: [], cases: [], screenshots: [], visualReview: 'pending independent image inspection' };
+const sources = ['src/main.js', 'src/engine/renderer.js', 'src/game/arena.js', 'src/data/citadel-hub.js', 'src/game/citadel-hub-scene.js', 'src/game/hub-movement.js', 'src/engine/hub-controls.js', 'src/ui/citadel-hub.js', 'src/ui/citadel-hub.css', 'src/ui/citadel-integration.css', 'src/ui/citadel-shop.js', 'src/ui/citadel-shop.css', 'src/game/expedition-economy.js', 'public/models/citadel-hub-v1/manifest.json'];
+const report = { status: 'running', scope: 'Native Chromium desktop keyboard and portrait emulated touch against the supplied compiled candidate. No physical-phone or subjective human-play claim.', origin, started: new Date().toISOString(), head: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(), driverSha256: executedDriverSha256, fixture: { path: fixture, sha256: hash(fixtureBytes), sourceHead: fixtureReport.head, natural: true, level: fixtureSave.expedition.level }, sources: {}, errors: [], cases: [], screenshots: [], visualReview: 'pending independent image inspection' };
 for (const file of sources) report.sources[file] = hash(await fs.readFile(path.join(root, file)));
 const artifactIndex = await fs.readFile(path.join(root, 'dist/index.html'));
 const servedIndex = await (await fetch(origin, { cache: 'no-store' })).text();
@@ -44,8 +53,9 @@ async function state(page) {
     const a = window.app, p = a.showcase?.root.position;
     const c = a.hubControls || a.citadelControls || a.citadel?.controls;
     const e = a.renderer.camera.matrixWorld.elements;
+    const r = a.renderer.r;
     const stored = localStorage.getItem('bladesurge_save_v1'), primary = stored ? JSON.parse(stored) : null;
-    return { mode: a.mode, tab: a.meta.tab, position: p ? { x: p.x, y: p.y, z: p.z } : null, nearest: a.hubMovement?.nearest?.id, moving: a.hubMovement?.moving, yaw: Math.atan2(-e[2], e[0]), camera: { x: a.renderer.camera.position.x, y: a.renderer.camera.position.y, z: a.renderer.camera.position.z }, gold: a.eco.s.gold, energy: a.eco.s.energy, energyT: a.eco.s.energyT, energyMax: a.eco.energyMax, level: a.expedition.s.level, potions: { ...a.expedition.s.consumables }, pending: a.expedition.s.pending ? { ...a.expedition.s.pending } : null, selected: a.eco.s.selected, active: !!a.battle?.active, stage: a.battle?.stage?.expedition || null, starting: !!a.stageStarting, keys: c ? Object.keys(c.keys) : null, pointer: c?.pointer?.id ?? null, primary: primary ? { gold: primary.gold, expedition: { level: primary.expedition?.level, consumables: primary.expedition?.consumables } } : null, observedAt: Date.now(), focused: document.activeElement?.className || document.activeElement?.id || document.activeElement?.tagName };
+    return { mode: a.mode, tab: a.meta.tab, position: p ? { x: p.x, y: p.y, z: p.z } : null, nearest: a.hubMovement?.nearest?.id, moving: a.hubMovement?.moving, yaw: Math.atan2(-e[2], e[0]), camera: { x: a.renderer.camera.position.x, y: a.renderer.camera.position.y, z: a.renderer.camera.position.z }, rendering: { quality: a.renderer.quality, bufferWidth: r.domElement.width, bufferHeight: r.domElement.height, pixelRatio: r.getPixelRatio(), lastPass: { ...r.info.render }, lastPassScope: 'Observed last renderer pass; composer autoReset may prevent full-frame totals', geometries: r.info.memory.geometries, textures: r.info.memory.textures, programs: r.info.programs.length }, gold: a.eco.s.gold, energy: a.eco.s.energy, energyT: a.eco.s.energyT, energyMax: a.eco.energyMax, level: a.expedition.s.level, potions: { ...a.expedition.s.consumables }, pending: a.expedition.s.pending ? { ...a.expedition.s.pending } : null, selected: a.eco.s.selected, active: !!a.battle?.active, stage: a.battle?.stage?.expedition || null, starting: !!a.stageStarting, keys: c ? Object.keys(c.keys) : null, pointer: c?.pointer?.id ?? null, primary: primary ? { gold: primary.gold, expedition: { level: primary.expedition?.level, consumables: primary.expedition?.consumables } } : null, observedAt: Date.now(), focused: document.activeElement?.className || document.activeElement?.id || document.activeElement?.tagName };
   });
 }
 
@@ -87,12 +97,20 @@ async function capture(page, name, row) {
   await saveReport();
 }
 
+async function selectLowGraphics(page, touch) {
+  const click = async selector => touch ? page.locator(selector).tap() : page.locator(selector).click();
+  await click('.oath-nav-menu'); await click('#oath-menu #btn-settings');
+  await click('#modal.show [data-q="low"]'); await click('#modal.show #m-cancel');
+  await page.locator('.citadel-hub-ui:not([hidden])').waitFor();
+  assert((await state(page)).rendering.quality === 'low', 'Native settings did not select low graphics');
+}
+
 // Inverse camera transform chooses trusted native keyboard or touch input.
 // Reading coordinates only steers the input; no actor position is ever assigned.
 async function pulse(page, session, vector, milliseconds, touch) {
   const clockBefore = await page.evaluate(() => window.app.renderer.time);
-  const seconds = Math.max(.08, Math.min(.35, milliseconds / 1000));
-  const observeProgress = () => page.waitForFunction(({ clockBefore, seconds }) => window.app.renderer.time - clockBefore >= seconds, { clockBefore, seconds }, { timeout: 15000 });
+  const seconds = Math.max(.08, Math.min(.12, milliseconds / 1000));
+  const observeProgress = () => page.waitForFunction(({ clockBefore, seconds }) => window.app.renderer.time - clockBefore >= seconds, { clockBefore, seconds }, { timeout: 25000 });
   if (touch) {
     const box = await page.locator('.citadel-hub-stick').boundingBox();
     assert(box, 'Touch joystick missing');
@@ -151,7 +169,7 @@ async function returnFromBattle(page, touch) {
 
 try {
   browser = await chromium.launch(launchOpts({ headless: true }));
-  for (const config of [{ name: 'desktop', viewport: { width: 1440, height: 900 }, touch: false }, { name: 'portrait', viewport: { width: 390, height: 844 }, touch: true }]) {
+  for (const config of [{ name: 'desktop', viewport: { width: 1440, height: 900 }, touch: false }, { name: 'portrait', viewport: { width: 390, height: 844 }, touch: true }].filter(config => selectedCases.includes(config.name))) {
     const row = { name: config.name, status: 'running', walks: [], frames: [], checks: {} }; report.cases.push(row);
     const context = await browser.newContext({ viewport: config.viewport, hasTouch: config.touch, isMobile: config.touch, serviceWorkers: 'block', storageState: { cookies: [], origins: [{ origin, localStorage: [{ name: 'bladesurge_save_v1', value: fixtureBytes.toString('utf8') }] }] } });
     const page = await context.newPage(), session = await context.newCDPSession(page);
@@ -159,9 +177,27 @@ try {
     page.on('pageerror', e => report.errors.push({ case: config.name, message: e.message }));
     page.on('response', response => { if (response.status() >= 400 && /\.(glb|png|webp|js|css)(\?|$)/.test(response.url())) report.errors.push({ case: config.name, url: response.url(), status: response.status() }); });
     try {
-      await boot(page); await capture(page, config.name + '-spawn', row);
+      await boot(page);
+      if (requestedQuality) { await selectLowGraphics(page, config.touch); row.graphicsSelectedNatively = 'low'; }
+      await capture(page, config.name + '-spawn', row);
       const initial = await state(page);
       assert(initial.level === fixtureSave.expedition.level && initial.gold === fixtureSave.gold, 'Earned fixture changed unexpectedly on load');
+      if (recheck === 'labels') {
+        const glass = spot('dungeon:glass_garden'), steward = spot('npc:arena-steward');
+        await walk(page, session, { x: 0, z: 1 }, config.touch, row);
+        await walk(page, session, { x: glass.x, z: glass.z + 1.05 }, config.touch, row);
+        await capture(page, config.name + '-glass-gate-label-recheck', row); await interact(page, config.touch);
+        await page.locator('.citadel-hub-dialog[open]').waitFor();
+        assert((await page.locator('#citadel-destination-title').textContent()) === glass.label, 'Recheck opened wrong gate');
+        await capture(page, config.name + '-glass-confirm-label-recheck', row); await dismissDestination(page, config.touch);
+        await walk(page, session, { x: 0, z: 1 }, config.touch, row);
+        await walk(page, session, { x: steward.x - 1.1, z: steward.z - .5 }, config.touch, row);
+        await capture(page, config.name + '-steward-label-recheck', row);
+        noSpend(initial, await state(page), 'Native visual label recheck');
+        row.checks.labelRecheck = 'Native gate and steward approach; actual PNG review required';
+        row.status = 'native-checks-pass-awaiting-visual-review';
+        continue;
+      }
       const merchant = spot('npc:potion-merchant');
       await walk(page, session, { x: merchant.x + 1.1, z: merchant.z - .5 }, config.touch, row);
       await page.waitForTimeout(450); const nearby = await state(page); noSpend(initial, nearby, 'Merchant approach');
@@ -200,6 +236,7 @@ try {
       const lockedState = await state(page), text = await page.locator('.citadel-hub-dialog').textContent();
       assert(text.includes(locked.label) && text.includes('탐험 Lv.' + locked.minLevel) && text.includes('에너지 ' + locked.energy) && await page.locator('.citadel-hub-go').isDisabled(), 'Locked exact route/cost/access missing'); noSpend(lockedBefore, lockedState, 'Locked gate');
       await capture(page, config.name + '-locked-dialog', row); row.checks.lockedGate = { route: locked.route, level: locked.minLevel, energy: locked.energy, blocked: true }; await dismissDestination(page, config.touch);
+      await walk(page, session, { x: 9, z: 2 }, config.touch, row);
       await walk(page, session, { x: 0, z: 1 }, config.touch, row);
       const unlocked = spot('dungeon:glass_garden');
       await walk(page, session, { x: unlocked.x, z: unlocked.z + 1.05 }, config.touch, row); await capture(page, config.name + '-glass-gate', row); const entryBefore = await state(page); await interact(page, config.touch);
