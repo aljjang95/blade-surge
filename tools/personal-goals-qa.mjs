@@ -105,12 +105,18 @@ async function select(metric,anchor){
   report.events.push({label:'native metric choice',metric,anchorRunId:anchor.runId,before,after,capture,summary,text,energy});await qa.save();return after;
 }
 async function viewport(width,height,label){
-  const before=await state();await page.setViewportSize({width,height});
+  const before=await state();
+  // A native modal dialog owns the top layer. Close it through its button
+  // before offering the normal portrait-continuation control underneath.
+  if(await page.locator('#masterworks[open]').isVisible())await page.locator('#masterworks .mw-close').click();
+  await page.setViewportSize({width,height});
   if(await page.locator('#btn-ignore-rotate').isVisible())await page.locator('#btn-ignore-rotate').click();
   await page.waitForTimeout(150);await page.evaluate(()=>window.app.renderer.render());
   const panel=await journal();await panel.scrollIntoViewIfNeeded();const after=await state();
-  qaAssert(equal(before.eco,after.eco)&&before.run?.id===after.run?.id&&before.active===after.active,'Native resize/render changed game state');
-  await page.screenshot({path:path.join(qa.out,`${label}.png`)});report.events.push({label:'actual responsive journal '+label,before,after,text:await panel.innerText()});await qa.save();
+  const energy=energyTransition(before,after,0,'native responsive journal');
+  const a=structuredClone(before.eco),b=structuredClone(after.eco);delete a.energy;delete a.energyT;delete b.energy;delete b.energyT;
+  qaAssert(equal(a,b)&&before.run?.id===after.run?.id&&before.active===after.active,'Native resize/render changed game state beyond verified normal energy regeneration');
+  await page.screenshot({path:path.join(qa.out,`${label}.png`)});report.events.push({label:'actual responsive journal '+label,before,after,energy,text:await panel.innerText()});await qa.save();
 }
 async function reload(label){
   if(await page.locator('.exp-result-shell').isVisible())await page.locator('.exp-close').click();
