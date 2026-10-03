@@ -3,7 +3,9 @@ import { difficultyEffects } from '../game/masterworks-core.js';
 import { DUNGEONS } from '../data/expansion.js';
 import { EXPEDITION_SETS } from '../data/expedition-items.js';
 import { uiArt } from './illustrated.js';
-import { runRouteLabel, runDetailsLabel } from '../game/run-history.js';
+import { runRouteLabel, runDetailsLabel, normalizeRunDetails } from '../game/run-history.js';
+import { GOAL_METRICS, comparableRunContext, normalizePersonalGoal, summarizePersonalRuns, personalGoalTarget } from '../game/run-personal-goals.js';
+import { personalContextLabel, personalDeparture, personalMetricValue, personalTargetLabel, personalResultLabel } from './personal-goal-labels.js';
 import './masterworks.css';
 
 const family = {ember:['잿불','ember_vault'],tide:['물결','glass_garden'],storm:['폭풍','ranger'],stone:['바위','star_archive']};
@@ -116,6 +118,7 @@ export class MasterworksView {
   }
   renderJournal() {
     this.intro('선택의 기록','첫 만남의 선택은 저장됩니다. 같은 길을 다시 찾으면 그 결과와 작은 쉼터의 도움을 만납니다.','star_archive');
+    this.renderPersonalGoal();
     for(const event of STORY_EVENTS){const c=event.choices.find(c=>c.id===this.state.story[event.id]);const card=n('article','mw-story-record');card.append(art('nav-journal'),n('small','mw-eyebrow',c?'남겨진 선택':'아직 만나지 않은 이야기'),n('h4','',event.name),details(c?c.consequence:'구역을 정화하며 길 위의 사람들을 만나세요.','이야기 읽기'));if(c)card.append(n('small','mw-muted',`당신의 선택: ${c.name} · 다시 만나면 체력 ${c.effects.heal?12:6}% 회복`));this.content.append(card);}
     this.content.append(n('h3','mw-section-title','최근 원정'));
     if(!this.state.history.length)this.content.append(n('p','mw-muted','첫 원정을 마치면 승리와 재도전의 기록이 남습니다.'));
@@ -123,8 +126,79 @@ export class MasterworksView {
       const card=n('article','mw-history');card.dataset.runHistory=String(h.runId);card.setAttribute('aria-label','최근 출격 기록');
       card.append(n('strong','',`${h.outcome==='victory'?'승리':'패배'} · ${runRouteLabel(h.details?.route)||`${h.floor}층 · 경로 상세 없음`}`),
         n('p','mw-muted',runDetailsLabel(h.details)),n('small','mw-muted',`획득 각인 종류 · ${h.boonIds.map(id=>BOONS.find(x=>x.id===id)?.name).join(' / ')||'없음'}`));
+      if(this.goalRecords().some(record=>record.runId===h.runId)) {
+        const preview=btn('이 기록 조건으로 목표 보기',()=>{this.goalPreviewRunId=h.runId;this.render();},'mw-goal-preview');
+        preview.dataset.goalRun=String(h.runId);card.append(preview);
+      }
       this.content.append(card);
     }
+  }
+  goalRecords() {
+    const history=this.state.history.slice(-20);
+    return [...history].reverse().filter(h=>{
+      const d=normalizeRunDetails(h.details);
+      return ['victory','defeat'].includes(h.outcome)&&Number.isSafeInteger(h.runId)&&h.runId>0&&history.filter(other=>other.runId===h.runId).length===1
+        && comparableRunContext(d)&&d.timeSec!==null&&d.perfects!==null&&d.breaks!==null;
+    });
+  }
+  renderPersonalGoal() {
+    const records=this.goalRecords(),chosen=normalizePersonalGoal(this.state.personalGoal);
+    const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+    const preview=records.find(h=>h.runId===this.goalPreviewRunId);
+    const anchor=preview||(chosen?records.find(h=>same(comparableRunContext(h.details),chosen.context)):records[0]);
+    const context=anchor?comparableRunContext(anchor.details):chosen?.context;
+    const panel=n('section','mw-personal-goal');panel.setAttribute('aria-label','최근 기록의 개인 목표');
+    panel.append(n('h3','mw-section-title','개인 최고와 다음 목표'),n('p','mw-muted','최근 20개 보존 기록 중 같은 조건의 승리만 비교합니다.'));
+    if(!context) {panel.append(n('p','mw-muted','경로·영웅·출격 레벨·조작과 시간·회피·균형 붕괴가 기록된 출격을 마치면 목표를 선택할 수 있습니다.'));this.content.append(panel);return;}
+    const summary=summarizePersonalRuns(this.state.history,context),isChosen=!!chosen&&same(chosen.context,context);
+    const metric=isChosen?chosen.metric:'time',target=personalGoalTarget(summary,metric),departure=personalDeparture(context);
+    panel.dataset.goalContext=JSON.stringify(context);
+    panel.append(n('strong','',runRouteLabel(context.route)),n('p','mw-muted',personalContextLabel(context)));
+    if(summary.count)panel.append(n('p','mw-goal-best',`최근 기록 최고 · 시간 약 ${personalMetricValue('time',summary.best.timeSec)} · 정확 회피 ${summary.best.perfects}회 · 균형 붕괴 ${summary.best.breaks}회 · 비교 승리 ${summary.count}회`));
+    else panel.append(n('p','mw-muted','같은 조건의 승리 기록이 없습니다. 첫 승리를 기준으로 다음 목표를 계산합니다.'));
+    const choices=n('div','mw-goal-choices');choices.setAttribute('role','group');choices.setAttribute('aria-label','다음 개인 목표 선택');
+    for(const choice of GOAL_METRICS) {
+      const button=btn(choice.label,()=>{if(!anchor||typeof this.battle.masterworks.goal!=='function')return;this.goalPreviewRunId=anchor.runId;this.act(()=>this.battle.masterworks.goal(anchor.runId,choice.id),'개인 목표를 저장했습니다.');});
+      button.dataset.personalGoalMetric=choice.id;button.setAttribute('aria-pressed',String(isChosen&&metric===choice.id));
+      button.disabled=!anchor||!!this.battle.active||!!this.app.stageStarting||typeof this.battle.masterworks.goal!=='function';choices.append(button);
+    }
+    panel.append(choices,n('p','mw-goal-target',isChosen?(target?personalTargetLabel(target):summary.count?'현재 최고값에서 다음 수치 목표를 만들 수 없습니다. 다른 목표를 선택해 주세요.':'목표 종류를 저장했습니다. 비교할 승리 기록을 기다립니다.'):'목표 종류를 선택하면 저장됩니다.'));
+    if(!anchor)panel.append(n('p','mw-muted','선택한 조건의 출격이 최근 20개 밖으로 밀렸습니다. 새 출격 기록으로 목표를 선택해 주세요.'));
+    const current=this.app.eco?.hero?.();
+    if(current)panel.append(n('p','mw-muted',`다음 출격 · ${personalContextLabel({route:context.route,heroId:this.app.eco.s.selected,heroLevel:current.level,control:this.app.journey?.s.autoBattle?'auto':'manual'})}로 시작합니다. 조건이 달라지면 비교하지 않습니다.`));
+    panel.append(n('small','mw-muted','출격 중 AUTO 전환을 포함한 실제 조작 기록으로 비교합니다. 개인 목표는 추가 보상을 지급하지 않습니다.'));
+    if(departure) {
+      const launch=btn(departure.kind==='dungeon'?`이 경로 다시 출격 · 에너지 ${departure.energy}`:`캠페인 선택 열기 · 해당 경로 에너지 ${departure.energy}`,
+        ()=>this.departPersonalGoal(context),'mw-primary');
+      launch.dataset.personalGoalDeparture=departure.kind;launch.disabled=!isChosen||!!this.battle.active||!!this.app.stageStarting||!this.app.eco;
+      panel.append(launch);
+      if(departure.kind==='campaign')panel.append(n('small','mw-muted','기존 캠페인 선택에서 위 스테이지 번호와 난이도를 확인한 뒤 출격하세요.'));
+      if(context.route.riftId)panel.append(n('small','mw-muted','균열은 오늘의 효과로 출격합니다. 기록과 효과가 달라지면 비교하지 않습니다.'));
+    }
+    this.content.append(panel);
+  }
+  async departPersonalGoal(context) {
+    const chosen=normalizePersonalGoal(this.state.personalGoal),result=this.app.ui?.resultData;
+    if(!chosen||JSON.stringify(chosen.context)!==JSON.stringify(context)||this.goalStarting||this.battle.active||this.app.stageStarting
+      ||this.app.expeditionUI?.result?.saveError||this.battle.rpgDirty||result?.saveError||result?.reward?.saveError
+      ||result?.reward?.ok===false||this.app.eco?.storageStatus==='unavailable'||this.app.party?.party?.status==='lobby') {
+      this.notice.textContent='저장한 개인 목표와 결과 저장 상태를 확인해 주세요.';return {ok:false};
+    }
+    const departure=personalDeparture(chosen.context);if(!departure)return {ok:false};
+    if(departure.kind==='campaign') {
+      if(this.app.expedition?.s?.pending||this.app.expeditionRefundPending){this.notice.textContent='이전 출격의 저장과 에너지 복구를 마친 뒤 캠페인을 선택해 주세요.';return {ok:false};}
+      this.close();if(this.app.expeditionUI?.result)this.app.expeditionUI.result=null;
+      this.app.toLobby();if(this.app.mode!=='lobby')return {ok:false};
+      this.app.meta.openTab('stage','campaign');return {ok:true};
+    }
+    this.goalStarting=true;this.close();
+    try {
+      const ok=await this.app.startExpedition('dungeon',departure.id,departure.options);
+      if(!ok){this.open('journal');this.notice.textContent='출격하지 못했습니다. 현재 접근 조건과 에너지를 확인해 주세요.';}
+      return {ok:!!ok};
+    } catch(error) {
+      this.open('journal');this.notice.textContent='출격 준비가 끝나지 않았습니다. 현재 결과와 에너지 복구 상태를 확인해 주세요.';throw error;
+    } finally {this.goalStarting=false;}
   }
   renderRun() {
     const run=this.battle.run,offer=this.battle.currentOffer();
@@ -197,7 +271,7 @@ export class MasterworksView {
     this.posture.hidden=!active||!r?.enabled||!e?.alive||e.spawning;
     if(!this.posture.hidden)this.posture.textContent=e.breakT>0?'균형 붕괴 · 받는 피해 +30%':`균형 ${Math.round(e.posture||0)} / ${e.postureMax||80}`;
     const result=this.battle.result?.masterworks;this.result.hidden=!result;
-    if(result)this.result.textContent=`기억에 남은 성장 · 명성 +${result.renown} · 균형 붕괴 ${result.breaks} · 정확 회피 ${result.perfects}`;
+    if(result)this.result.textContent=`기억에 남은 성장 · 명성 +${result.renown} · 균형 붕괴 ${result.breaks} · 정확 회피 ${result.perfects}${result.personalGoal?` · ${personalResultLabel(result.personalGoal)}`:''}`;
   }
   tick(dt){this.timer+=Number.isFinite(dt)?dt:0;if(this.timer>=.15){this.timer=0;this.refresh();}}
 }

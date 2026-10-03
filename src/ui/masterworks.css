@@ -64,6 +64,14 @@
 .mw-owned>.mw-muted{margin:8px 0}
 .mw-run-return{display:block;width:100%;margin-top:8px}
 .mw-details summary:focus-visible{outline:3px solid #a0ddce;outline-offset:2px;border-radius:4px}
+.mw-personal-goal{padding:14px;margin:10px 0 18px;border:1px solid #b9cfbd44;border-radius:12px;background:#b7cfbb0a;overflow-wrap:anywhere}
+.mw-personal-goal>strong,.mw-personal-goal>small{display:block}
+.mw-goal-best,.mw-goal-target{font-size:12px;line-height:1.65;color:#e5d5ad}
+.mw-goal-choices{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}
+.mw-goal-choices button{flex:1 1 110px;min-height:44px;padding:8px 10px;border:1px solid #b9cfbd44;border-radius:8px;background:#152125;color:#dce8df;font:inherit}
+.mw-goal-choices button[aria-pressed=true]{border-color:#e6c98a;background:#e6c98a18;color:#f0dda8}
+.mw-personal-goal>.mw-primary{display:block;width:100%;min-height:44px;margin:12px 0 8px}
+.mw-goal-preview{min-height:44px;margin-top:10px;padding:8px 12px;border:1px solid #b9cfbd44;border-radius:8px;background:#152125;color:#cce2d4;font:inherit}
 @media(max-width:620px){
  #masterworks[data-view=run] .mw-content{padding:10px 12px 12px}
  #masterworks[data-view=run] .mw-header{padding:8px 12px}

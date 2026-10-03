@@ -91,8 +91,8 @@ test('party start uses its server run id without mutating or persisting personal
   Object.assign(game,{stage:{idx:1,ch:1,code:'1-1',party:{runId:'server-run'}},active:true,
     player:{stats:{hp:100},maxHp:100,hp:100,alive:true},masterworks:{s:state,transact:()=>{transactions++;return {ok:false,error:'save-failed'};}},
     chronicle:{refresh:noop},after:()=>scheduled++});
-  const original=RpgBattle.prototype.start;RpgBattle.prototype.start=async function(){};
-  try{await Battle.prototype.start.call(game);}finally{RpgBattle.prototype.start=original;}
+  const original=RpgBattle.prototype.start;RpgBattle.prototype.start=async function(){this._startGeneration=(this._startGeneration||0)+1;};
+  try{await Battle.prototype.start.call(game,game.stage,'knight',{level:1});}finally{RpgBattle.prototype.start=original;}
   expect(transactions).toBe(0);expect(state).toEqual(before);
   expect(game.run).toMatchObject({id:'server-run',enabled:false,picked:[],queue:[],round:0});
   expect(game.effects).toEqual({});expect(scheduled).toBe(1);

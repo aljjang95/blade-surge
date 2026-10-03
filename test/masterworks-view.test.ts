@@ -89,6 +89,61 @@ test('journal displays exact expedition, hero, mixed control and observed zeroes
   expect(cards[1].text()).toContain('패배');expect(cards[1].text()).toContain('경로 상세 없음');expect(cards[1].text()).toContain('상세 기록 없음');expect(cards[1].text()).not.toContain('정확 회피 0');
   expect(JSON.stringify(view.battle.masterworks.s)).toBe(before);
 }));
+
+test('journal personal best uses the rolling twenty records and exposes one inline metric group with the existing route cost',()=>withMWDOM(()=>{
+  const view=renderFixture(),d={route:{kind:'dungeon',id:'glass_garden',depth:'standard',conquestId:null,riftId:null},heroId:'knight',heroLevel:4,control:'auto',timeSec:60.125,perfects:0,breaks:2};
+  view.tab='journal';view.app={eco:{s:{selected:'knight'},hero:()=>({level:5})},journey:{s:{autoBattle:true}}};
+  view.battle.masterworks.s.history=[{runId:1,floor:1,outcome:'victory',boonIds:[],details:d},{runId:2,floor:1,outcome:'defeat',boonIds:[],details:null}];
+  view.battle.masterworks.s.personalGoal={context:d,metric:'perfects'};view.battle.masterworks.goal=()=>({ok:true});
+  const before=JSON.stringify(view.battle.masterworks.s);view.renderJournal();const nodes:MWElement[]=view.content.all();
+  const panel=nodes.find(n=>n.attrs['aria-label']==='최근 기록의 개인 목표');
+  if(!panel)throw Error('Personal goal panel missing');
+  expect(panel.text()).toContain('최근 20개');expect(panel.text()).toContain('비교 승리 1회');expect(panel.text()).toContain('정확 회피 0회');
+  expect(panel.text()).toContain('정확 회피 1회 이상');expect(panel.text()).toContain('출격 Lv.4');expect(panel.text()).toContain('출격 Lv.5');
+  expect(panel.text()).toContain('조건이 달라지면 비교하지 않습니다');expect(panel.text()).toContain('에너지 4');
+  const choices=nodes.filter(n=>n.dataset.personalGoalMetric);expect(choices.map(n=>n.dataset.personalGoalMetric)).toEqual(['time','perfects','breaks']);
+  expect(choices.map(n=>n.attrs['aria-pressed'])).toEqual(['false','true','false']);expect(nodes.filter(n=>n.tagName==='dialog')).toHaveLength(0);
+  expect(nodes.filter(n=>n.dataset.goalRun).map(n=>n.dataset.goalRun)).toEqual(['1']);expect(JSON.stringify(view.battle.masterworks.s)).toBe(before);
+}));
+
+test('invalid history and duplicate run IDs never offer a goal selector or a departure',()=>withMWDOM(()=>{
+  const view=renderFixture(),details={route:{kind:'dungeon',id:'glass_garden',depth:'standard'},heroId:'knight',heroLevel:4,control:'auto',timeSec:1,perfects:0,breaks:0};
+  view.battle.masterworks.s.history=[{runId:1,floor:1,outcome:'victory',boonIds:[],details},{runId:1,floor:1,outcome:'defeat',boonIds:[],details:null}];
+  view.renderJournal();const nodes:MWElement[]=view.content.all();expect(nodes.filter(n=>n.dataset.goalRun||n.dataset.personalGoalMetric||n.dataset.personalGoalDeparture)).toHaveLength(0);
+  expect(view.content.text()).toContain('기록된 출격을 마치면 목표를 선택');
+}));
+
+test('dungeon goal departure delegates exact route options once without changing hero/control/goal or adding payment calls',async()=>{
+  const context={route:{kind:'dungeon',id:'glass_garden',depth:'standard',conquestId:null,riftId:null},heroId:'knight',heroLevel:4,control:'auto'};
+  const calls:any[]=[],goal={context,metric:'breaks'},eco={s:{selected:'mage',heroes:{mage:{level:7}}}};
+  let release:any;const authority=new Promise(resolve=>{release=resolve;});
+  const app:any={eco,journey:{s:{autoBattle:false}},startExpedition:async(...args:any[])=>{calls.push(args);return authority;}};
+  const view:any=Object.assign(Object.create(MasterworksView.prototype),{app,notice:{textContent:''},battle:{active:false,rpgDirty:false,masterworks:{s:{personalGoal:goal}}},close:()=>calls.push('close')});
+  const before=JSON.stringify({eco,goal,journey:app.journey}),first=view.departPersonalGoal(context);
+  expect(await view.departPersonalGoal(context)).toEqual({ok:false});
+  expect(calls).toEqual(['close',['dungeon','glass_garden',{rift:false,depth:'standard',conquestId:undefined}]]);
+  release(true);expect(await first).toEqual({ok:true});expect(view.goalStarting).toBe(false);
+  expect(JSON.stringify({eco,goal,journey:app.journey})).toBe(before);
+});
+
+test('failed dungeon admission reopens the journal without manually charging or refunding',async()=>{
+  const context={route:{kind:'dungeon',id:'glass_garden',depth:'deep',conquestId:null,riftId:null},heroId:'knight',heroLevel:4,control:'auto'};
+  const calls:any[]=[],goal={context,metric:'time'},app:any={eco:{s:{energy:1}},startExpedition:async(...args:any[])=>{calls.push(args);return false;}};
+  const view:any=Object.assign(Object.create(MasterworksView.prototype),{app,notice:{textContent:''},battle:{active:false,rpgDirty:false,masterworks:{s:{personalGoal:goal}}},close:()=>calls.push('close'),open:(tab:string)=>calls.push(`open:${tab}`)});
+  expect(await view.departPersonalGoal(context)).toEqual({ok:false});expect(app.eco.s.energy).toBe(1);expect(view.goalStarting).toBe(false);
+  expect(calls).toEqual(['close',['dungeon','glass_garden',{rift:false,depth:'deep',conquestId:undefined}],'open:journal']);
+  expect(view.notice.textContent).toContain('현재 접근 조건과 에너지');
+});
+
+test('campaign goal navigation clears only a saved expedition overlay and uses the existing selector without a departure/payment',async()=>{
+  const context={route:{kind:'campaign',id:'1-1',difficultyId:'story'},heroId:'knight',heroLevel:4,control:'auto'};
+  const calls:any[]=[],goal={context,metric:'time'},app:any={mode:'battle',eco:{s:{energy:10}},expeditionUI:{result:{win:true}},expedition:{s:{pending:null}},
+    toLobby(){expect(this.expeditionUI.result).toBeNull();calls.push('lobby');this.mode='lobby';},meta:{openTab:(...args:any[])=>calls.push(args)}};
+  const view:any=Object.assign(Object.create(MasterworksView.prototype),{app,notice:{textContent:''},battle:{active:false,rpgDirty:false,masterworks:{s:{personalGoal:goal}}},close:()=>calls.push('close')});
+  expect(await view.departPersonalGoal(context)).toEqual({ok:true});expect(calls).toEqual(['close','lobby',['stage','campaign']]);expect(app.eco.s.energy).toBe(10);
+  app.expedition.s.pending={id:1};calls.length=0;expect(await view.departPersonalGoal(context)).toEqual({ok:false});expect(calls).toEqual([]);
+  app.expedition.s.pending=null;app.expeditionRefundPending=true;expect(await view.departPersonalGoal(context)).toEqual({ok:false});expect(calls).toEqual([]);
+});
 test('boon choice artwork follows its ID and keeps chain cap directly on choice',()=>withMWDOM(()=>{
  const view=renderFixture(true);view.renderRun();const cards=view.content.all().filter((n:MWElement)=>n.dataset.boon);
  expect(cards).toHaveLength(3);expect(cards.map((n:MWElement)=>n.children[0].src)).toEqual(['/img/ui-crafted/engraving/ember_edge.webp','/img/ui-crafted/engraving/tide_breath.webp','/img/ui-crafted/engraving/storm_eye.webp']);
