@@ -11,6 +11,7 @@ import { ENCOUNTER_ART } from '../data/encounter-art.js';
 import { weeklyFrontier } from '../data/seasonal-content.js';
 import { ConquestRoutes, ConquestResult } from './conquests.jsx';
 import { retryEnergyForResult } from '../game/run-history.js';
+import { personalResultLabel } from '../ui/personal-goal-labels.js';
 import './hub.css';
 import './app-content.css';
 import './depths.css';
@@ -57,6 +58,7 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
         <div className="exp-result-summary">
           <div className="exp-result-heading"><h2>{result.win?'원정 승리':'원정 패배'}</h2><p className="exp-result-route">{result.name}</p><small>{result.kind==='arena'?'결투장':result.depth==='deep'?'심층 원정':'기본 원정'}{result.riftId?' · 균열':''}{result.conquestId?' · 전술 공략':''}</small></div>
           <div className="exp-outcome-stats"><span><b>{result.kills}</b>처치</span><span><b>{result.combo}</b>최대 콤보</span><span><b>{Math.floor(result.time)}초</b>전투 시간</span></div>
+          {app.battle?.result?.masterworks?.personalGoal&&<p aria-label="이번 출격의 개인 목표">{personalResultLabel(app.battle.result.masterworks.personalGoal)}</p>}
         </div>
         {result.routeObjective?.pages && <p aria-label="기록 복원 결과">기록 복원 {result.routeObjective.progress}/{result.routeObjective.target} · {result.routeObjective.pages.map(page=>page.label).join(' → ') || '복원한 기록 없음'}</p>}
         {result.routeObjective?.constellations && <p aria-label="별자리 복원 결과">별자리 복원 {result.routeObjective.progress}/{result.routeObjective.target} · {result.routeObjective.constellations.map(station=>station.label).join(' → ') || '복원한 별자리 없음'} · 오답 {result.routeObjective.mistakes}회</p>}

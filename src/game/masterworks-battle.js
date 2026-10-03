@@ -8,6 +8,7 @@ import { audio } from '../engine/audio.js';
 import { applyRiftEnemy } from './journey-rifts.js';
 import { RiftEncounters, RIFT_REINFORCEMENT, isRiftDungeon } from './rift-encounters.js';
 import { runHistoryContext, runDetailsForBattle } from './run-history.js';
+import { capturePersonalGoal, evaluatePersonalGoal } from './run-personal-goals.js';
 
 export class Battle extends RpgBattle {
   constructor(app) {
@@ -18,7 +19,11 @@ export class Battle extends RpgBattle {
   }
   async start(...args) {
     this.riftEncounter?.dispose();this.riftEncounter=null;
-    await super.start(...args);
+    const pendingStart=super.start(...args),generation=this._startGeneration,stage=args[0];
+    await pendingStart;
+    // Asset preparation can complete after stop or a newer start. Only the
+    // current living stage may issue a personal run id and freeze its goal.
+    if(!Number.isSafeInteger(generation)||generation!==this._startGeneration||this.stage!==stage||!this.active||!this.player?.alive)return;
     // Party runs are server-scoped and must not write or depend on a personal save.
     const ticket = this.stage?.party
       ? {ok:true,id:this.stage.party.runId || `party:${this.stage.code}`}
@@ -27,7 +32,8 @@ export class Battle extends RpgBattle {
     const s = this.masterworks.s;
     this.run = {id:ticket.id,picked:[],autoPicked:0,round:0,queue:[],storySeen:false,settled:false,renown:0,perfects:0,breaks:0,
       enabled:!this.stage.party && this.stage.expedition?.kind !== 'arena', challenges:[...s.challengeIds], permanent:masteryEffects(s),
-      historyContext:runHistoryContext(this.stage,args[1],args[2]?.level),controlSeen:0};
+      historyContext:runHistoryContext(this.stage,args[1],args[2]?.level),controlSeen:0,
+      personalGoal:!this.stage.party && this.stage.expedition?.kind !== 'arena' ? capturePersonalGoal(s) : null};
     this.run.difficulty = difficultyEffects(this.run.enabled ? this.run.challenges : []);
     this.buildBase = {...this.player.stats}; this.effects = {}; this.applyBuild();
     this.runKills = new WeakSet(); this.counterUntil = 0; this.chainUntil = 0;
@@ -229,7 +235,8 @@ export class Battle extends RpgBattle {
       s.history.push({runId:this.run.id,floor:this.stage.idx,outcome,boonIds:[...new Set(this.run.picked)],details:runDetailsForBattle(this)});
       s.history=s.history.slice(-20); this.rpgDirty=true; this.flushRpg();
     }
-    if(this.result) this.result.masterworks={renown:this.run.renown,breaks:this.run.breaks,perfects:this.run.perfects,boons:[...this.run.picked]};
+    if(this.result) this.result.masterworks={renown:this.run.renown,breaks:this.run.breaks,perfects:this.run.perfects,boons:[...this.run.picked],
+      personalGoal:evaluatePersonalGoal(this.run.personalGoal,runDetailsForBattle(this),outcome)};
     // Defeat presents its result synchronously, before this final history save.
     if(!this.stage.expedition&&this.result)this.ui.refreshResultGrowth?.(this.result);
     if(this.app.expeditionUI?.result)this.app.expeditionUI.render();
