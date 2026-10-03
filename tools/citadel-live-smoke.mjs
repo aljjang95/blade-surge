@@ -9,6 +9,11 @@ import { execFileSync } from 'node:child_process';
 import { launchOpts } from './chrome.mjs';
 import { CITADEL_HUB_HOTSPOTS } from '../src/data/citadel-hub.js';
 
+function isCloudflareBeacon(url, method) {
+  return ['GET', 'HEAD'].includes(method) && url.origin === 'https://static.cloudflareinsights.com' &&
+    !url.username && !url.password && !url.search && /^\/beacon\.min\.js\/v[0-9a-f]+$/.test(url.pathname);
+}
+
 const root = path.resolve(import.meta.dirname, '..');
 const arg = name => process.argv.find(value => value.startsWith(`--${name}=`))?.slice(name.length + 3);
 const origin = arg('origin'), expectedSha = arg('expected-sha'), run = arg('run');
@@ -26,7 +31,7 @@ const report = {
   status: 'running', origin, expectedSha, started: new Date().toISOString(),
   driver: { path: path.relative(root, import.meta.filename), sha256: hash(driverBytes) },
   scope: 'Public release byte identity and one isolated native Chromium 390×844 portrait touch smoke on the unchanged naturally earned fixture. No physical-phone, FPS, subjective human-play, purchase, or full QA-repeat claim.',
-  sources: {}, files: [], fetchConcurrency: 8, networkErrors: [], runtimeErrors: [], consoleErrors: [], browserAssetResponses: [], blockedRequests: [], screenshots: [],
+  sources: {}, files: [], fetchConcurrency: 8, networkErrors: [], runtimeErrors: [], consoleErrors: [], browserAssetResponses: [], blockedRequests: [], intentionallyBlockedTelemetry: [], screenshots: [],
 };
 const save = () => fs.writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
 const finiteDeadline = setTimeout(() => { report.status = 'fail'; report.failure = 'Finite smoke exceeded its 8-minute wall-time guard'; void save().finally(() => process.exit(1)); }, 480000);
@@ -163,6 +168,10 @@ try {
   await context.route('**/*', async route => {
     const request = route.request(), url = new URL(request.url());
     const publicHost = url.origin === origin || ['fonts.googleapis.com', 'fonts.gstatic.com'].includes(url.hostname);
+    if (isCloudflareBeacon(url, request.method())) {
+      report.intentionallyBlockedTelemetry.push({ url: request.url(), method: request.method(), reason: 'Cloudflare analytics beacon intentionally blocked' });
+      await route.abort('blockedbyclient'); return;
+    }
     if (!['GET', 'HEAD'].includes(request.method()) || !publicHost || (url.origin === origin && url.pathname.startsWith('/api/'))) {
       report.blockedRequests.push({ url: request.url(), method: request.method() }); await route.abort('blockedbyclient'); return;
     }
@@ -178,6 +187,8 @@ try {
     if (response.status() >= 400 && (['script', 'stylesheet', 'image', 'font', 'media'].includes(response.request().resourceType()) || /\.(?:glb|gltf|png|jpe?g|webp|svg|woff2?|js|css|mp3|ogg|wav)$/.test(pathname))) report.networkErrors.push({ url: response.url(), status: response.status() });
   });
   page.on('requestfailed', request => {
+    const intentionallyBlocked = report.intentionallyBlockedTelemetry.some(entry => entry.url === request.url() && entry.method === request.method());
+    if (intentionallyBlocked && request.failure()?.errorText?.startsWith('net::ERR_BLOCKED_BY_CLIENT')) return;
     if (['script', 'stylesheet', 'image', 'font', 'media'].includes(request.resourceType()) || new URL(request.url()).pathname.startsWith('/models/citadel-hub-v1/')) report.networkErrors.push({ url: request.url(), failure: request.failure()?.errorText });
   });
   await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 45000 });
