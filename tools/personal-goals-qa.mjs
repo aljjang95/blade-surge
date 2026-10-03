@@ -66,7 +66,8 @@ function energyTransition(before,after,cost,label){
     &&before.energyT<=before.observedAt&&after.energyT<=after.observedAt&&after.observedAt>=before.observedAt
     &&max===after.energyMax&&max===ENERGY.max,`${label}: ambiguous native energy observation`);
   let regained=0,saturated=false;
-  if(before.energy>=max)qaAssert(before.energy===max&&after.energy===max-cost&&after.energyT>=before.observedAt,`${label}: native full-energy charge`);
+  if(before.energy>=max)qaAssert(before.energy===max&&after.energy===max-cost
+    &&((cost===0&&after.energyT===before.energyT)||after.energyT>=before.observedAt),`${label}: native full-energy transition`);
   else{const ticks=(after.energyT-before.energyT)/period,due=Math.floor((after.observedAt-before.energyT)/period);
     if(Number.isSafeInteger(ticks)&&ticks>=0&&ticks<=due&&before.energy+ticks<max){regained=ticks;qaAssert(after.energy===before.energy+ticks-cost,`${label}: unexplained native energy delta`);}
     else{saturated=true;regained=max-before.energy;qaAssert(due>=regained&&after.energy===max-cost&&after.energyT>=before.observedAt&&after.energyT>=before.energyT+regained*period,`${label}: unexplained real energy cap`);}}
