@@ -77,7 +77,7 @@ test('goal departure hints preserve the existing depth/rift/conquest route and c
   const before=structuredClone(details);
   expect(personalDeparture(details)).toEqual({kind:'dungeon',label:expect.any(String),energy:4,id:'glass_garden',options:{rift:false,depth:'standard',conquestId:undefined}});
   expect(personalDeparture({...details,route:{...details.route,depth:'deep'}})?.energy).toBe(6);
-  expect(personalDeparture({...details,route:{...details.route,riftId:'iron'}})?.options.rift).toBe(true);
+  expect(personalDeparture({...details,route:{...details.route,riftId:'iron'}})?.options?.rift).toBe(true);
   expect(details).toEqual(before);
 });
 
@@ -135,7 +135,7 @@ function inheritedGoalFixture(metric:'time'|'perfects'|'breaks'|null='time') {
     this.stage=stage;this.active=false;this.result=null;
     return new Promise<void>(resolve=>starts.push({stage,generation,complete:()=>{
       if(this._startGeneration===generation&&this.stage===stage){
-        const stats=heroStats(HEROES[heroId],heroState);
+        const stats=heroStats(HEROES[heroId as keyof typeof HEROES],heroState);
         this.heroId=heroId;this.player={stats,maxHp:stats.hp,hp:stats.hp,alive:true,auto:true,pos:new THREE.Vector3(),play:noop,dispose:noop};
         this.world={rooms:[{id:0,type:'start',cleared:true},{id:1,type:'boss',cleared:true}]};
         Object.assign(this,{active:true,paused:false,elapsed:0,roomsCleared:1,kills:0,maxCombo:0,dmgDealt:0,revived:0,treasureRooms:0});

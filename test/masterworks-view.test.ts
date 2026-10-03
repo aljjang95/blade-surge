@@ -95,8 +95,9 @@ test('journal personal best uses the rolling twenty records and exposes one inli
   view.tab='journal';view.app={eco:{s:{selected:'knight'},hero:()=>({level:5})},journey:{s:{autoBattle:true}}};
   view.battle.masterworks.s.history=[{runId:1,floor:1,outcome:'victory',boonIds:[],details:d},{runId:2,floor:1,outcome:'defeat',boonIds:[],details:null}];
   view.battle.masterworks.s.personalGoal={context:d,metric:'perfects'};view.battle.masterworks.goal=()=>({ok:true});
-  const before=JSON.stringify(view.battle.masterworks.s);view.renderJournal();const nodes=view.content.all();
+  const before=JSON.stringify(view.battle.masterworks.s);view.renderJournal();const nodes:MWElement[]=view.content.all();
   const panel=nodes.find(n=>n.attrs['aria-label']==='최근 기록의 개인 목표');
+  if(!panel)throw Error('Personal goal panel missing');
   expect(panel.text()).toContain('최근 20개');expect(panel.text()).toContain('비교 승리 1회');expect(panel.text()).toContain('정확 회피 0회');
   expect(panel.text()).toContain('정확 회피 1회 이상');expect(panel.text()).toContain('출격 Lv.4');expect(panel.text()).toContain('출격 Lv.5');
   expect(panel.text()).toContain('조건이 달라지면 비교하지 않습니다');expect(panel.text()).toContain('에너지 4');
@@ -108,7 +109,7 @@ test('journal personal best uses the rolling twenty records and exposes one inli
 test('invalid history and duplicate run IDs never offer a goal selector or a departure',()=>withMWDOM(()=>{
   const view=renderFixture(),details={route:{kind:'dungeon',id:'glass_garden',depth:'standard'},heroId:'knight',heroLevel:4,control:'auto',timeSec:1,perfects:0,breaks:0};
   view.battle.masterworks.s.history=[{runId:1,floor:1,outcome:'victory',boonIds:[],details},{runId:1,floor:1,outcome:'defeat',boonIds:[],details:null}];
-  view.renderJournal();const nodes=view.content.all();expect(nodes.filter(n=>n.dataset.goalRun||n.dataset.personalGoalMetric||n.dataset.personalGoalDeparture)).toHaveLength(0);
+  view.renderJournal();const nodes:MWElement[]=view.content.all();expect(nodes.filter(n=>n.dataset.goalRun||n.dataset.personalGoalMetric||n.dataset.personalGoalDeparture)).toHaveLength(0);
   expect(view.content.text()).toContain('기록된 출격을 마치면 목표를 선택');
 }));
 
