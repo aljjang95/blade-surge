@@ -1,0 +1,36 @@
+{
+  "generator": "image_gen.imagegen",
+  "date": "2026-10-03",
+  "conceptReview": "independent concept pass before full sheet batch; refined previews reviewed",
+  "images": [
+    {
+      "file": "docs/assets/citadel-hub-v1/reference-source/character-sheet-gpt.png",
+      "sha256": "6ca077df2b95d3769cf61c5b0a6484e8ff2ad09e0827b5c4ead1b1b85959e701"
+    },
+    {
+      "file": "docs/assets/citadel-hub-v1/reference-source/terrain-sheet-gpt.png",
+      "sha256": "22ed81d3599808230be32b311044703756fcc058f31b52b325ed995928d81c6b"
+    },
+    {
+      "file": "docs/assets/citadel-hub-v1/reference-source/glass-garden-trellis-reference.png",
+      "sha256": "2f2b397e30aa742346c1dea4097470667fddcf65984803c1359342880bf02fa0"
+    }
+  ],
+  "transparency": {
+    "character-sheet-gpt.png": false,
+    "terrain-sheet-gpt.png": false,
+    "glass-garden-trellis-reference.png": true
+  },
+  "trellis": {
+    "localStatus": "unavailable",
+    "hostedStatus": "quota-blocked",
+    "outputGlb": null,
+    "reason": "No local TRELLIS/torch or GPU. One authorized anonymous official TRELLIS.2 run accepted and preprocessed reference, then image_to_3d failed provider quota; no GLB produced and no paid fallback used.",
+    "source": "https://microsoft-trellis-2.hf.space",
+    "spaceRevision": "ebf60b20fc5a4607f90a1c11c0aab0ceeda5429d",
+    "referenceSha256": "2f2b397e30aa742346c1dea4097470667fddcf65984803c1359342880bf02fa0",
+    "evidence": "/workspace/.blade-surge-tools/trellis-citadel/090408fc-b5ed-4408-975a-ed1f0c97804b/result.json"
+  },
+  "blender": "5.2.1 LTS",
+  "buildSeconds": 51.48
+}
