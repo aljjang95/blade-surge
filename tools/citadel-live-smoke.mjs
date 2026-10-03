@@ -38,11 +38,11 @@ async function publicBytes(file) {
   assert(response.ok, `${file}: HTTP ${response.status}`);
   return Buffer.from(await response.arrayBuffer());
 }
-async function compare(file, group, declared = null) {
+async function compare(file, group, declared = null, requestedPath = file) {
   const local = await fs.readFile(path.join(root, 'dist', file.slice(1)));
   if (declared) assert(local.length === declared.bytes && hash(local) === declared.sha256, `${file}: local dist differs from its manifest`);
-  const live = await publicBytes(file);
-  const row = { path: file, group, localBytes: local.length, liveBytes: live.length, localSha256: hash(local), liveSha256: hash(live), match: local.length === live.length && hash(local) === hash(live) };
+  const live = await publicBytes(requestedPath);
+  const row = { path: file, requestedPath, group, localBytes: local.length, liveBytes: live.length, localSha256: hash(local), liveSha256: hash(live), match: local.length === live.length && hash(local) === hash(live) };
   report.files.push(row);
   assert(row.match, `${file}: deployed bytes differ from local dist`);
   return live;
@@ -138,7 +138,7 @@ try {
   assert(report.localVersion.sha === expectedSha && report.localVersion.dirty === false, 'Local dist must carry the expected SHA and dirty:false');
   report.liveVersion = JSON.parse(await compare('/version.json', 'release-version'));
   assert(report.liveVersion.sha === expectedSha && report.liveVersion.dirty === false, 'Public version is not the expected clean release');
-  const index = (await compare('/index.html', 'compiled-index')).toString('utf8');
+  const index = (await compare('/index.html', 'compiled-index', null, '/')).toString('utf8');
   assert(!index.includes('/@vite/client') && !index.includes('/src/main.js'), 'Public page serves a development build');
   const indexFiles = [...new Set([...index.matchAll(/(?:src|href)=["'](\/assets\/index-[^"']+\.(?:js|css))["']/g)].map(match => match[1]))];
   assert(indexFiles.some(file => file.endsWith('.js')) && indexFiles.some(file => file.endsWith('.css')), 'Compiled index JS/CSS references are missing');
