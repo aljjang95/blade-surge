@@ -8,7 +8,8 @@ for(const theme of ['crypt','throne','abyss']) test(`${theme} tower has determin
   const rooms = JSON.stringify(floor.rooms), rng = floor.rand;
   const group=buildRegionArchitecture(floor,theme), repeat=buildRegionArchitecture(floor,theme);
   expect(group.children.length).toBeLessThanOrEqual(floor.rooms.length*3);
-  expect(group.children.length).toBeGreaterThanOrEqual(floor.rooms.length*2);
+  expect(group.children.length).toBeLessThan(group.userData.roomGeometry.length);
+  expect(new Set(group.userData.roomGeometry.map((range:any)=>range.roomId)).size).toBe(floor.rooms.length);
   expect(group.userData.roomDetails.length).toBe(floor.rooms.length);
   expect(new Set(group.userData.roomDetails.map((d:any)=>d.role)).size).toBe(5);
   expect(group.userData.roomDetails.some((d:any)=>d.thresholds>0)).toBe(true);
@@ -36,11 +37,15 @@ test('fully connected tower room has ground detail and no central tall obstructi
   const room={id:0,x:0,z:0,w:20,h:20,gx:0,gy:0,type:'normal',links:[1,2,3,4]};
   const neighbors=[[1,0],[-1,0],[0,1],[0,-1]].map(([gx,gy],i)=>({...room,id:i+1,gx,gy,x:gx*34,z:gy*34,links:[0]}));
   const group=buildRegionArchitecture({rooms:[room,...neighbors],corridors:[]},'crypt');
-  const first=group.children.filter(n=>n.name.startsWith('crypt-room-0-')) as THREE.Mesh[];
-  for(const mesh of first) {
+  let checked = 0;
+  for(const mesh of group.children as THREE.Mesh[]) {
     const p=mesh.geometry.attributes.position;
-    for(let i=0;i<p.count;i++) expect(p.getY(i)).toBeLessThan(.11);
+    for(const range of mesh.userData.roomRanges.filter((range:any)=>range.roomId===0)) {
+      checked += range.count;
+      for(let i=range.start;i<range.start+range.count;i++) expect(p.getY(i)).toBeLessThan(.11);
+    }
   }
+  expect(checked).toBeGreaterThan(0);
   expect(group.userData.roomDetails[0].landmark).toBe(false);
   group.userData.dispose();
 });

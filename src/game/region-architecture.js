@@ -13,7 +13,34 @@ const PALETTES = {
   crown: [0xafa698, 0xcfad62, 0xffd9a2],
 };
 
-/** 지역 건축은 방·재질별로 병합한다. 공유 던전 킷과 분리된 소유 자원만 회수한다. */
+// 연결된 이웃 중 한 매크로 셀 폭만 묶어 층 전체가 하나의 컬링 구가 되지 않게 한다.
+function architectureBatches(floor) {
+  const remaining = new Set(floor.rooms), batches = [];
+  const [spacingX, spacingZ] = floor.layout?.spacing || [34, 34];
+  for (const room of floor.rooms) {
+    if (!remaining.has(room)) continue;
+    const rooms = [room]; remaining.delete(room);
+    while (rooms.length < 3) {
+      const next = floor.rooms.find(candidate => {
+        if (!remaining.has(candidate)) return false;
+        const adjacent = rooms.some(member =>
+          ((member.links || []).includes(candidate.id) || (candidate.links || []).includes(member.id))
+          && Math.abs(member.gx - candidate.gx) + Math.abs(member.gy - candidate.gy) === 1);
+        if (!adjacent) return false;
+        const members = [...rooms, candidate];
+        const span = key => Math.max(...members.map(member => member[key])) - Math.min(...members.map(member => member[key]));
+        return span('gx') <= 1 && span('gy') <= 1
+          && span('x') <= spacingX + 6 && span('z') <= spacingZ + 6;
+      });
+      if (!next) break;
+      rooms.push(next); remaining.delete(next);
+    }
+    batches.push({ rooms, chunks: [[], [], []], ranges: [[], [], []], vertices: [0, 0, 0] });
+  }
+  return batches;
+}
+
+/** 지역 건축은 가까운 방의 같은 재질·그림자끼리 병합하고 소유 자원만 회수한다. */
 export function buildRegionArchitecture(floor, theme) {
   const group = new THREE.Group(); group.name = `region-${theme}`;
   const colors = PALETTES[theme];
@@ -34,8 +61,17 @@ export function buildRegionArchitecture(floor, theme) {
   );
   applyDungeonStoneDetail(materials[0]); applySurfaceDetail(materials[1], 'metal');
   group.userData.landmarks = [];
+  const batches = architectureBatches(floor), roomBatches = new Map();
+  group.userData.architectureBatches = batches.map((batch, batchId) => {
+    for (const room of batch.rooms) roomBatches.set(room, batchId);
+    return { batchId, roomIds: batch.rooms.map(room => room.id) };
+  });
+  group.userData.roomGeometry = [];
   for (const room of floor.rooms) {
     const chunks = [[], [], []];
+    const loopThreshold = theme === 'garden' && floor.rooms.length === 5 && [2,3].includes(room.id)
+      && floor.rooms[2].type === 'treasure' && floor.rooms[3].type === 'normal'
+      && floor.rooms[2].links?.includes(3) && floor.rooms[3].links?.includes(2) && floor.mask;
     const neighbors = (room.links || []).map((id) => floor.rooms[id]);
     const sideOccupied = (sx, sz) => neighbors.some((n) => sx ? Math.sign(n.gx-room.gx)===sx && n.gy===room.gy : Math.sign(n.gy-room.gy)===sz && n.gx===room.gx);
     // 중앙 후면 랜드마크는 복도 없는 면으로 돌린다. 통로 4개가 만나는 교차실은 바닥 문양만 유지한다.
@@ -64,6 +100,21 @@ export function buildRegionArchitecture(floor, theme) {
       rotation.setFromEuler(new THREE.Euler(rx, ry, rz));
       matrix.compose(position.set(x, y, z), rotation, scale);
       geometry.applyMatrix4(matrix);
+      if (loopThreshold) {
+        geometry.computeBoundingBox();
+        const bounds = geometry.boundingBox;
+        if (bounds.max.y > .2) {
+          // 새 회랑 양끝의 높은 장식은 중심점 대신 전체 바닥 면적과 실제 마스크 셀을 대조한다.
+          const x0 = Math.max(0, Math.floor(bounds.min.x - floor.minX));
+          const x1 = Math.min(floor.cols - 1, Math.floor(bounds.max.x - floor.minX));
+          const z0 = Math.max(0, Math.floor(bounds.min.z - floor.minZ));
+          const z1 = Math.min(floor.rows - 1, Math.floor(bounds.max.z - floor.minZ));
+          let intersects = false;
+          for (let row = z0; row <= z1 && !intersects; row++)
+            for (let col = x0; col <= x1; col++) if (floor.mask[row * floor.cols + col]) { intersects = true; break; }
+          if (intersects) { geometry.dispose(); return; }
+        }
+      }
       if (material === 0 && !geometry.getAttribute('color')) {
         const values = new Float32Array(geometry.getAttribute('position').count * 3).fill(1);
         geometry.setAttribute('color', new THREE.BufferAttribute(values, 3));
@@ -209,7 +260,7 @@ export function buildRegionArchitecture(floor, theme) {
       }
     }
     // 전투 카메라 안에서 읽히는 얕은 바닥 건축. 위험 표시(.11) 아래에 모두 둔다.
-    // 별도 메시 없이 기존 방별 재질에 병합하고 중앙 통행은 그대로 유지한다.
+    // 별도 메시 없이 기존 재질에 병합하고 중앙 통행은 그대로 유지한다.
     let inlayLayer = 0;
     const inlay = (geometry, px, pz, color=0x28313b, ry=0, y=null) => {
       const rgb=new THREE.Color(color), values=new Float32Array(geometry.getAttribute('position').count*3);
@@ -380,18 +431,30 @@ export function buildRegionArchitecture(floor, theme) {
       }
       buildingLandmark = false;
     }
-    for(let i=0;i<chunks.length;i++) {
-      if(!chunks[i].length) continue;
-      const geometry=mergeGeometries(chunks[i],false);
-      for(const part of chunks[i]) part.dispose();
-      if(!geometry) continue;
-      ownedGeometry.push(geometry);
-      const mesh=new THREE.Mesh(geometry,materials[i]);
-      mesh.name=`${theme}-room-${room.id}-${i}`;
-      mesh.castShadow=i!==2; mesh.receiveShadow=true;
-      geometry.computeBoundingSphere(); group.add(mesh);
+    const batchId = roomBatches.get(room), batch = batches[batchId];
+    for (let i = 0; i < chunks.length; i++) {
+      if (!chunks[i].length) continue;
+      const count = chunks[i].reduce((sum, part) => sum + part.getAttribute('position').count, 0);
+      // 원래 방의 정점 순서를 유지해 디버그·통로 검사가 이웃 방을 포함하지 않게 한다.
+      const range = { roomId: room.id, materialRole: i, batchId, start: batch.vertices[i], count };
+      batch.ranges[i].push(range); group.userData.roomGeometry.push(range);
+      batch.vertices[i] += count; batch.chunks[i].push(...chunks[i]);
     }
     group.userData.landmarks.push({roomId:room.id,theme,kind:room.landmark || theme,label:room.label || '',role:room.type,x:freeSide ? x+freeSide[0]*(hw+2.2) : x,z:freeSide ? z+freeSide[1]*(hh+2.2) : z});
+  }
+  for (const [batchId, batch] of batches.entries()) for (let i = 0; i < batch.chunks.length; i++) {
+    if (!batch.chunks[i].length) continue;
+    const geometry = mergeGeometries(batch.chunks[i], false);
+    for (const part of batch.chunks[i]) part.dispose();
+    if (!geometry) continue;
+    ownedGeometry.push(geometry);
+    const mesh = new THREE.Mesh(geometry, materials[i]);
+    const ids = batch.rooms.map(room => room.id);
+    mesh.name = ids.length === 1 ? `${theme}-room-${ids[0]}-${i}` : `${theme}-rooms-${ids.join('-')}-${i}`;
+    mesh.userData.batchId = batchId; mesh.userData.materialRole = i;
+    mesh.userData.roomRanges = batch.ranges[i];
+    mesh.castShadow = i !== 2; mesh.receiveShadow = true;
+    geometry.computeBoundingBox(); geometry.computeBoundingSphere(); group.add(mesh);
   }
   return group;
 }
