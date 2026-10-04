@@ -23,10 +23,71 @@ export const ABILITY_VFX_PROFILES = Object.freeze({
   void: Object.freeze({ ground: 'circle_demon', flash: 'singularity', secondary: 'blood_burst', color: 0x8f55ff, accent: 0xd5a6ff, radius: 3.2, burst: 18, light: 1.1 }),
 });
 
-async function waitForCompilation(compiling) {
-  let timer;
-  try { return await Promise.race([compiling, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('render preparation timeout')), 30000); })]); }
-  finally { clearTimeout(timer); }
+function checkPreparedPrograms(renderer, gl, properties, bindings) {
+  if (gl.isContextLost()) throw new Error('render preparation context lost');
+  if (renderer.getContext() !== gl || renderer.properties !== properties) throw new Error('render preparation renderer state changed');
+  for (const [material, program] of bindings) {
+    if (!properties.has(material) || properties.get(material).currentProgram !== program || !program.program) {
+      throw new Error('render preparation material or program was disposed or replaced');
+    }
+  }
+}
+
+function compilePreparedScene(renderer, scene, camera, targetScene, isCurrent) {
+  if (!isCurrent()) return Promise.resolve(false);
+  // r170 compileAsync's timer reads mutable material properties without a
+  // cancellation/error guard. Own the same readiness cadence over captured
+  // programs instead, so stop/context recovery cannot leave zombie timers.
+  if (THREE.REVISION !== '170' || typeof renderer.compile !== 'function'
+    || typeof renderer.getContext !== 'function' || typeof renderer.extensions?.get !== 'function'
+    || typeof renderer.properties?.has !== 'function' || typeof renderer.properties?.get !== 'function') {
+    return Promise.reject(new Error('render preparation requires Three r170 compilation API'));
+  }
+  const gl = renderer.getContext(), properties = renderer.properties;
+  if (typeof gl?.isContextLost !== 'function') return Promise.reject(new Error('render preparation has no WebGL context API'));
+  let pending;
+  try {
+    checkPreparedPrograms(renderer, gl, properties, []);
+    const materials = renderer.compile(scene, camera, targetScene);
+    pending = new Map();
+    for (const material of materials) {
+      if (!properties.has(material)) throw new Error('render preparation material was not compiled');
+      const program = properties.get(material).currentProgram;
+      if (!program?.program || typeof program.isReady !== 'function') throw new Error('render preparation program readiness is unavailable');
+      pending.set(material, program);
+    }
+    checkPreparedPrograms(renderer, gl, properties, pending);
+  } catch (error) { return Promise.reject(error); }
+  return new Promise((resolve, reject) => {
+    let poll, deadline, finished = false;
+    const finish = (ready, error = null) => {
+      if (finished) return; finished = true;
+      if (poll !== undefined) clearTimeout(poll);
+      if (deadline !== undefined) clearTimeout(deadline);
+      if (error) reject(error); else resolve(ready);
+    };
+    const check = () => {
+      poll = undefined;
+      if (finished) return;
+      try {
+        if (!isCurrent()) { finish(false); return; }
+        checkPreparedPrograms(renderer, gl, properties, pending);
+        for (const [material, program] of pending) {
+          checkPreparedPrograms(renderer, gl, properties, [[material, program]]);
+          const ready = program.isReady();
+          checkPreparedPrograms(renderer, gl, properties, [[material, program]]);
+          if (ready) pending.delete(material);
+        }
+        if (!pending.size) finish(true); else poll = setTimeout(check, 10);
+      } catch (error) { finish(false, error); }
+    };
+    deadline = setTimeout(() => finish(false, new Error('render preparation timeout')), 30000);
+    try {
+      // Match r170: KHR gets an immediate first check; otherwise wait 10 ms.
+      if (renderer.extensions.get('KHR_parallel_shader_compile') !== null) check();
+      else poll = setTimeout(check, 10);
+    } catch (error) { finish(false, error); }
+  });
 }
 
 async function prepareObjectReflection(renderer, objects, isCurrent) {
@@ -38,11 +99,11 @@ async function prepareObjectReflection(renderer, objects, isCurrent) {
     || typeof renderer.properties?.has !== 'function' || typeof renderer.properties?.get !== 'function') {
     throw new Error('targeted render preparation requires Three r170 program reflection');
   }
-  const gl = renderer.getContext(), programs = new Set();
+  const gl = renderer.getContext(), properties = renderer.properties, programs = new Set(), bindings = new Map();
   if (typeof gl?.isContextLost !== 'function' || typeof gl.getProgramParameter !== 'function' || typeof gl.LINK_STATUS !== 'number') {
     throw new Error('targeted render preparation has no WebGL readiness API');
   }
-  const checkContext = () => { if (gl.isContextLost()) throw new Error('render preparation context lost'); };
+  const checkContext = () => checkPreparedPrograms(renderer, gl, properties, bindings);
   checkContext();
   for (const object of objects) object.traverse(o => {
     for (const material of Array.isArray(o.material) ? o.material : [o.material]) {
@@ -52,6 +113,7 @@ async function prepareObjectReflection(renderer, objects, isCurrent) {
       if (!program?.program || typeof program.getUniforms !== 'function' || typeof program.getAttributes !== 'function') {
         throw new Error('targeted render preparation program reflection is unavailable');
       }
+      bindings.set(material, program);
       programs.add(program);
     }
   });
@@ -260,9 +322,9 @@ export class FX {
       });
       for (const texture of textures) if (texture) renderer.initTexture(texture);
       renderer.setRenderTarget(renderTarget);
-      await waitForCompilation(renderer.compileAsync(this.scene, this.camera));
+      await compilePreparedScene(renderer, this.scene, this.camera, null, valid);
       if (!valid()) return false;
-      await waitForCompilation(renderer.compileAsync(warm, this.camera, this.scene));
+      await compilePreparedScene(renderer, warm, this.camera, this.scene, valid);
       if (!valid()) return false;
       if (renderer.shadowMap.enabled) {
         // The shadow renderer uses a fog-free scene and depth materials of its
@@ -286,7 +348,7 @@ export class FX {
           const object = o.clone(false); object.material = Array.isArray(o.material) ? o.material.map(depth) : depth(o.material); shadowWarm.add(object);
         };
         this.scene.traverse(addShadow); warm.traverse(addShadow);
-        await waitForCompilation(renderer.compileAsync(shadowWarm, this.camera, shadowTarget));
+        await compilePreparedScene(renderer, shadowWarm, this.camera, shadowTarget, valid);
         if (!valid()) return false;
       }
       return await prepareObjectReflection(renderer, readinessObjects, valid);
