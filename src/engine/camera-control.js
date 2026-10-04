@@ -36,8 +36,10 @@ export class CameraControls {
       if (!this.active || this.drag || (!onPad && (event.pointerType === 'touch' || event.button !== 2 || event.target.closest?.(ui)))) return;
       if (onPad && event.button !== 0 && event.button !== 2) return;
       const surface = onPad ? this.pad : event.target;
-      this.drag = { id: event.pointerId, x: event.clientX, y: event.clientY, ...this.value, surface };
+      const value = this.currentValue();
+      this.drag = { id: event.pointerId, x: event.clientX, y: event.clientY, ...value, surface };
       try { surface.setPointerCapture?.(event.pointerId); } catch { this.drag = null; return; }
+      this.value = value;
       event.preventDefault();
     });
     document.addEventListener('pointermove', event => {
@@ -58,16 +60,18 @@ export class CameraControls {
     });
     document.addEventListener('wheel', event => {
       if (!this.active || event.ctrlKey || event.metaKey || !Number.isFinite(event.deltaY) || event.deltaY === 0 || (event.target.closest?.(ui) && !this.pad?.contains(event.target))) return;
-      event.preventDefault(); this.set({ ...this.value, zoom: this.value.zoom - Math.sign(event.deltaY) * 5 });
+      const value = this.currentValue();
+      event.preventDefault(); this.set({ ...value, zoom: value.zoom - Math.sign(event.deltaY) * 5 });
     }, { passive: false });
+    const zoomBy = delta => { const value = this.currentValue(); this.set({ ...value, zoom: value.zoom + delta }); };
     for (const [id, action] of Object.entries({ 'battle-camera-reset': () => this.reset(),
-      'battle-camera-zoom-in': () => this.set({ ...this.value, zoom: this.value.zoom + 10 }),
-      'battle-camera-zoom-out': () => this.set({ ...this.value, zoom: this.value.zoom - 10 }) })) {
+      'battle-camera-zoom-in': () => zoomBy(10),
+      'battle-camera-zoom-out': () => zoomBy(-10) })) {
       document.getElementById(id)?.addEventListener('click', () => { if (this.active) action(); });
     }
     this.pad?.addEventListener('keydown', event => {
       if (!this.active || event.ctrlKey || event.metaKey || event.altKey) return;
-      const v = { ...this.value };
+      const v = this.currentValue();
       if (event.key === 'ArrowLeft') v.yaw -= 8;
       else if (event.key === 'ArrowRight') v.yaw += 8;
       else if (event.key === 'ArrowUp') v.pitch += 3;
@@ -80,6 +84,8 @@ export class CameraControls {
     });
   }
   get active() { return this.app.mode === 'battle' && !!this.app.battle?.active && !this.app.battle.paused && !document.getElementById('modal')?.classList.contains('show'); }
+  // 지역 시점이 바뀐 뒤에도 새 조작은 현재 화면의 값을 기준으로 시작한다.
+  currentValue() { return normalizeBattleCamera(this.app.renderer.battleCamera || this.value); }
   set(value) { this.value = normalizeBattleCamera(value); this.app.renderer.battleCamera = this.value; }
   reset() { this.finish(); this.set({}); }
   finish() {
