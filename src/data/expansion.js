@@ -43,6 +43,8 @@ export const DUNGEONS = [
   }),
   dungeon('bellfall_crypt', '종락의 지하 회랑', 'garden', 1, 2, 'glass_leaf', '멈춘 종 아래의 회랑을 열고, 시간을 삼킨 수호자를 깨우세요.', {
     art: RIFT_ART.glass_hour_sovereign, accent: '#86e4d0', subtitle: 'BELLFALL CRYPT',
+    supportCasting: Object.freeze({ enemyId: 'glass_tollmage', windupSeconds: .9,
+      healCue: '치유 준비 · 근접·강타로 중단', summonCue: '소환 준비 · 근접·강타로 중단' }),
     objective: '세 개의 종문을 순서대로 공명시키고 모든 구역을 정화한 뒤 시계유리의 주권자를 쓰러뜨리세요.',
     tactic: `각 종문의 적을 처치한 뒤 1번 → 2번 → 3번 순서로 중심의 빛 안에서 각각 연속 2초간 공명하세요. 순서가 아닌 종문은 기다리며, 종문 3곳과 모든 구역을 정화하면 보스 봉인이 풀립니다. ${ENEMIES.glass_hour_sovereign.tactic}`,
     bossEnemy: 'glass_hour_sovereign', bossHp: 14500, bossName: '시계유리의 주권자', rosterMode: 'bellfall',

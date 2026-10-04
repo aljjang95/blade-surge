@@ -1,4 +1,10 @@
 /* 중앙 전장을 비워 두고 상태와 의도적인 조작은 가장자리에 배치한다. */
+/* 짧은 상태어만 조정한다. 원래 애니메이션 이름·시간과 숫자는 유지한다. */
+#dmg-layer .dmg.status.compact-status{min-width:0;padding:2px 5px;font-size:12px;line-height:16px;letter-spacing:0;border-radius:4px;color:#eff4eb;background:#11251ee6;border-color:#b6cfbe88;text-shadow:0 1px 2px #000}
+#dmg-layer .compact-status[data-combat-status=block]{color:#d8e8ef;border-color:#99c4d6}
+#dmg-layer .compact-status[data-combat-status=guard-break]{color:#ffe0a0;border-color:#e5b866}
+#dmg-layer .compact-status[data-combat-status=posture-break]{color:#e5ceff;border-color:#be9dea}
+#dmg-layer .compact-status[data-combat-status=miss]{color:#e0e6da;border-color:#a6b4a0}
 .experience-v2.oath-visual #hud.battle-readability .hud-top{grid-template-columns:220px minmax(0,1fr) 112px;gap:14px;padding-top:0}
 .experience-v2.oath-visual #hud.battle-readability .hud-player{padding:7px 8px;background:#12251fd9;border-color:#b6b89e40;gap:7px}
 .experience-v2.oath-visual #hud.battle-readability .hud-portrait{flex:0 0 36px;width:36px;height:36px;border-color:#c3b17b}

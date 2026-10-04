@@ -22,6 +22,7 @@ export const EXPEDITION_LAYOUTS = {
 };
 // Keep fallback advice on the same contract as the published route card.
 const TACTICS = Object.fromEntries(DUNGEONS.map(d => [d.id, d.tactic]));
+const BELLFALL_SUPPORT_CASTING = DUNGEONS.find(dungeon => dungeon.id === 'bellfall_crypt').supportCasting;
 const DUELS = {
   rookie: { enemyId: 'garden_captain', pattern: ['slam','spin'], behavior: 'shield', hp: 6500, tactic: '푸른 가드 때 공격을 멈추고 강타 뒤 반격하세요. 강한 타격 4회로 방패를 깰 수 있습니다.' },
   duelist: { enemyId: 'garden_captain', pattern: ['dash','spin','dash'], dodge: 0.22, hp: 8500, tactic: '회피하는 결투사의 돌진을 옆으로 피하세요. 회전이 끝나는 순간이 빈틈입니다.' },
@@ -30,6 +31,14 @@ const DUELS = {
   sunwarden: { enemyId: 'forge_captain', pattern: ['kiln_vents','slam','spin'], behavior: 'shield', hp: 13800, tactic: '빛의 고리 바깥에서 과열선을 피한 뒤 방패가 열린 순간에 집중하세요.' },
   void_oracle: { enemyId: 'frost_captain', pattern: ['archive_retrace','fan','archive_hourglass'], dodge: 0.16, hp: 15800, tactic: '보랏빛 파편이 멈춘 자리만 밟고, 되감긴 기록 경로로 돌아가지 마세요.' },
 };
+
+/** 종락 기본 개인 원정만 기존 주술사의 지원을 읽고 끊을 수 있게 한다. */
+export function supportCastingForStage(stage) {
+  const expedition = stage?.expedition;
+  if (stage?.party || stage?.riftId || expedition?.riftId || expedition?.conquestId ||
+      expedition?.kind !== 'dungeon' || expedition.id !== 'bellfall_crypt' || expedition.depth !== 'standard') return null;
+  return BELLFALL_SUPPORT_CASTING;
+}
 
 /** Accept IDs only: caller-provided scale, rewards and encounter data cannot replace the catalog.
  * @param {string} kind @param {string} id @param {object|null} eco

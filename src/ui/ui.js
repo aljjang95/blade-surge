@@ -11,6 +11,7 @@ import { renderGrowthPreparation, canPrepareGrowth } from './growth.js';
 import { comboFeedback } from './combo-feedback.js';
 import { BattleReadability } from './battle-readability.js';
 import { writeHudStyle } from './hud-style-write.js';
+import { combatHudAnimationRegion } from '../engine/combat-feedback.js';
 import './campaign.css';
 import './combo-feedback.css';
 
@@ -33,6 +34,7 @@ export class UI {
       const bottom = this.el.hud.classList.contains('show') && this.el.toast.childElementCount
         ? this.el.toast.getBoundingClientRect().bottom : 0;
       this.el.hud.style.setProperty('--combat-notice-bottom', `${bottom}px`);
+      this.refreshCombatTextRegions();
     });
     this.combatNoticeResize.observe(this.el.toast);
     this.combatNoticeResize.observe(this.el.hud);
@@ -44,7 +46,7 @@ export class UI {
     });
     this.lobbyCaptionResize.observe(lobby); this.lobbyCaptionResize.observe(lobbyBottom);
     this.skillBtns = [...document.querySelectorAll('.skill-btn')];
-    this.hurtT = 0; this.combatCueEl = $('combat-cue'); this.combatCueTimer = null; this.comboEl = $('combo'); this.comboN = $('combo-n'); this.killStreakEl = $('kill-streak'); this.killStreakN = $('kill-streak-n'); this.killStreakTier = $('kill-streak-tier');
+    this.hurtT = 0; this.combatCueEl = $('combat-cue'); this.combatCueTimer = null; this.combatCueOwner = null; this.comboEl = $('combo'); this.comboN = $('combo-n'); this.killStreakEl = $('kill-streak'); this.killStreakN = $('kill-streak-n'); this.killStreakTier = $('kill-streak-tier');
     this.lootLayer = $('loot-layer'); this.lootQueue = [];
     this.minimap = new Minimap($('minimap'));
     this.readability = new BattleReadability(app);
@@ -54,6 +56,15 @@ export class UI {
     cameraControls.setAttribute('aria-label', '전투 시점 조작');
     cameraControls.innerHTML = '<div id="battle-camera-pad" tabindex="0" role="group" aria-label="드래그 또는 방향키로 시점 회전, 더하기 빼기로 확대 축소, Home으로 복원"><span>시점 회전</span><small>드래그 ↔ ↕</small></div><div class="battle-camera-buttons"><button type="button" id="battle-camera-zoom-in" aria-label="시점 확대">+</button><button type="button" id="battle-camera-reset">복원</button><button type="button" id="battle-camera-zoom-out" aria-label="시점 축소">−</button></div>';
     this.el.hud.append(cameraControls);
+    // 타격마다 읽지 않고 레이아웃 변경 때 실제 HUD·조작 영역을 저장한다.
+    this.combatTextRegionEls = [
+      this.el.hud.querySelector('.hud-top'), $('objective'), $('btn-map'), $('bossbar'),
+      this.el.hud.querySelector('.actions'), $('joy'), $('map-tactics-context'),
+      $('combo'), $('kill-streak'), $('combat-cue'), this.el.toast, cameraControls,
+    ].filter(Boolean);
+    for (const el of this.combatTextRegionEls) this.combatNoticeResize.observe(el);
+    this.combatTextLayerEl = $('dmg-layer');
+    this.combatNoticeResize.observe(this.combatTextLayerEl);
     document.body.classList.add('force-landscape');
     $('btn-ignore-rotate').addEventListener('click', () => document.body.classList.remove('force-landscape'));
     this._bindGlobal();
@@ -92,12 +103,38 @@ export class UI {
     $('btn-result-double').addEventListener('click', () => this.watchAd());
   }
   show(el, on) { el.classList.toggle('show', on); }
+  refreshCombatTextRegions() {
+    if (typeof this.app.fx?.setCombatTextRegions !== 'function') return;
+    const shown = this.el.hud.classList.contains('show');
+    const layer = shown ? this.combatTextLayerEl?.getBoundingClientRect() : null;
+    const hud = shown ? this.el.hud.getBoundingClientRect() : null;
+    const oathVisual = document.documentElement.classList.contains('oath-visual');
+    const regions = shown ? (this.combatTextRegionEls || []).map(el => {
+      if (!['combo', 'kill-streak', 'combat-cue'].includes(el.id)) return el.getBoundingClientRect();
+      // 이 세 요소는 #hud 직접 자식이다. 숨긴 요소의 0 크기는 예약하지 않는다.
+      const width = el.offsetWidth, height = el.offsetHeight;
+      if (el.offsetParent !== this.el.hud || !(width > 0 && height > 0)) return null;
+      const left = hud.left + el.offsetLeft, top = hud.top + el.offsetTop;
+      return combatHudAnimationRegion(el.id, { left, top, right: left + width, bottom: top + height }, oathVisual);
+    }).filter(Boolean) : [];
+    const previous = this.combatTextRegions || [];
+    const oldLayer = this.combatTextLayerBounds;
+    const sameLayer = !layer && !oldLayer || layer && oldLayer
+      && layer.left === oldLayer.left && layer.right === oldLayer.right
+      && layer.top === oldLayer.top && layer.bottom === oldLayer.bottom;
+    if (sameLayer && previous.length === regions.length && regions.every((rect, i) =>
+      rect.left === previous[i].left && rect.right === previous[i].right
+      && rect.top === previous[i].top && rect.bottom === previous[i].bottom)) return;
+    this.combatTextRegions = regions.map(({ left, top, right, bottom }) => ({ left, top, right, bottom }));
+    this.combatTextLayerBounds = layer ? { left: layer.left, top: layer.top, right: layer.right, bottom: layer.bottom } : null;
+    this.app.fx?.setCombatTextRegions?.(regions, this.combatTextLayerBounds);
+  }
   setupMinimap(floor) { this.minimap.setFloor(floor); $('minimap-wrap').classList.remove('hidden'); }
   setObjective(floor) {
     if (this.app.battle?.world !== floor) return;
     this.readability.renderObjective(this.app.battle);
   }
-  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { this.readability?.clear(); this.refreshComboFeedback(); this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
+  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { if (this.combatCueOwner) this.clearCombatCue(this.combatCueOwner, this.combatCueEl?.textContent); this.readability?.clear(); this.refreshComboFeedback(); this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } this.refreshCombatTextRegions(); }
   pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; b.setPaused('manual', on); this.show(this.el.pause, on); if (!on && this.el.pause.contains(document.activeElement)) document.activeElement?.blur?.(); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
@@ -133,10 +170,20 @@ export class UI {
     this.modal(`<div class="levelup-pop"><div class="big">구매 완료!</div><p>${sku.name}</p><div class="loot" style="margin:10px 0">${this.rewardHtml(got)}</div>${extra}<div class="modal-btns"><button class="btn btn-gold" id="m-ok">받기</button></div></div>`, { onOpen: (b) => { b.querySelector('#m-ok').onclick = () => this.closeModal(); } });
   }
   hurtVignette() { this.hurtT = 0.5; }
-  combatCue(label, tone = 'red', duration = 720) {
+  /** 기존 알림을 소유자와 함께 교체한다. @param {*} owner */
+  combatCue(label, tone = 'red', duration = 720, owner = null) {
     const el = this.combatCueEl; if (!el || !label) return;
+    this.combatCueOwner = owner;
     clearTimeout(this.combatCueTimer); el.textContent = label; el.dataset.tone = tone; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
-    this.combatCueTimer = setTimeout(() => { el.classList.remove('on'); }, duration);
+    this.combatCueTimer = setTimeout(() => { this.combatCueOwner = null; this.combatCueTimer = null; el.classList.remove('on'); }, duration);
+  }
+  /** 같은 문구라도 다른 알림으로 교체됐으면 이전 시전이 지우지 않는다. */
+  clearCombatCue(owner, label) {
+    const el = this.combatCueEl;
+    if (!owner || this.combatCueOwner !== owner || el?.textContent !== label) return false;
+    clearTimeout(this.combatCueTimer); this.combatCueTimer = null; this.combatCueOwner = null;
+    el.classList.remove('on');
+    return true;
   }
   perfectDodge() {
     const f = $('perfect-flash'), l = $('perfect-label');
