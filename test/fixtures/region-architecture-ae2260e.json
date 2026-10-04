@@ -1,0 +1,196 @@
+{
+  "schema": 1,
+  "originalCommit": "ae2260e46be7d88ba1f47336f460668ec07199fe",
+  "originalSourceSha256": "7b0bd039b2040ea8c6c40be0fa8e58220d854d5a3955735a8834ad9ba0ce4644",
+  "cases": {
+    "floor4-crypt": {
+      "meshes": 24,
+      "vertices": 27726,
+      "materialRoles": [
+        0,
+        1
+      ],
+      "geometrySha256": "eb0c09481eb9095eb98cc2fa3d9137282240849683e89ea0ea705c154d863428",
+      "metadataSha256": "cac5dc6995114780d8b25f41e9a9adc38bcf613fa7832e2cd85da60283ceac9a",
+      "materialsSha256": "2e3d97a583225ff86c302378734cbc062df21ef9aadb4418db37c5725fd64774"
+    },
+    "floor4-throne": {
+      "meshes": 24,
+      "vertices": 11490,
+      "materialRoles": [
+        0,
+        1
+      ],
+      "geometrySha256": "1f80ce899c316866fa51dce310fa9acce17e8e9f3df08c87844d19b8ed70017c",
+      "metadataSha256": "3bef3014bc1c377794d209ba56aa008fbc346690b3666b3c25847256c8f468c6",
+      "materialsSha256": "e547de3f1d16d6bcf26f079118a5760ec1ae775295c13b2344abb15437049ca0"
+    },
+    "floor4-abyss": {
+      "meshes": 35,
+      "vertices": 37890,
+      "materialRoles": [
+        0,
+        1,
+        2
+      ],
+      "geometrySha256": "eadc0b787d220a19e851f3dc0f0812bf5c7a5702f357ccd2e851f0a17dbcd403",
+      "metadataSha256": "2ff9dc564d430a35766bb7028706925e2cbe3edc344edec2dd98619ce62536b2",
+      "materialsSha256": "911e23b0d0b1c8765569a5e55912d0d5d6a99cb127d42f3fc8568d0a7d97a129"
+    },
+    "floor4-garden": {
+      "meshes": 39,
+      "vertices": 53592,
+      "materialRoles": [
+        0,
+        1,
+        2
+      ],
+      "geometrySha256": "83e56ca377cc0dba0966d9f9e378b2ca20887b89d18c587dbf7bc30e3dfbe3c5",
+      "metadataSha256": "3c0a2f511fbf459b9a0f3297edc97666b9a4116038a62c872117fcb394f7d201",
+      "materialsSha256": "6ff7798aa1881ad04f43bc6a8b0d7ef1cb373f7157e3f9d63dd7ed376fbb29a4"
+    },
+    "floor4-forge": {
+      "meshes": 33,
+      "vertices": 33204,
+      "materialRoles": [
+        0,
+        1,
+        2
+      ],
+      "geometrySha256": "8b1a7e0ccc687ad712bff161cb9bf2f5a297e8261493aab6eef20f2fb43a816e",
+      "metadataSha256": "6a633da66302a48b2942594deafd5e6b45843c763ad0a7aef56dbff2c29669c1",
+      "materialsSha256": "199bbb689868d36288b256f5fb85b240555d8ccdc70ce62010a74281e8670f0e"
+    },
+    "floor4-frost": {
+      "meshes": 36,
+      "vertices": 60642,
+      "materialRoles": [
+        0,
+        1,
+        2
+      ],
+      "geometrySha256": "0c49d4124c77e474749a2529f34efc2453cc134b1d2c935ae727354035beda32",
+      "metadataSha256": "49a69c1b672450da41544d7f32b6d15fd7b58af64bdd27eed254aea70b16eb50",
+      "materialsSha256": "fe9f772bd9a539337984dd93281be5a41f5bf88fe857c95e0d0ad10646bb01f5"
+    },
+    "floor4-tide": {
+      "meshes": 36,
+      "vertices": 66276,
+      "materialRoles": [
+        0,
+        1,
+        2
+      ],
+      "geometrySha256": "a72f58dc3858bc121702a9893dfc3a2081d19fb4d0ae3bdecf1bbc56a0a82258",
+      "metadataSha256": "93a62e6e51648be25bea58dfab6b5fdc79455801f673be8c7332b45cfe129671",
+      "materialsSha256": "b941ff0ae26eb3cf459e406f6877713f9ed676bff7641062b5d1ceed8d07f4cb"
+    },
+    "floor4-crown": {
+      "meshes": 24,
+      "vertices": 23082,
+      "materialRoles": [
+        0,
+        1
+      ],
+      "geometrySha256": "e196720f9cad3897bf1e44eb22ef71335798d74b59c572a02f088c6169c20e04",
+      "metadataSha256": "16578bc1efb197e22ead1e1bcaf56574be28f19b33346c6bcff40dcf63569c0a",
+      "materialsSha256": "73da729ff26f080c10de051a68c10045c49e8ec5afc256eadddd3c49e7f2891a"
+    },
+    "campaign-1-1": {
+      "meshes": 36,
+      "vertices": 51594,
+      "materialRoles": [
+        0,
+        1,
+        2
+      ],
+      "geometrySha256": "4e809e0b8abc3c10a65a186d0a8d06ba57a0abdc4c5fe68a6ec008c764004b4c",
+      "metadataSha256": "d3f22b8b5c5b03f9331ee07e9157f17fa8d3b6d46294cab775a5a27369210fe8",
+      "materialsSha256": "6ff7798aa1881ad04f43bc6a8b0d7ef1cb373f7157e3f9d63dd7ed376fbb29a4"
+    },
+    "garden-loop": {
+      "meshes": 15,
+      "vertices": 20370,
+      "materialRoles": [
+        0,
+        1,
+        2
+      ],
+      "geometrySha256": "0245e64574adfcb3927983627502eff4e83eabdb850049ad1a6e2beb72dbf686",
+      "metadataSha256": "1307905d7a331bba5465366ab9bc09210e6b688dd8acfe078a8d36063191a803",
+      "materialsSha256": "6ff7798aa1881ad04f43bc6a8b0d7ef1cb373f7157e3f9d63dd7ed376fbb29a4"
+    },
+    "story-memorial": {
+      "meshes": 36,
+      "vertices": 51594,
+      "materialRoles": [
+        0,
+        1,
+        2
+      ],
+      "geometrySha256": "44ae75247732bfa295fd7f509584bdb64b717c41298cb94082d4923f9d8c59d5",
+      "metadataSha256": "d63f17ef457fc48fcb452da189e8ec63012265a58acb1df96192701d4f56b62d",
+      "materialsSha256": "6ff7798aa1881ad04f43bc6a8b0d7ef1cb373f7157e3f9d63dd7ed376fbb29a4"
+    },
+    "story-kiln": {
+      "meshes": 36,
+      "vertices": 60240,
+      "materialRoles": [
+        0,
+        1,
+        2
+      ],
+      "geometrySha256": "537d2b8a2793c2e90a90e4b2bd93fe401f4bea9e8fa30b08262bd3483dd1eb55",
+      "metadataSha256": "e2bafd24e26ad075ae27eea1486bd9984e1028eafe7bfab7919b0213c8bc9cb7",
+      "materialsSha256": "6ff7798aa1881ad04f43bc6a8b0d7ef1cb373f7157e3f9d63dd7ed376fbb29a4"
+    },
+    "story-archive": {
+      "meshes": 33,
+      "vertices": 54246,
+      "materialRoles": [
+        0,
+        1,
+        2
+      ],
+      "geometrySha256": "5cbe7f5ecbd8d5c0211287fab39a48c8d7926499bf45f56a2cc9a5a9b2d8eea6",
+      "metadataSha256": "fd735c09c5c1d08866954d8d4010f11a7207c1f5adff601f2caa7b707fa5a19e",
+      "materialsSha256": "6ff7798aa1881ad04f43bc6a8b0d7ef1cb373f7157e3f9d63dd7ed376fbb29a4"
+    },
+    "story-beacon": {
+      "meshes": 42,
+      "vertices": 59652,
+      "materialRoles": [
+        0,
+        1,
+        2
+      ],
+      "geometrySha256": "38190af4009229f9a8864cea82d22e10eedf396a904e340198bb366fee8e85af",
+      "metadataSha256": "58377bd4a0ff9fc5f1fbcb4563d4d2c73a744df70a51bf7023f65e0dfb213def",
+      "materialsSha256": "6ff7798aa1881ad04f43bc6a8b0d7ef1cb373f7157e3f9d63dd7ed376fbb29a4"
+    },
+    "story-tribunal": {
+      "meshes": 42,
+      "vertices": 62106,
+      "materialRoles": [
+        0,
+        1,
+        2
+      ],
+      "geometrySha256": "848b60e00ed256d3e84781ff4a6c6b3e91095bd20f63790e912fd312c203fdbd",
+      "metadataSha256": "74383aaef6ad2b445ab88ae65275c98fda9427f27ee9b98188edea826a31315a",
+      "materialsSha256": "6ff7798aa1881ad04f43bc6a8b0d7ef1cb373f7157e3f9d63dd7ed376fbb29a4"
+    },
+    "story-confluence": {
+      "meshes": 33,
+      "vertices": 54582,
+      "materialRoles": [
+        0,
+        1,
+        2
+      ],
+      "geometrySha256": "2b323e8e9ed0191e4170a54aff90b1dadf9817c761cecdd9150dcc9b91cf3514",
+      "metadataSha256": "a08d1dc0cb05150797b18c1a714fe5233448f5f5e16f5c09e176ad99e545e098",
+      "materialsSha256": "6ff7798aa1881ad04f43bc6a8b0d7ef1cb373f7157e3f9d63dd7ed376fbb29a4"
+    }
+  }
+}

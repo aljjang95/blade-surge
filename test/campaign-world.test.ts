@@ -41,11 +41,12 @@ test('다섯 지역은 서로 다른 배치와 방 비례를 사용한다', () =
 });
 
 for(const theme of themes) {
-  test(`${theme}: 지역 건축은 방별 병합과 한 번의 자원 회수를 보장한다`, () => {
+  test(`${theme}: 지역 건축은 이웃 방 병합과 한 번의 자원 회수를 보장한다`, () => {
     const floor=new Floor(1,theme), group=buildRegionArchitecture(floor,theme);
     expect(group.userData.landmarks.length).toBe(floor.rooms.length);
     expect(group.children.length).toBeLessThanOrEqual(floor.rooms.length*3);
-    expect(group.children.length).toBeGreaterThan(floor.rooms.length);
+    expect(group.children.length).toBeLessThan(group.userData.roomGeometry.length);
+    expect(new Set(group.userData.roomGeometry.map((range:any)=>range.roomId)).size).toBe(floor.rooms.length);
     const geometries = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>();
     group.traverse((node: THREE.Object3D) => {
       if(!(node instanceof THREE.Mesh)) return;

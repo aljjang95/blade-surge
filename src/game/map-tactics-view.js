@@ -1,5 +1,18 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import JADE_TACTICS_GEOMETRY from '../data/jade-tactics-geometry-v1.json';
+
+// Blender 원본 표면을 복사한다. 공유 데이터는 배치·회수 과정에서 변하지 않는다.
+function authoredBackingGeometry(surface) {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute(surface.position,3));
+  geometry.setAttribute('normal',new THREE.Float32BufferAttribute(surface.normal,3));
+  geometry.setAttribute('color',new THREE.Float32BufferAttribute(surface.color,3));
+  // 기존 바닥·방향 표면과 병합할 속성 형식만 맞춘다. 재질에는 텍스처가 없다.
+  geometry.setAttribute('uv',new THREE.BufferAttribute(new Float32Array(surface.position.length / 3 * 2),2));
+  geometry.setIndex(surface.index);
+  return geometry;
+}
 
 // TLL 자체 제작 기하만 사용한다. 전투 판정, 이동 마스크, 시간은 controller가 소유한다.
 // 정적 조형은 방 전체의 기존 표면 세 역할로 병합하고, 조작판 두 개와 범위 한 개만 갱신한다.
@@ -16,16 +29,18 @@ export class MapTacticsView {
       geometry.applyMatrix4(matrix.copy(transform.matrix));
       const flat = geometry.index ? geometry.toNonIndexed() : geometry;
       if (flat !== geometry) geometry.dispose();
-      const rgb = new THREE.Color(color), count = flat.getAttribute('position').count;
-      const colors = new Float32Array(count * 3);
-      for (let i = 0; i < count; i++) rgb.toArray(colors,i * 3);
-      flat.setAttribute('color',new THREE.BufferAttribute(colors,3)); chunks[role].push(flat);
+      if (color !== null) {
+        const rgb = new THREE.Color(color), count = flat.getAttribute('position').count;
+        const colors = new Float32Array(count * 3);
+        for (let i = 0; i < count; i++) rgb.toArray(colors,i * 3);
+        flat.setAttribute('color',new THREE.BufferAttribute(colors,3));
+      }
+      chunks[role].push(flat);
     };
     const slab = (x,z,w,d,color,role=0,ry=0,y=.072) => {
       const geometry = new THREE.PlaneGeometry(w,d); geometry.rotateX(-Math.PI / 2);
       add(geometry,role,color,x,y,z,ry);
     };
-    const box = (x,y,z,w,h,d,color,role=0,ry=0) => add(new THREE.BoxGeometry(w,h,d),role,color,x,y,z,ry);
     const arrow = (x,z,direction,color) => {
       const points = [[-.32,-.24],[0,.16],[.32,-.24],[.32,-.07],[0,.35],[-.32,-.07]];
       const shape = new THREE.Shape(); points.forEach(([px,pz],i) => i ? shape.lineTo(px,pz) : shape.moveTo(px,pz));
@@ -69,21 +84,11 @@ export class MapTacticsView {
         const bx = backing.x - x, bz = backing.z - z;
         slab((x + backing.x) / 2,(z + backing.z) / 2,.15,Math.hypot(bx,bz),pale,2,Math.atan2(bx,bz),.078);
       }
-      if (backing && gather) {
-        const bx = backing.x, rear = backing.z;
-        for (const side of [-1,1]) {
-          box(bx + side * .68,1.25,rear,.25,2.5,.32,stone);
-          box(bx + side * .42,2.56,rear,.68,.24,.40,pale,2);
-          box(bx + side * .68,.18,rear,.46,.30,.52,0xb39156,1);
+      if (backing) {
+        // 원본 조형도 기존 세 정적 재질 역할에 합친다. 별도 모델 draw를 추가하지 않는다.
+        for (const surface of JADE_TACTICS_GEOMETRY.models[node.id].surfaces) {
+          add(authoredBackingGeometry(surface),surface.role,null,backing.x,0,backing.z);
         }
-        // 상부의 열린 틈은 집결 판의 고유 실루엣이다.
-        box(bx,1.75,rear,.26,.48,.20,0x7fb8a0,2,Math.PI / 4);
-      } else if (backing) {
-        const bx = backing.x, rear = backing.z;
-        box(bx,1.30,rear,.54,2.6,.44,stone);
-        box(bx,2.75,rear,.64,.30,.56,0xb39156,1,Math.PI / 4);
-        box(bx,.18,rear,.86,.30,.76,0xb39156,1);
-        for (const side of [-1,1]) box(bx + side * .36,1.76,rear,.15,.60,.20,pale,2,side * .35);
       }
       const material = ownMaterial(new THREE.MeshBasicMaterial({ color: gather ? 0xa6f0d4 : 0xe2c58b, side: THREE.DoubleSide, toneMapped: false }));
       const pad = new THREE.Mesh(padGeometry,material); pad.position.set(x,.095,z); pad.name = `TacticsOperator_${node.id}`;
@@ -107,7 +112,10 @@ export class MapTacticsView {
     this.boundary = new THREE.Mesh(boundaryGeometry,this.boundaryMaterial); this.boundary.name = 'TacticsEffectRadius';
     this.boundary.position.y = .103; this.boundary.visible = false; this.group.add(this.boundary);
     this.group.visible = false;
-    this.group.userData.artContract = { provenance:'TLL original procedural geometry', maximumDraws:6, lights:0, renderTargets:0, textures:0, operatorRadius:nodes[0].operatorRadius, effectRadius:radius, backingFootprints };
+    this.group.userData.artContract = { provenance:'TLL original Blender-authored Jade tactics v1',
+      source:JADE_TACTICS_GEOMETRY.provenance.source, referenceSha256:JADE_TACTICS_GEOMETRY.provenance.referenceSha256,
+      maximumDraws:6, maximumTriangles:1600, maximumBackingTriangles:JADE_TACTICS_GEOMETRY.backingTriangleTotal,
+      lights:0, renderTargets:0, textures:0, operatorRadius:nodes[0].operatorRadius, effectRadius:radius, backingFootprints };
   }
   update(snapshot) {
     if (this.disposed) return;

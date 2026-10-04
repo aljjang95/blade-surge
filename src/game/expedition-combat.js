@@ -72,7 +72,17 @@ export function buildExpeditionWorld(stage) {
   const layout = depth === 'deep' ? expeditionDepth(id)?.layout : EXPEDITION_LAYOUTS[kind === 'arena' ? 'arena' : id];
   if (!layout) throw new RangeError('탐험 동선이 없습니다.');
   const seed = [...(id + (depth === 'deep' ? ':deep' : ''))].reduce((n, c) => n * 31 + c.charCodeAt(0), 17) >>> 0;
-  return new Floor(stage.idx, stage.theme || stage.chapter.theme, seed, layout);
+  const world = new Floor(stage.idx, stage.theme || stage.chapter.theme, seed, layout);
+  if (kind === 'dungeon' && id === 'glass_garden' && depth === 'standard' &&
+      !stage.party && !stage.riftId && !stage.expedition.riftId && !stage.expedition.conquestId) {
+    // 기존 방·봉인·난수 진행을 만든 뒤 보물방과 장치방 사이의 실제 순환만 연다.
+    const treasure = world.rooms[2], tactics = world.rooms[3];
+    world.corridors.push(...world.lShape(treasure, tactics));
+    treasure.links.push(tactics.id); tactics.links.push(treasure.id);
+    world.linkPending.push([[treasure.gx, treasure.gy], [tactics.gx, tactics.gy]]);
+    world.buildMask();
+  }
+  return world;
 }
 
 export function expeditionRoster(stage, room) {
