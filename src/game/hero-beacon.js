@@ -12,8 +12,9 @@ export class HeroBeacon {
       mesh.renderOrder = order; mesh.rotation.x = -Math.PI / 2; this.root.add(mesh); return mesh;
     };
     this.shadowRing = add(new THREE.RingGeometry(.66, .92, 32), 0x10252c, 990);
-    this.primaryRing = add(new THREE.RingGeometry(.73, .84, 32), 0xb9ffee, 991);
-    this.focusRing = add(new THREE.RingGeometry(.9, 1.06, 32), 0xffe6a0, 992);
+    // 위치 표시는 유지하면서 밝은 선이 발과 전투 바닥을 덮는 면적을 줄인다.
+    this.primaryRing = add(new THREE.RingGeometry(.785, .84, 32), 0xb9ffee, 991);
+    this.focusRing = add(new THREE.RingGeometry(1, 1.06, 32), 0xffe6a0, 992);
     this.focusRing.visible = false; this.focused = false; this.focusColor = new THREE.Color(0xffe6a0);
     const shape = new THREE.Shape();
     shape.moveTo(-.28, -.91); shape.lineTo(0, -1.35); shape.lineTo(.28, -.91); shape.lineTo(0, -1.06); shape.closePath();
@@ -63,4 +64,3 @@ export class HeroBeacon {
     this.root.removeFromParent(); this.root.traverse(o => { if (o.isMesh) { o.geometry.dispose(); o.material.dispose(); } });
   }
 }
-

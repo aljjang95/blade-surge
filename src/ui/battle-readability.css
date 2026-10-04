@@ -4,8 +4,10 @@
 .experience-v2.oath-visual #hud.battle-readability .hud-portrait{flex:0 0 36px;width:36px;height:36px;border-color:#c3b17b}
 .experience-v2.oath-visual #hud.battle-readability .hud-bars{gap:3px}
 .experience-v2.oath-visual #hud.battle-readability .hud-center{position:absolute;left:244px;top:0;width:calc(100% - 480px);text-align:left;opacity:1}
-.experience-v2.oath-visual #hud.battle-readability .hud-center .wave{color:#ead6aa;font-size:15px;line-height:22px;font-weight:700}
-.experience-v2.oath-visual #hud.battle-readability .hud-center .stage-name{color:#c4cdbd;font-size:10px;line-height:16px}
+/* 밝은 지형에서도 스테이지 글자만 또렷하게 보이도록 작은 받침을 둔다. */
+.experience-v2.oath-visual #hud.battle-readability .hud-center .wave,.experience-v2.oath-visual #hud.battle-readability .hud-center .stage-name{width:fit-content;max-width:100%;box-sizing:border-box;padding:0 5px;border-radius:3px;background:#10231ee8;text-shadow:0 1px 2px #000}
+.experience-v2.oath-visual #hud.battle-readability .hud-center .wave{color:#f2ddb0;font-size:15px;line-height:22px;font-weight:700}
+.experience-v2.oath-visual #hud.battle-readability .hud-center .stage-name{color:#d6ddce;font-size:10px;line-height:16px}
 .experience-v2.oath-visual #hud.battle-readability .hud-right{width:112px}
 .experience-v2.oath-visual #hud.battle-readability .hud-right-top{position:absolute;top:0;right:0;display:flex;width:auto;max-width:none;gap:6px}
 .experience-v2.oath-visual #hud.battle-readability .hud-right-top .hud-btn{min-width:44px;min-height:44px;height:44px;padding:0 9px;border-color:#b6b89e40;font-size:11px;background:#142b24e8}

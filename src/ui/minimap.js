@@ -3,14 +3,38 @@ import { battleObjectiveView, discoveredMapBounds, discoveredMapView, discovered
 
 /** 두 지도 크기가 발견한 지형만 공유하며 숨겨진 전체 경계는 읽지 않는다. */
 export class Minimap {
-  constructor(canvas) { this.c = canvas; this.g = canvas.getContext('2d'); this.floor = null; }
-  setFloor(floor) { this.floor = floor; }
+  constructor(canvas) {
+    this.c = canvas; this.g = canvas.getContext('2d'); this.floor = null;
+    this.cssWidth = this.cssHeight = 88; this.sizeMeasured = false;
+    this.measureSize();
+    if (typeof ResizeObserver === 'function') {
+      // 프레임마다 DOM 크기를 읽으면 직전 HUD 변경의 레이아웃 계산을 강제한다.
+      this.resizeObserver = new ResizeObserver(entries => {
+        for (const entry of entries) if (entry.target === this.c) this.cacheSize(entry.contentRect.width, entry.contentRect.height);
+      });
+      this.resizeObserver.observe(this.c);
+    } else {
+      this.onResize = () => this.measureSize();
+      window.addEventListener('resize', this.onResize);
+      window.addEventListener('orientationchange', this.onResize);
+    }
+  }
+  cacheSize(width, height) {
+    // 닫힌 지도나 숨겨진 HUD의 0 크기로 마지막 실제 표시 크기를 덮지 않는다.
+    if (!(width > 0) || !(height > 0)) return;
+    this.cssWidth = Math.max(1, Math.round(width)); this.cssHeight = Math.max(1, Math.round(height)); this.sizeMeasured = true;
+  }
+  measureSize() { this.cacheSize(this.c.clientWidth, this.c.clientHeight); }
+  setFloor(floor) {
+    this.floor = floor;
+    if (!this.sizeMeasured || !this.resizeObserver) this.measureSize();
+  }
   px(x, z) { return [this.width / 2 + (x - this.ox) * this.scale, this.height / 2 + (z - this.oz) * this.scale]; }
   draw(battle) {
     if (!this.floor || this.floor !== battle?.world || !battle.player) return;
     const view = discoveredMapView(this.floor), rooms = view.rooms;
     if (!rooms.length) return;
-    const width = this.c.clientWidth || 88, height = this.c.clientHeight || width;
+    const width = this.cssWidth, height = this.cssHeight;
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     if (this.width !== width || this.height !== height || this.dpr !== dpr) {
       this.width = width; this.height = height; this.dpr = dpr;

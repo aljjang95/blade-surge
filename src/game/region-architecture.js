@@ -211,14 +211,14 @@ export function buildRegionArchitecture(floor, theme) {
     // 전투 카메라 안에서 읽히는 얕은 바닥 건축. 위험 표시(.11) 아래에 모두 둔다.
     // 별도 메시 없이 기존 방별 재질에 병합하고 중앙 통행은 그대로 유지한다.
     let inlayLayer = 0;
-    const inlay = (geometry, px, pz, color=0x28313b, ry=0) => {
+    const inlay = (geometry, px, pz, color=0x28313b, ry=0, y=null) => {
       const rgb=new THREE.Color(color), values=new Float32Array(geometry.getAttribute('position').count*3);
       for(let i=0;i<values.length;i+=3) { values[i]=rgb.r; values[i+1]=rgb.g; values[i+2]=rgb.b; }
       geometry.setAttribute('color',new THREE.BufferAttribute(values,3));
       // 기존 타일 윗면(.04997) 위, 금속 테두리(.065)와 위험 표시(.11) 아래.
-      add(geometry,0,px,.052 + inlayLayer++ * .00035,pz,-Math.PI/2,0,ry);
+      add(geometry,0,px,y ?? .052 + inlayLayer++ * .00035,pz,-Math.PI/2,0,ry);
     };
-    const slab = (px,pz,w,d,color,ry=0) => inlay(new THREE.PlaneGeometry(w,d),px,pz,color,ry);
+    const slab = (px,pz,w,d,color,ry=0,y=null) => inlay(new THREE.PlaneGeometry(w,d),px,pz,color,ry,y);
     // 실제 회랑과 맞닿은 문턱만 길을 표시한다. 장식 원반은 전투 중심을 비운다.
     const dark = theme === 'garden' ? 0x344d45 : theme === 'forge' ? 0x273239
       : theme === 'frost' ? 0x425b73 : theme === 'tide' ? 0x2b525d
@@ -229,12 +229,23 @@ export function buildRegionArchitecture(floor, theme) {
       : theme === 'crown' ? 0xc0b398 : theme === 'throne' ? 0xac9575
       : theme === 'abyss' ? 0xaaa2be : 0x9daab8;
     // 양쪽 가장자리는 얕은 석재 보행 띠다. 별도 재질이나 이동 마스크를 만들지 않는다.
+    // 정원의 평면 모서리 장식은 석재 배치에 넣어 금속 랜드마크의 컬링/그림자 범위를 넓히지 않는다.
+    // 기존 금속 알베도를 석재 기본색으로 나눠 같은 황동/밝은 색 의도를 보존한다.
+    const cornerColor = new THREE.Color(colors[1]), stoneColor = materials[0].color;
+    cornerColor.r /= Math.max(.01,stoneColor.r);
+    cornerColor.g /= Math.max(.01,stoneColor.g);
+    cornerColor.b /= Math.max(.01,stoneColor.b);
     for (const side of [-1,1]) {
       slab(x + side * (hw - 1.5), z, .55, room.h - 2.1, dark);
       slab(x, z + side * (hh - 1.5), room.w - 2.1, .55, dark);
       for (const corner of [-1,1]) {
-        box(x + side * (hw - 1.5), .055, z + corner * (hh - 1.5), .08, .02, .8, 1);
-        box(x + side * (hw - 1.5), .055, z + corner * (hh - 1.5), .8, .02, .08, 1);
+        if (theme === 'garden') {
+          slab(x + side * (hw - 1.5), z + corner * (hh - 1.5), .08, .8, cornerColor, 0, .065);
+          slab(x + side * (hw - 1.5), z + corner * (hh - 1.5), .8, .08, cornerColor, 0, .065);
+        } else {
+          box(x + side * (hw - 1.5), .055, z + corner * (hh - 1.5), .08, .02, .8, 1);
+          box(x + side * (hw - 1.5), .055, z + corner * (hh - 1.5), .8, .02, .08, 1);
+        }
       }
     }
     const sills = new Set();
