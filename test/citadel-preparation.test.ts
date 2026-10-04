@@ -8,6 +8,9 @@ import { frontierForRoute, weeklyFrontier } from '../src/data/seasonal-content.j
 import { normalizeMasterworks } from '../src/game/masterworks-core.js';
 import { buildExpeditionStage } from '../src/game/expedition-combat.js';
 import { routeObjectiveForStage } from '../src/data/route-objectives.js';
+import { CHALLENGES } from '../src/data/masterworks.js';
+import { difficultyEffects } from '../src/game/masterworks-core.js';
+import { MasterworksService } from '../src/game/masterworks-service.js';
 
 const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 let values: Map<string, string>;
@@ -177,4 +180,44 @@ test('invalid catalog selections and existing pending/start/result blocks cannot
   expect(preparation(app).access.ok).toBe(false);
   app.stageStarting = false; app.expeditionUI.result = { saveError: 'full' };
   expect(preparation(app).access).toMatchObject({ ok: false, error: '전리품 정산을 먼저 저장해 주세요.' });
+});
+
+test('gate challenge preview reads every saved vow and the actual combined difficulty without saving or granting rewards', () => {
+  const app = fixture(); app.masterworks = new MasterworksService(app);
+  app.masterworks.s.challengeIds = ['siege', 'iron', 'fury', 'fury', 'unknown'];
+  const before = structuredClone(app.eco.s), stored = [...values], catalog = JSON.stringify(CHALLENGES);
+  const preview = preparation(app).challenges;
+  expect(preview.ids).toEqual(['iron', 'fury', 'siege']);
+  expect(preview.choices.every((choice: any) => choice.active)).toBe(true);
+  expect(preview.effects).toEqual(difficultyEffects(['iron', 'fury', 'siege']));
+  expect(preview.effects.enemyHp).toBeCloseTo(1.25);
+  expect(preview.effects.enemyAtk).toBeCloseTo(1.20);
+  expect(preview.effects.rewardMul).toBeCloseTo(1.32);
+  expect(preview.afterFuryToggle).toEqual(difficultyEffects(['iron', 'siege']));
+  expect(preview.changeAccess.ok).toBe(true);
+  expect(app.eco.s).toEqual(before); expect([...values]).toEqual(stored); expect(JSON.stringify(CHALLENGES)).toBe(catalog);
+});
+
+test('deep and basic gate vows preserve canonical access, costs and rewards while previewing only the existing fury addition', () => {
+  const app = fixture(); app.masterworks = new MasterworksService(app);
+  for (const definition of EXPEDITION_DEPTHS) {
+    unlock(app, definition);
+    for (const depth of ['standard', 'deep']) {
+      const projected = preparation(app, definition.id, depth);
+      expect(projected.challenges.furyActive).toBe(false);
+      expect(projected.challenges.effects).toEqual({ enemyHp: 1, enemyAtk: 1, rewardMul: 1 });
+      expect(projected.challenges.afterFuryToggle).toEqual(difficultyEffects(['fury']));
+      expect(projected.challenges.changeAccess.ok).toBe(projected.access.ok);
+      expect(projected.access.cost).toBe(projected.definition.energy);
+      expect(projected.rewards.base).toEqual(projected.definition.rewards);
+    }
+    app.eco.s.energy = definition.energy - 1;
+    const blocked = preparation(app, definition.id, 'deep');
+    expect(blocked.challenges.changeAccess).toEqual({ ok: false, error: blocked.access.error });
+    app.eco.s.energy = 50;
+  }
+  const before = structuredClone(app.eco.s);
+  expect(preparation(app, 'unknown').ok).toBe(false);
+  expect(preparation(app, 'glass_garden', 'unknown').ok).toBe(false);
+  expect(app.eco.s).toEqual(before);
 });
