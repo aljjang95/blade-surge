@@ -7,6 +7,7 @@ import { BOSS_SIGNATURES, isBossSignature } from '../data/boss-encounters.js';
 import { BossSignatures } from './boss-signatures.js';
 import { MobRole } from './mob-roles.js';
 import { canCommitMelee, packSeparation, packSteer } from './combat-craft.js';
+import { supportCastingForStage } from './expedition-combat.js';
 
 const _v = new THREE.Vector3();
 const areaPlayers = game => [...new Set(game.stage?.party ? game.app.party.livingPlayers() : [game.player])].filter(p => p?.alive);
@@ -17,6 +18,7 @@ export function enemySkillLabel(enemy) {
   return ({
     melee: '적의 공격', magic: '적의 주문', spin: '회전 강타', slam: '지면 강타', dash: '돌진',
     fan: '부채꼴 탄막', soulrain: '영혼비', summon: '지원 소환', bomber: '자폭 경고',
+    support_heal: '치유 준비', support_summon: '소환 준비',
     crusher: '분쇄 강타', charger: '돌진', flanker: '측면 습격', 'role:crusher': '분쇄 강타',
     'role:charger': '돌진', 'role:flanker': '측면 습격',
   })[key] || '적 기술';
@@ -63,6 +65,7 @@ export class Enemy extends Actor {
     this.packSide = ((game._packSpawnSeq = (game._packSpawnSeq || 0) + 1) & 1) ? 1 : -1;
     // 행동형 (bomber / shaman / shield)
     this.behavior = def.behavior || null; this.fuse = -1; this.healT = 4 + Math.random() * 2; this.summonT = 7 + Math.random() * 3; this.blocks = 0; this.guardBroken = 0;
+    this.supportOwner = null; this.supportCastKind = null; this.supportCueLabel = null;
     this.radius = 0.7 * def.scale;
     if (this.has('spawn')) { this.play(this.A('spawn'), { once: true, fade: 0, speed: 1.7 }); this.spawnLen = (this.clips[this.A('spawn')]?.duration || 1) / 1.7; }
     else { this.play(this.A('idle'), { fade: 0 }); this.spawnLen = 0.42; this.popIn = 0; this.model.scale.setScalar(0.01); }
@@ -84,6 +87,10 @@ export class Enemy extends Actor {
   }
   get player() { return this.game.player; }
   dispose() {
+    const rule = supportCastingForStage(this.game.stage);
+    if (this.supportOwner || (rule && this.runtimeSpeciesId === rule.enemyId &&
+        !this.isBoss && !this.isElite && this.behavior === 'shaman')) this.supportStopped = true;
+    this.clearSupportCast(); this.supportOwner = null;
     this.signatures?.dispose();
     this.mobRole?.dispose();
     if (this.marker) { this.marker.geometry.dispose(); this.marker.material.dispose(); this.marker = null; }
@@ -97,16 +104,111 @@ export class Enemy extends Actor {
     this.game.ui?.combatCue?.(`${this.isBoss ? '보스 · ' : ''}${enemySkillLabel({ ...this, special: this.special || kind })}`, 'red');
     audio.enemyTelegraph({ kind, boss: this.isBoss, urgent: this.isBoss || this.isElite });
   }
+  /** 생성자 뒤 지정되는 실제 종과 방을 첫 갱신에서 현행 전투에 귀속한다. */
+  bindSupportOwner() {
+    if (this.supportOwner || this.disposed || this.isBoss || this.isElite || this.behavior !== 'shaman') return;
+    const game = this.game, rule = supportCastingForStage(game.stage);
+    if (rule && this.runtimeSpeciesId === rule.enemyId) this.supportOwner = {
+      stage: game.stage, world: game.world, room: this.homeRoom, generation: game._startGeneration, rule,
+    };
+  }
+  supportOwnerValid() {
+    const owner = this.supportOwner, game = this.game;
+    return !!owner && this.alive && !this.disposed && game.active && !game.bossDefeated && game.player?.alive &&
+      game.stage === owner.stage && game.world === owner.world && this.homeRoom === owner.room &&
+      Number.isSafeInteger(owner.generation) && owner.generation === game._startGeneration &&
+      supportCastingForStage(game.stage) === owner.rule && this.runtimeSpeciesId === owner.rule.enemyId &&
+      owner.room?.spawned && owner.room.discovered && !owner.room.cleared &&
+      owner.world?.rooms[owner.room.id] === owner.room && game.enemies.includes(this);
+  }
+  /** 시전 문구와 고리는 현재 방에서 실제 화면에 보이는 소유자만 알린다. */
+  supportOwnerVisible() {
+    const game = this.game, camera = game.renderer?.camera;
+    if (!camera || game.curRoom !== this.homeRoom || !this.homeRoom?.discovered ||
+        !this.root.visible || !this.model.visible) return false;
+    _v.copy(this.pos); _v.y += 1.1 * this.def.scale; _v.project(camera);
+    return _v.z >= -1 && _v.z <= 1 && Math.abs(_v.x) <= 1 && Math.abs(_v.y) <= 1;
+  }
+  clearSupportCue() {
+    if (!this.supportCueLabel) return;
+    this.game.ui?.clearCombatCue?.(this, this.supportCueLabel);
+    this.supportCueLabel = null;
+  }
+  clearSupportCast() {
+    this.clearSupportCue();
+    if (!this.supportCastKind) return;
+    this.supportCastKind = null; this.special = null; this.telegraph = 0; this.attackDone = false;
+    if (this.telegraphRing) this.telegraphRing.visible = false;
+    if (this.state === 'attack') { this.state = 'chase'; this.stateT = 0; this.vel.set(0, 0, 0); }
+  }
+  startSupportCast(kind) {
+    const game = this.game, rule = this.supportOwner.rule;
+    this.supportCastKind = kind; this.special = kind === 'heal' ? 'support_heal' : 'support_summon';
+    this.state = 'attack'; this.stateT = 0; this.attackDone = false; this.telegraph = rule.windupSeconds;
+    this.vel.set(0, 0, 0); this.playTimed(this.A('cast'), rule.windupSeconds, { fade: .1 });
+    if (this.supportOwnerVisible()) {
+      const label = `${this.def.name} · ${kind === 'heal' ? rule.healCue : rule.summonCue}`;
+      game.ui?.combatCue?.(label, 'red', rule.windupSeconds * 1000, this); this.supportCueLabel = label;
+      // 치유 예고에는 잡음 난수를 쓰는 새 효과음을 붙이지 않는다. 소환의 기존 예고만 앞당긴다.
+      if (kind === 'summon') audio.enemyTelegraph({ kind: 'summon', boss: false, urgent: false });
+    }
+    this.updateSkillTelegraph();
+  }
+  trySupportCast(dt) {
+    this.healT -= dt; this.summonT -= dt;
+    if (this.state !== 'chase') return false;
+    if (this.healT <= 0) {
+      this.healT = 6;
+      for (const ally of this.game.enemies) if (ally.alive && ally !== this && ally.distTo(this) <= 6 && ally.hp < ally.maxHp) {
+        this.startSupportCast('heal'); return true;
+      }
+    }
+    if (this.summonT <= 0) {
+      this.summonT = 9; let alive = 0;
+      for (const enemy of this.game.enemies) if (enemy.alive) alive++;
+      if (alive < this.game.maxAlive - 3) { this.startSupportCast('summon'); return true; }
+    }
+    return false;
+  }
+  finishSupportCast() {
+    const kind = this.supportCastKind;
+    if (!kind) return;
+    if (!this.supportOwnerValid() || this.state !== 'attack' || this.stun > 0 || this.breakT > 0) {
+      this.clearSupportCast(); return;
+    }
+    if (this.game.paused || !Number.isFinite(this.stateT) ||
+        this.stateT + 1e-9 < this.supportOwner.rule.windupSeconds) return;
+    // 먼저 닫아 큰 dt나 중복 갱신이 완료 효과를 재실행하지 않게 한다.
+    this.clearSupportCast();
+    if (!this.supportOwnerValid()) return;
+    this.play(this.A('idleCombat'), { fade: .15 });
+    if (kind === 'summon') {
+      let alive = 0; for (const enemy of this.game.enemies) if (enemy.alive) alive++;
+      if (alive < this.game.maxAlive - 3) this.game.summonMinions(this, 2);
+      return;
+    }
+    let n = 0;
+    for (const ally of this.game.enemies) {
+      if (!ally.alive || ally === this || ally.distTo(this) > 6 || ally.hp >= ally.maxHp) continue;
+      ally.hp = Math.min(ally.maxHp, ally.hp + ally.maxHp * .15);
+      this.game.fx.embers(ally.pos, 0x80ff90, { n: 4, radius: .5, life: .7, rise: 2.5 }); n++;
+    }
+    if (n) {
+      this.game.fx.groundTex(this.pos, 'circle_gold', 0x80ff90, { r0: 1, r1: 7, life: .8, spin: 1, fadeIn: .1 });
+      this.game.fx.damage(this.pos, 0, { text: '치유 ×' + n });
+      audio.magic({ vol: .3, base: 392, notes: [0, 4, 7], step: .06 });
+    }
+  }
   updateSkillTelegraph() {
     const ring = this.telegraphRing;
     if (!ring) return;
-    const active = this.alive && !this.spawning && this.telegraph > 0;
+    const active = this.alive && !this.spawning && this.telegraph > 0 && (!this.supportCastKind || this.supportOwnerVisible());
     ring.visible = active;
-    if (!active) return;
+    if (!active) { if (this.supportCastKind) this.clearSupportCue(); return; }
     const kind = this.special || this.mobRole?.key || (this.def.ranged ? 'magic' : 'melee');
-    const danger = kind === 'soulrain' || kind === 'fan' || kind === 'magic' ? 0x86f7b2 : kind === 'slam' || kind === 'crusher' ? 0xffb04c : 0xff4b63;
+    const danger = kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind === 'support_heal' ? 0x86f7b2 : kind === 'slam' || kind === 'crusher' ? 0xffb04c : 0xff4b63;
     ring.material.color.set(danger);
-    const max = Math.max(.22, (this.attackDur || 1) * (this.hitAt || .5));
+    const max = this.supportCastKind ? this.supportOwner.rule.windupSeconds : Math.max(.22, (this.attackDur || 1) * (this.hitAt || .5));
     const remaining = Math.max(0, Math.min(1, this.telegraph / max));
     const pulse = Math.abs(Math.sin((this.game.elapsed || 0) * 18));
     ring.scale.setScalar(1.02 + (1 - remaining) * .22 + pulse * .06);
@@ -146,10 +248,12 @@ export class Enemy extends Actor {
       // 슈퍼아머는 유지해 강적과 잡몹의 타격 언어를 구분한다.
       if (this.state !== 'attack' || kb >= 4 || (hitReact && !this.isBoss && !this.isElite)) { this.signatures?.clear(); this.mobRole?.clear(); this.state = 'hurt'; this.stateT = 0; this.stagger = 0.22 + Math.min(0.4, kb * 0.03); this.play(this.A('hit'), { once: true, fade: 0.04, speed: 1.8 }); this.telegraph = 0; this.attackDone = false; }
     }
+    if (this.supportCastKind && (this.state !== 'attack' || this.stun > 0 || this.breakT > 0)) this.clearSupportCast();
     if (this.hp <= 0) { this.hp = 0; this.kill(dirx, dirz, kb); }
     return dmg;
   }
   kill(dirx, dirz, kb) {
+    this.clearSupportCast();
     this.signatures?.clear();
     this.mobRole?.clear();
     this.die(); this.state = 'dead'; this.telegraph = 0;
@@ -158,6 +262,22 @@ export class Enemy extends Actor {
     this.game.onEnemyDeath(this);
   }
   update(dt) {
+    if (this.supportStopped) return;
+    this.bindSupportOwner();
+    if (this.supportOwner) {
+      if (!this.supportOwnerValid()) {
+        this.clearSupportCast();
+        // 죽은 소유자의 기존 시체 수명은 진행해 Battle의 회수 경로를 막지 않는다.
+        if (!this.alive) {
+          if (this.marker) this.marker.visible = false;
+          if (!this.disposed && !this.game.paused && Number.isFinite(dt) && dt > 0) super.update(dt);
+        }
+        return;
+      }
+      // Actor가 기절 시간을 먼저 줄이므로 한 프레임보다 짧은 제어도 여기서 중단한다.
+      if (this.supportCastKind && (this.state !== 'attack' || this.stun > 0 || this.breakT > 0)) this.clearSupportCast();
+      if (this.game.paused || !Number.isFinite(dt) || dt <= 0) return;
+    }
     this.mobRole?.beforeStep(dt);
     super.update(dt);
     if(this.signatures){
@@ -185,6 +305,13 @@ export class Enemy extends Actor {
     }
     if (this.state === 'hurt') { this.vel.set(0, 0, 0); if (this.stateT > this.stagger) { this.state = 'chase'; this.play(this.A('idleCombat'), { fade: 0.12 }); } return; }
     if (this.state === 'dodge') { if (this.stateT > 0.4) { this.state = 'chase'; this.play(this.A('idle'), { fade: 0.1 }); } return; }
+    if (this.supportCastKind) {
+      this.vel.set(0, 0, 0);
+      this.telegraph = Math.max(0, this.supportOwner.rule.windupSeconds - this.stateT);
+      if (this.telegraph <= 1e-9) this.finishSupportCast();
+      else this.updateSkillTelegraph();
+      return;
+    }
     if (this.mobRole?.update()) return;
     // ---- 행동형 ----
     if (this.guardBroken > 0) { this.guardBroken -= dt; if (this.guardBroken <= 0 && this.marker) this.marker.material.color.set(0x60a0ff); }
@@ -197,10 +324,13 @@ export class Enemy extends Actor {
       }
       if (d < 2.2 && this.state === 'chase') { this.fuse = 0; this.special = 'bomber'; this.telegraph = 0.7; this.game.fx.ring(this.pos, 0xff6030, { telegraph: true, r0: 3.3, r1: 3.6, life: 0.7, y: 0.06, width: 1 }); this.announceSkill(); audio.charge({ vol: 0.3, dur: 0.6 }); return; }
     } else if (this.behavior === 'shaman') {
-      this.healT -= dt; this.summonT -= dt;
-      if (this.healT <= 0) { this.healT = 6; let n = 0; for (const o of this.game.enemies) { if (!o.alive || o === this || o.distTo(this) > 6 || o.hp >= o.maxHp) continue; o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.15); this.game.fx.embers(o.pos, 0x80ff90, { n: 4, radius: 0.5, life: 0.7, rise: 2.5 }); n++; }
-        if (n) { this.game.fx.groundTex(this.pos, 'circle_gold', 0x80ff90, { r0: 1, r1: 7, life: 0.8, spin: 1, fadeIn: 0.1 }); this.game.fx.damage(this.pos, 0, { text: '치유 ×' + n }); audio.magic({ vol: 0.3, base: 392, notes: [0, 4, 7], step: 0.06 }); } }
-      if (this.summonT <= 0) { this.summonT = 9; const alive = this.game.enemies.filter((e) => e.alive).length; if (alive < this.game.maxAlive - 3) { this.special = 'summon'; this.announceSkill(); this.game.summonMinions(this, 2); this.play(this.A('cast'), { once: true, fade: 0.1 }); } }
+      if (this.supportOwner) { if (this.trySupportCast(dt)) return; }
+      else {
+        this.healT -= dt; this.summonT -= dt;
+        if (this.healT <= 0) { this.healT = 6; let n = 0; for (const o of this.game.enemies) { if (!o.alive || o === this || o.distTo(this) > 6 || o.hp >= o.maxHp) continue; o.hp = Math.min(o.maxHp, o.hp + o.maxHp * 0.15); this.game.fx.embers(o.pos, 0x80ff90, { n: 4, radius: 0.5, life: 0.7, rise: 2.5 }); n++; }
+          if (n) { this.game.fx.groundTex(this.pos, 'circle_gold', 0x80ff90, { r0: 1, r1: 7, life: 0.8, spin: 1, fadeIn: 0.1 }); this.game.fx.damage(this.pos, 0, { text: '치유 ×' + n }); audio.magic({ vol: 0.3, base: 392, notes: [0, 4, 7], step: 0.06 }); } }
+        if (this.summonT <= 0) { this.summonT = 9; const alive = this.game.enemies.filter((e) => e.alive).length; if (alive < this.game.maxAlive - 3) { this.special = 'summon'; this.announceSkill(); this.game.summonMinions(this, 2); this.play(this.A('cast'), { once: true, fade: 0.1 }); } }
+      }
     }
     // 분리 (몹몰이 시 겹침 방지, 가까운 것만)
     const separation = packSeparation(this, this.game.enemies);
