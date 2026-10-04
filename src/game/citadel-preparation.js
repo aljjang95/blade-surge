@@ -8,6 +8,8 @@ import { personalContextLabel, personalControlLabel } from '../ui/personal-goal-
 import { mapTacticsForStage } from '../data/map-tactics.js';
 import { routeObjectiveForStage } from '../data/route-objectives.js';
 import { buildExpeditionStage, EXPEDITION_LAYOUTS } from './expedition-combat.js';
+import { CHALLENGES } from '../data/masterworks.js';
+import { difficultyEffects } from './masterworks-core.js';
 
 const definitions = (id, depth) => depth === 'deep' ? expeditionDepth(id) : DUNGEONS.find(def => def.id === id);
 // Basic catalog stages include a roster callback. Preserve that callback while
@@ -44,6 +46,24 @@ function accessFor(app, definition, depth) {
   return { ok: !error, error, energy: Number.isFinite(energy) ? energy : null, cost: definition.energy };
 }
 
+/** 서약은 기존 저장과 합산 규칙만 읽는다. 선택 저장은 MasterworksService가 맡는다. */
+function challengesFor(app, access) {
+  const selected = app.eco?.s?.masterworks?.challengeIds;
+  const choices = CHALLENGES.map(challenge => ({ id: challenge.id, name: challenge.name,
+    description: challenge.description, active: Array.isArray(selected) && selected.includes(challenge.id) }));
+  const ids = choices.filter(challenge => challenge.active).map(challenge => challenge.id);
+  const fury = choices.find(challenge => challenge.id === 'fury');
+  const result = app.ui?.resultData;
+  const unsaved = app.expeditionUI?.result?.saveError || app.battle?.rpgDirty || result?.saveError
+    || result?.reward?.saveError || result?.reward?.ok === false || app.expeditionRefundPending;
+  const error = !access.ok ? access.error : unsaved ? '결과 저장과 에너지 복구를 마친 뒤 서약을 선택해 주세요.'
+    : app.mode !== 'lobby' ? '성채로 돌아온 뒤 서약을 선택해 주세요.'
+    : typeof app.masterworks?.challenge !== 'function' ? '서약 준비 상태를 확인해 주세요.' : '';
+  return { choices, ids, effects: difficultyEffects(ids), furyActive: fury.active,
+    afterFuryToggle: difficultyEffects(fury.active ? ids.filter(id => id !== 'fury') : [...ids, 'fury']),
+    changeAccess: { ok: !error, error } };
+}
+
 function goalFor(state, currentContext) {
   const saved = normalizePersonalGoal(state?.personalGoal);
   if (!saved) return { selected: false, status: 'none', context: null, routeLabel: '', contextLabel: '',
@@ -73,7 +93,9 @@ export function citadelPreparation(app, routeId, depth = 'standard') {
     control, controlLabel: personalControlLabel(control) };
   const route = { kind: 'dungeon', id: routeId, depth, conquestId: null, riftId: null };
   const expedition = app.expedition?.s || {};
-  return { ok: true, routeId, depth, definition: copyDefinition(definition), access: accessFor(app, definition, depth),
+  const access = accessFor(app, definition, depth);
+  return { ok: true, routeId, depth, definition: copyDefinition(definition), access,
+    challenges: challengesFor(app, access),
     depthOptions: ['standard', 'deep'].flatMap(option => {
       const def = definitions(routeId, option);
       return def ? [{ depth: option, label: option === 'deep' ? '심층 원정' : '기본 원정',

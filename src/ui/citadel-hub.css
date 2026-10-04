@@ -83,6 +83,26 @@
 .citadel-hub-dialog .citadel-hub-action-cue [data-citadel-cue-action]{margin-top:3px;color:#b8d0c6}
 @media(max-width:600px){.citadel-hub-action-cue{padding-left:17px;padding-right:17px}}
 .citadel-hub-destination-footer{flex:none;padding:12px 26px 18px;border-top:1px solid #adbea640;background:#172d36;box-shadow:0 -8px 20px #102a3326}
+.citadel-hub-risk-choice{padding-bottom:9px;margin-bottom:9px;border-bottom:1px solid #adbea630}
+.citadel-hub-risk-row{display:flex;align-items:center;gap:12px}
+.citadel-hub-fury{flex:none;display:grid;gap:3px;min-width:116px;min-height:52px;padding:7px 12px;border:1px solid #a8bfab66;border-radius:7px;background:#29434a;color:#e1e8d6;font:600 11px system-ui,sans-serif;cursor:pointer}
+.citadel-hub-fury strong{font-size:10px;color:#b9d0c7}
+.citadel-hub-fury[aria-pressed="true"]{border-color:#ddbb92;background:#594034;color:#ffe5be}
+.citadel-hub-fury[aria-pressed="true"] strong{color:#ebc6a4}
+.citadel-hub-fury:disabled{opacity:.45;cursor:default}
+.citadel-hub-risk-row>div{min-width:0}
+.citadel-hub-dialog #citadel-fury-rule{font-size:11px;color:#e3ddc6;line-height:1.45}
+.citadel-hub-dialog .citadel-hub-risk-persistence{font-size:10px;line-height:1.45;color:#b8c9bd;margin-top:3px}
+.citadel-hub-dialog #citadel-challenge-active{margin-top:6px;font-size:10px;line-height:1.45;color:#d4e0cb}
+.citadel-hub-dialog .citadel-hub-challenge-notice{margin-top:6px;color:#e4c49d;font-size:10px;line-height:1.45}
+.citadel-hub-challenge-notice[hidden]{display:none}
+.citadel-hub-challenge-details{margin-top:18px;padding:12px;border:1px solid #a5b7a53d;border-radius:8px;background:#102b343b}
+.citadel-hub-challenge-details ul{display:grid;gap:7px;list-style:none;padding:0;margin:0 0 11px}
+.citadel-hub-challenge-details li{display:grid;gap:3px;font-size:11px;line-height:1.5;color:#a9bdb1}
+.citadel-hub-challenge-details li[data-active="true"]{color:#e9d2ac}
+.citadel-hub-challenge-details li strong{font-size:11px;font-weight:600}
+.citadel-hub-challenge-details li span{font-size:10px}
+.citadel-hub-dialog .citadel-hub-challenge-details p{font-size:11px;margin-top:7px}
 .citadel-hub-dialog .citadel-hub-access{color:var(--citadel-near-accent);font-size:11px;line-height:1.5}
 .citadel-hub-destination-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:10px}
 .citadel-hub-destination-actions button{border:1px solid #c7d6ca4a;border-radius:7px;background:#28444d;color:#e5e9dd;min-height:44px;padding:11px 17px;font:600 12px system-ui,sans-serif;cursor:pointer}
