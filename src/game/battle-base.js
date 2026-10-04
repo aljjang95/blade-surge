@@ -105,10 +105,13 @@ export class Battle {
     this.hazards = stage.expedition?.kind === 'arena' ? null : new RegionHazards(this);
     const preparationObjects = fieldDropsAllowed(stage) ? this.drops.preparationVisuals() : [];
     const readinessObjects = this.hazards ? [...preparationObjects, this.hazards.group] : preparationObjects;
+    const silhouette = this.renderer.playerSilhouette?.preparation(this.renderer.r, this.player, this.renderer.composer.writeBuffer);
     const prepared = await this.fx.prepare(this.renderer.r, this.app.models, this.renderer.composer.readBuffer,
-      preparationObjects, readinessObjects, () => this._startGeneration === startGeneration);
+      preparationObjects, readinessObjects, () => this._startGeneration === startGeneration,
+      silhouette ? silhouette.targets : []);
     if (this._startGeneration !== startGeneration) return;
     if (prepared === false) throw new Error('render preparation canceled');
+    if (silhouette && !silhouette.complete()) throw new Error('player silhouette preparation canceled');
     this.drops.setup(this.app.models.dungeon);
     this.renderer.rig.mode = 'battle'; this.renderer.rig.target.copy(this.player.pos); this.renderer.rig.pos.copy(this.player.pos).add(this.renderer.rig.offset);
     const weaponsGltf = await loadModel('skel_weapons');
@@ -425,7 +428,7 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
+  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const runtimeType = !this.stage.expedition && type === this.stage.encounter?.enemyId && this.stage.dungeonBossId ? this.stage.dungeonBossId : type;

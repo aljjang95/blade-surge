@@ -14,6 +14,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { displaySize, renderPixelRatio } from '../platform/mobile-display.js';
 import { rebindEnvironment } from './environment.js';
 import { ShaderProgramValidator } from './shader-program-validator.js';
+import { PlayerSilhouette, PLAYER_SILHOUETTE_FRAGMENT } from './player-silhouette.js';
 
 // 최종 합성 셰이더: 색수차 · 비네트 · 히트 플래시 · 방사형 블러(궁극기) · 색보정
 const FinalShader = {
@@ -26,11 +27,15 @@ const FinalShader = {
     uRadial: { value: 0 },     // 방사형 블러
     uDesat: { value: 0 },      // 채도 감소 (사망/슬로우)
     uTime: { value: 0 },
+    uPlayerMask: { value: null },
+    uPlayerOutlineStep: { value: new THREE.Vector2() },
+    uPlayerOutlineActive: { value: 0 },
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader: `
     uniform sampler2D tDiffuse; uniform float uAberr, uFlash, uVignette, uRadial, uDesat, uTime; uniform vec3 uFlashColor;
     varying vec2 vUv;
+    ${PLAYER_SILHOUETTE_FRAGMENT}
     void main(){
       vec2 uv = vUv; vec2 c = uv - 0.5; float d = length(c);
       vec3 col;
@@ -50,7 +55,7 @@ const FinalShader = {
       // 전면 백색 플래시는 시야와 접근성을 해친다. 타격 색은 바깥 테두리에만 남긴다.
       float impactEdge = smoothstep(0.42, 0.96, d);
       col = mix(col, uFlashColor * 0.72, clamp(uFlash * impactEdge * 0.28, 0.0, 0.22));
-      gl_FragColor = vec4(col, 1.0);
+      gl_FragColor = vec4(playerOutline(col, uv), 1.0);
     }`,
 };
 
@@ -105,6 +110,7 @@ export class Renderer {
     this.lobbyAA = new ShaderPass(FXAAShader); this.lobbyAA.enabled = false;
     this.composer.addPass(this.lobbyAA);
     this.u = this.finalPass.uniforms;
+    this.playerSilhouette = new PlayerSilhouette(this.u, this.finalPass);
     this.flash = 0; this.aberr = 0; this.radial = 0; this.desat = 0;
 
     const scheduleResize = () => {
@@ -141,6 +147,7 @@ export class Renderer {
     this.r.setPixelRatio(pr); this.composer.setPixelRatio(pr);
     this.r.setSize(w, h, false);
     this.composer.setSize(w, h);
+    this.playerSilhouette.resize(w, h, pr);
     this.lobbyAA.uniforms.resolution.value.set(1 / (w * this.r.getPixelRatio()), 1 / (h * this.r.getPixelRatio()));
     if (this.rig?.mode === 'battle' && this.battleMinimumAspect > 0) {
       const look = this.rig.target.clone().add(this.rig.lookOffset);
@@ -242,6 +249,7 @@ export class Renderer {
     this.u.uTime.value = this.time;
   }
   render() {
+    this.playerSilhouette.render(this.r, this.camera, this.playerSilhouetteTarget?.());
     // Bind the live actor after camera movement; a new battle never inherits an old mask.
     if (this.heroEffectFocus) {
       this.heroEffectFocus.setTarget(this.heroEffectTarget?.());

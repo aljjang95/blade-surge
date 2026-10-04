@@ -71,6 +71,8 @@ class App {
     this.fx.focus.bindBloom(this.renderer.bloom);
     this.renderer.heroEffectFocus = this.fx.focus;
     this.renderer.heroEffectTarget = () => this.mode === 'battle' && this.battle?.active ? this.battle.player : null;
+    this.renderer.playerSilhouetteTarget = () => this.mode === 'battle' && !this.stageStarting && !this.contextLost
+      && this.battle?.active ? this.battle.player : null;
     this.input = new Input();
     this.eco = new Economy();
     this.funnel = createFunnelLog();
@@ -102,12 +104,30 @@ class App {
     this.applySettings();
     this.canvas.addEventListener('webglcontextlost', event => {
       event.preventDefault(); this.contextLost = true; this.input.clear(); this.citadel.clearInput();
+      this._graphicsGeneration = (this._graphicsGeneration || 0) + 1;
+      this.renderer.playerSilhouette.contextLost();
       if (this.battle?.active) this.ui.pause(true);
       $('render-recovery').hidden = false;
     });
-    this.canvas.addEventListener('webglcontextrestored', () => {
+    this.canvas.addEventListener('webglcontextrestored', async () => {
+      const generation = this._graphicsGeneration = (this._graphicsGeneration || 0) + 1;
       try {
         this.renderer.rebuildEnvironment(Object.values(this.models).map(gltf => gltf.scene)); this.renderer.resize(true);
+        this.renderer.playerSilhouette.restoreTarget();
+        const battle = this.battle, actor = battle?.active ? battle.player : null;
+        if (actor && !actor.disposed) {
+          const silhouette = this.renderer.playerSilhouette.preparation(this.renderer.r, actor, this.renderer.composer.writeBuffer);
+          if (!silhouette) throw new Error('player silhouette recovery has no current model');
+          const current = () => this._graphicsGeneration === generation && battle === this.battle
+            && battle.active && battle.player === actor && silhouette.isCurrent();
+          const prepared = await this.fx.prepare(this.renderer.r, this.models, this.renderer.composer.readBuffer,
+            [], [], current, silhouette.targets);
+          if (this._graphicsGeneration !== generation) return;
+          if (current()) {
+            if (!prepared || !silhouette.complete()) throw new Error('player silhouette recovery canceled');
+          }
+        }
+        if (this._graphicsGeneration !== generation) return;
         this.contextLost = false; this.last = performance.now(); $('render-recovery').hidden = true;
         if (this.battle?.active) this.ui.toast('화면이 복구됐습니다. 계속 버튼으로 전투를 재개하세요.');
       } catch (error) { console.error('Graphics recovery failed', error); }

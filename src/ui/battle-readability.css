@@ -89,15 +89,33 @@
  .battle-atlas-header{padding:9px 12px}
 }
 @media(orientation:portrait){
- .experience-v2.oath-visual #hud.battle-readability .hud-top{grid-template-columns:minmax(0,1fr) 96px;gap:10px;padding-top:46px;top:calc(8px + var(--sat,0px))}
- .experience-v2.oath-visual #hud.battle-readability .hud-player{grid-column:1;grid-row:1}
- .experience-v2.oath-visual #hud.battle-readability .hud-center{left:0;top:0;width:calc(100% - 116px)}
- .experience-v2.oath-visual #hud.battle-readability .hud-right{grid-column:2;grid-row:1;width:96px}
- .experience-v2.oath-visual #hud.battle-readability .hud-right-top{width:auto;grid-template-columns:none;max-width:none}
- .experience-v2.oath-visual #hud.battle-readability #minimap-wrap{top:50px;grid-template-columns:88px;width:88px}
- .experience-v2.oath-visual #hud.battle-readability #btn-map{grid-column:1}
- .experience-v2.oath-visual #hud.battle-readability #objective{position:fixed;top:calc(132px + var(--sat,0px));left:14px;right:120px;max-width:none;padding:7px 8px;font-size:11px}
- .experience-v2.oath-visual #hud.battle-readability .bossbar{top:calc(190px + var(--sat,0px));left:14px;right:14px}
+ /* Real rows let longer goals and earned actions grow without covering HP or the boss. */
+ .experience-v2.oath-visual #hud.battle-readability .hud-top{--portrait-action-space:116px;position:relative;top:auto;left:auto;right:auto;margin:calc(8px + var(--sat,0px)) calc(14px + var(--sar,0px)) 0 calc(14px + var(--sal,0px));grid-template-columns:minmax(0,1fr) 88px;gap:4px 8px;padding-top:0}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center,.experience-v2.oath-visual #hud.battle-readability .hud-right,.experience-v2.oath-visual #hud.battle-readability #minimap-wrap{display:contents}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center .wave,.experience-v2.oath-visual #hud.battle-readability .hud-center .stage-name{grid-column:1/-1;max-width:calc(100% - var(--portrait-action-space));white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center .wave{grid-row:1}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center .stage-name{grid-row:2}
+ .experience-v2.oath-visual #hud.battle-readability .hud-right-top{position:static;grid-column:1/-1;grid-row:1/3;justify-self:end;align-self:start;width:auto;grid-template-columns:none;max-width:none}
+ .experience-v2.oath-visual #hud.battle-readability .hud-right-top .hud-btn{width:auto;flex:0 0 auto;overflow:visible;text-overflow:clip}
+ .experience-v2.oath-visual #hud.battle-readability .hud-player{grid-column:1;grid-row:3;padding:4px 6px;align-items:start}
+ .experience-v2.oath-visual #hud.battle-readability .hud-bars{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:2px 6px}
+ .experience-v2.oath-visual #hud.battle-readability .hud-bars>.hpbar,.experience-v2.oath-visual #hud.battle-readability .hud-bars>.mpbar{grid-column:1/-1}
+ .experience-v2.oath-visual #hud.battle-readability .hud-bars>.expbar{grid-column:1;align-self:center}
+ .experience-v2.oath-visual #hud.battle-readability .hud-bars>.ultbar{grid-column:2;align-self:center}
+ .experience-v2.oath-visual #hud.battle-readability .hud-bars>.rpg-xp{grid-column:1/-1;grid-template-columns:minmax(0,max-content) minmax(24px,1fr);align-items:center;gap:6px}
+ .experience-v2.oath-visual #hud.battle-readability .rpg-xp span{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+ .experience-v2.oath-visual #hud.battle-readability .hud-bars>.setgauge,.experience-v2.oath-visual #hud.battle-readability .hud-bars>.arsenal-hud,.experience-v2.oath-visual #hud.battle-readability .hud-bars>.experience-link,.experience-v2.oath-visual #hud.battle-readability .hud-bars>.mw-run-strip{grid-column:1/-1}
+ .experience-v2.oath-visual #hud.battle-readability #btn-map{grid-column:2;grid-row:3/5;width:88px;align-self:start}
+ .experience-v2.oath-visual #hud.battle-readability #objective{grid-column:1;grid-row:4;position:static;top:auto;left:auto;right:auto;grid-template-columns:minmax(0,max-content) minmax(0,1fr);gap:2px 8px;align-items:start;max-width:none;padding:5px 6px;font-size:11px}
+ .experience-v2.oath-visual #hud.battle-readability .battle-objective-title{overflow-wrap:anywhere}
+ .experience-v2.oath-visual #hud.battle-readability .battle-objective-action{align-self:center}
+ .experience-v2.oath-visual #hud.battle-readability .battle-objective-challenge,.experience-v2.oath-visual #hud.battle-readability .battle-objective-hold{grid-column:1/-1}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center .rpg-target,.experience-v2.oath-visual #hud.battle-readability .hud-center .mw-posture{position:static;grid-column:1/-1;width:auto;max-width:none;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center .rpg-target{grid-row:5}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center .mw-posture{grid-row:6}
+ .experience-v2.oath-visual #hud.battle-readability .bossbar{position:relative;top:auto;left:auto;right:auto;margin:6px calc(14px + var(--sar,0px)) 0 calc(14px + var(--sal,0px))}
+ .experience-v2.oath-visual #hud.battle-readability .bossbar .boss-name{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+ .experience-v2.oath-visual #hud.battle-readability .combat-cue{position:relative;top:auto;width:max-content;margin-top:8px}
  .experience-v2.oath-visual #hud.battle-readability .combo,.experience-v2.oath-visual #hud.battle-readability .kill-streak{top:calc(214px + var(--sat,0px))}
  .experience-v2.oath-visual #hud.battle-readability .oath-camera-details{top:auto;bottom:calc(284px + var(--sab,0px))}
  #hud.battle-readability #map-tactics-context{left:140px;right:14px;bottom:calc(236px + var(--sab,0px));display:grid;gap:5px}
@@ -111,7 +129,18 @@
  .battle-atlas-header{padding:12px}
  .battle-atlas-header h2{font-size:20px}
  .battle-atlas-close{min-width:96px}
- .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer) .hud-center,.experience-v2.oath-visual #hud.battle-readability .hud-top:has(#btn-boss-shortcut:not([hidden])) .hud-center{width:calc(100% - 192px)}
- .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-center{width:80px}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer){--portrait-action-space:194px}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(#btn-boss-shortcut:not([hidden])){--portrait-action-space:200px}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])){--portrait-action-space:278px}
+}
+@media(orientation:portrait) and (max-width:374px){
+ /* Four full-size actions take their own row instead of clipping the stage title. */
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-right-top{grid-row:3;justify-self:start;flex-wrap:wrap;max-width:100%}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-center .wave,.experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-center .stage-name{max-width:100%}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-player{grid-row:4}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) #btn-map{grid-row:4/6}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) #objective{grid-row:5}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-center .rpg-target{grid-row:6}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-center .mw-posture{grid-row:7}
 }
 @media(prefers-reduced-motion:reduce){.battle-atlas *,#map-tactics-context *{animation:none;transition:none}}
