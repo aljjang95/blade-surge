@@ -60,9 +60,13 @@ export class CitadelHubUI {
     this.dialog.setAttribute('aria-describedby', 'citadel-destination-description');
     document.body.append(this.dialog);
     this.dialog.addEventListener('close', () => {
-      this.opened = false; this.dialogSpot = null;
-      this.app.hubControls?.clear(); this.app.citadelControls?.clear();
-      if (this.visible && this.app.mode === 'lobby' && this.returnFocus?.isConnected) this.returnFocus.focus({ preventScroll: true });
+      // Native close events are deferred. A settled close must never clear a
+      // fresh E press, a newly reopened gate, or the journal opened after it.
+      if (!this.opened || this.dialog.open) return;
+      this.close();
+    });
+    this.dialog.addEventListener('cancel', event => {
+      event.preventDefault(); this.close();
     });
     this.dialog.addEventListener('click', event => {
       if (event.target !== this.dialog) return;
@@ -186,7 +190,17 @@ export class CitadelHubUI {
     go.textContent = `${preparation.depth === 'deep' ? '심층' : '기본'} 입장 · 에너지 ${access.cost}`;
     this.dialog.querySelector('.citadel-hub-access').textContent = access.error || '입장을 확정하면 에너지가 소모됩니다.';
   }
-  close() { if (this.dialog.open) this.dialog.close(); else { this.opened = false; this.dialogSpot = null; } }
+  close() {
+    if (!this.opened && !this.dialog.open) return;
+    // Finish state/input cleanup before the native dialog becomes walkable.
+    this.opened = false; this.dialogSpot = null;
+    this.app.hubControls?.clear(); this.app.citadelControls?.clear();
+    if (this.dialog.open) this.dialog.close();
+    const canWalk = this.visible && this.app.mode === 'lobby' && !this.app.stageStarting &&
+      (this.app.canWalkHub?.() ?? !document.querySelector('dialog[open], #modal.show'));
+    this.update(this.nearest, { blocked: !canWalk });
+    if (canWalk && !this.busy && this.returnFocus?.isConnected && !this.returnFocus.disabled) this.returnFocus.focus({ preventScroll: true });
+  }
   clear() { this.nearest = null; this.close(); this.touchKnob.style.transform = 'translate(-50%, -50%)'; }
   destroy() {
     this.clear(); this.unsub?.();
