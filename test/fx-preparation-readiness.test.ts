@@ -159,6 +159,44 @@ test('the first check matches r170 extension scheduling with no extra warm rende
   }
 });
 
+test('owned preparation compiles and reflects the player-only scene against its real target without a warm draw', async () => {
+  const f = fixture(5), maskScene = new THREE.Scene(), maskTarget = {}, material = new THREE.MeshDepthMaterial();
+  material.name = 'player-mask'; const object = new THREE.Mesh(f.geometry, material); object.visible = false; maskScene.add(object);
+  const finalScene = new THREE.Scene(), finalTarget = {}, finalMaterial = new THREE.ShaderMaterial(); finalMaterial.name = 'player-final';
+  finalScene.add(new THREE.Mesh(f.geometry, finalMaterial));
+  let current = true;
+  const mask = { scene: maskScene, target: maskTarget, readinessObjects: [maskScene], isCurrent: () => current };
+  const final = { scene: finalScene, target: finalTarget, readinessObjects: [finalScene], isCurrent: () => current };
+  const original = f.renderer.compile; let maskCompiled = false, finalCompiled = false;
+  f.renderer.compile = (scene: THREE.Scene, camera: THREE.Camera, targetScene: THREE.Scene | null = null) => {
+    if (scene === maskScene) { expect(f.current()).toBe(maskTarget); expect(targetScene).toBeNull(); maskCompiled = true; }
+    if (scene === finalScene) { expect(f.current()).toBe(finalTarget); expect(targetScene).toBeNull(); finalCompiled = true; }
+    return original(scene, camera, targetScene);
+  };
+  const result = observe(f.fx.prepare(f.renderer, {}, f.target, [f.template], [f.template, f.hazards], () => true, [mask, final]));
+  await f.untilHeld(); expect(maskCompiled).toBe(true); expect(finalCompiled).toBe(true);
+  expect(result.done).toBe(false); expect(f.current()).toBe(finalTarget);
+  f.release(); await finish(result);
+  expect(result.value).toBe(true); expect(result.error).toBeUndefined(); expect(f.compileCalls()).toBe(5);
+  expect(f.events.filter(e => e.startsWith('uniforms:'))).toEqual(['uniforms:player-mask', 'uniforms:player-final', 'uniforms:loot', 'uniforms:warning']);
+  expect(f.events.filter(e => e.startsWith('attributes:'))).toEqual(['attributes:player-mask', 'attributes:player-final', 'attributes:loot', 'attributes:warning']);
+  expect(f.current()).toBe(f.previous); expect(f.nativeAsyncCalls()).toBe(0); expect(maskScene.children).toEqual([object]);
+});
+
+test('stopped or restored player-only target preparation settles before stale polls and restores the original target', async () => {
+  for (const changedContext of [false, true]) {
+    const f = fixture(4), maskScene = new THREE.Scene(), material = new THREE.MeshDepthMaterial(); material.name = 'player-mask';
+    maskScene.add(new THREE.Mesh(f.geometry, material)); let current = true;
+    const mask = { scene: maskScene, target: {}, readinessObjects: [maskScene], isCurrent: () => current };
+    const result = observe(f.fx.prepare(f.renderer, {}, f.target, [], [], () => true, [mask]));
+    await f.untilHeld(); current = false;
+    if (changedContext) f.resetProperties(); material.dispose(); await finish(result, 10);
+    expect(result.value).toBe(false); expect(result.error).toBeUndefined(); expect(f.missingGets()).toBe(0);
+    expect(f.events.some(e => e === 'uniforms:player-mask' || e === 'attributes:player-mask')).toBe(false);
+    expect(f.current()).toBe(f.previous); expect(f.nativeAsyncCalls()).toBe(0);
+  }
+});
+
 test('default readiness deduplicates templates and restores their original parent', async () => {
   const f = fixture(0), owner = new THREE.Group(); owner.add(f.template);
   const result = observe(f.fx.prepare(f.renderer, {}, f.target, [f.template, f.template])); await finish(result);
