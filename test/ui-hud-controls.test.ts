@@ -13,9 +13,20 @@ class El {
   selectors = new Map<string, El>(); queries: string[] = [];
   classOps: string[] = []; layoutReads = 0; parentElement: El | null = null;
   children: El[] = []; attributeWrites: Record<string, number> = {}; textWrites = 0;
+  styleWrites: Record<string, number> = {}; datasetWrites: Record<string, number> = {}; hiddenWrites = 0;
   private text = '';
-  hidden = false; disabled = false; src = ''; title = ''; onerror: (() => void) | null = null;
-  constructor(public tagName = 'div', public namespaceURI: string | null = null) { this.style.setProperty = (key: string, value: string) => { this.style[key] = value; }; }
+  private hiddenValue = false;
+  disabled = false; src = ''; title = ''; onerror: (() => void) | null = null;
+  constructor(public tagName = 'div', public namespaceURI: string | null = null) {
+    this.style.setProperty = (key: string, value: string) => { this.styleWrites[key] = (this.styleWrites[key] || 0) + 1; this.style[key] = value; };
+    this.style.getPropertyValue = (key: string) => String(this.style[key] ?? '');
+    this.style.getPropertyPriority = () => '';
+    this.dataset = new Proxy(this.dataset, { set: (target, key: string, value: string) => {
+      this.datasetWrites[key] = (this.datasetWrites[key] || 0) + 1; target[key] = value; return true;
+    } });
+  }
+  get hidden() { return this.hiddenValue; }
+  set hidden(value: boolean) { this.hiddenWrites++; this.hiddenValue = value; }
   get textContent(): string { return this.text + this.children.map(child => child.textContent).join(''); }
   set textContent(value: string) {
     this.text = value; this.textWrites++;
@@ -159,7 +170,7 @@ test('cached children preserve cooldown, MP, lock, ultimate and ready transition
   ]);
   expect(get('btn-dodge').classList.contains('cooling')).toBe(false);
   expect(get('btn-dodge').querySelector('.dodge-cd')!.hidden).toBe(true);
-  expect(get('hud-hp').style.width).toBe('20%'); expect(get('hud-vignette').style.opacity).toBe(.42);
+  expect(get('hud-hp').style.width).toBe('20%'); expect(get('hud-vignette').style.opacity).toBe('0.42');
   expect(get('hud-mp').style.width).toBe('62.5%'); expect(get('hud-mp-txt').textContent).toBe('MP 25 / 40');
   expect(get('hud-exp-txt').textContent).toBe(`EXP 200 / ${levelExp(20)}`);
   expect(get('hud-ult').parentElement!.classList.contains('full')).toBe(true);
@@ -226,6 +237,51 @@ test('dodge cooldown keeps the native .01 visibility boundary and display roundi
     expect(cd.hidden).toBe(hidden); expect(dodge.classList.contains('cooling')).toBe(!hidden);
     expect(cd.textContent).toBe('0.0');
   }
+});
+
+test('같은 HUD 값은 반복 쓰지 않고 실제 MP·EXP·막대 소수 변화는 즉시 반영한다', () => {
+  const f = fixture(); update(f);
+  const labels = [get('hud-hp-txt'), get('hud-mp-txt'), get('hud-exp-txt'), get('btn-dodge').querySelector('.dodge-cd')!];
+  const bars = [get('hud-hp'), get('hud-mp'), get('hud-exp'), get('hud-ult'), get('hud-vignette'),
+    ...f.skillBtns.map(button => button.querySelector('.cd')!)];
+  const textWrites = labels.map(label => label.textWrites), styleWrites = bars.map(bar => ({ ...bar.styleWrites }));
+  const readyWrites = f.skillBtns.map(button => button.datasetWrites.ready || 0);
+  const hiddenWrites = [labels[3].hiddenWrites, get('btn-boss-shortcut').hiddenWrites];
+  const flashes = f.skillBtns.map(button => button.layoutReads), sounds = play.mock.calls.length;
+  for (let frame = 0; frame < 30; frame++) update(f);
+  expect(labels.map(label => label.textWrites)).toEqual(textWrites); expect(bars.map(bar => bar.styleWrites)).toEqual(styleWrites);
+  expect(f.skillBtns.map(button => button.datasetWrites.ready || 0)).toEqual(readyWrites);
+  expect([labels[3].hiddenWrites, get('btn-boss-shortcut').hiddenWrites]).toEqual(hiddenWrites);
+  expect(f.skillBtns.map(button => button.layoutReads)).toEqual(flashes); expect(play.mock.calls.length).toBe(sounds);
+  f.player.mp = 10.000000000000002; f.player.hp = 80.00000000000001; f.player.cds[0] = 1.9999999999999998;
+  update(f);
+  expect(get('hud-mp').style.width).toBe(Math.max(0, f.player.mp / f.player.maxMp) * 100 + '%');
+  expect(get('hud-hp').style.width).toBe(Math.max(0, f.player.hp / f.player.maxHp) * 100 + '%');
+  expect(f.skillBtns[0].querySelector('.cd')!.style['--p']).toBe(Math.max(0, f.player.cds[0] / 4) * 100 + '%');
+  expect(labels[1].textWrites).toBe(textWrites[1]);
+  f.player.mp = 11; f.hero.exp = 21; update(f);
+  expect(labels[1].textContent).toBe('MP 11 / 40'); expect(labels[1].textWrites).toBe(textWrites[1] + 1);
+  expect(labels[2].textContent).toBe(`EXP 21 / ${levelExp(1)}`); expect(labels[2].textWrites).toBe(textWrites[2] + 1);
+});
+
+test('외부 HUD 초기화와 같은 값의 setupHud 재호출도 실제 표시와 준비 전환을 복원한다', () => {
+  const f = fixture(); f.player.ult = 100; update(f);
+  const hp = get('hud-hp'), mp = get('hud-mp'), exp = get('hud-exp'), cd = f.skillBtns[0].querySelector('.cd')!;
+  get('hud-hp-txt').textContent = ''; get('hud-mp-txt').textContent = ''; get('hud-exp-txt').textContent = '';
+  hp.style.width = '0%'; mp.style.width = '0%'; exp.style.width = '0%'; cd.style['--p'] = '0%';
+  get('btn-dodge').querySelector('.dodge-cd')!.hidden = true; get('btn-boss-shortcut').hidden = false;
+  update(f);
+  expect(hp.style.width).toBe('80%'); expect(mp.style.width).toBe('25%'); expect(exp.style.width).toBe(20 / levelExp(1) * 100 + '%');
+  expect(get('hud-hp-txt').textContent).toBe('80 / 100'); expect(get('hud-mp-txt').textContent).toBe('MP 10 / 40');
+  expect(get('hud-exp-txt').textContent).toBe(`EXP 20 / ${levelExp(1)}`); expect(cd.style['--p']).toBe('50%');
+  expect(get('btn-dodge').querySelector('.dodge-cd')!.hidden).toBe(false); expect(get('btn-boss-shortcut').hidden).toBe(true);
+  f.ui.showHud(false); f.ui.showHud(true); f.ui.setupHud(f.player.def, f.player);
+  expect(get('hud-ult').parentElement!.classList.contains('full')).toBe(false);
+  const sounds = play.mock.calls.length, flashes = f.skillBtns.map(button => button.layoutReads); update(f);
+  expect(get('hud-ult').parentElement!.classList.contains('full')).toBe(true); expect(cd.style['--p']).toBe('50%');
+  expect(f.skillBtns[1].dataset.ready).toBe('1'); expect(f.skillBtns[3].dataset.ready).toBe('1');
+  expect(play.mock.calls.length).toBe(sounds + 2);
+  expect(f.skillBtns.map(button => button.layoutReads)).toEqual(flashes.map((count, slot) => count + (slot === 1 || slot === 3 ? 1 : 0)));
 });
 
 test('manual attack presentation preserves the existing target and cached nodes while exact readiness, reservation and finisher state change', () => {

@@ -10,6 +10,7 @@ import { levelExp } from '../data/heroes.js';
 import { renderGrowthPreparation, canPrepareGrowth } from './growth.js';
 import { comboFeedback } from './combo-feedback.js';
 import { BattleReadability } from './battle-readability.js';
+import { writeHudStyle } from './hud-style-write.js';
 import './campaign.css';
 import './combo-feedback.css';
 
@@ -247,22 +248,26 @@ export class UI {
     const p = b.player; if (!p) return;
     this.app.expeditionUI?.updateCombatStatus(b);
     this.miniT -= dt; if (this.miniT <= 0) { this.miniT = 1 / 20; this.minimap.draw(b); }
-    const hp = Math.max(0, p.hp / p.maxHp); $('hud-hp').style.width = hp * 100 + '%';
+    const hp = Math.max(0, p.hp / p.maxHp); writeHudStyle($('hud-hp').style, 'width', hp * 100 + '%');
     const hpValue = Math.floor(p.hp), maxHpValue = Math.floor(p.maxHp);
-    if (this._hpValue !== hpValue || this._maxHpValue !== maxHpValue) {
-      this._hpValue = hpValue; this._maxHpValue = maxHpValue;
-      $('hud-hp-txt').textContent = `${fmt(hpValue)} / ${fmt(maxHpValue)}`;
+    if (this._hpValue !== hpValue || this._maxHpValue !== maxHpValue || this._hpText === undefined) {
+      this._hpValue = hpValue; this._maxHpValue = maxHpValue; this._hpText = `${fmt(hpValue)} / ${fmt(maxHpValue)}`;
     }
-    $('hud-hp').style.background = hp < 0.3 ? 'linear-gradient(90deg,#ff2d55,#ff8aa0)' : 'linear-gradient(90deg,#2bd46a,#a6ff5a)';
-    const mp = Math.max(0, p.mp / p.maxMp); $('hud-mp').style.width = mp * 100 + '%'; $('hud-mp-txt').textContent = `MP ${Math.floor(p.mp)} / ${p.maxMp}`;
-    const hero = this.eco.hero(b.heroId), need = levelExp(hero.level); $('hud-exp').style.width = Math.min(100, hero.exp / Math.max(1, need) * 100) + '%'; $('hud-exp-txt').textContent = `EXP ${hero.exp} / ${need}`;
-    const dodge = this._dodgeBtn, dodgeCd = this._dodgeCd; dodge.classList.toggle('cooling', p.dodgeCd > .01); dodgeCd.hidden = p.dodgeCd <= .01; if (!dodgeCd.hidden) dodgeCd.textContent = p.dodgeCd.toFixed(1);
-    $('btn-boss-shortcut').hidden = !b.canBossShortcut?.();
-    const ult = p.ult / p.ultMax; $('hud-ult').style.width = ult * 100 + '%'; $('hud-ult').parentElement.classList.toggle('full', ult >= 1);
-    this.skillBtns.forEach((btn, slot) => { const i = p.combatSkillIndex(slot), sk = p.def.skills[i]; if (!sk) return; const locked = !p.unlocked(i); btn.classList.toggle('locked', locked); if (locked) return; let pct; if (sk.ult) { pct = 1 - ult; btn.classList.toggle('ready', ult >= 1); } else { pct = p.cds[i] / sk.cd; btn.classList.toggle('ready', false); } this._skillCooldowns[slot].style.setProperty('--p', (Math.max(0,pct) * 100) + '%'); const wasReady = btn.dataset.ready === '1'; const ready = pct <= 0 && (!sk.mp || p.mp >= sk.mp); if (ready && !wasReady && b.elapsed > 1) { btn.classList.remove('ready-flash'); void btn.offsetWidth; btn.classList.add('ready-flash'); audio.play('ui_pluck', { vol: 0.25 }); } btn.dataset.ready = ready ? '1' : '0'; });
+    const hpLabel = $('hud-hp-txt'); if (hpLabel.textContent !== this._hpText) hpLabel.textContent = this._hpText;
+    writeHudStyle($('hud-hp').style, 'background', hp < 0.3 ? 'linear-gradient(90deg,#ff2d55,#ff8aa0)' : 'linear-gradient(90deg,#2bd46a,#a6ff5a)');
+    const mp = Math.max(0, p.mp / p.maxMp); writeHudStyle($('hud-mp').style, 'width', mp * 100 + '%');
+    const mpText = `MP ${Math.floor(p.mp)} / ${p.maxMp}`, mpLabel = $('hud-mp-txt'); if (mpLabel.textContent !== mpText) mpLabel.textContent = mpText;
+    const hero = this.eco.hero(b.heroId), need = levelExp(hero.level); writeHudStyle($('hud-exp').style, 'width', Math.min(100, hero.exp / Math.max(1, need) * 100) + '%');
+    const expText = `EXP ${hero.exp} / ${need}`, expLabel = $('hud-exp-txt'); if (expLabel.textContent !== expText) expLabel.textContent = expText;
+    const dodge = this._dodgeBtn, dodgeCd = this._dodgeCd, dodgeHidden = p.dodgeCd <= .01;
+    dodge.classList.toggle('cooling', p.dodgeCd > .01); if (dodgeCd.hidden !== dodgeHidden) dodgeCd.hidden = dodgeHidden;
+    if (!dodgeCd.hidden) { const text = p.dodgeCd.toFixed(1); if (dodgeCd.textContent !== text) dodgeCd.textContent = text; }
+    const shortcut = $('btn-boss-shortcut'), shortcutHidden = !b.canBossShortcut?.(); if (shortcut.hidden !== shortcutHidden) shortcut.hidden = shortcutHidden;
+    const ult = p.ult / p.ultMax; writeHudStyle($('hud-ult').style, 'width', ult * 100 + '%'); $('hud-ult').parentElement.classList.toggle('full', ult >= 1);
+    this.skillBtns.forEach((btn, slot) => { const i = p.combatSkillIndex(slot), sk = p.def.skills[i]; if (!sk) return; const locked = !p.unlocked(i); btn.classList.toggle('locked', locked); if (locked) return; let pct; if (sk.ult) { pct = 1 - ult; btn.classList.toggle('ready', ult >= 1); } else { pct = p.cds[i] / sk.cd; btn.classList.toggle('ready', false); } writeHudStyle(this._skillCooldowns[slot].style, '--p', (Math.max(0,pct) * 100) + '%'); const wasReady = btn.dataset.ready === '1'; const ready = pct <= 0 && (!sk.mp || p.mp >= sk.mp); if (ready && !wasReady && b.elapsed > 1) { btn.classList.remove('ready-flash'); void btn.offsetWidth; btn.classList.add('ready-flash'); audio.play('ui_pluck', { vol: 0.25 }); } const readyValue = ready ? '1' : '0'; if (btn.dataset.ready !== readyValue) btn.dataset.ready = readyValue; });
     this.setGauge(b);
-    if (b.boss && b.boss.alive) $('boss-hp').style.width = (b.boss.hp / b.boss.maxHp * 100) + '%';
-    if (this.hurtT > 0) { this.hurtT -= dt; } $('hud-vignette').style.opacity = Math.max(hp < 0.3 ? 0.42 : 0, this.hurtT > 0 ? this.hurtT * 1.2 : 0);
+    if (b.boss && b.boss.alive) writeHudStyle($('boss-hp').style, 'width', (b.boss.hp / b.boss.maxHp * 100) + '%');
+    if (this.hurtT > 0) { this.hurtT -= dt; } writeHudStyle($('hud-vignette').style, 'opacity', Math.max(hp < 0.3 ? 0.42 : 0, this.hurtT > 0 ? this.hurtT * 1.2 : 0));
   }
 
   /** 테마 세트 게이지 — 켜진 세트가 자원을 쓰면 그 상태를 HUD 에 띄운다 (룬 장전 / 포자 반경 / 얼음 기둥 / 사슬) */
