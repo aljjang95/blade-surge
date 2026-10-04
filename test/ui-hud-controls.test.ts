@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, expect, spyOn, test } from 'bun:test';
 import { UI } from '../src/ui/ui.js';
 import { audio } from '../src/engine/audio.js';
-import { levelExp } from '../src/data/heroes.js';
+import { HEROES, levelExp } from '../src/data/heroes.js';
+import { Player } from '../src/game/player.js';
+import { Battle } from '../src/game/battle-base.js';
 
 // The DOM boundary records native-style selectors, classes and style writes.
 // setupHud/updateHud/showHud remain the production methods under test.
@@ -10,8 +12,18 @@ class El {
   classes = new Set<string>(); attrs: Record<string, string> = {};
   selectors = new Map<string, El>(); queries: string[] = [];
   classOps: string[] = []; layoutReads = 0; parentElement: El | null = null;
-  textContent = ''; hidden = false; src = ''; title = ''; onerror: (() => void) | null = null;
-  constructor() { this.style.setProperty = (key: string, value: string) => { this.style[key] = value; }; }
+  children: El[] = []; attributeWrites: Record<string, number> = {}; textWrites = 0;
+  private text = '';
+  hidden = false; disabled = false; src = ''; title = ''; onerror: (() => void) | null = null;
+  constructor(public tagName = 'div', public namespaceURI: string | null = null) { this.style.setProperty = (key: string, value: string) => { this.style[key] = value; }; }
+  get textContent(): string { return this.text + this.children.map(child => child.textContent).join(''); }
+  set textContent(value: string) {
+    this.text = value; this.textWrites++;
+    for (const child of this.children) child.parentElement = null;
+    this.children = [];
+  }
+  get className() { return [...this.classes].join(' '); }
+  set className(value: string) { this.classes = new Set(value.split(/\s+/).filter(Boolean)); }
   get classList() { return {
     contains: (key: string) => this.classes.has(key),
     toggle: (key: string, force?: boolean) => {
@@ -24,9 +36,21 @@ class El {
     remove: (...keys: string[]) => { for (const key of keys) { this.classOps.push(`remove:${key}`); this.classes.delete(key); } },
   }; }
   get offsetWidth() { this.layoutReads++; return 48; }
-  querySelector(selector: string) { this.queries.push(selector); return this.selectors.get(selector) ?? null; }
-  setAttribute(key: string, value: string) { this.attrs[key] = value; }
-  replaceChildren() {}
+  querySelector(selector: string): El | null {
+    this.queries.push(selector);
+    const known = this.selectors.get(selector); if (known) return known;
+    const find = (parent: El): El | null => {
+      for (const child of parent.children) {
+        if (selector.startsWith('.') ? child.classes.has(selector.slice(1)) : child.tagName === selector) return child;
+        const nested = find(child); if (nested) return nested;
+      }
+      return null;
+    };
+    return find(this);
+  }
+  setAttribute(key: string, value: string) { this.attrs[key] = value; this.attributeWrites[key] = (this.attributeWrites[key] || 0) + 1; }
+  append(...children: El[]) { for (const child of children) { child.parentElement = this; this.children.push(child); } }
+  replaceChildren(...children: El[]) { for (const child of this.children) child.parentElement = null; this.children = []; this.text = ''; this.append(...children); }
 }
 
 let nodes: Map<string, El>, originalDocument: PropertyDescriptor | undefined;
@@ -40,6 +64,8 @@ beforeEach(() => {
   nodes = new Map(); originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
   Object.defineProperty(globalThis, 'document', { configurable: true, value: {
     getElementById: get, querySelectorAll: () => [],
+    createElement: (tag: string) => new El(tag),
+    createElementNS: (namespace: string, tag: string) => new El(tag, namespace),
   } });
   play = observeAudio();
 });
@@ -54,6 +80,9 @@ function controls() {
     button.selectors.set('.lock b', new El()); return button;
   });
   get('btn-dodge').selectors.set('.dodge-cd', new El());
+  // Model the actual index.html attack button; setup only appends passive nodes.
+  const attack = get('btn-attack'), label = new El('span');
+  attack.tagName = 'button'; label.textContent = '공격'; attack.append(label);
   return buttons;
 }
 function fixture() {
@@ -86,7 +115,8 @@ function fixture() {
   return { ui, battle, player, hero, skillBtns, slots };
 }
 function queryCount(f: ReturnType<typeof fixture>) {
-  return f.skillBtns.reduce((n, button) => n + button.queries.length, get('btn-dodge').queries.length);
+  const countChildren = (node: El): number => node.queries.length + node.children.reduce((n, child) => n + countChildren(child), 0);
+  return f.skillBtns.reduce((n, button) => n + button.queries.length, get('btn-dodge').queries.length + countChildren(get('btn-attack')));
 }
 function update(f: ReturnType<typeof fixture>) {
   const before = queryCount(f); f.ui.updateHud(f.battle, .016);
@@ -196,4 +226,78 @@ test('dodge cooldown keeps the native .01 visibility boundary and display roundi
     expect(cd.hidden).toBe(hidden); expect(dodge.classList.contains('cooling')).toBe(!hidden);
     expect(cd.textContent).toBe('0.0');
   }
+});
+
+test('manual attack presentation preserves the existing target and cached nodes while exact readiness, reservation and finisher state change', () => {
+  const f = fixture(), button = get('btn-attack'), children = [...button.children];
+  const label = children[0], ring = children.find(child => child.tagName === 'svg')!;
+  const stage = children.find(child => child.classList.contains('attack-combo-stage'))!;
+  const cue = children.find(child => child.classList.contains('attack-combo-cue'))!;
+  const arc = ring.children.find(child => child.classList.contains('attack-combo-ring-progress'))!;
+  const combo = HEROES.knight.combo;
+  // Prepared component state, not native input evidence. Real Player methods
+  // determine readiness/progress; the rendering never consumes or queues input.
+  Object.assign(f.player, { alive: true, state: 'attack', comboIdx: 0, current: combo[0],
+    stateT: combo[0].dur * .1, hitDone: false, comboQueued: false,
+    attackProgress: Player.prototype.attackProgress, canQueueCombo: Player.prototype.canQueueCombo });
+  f.player.def.combo = combo;
+  const sourceState = () => ({ stateT: f.player.stateT, comboIdx: f.player.comboIdx, queued: f.player.comboQueued });
+  const before = sourceState(); update(f);
+  expect(sourceState()).toEqual(before);
+  expect(button.dataset.comboStatus).toBe('windup'); expect(stage.textContent).toBe(`1/${combo.length}타`);
+  expect(label.textContent).toBe('공격'); expect(cue.textContent).toBe('준비');
+  expect(arc.namespaceURI).toBe('http://www.w3.org/2000/svg'); expect(arc.style.strokeDashoffset).toBe('90');
+  const ariaWrites = button.attributeWrites['aria-label'], textWrites = children.map(child => child.textWrites);
+  f.player.stateT = combo[0].dur * .2; update(f);
+  expect(arc.style.strokeDashoffset).toBe('80');
+  expect(button.attributeWrites['aria-label']).toBe(ariaWrites); expect(children.map(child => child.textWrites)).toEqual(textWrites);
+  f.player.stateT = combo[0].dur * .9; update(f);
+  expect(f.player.canQueueCombo()).toBe(true); expect(f.player.comboQueued).toBe(false);
+  expect(button.dataset.comboStatus).toBe('ready'); expect(label.textContent).toBe('연계'); expect(cue.textContent).toBe('다시 누르기');
+  expect(button.attrs['aria-label']).toContain('다시 누르기'); expect(button.attrs['aria-keyshortcuts']).toBe('J Space');
+  expect(button.dataset.comboNextStage).toBe('');
+  f.player.comboQueued = true; update(f);
+  expect(button.dataset.comboStatus).toBe('queued'); expect(button.dataset.comboStage).toBe('1');
+  expect(button.dataset.comboNextStage).toBe('2'); expect(label.textContent).toBe('예약됨'); expect(cue.textContent).toBe('다음 2타');
+  const finalIndex = combo.findIndex(attack => attack.finisher === true);
+  f.player.comboIdx = finalIndex; f.player.current = combo[finalIndex]; f.player.stateT = f.player.current.dur * .9;
+  update(f);
+  expect(button.dataset.comboFinisher).toBe('true'); expect(stage.textContent).toBe(`${finalIndex + 1}/${combo.length}타 · 마무리`);
+  expect(button.dataset.comboNextStage).toBe('1'); expect(cue.textContent).toBe('다음 1타');
+  expect(button.disabled).toBe(false); expect(get('btn-attack')).toBe(button);
+  expect(button.children).toHaveLength(children.length);
+  button.children.forEach((child, index) => expect(child).toBe(children[index]));
+  expect(ring.children.find(child => child.classList.contains('attack-combo-ring-progress'))).toBe(arc);
+  expect(button.layoutReads + children.reduce((n, child) => n + child.layoutReads, 0)).toBe(0);
+});
+
+test('pause ownership and HUD/setup boundaries reset cached manual cues without replacing controls or retaining unknown timing', () => {
+  const f = fixture(), button = get('btn-attack'), children = [...button.children], combo = HEROES.knight.combo;
+  Object.assign(f.player, { alive: true, state: 'attack', comboIdx: 0, current: combo[0],
+    stateT: combo[0].dur * .9, hitDone: false, comboQueued: true,
+    attackProgress: Player.prototype.attackProgress, canQueueCombo: Player.prototype.canQueueCombo });
+  f.player.def.combo = combo;
+  update(f); expect(button.dataset.comboStatus).toBe('queued');
+  let clearCount = 0;
+  Object.assign(f.battle, { pauseReasons: new Set(), ui: f.ui, input: { enabled: true, clear() { clearCount++; } } });
+  const beforeQueries = queryCount(f), stateT = f.player.stateT;
+  Battle.prototype.setPaused.call(f.battle, 'manual', true);
+  expect(button.dataset.comboStatus).toBe('neutral'); expect(f.battle.input.enabled).toBe(false);
+  expect(children[0].textContent).toBe('공격'); expect(children.filter(child => child.tagName === 'span').slice(1).every(child => child.hidden)).toBe(true);
+  Battle.prototype.setPaused.call(f.battle, 'journal', true);
+  Battle.prototype.setPaused.call(f.battle, 'manual', false);
+  expect(button.dataset.comboStatus).toBe('neutral'); expect(f.battle.input.enabled).toBe(false);
+  Battle.prototype.setPaused.call(f.battle, 'journal', false);
+  expect(button.dataset.comboStatus).toBe('queued'); expect(f.battle.input.enabled).toBe(true);
+  expect(clearCount).toBe(4); expect(f.player.stateT).toBe(stateT); expect(f.player.comboQueued).toBe(true);
+  expect(queryCount(f)).toBe(beforeQueries);
+  f.player.auto = true; update(f); expect(button.dataset.comboStatus).toBe('neutral');
+  f.player.auto = false; f.player.current = { ...combo[0] }; update(f); expect(button.dataset.comboStatus).toBe('neutral');
+  f.player.current = combo[0]; update(f); expect(button.dataset.comboStatus).toBe('queued');
+  f.ui.showHud(false); expect(button.dataset.comboStatus).toBe('neutral');
+  f.ui.setupHud(f.player.def, f.player); expect(button.dataset.comboStatus).toBe('neutral');
+  expect(button.children).toHaveLength(children.length);
+  button.children.forEach((child, index) => expect(child).toBe(children[index]));
+  expect(get('btn-attack')).toBe(button); expect(button.disabled).toBe(false);
+  f.ui.showHud(true); update(f); expect(button.dataset.comboStatus).toBe('queued');
 });
