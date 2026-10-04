@@ -101,8 +101,14 @@ export class Battle {
     this.sp.configureSummons?.(equipBonus.summons || []);
     const sr = this.world.startRoom;
     this.player.pos.set(sr.x, 0, sr.z); this.player.yaw = 0;
-    await this.fx.prepare(this.renderer.r, this.app.models, this.renderer.composer.readBuffer);
+    // 실제 경고·드랍 재질을 출격 준비에 포함해 첫 처치/예고 때의 컴파일을 막는다.
+    this.hazards = stage.expedition?.kind === 'arena' ? null : new RegionHazards(this);
+    const preparationObjects = fieldDropsAllowed(stage) ? this.drops.preparationVisuals() : [];
+    const readinessObjects = this.hazards ? [...preparationObjects, this.hazards.group] : preparationObjects;
+    const prepared = await this.fx.prepare(this.renderer.r, this.app.models, this.renderer.composer.readBuffer,
+      preparationObjects, readinessObjects, () => this._startGeneration === startGeneration);
     if (this._startGeneration !== startGeneration) return;
+    if (prepared === false) throw new Error('render preparation canceled');
     this.drops.setup(this.app.models.dungeon);
     this.renderer.rig.mode = 'battle'; this.renderer.rig.target.copy(this.player.pos); this.renderer.rig.pos.copy(this.player.pos).add(this.renderer.rig.offset);
     const weaponsGltf = await loadModel('skel_weapons');
@@ -123,7 +129,6 @@ export class Battle {
     audio.waveHorn({ vol: 0.45 });
     this.heroId = heroId;
     this.bossKey = ENEMIES[stage.dungeonBossId || stage.encounter?.enemyId || stage.chapter.boss]?.voiceKey || stage.chapter.boss;
-    this.hazards = stage.expedition?.kind === 'arena' ? null : new RegionHazards(this);
     this.after(1.2, () => { if (this.active && stage.objective) this.ui.toast(stage.objective, 'gold'); });
     this.after(0.25, () => { if (this.active) audio.voice(heroVoiceName(heroId, 'select'), { min: 20 }); });
     this.after(3.2, () => { if (this.active) audio.voice('floor_start', { min: 30 }); });   // 층 시작 안내 ("The seal is broken" 는 unsealBoss 의 seal_break 가 맡는다)

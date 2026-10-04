@@ -4,6 +4,7 @@ import { ImpactLights } from './impact-lights.js';
 import { HeroEffectFocus } from './hero-effect-focus.js';
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
+const preparationOwners = new WeakMap();
 
 /**
  * Authored ability signatures keep the silhouette of each school distinct while
@@ -26,6 +27,51 @@ async function waitForCompilation(compiling) {
   let timer;
   try { return await Promise.race([compiling, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('render preparation timeout')), 30000); })]); }
   finally { clearTimeout(timer); }
+}
+
+async function prepareObjectReflection(renderer, objects, isCurrent) {
+  if (!isCurrent()) return false;
+  if (!objects.length) return true;
+  // This narrow adapter relies on the pinned Three r170 program-reflection API.
+  // Do not silently report readiness after a renderer/version change.
+  if (THREE.REVISION !== '170' || typeof renderer.getContext !== 'function'
+    || typeof renderer.properties?.has !== 'function' || typeof renderer.properties?.get !== 'function') {
+    throw new Error('targeted render preparation requires Three r170 program reflection');
+  }
+  const gl = renderer.getContext(), programs = new Set();
+  if (typeof gl?.isContextLost !== 'function' || typeof gl.getProgramParameter !== 'function' || typeof gl.LINK_STATUS !== 'number') {
+    throw new Error('targeted render preparation has no WebGL readiness API');
+  }
+  const checkContext = () => { if (gl.isContextLost()) throw new Error('render preparation context lost'); };
+  checkContext();
+  for (const object of objects) object.traverse(o => {
+    for (const material of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (!material) continue;
+      if (!renderer.properties.has(material)) throw new Error('targeted render preparation material was not compiled');
+      const program = renderer.properties.get(material).currentProgram;
+      if (!program?.program || typeof program.getUniforms !== 'function' || typeof program.getAttributes !== 'function') {
+        throw new Error('targeted render preparation program reflection is unavailable');
+      }
+      programs.add(program);
+    }
+  });
+  for (const program of programs) {
+    // Yield between this small set of measured loot/warning signatures so the
+    // native loading view can paint; no game step or render runs here.
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    if (!isCurrent()) return false;
+    checkContext();
+    const linked = gl.getProgramParameter(program.program, gl.LINK_STATUS);
+    checkContext();
+    if (linked !== true) {
+      const log = gl.getProgramInfoLog?.(program.program) || 'No program diagnostic available';
+      throw new Error(`Targeted shader program did not link: ${log}`);
+    }
+    // compileAsync alone can leave ACTIVE_UNIFORMS/attributes waiting on first
+    // combat draw. These r170 calls populate its existing per-program caches.
+    program.getUniforms(); checkContext(); program.getAttributes(); checkContext();
+  }
+  return isCurrent();
 }
 
 // ============ GPU Points 파티클 풀 ============
@@ -148,10 +194,13 @@ export class FX {
     this.scene.remove(it.obj); it.onEnd?.();
     it.obj.traverse?.((o) => { if (o.geometry && o.userData.ownGeo) o.geometry.dispose(); });
   }
-  async prepare(renderer, models, renderTarget) {
+  async prepare(renderer, models, renderTarget, preparationObjects = [], readinessObjects = preparationObjects, isCurrent = () => true) {
     // Run while stageStarting blocks game frames/input. compileAsync must finish
     // with the battle's actual lights/fog/shadows before any combat draw uses it.
+    const callerCurrent = () => !this._disposed && isCurrent();
+    if (!callerCurrent()) return false;
     await new Promise((resolve) => requestAnimationFrame(resolve));
+    if (!callerCurrent()) return false;
     if (!this._primed) {
       const p = new THREE.Vector3(), mark = this.items.length;
       this.flash(p, 0xffffff); this.ring(p, 0xffffff); this.pillar(p, 0xffffff); this.firePillar(p);
@@ -190,22 +239,31 @@ export class FX {
         warm.add(ghost);
       });
     }
-    const textures = new Set([...Object.values(VFX_TEX), sparkTex(), softCircleTex(), ringTex(), slashTex(), smokeTex()]);
-    warm.traverse((o) => {
-      for (const m of (Array.isArray(o.material) ? o.material : [o.material])) if (m) {
-        for (const value of Object.values(m)) if (value?.isTexture) textures.add(value);
-        for (const uniform of Object.values(m.uniforms || {})) if (uniform.value?.isTexture) textures.add(uniform.value);
-      }
-    });
-    for (const texture of textures) if (texture) renderer.initTexture(texture);
     // RenderPass draws into the composer's linear target, not the sRGB screen.
     // Preparing against the screen would retain different programs and still
     // force compilation when a skill reaches the actual battle render target.
-    const previousTarget = renderer.getRenderTarget();
-    renderer.setRenderTarget(renderTarget);
+    const previousOwner = preparationOwners.get(renderer);
+    const owner = { originalTarget: previousOwner ? previousOwner.originalTarget : renderer.getRenderTarget() };
+    preparationOwners.set(renderer, owner);
+    const valid = () => callerCurrent() && preparationOwners.get(renderer) === owner;
+    const originalParents = [];
     try {
+      for (const object of new Set(preparationObjects)) {
+        originalParents.push({ object, parent: object.parent }); warm.add(object);
+      }
+      const textures = new Set([...Object.values(VFX_TEX), sparkTex(), softCircleTex(), ringTex(), slashTex(), smokeTex()]);
+      warm.traverse((o) => {
+        for (const m of (Array.isArray(o.material) ? o.material : [o.material])) if (m) {
+          for (const value of Object.values(m)) if (value?.isTexture) textures.add(value);
+          for (const uniform of Object.values(m.uniforms || {})) if (uniform.value?.isTexture) textures.add(uniform.value);
+        }
+      });
+      for (const texture of textures) if (texture) renderer.initTexture(texture);
+      renderer.setRenderTarget(renderTarget);
       await waitForCompilation(renderer.compileAsync(this.scene, this.camera));
+      if (!valid()) return false;
       await waitForCompilation(renderer.compileAsync(warm, this.camera, this.scene));
+      if (!valid()) return false;
       if (renderer.shadowMap.enabled) {
         // The shadow renderer uses a fog-free scene and depth materials of its
         // own. Color-material compilation alone misses the first monster shadow.
@@ -229,8 +287,23 @@ export class FX {
         };
         this.scene.traverse(addShadow); warm.traverse(addShadow);
         await waitForCompilation(renderer.compileAsync(shadowWarm, this.camera, shadowTarget));
+        if (!valid()) return false;
       }
-    } finally { renderer.setRenderTarget(previousTarget); }
+      return await prepareObjectReflection(renderer, readinessObjects, valid);
+    } finally {
+      try {
+        for (const { object, parent } of originalParents) {
+          if (object.parent === warm) { warm.remove(object); if (parent && valid()) parent.add(object); }
+        }
+      }
+      finally {
+        // A superseded preparation must not overwrite the newer loading pass.
+        // The latest owner inherits the original target and restores it once.
+        if (preparationOwners.get(renderer) === owner) {
+          preparationOwners.delete(renderer); renderer.setRenderTarget(owner.originalTarget);
+        }
+      }
+    }
   }
 
   // ---------- 파티클 프리셋 ----------
