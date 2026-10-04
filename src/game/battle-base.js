@@ -53,6 +53,7 @@ export class Battle {
     if (this.paused) this.routeObjectives?.interrupt();
     this.input.enabled = this.active && !!this.player?.alive && !this.paused;
     this.input.clear();
+    this.ui?.refreshComboFeedback?.(this);
   }
   rollDrop(table) {
     // fieldDrop persists an inventory item immediately, before a pickup exists.

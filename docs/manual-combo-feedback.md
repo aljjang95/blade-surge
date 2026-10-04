@@ -1,0 +1,11 @@
+# Manual attack feedback
+
+The attack button previously kept the same label while a manual attack was preparing, accepting a fresh combo press or already holding an accepted next attack. Holding the button and pressing it again have different existing Player behavior, so that missing feedback made manual chaining hard to read.
+
+The existing attack button now shows the actual current attack number, total authored attacks and finisher marker. It shows `준비` before the existing queue window, `다시 누르기` when Player accepts a fresh press, and the actual next attack after Player has accepted a reservation. The progress ring uses Player.attackProgress(). This is a read-only projection of the existing Player methods and fields; it does not change attack timing, input handling, damage or rewards.
+
+AUTO, pause, inactive or dead battles, idle actors and unsupported actor state return the ordinary attack label. Pause refreshes this projection after the existing input clear because paused battles do not run updateHud. HUD setup and hiding clear the previous presentation. Decorative nodes are cached once, preserve the existing button and input bindings, and receive semantic updates only when their displayed state changes. Reduced motion uses a static state-colored ring.
+
+Validation evidence is kept under the ignored `work/qa/combo-feedback-20261004/` directory. Typecheck, 1,449 tests (2 skipped, 0 failed) and production build passed. Eleven focused component tests cover all 27 authored attacks across five heroes using actual Player query/input methods; two HUD integration tests cover stable nodes, semantic-only text/ARIA updates and lifecycle reset through the real pause hook. These component fixtures are not natural gameplay evidence.
+
+The initial full check failed four existing HUD tests because their attack-button fixture omitted the real label and DOM creation APIs. The fixture now represents that existing markup and passive child creation; the original four assertions remain intact, and the original failure log is preserved. Native verification is pending: it must distinguish one held press from a fresh eligible press, compare the displayed state with actual Player authority, inspect the portrait finisher text, and verify pause, AUTO and terminal cleanup before release.
