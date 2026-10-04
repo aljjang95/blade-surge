@@ -22,6 +22,7 @@ import { resolveJobHero } from '../data/jobs.js';
 import { buildExpeditionWorld, expeditionRoster, applyBattleConsumable, canApplyBattleConsumable } from './expedition-combat.js';
 import { ConquestRun } from './expedition-conquests.js';
 import { createRouteObjectives } from './route-objectives.js';
+import { createMapTactics } from './map-tactics.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
 import { dungeonVisualFor } from '../data/dungeon-visuals.js';
@@ -83,10 +84,13 @@ export class Battle {
     this.world = stage.expedition ? buildExpeditionWorld(stage) : new Floor(stage.idx, stage.chapter.theme, stage.party?.seed, stage.dungeon?.layout);
     this.conquest = stage.expedition?.conquestId ? new ConquestRun(stage, this.world, this.app.expeditionTicket) : null;
     this.routeObjectives = createRouteObjectives(stage, this.world);
+    this.mapTactics = createMapTactics(stage, this.world);
     this.autoTarget = this.routeObjectives?.autoRoom() || null;
     this.visual = dungeonVisualFor(stage);
     this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
     await this.routeObjectives?.prepareView?.(this.scene);
+    if (this._startGeneration !== startGeneration) return;
+    await this.mapTactics?.prepareView(this.scene, this);
     if (this._startGeneration !== startGeneration) return;
     this.renderer.setBattleVisual?.(this.visual, stage);
     this.roomsCleared = 0; this.bossFound = false;
@@ -416,7 +420,7 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
+  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const runtimeType = !this.stage.expedition && type === this.stage.encounter?.enemyId && this.stage.dungeonBossId ? this.stage.dungeonBossId : type;
@@ -510,6 +514,7 @@ export class Battle {
     }
   }
   onPlayerDeath() {
+    this.mapTactics?.cancel();
     this.sp?.armory.clear();
     this.input.enabled = false; this.input.clear();
     this.app.companionAgent?.observe('low-hp', { floor: this.stage?.idx || 0 });
@@ -526,7 +531,7 @@ export class Battle {
     audio.playMusic(musicForScene({ stage: this.stage, boss: !!this.boss }), MUSIC_MIX); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12], step: 0.08 });
     if (this.bossDefeated) this.after(.8, () => this.victory());
   }
-  defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, expedition: this.stage?.expedition || null, conquest: this.conquest?.finish(false) || null, routeObjective: this.routeObjectives?.finish(false) || null, treasureRooms: this.treasureRooms }; this.ui.showResult(this, false); }
+  defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, expedition: this.stage?.expedition || null, conquest: this.conquest?.finish(false) || null, routeObjective: this.routeObjectives?.finish(false) || null, mapTactics: this.mapTactics?.finish() || null, treasureRooms: this.treasureRooms }; this.ui.showResult(this, false); }
   victory() {
     if (this.routeObjectives && (this.paused || !this.bossDefeated || !this.routeObjectives.canWin())) return;
     if (!this.active || !this.player?.alive) return; this.active = false; this.input.enabled = false; this.input.clear();
@@ -541,7 +546,7 @@ export class Battle {
     const optional = this.world ? this.world.rooms.filter((r) => r.type !== ROOM_TYPE.START && r.type !== ROOM_TYPE.BOSS) : [];
     const optionalCleared = optional.filter((r) => r.cleared).length;
     const fullClear = optional.length > 0 && optionalCleared === optional.length;
-    this.result = { win: true, stars, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, rooms: this.roomsCleared, totalRooms: this.world ? this.world.rooms.length : 0, optionalRooms: optional.length, optionalCleared, fullClear, treasureRooms: this.treasureRooms, expedition: this.stage.expedition || null, conquest: this.conquest?.finish(true) || null, routeObjective: this.routeObjectives?.finish(true) || null };
+    this.result = { win: true, stars, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, rooms: this.roomsCleared, totalRooms: this.world ? this.world.rooms.length : 0, optionalRooms: optional.length, optionalCleared, fullClear, treasureRooms: this.treasureRooms, expedition: this.stage.expedition || null, conquest: this.conquest?.finish(true) || null, routeObjective: this.routeObjectives?.finish(true) || null, mapTactics: this.mapTactics?.finish() || null };
     this.after(1.6, () => this.ui.showResult(this, true));
   }
 
@@ -710,6 +715,8 @@ export class Battle {
     if (this.active) this.player.handleInput(this.input, dt);
     this.routeObjectives?.observePlayer?.(this.player);
     this.player.update(dt);
+    if (this.input.consume?.('interact')) this.mapTactics?.interact(this);
+    this.mapTactics?.update(this, dt);
     if (this.stage.party) this.app.party.updateHostActors(dt);
     if (this.active && this.stage.expedition) this.updateExpedition(dt);
     this.hazards?.update(dt);

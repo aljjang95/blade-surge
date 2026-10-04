@@ -22,7 +22,7 @@ const THEMES = {
 // Region themes set the broad palette; authored dungeon landmarks add the
 // readable in-game identity that the campaign map promises.
 const DUNGEON_ATMOSPHERES = {
-  memorial: { fog: 0x122526, bg: 0x0d1b1d, hemi: [0xaed8c5, 0x203b35], sun: 0xffedc9, sunI: 2.5, torch: 0x86e1c5, tint: 0xb5d8bf },
+  memorial: { fog: 0x142828, bg: 0x0d1b1d, hemi: [0xadccd0, 0x172d28], sun: 0xffedd4, sunI: 2.5, torch: 0x86e1c5, tint: 0xbbc9c0 },
   kiln: { fog: 0x261716, bg: 0x160d0d, hemi: [0xc99a7d, 0x311717], sun: 0xffc18c, sunI: 2.5, torch: 0xff7034, tint: 0xd8a28b },
   archive: { fog: 0x18263c, bg: 0x0e1727, hemi: [0xb8d8f2, 0x233752], sun: 0xd8edff, sunI: 2.5, torch: 0x86d7ff, tint: 0xb7cbed },
   beacon: { fog: 0x0d3037, bg: 0x08212b, hemi: [0x80d2d2, 0x123643], sun: 0xb5f6ef, sunI: 2.55, torch: 0x4be6d2, tint: 0x9adbd1 },
@@ -281,14 +281,7 @@ export class Arena {
           this.scene.add(l); this.lights.push(l); this.torches.push({ l, i0: 22, seed: this.torches.length * 1.7, room: r });
         }
       }
-      // 방 타입 표식 (바닥 링)
-      if (!r.objectiveProp && (r.type === ROOM_TYPE.ELITE || r.type === ROOM_TYPE.BOSS || r.type === ROOM_TYPE.TREASURE)) {
-        const col = r.type === ROOM_TYPE.BOSS ? 0xff3040 : r.type === ROOM_TYPE.ELITE ? 0xffc040 : 0x60ffc0;
-        const ring = new THREE.Mesh(new THREE.RingGeometry(r.w * 0.28, r.w * 0.32, 40),
-          new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false }));
-        this.ownedGeometry.add(ring.geometry); this.ownedMaterials.add(ring.material);
-        ring.rotation.x = -Math.PI / 2; ring.position.set(r.x, 0.06, r.z); this.group.add(ring);
-      }
+      // 방 역할은 기존 지역 건축 배치에 병합된 실제 회랑 문턱 표식이 나타낸다.
     }
     this.instanced('pillar_decorated', pillars, T.tint, { cutaway: true });
     this.instanced('banner_shield_red', banners);

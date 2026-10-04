@@ -12,6 +12,7 @@ import { weeklyFrontier } from '../data/seasonal-content.js';
 import { ConquestRoutes, ConquestResult } from './conquests.jsx';
 import { retryEnergyForResult } from '../game/run-history.js';
 import { personalResultLabel } from '../ui/personal-goal-labels.js';
+import { mapTacticsReceiptView } from '../ui/map-tactics-receipt.js';
 import './hub.css';
 import './app-content.css';
 import './depths.css';
@@ -42,6 +43,7 @@ function LootReveal({loot=[]}) {
 
 export function ExpeditionResult({controller, launch, message, focusRef}) {
   const app=controller.app, result=controller.result, rewards=result.rewards;
+  const mapTactics=mapTacticsReceiptView(result.mapTactics);
   const retryEnergy=retryEnergyForResult(result);
   const blocked=!!result.saveError || !!app.stageStarting;
   // Recheck the live receipt as well as disabling controls: old handlers must not leave a failed result.
@@ -62,6 +64,7 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
         </div>
         {result.routeObjective?.pages && <p aria-label="기록 복원 결과">기록 복원 {result.routeObjective.progress}/{result.routeObjective.target} · {result.routeObjective.pages.map(page=>page.label).join(' → ') || '복원한 기록 없음'}</p>}
         {result.routeObjective?.constellations && <p aria-label="별자리 복원 결과">별자리 복원 {result.routeObjective.progress}/{result.routeObjective.target} · {result.routeObjective.constellations.map(station=>station.label).join(' → ') || '복원한 별자리 없음'} · 오답 {result.routeObjective.mistakes}회</p>}
+        {mapTactics&&<section className="map-tactics-result" data-map-tactics-result aria-label="정원의 장치 사용 결과"><strong>{mapTactics.title}</strong><p>{mapTactics.detail}</p></section>}
         <div className="exp-result-save" data-save={result.saveError?'error':'saved'} role={result.saveError?'alert':'status'}>
           {result.saveError?<><div><strong>정산 저장 실패</strong><p>저장 공간을 확인한 뒤 다시 저장해 주세요. 저장 전에는 이동할 수 없습니다.</p></div><button ref={focusRef} className="exp-primary" onClick={retrySave}>정산 다시 저장</button></>:<p>{result.win?'정산 저장 완료 · 보상을 보관했습니다.':'결과 저장 완료 · 다시 도전할 수 있습니다.'}</p>}
         </div>
@@ -209,7 +212,7 @@ export class ExpeditionUI {
     const r=b.result;if(!r)return;
     if(!r.expeditionReceipt?.ok){r.expeditionReceipt=this.app.expedition.settle(this.app.expeditionTicket,{win,conquest:r.conquest,kills:b.kills,treasureRooms:r.treasureRooms,fieldRewards:{fieldGold:b.drops.gold,fieldStones:b.drops.stones,fieldStones2:b.drops.stones2,fieldStones3:b.drops.stones3,fieldFragments:b.drops.fragments},fieldLoot:b.drops.loot});if(r.expeditionReceipt.ok)this.app.expeditionTicket=null;}
     this.app.ui.showHud(false);this.app.ui.show(this.app.ui.el.pause,false);this.app.ui.closeModal();
-    this.result={win,kind:b.stage.expedition.kind,id:b.stage.expedition.id,depth:b.stage.expedition.depth||'standard',conquestId:b.stage.expedition.conquestId||null,conquest:r.conquest,routeObjective:r.routeObjective,riftId:b.stage.riftId||null,name:b.stage.title||b.stage.name,kills:b.kills,combo:b.maxCombo,time:r.time,rewards:r.expeditionReceipt.rewards||{},saveError:!r.expeditionReceipt.ok?r.expeditionReceipt.error:null};
+    this.result={win,kind:b.stage.expedition.kind,id:b.stage.expedition.id,depth:b.stage.expedition.depth||'standard',conquestId:b.stage.expedition.conquestId||null,conquest:r.conquest,routeObjective:r.routeObjective,mapTactics:r.mapTactics,riftId:b.stage.riftId||null,name:b.stage.title||b.stage.name,kills:b.kills,combo:b.maxCombo,time:r.time,rewards:r.expeditionReceipt.rewards||{},saveError:!r.expeditionReceipt.ok?r.expeditionReceipt.error:null};
     this.open('dungeons');audio.play(win?'jingle_win1':'ui_error',{vol:.5});
   }
 }

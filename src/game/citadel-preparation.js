@@ -5,6 +5,7 @@ import { frontierForRoute } from '../data/seasonal-content.js';
 import { capturePersonalGoal, normalizePersonalGoal, summarizePersonalRuns } from './run-personal-goals.js';
 import { runRouteLabel } from './run-history.js';
 import { personalContextLabel, personalControlLabel } from '../ui/personal-goal-labels.js';
+import { mapTacticsForStage } from '../data/map-tactics.js';
 
 const definitions = (id, depth) => depth === 'deep' ? expeditionDepth(id) : DUNGEONS.find(def => def.id === id);
 // Basic catalog stages include a roster callback. Preserve that callback while
@@ -63,6 +64,7 @@ export function citadelPreparation(app, routeId, depth = 'standard') {
         definition: copyDefinition(def), access: accessFor(app, def, option) }] : [];
     }),
     hero,
+    mapTactics: mapTacticsForStage({ expedition: route }),
     potions: CONSUMABLES.map((potion, index) => ({ id: potion.id, name: potion.name, description: potion.description,
       key: ['U', 'I', 'O'][index], count: expedition.consumables?.[potion.id] ?? 0 })),
     // Authored fixed payout only: field loot, seasonal adjustments and account-level bonuses are separate.

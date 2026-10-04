@@ -9,6 +9,7 @@ import { resultStoryHtml } from './campaign.js';
 import { levelExp } from '../data/heroes.js';
 import { renderGrowthPreparation, canPrepareGrowth } from './growth.js';
 import { comboFeedback } from './combo-feedback.js';
+import { BattleReadability } from './battle-readability.js';
 import './campaign.css';
 import './combo-feedback.css';
 
@@ -45,6 +46,7 @@ export class UI {
     this.hurtT = 0; this.combatCueEl = $('combat-cue'); this.combatCueTimer = null; this.comboEl = $('combo'); this.comboN = $('combo-n'); this.killStreakEl = $('kill-streak'); this.killStreakN = $('kill-streak-n'); this.killStreakTier = $('kill-streak-tier');
     this.lootLayer = $('loot-layer'); this.lootQueue = [];
     this.minimap = new Minimap($('minimap'));
+    this.readability = new BattleReadability(app);
     this.miniT = 0;
     const cameraControls = document.createElement('div');
     cameraControls.id = 'battle-camera-controls';
@@ -91,25 +93,10 @@ export class UI {
   show(el, on) { el.classList.toggle('show', on); }
   setupMinimap(floor) { this.minimap.setFloor(floor); $('minimap-wrap').classList.remove('hidden'); }
   setObjective(floor) {
-    const left = floor.rooms.filter((r) => !r.cleared && r.type !== ROOM_TYPE.START).length;
-    const boss = floor.bossRoom;
-    const el = $('objective');
-    if (boss && boss.cleared) el.innerHTML = '<b style="color:var(--green)">층 클리어!</b>';
-    else if (floor.sealed) el.innerHTML = `☠ 보스 봉인 해제까지 남은 구역 <b>${left - 1}</b>`;   // HUD 우측 폭이 좁다 — 긴 문장은 스킬 버튼에 가려진다
-    else if (boss && boss.discovered) el.innerHTML = '☠ <b>보스방 발견</b> — 처치하면 층 클리어';
-    else el.innerHTML = `☠ 보스를 찾아라 · 남은 구역 <b>${left}</b>`;
-    const route = this.app.battle?.routeObjectives;
-    if (route && route.world === floor && !boss?.cleared) {
-      const hint = document.createElement('small'); hint.className = 'conquest-hint'; hint.textContent = route.hint();
-      el.append(hint);
-    }
-    const conquest = this.app.battle?.conquest;
-    if (conquest && conquest.world === floor) {
-      const hint = document.createElement('small'); hint.className = 'conquest-hint'; hint.textContent = conquest.hint();
-      el.append(hint);
-    }
+    if (this.app.battle?.world !== floor) return;
+    this.readability.renderObjective(this.app.battle);
   }
-  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { this.refreshComboFeedback(); this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
+  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { this.readability?.clear(); this.refreshComboFeedback(); this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
   pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; b.setPaused('manual', on); this.show(this.el.pause, on); if (!on && this.el.pause.contains(document.activeElement)) document.activeElement?.blur?.(); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
@@ -251,6 +238,7 @@ export class UI {
   ultCinema(name, def) { const c = $('ult-cinema'); $('ult-name').textContent = name; $('ult-name').style.textShadow = `0 0 20px ${def.color}, 0 4px 0 #000`; c.classList.remove('on'); void c.offsetWidth; c.classList.add('on'); setTimeout(() => c.classList.remove('on'), 1700); }
   updateHud(b, dt) {
     this.refreshComboFeedback(b);
+    this.readability?.update(b, dt);
     const astralChoice = !!b.active && b.routeObjectives?.def?.id === 'astral_constellations_standard';
     if (this._astralChoiceHud !== astralChoice) {
       this.el.hud.classList.toggle('astral-choice-hud', astralChoice);

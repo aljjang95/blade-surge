@@ -123,7 +123,7 @@ export class CitadelHubUI {
       <div class="citadel-hub-destination-body"><small class="citadel-hub-eyebrow">원정 출격 준비</small><h2 id="citadel-destination-title"></h2><p id="citadel-destination-description"></p>
       <fieldset class="citadel-hub-depths"><legend>원정 단계</legend>${preparation.depthOptions.map(option => `<label class="citadel-hub-depth"><input type="radio" name="citadel-depth" value="${safe(option.depth)}" data-citadel-depth="${safe(option.depth)}" aria-describedby="citadel-depth-${safe(option.depth)}-state" ${option.depth === this.selectedDepth ? 'checked' : ''}><span class="citadel-hub-depth-copy"><strong>${safe(option.label)}</strong><small id="citadel-depth-${safe(option.depth)}-state"></small></span></label>`).join('')}</fieldset>
       <div class="citadel-hub-destination-stats"><span>해금 <b data-citadel-unlock></b></span><span>입장 비용 <b data-citadel-cost></b></span><span>현재 보유 <b data-citadel-energy></b></span></div><p class="citadel-hub-unlock-note" hidden></p>
-      <section class="citadel-hub-preparation-section" aria-label="원정 목표"><h3>이번 원정의 목표</h3><p class="citadel-hub-objective"></p></section>
+      <section class="citadel-hub-preparation-section" aria-label="원정 목표"><h3>이번 원정의 목표</h3><p class="citadel-hub-objective"></p><p class="citadel-hub-tactics" hidden></p></section>
       <section class="citadel-hub-preparation-section" aria-label="클리어 보상"><h3>기본 클리어 보상</h3><p class="citadel-hub-rewards"></p><div class="citadel-hub-first-reward"></div></section>
       <section class="citadel-hub-frontier" aria-label="프론티어 효과"></section>
       <section class="citadel-hub-preparation-section citadel-hub-hero" aria-label="출격 영웅"><h3>출격 영웅</h3><p></p></section>
@@ -190,6 +190,9 @@ export class CitadelHubUI {
     unlockNote.hidden = preparation.depth !== 'deep';
     unlockNote.textContent = preparation.depth === 'deep' ? `심층 해금: 기본 원정 클리어 · 캠페인 ${selected.unlockCode} 클리어 · 탐험 Lv.${selected.minLevel}` : '';
     this.dialog.querySelector('.citadel-hub-objective').textContent = selected.objective || selected.description;
+    const tactics = this.dialog.querySelector('.citadel-hub-tactics');
+    tactics.hidden = !preparation.mapTactics;
+    tactics.textContent = preparation.mapTactics ? `선택 전술 · ${preparation.mapTactics.options.map(option => option.label).join(' / ')} 중 이 방에서 1회. 적을 표시 범위로 유인한 뒤 장치 가까이에서 F 또는 전술 버튼으로 발동하세요. AUTO는 사용하지 않으며 추가 보상은 없습니다.` : '';
     this.dialog.querySelector('.citadel-hub-rewards').textContent = rewardLabel(preparation.rewards.base);
     const first = preparation.rewards.firstClear;
     this.dialog.querySelector('.citadel-hub-first-reward').innerHTML = first ? `<strong>첫 심층 클리어 추가 ${first.eligible ? '· 미수령' : '· 수령 완료'}</strong><p>${safe(rewardLabel(first.rewards))}</p>${first.eligible ? '' : '<small>이번 클리어에는 첫 클리어 보상이 추가되지 않습니다.</small>'}` : '';

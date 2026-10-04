@@ -5,11 +5,11 @@
     {
       "hero": "knight",
       "path": "public/models/heroes-v3/knight-v3.glb",
-      "sha256": "1a462698a80c3205ad400a8215cae24720caf9369454e4f935174be51e1f0a99",
-      "bytes": 466288,
+      "sha256": "eca324586230078151e20bb522013c7a2fd8bc067bbf4d326bb8dabf5b9a5465",
+      "bytes": 474908,
       "source": "public/models/tll/knight-casual-v2.glb",
       "source_sha256": "c5898f8b7f4365e8cd67e2a75c0e42f169044260ee4d0bd6b1d6a9e54ea54235",
-      "vertices": 10642,
+      "vertices": 10692,
       "bones": [
         "chest",
         "foot.l",
@@ -26,16 +26,23 @@
         "upperarm.r",
         "upperleg.l",
         "upperleg.r"
-      ]
+      ],
+      "jade_heraldry_v1": {
+        "baseline_sha256": "1a462698a80c3205ad400a8215cae24720caf9369454e4f935174be51e1f0a99",
+        "added_blender_vertices": 50,
+        "added_exported_vertices": 150,
+        "added_bytes": 8620,
+        "provenance": "art/heroes-v3/jade-heraldry-v1.json"
+      }
     },
     {
       "hero": "barbarian",
       "path": "public/models/heroes-v3/barbarian-v3.glb",
-      "sha256": "f6eaa6efc41aa78fdc558dd1f6a9ea4dd90201ccb3b8043d22efb624b6309d04",
-      "bytes": 402860,
+      "sha256": "c0828bd4e17eec5e9f3e9e9d999c6d1f2fc87698e5d2f7bb5b5f69e93ad38f90",
+      "bytes": 408804,
       "source": "public/models/tll/barbarian-casual-v2.glb",
       "source_sha256": "22bf9b3db78e5455c8925f31b20d9b72c9e9d5b31e17c130ec9c463f2099d7e7",
-      "vertices": 9258,
+      "vertices": 9296,
       "bones": [
         "chest",
         "foot.l",
@@ -52,16 +59,23 @@
         "upperarm.r",
         "upperleg.l",
         "upperleg.r"
-      ]
+      ],
+      "jade_heraldry_v1": {
+        "baseline_sha256": "f6eaa6efc41aa78fdc558dd1f6a9ea4dd90201ccb3b8043d22efb624b6309d04",
+        "added_blender_vertices": 38,
+        "added_exported_vertices": 114,
+        "added_bytes": 5944,
+        "provenance": "art/heroes-v3/jade-heraldry-v1.json"
+      }
     },
     {
       "hero": "mage",
       "path": "public/models/heroes-v3/mage-v3.glb",
-      "sha256": "ef437a50724928a8e22c75d5ff7ddf5d4b7d061ba3e38553c2d2094bb60d1fac",
-      "bytes": 518784,
+      "sha256": "8b46b43cc4204461265fe6a27737ae426b685b0c591194b5e0b8d8681698a8b3",
+      "bytes": 527412,
       "source": "public/models/tll/mage-casual-v2.glb",
       "source_sha256": "d9a76c02d9d837a2376e2408dc144629100b468716487506484a6f7f52d4a504",
-      "vertices": 12102,
+      "vertices": 12178,
       "bones": [
         "chest",
         "foot.l",
@@ -78,16 +92,23 @@
         "upperarm.r",
         "upperleg.l",
         "upperleg.r"
-      ]
+      ],
+      "jade_heraldry_v1": {
+        "baseline_sha256": "ef437a50724928a8e22c75d5ff7ddf5d4b7d061ba3e38553c2d2094bb60d1fac",
+        "added_blender_vertices": 76,
+        "added_exported_vertices": 228,
+        "added_bytes": 8628,
+        "provenance": "art/heroes-v3/jade-heraldry-v1.json"
+      }
     },
     {
       "hero": "rogue",
       "path": "public/models/heroes-v3/rogue-v3.glb",
-      "sha256": "cf16c0e0c4cc226f32f60909f694f696394479048f6a97b76af14ce5cba04648",
-      "bytes": 375156,
+      "sha256": "d2522dd59016860672930bb62cf968499e256e1f1fd44ab811b0627f929db3d2",
+      "bytes": 386636,
       "source": "public/models/tll/rogue-casual-v2.glb",
       "source_sha256": "036b80d2843c2b163ae7443c612c6757519ec509dcb348bc8a784f69d64faf0c",
-      "vertices": 8534,
+      "vertices": 8606,
       "bones": [
         "chest",
         "foot.l",
@@ -104,21 +125,35 @@
         "upperarm.r",
         "upperleg.l",
         "upperleg.r"
-      ]
+      ],
+      "jade_heraldry_v1": {
+        "baseline_sha256": "cf16c0e0c4cc226f32f60909f694f696394479048f6a97b76af14ce5cba04648",
+        "added_blender_vertices": 72,
+        "added_exported_vertices": 216,
+        "added_bytes": 11480,
+        "provenance": "art/heroes-v3/jade-heraldry-v1.json"
+      }
     },
     {
       "hero": "ranger",
       "path": "public/models/heroes-v3/ranger-v3.glb",
-      "sha256": "25a4ff71bf959bd9ffa41cd4c068a13f47eb6992502a09b764266345b7cb948b",
-      "bytes": 43552,
+      "sha256": "2c380db0ef326fda793fb76442d2234c52155266f8ffa7ea6ea2605b97245b41",
+      "bytes": 52184,
       "source": "public/models/Ranger.glb",
       "source_sha256": "4a1db924132836b29b1a63f55b8031e06eb6ec103037017864859786982727cb",
-      "vertices": 392,
+      "vertices": 448,
       "bones": [
         "chest",
         "upperarm.l",
         "upperarm.r"
-      ]
+      ],
+      "jade_heraldry_v1": {
+        "baseline_sha256": "25a4ff71bf959bd9ffa41cd4c068a13f47eb6992502a09b764266345b7cb948b",
+        "added_blender_vertices": 56,
+        "added_exported_vertices": 168,
+        "added_bytes": 8632,
+        "provenance": "art/heroes-v3/jade-heraldry-v1.json"
+      }
     }
   ],
   "scope": "Fitted costume revision; retained original faces, rigs and animations. Blender studio renders are not game QA."
