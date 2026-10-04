@@ -222,7 +222,10 @@ try {
     assert(!(await page.locator('.citadel-hub-dialog').evaluate(dialog => dialog.open)), 'Journal bridge left destination dialog open');
     unchanged(prepared, await state(), 'Native gate-to-journal bridge');
     await screenshot('portrait-native-journal-bridge');
-    await page.locator('#masterworks[open] .mw-close').tap(); await page.keyboard.press('KeyE');
+    await page.locator('#masterworks[open] .mw-close').tap();
+    await page.waitForFunction(() => !document.querySelector('#masterworks[open]') &&
+      document.activeElement === document.querySelector('.citadel-hub-interact:not([disabled])') && window.app.canWalkHub());
+    await page.keyboard.press('KeyE');
     await page.locator('.citadel-hub-dialog[open]').waitFor(); const view = await prepState();
     assert(view.depth === 'standard' && !view.goDisabled && view.goalStatus === 'mismatch', 'Journal bridge return lost standard admission or saved mismatch');
     unchanged(prepared, await state(), 'Native journal close and E reopen'); report.checks.journalBridge = view;
