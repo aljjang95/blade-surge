@@ -87,6 +87,7 @@ function nativeResizeFixture(r:any, width:number, height:number) {
     let ratio = 1;
     r.r = {setPixelRatio:(value:number)=>{ratio=value;},getPixelRatio:()=>ratio,setSize:noop};
     r.composer = {setPixelRatio:noop,setSize:noop};
+    r.playerSilhouette = {size:[] as number[], resize(w:number,h:number,pr:number) { this.size=[w,h,pr]; }};
     r.lobbyAA = {uniforms:{resolution:{value:new THREE.Vector2()}}};
     r.bloom = {resolution:new THREE.Vector2(),setSize:noop}; r.quality='high';
   }
@@ -108,6 +109,7 @@ test('native resize fits both live rig and camera before input and next lag fram
   const original=r.camera.position.clone(),look=r.rig.target.clone().add(r.rig.lookOffset),direction=r.camera.quaternion.clone();
   const controls={...r.battleCamera},offset=r.rig.offset.clone(),target=r.rig.target.clone();
   nativeResizeFixture(r,390,844);
+  expect(r.playerSilhouette.size).toEqual([390,844,r.pixelRatio]);
   expect(r.camera.position.distanceTo(look)/original.distanceTo(look)).toBeCloseTo(.8/(390/844),12);
   expect(r.camera.position.equals(r.rig.pos)).toBe(true);
   expect(r.camera.quaternion.equals(direction)).toBe(true);

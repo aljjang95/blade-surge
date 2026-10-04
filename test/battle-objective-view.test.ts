@@ -64,3 +64,23 @@ test('선택 전술 공략은 필수 정화와 함께 표시하며 실패를 완
   expect(battleObjectiveView({ world, conquest })).toMatchObject({ title: '보스 봉인 해제', challenge: '전술 · 표식 마지막 처치 · 1/2' });
   conquest.failed = true; expect(battleObjectiveView({ world, conquest })).toHaveProperty('challenge', '전술 조건 미달 · 원정 계속');
 });
+
+test('보스 안내는 발견과 실제 입장·출현·완료를 따르며 전투 권한에 접근하지 않는다', () => {
+  const bossRoom = { id: 4, type: 'boss', discovered: false, cleared: false };
+  const startRoom = { id: 0, type: 'start', discovered: true, cleared: true };
+  const world = { rooms: [startRoom, bossRoom], bossRoom, sealed: false };
+  const boss = { alive: true, takeDamage() { throw Error('HUD가 보스 피해를 적용함'); } };
+  const battle: any = { world, curRoom: startRoom, boss };
+  expect(battleObjectiveView(battle)).toMatchObject({ title: '보스 찾기', roomId: null });
+  bossRoom.discovered = true;
+  expect(battleObjectiveView(battle)).toMatchObject({ action: '발견한 보스 구역으로 이동', roomId: 4 });
+  battle.curRoom = bossRoom; battle.boss = null;
+  expect(battleObjectiveView(battle)).toMatchObject({ action: '보스 출현에 대비', roomId: 4 });
+  battle.boss = boss;
+  expect(battleObjectiveView(battle)).toMatchObject({ action: '공격 예고를 피하고 보스를 공격', roomId: 4 });
+  battle.curRoom = startRoom;
+  expect(battleObjectiveView(battle)).toHaveProperty('action', '발견한 보스 구역으로 이동');
+  bossRoom.cleared = true;
+  expect(battleObjectiveView(battle)).toMatchObject({ title: '정화 완료', roomId: null });
+  expect(boss.alive).toBe(true); expect(world.sealed).toBe(false);
+});

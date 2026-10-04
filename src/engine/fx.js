@@ -256,7 +256,7 @@ export class FX {
     this.scene.remove(it.obj); it.onEnd?.();
     it.obj.traverse?.((o) => { if (o.geometry && o.userData.ownGeo) o.geometry.dispose(); });
   }
-  async prepare(renderer, models, renderTarget, preparationObjects = [], readinessObjects = preparationObjects, isCurrent = () => true) {
+  async prepare(renderer, models, renderTarget, preparationObjects = [], readinessObjects = preparationObjects, isCurrent = () => true, targetPreparations = []) {
     // Run while stageStarting blocks game frames/input. compileAsync must finish
     // with the battle's actual lights/fog/shadows before any combat draw uses it.
     const callerCurrent = () => !this._disposed && isCurrent();
@@ -351,6 +351,18 @@ export class FX {
         await compilePreparedScene(renderer, shadowWarm, this.camera, shadowTarget, valid);
         if (!valid()) return false;
       }
+      // 내 캐릭터 마스크처럼 조명 없는 별도 타깃도 같은 취소 가능한
+      // 컴파일 소유자 안에서 준비한다. 추가 warm draw/그림자 패스는 없다.
+      for (const preparation of targetPreparations) {
+        if (!valid() || !preparation.isCurrent()) return false;
+        renderer.setRenderTarget(preparation.target);
+        const targetCurrent = () => valid() && preparation.isCurrent();
+        await compilePreparedScene(renderer, preparation.scene, this.camera, null, targetCurrent);
+        if (!targetCurrent()) return false;
+        const reflected = await prepareObjectReflection(renderer, preparation.readinessObjects, targetCurrent);
+        if (!targetCurrent() || !reflected) return false;
+      }
+      renderer.setRenderTarget(renderTarget);
       return await prepareObjectReflection(renderer, readinessObjects, valid);
     } finally {
       try {
