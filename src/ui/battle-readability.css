@@ -5,6 +5,8 @@
 #dmg-layer .compact-status[data-combat-status=guard-break]{color:#ffe0a0;border-color:#e5b866}
 #dmg-layer .compact-status[data-combat-status=posture-break]{color:#e5ceff;border-color:#be9dea}
 #dmg-layer .compact-status[data-combat-status=miss]{color:#e0e6da;border-color:#a6b4a0}
+/* Actual header and active cue bounds reserve a separate row for the global HUD-sibling toast. */
+body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,calc(64px + var(--sat,0px)))}
 .experience-v2.oath-visual #hud.battle-readability .hud-top{grid-template-columns:220px minmax(0,1fr) 112px;gap:14px;padding-top:0}
 .experience-v2.oath-visual #hud.battle-readability .hud-player{padding:7px 8px;background:#12251fd9;border-color:#b6b89e40;gap:7px}
 .experience-v2.oath-visual #hud.battle-readability .hud-portrait{flex:0 0 36px;width:36px;height:36px;border-color:#c3b17b}
@@ -95,6 +97,7 @@
  .battle-atlas-header{padding:9px 12px}
 }
 @media(orientation:portrait){
+ body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,calc(174px + var(--sat,0px)))}
  /* Real rows let longer goals and earned actions grow without covering HP or the boss. */
  .experience-v2.oath-visual #hud.battle-readability .hud-top{--portrait-action-space:116px;position:relative;top:auto;left:auto;right:auto;margin:calc(8px + var(--sat,0px)) calc(14px + var(--sar,0px)) 0 calc(14px + var(--sal,0px));grid-template-columns:minmax(0,1fr) 88px;gap:4px 8px;padding-top:0}
  .experience-v2.oath-visual #hud.battle-readability .hud-center,.experience-v2.oath-visual #hud.battle-readability .hud-right,.experience-v2.oath-visual #hud.battle-readability #minimap-wrap{display:contents}

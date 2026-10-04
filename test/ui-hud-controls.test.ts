@@ -12,6 +12,8 @@ class El {
   classes = new Set<string>(); attrs: Record<string, string> = {};
   selectors = new Map<string, El>(); queries: string[] = [];
   classOps: string[] = []; layoutReads = 0; parentElement: El | null = null;
+  geometryReads = 0; offsetParent: El | null = null; offsetLeft = 0; offsetTop = 0;
+  bounds = { left: 0, top: 0, width: 0, height: 0 };
   children: El[] = []; attributeWrites: Record<string, number> = {}; textWrites = 0;
   styleWrites: Record<string, number> = {}; datasetWrites: Record<string, number> = {}; hiddenWrites = 0;
   private text = '';
@@ -21,6 +23,9 @@ class El {
     this.style.setProperty = (key: string, value: string) => { this.styleWrites[key] = (this.styleWrites[key] || 0) + 1; this.style[key] = value; };
     this.style.getPropertyValue = (key: string) => String(this.style[key] ?? '');
     this.style.getPropertyPriority = () => '';
+    this.style.removeProperty = (key: string) => {
+      const previous = this.style.getPropertyValue(key); delete this.style[key]; return previous;
+    };
     this.dataset = new Proxy(this.dataset, { set: (target, key: string, value: string) => {
       this.datasetWrites[key] = (this.datasetWrites[key] || 0) + 1; target[key] = value; return true;
     } });
@@ -46,7 +51,35 @@ class El {
     add: (...keys: string[]) => { for (const key of keys) { this.classOps.push(`add:${key}`); this.classes.add(key); } },
     remove: (...keys: string[]) => { for (const key of keys) { this.classOps.push(`remove:${key}`); this.classes.delete(key); } },
   }; }
-  get offsetWidth() { this.layoutReads++; return 48; }
+  get offsetWidth() { this.layoutReads++; return this.hidden || this.classes.has('hidden') ? 0 : this.bounds.width || 48; }
+  get offsetHeight() { this.layoutReads++; return this.hidden || this.classes.has('hidden') ? 0 : this.bounds.height; }
+  get childElementCount() { return this.children.length; }
+  getBoundingClientRect() {
+    this.geometryReads++;
+    const { left, width } = this.bounds;
+    const styledTop = Number.parseFloat(this.style.getPropertyValue('--battle-notice-top'));
+    const top = Number.isFinite(styledTop) ? styledTop : this.bounds.top;
+    const height = this.hidden || this.classes.has('hidden') ? 0 : this.bounds.height;
+    return { x: left, y: top, left, top, width: height ? width : 0, height, right: left + (height ? width : 0), bottom: top + height };
+  }
+  querySelectorAll(selector: string): El[] {
+    this.queries.push(selector);
+    const alternatives = selector.split(',').map(value => value.trim().split(/\s+/));
+    const matches = (el: El, token: string) => token.startsWith('.') ? el.classes.has(token.slice(1)) : el.tagName === token;
+    const descendants: El[] = [];
+    const visit = (parent: El) => { for (const child of parent.children) { descendants.push(child); visit(child); } };
+    visit(this);
+    return descendants.filter(el => alternatives.some(tokens => {
+      if (!matches(el, tokens[tokens.length - 1])) return false;
+      let parent = el.parentElement;
+      for (let i = tokens.length - 2; i >= 0; i--) {
+        while (parent && !matches(parent, tokens[i])) parent = parent.parentElement;
+        if (!parent) return false;
+        parent = parent.parentElement;
+      }
+      return true;
+    }));
+  }
   querySelector(selector: string): El | null {
     this.queries.push(selector);
     const known = this.selectors.get(selector); if (known) return known;
@@ -61,7 +94,17 @@ class El {
   }
   setAttribute(key: string, value: string) { this.attrs[key] = value; this.attributeWrites[key] = (this.attributeWrites[key] || 0) + 1; }
   append(...children: El[]) { for (const child of children) { child.parentElement = this; this.children.push(child); } }
+  remove() { if (this.parentElement) this.parentElement.children = this.parentElement.children.filter(child => child !== this); this.parentElement = null; }
   replaceChildren(...children: El[]) { for (const child of this.children) child.parentElement = null; this.children = []; this.text = ''; this.append(...children); }
+}
+
+// The platform delivers explicit resize notifications; it does not emulate CSS or a browser render.
+class ResizeBoundary {
+  observed = new Set<El>(); unobserved: El[] = [];
+  constructor(private notify: () => void) {}
+  observe(el: El) { this.observed.add(el); }
+  unobserve(el: El) { this.observed.delete(el); this.unobserved.push(el); }
+  deliver(el: El) { expect(this.observed.has(el)).toBe(true); this.notify(); }
 }
 
 let nodes: Map<string, El>, originalDocument: PropertyDescriptor | undefined;
@@ -73,8 +116,9 @@ const get = (id: string) => {
 };
 beforeEach(() => {
   nodes = new Map(); originalDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  const documentElement = new El('html'); documentElement.classList.add('oath-visual');
   Object.defineProperty(globalThis, 'document', { configurable: true, value: {
-    getElementById: get, querySelectorAll: () => [],
+    getElementById: get, querySelectorAll: () => [], documentElement,
     createElement: (tag: string) => new El(tag),
     createElementNS: (namespace: string, tag: string) => new El(tag, namespace),
   } });
@@ -116,14 +160,31 @@ function fixture() {
   get('hud-ult').parentElement = new El();
   const battle: any = { player, active: true, heroId: 'test', elapsed: 2, routeObjectives: null,
     sp: null, boss: null, canBossShortcut: () => false };
+  const hud = get('hud'), header = new El(), center = new El();
+  header.className = 'hud-top'; center.className = 'hud-center';
+  const wave = get('hud-wave'), stage = get('hud-stage'), target = new El(), posture = new El();
+  wave.className = 'wave'; stage.className = 'stage-name'; target.className = 'rpg-target'; posture.className = 'mw-posture';
+  center.append(wave, stage, target, posture); header.append(center); hud.append(header, get('bossbar'), get('combat-cue'));
+  hud.bounds = { left: 0, top: 0, width: 880, height: 400 };
+  header.bounds = { left: 14, top: 14, width: 852, height: 90 };
+  wave.bounds = { left: 244, top: 14, width: 200, height: 22 };
+  stage.bounds = { left: 244, top: 39, width: 200, height: 16 };
+  target.bounds = { left: 244, top: 60, width: 300, height: 20 };
+  posture.bounds = { left: 244, top: 84, width: 300, height: 15 };
+  get('bossbar').classList.add('hidden'); get('combat-cue').offsetParent = hud;
+  get('toast-layer').bounds = { left: 330, top: 64, width: 220, height: 24 };
   const ui: any = Object.assign(Object.create(UI.prototype), { skillBtns, _astralChoiceHud: false,
     app: { battle }, eco: { hero: () => hero }, el: { hud: get('hud'), toast: get('toast-layer') },
     comboEl: get('combo'), killStreakEl: get('kill-streak'), combatCueEl: get('combat-cue'),
     lootLayer: get('loot-layer'), combatNotices: { clear() {} }, hurtT: 0, miniT: 0,
     minimap: { draw() {} },
+    combatNoticeHeaderEls: [], combatNoticeObservedHeaders: new Set<El>(),
   });
+  const resize = new ResizeBoundary(() => ui.refreshCombatNoticeLayout());
+  ui.combatNoticeResize = resize;
+  for (const el of [hud, get('toast-layer'), header, get('bossbar'), get('combat-cue')]) resize.observe(el);
   ui.setupHud(def, player);
-  return { ui, battle, player, hero, skillBtns, slots };
+  return { ui, battle, player, hero, skillBtns, slots, resize, header, wave, stage, target, posture };
 }
 function queryCount(f: ReturnType<typeof fixture>) {
   const countChildren = (node: El): number => node.queries.length + node.children.reduce((n, child) => n + countChildren(child), 0);
@@ -356,4 +417,79 @@ test('pause ownership and HUD/setup boundaries reset cached manual cues without 
   button.children.forEach((child, index) => expect(child).toBe(children[index]));
   expect(get('btn-attack')).toBe(button); expect(button.disabled).toBe(false);
   f.ui.showHud(true); update(f); expect(button.dataset.comboStatus).toBe('queued');
+});
+
+// Supplied DOM bounds test the real layout methods and observer/lifecycle wiring.
+// They do not prove browser CSS grid/cascade, physical viewport or native art readability.
+test('combat notice follows a newly observed absolute target row and stays out of normal HUD ticks', () => {
+  const f = fixture(), toast = get('toast-layer'); f.ui.showHud(true);
+  expect(f.resize.observed.has(f.target)).toBe(true); expect(f.resize.observed.has(f.posture)).toBe(true);
+  const notice = new El(); notice.textContent = '20연속 처치 · 전장의 지배자'; toast.append(notice);
+  f.resize.deliver(toast);
+  expect(toast.style['--battle-notice-top']).toBe('110px');
+  expect(get('hud').style['--combat-notice-bottom']).toBe('134px');
+  f.target.bounds = { left: 244, top: 126.4, width: 300, height: 32 };
+  f.resize.deliver(f.target);
+  expect(toast.style['--battle-notice-top']).toBe('165px');
+  expect(get('hud').style['--combat-notice-bottom']).toBe('189px');
+  expect(notice.textContent).toBe('20연속 처치 · 전장의 지배자');
+  const writes = toast.styleWrites['--battle-notice-top']; f.resize.deliver(f.target);
+  expect(toast.styleWrites['--battle-notice-top']).toBe(writes);
+  const headerNodes = [f.header, f.wave, f.stage, f.target, f.posture, get('bossbar')];
+  const reads = headerNodes.map(el => el.geometryReads);
+  for (let frame = 0; frame < 30; frame++) update(f);
+  expect(headerNodes.map(el => el.geometryReads)).toEqual(reads);
+});
+
+test('provided growing portrait header and separate visible boss bounds reserve the full notice row', () => {
+  const f = fixture(), toast = get('toast-layer'), boss = get('bossbar');
+  get('hud').bounds = { left: 0, top: 0, width: 390, height: 844 };
+  f.header.bounds = { left: 14, top: 8, width: 362, height: 310.5 };
+  f.target.bounds = { left: 14, top: 252.25, width: 362, height: 23.25 };
+  f.posture.bounds = { left: 14, top: 294, width: 362, height: 24.5 };
+  f.ui.showHud(true); toast.append(new El()); f.resize.deliver(f.header);
+  expect(toast.style['--battle-notice-top']).toBe('325px');
+  expect(get('hud').style['--combat-notice-bottom']).toBe('349px');
+  boss.bounds = { left: 14, top: 324, width: 362, height: 52.25 }; boss.classList.remove('hidden');
+  f.resize.deliver(boss);
+  expect(toast.style['--battle-notice-top']).toBe('383px');
+  expect(get('hud').style['--combat-notice-bottom']).toBe('407px');
+  boss.classList.add('hidden'); f.resize.deliver(boss);
+  expect(toast.style['--battle-notice-top']).toBe('325px');
+});
+
+test('real cue ownership and clear lifecycle separate a notice from the stable animated danger envelope', () => {
+  const f = fixture(), cue = get('combat-cue'), toast = get('toast-layer'), owner = {}, foreign = {};
+  cue.bounds = { left: 440, top: 150, width: 132, height: 30 }; cue.offsetLeft = 440; cue.offsetTop = 150;
+  f.ui.showHud(true); toast.append(new El()); f.resize.deliver(toast);
+  try {
+    f.ui.combatCue('치유 준비 · 근접·강타로 중단', 'red', 5000, owner);
+    expect(f.ui.combatCueOwner).toBe(owner); expect(cue.classList.contains('on')).toBe(true);
+    // Offset box bottom180 + existing envelope4.2 +6 gap rounds upward to191.
+    expect(toast.style['--battle-notice-top']).toBe('191px');
+    expect(get('hud').style['--combat-notice-bottom']).toBe('215px');
+    expect(f.ui.clearCombatCue(foreign, cue.textContent)).toBe(false);
+    expect(toast.style['--battle-notice-top']).toBe('191px');
+    expect(f.ui.clearCombatCue(owner, cue.textContent)).toBe(true);
+    expect(toast.style['--battle-notice-top']).toBe('110px');
+    expect(get('hud').style['--combat-notice-bottom']).toBe('134px');
+  } finally { clearTimeout(f.ui.combatCueTimer); }
+});
+
+test('HUD exit clears notice positioning and reentry observes replacement target leaves without retaining the old owner', () => {
+  const f = fixture(), toast = get('toast-layer'); f.ui.showHud(true); toast.append(new El()); f.resize.deliver(toast);
+  expect(f.ui.combatNoticeObservedHeaders.size).toBe(4);
+  f.ui.showHud(false);
+  expect(toast.style.getPropertyValue('--battle-notice-top')).toBe('');
+  expect(get('hud').style['--combat-notice-bottom']).toBe('0px');
+  expect(f.ui.combatNoticeHeaderEls).toEqual([]);
+  const parent = f.target.parentElement!, nextTarget = new El(); f.target.remove(); nextTarget.className = 'rpg-target';
+  nextTarget.bounds = { left: 244, top: 150, width: 300, height: 60 }; parent.append(nextTarget);
+  f.ui.showHud(true);
+  expect(f.resize.observed.has(f.target)).toBe(false); expect(f.resize.unobserved).toContain(f.target);
+  expect(f.resize.observed.has(nextTarget)).toBe(true); expect(f.ui.combatNoticeObservedHeaders.size).toBe(4);
+  expect(toast.style['--battle-notice-top']).toBe('216px');
+  expect(get('hud').style['--combat-notice-bottom']).toBe('0px');
+  toast.append(new El()); f.resize.deliver(nextTarget);
+  expect(get('hud').style['--combat-notice-bottom']).toBe('240px');
 });
