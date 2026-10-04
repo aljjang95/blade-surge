@@ -199,6 +199,14 @@ try {
     unchanged(prepared, live, 'Standard preparation open'); assert(live.keys.length === 0 && live.pointer === null, 'Destination dialog retained lobby input'); report.checks.standardPrep = view;
   });
   await screenshot('portrait-standard-preparation');
+  await step('Keep actual departure controls visible in short landscape', async () => {
+    await page.setViewportSize({ width: 844, height: 390 });
+    await screenshot('landscape-standard-preparation');
+    const go = await page.locator('.citadel-hub-dialog[open] .citadel-hub-go').boundingBox();
+    assert(go && go.height >= 44 && go.y >= 0 && go.y + go.height <= 390, 'Short landscape lost its visible 44px departure control');
+    await page.setViewportSize({ width: 390, height: 844 });
+    unchanged(prepared, await state(), 'Native responsive viewport change');
+  });
   await step('Scroll native preparation to actual supplies and saved mismatch', async () => {
     const box = await page.locator('.citadel-hub-destination-scroll').boundingBox(); assert(box, 'Preparation scroll area missing');
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await page.mouse.wheel(0, 1100);

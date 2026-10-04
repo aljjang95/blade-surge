@@ -139,7 +139,21 @@ export class CitadelHubUI {
     goalOpen.disabled = typeof this.app.battle?.chronicle?.open !== 'function';
     goalOpen.addEventListener('click', () => {
       if (this.busy || this.app.stageStarting || !this.opened || this.dialogSpot !== spot) return;
-      this.close(); this.app.battle.chronicle.open('journal', this.interactButton);
+      const chronicle = this.app.battle.chronicle, trigger = this.interactButton;
+      this.close(); this.journalFocusCleanup?.();
+      const restoreHubFocus = () => {
+        // A deferred prior close can arrive after another journal visit opens.
+        if (chronicle.dialog.open) return;
+        this.journalFocusCleanup?.(); this.journalFocusCleanup = null;
+        if (!this.visible || this.app.mode !== 'lobby' || this.busy || this.app.stageStarting || this.opened || this.dialog.open) return;
+        const canWalk = this.app.canWalkHub?.() ?? !document.querySelector('dialog[open], #modal.show');
+        if (!canWalk) return;
+        this.update(this.app.hubMovement?.nearest ?? this.nearest, { blocked: false });
+        if (trigger.isConnected && !trigger.disabled) trigger.focus({ preventScroll: true });
+      };
+      chronicle.dialog.addEventListener('close', restoreHubFocus);
+      this.journalFocusCleanup = () => chronicle.dialog.removeEventListener('close', restoreHubFocus);
+      chronicle.open('journal', trigger);
     });
     this.dialog.querySelector('.citadel-hub-go').addEventListener('click', async () => {
       if (this.busy || this.app.stageStarting || !this.opened || this.dialogSpot !== spot) return;
@@ -203,7 +217,7 @@ export class CitadelHubUI {
   }
   clear() { this.nearest = null; this.close(); this.touchKnob.style.transform = 'translate(-50%, -50%)'; }
   destroy() {
-    this.clear(); this.unsub?.();
+    this.clear(); this.unsub?.(); this.journalFocusCleanup?.();
     const listeners = this.app.eco?.listeners, listenerIndex = listeners?.indexOf(this.ecoListener);
     if (listenerIndex >= 0) listeners.splice(listenerIndex, 1);
     this.interactButton.removeEventListener('click', this.clickHandler);
