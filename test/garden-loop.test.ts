@@ -85,20 +85,25 @@ test('심층·다른 지역·파티·균열·전술 공략은 새 정원 회랑�
 test('새 회랑 양끝의 높은 지역 장식은 전체 바닥 면적이 실제 이동 마스크와 겹치지 않는다', () => {
   const world = buildExpeditionWorld(garden()), before = Array.from(world.mask!);
   const group = buildRegionArchitecture(world, 'garden');
+  let checked = 0, tall = 0;
   for (const node of group.children) {
-    if (!/^garden-room-[23]-/.test(node.name)) continue;
     const mesh = node as THREE.Mesh, position = mesh.geometry.getAttribute('position');
-    for (let i = 0; i < position.count; i += 3) {
-      if (Math.max(position.getY(i), position.getY(i + 1), position.getY(i + 2)) <= .2) continue;
-      const xs = [position.getX(i), position.getX(i + 1), position.getX(i + 2)];
-      const zs = [position.getZ(i), position.getZ(i + 1), position.getZ(i + 2)];
-      const x0 = Math.floor(Math.min(...xs) - world.minX!), x1 = Math.floor(Math.max(...xs) - world.minX!);
-      const z0 = Math.floor(Math.min(...zs) - world.minZ!), z1 = Math.floor(Math.max(...zs) - world.minZ!);
-      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
-        if (x >= 0 && z >= 0 && x < world.cols! && z < world.rows!) expect(world.mask![z * world.cols! + x]).toBe(0);
+    for (const range of mesh.userData.roomRanges.filter((range: { roomId: number }) => [2, 3].includes(range.roomId))) {
+      for (let i = range.start; i < range.start + range.count; i += 3) {
+        checked += 3;
+        if (Math.max(position.getY(i), position.getY(i + 1), position.getY(i + 2)) <= .2) continue;
+        tall += 3;
+        const xs = [position.getX(i), position.getX(i + 1), position.getX(i + 2)];
+        const zs = [position.getZ(i), position.getZ(i + 1), position.getZ(i + 2)];
+        const x0 = Math.floor(Math.min(...xs) - world.minX!), x1 = Math.floor(Math.max(...xs) - world.minX!);
+        const z0 = Math.floor(Math.min(...zs) - world.minZ!), z1 = Math.floor(Math.max(...zs) - world.minZ!);
+        for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
+          if (x >= 0 && z >= 0 && x < world.cols! && z < world.rows!) expect(world.mask![z * world.cols! + x]).toBe(0);
+        }
       }
     }
   }
+  expect(checked).toBeGreaterThan(0); expect(tall).toBeGreaterThan(0);
   expect(Array.from(world.mask!)).toEqual(before);
   expect(group.children.length).toBeLessThanOrEqual(world.rooms.length * 3);
   group.userData.dispose();
