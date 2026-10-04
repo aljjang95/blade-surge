@@ -6,6 +6,8 @@ import { DUNGEONS } from '../src/data/expansion.js';
 import { EXPEDITION_DEPTHS } from '../src/data/expedition-depths.js';
 import { frontierForRoute, weeklyFrontier } from '../src/data/seasonal-content.js';
 import { normalizeMasterworks } from '../src/game/masterworks-core.js';
+import { buildExpeditionStage } from '../src/game/expedition-combat.js';
+import { routeObjectiveForStage } from '../src/data/route-objectives.js';
 
 const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 let values: Map<string, string>;
@@ -40,6 +42,49 @@ function goal(app: any, override: object = {}, metric = 'time', victory = true) 
   ] });
 }
 const preparation = (app: any, id = 'glass_garden', depth = 'standard') => citadelPreparation(app, id, depth) as any;
+
+function actionCue(app: ReturnType<typeof fixture>, id: string, depth = 'standard') {
+  const preview = citadelPreparation(app, id, depth);
+  if (!preview.ok || !('actionCue' in preview)) throw new Error('유효한 원정 준비가 필요합니다.');
+  return preview.actionCue;
+}
+
+test('정원 첫 행동 안내는 실제 선택 전술을 필수 공명 목표와 구분하고 심층 선택 때 전술을 제거한다', () => {
+  const app = fixture(), basic = actionCue(app, 'glass_garden')!, deep = actionCue(app, 'glass_garden', 'deep')!;
+  expect(basic.objective).toBe(buildExpeditionStage('dungeon', 'glass_garden', null).objective);
+  expect(basic.action).toBe('선택 · 집결 / 방출 · 장치 곁 F 또는 전술 버튼 · 이 방에서 1회(수동)');
+  expect(basic.objective).toContain('2초');
+  expect(deep.objective).toBe(buildExpeditionStage('dungeon', 'glass_garden', null, { depth: 'deep' }).objective);
+  expect(deep.action).toBe('보물방 2곳 · 적 처치 후 제단 중심에서 공명');
+  expect(deep.action).not.toMatch(/집결|방출|전술 버튼|F/);
+});
+
+test('금고 증원과 관측소 기록 안내는 선택한 실제 원정의 수·순서·유지 시간을 따른다', () => {
+  const app = fixture();
+  for (const depth of ['standard', 'deep']) {
+    const ember = buildExpeditionStage('dungeon', 'ember_vault', null, { depth });
+    const waves = ember.expedition.mechanics.reinforcements;
+    expect(actionCue(app, 'ember_vault', depth)!.objective).toBe(ember.objective);
+    expect(actionCue(app, 'ember_vault', depth)!.action).toBe(`정예방 ${depth === 'deep' ? 2 : 1}곳 · 증원 각 ${waves}회까지 처치`);
+    const night = buildExpeditionStage('dungeon', 'nightglass_observatory', null, { depth });
+    const records = routeObjectiveForStage(night);
+    if (!records || !('kind' in records) || records.kind !== 'records') throw new Error('기록 복원 계약이 필요합니다.');
+    expect(records.gates.map(gate => gate.pageId)).toEqual(depth === 'deep' ? [3, 2, 1] : [1, 2, 3]);
+    expect(actionCue(app, 'nightglass_observatory', depth)!.objective).toBe(night.objective);
+    expect(actionCue(app, 'nightglass_observatory', depth)!.action).toBe(`기록 ${depth === 'deep' ? '3 → 2 → 1' : '1 → 2 → 3'} 순서 · 기록대에서 공격·회피 없이 ${records.holdSeconds}초 유지`);
+  }
+});
+
+test('세 기준문 이외에는 새 행동을 만들지 않으며 반복 준비는 저장·재고·정산을 바꾸지 않는다', () => {
+  const app = fixture(), stateBefore = structuredClone(app.eco.s), expeditionBefore = structuredClone(app.expedition.s);
+  const catalogBefore = JSON.stringify([DUNGEONS, EXPEDITION_DEPTHS]), storageBefore = [...values];
+  for (const def of DUNGEONS) for (const depth of ['standard', 'deep']) {
+    const cue = actionCue(app, def.id, depth);
+    expect(!!cue).toBe(['glass_garden', 'ember_vault', 'nightglass_observatory'].includes(def.id));
+  }
+  expect(app.eco.s).toEqual(stateBefore); expect(app.expedition.s).toEqual(expeditionBefore);
+  expect(JSON.stringify([DUNGEONS, EXPEDITION_DEPTHS])).toBe(catalogBefore); expect([...values]).toEqual(storageBefore);
+});
 
 test('every gate projects canonical basic and deep routes; each deep lock uses actual expedition eligibility', () => {
   for (const def of EXPEDITION_DEPTHS) {

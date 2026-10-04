@@ -36,6 +36,9 @@ export function buildRegionArchitecture(floor, theme) {
   group.userData.landmarks = [];
   for (const room of floor.rooms) {
     const chunks = [[], [], []];
+    const loopThreshold = theme === 'garden' && floor.rooms.length === 5 && [2,3].includes(room.id)
+      && floor.rooms[2].type === 'treasure' && floor.rooms[3].type === 'normal'
+      && floor.rooms[2].links?.includes(3) && floor.rooms[3].links?.includes(2) && floor.mask;
     const neighbors = (room.links || []).map((id) => floor.rooms[id]);
     const sideOccupied = (sx, sz) => neighbors.some((n) => sx ? Math.sign(n.gx-room.gx)===sx && n.gy===room.gy : Math.sign(n.gy-room.gy)===sz && n.gx===room.gx);
     // 중앙 후면 랜드마크는 복도 없는 면으로 돌린다. 통로 4개가 만나는 교차실은 바닥 문양만 유지한다.
@@ -64,6 +67,21 @@ export function buildRegionArchitecture(floor, theme) {
       rotation.setFromEuler(new THREE.Euler(rx, ry, rz));
       matrix.compose(position.set(x, y, z), rotation, scale);
       geometry.applyMatrix4(matrix);
+      if (loopThreshold) {
+        geometry.computeBoundingBox();
+        const bounds = geometry.boundingBox;
+        if (bounds.max.y > .2) {
+          // 새 회랑 양끝의 높은 장식은 중심점 대신 전체 바닥 면적과 실제 마스크 셀을 대조한다.
+          const x0 = Math.max(0, Math.floor(bounds.min.x - floor.minX));
+          const x1 = Math.min(floor.cols - 1, Math.floor(bounds.max.x - floor.minX));
+          const z0 = Math.max(0, Math.floor(bounds.min.z - floor.minZ));
+          const z1 = Math.min(floor.rows - 1, Math.floor(bounds.max.z - floor.minZ));
+          let intersects = false;
+          for (let row = z0; row <= z1 && !intersects; row++)
+            for (let col = x0; col <= x1; col++) if (floor.mask[row * floor.cols + col]) { intersects = true; break; }
+          if (intersects) { geometry.dispose(); return; }
+        }
+      }
       if (material === 0 && !geometry.getAttribute('color')) {
         const values = new Float32Array(geometry.getAttribute('position').count * 3).fill(1);
         geometry.setAttribute('color', new THREE.BufferAttribute(values, 3));

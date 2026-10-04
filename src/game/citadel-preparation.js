@@ -6,6 +6,8 @@ import { capturePersonalGoal, normalizePersonalGoal, summarizePersonalRuns } fro
 import { runRouteLabel } from './run-history.js';
 import { personalContextLabel, personalControlLabel } from '../ui/personal-goal-labels.js';
 import { mapTacticsForStage } from '../data/map-tactics.js';
+import { routeObjectiveForStage } from '../data/route-objectives.js';
+import { buildExpeditionStage, EXPEDITION_LAYOUTS } from './expedition-combat.js';
 
 const definitions = (id, depth) => depth === 'deep' ? expeditionDepth(id) : DUNGEONS.find(def => def.id === id);
 // Basic catalog stages include a roster callback. Preserve that callback while
@@ -14,6 +16,20 @@ const copyDefinition = value => Array.isArray(value) ? value.map(copyDefinition)
   : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).map(([key, item]) => [key, copyDefinition(item)])) : value;
 const sameRoute = (left, right) => left?.kind === right.kind && left.id === right.id && left.depth === right.depth
   && left.conquestId === right.conquestId && left.riftId === right.riftId;
+
+/** 세 기준문의 실제 단계·목표·조작만 읽으며 월드 생성이나 입장을 실행하지 않는다. */
+function actionCueFor(routeId, depth) {
+  if (!['glass_garden', 'ember_vault', 'nightglass_observatory'].includes(routeId)) return null;
+  const stage = buildExpeditionStage('dungeon', routeId, null, { depth });
+  const tactics = mapTacticsForStage(stage), objective = routeObjectiveForStage(stage);
+  const layout = depth === 'deep' ? expeditionDepth(routeId).layout : EXPEDITION_LAYOUTS[routeId];
+  let action;
+  if (tactics) action = `선택 · ${tactics.options.map(option => option.label).join(' / ')} · 장치 곁 F 또는 전술 버튼 · 이 방에서 1회(수동)`;
+  else if (objective?.kind === 'records') action = `기록 ${objective.gates.map(gate => gate.pageId).join(' → ')} 순서 · 기록대에서 공격·회피 없이 ${objective.holdSeconds}초 유지`;
+  else if (stage.expedition.mechanics.reinforcements) action = `정예방 ${layout.types.filter(type => type === 'elite').length}곳 · 증원 각 ${stage.expedition.mechanics.reinforcements}회까지 처치`;
+  else action = `보물방 ${layout.types.filter(type => type === 'treasure').length}곳 · 적 처치 후 제단 중심에서 공명`;
+  return { objective: stage.objective, action };
+}
 
 function accessFor(app, definition, depth) {
   const energy = app.eco?.s?.energy;
@@ -65,6 +81,7 @@ export function citadelPreparation(app, routeId, depth = 'standard') {
     }),
     hero,
     mapTactics: mapTacticsForStage({ expedition: route }),
+    actionCue: actionCueFor(routeId, depth),
     potions: CONSUMABLES.map((potion, index) => ({ id: potion.id, name: potion.name, description: potion.description,
       key: ['U', 'I', 'O'][index], count: expedition.consumables?.[potion.id] ?? 0 })),
     // Authored fixed payout only: field loot, seasonal adjustments and account-level bonuses are separate.
