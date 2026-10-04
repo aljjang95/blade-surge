@@ -17,7 +17,8 @@ function fixture(width = 88, height = 88, observed = true) {
   } : undefined });
   const context = new Proxy({}, { get: () => () => undefined });
   const dimensions = { width, height };
-  const canvas = { get clientWidth() { widthReads++; return dimensions.width; },
+  const canvas = { ownerDocument: { createElement: () => ({ width: 0, height: 0, getContext: () => context }) },
+    get clientWidth() { widthReads++; return dimensions.width; },
     get clientHeight() { heightReads++; return dimensions.height; }, getContext: () => context, width: 0, height: 0 };
   const map = new Minimap(canvas);
   const room = { id: 0, x: 0, z: 0, w: 20, h: 20, type: 'start', discovered: true, cleared: true, gx: 0, gy: 0 };
