@@ -48,6 +48,7 @@ test('actual models merge into six existing view submissions without additional 
   const scene = new THREE.Scene(), originalNodes = JSON.stringify(nodes), originalData = hash(JSON.stringify(DATA));
   const floor = { walkable:(x:number,z:number) => Math.abs(x) <= 11 && Math.abs(z) <= 13 };
   const view = new View(scene,nodes,room,floor);
+  expect(view.group.userData.artContract.sourceSha256).toBe(DATA.provenance.sourceSha256);
   expect(meshes(view)).toHaveLength(6);
   expect(triangles(view)).toBe(1126);
   expect(triangles(view)).toBeLessThanOrEqual(1600); // 이 두 원본 조형의 국소 예산이다. 전역 성능 기준은 별도다.

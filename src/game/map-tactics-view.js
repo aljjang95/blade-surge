@@ -113,7 +113,8 @@ export class MapTacticsView {
     this.boundary.position.y = .103; this.boundary.visible = false; this.group.add(this.boundary);
     this.group.visible = false;
     this.group.userData.artContract = { provenance:'TLL original Blender-authored Jade tactics v1',
-      source:JADE_TACTICS_GEOMETRY.provenance.source, referenceSha256:JADE_TACTICS_GEOMETRY.provenance.referenceSha256,
+      source:JADE_TACTICS_GEOMETRY.provenance.source, sourceSha256:JADE_TACTICS_GEOMETRY.provenance.sourceSha256,
+      referenceSha256:JADE_TACTICS_GEOMETRY.provenance.referenceSha256,
       maximumDraws:6, maximumTriangles:1600, maximumBackingTriangles:JADE_TACTICS_GEOMETRY.backingTriangleTotal,
       lights:0, renderTargets:0, textures:0, operatorRadius:nodes[0].operatorRadius, effectRadius:radius, backingFootprints };
   }

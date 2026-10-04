@@ -24,17 +24,17 @@ export class UI {
     this.app = app; this.eco = app.eco;
     this._astralChoiceHud = false;
     this.el = { hud: $('hud'), meta: $('meta'), result: $('result'), modal: $('modal'), modalBox: $('modal-box'), toast: $('toast-layer'), boot: $('boot'), reveal: $('reveal'), pause: $('pause-overlay') };
+    this.combatNoticeHeaderEls = [];
+    this.combatNoticeObservedHeaders = new Set();
     this.combatNotices = new CombatNoticeQueue({ show: ({ message, tone }) => {
       const notice = document.createElement('div'); notice.className = 'toast combat-notice ' + tone;
       notice.innerHTML = message; this.el.toast.appendChild(notice);
-      return () => notice.remove();
+      this.refreshCombatNoticeLayout();
+      return () => { notice.remove(); this.refreshCombatNoticeLayout(); };
     } });
     // The announcement must clear the actual notice height, including wrapped copy and rotation.
     this.combatNoticeResize = new ResizeObserver(() => {
-      const bottom = this.el.hud.classList.contains('show') && this.el.toast.childElementCount
-        ? this.el.toast.getBoundingClientRect().bottom : 0;
-      this.el.hud.style.setProperty('--combat-notice-bottom', `${bottom}px`);
-      this.refreshCombatTextRegions();
+      this.refreshCombatNoticeLayout();
     });
     this.combatNoticeResize.observe(this.el.toast);
     this.combatNoticeResize.observe(this.el.hud);
@@ -103,6 +103,47 @@ export class UI {
     $('btn-result-double').addEventListener('click', () => this.watchAd());
   }
   show(el, on) { el.classList.toggle('show', on); }
+  observeCombatNoticeHeaders() {
+    // Target and posture leaves are authored by the Battle views after UI construction.
+    const leaves = [...this.el.hud.querySelectorAll('.hud-center .wave, .hud-center .stage-name, .rpg-target, .mw-posture')];
+    for (const el of this.combatNoticeObservedHeaders) if (!leaves.includes(el)) {
+      this.combatNoticeResize.unobserve(el); this.combatNoticeObservedHeaders.delete(el);
+    }
+    for (const el of leaves) if (!this.combatNoticeObservedHeaders.has(el)) {
+      this.combatNoticeResize.observe(el); this.combatNoticeObservedHeaders.add(el);
+    }
+    this.combatNoticeHeaderEls = [this.el.hud.querySelector('.hud-top'), $('bossbar'), ...leaves].filter(Boolean);
+  }
+  refreshCombatNoticeLayout() {
+    const hud = this.el?.hud, toast = this.el?.toast;
+    if (!hud || !toast) return;
+    const shown = hud.classList.contains('show');
+    if (shown) {
+      let bottom = 0;
+      // Absolute landscape columns and display:contents portrait columns need their real leaves.
+      for (const el of this.combatNoticeHeaderEls || []) {
+        const rect = el.getBoundingClientRect();
+        if (rect.width > 0 && rect.height > 0 && Number.isFinite(rect.bottom)) bottom = Math.max(bottom, rect.bottom);
+      }
+      const cue = this.combatCueEl;
+      if (cue?.classList.contains('on') && cue.offsetParent === hud) {
+        const width = cue.offsetWidth, height = cue.offsetHeight;
+        if (width > 0 && height > 0) {
+          const box = hud.getBoundingClientRect(), left = box.left + cue.offsetLeft, top = box.top + cue.offsetTop;
+          const area = combatHudAnimationRegion('combat-cue', { left, top, right: left + width, bottom: top + height }, document.documentElement.classList.contains('oath-visual'));
+          if (area) bottom = Math.max(bottom, area.bottom);
+        }
+      }
+      // The fixed global toast is a HUD sibling, so its layout property must live on the toast itself.
+      writeHudStyle(toast.style, '--battle-notice-top', `${Math.ceil(bottom + 6)}px`);
+    } else {
+      toast.style.removeProperty('--battle-notice-top');
+      this.combatNoticeHeaderEls = [];
+    }
+    const noticeBottom = shown && toast.childElementCount ? toast.getBoundingClientRect().bottom : 0;
+    writeHudStyle(hud.style, '--combat-notice-bottom', `${noticeBottom}px`);
+    this.refreshCombatTextRegions();
+  }
   refreshCombatTextRegions() {
     if (typeof this.app.fx?.setCombatTextRegions !== 'function') return;
     const shown = this.el.hud.classList.contains('show');
@@ -134,7 +175,7 @@ export class UI {
     if (this.app.battle?.world !== floor) return;
     this.readability.renderObjective(this.app.battle);
   }
-  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { if (this.combatCueOwner) this.clearCombatCue(this.combatCueOwner, this.combatCueEl?.textContent); this.readability?.clear(); this.refreshComboFeedback(); this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } this.refreshCombatTextRegions(); }
+  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { if (this.combatCueOwner) this.clearCombatCue(this.combatCueOwner, this.combatCueEl?.textContent); this.readability?.clear(); this.refreshComboFeedback(); this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } else this.observeCombatNoticeHeaders(); this.refreshCombatNoticeLayout(); }
   pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; b.setPaused('manual', on); this.show(this.el.pause, on); if (!on && this.el.pause.contains(document.activeElement)) document.activeElement?.blur?.(); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
@@ -175,7 +216,8 @@ export class UI {
     const el = this.combatCueEl; if (!el || !label) return;
     this.combatCueOwner = owner;
     clearTimeout(this.combatCueTimer); el.textContent = label; el.dataset.tone = tone; el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
-    this.combatCueTimer = setTimeout(() => { this.combatCueOwner = null; this.combatCueTimer = null; el.classList.remove('on'); }, duration);
+    this.refreshCombatNoticeLayout();
+    this.combatCueTimer = setTimeout(() => { this.combatCueOwner = null; this.combatCueTimer = null; el.classList.remove('on'); this.refreshCombatNoticeLayout(); }, duration);
   }
   /** 같은 문구라도 다른 알림으로 교체됐으면 이전 시전이 지우지 않는다. */
   clearCombatCue(owner, label) {
@@ -183,6 +225,7 @@ export class UI {
     if (!owner || this.combatCueOwner !== owner || el?.textContent !== label) return false;
     clearTimeout(this.combatCueTimer); this.combatCueTimer = null; this.combatCueOwner = null;
     el.classList.remove('on');
+    this.refreshCombatNoticeLayout();
     return true;
   }
   perfectDodge() {
