@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { softCircleTex, sparkTex, ringTex, slashTex, smokeTex, VFX_TEX } from './assets.js';
 import { ImpactLights } from './impact-lights.js';
 import { HeroEffectFocus } from './hero-effect-focus.js';
+import { compactCombatStatus, decorativeBurstGain, boundedFeedbackGain, combatTextRegions, combatTextViewport, heroCombatTextRegion, placeCombatStatus } from './combat-feedback.js';
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
 const preparationOwners = new WeakMap();
@@ -213,6 +214,8 @@ export class FX {
     this.dmgLayer = document.getElementById('dmg-layer');
     this.dmgPool = []; this.maxDmg = 40;
     this._damageRecent = []; this._damageSerial = 0;
+    this._combatTextRegions = [];
+    this._combatTextViewport = null;
     this.quality = 'high';
     this._mats = {};
     this._transparentMats = new Map();
@@ -594,9 +597,10 @@ export class FX {
   // pass cannot contribute visible pixels, so retain both sides in one draw.
   _addMat(tex, color, { blending = THREE.AdditiveBlending, telegraph = false } = {}) { return this._keep(new THREE.MeshBasicMaterial({ map: tex, color, blending, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, opacity: 1 }), { telegraph }); }
   /** 카메라를 향하는 텍스처 플래시 (holy_burst, ice, shockwave 등) */
-  texFlash(pos, name, color = 0xffffff, { size = 3, life = 0.35, spin = 0, grow = 1.3, y = 1 } = {}) {
+  texFlash(pos, name, color = 0xffffff, { size = 3, life = 0.35, spin = 0, grow = 1.3, y = 1, gain = 1 } = {}) {
     const tex = VFX_TEX[name]; if (!tex) return this.flash(pos, color, { size, life });
     const m = this._keep(new THREE.SpriteMaterial({ map: tex, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, rotation: Math.random() * Math.PI * 2 }));
+    m.color.multiplyScalar(boundedFeedbackGain(gain));
     const sp = new THREE.Sprite(m); sp.position.copy(pos); sp.position.y += y; sp.scale.setScalar(size * 0.4); sp.renderOrder = 11;
     this.add(sp, life, (k, t, dt) => { const e = 1 - Math.pow(1 - k, 2); sp.scale.setScalar(size * (0.4 + e * grow)); m.opacity = k < 0.25 ? k / 0.25 : 1 - (k - 0.25) / 0.75; m.rotation += spin * dt; }, () => m.dispose());
     return sp;
@@ -614,10 +618,10 @@ export class FX {
     return this.groundTex(pos, demon ? 'circle_demon' : 'circle_gold', color, { r0: radius * 0.4, r1: radius, life, spin: 1.6, y: 0.07, fadeIn: 0.2, hold: 0.35, telegraph });
   }
   /** 플립북 (explosion / dust 4x4 아틀라스) — 빌보드 셰이더 */
-  flipbook(pos, name, { size = 3, life = 0.6, color = 0xffffff, cols = 4, rows = 4, y = 1, blending = THREE.AdditiveBlending, opacity = 1 } = {}) {
+  flipbook(pos, name, { size = 3, life = 0.6, color = 0xffffff, cols = 4, rows = 4, y = 1, blending = THREE.AdditiveBlending, opacity = 1, gain = 1 } = {}) {
     const tex = VFX_TEX[name]; if (!tex) return this.burst(pos, color, { n: 20 });
     const m = this._keep(new THREE.ShaderMaterial({
-      uniforms: { uTex: { value: tex }, uFrame: { value: 0 }, uGrid: { value: new THREE.Vector2(cols, rows) }, uColor: { value: new THREE.Color(color) }, uScale: { value: size }, uAlpha: { value: opacity } },
+      uniforms: { uTex: { value: tex }, uFrame: { value: 0 }, uGrid: { value: new THREE.Vector2(cols, rows) }, uColor: { value: new THREE.Color(color).multiplyScalar(boundedFeedbackGain(gain)) }, uScale: { value: size }, uAlpha: { value: opacity } },
       vertexShader: `uniform float uScale; varying vec2 vUv; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(0.0,0.0,0.0,1.0); mv.xy += position.xy * uScale; gl_Position = projectionMatrix * mv; }`,
       fragmentShader: `uniform sampler2D uTex; uniform float uFrame, uAlpha; uniform vec2 uGrid; uniform vec3 uColor; varying vec2 vUv;
         void main(){ float f = floor(uFrame); float cx = mod(f, uGrid.x); float cy = floor(f / uGrid.x); vec2 uv = (vUv + vec2(cx, uGrid.y - 1.0 - cy)) / uGrid; vec4 t = texture2D(uTex, uv); float lum = max(t.r, max(t.g, t.b)); gl_FragColor = vec4(t.rgb * uColor, lum * uAlpha); }`,
@@ -628,7 +632,7 @@ export class FX {
     this.add(mesh, life, (k) => { m.uniforms.uFrame.value = Math.min(frames - 1, k * frames); m.uniforms.uAlpha.value = opacity * (k > 0.85 ? (1 - k) / 0.15 : 1); }, () => m.dispose());
     return mesh;
   }
-  explosion(pos, { size = 4, color = 0xffffff, life = 0.55 } = {}) { this.flipbook(pos, 'explosion', { size, life, color, y: size * 0.35 }); }
+  explosion(pos, { size = 4, color = 0xffffff, life = 0.55 } = {}) { this.flipbook(pos, 'explosion', { size, life, color, y: size * 0.35, gain: decorativeBurstGain(size) }); }
   dustPuff(pos, { size = 3, life = 0.9, color = 0xa89880 } = {}) { this.flipbook(pos, 'dust', { size, life, color, y: size * 0.3, blending: THREE.NormalBlending, opacity: 0.75 }); }
   /** 화염 기둥: 교차 2장 + UV 스크롤 */
   _fireMaterial(tex, color) {
@@ -680,10 +684,14 @@ export class FX {
   }
   /** 얼음 결정 폭발 */
   iceBurst(pos, { size = 3, life = 0.5 } = {}) { this.texFlash(pos, 'ice', 0xc0f0ff, { size, life, spin: 0.5, grow: 1.0, y: 0.6 }); }
-  holyBurst(pos, { size = 6, life = 0.4, color = 0xfff0c0 } = {}) { this.texFlash(pos, 'holy_burst', color, { size, life, spin: 1.2, grow: 1.6, y: 1.2 }); }
+  holyBurst(pos, { size = 6, life = 0.4, color = 0xfff0c0 } = {}) { this.texFlash(pos, 'holy_burst', color, { size, life, spin: 1.2, grow: 1.6, y: 1.2, gain: decorativeBurstGain(size) }); }
   shockTex(pos, color = 0xffe080, { r1 = 6, life = 0.45 } = {}) { this.groundTex(pos, 'shockwave', color, { r0: 0.5, r1, life, spin: 0.4, y: 0.1, fadeIn: 0.05 }); }
 
   // ---------- 데미지 숫자 ----------
+  setCombatTextRegions(regions, layerBounds = null) {
+    this._combatTextViewport = combatTextViewport(layerBounds);
+    this._combatTextRegions = combatTextRegions(regions, this._combatTextViewport);
+  }
   damage(worldPos, value, { crit = false, kind = '', text = null, finisher = false, boss = false, heavy = false } = {}) {
     const el = this.dmgPool.length ? this.dmgPool.pop() : document.createElement('div');
     if (el._dmgDone) { el.removeEventListener('animationend', el._dmgDone); el._dmgDone = null; }
@@ -695,6 +703,7 @@ export class FX {
       }
     }
     const status = text !== null;
+    const compact = status ? compactCombatStatus(text) : null;
     const classes = ['dmg'];
     if (crit) classes.push('crit');
     if (kind) classes.push(kind);
@@ -702,8 +711,11 @@ export class FX {
     else if (boss) classes.push('boss');
     else if (heavy) classes.push('heavy');
     if (status) classes.push('status');
+    if (compact) classes.push('compact-status');
     el.className = classes.join(' ');
-    el.textContent = text ?? (crit ? `${Math.round(value)}!` : Math.round(value));
+    el.textContent = compact?.label ?? text ?? (crit ? `${Math.round(value)}!` : Math.round(value));
+    if (compact) el.dataset.combatStatus = compact.key;
+    else delete el.dataset.combatStatus;
     const tag = status ? '' : finisher ? 'FINISH' : crit ? 'CRIT' : boss ? 'BOSS' : kind === 'skill' ? 'SKILL' : heavy ? 'HEAVY' : '';
     el.dataset.tag = tag;
     el.setAttribute('aria-hidden', 'true');
@@ -723,10 +735,27 @@ export class FX {
       const crowded = this._damageRecent.some((entry) => Math.hypot(entry.x - (x + candidate[0]), entry.y - (y + candidate[1])) < 36);
       if (!crowded) { offset = candidate; break; }
     }
-    const placedX = Math.max(24, Math.min(vw - 24, x + offset[0]));
-    const placedY = Math.max(safeTop, Math.min(vh - safeBottom, y + offset[1]));
-    this._damageRecent.push({ x: placedX, y: placedY, t: now });
+    let placedX = Math.max(24, Math.min(vw - 24, x + offset[0]));
+    let placedY = Math.max(safeTop, Math.min(vh - safeBottom, y + offset[1]));
     const lift = finisher ? -112 : crit ? -92 : heavy || boss ? -78 : kind === 'heal' ? -58 : -68;
+    let bounds;
+    if (compact) {
+      const view = this._combatTextViewport;
+      const textWidth = view?.width || vw, textHeight = view?.height || vh;
+      const target = this.focus?.target;
+      const hero = target?.alive && !target.dead && !target.disposed
+        ? heroCombatTextRegion(this.focus.area.value, textWidth, textHeight) : null;
+      // 새 상태어만 실제 표시 영역의 로컬 좌표로 투영한다. 숫자의 기존 배치는 유지한다.
+      const placement = placeCombatStatus({
+        x: view ? (_v.x * .5 + .5) * textWidth + offset[0] * 2 : placedX + offset[0],
+        y: view ? (-_v.y * .5 + .5) * textHeight + offset[1] : placedY,
+        label: compact.label, lift, width: textWidth, height: textHeight,
+        hero, regions: this._combatTextRegions || [], recent: this._damageRecent,
+      });
+      // 기존 CSS 이동을 유지한다. 실제 중심에는 이미 --dmg-x가 포함돼 있다.
+      placedX = placement.x - offset[0]; placedY = placement.y; bounds = placement.bounds;
+    }
+    this._damageRecent.push({ x: placedX, y: placedY, t: now, ...(bounds ? { bounds } : {}) });
     el.style.left = placedX + 'px'; el.style.top = placedY + 'px';
     el.style.setProperty('--dmg-x', offset[0] + 'px');
     el.style.setProperty('--dmg-lift', lift + 'px');
