@@ -6,6 +6,12 @@ import { DUNGEONS } from '../src/data/expansion.js';
 import { EXPEDITION_DEPTHS } from '../src/data/expedition-depths.js';
 import { frontierForRoute, weeklyFrontier } from '../src/data/seasonal-content.js';
 import { normalizeMasterworks } from '../src/game/masterworks-core.js';
+import { buildExpeditionStage } from '../src/game/expedition-combat.js';
+import { routeObjectiveForStage } from '../src/data/route-objectives.js';
+import { CHALLENGES } from '../src/data/masterworks.js';
+import { difficultyEffects } from '../src/game/masterworks-core.js';
+import { MasterworksService } from '../src/game/masterworks-service.js';
+import { GARDEN_MASTERY } from '../src/data/garden-mastery.js';
 
 const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 let values: Map<string, string>;
@@ -33,13 +39,56 @@ const unlock = (app: any, def: (typeof EXPEDITION_DEPTHS)[number]) => {
   app.eco.s.progress.stars[def.unlockCode] = 1;
 };
 function goal(app: any, override: object = {}, metric = 'time', victory = true) {
-  const context = { route: { kind: 'dungeon', id: 'glass_garden', depth: 'standard', conquestId: null, riftId: null },
+  const context = { route: { kind: 'dungeon', id: 'glass_garden', depth: 'standard', conquestId: null, riftId: null, encounterVersion: GARDEN_MASTERY.version },
     heroId: 'knight', heroLevel: 1, control: 'manual', ...override };
   app.eco.s.masterworks = normalizeMasterworks({ personalGoal: { context, metric }, history: [
     { runId: 1, floor: 1, outcome: victory ? 'victory' : 'defeat', boonIds: [], details: { ...context, timeSec: 60, perfects: 2, breaks: 3 } },
   ] });
 }
 const preparation = (app: any, id = 'glass_garden', depth = 'standard') => citadelPreparation(app, id, depth) as any;
+
+function actionCue(app: ReturnType<typeof fixture>, id: string, depth = 'standard') {
+  const preview = citadelPreparation(app, id, depth);
+  if (!preview.ok || !('actionCue' in preview)) throw new Error('유효한 원정 준비가 필요합니다.');
+  return preview.actionCue;
+}
+
+test('정원 첫 행동 안내는 실제 선택 전술을 필수 공명 목표와 구분하고 심층 선택 때 전술을 제거한다', () => {
+  const app = fixture(), basic = actionCue(app, 'glass_garden')!, deep = actionCue(app, 'glass_garden', 'deep')!;
+  expect(basic.objective).toBe(buildExpeditionStage('dungeon', 'glass_garden', null).objective);
+  expect(basic.action).toBe('선택 · 집결 / 방출 · 장치 곁 F 또는 전술 버튼 · 이 방에서 1회(수동)');
+  expect(basic.objective).toContain('2초');
+  expect(deep.objective).toBe(buildExpeditionStage('dungeon', 'glass_garden', null, { depth: 'deep' }).objective);
+  expect(deep.action).toBe('보물방 2곳 · 적 처치 후 제단 중심에서 공명');
+  expect(deep.action).not.toMatch(/집결|방출|전술 버튼|F/);
+});
+
+test('금고 증원과 관측소 기록 안내는 선택한 실제 원정의 수·순서·유지 시간을 따른다', () => {
+  const app = fixture();
+  for (const depth of ['standard', 'deep']) {
+    const ember = buildExpeditionStage('dungeon', 'ember_vault', null, { depth });
+    const waves = ember.expedition.mechanics.reinforcements;
+    expect(actionCue(app, 'ember_vault', depth)!.objective).toBe(ember.objective);
+    expect(actionCue(app, 'ember_vault', depth)!.action).toBe(`정예방 ${depth === 'deep' ? 2 : 1}곳 · 증원 각 ${waves}회까지 처치`);
+    const night = buildExpeditionStage('dungeon', 'nightglass_observatory', null, { depth });
+    const records = routeObjectiveForStage(night);
+    if (!records || !('kind' in records) || records.kind !== 'records') throw new Error('기록 복원 계약이 필요합니다.');
+    expect(records.gates.map(gate => gate.pageId)).toEqual(depth === 'deep' ? [3, 2, 1] : [1, 2, 3]);
+    expect(actionCue(app, 'nightglass_observatory', depth)!.objective).toBe(night.objective);
+    expect(actionCue(app, 'nightglass_observatory', depth)!.action).toBe(`기록 ${depth === 'deep' ? '3 → 2 → 1' : '1 → 2 → 3'} 순서 · 기록대에서 공격·회피 없이 ${records.holdSeconds}초 유지`);
+  }
+});
+
+test('세 기준문 이외에는 새 행동을 만들지 않으며 반복 준비는 저장·재고·정산을 바꾸지 않는다', () => {
+  const app = fixture(), stateBefore = structuredClone(app.eco.s), expeditionBefore = structuredClone(app.expedition.s);
+  const catalogBefore = JSON.stringify([DUNGEONS, EXPEDITION_DEPTHS]), storageBefore = [...values];
+  for (const def of DUNGEONS) for (const depth of ['standard', 'deep']) {
+    const cue = actionCue(app, def.id, depth);
+    expect(!!cue).toBe(['glass_garden', 'ember_vault', 'nightglass_observatory'].includes(def.id));
+  }
+  expect(app.eco.s).toEqual(stateBefore); expect(app.expedition.s).toEqual(expeditionBefore);
+  expect(JSON.stringify([DUNGEONS, EXPEDITION_DEPTHS])).toBe(catalogBefore); expect([...values]).toEqual(storageBefore);
+});
 
 test('every gate projects canonical basic and deep routes; each deep lock uses actual expedition eligibility', () => {
   for (const def of EXPEDITION_DEPTHS) {
@@ -96,6 +145,22 @@ test('personal objective distinguishes matching conditions, missing victory base
   expect(preparation(app).personalGoal).toMatchObject({ status: 'no-target', target: null, comparisonCount: 1 });
 });
 
+test('사냥터 준비는 이전 목표의 조건 불일치를 알리고 실제 입구·장치 안내만 읽는다', () => {
+  const app = fixture();
+  goal(app, { route: { kind: 'dungeon', id: 'glass_garden', depth: 'standard', conquestId: null, riftId: null } });
+  const before = JSON.stringify(app.eco.s), view = preparation(app);
+  expect(view.personalGoal).toMatchObject({ status: 'mismatch', matches: false, mismatches: ['route'], baseline: 60, target: 59 });
+  expect(view.personalGoal.routeLabel).toContain('버전 미기록');
+  expect(view.gardenMastery).toBe(GARDEN_MASTERY);
+  expect(view.gardenMastery.approachRoomIds).toEqual([1, 2]);
+  expect(view.gardenMastery.hints.gather).toContain('회복기');
+  expect(view.gardenMastery.priorityHint).toContain('자객의 측면 예고');
+  expect(view.gardenMastery.hints.release).toContain('해골 망령 압박');
+  expect(view.gardenMastery.hints.release).toContain('예고는 유지');
+  expect(view.access.cost).toBe(4); expect(preparation(app, 'glass_garden', 'deep').gardenMastery).toBeNull();
+  expect(JSON.stringify(app.eco.s)).toBe(before);
+});
+
 test('goal comparison includes depth, conquest and rift as well as selected hero, departure level and control', () => {
   const app = fixture(); goal(app);
   expect(preparation(app, 'glass_garden', 'deep').personalGoal).toMatchObject({ status: 'mismatch', mismatches: ['route'] });
@@ -132,4 +197,44 @@ test('invalid catalog selections and existing pending/start/result blocks cannot
   expect(preparation(app).access.ok).toBe(false);
   app.stageStarting = false; app.expeditionUI.result = { saveError: 'full' };
   expect(preparation(app).access).toMatchObject({ ok: false, error: '전리품 정산을 먼저 저장해 주세요.' });
+});
+
+test('gate challenge preview reads every saved vow and the actual combined difficulty without saving or granting rewards', () => {
+  const app = fixture(); app.masterworks = new MasterworksService(app);
+  app.masterworks.s.challengeIds = ['siege', 'iron', 'fury', 'fury', 'unknown'];
+  const before = structuredClone(app.eco.s), stored = [...values], catalog = JSON.stringify(CHALLENGES);
+  const preview = preparation(app).challenges;
+  expect(preview.ids).toEqual(['iron', 'fury', 'siege']);
+  expect(preview.choices.every((choice: any) => choice.active)).toBe(true);
+  expect(preview.effects).toEqual(difficultyEffects(['iron', 'fury', 'siege']));
+  expect(preview.effects.enemyHp).toBeCloseTo(1.25);
+  expect(preview.effects.enemyAtk).toBeCloseTo(1.20);
+  expect(preview.effects.rewardMul).toBeCloseTo(1.32);
+  expect(preview.afterFuryToggle).toEqual(difficultyEffects(['iron', 'siege']));
+  expect(preview.changeAccess.ok).toBe(true);
+  expect(app.eco.s).toEqual(before); expect([...values]).toEqual(stored); expect(JSON.stringify(CHALLENGES)).toBe(catalog);
+});
+
+test('deep and basic gate vows preserve canonical access, costs and rewards while previewing only the existing fury addition', () => {
+  const app = fixture(); app.masterworks = new MasterworksService(app);
+  for (const definition of EXPEDITION_DEPTHS) {
+    unlock(app, definition);
+    for (const depth of ['standard', 'deep']) {
+      const projected = preparation(app, definition.id, depth);
+      expect(projected.challenges.furyActive).toBe(false);
+      expect(projected.challenges.effects).toEqual({ enemyHp: 1, enemyAtk: 1, rewardMul: 1 });
+      expect(projected.challenges.afterFuryToggle).toEqual(difficultyEffects(['fury']));
+      expect(projected.challenges.changeAccess.ok).toBe(projected.access.ok);
+      expect(projected.access.cost).toBe(projected.definition.energy);
+      expect(projected.rewards.base).toEqual(projected.definition.rewards);
+    }
+    app.eco.s.energy = definition.energy - 1;
+    const blocked = preparation(app, definition.id, 'deep');
+    expect(blocked.challenges.changeAccess).toEqual({ ok: false, error: blocked.access.error });
+    app.eco.s.energy = 50;
+  }
+  const before = structuredClone(app.eco.s);
+  expect(preparation(app, 'unknown').ok).toBe(false);
+  expect(preparation(app, 'glass_garden', 'unknown').ok).toBe(false);
+  expect(app.eco.s).toEqual(before);
 });

@@ -2,8 +2,10 @@ import * as THREE from 'three';
 import { softCircleTex, sparkTex, ringTex, slashTex, smokeTex, VFX_TEX } from './assets.js';
 import { ImpactLights } from './impact-lights.js';
 import { HeroEffectFocus } from './hero-effect-focus.js';
+import { compactCombatStatus, decorativeBurstGain, boundedFeedbackGain, combatTextRegions, combatTextViewport, heroCombatTextRegion, placeCombatStatus } from './combat-feedback.js';
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
+const preparationOwners = new WeakMap();
 
 /**
  * Authored ability signatures keep the silhouette of each school distinct while
@@ -22,10 +24,221 @@ export const ABILITY_VFX_PROFILES = Object.freeze({
   void: Object.freeze({ ground: 'circle_demon', flash: 'singularity', secondary: 'blood_burst', color: 0x8f55ff, accent: 0xd5a6ff, radius: 3.2, burst: 18, light: 1.1 }),
 });
 
-async function waitForCompilation(compiling) {
-  let timer;
-  try { return await Promise.race([compiling, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('render preparation timeout')), 30000); })]); }
-  finally { clearTimeout(timer); }
+function checkPreparedPrograms(renderer, gl, properties, bindings) {
+  if (gl.isContextLost()) throw new Error('render preparation context lost');
+  if (renderer.getContext() !== gl || renderer.properties !== properties) throw new Error('render preparation renderer state changed');
+  for (const [material, program] of bindings) {
+    if (!properties.has(material) || properties.get(material).currentProgram !== program || !program.program) {
+      throw new Error('render preparation material or program was disposed or replaced');
+    }
+  }
+}
+
+function checkCachedProgramBindings(renderer, gl, properties, bindings) {
+  checkPreparedPrograms(renderer, gl, properties, []);
+  for (const { material, cache, key, program, handle } of bindings) {
+    if (!properties.has(material) || properties.get(material).programs !== cache
+      || cache.get(key) !== program || program.program !== handle) {
+      throw new Error('render preparation cached material or program was disposed or replaced');
+    }
+  }
+}
+
+function captureCompiledPrograms(renderer, gl, properties, materials, captured) {
+  if (captured.gl && (captured.gl !== gl || captured.properties !== properties)) {
+    throw new Error('render preparation renderer state changed');
+  }
+  captured.gl = gl; captured.properties = properties;
+  captured.lastMaterials = materials;
+  const bindings = [], byProgram = new Map();
+  for (const material of materials) {
+    if (!properties.has(material)) throw new Error('render preparation material was not compiled');
+    const cache = properties.get(material).programs;
+    if (!(cache instanceof Map) || !cache.size) throw new Error('render preparation program cache is unavailable');
+    for (const [key, program] of cache) {
+      if (!program?.program || typeof program.isReady !== 'function') throw new Error('render preparation program readiness is unavailable');
+      const binding = { material, cache, key, program, handle: program.program };
+      bindings.push(binding);
+      if (!byProgram.has(program)) byProgram.set(program, []);
+      byProgram.get(program).push(binding);
+      if (!captured.programs.has(program)) captured.programs.set(program, []);
+      const existing = captured.programs.get(program);
+      if (!existing.some(b => b.material === material && b.cache === cache && b.key === key)) existing.push(binding);
+    }
+  }
+  checkCachedProgramBindings(renderer, gl, properties, bindings);
+  return { bindings, byProgram };
+}
+
+function compilePreparedScene(renderer, scene, camera, targetScene, isCurrent, captured = null) {
+  if (!isCurrent()) return Promise.resolve(false);
+  // r170 compileAsync's timer reads mutable material properties without a
+  // cancellation/error guard. Own the same readiness cadence over captured
+  // programs instead, so stop/context recovery cannot leave zombie timers.
+  if (THREE.REVISION !== '170' || typeof renderer.compile !== 'function'
+    || typeof renderer.getContext !== 'function' || typeof renderer.extensions?.get !== 'function'
+    || typeof renderer.properties?.has !== 'function' || typeof renderer.properties?.get !== 'function') {
+    return Promise.reject(new Error('render preparation requires Three r170 compilation API'));
+  }
+  const gl = renderer.getContext(), properties = renderer.properties;
+  if (typeof gl?.isContextLost !== 'function') return Promise.reject(new Error('render preparation has no WebGL context API'));
+  let pending, cached;
+  try {
+    checkPreparedPrograms(renderer, gl, properties, []);
+    const materials = renderer.compile(scene, camera, targetScene);
+    pending = new Map();
+    for (const material of materials) {
+      if (!properties.has(material)) throw new Error('render preparation material was not compiled');
+      const program = properties.get(material).currentProgram;
+      if (!program?.program || typeof program.isReady !== 'function') throw new Error('render preparation program readiness is unavailable');
+      pending.set(material, program);
+    }
+    checkPreparedPrograms(renderer, gl, properties, pending);
+    if (captured) {
+      cached = captureCompiledPrograms(renderer, gl, properties, materials, captured);
+      pending = new Map([...cached.byProgram.keys()].map(program => [program, program]));
+    }
+  } catch (error) { return Promise.reject(error); }
+  return new Promise((resolve, reject) => {
+    let poll, deadline, finished = false;
+    const finish = (ready, error = null) => {
+      if (finished) return; finished = true;
+      if (poll !== undefined) clearTimeout(poll);
+      if (deadline !== undefined) clearTimeout(deadline);
+      if (error) reject(error); else resolve(ready);
+    };
+    const check = () => {
+      poll = undefined;
+      if (finished) return;
+      try {
+        if (!isCurrent()) { finish(false); return; }
+        if (cached) checkCachedProgramBindings(renderer, gl, properties, cached.bindings);
+        else checkPreparedPrograms(renderer, gl, properties, pending);
+        for (const [material, program] of pending) {
+          if (cached) checkCachedProgramBindings(renderer, gl, properties, cached.byProgram.get(program));
+          else checkPreparedPrograms(renderer, gl, properties, [[material, program]]);
+          const ready = program.isReady();
+          if (cached && !isCurrent()) { finish(false); return; }
+          if (cached) checkCachedProgramBindings(renderer, gl, properties, cached.byProgram.get(program));
+          else checkPreparedPrograms(renderer, gl, properties, [[material, program]]);
+          if (ready) pending.delete(material);
+        }
+        if (!pending.size) finish(true); else poll = setTimeout(check, 10);
+      } catch (error) { finish(false, error); }
+    };
+    deadline = setTimeout(() => finish(false, new Error('render preparation timeout')), 30000);
+    try {
+      // Match r170: KHR gets an immediate first check; otherwise wait 10 ms.
+      if (renderer.extensions.get('KHR_parallel_shader_compile') !== null) check();
+      else poll = setTimeout(check, 10);
+    } catch (error) { finish(false, error); }
+  });
+}
+
+function checkCapturedReadiness(renderer, objects, captured, targetMaterials = null) {
+  const { gl, properties, programs } = captured;
+  checkPreparedPrograms(renderer, gl, properties, []);
+  for (const object of objects) object.traverse(o => {
+    for (const material of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (!material) continue;
+      if (!properties.has(material) || (targetMaterials && !targetMaterials.has(material))) {
+        throw new Error('targeted render preparation requested material was not compiled for its target');
+      }
+      const record = properties.get(material), program = record.currentProgram;
+      const bindings = programs.get(program);
+      if (!bindings?.some(b => b.material === material && b.cache === record.programs
+        && b.cache.get(b.key) === program && program.program === b.handle)) {
+        throw new Error('targeted render preparation requested material or program was disposed or replaced');
+      }
+    }
+  });
+}
+
+async function prepareCompiledReflection(renderer, captured, isCurrent, checkReadiness) {
+  if (!isCurrent()) return false;
+  const { gl, properties, programs } = captured;
+  if (!programs.size) { checkReadiness(); return isCurrent(); }
+  if (typeof gl.getProgramParameter !== 'function' || typeof gl.LINK_STATUS !== 'number') {
+    throw new Error('targeted render preparation has no WebGL readiness API');
+  }
+  checkReadiness();
+  for (const [program, bindings] of programs) {
+    // 실제 출격/복구 준비에서만 이미 획득한 캐시의 양면 프로그램까지 반사한다.
+    // 부트 기본 경로와 게임 프레임에는 추가 draw나 준비 레지스트리가 없다.
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    if (!isCurrent()) return false;
+    const check = () => {
+      checkCachedProgramBindings(renderer, gl, properties, bindings);
+      checkReadiness();
+    };
+    check();
+    if (typeof program.getUniforms !== 'function' || typeof program.getAttributes !== 'function') {
+      throw new Error('targeted render preparation program reflection is unavailable');
+    }
+    const linked = gl.getProgramParameter(program.program, gl.LINK_STATUS);
+    if (!isCurrent()) return false;
+    check();
+    if (linked !== true) {
+      const log = gl.getProgramInfoLog?.(program.program) || 'No program diagnostic available';
+      throw new Error(`Targeted shader program did not link: ${log}`);
+    }
+    program.getUniforms();
+    if (!isCurrent()) return false;
+    check();
+    program.getAttributes();
+    if (!isCurrent()) return false;
+    check();
+  }
+  if (!isCurrent()) return false;
+  for (const bindings of programs.values()) checkCachedProgramBindings(renderer, gl, properties, bindings);
+  checkReadiness();
+  return true;
+}
+
+async function prepareObjectReflection(renderer, objects, isCurrent) {
+  if (!isCurrent()) return false;
+  if (!objects.length) return true;
+  // This narrow adapter relies on the pinned Three r170 program-reflection API.
+  // Do not silently report readiness after a renderer/version change.
+  if (THREE.REVISION !== '170' || typeof renderer.getContext !== 'function'
+    || typeof renderer.properties?.has !== 'function' || typeof renderer.properties?.get !== 'function') {
+    throw new Error('targeted render preparation requires Three r170 program reflection');
+  }
+  const gl = renderer.getContext(), properties = renderer.properties, programs = new Set(), bindings = new Map();
+  if (typeof gl?.isContextLost !== 'function' || typeof gl.getProgramParameter !== 'function' || typeof gl.LINK_STATUS !== 'number') {
+    throw new Error('targeted render preparation has no WebGL readiness API');
+  }
+  const checkContext = () => checkPreparedPrograms(renderer, gl, properties, bindings);
+  checkContext();
+  for (const object of objects) object.traverse(o => {
+    for (const material of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (!material) continue;
+      if (!renderer.properties.has(material)) throw new Error('targeted render preparation material was not compiled');
+      const program = renderer.properties.get(material).currentProgram;
+      if (!program?.program || typeof program.getUniforms !== 'function' || typeof program.getAttributes !== 'function') {
+        throw new Error('targeted render preparation program reflection is unavailable');
+      }
+      bindings.set(material, program);
+      programs.add(program);
+    }
+  });
+  for (const program of programs) {
+    // Yield between this small set of measured loot/warning signatures so the
+    // native loading view can paint; no game step or render runs here.
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    if (!isCurrent()) return false;
+    checkContext();
+    const linked = gl.getProgramParameter(program.program, gl.LINK_STATUS);
+    checkContext();
+    if (linked !== true) {
+      const log = gl.getProgramInfoLog?.(program.program) || 'No program diagnostic available';
+      throw new Error(`Targeted shader program did not link: ${log}`);
+    }
+    // compileAsync alone can leave ACTIVE_UNIFORMS/attributes waiting on first
+    // combat draw. These r170 calls populate its existing per-program caches.
+    program.getUniforms(); checkContext(); program.getAttributes(); checkContext();
+  }
+  return isCurrent();
 }
 
 // ============ GPU Points 파티클 풀 ============
@@ -105,6 +318,8 @@ export class FX {
     this.dmgLayer = document.getElementById('dmg-layer');
     this.dmgPool = []; this.maxDmg = 40;
     this._damageRecent = []; this._damageSerial = 0;
+    this._combatTextRegions = [];
+    this._combatTextViewport = null;
     this.quality = 'high';
     this._mats = {};
     this._transparentMats = new Map();
@@ -148,10 +363,13 @@ export class FX {
     this.scene.remove(it.obj); it.onEnd?.();
     it.obj.traverse?.((o) => { if (o.geometry && o.userData.ownGeo) o.geometry.dispose(); });
   }
-  async prepare(renderer, models, renderTarget) {
+  async prepare(renderer, models, renderTarget, preparationObjects = [], readinessObjects = preparationObjects, isCurrent = () => true, targetPreparations = [], { reflectCompiledPrograms = false } = {}) {
     // Run while stageStarting blocks game frames/input. compileAsync must finish
     // with the battle's actual lights/fog/shadows before any combat draw uses it.
+    const callerCurrent = () => !this._disposed && isCurrent();
+    if (!callerCurrent()) return false;
     await new Promise((resolve) => requestAnimationFrame(resolve));
+    if (!callerCurrent()) return false;
     if (!this._primed) {
       const p = new THREE.Vector3(), mark = this.items.length;
       this.flash(p, 0xffffff); this.ring(p, 0xffffff); this.pillar(p, 0xffffff); this.firePillar(p);
@@ -190,22 +408,33 @@ export class FX {
         warm.add(ghost);
       });
     }
-    const textures = new Set([...Object.values(VFX_TEX), sparkTex(), softCircleTex(), ringTex(), slashTex(), smokeTex()]);
-    warm.traverse((o) => {
-      for (const m of (Array.isArray(o.material) ? o.material : [o.material])) if (m) {
-        for (const value of Object.values(m)) if (value?.isTexture) textures.add(value);
-        for (const uniform of Object.values(m.uniforms || {})) if (uniform.value?.isTexture) textures.add(uniform.value);
-      }
-    });
-    for (const texture of textures) if (texture) renderer.initTexture(texture);
     // RenderPass draws into the composer's linear target, not the sRGB screen.
     // Preparing against the screen would retain different programs and still
     // force compilation when a skill reaches the actual battle render target.
-    const previousTarget = renderer.getRenderTarget();
-    renderer.setRenderTarget(renderTarget);
+    const previousOwner = preparationOwners.get(renderer);
+    const owner = { originalTarget: previousOwner ? previousOwner.originalTarget : renderer.getRenderTarget() };
+    preparationOwners.set(renderer, owner);
+    const valid = () => callerCurrent() && preparationOwners.get(renderer) === owner;
+    const captured = reflectCompiledPrograms ? { programs: new Map(), gl: null, properties: null } : null;
+    const targetReadiness = [];
+    const originalParents = [];
     try {
-      await waitForCompilation(renderer.compileAsync(this.scene, this.camera));
-      await waitForCompilation(renderer.compileAsync(warm, this.camera, this.scene));
+      for (const object of new Set(preparationObjects)) {
+        originalParents.push({ object, parent: object.parent }); warm.add(object);
+      }
+      const textures = new Set([...Object.values(VFX_TEX), sparkTex(), softCircleTex(), ringTex(), slashTex(), smokeTex()]);
+      warm.traverse((o) => {
+        for (const m of (Array.isArray(o.material) ? o.material : [o.material])) if (m) {
+          for (const value of Object.values(m)) if (value?.isTexture) textures.add(value);
+          for (const uniform of Object.values(m.uniforms || {})) if (uniform.value?.isTexture) textures.add(uniform.value);
+        }
+      });
+      for (const texture of textures) if (texture) renderer.initTexture(texture);
+      renderer.setRenderTarget(renderTarget);
+      await compilePreparedScene(renderer, this.scene, this.camera, null, valid, captured);
+      if (!valid()) return false;
+      await compilePreparedScene(renderer, warm, this.camera, this.scene, valid, captured);
+      if (!valid()) return false;
       if (renderer.shadowMap.enabled) {
         // The shadow renderer uses a fog-free scene and depth materials of its
         // own. Color-material compilation alone misses the first monster shadow.
@@ -228,9 +457,47 @@ export class FX {
           const object = o.clone(false); object.material = Array.isArray(o.material) ? o.material.map(depth) : depth(o.material); shadowWarm.add(object);
         };
         this.scene.traverse(addShadow); warm.traverse(addShadow);
-        await waitForCompilation(renderer.compileAsync(shadowWarm, this.camera, shadowTarget));
+        await compilePreparedScene(renderer, shadowWarm, this.camera, shadowTarget, valid, captured);
+        if (!valid()) return false;
       }
-    } finally { renderer.setRenderTarget(previousTarget); }
+      // 내 캐릭터 마스크처럼 조명 없는 별도 타깃도 같은 취소 가능한
+      // 컴파일 소유자 안에서 준비한다. 추가 warm draw/그림자 패스는 없다.
+      for (const preparation of targetPreparations) {
+        if (!valid() || !preparation.isCurrent()) return false;
+        renderer.setRenderTarget(preparation.target);
+        const targetCurrent = () => valid() && preparation.isCurrent();
+        await compilePreparedScene(renderer, preparation.scene, this.camera, null, targetCurrent, captured);
+        if (!targetCurrent()) return false;
+        if (captured) {
+          const entry = { objects: preparation.readinessObjects, materials: captured.lastMaterials };
+          checkCapturedReadiness(renderer, entry.objects, captured, entry.materials);
+          targetReadiness.push(entry);
+        } else {
+          const reflected = await prepareObjectReflection(renderer, preparation.readinessObjects, targetCurrent);
+          if (!targetCurrent() || !reflected) return false;
+        }
+      }
+      renderer.setRenderTarget(renderTarget);
+      if (captured) return await prepareCompiledReflection(renderer, captured,
+        () => valid() && targetPreparations.every(preparation => preparation.isCurrent()), () => {
+          checkCapturedReadiness(renderer, readinessObjects, captured);
+          for (const entry of targetReadiness) checkCapturedReadiness(renderer, entry.objects, captured, entry.materials);
+        });
+      return await prepareObjectReflection(renderer, readinessObjects, valid);
+    } finally {
+      try {
+        for (const { object, parent } of originalParents) {
+          if (object.parent === warm) { warm.remove(object); if (parent && valid()) parent.add(object); }
+        }
+      }
+      finally {
+        // A superseded preparation must not overwrite the newer loading pass.
+        // The latest owner inherits the original target and restores it once.
+        if (preparationOwners.get(renderer) === owner) {
+          preparationOwners.delete(renderer); renderer.setRenderTarget(owner.originalTarget);
+        }
+      }
+    }
   }
 
   // ---------- 파티클 프리셋 ----------
@@ -447,9 +714,10 @@ export class FX {
   // pass cannot contribute visible pixels, so retain both sides in one draw.
   _addMat(tex, color, { blending = THREE.AdditiveBlending, telegraph = false } = {}) { return this._keep(new THREE.MeshBasicMaterial({ map: tex, color, blending, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, opacity: 1 }), { telegraph }); }
   /** 카메라를 향하는 텍스처 플래시 (holy_burst, ice, shockwave 등) */
-  texFlash(pos, name, color = 0xffffff, { size = 3, life = 0.35, spin = 0, grow = 1.3, y = 1 } = {}) {
+  texFlash(pos, name, color = 0xffffff, { size = 3, life = 0.35, spin = 0, grow = 1.3, y = 1, gain = 1 } = {}) {
     const tex = VFX_TEX[name]; if (!tex) return this.flash(pos, color, { size, life });
     const m = this._keep(new THREE.SpriteMaterial({ map: tex, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, rotation: Math.random() * Math.PI * 2 }));
+    m.color.multiplyScalar(boundedFeedbackGain(gain));
     const sp = new THREE.Sprite(m); sp.position.copy(pos); sp.position.y += y; sp.scale.setScalar(size * 0.4); sp.renderOrder = 11;
     this.add(sp, life, (k, t, dt) => { const e = 1 - Math.pow(1 - k, 2); sp.scale.setScalar(size * (0.4 + e * grow)); m.opacity = k < 0.25 ? k / 0.25 : 1 - (k - 0.25) / 0.75; m.rotation += spin * dt; }, () => m.dispose());
     return sp;
@@ -467,10 +735,10 @@ export class FX {
     return this.groundTex(pos, demon ? 'circle_demon' : 'circle_gold', color, { r0: radius * 0.4, r1: radius, life, spin: 1.6, y: 0.07, fadeIn: 0.2, hold: 0.35, telegraph });
   }
   /** 플립북 (explosion / dust 4x4 아틀라스) — 빌보드 셰이더 */
-  flipbook(pos, name, { size = 3, life = 0.6, color = 0xffffff, cols = 4, rows = 4, y = 1, blending = THREE.AdditiveBlending, opacity = 1 } = {}) {
+  flipbook(pos, name, { size = 3, life = 0.6, color = 0xffffff, cols = 4, rows = 4, y = 1, blending = THREE.AdditiveBlending, opacity = 1, gain = 1 } = {}) {
     const tex = VFX_TEX[name]; if (!tex) return this.burst(pos, color, { n: 20 });
     const m = this._keep(new THREE.ShaderMaterial({
-      uniforms: { uTex: { value: tex }, uFrame: { value: 0 }, uGrid: { value: new THREE.Vector2(cols, rows) }, uColor: { value: new THREE.Color(color) }, uScale: { value: size }, uAlpha: { value: opacity } },
+      uniforms: { uTex: { value: tex }, uFrame: { value: 0 }, uGrid: { value: new THREE.Vector2(cols, rows) }, uColor: { value: new THREE.Color(color).multiplyScalar(boundedFeedbackGain(gain)) }, uScale: { value: size }, uAlpha: { value: opacity } },
       vertexShader: `uniform float uScale; varying vec2 vUv; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(0.0,0.0,0.0,1.0); mv.xy += position.xy * uScale; gl_Position = projectionMatrix * mv; }`,
       fragmentShader: `uniform sampler2D uTex; uniform float uFrame, uAlpha; uniform vec2 uGrid; uniform vec3 uColor; varying vec2 vUv;
         void main(){ float f = floor(uFrame); float cx = mod(f, uGrid.x); float cy = floor(f / uGrid.x); vec2 uv = (vUv + vec2(cx, uGrid.y - 1.0 - cy)) / uGrid; vec4 t = texture2D(uTex, uv); float lum = max(t.r, max(t.g, t.b)); gl_FragColor = vec4(t.rgb * uColor, lum * uAlpha); }`,
@@ -481,7 +749,7 @@ export class FX {
     this.add(mesh, life, (k) => { m.uniforms.uFrame.value = Math.min(frames - 1, k * frames); m.uniforms.uAlpha.value = opacity * (k > 0.85 ? (1 - k) / 0.15 : 1); }, () => m.dispose());
     return mesh;
   }
-  explosion(pos, { size = 4, color = 0xffffff, life = 0.55 } = {}) { this.flipbook(pos, 'explosion', { size, life, color, y: size * 0.35 }); }
+  explosion(pos, { size = 4, color = 0xffffff, life = 0.55 } = {}) { this.flipbook(pos, 'explosion', { size, life, color, y: size * 0.35, gain: decorativeBurstGain(size) }); }
   dustPuff(pos, { size = 3, life = 0.9, color = 0xa89880 } = {}) { this.flipbook(pos, 'dust', { size, life, color, y: size * 0.3, blending: THREE.NormalBlending, opacity: 0.75 }); }
   /** 화염 기둥: 교차 2장 + UV 스크롤 */
   _fireMaterial(tex, color) {
@@ -533,10 +801,14 @@ export class FX {
   }
   /** 얼음 결정 폭발 */
   iceBurst(pos, { size = 3, life = 0.5 } = {}) { this.texFlash(pos, 'ice', 0xc0f0ff, { size, life, spin: 0.5, grow: 1.0, y: 0.6 }); }
-  holyBurst(pos, { size = 6, life = 0.4, color = 0xfff0c0 } = {}) { this.texFlash(pos, 'holy_burst', color, { size, life, spin: 1.2, grow: 1.6, y: 1.2 }); }
+  holyBurst(pos, { size = 6, life = 0.4, color = 0xfff0c0 } = {}) { this.texFlash(pos, 'holy_burst', color, { size, life, spin: 1.2, grow: 1.6, y: 1.2, gain: decorativeBurstGain(size) }); }
   shockTex(pos, color = 0xffe080, { r1 = 6, life = 0.45 } = {}) { this.groundTex(pos, 'shockwave', color, { r0: 0.5, r1, life, spin: 0.4, y: 0.1, fadeIn: 0.05 }); }
 
   // ---------- 데미지 숫자 ----------
+  setCombatTextRegions(regions, layerBounds = null) {
+    this._combatTextViewport = combatTextViewport(layerBounds);
+    this._combatTextRegions = combatTextRegions(regions, this._combatTextViewport);
+  }
   damage(worldPos, value, { crit = false, kind = '', text = null, finisher = false, boss = false, heavy = false } = {}) {
     const el = this.dmgPool.length ? this.dmgPool.pop() : document.createElement('div');
     if (el._dmgDone) { el.removeEventListener('animationend', el._dmgDone); el._dmgDone = null; }
@@ -548,6 +820,7 @@ export class FX {
       }
     }
     const status = text !== null;
+    const compact = status ? compactCombatStatus(text) : null;
     const classes = ['dmg'];
     if (crit) classes.push('crit');
     if (kind) classes.push(kind);
@@ -555,8 +828,11 @@ export class FX {
     else if (boss) classes.push('boss');
     else if (heavy) classes.push('heavy');
     if (status) classes.push('status');
+    if (compact) classes.push('compact-status');
     el.className = classes.join(' ');
-    el.textContent = text ?? (crit ? `${Math.round(value)}!` : Math.round(value));
+    el.textContent = compact?.label ?? text ?? (crit ? `${Math.round(value)}!` : Math.round(value));
+    if (compact) el.dataset.combatStatus = compact.key;
+    else delete el.dataset.combatStatus;
     const tag = status ? '' : finisher ? 'FINISH' : crit ? 'CRIT' : boss ? 'BOSS' : kind === 'skill' ? 'SKILL' : heavy ? 'HEAVY' : '';
     el.dataset.tag = tag;
     el.setAttribute('aria-hidden', 'true');
@@ -576,10 +852,27 @@ export class FX {
       const crowded = this._damageRecent.some((entry) => Math.hypot(entry.x - (x + candidate[0]), entry.y - (y + candidate[1])) < 36);
       if (!crowded) { offset = candidate; break; }
     }
-    const placedX = Math.max(24, Math.min(vw - 24, x + offset[0]));
-    const placedY = Math.max(safeTop, Math.min(vh - safeBottom, y + offset[1]));
-    this._damageRecent.push({ x: placedX, y: placedY, t: now });
+    let placedX = Math.max(24, Math.min(vw - 24, x + offset[0]));
+    let placedY = Math.max(safeTop, Math.min(vh - safeBottom, y + offset[1]));
     const lift = finisher ? -112 : crit ? -92 : heavy || boss ? -78 : kind === 'heal' ? -58 : -68;
+    let bounds;
+    if (compact) {
+      const view = this._combatTextViewport;
+      const textWidth = view?.width || vw, textHeight = view?.height || vh;
+      const target = this.focus?.target;
+      const hero = target?.alive && !target.dead && !target.disposed
+        ? heroCombatTextRegion(this.focus.area.value, textWidth, textHeight) : null;
+      // 새 상태어만 실제 표시 영역의 로컬 좌표로 투영한다. 숫자의 기존 배치는 유지한다.
+      const placement = placeCombatStatus({
+        x: view ? (_v.x * .5 + .5) * textWidth + offset[0] * 2 : placedX + offset[0],
+        y: view ? (-_v.y * .5 + .5) * textHeight + offset[1] : placedY,
+        label: compact.label, lift, width: textWidth, height: textHeight,
+        hero, regions: this._combatTextRegions || [], recent: this._damageRecent,
+      });
+      // 기존 CSS 이동을 유지한다. 실제 중심에는 이미 --dmg-x가 포함돼 있다.
+      placedX = placement.x - offset[0]; placedY = placement.y; bounds = placement.bounds;
+    }
+    this._damageRecent.push({ x: placedX, y: placedY, t: now, ...(bounds ? { bounds } : {}) });
     el.style.left = placedX + 'px'; el.style.top = placedY + 'px';
     el.style.setProperty('--dmg-x', offset[0] + 'px');
     el.style.setProperty('--dmg-lift', lift + 'px');

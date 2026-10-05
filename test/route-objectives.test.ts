@@ -5,7 +5,7 @@ import { createRouteObjectives } from '../src/game/route-objectives.js';
 import { buildExpeditionStage, buildExpeditionWorld, EXPEDITION_LAYOUTS } from '../src/game/expedition-combat.js';
 import { Battle } from '../src/game/battle-base.js';
 import { Player } from '../src/game/player.js';
-import { UI } from '../src/ui/ui.js';
+import { battleObjectiveView } from '../src/ui/battle-objective-view.js';
 
 const noop = () => {};
 function fixture(stage: any = buildExpeditionStage('dungeon', 'bellfall_crypt', null)) {
@@ -218,25 +218,11 @@ test('production AUTO follows walkable flow around walls, returns to earlier gat
   expect(wallDetour).toBe(true); expect(visited).toEqual([2, 3, 5]); expect(f.route.complete).toBe(true);
 });
 
-test('real objective HUD and existing floor FX show numbered next target and partial hold', () => {
+test('실제 종문 목표 표시와 기존 FX가 다음 대상과 부분 유지량을 공유한다', () => {
   const f = fixture(); clearCombat(f, 2); tickAt(f, 2, .5);
   expect(f.circles.some(c => c.radius === 3 && c.color === 0xffd060)).toBe(true);
   expect(f.labels).toContain('1번 종문 · 중심 2초');
-  const before = Object.getOwnPropertyDescriptor(globalThis, 'document');
-  const appended: any[] = [];
-  const el = { innerHTML: '', append: (node: any) => appended.push(node) };
-  Object.defineProperty(globalThis, 'document', { configurable: true, value: {
-    getElementById: () => el, createElement: () => ({ className: '', textContent: '' }),
-  } });
-  try {
-    UI.prototype.setObjective.call({ app: { battle: f.g } } as any, f.world);
-    expect(appended[0].className).toBe('conquest-hint');
-    expect(appended[0].textContent).toContain('종문 0/3 · 다음 1번 종문 · 북쪽 예배실');
-    expect(appended[0].textContent).toContain('0.5/2');
-    tickAt(f, 2, 1.5); appended.length = 0;
-    UI.prototype.setObjective.call({ app: { battle: f.g } } as any, f.world);
-    expect(appended[0].textContent).toContain('종문 1/3 · 다음 2번 종문');
-  } finally {
-    if (before) Object.defineProperty(globalThis, 'document', before); else Reflect.deleteProperty(globalThis, 'document');
-  }
+  expect(battleObjectiveView(f.g)).toMatchObject({ title: '종문 조율', progress: 0, total: 3, roomId: 2, hold: .5, holdTotal: 2 });
+  tickAt(f, 2, 1.5);
+  expect(battleObjectiveView(f.g)).toMatchObject({ title: '종문 조율', progress: 1, total: 3, hold: 0, roomId: null });
 });

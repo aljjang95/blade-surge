@@ -13,7 +13,7 @@ test('metric catalog and comparable contexts retain only authored, observed depa
   expect(Object.isFrozen(GOAL_METRICS)).toBe(true);
   for (const metric of GOAL_METRICS) expect(Object.isFrozen(metric)).toBe(true);
   const raw = details({ displayName: '<script>', reward: 999999, timeSec: Infinity });
-  expect(comparableRunContext(raw)).toEqual({ route: campaign(), heroId: 'knight', heroLevel: 3, control: 'manual' });
+  expect<unknown>(comparableRunContext(raw)).toEqual({ route: campaign(), heroId: 'knight', heroLevel: 3, control: 'manual' });
   expect(comparableRunContext(context())).toEqual(context());
   for (const control of ['manual', 'auto', 'mixed']) expect(comparableRunContext(details({ control }))?.control).toBe(control);
   for (const value of [null, [], {}, details({ route: null }), details({ route: campaign(null) }), details({ route: campaign('__proto__') }),
@@ -29,7 +29,7 @@ test('personal goal migration rejects malicious identities and never copies arbi
   expect(JSON.stringify(raw)).toBe(before);
   const normalized = normalizePersonalGoal(raw)!;
   raw.context.route.difficultyId = 'nightmare';
-  expect(normalized.context.route).toEqual(campaign());
+  expect<unknown>(normalized.context.route).toEqual(campaign());
   for (const value of [undefined, null, [], {}, { context: context(), metric: '__proto__' }, { context: context(), metric: 'toString' },
     { context: context(), metric: ['time'] }, { context: details({ control: 'unknown' }), metric: 'time' },
     { context: details({ route: campaign(null) }), metric: 'time' }]) expect(normalizePersonalGoal(value)).toBeNull();
@@ -240,7 +240,7 @@ test('normalization, comparison, capture and evaluation accept frozen inputs wit
   const goal = Object.freeze({ context: Object.freeze({ ...context(), route }), metric: 'breaks' });
   const state = Object.freeze({ history, personalGoal: goal, runSeq: 7, gold: 99 });
   const before = JSON.stringify(state);
-  expect(normalizePersonalGoal(goal)).toEqual(goal);
+  expect<unknown>(normalizePersonalGoal(goal)).toEqual(goal);
   expect(summarizePersonalRuns(history, goal.context)).toMatchObject({ count: 1, runIds: [7] });
   const captured = capturePersonalGoal(state)!;
   expect(captured).toMatchObject({ metric: 'breaks', baseline: 1, target: 2 });

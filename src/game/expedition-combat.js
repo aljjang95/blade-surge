@@ -4,6 +4,7 @@ import { Floor } from './world.js';
 import { expeditionDepth, depthStage } from '../data/expedition-depths.js';
 import { conquestForRun } from '../data/expedition-conquests.js';
 import { frontierFromSnapshot, frontierEffectForStage } from '../data/seasonal-content.js';
+import { gardenMasteryForStage, gardenMasteryDiagonals } from '../data/garden-mastery.js';
 
 export const EXPEDITION_LAYOUTS = {
   glass_garden: { spacing: [30, 30], size: [20, 20], width: 6, cells: [[0,0],[1,0],[1,-1],[2,0],[3,0]], edges: [[0,1],[1,2],[1,3],[3,4]], types: ['start','normal','treasure','normal','boss'] },
@@ -22,6 +23,7 @@ export const EXPEDITION_LAYOUTS = {
 };
 // Keep fallback advice on the same contract as the published route card.
 const TACTICS = Object.fromEntries(DUNGEONS.map(d => [d.id, d.tactic]));
+const BELLFALL_SUPPORT_CASTING = DUNGEONS.find(dungeon => dungeon.id === 'bellfall_crypt').supportCasting;
 const DUELS = {
   rookie: { enemyId: 'garden_captain', pattern: ['slam','spin'], behavior: 'shield', hp: 6500, tactic: '푸른 가드 때 공격을 멈추고 강타 뒤 반격하세요. 강한 타격 4회로 방패를 깰 수 있습니다.' },
   duelist: { enemyId: 'garden_captain', pattern: ['dash','spin','dash'], dodge: 0.22, hp: 8500, tactic: '회피하는 결투사의 돌진을 옆으로 피하세요. 회전이 끝나는 순간이 빈틈입니다.' },
@@ -30,6 +32,14 @@ const DUELS = {
   sunwarden: { enemyId: 'forge_captain', pattern: ['kiln_vents','slam','spin'], behavior: 'shield', hp: 13800, tactic: '빛의 고리 바깥에서 과열선을 피한 뒤 방패가 열린 순간에 집중하세요.' },
   void_oracle: { enemyId: 'frost_captain', pattern: ['archive_retrace','fan','archive_hourglass'], dodge: 0.16, hp: 15800, tactic: '보랏빛 파편이 멈춘 자리만 밟고, 되감긴 기록 경로로 돌아가지 마세요.' },
 };
+
+/** 종락 기본 개인 원정만 기존 주술사의 지원을 읽고 끊을 수 있게 한다. */
+export function supportCastingForStage(stage) {
+  const expedition = stage?.expedition;
+  if (stage?.party || stage?.riftId || expedition?.riftId || expedition?.conquestId ||
+      expedition?.kind !== 'dungeon' || expedition.id !== 'bellfall_crypt' || expedition.depth !== 'standard') return null;
+  return BELLFALL_SUPPORT_CASTING;
+}
 
 /** Accept IDs only: caller-provided scale, rewards and encounter data cannot replace the catalog.
  * @param {string} kind @param {string} id @param {object|null} eco
@@ -62,9 +72,10 @@ export function buildExpeditionStage(kind, id, eco, { depth = 'standard', conque
     expeditionEnemy: enemy,
   };
   if (def.roster) stage.rosterFor = () => def.roster;
+  const mastery = gardenMasteryForStage(stage);
   // AI arena uses the matching atmosphere with the already-loaded original rigs.
   if (id === 'champion') stage.chapter = { ...base.chapter, theme: 'frost' };
-  return stage;
+  return { ...stage, ...(mastery ? { encounterVersion: mastery.version } : {}) };
 }
 
 export function buildExpeditionWorld(stage) {
@@ -72,7 +83,23 @@ export function buildExpeditionWorld(stage) {
   const layout = depth === 'deep' ? expeditionDepth(id)?.layout : EXPEDITION_LAYOUTS[kind === 'arena' ? 'arena' : id];
   if (!layout) throw new RangeError('탐험 동선이 없습니다.');
   const seed = [...(id + (depth === 'deep' ? ':deep' : ''))].reduce((n, c) => n * 31 + c.charCodeAt(0), 17) >>> 0;
-  return new Floor(stage.idx, stage.theme || stage.chapter.theme, seed, layout);
+  const world = new Floor(stage.idx, stage.theme || stage.chapter.theme, seed, layout);
+  if (kind === 'dungeon' && id === 'glass_garden' && depth === 'standard' &&
+      !stage.party && !stage.riftId && !stage.expedition.riftId && !stage.expedition.conquestId) {
+    // 기존 방·봉인·난수 진행을 만든 뒤 보물방과 장치방 사이의 실제 순환만 연다.
+    const treasure = world.rooms[2], tactics = world.rooms[3];
+    world.corridors.push(...world.lShape(treasure, tactics));
+    treasure.links.push(tactics.id); tactics.links.push(treasure.id);
+    world.linkPending.push([[treasure.gx, treasure.gy], [tactics.gx, tactics.gy]]);
+    world.buildMask();
+    const mastery = gardenMasteryForStage(stage);
+    if (mastery) {
+      tactics.label = mastery.label;
+      tactics.gardenMastery = Object.freeze({ version: mastery.version, approachRoomIds: mastery.approachRoomIds,
+        diagonals: gardenMasteryDiagonals(tactics) });
+    }
+  }
+  return world;
 }
 
 export function expeditionRoster(stage, room) {
@@ -95,7 +122,13 @@ export function expeditionRoster(stage, room) {
     if (room.type === 'elite') return [R.elite[0], R.trash[0], R.trash[2], R.trash[5], R.ranged[0]];
     return [R.trash[0], R.trash[1], R.trash[2], R.trash[3], R.ranged[0], R.ranged[1], R.elite[0]];
   }
-  if (id === 'glass_garden') return room.type === 'treasure' ? [R.trash[0],R.trash[2],R.ranged[0]] : [R.trash[0],R.trash[1],R.trash[2],R.trash[0],R.ranged[0],R.trash[4]];
+  if (id === 'glass_garden') {
+    const roster = room.type === 'treasure' ? [R.trash[0],R.trash[2],R.ranged[0]] : [R.trash[0],R.trash[1],R.trash[2],R.trash[0],R.ranged[0],R.trash[4]];
+    const mastery = gardenMasteryForStage(stage);
+    // 다른 다섯 자리의 생성 순서를 지키고 중복 잡몹 한 자리만 기존 분쇄형으로 바꾼다.
+    if (mastery && room.id === mastery.roomId && room.type === 'normal') roster[mastery.replacementSlot] = mastery.replacementEnemyId;
+    return roster;
+  }
   if (id === 'ember_vault') return [R.elite[0],R.trash[0],R.trash[1],R.trash[3],R.ranged[0],R.trash[4]];
   return [R.ranged[0],R.ranged[1],R.ranged[2],R.trash[1],R.trash[5],...(room.type === 'elite' ? [R.elite[0]] : [])];
 }

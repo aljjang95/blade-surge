@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { Battle } from '../src/game/masterworks-battle.js';
 import { Battle as BaseBattle } from '../src/game/battle-base.js';
 import { buildExpeditionStage } from '../src/game/expedition-combat.js';
+import { GARDEN_MASTERY } from '../src/data/garden-mastery.js';
 import { HEROES, heroStats } from '../src/data/heroes.js';
 import { Economy } from '../src/game/economy.js';
 import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
@@ -13,6 +14,8 @@ import { personalDeparture, personalResultLabel } from '../src/ui/personal-goal-
 
 const details = { route:{ kind:'dungeon',id:'glass_garden',depth:'standard',conquestId:null,riftId:null },
   heroId:'knight',heroLevel:4,control:'auto',timeSec:60.125,perfects:0,breaks:2 };
+// 기존 전역 fixture는 버전 미기록으로 보존하고 같은 조건의 실제 출격만 현재 버전을 쓴다.
+const currentGardenRoute = () => ({ ...details.route, encounterVersion:GARDEN_MASTERY.version });
 const history = () => [{ runId:7,floor:1,outcome:'victory',boonIds:[],details:structuredClone(details) }];
 function withStorage(fn:(storage:{values:Map<string,string>,fail:boolean})=>void) {
   const descriptor=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
@@ -101,7 +104,7 @@ async function withAsyncStorage<T>(fn:(storage:{values:Map<string,string>,writes
   try{return await fn(storage);}finally{if(descriptor)Object.defineProperty(globalThis,'localStorage',descriptor);else Reflect.deleteProperty(globalThis,'localStorage');}
 }
 const noop=()=>{};
-function inheritedGoalFixture(metric:'time'|'perfects'|'breaks'|null='time') {
+function inheritedGoalFixture(metric:'time'|'perfects'|'breaks'|null='time',legacyHistory=false) {
   const eco=new Economy(),expedition=new ExpeditionEconomy(eco),hero=eco.hero();
   const app:any={eco,expedition,stageStarting:false,expeditionUI:{result:null,render:noop}};
   const battle:any=Object.create(Battle.prototype);app.battle=battle;
@@ -120,8 +123,9 @@ function inheritedGoalFixture(metric:'time'|'perfects'|'breaks'|null='time') {
   });
   battle.ensureRpg(); // The real Rpg constructor normalizes this before start.
   battle.masterworks=new MasterworksService(app);
-  const earlier={...structuredClone(details),heroLevel:hero.level,timeSec:11,perfects:2};
+  const earlier={...structuredClone(details),route:legacyHistory?structuredClone(details.route):currentGardenRoute(),heroLevel:hero.level,timeSec:11,perfects:2};
   battle.masterworks.s.history=[{runId:7,floor:1,outcome:'victory',boonIds:[],details:earlier}];
+  const initialHistory=structuredClone(battle.masterworks.s.history);
   battle.masterworks.s.runSeq=7;
   if(metric)expect(battle.masterworks.goal(7,metric).ok).toBe(true);else expect(eco.save()).toBe(true);
   const admissionBefore=structuredClone(eco.s),admitted=expedition.begin('dungeon','glass_garden');
@@ -143,11 +147,12 @@ function inheritedGoalFixture(metric:'time'|'perfects'|'breaks'|null='time') {
       resolve();
     }}));
   });
-  return {eco,expedition,hero,app,battle,starts,assetStart,admissionEnergy:eco.s.energy,stage:buildExpeditionStage('dungeon','glass_garden',{}, {depth:'standard'})};
+  return {eco,expedition,hero,app,battle,starts,assetStart,initialHistory,admissionEnergy:eco.s.energy,stage:buildExpeditionStage('dungeon','glass_garden',{}, {depth:'standard'})};
 }
-async function completeInheritedGoal(metric:'time'|'perfects'|'breaks'|null,seconds=9.5,mixed=false,win=true,readWrites=()=>0) {
-  const f=inheritedGoalFixture(metric),{battle,hero}=f;
+async function completeInheritedGoal(metric:'time'|'perfects'|'breaks'|null,seconds=9.5,mixed=false,win=true,readWrites=()=>0,legacyHistory=false) {
+  const f=inheritedGoalFixture(metric,legacyHistory),{battle,hero}=f;
   try{
+    expect(f.stage.encounterVersion).toBe(GARDEN_MASTERY.version);
     const writesBeforeStart=readWrites();
     const started=battle.start(f.stage,'knight',hero,{});f.starts[0].complete();await started;
     expect(battle.run.id).toBe(8);expect(battle.masterworks.s.runSeq).toBe(8);
@@ -161,7 +166,7 @@ async function completeInheritedGoal(metric:'time'|'perfects'|'breaks'|null,seco
     hero.level++;expect(battle.run.historyContext.heroLevel).toBe(departureLevel);
     if(win)battle.victory();else battle.defeat();
     expect(battle.result.time).toBe(seconds);expect(battle.elapsed).toBeGreaterThan(seconds);
-    expect(battle.masterworks.s.history.at(-1).details).toEqual({route:details.route,heroId:'knight',heroLevel:departureLevel,
+    expect(battle.masterworks.s.history.at(-1).details).toEqual({route:currentGardenRoute(),heroId:'knight',heroLevel:departureLevel,
       control:mixed?'mixed':'auto',timeSec:seconds,perfects:3,breaks:3});
     const frozenResult=structuredClone(battle.result.masterworks.personalGoal);
     if(win){const presentation=battle.timers.find((timer:any)=>timer.t===1.6);expect(presentation).toBeDefined();presentation.fn();}
@@ -176,7 +181,7 @@ async function completeInheritedGoal(metric:'time'|'perfects'|'breaks'|null,seco
     expect(persisted.masterworks.history).toEqual(battle.masterworks.s.history);
     expect(persisted.expedition.pending).toBeNull();
     const projection=structuredClone(f.eco.s);delete projection.created;delete projection.energyT;delete projection.limitedStart;delete projection.masterworks.personalGoal;
-    return {result:frozenResult,history:historyBefore,projection,captured,next:capturePersonalGoal(battle.masterworks.s),settlementWrites:readWrites()-writesBeforeStart};
+    return {result:frozenResult,history:historyBefore,initialHistory:f.initialHistory,projection,captured,next:capturePersonalGoal(battle.masterworks.s),settlementWrites:readWrites()-writesBeforeStart};
   }finally{f.assetStart.mockRestore();}
 }
 
@@ -201,6 +206,21 @@ test('actual perfect target stays fixed after history gains a better record and 
 test('actual observed mixed controls cannot satisfy an AUTO goal and actual defeat cannot achieve a goal',()=>withAsyncStorage(async storage=>{
   expect((await completeInheritedGoal('time',9.5,true)).result).toMatchObject({eligible:false,achieved:false,reason:'conditions'});
   storage.values.clear();expect((await completeInheritedGoal('time',9.5,false,false)).result).toMatchObject({eligible:false,achieved:false,reason:'defeat'});
+}));
+test('actual legacy Garden goal stays unmatched by the current native departure without rewriting its baseline or adding payout',()=>withAsyncStorage(async storage=>{
+  const legacyBefore=structuredClone(details);
+  const observed=await completeInheritedGoal('time',9.5,false,true,()=>storage.writes,true);
+  expect(observed.result).toEqual({eligible:false,achieved:false,metric:'time',baseline:11,target:10,value:null,reason:'conditions'});
+  expect(observed.captured.context.route).toEqual(details.route);
+  expect(observed.next).toMatchObject({baseline:11,target:10});
+  expect(observed.history[0]).toEqual(observed.initialHistory[0]);
+  expect(observed.history[0].details.route).toEqual(details.route);
+  expect(observed.history[1].details.route).toEqual(currentGardenRoute());
+  expect(details).toEqual(legacyBefore);
+  storage.values.clear();const withoutGoal=await completeInheritedGoal(null,9.5,false,true,()=>storage.writes,true);
+  expect(withoutGoal.result).toBeNull();
+  expect(observed.projection).toEqual(withoutGoal.projection);expect(observed.history).toEqual(withoutGoal.history);
+  expect(observed.settlementWrites).toBe(withoutGoal.settlementWrites);
 }));
 test('a stale completed asset start cannot replace the newer frozen goal, context or durable run sequence',()=>withAsyncStorage(async()=>{
   const f=inheritedGoalFixture();try{

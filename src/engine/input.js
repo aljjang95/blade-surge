@@ -111,15 +111,17 @@ export class Input {
     };
     btn('btn-attack', () => { this._attack('button', true); this.press('attack'); }, () => { this._attack('button', false); });
     btn('btn-dodge', () => this.press('dodge'));
+    btn('btn-map-interact', () => this.press('interact'));
     document.querySelectorAll('.skill-btn').forEach((b) => btn(b, () => this.press('skill' + b.dataset.skill)));
 
     window.addEventListener('keydown', (e) => {
       if (!this.enabled || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.target?.closest?.('button, input, textarea, select, [contenteditable], [role="dialog"], dialog, #battle-camera-controls')) return;
-      if (!/^(Key[WASDJKRQE]|Arrow(Left|Right|Up|Down)|Space|ShiftLeft|Digit[1-6])$/.test(e.code)) return;
+      if (!/^(Key[WASDJKRQEF]|Arrow(Left|Right|Up|Down)|Space|ShiftLeft|Digit[1-6])$/.test(e.code)) return;
       e.preventDefault();
       if (e.repeat) return; this.keys[e.code] = true;
       if (e.code === 'KeyJ' || e.code === 'Space') { this._attack(e.code, true); this.press('attack'); }
       if (e.code === 'KeyK' || e.code === 'ShiftLeft') this.press('dodge');
+      if (e.code === 'KeyF') this.press('interact');
       if (e.code === 'Digit1') this.press('skill0'); if (e.code === 'Digit2') this.press('skill1'); if (e.code === 'Digit3') this.press('skill2'); if (e.code === 'KeyR' || e.code === 'Digit4') this.press('skill3');
       if (e.code === 'KeyQ' || e.code === 'Digit5') this.press('skill4'); if (e.code === 'KeyE' || e.code === 'Digit6') this.press('skill5');
     });

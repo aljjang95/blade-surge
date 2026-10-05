@@ -15,7 +15,19 @@ float heroEffectFactor(vec2 uv) {
 }
 `;
 
-function extendMain(source, statement) {
+const cosmeticMask = `
+uniform sampler2D heroCosmeticMask;
+uniform float heroCosmeticMaskActive;
+uniform float heroCosmeticMaskAllowed;
+float heroCosmeticFactor(vec2 uv) {
+  float factor = heroEffectFactor(uv);
+  if (heroCosmeticMaskActive < .5 || heroCosmeticMaskAllowed < .5) return factor;
+  float mask = clamp(texture2D(heroCosmeticMask, uv).r, 0.0, 1.0);
+  return min(factor, mix(1.0, .02, mask));
+}
+`;
+
+function extendMain(source, statement, extra = '') {
   // Ignore comment braces while locating main's matching close. Appending to
   // the last brace would modify an unrelated helper declared after main.
   const code = source.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, comment => comment.replace(/[^\n]/g, ' '));
@@ -30,7 +42,7 @@ function extendMain(source, statement) {
   if (depth) throw new Error('Hero effect focus found an unbalanced fragment main()');
   close--;
   // Keep #version/precision and the original shader's declarations in place.
-  return source.slice(0, main.index) + capsule + source.slice(main.index, close)
+  return source.slice(0, main.index) + capsule + extra + source.slice(main.index, close)
     + '\n' + statement + '\n' + source.slice(close);
 }
 
@@ -40,6 +52,9 @@ export class HeroEffectFocus {
   constructor() {
     this.area = { value: new THREE.Vector4() };
     this.viewport = { value: new THREE.Vector2(1, 1) };
+    /** @type {{ value: THREE.Texture | null }} */
+    this.cosmeticMask = { value: null };
+    this.cosmeticMaskActive = { value: 0 };
     this.target = null;
     this.bound = new WeakSet();
     this.foot = new THREE.Vector3(); this.head = new THREE.Vector3();
@@ -50,9 +65,10 @@ export class HeroEffectFocus {
     this.target = target;
     // A replacement/dead/lobby actor cannot inherit the previous frame's mask.
     this.area.value.set(0, 0, 0, 0);
+    this._clearCosmeticMask();
   }
   bind(material) {
-    if (material?.blending !== THREE.AdditiveBlending || !material.transparent) return material;
+    if (material?.blending !== THREE.AdditiveBlending || !material.transparent || material.userData?.telegraph === true) return material;
     return this._bind(material, 'alpha');
   }
   bindBloom(bloom) {
@@ -73,23 +89,56 @@ export class HeroEffectFocus {
     const prefix = intact ? prior.prefix : material.customProgramCacheKey();
     const focus = this;
     const statement = scope === 'alpha'
-      ? 'gl_FragColor.a *= heroEffectFactor(gl_FragCoord.xy / heroFocusViewport);'
+      ? 'gl_FragColor.a *= heroCosmeticFactor(gl_FragCoord.xy / heroFocusViewport);'
       : 'gl_FragColor.rgb *= heroEffectFactor(vUv);';
     const hook = function(shader, renderer) {
       original.call(this, shader, renderer);
       shader.uniforms.heroFocus = focus.area;
       shader.uniforms.heroFocusViewport = focus.viewport;
-      shader.fragmentShader = extendMain(shader.fragmentShader, statement);
+      if (scope === 'alpha') {
+        shader.uniforms.heroCosmeticMask = focus.cosmeticMask;
+        shader.uniforms.heroCosmeticMaskActive = focus.cosmeticMaskActive;
+        shader.uniforms.heroCosmeticMaskAllowed = { value: this.userData.heroCosmeticMask === false ? 0 : 1 };
+      }
+      shader.fragmentShader = extendMain(shader.fragmentShader, statement, scope === 'alpha' ? cosmeticMask : '');
     };
-    const cacheKey = () => prefix + '|hero-effect-focus-v3:' + scope;
+    const cacheKey = () => prefix + (scope === 'alpha' ? '|hero-effect-focus-v4:' : '|hero-effect-focus-v3:') + scope;
     material.onBeforeCompile = hook; material.customProgramCacheKey = cacheKey;
     material.needsUpdate = true;
     bindings.set(material, { owner: this, scope, original, prefix, hook, cacheKey });
     this.bound.add(material);
     return material;
   }
+  _clearCosmeticMask() {
+    this.cosmeticMask.value = null;
+    this.cosmeticMaskActive.value = 0;
+  }
+  _syncCosmeticMask(renderer, camera, player) {
+    const game = player.game, wrapper = game?.renderer, owner = wrapper?.playerSilhouette;
+    // Renderer.render가 update 직전에 현재 플레이어 마스크를 완성한다.
+    // 마스크 소유자는 건너뛴 프레임이나 유효하지 않은 프레임마다 활성 플래그를 끈다.
+    if (!game?.active || game.player !== player || game.app?.mode !== 'battle' || game.app.stageStarting || game.app.contextLost
+      || wrapper?.r !== renderer || wrapper.camera !== camera || !owner?.ready || owner.disposed || owner.actor !== player
+      || !(owner.uniforms?.uPlayerOutlineActive?.value >= .5)) return;
+    const context = renderer.getContext?.();
+    if (!context?.isContextLost || context.isContextLost()) return;
+    const mask = owner.uniforms?.uPlayerMask?.value, target = owner.target;
+    const ratio = wrapper.pixelRatio;
+    if (!mask?.isTexture || target?.texture !== mask || !Number.isFinite(ratio) || !(ratio > 0)
+      || wrapper._width !== owner.cssWidth || wrapper._height !== owner.cssHeight
+      || owner.pixelRatio !== Math.min(1, Math.max(.01, ratio))
+      || this.viewport.value.x !== Math.floor(owner.cssWidth * ratio) || this.viewport.value.y !== Math.floor(owner.cssHeight * ratio)) return;
+    const width = Math.max(1, Math.floor(owner.cssWidth * owner.pixelRatio));
+    const height = Math.max(1, Math.floor(owner.cssHeight * owner.pixelRatio));
+    if (target.width !== width || target.height !== height || mask.image?.width !== width || mask.image?.height !== height) return;
+    // 소유자의 현재 텍스처만 빌린다. 텍스처와 uniform을 지우거나 크기를
+    // 바꾸거나 해제하지 않으며, 기존 블룸 처리도 그대로 유지한다.
+    this.cosmeticMask.value = mask;
+    this.cosmeticMaskActive.value = 1;
+  }
   update(renderer, camera) {
     this.area.value.set(0, 0, 0, 0);
+    this._clearCosmeticMask();
     const p = this.target;
     if (!p?.alive || p.dead || p.disposed || !p.pos || ![p.pos.x, p.pos.y, p.pos.z].every(Number.isFinite)) return;
     renderer.getDrawingBufferSize(this.viewport.value);
@@ -117,5 +166,6 @@ export class HeroEffectFocus {
     const rx = Math.max(width, 2 / size.x), ry = Math.max(height, 2 / size.y);
     if (x + rx < 0 || x - rx > 1 || y + ry < 0 || y - ry > 1) return;
     this.area.value.set(x, y, rx, ry);
+    this._syncCosmeticMask(renderer, camera, p);
   }
 }

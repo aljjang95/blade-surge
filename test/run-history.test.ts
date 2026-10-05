@@ -53,7 +53,7 @@ test('details preserve observed zeroes and fractional time, reject malformed cou
   const history = Array.from({ length: 25 }, (_, i) => ({ runId: i + 1, floor: 1, outcome: 'victory', boonIds: [], details }));
   const normalized = normalizeMasterworks(JSON.parse(JSON.stringify({ history })));
   expect(normalized.history).toHaveLength(20); expect(normalized.history[0].runId).toBe(6);
-  expect(normalized.history.at(-1)?.details).toEqual(details);
+  expect<unknown>(normalized.history.at(-1)?.details).toEqual(details);
   expect(normalizeMasterworks(normalized).history).toEqual(normalized.history);
   expect(runDetailsLabel(details)).toContain('정확 회피 0'); expect(runDetailsLabel(details)).toContain('152초');
   const invalid = normalizeRunDetails({ route: { kind: 'campaign', id: 'fake' }, heroId: '__proto__', heroLevel: 81, control: true, perfects: -1, breaks: 1.5, timeSec: Infinity });

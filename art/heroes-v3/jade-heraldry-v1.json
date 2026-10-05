@@ -1,0 +1,295 @@
+{
+  "schema": "blade-surge.jade-heraldry.v1",
+  "blender": "5.2.1 LTS",
+  "baseline_commit": "ccd41255f58c17b105882260a66dfcf3d97beadc",
+  "source_credit": "KayKit Adventurers CC0; existing TLL original derivative Blender costume; new original rear fittings",
+  "license_file": "public/models/KAYKIT_ADVENTURERS_LICENSE.txt",
+  "scope": "Original Blender-authored rear/shoulder fittings. Existing faces, animation rigs, sockets, source GLBs and original fitting buffers preserved. Blender review images are not runtime or device QA.",
+  "runtime_contract": {
+    "additional_draws_per_hero": 0,
+    "additional_shader_programs_per_hero": 0,
+    "new_material_roles": 0,
+    "vertex_delta_limit": 800,
+    "byte_delta_limit": 75000
+  },
+  "assets": [
+    {
+      "hero": "knight",
+      "path": "public/models/heroes-v3/knight-v3.glb",
+      "sha256": "eca324586230078151e20bb522013c7a2fd8bc067bbf4d326bb8dabf5b9a5465",
+      "baseline_sha256": "1a462698a80c3205ad400a8215cae24720caf9369454e4f935174be51e1f0a99",
+      "baseline_bytes": 466288,
+      "bytes": 474908,
+      "added_bytes": 8620,
+      "baseline_exported_vertices": 12239,
+      "exported_vertices": 12389,
+      "added_exported_vertices": 150,
+      "added_blender_vertices": 50,
+      "added_triangles": 76,
+      "original_geometry_buffer_preserved": true,
+      "source_material_count": 5,
+      "output_material_count": 5,
+      "runtime_material_roles": [
+        "cloth",
+        "metal",
+        "skin"
+      ],
+      "added_draws": 0,
+      "added_programs": 0,
+      "bones": [
+        "chest",
+        "upperarm.l",
+        "upperarm.r"
+      ],
+      "parts": [
+        "Jade Knight dorsal shadow seam",
+        "Jade Knight split oath crest -1",
+        "Jade Knight shoulder oath -1",
+        "Jade Knight split oath crest 1",
+        "Jade Knight shoulder oath 1",
+        "Jade Knight oath fastener"
+      ],
+      "review_master": "work/jade-heraldry-v1/knight-jade-v1.blend",
+      "review_master_sha256": "ab618900634ae67ee5c0a3f275638dd59a7320ffb046fe64891e2d837e39feb8",
+      "review_renders": [
+        {
+          "path": "work/jade-heraldry-v1/knight-rear-before.png",
+          "sha256": "aa21fbf53814b16f2bbab682ccf1b8222dfa6ebcbf3b5a2b261fb145934ae034"
+        },
+        {
+          "path": "work/jade-heraldry-v1/knight-rear-after.png",
+          "sha256": "f1a4534a6a381326141b9b887adad1f2a6c49ed973a29652cd06d12504c18334"
+        },
+        {
+          "path": "work/jade-heraldry-v1/knight-front-before.png",
+          "sha256": "64c0e28949bdc1af78bda5fc818eedc733513695921ca8c1af783673a79adf4d"
+        },
+        {
+          "path": "work/jade-heraldry-v1/knight-front-after.png",
+          "sha256": "f737d8b56c47f315e189f7c43cffbfd29264401d4f593182c7014d7e3682dda8"
+        }
+      ]
+    },
+    {
+      "hero": "barbarian",
+      "path": "public/models/heroes-v3/barbarian-v3.glb",
+      "sha256": "c0828bd4e17eec5e9f3e9e9d999c6d1f2fc87698e5d2f7bb5b5f69e93ad38f90",
+      "baseline_sha256": "f6eaa6efc41aa78fdc558dd1f6a9ea4dd90201ccb3b8043d22efb624b6309d04",
+      "baseline_bytes": 402860,
+      "bytes": 408804,
+      "added_bytes": 5944,
+      "baseline_exported_vertices": 10309,
+      "exported_vertices": 10423,
+      "added_exported_vertices": 114,
+      "added_blender_vertices": 38,
+      "added_triangles": 60,
+      "original_geometry_buffer_preserved": true,
+      "source_material_count": 5,
+      "output_material_count": 5,
+      "runtime_material_roles": [
+        "cloth",
+        "metal",
+        "skin"
+      ],
+      "added_draws": 0,
+      "added_programs": 0,
+      "bones": [
+        "chest"
+      ],
+      "parts": [
+        "Jade Barbarian mantle shadow",
+        "Jade Barbarian asymmetric war mantle",
+        "Jade Barbarian brass shoulder band",
+        "Jade Barbarian mantle broken edge"
+      ],
+      "review_master": "work/jade-heraldry-v1/barbarian-jade-v1.blend",
+      "review_master_sha256": "2777f12806020ed1c978a07a306a358c21955ba77d3d8b5ecf277dc7428f1eef",
+      "review_renders": [
+        {
+          "path": "work/jade-heraldry-v1/barbarian-rear-before.png",
+          "sha256": "77420be0b2852062d43230b44cdbed2da67b7a2654febb37c3ca5342a779ee43"
+        },
+        {
+          "path": "work/jade-heraldry-v1/barbarian-rear-after.png",
+          "sha256": "01f1af12aa7b6a99ef63f3b531fb6a228b8a694e8f57d800602b7ac32dd081a4"
+        },
+        {
+          "path": "work/jade-heraldry-v1/barbarian-front-before.png",
+          "sha256": "a2b4e1d3c8ef72325962ab0cd40c8015aa343e016b85a2b8439f6eca643be6eb"
+        },
+        {
+          "path": "work/jade-heraldry-v1/barbarian-front-after.png",
+          "sha256": "414b378900e86801c0d720d9f4552ef384b4b1db196981cdb4dfcf0bb31ffbf1"
+        }
+      ]
+    },
+    {
+      "hero": "mage",
+      "path": "public/models/heroes-v3/mage-v3.glb",
+      "sha256": "8b46b43cc4204461265fe6a27737ae426b685b0c591194b5e0b8d8681698a8b3",
+      "baseline_sha256": "ef437a50724928a8e22c75d5ff7ddf5d4b7d061ba3e38553c2d2094bb60d1fac",
+      "baseline_bytes": 518784,
+      "bytes": 527412,
+      "added_bytes": 8628,
+      "baseline_exported_vertices": 13192,
+      "exported_vertices": 13420,
+      "added_exported_vertices": 228,
+      "added_blender_vertices": 76,
+      "added_triangles": 140,
+      "original_geometry_buffer_preserved": true,
+      "source_material_count": 8,
+      "output_material_count": 8,
+      "runtime_material_roles": [
+        "cloth",
+        "metal",
+        "skin"
+      ],
+      "added_draws": 0,
+      "added_programs": 0,
+      "bones": [
+        "chest",
+        "hips"
+      ],
+      "parts": [
+        "Jade Mage lunar crescent back collar",
+        "Jade Mage astral star shadow",
+        "Jade Mage ivory four point back star"
+      ],
+      "review_master": "work/jade-heraldry-v1/mage-jade-v1.blend",
+      "review_master_sha256": "8e70e0e72e3a46d09406c421481a86d80dc45db7b9f306cf03cbf99cc6b18660",
+      "review_renders": [
+        {
+          "path": "work/jade-heraldry-v1/mage-rear-before.png",
+          "sha256": "0d13cff12457dc8349c33ff71036a2bd66369fc4df9e09242d0e25cacbea161e"
+        },
+        {
+          "path": "work/jade-heraldry-v1/mage-rear-after.png",
+          "sha256": "43677994d0a66b28a9cc159b813c9d7d23e8a9f7a1d75422c7eafd86a84cda38"
+        },
+        {
+          "path": "work/jade-heraldry-v1/mage-front-before.png",
+          "sha256": "8e513ecc1b0cfeed717078186077486c0f09913bcdcb8275e8180dd3b2069908"
+        },
+        {
+          "path": "work/jade-heraldry-v1/mage-front-after.png",
+          "sha256": "9483d8e11b99207cd776f87183850ab6a6a65924cf1441c4a515a1a8958db5ca"
+        }
+      ]
+    },
+    {
+      "hero": "rogue",
+      "path": "public/models/heroes-v3/rogue-v3.glb",
+      "sha256": "d2522dd59016860672930bb62cf968499e256e1f1fd44ab811b0627f929db3d2",
+      "baseline_sha256": "cf16c0e0c4cc226f32f60909f694f696394479048f6a97b76af14ce5cba04648",
+      "baseline_bytes": 375156,
+      "bytes": 386636,
+      "added_bytes": 11480,
+      "baseline_exported_vertices": 9336,
+      "exported_vertices": 9552,
+      "added_exported_vertices": 216,
+      "added_blender_vertices": 72,
+      "added_triangles": 112,
+      "original_geometry_buffer_preserved": true,
+      "source_material_count": 8,
+      "output_material_count": 8,
+      "runtime_material_roles": [
+        "cloth",
+        "metal",
+        "skin"
+      ],
+      "added_draws": 0,
+      "added_programs": 0,
+      "bones": [
+        "chest",
+        "hips"
+      ],
+      "parts": [
+        "Jade Rogue twin tail silhouette -1",
+        "Jade Rogue twin teal tail -1",
+        "Jade Rogue tail pale seam -1",
+        "Jade Rogue rear harness -1",
+        "Jade Rogue twin tail silhouette 1",
+        "Jade Rogue twin teal tail 1",
+        "Jade Rogue tail pale seam 1",
+        "Jade Rogue rear harness 1"
+      ],
+      "review_master": "work/jade-heraldry-v1/rogue-jade-v1.blend",
+      "review_master_sha256": "1c753f78ca838fb1cebb3b5407561ad7b8fb535b5756da642f3ed22f70b3f73a",
+      "review_renders": [
+        {
+          "path": "work/jade-heraldry-v1/rogue-rear-before.png",
+          "sha256": "2fba8453d34f284100171ecfecd0db22e551ebd044e92fe6ba1771e93a0558d2"
+        },
+        {
+          "path": "work/jade-heraldry-v1/rogue-rear-after.png",
+          "sha256": "0abadf7f8c29131b47ff6666f9d043966ced97a4ee4dd3a520170f7718dc4995"
+        },
+        {
+          "path": "work/jade-heraldry-v1/rogue-front-before.png",
+          "sha256": "811e8127a359e9485852b6dbb76df62bbbd7b7a0e5b0c5534d4859ef4889143a"
+        },
+        {
+          "path": "work/jade-heraldry-v1/rogue-front-after.png",
+          "sha256": "4a0f348ffd8da16ae6b90f6f34495c2a573250def07c116620b58ea15d2b20c9"
+        }
+      ]
+    },
+    {
+      "hero": "ranger",
+      "path": "public/models/heroes-v3/ranger-v3.glb",
+      "sha256": "2c380db0ef326fda793fb76442d2234c52155266f8ffa7ea6ea2605b97245b41",
+      "baseline_sha256": "25a4ff71bf959bd9ffa41cd4c068a13f47eb6992502a09b764266345b7cb948b",
+      "baseline_bytes": 43552,
+      "bytes": 52184,
+      "added_bytes": 8632,
+      "baseline_exported_vertices": 1512,
+      "exported_vertices": 1680,
+      "added_exported_vertices": 168,
+      "added_blender_vertices": 56,
+      "added_triangles": 88,
+      "original_geometry_buffer_preserved": true,
+      "source_material_count": 3,
+      "output_material_count": 3,
+      "runtime_material_roles": [
+        "cloth",
+        "metal"
+      ],
+      "added_draws": 0,
+      "added_programs": 0,
+      "bones": [
+        "chest"
+      ],
+      "parts": [
+        "Jade Ranger leaf yoke shadow -1",
+        "Jade Ranger ivory leaf yoke -1",
+        "Jade Ranger leaf central vein -1",
+        "Jade Ranger leaf yoke shadow 1",
+        "Jade Ranger ivory leaf yoke 1",
+        "Jade Ranger leaf central vein 1"
+      ],
+      "review_master": "work/jade-heraldry-v1/ranger-jade-v1.blend",
+      "review_master_sha256": "dfa00fb530e654d4f841d222459b066f089edf50d0f95ccd6b466b267db09e4d",
+      "review_renders": [
+        {
+          "path": "work/jade-heraldry-v1/ranger-rear-before.png",
+          "sha256": "b6cbc827f417ae1b7efdd44a32debefa93f3cc6f597badcf4083dba7295ddc09"
+        },
+        {
+          "path": "work/jade-heraldry-v1/ranger-rear-after.png",
+          "sha256": "ff2cd4e03ba89d93414603b56c0760ada5103ecd47fd2b15e989a5d34fca6c4e"
+        },
+        {
+          "path": "work/jade-heraldry-v1/ranger-front-before.png",
+          "sha256": "4c9a77c053afb2318a52775c2481906683fece35ea47bc31f4c94a7eaa6a47ce"
+        },
+        {
+          "path": "work/jade-heraldry-v1/ranger-front-after.png",
+          "sha256": "a63d4c731f8a510d14eadf0782ba101b757433e942691770fd53f7f3f76816c4"
+        }
+      ]
+    }
+  ],
+  "authoring_script": "tools/art/build-jade-heraldry-v1.py",
+  "reproduction": "blender --background --factory-startup --threads 2 --python-exit-code 1 --python tools/art/build-jade-heraldry-v1.py -- --preview",
+  "draw_budget_basis": "assembleHeroIdentity in src/engine/hero-identity.js merges all fitting meshes into existing cloth/metal/skin roles; this revision preserves the complete input material array and role set. Runtime frame counters are separate QA."
+}

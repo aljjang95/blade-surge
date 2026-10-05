@@ -178,7 +178,7 @@
           <button class="hud-btn" id="btn-auto">AUTO</button>
           <button class="hud-btn" id="btn-pause">❚❚</button>
         </div>
-        <div id="minimap-wrap" class="hidden"><canvas id="minimap"></canvas><div id="objective"></div></div>
+        <div id="minimap-wrap" class="hidden"><button type="button" id="btn-map" aria-label="발견한 구역 지도 열기" aria-haspopup="dialog"><canvas id="minimap" aria-hidden="true"></canvas><span>지도</span></button><div id="objective"></div></div>
       </div>
     </div>
     <div class="bossbar hidden" id="bossbar"><img id="boss-portrait" alt="" /><div class="bb-body"><div class="boss-name" id="boss-name">해골 군주</div><div class="boss-hp"><div id="boss-hp"></div></div></div></div>
@@ -186,6 +186,10 @@
     <div class="combo hidden" id="combo"><b id="combo-n">0</b><span>COMBO</span></div>
     <div class="kill-streak" id="kill-streak"><b id="kill-streak-n">0</b><span>연속 처치</span><em id="kill-streak-tier">사냥 본능</em></div>
     <div class="joystick" id="joy"><div class="joy-base"><div class="joy-knob" id="joy-knob"></div></div></div>
+    <section id="map-tactics-context" hidden aria-label="정원의 장치">
+      <div class="map-tactics-context-copy"><strong>정원의 장치</strong><span>이 방에서 1회 · 적 모으기 / 밀어내기</span></div>
+      <button type="button" id="btn-map-interact" disabled aria-keyshortcuts="F"><span class="map-tactics-action-name">조작판으로 이동</span><small class="map-tactics-action-detail"></small></button>
+    </section>
     <div class="actions">
       <button class="skill-btn" data-skill="0"><img alt="" /><div class="cd"></div><span class="key">1</span></button>
       <button class="skill-btn" data-skill="1"><img alt="" /><div class="cd"></div><span class="key">2</span></button>
@@ -259,6 +263,7 @@
   <div id="pause-overlay" class="screen">
     <div class="modal-box">
       <h2>일시정지</h2>
+      <section id="battle-info" aria-label="전투 정보"><h3>전투 정보</h3><div id="battle-info-actions"></div></section>
       <div class="pause-btns">
         <button class="btn btn-gold" id="btn-resume">계속</button>
         <button class="btn btn-ghost" id="btn-giveup">포기</button>

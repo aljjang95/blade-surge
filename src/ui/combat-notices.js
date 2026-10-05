@@ -5,8 +5,9 @@ export class CombatNoticeQueue {
     this.duration = duration; this.limit = limit;
     this.pending = []; this.current = null; this.timer = null; this.remove = null; this.revision = 0;
   }
-  push(message, tone = '', { replaceUrgent = false } = {}) {
-    const notice = { message, tone, urgent: tone.split(/\s+/).includes('red') };
+  /** @param {*} message @param {string} [tone] @param {{replaceUrgent?: boolean, urgent?: boolean}} [options] */
+  push(message, tone = '', { replaceUrgent = false, urgent } = {}) {
+    const notice = { message, tone, urgent: typeof urgent === 'boolean' ? urgent : tone.split(/\s+/).includes('red') };
     // A new cast supersedes older danger cues; routine guidance can still resume.
     if (notice.urgent && replaceUrgent) {
       this.pending = this.pending.filter((item) => !item.urgent);

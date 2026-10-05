@@ -1,19 +1,47 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { applyDungeonStoneDetail, applySurfaceDetail } from '../engine/surface-textures.js';
+import { GARDEN_MASTERY } from '../data/garden-mastery.js';
 
 const PALETTES = {
   crypt: [0x8e98ae, 0x938269, 0x749ebd],
   throne: [0xab9480, 0xc6a061, 0xd9a26f],
   abyss: [0x817a98, 0xa497b7, 0x9c85cf],
-  garden: [0x939d87, 0xc7ac68, 0x7fb8a0],
+  garden: [0x7f9690, 0xb39156, 0x7fb8a0],
   forge: [0x353a42, 0xa78556, 0xff7638],
   frost: [0x788caa, 0xc6c9d5, 0x86d9eb],
   tide: [0x46666d, 0xc1a569, 0x74cbd0],
   crown: [0xafa698, 0xcfad62, 0xffd9a2],
 };
 
-/** 지역 건축은 방·재질별로 병합한다. 공유 던전 킷과 분리된 소유 자원만 회수한다. */
+// 연결된 이웃 중 한 매크로 셀 폭만 묶어 층 전체가 하나의 컬링 구가 되지 않게 한다.
+function architectureBatches(floor) {
+  const remaining = new Set(floor.rooms), batches = [];
+  const [spacingX, spacingZ] = floor.layout?.spacing || [34, 34];
+  for (const room of floor.rooms) {
+    if (!remaining.has(room)) continue;
+    const rooms = [room]; remaining.delete(room);
+    while (rooms.length < 3) {
+      const next = floor.rooms.find(candidate => {
+        if (!remaining.has(candidate)) return false;
+        const adjacent = rooms.some(member =>
+          ((member.links || []).includes(candidate.id) || (candidate.links || []).includes(member.id))
+          && Math.abs(member.gx - candidate.gx) + Math.abs(member.gy - candidate.gy) === 1);
+        if (!adjacent) return false;
+        const members = [...rooms, candidate];
+        const span = key => Math.max(...members.map(member => member[key])) - Math.min(...members.map(member => member[key]));
+        return span('gx') <= 1 && span('gy') <= 1
+          && span('x') <= spacingX + 6 && span('z') <= spacingZ + 6;
+      });
+      if (!next) break;
+      rooms.push(next); remaining.delete(next);
+    }
+    batches.push({ rooms, chunks: [[], [], []], ranges: [[], [], []], vertices: [0, 0, 0] });
+  }
+  return batches;
+}
+
+/** 지역 건축은 가까운 방의 같은 재질·그림자끼리 병합하고 소유 자원만 회수한다. */
 export function buildRegionArchitecture(floor, theme) {
   const group = new THREE.Group(); group.name = `region-${theme}`;
   const colors = PALETTES[theme];
@@ -34,8 +62,17 @@ export function buildRegionArchitecture(floor, theme) {
   );
   applyDungeonStoneDetail(materials[0]); applySurfaceDetail(materials[1], 'metal');
   group.userData.landmarks = [];
+  const batches = architectureBatches(floor), roomBatches = new Map();
+  group.userData.architectureBatches = batches.map((batch, batchId) => {
+    for (const room of batch.rooms) roomBatches.set(room, batchId);
+    return { batchId, roomIds: batch.rooms.map(room => room.id) };
+  });
+  group.userData.roomGeometry = [];
   for (const room of floor.rooms) {
     const chunks = [[], [], []];
+    const loopThreshold = theme === 'garden' && floor.rooms.length === 5 && [2,3].includes(room.id)
+      && floor.rooms[2].type === 'treasure' && floor.rooms[3].type === 'normal'
+      && floor.rooms[2].links?.includes(3) && floor.rooms[3].links?.includes(2) && floor.mask;
     const neighbors = (room.links || []).map((id) => floor.rooms[id]);
     const sideOccupied = (sx, sz) => neighbors.some((n) => sx ? Math.sign(n.gx-room.gx)===sx && n.gy===room.gy : Math.sign(n.gy-room.gy)===sz && n.gx===room.gx);
     // 중앙 후면 랜드마크는 복도 없는 면으로 돌린다. 통로 4개가 만나는 교차실은 바닥 문양만 유지한다.
@@ -64,6 +101,21 @@ export function buildRegionArchitecture(floor, theme) {
       rotation.setFromEuler(new THREE.Euler(rx, ry, rz));
       matrix.compose(position.set(x, y, z), rotation, scale);
       geometry.applyMatrix4(matrix);
+      if (loopThreshold) {
+        geometry.computeBoundingBox();
+        const bounds = geometry.boundingBox;
+        if (bounds.max.y > .2) {
+          // 새 회랑 양끝의 높은 장식은 중심점 대신 전체 바닥 면적과 실제 마스크 셀을 대조한다.
+          const x0 = Math.max(0, Math.floor(bounds.min.x - floor.minX));
+          const x1 = Math.min(floor.cols - 1, Math.floor(bounds.max.x - floor.minX));
+          const z0 = Math.max(0, Math.floor(bounds.min.z - floor.minZ));
+          const z1 = Math.min(floor.rows - 1, Math.floor(bounds.max.z - floor.minZ));
+          let intersects = false;
+          for (let row = z0; row <= z1 && !intersects; row++)
+            for (let col = x0; col <= x1; col++) if (floor.mask[row * floor.cols + col]) { intersects = true; break; }
+          if (intersects) { geometry.dispose(); return; }
+        }
+      }
       if (material === 0 && !geometry.getAttribute('color')) {
         const values = new Float32Array(geometry.getAttribute('position').count * 3).fill(1);
         geometry.setAttribute('color', new THREE.BufferAttribute(values, 3));
@@ -134,11 +186,6 @@ export function buildRegionArchitecture(floor, theme) {
         for (let i=0;i<5;i++) add(new THREE.IcosahedronGeometry(.48,0),2,px+Math.sin(i*2)*.9,1+i*.55,rear+.5);
         box(x+side*(hw+1.5),.2,z,1.6,.4,Math.max(6,room.h-10));
       }
-      ring(x,.10,z,Math.min(hw,hh)*.72,.06,1);
-      for (let i=0;i<8;i++) {
-        const a=i*Math.PI/4;
-        box(x+Math.cos(a)*5,.09,z+Math.sin(a)*5,.16,.045,1.4,1,-a);
-      }
     } else if (theme === 'forge') {
       for (const side of [-1,1]) {
         const px=x+side*(hw-2);
@@ -176,7 +223,6 @@ export function buildRegionArchitecture(floor, theme) {
       }
       buildingLandmark=false;
       for(const side of [-1,1]) box(x+side*(hw-2),.085,z,.1,.04,room.h-3,2);
-      ring(x,.10,z,5,.045,1);
     } else if (theme === 'tide') {
       // 천문 관측기의 교차 고리: 바닥 외곽에서 하늘을 향한 명확한 실루엣.
       buildingLandmark=true;
@@ -195,8 +241,6 @@ export function buildRegionArchitecture(floor, theme) {
           add(new THREE.OctahedronGeometry(.48),2,x+side*(hw+1.9),2.3,z+i*5);
         }
       }
-      ring(x,.10,z,Math.min(hw,hh)*.7,.045,1);
-      ring(x,.105,z,Math.min(hw,hh)*.53,.035,2);
     } else if (theme === 'crown') {
       // 바닥과 떨어진 제단 위의 왕관 파편. 앞쪽 화면을 덮는 천장은 사용하지 않는다.
       buildingLandmark=true;
@@ -215,149 +259,138 @@ export function buildRegionArchitecture(floor, theme) {
         }
         box(px,6.6,z, .3,.4,room.h*.6,1);
       }
-      ring(x,.1,z,Math.min(hw,hh)*.73,.075,1);
-      for(let i=0;i<5;i++) {
-        const a=i*Math.PI*2/5;
-        box(x+Math.sin(a)*6,.09,z+Math.cos(a)*6,.16,.035,2,1,a);
-      }
     }
     // 전투 카메라 안에서 읽히는 얕은 바닥 건축. 위험 표시(.11) 아래에 모두 둔다.
-    // 별도 메시 없이 기존 방별 재질에 병합하고 중앙 통행은 그대로 유지한다.
+    // 별도 메시 없이 기존 재질에 병합하고 중앙 통행은 그대로 유지한다.
     let inlayLayer = 0;
-    const inlay = (geometry, px, pz, color=0x28313b, ry=0) => {
+    const inlay = (geometry, px, pz, color=0x28313b, ry=0, y=null) => {
       const rgb=new THREE.Color(color), values=new Float32Array(geometry.getAttribute('position').count*3);
       for(let i=0;i<values.length;i+=3) { values[i]=rgb.r; values[i+1]=rgb.g; values[i+2]=rgb.b; }
       geometry.setAttribute('color',new THREE.BufferAttribute(values,3));
       // 기존 타일 윗면(.04997) 위, 금속 테두리(.065)와 위험 표시(.11) 아래.
-      add(geometry,0,px,.052 + inlayLayer++ * .00035,pz,-Math.PI/2,0,ry);
+      add(geometry,0,px,y ?? .052 + inlayLayer++ * .00035,pz,-Math.PI/2,0,ry);
     };
-    const slab = (px,pz,w,d,color,ry=0) => inlay(new THREE.PlaneGeometry(w,d),px,pz,color,ry);
-    const radius=Math.min(hw,hh)-2.3;
-    if(tower) {
-      const dark = theme==='crypt' ? 0x404a60 : theme==='throne' ? 0x59463e : 0x423b58;
-      const light = theme==='crypt' ? 0x8290a1 : theme==='throne' ? 0xac9575 : 0x8b809f;
-      // Continuous framed aisles make the playable footprint legible without adding colliders.
-      for(const side of [-1,1]) {
-        slab(x+side*(hw-1.4),z,.65,room.h-2.1,dark);
-        slab(x,z+side*(hh-1.4),room.w-2.1,.65,dark);
-        box(x+side*(hw-1.4),.055,z,.08,.02,room.h-2.1,1);
-        box(x,.055,z+side*(hh-1.4),room.w-2.1,.02,.08,1);
-      }
-      const role=room.type;
-      const sides=theme==='abyss'?6:theme==='throne'?8:12;
-      const emblemRadius=radius*(role==='boss'?.86:role==='elite'?.74:.59);
-      if(role==='start' || role==='treasure') {
-        // Arrival compass / treasury diamond have distinct silhouettes from encounter circles.
-        slab(x,z,emblemRadius*1.5,emblemRadius*1.5,dark,Math.PI/4);
-        for(const side of [-1,1]) {
-          box(x+side*emblemRadius*.7,.055,z,.10,.02,emblemRadius*1.4,1);
-          box(x,.055,z+side*emblemRadius*.7,emblemRadius*1.4,.02,.10,1);
-        }
-        const count=role==='treasure'?4:8;
-        for(let i=0;i<count;i++) {
-          const a=i*Math.PI*2/count;
-          slab(x+Math.sin(a)*emblemRadius*.4,z+Math.cos(a)*emblemRadius*.4,.55,1.3,light,a);
-        }
-      } else {
-        inlay(new THREE.RingGeometry(emblemRadius*.61,emblemRadius,sides),x,z,dark);
-        ring(x,.065,z,emblemRadius,.06,1);
-        if(role==='boss') ring(x,.065,z,emblemRadius*.6,.07,1);
-        const count=role==='elite'?6:sides;
-        const phase=(room.id%3)*Math.PI/count;
-        for(let i=0;i<count;i++) {
-          const a=i*Math.PI*2/count+phase;
-          slab(x+Math.sin(a)*emblemRadius*.8,z+Math.cos(a)*emblemRadius*.8,.48,emblemRadius*.29,light,a);
-        }
-      }
-      // Door sills use actual corridor rectangles, so offset L-shaped entries stay aligned.
-      const sills=new Set();
-      for(const corridor of floor.corridors || []) for(const axis of ['x','z']) for(const side of [-1,1]) {
-        const edge=(axis==='x'?x+side*hw:z+side*hh);
-        const c=axis==='x'?corridor.x:corridor.z, half=(axis==='x'?corridor.w:corridor.h)/2;
-        if(c-half>=edge || c+half<=edge) continue;
-        const cross=axis==='x'?corridor.z:corridor.x, crossHalf=(axis==='x'?corridor.h:corridor.w)/2;
-        const center=axis==='x'?z:x, roomHalf=axis==='x'?hh:hw;
-        const lo=Math.max(cross-crossHalf,center-roomHalf+.5), hi=Math.min(cross+crossHalf,center+roomHalf-.5);
-        if(hi-lo<1) continue;
-        const key=`${axis}:${side}:${lo.toFixed(1)}:${hi.toFixed(1)}`;
-        if(sills.has(key)) continue; sills.add(key);
-        const mid=(lo+hi)/2;
-        slab(axis==='x'?edge:mid,axis==='x'?mid:edge,axis==='x'?1.1:hi-lo,axis==='x'?hi-lo:1.1,dark);
-        for(const step of [-.32,.32]) box(axis==='x'?edge+step:mid,.055,axis==='x'?mid:edge+step,
-          axis==='x'?.08:hi-lo,.02,axis==='x'?hi-lo:.08,1);
-      }
-      group.userData.roomDetails ||= [];
-      group.userData.roomDetails.push({roomId:room.id,theme,role,thresholds:sills.size,landmark:!!freeSide});
-    } else if(theme==='garden') {
-      inlay(new THREE.RingGeometry(radius*.62,radius*.92,48),x,z,0x455d45);
-      ring(x,.065,z,radius*.62,.10,1);
-      ring(x,.065,z,radius*.92,.10,1);
-      for(let i=0;i<8;i++) {
-        const a=i*Math.PI/4, px=x+Math.sin(a)*radius*.77, pz=z+Math.cos(a)*radius*.77;
-        slab(px,pz,.9,1.5,0x93a874,a);
-        box(px,.055,pz,.10,.025,1.7,1,a);
-      }
-      for(const sx of [-1,1]) for(const sz of [-1,1]) {
-        const px=x+sx*(hw-3.2), pz=z+sz*(hh-3.2);
-        slab(px,pz,3,2.5,0x304b35);
-        for(let petal=0;petal<4;petal++) {
-          const a=petal*Math.PI/2;
-          slab(px+Math.sin(a)*.65,pz+Math.cos(a)*.65,.45,1,0x829b61,a);
-        }
-      }
-    } else if(theme==='forge') {
-      // 넓은 강철 환기구와 양옆 냉각로가 정원 원형 바닥과 다른 직선 실루엣을 만든다.
-      for(const side of [-1,1]) {
-        const px=x+side*Math.min(5,hw*.46);
-        slab(px,z,3.2,Math.max(6,room.h-7),0x242b31);
-        for(let dz=-hh+4;dz<=hh-4;dz+=1.4) {
-          box(px,.055,z+dz,3.1,.025,.16,1);
-          for(const edge of [-1,1]) cylinder(px+edge*1.35,.065,z+dz,.09,.09,.02,1,6);
-        }
-        box(x+side*(hw-2),.055,z,.55,.025,room.h-5,2);
-        box(x+side*(hw-2.5),.055,z,.12,.025,room.h-5,1);
-      }
-    } else if(theme==='frost') {
-      inlay(new THREE.RingGeometry(radius*.72,radius,6),x,z,0x6389a6);
-      for(let i=0;i<6;i++) {
-        const a=i*Math.PI/3;
-        box(x+Math.sin(a)*radius*.43,.055,z+Math.cos(a)*radius*.43,.16,.025,radius*.85,2,a);
-        for(const side of [-1,1]) {
-          const b=a+side*Math.PI/3, cx=x+Math.sin(a)*radius*.63, cz=z+Math.cos(a)*radius*.63;
-          box(cx+Math.sin(b)*.8,.055,cz+Math.cos(b)*.8,.11,.025,1.7,2,b);
-        }
-      }
-      for(const side of [-1,1]) {
-        slab(x+side*(hw-2.6),z,1.7,room.h-6,0x36465e);
-        for(let dz=-hh+4;dz<hh-3;dz+=1.1) box(x+side*(hw-2.6),.055,z+dz,1.5,.025,.13,1);
-      }
-    } else if(theme==='tide') {
-      for(const fraction of [.45,.79]) {
-        inlay(new THREE.RingGeometry(radius*fraction-.34,radius*fraction+.34,64),x,z,0x24546b);
-        ring(x,.065,z,radius*fraction-.34,.055,1);
-        ring(x,.065,z,radius*fraction+.34,.055,2);
-      }
-      for(const side of [-1,1]) {
-        slab(x+side*radius*.55,z,.7,room.h-4,0x285a6d);
-        for(let dz=-hh+3;dz<hh-2;dz+=2) box(x+side*radius*.55,.055,z+dz,.7,.025,.10,1);
-      }
-      for(let i=0;i<12;i++) {
-        const a=i*Math.PI/6;
-        box(x+Math.sin(a)*radius*.93,.055,z+Math.cos(a)*radius*.93,.11,.025,i%3===0?1.2:.6,1,a);
-      }
-    } else if(theme==='crown') {
-      inlay(new THREE.CircleGeometry(radius*.86,10),x,z,0x252333);
-      ring(x,.065,z,radius*.86,.11,1);
-      ring(x,.065,z,radius*.38,.10,1);
-      for(let i=0;i<10;i++) {
-        const a=i*Math.PI/5;
-        box(x+Math.sin(a)*radius*.60,.055,z+Math.cos(a)*radius*.60,.10,.025,radius*.44,1,a);
-        if(i%2===0) {
-          slab(x+Math.sin(a)*radius*.59,z+Math.cos(a)*radius*.59,1.25,1.25,0x6c6267,Math.PI/4+a);
-          box(x+Math.sin(a)*radius*.59,.065,z+Math.cos(a)*radius*.59,.14,.02,1.1,1,a);
+    const slab = (px,pz,w,d,color,ry=0,y=null) => inlay(new THREE.PlaneGeometry(w,d),px,pz,color,ry,y);
+    // 실제 회랑과 맞닿은 문턱만 길을 표시한다. 장식 원반은 전투 중심을 비운다.
+    const dark = theme === 'garden' ? 0x344d45 : theme === 'forge' ? 0x273239
+      : theme === 'frost' ? 0x425b73 : theme === 'tide' ? 0x2b525d
+      : theme === 'crown' ? 0x534c59 : theme === 'throne' ? 0x59463e
+      : theme === 'abyss' ? 0x423b58 : 0x404a60;
+    const pale = theme === 'garden' ? 0xc5c5a9 : theme === 'forge' ? 0x9aa49e
+      : theme === 'frost' ? 0xabc4ce : theme === 'tide' ? 0x9abfba
+      : theme === 'crown' ? 0xc0b398 : theme === 'throne' ? 0xac9575
+      : theme === 'abyss' ? 0xaaa2be : 0x9daab8;
+    // 양쪽 가장자리는 얕은 석재 보행 띠다. 별도 재질이나 이동 마스크를 만들지 않는다.
+    // 정원의 평면 모서리 장식은 석재 배치에 넣어 금속 랜드마크의 컬링/그림자 범위를 넓히지 않는다.
+    // 기존 금속 알베도를 석재 기본색으로 나눠 같은 황동/밝은 색 의도를 보존한다.
+    const cornerColor = new THREE.Color(colors[1]), stoneColor = materials[0].color;
+    cornerColor.r /= Math.max(.01,stoneColor.r);
+    cornerColor.g /= Math.max(.01,stoneColor.g);
+    cornerColor.b /= Math.max(.01,stoneColor.b);
+    for (const side of [-1,1]) {
+      slab(x + side * (hw - 1.5), z, .55, room.h - 2.1, dark);
+      slab(x, z + side * (hh - 1.5), room.w - 2.1, .55, dark);
+      for (const corner of [-1,1]) {
+        if (theme === 'garden') {
+          slab(x + side * (hw - 1.5), z + corner * (hh - 1.5), .08, .8, cornerColor, 0, .065);
+          slab(x + side * (hw - 1.5), z + corner * (hh - 1.5), .8, .08, cornerColor, 0, .065);
+        } else {
+          box(x + side * (hw - 1.5), .055, z + corner * (hh - 1.5), .08, .02, .8, 1);
+          box(x + side * (hw - 1.5), .055, z + corner * (hh - 1.5), .8, .02, .08, 1);
         }
       }
     }
+    const sills = new Set();
+    for (const corridor of floor.corridors || []) for (const axis of ['x','z']) for (const side of [-1,1]) {
+      const edge = axis === 'x' ? x + side * hw : z + side * hh;
+      const c = axis === 'x' ? corridor.x : corridor.z;
+      const half = (axis === 'x' ? corridor.w : corridor.h) / 2;
+      if (c - half >= edge || c + half <= edge) continue;
+      const cross = axis === 'x' ? corridor.z : corridor.x;
+      const crossHalf = (axis === 'x' ? corridor.h : corridor.w) / 2;
+      const center = axis === 'x' ? z : x, roomHalf = axis === 'x' ? hh : hw;
+      const lo = Math.max(cross - crossHalf, center - roomHalf + .5);
+      const hi = Math.min(cross + crossHalf, center + roomHalf - .5);
+      if (hi - lo < 1) continue;
+      const key = `${axis}:${side}:${lo.toFixed(1)}:${hi.toFixed(1)}`;
+      if (sills.has(key)) continue;
+      sills.add(key);
+      const mid = (lo + hi) / 2;
+      const along = Math.min(axis === 'x' ? hw - 3.2 : hh - 3.2, 6);
+      const stripeWidth = Math.min(2.35, hi - lo - .5);
+      // 문턱의 실제 폭과 L자 회랑의 어긋난 입구 위치를 보존한다.
+      slab(axis === 'x' ? edge : mid, axis === 'x' ? mid : edge,
+        axis === 'x' ? 1.05 : hi - lo, axis === 'x' ? hi - lo : 1.05, pale);
+      if (along > .5 && stripeWidth > .5) {
+        const into = edge - side * (along / 2 + .7);
+        slab(axis === 'x' ? into : mid, axis === 'x' ? mid : into,
+          axis === 'x' ? along : stripeWidth, axis === 'x' ? stripeWidth : along,
+          theme === 'garden' ? 0x98a79b : dark);
+      }
+      // 입구 양옆의 표식은 방 역할을 나타내며 중앙 발밑을 덮지 않는다.
+      const role = room.type, count = role === 'boss' ? 3 : role === 'elite' ? 2 : 1;
+      for (const wing of [-1,1]) for (let mark = 0; mark < count; mark++) {
+        const inward = edge - side * (1.9 + mark * .62);
+        const across = mid + wing * Math.min((hi - lo) / 2 + .42, roomHalf - .9);
+        if (Math.abs(across - center) > roomHalf - .4) continue;
+        const px = axis === 'x' ? inward : across, pz = axis === 'x' ? across : inward;
+        const diamond = role === 'treasure';
+        slab(px, pz, diamond ? .64 : axis === 'x' ? .23 : .64,
+          diamond ? .64 : axis === 'x' ? .64 : .23, pale, diamond ? Math.PI / 4 : 0);
+      }
+      if (room.type === 'start') {
+        const inward = edge - side * 2;
+        slab(axis === 'x' ? inward : mid, axis === 'x' ? mid : inward,
+          axis === 'x' ? .15 : stripeWidth, axis === 'x' ? stripeWidth : .15, pale);
+      }
+    }
+    if (theme === 'garden') {
+      // 네 외곽 정원 패널과 잎의 큰 면: 두꺼운 검은 원반 대신 비워 둔 옥빛 중정.
+      for (const sx of [-1,1]) for (const sz of [-1,1]) {
+        const px = x + sx * (hw - 3.2), pz = z + sz * (hh - 3.2);
+        slab(px, pz, 2.6, 1.9, dark);
+        slab(px, pz, .8, 1.35, pale, sx * sz * Math.PI / 4);
+        slab(px + sx * .55, pz + sz * .25, .42, .85, 0x829b84, sx * sz * Math.PI / 4);
+      }
+      if (room.gardenMastery?.version === GARDEN_MASTERY.version) {
+        // 열린 하단의 두 대각선을 얕은 이음선으로 읽힌다. 기존 석재 배치에 병합한다.
+        // 예고가 덮은 순간에는 안전한 길이 아니다. 물리 마스크와 조작판은 그대로 둔다.
+        for (const path of room.gardenMastery.diagonals) {
+          const dx = path.toX - path.fromX, dz = path.toZ - path.fromZ, length = Math.hypot(dx, dz);
+          const rotation = -Math.atan2(dz, dx);
+          slab((path.fromX + path.toX) / 2, (path.fromZ + path.toZ) / 2, length, .12, 0x9aab9d, rotation);
+          slab(path.toX, path.toZ, .65, .12, pale, rotation + Math.PI / 2);
+        }
+      }
+    } else if (theme === 'forge') {
+      // 냉각 격자는 양쪽 가장자리로 밀어 근접 전투와 위험 예고의 중앙을 비운다.
+      for (const side of [-1,1]) {
+        const px = x + side * (hw - 3.25);
+        slab(px,z,1.6,Math.max(4,room.h - 8),dark);
+        for (let dz = -hh + 4; dz <= hh - 4; dz += 1.8)
+          slab(px,z + dz,1.5,.13,pale);
+      }
+    } else if (theme === 'frost') {
+      for (const sx of [-1,1]) for (const sz of [-1,1]) {
+        const px = x + sx * (hw - 3), pz = z + sz * (hh - 3);
+        slab(px,pz,1.7,.16,pale,Math.PI / 4);
+        slab(px,pz,1.7,.16,pale,-Math.PI / 4);
+      }
+    } else if (theme === 'tide') {
+      for (const side of [-1,1]) {
+        const px = x + side * (hw - 3);
+        slab(px,z,.65,room.h - 7,dark);
+        for (let dz = -hh + 4; dz < hh - 3; dz += 2.2) slab(px,z + dz,.6,.10,pale);
+      }
+    } else if (theme === 'crown' || tower) {
+      for (const sx of [-1,1]) for (const sz of [-1,1]) {
+        const px = x + sx * (hw - 2.6), pz = z + sz * (hh - 2.6);
+        slab(px,pz,.9,.9,dark,Math.PI / 4);
+        if (room.type === 'boss' || room.type === 'treasure') slab(px,pz,.36,.36,pale,Math.PI / 4);
+      }
+    }
+    group.userData.roomDetails ||= [];
+    group.userData.roomDetails.push({ roomId: room.id, theme, role: room.type, thresholds: sills.size, landmark: !!freeSide, centerClear: true });
     // Story structures are wall-mounted outside the playable rectangles. They add no hidden
     // collision: room/corridor rectangles remain the single map and AUTO authority.
     if (room.landmark && freeSide && ['start','elite','boss'].includes(room.type)) {
@@ -409,18 +442,30 @@ export function buildRegionArchitecture(floor, theme) {
       }
       buildingLandmark = false;
     }
-    for(let i=0;i<chunks.length;i++) {
-      if(!chunks[i].length) continue;
-      const geometry=mergeGeometries(chunks[i],false);
-      for(const part of chunks[i]) part.dispose();
-      if(!geometry) continue;
-      ownedGeometry.push(geometry);
-      const mesh=new THREE.Mesh(geometry,materials[i]);
-      mesh.name=`${theme}-room-${room.id}-${i}`;
-      mesh.castShadow=i!==2; mesh.receiveShadow=true;
-      geometry.computeBoundingSphere(); group.add(mesh);
+    const batchId = roomBatches.get(room), batch = batches[batchId];
+    for (let i = 0; i < chunks.length; i++) {
+      if (!chunks[i].length) continue;
+      const count = chunks[i].reduce((sum, part) => sum + part.getAttribute('position').count, 0);
+      // 원래 방의 정점 순서를 유지해 디버그·통로 검사가 이웃 방을 포함하지 않게 한다.
+      const range = { roomId: room.id, materialRole: i, batchId, start: batch.vertices[i], count };
+      batch.ranges[i].push(range); group.userData.roomGeometry.push(range);
+      batch.vertices[i] += count; batch.chunks[i].push(...chunks[i]);
     }
     group.userData.landmarks.push({roomId:room.id,theme,kind:room.landmark || theme,label:room.label || '',role:room.type,x:freeSide ? x+freeSide[0]*(hw+2.2) : x,z:freeSide ? z+freeSide[1]*(hh+2.2) : z});
+  }
+  for (const [batchId, batch] of batches.entries()) for (let i = 0; i < batch.chunks.length; i++) {
+    if (!batch.chunks[i].length) continue;
+    const geometry = mergeGeometries(batch.chunks[i], false);
+    for (const part of batch.chunks[i]) part.dispose();
+    if (!geometry) continue;
+    ownedGeometry.push(geometry);
+    const mesh = new THREE.Mesh(geometry, materials[i]);
+    const ids = batch.rooms.map(room => room.id);
+    mesh.name = ids.length === 1 ? `${theme}-room-${ids[0]}-${i}` : `${theme}-rooms-${ids.join('-')}-${i}`;
+    mesh.userData.batchId = batchId; mesh.userData.materialRole = i;
+    mesh.userData.roomRanges = batch.ranges[i];
+    mesh.castShadow = i !== 2; mesh.receiveShadow = true;
+    geometry.computeBoundingBox(); geometry.computeBoundingSphere(); group.add(mesh);
   }
   return group;
 }

@@ -163,8 +163,14 @@ test('prepare는 공유 화염 셰이더를 실제 컴파일 호출에 포함하
   texture.clone=()=>{throw new Error('warmup must not clone fire texture');};
   const fx=fireFixture();for(const method of ['flash','ring','pillar','flipbook'])fx[method]=()=>{};
   const previous={},target={},compiled:THREE.ShaderMaterial[]=[],initialized:THREE.Texture[]=[];let current=previous;
+  const properties=new Map<THREE.Material,any>(),program={program:{},isReady:()=>true},gl={isContextLost:()=>false};
   const renderer={getRenderTarget:()=>current,setRenderTarget:(t:any)=>{current=t;},shadowMap:{enabled:false},initTexture:(t:THREE.Texture)=>initialized.push(t),
-    compileAsync:async(scene:THREE.Scene)=>{expect(current).toBe(target);scene.traverse((o:any)=>{if(o.material?.uniforms?.uOffset)compiled.push(o.material);});}};
+    getContext:()=>gl,extensions:{get:()=>null},
+    properties:{has:(m:THREE.Material)=>properties.has(m),get:(m:THREE.Material)=>properties.get(m)},
+    compile:(scene:THREE.Scene)=>{expect(current).toBe(target);const materials=new Set<THREE.Material>();scene.traverse((o:any)=>{
+      for(const material of Array.isArray(o.material)?o.material:[o.material])if(material){materials.add(material);properties.set(material,{currentProgram:program});}
+      if(o.material?.uniforms?.uOffset)compiled.push(o.material);
+    });return materials;}};
   try {
     await fx.prepare(renderer,{},target);
     expect(compiled).toHaveLength(1);expect(compiled[0]).toBe(fx._mats.firePillar);expect(compiled[0].uniforms.map.value).toBe(texture);

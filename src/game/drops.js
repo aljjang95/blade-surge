@@ -23,7 +23,17 @@ export class DropSystem {
     this.gold = 0; this.stones = 0; this.stones2 = 0; this.stones3 = 0; this.fragments = 0; this.loot = [];
     this._geoCoin = null; this._matCache = {};
     this._lootMaterials = new Map();
+    this._preparationVisuals = null;
     this.beamMat = new THREE.SpriteMaterial({ map: softCircleTex(), blending: THREE.AdditiveBlending, depthWrite: false, transparent: true });
+  }
+  /** 실제 드랍과 같은 천/금속 재질을 준비하되 필드·보상 상태에는 등록하지 않는다. */
+  preparationVisuals() {
+    if (!this._preparationVisuals) {
+      this._preparationVisuals = [ITEM_BY_ID.b_cloth, ITEM_BY_ID.w_iron]
+        .map(item => createLootVisual(item, this._lootMaterials));
+    }
+    // 비동기 준비마다 부모가 독립적인 껍데기를 빌려 주고 형상·재질은 공유한다.
+    return this._preparationVisuals.map(root => root.clone());
   }
   setup(dungeonGltf) {
     // 코인 메시 (던전 킷) — 없으면 실린더 폴백

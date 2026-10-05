@@ -49,7 +49,7 @@ import './ui/citadel-integration.css';
 const BOOT_TIPS = [
   '<b>진공기</b>로 적을 끌어모은 뒤 한 번에 쓸어담는 것이 몹몰이의 기본이다.',
   '적의 공격 직전 <b>회피</b>하면 퍼펙트 회피 — 시간이 느려지고 반격 창이 열린다.',
-  '<b>미니맵</b>의 화살표는 아직 못 찾은 보스방의 방향이다.',
+  '<b>미니맵</b>에서 발견한 방과 지금 해야 할 행동을 확인하라. 직접 탐험해 다음 길을 찾아라.',
   '싸움 소리를 들은 <b>이웃 방의 무리</b>가 복도로 몰려온다. 입구를 등지지 마라.',
   '같은 세트 <b>2개·4개</b>를 맞추면 플레이 방식이 바뀌는 세트 효과가 열린다.',
   '<b>강화 +8</b>까지는 실패가 없다. +12부터는 파괴 위험 — 보호석을 챙겨라.',
@@ -71,6 +71,8 @@ class App {
     this.fx.focus.bindBloom(this.renderer.bloom);
     this.renderer.heroEffectFocus = this.fx.focus;
     this.renderer.heroEffectTarget = () => this.mode === 'battle' && this.battle?.active ? this.battle.player : null;
+    this.renderer.playerSilhouetteTarget = () => this.mode === 'battle' && !this.stageStarting && !this.contextLost
+      && this.battle?.active ? this.battle.player : null;
     this.input = new Input();
     this.eco = new Economy();
     this.funnel = createFunnelLog();
@@ -102,12 +104,30 @@ class App {
     this.applySettings();
     this.canvas.addEventListener('webglcontextlost', event => {
       event.preventDefault(); this.contextLost = true; this.input.clear(); this.citadel.clearInput();
+      this._graphicsGeneration = (this._graphicsGeneration || 0) + 1;
+      this.renderer.playerSilhouette.contextLost();
       if (this.battle?.active) this.ui.pause(true);
       $('render-recovery').hidden = false;
     });
-    this.canvas.addEventListener('webglcontextrestored', () => {
+    this.canvas.addEventListener('webglcontextrestored', async () => {
+      const generation = this._graphicsGeneration = (this._graphicsGeneration || 0) + 1;
       try {
         this.renderer.rebuildEnvironment(Object.values(this.models).map(gltf => gltf.scene)); this.renderer.resize(true);
+        this.renderer.playerSilhouette.restoreTarget();
+        const battle = this.battle, actor = battle?.active ? battle.player : null;
+        if (actor && !actor.disposed) {
+          const silhouette = this.renderer.playerSilhouette.preparation(this.renderer.r, actor, this.renderer.composer.writeBuffer);
+          if (!silhouette) throw new Error('player silhouette recovery has no current model');
+          const current = () => this._graphicsGeneration === generation && battle === this.battle
+            && battle.active && battle.player === actor && silhouette.isCurrent();
+          const prepared = await this.fx.prepare(this.renderer.r, this.models, this.renderer.composer.readBuffer,
+            [], [], current, silhouette.targets, { reflectCompiledPrograms: true });
+          if (this._graphicsGeneration !== generation) return;
+          if (current()) {
+            if (!prepared || !silhouette.complete()) throw new Error('player silhouette recovery canceled');
+          }
+        }
+        if (this._graphicsGeneration !== generation) return;
         this.contextLost = false; this.last = performance.now(); $('render-recovery').hidden = true;
         if (this.battle?.active) this.ui.toast('화면이 복구됐습니다. 계속 버튼으로 전투를 재개하세요.');
       } catch (error) { console.error('Graphics recovery failed', error); }

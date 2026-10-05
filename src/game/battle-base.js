@@ -22,6 +22,7 @@ import { resolveJobHero } from '../data/jobs.js';
 import { buildExpeditionWorld, expeditionRoster, applyBattleConsumable, canApplyBattleConsumable } from './expedition-combat.js';
 import { ConquestRun } from './expedition-conquests.js';
 import { createRouteObjectives } from './route-objectives.js';
+import { createMapTactics } from './map-tactics.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
 import { dungeonVisualFor } from '../data/dungeon-visuals.js';
@@ -83,10 +84,13 @@ export class Battle {
     this.world = stage.expedition ? buildExpeditionWorld(stage) : new Floor(stage.idx, stage.chapter.theme, stage.party?.seed, stage.dungeon?.layout);
     this.conquest = stage.expedition?.conquestId ? new ConquestRun(stage, this.world, this.app.expeditionTicket) : null;
     this.routeObjectives = createRouteObjectives(stage, this.world);
+    this.mapTactics = createMapTactics(stage, this.world);
     this.autoTarget = this.routeObjectives?.autoRoom() || null;
     this.visual = dungeonVisualFor(stage);
     this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
     await this.routeObjectives?.prepareView?.(this.scene);
+    if (this._startGeneration !== startGeneration) return;
+    await this.mapTactics?.prepareView(this.scene, this);
     if (this._startGeneration !== startGeneration) return;
     this.renderer.setBattleVisual?.(this.visual, stage);
     this.roomsCleared = 0; this.bossFound = false;
@@ -97,8 +101,17 @@ export class Battle {
     this.sp.configureSummons?.(equipBonus.summons || []);
     const sr = this.world.startRoom;
     this.player.pos.set(sr.x, 0, sr.z); this.player.yaw = 0;
-    await this.fx.prepare(this.renderer.r, this.app.models, this.renderer.composer.readBuffer);
+    // 실제 경고·드랍 재질을 출격 준비에 포함해 첫 처치/예고 때의 컴파일을 막는다.
+    this.hazards = stage.expedition?.kind === 'arena' ? null : new RegionHazards(this);
+    const preparationObjects = fieldDropsAllowed(stage) ? this.drops.preparationVisuals() : [];
+    const readinessObjects = this.hazards ? [...preparationObjects, this.hazards.group] : preparationObjects;
+    const silhouette = this.renderer.playerSilhouette?.preparation(this.renderer.r, this.player, this.renderer.composer.writeBuffer);
+    const prepared = await this.fx.prepare(this.renderer.r, this.app.models, this.renderer.composer.readBuffer,
+      preparationObjects, readinessObjects, () => this._startGeneration === startGeneration,
+      silhouette ? silhouette.targets : [], { reflectCompiledPrograms: true });
     if (this._startGeneration !== startGeneration) return;
+    if (prepared === false) throw new Error('render preparation canceled');
+    if (silhouette && !silhouette.complete()) throw new Error('player silhouette preparation canceled');
     this.drops.setup(this.app.models.dungeon);
     this.renderer.rig.mode = 'battle'; this.renderer.rig.target.copy(this.player.pos); this.renderer.rig.pos.copy(this.player.pos).add(this.renderer.rig.offset);
     const weaponsGltf = await loadModel('skel_weapons');
@@ -119,7 +132,6 @@ export class Battle {
     audio.waveHorn({ vol: 0.45 });
     this.heroId = heroId;
     this.bossKey = ENEMIES[stage.dungeonBossId || stage.encounter?.enemyId || stage.chapter.boss]?.voiceKey || stage.chapter.boss;
-    this.hazards = stage.expedition?.kind === 'arena' ? null : new RegionHazards(this);
     this.after(1.2, () => { if (this.active && stage.objective) this.ui.toast(stage.objective, 'gold'); });
     this.after(0.25, () => { if (this.active) audio.voice(heroVoiceName(heroId, 'select'), { min: 20 }); });
     this.after(3.2, () => { if (this.active) audio.voice('floor_start', { min: 30 }); });   // 층 시작 안내 ("The seal is broken" 는 unsealBoss 의 seal_break 가 맡는다)
@@ -416,7 +428,7 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
+  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const runtimeType = !this.stage.expedition && type === this.stage.encounter?.enemyId && this.stage.dungeonBossId ? this.stage.dungeonBossId : type;
@@ -478,7 +490,7 @@ export class Battle {
     this.kills++; this.waveKilled++; this.killStreak++; this.killStreakT = 3.4;
     const streakTier = this.killStreak >= 20 ? '전장의 지배자' : this.killStreak >= 10 ? '광란' : '사냥 본능';
     this.ui?.setKillStreak?.(this.killStreak, streakTier);
-    if ([5, 10, 20, 30].includes(this.killStreak)) this.ui.toast(`${this.killStreak}연속 처치 · ${streakTier}`, this.killStreak >= 20 ? 'red' : 'gold');
+    if ([5, 10, 20, 30].includes(this.killStreak)) this.ui.toast(`${this.killStreak}연속 처치 · ${streakTier}`, this.killStreak >= 20 ? 'red' : 'gold', { urgent: false });
     this.player.addUlt(ultKillGain(e)); this.player.addMp?.(2);
     if (this.sp) this.sp.onKill(e);
     if (this.hasProc('blood_leech') && this.player.alive) { const heal = Math.floor(this.player.maxHp * 0.03); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); this.fx.embers(this.player.pos, 0xff3a5a, { n: 4, radius: 0.6, life: 0.6, rise: 2 }); if (this.fx.dmgLayer.children.length < 20) this.fx.damage(this.player.pos, heal, { kind: 'heal', text: '+' + heal }); }
@@ -510,6 +522,7 @@ export class Battle {
     }
   }
   onPlayerDeath() {
+    this.mapTactics?.cancel();
     this.sp?.armory.clear();
     this.input.enabled = false; this.input.clear();
     this.app.companionAgent?.observe('low-hp', { floor: this.stage?.idx || 0 });
@@ -526,7 +539,7 @@ export class Battle {
     audio.playMusic(musicForScene({ stage: this.stage, boss: !!this.boss }), MUSIC_MIX); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12], step: 0.08 });
     if (this.bossDefeated) this.after(.8, () => this.victory());
   }
-  defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, expedition: this.stage?.expedition || null, conquest: this.conquest?.finish(false) || null, routeObjective: this.routeObjectives?.finish(false) || null, treasureRooms: this.treasureRooms }; this.ui.showResult(this, false); }
+  defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, expedition: this.stage?.expedition || null, conquest: this.conquest?.finish(false) || null, routeObjective: this.routeObjectives?.finish(false) || null, mapTactics: this.mapTactics?.finish() || null, treasureRooms: this.treasureRooms }; this.ui.showResult(this, false); }
   victory() {
     if (this.routeObjectives && (this.paused || !this.bossDefeated || !this.routeObjectives.canWin())) return;
     if (!this.active || !this.player?.alive) return; this.active = false; this.input.enabled = false; this.input.clear();
@@ -541,7 +554,7 @@ export class Battle {
     const optional = this.world ? this.world.rooms.filter((r) => r.type !== ROOM_TYPE.START && r.type !== ROOM_TYPE.BOSS) : [];
     const optionalCleared = optional.filter((r) => r.cleared).length;
     const fullClear = optional.length > 0 && optionalCleared === optional.length;
-    this.result = { win: true, stars, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, rooms: this.roomsCleared, totalRooms: this.world ? this.world.rooms.length : 0, optionalRooms: optional.length, optionalCleared, fullClear, treasureRooms: this.treasureRooms, expedition: this.stage.expedition || null, conquest: this.conquest?.finish(true) || null, routeObjective: this.routeObjectives?.finish(true) || null };
+    this.result = { win: true, stars, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, rooms: this.roomsCleared, totalRooms: this.world ? this.world.rooms.length : 0, optionalRooms: optional.length, optionalCleared, fullClear, treasureRooms: this.treasureRooms, expedition: this.stage.expedition || null, conquest: this.conquest?.finish(true) || null, routeObjective: this.routeObjectives?.finish(true) || null, mapTactics: this.mapTactics?.finish() || null };
     this.after(1.6, () => this.ui.showResult(this, true));
   }
 
@@ -627,7 +640,13 @@ export class Battle {
     const effect = frontierEffectForStage(this.stage);
     if (hostile && effect?.kind === 'projectileDamageMultiplier') dmg *= effect.value;
     let mesh = null;
-    if (visual !== null && size > 0) { mesh = visual === 'arrow' ? createArrowVisual(color, size, dir) : this.fx.orb(color, size); mesh.position.copy(pos); this.scene.add(mesh); }
+    if (visual !== null && size > 0) {
+      mesh = visual === 'arrow' ? createArrowVisual(color, size, dir) : this.fx.orb(color, size);
+      // 실제 투사체의 후광에는 기존 마스크만 적용하고 새 몸통·장비
+      // 장식 효과 감쇠는 적용하지 않는다. 외형과 명중 타이밍은 유지한다.
+      if (mesh.userData.halo?.material) mesh.userData.halo.material.userData.heroCosmeticMask = false;
+      mesh.position.copy(pos); this.scene.add(mesh);
+    }
     const readableTrail = trail ?? (!hostile && kind === 'magic' ? color : null);
     this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, stun, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, counter, comboToken, skillCast, basic });
   }
@@ -710,6 +729,8 @@ export class Battle {
     if (this.active) this.player.handleInput(this.input, dt);
     this.routeObjectives?.observePlayer?.(this.player);
     this.player.update(dt);
+    if (this.input.consume?.('interact')) this.mapTactics?.interact(this);
+    this.mapTactics?.update(this, dt);
     if (this.stage.party) this.app.party.updateHostActors(dt);
     if (this.active && this.stage.expedition) this.updateExpedition(dt);
     this.hazards?.update(dt);

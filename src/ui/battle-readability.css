@@ -1,0 +1,160 @@
+/* 중앙 전장을 비워 두고 상태와 의도적인 조작은 가장자리에 배치한다. */
+/* 짧은 상태어만 조정한다. 원래 애니메이션 이름·시간과 숫자는 유지한다. */
+#dmg-layer .dmg.status.compact-status{min-width:0;padding:2px 5px;font-size:12px;line-height:16px;letter-spacing:0;border-radius:4px;color:#eff4eb;background:#11251ee6;border-color:#b6cfbe88;text-shadow:0 1px 2px #000}
+#dmg-layer .compact-status[data-combat-status=block]{color:#d8e8ef;border-color:#99c4d6}
+#dmg-layer .compact-status[data-combat-status=guard-break]{color:#ffe0a0;border-color:#e5b866}
+#dmg-layer .compact-status[data-combat-status=posture-break]{color:#e5ceff;border-color:#be9dea}
+#dmg-layer .compact-status[data-combat-status=miss]{color:#e0e6da;border-color:#a6b4a0}
+/* Actual header and active cue bounds reserve a separate row for the global HUD-sibling toast. */
+body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,calc(64px + var(--sat,0px)))}
+.experience-v2.oath-visual #hud.battle-readability .hud-top{grid-template-columns:220px minmax(0,1fr) 112px;gap:14px;padding-top:0}
+.experience-v2.oath-visual #hud.battle-readability .hud-player{padding:7px 8px;background:#12251fd9;border-color:#b6b89e40;gap:7px}
+.experience-v2.oath-visual #hud.battle-readability .hud-portrait{flex:0 0 36px;width:36px;height:36px;border-color:#c3b17b}
+.experience-v2.oath-visual #hud.battle-readability .hud-bars{gap:3px}
+.experience-v2.oath-visual #hud.battle-readability .hud-center{position:absolute;left:244px;top:0;width:calc(100% - 480px);text-align:left;opacity:1}
+/* 밝은 지형에서도 스테이지 글자만 또렷하게 보이도록 작은 받침을 둔다. */
+.experience-v2.oath-visual #hud.battle-readability .hud-center .wave,.experience-v2.oath-visual #hud.battle-readability .hud-center .stage-name{width:fit-content;max-width:100%;box-sizing:border-box;padding:0 5px;border-radius:3px;background:#10231ee8;text-shadow:0 1px 2px #000}
+.experience-v2.oath-visual #hud.battle-readability .hud-center .wave{color:#f2ddb0;font-size:15px;line-height:22px;font-weight:700}
+.experience-v2.oath-visual #hud.battle-readability .hud-center .stage-name{color:#d6ddce;font-size:10px;line-height:16px}
+.experience-v2.oath-visual #hud.battle-readability .hud-right{width:112px}
+.experience-v2.oath-visual #hud.battle-readability .hud-right-top{position:absolute;top:0;right:0;display:flex;width:auto;max-width:none;gap:6px}
+.experience-v2.oath-visual #hud.battle-readability .hud-right-top .hud-btn{min-width:44px;min-height:44px;height:44px;padding:0 9px;border-color:#b6b89e40;font-size:11px;background:#142b24e8}
+.experience-v2.oath-visual #hud.battle-readability #btn-auto{min-width:52px}
+.experience-v2.oath-visual #hud.battle-readability #btn-auto.on{background:#b6d2ac;color:#14291f}
+.experience-v2.oath-visual #hud.battle-readability .battle-earned-offer{border-color:#a6f0d4!important;color:#cffff0;min-width:64px!important}
+.experience-v2.oath-visual #hud.battle-readability #minimap-wrap{position:absolute;right:0;top:52px;display:grid;grid-template-columns:164px 88px;gap:8px;align-items:start;background:none;border:0;padding:0;opacity:1}
+.experience-v2.oath-visual #hud.battle-readability #btn-map{grid-column:2;grid-row:1;position:relative;display:block;padding:0;border:1px solid #b6b89e66;border-radius:8px;background:#10251f;cursor:pointer;overflow:hidden;min-width:44px;min-height:44px}
+.experience-v2.oath-visual #hud.battle-readability #minimap{width:88px;height:88px;border:0;border-radius:0;box-shadow:none}
+.experience-v2.oath-visual #hud.battle-readability #btn-map>span{position:absolute;bottom:2px;right:4px;color:#d4dfce;font-size:9px;background:#0b211de0;padding:1px 4px;border-radius:3px;pointer-events:none}
+.experience-v2.oath-visual #hud.battle-readability #objective{grid-column:1;grid-row:1;position:static;max-width:none;display:grid;gap:4px;white-space:normal;text-align:left;padding:8px 9px;border:1px solid #b6b89e2e;border-left:2px solid #b39156;background:#10251fdc;border-radius:3px 7px 7px 3px;line-height:1.4;min-width:0;font-size:11px;color:#d2dbc8}
+.battle-objective-title{font-size:12px;color:#f0e6c8;font-weight:700}
+.battle-objective-title>span{font-size:10px;color:#a6f0d4;white-space:nowrap}
+.battle-objective-action{color:#c9d6c5;font-weight:500;overflow-wrap:anywhere}
+.battle-objective-hold{width:100%;height:5px;accent-color:#a6f0d4}
+.battle-objective-challenge{font-size:10px;color:#d3bd8a;line-height:1.4}
+#map-tactics-context:not([data-phase=ready]) .map-tactics-context-copy>strong{display:block;font-size:11px}
+.experience-v2.oath-visual #hud.battle-readability .bossbar{left:244px;right:286px;top:66px}
+.experience-v2.oath-visual #hud.battle-readability .rpg-target,.experience-v2.oath-visual #hud.battle-readability .mw-posture{margin:2px 0;font-size:10px}
+.experience-v2.oath-visual #hud.battle-readability .combo{top:94px;left:14px;padding:4px 7px}
+.experience-v2.oath-visual #hud.battle-readability .kill-streak{top:106px;left:43%;padding:4px 8px}
+.experience-v2.oath-visual #hud.battle-readability .oath-camera-details>summary{min-height:44px;min-width:44px;display:grid;place-items:center;padding:8px}
+.experience-v2.oath-visual #hud.battle-readability .oath-camera-details{top:142px}
+.experience-v2.oath-visual #hud.battle-readability .oath-camera-details button{min-height:44px;min-width:44px}
+.experience-v2.oath-visual #hud.battle-readability .exp-combat-status{left:150px;bottom:18px;max-width:calc(100% - 380px);padding:3px 6px;transform:none;font-size:10px;pointer-events:none}
+.experience-v2.oath-visual #hud.battle-readability:has(#map-tactics-context:not([hidden])) .exp-combat-status{bottom:144px}
+#map-tactics-context[hidden],#btn-map-interact[hidden]{display:none!important}
+#hud.battle-readability #map-tactics-context{position:absolute;left:calc(150px + var(--sal,0px));right:calc(226px + var(--sar,0px));bottom:calc(66px + var(--sab,0px));display:flex;justify-content:space-between;align-items:center;gap:10px;z-index:18;pointer-events:none;color:#edf0d9}
+.map-tactics-context-copy{display:grid;gap:3px;min-width:0;text-shadow:0 1px 4px #061a15}
+.map-tactics-context-copy>strong{font-size:12px;font-weight:700;color:#b9dbcc}
+.map-tactics-context-copy>span{font-size:10px;line-height:1.4;color:#cbd9c9}
+#btn-map-interact{pointer-events:auto;min-height:52px;min-width:150px;max-width:260px;flex:1;display:grid;align-content:center;gap:4px;padding:9px 12px;border:1px solid #a6f0d4;border-radius:8px;background:#a6f0d4;color:#133b31;box-shadow:0 3px 0 #244e41;font-family:var(--font-ui,system-ui,sans-serif);cursor:pointer}
+.map-tactics-action-name{font-size:14px;font-weight:750;line-height:1.3}
+.map-tactics-action-detail{font-size:10px;line-height:1.3}
+#btn-map-interact:disabled{background:#142e25df;border-color:#a3baa06b;color:#ced8c5;box-shadow:none;cursor:default}
+#map-tactics-context[data-phase=windup] #btn-map-interact,#map-tactics-context[data-phase=active] #btn-map-interact{border-color:#b39156;color:#e9d2a4}
+#battle-info{margin:14px 0;border-top:1px solid #b6b89e33;padding-top:10px}
+#battle-info>h3{font-size:12px;margin:0 0 8px;color:#becdb7}
+#battle-info-actions{display:flex;flex-wrap:wrap;gap:8px}
+#battle-info-actions>.hud-btn,#battle-info-actions>details>summary{min-height:44px;min-width:80px;padding:10px 14px;background:#223b31;border:1px solid #b6b89e55;border-radius:6px;color:#f0e6c8;font:600 12px var(--font-ui,system-ui,sans-serif);cursor:pointer}
+#battle-info-actions .oath-run-details{position:static;font-size:12px}
+#battle-info-actions .oath-run-details[open] .mw-run-strip{position:static;width:auto!important;max-width:100%!important;white-space:normal!important;padding:10px;line-height:1.6;background:#152d24}
+.battle-atlas{width:min(880px,calc(100vw - 24px));max-height:calc(var(--app-height,100dvh) - var(--sat,0px) - var(--sab,0px) - 24px);padding:0;border:1px solid #b6b89e77;border-radius:12px;background:#142a23;color:#edf0d9;overflow:hidden;font-family:var(--font-ui,system-ui,sans-serif);box-shadow:0 24px 80px #0008}
+.battle-atlas[open]{inset:0;margin:auto;display:flex;flex-direction:column}
+.battle-atlas::backdrop{background:#071712c9;backdrop-filter:blur(4px)}
+.battle-atlas-header{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 18px;border-bottom:1px solid #b6b89e33}
+.battle-atlas-header small{font-size:9px;letter-spacing:.18em;color:#b39156}
+.battle-atlas-header h2{margin:3px 0 0;font-size:22px;line-height:1.2;color:#eee6ca}
+.battle-atlas-close{min-width:100px;min-height:44px;padding:9px 13px;color:#e7edd5;border:1px solid #b6b89e55;background:#263e32;border-radius:6px;font:600 12px var(--font-ui,system-ui,sans-serif);cursor:pointer}
+.battle-atlas-body{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:16px;padding:16px;min-height:0;overflow:auto;overscroll-behavior:contain}
+.battle-atlas-canvas{width:100%;height:calc(min(420px,var(--app-height,100dvh)) - 150px);min-height:140px;background:#0d211e;border:1px solid #b6b89e33;border-radius:8px}
+.battle-atlas-aside{min-width:0}
+.battle-atlas-goal{margin:0 0 10px;padding-left:9px;border-left:2px solid #a6f0d4;color:#e8ecd4;font-size:12px;line-height:1.6}
+.battle-atlas-legend{font-size:11px;color:#b7c7b5;line-height:1.5}
+.battle-atlas-rooms{padding:0;margin:10px 0 0;list-style:none;display:grid;gap:6px}
+.battle-atlas-rooms>li{padding:7px 8px;border-left:2px solid #526b60;background:#1d342b;font-size:12px;line-height:1.4}
+.battle-atlas-rooms>li.is-current{border-color:#a6f0d4;color:#c8f4e1}
+.battle-atlas-rooms>li.is-objective{border-color:#b39156;color:#efd5a2}
+.battle-atlas-rooms small{display:block;margin-top:2px;font-size:10px;color:#b2c4ae}
+.battle-atlas-footnote{flex:none;font-size:10px;line-height:1.5;color:#aebeaa;border-top:1px solid #b6b89e33;margin:0;padding:9px 16px}
+.battle-atlas :focus-visible,#btn-map-interact:focus-visible,#btn-map:focus-visible{outline:3px solid #d9fff0;outline-offset:3px}
+.map-tactics-result{border-left:2px solid #a6f0d4;padding:8px 12px;margin:16px 0;background:#a6f0d409}
+.map-tactics-result strong{display:block;color:#d6eaca;font-size:13px;line-height:1.5}
+.map-tactics-result p{margin:4px 0 0;color:#bed0bc;font-size:12px;line-height:1.5}
+@media(orientation:landscape){
+ /* 소모된 장치는 같은 결과를 버튼과 설명에 두 번 펼치지 않는다. */
+ #map-tactics-context:is([data-phase=spent],[data-phase=canceled]) .map-tactics-context-copy{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 8px}
+ #map-tactics-context:is([data-phase=spent],[data-phase=canceled]):not([data-nearby=""]) .map-tactics-context-copy{display:none}
+}
+@media(orientation:landscape) and (max-width:700px){
+ .experience-v2.oath-visual #hud.battle-readability .hud-top{grid-template-columns:184px minmax(0,1fr) 100px;gap:10px}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center{left:200px;width:calc(100% - 416px)}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center .wave{font-size:13px}
+ .experience-v2.oath-visual #hud.battle-readability .bossbar{left:214px;right:258px;top:65px}
+ .experience-v2.oath-visual #hud.battle-readability #minimap-wrap{grid-template-columns:144px 72px;gap:7px}
+ .experience-v2.oath-visual #hud.battle-readability #minimap{width:72px;height:72px}
+ .experience-v2.oath-visual #hud.battle-readability .hud-right-top .hud-btn{padding:0 6px;font-size:10px}
+ #hud.battle-readability #map-tactics-context{gap:5px;display:grid;grid-template-columns:1fr}
+ .map-tactics-context-copy>strong{display:none}
+ .map-tactics-context-copy>span{font-size:9px}
+ #btn-map-interact{width:100%;min-width:0;max-width:none;padding:7px}
+ .map-tactics-action-name{font-size:13px}
+ .battle-atlas-body{grid-template-columns:minmax(0,1fr) 190px;gap:12px;padding:12px}
+ .battle-atlas-header{padding:9px 12px}
+}
+@media(orientation:portrait){
+ body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,calc(174px + var(--sat,0px)))}
+ /* Real rows let longer goals and earned actions grow without covering HP or the boss. */
+ .experience-v2.oath-visual #hud.battle-readability .hud-top{--portrait-action-space:116px;position:relative;top:auto;left:auto;right:auto;margin:calc(8px + var(--sat,0px)) calc(14px + var(--sar,0px)) 0 calc(14px + var(--sal,0px));grid-template-columns:minmax(0,1fr) 88px;gap:4px 8px;padding-top:0}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center,.experience-v2.oath-visual #hud.battle-readability .hud-right,.experience-v2.oath-visual #hud.battle-readability #minimap-wrap{display:contents}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center .wave,.experience-v2.oath-visual #hud.battle-readability .hud-center .stage-name{grid-column:1/-1;max-width:calc(100% - var(--portrait-action-space));white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center .wave{grid-row:1}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center .stage-name{grid-row:2}
+ .experience-v2.oath-visual #hud.battle-readability .hud-right-top{position:static;grid-column:1/-1;grid-row:1/3;justify-self:end;align-self:start;width:auto;grid-template-columns:none;max-width:none}
+ .experience-v2.oath-visual #hud.battle-readability .hud-right-top .hud-btn{width:auto;flex:0 0 auto;overflow:visible;text-overflow:clip}
+ .experience-v2.oath-visual #hud.battle-readability .hud-player{grid-column:1;grid-row:3;padding:4px 6px;align-items:start}
+ .experience-v2.oath-visual #hud.battle-readability .hud-bars{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:2px 6px}
+ .experience-v2.oath-visual #hud.battle-readability .hud-bars>.hpbar,.experience-v2.oath-visual #hud.battle-readability .hud-bars>.mpbar{grid-column:1/-1}
+ .experience-v2.oath-visual #hud.battle-readability .hud-bars>.expbar{grid-column:1;align-self:center}
+ .experience-v2.oath-visual #hud.battle-readability .hud-bars>.ultbar{grid-column:2;align-self:center}
+ .experience-v2.oath-visual #hud.battle-readability .hud-bars>.rpg-xp{grid-column:1/-1;grid-template-columns:minmax(0,max-content) minmax(24px,1fr);align-items:center;gap:6px}
+ .experience-v2.oath-visual #hud.battle-readability .rpg-xp span{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+ .experience-v2.oath-visual #hud.battle-readability .hud-bars>.setgauge,.experience-v2.oath-visual #hud.battle-readability .hud-bars>.arsenal-hud,.experience-v2.oath-visual #hud.battle-readability .hud-bars>.experience-link,.experience-v2.oath-visual #hud.battle-readability .hud-bars>.mw-run-strip{grid-column:1/-1}
+ .experience-v2.oath-visual #hud.battle-readability #btn-map{grid-column:2;grid-row:3/5;width:88px;align-self:start}
+ .experience-v2.oath-visual #hud.battle-readability #objective{grid-column:1;grid-row:4;position:static;top:auto;left:auto;right:auto;grid-template-columns:minmax(0,max-content) minmax(0,1fr);gap:2px 8px;align-items:start;max-width:none;padding:5px 6px;font-size:11px}
+ .experience-v2.oath-visual #hud.battle-readability .battle-objective-title{overflow-wrap:anywhere}
+ .experience-v2.oath-visual #hud.battle-readability .battle-objective-action{align-self:center}
+ .experience-v2.oath-visual #hud.battle-readability .battle-objective-challenge,.experience-v2.oath-visual #hud.battle-readability .battle-objective-hold{grid-column:1/-1}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center .rpg-target,.experience-v2.oath-visual #hud.battle-readability .hud-center .mw-posture{position:static;grid-column:1/-1;width:auto;max-width:none;white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center .rpg-target{grid-row:5}
+ .experience-v2.oath-visual #hud.battle-readability .hud-center .mw-posture{grid-row:6}
+ .experience-v2.oath-visual #hud.battle-readability .bossbar{position:relative;top:auto;left:auto;right:auto;margin:6px calc(14px + var(--sar,0px)) 0 calc(14px + var(--sal,0px))}
+ .experience-v2.oath-visual #hud.battle-readability .bossbar .boss-name{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
+ .experience-v2.oath-visual #hud.battle-readability .combat-cue{position:relative;top:auto;width:max-content;margin-top:8px}
+ .experience-v2.oath-visual #hud.battle-readability .combo,.experience-v2.oath-visual #hud.battle-readability .kill-streak{top:calc(214px + var(--sat,0px))}
+ .experience-v2.oath-visual #hud.battle-readability .oath-camera-details{top:auto;bottom:calc(284px + var(--sab,0px))}
+ #hud.battle-readability #map-tactics-context{left:140px;right:14px;bottom:calc(236px + var(--sab,0px));display:grid;gap:5px}
+ .map-tactics-context-copy>strong{display:none}
+ #btn-map-interact{width:100%;min-width:0;max-width:none}
+ .experience-v2.oath-visual #hud.battle-readability .exp-combat-status{left:14px;bottom:calc(272px + var(--sab,0px));max-width:116px;font-size:9px}
+ .experience-v2.oath-visual #hud.battle-readability:has(#map-tactics-context:not([hidden])) .exp-combat-status{bottom:calc(340px + var(--sab,0px))}
+ .battle-atlas-body{grid-template-columns:1fr;gap:12px;max-height:calc(var(--app-height,100dvh) - 145px)}
+ .battle-atlas-canvas{height:290px;min-height:220px}
+ .battle-atlas-rooms{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .battle-atlas-header{padding:12px}
+ .battle-atlas-header h2{font-size:20px}
+ .battle-atlas-close{min-width:96px}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer){--portrait-action-space:194px}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(#btn-boss-shortcut:not([hidden])){--portrait-action-space:200px}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])){--portrait-action-space:278px}
+}
+@media(orientation:portrait) and (max-width:374px){
+ /* Four full-size actions take their own row instead of clipping the stage title. */
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-right-top{grid-row:3;justify-self:start;flex-wrap:wrap;max-width:100%}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-center .wave,.experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-center .stage-name{max-width:100%}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-player{grid-row:4}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) #btn-map{grid-row:4/6}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) #objective{grid-row:5}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-center .rpg-target{grid-row:6}
+ .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-center .mw-posture{grid-row:7}
+}
+@media(prefers-reduced-motion:reduce){.battle-atlas *,#map-tactics-context *{animation:none;transition:none}}
