@@ -318,6 +318,7 @@ export class FX {
     this.dmgLayer = document.getElementById('dmg-layer');
     this.dmgPool = []; this.maxDmg = 40;
     this._damageRecent = []; this._damageSerial = 0;
+    this._damageRandomState = 0x6d2b79f5;
     this._combatTextRegions = [];
     this._combatTextViewport = null;
     this.quality = 'high';
@@ -805,6 +806,11 @@ export class FX {
   shockTex(pos, color = 0xffe080, { r1 = 6, life = 0.45 } = {}) { this.groundTex(pos, 'shockwave', color, { r0: 0.5, r1, life, spin: 0.4, y: 0.1, fadeIn: 0.05 }); }
 
   // ---------- 데미지 숫자 ----------
+  _damageRandom() {
+    // 화면 표시·animationend 수명이 전투와 보상의 전역 난수 순서를 바꾸지 않는다.
+    this._damageRandomState = (Math.imul(this._damageRandomState, 1664525) + 1013904223) >>> 0;
+    return this._damageRandomState / 4294967296;
+  }
   setCombatTextRegions(regions, layerBounds = null) {
     this._combatTextViewport = combatTextViewport(layerBounds);
     this._combatTextRegions = combatTextRegions(regions, this._combatTextViewport);
@@ -837,7 +843,7 @@ export class FX {
     el.dataset.tag = tag;
     el.setAttribute('aria-hidden', 'true');
     const vw = Math.max(1, window.innerWidth || 1), vh = Math.max(1, window.innerHeight || 1);
-    _v.copy(worldPos); _v.y += 1.9 + Math.random() * 0.5; _v.x += (Math.random() - 0.5) * 0.8; _v.project(this.camera);
+    _v.copy(worldPos); _v.y += 1.9 + this._damageRandom() * 0.5; _v.x += (this._damageRandom() - 0.5) * 0.8; _v.project(this.camera);
     const projectedX = (_v.x * 0.5 + 0.5) * vw, projectedY = (-_v.y * 0.5 + 0.5) * vh;
     const portrait = vh > vw;
     const safeTop = portrait ? Math.min(170, vh * 0.24) : Math.min(104, vh * 0.18);
