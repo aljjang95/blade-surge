@@ -121,7 +121,7 @@ class App {
           const current = () => this._graphicsGeneration === generation && battle === this.battle
             && battle.active && battle.player === actor && silhouette.isCurrent();
           const prepared = await this.fx.prepare(this.renderer.r, this.models, this.renderer.composer.readBuffer,
-            [], [], current, silhouette.targets);
+            [], [], current, silhouette.targets, { reflectCompiledPrograms: true });
           if (this._graphicsGeneration !== generation) return;
           if (current()) {
             if (!prepared || !silhouette.complete()) throw new Error('player silhouette recovery canceled');

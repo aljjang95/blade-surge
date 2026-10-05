@@ -34,7 +34,43 @@ function checkPreparedPrograms(renderer, gl, properties, bindings) {
   }
 }
 
-function compilePreparedScene(renderer, scene, camera, targetScene, isCurrent) {
+function checkCachedProgramBindings(renderer, gl, properties, bindings) {
+  checkPreparedPrograms(renderer, gl, properties, []);
+  for (const { material, cache, key, program, handle } of bindings) {
+    if (!properties.has(material) || properties.get(material).programs !== cache
+      || cache.get(key) !== program || program.program !== handle) {
+      throw new Error('render preparation cached material or program was disposed or replaced');
+    }
+  }
+}
+
+function captureCompiledPrograms(renderer, gl, properties, materials, captured) {
+  if (captured.gl && (captured.gl !== gl || captured.properties !== properties)) {
+    throw new Error('render preparation renderer state changed');
+  }
+  captured.gl = gl; captured.properties = properties;
+  captured.lastMaterials = materials;
+  const bindings = [], byProgram = new Map();
+  for (const material of materials) {
+    if (!properties.has(material)) throw new Error('render preparation material was not compiled');
+    const cache = properties.get(material).programs;
+    if (!(cache instanceof Map) || !cache.size) throw new Error('render preparation program cache is unavailable');
+    for (const [key, program] of cache) {
+      if (!program?.program || typeof program.isReady !== 'function') throw new Error('render preparation program readiness is unavailable');
+      const binding = { material, cache, key, program, handle: program.program };
+      bindings.push(binding);
+      if (!byProgram.has(program)) byProgram.set(program, []);
+      byProgram.get(program).push(binding);
+      if (!captured.programs.has(program)) captured.programs.set(program, []);
+      const existing = captured.programs.get(program);
+      if (!existing.some(b => b.material === material && b.cache === cache && b.key === key)) existing.push(binding);
+    }
+  }
+  checkCachedProgramBindings(renderer, gl, properties, bindings);
+  return { bindings, byProgram };
+}
+
+function compilePreparedScene(renderer, scene, camera, targetScene, isCurrent, captured = null) {
   if (!isCurrent()) return Promise.resolve(false);
   // r170 compileAsync's timer reads mutable material properties without a
   // cancellation/error guard. Own the same readiness cadence over captured
@@ -46,7 +82,7 @@ function compilePreparedScene(renderer, scene, camera, targetScene, isCurrent) {
   }
   const gl = renderer.getContext(), properties = renderer.properties;
   if (typeof gl?.isContextLost !== 'function') return Promise.reject(new Error('render preparation has no WebGL context API'));
-  let pending;
+  let pending, cached;
   try {
     checkPreparedPrograms(renderer, gl, properties, []);
     const materials = renderer.compile(scene, camera, targetScene);
@@ -58,6 +94,10 @@ function compilePreparedScene(renderer, scene, camera, targetScene, isCurrent) {
       pending.set(material, program);
     }
     checkPreparedPrograms(renderer, gl, properties, pending);
+    if (captured) {
+      cached = captureCompiledPrograms(renderer, gl, properties, materials, captured);
+      pending = new Map([...cached.byProgram.keys()].map(program => [program, program]));
+    }
   } catch (error) { return Promise.reject(error); }
   return new Promise((resolve, reject) => {
     let poll, deadline, finished = false;
@@ -72,11 +112,15 @@ function compilePreparedScene(renderer, scene, camera, targetScene, isCurrent) {
       if (finished) return;
       try {
         if (!isCurrent()) { finish(false); return; }
-        checkPreparedPrograms(renderer, gl, properties, pending);
+        if (cached) checkCachedProgramBindings(renderer, gl, properties, cached.bindings);
+        else checkPreparedPrograms(renderer, gl, properties, pending);
         for (const [material, program] of pending) {
-          checkPreparedPrograms(renderer, gl, properties, [[material, program]]);
+          if (cached) checkCachedProgramBindings(renderer, gl, properties, cached.byProgram.get(program));
+          else checkPreparedPrograms(renderer, gl, properties, [[material, program]]);
           const ready = program.isReady();
-          checkPreparedPrograms(renderer, gl, properties, [[material, program]]);
+          if (cached && !isCurrent()) { finish(false); return; }
+          if (cached) checkCachedProgramBindings(renderer, gl, properties, cached.byProgram.get(program));
+          else checkPreparedPrograms(renderer, gl, properties, [[material, program]]);
           if (ready) pending.delete(material);
         }
         if (!pending.size) finish(true); else poll = setTimeout(check, 10);
@@ -89,6 +133,66 @@ function compilePreparedScene(renderer, scene, camera, targetScene, isCurrent) {
       else poll = setTimeout(check, 10);
     } catch (error) { finish(false, error); }
   });
+}
+
+function checkCapturedReadiness(renderer, objects, captured, targetMaterials = null) {
+  const { gl, properties, programs } = captured;
+  checkPreparedPrograms(renderer, gl, properties, []);
+  for (const object of objects) object.traverse(o => {
+    for (const material of Array.isArray(o.material) ? o.material : [o.material]) {
+      if (!material) continue;
+      if (!properties.has(material) || (targetMaterials && !targetMaterials.has(material))) {
+        throw new Error('targeted render preparation requested material was not compiled for its target');
+      }
+      const record = properties.get(material), program = record.currentProgram;
+      const bindings = programs.get(program);
+      if (!bindings?.some(b => b.material === material && b.cache === record.programs
+        && b.cache.get(b.key) === program && program.program === b.handle)) {
+        throw new Error('targeted render preparation requested material or program was disposed or replaced');
+      }
+    }
+  });
+}
+
+async function prepareCompiledReflection(renderer, captured, isCurrent, checkReadiness) {
+  if (!isCurrent()) return false;
+  const { gl, properties, programs } = captured;
+  if (!programs.size) { checkReadiness(); return isCurrent(); }
+  if (typeof gl.getProgramParameter !== 'function' || typeof gl.LINK_STATUS !== 'number') {
+    throw new Error('targeted render preparation has no WebGL readiness API');
+  }
+  checkReadiness();
+  for (const [program, bindings] of programs) {
+    // 실제 출격/복구 준비에서만 이미 획득한 캐시의 양면 프로그램까지 반사한다.
+    // 부트 기본 경로와 게임 프레임에는 추가 draw나 준비 레지스트리가 없다.
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    if (!isCurrent()) return false;
+    const check = () => {
+      checkCachedProgramBindings(renderer, gl, properties, bindings);
+      checkReadiness();
+    };
+    check();
+    if (typeof program.getUniforms !== 'function' || typeof program.getAttributes !== 'function') {
+      throw new Error('targeted render preparation program reflection is unavailable');
+    }
+    const linked = gl.getProgramParameter(program.program, gl.LINK_STATUS);
+    if (!isCurrent()) return false;
+    check();
+    if (linked !== true) {
+      const log = gl.getProgramInfoLog?.(program.program) || 'No program diagnostic available';
+      throw new Error(`Targeted shader program did not link: ${log}`);
+    }
+    program.getUniforms();
+    if (!isCurrent()) return false;
+    check();
+    program.getAttributes();
+    if (!isCurrent()) return false;
+    check();
+  }
+  if (!isCurrent()) return false;
+  for (const bindings of programs.values()) checkCachedProgramBindings(renderer, gl, properties, bindings);
+  checkReadiness();
+  return true;
 }
 
 async function prepareObjectReflection(renderer, objects, isCurrent) {
@@ -259,7 +363,7 @@ export class FX {
     this.scene.remove(it.obj); it.onEnd?.();
     it.obj.traverse?.((o) => { if (o.geometry && o.userData.ownGeo) o.geometry.dispose(); });
   }
-  async prepare(renderer, models, renderTarget, preparationObjects = [], readinessObjects = preparationObjects, isCurrent = () => true, targetPreparations = []) {
+  async prepare(renderer, models, renderTarget, preparationObjects = [], readinessObjects = preparationObjects, isCurrent = () => true, targetPreparations = [], { reflectCompiledPrograms = false } = {}) {
     // Run while stageStarting blocks game frames/input. compileAsync must finish
     // with the battle's actual lights/fog/shadows before any combat draw uses it.
     const callerCurrent = () => !this._disposed && isCurrent();
@@ -311,6 +415,8 @@ export class FX {
     const owner = { originalTarget: previousOwner ? previousOwner.originalTarget : renderer.getRenderTarget() };
     preparationOwners.set(renderer, owner);
     const valid = () => callerCurrent() && preparationOwners.get(renderer) === owner;
+    const captured = reflectCompiledPrograms ? { programs: new Map(), gl: null, properties: null } : null;
+    const targetReadiness = [];
     const originalParents = [];
     try {
       for (const object of new Set(preparationObjects)) {
@@ -325,9 +431,9 @@ export class FX {
       });
       for (const texture of textures) if (texture) renderer.initTexture(texture);
       renderer.setRenderTarget(renderTarget);
-      await compilePreparedScene(renderer, this.scene, this.camera, null, valid);
+      await compilePreparedScene(renderer, this.scene, this.camera, null, valid, captured);
       if (!valid()) return false;
-      await compilePreparedScene(renderer, warm, this.camera, this.scene, valid);
+      await compilePreparedScene(renderer, warm, this.camera, this.scene, valid, captured);
       if (!valid()) return false;
       if (renderer.shadowMap.enabled) {
         // The shadow renderer uses a fog-free scene and depth materials of its
@@ -351,7 +457,7 @@ export class FX {
           const object = o.clone(false); object.material = Array.isArray(o.material) ? o.material.map(depth) : depth(o.material); shadowWarm.add(object);
         };
         this.scene.traverse(addShadow); warm.traverse(addShadow);
-        await compilePreparedScene(renderer, shadowWarm, this.camera, shadowTarget, valid);
+        await compilePreparedScene(renderer, shadowWarm, this.camera, shadowTarget, valid, captured);
         if (!valid()) return false;
       }
       // 내 캐릭터 마스크처럼 조명 없는 별도 타깃도 같은 취소 가능한
@@ -360,12 +466,23 @@ export class FX {
         if (!valid() || !preparation.isCurrent()) return false;
         renderer.setRenderTarget(preparation.target);
         const targetCurrent = () => valid() && preparation.isCurrent();
-        await compilePreparedScene(renderer, preparation.scene, this.camera, null, targetCurrent);
+        await compilePreparedScene(renderer, preparation.scene, this.camera, null, targetCurrent, captured);
         if (!targetCurrent()) return false;
-        const reflected = await prepareObjectReflection(renderer, preparation.readinessObjects, targetCurrent);
-        if (!targetCurrent() || !reflected) return false;
+        if (captured) {
+          const entry = { objects: preparation.readinessObjects, materials: captured.lastMaterials };
+          checkCapturedReadiness(renderer, entry.objects, captured, entry.materials);
+          targetReadiness.push(entry);
+        } else {
+          const reflected = await prepareObjectReflection(renderer, preparation.readinessObjects, targetCurrent);
+          if (!targetCurrent() || !reflected) return false;
+        }
       }
       renderer.setRenderTarget(renderTarget);
+      if (captured) return await prepareCompiledReflection(renderer, captured,
+        () => valid() && targetPreparations.every(preparation => preparation.isCurrent()), () => {
+          checkCapturedReadiness(renderer, readinessObjects, captured);
+          for (const entry of targetReadiness) checkCapturedReadiness(renderer, entry.objects, captured, entry.materials);
+        });
       return await prepareObjectReflection(renderer, readinessObjects, valid);
     } finally {
       try {

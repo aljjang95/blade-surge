@@ -89,7 +89,14 @@ function fixture(holdPass = 3, parallel = false) {
       // Match r170 compile's returned material set, including invisible meshes.
       scene.traverse((o: any) => {
         for (const m of Array.isArray(o.material) ? o.material : [o.material]) {
-          if (!m) continue; materials.add(m); nativeProperties.set(m, { currentProgram: programFor(m.name || m.type) });
+          if (!m) continue; materials.add(m);
+          const key = m.name || m.type, cache = nativeProperties.get(m)?.programs ?? new Map();
+          let currentProgram;
+          if (m.transparent && m.side === THREE.DoubleSide && m.forceSinglePass === false) {
+            cache.set(`${key}:back`, programFor(`${key}:back`));
+            currentProgram = programFor(`${key}:front`); cache.set(`${key}:front`, currentProgram);
+          } else { currentProgram = programFor(key); cache.set(key, currentProgram); }
+          nativeProperties.set(m, { programs: cache, currentProgram });
           if (!listened.has(m)) { listened.add(m); m.addEventListener('dispose', () => nativeProperties.delete(m)); }
         }
       });
@@ -119,7 +126,7 @@ function fixture(holdPass = 3, parallel = false) {
   for (let i = 0; i < 6; i++) { const mesh = new THREE.Mesh(geometry, warning); mesh.visible = false; hazards.add(mesh); }
   fx.scene.add(hazards);
   const unrelated = new THREE.MeshStandardMaterial(); unrelated.name = 'unrelated'; fx.scene.add(new THREE.Mesh(geometry, unrelated));
-  return { fx, renderer, template, hazards, geometry, surface, warning, nativeProperties, programs, events, target, previous, programFor,
+  return { fx, renderer, template, hazards, geometry, surface, warning, unrelated, nativeProperties, programs, events, target, previous, programFor,
     current: () => current, release: () => { held = false; }, compileCalls: () => compileCalls,
     missingGets: () => missingGets, nativeAsyncCalls: () => nativeAsyncCalls,
     setLost: (value: boolean) => { lost = value; }, setLinked: (value: boolean) => { linked = value; },
@@ -337,4 +344,155 @@ test('overlapping preparations leave the new target owned until it restores the 
   f.release(); await finish(second); expect(second.value).toBe(true); expect(f.current()).toBe(f.previous); expect(replacement.parent).toBeNull();
   expect(f.events.filter(e => e.startsWith('uniforms:'))).toEqual(['uniforms:replacement-loot']);
   const later = observe(f.fx.prepare(f.renderer, {}, laterTarget)); await finish(later); expect(later.value).toBe(true); expect(f.current()).toBe(f.previous);
+});
+
+test('disabled compiled reflection keeps the original narrow readiness scope', async () => {
+  const f = fixture(0); f.renderer.shadowMap.enabled = false;
+  const result = observe(f.fx.prepare(f.renderer, {}, f.target, [f.template], [f.template, f.hazards], () => true, [], { reflectCompiledPrograms: false }));
+  await finish(result); expect(result.value).toBe(true);
+  expect(f.events.filter(e => e.startsWith('uniforms:'))).toEqual(['uniforms:loot', 'uniforms:warning']);
+  expect(f.events).not.toContain('uniforms:unrelated'); expect(f.compileCalls()).toBe(2);
+});
+
+test('compiled reflection includes cached back and front and deduplicates shared acquired handles', async () => {
+  const f = fixture(0); f.renderer.shadowMap.enabled = false;
+  const material = new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide, forceSinglePass: false });
+  material.name = 'ribbon'; const alias = material.clone(); alias.name = 'ribbon';
+  f.fx.scene.add(new THREE.Mesh(f.geometry, material), new THREE.Mesh(f.geometry, alias));
+  f.template.add(new THREE.Mesh(f.geometry, material));
+  const back = f.programFor('ribbon:back');
+  back.isReady = () => {
+    f.events.push('ready:ribbon:back');
+    // 실제 캐시에 남은 back은 마지막 currentProgram이 아니어도 유효하다.
+    f.nativeProperties.get(material).currentProgram = back;
+    return true;
+  };
+  const result = observe(f.fx.prepare(f.renderer, {}, f.target, [f.template], [], () => true, [], { reflectCompiledPrograms: true }));
+  await finish(result); expect(result.value).toBe(true); expect(result.error).toBeUndefined();
+  for (const key of ['warning', 'unrelated', 'loot', 'ribbon:back', 'ribbon:front']) {
+    expect(f.events.filter(e => e === `uniforms:${key}`)).toHaveLength(1);
+    expect(f.events.filter(e => e === `attributes:${key}`)).toHaveLength(1);
+    expect(f.events.filter(e => e === `link:${key}`)).toHaveLength(1);
+  }
+  expect(f.events).toContain('ready:ribbon:back'); expect(f.events).toContain('ready:ribbon:front');
+  expect(f.compileCalls()).toBe(2); expect(f.current()).toBe(f.previous);
+});
+
+test('a non-current cached back program must become ready within the existing deadline', async () => {
+  const f = fixture(0); f.renderer.shadowMap.enabled = false;
+  const material = new THREE.MeshBasicMaterial({ transparent: true, side: THREE.DoubleSide, forceSinglePass: false });
+  material.name = 'ribbon'; f.fx.scene.add(new THREE.Mesh(f.geometry, material));
+  f.programFor('ribbon:back').isReady = () => false;
+  const result = observe(f.fx.prepare(f.renderer, {}, f.target, [], [], () => true, [], { reflectCompiledPrograms: true }));
+  await clock.advance(29999); expect(result.done).toBe(false);
+  await finish(result, 1); expect(result.error?.message).toBe('render preparation timeout');
+  expect(f.events.some(e => e.startsWith('uniforms:'))).toBe(false); expect(f.current()).toBe(f.previous);
+});
+
+test('compiled reflection rejects disposed material, replaced cache/key/handle and lost renderer before native queries', async () => {
+  for (const failure of ['dispose', 'map', 'key', 'program', 'handle', 'context', 'properties']) {
+    const f = fixture(0); f.renderer.shadowMap.enabled = false;
+    const original = root.requestAnimationFrame; let rafs = 0;
+    root.requestAnimationFrame = (fn: any) => original((time: number) => {
+      if (++rafs === 2) {
+        const record = f.nativeProperties.get(f.warning);
+        if (failure === 'dispose') f.warning.dispose();
+        else if (failure === 'map') record.programs = new Map(record.programs);
+        else if (failure === 'key') record.programs.delete('warning');
+        else if (failure === 'program') record.programs.set('warning', f.programFor('replacement'));
+        else if (failure === 'handle') f.programFor('warning').program = { key: 'changed-native-handle' };
+        else if (failure === 'context') f.setLost(true);
+        else f.resetProperties();
+      }
+      fn(time);
+    });
+    const result = observe(f.fx.prepare(f.renderer, {}, f.target, [], [], () => true, [], { reflectCompiledPrograms: true }));
+    await finish(result);
+    expect(result.error?.message).toContain(failure === 'context' ? 'context lost' : failure === 'properties' ? 'renderer state changed' : 'disposed or replaced');
+    expect(f.events.some(e => e.startsWith('link:') || e.startsWith('uniforms:'))).toBe(false);
+    expect(f.missingGets()).toBe(0); expect(f.current()).toBe(f.previous); root.requestAnimationFrame = original;
+  }
+});
+
+test('compiled reflection honors live cancellation after the loading frame and after uniform reflection', async () => {
+  for (const duringUniforms of [false, true]) {
+    const f = fixture(0); f.renderer.shadowMap.enabled = false; let valid = true;
+    const original = root.requestAnimationFrame; let rafs = 0;
+    if (duringUniforms) f.programFor('warning').getUniforms = () => { f.events.push('uniforms:warning'); valid = false; };
+    else root.requestAnimationFrame = (fn: any) => original((time: number) => { if (++rafs === 2) valid = false; fn(time); });
+    const result = observe(f.fx.prepare(f.renderer, {}, f.target, [], [], () => valid, [], { reflectCompiledPrograms: true }));
+    await finish(result); expect(result.value).toBe(false); expect(result.error).toBeUndefined();
+    expect(f.events.some(e => e.startsWith('attributes:'))).toBe(false);
+    expect(f.events.filter(e => e.startsWith('uniforms:'))).toEqual(duringUniforms ? ['uniforms:warning'] : []);
+    expect(f.current()).toBe(f.previous); expect(f.missingGets()).toBe(0); root.requestAnimationFrame = original;
+  }
+});
+
+test('compiled reflection rechecks cache lifetime after link, uniforms and attributes', async () => {
+  for (const point of ['link', 'uniforms', 'attributes']) {
+    const f = fixture(0); f.renderer.shadowMap.enabled = false;
+    const replace = () => { const record = f.nativeProperties.get(f.warning); record.programs = new Map(record.programs); };
+    if (point === 'link') {
+      const native = f.renderer.getContext().getProgramParameter;
+      f.renderer.getContext().getProgramParameter = (...args: any[]) => { const result = native(...args); replace(); return result; };
+    } else f.programFor('warning')[point === 'uniforms' ? 'getUniforms' : 'getAttributes'] = () => { f.events.push(`${point}:warning`); replace(); };
+    const result = observe(f.fx.prepare(f.renderer, {}, f.target, [], [], () => true, [], { reflectCompiledPrograms: true }));
+    await finish(result); expect(result.error?.message).toContain('disposed or replaced');
+    if (point === 'link') expect(f.events.some(e => e.startsWith('uniforms:'))).toBe(false);
+    if (point !== 'attributes') expect(f.events.some(e => e.startsWith('attributes:'))).toBe(false);
+    expect(f.missingGets()).toBe(0); expect(f.current()).toBe(f.previous);
+  }
+});
+
+test('compiled reflection still rejects uncompiled and replaced explicitly requested materials', async () => {
+  for (const replacement of [false, true]) {
+    const f = fixture(0); f.renderer.shadowMap.enabled = false;
+    const missing = new THREE.Mesh(f.geometry, new THREE.MeshStandardMaterial());
+    const original = root.requestAnimationFrame; let rafs = 0;
+    if (replacement) root.requestAnimationFrame = (fn: any) => original((time: number) => {
+      if (++rafs === 2) (f.hazards.children[0] as THREE.Mesh).material = missing.material;
+      fn(time);
+    });
+    const result = observe(f.fx.prepare(f.renderer, {}, f.target, [], [replacement ? f.hazards : missing], () => true, [], { reflectCompiledPrograms: true }));
+    await finish(result); expect(result.error?.message).toContain('requested material was not compiled');
+    expect(f.events.some(e => e.startsWith('uniforms:'))).toBe(false);
+    expect(f.missingGets()).toBe(0); expect(f.current()).toBe(f.previous); root.requestAnimationFrame = original;
+  }
+});
+
+test('compiled reflection binds requested target materials to their own compile pass', async () => {
+  const f = fixture(0); f.renderer.shadowMap.enabled = false;
+  const scene = new THREE.Scene(), material = new THREE.MeshDepthMaterial(); material.name = 'player-mask';
+  scene.add(new THREE.Mesh(f.geometry, material));
+  // 메인에서 컴파일됐어도 별도 타깃에 없는 요청은 성공으로 처리하지 않는다.
+  const target = { scene, target: {}, readinessObjects: [f.hazards], isCurrent: () => true };
+  const result = observe(f.fx.prepare(f.renderer, {}, f.target, [], [], () => true, [target], { reflectCompiledPrograms: true }));
+  await finish(result); expect(result.error?.message).toContain('requested material was not compiled for its target');
+  expect(f.events.some(e => e.startsWith('uniforms:'))).toBe(false); expect(f.current()).toBe(f.previous);
+});
+
+test('compiled reflection aborts context loss during uniforms before attributes or further programs', async () => {
+  const f = fixture(0); f.renderer.shadowMap.enabled = false;
+  f.programFor('warning').getUniforms = () => { f.events.push('uniforms:warning'); f.setLost(true); };
+  const result = observe(f.fx.prepare(f.renderer, {}, f.target, [], [], () => true, [], { reflectCompiledPrograms: true }));
+  await finish(result); expect(result.error?.message).toContain('context lost');
+  expect(f.events.filter(e => e.startsWith('uniforms:'))).toEqual(['uniforms:warning']);
+  expect(f.events.some(e => e.startsWith('attributes:'))).toBe(false); expect(f.current()).toBe(f.previous);
+});
+
+test('compiled reflection covers the existing main, warm, shadow, mask and final passes without adding a compile', async () => {
+  const f = fixture(5), maskScene = new THREE.Scene(), finalScene = new THREE.Scene();
+  const maskMaterial = new THREE.MeshDepthMaterial(); maskMaterial.name = 'player-mask';
+  const finalMaterial = new THREE.ShaderMaterial(); finalMaterial.name = 'player-final';
+  maskScene.add(new THREE.Mesh(f.geometry, maskMaterial)); finalScene.add(new THREE.Mesh(f.geometry, finalMaterial));
+  const targets = [
+    { scene: maskScene, target: {}, readinessObjects: [maskScene], isCurrent: () => true },
+    { scene: finalScene, target: {}, readinessObjects: [finalScene], isCurrent: () => true },
+  ];
+  const result = observe(f.fx.prepare(f.renderer, {}, f.target, [f.template], [f.template, f.hazards], () => true, targets, { reflectCompiledPrograms: true }));
+  await f.untilHeld(); expect(result.done).toBe(false); expect(f.events.some(e => e.startsWith('uniforms:'))).toBe(false);
+  f.release(); await finish(result); expect(result.value).toBe(true); expect(result.error).toBeUndefined();
+  expect(f.compileCalls()).toBe(5); expect(f.nativeAsyncCalls()).toBe(0);
+  for (const key of f.programs.keys()) expect(f.events.filter(e => e === `uniforms:${key}`)).toHaveLength(1);
+  expect(f.current()).toBe(f.previous); expect(f.hazards.parent).toBe(f.fx.scene); expect(f.template.parent).toBeNull();
 });

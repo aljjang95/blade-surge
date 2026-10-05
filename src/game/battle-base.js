@@ -108,7 +108,7 @@ export class Battle {
     const silhouette = this.renderer.playerSilhouette?.preparation(this.renderer.r, this.player, this.renderer.composer.writeBuffer);
     const prepared = await this.fx.prepare(this.renderer.r, this.app.models, this.renderer.composer.readBuffer,
       preparationObjects, readinessObjects, () => this._startGeneration === startGeneration,
-      silhouette ? silhouette.targets : []);
+      silhouette ? silhouette.targets : [], { reflectCompiledPrograms: true });
     if (this._startGeneration !== startGeneration) return;
     if (prepared === false) throw new Error('render preparation canceled');
     if (silhouette && !silhouette.complete()) throw new Error('player silhouette preparation canceled');
