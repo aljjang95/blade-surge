@@ -4,7 +4,7 @@
  *   node tools/voice/gen.mjs lines [필터]     # LINES → Seed Audio(@Audio1 = refs) → ASR 대조/길이 대조 → 정규화 → public/sfx/voice/<name>.mp3
  *   node tools/voice/gen.mjs report          # 남은 것 / 실패한 것
  * 멱등: 이미 있는 산출물은 건너뛴다. 실패는 tools/voice/.fail.json 에 남기고 다음 실행에서 재시도(최대 3회).
- * 키: RUNWARE_API_KEY 환경변수 (session-auth). bash 178초 상한 — 한 호출에 BATCH 개씩만.
+ * 키: RUNWARE_API_KEY의 승인된 자식 프로세스 주입. 실제 생성은 승인된 비용·총량 안에서 BATCH 개씩만.
  */
 import { VOICES, LINES } from './lines.mjs';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, statSync } from 'fs';
@@ -15,7 +15,7 @@ import { randomUUID } from 'crypto';
 const HERE = dirname(new URL(import.meta.url).pathname), PROJ = resolve(HERE, '../..');
 const REFS = resolve(HERE, 'refs'), OUT = resolve(PROJ, 'public/sfx/voice'), TMP = resolve(HERE, '.tmp'), FAIL = resolve(HERE, '.fail.json');
 for (const d of [REFS, OUT, TMP]) mkdirSync(d, { recursive: true });
-const KEY = process.env.RUNWARE_API_KEY; if (!KEY) { console.error('RUNWARE_API_KEY 없음 — session-auth'); process.exit(1); }
+const KEY = process.env.RUNWARE_API_KEY; if (!KEY) { console.error('RUNWARE_API_KEY 없음 — 기존 로컬 담당의 승인된 보안 주입을 확인하세요'); process.exit(1); }
 const mode = process.argv[2] || 'report', filter = process.argv[3] || '';
 const BATCH = Number(process.env.BATCH || 8);
 const fails = existsSync(FAIL) ? JSON.parse(readFileSync(FAIL, 'utf8')) : {};
