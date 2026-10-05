@@ -77,8 +77,31 @@ export class CitadelHubUI {
       const box = this.dialog.getBoundingClientRect();
       if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) this.close();
     });
+    this.dialog.addEventListener('keydown', event => this.containDestinationTab(event));
     this.ecoListener = () => { if (this.opened && this.dialogSpot) this.refreshDestination(); };
     this.unsub = this.app.eco?.onChange?.(this.ecoListener);
+  }
+  containDestinationTab(event) {
+    if (!this.opened || !this.dialog.open || event.key !== 'Tab' || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+    const owner = this.dialog.ownerDocument, active = owner.activeElement;
+    if (!this.dialog.contains(active)) return;
+    // 저장·입장 상태가 바뀔 수 있어 매번 실제로 탭 가능한 요소를 다시 읽는다.
+    // 스크롤 밖 요소도 렌더되어 있으면 포함하고 중간 탭 이동·스크롤은 브라우저에 맡긴다.
+    const controls = [...this.dialog.querySelectorAll('button, input, select, textarea, a[href], [tabindex]')].filter(control => {
+      const visibility = owner.defaultView.getComputedStyle(control).visibility;
+      return control.tabIndex >= 0 && !control.matches(':disabled') && !control.closest('[hidden], [inert]') &&
+        control.getClientRects().length > 0 && visibility !== 'hidden' && visibility !== 'collapse';
+    });
+    const stops = controls.filter(control => {
+      if (control.type !== 'radio' || !control.name) return true;
+      const group = controls.filter(candidate => candidate.type === 'radio' && candidate.name === control.name && candidate.form === control.form);
+      return control === (group.find(candidate => candidate.checked) || group[0]);
+    });
+    const first = stops[0], last = stops.at(-1);
+    // 처음·마지막 경계에서만 순환하며 라디오 선택과 방향키의 기본 동작은 바꾸지 않는다.
+    const target = event.shiftKey && active === first ? last : !event.shiftKey && active === last ? first : null;
+    if (!target) return;
+    event.preventDefault(); target.focus();
   }
   setVisible(visible) {
     this.visible = !!visible; this.root.hidden = !this.visible;
