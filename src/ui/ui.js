@@ -8,7 +8,9 @@ import { ROOM_TYPE } from '../game/world.js';
 import { resultStoryHtml } from './campaign.js';
 import { levelExp } from '../data/heroes.js';
 import { renderGrowthPreparation, canPrepareGrowth } from './growth.js';
+import { comboFeedback } from './combo-feedback.js';
 import './campaign.css';
+import './combo-feedback.css';
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => Math.floor(n).toLocaleString('ko-KR');
@@ -107,7 +109,7 @@ export class UI {
       el.append(hint);
     }
   }
-  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
+  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { this.refreshComboFeedback(); this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } }
   pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; b.setPaused('manual', on); this.show(this.el.pause, on); if (!on && this.el.pause.contains(document.activeElement)) document.activeElement?.blur?.(); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
@@ -157,6 +159,7 @@ export class UI {
   // ---------------- HUD ----------------
   setupHud(def, player) {
     // Controls keep their children during combat; rebind on each hero/party setup.
+    this.cacheComboFeedback(); this.refreshComboFeedback();
     this._skillCooldowns = this.skillBtns.map(btn => btn.querySelector('.cd'));
     this._dodgeBtn = $('btn-dodge'); this._dodgeCd = this._dodgeBtn.querySelector('.dodge-cd');
     $('hud-portrait').src = def.portrait; $('hud-stage').textContent = '';
@@ -173,6 +176,51 @@ export class UI {
     $('btn-boss-shortcut').hidden = !this.app.battle?.canBossShortcut?.();
     $('btn-auto').classList.toggle('on', !!player.auto);
     this.setCombo(0); $('hud-ult').parentElement.classList.remove('full');
+  }
+  cacheComboFeedback() {
+    if (this._attackComboButton) return;
+    const button = $('btn-attack'); if (!button) return;
+    this._attackComboButton = button;
+    this._attackComboLabel = button.querySelector('span');
+    this._attackComboLabel.classList.add('attack-combo-label');
+    this._attackComboLabel.setAttribute('aria-hidden', 'true');
+    const stage = document.createElement('span'), cue = document.createElement('span');
+    stage.className = 'attack-combo-stage'; cue.className = 'attack-combo-cue';
+    stage.setAttribute('aria-hidden', 'true'); cue.setAttribute('aria-hidden', 'true');
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.classList.add('attack-combo-ring'); svg.setAttribute('viewBox', '0 0 100 100'); svg.setAttribute('aria-hidden', 'true'); svg.setAttribute('focusable', 'false');
+    for (const name of ['track', 'progress']) {
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.classList.add(`attack-combo-ring-${name}`);
+      for (const [key, value] of Object.entries({ cx: '50', cy: '50', r: '46', pathLength: '100' })) circle.setAttribute(key, value);
+      svg.append(circle);
+      if (name === 'progress') this._attackComboArc = circle;
+    }
+    button.classList.add('combo-feedback'); button.setAttribute('aria-keyshortcuts', 'J Space');
+    button.append(svg, stage, cue);
+    this._attackComboStage = stage; this._attackComboCue = cue;
+    this._comboFeedbackKey = null; this._comboFeedbackProgress = null;
+  }
+  /** Read-only feedback; the existing button and Player retain all input authority. */
+  refreshComboFeedback(battle) {
+    const button = this._attackComboButton; if (!button) return;
+    const view = comboFeedback(battle);
+    const key = `${view.status}|${view.stage}|${view.total}|${view.finisher}|${view.nextStage}`;
+    if (this._comboFeedbackKey !== key) {
+      this._comboFeedbackKey = key;
+      button.dataset.comboStatus = view.status; button.dataset.comboStage = String(view.stage); button.dataset.comboTotal = String(view.total);
+      button.dataset.comboFinisher = String(view.finisher); button.dataset.comboNextStage = view.nextStage === null ? '' : String(view.nextStage);
+      this._attackComboLabel.textContent = view.label;
+      this._attackComboStage.hidden = this._attackComboCue.hidden = view.status === 'neutral';
+      this._attackComboStage.textContent = view.stage ? `${view.stage}/${view.total}타${view.finisher ? ' · 마무리' : ''}` : '';
+      this._attackComboCue.textContent = view.detail.split(' · ').at(-1);
+      button.setAttribute('aria-label', `${view.label}${view.detail ? ` · ${view.detail}` : ''} · J 또는 Space`);
+    }
+    const progress = Math.round(view.progress * 1000) / 10;
+    if (this._comboFeedbackProgress !== progress) {
+      this._comboFeedbackProgress = progress;
+      this._attackComboArc.style.strokeDashoffset = String(100 - progress);
+    }
   }
   setWave() {}
   /** 각성 해금 연출 — 레벨 구간을 넘겨 새 스킬이 열렸을 때 */
@@ -202,6 +250,7 @@ export class UI {
   }
   ultCinema(name, def) { const c = $('ult-cinema'); $('ult-name').textContent = name; $('ult-name').style.textShadow = `0 0 20px ${def.color}, 0 4px 0 #000`; c.classList.remove('on'); void c.offsetWidth; c.classList.add('on'); setTimeout(() => c.classList.remove('on'), 1700); }
   updateHud(b, dt) {
+    this.refreshComboFeedback(b);
     const astralChoice = !!b.active && b.routeObjectives?.def?.id === 'astral_constellations_standard';
     if (this._astralChoiceHud !== astralChoice) {
       this.el.hud.classList.toggle('astral-choice-hud', astralChoice);
