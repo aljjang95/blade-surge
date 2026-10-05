@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "status": "GENERATED_RUNTIME_SELECTOR_ACTIVATED_NOT_RENDERED",
+  "author": "TLL original compact coronet and geometry derivative recipe",
+  "retainedSource": "KayKit Adventurers Character Pack2.0 FREE / CC0",
+  "sourceLicenseFile": "public/models/KAYKIT_ADVENTURERS_LICENSE.txt",
+  "commercialUse": "CC0 permits commercial use; preserve source records. No exclusive original-face claim.",
+  "parentSha": "bb7b2b8b2c4d2d624b36982e103534b23815921d",
+  "parentTree": "92509c07c1b0ba042b41c0bfdcc0c2d991179849",
+  "sourceBaseSha256": "d319d2b33777f90b4fa19df4cad020fd54b99f639896ef2fb9e9af843d86457b",
+  "sourceFittingSha256": "eca324586230078151e20bb522013c7a2fd8bc067bbf4d326bb8dabf5b9a5465",
+  "blenderRequired": "5.2.1 LTS",
+  "authoringGenerator": "tools/art/build-knight-head-balance-v1.py",
+  "sourceDecoder": "tools/art/decode-knight-head-balance-v1.mjs",
+  "shapeSource": "Retained CC0 mesh topology/face atlas with declared neck-preserving profile; original hand-authored24-segment band/eight-point crest.",
+  "otherFourHeroesChanged": false,
+  "existingOriginalGLBsChanged": false,
+  "rigAnimationWeaponUVWeightAndOriginalBinaryPrefixPreservationRequired": true,
+  "newMaterialRolesTexturesShaderFeaturesLightsRenderTargetsShadowPasses": 0,
+  "trellisOrProviderUsed": false,
+  "assetsGenerated": true,
+  "rendered": false,
+  "runtimeActivated": true,
+  "runtimeActivationScope": "이 후속 후보의 기존 selector에 실제 base/fitting 쌍을 활성화했다. 브라우저·엔진 실행이나 배포·시각 수락을 뜻하지 않는다.",
+  "generationReceipt": {
+    "path": "work/knight-produced-v2-private179-first-1791166188440/produced/generation-receipt.json",
+    "sha256": "62046576b85ebed6729459f9612665e5b788903a4e34e9631af61e8703519ce6",
+    "originalSourceContractSha256": "e1646612216046469e74a78ae931b33977518a4f19576c7387ff63185ef6e358",
+    "generatorSha256": "0ed6346f1dbfa303ff090ad8c18ca7bbfda4bf55aa6cfc5ad0ab6a4265edd655"
+  },
+  "assets": {
+    "base": { "path": "public/models/heroes-next/knight-head-balance-v1.glb", "sha256": "694064b1774f4f012fcef68da380175ea432cc5e86ed9280894b7af3af0ad633", "bytes": 632916 },
+    "fitting": { "path": "public/models/heroes-next/knight-fitting-head-balance-v1.glb", "sha256": "f59bea70236f0c2abc6c70a7d75ae61c50d3651586a21c2bd946230c96793685", "bytes": 498060 }
+  },
+  "rootV3TypeAndPreservationVerification": {
+    "sourceReadySha256": "87297649ab4f295b2514126b8d23ae7074090b0597235a2c3644e5df2eed4d06",
+    "actualReceipt": "work/qa/knight-head-balance-20261005/ROOT-first-T-v3-type-and-generated-preservation-test-actual-receipt.json",
+    "actualReceiptSha256": "b32d12f94d3180aa808a0c8177c20a43e0fcb3b0b8517485d37a006349b55481",
+    "typecheckExitCode": 0, "testsPassed": 7, "testsFailed": 0, "expectCalls": 21875,
+    "scope": "활성화 전 정확한 V3에서 ROOT가 실제 생성물을 읽어 보존·200 clip pose·cache 회수를 검사했다. V4 실행이나 실제 이미지·성능의 증거로 승격하지 않는다."
+  },
+  "currentV4ActivationVerification": "SOURCE_REVIEWED_HASHES_MATCH_EXECUTABLE_CHECKS_NOT_RUN",
+  "actualPoseOrPixelOrWholeFrameBudgetPass": false,
+  "limitations": "Knight만 실제 생성·쌍 선택을 활성화했다. 새 실제 pixels·목/얼굴/왕관/무기 간섭 시각 검토·quiet/crowd/boss·cold/retry·전체 frame 420 draw/CPU·기기/AAA/다섯 클래스 결과는 미검증이다. 기존 V3 보존 검사는 이번 활성화의 런타임 PASS가 아니다."
+}

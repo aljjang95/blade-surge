@@ -5,6 +5,7 @@ import { expeditionDepth } from '../data/expedition-depths.js';
 import { conquestForRun, expeditionConquest } from '../data/expedition-conquests.js';
 import { DIFFICULTIES } from './difficulty.js';
 import { RIFT_RULES } from './journey-rifts.js';
+import { GARDEN_MASTERY, gardenMasteryForStage } from '../data/garden-mastery.js';
 
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const count = value => Number.isSafeInteger(value) && value >= 0 && value <= 1000000 ? value : null;
@@ -15,7 +16,13 @@ const campaign = value => {
   return parts && Number(parts[1]) <= CHAPTERS.length && Number(parts[2]) <= STAGES_PER_CHAPTER ? parts : null;
 };
 
-/** Only catalog identities survive saves; legacy floors cannot reveal the original expedition. */
+/** @typedef {{kind:'campaign', id:string, difficultyId:string|null, depth?:never, conquestId?:never, riftId?:never, encounterVersion?:never}} CampaignRunRoute */
+/** @typedef {{kind:'dungeon', id:string, depth:'standard'|'deep', conquestId:string|null, riftId:string|null, difficultyId?:never, encounterVersion?:string}} DungeonRunRoute */
+/** @typedef {CampaignRunRoute|DungeonRunRoute} NormalizedRunRoute */
+
+/** 카탈로그 경로만 저장하며 이전 층 기록에서 원정 경로를 추정하지 않는다.
+ * @returns {NormalizedRunRoute|null}
+ */
 export function normalizeRunRoute(value) {
   if (!object(value)) return null;
   if (value.kind === 'campaign') {
@@ -27,13 +34,20 @@ export function normalizeRunRoute(value) {
   const conquestId = value.conquestId ?? null, riftId = value.riftId ?? null;
   if (conquestId !== null && !conquestForRun(value.id, value.depth, conquestId)) return null;
   if (riftId !== null && (value.depth !== 'standard' || conquestId || !RIFT_RULES.some(r => r.id === riftId))) return null;
-  return { kind: 'dungeon', id: value.id, depth: value.depth, conquestId, riftId };
+  const encounterVersion = value.encounterVersion ?? null;
+  // 누락된 이전 기록은 누락된 채 보존한다. 알 수 없는 버전을 구형 기록으로 바꾸지 않는다.
+  if (encounterVersion !== null && (value.id !== 'glass_garden' || value.depth !== 'standard' || conquestId || riftId ||
+      encounterVersion !== GARDEN_MASTERY.version)) return null;
+  return { kind: 'dungeon', id: value.id, depth: value.depth, conquestId, riftId,
+    ...(encounterVersion !== null ? { encounterVersion } : {}) };
 }
 
 export function runRouteForStage(stage) {
   if (!stage || stage.party || stage.expedition?.kind === 'arena') return null;
+  const mastery = gardenMasteryForStage(stage);
   return normalizeRunRoute(stage.expedition
-    ? { kind: stage.expedition.kind, id: stage.expedition.id, depth: stage.expedition.depth || 'standard', conquestId: stage.expedition.conquestId, riftId: stage.riftId }
+    ? { kind: stage.expedition.kind, id: stage.expedition.id, depth: stage.expedition.depth || 'standard', conquestId: stage.expedition.conquestId,
+      riftId: stage.riftId || stage.expedition.riftId, ...(mastery ? { encounterVersion: stage.encounterVersion } : {}) }
     : { kind: 'campaign', id: stage.code, difficultyId: stage.difficultyId });
 }
 
@@ -54,7 +68,7 @@ export function runHistoryContext(stage, heroId, heroLevel) {
 export function runDetailsForBattle(battle) {
   const context = battle.run?.historyContext;
   const seen = battle.run?.controlSeen;
-  return normalizeRunDetails({ route: context?.route ?? runRouteForStage(battle.stage), heroId: context?.heroId ?? battle.heroId,
+  return normalizeRunDetails({ route: context ? context.route : runRouteForStage(battle.stage), heroId: context?.heroId ?? battle.heroId,
     heroLevel: context?.heroLevel ?? battle.growthStart?.level,
     control: seen === 1 ? 'manual' : seen === 2 ? 'auto' : seen === 3 ? 'mixed' : 'unknown',
     perfects: battle.run?.perfects, breaks: battle.run?.breaks, timeSec: battle.result?.time ?? battle.elapsed });
@@ -68,7 +82,9 @@ export function runRouteLabel(value) {
     return `캠페인 ${route.id} · ${stage.title || stage.name}${route.difficultyId ? ` · ${DIFFICULTIES[route.difficultyId].name}` : ''}`;
   }
   const def = route.depth === 'deep' ? expeditionDepth(route.id) : DUNGEONS.find(d => d.id === route.id);
-  return `${def.name} · ${route.depth === 'deep' ? '심층 원정' : '기본 원정'}${route.conquestId ? ` · ${expeditionConquest(route.conquestId).name}` : ''}${route.riftId ? ` · ${RIFT_RULES.find(r => r.id === route.riftId).name}` : ''}`;
+  const version = route.id === 'glass_garden' && route.depth === 'standard' && !route.conquestId && !route.riftId
+    ? route.encounterVersion === GARDEN_MASTERY.version ? ' · 사냥터 v1' : ' · 전투 구성 버전 미기록' : '';
+  return `${def.name} · ${route.depth === 'deep' ? '심층 원정' : '기본 원정'}${route.conquestId ? ` · ${expeditionConquest(route.conquestId).name}` : ''}${route.riftId ? ` · ${RIFT_RULES.find(r => r.id === route.riftId).name}` : ''}${version}`;
 }
 
 export function runDetailsLabel(value) {

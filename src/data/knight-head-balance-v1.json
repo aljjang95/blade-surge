@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "id": "knight-head-balance-v1",
+  "status": "GENERATED",
+  "useInGame": true,
+  "assets": {
+    "base": { "path": "/models/heroes-next/knight-head-balance-v1.glb", "sha256": "694064b1774f4f012fcef68da380175ea432cc5e86ed9280894b7af3af0ad633" },
+    "fitting": { "path": "/models/heroes-next/knight-fitting-head-balance-v1.glb", "sha256": "f59bea70236f0c2abc6c70a7d75ae61c50d3651586a21c2bd946230c96793685" }
+  },
+  "sources": {
+    "base": { "path": "public/models/Knight.glb", "sha256": "d319d2b33777f90b4fa19df4cad020fd54b99f639896ef2fb9e9af843d86457b" },
+    "fitting": { "path": "public/models/heroes-v3/knight-v3.glb", "sha256": "eca324586230078151e20bb522013c7a2fd8bc067bbf4d326bb8dabf5b9a5465" },
+    "headProfiles": { "path": "tools/art/head-profiles.json", "sha256": "80af3e7102ac4a5d1656419bdd72fb7e0628fbe9fa62863b68a8342781608c39" }
+  },
+  "headStreams": {
+    "POSITION": "de0fc15e7bf62d03d7cf240b70bb061bca60a502deab6a307481a83f548eaf3a",
+    "NORMAL": "2614c194b412c08cfcad865af0834bbb1465c452c484cdca3adca3401969b094",
+    "TEXCOORD_0": "605878e6de4afe77fdcd75de9cfd040ee0564ce4d90ef29683d154c780355ba4",
+    "JOINTS_0": "31c561dd95fd47ff7f8a3299cb4b669314371858e8e18ce6da9dd7d483be48d5",
+    "WEIGHTS_0": "1584c6ab033526a1de568eeb60d8d9790d2a1250a83c9074cef2a533e5803303",
+    "INDICES": "c52057939729b4ab57dbdf2f548ad2cce9931c51b5db78e2ba28d86c46038448"
+  },
+  "shape": { "neckMaxY": 1.30, "transitionEndY": 1.42, "upperXZ": 0.80, "upperY": 0.84 },
+  "preservation": { "headVertices": 727, "headTriangles": 956, "neckVertices": 81, "joints": 41, "clips": 40, "crownMeshIndex": 20, "crownMaterialIndex": 1 },
+  "predictedQuantizedHeadBounds": {
+    "min": [-0.434500190771, 1.2158314649950002, -0.38801750971500004],
+    "max": [0.434498744962, 2.152160513779, 0.425397376303]
+  },
+  "crown": { "segments": 24, "crestPoints": 8, "triangles": 220, "maximumY": 2.20 },
+  "license": "KayKit Adventurers 2.0 CC0-derived head; original TLL compact coronet. No exclusive original face claim.",
+  "runtimeEvidence": "Blender 5.2.1 LTS 실제 생성물 쌍을 기존 source/runtime selector에 활성화했다. ROOT의 정확한 V3에서 typecheck exit 0과 생성물 보존 7 tests/21875 assertions PASS를 기록했다. 이 V4 활성화 소스의 type/test/build/browser는 미실행이며 실제 pixels·전체 frame draw/CPU·시각 품질은 미검증이다. 기존 420 draw/CPU 제한을 유지한다."
+}

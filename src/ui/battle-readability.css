@@ -80,6 +80,11 @@ body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,
 .map-tactics-result{border-left:2px solid #a6f0d4;padding:8px 12px;margin:16px 0;background:#a6f0d409}
 .map-tactics-result strong{display:block;color:#d6eaca;font-size:13px;line-height:1.5}
 .map-tactics-result p{margin:4px 0 0;color:#bed0bc;font-size:12px;line-height:1.5}
+@media(orientation:landscape){
+ /* 소모된 장치는 같은 결과를 버튼과 설명에 두 번 펼치지 않는다. */
+ #map-tactics-context:is([data-phase=spent],[data-phase=canceled]) .map-tactics-context-copy{display:flex;align-items:baseline;flex-wrap:wrap;gap:3px 8px}
+ #map-tactics-context:is([data-phase=spent],[data-phase=canceled]):not([data-nearby=""]) .map-tactics-context-copy{display:none}
+}
 @media(orientation:landscape) and (max-width:700px){
  .experience-v2.oath-visual #hud.battle-readability .hud-top{grid-template-columns:184px minmax(0,1fr) 100px;gap:10px}
  .experience-v2.oath-visual #hud.battle-readability .hud-center{left:200px;width:calc(100% - 416px)}

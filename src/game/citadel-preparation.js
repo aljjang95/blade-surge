@@ -3,13 +3,14 @@ import { expeditionDepth } from '../data/expedition-depths.js';
 import { HEROES } from '../data/heroes.js';
 import { frontierForRoute } from '../data/seasonal-content.js';
 import { capturePersonalGoal, normalizePersonalGoal, summarizePersonalRuns } from './run-personal-goals.js';
-import { runRouteLabel } from './run-history.js';
+import { runRouteLabel, runRouteForStage } from './run-history.js';
 import { personalContextLabel, personalControlLabel } from '../ui/personal-goal-labels.js';
 import { mapTacticsForStage } from '../data/map-tactics.js';
 import { routeObjectiveForStage } from '../data/route-objectives.js';
 import { buildExpeditionStage, EXPEDITION_LAYOUTS } from './expedition-combat.js';
 import { CHALLENGES } from '../data/masterworks.js';
 import { difficultyEffects } from './masterworks-core.js';
+import { gardenMasteryForStage } from '../data/garden-mastery.js';
 
 const definitions = (id, depth) => depth === 'deep' ? expeditionDepth(id) : DUNGEONS.find(def => def.id === id);
 // Basic catalog stages include a roster callback. Preserve that callback while
@@ -17,7 +18,8 @@ const definitions = (id, depth) => depth === 'deep' ? expeditionDepth(id) : DUNG
 const copyDefinition = value => Array.isArray(value) ? value.map(copyDefinition)
   : value && typeof value === 'object' ? Object.fromEntries(Object.entries(value).map(([key, item]) => [key, copyDefinition(item)])) : value;
 const sameRoute = (left, right) => left?.kind === right.kind && left.id === right.id && left.depth === right.depth
-  && left.conquestId === right.conquestId && left.riftId === right.riftId;
+  && left.conquestId === right.conquestId && left.riftId === right.riftId
+  && (left.encounterVersion ?? null) === (right.encounterVersion ?? null);
 
 /** 세 기준문의 실제 단계·목표·조작만 읽으며 월드 생성이나 입장을 실행하지 않는다. */
 function actionCueFor(routeId, depth) {
@@ -91,7 +93,8 @@ export function citadelPreparation(app, routeId, depth = 'standard') {
   const control = state.journey?.autoBattle === true ? 'auto' : 'manual';
   const hero = { id: heroId ?? null, name: HEROES[heroId]?.name || '영웅 미선택', level: heroState?.level ?? null,
     control, controlLabel: personalControlLabel(control) };
-  const route = { kind: 'dungeon', id: routeId, depth, conquestId: null, riftId: null };
+  const stage = buildExpeditionStage('dungeon', routeId, null, { depth });
+  const route = runRouteForStage(stage);
   const expedition = app.expedition?.s || {};
   const access = accessFor(app, definition, depth);
   return { ok: true, routeId, depth, definition: copyDefinition(definition), access,
@@ -103,6 +106,7 @@ export function citadelPreparation(app, routeId, depth = 'standard') {
     }),
     hero,
     mapTactics: mapTacticsForStage({ expedition: route }),
+    gardenMastery: gardenMasteryForStage(stage),
     actionCue: actionCueFor(routeId, depth),
     potions: CONSUMABLES.map((potion, index) => ({ id: potion.id, name: potion.name, description: potion.description,
       key: ['U', 'I', 'O'][index], count: expedition.consumables?.[potion.id] ?? 0 })),

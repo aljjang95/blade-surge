@@ -4,6 +4,7 @@ import { Floor } from './world.js';
 import { expeditionDepth, depthStage } from '../data/expedition-depths.js';
 import { conquestForRun } from '../data/expedition-conquests.js';
 import { frontierFromSnapshot, frontierEffectForStage } from '../data/seasonal-content.js';
+import { gardenMasteryForStage, gardenMasteryDiagonals } from '../data/garden-mastery.js';
 
 export const EXPEDITION_LAYOUTS = {
   glass_garden: { spacing: [30, 30], size: [20, 20], width: 6, cells: [[0,0],[1,0],[1,-1],[2,0],[3,0]], edges: [[0,1],[1,2],[1,3],[3,4]], types: ['start','normal','treasure','normal','boss'] },
@@ -71,9 +72,10 @@ export function buildExpeditionStage(kind, id, eco, { depth = 'standard', conque
     expeditionEnemy: enemy,
   };
   if (def.roster) stage.rosterFor = () => def.roster;
+  const mastery = gardenMasteryForStage(stage);
   // AI arena uses the matching atmosphere with the already-loaded original rigs.
   if (id === 'champion') stage.chapter = { ...base.chapter, theme: 'frost' };
-  return stage;
+  return { ...stage, ...(mastery ? { encounterVersion: mastery.version } : {}) };
 }
 
 export function buildExpeditionWorld(stage) {
@@ -90,6 +92,12 @@ export function buildExpeditionWorld(stage) {
     treasure.links.push(tactics.id); tactics.links.push(treasure.id);
     world.linkPending.push([[treasure.gx, treasure.gy], [tactics.gx, tactics.gy]]);
     world.buildMask();
+    const mastery = gardenMasteryForStage(stage);
+    if (mastery) {
+      tactics.label = mastery.label;
+      tactics.gardenMastery = Object.freeze({ version: mastery.version, approachRoomIds: mastery.approachRoomIds,
+        diagonals: gardenMasteryDiagonals(tactics) });
+    }
   }
   return world;
 }
@@ -114,7 +122,13 @@ export function expeditionRoster(stage, room) {
     if (room.type === 'elite') return [R.elite[0], R.trash[0], R.trash[2], R.trash[5], R.ranged[0]];
     return [R.trash[0], R.trash[1], R.trash[2], R.trash[3], R.ranged[0], R.ranged[1], R.elite[0]];
   }
-  if (id === 'glass_garden') return room.type === 'treasure' ? [R.trash[0],R.trash[2],R.ranged[0]] : [R.trash[0],R.trash[1],R.trash[2],R.trash[0],R.ranged[0],R.trash[4]];
+  if (id === 'glass_garden') {
+    const roster = room.type === 'treasure' ? [R.trash[0],R.trash[2],R.ranged[0]] : [R.trash[0],R.trash[1],R.trash[2],R.trash[0],R.ranged[0],R.trash[4]];
+    const mastery = gardenMasteryForStage(stage);
+    // 다른 다섯 자리의 생성 순서를 지키고 중복 잡몹 한 자리만 기존 분쇄형으로 바꾼다.
+    if (mastery && room.id === mastery.roomId && room.type === 'normal') roster[mastery.replacementSlot] = mastery.replacementEnemyId;
+    return roster;
+  }
   if (id === 'ember_vault') return [R.elite[0],R.trash[0],R.trash[1],R.trash[3],R.ranged[0],R.trash[4]];
   return [R.ranged[0],R.ranged[1],R.ranged[2],R.trash[1],R.trash[5],...(room.type === 'elite' ? [R.elite[0]] : [])];
 }

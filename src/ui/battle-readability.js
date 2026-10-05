@@ -1,6 +1,7 @@
 import { Minimap } from './minimap.js';
 import { battleObjectiveView, discoveredMapView } from './battle-objective-view.js';
 import './battle-readability.css';
+import { gardenMasteryForStage } from '../data/garden-mastery.js';
 
 const node = (tag, className, text = '') => {
   const element = document.createElement(tag); element.className = className; element.textContent = text; return element;
@@ -104,8 +105,11 @@ export class BattleReadability {
         : nearby ? `${nearby.label} 발동 · F` : '조작판으로 이동';
       this.actionDetail.textContent = snapshot.used ? `제어 대상 ${snapshot.affectedCount}명${snapshot.remainingSeconds > 0 ? ` · ${snapshot.remainingSeconds.toFixed(1)}초` : ''}`
         : snapshot.actionable ? `${effect} · 대상 ${snapshot.targetCount}명` : blockedCopy[snapshot.blockedReason] || '장치의 조작판으로 이동';
-      this.contextTitle.textContent = snapshot.used ? this.actionName.textContent : '정원의 장치';
-      this.contextDetail.textContent = snapshot.used ? this.actionDetail.textContent : '이 방에서 1회 · 적 모으기 / 밀어내기';
+      const mastery = gardenMasteryForStage(battle.stage);
+      this.contextTitle.textContent = snapshot.used ? this.actionName.textContent : mastery?.label || '정원의 장치';
+      this.contextDetail.textContent = snapshot.used ? this.actionDetail.textContent
+        : mastery ? `이 방에서 1회 · ${nearby ? mastery.hints[nearby.id] : mastery.priorityHint}`
+          : '이 방에서 1회 · 적 모으기 / 밀어내기';
       this.action.setAttribute('aria-label', `${this.actionName.textContent} · ${this.actionDetail.textContent} · 이 방에서 1회`);
     }
     if (this.dialog.open) this.refreshMap(battle, goal);
@@ -132,6 +136,14 @@ export class BattleReadability {
       const li = node('li', current ? 'is-current' : objective ? 'is-objective' : ''); li.dataset.room = String(room.id);
       li.textContent = `${current ? '현재 · ' : objective ? '목표 · ' : ''}${room.label || `${roomType[room.type] || '구역'} ${room.id + 1}`}`;
       li.append(node('small', '', room.type === 'boss' && known.sealed ? '봉인됨' : room.cleared ? '정화 완료' : '미정화'));
+      const mastery = gardenMasteryForStage(battle.stage);
+      if (mastery && room.id === mastery.roomId) {
+        // 실제로 양끝을 발견한 연결만 안내한다. 미발견 입구의 위치는 만들지 않는다.
+        const approaches = mastery.approachRoomIds.filter(id => known.corridors.some(edge =>
+          edge.fromId === room.id && edge.toId === id || edge.toId === room.id && edge.fromId === id));
+        li.append(node('small', '', approaches.length === 2 ? '발견한 입구 · 전투방 / 보물방'
+          : approaches.length === 1 ? `발견한 입구 · ${approaches[0] === 1 ? '전투방' : '보물방'}` : '연결 입구 미발견'));
+      }
       this.rooms.append(li);
     }
   }

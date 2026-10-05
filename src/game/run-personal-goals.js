@@ -31,7 +31,8 @@ function sameContext(a, b) {
   if (left.kind !== right.kind || left.id !== right.id) return false;
   return left.kind === 'campaign'
     ? left.difficultyId === right.difficultyId
-    : left.depth === right.depth && left.conquestId === right.conquestId && left.riftId === right.riftId;
+    : left.depth === right.depth && left.conquestId === right.conquestId && left.riftId === right.riftId
+      && (left.encounterVersion ?? null) === (right.encounterVersion ?? null);
 }
 
 /** Invalid observations still occupy their original slot in the terminal history. */

@@ -17,7 +17,7 @@ export function personalTargetLabel(receipt) {
 export function personalResultLabel(result) {
   if (!result) return '';
   if (!result.eligible) return result.reason === 'defeat' ? '개인 목표 · 패배 기록은 최고 기록과 비교하지 않습니다.'
-    : '개인 목표 · 경로·영웅·출격 레벨·조작 조건이 달라 비교하지 않습니다.';
+    : '개인 목표 · 경로·전투 구성·영웅·출격 레벨·조작 조건이 달라 비교하지 않습니다.';
   // Keep the terminal time exact here: rounding 10.004 to 10.00 must not make
   // a missed 10.00-second target look achieved. Summary/targets use cents.
   const actual=result.metric==='time'?`${String(result.value)}초`:personalMetricValue(result.metric,result.value);

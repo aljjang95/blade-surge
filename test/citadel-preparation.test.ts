@@ -11,6 +11,7 @@ import { routeObjectiveForStage } from '../src/data/route-objectives.js';
 import { CHALLENGES } from '../src/data/masterworks.js';
 import { difficultyEffects } from '../src/game/masterworks-core.js';
 import { MasterworksService } from '../src/game/masterworks-service.js';
+import { GARDEN_MASTERY } from '../src/data/garden-mastery.js';
 
 const originalStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 let values: Map<string, string>;
@@ -38,7 +39,7 @@ const unlock = (app: any, def: (typeof EXPEDITION_DEPTHS)[number]) => {
   app.eco.s.progress.stars[def.unlockCode] = 1;
 };
 function goal(app: any, override: object = {}, metric = 'time', victory = true) {
-  const context = { route: { kind: 'dungeon', id: 'glass_garden', depth: 'standard', conquestId: null, riftId: null },
+  const context = { route: { kind: 'dungeon', id: 'glass_garden', depth: 'standard', conquestId: null, riftId: null, encounterVersion: GARDEN_MASTERY.version },
     heroId: 'knight', heroLevel: 1, control: 'manual', ...override };
   app.eco.s.masterworks = normalizeMasterworks({ personalGoal: { context, metric }, history: [
     { runId: 1, floor: 1, outcome: victory ? 'victory' : 'defeat', boonIds: [], details: { ...context, timeSec: 60, perfects: 2, breaks: 3 } },
@@ -142,6 +143,22 @@ test('personal objective distinguishes matching conditions, missing victory base
     metric: 'perfects', target: null, baseline: null, comparisonCount: 0 });
   goal(app, {}, 'breaks'); app.eco.s.masterworks.history[0].details.breaks = 1000000;
   expect(preparation(app).personalGoal).toMatchObject({ status: 'no-target', target: null, comparisonCount: 1 });
+});
+
+test('사냥터 준비는 이전 목표의 조건 불일치를 알리고 실제 입구·장치 안내만 읽는다', () => {
+  const app = fixture();
+  goal(app, { route: { kind: 'dungeon', id: 'glass_garden', depth: 'standard', conquestId: null, riftId: null } });
+  const before = JSON.stringify(app.eco.s), view = preparation(app);
+  expect(view.personalGoal).toMatchObject({ status: 'mismatch', matches: false, mismatches: ['route'], baseline: 60, target: 59 });
+  expect(view.personalGoal.routeLabel).toContain('버전 미기록');
+  expect(view.gardenMastery).toBe(GARDEN_MASTERY);
+  expect(view.gardenMastery.approachRoomIds).toEqual([1, 2]);
+  expect(view.gardenMastery.hints.gather).toContain('회복기');
+  expect(view.gardenMastery.priorityHint).toContain('자객의 측면 예고');
+  expect(view.gardenMastery.hints.release).toContain('해골 망령 압박');
+  expect(view.gardenMastery.hints.release).toContain('예고는 유지');
+  expect(view.access.cost).toBe(4); expect(preparation(app, 'glass_garden', 'deep').gardenMastery).toBeNull();
+  expect(JSON.stringify(app.eco.s)).toBe(before);
 });
 
 test('goal comparison includes depth, conquest and rift as well as selected hero, departure level and control', () => {

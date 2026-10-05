@@ -6,11 +6,16 @@ import { stageDef } from '../src/data/stages.js';
 import { STORY_DUNGEONS } from '../src/data/story-dungeons.js';
 import { buildExpeditionStage, buildExpeditionWorld } from '../src/game/expedition-combat.js';
 import { buildRegionArchitecture } from '../src/game/region-architecture.js';
+import { GARDEN_MASTERY } from '../src/data/garden-mastery.js';
 import { SURFACE_TEXTURES } from '../src/engine/surface-textures.js';
 import { BattleOcclusion } from '../src/engine/battle-occlusion.js';
 import baseline from './fixtures/region-architecture-ae2260e.json';
 
 type Range = { roomId: number; materialRole: number; batchId: number; start: number; count: number };
+type Landmark = { roomId: number; theme: string; kind: string; label: string; role: string; x: number; z: number };
+type MasteryRoom = { label: string; gardenMastery?: { version: string; diagonals: readonly {
+  fromX: number; fromZ: number; toX: number; toZ: number;
+}[] } };
 const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
 const themes = ['crypt', 'throne', 'abyss', 'garden', 'forge', 'frost', 'tide', 'crown'];
 const cases: [string, string, () => Floor][] = themes.map(theme => [`floor4-${theme}`, theme, () => new Floor(4, theme)]);
@@ -58,10 +63,113 @@ function geometryFingerprint(group: THREE.Group) {
   return digest.digest('hex');
 }
 
+// 역사 원본 hash는 그대로 검사하고 현재 소스의 추가분을 한 방·한 재질의 정확한 꼬리로 한정한다.
+function expectGardenMasteryAddition(current: THREE.Group, legacy: THREE.Group, floor: Floor) {
+  const entries = (group: THREE.Group) => (group.children as THREE.Mesh[]).flatMap(mesh =>
+    (mesh.userData.roomRanges as Range[]).map(range => ({ mesh, range })));
+  const actual = entries(current), original = entries(legacy);
+  const authored = (floor.rooms[3] as MasteryRoom).gardenMastery!;
+  expect(authored.version).toBe(GARDEN_MASTERY.version); expect(authored.diagonals).toHaveLength(2);
+  expect(current.children.map(mesh => mesh.name)).toEqual(legacy.children.map(mesh => mesh.name));
+  expect(current.userData.architectureBatches).toEqual(legacy.userData.architectureBatches);
+  const legacyLandmarks = legacy.userData.landmarks as Landmark[];
+  const legacyRoom = legacyLandmarks.filter(landmark => landmark.roomId === 3);
+  expect(legacyRoom).toHaveLength(1); expect(legacyRoom[0].label).toBe('');
+  expect((floor.rooms[3] as MasteryRoom).label).toBe(GARDEN_MASTERY.label);
+  expect(current.userData.roomDetails).toEqual(legacy.userData.roomDetails);
+  expect(current.userData.landmarks).toEqual(legacyLandmarks.map(landmark => landmark.roomId === 3
+    ? { ...landmark, label: GARDEN_MASTERY.label } : landmark));
+  expect(actual.map(({ range }) => [range.roomId, range.materialRole, range.batchId])).toEqual(
+    original.map(({ range }) => [range.roomId, range.materialRole, range.batchId]));
+  const changed = original.filter(({ range }) => range.roomId === 3 && range.materialRole === 0);
+  expect(changed).toHaveLength(1); const added = changed[0];
+  const byRoom = (a: Range, b: Range) => a.roomId - b.roomId || a.materialRole - b.materialRole;
+  expect([...current.userData.roomGeometry].sort(byRoom)).toEqual(actual.map(({ range }) => range).sort(byRoom));
+  for (let m = 0; m < current.children.length; m++) {
+    const mesh = current.children[m] as THREE.Mesh, previous = legacy.children[m] as THREE.Mesh;
+    expect(materialShape(mesh.material as THREE.MeshStandardMaterial)).toEqual(materialShape(previous.material as THREE.MeshStandardMaterial));
+    expect([mesh.castShadow, mesh.receiveShadow, mesh.frustumCulled, mesh.visible, mesh.position.toArray(), mesh.scale.toArray(), mesh.quaternion.toArray()]).toEqual(
+      [previous.castShadow, previous.receiveShadow, previous.frustumCulled, previous.visible, previous.position.toArray(), previous.scale.toArray(), previous.quaternion.toArray()]);
+    expect(mesh.geometry.index).toBeNull(); expect(mesh.geometry.groups).toEqual(previous.geometry.groups);
+    expect(mesh.geometry.drawRange).toEqual(previous.geometry.drawRange);
+    const extra = previous === added.mesh ? 24 : 0;
+    for (const name of Object.keys(mesh.geometry.attributes)) {
+      const attr = mesh.geometry.getAttribute(name) as THREE.BufferAttribute;
+      const old = previous.geometry.getAttribute(name) as THREE.BufferAttribute;
+      expect(attr.count).toBe(old.count + extra);
+      expect(attr.array.length).toBe(old.array.length + extra * old.itemSize);
+    }
+    const positions = mesh.geometry.getAttribute('position'), union = new THREE.Box3(), point = new THREE.Vector3();
+    let next = 0;
+    for (const range of mesh.userData.roomRanges as Range[]) {
+      expect(range.start).toBe(next); next += range.count;
+    }
+    expect(next).toBe(positions.count);
+    let farthest = 0;
+    for (let i = 0; i < positions.count; i++) {
+      point.fromBufferAttribute(positions, i); union.expandByPoint(point);
+      farthest = Math.max(farthest, point.distanceToSquared(mesh.geometry.boundingSphere!.center));
+    }
+    expect(mesh.geometry.boundingBox!.min.toArray()).toEqual(union.min.toArray());
+    expect(mesh.geometry.boundingBox!.max.toArray()).toEqual(union.max.toArray());
+    expect(farthest).toBeLessThanOrEqual((mesh.geometry.boundingSphere!.radius + 1e-5) ** 2);
+  }
+  for (let i = 0; i < actual.length; i++) {
+    const { mesh, range } = actual[i], previous = original[i];
+    const tail = range.roomId === 3 && range.materialRole === 0 ? 24 : 0;
+    const shift = range.batchId === added.range.batchId && range.materialRole === 0 && previous.range.start > added.range.start ? 24 : 0;
+    expect(range.count).toBe(previous.range.count + tail); expect(range.start).toBe(previous.range.start + shift);
+    expect(Object.keys(mesh.geometry.attributes).sort()).toEqual(Object.keys(previous.mesh.geometry.attributes).sort());
+    for (const name of Object.keys(mesh.geometry.attributes)) {
+      const attr = mesh.geometry.getAttribute(name) as THREE.BufferAttribute;
+      const old = previous.mesh.geometry.getAttribute(name) as THREE.BufferAttribute;
+      expect([attr.itemSize, attr.normalized, attr.array.constructor.name]).toEqual([old.itemSize, old.normalized, old.array.constructor.name]);
+      const size = attr.array.BYTES_PER_ELEMENT * attr.itemSize;
+      expect(new Uint8Array(attr.array.buffer, attr.array.byteOffset + range.start * size, previous.range.count * size)).toEqual(
+        new Uint8Array(old.array.buffer, old.array.byteOffset + previous.range.start * size, previous.range.count * size));
+    }
+    if (!tail) continue;
+    const start = range.start + previous.range.count;
+    const positions = mesh.geometry.getAttribute('position'), normals = mesh.geometry.getAttribute('normal');
+    const colors = mesh.geometry.getAttribute('color'), uv = mesh.geometry.getAttribute('uv');
+    const uvCorners = [[0, 1], [0, 0], [1, 1], [0, 0], [1, 0], [1, 1]];
+    for (let quad = 0; quad < 4; quad++) {
+      const path = authored.diagonals[Math.floor(quad / 2)], cap = quad % 2 === 1;
+      const dx = path.toX - path.fromX, dz = path.toZ - path.fromZ, length = Math.hypot(dx, dz);
+      const cx = cap ? path.toX : (path.fromX + path.toX) / 2, cz = cap ? path.toZ : (path.fromZ + path.toZ) / 2;
+      const color = new THREE.Color(cap ? 0xc5c5a9 : 0x9aab9d), first = start + quad * 6;
+      for (let vertex = 0; vertex < 6; vertex++) {
+        const index = first + vertex, x = positions.getX(index), y = positions.getY(index), z = positions.getZ(index);
+        const along = ((x - cx) * dx + (z - cz) * dz) / length, across = (-(x - cx) * dz + (z - cz) * dx) / length;
+        const [u, v] = uvCorners[vertex];
+        expect(Math.abs(along - (cap ? (.5 - v) * .12 : (u - .5) * length))).toBeLessThan(1e-5);
+        expect(Math.abs(across - (cap ? (.5 - u) * .65 : (.5 - v) * .12))).toBeLessThan(1e-5);
+        expect(y).toBe(positions.getY(first)); expect(y).toBeGreaterThan(.04997); expect(y).toBeLessThan(.11);
+        expect(floor.walkable(x, z)).toBe(true);
+        expect(normals.getX(index)).toBeCloseTo(0, 12); expect(normals.getY(index)).toBe(1); expect(normals.getZ(index)).toBeCloseTo(0, 12);
+        expect([colors.getX(index), colors.getY(index), colors.getZ(index)]).toEqual([Math.fround(color.r), Math.fround(color.g), Math.fround(color.b)]);
+        expect([uv.getX(index), uv.getY(index)]).toEqual(uvCorners[vertex]);
+      }
+    }
+  }
+  expect(actual.reduce((sum, { range }) => sum + range.count, 0)).toBe(original.reduce((sum, { range }) => sum + range.count, 0) + 24);
+}
+
 for (const [name, theme, makeFloor] of cases) test(`${name}: AE 방의 모든 삼각형·재질·정보를 보존하는 제한 배치`, () => {
   const floor = makeFloor(), control = makeFloor(), rng = floor.rand;
   const before = hash([floor.rooms, floor.corridors, Array.from(floor.mask!), Array.from(floor.inner!), floor.gates, floor.sealed]);
-  const group = buildRegionArchitecture(floor, theme);
+  const mastery = name === 'garden-loop';
+  if (mastery) {
+    const currentRoom = floor.rooms[3] as MasteryRoom, historicalRoom = control.rooms[3] as MasteryRoom;
+    expect(currentRoom.label).toBe(GARDEN_MASTERY.label);
+    expect(currentRoom.gardenMastery?.version).toBe(GARDEN_MASTERY.version);
+    delete historicalRoom.gardenMastery;
+    // 정확한 부모 layout에는 labels가 없어 room3의 역사 이름은 빈 문자열이다.
+    historicalRoom.label = '';
+  }
+  const controlBefore = hash([control.rooms, control.corridors, Array.from(control.mask!), Array.from(control.inner!), control.gates, control.sealed]);
+  const current = mastery ? buildRegionArchitecture(floor, theme) : null;
+  const group = buildRegionArchitecture(mastery ? control : floor, theme);
   const original = baseline.cases[name as keyof typeof baseline.cases];
   expect(original).toBeDefined();
   expect(geometryFingerprint(group)).toBe(original.geometrySha256);
@@ -131,6 +239,12 @@ for (const [name, theme, makeFloor] of cases) test(`${name}: AE 방의 모든 �
   expect(hash([floor.rooms, floor.corridors, Array.from(floor.mask!), Array.from(floor.inner!), floor.gates, floor.sealed])).toBe(before);
   expect(floor.rand).toBe(rng);
   expect(Array.from({ length: 16 }, () => floor.rand())).toEqual(Array.from({ length: 16 }, () => control.rand()));
+  if (current) {
+    expectGardenMasteryAddition(current, group, floor);
+    expect(hash([floor.rooms, floor.corridors, Array.from(floor.mask!), Array.from(floor.inner!), floor.gates, floor.sealed])).toBe(before);
+    expect(hash([control.rooms, control.corridors, Array.from(control.mask!), Array.from(control.inner!), control.gates, control.sealed])).toBe(controlBefore);
+    current.userData.dispose();
+  }
   group.userData.dispose();
 });
 

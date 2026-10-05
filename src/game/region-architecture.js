@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { applyDungeonStoneDetail, applySurfaceDetail } from '../engine/surface-textures.js';
+import { GARDEN_MASTERY } from '../data/garden-mastery.js';
 
 const PALETTES = {
   crypt: [0x8e98ae, 0x938269, 0x749ebd],
@@ -350,6 +351,16 @@ export function buildRegionArchitecture(floor, theme) {
         slab(px, pz, 2.6, 1.9, dark);
         slab(px, pz, .8, 1.35, pale, sx * sz * Math.PI / 4);
         slab(px + sx * .55, pz + sz * .25, .42, .85, 0x829b84, sx * sz * Math.PI / 4);
+      }
+      if (room.gardenMastery?.version === GARDEN_MASTERY.version) {
+        // 열린 하단의 두 대각선을 얕은 이음선으로 읽힌다. 기존 석재 배치에 병합한다.
+        // 예고가 덮은 순간에는 안전한 길이 아니다. 물리 마스크와 조작판은 그대로 둔다.
+        for (const path of room.gardenMastery.diagonals) {
+          const dx = path.toX - path.fromX, dz = path.toZ - path.fromZ, length = Math.hypot(dx, dz);
+          const rotation = -Math.atan2(dz, dx);
+          slab((path.fromX + path.toX) / 2, (path.fromZ + path.toZ) / 2, length, .12, 0x9aab9d, rotation);
+          slab(path.toX, path.toZ, .65, .12, pale, rotation + Math.PI / 2);
+        }
       }
     } else if (theme === 'forge') {
       // 냉각 격자는 양쪽 가장자리로 밀어 근접 전투와 위험 예고의 중앙을 비운다.

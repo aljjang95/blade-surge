@@ -24,14 +24,14 @@ const goalCopy = goal => {
   const metric = personalMetricLabel(goal.metric);
   const target = Number.isFinite(goal.target) ? `${metric} ${personalMetricValue(goal.metric, goal.target)} ${goal.metric === 'time' ? '이하' : '이상'}` : '';
   const baseline = Number.isFinite(goal.baseline) ? `최고 기록 ${personalMetricValue(goal.metric, goal.baseline)}` : '';
-  const labels = { route: '경로·원정 단계', hero: '영웅', level: '출격 레벨', control: '조작' };
+  const labels = { route: '경로·원정 단계·전투 구성', hero: '영웅', level: '출격 레벨', control: '조작' };
   const mismatch = goal.mismatches?.length ? `다른 조건: ${goal.mismatches.map(key => labels[key] || key).join(' · ')}.` : '';
   if (goal.status === 'mismatch') {
     return { status: goal.status, title: '개인 목표 · 비교 조건 다름', description: `${mismatch} 현재 선택으로는 저장한 목표와 비교하지 않습니다.`, condition, target, baseline };
   }
   if (goal.status === 'no-baseline') return { status: goal.status, title: '개인 목표 · 비교 기록 없음', description: `${metric} 목표를 선택했지만 저장한 조건의 유효한 클리어 기록이 없어 목표 수치를 안내할 수 없습니다. ${mismatch}`, condition };
   if (goal.status === 'no-target') return { status: goal.status, title: '개인 목표 · 목표 수치 없음', description: `${metric} 비교 기록은 있지만 다음 목표 수치를 계산할 수 없습니다. ${mismatch}`, condition, baseline };
-  return { status: 'matching', title: '개인 목표 · 비교 준비', description: '경로·원정 단계·영웅·출격 레벨·조작이 저장한 목표와 일치합니다. 전투 중 AUTO를 전환하면 실제 조작 조건으로 비교합니다.', condition, target, baseline };
+  return { status: 'matching', title: '개인 목표 · 비교 준비', description: '경로·원정 단계·전투 구성·영웅·출격 레벨·조작이 저장한 목표와 일치합니다. 전투 중 AUTO를 전환하면 실제 조작 조건으로 비교합니다.', condition, target, baseline };
 };
 
 /** Native controls and destination dialogs for the walking lobby. */
@@ -123,19 +123,21 @@ export class CitadelHubUI {
     const preparation = citadelPreparation(this.app, def.id, this.selectedDepth);
     if (!preparation.ok) { this.close(); return; }
     this.challengeNotice = ''; this.reviewedPreparation = null;
-    this.dialog.innerHTML = `<div class="citadel-hub-destination-shell"><div class="citadel-hub-destination-scroll">
-      <div class="citadel-hub-destination-art"><span></span></div>
-      <div class="citadel-hub-destination-body"><small class="citadel-hub-eyebrow">원정 출격 준비</small><h2 id="citadel-destination-title"></h2><p id="citadel-destination-description"></p>
+    this.dialog.innerHTML = `<div class="citadel-hub-destination-shell"><header class="citadel-hub-destination-heading">
+      <div class="citadel-hub-destination-identity"><small class="citadel-hub-eyebrow">원정 출격 준비</small><h2 id="citadel-destination-title"></h2></div>
       <fieldset class="citadel-hub-depths"><legend>원정 단계</legend>${preparation.depthOptions.map(option => `<label class="citadel-hub-depth"><input type="radio" name="citadel-depth" value="${safe(option.depth)}" data-citadel-depth="${safe(option.depth)}" aria-describedby="citadel-depth-${safe(option.depth)}-state" ${option.depth === this.selectedDepth ? 'checked' : ''}><span class="citadel-hub-depth-copy"><strong>${safe(option.label)}</strong><small id="citadel-depth-${safe(option.depth)}-state"></small></span></label>`).join('')}</fieldset>
+      </header><section class="citadel-hub-action-cue" aria-label="출격 전 행동 안내" hidden><strong data-citadel-cue-depth></strong><p data-citadel-cue-objective></p><p data-citadel-cue-action></p></section><div class="citadel-hub-destination-scroll">
+      <div class="citadel-hub-destination-art"><span></span></div>
+      <div class="citadel-hub-destination-body"><p id="citadel-destination-description"></p><p class="citadel-hub-tactics" hidden></p>
       <div class="citadel-hub-destination-stats"><span>해금 <b data-citadel-unlock></b></span><span>입장 비용 <b data-citadel-cost></b></span><span>현재 보유 <b data-citadel-energy></b></span></div><p class="citadel-hub-unlock-note" hidden></p>
-      <section class="citadel-hub-preparation-section" aria-label="원정 목표"><h3>이번 원정의 목표</h3><p class="citadel-hub-objective"></p><p class="citadel-hub-tactics" hidden></p></section>
+      <section class="citadel-hub-preparation-section" aria-label="원정 목표"><h3>이번 원정의 목표</h3><p class="citadel-hub-objective"></p></section>
       <section class="citadel-hub-preparation-section" aria-label="클리어 보상"><h3>기본 클리어 보상</h3><p class="citadel-hub-rewards"></p><div class="citadel-hub-first-reward"></div></section>
       <section class="citadel-hub-frontier" aria-label="프론티어 효과"></section>
       <section class="citadel-hub-preparation-section citadel-hub-hero" aria-label="출격 영웅"><h3>출격 영웅</h3><p></p></section>
       <section class="citadel-hub-preparation-section" aria-label="보유 물약"><h3>보유 물약 <small>전투에서 사용</small></h3><ul class="citadel-hub-potions"></ul><p class="citadel-hub-preparation-note">이 화면에서는 물약을 소모하지 않습니다.</p></section>
       <section class="citadel-hub-challenge-details" aria-label="서약 효과 상세"><h3>현재 출격에 적용할 서약</h3><ul data-citadel-challenge-list></ul><p data-citadel-challenge-effects></p><p data-citadel-fury-preview></p><p id="citadel-fury-persistence">선택은 즉시 저장되며 해제할 때까지 개인 캠페인·원정에 유지됩니다. 파티·아레나에는 적용되지 않습니다.</p><p>완료 명성은 클리어 정산에서 계산합니다. 필드 골드·장비와 기본 클리어 보상은 기존 규칙을 따릅니다.</p></section>
       <section class="citadel-hub-personal-goal" aria-label="개인 목표"><div class="citadel-hub-goal-copy"></div><button type="button" class="citadel-hub-goal-open">기록에서 목표 보기</button></section>
-      </div></div><section class="citadel-hub-action-cue" aria-label="출격 전 행동 안내" hidden><strong data-citadel-cue-depth></strong><p data-citadel-cue-objective></p><p data-citadel-cue-action></p></section><div class="citadel-hub-destination-footer"><section class="citadel-hub-risk-choice" aria-label="서약 선택"><div class="citadel-hub-risk-row"><button type="button" class="citadel-hub-fury" aria-pressed="false" aria-describedby="citadel-fury-rule citadel-fury-persistence citadel-challenge-active"><span>분노의 적</span><strong data-citadel-fury-state></strong></button><div><p id="citadel-fury-rule"></p><p class="citadel-hub-risk-persistence">선택 즉시 저장 · 해제할 때까지 유지</p></div></div><p id="citadel-challenge-active"></p><p class="citadel-hub-challenge-notice" role="status" aria-live="polite" hidden></p></section><p class="citadel-hub-access" role="status" aria-live="polite"></p><div class="citadel-hub-destination-actions"><button type="button" class="citadel-hub-cancel">돌아가기</button><button type="button" class="citadel-hub-go"></button></div></div></div>`;
+      </div></div><div class="citadel-hub-destination-footer"><section class="citadel-hub-risk-choice" aria-label="서약 선택"><div class="citadel-hub-risk-row"><button type="button" class="citadel-hub-fury" aria-pressed="false" aria-describedby="citadel-fury-rule citadel-fury-persistence citadel-challenge-active"><span>분노의 적</span><strong data-citadel-fury-state></strong></button><div><p id="citadel-fury-rule"></p><p class="citadel-hub-risk-persistence">선택 즉시 저장 · 해제할 때까지 유지</p></div></div><p id="citadel-challenge-active"></p><p class="citadel-hub-challenge-notice" role="status" aria-live="polite" hidden></p></section><p class="citadel-hub-access" role="status" aria-live="polite"></p><div class="citadel-hub-destination-actions"><button type="button" class="citadel-hub-cancel">돌아가기</button><button type="button" class="citadel-hub-go"></button></div></div></div>`;
     this.dialog.querySelectorAll('[data-citadel-depth]').forEach(input => input.addEventListener('change', () => {
       if (!input.checked || this.busy || !this.opened) return;
       this.selectedDepth = input.value; this.challengeNotice = ''; this.refreshDestination();
@@ -219,10 +221,15 @@ export class CitadelHubUI {
     const unlockNote = this.dialog.querySelector('.citadel-hub-unlock-note');
     unlockNote.hidden = preparation.depth !== 'deep';
     unlockNote.textContent = preparation.depth === 'deep' ? `심층 해금: 기본 원정 클리어 · 캠페인 ${selected.unlockCode} 클리어 · 탐험 Lv.${selected.minLevel}` : '';
-    this.dialog.querySelector('.citadel-hub-objective').textContent = selected.objective || selected.description;
+    const objective = this.dialog.querySelector('.citadel-hub-objective');
+    objective.textContent = selected.objective || selected.description;
+    // 고정 행동 안내가 있는 지역은 같은 목표를 본문에 다시 표시하지 않는다.
+    objective.closest('section').hidden = !!preparation.actionCue;
     const tactics = this.dialog.querySelector('.citadel-hub-tactics');
     tactics.hidden = !preparation.mapTactics;
-    tactics.textContent = preparation.mapTactics ? `선택 전술 · ${preparation.mapTactics.options.map(option => option.label).join(' / ')} 중 이 방에서 1회. 적을 표시 범위로 유인한 뒤 장치 가까이에서 F 또는 전술 버튼으로 발동하세요. AUTO는 사용하지 않으며 추가 보상은 없습니다.` : '';
+    const mastery = preparation.gardenMastery;
+    tactics.textContent = mastery ? `${mastery.label} · ${mastery.approachHint}. 집결: ${mastery.hints.gather}. 방출: ${mastery.hints.release}. 이 방에서 1회 · 장치 곁 F / 전술 버튼(수동) · AUTO는 장치를 사용하지 않음 · 추가 보상 없음.`
+      : preparation.mapTactics ? '적을 표시 범위로 유인하세요. AUTO에서는 장치를 사용하지 않으며 추가 보상은 없습니다.' : '';
     const cue = this.dialog.querySelector('.citadel-hub-action-cue');
     cue.hidden = !preparation.actionCue;
     cue.querySelector('[data-citadel-cue-depth]').textContent = `${preparation.depth === 'deep' ? '심층' : '기본'} 원정 · 행동 안내`;
