@@ -54,7 +54,7 @@ DPS·생존시간·성장곡선·가챠 기댓값이 목표 밴드 안인지. �
 ```bash
 git add -A && git commit -m "feat(<축>): <무엇을>"
 git push
-npm run deploy          # Cloudflare Workers
+apex-vault run cloudflare -- bun run deploy  # 소유 잠금·정확한 HEAD·rollback 검사
 ```
 그리고 `LESSONS.md` 에 **한 줄**을 적는다 — 이번에 걸려 넘어진 것, 다음 회전이 피해야 할 것.
 지표가 좋아졌다는 기록은 필요 없다(파일에 남는다). **실패한 것만** 적는다.
@@ -62,7 +62,7 @@ npm run deploy          # Cloudflare Workers
 ## 실패 처리
 
 게이트에서 떨어지면:
-1. `git checkout -- .` 로 되돌린다. 반쯤 고쳐서 통과시키려 하지 않는다
+1. 해당 회전이 소유한 변경만 점검·수정한다. 다른 작업과 기존 사용자 diff를 일괄 checkout/reset으로 지우지 않는다
 2. `LESSONS.md` 에 왜 떨어졌는지 적는다
 3. 같은 축을 더 작게 쪼개서 재시도하거나, 다른 축으로 넘어간다
 
