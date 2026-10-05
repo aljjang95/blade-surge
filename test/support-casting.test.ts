@@ -291,3 +291,156 @@ test('Lv2 마법사·레인저는 기존 기본 스킬의 강타로 지원을 �
     expect(weak.caster.supportCastKind).toBe('heal');
   }
 });
+
+// 결과 UI가 열린 뒤에는 Enemy.update를 호출하지 않는 실제 종료 경계를 검증한다.
+const resultEndings = ['defeat', 'victory'] as const;
+function resultFixture() {
+  const f = fixture(), presented: any[] = [];
+  Object.assign(f.game, { result: null, heroId: 'knight', revived: 0, kills: 7, maxCombo: 4,
+    dmgDealt: 44, roomsCleared: 2, treasureRooms: 1 });
+  Object.assign(f.game.player, { hp: 700, maxHp: 1000, play: noop, magnetMul: 1 });
+  f.game.input.enabled = true; f.game.fx.burst = noop; f.ui.showBoss = noop;
+  f.ui.showResult = (battle: any, win: boolean) => presented.push({ battle, win, active: battle.active,
+    result: battle.result, kind: f.caster.supportCastKind, telegraph: f.caster.telegraph,
+    ring: f.caster.telegraphRing.visible, cue: f.ui.combatCueOwner, cueVisible: f.classes.has('on') });
+  return { ...f, presented };
+}
+function presentResult(f: ReturnType<typeof resultFixture>, ending: typeof resultEndings[number]) {
+  if (ending === 'victory') {
+    const timer = f.game.timers.find((value: any) => value.t === 1.6);
+    expect(timer).toBeDefined(); timer.fn();
+  }
+  expect(f.presented).toHaveLength(1);
+}
+
+for (const ending of resultEndings) for (const kind of ['heal', 'summon'])
+test(`${ending}은 ${kind} 준비를 결과 UI 전에 동기 취소하고 효과 없이 기존 결과를 기록한다`, () => {
+  const f = resultFixture(); start(f, kind); step(f, .4);
+  expect(f.caster.supportCastKind).toBe(kind); expect(f.caster.telegraphRing.visible).toBe(true);
+  expect(f.ui.combatCueOwner).toBe(f.caster); expect(f.classes.has('on')).toBe(true);
+  const hp = f.ally.hp, cooldowns = [f.caster.healT, f.caster.summonT, f.caster.atkCd];
+  const owner = f.caster.supportOwner, ring = f.caster.telegraphRing, time = f.game.elapsed;
+  f.game[ending]();
+  // 종료 뒤 수동 AI 갱신 없이 즉시 확인해야 원래 누락을 잡는다.
+  expect(f.game.active).toBe(false); expect(f.game.input.enabled).toBe(false);
+  expect(f.caster.supportCastKind).toBeNull(); expect(f.caster.special).toBeNull();
+  expect(f.caster.telegraph).toBe(0); expect(ring.visible).toBe(false);
+  expect(f.caster.supportCueLabel).toBeNull(); expect(f.ui.combatCueOwner).toBeNull();
+  expect(f.classes.has('on')).toBe(false); expect(f.caster.state).toBe('chase');
+  expect(f.caster.supportOwner).toBe(owner); expect(f.caster.telegraphRing).toBe(ring);
+  expect(f.caster.disposed).toBe(false); expect(f.caster.supportStopped).not.toBe(true);
+  expect([f.caster.healT, f.caster.summonT, f.caster.atkCd]).toEqual(cooldowns);
+  expect(f.ally.hp).toBe(hp); expect(f.summons).toHaveLength(0); expect(f.spawns).toHaveLength(0);
+  expect(f.effects.filter(value => value === '치유 ×1')).toHaveLength(0);
+  expect(f.game.result).toMatchObject({ win: ending === 'victory', kills: 7, maxCombo: 4,
+    dmg: 44, time, treasureRooms: 1, expedition: f.stage.expedition,
+    conquest: null, routeObjective: null, mapTactics: null });
+  if (ending === 'victory') expect(f.game.result).toMatchObject({ stars: 2, rooms: 2,
+    totalRooms: f.world.rooms.length, fullClear: false });
+  presentResult(f, ending);
+  expect(f.presented[0]).toMatchObject({ win: ending === 'victory', active: false,
+    kind: null, telegraph: 0, ring: false, cue: null, cueVisible: false });
+  expect(f.presented[0].battle).toBe(f.game); expect(f.presented[0].result).toBe(f.game.result);
+});
+
+for (const ending of resultEndings)
+test(`${ending}은 현재 방 밖의 실제 지원 액터도 닫고 일반 공격 고리와 액터를 보존한다`, () => {
+  const f = resultFixture(); start(f);
+  const remote = fixture(), room = f.world.rooms[2]; room.spawned = true; room.discovered = true;
+  remote.caster.game = f.game; remote.caster.homeRoom = room;
+  remote.caster.pos.set(room.x, 0, room.z); f.game.scene.add(remote.caster.root);
+  remote.caster.healT = 99; remote.caster.summonT = 0; f.game.enemies.push(remote.caster);
+  step({ ...f, caster: remote.caster }, .01);
+  expect(remote.caster.supportCastKind).toBe('summon'); expect(remote.caster.homeRoom).not.toBe(f.game.curRoom);
+  expect(remote.caster.supportOwnerValid()).toBe(true); expect(f.ui.combatCueOwner).toBe(f.caster);
+  const ordinary = fixture(); ordinary.caster.game = f.game; ordinary.caster.runtimeSpeciesId = 'skel_priest';
+  ordinary.caster.state = 'attack'; ordinary.caster.special = 'magic'; ordinary.caster.telegraph = .4;
+  ordinary.caster.telegraphRing.visible = true; f.game.enemies.push(ordinary.caster);
+  const actors = [...f.game.enemies], remoteOwner = remote.caster.supportOwner;
+  f.game[ending]();
+  for (const caster of [f.caster, remote.caster]) {
+    expect(caster.supportCastKind).toBeNull(); expect(caster.telegraph).toBe(0);
+    expect(caster.telegraphRing.visible).toBe(false); expect(caster.disposed).toBe(false);
+    expect(caster.supportStopped).not.toBe(true);
+  }
+  expect(remote.caster.supportOwner).toBe(remoteOwner); expect(f.game.enemies).toEqual(actors);
+  expect([ordinary.caster.state, ordinary.caster.special, ordinary.caster.telegraph,
+    ordinary.caster.telegraphRing.visible]).toEqual(['attack', 'magic', .4, true]);
+  expect(f.ui.combatCueOwner).toBeNull(); expect(f.summons).toHaveLength(0); expect(f.spawns).toHaveLength(0);
+});
+
+test('거절된 승리의 기존 비활성·사망·정지·보스·목표 가드는 진행 중 시전을 취소하지 않는다', () => {
+  for (const blocked of ['inactive', 'dead', 'paused', 'boss', 'objective']) {
+    const f = resultFixture(); start(f);
+    if (blocked === 'inactive') f.game.active = false;
+    if (blocked === 'dead') f.game.player.alive = false;
+    if (['paused', 'boss', 'objective'].includes(blocked)) {
+      f.game.bossDefeated = blocked !== 'boss'; f.game.paused = blocked === 'paused';
+      f.game.routeObjectives = { canWin: () => blocked !== 'objective' };
+    }
+    const before = [f.game.active, f.game.input.enabled, f.caster.stateT, f.caster.telegraph,
+      f.caster.healT, f.caster.summonT, f.caster.supportOwner];
+    f.game.victory();
+    expect([f.game.active, f.game.input.enabled, f.caster.stateT, f.caster.telegraph,
+      f.caster.healT, f.caster.summonT, f.caster.supportOwner]).toEqual(before);
+    expect(f.caster.supportCastKind).toBe('heal'); expect(f.caster.telegraphRing.visible).toBe(true);
+    expect(f.ui.combatCueOwner).toBe(f.caster); expect(f.classes.has('on')).toBe(true);
+    expect(f.game.result).toBeNull(); expect(f.game.timers).toHaveLength(0);
+    expect(f.presented).toHaveLength(0); expect(f.ally.hp).toBe(500);
+  }
+});
+
+test('결과 전환의 지원 정리는 다른 소유자가 교체한 문구를 지우지 않는다', () => {
+  for (const ending of resultEndings) {
+    const f = resultFixture(); start(f); const foreign = {};
+    f.ui.combatCue('외부 전투 알림', 'red', 900, foreign); f.game[ending]();
+    expect(f.caster.supportCastKind).toBeNull(); expect(f.caster.supportCueLabel).toBeNull();
+    expect(f.caster.telegraphRing.visible).toBe(false); expect(f.ui.combatCueOwner).toBe(foreign);
+    expect(f.el.textContent).toBe('외부 전투 알림'); expect(f.classes.has('on')).toBe(true);
+  }
+});
+
+test('이미 완료해 예약한 소환은 종료 시 예약을 바꾸지 않고 기존 비활성 가드로 병력을 막는다', () => {
+  for (const ending of resultEndings) {
+    const f = resultFixture(); start(f, 'summon'); step(f, .9);
+    expect(f.summons).toEqual([2]); expect(f.caster.supportCastKind).toBeNull();
+    const committed = [...f.game.timers]; expect(committed.map(timer => timer.t)).toEqual([0, .12]);
+    f.game[ending]();
+    for (const timer of committed) { expect(f.game.timers).toContain(timer); timer.fn(); }
+    f.caster.finishSupportCast();
+    expect(f.spawns).toHaveLength(0); expect(f.summons).toEqual([2]);
+  }
+});
+
+test('종료를 다시 요청해도 원래 결과와 타이머·정산 표시를 재작성하지 않는다', () => {
+  for (const ending of resultEndings) {
+    const f = resultFixture(); start(f); f.game[ending](); presentResult(f, ending);
+    const result = f.game.result, timers = [...f.game.timers], effects = [...f.effects];
+    f.game.defeat(); f.game.victory();
+    expect(f.game.result).toBe(result); expect(f.game.timers).toEqual(timers);
+    expect(f.effects).toEqual(effects); expect(f.presented).toHaveLength(1);
+    expect(f.caster.supportStopped).not.toBe(true); expect(f.caster.disposed).toBe(false);
+  }
+});
+
+test('결과 종료 전 기존 부활은 액터를 폐기하거나 지원 시전을 영구 정지하지 않는다', () => {
+  const f = resultFixture(); start(f); const owner = f.caster.supportOwner;
+  f.game.player.alive = false; f.game.player.revive = () => { f.game.player.alive = true; };
+  f.game.fx.holyBurst = noop; f.game.fx.shockTex = noop; f.game.hitRadius = noop;
+  f.game.revivePlayer();
+  expect(f.game.active).toBe(true); expect(f.game.player.alive).toBe(true); expect(f.game.revived).toBe(1);
+  expect(f.game.input.enabled).toBe(true); expect(f.game.result).toBeNull();
+  expect(f.caster.supportOwner).toBe(owner); expect(f.caster.supportCastKind).toBe('heal');
+  expect(f.caster.disposed).toBe(false); expect(f.caster.supportStopped).not.toBe(true);
+  step(f, .9); expect(f.ally.hp).toBe(650); expect(f.caster.supportCastKind).toBeNull();
+});
+
+test('적 목록이 없는 기존 부분 결과 객체도 accepted defeat·victory의 결과 처리 순서를 유지한다', () => {
+  for (const ending of resultEndings) {
+    const f = resultFixture(); delete f.game.enemies;
+    f.game[ending]();
+    expect(f.game.active).toBe(false); expect(f.game.input.enabled).toBe(false);
+    expect(f.game.result).toMatchObject({ win: ending === 'victory', kills: 7, maxCombo: 4, dmg: 44 });
+    presentResult(f, ending); expect(f.presented[0].result).toBe(f.game.result);
+  }
+});
