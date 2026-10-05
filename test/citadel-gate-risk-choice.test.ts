@@ -220,3 +220,140 @@ test('closed or replaced dialogs and forged destination arguments cannot change 
   expect(await view.startDestination(DUNGEONS.find(candidate => candidate.id !== definition.id), spot)).toBe(false);
   expect(eco.s).toEqual(before); expect(calls).toEqual([]); expect(values.size).toBe(0);
 });
+
+// 합성 요소로 경계 판단만 검증한다. 실제 탭 이동·스크롤·브라우저 포커스는 별도 네이티브 검증 대상이다.
+class GateFocusControl {
+  type = 'button'; name = ''; form: object | null = null; tabIndex = 0; checked = false;
+  disabled = false; disabledAncestor = false; hiddenAncestor = false; inertAncestor = false;
+  rendered = true; visibility = 'visible'; top = 0;
+  constructor(public id: string, public owner: any, options: Partial<GateFocusControl> = {}) { Object.assign(this, options); }
+  matches(selector: string) { return selector === ':disabled' && (this.disabled || this.disabledAncestor); }
+  closest() { return this.hiddenAncestor || this.inertAncestor ? {} : null; }
+  getClientRects() { return this.rendered ? [{ top: this.top, width: 40, height: 40 }] : []; }
+  focus() { this.owner.activeElement = this; this.owner.focused.push(this.id); }
+}
+
+function focusFixture() {
+  const owner: any = { activeElement: null, focused: [], defaultView: { getComputedStyle: (control: GateFocusControl) => ({ visibility: control.visibility }) } };
+  const standard = new GateFocusControl('standard', owner, { type: 'radio', name: 'citadel-depth', checked: true });
+  const deep = new GateFocusControl('deep', owner, { type: 'radio', name: 'citadel-depth' });
+  const goal = new GateFocusControl('goal', owner), fury = new GateFocusControl('fury', owner);
+  const cancel = new GateFocusControl('cancel', owner), go = new GateFocusControl('go', owner);
+  const controls = [standard, deep, goal, fury, cancel, go];
+  const dialog: any = { open: true, ownerDocument: owner, querySelectorAll: () => controls,
+    contains: (control: GateFocusControl) => controls.includes(control) };
+  const view: any = Object.assign(Object.create(CitadelHubUI.prototype), { dialog, opened: true });
+  const press = (active: GateFocusControl | object, options: any = {}) => {
+    owner.activeElement = active; owner.focused.length = 0;
+    const event = { key: 'Tab', shiftKey: false, altKey: false, ctrlKey: false, metaKey: false, defaultPrevented: false,
+      preventDefault() { this.defaultPrevented = true; }, ...options };
+    view.containDestinationTab(event);
+    return event;
+  };
+  return { owner, controls, dialog, view, standard, deep, goal, fury, cancel, go, press };
+}
+
+test('gate Tab wraps only Go to the checked depth and ShiftTab wraps that depth to Go', () => {
+  const f = focusFixture();
+  expect(f.press(f.go).defaultPrevented).toBe(true);
+  expect(f.owner.activeElement).toBe(f.standard); expect(f.owner.focused).toEqual(['standard']);
+  expect(f.press(f.standard, { shiftKey: true }).defaultPrevented).toBe(true);
+  expect(f.owner.activeElement).toBe(f.go); expect(f.owner.focused).toEqual(['go']);
+  expect(f.standard.checked).toBe(true); expect(f.deep.checked).toBe(false);
+});
+
+test('intermediate gate Tab and ShiftTab retain native focus movement and scrolling', () => {
+  const f = focusFixture();
+  for (const active of [f.standard, f.goal, f.fury, f.cancel]) {
+    expect(f.press(active).defaultPrevented).toBe(false);
+    expect(f.owner.activeElement).toBe(active); expect(f.owner.focused).toEqual([]);
+  }
+  for (const active of [f.goal, f.fury, f.cancel, f.go]) {
+    expect(f.press(active, { shiftKey: true }).defaultPrevented).toBe(false);
+    expect(f.owner.activeElement).toBe(active); expect(f.owner.focused).toEqual([]);
+  }
+});
+
+test('live checked radio is the sole group boundary and arrows never select or focus through the handler', () => {
+  const f = focusFixture(); f.standard.checked = false; f.deep.checked = true;
+  expect(f.press(f.go).defaultPrevented).toBe(true); expect(f.owner.focused).toEqual(['deep']);
+  expect(f.press(f.deep, { shiftKey: true }).defaultPrevented).toBe(true); expect(f.owner.focused).toEqual(['go']);
+  expect(f.press(f.standard, { shiftKey: true }).defaultPrevented).toBe(false); expect(f.owner.focused).toEqual([]);
+  for (const key of ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown']) {
+    expect(f.press(f.deep, { key }).defaultPrevented).toBe(false); expect(f.owner.focused).toEqual([]);
+    expect(f.standard.checked).toBe(false); expect(f.deep.checked).toBe(true);
+  }
+});
+
+test('disabled Go and changed live controls update both boundaries without stale focus targets', () => {
+  const f = focusFixture(); f.go.disabled = true; f.goal.disabled = true; f.fury.disabledAncestor = true;
+  expect(f.press(f.cancel).defaultPrevented).toBe(true); expect(f.owner.focused).toEqual(['standard']);
+  expect(f.press(f.standard, { shiftKey: true }).defaultPrevented).toBe(true); expect(f.owner.focused).toEqual(['cancel']);
+  f.go.disabled = false;
+  expect(f.press(f.cancel).defaultPrevented).toBe(false); expect(f.owner.focused).toEqual([]);
+  expect(f.press(f.go).defaultPrevented).toBe(true); expect(f.owner.focused).toEqual(['standard']);
+});
+
+test('hidden, inert, unrendered and negative-tabindex controls cannot become gate boundaries', () => {
+  const f = focusFixture();
+  const excluded = [
+    new GateFocusControl('hidden', f.owner, { hiddenAncestor: true }),
+    new GateFocusControl('inert', f.owner, { inertAncestor: true }),
+    new GateFocusControl('no-layout', f.owner, { rendered: false }),
+    new GateFocusControl('invisible', f.owner, { visibility: 'hidden' }),
+    new GateFocusControl('collapsed', f.owner, { visibility: 'collapse' }),
+    new GateFocusControl('programmatic', f.owner, { tabIndex: -1 }),
+  ];
+  f.controls.unshift(...excluded); f.controls.push(...excluded);
+  expect(f.press(f.go).defaultPrevented).toBe(true); expect(f.owner.focused).toEqual(['standard']);
+  expect(f.press(f.standard, { shiftKey: true }).defaultPrevented).toBe(true); expect(f.owner.focused).toEqual(['go']);
+});
+
+test('rendered scroll-out controls stay eligible and a changed list is read at the next native key', () => {
+  const f = focusFixture(), below = new GateFocusControl('scroll-out', f.owner, { top: 1200 });
+  f.controls.push(below);
+  expect(f.press(f.go).defaultPrevented).toBe(false); expect(f.owner.focused).toEqual([]);
+  expect(f.press(below).defaultPrevented).toBe(true); expect(f.owner.focused).toEqual(['standard']);
+  below.rendered = false;
+  expect(f.press(f.go).defaultPrevented).toBe(true); expect(f.owner.focused).toEqual(['standard']);
+});
+
+test('an unavailable checked radio falls back only to an eligible radio without changing the selection', () => {
+  const f = focusFixture(); f.standard.hiddenAncestor = true;
+  expect(f.press(f.go).defaultPrevented).toBe(true); expect(f.owner.focused).toEqual(['deep']);
+  expect(f.standard.checked).toBe(true); expect(f.deep.checked).toBe(false);
+  f.deep.disabled = true;
+  expect(f.press(f.go).defaultPrevented).toBe(true); expect(f.owner.focused).toEqual(['goal']);
+});
+
+test('closed, foreign, modified and already-handled keys leave focus and native defaults alone', () => {
+  const f = focusFixture();
+  for (const options of [{ key: 'Escape' }, { key: 'Enter' }, { key: ' ' }, { altKey: true }, { ctrlKey: true }, { metaKey: true }]) {
+    expect(f.press(f.go, options).defaultPrevented).toBe(false); expect(f.owner.focused).toEqual([]);
+  }
+  expect(f.press(f.go, { defaultPrevented: true }).defaultPrevented).toBe(true); expect(f.owner.focused).toEqual([]);
+  expect(f.press({}).defaultPrevented).toBe(false); expect(f.owner.focused).toEqual([]);
+  f.view.opened = false;
+  expect(f.press(f.go).defaultPrevented).toBe(false); expect(f.owner.focused).toEqual([]);
+  f.view.opened = true; f.dialog.open = false;
+  expect(f.press(f.go).defaultPrevented).toBe(false); expect(f.owner.focused).toEqual([]);
+});
+
+test('one eligible control stays contained and no eligible control invents a focus target', () => {
+  const f = focusFixture(); f.controls.forEach(control => { control.disabled = control !== f.cancel; });
+  expect(f.press(f.cancel).defaultPrevented).toBe(true); expect(f.owner.focused).toEqual(['cancel']);
+  expect(f.press(f.cancel, { shiftKey: true }).defaultPrevented).toBe(true); expect(f.owner.focused).toEqual(['cancel']);
+  f.cancel.disabled = true;
+  expect(f.press(f.cancel).defaultPrevented).toBe(false); expect(f.owner.focused).toEqual([]);
+});
+
+test('keyboard containment never writes gate economy, vows, preparation or departure authority', () => {
+  const gate = fixture(), f = focusFixture(), before = structuredClone(gate.eco.s), saved = [...values];
+  gate.view.dialog = f.dialog;
+  for (const active of [f.go, f.standard]) {
+    f.owner.activeElement = active;
+    gate.view.containDestinationTab({ key: 'Tab', shiftKey: active === f.standard, preventDefault() {} });
+  }
+  expect(gate.eco.s).toEqual(before); expect([...values]).toEqual(saved); expect(gate.calls).toEqual([]);
+  expect(gate.view.opened).toBe(true); expect(gate.view.dialogSpot).toBe(gate.spot); expect(gate.view.busy).toBe(false);
+});
