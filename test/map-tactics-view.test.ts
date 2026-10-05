@@ -4,6 +4,9 @@ import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import DATA from '../src/data/jade-tactics-geometry-v1.json';
 import { MapTacticsView } from '../src/game/map-tactics-view.js';
+import { buildExpeditionStage, buildExpeditionWorld } from '../src/game/expedition-combat.js';
+import { createMapTactics } from '../src/game/map-tactics.js';
+import { Floor } from '../src/game/world.js';
 
 const nodes = [-1,1].map((side,i) => ({ id:i ? 'release' : 'gather', side,
   operator:{ x:side * 4.5,y:0,z:-2.5 }, anchor:{ x:side * 4.5,y:0,z:-.5 },
@@ -94,4 +97,89 @@ test('complete blocked footprints omit tall backings while control surfaces and 
   expect(view.boundary.position.z).toBe(nodes[1].anchor.z);
   expect(view.boundary.visible).toBe(true);
   view.dispose();
+});
+
+
+test('farther fallback preserves the original first safe rear placement', () => {
+  const floor = { walkable:(x:number,z:number) => Math.abs(x) <= 11 && Math.abs(z) <= 13 };
+  const view = new View(new THREE.Scene(),nodes,room,floor);
+  expect(view.group.userData.artContract.backingFootprints.map((backing:{id:string,location:{x:number,z:number}}) =>
+    ({ id:backing.id,location:backing.location }))).toEqual(nodes.map(node => ({
+      id:node.id,location:{ x:node.operator.x,z:room.z - room.h / 2 - 1.25 },
+    })));
+  expect(triangles(view)).toBe(1126);
+  view.dispose();
+});
+
+test('actual quantized Garden Floor recovers both backings outside every walkable footprint cell', () => {
+  const stage = buildExpeditionStage('dungeon','glass_garden',null), world = buildExpeditionWorld(stage);
+  expect(world).toBeInstanceOf(Floor);
+  expect(world.seed).toBe(3944785920);
+  expect(world.rooms).toHaveLength(5); expect(world.corridors).toHaveLength(10);
+  const tactics = createMapTactics(stage,world)!, ownerRoom = tactics.room;
+  // 원래 actual FAIL은 이 좌표의 셀 확장 때문에 첫 세 후보를 모두 거부했다.
+  expect([ownerRoom.id,ownerRoom.x,ownerRoom.z,ownerRoom.w,ownerRoom.h]).toEqual([
+    3,-1.8001625938341022,-61.745415890589356,16,24,
+  ]);
+  expect([world.minX,world.minZ]).toEqual([-75.40300032775849,-103.71773242298514]);
+  const gather = tactics.nodes[0], release = tactics.nodes[1], rear = ownerRoom.z - ownerRoom.h / 2 - 1.25;
+  const dxs = [-1.1,-.825,-.55,-.275,0,.275,.55,.825,1.1], dzs = [-.55,-.275,0,.275,.55];
+  const footprintOutside = (location:{x:number,z:number}) => dxs.every(dx =>
+    dzs.every(dz => !world.walkable(location.x + dx,location.z + dz)));
+  const originalCandidates = [
+    { x:gather.operator.x,z:rear },
+    { x:ownerRoom.x + gather.side * (ownerRoom.w / 2 + 1.6),z:gather.operator.z },
+    { x:ownerRoom.x + gather.side * (ownerRoom.w / 2 + 1.6),z:rear },
+  ];
+  expect(originalCandidates.map(footprintOutside)).toEqual([false,false,false]);
+  // 해석적 방 사각형 밖의 표본도 실제 fillRect 셀에서는 이동 가능하다.
+  const quantizedWitness = { x:-10.300162593834102,z:-64.79541589058935 };
+  expect(quantizedWitness.x).toBeLessThan(ownerRoom.x - ownerRoom.w / 2);
+  expect(world.walkable(quantizedWitness.x,quantizedWitness.z)).toBe(true);
+  const fallback = { x:ownerRoom.x + gather.side * (ownerRoom.w / 2 + 2.6),z:gather.operator.z };
+  expect(footprintOutside(fallback)).toBe(true);
+  if (!world.mask || !world.inner) throw new Error('실제 정원의 이동·내부 마스크가 생성되어야 한다.');
+  const originalNodes = JSON.stringify(tactics.nodes), originalMask = hash(Buffer.from(world.mask)), originalInner = hash(Buffer.from(world.inner));
+  const originalWorld = JSON.stringify({ rooms:world.rooms,corridors:world.corridors,gates:world.gates,sealed:world.sealed });
+  const scene = new THREE.Scene(), view = new View(scene,[...tactics.nodes],ownerRoom,world);
+  type Backing = {id:'gather'|'release',location:{x:number,z:number}|null,maskChecked:boolean};
+  const backings:Backing[] = view.group.userData.artContract.backingFootprints;
+  expect(backings).toEqual([
+    { id:'gather',location:fallback,maskChecked:true },
+    { id:'release',location:{ x:ownerRoom.x + release.side * (ownerRoom.w / 2 + 1.6),z:rear },maskChecked:true },
+  ]);
+  expect(meshes(view)).toHaveLength(6); expect(triangles(view)).toBe(1126);
+  expect(triangles(view)).toBeLessThanOrEqual(1600);
+  expect(view.group.userData.artContract.maximumDraws).toBe(6);
+  expect(view.group.userData.artContract.maximumBackingTriangles).toBe(796);
+  expect(view.group.userData.artContract.operatorRadius).toBe(1.4);
+  expect(view.group.userData.artContract.effectRadius).toBe(6);
+  for (const backing of backings) {
+    expect(backing.location).not.toBeNull();
+    const location = backing.location!;
+    expect(footprintOutside(location)).toBe(true);
+    for (const surface of DATA.models[backing.id].surfaces) {
+      expect(surface.position.every((value,index,array) => index % 3 !== 0 ||
+        !world.walkable(value + location.x,array[index + 2] + location.z))).toBe(true);
+    }
+  }
+  for (const entry of view.entries) {
+    expect(entry.pad.position.toArray()).toEqual([entry.node.operator.x,.095,entry.node.operator.z]);
+    expect(entry.pad.geometry).toBeInstanceOf(THREE.RingGeometry);
+    const pad = entry.pad.geometry as THREE.RingGeometry;
+    expect([pad.parameters.innerRadius,pad.parameters.outerRadius]).toEqual([entry.node.operatorRadius - .09,entry.node.operatorRadius]);
+  }
+  expect(view.boundary.geometry).toBeInstanceOf(THREE.RingGeometry);
+  const boundary = view.boundary.geometry as THREE.RingGeometry;
+  expect([boundary.parameters.innerRadius,boundary.parameters.outerRadius]).toEqual([6 - .055,6]);
+  view.update({ roomDiscovered:true,phase:'ready',selectedId:null,nearbyId:'gather',used:false,actionable:true });
+  expect(view.group.visible).toBe(true);
+  expect(meshes(view).filter(mesh => mesh.material instanceof THREE.MeshStandardMaterial)).toHaveLength(3);
+  expect(meshes(view).filter(mesh => mesh.material instanceof THREE.MeshStandardMaterial).every(mesh => mesh.visible)).toBe(true);
+  expect(view.boundary.position.x).toBe(gather.anchor.x); expect(view.boundary.position.z).toBe(gather.anchor.z);
+  view.dispose(); view.dispose();
+  expect(scene.children).toHaveLength(0);
+  expect(JSON.stringify(tactics.nodes)).toBe(originalNodes);
+  expect(hash(Buffer.from(world.mask))).toBe(originalMask); expect(hash(Buffer.from(world.inner))).toBe(originalInner);
+  expect(JSON.stringify({ rooms:world.rooms,corridors:world.corridors,gates:world.gates,sealed:world.sealed })).toBe(originalWorld);
 });
