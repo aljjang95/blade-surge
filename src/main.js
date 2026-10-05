@@ -379,6 +379,8 @@ class App {
       // 킬 카운트 → 임무
       this.renderer.update(dt, realDt); if (render) this.renderer.render();
     } else if (this.mode === 'lobby') {
+      // 입장 준비 중에는 성채 장면을 정지하고 네이티브 UI와 음악을 유지한다.
+      if (this.hubUI?.opened && this.hubUI.dialog?.open) return;
       if (this.showcase) {
         const s = this.showcase;
         const move = this.hubControls.update();
