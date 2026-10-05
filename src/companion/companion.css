@@ -271,7 +271,7 @@ body.party-playing .companion-launcher { display: none; }
 .companion-quick button:disabled { opacity: .5; cursor: wait; }
 
 @media (orientation: landscape) and (max-height: 480px) {
-  .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher) { top: calc(64px + env(safe-area-inset-top, 0px)); min-width: 132px; }
+  .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher):not(.companion-pause-launcher) { top: calc(64px + env(safe-area-inset-top, 0px)); min-width: 132px; }
   .companion-ui:not(.is-connected) .companion-launcher { top: auto; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
   .companion-panel { width: min(640px, calc(100vw - 24px)); }
   .companion-head { min-height: 50px; padding-block: 4px; }
@@ -290,7 +290,7 @@ body.party-playing .companion-launcher { display: none; }
 }
 
 @media (orientation: portrait), (max-width: 600px) {
-  .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher) { top: auto; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); left: calc(10px + env(safe-area-inset-left, 0px)); min-width: 130px; }
+  .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher):not(.companion-pause-launcher) { top: auto; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); left: calc(10px + env(safe-area-inset-left, 0px)); min-width: 130px; }
   .companion-ui.is-connected .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher) { top: calc(64px + env(safe-area-inset-top, 0px)); bottom: auto; }
   .companion-panel { top: max(8px, env(safe-area-inset-top, 0px)); right: 8px; width: calc(100vw - 16px); }
   .companion-hero { min-height: 132px; }
