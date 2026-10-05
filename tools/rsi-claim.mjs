@@ -12,7 +12,7 @@
  *   node tools/rsi-claim.mjs fail  <축> [사유]        # 실패 기록 + 락 해제
  *   node tools/rsi-claim.mjs steal <축>               # 6시간 넘게 running 인 죽은 락 회수
  *
- * 필요한 것: CLOUDFLARE_API_TOKEN (session-auth 뿌리 토큰)
+ * 필요한 것: CLOUDFLARE_API_TOKEN의 승인된 자식 프로세스 주입
  */
 import { execFileSync } from 'child_process';
 
@@ -22,7 +22,7 @@ const TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const REPO = process.env.GH_REPO || 'aljjang95/blade-surge';
 const SESSION = process.env.CLAUDE_SESSION_ID || process.env.SESSION || `pid-${process.pid}-${Date.now().toString(36)}`;
 const STALE_HOURS = 6;
-if (!TOKEN) { console.error('CLOUDFLARE_API_TOKEN 이 없다 — session-auth 스킬을 읽어라'); process.exit(1); }
+if (!TOKEN) { console.error('CLOUDFLARE_API_TOKEN 이 없다 — 기존 로컬 담당의 승인된 보안 주입을 확인하세요'); process.exit(1); }
 
 async function q(sql, params = []) {
   const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACC}/d1/database/${DB}/query`, {

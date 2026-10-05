@@ -35,12 +35,10 @@
 > 회전 5 로 §4-1 장비 외형(무기·방패 메시 교체 + 등급 발광 + 강화 오라, `src/game/look.js`)을 닫았다. 다음 회전은 **§4-2 레벨 구간별 스킬**부터. 지표는 밴드 중앙 근처라 **회귀 감시**만 하면 된다.
 > 새 콘텐츠 회전에서 `drawCalls` 회귀 규칙(+20%)이 걸리면 기준선을 다시 박는다 (회전 3 교훈).
 
-## 갈래 사고 (2026-09-04) — 같은 레포에 네 세션이 붙어 있었다
+## 동시 작업과 공개 버전
 
-- **푸시 못 하는 세션이 배포는 할 수 있다.** 클라우드/예약 세션은 git 프록시에 403 이지만 Cloudflare 배포는 된다 → 라이브에만 존재하는 코드가 생긴다. 그 상태에서 `origin/main` 만 클론한 다른 세션이 배포하면 **유저가 보던 콘텐츠가 통째로 사라진다** (실제로 각성 8종·세트 4종이 라이브에서 두 번 사라졌다 — 번들 378KB → 344KB).
-- **배포 가드는 main 에 올라가야 효력이 있다** (`tools/deploy-guard.mjs` + `dist/version.json`). 가드가 든 커밋이 푸시되지 않은 동안은, 그 가드를 모르는 세션이 계속 되돌린다. 닭이 먼저냐 달걀이 먼저냐 — **푸시를 먼저 뚫어야 한다.**
-- **푸시 가능 여부는 세션 종류로 갈린다** (표는 `CLAUDE.md`). 로컬 Cowork 세션은 deploy key 로 푸시된다 — 클라우드 회전의 R2 번들을 받아 미는 **인계 담당**은 여기다.
-- 라이브가 어느 커밋인지 확인하는 단일 출처는 `curl <라이브>/version.json`. 번들 크기·문자열 grep 으로 추측하지 마라 (그렇게 하다 30분을 썼다).
+- 현재 branch·HEAD·dirty 상태와 다른 작업 소유권을 확인한다. 검증한 Git 커밋과 공개 `version.json`의 SHA, deployment receipt를 대조한다. 라이브에만 있는 변경을 낡은 checkout으로 덮지 않는다.
+- 공개 배포는 `tools/deploy.mjs`의 소유 잠금·정확한 HEAD·rollback·재조정 계약만 사용한다.
 
 ## 보이스 (회전 7 — 영어 액션 VO, 2026-09-04)
 
@@ -89,26 +87,10 @@
 - **`Box3.setFromObject` 는 quantize/meshopt 모델에서 ~0.03 을 뱉는다.** 크기 검증에 쓰지 마라.
   렌더된 스크린샷으로 눈으로 봐라
 
-## 컨테이너 / 도구
+## 현재 클라우드 / 도구
 
-- **마운트는 덮어쓰기만 되고 삭제가 안 된다.** `mnt/outputs` 도, 연결된 사용자 폴더도 똑같다.
-  실측: `unlink 불가 / rename OK / rmdir 불가`.
-  → 마운트 위에서 **git clone 이 죽는다**(lock 파일을 못 지워 `could not lock config file`),
-    npm install 도 못 돌고, `rsync --delete` 도 안 먹는다.
-  → **작업은 세션 디스크에서, 마운트는 결과물 전달용으로만.**
-  → 실수로 마운트에 클론하면 **지울 수도 없는 잔해가 대표님 폴더에 남는다.**
-    삭제하려면 `allow_cowork_file_delete` 로 권한을 요청해야 하는데,
-    폴더 전체 삭제 권한이라 거절당하는 게 정상이다. **애초에 만들지 마라.**
-- **백그라운드 프로세스는 bash 호출이 끝나면 죽는다. `setsid nohup` 도 소용없다** — 호출마다 `bwrap --unshare-pid --die-with-parent` 샌드박스라 PID 네임스페이스째 사라진다. 로그 파일은 0바이트로 남는다. `gh auth login --web` 을 띄워두고
-  다음 호출에서 결과를 받는 방식은 안 된다 — 폴링이 끊긴다.
-  → device_code 를 **파일로 남기고**, 승인 후 별도 호출에서 **1회만** 토큰 교환 (`CLAUDE.md` 참조)
-- **`/tmp` 에 큰 파일을 받다가 "Failure writing output to destination" 이 났다.** `/sessions` 디스크를 써라
-- **bash 호출이 exit 143 으로 죽으면 heredoc 이 중간에 잘려 파일이 깨진다.**
-  긴 스크립트는 Write 툴로 쓰고 bash 로는 실행만 해라
-- **한 번의 bash 호출은 178초에서 잘린다 (`timeout_ms` 를 더 줘도 호스트가 깎는다).** 하네스 한 층은 40~50초 벽시계라 **호출당 1회**만 돌려라 — 2회 for 루프는 두 번째 도중에 죽고 결과가 안 남는다
-- Playwright chromium 이 `libXdamage.so.1` 을 못 찾으면(루트 없음) .deb 를 받아 풀고
-  `LD_LIBRARY_PATH=/tmp/libs/usr/lib/x86_64-linux-gnu`
-- Vite `EPERM unlink dist/_headers` → `emptyOutDir: false`
+- 제공된 현재 checkout과 설치된 toolchain을 사용한다. 서버는 실제 bind/HTTP readiness로 확인하며 프로세스 소유권을 보존한다.
+- Playwright의 browser executable과 설치된 버전을 확인한다. 실제 Chromium/SwiftShader 검증과 휴대폰 하드웨어 검증은 구분한다.
 
 ## 렌더 / 에셋
 
@@ -155,12 +137,10 @@
   그 방 한가운데서 멈춘다. → 이어붙인다(`push`). 죽을 때마다 하나씩 빠지므로 방을 옮겨도 이전 방 잔여가 그 방에서 스폰되어 쫓아온다
 - **증원은 도착 시점에 이웃 정원에서 차감.** 미리 빼두면 방이 먼저 닫혔을 때(레벨 30은 2초) 그 몫이 층에서 증발한다
 
-## 인증 (2026-09-03, 세 번 뒤집혔다)
+## 현재 인증
 
-- **구글 드라이브에 둔 평문 키는 PC 쪽 APEX(Codex Work)가 한 시간 안에 `*.retired.txt` 로 지운다.** deploy key·cloudflare.env·fish·runware 전부 당했다. 드라이브는 금고가 아니다.
-- **Cloudflare Secrets Store 는 write-only 다.** API 로 값을 못 읽는다 → 바인딩된 워커(`tools/apex-secrets`)가 게이트(뿌리 토큰 sha256)를 확인하고 건네준다. 콜드스타트 첫 호출에 500/1042 가 한 번 날 수 있다 — 재시도 한 번.
-- 뿌리 토큰은 `session-auth` 스킬(보스님 계정 파일)에만. **이 레포는 public** — CLAUDE.md 에 값·파일 id 를 적지 마라.
-- `T=... curl "...$T..."` 접두 대입은 URL 확장보다 늦다 → 빈 토큰. `export` 먼저.
+- 승인된 vault 자식 주입 또는 명시 기존 PC Wrangler OAuth 계약을 따른다. 상세는 `docs/deployment-auth.md`, `docs/pc-bridge.md`다.
+- 원문을 채팅·로그·인자·임시 파일·Git에 내보내지 않는다. 환경 등록은 기존 로컬 소유자가 담당한다.
 
 ## 밸런스 (회전 3)
 
