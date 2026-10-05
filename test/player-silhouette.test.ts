@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { PlayerSilhouette, PLAYER_SILHOUETTE_FRAGMENT } from '../src/engine/player-silhouette.js';
+import { HeroEffectFocus } from '../src/engine/hero-effect-focus.js';
 
 function fixture() {
   const uniforms = { uPlayerMask: { value: null as THREE.Texture | null },
@@ -54,7 +55,7 @@ function fixture() {
   return { silhouette, uniforms, scene, parent, root, motion, model, geometry, material, skin, bone, skeleton, equipment,
     actor, camera, renderer, events, oldTarget, prepare, current: () => target, color: () => color, alpha: () => alpha,
     viewport, scissor, scissorTest: () => scissorTest,
-    lose: () => { lost = true; } };
+    lose: () => { lost = true; }, recover: () => { lost = false; } };
 }
 
 test('both animation poses share live skin, morph, ancestor and bone-mounted equipment transforms', () => {
@@ -236,4 +237,101 @@ test('mask retains authored deformation/alpha settings and pinned shader output 
   expect(hashed.alphaHash).toBe(true); f.silhouette.render(f.renderer, f.camera, f.actor);
   expect(f.uniforms.uPlayerOutlineActive.value).toBe(1); expect(f.material.map).toBe(map);
   expect(f.material.alphaHash).toBe(true); expect(f.material.displacementMap).toBe(displacement);
+});
+
+// 렌더 호출을 기록하는 모의 렌더러로 실제 마스크 생성·사용 메서드를 검사한다.
+// GPU 셰이더 출력이나 실제 입력으로 진행한 전투를 입증하는 검사는 아니다.
+function focusFixture() {
+  const f = fixture(), focus = new HeroEffectFocus();
+  const wrapper = { r: f.renderer, camera: f.camera, playerSilhouette: f.silhouette,
+    _width: 844, _height: 390, pixelRatio: 2 };
+  const app = { mode: 'battle', stageStarting: false, contextLost: false };
+  const game: any = { active: true, player: f.actor, renderer: wrapper, app };
+  Object.assign(f.actor, { game, pos: f.root.position, scale: 1 });
+  f.renderer.getDrawingBufferSize = (out: THREE.Vector2) => out.set(
+    Math.floor(wrapper._width * wrapper.pixelRatio), Math.floor(wrapper._height * wrapper.pixelRatio));
+  f.camera.position.set(0, 8.2, 7.4); f.camera.lookAt(0, .85, 0);
+  focus.setTarget(f.actor);
+  const refresh = () => { f.silhouette.render(f.renderer, f.camera, game.player); focus.update(f.renderer, f.camera); };
+  return { ...f, focus, wrapper, app, game, refresh };
+}
+
+test('cosmetic alpha borrows the completed player and equipment mask without issuing another render or changing the owner', () => {
+  const f = focusFixture(); f.prepare();
+  f.focus.update(f.renderer, f.camera);
+  expect(f.focus.area.value.z).toBeGreaterThan(0);
+  expect(f.focus.cosmeticMask.value).toBeNull(); expect(f.focus.cosmeticMaskActive.value).toBe(0);
+  f.silhouette.render(f.renderer, f.camera, f.actor);
+  const draws = f.renderer.info.render.calls, events = f.events.length;
+  const target = f.silhouette.target, texture = f.uniforms.uPlayerMask.value;
+  const entries = f.silhouette.entries.map((entry: any) => ({ source: entry.source, geometry: entry.proxy.geometry, material: entry.proxy.material }));
+  let disposed = 0; texture!.addEventListener('dispose', () => disposed++);
+  f.focus.update(f.renderer, f.camera);
+  expect(f.focus.cosmeticMask.value).toBe(texture); expect(f.focus.cosmeticMaskActive.value).toBe(1);
+  expect(f.renderer.info.render.calls).toBe(draws); expect(f.events.length).toBe(events);
+  expect(f.silhouette.target).toBe(target); expect(f.uniforms.uPlayerMask.value).toBe(texture);
+  expect(f.uniforms.uPlayerOutlineActive.value).toBe(1); expect(disposed).toBe(0);
+  for (const [index, entry] of entries.entries()) {
+    expect(f.silhouette.entries[index].source).toBe(entry.source);
+    expect(f.silhouette.entries[index].proxy.geometry).toBe(entry.geometry);
+    expect(f.silhouette.entries[index].proxy.material).toBe(entry.material);
+  }
+  f.focus.setTarget(null);
+  expect(f.focus.cosmeticMask.value).toBeNull(); expect(f.focus.cosmeticMaskActive.value).toBe(0);
+  expect(f.uniforms.uPlayerMask.value).toBe(texture); expect(f.uniforms.uPlayerOutlineActive.value).toBe(1);
+  expect(disposed).toBe(0);
+});
+
+test('mask ownership, battle lifecycle and invalid producer frames close only the cosmetic consumer', () => {
+  const f = focusFixture(); f.prepare(); f.refresh();
+  const closed = () => { expect(f.focus.cosmeticMask.value).toBeNull(); expect(f.focus.cosmeticMaskActive.value).toBe(0); };
+  const cases: Array<() => () => void> = [
+    () => { f.game.active=false; return () => { f.game.active=true; }; },
+    () => { f.app.mode='lobby'; return () => { f.app.mode='battle'; }; },
+    () => { f.app.stageStarting=true; return () => { f.app.stageStarting=false; }; },
+    () => { f.app.contextLost=true; return () => { f.app.contextLost=false; }; },
+    () => { f.game.player={...f.actor}; return () => { f.game.player=f.actor; }; },
+    () => { f.silhouette.actor={...f.actor}; return () => { f.silhouette.actor=f.actor; }; },
+    () => { f.silhouette.ready=false; return () => { f.silhouette.ready=true; }; },
+    () => { f.silhouette.disposed=true; return () => { f.silhouette.disposed=false; }; },
+    () => { f.wrapper.r={}; return () => { f.wrapper.r=f.renderer; }; },
+    () => { const camera=f.wrapper.camera; f.wrapper.camera=new THREE.PerspectiveCamera(); return () => { f.wrapper.camera=camera; }; },
+  ];
+  for (const change of cases) {
+    f.refresh(); expect(f.focus.cosmeticMaskActive.value).toBe(1);
+    const restore = change(), ownerTexture = f.uniforms.uPlayerMask.value;
+    f.focus.update(f.renderer, f.camera); closed(); expect(f.uniforms.uPlayerMask.value).toBe(ownerTexture);
+    restore(); f.refresh(); expect(f.focus.cosmeticMaskActive.value).toBe(1);
+  }
+  f.actor.alive=false; f.refresh(); closed(); f.actor.alive=true; f.refresh();
+  const original=f.equipment.geometry; f.equipment.geometry=new THREE.BoxGeometry(.2,.5,.2);
+  f.refresh(); expect(f.uniforms.uPlayerOutlineActive.value).toBe(0); closed();
+  expect(f.silhouette.ready).toBe(true); // 마스크 사용자는 소유자를 복구하거나 다시 컴파일하지 않는다.
+  f.equipment.geometry=original; f.refresh(); expect(f.focus.cosmeticMaskActive.value).toBe(1);
+  f.parent.remove(f.root); f.refresh(); closed(); f.parent.add(f.root); f.refresh();
+  expect(f.focus.cosmeticMaskActive.value).toBe(1);
+});
+
+test('current CSS dimensions, quality resolution and context restoration rebind the borrowed texture without stale ownership', () => {
+  const f = focusFixture(); f.prepare();
+  for (const [width,height,ratio] of [[844,390,2],[390,844,.68],[640,360,.75]]) {
+    Object.assign(f.wrapper,{_width:width,_height:height,pixelRatio:ratio});
+    f.silhouette.resize(width,height,ratio); f.camera.aspect=width/height; f.camera.updateProjectionMatrix(); f.refresh();
+    expect(f.focus.cosmeticMask.value).toBe(f.silhouette.target.texture);
+    expect(f.focus.cosmeticMaskActive.value).toBe(1);
+    const previous=f.silhouette.target.texture, oldRatio=f.wrapper.pixelRatio;
+    f.wrapper.pixelRatio=.5; f.focus.update(f.renderer,f.camera);
+    expect(f.focus.cosmeticMaskActive.value).toBe(0); expect(f.focus.cosmeticMask.value).toBeNull();
+    expect(f.silhouette.target.texture).toBe(previous); expect(f.uniforms.uPlayerMask.value).toBe(previous);
+    f.wrapper.pixelRatio=oldRatio; f.refresh(); expect(f.focus.cosmeticMaskActive.value).toBe(1);
+  }
+  const oldTexture=f.silhouette.target.texture;
+  f.lose(); f.focus.update(f.renderer,f.camera);
+  expect(f.focus.cosmeticMask.value).toBeNull(); expect(f.focus.cosmeticMaskActive.value).toBe(0);
+  expect(f.uniforms.uPlayerMask.value).toBe(oldTexture);
+  f.silhouette.contextLost(); f.silhouette.restoreTarget(); f.recover();
+  expect(f.silhouette.target.texture).not.toBe(oldTexture);
+  f.focus.update(f.renderer,f.camera); expect(f.focus.cosmeticMaskActive.value).toBe(0);
+  f.prepare(); f.refresh();
+  expect(f.focus.cosmeticMask.value).toBe(f.silhouette.target.texture); expect(f.focus.cosmeticMaskActive.value).toBe(1);
 });

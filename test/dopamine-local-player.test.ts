@@ -2,6 +2,8 @@ import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { Player } from '../src/game/player.js';
 import { Battle } from '../src/game/battle-base.js';
+import { CombatNoticeQueue } from '../src/ui/combat-notices.js';
+import { HeroEffectFocus } from '../src/engine/hero-effect-focus.js';
 import { HEROES } from '../src/data/heroes.js';
 import { MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC, skillIndexForCombatSlot } from '../src/game/progression.js';
 
@@ -58,6 +60,76 @@ test('enemy death grants exactly two MP without changing the existing ultimate g
     hasProc:()=>false,stage:{party:true},drops:{onKill(){}},fx:{burst(){},dustPuff(){},explosion(){}},renderer:{shake(){}},pending:[],active:true,enemies:[e],after(){}};
   Battle.prototype.onEnemyDeath.call(g,e);
   expect(mp).toBe(2); expect(ult).toBe(1); expect(g.kills).toBe(1);
+});
+
+test('kill achievements remain queued behind danger with the same payload, rewards and streak counters',()=>{
+  for (const milestone of [5, 10, 20, 30]) {
+    let ult=0,mp=0; const visible:string[]=[], messages:any[][]=[], drops:any[][]=[], streaks:any[][]=[];
+    const queue=new CombatNoticeQueue({show:({message}:{message:string})=>{
+      visible.push(message); return ()=>{visible.splice(visible.indexOf(message),1);};
+    },schedule:(()=>1) as any,cancel:(()=>{}) as any});
+    queue.push('증원이 몰려온다!','red');
+    const e:any={isBoss:false,isElite:false,homeRoom:null,pos:new THREE.Vector3(),alive:false};
+    const stage={party:true};
+    const g:any={conquest:null,kills:7,waveKilled:3,killStreak:milestone-1,killStreakT:0,
+      player:{alive:true,addUlt:(n:number)=>ult+=n,addMp:(n:number)=>mp+=n},sp:null,hasProc:()=>false,stage,
+      ui:{setKillStreak:(...args:any[])=>streaks.push(args),toast:(message:string,tone:string,options:any)=>{
+        messages.push([message,tone,options]);queue.push(message,tone,options);
+      }},drops:{onKill:(...args:any[])=>drops.push(args)},fx:{burst(){},dustPuff(){},explosion(){}},renderer:{shake(){}},
+      pending:[],active:true,enemies:[e],after(){}};
+    Battle.prototype.onEnemyDeath.call(g,e);
+    const tier=milestone>=20?'전장의 지배자':milestone>=10?'광란':'사냥 본능';
+    expect(messages).toEqual([[`${milestone}연속 처치 · ${tier}`,milestone>=20?'red':'gold',{urgent:false}]]);
+    expect(visible).toEqual(['증원이 몰려온다!']);
+    expect(queue.pending).toHaveLength(1);
+    expect(queue.pending[0]).toMatchObject({message:messages[0][0],tone:messages[0][1],urgent:false});
+    expect(streaks).toEqual([[milestone,tier]]);expect(g.killStreak).toBe(milestone);expect(g.killStreakT).toBe(3.4);
+    expect(g.kills).toBe(8);expect(g.waveKilled).toBe(4);expect(mp).toBe(2);expect(ult).toBe(1);
+    expect(drops).toEqual([[e,stage]]);queue.clear();
+  }
+});
+
+test('actual boss phase warnings keep their red danger priority over red achievements',()=>{
+  const visible:string[]=[], calls:any[][]=[];
+  const queue=new CombatNoticeQueue({show:({message}:{message:string})=>{
+    visible.push(message);return ()=>{visible.splice(visible.indexOf(message),1);};
+  },schedule:(()=>1) as any,cancel:(()=>{}) as any});
+  queue.push('20연속 처치 · 전장의 지배자','red',{urgent:false});
+  const g:any={bossKey:'glass_warden',ui:{toast:(...args:any[])=>{calls.push(args);queue.push(args[0],args[1],args[2]);}},
+    fx:{shockTex(){},firePillar(){}},renderer:{flashScreen(){},shake(){}}};
+  const boss:any={pos:new THREE.Vector3(),def:{name:'유리 감시자'}};
+  Battle.prototype.bossPhase.call(g,boss,1);
+  expect(calls).toEqual([['보스 2페이즈!','red']]);expect(visible).toEqual(['보스 2페이즈!']);
+  expect(queue.current?.urgent).toBe(true);expect(queue.pending[0].message).toBe('20연속 처치 · 전장의 지배자');
+  Battle.prototype.bossPhase.call(g,boss,2);
+  expect(calls[1]).toEqual(['유리 감시자 광폭화!','red']);
+  expect(queue.pending.some(item=>item.message==='유리 감시자 광폭화!'&&item.urgent)).toBe(true);
+  queue.clear();
+});
+
+test('actual projectile spawn keeps the original mesh and halo while excluding stronger cosmetic masking',()=>{
+  for (const hostile of [false,true]) {
+    const focus=new HeroEffectFocus(), mesh=new THREE.Group();
+    const core=new THREE.Mesh(new THREE.SphereGeometry(.2),new THREE.MeshBasicMaterial({color:0xffffff}));
+    const halo=new THREE.Sprite(new THREE.SpriteMaterial({color:0x80ff90,transparent:true,blending:THREE.AdditiveBlending}));
+    halo.scale.setScalar(1.6);focus.bind(halo.material);mesh.add(core,halo);mesh.userData.halo=halo;mesh.userData.core=core;
+    const visuals:any[][]=[], scene=new THREE.Scene(), projectiles:any[]=[];
+    const g:any={stage:{},scene,projectiles,fx:{orb:(...args:any[])=>{visuals.push(args);return mesh;}}};
+    const pos=new THREE.Vector3(1,1,2),dir=new THREE.Vector3(0,0,2),owner={};
+    Battle.prototype.spawnProjectile.call(g,{pos,dir,speed:12,radius:.4,dmg:37,color:0x80ff90,owner,life:1.4,hostile});
+    expect(visuals).toEqual([[0x80ff90,.4]]);expect(scene.children).toEqual([mesh]);expect(mesh.children).toEqual([core,halo]);
+    expect(mesh.position.toArray()).toEqual(pos.toArray());expect(halo.scale.toArray()).toEqual([1.6,1.6,1.6]);
+    expect(halo.material.color.getHex()).toBe(0x80ff90);expect(halo.material.userData.heroCosmeticMask).toBe(false);
+    expect(core.material.color.getHex()).toBe(0xffffff);expect(core.material.userData).not.toHaveProperty('heroCosmeticMask');
+    expect(projectiles).toHaveLength(1);expect(projectiles[0]).toMatchObject({speed:12,radius:.4,dmg:37,owner,life:1.4,hostile,mesh});
+    expect(projectiles[0].pos).not.toBe(pos);expect(projectiles[0].pos.toArray()).toEqual([1,1,2]);
+    expect(projectiles[0].dir.toArray()).toEqual([0,0,1]);expect(dir.toArray()).toEqual([0,0,2]);
+    expect(projectiles[0].trail).toBe(hostile?null:0x80ff90);
+    const compiled:any={uniforms:{},fragmentShader:'void main() { gl_FragColor = vec4(1.0); }'};
+    halo.material.onBeforeCompile(compiled,{} as THREE.WebGLRenderer);
+    expect(compiled.uniforms.heroCosmeticMaskAllowed.value).toBe(0);
+    mesh.removeFromParent();core.geometry.dispose();core.material.dispose();halo.material.dispose();
+  }
 });
 
 test('perfect dodge grants the control-first MP and ultimate reward',()=>{

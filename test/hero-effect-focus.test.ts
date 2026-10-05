@@ -68,16 +68,50 @@ test('additive binding preserves prior shader work/cache identity and changes al
   focus.bind(material); expect(material.onBeforeCompile).toBe(hook); expect(material.version).toBe(originalVersion + 1);
   const value = compile(material); expect(calls).toBe(1);
   expect(value.uniforms.heroFocus).toBe(focus.area); expect(value.uniforms.heroFocusViewport).toBe(focus.viewport);
+  expect(value.uniforms.heroCosmeticMask).toBe(focus.cosmeticMask);
+  expect(value.uniforms.heroCosmeticMaskActive).toBe(focus.cosmeticMaskActive);
+  expect(value.uniforms.heroCosmeticMaskAllowed.value).toBe(1);
   expect(value.fragmentShader.startsWith('#version 300 es')).toBe(true);
   expect(value.fragmentShader).toContain('gl_FragColor = vec4(.5)');
-  expect(value.fragmentShader).toContain('gl_FragColor.a *= heroEffectFactor(');
+  expect(value.fragmentShader).toContain('gl_FragColor.a *= heroCosmeticFactor(');
   expect(value.fragmentShader).not.toContain('gl_FragColor.rgb *=');
   expect(value.fragmentShader.indexOf('gl_FragColor.a *=')).toBeLessThan(value.fragmentShader.indexOf('float later()'));
-  expect(material.customProgramCacheKey()).toBe('authored-fire-program|hero-effect-focus-v3:alpha');
+  expect(material.customProgramCacheKey()).toBe('authored-fire-program|hero-effect-focus-v4:alpha');
   const normal = new THREE.SpriteMaterial({ transparent: true, blending: THREE.NormalBlending });
   const normalHook = normal.onBeforeCompile, normalKey = normal.customProgramCacheKey();
   focus.bind(normal); expect(normal.onBeforeCompile).toBe(normalHook); expect(normal.customProgramCacheKey()).toBe(normalKey);
   expect(normal.version).toBe(0);
+});
+
+test('explicit telegraph materials retain their original shader and program identity', () => {
+  const focus = new HeroEffectFocus();
+  const telegraph = new THREE.MeshBasicMaterial({ transparent: true, blending: THREE.AdditiveBlending });
+  telegraph.userData.telegraph = true;
+  const hook = telegraph.onBeforeCompile, key = telegraph.customProgramCacheKey(), version = telegraph.version;
+  const uniforms = compile(telegraph).uniforms;
+  expect(focus.bind(telegraph)).toBe(telegraph);
+  expect(telegraph.onBeforeCompile).toBe(hook); expect(telegraph.customProgramCacheKey()).toBe(key);
+  expect(telegraph.version).toBe(version); expect(compile(telegraph).uniforms).toEqual(uniforms);
+  expect(compile(telegraph).fragmentShader).not.toContain('heroCosmeticFactor');
+  const retained = telegraph.clone(); focus.bind(retained);
+  expect(compile(retained).fragmentShader).not.toContain('heroEffectFactor');
+});
+
+test('projectile halo opt-out keeps the warmed alpha program and only its historical capsule attenuation', () => {
+  const focus = new HeroEffectFocus();
+  const cosmetic = new THREE.SpriteMaterial({ transparent: true, blending: THREE.AdditiveBlending });
+  const projectile = cosmetic.clone();
+  focus.bind(cosmetic); focus.bind(projectile);
+  // Battle.spawnProjectile은 바인딩된 새 후광에 첫 렌더 전에 예외 플래그를 붙인다.
+  projectile.userData.heroCosmeticMask = false;
+  const cosmeticShader = compile(cosmetic), projectileShader = compile(projectile);
+  expect(cosmetic.customProgramCacheKey()).toBe(projectile.customProgramCacheKey());
+  expect(cosmeticShader.fragmentShader).toBe(projectileShader.fragmentShader);
+  expect(cosmeticShader.uniforms.heroCosmeticMaskAllowed.value).toBe(1);
+  expect(projectileShader.uniforms.heroCosmeticMaskAllowed.value).toBe(0);
+  expect(projectileShader.fragmentShader).toContain('heroCosmeticMaskAllowed < .5) return factor;');
+  expect(projectileShader.uniforms.heroFocus).toBe(focus.area);
+  expect(projectileShader.uniforms.heroCosmeticMask).toBe(focus.cosmeticMask);
 });
 
 test('retained clone and replacement focus owner bind current shared uniforms without duplicate hooks', () => {
@@ -88,7 +122,10 @@ test('retained clone and replacement focus owner bind current shared uniforms wi
   expect(compile(retained).uniforms.heroFocus).toBe(first.area);
   second.bind(material); const compiled = compile(material);
   expect(compiled.uniforms.heroFocus).toBe(second.area);
+  expect(compiled.uniforms.heroCosmeticMask).toBe(second.cosmeticMask);
+  expect(compiled.uniforms.heroCosmeticMaskActive).toBe(second.cosmeticMaskActive);
   expect(compiled.fragmentShader.match(/uniform vec4 heroFocus;/g)).toHaveLength(1);
+  expect(compiled.fragmentShader.match(/uniform sampler2D heroCosmeticMask;/g)).toHaveLength(1);
   first.bind(material); expect(compile(material).uniforms.heroFocus).toBe(first.area);
   material.dispose(); first.bind(material); expect(compile(material).uniforms.heroFocus).toBe(first.area);
 });
@@ -103,6 +140,9 @@ test('existing bloom blend receives only RGB attenuation and preserves alpha, te
   const value = compile(material);
   expect(value.fragmentShader).toContain('gl_FragColor.rgb *= heroEffectFactor(vUv);');
   expect(value.fragmentShader).not.toContain('gl_FragColor.a *=');
+  expect(value.fragmentShader).not.toContain('heroCosmeticMask');
+  expect(value.uniforms).not.toHaveProperty('heroCosmeticMask');
+  expect(material.customProgramCacheKey()).toContain('|hero-effect-focus-v3:bloom-rgb');
   expect((uniforms as any).heroFocus).toBe(focus.area); expect(material.uniforms.heroFocus).toBe(focus.area);
   expect(uniforms.tDiffuse.value).toBe(texture); expect(uniforms.opacity.value).toBe(1);
   expect(() => focus.bindBloom({})).toThrow('blendMaterial/copyUniforms');

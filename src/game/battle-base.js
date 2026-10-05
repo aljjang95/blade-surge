@@ -490,7 +490,7 @@ export class Battle {
     this.kills++; this.waveKilled++; this.killStreak++; this.killStreakT = 3.4;
     const streakTier = this.killStreak >= 20 ? '전장의 지배자' : this.killStreak >= 10 ? '광란' : '사냥 본능';
     this.ui?.setKillStreak?.(this.killStreak, streakTier);
-    if ([5, 10, 20, 30].includes(this.killStreak)) this.ui.toast(`${this.killStreak}연속 처치 · ${streakTier}`, this.killStreak >= 20 ? 'red' : 'gold');
+    if ([5, 10, 20, 30].includes(this.killStreak)) this.ui.toast(`${this.killStreak}연속 처치 · ${streakTier}`, this.killStreak >= 20 ? 'red' : 'gold', { urgent: false });
     this.player.addUlt(ultKillGain(e)); this.player.addMp?.(2);
     if (this.sp) this.sp.onKill(e);
     if (this.hasProc('blood_leech') && this.player.alive) { const heal = Math.floor(this.player.maxHp * 0.03); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); this.fx.embers(this.player.pos, 0xff3a5a, { n: 4, radius: 0.6, life: 0.6, rise: 2 }); if (this.fx.dmgLayer.children.length < 20) this.fx.damage(this.player.pos, heal, { kind: 'heal', text: '+' + heal }); }
@@ -640,7 +640,13 @@ export class Battle {
     const effect = frontierEffectForStage(this.stage);
     if (hostile && effect?.kind === 'projectileDamageMultiplier') dmg *= effect.value;
     let mesh = null;
-    if (visual !== null && size > 0) { mesh = visual === 'arrow' ? createArrowVisual(color, size, dir) : this.fx.orb(color, size); mesh.position.copy(pos); this.scene.add(mesh); }
+    if (visual !== null && size > 0) {
+      mesh = visual === 'arrow' ? createArrowVisual(color, size, dir) : this.fx.orb(color, size);
+      // 실제 투사체의 후광에는 기존 마스크만 적용하고 새 몸통·장비
+      // 장식 효과 감쇠는 적용하지 않는다. 외형과 명중 타이밍은 유지한다.
+      if (mesh.userData.halo?.material) mesh.userData.halo.material.userData.heroCosmeticMask = false;
+      mesh.position.copy(pos); this.scene.add(mesh);
+    }
     const readableTrail = trail ?? (!hostile && kind === 'magic' ? color : null);
     this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, stun, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, counter, comboToken, skillCast, basic });
   }
