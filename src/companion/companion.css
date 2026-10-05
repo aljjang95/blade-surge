@@ -272,6 +272,7 @@ body.party-playing .companion-launcher { display: none; }
 
 @media (orientation: landscape) and (max-height: 480px) {
   .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher):not(.companion-pause-launcher) { top: calc(64px + env(safe-area-inset-top, 0px)); min-width: 132px; }
+  #pause-overlay .pause-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .companion-ui:not(.is-connected) .companion-launcher { top: auto; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
   .companion-panel { width: min(640px, calc(100vw - 24px)); }
   .companion-head { min-height: 50px; padding-block: 4px; }
