@@ -48,6 +48,48 @@ test('new danger preempts routine information immediately, then resumes it', () 
   f.advance(2200); expect(f.visible).toEqual([]);
 });
 
+test('red cosmetic achievements retain their payload without preempting an actual warning', () => {
+  const f = fixture();
+  f.queue.push('보스의 봉인이 풀렸다!', 'red'); f.advance(700);
+  f.queue.push('20연속 처치 · 전장의 지배자', 'red', { urgent: false });
+  expect(f.visible).toEqual(['보스의 봉인이 풀렸다!']);
+  expect(f.queue.pending[0]).toMatchObject({ message: '20연속 처치 · 전장의 지배자', tone: 'red', urgent: false });
+  f.advance(1499); expect(f.visible).toEqual(['보스의 봉인이 풀렸다!']);
+  f.advance(1); expect(f.visible).toEqual(['20연속 처치 · 전장의 지배자']);
+  expect(f.queue.current?.tone).toBe('red');
+  f.advance(2199); expect(f.visible).toEqual(['20연속 처치 · 전장의 지배자']);
+  f.advance(1); expect(f.visible).toEqual([]); expect(f.timers.size).toBe(0);
+});
+
+test('genuine danger interrupts a red achievement and resumes it for the full original duration', () => {
+  const f = fixture();
+  f.queue.push('30연속 처치 · 전장의 지배자', 'red', { urgent: false }); f.advance(700);
+  const stale = [...f.timers.values()][0].fn;
+  f.queue.push('증원이 몰려온다!', 'red');
+  expect(f.visible).toEqual(['증원이 몰려온다!']); expect(f.timers.size).toBe(1);
+  stale(); expect(f.visible).toEqual(['증원이 몰려온다!']);
+  f.advance(2200); expect(f.visible).toEqual(['30연속 처치 · 전장의 지배자']);
+  f.advance(2199); expect(f.visible).toEqual(['30연속 처치 · 전장의 지배자']);
+  f.advance(1); expect(f.visible).toEqual([]);
+  expect(f.seen.map(({ message, at }) => [message, at])).toEqual([
+    ['30연속 처치 · 전장의 지배자', 0], ['증원이 몰려온다!', 700], ['30연속 처치 · 전장의 지배자', 2900],
+  ]);
+});
+
+test('fresh cast replacement preserves red routine achievement and does not demote other red warnings', () => {
+  const f = fixture();
+  f.queue.push('이전 기술', 'red');
+  f.queue.push('20연속 처치 · 전장의 지배자', 'red', { urgent: false });
+  f.queue.push('보스의 기척', 'red');
+  f.queue.push('귀환의 쉼터', 'red', { replaceUrgent: true });
+  expect(f.visible).toEqual(['귀환의 쉼터']);
+  expect(f.queue.pending.map(item => item.message)).toEqual(['20연속 처치 · 전장의 지배자']);
+  f.advance(2200); expect(f.visible).toEqual(['20연속 처치 · 전장의 지배자']);
+  const stale = [...f.timers.values()][0].fn;
+  f.queue.clear(); expect(f.visible).toEqual([]); expect(f.timers.size).toBe(0);
+  f.queue.push('새 전투 목표', 'gold'); stale(); expect(f.visible).toEqual(['새 전투 목표']);
+});
+
 test('repeated active and waiting messages neither stack nor extend a warning forever', () => {
   const f = fixture();
   f.queue.push('위험', 'red'); f.advance(1000);
