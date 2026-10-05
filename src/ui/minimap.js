@@ -137,7 +137,8 @@ export class Minimap {
     const tactics = battle.mapTactics?.snapshot(battle);
     if (tactics?.roomDiscovered) for (const device of tactics.nodes) {
       if (!discoveredPoint(view, device.operator.x, device.operator.z)) continue;
-      const [x, y] = this.px(device.operator.x, device.operator.z), size = width > 160 ? 5 : 3;
+      const worldX = device.operator.x, worldZ = device.operator.z;
+      const x = this.width / 2 + (worldX - this.ox) * this.scale, y = this.height / 2 + (worldZ - this.oz) * this.scale, size = width > 160 ? 5 : 3;
       g.fillStyle = tactics.used ? '#7d8c7a' : device.id === tactics.nearbyId && tactics.actionable ? '#a6f0d4' : device.id === 'gather' ? '#68bea5' : '#c4a46d';
       g.strokeStyle = '#13291f'; g.lineWidth = 1;
       g.beginPath(); if (device.id === 'gather') { g.moveTo(x, y - size); g.lineTo(x + size, y); g.lineTo(x, y + size); g.lineTo(x - size, y); }
@@ -146,21 +147,25 @@ export class Minimap {
     for (const enemy of battle.enemies || []) {
       if (!enemy.alive || !enemy.pos || !discoveredPoint(view, enemy.pos.x, enemy.pos.z)
         || Math.hypot(enemy.pos.x - p.pos.x, enemy.pos.z - p.pos.z) > 28) continue;
-      const [x, y] = this.px(enemy.pos.x, enemy.pos.z); g.fillStyle = enemy.isBoss ? '#ff6478' : '#eaae8c';
+      const worldX = enemy.pos.x, worldZ = enemy.pos.z;
+      const x = this.width / 2 + (worldX - this.ox) * this.scale, y = this.height / 2 + (worldZ - this.oz) * this.scale; g.fillStyle = enemy.isBoss ? '#ff6478' : '#eaae8c';
       g.beginPath(); g.arc(x, y, enemy.isBoss ? 3 : 1.8, 0, Math.PI * 2); g.fill();
     }
     for (const item of battle.drops?.items || []) {
       const point = item.mesh?.position;
       if (item.kind !== 'item' || !point || !discoveredPoint(view, point.x, point.z)) continue;
-      const [x, y] = this.px(point.x, point.z); g.fillStyle = '#ebcf8c'; g.beginPath(); g.arc(x, y, 2, 0, Math.PI * 2); g.fill();
+      const worldX = point.x, worldZ = point.z;
+      const x = this.width / 2 + (worldX - this.ox) * this.scale, y = this.height / 2 + (worldZ - this.oz) * this.scale; g.fillStyle = '#ebcf8c'; g.beginPath(); g.arc(x, y, 2, 0, Math.PI * 2); g.fill();
     }
     if (battle.stage?.party && battle.app?.party) for (const member of battle.app.party.members) {
       const ally = battle.app.party.players.get(member.id);
       if (!ally || ally === p || !discoveredPoint(view, ally.pos.x, ally.pos.z)) continue;
-      const [x, y] = this.px(ally.pos.x, ally.pos.z); g.fillStyle = ally.alive ? '#78ddff' : '#a89681';
+      const worldX = ally.pos.x, worldZ = ally.pos.z;
+      const x = this.width / 2 + (worldX - this.ox) * this.scale, y = this.height / 2 + (worldZ - this.oz) * this.scale; g.fillStyle = ally.alive ? '#78ddff' : '#a89681';
       g.beginPath(); g.arc(x, y, 3, 0, Math.PI * 2); g.fill();
     }
-    const [px, py] = this.px(p.pos.x, p.pos.z); g.save(); g.translate(px, py); g.rotate(-p.yaw + Math.PI);
+    const worldX = p.pos.x, worldZ = p.pos.z;
+    const px = this.width / 2 + (worldX - this.ox) * this.scale, py = this.height / 2 + (worldZ - this.oz) * this.scale; g.save(); g.translate(px, py); g.rotate(-p.yaw + Math.PI);
     g.fillStyle = '#e7fff2'; g.strokeStyle = '#17352a'; g.lineWidth = 1.5;
     g.beginPath(); g.moveTo(0, -6); g.lineTo(4, 5); g.lineTo(-4, 5); g.closePath(); g.fill(); g.stroke(); g.restore();
     // 기존 보스 기척은 방향 단서로만 유지하며 미발견 방의 형태는 표시하지 않는다.
