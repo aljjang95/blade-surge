@@ -1,10 +1,12 @@
+현재 개발·배포 정본: [AGENTS.md](AGENTS.md) · [CURRENT_STACK](docs/CURRENT_STACK.md).
+
 # BLADE SURGE — 블레이드 서지
 
 three.js(WebGL2) 기반 **가로모드 모바일 3D 몹몰이 핵앤슬래시 가챠 RPG** 웹앱.
 과금은 전부 **목업**(실제 결제 없음) — 결제 SDK 연결 지점만 만들어 둠.
 
 ```bash
-bun install
+bun install --frozen-lockfile
 bun run dev           # http://localhost:5173  (--host 로 폰에서 접속)
 bun run check         # 타입검사 + 회귀 테스트 + dist/ 빌드
 apex-vault run cloudflare -- bun run deploy  # 잠금·버전 대조·복구 영수증을 포함한 배포
