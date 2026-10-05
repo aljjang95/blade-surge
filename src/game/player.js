@@ -36,7 +36,7 @@ export class Player extends Actor {
     this.maxMp = MP_BASE; this.mp = MP_BASE; this.mpRegen = MP_REGEN_PER_SEC; this.dodgeCd = 0;
     this.dr = 0; this.drT = 0; this.sanctum = null;   // 성역: 피해 감소
     this.buffs = { atk: 1, spd: 1, atkSpd: 1, t: 0 }; this.stormT = 0;
-    this.auto = false; this.autoT = 0; this.magnetMul = 1;
+    this.auto = false; this.autoT = 0; this.magnetMul = 1; this._autoHubCounts = [];
     this.sprint = 0; this.sprintT = 0; this.lockTarget = null; this.perfectWindow = 0; this.perfectCd = 0; this.counterWindow = 0;
     this.trail = null; this.current = null; this.skillCtx = null;
     this.moveDir = new THREE.Vector3();
@@ -400,8 +400,25 @@ export class Player extends Actor {
     const out = { x: 0, y: 0 };
     const list = this.game.enemies.filter((e) => e.alive && !e.spawning);
     if (!list.length) return this.autoExplore(dt);
+    const counts = this._autoHubCounts || (this._autoHubCounts = []);
+    // 같은 적 쌍의 거리는 한 번만 읽고 양쪽에 상대 가중치를 더한다.
+    // 자기항도 원래 비교를 유지해 비유한 좌표를 이웃으로 세지 않는다.
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i], dx = c.pos.x - c.pos.x, dz = c.pos.z - c.pos.z;
+      counts[i] = dx * dx + dz * dz < 16 ? (c.isBoss ? 5 : c.isElite ? 2 : 1) : 0;
+    }
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i], weight = c.isBoss ? 5 : c.isElite ? 2 : 1;
+      for (let j = i + 1; j < list.length; j++) {
+        const e = list[j], dx = e.pos.x - c.pos.x, dz = e.pos.z - c.pos.z;
+        if (dx * dx + dz * dz < 16) { counts[i] += e.isBoss ? 5 : e.isElite ? 2 : 1; counts[j] += weight; }
+      }
+    }
     let hub = null, bestN = -1;
-    for (const c of list) { let n = 0; for (const e of list) { const dx = e.pos.x - c.pos.x, dz = e.pos.z - c.pos.z; if (dx * dx + dz * dz < 16) n += e.isBoss ? 5 : e.isElite ? 2 : 1; } const dist = this.distTo(c); const score = n - dist * 0.35; if (score > bestN) { bestN = score; hub = c; } }
+    for (let i = 0; i < list.length; i++) {
+      const c = list[i], dist = this.distTo(c), score = counts[i] - dist * 0.35;
+      if (score > bestN) { bestN = score; hub = c; }
+    }
     const priority = this.game.conquest?.autoEnemy(list);
     const e = priority || hub || list[0];
     if (priority) this.lockTarget = priority;
