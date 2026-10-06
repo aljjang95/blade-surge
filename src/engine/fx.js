@@ -750,7 +750,7 @@ export class FX {
     this.add(mesh, life, (k) => { m.uniforms.uFrame.value = Math.min(frames - 1, k * frames); m.uniforms.uAlpha.value = opacity * (k > 0.85 ? (1 - k) / 0.15 : 1); }, () => m.dispose());
     return mesh;
   }
-  explosion(pos, { size = 4, color = 0xffffff, life = 0.55 } = {}) { this.flipbook(pos, 'explosion', { size, life, color, y: size * 0.35, gain: decorativeBurstGain(size) }); }
+  explosion(pos, { size = 4, color = 0xffffff, life = 0.55, opacity = 1 } = {}) { this.flipbook(pos, 'explosion', { size, life, color, y: size * 0.35, opacity, gain: decorativeBurstGain(size) }); }
   dustPuff(pos, { size = 3, life = 0.9, color = 0xa89880 } = {}) { this.flipbook(pos, 'dust', { size, life, color, y: size * 0.3, blending: THREE.NormalBlending, opacity: 0.75 }); }
   /** 화염 기둥: 교차 2장 + UV 스크롤 */
   _fireMaterial(tex, color) {

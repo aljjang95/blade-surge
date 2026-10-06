@@ -373,7 +373,7 @@ export class Enemy extends Actor {
   /** 자폭 — 플레이어와 주변 적 모두에게. 무리 속에서 터지면 연쇄 */
   explode() {
     const g = this.game, p = this.player; const c = this.pos.clone();
-    g.fx.explosion(c, { size: 5.5, color: 0xff7a30, life: 0.5 }); g.fx.shockTex(c, 0xff8a40, { r1: 6, life: 0.45 }); g.fx.burst(c.clone().setY(0.8), 0xffa040, { n: 26, speed: 10, size: 0.4, up: 1 }); g.fx.dustPuff(c, { size: 4, life: 0.6 });
+    g.fx.explosion(c, { size: 5.5, color: 0xff7a30, life: 0.5, opacity: g.stage?.party ? 1 : 0.6 }); g.fx.shockTex(c, 0xff8a40, { r1: 6, life: 0.45 }); g.fx.burst(c.clone().setY(0.8), 0xffa040, { n: 26, speed: 10, size: 0.4, up: 1 }); g.fx.dustPuff(c, { size: 4, life: 0.6 });
     audio.boom({ vol: 0.7, dur: 0.5, low: 70 }); g.renderer.shake(0.5); audio.vibe(40);
     for (const p of areaPlayers(g)) if (Math.hypot(p.pos.x - c.x, p.pos.z - c.z) < 3.4) p.hurt(this.atk * 2.5, { dirx: p.pos.x - c.x, dirz: p.pos.z - c.z, kb: 9, kind: 'blunt' });
     for (const o of this.game.enemies) { if (o === this || !o.alive || o.spawning) continue; const dx = o.pos.x - c.x, dz = o.pos.z - c.z; if (Math.hypot(dx, dz) > 3.4) continue; o.hurt(this.atk * 3, { dirx: dx, dirz: dz, kb: 7, kind: 'blunt' }); if (o.behavior === 'bomber' && o.fuse < 0 && o.alive) o.fuse = 0.5; }

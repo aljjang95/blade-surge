@@ -3,7 +3,7 @@ import { BOONS, MASTERY_NODES } from '../src/data/masterworks.js';
 import { CHAPTERS, STAGES_PER_CHAPTER, stageDef } from '../src/data/stages.js';
 import { DUNGEONS } from '../src/data/expansion.js';
 import { EXPEDITION_DEPTHS } from '../src/data/expedition-depths.js';
-import { normalizeMasterworks, boonChoices, boonEffects, unlockMastery, grantRenown, choosePath, masteryEffects, toggleChallenge, difficultyEffects, recordProgress, claimBounty, recordDiscovery, resolveStory } from '../src/game/masterworks-core.js';
+import { normalizeMasterworks, boonChoices, boonEffects, previewBoon, unlockMastery, grantRenown, choosePath, masteryEffects, toggleChallenge, difficultyEffects, recordProgress, claimBounty, recordDiscovery, resolveStory } from '../src/game/masterworks-core.js';
 
 describe('masterworks progression contracts',()=>{
   test('legacy and malicious input produce bounded whitelisted state without free unlocks',()=>{
@@ -27,6 +27,42 @@ describe('masterworks progression contracts',()=>{
     expect(boonEffects({ember_edge:2}).atk).toBeCloseTo(.1);
     expect(boonEffects(['ember_edge','storm_eye']).atk).toBeCloseTo(.12);
     const e=boonEffects({storm_eye:100,tide_guard:100,stone_plate:2,ember_hunt:2});expect(e.chain).toBe(2);expect(e.perfectHeal).toBeCloseTo(.03);expect(e.breakPower).toBeCloseTo(.24);expect(e.finisher).toBeCloseTo(.16);expect(e.cooldown).toBeCloseTo(.08);
+  });
+  test('boon preview compares complete bonuses without duplicating an existing synergy or mutating input',()=>{
+    const picked=Object.freeze(['ember_edge','ember_edge','storm_eye']),snapshot=[...picked];
+    const preview=previewBoon(picked,'ember_edge');if(!preview)throw Error('Expected valid preview');
+    expect(preview.rank).toBe(2);expect(preview.nextRank).toBe(3);
+    expect(preview.before.atk).toBeCloseTo(.17);expect(preview.after.atk).toBeCloseTo(.22);
+    expect(preview.changes).toHaveLength(1);expect(preview.changes[0].key).toBe('atk');expect(preview.synergyIds).toEqual([]);
+    expect(preview.after).toEqual(boonEffects([...picked,'ember_edge']));expect(picked).toEqual(snapshot);
+    expect(previewBoon(picked,'ember_edge')).toEqual(preview);
+    const rankMap=Object.freeze({ember_edge:2,storm_eye:1});expect(previewBoon(rankMap,'ember_edge')).toEqual(preview);
+  });
+  test('sixth pick previews all four coefficient changes and exactly the three newly completed combinations',()=>{
+    const picked=Object.freeze(['ember_hunt','ember_hunt','tide_guard','tide_guard','stone_plate']);
+    const preview=previewBoon(picked,'storm_step');if(!preview)throw Error('Expected fourth-family preview');
+    expect(preview.synergyIds).toEqual(['wildfire','rain','thunder']);
+    expect(preview.changes.map(c=>c.key)).toEqual(['speed','atk','cooldown','crit']);
+    for(const [key,value] of Object.entries({speed:.04,atk:.07,cooldown:.08,crit:.04})){
+      expect(preview.before[key]||0).toBe(0);expect(preview.after[key]).toBeCloseTo(value);
+    }
+    expect(preview.after.healOnKill).toBe(preview.before.healOnKill);
+    expect(preview.after).toEqual(boonEffects([...picked,'storm_step']));expect(picked).toHaveLength(5);
+  });
+  test('a legal third chain rank exposes the existing target cap instead of promising another target',()=>{
+    const picked=Object.freeze(['storm_eye','storm_eye','ember_edge','tide_guard','stone_plate']);
+    const preview=previewBoon(picked,'storm_eye');if(!preview)throw Error('Expected capped upgrade preview');
+    expect(preview.rank).toBe(2);expect(preview.nextRank).toBe(3);
+    expect(preview.changes).toEqual([{key:'chain',before:2,after:2}]);expect(preview.synergyIds).toEqual([]);
+    expect(preview.after).toEqual(preview.before);expect(preview.after).toEqual(boonEffects([...picked,'storm_eye']));
+  });
+  test('preview rejects unknown and maximum rank choices and cannot consume or reorder the deterministic offer',()=>{
+    const picked=Object.freeze(['ember_edge','ember_edge','ember_edge']),seed='1-1:7',round=3;
+    expect(previewBoon(picked,'bad')).toBeNull();expect(previewBoon(picked,'ember_edge')).toBeNull();
+    const offer=Object.freeze(boonChoices(seed,picked,round).map(b=>b.id)),snapshot=[...offer];
+    for(const id of offer)expect(previewBoon(picked,id)).not.toBeNull();
+    expect(offer).toEqual(snapshot);expect(boonChoices(seed,picked,round).map(b=>b.id)).toEqual(snapshot);
+    expect(picked).toEqual(['ember_edge','ember_edge','ember_edge']);
   });
   test('bounties track only known activity, pay once, and persist receipts',()=>{
     const s=normalizeMasterworks(null);recordProgress(s,'money',1000);expect(s.renown).toBe(0);expect(claimBounty(s,'first_hunt').ok).toBe(false);

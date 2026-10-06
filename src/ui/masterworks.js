@@ -1,5 +1,5 @@
 import { BOONS, SYNERGIES, MASTERY_NODES, PATHS, CHALLENGES, STORY_EVENTS, BOUNTIES } from '../data/masterworks.js';
-import { difficultyEffects } from '../game/masterworks-core.js';
+import { difficultyEffects, previewBoon } from '../game/masterworks-core.js';
 import { DUNGEONS } from '../data/expansion.js';
 import { EXPEDITION_SETS } from '../data/expedition-items.js';
 import { uiArt } from './illustrated.js';
@@ -14,6 +14,9 @@ const btn=(text,fn,cls='')=>{const e=n('button',cls,text);e.type='button';e.addE
 const art=(id)=>{const e=n('img','mw-illustration');e.src=uiArt(id);e.alt='';e.loading='lazy';return e;};
 const details=(text,label='자세히')=>{const e=n('details','mw-details');e.append(n('summary','',label),n('p','',text));return e;};
 const fmt=v=>Math.round(v||0).toLocaleString('ko-KR');
+const boonEffectLabels={atk:'공격력',hp:'최대 체력',def:'방어력',speed:'이동 속도',crit:'치명타 확률',finisher:'마무리 피해',breakPower:'균형 파괴력',cooldown:'재사용 대기',perfectHeal:'정확 회피 회복',healOnKill:'처치 회복',chain:'마무리 연쇄',rewardMul:'완료 명성'};
+const boonEffectValue=(key,value)=>key==='chain'?`${value}명`:`${key==='cooldown'?'-':['perfectHeal','healOnKill'].includes(key)?'':'+'}${Number((value*100).toFixed(1))}%`;
+const boonChangeLabel=change=>`${boonEffectLabels[change.key]} ${boonEffectValue(change.key,change.before)} → ${boonEffectValue(change.key,change.after)}${change.before===change.after?' · 상한, 변화 없음':''}`;
 const err={unknown:'선택을 확인해 주세요.',owned:'이미 배운 숙련입니다.',prerequisite:'앞 단계 숙련을 먼저 배워 주세요.',renown:'명성이 부족합니다.',claimed:'이미 받은 보상입니다.',incomplete:'의뢰 목표를 먼저 달성해 주세요.'};
 
 /** An in-game journal with separate pause ownership; no navigation away from the app. */
@@ -219,9 +222,25 @@ export class MasterworksView {
         const b=BOONS.find(x=>x.id===id),rank=run.picked.filter(x=>x===id).length;
         const card=btn('',()=>this.act(()=>this.battle.selectBoon(id),'이번 원정에 적용했습니다.'),'mw-card mw-boon');card.dataset.boon=id;card.dataset.family=b.family;
         const illustration=art(`boon-${b.id}`);illustration.className+=' mw-boon-art';
-        card.append(illustration,n('small','mw-eyebrow',`${family[b.family][0]} · ${rank?`강화 ${rank} → ${rank+1}`:'새 각인'}`),n('h4','',b.name),n('p','mw-choice-effect',b.description),n('strong','mw-pick',rank?'이 각인 강화':'이 각인 적용'));cards.append(card);
+        card.append(illustration,n('small','mw-eyebrow',`${family[b.family][0]} · ${rank?`강화 ${rank} → ${rank+1}`:'새 각인'}`),n('h4','',b.name),n('p','mw-choice-effect',b.description));
+        const preview=previewBoon(run.picked,id);
+        if(preview) {
+          const summary=n('span','mw-boon-preview'),visible=preview.changes.slice(0,3),shown=new Set(visible.map(c=>c.key));
+          summary.append(n('span','mw-preview-title','각인 효과 변화'));
+          for(const change of visible)summary.append(n('span','mw-preview-change',boonChangeLabel(change)));
+          if(preview.synergyIds.length) {
+            const combos=preview.synergyIds.map(id=>{
+              const synergy=SYNERGIES.find(s=>s.id===id);
+              const effects=Object.keys(synergy.effects).map(key=>shown.has(key)?boonEffectLabels[key]:boonChangeLabel(preview.changes.find(c=>c.key===key)));
+              return `${synergy.name} (${effects.join(' · ')})`;
+            });
+            summary.append(n('span','mw-preview-synergies',`새 조합 · ${combos.join(' / ')}`));
+          }
+          card.append(summary);
+        }
+        card.append(n('strong','mw-pick',rank?'이 각인 강화':'이 각인 적용'));cards.append(card);
       }
-      pending.append(cards,details('서로 다른 계열을 모으면 조합 효과가 열립니다. 같은 각인은 3단계까지 강화됩니다.','각인 조합 규칙'));
+      pending.append(cards,details('서로 다른 계열을 모으면 조합 효과가 열립니다. 같은 각인은 3단계까지 강화됩니다. 변화 수치는 이번 출격의 각인 보너스 합계이며, 장비·영구 숙련은 포함하지 않습니다. 회복은 최대 체력 기준이며 치명타는 확률에 더하는 보너스입니다.','각인 조합 규칙'));
     } else if(offer?.kind==='story') {
       const event=STORY_EVENTS.find(e=>e.id===offer.id),remembered=event.choices.find(c=>c.id===this.state.story[event.id]);
       this.runIntro(event.name,remembered?remembered.consequence:event.description,remembered?'다시 만난 인연 · 선택 기록 있음':'길 위의 만남 · 행동 하나 선택','nav-journal',pending,offer.id==='bridge'?'ember_vault':offer.id==='archive'?'star_archive':'glass_garden');
