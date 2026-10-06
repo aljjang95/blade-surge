@@ -76,9 +76,26 @@ function sumEffects(parts) {
   if(out.healOnKill) out.healOnKill=Math.min(.05,out.healOnKill);
   return out;
 }
+function boonSynergies(rank) {
+  const families=new Set(BOONS.filter(b=>rank[b.id]>0).map(b=>b.family));
+  return SYNERGIES.filter(s=>s.families.every(f=>families.has(f)));
+}
 export function boonEffects(picked) {
-  const rank=ranks(picked), families=new Set(BOONS.filter(b=>rank[b.id]>0).map(b=>b.family));
-  return sumEffects([...BOONS.map(b=>Object.fromEntries(Object.entries(b.effects).map(([k,v])=>[k,v*rank[b.id]]))),...SYNERGIES.filter(s=>s.families.every(f=>families.has(f))).map(s=>s.effects)]);
+  const rank=ranks(picked);
+  return sumEffects([...BOONS.map(b=>Object.fromEntries(Object.entries(b.effects).map(([k,v])=>[k,v*rank[b.id]]))),...boonSynergies(rank).map(s=>s.effects)]);
+}
+/** 선택 권한은 전투가 소유하며, 여기서는 각인 효과만 부작용 없이 비교한다. */
+export function previewBoon(picked,id) {
+  const boon=BOONS.find(b=>b.id===id);
+  if(!boon)return null;
+  const rank=ranks(picked);
+  if(rank[id]>=boon.maxRank)return null;
+  const next={...rank,[id]:rank[id]+1},before=boonEffects(rank),after=boonEffects(next);
+  const active=new Set(boonSynergies(rank).map(s=>s.id));
+  const synergies=boonSynergies(next).filter(s=>!active.has(s.id));
+  const keys=[...new Set([...Object.keys(boon.effects),...synergies.flatMap(s=>Object.keys(s.effects))])];
+  return {rank:rank[id],nextRank:next[id],before,after,
+    changes:keys.map(key=>({key,before:before[key]||0,after:after[key]||0})),synergyIds:synergies.map(s=>s.id)};
 }
 export function masteryEffects(state) { const s=normalizeMasterworks(state); return sumEffects([...MASTERY_NODES.filter(n=>s.unlocked.includes(n.id)).map(n=>n.effects),PATHS.find(p=>p.id===s.path)?.effects||{}]); }
 export function unlockMastery(state,id) {

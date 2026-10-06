@@ -36,6 +36,12 @@
 #masterworks[data-view=run] .mw-boon>h4{font-size:18px;line-height:1.4;margin-top:4px}
 #masterworks[data-view=run] .mw-boon>.mw-choice-effect{font-size:14px;line-height:1.6;font-weight:700;min-height:0;flex:1}
 #masterworks[data-view=run] .mw-pick{display:block;font-size:12px;line-height:1.5;margin-top:auto;margin-bottom:0;padding-top:10px;border-top:1px solid #cfb57535;color:#f2d69c}
+/* 미리보기는 기존 본문 스크롤 안에서만 늘어나며 선택 버튼을 중첩하지 않는다. */
+#masterworks[data-view=run] .mw-boon-preview{display:block;min-width:0;margin:2px 0 8px;padding-top:6px;border-top:1px solid #cfb57525;font-size:11px;line-height:1.45;color:#d4e5dc;overflow-wrap:anywhere}
+.mw-preview-title,.mw-preview-change,.mw-preview-synergies{display:block}
+.mw-preview-title{margin-bottom:3px;color:#a9bdb9;font-size:10px}
+.mw-preview-change+.mw-preview-change{margin-top:3px}
+.mw-preview-synergies{margin-top:5px;color:#f2d69c}
 .mw-story-choices{gap:10px}
 .mw-story-choice{display:flex;flex-direction:column;padding:14px;background:radial-gradient(ellipse at 50% 0%,#d7b46c1c,transparent 65%),#172125;border-color:#d3af6650}
 .mw-story-choice[data-reward=heal]{background:radial-gradient(ellipse at 50% 0%,#82c2a71c,transparent 65%),#172125;border-color:#91c7a950}
@@ -76,8 +82,8 @@
  #masterworks[data-view=run] .mw-content{padding:10px 12px 12px}
  #masterworks[data-view=run] .mw-header{padding:8px 12px}
  #masterworks[data-view=run] .mw-boon{display:grid;grid-template-columns:80px minmax(0,1fr);column-gap:12px;padding:12px}
- #masterworks[data-view=run] .mw-boon>.mw-illustration{grid-column:1;grid-row:1/5;width:80px;height:100%;max-height:130px;margin:0;align-self:center;filter:none}
- #masterworks[data-view=run] .mw-boon>.mw-eyebrow,#masterworks[data-view=run] .mw-boon>h4,#masterworks[data-view=run] .mw-boon>p,#masterworks[data-view=run] .mw-boon>.mw-pick{grid-column:2;margin-top:0;margin-bottom:4px}
+ #masterworks[data-view=run] .mw-boon>.mw-illustration{grid-column:1;grid-row:1/6;width:80px;height:100%;max-height:130px;margin:0;align-self:center;filter:none}
+ #masterworks[data-view=run] .mw-boon>.mw-eyebrow,#masterworks[data-view=run] .mw-boon>h4,#masterworks[data-view=run] .mw-boon>p,#masterworks[data-view=run] .mw-boon>.mw-pick,#masterworks[data-view=run] .mw-boon>.mw-boon-preview{grid-column:2;margin-top:0;margin-bottom:4px}
  #masterworks[data-view=run] .mw-boon>.mw-pick{margin-bottom:0;padding-top:6px}
  #masterworks[data-view=run] .mw-picked{grid-template-columns:repeat(2,minmax(0,1fr))}
  #masterworks[data-view=run] .mw-chip{grid-template-columns:34px minmax(0,1fr);gap:6px;padding:8px}
@@ -105,6 +111,7 @@
  #masterworks[data-view=run] .mw-boon>.mw-illustration{width:100%;height:54px;min-height:0;margin:0;filter:none}
  #masterworks[data-view=run] .mw-boon>h4{font-size:15px}
  #masterworks[data-view=run] .mw-boon>.mw-choice-effect{font-size:12px}
+ #masterworks[data-view=run] .mw-boon-preview{font-size:10px;line-height:1.4;margin-bottom:4px}
  .mw-story-choice>.mw-illustration{height:56px}
  .mw-run-intro{padding-top:6px;padding-bottom:6px}
 }

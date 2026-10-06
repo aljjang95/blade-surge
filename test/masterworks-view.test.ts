@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import { MasterworksView } from '../src/ui/masterworks.js';
 import { BOONS, STORY_EVENTS } from '../src/data/masterworks.js';
 import { Battle } from '../src/game/masterworks-battle.js';
-import { normalizeMasterworks } from '../src/game/masterworks-core.js';
+import { normalizeMasterworks, previewBoon } from '../src/game/masterworks-core.js';
 import { uiArt } from '../src/ui/illustrated.js';
 
 function fixture(result:any=null) {
@@ -193,6 +193,53 @@ test('clicking a boon applies only that choice and restores the trigger while th
   expect(battle.run.picked).toEqual(['tide_breath']);expect(battle.run.queue).toEqual([next]);expect(storage.attempts).toBe(0);
   expect(view.dialog.open).toBe(false);expect(pauses).toEqual(new Set(['catalogue']));expect(trigger.focused).toBe(true);
   expect(view.hud.textContent).toBe('각인 +1');
+}));
+
+test('rendering a preview leaves the live offer and save untouched, then the native choice applies that same calculation',()=>withMWDOM(()=>{
+  const next={kind:'story',id:'lantern'},first={kind:'boon',ids:['ember_edge','tide_breath','storm_eye'],round:2,autoAt:8};
+  const {view,battle,state,storage,pauses,trigger}=choiceFixture([first,next]);
+  battle.run.picked=['ember_edge'];battle.run.permanent={};battle.run.round=3;
+  battle.buildBase={hp:100,atk:20,def:10,spd:5,crit:.05};battle.applyBuild=Battle.prototype.applyBuild;battle.applyBuild();
+  pauses.add('catalogue');const before=JSON.stringify({run:battle.run,state,player:battle.player,effects:battle.effects,pauses:[...pauses]});
+  view.render();view.render();
+  expect(JSON.stringify({run:battle.run,state,player:battle.player,effects:battle.effects,pauses:[...pauses]})).toBe(before);
+  expect(storage.attempts).toBe(0);
+  const cards:MWElement[]=view.content.all().filter((n:MWElement)=>n.dataset.boon);
+  expect(cards.map(n=>n.dataset.boon)).toEqual(first.ids);expect(cards[0].text()).toContain('공격력 +5% → +10%');
+  const preview=previewBoon(battle.run.picked,'storm_eye');if(!preview)throw Error('Expected native choice preview');
+  expect(cards[2].text()).toContain('질주하는 불씨');expect(cards[2].text()).toContain('공격력 +5% → +12%');
+  expect(battle.selectBoon('storm_edge').ok).toBe(false);expect(battle.run.queue).toEqual([first,next]);
+  cards[2].click();
+  expect(battle.effects).toEqual(preview.after);expect(battle.player.stats.atk).toBeCloseTo(22.4);
+  expect(battle.run.picked).toEqual(['ember_edge','storm_eye']);expect(battle.run.queue).toEqual([next]);expect(storage.attempts).toBe(0);
+  expect(view.dialog.open).toBe(false);expect(pauses).toEqual(new Set(['catalogue']));expect(trigger.focused).toBe(true);
+}));
+
+test('a capped chain preview explicitly preserves two targets and does not invent a new combination',()=>withMWDOM(()=>{
+  const view=renderFixture(true);view.battle.run.picked=['storm_eye','storm_eye','ember_edge','tide_guard','stone_plate'];
+  view.battle.currentOffer=()=>({kind:'boon',ids:['storm_eye']});const before=JSON.stringify(view.battle.run);view.renderRun();
+  const card:MWElement=view.content.all().find((n:MWElement)=>n.dataset.boon==='storm_eye');
+  expect(card.text()).toContain('강화 2 → 3');expect(card.text()).toContain('마무리 연쇄 2명 → 2명 · 상한, 변화 없음');
+  expect(card.all().filter(n=>n.className==='mw-preview-synergies')).toHaveLength(0);expect(JSON.stringify(view.battle.run)).toBe(before);
+}));
+
+test('four coefficient changes fit three rows while the new-combination group retains the fourth actual change',()=>withMWDOM(()=>{
+  const view=renderFixture(true);view.battle.run.picked=['ember_hunt','ember_hunt','tide_guard','tide_guard','stone_plate'];
+  view.battle.currentOffer=()=>({kind:'boon',ids:['storm_step']});view.renderRun();
+  const card:MWElement=view.content.all().find((n:MWElement)=>n.dataset.boon==='storm_step'),rows=card.all().filter(n=>n.className==='mw-preview-change');
+  expect(rows).toHaveLength(3);expect(rows.map(n=>n.text())).toEqual(['이동 속도 +0% → +4%','공격력 +0% → +7%','재사용 대기 -0% → -8%']);
+  const combo=card.all().find(n=>n.className==='mw-preview-synergies');if(!combo)throw Error('Expected new combination group');
+  for(const name of ['질주하는 불씨','비의 행군','산울림'])expect(combo.text()).toContain(name);
+  expect(combo.text()).toContain('치명타 확률 +0% → +4%');expect(combo.text()).not.toContain('바위샘');
+  expect(card.all().filter(n=>['button','details','input','a'].includes(n.tagName))).toHaveLength(0);
+  expect(view.content.text()).toContain('각인 보너스 합계');expect(view.content.text()).toContain('장비·영구 숙련은 포함하지 않습니다');
+}));
+
+test('preview healing retains fractional percentages and uses the current total rather than the static per-rank amount',()=>withMWDOM(()=>{
+  const view=renderFixture(true);view.battle.run.picked=['tide_return'];view.battle.currentOffer=()=>({kind:'boon',ids:['tide_return']});view.renderRun();
+  const card:MWElement=view.content.all().find((n:MWElement)=>n.dataset.boon==='tide_return');
+  expect(card.text()).toContain('처치 회복 0.7% → 1.4%');expect(card.text()).toContain('최대 체력 0.7% 회복');
+  expect(card.all().filter(n=>n.className==='mw-preview-change')).toHaveLength(1);
 }));
 
 for(const event of STORY_EVENTS)for(const choice of event.choices)test(`${event.id}/${choice.id} displays its real reward and routes selection through the durable story transaction`,()=>withMWDOM(()=>{
