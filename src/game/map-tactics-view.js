@@ -56,6 +56,9 @@ export class MapTacticsView {
         { x:node.operator.x, z:rear },
         { x:room.x + node.side * (room.w / 2 + 1.6), z:node.operator.z },
         { x:room.x + node.side * (room.w / 2 + 1.6), z:rear },
+        // 1m 셀 양자화로 세 기존 위치가 막힐 때만 더 바깥을 같은 전체 면적으로 검사한다.
+        { x:room.x + node.side * (room.w / 2 + 2.6), z:node.operator.z },
+        { x:room.x + node.side * (room.w / 2 + 2.6), z:rear },
       ];
       if (!floor?.walkable) return candidates[0];
       // 방 바깥에도 회랑이 있을 수 있다. 조형의 전체 바닥 면적이 실제 마스크 밖인지 읽는다.

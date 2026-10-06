@@ -539,10 +539,18 @@ export class Battle {
     audio.playMusic(musicForScene({ stage: this.stage, boss: !!this.boss }), MUSIC_MIX); audio.magic({ vol: 0.5, base: 523, notes: [0, 4, 7, 12], step: 0.08 });
     if (this.bossDefeated) this.after(.8, () => this.victory());
   }
-  defeat() { if (!this.active) return; this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, expedition: this.stage?.expedition || null, conquest: this.conquest?.finish(false) || null, routeObjective: this.routeObjectives?.finish(false) || null, mapTactics: this.mapTactics?.finish() || null, treasureRooms: this.treasureRooms }; this.ui.showResult(this, false); }
+  defeat() {
+    if (!this.active) return;
+    // 결과 화면이 갱신을 멈추기 전에 모든 방의 현재 지원 시전과 소유 알림을 회수한다.
+    if (this.enemies) for (const enemy of this.enemies) enemy.clearSupportCast?.();
+    this.active = false; this.input.enabled = false; this.input.clear(); this.app.companionAgent?.observe('defeat', { floor: this.stage?.idx || 0 }); this.result = { win: false, kills: this.kills, maxCombo: this.maxCombo, dmg: this.dmgDealt, time: this.elapsed, expedition: this.stage?.expedition || null, conquest: this.conquest?.finish(false) || null, routeObjective: this.routeObjectives?.finish(false) || null, mapTactics: this.mapTactics?.finish() || null, treasureRooms: this.treasureRooms }; this.ui.showResult(this, false);
+  }
   victory() {
     if (this.routeObjectives && (this.paused || !this.bossDefeated || !this.routeObjectives.canWin())) return;
-    if (!this.active || !this.player?.alive) return; this.active = false; this.input.enabled = false; this.input.clear();
+    if (!this.active || !this.player?.alive) return;
+    // 승리 조건을 통과한 경우에만 시전을 닫고 기존 결과·축하 순서를 이어간다.
+    if (this.enemies) for (const enemy of this.enemies) enemy.clearSupportCast?.();
+    this.active = false; this.input.enabled = false; this.input.clear();
     this.app.companionAgent?.observe('victory', { floor: this.stage?.idx || 0 });
     this.player.play('Cheer', { fade: 0.2 }); audio.playMusic(null); audio.play('jingle_win0', { vol: 0.9 }); this.ui.showBoss('', false); this.after(1.2, () => audio.voice(heroVoiceName(this.heroId, 'win'))); this.after(3.8, () => audio.voice('floor_clear'));
     this.fx.burst(this.player.pos.clone().setY(1), 0xffd060, { n: 60, speed: 9, size: 0.5, up: 1.5, grav: 6, life: 1.2 }); this.fx.embers(this.player.pos, 0xffe080, { n: 40, radius: 2, life: 2, rise: 3 });

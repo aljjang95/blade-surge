@@ -82,13 +82,14 @@ test('placement rejects stale view input and reports a fully blocked viewport wi
   expect(cached).toEqual([{ left: 0, right: 390, top: 0, bottom: 844 }]);
 });
 
-test('status presentation preserves damage node pressure, RNG consumption and retirement through pool reuse', () => {
-  // 후속 FX·난수 호출이 DOM 개수에 의존하므로 실제 FX.damage의 풀 재사용을 확인한다.
+test('status presentation preserves damage node pressure and retirement without gameplay RNG through pool reuse', () => {
+  // 실제 FX.damage의 풀 재사용과 전역 전투 난수의 비소비를 함께 확인한다.
   const fx: any = Object.create(FX.prototype);
   fx.camera = new PerspectiveCamera(55, 390 / 844, .1, 100);
   fx.camera.position.set(0, 8, 10); fx.camera.lookAt(0, 0, 0); fx.camera.updateMatrixWorld(true);
   fx.focus = new HeroEffectFocus(); fx.focus.setTarget({ alive: true }); fx.focus.area.value.set(.5, .5, .08, .1);
   fx.dmgPool = []; fx.maxDmg = 40; fx._damageRecent = []; fx._damageSerial = 0;
+  fx._damageRandomState = 123;
   fx.setCombatTextRegions([{ left: 0, right: 390, top: 0, bottom: 184 }]);
   const created: any[] = [], observed: any[] = [];
   const layer: any = {
@@ -127,7 +128,7 @@ test('status presentation preserves damage node pressure, RNG consumption and re
     fx.damage(new Vector3(), 67.8, { heavy: true });
     observed.push({ text: layer.children.at(-1).textContent, key: layer.children.at(-1).dataset.combatStatus, tag: layer.children.at(-1).dataset.tag });
     Math.random = originalRandom;
-    expect(randomCalls).toBe(114);
+    expect(randomCalls).toBe(0);
     expect(created.length).toBe(41);
     expect(layer.children.length).toBe(40);
     expect(fx.dmgPool.length).toBe(1);
@@ -205,6 +206,7 @@ test('compact text uses cached layer height and local HUD coordinates while nume
     const fx: any = Object.create(FX.prototype);
     fx.camera = camera; fx.focus = new HeroEffectFocus();
     fx.dmgPool = []; fx.maxDmg = 40; fx._damageRecent = []; fx._damageSerial = 0;
+    fx._damageRandomState = 123;
     fx.dmgLayer = { children: [], appendChild(el: any) { this.children.push(el); el.parentNode = this; } };
     fx.setCombatTextRegions(withLayer ? [{ left: 17, top: 23, right: 407, bottom: 103 }] : [], withLayer ? layerBounds : null);
     return fx;
@@ -223,10 +225,11 @@ test('compact text uses cached layer height and local HUD coordinates while nume
     compactFx.damage(pos, 0, { text: 'GUARD BREAK' });
     const animationBounds = compactFx._damageRecent[0].bounds;
     compactFx._damageRecent = []; compactFx._damageSerial = 0;
+    compactFx._damageRandomState = numericFx._damageRandomState;
     compactFx.damage(pos, 67.8);
     numericFx.damage(pos, 67.8);
     Math.random = random;
-    expect(calls).toBe(6);
+    expect(calls).toBe(0);
     expect(animationBounds.left).toBeGreaterThanOrEqual(0);
     expect(animationBounds.right).toBeLessThanOrEqual(390);
     expect(animationBounds.top).toBeGreaterThanOrEqual(0);
@@ -279,4 +282,114 @@ test('HUD cache reads stable animated layout and the actual layer once per bound
     if (original) Object.defineProperty(globalThis, 'document', original);
     else Reflect.deleteProperty(globalThis, 'document');
   }
+});
+
+import { Scene } from 'three';
+import { Battle as RpgBattle } from '../src/game/rpg-battle.js';
+
+function realDamageFixture() {
+  const globals = ['window', 'document'].map(key => [key, Object.getOwnPropertyDescriptor(globalThis, key)] as const);
+  const created: any[] = [];
+  const layer: any = {
+    children: [],
+    get firstChild() { return this.children[0] || null; },
+    appendChild(el: any) { this.children.push(el); el.parentNode = this; },
+    removeChild(el: any) { this.children.splice(this.children.indexOf(el), 1); el.parentNode = null; },
+  };
+  const gradient = { addColorStop() {} };
+  const context = { createRadialGradient: () => gradient, createLinearGradient: () => gradient, fillRect() {}, clearRect() {} };
+  const restore = () => {
+    for (const [key, descriptor] of globals) {
+      if (descriptor) Object.defineProperty(globalThis, key, descriptor);
+      else Reflect.deleteProperty(globalThis, key);
+    }
+  };
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { innerWidth: 880, innerHeight: 400 } });
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: {
+    getElementById: () => layer,
+    createElement(tag: string) {
+      if (tag === 'canvas') return { getContext: () => context };
+      const el: any = { dataset: {}, handlers: new Map(), style: { setProperty() {} }, offsetWidth: 0, parentNode: null,
+        setAttribute() {}, addEventListener(type: string, callback: () => void) { this.handlers.set(type, callback); },
+        removeEventListener(type: string, callback: () => void) { if (this.handlers.get(type) === callback) this.handlers.delete(type); } };
+      created.push(el); return el;
+    },
+  } });
+  try {
+    const camera = new PerspectiveCamera(55, 880 / 400, .1, 100);
+    camera.position.set(0, 8, 10); camera.lookAt(0, 0, 0); camera.updateMatrixWorld(true);
+    const fx = new FX(new Scene(), camera);
+    const retire = () => { for (const el of [...layer.children]) el.handlers.get('animationend')(); };
+    return { fx, layer, created, retire, close() { fx.dispose(); restore(); } };
+  } catch (error) { restore(); throw error; }
+}
+
+test('실제 피해 숫자는 전역 난수 없이 유한한 위치 변화를 유지하고 animationend 뒤 같은 노드를 재사용한다', () => {
+  const f = realDamageFixture(), originalRandom = Math.random, pos = new Vector3();
+  const positions: string[] = [];
+  let globalCalls = 0;
+  try {
+    // Three 생성자의 UUID 할당은 준비 단계에서 끝냈고 실제 표시 경로만 관찰한다.
+    Math.random = () => { globalCalls++; throw new Error('피해 숫자가 전투 난수를 소비했다'); };
+    for (let i = 0; i < 64; i++) {
+      f.fx._damageRecent = []; f.fx._damageSerial = 0;
+      f.fx.damage(pos, 50);
+      const el = f.layer.children[0], x = parseFloat(el.style.left), y = parseFloat(el.style.top);
+      expect(Number.isFinite(x) && Number.isFinite(y)).toBe(true);
+      expect(x).toBeGreaterThanOrEqual(26); expect(x).toBeLessThanOrEqual(854);
+      expect(y).toBeGreaterThanOrEqual(72); expect(y).toBeLessThanOrEqual(320);
+      positions.push(el.style.left + '/' + el.style.top);
+      f.retire();
+      expect(f.layer.children).toHaveLength(0); expect(f.fx.dmgPool).toHaveLength(1);
+    }
+    expect(new Set(positions).size).toBeGreaterThan(48);
+    expect(f.created).toHaveLength(1);
+    expect(f.created[0].handlers.size).toBe(0); expect(f.created[0]._dmgDone).toBeNull();
+    expect(globalCalls).toBe(0);
+  } finally { Math.random = originalRandom; f.close(); }
+});
+
+test('실제 RPG 피해의 표시·억제와 서로 다른 DOM 수명은 다음 전투 난수와 피해량을 바꾸지 않는다', () => {
+  const seeded = () => {
+    let state = 20260905;
+    return () => { state = (Math.imul(state, 1103515245) + 12345) >>> 0; return state / 4294967296; };
+  };
+  function scenario(earlyRetirement: boolean) {
+    const f = realDamageFixture(), originalRandom = Math.random, pos = new Vector3();
+    const amounts: number[] = [];
+    let calls = 0, admitted = 0;
+    try {
+      for (let i = 0; i < 4; i++) f.fx.damage(pos, 1);
+      const player = { stats: { crit: 0, critDmg: 2, ultGain: 1 }, auto: true, addUlt() {} };
+      const battle: any = Object.assign(Object.create(RpgBattle.prototype), {
+        active: true, paused: false, player, fx: f.fx, combo: 0, maxCombo: 0, dmgDealt: 0,
+        app: { reducedMotion: { matches: false } }, ui: { setCombo() {} },
+      });
+      const enemy: any = { alive: true, spawning: false, pos, def: { scale: 1 },
+        hurt(amount: number) { amounts.push(amount); return amount; } };
+      const gameRandom = seeded();
+      Math.random = () => { calls++; return gameRandom(); };
+      for (let i = 0; i < 32; i++) {
+        if (earlyRetirement || i === 16) f.retire();
+        const before = f.layer.children.length;
+        // proc/contact 연출을 생략하는 실제 요청에도 숫자의 기존 4-node admission은 그대로 실행한다.
+        battle.damageEnemy(enemy, 100, { noProc: true });
+        if (f.layer.children.length > before) admitted++;
+      }
+      expect(calls).toBe(64);
+      const next = Array.from({ length: 4 }, () => Math.random());
+      f.retire();
+      expect(f.layer.children).toHaveLength(0); expect(f.fx.dmgPool).toHaveLength(4);
+      expect(f.created).toHaveLength(4);
+      expect(f.created.every(el => el.handlers.size === 0 && el._dmgDone === null)).toBe(true);
+      expect(amounts.every(amount => Number.isFinite(amount) && amount >= 90 && amount < 110)).toBe(true);
+      return { amounts, next, admitted };
+    } finally { Math.random = originalRandom; f.close(); }
+  }
+  const early = scenario(true), late = scenario(false), untouched = seeded();
+  for (let i = 0; i < 64; i++) untouched();
+  const expectedNext = Array.from({ length: 4 }, () => untouched());
+  expect(early.admitted).toBe(32); expect(late.admitted).toBe(4);
+  expect(early.amounts).toEqual(late.amounts);
+  expect(early.next).toEqual(expectedNext); expect(late.next).toEqual(expectedNext);
 });
