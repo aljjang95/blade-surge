@@ -5,16 +5,20 @@ import { spawnCharacter, disposeCharacter } from '../engine/assets.js';
 import { CITADEL_HUB, CITADEL_HUB_HOTSPOTS, CITADEL_HUB_PROPS, CITADEL_HUB_ASSET_ROOT } from '../data/citadel-hub.js';
 import { preloadEnvironmentKit, buildEnvironmentInstances } from '../engine/environment-kit-asset.js';
 import { CanopySightline } from '../engine/canopy-sightline.js';
+import { createCitadelGateDesignLibrary } from './citadel-gate-designs.js';
 
 const templates = new Map();
 const pending = new Map();
 const loader = new GLTFLoader();
 
-/** Visual assets are optional. A bounded failure preserves the playable plaza. */
+/**
+ * 시각 자산은 선택 사항이며 제한된 실패 뒤에도 광장 플레이를 유지한다.
+ * @param {{ quality?: string, fetcher?: (path: string, init?: RequestInit) => Promise<Response> }} [options]
+ */
 export async function preloadCitadelHubAssets({ quality = 'high', fetcher = globalThis.fetch } = {}) {
   const environmentReady = preloadEnvironmentKit({ fetcher });
   const suffix = quality === 'low' ? '-lod1' : '';
-  const assets = [...new Set([...CITADEL_HUB_HOTSPOTS, ...CITADEL_HUB_PROPS].map(s => s.asset).filter(Boolean)), `${CITADEL_HUB_ASSET_ROOT}paving.glb`];
+  const assets = [...new Set([...CITADEL_HUB_HOTSPOTS.filter(s => s.kind !== 'dungeon'), ...CITADEL_HUB_PROPS].map(s => s.asset).filter(Boolean)), `${CITADEL_HUB_ASSET_ROOT}paving.glb`];
   const results = await Promise.all(assets.map(async basePath => {
     const selected = suffix ? basePath.replace(/\.glb$/, `${suffix}.glb`) : basePath;
     if (!pending.has(selected)) pending.set(selected, (async () => {
@@ -41,6 +45,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
   const root = new THREE.Group(); root.name = 'Citadel_PlayableHub';
   const geometryOwned = new Set(), materialsOwned = new Set(), texturesOwned = new Set();
   const characters = [], markers = new Map(), labels = [], gateNodes = new Map();
+  const gateDesigns = createCitadelGateDesignLibrary({ environmentTexture, quality });
   let authoredAssetCount = 0;
   const mat = (color, options = {}) => {
     const m = new THREE.MeshStandardMaterial({ color, roughness: .88, metalness: .03, ...options });
@@ -149,58 +154,6 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     authoredAssetCount++;
   }
 
-  function emblem(b, kind, accent) {
-    const y = 3.12, z = .16;
-    const diamond = (x, yy, size, material = accent) => b.box(size, size, .13, material, x, yy, z, 0);
-    if (kind === 'glass' || kind === 'leaf') {
-      for (const side of [-1, 1]) b.add(new THREE.SphereGeometry(.19, 8, 6), accent, side * .24, y + .11, z);
-      b.add(new THREE.ConeGeometry(.19, .65, 4), accent, 0, y + .3, z);
-      if (kind === 'leaf') for (const side of [-1, 1]) b.box(.12, .6, .13, gold, side * .47, y + .02, z, 0);
-    } else if (kind === 'vault' || kind === 'valve' || kind === 'orbit' || kind === 'crescent') {
-      b.ring(.36, .07, gold, 0, y + .02, z, 0, kind === 'crescent' ? Math.PI * 1.55 : Math.PI * 2);
-      if (kind === 'orbit') { b.ring(.52, .027, accent, 0, y + .02, z, 0); diamond(.37, y + .4, .15); }
-      if (kind === 'valve') for (const side of [-1, 1]) b.box(.11, .56, .11, accent, side * .12, y, z);
-      if (kind === 'vault') { b.box(.08, .61, .08, gold, 0, y, z); b.box(.61, .08, .08, gold, 0, y, z); }
-      if (kind === 'crescent') diamond(.1, y + .04, .14);
-    } else if (kind === 'bell') {
-      b.add(new THREE.CylinderGeometry(.15, .34, .42, 12), gold, 0, y + .09, z);
-      b.ring(.32, .035, accent, 0, y - .11, z); b.add(new THREE.SphereGeometry(.08, 8, 6), gold, 0, y - .19, z);
-    } else if (kind === 'hydra') {
-      for (const offset of [-.34, 0, .34]) {
-        b.box(.1, .43, .1, accent, offset, y, z);
-        b.add(new THREE.ConeGeometry(.14, .28, 5), gold, offset, y + .27, z, 0, 0, -.6);
-      }
-    } else if (kind === 'anvil') {
-      b.box(.7, .2, .24, gold, 0, y + .2, z); b.box(.25, .36, .22, accent, 0, y -.02, z);
-      b.box(.53, .1, .27, gold, 0, y -.24, z);
-    } else if (kind === 'spire' || kind === 'comet') {
-      b.add(new THREE.ConeGeometry(.21, .72, 4), accent, 0, y + .13, z);
-      for (const side of [-1, 1]) b.box(.11, .4, .1, gold, side * .28, y + .08, z);
-      if (kind === 'comet') b.add(new THREE.SphereGeometry(.23, 8, 6), gold, 0, y -.13, z);
-    } else if (kind === 'blades' || kind === 'oath') {
-      for (const side of [-1, 1]) b.add(new THREE.BoxGeometry(.085, .75, .1), gold, side * .12, y + .08, z, 0, 0, side * .38);
-      b.ring(.29, .035, accent, 0, y, z, 0);
-    } else {
-      for (let i = 0; i < 4; i++) b.add(new THREE.BoxGeometry(.09, .82, .09), accent, 0, y, z, 0, 0, i * Math.PI / 4);
-    }
-  }
-
-  function fallbackGate(node, spot) {
-    const accent = mat(spot.accent || '#a6d9d0', { emissive: spot.accent || '#a6d9d0', emissiveIntensity: .07 });
-    const b = batch(node);
-    for (const side of [-1, 1]) {
-      b.box(.35, 2.35, .47, ivory, side * 1.27, 1.18, 0);
-      b.box(.53, .16, .57, gold, side * 1.27, .11, 0);
-      b.box(.44, .11, .54, gold, side * 1.27, 2.21, 0);
-      b.box(.075, 1.78, .03, accent, side * 1.27, 1.21, .252);
-    }
-    b.ring(1.27, .15, ivory, 0, 2.31, 0, 0, Math.PI);
-    b.ring(1.27, .027, gold, 0, 2.31, .16, 0, Math.PI);
-    b.box(2.15, .045, .64, slate, 0, .025, 0);
-    b.box(1.92, .008, .1, accent, 0, .054, .42);
-    emblem(b, spot.emblem, accent); b.finish();
-  }
-
   function textLabel(spot, y) {
     if (typeof document === 'undefined') return null;
     const canvas = document.createElement('canvas'); canvas.width = 768; canvas.height = 180;
@@ -229,7 +182,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     root.add(node); gateNodes.set(spot.id, node);
     const isGate = ['dungeon', 'campaign', 'arena'].includes(spot.kind);
     if (isGate) {
-      if (!cloneAsset(spot.asset, node)) fallbackGate(node, spot);
+      node.add(gateDesigns.build(spot));
       textLabel(spot, 4.12);
     } else {
       if (!cloneAsset(spot.asset, node)) {
@@ -381,6 +334,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     },
     dispose() {
       if (disposed) return; disposed = true;
+      gateDesigns.dispose();
       gardenAssets.userData.dispose();
       courtyardTrees.userData.dispose(); canopySightline.reset();
       for (const actor of characters) disposeCharacter(actor.root, actor.mixer);

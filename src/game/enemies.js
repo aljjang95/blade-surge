@@ -8,6 +8,7 @@ import { BossSignatures } from './boss-signatures.js';
 import { MobRole } from './mob-roles.js';
 import { canCommitMelee, packSeparation, packSteer } from './combat-craft.js';
 import { supportCastingForStage } from './expedition-combat.js';
+import { beginEnemyGather, prepareEnemyGather } from './crowd-gather.js';
 
 const _v = new THREE.Vector3();
 const areaPlayers = game => [...new Set(game.stage?.party ? game.app.party.livingPlayers() : [game.player])].filter(p => p?.alive);
@@ -59,6 +60,7 @@ export class Enemy extends Actor {
     this.state = 'spawn'; this.stateT = 0; this.spawning = true; this.telegraph = 0;
     this.atkCd = 0.6 + Math.random() * 1.2; this.hitAt = 0.5; this.attackDur = def.atkTime; this.attackDone = false;
     this.stagger = 0; this.poison = 0; this.poisonT = 0; this.phase = 0; this.enraged = false; this.special = null;
+    this.gatherT = 0; this.gatherBlockT = 0; this.gatherX = 0; this.gatherZ = 0; this.gatherSpeed = 0;
     this.patternTurn = 0;
     this.signatures = def.signatureBoss ? new BossSignatures(this) : null;
     this.mobRole = def.meleeRole && !def.boss && !def.elite ? new MobRole(this) : null;
@@ -87,6 +89,7 @@ export class Enemy extends Actor {
   }
   get player() { return this.game.player; }
   dispose() {
+    this.gatherT = 0; this.gatherBlockT = 0;
     const rule = supportCastingForStage(this.game.stage);
     if (this.supportOwner || (rule && this.runtimeSpeciesId === rule.enemyId &&
         !this.isBoss && !this.isElite && this.behavior === 'shaman')) this.supportStopped = true;
@@ -99,6 +102,7 @@ export class Enemy extends Actor {
   }
   /** 몹몰이: 중심으로 끌어당김 */
   pull(cx, cz, force) { const dx = cx - this.pos.x, dz = cz - this.pos.z; const d = Math.hypot(dx, dz) || 1; if (d < 0.8) return; const f = force * (this.isBoss ? 0.15 : this.isElite ? 0.5 : 1); this.kb.x += dx / d * f; this.kb.z += dz / d * f; }
+  gather(cx, cz, speed, duration = .14) { return beginEnemyGather(this, cx, cz, speed, duration); }
   announceSkill() {
     const kind = this.special || this.mobRole?.key || (this.def.ranged ? 'magic' : 'melee');
     this.game.ui?.combatCue?.(`${this.isBoss ? '보스 · ' : ''}${enemySkillLabel({ ...this, special: this.special || kind })}`, 'red');
@@ -235,6 +239,8 @@ export class Enemy extends Actor {
     }
     const armor = this.def.armor || 0; dmg *= 1 - armor;
     this.hp -= dmg;
+    // 강타·띄우기는 몰이를 끝내고 기존 저항·넉백을 그대로 적용한다.
+    if (kb >= 6 || up) this.gatherT = 0;
     this.flash(crit ? 0xffd040 : 0xffffff, crit ? 0.18 : 0.12);
     const resist = this.isBoss ? 0.25 : this.isElite ? 0.5 : 1;
     this.knockback(dirx, dirz, kb * resist * (this.def.armor ? 0.6 : 1));
@@ -248,11 +254,15 @@ export class Enemy extends Actor {
       // 슈퍼아머는 유지해 강적과 잡몹의 타격 언어를 구분한다.
       if (this.state !== 'attack' || kb >= 4 || (hitReact && !this.isBoss && !this.isElite)) { this.signatures?.clear(); this.mobRole?.clear(); this.state = 'hurt'; this.stateT = 0; this.stagger = 0.22 + Math.min(0.4, kb * 0.03); this.play(this.A('hit'), { once: true, fade: 0.04, speed: 1.8 }); this.telegraph = 0; this.attackDone = false; }
     }
+    // 채널이 다음 프레임 재몰이해 강타 관성을 지우지 못하게 제어 소유 시간을 둔다.
+    if (kb >= 6 || up) this.gatherBlockT = Math.max(this.gatherBlockT || 0, .35, this.stun,
+      this.state === 'hurt' ? this.stagger : 0);
     if (this.supportCastKind && (this.state !== 'attack' || this.stun > 0 || this.breakT > 0)) this.clearSupportCast();
     if (this.hp <= 0) { this.hp = 0; this.kill(dirx, dirz, kb); }
     return dmg;
   }
   kill(dirx, dirz, kb) {
+    this.gatherT = 0; this.gatherBlockT = 0;
     this.clearSupportCast();
     this.signatures?.clear();
     this.mobRole?.clear();
@@ -279,7 +289,10 @@ export class Enemy extends Actor {
       if (this.game.paused || !Number.isFinite(dt) || dt <= 0) return;
     }
     this.mobRole?.beforeStep(dt);
+    const gathering = prepareEnemyGather(this, dt);
     super.update(dt);
+    this.gatherBlockT = Math.max(0, (this.gatherBlockT || 0) - dt);
+    if (gathering) this.vel.set(0, 0, 0);
     if(this.signatures){
       if(this.alive&&dt>0)this.signatures.remember(dt);
       if(!this.alive||this.state!=='attack'||this.stun>0)this.signatures.clear();

@@ -1,4 +1,13 @@
 import { audio } from '../engine/audio.js';
+import './tutorial.css';
+
+const STEPS = ['attack', 'dodge', 'skill', 'clear'];
+const TIPS = {
+  attack: { n: '1 / 4', title: '공격과 콤보', copy: '공격 버튼 · J/Space로 공격. “다시 누르기”가 보이면 한 번 더 눌러 다음 타를 잇습니다.', target: '#btn-attack' },
+  dodge: { n: '2 / 4', title: '붉은 예고에서 벗어나기', copy: '회피 버튼 · K/Shift로 피하세요. 적의 공격 직전 회피하면 퍼펙트 회피가 됩니다.', target: '#btn-dodge' },
+  skill: { n: '3 / 4', title: '스킬로 무리 상대하기', copy: '오른쪽 스킬 버튼 · 1~3/R. MP·쿨타임·궁극기 게이지가 준비된 스킬을 쓰세요.', target: '#hud .skill-btn[data-skill="0"]' },
+  clear: { n: '4 / 4', title: '미니맵을 따라 정화하기', copy: '방을 정화하면 다음 길이 열립니다. 체력은 빨간 물약, 어려우면 상단 AUTO로 보조하세요.', target: null },
+};
 
 export function nextHealHintTier(hp, maxHp, shownTier = 0) {
   if (!Number.isFinite(hp) || !Number.isFinite(maxHp) || maxHp <= 0) return 0;
@@ -7,7 +16,7 @@ export function nextHealHintTier(hp, maxHp, shownTier = 0) {
   return tier > shownTier ? tier : 0;
 }
 
-/** 첫 전투에서 실제 버튼을 눌러 배우는 짧은 온보딩. 안내서와 별개로 전투 입력을 요구한다. */
+/** 전투를 멈추지 않는 조작 안내. 입력·AUTO·일시정지의 소유권은 기존 전투에 둔다. */
 export class BattleTutorial {
   constructor(app) {
     this.app = app;
@@ -17,9 +26,17 @@ export class BattleTutorial {
     this.stepLabel = document.getElementById('tutorial-step');
     this.next = document.getElementById('tutorial-next');
     this.skip = document.getElementById('tutorial-skip');
+    this.card = this.root?.querySelector('.tutorial-card');
+    this.toggle = document.createElement('button');
+    this.toggle.id = 'tutorial-toggle'; this.toggle.className = 'tutorial-toggle'; this.toggle.type = 'button';
+    this.toggle.setAttribute('aria-controls', 'tutorial-panel');
+    if (this.card) { this.card.id = 'tutorial-panel'; this.root.prepend(this.toggle); }
     this.phase = null;
     this.completedSteps = new Set();
-    this.beforeAuto = false;
+    this.expanded = false;
+    this.reviewing = false;
+    this.expandUntil = 0;
+    this.highlightTarget = null;
     this.healTipLevel = 0;
     this.healTipUntil = 0;
     this.healTipButton = null;
@@ -33,12 +50,15 @@ export class BattleTutorial {
     this.healHintAlert.setAttribute('role', 'alert');
     document.getElementById('hud')?.append(this.healHintStatus, this.healHintAlert);
     this.onHealPotionClick = () => this.clearHealTip();
-    this.onNext = () => this.resumeCurrent();
+    this.onNext = () => this.nextTip();
     this.next?.addEventListener('click', this.onNext);
     this.skip?.addEventListener('click', () => this.finish(true));
+    this.toggle.addEventListener('click', () => { this.setExpanded(!this.expanded); this.restorePlayFocus(); });
+    this.renderExpansion();
   }
 
   begin(stage) {
+    this.end();
     const save = this.app.eco.s;
     if (stage?.code === '1-1' && stage.difficultyId === 'story') { this.healTipLevel = 0; this.clearHealTip(); }
     if (this.skipOnceForAutoRetry) {
@@ -47,50 +67,92 @@ export class BattleTutorial {
       document.querySelectorAll('.tutorial-focus').forEach((el) => el.classList.remove('tutorial-focus'));
       return false;
     }
-    if (stage?.code !== '1-1' || stage.difficultyId !== 'story' || save.tutorial?.completed || !this.root) return false;
+    if (stage?.code !== '1-1' || stage.difficultyId !== 'story' || !this.root) return false;
     const battle = this.app.battle;
-    this.battle = battle; this.phase = 'attack'; this.beforeAuto = !!battle.player.auto; battle.player.auto = false;
-    document.getElementById('btn-auto')?.classList.toggle('on', false);
-    this.show('attack', true);
-    return true;
+    if (!battle?.active || !battle.player?.alive) return false;
+    this.battle = battle; this.reviewing = !!save.tutorial?.completed;
+    if (!this.reviewing) this.show('attack');
+    this.syncVisibility();
+    return !this.reviewing;
   }
 
-  show(phase, paused) {
-    const data = {
-      attack: { n: '01 / 04', title: '첫 칼을 뽑아라', copy: '공격을 누르고, 타격이 닿은 직후 다시 눌러 콤보를 이어가세요. 길게 누르기만 해서는 이어지지 않아요. 키보드는 J 또는 Space입니다.', target: '#btn-attack', button: '전투 시작' },
-      dodge: { n: '02 / 04', title: '붉은 예고를 피하라', copy: '적의 공격이 닿기 직전에 회피를 눌러 퍼펙트 회피를 노리세요.', target: '#btn-dodge', button: '회피 연습' },
-      skill: { n: '03 / 04', title: '스킬로 무리를 무너뜨려라', copy: '화면 오른쪽의 스킬 중 하나를 눌러 MP를 사용하세요. 궁극기는 게이지가 차면 R로 발동합니다.', target: '#hud .skill-btn[data-skill="0"]', button: '스킬 연습' },
-      clear: { n: '04 / 04', title: '방을 정화하면 길이 열린다', copy: '미니맵을 따라 방을 정리하세요. 체력이 줄면 빨간 물약을 누르세요. 수동 조작이 어렵다면 상단 AUTO를 켤 수 있습니다. 각인 창에서는 하나를 고르세요.', target: null, button: '전투 계속' },
-    }[phase];
+  show(phase) {
+    const data = TIPS[phase];
     if (!data) return;
     this.phase = phase;
-    if (!this.completedSteps.has(phase)) {
+    if (this.expanded && !this.reviewing && !this.completedSteps.has(phase)) {
       this.completedSteps.add(phase);
       this.app.funnel?.track('tutorial_step', { step: this.completedSteps.size });
     }
-    this.app.battle?.setPaused('tutorial', paused);
-    this.root.hidden = false; this.root.classList.toggle('waiting', paused);
-    this.stepLabel.textContent = data.n; this.title.textContent = data.title; this.copy.textContent = data.copy; this.next.textContent = data.button;
-    document.querySelectorAll('.tutorial-focus').forEach((el) => el.classList.remove('tutorial-focus'));
-    if (data.target) document.querySelector(data.target)?.classList.add('tutorial-focus');
-    this.next.hidden = !paused;
+    this.stepLabel.textContent = data.n; this.title.textContent = data.title; this.copy.textContent = data.copy;
+    this.next.textContent = phase === 'clear' ? '안내 닫기' : '다음 안내'; this.next.hidden = false;
+    this.skip.textContent = '그만 보기';
+    this.syncVisibility(); this.renderHighlight();
   }
 
+  // 이전 호출 경계도 입력을 초기화하거나 다른 화면의 정지를 해제하지 않는다.
   resumeCurrent() {
-    if (!this.battle?.active) return;
+    if (!this.battle?.active || this.battle.paused) return;
     audio.play('ui_click', { vol: 0.4 });
-    this.battle.setPaused('tutorial', false);
-    this.root.classList.remove('waiting'); this.next.hidden = true;
+    this.setExpanded(false); this.restorePlayFocus();
+  }
+
+  nextTip() {
+    if (!this.battle?.active || this.battle.paused) return;
+    if (this.phase === 'clear') { this.finish(true); return; }
+    this.show(STEPS[STEPS.indexOf(this.phase) + 1] || 'attack');
+    this.restorePlayFocus();
+  }
+
+  setExpanded(on) {
+    if (on && (!this.battle?.active || this.battle.paused)) return;
+    if (!on) this.restorePlayFocus();
+    this.expanded = !!on;
+    if (on) this.show(this.phase || 'attack');
+    this.expandUntil = on ? this.battle.elapsed + 8 : 0;
+    this.renderExpansion(); this.renderHighlight();
+  }
+
+  renderExpansion() {
+    if (this.card) this.card.hidden = !this.expanded;
+    if (this.toggle) {
+      this.toggle.textContent = this.expanded ? '안내 접기' : '조작 안내 보기';
+      this.toggle.setAttribute('aria-expanded', String(!!this.expanded));
+    }
+    this.root?.classList?.remove('waiting');
+  }
+
+  renderHighlight() {
+    this.highlightTarget?.classList.remove('tutorial-focus'); this.highlightTarget = null;
+    if (this.expanded && !this.root.hidden && TIPS[this.phase]?.target) {
+      this.highlightTarget = document.querySelector(TIPS[this.phase].target);
+      this.highlightTarget?.classList.add('tutorial-focus');
+    }
+  }
+
+  syncVisibility() {
+    if (!this.root) return;
+    const hidden = !this.battle?.active || this.battle !== this.app.battle || this.battle.paused;
+    if (this.root.hidden !== hidden) { this.root.hidden = hidden; this.renderHighlight(); }
+  }
+
+  restorePlayFocus() {
+    // 안내 버튼에만 걸린 초점을 돌린다. 다른 모달·정지 화면의 초점은 건드리지 않는다.
+    if (this.battle?.active && !this.battle.paused && this.battle === this.app.battle && this.app.mode === 'battle'
+      && !document.hidden && this.root?.contains?.(document.activeElement)) this.app.canvas?.focus({ preventScroll: true });
   }
 
   update() {
     this.updateHealTip();
-    if (!this.battle?.active || !this.phase) return;
+    this.syncVisibility();
+    if (!this.battle?.active || this.battle.paused) return;
+    if (this.expanded && this.battle.elapsed >= this.expandUntil) { this.setExpanded(false); this.restorePlayFocus(); }
+    if (!this.phase) return;
+    if (this.battle.roomsCleared > 0 && !this.reviewing) { this.finish(false); return; }
     const p = this.battle.player;
-    if (this.phase === 'attack' && p?.state === 'attack') this.show('dodge', true);
-    else if (this.phase === 'dodge' && p?.state === 'dodge') this.show('skill', true);
-    else if (this.phase === 'skill' && (p?.state === 'skill' || p?.state === 'ult')) this.show('clear', false);
-    else if (this.phase === 'clear' && this.battle.roomsCleared > 0) this.finish(false);
+    if (this.phase === 'attack' && p?.state === 'attack') this.show('dodge');
+    else if (this.phase === 'dodge' && p?.state === 'dodge') this.show('skill');
+    else if (this.phase === 'skill' && (p?.state === 'skill' || p?.state === 'ult')) this.show('clear');
   }
 
   clearHealTip() {
@@ -111,7 +173,7 @@ export class BattleTutorial {
     const currentCount = Number(this.healTipButton?.querySelector?.('b')?.textContent);
     const potionUsed = this.healTipPotionCount !== null && Number.isFinite(currentCount) && currentCount < this.healTipPotionCount;
     if (this.healTipUntil && (performance.now() >= this.healTipUntil || !battle?.active || battle.paused || !player?.alive || player.hp / player.maxHp > .55 || potionUsed || document.querySelector?.('#modal.show, #masterworks[open]') || this.healTipButton?.disabled)) this.clearHealTip();
-    if (this.phase || !battle?.active || battle.paused || !player?.alive || battle.stage?.code !== '1-1' || battle.stage?.difficultyId !== 'story') return;
+    if (this.phase && this.expanded || !battle?.active || battle.paused || !player?.alive || battle.stage?.code !== '1-1' || battle.stage?.difficultyId !== 'story') return;
     const tier = nextHealHintTier(player.hp, player.maxHp, this.healTipLevel);
     if (!tier || document.querySelector?.('#modal.show, #masterworks[open]')) return;
     const potion = document.querySelector?.('.exp-potions [data-potion="hp_tonic"]');
@@ -135,24 +197,28 @@ export class BattleTutorial {
   finish(skipped) {
     if (!this.phase) return;
     const battle = this.battle;
-    battle?.setPaused('tutorial', false);
-    const preference = this.app.journey?.s.autoBattle;
-    const auto = typeof preference === 'boolean' ? preference : this.beforeAuto;
-    if (battle?.player) battle.player.auto = auto;
-    this.app._auto = auto;
-    document.getElementById('btn-auto')?.classList.toggle('on', auto);
-    this.app.eco.s.tutorial = { completed: true };
-    this.app.eco.emit();
-    this.app.funnel?.track('tutorial_complete', { steps: this.completedSteps?.size || 0, skipped: !!skipped });
+    // 남아 있는 옛 안내 소유 정지만 해제하며 실제 AUTO와 다른 정지 소유자는 보존한다.
+    if (battle?.pauseReasons?.has('tutorial')) battle.setPaused('tutorial', false);
+    const firstCompletion = !this.app.eco.s.tutorial?.completed;
+    if (firstCompletion) {
+      this.app.eco.s.tutorial = { ...this.app.eco.s.tutorial, completed: true };
+      this.app.eco.emit();
+      this.app.funnel?.track('tutorial_complete', { steps: this.completedSteps?.size || 0, skipped: !!skipped });
+    }
     document.querySelectorAll('.tutorial-focus').forEach((el) => el.classList.remove('tutorial-focus'));
     this.clearHealTip();
-    this.root.hidden = true; this.phase = null; this.battle = null; this.completedSteps?.clear();
-    this.app.ui.toast(skipped ? '튜토리얼을 건너뛰었습니다. 안내서에서 다시 확인할 수 있어요.' : '전투 튜토리얼 완료 · 이제 던전을 정복하세요!', 'gold');
+    this.restorePlayFocus();
+    this.phase = null; this.reviewing = true; this.expanded = false; this.expandUntil = 0; this.completedSteps?.clear();
+    this.renderExpansion(); this.syncVisibility(); this.restorePlayFocus();
   }
 
   end() {
     this.clearHealTip();
-    if (this.phase) this.finish(true);
-    else if (this.root) this.root.hidden = true;
+    if (this.battle?.pauseReasons?.has('tutorial')) this.battle.setPaused('tutorial', false);
+    this.restorePlayFocus();
+    document.querySelectorAll('.tutorial-focus').forEach(el => el.classList.remove('tutorial-focus'));
+    this.phase = null; this.battle = null; this.expanded = false; this.expandUntil = 0; this.completedSteps?.clear();
+    if (this.root) this.root.hidden = true;
+    this.renderExpansion();
   }
 }

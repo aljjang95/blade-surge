@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { audio } from '../engine/audio.js';
 import { applyKnightSlashVariant, knightSlashVariantForBattle } from './knight-builds.js';
 import { AWAKENING_III } from './awakening-iii.js';
+import { gatherEnemies } from './crowd-gather.js';
 
 const _v = new THREE.Vector3();
 const fwd = (p, d = 1) => p.forward(new THREE.Vector3()).multiplyScalar(d).add(p.pos);
@@ -115,10 +116,15 @@ export const SKILLS = {
   },
   shield_bash: {
     dur: 0.7,
+    start(game, p, c) {
+      c.data.gatherCenter = fwd(p, 1.2);
+      gatherEnemies(game, c.data.gatherCenter, 7, 22, .25);
+      game.fx.castCircle(c.data.gatherCenter, 0xffe0a0, { radius: 5, life: .25 });
+    },
+    update(game, _p, c) { if (!c.cast) gatherEnemies(game, c.data.gatherCenter, 7, 22); },
     cast(game, p, c) {
-      const center = fwd(p, 1.2);
-      // 몹몰이: 먼저 끌어당기고 때린다
-      game.vacuum(center, 7, 22);
+      const center = c.data.gatherCenter || fwd(p, 1.2);
+      // 준비 시간에 실제로 모인 적을 원래 접촉 시점에 강타한다.
       game.hitRadius(center, 5.0, c.dmg, { kb: 7, kind: 'blunt', stun: 1.4, source: p });
       game.fx.shockTex(center, 0xffe0a0, { r1: 6.5, life: 0.5 });
       game.fx.explosion(center, { size: 4.5, color: 0xffe0b0, life: 0.45 });
@@ -184,13 +190,13 @@ export const SKILLS = {
   // ================= 광전사 (불 · 회전 몹몰이) =================
   whirlwind: {
     dur: 1.6, total: 1.6,
-    start(game, p, c) { p.play('2H_Melee_Attack_Spinning', { fade: 0.05, speed: 2.2 }); c.data.tick = 0; p.startTrail(); audio.whoosh({ vol: 0.5, pitch: 0.7, dur: 0.5 }); game.fx.castCircle(p.pos, 0xff7a4a, { radius: 3.8, life: 1.5 }); },
+    start(game, p, c) { p.play('2H_Melee_Attack_Spinning', { fade: 0.05, speed: 2.2 }); c.data.tick = .16; p.startTrail(); audio.whoosh({ vol: 0.5, pitch: 0.7, dur: 0.5 }); game.fx.castCircle(p.pos, 0xff7a4a, { radius: 3.8, life: 1.5 }); },
     update(game, p, c, dt) {
       const m = game.input.move; const spd = p.stats.spd * 0.6; p.vel.set(m.x * spd, 0, m.y * spd);
-      game.vacuum(p.pos, 5.5, 7); // 회전하며 빨아들임
+      gatherEnemies(game, p.pos, 5.5, 12); // 첫 접촉 전에 모으고 연타 중 군집을 유지한다.
       c.data.tick -= dt;
       if (c.data.tick <= 0) {
-        c.data.tick = 0.22; const i = c.data.n = (c.data.n || 0) + 1;
+        c.data.tick = .22; const i = c.data.n = (c.data.n || 0) + 1;
         game.hitRadius(p.pos, 3.8, c.dmg, { kb: 2.5, kind: 'slash', source: p, dirFrom: p.pos, quietStop: i % 2 === 0 });
         game.fx.slashSprite(p.pos.clone().setY(1.1), new THREE.Vector3(Math.sin(i * 1.5), 0, Math.cos(i * 1.5)), 0xff9a5a, { size: 4.4, life: 0.22, tilt: -1.45 });
         game.fx.burst(p.pos.clone().setY(1), 0xffa060, { n: 5, speed: 6, size: 0.3 });
@@ -202,9 +208,10 @@ export const SKILLS = {
   },
   quake: {
     dur: 0.9,
+    start(game, p, c) { c.data.gatherCenter = fwd(p, 1.5); gatherEnemies(game, c.data.gatherCenter, 9, 12, .36); },
+    update(game, _p, c) { if (!c.cast) gatherEnemies(game, c.data.gatherCenter, 9, 12); },
     cast(game, p, c) {
-      const center = fwd(p, 1.5);
-      game.vacuum(center, 9, 12);
+      const center = c.data.gatherCenter || fwd(p, 1.5);
       game.hitRadius(center, 8, c.dmg, { kb: 9, kind: 'blunt', up: true, stun: 0.8, source: p, dirFrom: center });
       [0, 0.08, 0.16].forEach((d, i) => game.after(d, () => { game.fx.shockTex(center, i === 1 ? 0xffffff : 0xff9a4a, { r1: 5 + i * 4, life: 0.5 + i * 0.1 }); game.renderer.shake(0.5); audio.thump({ vol: 0.8, freq: 55 - i * 8, dur: 0.3 }); }));
       game.fx.explosion(center, { size: 8, color: 0xff9a50, life: 0.6 });
@@ -293,7 +300,7 @@ export const SKILLS = {
     update(game, p, c, dt) {
       const m = game.input.move; const spd = p.stats.spd * 0.5; p.vel.set(m.x * spd, 0, m.y * spd);
       if (c.t > 0.6 && p.actionName !== 'Spellcasting') p.play('Spellcasting', { fade: 0.2 });
-      game.vacuum(p.pos, 7, 4);
+      gatherEnemies(game, p.pos, 8.5, 9);
       for (let i = 0; i < (game.fx.lite ? 2 : 5); i++) { const a = Math.random() * Math.PI * 2, r = Math.random() * 6.5; game.fx.glow.emit(p.pos.x + Math.cos(a) * r, 5 + Math.random() * 3, p.pos.z + Math.sin(a) * r, 0, -14, 0, new THREE.Color(0xa0e8ff), 0.35, 0.5, { grav: 20, shrink: 0.5 }); }
       c.data.tick -= dt;
       if (c.data.tick <= 0) {

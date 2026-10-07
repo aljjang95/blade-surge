@@ -33,27 +33,28 @@ test('explicit AUTO retry skips the tutorial for one run without marking it comp
   expect(tutorial.phase).toBeNull();
   expect(tutorial.skipOnceForAutoRetry).toBe(false);
   expect(save.tutorial.completed).toBe(false);
-  expect(tutorial.completedSteps.size).toBe(1);
+  expect(tutorial.completedSteps.size).toBe(0);
 });
 
-for (const savedAuto of [true, false]) test(`tutorial exit respects latest saved AUTO ${savedAuto} and its button`, () => {
+for (const savedAuto of [true, false]) test(`tutorial exit preserves actual AUTO and saved preference ${savedAuto} without rewriting its button`, () => {
   const battle = { player: { auto: !savedAuto }, setPaused() {} };
   const tutorial: any = Object.assign(Object.create(BattleTutorial.prototype), {
     phase: 'clear', beforeAuto: !savedAuto, battle, root: { hidden: false },
     app: { journey: { s: { autoBattle: savedAuto } }, eco: { s: {}, emit() {} }, ui: { toast() {} } },
   });
   tutorial.finish(false);
-  expect(battle.player.auto).toBe(savedAuto); expect(buttonOn).toBe(savedAuto);
+  expect(battle.player.auto).toBe(!savedAuto); expect(buttonOn).toBe(false);
+  expect(tutorial.app.journey.s.autoBattle).toBe(savedAuto);
   expect(tutorial.app.eco.s.tutorial.completed).toBe(true); expect(tutorial.phase).toBeNull();
 });
 
-test('without a journey service tutorial keeps the original AUTO preference', () => {
+test('without a journey service tutorial leaves actual AUTO authority unchanged', () => {
   const battle = { player: { auto: false }, setPaused() {} };
   const tutorial: any = Object.assign(Object.create(BattleTutorial.prototype), {
     phase: 'attack', beforeAuto: true, battle, root: { hidden: false },
     app: { eco: { s: {}, emit() {} }, ui: { toast() {} } },
   });
-  tutorial.finish(true); expect(battle.player.auto).toBe(true); expect(buttonOn).toBe(true);
+  tutorial.finish(true); expect(battle.player.auto).toBe(false); expect(buttonOn).toBe(false);
 });
 
 function healHintFixture(hp: number, shownTier = 0) {
