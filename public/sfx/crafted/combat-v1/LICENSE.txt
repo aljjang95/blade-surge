@@ -1,0 +1,11 @@
+Blade Surge Combat Sound Library V1
+
+These twelve non-vocal effects were synthesized from mathematical oscillators
+and seeded noise by tools/audio/build-combat-library.py. No third-party audio
+recording, paid service, or voice source was used.
+
+To the extent possible under law, the authors dedicate these generated sound
+effects to the public domain under CC0 1.0 Universal:
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Existing character voice performances are separate assets and are unchanged.

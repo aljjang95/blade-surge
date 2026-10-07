@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { lobbyCameraPosition, lobbyCompositionShift } from './lobby-camera.js';
+import { lobbyCameraPosition, lobbyCompositionShift, walkingLobbyCameraPosition } from './lobby-camera.js';
 import { LobbySightline } from './lobby-sightline.js';
 import { battleCameraOffset } from './camera-control.js';
 import { fitBattleCameraOffset, minimumBattleAspect, refitBattleCameraPosition } from './battle-aspect-fit.js';
@@ -208,9 +208,7 @@ export class Renderer {
       const walking = this.lobbyNavigation;
       const portrait = this._width < this._height;
       // The walking plaza needs a clear view of the route ahead and nearby entrances.
-      const radius = portrait ? 16.5 : 15;
-      const pitch = (portrait ? 48 : 43) * Math.PI / 180;
-      const p = walking ? { x: 0, y: 1.1 + radius * Math.sin(pitch), z: radius * Math.cos(pitch) } : lobbyCameraPosition(this.lobbyCamera);
+      const p = walking ? walkingLobbyCameraPosition(portrait) : lobbyCameraPosition(this.lobbyCamera);
       desired = new THREE.Vector3(p.x, p.y, p.z).add(rig.target);
       this.lobbySightline ??= new LobbySightline();
       if (!walking) desired.y += this.lobbySightline.solve(desired,rig.target,this.lobbyOccluders,performance.now());

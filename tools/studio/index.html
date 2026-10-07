@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Blade Surge · 제작 Studio</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/style.css">
+  <script type="importmap">{"imports":{"three":"/vendor/three.module.js","three/addons/":"/vendor/addons/"}}</script>
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Blade Surge 제작 Studio"><span class="brand-mark">BS</span><span>BLADE SURGE<small>PRODUCTION STUDIO</small></span></a>
+    <nav aria-label="제작 도구"><button class="tab active" data-panel="library" aria-selected="true">에셋 라이브러리</button><button class="tab" data-panel="production" aria-selected="false">부서별 제작 보드</button><button class="tab" data-panel="story" aria-selected="false">스토리보드</button></nav>
+    <span class="local-badge"><i></i> LOCAL · READ ONLY</span>
+  </header>
+  <section class="intro"><div><p class="eyebrow">같은 장면, 같은 목표, 함께 만드는 출시</p><h1>눈에 보이는 변화부터.</h1><p>실제 게임 에셋과 제작 상태를 한곳에서 확인합니다.</p></div><div class="release"><span>출시 목표</span><strong>10.09</strong><small>2026 · 금요일</small></div></section>
+  <div class="statusbar"><span id="connection">소스 확인 중…</span><span id="repository">HEAD 확인 중…</span><button id="refresh" class="quiet">지금 갱신</button></div>
+  <main>
+    <section id="library" class="panel active" aria-label="에셋 라이브러리">
+      <aside class="catalog"><div class="catalog-heading"><h2>라이브러리</h2><span id="asset-count">—</span></div><label class="sr-only" for="search">에셋 검색</label><input id="search" type="search" placeholder="이름·폴더로 찾기"><label class="sr-only" for="group">에셋 폴더</label><select id="group"><option value="">전체 폴더</option></select><div id="asset-list" class="asset-list" role="list"></div></aside>
+      <div class="inspection"><div class="preview-heading"><div><p id="asset-group" class="eyebrow">실제 GLB</p><h2 id="asset-title">에셋을 선택하세요</h2></div><span id="asset-kind" class="pill">미리보기</span></div><div id="viewport" class="viewport"><div id="preview-message" role="status">모델을 불러오는 중…</div><span class="preview-note">제작 미리보기 · 인게임 품질 판정과 별도</span></div><div class="preview-controls"><button id="front">정면</button><button id="quarter">3/4</button><button id="rotate">뒤로 돌리기</button><label for="animation">동작</label><select id="animation"><option value="">대기 포즈</option></select><button id="capture" class="quiet">PNG 저장</button></div><div id="asset-metrics" class="asset-metrics"></div><div class="details"><h3>파일과 검증 근거</h3><dl id="asset-details"></dl><p class="small-note">헤더·파일 해시·클립 이름은 구조 관측입니다. 리깅 품질, 플레이 판독, 모바일 성능과 사운드 평가는 실제 게임에서 확인합니다.</p></div></div>
+      <section class="sound-library" aria-label="제작 사운드 라이브러리"><h3>타격 · 스킬 사운드</h3><p class="small-note">직접 만든 실제 MP3를 선택해 듣습니다. 길이·peak/RMS는 제작 manifest 기록이고 청감 품질 판정은 별도입니다.</p><div id="sound-list" class="sound-list"></div><div class="sound-player"><span id="sound-title">사운드를 선택하세요</span><audio id="sound-player" controls preload="none"></audio></div><p id="sound-details" class="small-note"></p></section>
+    </section>
+    <section id="production" class="panel" aria-label="부서별 제작 보드"><div class="section-heading"><div><p class="eyebrow">파일 변화 → 팀 상태 공유</p><h2>출시를 만드는 여섯 역할</h2></div><span class="pill">5초마다 로컬 파일 확인</span></div><p class="section-description">각 역할의 소유 파일과 다음 확인을 함께 봅니다. 에이전트 상태는 팀이 갱신한 기록이며, 도구가 완료나 PASS를 자동 생성하지 않습니다.</p><div id="departments" class="departments"></div><div class="section-heading"><h2>2일 출시 우선순위</h2></div><div id="milestones" class="milestones"></div><div class="board-footer"><p id="board-update"></p><p>작업 기록: <code>tools/studio/board.json</code> · 소스 파일을 편집하면 이 화면에 반영됩니다.</p></div></section>
+    <section id="story" class="panel" aria-label="스토리보드"><div class="section-heading"><div><p class="eyebrow">서약 전당에서 첫 전투까지</p><h2>첫 90초의 시나리오</h2></div><span class="pill">기획 초안 · 구현 증거 아님</span></div><p id="story-intent" class="section-description"></p><div id="story-shots" class="story-shots"></div><div class="board-footer"><p>장면·목표·에셋 참조·플레이 확인: <code>tools/studio/storyboard.json</code></p></div></section>
+  </main>
+  <footer>Blade Surge 제작 라이브러리<span>같은 에셋과 같은 장면으로 함께 검토합니다.</span></footer>
+</body>
+</html>

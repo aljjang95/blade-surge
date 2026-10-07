@@ -146,8 +146,8 @@ export class Arena {
     sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = sun.shadow.camera.bottom = -15; sun.shadow.camera.right = sun.shadow.camera.top = 15;
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 50; sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.02;
     this.scene.add(sun); this.lights.push(sun);
-    this.lobbyHall = buildCitadelHubScene({ models: this.hubModels, environmentTexture: this.renderer.characterEnvironment.texture, quality: this.renderer.quality }); this.group.add(this.lobbyHall);
-    this.lobbyWorld = buildLobbyWorld(); this.group.add(this.lobbyWorld);
+    this.lobbyHall = buildCitadelHubScene({ models: this.hubModels, environmentTexture: this.renderer.characterEnvironment.texture, quality: this.renderer.quality, camera: this.renderer.camera }); this.group.add(this.lobbyHall);
+    this.lobbyWorld = buildLobbyWorld({ quality: this.renderer.quality }); this.group.add(this.lobbyWorld);
     this.renderer.lobbyOccluders = [];this.lobbyHall.traverse(o=>{if(o.isMesh)this.renderer.lobbyOccluders.push(o);});
     this.lobbyHall.traverse((o) => { if (o.isMesh && o.material.isMeshStandardMaterial) { o.material.envMap = this.renderer.characterEnvironment.texture; o.material.envMapIntensity = .3; } });
     const rim = new THREE.DirectionalLight(0x83c9e0, 1.8); rim.position.set(2, 4, -4);

@@ -16,6 +16,13 @@ export function lobbyCameraPosition(value) {
   return { x: radius * Math.sin(yaw) * Math.cos(pitch), y: 1.1 + radius * Math.sin(pitch), z: radius * Math.cos(yaw) * Math.cos(pitch) };
 }
 
+const walkingLandscape = Object.freeze({ x: 0, y: 1.1 + 15 * Math.sin(35 * Math.PI / 180), z: 15 * Math.cos(35 * Math.PI / 180) });
+const walkingPortrait = Object.freeze({ x: 0, y: 1.1 + 16.5 * Math.sin(48 * Math.PI / 180), z: 16.5 * Math.cos(48 * Math.PI / 180) });
+/** 가로 광장은 같은 거리·방향에서 숲과 마을의 높이를 함께 보여 준다. */
+export function walkingLobbyCameraPosition(portrait = false) {
+  return portrait ? walkingPortrait : walkingLandscape;
+}
+
 /** 로비 조작은 전투 카메라와 전투 입력에 영향을 주지 않는다. */
 export class LobbyCameraControls {
   constructor(app) {

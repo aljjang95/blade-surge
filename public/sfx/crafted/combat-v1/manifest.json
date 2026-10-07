@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "author": "Blade Surge local procedural audio studio",
+  "license": "CC0-1.0",
+  "source": "tools/audio/build-combat-library.py",
+  "sampleRate": 44100,
+  "channels": 1,
+  "voicesModified": false,
+  "assets": [
+    {
+      "id": "blade",
+      "path": "/sfx/crafted/combat-v1/blade.mp3",
+      "bytes": 4119,
+      "sha256": "a2491aec7796380a748ee316576af5aa008fc52d1953b4884738d95267982aec",
+      "decodedSamples": 12348,
+      "durationSec": 0.28,
+      "decodedPeak": 0.759843,
+      "decodedRms": 0.133995
+    },
+    {
+      "id": "heavy",
+      "path": "/sfx/crafted/combat-v1/heavy.mp3",
+      "bytes": 5999,
+      "sha256": "f64cb2918ec8438ec388ddd65c3c0d9593f17a4926bd736f68f8aa362d5631ce",
+      "decodedSamples": 18522,
+      "durationSec": 0.42,
+      "decodedPeak": 0.7743,
+      "decodedRms": 0.124027
+    },
+    {
+      "id": "dual",
+      "path": "/sfx/crafted/combat-v1/dual.mp3",
+      "bytes": 3492,
+      "sha256": "7ad24f52420d889ab0f5b192ef21c7622982226003460fb8b73294107a78c156",
+      "decodedSamples": 10143,
+      "durationSec": 0.23,
+      "decodedPeak": 0.913267,
+      "decodedRms": 0.173086
+    },
+    {
+      "id": "bow",
+      "path": "/sfx/crafted/combat-v1/bow.mp3",
+      "bytes": 4432,
+      "sha256": "21d60dbc729def5cac91fe1a6224b773bd9cf648b09760b6bd8f5dba84b8a8d7",
+      "decodedSamples": 13230,
+      "durationSec": 0.3,
+      "decodedPeak": 0.790714,
+      "decodedRms": 0.128873
+    },
+    {
+      "id": "arcane",
+      "path": "/sfx/crafted/combat-v1/arcane.mp3",
+      "bytes": 6313,
+      "sha256": "230c6973944bbdf039b57ec5e851226383a1a47fcff394d433d0cc96b24d8eff",
+      "decodedSamples": 20286,
+      "durationSec": 0.46,
+      "decodedPeak": 0.78337,
+      "decodedRms": 0.136243
+    },
+    {
+      "id": "holy",
+      "path": "/sfx/crafted/combat-v1/holy.mp3",
+      "bytes": 6940,
+      "sha256": "53fd99aebc600424df92d79f8c1604e79f64fb3f1adef14960aadc05f8ab6b51",
+      "decodedSamples": 22932,
+      "durationSec": 0.52,
+      "decodedPeak": 0.758478,
+      "decodedRms": 0.132283
+    },
+    {
+      "id": "earth",
+      "path": "/sfx/crafted/combat-v1/earth.mp3",
+      "bytes": 6626,
+      "sha256": "5f829491565379ed08930a13df9d96155a3abfdcab123263c406f15baae0b829",
+      "decodedSamples": 21609,
+      "durationSec": 0.49,
+      "decodedPeak": 0.785192,
+      "decodedRms": 0.12028
+    },
+    {
+      "id": "shadow",
+      "path": "/sfx/crafted/combat-v1/shadow.mp3",
+      "bytes": 5373,
+      "sha256": "0bb2d7837f6d075daf5310b2220eafa3209044b703fd4cc9623758531cd58bbc",
+      "decodedSamples": 16758,
+      "durationSec": 0.38,
+      "decodedPeak": 0.748012,
+      "decodedRms": 0.119304
+    },
+    {
+      "id": "fire",
+      "path": "/sfx/crafted/combat-v1/fire.mp3",
+      "bytes": 6940,
+      "sha256": "ebf251dd881073a5081ada4aaf6589fbcff7cd54debec9beba14b9ed23305ca5",
+      "decodedSamples": 22050,
+      "durationSec": 0.5,
+      "decodedPeak": 0.834803,
+      "decodedRms": 0.132371
+    },
+    {
+      "id": "frost",
+      "path": "/sfx/crafted/combat-v1/frost.mp3",
+      "bytes": 6940,
+      "sha256": "44aafd81a05264dffb29381fedca43ecf1b1288d15eb50b117a5bc000696d85b",
+      "decodedSamples": 22050,
+      "durationSec": 0.5,
+      "decodedPeak": 0.781457,
+      "decodedRms": 0.115222
+    },
+    {
+      "id": "storm",
+      "path": "/sfx/crafted/combat-v1/storm.mp3",
+      "bytes": 5999,
+      "sha256": "cecea57a0d7fed0044c21ba71e1f6d840c0612a04161cd88435a00fbb4daf4eb",
+      "decodedSamples": 18522,
+      "durationSec": 0.42,
+      "decodedPeak": 0.857716,
+      "decodedRms": 0.119861
+    },
+    {
+      "id": "ultimate",
+      "path": "/sfx/crafted/combat-v1/ultimate.mp3",
+      "bytes": 8821,
+      "sha256": "27f5a1444311e7e43dcc00c44dacba57858f9533ba0cfc91931a9400917bd920",
+      "decodedSamples": 29106,
+      "durationSec": 0.66,
+      "decodedPeak": 0.743608,
+      "decodedRms": 0.130348
+    }
+  ]
+}

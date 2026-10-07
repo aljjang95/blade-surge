@@ -1,0 +1,186 @@
+{
+  "schema": "blade-surge-production-board/v1",
+  "updatedAt": "2026-10-07T13:05:40Z",
+  "targetRelease": "2026-10-09",
+  "note": "이번 작업의 소유 범위와 미확인 조건. 구현/검증 근거가 생길 때 해당 부서만 갱신한다.",
+  "departments": [
+    {
+      "id": "integration",
+      "name": "제작 총괄 · 빌드",
+      "owner": "root",
+      "status": "verified",
+      "owns": [
+        "통합",
+        "package scripts",
+        "전체 검사",
+        "출시 후보"
+      ],
+      "tasks": [
+        "기존 main과 이전 사용자 교정 보존",
+        "각 부서 변경을 하나의 게임 빌드로 통합",
+        "같은 코드·같은 빌드의 결과와 차단 기록 확인"
+      ],
+      "nextCheck": "사용자가 요청한 모바일 에뮬 검증·머지와 정식 배포, 공개 버전·실행 확인",
+      "blockers": [
+        "실기기 GPU·발열·청감·FELT는 클라우드 에뮬로 확인할 수 없음"
+      ],
+      "evidence": [
+        "기준 main f8d6afb38df6198dffb2173a37b9ec41821d70cd",
+        "bun run check: 타입/1,706 통과·기존4제외·실패0/빌드 통과; 최종 게임 코드 2026-10-07T12:05:15.126Z",
+        "최종 bun run check:1707 통과·기존4제외·0실패·타입/빌드 통과,2026-10-07T12:14:38.060Z",
+        "단독 동일seed/선택/레벨 비교:기준0.98ms/397draw→후보0.90ms/401draw,모든 PRD 밴드와 기본 상대 한도 통과; 소프트웨어 JS 실행·1쌍 범위",
+        "동일5176 fixed snapshot의 시야·touch·전투·정산을 별도 단계로 확인;independent source/asset/snapshot·PNG review완료",
+        "docs/STUDIO_SPRINT_20261007.md에 실제 전후PNG/구현·검증·남은 범위 보관"
+      ]
+    },
+    {
+      "id": "assets",
+      "name": "에셋 · 숲 라이브러리",
+      "owner": "asset_library",
+      "status": "verified",
+      "owns": [
+        "독립 에셋 팩",
+        "Blender 제작 원본",
+        "출처·해시·LOD"
+      ],
+      "tasks": [
+        "기존 citadel-hub-v1과 함께 쓰는 수목·마을 소품",
+        "같은 미술 체계의 큰 실루엣과 낮은 렌더 비용",
+        "라이브러리에서 실제 GLB를 읽고 확인"
+      ],
+      "nextCheck": "실제 마을 배치의 시야와 가로 화면 검수",
+      "blockers": [
+        "실제 게임 시야·실기기 성능 검수는 별도"
+      ],
+      "evidence": [
+        "public/models/environment/studio-kit/manifest.json: Blender 4.3.2 자체 GLB 6종, 576,692 bytes, 실제 Three 로딩/해시 확인",
+        "tools/art/build-environment-kit.py: 재생성 소스"
+      ]
+    },
+    {
+      "id": "world",
+      "name": "마을 · 환경 구성",
+      "owner": "world_village",
+      "status": "verified",
+      "owns": [
+        "citadel-hub-scene",
+        "마을/숲 배치",
+        "동선·시야"
+      ],
+      "tasks": [
+        "광장·관문·숲 외곽이 구별되는 실제 공간",
+        "주인공과 출격 행동을 가리지 않는 배치",
+        "기존 충돌·입구·NPC 상호작용 유지"
+      ],
+      "nextCheck": "실제 휴대전화 시야·GPU·발열과 주관 미술 검수",
+      "blockers": [
+        "실제 휴대전화와 주관 미술 검수는 미확인"
+      ],
+      "evidence": [
+        "test/environment-kit-asset.test.ts: 원본 geometry 보존·반복 dispose·fallback 조립 회귀",
+        "고정 가로 카메라 pitch35/radius15, 정원·돌길·수목/가옥 실제 배치",
+        "최종5176 실제1280/640 merchant·tree북쪽·gate·prep 직접 확인; 영웅 분리·버튼44px·가로넘침0·수관복원",
+        "CanopySightline 회귀를 포함한 환경 관련22검사/221 assertions,독립 소스·화면 검토"
+      ]
+    },
+    {
+      "id": "combat",
+      "name": "전투 VFX · 사운드 · 동작",
+      "owner": "combat_animation",
+      "status": "verified",
+      "owns": [
+        "FX",
+        "audio",
+        "전투 표시·모션"
+      ],
+      "tasks": [
+        "경타·강타·마무리를 시각/소리로 구별",
+        "영웅·무기·공격 예고를 지우는 장식 억제",
+        "기존 얼굴·리그·clip·피해·난수 권한 유지"
+      ],
+      "nextCheck": "실기기 다섯 직업의 혼전·스피커/이어폰 믹스 검수",
+      "blockers": [
+        "실제 기기 오디오 청감·GPU/혼전 체감 미확인"
+      ],
+      "evidence": [
+        "docs/combat-studio-v1.md: 관련 41검사/754 assertions 통과",
+        "public/sfx/crafted/combat-v1/manifest.json: 자체 MP3 12개/71,994 bytes",
+        "실제 브라우저 홀드 리본 shader link, 스킬3종, 음원12개 디코딩/재생 관측",
+        "같은 최종5176 고정880×400:짧은Space tap·down/up 홀드·실제 shader draw6/alpha4·GL link·실제 포기/로비4단계 통과",
+        "화면 변경 직후 첫 smoke timeout은 원본FAIL로 보존; 재검증은 별도 결과"
+      ]
+    },
+    {
+      "id": "qa",
+      "name": "실플레이 · 결함 추적",
+      "owner": "playtest_qa",
+      "status": "verified",
+      "owns": [
+        "실제 브라우저 입력",
+        "스크린샷",
+        "오류·저장·재출격 증거"
+      ],
+      "tasks": [
+        "로비→입구→전투→결과→정비→재출격",
+        "홀드 콤보·회피·정지/대화 복귀",
+        "화면 가림과 입력 중단을 재현해 담당에게 전달"
+      ],
+      "nextCheck": "실기기 터치·발열·장시간 혼전·주관 체감",
+      "blockers": [
+        "실제 휴대전화 GPU·멀티터치·발열·청감 미확인"
+      ],
+      "evidence": [
+        "PRD.md 목표 밴드",
+        "_autopipe/qa-requirements.md",
+        "12:05 원본 native13 단계 PASS,오류/HTTP실패/요청실패0; 실제 정산·reload 확인",
+        "원본 tree 수관/640 안내창 가림2건 재현,수정 빌드 재검증 진행",
+        "최종 targeted-final-1217:실제 emulated touch 이동1.4196m/해제,상점·나무·관문·입장7단계 통과;후속attack timeout원본FAIL보존",
+        "fixed-viewport-combat-1223:같은artifact 실제tap/hold·셰이더·포기/로비4단계 통과,game/HTTPerrors0,media요청취소1별도기록"
+      ]
+    },
+    {
+      "id": "design",
+      "name": "기획 · 스토리보드 · Studio",
+      "owner": "requirements_design",
+      "status": "verified",
+      "owns": [
+        "tools/studio/",
+        "tools/studio-server.mjs",
+        "docs/BLADESURGE_STUDIO.md"
+      ],
+      "tasks": [
+        "과거 교정과 2일 출시 우선순위 연결",
+        "실제 에셋·부서 소유권·차단 상태 한 화면",
+        "첫 90초 장면/행동/확인 기준을 재사용 템플릿으로"
+      ],
+      "nextCheck": "게임 최종 시야 결과를 보드와 장면 템플릿에 연결",
+      "blockers": [
+        "기획 장면의 주관 체감은 사용자 확인 필요"
+      ],
+      "evidence": [
+        "_autopipe/lobby-identity.md",
+        "docs/EXPERIENCE_CEILING_V2.md",
+        "tools/studio/storyboard.json",
+        "실제 GLB134개·MP312개·6부서·6장면,5초 보드 갱신·390px 화면,반복 리그 texture7 고정",
+        "/workspace/scratch/bladesurge-studio-qa/final-report.json: 실제 브라우저·HTTP 경계 확인"
+      ]
+    }
+  ],
+  "priorities": [
+    {
+      "title": "10/07 · 첫인상과 타격의 큰 변화",
+      "outcome": "실제 마을의 수목·광장·랜드마크와 대표 공격 피드백을 함께 보고 체감한다.",
+      "acceptance": "같은 게임 화면의 전후 비교, 영웅/무기/위험과 출격 행동이 읽힘"
+    },
+    {
+      "title": "10/08 · 플레이와 저장으로 후보 고정",
+      "outcome": "새 공간과 효과를 수동 전투·한 층 완주·결과/재출격 흐름에 통합한다.",
+      "acceptance": "오류0, 기존 PRD 밴드와 상대 성능, 정산/세이브 회귀, 독립 실제 화면 검토"
+    },
+    {
+      "title": "10/09 · 검증한 후보의 출시 판단",
+      "outcome": "최종 빌드와 남은 차단을 근거로 출시 여부를 결정한다.",
+      "acceptance": "exact source/build와 필수 검증 근거, 실기기/청감/FELT 미확인은 명시"
+    }
+  ]
+}

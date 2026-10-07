@@ -1,3 +1,5 @@
+import { COMBAT_SOUND_FILES, attackSound, skillSound, ULTIMATE_SOUND } from './combat-sound-library.js';
+
 // Web Audio: 샘플(Kenney CC0) + 프로시저럴 합성 SFX + BGM 크로스페이드 + 햅틱
 // 오디오 타이머/음소거가 전투와 보상의 Math.random 순서를 바꾸지 않는다.
 // 장식용 스트림은 한 번만 시드하고, 노이즈 샘플마다 외부 난수를 호출하지 않는다.
@@ -14,7 +16,7 @@ function createAudioRandom() {
 const SFX_FILES = ['hit_punch0', 'hit_punch1', 'hit_punch2', 'hit_metal0', 'hit_metal1', 'hit_metal2', 'hit_soft0', 'hit_soft1', 'hit_bell', 'hit_mining', 'hit_wood', 'hit_plate', 'hit_glass',
   'ui_click', 'ui_confirm', 'ui_select', 'ui_back', 'ui_error', 'ui_open', 'ui_close', 'ui_max', 'ui_drop', 'ui_bong', 'ui_glass', 'ui_pluck',
   'coin0', 'coin1', 'coin_stack', 'pack_open', 'card_fan', 'card_place', 'jingle_win0', 'jingle_win1', 'jingle_legend',
-  'expansion/flow-impact-light', 'expansion/flow-impact-heavy'];
+  'expansion/flow-impact-light', 'expansion/flow-impact-heavy', ...COMBAT_SOUND_FILES];
 
 export class AudioSys {
   constructor() {
@@ -361,21 +363,32 @@ export class AudioSys {
 
   /** 공격 시작과 접촉 사이를 분리해 입력 순간과 실제 타격 순간을 귀로 읽게 한다. */
   attackRelease({ weapon = 'blade', finisher = false, ranged = false } = {}) {
-    if (this.enabled && this.ctx) {
-      const pitch = ranged ? 1.55 : weapon === '2h' ? 0.72 : weapon === 'dual' ? 1.22 : 1;
-      this.whoosh({ vol: finisher ? 0.7 : 0.42, pitch, dur: finisher ? 0.32 : 0.2 });
-      if (finisher) this.clang({ vol: 0.36, freq: ranged ? 2100 : 1700, dur: 0.22 });
-      else this.contactSnap({ vol: 0.08, freq: ranged ? 2400 : 1850 });
+    if (this.enabled && this.mix.sfx && this.ctx) {
+      const sample = attackSound(weapon, ranged);
+      if (this.buffers[sample]) {
+        this.play(sample, { vol: finisher ? .86 : .56, rate: finisher ? .84 : 1, vary: .035, min: .06, priority: finisher ? 4 : 2 });
+      } else {
+        const pitch = ranged ? 1.55 : weapon === '2h' ? 0.72 : weapon === 'dual' ? 1.22 : 1;
+        this.whoosh({ vol: finisher ? 0.7 : 0.42, pitch, dur: finisher ? 0.32 : 0.2 });
+        if (finisher) this.clang({ vol: 0.36, freq: ranged ? 2100 : 1700, dur: 0.22 });
+        else this.contactSnap({ vol: 0.08, freq: ranged ? 2400 : 1850 });
+      }
     }
     this.vibe(finisher ? [16, 12, 34] : 8);
   }
 
   /** 스킬 발동 시전음. 일반 공격과 다른 상승음으로 기술 입력을 구분한다. */
-  skillRelease({ ult = false, school = 'arcane' } = {}) {
-    if (this.enabled && this.ctx) {
-      const base = school.includes('fire') ? 210 : school.includes('ice') ? 520 : school.includes('void') ? 150 : 360;
-      if (ult) { this.charge({ vol: 0.5, dur: 0.52 }); this.thump({ vol: 0.5, freq: 52, dur: 0.24 }); }
-      else this.magic({ vol: 0.24, base, notes: [0, 3, 7], step: 0.035, type: school.includes('void') ? 'sawtooth' : 'triangle' });
+  skillRelease({ ult = false, school = 'arcane', hero = '' } = {}) {
+    if (this.enabled && this.mix.sfx && this.ctx) {
+      const sample = skillSound(school, hero);
+      if (this.buffers[sample]) {
+        this.play(sample, { vol: ult ? .74 : .64, rate: ult ? .88 : 1, vary: .02, min: .08, priority: 5 });
+        if (ult) this.play(ULTIMATE_SOUND, { vol: .42, vary: 0, min: .2, priority: 5 });
+      } else {
+        const base = school.includes('fire') ? 210 : school.includes('ice') ? 520 : school.includes('void') ? 150 : 360;
+        if (ult) { this.charge({ vol: 0.5, dur: 0.52 }); this.thump({ vol: 0.5, freq: 52, dur: 0.24 }); }
+        else this.magic({ vol: 0.24, base, notes: [0, 3, 7], step: 0.035, type: school.includes('void') ? 'sawtooth' : 'triangle' });
+      }
     }
     this.vibe(ult ? [20, 16, 42] : 10);
   }

@@ -133,3 +133,9 @@
  .citadel-hub-destination-actions .citadel-hub-go{flex:1.75}
 }
 @media(prefers-reduced-motion:reduce){.citadel-hub-ui *,.citadel-hub-dialog *{scroll-behavior:auto;animation:none;transition:none}}
+@media(max-height:440px) and (orientation:landscape){
+ .citadel-hub-near{left:auto;right:16px;bottom:calc(68px + env(safe-area-inset-bottom,0px));transform:none;width:min(420px,calc(100% - 142px));gap:10px;padding:6px 10px}
+ .citadel-hub-near-copy{gap:2px}
+ .citadel-hub-near-detail{display:none}
+ .citadel-hub-interact{min-height:44px;padding:8px 12px}
+}

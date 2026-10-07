@@ -3,6 +3,8 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { spawnCharacter, disposeCharacter } from '../engine/assets.js';
 import { CITADEL_HUB, CITADEL_HUB_HOTSPOTS, CITADEL_HUB_PROPS, CITADEL_HUB_ASSET_ROOT } from '../data/citadel-hub.js';
+import { preloadEnvironmentKit, buildEnvironmentInstances } from '../engine/environment-kit-asset.js';
+import { CanopySightline } from '../engine/canopy-sightline.js';
 
 const templates = new Map();
 const pending = new Map();
@@ -10,6 +12,7 @@ const loader = new GLTFLoader();
 
 /** Visual assets are optional. A bounded failure preserves the playable plaza. */
 export async function preloadCitadelHubAssets({ quality = 'high', fetcher = globalThis.fetch } = {}) {
+  const environmentReady = preloadEnvironmentKit({ fetcher });
   const suffix = quality === 'low' ? '-lod1' : '';
   const assets = [...new Set([...CITADEL_HUB_HOTSPOTS, ...CITADEL_HUB_PROPS].map(s => s.asset).filter(Boolean)), `${CITADEL_HUB_ASSET_ROOT}paving.glb`];
   const results = await Promise.all(assets.map(async basePath => {
@@ -30,11 +33,11 @@ export async function preloadCitadelHubAssets({ quality = 'high', fetcher = glob
     })());
     return { path: basePath, loaded: await pending.get(selected) };
   }));
-  return { loaded: results.filter(r => r.loaded).length, total: assets.length, results };
+  return { loaded: results.filter(r => r.loaded).length, total: assets.length, results, environment: await environmentReady };
 }
 
 /** The visible geometry and collision data refer to the same ground plane (y=0). */
-export function buildCitadelHubScene({ models = {}, environmentTexture = null, quality = 'high', assets = templates } = {}) {
+export function buildCitadelHubScene({ models = {}, environmentTexture = null, quality = 'high', assets = templates, camera = null } = {}) {
   const root = new THREE.Group(); root.name = 'Citadel_PlayableHub';
   const geometryOwned = new Set(), materialsOwned = new Set(), texturesOwned = new Set();
   const characters = [], markers = new Map(), labels = [], gateNodes = new Map();
@@ -283,10 +286,74 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
   }
   booth.finish();
 
+  // 기존 충돌·입구와 같은 광장을 쓰며 높은 수목은 이동 경계 밖에 둔다.
+  const grove = [];
+  for (const side of [-1, 1]) {
+    for (const z of [-8.4, -2.8, 3.5]) {
+      grove.push({ asset: z === -2.8 ? 'broadleaf-tree' : 'evergreen-tree', x: side * 15.4, z,
+        y: -.42, yaw: side * .7, scale: z === -2.8 ? .85 : .9 });
+    }
+    grove.push({ asset: 'broadleaf-tree', x: side * 13.8, z: -16.8, y: -.4, yaw: side, scale: 1.05 });
+    grove.push({ asset: 'mossy-rock-cluster', x: side * 6, z: -4.8, y: .47, yaw: side, scale: .28 });
+    for (const z of [-5.5, 4.5]) grove.push({ asset: 'lantern', x: side * 13.7, z, y: -.35, scale: .92 });
+  }
+  grove.push({ asset: 'timber-cottage', x: -9, z: 13.7, y: -.4, yaw: Math.PI, scale: .72 });
+  const gardenAssets = buildEnvironmentInstances(grove, { name: 'Citadel_PlazaGarden' });
+  if (gardenAssets.userData.batchCount) root.add(gardenAssets);
+  const courtyardTrees = buildEnvironmentInstances([-1, 1].map(side => ({
+    asset: 'broadleaf-tree', x: side * 6, z: -4.8, y: .47, yaw: side * .9, scale: .57,
+  })), { name: 'Citadel_CourtyardTrees' });
+  const canopySightline = new CanopySightline();
+  courtyardTrees.traverse(node => {
+    if (!node.isMesh) return;
+    for (const material of Array.isArray(node.material) ? node.material : [node.material]) canopySightline.bind(material);
+  });
+  if (courtyardTrees.userData.batchCount) root.add(courtyardTrees);
+
+  // 물약상의 직물, 상자와 화단을 정적 배치로 묶어 시장의 쓰임을 읽게 한다.
+  const market = batch(), cloth = mat(0x477b6c), earth = mat(0x2e5041), bloom = mat(0xb9d6a5);
+  const lawn = mat(0x365a46), pathStone = mat(0x6b7f80);
+  // 낮은 녹지와 넓은 돌길이 같은 지면에서 광장의 구역을 읽게 한다.
+  market.box(4.6, .008, 23.8, pathStone, 0, .019, 0);
+  market.box(24.6, .008, 2.15, pathStone, 0, .019, -2.5);
+  for (const side of [-1, 1]) {
+    market.add(new THREE.CircleGeometry(1, 24).scale(2.1, 3.2, 1), lawn, side * 6, .024, -3.2, -Math.PI / 2);
+    market.add(new THREE.RingGeometry(.96, 1, 24).scale(2.28, 3.38, 1), ivory, side * 6, .025, -3.2, -Math.PI / 2);
+  }
+  if (!authoredStall) {
+    for (const side of [-1, 1]) {
+      market.box(.14, 2.65, .14, wood, -6.4 + side * 1.1, 1.32, 7.75);
+      market.box(.13, 2.4, .13, wood, -6.4 + side * 1.1, 1.2, 6.8);
+    }
+    market.box(2.52, .06, 1.28, cloth, -6.4, 2.66, 7.32);
+  }
+  for (const side of [-1, 1]) {
+    market.box(.65, .6, .62, wood, -6.4 + side * .85, .3, 7.47);
+    market.box(.7, .07, .66, gold, -6.4 + side * .85, .64, 7.47);
+    for (const z of [-4.8, -1.3]) {
+      market.box(1.6, .06, .4, earth, side * 6, z === -4.8 ? .49 : -.01, z);
+      if(z!==-4.8)continue;
+      for(let i=0;i<6;i++) {
+        const x=side*6-.72+i*.29;
+        market.add(new THREE.IcosahedronGeometry(.15,0),i%2?teal:bloom,x,.67+(i%2)*.08,z);
+      }
+    }
+  }
+  for (const side of [-1, 1]) {
+    // 바닥의 정원 문양은 단차 없이 벤치와 나무를 한 구역으로 묶는다.
+    for (let i = 0; i < 8; i++) {
+      const angle = i * Math.PI / 4;
+      market.add(new THREE.CircleGeometry(.18, 6), cloth, side * 6 + Math.cos(angle) * 2.1, .04,
+        -3.2 + Math.sin(angle) * 3.2, -Math.PI / 2);
+    }
+  }
+  market.finish();
+
   let disposed = false, nearestId = null;
   root.userData = {
     version: 'citadel-playable-hub-v1', spatial: CITADEL_HUB, hotspots: CITADEL_HUB_HOTSPOTS,
     authoredAssetCount,
+    environmentInstanceCount: gardenAssets.userData.instanceCount + courtyardTrees.userData.instanceCount,
     hotspotNodes: gateNodes,
     highlightHotspot(id) {
       if (id === nearestId) return; nearestId = id || null;
@@ -299,6 +366,8 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     update(dt, state = {}) {
       if (disposed) return;
       const { nearestId: nextId, nearest, reducedMotion = false, playerPosition } = state;
+      canopySightline.setTarget(playerPosition);
+      if (camera) canopySightline.update(camera.position); else canopySightline.disable();
       if (Object.hasOwn(state, 'nearestId') || Object.hasOwn(state, 'nearest')) this.highlightHotspot(nextId ?? nearest?.id ?? null);
       if (!reducedMotion) for (const actor of characters) actor.mixer.update(Math.min(dt, .05));
       if (playerPosition) for (const { sprite, spot, isNpc } of labels) {
@@ -312,6 +381,8 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     },
     dispose() {
       if (disposed) return; disposed = true;
+      gardenAssets.userData.dispose();
+      courtyardTrees.userData.dispose(); canopySightline.reset();
       for (const actor of characters) disposeCharacter(actor.root, actor.mixer);
       for (const geometry of geometryOwned) geometry.dispose();
       for (const material of materialsOwned) material.dispose();

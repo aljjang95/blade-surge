@@ -179,15 +179,15 @@ export class Actor {
   /** 무기 트레일용: 손 위치와 무기 끝 */
   /** GLTFLoader 는 노드 이름의 '.' 등을 제거함 → 원본/정제 이름 모두 검색 */
   node(name) { return this.model.getObjectByName(name) || this.model.getObjectByName(name.replace(/[^\w-]/g, '')); }
-  weaponPoints(handName = 'handslot.r', len = 1.3) {
+  weaponPoints(handName = 'handslot.r', len = 1.3, points = [new THREE.Vector3(), new THREE.Vector3()]) {
     handName = this.model.userData.authoredContract?.sockets?.[handName] || handName;
     const h = this.node(handName); if (!h) return null;
-    const a = new THREE.Vector3(); h.getWorldPosition(a);
-    const b = new THREE.Vector3(0, len * this.scale, 0);
+    const a = points[0]; h.getWorldPosition(a);
+    const b = points[1].set(0, len * this.scale, 0);
     if (this.model.userData.authoredContract) {
       h.getWorldQuaternion(_weaponQuaternion);
       b.applyQuaternion(_weaponQuaternion).add(a);
     } else h.localToWorld(b);
-    return [a, b];
+    return points;
   }
 }
