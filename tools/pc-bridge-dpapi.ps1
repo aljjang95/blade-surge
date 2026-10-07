@@ -9,6 +9,8 @@ $encryptedBytes = $null
 $plainBytes = $null
 $secretValue = $null
 try {
+  # Windows PowerShell의 기본 stdin 코드페이지로 한글 경로를 손상시키지 않는다.
+  [Console]::InputEncoding = New-Object Text.UTF8Encoding($false, $true)
   $inputText = [Console]::In.ReadToEnd()
   if ($inputText.Length -gt 8192) { throw 'Invalid request' }
   $request = ConvertFrom-Json -InputObject $inputText

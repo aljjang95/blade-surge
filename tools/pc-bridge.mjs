@@ -268,7 +268,7 @@ export function runBridge(args, options = {}) {
       if (process.platform !== 'win32') fail('ROUTE');
       // DPAPI 키는 PowerShell 자식 안에서만 해독/주입하고 stdout에는 개수만 돌려준다.
       const powershell = resolve(parent.SystemRoot ?? parent.SYSTEMROOT ?? 'C:/Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe');
-      readiness = json(run(powershell, ['-NoLogo', '-NoProfile', '-NonInteractive', '-File', resolve(root, 'tools/pc-bridge-dpapi.ps1')],
+      readiness = json(run(powershell, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', resolve(root, 'tools/pc-bridge-dpapi.ps1')],
         env, JSON.stringify({ path: entry.path, keys: entry.keys, provider: request.provider, action: request.command })));
     }
     if (!exactKeys(readiness, ['selectedKeyCount', 'providerSuccess', 'dpapiReadable', 'httpStatus']) || readiness.selectedKeyCount !== entry.keys.length

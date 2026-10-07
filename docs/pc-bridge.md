@@ -92,6 +92,10 @@ or re-encrypt credentials. Existing encrypted files remain untouched. Managed st
 memory is not guaranteed to be securely erased; credentials remain within the local
 process tree. Files with another format, account or entropy fail closed.
 
+On Windows, the fixed helper process receives `-ExecutionPolicy Bypass` for that
+child only; the machine execution policy is unchanged. UTF-8 stdin is explicit so
+checkout and configured source paths containing Korean characters remain intact.
+
 ## Fixed commands
 
 Run from the exact bound checkout root. Every command requires the full expected

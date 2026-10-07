@@ -310,7 +310,7 @@ test.skipIf(process.platform !== 'win32')('real raw-binary CurrentUser DPAPI chi
   copyFileSync(resolve(workspace, 'tools/pc-bridge-dpapi.ps1'), resolve(f.root, 'tools/pc-bridge-dpapi.ps1'));
   const path = resolve(f.root, '.apex/synthetic.dpapi');
   const powershell = resolve(process.env.SystemRoot ?? 'C:/Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe');
-  const script = '$ErrorActionPreference="Stop"; Add-Type -AssemblyName System.Security; $r=ConvertFrom-Json ([Console]::In.ReadToEnd()); $b=[Text.Encoding]::UTF8.GetBytes($r.value); $e=[Security.Cryptography.ProtectedData]::Protect($b,$null,[Security.Cryptography.DataProtectionScope]::CurrentUser); [IO.File]::WriteAllBytes($r.path,$e); [Array]::Clear($b,0,$b.Length)';
+  const script = '$ErrorActionPreference="Stop"; [Console]::InputEncoding=New-Object Text.UTF8Encoding($false,$true); Add-Type -AssemblyName System.Security; $r=ConvertFrom-Json ([Console]::In.ReadToEnd()); $b=[Text.Encoding]::UTF8.GetBytes($r.value); $e=[Security.Cryptography.ProtectedData]::Protect($b,$null,[Security.Cryptography.DataProtectionScope]::CurrentUser); [IO.File]::WriteAllBytes($r.path,$e); [Array]::Clear($b,0,$b.Length)';
   execFileSync(powershell, ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', script], { input: JSON.stringify({ path, value: 'synthetic-fish-only' }), env: f.env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
   f.profile.providers['fish-audio'] = { route: 'dpapi', path, keys: ['FISH_API_KEY'] }; f.save();
   const runner = (file: string, args: string[], options: any) => execFileSync(file, args, options) as string;

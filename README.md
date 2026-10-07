@@ -1,5 +1,7 @@
 현재 개발·배포 정본: [AGENTS.md](AGENTS.md) · [CURRENT_STACK](docs/CURRENT_STACK.md).
 
+현재 PC 실행과 확인된 차단: [Windows 셋업](docs/LOCAL_SETUP_20261008.md).
+
 # BLADE SURGE — 블레이드 서지
 
 three.js(WebGL2) 기반 **가로모드 모바일 3D 몹몰이 핵앤슬래시 가챠 RPG** 웹앱.
