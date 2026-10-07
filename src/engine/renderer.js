@@ -208,7 +208,7 @@ export class Renderer {
       const walking = this.lobbyNavigation;
       const portrait = this._width < this._height;
       // The walking plaza needs a clear view of the route ahead and nearby entrances.
-      const p = walking ? walkingLobbyCameraPosition(portrait) : lobbyCameraPosition(this.lobbyCamera);
+      const p = walking ? walkingLobbyCameraPosition(portrait, this.lobbyCamera) : lobbyCameraPosition(this.lobbyCamera);
       desired = new THREE.Vector3(p.x, p.y, p.z).add(rig.target);
       this.lobbySightline ??= new LobbySightline();
       if (!walking) desired.y += this.lobbySightline.solve(desired,rig.target,this.lobbyOccluders,performance.now());

@@ -1,0 +1,81 @@
+/* 안내는 기본 접힌 상태다. 읽는 동안에도 문구 뒤의 전장을 조작할 수 있다. */
+#battle-tutorial {
+  inset: 0;
+  z-index: 18;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: calc(78px + var(--sat)) 12px 0;
+  background: none;
+  pointer-events: none;
+}
+#battle-tutorial[hidden], #battle-tutorial [hidden] { display: none; }
+#battle-tutorial .tutorial-toggle {
+  align-self: center;
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid #d6bd7666;
+  border-radius: 8px;
+  background: #102622e8;
+  color: #e7dcc3;
+  font: 600 11px var(--font);
+  cursor: pointer;
+  pointer-events: auto;
+}
+/* 접힌 안내는 보스 체력줄 위의 첫 줄에 두고 펼친 카드의 기존 위치는 유지한다. */
+#battle-tutorial .tutorial-toggle[aria-expanded='false'] {
+  position: absolute;
+  top: calc(12px + var(--sat));
+  right: calc(var(--tutorial-folded-right, 146px) + var(--sar));
+  max-width: 120px;
+  white-space: nowrap;
+}
+#battle-tutorial .tutorial-card {
+  width: min(320px, calc(100vw - 24px));
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid #d6bd7655;
+  border-radius: 9px;
+  background: #102622ed;
+  box-shadow: 0 8px 22px #0004;
+  pointer-events: none;
+}
+#battle-tutorial .tutorial-art { display: none; }
+#battle-tutorial .tutorial-copy-wrap > span { font-size: 9px; letter-spacing: .08em; }
+#battle-tutorial .tutorial-copy-wrap h2 { margin: 2px 0 4px; font-size: 15px; }
+#battle-tutorial .tutorial-copy-wrap p { font-size: 11px; line-height: 1.5; }
+#battle-tutorial .tutorial-actions { grid-column: auto; flex-direction: row; min-width: 0; gap: 8px; }
+#battle-tutorial .tutorial-actions .btn { min-height: 40px; flex: 1; padding: 6px 8px; font-size: 11px; pointer-events: auto; }
+#battle-tutorial .tutorial-toggle:focus-visible, #battle-tutorial .tutorial-actions .btn:focus-visible { outline: 2px solid #e7ce91; outline-offset: 3px; }
+@media (orientation: landscape) {
+  /* 실제 상단에 나타난 직행·획득 버튼 수만큼 접힌 안내의 여백을 예약한다. */
+  #hud:has(#btn-boss-shortcut:not([hidden])),
+  #hud:has(.hud-right-top .battle-earned-offer:not([hidden])) { --tutorial-folded-right: 224px; }
+  #hud:has(#btn-boss-shortcut:not([hidden])):has(.hud-right-top .battle-earned-offer:not([hidden])) { --tutorial-folded-right: 294px; }
+}
+@media (orientation: landscape) and (max-width: 700px) {
+  /* 획득 버튼까지 열린 짧은 행은 스테이지 문구를 피하는 별도 위치를 쓴다. */
+  #hud:has(.hud-right-top .battle-earned-offer:not([hidden])) #battle-tutorial .tutorial-toggle[aria-expanded='false'] {
+    top: calc(166px + var(--sat));
+    right: calc(224px + var(--sar));
+  }
+}
+@media (orientation: landscape) and (max-height: 420px) {
+  #battle-tutorial { padding-top: calc(62px + var(--sat)); }
+  #battle-tutorial .tutorial-toggle { min-height: 36px; padding: 6px 11px; }
+  #battle-tutorial .tutorial-card { gap: 6px; padding: 8px 10px; }
+}
+@media (orientation: portrait) {
+  /* 좌측 물약 행 아래, 짧은 화면의 시점 버튼과 이동 스틱 위에 별도 공간을 쓴다. */
+  #battle-tutorial .tutorial-toggle[aria-expanded='false'] {
+    top: auto;
+    right: auto;
+    bottom: calc(176px + var(--sab));
+    left: calc(14px + var(--sal));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-focus { animation: none; box-shadow: 0 0 0 2px #dfc88288; }
+}

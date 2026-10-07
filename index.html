@@ -54,9 +54,9 @@
 
     <!-- lobby -->
     <div id="tab-home" class="tab show">
-      <div id="lobby-camera-pad" tabindex="0" role="group" aria-label="영웅 둘러보기. 드래그로 회전, 휠로 확대. 방향키로 회전과 높이, 더하기 빼기로 확대, Home으로 초기화."></div>
+      <div id="lobby-camera-pad" tabindex="0" role="group" aria-label="로비 시점. 드래그로 회전, 두 손가락으로 확대. 방향키로 회전과 높이, 더하기 빼기로 확대, Home으로 기본 시점."><span aria-hidden="true">시점</span></div>
       <div class="lobby-camera-tools">
-        <button type="button" id="lobby-camera-toggle" aria-expanded="false" aria-controls="lobby-camera-panel">시점 조작</button>
+        <div class="lobby-camera-buttons"><button type="button" id="lobby-camera-toggle" aria-expanded="false" aria-controls="lobby-camera-panel">시점 조작</button><button type="button" id="lobby-camera-reset" aria-label="로비 기본 시점으로 복귀">기본</button><button type="button" id="lobby-camera-zoom-out" aria-label="로비 시점 축소">−</button><button type="button" id="lobby-camera-zoom-in" aria-label="로비 시점 확대">＋</button></div>
         <div id="lobby-camera-panel" hidden>
           <div class="lobby-view-presets" role="group" aria-label="로비 시점">
             <button type="button" data-lobby-view="oath">기본</button><button type="button" data-lobby-view="front">정면</button><button type="button" data-lobby-view="city">성채</button><button type="button" data-lobby-view="side">측면</button><button type="button" data-lobby-view="back">뒷모습</button>
@@ -64,7 +64,7 @@
           <label>회전 <input type="range" name="yaw" min="-180" max="180" value="19"></label>
           <label>높이 <input type="range" name="pitch" min="8" max="42" value="11"></label>
           <label>확대 <input type="range" name="zoom" min="75" max="135" value="100"></label>
-          <small>영웅을 드래그해 둘러보세요 · 휠로 확대</small>
+          <small>빈 광장을 드래그해 둘러보세요 · 휠로 확대<br>터치는 오른쪽 시점 패드 · 두 손가락으로 확대</small>
         </div>
       </div>
       <div class="lobby-left">

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { weaponTrailGain } from '../engine/weapon-trail.js';
+import { gatherEnemies } from './crowd-gather.js';
 import { Actor } from './actor.js';
 import { audio } from '../engine/audio.js';
 import { SKILLS } from './skills.js';
@@ -40,6 +41,7 @@ export class Player extends Actor {
     this.auto = false; this.autoT = 0; this.magnetMul = 1; this._autoHubCounts = [];
     this.sprint = 0; this.sprintT = 0; this.lockTarget = null; this.perfectWindow = 0; this.perfectCd = 0; this.counterWindow = 0;
     this.trail = null; this.current = null; this.skillCtx = null;
+    this.hurtFeedbackT = 0;
     this.moveDir = new THREE.Vector3();
     this.play('Idle');
     this.footT = 0;
@@ -152,7 +154,7 @@ export class Player extends Actor {
       this.vel.copy(f).multiplyScalar(dist / Math.max(0.15, c.hitAt * dur));
       this.game.fx.ring(this.pos.clone().addScaledVector(f, dist), this.def.color, { r0: c.range - 0.3, r1: c.range + 0.2, life: c.hitAt * dur, y: 0.06, width: 1 });   // 착지 예고
     } else if (c.move === 'spin') {
-      this.game.vacuum(this.pos.clone(), c.range + 1.5, 7);   // 회전베기: 먼저 끌어모은다
+      gatherEnemies(this.game, this.pos, c.range + 1.5, 9, c.hitAt * dur);   // 회전베기: 접촉 전 실제 이동으로 모은다.
       this.vel.copy(f).multiplyScalar(0.8);
     } else if (!this.def.ranged && this.auto) { const d = target ? Math.max(0, Math.min(2.2, this.distTo(target) - 1.6)) : 0.6; this.vel.copy(f).multiplyScalar(d / Math.max(0.15, c.hitAt * dur)); }   // AUTO만 적에게 붙는다
     audio.whoosh({ vol: 0.35 + idx * 0.08, pitch: this.def.ranged ? 1.6 : (c.move === 'slam' ? 0.6 : 1 + idx * 0.12), dur: c.move === 'spin' ? 0.4 : 0.22 });
@@ -232,7 +234,7 @@ export class Player extends Actor {
       if (tick === 0) this.game.sp?.onComboHit(hits);
       this.game.fx.slashArc(this.pos, this.yaw + tick * 2.1, this.def.color, { radius: c.range + 0.3, arc: 300, height: 1.1, life: 0.22, thickness: 0.6 });
       this.game.fx.dust(this.pos, { n: 4, size: 1.2 });
-      if (tick === 0 || gravity) this.game.vacuum(this.pos.clone(), c.range + 1.5, gravity ? 10 : 5);
+      if (gravity) this.game.vacuum(this.pos.clone(), c.range + 1.5, 10);
       audio.whoosh({ vol: 0.3, pitch: 1.1 + tick * 0.15, dur: 0.18 });
       if (!hits) audio.whoosh({ vol: 0.12, pitch: 1.8, dur: 0.1 });
       return;
@@ -385,15 +387,22 @@ export class Player extends Actor {
     if (red <= 0) { this.game.fx.damage(this.pos,0,{text:'보호막'}); return false; }
     this.hp -= red;
     this.game.routeObjectives?.interrupt();
-    this.flash(0xff4040, 0.15);
     this.game.fx.damage(this.pos, red, { kind: 'self' });
-    this.game.fx.burst(this.pos.clone().setY(1.2), 0xff5a5a, { n: 8, speed: 5, size: 0.3 });
-    this.game.renderer.shake(0.3); this.game.renderer.flashScreen(0.18, 0xff2040); this.game.ui.hurtVignette();
-    audio.hit('hurt'); audio.vibe([30, 20, 30]); audio.bark(`hero_${this.def.voiceId || this.def.id}_hurt`, { n: 3, vol: 0.8, min: 0.7 });
-    this.knockback(dirx, dirz, kb);
+    const heavy = kb >= 6;
+    // 경타는 피해만 누적하고 이동·콤보 시계를 보존한다. 짧은 몸 반응으로 읽고
+    // 반복 화면 흔들림·물리 밀림이 몹몰이의 다음 입력을 덮지 않게 한다.
+    if (heavy || !(this.hurtFeedbackT > 0)) {
+      this.hurtFeedbackT = .18;
+      this.flash(0xff4040, heavy ? .15 : .09);
+      this.game.fx.burst(this.pos.clone().setY(1.2), 0xff5a5a, { n: heavy ? 8 : 4, speed: heavy ? 5 : 3, size: .3 });
+      this.game.renderer.shake(heavy ? .3 : .055); this.game.renderer.flashScreen(heavy ? .18 : .055, 0xff2040); this.game.ui.hurtVignette();
+      audio.hit('hurt'); audio.vibe(heavy ? [30, 20, 30] : 8); audio.bark(`hero_${this.def.voiceId || this.def.id}_hurt`, { n: 3, vol: heavy ? .8 : .6, min: .7 });
+      if (!heavy && this.motionRoot) this.receiveImpact(dirx, dirz, .18);
+    }
+    if (heavy) this.knockback(dirx, dirz, kb);
     if (this.game.hasProc('blood_rage') && (this._bloodCd || 0) <= this.game.elapsed) { this._bloodCd = this.game.elapsed + 1.5; this.game.bloodBurst(this); }
     // 스킬/궁극기 중엔 슈퍼아머. 기본 콤보 중에도 경타(kb<6)는 끊지 못한다 — 무리 속에서 잡몹 한 대마다 콤보가 1타로 돌아가던 것이 '끊김'의 절반
-    const armored = this.state === 'skill' || this.state === 'ult' || this.state === 'dodge' || (this.state === 'attack' && kb < 6);
+    const armored = !heavy || this.state === 'skill' || this.state === 'ult' || this.state === 'dodge';
     if (!armored) {
       if (this.state === 'attack') { this.comboResume = { idx: Math.min(this.comboIdx + 1, this.def.combo.length - 1), t: 1.2 }; }   // 강타에 끊겨도 1.2초 안에 다시 누르면 이어서
       this.stopTrail(); this.state = 'hurt'; this.stateT = 0; this.play(Math.random() < 0.5 ? 'Hit_A' : 'Hit_B', { once: true, fade: 0.05, speed: 1.6 });
@@ -497,6 +506,7 @@ export class Player extends Actor {
   // ---------------- 업데이트 ----------------
   update(dt) {
     super.update(dt);
+    this.hurtFeedbackT = Math.max(0, (this.hurtFeedbackT || 0) - dt);
     this.attackBufferT = Math.max(0, (this.attackBufferT || 0) - dt);
     this.dodgeBufferT = Math.max(0, (this.dodgeBufferT || 0) - dt);
     this.beacon.update(this.alive, this.yaw, { state: this.state, color: this.def.accent || this.def.color, reduced: !!this.game.app?.reducedMotion?.matches });
@@ -521,6 +531,7 @@ export class Player extends Actor {
     this.stateT += dt;
     if (this.state === 'attack') {
       const c = this.current; const dur = c.dur / (this.buffs.atkSpd * (this.stormT > 0 ? 1.4 : 1)); const t = this.stateT / dur;
+      if (c.move === 'spin' && !this.hitDone) gatherEnemies(this.game, this.pos, c.range + 1.5, 9);
       if (!this.hitDone && t >= c.hitAt) { this.hitDone = true; this.doComboHit(0); if (c.move !== 'spin') this.vel.multiplyScalar(c.move === 'lunge' ? 0.35 : 0.2); this.nextTick = c.hitAt + (1 - c.hitAt) / (c.ticks || 1); }
       if (this.hitDone && this.ticksLeft > 0 && t >= this.nextTick) { this.ticksLeft--; this.doComboHit((c.ticks || 1) - this.ticksLeft - 1); this.nextTick += (1 - c.hitAt) / (c.ticks || 1); }   // 회오리 연타
       if (c.through && this.ghostT !== undefined) { this.ghostT += dt; if (this.ghostT > 0.06 && !this.hitDone) { this.ghostT = 0; this.game.fx.ghost(this.model, this.def.color, { life: 0.25, opacity: 0.4 }); } }

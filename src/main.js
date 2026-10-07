@@ -88,7 +88,7 @@ class App {
     this.wardrobe = new Wardrobe(this);
     this.mode = 'boot'; this.showcase = null; this.lobbyVisible = true;
     this.hubMovement = new HubMovement(CITADEL_HUB);
-    this.citadel = { movement: this.hubMovement, clearInput: () => this.hubControls?.clear() };
+    this.citadel = { movement: this.hubMovement, clearInput: () => { this.hubControls?.clear(); this.lobbyCameraControls?.finish(); } };
     this.citadelShop = new CitadelShop(this);
     this.hubUI = new CitadelHubUI(this, { onInteract: spot => this.interactHub(spot) });
     this.hubControls = new HubControls({ isActive: () => this.canWalkHub(), joystick: this.hubUI.touchStick, knob: this.hubUI.touchKnob });
@@ -208,6 +208,7 @@ class App {
     const visible = surface && !this.stageStarting && !this.expeditionUI?.opened && !this.companionAgent?.getSnapshot().open && !document.querySelector('#modal.show');
     document.body.classList.toggle('citadel-hub-active', surface);
     this.renderer.lobbyNavigation = this.mode === 'lobby';
+    this.lobbyCameraControls?.updateActivity();
     if (this.hubUI.visible !== visible) this.hubUI.setVisible(visible);
     if (!this.canWalkHub()) this.citadel.clearInput();
     this.hubUI.update(this.hubMovement.nearest, { blocked: !this.canWalkHub() });

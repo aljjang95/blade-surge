@@ -1,0 +1,14 @@
+{
+  "createdAt": "2026-10-07T16:20:03.766675+00:00",
+  "tool": "image_gen.imagegen",
+  "images": 1,
+  "source": "/workspace/generated_images/exec-af7e6efb-03de-4941-bf8c-b0cc2eda1644.png",
+  "referenceCopy": "/workspace/scratch/bladesurge-gate-reference-20261008/citadel-gate-reference-board.png",
+  "sha256": "3a67e72fcc1f566709d64a3cb25c02417d3644fd9699456282573d70e7fdb783",
+  "prompt": "/workspace/scratch/bladesurge-gate-reference-20261008/prompt.txt",
+  "rights": "Original native-generated visual reference; no third-party game art, model, or texture used. Three.js geometry will be authored directly from this reference.",
+  "scope": "Twelve dungeon gateway design board; not a screenshot of implemented game geometry.",
+  "transparentBackground": false,
+  "visuallyInspected": true,
+  "implementationConstraints": "Preserve canonical hotspot/collision positions, local post radius .29 at \u00b11.27, clear walking passage, y<=3.8 and x width<=4.0; simplify microdetails and raise low hanging ornaments to preserve player movement."
+}
