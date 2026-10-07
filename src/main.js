@@ -45,6 +45,7 @@ import { HubMovement } from './game/hub-movement.js';
 import { HubControls } from './engine/hub-controls.js';
 import { CitadelHubUI } from './ui/citadel-hub.js';
 import { CitadelShop } from './ui/citadel-shop.js';
+import { CitadelCommand } from './ui/citadel-command.js';
 import './ui/citadel-integration.css';
 const BOOT_TIPS = [
   '<b>진공기</b>로 적을 끌어모은 뒤 한 번에 쓸어담는 것이 몹몰이의 기본이다.',
@@ -86,11 +87,12 @@ class App {
     this.arsenal = new ArsenalService(this);
     this.models = {};
     this.wardrobe = new Wardrobe(this);
-    this.mode = 'boot'; this.showcase = null; this.lobbyVisible = true;
+    this.mode = 'boot'; this.showcase = null; this.lobbyVisible = true; this.hubWalkMode = false;
     this.hubMovement = new HubMovement(CITADEL_HUB);
     this.citadel = { movement: this.hubMovement, clearInput: () => { this.hubControls?.clear(); this.lobbyCameraControls?.finish(); } };
     this.citadelShop = new CitadelShop(this);
     this.hubUI = new CitadelHubUI(this, { onInteract: spot => this.interactHub(spot) });
+    this.commandUI = new CitadelCommand(this);
     this.hubControls = new HubControls({ isActive: () => this.canWalkHub(), joystick: this.hubUI.touchStick, knob: this.hubUI.touchKnob });
     this.canvas.tabIndex = 0;
     this.canvas.setAttribute('aria-label', '성채와 던전 게임 화면');
@@ -194,7 +196,7 @@ class App {
   }
   // ---------- 로비 ----------
   canWalkHub() {
-    return this.mode === 'lobby' && this.meta.tab === 'home' && this.lobbyVisible && !this.stageStarting && !this.contextLost &&
+    return this.hubWalkMode && this.mode === 'lobby' && this.meta.tab === 'home' && this.lobbyVisible && !this.stageStarting && !this.contextLost &&
       !this.expeditionUI?.opened && !this.companionAgent?.getSnapshot().open &&
       !document.querySelector('dialog[open], #modal.show');
   }
@@ -203,13 +205,29 @@ class App {
     this.citadel.clearInput();
     return this.hubUI.interact(spot);
   }
+  setHubWalkMode(enabled) {
+    if (this.mode !== 'lobby' || this.stageStarting || this.contextLost || this.meta.tab !== 'home' ||
+      this.expeditionUI?.opened || document.querySelector('dialog[open], #modal.show')) return false;
+    this.input.clear(); this.citadel.clearInput();
+    this.hubWalkMode = !!enabled;
+    if (!this.hubWalkMode) {
+      this.hubMovement.reset();
+      if (this.showcase) this.showcase.root.rotation.y = Math.PI * .15;
+    }
+    this.syncHub();
+    (this.hubWalkMode ? this.canvas : this.commandUI.explore).focus({ preventScroll: true });
+    return true;
+  }
   syncHub() {
     const surface = this.mode === 'lobby' && this.meta.tab === 'home' && this.lobbyVisible;
     const visible = surface && !this.stageStarting && !this.expeditionUI?.opened && !this.companionAgent?.getSnapshot().open && !document.querySelector('#modal.show');
-    document.body.classList.toggle('citadel-hub-active', surface);
-    this.renderer.lobbyNavigation = this.mode === 'lobby';
+    const exploring = surface && this.hubWalkMode;
+    document.body.classList.toggle('citadel-hub-active', exploring);
+    document.body.classList.toggle('citadel-command-active', surface && !this.hubWalkMode);
+    this.renderer.lobbyNavigation = this.mode === 'lobby' && this.hubWalkMode;
     this.lobbyCameraControls?.updateActivity();
-    if (this.hubUI.visible !== visible) this.hubUI.setVisible(visible);
+    if (this.hubUI.visible !== (visible && this.hubWalkMode)) this.hubUI.setVisible(visible && this.hubWalkMode);
+    this.commandUI?.setVisible(visible && !this.hubWalkMode, visible && this.hubWalkMode);
     if (!this.canWalkHub()) this.citadel.clearInput();
     this.hubUI.update(this.hubMovement.nearest, { blocked: !this.canWalkHub() });
   }
@@ -230,9 +248,17 @@ class App {
     this.companionAgent?.syncLobbyContext();
     if (!first) { this.fx.pillar(root.position, def.color, { radius: 1.2, height: 8, life: 0.8 }); this.fx.burst(root.position.clone().setY(1), def.color, { n: 40, speed: 6, size: 0.4, up: 1 }); audio.magic({ vol: 0.3, base: 440, notes: [0, 4, 7, 12] }); }
     this.renderer.rig.mode = 'lobby'; this.renderer.rig.target.copy(root.position);
-    this.renderer.lobbyNavigation = true;
+    this.renderer.lobbyNavigation = this.hubWalkMode;
   }
-  setLobbyVisible(v) { this.lobbyVisible = v; }
+  setLobbyVisible(v) {
+    this.lobbyVisible = v;
+    if (!v) {
+      this.hubWalkMode = false;
+      this.input.clear(); this.citadel.clearInput();
+      this.hubMovement.reset();
+      if (this.showcase) this.showcase.root.rotation.y = Math.PI * .15;
+    }
+  }
   toLobby(first = false) {
     if (this.expeditionTicket && this.battle?.result?.win && !this.battle.result.expeditionReceipt?.ok) { this.expeditionUI.showResult(this.battle, true); return; }
     if (this.expeditionRefundPending && this.expeditionTicket) {
@@ -244,7 +270,7 @@ class App {
       if (outcome.ok) this.expeditionTicket = null;
     }
     if (this.mode === 'battle') { this.battle.stop(); }
-    this.citadel.clearInput(); this.hubUI.close(); this.citadelShop.close(); this.hubMovement.reset();
+    this.citadel.clearInput(); this.hubUI.close(); this.citadelShop.close(); this.hubMovement.reset(); this.hubWalkMode = false;
     this._bossAttemptTracked = false;
     this.tutorial.end();
     this.ui.hideResult(); this.mode = 'lobby';

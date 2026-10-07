@@ -12,6 +12,14 @@ export const CITADEL_GATE_DESIGNS = Object.freeze({
   comet_bastion: 'meteor-battlement', campaign: 'oath-banner', arena: 'crossed-blade-arena',
 });
 
+// 구조물의 재질과 별개로 던전 안쪽의 균열 색을 유지한다. 캠페인·투기장은 포털이 아니다.
+export const CITADEL_GATE_PORTALS = Object.freeze({
+  glass_garden: 0x62efbd, ember_vault: 0xff9846, star_archive: 0x9cbcff,
+  bellfall_crypt: 0x88dfc3, cinder_tide_lock: 0x51dfe3, nightglass_observatory: 0xa48aff,
+  eclipse_hydra_vault: 0xff5278, ashforge_catacomb: 0xff7146, astral_leviathan_spire: 0x70c6ff,
+  verdigris_sanctum: 0x5fe5aa, sable_mirage_basin: 0xffcf79, comet_bastion: 0xbd8fff,
+});
+
 const P = 1.27;
 const COLORS = Object.freeze({
   ivory: 0xe1dfca, stone: 0x72898b, dark: 0x293842, iron: 0x45535e, bronze: 0xb98a48,
@@ -21,12 +29,12 @@ const COLORS = Object.freeze({
 });
 
 /**
- * 정적인 14개 입구는 네 공유 재질만 쓰며 입구마다 역할별 버퍼를 병합한다.
+ * 14개 구조물은 네 공유 재질로 병합하고, 12개 균열은 하나의 공유 셰이더만 사용한다.
  * @param {{ environmentTexture?: THREE.Texture | null, quality?: string }} [options]
  */
 export function createCitadelGateDesignLibrary({ environmentTexture = null, quality = 'high' } = {}) {
   const materials = new Map(), geometries = new Set(), groups = new Set();
-  let disposed = false;
+  let disposed = false, portalTime = 0;
   const segments = quality === 'low' ? 8 : 12;
   function material(role) {
     if (!materials.has(role)) {
@@ -39,6 +47,70 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
       next.name = `Citadel_Gate_Shared_${role}`; materials.set(role, next);
     }
     return materials.get(role);
+  }
+
+  function portalMaterial() {
+    if (!materials.has('portal')) {
+      const next = new THREE.ShaderMaterial({
+        vertexColors: true, side: THREE.DoubleSide, toneMapped: false, fog: true,
+        uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { portalTime: { value: 0 } }]),
+        vertexShader: `
+          varying vec2 portalUv;
+          varying vec3 portalTint;
+          #include <fog_pars_vertex>
+          void main() {
+            portalUv = uv;
+            portalTint = color;
+            vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+            gl_Position = projectionMatrix * mvPosition;
+            #include <fog_vertex>
+          }
+        `,
+        fragmentShader: `
+          uniform float portalTime;
+          varying vec2 portalUv;
+          varying vec3 portalTint;
+          #include <fog_pars_fragment>
+          void main() {
+            vec2 p = (portalUv - 0.5) * 2.0;
+            float radius = length(p);
+            float angle = atan(p.y, p.x);
+            float phase = portalTint.r * 4.0 + portalTint.b * 3.0;
+            float twist = angle * 4.0 + radius * 17.0 - portalTime * 0.7 + phase;
+            float spiral = pow(0.5 + 0.5 * sin(twist), 6.0);
+            float wisps = pow(0.5 + 0.5 * sin(angle * 7.0 - radius * 13.0 + portalTime * 0.35), 12.0);
+            float edge = exp(-pow((radius - 0.91) * 27.0, 2.0));
+            float arcs = 0.64 + 0.36 * pow(0.5 + 0.5 * sin(angle * 9.0 - portalTime * 0.4 + phase), 3.0);
+            float depth = 1.0 - smoothstep(0.7, 1.0, radius);
+            vec3 abyss = mix(vec3(0.009, 0.018, 0.037), portalTint * 0.075, radius);
+            vec3 energy = portalTint * (0.13 + spiral * 0.55 + wisps * 0.15) * depth;
+            energy += mix(portalTint, vec3(1.0), 0.2) * edge * arcs * 1.45;
+            gl_FragColor = vec4(abyss + energy, 1.0);
+            #include <fog_fragment>
+            #include <colorspace_fragment>
+          }
+        `,
+      });
+      next.name = 'Citadel_Gate_Shared_portal'; materials.set('portal', next);
+    }
+    return materials.get('portal');
+  }
+
+  function addPortal(root, route) {
+    const color = CITADEL_GATE_PORTALS[route];
+    if (color === undefined) return;
+    // 에너지 원판은 충돌·선택 대상이 아니다. 기존 좌우 기둥의 이동 통로를 바꾸지 않는다.
+    const geometry = new THREE.CircleGeometry(1, quality === 'low' ? 32 : 48);
+    geometry.scale(1.025, 1.25, 1); geometry.translate(0, 1.29, -.09);
+    const count = geometry.getAttribute('position').count, tint = new THREE.Color(color);
+    const colors = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) { colors[i * 3] = tint.r; colors[i * 3 + 1] = tint.g; colors[i * 3 + 2] = tint.b; }
+    geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geometry.computeBoundingBox(); geometry.computeBoundingSphere(); geometries.add(geometry);
+    const mesh = new THREE.Mesh(geometry, portalMaterial()); mesh.name = `Citadel_Portal_${route}`;
+    mesh.userData.portalVisual = true; mesh.userData.route = route;
+    mesh.raycast = () => {}; mesh.castShadow = false; mesh.receiveShadow = false;
+    root.add(mesh);
   }
 
   function build(spot) {
@@ -331,13 +403,22 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
         mesh.castShadow = false; mesh.receiveShadow = role !== 'glow'; root.add(mesh);
       }
     } finally { for (const pieces of bins.values()) for (const piece of pieces) piece.dispose(); }
+    addPortal(root, spot.route);
     root.userData = { designId: design, route: spot.route, reference: CITADEL_GATE_REFERENCE,
+      portal: Object.hasOwn(CITADEL_GATE_PORTALS, spot.route),
       batchCount: root.children.length, originalGeometry: true };
     groups.add(root); return root;
   }
 
   return {
     build,
+    update(dt, reducedMotion = false) {
+      if (disposed) return;
+      // 한 장면의 공유 시간만 갱신한다. 감속 모션은 출렁임 없이 같은 정지 프레임을 보여준다.
+      if (!reducedMotion && Number.isFinite(dt)) portalTime = (portalTime + Math.max(0, Math.min(dt, .05))) % 3600;
+      const next = materials.get('portal');
+      if (next) next.uniforms.portalTime.value = reducedMotion ? 0 : portalTime;
+    },
     dispose() {
       if (disposed) return; disposed = true;
       for (const group of groups) group.removeFromParent();

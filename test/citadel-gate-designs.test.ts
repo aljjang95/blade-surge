@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { CITADEL_HUB_HOTSPOTS } from '../src/data/citadel-hub.js';
-import { createCitadelGateDesignLibrary, CITADEL_GATE_DESIGNS } from '../src/game/citadel-gate-designs.js';
+import { createCitadelGateDesignLibrary, CITADEL_GATE_DESIGNS, CITADEL_GATE_PORTALS } from '../src/game/citadel-gate-designs.js';
 import { buildCitadelHubScene, preloadCitadelHubAssets } from '../src/game/citadel-hub-scene.js';
 
 const gates = CITADEL_HUB_HOTSPOTS.filter(spot => ['dungeon', 'campaign', 'arena'].includes(spot.kind));
@@ -16,7 +16,7 @@ test('all fourteen canonical routes have distinct bounded geometry and preserve 
       expect(bounds.min.y).toBeLessThan(.005);
       expect(bounds.max.y).toBeLessThanOrEqual(3.8);
       expect(bounds.max.x - bounds.min.x).toBeLessThan(4);
-      expect(gate.children.length).toBeLessThanOrEqual(4);
+      expect(gate.children.length).toBeLessThanOrEqual(5);
       let signature = '', triangles = 0;
       gate.traverse((node: any) => {
         if (!node.isMesh) return;
@@ -26,7 +26,19 @@ test('all fourteen canonical routes have distinct bounded geometry and preserve 
         expect(node.material.vertexColors).toBe(true);
         expect(node.material.transparent).toBe(false);
         expect(node.geometry.groups).toHaveLength(0);
-        triangles += position.count / 3;
+        triangles += (node.geometry.index?.count ?? position.count) / 3;
+        if (node.userData.portalVisual) {
+          // 균열 면은 시각 효과만 차지한다. 고형 메시의 기존 기둥·통로 규칙은 아래에서 그대로 검사한다.
+          expect(node.material.isShaderMaterial).toBe(true);
+          expect(node.material.side).toBe(THREE.DoubleSide);
+          expect(node.geometry.getAttribute('uv').count).toBe(position.count);
+          const portalBounds = node.geometry.boundingBox;
+          expect(portalBounds.min.x).toBeGreaterThan(-1.026);
+          expect(portalBounds.max.x).toBeLessThan(1.026);
+          expect(portalBounds.min.y).toBeGreaterThan(.039);
+          expect(portalBounds.max.y).toBeLessThan(2.541);
+          return;
+        }
         signature += Array.from(position.array).join(',');
         for (let i = 0; i < position.count; i++) {
           const x = position.getX(i), y = position.getY(i), z = position.getZ(i);
@@ -47,7 +59,7 @@ test('all fourteen canonical routes have distinct bounded geometry and preserve 
   } finally { library.dispose(); }
 });
 
-test('quality variants share at most four materials and release owned buffers once without disposing the environment', () => {
+test('quality variants share five materials and release owned buffers once without disposing the environment', () => {
   for (const quality of ['high', 'low']) {
     const environment = new THREE.Texture(), library = createCitadelGateDesignLibrary({ quality, environmentTexture: environment });
     const geometry = new Set<THREE.BufferGeometry>(), materials = new Set<THREE.Material>();
@@ -61,8 +73,8 @@ test('quality variants share at most four materials and release owned buffers on
         geometry.add(node.geometry); materials.add(node.material);
       });
     }
-    expect(materials.size).toBe(4);
-    expect(geometry.size).toBeLessThanOrEqual(56);
+    expect(materials.size).toBe(5);
+    expect(geometry.size).toBeLessThanOrEqual(68);
     for (const buffer of geometry) buffer.addEventListener('dispose', () => freedGeometry++);
     for (const material of materials) material.addEventListener('dispose', () => freedMaterial++);
     library.dispose(); library.dispose();
@@ -72,6 +84,45 @@ test('quality variants share at most four materials and release owned buffers on
     expect(freedTexture).toBe(0);
     expect(() => library.build(gates[0])).toThrow();
     environment.dispose();
+  }
+});
+
+test('only the twelve dungeon routes own opaque energy interiors with one shared finite clock', () => {
+  for (const quality of ['high', 'low']) {
+    const library = createCitadelGateDesignLibrary({ quality }), portals: THREE.Mesh[] = [];
+    try {
+      expect(Object.keys(CITADEL_GATE_PORTALS).sort()).toEqual(gates.filter(spot => spot.kind === 'dungeon').map(spot => spot.route).sort());
+      for (const spot of gates) {
+        const gate = library.build(spot);
+        const energy = gate.children.filter(child => child.userData.portalVisual) as THREE.Mesh[];
+        expect(energy.length).toBe(spot.kind === 'dungeon' ? 1 : 0);
+        expect(gate.userData.portal).toBe(spot.kind === 'dungeon');
+        for (const mesh of energy) {
+          expect(mesh.geometry.index!.count / 3).toBe(quality === 'low' ? 32 : 48);
+          expect(mesh.castShadow).toBe(false);
+          expect(mesh.receiveShadow).toBe(false);
+          const expected = new THREE.Color(CITADEL_GATE_PORTALS[spot.route as keyof typeof CITADEL_GATE_PORTALS]);
+          const tint = mesh.geometry.getAttribute('color');
+          expect(tint.getX(0)).toBeCloseTo(expected.r, 6);
+          expect(tint.getY(0)).toBeCloseTo(expected.g, 6);
+          expect(tint.getZ(0)).toBeCloseTo(expected.b, 6);
+          portals.push(mesh);
+        }
+      }
+      expect(portals).toHaveLength(12);
+      const shared = portals[0].material as THREE.ShaderMaterial;
+      expect(portals.every(mesh => mesh.material === shared)).toBe(true);
+      expect(shared.uniforms.fogColor.value.isColor).toBe(true);
+      library.update(.02); expect(shared.uniforms.portalTime.value).toBeCloseTo(.02);
+      library.update(100); expect(shared.uniforms.portalTime.value).toBeCloseTo(.07);
+      library.update(Number.NaN); library.update(-1);
+      expect(shared.uniforms.portalTime.value).toBeCloseTo(.07);
+      library.update(.03, true); expect(shared.uniforms.portalTime.value).toBe(0);
+      library.update(100, true); expect(shared.uniforms.portalTime.value).toBe(0);
+      library.update(.01); expect(shared.uniforms.portalTime.value).toBeCloseTo(.08);
+      library.dispose(); library.update(.01);
+      expect(shared.uniforms.portalTime.value).toBeCloseTo(.08);
+    } finally { library.dispose(); }
   }
 });
 
