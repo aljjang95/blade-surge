@@ -1,0 +1,190 @@
+{
+  "version": "studio-environment-v1",
+  "schema": 1,
+  "blender": "4.3.2",
+  "generator": "tools/art/build-environment-kit.py",
+  "generatorSha256": "bceed3dee205bea2f9179ea28d40d24b5c37c1ad0ab5ef5bde1d89469d80b577",
+  "seed": 20261007,
+  "rights": "Original authored geometry and palette; no external assets or generation providers",
+  "license": "Project-owned original assets",
+  "runtime": {
+    "units": "metres",
+    "up": "+Y",
+    "forward": "+Z",
+    "pivot": "ground-centred",
+    "static": true
+  },
+  "policy": {
+    "maxTrianglesPerAsset": 5500,
+    "maxBytesPerAsset": 900000,
+    "maxDrawsPerAsset": 1,
+    "textures": false,
+    "transparentSurfaces": false,
+    "lights": false,
+    "skins": false
+  },
+  "assets": [
+    {
+      "file": "evergreen-tree.glb",
+      "url": "/models/environment/studio-kit/evergreen-tree.glb",
+      "bytes": 91848,
+      "sha256": "5de94cc5298edbc7dbdf258268105ea9be62b397cddd2277dd994815b0ded158",
+      "triangles": 964,
+      "draws": 1,
+      "materials": 1,
+      "boundsGltf": {
+        "min": [
+          -2.153258800506592,
+          0,
+          -2.0700883865356445
+        ],
+        "max": [
+          2.153258800506592,
+          7.253737926483154,
+          2.0700883865356445
+        ]
+      },
+      "vertexColors": true,
+      "textures": 0,
+      "validation": "passed-static-glb-contract",
+      "labelKo": "성채 침엽수",
+      "category": "forest"
+    },
+    {
+      "file": "broadleaf-tree.glb",
+      "url": "/models/environment/studio-kit/broadleaf-tree.glb",
+      "bytes": 98780,
+      "sha256": "1563ef81689b4995f0a2f4248e49d77877cc155de42590e2fab5c5f8020df98f",
+      "triangles": 992,
+      "draws": 1,
+      "materials": 1,
+      "boundsGltf": {
+        "min": [
+          -2.977013349533081,
+          0,
+          -2.939270496368408
+        ],
+        "max": [
+          2.977013349533081,
+          6.8407721519470215,
+          2.939270496368408
+        ]
+      },
+      "vertexColors": true,
+      "textures": 0,
+      "validation": "passed-static-glb-contract",
+      "labelKo": "정원 활엽수",
+      "category": "forest"
+    },
+    {
+      "file": "mossy-rock-cluster.glb",
+      "url": "/models/environment/studio-kit/mossy-rock-cluster.glb",
+      "bytes": 52196,
+      "sha256": "2612af30305644d6b87d1ad8d23ab3f1def3c3a10351ecb6b4a4ee90a44a0d1b",
+      "triangles": 462,
+      "draws": 1,
+      "materials": 1,
+      "boundsGltf": {
+        "min": [
+          -1.4587661027908325,
+          0,
+          -1.2359917163848877
+        ],
+        "max": [
+          1.4587661027908325,
+          1.5178784132003784,
+          1.2359917163848877
+        ]
+      },
+      "vertexColors": true,
+      "textures": 0,
+      "validation": "passed-static-glb-contract",
+      "labelKo": "이끼 바위 군집",
+      "category": "forest"
+    },
+    {
+      "file": "timber-cottage.glb",
+      "url": "/models/environment/studio-kit/timber-cottage.glb",
+      "bytes": 211672,
+      "sha256": "ddd98af9b9bdf104f4df39e9e6acf32b7ae04c6487139b2bda2ca9f66a28f72c",
+      "triangles": 2634,
+      "draws": 1,
+      "materials": 1,
+      "boundsGltf": {
+        "min": [
+          -2.9417922496795654,
+          0,
+          -2.672499895095825
+        ],
+        "max": [
+          2.9417922496795654,
+          5.730000019073486,
+          2.672499895095825
+        ]
+      },
+      "vertexColors": true,
+      "textures": 0,
+      "validation": "passed-static-glb-contract",
+      "labelKo": "청기와 목조 가옥",
+      "category": "village"
+    },
+    {
+      "file": "village-gate.glb",
+      "url": "/models/environment/studio-kit/village-gate.glb",
+      "bytes": 106988,
+      "sha256": "3d57ea3fa780d3b0ebfd44c5a3e0c09450374378a21c72858e15d416bc2522a0",
+      "triangles": 1364,
+      "draws": 1,
+      "materials": 1,
+      "boundsGltf": {
+        "min": [
+          -4.034999847412109,
+          0,
+          -1.0850000381469727
+        ],
+        "max": [
+          4.034999847412109,
+          5.795000076293945,
+          1.0850000381469727
+        ]
+      },
+      "vertexColors": true,
+      "textures": 0,
+      "validation": "passed-static-glb-contract",
+      "labelKo": "숲길 마을 문",
+      "category": "village"
+    },
+    {
+      "file": "lantern.glb",
+      "url": "/models/environment/studio-kit/lantern.glb",
+      "bytes": 15208,
+      "sha256": "b5986af024375d61576a75b0f84c16d4ea4f3091e066aa07042f9dc81f683a45",
+      "triangles": 182,
+      "draws": 1,
+      "materials": 1,
+      "boundsGltf": {
+        "min": [
+          -0.38999998569488525,
+          0,
+          -0.5674999952316284
+        ],
+        "max": [
+          0.38999998569488525,
+          2.9600000381469727,
+          0.5674999952316284
+        ]
+      },
+      "vertexColors": true,
+      "textures": 0,
+      "validation": "passed-static-glb-contract",
+      "labelKo": "황동 길안내 등",
+      "category": "village"
+    }
+  ],
+  "evidence": {
+    "staticBytes": "checked after each Blender GLB export",
+    "sourceBlend": "/workspace/scratch/bladesurge-environment-kit/studio-environment-v1.blend",
+    "blenderPreview": "/workspace/scratch/bladesurge-environment-kit/studio-environment-preview.png",
+    "runtimeVisualReview": "Separate game camera verification required"
+  }
+}

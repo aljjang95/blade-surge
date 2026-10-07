@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { weaponTrailGain } from '../engine/weapon-trail.js';
 import { Actor } from './actor.js';
 import { audio } from '../engine/audio.js';
 import { SKILLS } from './skills.js';
@@ -163,8 +164,16 @@ export class Player extends Actor {
   }
   startTrail() {
     if (this.trail) this.trail.stop();
-    const hand = this.def.weapon === 'dual' ? 'handslot.r' : 'handslot.r'; const len = this.def.weapon === '2h' ? 1.6 : 1.2;
-    this.trail = this.game.fx.trail(() => this.weaponPoints(hand, len), this.look.trailColor, { segs: 18, life: 0.26 });
+    if (this.game.app?.reducedMotion?.matches) { this.trail = null; return; }
+    const hand = 'handslot.r', heavy = this.def.weapon === '2h', dual = this.def.weapon === 'dual';
+    const len = heavy ? 1.6 : dual ? .95 : 1.2;
+    const combo = this.current;
+    this.trail = this.game.fx.trail(points => this.weaponPoints(hand, len, points), this.look.trailColor, {
+      segs: this.game.fx.lite ? 10 : 22, life: this.game.fx.lite ? .14 : heavy ? .29 : dual ? .18 : .24,
+      width: heavy ? .88 : dual ? .66 : .76,
+      getGain: () => this.current === combo && this.state === 'attack' && !this.game.app?.reducedMotion?.matches
+        ? weaponTrailGain(this.attackProgress(), combo.hitAt, combo.move === 'spin') : 0,
+    });
   }
   stopTrail() { if (this.trail) { this.trail.stop(); this.trail = null; } }
   arrowOrigin(dir = this.forward(new THREE.Vector3())) {
@@ -323,7 +332,7 @@ export class Player extends Actor {
     if (sk.anim) this.playTimed(sk.anim, impl.dur || 0.8, { fade: 0.06 });
     if (!sk.ult && this.def.id === 'ranger') audio.whoosh({ vol: .45, pitch: 1.6, dur: .2 });
     else if (!sk.ult) audio.bark(`hero_${this.def.voiceId || this.def.id}_skill${i}`, { vol: 0.95, min: 1.5 });   // 스킬 이름 외침
-    audio.skillRelease({ ult: !!sk.ult, school: sk.id || 'arcane' });
+    audio.skillRelease({ ult: !!sk.ult, school: sk.id || 'arcane', hero: this.def.id });
     if (sk.ult) { this.game.ultCinematic(sk, this); audio.charge({ vol: 0.35, dur: 0.7 }); if (this.def.id !== 'ranger') audio.voice(`hero_${this.def.voiceId || this.def.id}_ult`, { min: 8, duck: 0.5, dur: 1.6 }); if (this.game.hasProc('phoenix_burn')) this.game.after(0.35, () => this.game.phoenixBurn(this)); }
     else if (this.game.hasProc('gravity_hole')) { const t = this.lockTarget && this.lockTarget.alive ? this.lockTarget.pos.clone() : this.pos.clone().addScaledVector(this.forward(_v.clone()), 4); this.game.singularity(t); }
     if (!sk.ult) this.game.sp?.onSkillCast(i, sk);   // 룬 4세트: 만장전이면 과부하 — 이 스킬의 쿨타임이 0이 된다

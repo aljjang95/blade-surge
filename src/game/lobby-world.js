@@ -1,16 +1,28 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { buildEnvironmentInstances } from '../engine/environment-kit-asset.js';
 /** Original, runtime-authored citadel surroundings. Six static batches, no textures,
  * lights, particle emitters or combat navigation changes. */
-export function buildLobbyWorld() {
+export function buildLobbyWorld({ quality = 'high' } = {}) {
  const root=new THREE.Group();root.name='TLL_CitadelWorld';
  const colours=[0x576e70,0x97a69b,0x36565c,0xa58756,0x4a6960];
  const mats=colours.map(color=>new THREE.MeshLambertMaterial({color,flatShading:true}));
  const bins=mats.map(()=>[]),tr=new THREE.Object3D();let parts=0;
- function add(g,m,x,y,z,rx=0,ry=0){tr.position.set(x,y,z);tr.rotation.set(rx,ry,0);tr.updateMatrix();g.applyMatrix4(tr.matrix);bins[m].push(g);parts++;}
+ function add(g,m,x,y,z,rx=0,ry=0){
+  // 초목의 Icosahedron과 지형의 indexed primitive를 같은 속성 배치로 맞춘다.
+  if(m===4&&g.index){const expanded=g.toNonIndexed();g.dispose();g=expanded;}
+  tr.position.set(x,y,z);tr.rotation.set(rx,ry,0);tr.updateMatrix();g.applyMatrix4(tr.matrix);bins[m].push(g);parts++;
+ }
  const box=(w,h,d,m,x,y,z,ry=0)=>add(new THREE.BoxGeometry(w,h,d),m,x,y,z,0,ry);
  const col=(r,h,m,x,y,z,n=10)=>add(new THREE.CylinderGeometry(r,r*1.12,h,n),m,x,y,z);
  const arch=(x,z,w,h,ry=0)=>{for(const sign of [-1,1]){const dx=sign*w*.5;box(.42,h,.55,1,x+dx*Math.cos(ry),h*.5-.2,z-dx*Math.sin(ry),ry);}add(new THREE.TorusGeometry(w*.5,.22,5,24,Math.PI),1,x,h-.2,z,0,ry);};
+ // 숲과 마을은 공중 소품이 아니라 광장과 이어진 넓은 지형 위에 놓인다.
+ col(53,1.15,4,0,-1.25,0,64);
+ for (const side of [-1, 1]) {
+  box(14,.22,38,4,side*19,-.66,-1);
+  box(5,.09,24,1,side*16,-.43,0);
+  for (const z of [-12,-4,4,12]) box(13,.09,2.8,1,side*21,-.42,z);
+ }
  // Clear, continuous apron around the original hero dais, then a bridge into the city.
  col(12,.38,0,0,-.68,0,64);col(11.7,.12,1,0,-.45,0,64);
  box(6,.4,25,0,0,-.72,21);box(5.7,.10,25,1,0,-.46,21);
@@ -18,13 +30,13 @@ export function buildLobbyWorld() {
  for(const z of [15,24,33]){arch(0,z,6.8,4.2);for(const side of [-1,1]){col(.7,6,0,side*4,2.4,z,8);col(.85,.22,1,side*4,5.5,z,8);add(new THREE.ConeGeometry(.95,1.7,8),2,side*4,6.4,z);}}
  // Repeated terraces recede in actual depth, including the formerly empty front hemisphere.
  for(let i=0;i<24;i++){
+  if(i%3!==0)continue;
   const a=i*Math.PI/12,r=24+(i%3)*4,x=Math.sin(a)*r,z=Math.cos(a)*r;
   const h=3.5+(i*7%9)*.55,w=2.8+(i%3)*.4;
   box(w+1,1,w+1,0,x,-1.2,z,a);box(w,h,w, i%3===0?0:2,x,h*.5-.7,z,a);
   col(w*.55,.25,1,x,h-.6,z,8);add(new THREE.ConeGeometry(w*.7,2.5,8),2,x,h+.65,z);
   // Inlaid windows and balcony cornices read as architecture rather than a blank wall.
   for(let floor=1;floor<h-1;floor+=1.4)for(const sign of [-1,1]){box(.22,.65,.04,3,x+sign*.6*Math.cos(a)+Math.sin(a)*(w*.51),floor,z-sign*.6*Math.sin(a)+Math.cos(a)*(w*.51),a);}
-  if(i%2===0){col(w*.9,5,2,x,-3.2,z,7);add(new THREE.ConeGeometry(w*.9,7,7),0,x,-8.8,z,Math.PI);}
  }
  for(const side of [-1,1]){box(13,.4,4,0,side*15,-.66,2);arch(side*15,2,4.2,4.4,Math.PI/2);for(let j=0;j<5;j++){col(.16,1,1,side*(10+j*2),0,4);box(2.2,.16,.25,3,side*(10+j*2),.6,4);}}
  for(let i=0;i<18;i++){const a=i*Math.PI/9,r=52,x=Math.sin(a)*r,z=Math.cos(a)*r;const h=9+(i*11%13);add(new THREE.ConeGeometry(8,h,5),2,x,h*.5-5,z);if(i%2===0)add(new THREE.IcosahedronGeometry(3,0),4,x,3,z);}
@@ -34,7 +46,25 @@ export function buildLobbyWorld() {
  for(let i=0;i<p.count;i++){v.copy(horizon).lerp(zenith,Math.min(1,Math.max(0,p.getY(i)/65)));c.push(v.r,v.g,v.b);}
  sky.setAttribute('color',new THREE.Float32BufferAttribute(c,3));const sm=new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false,depthWrite:false});
  const dome=new THREE.Mesh(sky,sm);dome.name='Citadel_sky';dome.renderOrder=-10;root.add(dome);
- root.userData={version:'citadel-world-v1',parts,batches:6,interactive:false};let disposed=false;
- root.userData.dispose=()=>{if(disposed)return;disposed=true;root.traverse(o=>{if(o.isMesh){o.geometry.dispose();o.material.dispose();}});root.removeFromParent();};
+ const placements = [], low = quality === 'low', count = low ? 20 : 36;
+ // 네 구역으로 나눠 보이지 않는 숲까지 한 번에 그리는 거대한 배치를 피한다.
+ for(let row=0;row<3;row++)for(let i=0;i<count;i++){
+  const a=(i+.23*(row%2))*Math.PI*2/count,r=22+row*10+(i*7%5),x=Math.sin(a)*r,z=Math.cos(a)*r;
+  if(row===0&&Math.abs(x)<5.5)continue;
+  const chunk=`forest-${Math.floor((a%(Math.PI*2))/(Math.PI/2))}`;
+  placements.push({asset:i%3===0?'broadleaf-tree':'evergreen-tree',x,z,y:-.55,yaw:a+.4,scale:.8+(i%4)*.12,chunk});
+  if(row===0&&i%4===0)placements.push({asset:'mossy-rock-cluster',x:x*.95,z:z*.95,y:-.5,yaw:a,scale:1.2,chunk});
+ }
+ for(const side of [-1,1])for(let i=0;i<(low?3:5);i++){
+  const x=side*(18.7+(i%2)*5.7),z=-13+i*6.4;
+  placements.push({asset:'timber-cottage',x,z,y:-.36,yaw:-side*Math.PI/2,scale:.84+(i%2)*.08,chunk:`village-${side}`});
+  placements.push({asset:'lantern',x:x-side*3.1,z:z+2,y:-.37,scale:.85,chunk:`village-${side}`});
+ }
+ placements.push({asset:'village-gate',x:0,z:33,y:-.4,yaw:Math.PI,scale:1.1,chunk:'city-bridge'});
+ const environment = buildEnvironmentInstances(placements, { name: 'Citadel_ForestVillage' });
+ if(environment.userData.batchCount)root.add(environment);
+ root.userData={version:'citadel-forest-village-v2',parts,batches:6+environment.userData.batchCount,interactive:false,environmentInstances:environment.userData.instanceCount};let disposed=false;
+ const ownedMeshes = root.children.filter(o=>o.isMesh);
+ root.userData.dispose=()=>{if(disposed)return;disposed=true;environment.userData.dispose();for(const o of ownedMeshes){o.geometry.dispose();o.material.dispose();}root.removeFromParent();};
  return root;
 }
