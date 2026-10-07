@@ -28,6 +28,10 @@ node tools/parallel-play-qa.mjs --expected-sha=$candidateSha --origin=http://127
 
 2026-10-08 수정 전 실제 마우스 AUTO ON→OFF 뒤 버튼 포커스가 남아 `KeyD`가 입력되지 않는 결함을 재현했다. 입력 엔진의 UI 키 차단은 유지하고 성공한 포인터 전환만 AUTO 버튼 포커스를 해제한다. Enter/Space 클릭, 저장 실패, 다른 컨트롤로 이동한 포커스는 유지한다.
 
+동일한 터치 취소 입력에서 브라우저가 `cancelable=false`인 `touchcancel`을 전달했을 때 기본 동작을 취소하려는 오류도 관찰했다. 버튼 해제는 소유권을 항상 정리하며 `cancelable=true`일 때만 `preventDefault()`를 호출한다. 기존 멀티터치 fixture와 console 오류 검사를 유지해 다시 플레이한다.
+
+실행 시작 시각과 단계 시작 시각은 보고서에 남긴다. 이번 전체 작업의 최초 플레이 도달 시간과 최초 gameplay QA 도달 시간은 별도로 수집하지 않았으므로 **unknown/unverified**다. 부트 완료나 스크린샷 시각으로 소급 추정하지 않는다. 정상 플레이의 `Math.random`은 그대로 두며 시드를 주입하지 않아 드랍·피해·완주 시간의 정확한 재현은 보장하지 않는다. 고정된 초기 저장과 입력 순서의 기능 재현을 비교한다.
+
 승리 판정과 결과창 사이에는 기존 1.6초 전투 연출 지연이 있다. 결과 객체가 생긴 즉시 보상 정산을 요구하지 않고, 자연 결과창이 나타난 뒤 정산을 검사한다. 초기 임시 harness의 조기 정산 실패는 게임 결함의 증거가 아니다.
 
 병행 기능 플레이의 wall time은 FPS 판정에 쓰지 않는다. 성능 metrics는 다른 플레이와 겹치지 않게 별도로 실행한다. viewport/CDP 터치는 실제 Android의 GPU·터치·발열·오디오 증거가 아니며, `functional-pass`도 배포 승인이나 독립 리뷰 통과가 아니다. 기존 전체 테스트의 `region-architecture-batching` geometry 해시 실패는 별도로 보고하고 기준값을 통과 목적으로 바꾸지 않는다.

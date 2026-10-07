@@ -28,7 +28,7 @@ const report = { head: expected, started: new Date().toISOString(), origin, angl
 const save = () => fs.writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
 async function guard() {
   assert(git(['rev-parse', 'HEAD']) === expected && !git(['status', '--porcelain']), 'Freeze the exact clean committed checkout before and throughout QA');
-  for (const file of ['dist/version.json', 'dist/index.html', 'src/ui/ui.js', 'tools/parallel-play-qa.mjs', 'tools/expedition-qa-runtime.mjs']) {
+  for (const file of ['dist/version.json', 'dist/index.html', 'src/ui/ui.js', 'src/engine/input.js', 'tools/parallel-play-qa.mjs', 'tools/expedition-qa-runtime.mjs']) {
     const digest = hash(await fs.readFile(path.join(root, file)));
     if (report.artifacts[file]) assert(report.artifacts[file] === digest, `Artifact changed during play: ${file}`);
     report.artifacts[file] = digest;
