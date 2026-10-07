@@ -17,6 +17,8 @@ DISPLAY=:99 node tools/mobile-qa.mjs \
 
 공개 배포 후에는 root의 배포 완료 확인과 정확한 SHA를 사용해 `--origin=https://blade.tllhouse.com`으로 실행한다. `--artifact-dir`의 보존된 local dist(기본 repo/dist)가 expected SHA·clean 상태인지 확인하고 served version·compiled index·JS/CSS를 exact bytes/해시 비교한다. 경로 탈출을 거부하고 마지막에 버전이 바뀌지 않았는지 다시 확인한다. 출력 디렉터리는 새 경로여야 하며 실패 원본을 덮어쓰지 않는다. `--profiles=android` 또는 `iphone`으로 범위를 좁힐 수 있다. 차단된 클라우드 외부 폰트 환경에서만 `--empty-fonts-css`를 사용하며, 실제 폰트 다운로드 성공 증거로 해석하지 않는다.
 
+공개 origin에서 환경에 지정된 HTTPS/HTTP proxy가 있으면 Chromium에도 명시해 같은 경로를 사용한다. proxy 환경과 `NO_PROXY`를 해제하지 않으며, artifact fetch는 Node 24의 `NODE_USE_ENV_PROXY=1` 또는 `--use-env-proxy`를 요구한다. proxy 주소·자격 증명은 report에 쓰지 않고 인증 정보가 포함된 Chromium proxy는 거부한다. TLS 검증은 유지한다. localhost 검증에는 이 공개 origin 전용 설정을 적용하지 않는다.
+
 실제 touch joystick·짧은 공격·홀드·스킬, CDP screen orientation 변경의 trusted orientation/resize 이벤트, pause, 다른 native 탭의 `document.hidden`과 foreground 명시 재개, 에너지를 사용하는 원정 입장, 실제 포기 정산·저장·reload를 확인한다. 화면 회전 직후 짧은 공격은 별도 관찰이며 실패를 안정화 뒤 입력의 통과로 덮지 않는다. `app.step`, 상태 주입·teleport·보상 지급·testPause·프레임 가속은 사용하지 않는다.
 
 회전 직후 UI geometry가 아직 화면 밖이면 hit guard를 풀지 않고 `notDispatched`와 좌표 오류를 기록한다. 실제 touch를 전달한 뒤 공격 상태를 관측하지 못한 `dispatchedButNotAccepted`와 구분한다. trusted orientation 자체와 안정화 뒤 입력은 계속 필수 게이트다. 전달하지 않은 touch를 제품의 입력 유실로 보고하지 않는다.
@@ -34,3 +36,7 @@ Playwright 기본 세션의 focus override가 문서를 항상 visible로 고정
 산출물은 report·재현 driver·observer 사본·프로필별 PNG·최종 격리 저장 상태다. runtime/HTTP 오류, 원시 실패 요청, 미디어 미확정, 실제 화면 검토를 별도로 보고한다. 자연 프레임 timeout은 동시에 실행하는 Android emulator 등 CPU 경쟁의 영향을 받을 수 있으므로 모바일 FPS나 성능 비교로 쓰지 않는다.
 
 2026-10-07 도구 진단 원본은 `/workspace/scratch/bladesurge-mobile-qa/`에 보존했다. 첫 `local-0f166d5-1301`은 잘못된 joystick 중심·Playwright viewport 복원·강제 visible 때문에 전체 실패다. `native-v2`의 모달 animation 좌표, `android-v3`의 scroll 밖 버튼, `android-v4`의 회전 중 화면 밖 좌표도 각각 원본 실패를 유지한다. `native-v5`는 Android 기능 9개와 회전 관찰 1개를 기록했지만, hidden touch 응답을 외부 native foreground 개입으로 해제했으므로 별도 `qualification.json`에서 assisted 진단으로 한정하고 iPhone 반복을 중단했다. 이 도구 결함들을 제품 입력 손실로 단정하거나 기존 12:17 공격 timeout의 원인으로 소급하지 않는다.
+
+`local-0f166d5-native-v6`는 clean `0f166d5` dist에서 같은 driver SHA-256 `a30da477e5b8626da8182f106066587de9a6f198dc711e4d36085c49c04666c3`로 두 프로필을 외부 개입 없이 완주했다. 각 기능 9개가 통과했고 native runtime·HTTP·원시 실패 요청은 모두 0, 배포 파일 exact-byte 비교 6개도 불일치 0이다. 실제 trusted hidden→visible과 입력 해제·명시 재개, 에너지 100→96 입장, 포기 receipt `{ok:true,win:false,rewards:{}}`, pending 해제와 저장·reload를 확인했다. 회전 직후 좌표가 새 화면 밖인 `notDispatched` 관찰은 프로필마다 1개를 남겼고 안정화 뒤 tap/hold는 필수 통과했다.
+
+최종 `report.json`의 원래 `awaiting-visual-review` 상태는 보존하고 `qualified-review.json`에 직접 본 PNG 12장과 기능·네트워크·시각 판정을 별도로 기록했다. 독립 reviewer의 `independent-review.json`과 미디어 원시 자료 재검수도 별도다. 공개 proxy 지원 후속 driver와 main/운영 빌드 검증은 이 local v6 원본과 구분한다. Xvfb·SwiftShader 모바일 프로필 결과를 Android OS·Safari·실기기·발열·실청음·모바일 성능 인증으로 사용하지 않는다.

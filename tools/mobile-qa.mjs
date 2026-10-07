@@ -19,6 +19,18 @@ const artifactDir = path.resolve(arg('artifact-dir') || path.join(root, 'dist'))
 const selected = (arg('profiles') || 'android,iphone').split(',');
 const allowedOrigin = origin === 'https://blade.tllhouse.com' || /^http:\/\/(?:127\.0\.0\.1|localhost):\d+$/.test(origin || '');
 if (!allowedOrigin || !/^[a-f0-9]{40}$/.test(expectedSha || '') || !arg('out') || selected.some(name => !['android', 'iphone'].includes(name))) throw Error('Supply authorized --origin, full --expected-sha, new --out and valid --profiles');
+let publicProxy;
+if (origin === 'https://blade.tllhouse.com') {
+  const source = ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy'].find(key => process.env[key]);
+  if (source) {
+    let proxy;
+    try { proxy = new URL(process.env[source]); } catch { throw Error('Configured public-origin proxy URL is invalid'); }
+    if (!['http:', 'https:'].includes(proxy.protocol) || proxy.username || proxy.password || proxy.pathname !== '/' || proxy.search || proxy.hash) throw Error('Public-origin Chromium requires a configured credential-free HTTP(S) proxy without a path');
+    const nodeEnvProxy = process.env.NODE_USE_ENV_PROXY === '1' || process.execArgv.includes('--use-env-proxy') || /(?:^|\s)--use-env-proxy(?:\s|$)/.test(process.env.NODE_OPTIONS || '');
+    if (!nodeEnvProxy) throw Error('Restart Node 24 with NODE_USE_ENV_PROXY=1 so artifact fetch honors the configured proxy and NO_PROXY');
+    publicProxy = { server: proxy.origin, source, protocol: proxy.protocol, nodeEnvProxy };
+  }
+}
 const profiles = { android: { name: 'Pixel 7', device: devices['Pixel 7'] }, iphone: { name: 'iPhone 13', device: devices['iPhone 13'] } };
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const assert = (condition, message) => { if (!condition) throw Error(message); };
@@ -39,6 +51,7 @@ const report = {
   status: 'running', started: new Date().toISOString(), origin, expectedSha,
   sourceHead: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
   driverSha256: hash(driver), headed: flag('headed'), emptyFontsCss: flag('empty-fonts-css'),
+  proxy: publicProxy ? { configured: true, source: publicProxy.source, protocol: publicProxy.protocol, credentials: false, chromiumExplicitProxy: true, nodeEnvProxy: true, environmentPreserved: true } : { chromiumExplicitProxy: false, environmentPreserved: true },
   scope: 'Fresh isolated Chromium mobile DPR/user-agent/touch profiles, native CDP touch/orientation and actual tab visibility. Natural renderer-clock observation only. iPhone profile uses Chromium, not Safari. No physical phone/GPU/thermal/subjective audio or full native Android certification.',
   artifactDir, artifact: [], profiles: [],
 };
@@ -98,6 +111,7 @@ async function launchNativeBrowser(profileDir) {
   await fs.mkdir(userDataDir);
   const args = ['--no-sandbox', '--no-first-run', '--no-default-browser-check', '--remote-debugging-port=0', `--user-data-dir=${userDataDir}`,
     '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'];
+  if (publicProxy) args.push(`--proxy-server=${publicProxy.server}`);
   if (!flag('headed')) args.push('--headless=new');
   args.push('about:blank');
   chromiumProcess = spawn(arg('chrome') || process.env.CHROME_PATH || '/usr/bin/chromium', args, { stdio: 'ignore' });
