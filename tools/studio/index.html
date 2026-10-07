@@ -12,7 +12,7 @@
 <body>
   <header class="topbar">
     <a class="brand" href="/" aria-label="Blade Surge 제작 Studio"><span class="brand-mark">BS</span><span>BLADE SURGE<small>PRODUCTION STUDIO</small></span></a>
-    <nav aria-label="제작 도구"><button class="tab active" data-panel="library" aria-selected="true">에셋 라이브러리</button><button class="tab" data-panel="production" aria-selected="false">부서별 제작 보드</button><button class="tab" data-panel="story" aria-selected="false">스토리보드</button></nav>
+    <nav aria-label="제작 도구"><button class="tab active" data-panel="library" aria-selected="true">에셋 라이브러리</button><button class="tab" data-panel="production" aria-selected="false">부서별 제작 보드</button><button class="tab" data-panel="story" aria-selected="false">스토리보드</button><button class="tab" data-panel="ux" aria-selected="false">UX 개선</button></nav>
     <span class="local-badge"><i></i> LOCAL · READ ONLY</span>
   </header>
   <section class="intro"><div><p class="eyebrow">같은 장면, 같은 목표, 함께 만드는 출시</p><h1>눈에 보이는 변화부터.</h1><p>실제 게임 에셋과 제작 상태를 한곳에서 확인합니다.</p></div><div class="release"><span>출시 목표</span><strong>10.09</strong><small>2026 · 금요일</small></div></section>
@@ -24,7 +24,28 @@
       <section class="sound-library" aria-label="제작 사운드 라이브러리"><h3>타격 · 스킬 사운드</h3><p class="small-note">직접 만든 실제 MP3를 선택해 듣습니다. 길이·peak/RMS는 제작 manifest 기록이고 청감 품질 판정은 별도입니다.</p><div id="sound-list" class="sound-list"></div><div class="sound-player"><span id="sound-title">사운드를 선택하세요</span><audio id="sound-player" controls preload="none"></audio></div><p id="sound-details" class="small-note"></p></section>
     </section>
     <section id="production" class="panel" aria-label="부서별 제작 보드"><div class="section-heading"><div><p class="eyebrow">파일 변화 → 팀 상태 공유</p><h2>출시를 만드는 여섯 역할</h2></div><span class="pill">5초마다 로컬 파일 확인</span></div><p class="section-description">각 역할의 소유 파일과 다음 확인을 함께 봅니다. 에이전트 상태는 팀이 갱신한 기록이며, 도구가 완료나 PASS를 자동 생성하지 않습니다.</p><div id="departments" class="departments"></div><div class="section-heading"><h2>2일 출시 우선순위</h2></div><div id="milestones" class="milestones"></div><div class="board-footer"><p id="board-update"></p><p>작업 기록: <code>tools/studio/board.json</code> · 소스 파일을 편집하면 이 화면에 반영됩니다.</p></div></section>
-    <section id="story" class="panel" aria-label="스토리보드"><div class="section-heading"><div><p class="eyebrow">서약 전당에서 첫 전투까지</p><h2>첫 90초의 시나리오</h2></div><span class="pill">기획 초안 · 구현 증거 아님</span></div><p id="story-intent" class="section-description"></p><div id="story-shots" class="story-shots"></div><div class="board-footer"><p>장면·목표·에셋 참조·플레이 확인: <code>tools/studio/storyboard.json</code></p></div></section>
+    <section id="ux" class="panel" aria-label="근거 기반 UX 개선">
+      <div class="section-heading"><div><p class="eyebrow">관측 → 한 가지 수정 → 실제 입력 재검수</p><h2>다음 수정의 근거를 남깁니다</h2></div><span class="pill">검토용 지시 · 자동 판정 없음</span></div>
+      <p id="ux-intent" class="section-description"></p>
+      <div class="ux-workspace">
+        <div class="ux-editor">
+          <label for="ux-template">화면 템플릿</label><select id="ux-template"></select>
+          <div class="ux-template-details"><h3 id="ux-title"></h3><p id="ux-objective"></p><p id="ux-owners" class="small-note"></p></div>
+          <label for="ux-scenario">사용자 시나리오</label><textarea id="ux-scenario" rows="3" maxlength="3000"></textarea>
+          <label for="ux-observation">현재 관측 <span>필수</span></label><textarea id="ux-observation" rows="3" maxlength="4000" placeholder="어떤 입력을 했을 때 무엇이 보이거나 멈췄는지"></textarea>
+          <label for="ux-evidence">근거 / 파일 <span>필수</span></label><textarea id="ux-evidence" rows="2" maxlength="4000" placeholder="스크린샷·로그 경로, 재현 순서, 검토한 파일/라인"></textarea>
+          <div class="ux-field-pair"><div><label for="ux-environment">확인 환경 <span>필수</span></label><select id="ux-environment"><option value="">선택하세요</option><option value="browser">데스크톱 브라우저</option><option value="emulation">viewport / touch 에뮬</option><option value="physical">물리 기기</option><option value="source">소스 검토만</option></select></div><div><label for="ux-severity">문제 분류 <span>필수</span></label><select id="ux-severity"><option value="">선택하세요</option><option value="blocking">진행 불가</option><option value="major">주요 불편</option><option value="minor">가독성 / 조작성</option><option value="observation">관찰 · 판단 미확인</option></select></div></div>
+          <label for="ux-environment-details">환경 상세</label><input id="ux-environment-details" maxlength="1000" placeholder="빌드/HEAD, 브라우저, 화면 크기, 사용한 입력">
+          <label for="ux-next-change">다음 한 가지 수정 <span>필수</span></label><textarea id="ux-next-change" rows="3" maxlength="3000" placeholder="관측한 문제 한 가지를 해결할 구체적인 변경"></textarea>
+          <label for="ux-reviewer">검토자 의견</label><textarea id="ux-reviewer" rows="2" maxlength="3000" placeholder="누가 어떤 근거를 보고 판단했는지 · 비워두면 미검토"></textarea>
+          <label for="ux-extra-acceptance">추가 수락 기준</label><textarea id="ux-extra-acceptance" rows="2" maxlength="3000" placeholder="이 문제의 실제 재현/수정 확인 조건"></textarea>
+          <div class="ux-acceptance"><h3>기본 수락 기준</h3><ul id="ux-acceptance"></ul></div>
+        </div>
+        <div class="ux-output"><h3>다음 작업 프롬프트</h3><p class="small-note">각 필수 항목을 작성하면 지시를 구성합니다. 근거의 사실 여부와 수정 결과는 사람이 검토합니다.</p><label class="sr-only" for="ux-prompt">다음 작업 프롬프트 원문</label><textarea id="ux-prompt" rows="22" readonly spellcheck="false" placeholder="필수 항목을 작성하세요."></textarea><div class="ux-actions"><button id="ux-copy" type="button" disabled>프롬프트 복사</button><button id="ux-export" type="button" disabled>TXT 내려받기</button></div><p id="ux-status" role="status" aria-live="polite"></p><p class="small-note">평가 내용은 이 탭의 메모리에만 남습니다. 새로고침/종료 전에 복사하거나 내려받으세요. 파일·게임 저장·가격·배포는 변경하지 않습니다.</p></div>
+      </div>
+      <div class="board-footer"><p>템플릿: <code>tools/studio/ux-prompts.json</code> · 실제 입력 검수가 끝난 뒤 관측과 다음 수정 지시를 갱신합니다.</p></div>
+    </section>
+    <section id="story" class="panel" aria-label="스토리보드"><div class="section-heading"><div><p class="eyebrow">콘텐츠 선택에서 첫 전투까지</p><h2>첫 90초의 시나리오</h2></div><span class="pill">기획 초안 · 구현 증거 아님</span></div><p id="story-intent" class="section-description"></p><div id="story-shots" class="story-shots"></div><div class="board-footer"><p>장면·목표·에셋 참조·플레이 확인: <code>tools/studio/storyboard.json</code></p></div></section>
   </main>
   <footer>Blade Surge 제작 라이브러리<span>같은 에셋과 같은 장면으로 함께 검토합니다.</span></footer>
 </body>

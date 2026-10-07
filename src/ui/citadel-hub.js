@@ -134,7 +134,11 @@ export class CitadelHubUI {
     return false;
   }
   openDestination(spot, trigger = this.interactButton) {
-    const def = DUNGEONS.find(d => d.id === spot.route); if (!def || this.opened || this.busy) return false;
+    const canonical = CITADEL_HUB_HOTSPOTS.find(item => item.id === spot?.id && item.kind === 'dungeon');
+    const def = canonical && DUNGEONS.find(d => d.id === canonical.route);
+    if (!def || this.opened || this.busy || this.app.mode !== 'lobby' || this.app.stageStarting) return false;
+    spot = canonical;
+    this.app.citadel?.clearInput?.();
     this.trigger = trigger; this.returnFocus = trigger?.isConnected ? trigger : document.activeElement;
     this.dialogSpot = spot; this.selectedDepth = 'standard'; this.opened = true;
     this.renderDestination(def, spot);
@@ -171,17 +175,16 @@ export class CitadelHubUI {
     goalOpen.disabled = typeof this.app.battle?.chronicle?.open !== 'function';
     goalOpen.addEventListener('click', () => {
       if (this.busy || this.app.stageStarting || !this.opened || this.dialogSpot !== spot) return;
-      const chronicle = this.app.battle.chronicle, trigger = this.interactButton;
+      const chronicle = this.app.battle.chronicle, trigger = this.returnFocus;
       this.close(); this.journalFocusCleanup?.();
       const restoreHubFocus = () => {
         // A deferred prior close can arrive after another journal visit opens.
         if (chronicle.dialog.open) return;
         this.journalFocusCleanup?.(); this.journalFocusCleanup = null;
-        if (!this.visible || this.app.mode !== 'lobby' || this.busy || this.app.stageStarting || this.opened || this.dialog.open) return;
-        const canWalk = this.app.canWalkHub?.() ?? !document.querySelector('dialog[open], #modal.show');
-        if (!canWalk) return;
-        this.update(this.app.hubMovement?.nearest ?? this.nearest, { blocked: false });
-        if (trigger.isConnected && !trigger.disabled) trigger.focus({ preventScroll: true });
+        this.app.syncHub?.();
+        if (!this.canReturnFocus(trigger)) return;
+        this.update(this.app.hubMovement?.nearest ?? this.nearest, { blocked: !this.app.canWalkHub?.() });
+        trigger.focus({ preventScroll: true });
       };
       chronicle.dialog.addEventListener('close', restoreHubFocus);
       this.journalFocusCleanup = () => chronicle.dialog.removeEventListener('close', restoreHubFocus);
@@ -293,10 +296,17 @@ export class CitadelHubUI {
     this.opened = false; this.dialogSpot = null; this.reviewedPreparation = null;
     this.app.hubControls?.clear(); this.app.citadelControls?.clear();
     if (this.dialog.open) this.dialog.close();
+    this.app.syncHub?.();
     const canWalk = this.visible && this.app.mode === 'lobby' && !this.app.stageStarting &&
       (this.app.canWalkHub?.() ?? !document.querySelector('dialog[open], #modal.show'));
     this.update(this.nearest, { blocked: !canWalk });
-    if (canWalk && !this.busy && this.returnFocus?.isConnected && !this.returnFocus.disabled) this.returnFocus.focus({ preventScroll: true });
+    if (this.canReturnFocus(this.returnFocus)) this.returnFocus.focus({ preventScroll: true });
+  }
+  canReturnFocus(trigger) {
+    if (this.app.mode !== 'lobby' || this.app.meta?.tab !== 'home' || !this.app.lobbyVisible || this.busy ||
+      this.app.stageStarting || this.opened || this.dialog.open || document.querySelector('dialog[open], #modal.show')) return false;
+    if (!trigger?.isConnected || trigger.disabled || trigger.closest('[hidden], [inert]')) return false;
+    return trigger.getClientRects().length > 0;
   }
   clear() { this.nearest = null; this.close(); this.touchKnob.style.transform = 'translate(-50%, -50%)'; }
   destroy() {

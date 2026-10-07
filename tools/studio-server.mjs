@@ -16,7 +16,7 @@ const portValue = process.argv.find(value => value.startsWith('--port='));
 const port = portValue ? Number(portValue.slice(7)) : 4310;
 if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('포트는 1–65535 정수여야 합니다.');
 const startedAt = new Date().toISOString();
-const uiFiles = new Map(['index.html', 'app.js', 'style.css'].map(file => [`/${file}`, path.join(studioRoot, file)]));
+const uiFiles = new Map(['index.html', 'app.js', 'ux-prompt.js', 'style.css'].map(file => [`/${file}`, path.join(studioRoot, file)]));
 uiFiles.set('/', path.join(studioRoot, 'index.html'));
 const vendorFiles = new Map([
   ['three.module.js', 'build/three.module.js'],
@@ -199,8 +199,8 @@ const server = http.createServer(async (request, response) => {
     if (route === '/api/catalog') return send(200, JSON.stringify(await catalog()));
     if (route === '/api/status') return send(200, JSON.stringify(await repositoryStatus()));
     if (route === '/api/audio') return send(200, JSON.stringify(await audioCatalog()));
-    if (route === '/api/board' || route === '/api/storyboard') {
-      const filename = route === '/api/board' ? 'board.json' : 'storyboard.json';
+    if (route === '/api/board' || route === '/api/storyboard' || route === '/api/ux-prompts') {
+      const filename = route === '/api/board' ? 'board.json' : route === '/api/storyboard' ? 'storyboard.json' : 'ux-prompts.json';
       return send(200, JSON.stringify(JSON.parse(await readFile(await regularFile(path.join(studioRoot, filename), studioRoot), 'utf8'))));
     }
     let file, boundary;

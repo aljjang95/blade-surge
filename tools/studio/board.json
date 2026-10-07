@@ -1,8 +1,8 @@
 {
   "schema": "blade-surge-production-board/v1",
-  "updatedAt": "2026-10-07T13:05:40Z",
+  "updatedAt": "2026-10-07T20:38:00Z",
   "targetRelease": "2026-10-09",
-  "note": "이번 작업의 소유 범위와 미확인 조건. 구현/검증 근거가 생길 때 해당 부서만 갱신한다.",
+  "note": "과거 부서의 검증 근거는 해당 이전 후보 기록이다. 이번 선택형 홈·던전 포털·상점 UX 후보에 PASS를 옮기지 않는다. 현재 Studio UX 템플릿은 작업 지시 도구이며 실제 플레이 검수와 별도다.",
   "departments": [
     {
       "id": "integration",
@@ -141,7 +141,7 @@
     {
       "id": "design",
       "name": "기획 · 스토리보드 · Studio",
-      "owner": "requirements_design",
+      "owner": "ux_studio",
       "status": "verified",
       "owns": [
         "tools/studio/",
@@ -149,20 +149,24 @@
         "docs/BLADESURGE_STUDIO.md"
       ],
       "tasks": [
-        "과거 교정과 2일 출시 우선순위 연결",
-        "실제 에셋·부서 소유권·차단 상태 한 화면",
-        "첫 90초 장면/행동/확인 기준을 재사용 템플릿으로"
+        "선택형 홈·선택적 마을 체험의 시나리오 템플릿",
+        "4개 화면의 근거·문제 분류·다음 한 가지 수정 프롬프트",
+        "브라우저 메모리 평가와 복사/다운로드, 읽기 전용 서버 계약 보존"
       ],
-      "nextCheck": "게임 최종 시야 결과를 보드와 장면 템플릿에 연결",
+      "nextCheck": "입력한 근거를 담당 검토자가 확인하고 다음 한 가지 변경을 실제 화면·입력으로 재검수",
       "blockers": [
-        "기획 장면의 주관 체감은 사용자 확인 필요"
+        "입력한 근거의 사실 여부와 수정 결과는 도구가 자동 판정하지 않음",
+        "실기기 입력·GPU·발열·청감 검증은 별도"
       ],
       "evidence": [
         "_autopipe/lobby-identity.md",
         "docs/EXPERIENCE_CEILING_V2.md",
         "tools/studio/storyboard.json",
         "실제 GLB134개·MP312개·6부서·6장면,5초 보드 갱신·390px 화면,반복 리그 texture7 고정",
-        "/workspace/scratch/bladesurge-studio-qa/final-report.json: 실제 브라우저·HTTP 경계 확인"
+        "/workspace/scratch/bladesurge-studio-qa/final-report.json: 실제 브라우저·HTTP 경계 확인",
+        "tools/studio/ux-prompts.json: 선택형 홈/출격 준비/골드 보급/재화·결제 상점 템플릿; 구현·PASS 증거 아님",
+        "test/studio-server.test.ts: 고정 UX 읽기 경로/HEAD 및 method·Host·경로·일반 파일·execute 접근 차단 2 tests / 25 assertions 통과",
+        "/workspace/scratch/bladesurge-selection-20261007/native-studio-v1/report.json: 실제 390×844/960×720 입력,4템플릿·탭/5초갱신 초안 유지,필수값 gating·TXT 일치·복사 실패 fallback·reload 초기화,12단계 PASS; Chromium SwiftShader,외부 font CSS 대체,clipboard 거부는 명시 API 경계 재현,물리 기기/실제 OS 클립보드 인증 아님"
       ]
     }
   ],

@@ -319,6 +319,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     update(dt, state = {}) {
       if (disposed) return;
       const { nearestId: nextId, nearest, reducedMotion = false, playerPosition } = state;
+      gateDesigns.update(dt, reducedMotion);
       canopySightline.setTarget(playerPosition);
       if (camera) canopySightline.update(camera.position); else canopySightline.disable();
       if (Object.hasOwn(state, 'nearestId') || Object.hasOwn(state, 'nearest')) this.highlightHotspot(nextId ?? nearest?.id ?? null);

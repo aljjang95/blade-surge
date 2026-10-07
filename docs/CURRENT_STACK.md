@@ -10,6 +10,8 @@ Worker는 ASSETS·AI·DIALOGUE_BUDGET·PARTIES 바인딩을 사용한다. 동행
 
 ## 최신 제품 계약
 
+`docs/selection-first-lobby.md`에 따라 기본 로비는 콘텐츠 선택 UI이며, 마을 이동은 ‘마을 둘러보기’에서 선택적으로 사용한다. 던전 카드와 물리 포털은 같은 기존 출격 준비·입장·저장·환급·정산 서비스를 사용한다. Studio의 UX 개선 템플릿은 실제 근거를 입력해 다음 작업 지시를 작성하는 로컬 도구다.
+
 `docs/citadel-departure-preparation.md`의 물리 입구 standard/deep 선택·에너지/보상·goal·journal 복귀 계약과 `docs/manual-combo-feedback.md`의 실제 Player 기반 콤보 표시·pause/AUTO/lifecycle·미디어 오류 분류 경계를 이어받는다. 기존 기록의 browser·실기기·공개 배포 한계를 유지하며 과거 검증을 이번 병합 소스의 새 검증으로 재사용하지 않는다.
 
 ## 실행과 검증

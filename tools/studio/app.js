@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createUxPrompt, promptReadiness } from './ux-prompt.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -12,6 +13,9 @@ let assets = [], selected = null, currentModel = null, mixer = null, animations 
 let renderer, scene, camera, controls, previewReady = false, needsRender = true, activePanel = 'library';
 let lastFrame = performance.now(), lastState = '';
 let lastAudio = '';
+let uxLibrary = null, lastUx = '', currentUxId = '';
+const uxDrafts = new Map();
+const uxFields = { scenario: 'ux-scenario', observation: 'ux-observation', evidence: 'ux-evidence', environment: 'ux-environment', severity: 'ux-severity', environmentDetails: 'ux-environment-details', nextChange: 'ux-next-change', reviewer: 'ux-reviewer', extraAcceptance: 'ux-extra-acceptance' };
 
 function node(tag, text, className) {
   const element = document.createElement(tag);
@@ -203,10 +207,50 @@ function renderStory(storyboard) {
   }
 }
 
+function saveUxDraft() {
+  if (!currentUxId) return;
+  uxDrafts.set(currentUxId, Object.fromEntries(Object.entries(uxFields).map(([key, id]) => [key, $(id).value])));
+}
+
+function updateUxPrompt() {
+  saveUxDraft();
+  const template = uxLibrary?.templates.find(value => value.id === currentUxId);
+  if (!template) return;
+  const draft = uxDrafts.get(currentUxId), missing = promptReadiness(draft);
+  $('ux-copy').disabled = $('ux-export').disabled = missing.length > 0;
+  $('ux-prompt').value = missing.length ? '' : createUxPrompt(template, uxLibrary.constraints, draft);
+  $('ux-status').textContent = missing.length ? `작성 필요 · ${missing.join(', ')}` : '검토용 지시를 구성했습니다. 근거와 실제 수정 결과는 미검증입니다.';
+}
+
+function selectUxTemplate(id) {
+  const template = uxLibrary?.templates.find(value => value.id === id);
+  if (!template) return;
+  saveUxDraft(); currentUxId = id;
+  const draft = uxDrafts.get(id) || { scenario: template.scenario };
+  for (const [key, fieldId] of Object.entries(uxFields)) $(fieldId).value = draft[key] || '';
+  $('ux-template').value = id;
+  $('ux-title').textContent = `${template.name} · ${stateLabels[template.status] || template.status}`;
+  $('ux-objective').textContent = template.objective;
+  $('ux-owners').textContent = `소유 범위 · ${template.owners.join(' / ')}`;
+  $('ux-acceptance').replaceChildren(...template.acceptance.map(value => node('li', value)));
+  updateUxPrompt();
+}
+
+function renderUx(library) {
+  saveUxDraft(); uxLibrary = library;
+  $('ux-intent').textContent = library.intent;
+  $('ux-template').replaceChildren(...library.templates.map(template => {
+    const option = node('option', template.name); option.value = template.id; return option;
+  }));
+  selectUxTemplate(library.templates.some(template => template.id === currentUxId) ? currentUxId : library.templates[0]?.id);
+}
+
 async function refresh() {
   $('refresh').disabled = true;
   try {
-    const [catalog, board, storyboard, status, audio] = await Promise.all(['/api/catalog', '/api/board', '/api/storyboard', '/api/status', '/api/audio'].map(json));
+    const [catalog, board, storyboard, status, audio, ux] = await Promise.all(['/api/catalog', '/api/board', '/api/storyboard', '/api/status', '/api/audio', '/api/ux-prompts'].map(json));
+    const uxSignature = JSON.stringify(ux);
+    if (lastUx !== uxSignature) { renderUx(ux); lastUx = uxSignature; }
     const audioSignature = JSON.stringify(audio.assets);
     if (lastAudio !== audioSignature) { renderAudio(audio); lastAudio = audioSignature; }
     const nextState = JSON.stringify([catalog.observedAt, board, storyboard]);
@@ -250,6 +294,22 @@ $('capture').addEventListener('click', () => {
   if (!renderer || !currentModel) return;
   renderer.render(scene, camera);
   const link = node('a'); link.download = `${selected.name}-studio-preview.png`; link.href = renderer.domElement.toDataURL('image/png'); link.click();
+});
+$('ux-template').addEventListener('change', () => selectUxTemplate($('ux-template').value));
+for (const id of Object.values(uxFields)) $(id).addEventListener('input', updateUxPrompt);
+$('ux-copy').addEventListener('click', async () => {
+  const prompt = $('ux-prompt').value;
+  if (!prompt) return;
+  try { await navigator.clipboard.writeText(prompt); $('ux-status').textContent = '프롬프트를 복사했습니다. 수정 결과는 아직 미검증입니다.'; }
+  catch { $('ux-prompt').focus(); $('ux-prompt').select(); $('ux-status').textContent = '클립보드 권한을 사용할 수 없어 원문을 선택했습니다. 직접 복사하거나 TXT를 내려받으세요.'; }
+});
+$('ux-export').addEventListener('click', () => {
+  const prompt = $('ux-prompt').value;
+  if (!prompt) return;
+  const url = URL.createObjectURL(new Blob([prompt], { type: 'text/plain;charset=utf-8' }));
+  const link = node('a'); link.href = url; link.download = `bladesurge-ux-${currentUxId}.txt`;
+  document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(url), 1000);
+  $('ux-status').textContent = 'TXT 내려받기를 요청했습니다. 게임/서버 파일은 변경하지 않았습니다.';
 });
 $('refresh').addEventListener('click', refresh);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { needsRender = true; refresh(); } else $('sound-player').pause(); });
