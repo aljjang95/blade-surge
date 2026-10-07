@@ -32,7 +32,7 @@ blender --background --python-exit-code 1 --python tools/art/build-environment-k
 python3 tools/audio/build-combat-library.py
 ```
 
-[Studio 사용/구조](BLADESURGE_STUDIO.md), [전투·리깅 검수](combat-studio-v1.md), [환경 팩](../public/models/environment/studio-kit/README.md)에 구현과 재개 방법이 있다. Blender 편집 원본은 `/workspace/scratch/bladesurge-environment-kit/studio-environment-v1.blend`에, 재생성 소스는 저장소에 보관한다.
+[Studio 사용/구조](BLADESURGE_STUDIO.md), [전투·리깅 검수](combat-studio-v1.md), [환경 팩](../public/models/environment/studio-kit/README.md), [모바일 에뮬 검증](MOBILE_EMULATION_QA.md), [Android OS 에뮬 환경](ANDROID_EMULATOR.md)에 구현과 재개 방법이 있다. Blender 편집 원본은 `/workspace/scratch/bladesurge-environment-kit/studio-environment-v1.blend`에, 재생성 소스는 저장소에 보관한다.
 
 ## 이번 검증
 
@@ -44,4 +44,4 @@ python3 tools/audio/build-combat-library.py
 - 같은 최종 빌드의 고정880×400 화면에서 자연 clock 안정화 후 실제 짧은Space tap,down/up 홀드,shader draw6/alpha4·GL link,포기 receipt/로비 pending 정리4단계를 별도로 통과했다. `/workspace/scratch/bladesurge-qa/fixed-viewport-combat-1223/report.json`. game/HTTP 오류0,로비MP3 media 요청취소1은 별도 원본으로 남겼다. 첫 화면 변경 직후 timeout 원인을 이 재시도만으로 확정하거나 제품 코드가 수리됐다고 주장하지 않는다.
 - Studio는 실제 구조·6kit/12audio 해시·GLB/클립·12MP3decode/play·보드 갱신·390px 세 탭·HTTP 경계를 확인했다. 반복 리그 교체의 live texture는7로 유지했다. `/workspace/scratch/bladesurge-studio-qa/final-report.json`.
 
-원본의 Indexed/non-indexed 병합 실패, Studio 압축 리그 CSP 실패·모바일 넘침, 나무/안내창 가림 기록을 보존하고 수정 후 검사를 분리했다. 현재 단계는 구현·검증 후보이며 공개 서비스 배포가 아니다. 출시 전 실제 휴대전화 GPU·멀티터치·발열, 스피커/이어폰 믹스와 사용자의 화면/타격 체감 확인이 남는다.
+원본의 Indexed/non-indexed 병합 실패, Studio 압축 리그 CSP 실패·모바일 넘침, 나무/안내창 가림 기록을 보존하고 수정 후 검사를 분리했다. 위 검사는 통합 후보에서 수행한 기록이다. 사용자가 에뮬 환경·머지·배포를 요청하여 후속 검증과 정식 배포를 진행한다. 최종 상태는 [PR #131](https://github.com/aljjang95/blade-surge/pull/131)과 공개 서비스의 `/version.json`, 배포 영수증으로 확인한다. 실제 휴대전화 GPU·발열, 스피커/이어폰 믹스와 사용자의 화면/타격 체감은 클라우드 에뮬 검증의 범위에 포함되지 않는다.

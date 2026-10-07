@@ -12,6 +12,7 @@
     "check": "bun run typecheck && bun test && bun run build",
     "preview": "vite preview --host",
     "studio": "node tools/studio-server.mjs",
+    "qa:mobile": "node tools/mobile-qa.mjs",
     "deploy": "node tools/deploy.mjs",
     "pc:bridge": "node tools/pc-bridge.mjs",
     "metrics": "node tools/metrics.mjs"
