@@ -34,7 +34,8 @@ class El {
   querySelector(selector: string) { return this.querySelectorAll(selector)[0] || null; }
   setAttribute(k: string, v: string) { this.attrs[k] = v; }
   addEventListener(k: string, fn: Function) { this.events[k] = fn; }
-  focus() { this.focused = true; }
+  focus() { this.focused = true; Object.assign(document, { activeElement: this }); }
+  blur() { this.focused = false; if (document.activeElement === (this as any)) Object.assign(document, { activeElement: null }); }
   click() { if (!this.disabled) { this.onclick?.(); this.events.click?.(); } }
 }
 
@@ -94,6 +95,46 @@ function fixture(win = true, lootCount = 1) {
   const action = (kind: string) => get('result-growth').all().find(n => n.dataset.growth === kind)!;
   return { ui, app, eco, save, battle, result, calls, box, footer, action, flushTimers, settlements: () => settlements };
 }
+
+test('마우스로 AUTO를 켜고 끄면 키보드 전투 입력을 위해 버튼 포커스를 해제한다', () => {
+  const f = fixture(), button = get('btn-auto');
+  f.battle.player = { auto: false };
+  const saved: boolean[] = [];
+  f.app.journey = { setAuto: (on: boolean) => { saved.push(on); return { ok: true }; } };
+  for (const on of [true, false]) {
+    button.focus(); button.events.click({ detail: 1, currentTarget: button });
+    expect(document.activeElement).toBeNull();
+    expect(f.battle.player.auto).toBe(on); expect(f.app._auto).toBe(on);
+    expect(button.classList.contains('on')).toBe(on);
+  }
+  expect(saved).toEqual([true, false]);
+});
+
+test('키보드 AUTO 조작은 버튼 포커스를 유지한다', () => {
+  const f = fixture(), button = get('btn-auto');
+  f.battle.player = { auto: false };
+  button.focus(); button.events.click({ detail: 0, currentTarget: button });
+  expect(document.activeElement).toBe(button as any);
+  expect(f.battle.player.auto).toBe(true);
+});
+
+test('AUTO 저장 실패는 전투 설정과 버튼 포커스를 보존한다', () => {
+  const f = fixture(), button = get('btn-auto');
+  f.battle.player = { auto: false }; f.app._auto = false;
+  f.app.journey = { setAuto: () => ({ ok: false, error: '저장 실패' }) };
+  button.focus(); button.events.click({ detail: 1, currentTarget: button });
+  expect(document.activeElement).toBe(button as any);
+  expect(f.battle.player.auto).toBe(false); expect(f.app._auto).toBe(false);
+  expect(f.calls).toContain('toast:저장 실패');
+});
+
+test('AUTO 전환 중 다른 컨트롤로 옮긴 포커스를 빼앗지 않는다', () => {
+  const f = fixture(), button = get('btn-auto'), other = get('other-control');
+  f.battle.player = { auto: false };
+  f.app.journey = { setAuto: () => { other.focus(); return { ok: true }; } };
+  button.focus(); button.events.click({ detail: 1, currentTarget: button });
+  expect(document.activeElement).toBe(other as any);
+});
 
 test('real defeat chain exposes a later chronicle save failure and retries without duplicate history', () => {
   const f = fixture(false);
