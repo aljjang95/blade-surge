@@ -12,7 +12,7 @@
 .oath-visual .citadel-hub-destination-shell { max-height: calc(100dvh - 34px); }
 .oath-visual .citadel-hub-destination-scroll { scrollbar-color: #a59776 #f6efdf; }
 .oath-visual .citadel-hub-destination-heading { display: block; position: relative; padding: 0; border: 0; background: none; }
-.oath-visual .citadel-hub-destination-art { height: 220px; border: 0; background-position: center 52%; background-color: #dce8d2; }
+.oath-visual .citadel-hub-destination-art { height: 164px; border: 0; background-position: center 52%; background-color: #dce8d2; }
 .oath-visual .citadel-hub-destination-art::after { display: none; }
 .oath-visual .citadel-hub-destination-art > span { left: 24px; bottom: 18px; padding: 6px 10px; color: #f6efdf; background: #153b32d9; border-radius: 3px; font-size: 9px; letter-spacing: .16em; }
 .oath-visual .citadel-hub-destination-identity { position: absolute; left: 24px; top: 18px; max-width: calc(100% - 108px); padding: 12px 16px; background: #f8f1e5eb; border: 1px solid #c3ae7c85; border-radius: 3px; }
@@ -42,7 +42,7 @@
 .oath-visual .citadel-hub-preparation-section { margin-top: 14px; }
 .oath-visual .citadel-hub-rewards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 0; margin: 0; list-style: none; }
 .oath-visual .citadel-hub-rewards li { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 4px; border: 1px solid #bca67666; border-radius: 3px; text-align: center; min-width: 0; }
-.oath-visual .citadel-hub-rewards img { width: 44px; height: 44px; object-fit: contain; }
+.oath-visual .citadel-hub-rewards img { width: 44px; height: 44px; object-fit: contain; border-radius: 50%; border: 1px solid #b8a575; }
 .oath-visual .citadel-hub-rewards span { font-size: 10px; color: #4e604d; }
 .oath-visual .citadel-hub-rewards b { font-size: 18px; font-family: Georgia, serif; color: #1d4136; }
 .oath-visual .citadel-hub-loadout { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 10px; }
@@ -51,7 +51,7 @@
 .oath-visual .citadel-hub-hero p { font-size: 10px; line-height: 1.5; margin-top: 4px; color: #274938; }
 .oath-visual .citadel-hub-potions { gap: 6px; }
 .oath-visual .citadel-hub-potions li { padding: 6px 4px; border: 1px solid #bca67666; border-radius: 3px; background: none; text-align: center; }
-.oath-visual .citadel-hub-potions img { width: 38px; height: 38px; object-fit: contain; }
+.oath-visual .citadel-hub-potions img { width: 38px; height: 38px; object-fit: contain; border-radius: 50%; border: 1px solid #b8a575; }
 .oath-visual .citadel-hub-potions li > div { gap: 3px; }
 .oath-visual .citadel-hub-potions strong { font-size: 10px; color: #3b563f; }
 .oath-visual .citadel-hub-potions li > div > span { justify-content: center; }
@@ -84,7 +84,7 @@
 @media (max-width: 600px) {
   .oath-visual .citadel-hub-dialog { width: calc(100vw - 16px); max-height: calc(100dvh - 16px); border-radius: 9px; }
   .oath-visual .citadel-hub-destination-shell { max-height: calc(100dvh - 18px); }
-  .oath-visual .citadel-hub-destination-art { height: 205px; }
+  .oath-visual .citadel-hub-destination-art { height: 180px; }
   .oath-visual .citadel-hub-destination-identity { left: 14px; top: 14px; padding: 10px; }
   .oath-visual .citadel-hub-destination-heading h2 { font-size: 28px; }
   .oath-visual .citadel-hub-destination-art > span { left: 14px; bottom: 12px; }
