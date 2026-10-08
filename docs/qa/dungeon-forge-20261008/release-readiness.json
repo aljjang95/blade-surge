@@ -1,0 +1,34 @@
+{
+  "checkedAt": "2026-10-08T14:03:59Z",
+  "repository": "aljjang95/blade-surge",
+  "target": "https://blade.tllhouse.com",
+  "releaseStatus": "BLOCKED",
+  "reasons": [
+    "Official Remote Desktop Commander list_devices returned all three registered devices Offline; existing PC authentication bridge cannot execute.",
+    "No apex-vault executable is available in the current cloud command path.",
+    "The local release controller's public version.json read timed out during this session."
+  ],
+  "remoteDeviceSummary": {
+    "online": 0,
+    "offline": 3,
+    "mostRecentLastSeenHours": 488
+  },
+  "github": {
+    "repositoryAccess": "admin/push/pull available",
+    "trackedActionsWorkflows": 0,
+    "baseCommitStatuses": 0,
+    "baseCommitPullRequestWorkflowRuns": 0,
+    "baseSha": "678caf52a19ffda2240bfd7882278c4c0b77c49d"
+  },
+  "resumption": {
+    "precondition": "Authorized existing PC online, same reviewed clean merged HEAD in the bound canonical checkout, and release checks passed.",
+    "doctor": "node tools/pc-bridge.mjs doctor --route=wrangler --expected-head=<FULL_MERGED_SHA>",
+    "check": "node tools/pc-bridge.mjs check --route=local --expected-head=<FULL_MERGED_SHA>",
+    "deploy": "node tools/pc-bridge.mjs deploy --route=wrangler --expected-head=<FULL_MERGED_SHA>",
+    "uncertainResult": "node tools/pc-bridge.mjs reconcile --route=wrangler --expected-head=<SAME_FULL_MERGED_SHA>",
+    "existingVaultAlternative": "apex-vault run cloudflare -- bun run deploy",
+    "postdeploy": "Verify receipt exact SHA, sole 100% version and owner tag, then public version.json and core gameplay."
+  },
+  "safety": "No deployment/lease mutation, no raw Wrangler deployment, no credential/profile/key extraction or authentication fallback was attempted.",
+  "previousCheckedAt": "2026-10-08T13:37:32Z"
+}

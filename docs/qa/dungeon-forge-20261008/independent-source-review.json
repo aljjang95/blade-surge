@@ -1,0 +1,305 @@
+{
+  "schema": 1,
+  "createdAt": "2026-10-08T13:49:07.079Z",
+  "reviewer": "independent dungeon_map agent",
+  "status": "NO_REMAINING_SOURCE_BLOCKER_FOUND",
+  "scope": "Independent source review and direct GLB geometry fitting inspection; not browser visual approval or release approval.",
+  "reviewedFiles": [
+    {
+      "path": "src/engine/forged-weapons.js",
+      "sha256": "40607f711885609e3c2eb63d66070800fee8a5840d9dbe6079d77e99ccab7b01"
+    },
+    {
+      "path": "src/engine/assets.js",
+      "sha256": "c073864fc71adeb22d91e4afbb7af6f27cc3c845714d18e181f071a5b78fd3db"
+    },
+    {
+      "path": "src/engine/encounter-identity.js",
+      "sha256": "6833d0b0bfe4149fde9fa5e5298f9eb2ba6a221d425446627af518446d1627f5"
+    },
+    {
+      "path": "src/data/encounter-models.js",
+      "sha256": "b43330a06a8d6a5eb5e2f140f0b939cc8cc554ab2e94e7ce8828a3b9feb43bbb"
+    },
+    {
+      "path": "src/data/stages.js",
+      "sha256": "430c9369c57d83a75eed570e0be70d2c703dbbcb91af65110e8d460ca2978dd9"
+    },
+    {
+      "path": "src/engine/weapon-trail.js",
+      "sha256": "e41b79e8be72b8201af1b52c02e6e41d2dd20a2562e5a65fd4826062e7de4c39"
+    },
+    {
+      "path": "src/engine/fx.js",
+      "sha256": "b26e82416c80a0cd6cbc277639a2499d8541f3e257ccd0c988c4cd0d0c515b94"
+    },
+    {
+      "path": "tools/art/build-dungeon-forge-v2.py",
+      "sha256": "33014e41db7bd578d98a5a5335be734ddb46ca5dae8b15b8da9e06b130c45eab"
+    },
+    {
+      "path": "tools/art/compress-dungeon-forge.mjs",
+      "sha256": "110ef60c72852eccee83c40e5a8fea9b8d0639760913ad35eb18966109e4e0f8"
+    }
+  ],
+  "method": {
+    "runtime": "Bun 1.4.2 with Three.js r170 GLTFLoader and MeshoptDecoder",
+    "inputs": "Actual shipped heroModelPaths(hero).base and public/models/dungeon-forge-v2/forge-{form}-v2.glb for five heroes, eight forms, eleven nodes. Image references were stripped from in-memory GLB JSON only to load without DOM; nodes, geometry, transforms, skin data and indices remained unchanged.",
+    "steps": "Computed original weapon bounds in each weapon node local frame, fitted actual new geometry, measured nearest vertex distance to socket origin, main-axis extent error, and finite positions/normals. The before pass used the previous AABB-center fit; after pass used the corrected form-aware origin-preserving fit.",
+    "performedEarlier": true,
+    "additionalTestRerunForReport": false,
+    "distanceMeaning": "Nearest-vertex distance in weapon node local model units; a diagnostic for grip displacement, not a measured distance from an animated rendered hand surface."
+  },
+  "findings": [
+    {
+      "id": "WEAPON_GRIP_AABB_CENTER",
+      "initialStatus": "BLOCKER",
+      "status": "RESOLVED_SOURCE_CHECK",
+      "files": [
+        "src/engine/forged-weapons.js",
+        "tools/art/build-dungeon-forge-v2.py"
+      ],
+      "problem": "AABB-center translation moved asymmetric axe and bow handles away from socket origin. One-handed axe was authored with blade +X while original blade points -X.",
+      "evidence": "Barbarian one-handed axe original local bounds x[-0.588885543084,0.125536093971]. Prior fitting displaced authored grip origin by x=-0.417066199072; nearest fitted vertex was 0.371175703902 from socket origin. Bow prior origin x=-0.285469688475.",
+      "correction": "fitForgedWeapon now receives the explicit form, keeps grip origin at zero without centroid translation, rotates axe by PI around Y (preserving winding), rotates bow onto Z, and fits positive/negative longitudinal extents relative to zero.",
+      "verification": "Actual 11-node geometry inspection: all positions/normals finite, max main-axis extent error 5.832721328147272e-8. Axe nearest vertex became 0.066084695557; bow 0.050441204866; staff 0.061460997785. Actual rendered hand/attack pose remains a separate check."
+    }
+  ],
+  "nodeChecks": [
+    {
+      "hero": "Knight",
+      "node": "1H_Sword",
+      "form": "sword",
+      "axis": "y",
+      "priorGripOffset": [
+        -7.229045002055123e-7,
+        -0.08875543384846973,
+        -0.01883480160702894
+      ],
+      "fixedGripTranslation": [
+        0,
+        0,
+        0
+      ],
+      "priorNearestVertex": 0.06265640503071235,
+      "fixedNearestVertex": 0.07401445297067757,
+      "axisExtentError": 5.623939980381465e-8,
+      "positionsAndNormalsFinite": true
+    },
+    {
+      "hero": "Knight",
+      "node": "2H_Sword",
+      "form": "greatsword",
+      "axis": "y",
+      "priorGripOffset": [
+        -7.22904499705912e-7,
+        -0.11684680142597814,
+        -0.01924225776569613
+      ],
+      "fixedGripTranslation": [
+        0,
+        0,
+        0
+      ],
+      "priorNearestVertex": 0.06762144109043373,
+      "fixedNearestVertex": 0.07604637171118536,
+      "axisExtentError": 5.832721328147272e-8,
+      "positionsAndNormalsFinite": true
+    },
+    {
+      "hero": "Knight",
+      "node": "1H_Sword_Offhand",
+      "form": "sword",
+      "axis": "y",
+      "priorGripOffset": [
+        -7.22904500038979e-7,
+        -0.08875543384846973,
+        -0.01883480160702905
+      ],
+      "fixedGripTranslation": [
+        0,
+        0,
+        0
+      ],
+      "priorNearestVertex": 0.06265640503071235,
+      "fixedNearestVertex": 0.07401445297067757,
+      "axisExtentError": 5.6239400025859254e-8,
+      "positionsAndNormalsFinite": true
+    },
+    {
+      "hero": "Barbarian",
+      "node": "1H_Axe",
+      "form": "axe",
+      "axis": "y",
+      "priorGripOffset": [
+        -0.41706619907169956,
+        0.031020614802634627,
+        -0.02339232160715818
+      ],
+      "fixedGripTranslation": [
+        0,
+        0,
+        0
+      ],
+      "priorNearestVertex": 0.37117570390208005,
+      "fixedNearestVertex": 0.06608469555685535,
+      "axisExtentError": 2.4569670520335762e-8,
+      "positionsAndNormalsFinite": true
+    },
+    {
+      "hero": "Barbarian",
+      "node": "2H_Axe",
+      "form": "greataxe",
+      "axis": "y",
+      "priorGripOffset": [
+        0.000032321238000176944,
+        -0.07263669906476461,
+        -0.027726156702325394
+      ],
+      "fixedGripTranslation": [
+        0,
+        0,
+        0
+      ],
+      "priorNearestVertex": 0.06074727863745938,
+      "fixedNearestVertex": 0.07839016477296336,
+      "axisExtentError": 4.969489775241698e-8,
+      "positionsAndNormalsFinite": true
+    },
+    {
+      "hero": "Barbarian",
+      "node": "1H_Axe_Offhand",
+      "form": "axe",
+      "axis": "y",
+      "priorGripOffset": [
+        -0.41706619907169984,
+        0.03102061480263424,
+        -0.023392321607157984
+      ],
+      "fixedGripTranslation": [
+        0,
+        0,
+        0
+      ],
+      "priorNearestVertex": 0.37117570390208005,
+      "fixedNearestVertex": 0.06608469555685535,
+      "axisExtentError": 2.4569669854201948e-8,
+      "positionsAndNormalsFinite": true
+    },
+    {
+      "hero": "Mage",
+      "node": "1H_Wand",
+      "form": "wand",
+      "axis": "y",
+      "priorGripOffset": [
+        -0.00002700600099969641,
+        -0.10347344808432002,
+        0.00002123717300001049
+      ],
+      "fixedGripTranslation": [
+        0,
+        0,
+        0
+      ],
+      "priorNearestVertex": 0.06500305260462275,
+      "fixedNearestVertex": 0.04653214675280853,
+      "axisExtentError": 2.4185000446763638e-8,
+      "positionsAndNormalsFinite": true
+    },
+    {
+      "hero": "Mage",
+      "node": "2H_Staff",
+      "form": "staff",
+      "axis": "y",
+      "priorGripOffset": [
+        0.04277857921850026,
+        -0.44884025170673925,
+        0.00002123717299995498
+      ],
+      "fixedGripTranslation": [
+        0,
+        0,
+        0
+      ],
+      "priorNearestVertex": 0.1627612115635875,
+      "fixedNearestVertex": 0.061460997785020344,
+      "axisExtentError": 1.334284061016433e-8,
+      "positionsAndNormalsFinite": true
+    },
+    {
+      "hero": "Rogue",
+      "node": "Knife",
+      "form": "dagger",
+      "axis": "y",
+      "priorGripOffset": [
+        0.009497742015999955,
+        0.03603950973486403,
+        0.00003122490750026574
+      ],
+      "fixedGripTranslation": [
+        0,
+        0,
+        0
+      ],
+      "priorNearestVertex": 0.05906123466033065,
+      "fixedNearestVertex": 0.06719604810931716,
+      "axisExtentError": 2.6280950526924585e-8,
+      "positionsAndNormalsFinite": true
+    },
+    {
+      "hero": "Rogue",
+      "node": "Knife_Offhand",
+      "form": "dagger",
+      "axis": "y",
+      "priorGripOffset": [
+        0.00949774201600001,
+        0.03603950973486386,
+        0.0000312249074997939
+      ],
+      "fixedGripTranslation": [
+        0,
+        0,
+        0
+      ],
+      "priorNearestVertex": 0.05906123466033065,
+      "fixedNearestVertex": 0.06719604810931716,
+      "axisExtentError": 2.6280950082835375e-8,
+      "positionsAndNormalsFinite": true
+    },
+    {
+      "hero": "Ranger",
+      "node": "Bow",
+      "form": "bow",
+      "axis": "z",
+      "priorGripOffset": [
+        -0.2854696884751319,
+        4.440892098500626e-16,
+        6.92903995513916e-7
+      ],
+      "fixedGripTranslation": [
+        0,
+        0,
+        0
+      ],
+      "priorNearestVertex": 0.1084492242719757,
+      "fixedNearestVertex": 0.05044120486638747,
+      "axisExtentError": 2.9802322387695312e-8,
+      "positionsAndNormalsFinite": true
+    }
+  ],
+  "otherReviewedBoundaries": [
+    "Weapon templates are awaited during hero model loading before prepareModel and cached by form.",
+    "Replaced weapon geometry/material disposal excludes buffers still referenced by the scene; shared textures remain cached.",
+    "Encounter aliases retain kaykit rig selection and base animation clips; added authored surfaces preserve vertex color and bind to existing bones.",
+    "Weapon trails retain fixed update buffers; FX removes/disposes expired trails and contact sprite materials.",
+    "Contact ring texture and sprite/material feature variants participate in existing FX preparation.",
+    "Blender generation and meshopt delivery scripts were reviewed against current asset contracts."
+  ],
+  "limitations": [
+    "No source review can establish visual quality, successful live deployment, physical mobile performance, or actual animated grip appearance.",
+    "Unit/typecheck PASS1785 was root-reported context, not a fresh independent full-suite run for this review.",
+    "New geometry and model instances consume Three UUID Math.random draws; map-specific seeded generation is preserved but global gameplay random sequence identity is not claimed. See work/dungeon-surface-rng/report.json.",
+    "QA4 dark rectangular floor patches were inspected in saved screenshots and tentatively match preexisting region-architecture threshold slabs. Runtime raycast attribution was requested but had not been received when this report was saved.",
+    "Source hashes are captured when this report is saved and identify the reviewed corrected files; no product files were edited during this review."
+  ]
+}

@@ -1,0 +1,486 @@
+{
+  "baselineSha": "678caf52a19ffda2240bfd7882278c4c0b77c49d",
+  "scope": "Arena.buildFloor only; actual shipped dungeon GLB mesh/node/transforms with material image references stripped for Node; no browser sky sprite (same exclusion on both sides); source code unmodified",
+  "cases": [
+    {
+      "theme": "garden",
+      "seed": 20260905,
+      "base": {
+        "calls": 6808,
+        "nextValue": 0.6402965439483523,
+        "instancedMeshes": 83,
+        "instances": 1808,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 6828,
+        "nextValue": 0.8682266287505627,
+        "instancedMeshes": 83,
+        "instances": 1360,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "garden",
+      "seed": 1,
+      "base": {
+        "calls": 6800,
+        "nextValue": 0.6281576910987496,
+        "instancedMeshes": 81,
+        "instances": 1840,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 6820,
+        "nextValue": 0.12182003445923328,
+        "instancedMeshes": 81,
+        "instances": 1387,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "garden",
+      "seed": 98211,
+      "base": {
+        "calls": 6800,
+        "nextValue": 0.6281576910987496,
+        "instancedMeshes": 81,
+        "instances": 1620,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 6820,
+        "nextValue": 0.12182003445923328,
+        "instancedMeshes": 81,
+        "instances": 1208,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "forge",
+      "seed": 20260905,
+      "base": {
+        "calls": 6880,
+        "nextValue": 0.9520742790773511,
+        "instancedMeshes": 67,
+        "instances": 1492,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 6900,
+        "nextValue": 0.13762382231652737,
+        "instancedMeshes": 67,
+        "instances": 1018,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "forge",
+      "seed": 1,
+      "base": {
+        "calls": 6976,
+        "nextValue": 0.37400291580706835,
+        "instancedMeshes": 77,
+        "instances": 1555,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 6996,
+        "nextValue": 0.2122208159416914,
+        "instancedMeshes": 77,
+        "instances": 1093,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "forge",
+      "seed": 98211,
+      "base": {
+        "calls": 6980,
+        "nextValue": 0.528774032369256,
+        "instancedMeshes": 86,
+        "instances": 1549,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 7000,
+        "nextValue": 0.059426854364573956,
+        "instancedMeshes": 86,
+        "instances": 1096,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "frost",
+      "seed": 20260905,
+      "base": {
+        "calls": 16080,
+        "nextValue": 0.6674834797158837,
+        "instancedMeshes": 103,
+        "instances": 1601,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 16100,
+        "nextValue": 0.12146939523518085,
+        "instancedMeshes": 103,
+        "instances": 1254,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "frost",
+      "seed": 1,
+      "base": {
+        "calls": 16036,
+        "nextValue": 0.7004898209124804,
+        "instancedMeshes": 102,
+        "instances": 1594,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 16056,
+        "nextValue": 0.22532654087990522,
+        "instancedMeshes": 102,
+        "instances": 1292,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "frost",
+      "seed": 98211,
+      "base": {
+        "calls": 16088,
+        "nextValue": 0.35699288081377745,
+        "instancedMeshes": 103,
+        "instances": 1587,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 16108,
+        "nextValue": 0.1662258468568325,
+        "instancedMeshes": 103,
+        "instances": 1248,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "tide",
+      "seed": 20260905,
+      "base": {
+        "calls": 6100,
+        "nextValue": 0.1725888829678297,
+        "instancedMeshes": 104,
+        "instances": 1916,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 6120,
+        "nextValue": 0.5034522404894233,
+        "instancedMeshes": 104,
+        "instances": 1424,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "tide",
+      "seed": 1,
+      "base": {
+        "calls": 6052,
+        "nextValue": 0.913227679207921,
+        "instancedMeshes": 100,
+        "instances": 1868,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 6072,
+        "nextValue": 0.5540397791191936,
+        "instancedMeshes": 100,
+        "instances": 1379,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "tide",
+      "seed": 98211,
+      "base": {
+        "calls": 6024,
+        "nextValue": 0.4796685641631484,
+        "instancedMeshes": 101,
+        "instances": 1812,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 6044,
+        "nextValue": 0.886903665959835,
+        "instancedMeshes": 101,
+        "instances": 1335,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "crown",
+      "seed": 20260905,
+      "base": {
+        "calls": 5332,
+        "nextValue": 0.3085514288395643,
+        "instancedMeshes": 124,
+        "instances": 1764,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 5352,
+        "nextValue": 0.7814254751428962,
+        "instancedMeshes": 124,
+        "instances": 1332,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "crown",
+      "seed": 1,
+      "base": {
+        "calls": 5308,
+        "nextValue": 0.03851485252380371,
+        "instancedMeshes": 118,
+        "instances": 1746,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 5328,
+        "nextValue": 0.028816253878176212,
+        "instancedMeshes": 118,
+        "instances": 1305,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "crown",
+      "seed": 98211,
+      "base": {
+        "calls": 5320,
+        "nextValue": 0.7724068975076079,
+        "instancedMeshes": 121,
+        "instances": 1775,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 5340,
+        "nextValue": 0.532071627676487,
+        "instancedMeshes": 121,
+        "instances": 1352,
+        "ownedGeometry": 1
+      },
+      "randomDelta": 20,
+      "meshDelta": 0
+    },
+    {
+      "theme": "crypt",
+      "seed": 20260905,
+      "base": {
+        "calls": 5428,
+        "nextValue": 0.20066951774060726,
+        "instancedMeshes": 104,
+        "instances": 1485,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 5472,
+        "nextValue": 0.478658695705235,
+        "instancedMeshes": 104,
+        "instances": 1111,
+        "ownedGeometry": 3
+      },
+      "randomDelta": 44,
+      "meshDelta": 0
+    },
+    {
+      "theme": "crypt",
+      "seed": 1,
+      "base": {
+        "calls": 5204,
+        "nextValue": 0.5866465251892805,
+        "instancedMeshes": 85,
+        "instances": 1483,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 5244,
+        "nextValue": 0.2868739813566208,
+        "instancedMeshes": 84,
+        "instances": 1104,
+        "ownedGeometry": 3
+      },
+      "randomDelta": 40,
+      "meshDelta": -1
+    },
+    {
+      "theme": "crypt",
+      "seed": 98211,
+      "base": {
+        "calls": 5120,
+        "nextValue": 0.49121805746108294,
+        "instancedMeshes": 97,
+        "instances": 1418,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 5160,
+        "nextValue": 0.1493215700611472,
+        "instancedMeshes": 96,
+        "instances": 1109,
+        "ownedGeometry": 3
+      },
+      "randomDelta": 40,
+      "meshDelta": -1
+    },
+    {
+      "theme": "throne",
+      "seed": 20260905,
+      "base": {
+        "calls": 5516,
+        "nextValue": 0.8567178286612034,
+        "instancedMeshes": 104,
+        "instances": 1485,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 5560,
+        "nextValue": 0.06558054964989424,
+        "instancedMeshes": 104,
+        "instances": 1111,
+        "ownedGeometry": 3
+      },
+      "randomDelta": 44,
+      "meshDelta": 0
+    },
+    {
+      "theme": "throne",
+      "seed": 1,
+      "base": {
+        "calls": 5288,
+        "nextValue": 0.42202345933765173,
+        "instancedMeshes": 85,
+        "instances": 1483,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 5328,
+        "nextValue": 0.028816253878176212,
+        "instancedMeshes": 84,
+        "instances": 1104,
+        "ownedGeometry": 3
+      },
+      "randomDelta": 40,
+      "meshDelta": -1
+    },
+    {
+      "theme": "throne",
+      "seed": 98211,
+      "base": {
+        "calls": 5204,
+        "nextValue": 0.5866465251892805,
+        "instancedMeshes": 97,
+        "instances": 1418,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 5244,
+        "nextValue": 0.2868739813566208,
+        "instancedMeshes": 96,
+        "instances": 1109,
+        "ownedGeometry": 3
+      },
+      "randomDelta": 40,
+      "meshDelta": -1
+    },
+    {
+      "theme": "abyss",
+      "seed": 20260905,
+      "base": {
+        "calls": 5380,
+        "nextValue": 0.7717731539160013,
+        "instancedMeshes": 104,
+        "instances": 1485,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 5424,
+        "nextValue": 0.6167686218395829,
+        "instancedMeshes": 104,
+        "instances": 1111,
+        "ownedGeometry": 3
+      },
+      "randomDelta": 44,
+      "meshDelta": 0
+    },
+    {
+      "theme": "abyss",
+      "seed": 1,
+      "base": {
+        "calls": 5168,
+        "nextValue": 0.9743246668949723,
+        "instancedMeshes": 85,
+        "instances": 1483,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 5208,
+        "nextValue": 0.3469280106946826,
+        "instancedMeshes": 84,
+        "instances": 1104,
+        "ownedGeometry": 3
+      },
+      "randomDelta": 40,
+      "meshDelta": -1
+    },
+    {
+      "theme": "abyss",
+      "seed": 98211,
+      "base": {
+        "calls": 5076,
+        "nextValue": 0.8811753373593092,
+        "instancedMeshes": 97,
+        "instances": 1418,
+        "ownedGeometry": 0
+      },
+      "head": {
+        "calls": 5116,
+        "nextValue": 0.4115181118249893,
+        "instancedMeshes": 96,
+        "instances": 1109,
+        "ownedGeometry": 3
+      },
+      "randomDelta": 40,
+      "meshDelta": -1
+    }
+  ]
+}

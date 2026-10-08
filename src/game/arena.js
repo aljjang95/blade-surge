@@ -7,6 +7,7 @@ import { buildCitadelHubScene } from './citadel-hub-scene.js';
 import { buildLobbyWorld } from './lobby-world.js';
 import { BattleOcclusion } from '../engine/battle-occlusion.js';
 import { softCircleTex } from '../engine/assets.js';
+import { applyDungeonSurface, collectDungeonTiles, projectDungeonSurface } from './dungeon-surface.js';
 
 const THEMES = {
   garden: { fog: 0x172b2b, bg: 0x172b2b, hemi: [0xa0b5ae, 0x283930], sun: 0xffedca, sunI: 2.3, torch: 0x8adbd0, tint: 0xcbd0b8 },
@@ -113,6 +114,11 @@ export class Arena {
     if (opts.cutaway) this.occlusion.bind(mat);
     part.updateWorldMatrix(true, true);
     const local = new THREE.Matrix4().copy(part.matrixWorld).invert().multiply(src.matrixWorld);
+    let geometry = src.geometry;
+    if (opts.dungeonSurface && applyDungeonSurface(mat)) {
+      geometry = projectDungeonSurface(src.geometry, local, TILE);
+      this.ownedGeometry.add(geometry);
+    }
 
     // 공간 버킷으로 분할
     const buckets = new Map();
@@ -122,7 +128,8 @@ export class Arena {
     }
     const o = new THREE.Object3D(); const out = [];
     for (const list of buckets.values()) {
-      const im = new THREE.InstancedMesh(src.geometry, mat, list.length);
+      const im = new THREE.InstancedMesh(geometry, mat, list.length);
+      if (opts.dungeonSurface) im.name = `dungeon-surface-${name}`;
       list.forEach((t, i) => { o.position.set(t.x, t.y || 0, t.z); o.rotation.set(0, t.ry || 0, 0); o.scale.setScalar(t.s || 1); o.updateMatrix(); im.setMatrixAt(i, o.matrix.multiply(local)); });
       im.castShadow = castShadow; im.receiveShadow = true; im.frustumCulled = true;
       im.computeBoundingSphere?.();   // 청크 기준 타이트한 바운드 → 컬링이 실제로 걸린다
@@ -216,19 +223,9 @@ export class Arena {
     this.scene.add(sun, sun.target); this.lights.push(sun, sun.target); this.sun = sun;
 
     // ---- 바닥 (방 + 복도) ----
-    const floors = { floor_tile_large: [], floor_tile_large_rocks: [], floor_dirt_large: [] };
-    const put = (rect, boss) => {
-      const x0 = Math.floor((rect.x - rect.w / 2) / TILE), x1 = Math.ceil((rect.x + rect.w / 2) / TILE);
-      const z0 = Math.floor((rect.z - rect.h / 2) / TILE), z1 = Math.ceil((rect.z + rect.h / 2) / TILE);
-      for (let i = x0; i < x1; i++) for (let j = z0; j < z1; j++) {
-        const k = random();
-        const key = boss || floorData.layout ? 'floor_tile_large' : k < 0.75 ? 'floor_tile_large' : k < 0.9 ? 'floor_tile_large_rocks' : 'floor_dirt_large';
-        floors[key].push({ x: i * TILE + TILE / 2, z: j * TILE + TILE / 2, ry: Math.floor(random() * 4) * Math.PI / 2 });
-      }
-    };
-    for (const r of floorData.rooms) put(r, r.type === ROOM_TYPE.BOSS);
-    for (const c of floorData.corridors) put(c, false);
-    for (const k in floors) this.instanced(k, floors[k], T.tint, { castShadow: false });
+    const tiles = collectDungeonTiles(floorData, random, TILE);
+    this.group.userData.dungeonSurface = { sampledTiles: tiles.sampledTiles, uniqueTiles: tiles.uniqueTiles };
+    for (const k in tiles.transforms) this.instanced(k, tiles.transforms[k], T.tint, { castShadow: false, dungeonSurface: true });
 
     // ---- 벽: 걷기 가능 셀의 경계에 세운다 ----
     const walls = { wall: [], wall_cracked: [], wall_broken: [], wall_arched: [], wall_window_open: [] };

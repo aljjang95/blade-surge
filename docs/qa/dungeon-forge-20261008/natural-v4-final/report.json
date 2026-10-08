@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "status": "FAIL",
+  "startedAt": "2026-10-08T13:49:48.507Z",
+  "scope": "Isolated Chromium software renderer, natural requestAnimationFrame only, fresh local save and native pointer/keyboard input. App state is read only. No app.step, app.testPause mutation, actor spawning, grants or invulnerability. This is scripted browser play, not human playtesting, physical-device performance, perceived audio quality or production acceptance. Companion remains naturally active, so kills are not attributed solely to player attacks.",
+  "checks": [],
+  "actions": [
+    {
+      "at": "2026-10-08T13:49:53.728Z",
+      "input": "pointer-click",
+      "selector": "#boot-start"
+    }
+  ],
+  "samples": [],
+  "screenshots": [
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/natural-v4-final/01-fresh-lobby.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/natural-v4-final/failure.png"
+  ],
+  "errors": [],
+  "warnings": [
+    "Service Worker registration blocked by Playwright",
+    "THREE.WebGLRenderer: KHR_parallel_shader_compile extension not supported."
+  ],
+  "failedRequests": [],
+  "badResponses": [],
+  "externalRequests": [],
+  "build": {
+    "sha": "678caf52a19ffda2240bfd7882278c4c0b77c49d",
+    "dirty": true,
+    "builtAt": "2026-10-08T13:42:39.996Z",
+    "pwaRelease": "7454a98579fc70bb6613"
+  },
+  "origin": "http://127.0.0.1:44107",
+  "browser": "153.0.8010.0",
+  "viewport": {
+    "width": 880,
+    "height": 400
+  },
+  "fontFixture": "QA-only local Noto Sans KR 400/700 and Black Han Sans 400, plus per-browser FONTCONFIG_FILE for generic system-ui fallback; optional external CSS empty. Application and OS fonts unchanged.",
+  "failure": "locator.waitFor: Timeout 60000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('.citadel-command-campaign') to be visible\u001b[22m\n\u001b[2m    121 × locator resolved to hidden <button type=\"button\" class=\"citadel-command-campaign\">…</button>\u001b[22m\n\n    at /workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/natural-play.mjs:94:51",
+  "finishedAt": "2026-10-08T13:51:24.421Z"
+}

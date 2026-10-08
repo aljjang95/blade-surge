@@ -1,0 +1,131 @@
+{
+  "status": "PASS",
+  "scope": "Delivery GLB, original socket fit, actual Three.js/WebGL2 rendering and skinned pose deformation; software GPU, not physical Android performance or final art approval",
+  "reviewedViews": [
+    "front",
+    "three-quarter",
+    "profile",
+    "clay",
+    "run",
+    "first class combo"
+  ],
+  "models": [
+    {
+      "name": "Skeleton_Vanguard",
+      "status": "PASS",
+      "png": "work/dungeon-forge-v2/preview-v2/Skeleton_Vanguard.png",
+      "sha256": "5bf477d1556808175d91cbaf3e117af9facc95d01fbf2ff17dccabc8278ca0c4",
+      "observations": "Original face and body intact; fitting follows torso/head/limbs with no detached or exploded pieces",
+      "samples": 115,
+      "maxSpan": 3.2064988546310436
+    },
+    {
+      "name": "Skeleton_Skirmisher",
+      "status": "PASS",
+      "png": "work/dungeon-forge-v2/preview-v2/Skeleton_Skirmisher.png",
+      "sha256": "d1a142cb9336a9621884a6850b0050521bfe399a46cd496f1b4dda19d26b221c",
+      "observations": "Original face and body intact; fitting follows torso/head/limbs with no detached or exploded pieces",
+      "samples": 115,
+      "maxSpan": 2.9461539610234357
+    },
+    {
+      "name": "Skeleton_Runekeeper",
+      "status": "PASS",
+      "png": "work/dungeon-forge-v2/preview-v2/Skeleton_Runekeeper.png",
+      "sha256": "2e8b1dad14bea5226b36b7c59278ceecc657fbc1c53e3cba9014b66853a2523a",
+      "observations": "Original face and body intact; fitting follows torso/head/limbs with no detached or exploded pieces",
+      "samples": 115,
+      "maxSpan": 3.296241657696322
+    },
+    {
+      "name": "Skeleton_Bulwark",
+      "status": "PASS",
+      "png": "work/dungeon-forge-v2/preview-v2/Skeleton_Bulwark.png",
+      "sha256": "8ff76d756e1b300a5494f02fd7679c63485bc00e66b8ac1a1783112da74639b5",
+      "observations": "Original face and body intact; fitting follows torso/head/limbs with no detached or exploded pieces",
+      "samples": 115,
+      "maxSpan": 2.870391178263731
+    },
+    {
+      "name": "Knight__sword",
+      "status": "PASS",
+      "png": "work/dungeon-forge-v2/preview-v2/Knight__sword.png",
+      "sha256": "864bfc0f4e6d944e3b5ffb89a2b404f04d553a0c0ba29f43263b09a4ce80271d",
+      "observations": "Socket grip stays in hand in idle/run/attack; expected blade direction, intact silhouette",
+      "samples": 200,
+      "maxSpan": 2.866907259400564
+    },
+    {
+      "name": "Knight__greatsword",
+      "status": "PASS",
+      "png": "work/dungeon-forge-v2/preview-v2/Knight__greatsword.png",
+      "sha256": "771cb66e44e710164625db1fd9753cd61f7753920b4ef8e27b95ee105ccce8eb",
+      "observations": "Socket grip stays in hand in idle/run/attack; expected blade direction, intact silhouette",
+      "samples": 200,
+      "maxSpan": 2.866907259400564
+    },
+    {
+      "name": "Barbarian__axe",
+      "status": "PASS",
+      "png": "work/dungeon-forge-v2/preview-v2/Barbarian__axe.png",
+      "sha256": "d589b5fd89a9cff9f47d169a6346e4af82f443dce23bddb5a2fc72f5b4467c6b",
+      "observations": "Socket grip stays in hand in idle/run/attack; expected blade direction, intact silhouette",
+      "samples": 200,
+      "maxSpan": 2.9241242015729236
+    },
+    {
+      "name": "Barbarian__greataxe",
+      "status": "PASS",
+      "png": "work/dungeon-forge-v2/preview-v2/Barbarian__greataxe.png",
+      "sha256": "5800764165f46860c67f275b4606eb1dd444492da067ebe96665ffad85464add",
+      "observations": "Socket grip stays in hand in idle/run/attack; expected blade direction, intact silhouette",
+      "samples": 200,
+      "maxSpan": 2.9241242015729236
+    },
+    {
+      "name": "Rogue__dagger",
+      "status": "PASS",
+      "png": "work/dungeon-forge-v2/preview-v2/Rogue__dagger.png",
+      "sha256": "f28d0ecee579e7ed39d8ad60b121cc7936c9e2ba63a1c8fcf7bafd6690d5979e",
+      "observations": "Socket grip stays in hand in idle/run/attack; expected blade direction, intact silhouette",
+      "samples": 200,
+      "maxSpan": 3.1461112513265084
+    },
+    {
+      "name": "Mage__wand",
+      "status": "PASS",
+      "png": "work/dungeon-forge-v2/preview-v2/Mage__wand.png",
+      "sha256": "6f74a1c90719aae9e3088bb53f45931a841ee66108be7ef5eb542fef4b968ee5",
+      "observations": "Socket grip stays in hand in idle/run/attack; expected blade direction, intact silhouette",
+      "samples": 200,
+      "maxSpan": 2.9349056749545426
+    },
+    {
+      "name": "Mage__staff",
+      "status": "PASS",
+      "png": "work/dungeon-forge-v2/preview-v2/Mage__staff.png",
+      "sha256": "4dc6bbfc9d30e3a15efae33e8b5eb36be71503797b0424a5a8603829c447e76e",
+      "observations": "Socket grip stays in hand in idle/run/attack; expected blade direction, intact silhouette",
+      "samples": 200,
+      "maxSpan": 2.9349056749545426
+    },
+    {
+      "name": "Ranger__bow",
+      "status": "PASS",
+      "png": "work/dungeon-forge-v2/preview-v2/Ranger__bow.png",
+      "sha256": "2630afe88dddd6bffde49369961350da46093bee134f8a71b9106b717868f053",
+      "observations": "Socket grip stays in hand in idle/run/attack; expected blade direction, intact silhouette",
+      "samples": 205,
+      "maxSpan": 3.0536300160907714
+    }
+  ],
+  "runtimeErrors": [],
+  "poseSamples": 2065,
+  "preservedFailure": "work/dungeon-forge-v2/preview/Barbarian__axe.png",
+  "correction": "Preserve local grip origin; explicit bow +Y to +Z axis and one-handed axe negative-X blade; fit longitudinal ends on either side of grip without AABB-center translation",
+  "sourceHashes": {
+    "src/engine/forged-weapons.js": "40607f711885609e3c2eb63d66070800fee8a5840d9dbe6079d77e99ccab7b01",
+    "src/engine/encounter-identity.js": "6833d0b0bfe4149fde9fa5e5298f9eb2ba6a221d425446627af518446d1627f5",
+    "docs/assets/dungeon-forge-v2.json": "c7168389af0a741a2c2e157228de4030800235ab9736240f0896c7e4c6cb4772"
+  }
+}

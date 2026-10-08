@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "asset": "dungeon-surface-v1",
+  "createdAt": "2026-10-08T13:18:24.005Z",
+  "tool": "image_gen__imagegen",
+  "toolRunId": "73067e67-cf88-47de-a7ef-77e296deef0d",
+  "source": "art/dungeon-surface-v1/source.png",
+  "sourceSha256": "7aaa314048afe01a196a94b7eedbe61bfcccaceeab01cec8b60a16101ad78fda",
+  "sourceSize": {
+    "width": 1254,
+    "height": 1254
+  },
+  "runtime": "public/img/environment/dungeon-stone-v1.webp",
+  "runtimeSha256": "72cbc0d9655ba376d04f534604365b79f0926a8e4819b55a21f367cde4b536c0",
+  "runtimeSize": {
+    "width": 1024,
+    "height": 1024
+  },
+  "conversion": "sharp resize 1024×1024 Lanczos3, WebP quality 88 effort 6; no recoloring or creative edit",
+  "prompt": "Use case: stylized-concept. Asset type: one seamless square albedo texture for the walkable dungeon floor in the 3D action RPG Blade Surge. Create an exquisite hand-crafted game-ready stone paving material viewed perfectly orthographically from directly overhead. Closely fitted large irregular rectangular limestone and slate flagstones, subtle beveled worn edges, fine mineral grains, tiny chips, delicate hairline cracks and faint weathering in crevices. Medium-value neutral cool grey, very restrained variation, no deep black outlines, no gold, no rune, no symbol, no text, no vegetation, no props, no scene, no perspective. Even diffuse unlit illumination with no cast shadows or highlights baked in; details remain readable at small scale, refined stylized PBR game art. The texture repeats seamlessly on all four edges; stone shapes must cross borders naturally. Fill the entire square with the paving material. Single standalone texture image, no collage or labels.",
+  "ownership": "Original image generated for this project through OpenAI imagegen; provider terms apply. No third-party source image or copied game asset.",
+  "usage": "Shared opaque floor material on existing instanced CC0 dungeon tile geometry; original tile geometry, collision and authored architecture retained."
+}

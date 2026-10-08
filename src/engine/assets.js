@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { preloadArmory } from './armory-assets.js';
+import { forgeHeroWeapons } from './forged-weapons.js';
 import { finishOathKnightMaterial } from './hero-surface-finish.js';
 import { heroModelPaths, KNIGHT_HEAD_BALANCE_REVISION_ID } from './hero-model-paths.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -11,6 +12,7 @@ import { assembleHeroIdentity } from './hero-identity.js';
 import { assembleEncounterIdentity } from './encounter-identity.js';
 import { ENCOUNTER_MODELS } from '../data/encounter-models.js';
 import { preloadSurfaceTextures, projectSurfaceUV, surfaceRole, applySurfaceDetail } from './surface-textures.js';
+import { preloadDungeonSurface } from '../game/dungeon-surface.js';
 
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
@@ -80,6 +82,7 @@ export async function loadModel(name, contract = null) {
         }
       }
     });
+    if (!contract && HERO_MODELS.includes(name)) await forgeHeroWeapons(gltf, name);
     return prepareModel(gltf, contract);
   });
   cache.set(key, p);
@@ -160,6 +163,7 @@ export function mergeSkinned(scene, animations = []) {
 
 export async function preloadAll(onProgress) {
   await preloadSurfaceTextures();
+  await preloadDungeonSurface();
   await preloadArmory();
   let done = 0;
   await Promise.all(MODEL_LIST.map(async (n) => { await loadModel(n); done++; onProgress?.(done / MODEL_LIST.length); }));

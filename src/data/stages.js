@@ -89,14 +89,14 @@ export function stageDef(ch, st) {
 // 잡몹 한 대 ≈ 최대 HP 의 0.7%, 원거리 1%, 폭탄·엘리트 2%, 보스 강타 2.5% — AUTO 가 한 층에 25~35% 를 잃는 수준 (적 위협 회전 2026-09-04: 이전 수치는 정액 방어 차감 때문에 잡몹 1타 = 1 피해였다)
 export const ENEMIES = {
   // ================= 1장 · 어둠의 지하묘지 (언데드) =================
-  skel_minion: { name: '해골 병사', model: 'Skeleton_Minion', hp: 490, atk: 20, spd: 4.6, range: 1.9, atkTime: 1.2, weapon: 'Skeleton_Blade', exp: 8, scale: 0.95, gold: 1 },
-  skel_rogue:  { name: '해골 자객', model: 'Skeleton_Rogue', hp: 630, atk: 29, spd: 6.2, range: 2.0, atkTime: 0.8, weapon: 'Skeleton_Blade', exp: 12, scale: 0.95, dodge: 0.2, gold: 1 },
-  skel_mage:   { name: '해골 주술사', model: 'Skeleton_Mage', hp: 525, atk: 29, spd: 3.0, range: 8.0, atkTime: 2.2, weapon: 'Skeleton_Staff', ranged: true, exp: 14, scale: 1.0, gold: 2, projColor: 0x60ff80 },
+  skel_minion: { name: '해골 병사', model: 'Skeleton_Vanguard', hp: 490, atk: 20, spd: 4.6, range: 1.9, atkTime: 1.2, weapon: 'Skeleton_Blade', exp: 8, scale: 0.95, gold: 1 },
+  skel_rogue:  { name: '해골 자객', model: 'Skeleton_Skirmisher', hp: 630, atk: 29, spd: 6.2, range: 2.0, atkTime: 0.8, weapon: 'Skeleton_Blade', exp: 12, scale: 0.95, dodge: 0.2, gold: 1 },
+  skel_mage:   { name: '해골 주술사', model: 'Skeleton_Runekeeper', hp: 525, atk: 29, spd: 3.0, range: 8.0, atkTime: 2.2, weapon: 'Skeleton_Staff', ranged: true, exp: 14, scale: 1.0, gold: 2, projColor: 0x60ff80 },
   ghost:       { name: '원령', model: 'Flying_Ghost', hp: 420, atk: 24, spd: 5.4, range: 2.1, atkTime: 1.1, exp: 11, scale: 1.25, gold: 1, ghostly: true },
   ghost_skull: { name: '해골 망령', model: 'Flying_Ghost_Skull', hp: 490, atk: 26, spd: 3.4, range: 8.5, atkTime: 2.0, ranged: true, exp: 15, scale: 1.2, gold: 2, ghostly: true, projColor: 0x80d0ff },
   blob_green:  { name: '부패 슬라임', model: 'Blob_GreenBlob', hp: 700, atk: 18, spd: 3.2, range: 1.7, atkTime: 1.4, exp: 9, scale: 1.0, gold: 1 },
   bone_orc:    { name: '뼈 오크', model: 'Big_Orc_Skull', hp: 1120, atk: 31, spd: 3.8, range: 2.2, atkTime: 1.5, exp: 15, scale: 1.0, armor: 0.15, gold: 2 },
-  elite_skel_captain: { name: '해골 대장', model: 'Skeleton_Warrior', hp: 5600, atk: 51, spd: 3.6, range: 2.6, atkTime: 1.5, weapon: 'Skeleton_Axe', shield: 'Skeleton_Shield_Large_A', exp: 60, scale: 1.45, armor: 0.25, elite: true, tint: '#ffd080', gold: 8 },
+  elite_skel_captain: { name: '해골 대장', model: 'Skeleton_Bulwark', hp: 5600, atk: 51, spd: 3.6, range: 2.6, atkTime: 1.5, weapon: 'Skeleton_Axe', shield: 'Skeleton_Shield_Large_A', exp: 60, scale: 1.45, armor: 0.25, elite: true, tint: '#ffd080', gold: 8 },
   elite_bone_lord:    { name: '골편 군주', model: 'Big_Orc_Skull', hp: 5200, atk: 48, spd: 3.4, range: 2.8, atkTime: 1.6, exp: 58, scale: 1.35, armor: 0.2, elite: true, tint: '#d0e0ff', gold: 8 },
   elite_wraith:       { name: '대원령', model: 'Flying_Ghost', hp: 3600, atk: 46, spd: 5.6, range: 2.4, atkTime: 1.0, exp: 55, scale: 1.7, elite: true, tint: '#a0d0ff', ghostly: true, gold: 8 },
 
@@ -104,9 +104,9 @@ export const ENEMIES = {
   // bomber: 돌진 → 2.2 안에서 0.7초 도화선 → 자폭. (Blob_GreenSpikyBlob 은 다른 블롭의 2.2배 크기 GLB — scale 0.5 로 맞춘다. 0.95 였을 때 영웅의 4배짜리 괴물이 화면을 덮었다) 아군도 다친다 → 진공으로 무리에 끌어넣으면 연쇄 폭발
   bomb_slime:  { name: '폭탄 슬라임', model: 'Blob_GreenSpikyBlob', hp: 385, atk: 33, spd: 6.4, range: 1.6, atkTime: 1.0, exp: 12, scale: 0.5, gold: 1, behavior: 'bomber', tint: '#ffd060' },
   // shaman: 거리 유지 + 6초마다 주변 아군 회복 + 9초마다 소환. 먼저 잡아야 한다
-  skel_priest: { name: '해골 사제', model: 'Skeleton_Mage', hp: 595, atk: 18, spd: 3.2, range: 8.0, atkTime: 2.4, weapon: 'Skeleton_Staff', ranged: true, exp: 18, scale: 1.05, gold: 3, projColor: 0xa0ffb0, behavior: 'shaman', summon: 'skel_minion', tint: '#b0ffc0' },
+  skel_priest: { name: '해골 사제', model: 'Skeleton_Runekeeper', hp: 595, atk: 18, spd: 3.2, range: 8.0, atkTime: 2.4, weapon: 'Skeleton_Staff', ranged: true, exp: 18, scale: 1.05, gold: 3, projColor: 0xa0ffb0, behavior: 'shaman', summon: 'skel_minion', tint: '#b0ffc0' },
   // shield: 정면 피해 80% 감소. 뒤·옆에서 치거나, 마무리 타격(kb≥4) 4번이면 가드 브레이크 3초
-  skel_shield: { name: '해골 방패병', model: 'Skeleton_Warrior', hp: 1260, atk: 26, spd: 3.4, range: 2.2, atkTime: 1.6, weapon: 'Skeleton_Blade', shield: 'Skeleton_Shield_Large_A', exp: 16, scale: 1.05, gold: 2, armor: 0.1, behavior: 'shield' },
+  skel_shield: { name: '해골 방패병', model: 'Skeleton_Bulwark', hp: 1260, atk: 26, spd: 3.4, range: 2.2, atkTime: 1.6, weapon: 'Skeleton_Blade', shield: 'Skeleton_Shield_Large_A', exp: 16, scale: 1.05, gold: 2, armor: 0.1, behavior: 'shield' },
   // ================= 2장 · 불타는 왕좌 (오크 · 악마) =================
   orc:      { name: '오크 전사', model: 'Big_Orc', hp: 1050, atk: 29, spd: 4.0, range: 2.2, atkTime: 1.3, exp: 12, scale: 1.0, gold: 2 },
   orc_blob: { name: '꼬마 오크', model: 'Blob_Orc', hp: 595, atk: 22, spd: 4.8, range: 1.8, atkTime: 1.0, exp: 10, scale: 1.0, gold: 1 },
@@ -139,7 +139,7 @@ export const ENEMIES = {
   elite_dragonling:    { name: '새끼 용', model: 'Flying_Dragon', hp: 5600, atk: 66, spd: 5.4, range: 2.8, atkTime: 1.3, exp: 78, scale: 1.5, elite: true, tint: '#ffc0a0', gold: 10 },
 
   // ================= 보스 3종 =================
-  boss_warlord: { name: '해골 군주', model: 'Skeleton_Warrior', hp: 31200, atk: 45, spd: 3.6, range: 3.2, atkTime: 1.8, weapon: 'Skeleton_Axe', shield: 'Skeleton_Shield_Large_A', exp: 150, scale: 2.2, boss: true, armor: 0.25, gold: 40, portrait: '/img/boss_warlord.webp', kit: 'warlord', summon: 'skel_minion' },
+  boss_warlord: { name: '해골 군주', model: 'Skeleton_Bulwark', hp: 31200, atk: 45, spd: 3.6, range: 3.2, atkTime: 1.8, weapon: 'Skeleton_Axe', shield: 'Skeleton_Shield_Large_A', exp: 150, scale: 2.2, boss: true, armor: 0.25, gold: 40, portrait: '/img/boss_warlord.webp', kit: 'warlord', summon: 'skel_minion' },
   boss_demon:   { name: '심연의 대악마', model: 'Big_Demon', hp: 33600, atk: 51, spd: 4.0, range: 3.4, atkTime: 1.6, exp: 175, scale: 2.3, boss: true, armor: 0.2, gold: 45, portrait: '/img/boss_lich.webp', kit: 'reaper', summon: 'imp' },
   boss_dragon:  { name: '고대 용 발카르', model: 'Flying_Dragon_Evolved', hp: 37200, atk: 56, spd: 4.6, range: 3.2, atkTime: 1.5, exp: 200, scale: 2.6, boss: true, armor: 0.2, gold: 55, portrait: '/img/boss_reaper.webp', kit: 'dragon', summon: 'squidle', projColor: 0xff7a30 },
 
@@ -148,15 +148,15 @@ export const ENEMIES = {
   // dedicated portrait/colour identity; they are not claimed as new GLB files.
   glass_shardling: { name: '유리 파편충', model: 'Blob_GreenSpikyBlob', hp: 760, atk: 31, spd: 5.8, range: 1.7, atkTime: 1.0, exp: 16, scale: 0.55, gold: 2, behavior: 'bomber', tint: '#7fffe1' },
   bell_wisp: { name: '종의 잔영', model: 'Flying_Ghost', hp: 610, atk: 28, spd: 5.8, range: 2.2, atkTime: 1.0, exp: 16, scale: 1.3, gold: 2, ghostly: true, dodge: 0.12, tint: '#b4fff3' },
-  glass_tollmage: { name: '시계종 주술사', model: 'Skeleton_Mage', hp: 720, atk: 23, spd: 3.3, range: 8.5, atkTime: 2.1, ranged: true, exp: 21, scale: 1.08, gold: 3, projColor: 0x7fe8ff, behavior: 'shaman', summon: 'glass_shardling', tint: '#b8f5ff' },
-  glass_warden: { name: '유리 회랑 감시자', model: 'Skeleton_Warrior', hp: 6400, atk: 55, spd: 3.5, range: 2.8, atkTime: 1.5, exp: 72, scale: 1.5, armor: 0.27, elite: true, behavior: 'shield', weapon: 'Skeleton_Axe', shield: 'Skeleton_Shield_Large_A', tint: '#8fffe2', gold: 10 },
+  glass_tollmage: { name: '시계종 주술사', model: 'Skeleton_Runekeeper', hp: 720, atk: 23, spd: 3.3, range: 8.5, atkTime: 2.1, ranged: true, exp: 21, scale: 1.08, gold: 3, projColor: 0x7fe8ff, behavior: 'shaman', summon: 'glass_shardling', tint: '#b8f5ff' },
+  glass_warden: { name: '유리 회랑 감시자', model: 'Skeleton_Bulwark', hp: 6400, atk: 55, spd: 3.5, range: 2.8, atkTime: 1.5, exp: 72, scale: 1.5, armor: 0.27, elite: true, behavior: 'shield', weapon: 'Skeleton_Axe', shield: 'Skeleton_Shield_Large_A', tint: '#8fffe2', gold: 10 },
   cinderling: { name: '재의 파편', model: 'Blob_Mushnub', hp: 820, atk: 38, spd: 5.5, range: 1.7, atkTime: 1.0, exp: 17, scale: 1.0, gold: 2, behavior: 'bomber', tint: '#ff9c66' },
   chain_forger: { name: '사슬 벼림꾼', model: 'Big_Orc', hp: 1320, atk: 39, spd: 3.6, range: 2.4, atkTime: 1.5, exp: 20, scale: 1.05, armor: 0.18, behavior: 'shield', tint: '#ffc078', gold: 3 },
   ember_scribe: { name: '불씨 기록술사', model: 'Flying_Hywirl', hp: 850, atk: 31, spd: 3.8, range: 8.5, atkTime: 2.0, ranged: true, exp: 23, scale: 1.05, gold: 3, projColor: 0xff7540, behavior: 'shaman', summon: 'cinderling', tint: '#ffd09b' },
   slag_colossus: { name: '슬래그 거수', model: 'Big_BlueDemon', hp: 7600, atk: 62, spd: 3.0, range: 3.0, atkTime: 1.8, exp: 78, scale: 1.45, armor: 0.3, elite: true, tint: '#ff9b66', gold: 11 },
   nightglass_page: { name: '밤유리 서기관', model: 'Flying_Ghost_Skull', hp: 780, atk: 30, spd: 3.4, range: 9.0, atkTime: 2.0, ranged: true, exp: 22, scale: 1.25, gold: 3, projColor: 0x8ad9ff, behavior: 'shaman', summon: 'frost_mirror', tint: '#bde9ff' },
   frost_mirror: { name: '서리 거울벌', model: 'Blob_GreenBlob', hp: 1180, atk: 34, spd: 3.7, range: 1.8, atkTime: 1.4, exp: 19, scale: 1.05, armor: 0.16, behavior: 'shield', tint: '#99d8ff', gold: 3 },
-  archive_scribe: { name: '되감기 기록자', model: 'Skeleton_Mage', hp: 900, atk: 27, spd: 3.2, range: 8.5, atkTime: 2.2, ranged: true, exp: 24, scale: 1.1, gold: 3, projColor: 0x9fbdff, behavior: 'shaman', summon: 'frost_mirror', tint: '#d2ddff' },
+  archive_scribe: { name: '되감기 기록자', model: 'Skeleton_Runekeeper', hp: 900, atk: 27, spd: 3.2, range: 8.5, atkTime: 2.2, ranged: true, exp: 24, scale: 1.1, gold: 3, projColor: 0x9fbdff, behavior: 'shaman', summon: 'frost_mirror', tint: '#d2ddff' },
   archive_warden: { name: '밤유리 수문장', model: 'Big_Yeti', hp: 8200, atk: 59, spd: 3.1, range: 3.0, atkTime: 1.8, exp: 82, scale: 1.6, armor: 0.31, elite: true, behavior: 'shield', tint: '#a7d7ff', gold: 11 },
   // ================= 시즌 전선 · 일식·재벼림·성운 =================
   eclipse_scalelet: { name: '일식 비늘새끼', model: 'Flying_Dragon', hp: 880, atk: 36, spd: 5.2, range: 2.1, atkTime: 1.15, exp: 19, scale: 0.9, gold: 2, behavior: 'bomber', tint: '#63e7dd' },
