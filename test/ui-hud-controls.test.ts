@@ -152,7 +152,7 @@ function fixture() {
   ];
   const def = { skills, color: '#123456', portrait: 'hero.png' }, slots = [0, 1, 2, 3, 4, 5];
   const player: any = { def, hp: 80, maxHp: 100, mp: 10, maxMp: 40, ult: 50, ultMax: 100,
-    dodgeCd: 1.25, cds: [2, 0, 0, 0, 5, 6], auto: false,
+    alive: true, dodgeCd: 1.25, cds: [2, 0, 0, 0, 5, 6], auto: false,
     combatSkillIndex: (slot: number) => slots[slot],
     combatSkill: (slot: number) => ({ index: slots[slot], skill: player.def.skills[slots[slot]] }),
     unlocked: (index: number) => hero.level >= (player.def.skills[index].unlock || 1),
@@ -218,7 +218,7 @@ test('cached children preserve cooldown, MP, lock, ultimate and ready transition
   expect(get('hud-exp-txt').textContent).toBe(`EXP 20 / ${levelExp(1)}`);
   expect(get('hud-ult').style.width).toBe('50%');
   expect(play.mock.calls.map(call => call[0])).toEqual(['ui_pluck']);
-  f.player.hp = 20; f.player.mp = 25; f.player.ult = 100; f.player.dodgeCd = .001;
+  f.player.hp = 20; f.player.mp = 25; f.player.ult = 100; f.player.dodgeCd = 0;
   f.player.cds = [0, 4, 0, 0, 3, 0]; f.hero.level = 20; f.hero.exp = 200;
   update(f);
   expect(readControls(f)).toEqual([
@@ -266,6 +266,50 @@ test('setupHud rebinds replaced cooldown children and current skill loadout with
   expect(f.skillBtns[0].style.background).toBe('linear-gradient(135deg, #fedcba, #222)');
 });
 
+test('스킬 상태는 기존 버튼 안의 고정 노드를 재사용하고 문구가 바뀔 때만 갱신한다', () => {
+  const f = fixture(); update(f);
+  const labels = f.skillBtns.map(button => button.querySelector('.skill-status')!);
+  expect(labels.map(label => label.textContent)).toEqual(['2.0', '', 'MP 부족', '50%', '', '']);
+  expect(f.skillBtns[0].attrs['aria-label']).toContain('재사용 대기 2.0초');
+  expect(f.skillBtns[2].attrs['aria-label']).toContain('MP 20 필요');
+  const writes = labels.map(label => label.textWrites), aria = f.skillBtns.map(button => button.attributeWrites['aria-label']);
+  for (let i = 0; i < 30; i++) update(f);
+  expect(labels.map(label => label.textWrites)).toEqual(writes);
+  expect(f.skillBtns.map(button => button.attributeWrites['aria-label'])).toEqual(aria);
+  f.player.cds[0] = .001; update(f);
+  expect(labels[0].textContent).toBe('0.1'); expect(f.skillBtns[0].dataset.ready).toBe('0');
+  f.player.cds[0] = 0; update(f);
+  expect(labels[0].hidden).toBe(true); expect(f.skillBtns[0].dataset.ready).toBe('1');
+  f.hero.level = 20; update(f); f.hero.level = 1; update(f);
+  expect(f.skillBtns[4].dataset.ready).toBe('0'); expect(f.skillBtns[4].classList.contains('locked')).toBe(true);
+  f.ui.showHud(false);
+  expect(labels.every(label => label.hidden)).toBe(true);
+  expect(f.skillBtns.every(button => button.dataset.ready === '0')).toBe(true);
+  f.ui.setupHud(f.player.def, f.player);
+  f.skillBtns.forEach((button, slot) => {
+    expect(button.querySelector('.skill-status')).toBe(labels[slot]);
+    expect(button.querySelectorAll('.skill-status')).toHaveLength(1);
+    expect(button.disabled).toBe(false);
+  });
+});
+
+test('입력 초기화 경계의 스킬 표시 갱신은 정지 중 루프 없이 중립화하고 복귀 소리를 재생하지 않는다', () => {
+  const f = fixture(); update(f);
+  Object.assign(f.battle, { pauseReasons: new Set(), ui: f.ui,
+    input: { enabled: true, clear() { f.ui.refreshSkillFeedback(f.battle, false); } } });
+  const count = play.mock.calls.length;
+  Battle.prototype.setPaused.call(f.battle, 'manual', true);
+  expect(f.skillBtns.every(button => button.dataset.ready === '0')).toBe(true);
+  expect(f.skillBtns.every(button => button.querySelector('.skill-status')!.hidden)).toBe(true);
+  Battle.prototype.setPaused.call(f.battle, 'journal', true);
+  Battle.prototype.setPaused.call(f.battle, 'manual', false);
+  expect(f.skillBtns[1].dataset.ready).toBe('0');
+  Battle.prototype.setPaused.call(f.battle, 'journal', false);
+  expect(f.skillBtns[1].dataset.ready).toBe('1');
+  expect(f.skillBtns[0].querySelector('.skill-status')!.textContent).toBe('2.0');
+  expect(play.mock.calls.length).toBe(count);
+});
+
 test('Astral HUD scope changes once per transition and resets across victory, hide, retry and campaign', () => {
   const f = fixture(), hud = get('hud'); update(f); update(f);
   const toggles = () => hud.classOps.filter(op => op.startsWith('toggle:astral-choice-hud:'));
@@ -291,13 +335,19 @@ test('Astral HUD scope changes once per transition and resets across victory, hi
 });
 
 
-test('dodge cooldown keeps the native .01 visibility boundary and display rounding', () => {
+test('회피는 0초 경계에서만 대기 숫자를 숨기고 남은 양수를 0.0으로 표시하지 않는다', () => {
   const f = fixture(), dodge = get('btn-dodge'), cd = dodge.querySelector('.dodge-cd')!;
-  for (const [value, hidden] of [[.02, false], [.01, true], [0, true], [.03, false]] as const) {
+  for (const [value, text] of [[.02, '0.1'], [.01, '0.1'], [.001, '0.1'], [0, ''], [.03, '0.1'], [1.01, '1.1']] as const) {
     f.player.dodgeCd = value; update(f);
+    const hidden = value <= 0;
     expect(cd.hidden).toBe(hidden); expect(dodge.classList.contains('cooling')).toBe(!hidden);
-    expect(cd.textContent).toBe('0.0');
+    expect(cd.textContent).toBe(text);
+    expect(dodge.attrs['aria-label']).toBe(`회피${text ? ` · 재사용 대기 ${text}초` : ''} · K 또는 Shift`);
   }
+  f.ui.showHud(false); expect(cd.hidden).toBe(true); expect(cd.textContent).toBe('');
+  f.ui.showHud(true); update(f); expect(cd.textContent).toBe('1.1');
+  f.battle.paused = true; f.ui.refreshDodgeFeedback(f.battle); expect(cd.hidden).toBe(true);
+  f.battle.paused = false; f.player.alive = false; f.ui.refreshDodgeFeedback(f.battle); expect(cd.hidden).toBe(true);
 });
 
 test('같은 HUD 값은 반복 쓰지 않고 실제 MP·EXP·막대 소수 변화는 즉시 반영한다', () => {
@@ -417,6 +467,38 @@ test('pause ownership and HUD/setup boundaries reset cached manual cues without 
   button.children.forEach((child, index) => expect(child).toBe(children[index]));
   expect(get('btn-attack')).toBe(button); expect(button.disabled).toBe(false);
   f.ui.showHud(true); update(f); expect(button.dataset.comboStatus).toBe('queued');
+});
+
+test('이어치기와 마무리 강화는 기존 공격 버튼의 세 줄·링만 사용하고 각각 실제 만료를 반영한다', () => {
+  const f = fixture(), button = get('btn-attack'), children = [...button.children];
+  const label = children[0], stage = button.querySelector('.attack-combo-stage')!, cue = button.querySelector('.attack-combo-cue')!;
+  f.player.def.combo = HEROES.knight.combo;
+  Object.assign(f.player, { state: 'dodge', comboResume: { idx: 3, t: 1.24 }, counterWindow: 2.39 });
+  update(f);
+  expect(button.dataset.comboStatus).toBe('dodge-resume'); expect(button.dataset.counterActive).toBe('true');
+  expect(label.textContent).toBe('회피 중'); expect(stage.textContent).toBe('다음 4/6타'); expect(cue.textContent).toBe('연계 1.3초');
+  expect(button.attrs['aria-label']).toContain('연계 보존 1.3초 · 마무리 강화 2.4초');
+  const writes = [label, stage, cue].map(node => node.textWrites), aria = button.attributeWrites['aria-label'];
+  f.player.comboResume.t = 1.23; f.player.counterWindow = 2.38; update(f);
+  expect([label, stage, cue].map(node => node.textWrites)).toEqual(writes);
+  expect(button.attributeWrites['aria-label']).toBe(aria);
+  f.player.state = 'idle'; update(f); expect(label.textContent).toBe('이어치기');
+  const stageWrites = stage.textWrites;
+  f.player.comboResume.t = 1.13; f.player.counterWindow = 2.28; update(f);
+  expect(cue.textContent).toBe('연계 1.2초'); expect(stage.textWrites).toBe(stageWrites);
+  expect(button.attrs['aria-label']).toContain('마무리 강화 2.3초');
+  f.player.comboResume = null; update(f);
+  expect(button.dataset.comboStatus).toBe('counter'); expect(stage.textContent).toBe('마무리 강화'); expect(cue.textContent).toBe('2.3초');
+  f.player.counterWindow = 0; update(f);
+  expect(button.dataset.comboStatus).toBe('neutral'); expect(button.dataset.counterActive).toBe('false');
+  expect(stage.hidden).toBe(true); expect(cue.hidden).toBe(true);
+  f.player.comboResume = { idx: 3, t: .8 }; f.player.counterWindow = 1.4; update(f);
+  f.ui.showHud(false); expect(button.dataset.counterActive).toBe('false'); expect(cue.hidden).toBe(true);
+  f.ui.setupHud(f.player.def, f.player); f.ui.showHud(true); update(f);
+  expect(button.dataset.comboStatus).toBe('resume'); expect(button.dataset.counterActive).toBe('true');
+  f.player.auto = true; update(f); expect(button.dataset.comboStatus).toBe('neutral');
+  expect(button.children).toHaveLength(children.length);
+  button.children.forEach((child, index) => expect(child).toBe(children[index]));
 });
 
 // Supplied DOM bounds test the real layout methods and observer/lifecycle wiring.

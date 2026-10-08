@@ -3,8 +3,8 @@ import './tutorial.css';
 
 const STEPS = ['attack', 'dodge', 'skill', 'clear'];
 const TIPS = {
-  attack: { n: '1 / 4', title: '공격과 콤보', copy: '공격 버튼 · J/Space로 공격. “다시 누르기”가 보이면 한 번 더 눌러 다음 타를 잇습니다.', target: '#btn-attack' },
-  dodge: { n: '2 / 4', title: '붉은 예고에서 벗어나기', copy: '회피 버튼 · K/Shift로 피하세요. 적의 공격 직전 회피하면 퍼펙트 회피가 됩니다.', target: '#btn-dodge' },
+  attack: { n: '1 / 4', title: '공격과 콤보', copy: '공격 버튼 · J/Space로 공격. “다시 누르기” 때 방향을 잡고 다시 누르면 다음 타가 그쪽으로 이어집니다.', target: '#btn-attack' },
+  dodge: { n: '2 / 4', title: '피하고 이어치기', copy: '회피 · K/Shift: 방향을 잡으면 그쪽으로, 방향 없이 누르면 백스텝. 공격 버튼의 남은 타수를 이어치세요. 공격 직전 회피하면 퍼펙트!', target: '#btn-dodge' },
   skill: { n: '3 / 4', title: '스킬로 무리 상대하기', copy: '오른쪽 스킬 버튼 · 1~3/R. MP·쿨타임·궁극기 게이지가 준비된 스킬을 쓰세요.', target: '#hud .skill-btn[data-skill="0"]' },
   clear: { n: '4 / 4', title: '미니맵을 따라 정화하기', copy: '방을 정화하면 다음 길이 열립니다. 체력은 빨간 물약, 어려우면 상단 AUTO로 보조하세요.', target: null },
 };

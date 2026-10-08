@@ -1,0 +1,20 @@
+{
+  "combat-flow-base-v1": {
+    "rawPath": "combat-flow-base-v1.json",
+    "rawBytes": 8275129,
+    "rawSha256": "9229599ba6469f37c51ed3efb1caa3487ba373652827cd0dc3ebd556d8890c65",
+    "gzipPath": "combat-flow-base-v1.json.gz",
+    "gzipBytes": 802579,
+    "gzipSha256": "6eb2a815c43f9be940d1e505432c91943cc989d72af15c45341c3411061bdc3f",
+    "roundTripExact": true
+  },
+  "combat-flow-head-v1": {
+    "rawPath": "combat-flow-head-v1.json",
+    "rawBytes": 8277164,
+    "rawSha256": "d255a910897c33de90966dddeca19f1907e0fa107b5697194ec3a74e6816b553",
+    "gzipPath": "combat-flow-head-v1.json.gz",
+    "gzipBytes": 801100,
+    "gzipSha256": "bdfcff2bd209de75f0472d4f8b7a95c3e96062298327f7e4a50a4694d82e9ef5",
+    "roundTripExact": true
+  }
+}

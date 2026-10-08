@@ -642,7 +642,10 @@ export class FX {
     mesh.position.copy(pos); mesh.position.y += height;
     mesh.rotation.order = 'YXZ'; mesh.rotation.y = yaw - Math.PI / 2 + (flip ? 0 : 0); mesh.rotation.x = -Math.PI / 2 + tilt * (flip ? -1 : 1);
     const dir = flip ? -1 : 1;
-    this.add(mesh, life, (k) => { const e = 1 - Math.pow(1 - k, 2); mesh.scale.setScalar(0.7 + e * 0.6); m.opacity = 1 - e; mesh.rotation.z = dir * (e - 0.5) * 0.9; }, () => m.dispose());
+    // 공격 범위를 읽는 예고는 판정까지 같은 크기·방향을 유지한다.
+    const update = telegraph ? (k) => { m.opacity = .8 + .2 * k; }
+      : (k) => { const e = 1 - Math.pow(1 - k, 2); mesh.scale.setScalar(0.7 + e * 0.6); m.opacity = 1 - e; mesh.rotation.z = dir * (e - 0.5) * 0.9; };
+    this.add(mesh, life, update, () => m.dispose());
   }
   // ---------- 검격 파동 (수직 초승달, 이동) ----------
   crescent(pos, dir, color, { size = 1.8, life = 0.5, speed = 0, tilt = -0.75 } = {}) {
@@ -750,10 +753,18 @@ export class FX {
     this.add(sp, life, (k, t, dt) => { const e = 1 - Math.pow(1 - k, 2); sp.scale.setScalar(size * (0.4 + e * grow)); m.opacity = k < 0.25 ? k / 0.25 : 1 - (k - 0.25) / 0.75; m.rotation += spin * dt; }, () => m.dispose());
     return sp;
   }
-  /** 지면 텍스처 (마법진 / 충격파 링). 회전·확대·페이드 */
-  groundTex(pos, name, color = 0xffffff, { r0 = 0.2, r1 = 4, life = 0.5, spin = 1, y = 0.06, fadeIn = 0.15, hold = 0, telegraph = false } = {}) {
-    const tex = VFX_TEX[name]; if (!tex) return this.ring(pos, color, { r0, r1, life, y, telegraph });
+  /** 지면 텍스처 (마법진 / 충격파 링). 회전·확대·페이드
+   * @param {THREE.Vector3} pos
+   * @param {string} name
+   * @param {THREE.ColorRepresentation} [color]
+   * @param {{r0?: number, r1?: number, life?: number, spin?: number, y?: number, fadeIn?: number, hold?: number, telegraph?: boolean, gain?: number}} [options]
+   */
+  groundTex(pos, name, color = 0xffffff, { r0 = 0.2, r1 = 4, life = 0.5, spin = 1, y = 0.06, fadeIn = 0.15, hold = 0, telegraph = false, gain = 1 } = {}) {
+    // 적의 실제 예고와 일반 마법진은 원래 밝기를 유지한다. 장식 호출만 RGB를 제한한다.
+    const intensity = telegraph ? 1 : boundedFeedbackGain(gain);
+    const tex = VFX_TEX[name]; if (!tex) return this.ring(pos, intensity < 1 ? new THREE.Color(color).multiplyScalar(intensity) : color, { r0, r1, life, y, telegraph });
     const m = this._addMat(tex, color, { telegraph });
+    m.color.multiplyScalar(intensity);
     const mesh = new THREE.Mesh(this.plane2, m); mesh.rotation.x = -Math.PI / 2; mesh.position.copy(pos); mesh.position.y = y; mesh.renderOrder = 8;
     this.add(mesh, life, (k, t, dt) => { const e = 1 - Math.pow(1 - k, 3); const r = r0 + (r1 - r0) * e; mesh.scale.set(r, r, 1); mesh.rotation.z += spin * dt; m.opacity = k < fadeIn ? k / fadeIn : (hold > 0 ? (k < 0.65 ? 1 : 1 - (k - 0.65) / 0.35) : 1 - (k - fadeIn) / (1 - fadeIn)); }, () => m.dispose());
     return mesh;
@@ -830,7 +841,11 @@ export class FX {
   /** 얼음 결정 폭발 */
   iceBurst(pos, { size = 3, life = 0.5 } = {}) { this.texFlash(pos, 'ice', 0xc0f0ff, { size, life, spin: 0.5, grow: 1.0, y: 0.6 }); }
   holyBurst(pos, { size = 6, life = 0.4, color = 0xfff0c0 } = {}) { this.texFlash(pos, 'holy_burst', color, { size, life, spin: 1.2, grow: 1.6, y: 1.2, gain: decorativeBurstGain(size) }); }
-  shockTex(pos, color = 0xffe080, { r1 = 6, life = 0.45 } = {}) { this.groundTex(pos, 'shockwave', color, { r0: 0.5, r1, life, spin: 0.4, y: 0.1, fadeIn: 0.05 }); }
+  /** @param {THREE.Vector3} pos
+   * @param {THREE.ColorRepresentation} [color]
+   * @param {{r1?: number, life?: number}} [options]
+   */
+  shockTex(pos, color = 0xffe080, { r1 = 6, life = 0.45 } = {}) { this.groundTex(pos, 'shockwave', color, { r0: 0.5, r1, life, spin: 0.4, y: 0.1, fadeIn: 0.05, gain: decorativeBurstGain(r1) }); }
 
   // ---------- 데미지 숫자 ----------
   _damageRandom() {

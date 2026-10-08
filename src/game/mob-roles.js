@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {audio} from '../engine/audio.js';
 import {MOB_ROLES,MAX_MOB_ROLE_ATTACKS} from '../data/mob-roles.js';
 import {hazardContains,hazardVertexShader,hazardFragmentShader} from './region-hazards.js';
+import {canCommitMelee} from './combat-craft.js';
 
 const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
 function segmentHit(ax,az,bx,bz,x,z,radius){
@@ -27,6 +28,7 @@ export class MobRole {
   available(distance){
     const e=this.enemy,g=e.game;
     return !this.disposed&&g.active&&!g.paused&&e.alive&&e.stun<=0&&distance<=this.def.reach&&
+      canCommitMelee(e,g.enemies,e.player)&&
       (g.enemies||[]).filter(o=>o.alive&&o.mobRole?.plan).length<MAX_MOB_ROLE_ATTACKS;
   }
   clear(){this.plan=null;this.mesh.visible=false;}

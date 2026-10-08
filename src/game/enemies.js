@@ -9,6 +9,8 @@ import { MobRole } from './mob-roles.js';
 import { canCommitMelee, packSeparation, packSteer } from './combat-craft.js';
 import { supportCastingForStage } from './expedition-combat.js';
 import { beginEnemyGather, prepareEnemyGather } from './crowd-gather.js';
+import { EnemyDashWarning } from './enemy-dash-warning.js';
+import { hazardContains } from './region-hazards.js';
 
 const _v = new THREE.Vector3();
 const areaPlayers = game => [...new Set(game.stage?.party ? game.app.party.livingPlayers() : [game.player])].filter(p => p?.alive);
@@ -64,7 +66,8 @@ export class Enemy extends Actor {
     this.patternTurn = 0;
     this.signatures = def.signatureBoss ? new BossSignatures(this) : null;
     this.mobRole = def.meleeRole && !def.boss && !def.elite ? new MobRole(this) : null;
-    this.packSide = ((game._packSpawnSeq = (game._packSpawnSeq || 0) + 1) & 1) ? 1 : -1;
+    this.packId = game._packSpawnSeq = (game._packSpawnSeq || 0) + 1;
+    this.packSide = (this.packId & 1) ? 1 : -1;
     // 행동형 (bomber / shaman / shield)
     this.behavior = def.behavior || null; this.fuse = -1; this.healT = 4 + Math.random() * 2; this.summonT = 7 + Math.random() * 3; this.blocks = 0; this.guardBroken = 0;
     this.supportOwner = null; this.supportCastKind = null; this.supportCueLabel = null;
@@ -90,6 +93,7 @@ export class Enemy extends Actor {
   get player() { return this.game.player; }
   dispose() {
     this.gatherT = 0; this.gatherBlockT = 0;
+    this.clearDashWarning(); this.dashWarning?.dispose();
     const rule = supportCastingForStage(this.game.stage);
     if (this.supportOwner || (rule && this.runtimeSpeciesId === rule.enemyId &&
         !this.isBoss && !this.isElite && this.behavior === 'shaman')) this.supportStopped = true;
@@ -103,6 +107,7 @@ export class Enemy extends Actor {
   /** 몹몰이: 중심으로 끌어당김 */
   pull(cx, cz, force) { const dx = cx - this.pos.x, dz = cz - this.pos.z; const d = Math.hypot(dx, dz) || 1; if (d < 0.8) return; const f = force * (this.isBoss ? 0.15 : this.isElite ? 0.5 : 1); this.kb.x += dx / d * f; this.kb.z += dz / d * f; }
   gather(cx, cz, speed, duration = .14) { return beginEnemyGather(this, cx, cz, speed, duration); }
+  clearDashWarning() { this.dashWarning?.hide(); this.partyDashWarning = null; }
   announceSkill() {
     const kind = this.special || this.mobRole?.key || (this.def.ranged ? 'magic' : 'melee');
     this.game.ui?.combatCue?.(`${this.isBoss ? '보스 · ' : ''}${enemySkillLabel({ ...this, special: this.special || kind })}`, 'red');
@@ -258,11 +263,13 @@ export class Enemy extends Actor {
     if (kb >= 6 || up) this.gatherBlockT = Math.max(this.gatherBlockT || 0, .35, this.stun,
       this.state === 'hurt' ? this.stagger : 0);
     if (this.supportCastKind && (this.state !== 'attack' || this.stun > 0 || this.breakT > 0)) this.clearSupportCast();
+    if (this.state !== 'attack' || this.stun > 0 || this.breakT > 0) this.clearDashWarning();
     if (this.hp <= 0) { this.hp = 0; this.kill(dirx, dirz, kb); }
     return dmg;
   }
   kill(dirx, dirz, kb) {
     this.gatherT = 0; this.gatherBlockT = 0;
+    this.clearDashWarning();
     this.clearSupportCast();
     this.signatures?.clear();
     this.mobRole?.clear();
@@ -273,6 +280,8 @@ export class Enemy extends Actor {
   }
   update(dt) {
     if (this.supportStopped) return;
+    if (this.partyDashWarning && (!this.alive || this.state !== 'attack' || this.stun > 0 || this.breakT > 0 ||
+        !this.game.active || this.game.bossDefeated)) this.clearDashWarning();
     this.bindSupportOwner();
     if (this.supportOwner) {
       if (!this.supportOwnerValid()) {
@@ -376,11 +385,16 @@ export class Enemy extends Actor {
       const t = this.stateT / this.attackDur;
       if(isBossSignature(this.special))this.signatures?.update(this.stateT);
       else {
-        if (!this.attackDone && t < this.hitAt && this.special !== 'dash') { const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z; if (!this.def.pattern) this.faceDir(dx, dz); this.telegraph = this.hitAt * this.attackDur - this.stateT; }
+        if (!this.attackDone && t < this.hitAt && this.special !== 'dash') {
+          // 바닥에 고정한 방향 예고는 그대로 공격한다. 방향 도형이 없는 기존
+          // 단발 주문만 표적을 추적해 옆걸음으로 피한 근접 범위를 되돌리지 않는다.
+          if (this.def.ranged && !this.special && !this.def.pattern) this.faceDir(p.pos.x - this.pos.x, p.pos.z - this.pos.z);
+          this.telegraph = this.hitAt * this.attackDur - this.stateT;
+        }
         if (this.special === 'dash') this.telegraph = Math.max(0, this.attackDur * .45 - this.stateT);
         if (!this.attackDone && t >= this.hitAt) { this.attackDone = true; this.telegraph = 0; this.doAttack(); }
       }
-      if (t >= 1) { this.signatures?.clear(); this.state = 'chase'; this.dashV = null; this.atkCd = (this.def.atkTime * 0.6 + Math.random() * 0.8) * (this.enraged ? 0.6 : 1); this.play(this.A('idleCombat'), { fade: 0.15 }); }
+      if (t >= 1) { this.signatures?.clear(); this.clearDashWarning(); this.state = 'chase'; this.dashV = null; this.atkCd = (this.def.atkTime * 0.6 + Math.random() * 0.8) * (this.enraged ? 0.6 : 1); this.play(this.A('idleCombat'), { fade: 0.15 }); }
     }
   }
   /** 자폭 — 플레이어와 주변 적 모두에게. 무리 속에서 터지면 연쇄 */
@@ -397,8 +411,11 @@ export class Enemy extends Actor {
     if (this.mobRole) { if (this.mobRole.available(d)) { this.mobRole.start(); this.announceSkill(); } return; }
     if (!canCommitMelee(this, this.game.enemies, this.player)) { this.atkCd = Math.max(this.atkCd, .16); return; }
     this.signatures?.clear();
-    this.attackSequence=(this.attackSequence||0)+1; this.partyDashWarning = null;
+    this.clearDashWarning();
+    this.attackSequence=(this.attackSequence||0)+1;
     this.state = 'attack'; this.stateT = 0; this.attackDone = false;
+    // 예고를 그린 다음 프레임에 추격·분리 속도가 남아 원점을 옮기지 않는다.
+    this.vel.set(0, 0, 0);
     let anim = this.def.ranged ? this.A('cast') : this.A('attack'); this.special = null;
     if (this.isBoss) {
       const r = Math.random(); const kit = this.def.kit;
@@ -417,17 +434,29 @@ export class Enemy extends Actor {
     if (this.isElite && !this.isBoss && Math.random() < 0.3) { anim = this.A('attackHeavy'); this.special = 'spin'; }
     let dur = (this.def.atkTime) * (this.enraged ? 0.75 : 1) * (this.special === 'spin' ? 1.4 : this.special === 'dash' ? 0.9 : 1);
     this.attackDur = dur; this.hitAt = this.special === 'spin' ? 0.55 : this.special === 'summon' ? 0.6 : this.special === 'dash' ? 0.85 : this.special === 'soulrain' ? 0.6 : 0.52;
+    this.telegraph = dur * this.hitAt;
     this.playTimed(anim, dur, { fade: 0.08 });
     this.announceSkill();
     const f = this.forward(_v.clone()); const g = this.game;
-    if (this.special === 'dash') { const p = this.player; const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z; const dd = Math.hypot(dx, dz) || 1; const travel = Math.min(9, dd + 1.5); this.partyDashWarning = {x:this.pos.x+dx/dd*travel/2,z:this.pos.z+dz/dd*travel/2,length:travel+6.4,width:6.4,angle:Math.atan2(dz,dx)}; this.dashV = new THREE.Vector3(dx / dd, 0, dz / dd).multiplyScalar(travel / (dur * .4)); this.faceDir(dx, dz); this.telegraph = dur * .45; g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: travel, arc: 30, height: 0.1, telegraph: true, life: dur * this.hitAt, thickness: 1 }); audio.whoosh({ vol: 0.5, pitch: 0.5, dur: 0.5 }); }
+    if (this.special === 'dash') {
+      const p = this.player, dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z;
+      const dd = Math.hypot(dx, dz) || 1, travel = Math.min(9, dd + 1.5);
+      this.partyDashWarning = { x: this.pos.x + dx / dd * travel / 2, z: this.pos.z + dz / dd * travel / 2,
+        length: travel + 6.4, width: 6.4, angle: Math.atan2(dz, dx), safeRadius: 0 };
+      // 고유기 보스는 기존 경고 슬롯 하나를 빌려 최대 6개 메시 계약을 유지한다.
+      this.dashWarning ||= new EnemyDashWarning(g.scene, this.signatures?.slots[0].mesh);
+      this.dashWarning.show(this.partyDashWarning);
+      this.dashV = new THREE.Vector3(dx / dd, 0, dz / dd).multiplyScalar(travel / (dur * .4));
+      this.faceDir(dx, dz); this.telegraph = dur * .45;
+      audio.whoosh({ vol: .5, pitch: .5, dur: .5 });
+    }
     else if (this.def.ranged && !this.special) { g.fx.flash(this.pos.clone().setY(1.6 * this.def.scale), 0xa0ff90, { size: 1.5 * this.def.scale, telegraph: true, life: dur * this.hitAt }); if (this.isBoss) audio.magic({ vol: 0.25, base: 200, notes: [0, 1, 0], step: 0.1, type: 'square' }); }
     else if (this.special === 'fan') g.fx.slashArc(this.pos, this.yaw, this.def.projColor || 0x80ff90, { radius: 14, arc: 80, height: 0.1, telegraph: true, life: dur * this.hitAt, thickness: .6 });
     else if (this.special === 'spin') g.fx.ring(this.pos, 0xff3030, { r0: 4.2, r1: 4.8, telegraph: true, life: dur * this.hitAt, y: 0.06, width: 1 });
     else if (this.special === 'slam') g.fx.ring(this.pos.clone().addScaledVector(f, 2), 0xff3030, { r0: 3.6, r1: 4.2, telegraph: true, life: dur * this.hitAt, y: 0.06 });
     else if (this.special === 'summon') { g.fx.castCircle(this.pos, 0xff3030, { radius: 4, telegraph: true, life: dur, demon: true }); }
     else if (this.special === 'soulrain') { const p = this.player; this.rainPts = []; for (let i = 0; i < 6; i++) { const pt = p.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 8, 0, (Math.random() - 0.5) * 8)); if (i === 0) pt.copy(p.pos); this.rainPts.push(pt); g.fx.ring(pt, 0x80ff90, { r0: 1.8, r1: 2.2, telegraph: true, life: dur * this.hitAt, y: 0.06 }); } g.fx.castCircle(this.pos, 0x80ff90, { radius: 4, telegraph: true, life: dur, demon: true }); }
-    else g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: this.def.range + 0.5, arc: 110, height: 0.1, telegraph: true, life: dur * this.hitAt, tilt: 0, thickness: 0.9 });
+    else g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: this.def.range + 0.6, arc: THREE.MathUtils.radToDeg(2.2), height: 0.1, telegraph: true, life: dur * this.hitAt, tilt: 0, thickness: 1 });
     if (this.isBoss && this.special !== 'dash') audio.whoosh({ vol: 0.4, pitch: 0.5, dur: 0.5 });
   }
   doAttack() {
@@ -449,7 +478,9 @@ export class Enemy extends Actor {
     }
     if (this.special === 'fan') {
       const pc2 = this.def.projColor || 0x60ff80;
-      for (let i = -2; i <= 2; i++) { const dir = (this.def.pattern ? f.clone().setY(0) : p.pos.clone().setY(1.2).sub(this.pos.clone().setY(1.5)).normalize()).applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.28); const sp = this.pos.clone().addScaledVector(f, 0.8).setY(1.5 * this.def.scale); g.spawnProjectile({ pos: sp, dir, speed: 13, radius: 0.75, dmg: dmg * 0.7, color: pc2, size: 0.6, owner: this, kb: 3, kind: 'magic', life: this.def.pattern ? 1 : 1.8, trail: pc2, hostile: true }); }
+      // 기존 구형 보스의 하향 탄도는 유지하고 지면 방향만 예고에 고정한다.
+      const aim = this.def.pattern ? f : f.clone().multiplyScalar(this.distTo(p)).setY(1.2 - 1.5).normalize();
+      for (let i = -2; i <= 2; i++) { const dir = aim.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.28); const sp = this.pos.clone().addScaledVector(f, 0.8).setY(1.5 * this.def.scale); g.spawnProjectile({ pos: sp, dir, speed: 13, radius: 0.75, dmg: dmg * 0.7, color: pc2, size: 0.6, owner: this, kb: 3, kind: 'magic', life: this.def.pattern ? 1 : 1.8, trail: pc2, hostile: true }); }
       audio.magic({ vol: 0.3, base: 300, notes: [0, -5, -7], step: 0.05, type: 'square' }); return;
     }
     if (this.def.ranged && !this.special) {
@@ -472,7 +503,8 @@ export class Enemy extends Actor {
     }
     if (this.special === 'dash') {
       this.dashV = null; g.fx.slashArc(this.pos, this.yaw, 0xd070ff, { radius: 3.2, arc: 160, height: 1.2, life: 0.25, tilt: 0.8 }); g.fx.ghost(this.model, 0xb26bff, { life: 0.35, opacity: 0.5 }); audio.whoosh({ vol: 0.6, pitch: 1.2, dur: 0.2 });
-      if (p.distTo(this) < 3.2) p.hurt(dmg, { dirx: p.pos.x - this.pos.x, dirz: p.pos.z - this.pos.z, kb: 7, kind: 'blunt' });
+      if (this.partyDashWarning && p.distTo(this) < 3.2 && hazardContains(this.partyDashWarning, p.pos.x, p.pos.z)) p.hurt(dmg, { dirx: p.pos.x - this.pos.x, dirz: p.pos.z - this.pos.z, kb: 7, kind: 'blunt' });
+      this.clearDashWarning();
       return;
     }
     audio.whoosh({ vol: 0.35, pitch: this.isBoss ? 0.5 : 0.9, dur: 0.3 });
@@ -496,7 +528,7 @@ export function enemyPartyWarnings(enemy) {
   if (enemy.special === 'summon') return [];
   if (enemy.special === 'slam') return [{...base,x:base.x+forward.x*2,z:base.z+forward.z*2,radius:4.2}];
   if (enemy.special === 'spin') return [{...base,radius:4.8}];
-  if (enemy.special === 'dash' && enemy.partyDashWarning) return [{...base,kind:'lane',...enemy.partyDashWarning}];
+  if (enemy.special === 'dash') return enemy.partyDashWarning ? [{...base,kind:'lane',...enemy.partyDashWarning}] : [];
   if (enemy.special === 'fan' || enemy.def.ranged) {
     const angles = enemy.special === 'fan' ? [-.56,-.28,0,.28,.56] : [0];
     return angles.map((a,i)=>{const yaw=enemy.yaw+a;return {...base,id:`${base.id}:${i}`,kind:'lane',x:base.x+Math.sin(yaw)*7,z:base.z+Math.cos(yaw)*7,width:1.5,length:14,angle:Math.PI/2-yaw};});

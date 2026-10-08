@@ -10,9 +10,10 @@ function fanFixture(yaw: number) {
   const enemy = Object.create(Enemy.prototype);
   Object.assign(enemy, {
     def: (ENEMIES as Record<string, any>).frost_captain,
-    pos: new THREE.Vector3(40, 0, -30), yaw, isBoss: true,
+    pos: new THREE.Vector3(40, 0, -30), vel: new THREE.Vector3(), yaw, isBoss: true,
     phase: 0, patternTurn: 0, atk: 40, A: (key: string) => key, playTimed: () => {},
     game: {
+      scene: new THREE.Scene(),
       player: { pos: new THREE.Vector3(40 + Math.sin(yaw) * 3, 0, -30 + Math.cos(yaw) * 3) },
       fx: { slashArc: (_pos: unknown, angle: number, _color: unknown, options: { radius: number; arc: number }) => warnings.push({ yaw: angle, ...options }) },
       spawnProjectile: (shot: typeof shots[number]) => shots.push(shot),
@@ -59,6 +60,13 @@ test('legacy enemy windups preserve their telegraph material and original attack
       enemy.game.fx[method] = (...args: any[]) => warnings.push({ method, options: args.at(-1) });
     }
     enemy.startAttack(3);
+    if (pattern === 'dash') {
+      expect(enemy.dashWarning.mesh.visible).toBe(true);
+      expect(enemy.dashWarning.mesh.scale.x).toBe(enemy.partyDashWarning.length);
+      expect(enemy.dashWarning.mesh.scale.z).toBe(enemy.partyDashWarning.width);
+      enemy.dashWarning.dispose();
+      continue;
+    }
     expect(warnings.length).toBeGreaterThan(0);
     for (const warning of warnings) {
       expect(warning.options.telegraph).toBe(true);

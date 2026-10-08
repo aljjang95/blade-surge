@@ -9,7 +9,7 @@ test('recovery requires the completed heavy attack sequence, not an interrupted 
 });
 test('real enemy attack records sequence only when execution reaches doAttack',()=>{
   const noop=()=>{};const e:any=Object.create(Enemy.prototype);
-  Object.assign(e,{def:{atkTime:1,pattern:['spin']},isBoss:true,phase:0,patternTurn:0,atk:10,pos:new THREE.Vector3(),yaw:0,A:(x:string)=>x,forward:(v:any)=>v.set(0,0,1),playTimed:noop,
+  Object.assign(e,{def:{atkTime:1,pattern:['spin']},isBoss:true,phase:0,patternTurn:0,atk:10,pos:new THREE.Vector3(),vel:new THREE.Vector3(),yaw:0,A:(x:string)=>x,forward:(v:any)=>v.set(0,0,1),playTimed:noop,
     game:{player:{distTo:()=>20},fx:{ring:noop,slashArc:noop,dust:noop},renderer:{shake:noop}}});
   e.startAttack(3);expect(e.attackSequence).toBe(1);expect(e.completedAttackSequence).toBeUndefined();
   e.doAttack();expect(e.completedAttackSequence).toBe(1);

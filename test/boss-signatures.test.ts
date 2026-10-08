@@ -17,7 +17,7 @@ function fixture(party=false){
   const game:any={scene:new THREE.Scene(),player,active:true,paused:false,stage:{party,chapter:{theme:'garden'}},fx:{},ui:{toast:()=>{}},world:{roomAt:()=>room}};
   game.app={party:{livingPlayers:()=>[player,player]}};
   const enemy:any=Object.create(Enemy.prototype);
-  Object.assign(enemy,{game,def:(ENEMIES as any).garden_finalboss,pos:new THREE.Vector3(40,0,-30),homeRoom:room,alive:true,spawning:false,state:'attack',stateT:0,phase:0,patternTurn:0,attackSequence:1,atk:100,yaw:0,isBoss:true,stun:0,A:(s:string)=>s,playTimed:()=>{}});
+  Object.assign(enemy,{game,def:(ENEMIES as any).garden_finalboss,pos:new THREE.Vector3(40,0,-30),vel:new THREE.Vector3(),homeRoom:room,alive:true,spawning:false,state:'attack',stateT:0,phase:0,patternTurn:0,attackSequence:1,atk:100,yaw:0,isBoss:true,stun:0,A:(s:string)=>s,playTimed:()=>{}});
   const caster=new BossSignatures(enemy);enemy.signatures=caster;
   return {game,enemy,caster,player,damage};
 }

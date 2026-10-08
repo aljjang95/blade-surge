@@ -3,7 +3,6 @@ export const MELEE_ATTACK_SLOTS = 3;
 
 export function packSeparation(self, enemies = [], { padding = .22, range = 2.8, gain = 5.2, maxNeighbors = 8 } = {}) {
   let x = 0, z = 0, count = 0, overlap = 0;
-  const selfIndex = Math.max(0, enemies.indexOf(self));
   for (let i = 0; i < enemies.length; i++) {
     const other = enemies[i];
     if (!other || other === self || !other.alive || other.spawning) continue;
@@ -12,7 +11,15 @@ export function packSeparation(self, enemies = [], { padding = .22, range = 2.8,
     const min = Math.max(.6, finite(self?.radius) + finite(other?.radius) + padding);
     let d = Math.hypot(dx, dz), nx, nz;
     if (d >= min) continue;
-    if (d < 1e-4) { nx = ((selfIndex + i) & 1) ? 1 : -1; nz = ((selfIndex ^ i) & 2) ? .35 : -.35; d = 0; }
+    if (d < 1e-4) {
+      // 완전히 겹친 쌍도 서로 반대로 밀어낸다. 생성 순번을 쓰므로 명단 순서나
+      // 렌더 주기와 무관하며 새 난수로 공격·드랍 시드를 소비하지 않는다.
+      const selfId = Number.isSafeInteger(self?.packId) ? self.packId : Math.max(0, enemies.indexOf(self));
+      const otherId = Number.isSafeInteger(other.packId) ? other.packId : i;
+      const angle = (Math.min(selfId, otherId) * 17 + Math.max(selfId, otherId) * 31) * 2.399963;
+      const side = selfId < otherId || (selfId === otherId && enemies.indexOf(self) < i) ? -1 : 1;
+      nx = Math.cos(angle) * side; nz = Math.sin(angle) * side; d = 0;
+    }
     else { nx = dx / d; nz = dz / d; }
     const penetration = min - d;
     x += nx * penetration * gain; z += nz * penetration * gain; overlap += penetration;
@@ -22,12 +29,14 @@ export function packSeparation(self, enemies = [], { padding = .22, range = 2.8,
 }
 
 export function canCommitMelee(self, enemies = [], player, { slots = MELEE_ATTACK_SLOTS, radius = 6.5 } = {}) {
-  if (!self || self.isBoss || self.isElite || self.def?.ranged || self.mobRole) return true;
+  if (!self || self.isBoss || self.isElite || self.def?.ranged) return true;
   let active = 0;
   for (const other of enemies) {
     if (!other || other === self || !other.alive || other.spawning || other.isBoss || other.isElite || other.def?.ranged) continue;
     if (other.state !== 'attack') continue;
-    if (player?.pos && Math.hypot(finite(other.pos?.x) - finite(player.pos.x), finite(other.pos?.z) - finite(player.pos.z)) > radius) continue;
+    // 먼 거리에서 준비한 돌격도 곧 근접한다. 역할 계획은 기존 전역 3명
+    // 한도와 함께 점유해 적 갱신 순서로 일반 공격이 추가 진입하지 못하게 한다.
+    if (!other.mobRole?.plan && player?.pos && Math.hypot(finite(other.pos?.x) - finite(player.pos.x), finite(other.pos?.z) - finite(player.pos.z)) > radius) continue;
     if (++active >= slots) return false;
   }
   return true;

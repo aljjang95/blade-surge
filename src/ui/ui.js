@@ -9,11 +9,13 @@ import { resultStoryHtml } from './campaign.js';
 import { levelExp } from '../data/heroes.js';
 import { renderGrowthPreparation, canPrepareGrowth } from './growth.js';
 import { comboFeedback } from './combo-feedback.js';
+import { skillFeedback } from './skill-feedback.js';
 import { BattleReadability } from './battle-readability.js';
 import { writeHudStyle } from './hud-style-write.js';
 import { combatHudAnimationRegion } from '../engine/combat-feedback.js';
 import './campaign.css';
 import './combo-feedback.css';
+import './skill-feedback.css';
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => Math.floor(n).toLocaleString('ko-KR');
@@ -46,6 +48,10 @@ export class UI {
     });
     this.lobbyCaptionResize.observe(lobby); this.lobbyCaptionResize.observe(lobbyBottom);
     this.skillBtns = [...document.querySelectorAll('.skill-btn')];
+    // 정지는 HUD 루프를 건너뛰므로 기존 입력 초기화 경계에서 즉시 표시한다.
+    this.skillFeedbackClearListener = app.input.onClear(() => {
+      this.refreshSkillFeedback(app.battle, false); this.refreshDodgeFeedback(app.battle); this.refreshComboFeedback(app.battle);
+    });
     this.hurtT = 0; this.combatCueEl = $('combat-cue'); this.combatCueTimer = null; this.combatCueOwner = null; this.comboEl = $('combo'); this.comboN = $('combo-n'); this.killStreakEl = $('kill-streak'); this.killStreakN = $('kill-streak-n'); this.killStreakTier = $('kill-streak-tier');
     this.lootLayer = $('loot-layer'); this.lootQueue = [];
     this.minimap = new Minimap($('minimap'));
@@ -184,7 +190,7 @@ export class UI {
     if (this.app.battle?.world !== floor) return;
     this.readability.renderObjective(this.app.battle);
   }
-  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { if (this.combatCueOwner) this.clearCombatCue(this.combatCueOwner, this.combatCueEl?.textContent); this.readability?.clear(); this.refreshComboFeedback(); this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } else this.observeCombatNoticeHeaders(); this.refreshCombatNoticeLayout(); }
+  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { if (this.combatCueOwner) this.clearCombatCue(this.combatCueOwner, this.combatCueEl?.textContent); this.readability?.clear(); this.refreshComboFeedback(); this.refreshSkillFeedback(); this.refreshDodgeFeedback(); this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } else this.observeCombatNoticeHeaders(); this.refreshCombatNoticeLayout(); }
   pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; b.setPaused('manual', on); this.show(this.el.pause, on); if (!on && this.el.pause.contains(document.activeElement)) document.activeElement?.blur?.(); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
@@ -248,7 +254,14 @@ export class UI {
     // Controls keep their children during combat; rebind on each hero/party setup.
     this.cacheComboFeedback(); this.refreshComboFeedback();
     this._skillCooldowns = this.skillBtns.map(btn => btn.querySelector('.cd'));
-    this._dodgeBtn = $('btn-dodge'); this._dodgeCd = this._dodgeBtn.querySelector('.dodge-cd');
+    this._skillFeedbackViews = this.skillBtns.map(() => ({}));
+    this._skillStatusLabels = this.skillBtns.map(btn => {
+      let label = btn.querySelector('.skill-status');
+      if (!label) { label = document.createElement('span'); label.className = 'skill-status'; label.setAttribute('aria-hidden', 'true'); btn.append(label); }
+      label.textContent = ''; label.hidden = true; btn.dataset.skillStatus = 'neutral'; btn._skillFeedbackDescription = null;
+      return label;
+    });
+    this._dodgeBtn = $('btn-dodge'); this._dodgeCd = this._dodgeBtn.querySelector('.dodge-cd'); this._dodgeDescription = null; this.refreshDodgeFeedback();
     $('hud-portrait').src = def.portrait; $('hud-stage').textContent = '';
     this.skillBtns.forEach((b, slot) => {
       const { index, skill: sk } = player.combatSkill(slot);
@@ -292,21 +305,60 @@ export class UI {
   refreshComboFeedback(battle) {
     const button = this._attackComboButton; if (!button) return;
     const view = comboFeedback(battle);
-    const key = `${view.status}|${view.stage}|${view.total}|${view.finisher}|${view.nextStage}`;
+    const key = `${view.status}|${view.stage}|${view.total}|${view.finisher}|${view.nextStage}|${view.cue}|${view.counterSeconds}`;
     if (this._comboFeedbackKey !== key) {
       this._comboFeedbackKey = key;
       button.dataset.comboStatus = view.status; button.dataset.comboStage = String(view.stage); button.dataset.comboTotal = String(view.total);
       button.dataset.comboFinisher = String(view.finisher); button.dataset.comboNextStage = view.nextStage === null ? '' : String(view.nextStage);
-      this._attackComboLabel.textContent = view.label;
+      button.dataset.counterActive = String(view.counterActive);
+      if (this._attackComboLabel.textContent !== view.label) this._attackComboLabel.textContent = view.label;
       this._attackComboStage.hidden = this._attackComboCue.hidden = view.status === 'neutral';
-      this._attackComboStage.textContent = view.stage ? `${view.stage}/${view.total}타${view.finisher ? ' · 마무리' : ''}` : '';
-      this._attackComboCue.textContent = view.detail.split(' · ').at(-1);
+      if (this._attackComboStage.textContent !== view.stageLabel) this._attackComboStage.textContent = view.stageLabel;
+      if (this._attackComboCue.textContent !== view.cue) this._attackComboCue.textContent = view.cue;
       button.setAttribute('aria-label', `${view.label}${view.detail ? ` · ${view.detail}` : ''} · J 또는 Space`);
     }
     const progress = Math.round(view.progress * 1000) / 10;
     if (this._comboFeedbackProgress !== progress) {
       this._comboFeedbackProgress = progress;
       this._attackComboArc.style.strokeDashoffset = String(100 - progress);
+    }
+  }
+  /** 0초가 되기 전에 준비로 보이지 않도록 실제 회피 재사용 경계를 읽는다. */
+  refreshDodgeFeedback(battle) {
+    const button = this._dodgeBtn, label = this._dodgeCd; if (!button || !label) return;
+    const player = battle?.player;
+    const active = !!battle?.active && !battle.paused && battle.input?.enabled !== false && !!player?.alive;
+    const cooling = active && Number.isFinite(player.dodgeCd) && player.dodgeCd > 0;
+    button.classList.toggle('cooling', cooling);
+    if (label.hidden !== !cooling) label.hidden = !cooling;
+    const text = cooling ? (Math.ceil(player.dodgeCd * 10) / 10).toFixed(1) : '';
+    if (label.textContent !== text) label.textContent = text;
+    const description = `회피${cooling ? ` · 재사용 대기 ${text}초` : ''} · K 또는 Shift`;
+    if (this._dodgeDescription !== description) { this._dodgeDescription = description; button.setAttribute('aria-label', description); }
+  }
+  /** 쿨다운·MP·궁극기 자원만 투영하며 기존 버튼과 입력 바인딩은 유지한다. */
+  refreshSkillFeedback(battle, animate = true) {
+    if (!this._skillStatusLabels) return;
+    for (let slot = 0; slot < this.skillBtns.length; slot++) {
+      const button = this.skillBtns[slot], label = this._skillStatusLabels[slot], view = skillFeedback(battle, slot, this._skillFeedbackViews[slot]);
+      if (button.dataset.skillStatus !== view.status) button.dataset.skillStatus = view.status;
+      if (label.textContent !== view.label) label.textContent = view.label;
+      if (label.hidden !== !view.label) label.hidden = !view.label;
+      const description = `${button.title}${view.detail ? ` · ${view.detail}` : ''}`;
+      if (button._skillFeedbackDescription !== description) {
+        button._skillFeedbackDescription = description; button.setAttribute('aria-label', description);
+      }
+      const skill = battle?.player?.def?.skills?.[battle.player.combatSkillIndex(slot)];
+      button.classList.toggle('locked', view.locked);
+      button.classList.toggle('ready', !!skill?.ult && view.ready);
+      writeHudStyle(this._skillCooldowns[slot].style, '--p', (view.progress * 100) + '%');
+      const wasReady = button.dataset.ready === '1';
+      if (animate && view.ready && !wasReady && battle.elapsed > 1) {
+        button.classList.remove('ready-flash'); void button.offsetWidth; button.classList.add('ready-flash');
+        audio.play('ui_pluck', { vol: 0.25 });
+      }
+      if (view.status === 'neutral' || view.locked) button.classList.remove('ready-flash');
+      const ready = view.ready ? '1' : '0'; if (button.dataset.ready !== ready) button.dataset.ready = ready;
     }
   }
   setWave() {}
@@ -338,6 +390,8 @@ export class UI {
   ultCinema(name, def) { const c = $('ult-cinema'); $('ult-name').textContent = name; $('ult-name').style.textShadow = `0 0 20px ${def.color}, 0 4px 0 #000`; c.classList.remove('on'); void c.offsetWidth; c.classList.add('on'); setTimeout(() => c.classList.remove('on'), 1700); }
   updateHud(b, dt) {
     this.refreshComboFeedback(b);
+    this.refreshSkillFeedback(b);
+    this.refreshDodgeFeedback(b);
     this.readability?.update(b, dt);
     const astralChoice = !!b.active && b.routeObjectives?.def?.id === 'astral_constellations_standard';
     if (this._astralChoiceHud !== astralChoice) {
@@ -358,12 +412,8 @@ export class UI {
     const mpText = `MP ${Math.floor(p.mp)} / ${p.maxMp}`, mpLabel = $('hud-mp-txt'); if (mpLabel.textContent !== mpText) mpLabel.textContent = mpText;
     const hero = this.eco.hero(b.heroId), need = levelExp(hero.level); writeHudStyle($('hud-exp').style, 'width', Math.min(100, hero.exp / Math.max(1, need) * 100) + '%');
     const expText = `EXP ${hero.exp} / ${need}`, expLabel = $('hud-exp-txt'); if (expLabel.textContent !== expText) expLabel.textContent = expText;
-    const dodge = this._dodgeBtn, dodgeCd = this._dodgeCd, dodgeHidden = p.dodgeCd <= .01;
-    dodge.classList.toggle('cooling', p.dodgeCd > .01); if (dodgeCd.hidden !== dodgeHidden) dodgeCd.hidden = dodgeHidden;
-    if (!dodgeCd.hidden) { const text = p.dodgeCd.toFixed(1); if (dodgeCd.textContent !== text) dodgeCd.textContent = text; }
     const shortcut = $('btn-boss-shortcut'), shortcutHidden = !b.canBossShortcut?.(); if (shortcut.hidden !== shortcutHidden) shortcut.hidden = shortcutHidden;
     const ult = p.ult / p.ultMax; writeHudStyle($('hud-ult').style, 'width', ult * 100 + '%'); $('hud-ult').parentElement.classList.toggle('full', ult >= 1);
-    this.skillBtns.forEach((btn, slot) => { const i = p.combatSkillIndex(slot), sk = p.def.skills[i]; if (!sk) return; const locked = !p.unlocked(i); btn.classList.toggle('locked', locked); if (locked) return; let pct; if (sk.ult) { pct = 1 - ult; btn.classList.toggle('ready', ult >= 1); } else { pct = p.cds[i] / sk.cd; btn.classList.toggle('ready', false); } writeHudStyle(this._skillCooldowns[slot].style, '--p', (Math.max(0,pct) * 100) + '%'); const wasReady = btn.dataset.ready === '1'; const ready = pct <= 0 && (!sk.mp || p.mp >= sk.mp); if (ready && !wasReady && b.elapsed > 1) { btn.classList.remove('ready-flash'); void btn.offsetWidth; btn.classList.add('ready-flash'); audio.play('ui_pluck', { vol: 0.25 }); } const readyValue = ready ? '1' : '0'; if (btn.dataset.ready !== readyValue) btn.dataset.ready = readyValue; });
     this.setGauge(b);
     if (b.boss && b.boss.alive) writeHudStyle($('boss-hp').style, 'width', (b.boss.hp / b.boss.maxHp * 100) + '%');
     if (this.hurtT > 0) { this.hurtT -= dt; } writeHudStyle($('hud-vignette').style, 'opacity', Math.max(hp < 0.3 ? 0.42 : 0, this.hurtT > 0 ? this.hurtT * 1.2 : 0));

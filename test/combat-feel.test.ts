@@ -48,12 +48,11 @@ test('manual attack captures the current movement direction and respects the com
     stats: { spd: 1 },
     action: { timeScale: 1 },
     faceDir: (x: number, z: number) => { p.yaw = Math.atan2(x, z); },
-    startCombo: (index: number) => { p.started = index; },
   });
   const input = { move: { x: 1, y: 0 }, attackHeld: false, consume: (name: string) => name === 'attack' };
   Player.prototype.handleInput.call(p, input, 0.016);
   expect(p.yaw).toBe(Math.PI / 2);
-  expect(p.started).toBe(0);
+  expect(p.state).toBe('attack'); expect(p.comboIdx).toBe(0);
 
   const attack = manualPlayer({ state: 'attack', current: HEROES.knight.combo[0], hitDone: false, stateT: 0.05 });
   const early = { move: { x: 0, y: 0 }, attackHeld: false, consume: (name: string) => name === 'attack' };

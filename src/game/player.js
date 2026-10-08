@@ -34,6 +34,11 @@ export class Player extends Actor {
     this.auraT = 0;
     this.state = 'idle'; this.stateT = 0;
     this.comboIdx = 0; this.comboQueued = false; this.attackBufferT = 0; this.dodgeBufferT = 0; this.hitDone = false; this.comboWindow = 0;
+    this.attackBufferYaw = null; this.comboQueuedYaw = null;
+    // 정지·초점 이탈·재출격은 짧은 입력 버퍼와 방향을 폐기하되 수락된 콤보는 보존한다.
+    this._offDodgeInputClear = game.input?.onClear?.(() => {
+      this.dodgeBufferT = 0; this.attackBufferT = 0; this.attackBufferYaw = null; this.comboQueuedYaw = null;
+    });
     this.cds = def.skills.map(() => 0); this.ult = 0; this.ultMax = 100; this.ultGainLock = 0;
     this.maxMp = MP_BASE; this.mp = MP_BASE; this.mpRegen = MP_REGEN_PER_SEC; this.dodgeCd = 0;
     this.dr = 0; this.drT = 0; this.sanctum = null;   // 성역: 피해 감소
@@ -64,10 +69,11 @@ export class Player extends Actor {
   combatSkillIndex(slot) { return skillIndexForCombatSlot(this.skillLoadout, slot); }
   combatSkill(slot) { const index = this.combatSkillIndex(slot); return { index, skill: this.def.skills[index] }; }
   tryCastCombatSkill(slot) { const index = this.combatSkillIndex(slot); return index >= 0 && this.tryCastSkill(index); }
-  dispose() { this.beacon?.dispose(); super.dispose(); }
+  dispose() { this._offDodgeInputClear?.(); this._offDodgeInputClear = null; this.attackBufferYaw = null; this.comboQueuedYaw = null; this.beacon?.dispose(); super.dispose(); }
 
   // ---------------- 입력 처리 ----------------
   handleInput(input, dt) {
+    if (!this.alive || this.auto || this.stun > 0) { this.attackBufferYaw = null; this.comboQueuedYaw = null; }
     if (!this.alive) return;
     let mx = input.move.x, my = input.move.y;
     if (this.auto) { const m = this.autoMove(dt); mx = m.x; my = m.y; }
@@ -81,19 +87,22 @@ export class Player extends Actor {
       if (this.dodgeCd <= 0 && this.state !== 'dodge' && this.state !== 'ult' && this.stun <= 0 && this.canDodgeCancel()) return this.dodge(wantMove ? this.moveDir : null);
       if (this.state === 'attack' && this.dodgeCd <= 0) this.dodgeBufferT = DODGE_INPUT_BUFFER_SEC;
     }
-    if (this.dodgeBufferT > 0 && this.dodgeCd <= 0 && this.state === 'attack' && this.canDodgeCancel()) return this.dodge(wantMove ? this.moveDir : null);
+    // 후딜 끝에서 예약한 입력은 자연 종료 뒤에도 유효하다. 스킬·궁극기·기절로
+    // 전환된 상태는 건너뛰지 않고, 공격 중에는 기존 캔슬 경계만 사용한다.
+    if (this.dodgeBufferT > 0 && this.dodgeCd <= 0 && this.stun <= 0 &&
+      (this.state === 'idle' || this.state === 'move' || (this.state === 'attack' && this.canDodgeCancel()))) return this.dodge(wantMove ? this.moveDir : null);
     // 전투 입력은 0~3 고정 + Q/E 장착 슬롯 4/5만 노출한다.
     for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot)) return; }
     // 공격: 입력 버퍼는 버튼을 누른 순간의 의도를 보존하지만, 버튼 홀드 자체는
     // 다음 콤보를 예약하지 않는다. 수동 전투에서 타이밍을 직접 결정하게 하는 경계다.
     if (input.consume('attack')) {
       this.attackBufferT = ATTACK_INPUT_BUFFER_SEC;
-      if (this.state === 'attack' && this.canQueueCombo()) this.comboQueued = true;
+      this.attackBufferYaw = !this.auto && this.stun <= 0 && wantMove ? Math.atan2(mx, my) : null;
+      if (this.state === 'attack' && this.canQueueCombo()) { this.comboQueued = true; this.comboQueuedYaw = this.attackBufferYaw; }
     }
     if ((this.state === 'idle' || this.state === 'move') && this.attackBufferT > 0) {
       this.attackBufferT = 0;
-      if (!this.auto && wantMove) this.faceDir(mx, my);
-      this.startCombo(0);
+      this.startCombo(0, this.attackBufferYaw);
     }
     // 이동
     if (this.state === 'idle' || this.state === 'move') {
@@ -131,13 +140,16 @@ export class Player extends Actor {
   }
 
   // ---------------- 기본 콤보 ----------------
-  startCombo(idx) {
+  startCombo(idx, inputYaw = null) {
     if (idx === 0 && this.comboResume && this.comboResume.t > 0) { idx = this.comboResume.idx; this.comboResume = null; }
     const c = this.def.combo[idx]; if (!c) return;
+    // 수락한 새 입력만 다음 타격의 시작 방향을 고른다. 진행 중 타격은 꺾지 않는다.
+    if (!this.auto && this.alive && this.stun <= 0 && Number.isFinite(inputYaw)) this.yaw = inputYaw;
+    this.attackBufferYaw = null; this.comboQueuedYaw = null;
     this.state = 'attack'; this.stateT = 0; this.comboIdx = idx; this.comboQueued = false; this.hitDone = false; this.current = c;
     this.vel.set(0, 0, 0);
-    // AUTO만 적을 향해 몸을 돌린다. 수동 공격은 현재 바라보는 방향을
-    // 그대로 사용해야 거리와 방향을 읽고 맞출 수 있다.
+    // AUTO만 적을 향해 몸을 돌린다. 수동 공격은 새 입력으로 고른 방향을
+    // 유지하며, 입력이 없으면 현재 바라보는 방향을 그대로 사용한다.
     const target = this.auto ? this.autoAim(this.def.ranged ? 12 : 7) : null;
     const dur = c.dur / (this.buffs.atkSpd * (this.stormT > 0 ? 1.4 : 1));
     this.playTimed(c.anim, dur, { fade: 0.06 });
@@ -213,7 +225,7 @@ export class Player extends Actor {
     }
     if (c.move === 'nova') {   // 노바: 끌어모아 터뜨린다
       this.game.vacuum(this.pos.clone(), c.range + 2, gravity ? 14 : 9);
-      const hits = this.game.hitRadius(this.pos, c.range, dmg, { kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'magic', finisher: true, comboToken, source: this, basic: true });
+      const hits = this.game.hitRadius(this.pos, c.range, dmg, { kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'magic', finisher: true, counter: counterFinisher, comboToken, source: this, basic: true });
       this.game.sp?.onComboHit(hits);
       this.game.fx.holyBurst(this.pos, { size: c.range * 2.4, life: 0.45, color: this.def.accent }); this.game.fx.shockTex(this.pos, this.def.color, { r1: c.range * 1.6, life: 0.4 }); this.game.fx.ring(this.pos, this.def.color, { r0: 0.5, r1: c.range + 1, life: 0.35, vertical: false });
       this.game.renderer.shake(0.4); audio.magic({ vol: 0.4, base: 330, notes: [0, 7, 12], step: 0.04 }); audio.boom({ vol: 0.4, dur: 0.4, low: 90 });
@@ -222,7 +234,7 @@ export class Player extends Actor {
     }
     if (c.move === 'slam') {   // 도약 강타: 착지점 반경
       const cpos = this.pos.clone().addScaledVector(f, 0.8);
-      const hits = this.game.hitRadius(cpos, c.range, dmg, { kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'blunt', finisher: true, comboToken, source: this, basic: true });
+      const hits = this.game.hitRadius(cpos, c.range, dmg, { kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'blunt', finisher: true, counter: counterFinisher, comboToken, source: this, basic: true });
       this.game.sp?.onComboHit(hits);
       this.game.fx.shockTex(cpos, this.def.color, { r1: c.range * 1.5, life: 0.45 }); this.game.fx.dustPuff(cpos, { size: c.range * 1.2, life: 0.6 }); this.game.fx.explosion(cpos, { size: 4, color: this.def.accent, life: 0.4 }); this.game.fx.burst(cpos.clone().setY(0.4), this.def.color, { n: 20, speed: 8, size: 0.4 });
       this.game.renderer.shake(0.7); this.game.renderer.punch(0.5); audio.boom({ vol: 0.7, dur: 0.5, low: 55 }); audio.vibe(30);
@@ -294,13 +306,16 @@ export class Player extends Actor {
     // Evade without throwing away the earned combo. A cancelled windup repeats
     // its own step; it cannot skip ahead to a free finishing blow.
     if (this.state === 'attack' && this.current) this.comboResume = {idx:this.hitDone?(this.comboIdx+1)%this.def.combo.length:this.comboIdx,t:1.25};
+    this.attackBufferYaw = null; this.comboQueuedYaw = null;
     this.dodgeBufferT = 0; this.stopTrail(); this.state = 'dodge'; this.stateT = 0; this.invuln = 0.4; this.dodgeCd = DODGE_COOLDOWN_SEC;
     this.perfectWindow = 0.28;   // 이 안에 피격 판정이 스치면 퍼펙트
     if (this.def.jobId === 'ranger') this.gainJobResource(1);
-    const d = dir ? dir.clone().normalize() : this.forward(_v.clone());
-    this.faceDir(d.x, d.z);
+    // 수동 무방향 회피는 적을 보면서 물러선다. 방향 입력과 AUTO는 기존 전방 회피를 유지한다.
+    const backstep = !dir && !this.auto;
+    const d = dir ? dir.clone().normalize() : this.forward(_v.clone()).multiplyScalar(backstep ? -1 : 1);
+    if (!backstep) this.faceDir(d.x, d.z);
     this.vel.copy(d).multiplyScalar(19);
-    this.play('Dodge_Forward', { once: true, fade: 0.05, speed: 1.6 });
+    this.play(backstep && this.has('dodge') ? this.A('dodge') : 'Dodge_Forward', { once: true, fade: 0.05, speed: 1.6 });
     audio.dodgeRelease();
     this.game.fx.dust(this.pos, { n: 8, size: 1.2 });
     this.ghostT = 0;
@@ -322,10 +337,12 @@ export class Player extends Actor {
     if (this.state === 'ult' || this.state === 'dodge' || this.stun > 0) return false;
     if (!this.auto && this.state === 'attack' && !this.canSkillCancel()) return false;
     if (this.state === 'skill' && this.skillCtx && !this.skillCtx.done) return false;
-    this.stopTrail();
     const impl = SKILLS[sk.id]; if (!impl) return false;
     const mpCost = skillMpCost(sk), currentMp = Number.isFinite(this.mp) ? this.mp : MP_BASE;
     if (mpCost > currentMp) { this.game.ui.toast(`MP 부족 · ${mpCost} 필요`, 'red'); audio.play('ui_error', { vol: 0.5 }); return false; }
+    // 실제로 전환할 수 있는 스킬만 진행 중 평타의 궤적을 종료한다.
+    this.stopTrail();
+    this.attackBufferYaw = null; this.comboQueuedYaw = null;
     if (sk.ult) { this.ult = 0; this.ultGainLock = ultimateLockDuration(impl); this.state = 'ult'; } else { this.mp = currentMp - mpCost; this.cds[i] = this.game.skillCooldown?.(sk.cd) ?? sk.cd; this.state = 'skill'; }
     this.stateT = 0; this.vel.set(0, 0, 0);
     if (this.auto) this.autoAim(12);
@@ -404,13 +421,15 @@ export class Player extends Actor {
     // 스킬/궁극기 중엔 슈퍼아머. 기본 콤보 중에도 경타(kb<6)는 끊지 못한다 — 무리 속에서 잡몹 한 대마다 콤보가 1타로 돌아가던 것이 '끊김'의 절반
     const armored = !heavy || this.state === 'skill' || this.state === 'ult' || this.state === 'dodge';
     if (!armored) {
-      if (this.state === 'attack') { this.comboResume = { idx: Math.min(this.comboIdx + 1, this.def.combo.length - 1), t: 1.2 }; }   // 강타에 끊겨도 1.2초 안에 다시 누르면 이어서
+      // 회피와 같은 실행 경계: 타격 전에는 반복하고 마무리 타격을 실행했으면 첫 타로 돌아간다.
+      if (this.state === 'attack' && this.current) { this.comboResume = { idx: this.hitDone ? (this.comboIdx + 1) % this.def.combo.length : this.comboIdx, t: 1.2 }; }
+      this.attackBufferYaw = null; this.comboQueuedYaw = null;
       this.stopTrail(); this.state = 'hurt'; this.stateT = 0; this.play(Math.random() < 0.5 ? 'Hit_A' : 'Hit_B', { once: true, fade: 0.05, speed: 1.6 });
     }
     if (this.hp <= 0) { this.hp = 0; this.stopTrail(); this.state = 'dead'; this.die(); this.game.onPlayerDeath(this); }
     return true;
   }
-  die() { if (this.alive) this.knightLifeEpoch = (this.knightLifeEpoch || 0) + 1; this.beacon?.setFocus(false); super.die(); }
+  die() { this.attackBufferYaw = null; this.comboQueuedYaw = null; if (this.alive) this.knightLifeEpoch = (this.knightLifeEpoch || 0) + 1; this.beacon?.setFocus(false); super.die(); }
   revive() { this.beacon?.setFocus(false); this.alive = true; this.dead = false; this.deathT = -1; this.hp = this.maxHp; this.state = 'idle'; this.invuln = 2; this.pos.y = 0; for (const m of this.mats) m.transparent = false; this.play('Idle'); }
 
   // ---------------- 자동 전투 ----------------
@@ -505,9 +524,11 @@ export class Player extends Actor {
 
   // ---------------- 업데이트 ----------------
   update(dt) {
+    if (!this.alive || this.auto || this.stun > 0) { this.attackBufferYaw = null; this.comboQueuedYaw = null; }
     super.update(dt);
     this.hurtFeedbackT = Math.max(0, (this.hurtFeedbackT || 0) - dt);
     this.attackBufferT = Math.max(0, (this.attackBufferT || 0) - dt);
+    if (this.attackBufferT === 0) this.attackBufferYaw = null;
     this.dodgeBufferT = Math.max(0, (this.dodgeBufferT || 0) - dt);
     this.beacon.update(this.alive, this.yaw, { state: this.state, color: this.def.accent || this.def.color, reduced: !!this.game.app?.reducedMotion?.matches });
     this.guardT = Math.max(0, (this.guardT || 0) - dt);
@@ -539,12 +560,12 @@ export class Player extends Actor {
       if (this.hitDone && c.move !== 'spin') this.vel.multiplyScalar(Math.pow(0.001, dt));
       // 콤보 연계 창: 타격 직후부터 (0.18 → 0.1: 타 사이 공백이 '끊김'으로 읽혔다). 연타 중엔 마지막 tick 뒤
       const chainAt = c.ticks ? this.nextTick - 0.02 : c.hitAt + 0.1;
-      if (this.hitDone && this.comboQueued && !this.ticksLeft && t >= chainAt) { const next = this.comboIdx + 1; if (next < this.def.combo.length) { this.startCombo(next); return; } else if (t >= c.hitAt + 0.3) { this.startCombo(0); return; } }   // 마무리 뒤에도 idle 을 거치지 않고 1타로
-      if (t >= 1) { this.stopTrail(); this.state = 'idle'; this.play('Idle', { fade: 0.2 }); this.vel.set(0, 0, 0); if (this.comboQueued) this.startCombo(0); }
+      if (this.hitDone && this.comboQueued && !this.ticksLeft && t >= chainAt) { const next = this.comboIdx + 1; if (next < this.def.combo.length) { this.startCombo(next, this.comboQueuedYaw); return; } else if (t >= c.hitAt + 0.3) { this.startCombo(0, this.comboQueuedYaw); return; } }   // 마무리 뒤에도 idle 을 거치지 않고 1타로
+      if (t >= 1) { this.stopTrail(); this.state = 'idle'; this.play('Idle', { fade: 0.2 }); this.vel.set(0, 0, 0); if (this.comboQueued) this.startCombo(0, this.comboQueuedYaw); }
     } else if (this.state === 'dodge') {
       this.ghostT += dt; if (this.ghostT > 0.05) { this.ghostT = 0; this.game.fx.ghost(this.model, this.def.color, { life: 0.3, opacity: 0.5 }); }
       this.vel.multiplyScalar(Math.pow(0.02, dt));
-      if (this.stateT > 0.32) { this.state = 'idle'; this.vel.set(0, 0, 0); this.play('Idle', { fade: 0.15 }); if (this.attackBufferT > 0) { this.attackBufferT = 0; this.startCombo(0); } }
+      if (this.stateT > 0.32) { this.state = 'idle'; this.vel.set(0, 0, 0); this.play('Idle', { fade: 0.15 }); if (this.attackBufferT > 0) { this.attackBufferT = 0; this.startCombo(0, this.attackBufferYaw); } }
     } else if (this.state === 'hurt') {
       this.vel.set(0, 0, 0);
       if (this.stateT > 0.32) { this.state = 'idle'; this.play('Idle', { fade: 0.15 }); }

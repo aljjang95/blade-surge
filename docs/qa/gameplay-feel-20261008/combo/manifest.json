@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "scope": "SHA-256 of copied original fixture evidence; gzip decompresses to the unchanged final report bytes.",
+  "build": {
+    "sha": "fab00213725df80be2670eb9d78625aa09d17773",
+    "dirty": true,
+    "builtAt": "2026-10-08T14:52:57.067Z",
+    "pwaRelease": "65fd524ae06edc3ec6e3"
+  },
+  "helperSha256": "855fac1718a35c5b4b25289ef7ebedd1aff8a0db8d29c1ed1d98d0f69d74148c",
+  "uncompressedReport": {
+    "originalPath": "work/qa/gameplay-20261008/cloud-combo-ready-v3/report.json",
+    "sha256": "d123571fa51e6e572b09ad91f4dd07ce34f4887b2ec54f4e2c6ffaff00d5b226",
+    "bytes": 886851
+  },
+  "files": {
+    "combo/combo_barbarian_05.png": {
+      "sha256": "e6944cf3474dd4e9bfad5782b229b727039d35af75f0116d586a247d96cdd5c3",
+      "bytes": 509610
+    },
+    "combo/combo_knight_06.png": {
+      "sha256": "d857edb60acdc00fa67e97fea1683d6dacd6dfffab47adf6204f3598adeeee64",
+      "bytes": 533041
+    },
+    "combo/combo_mage_05.png": {
+      "sha256": "41037ab7300200f3fc94ab0dee21d24948274cc3c2fb39b24de0363721fbf59f",
+      "bytes": 531953
+    },
+    "combo/combo_ranger_05.png": {
+      "sha256": "92688dd37b6ff25965a31e2608a629c1a151d2c63ae4382ca0ae1e9f617ca607",
+      "bytes": 516542
+    },
+    "combo/combo_rogue_06.png": {
+      "sha256": "dcfd04cfaa2b955a5f45e2397f720813e7353cee8a633a414133b16361ac4142",
+      "bytes": 527519
+    },
+    "combo/followup_counter-consumed.png": {
+      "sha256": "a8f49406d5a5fcd509a75e6b9999ce6308ae9896e1bf8f53a22410b0b3b9ac71",
+      "bytes": 516946
+    },
+    "combo/followup_dodge-resume.png": {
+      "sha256": "cef76ba63b6e04d466d9ca20ee2490b35766342a6d86b9671d6fc9dafacb7e26",
+      "bytes": 517915
+    },
+    "combo/followup_perfect-counter.png": {
+      "sha256": "9b1fd716602985afec1d2da9c56f9b8bcba4c2c29977a3a0ad5fc91d413c5ca4",
+      "bytes": 540795
+    },
+    "combo/followup_resume-ready.png": {
+      "sha256": "930427b297400322c66385f532be0b408c9b43eb537f895cf98f3590af13a19c",
+      "bytes": 494677
+    },
+    "combo/report.json.gz": {
+      "sha256": "8eb19fa4900a3e53474c9410c0c823ac0e337847ee5883fc48e34c4401007432",
+      "bytes": 41126
+    },
+    "combo/run.log": {
+      "sha256": "7b206bf27668478e0a6c6155ce6acf2403c993cc64158402b5a6d90a86f7ea3f",
+      "bytes": 423
+    },
+    "combo-failures/cloud-combo-diagnostic-v2/failure_knight.png": {
+      "sha256": "e38183c719bb242afba71892d643f0fece391f34f5a6e1fffe74f834135f3bcf",
+      "bytes": 348071
+    },
+    "combo-failures/cloud-combo-diagnostic-v2/report.json": {
+      "sha256": "801d79c67c4d58516a4055ccd943fb552c3ac0db0d3bac27580bfbc83329df24",
+      "bytes": 86318
+    },
+    "combo-failures/cloud-combo-diagnostic-v2/run.log": {
+      "sha256": "ee4adad24e76f5c6dbb0f08a6a20a91c129d96d8ac1d2db855e5e2fa31bb5f90",
+      "bytes": 524
+    },
+    "combo-failures/cloud-combo-v1/report.json": {
+      "sha256": "34f2bdfd5cad5d0a8d63e473fc5d12149bdef12ac841b18b12791427de51e6df",
+      "bytes": 29471
+    },
+    "combo-failures/cloud-combo-v1/run.log": {
+      "sha256": "a93be81a0ec19834b7003cbd2d68117fff6df04cfe44fbc65a4c5022caf5e4cd",
+      "bytes": 513
+    },
+    "combo-review.md": {
+      "sha256": "8df4e2ff00aafc79ec9a6f36c556f1b5fac159c5e0d8d56657e7168036f0a0f9",
+      "bytes": 7490
+    }
+  }
+}

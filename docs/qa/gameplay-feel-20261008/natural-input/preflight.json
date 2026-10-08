@@ -1,0 +1,49 @@
+{
+  "at": "2026-10-08T15:00:53.816412+00:00",
+  "scope": "Existing purpose-built repository natural-RAF/native-input scripted software QA; not human playtesting. Driver copied byte-for-byte without behavior changes. Existing isolated fonts reused; no file overwritten. Different font fixture from deterministic metrics, not a performance comparison.",
+  "driverIdentical": true,
+  "files": {
+    "/workspace/scratch/fc6f71e2bf7f/blade-surge/docs/qa/dungeon-forge-20261008/natural-v4-run2/driver.mjs": {
+      "bytes": 15003,
+      "sha256": "9ee7ca0d7815fec7a7fb6c3f3907ef08c72d1895661496b47777557f89e75693"
+    },
+    "/workspace/scratch/fc6f71e2bf7f/blade-surge/work/qa/gameplay-natural-driver.mjs": {
+      "bytes": 15003,
+      "sha256": "9ee7ca0d7815fec7a7fb6c3f3907ef08c72d1895661496b47777557f89e75693"
+    },
+    "/tmp/blade-qa-fontconfig/fonts.conf": {
+      "bytes": 248,
+      "sha256": "fdec73cf32b3166c540be16e51a6691627dae13263e365225f9a748dfd71f48c"
+    },
+    "/tmp/blade-qa-fontconfig/NotoSansKR-Regular.ttf": {
+      "bytes": 2457568,
+      "sha256": "db7068bffcd6034d4c6d8b9ee7b50b65d72bf4befe1bf8ec4555747c713a5d85"
+    },
+    "/tmp/blade-qa-fontconfig/NotoSansKR-Bold.ttf": {
+      "bytes": 2457336,
+      "sha256": "8d29a13d694d31887e35d6b13ec4399659a26e11d76e75969168deff3cbc54e6"
+    },
+    "/tmp/blade-qa-fontconfig/BlackHanSans-Regular.ttf": {
+      "bytes": 978968,
+      "sha256": "bccac0aeebdbdd22fec985e1de47546c40d998e580fa98589edd2e876987e6da"
+    },
+    "/tmp/blade-qa-fonts/node_modules/@fontsource/noto-sans-kr/files/noto-sans-kr-korean-400-normal.woff2": {
+      "bytes": 541864,
+      "sha256": "3aa0d1d63f3b5b2a33053a41a34512eac63abfb1dc2112aeda04733656a1a6d9"
+    },
+    "/tmp/blade-qa-fonts/node_modules/@fontsource/noto-sans-kr/files/noto-sans-kr-korean-700-normal.woff2": {
+      "bytes": 559192,
+      "sha256": "dab3d492daa687386292cff1499225db580f931f800ee0d124eb0636378c6020"
+    },
+    "/tmp/blade-qa-title-fonts/node_modules/@fontsource/black-han-sans/files/black-han-sans-korean-400-normal.woff2": {
+      "bytes": 190420,
+      "sha256": "e02f4e41a5852756cff190d9280944f9a86ef3b2841c0400f2245781588ea8cf"
+    }
+  },
+  "build": {
+    "sha": "fab00213725df80be2670eb9d78625aa09d17773",
+    "dirty": true,
+    "builtAt": "2026-10-08T14:52:57.067Z",
+    "pwaRelease": "65fd524ae06edc3ec6e3"
+  }
+}
