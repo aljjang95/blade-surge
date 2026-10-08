@@ -5,8 +5,10 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 const root = process.cwd(), out = path.resolve(process.argv[2]), origin = process.argv[4] || 'http://127.0.0.1:4173';
-await fs.mkdir(out);
 const assert = (v, m) => { if (!v) throw Error(m); };
+const profile = process.argv[3];
+assert(!profile || ['desktop', 'landscape', 'portrait'].includes(profile), 'Unknown UI QA profile');
+await fs.mkdir(out);
 const report = { started: new Date().toISOString(), head: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
   fixture: 'Independent Chromium process per profile; fresh storage, normal RAF and randomness. Explicit native explore entry for current selection-first contract. Short joystick: release as soon as displacement >0.1, without minimum hold or added delay, then immediate menu tap; repeat five times. Native input only, no injected save/actor/route/time. Browser viewport QA, not physical Android or performance proof.', profiles: [], sources: {} };
 for (const file of ['src/ui/garden-ui.css', 'src/ui/oath-shell.js', 'src/main.js', 'src/engine/hub-controls.js', 'tools/garden-ui-qa.mjs', 'dist/index.html']) report.sources[file] = createHash('sha256').update(await fs.readFile(file)).digest('hex');
@@ -17,7 +19,18 @@ async function servedBuild() {
   const version = await response.json(), local = JSON.parse(await fs.readFile('dist/version.json', 'utf8'));
   assert(JSON.stringify(version) === JSON.stringify(local), 'Served build identity differs from local candidate');
   const index = await fetch(`${origin}/?verify=${Date.now()}`, { cache: 'no-store' });
-  assert(index.ok && createHash('sha256').update(Buffer.from(await index.text())).digest('hex') === report.sources['dist/index.html'], 'Served index differs from local artifact');
+  assert(index.ok, 'Served index unavailable');
+  const html = await index.text();
+  assert(createHash('sha256').update(Buffer.from(html)).digest('hex') === report.sources['dist/index.html'], 'Served index differs from local artifact');
+  report.servedArtifacts ||= {};
+  for (const [, asset] of html.matchAll(/\b(?:src|href)="([^"]+\.(?:js|css))"/g)) {
+    const url = new URL(asset, origin), file = path.resolve('dist', '.' + url.pathname);
+    assert(url.origin === new URL(origin).origin && file.startsWith(path.resolve('dist') + path.sep), 'Asset outside candidate');
+    const response = await fetch(url, { cache:'no-store', signal:AbortSignal.timeout(20000) });
+    const localHash = createHash('sha256').update(await fs.readFile(file)).digest('hex');
+    assert(response.ok && createHash('sha256').update(Buffer.from(await response.arrayBuffer())).digest('hex') === localHash, 'Served bundle differs from local artifact');
+    report.servedArtifacts[url.pathname] = localHash;
+  }
   return version;
 }
 report.build = await servedBuild();
@@ -164,6 +177,7 @@ try {
     await fs.writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2)); await context.close(); await browser.close();
   }
 } finally { if (browser?.isConnected()) await browser.close(); }
+assert(report.profiles.length === (profile ? 1 : 3), 'Missing UI QA profiles');
 report.status = report.profiles.every(p => p.status === 'passed') ? 'passed' : 'failed';
 for (const [file, digest] of Object.entries(report.sources)) assert(createHash('sha256').update(await fs.readFile(file)).digest('hex') === digest, 'Source changed during UI QA');
 assert(execFileSync('git', ['rev-parse', 'HEAD'], { encoding:'utf8' }).trim() === report.head && !execFileSync('git', ['status','--porcelain'], { encoding:'utf8' }).trim(), 'Source identity changed during UI QA');
