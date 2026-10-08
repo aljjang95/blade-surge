@@ -1,0 +1,26 @@
+{
+  "generator": "built-in imagegen",
+  "date": "2026-10-08",
+  "license": "self-generated",
+  "reference": "work/design/departure-journal-20261008/departure-journal-concept-v1.png",
+  "assets": [
+    {
+      "file": "glass-conservatory.webp",
+      "width": 1400,
+      "height": 933,
+      "bytes": 392916,
+      "sha256": "4769d7898e8a93e0226cc9d7e9c731088da6a49798adc119a63e4f9030a7c06a",
+      "originalSha256": "f755ed8d4217e8e898aaaf619c25a4dcb83644fa8c4d62130718d6c336539795",
+      "prompt": "Standalone landscape fantasy conservatory header illustration matching approved expedition journal; pale stone, ivy, white flowers, turquoise crystal tree on right, warm sunlight, airy left side, natural ivory haze. No text, UI, people or watermark."
+    },
+    {
+      "file": "ivory-paper.webp",
+      "width": 440,
+      "height": 440,
+      "bytes": 7890,
+      "sha256": "47b2a50177d3056148d2a1530a5cb0c16698212d69a3bc2eef84f79b74bba35e",
+      "originalSha256": "c0099ca1882b2f350555d19cc68aba4c0805e9203f20840cf3ab191d204b1017",
+      "prompt": "Seamless flat scanned very pale warm ivory cotton paper, fine fibers, very low contrast, quiet even lighting. No stains, folds, shadows, vignette, border, objects, drawings, text or watermark."
+    }
+  ]
+}

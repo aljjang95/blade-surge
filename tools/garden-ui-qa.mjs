@@ -11,7 +11,7 @@ assert(!profile || ['desktop', 'landscape', 'portrait'].includes(profile), 'Unkn
 await fs.mkdir(out);
 const report = { started: new Date().toISOString(), head: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
   fixture: 'Independent Chromium process per profile; fresh storage, normal RAF and randomness. Explicit native explore entry for current selection-first contract. Short joystick: release as soon as displacement >0.1, without minimum hold or added delay, then immediate menu tap; repeat five times. Native input only, no injected save/actor/route/time. Browser viewport QA, not physical Android or performance proof.', profiles: [], sources: {} };
-for (const file of ['src/ui/garden-ui.css', 'src/ui/oath-shell.js', 'src/main.js', 'src/engine/hub-controls.js', 'tools/garden-ui-qa.mjs', 'dist/index.html']) report.sources[file] = createHash('sha256').update(await fs.readFile(file)).digest('hex');
+for (const file of ['src/ui/garden-ui.css', 'src/ui/departure-journal.css', 'src/ui/citadel-hub.js', 'src/ui/oath-shell.js', 'src/main.js', 'src/engine/hub-controls.js', 'tools/garden-ui-qa.mjs', 'public/img/departure-journal/glass-conservatory.webp', 'public/img/departure-journal/ivory-paper.webp', 'dist/index.html']) report.sources[file] = createHash('sha256').update(await fs.readFile(file)).digest('hex');
 assert(!execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim(), 'Freeze a clean source before QA');
 async function servedBuild() {
   const response = await fetch(`${origin}/version.json?verify=${Date.now()}`, { cache: 'no-store' });
@@ -64,6 +64,33 @@ try {
         if (options.hasTouch) await card.tap(); else await card.click();
         await page.locator('.citadel-hub-dialog[open]').waitFor();
         assert(await page.locator('.citadel-hub-go').isDisabled() === (locked === 'true'), 'Selection access state mismatch');
+        if (route === 'glass_garden') {
+          await page.locator('.citadel-hub-rewards img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
+          await shot('departure-journal');
+          row.departureLayout = await page.evaluate(() => {
+            const dialog = document.querySelector('.citadel-hub-dialog'), scroll = dialog.querySelector('.citadel-hub-destination-scroll');
+            const footer = dialog.querySelector('.citadel-hub-destination-footer').getBoundingClientRect();
+            return { width: dialog.clientWidth, scrollWidth: scroll.scrollWidth, footerTop: footer.top, footerBottom: footer.bottom, viewportHeight: innerHeight,
+              rewards: [...dialog.querySelectorAll('.citadel-hub-rewards li')].map(item => item.textContent), rulesClosed: !dialog.querySelector('.citadel-hub-journal-rules').open };
+          });
+          assert(row.departureLayout.scrollWidth <= row.departureLayout.width && row.departureLayout.footerBottom <= row.departureLayout.viewportHeight, 'Journal overflow or hidden footer');
+          assert(row.departureLayout.rulesClosed && row.departureLayout.rewards.join(' ').includes('360'), 'Journal reward or collapsed state');
+          await tap('.citadel-hub-journal-rules > summary');
+          assert(await page.locator('[data-citadel-cue-action]').isVisible(), 'Rules disclosure lost authored instructions');
+          await tap('.citadel-hub-journal-rules > summary');
+          await tap('.citadel-hub-journal-oaths > summary');
+          await tap('.citadel-hub-fury');
+          assert(await page.locator('.citadel-hub-fury').getAttribute('aria-pressed') === 'true', 'Native oath did not save');
+          await tap('.citadel-hub-fury');
+          assert(await page.locator('.citadel-hub-fury').getAttribute('aria-pressed') === 'false', 'Native oath did not restore');
+          await tap('.citadel-hub-journal-oaths > summary');
+          await tap('[data-citadel-depth="deep"]');
+          assert(await page.locator('.citadel-hub-go').isDisabled() && await page.locator('.citadel-hub-unlock-note').isVisible(), 'Locked deep inspection enabled admission');
+          await shot('departure-deep-locked');
+          await tap('[data-citadel-depth="standard"]');
+          assert(!await page.locator('.citadel-hub-go').isDisabled(), 'Normal admission did not restore');
+          row.steps.push('journal: visible footer/rewards, rules disclosure, oath save/restore, locked deep inspection');
+        }
         await tap('.citadel-hub-cancel'); await page.waitForFunction(() => app.commandUI.visible);
         assert(await card.evaluate(el => el===document.activeElement), 'Preparation did not restore native card focus');
         const after = await page.evaluate(() => ({ energy:app.eco.s.energy,gold:app.eco.s.gold,pending:app.expedition.s.pending }));
