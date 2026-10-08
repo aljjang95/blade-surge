@@ -2,11 +2,21 @@ import './citadel-hub.css';
 import { DUNGEONS, MATERIALS, CONSUMABLES } from '../data/expansion.js';
 import { CITADEL_HUB_HOTSPOTS } from '../data/citadel-hub.js';
 import { citadelPreparation } from '../game/citadel-preparation.js';
+import { HEROES } from '../data/heroes.js';
 import { personalMetricLabel, personalMetricValue } from './personal-goal-labels.js';
 
 const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const verbs = { dungeon: '입장 확인', campaign: '캠페인 보기', arena: '상대 고르기', merchant: '물약 구매', trainer: '전투 준비', steward: '결투 안내' };
 const count = value => Number(value).toLocaleString('ko-KR');
+const potionArt = id => `/img/departure-journal/icons/potion-${id === 'hp_tonic' ? 'health' : id === 'overdrive' ? 'power' : 'guard'}.webp`;
+const rewardCards = rewards => {
+  const entries = [];
+  if (rewards?.gold) entries.push({ name: '골드', amount: rewards.gold, art: 'gold' });
+  if (rewards?.xp) entries.push({ name: '탐험 경험치', amount: rewards.xp, art: 'hero-xp' });
+  for (const [id, amount] of Object.entries(rewards?.materials || {})) entries.push({ name: MATERIALS.find(item => item.id === id)?.name || id, amount, art: id === 'ember_core' ? 'material-ember' : id === 'star_dust' ? 'material-stardust' : 'material-leaf' });
+  for (const [id, amount] of Object.entries(rewards?.consumables || {})) entries.push({ name: CONSUMABLES.find(item => item.id === id)?.name || id, amount, art: `potion-${id === 'hp_tonic' ? 'health' : id === 'overdrive' ? 'power' : 'guard'}` });
+  return entries.map(item => `<li><img src="/img/departure-journal/icons/${item.art}.webp" alt="" width="48" height="48"><span>${safe(item.name)}</span><b>${count(item.amount)}</b></li>`).join('') || '<li>추가 보상 없음</li>';
+};
 const rewardLabel = rewards => {
   const entries = [];
   if (rewards?.gold) entries.push(`골드 ${count(rewards.gold)}`);
@@ -87,7 +97,7 @@ export class CitadelHubUI {
     if (!this.dialog.contains(active)) return;
     // 저장·입장 상태가 바뀔 수 있어 매번 실제로 탭 가능한 요소를 다시 읽는다.
     // 스크롤 밖 요소도 렌더되어 있으면 포함하고 중간 탭 이동·스크롤은 브라우저에 맡긴다.
-    const controls = [...this.dialog.querySelectorAll('button, input, select, textarea, a[href], [tabindex]')].filter(control => {
+    const controls = [...this.dialog.querySelectorAll('button, input, select, textarea, a[href], summary, [tabindex]')].filter(control => {
       const visibility = owner.defaultView.getComputedStyle(control).visibility;
       return control.tabIndex >= 0 && !control.matches(':disabled') && !control.closest('[hidden], [inert]') &&
         control.getClientRects().length > 0 && visibility !== 'hidden' && visibility !== 'collapse';
@@ -150,27 +160,22 @@ export class CitadelHubUI {
     const preparation = citadelPreparation(this.app, def.id, this.selectedDepth);
     if (!preparation.ok) { this.close(); return; }
     this.challengeNotice = ''; this.reviewedPreparation = null;
-    this.dialog.innerHTML = `<div class="citadel-hub-destination-shell"><header class="citadel-hub-destination-heading">
-      <div class="citadel-hub-destination-identity"><small class="citadel-hub-eyebrow">원정 출격 준비</small><h2 id="citadel-destination-title"></h2></div>
-      <fieldset class="citadel-hub-depths"><legend>원정 단계</legend>${preparation.depthOptions.map(option => `<label class="citadel-hub-depth"><input type="radio" name="citadel-depth" value="${safe(option.depth)}" data-citadel-depth="${safe(option.depth)}" aria-describedby="citadel-depth-${safe(option.depth)}-state" ${option.depth === this.selectedDepth ? 'checked' : ''}><span class="citadel-hub-depth-copy"><strong>${safe(option.label)}</strong><small id="citadel-depth-${safe(option.depth)}-state"></small></span></label>`).join('')}</fieldset>
-      </header><section class="citadel-hub-action-cue" aria-label="출격 전 행동 안내" hidden><strong data-citadel-cue-depth></strong><p data-citadel-cue-objective></p><p data-citadel-cue-action></p></section><div class="citadel-hub-destination-scroll">
-      <div class="citadel-hub-destination-art"><span></span></div>
-      <div class="citadel-hub-destination-body"><p id="citadel-destination-description"></p><p class="citadel-hub-tactics" hidden></p>
-      <div class="citadel-hub-destination-stats"><span>해금 <b data-citadel-unlock></b></span><span>입장 비용 <b data-citadel-cost></b></span><span>현재 보유 <b data-citadel-energy></b></span></div><p class="citadel-hub-unlock-note" hidden></p>
-      <section class="citadel-hub-preparation-section" aria-label="원정 목표"><h3>이번 원정의 목표</h3><p class="citadel-hub-objective"></p></section>
-      <section class="citadel-hub-preparation-section" aria-label="클리어 보상"><h3>기본 클리어 보상</h3><p class="citadel-hub-rewards"></p><div class="citadel-hub-first-reward"></div></section>
-      <section class="citadel-hub-frontier" aria-label="프론티어 효과"></section>
-      <section class="citadel-hub-preparation-section citadel-hub-hero" aria-label="출격 영웅"><h3>출격 영웅</h3><p></p></section>
-      <section class="citadel-hub-preparation-section" aria-label="보유 물약"><h3>보유 물약 <small>전투에서 사용</small></h3><ul class="citadel-hub-potions"></ul><p class="citadel-hub-preparation-note">이 화면에서는 물약을 소모하지 않습니다.</p></section>
-      <section class="citadel-hub-challenge-details" aria-label="서약 효과 상세"><h3>현재 출격에 적용할 서약</h3><ul data-citadel-challenge-list></ul><p data-citadel-challenge-effects></p><p data-citadel-fury-preview></p><p id="citadel-fury-persistence">선택은 즉시 저장되며 해제할 때까지 개인 캠페인·원정에 유지됩니다. 파티·아레나에는 적용되지 않습니다.</p><p>완료 명성은 클리어 정산에서 계산합니다. 필드 골드·장비와 기본 클리어 보상은 기존 규칙을 따릅니다.</p></section>
-      <section class="citadel-hub-personal-goal" aria-label="개인 목표"><div class="citadel-hub-goal-copy"></div><button type="button" class="citadel-hub-goal-open">기록에서 목표 보기</button></section>
-      </div></div><div class="citadel-hub-destination-footer"><section class="citadel-hub-risk-choice" aria-label="서약 선택"><div class="citadel-hub-risk-row"><button type="button" class="citadel-hub-fury" aria-pressed="false" aria-describedby="citadel-fury-rule citadel-fury-persistence citadel-challenge-active"><span>분노의 적</span><strong data-citadel-fury-state></strong></button><div><p id="citadel-fury-rule"></p><p class="citadel-hub-risk-persistence">선택 즉시 저장 · 해제할 때까지 유지</p></div></div><p id="citadel-challenge-active"></p><p class="citadel-hub-challenge-notice" role="status" aria-live="polite" hidden></p></section><p class="citadel-hub-access" role="status" aria-live="polite"></p><div class="citadel-hub-destination-actions"><button type="button" class="citadel-hub-cancel">돌아가기</button><button type="button" class="citadel-hub-go"></button></div></div></div>`;
+    this.dialog.innerHTML = `<div class="citadel-hub-destination-shell"><div class="citadel-hub-destination-scroll">
+      <header class="citadel-hub-destination-heading"><div class="citadel-hub-destination-art"><span></span></div><div class="citadel-hub-destination-identity"><small class="citadel-hub-eyebrow">원정 준비</small><h2 id="citadel-destination-title"></h2><b data-citadel-unlock></b></div><button type="button" class="citadel-hub-dismiss" aria-label="출격 준비 닫기">닫기</button></header>
+      <div class="citadel-hub-destination-body"><fieldset class="citadel-hub-depths"><legend>원정 단계</legend>${preparation.depthOptions.map(option => `<label class="citadel-hub-depth"><input type="radio" name="citadel-depth" value="${safe(option.depth)}" data-citadel-depth="${safe(option.depth)}" aria-describedby="citadel-depth-${safe(option.depth)}-state" ${option.depth === this.selectedDepth ? 'checked' : ''}><span class="citadel-hub-depth-copy"><strong>${safe(option.label)}</strong><small id="citadel-depth-${safe(option.depth)}-state"></small></span></label>`).join('')}</fieldset>
+      <div class="citadel-hub-destination-stats"><span>입장 비용 <b data-citadel-cost></b></span><span>현재 보유 <b data-citadel-energy></b></span></div><p class="citadel-hub-unlock-note" hidden></p>
+      <section class="citadel-hub-preparation-section" aria-label="클리어 보상"><h3>원정 보상 <small>REWARDS</small></h3><ul class="citadel-hub-rewards"></ul><div class="citadel-hub-first-reward"></div></section>
+      <section class="citadel-hub-preparation-section" aria-label="보유 물약"><h3>출격 준비 <small>PREPARATION</small></h3><div class="citadel-hub-loadout"><div class="citadel-hub-hero" aria-label="출격 영웅"><img alt="" width="76" height="76"><p></p></div><ul class="citadel-hub-potions"></ul></div><p class="citadel-hub-preparation-note">물약은 전투에서 사용 · 이 화면에서는 소모되지 않습니다.</p></section>
+      <details class="citadel-hub-journal-rules"><summary>목표 · 규칙 보기</summary><p id="citadel-destination-description"></p><section class="citadel-hub-action-cue" aria-label="출격 전 행동 안내" hidden><strong data-citadel-cue-depth></strong><p data-citadel-cue-objective></p><p data-citadel-cue-action></p></section><p class="citadel-hub-tactics" hidden></p><section class="citadel-hub-preparation-section" aria-label="원정 목표"><h3>이번 원정의 목표</h3><p class="citadel-hub-objective"></p></section><section class="citadel-hub-frontier" aria-label="프론티어 효과"></section><section class="citadel-hub-personal-goal" aria-label="개인 목표"><div class="citadel-hub-goal-copy"></div><button type="button" class="citadel-hub-goal-open">기록에서 목표 보기</button></section></details>
+      <details class="citadel-hub-journal-oaths"><summary><span id="citadel-challenge-active"></span><span>변경</span></summary><section class="citadel-hub-risk-choice" aria-label="서약 선택"><div class="citadel-hub-risk-row"><button type="button" class="citadel-hub-fury" aria-pressed="false" aria-describedby="citadel-fury-rule citadel-fury-persistence citadel-challenge-active"><span>분노의 적</span><strong data-citadel-fury-state></strong></button><div><p id="citadel-fury-rule"></p><p class="citadel-hub-risk-persistence">선택 즉시 저장 · 해제할 때까지 유지</p></div></div></section><section class="citadel-hub-challenge-details" aria-label="서약 효과 상세"><h3>현재 출격에 적용할 서약</h3><ul data-citadel-challenge-list></ul><p data-citadel-challenge-effects></p><p data-citadel-fury-preview></p><p id="citadel-fury-persistence">선택은 즉시 저장되며 해제할 때까지 개인 캠페인·원정에 유지됩니다. 파티·아레나에는 적용되지 않습니다.</p><p>완료 명성은 클리어 정산에서 계산합니다. 필드 골드·장비와 기본 클리어 보상은 기존 규칙을 따릅니다.</p></section></details>
+      </div></div><div class="citadel-hub-destination-footer"><p class="citadel-hub-challenge-notice" role="status" aria-live="polite" hidden></p><p class="citadel-hub-access" role="status" aria-live="polite"></p><div class="citadel-hub-destination-actions"><button type="button" class="citadel-hub-cancel">돌아가기</button><button type="button" class="citadel-hub-go"></button></div></div></div>`;
     this.dialog.querySelectorAll('[data-citadel-depth]').forEach(input => input.addEventListener('change', () => {
       if (!input.checked || this.busy || !this.opened) return;
       this.selectedDepth = input.value; this.challengeNotice = ''; this.refreshDestination();
     }));
     this.dialog.querySelector('.citadel-hub-fury').addEventListener('click', () => this.toggleFury(spot));
     this.dialog.querySelector('.citadel-hub-cancel').addEventListener('click', () => this.close());
+    this.dialog.querySelector('.citadel-hub-dismiss').addEventListener('click', () => this.close());
     const goalOpen = this.dialog.querySelector('.citadel-hub-goal-open');
     goalOpen.disabled = typeof this.app.battle?.chronicle?.open !== 'function';
     goalOpen.addEventListener('click', () => {
@@ -231,7 +236,7 @@ export class CitadelHubUI {
     this.dialog.dataset.depth = preparation.depth;
     this.dialog.style.setProperty('--citadel-near-accent', selected.accent || def.accent || '#a6d7cc');
     const art = this.dialog.querySelector('.citadel-hub-destination-art');
-    art.style.backgroundImage = selected.art ? `url("${selected.art}")` : '';
+    art.style.backgroundImage = `url("${def.id === 'glass_garden' && preparation.depth === 'standard' ? '/img/departure-journal/glass-conservatory.webp' : selected.art || def.art}")`;
     art.querySelector('span').textContent = selected.subtitle || def.subtitle || def.theme.toUpperCase();
     this.dialog.querySelector('#citadel-destination-title').textContent = selected.name;
     this.dialog.querySelector('#citadel-destination-description').textContent = selected.description;
@@ -261,13 +266,14 @@ export class CitadelHubUI {
     cue.querySelector('[data-citadel-cue-depth]').textContent = `${preparation.depth === 'deep' ? '심층' : '기본'} 원정 · 행동 안내`;
     cue.querySelector('[data-citadel-cue-objective]').textContent = preparation.actionCue?.objective || '';
     cue.querySelector('[data-citadel-cue-action]').textContent = preparation.actionCue?.action || '';
-    this.dialog.querySelector('.citadel-hub-rewards').textContent = rewardLabel(preparation.rewards.base);
+    this.dialog.querySelector('.citadel-hub-rewards').innerHTML = rewardCards(preparation.rewards.base);
     const first = preparation.rewards.firstClear;
     this.dialog.querySelector('.citadel-hub-first-reward').innerHTML = first ? `<strong>첫 심층 클리어 추가 ${first.eligible ? '· 미수령' : '· 수령 완료'}</strong><p>${safe(rewardLabel(first.rewards))}</p>${first.eligible ? '' : '<small>이번 클리어에는 첫 클리어 보상이 추가되지 않습니다.</small>'}` : '';
     const frontier = preparation.frontier;
     this.dialog.querySelector('.citadel-hub-frontier').innerHTML = frontier ? `<h3>이번 주 프론티어 · ${safe(frontier.name)}</h3><p>${safe(frontier.modifier)}</p>` : `<p>${preparation.depth === 'deep' ? '프론티어 효과는 기본 원정에만 적용됩니다.' : '이번 원정에 적용되는 프론티어 효과가 없습니다.'}</p>`;
     this.dialog.querySelector('.citadel-hub-hero p').textContent = `${preparation.hero.name} · 출격 Lv.${preparation.hero.level} · ${preparation.hero.controlLabel}`;
-    this.dialog.querySelector('.citadel-hub-potions').innerHTML = preparation.potions.map(potion => `<li data-citadel-potion="${safe(potion.id)}"><div><strong>${safe(potion.name)}</strong><span><kbd>${safe(potion.key)}</kbd><b data-citadel-potion-count>${count(potion.count)}개</b></span></div><p>${safe(potion.description)}</p></li>`).join('');
+    this.dialog.querySelector('.citadel-hub-hero img').src = HEROES[this.app.eco.s.selected].portrait;
+    this.dialog.querySelector('.citadel-hub-potions').innerHTML = preparation.potions.map(potion => `<li data-citadel-potion="${safe(potion.id)}"><img src="${potionArt(potion.id)}" alt="" width="44" height="44"><div><strong>${safe(potion.name)}</strong><span><kbd>${safe(potion.key)}</kbd><b data-citadel-potion-count>${count(potion.count)}개</b></span></div><details><summary>효과</summary><p>${safe(potion.description)}</p></details></li>`).join('');
     const challenges = preparation.challenges, fury = challenges.choices.find(challenge => challenge.id === 'fury');
     const toggle = this.dialog.querySelector('.citadel-hub-fury');
     toggle.disabled = !challenges.changeAccess.ok || this.busy;
@@ -286,7 +292,7 @@ export class CitadelHubUI {
     goalSection.dataset.status = goal.status;
     goalSection.querySelector('.citadel-hub-goal-copy').innerHTML = `<h3>${safe(goal.title)}</h3>${goal.condition ? `<p class="citadel-hub-goal-context">${safe(goal.condition)}</p>` : ''}${goal.target ? `<strong class="citadel-hub-goal-target">${safe(goal.target)}</strong>` : ''}${goal.baseline ? `<span class="citadel-hub-goal-baseline">${safe(goal.baseline)}</span>` : ''}<p>${safe(goal.description)}</p><small>개인 목표는 추가 보상을 지급하지 않습니다.</small>`;
     go.disabled = !access.ok || this.busy;
-    go.textContent = `${preparation.depth === 'deep' ? '심층' : '기본'} 입장 · 에너지 ${access.cost}`;
+    go.textContent = `${preparation.depth === 'deep' ? '심층 원정 시작' : '원정 시작'} · 에너지 ${access.cost}`;
     this.dialog.querySelector('.citadel-hub-access').textContent = access.error || '입장을 확정하면 에너지가 소모됩니다.';
     this.reviewedPreparation = preparationSignature(preparation);
   }
