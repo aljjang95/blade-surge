@@ -518,16 +518,34 @@ export class FX {
       this.sparks.emit(pos.x, pos.y, pos.z, _v.x, _v.y, _v.z, c, size * (0.6 + Math.random() * 0.8), life * (0.6 + Math.random() * 0.8), { grav: 14, shrink: 0.1 });
     }
   }
-  /** Bounded contact cue: pooled sparks, one short flash, and a heavy-only pooled light. */
-  contact(pos, dir, color, { size=1.6, particles=5, light=false, kind='slash', tier='light' }={}) {
-    const e=this.camera?.matrixWorld.elements;
-    const angle=e && dir.lengthSq()>0 ? Math.atan2(dir.x*e[4]+dir.y*e[5]+dir.z*e[6],dir.x*e[0]+dir.y*e[1]+dir.z*e[2]) : -.65;
-    const shaped=particles>0 && kind!=='magic';
-    this.flash(pos,color,{size,life:particles===0?.08:tier==='finisher'?.14:.10,angle,stretch:shaped?2.15:1,contact:true});
-    this.flash(pos,0xffffff,{size:size*.56,life:particles===0?.055:.07,angle,stretch:shaped?1.6:1,contact:true});
-    if((tier==='finisher'||particles>5)&&!this.lite)this.texFlash(pos,'slash',0xffffff,{size:size*.9,life:.13,spin:0,grow:.42,y:0});
-    if(particles>0)this.directional(pos,dir,color,{n:this.lite?Math.min(3,particles):particles,speed:particles>5?11:7,size:particles>5?.25:.18,life:.18,spread:.26});
-    if(light)this.light(pos,color,3.2,3.5,.1);
+  /** 접촉 하나에 날·둔기·마법의 실루엣 하나만 남기고 불꽃은 기존 풀을 쓴다. */
+  contact(pos, dir, color, { size = 1.6, particles = 5, light = false, kind = 'slash', tier = 'light' } = {}) {
+    const count = Number.isFinite(particles) ? Math.max(0, Math.min(12, Math.round(particles))) : 0;
+    const radius = Number.isFinite(size) ? Math.max(.4, Math.min(2, size)) : 1;
+    const reduced = count === 0, heavy = tier !== 'light';
+    const e = this.camera?.matrixWorld.elements;
+    const angle = e && dir.lengthSq() > 0
+      ? Math.atan2(dir.x * e[4] + dir.y * e[5] + dir.z * e[6], dir.x * e[0] + dir.y * e[1] + dir.z * e[2]) : -.65;
+    // 둔기는 중심이 빈 충격 고리, 참격은 진행 방향의 얇은 날, 마법은 짧은 별빛이다.
+    // 흰 플래시와 참격 아틀라스를 중첩하지 않아 적 몸과 다음 예고를 비워 둔다.
+    const slash = kind === 'slash', blunt = kind === 'blunt';
+    const cue = this.flash(pos, color, {
+      size: radius, life: reduced ? .08 : tier === 'finisher' ? .14 : .10,
+      angle: reduced || blunt ? 0 : slash ? angle : Math.PI / 4,
+      stretch: reduced || blunt ? 1 : slash ? (heavy ? 2 : 1.7) : 1.12,
+      tex: blunt && !reduced ? 'ring' : 'spark', contact: true, stationary: reduced,
+    });
+    // Three r170의 제거한 흰 flash는 재질·sprite UUID로 난수 8회를 썼다.
+    // 강타의 texFlash도 UUID 8회와 회전 1회를 썼다. 표시 정리만으로 이후
+    // 전투·드랍의 난수 진행을 바꾸지 않되 제거한 렌더 자원은 만들지 않는다.
+    const retiredRandomDraws = 8 + ((tier === 'finisher' || particles > 5) && !this.lite ? 9 : 0);
+    for (let i = 0; i < retiredRandomDraws; i++) Math.random();
+    if (count > 0) this.directional(pos, dir, color, {
+      n: this.lite ? Math.min(3, count) : count, speed: heavy ? 11 : 7,
+      size: heavy ? .25 : .18, life: .18, spread: blunt ? .7 : slash ? .2 : .4,
+    });
+    if (light && !reduced) this.light(pos, color, 3.2, 3.5, .1);
+    return cue;
   }
   /**
    * A bounded, authored impact language for skills. It deliberately composes
@@ -591,13 +609,18 @@ export class FX {
   aura(pos, color, n = 3) { this.embers(pos, color, { n, radius: 0.8, life: 0.8, size: 0.3, rise: 2 }); }
 
   // ---------- 스프라이트 플래시 ----------
-  flash(pos, color, { size = 2.2, life = 0.18, tex = 'spark', angle = null, stretch = 1, contact = false, telegraph = false } = {}) {
-    const m = this._keep(new THREE.SpriteMaterial({ map: tex === 'spark' ? sparkTex() : softCircleTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 1 }), { telegraph });
-    const s = new THREE.Sprite(m); s.position.copy(pos); s.scale.set(size*.3*stretch,size*.3/stretch,1); s.material.rotation = angle ?? Math.random() * Math.PI; s.renderOrder = 11;
+  /** @param {THREE.Vector3} pos @param {THREE.ColorRepresentation} color
+   * @param {{size?: number, life?: number, tex?: string, angle?: number|null, stretch?: number, contact?: boolean, telegraph?: boolean, stationary?: boolean}} [options]
+   */
+  flash(pos, color, { size = 2.2, life = 0.18, tex = 'spark', angle = null, stretch = 1, contact = false, telegraph = false, stationary = false } = {}) {
+    const m = this._keep(new THREE.SpriteMaterial({ map: tex === 'spark' ? sparkTex() : tex === 'ring' ? ringTex() : softCircleTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 1 }), { telegraph });
+    const initial = stationary ? size : size * (contact ? .6 : .3);
+    const s = new THREE.Sprite(m); s.position.copy(pos); s.scale.set(initial * stretch, initial / stretch, 1); s.material.rotation = angle ?? Math.random() * Math.PI; s.renderOrder = 11;
     this.add(s, life, (k) => {
-      const radius=size*(contact ? .45+.55*Math.min(1,k/.18) : .3+k*1.2);
+      const radius = size * (stationary ? 1 : contact ? .6 + .4 * Math.min(1, k / .18) : .3 + k * 1.2);
       s.scale.set(radius*stretch,radius/stretch,1); m.opacity = contact ? (1-k)**1.7 : 1-k;
     }, () => m.dispose());
+    return s;
   }
   // ---------- 지면 충격파 링 ----------
   ring(pos, color, { r0 = 0.3, r1 = 4, life = 0.45, width = 0.5, y = 0.08, vertical = false, thick = 1, telegraph = false } = {}) {

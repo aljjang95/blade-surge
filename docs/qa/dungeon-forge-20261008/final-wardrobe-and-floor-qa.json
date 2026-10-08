@@ -1,0 +1,2680 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "started": "2026-10-08T13:45:56.233Z",
+  "head": "678caf52a19ffda2240bfd7882278c4c0b77c49d",
+  "scope": "Local compiled game, isolated save; native hero-tab/hero-card/front/left/right buttons at 1440/390/360. All visible skinned vertices project through the current R3F camera. Geometry bounds are not pixel occlusion, physical-device or production evidence. Manual screenshot review remains a separate gate.",
+  "fontconfigFixture": "/tmp/blade-qa-fontconfig/fonts.conf",
+  "viewports": [
+    [
+      1440,
+      900
+    ],
+    [
+      390,
+      844
+    ],
+    [
+      360,
+      800
+    ]
+  ],
+  "checks": [
+    {
+      "name": "Actual game WebGL2 context available",
+      "status": "PASS",
+      "scope": "native-boot",
+      "evidence": {
+        "webgl2": true,
+        "lost": false,
+        "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "revision": "170"
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon knight/1440",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_sword",
+            "visible": false
+          },
+          {
+            "name": "Forge_sword",
+            "visible": true
+          },
+          {
+            "name": "Forge_greatsword",
+            "visible": false
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera knight/1440/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.593177591270374,
+          "right": 0.45471898381705456,
+          "top": 0.512436605278431,
+          "bottom": -0.491216605139554,
+          "near": 0.985355079379456,
+          "far": 0.9905039756687892
+        },
+        "vertices": 11442,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            -0.08475833270701827,
+            0.007878458201585238,
+            -0.5111684929452149
+          ],
+          "scale": 1.2389445444138067,
+          "height": 2.6999999999999997,
+          "radius": 1.6832360024284432
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3499999999999999,
+            7.889579427714996
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera knight/1440/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.8079477369426518,
+          "right": 0.6260589087032653,
+          "top": 0.5047939966884458,
+          "bottom": -0.5082739781371226,
+          "near": 0.9872619927849106,
+          "far": 0.9903382394330765
+        },
+        "vertices": 11442,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            -0.08475833270701827,
+            0.007878458201585238,
+            -0.5111684929452149
+          ],
+          "scale": 1.2389445444138067,
+          "height": 2.6999999999999997,
+          "radius": 1.6832360024284432
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3499999999999999,
+            7.889579427714996
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera knight/1440/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.5425891731805262,
+          "right": 0.2333318638569849,
+          "top": 0.5115338217795896,
+          "bottom": -0.5208958470762681,
+          "near": 0.9843157077305564,
+          "far": 0.9906637254637182
+        },
+        "vertices": 11442,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            -0.08475833270701827,
+            0.007878458201585238,
+            -0.5111684929452149
+          ],
+          "scale": 1.2389445444138067,
+          "height": 2.6999999999999997,
+          "radius": 1.6832360024284432
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3499999999999999,
+            7.889579427714996
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon barbarian/1440",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_axe",
+            "visible": false
+          },
+          {
+            "name": "Forge_axe",
+            "visible": false
+          },
+          {
+            "name": "Forge_greataxe",
+            "visible": true
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera barbarian/1440/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.5753596697624328,
+          "right": 0.4597212822360772,
+          "top": 0.560092704365318,
+          "bottom": -0.63067627791825,
+          "near": 0.9847660420883582,
+          "far": 0.9901795779683515
+        },
+        "vertices": 12469,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            0.08051639775717057,
+            0.007878458201585238,
+            -0.4930105775191418
+          ],
+          "scale": 1.2381961051115784,
+          "height": 2.7,
+          "radius": 1.4848493695747307
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            6.959711545232584
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera barbarian/1440/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.7962344829951166,
+          "right": 0.6282615392130715,
+          "top": 0.5646169000292129,
+          "bottom": -0.5877904325129161,
+          "near": 0.9870678452508178,
+          "far": 0.990001292183854
+        },
+        "vertices": 12469,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            0.08051639775717057,
+            0.007878458201585238,
+            -0.4930105775191418
+          ],
+          "scale": 1.2381961051115784,
+          "height": 2.7,
+          "radius": 1.4848493695747307
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            6.959711545232584
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera barbarian/1440/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.5788808996682006,
+          "right": 0.2299474377332144,
+          "top": 0.5517119720072353,
+          "bottom": -0.677436049581498,
+          "near": 0.9839210854629385,
+          "far": 0.9900870055565004
+        },
+        "vertices": 12469,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            0.08051639775717057,
+            0.007878458201585238,
+            -0.4930105775191418
+          ],
+          "scale": 1.2381961051115784,
+          "height": 2.7,
+          "radius": 1.4848493695747307
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            6.959711545232584
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon mage/1440",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_wand",
+            "visible": false
+          },
+          {
+            "name": "Forge_staff",
+            "visible": true
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera mage/1440/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.518327901601302,
+          "right": 0.43268929696232744,
+          "top": 0.5823578841422039,
+          "bottom": -0.5529407518122026,
+          "near": 0.9846819622182237,
+          "far": 0.9904175473483202
+        },
+        "vertices": 14864,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            0.062222685416036705,
+            0.007878458201585238,
+            -0.2808061880362153
+          ],
+          "scale": 1.199320745849791,
+          "height": 2.7,
+          "radius": 1.548813182134313
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            7.259519521630565
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera mage/1440/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.804944041961478,
+          "right": 0.49582128454472074,
+          "top": 0.5768016024874664,
+          "bottom": -0.5767915932499182,
+          "near": 0.9870820092462825,
+          "far": 0.990254274070229
+        },
+        "vertices": 14864,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            0.062222685416036705,
+            0.007878458201585238,
+            -0.2808061880362153
+          ],
+          "scale": 1.199320745849791,
+          "height": 2.7,
+          "radius": 1.548813182134313
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            7.259519521630565
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera mage/1440/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.5752707519379163,
+          "right": 0.24765939658559716,
+          "top": 0.565082757275821,
+          "bottom": -0.5704793020193105,
+          "near": 0.9841576583759014,
+          "far": 0.9899125381603964
+        },
+        "vertices": 14864,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            0.062222685416036705,
+            0.007878458201585238,
+            -0.2808061880362153
+          ],
+          "scale": 1.199320745849791,
+          "height": 2.7,
+          "radius": 1.548813182134313
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            7.259519521630565
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon rogue/1440",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_dagger",
+            "visible": true
+          },
+          {
+            "name": "Forge_dagger",
+            "visible": true
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera rogue/1440/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.6139747528050339,
+          "right": 0.6038046283496254,
+          "top": 0.6548442607728676,
+          "bottom": -0.6614561039903213,
+          "near": 0.9845201367325458,
+          "far": 0.9895968984131559
+        },
+        "vertices": 12283,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            -0.05652796558224488,
+            0.007878458201264925,
+            -0.24573921426683604
+          ],
+          "scale": 1.146850245571801,
+          "height": 2.7,
+          "radius": 1.3018714826891866
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            6.102066764574252
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera rogue/1440/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.8047570947041812,
+          "right": 0.5375703728848907,
+          "top": 0.6576992997815537,
+          "bottom": -0.6817021012421892,
+          "near": 0.9838332470195108,
+          "far": 0.9896477346177032
+        },
+        "vertices": 12283,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            -0.05652796558224488,
+            0.007878458201264925,
+            -0.24573921426683604
+          ],
+          "scale": 1.146850245571801,
+          "height": 2.7,
+          "radius": 1.3018714826891866
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            6.102066764574252
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera rogue/1440/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.616292381076088,
+          "right": 0.7171535660996486,
+          "top": 0.6634313052311462,
+          "bottom": -0.6907000047403358,
+          "near": 0.9833754989371838,
+          "far": 0.989461946413517
+        },
+        "vertices": 12283,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            -0.05652796558224488,
+            0.007878458201264925,
+            -0.24573921426683604
+          ],
+          "scale": 1.146850245571801,
+          "height": 2.7,
+          "radius": 1.3018714826891866
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            6.102066764574252
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon ranger/1440",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Bow",
+            "form": "bow",
+            "visible": true
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera ranger/1440/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.7426733974126264,
+          "right": 0.6909422437882204,
+          "top": 0.6815404771880043,
+          "bottom": -0.6942665408613067,
+          "near": 0.9856855050457483,
+          "far": 0.9889281126840058
+        },
+        "vertices": 11785,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            -0.3343659490276411,
+            -0.004839307465535502,
+            -0.01271417708853012
+          ],
+          "scale": 1.1976140858861666,
+          "height": 2.7000000000000006,
+          "radius": 1.3120313220482407
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3500000000000003,
+            6.149687454412419
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera ranger/1440/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.6107782610593273,
+          "right": 0.716337250084549,
+          "top": 0.6491299606308985,
+          "bottom": -0.6797166016227802,
+          "near": 0.9857200942504825,
+          "far": 0.9896421946918297
+        },
+        "vertices": 11785,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            -0.3343659490276411,
+            -0.004839307465535502,
+            -0.01271417708853012
+          ],
+          "scale": 1.1976140858861666,
+          "height": 2.7000000000000006,
+          "radius": 1.3120313220482407
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3500000000000003,
+            6.149687454412419
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera ranger/1440/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.65753164663537,
+          "right": 0.3347232492632375,
+          "top": 0.7153431561979298,
+          "bottom": -0.7481209497341792,
+          "near": 0.9843747395503558,
+          "far": 0.9897285639662047
+        },
+        "vertices": 11785,
+        "viewport": [
+          1440,
+          900
+        ],
+        "canvas": {
+          "x": 98,
+          "y": 137,
+          "width": 422.59375,
+          "height": 531
+        },
+        "frame": {
+          "offset": [
+            -0.3343659490276411,
+            -0.004839307465535502,
+            -0.01271417708853012
+          ],
+          "scale": 1.1976140858861666,
+          "height": 2.7000000000000006,
+          "radius": 1.3120313220482407
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3500000000000003,
+            6.149687454412419
+          ],
+          "fov": 36,
+          "aspect": 0.7958451035781544
+        }
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon knight/390",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_sword",
+            "visible": false
+          },
+          {
+            "name": "Forge_sword",
+            "visible": true
+          },
+          {
+            "name": "Forge_greatsword",
+            "visible": false
+          }
+        ],
+        "width": 294,
+        "height": 209,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera knight/390/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.3135893096688355,
+          "right": 0.24358825559758054,
+          "top": 0.48673308874120874,
+          "bottom": -0.46569192603321297,
+          "near": 0.9855758523302369,
+          "far": 0.9905021997004773
+        },
+        "vertices": 11442,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.08475833270701827,
+            0.007878458201585238,
+            -0.5111684929452149
+          ],
+          "scale": 1.2389445444138067,
+          "height": 2.6999999999999997,
+          "radius": 1.6832360024284432
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3499999999999999,
+            8.342559211974907
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera knight/390/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.4324390210559369,
+          "right": 0.3357486871616116,
+          "top": 0.4763688263650145,
+          "bottom": -0.4834720492139489,
+          "near": 0.9873800247616848,
+          "far": 0.9903402723006962
+        },
+        "vertices": 11442,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.08475833270701827,
+            0.007878458201585238,
+            -0.5111684929452149
+          ],
+          "scale": 1.2389445444138067,
+          "height": 2.6999999999999997,
+          "radius": 1.6832360024284432
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3499999999999999,
+            8.342559211974907
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera knight/390/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.2906173739207543,
+          "right": 0.12513131545937822,
+          "top": 0.48629271959395404,
+          "bottom": -0.49011455204169907,
+          "near": 0.9845994668589231,
+          "far": 0.9906596920912147
+        },
+        "vertices": 11442,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.08475833270701827,
+            0.007878458201585238,
+            -0.5111684929452149
+          ],
+          "scale": 1.2389445444138067,
+          "height": 2.6999999999999997,
+          "radius": 1.6832360024284432
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3499999999999999,
+            8.342559211974907
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon barbarian/390",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_axe",
+            "visible": false
+          },
+          {
+            "name": "Forge_axe",
+            "visible": false
+          },
+          {
+            "name": "Forge_greataxe",
+            "visible": true
+          }
+        ],
+        "width": 294,
+        "height": 209,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera barbarian/390/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.2709000148200057,
+          "right": 0.2251475496178625,
+          "top": 0.4808827572780517,
+          "bottom": -0.5241282074908079,
+          "near": 0.9853535369765349,
+          "far": 0.9901330842964321
+        },
+        "vertices": 12469,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            0.08051639775717057,
+            0.007878458201585238,
+            -0.4930105775191418
+          ],
+          "scale": 1.2381961051115784,
+          "height": 2.7,
+          "radius": 1.4848493695747307
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            8.136237113807047
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera barbarian/390/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.38497426893634296,
+          "right": 0.3032052310495539,
+          "top": 0.4836445606899179,
+          "bottom": -0.5044369904614056,
+          "near": 0.9873454292125883,
+          "far": 0.9899614481442427
+        },
+        "vertices": 12469,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            0.08051639775717057,
+            0.007878458201585238,
+            -0.4930105775191418
+          ],
+          "scale": 1.2381961051115784,
+          "height": 2.7,
+          "radius": 1.4848493695747307
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            8.136237113807047
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera barbarian/390/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.27790082708326264,
+          "right": 0.10664345569121113,
+          "top": 0.48049444379850365,
+          "bottom": -0.5626687243514831,
+          "near": 0.9846499582155441,
+          "far": 0.9900428086630986
+        },
+        "vertices": 12469,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            0.08051639775717057,
+            0.007878458201585238,
+            -0.4930105775191418
+          ],
+          "scale": 1.2381961051115784,
+          "height": 2.7,
+          "radius": 1.4848493695747307
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            8.136237113807047
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon mage/390",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_wand",
+            "visible": false
+          },
+          {
+            "name": "Forge_staff",
+            "visible": true
+          }
+        ],
+        "width": 294,
+        "height": 209,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera mage/390/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.25405781539218547,
+          "right": 0.21779016392864908,
+          "top": 0.5132232618913551,
+          "bottom": -0.4900776663338916,
+          "near": 0.9851833022635011,
+          "far": 0.9903835933497328
+        },
+        "vertices": 14864,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            0.062222685416036705,
+            0.007878458201585238,
+            -0.2808061880362153
+          ],
+          "scale": 1.199320745849791,
+          "height": 2.7,
+          "radius": 1.548813182134313
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            8.202759478869012
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera mage/390/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.40106223319242,
+          "right": 0.2476370719762439,
+          "top": 0.5072255529649663,
+          "bottom": -0.5106248929132332,
+          "near": 0.9873073629433929,
+          "far": 0.990226385573435
+        },
+        "vertices": 14864,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            0.062222685416036705,
+            0.007878458201585238,
+            -0.2808061880362153
+          ],
+          "scale": 1.199320745849791,
+          "height": 2.7,
+          "radius": 1.548813182134313
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            8.202759478869012
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera mage/390/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.2907231265407797,
+          "right": 0.12067970911090918,
+          "top": 0.500280642351105,
+          "bottom": -0.504241062680381,
+          "near": 0.9847296135782803,
+          "far": 0.9899085179272394
+        },
+        "vertices": 14864,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            0.062222685416036705,
+            0.007878458201585238,
+            -0.2808061880362153
+          ],
+          "scale": 1.199320745849791,
+          "height": 2.7,
+          "radius": 1.548813182134313
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            8.202759478869012
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon rogue/390",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_dagger",
+            "visible": true
+          },
+          {
+            "name": "Forge_dagger",
+            "visible": true
+          }
+        ],
+        "width": 294,
+        "height": 209,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera rogue/390/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.2564620858998219,
+          "right": 0.2542080896223838,
+          "top": 0.5012133185274295,
+          "bottom": -0.5090236320818241,
+          "near": 0.9853860947715651,
+          "far": 0.9894922955306625
+        },
+        "vertices": 12283,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.05652796558224488,
+            0.007878458201264925,
+            -0.24573921426683604
+          ],
+          "scale": 1.146850245571801,
+          "height": 2.7,
+          "radius": 1.3018714826891866
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            7.945940111446082
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera rogue/390/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.3496931260592702,
+          "right": 0.23640256957156658,
+          "top": 0.49984524893185855,
+          "bottom": -0.5209480555530529,
+          "near": 0.9848794718568241,
+          "far": 0.9895366112574078
+        },
+        "vertices": 12283,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.05652796558224488,
+            0.007878458201264925,
+            -0.24573921426683604
+          ],
+          "scale": 1.146850245571801,
+          "height": 2.7,
+          "radius": 1.3018714826891866
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            7.945940111446082
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera rogue/390/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.26889765161403345,
+          "right": 0.31161294693954866,
+          "top": 0.5128039208666959,
+          "bottom": -0.5261423152454994,
+          "near": 0.9845469359338901,
+          "far": 0.9893749847721179
+        },
+        "vertices": 12283,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.05652796558224488,
+            0.007878458201264925,
+            -0.24573921426683604
+          ],
+          "scale": 1.146850245571801,
+          "height": 2.7,
+          "radius": 1.3018714826891866
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            7.945940111446082
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon ranger/390",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Bow",
+            "form": "bow",
+            "visible": true
+          }
+        ],
+        "width": 294,
+        "height": 209,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera ranger/390/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.32294292114389317,
+          "right": 0.30536596787459325,
+          "top": 0.5245658550194544,
+          "bottom": -0.5318142162143777,
+          "near": 0.9862705853817871,
+          "far": 0.9889216213089489
+        },
+        "vertices": 11785,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.3343659490276411,
+            -0.004839307465535502,
+            -0.01271417708853012
+          ],
+          "scale": 1.1976140858861666,
+          "height": 2.7000000000000006,
+          "radius": 1.3120313220482407
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3500000000000003,
+            7.956506344379499
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera ranger/390/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.26943356232594834,
+          "right": 0.3057477060745315,
+          "top": 0.4987962027196315,
+          "bottom": -0.5234776673115724,
+          "near": 0.9862967467842563,
+          "far": 0.9895397904599739
+        },
+        "vertices": 11785,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.3343659490276411,
+            -0.004839307465535502,
+            -0.01271417708853012
+          ],
+          "scale": 1.1976140858861666,
+          "height": 2.7000000000000006,
+          "radius": 1.3120313220482407
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3500000000000003,
+            7.956506344379499
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera ranger/390/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.28337173062284393,
+          "right": 0.1507853577846973,
+          "top": 0.5362391170286954,
+          "bottom": -0.562908175565185,
+          "near": 0.985266264551804,
+          "far": 0.9896159533203833
+        },
+        "vertices": 11785,
+        "viewport": [
+          390,
+          844
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 294,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.3343659490276411,
+            -0.004839307465535502,
+            -0.01271417708853012
+          ],
+          "scale": 1.1976140858861666,
+          "height": 2.7000000000000006,
+          "radius": 1.3120313220482407
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3500000000000003,
+            7.956506344379499
+          ],
+          "fov": 36,
+          "aspect": 1.4066985645933014
+        }
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon knight/360",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_sword",
+            "visible": false
+          },
+          {
+            "name": "Forge_sword",
+            "visible": true
+          },
+          {
+            "name": "Forge_greatsword",
+            "visible": false
+          }
+        ],
+        "width": 264,
+        "height": 209,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera knight/360/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.34900735399677846,
+          "right": 0.27130702228262865,
+          "top": 0.48695527444678055,
+          "bottom": -0.46568419879896017,
+          "near": 0.9855756436502748,
+          "far": 0.9905021954482031
+        },
+        "vertices": 11442,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.08475833270701827,
+            0.007878458201585238,
+            -0.5111684929452149
+          ],
+          "scale": 1.2389445444138067,
+          "height": 2.6999999999999997,
+          "radius": 1.6832360024284432
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3499999999999999,
+            8.342559211974907
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera knight/360/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.4804850554812651,
+          "right": 0.3740256782816412,
+          "top": 0.48065537970754557,
+          "bottom": -0.48049619766696305,
+          "near": 0.9873798014682014,
+          "far": 0.9903423797088012
+        },
+        "vertices": 11442,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.08475833270701827,
+            0.007878458201585238,
+            -0.5111684929452149
+          ],
+          "scale": 1.2389445444138067,
+          "height": 2.6999999999999997,
+          "radius": 1.6832360024284432
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3499999999999999,
+            8.342559211974907
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera knight/360/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.3242086721937187,
+          "right": 0.13919196405295853,
+          "top": 0.4910874634854636,
+          "bottom": -0.4882286230325714,
+          "near": 0.984608054627125,
+          "far": 0.9906613865710632
+        },
+        "vertices": 11442,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.08475833270701827,
+            0.007878458201585238,
+            -0.5111684929452149
+          ],
+          "scale": 1.2389445444138067,
+          "height": 2.6999999999999997,
+          "radius": 1.6832360024284432
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3499999999999999,
+            8.342559211974907
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon barbarian/360",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_axe",
+            "visible": false
+          },
+          {
+            "name": "Forge_axe",
+            "visible": false
+          },
+          {
+            "name": "Forge_greataxe",
+            "visible": true
+          }
+        ],
+        "width": 264,
+        "height": 209,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera barbarian/360/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.3020997724843122,
+          "right": 0.2507703115632164,
+          "top": 0.47954592136851626,
+          "bottom": -0.5251099057371361,
+          "near": 0.9853520303467367,
+          "far": 0.9901330842964321
+        },
+        "vertices": 12469,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            0.08051639775717057,
+            0.007878458201585238,
+            -0.4930105775191418
+          ],
+          "scale": 1.2381961051115784,
+          "height": 2.7,
+          "radius": 1.4848493695747307
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            8.136237113807047
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera barbarian/360/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.4274540360983282,
+          "right": 0.3376058781641983,
+          "top": 0.4853451544397677,
+          "bottom": -0.5023473861885128,
+          "near": 0.9873270790686649,
+          "far": 0.9899676750794527
+        },
+        "vertices": 12469,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            0.08051639775717057,
+            0.007878458201585238,
+            -0.4930105775191418
+          ],
+          "scale": 1.2381961051115784,
+          "height": 2.7,
+          "radius": 1.4848493695747307
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            8.136237113807047
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera barbarian/360/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.30979064152952246,
+          "right": 0.12116399758152202,
+          "top": 0.48337288822571317,
+          "bottom": -0.5532730192878016,
+          "near": 0.9846638651271873,
+          "far": 0.9900430578231247
+        },
+        "vertices": 12469,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            0.08051639775717057,
+            0.007878458201585238,
+            -0.4930105775191418
+          ],
+          "scale": 1.2381961051115784,
+          "height": 2.7,
+          "radius": 1.4848493695747307
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            8.136237113807047
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon mage/360",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_wand",
+            "visible": false
+          },
+          {
+            "name": "Forge_staff",
+            "visible": true
+          }
+        ],
+        "width": 264,
+        "height": 209,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera mage/360/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.2824880976169786,
+          "right": 0.24249808103466985,
+          "top": 0.5151650564647304,
+          "bottom": -0.49007801845342724,
+          "near": 0.9851843543188447,
+          "far": 0.9903846726982051
+        },
+        "vertices": 14864,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            0.062222685416036705,
+            0.007878458201585238,
+            -0.2808061880362153
+          ],
+          "scale": 1.199320745849791,
+          "height": 2.7,
+          "radius": 1.548813182134313
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            8.202759478869012
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera mage/360/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.4459889916332476,
+          "right": 0.27577764833718066,
+          "top": 0.5103267605966039,
+          "bottom": -0.5087509507350586,
+          "near": 0.9873073629433929,
+          "far": 0.9902310399854891
+        },
+        "vertices": 14864,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            0.062222685416036705,
+            0.007878458201585238,
+            -0.2808061880362153
+          ],
+          "scale": 1.199320745849791,
+          "height": 2.7,
+          "radius": 1.548813182134313
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            8.202759478869012
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera mage/360/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.32441313043451897,
+          "right": 0.13383617713632484,
+          "top": 0.5054624198888185,
+          "bottom": -0.5012095277562105,
+          "near": 0.9847329164457078,
+          "far": 0.9899085179272394
+        },
+        "vertices": 14864,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            0.062222685416036705,
+            0.007878458201585238,
+            -0.2808061880362153
+          ],
+          "scale": 1.199320745849791,
+          "height": 2.7,
+          "radius": 1.548813182134313
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            8.202759478869012
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon rogue/360",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_dagger",
+            "visible": true
+          },
+          {
+            "name": "Forge_dagger",
+            "visible": true
+          }
+        ],
+        "width": 264,
+        "height": 209,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera rogue/360/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.2854250009054166,
+          "right": 0.2827559899723546,
+          "top": 0.5026424061097872,
+          "bottom": -0.5090157908564963,
+          "near": 0.9853872419284178,
+          "far": 0.9894922955306625
+        },
+        "vertices": 12283,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.05652796558224488,
+            0.007878458201264925,
+            -0.24573921426683604
+          ],
+          "scale": 1.146850245571801,
+          "height": 2.7,
+          "radius": 1.3018714826891866
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            7.945940111446082
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera rogue/360/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.38866213352521073,
+          "right": 0.2632664979319718,
+          "top": 0.5005722814061561,
+          "bottom": -0.5209583062684888,
+          "near": 0.9848762789268485,
+          "far": 0.9895366112574078
+        },
+        "vertices": 12283,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.05652796558224488,
+            0.007878458201264925,
+            -0.24573921426683604
+          ],
+          "scale": 1.146850245571801,
+          "height": 2.7,
+          "radius": 1.3018714826891866
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            7.945940111446082
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera rogue/360/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.29945420293381,
+          "right": 0.34675956472695435,
+          "top": 0.5093548784510922,
+          "bottom": -0.5261598260722951,
+          "near": 0.984532993834408,
+          "far": 0.9893749847721179
+        },
+        "vertices": 12283,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.05652796558224488,
+            0.007878458201264925,
+            -0.24573921426683604
+          ],
+          "scale": 1.146850245571801,
+          "height": 2.7,
+          "radius": 1.3018714826891866
+        },
+        "camera": {
+          "position": [
+            0,
+            1.35,
+            7.945940111446082
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Native R3F wardrobe forged weapon ranger/360",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Bow",
+            "form": "bow",
+            "visible": true
+          }
+        ],
+        "width": 264,
+        "height": 209,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera ranger/360/front",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.359622818400256,
+          "right": 0.34006866329047464,
+          "top": 0.5239503545798601,
+          "bottom": -0.5318202060252017,
+          "near": 0.9862705853817871,
+          "far": 0.9889216213089489
+        },
+        "vertices": 11785,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.3343659490276411,
+            -0.004839307465535502,
+            -0.01271417708853012
+          ],
+          "scale": 1.1976140858861666,
+          "height": 2.7000000000000006,
+          "radius": 1.3120313220482407
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3500000000000003,
+            7.956506344379499
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera ranger/360/left",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.3000510125902606,
+          "right": 0.34058053622355294,
+          "top": 0.5002713230963773,
+          "bottom": -0.5234904484825584,
+          "near": 0.9862973179436998,
+          "far": 0.9895397904599739
+        },
+        "vertices": 11785,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.3343659490276411,
+            -0.004839307465535502,
+            -0.01271417708853012
+          ],
+          "scale": 1.1976140858861666,
+          "height": 2.7000000000000006,
+          "radius": 1.3120313220482407
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3500000000000003,
+            7.956506344379499
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Visible animated hero and weapon stay inside R3F camera ranger/360/right",
+      "status": "PASS",
+      "scope": "native-rotation-visible-vertex-projection",
+      "evidence": {
+        "box": {
+          "left": -0.3155730636481671,
+          "right": 0.16756414856858456,
+          "top": 0.5377347236150687,
+          "bottom": -0.5629027829773999,
+          "near": 0.985266264551804,
+          "far": 0.9896175940545899
+        },
+        "vertices": 11785,
+        "viewport": [
+          360,
+          800
+        ],
+        "canvas": {
+          "x": 82,
+          "y": 88,
+          "width": 264,
+          "height": 209
+        },
+        "frame": {
+          "offset": [
+            -0.3343659490276411,
+            -0.004839307465535502,
+            -0.01271417708853012
+          ],
+          "scale": 1.1976140858861666,
+          "height": 2.7000000000000006,
+          "radius": 1.3120313220482407
+        },
+        "camera": {
+          "position": [
+            0,
+            1.3500000000000003,
+            7.956506344379499
+          ],
+          "fov": 36,
+          "aspect": 1.263157894736842
+        }
+      }
+    },
+    {
+      "name": "Native home tab unmounts R3F wardrobe and releases character",
+      "status": "PASS",
+      "scope": "native-release-lifecycle",
+      "evidence": {}
+    },
+    {
+      "name": "Architectural slab authoring source is identical to pre-patch baseline",
+      "status": "PASS",
+      "scope": "baseline-source-comparison",
+      "evidence": {
+        "source": "394e9c4015dbf6961de1e167169967931cd7ddb77aed6ad40080345934c2de47",
+        "baseline": "394e9c4015dbf6961de1e167169967931cd7ddb77aed6ad40080345934c2de47"
+      }
+    },
+    {
+      "name": "Dark floor patch is existing raised architectural stone, not a missing tile 4-8",
+      "status": "PASS",
+      "scope": "actual-pixel-raycast-and-unchanged-source",
+      "evidence": {
+        "pixel": {
+          "x": 500,
+          "y": 820
+        },
+        "viewport": [
+          1440,
+          900
+        ],
+        "hits": [
+          {
+            "name": "tide-rooms-0-1-3-0",
+            "point": [
+              -74.93801540707537,
+              0.05550000071525574,
+              -68.17845824845672
+            ],
+            "distance": 10.053495326336401,
+            "materialRole": 0,
+            "roomRanges": [
+              {
+                "roomId": 0,
+                "materialRole": 0,
+                "batchId": 0,
+                "start": 0,
+                "count": 456
+              },
+              {
+                "roomId": 1,
+                "materialRole": 0,
+                "batchId": 0,
+                "start": 456,
+                "count": 312
+              },
+              {
+                "roomId": 3,
+                "materialRole": 0,
+                "batchId": 0,
+                "start": 768,
+                "count": 288
+              }
+            ],
+            "face": {
+              "a": 204,
+              "b": 205,
+              "c": 206
+            },
+            "vertexColors": [
+              [
+                0.024157632142305374,
+                0.08437620848417282,
+                0.109461709856987
+              ],
+              [
+                0.024157632142305374,
+                0.08437620848417282,
+                0.109461709856987
+              ],
+              [
+                0.024157632142305374,
+                0.08437620848417282,
+                0.109461709856987
+              ]
+            ],
+            "material": {
+              "name": "",
+              "color": "46666d",
+              "map": "CC0_dungeon-stone-diffuse",
+              "image": "http://127.0.0.1:33929/img/materials-cc0/polyhaven-medieval-wall-02-diffuse-1k.jpg"
+            }
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "point": [
+              -74.94013496643265,
+              0.049963007215408695,
+              -68.18148720958199
+            ],
+            "distance": 10.060153061265398,
+            "instanceId": 21,
+            "face": {
+              "a": 216,
+              "b": 213,
+              "c": 217
+            },
+            "vertexColors": null,
+            "material": {
+              "name": "texture",
+              "color": "9adbd1",
+              "map": "GPT_Dungeon_Stone_v1",
+              "image": "http://127.0.0.1:33929/img/environment/dungeon-stone-v1.webp"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Dark floor patch is existing raised architectural stone, not a missing tile 5-4",
+      "status": "PASS",
+      "scope": "actual-pixel-raycast-and-unchanged-source",
+      "evidence": {
+        "pixel": {
+          "x": 1340,
+          "y": 370
+        },
+        "viewport": [
+          1440,
+          900
+        ],
+        "hits": [
+          {
+            "name": "crown-rooms-0-1-4-0",
+            "point": [
+              -67.88678828827105,
+              0.05375000089406967,
+              -74.88336990395803
+            ],
+            "distance": 14.726247255992579,
+            "materialRole": 0,
+            "roomRanges": [
+              {
+                "roomId": 0,
+                "materialRole": 0,
+                "batchId": 0,
+                "start": 0,
+                "count": 912
+              },
+              {
+                "roomId": 1,
+                "materialRole": 0,
+                "batchId": 0,
+                "start": 912,
+                "count": 732
+              },
+              {
+                "roomId": 4,
+                "materialRole": 0,
+                "batchId": 0,
+                "start": 1644,
+                "count": 708
+              }
+            ],
+            "face": {
+              "a": 642,
+              "b": 643,
+              "c": 644
+            },
+            "vertexColors": [
+              [
+                0.08650045841932297,
+                0.07227185368537903,
+                0.09989872574806213
+              ],
+              [
+                0.08650045841932297,
+                0.07227185368537903,
+                0.09989872574806213
+              ],
+              [
+                0.08650045841932297,
+                0.07227185368537903,
+                0.09989872574806213
+              ]
+            ],
+            "material": {
+              "name": "",
+              "color": "afa698",
+              "map": "CC0_dungeon-stone-diffuse",
+              "image": "http://127.0.0.1:33929/img/materials-cc0/polyhaven-medieval-wall-02-diffuse-1k.jpg"
+            }
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "point": [
+              -67.88158459056353,
+              0.04996300721541047,
+              -74.88706967576715
+            ],
+            "distance": 14.733670739163774,
+            "instanceId": 38,
+            "face": {
+              "a": 89,
+              "b": 87,
+              "c": 90
+            },
+            "vertexColors": null,
+            "material": {
+              "name": "texture",
+              "color": "d5c0d8",
+              "map": "GPT_Dungeon_Stone_v1",
+              "image": "http://127.0.0.1:33929/img/environment/dungeon-stone-v1.webp"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "No failed model/texture/script loads or HTTP errors",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "failedVisualRequests": [],
+        "badResponses": []
+      }
+    },
+    {
+      "name": "No browser runtime or shader errors",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": []
+    },
+    {
+      "name": "No asset fallback warnings",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": [
+        "Service Worker registration blocked by Playwright",
+        "THREE.WebGLRenderer: KHR_parallel_shader_compile extension not supported."
+      ]
+    }
+  ],
+  "errors": [],
+  "warnings": [
+    "Service Worker registration blocked by Playwright",
+    "THREE.WebGLRenderer: KHR_parallel_shader_compile extension not supported."
+  ],
+  "networkFailures": [],
+  "badResponses": [],
+  "externalRequests": [],
+  "optionalFontFixtures": [
+    {
+      "url": "https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap",
+      "fixture": "Empty optional external font CSS; uses installed system fallback. No CDN-font availability claim."
+    }
+  ],
+  "screenshots": [
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-knight-1440-right.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-barbarian-1440-right.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-mage-1440-right.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-rogue-1440-right.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-ranger-1440-right.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-knight-390-front.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-barbarian-390-front.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-mage-390-front.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-rogue-390-front.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-ranger-390-front.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-knight-360-left.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-barbarian-360-left.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-mage-360-left.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-rogue-360-left.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/r3f-wardrobe-ranger-360-left.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/floor-slab-probe-4-8.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v6/floor-slab-probe-5-4.png"
+  ],
+  "version": {
+    "sha": "678caf52a19ffda2240bfd7882278c4c0b77c49d",
+    "dirty": true,
+    "builtAt": "2026-10-08T13:42:39.996Z",
+    "pwaRelease": "7454a98579fc70bb6613"
+  },
+  "origin": "http://127.0.0.1:33929",
+  "browser": "153.0.8010.0",
+  "systemFontFixture": {
+    "family": "Noto Sans KR",
+    "weights": [
+      400,
+      700
+    ],
+    "scope": "QA-only local font preload for missing container Korean fonts; application CSS and production assets unchanged."
+  },
+  "finished": "2026-10-08T13:49:34.166Z"
+}

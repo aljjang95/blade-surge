@@ -1,0 +1,170 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "checkedAt": "2026-10-08T14:04:43.454Z",
+  "source": {
+    "path": "/workspace/scratch/46cbb073351f/blade-surge/docs/qa/dungeon-forge-20261008/media-handoff-v1/report.json",
+    "sha256": "85dc49b3cf253ca64327dece31a477dbf235ad4e8f5c64ae868ab66c92fb9351",
+    "preservedStatus": "FUNCTIONAL_PASS_NATIVE_MEDIA_REVIEW_REQUIRED"
+  },
+  "earlierNaturalRun": {
+    "path": "/workspace/scratch/46cbb073351f/blade-surge/docs/qa/dungeon-forge-20261008/natural-v4-run2/report.json",
+    "sha256": "dbd29dea0532729ca527f1bb59f18f7e9d6a7ad55a5c29d03977ebaefe96b901",
+    "preservedStatus": "FAIL",
+    "scope": "Ten native-action functional checks remain positive. This later identical-build reproduction diagnoses the one observed media cancellation pattern; the earlier report was not rewritten or retroactively asserted to contain native CDP evidence."
+  },
+  "scope": "Only this immutable report exact successful media request and its same native player load/play/pause/suspend/cancel sequence are qualified. Not an ERR_ABORTED allowlist, audible playback proof, physical-device validation or production release.",
+  "build": {
+    "sha": "678caf52a19ffda2240bfd7882278c4c0b77c49d",
+    "dirty": true,
+    "builtAt": "2026-10-08T13:42:39.996Z",
+    "pwaRelease": "7454a98579fc70bb6613"
+  },
+  "assessment": {
+    "passed": true,
+    "failures": [],
+    "qualified": [
+      {
+        "requestId": "69.297",
+        "url": "http://127.0.0.1:45977/bgm/regions/lobby.mp3",
+        "nativePlayerId": "F2B0D90A387BB3967083DE0E28C5F239",
+        "loadAt": 6242.424927,
+        "requestAt": 6242.425031,
+        "playAt": 6247.623202,
+        "pauseAt": 6270.344812,
+        "suspendedAt": 6285.406614,
+        "canceledAt": 6285.407574,
+        "suspendToCancelMs": 0.9599999993952224,
+        "matchedJsInstanceId": 1,
+        "stoppedPlaybackSec": 21.290667,
+        "replacementNativePlayerId": "D907DE7864ED4B12CBD8734A5DF875D5",
+        "returnNativePlayerId": "A12F929FC5E6489603C6A0BF80DDF4B4"
+      }
+    ]
+  },
+  "rejectionControls": [
+    {
+      "name": "unsuccessful-http",
+      "rejected": true,
+      "failures": [
+        "strict-existing-js-lifecycle-assessment",
+        "existing-strict-classification",
+        "successful-canceled-media",
+        "unique-distinct-replacement-native-player",
+        "replacement-native-play-before-cancel"
+      ]
+    },
+    {
+      "name": "not-browser-canceled",
+      "rejected": true,
+      "failures": [
+        "successful-canceled-media"
+      ]
+    },
+    {
+      "name": "network-reset",
+      "rejected": true,
+      "failures": [
+        "strict-existing-js-lifecycle-assessment",
+        "existing-strict-classification",
+        "successful-canceled-media",
+        "unique-distinct-replacement-native-player",
+        "replacement-native-play-before-cancel"
+      ]
+    },
+    {
+      "name": "wrong-frame",
+      "rejected": true,
+      "failures": [
+        "exact-native-frame-loader"
+      ]
+    },
+    {
+      "name": "wrong-document-clock",
+      "rejected": true,
+      "failures": [
+        "exact-native-document-clock"
+      ]
+    },
+    {
+      "name": "missing-native-suspension",
+      "rejected": true,
+      "failures": [
+        "same-player-decode-play-pause-suspend-order",
+        "native-suspend-immediately-before-exact-cancel"
+      ]
+    },
+    {
+      "name": "native-suspension-after-cancel",
+      "rejected": true,
+      "failures": [
+        "same-player-decode-play-pause-suspend-order",
+        "native-suspend-immediately-before-exact-cancel"
+      ]
+    },
+    {
+      "name": "missing-native-pause",
+      "rejected": true,
+      "failures": [
+        "same-player-decode-play-pause-suspend-order",
+        "no-replay-after-stop"
+      ]
+    },
+    {
+      "name": "wrong-native-load-url",
+      "rejected": true,
+      "failures": [
+        "unique-original-native-load-lifetime"
+      ]
+    },
+    {
+      "name": "missing-native-replacement-play",
+      "rejected": true,
+      "failures": [
+        "replacement-native-play-before-cancel"
+      ]
+    },
+    {
+      "name": "missing-js-disconnect",
+      "rejected": true,
+      "failures": [
+        "strict-existing-js-lifecycle-assessment",
+        "existing-strict-classification",
+        "unique-distinct-replacement-native-player",
+        "replacement-native-play-before-cancel"
+      ]
+    },
+    {
+      "name": "runtime-console-error",
+      "rejected": true,
+      "failures": [
+        "strict-existing-js-lifecycle-assessment",
+        "runtime-http-observer-error"
+      ]
+    },
+    {
+      "name": "unrelated-model-failure",
+      "rejected": true,
+      "failures": [
+        "strict-existing-js-lifecycle-assessment",
+        "exact-single-failure",
+        "existing-strict-classification",
+        "successful-canceled-media",
+        "exact-native-frame-loader",
+        "exact-native-document-clock",
+        "unique-original-native-load-lifetime"
+      ]
+    },
+    {
+      "name": "different-build",
+      "rejected": true,
+      "failures": [
+        "candidate-build-identity"
+      ]
+    }
+  ],
+  "limitations": [
+    "Natural manual segment is scripted Chromium SwiftShader, not human or physical-device play.",
+    "Result screenshot captured an initial animation frame; functional visible-result and native return-click evidence are distinct from result-screen visual acceptance."
+  ]
+}

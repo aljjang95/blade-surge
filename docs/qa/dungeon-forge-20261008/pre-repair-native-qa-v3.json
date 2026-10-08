@@ -1,0 +1,637 @@
+{
+  "schema": 1,
+  "status": "FAIL",
+  "started": "2026-10-08T13:29:55.039Z",
+  "head": "678caf52a19ffda2240bfd7882278c4c0b77c49d",
+  "scope": "Local compiled game; isolated browser save. Native pointer/keyboard events use controlled fixed simulation steps. Separate art fixtures directly visit locked chapters, place/stun durable enemies and grant invulnerability. This is not natural campaign progression, a human playtest, physical-device/GPU performance, audio-perception or production release evidence.",
+  "viewports": [
+    [
+      1440,
+      900
+    ],
+    [
+      390,
+      844
+    ],
+    [
+      360,
+      800
+    ]
+  ],
+  "checks": [
+    {
+      "name": "Actual game WebGL2 context available",
+      "status": "PASS",
+      "scope": "native-boot",
+      "evidence": {
+        "webgl2": true,
+        "lost": false,
+        "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "revision": "170"
+      }
+    },
+    {
+      "name": "Fresh save enters first stage through visible campaign card and entry button",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {}
+    },
+    {
+      "name": "Reachable battle controls 1440x900",
+      "status": "PASS",
+      "scope": "native-layout",
+      "evidence": [
+        {
+          "selector": "#btn-attack",
+          "x": 1338,
+          "y": 800,
+          "width": 86,
+          "height": 86,
+          "inside": true,
+          "reachable": true,
+          "hit": "btn-attack"
+        },
+        {
+          "selector": "#btn-dodge",
+          "x": 1270,
+          "y": 824,
+          "width": 58,
+          "height": 58,
+          "inside": true,
+          "reachable": true,
+          "hit": "dodge-label"
+        },
+        {
+          "selector": "#btn-pause",
+          "x": 1382,
+          "y": 12,
+          "width": 44,
+          "height": 44,
+          "inside": true,
+          "reachable": true,
+          "hit": "btn-pause"
+        },
+        {
+          "selector": "#joy .joy-base",
+          "x": 28,
+          "y": 766,
+          "width": 112,
+          "height": 112,
+          "inside": true,
+          "reachable": true,
+          "hit": "joy-knob"
+        }
+      ]
+    },
+    {
+      "name": "Native joystick moves and releases 1440",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "before": [
+          -71.51851715147495,
+          0,
+          -70.47213684301823
+        ],
+        "after": {
+          "pos": [
+            -70.45149449834508,
+            0,
+            -70.26177321125236
+          ],
+          "active": false
+        },
+        "travel": 1.0875615843997206,
+        "fixedSteps": 21
+      }
+    },
+    {
+      "name": "Native attack starts an actual clip 1440",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "state": "attack",
+        "clip": "1H_Melee_Attack_Slice_Horizontal",
+        "held": false,
+        "combo": 0.03333333333333333
+      }
+    },
+    {
+      "name": "Pause freezes and releases controls 1440",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "paused": true,
+        "elapsed": 4.866666666666655,
+        "held": false,
+        "joy": false
+      }
+    },
+    {
+      "name": "Native resume 1440",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {}
+    },
+    {
+      "name": "Reachable battle controls 390x844",
+      "status": "PASS",
+      "scope": "native-layout",
+      "evidence": [
+        {
+          "selector": "#btn-attack",
+          "x": 302,
+          "y": 748,
+          "width": 80,
+          "height": 80,
+          "inside": true,
+          "reachable": true,
+          "hit": "btn-attack"
+        },
+        {
+          "selector": "#btn-dodge",
+          "x": 226,
+          "y": 758,
+          "width": 60,
+          "height": 60,
+          "inside": true,
+          "reachable": true,
+          "hit": "dodge-label"
+        },
+        {
+          "selector": "#btn-pause",
+          "x": 251,
+          "y": 8,
+          "width": 44,
+          "height": 44,
+          "inside": true,
+          "reachable": true,
+          "hit": "btn-pause"
+        },
+        {
+          "selector": "#joy .joy-base",
+          "x": 10,
+          "y": 736,
+          "width": 88,
+          "height": 88,
+          "inside": true,
+          "reachable": true,
+          "hit": "joy-knob"
+        }
+      ]
+    },
+    {
+      "name": "Native joystick moves and releases 390",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "before": [
+          -70.45149449834508,
+          0,
+          -70.26177321125236
+        ],
+        "after": {
+          "pos": [
+            -69.66203502569952,
+            0,
+            -70.11424289247066
+          ],
+          "active": false
+        },
+        "travel": 0.8031260510714606,
+        "fixedSteps": 21
+      }
+    },
+    {
+      "name": "Native attack starts an actual clip 390",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "state": "attack",
+        "clip": "1H_Melee_Attack_Slice_Horizontal",
+        "held": false,
+        "combo": 0.03333333333333333
+      }
+    },
+    {
+      "name": "Pause freezes and releases controls 390",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "paused": true,
+        "elapsed": 8.283333333333324,
+        "held": false,
+        "joy": false
+      }
+    },
+    {
+      "name": "Native resume 390",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {}
+    },
+    {
+      "name": "Reachable battle controls 360x800",
+      "status": "PASS",
+      "scope": "native-layout",
+      "evidence": [
+        {
+          "selector": "#btn-attack",
+          "x": 272,
+          "y": 704,
+          "width": 80,
+          "height": 80,
+          "inside": true,
+          "reachable": true,
+          "hit": "btn-attack"
+        },
+        {
+          "selector": "#btn-dodge",
+          "x": 196,
+          "y": 714,
+          "width": 60,
+          "height": 60,
+          "inside": true,
+          "reachable": true,
+          "hit": "dodge-label"
+        },
+        {
+          "selector": "#btn-pause",
+          "x": 197,
+          "y": 8,
+          "width": 44,
+          "height": 44,
+          "inside": true,
+          "reachable": true,
+          "hit": "btn-pause"
+        },
+        {
+          "selector": "#joy .joy-base",
+          "x": 10,
+          "y": 692,
+          "width": 88,
+          "height": 88,
+          "inside": true,
+          "reachable": true,
+          "hit": "joy-knob"
+        }
+      ]
+    },
+    {
+      "name": "Native joystick moves and releases 360",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "before": [
+          -69.66203502569952,
+          0,
+          -70.11424289247066
+        ],
+        "after": {
+          "pos": [
+            -68.87257373954652,
+            0,
+            -69.9667221771545
+          ],
+          "active": false
+        },
+        "travel": 0.8031260696688532,
+        "fixedSteps": 21
+      }
+    },
+    {
+      "name": "Native attack starts an actual clip 360",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "state": "attack",
+        "clip": "1H_Melee_Attack_Slice_Horizontal",
+        "held": false,
+        "combo": 0.03333333333333333
+      }
+    },
+    {
+      "name": "Pause freezes and releases controls 360",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "paused": true,
+        "elapsed": 11.700000000000161,
+        "held": false,
+        "joy": false
+      }
+    },
+    {
+      "name": "Native resume 360",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {}
+    },
+    {
+      "name": "Native giveup/result/lobby removes battle actors and trails",
+      "status": "PASS",
+      "scope": "native-release-lifecycle",
+      "evidence": {
+        "active": false,
+        "player": false,
+        "held": false,
+        "trails": 0,
+        "fx": 0,
+        "enabled": false
+      }
+    },
+    {
+      "name": "Native hero tab mounts R3F wardrobe with forged weapon: knight",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_sword",
+            "visible": false
+          },
+          {
+            "name": "Forge_sword",
+            "visible": true
+          },
+          {
+            "name": "Forge_greatsword",
+            "visible": false
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Native hero tab mounts R3F wardrobe with forged weapon: barbarian",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_axe",
+            "visible": false
+          },
+          {
+            "name": "Forge_axe",
+            "visible": false
+          },
+          {
+            "name": "Forge_greataxe",
+            "visible": true
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Native hero tab mounts R3F wardrobe with forged weapon: mage",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_wand",
+            "visible": false
+          },
+          {
+            "name": "Forge_staff",
+            "visible": true
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Native hero tab mounts R3F wardrobe with forged weapon: rogue",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_dagger",
+            "visible": true
+          },
+          {
+            "name": "Forge_dagger",
+            "visible": true
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Native hero tab mounts R3F wardrobe with forged weapon: ranger",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Bow",
+            "form": "bow",
+            "visible": true
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Native home tab unmounts R3F wardrobe and releases character",
+      "status": "PASS",
+      "scope": "native-release-lifecycle",
+      "evidence": {}
+    },
+    {
+      "name": "Four authored enemy surfaces are loaded on real animated rigs",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": [
+        {
+          "name": "Skeleton_Vanguard",
+          "loaded": true,
+          "clips": 23,
+          "nodes": [
+            {
+              "name": "TLL_Skeleton_Vanguard_forge_vertex_metal",
+              "vertices": 654
+            }
+          ]
+        },
+        {
+          "name": "Skeleton_Skirmisher",
+          "loaded": true,
+          "clips": 23,
+          "nodes": [
+            {
+              "name": "TLL_Skeleton_Skirmisher_forge_vertex_metal",
+              "vertices": 576
+            }
+          ]
+        },
+        {
+          "name": "Skeleton_Runekeeper",
+          "loaded": true,
+          "clips": 23,
+          "nodes": [
+            {
+              "name": "TLL_Skeleton_Runekeeper_forge_vertex_metal",
+              "vertices": 1332
+            }
+          ]
+        },
+        {
+          "name": "Skeleton_Bulwark",
+          "loaded": true,
+          "clips": 23,
+          "nodes": [
+            {
+              "name": "TLL_Skeleton_Bulwark_forge_vertex_metal",
+              "vertices": 960
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Actual knight actor carries authored forge weapon geometry",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": [
+        {
+          "name": "Forge_sword",
+          "visible": false,
+          "vertices": 972
+        },
+        {
+          "name": "Forge_sword",
+          "visible": true,
+          "vertices": 972
+        },
+        {
+          "name": "Forge_greatsword",
+          "visible": false,
+          "vertices": 972
+        }
+      ]
+    },
+    {
+      "name": "Native key attack damages controlled enemy and emits new contact VFX",
+      "status": "FAIL",
+      "scope": "native-key-with-enemy-fixture",
+      "evidence": {
+        "setup": [
+          {
+            "type": "해골 병사",
+            "model": "Skeleton_Vanguard",
+            "pos": [
+              -71.51851715147495,
+              0,
+              -71.92213684301824
+            ],
+            "alive": true
+          },
+          {
+            "type": "해골 자객",
+            "model": "Skeleton_Skirmisher",
+            "pos": [
+              -74.01851715147495,
+              0,
+              -74.47213684301823
+            ],
+            "alive": true
+          },
+          {
+            "type": "해골 주술사",
+            "model": "Skeleton_Runekeeper",
+            "pos": [
+              -71.51851715147495,
+              0,
+              -74.47213684301823
+            ],
+            "alive": true
+          },
+          {
+            "type": "해골 대장",
+            "model": "Skeleton_Bulwark",
+            "pos": [
+              -69.01851715147495,
+              0,
+              -74.47213684301823
+            ],
+            "alive": true
+          }
+        ],
+        "contacts": [],
+        "damage": [],
+        "peakTrailSamples": 13,
+        "peakTrailIndices": 72
+      }
+    }
+  ],
+  "errors": [],
+  "warnings": [
+    "Service Worker registration blocked by Playwright",
+    "THREE.WebGLRenderer: KHR_parallel_shader_compile extension not supported."
+  ],
+  "networkFailures": [
+    {
+      "url": "http://127.0.0.1:43059/bgm/regions/lobby.mp3",
+      "resource": "media",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "badResponses": [],
+  "externalRequests": [],
+  "optionalFontFixtures": [
+    {
+      "url": "https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap",
+      "fixture": "Empty optional external font CSS; uses installed system fallback. No CDN-font availability claim."
+    }
+  ],
+  "screenshots": [
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v3/lobby-1440.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v3/battle-native-1440.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v3/battle-native-390.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v3/battle-native-360.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v3/r3f-wardrobe-knight.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v3/r3f-wardrobe-barbarian.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v3/r3f-wardrobe-mage.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v3/r3f-wardrobe-rogue.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v3/r3f-wardrobe-ranger.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v3/failure.png"
+  ],
+  "version": {
+    "sha": "678caf52a19ffda2240bfd7882278c4c0b77c49d",
+    "dirty": true,
+    "builtAt": "2026-10-08T13:25:38.655Z",
+    "pwaRelease": "44f88890431175465959"
+  },
+  "origin": "http://127.0.0.1:43059",
+  "browser": "153.0.8010.0",
+  "systemFontFixture": {
+    "family": "Noto Sans KR",
+    "weights": [
+      400,
+      700
+    ],
+    "scope": "QA-only local font preload for missing container Korean fonts; application CSS and production assets unchanged."
+  },
+  "failure": "Error: Native key attack damages controlled enemy and emits new contact VFX: {\"setup\":[{\"type\":\"해골 병사\",\"model\":\"Skeleton_Vanguard\",\"pos\":[-71.51851715147495,0,-71.92213684301824],\"alive\":true},{\"type\":\"해골 자객\",\"model\":\"Skeleton_Skirmisher\",\"pos\":[-74.01851715147495,0,-74.47213684301823],\"alive\":true},{\"type\":\"해골 주술사\",\"model\":\"Skeleton_Runekeeper\",\"pos\":[-71.51851715147495,0,-74.47213684301823],\"alive\":true},{\"type\":\"해골 대장\",\"model\":\"Skeleton_Bulwark\",\"pos\":[-69.01851715147495,0,-74.47213684301823],\"alive\":true}],\"contacts\":[],\"damage\":[],\"peakTrailSamples\":13,\"peakTrailIndices\":72}\n    at check (file:///workspace/scratch/46cbb073351f/blade-surge/tools/dungeon-forge-qa.mjs:30:18)\n    at file:///workspace/scratch/46cbb073351f/blade-surge/tools/dungeon-forge-qa.mjs:249:3",
+  "finished": "2026-10-08T13:32:13.735Z"
+}

@@ -1,0 +1,182 @@
+[
+  {
+    "name": "Skeleton_Vanguard",
+    "samples": 115,
+    "maxSpan": 3.2064988546310436,
+    "before": [
+      {
+        "name": "mesh_0_Merged",
+        "vertices": 4778
+      },
+      {
+        "name": "mesh_4",
+        "vertices": 80
+      }
+    ],
+    "after": [
+      {
+        "name": "mesh_0_Merged",
+        "vertices": 4778
+      },
+      {
+        "name": "TLL_Skeleton_Vanguard_forge_vertex_metal",
+        "vertices": 654
+      },
+      {
+        "name": "mesh_4",
+        "vertices": 80
+      }
+    ],
+    "beforeShadow": {
+      "name": "mesh_0_Merged",
+      "vertices": 4778
+    },
+    "afterShadow": {
+      "name": "mesh_0_Merged",
+      "vertices": 4778
+    }
+  },
+  {
+    "name": "Skeleton_Skirmisher",
+    "samples": 115,
+    "maxSpan": 2.9461539610234357,
+    "before": [
+      {
+        "name": "mesh_0_Merged",
+        "vertices": 4731
+      },
+      {
+        "name": "mesh_1",
+        "vertices": 392
+      },
+      {
+        "name": "mesh_5",
+        "vertices": 80
+      },
+      {
+        "name": "mesh_2",
+        "vertices": 56
+      }
+    ],
+    "after": [
+      {
+        "name": "mesh_0_Merged",
+        "vertices": 4731
+      },
+      {
+        "name": "TLL_Skeleton_Skirmisher_forge_vertex_metal",
+        "vertices": 576
+      },
+      {
+        "name": "mesh_1",
+        "vertices": 392
+      },
+      {
+        "name": "mesh_5",
+        "vertices": 80
+      },
+      {
+        "name": "mesh_2",
+        "vertices": 56
+      }
+    ],
+    "beforeShadow": {
+      "name": "mesh_0_Merged",
+      "vertices": 4731
+    },
+    "afterShadow": {
+      "name": "mesh_0_Merged",
+      "vertices": 4731
+    }
+  },
+  {
+    "name": "Skeleton_Runekeeper",
+    "samples": 115,
+    "maxSpan": 3.296241657696322,
+    "before": [
+      {
+        "name": "mesh_0_Merged",
+        "vertices": 3636
+      },
+      {
+        "name": "mesh_1",
+        "vertices": 340
+      },
+      {
+        "name": "mesh_4",
+        "vertices": 80
+      }
+    ],
+    "after": [
+      {
+        "name": "mesh_0_Merged",
+        "vertices": 3636
+      },
+      {
+        "name": "TLL_Skeleton_Runekeeper_forge_vertex_metal",
+        "vertices": 1332
+      },
+      {
+        "name": "mesh_1",
+        "vertices": 340
+      },
+      {
+        "name": "mesh_4",
+        "vertices": 80
+      }
+    ],
+    "beforeShadow": {
+      "name": "mesh_0_Merged",
+      "vertices": 3636
+    },
+    "afterShadow": {
+      "name": "mesh_0_Merged",
+      "vertices": 3636
+    }
+  },
+  {
+    "name": "Skeleton_Bulwark",
+    "samples": 115,
+    "maxSpan": 2.870391178263731,
+    "before": [
+      {
+        "name": "mesh_0_Merged",
+        "vertices": 4968
+      },
+      {
+        "name": "mesh_1",
+        "vertices": 1069
+      },
+      {
+        "name": "mesh_5",
+        "vertices": 80
+      }
+    ],
+    "after": [
+      {
+        "name": "mesh_0_Merged",
+        "vertices": 4968
+      },
+      {
+        "name": "mesh_1",
+        "vertices": 1069
+      },
+      {
+        "name": "TLL_Skeleton_Bulwark_forge_vertex_metal",
+        "vertices": 960
+      },
+      {
+        "name": "mesh_5",
+        "vertices": 80
+      }
+    ],
+    "beforeShadow": {
+      "name": "mesh_0_Merged",
+      "vertices": 4968
+    },
+    "afterShadow": {
+      "name": "mesh_0_Merged",
+      "vertices": 4968
+    }
+  }
+]

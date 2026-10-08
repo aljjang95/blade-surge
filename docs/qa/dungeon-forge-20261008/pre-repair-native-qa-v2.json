@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "status": "FAIL",
+  "started": "2026-10-08T13:27:57.796Z",
+  "head": "678caf52a19ffda2240bfd7882278c4c0b77c49d",
+  "scope": "Local compiled game; isolated browser save. Native pointer/keyboard events use controlled fixed simulation steps. Separate art fixtures directly visit locked chapters, place/stun durable enemies and grant invulnerability. This is not natural campaign progression, a human playtest, physical-device/GPU performance, audio-perception or production release evidence.",
+  "viewports": [
+    [
+      1440,
+      900
+    ],
+    [
+      390,
+      844
+    ],
+    [
+      360,
+      800
+    ]
+  ],
+  "checks": [
+    {
+      "name": "Actual game WebGL2 context available",
+      "status": "PASS",
+      "scope": "native-boot",
+      "evidence": {
+        "webgl2": true,
+        "lost": false,
+        "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "revision": "170"
+      }
+    }
+  ],
+  "errors": [],
+  "warnings": [
+    "Service Worker registration blocked by Playwright",
+    "THREE.WebGLRenderer: KHR_parallel_shader_compile extension not supported."
+  ],
+  "networkFailures": [],
+  "badResponses": [],
+  "externalRequests": [],
+  "optionalFontFixtures": [
+    {
+      "url": "https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap",
+      "fixture": "Empty optional external font CSS; uses installed system fallback. No CDN-font availability claim."
+    }
+  ],
+  "screenshots": [
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v2/lobby-1440.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v2/failure.png"
+  ],
+  "version": {
+    "sha": "678caf52a19ffda2240bfd7882278c4c0b77c49d",
+    "dirty": true,
+    "builtAt": "2026-10-08T13:25:38.655Z",
+    "pwaRelease": "44f88890431175465959"
+  },
+  "origin": "http://127.0.0.1:36723",
+  "browser": "153.0.8010.0",
+  "systemFontFixture": {
+    "family": "Noto Sans KR",
+    "weights": [
+      400,
+      700
+    ],
+    "scope": "QA-only local font preload for missing container Korean fonts; application CSS and production assets unchanged."
+  },
+  "failure": "locator.click: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('#btn-battle')\u001b[22m\n\u001b[2m    - locator resolved to <button id=\"btn-battle\" class=\"btn btn-gold btn-battle\">…</button>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is not visible\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    49 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is not visible\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n\n    at /workspace/scratch/46cbb073351f/blade-surge/tools/dungeon-forge-qa.mjs:118:37",
+  "finished": "2026-10-08T13:28:59.363Z"
+}

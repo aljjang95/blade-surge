@@ -18,7 +18,7 @@ export function assembleEncounterIdentity(gltf, authored, name, config) {
     const index = source.bones.findIndex(b => normalize(b.name) === normalize(bone || ''));
     if (index < 0) throw Error(`Missing encounter joint: ${name}:${bone}`);
     const geometry = o.geometry.clone().applyMatrix4(o.matrixWorld);
-    for (const key of Object.keys(geometry.attributes)) if (!['position', 'normal'].includes(key)) geometry.deleteAttribute(key);
+    for (const key of Object.keys(geometry.attributes)) if (!['position', 'normal', 'color'].includes(key)) geometry.deleteAttribute(key);
     if (!geometry.attributes.normal) geometry.computeVertexNormals();
     projectSurfaceUV(geometry);
     const n = geometry.attributes.position.count, indices = new Uint16Array(n * 4), weights = new Float32Array(n * 4);
@@ -40,7 +40,7 @@ export function assembleEncounterIdentity(gltf, authored, name, config) {
     for (const part of group.geometries) part.dispose();
     if (!geometry) throw Error(`Incompatible encounter surface: ${name}:${key}`);
     const material = group.material; material.userData.tllAuthored = true;
-    if (!material.emissive?.getHex()) {
+    if (!material.vertexColors && !material.emissive?.getHex()) {
       applySurfaceDetail(material, key.includes('cloth') ? 'cloth' : key.includes('stone') ? 'stone' : 'metal');
       // The shared albedo has dark texels; multiplying roughness by it creates mirrors.
       // Keep the Blender-authored roughness while retaining actual albedo/bump detail.

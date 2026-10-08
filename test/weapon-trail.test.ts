@@ -20,7 +20,8 @@ test('리본은 포화·새 프레임에서도 고정 버퍼·출력 벡터를 �
   const retained = { samples: trail.samples, pos: trail.pos, uv: trail.uv, alpha: trail.alpha, points: trail.points };
   const clones = spyOn(THREE.Vector3.prototype, 'clone').mockImplementation(() => { throw new Error('프레임 벡터 복제'); });
   for (let i = 0; i < 120; i++) trail.update(1 / 60);
-  expect(trail.n).toBe(6); expect(trail.pos[0]).toBe(119); expect(trail.pos[30]).toBe(114);
+  expect(trail.n).toBe(6); expect(trail.pos[0]).toBe(119); expect(trail.pos[30]).toBe(108);
+  expect(trail.t - trail.times[(trail.head + trail.n - 1) % trail.segs]!).toBeGreaterThan(.18);
   expect(trail.pos[1]).toBe(1.5); expect(trail.pos[4]).toBe(3);
   expect(trail.geo.drawRange.count).toBe(30);
   expect(trail.mesh.children).toHaveLength(0); expect(trail.mat.forceSinglePass).toBe(true);
@@ -73,4 +74,42 @@ test('셰이더는 공유 텍스처·안개·출력 변환을 유지하고 날�
   expect(material.fragmentShader).toContain('#include <fog_fragment>');
   expect(material.fragmentShader).toContain('#include <colorspace_fragment>');
   material.dispose(); texture.dispose();
+});
+
+test('30·60·120·180Hz의 꼬리는 같은 수명을 덮으며 최신 면은 실제 무기 끝을 따른다', () => {
+  for (const hz of [30, 60, 120, 180]) {
+    let t = 0;
+    const texture = new THREE.Texture();
+    const trail = new WeaponTrail((points: THREE.Vector3[]) => {
+      points[0]!.set(Math.sin(t) * .4, 1, Math.cos(t) * .4);
+      points[1]!.set(Math.sin(t) * 1.6, 1, Math.cos(t) * 1.6); return points;
+    }, createWeaponTrailMaterial(texture, 0xffffff), { segs: 22, life: .29 });
+    for (let i = 0; i < hz; i++) { t += 1 / hz; trail.update(1 / hz); }
+    const oldestAge = trail.t - trail.times[(trail.head + trail.n - 1) % trail.segs]!;
+    expect(oldestAge).toBeGreaterThan(.29 - 2 / hz - trail.sampleInterval);
+    expect(oldestAge).toBeLessThan(.29);
+    expect(trail.pos[3]).toBeCloseTo(Math.sin(t) * 1.6, 6);
+    expect(trail.pos[5]).toBeCloseTo(Math.cos(t) * 1.6, 6);
+    expect(trail.n).toBeLessThanOrEqual(22);
+    trail.dispose(); texture.dispose();
+  }
+});
+
+test('정지한 날은 꼬리를 갱신하지 않고 순간이동·손상된 소켓은 빛의 벽을 만들지 않는다', () => {
+  let x = 0;
+  const texture = new THREE.Texture();
+  const trail = new WeaponTrail((points: THREE.Vector3[]) => {
+    points[0]!.set(x, 1, 0); points[1]!.set(x, 2.2, 0); return points;
+  }, createWeaponTrailMaterial(texture, 0xffffff), { segs: 22, life: .24 });
+  for (let i = 0; i < 8; i++) { x += .1; trail.update(1 / 60); }
+  expect(trail.n).toBeGreaterThan(2);
+  x += 12; trail.update(1 / 60);
+  expect(trail.n).toBe(1); expect(trail.geo.drawRange.count).toBe(0);
+  const emissionTime = trail.times[trail.head];
+  for (let i = 0; i < 6; i++) trail.update(1 / 60);
+  expect(trail.n).toBe(1); expect(trail.times[trail.head]).toBe(emissionTime);
+  x = NaN; trail.update(1 / 60);
+  expect([...trail.pos].every(Number.isFinite)).toBe(true);
+  trail.stop(); trail.update(.3); expect(trail.dead).toBe(true);
+  texture.dispose();
 });

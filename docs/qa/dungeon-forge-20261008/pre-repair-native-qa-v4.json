@@ -1,0 +1,3752 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "started": "2026-10-08T13:33:08.896Z",
+  "head": "678caf52a19ffda2240bfd7882278c4c0b77c49d",
+  "scope": "Local compiled game; isolated browser save. Native pointer/keyboard events use controlled fixed simulation steps. Separate art fixtures directly visit locked chapters, place/stun durable enemies and grant invulnerability. This is not natural campaign progression, a human playtest, physical-device/GPU performance, audio-perception or production release evidence.",
+  "fontconfigFixture": "/tmp/blade-qa-fontconfig/fonts.conf",
+  "viewports": [
+    [
+      1440,
+      900
+    ],
+    [
+      390,
+      844
+    ],
+    [
+      360,
+      800
+    ]
+  ],
+  "checks": [
+    {
+      "name": "Actual game WebGL2 context available",
+      "status": "PASS",
+      "scope": "native-boot",
+      "evidence": {
+        "webgl2": true,
+        "lost": false,
+        "version": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "revision": "170"
+      }
+    },
+    {
+      "name": "Fresh save enters first stage through visible campaign card and entry button",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {}
+    },
+    {
+      "name": "Reachable battle controls 1440x900",
+      "status": "PASS",
+      "scope": "native-layout",
+      "evidence": [
+        {
+          "selector": "#btn-attack",
+          "x": 1338,
+          "y": 800,
+          "width": 86,
+          "height": 86,
+          "inside": true,
+          "reachable": true,
+          "hit": "btn-attack"
+        },
+        {
+          "selector": "#btn-dodge",
+          "x": 1270,
+          "y": 824,
+          "width": 58,
+          "height": 58,
+          "inside": true,
+          "reachable": true,
+          "hit": "dodge-label"
+        },
+        {
+          "selector": "#btn-pause",
+          "x": 1382,
+          "y": 12,
+          "width": 44,
+          "height": 44,
+          "inside": true,
+          "reachable": true,
+          "hit": "btn-pause"
+        },
+        {
+          "selector": "#joy .joy-base",
+          "x": 28,
+          "y": 766,
+          "width": 112,
+          "height": 112,
+          "inside": true,
+          "reachable": true,
+          "hit": "joy-knob"
+        }
+      ]
+    },
+    {
+      "name": "Native joystick moves and releases 1440",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "before": [
+          -71.51851715147495,
+          0,
+          -70.47213684301823
+        ],
+        "after": {
+          "pos": [
+            -70.45149449834508,
+            0,
+            -70.26177321125236
+          ],
+          "active": false
+        },
+        "travel": 1.0875615843997206,
+        "fixedSteps": 21
+      }
+    },
+    {
+      "name": "Native attack starts an actual clip 1440",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "state": "attack",
+        "clip": "1H_Melee_Attack_Slice_Horizontal",
+        "held": false,
+        "combo": 0.03333333333333333
+      }
+    },
+    {
+      "name": "Pause freezes and releases controls 1440",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "paused": true,
+        "elapsed": 4.866666666666655,
+        "held": false,
+        "joy": false
+      }
+    },
+    {
+      "name": "Native resume 1440",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {}
+    },
+    {
+      "name": "Reachable battle controls 390x844",
+      "status": "PASS",
+      "scope": "native-layout",
+      "evidence": [
+        {
+          "selector": "#btn-attack",
+          "x": 302,
+          "y": 748,
+          "width": 80,
+          "height": 80,
+          "inside": true,
+          "reachable": true,
+          "hit": "btn-attack"
+        },
+        {
+          "selector": "#btn-dodge",
+          "x": 226,
+          "y": 758,
+          "width": 60,
+          "height": 60,
+          "inside": true,
+          "reachable": true,
+          "hit": "dodge-label"
+        },
+        {
+          "selector": "#btn-pause",
+          "x": 251,
+          "y": 8,
+          "width": 44,
+          "height": 44,
+          "inside": true,
+          "reachable": true,
+          "hit": "btn-pause"
+        },
+        {
+          "selector": "#joy .joy-base",
+          "x": 10,
+          "y": 736,
+          "width": 88,
+          "height": 88,
+          "inside": true,
+          "reachable": true,
+          "hit": "joy-knob"
+        }
+      ]
+    },
+    {
+      "name": "Native joystick moves and releases 390",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "before": [
+          -70.45149449834508,
+          0,
+          -70.26177321125236
+        ],
+        "after": {
+          "pos": [
+            -69.66203502569952,
+            0,
+            -70.11424289247066
+          ],
+          "active": false
+        },
+        "travel": 0.8031260510714606,
+        "fixedSteps": 21
+      }
+    },
+    {
+      "name": "Native attack starts an actual clip 390",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "state": "attack",
+        "clip": "1H_Melee_Attack_Slice_Horizontal",
+        "held": false,
+        "combo": 0.03333333333333333
+      }
+    },
+    {
+      "name": "Pause freezes and releases controls 390",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "paused": true,
+        "elapsed": 8.283333333333324,
+        "held": false,
+        "joy": false
+      }
+    },
+    {
+      "name": "Native resume 390",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {}
+    },
+    {
+      "name": "Reachable battle controls 360x800",
+      "status": "PASS",
+      "scope": "native-layout",
+      "evidence": [
+        {
+          "selector": "#btn-attack",
+          "x": 272,
+          "y": 704,
+          "width": 80,
+          "height": 80,
+          "inside": true,
+          "reachable": true,
+          "hit": "btn-attack"
+        },
+        {
+          "selector": "#btn-dodge",
+          "x": 196,
+          "y": 714,
+          "width": 60,
+          "height": 60,
+          "inside": true,
+          "reachable": true,
+          "hit": "dodge-label"
+        },
+        {
+          "selector": "#btn-pause",
+          "x": 197,
+          "y": 8,
+          "width": 44,
+          "height": 44,
+          "inside": true,
+          "reachable": true,
+          "hit": "btn-pause"
+        },
+        {
+          "selector": "#joy .joy-base",
+          "x": 10,
+          "y": 692,
+          "width": 88,
+          "height": 88,
+          "inside": true,
+          "reachable": true,
+          "hit": "joy-knob"
+        }
+      ]
+    },
+    {
+      "name": "Native joystick moves and releases 360",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "before": [
+          -69.66203502569952,
+          0,
+          -70.11424289247066
+        ],
+        "after": {
+          "pos": [
+            -68.87257373954652,
+            0,
+            -69.9667221771545
+          ],
+          "active": false
+        },
+        "travel": 0.8031260696688532,
+        "fixedSteps": 21
+      }
+    },
+    {
+      "name": "Native attack starts an actual clip 360",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "state": "attack",
+        "clip": "1H_Melee_Attack_Slice_Horizontal",
+        "held": false,
+        "combo": 0.03333333333333333
+      }
+    },
+    {
+      "name": "Pause freezes and releases controls 360",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {
+        "paused": true,
+        "elapsed": 11.700000000000161,
+        "held": false,
+        "joy": false
+      }
+    },
+    {
+      "name": "Native resume 360",
+      "status": "PASS",
+      "scope": "native-pointer-input",
+      "evidence": {}
+    },
+    {
+      "name": "Native giveup/result/lobby removes battle actors and trails",
+      "status": "PASS",
+      "scope": "native-release-lifecycle",
+      "evidence": {
+        "active": false,
+        "player": false,
+        "held": false,
+        "trails": 0,
+        "fx": 0,
+        "enabled": false
+      }
+    },
+    {
+      "name": "Native hero tab mounts R3F wardrobe with forged weapon: knight",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_sword",
+            "visible": false
+          },
+          {
+            "name": "Forge_sword",
+            "visible": true
+          },
+          {
+            "name": "Forge_greatsword",
+            "visible": false
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Native hero tab mounts R3F wardrobe with forged weapon: barbarian",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_axe",
+            "visible": false
+          },
+          {
+            "name": "Forge_axe",
+            "visible": false
+          },
+          {
+            "name": "Forge_greataxe",
+            "visible": true
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Native hero tab mounts R3F wardrobe with forged weapon: mage",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_wand",
+            "visible": false
+          },
+          {
+            "name": "Forge_staff",
+            "visible": true
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Native hero tab mounts R3F wardrobe with forged weapon: rogue",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Forge_dagger",
+            "visible": true
+          },
+          {
+            "name": "Forge_dagger",
+            "visible": true
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Native hero tab mounts R3F wardrobe with forged weapon: ranger",
+      "status": "PASS",
+      "scope": "native-input",
+      "evidence": {
+        "nodes": [
+          {
+            "name": "Bow",
+            "form": "bow",
+            "visible": true
+          }
+        ],
+        "width": 422,
+        "height": 531,
+        "webgl2": true,
+        "lost": false
+      }
+    },
+    {
+      "name": "Native home tab unmounts R3F wardrobe and releases character",
+      "status": "PASS",
+      "scope": "native-release-lifecycle",
+      "evidence": {}
+    },
+    {
+      "name": "Four authored enemy surfaces are loaded on real animated rigs",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": [
+        {
+          "name": "Skeleton_Vanguard",
+          "loaded": true,
+          "clips": 23,
+          "nodes": [
+            {
+              "name": "TLL_Skeleton_Vanguard_forge_vertex_metal",
+              "vertices": 654
+            }
+          ]
+        },
+        {
+          "name": "Skeleton_Skirmisher",
+          "loaded": true,
+          "clips": 23,
+          "nodes": [
+            {
+              "name": "TLL_Skeleton_Skirmisher_forge_vertex_metal",
+              "vertices": 576
+            }
+          ]
+        },
+        {
+          "name": "Skeleton_Runekeeper",
+          "loaded": true,
+          "clips": 23,
+          "nodes": [
+            {
+              "name": "TLL_Skeleton_Runekeeper_forge_vertex_metal",
+              "vertices": 1332
+            }
+          ]
+        },
+        {
+          "name": "Skeleton_Bulwark",
+          "loaded": true,
+          "clips": 23,
+          "nodes": [
+            {
+              "name": "TLL_Skeleton_Bulwark_forge_vertex_metal",
+              "vertices": 960
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Actual knight actor carries authored forge weapon geometry",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": [
+        {
+          "name": "Forge_sword",
+          "visible": false,
+          "vertices": 972
+        },
+        {
+          "name": "Forge_sword",
+          "visible": true,
+          "vertices": 972
+        },
+        {
+          "name": "Forge_greatsword",
+          "visible": false,
+          "vertices": 972
+        }
+      ]
+    },
+    {
+      "name": "Native key attack damages controlled enemy and emits new contact VFX",
+      "status": "PASS",
+      "scope": "native-key-with-enemy-fixture",
+      "evidence": {
+        "setup": [
+          {
+            "type": "해골 병사",
+            "model": "Skeleton_Vanguard",
+            "pos": [
+              -71.51851715147495,
+              0,
+              -71.92213684301824
+            ],
+            "alive": true
+          },
+          {
+            "type": "해골 자객",
+            "model": "Skeleton_Skirmisher",
+            "pos": [
+              -74.01851715147495,
+              0,
+              -74.47213684301823
+            ],
+            "alive": true
+          },
+          {
+            "type": "해골 주술사",
+            "model": "Skeleton_Runekeeper",
+            "pos": [
+              -71.51851715147495,
+              0,
+              -74.47213684301823
+            ],
+            "alive": true
+          },
+          {
+            "type": "해골 대장",
+            "model": "Skeleton_Bulwark",
+            "pos": [
+              -69.01851715147495,
+              0,
+              -74.47213684301823
+            ],
+            "alive": true
+          }
+        ],
+        "contacts": [
+          {
+            "options": {
+              "size": 1,
+              "particles": 4,
+              "light": false,
+              "kind": "slash",
+              "tier": "light"
+            },
+            "sprite": true,
+            "width": 1.02,
+            "height": 0.35294117647058826,
+            "texture": "procedural"
+          }
+        ],
+        "damage": [
+          {
+            "loss": 232.9326342172426,
+            "state": "attack"
+          }
+        ],
+        "peakTrailSamples": 6,
+        "peakTrailIndices": 30
+      }
+    },
+    {
+      "name": "Actual weapon motion writes visible trail triangles",
+      "status": "PASS",
+      "scope": "native-key-with-enemy-fixture",
+      "evidence": {
+        "contacts": [
+          {
+            "options": {
+              "size": 1,
+              "particles": 4,
+              "light": false,
+              "kind": "slash",
+              "tier": "light"
+            },
+            "sprite": true,
+            "width": 1.02,
+            "height": 0.35294117647058826,
+            "texture": "procedural"
+          }
+        ],
+        "damage": [
+          {
+            "loss": 232.9326342172426,
+            "state": "attack"
+          }
+        ],
+        "peakTrailSamples": 6,
+        "peakTrailIndices": 30
+      }
+    },
+    {
+      "name": "Released attack expires weapon trails",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "trails": 0,
+        "held": false,
+        "state": "idle"
+      }
+    },
+    {
+      "name": "Dungeon room/spawn geometry 1-4",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "stage": {
+          "code": "1-4",
+          "name": "발자국의 온실 격자",
+          "theme": "garden"
+        },
+        "maps": [
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "garden-rooms-0-1-3-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "garden-rooms-2-5-4-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "garden-rooms-6-7-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "garden-rooms-8-9-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          }
+        ],
+        "surfaces": [
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 6,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 70,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 90,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 29,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 74,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 92,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 57,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 34,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 30,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 35,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 8,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 8,
+            "vertices": 275
+          }
+        ],
+        "rooms": 10,
+        "roomCentersWalkable": true,
+        "spawnWalkable": true,
+        "drawCalls": 1,
+        "surface": {
+          "sampledTiles": 1031,
+          "uniqueTiles": 533
+        },
+        "memory": {
+          "geometries": 129,
+          "textures": 127
+        },
+        "lost": false
+      }
+    },
+    {
+      "name": "Generated stone texture is sampled by actual dungeon material 1-4",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": [
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "garden-rooms-0-1-3-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "garden-rooms-2-5-4-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "garden-rooms-6-7-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "garden-rooms-8-9-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        }
+      ]
+    },
+    {
+      "name": "Dungeon surface removes overlapping tile instances 1-4",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "sampledTiles": 1031,
+        "uniqueTiles": 533
+      }
+    },
+    {
+      "name": "Dungeon room/spawn geometry 2-4",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "stage": {
+          "code": "2-4",
+          "name": "장인들의 탈출 작업장",
+          "theme": "forge"
+        },
+        "maps": [
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "forge-rooms-0-1-3-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "forge-rooms-2-4-5-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "forge-rooms-6-8-9-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "forge-room-7-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "forge-rooms-10-11-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          }
+        ],
+        "surfaces": [
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 6,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 55,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 66,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 70,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 5,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 26,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 71,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 15,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 20,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 13,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 31,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 15,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 35,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 73,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 26,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 33,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 34,
+            "vertices": 275
+          },
+          {
+            "name": "forge-rooms-0-1-3-0",
+            "vertices": 1710
+          },
+          {
+            "name": "forge-rooms-0-1-3-1",
+            "vertices": 5868
+          },
+          {
+            "name": "forge-rooms-0-1-3-2",
+            "vertices": 4092
+          },
+          {
+            "name": "forge-rooms-2-4-5-0",
+            "vertices": 1806
+          },
+          {
+            "name": "forge-rooms-2-4-5-1",
+            "vertices": 5868
+          },
+          {
+            "name": "forge-rooms-2-4-5-2",
+            "vertices": 4092
+          },
+          {
+            "name": "forge-rooms-6-8-9-0",
+            "vertices": 1800
+          },
+          {
+            "name": "forge-rooms-6-8-9-1",
+            "vertices": 5868
+          },
+          {
+            "name": "forge-rooms-6-8-9-2",
+            "vertices": 4092
+          },
+          {
+            "name": "forge-room-7-0",
+            "vertices": 480
+          },
+          {
+            "name": "forge-room-7-1",
+            "vertices": 1944
+          },
+          {
+            "name": "forge-room-7-2",
+            "vertices": 540
+          },
+          {
+            "name": "forge-rooms-10-11-0",
+            "vertices": 1284
+          },
+          {
+            "name": "forge-rooms-10-11-1",
+            "vertices": 3924
+          },
+          {
+            "name": "forge-rooms-10-11-2",
+            "vertices": 3552
+          }
+        ],
+        "rooms": 12,
+        "roomCentersWalkable": true,
+        "spawnWalkable": true,
+        "drawCalls": 1,
+        "surface": {
+          "sampledTiles": 1023,
+          "uniqueTiles": 594
+        },
+        "memory": {
+          "geometries": 145,
+          "textures": 127
+        },
+        "lost": false
+      }
+    },
+    {
+      "name": "Generated stone texture is sampled by actual dungeon material 2-4",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": [
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "forge-rooms-0-1-3-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "forge-rooms-2-4-5-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "forge-rooms-6-8-9-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "forge-room-7-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "forge-rooms-10-11-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        }
+      ]
+    },
+    {
+      "name": "Dungeon surface removes overlapping tile instances 2-4",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "sampledTiles": 1023,
+        "uniqueTiles": 594
+      }
+    },
+    {
+      "name": "Dungeon room/spawn geometry 3-8",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "stage": {
+          "code": "3-8",
+          "name": "계약 아래의 역류",
+          "theme": "frost"
+        },
+        "maps": [
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "frost-rooms-0-1-2-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "frost-room-3-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "frost-rooms-4-5-6-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "frost-rooms-7-8-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "frost-rooms-9-10-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "frost-rooms-11-12-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          }
+        ],
+        "surfaces": [
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 79,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 53,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 37,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 51,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 45,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 71,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 84,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 82,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 6,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 27,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 15,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 26,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 31,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 33,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 34,
+            "vertices": 275
+          }
+        ],
+        "rooms": 13,
+        "roomCentersWalkable": true,
+        "spawnWalkable": true,
+        "drawCalls": 1,
+        "surface": {
+          "sampledTiles": 1205,
+          "uniqueTiles": 674
+        },
+        "memory": {
+          "geometries": 205,
+          "textures": 127
+        },
+        "lost": false
+      }
+    },
+    {
+      "name": "Generated stone texture is sampled by actual dungeon material 3-8",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": [
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "frost-rooms-0-1-2-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "frost-room-3-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "frost-rooms-4-5-6-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "frost-rooms-7-8-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "frost-rooms-9-10-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "frost-rooms-11-12-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        }
+      ]
+    },
+    {
+      "name": "Dungeon surface removes overlapping tile instances 3-8",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "sampledTiles": 1205,
+        "uniqueTiles": 674
+      }
+    },
+    {
+      "name": "Dungeon room/spawn geometry 4-8",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "stage": {
+          "code": "4-8",
+          "name": "기다리는 배의 선실",
+          "theme": "tide"
+        },
+        "maps": [
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "tide-rooms-0-1-3-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "tide-rooms-2-6-7-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "tide-rooms-4-5-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "tide-rooms-8-9-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "tide-room-10-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          }
+        ],
+        "surfaces": [
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 74,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 70,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 78,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 41,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 49,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 46,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 22,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 80,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 69,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 14,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 6,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 2,
+            "vertices": 275
+          }
+        ],
+        "rooms": 11,
+        "roomCentersWalkable": true,
+        "spawnWalkable": true,
+        "drawCalls": 1,
+        "surface": {
+          "sampledTiles": 1019,
+          "uniqueTiles": 551
+        },
+        "memory": {
+          "geometries": 215,
+          "textures": 127
+        },
+        "lost": false
+      }
+    },
+    {
+      "name": "Generated stone texture is sampled by actual dungeon material 4-8",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": [
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "tide-rooms-0-1-3-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "tide-rooms-2-6-7-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "tide-rooms-4-5-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "tide-rooms-8-9-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "tide-room-10-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        }
+      ]
+    },
+    {
+      "name": "Dungeon surface removes overlapping tile instances 4-8",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "sampledTiles": 1019,
+        "uniqueTiles": 551
+      }
+    },
+    {
+      "name": "Dungeon room/spawn geometry 5-4",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "stage": {
+          "code": "5-4",
+          "name": "네 왕좌의 회합 회랑",
+          "theme": "crown"
+        },
+        "maps": [
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "crown-rooms-0-1-4-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "crown-rooms-2-3-6-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "crown-rooms-5-9-8-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "crown-rooms-7-11-10-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "crown-rooms-12-13-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          }
+        ],
+        "surfaces": [
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 87,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 88,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 3,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 4,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 91,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 9,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 1,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 8,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 83,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 97,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 90,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 16,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 4,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 36,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 47,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 57,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 6,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 36,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 40,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 4,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 4,
+            "vertices": 275
+          }
+        ],
+        "rooms": 14,
+        "roomCentersWalkable": true,
+        "spawnWalkable": true,
+        "drawCalls": 1,
+        "surface": {
+          "sampledTiles": 1486,
+          "uniqueTiles": 811
+        },
+        "memory": {
+          "geometries": 229,
+          "textures": 127
+        },
+        "lost": false
+      }
+    },
+    {
+      "name": "Generated stone texture is sampled by actual dungeon material 5-4",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": [
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "crown-rooms-0-1-4-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "crown-rooms-2-3-6-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "crown-rooms-5-9-8-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "crown-rooms-7-11-10-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "crown-rooms-12-13-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        }
+      ]
+    },
+    {
+      "name": "Dungeon surface removes overlapping tile instances 5-4",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "sampledTiles": 1486,
+        "uniqueTiles": 811
+      }
+    },
+    {
+      "name": "Dungeon room/spawn geometry 6-3",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "stage": {
+          "code": "6-3",
+          "name": "생존자의 주소 갈림길",
+          "theme": "garden"
+        },
+        "maps": [
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "dungeon-surface-floor_tile_large",
+            "material": "texture",
+            "tag": "gpt-dungeon-stone-v1",
+            "textureName": "GPT_Dungeon_Stone_v1",
+            "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+            "width": 1024,
+            "height": 1024
+          },
+          {
+            "node": "garden-rooms-0-1-2-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "garden-rooms-3-8-9-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "garden-rooms-4-5-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "garden-rooms-6-7-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          },
+          {
+            "node": "garden-rooms-10-11-1",
+            "material": "",
+            "tag": "forged-metal",
+            "textureName": "GUI_forged-metal",
+            "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+            "width": 768,
+            "height": 768
+          }
+        ],
+        "surfaces": [
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 6,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 70,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 88,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 68,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 94,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 68,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 7,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 35,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 73,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 16,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 39,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 26,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 22,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 6,
+            "vertices": 275
+          },
+          {
+            "name": "dungeon-surface-floor_tile_large",
+            "instances": 18,
+            "vertices": 275
+          }
+        ],
+        "rooms": 12,
+        "roomCentersWalkable": true,
+        "spawnWalkable": true,
+        "drawCalls": 1,
+        "surface": {
+          "sampledTiles": 1095,
+          "uniqueTiles": 636
+        },
+        "memory": {
+          "geometries": 244,
+          "textures": 127
+        },
+        "lost": false
+      }
+    },
+    {
+      "name": "Generated stone texture is sampled by actual dungeon material 6-3",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": [
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "dungeon-surface-floor_tile_large",
+          "material": "texture",
+          "tag": "gpt-dungeon-stone-v1",
+          "textureName": "GPT_Dungeon_Stone_v1",
+          "url": "http://127.0.0.1:32821/img/environment/dungeon-stone-v1.webp",
+          "width": 1024,
+          "height": 1024
+        },
+        {
+          "node": "garden-rooms-0-1-2-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "garden-rooms-3-8-9-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "garden-rooms-4-5-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "garden-rooms-6-7-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        },
+        {
+          "node": "garden-rooms-10-11-1",
+          "material": "",
+          "tag": "forged-metal",
+          "textureName": "GUI_forged-metal",
+          "url": "http://127.0.0.1:32821/img/materials-crafted/forged-metal.webp",
+          "width": 768,
+          "height": 768
+        }
+      ]
+    },
+    {
+      "name": "Dungeon surface removes overlapping tile instances 6-3",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "sampledTiles": 1095,
+        "uniqueTiles": 636
+      }
+    },
+    {
+      "name": "Repeated chapter transitions release battle actor/trail ownership",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "mode": "lobby",
+        "playerAttached": false,
+        "enemiesAttached": 0,
+        "trailsAttached": 0,
+        "trails": 0,
+        "battle": false,
+        "contextLost": false,
+        "glError": 0
+      }
+    },
+    {
+      "name": "No failed model/texture/script loads or HTTP errors",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": {
+        "failedVisualRequests": [],
+        "badResponses": []
+      }
+    },
+    {
+      "name": "No browser runtime or shader errors",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": []
+    },
+    {
+      "name": "No asset fallback warnings",
+      "status": "PASS",
+      "scope": "controlled-fixture",
+      "evidence": [
+        "Service Worker registration blocked by Playwright",
+        "THREE.WebGLRenderer: KHR_parallel_shader_compile extension not supported."
+      ]
+    }
+  ],
+  "errors": [],
+  "warnings": [
+    "Service Worker registration blocked by Playwright",
+    "THREE.WebGLRenderer: KHR_parallel_shader_compile extension not supported."
+  ],
+  "networkFailures": [
+    {
+      "url": "http://127.0.0.1:32821/bgm/regions/lobby.mp3",
+      "resource": "media",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:32821/bgm/regions/lobby.mp3",
+      "resource": "media",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:32821/bgm/regions/lobby.mp3",
+      "resource": "media",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:32821/bgm/regions/forge.mp3",
+      "resource": "media",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:32821/bgm/regions/lobby.mp3",
+      "resource": "media",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:32821/bgm/regions/frost.mp3",
+      "resource": "media",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "badResponses": [],
+  "externalRequests": [],
+  "optionalFontFixtures": [
+    {
+      "url": "https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap",
+      "fixture": "Empty optional external font CSS; uses installed system fallback. No CDN-font availability claim."
+    }
+  ],
+  "screenshots": [
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/lobby-1440.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/battle-native-1440.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/battle-native-390.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/battle-native-360.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/r3f-wardrobe-knight.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/r3f-wardrobe-barbarian.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/r3f-wardrobe-mage.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/r3f-wardrobe-rogue.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/r3f-wardrobe-ranger.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/forge-enemies-contact.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/dungeon-1-4-garden.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/dungeon-2-4-forge.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/dungeon-3-8-frost.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/dungeon-4-8-tide.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/dungeon-5-4-crown.png",
+    "/workspace/scratch/46cbb073351f/blade-surge/work/dungeon-forge-20261008/native-qa-v4/dungeon-6-3-garden.png"
+  ],
+  "version": {
+    "sha": "678caf52a19ffda2240bfd7882278c4c0b77c49d",
+    "dirty": true,
+    "builtAt": "2026-10-08T13:25:38.655Z",
+    "pwaRelease": "44f88890431175465959"
+  },
+  "origin": "http://127.0.0.1:32821",
+  "browser": "153.0.8010.0",
+  "systemFontFixture": {
+    "family": "Noto Sans KR",
+    "weights": [
+      400,
+      700
+    ],
+    "scope": "QA-only local font preload for missing container Korean fonts; application CSS and production assets unchanged."
+  },
+  "finished": "2026-10-08T13:36:34.741Z"
+}

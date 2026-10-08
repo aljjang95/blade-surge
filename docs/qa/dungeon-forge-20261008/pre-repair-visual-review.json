@@ -1,0 +1,56 @@
+{
+  "status": "FAIL",
+  "scope": "Independent screenshot review; automated report.json remains 51 functional checks PASS. This review does not certify physical devices, natural progression or deployment.",
+  "reviewedFiles": {
+    "lobby-1440.png": "e7cc7521b612a6fecfe24a6551df994538d14a5f2a7f7e1532fa9589dd2d9c28",
+    "battle-native-390.png": "149fef78ba9ee6b0056ec8e7e3b34837997131e35bcf469a6b2b89619c1ac470",
+    "forge-enemies-contact.png": "69d7d6d8ee8ee0cf0f4eb092106b5f91ecbf7caf6d35661b64fbbe58e8355ab1",
+    "dungeon-2-4-forge.png": "93b94338c17ab7e9293988bd400714fc6aaa05630fd1eff8885f01bca3155530",
+    "dungeon-3-8-frost.png": "256f4ebbba4f86b0dacd1b7163a5b75060b37393c5a2c570b173dab822228d03",
+    "dungeon-4-8-tide.png": "a4986780a3f5162c95e288e7cc3c60670b86f970f1693e7863b9db0a3cea5c9e",
+    "dungeon-5-4-crown.png": "3eb67efaf39b9f685c88bcfa7658b06f82587ed712dbc0d8c34ef11e45f9ec60",
+    "dungeon-6-3-garden.png": "837d3de3da02d55b1607e50dad27fd0e632f312bda0a370627e83c85c32d75f8"
+  },
+  "findings": [
+    {
+      "status": "PASS",
+      "subject": "Korean UI glyphs",
+      "evidence": "lobby-1440.png",
+      "note": "QA process-local fontconfig restores system-ui Korean fallback without changing application CSS."
+    },
+    {
+      "status": "PASS",
+      "subject": "Dungeon stone surface and battle silhouette",
+      "evidence": [
+        "battle-native-390.png",
+        "forge-enemies-contact.png",
+        "dungeon-2-4-forge.png",
+        "dungeon-3-8-frost.png",
+        "dungeon-4-8-tide.png",
+        "dungeon-5-4-crown.png",
+        "dungeon-6-3-garden.png"
+      ],
+      "note": "Generated floor detail is visible in six region palettes; primary hero, control buttons and selected target beacon remain readable in captured scenes."
+    },
+    {
+      "status": "FAIL",
+      "subject": "R3F equipment camera crop",
+      "evidence": [
+        "r3f-wardrobe-knight.png",
+        "r3f-wardrobe-barbarian.png",
+        "r3f-wardrobe-mage.png",
+        "r3f-wardrobe-ranger.png"
+      ],
+      "note": "Body/head and weapon extend beyond the preview canvas after one native right-rotation press. Root assigned a camera repair; final rebuilt candidate requires revalidation."
+    },
+    {
+      "status": "PENDING",
+      "subject": "Large dark floor rectangles",
+      "evidence": [
+        "dungeon-4-8-tide.png",
+        "dungeon-5-4-crown.png"
+      ],
+      "note": "Map reviewer identifies existing architectural path slabs; runtime raycast classification remains pending. Not confirmed as new missing floor geometry."
+    }
+  ]
+}

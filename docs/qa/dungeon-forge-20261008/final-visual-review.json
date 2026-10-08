@@ -1,0 +1,184 @@
+{
+  "schema": 1,
+  "status": "PASS",
+  "reviewedAt": "2026-10-08T13:51:20.126Z",
+  "reviewer": "qa_review",
+  "scope": "Independent direct inspection of all 17 saved QA6 screenshots, actual vertex projections and two actual pixel raycasts in the compiled final candidate. These are desktop Chromium SwiftShader and emulated 390/360 viewports, not physical devices, natural campaign progression, audio perception or production deployment evidence.",
+  "candidateVersion": {
+    "sha": "678caf52a19ffda2240bfd7882278c4c0b77c49d",
+    "dirty": true,
+    "builtAt": "2026-10-08T13:42:39.996Z",
+    "pwaRelease": "7454a98579fc70bb6613"
+  },
+  "automated": {
+    "scope": "Targeted camera/grip regression, local model loading and architectural floor classification",
+    "checks": 68,
+    "status": "PASS",
+    "errors": 0,
+    "reportSha256": "42a87390d4b8fc52c875c4ee7e44d2087b45f7443373d2b7c4e49b55a7ea58d1"
+  },
+  "findings": [
+    {
+      "id": "wardrobe-crop",
+      "status": "RESOLVED",
+      "priorEvidence": "../native-qa-v4/visual-review.json",
+      "priorStatus": "FAIL",
+      "finding": "The old camera cropped heroes or weapon tips during rotation. All 5 heroes now remain fully visible at 1440x900, 390x844 and 360x800 in front, left and right native button rotations. All 45 actual visible-vertex projections fit. All 15 representative screenshots show full head, body, feet and held weapon with controls clear."
+    },
+    {
+      "id": "weapon-grip",
+      "status": "PASS",
+      "finding": "The revised held sword, axe, wand, daggers and bow remain attached at the hands in the inspected wardrobe views. This review covers the default five hero loadouts; the separate Blender agent all-eight-form pose evidence covers other weapon forms and attack clips."
+    },
+    {
+      "id": "dark-floor-classification",
+      "status": "RESOLVED",
+      "priorEvidence": "../native-qa-v4/visual-review.json",
+      "priorStatus": "PENDING",
+      "finding": "At 4-8 pixel (500,820) and 5-4 pixel (1340,370), the nearest visible object is pre-existing raised architecture at y=.0555/.05375 with CC0 stone material. In both probes the GPT floor mesh exists immediately underneath at y=.049963. The architectural source hash is identical to the pre-patch baseline; this is dark inlay stone, not missing floor coverage."
+    },
+    {
+      "id": "korean-ui",
+      "status": "PASS",
+      "finding": "Korean labels render without tofu in the reviewed images using the explicitly recorded QA-only Noto/Black Han local font fixtures."
+    }
+  ],
+  "priorRuns": [
+    {
+      "path": "../native-qa-v4/report.json",
+      "status": "PASS",
+      "scope": "51 broad native-input/controlled-art/lifecycle checks before final grip/camera corrections; not rerun or overwritten by the targeted QA6."
+    },
+    {
+      "path": "../native-qa-v4/visual-review.json",
+      "status": "FAIL",
+      "scope": "Real camera crop and pending dark-floor classification preserved. The new evidence above closes those findings without changing this historical report."
+    },
+    {
+      "path": "../native-qa-v5/report.json",
+      "status": "FAIL",
+      "scope": "Harness bound accumulator initialized top/bottom infinities incorrectly. Product source unchanged; fixed accumulator rerun is QA6."
+    }
+  ],
+  "staticReview": {
+    "status": "PASS",
+    "notes": [
+      "Camera bounds sample visible actual skinned vertices; the animation-owned root transform remains intact. Conservative all-yaw cylinder fitting updates on size/character change rather than per battle frame.",
+      "Forged weapon fitting preserves socket origin, uses proper rotations for axe and bow, positive axis scales, recomputed normals and bounds. Replaced resource cleanup avoids disposing geometry/material still in use.",
+      "Dungeon floor deduplication preserves old RNG consumption and collision coverage; immutable source comparison and raycasts classify retained inlays."
+    ],
+    "sources": [
+      {
+        "file": "src/expansion/wardrobe.jsx",
+        "sha256": "1a00bbc2a8899cf3055b8a71f7584f8ba32d2e232687b28feff1c98642f18f88"
+      },
+      {
+        "file": "src/engine/forged-weapons.js",
+        "sha256": "40607f711885609e3c2eb63d66070800fee8a5840d9dbe6079d77e99ccab7b01"
+      },
+      {
+        "file": "src/game/dungeon-surface.js",
+        "sha256": "cc63f3ee628316775c82b84977bc597bafa049b96b628cec9642cd421841a8db"
+      },
+      {
+        "file": "src/game/arena.js",
+        "sha256": "a7e856ea305b095f025cad68df4069f716338846e786ae087784505c048737d3"
+      },
+      {
+        "file": "src/engine/fx.js",
+        "sha256": "b26e82416c80a0cd6cbc277639a2499d8541f3e257ccd0c988c4cd0d0c515b94"
+      },
+      {
+        "file": "src/engine/weapon-trail.js",
+        "sha256": "e41b79e8be72b8201af1b52c02e6e41d2dd20a2562e5a65fd4826062e7de4c39"
+      }
+    ]
+  },
+  "screenshots": [
+    {
+      "file": "r3f-wardrobe-knight-1440-right.png",
+      "sha256": "aeb50c36f9d72a0c67e1f748cfbb711fd4d356245b5a5e3297462381c36f6394",
+      "status": "PASS"
+    },
+    {
+      "file": "r3f-wardrobe-barbarian-1440-right.png",
+      "sha256": "607ea4cffdc87ef6bef939878c0685897507d212d3f0f280975e20fb4ebaae76",
+      "status": "PASS"
+    },
+    {
+      "file": "r3f-wardrobe-mage-1440-right.png",
+      "sha256": "06b79beb3adbb6c191fc4bc77e92646773cae591967290d6c3f5701624cf90b7",
+      "status": "PASS"
+    },
+    {
+      "file": "r3f-wardrobe-rogue-1440-right.png",
+      "sha256": "a008b4bc49ad1af0f76d9fff493fcf4001b5af84ad2a4585fad608f1697ad0b0",
+      "status": "PASS"
+    },
+    {
+      "file": "r3f-wardrobe-ranger-1440-right.png",
+      "sha256": "c6b84a30b519f7b79bf6fc4ab19435d73c0817327e71d1ce1c3ad300ea16b141",
+      "status": "PASS"
+    },
+    {
+      "file": "r3f-wardrobe-knight-390-front.png",
+      "sha256": "05ecb8c31f2baeebb8a5b1f55cec615dd4bf1299daa857ef8c50f651f04014d4",
+      "status": "PASS"
+    },
+    {
+      "file": "r3f-wardrobe-barbarian-390-front.png",
+      "sha256": "7cc846bed0d370a5ab001b9a116550d532808ea11f4c716beedb0da3f5c6fd99",
+      "status": "PASS"
+    },
+    {
+      "file": "r3f-wardrobe-mage-390-front.png",
+      "sha256": "589fb5cee9c73f6b0252168a127fdcf3ba9701e2b98d2212c6e147e4c938be4c",
+      "status": "PASS"
+    },
+    {
+      "file": "r3f-wardrobe-rogue-390-front.png",
+      "sha256": "545f4340345f93965fc2eb457f0dc73c50d6a1b95c3e50b8ebed12bb491b4941",
+      "status": "PASS"
+    },
+    {
+      "file": "r3f-wardrobe-ranger-390-front.png",
+      "sha256": "d2ece485810a667162f17a60c6b6422180bdd0961a25009042defaf521f7368d",
+      "status": "PASS"
+    },
+    {
+      "file": "r3f-wardrobe-knight-360-left.png",
+      "sha256": "3eeace56ed14af2601e04c3e9ef548a21b759d145351807655a9723df2c6a4c1",
+      "status": "PASS"
+    },
+    {
+      "file": "r3f-wardrobe-barbarian-360-left.png",
+      "sha256": "1c05483100a080399434d068987096989085b8eb5725af2bb33190c6af6d0fc0",
+      "status": "PASS"
+    },
+    {
+      "file": "r3f-wardrobe-mage-360-left.png",
+      "sha256": "4873864da2292858eb391199e602b145192149d31fb6a41a26148d58fd3442e4",
+      "status": "PASS"
+    },
+    {
+      "file": "r3f-wardrobe-rogue-360-left.png",
+      "sha256": "bb673adcbac3643e1f3371a962ae5fbf5649bba14b6286b395979292d81bf497",
+      "status": "PASS"
+    },
+    {
+      "file": "r3f-wardrobe-ranger-360-left.png",
+      "sha256": "a76b8eab28e4be9e44a73208db1472dc6ff3940370fea41db9b5c53687650b83",
+      "status": "PASS"
+    },
+    {
+      "file": "floor-slab-probe-4-8.png",
+      "sha256": "1e2735435602619ae869e254c74e468b7e7d038dd312b96b96ad6e19ec73e63d",
+      "status": "PASS"
+    },
+    {
+      "file": "floor-slab-probe-5-4.png",
+      "sha256": "76d3671492fdd0ae3c859199d5ec24518c627c41d4d9d37c40e83c966768c68e",
+      "status": "PASS"
+    }
+  ]
+}

@@ -34,6 +34,8 @@ export class WeaponTrail {
   constructor(getPoints, material, { segs = 18, life = .24, width = 1, getGain = null } = {}) {
     this.getPoints = getPoints; this.getGain = getGain;
     this.segs = Math.max(3, Math.min(32, Math.round(segs))); this.life = life;
+    // 고주사율에서도 같은 수명의 꼬리를 남긴다. 현재 끝점은 매 프레임 갱신한다.
+    this.sampleInterval = life / (this.segs - 1); this.nextSampleAt = 0;
     this.width = width; this.t = 0; this.dead = false; this.active = true;
     this.head = 0; this.n = 0;
     this.points = [new THREE.Vector3(), new THREE.Vector3()];
@@ -70,15 +72,32 @@ export class WeaponTrail {
       const points = this.getPoints(this.points);
       if (points) {
         const a = points[0], b = points[1];
-        // 손 가까이의 넓은 면을 줄여 캐릭터를 가리지 않고 끝의 궤적을 드러낸다.
-        this.head = (this.head + this.segs - 1) % this.segs;
-        const offset = this.head * 6, inner = Math.max(0, 1 - this.width);
-        this.samples[offset] = a.x + (b.x - a.x) * inner;
-        this.samples[offset + 1] = a.y + (b.y - a.y) * inner;
-        this.samples[offset + 2] = a.z + (b.z - a.z) * inner;
-        this.samples[offset + 3] = b.x; this.samples[offset + 4] = b.y; this.samples[offset + 5] = b.z;
-        this.times[this.head] = this.t; this.gains[this.head] = Math.min(1, gain);
-        this.n = Math.min(this.segs, this.n + 1);
+        if (Number.isFinite(a.x) && Number.isFinite(a.y) && Number.isFinite(a.z)
+          && Number.isFinite(b.x) && Number.isFinite(b.y) && Number.isFinite(b.z)) {
+          const inner = Math.max(0, 1 - this.width);
+          const x = a.x + (b.x - a.x) * inner, y = a.y + (b.y - a.y) * inner, z = a.z + (b.z - a.z) * inner;
+          const prior = this.head * 6;
+          const dx = b.x - this.samples[prior + 3], dy = b.y - this.samples[prior + 4], dz = b.z - this.samples[prior + 5];
+          const distance = dx * dx + dy * dy + dz * dz;
+          const bladeLengthSq = (b.x - a.x) ** 2 + (b.y - a.y) ** 2 + (b.z - a.z) ** 2;
+          // 순간이동/소켓 교체는 긴 빛의 벽으로 연결하지 않는다.
+          if (this.n && distance > Math.max(9, bladeLengthSq * 6.25)) this.n = 0;
+          const moved = !this.n || distance > .000001 || Math.abs(x - this.samples[prior])
+            + Math.abs(y - this.samples[prior + 1]) + Math.abs(z - this.samples[prior + 2]) > .001;
+          if (moved) {
+            if (!this.n || this.t >= this.nextSampleAt) {
+              if (!this.n) this.nextSampleAt = this.t + this.sampleInterval;
+              else this.nextSampleAt += (Math.floor((this.t - this.nextSampleAt) / this.sampleInterval) + 1) * this.sampleInterval;
+              this.head = (this.head + this.segs - 1) % this.segs;
+              this.n = Math.min(this.segs, this.n + 1);
+            }
+            // 손 가까이의 넓은 면을 줄이고 최신 점은 실제 무기 끝에 고정한다.
+            const offset = this.head * 6;
+            this.samples[offset] = x; this.samples[offset + 1] = y; this.samples[offset + 2] = z;
+            this.samples[offset + 3] = b.x; this.samples[offset + 4] = b.y; this.samples[offset + 5] = b.z;
+            this.times[this.head] = this.t; this.gains[this.head] = Math.min(1, gain);
+          }
+        }
       }
     }
     if (!this.active && !this.n) { this.dispose(); return; }

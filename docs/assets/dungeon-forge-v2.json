@@ -1,0 +1,148 @@
+{
+  "revision": "dungeon-forge-v2",
+  "authoring": "Blender headless",
+  "blender": "4.3.2",
+  "license": "Original project-authored geometry; source character rigs unchanged",
+  "files": [
+    {
+      "path": "public/models/tll/encounters/forge-vanguard-v2.glb",
+      "bytes": 21272,
+      "sha256": "1665a4663b4739f2bd64bbc8a8207189910527347989770fc554765b561d6fa3"
+    },
+    {
+      "path": "tools/art/source/dungeon-forge-v2/forge-vanguard-v2.blend",
+      "bytes": 493744,
+      "sha256": "e5033dd26661cdc303caac18546d44998d70a27ed257c800b2191b1c79bac0ba"
+    },
+    {
+      "path": "public/models/tll/encounters/forge-skirmisher-v2.glb",
+      "bytes": 18312,
+      "sha256": "3ac81266f923a30296c6b9f454545e89336b961a969cfe5372794606569d11c7"
+    },
+    {
+      "path": "tools/art/source/dungeon-forge-v2/forge-skirmisher-v2.blend",
+      "bytes": 486348,
+      "sha256": "e34cf3658e45ebd25f144841ec0b82411e7d4630f08175db6cf8f4a0b70b0a9c"
+    },
+    {
+      "path": "public/models/tll/encounters/forge-runekeeper-v2.glb",
+      "bytes": 37192,
+      "sha256": "af4e444e385007f59fb417fa58553b4d39a8fdec0ef6344af2a0e278db7494ef"
+    },
+    {
+      "path": "tools/art/source/dungeon-forge-v2/forge-runekeeper-v2.blend",
+      "bytes": 524828,
+      "sha256": "af8b6c7d32a305b7fc5138de2888387146f6fcc14299d9256f2f038c7a339b8d"
+    },
+    {
+      "path": "public/models/tll/encounters/forge-bulwark-v2.glb",
+      "bytes": 29108,
+      "sha256": "74400b8a82c5aebb1269830712ea7bee3136a6d0d2170f7d2ccfa198412678e5"
+    },
+    {
+      "path": "tools/art/source/dungeon-forge-v2/forge-bulwark-v2.blend",
+      "bytes": 506268,
+      "sha256": "767ab3f094dd86c6fd4905528c4dc2f5c787c6b7a5b775372a2d71bb8b008256"
+    },
+    {
+      "path": "public/models/dungeon-forge-v2/forge-sword-v2.glb",
+      "bytes": 23640,
+      "sha256": "0616b17860de699372d102a31dfe23de9ca0697bf9e1bc8ae070d219eb22fffc"
+    },
+    {
+      "path": "tools/art/source/dungeon-forge-v2/forge-sword-v2.blend",
+      "bytes": 490304,
+      "sha256": "573233e44ed52d0584feeed8f8979eccf9d329a56880db9fd325a3179d1ce844"
+    },
+    {
+      "path": "public/models/dungeon-forge-v2/forge-greatsword-v2.glb",
+      "bytes": 23668,
+      "sha256": "9996d5499840b6fa1ebcac2658d3f972f5a1eac534441e8e8df89aebe36a7145"
+    },
+    {
+      "path": "tools/art/source/dungeon-forge-v2/forge-greatsword-v2.blend",
+      "bytes": 490304,
+      "sha256": "09ef648ff285be98562fcff016383e621da910364410a9e47f842667c317f3c6"
+    },
+    {
+      "path": "public/models/dungeon-forge-v2/forge-axe-v2.glb",
+      "bytes": 25064,
+      "sha256": "01004353cd0f906f24f8ff43ae3327546024c5e96cb7b1dab32ca7a7a3b8b3f0"
+    },
+    {
+      "path": "tools/art/source/dungeon-forge-v2/forge-axe-v2.blend",
+      "bytes": 493408,
+      "sha256": "75a451e9a7a54ddbde81ce064727c2b42023ac7d40735e0e29e7814e14611de1"
+    },
+    {
+      "path": "public/models/dungeon-forge-v2/forge-greataxe-v2.glb",
+      "bytes": 29724,
+      "sha256": "61136fdbfc97f8b1be5047b0bc1544539bc01002f3e2e94564c4cb12cad5d96c"
+    },
+    {
+      "path": "tools/art/source/dungeon-forge-v2/forge-greataxe-v2.blend",
+      "bytes": 504184,
+      "sha256": "4903eae7ca9ab2df47712892000e7e8a5901e5e6121c390c9600de376d04f417"
+    },
+    {
+      "path": "public/models/dungeon-forge-v2/forge-dagger-v2.glb",
+      "bytes": 22164,
+      "sha256": "a2f2cc9c9de7b276cf1da7e821370775e0586a0610beb086d987f87130fdcc00"
+    },
+    {
+      "path": "tools/art/source/dungeon-forge-v2/forge-dagger-v2.blend",
+      "bytes": 487708,
+      "sha256": "371616e616613a305a6ad031816f385d4e3280548e9718f6923d1d8a74608dda"
+    },
+    {
+      "path": "public/models/dungeon-forge-v2/forge-wand-v2.glb",
+      "bytes": 18636,
+      "sha256": "24e7352a12b944221b65fe33c98635bb40420408bdfb584b93451213aea6a355"
+    },
+    {
+      "path": "tools/art/source/dungeon-forge-v2/forge-wand-v2.blend",
+      "bytes": 478120,
+      "sha256": "0583275836d32a5697c5f323e33274a1658992277236bedd1f8e8c1e1d35628b"
+    },
+    {
+      "path": "public/models/dungeon-forge-v2/forge-staff-v2.glb",
+      "bytes": 18592,
+      "sha256": "98f2e856ad84ba732cd5dcf7b05ccd95ffefd3f3b90df700b16594afa994fc39"
+    },
+    {
+      "path": "tools/art/source/dungeon-forge-v2/forge-staff-v2.blend",
+      "bytes": 478120,
+      "sha256": "d7cc75e3a67a74048944f15f51f2789151909e1d20def1c7c96d7ce64c8966c1"
+    },
+    {
+      "path": "public/models/dungeon-forge-v2/forge-bow-v2.glb",
+      "bytes": 23100,
+      "sha256": "7bd240d25f3a550c3fd84edc29a2e0fcb52c96121ee0db6e41d40a377d6e5db8"
+    },
+    {
+      "path": "tools/art/source/dungeon-forge-v2/forge-bow-v2.blend",
+      "bytes": 483988,
+      "sha256": "bcaa51a7017899b5650fc7a44cc2cabb5ddb85bacb2d3452abbf64ff5bbab6e4"
+    }
+  ],
+  "deliveryCompression": "EXT_meshopt_compression, lossless meshoptimizer",
+  "compressionScript": {
+    "path": "tools/art/compress-dungeon-forge.mjs",
+    "sha256": "110ef60c72852eccee83c40e5a8fea9b8d0639760913ad35eb18966109e4e0f8"
+  },
+  "sourceScript": {
+    "path": "tools/art/build-dungeon-forge-v2.py",
+    "sha256": "33014e41db7bd578d98a5a5335be734ddb46ca5dae8b15b8da9e06b130c45eab"
+  },
+  "preservedSources": {
+    "public/models/Knight.glb": "d319d2b33777f90b4fa19df4cad020fd54b99f639896ef2fb9e9af843d86457b",
+    "public/models/Barbarian.glb": "4134f0da1cf150e3e1ffb285e5fa9e34ab9c88ce8e32e07f34d8e821a96a3a17",
+    "public/models/Mage.glb": "5ddeb9c41099d4efe7b93774167826ae1c36ad057ab51d64d39797103e463538",
+    "public/models/Rogue.glb": "c626cbbeea606a309caa6af3d3fbbd49c5fbea7495c4b6f5f747a3aaf46bf99d",
+    "public/models/Ranger.glb": "4a1db924132836b29b1a63f55b8031e06eb6ec103037017864859786982727cb",
+    "public/models/Skeleton_Minion.glb": "f6c239e237550478d3ad7e1a2fef15b48d751c717e8953923097df6d69b9f0ed",
+    "public/models/Skeleton_Warrior.glb": "49e510ba770d9a7c3e838ca71de2b33c7b9a73a2e4d452cee413f75def62c725",
+    "public/models/Skeleton_Rogue.glb": "59732d2294ccb799ec556f745d9e8308af8a620cef2ce74720acf0fa2d07ded3",
+    "public/models/Skeleton_Mage.glb": "ba1720ca77a3e45044c6d1fc90fd5e47a59a0eeae8e08bce74e6e9c0ddad73ad"
+  }
+}
