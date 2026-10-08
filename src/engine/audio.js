@@ -374,7 +374,7 @@ export class AudioSys {
         else this.contactSnap({ vol: 0.08, freq: ranged ? 2400 : 1850 });
       }
     }
-    this.vibe(finisher ? [16, 12, 34] : 8);
+    // 헛친 공격에는 명중 진동을 주지 않는다. 실제 접촉의 강한 펄스를 먼저 재시작하지 않게 한다.
   }
 
   /** 스킬 발동 시전음. 일반 공격과 다른 상승음으로 기술 입력을 구분한다. */

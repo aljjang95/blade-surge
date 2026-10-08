@@ -1,0 +1,5162 @@
+{
+  "status": "FAIL",
+  "startedAt": "2026-10-08T21:05:33.753Z",
+  "head": "17ac254b625d5bbfeb1d7e7b3b7cc0f73c6ab2f3",
+  "build": {
+    "sha": "17ac254b625d5bbfeb1d7e7b3b7cc0f73c6ab2f3",
+    "dirty": true,
+    "builtAt": "2026-10-08T21:05:05.598Z",
+    "pwaRelease": "05ef4bd0001c5b65ef9a"
+  },
+  "expectedSha": null,
+  "scope": "Compiled local production preview in isolated fresh storage, software WebGL. UI and initial manual segment use native Playwright pointer/keyboard with natural RAF and read-only app observation. Later four full clears use a disclosed Lv10/one-star knight fixture, existing starter gear, refilled entry energy, AUTO and deterministic 1/60s stepping/first earned boon. No HP, damage, enemy position, invulnerability, victory or reward injection during those clears. Not physical-device performance, tactile evaluation, human playtest or live deployment.",
+  "sources": {
+    "src/data/open-fields.js": "83d0cafe285a5608ad55c6ad489902f38b38687ee9dc6eb50c077f66f67f7676",
+    "src/data/expedition-routes.js": "3640443588ac87c99cb46caaa12de10669352324a350221bc7fe6befae7b64be",
+    "src/game/open-field-scene.js": "64b6e83ffde57ca7ceb368dfb974a783becebb12f481ef2fa6399c1c4410aff4",
+    "src/game/expedition-combat.js": "d66d29adaab0989aaeba412268be8614cec876d6640eef6c73eb8534f50462de",
+    "src/game/expedition-economy.js": "65fa99f9709b3cf39f57fe2adb8aaa499830282b8726e139ecc68fec96bf26b5",
+    "src/game/crowd-gather.js": "e015890a3c310857cf0ea26af8d32603119c302b8d12fc1f33ede24ef34d22c7",
+    "src/game/player.js": "ae0e69547372fd33c4b1a021a1a7b47814d797da4a2094e03c8d0678b7a7fd21",
+    "src/game/enemies.js": "6717b1d08a1cb7de3fe8a370a4f33348d33c221f63bc61c75f8d885a54fbf6ca",
+    "src/game/actor.js": "0e9f5d45f42bf4c42de05c8b53dd0f0453ec6d102e07e663e8e0d89ebe18b8ed",
+    "src/game/combat-motion.js": "6c3878b53092a6bb95a0b917855c8052cf71c1a4c635d361c4dd2f421a11f9e7",
+    "src/game/combat-contact.js": "630270456a4ee89c4265b9ed67e13d499b00560d18dfcee5b0506ac50b9079a3",
+    "src/engine/audio.js": "b1b09698d576c131017e954d38a6d1f488b1d880a0e28ff31fb73045e22e53b2",
+    "src/game/run-history.js": "23de7a5ca7af579ee4eec26ebb7a073f35038c3adbba7a9c268a9f053ab5038b",
+    "src/game/journey-core.js": "dc6cbea672f874b98a71819169f21caf2ada35a6a716f4a7792d43bb3581375b",
+    "src/expansion/hub.jsx": "69ccf8d3948ee9094eb3103e198b5d7222e0701059e5bfbd441aceccd92b69db",
+    "tools/open-fields-qa.mjs": "66f2038ddc885ae86e3b57bec0953921c0bc8c878622c113e2ec1244e7c4d32a"
+  },
+  "checks": [
+    {
+      "status": "PASS",
+      "name": "동일 배포용 빌드",
+      "evidence": {
+        "sha": "17ac254b625d5bbfeb1d7e7b3b7cc0f73c6ab2f3",
+        "dirty": true,
+        "builtAt": "2026-10-08T21:05:05.598Z",
+        "pwaRelease": "05ef4bd0001c5b65ef9a"
+      }
+    },
+    {
+      "status": "PASS",
+      "name": "격리된 초기 저장소",
+      "evidence": {}
+    },
+    {
+      "status": "PASS",
+      "name": "360px 바람결 초원 출격·카드 이미지",
+      "evidence": {
+        "height": 44,
+        "inside": true,
+        "hit": true,
+        "disabled": false,
+        "overflow": false,
+        "image": true
+      }
+    },
+    {
+      "status": "PASS",
+      "name": "360px 해오름 해안 출격·카드 이미지",
+      "evidence": {
+        "height": 44,
+        "inside": true,
+        "hit": true,
+        "disabled": false,
+        "overflow": false,
+        "image": true
+      }
+    },
+    {
+      "status": "PASS",
+      "name": "360px 하늘바람 산길 출격·카드 이미지",
+      "evidence": {
+        "height": 44,
+        "inside": true,
+        "hit": true,
+        "disabled": false,
+        "overflow": false,
+        "image": true
+      }
+    },
+    {
+      "status": "PASS",
+      "name": "360px 새벽항 도시 출격·카드 이미지",
+      "evidence": {
+        "height": 44,
+        "inside": true,
+        "hit": true,
+        "disabled": false,
+        "overflow": false,
+        "image": true
+      }
+    },
+    {
+      "status": "PASS",
+      "name": "390px 바람결 초원 출격·카드 이미지",
+      "evidence": {
+        "height": 44,
+        "inside": true,
+        "hit": true,
+        "disabled": false,
+        "overflow": false,
+        "image": true
+      }
+    },
+    {
+      "status": "PASS",
+      "name": "390px 해오름 해안 출격·카드 이미지",
+      "evidence": {
+        "height": 44,
+        "inside": true,
+        "hit": true,
+        "disabled": false,
+        "overflow": false,
+        "image": true
+      }
+    },
+    {
+      "status": "PASS",
+      "name": "390px 하늘바람 산길 출격·카드 이미지",
+      "evidence": {
+        "height": 44,
+        "inside": true,
+        "hit": true,
+        "disabled": false,
+        "overflow": false,
+        "image": true
+      }
+    },
+    {
+      "status": "PASS",
+      "name": "390px 새벽항 도시 출격·카드 이미지",
+      "evidence": {
+        "height": 44,
+        "inside": true,
+        "hit": true,
+        "disabled": false,
+        "overflow": false,
+        "image": true
+      }
+    },
+    {
+      "status": "PASS",
+      "name": "1440px 바람결 초원 출격·카드 이미지",
+      "evidence": {
+        "height": 44,
+        "inside": true,
+        "hit": true,
+        "disabled": false,
+        "overflow": false,
+        "image": true
+      }
+    },
+    {
+      "status": "PASS",
+      "name": "1440px 해오름 해안 출격·카드 이미지",
+      "evidence": {
+        "height": 44,
+        "inside": true,
+        "hit": true,
+        "disabled": false,
+        "overflow": false,
+        "image": true
+      }
+    },
+    {
+      "status": "PASS",
+      "name": "1440px 하늘바람 산길 출격·카드 이미지",
+      "evidence": {
+        "height": 44,
+        "inside": true,
+        "hit": true,
+        "disabled": false,
+        "overflow": false,
+        "image": true
+      }
+    },
+    {
+      "status": "PASS",
+      "name": "1440px 새벽항 도시 출격·카드 이미지",
+      "evidence": {
+        "height": 44,
+        "inside": true,
+        "hit": true,
+        "disabled": false,
+        "overflow": false,
+        "image": true
+      }
+    },
+    {
+      "status": "PASS",
+      "name": "자연 RAF 필드 출격",
+      "evidence": {}
+    },
+    {
+      "status": "FAIL",
+      "name": "실제 공격·스킬·회피 입력",
+      "evidence": {
+        "attacks": 0,
+        "skills": true,
+        "dodged": true,
+        "before": {
+          "mode": "battle",
+          "active": true,
+          "paused": false,
+          "testPause": false,
+          "elapsed": 4.3502000000000125,
+          "kills": 0,
+          "roomCount": 6,
+          "held": false,
+          "player": {
+            "auto": false,
+            "state": "skill",
+            "comboIdx": 0,
+            "hp": 2968,
+            "mp": 76.1,
+            "cds": [
+              0,
+              0,
+              11.95,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "dodgeCd": 0,
+            "pos": [
+              -85.5689673856525,
+              0,
+              -47.724445663536635
+            ],
+            "pose": [
+              0,
+              0,
+              0
+            ]
+          },
+          "nearest": 1.8627297904115194,
+          "alive": 4
+        },
+        "after": {
+          "mode": "battle",
+          "active": true,
+          "paused": false,
+          "testPause": false,
+          "elapsed": 6.639600000000006,
+          "kills": 3,
+          "roomCount": 6,
+          "held": false,
+          "player": {
+            "auto": false,
+            "state": "dodge",
+            "comboIdx": 0,
+            "hp": 2968,
+            "mp": 70.67879999999975,
+            "cds": [
+              4.205300000000006,
+              0,
+              9.660599999999967,
+              0,
+              0,
+              0,
+              0,
+              0
+            ],
+            "dodgeCd": 1.2,
+            "pos": [
+              -87.92492900795776,
+              0,
+              -48.01372005980688
+            ],
+            "pose": [
+              0,
+              0,
+              0
+            ]
+          },
+          "nearest": 7.152203982663117,
+          "alive": 1
+        }
+      }
+    }
+  ],
+  "ui": [
+    {
+      "viewport": {
+        "width": 360,
+        "height": 800
+      },
+      "rows": [
+        {
+          "id": "windmeadow",
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "disabled": false,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "sunbreak_coast",
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "disabled": false,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "skywind_pass",
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "disabled": false,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "dawnward_city",
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "disabled": false,
+          "overflow": false,
+          "image": true
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "rows": [
+        {
+          "id": "windmeadow",
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "disabled": false,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "sunbreak_coast",
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "disabled": false,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "skywind_pass",
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "disabled": false,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "dawnward_city",
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "disabled": false,
+          "overflow": false,
+          "image": true
+        }
+      ]
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "rows": [
+        {
+          "id": "windmeadow",
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "disabled": false,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "sunbreak_coast",
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "disabled": false,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "skywind_pass",
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "disabled": false,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "dawnward_city",
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "disabled": false,
+          "overflow": false,
+          "image": true
+        }
+      ]
+    }
+  ],
+  "native": [
+    {
+      "label": "native-entry",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.03330000000000291,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "idle",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -89.86918105650693,
+          0,
+          -79.38205087836832
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "auto-before",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.08330000000000291,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "idle",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -89.86918105650693,
+          0,
+          -79.38205087836832
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.21670000000000436,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -89.78036589492027,
+          0,
+          -79.32883059396163
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.4000000000000074,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -88.96470118341476,
+          0,
+          -78.59286307001113
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.5000000000000074,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -88.51550119384225,
+          0,
+          -78.19319744688748
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.5500000000000075,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -88.25195580354881,
+          0,
+          -78.0299680768125
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.5500000000000075,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -88.25195580354881,
+          0,
+          -78.0299680768125
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.5500000000000075,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -88.25195580354881,
+          0,
+          -78.0299680768125
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.5500000000000075,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -88.25195580354881,
+          0,
+          -78.0299680768125
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.5500000000000075,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -88.25195580354881,
+          0,
+          -78.0299680768125
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.5500000000000075,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -88.25195580354881,
+          0,
+          -78.0299680768125
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.5500000000000075,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -88.25195580354881,
+          0,
+          -78.0299680768125
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.6000000000000075,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.98841041325537,
+          0,
+          -77.86673870673752
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.6000000000000075,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.98841041325537,
+          0,
+          -77.86673870673752
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.6500000000000076,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.86176859637366,
+          0,
+          -77.58378667861808
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.7833000000000033,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.52414151256706,
+          0,
+          -76.82943657165168
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.7833000000000033,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.52414151256706,
+          0,
+          -76.82943657165168
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.8833000000000034,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.45324299552408,
+          0,
+          -76.21350362052704
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 0.9833000000000035,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.40580241149978,
+          0,
+          -75.56866572753985
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 1.0333000000000034,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.39430444623109,
+          0,
+          -75.22786738342013
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 1.1333000000000035,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.37895247192128,
+          0,
+          -74.51122485305095
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 1.1833000000000036,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.37537995539766,
+          0,
+          -74.13537458133594
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 1.2833000000000037,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.37090296872194,
+          0,
+          -73.34878337447768
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 1.3833000000000037,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2800,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36982318024937,
+          0,
+          -72.5156747689111
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 1.4333000000000038,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36955326547205,
+          0,
+          -72.08168260284577
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 1.5333000000000039,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36923905493919,
+          0,
+          -71.18656544055696
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 1.5333000000000039,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36923905493919,
+          0,
+          -71.18656544055696
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 1.6000000000000083,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36919948275028,
+          0,
+          -70.58693244210606
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 1.7167000000000128,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918196780928,
+          0,
+          -69.53779944225222
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 1.8335000000000157,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918117338229,
+          0,
+          -68.48776744225253
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 1.8835000000000157,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918112108499,
+          0,
+          -68.03826744225253
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.0335000000000156,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105880139,
+          0,
+          -66.68976744225253
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.0835000000000155,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105794659,
+          0,
+          -66.24026744225253
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.1335000000000153,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.3691810570918,
+          0,
+          -65.79076744225253
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.233500000000015,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105668968,
+          0,
+          -64.89176744225253
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.2835000000000147,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105663136,
+          0,
+          -64.44226744225253
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.2835000000000147,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105663136,
+          0,
+          -64.44226744225253
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.3335000000000146,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105657304,
+          0,
+          -63.99276744225253
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.483500000000014,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650811,
+          0,
+          -62.64426744225253
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.533500000000014,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650766,
+          0,
+          -62.19476744225253
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.5835000000000137,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.3691810565072,
+          0,
+          -61.745267442252526
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.6835000000000133,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.369181056507,
+          0,
+          -60.846267442252525
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.733500000000013,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650697,
+          0,
+          -60.396767442252525
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.783500000000013,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650696,
+          0,
+          -59.947267442252524
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.8835000000000126,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650695,
+          0,
+          -59.04826744225252
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.9335000000000124,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650693,
+          0,
+          -58.59876744225252
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 2.9835000000000123,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650693,
+          0,
+          -58.14926744225252
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 3.033500000000012,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650693,
+          0,
+          -57.69976744225252
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 3.083500000000012,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650693,
+          0,
+          -57.25026744225252
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 3.1335000000000117,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650693,
+          0,
+          -56.80076744225252
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 3.2335000000000114,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650693,
+          0,
+          -55.90176744225252
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 3.3002000000000153,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650693,
+          0,
+          -55.30213444225248
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 3.400200000000015,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650693,
+          0,
+          -54.40313444225248
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": null,
+      "alive": 0
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 3.450200000000015,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650693,
+          0,
+          -53.95363444225248
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 18.351859904156417,
+      "alive": 1
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 3.5002000000000146,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650693,
+          0,
+          -53.50413444225248
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 17.990836754114397,
+      "alive": 1
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 3.6002000000000143,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650693,
+          0,
+          -52.60513444225248
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 16.542548656216134,
+      "alive": 3
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 3.700200000000014,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650693,
+          0,
+          -51.70613444225248
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 7.692821098335052,
+      "alive": 4
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 3.8002000000000136,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650693,
+          0,
+          -50.807134442252476
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 7.07843586917224,
+      "alive": 4
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 3.883600000000015,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.36918105650693,
+          0,
+          -50.05736844225246
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 6.61601777006668,
+      "alive": 4
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 3.9836000000000147,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.53656143930114,
+          0,
+          -49.190694548707256
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 6.299386213062394,
+      "alive": 4
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.033600000000015,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -87.70394182209535,
+          0,
+          -48.77352065516205
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 6.265331064940257,
+      "alive": 4
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.133600000000015,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -86.94945810318833,
+          0,
+          -48.305352294204035
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 4.746703790411474,
+      "alive": 4
+    },
+    {
+      "label": "native-auto-approach",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.250200000000013,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": true,
+        "state": "move",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.98328032608943,
+          0,
+          -47.89878738942721
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 2.9522297904115082,
+      "alive": 4
+    },
+    {
+      "label": "native-manual-start",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.3502000000000125,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 76.1,
+        "cds": [
+          0,
+          0,
+          11.95,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 1.8627297904115194,
+      "alive": 4
+    },
+    {
+      "label": "native-attack-0",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.3502000000000125,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 76.1,
+        "cds": [
+          0,
+          0,
+          11.95,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 1.8627297904115194,
+      "alive": 4
+    },
+    {
+      "label": "native-attack-1",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.450200000000012,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 76.29999999999998,
+        "cds": [
+          0,
+          0,
+          11.849999999999998,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 1.8627297904115194,
+      "alive": 4
+    },
+    {
+      "label": "native-attack-2",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.500200000000012,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 76.39999999999998,
+        "cds": [
+          0,
+          0,
+          11.799999999999997,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 1.8627297904115194,
+      "alive": 4
+    },
+    {
+      "label": "native-attack-3",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.550200000000012,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 76.49999999999997,
+        "cds": [
+          0,
+          0,
+          11.749999999999996,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 1.8627297904115194,
+      "alive": 4
+    },
+    {
+      "label": "native-attack-4",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.550200000000012,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 76.49999999999997,
+        "cds": [
+          0,
+          0,
+          11.749999999999996,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 1.8627297904115194,
+      "alive": 4
+    },
+    {
+      "label": "native-attack-5",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.650200000000011,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 76.69999999999996,
+        "cds": [
+          0,
+          0,
+          11.649999999999995,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 1.9286481383651417,
+      "alive": 4
+    },
+    {
+      "label": "native-attack-6",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.650200000000011,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 76.69999999999996,
+        "cds": [
+          0,
+          0,
+          11.649999999999995,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 1.9286481383651417,
+      "alive": 4
+    },
+    {
+      "label": "native-attack-7",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.700200000000011,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 76.79999999999995,
+        "cds": [
+          0,
+          0,
+          11.599999999999994,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 1.9849911474506465,
+      "alive": 4
+    },
+    {
+      "label": "native-attack-8",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.750200000000011,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 76.89999999999995,
+        "cds": [
+          0,
+          0,
+          11.549999999999994,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 2.0326472988595956,
+      "alive": 4
+    },
+    {
+      "label": "native-attack-9",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.800200000000011,
+      "kills": 0,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 76.99999999999994,
+        "cds": [
+          0,
+          0,
+          11.499999999999993,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 2.0726692093208374,
+      "alive": 4
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.9002000000000105,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 79.19999999999993,
+        "cds": [
+          0,
+          0,
+          11.399999999999991,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 8.54076835894568,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.9002000000000105,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 79.19999999999993,
+        "cds": [
+          0,
+          0,
+          11.399999999999991,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 8.54076835894568,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.92820000000001,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 79.25599999999993,
+        "cds": [
+          0,
+          0,
+          11.371999999999991,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 8.311168358945674,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.97820000000001,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 79.35599999999992,
+        "cds": [
+          0,
+          0,
+          11.32199999999999,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 8.221543426799272,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 4.97820000000001,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 79.35599999999992,
+        "cds": [
+          0,
+          0,
+          11.32199999999999,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 8.221543426799272,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.07820000000001,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 79.55599999999991,
+        "cds": [
+          0,
+          0,
+          11.221999999999989,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 7.932520300134482,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.128200000000009,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 79.6559999999999,
+        "cds": [
+          0,
+          0,
+          11.171999999999988,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 7.864895966353861,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.228200000000009,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 79.8559999999999,
+        "cds": [
+          0,
+          0,
+          11.071999999999987,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 7.76355525573883,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.278200000000009,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 79.95599999999989,
+        "cds": [
+          0,
+          0,
+          11.021999999999986,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 7.725949224807963,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.328200000000009,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 80.05599999999988,
+        "cds": [
+          0,
+          0,
+          10.971999999999985,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 7.602193232503877,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.328200000000009,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 80.05599999999988,
+        "cds": [
+          0,
+          0,
+          10.971999999999985,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 7.602193232503877,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.328200000000009,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 80.05599999999988,
+        "cds": [
+          0,
+          0,
+          10.971999999999985,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 7.602193232503877,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.394900000000013,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 80.18939999999989,
+        "cds": [
+          0,
+          0,
+          10.905299999999981,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 7.16476215455463,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.444900000000013,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 80.28939999999989,
+        "cds": [
+          0,
+          0,
+          10.85529999999998,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 6.840323738943805,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.494900000000013,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 80.38939999999988,
+        "cds": [
+          0,
+          0,
+          10.80529999999998,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 6.5184504499485225,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.544900000000013,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 80.48939999999988,
+        "cds": [
+          0,
+          0,
+          10.755299999999979,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 6.198686567583223,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.594900000000012,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 80.58939999999987,
+        "cds": [
+          0,
+          0,
+          10.705299999999978,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 5.8806573350023195,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.644900000000012,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 80.68939999999986,
+        "cds": [
+          0,
+          0,
+          10.655299999999977,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 5.564054574601652,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.694900000000012,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 80.78939999999986,
+        "cds": [
+          0,
+          0,
+          10.605299999999977,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 5.248624859561114,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.694900000000012,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 80.78939999999986,
+        "cds": [
+          0,
+          0,
+          10.605299999999977,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 5.248624859561114,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.744900000000012,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 80.88939999999985,
+        "cds": [
+          0,
+          0,
+          10.555299999999976,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 4.9341597868290386,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.794900000000012,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 80.98939999999985,
+        "cds": [
+          0,
+          0,
+          10.505299999999975,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 4.600996736448058,
+      "alive": 3
+    },
+    {
+      "label": "native-skill-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.8449000000000115,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "idle",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 81.08939999999984,
+        "cds": [
+          0,
+          0,
+          10.455299999999975,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 4.277548803917187,
+      "alive": 3
+    },
+    {
+      "label": "native-skill",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.8449000000000115,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "idle",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 81.08939999999984,
+        "cds": [
+          0,
+          0,
+          10.455299999999975,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 4.277548803917187,
+      "alive": 3
+    },
+    {
+      "label": "native-skill",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.8449000000000115,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "idle",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 81.08939999999984,
+        "cds": [
+          0,
+          0,
+          10.455299999999975,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 4.277548803917187,
+      "alive": 3
+    },
+    {
+      "label": "native-skill",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.944900000000011,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 65.28939999999983,
+        "cds": [
+          4.9,
+          0,
+          10.355299999999973,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 3.6688592798855986,
+      "alive": 3
+    },
+    {
+      "label": "native-dodge-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 5.944900000000011,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 65.28939999999983,
+        "cds": [
+          4.9,
+          0,
+          10.355299999999973,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 3.6688592798855986,
+      "alive": 3
+    },
+    {
+      "label": "native-dodge-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 6.0116000000000085,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 65.42279999999982,
+        "cds": [
+          4.833300000000003,
+          0,
+          10.288599999999976,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 3.301754662883326,
+      "alive": 3
+    },
+    {
+      "label": "native-dodge-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 6.0116000000000085,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 65.42279999999982,
+        "cds": [
+          4.833300000000003,
+          0,
+          10.288599999999976,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 3.301754662883326,
+      "alive": 3
+    },
+    {
+      "label": "native-dodge-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 6.061600000000008,
+      "kills": 1,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 65.52279999999982,
+        "cds": [
+          4.783300000000003,
+          0,
+          10.238599999999975,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 3.0547123865158055,
+      "alive": 3
+    },
+    {
+      "label": "native-dodge-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 6.111600000000008,
+      "kills": 3,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 69.62279999999981,
+        "cds": [
+          4.733300000000003,
+          0,
+          10.188599999999974,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 9.211501291670235,
+      "alive": 1
+    },
+    {
+      "label": "native-dodge-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 6.139600000000008,
+      "kills": 3,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 69.67879999999981,
+        "cds": [
+          4.705300000000004,
+          0,
+          10.160599999999974,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 9.11644310424499,
+      "alive": 1
+    },
+    {
+      "label": "native-dodge-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 6.239600000000007,
+      "kills": 3,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 69.8787999999998,
+        "cds": [
+          4.605300000000004,
+          0,
+          10.060599999999972,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 8.776974672182183,
+      "alive": 1
+    },
+    {
+      "label": "native-dodge-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 6.289600000000007,
+      "kills": 3,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 69.9787999999998,
+        "cds": [
+          4.555300000000004,
+          0,
+          10.010599999999972,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 8.607256192174324,
+      "alive": 1
+    },
+    {
+      "label": "native-dodge-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 6.339600000000007,
+      "kills": 3,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 70.07879999999979,
+        "cds": [
+          4.5053000000000045,
+          0,
+          9.960599999999971,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 8.4375490469282,
+      "alive": 1
+    },
+    {
+      "label": "native-dodge-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 6.389600000000007,
+      "kills": 3,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 70.17879999999978,
+        "cds": [
+          4.455300000000005,
+          0,
+          9.91059999999997,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 8.267853934420634,
+      "alive": 1
+    },
+    {
+      "label": "native-dodge-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 6.439600000000007,
+      "kills": 3,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "skill",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 70.27879999999978,
+        "cds": [
+          4.405300000000005,
+          0,
+          9.86059999999997,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 8.098171611080522,
+      "alive": 1
+    },
+    {
+      "label": "native-dodge-window",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 6.4896000000000065,
+      "kills": 3,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "idle",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 70.37879999999977,
+        "cds": [
+          4.355300000000005,
+          0,
+          9.810599999999969,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 7.928502898032279,
+      "alive": 1
+    },
+    {
+      "label": "native-dodge",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 6.4896000000000065,
+      "kills": 3,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "idle",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 70.37879999999977,
+        "cds": [
+          4.355300000000005,
+          0,
+          9.810599999999969,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 0,
+        "pos": [
+          -85.5689673856525,
+          0,
+          -47.724445663536635
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 7.928502898032279,
+      "alive": 1
+    },
+    {
+      "label": "native-dodge",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 6.539600000000006,
+      "kills": 3,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "dodge",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 70.47879999999977,
+        "cds": [
+          4.305300000000005,
+          0,
+          9.760599999999968,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 1.3,
+        "pos": [
+          -86.51188629347135,
+          0,
+          -47.84022102049011
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 7.43148206017986,
+      "alive": 1
+    },
+    {
+      "label": "native-manual-end",
+      "mode": "battle",
+      "active": true,
+      "paused": false,
+      "testPause": false,
+      "elapsed": 6.639600000000006,
+      "kills": 3,
+      "roomCount": 6,
+      "held": false,
+      "player": {
+        "auto": false,
+        "state": "dodge",
+        "comboIdx": 0,
+        "hp": 2968,
+        "mp": 70.67879999999975,
+        "cds": [
+          4.205300000000006,
+          0,
+          9.660599999999967,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "dodgeCd": 1.2,
+        "pos": [
+          -87.92492900795776,
+          0,
+          -48.01372005980688
+        ],
+        "pose": [
+          0,
+          0,
+          0
+        ]
+      },
+      "nearest": 7.152203982663117,
+      "alive": 1
+    }
+  ],
+  "runs": [],
+  "screenshots": [
+    "fields-360.png",
+    "fields-390.png",
+    "fields-1440.png",
+    "failure.png"
+  ],
+  "errors": [],
+  "warnings": [
+    "Service Worker registration blocked by Playwright",
+    "THREE.WebGLRenderer: KHR_parallel_shader_compile extension not supported."
+  ],
+  "failedRequests": [
+    {
+      "url": "http://127.0.0.1:40871/bgm/regions/lobby.mp3",
+      "type": "media",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "httpErrors": [],
+  "origin": "http://127.0.0.1:40871",
+  "browser": "153.0.8010.0",
+  "fontFixture": "Local Korean font faces and optional external Google CSS fulfilled empty for this isolated QA only; product assets unchanged.",
+  "failure": "Error: 실제 공격·스킬·회피 입력\n    at check (file:///workspace/scratch/46cbb073351f/blade-surge/tools/open-fields-qa.mjs:27:107)\n    at file:///workspace/scratch/46cbb073351f/blade-surge/tools/open-fields-qa.mjs:76:3",
+  "finishedAt": "2026-10-08T21:06:48.652Z"
+}

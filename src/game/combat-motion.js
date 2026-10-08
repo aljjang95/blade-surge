@@ -12,7 +12,7 @@ export function attackPhase(t, contact = 0.4) {
   return contact + (1 - contact) * (0.63 + 0.37 * smooth((t - settle) / (1 - settle)));
 }
 
-export function attackBody(t, contact, weapon = '1h', ranged = false) {
+export function attackBody(t, contact, weapon = '1h', ranged = false, warriorIndex = -1, move = '', finisher = false) {
   t = clamp01(t); contact = Math.max(0.1, Math.min(0.85, contact || 0.4));
   const weight = ranged ? 0.45 : weapon === '2h' ? 1.15 : weapon === 'dual' ? 0.7 : 1;
   // The render pivot carries a readable anticipation and a sharper impact
@@ -22,6 +22,17 @@ export function attackBody(t, contact, weapon = '1h', ranged = false) {
   const anticipation = before ? Math.sin(Math.PI * t / contact) : 0;
   const recovery = before ? 0 : Math.max(0, 1 - (t - contact) / (1 - contact));
   const snap = recovery ** 1.65;
+  if (warriorIndex >= 0 && !ranged) {
+    const side = warriorIndex % 2 ? -1 : 1, heavy = finisher ? 1.25 : 1;
+    const spin = move === 'spin', stab = move === 'lunge';
+    // 본·손 소켓과 판정 원점은 그대로 두고 렌더 피벗에서 몸의 축을 크게 읽는다.
+    return {
+      pitch: (-anticipation * .17 + snap * (stab ? .26 : .3)) * weight * heavy,
+      yaw: spin ? Math.sin(t*Math.PI*2)*.12 : (-anticipation*.26+snap*.32)*side*weight,
+      roll: (anticipation*.1-snap*.08)*side*weight,
+      forward: (-anticipation*.1+snap*.2)*weight,
+    };
+  }
   return {
     pitch: (-anticipation * 0.135 + snap * 0.19) * weight,
     yaw: (-anticipation * 0.105 + snap * 0.115) * weight,

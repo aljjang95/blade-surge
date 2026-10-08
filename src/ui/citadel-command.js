@@ -47,7 +47,10 @@ export class CitadelCommand {
     this.campaign.append(this.nextStory);
     const arena = action('', () => app.expeditionUI.open('arena'), 'citadel-command-arena');
     arena.append(element('small', '', 'SOLO ARENA'), element('strong', '', '결투장'), element('span', '', 'AI 상대와 무료 연습'));
-    destinations.append(this.campaign, arena);
+    const fields = action('', () => app.expeditionUI.open('dungeons', { depth: 'fields' }), 'citadel-command-arena');
+    fields.id = 'citadel-command-fields';
+    fields.append(element('small', '', 'OPEN FIELD'), element('strong', '', '야외 필드'), element('span', '', '초원 · 해안 · 산길 · 도시'));
+    destinations.append(this.campaign, fields, arena);
     const tools = element('nav', 'citadel-command-tools');
     tools.setAttribute('aria-label', '출격 전 정비');
     this.supply = action('보급 상점', button => app.citadelShop.open(button));

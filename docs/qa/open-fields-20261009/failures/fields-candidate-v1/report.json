@@ -1,0 +1,1587 @@
+{
+  "status": "RUNNING",
+  "started": "2026-10-08T20:42:13.895Z",
+  "head": "731c39e2c44341f3f3c1555b547d7577024774fb",
+  "build": {
+    "sha": "731c39e2c44341f3f3c1555b547d7577024774fb",
+    "dirty": true,
+    "builtAt": "2026-10-08T20:41:40.211Z",
+    "pwaRelease": "13517d2d79b445f0dcd7"
+  },
+  "sourceDirty": true,
+  "releaseApproved": false,
+  "scope": "Isolated production preview in Chromium/SwiftShader, fresh local save, native field catalogue entry and viewport controls, then seeded AUTO with deterministic app.step. Initial hero is naturally Lv1; later levels come from actual combat. No hero/gear grants, actor position/HP/damage/victory edits or free energy. Browser viewport checks do not prove Android/GPU performance, real touch feel or physical vibration.",
+  "sources": {
+    "src/data/open-fields.js": "83d0cafe285a5608ad55c6ad489902f38b38687ee9dc6eb50c077f66f67f7676",
+    "src/data/expedition-routes.js": "3640443588ac87c99cb46caaa12de10669352324a350221bc7fe6befae7b64be",
+    "src/game/open-field-scene.js": "64b6e83ffde57ca7ceb368dfb974a783becebb12f481ef2fa6399c1c4410aff4",
+    "src/game/expedition-combat.js": "d66d29adaab0989aaeba412268be8614cec876d6640eef6c73eb8534f50462de",
+    "src/game/expedition-economy.js": "65fa99f9709b3cf39f57fe2adb8aaa499830282b8726e139ecc68fec96bf26b5",
+    "src/game/player.js": "ae0e69547372fd33c4b1a021a1a7b47814d797da4a2094e03c8d0678b7a7fd21",
+    "src/game/enemies.js": "02a4f8e0557925a3be8e78aba177cfdae2d0f3ebe43bd011c9e31c41c9891325",
+    "src/game/crowd-gather.js": "e015890a3c310857cf0ea26af8d32603119c302b8d12fc1f33ede24ef34d22c7",
+    "src/game/combat-motion.js": "6c3878b53092a6bb95a0b917855c8052cf71c1a4c635d361c4dd2f421a11f9e7",
+    "src/game/actor.js": "0e9f5d45f42bf4c42de05c8b53dd0f0453ec6d102e07e663e8e0d89ebe18b8ed",
+    "src/game/combat-contact.js": "630270456a4ee89c4265b9ed67e13d499b00560d18dfcee5b0506ac50b9079a3",
+    "src/engine/audio.js": "b1b09698d576c131017e954d38a6d1f488b1d880a0e28ff31fb73045e22e53b2",
+    "src/expansion/hub.jsx": "69ccf8d3948ee9094eb3103e198b5d7222e0701059e5bfbd441aceccd92b69db",
+    "src/ui/citadel-command.js": "15b50afe994cc6f219d9496cc9372b40cc4fcf79bb7380aaf37b59a16dc86d06",
+    "src/ui/citadel-command.css": "ff3da0d660eb4117ed2735cd3e93d920df0d765719bfea3c511889ac49694184",
+    "src/game/arena.js": "5505dcc52bd6d95bebf8bd707acb1c732b3238065f400dc016699afe11a1795e",
+    "src/game/battle-base.js": "9b79428987f59ba4895a7a9765103efd037e4afe7b921ffe629b976bc7be63fc",
+    "tools/open-fields-qa.mjs": "d126002d269c230dc952049825f6dd9d92317575c56192a8547c4bcde9079784"
+  },
+  "ui": [
+    {
+      "size": {
+        "width": 360,
+        "height": 800
+      },
+      "rows": [
+        {
+          "id": "windmeadow",
+          "disabled": false,
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "sunbreak_coast",
+          "disabled": false,
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "skywind_pass",
+          "disabled": false,
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "dawnward_city",
+          "disabled": false,
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "overflow": false,
+          "image": true
+        }
+      ]
+    },
+    {
+      "size": {
+        "width": 390,
+        "height": 844
+      },
+      "rows": [
+        {
+          "id": "windmeadow",
+          "disabled": false,
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "sunbreak_coast",
+          "disabled": false,
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "skywind_pass",
+          "disabled": false,
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "dawnward_city",
+          "disabled": false,
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "overflow": false,
+          "image": true
+        }
+      ]
+    },
+    {
+      "size": {
+        "width": 1440,
+        "height": 900
+      },
+      "rows": [
+        {
+          "id": "windmeadow",
+          "disabled": false,
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "sunbreak_coast",
+          "disabled": false,
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "skywind_pass",
+          "disabled": false,
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "overflow": false,
+          "image": true
+        },
+        {
+          "id": "dawnward_city",
+          "disabled": false,
+          "height": 44,
+          "inside": true,
+          "hit": true,
+          "overflow": false,
+          "image": true
+        }
+      ]
+    }
+  ],
+  "runs": [
+    {
+      "id": "windmeadow",
+      "before": {
+        "energy": 100,
+        "hero": {
+          "level": 1,
+          "exp": 0,
+          "star": 1,
+          "shards": 0,
+          "skills": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "skillLoadout": [
+            4,
+            5
+          ],
+          "equip": {
+            "weapon": null,
+            "armor": null,
+            "ring": null,
+            "boots": null
+          }
+        },
+        "wins": {
+          "welcome": 1,
+          "campaignWins": 0,
+          "dungeonWins": 0,
+          "arenaWins": 0,
+          "crafts": 0,
+          "consumed": 0,
+          "glass_garden": 0,
+          "ember_vault": 0,
+          "star_archive": 0,
+          "bellfall_crypt": 0,
+          "cinder_tide_lock": 0,
+          "nightglass_observatory": 0,
+          "eclipse_hydra_vault": 0,
+          "ashforge_catacomb": 0,
+          "astral_leviathan_spire": 0,
+          "verdigris_sanctum": 0,
+          "sable_mirage_basin": 0,
+          "comet_bastion": 0,
+          "windmeadow": 0,
+          "sunbreak_coast": 0,
+          "skywind_pass": 0,
+          "dawnward_city": 0
+        },
+        "gold": 12000
+      },
+      "start": {
+        "energy": 96,
+        "heroLevel": 1,
+        "field": "meadow",
+        "rooms": 6,
+        "auto": true
+      },
+      "scope": "Naturally earned Lv1 profile; controlled stepping of real AUTO/AI/collision/rewards.",
+      "states": [
+        {
+          "active": true,
+          "elapsed": 3.9999999999999907,
+          "kills": 0,
+          "rooms": 0,
+          "hp": 2968,
+          "maxHp": 2968,
+          "boss": false,
+          "remaining": 5,
+          "sealed": true,
+          "peak": 4,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 7.884999999999976,
+          "kills": 4,
+          "rooms": 1,
+          "hp": 3248,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 4,
+          "sealed": true,
+          "peak": 4,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 11.833000000000165,
+          "kills": 5,
+          "rooms": 1,
+          "hp": 3248,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 4,
+          "sealed": true,
+          "peak": 7,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 15.560000000000349,
+          "kills": 7,
+          "rooms": 1,
+          "hp": 3223,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 4,
+          "sealed": true,
+          "peak": 6,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 19.384000000000174,
+          "kills": 9,
+          "rooms": 1,
+          "hp": 3176,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 4,
+          "sealed": true,
+          "peak": 4,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 23.07433333333329,
+          "kills": 9,
+          "rooms": 1,
+          "hp": 3151,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 4,
+          "sealed": true,
+          "peak": 2,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 26.897999999999733,
+          "kills": 11,
+          "rooms": 2,
+          "hp": 3151,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 3,
+          "sealed": true,
+          "peak": 2,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 30.75799999999951,
+          "kills": 13,
+          "rooms": 2,
+          "hp": 3151,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 3,
+          "sealed": true,
+          "peak": 7,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 34.5709999999993,
+          "kills": 14,
+          "rooms": 2,
+          "hp": 3098,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 3,
+          "sealed": true,
+          "peak": 5,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 38.2999999999991,
+          "kills": 16,
+          "rooms": 2,
+          "hp": 3073,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 3,
+          "sealed": true,
+          "peak": 4,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 41.993999999998906,
+          "kills": 16,
+          "rooms": 2,
+          "hp": 3073,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 3,
+          "sealed": true,
+          "peak": 2,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 45.93199999999869,
+          "kills": 18,
+          "rooms": 3,
+          "hp": 3073,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 2,
+          "sealed": true,
+          "peak": 2,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 49.93199999999846,
+          "kills": 18,
+          "rooms": 3,
+          "hp": 3073,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 2,
+          "sealed": true,
+          "peak": 5,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 53.66899999999826,
+          "kills": 20,
+          "rooms": 3,
+          "hp": 3051,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 2,
+          "sealed": true,
+          "peak": 5,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 57.46699999999806,
+          "kills": 20,
+          "rooms": 3,
+          "hp": 3020,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 2,
+          "sealed": true,
+          "peak": 3,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 61.25199999999786,
+          "kills": 22,
+          "rooms": 3,
+          "hp": 2989,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 2,
+          "sealed": true,
+          "peak": 3,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 65.13499999999765,
+          "kills": 23,
+          "rooms": 4,
+          "hp": 2989,
+          "maxHp": 3248,
+          "boss": true,
+          "remaining": 1,
+          "sealed": false,
+          "peak": 1,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 68.80099999999742,
+          "kills": 23,
+          "rooms": 4,
+          "hp": 2989,
+          "maxHp": 3248,
+          "boss": true,
+          "remaining": 1,
+          "sealed": false,
+          "peak": 1,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 72.37599999999718,
+          "kills": 23,
+          "rooms": 4,
+          "hp": 2989,
+          "maxHp": 3248,
+          "boss": true,
+          "remaining": 1,
+          "sealed": false,
+          "peak": 1,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 75.05791666666344,
+          "kills": 24,
+          "rooms": 5,
+          "hp": 2951.24,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 0,
+          "sealed": false,
+          "peak": 1,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": false,
+          "win": true,
+          "elapsed": 77.37766666666316,
+          "kills": 24,
+          "rooms": 5,
+          "hp": 2951.24,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 0,
+          "sealed": false,
+          "peak": 0,
+          "invalid": false,
+          "cap": 24
+        }
+      ],
+      "peakAlive": 7,
+      "last": {
+        "active": false,
+        "win": true,
+        "elapsed": 77.37766666666316,
+        "kills": 24,
+        "rooms": 5,
+        "hp": 2951.24,
+        "maxHp": 3248,
+        "boss": false,
+        "remaining": 0,
+        "sealed": false,
+        "peak": 0,
+        "invalid": false,
+        "cap": 24
+      },
+      "result": {
+        "result": {
+          "win": true,
+          "kind": "dungeon",
+          "id": "windmeadow",
+          "depth": "standard",
+          "conquestId": null,
+          "conquest": null,
+          "routeObjective": null,
+          "mapTactics": null,
+          "riftId": null,
+          "name": "바람결 초원",
+          "kills": 24,
+          "combo": 46,
+          "time": 77.37766666666316,
+          "rewards": {
+            "gold": 777,
+            "xp": 100,
+            "materials": {
+              "glass_leaf": 3
+            },
+            "consumables": {
+              "hp_tonic": 1
+            },
+            "levelsGained": 0,
+            "levelGold": 0,
+            "firstClear": false,
+            "stones": 40,
+            "stones2": 5,
+            "stones3": 1,
+            "fragments": 11,
+            "got": [
+              {
+                "k": "gold",
+                "n": 777
+              },
+              {
+                "k": "stones",
+                "n": 40
+              },
+              {
+                "k": "stones2",
+                "n": 5
+              },
+              {
+                "k": "stones3",
+                "n": 1
+              },
+              {
+                "k": "fragments",
+                "n": 11
+              }
+            ],
+            "loot": [
+              {
+                "uid": 2,
+                "id": "a_scrap",
+                "enh": 0
+              },
+              {
+                "uid": 6,
+                "id": "r_moon",
+                "enh": 0
+              },
+              {
+                "uid": 5,
+                "id": "r_sapphire",
+                "enh": 0
+              },
+              {
+                "uid": 4,
+                "id": "a_scale",
+                "enh": 0
+              },
+              {
+                "uid": 9,
+                "id": "a_chain",
+                "enh": 0
+              },
+              {
+                "uid": 7,
+                "id": "w_frost",
+                "enh": 0
+              },
+              {
+                "uid": 8,
+                "id": "a_ranger",
+                "enh": 0
+              },
+              {
+                "uid": 10,
+                "id": "b_wind",
+                "enh": 0
+              },
+              {
+                "uid": 11,
+                "id": "b_cloth",
+                "enh": 0
+              },
+              {
+                "uid": 12,
+                "id": "b_ranger",
+                "enh": 0
+              },
+              {
+                "uid": 13,
+                "id": "a_chain",
+                "enh": 0
+              },
+              {
+                "uid": 15,
+                "id": "w_rusty",
+                "enh": 0
+              },
+              {
+                "uid": 16,
+                "id": "a_ranger",
+                "enh": 0
+              },
+              {
+                "uid": 17,
+                "id": "w_cleaver",
+                "enh": 0
+              },
+              {
+                "uid": 18,
+                "id": "b_worn",
+                "enh": 0
+              },
+              {
+                "uid": 21,
+                "id": "r_pearl",
+                "enh": 0
+              },
+              {
+                "uid": 20,
+                "id": "w_sun",
+                "enh": 0
+              },
+              {
+                "uid": 19,
+                "id": "a_mithril",
+                "enh": 0
+              },
+              {
+                "uid": 14,
+                "id": "r_gravity",
+                "enh": 0
+              }
+            ],
+            "heroExp": 100,
+            "ups": 1,
+            "heroId": "knight"
+          },
+          "saveError": null
+        },
+        "pending": null,
+        "wins": {
+          "welcome": 1,
+          "campaignWins": 0,
+          "dungeonWins": 1,
+          "arenaWins": 0,
+          "crafts": 0,
+          "consumed": 0,
+          "glass_garden": 0,
+          "ember_vault": 0,
+          "star_archive": 0,
+          "bellfall_crypt": 0,
+          "cinder_tide_lock": 0,
+          "nightglass_observatory": 0,
+          "eclipse_hydra_vault": 0,
+          "ashforge_catacomb": 0,
+          "astral_leviathan_spire": 0,
+          "verdigris_sanctum": 0,
+          "sable_mirage_basin": 0,
+          "comet_bastion": 0,
+          "windmeadow": 1,
+          "sunbreak_coast": 0,
+          "skywind_pass": 0,
+          "dawnward_city": 0
+        },
+        "rooms": [
+          {
+            "type": "start",
+            "cleared": true
+          },
+          {
+            "type": "normal",
+            "cleared": true
+          },
+          {
+            "type": "normal",
+            "cleared": true
+          },
+          {
+            "type": "treasure",
+            "cleared": true
+          },
+          {
+            "type": "elite",
+            "cleared": true
+          },
+          {
+            "type": "boss",
+            "cleared": true
+          }
+        ],
+        "history": {
+          "runId": 1,
+          "floor": 1,
+          "outcome": "victory",
+          "boonIds": [
+            "tide_breath",
+            "stone_reserve",
+            "storm_step",
+            "ember_edge"
+          ],
+          "details": {
+            "route": {
+              "kind": "dungeon",
+              "id": "windmeadow",
+              "depth": "standard",
+              "conquestId": null,
+              "riftId": null
+            },
+            "heroId": "knight",
+            "heroLevel": 1,
+            "control": "auto",
+            "perfects": 0,
+            "breaks": 6,
+            "timeSec": 77.37766666666316
+          }
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "sunbreak_coast",
+      "before": {
+        "energy": 96,
+        "hero": {
+          "level": 2,
+          "exp": 97,
+          "star": 1,
+          "shards": 0,
+          "skills": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "skillLoadout": [
+            4,
+            5
+          ],
+          "equip": {
+            "weapon": null,
+            "armor": null,
+            "ring": null,
+            "boots": null
+          }
+        },
+        "wins": {
+          "welcome": 1,
+          "campaignWins": 0,
+          "dungeonWins": 1,
+          "arenaWins": 0,
+          "crafts": 0,
+          "consumed": 0,
+          "glass_garden": 0,
+          "ember_vault": 0,
+          "star_archive": 0,
+          "bellfall_crypt": 0,
+          "cinder_tide_lock": 0,
+          "nightglass_observatory": 0,
+          "eclipse_hydra_vault": 0,
+          "ashforge_catacomb": 0,
+          "astral_leviathan_spire": 0,
+          "verdigris_sanctum": 0,
+          "sable_mirage_basin": 0,
+          "comet_bastion": 0,
+          "windmeadow": 1,
+          "sunbreak_coast": 0,
+          "skywind_pass": 0,
+          "dawnward_city": 0
+        },
+        "gold": 12777
+      },
+      "start": {
+        "energy": 92,
+        "heroLevel": 2,
+        "field": "coast",
+        "rooms": 6,
+        "auto": true
+      },
+      "scope": "Naturally earned Lv2 profile; controlled stepping of real AUTO/AI/collision/rewards.",
+      "states": [
+        {
+          "active": true,
+          "elapsed": 3.973999999999991,
+          "kills": 0,
+          "rooms": 0,
+          "hp": 3024,
+          "maxHp": 3024,
+          "boss": false,
+          "remaining": 5,
+          "sealed": true,
+          "peak": 7,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 7.7843333333333105,
+          "kills": 6,
+          "rooms": 0,
+          "hp": 2901,
+          "maxHp": 3024,
+          "boss": false,
+          "remaining": 5,
+          "sealed": true,
+          "peak": 7,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 11.585000000000152,
+          "kills": 7,
+          "rooms": 1,
+          "hp": 3141.24,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 4,
+          "sealed": true,
+          "peak": 1,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 15.58500000000035,
+          "kills": 7,
+          "rooms": 1,
+          "hp": 3141.24,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 4,
+          "sealed": true,
+          "peak": 7,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 19.387000000000175,
+          "kills": 11,
+          "rooms": 1,
+          "hp": 3153.199999999999,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 4,
+          "sealed": true,
+          "peak": 7,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 23.27699999999995,
+          "kills": 14,
+          "rooms": 2,
+          "hp": 3231.9199999999983,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 3,
+          "sealed": true,
+          "peak": 3,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 27.136999999999727,
+          "kills": 16,
+          "rooms": 2,
+          "hp": 3248,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 3,
+          "sealed": true,
+          "peak": 4,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 30.983999999999504,
+          "kills": 18,
+          "rooms": 3,
+          "hp": 3241.24,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 2,
+          "sealed": true,
+          "peak": 2,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 34.859999999999296,
+          "kills": 18,
+          "rooms": 3,
+          "hp": 3241.24,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 2,
+          "sealed": true,
+          "peak": 5,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 38.660999999999085,
+          "kills": 22,
+          "rooms": 3,
+          "hp": 3248,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 2,
+          "sealed": true,
+          "peak": 5,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 42.62499999999886,
+          "kills": 23,
+          "rooms": 4,
+          "hp": 3248,
+          "maxHp": 3248,
+          "boss": true,
+          "remaining": 1,
+          "sealed": false,
+          "peak": 1,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 46.24599999999867,
+          "kills": 23,
+          "rooms": 4,
+          "hp": 3248,
+          "maxHp": 3248,
+          "boss": true,
+          "remaining": 1,
+          "sealed": false,
+          "peak": 1,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 49.78766666666516,
+          "kills": 23,
+          "rooms": 4,
+          "hp": 3248,
+          "maxHp": 3248,
+          "boss": true,
+          "remaining": 1,
+          "sealed": false,
+          "peak": 1,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 52.180999999998136,
+          "kills": 24,
+          "rooms": 5,
+          "hp": 3248,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 0,
+          "sealed": false,
+          "peak": 1,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": false,
+          "win": true,
+          "elapsed": 52.56433333333145,
+          "kills": 24,
+          "rooms": 5,
+          "hp": 3248,
+          "maxHp": 3248,
+          "boss": false,
+          "remaining": 0,
+          "sealed": false,
+          "peak": 0,
+          "invalid": false,
+          "cap": 24
+        }
+      ],
+      "peakAlive": 7,
+      "last": {
+        "active": false,
+        "win": true,
+        "elapsed": 52.56433333333145,
+        "kills": 24,
+        "rooms": 5,
+        "hp": 3248,
+        "maxHp": 3248,
+        "boss": false,
+        "remaining": 0,
+        "sealed": false,
+        "peak": 0,
+        "invalid": false,
+        "cap": 24
+      },
+      "result": {
+        "result": {
+          "win": true,
+          "kind": "dungeon",
+          "id": "sunbreak_coast",
+          "depth": "standard",
+          "conquestId": null,
+          "conquest": null,
+          "routeObjective": null,
+          "mapTactics": null,
+          "riftId": null,
+          "name": "해오름 해안",
+          "kills": 24,
+          "combo": 31,
+          "time": 52.56433333333145,
+          "rewards": {
+            "gold": 750,
+            "xp": 100,
+            "materials": {
+              "glass_leaf": 3
+            },
+            "consumables": {
+              "hp_tonic": 1
+            },
+            "levelsGained": 1,
+            "levelGold": 150,
+            "firstClear": false,
+            "stones": 61,
+            "stones2": 5,
+            "stones3": 1,
+            "fragments": 9,
+            "got": [
+              {
+                "k": "gold",
+                "n": 900
+              },
+              {
+                "k": "stones",
+                "n": 61
+              },
+              {
+                "k": "stones2",
+                "n": 5
+              },
+              {
+                "k": "stones3",
+                "n": 1
+              },
+              {
+                "k": "fragments",
+                "n": 9
+              }
+            ],
+            "loot": [
+              {
+                "uid": 24,
+                "id": "w_bronze",
+                "enh": 0
+              },
+              {
+                "uid": 22,
+                "id": "w_guard",
+                "enh": 0
+              },
+              {
+                "uid": 23,
+                "id": "a_mithril",
+                "enh": 0
+              },
+              {
+                "uid": 26,
+                "id": "r_amber",
+                "enh": 0
+              },
+              {
+                "uid": 25,
+                "id": "w_rune",
+                "enh": 0
+              },
+              {
+                "uid": 27,
+                "id": "r_bone",
+                "enh": 0
+              },
+              {
+                "uid": 28,
+                "id": "a_padded",
+                "enh": 0
+              },
+              {
+                "uid": 29,
+                "id": "r_bone",
+                "enh": 0
+              },
+              {
+                "uid": 30,
+                "id": "b_swift",
+                "enh": 0
+              },
+              {
+                "uid": 31,
+                "id": "a_cloth",
+                "enh": 0
+              },
+              {
+                "uid": 32,
+                "id": "a_bronze",
+                "enh": 0
+              },
+              {
+                "uid": 33,
+                "id": "a_leather",
+                "enh": 0
+              },
+              {
+                "uid": 35,
+                "id": "a_scale",
+                "enh": 0
+              },
+              {
+                "uid": 36,
+                "id": "b_straw",
+                "enh": 0
+              },
+              {
+                "uid": 37,
+                "id": "w_steel",
+                "enh": 0
+              },
+              {
+                "uid": 38,
+                "id": "b_swift",
+                "enh": 0
+              },
+              {
+                "uid": 39,
+                "id": "w_dragon",
+                "enh": 0
+              },
+              {
+                "uid": 41,
+                "id": "exp_glasswarden_ring",
+                "enh": 0
+              },
+              {
+                "uid": 40,
+                "id": "w_void",
+                "enh": 0
+              },
+              {
+                "uid": 34,
+                "id": "b_ranger",
+                "enh": 0
+              }
+            ],
+            "heroExp": 100,
+            "ups": 1,
+            "heroId": "knight"
+          },
+          "saveError": null
+        },
+        "pending": null,
+        "wins": {
+          "welcome": 1,
+          "campaignWins": 0,
+          "dungeonWins": 2,
+          "arenaWins": 0,
+          "crafts": 0,
+          "consumed": 0,
+          "glass_garden": 0,
+          "ember_vault": 0,
+          "star_archive": 0,
+          "bellfall_crypt": 0,
+          "cinder_tide_lock": 0,
+          "nightglass_observatory": 0,
+          "eclipse_hydra_vault": 0,
+          "ashforge_catacomb": 0,
+          "astral_leviathan_spire": 0,
+          "verdigris_sanctum": 0,
+          "sable_mirage_basin": 0,
+          "comet_bastion": 0,
+          "windmeadow": 1,
+          "sunbreak_coast": 1,
+          "skywind_pass": 0,
+          "dawnward_city": 0
+        },
+        "rooms": [
+          {
+            "type": "start",
+            "cleared": true
+          },
+          {
+            "type": "normal",
+            "cleared": true
+          },
+          {
+            "type": "normal",
+            "cleared": true
+          },
+          {
+            "type": "treasure",
+            "cleared": true
+          },
+          {
+            "type": "elite",
+            "cleared": true
+          },
+          {
+            "type": "boss",
+            "cleared": true
+          }
+        ],
+        "history": {
+          "runId": 2,
+          "floor": 31,
+          "outcome": "victory",
+          "boonIds": [
+            "ember_hunt",
+            "ember_feast",
+            "storm_edge",
+            "stone_reserve"
+          ],
+          "details": {
+            "route": {
+              "kind": "dungeon",
+              "id": "sunbreak_coast",
+              "depth": "standard",
+              "conquestId": null,
+              "riftId": null
+            },
+            "heroId": "knight",
+            "heroLevel": 2,
+            "control": "auto",
+            "perfects": 0,
+            "breaks": 5,
+            "timeSec": 52.56433333333145
+          }
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "skywind_pass",
+      "before": {
+        "energy": 92,
+        "hero": {
+          "level": 4,
+          "exp": 66,
+          "star": 1,
+          "shards": 0,
+          "skills": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1,
+            1
+          ],
+          "skillLoadout": [
+            4,
+            5
+          ],
+          "equip": {
+            "weapon": null,
+            "armor": null,
+            "ring": null,
+            "boots": null
+          }
+        },
+        "wins": {
+          "welcome": 1,
+          "campaignWins": 0,
+          "dungeonWins": 2,
+          "arenaWins": 0,
+          "crafts": 0,
+          "consumed": 0,
+          "glass_garden": 0,
+          "ember_vault": 0,
+          "star_archive": 0,
+          "bellfall_crypt": 0,
+          "cinder_tide_lock": 0,
+          "nightglass_observatory": 0,
+          "eclipse_hydra_vault": 0,
+          "ashforge_catacomb": 0,
+          "astral_leviathan_spire": 0,
+          "verdigris_sanctum": 0,
+          "sable_mirage_basin": 0,
+          "comet_bastion": 0,
+          "windmeadow": 1,
+          "sunbreak_coast": 1,
+          "skywind_pass": 0,
+          "dawnward_city": 0
+        },
+        "gold": 13677
+      },
+      "start": {
+        "energy": 88,
+        "heroLevel": 4,
+        "field": "mountain",
+        "rooms": 7,
+        "auto": true
+      },
+      "scope": "Naturally earned Lv4 profile; controlled stepping of real AUTO/AI/collision/rewards.",
+      "states": [
+        {
+          "active": true,
+          "elapsed": 3.9639999999999906,
+          "kills": 2,
+          "rooms": 0,
+          "hp": 3472,
+          "maxHp": 3472,
+          "boss": false,
+          "remaining": 6,
+          "sealed": true,
+          "peak": 7,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 7.733999999999979,
+          "kills": 2,
+          "rooms": 0,
+          "hp": 3404,
+          "maxHp": 3472,
+          "boss": false,
+          "remaining": 6,
+          "sealed": true,
+          "peak": 5,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 11.610000000000154,
+          "kills": 7,
+          "rooms": 1,
+          "hp": 3445.664,
+          "maxHp": 3472,
+          "boss": false,
+          "remaining": 5,
+          "sealed": true,
+          "peak": 5,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 15.55800000000035,
+          "kills": 8,
+          "rooms": 1,
+          "hp": 3472,
+          "maxHp": 3472,
+          "boss": false,
+          "remaining": 5,
+          "sealed": true,
+          "peak": 7,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 19.220000000000176,
+          "kills": 12,
+          "rooms": 1,
+          "hp": 3433.3280000000004,
+          "maxHp": 3472,
+          "boss": false,
+          "remaining": 5,
+          "sealed": true,
+          "peak": 6,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 23.079999999999952,
+          "kills": 14,
+          "rooms": 2,
+          "hp": 3819,
+          "maxHp": 3819,
+          "boss": false,
+          "remaining": 4,
+          "sealed": true,
+          "peak": 2,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 26.884999999999728,
+          "kills": 16,
+          "rooms": 2,
+          "hp": 3819,
+          "maxHp": 3819,
+          "boss": false,
+          "remaining": 4,
+          "sealed": true,
+          "peak": 4,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 30.796999999999503,
+          "kills": 18,
+          "rooms": 3,
+          "hp": 3819,
+          "maxHp": 3819,
+          "boss": false,
+          "remaining": 3,
+          "sealed": true,
+          "peak": 2,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 34.692999999999294,
+          "kills": 19,
+          "rooms": 3,
+          "hp": 3781,
+          "maxHp": 3819,
+          "boss": false,
+          "remaining": 3,
+          "sealed": true,
+          "peak": 5,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 38.30899999999911,
+          "kills": 23,
+          "rooms": 4,
+          "hp": 3676.828,
+          "maxHp": 3819,
+          "boss": false,
+          "remaining": 2,
+          "sealed": true,
+          "peak": 4,
+          "invalid": false,
+          "cap": 24
+        },
+        {
+          "active": true,
+          "elapsed": 42.30899999999888,
+          "kills": 23,
+          "rooms": 4,
+          "hp": 3676.828,
+          "maxHp": 3819,
+          "boss": false,
+          "remaining": 2,
+          "sealed": true,
+          "peak": 5,
+          "invalid": false,
+          "cap": 24
+        }
+      ],
+      "peakAlive": 7,
+      "last": {
+        "active": true,
+        "elapsed": 42.30899999999888,
+        "kills": 23,
+        "rooms": 4,
+        "hp": 3676.828,
+        "maxHp": 3819,
+        "boss": false,
+        "remaining": 2,
+        "sealed": true,
+        "peak": 5,
+        "invalid": false,
+        "cap": 24
+      }
+    }
+  ],
+  "errors": [],
+  "failedRequests": [
+    {
+      "url": "http://127.0.0.1:36157/bgm/regions/lobby.mp3",
+      "type": "media",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:36157/bgm/regions/boss.mp3",
+      "type": "media",
+      "error": "net::ERR_ABORTED"
+    },
+    {
+      "url": "http://127.0.0.1:36157/bgm/regions/lobby.mp3",
+      "type": "media",
+      "error": "net::ERR_ABORTED"
+    }
+  ],
+  "httpErrors": [],
+  "screenshots": [
+    "catalogue-360.png",
+    "catalogue-390.png",
+    "catalogue-1440.png",
+    "meadow-entry.png",
+    "meadow-boss.png",
+    "meadow-result.png",
+    "coast-entry.png",
+    "coast-boss.png",
+    "coast-result.png",
+    "mountain-entry.png"
+  ],
+  "origin": "http://127.0.0.1:36157",
+  "indexSha256": "2a76bb0851ebed998d3c53f39701d9014e51bf16a25ee3f000353f159228c4b4",
+  "browser": "153.0.8010.0"
+}

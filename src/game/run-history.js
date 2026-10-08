@@ -1,6 +1,7 @@
 import { HEROES } from '../data/heroes.js';
 import { CHAPTERS, STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
-import { DUNGEONS, ARENA_RIVALS } from '../data/expansion.js';
+import { ARENA_RIVALS } from '../data/expansion.js';
+import { EXPEDITION_ROUTES as DUNGEONS } from '../data/expedition-routes.js';
 import { expeditionDepth } from '../data/expedition-depths.js';
 import { conquestForRun, expeditionConquest } from '../data/expedition-conquests.js';
 import { DIFFICULTIES } from './difficulty.js';

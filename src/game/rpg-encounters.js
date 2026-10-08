@@ -1,5 +1,6 @@
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
-import { DUNGEONS, ARENA_RIVALS } from '../data/expansion.js';
+import { ARENA_RIVALS } from '../data/expansion.js';
+import { EXPEDITION_ROUTES as DUNGEONS } from '../data/expedition-routes.js';
 import { expeditionDepth } from '../data/expedition-depths.js';
 import { RIFT_RULES } from './journey-rifts.js';
 

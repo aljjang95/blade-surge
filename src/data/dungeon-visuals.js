@@ -1,6 +1,10 @@
 // Dungeon identity is more than a palette: each route owns a landmark,
 // horizon treatment, lighting language and a camera composition.
 export const DUNGEON_VISUALS = Object.freeze({
+  meadow: Object.freeze({ key: 'meadow', sky: { top: 0x3884c2, horizon: 0xc8e5e1, ground: 0x538458, stars: 0xffffff, celestial: 0xffedb9, density: 0 }, camera: { y: 10, z: 12, fov: 46, lookY: 1, lag: 8, yaw: -7, pitch: 0, zoom: 100, side: 0 } }),
+  coast: Object.freeze({ key: 'coast', sky: { top: 0x278cc8, horizon: 0xa2e4e4, ground: 0x237fa4, stars: 0xffffff, celestial: 0xffe3a0, density: 0 }, camera: { y: 10, z: 12, fov: 46, lookY: 1, lag: 8, yaw: 8, pitch: 0, zoom: 100, side: 0 } }),
+  mountain: Object.freeze({ key: 'mountain', sky: { top: 0x678ebf, horizon: 0xdde7ed, ground: 0x81939d, stars: 0xffffff, celestial: 0xfff4df, density: 0 }, camera: { y: 10, z: 12, fov: 46, lookY: 1, lag: 8, yaw: -9, pitch: 0, zoom: 100, side: 0 } }),
+  city: Object.freeze({ key: 'city', sky: { top: 0x557fa9, horizon: 0xf2d7ad, ground: 0x9b8c7e, stars: 0xffffff, celestial: 0xffc97c, density: 0 }, camera: { y: 10, z: 12, fov: 46, lookY: 1, lag: 8, yaw: 6, pitch: 0, zoom: 100, side: 0 } }),
   memorial: Object.freeze({ key: 'memorial', landmark: 'memorial', sky: { top: 0x0b1b2c, horizon: 0x8ab9a9, ground: 0x16332f, stars: 0xffe0a0, celestial: 0xffc57a, density: .34 }, camera: { y: 7.2, z: 8.8, fov: 42, lookY: 1.08, lag: 7.8, yaw: -7, pitch: 2, zoom: 102, side: -.35 } }),
   kiln: Object.freeze({ key: 'kiln', landmark: 'kiln', sky: { top: 0x1b0911, horizon: 0xd35632, ground: 0x321410, stars: 0xffa15c, celestial: 0xff7b32, density: .26 }, camera: { y: 6.5, z: 7.5, fov: 44, lookY: 1.18, lag: 8.8, yaw: 9, pitch: 5, zoom: 106, side: .42 } }),
   archive: Object.freeze({ key: 'archive', landmark: 'archive', sky: { top: 0x07142e, horizon: 0x6f98ca, ground: 0x101e39, stars: 0xb8e5ff, celestial: 0xa8d7ff, density: .22 }, camera: { y: 8.7, z: 10.1, fov: 39, lookY: .82, lag: 5.8, yaw: -12, pitch: -3, zoom: 96, side: -.18 } }),
@@ -10,6 +14,7 @@ export const DUNGEON_VISUALS = Object.freeze({
 });
 
 const VISUAL_BY_ROUTE = Object.freeze({
+  windmeadow: 'meadow', sunbreak_coast: 'coast', skywind_pass: 'mountain', dawnward_city: 'city',
   procession: 'memorial', greenhouse: 'memorial', kiln: 'kiln', uprising: 'kiln',
   archive: 'archive', reverseRiver: 'archive', beacon: 'beacon', lostShip: 'beacon',
   tribunal: 'tribunal', emptyThrones: 'tribunal', confluence: 'confluence', addresses: 'confluence',

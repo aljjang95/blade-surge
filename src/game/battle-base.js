@@ -24,6 +24,7 @@ import { ConquestRun } from './expedition-conquests.js';
 import { createRouteObjectives } from './route-objectives.js';
 import { createMapTactics } from './map-tactics.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
+import { preloadFieldSurface } from './open-field-scene.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
 import { dungeonVisualFor } from '../data/dungeon-visuals.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
@@ -87,6 +88,8 @@ export class Battle {
     this.mapTactics = createMapTactics(stage, this.world);
     this.autoTarget = this.routeObjectives?.autoRoom() || null;
     this.visual = dungeonVisualFor(stage);
+    if (stage.field) await preloadFieldSurface();
+    if (this._startGeneration !== startGeneration) return;
     this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
     await this.routeObjectives?.prepareView?.(this.scene);
     if (this._startGeneration !== startGeneration) return;
@@ -627,7 +630,7 @@ export class Battle {
     });
     const dirx = opts.dirx || 0, dirz = opts.dirz || 0;
     const color = opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
-    const contact = this.paused ? null : contactProfile(opts, crit, e.isBoss, this.app?.reducedMotion?.matches);
+    const contact = this.paused ? null : contactProfile(opts, crit, e.isBoss, this.app?.reducedMotion?.matches, p.def?.weapon);
     if (contact) e.receiveImpact?.(dirx, dirz, contactFeedback({ finisher: opts.finisher, crit, boss: e.isBoss, elite: e.isElite, reduced: !!this.app?.reducedMotion?.matches }).recoil);
     if (opts.basic && p === this.player && !p.auto) { this.impactTarget = e; this.impactT = .16; }
     const budget = contactBudget(this._contactBudget, this.elapsed, contact);

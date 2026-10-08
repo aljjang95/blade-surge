@@ -1,0 +1,17 @@
+{
+  "generator": "built-in ImageGen",
+  "createdAt": "2026-10-08T20:18:55.484Z",
+  "prompt": "art/open-fields-v1/prompt.txt",
+  "source": {
+    "path": "art/open-fields-v1/grass-source-v1.png",
+    "bytes": 3297660,
+    "sha256": "f378b3b0fef0d716484a6c0ab3f714ef959245d2ec0bcf68de42428cca898c48"
+  },
+  "delivery": {
+    "path": "public/img/environment/field-grass-v1.webp",
+    "bytes": 309150,
+    "sha256": "35abf1e51b6d08af269592e34c7fc213938614cd5bcd0bd1ffd8ce00a5f316b3"
+  },
+  "conversion": "sharp resize 1024x1024, WebP quality 82",
+  "geometry": "자체 생성 Three.js 절차 지형; 기존 던전 석재는 원본 출처 유지"
+}

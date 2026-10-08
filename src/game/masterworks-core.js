@@ -1,6 +1,6 @@
 import { BOONS, SYNERGIES, MASTERY_NODES, PATHS, CHALLENGES, STORY_EVENTS, BOUNTIES } from '../data/masterworks.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
-import { DUNGEONS } from '../data/expansion.js';
+import { EXPEDITION_ROUTES as DUNGEONS } from '../data/expedition-routes.js';
 import { EXPEDITION_DEPTHS, expeditionDepth } from '../data/expedition-depths.js';
 import { normalizeRunDetails } from './run-history.js';
 import { normalizePersonalGoal } from './run-personal-goals.js';

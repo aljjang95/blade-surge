@@ -1,4 +1,5 @@
-import { DUNGEONS, ARENA_RIVALS, MATERIALS, MATERIAL_REFINING, CONSUMABLES, JOBS, RECIPES, EXPEDITION_QUESTS, accountLevelXp } from '../data/expansion.js';
+import { ARENA_RIVALS, MATERIALS, MATERIAL_REFINING, CONSUMABLES, JOBS, RECIPES, EXPEDITION_QUESTS, accountLevelXp } from '../data/expansion.js';
+import { EXPEDITION_ROUTES as DUNGEONS } from '../data/expedition-routes.js';
 import { ITEM_BY_ID } from '../data/items.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { normalizeJourney, refreshPeriods, recordJourneyWin } from './journey-core.js';

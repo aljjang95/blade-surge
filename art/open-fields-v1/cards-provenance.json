@@ -1,0 +1,113 @@
+{
+  "generator": "actual Three.js open-field renderer",
+  "scope": "Compiled production preview of the dirty working tree. Controlled scene capture with player position, app.step and wider card camera; not natural play or a deployed release.",
+  "build": {
+    "sha": "731c39e2c44341f3f3c1555b547d7577024774fb",
+    "dirty": true,
+    "builtAt": "2026-10-08T20:41:40.211Z",
+    "pwaRelease": "13517d2d79b445f0dcd7"
+  },
+  "camera": {
+    "preset": "top",
+    "y": 14,
+    "z": 15,
+    "fov": 50
+  },
+  "cards": [
+    {
+      "field": "meadow",
+      "source": "docs/qa/open-fields-20261009/cards/meadow-card.png",
+      "sourceSha256": "75474bb55836f7203d110500666168fe84cc14a0a883e2c799868420045b1064",
+      "delivery": "public/img/fields/meadow-v1.webp",
+      "deliverySha256": "c1c3eb0d9fa9e72a241e6fe02eecd6d28d3607a10b60f581374ef899c2e1eba7",
+      "scene": {
+        "room": "초원 야영지",
+        "pos": [
+          -89.86918105650693,
+          0,
+          -85.38205087836832
+        ],
+        "geometries": 70,
+        "texture": {
+          "field": "meadow",
+          "cells": 7785,
+          "texture": "GPT_Field_Grass_v1"
+        },
+        "lastPostprocessPassCalls": 1
+      }
+    },
+    {
+      "field": "coast",
+      "source": "docs/qa/open-fields-20261009/cards/coast-card.png",
+      "sourceSha256": "56dcebb5ccfa0f871025e0d739ff647bf8fbfcc510a1eb98d52c1e230930a2ef",
+      "delivery": "public/img/fields/coast-v1.webp",
+      "deliverySha256": "2cdeb64ad00b255bcf14e654c745cd25d91a2c1cb1d45b8b8a6fbdfa2024c5c6",
+      "scene": {
+        "room": "해안 나루",
+        "pos": [
+          -71.0270865559578,
+          0,
+          -68.55935859959573
+        ],
+        "geometries": 70,
+        "texture": {
+          "field": "coast",
+          "cells": 4865,
+          "texture": null
+        },
+        "lastPostprocessPassCalls": 1
+      }
+    },
+    {
+      "field": "mountain",
+      "source": "docs/qa/open-fields-20261009/cards/mountain-card.png",
+      "sourceSha256": "8b409f8aff65768d209acfd37dc314a27418780765b862e7906bd6373779e588",
+      "delivery": "public/img/fields/mountain-v1.webp",
+      "deliverySha256": "15495265104d3dd53f9f373aa36be96107685f6d3c99b08970c79396e2d62ea9",
+      "scene": {
+        "room": "등산로 입구",
+        "pos": [
+          -67.11165457498282,
+          0,
+          -72.55096296686679
+        ],
+        "geometries": 69,
+        "texture": {
+          "field": "mountain",
+          "cells": 5381,
+          "texture": "GPT_Dungeon_Stone_v1"
+        },
+        "lastPostprocessPassCalls": 1
+      }
+    },
+    {
+      "field": "city",
+      "source": "docs/qa/open-fields-20261009/cards/city-card.png",
+      "sourceSha256": "917e88b1177e2ff9665393e5c07481758fa62b49b9a5e1d68e4433c45163654a",
+      "delivery": "public/img/fields/city-v1.webp",
+      "deliverySha256": "8240e4fd9351010b705f3498553a93107963fd1867d4664f5216a6921e49ffdd",
+      "scene": {
+        "room": "서문 광장",
+        "pos": [
+          -77.76976849604398,
+          0,
+          -81.35909148398787
+        ],
+        "geometries": 71,
+        "texture": {
+          "field": "city",
+          "cells": 6264,
+          "texture": "GPT_Dungeon_Stone_v1"
+        },
+        "lastPostprocessPassCalls": 1
+      }
+    }
+  ],
+  "performanceNote": "lastPostprocessPassCalls describes only the final postprocessing pass, not total frame draw calls. Total campaign calls are measured separately by tools/metrics.mjs.",
+  "conversion": {
+    "width": 960,
+    "height": 540,
+    "format": "WebP",
+    "quality": 83
+  }
+}

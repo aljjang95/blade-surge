@@ -1,0 +1,7 @@
+{
+  "scope": "Dirty development build, controlled scene capture. Player position and deterministic app.step used to inspect scenery; not natural play or production evidence.",
+  "fields": [],
+  "errors": [],
+  "warnings": [],
+  "failure": "page.goto: net::ERR_CONNECTION_REFUSED at http://127.0.0.1:4244/\nCall log:\n\u001b[2m  - navigating to \"http://127.0.0.1:4244/\", waiting until \"domcontentloaded\"\u001b[22m\n\n    at /workspace/scratch/46cbb073351f/blade-surge/work/qa/open-fields-20261009/render-draft.mjs:17:14"
+}

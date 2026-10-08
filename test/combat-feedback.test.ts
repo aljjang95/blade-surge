@@ -26,7 +26,7 @@ test('enemy skill labels keep mob roles and boss signatures visually distinct', 
   expect(enemySkillLabel({ def: { ranged: true } })).toBe('적의 주문');
 });
 
-test('combat audio requests distinct haptic timings for telegraph, attack release, and ultimate release', () => {
+test('공격 발동은 명중 진동을 선점하지 않고 예고와 궁극기 진동을 유지한다', () => {
   const original = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
   const calls: unknown[] = [];
   Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { vibrate: (pattern: unknown) => { calls.push(pattern); return true; } } });
@@ -34,7 +34,7 @@ test('combat audio requests distinct haptic timings for telegraph, attack releas
     new AudioSys().enemyTelegraph({ kind: 'slam', boss: true });
     new AudioSys().attackRelease({ finisher: true });
     new AudioSys().skillRelease({ ult: true });
-    expect(calls).toEqual([[10, 14, 24], [16, 12, 34], [20, 16, 42]]);
+    expect(calls).toEqual([[10, 14, 24], [20, 16, 42]]);
   } finally {
     if (original) Object.defineProperty(globalThis, 'navigator', original);
     else Reflect.deleteProperty(globalThis, 'navigator');

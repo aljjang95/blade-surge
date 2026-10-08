@@ -1,0 +1,48 @@
+{
+  "errors": 0,
+  "bootMs": 5017,
+  "floorClearSec": 174.3,
+  "killsPerFloor": 190,
+  "maxAliveSeen": 24,
+  "_maxAliveSampled": 23,
+  "dropsPerFloor": 31,
+  "longestDryStreakSec": 19,
+  "hitTakenRatio": 0.255,
+  "avgFrameMs": 1.27,
+  "p95FrameMs": 3.7,
+  "rhythmBeats": 7,
+  "drawCalls": 422,
+  "_beats": {
+    "explore": true,
+    "encounter": true,
+    "vacuum": true,
+    "drop": true,
+    "setProgress": false,
+    "bossFound": true,
+    "bossKill": true,
+    "floorClear": true
+  },
+  "_roomsCleared": "12/12",
+  "_won": true,
+  "_seed": 20260905,
+  "_choices": [
+    "boon:storm_eye",
+    "story:lantern:guide",
+    "boon:tide_breath"
+  ],
+  "_heroLevelStart": 1,
+  "_heroLevelEnd": 4,
+  "_endReason": "전구역클리어",
+  "_avgAlive": 3.6,
+  "_errorSamples": [],
+  "_at": "2026-10-08T21:00:39.630Z",
+  "_build": {
+    "sha": "17ac254b625d5bbfeb1d7e7b3b7cc0f73c6ab2f3",
+    "dirty": true,
+    "builtAt": "2026-10-08T20:59:05.136Z",
+    "pwaRelease": "01cce35d7a6d34887d7a"
+  },
+  "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+  "_renderEvery": 3,
+  "_timeoutSec": 600
+}

@@ -1,0 +1,41 @@
+{
+  "created": "2026-10-08T20:40:54.582Z",
+  "kind": "Actual Three.js game render capture, UI hidden in isolated QA only; player position moved inside start room. Generated GPT grass texture, self-authored terrain geometry, preserved original hero/companion assets.",
+  "renderScope": "Dirty development build, controlled scene capture. Player position and deterministic app.step used to inspect scenery; not natural play or production evidence.",
+  "conversion": {
+    "width": 960,
+    "height": 540,
+    "format": "WebP",
+    "quality": 82
+  },
+  "files": [
+    {
+      "field": "meadow",
+      "source": "work/qa/open-fields-20261009/draft-render-v7/meadow-card.png",
+      "sourceSha256": "664b64e0efbee18a273a02316740c7b21e2b20a8f28d1c8fc937de2d31af934a",
+      "output": "public/img/fields/meadow-v1.webp",
+      "sha256": "9b7653bc2da54cddc5c14e92ecf0446dd6d0e284febff6a4d8a28600ff7c8615"
+    },
+    {
+      "field": "coast",
+      "source": "work/qa/open-fields-20261009/draft-render-v7/coast-card.png",
+      "sourceSha256": "64721e8a654197e0ed2de8a3c7e156606be3ed6fcf1fe908171b23017a37ba93",
+      "output": "public/img/fields/coast-v1.webp",
+      "sha256": "a6d431b57b73c7bec032bc3979916be679233a5b929f073527bb8d2f36af7c0c"
+    },
+    {
+      "field": "mountain",
+      "source": "work/qa/open-fields-20261009/draft-render-v7/mountain-card.png",
+      "sourceSha256": "92dd816adcde709edbfd306ef1f365966c4f5fd3790a37331e2f48f5667200b5",
+      "output": "public/img/fields/mountain-v1.webp",
+      "sha256": "5d605175dedddeb87509121ab933ad0bd193a0106511841d6a20c1cc3ccd0eef"
+    },
+    {
+      "field": "city",
+      "source": "work/qa/open-fields-20261009/draft-render-v7/city-card.png",
+      "sourceSha256": "d59d746b5b4436bc0670fbf019c4e5e23408500bf54cc1cd0b438966173a9ee5",
+      "output": "public/img/fields/city-v1.webp",
+      "sha256": "ce938725e1c5f5d560becf00c18e431994057425d78e5c79800b8f85dae92237"
+    }
+  ]
+}

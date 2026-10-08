@@ -1,0 +1,142 @@
+[
+  {
+    "file": "combat-base",
+    "passed": true,
+    "runs": 2000,
+    "failures": [],
+    "heroes": [
+      {
+        "hero": "knight",
+        "runs": 668,
+        "survival": 668,
+        "medianDps": 1468.9221576965106,
+        "minHpRatio": 0.9378571428571428,
+        "maxLightInterruptions": 0,
+        "allWalkable": true,
+        "minGathered": 12
+      },
+      {
+        "hero": "barbarian",
+        "runs": 666,
+        "survival": 666,
+        "medianDps": 1625.0052676185878,
+        "minHpRatio": 0.9494444444444444,
+        "maxLightInterruptions": 0,
+        "allWalkable": true,
+        "minGathered": 11
+      },
+      {
+        "hero": "mage",
+        "runs": 666,
+        "survival": 666,
+        "medianDps": 1755.324662921318,
+        "minHpRatio": 0.8613333333333333,
+        "maxLightInterruptions": 0,
+        "allWalkable": true,
+        "minGathered": 12
+      }
+    ],
+    "whirlwind": [
+      {
+        "fps": 30,
+        "done": true,
+        "ticks": 7,
+        "acceptedHits": 7,
+        "damage": 2027.2179809262045,
+        "damageUpperBound": 3742.2000000000003,
+        "lastHitAt": 1.6006666666666685,
+        "firstHitAt": 0.16666666666666666
+      },
+      {
+        "fps": 60,
+        "done": true,
+        "ticks": 7,
+        "acceptedHits": 7,
+        "damage": 2027.2179809262045,
+        "damageUpperBound": 3742.2000000000003,
+        "lastHitAt": 1.5506666666666662,
+        "firstHitAt": 0.16666666666666666
+      },
+      {
+        "fps": 120,
+        "done": true,
+        "ticks": 7,
+        "acceptedHits": 7,
+        "damage": 2027.2179809262045,
+        "damageUpperBound": 3742.2000000000003,
+        "lastHitAt": 1.5256666666666638,
+        "firstHitAt": 0.16666666666666666
+      }
+    ]
+  },
+  {
+    "file": "combat-head-v2",
+    "passed": true,
+    "runs": 2000,
+    "failures": [],
+    "heroes": [
+      {
+        "hero": "knight",
+        "runs": 668,
+        "survival": 668,
+        "medianDps": 1468.7236579927655,
+        "minHpRatio": 0.9378571428571428,
+        "maxLightInterruptions": 0,
+        "allWalkable": true,
+        "minGathered": 12
+      },
+      {
+        "hero": "barbarian",
+        "runs": 666,
+        "survival": 666,
+        "medianDps": 1625.0052676185878,
+        "minHpRatio": 0.9494444444444444,
+        "maxLightInterruptions": 0,
+        "allWalkable": true,
+        "minGathered": 11
+      },
+      {
+        "hero": "mage",
+        "runs": 666,
+        "survival": 666,
+        "medianDps": 1755.324662921318,
+        "minHpRatio": 0.8613333333333333,
+        "maxLightInterruptions": 0,
+        "allWalkable": true,
+        "minGathered": 12
+      }
+    ],
+    "whirlwind": [
+      {
+        "fps": 30,
+        "done": true,
+        "ticks": 7,
+        "acceptedHits": 7,
+        "damage": 2027.2179809262045,
+        "damageUpperBound": 3742.2000000000003,
+        "lastHitAt": 1.6006666666666685,
+        "firstHitAt": 0.16666666666666666
+      },
+      {
+        "fps": 60,
+        "done": true,
+        "ticks": 7,
+        "acceptedHits": 7,
+        "damage": 2027.2179809262045,
+        "damageUpperBound": 3742.2000000000003,
+        "lastHitAt": 1.5506666666666662,
+        "firstHitAt": 0.16666666666666666
+      },
+      {
+        "fps": 120,
+        "done": true,
+        "ticks": 7,
+        "acceptedHits": 7,
+        "damage": 2027.2179809262045,
+        "damageUpperBound": 3742.2000000000003,
+        "lastHitAt": 1.5256666666666638,
+        "firstHitAt": 0.16666666666666666
+      }
+    ]
+  }
+]

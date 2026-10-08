@@ -12,6 +12,7 @@ export function beginEnemyGather(enemy, x, z, speed, duration) {
   if (!enemy.alive || enemy.spawning || enemy.disposed || enemy.gatherBlockT > 0 || originLocked(enemy) || !Number.isFinite(x) || !Number.isFinite(z) ||
       !Number.isFinite(speed) || speed <= 0 || !Number.isFinite(duration) || duration <= 0) return false;
   enemy.gatherX = x; enemy.gatherZ = z;
+  enemy.gatherWindupOwner = null;
   enemy.gatherSpeed = Math.min(32, speed) * (enemy.isBoss ? .15 : enemy.isElite ? .5 : 1);
   enemy.gatherT = Math.max(enemy.gatherT || 0, duration);
   return true;
@@ -20,6 +21,10 @@ export function beginEnemyGather(enemy, x, z, speed, duration) {
 /** Actor의 기존 Floor.resolve를 통과하는 속도만 예약해 중심 관통·잔여 관성을 막는다. */
 export function prepareEnemyGather(enemy, dt) {
   if (!(enemy.gatherT > 0) || !Number.isFinite(dt) || dt <= 0 || enemy.game.paused) return false;
+  const owner = enemy.gatherWindupOwner;
+  if (owner && (owner.state !== 'attack' || owner.hitDone || owner._gatherAttackSerial !== enemy.gatherAttackSerial)) {
+    enemy.gatherT = 0; enemy.gatherWindupOwner = null; return false;
+  }
   if (!enemy.alive || enemy.spawning || enemy.disposed || !enemy.game.active || !enemy.game.player?.alive) {
     enemy.gatherT = 0; return false;
   }
@@ -62,6 +67,27 @@ export function gatherEnemies(game, center, radius, speed, duration = .14) {
   }
   if (count && (game._vacSfx === undefined || game.elapsed - game._vacSfx > .45)) {
     game._vacSfx = game.elapsed; audio.suck({ vol: .22, dur: .4 });
+  }
+  return count;
+}
+
+/** 전사 마무리는 실제 공격 방향 안에서 준비 중에 모은다. 명중 뒤 넉백을 다시 지우지 않는다. */
+export function gatherWarriorWindup(player, combo, duration) {
+  const game = player.game;
+  if (!game.active || game.paused || !player.alive || !['knight','barbarian'].includes(player.def.id) || !combo.finisher) return 0;
+  const fx = Math.sin(player.yaw), fz = Math.cos(player.yaw), offset = combo.move === 'slam' ? .8 : 1.35;
+  let x = player.pos.x + fx * offset, z = player.pos.z + fz * offset;
+  if (game.world?.resolve) [x,z] = game.world.resolve(player.pos.x,player.pos.z,x,z,.55);
+  const radius = combo.range + (player.counterWindow > 0 ? 2.8 : 2), half = Math.min(Math.PI,(combo.arc || 160) * Math.PI / 360 + .12);
+  let count = 0;
+  for (const enemy of game.enemies) {
+    if (!enemy.alive || enemy.spawning) continue;
+    const dx = enemy.pos.x-player.pos.x, dz = enemy.pos.z-player.pos.z, distance = Math.hypot(dx,dz);
+    if (distance > radius) continue;
+    if (half < Math.PI && distance > .9 && (dx*fx+dz*fz)/distance < Math.cos(half)) continue;
+    if (enemy.gather(x,z,10,combo.hitAt*duration)) {
+      enemy.gatherWindupOwner = player; enemy.gatherAttackSerial = player._gatherAttackSerial; count++;
+    }
   }
   return count;
 }

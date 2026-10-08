@@ -1,0 +1,116 @@
+{
+  "scope": "Compiled production preview of the dirty working tree. Controlled scene capture with player position, app.step and wider card camera; not natural play or a deployed release.",
+  "build": {
+    "sha": "731c39e2c44341f3f3c1555b547d7577024774fb",
+    "dirty": true,
+    "builtAt": "2026-10-08T20:41:40.211Z",
+    "pwaRelease": "13517d2d79b445f0dcd7"
+  },
+  "fields": [
+    {
+      "id": "windmeadow",
+      "field": "meadow",
+      "start": {
+        "ok": true,
+        "stage": "meadow",
+        "mode": "battle",
+        "scene": "open-field-meadow"
+      },
+      "scene": {
+        "room": "초원 야영지",
+        "pos": [
+          -89.86918105650693,
+          0,
+          -85.38205087836832
+        ],
+        "drawCalls": 1,
+        "geometries": 70,
+        "texture": {
+          "field": "meadow",
+          "cells": 7785,
+          "texture": "GPT_Field_Grass_v1"
+        }
+      }
+    },
+    {
+      "id": "sunbreak_coast",
+      "field": "coast",
+      "start": {
+        "ok": true,
+        "stage": "coast",
+        "mode": "battle",
+        "scene": "open-field-coast"
+      },
+      "scene": {
+        "room": "해안 나루",
+        "pos": [
+          -71.0270865559578,
+          0,
+          -68.55935859959573
+        ],
+        "drawCalls": 1,
+        "geometries": 70,
+        "texture": {
+          "field": "coast",
+          "cells": 4865,
+          "texture": null
+        }
+      }
+    },
+    {
+      "id": "skywind_pass",
+      "field": "mountain",
+      "start": {
+        "ok": true,
+        "stage": "mountain",
+        "mode": "battle",
+        "scene": "open-field-mountain"
+      },
+      "scene": {
+        "room": "등산로 입구",
+        "pos": [
+          -67.11165457498282,
+          0,
+          -72.55096296686679
+        ],
+        "drawCalls": 1,
+        "geometries": 69,
+        "texture": {
+          "field": "mountain",
+          "cells": 5381,
+          "texture": "GPT_Dungeon_Stone_v1"
+        }
+      }
+    },
+    {
+      "id": "dawnward_city",
+      "field": "city",
+      "start": {
+        "ok": true,
+        "stage": "city",
+        "mode": "battle",
+        "scene": "open-field-city"
+      },
+      "scene": {
+        "room": "서문 광장",
+        "pos": [
+          -77.76976849604398,
+          0,
+          -81.35909148398787
+        ],
+        "drawCalls": 1,
+        "geometries": 71,
+        "texture": {
+          "field": "city",
+          "cells": 6264,
+          "texture": "GPT_Dungeon_Stone_v1"
+        }
+      }
+    }
+  ],
+  "errors": [],
+  "warnings": [
+    "Service Worker registration blocked by Playwright",
+    "THREE.WebGLRenderer: KHR_parallel_shader_compile extension not supported."
+  ]
+}
