@@ -11,7 +11,16 @@ const report = { started: new Date().toISOString(), head: execFileSync('git', ['
   fixture: 'Independent Chromium process per profile; fresh storage, normal RAF and randomness. Explicit native explore entry for current selection-first contract. Short joystick: release as soon as displacement >0.1, without minimum hold or added delay, then immediate menu tap; repeat five times. Native input only, no injected save/actor/route/time. Browser viewport QA, not physical Android or performance proof.', profiles: [], sources: {} };
 for (const file of ['src/ui/garden-ui.css', 'src/ui/oath-shell.js', 'src/main.js', 'src/engine/hub-controls.js', 'tools/garden-ui-qa.mjs', 'dist/index.html']) report.sources[file] = createHash('sha256').update(await fs.readFile(file)).digest('hex');
 assert(!execFileSync('git', ['status', '--porcelain'], { encoding: 'utf8' }).trim(), 'Freeze a clean source before QA');
-report.build = await (await fetch(`${origin}/version.json`)).json();
+async function servedBuild() {
+  const response = await fetch(`${origin}/version.json?verify=${Date.now()}`, { cache: 'no-store' });
+  assert(response.ok, 'Served version unavailable');
+  const version = await response.json(), local = JSON.parse(await fs.readFile('dist/version.json', 'utf8'));
+  assert(JSON.stringify(version) === JSON.stringify(local), 'Served build identity differs from local candidate');
+  const index = await fetch(`${origin}/?verify=${Date.now()}`, { cache: 'no-store' });
+  assert(index.ok && createHash('sha256').update(Buffer.from(await index.text())).digest('hex') === report.sources['dist/index.html'], 'Served index differs from local artifact');
+  return version;
+}
+report.build = await servedBuild();
 assert(report.build.sha === report.head && !report.build.dirty, 'Final UI QA requires the exact clean committed build');
 let browser;
 try {
@@ -35,10 +44,24 @@ try {
       await shot('selection');
       row.selectionLayout = await page.evaluate(() => { const p = document.querySelector('#citadel-command').getBoundingClientRect(), n = document.querySelector('#meta .bottomnav').getBoundingClientRect(); return { panelBottom:p.bottom, navTop:n.top, cards:document.querySelectorAll('[data-command-route]').length }; });
       assert(row.selectionLayout.cards === 12 && row.selectionLayout.panelBottom <= row.selectionLayout.navTop, 'Selection cards or dock overlap');
+      row.selectionRoutes = [];
+      for (const card of await page.locator('[data-command-route]').all()) {
+        const before = await page.evaluate(() => ({ energy:app.eco.s.energy,gold:app.eco.s.gold,pending:app.expedition.s.pending }));
+        const route = await card.getAttribute('data-command-route'), locked = await card.getAttribute('data-locked');
+        if (options.hasTouch) await card.tap(); else await card.click();
+        await page.locator('.citadel-hub-dialog[open]').waitFor();
+        assert(await page.locator('.citadel-hub-go').isDisabled() === (locked === 'true'), 'Selection access state mismatch');
+        await tap('.citadel-hub-cancel'); await page.waitForFunction(() => app.commandUI.visible);
+        assert(await card.evaluate(el => el===document.activeElement), 'Preparation did not restore native card focus');
+        const after = await page.evaluate(() => ({ energy:app.eco.s.energy,gold:app.eco.s.gold,pending:app.expedition.s.pending }));
+        assert(JSON.stringify(before)===JSON.stringify(after), 'Selection preview/cancel spent resources');
+        row.selectionRoutes.push({route,locked,cancelPreserved:true});
+      }
+      row.steps.push('12 native selection cards, locked access, cancel and focus restoration');
       await tap('#citadel-explore'); await page.waitForFunction(() => app.canWalkHub());
       await page.waitForTimeout(1200);
       row.layout = await page.evaluate(() => {
-        const selectors = ['#meta .bottomnav', '#meta .profile', '#meta .currencies', '.citadel-hub-place', '.citadel-hub-near', '.lobby-camera-tools', '.companion-launcher', ...(matchMedia('(any-pointer:coarse)').matches ? ['.citadel-hub-stick', '#lobby-camera-pad'] : [])];
+        const selectors = ['#meta .bottomnav', '#meta .profile', '#meta .currencies', '.citadel-hub-place', '.citadel-hub-near', '.lobby-camera-tools', '.companion-launcher', '#citadel-command-return', ...(matchMedia('(any-pointer:coarse)').matches ? ['.citadel-hub-stick', '#lobby-camera-pad'] : [])];
         const boxes = Object.fromEntries(selectors.map(s => { const el = document.querySelector(s), b = el.getBoundingClientRect(); return [s, { x: b.x, y: b.y, w: b.width, h: b.height }]; }));
         const buttons = [...document.querySelectorAll('#meta .bottomnav button')].map(el => { const b = el.getBoundingClientRect(); return { text: el.textContent.trim(), w: b.width, h: b.height, hit: el.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)) }; });
         return { boxes, buttons, overflow: document.documentElement.scrollWidth > innerWidth, viewport: { width: innerWidth, height: innerHeight } };
@@ -48,6 +71,8 @@ try {
       assert(!row.layout.overflow, 'Horizontal overflow');
       const a = row.layout.boxes['#meta .bottomnav'], b = row.layout.boxes['.citadel-hub-near'];
       assert(a.y >= b.y + b.h || b.x >= a.x + a.w || a.x >= b.x + b.w, 'Navigation overlaps gate invitation');
+      const place = row.layout.boxes['.citadel-hub-place'], back = row.layout.boxes['#citadel-command-return'];
+      assert(place.x+place.w<=back.x || back.x+back.w<=place.x || place.y+place.h<=back.y || back.y+back.h<=place.y, 'Return button overlaps location');
       await shot('hub'); row.steps.push('viewport, native hit targets and invitation/nav separation');
       const before = await page.evaluate(() => ({ ...app.hubMovement.position }));
       if (!options.hasTouch) {
@@ -92,6 +117,8 @@ try {
       await tap('#meta .bottomnav [data-tab="home"]'); await page.waitForFunction(() => app.commandUI.visible); row.steps.push('adventure menu and return');
       await tap('#citadel-explore'); await page.waitForFunction(() => app.canWalkHub());
       await tap('#lobby-camera-toggle'); assert(await page.locator('#lobby-camera-panel').isVisible(), 'Camera panel inaccessible'); await tap('#lobby-camera-toggle'); row.steps.push('camera settings remain accessible');
+      await tap('#citadel-command-return'); await page.waitForFunction(()=>app.commandUI.visible && !app.canWalkHub());
+      await tap('#citadel-explore'); await page.waitForFunction(()=>app.canWalkHub()); row.steps.push('native return to selection and explore reentry');
       row.gateWalk = [];
       for (const target of [{ x: 0, z: -8 }, { x: -9, z: -8 }, { x: -9, z: -9.5 }]) {
         let arrived = false;
@@ -131,6 +158,7 @@ try {
         assert(!row.smallOverflow, '320px currency clipping');
       }
       assert(!row.errors.length && !row.httpErrors.length, 'Runtime or HTTP errors'); row.status = 'passed';
+      row.menuObserved = await page.evaluate(() => window.menuObserved || []);
     } catch (e) { row.status = 'failed'; row.failure = String(e); row.menuObserved = await page.evaluate(() => window.menuObserved || []); await shot('failure'); }
     console.log(JSON.stringify({ id, status: row.status, failure: row.failure, steps: row.steps }));
     await fs.writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2)); await context.close(); await browser.close();
@@ -139,6 +167,6 @@ try {
 report.status = report.profiles.every(p => p.status === 'passed') ? 'passed' : 'failed';
 for (const [file, digest] of Object.entries(report.sources)) assert(createHash('sha256').update(await fs.readFile(file)).digest('hex') === digest, 'Source changed during UI QA');
 assert(execFileSync('git', ['rev-parse', 'HEAD'], { encoding:'utf8' }).trim() === report.head && !execFileSync('git', ['status','--porcelain'], { encoding:'utf8' }).trim(), 'Source identity changed during UI QA');
-const served = await (await fetch(`${origin}/version.json`)).json(); assert(JSON.stringify(served)===JSON.stringify(report.build), 'Served version changed during QA');
+const served = await servedBuild(); assert(JSON.stringify(served)===JSON.stringify(report.build), 'Served version changed during QA');
 report.finished = new Date().toISOString(); await fs.writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
 if (report.status !== 'passed') process.exitCode = 1;
