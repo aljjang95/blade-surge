@@ -78,7 +78,16 @@ export class UI {
     $('btn-resume').addEventListener('click', () => this.pause(false));
     $('btn-giveup').addEventListener('click', () => { this.pause(false); this.app.battle.defeat(); });
     $('btn-boss-shortcut').addEventListener('click', () => { const b = this.app.battle; if (b?.shortcutBoss()) { $('btn-boss-shortcut').hidden = true; this.setObjective(b.world); } });
-    $('btn-auto').addEventListener('click', () => { const p = this.app.battle.player; if (!p) return; const next = !p.auto; const saved = this.app.journey?.setAuto(next); if (saved?.ok === false) { this.toast(saved.error, 'red'); return; } p.auto = next; this.app._auto = next; $('btn-auto').classList.toggle('on', p.auto); this.toast(p.auto ? '자동 전투 ON · 다음 출격에도 적용' : '자동 전투 OFF · 다음 출격에도 적용'); });
+    $('btn-auto').addEventListener('click', (event) => {
+      const p = this.app.battle.player; if (!p) return;
+      const next = !p.auto, saved = this.app.journey?.setAuto(next);
+      if (saved?.ok === false) { this.toast(saved.error, 'red'); return; }
+      p.auto = next; this.app._auto = next;
+      $('btn-auto').classList.toggle('on', p.auto);
+      // 포인터 전환 후 WASD를 복구하되 키보드 UI 조작과 다른 컨트롤의 포커스는 유지한다.
+      if (event?.detail > 0 && document.activeElement === event.currentTarget) event.currentTarget.blur();
+      this.toast(p.auto ? '자동 전투 ON · 다음 출격에도 적용' : '자동 전투 OFF · 다음 출격에도 적용');
+    });
     $('btn-result-lobby').addEventListener('click', () => { if (canPrepareGrowth(this.app, this.resultData)) this.app.toLobby(); });
     $('btn-result-retry').addEventListener('click', () => { if (canPrepareGrowth(this.app, this.resultData)) this.app.startStage(this.app.battle.stage); });
     $('btn-result-auto-retry').addEventListener('click', async () => {

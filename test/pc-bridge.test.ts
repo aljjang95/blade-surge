@@ -79,6 +79,7 @@ test('exact-head mismatch blocks authentication and deployment before children',
   expect(f.children()).toHaveLength(0);
 });
 
+// 실제 Git 자식 수십 번의 Windows 시작 비용을 허용한다. 차단 조건·assertion은 그대로다.
 test('tracked modifications, staged edits and all untracked source block deploy and reconcile', () => {
   const f = fixture();
   for (const command of ['deploy', 'reconcile']) {
@@ -93,7 +94,7 @@ test('tracked modifications, staged edits and all untracked source block deploy 
     rmSync(resolve(f.root, 'nested/untracked.txt'));
   }
   expect(f.children()).toHaveLength(0);
-});
+}, process.platform === 'win32' ? 20000 : 5000);
 
 test('clean deployment enters only existing guard with explicit Wrangler auth; reconcile flag is fixed', () => {
   const f = fixture();
@@ -304,13 +305,14 @@ test('official Runway variable is accepted without credentials or provider netwo
   expect(childEnvironment({ RUNWAYML_API_SECRET: 'PRIVATE', PATH: 'system' })).toEqual({ PATH: 'system', WRANGLER_SEND_METRICS: 'false' });
 });
 
+// 암호화/해독 PowerShell과 Git fixture의 시작 비용은 애플리케이션 SLA가 아니다.
 test.skipIf(process.platform !== 'win32')('real raw-binary CurrentUser DPAPI child readiness uses one synthetic key without exporting value', () => {
   const f = fixture();
   mkdirSync(resolve(f.root, 'tools'));
   copyFileSync(resolve(workspace, 'tools/pc-bridge-dpapi.ps1'), resolve(f.root, 'tools/pc-bridge-dpapi.ps1'));
   const path = resolve(f.root, '.apex/synthetic.dpapi');
   const powershell = resolve(process.env.SystemRoot ?? 'C:/Windows', 'System32/WindowsPowerShell/v1.0/powershell.exe');
-  const script = '$ErrorActionPreference="Stop"; Add-Type -AssemblyName System.Security; $r=ConvertFrom-Json ([Console]::In.ReadToEnd()); $b=[Text.Encoding]::UTF8.GetBytes($r.value); $e=[Security.Cryptography.ProtectedData]::Protect($b,$null,[Security.Cryptography.DataProtectionScope]::CurrentUser); [IO.File]::WriteAllBytes($r.path,$e); [Array]::Clear($b,0,$b.Length)';
+  const script = '$ErrorActionPreference="Stop"; [Console]::InputEncoding=New-Object Text.UTF8Encoding($false,$true); Add-Type -AssemblyName System.Security; $r=ConvertFrom-Json ([Console]::In.ReadToEnd()); $b=[Text.Encoding]::UTF8.GetBytes($r.value); $e=[Security.Cryptography.ProtectedData]::Protect($b,$null,[Security.Cryptography.DataProtectionScope]::CurrentUser); [IO.File]::WriteAllBytes($r.path,$e); [Array]::Clear($b,0,$b.Length)';
   execFileSync(powershell, ['-NoLogo', '-NoProfile', '-NonInteractive', '-Command', script], { input: JSON.stringify({ path, value: 'synthetic-fish-only' }), env: f.env, stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
   f.profile.providers['fish-audio'] = { route: 'dpapi', path, keys: ['FISH_API_KEY'] }; f.save();
   const runner = (file: string, args: string[], options: any) => execFileSync(file, args, options) as string;
@@ -319,4 +321,4 @@ test.skipIf(process.platform !== 'win32')('real raw-binary CurrentUser DPAPI chi
   expect(JSON.stringify(result)).not.toContain('synthetic-fish-only');
   writeFileSync(path, Buffer.from([1, 2, 3]));
   expect(f.run('media-auth', 'dpapi', ['--provider=fish-audio'], { runner })).toEqual({ ok: false, code: 'CHILD', message: 'Local command failed or returned an invalid response.' });
-});
+}, 20000);

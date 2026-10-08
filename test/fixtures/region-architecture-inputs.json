@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "rendererSourceSha256": "7b0bd039b2040ea8c6c40be0fa8e58220d854d5a3955735a8834ad9ba0ce4644",
+  "capturedSource": "6fd971de9eb5cfbaf591271d7caf7ff921683dd9",
+  "cases": {
+    "floor4-crypt": "104c45b9fbdad39bf458529c81b67871411583d159f90607d93d7019cd03a8ed",
+    "floor4-throne": "104c45b9fbdad39bf458529c81b67871411583d159f90607d93d7019cd03a8ed",
+    "floor4-abyss": "104c45b9fbdad39bf458529c81b67871411583d159f90607d93d7019cd03a8ed",
+    "floor4-garden": "7330b044b43c8981c62579d310a3beeba713c9bef173cf51c1dbe10146f9d5e8",
+    "floor4-forge": "f660c77941b8e27683db82666d4ebdbc6cd29fe29f45d5d305ee7e9c3a7f645b",
+    "floor4-frost": "2986518b960dbb6865eb0d7d73aefe3d6ca7a30da293a967619144a582491969",
+    "floor4-tide": "b0191eba35c2e5ac645cdd56928d65d5d0b7f6cd5c872ef12fe2a070f839768d",
+    "floor4-crown": "7e0d122c170fcd3da7f200c82a8153c85ced25423078815f8cbda35dbb771074",
+    "campaign-1-1": "0d23eea45fb8aef199054ab888a651a1aa6d21184f52e53f972bf4dd6965d999",
+    "garden-loop": "69f3f36906bc69ecc0da0e1b5d46d6630ddd4b87f571f993db6696bffba49cff",
+    "story-memorial": "ffeefb8a863718a03a28b58c021749e9ed4f5132c28f368fa530e5b2834ce477",
+    "story-kiln": "eb9bb1cb565179ac23d060b1226f144ed5ed0de6677f7dac6832b6ef95c1fa5f",
+    "story-archive": "1137c94760ca787a3bd59274b8ed21ca9347b59ba3481d4a06759f7e6b36dc9f",
+    "story-beacon": "555f26780eeb55296e752ff01e4bf556cf68411773d6d4a15eb0b40a24c8aea2",
+    "story-tribunal": "c1e3cc202f96a190133213d5310d9bc5189a7cbde477229ced7f596aada235a4",
+    "story-confluence": "c824ad6a1eece613331aab205d0ea7f550f3437ebb2ea58614659d282698103d"
+  }
+}

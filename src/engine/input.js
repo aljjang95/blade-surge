@@ -103,7 +103,8 @@ export class Input {
       const u = (e) => {
         if (owner === null || (e.changedTouches ? !Array.from(e.changedTouches).some(t => t.identifier === owner) : owner !== 'mouse')) return;
         if (e.type === 'mouseup' && e.button !== undefined && e.button !== 0) return;
-        owner = null; e.preventDefault(); up && up();
+        // 브라우저가 취소한 터치는 기본 동작을 취소할 수 없어도 소유권을 해제한다.
+        owner = null; if (e.cancelable) e.preventDefault(); up && up();
       };
       this.onClear(() => { owner = null; });
       el.addEventListener('touchstart', d, { passive: false }); el.addEventListener('touchend', u); el.addEventListener('touchcancel', u);

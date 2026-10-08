@@ -114,6 +114,25 @@ function pointer(surface: EventTarget, type: string, id: number, x: number, y: n
 }
 
 describe('citadel input boundary', () => {
+  test('owned joystick touch cancels browser tap recognition without swallowing other UI or inactive touches', () => {
+    const { controls, host, joystick, setActive } = controlsFixture();
+    const touch = (target: EventTarget, cancelable = true) => {
+      const event = new Event('touchstart', { cancelable }); target.dispatchEvent(event); return event;
+    };
+    expect(touch(joystick).defaultPrevented).toBe(false);
+    pointer(joystick, 'pointerdown', 7, 80, 260);
+    expect(touch(joystick).defaultPrevented).toBe(true);
+    expect(touch(host).defaultPrevented).toBe(false);
+    expect(touch(joystick, false).defaultPrevented).toBe(false);
+    pointer(joystick, 'pointercancel', 7, 80, 260);
+    expect(touch(joystick).defaultPrevented).toBe(false);
+    setActive(false);
+    expect(touch(joystick).defaultPrevented).toBe(false);
+    setActive(true); controls.destroy();
+    pointer(joystick, 'pointerdown', 7, 80, 260);
+    expect(touch(joystick).defaultPrevented).toBe(false);
+  });
+
   test('keyboard interaction fires once per press and ignores focused UI, shortcuts and repeats', () => {
     const { controls, host } = controlsFixture();
     key(host, 'keydown', 'KeyW'); key(host, 'keydown', 'KeyD');

@@ -1,67 +1,32 @@
 import { expect, test } from 'bun:test';
-import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
 import { Floor } from '../src/game/world.js';
-import { stageDef } from '../src/data/stages.js';
-import { STORY_DUNGEONS } from '../src/data/story-dungeons.js';
-import { buildExpeditionStage, buildExpeditionWorld } from '../src/game/expedition-combat.js';
 import { buildRegionArchitecture } from '../src/game/region-architecture.js';
 import { GARDEN_MASTERY } from '../src/data/garden-mastery.js';
 import { SURFACE_TEXTURES } from '../src/engine/surface-textures.js';
 import { BattleOcclusion } from '../src/engine/battle-occlusion.js';
-import baseline from './fixtures/region-architecture-ae2260e.json';
+import { architectureCases, assertHistoricalInput, baseline, buildHistoricalArchitecture, geometryFingerprint, hash, materialShape } from './helpers/region-architecture-reference.mjs';
 
 type Range = { roomId: number; materialRole: number; batchId: number; start: number; count: number };
 type Landmark = { roomId: number; theme: string; kind: string; label: string; role: string; x: number; z: number };
 type MasteryRoom = { label: string; gardenMastery?: { version: string; diagonals: readonly {
   fromX: number; fromZ: number; toX: number; toZ: number;
 }[] } };
-const hash = (value: unknown) => createHash('sha256').update(JSON.stringify(value)).digest('hex');
-const themes = ['crypt', 'throne', 'abyss', 'garden', 'forge', 'frost', 'tide', 'crown'];
-const cases: [string, string, () => Floor][] = themes.map(theme => [`floor4-${theme}`, theme, () => new Floor(4, theme)]);
-cases.push(['campaign-1-1', 'garden', () => {
-  const stage = stageDef(1, 1);
-  return new Floor(stage.idx, stage.chapter.theme, undefined, stage.dungeon.layout as any);
-}]);
-cases.push(['garden-loop', 'garden', () => buildExpeditionWorld(buildExpeditionStage('dungeon', 'glass_garden', null))]);
-const storyMarks = new Set<string>();
-for (const map of Object.values(STORY_DUNGEONS)) {
-  if (storyMarks.has(map.landmark)) continue;
-  storyMarks.add(map.landmark);
-  cases.push([`story-${map.landmark}`, 'garden', () => new Floor(51, 'garden', undefined, map.layout as any)]);
-}
+const cases = architectureCases as [string, string, () => Floor][];
 
-function materialShape(material: THREE.MeshStandardMaterial) {
-  return {
-    type: material.type, color: material.color.toArray(), emissive: material.emissive.toArray(),
-    emissiveIntensity: material.emissiveIntensity, roughness: material.roughness, metalness: material.metalness,
-    vertexColors: material.vertexColors, transparent: material.transparent, opacity: material.opacity,
-    side: material.side, depthTest: material.depthTest, depthWrite: material.depthWrite,
-    map: material.map?.name || null, normalMap: material.normalMap?.name || null,
-    roughnessMap: material.roughnessMap?.name || null, bumpMap: material.bumpMap?.name || null,
-    bumpScale: material.bumpScale, normalScale: material.normalScale.toArray(),
-    shader: material.onBeforeCompile.toString(), cacheKey: material.customProgramCacheKey(),
-  };
-}
-
-// AE 원본의 방별 메시에서 기록한 순서 있는 바이트와 대조한다. 정점을 정렬하지 않는다.
-function geometryFingerprint(group: THREE.Group) {
-  const records = (group.children as THREE.Mesh[]).flatMap(mesh =>
-    (mesh.userData.roomRanges as Range[]).map(range => ({ mesh, range })));
-  records.sort((a, b) => a.range.roomId - b.range.roomId || a.range.materialRole - b.range.materialRole);
-  const digest = createHash('sha256');
-  for (const { mesh, range } of records) {
-    digest.update(JSON.stringify([range.roomId, range.materialRole, range.count]));
-    for (const name of Object.keys(mesh.geometry.attributes).sort()) {
-      const attr = mesh.geometry.getAttribute(name) as THREE.BufferAttribute;
-      digest.update(JSON.stringify([name, attr.itemSize, attr.normalized, attr.array.constructor.name]));
-      const bytes = attr.array.BYTES_PER_ELEMENT;
-      digest.update(new Uint8Array(attr.array.buffer, attr.array.byteOffset + range.start * attr.itemSize * bytes,
-        range.count * attr.itemSize * bytes));
-    }
+test('별도 V8도 16개 역사 원본과 현재 지오메트리 바이트 및 고정 메타데이터를 정확히 보존한다', () => {
+  const result = JSON.parse(execFileSync('node', [fileURLToPath(new URL('./helpers/region-architecture-v8.mjs', import.meta.url))],
+    { encoding: 'utf8', timeout: 60000 }));
+  expect(result.v8).toBeTruthy();
+  expect(Object.keys(result.cases).sort()).toEqual(Object.keys(baseline.cases).sort());
+  for (const [name, fingerprints] of Object.entries(result.cases) as [string, { geometrySha256: string; historicalGeometrySha256: string; archivedGeometrySha256: string; metadataSha256: string }][]) {
+    expect(fingerprints.geometrySha256).toBe(fingerprints.historicalGeometrySha256);
+    expect(fingerprints.archivedGeometrySha256).toBe(baseline.cases[name].geometrySha256);
+    expect(fingerprints.metadataSha256).toBe(baseline.cases[name].metadataSha256);
   }
-  return digest.digest('hex');
-}
+});
 
 // 역사 원본 hash는 그대로 검사하고 현재 소스의 추가분을 한 방·한 재질의 정확한 꼬리로 한정한다.
 function expectGardenMasteryAddition(current: THREE.Group, legacy: THREE.Group, floor: Floor) {
@@ -167,12 +132,21 @@ for (const [name, theme, makeFloor] of cases) test(`${name}: AE 방의 모든 �
     // 정확한 부모 layout에는 labels가 없어 room3의 역사 이름은 빈 문자열이다.
     historicalRoom.label = '';
   }
+  assertHistoricalInput(name, control);
   const controlBefore = hash([control.rooms, control.corridors, Array.from(control.mask!), Array.from(control.inner!), control.gates, control.sealed]);
   const current = mastery ? buildRegionArchitecture(floor, theme) : null;
   const group = buildRegionArchitecture(mastery ? control : floor, theme);
   const original = baseline.cases[name as keyof typeof baseline.cases];
   expect(original).toBeDefined();
-  expect(geometryFingerprint(group)).toBe(original.geometrySha256);
+  // Bun과 V8의 초미세 법선 잔차를 허용 오차로 덮지 않고 같은 엔진의 원본 바이트와 대조한다.
+  const historical = buildHistoricalArchitecture(control, theme);
+  try {
+    expect(geometryFingerprint(group)).toBe(geometryFingerprint(historical));
+    expect(hash([historical.userData.roomDetails, historical.userData.landmarks])).toBe(original.metadataSha256);
+    const historicalMaterials = new Map<number, THREE.MeshStandardMaterial>();
+    for (const mesh of historical.children as THREE.Mesh[]) historicalMaterials.set(Number(mesh.name.split('-').at(-1)), mesh.material as THREE.MeshStandardMaterial);
+    expect(hash([...historicalMaterials.entries()].sort(([a], [b]) => a - b).map(([role, material]) => [role, materialShape(material)]))).toBe(original.materialsSha256);
+  } finally { historical.userData.dispose(); }
   expect(hash([group.userData.roomDetails, group.userData.landmarks])).toBe(original.metadataSha256);
   expect(group.children.length).toBeLessThan(original.meshes);
   let vertices = 0;
@@ -246,6 +220,25 @@ for (const [name, theme, makeFloor] of cases) test(`${name}: AE 방의 모든 �
     current.userData.dispose();
   }
   group.userData.dispose();
+});
+
+test('고정 입력 검사는 원본과 현재 렌더러에 동시에 들어갈 방 크기 변조도 거부한다', () => {
+  const floor = cases[0][2](); assertHistoricalInput(cases[0][0], floor);
+  floor.rooms[0].w += .01;
+  expect(() => assertHistoricalInput(cases[0][0], floor)).toThrow('frozen starting floor changed');
+});
+
+for (const attribute of ['position', 'normal', 'color', 'uv']) test(`바이트 비교는 ${attribute}의 미세 손상도 거부한다`, () => {
+  const group = buildRegionArchitecture(cases[0][2](), cases[0][1]);
+  try {
+    const expected = geometryFingerprint(group);
+    const mesh = (group.children as THREE.Mesh[]).find(mesh => mesh.geometry.getAttribute(attribute))!;
+    const attr = mesh.geometry.getAttribute(attribute) as THREE.BufferAttribute;
+    // 한 Float32 비트만 뒤집는다. 수치 허용 오차나 정점 정렬로 이 손상을 숨기지 않는다.
+    const bytes = new Uint8Array(attr.array.buffer, attr.array.byteOffset, attr.array.byteLength);
+    bytes[0] ^= 1;
+    expect(geometryFingerprint(group)).not.toBe(expected);
+  } finally { group.userData.dispose(); }
 });
 
 test('연결이 없거나 실제 월드 거리가 먼 방은 같은 배치로 합치지 않는다', () => {

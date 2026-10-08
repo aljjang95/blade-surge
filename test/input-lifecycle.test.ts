@@ -74,6 +74,24 @@ describe('사람 입력 수명주기', () => {
     key('keydown','KeyJ'); touch('touchend',9); expect(input.attackHeld).toBe(true);
     key('keyup','KeyJ'); expect(input.attackHeld).toBe(false);
   });
+  for (const cancelable of [false, true]) test(`공격 터치 해제 cancelable=${cancelable}는 키 홀드를 보존하고 허용된 기본 동작만 취소한다`, () => {
+    const button = elements.get('btn-attack')!;
+    const start = new Event('touchstart', { cancelable: true });
+    Object.defineProperty(start, 'changedTouches', { value: [{ identifier: 9 }] });
+    button.dispatchEvent(start); key('keydown', 'KeyJ');
+    const end = new Event(cancelable ? 'touchend' : 'touchcancel', { cancelable });
+    Object.defineProperty(end, 'changedTouches', { value: [{ identifier: 9 }] });
+    let prevented = 0;
+    end.preventDefault = () => { prevented++; Event.prototype.preventDefault.call(end); };
+    button.dispatchEvent(end);
+    expect(prevented).toBe(cancelable ? 1 : 0);
+    expect(end.defaultPrevented).toBe(cancelable);
+    expect(input.attackSources.has('button')).toBe(false);
+    expect(input.attackHeld).toBe(true);
+    key('keyup', 'KeyJ'); expect(input.attackHeld).toBe(false);
+    // 취소 뒤 새 손가락도 같은 버튼을 다시 누를 수 있다.
+    button.dispatchEvent(start); expect(input.attackHeld).toBe(true);
+  });
   test('카메라 패드로 포커스 이동 시 키 이동만 멈추고 터치는 유지한다', () => {
     key('keydown','KeyW'); key('keydown','KeyJ');
     Object.assign(input.joy, {active:true,id:7}); input.screenMove.x = 1;
