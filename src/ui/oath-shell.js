@@ -15,9 +15,9 @@ export class OathShell {
   const selected=['home','heroes','stage'].map(id=>original.find(b=>b.dataset.tab===id));
   for(const button of original)if(!selected.includes(button))this.grid.append(button);
   for(const button of selected)if(button)nav.append(button);
-  const homeButton=selected[0];if(homeButton)for(const node of homeButton.childNodes)if(node.nodeType===3&&node.textContent.trim())node.textContent='거점';
+  const homeButton=selected[0];if(homeButton){for(const node of homeButton.childNodes)if(node.nodeType===3&&node.textContent.trim())node.textContent='출격';homeButton.addEventListener('click',()=>app.setHubWalkMode(false));}
   const offers=home.querySelector('.lobby-right');if(offers?.children.length){const detail=el('details','oath-menu-offers'),summary=el('summary','','추가 상품 안내'),items=el('div');items.append(...offers.children);detail.append(summary,items);this.menu.append(detail);}
-  const growth=el('button','oath-nav-growth','성장');growth.type='button';growth.onclick=()=>document.querySelector('.mw-open')?.click();nav.append(growth,trigger);
+  const growth=el('button','oath-nav-growth','성장');growth.type='button';growth.onclick=()=>{app.setHubWalkMode(false);document.querySelector('.mw-open')?.click();};nav.append(growth,trigger);
   // 기존 그림을 장식으로 연결하고 메뉴 이름과 이벤트 소유권을 유지한다.
   for(const [button,icon] of [[growth,'ic-growth'],[trigger,'ic-menu']]){
    const art=el('i',`ic ${icon}`);art.setAttribute('aria-hidden','true');button.prepend(art);
@@ -44,7 +44,7 @@ export class OathShell {
   if(run){const detail=el('details','oath-run-details'),summary=el('summary','','성장 정보');run.before(detail);detail.append(summary,run);}
   const pause=document.querySelector('#btn-pause');pause.textContent='Ⅱ';pause.setAttribute('aria-label','일시정지');
  }
- open(){if(this.disposed||this.app.mode!=='lobby'||this.app.stageStarting||this.menu.open)return;this.app.input.clear();this.restoreFocus=true;this.menu.showModal();this.trigger.setAttribute('aria-expanded','true');}
+ open(){if(this.disposed||this.app.mode!=='lobby'||this.app.stageStarting||this.menu.open)return;this.app.setHubWalkMode(false);this.app.input.clear();this.restoreFocus=true;this.menu.showModal();this.trigger.setAttribute('aria-expanded','true');}
  close(){if(!this.menu.open)return;this.restoreFocus=true;this.menu.close();}
  dispose(){if(this.disposed)return;this.disposed=true;this.observer.disconnect();this.modalObserver.disconnect();document.removeEventListener('close',this.returnMenuFocus,true);this.close();}
 }

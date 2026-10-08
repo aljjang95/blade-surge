@@ -1,37 +1,51 @@
 {
   "schema": "blade-surge-storyboard/v1",
-  "title": "서약 전당에서 첫 전투까지",
-  "intent": "기존 얼굴·직업·리그·저장을 보존하고, 실제 마을의 큰 공간과 읽히는 타격을 먼저 체감한다. 이 시간은 기획 템플릿이며 실제 플레이 시간이나 구현 완료를 뜻하지 않는다.",
+  "title": "콘텐츠 선택에서 첫 전투까지",
+  "intent": "홈에서 콘텐츠를 선택하고 기존 준비·입장 판정으로 출격한다. 로비 산책은 선택적 체험이며 전투·보급의 필수 동선이 아니다. 기존 얼굴·직업·리그·저장을 보존한다. 시간과 장면은 기획 템플릿이며 구현 완료나 실제 플레이 시간을 뜻하지 않는다.",
   "shots": [
     {
       "number": "01",
       "time": "00–10초",
-      "status": "기획",
-      "title": "영웅이 먼저 보이는 도착",
-      "composition": "차가운 석재와 따뜻한 황동 사이, 상체·무기와 서약 전당의 수직 실루엣을 읽는다.",
-      "action": "현재 저장 영웅으로 마을에 진입한다. 화면 전체 회전과 밝은 소품이 시선을 빼앗지 않는다.",
-      "acceptance": "640×360에서 얼굴·무기·출격 행동을 첫 화면에 식별",
-      "assetRefs": ["public/models/heroes-v3/", "public/models/citadel-hub-v1/"]
+      "status": "선택형 홈 개선 기획",
+      "title": "영웅과 콘텐츠가 보이는 홈",
+      "composition": "현재 영웅과 출격·정비·상점의 우선순위를 읽는다. 배경의 게이트와 마을은 기능 버튼을 가리지 않는다.",
+      "action": "저장된 영웅으로 홈에 진입하고 콘텐츠를 선택한다. 이동 조작을 먼저 요구하지 않는다.",
+      "acceptance": "390×844/640×360/1280×720에서 콘텐츠·상점·마을 체험을 구별하고 주요 행동 44px",
+      "assetRefs": [
+        "src/main.js",
+        "src/ui/oath-shell.js",
+        "public/models/heroes-v3/"
+      ]
     },
     {
       "number": "02",
       "time": "10–25초",
-      "status": "기획",
-      "title": "숲이 감싸는 마을 광장",
+      "status": "선택적 체험 기획",
+      "title": "원할 때 둘러보는 마을",
       "composition": "낮은 길가 식생·중간 수목·높은 외곽 수관으로 깊이를 만든다. 광장과 통행로는 비워 둔다.",
-      "action": "직접 걸어 광장과 상점/NPC를 발견한다. 나무를 장식 벽으로 쓰되 기존 충돌과 경로를 보존한다.",
-      "acceptance": "전경/중경/원경 구별, 관문 접근과 NPC 조작이 가려지지 않음",
-      "assetRefs": ["public/models/citadel-hub-v1/planter.glb", "public/models/environment/studio-kit/evergreen-tree.glb", "public/models/environment/studio-kit/broadleaf-tree.glb", "public/models/environment/studio-kit/timber-cottage.glb"]
+      "action": "마을 둘러보기를 선택한 경우에만 산책한다. 언제든 홈으로 돌아와 콘텐츠·상점을 바로 연다.",
+      "acceptance": "마을 체험이 입장/보급의 필수 동선이 아니며 홈 복귀 후 이동 키/포인터가 남지 않음",
+      "assetRefs": [
+        "public/models/citadel-hub-v1/planter.glb",
+        "public/models/environment/studio-kit/evergreen-tree.glb",
+        "public/models/environment/studio-kit/broadleaf-tree.glb",
+        "public/models/environment/studio-kit/timber-cottage.glb"
+      ]
     },
     {
       "number": "03",
       "time": "25–40초",
-      "status": "기존 흐름 위 개선",
-      "title": "유리 정원으로 출발",
-      "composition": "정원 관문의 고유 실루엣과 실제 출격 준비가 이어진다. 기본/심층·비용·영웅을 명확히 확인한다.",
-      "action": "물리 관문에서 기존 UI로 난이도를 고르고 출격한다.",
-      "acceptance": "기존 입장/해금/에너지 판정, 고정 출발 버튼, cancel/Tab/스크롤 유지",
-      "assetRefs": ["public/models/citadel-hub-v1/gate-glass_garden.glb", "docs/citadel-departure-preparation.md"]
+      "status": "선택형 출격 개선 기획",
+      "title": "던전 선택과 포털의 인상",
+      "composition": "콘텐츠 카드와 판타지 던전 게이트가 테마·위험을 표현한다. 선택 후 기본/심층·비용·보상·영웅을 확인한다.",
+      "action": "홈의 콘텐츠 UI에서 던전을 선택하고 기존 출격 준비를 거쳐 입장한다. 산책 중 게이트 상호작용도 보존한다.",
+      "acceptance": "기존 해금·에너지·환급·보상 판정과 취소/포커스 복귀 유지, 출격 중 중복 실행 없음",
+      "assetRefs": [
+        "src/ui/citadel-hub.js",
+        "src/expansion/hub.jsx",
+        "src/game/citadel-gate-designs.js",
+        "docs/citadel-departure-preparation.md"
+      ]
     },
     {
       "number": "04",
@@ -39,9 +53,13 @@
       "status": "기존 흐름 위 개선",
       "title": "처음 베는 한 번",
       "composition": "준비→접촉→잔광의 방향이 보이고, 몸/무기를 남긴다. 경타의 소리는 짧고 마무리는 더 무겁다.",
-      "action": "실제 공격 홀드와 새 입력으로 콤보를 잇고 회피한다.",
+      "action": "새 공격 입력을 반복해 수동 콤보를 잇고 회피한다. AUTO 선택과 수동 입력을 구별한다.",
       "acceptance": "새 shader 끊김·404 없음, 실제 명중에서만 피드백, LOW/reduced 유지",
-      "assetRefs": ["src/engine/fx.js", "src/engine/audio.js", "docs/manual-combo-feedback.md"]
+      "assetRefs": [
+        "src/engine/fx.js",
+        "src/engine/audio.js",
+        "docs/manual-combo-feedback.md"
+      ]
     },
     {
       "number": "05",
@@ -51,7 +69,11 @@
       "composition": "큰 기술의 외곽 실루엣과 위험 예고를 분리한다. 전술 장치와 두 갈래 길은 플레이 선택으로 연결한다.",
       "action": "적을 모아 스킬로 정리하고 기존 정원 집결/방출 장치를 선택한다.",
       "acceptance": "영웅·무기·적의 예고 판독, 장치1회/정지/방이탈/종료 경계 유지",
-      "assetRefs": ["src/data/jade-tactics-geometry-v1.json", "docs/assets/jade-tactics-v1.md", "docs/ability-vfx-signatures.md"]
+      "assetRefs": [
+        "src/data/jade-tactics-geometry-v1.json",
+        "docs/assets/jade-tactics-v1.md",
+        "docs/ability-vfx-signatures.md"
+      ]
     },
     {
       "number": "06",
@@ -59,9 +81,13 @@
       "status": "기존 흐름 검증",
       "title": "보상이 다음 모험으로",
       "composition": "드랍·장비 변화가 보이고 결과의 통계와 다음 행동이 한 화면에서 읽힌다.",
-      "action": "실제 보상을 받고 정비·저장·다시 출격한다. 전체 층 완주는 PRD 150–420초 범위로 별도 확인한다.",
+      "action": "실제 보상을 받고 홈으로 돌아와 정비·보급·저장·재출격한다. 전체 층 완주는 PRD 150–420초 범위로 별도 확인한다.",
       "acceptance": "중복 정산0, 기존 저장 보존, 재로딩과 새 전투 상태, 44px 결과 행동",
-      "assetRefs": ["public/models/armory-v1/", "_autopipe/qa-requirements.md", "PRD.md"]
+      "assetRefs": [
+        "public/models/armory-v1/",
+        "_autopipe/qa-requirements.md",
+        "PRD.md"
+      ]
     }
   ]
 }

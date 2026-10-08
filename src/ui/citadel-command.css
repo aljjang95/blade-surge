@@ -1,0 +1,50 @@
+.citadel-command[hidden], .citadel-command-return[hidden] { display: none !important; }
+.citadel-command { position: absolute; inset: calc(66px + var(--sat)) max(20px, var(--sar)) calc(74px + var(--sab)) max(20px, var(--sal)); max-width: 1020px; margin-inline: auto; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; padding: 22px; color: #ecedda; background: linear-gradient(135deg, #10262afa, #102420eb 70%, #19302bf0); border: 1px solid #b8cca13b; border-radius: 18px; box-shadow: 0 16px 70px #07101180; pointer-events: auto; }
+.citadel-command button { min-height: 44px; cursor: pointer; font: 600 13px system-ui, sans-serif; color: #e4e9d8; border: 1px solid #c5cbaa40; border-radius: 9px; background: #254137; padding: 10px 14px; text-align: left; }
+.citadel-command button:hover { border-color: #e2c88e; background-color: #2c4a3d; }
+.citadel-command button:focus-visible, .citadel-command-return:focus-visible { outline: 3px solid #ffe0a5; outline-offset: -3px; }
+.citadel-command-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.citadel-command-kicker { font-size: 10px; letter-spacing: .14em; color: #c9bd8e; }
+.citadel-command-heading h1 { margin: 5px 0; font-size: clamp(22px, 3vw, 30px); letter-spacing: -.04em; }
+.citadel-command-heading p { margin: 4px 0 0; color: #afc4b8; font-size: 12px; }
+.citadel-command-explore { flex: none; }
+.citadel-command-hero { display: flex; align-items: center; gap: 12px; margin: 18px 0; padding: 10px 12px; border: 1px solid #b8ccaa24; border-radius: 10px; background: #b3ccaa08; }
+.citadel-command-hero img { width: 44px; height: 44px; object-fit: cover; border: 1px solid #dfc28388; border-radius: 8px; }
+.citadel-command-hero > div { display: flex; flex: 1; flex-direction: column; gap: 4px; }
+.citadel-command-hero strong { font-size: 14px; }.citadel-command-hero span { font-size: 11px; color: #b6cbbb; }
+.citadel-command-destinations { display: grid; grid-template-columns: 1.6fr 1fr; gap: 10px; }
+.citadel-command-destinations button { display: flex; flex-direction: column; gap: 5px; padding: 16px 18px; overflow: hidden; position: relative; }
+.citadel-command-destinations button::after { content: ''; position: absolute; width: 110px; height: 110px; right: -30px; top: -15px; border: 1px solid #e0c49030; border-radius: 50%; box-shadow: 0 0 0 12px #ddc19509, 0 0 0 24px #ddc19505; pointer-events: none; }
+.citadel-command-destinations .citadel-command-campaign { background: linear-gradient(115deg, #455440, #203a33); border-color: #d5bd7859; }
+.citadel-command-destinations .citadel-command-arena { background: linear-gradient(115deg, #37454d, #20323a); }
+.citadel-command-destinations strong { font-size: 21px; color: #f1e6c8; }.citadel-command-destinations small { font-size: 9px; letter-spacing: .1em; color: #bccaac; }.citadel-command-destinations span { font-size: 12px; color: #c9d5c4; }
+.citadel-command-destinations .citadel-command-next { letter-spacing: 0; color: #e1c596; }
+.citadel-command-tools { display: flex; gap: 7px; flex-wrap: wrap; margin: 12px 0 22px; }.citadel-command-tools button { flex: 1 0 auto; text-align: center; padding-inline: 10px; font-size: 12px; background: #162f2c; }
+.citadel-command-route-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }.citadel-command-route-heading h2 { font-size: 18px; margin: 0; }.citadel-command-route-heading span { color: #bbcdad; font-size: 11px; }
+.citadel-command-route-help { font-size: 11px; color: #afc2b5; line-height: 1.5; margin: 7px 0 12px; }
+.citadel-command-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.citadel-command .citadel-command-route { display: flex; flex-direction: column; padding: 0; overflow: hidden; background: #0c2222; border-color: color-mix(in srgb, var(--route-accent), transparent 68%); }
+.citadel-command-art { width: 100%; height: 92px; object-fit: cover; object-position: center 38%; background: #193331; }
+.citadel-command-route-copy { padding: 11px 12px; display: flex; flex-direction: column; gap: 6px; }.citadel-command-route-copy small { color: var(--route-accent); font-size: 8px; letter-spacing: .07em; }.citadel-command-route-copy h3 { margin: 0; font-size: 15px; line-height: 1.25; }.citadel-command-reward { color: #bbccba; font-size: 10px; }.citadel-command-route-status { display: block; color: #e5d4a7; font-size: 11px; border-top: 1px solid #b7c6a81c; padding-top: 7px; margin-top: 2px; }
+.citadel-command-route[data-locked='true'] .citadel-command-art { filter: saturate(.5); }.citadel-command-route[data-locked='true'] .citadel-command-route-status { color: #bbbfba; }
+.citadel-command-return { position: absolute; left: max(18px, var(--sal)); top: calc(60px + var(--sat)); z-index: 29; min-height: 44px; padding: 10px 13px; border: 1px solid #dac48870; border-radius: 8px; background: #183631f2; color: #f0e6c8; font: 600 13px system-ui, sans-serif; cursor: pointer; pointer-events: auto; }
+@media (max-width: 700px) { .citadel-command { inset-inline: max(10px, var(--sal)) max(10px, var(--sar)); padding: 15px; border-radius: 12px; }.citadel-command-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.citadel-command-heading { gap: 10px; }.citadel-command-explore { font-size: 11px !important; padding-inline: 10px !important; }.citadel-command-destinations button { padding: 13px; }.citadel-command-heading p { font-size: 11px; }.citadel-command-tools { gap: 6px; } }
+@media (max-width: 420px) { .citadel-command-heading h1 { font-size: 23px; }.citadel-command-kicker { font-size: 8px; }.citadel-command-heading p { max-width: 180px; line-height: 1.5; }.citadel-command-hero { margin-block: 14px; padding: 9px; gap: 8px; }.citadel-command-hero button { font-size: 11px; padding: 8px; }.citadel-command-grid { gap: 8px; }.citadel-command-route-copy { padding: 10px; }.citadel-command-art { height: 82px; }.citadel-command-route-copy h3 { font-size: 13px; }.citadel-command-route-heading span { font-size: 10px; }.citadel-command-destinations strong { font-size: 19px; }.citadel-command-destinations span { font-size: 10px; } }
+@media (orientation: landscape) and (max-height: 550px) { .citadel-command { top: calc(58px + var(--sat)); bottom: calc(66px + var(--sab)); padding: 15px 18px; }.citadel-command-heading h1 { font-size: 24px; }.citadel-command-hero { margin-block: 12px; }.citadel-command-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }.citadel-command-art { height: 78px; }.citadel-command-return { top: calc(58px + var(--sat)); } }
+@media (orientation: landscape) and (max-height: 550px) and (min-width: 600px) {
+  .citadel-command { display: grid; grid-template-columns: minmax(170px, 25%) minmax(0, 1fr); column-gap: 16px; align-content: start; align-items: start; }
+  .citadel-command-heading { grid-column: 1 / -1; margin-bottom: 15px; }.citadel-command-heading p { display: none; }
+  .citadel-command-hero { grid-column: 1; grid-row: 2; flex-wrap: wrap; margin: 0 0 10px; padding: 8px; gap: 8px; }.citadel-command-hero img { width: 34px; height: 34px; }.citadel-command-hero > div { min-width: 95px; }.citadel-command-hero button { width: 100%; text-align: center; }
+  .citadel-command-destinations { grid-column: 1; grid-row: 3; grid-template-columns: 1fr; }.citadel-command-destinations button { padding: 11px; }.citadel-command-destinations strong { font-size: 17px; }.citadel-command-destinations span { font-size: 10px; }.citadel-command-destinations .citadel-command-next { display: none; }
+  .citadel-command-tools { grid-column: 1; grid-row: 4; margin: 10px 0 0; }.citadel-command-tools button { flex-basis: 100%; }
+  .citadel-command-routes { grid-column: 2; grid-row: 2 / 5; }.citadel-command-route-heading { align-items: start; flex-wrap: wrap; gap: 4px; }.citadel-command-route-help { margin: 6px 0 9px; }
+}
+@media (orientation: landscape) and (max-height: 550px) and (min-width: 600px) and (max-width: 700px) { .citadel-command-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }.citadel-command-route-copy { padding: 9px; }.citadel-command-route-copy h3 { font-size: 13px; }.citadel-command-art { height: 64px; } }
+/* 낮은 가로 화면에서도 첫 게이트의 이름·비용·선택 상태를 한눈에 보여 준다. */
+@media (orientation: landscape) and (max-height: 400px) and (min-width: 600px) {
+  .citadel-command { padding: 10px 16px; column-gap: 14px; }
+  .citadel-command-heading { min-height: 44px; margin-bottom: 8px; }.citadel-command-kicker { display: none; }.citadel-command-heading h1 { margin: 0; font-size: 21px; line-height: 1.25; }
+  .citadel-command-route-help { display: none; }.citadel-command-route-heading { margin-bottom: 8px; }.citadel-command-route-heading h2 { font-size: 16px; line-height: 1.3; }.citadel-command-route-heading span { font-size: 10px; line-height: 1.3; }
+  .citadel-command-art { height: 44px; }.citadel-command-route-copy { padding: 8px; gap: 4px; }.citadel-command-route-copy small { display: none; }.citadel-command-route-copy h3 { font-size: 13px; line-height: 1.25; }.citadel-command-reward { font-size: 11px; line-height: 1.25; }.citadel-command-route-status { margin-top: 0; padding-top: 5px; font-size: 11px; line-height: 1.25; }
+}
+@media (prefers-reduced-motion: reduce) { .citadel-command { scroll-behavior: auto; } }
