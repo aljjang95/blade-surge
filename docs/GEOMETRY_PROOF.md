@@ -14,3 +14,5 @@
 - 방 크기 변조와 position/normal/color/uv의 Float32 한 비트 손상이 거부되는 대조 검사를 실행한다.
 
 원본 JSON을 재생성하지 않았으며 production 렌더러·에셋·전투 규칙도 변경하지 않는다. 검증 fixture는 정상 gameplay와 구분한다. `bun run check`는 기존 진입점이고 검사에 실제 Node/V8도 필요하다. 누락된 Node나 손상된 역사 원본을 건너뛰지 않고 실패한다. 기존 `parallel-play-qa.mjs`로 깨끗한 후보 production build의 수동/터치/성장 경로를 재실행하며 물리 Android·오디오·배포 승인으로 확대하지 않는다.
+
+전체 검사에서는 Windows Git 자식 호출이 많은 dirty-check 및 실제 DPAPI 통합 테스트가 기본 5초에서 간헐적으로 시간 초과했다. 단독 DPAPI 재현도 약 4.5초가 걸렸으므로 이 두 통합 검사에만 20초 한도를 명시했다. 배포 차단·손상 데이터 거부·값 비노출 assertion과 production 자식 실행 제한은 그대로다. 게임 성능 밴드를 바꾸는 조치가 아니며 실패 로그는 별도로 보존한다.
