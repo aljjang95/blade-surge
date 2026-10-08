@@ -24,7 +24,9 @@ test('경타는 피해와 목표 중단을 유지하며 이동·공격·기존 �
 
 test('강타는 기존 넉백·콤보 중단/재개를 유지하고 스킬 슈퍼아머에도 실제 밀림을 남긴다', () => {
   const f = createCombatFlowFixture(runtime), p: any = f.player;
-  p.state = 'attack'; p.comboIdx = 2; p.stateT = .2;
+  p.startCombo(2);
+  for (let frame = 0; frame < 120 && !p.hitDone; frame++) stepCombatFlow(f, 1 / 120);
+  expect(p.hitDone).toBe(true);
   p.hurt(20, { dirz: 1, kb: 6 });
   expect(p.state).toBe('hurt'); expect(p.stateT).toBe(0);
   expect(p.comboResume).toEqual({ idx: 3, t: 1.2 }); expect(p.kb.z).toBe(6);

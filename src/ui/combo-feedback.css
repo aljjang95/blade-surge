@@ -11,5 +11,13 @@
 #hud #btn-attack .attack-combo-ring-progress{stroke:var(--attack-combo-ink);stroke-dasharray:100;stroke-dashoffset:100;transform:rotate(-90deg);transform-origin:50% 50%}
 #hud #btn-attack[data-combo-status="ready"]{--attack-combo-ink:#20554c}
 #hud #btn-attack[data-combo-status="queued"]{--attack-combo-ink:#254e70}
+#hud #btn-attack[data-combo-status="resume"],#hud #btn-attack[data-combo-status="dodge-resume"]{--attack-combo-ink:#20554c}
+/* 보존 시간은 숫자로 읽고, 공격 중에만 기존 타격 진행 호를 사용한다. */
+#hud #btn-attack:is([data-combo-status="resume"],[data-combo-status="dodge-resume"],[data-combo-status="counter"],[data-combo-status="dodge-counter"]) .attack-combo-ring-progress{display:none}
+#hud #btn-attack:is([data-combo-status="resume"],[data-combo-status="dodge-resume"]) .attack-combo-ring-track{stroke:var(--attack-combo-ink)}
+#hud #btn-attack[data-counter-active="true"]{--attack-combo-ink:#825607}
+#hud #btn-attack[data-counter-active="true"] .attack-combo-ring-track{stroke:#b58836;stroke-width:3.5}
+#hud #btn-attack[data-counter-active="true"] .attack-combo-stage{font-weight:800;color:#674000}
 #hud #btn-attack[data-combo-finisher="true"] .attack-combo-stage{font-weight:800;color:#54340c}
+#hud #btn-dodge .dodge-cd[hidden]{display:none}
 @media(prefers-reduced-motion:reduce){#hud #btn-attack .attack-combo-ring-progress{display:none}#hud #btn-attack .attack-combo-ring-track{stroke:var(--attack-combo-ink)}}

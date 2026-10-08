@@ -1,0 +1,52 @@
+{
+  "recordedAt": "2026-10-08T15:07:50.431076+00:00",
+  "helper": "/workspace/scratch/fc6f71e2bf7f/blade-surge/tools/combat-flow-sim.mjs",
+  "helperSha256": "438df2748a36de0327aac95d5951f04443ce4a7462fb9cf6870e1b354449681e",
+  "baseline": {
+    "project": "/workspace/scratch/fc6f71e2bf7f/blade-surge-metrics-base",
+    "head": "fab00213725df80be2670eb9d78625aa09d17773",
+    "hashes": {
+      "tools/combat-flow-sim.mjs": "438df2748a36de0327aac95d5951f04443ce4a7462fb9cf6870e1b354449681e",
+      "src/game/player.js": "b2bfa414ebcd584b87bd30bfadd7ac909f3c71b222fe11cdae873938ef8b7614",
+      "src/game/enemies.js": "6995e28937fec666d21d866ddf2782fd43cb59e82319e5b16885f2b37f0ba976",
+      "src/game/actor.js": "186ae6ece1a0ba8f3fc419eba53a25a238167e518a6b832667dae2b0604c6b81",
+      "src/game/battle-base.js": "ab703ee3f9ab002f99b7bad0ad6ab7916cc4a49a1d669f2caec7f4edff99c063",
+      "src/game/combat-motion.js": "dbda4ba45e04bb9e47f6bfb5005d6bf31a15c0688f140cfad007b58d99c02c87",
+      "src/game/crowd-contact.js": "f28c07dfc79a15521687f259fba6df2d7290f5c0f1146330605f3bc6fd5dfc14",
+      "src/game/crowd-gather.js": "0f2eaa69fbdf6b9e0cc0009edaa4334ec43c3829aa0da36efda6b5027a1bf541",
+      "src/game/combat-craft.js": "e7e6c46cdc1ccaeb494c7d1a0c29de91bdba80bd3d21707f5536a6019f444902",
+      "src/game/mob-roles.js": "42c8cbe50f859c1861bb47bd053748df707c3acfb9838f69ebcd6d9168910659",
+      "src/game/skills.js": "9966c627a25dab322a8f4dc47c7c0170d8e6f2f467a297b4c66f2e61d4d37cb6",
+      "src/game/progression.js": "daa0995be5566ae6a00b577af09b6d823774038c5bc2b2668c21f323b0baa174",
+      "src/game/expedition-combat.js": "f3f5ff25ee48336d427038ad1d93b3685f19c634224c32664d6c06e4de1b9f76",
+      "src/data/heroes.js": "01e11fbf5f748e02ebb3a08d258aa73c4204348fa192222e4ecfd63e5dfa3292",
+      "src/data/stages.js": "430c9369c57d83a75eed570e0be70d2c703dbbcb91af65110e8d460ca2978dd9",
+      "src/data/rigs.js": "6ea6bbd4f5f998b9e8b4a14607dcd4ed42fc0aca88e9eb058288c477a04a74d8",
+      "src/data/mob-roles.js": "1f77fa672d7fbfcfe7f036499797962ac3ca583d7ce2e710cc3aa1d0661f5b78"
+    }
+  },
+  "candidate": {
+    "project": "/workspace/scratch/fc6f71e2bf7f/blade-surge",
+    "head": "fab00213725df80be2670eb9d78625aa09d17773",
+    "hashes": {
+      "tools/combat-flow-sim.mjs": "438df2748a36de0327aac95d5951f04443ce4a7462fb9cf6870e1b354449681e",
+      "src/game/player.js": "d6dedc9cce9274931ca5a19759d4acce7e4bf3ae668bfd23a97efd543da644c9",
+      "src/game/enemies.js": "ece9435bce3f7e5c625d1aec8bfb34ca8fda953edfbbf982d207f9faf2f4b9e3",
+      "src/game/actor.js": "186ae6ece1a0ba8f3fc419eba53a25a238167e518a6b832667dae2b0604c6b81",
+      "src/game/battle-base.js": "ab703ee3f9ab002f99b7bad0ad6ab7916cc4a49a1d669f2caec7f4edff99c063",
+      "src/game/combat-motion.js": "dbda4ba45e04bb9e47f6bfb5005d6bf31a15c0688f140cfad007b58d99c02c87",
+      "src/game/crowd-contact.js": "f28c07dfc79a15521687f259fba6df2d7290f5c0f1146330605f3bc6fd5dfc14",
+      "src/game/crowd-gather.js": "0f2eaa69fbdf6b9e0cc0009edaa4334ec43c3829aa0da36efda6b5027a1bf541",
+      "src/game/combat-craft.js": "a2940975d329ae701aa6d5e8240415e53ac650308adab2e47670e843fddbcc0c",
+      "src/game/mob-roles.js": "07f871b63dc87d47d13d6c98bb4f105dc3abb5a76fe4210ab92e57e0a6fa26c0",
+      "src/game/skills.js": "9966c627a25dab322a8f4dc47c7c0170d8e6f2f467a297b4c66f2e61d4d37cb6",
+      "src/game/progression.js": "daa0995be5566ae6a00b577af09b6d823774038c5bc2b2668c21f323b0baa174",
+      "src/game/expedition-combat.js": "f3f5ff25ee48336d427038ad1d93b3685f19c634224c32664d6c06e4de1b9f76",
+      "src/data/heroes.js": "01e11fbf5f748e02ebb3a08d258aa73c4204348fa192222e4ecfd63e5dfa3292",
+      "src/data/stages.js": "430c9369c57d83a75eed570e0be70d2c703dbbcb91af65110e8d460ca2978dd9",
+      "src/data/rigs.js": "6ea6bbd4f5f998b9e8b4a14607dcd4ed42fc0aca88e9eb058288c477a04a74d8",
+      "src/data/mob-roles.js": "1f77fa672d7fbfcfe7f036499797962ac3ca583d7ce2e710cc3aa1d0661f5b78"
+    }
+  },
+  "note": "Both executions use current candidate-root helper against selected project sources. Supplementary hashes include melee-slot files omitted by helper sourceHashes."
+}

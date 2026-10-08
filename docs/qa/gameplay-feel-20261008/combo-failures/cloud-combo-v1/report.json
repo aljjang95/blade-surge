@@ -1,0 +1,451 @@
+{
+  "schemaVersion": 2,
+  "status": "fail",
+  "startedAt": "2026-10-08T15:00:22.531Z",
+  "scope": "Compiled-game visual fixture: real Input.press, Player query/transition/hit methods and app.step. Not natural play, native pointer input, performance or physical-device evidence.",
+  "viewport": {
+    "width": 880,
+    "height": 400
+  },
+  "dt": 0.008333333333333333,
+  "limitations": [
+    "Google font CDN responses retain the former harness empty-CSS stub; screenshots use installed fallback fonts.",
+    "Fresh isolated browser saves are prepared at level 5, with tutorial completed and manual control.",
+    "Ten spawned visual targets use HP=1000000, ATK=0 and attack cooldown=1000000; these are not normal combat balance.",
+    "Knight perfect-dodge cut injects one incoming Player.hurt(1) while actual dodge invulnerability is active; no direct counterWindow assignment."
+  ],
+  "heroes": [
+    {
+      "hero": "knight",
+      "preparation": {
+        "before": {
+          "selected": "knight",
+          "level": 1,
+          "energy": 100,
+          "inventory": 0
+        },
+        "granted": false,
+        "after": {
+          "selected": "knight",
+          "level": 5,
+          "energy": 100,
+          "inventory": 0,
+          "tutorialCompleted": true,
+          "auto": false
+        }
+      },
+      "fixture": {
+        "hero": "knight",
+        "level": 5,
+        "hp": 3695,
+        "maxHp": 3696,
+        "stage": "1-1",
+        "comboCount": 6,
+        "targetCount": 10,
+        "targets": [
+          {
+            "before": {
+              "hp": 490,
+              "maxHp": 490,
+              "atk": 20,
+              "atkCd": 0.99031714880839
+            },
+            "after": {
+              "hp": 1000000,
+              "maxHp": 1000000,
+              "atk": 0,
+              "atkCd": 1000000
+            }
+          },
+          {
+            "before": {
+              "hp": 420,
+              "maxHp": 420,
+              "atk": 24,
+              "atkCd": 0.6373473071493209
+            },
+            "after": {
+              "hp": 1000000,
+              "maxHp": 1000000,
+              "atk": 0,
+              "atkCd": 1000000
+            }
+          },
+          {
+            "before": {
+              "hp": 630,
+              "maxHp": 630,
+              "atk": 29,
+              "atkCd": 1.731443648133427
+            },
+            "after": {
+              "hp": 1000000,
+              "maxHp": 1000000,
+              "atk": 0,
+              "atkCd": 1000000
+            }
+          },
+          {
+            "before": {
+              "hp": 1260,
+              "maxHp": 1260,
+              "atk": 26,
+              "atkCd": 1.5844198909588156
+            },
+            "after": {
+              "hp": 1000000,
+              "maxHp": 1000000,
+              "atk": 0,
+              "atkCd": 1000000
+            }
+          },
+          {
+            "before": {
+              "hp": 385,
+              "maxHp": 385,
+              "atk": 33,
+              "atkCd": 0.6691418831236661
+            },
+            "after": {
+              "hp": 1000000,
+              "maxHp": 1000000,
+              "atk": 0,
+              "atkCd": 1000000
+            }
+          },
+          {
+            "before": {
+              "hp": 1120,
+              "maxHp": 1120,
+              "atk": 31,
+              "atkCd": 1.7024051514454186
+            },
+            "after": {
+              "hp": 1000000,
+              "maxHp": 1000000,
+              "atk": 0,
+              "atkCd": 1000000
+            }
+          },
+          {
+            "before": {
+              "hp": 490,
+              "maxHp": 490,
+              "atk": 20,
+              "atkCd": 0.8280706283636391
+            },
+            "after": {
+              "hp": 1000000,
+              "maxHp": 1000000,
+              "atk": 0,
+              "atkCd": 1000000
+            }
+          },
+          {
+            "before": {
+              "hp": 420,
+              "maxHp": 420,
+              "atk": 24,
+              "atkCd": 1.2071828437037766
+            },
+            "after": {
+              "hp": 1000000,
+              "maxHp": 1000000,
+              "atk": 0,
+              "atkCd": 1000000
+            }
+          },
+          {
+            "before": {
+              "hp": 630,
+              "maxHp": 630,
+              "atk": 29,
+              "atkCd": 1.4142372940666972
+            },
+            "after": {
+              "hp": 1000000,
+              "maxHp": 1000000,
+              "atk": 0,
+              "atkCd": 1000000
+            }
+          },
+          {
+            "before": {
+              "hp": 1260,
+              "maxHp": 1260,
+              "atk": 26,
+              "atkCd": 1.6749303177930415
+            },
+            "after": {
+              "hp": 1000000,
+              "maxHp": 1000000,
+              "atk": 0,
+              "atkCd": 1000000
+            }
+          }
+        ],
+        "seed": 20261008,
+        "warmupFrames": 150
+      },
+      "attacks": [],
+      "followup": [],
+      "status": "fail"
+    }
+  ],
+  "errors": [],
+  "failedRequests": [],
+  "source": {
+    "head": "fab00213725df80be2670eb9d78625aa09d17773",
+    "branch": "codex/gameplay-feel-20261008",
+    "dirty": true,
+    "files": {
+      "bun.lock": "94ad4ae70b404a489c64615438b1a073600c85f9f906d5d5191a04d3f304b04d",
+      "index.html": "4fb30e554481044201edb2517d4ad1a668cd5773666fc078e39b804a34b995f6",
+      "package.json": "14028ae84fdbf4f13226152792d214994b00764a7d47d2e3c136c9df011b9272",
+      "src/companion/CompanionPanel.tsx": "bb7b0aac01e537e1bf8d16adca4f6fe3cd9b3296129645cbe0578066a6dba281",
+      "src/companion/bootstrap.ts": "95f8948d09970a1d58fb9be68d140e99a81a6979108bc7314e59196378001b63",
+      "src/companion/combatant.js": "fc7a910ce0d595bb4884e753a8fc8ce5517cc13889fcdcb4789ddf0df69efc3c",
+      "src/companion/companion-agent.ts": "fb1964ed08dbbb1f4ad5fd559b7433962aea748430e241d6666f37066f766086",
+      "src/companion/companion.css": "84494f27cf8337263c67e222639b2d9a4f7cdeb77e194e72a419bc831cdf0716",
+      "src/companion/dialogue-client.ts": "d3b920e2e96447a7b927c6856f93cd232cfdb02ac21c96b5647f3fd1ded2476b",
+      "src/companion/dialogue-contract.ts": "84fbe0de970453c056feac796e8d4470f1f76fe12c9622ed44d84ba3ab0ce95e",
+      "src/companion/director.ts": "cc888471e192420b8eab58e5f576195b18721a8eb55e64f14f0a2e33f4dfeabd",
+      "src/companion/mount.tsx": "5b69b5dc329a27c00433f50b040fe28f2bc767fa1aa11af626f9efbc01df9a74",
+      "src/data/armory.js": "5551d3b7a8543b08bd5e53d350027877a7f6283535c0ca489bbd9c222346efeb",
+      "src/data/boss-encounters.js": "5a776c7f50a3f40d6fbb07a06b651460407fceaa2d8e3d5186b804a57d8702a8",
+      "src/data/campaign-story.js": "00a16e126df4d48f2047fe0c680c4e72777f8b9b541c3c0d2f86a992554fdba2",
+      "src/data/citadel-hub.js": "7cd15ab4bd3ace29ba31f8180e1233dfbd75a4829fac98a0f606f98aca01b3c5",
+      "src/data/citadel-shop.js": "9d3716c96cb4c360b2ee33c0e7ff192826595ea3e24c61c9f32ce5a77ebced98",
+      "src/data/combat-arts.js": "5caa9ee8d53561cff33ab02f4806454e26dee44f931a20f64f33217692523cf2",
+      "src/data/dungeon-visuals.js": "412467dca04004c8300dfc10c74a98403ba4abdb7583b2999146d0b0b5612030",
+      "src/data/encounter-art.js": "d8c1987c0cc9834c49ec44edeeae1b4267b89d2f0e28203d26424940b6d10666",
+      "src/data/encounter-models.js": "b43330a06a8d6a5eb5e2f140f0b939cc8cc554ab2e94e7ce8828a3b9feb43bbb",
+      "src/data/engraving-art.js": "5c4a38207e53aeae554e5eab59de90992226f461b4be24c96f628cd95541dd35",
+      "src/data/expansion.js": "0a09128e10c5df0df7e7ca395f7a25ccfedb753b64b6f217cd31533ebb998170",
+      "src/data/expedition-conquests.js": "02d8d7c7e660d37f3c62525279e78c1809ba23abf2787456632a32d3b8fa711c",
+      "src/data/expedition-depths.js": "589e3a5b4499549098d69a879439cd44d33433387dd5f21caf36f689a609cd03",
+      "src/data/expedition-items.js": "fd87078d4625fe2bb1ac6a9447f26da30b72b0691fad9da9f511d9e577c00959",
+      "src/data/garden-mastery.js": "54805fe80f2fefc292dc68007bdd884f8641efae176d9ecde71fee50737698f2",
+      "src/data/heroes.js": "01e11fbf5f748e02ebb3a08d258aa73c4204348fa192222e4ecfd63e5dfa3292",
+      "src/data/items.js": "31d753945983ab306519b9c68aa7695d71407b4cc6594c149a69318919d5b9f4",
+      "src/data/jade-tactics-geometry-v1.json": "e79ee7be03cc78325ee14702248ef4b83519df721963d235ab0ef89b7836a765",
+      "src/data/jobs.js": "7f20f15660dcd83f6cf5bff2719075c4a41d1f02916ae293519c0734695faaef",
+      "src/data/journey.js": "cdb742d76d273917845be66535f7dc365469bbcc7ea53d04a6402c06974235a4",
+      "src/data/knight-head-balance-v1.json": "224dea955e612bbb6760d002889228c6b364585529808d0f250be5204fef57c0",
+      "src/data/map-tactics.js": "850a615573f526792ef5ad2dd83e54dc13e43de5b53125b6d61cc6c7ed709dff",
+      "src/data/masterworks.js": "b436bbec0d60d4caf6cb41580e2f85d16cb619cf424b58e6335bc288f2a89ada",
+      "src/data/mob-roles.js": "1f77fa672d7fbfcfe7f036499797962ac3ca583d7ce2e710cc3aa1d0661f5b78",
+      "src/data/music.js": "9b76c32ce72d0bd2638fe78dc3c36e3c26f18e36efee4aab65798162a4a8a80f",
+      "src/data/rigs.js": "6ea6bbd4f5f998b9e8b4a14607dcd4ed42fc0aca88e9eb058288c477a04a74d8",
+      "src/data/route-objectives.js": "710d73f9de93d23e71a25a4cb9deb4a3ea5b6924519463e68bc751390377713c",
+      "src/data/seasonal-content.js": "b30891a08bb4b68570909d0325f572dbef3849e7537b6fdf21f80f078f653e1d",
+      "src/data/shop.js": "88eefb45bf3a0b3359328c9a69c2ad1cfb76dfc4461c5f02207d4ac5242d2cbf",
+      "src/data/stages.js": "430c9369c57d83a75eed570e0be70d2c703dbbcb91af65110e8d460ca2978dd9",
+      "src/data/story-dungeons.js": "fcfa780eae2f2dd5269e07897a5b2fba27d35a05df9057492327db863b9bc9da",
+      "src/data/summon-gear.js": "e92dc1dcc35434ca220ec14609f2728c9a6271d163db07c5b55ab8394a8b9b4c",
+      "src/data/weapon-looks.js": "048e0b3506477fcf1b81ca6f2de4e3912754319e4d36fda5653b61673c00a06a",
+      "src/engine/armory-assets.js": "cbb1345a845cac3077480cfde1e335300914513b4150ea68e43caaaa3475e21a",
+      "src/engine/arrow-visual.js": "54b74c36bb3d15b05b224144f18f55ac6e51d6ce2fd6a41e70be209f24fa3e15",
+      "src/engine/assets.js": "c073864fc71adeb22d91e4afbb7af6f27cc3c845714d18e181f071a5b78fd3db",
+      "src/engine/audio.js": "cae73d1e91349a2f066c6ba64dc656e89bcb2b7daa5f57a022f1aa32d2f5d3a3",
+      "src/engine/battle-aspect-fit.js": "40a13937a067cc8dafa79a185fe31948db472f3670130c95735bc815b498b54d",
+      "src/engine/battle-framing.js": "cd1a9cf2bd86ec81cc4f7502d164bfeef5a9e21079a2db4c44aea7e82eadb74e",
+      "src/engine/battle-occlusion.js": "a1f83d398f3bc92535d10125e4367090219391a824425ee7eab6e6c555163775",
+      "src/engine/camera-control.js": "a5588c70cedb53ad568aa598ef6cca57edd9dacc56434bd6e59c62d2695a873c",
+      "src/engine/canopy-sightline.js": "ef90a0c2c5e40101314335bcbc985e0be505c31241151539f9d1ad74d208c6b0",
+      "src/engine/combat-feedback.js": "2846ce7956ab459319496ce3c84584aefed4a31a11a9934e2685f9a2f272ea58",
+      "src/engine/combat-sound-library.js": "b80bcd34fce3862bb1c62a660f1e8a065a7203041c818e3cd4e757004e421790",
+      "src/engine/encounter-identity.js": "6833d0b0bfe4149fde9fa5e5298f9eb2ba6a221d425446627af518446d1627f5",
+      "src/engine/environment-kit-asset.js": "dc655cd8fc07ffe5efaf02cc573ba779a6a3066bf28d0e0d326dfadb7537272b",
+      "src/engine/environment.js": "936b02638d5767a6b157d6ca7e25aea6a0b2bf04bd9576605c377b813c788656",
+      "src/engine/forged-weapons.js": "40607f711885609e3c2eb63d66070800fee8a5840d9dbe6079d77e99ccab7b01",
+      "src/engine/fx.js": "8800f5d0e2666f6c7f964db7cc0a87fb85f541d180fb63b24cc53078cd7e1f37",
+      "src/engine/hero-effect-focus.js": "c4145055aae34c7cfce2f4280060d523a5670f3bf63a3d339e16c38db146485b",
+      "src/engine/hero-identity.js": "263d4d003f6c961d2b1ac5aded1c5591cd69fd351669366b5004068bc302d95a",
+      "src/engine/hero-model-paths.js": "48d5a8977b1aa4421064674185711965b58092f0562a7037f035fa40dd5ec057",
+      "src/engine/hero-surface-finish.js": "261eb648854ad3e8edf5f7ed17aa0e1b17e7178eb8f83967650fb9caa1079d09",
+      "src/engine/hero-voice.js": "5fb79a9b081006c8d173f42528928d219ecdedfd1328f38e9e709b355d3217ed",
+      "src/engine/hub-controls.js": "5f82bf372ee1815368c144e1deca5a39a2234d86c6c5cf589854c95bebe2280d",
+      "src/engine/impact-lights.js": "0bc39a6bcdadb7ac1b95d4ae45bc82ff41cb525d2c38dfc638396f1a6e5c7f93",
+      "src/engine/input.js": "c7ea31d372df9eedf83e8c6336e4e40e24d34ed17df36c9a5c8ae2559325b560",
+      "src/engine/lobby-camera.js": "78c7e8bf3213360e77acb19044bbe921788aaaf9e305f2b552f62cd5e83a32e9",
+      "src/engine/lobby-sightline.js": "897fc9106a210c475a4e2af203828d331aaf09be47adb27e7caa9d2bc932a0e7",
+      "src/engine/oathhall-asset.js": "b0fe1ee7d31324c03bb98d917bbbc66008030606668a1d8b04191ff8c8eb7358",
+      "src/engine/player-silhouette.js": "aefe91ad0df6d35b7e1d144b352ca6c1888dceb710cbf524deb22e9d7a5b73ef",
+      "src/engine/renderer.js": "8ccd2739424ca450a53e2c1954137e8382c0b9dfdba21c06fda62580a427c503",
+      "src/engine/shader-program-validator.js": "8795b26e3d4f4ad30126a54a8a7f03657136b99c98dab477baab2a7d4238274b",
+      "src/engine/surface-textures.js": "e09a628dd4bb2c40ce9b85cdf679a9b08662338c77c4a2e0a51624866fe5ffcb",
+      "src/engine/weapon-trail.js": "e41b79e8be72b8201af1b52c02e6e41d2dd20a2562e5a65fd4826062e7de4c39",
+      "src/expansion/app-content.css": "a5db8bc1502b67bf52d91aece4c36b3497674686b0630922aed95cb15781b687",
+      "src/expansion/cinematic.js": "76c37f7a8e62a922c8a7cfcdd3612b23f4290160a024f17d37ed71a6708587bb",
+      "src/expansion/conquests.jsx": "dfad14e376ddcae346dcf9237fc28346d3418cc86a7adb24634c0d3d358fbf97",
+      "src/expansion/depths.css": "b28d9bc551f9d7e6e18e0948dd1292b22aadf926d010162bd6d11dedf4cb75a5",
+      "src/expansion/hub.css": "82f4310fa432a4117085e29c62e76913b75f461b0185f8d5204f75506265640f",
+      "src/expansion/hub.jsx": "404b7af8e429018e21f1a2ca27b50db2fdd7c76c82e8ca725672dab4a0ad0685",
+      "src/expansion/wardrobe.jsx": "1a00bbc2a8899cf3055b8a71f7584f8ba32d2e232687b28feff1c98642f18f88",
+      "src/game/actor.js": "186ae6ece1a0ba8f3fc419eba53a25a238167e518a6b832667dae2b0604c6b81",
+      "src/game/apex-battle.js": "4af9e86f7c92fd9a696d4220af9f38cd7c1d23231fded1e7b91f9092090ec0b2",
+      "src/game/apex-combat.js": "7148209d7e0aae14871c48429b948986b4b9b261040c631b447017c5756b2f73",
+      "src/game/arena.js": "a7e856ea305b095f025cad68df4069f716338846e786ae087784505c048737d3",
+      "src/game/armor-appearance.js": "2f594db69cf7ab4a6245d1d1b417bda09cfc587fe2d259d583bfc45bb88d493e",
+      "src/game/armory-procs.js": "345128e0c22a99e796055a6bd1554b110c40977da673d1aa16090f6716cb2927",
+      "src/game/arsenal-core.js": "9739a0bd9c47153337df706415e5f547fdc8d8860fc3e3621a6b4ddda7436b40",
+      "src/game/arsenal-service.js": "a89151f97d07adc6916d7ce0970f132640f846f79d2fe903814577ec1622c752",
+      "src/game/astral-constellation-view.js": "f6d9b2d19f1f72c50d0be8aaaba950d730bc3cb802afb7baf740c3703ef1716e",
+      "src/game/astral-constellations.js": "7e63d7252b6d5d6457dd8a805a15c8672ec41f0fcc730180a3ef37d682c35986",
+      "src/game/awakening-iii.js": "aca0da9df23260db7b7a3fec3179f90bfb57f8dd0c329593433f7a61f3a86af1",
+      "src/game/battle-base.js": "ab703ee3f9ab002f99b7bad0ad6ab7916cc4a49a1d669f2caec7f4edff99c063",
+      "src/game/battle.js": "e6830f9c06658058d1ac0ffe6f4ae2a78eceba744bf143ee248812a3f076f394",
+      "src/game/boss-signatures.js": "06695f0d6b515467c7f6623f9a736f6df4a60e4af0f4d23c9ddafe6c7b38f810",
+      "src/game/citadel-gate-designs.js": "54d764fc893dd393976bf9bb81c4fd2cb19498c2639eb251c9f0ff0e7ddca13f",
+      "src/game/citadel-hub-scene.js": "546f110bbf1895a669cc18c04f091785d66ce5e2c9dc9874268e6129cd955700",
+      "src/game/citadel-preparation.js": "2bcb5bdb5d8cc22f678fc83218c695449cb71bdae49182bf4d97737077cfc069",
+      "src/game/combat-contact.js": "794252607a832da02a624da01257380ea5bc2bab6b0d3921c137723282e171e4",
+      "src/game/combat-craft.js": "a2940975d329ae701aa6d5e8240415e53ac650308adab2e47670e843fddbcc0c",
+      "src/game/combat-motion.js": "dbda4ba45e04bb9e47f6bfb5005d6bf31a15c0688f140cfad007b58d99c02c87",
+      "src/game/combo-link.js": "d4d4ffafc26033f588d42c484cf941b607e82eba236b6af6cdf2f98b8cf0aea0",
+      "src/game/control-rewards.js": "8a569b9d325780cc391f07289ab415352281e5fbe5ba9471a1c023678f552f3a",
+      "src/game/cooling-valve-view.js": "85795daefd21c4101c889836cbeaaa347d16578cec296fa2930d58389e4c223f",
+      "src/game/cooling-valves.js": "1f5bbd7a31ef50ae5778e64f65845c7718f589053e5b36f3b49f4dc3e0308791",
+      "src/game/crowd-contact.js": "f28c07dfc79a15521687f259fba6df2d7290f5c0f1146330605f3bc6fd5dfc14",
+      "src/game/crowd-gather.js": "0f2eaa69fbdf6b9e0cc0009edaa4334ec43c3829aa0da36efda6b5027a1bf541",
+      "src/game/difficulty.js": "d790074510057f4664509ecaf63ff8ae1856ef25666069a1159d19d4c7ad2a2e",
+      "src/game/drops.js": "b78f660f4f71ae708b0bd6e07ff8c64abbefc5889ddedd1c587a56d66f5b3ab6",
+      "src/game/dungeon-surface.js": "cc63f3ee628316775c82b84977bc597bafa049b96b628cec9642cd421841a8db",
+      "src/game/economy.js": "eb41af735331a118510693d77654e61271b7bc6c2282ca266c9125bca8559e96",
+      "src/game/enemies.js": "ece9435bce3f7e5c625d1aec8bfb34ca8fda953edfbbf982d207f9faf2f4b9e3",
+      "src/game/enemy-dash-warning.js": "26314d0564bb39bf763d51fcff0550999dedce0a58b79bf4c131705613f72d3c",
+      "src/game/expedition-combat.js": "f3f5ff25ee48336d427038ad1d93b3685f19c634224c32664d6c06e4de1b9f76",
+      "src/game/expedition-conquests.js": "0e3bcca01e75c957aeb9e5678001992c63959e1f5329a240c451b23ac88dc681",
+      "src/game/expedition-economy.js": "6aee7186eb8778cb68e1f2ae840b46653b78859956f31059208322ee2710ac6d",
+      "src/game/funnel-events.js": "20d68007ca67320d48f5ccd08ac44cfda338129593dab69d39749f0509cff77c",
+      "src/game/growth-options.js": "a5cb06ea2ed3eb07aaf97a22c6e3eecbc17a1ec67ff82c104600a1b48403c78f",
+      "src/game/hero-beacon.js": "f70f9d5bb8be4b6e9666e198608155420eeefa57d9b8ebde1323d0d0513d9456",
+      "src/game/hero-training.js": "d963ba5eb0722e1aa1540c178afa6a9f6b23d996f3a97870978fd7a93861bf1c",
+      "src/game/hub-movement.js": "32aed6737afd7a5d4c39563b06f05beed676943a6bea7b5fb9eeeb5541b7431a",
+      "src/game/journey-core.js": "23d39ca26151a2d2ad57c05e0cf97061c960afd93af250deb43629e66a4e8a96",
+      "src/game/journey-rifts.js": "c3eff847775d2797333685dbe98d5642192921261fde1ef9184f5517cac2730d",
+      "src/game/journey-service.js": "ffb2d5ac6d189ecde208583971e85d5e812de37a7d3e5c549680e6622a482d47",
+      "src/game/knight-builds.js": "88d43c502ff1a27796ab678aad58af37cf18dfdf61a13512a0b5dc5fcef821c8",
+      "src/game/lobby-hall.js": "60043a142a7a192da43124639e2dda04eb26ee7033329c5ccc3edce62f1f39e9",
+      "src/game/lobby-world.js": "cafa3263f038e959967024e44a0c00e71cd8561810095d20bb50b740621407a5",
+      "src/game/look.js": "214c64ff756270a560e8561f64e8f0f66443ff1ffdbee06f91fbb99577112b21",
+      "src/game/loot-visual.js": "432aa843f8e027e9992139dc53f201a1cfeee20b0dc7e9650891b642d255110a",
+      "src/game/map-tactics-view.js": "1f5161996520ca935c4022ac5bbdb65771807ae7091c36def9a0325c546171a6",
+      "src/game/map-tactics.js": "1a96d2a4bfed0e85169f5ce22796a45d161bf0b8f6b55d6d762c70b99f0af573",
+      "src/game/masterworks-battle.js": "d5b761aefd8f50eadee510e64b0343cbda2ab9b0d17f99eef11214d69e4c7da7",
+      "src/game/masterworks-combat.js": "a6a1c587222a94fba369249397b0ec810bd302a4d3d1f977b2ed008bd6d65fa5",
+      "src/game/masterworks-core.js": "88e39cd3b00ab04953dcd1b678bc93b30cc57f02af0889e6465fc5307b93ab36",
+      "src/game/masterworks-service.js": "0c2418a0cfbba2822d7bddd1bf21a5531c437f33d2d30a495744fb6ceb1a8cca",
+      "src/game/mob-roles.js": "07f871b63dc87d47d13d6c98bb4f105dc3abb5a76fe4210ab92e57e0a6fa26c0",
+      "src/game/nightglass-record-view.js": "f1a323de25c53325c581c65ad6ee3960add2b810fb510fa5c924613f6f3b81a9",
+      "src/game/nightglass-records.js": "4c20fe6805742562b55eb1d58c2973fe1cce8675eb92fc91d15a9ce3ba2cf0f4",
+      "src/game/player.js": "d6dedc9cce9274931ca5a19759d4acce7e4bf3ae668bfd23a97efd543da644c9",
+      "src/game/progression.js": "daa0995be5566ae6a00b577af09b6d823774038c5bc2b2668c21f323b0baa174",
+      "src/game/region-architecture.js": "394e9c4015dbf6961de1e167169967931cd7ddb77aed6ad40080345934c2de47",
+      "src/game/region-hazards.js": "188aaa7d31deab49929ff0cde0384f8b512a3953636ab80c97e144f4eccaf2bc",
+      "src/game/rift-encounters.js": "6da6160052b80565e2e849011cb056b1cab87ffaaaf607bd2e66d2bdcf1245ba",
+      "src/game/route-objectives.js": "434a2a5e204c2a0920e8430c282f9361783e943a9250c3e69349f1bdcff80bc9",
+      "src/game/rpg-battle.js": "937a355aac33f0c246574f6d1e49a860158e4bf064e7bd9ac603ca622f9a66f4",
+      "src/game/rpg-catalogue.js": "ec3288af6d456cd83aa68f729e35d2d638ebfb635f5b9102290e8495a9ffdced",
+      "src/game/rpg-core.js": "673156153d5aed0fddf25451cdae71d24600d5920ca97957b1d9787f105bca0a",
+      "src/game/rpg-encounters.js": "e0fdcfb2e92c08be5eeba8e3e0c5a1c930d8c1a5a4dfb2889dd8df5b29200f5e",
+      "src/game/run-history.js": "5880e5ab9681703397c9d61db43803bfd2155f0fd9cf717f718b84dcc5a051c7",
+      "src/game/run-personal-goals.js": "627521440f3b6b4ba61c30baf4dca770b5364e94aba1d0b2cb7de7c79b838657",
+      "src/game/save-base.js": "6a3a34999fc5d14be695cc7d56116a7b90152f4164879411c479f0eb998abe98",
+      "src/game/save.js": "8babe0bb83ca4d06535642327151255f99e38ca1f6ef9d60964391c496113fe9",
+      "src/game/setprocs.js": "9cd312ff1e962b5a68d194be936d1d1f4ff387ebff4217cf2898a92fbba7ca3c",
+      "src/game/skills.js": "9966c627a25dab322a8f4dc47c7c0170d8e6f2f467a297b4c66f2e61d4d37cb6",
+      "src/game/world.js": "360ea5ca27bc38499f9514f25734e3e4842a7fe9a6a9e58e4dc7162344c37cd7",
+      "src/main.js": "9344274b862997e56f150419634645cb7333c55c2f06776b8d04923eafb9d59a",
+      "src/party/battle.js": "aa297ed183b513eae9a60643a03d86cd0bae1b27ff2fa5601ed4fec99a00341b",
+      "src/party/combat-effects.js": "f45935c60c81cb8ad18489590e024494af035a12b8b6da838663d4d560bde72e",
+      "src/party/party.css": "5686d4b624683c0e459aa517deaf0b60ca7b39e22962c7b448f2bde4f0273024",
+      "src/party/presence.js": "db9045ca4b754c27b8bafeb50eee03503f2ebf5a6d9f3a8d37cdee8a0b9e6e55",
+      "src/party/protocol.js": "c9540d52d5775ab23bb1365cc1765d3ce171fe3f45dfb7f43d1966f1a1305cf6",
+      "src/party/replication.js": "80f7308c6fbfce8c95161275a3cadd0e07b2889e196152d4b9e6b16b13cd7ab4",
+      "src/party/session.js": "cd29ffc1f129f5a8295ec9cacc9f19b1c05d7d5288e15694103fd5565616300c",
+      "src/party/view.js": "761e73bc876ba0f7fd8165359c0b4981d61ca40d9a4e6f17af2735453c20fbb5",
+      "src/party/visual-effects.js": "59628e1fa8b3a5477e2d4b7075b0f9fba6440950e7fa8f1632bd9d2064723c61",
+      "src/party/visual-protocol.js": "e111b6707e9a4a920777847ede40f5137b00c30d5c4add2f357fb2a5dab898c1",
+      "src/platform/app-mode.css": "4b84ff4cf542f7483c22310e731d89f0b96d0a7e9477ef3d2dbe58200809f412",
+      "src/platform/app-mode.js": "ff96d9a82895b07702c2a8bba9153810ebaf8f6402c7e743da6cd1ed038e7fc3",
+      "src/platform/mobile-display.js": "1d9ab59286370530384da58f7b919acff642ec4b4135b516d0ec458a8c71479b",
+      "src/platform/native-app.js": "5c951f87c6352e05436fb05fabb45faecf862a80d9c8ca9367e280df61e3939c",
+      "src/platform/pwa.js": "6617bb6298c9c391c5608223dc69eb2394745b2e61598da6ae5da5d133e1da54",
+      "src/style.css": "7a7b090b0e78f4615a3d2f3dda2600be037d08564ba502edca4556ea08affa99",
+      "src/ui/arsenal.css": "1ee63305e205b687a248eb410ee8ff8efe45d207b642f18a2dd4af6991d28446",
+      "src/ui/arsenal.js": "c1dbf33328c87e8cda615508416885d735ad490daf8bac3033b878e4f599be32",
+      "src/ui/battle-objective-view.js": "3224d0337bf5aab87c7ca78c632835841fcdaf0924335487246b7bb8191ea43b",
+      "src/ui/battle-readability.css": "d890b4f2b11f230b3002225816810b5467dffb18f0442acdc31bcac436b739ec",
+      "src/ui/battle-readability.js": "8ad559bf5b3ec0db93e451041e6bf798e1dfefc2aceb92678f71afa1a08acf5a",
+      "src/ui/campaign.css": "71d6b5447b9409e640497d909ef66da041b519d1b5e419b13fd3c004a68a07ab",
+      "src/ui/campaign.js": "13e060691c76ffcedbffce3850bf9eed6a2a8f778947793ed7cd63621086c653",
+      "src/ui/citadel-command.css": "10cc75264a09ef8cf4790198b2ae1c658c17ccd0f6178ea8d948348acbe4ab1b",
+      "src/ui/citadel-command.js": "7d425a3204143e707b64e860810a1349761b87f19dd1730d4e49baa0896fd0c3",
+      "src/ui/citadel-hub.css": "89b7947e14d46b21f726fedbd430bb5207414199e2809bb949f93dea53cadabe",
+      "src/ui/citadel-hub.js": "ad76ceaa8898fb761ff1cba667a47c0ca5aabf84b56743f94b51aab823829170",
+      "src/ui/citadel-integration.css": "0c1acc4a6f41aa98e3bb7ab492f849bda3117c42a27f977a0b053f3650a30bd7",
+      "src/ui/citadel-shop.css": "b879d517c8301409fa9802cccf0744007828581802afcf79901248421c69ebfe",
+      "src/ui/citadel-shop.js": "f38aa8fbd18e9e502e768c2ddc10adf7f6f62d74493e065125750ecf34c043c9",
+      "src/ui/combat-notices.js": "2e95c4a4f5bd228b120af7a898d8378205ab1fa442a7538066271494f20f137f",
+      "src/ui/combo-feedback.css": "495127f5114f34b79ee26cdbb655de36188405db807e5a355d047edb3f72c477",
+      "src/ui/combo-feedback.js": "320a559b04a4ebeb47ca3b5ce4a55ba08114c328c9a7afc3de78db0f119284b6",
+      "src/ui/enemy-preview.js": "e4d8ddc87d1423b09b606db2920fa0de8da40962fca4a54ef340551f29bafe3f",
+      "src/ui/experience-v2.css": "a79ee3f8ba81d3a51a8778b0f2ab71b6bcd2c53d9987e5128b237704acd163d1",
+      "src/ui/experience-view.js": "c93b652fb589ccfb157f5aa4d9d2c165bae22b4da89ea4ba2ed1c4a705ce0572",
+      "src/ui/gacha-contents.js": "394b4d6d9881e17a8781058cbe11cab8ed68bf22eec6513e891d03a19b3a94f4",
+      "src/ui/garden-ui.css": "337fa8623c4d6dc51086976ad307ac0e9632ffd7e2728d0cae881767038e1c8c",
+      "src/ui/growth.js": "6b69e163283aebcfb2f701ba50e47976270924e008a502178b6427f2c4963127",
+      "src/ui/guide.js": "456cf495a591d8e7f73701927d6e49841b77464ff2937b01380f9eedfdd2f128",
+      "src/ui/hero-progression.js": "3bba5ffc92dc7a75299ba4ed755c1f61704314b581e97ae97932ce1db82421bb",
+      "src/ui/hud-style-write.js": "cbd248789dfaf812acf917f760072bfd2acdf2fa19479d92e10d4c93f8ca1d27",
+      "src/ui/illustrated.css": "e28a9fb7a711967d5788a5852870426e81829401a5c6986cd16770600dad80f6",
+      "src/ui/illustrated.js": "c2b0c7c46b05b8e416ee9efacd4062832d04b73463a11db1fba8543ce5737dc5",
+      "src/ui/journey.css": "32873d8a4dcf2d6466ab0707043a09f8afe16cccd1b5e465c704657143df2f58",
+      "src/ui/journey.js": "97ab86549cb9f6162dfa8dbdb205f54c32fe26370a8e1dc2feb9b9239132554d",
+      "src/ui/map-tactics-receipt.js": "74429005df731e203886b8ca88ba952fb1cae954ee1dbaeb33ad2e26eeaeaee4",
+      "src/ui/masterworks.css": "33d8da68eb924d13d9886754589fd31d02fc2f4ad7e1ad6522b0e605bc5aa289",
+      "src/ui/masterworks.js": "f89581d9acd8806d1af0db43e9b12023c75fdad22f3b75e0253b43ee96818fbd",
+      "src/ui/meta.js": "728e24669e4f735bb3699d7f31ebefbbe4ab94a1960a0ab0b00224fa6ff7838c",
+      "src/ui/minimap.js": "05ad04906f95fd6132c8ffa7cf79239af894a325e64166b5aa4d97a4348e19c2",
+      "src/ui/mobile-combat.css": "93e5c2e75578c1a683c813e530b9055ddcaf49317b530831bd2c16c988686e1f",
+      "src/ui/oath-shell.js": "d74ce7e288aec999a4e172ed0a4a7233ede2a7d4b2435e014d2294fe737c20fd",
+      "src/ui/oath-visual.css": "32043d8a2da6c2207681d1a40ee0165bee8e6a8a6d2eeeeaaa7e6553b937673c",
+      "src/ui/personal-goal-labels.js": "cf7d07c91ced74152c65e8e1b65e2abf7cac85c913eec872d676923d8e89bb40",
+      "src/ui/progression.css": "641d1edf64f707913f14edc75ea020ca9610d8a1ae7b8c3bce716449c86180f4",
+      "src/ui/rpg.css": "2b33bdd6b76f42bd0dd105f2f24c5a010d3fae9473ca5b164366e946231474ff",
+      "src/ui/rpg.js": "8eebad9d09a71d437c7bf64f5c452bdbfd8c1613a4948336809dade0f867828d",
+      "src/ui/skill-feedback.css": "2816eb72b46768a4ff2dfccb5ddfb4e2ac87c1032f6163678e48b99c87b653cb",
+      "src/ui/skill-feedback.js": "68026ee2f7a0721cecbb6e213aae0e166216a8e203629a3d9f50df2f40d097cd",
+      "src/ui/tutorial.css": "70ef45f98766987f0b9c560a54c746b7b0bdff79d2485b823d8d2a9e90d760ba",
+      "src/ui/tutorial.js": "5d5d9da9ecec48190db9c164e66e75f94b2453140c7ccfd803bd5a7bd7a6166b",
+      "src/ui/ui.js": "5d11ee5a3dcfa9ba13350bddb95868e4bd21f36c54d7f7b1cd37ca137bedf598",
+      "vite.config.js": "3b2e239bb21e9439587637dce0911de02d693696e504eeb71bfee00862fd71d8"
+    },
+    "toolSha256": "a15cf0e50baafeb979d104673e3889e9be1e9fe696a84608db7adec51b9b25e5"
+  },
+  "build": {
+    "version": {
+      "sha": "fab00213725df80be2670eb9d78625aa09d17773",
+      "dirty": true,
+      "builtAt": "2026-10-08T14:52:57.067Z",
+      "pwaRelease": "65fd524ae06edc3ec6e3"
+    },
+    "indexSha256": "f0a05b124574ba4179e9f48801eee0f3c607576cc4f2dd0e8df83ff99176b453",
+    "versionSha256": "0409ee0bc5a56815aa63d0644784cd04c9a47cf505623d0f0ae330157d6533e9",
+    "entryAssets": {
+      "/assets/index-BHBSD1W7.js": "662b47745dd9f9f613db8e13ccf3a879eeb6ba28425c5d0bf0ba18056cc5c50b",
+      "/assets/index-CHiGb34N.css": "33f6fac90d1917fee1669f5073073af0fb8189007d37d023b83bafd3043d1156",
+      "/assets/three-DVAzQdY9.js": "e2ce1d157f98b32e67ac58c5b438959e88f40ee92cbd18bd7f7c023be49a9476"
+    },
+    "servedVersion": {
+      "sha": "fab00213725df80be2670eb9d78625aa09d17773",
+      "dirty": true,
+      "builtAt": "2026-10-08T14:52:57.067Z",
+      "pwaRelease": "65fd524ae06edc3ec6e3"
+    }
+  },
+  "failure": "page.evaluate: Error: 타격 0가 발생하지 않았습니다\n    at Object.contact (eval at evaluate (:311:30), <anonymous>:43:15)\n    at eval (eval at evaluate (:311:30), <anonymous>:4:23)\n    at UtilityScript.evaluate (<anonymous>:313:16)\n    at UtilityScript.<anonymous> (<anonymous>:1:44)\n    at /workspace/scratch/fc6f71e2bf7f/blade-surge/tools/shot_combo.mjs:148:31",
+  "completedAt": "2026-10-08T15:00:49.584Z"
+}

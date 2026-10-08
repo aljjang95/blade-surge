@@ -15,6 +15,7 @@ let host: EventTarget;
 let elements: Map<string, ElementStub>;
 let input: Input;
 let gamepad: any = null;
+let gamepads: any[] | null = null;
 
 function key(type: string, code: string) {
   const event = new Event(type, { cancelable: true });
@@ -24,12 +25,12 @@ function key(type: string, code: string) {
 }
 
 beforeEach(() => {
-  elements = new Map(); host = new EventTarget(); gamepad = null;
+  elements = new Map(); host = new EventTarget(); gamepad = null; gamepads = null;
   const find = (id: string) => { if (!elements.has(id)) elements.set(id, new ElementStub()); return elements.get(id); };
   const documentStub = Object.assign(new EventTarget(), { hidden: false, getElementById: find, querySelector: find, querySelectorAll: () => [] });
   Object.defineProperty(globalThis, 'window', { configurable: true, value: host });
   Object.defineProperty(globalThis, 'document', { configurable: true, value: documentStub });
-  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { getGamepads: () => gamepad ? [gamepad] : [] } });
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { getGamepads: () => gamepads ?? (gamepad ? [gamepad] : []) } });
   input = new Input(); input.enabled = true;
 });
 
@@ -150,6 +151,45 @@ describe('사람 입력 수명주기', () => {
   test('공격 Space는 브라우저 버튼 활성화에 중복 전달하지 않는다', () => {
     expect(key('keydown', 'Space').defaultPrevented).toBe(true);
     expect(input.queue).toEqual(['attack']);
+  });
+  test('양쪽 Shift는 같은 회피를 한 번 예약하고 비활성·메뉴 포커스는 유지한다', () => {
+    for (const code of ['ShiftLeft', 'ShiftRight']) {
+      expect(key('keydown', code).defaultPrevented).toBe(true);
+      expect(input.consume('dodge')).toBe(true);
+      expect(input.consume('dodge')).toBe(false);
+      key('keyup', code);
+      input.enabled = false; key('keydown', code); input.enabled = true;
+      expect(input.queue).toEqual([]);
+      const menuKey = new Event('keydown', { cancelable: true });
+      Object.defineProperties(menuKey, { code: { value: code }, target: { value: { closest: () => ({}) } } });
+      host.dispatchEvent(menuKey);
+      expect(input.queue).toEqual([]);
+      expect(menuKey.defaultPrevented).toBe(false);
+    }
+  });
+  test('게임패드 앞 슬롯이 비었거나 끊겨도 뒤의 연결된 패드로 이동·회피한다', () => {
+    const pad = { connected: true, axes: [.8, 0], buttons: [{ pressed: false }, { pressed: true }] };
+    for (const first of [null, undefined, { connected: false }]) {
+      input.clear(); gamepads = [first, pad]; input.update();
+      expect(input.gamepadConnected).toBe(true);
+      expect(input.move.x).toBeGreaterThan(.7);
+      expect(input.consume('dodge')).toBe(true);
+      input.update(); expect(input.consume('dodge')).toBe(false);
+    }
+  });
+  test('패드 연결 해제는 패드 홀드만 정리하고 키보드 이동과 공격을 보존한다', () => {
+    gamepads = [null, { connected: true, axes: [.8, 0], buttons: [{ pressed: true }] }];
+    input.update(); input.consume('attack');
+    expect(input.attackSources.has('gamepad')).toBe(true);
+    key('keydown', 'KeyW'); key('keydown', 'KeyJ');
+    gamepads = [null, null]; input.update();
+    expect(input.gamepadConnected).toBe(false);
+    expect(input.attackSources.has('gamepad')).toBe(false);
+    expect(input.attackHeld).toBe(true);
+    expect(input.move).toEqual({ x: 0, y: -1 });
+    key('keyup', 'KeyJ'); key('keyup', 'KeyW'); input.update();
+    expect(input.attackHeld).toBe(false);
+    expect(input.move).toEqual({ x: 0, y: 0 });
   });
   test('표준 게임패드는 키보드·터치와 같은 명령 큐와 공격 홀드 경로를 사용한다', () => {
     gamepad = { connected: true, axes: [.8, 0], buttons: [{ pressed: true, value: 1 }] };

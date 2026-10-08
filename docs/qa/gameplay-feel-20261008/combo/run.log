@@ -1,0 +1,6 @@
+{"hero":"knight","attacks":6,"followup":4,"status":"pass"}
+{"hero":"barbarian","attacks":5,"followup":0,"status":"pass"}
+{"hero":"mage","attacks":5,"followup":0,"status":"pass"}
+{"hero":"rogue","attacks":6,"followup":0,"status":"pass"}
+{"hero":"ranger","attacks":5,"followup":0,"status":"pass"}
+{"status":"pass","out":"/workspace/scratch/fc6f71e2bf7f/blade-surge/work/qa/gameplay-20261008/cloud-combo-ready-v3","heroes":5}

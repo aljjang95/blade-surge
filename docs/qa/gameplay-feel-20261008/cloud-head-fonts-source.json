@@ -1,0 +1,40 @@
+{
+  "at": "2026-10-08T14:54:55.546561+00:00",
+  "files": {
+    "src/game/player.js": "d6dedc9cce9274931ca5a19759d4acce7e4bf3ae668bfd23a97efd543da644c9",
+    "src/game/enemies.js": "ece9435bce3f7e5c625d1aec8bfb34ca8fda953edfbbf982d207f9faf2f4b9e3",
+    "src/game/combat-craft.js": "a2940975d329ae701aa6d5e8240415e53ac650308adab2e47670e843fddbcc0c",
+    "src/engine/input.js": "c7ea31d372df9eedf83e8c6336e4e40e24d34ed17df36c9a5c8ae2559325b560",
+    "src/ui/ui.js": "5d11ee5a3dcfa9ba13350bddb95868e4bd21f36c54d7f7b1cd37ca137bedf598",
+    "src/ui/skill-feedback.js": "68026ee2f7a0721cecbb6e213aae0e166216a8e203629a3d9f50df2f40d097cd",
+    "src/ui/skill-feedback.css": "2816eb72b46768a4ff2dfccb5ddfb4e2ac87c1032f6163678e48b99c87b653cb",
+    "tools/metrics.mjs": "5cc164a1afdd5952a6bd8e6e5d507de770a0138026a6de6fc267148b4cee5d85",
+    "bun.lock": "94ad4ae70b404a489c64615438b1a073600c85f9f906d5d5191a04d3f304b04d",
+    "dist/version.json": "0409ee0bc5a56815aa63d0644784cd04c9a47cf505623d0f0ae330157d6533e9"
+  },
+  "version": {
+    "sha": "fab00213725df80be2670eb9d78625aa09d17773",
+    "dirty": true,
+    "builtAt": "2026-10-08T14:52:57.067Z",
+    "pwaRelease": "65fd524ae06edc3ec6e3"
+  },
+  "allChangedSourceFiles": {
+    "src/engine/combat-feedback.js": "2846ce7956ab459319496ce3c84584aefed4a31a11a9934e2685f9a2f272ea58",
+    "src/engine/fx.js": "8800f5d0e2666f6c7f964db7cc0a87fb85f541d180fb63b24cc53078cd7e1f37",
+    "src/engine/input.js": "c7ea31d372df9eedf83e8c6336e4e40e24d34ed17df36c9a5c8ae2559325b560",
+    "src/game/combat-craft.js": "a2940975d329ae701aa6d5e8240415e53ac650308adab2e47670e843fddbcc0c",
+    "src/game/enemies.js": "ece9435bce3f7e5c625d1aec8bfb34ca8fda953edfbbf982d207f9faf2f4b9e3",
+    "src/game/enemy-dash-warning.js": "26314d0564bb39bf763d51fcff0550999dedce0a58b79bf4c131705613f72d3c",
+    "src/game/mob-roles.js": "07f871b63dc87d47d13d6c98bb4f105dc3abb5a76fe4210ab92e57e0a6fa26c0",
+    "src/game/player.js": "d6dedc9cce9274931ca5a19759d4acce7e4bf3ae668bfd23a97efd543da644c9",
+    "src/ui/combo-feedback.css": "495127f5114f34b79ee26cdbb655de36188405db807e5a355d047edb3f72c477",
+    "src/ui/combo-feedback.js": "320a559b04a4ebeb47ca3b5ce4a55ba08114c328c9a7afc3de78db0f119284b6",
+    "src/ui/skill-feedback.css": "2816eb72b46768a4ff2dfccb5ddfb4e2ac87c1032f6163678e48b99c87b653cb",
+    "src/ui/skill-feedback.js": "68026ee2f7a0721cecbb6e213aae0e166216a8e203629a3d9f50df2f40d097cd",
+    "src/ui/tutorial.js": "5d5d9da9ecec48190db9c164e66e75f94b2453140c7ccfd803bd5a7bd7a6166b",
+    "src/ui/ui.js": "5d11ee5a3dcfa9ba13350bddb95868e4bd21f36c54d7f7b1cd37ca137bedf598",
+    "tools/shot_combo.mjs": "a15cf0e50baafeb979d104673e3889e9be1e9fe696a84608db7adec51b9b25e5"
+  },
+  "afterMetricsAt": "2026-10-08T14:57:43.831176+00:00",
+  "initialSnapshotUnchanged": true
+}

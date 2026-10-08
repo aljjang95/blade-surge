@@ -1,0 +1,84 @@
+{
+  "baselineSha": "fab00213725df80be2670eb9d78625aa09d17773",
+  "scope": "현재 Actor/Floor에서 구형 Enemy startAttack/doAttack과 후보 비교. 렌더/실기기 증거 아님.",
+  "rows": [
+    {
+      "baseline": true,
+      "fps": 30,
+      "outsideWarning": true,
+      "withinEndpointRadius": true,
+      "endpoint": [
+        -30.151445358991623,
+        0,
+        -52.24211637826222
+      ],
+      "hit": true,
+      "damage": 66
+    },
+    {
+      "baseline": true,
+      "fps": 60,
+      "outsideWarning": true,
+      "withinEndpointRadius": true,
+      "endpoint": [
+        -29.967302968057627,
+        0,
+        -52.0579739873281
+      ],
+      "hit": true,
+      "damage": 66
+    },
+    {
+      "baseline": true,
+      "fps": 120,
+      "outsideWarning": true,
+      "withinEndpointRadius": true,
+      "endpoint": [
+        -29.967302968057624,
+        0,
+        -52.1500451827951
+      ],
+      "hit": true,
+      "damage": 66
+    },
+    {
+      "baseline": false,
+      "fps": 30,
+      "outsideWarning": true,
+      "withinEndpointRadius": true,
+      "endpoint": [
+        -30.151445358991623,
+        0,
+        -52.24211637826222
+      ],
+      "hit": false,
+      "damage": 0
+    },
+    {
+      "baseline": false,
+      "fps": 60,
+      "outsideWarning": true,
+      "withinEndpointRadius": true,
+      "endpoint": [
+        -29.967302968057627,
+        0,
+        -52.0579739873281
+      ],
+      "hit": false,
+      "damage": 0
+    },
+    {
+      "baseline": false,
+      "fps": 120,
+      "outsideWarning": true,
+      "withinEndpointRadius": true,
+      "endpoint": [
+        -29.967302968057624,
+        0,
+        -52.1500451827951
+      ],
+      "hit": false,
+      "damage": 0
+    }
+  ]
+}

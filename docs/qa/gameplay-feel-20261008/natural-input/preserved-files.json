@@ -1,0 +1,72 @@
+[
+  {
+    "file": "report.json",
+    "source": "/workspace/scratch/fc6f71e2bf7f/blade-surge/work/qa/gameplay-20261008/cloud-native-v1/report.json",
+    "bytes": 707359,
+    "sha256": "3204184f497c201ac07cfa9ceeaab1140b0c7c85dc6fbeb0a627198d6474925f",
+    "identical": true
+  },
+  {
+    "file": "preflight.json",
+    "source": "/workspace/scratch/fc6f71e2bf7f/blade-surge/work/qa/gameplay-20261008/cloud-native-v1-preflight.json",
+    "bytes": 2342,
+    "sha256": "c31d466bb7a38a121e8767831e946eb45b4685a7defa952505b5c786f21faff5",
+    "identical": true
+  },
+  {
+    "file": "driver.mjs",
+    "source": "/workspace/scratch/fc6f71e2bf7f/blade-surge/work/qa/gameplay-natural-driver.mjs",
+    "bytes": 15003,
+    "sha256": "9ee7ca0d7815fec7a7fb6c3f3907ef08c72d1895661496b47777557f89e75693",
+    "identical": true
+  },
+  {
+    "file": "run.log",
+    "source": "/workspace/scratch/fc6f71e2bf7f/blade-surge/work/qa/gameplay-20261008/cloud-native-v1.log",
+    "bytes": 152,
+    "sha256": "24d9e77be33e009937f03cf9852de06e8adb9dc91348fecff31da74c976a4ceb",
+    "identical": true
+  },
+  {
+    "file": "01-fresh-lobby.png",
+    "source": "/workspace/scratch/fc6f71e2bf7f/blade-surge/work/qa/gameplay-20261008/cloud-native-v1/01-fresh-lobby.png",
+    "bytes": 365597,
+    "sha256": "565919540b6eaa99a308f63ae8aac9562ac9d13ce6693fc0521ef712a2eac6a6",
+    "identical": true
+  },
+  {
+    "file": "02-first-crowd-manual.png",
+    "source": "/workspace/scratch/fc6f71e2bf7f/blade-surge/work/qa/gameplay-20261008/cloud-native-v1/02-first-crowd-manual.png",
+    "bytes": 519754,
+    "sha256": "8a55b1a8567e2fab0fd25b9d030a54870a589770bdba141c5b89d867745da3da",
+    "identical": true
+  },
+  {
+    "file": "03-manual-cycle-0.png",
+    "source": "/workspace/scratch/fc6f71e2bf7f/blade-surge/work/qa/gameplay-20261008/cloud-native-v1/03-manual-cycle-0.png",
+    "bytes": 486473,
+    "sha256": "30e73a007c0267c4ce53551bd68e1be4c680f82790e68dfda41808d2ef338ab4",
+    "identical": true
+  },
+  {
+    "file": "03-manual-cycle-2.png",
+    "source": "/workspace/scratch/fc6f71e2bf7f/blade-surge/work/qa/gameplay-20261008/cloud-native-v1/03-manual-cycle-2.png",
+    "bytes": 468555,
+    "sha256": "2077f1e6d5043fe33abb8853b729bda8b97dcfbfab85593ab4035b3c4d42a710",
+    "identical": true
+  },
+  {
+    "file": "04-native-pause.png",
+    "source": "/workspace/scratch/fc6f71e2bf7f/blade-surge/work/qa/gameplay-20261008/cloud-native-v1/04-native-pause.png",
+    "bytes": 246890,
+    "sha256": "13e0fcf45314fb882b5fc50b6fcc0c1716293b5d128ece25cce209cb007579cb",
+    "identical": true
+  },
+  {
+    "file": "06-native-result.png",
+    "source": "/workspace/scratch/fc6f71e2bf7f/blade-surge/work/qa/gameplay-20261008/cloud-native-v1/06-native-result.png",
+    "bytes": 147401,
+    "sha256": "ed708a697ef0adf61999990baed6ffec4a74daad6f7440f82f6cb95c27ba7835",
+    "identical": true
+  }
+]

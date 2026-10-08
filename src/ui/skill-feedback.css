@@ -1,0 +1,16 @@
+/* 기존 터치 영역 안에서 재사용·충전·MP 상태를 읽는다. */
+#hud .skill-btn .skill-status {
+  position:absolute; left:2px; right:2px; top:50%; transform:translateY(-50%);
+  z-index:2; pointer-events:none; text-align:center; white-space:nowrap;
+  font-size:17px; line-height:23px; font-weight:900; font-variant-numeric:tabular-nums;
+  color:#fff; text-shadow:0 1px 3px #000,0 0 6px #000;
+}
+#hud .skill-btn .skill-status[hidden] { display:none; }
+#hud .skill-btn[data-skill-status="mana"] .skill-status { font-size:10px; color:#c6eaff; background:#112c45e8; border-radius:4px; line-height:20px; }
+#hud .skill-btn[data-skill-status="mana"] img { filter:saturate(.35) brightness(.55); }
+#hud .skill-btn[data-skill-status="charge"] .skill-status { color:#fff3bc; font-size:14px; }
+#hud .skill-btn .key { z-index:3; color:#fff; text-shadow:0 1px 3px #000; }
+@media (prefers-reduced-motion:reduce) {
+  #hud .skill-btn.ult.ready,#hud .skill-btn.ready-flash { animation:none; }
+  #hud .skill-btn.ult.ready { outline:2px solid var(--gold); outline-offset:-3px; }
+}

@@ -39,7 +39,8 @@ export class Input {
     let pads;
     try { pads = getGamepads.call(globalThis.navigator); } catch { return; }
     let pad = null;
-    for (let i = 0; i < (pads?.length || 0); i++) if (pads[i]?.connected !== false) { pad = pads[i]; break; }
+    // 연결 해제된 슬롯은 null로 남을 수 있으므로 실제 패드를 찾을 때까지 건너뛴다.
+    for (let i = 0; i < (pads?.length || 0); i++) if (pads[i] && pads[i].connected !== false) { pad = pads[i]; break; }
     if (!pad) {
       this.gamepadConnected = false; this.gamepadMove.x = this.gamepadMove.y = 0;
       this._attack('gamepad', false); this.gamepadButtons.fill(0); return;
@@ -117,11 +118,11 @@ export class Input {
 
     window.addEventListener('keydown', (e) => {
       if (!this.enabled || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.target?.closest?.('button, input, textarea, select, [contenteditable], [role="dialog"], dialog, #battle-camera-controls')) return;
-      if (!/^(Key[WASDJKRQEF]|Arrow(Left|Right|Up|Down)|Space|ShiftLeft|Digit[1-6])$/.test(e.code)) return;
+      if (!/^(Key[WASDJKRQEF]|Arrow(Left|Right|Up|Down)|Space|Shift(Left|Right)|Digit[1-6])$/.test(e.code)) return;
       e.preventDefault();
       if (e.repeat) return; this.keys[e.code] = true;
       if (e.code === 'KeyJ' || e.code === 'Space') { this._attack(e.code, true); this.press('attack'); }
-      if (e.code === 'KeyK' || e.code === 'ShiftLeft') this.press('dodge');
+      if (e.code === 'KeyK' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') this.press('dodge');
       if (e.code === 'KeyF') this.press('interact');
       if (e.code === 'Digit1') this.press('skill0'); if (e.code === 'Digit2') this.press('skill1'); if (e.code === 'Digit3') this.press('skill2'); if (e.code === 'KeyR' || e.code === 'Digit4') this.press('skill3');
       if (e.code === 'KeyQ' || e.code === 'Digit5') this.press('skill4'); if (e.code === 'KeyE' || e.code === 'Digit6') this.press('skill5');

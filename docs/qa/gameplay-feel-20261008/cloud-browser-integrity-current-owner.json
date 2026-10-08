@@ -1,0 +1,9 @@
+{
+  "package": "@sparticuz/chromium",
+  "version": "153.0.0",
+  "executable": "/tmp/blade-chromium-153-current-owner/chromium",
+  "packedDecompressedSha256": "53a15d6c3a3d27dfb54c4ba60278b1683136f70cf1e67e989da7dfbd3d451ef0",
+  "binarySha256": "53a15d6c3a3d27dfb54c4ba60278b1683136f70cf1e67e989da7dfbd3d451ef0",
+  "equal": true,
+  "extraction": "Brotli bytes and tar-fs chown:false; original package unchanged"
+}

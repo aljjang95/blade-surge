@@ -1,0 +1,8 @@
+{
+  "source": "https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/OTF/Korean/NotoSansCJKkr-Regular.otf",
+  "licenseSource": "https://raw.githubusercontent.com/notofonts/noto-cjk/main/Sans/LICENSE",
+  "fontSha256": "6bcb2a0703aa137e874fc2dffa85f6c21ba9a67fa329e81b8c801663af7e992a",
+  "fontconfigFile": "/tmp/blade-qa-fonts/qa-review-noto-cjk/fontconfig.conf",
+  "fontconfigSha256": "dd0164f9b9bc6b73cfecc5d1f7fd4f01c39db5f954dc1850e193e563838d4f54",
+  "scope": "QA fallback font only; product font CSS and metrics bands unchanged; original baseline kept; sole added font directory isolated from other fontsource assets"
+}
