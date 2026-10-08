@@ -18,6 +18,10 @@ export class OathShell {
   const homeButton=selected[0];if(homeButton)for(const node of homeButton.childNodes)if(node.nodeType===3&&node.textContent.trim())node.textContent='거점';
   const offers=home.querySelector('.lobby-right');if(offers?.children.length){const detail=el('details','oath-menu-offers'),summary=el('summary','','추가 상품 안내'),items=el('div');items.append(...offers.children);detail.append(summary,items);this.menu.append(detail);}
   const growth=el('button','oath-nav-growth','성장');growth.type='button';growth.onclick=()=>document.querySelector('.mw-open')?.click();nav.append(growth,trigger);
+  // 기존 그림을 장식으로 연결하고 메뉴 이름과 이벤트 소유권을 유지한다.
+  for(const [button,icon] of [[growth,'ic-growth'],[trigger,'ic-menu']]){
+   const art=el('i',`ic ${icon}`);art.setAttribute('aria-hidden','true');button.prepend(art);
+  }
   for(const button of document.querySelectorAll('#tab-home .lobby-left > button')){
    if(button.classList.contains('companion-launcher'))continue; // React/bootstrap retains its original parent.
    if(button.classList.contains('arsenal-open')){button.classList.add('oath-build-entry');home.append(button);}else this.grid.append(button);

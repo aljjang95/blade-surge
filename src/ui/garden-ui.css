@@ -1,0 +1,219 @@
+/* 성채의 정원: 이동 시야를 남기는 옥색 HUD와 따뜻한 수첩 질감이다. */
+.oath-visual #meta {
+  --garden-jade: #193f39;
+  --garden-cream: #fff1d2;
+  --garden-gold: #e7c681;
+}
+.oath-visual #meta .topbar {
+  padding: calc(14px + var(--sat)) max(18px, var(--sar)) 8px max(18px, var(--sal));
+  background: none;
+  align-items: flex-start;
+}
+.oath-visual #meta .profile {
+  padding: 5px 15px 5px 5px;
+  border: 1px solid #e7c681a6;
+  border-radius: 38px;
+  background: linear-gradient(130deg, #2b5a4feb, #143b35ed);
+  box-shadow: inset 0 1px 0 #ffefc23d, 0 5px 16px #09241d38;
+}
+.oath-visual #meta .topbar .avatar {
+  width: 46px;
+  height: 46px;
+  border: 2px solid var(--garden-gold);
+  border-radius: 50%;
+  background: #f5e5bc;
+}
+.oath-visual #meta .topbar .prof-name { color: var(--garden-cream); }
+.oath-visual #meta .topbar .prof-lv { color: #d8e7d7; }
+.oath-visual #meta .currencies { gap: 9px; padding-top: 5px; }
+.oath-visual #meta .cur {
+  min-height: 44px;
+  padding: 3px 6px 3px 9px;
+  border: 1px solid #b7d9b88a;
+  border-radius: 30px;
+  background: linear-gradient(150deg, #346554ee, #173e37ef);
+  color: #fff6df;
+  box-shadow: inset 0 1px 0 #efffde30, 0 4px 12px #08251c30;
+  font-variant-numeric: tabular-nums;
+}
+.oath-visual #meta .cur .ic { width: 26px; height: 26px; }
+.oath-visual #meta .cur .plus {
+  width: 32px;
+  height: 36px;
+  line-height: 36px;
+  background: #e4f5d51f;
+  border: 1px solid #d6e9b24d;
+  color: #fff2cc;
+  font-size: 20px;
+}
+.oath-visual #meta .cur-sub { left: 14px; color: #fff4d6; text-shadow: 0 1px 3px #09251b; }
+.oath-visual #meta .bottomnav {
+  left: 50%;
+  right: auto;
+  bottom: calc(14px + var(--sab));
+  transform: translateX(-50%);
+  width: min(490px, calc(100% - 32px - var(--sal) - var(--sar)));
+  height: 86px;
+  padding: 5px 10px;
+  gap: 7px;
+  border: 1px solid #b9d2a58f;
+  border-radius: 48px;
+  background: linear-gradient(160deg, #386651ee, #143d34f0);
+  box-shadow: inset 0 1px 0 #f2ffdc36, 0 8px 24px #09261f54;
+}
+/* 다른 메뉴의 마지막 콘텐츠도 떠 있는 하단 메뉴 아래로 숨지 않게 한다. */
+.oath-visual #meta .tab:not(#tab-home) { top: calc(88px + var(--sat)) !important; bottom: calc(110px + var(--sab)) !important; }
+.oath-visual #meta .bottomnav button {
+  flex-direction: column;
+  height: 74px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 4px 6px;
+  gap: 3px;
+  border: 1px solid transparent;
+  border-radius: 36px;
+  color: #f6efd8;
+  font-size: 12px;
+  touch-action: none;
+}
+.oath-visual #meta .bottomnav button.on {
+  border: 1px solid #f0d58ba6;
+  background: linear-gradient(150deg, #8da55d66, #294c3540);
+  color: #fff1bf;
+  box-shadow: inset 0 0 12px #f2d48018;
+}
+.oath-visual #meta .bottomnav button .ic,
+.oath-visual #meta .bottomnav button[data-tab=home] .ic {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #d6d6a27d;
+  border-radius: 50%;
+  background-color: #0b2c25;
+  background-size: 86%;
+  filter: none;
+  pointer-events: none;
+}
+.oath-visual .ic-growth { background-image: url('/img/ui-crafted/nav-mastery.webp'); }
+.oath-visual .ic-menu { background-image: url('/img/ui-crafted/nav-journal.webp'); }
+.oath-visual .oath-nav-growth::before, .oath-visual .oath-nav-menu::before { content: none; }
+.oath-visual #meta .bottomnav button .dot { top: 7px; right: 12px; }
+.oath-visual #meta .bottomnav button:focus-visible,
+.oath-visual #meta .cur .plus:focus-visible { outline: 3px solid #fff0b3; outline-offset: 3px; }
+
+/* 입구 안내는 기존 접근·확인 조건을 따르며 중앙 이동 경로를 가리지 않는다. */
+.citadel-hub-active .citadel-hub-place {
+  left: max(20px, var(--sal));
+  top: calc(88px + var(--sat));
+  gap: 3px;
+  padding: 9px 17px;
+  border: 1px solid #dac48eab;
+  border-radius: 24px 24px 24px 8px;
+  background: linear-gradient(120deg, #fff4d8ee, #eddebce8);
+  color: #29453a;
+  text-shadow: none;
+  box-shadow: 0 4px 15px #142c2530;
+}
+.citadel-hub-active .citadel-hub-place small { color: #78663e; font-size: 8px; letter-spacing: 2px; }
+.citadel-hub-active .citadel-hub-place strong { font-size: 17px; font-weight: 700; }
+.citadel-hub-active .citadel-hub-place span { display: none; }
+.citadel-hub-active .citadel-hub-near {
+  left: auto;
+  right: max(20px, var(--sar));
+  bottom: calc(122px + var(--sab));
+  transform: none;
+  width: min(360px, calc(100% - 156px));
+  gap: 12px;
+  padding: 13px 15px;
+  border: 1px solid #d8c38ba6;
+  border-radius: 28px 28px 10px 28px;
+  background: linear-gradient(125deg, #fff5dcf5, #eadabaf5);
+  box-shadow: inset 0 1px 0 #fffef4, 0 8px 24px #08251e3d;
+  backdrop-filter: none;
+  color: #29453a;
+}
+.citadel-hub-active .citadel-hub-near-copy small { color: #75613c; letter-spacing: 1px; }
+.citadel-hub-active .citadel-hub-near-name { font-size: 16px; font-weight: 750; }
+.citadel-hub-active .citadel-hub-near-detail { color: #465b4e; font-size: 11px; }
+.citadel-hub-active .citadel-hub-interact {
+  min-height: 48px;
+  padding: 10px 13px;
+  border: 1px solid #907239;
+  border-radius: 25px;
+  background: linear-gradient(#f5dfa5, #d9b870);
+  color: #3a432b;
+  box-shadow: inset 0 1px 0 #fff6d6, 0 2px 4px #7a623926;
+}
+.citadel-hub-active .citadel-hub-interact:disabled { background: #e0d7bd; color: #657266; border-color: #b9b699; box-shadow: none; }
+.citadel-hub-active .citadel-hub-interact kbd { border-radius: 50%; background: #335448; border-color: #335448; }
+.citadel-hub-active .citadel-hub-hint { bottom: calc(28px + var(--sab)); left: max(20px, var(--sal)); gap: 8px; }
+.citadel-hub-active .citadel-hub-stick { bottom: calc(124px + var(--sab)); border-color: #c6d8a885; background: radial-gradient(circle, #3a675499, #183b3266); }
+.oath-visual .citadel-hub-active #tab-home .lobby-camera-tools { top: calc(154px + var(--sat)); width: auto; }
+.citadel-hub-active .lobby-camera-buttons button,
+.oath-visual .citadel-hub-active #tab-home #lobby-camera-toggle,
+.oath-visual .citadel-hub-active #tab-home .lobby-left .companion-launcher {
+  border-radius: 24px;
+  background: #214b3ded;
+  border-color: #b8c99b80;
+  color: #fff0cc;
+}
+.oath-visual .citadel-hub-active #tab-home #lobby-camera-panel { border-radius: 20px; background: #1a4038f5; }
+.oath-visual .citadel-hub-active #tab-home #lobby-camera-pad { bottom: calc(226px + var(--sab)); height: 64px; border-radius: 32px; background: #214b3d9c; }
+
+/* 준비 창과 메뉴는 실제 안내 텍스트를 남긴 채 같은 재질로 묶는다. */
+.citadel-hub-dialog, .oath-visual .oath-menu { border: 1px solid #d7bd80a6; border-radius: 26px; background: #193c34; box-shadow: 0 24px 70px #061e1ac7; }
+.citadel-hub-destination-heading, .citadel-hub-destination-footer { background: #214b3f; }
+.citadel-hub-destination-heading { border-radius: 25px 25px 0 0; }
+.citadel-hub-destination-actions button, .citadel-hub-depth, .citadel-hub-goal-open, .citadel-hub-fury { border-radius: 18px; }
+.citadel-hub-destination-actions .citadel-hub-go { background: linear-gradient(#f6dfa9, #d9b979); color: #293c2c; border-color: #e7c681; }
+.oath-visual .oath-menu-heading { background: linear-gradient(100deg, #fff1d2, #e8d8b4); color: #29453a; }
+.oath-visual .oath-menu-close { color: #29453a; border-radius: 22px; }
+.oath-visual .oath-menu-grid button { border-radius: 20px; background: #285040; color: #fff1d2; }
+
+@media (orientation: portrait) {
+  .oath-visual #meta .topbar { padding: calc(8px + var(--sat)) 8px 8px; gap: 6px; }
+  .oath-visual #meta .profile { padding: 3px; }
+  .oath-visual #meta .topbar .avatar { width: 38px; height: 38px; }
+  .oath-visual #meta .currencies { gap: 4px; padding-top: 0; }
+  .oath-visual #meta .cur { min-width: 0; min-height: 44px; padding: 2px 3px; font-size: 10px; gap: 2px; }
+  .oath-visual #meta .cur .ic { width: 18px; height: 18px; }
+  .oath-visual #meta .cur .plus { width: 24px; min-width: 24px; }
+  .oath-visual #meta .bottomnav { height: 80px; padding: 3px 6px; gap: 1px; bottom: calc(8px + var(--sab)); width: calc(100% - 20px); }
+  .oath-visual #meta .bottomnav button { height: 72px; padding: 3px; font-size: 11px; }
+  .oath-visual #meta .tab:not(#tab-home) { top: calc(74px + var(--sat)) !important; bottom: calc(98px + var(--sab)) !important; }
+  .citadel-hub-active .citadel-hub-place { left: 12px; top: calc(76px + var(--sat)); }
+  .oath-visual .citadel-hub-active #tab-home .lobby-camera-tools { left: 12px; top: calc(146px + var(--sat)); }
+  .oath-visual .citadel-hub-active #tab-home .lobby-left { right: 12px; top: calc(80px + var(--sat)); }
+  .citadel-hub-active .citadel-hub-near { right: 12px; bottom: calc(100px + var(--sab)); width: calc(100% - 24px); padding: 10px 12px; }
+  .citadel-hub-active .citadel-hub-near-name { font-size: 14px; }
+  .citadel-hub-active .citadel-hub-stick { bottom: calc(206px + var(--sab)); }
+  .oath-visual .citadel-hub-active #tab-home #lobby-camera-pad { right: 12px; bottom: calc(206px + var(--sab)); }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  .oath-visual #meta .topbar { padding-top: calc(8px + var(--sat)); }
+  .oath-visual #meta .topbar .avatar { width: 36px; height: 36px; }
+  .oath-visual #meta .currencies { padding-top: 0; }
+  .oath-visual #meta .bottomnav { width: 380px; height: 72px; bottom: calc(8px + var(--sab)); padding: 3px 8px; gap: 3px; }
+  .oath-visual #meta .bottomnav button { height: 64px; font-size: 11px; padding: 2px 4px; }
+  .oath-visual #meta .tab:not(#tab-home) { top: calc(72px + var(--sat)) !important; bottom: calc(90px + var(--sab)) !important; }
+  .oath-visual #meta .bottomnav button .ic, .oath-visual #meta .bottomnav button[data-tab=home] .ic { width: 32px; height: 32px; }
+  .citadel-hub-active .citadel-hub-place { top: calc(68px + var(--sat)); padding: 7px 14px; }
+  .citadel-hub-active .citadel-hub-place small { display: none; }
+  .oath-visual .citadel-hub-active #tab-home .lobby-camera-tools { top: calc(114px + var(--sat)); }
+  .citadel-hub-active .citadel-hub-near { bottom: calc(92px + var(--sab)); width: min(310px, calc(100% - 160px)); padding: 8px 12px; }
+  .citadel-hub-active .citadel-hub-near-detail { display: none; }
+  .citadel-hub-active .citadel-hub-near-name { font-size: 14px; }
+  .citadel-hub-active .citadel-hub-stick { bottom: calc(100px + var(--sab)); }
+  .oath-visual .citadel-hub-active #tab-home #lobby-camera-pad { top: calc(132px + var(--sat)); bottom: auto; width: 72px; height: 48px; }
+  .citadel-hub-active .citadel-hub-hint { display: none; }
+}
+@media (max-width: 360px) and (orientation: portrait) {
+  .oath-visual #meta .topbar { padding-left: 6px; padding-right: 6px; gap: 3px; }
+  .oath-visual #meta .topbar .avatar { width: 32px; height: 32px; }
+  .oath-visual #meta .currencies { gap: 2px; }
+  .oath-visual #meta .cur { gap: 1px; font-size: 9px; }
+  .oath-visual #meta .cur .ic { width: 15px; height: 15px; }
+  .oath-visual #meta .cur .plus { width: 22px; min-width: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .oath-visual #meta .bottomnav button { transition: none; }
+}
