@@ -57,6 +57,11 @@ export class HubControls {
       if (!this.active) { this.clear(); return; }
       this._movePointer(event); event.preventDefault();
     });
+    // 조이스틱의 짧은 터치를 브라우저 탭 제스처로 보내지 않는다.
+    // 다음 UI 버튼의 네이티브 click은 그대로 유지한다.
+    this._listen(this.joystick, 'touchstart', event => {
+      if (this.active && this.pointer !== null && event.cancelable) event.preventDefault();
+    }, { passive: false });
     for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) this._listen(this.joystick, type, event => {
       if (this.pointer?.id === event.pointerId) this._releasePointer();
     });
