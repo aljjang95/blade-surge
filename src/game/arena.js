@@ -8,6 +8,7 @@ import { buildLobbyWorld } from './lobby-world.js';
 import { BattleOcclusion } from '../engine/battle-occlusion.js';
 import { softCircleTex } from '../engine/assets.js';
 import { applyDungeonSurface, collectDungeonTiles, projectDungeonSurface } from './dungeon-surface.js';
+import { buildOpenFieldScene, FIELD_ATMOSPHERES } from './open-field-scene.js';
 
 const THEMES = {
   garden: { fog: 0x172b2b, bg: 0x172b2b, hemi: [0xa0b5ae, 0x283930], sun: 0xffedca, sunI: 2.3, torch: 0x8adbd0, tint: 0xcbd0b8 },
@@ -59,14 +60,14 @@ export class Arena {
     for (const g of floorData.gates) {
       // 장막(반투명 검붉은 판) + 마법진(circle_demon, 회전) + 발밑 룬. 가산 판 하나로는 밝은 바닥 위에서 거의 안 보였다 (스크린샷 대조)
       const wall = new THREE.Mesh(new THREE.PlaneGeometry(7.5, 4.2, 1, 1),
-        new THREE.MeshBasicMaterial({ color: 0x5a0a1c, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false }));
+        new THREE.MeshBasicMaterial({ color: 0x5a0a1c, transparent: true, opacity: 0.55, side: THREE.DoubleSide, forceSinglePass: true, depthWrite: false }));
       wall.position.set(g.x, 2.1, g.z); if (g.axis === 'z') wall.rotation.y = Math.PI / 2; wall.renderOrder = 2;
       const tex = VFX_TEX.circle_demon;
       const sigil = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 4.2),
-        new THREE.MeshBasicMaterial({ map: tex || null, color: 0xff3050, transparent: true, opacity: 0.95, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+        new THREE.MeshBasicMaterial({ map: tex || null, color: 0xff3050, transparent: true, opacity: 0.95, side: THREE.DoubleSide, forceSinglePass: true, depthWrite: false, blending: THREE.AdditiveBlending }));
       sigil.position.set(0, -0.05, 0.02); sigil.renderOrder = 3; wall.add(sigil);
       const rune = new THREE.Mesh(new THREE.RingGeometry(1.6, 2.2, 6),
-        new THREE.MeshBasicMaterial({ color: 0xff6070, transparent: true, opacity: 0.7, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+        new THREE.MeshBasicMaterial({ color: 0xff6070, transparent: true, opacity: 0.7, side: THREE.DoubleSide, forceSinglePass: true, depthWrite: false, blending: THREE.AdditiveBlending }));
       rune.position.set(0, -2.02, 0); rune.rotation.x = Math.PI / 2; rune.renderOrder = 3;
       wall.userData.rune = rune; wall.userData.sigil = sigil; wall.add(rune);
       this.group.add(wall); this.seals.push(wall);
@@ -92,6 +93,7 @@ export class Arena {
     this.lobbyHall?.userData.dispose(); this.lobbyHall = null;
     this.lobbyWorld?.userData.dispose(); this.lobbyWorld = null; this.renderer.lobbyOccluders = [];
     this.regionArchitecture?.userData.dispose(); this.regionArchitecture = null;
+    this.fieldScene?.userData.dispose(); this.fieldScene = null;
     for (const material of this.ownedMaterials) material.dispose(); this.ownedMaterials.clear();
     for (const geometry of this.ownedGeometry) geometry.dispose(); this.ownedGeometry.clear();
     for (const s of this.seals) disposeSeal(s);
@@ -180,7 +182,7 @@ export class Arena {
     group.add(new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, depthWrite: false, fog: false })));
     const random = mulberry32((seed || 1) ^ 0x7f31);
     const points = [];
-    for (let i = 0; i < Math.floor(220 * (sky.density || .25)); i++) {
+    for (let i = 0; i < Math.floor(220 * (sky.density ?? .25)); i++) {
       const theta = random() * Math.PI * 2, y = .16 + random() * .78, radius = 96;
       const ring = Math.sqrt(1 - y * y); points.push(Math.cos(theta) * ring * radius, y * radius, Math.sin(theta) * ring * radius);
     }
@@ -208,10 +210,11 @@ export class Arena {
     this.clear();
     this.floorData = floorData;
     const visualKey = visual?.landmark || floorData.layout?.landmark || 'crypt';
-    const T = { ...(THEMES[theme] || THEMES.crypt), ...(DUNGEON_ATMOSPHERES[visualKey] || {}) };
+    const field = floorData.layout?.field;
+    const T = { ...(THEMES[theme] || THEMES.crypt), ...(DUNGEON_ATMOSPHERES[visualKey] || {}), ...(FIELD_ATMOSPHERES[field] || {}) };
     const random = mulberry32((floorData.seed || floorData.floor * 7919) ^ 0x51a7);
     const rnd = (a, b) => a + random() * (b - a);
-    this.scene.background = new THREE.Color(T.bg); this.scene.fog.color.set(T.fog); this.scene.fog.density = 0.026;
+    this.scene.background = new THREE.Color(T.bg); this.scene.fog.color.set(T.fog); this.scene.fog.density = field ? .008 : .026;
     this.buildSky(visual, floorData.seed || floorData.floor || 1);
 
     const hemi = new THREE.HemisphereLight(T.hemi[0], T.hemi[1], 1.5); this.scene.add(hemi); this.lights.push(hemi);
@@ -221,6 +224,12 @@ export class Arena {
     sun.shadow.camera.left = sun.shadow.camera.bottom = -22; sun.shadow.camera.right = sun.shadow.camera.top = 22;
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 70; sun.shadow.bias = -0.0018; sun.shadow.normalBias = 0.03;
     this.scene.add(sun, sun.target); this.lights.push(sun, sun.target); this.sun = sun;
+
+    if (field) {
+      this.fieldScene = buildOpenFieldScene(floorData, this.renderer.quality);
+      this.fieldScene.traverse(node => { if(node.isMesh && node.name !== 'field-walkable-ground' && node.name !== 'field-ocean' && node.name !== 'field-backdrop')this.occlusion.bind(node.material); });
+      this.group.add(this.fieldScene); this.buildSeals(floorData); return;
+    }
 
     // ---- 바닥 (방 + 복도) ----
     const tiles = collectDungeonTiles(floorData, random, TILE);
@@ -292,6 +301,7 @@ export class Arena {
   }
 
   update(dt, fx, playerPos) {
+    this.fieldScene?.userData.update(dt);
     if (this.skyGroup && playerPos) this.skyGroup.position.set(playerPos.x, 0, playerPos.z);
     this.occlusion.setTarget(this.floorData ? playerPos : null);
     this.t += dt;

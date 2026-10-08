@@ -1,6 +1,7 @@
 import {expect,test} from 'bun:test';
 import {JOURNEY_STEPS} from '../src/data/journey.js';
 import {DUNGEONS,RECIPES} from '../src/data/expansion.js';
+import {EXPEDITION_ROUTES} from '../src/data/expedition-routes.js';
 import {ITEM_BY_ID} from '../src/data/items.js';
 import {normalizeJourney,periodAt,refreshPeriods,journeySteps,contractRows,recordJourneyWin,claimJourneyStep,claimContract,setTargetRecipe} from '../src/game/journey-core.js';
 
@@ -38,7 +39,7 @@ test('legacy and malicious saves normalize without unknown targets, itemless rec
     weekly:{wins:-10,targets:{star_archive:5}},receipts:[...Array.from({length:300},(_,i)=>`run:${i}`),'bad space','__proto__']});
   expect(s.day).toBe(0);expect(s.week).toBe(0);expect(s.autoBattle).toBe(false);expect(s.targetRecipeId).toBeNull();
   expect(s.claimedSteps).toEqual(['oath']);expect(s.daily.wins).toBe(0);expect(s.daily.targets.glass_garden).toBe(1000000);
-  expect(Object.keys(s.daily.targets)).toEqual(DUNGEONS.map(d=>d.id));expect(s.daily.claimed).toEqual(['first_dungeon']);
+  expect(Object.keys(s.daily.targets)).toEqual(EXPEDITION_ROUTES.map(d=>d.id));expect(s.daily.claimed).toEqual(['first_dungeon']);
   expect(s.weekly.wins).toBe(0);expect(s.receipts).toHaveLength(256);expect(s.receipts[0]).toBe('run:44');
   expect(normalizeJourney(s)).toEqual(s);
 });

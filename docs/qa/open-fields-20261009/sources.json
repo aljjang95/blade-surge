@@ -1,0 +1,187 @@
+{
+  "baseSha": "731c39e2c44341f3f3c1555b547d7577024774fb",
+  "integratedMain": "17ac254b625d5bbfeb1d7e7b3b7cc0f73c6ab2f3",
+  "scope": "Final owned working-tree source and delivered asset hashes before commit; dirty production-preview reports remain labelled dirty.",
+  "files": [
+    {
+      "path": "art/open-fields-v1/cards-provenance.json",
+      "bytes": 3573,
+      "sha256": "202e0f5c59c961970469321c80d60a25e4aaffd2a98a0c505c75d1a91833ca38"
+    },
+    {
+      "path": "art/open-fields-v1/grass-source-v1.png",
+      "bytes": 3297660,
+      "sha256": "f378b3b0fef0d716484a6c0ab3f714ef959245d2ec0bcf68de42428cca898c48"
+    },
+    {
+      "path": "art/open-fields-v1/prompt.txt",
+      "bytes": 734,
+      "sha256": "0f96cb774861a19c0dbed54dddc6ff0a705a2e2788e220e57a6329888b712c29"
+    },
+    {
+      "path": "art/open-fields-v1/provenance.json",
+      "bytes": 643,
+      "sha256": "b9a56fdfd62b18d27f0533a78a1e6da4ac861d398ef223c5f6b1c12a0b1d3755"
+    },
+    {
+      "path": "public/img/environment/field-grass-v1.webp",
+      "bytes": 309150,
+      "sha256": "35abf1e51b6d08af269592e34c7fc213938614cd5bcd0bd1ffd8ce00a5f316b3"
+    },
+    {
+      "path": "public/img/fields/city-v1.webp",
+      "bytes": 62158,
+      "sha256": "8240e4fd9351010b705f3498553a93107963fd1867d4664f5216a6921e49ffdd"
+    },
+    {
+      "path": "public/img/fields/coast-v1.webp",
+      "bytes": 20370,
+      "sha256": "2cdeb64ad00b255bcf14e654c745cd25d91a2c1cb1d45b8b8a6fbdfa2024c5c6"
+    },
+    {
+      "path": "public/img/fields/meadow-v1.webp",
+      "bytes": 100404,
+      "sha256": "c1c3eb0d9fa9e72a241e6fe02eecd6d28d3607a10b60f581374ef899c2e1eba7"
+    },
+    {
+      "path": "public/img/fields/mountain-v1.webp",
+      "bytes": 61640,
+      "sha256": "15495265104d3dd53f9f373aa36be96107685f6d3c99b08970c79396e2d62ea9"
+    },
+    {
+      "path": "src/data/dungeon-visuals.js",
+      "bytes": 4035,
+      "sha256": "a4307695101882efff1832e43f54232bb9104d9866237f3577d5f13120543ec1"
+    },
+    {
+      "path": "src/data/expedition-routes.js",
+      "bytes": 271,
+      "sha256": "3640443588ac87c99cb46caaa12de10669352324a350221bc7fe6befae7b64be"
+    },
+    {
+      "path": "src/data/open-fields.js",
+      "bytes": 3188,
+      "sha256": "83d0cafe285a5608ad55c6ad489902f38b38687ee9dc6eb50c077f66f67f7676"
+    },
+    {
+      "path": "src/engine/audio.js",
+      "bytes": 35221,
+      "sha256": "b1b09698d576c131017e954d38a6d1f488b1d880a0e28ff31fb73045e22e53b2"
+    },
+    {
+      "path": "src/expansion/hub.jsx",
+      "bytes": 30354,
+      "sha256": "69ccf8d3948ee9094eb3103e198b5d7222e0701059e5bfbd441aceccd92b69db"
+    },
+    {
+      "path": "src/game/actor.js",
+      "bytes": 11743,
+      "sha256": "0e9f5d45f42bf4c42de05c8b53dd0f0453ec6d102e07e663e8e0d89ebe18b8ed"
+    },
+    {
+      "path": "src/game/arena.js",
+      "bytes": 21906,
+      "sha256": "eda5bed6a4a93e41ec28aa4b13c4ceb197d033a37e38b4ec115ae2fab6e9e3c1"
+    },
+    {
+      "path": "src/game/battle-base.js",
+      "bytes": 59497,
+      "sha256": "9b79428987f59ba4895a7a9765103efd037e4afe7b921ffe629b976bc7be63fc"
+    },
+    {
+      "path": "src/game/combat-contact.js",
+      "bytes": 1680,
+      "sha256": "630270456a4ee89c4265b9ed67e13d499b00560d18dfcee5b0506ac50b9079a3"
+    },
+    {
+      "path": "src/game/combat-motion.js",
+      "bytes": 4100,
+      "sha256": "6c3878b53092a6bb95a0b917855c8052cf71c1a4c635d361c4dd2f421a11f9e7"
+    },
+    {
+      "path": "src/game/crowd-gather.js",
+      "bytes": 5351,
+      "sha256": "e015890a3c310857cf0ea26af8d32603119c302b8d12fc1f33ede24ef34d22c7"
+    },
+    {
+      "path": "src/game/enemies.js",
+      "bytes": 41817,
+      "sha256": "6717b1d08a1cb7de3fe8a370a4f33348d33c221f63bc61c75f8d885a54fbf6ca"
+    },
+    {
+      "path": "src/game/expedition-combat.js",
+      "bytes": 13685,
+      "sha256": "d66d29adaab0989aaeba412268be8614cec876d6640eef6c73eb8534f50462de"
+    },
+    {
+      "path": "src/game/expedition-economy.js",
+      "bytes": 21565,
+      "sha256": "65fa99f9709b3cf39f57fe2adb8aaa499830282b8726e139ecc68fec96bf26b5"
+    },
+    {
+      "path": "src/game/journey-core.js",
+      "bytes": 8252,
+      "sha256": "dc6cbea672f874b98a71819169f21caf2ada35a6a716f4a7792d43bb3581375b"
+    },
+    {
+      "path": "src/game/masterworks-core.js",
+      "bytes": 8785,
+      "sha256": "aef60c948ee9f213dc564431a8fc283d2bddffab70a4ba27eb5bfba43ea4c79d"
+    },
+    {
+      "path": "src/game/open-field-scene.js",
+      "bytes": 13201,
+      "sha256": "64b6e83ffde57ca7ceb368dfb974a783becebb12f481ef2fa6399c1c4410aff4"
+    },
+    {
+      "path": "src/game/player.js",
+      "bytes": 44822,
+      "sha256": "ae0e69547372fd33c4b1a021a1a7b47814d797da4a2094e03c8d0678b7a7fd21"
+    },
+    {
+      "path": "src/game/rpg-encounters.js",
+      "bytes": 3200,
+      "sha256": "fe6050d68d35b71aa8a2dda3731ba1dcfe096d57d123272a98ce3a28256ad6b5"
+    },
+    {
+      "path": "src/game/run-history.js",
+      "bytes": 7287,
+      "sha256": "23de7a5ca7af579ee4eec26ebb7a073f35038c3adbba7a9c268a9f053ab5038b"
+    },
+    {
+      "path": "src/ui/citadel-command.css",
+      "bytes": 9505,
+      "sha256": "ff3da0d660eb4117ed2735cd3e93d920df0d765719bfea3c511889ac49694184"
+    },
+    {
+      "path": "src/ui/citadel-command.js",
+      "bytes": 7976,
+      "sha256": "15b50afe994cc6f219d9496cc9372b40cc4fcf79bb7380aaf37b59a16dc86d06"
+    },
+    {
+      "path": "test/combat-feedback.test.ts",
+      "bytes": 22332,
+      "sha256": "1bcb9ea3d94edde488bcba8b26811a8ad3eee12a2141ee48ad6d1a66c442bd3e"
+    },
+    {
+      "path": "test/journey-core.test.ts",
+      "bytes": 8346,
+      "sha256": "8f895198981fcf13b640fe3cf67a1a3e16c2f6c6cbf4108f217f583c3e35d192"
+    },
+    {
+      "path": "test/open-fields.test.ts",
+      "bytes": 5543,
+      "sha256": "c55e2e24d8c75d0763eea5f040791766bec324c6490554341ea37ff0dfb924af"
+    },
+    {
+      "path": "test/warrior-field-combat.test.ts",
+      "bytes": 3777,
+      "sha256": "5f821e773601984d3e70609cdbccc294f655deff58557fcd53de638b254d2a9e"
+    },
+    {
+      "path": "tools/open-fields-qa.mjs",
+      "bytes": 16168,
+      "sha256": "8ecf9c0e25ecf482d92dd283ab37d3240e4582e10cf423c949bbdc3eecefd015"
+    }
+  ]
+}

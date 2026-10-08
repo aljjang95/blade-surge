@@ -1,4 +1,6 @@
-import { DUNGEONS, ARENA_RIVALS } from '../data/expansion.js';
+import { ARENA_RIVALS } from '../data/expansion.js';
+import { FIELD_DUNGEONS } from '../data/open-fields.js';
+import { EXPEDITION_ROUTES as DUNGEONS } from '../data/expedition-routes.js';
 import { ENEMIES } from '../data/stages.js';
 import { Floor } from './world.js';
 import { expeditionDepth, depthStage } from '../data/expedition-depths.js';
@@ -7,6 +9,7 @@ import { frontierFromSnapshot, frontierEffectForStage } from '../data/seasonal-c
 import { gardenMasteryForStage, gardenMasteryDiagonals } from '../data/garden-mastery.js';
 
 export const EXPEDITION_LAYOUTS = {
+  ...Object.fromEntries(FIELD_DUNGEONS.map(d => [d.id, d.layout])),
   glass_garden: { spacing: [30, 30], size: [20, 20], width: 6, cells: [[0,0],[1,0],[1,-1],[2,0],[3,0]], edges: [[0,1],[1,2],[1,3],[3,4]], types: ['start','normal','treasure','normal','boss'] },
   ember_vault: { spacing: [34, 26], size: [24, 16], width: 8, cells: [[0,0],[1,0],[2,0]], edges: [[0,1],[1,2]], types: ['start','elite','boss'] },
   star_archive: { spacing: [28, 34], size: [16, 24], width: 6, cells: [[0,0],[0,1],[1,1],[1,2]], edges: [[0,1],[1,2],[2,3]], types: ['start','normal','elite','boss'] },
@@ -51,6 +54,7 @@ export function buildExpeditionStage(kind, id, eco, { depth = 'standard', conque
   if (!def) throw new RangeError('알 수 없는 탐험입니다.');
   if (!['standard', 'deep'].includes(depth) || (depth === 'deep' && kind !== 'dungeon')) throw new RangeError('알 수 없는 원정 난이도입니다.');
   const deep = depth === 'deep' ? expeditionDepth(id) : null;
+  if (depth === 'deep' && !deep) throw new RangeError('이 필드는 기본 원정만 지원합니다.');
   const conquest = conquestForRun(id, depth, conquestId);
   if (conquestId !== null && (!conquest || kind !== 'dungeon')) throw new RangeError('알 수 없는 전술 공략입니다.');
   const base = deep ? depthStage(id) : def.stage;
@@ -65,7 +69,7 @@ export function buildExpeditionStage(kind, id, eco, { depth = 'standard', conque
   if (activeFrontier?.effects.kind === 'bossStatMultiplier') enemy.hp = Math.floor(enemy.hp * activeFrontier.effects.value);
   const stage = { ...base, boss: true, finale: false, story: null, ...(activeFrontier ? { frontier: activeFrontier } : {}), expedition: { kind, id, depth, ...(def.rosterMode ? { rosterMode: def.rosterMode } : {}), ...(conquest ? { conquestId } : {}),
     mechanics: deep?.mechanics || { attunement: id === 'glass_garden' || id === 'bellfall_crypt', reinforcements: id === 'ember_vault' || id === 'cinder_tide_lock' ? 2 : 0 } },
-    theme: def.theme,
+    theme: def.theme, ...(def.field ? { field: def.field } : {}),
     code: deep?.name || def.name, name: deep?.name || def.name, title: conquest ? `${deep.name} · ${conquest.name}` : deep?.name || def.name,
     objective: conquest?.objective || deep?.objective || (duel ? `AI 모의 결투 · 150초 제한 · ${duel.tactic}` : def.objective || TACTICS[id]),
     encounter: { ...base.encounter, enemyId, name: enemy.name, label: deep ? 'DEEP EXPEDITION' : kind === 'arena' ? 'AI DUEL' : 'DUNGEON BOSS', tactic: deep ? deep.tactic || base.encounter.tactic : duel?.tactic || def.tactic || TACTICS[id] },

@@ -86,11 +86,15 @@ export class Actor {
       const t = Math.min(1, (this.stateT + dt) / (c.dur / speed));
       motion.action.time = attackPhase(t, c.hitAt) * motion.clip.duration;
       this.mixer.update(0);
-      if (!reduced) {
-        const pose = attackBody(t, c.hitAt, this.def.weapon, this.def.ranged);
-        pivot.rotation.x = pose.pitch; pivot.rotation.y = pose.yaw; pivot.position.z = pose.forward;
-        pivot.rotation.z = pose.roll || 0;
-      }
+    }
+    const c = this.current;
+    if (!reduced && this.state === 'attack' && this.def?.combo?.includes(c)) {
+      const expires = this.buffs?.t > 0 && this.buffs.t <= dt;
+      const speed = (expires ? 1 : (this.buffs?.atkSpd || 1)) * (this.stormT > dt ? 1.4 : 1);
+      const t = Math.min(1, (this.stateT + dt) / (c.dur / speed));
+      const warriorIndex = this.def.id === 'knight' || this.def.id === 'barbarian' ? this.comboIdx : -1;
+      const pose = attackBody(t, c.hitAt, this.def.weapon, this.def.ranged, warriorIndex, c.move, c.finisher);
+      pivot.rotation.x = pose.pitch; pivot.rotation.y = pose.yaw; pivot.position.z = pose.forward; pivot.rotation.z = pose.roll || 0;
     }
     if (this._strikeRecoil) {
       const s = this._strikeRecoil; s.t += dt;
