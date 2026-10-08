@@ -8,14 +8,14 @@ import { personalMetricLabel, personalMetricValue } from './personal-goal-labels
 const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const verbs = { dungeon: '입장 확인', campaign: '캠페인 보기', arena: '상대 고르기', merchant: '물약 구매', trainer: '전투 준비', steward: '결투 안내' };
 const count = value => Number(value).toLocaleString('ko-KR');
-const potionArt = id => `/img/ui-crafted/potion-${id === 'hp_tonic' ? 'health' : id === 'overdrive' ? 'power' : 'guard'}.webp`;
+const potionArt = id => `/img/departure-journal/icons/potion-${id === 'hp_tonic' ? 'health' : id === 'overdrive' ? 'power' : 'guard'}.webp`;
 const rewardCards = rewards => {
   const entries = [];
   if (rewards?.gold) entries.push({ name: '골드', amount: rewards.gold, art: 'gold' });
   if (rewards?.xp) entries.push({ name: '탐험 경험치', amount: rewards.xp, art: 'hero-xp' });
   for (const [id, amount] of Object.entries(rewards?.materials || {})) entries.push({ name: MATERIALS.find(item => item.id === id)?.name || id, amount, art: id === 'ember_core' ? 'material-ember' : id === 'star_dust' ? 'material-stardust' : 'material-leaf' });
   for (const [id, amount] of Object.entries(rewards?.consumables || {})) entries.push({ name: CONSUMABLES.find(item => item.id === id)?.name || id, amount, art: `potion-${id === 'hp_tonic' ? 'health' : id === 'overdrive' ? 'power' : 'guard'}` });
-  return entries.map(item => `<li><img src="/img/ui-crafted/${item.art}.webp" alt="" width="48" height="48"><span>${safe(item.name)}</span><b>${count(item.amount)}</b></li>`).join('') || '<li>추가 보상 없음</li>';
+  return entries.map(item => `<li><img src="/img/departure-journal/icons/${item.art}.webp" alt="" width="48" height="48"><span>${safe(item.name)}</span><b>${count(item.amount)}</b></li>`).join('') || '<li>추가 보상 없음</li>';
 };
 const rewardLabel = rewards => {
   const entries = [];

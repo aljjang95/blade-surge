@@ -22,5 +22,79 @@
       "originalSha256": "c0099ca1882b2f350555d19cc68aba4c0805e9203f20840cf3ab191d204b1017",
       "prompt": "Seamless flat scanned very pale warm ivory cotton paper, fine fibers, very low contrast, quiet even lighting. No stains, folds, shadows, vignette, border, objects, drawings, text or watermark."
     }
+  ],
+  "derivedIcons": [
+    {
+      "file": "public/img/departure-journal/icons/gold.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 17536,
+      "sha256": "d8be90ef1b83b788f50f0a6e57e44c67ed431e247dd9984ae5900520db3090fc",
+      "source": "public/img/ui-crafted/gold.webp",
+      "processing": "dark background keyed to alpha by corner-color distance"
+    },
+    {
+      "file": "public/img/departure-journal/icons/hero-xp.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 30686,
+      "sha256": "f542607c9a28de25ba2b2fa40ad6d0f3c5a38950ea9b6dd730a5ffeebafc7235",
+      "source": "public/img/ui-crafted/hero-xp.webp",
+      "processing": "dark background keyed to alpha by corner-color distance"
+    },
+    {
+      "file": "public/img/departure-journal/icons/material-leaf.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 15204,
+      "sha256": "1aec0e3914f23adf4c30675ae93df364af667ac67ce3d517ff3da2496d915134",
+      "source": "public/img/ui-crafted/material-leaf.webp",
+      "processing": "dark background keyed to alpha by corner-color distance"
+    },
+    {
+      "file": "public/img/departure-journal/icons/material-ember.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 18690,
+      "sha256": "2363df5c8169573fe4d3af40b2d194bd170ec3703ddabec0adab9ef512139206",
+      "source": "public/img/ui-crafted/material-ember.webp",
+      "processing": "dark background keyed to alpha by corner-color distance"
+    },
+    {
+      "file": "public/img/departure-journal/icons/material-stardust.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 23592,
+      "sha256": "eb66783bd79d1acd1f37402fb81a1c23e0df53eae6c45dd4c7f163072d1bae7d",
+      "source": "public/img/ui-crafted/material-stardust.webp",
+      "processing": "dark background keyed to alpha by corner-color distance"
+    },
+    {
+      "file": "public/img/departure-journal/icons/potion-health.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 19766,
+      "sha256": "69f73f5afb5d0f3bd5590288cdb8da877643798004cf48fe701ec0bd69224fe5",
+      "source": "public/img/ui-crafted/potion-health.webp",
+      "processing": "dark background keyed to alpha by corner-color distance"
+    },
+    {
+      "file": "public/img/departure-journal/icons/potion-power.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 22158,
+      "sha256": "205e49b97f1b14856f8888e6bb72b8ba27f9888cfbbc2fd0f7c664052010d553",
+      "source": "public/img/ui-crafted/potion-power.webp",
+      "processing": "dark background keyed to alpha by corner-color distance"
+    },
+    {
+      "file": "public/img/departure-journal/icons/potion-guard.webp",
+      "width": 384,
+      "height": 384,
+      "bytes": 25996,
+      "sha256": "992cae0358c13e8200268cf9ef7ef99f62de894fd27f402b36d8acab64cdcab4",
+      "source": "public/img/ui-crafted/potion-guard.webp",
+      "processing": "dark background keyed to alpha by corner-color distance"
+    }
   ]
 }
