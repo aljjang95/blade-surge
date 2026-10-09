@@ -44,6 +44,29 @@ export async function runMobileJourneyChecks({ page, device, nativeCall, shortTo
       await shortTouch('.adventure-nav [data-section="dungeons"]');
     }
   });
+  await step('Native swipe reveals the short landscape dungeon map', async row => {
+    await resize({ width: 667, height: 280 });
+    await shortTouch('.adventure-nav [data-section="arena"]');
+    await shortTouch('.adventure-nav [data-section="dungeons"]');
+    const scroll = page.locator('.exp-scroll');
+    const box = await scroll.boundingBox();
+    assert(box && box.height >= 64, 'Scrollable body missing');
+    row.beforeScroll = await scroll.evaluate(el => el.scrollTop);
+    const x = box.x + box.width - 12, from = box.y + box.height - 10, to = box.y + 10;
+    await nativeCall('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y: from, id: 1 }] });
+    try {
+      for (let index = 1; index <= 8; index++) {
+        await nativeCall('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: from + (to - from) * index / 8, id: 1 }] });
+        await page.waitForTimeout(25);
+      }
+    } finally { await nativeCall('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); }
+    await page.waitForFunction(before => document.querySelector('.exp-scroll').scrollTop > before + 30, row.beforeScroll);
+    row.afterScroll = await scroll.evaluate(el => el.scrollTop);
+    assert((await state()).energy === row.before.energy, 'Scrolling spent energy');
+    await screenshot('667x280-native-map-swipe');
+    await shortTouch('.adventure-nav [data-section="arena"]');
+    await shortTouch('.adventure-nav [data-section="dungeons"]');
+  });
   await resize({ width: 844, height: 390 });
   await step('Lv1 graphical journey, locked preview and cancel do not spend', async row => {
     assert(await page.locator('[data-journey-node]').count() === 12, 'Twelve route images missing');
@@ -75,6 +98,33 @@ export async function runMobileJourneyChecks({ page, device, nativeCall, shortTo
     assert(result.battle.result?.win && result.battle.result.receipt?.ok && !result.pending, 'Natural victory/settlement failed');
     assert(result.expedition.stats.glass_garden === 1 && result.inventory > row.before.inventory, 'Real progress/loot missing');
     await screenshot('natural-glass-victory');
+  });
+  await step('Result safe-area CSS fixture preserves readable controls', async row => {
+    // CSS 환경만 모의한다. 실기기 노치·OS 회전 증거와 게임 상태 주입이 아니다.
+    const values = { '--sal': '36px', '--sar': '36px', '--sat': '24px', '--sab': '24px' };
+    row.layoutFixture = { kind: 'CSS safe-area simulation', values };
+    const previous = await page.evaluate(values => Object.fromEntries(Object.keys(values).map(name => [name,
+      { value: document.documentElement.style.getPropertyValue(name), priority: document.documentElement.style.getPropertyPriority(name) }])), values);
+    await page.evaluate(values => { for (const [name, value] of Object.entries(values)) document.documentElement.style.setProperty(name, value); }, values);
+    try {
+      row.padding = await page.evaluate(() => Object.fromEntries(['.exp-result-header', '.exp-result-scroll'].map(selector => {
+        const style = getComputedStyle(document.querySelector(selector));
+        return [selector, { left: parseFloat(style.paddingLeft), right: parseFloat(style.paddingRight) }];
+      })));
+      assert(Object.values(row.padding).every(value => value.left >= 36 && value.right >= 36), 'Result padding lost safe-area protection');
+      row.controls = await page.evaluate(() => [...document.querySelectorAll('.exp-result-header button,.exp-result-footer button')].map(el => {
+        const r = el.getBoundingClientRect();
+        return { label: el.textContent, height: r.height, safe: r.x >= 36 && r.right <= innerWidth - 36 && r.y >= 24 && r.bottom <= innerHeight - 24,
+          reachable: el.contains(document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)) };
+      }));
+      assert(row.controls.every(control => control.height >= 44 && control.safe && control.reachable), 'Safe-area result controls clipped or covered');
+      await screenshot('result-safe-area-fixture');
+    } finally {
+      await page.evaluate(previous => { for (const [name, entry] of Object.entries(previous)) {
+        if (entry.value) document.documentElement.style.setProperty(name, entry.value, entry.priority);
+        else document.documentElement.style.removeProperty(name);
+      } }, previous);
+    }
   });
   await step('Claim existing quest, next preparation and saved journey reload', async row => {
     await shortTouch('[data-next-dungeon="ember_vault"]');

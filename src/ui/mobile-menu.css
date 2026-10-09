@@ -23,12 +23,12 @@
   #tab-stage .adventure-nav { padding: 0 2px 4px; gap: 2px; }
   #tab-stage .adventure-nav button { min-height: 44px; padding: 4px 3px; font-size: 11px; flex-direction: row; gap: 4px; }
   #tab-stage .adventure-nav img { width: 22px; height: 22px; }
-  #tab-stage .exp-header { min-height: 44px; padding: 0 8px; gap: 8px; }
+  #tab-stage .exp-header:not(.exp-result-header) { min-height: 44px; padding: 0 8px; gap: 8px; }
   #tab-stage .exp-header h1 { font-size: 15px; }
   #tab-stage .exp-account { min-width: 90px; gap: 2px 6px; }
   #tab-stage .exp-account small { display: none; }
   #tab-stage .exp-close { min-height: 44px; }
-  #tab-stage .exp-scroll { padding: 8px 10px 14px; }
+  #tab-stage .exp-scroll:not(.exp-result-scroll) { padding: 8px 10px 14px; }
   #tab-stage .exp-footer { min-height: 24px; padding: 3px 10px; }
 }
 @media (orientation: landscape) and (max-height: 360px) {

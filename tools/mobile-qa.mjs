@@ -259,6 +259,7 @@ try {
         assert(entry.reachable, 'Portrait rotation hint covered the primary start button');
         r.diagnostics.push({ kind: 'start-screen', reload, ...entry });
         if (!reload && !entry.fullscreen) assert(entry.text === '전체화면 · 가로로 시작', 'Mobile primary start must offer fullscreen and landscape');
+        await screenshot(reload ? 'reload-entry' : 'mobile-fullscreen-entry');
       }
       await shortTouch('#boot-start');
       await page.waitForFunction(() => app.mode === 'lobby' && !document.querySelector('#boot.show'), undefined, { timeout: 180000 });
