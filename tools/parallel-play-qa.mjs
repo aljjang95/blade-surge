@@ -103,6 +103,7 @@ try {
       await step('native-standard-admission', async item => {
         await tap('#btn-expedition'); await tap('.adventure-nav [data-section="dungeons"]');
         await tap(page.locator('.exp-route-tabs').getByRole('button', { name: '기본 원정', exact: true }));
+        await tap('.exp-dungeon-details > summary');
         await tap(page.locator('[data-dungeon="glass_garden"][data-depth="standard"]').getByRole('button', { name: '던전 입장', exact: true }));
         await page.waitForFunction(() => app.battle?.active && !app.stageStarting && !document.querySelector('.exp-cinematic'), undefined, { timeout: 120000 });
         if (await page.locator('#tutorial-skip').isVisible()) await tap('#tutorial-skip');

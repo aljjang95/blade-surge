@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync, spawn } from 'node:child_process';
 import { installConquestMediaObserver } from './conquest-media-observer.mjs';
 import { createMediaCheckpoints, assessMediaObservations } from './qa-media-checkpoints.mjs';
+import { runMobileJourneyChecks } from './mobile-journey-checks.mjs';
 
 const root = path.resolve(import.meta.dirname, '..');
 const arg = name => process.argv.find(value => value.startsWith(`--${name}=`))?.slice(name.length + 3);
@@ -17,6 +18,8 @@ if (flag('help')) {
 const origin = arg('origin'), expectedSha = arg('expected-sha'), out = path.resolve(arg('out') || '');
 const artifactDir = path.resolve(arg('artifact-dir') || path.join(root, 'dist'));
 const selected = (arg('profiles') || 'android,iphone').split(',');
+const angle = arg('angle') || 'swiftshader';
+if (!['swiftshader', 'd3d11'].includes(angle)) throw Error('Supported --angle=swiftshader|d3d11');
 const allowedOrigin = origin === 'https://blade.tllhouse.com' || /^http:\/\/(?:127\.0\.0\.1|localhost):\d+$/.test(origin || '');
 if (!allowedOrigin || !/^[a-f0-9]{40}$/.test(expectedSha || '') || !arg('out') || selected.some(name => !['android', 'iphone'].includes(name))) throw Error('Supply authorized --origin, full --expected-sha, new --out and valid --profiles');
 let publicProxy;
@@ -46,10 +49,11 @@ await fs.mkdir(path.dirname(out), { recursive: true });
 await fs.mkdir(out); // 실패 원본을 덮어쓰지 않는다.
 const driver = await fs.readFile(import.meta.filename);
 await fs.writeFile(path.join(out, 'driver.mjs'), driver, { flag: 'wx' });
-for (const file of ['conquest-media-observer.mjs', 'qa-media-checkpoints.mjs']) await fs.copyFile(path.join(root, 'tools', file), path.join(out, file));
+for (const file of ['conquest-media-observer.mjs', 'qa-media-checkpoints.mjs', 'mobile-journey-checks.mjs']) await fs.copyFile(path.join(root, 'tools', file), path.join(out, file));
 const report = {
   status: 'running', started: new Date().toISOString(), origin, expectedSha,
   sourceHead: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(),
+  scenario: flag('journey') ? 'mobile-entry-and-dungeon-journey' : 'mobile-input-lifecycle', angle,
   driverSha256: hash(driver), headed: flag('headed'), emptyFontsCss: flag('empty-fonts-css'),
   proxy: publicProxy ? { configured: true, source: publicProxy.source, protocol: publicProxy.protocol, credentials: false, chromiumExplicitProxy: true, nodeEnvProxy: true, environmentPreserved: true } : { chromiumExplicitProxy: false, environmentPreserved: true },
   scope: 'Fresh isolated Chromium mobile DPR/user-agent/touch profiles, native CDP touch/orientation and actual tab visibility. Natural renderer-clock observation only. iPhone profile uses Chromium, not Safari. No physical phone/GPU/thermal/subjective audio or full native Android certification.',
@@ -110,7 +114,7 @@ async function launchNativeBrowser(profileDir) {
   const userDataDir = path.join(profileDir, 'isolated-chromium-profile');
   await fs.mkdir(userDataDir);
   const args = ['--no-sandbox', '--no-first-run', '--no-default-browser-check', '--remote-debugging-port=0', `--user-data-dir=${userDataDir}`,
-    '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'];
+    '--use-gl=angle', `--use-angle=${angle}`, ...(angle === 'swiftshader' ? ['--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] : []), '--autoplay-policy=no-user-gesture-required'];
   if (publicProxy) args.push(`--proxy-server=${publicProxy.server}`);
   if (!flag('headed')) args.push('--headless=new');
   args.push('about:blank');
@@ -213,6 +217,7 @@ try {
         input: { enabled: a.input.enabled, held: a.input.attackHeld, sources: [...a.input.attackSources], queue: [...a.input.queue], move: { ...a.input.move }, joy: { active: a.input.joy.active, id: a.input.joy.id } },
         selected: a.eco.s.selected, gold: a.eco.s.gold, inventory: a.eco.s.inventory.length, level: a.eco.hero().level,
         energy: a.eco.s.energy, pending: a.expedition.s.pending, autoBattle: a.journey.s.autoBattle,
+        expedition: { level: a.expedition.s.level, xp: a.expedition.s.xp, stats: { ...a.expedition.s.stats }, claimed: [...a.expedition.s.claimed] },
         battle: { active: !!b?.active, paused: !!b?.paused, reasons: [...(b?.pauseReasons || [])], elapsed: b?.elapsed, result: b?.result ? { win: b.result.win, receipt: b.result.expeditionReceipt } : null },
         player: p ? { state: p.state, stateT: p.stateT, comboIdx: p.comboIdx, comboQueued: p.comboQueued, attackBufferT: p.attackBufferT, dodgeBufferT: p.dodgeBufferT, alive: p.alive,
           hp: p.hp, pos: { x: p.pos.x, z: p.pos.z }, cds: [...p.cds] } : null,
@@ -248,8 +253,16 @@ try {
       for (const row of r.network.filter(row => row.documentId === documentId)) row.documentTimeOrigin = timeOrigin;
       const portrait = page.locator('#btn-ignore-rotate');
       if (await portrait.isVisible()) await shortTouch(portrait);
-      await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 }); await shortTouch('#boot-start');
+      await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 180000 });
+      if (flag('journey')) {
+        const entry = await page.evaluate(() => { const button = document.querySelector('#boot-start'), box = button.getBoundingClientRect(); return { text: button.textContent, fullscreen: !!document.fullscreenElement, reachable: button.contains(document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2)) }; });
+        assert(entry.reachable, 'Portrait rotation hint covered the primary start button');
+        r.diagnostics.push({ kind: 'start-screen', reload, ...entry });
+        if (!reload && !entry.fullscreen) assert(entry.text === '전체화면 · 가로로 시작', 'Mobile primary start must offer fullscreen and landscape');
+      }
+      await shortTouch('#boot-start');
       await page.waitForFunction(() => app.mode === 'lobby' && !document.querySelector('#boot.show'), undefined, { timeout: 180000 });
+      if (flag('journey')) r.diagnostics.push({ kind: 'screen-request', reload, ...await page.evaluate(() => ({ fullscreen: !!document.fullscreenElement, request: app.appModeView.lastLandscapeRequest, width: innerWidth, height: innerHeight })) });
       if (await portrait.isVisible()) await shortTouch(portrait);
       const modal = page.locator('#modal.show #m-cancel'); if (await modal.isVisible()) await shortTouch(modal);
       await page.locator('.citadel-hub-ui:not([hidden])').waitFor(); await clockProgress();
@@ -293,6 +306,9 @@ try {
 
     try {
       await boot(); await screenshot('portrait-hub');
+      if (flag('journey')) {
+        await runMobileJourneyChecks({ page, device, nativeCall, shortTouch, state, step, screenshot, boot, clockProgress });
+      } else {
       await step('Portrait native touch hub joystick and release', async row => {
         row.touch = await joystick('.citadel-hub-stick', false);
         assert(row.touch.distance > .05, 'Hub touch joystick did not move in natural frames');
@@ -301,6 +317,7 @@ try {
       await step('Native touch standard Glass admission', async row => {
         await shortTouch('#btn-expedition'); await shortTouch('.adventure-nav [data-section="dungeons"]');
         await shortTouch(page.locator('.exp-route-tabs').getByRole('button', { name: '기본 원정', exact: true }));
+        await shortTouch('.exp-dungeon-details > summary');
         await shortTouch(page.locator('[data-dungeon="glass_garden"][data-depth="standard"]').getByRole('button', { name: '던전 입장', exact: true }));
         await page.waitForFunction(() => app.battle?.active && !app.stageStarting && !document.querySelector('.exp-cinematic'), undefined, { timeout: 180000 });
         await clockProgress(); const s = await state();
@@ -388,6 +405,7 @@ try {
         assert(reloaded.pending === null && reloaded.stored.pending === null, 'Reload resurrected admission');
         await screenshot('reloaded-landscape-hub');
       });
+      }
       assert(!r.errors.length && !r.httpErrors.length, 'Browser runtime or HTTP errors observed');
       r.functionalStatus = 'pass';
     } catch (error) {

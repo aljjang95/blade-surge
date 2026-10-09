@@ -1,0 +1,33 @@
+/* 짧아진 모바일 브라우저에서도 모험 본문과 고정 조작이 서로를 밀어내지 않는다. */
+#tab-stage #expedition-root { display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+#tab-stage .exp-shell { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; min-height: 0; overflow: hidden; }
+#tab-stage .exp-header { min-width: 0; flex-shrink: 0; }
+#tab-stage .exp-brand { min-width: 0; gap: 8px; }
+#tab-stage .exp-brand > img { width: 32px; height: 32px; object-fit: contain; }
+#tab-stage .exp-scroll { min-height: 0; min-width: 0; touch-action: pan-y; }
+#tab-stage .exp-footer:not(:has([role=status]:not(:empty))) { display: none; }
+#rotate-hint button { min-height: 44px; }
+#rotate-hint p { max-width: 340px; }
+@media (orientation: landscape) and (max-height: 550px) {
+  .oath-visual #meta:has(.tab.show:not(#tab-home)) .topbar { padding: calc(2px + var(--sat)) max(8px, var(--sar)) 2px max(8px, var(--sal)); min-height: 48px; }
+  .oath-visual #meta:has(.tab.show:not(#tab-home)) .profile { padding: 2px 5px; }
+  .oath-visual #meta:has(.tab.show:not(#tab-home)) .topbar .avatar { width: 30px; height: 30px; }
+  .oath-visual #meta:has(.tab.show:not(#tab-home)) .currencies { padding: 0; gap: 5px; }
+  .oath-visual #meta:has(.tab.show:not(#tab-home)) .cur { min-height: 44px; padding: 2px 5px; font-size: 12px; }
+  .oath-visual #meta:has(.tab.show:not(#tab-home)) .cur .ic { width: 20px; height: 20px; }
+  .oath-visual #meta:has(.tab.show:not(#tab-home)) .bottomnav { bottom: calc(4px + var(--sab)); height: 50px; width: min(420px, calc(100% - var(--sal) - var(--sar) - 16px)); padding: 0 4px; gap: 2px; }
+  .oath-visual #meta:has(.tab.show:not(#tab-home)) .bottomnav button { height: 48px; min-height: 44px; flex-direction: row; gap: 4px; padding: 2px 4px; }
+  .oath-visual #meta:has(.tab.show:not(#tab-home)) .bottomnav button .ic { width: 24px; height: 24px; }
+  .oath-visual #meta .tab:not(#tab-home) { top: calc(52px + var(--sat)) !important; bottom: calc(58px + var(--sab)) !important; }
+  .oath-visual #meta #tab-stage > .panel { padding: 4px max(6px, var(--sar)) 4px max(6px, var(--sal)); }
+  #tab-stage .adventure-nav { padding: 0 2px 4px; gap: 2px; }
+  #tab-stage .adventure-nav button { min-height: 44px; padding: 4px 3px; font-size: 11px; flex-direction: row; gap: 4px; }
+  #tab-stage .adventure-nav img { width: 22px; height: 22px; }
+  #tab-stage .exp-header { min-height: 44px; padding: 0 8px; gap: 8px; }
+  #tab-stage .exp-header h1 { font-size: 15px; }
+  #tab-stage .exp-account { min-width: 90px; gap: 2px 6px; }
+  #tab-stage .exp-account small { display: none; }
+  #tab-stage .exp-close { min-height: 44px; }
+  #tab-stage .exp-scroll { padding: 8px 10px 14px; }
+  #tab-stage .exp-footer { min-height: 24px; padding: 3px 10px; }
+}

@@ -1,6 +1,7 @@
 import { DUNGEONS, MATERIALS } from '../data/expansion.js';
 import { HEROES } from '../data/heroes.js';
 import { citadelHotspot } from '../data/citadel-hub.js';
+import { dungeonJourney } from './dungeon-journey.js';
 import './citadel-command.css';
 
 const element = (tag, className, text) => {
@@ -47,7 +48,13 @@ export class CitadelCommand {
     this.campaign.append(this.nextStory);
     const arena = action('', () => app.expeditionUI.open('arena'), 'citadel-command-arena');
     arena.append(element('small', '', 'SOLO ARENA'), element('strong', '', '결투장'), element('span', '', 'AI 상대와 무료 연습'));
-    destinations.append(this.campaign, arena);
+    this.journey = action('', () => app.expeditionUI.open('dungeons', { depth: 'standard' }), 'citadel-command-journey');
+    this.journey.id = 'citadel-dungeon-journey';
+    this.journeyArt = element('img'); this.journeyArt.alt = '';
+    this.journeyName = element('strong'); this.journeyStatus = element('span');
+    const journeyCopy = element('div'); journeyCopy.append(element('small', '', 'Lv.1부터 이어지는 던전 여정'), this.journeyName, this.journeyStatus);
+    this.journey.append(this.journeyArt, journeyCopy);
+    destinations.append(this.journey, this.campaign, arena);
     const tools = element('nav', 'citadel-command-tools');
     tools.setAttribute('aria-label', '출격 전 정비');
     this.supply = action('보급 상점', button => app.citadelShop.open(button));
@@ -104,6 +111,12 @@ export class CitadelCommand {
     this.heroInfo.replaceChildren(element('strong', '', hero.name), element('span', '', `영웅 Lv.${eco.hero().level} · 전투력 ${eco.heroPower(eco.s.selected).toLocaleString()}`));
     const next = eco.nextStage();
     this.nextStory.textContent = next.name;
+    const journey = dungeonJourney(expedition);
+    if (journey.current) {
+      this.journeyArt.src = journey.current.dungeon.art;
+      this.journeyName.textContent = journey.current.dungeon.name;
+      this.journeyStatus.textContent = `원정 Lv.${expedition.s.level} · ${journey.cleared}/${journey.nodes.length} 정복 · 여정 지도 보기 →`;
+    }
     let ready = 0;
     for (const dungeon of DUNGEONS) {
       const access = expedition.dungeonAccess(dungeon.id, { depth: 'standard' });

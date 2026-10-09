@@ -622,7 +622,7 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 #rotate-hint p { color: var(--muted); font-size: 13px; margin: 0; line-height: 1.6; }
 #rotate-hint button { margin-top: 6px; }
 @keyframes rotPhone { 0%, 40% { transform: rotate(0) } 60%, 100% { transform: rotate(-90deg) } }
-@media (orientation: portrait) and (max-width: 900px) { body.force-landscape:not(:has(dialog[open])) #rotate-hint { display: flex; } }
+@media (orientation: portrait) and (max-width: 900px) { body.force-landscape:not(:has(#boot.show)):not(:has(dialog[open])) #rotate-hint { display: flex; } }
 
 @media (orientation: landscape) {
   /* ---- 좌측 세로 네비 레일 ---- */

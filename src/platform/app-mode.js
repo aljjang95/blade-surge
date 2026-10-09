@@ -1,4 +1,5 @@
 import './app-mode.css';
+import { mobileScreen, requestLandscapeScreen } from './landscape-screen.js';
 
 export function displayState(view = window, nav = navigator, doc = document) {
   const fullscreen = !!doc.fullscreenElement;
@@ -45,14 +46,29 @@ export class AppModeView {
     window.addEventListener('bladesurge:pwa-state', () => this.render());
     for (const mode of ['standalone', 'fullscreen']) window.matchMedia(`(display-mode: ${mode})`).addEventListener('change', () => this.render());
     this.render();
+    const rotate = document.getElementById('btn-rotate-fullscreen');
+    rotate.onclick = () => this.startLandscape();
+  }
+  startLandscape() {
+    const request = requestLandscapeScreen();
+    return request.then(result => {
+      this.lastLandscapeRequest = result;
+      this.render();
+      const portrait = window.matchMedia('(orientation: portrait)').matches;
+      document.getElementById('rotate-screen-status').textContent = result.orientation === 'locked'
+        ? '가로 화면으로 전환했습니다.' : portrait ? '휴대폰을 가로로 돌려주세요. 이 브라우저는 자동 회전을 지원하지 않을 수 있습니다.' : '가로 화면으로 준비됐습니다.';
+      return result;
+    });
   }
   toggleFullscreen(opener) {
     // The request must stay directly inside the user's tap, before any await.
     const failed = () => { this.open(opener); this.message('이 브라우저에서는 전체 화면을 열지 못했습니다. 홈 화면 설치 안내를 이용해 주세요.'); };
     try {
-      const request = document.fullscreenElement ? document.exitFullscreen()
-        : document.documentElement.requestFullscreen({ navigationUI: 'hide' });
-      Promise.resolve(request).then(() => { this.render(); if (this.dialog.open) this.dialog.close(); }).catch(failed);
+      const request = document.fullscreenElement ? document.exitFullscreen() : this.startLandscape();
+      Promise.resolve(request).then(result => {
+        if (result?.fullscreen === 'unavailable' || result?.fullscreen === 'unsupported') { failed(); return; }
+        this.render(); if (this.dialog.open) this.dialog.close();
+      }).catch(failed);
     } catch { failed(); }
   }
   message(text) { this.dialog.querySelector('#app-mode-status').textContent = text; }
@@ -64,6 +80,8 @@ export class AppModeView {
   }
   render() {
     const state = this.app.pwa.getState(), screen = displayState();
+    const start = document.getElementById('boot-start');
+    if (!start.disabled && !start.classList.contains('hidden')) start.textContent = mobileScreen() && !screen.fullscreen && !screen.appMode ? '전체화면 · 가로로 시작' : '터치하여 시작';
     this.entry.hidden = screen.appMode || screen.fullscreen;
     this.entry.querySelector('#app-mode-boot-fullscreen').hidden = !screen.canFullscreen;
     this.lobbyButton.textContent = screen.appMode || screen.fullscreen ? '화면 설정' : '앱 설치';
