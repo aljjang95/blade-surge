@@ -12,7 +12,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const arg = name => process.argv.find(value => value.startsWith(`--${name}=`))?.slice(name.length + 3);
 const flag = name => process.argv.includes(`--${name}`);
 if (flag('help')) {
-  console.log('node tools/mobile-qa.mjs --origin=http://127.0.0.1:5175 --expected-sha=<40 hex> --out=/absolute/new-directory [--artifact-dir=/absolute/dist] [--profiles=android,iphone] [--headed] [--empty-fonts-css] [--chrome=/usr/bin/chromium]');
+  console.log('node tools/mobile-qa.mjs --origin=http://127.0.0.1:5175 --expected-sha=<40 hex> --out=/absolute/new-directory [--artifact-dir=/absolute/dist] [--profiles=android,iphone] [--journey] [--angle=swiftshader|d3d11] [--headed] [--empty-fonts-css] [--chrome=/usr/bin/chromium]');
   process.exit(0);
 }
 const origin = arg('origin'), expectedSha = arg('expected-sha'), out = path.resolve(arg('out') || '');
@@ -265,7 +265,13 @@ try {
       if (flag('journey')) r.diagnostics.push({ kind: 'screen-request', reload, ...await page.evaluate(() => ({ fullscreen: !!document.fullscreenElement, request: app.appModeView.lastLandscapeRequest, width: innerWidth, height: innerHeight })) });
       if (await portrait.isVisible()) await shortTouch(portrait);
       const modal = page.locator('#modal.show #m-cancel'); if (await modal.isVisible()) await shortTouch(modal);
-      await page.locator('.citadel-hub-ui:not([hidden])').waitFor(); await clockProgress();
+      // 출격 메뉴를 기본 로비로 쓰는 여정과 기존 마을 이동 검증의 진입점을 구분한다.
+      if (flag('journey')) await page.locator('#citadel-command:not([hidden])').waitFor();
+      else {
+        if (await page.locator('#citadel-explore').isVisible()) await shortTouch('#citadel-explore');
+        await page.locator('.citadel-hub-ui:not([hidden])').waitFor();
+      }
+      await clockProgress();
       assert((await state()).hallName === 'Citadel_PlayableHub', 'Current authored playable hub did not load');
       await checkpoints.capture(documentId, reload ? 'reload-boot' : 'fresh-boot');
     }
