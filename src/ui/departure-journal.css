@@ -14,7 +14,7 @@
 .oath-visual .citadel-hub-destination-heading { display: block; position: relative; padding: 0; border: 0; background: none; }
 .oath-visual .citadel-hub-destination-art { height: 164px; border: 0; background-position: center 52%; background-color: #dce8d2; }
 .oath-visual .citadel-hub-destination-art::after { display: none; }
-.oath-visual .citadel-hub-destination-art > span { left: 24px; bottom: 18px; padding: 6px 10px; color: #f6efdf; background: #153b32d9; border-radius: 3px; font-size: 9px; letter-spacing: .16em; }
+.oath-visual .citadel-hub-destination-art > span { left: auto; right: 24px; bottom: 18px; max-width: 45%; padding: 6px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #f6efdf; background: #153b32d9; border-radius: 3px; font-size: 9px; letter-spacing: .16em; }
 .oath-visual .citadel-hub-destination-identity { position: absolute; left: 24px; top: 18px; max-width: calc(100% - 108px); padding: 12px 16px; background: #f8f1e5eb; border: 1px solid #c3ae7c85; border-radius: 3px; }
 .oath-visual .citadel-hub-eyebrow { color: #456454; font-size: 10px; letter-spacing: .16em; }
 .oath-visual .citadel-hub-destination-heading h2 { margin: 8px 0; font-family: var(--font-title, Georgia, serif); font-size: 32px; color: #173d34; }
@@ -87,7 +87,7 @@
   .oath-visual .citadel-hub-destination-art { height: 180px; }
   .oath-visual .citadel-hub-destination-identity { left: 14px; top: 14px; padding: 10px; }
   .oath-visual .citadel-hub-destination-heading h2 { font-size: 28px; }
-  .oath-visual .citadel-hub-destination-art > span { left: 14px; bottom: 12px; }
+  .oath-visual .citadel-hub-destination-art > span { right: 14px; bottom: 12px; }
   .oath-visual .citadel-hub-destination-body { display: block; padding: 12px 14px 14px; }
   .oath-visual .citadel-hub-destination-footer { padding: 8px 14px 12px; }
   .oath-visual .citadel-hub-depth { padding: 8px; gap: 6px; }
