@@ -8,7 +8,7 @@ export async function runMobileJourneyChecks({ page, device, nativeCall, shortTo
     await page.waitForFunction(({ width, height }) => Math.abs(innerWidth - width) <= 1 && Math.abs(innerHeight - height) <= 1, { width, height });
     if (await page.locator('#btn-ignore-rotate').isVisible()) await shortTouch('#btn-ignore-rotate');
   };
-  const modal = '.citadel-hub-destination';
+  const modal = '.citadel-hub-dialog';
   await step('Native fullscreen start and WebGL2 renderer', async row => {
     row.screen = await page.evaluate(() => ({ fullscreen: !!document.fullscreenElement, request: app.appModeView.lastLandscapeRequest }));
     assert(row.screen.request, 'Start never requested screen mode');
