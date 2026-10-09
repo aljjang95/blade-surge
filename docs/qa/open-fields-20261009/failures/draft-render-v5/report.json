@@ -1,0 +1,10 @@
+{
+  "scope": "Dirty development build, controlled scene capture. Player position and deterministic app.step used to inspect scenery; not natural play or production evidence.",
+  "fields": [],
+  "errors": [],
+  "warnings": [
+    "Service Worker registration blocked by Playwright",
+    "THREE.WebGLRenderer: KHR_parallel_shader_compile extension not supported."
+  ],
+  "failure": "Error: Start failed windmeadow{\"ok\":false,\"mode\":\"lobby\"}\n    at file:///workspace/scratch/46cbb073351f/blade-surge/work/qa/open-fields-20261009/render-draft.mjs:27:24"
+}

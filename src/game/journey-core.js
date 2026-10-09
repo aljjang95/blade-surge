@@ -1,5 +1,6 @@
 import { JOURNEY_STEPS, DAILY_CONTRACTS, WEEKLY_CONTRACTS, JOURNEY_ACTION_STATS } from '../data/journey.js';
-import { DUNGEONS, RECIPES } from '../data/expansion.js';
+import { RECIPES } from '../data/expansion.js';
+import { EXPEDITION_ROUTES as DUNGEONS } from '../data/expedition-routes.js';
 import { ITEM_BY_ID, SLOTS } from '../data/items.js';
 import { MASTERY_NODES } from '../data/masterworks.js';
 

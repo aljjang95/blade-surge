@@ -14,6 +14,7 @@ export function dungeonJourney(service) {
 
 export function dungeonContinuation(service, result) {
   if (!result?.win || result.saveError || result.kind !== 'dungeon' || result.depth !== 'standard' || result.riftId || result.conquestId) return null;
+  if (!DUNGEONS.some(dungeon => dungeon.id === result.id)) return null;
   const current = dungeonJourney(service).current;
   if (!current || current.cleared || current.dungeon.id === result.id) return null;
   if (current.unlocked) return { ...current.dungeon, claimQuestIds: [], claimXp: 0 };

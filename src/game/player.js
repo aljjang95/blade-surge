@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { weaponTrailGain } from '../engine/weapon-trail.js';
-import { gatherEnemies } from './crowd-gather.js';
+import { gatherEnemies, gatherWarriorWindup } from './crowd-gather.js';
 import { Actor } from './actor.js';
 import { audio } from '../engine/audio.js';
 import { SKILLS } from './skills.js';
@@ -147,12 +147,14 @@ export class Player extends Actor {
     if (!this.auto && this.alive && this.stun <= 0 && Number.isFinite(inputYaw)) this.yaw = inputYaw;
     this.attackBufferYaw = null; this.comboQueuedYaw = null;
     this.state = 'attack'; this.stateT = 0; this.comboIdx = idx; this.comboQueued = false; this.hitDone = false; this.current = c;
+    this._gatherAttackSerial = (this._gatherAttackSerial || 0) + 1;
     this.vel.set(0, 0, 0);
     // AUTO만 적을 향해 몸을 돌린다. 수동 공격은 새 입력으로 고른 방향을
     // 유지하며, 입력이 없으면 현재 바라보는 방향을 그대로 사용한다.
     const target = this.auto ? this.autoAim(this.def.ranged ? 12 : 7) : null;
     const dur = c.dur / (this.buffs.atkSpd * (this.stormT > 0 ? 1.4 : 1));
-    this.playTimed(c.anim, dur, { fade: 0.06 });
+    this.playTimed(c.anim, dur, { fade: ['knight','barbarian'].includes(this.def.id) ? .035 : .06 });
+    gatherWarriorWindup(this, c, dur);
     this.ticksLeft = c.ticks ? c.ticks - 1 : 0; this.nextTick = 0; this.through = null;
     const f = this.forward(_v);
     if (c.move === 'lunge') {
@@ -268,7 +270,7 @@ export class Player extends Actor {
       this.game.fx.slashSprite(sp, f, this.def.color, { size: c.range * 1.7, life: c.finisher ? 0.32 : 0.22, tilt, flip: this.comboIdx % 2 === 1 });
       if (c.finisher) {
         // 마무리 타격: 살짝 몹몰이 + 충격파
-        this.game.vacuum(this.pos.clone().addScaledVector(f, counterFinisher ? 2.3 : 1.5), gravity ? 11 : counterFinisher ? 6.5 : 5.5, gravity ? 16 : counterFinisher ? 11 : 8);
+        if (!['knight','barbarian'].includes(this.def.id) || gravity) this.game.vacuum(this.pos.clone().addScaledVector(f, counterFinisher ? 2.3 : 1.5), gravity ? 11 : counterFinisher ? 6.5 : 5.5, gravity ? 16 : counterFinisher ? 11 : 8);
         if (counterFinisher) { this.game.ui.toast('완벽 회피 연계 · 군중 붕괴', 'gold'); audio.ting({ vol: .5, freq: 2100 }); }
         this.game.fx.shockTex(this.pos.clone().addScaledVector(f, 1.2), this.def.color, { r1: 4.2, life: 0.35 });
         this.game.fx.explosion(this.pos.clone().addScaledVector(f, 1.6), { size: 3.2, color: this.def.accent, life: 0.35 });

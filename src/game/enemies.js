@@ -62,7 +62,7 @@ export class Enemy extends Actor {
     this.state = 'spawn'; this.stateT = 0; this.spawning = true; this.telegraph = 0;
     this.atkCd = 0.6 + Math.random() * 1.2; this.hitAt = 0.5; this.attackDur = def.atkTime; this.attackDone = false;
     this.stagger = 0; this.poison = 0; this.poisonT = 0; this.phase = 0; this.enraged = false; this.special = null;
-    this.gatherT = 0; this.gatherBlockT = 0; this.gatherX = 0; this.gatherZ = 0; this.gatherSpeed = 0;
+    this.gatherT = 0; this.gatherBlockT = 0; this.gatherX = 0; this.gatherZ = 0; this.gatherSpeed = 0; this.gatherWindupOwner = null;
     this.patternTurn = 0;
     this.signatures = def.signatureBoss ? new BossSignatures(this) : null;
     this.mobRole = def.meleeRole && !def.boss && !def.elite ? new MobRole(this) : null;
@@ -83,16 +83,17 @@ export class Enemy extends Actor {
     if (def.elite || def.boss || def.behavior === 'shield' || def.behavior === 'shaman') {
       const col = def.boss ? 0xff3040 : def.elite ? 0xffc040 : def.behavior === 'shield' ? 0x60a0ff : 0x80ff90;
       const mk = new THREE.Mesh(new THREE.RingGeometry(def.boss ? 1.5 : 0.95, def.boss ? 1.9 : 1.25, 28),
-        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.65, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+        new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.65, side: THREE.DoubleSide, forceSinglePass: true, depthWrite: false, blending: THREE.AdditiveBlending }));
       mk.rotation.x = -Math.PI / 2; mk.position.y = 0.07; mk.renderOrder = 3;
       this.root.add(mk); this.marker = mk;
     }
-    this.telegraphRing = new THREE.Mesh(new THREE.RingGeometry(.68, .9, 32), new THREE.MeshBasicMaterial({ color: 0xff6040, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+    // 평면 경고선은 양면 단일 패스로 그려 군중 예고의 중복 드로우를 없앤다.
+    this.telegraphRing = new THREE.Mesh(new THREE.RingGeometry(.68, .9, 32), new THREE.MeshBasicMaterial({ color: 0xff6040, transparent: true, opacity: 0, side: THREE.DoubleSide, forceSinglePass: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     this.telegraphRing.name = 'EnemySkillTelegraph'; this.telegraphRing.rotation.x = -Math.PI / 2; this.telegraphRing.position.y = .09; this.telegraphRing.renderOrder = 5; this.telegraphRing.visible = false; this.root.add(this.telegraphRing);
   }
   get player() { return this.game.player; }
   dispose() {
-    this.gatherT = 0; this.gatherBlockT = 0;
+    this.gatherT = 0; this.gatherBlockT = 0; this.gatherWindupOwner = null;
     this.clearDashWarning(); this.dashWarning?.dispose();
     const rule = supportCastingForStage(this.game.stage);
     if (this.supportOwner || (rule && this.runtimeSpeciesId === rule.enemyId &&
@@ -268,7 +269,7 @@ export class Enemy extends Actor {
     return dmg;
   }
   kill(dirx, dirz, kb) {
-    this.gatherT = 0; this.gatherBlockT = 0;
+    this.gatherT = 0; this.gatherBlockT = 0; this.gatherWindupOwner = null;
     this.clearDashWarning();
     this.clearSupportCast();
     this.signatures?.clear();

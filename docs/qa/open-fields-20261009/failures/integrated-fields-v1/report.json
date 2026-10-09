@@ -1,0 +1,66 @@
+{
+  "status": "FAIL",
+  "startedAt": "2026-10-08T21:02:07.288Z",
+  "head": "17ac254b625d5bbfeb1d7e7b3b7cc0f73c6ab2f3",
+  "build": {
+    "sha": "17ac254b625d5bbfeb1d7e7b3b7cc0f73c6ab2f3",
+    "dirty": true,
+    "builtAt": "2026-10-08T20:59:05.136Z",
+    "pwaRelease": "01cce35d7a6d34887d7a"
+  },
+  "expectedSha": null,
+  "scope": "Compiled local production preview in isolated fresh storage, software WebGL. UI and initial manual segment use native Playwright pointer/keyboard with natural RAF and read-only app observation. Later four full clears use a disclosed Lv10/one-star knight fixture, existing starter gear, refilled entry energy, AUTO and deterministic 1/60s stepping/first earned boon. No HP, damage, enemy position, invulnerability, victory or reward injection during those clears. Not physical-device performance, tactile evaluation, human playtest or live deployment.",
+  "sources": {
+    "src/data/open-fields.js": "83d0cafe285a5608ad55c6ad489902f38b38687ee9dc6eb50c077f66f67f7676",
+    "src/data/expedition-routes.js": "3640443588ac87c99cb46caaa12de10669352324a350221bc7fe6befae7b64be",
+    "src/game/open-field-scene.js": "64b6e83ffde57ca7ceb368dfb974a783becebb12f481ef2fa6399c1c4410aff4",
+    "src/game/expedition-combat.js": "d66d29adaab0989aaeba412268be8614cec876d6640eef6c73eb8534f50462de",
+    "src/game/expedition-economy.js": "65fa99f9709b3cf39f57fe2adb8aaa499830282b8726e139ecc68fec96bf26b5",
+    "src/game/crowd-gather.js": "e015890a3c310857cf0ea26af8d32603119c302b8d12fc1f33ede24ef34d22c7",
+    "src/game/player.js": "ae0e69547372fd33c4b1a021a1a7b47814d797da4a2094e03c8d0678b7a7fd21",
+    "src/game/enemies.js": "02a4f8e0557925a3be8e78aba177cfdae2d0f3ebe43bd011c9e31c41c9891325",
+    "src/game/actor.js": "0e9f5d45f42bf4c42de05c8b53dd0f0453ec6d102e07e663e8e0d89ebe18b8ed",
+    "src/game/combat-motion.js": "6c3878b53092a6bb95a0b917855c8052cf71c1a4c635d361c4dd2f421a11f9e7",
+    "src/game/combat-contact.js": "630270456a4ee89c4265b9ed67e13d499b00560d18dfcee5b0506ac50b9079a3",
+    "src/engine/audio.js": "b1b09698d576c131017e954d38a6d1f488b1d880a0e28ff31fb73045e22e53b2",
+    "src/game/run-history.js": "23de7a5ca7af579ee4eec26ebb7a073f35038c3adbba7a9c268a9f053ab5038b",
+    "src/game/journey-core.js": "dc6cbea672f874b98a71819169f21caf2ada35a6a716f4a7792d43bb3581375b",
+    "src/expansion/hub.jsx": "69ccf8d3948ee9094eb3103e198b5d7222e0701059e5bfbd441aceccd92b69db",
+    "tools/open-fields-qa.mjs": "244850eb33d746dd7885cb94a49305b42528aa5daf82946245762bc88e01c249"
+  },
+  "checks": [
+    {
+      "status": "PASS",
+      "name": "동일 배포용 빌드",
+      "evidence": {
+        "sha": "17ac254b625d5bbfeb1d7e7b3b7cc0f73c6ab2f3",
+        "dirty": true,
+        "builtAt": "2026-10-08T20:59:05.136Z",
+        "pwaRelease": "01cce35d7a6d34887d7a"
+      }
+    },
+    {
+      "status": "PASS",
+      "name": "격리된 초기 저장소",
+      "evidence": {}
+    }
+  ],
+  "ui": [],
+  "native": [],
+  "runs": [],
+  "screenshots": [
+    "failure.png"
+  ],
+  "errors": [],
+  "warnings": [
+    "Service Worker registration blocked by Playwright",
+    "THREE.WebGLRenderer: KHR_parallel_shader_compile extension not supported."
+  ],
+  "failedRequests": [],
+  "httpErrors": [],
+  "origin": "http://127.0.0.1:40701",
+  "browser": "153.0.8010.0",
+  "fontFixture": "Local Korean font faces and optional external Google CSS fulfilled empty for this isolated QA only; product assets unchanged.",
+  "failure": "locator.evaluate: Error: strict mode violation: locator('.exp-dungeon[data-depth=\"fields\"][data-dungeon=\"windmeadow\"]').locator('.exp-dungeon-art img') resolved to 2 elements:\n    1) <img loading=\"lazy\" decoding=\"async\" alt=\"바람결 초원 게임 화면\" src=\"/img/fields/meadow-v1.webp\"/> aka getByRole('img', { name: '바람결 초원 게임 화면' })\n    2) <img alt=\"\" loading=\"lazy\" decoding=\"async\" src=\"/img/ui-crafted/energy.webp\"/> aka locator('.ui-resource > img').first()\n\nCall log:\n\u001b[2m  - waiting for locator('.exp-dungeon[data-depth=\"fields\"][data-dungeon=\"windmeadow\"]').locator('.exp-dungeon-art img')\u001b[22m\n\n    at /workspace/scratch/46cbb073351f/blade-surge/tools/open-fields-qa.mjs:59:238",
+  "finishedAt": "2026-10-08T21:02:41.362Z"
+}

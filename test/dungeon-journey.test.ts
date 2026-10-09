@@ -50,10 +50,10 @@ test('실제 정산·저장·재로딩 뒤 다음 해금 던전은 이어지고 
   expect(restored.begin('dungeon', 'star_archive').ok).toBe(false);
 });
 
-test('패배·정산 실패·심층·균열·전술 공략에서 기본 여정의 다음 출격을 제안하지 않는다', () => {
+test('패배·정산 실패·심층·균열·전술 공략·야외 필드에서 기본 여정의 다음 출격을 제안하지 않는다', () => {
   const { service } = make();
   service.settle(service.begin('dungeon', 'glass_garden').ticket, { win: true });
-  for (const override of [{ win: false }, { saveError: '저장 실패' }, { depth: 'deep' }, { riftId: 'rift' }, { conquestId: 'test' }, { kind: 'arena' }]) {
+  for (const override of [{ win: false }, { saveError: '저장 실패' }, { depth: 'deep' }, { riftId: 'rift' }, { conquestId: 'test' }, { kind: 'arena' }, { id: 'windmeadow' }]) {
     expect(dungeonContinuation(service, { ...result, ...override })).toBeNull();
   }
 });

@@ -33,6 +33,10 @@ export async function runMobileJourneyChecks({ page, device, nativeCall, shortTo
         assert(layout.content.height >= 64, `${tab} content collapsed at ${viewport.width}x${viewport.height}`);
         assert(layout.content.y >= layout.panel.y && layout.content.bottom <= layout.panel.bottom + 1 && layout.content.bottom <= layout.nav.y + 1, `${tab} content escaped panel or overlaps dock`);
         assert(!layout.overflow && layout.controls.every(control => control.height >= 44 && control.reachable), `${tab} menu clipped/covered`);
+        if (tab === 'dungeons' && viewport.width > viewport.height && viewport.height <= 360) {
+          const firstArt = await page.locator('[data-journey-node="glass_garden"] .journey-node-art').boundingBox();
+          assert(firstArt && firstArt.y >= layout.content.y && firstArt.y + firstArt.height <= layout.content.bottom, 'Short landscape hides the first graphical dungeon');
+        }
         if (['arena', 'dungeons'].includes(tab)) await screenshot(`${viewport.width}x${viewport.height}-${tab}`);
       }
       await shortTouch('.adventure-nav [data-section="campaign"]');

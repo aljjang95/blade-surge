@@ -31,3 +31,13 @@
   #tab-stage .exp-scroll { padding: 8px 10px 14px; }
   #tab-stage .exp-footer { min-height: 24px; padding: 3px 10px; }
 }
+@media (orientation: landscape) and (max-height: 360px) {
+  /* 지도 첫 줄을 바로 보이게 한다. 로비 복귀는 항상 보이는 하단 출격 버튼에 있다. */
+  #tab-stage .exp-shell:has(.dungeon-journey) > .exp-header { display: none; }
+  #tab-stage .dungeon-journey-heading { margin-bottom: 6px; }
+  #tab-stage .dungeon-journey-heading small { display: none; }
+  #tab-stage .dungeon-journey-heading h2 { font-size: 14px; margin: 0; }
+  #tab-stage .dungeon-journey-map { grid-template-rows: repeat(2, 88px); }
+  #tab-stage .journey-node { gap: 2px; }
+  #tab-stage .journey-node-art { width: 46px; height: 46px; }
+}

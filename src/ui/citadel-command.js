@@ -54,7 +54,10 @@ export class CitadelCommand {
     this.journeyName = element('strong'); this.journeyStatus = element('span');
     const journeyCopy = element('div'); journeyCopy.append(element('small', '', 'Lv.1부터 이어지는 던전 여정'), this.journeyName, this.journeyStatus);
     this.journey.append(this.journeyArt, journeyCopy);
-    destinations.append(this.journey, this.campaign, arena);
+    const fields = action('', () => app.expeditionUI.open('dungeons', { depth: 'fields' }), 'citadel-command-arena');
+    fields.id = 'citadel-command-fields';
+    fields.append(element('small', '', 'OPEN FIELD'), element('strong', '', '야외 필드'), element('span', '', '초원 · 해안 · 산길 · 도시'));
+    destinations.append(this.journey, this.campaign, fields, arena);
     const tools = element('nav', 'citadel-command-tools');
     tools.setAttribute('aria-label', '출격 전 정비');
     this.supply = action('보급 상점', button => app.citadelShop.open(button));

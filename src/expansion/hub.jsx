@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { DUNGEONS, MATERIALS, MATERIAL_REFINING, CONSUMABLES, JOBS, RECIPES, ARENA_RIVALS } from '../data/expansion.js';
+import { FIELD_DUNGEONS } from '../data/open-fields.js';
 import { ITEM_BY_ID, ITEM_ICON, SETS, RARITY_COLOR, rarityRank } from '../data/items.js';
 import { HEROES } from '../data/heroes.js';
 import { audio } from '../engine/audio.js';
@@ -108,7 +109,7 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
 
 function DungeonRoutes({app, service, launch, controller}) {
   const [depth, setDepth] = useState(controller.dungeonDepth || (campaignFinished(app.eco.s.progress) ? 'deep' : 'standard'));
-  const deep = depth === 'deep', s = service.snapshot();
+  const deep = depth === 'deep', fields = depth === 'fields', runDepth = deep ? 'deep' : 'standard', s = service.snapshot();
   const frontier = weeklyFrontier();
   const frontierDungeon = DUNGEONS.find(d => d.id === frontier.routeId) || DUNGEONS[0];
   const choose = value => { setDepth(value); controller.dungeonDepth = value; };
@@ -120,24 +121,27 @@ function DungeonRoutes({app, service, launch, controller}) {
     </section>
     <div className="exp-route-tabs" role="group" aria-label="원정 구분">
       <button aria-pressed={depth==='standard'} onClick={()=>choose('standard')}>기본 원정</button>
+      <button aria-pressed={fields} onClick={()=>choose('fields')}>야외 필드</button>
       <button aria-pressed={deep} onClick={()=>choose('deep')}>심층 원정 <small>{EXPEDITION_DEPTHS.filter(d=>service.dungeonAccess(d.id,{depth:'deep'}).ok).length}/{EXPEDITION_DEPTHS.length}</small></button>
       <button aria-pressed={depth==='conquests'} onClick={()=>choose('conquests')}>전술 공략 <small>{s.conquests.length}/6</small></button>
     </div>
     {depth==='conquests' ? <ConquestRoutes service={service} launch={launch} starting={app.stageStarting}/> : <>
     {deep && <p className="exp-depth-intro">캠페인에서 구한 지역의 남은 이야기를 이어갑니다. 처음 정복하면 추가 보상을 받고, 다시 도전하면 더 많은 제작 재료를 얻습니다.</p>}
-    <details className="ui-details exp-dungeon-details" open={deep}><summary>{deep ? '심층 원정 · 지역과 보상' : '전체 던전 · 목표와 보상'}</summary><div className="exp-dungeon-grid">{(deep ? EXPEDITION_DEPTHS : DUNGEONS).map((d,i)=>{
-      const access=service.dungeonAccess(d.id,{depth}), locked=!access.ok;
+    {fields && <p className="exp-depth-intro">초원 · 해안 · 산길 · 도시를 직접 이동하며 싸웁니다. 전투 구역을 정화하면 보스 봉인이 풀립니다. 모든 필드는 원정 Lv.1부터 입장할 수 있습니다.</p>}
+    <details className="ui-details exp-dungeon-details" open={deep || fields}><summary>{fields ? '야외 필드 · 지역과 보상' : deep ? '심층 원정 · 지역과 보상' : '전체 던전 · 목표와 보상'}</summary><div className="exp-dungeon-grid">{(fields ? FIELD_DUNGEONS : deep ? EXPEDITION_DEPTHS : DUNGEONS).map((d,i)=>{
+      const access=service.dungeonAccess(d.id,{depth:runDepth}), locked=!access.ok;
       const wins=deep ? s.depthWins?.[d.id]||0 : s.stats[d.id];
       const art=deep ? d.art || ENCOUNTER_ART[['garden_midboss','tide_midboss','homecoming_finalboss'][i]] : d.art || ART[d.id];
       return <article key={`${depth}:${d.id}`} className="exp-dungeon" data-depth={depth} data-dungeon={d.id} style={{'--exp-accent':d.accent || COLORS[d.id] || '#b7d8bd'}}>
-        <div className="exp-dungeon-art"><Art src={art} alt={d.name+(deep?' 수호자':' 던전 원화')} loading="lazy" decoding="async"/><span className="exp-number">0{i+1}</span>
+        <div className="exp-dungeon-art"><Art src={art} alt={d.name+(fields?' 게임 화면':deep?' 수호자':' 던전 원화')} loading="lazy" decoding="async"/><span className="exp-number">0{i+1}</span>
           <div className="exp-dungeon-badges"><span>{deep ? `캠페인 ${d.unlockCode} 이후` : `원정 Lv.${d.minLevel}`}</span><span className="ui-resource"><Icon id="energy"/>에너지 {d.energy}</span></div>
         </div>
         <div className="exp-card-body"><small>{deep ? (wins ? `${wins}회 정복` : '첫 정복 보상 미획득') : d.subtitle || SUBTITLES[d.id] || d.theme.toUpperCase()}</small><h3>{d.name}</h3><p>{deep ? d.objective : d.objective || OBJECTIVES[d.id] || d.description}</p>
+          {fields && <p>{d.description}</p>}
           {deep && <Detail label="이야기 · 첫 정복 보상"><p>{d.description}</p>{!wins ? <RewardChips rewards={d.firstRewards}/> : <p>첫 정복 보상을 받았습니다.</p>}</Detail>}
           <div className="exp-material-reward">{MATERIALS.filter(m=>d.rewards.materials?.[m.id]).map(m=><React.Fragment key={m.id}><img src={MATERIAL_ART[m.id]} alt=""/><span>{m.name}<b>확정 +{d.rewards.materials[m.id]}</b></span></React.Fragment>)}<em>EXP +{d.rewards.xp}</em></div>
           {deep && <small className="exp-depth-power">권장 전투력 {fmt(2600*d.scale)} · {d.layout.cells.length}개 구역</small>}
-          <button className="exp-primary" disabled={locked||app.stageStarting} onClick={()=>launch('dungeon',d.id,{depth})}>{locked ? access.error : deep ? '심층 원정 출격' : '던전 입장'}</button>
+          <button className="exp-primary" disabled={locked||app.stageStarting} onClick={()=>launch('dungeon',d.id,{depth:runDepth})}>{locked ? access.error : fields ? '필드 출격' : deep ? '심층 원정 출격' : '던전 입장'}</button>
         </div>
       </article>;
     })}</div></details>
@@ -213,7 +217,7 @@ export class ExpeditionUI {
   }
   open(tab='dungeons', {depth}={}){
     if(this.app.mode==='battle'&&this.app.battle.active)return;
-    if (['standard','deep'].includes(depth)) this.dungeonDepth=depth;
+    if (['standard','deep','fields'].includes(depth)) this.dungeonDepth=depth;
     this.app.ui.closeModal();this.app.ui.hideResult();this.app.ui.show(document.getElementById('meta'),true);
     this.app.meta.openTab('stage',tab);
   }
