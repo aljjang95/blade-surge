@@ -9,6 +9,16 @@ export async function runMobileJourneyChecks({ page, device, nativeCall, shortTo
     if (await page.locator('#btn-ignore-rotate').isVisible()) await shortTouch('#btn-ignore-rotate');
   };
   const modal = '.citadel-hub-dialog';
+  const checkPreparationLabels = async () => {
+    const labels = await page.evaluate(() => {
+      const a = document.querySelector('.citadel-hub-dialog [data-citadel-unlock]').getBoundingClientRect();
+      const b = document.querySelector('.citadel-hub-dialog .citadel-hub-destination-art > span').getBoundingClientRect();
+      return { level: document.querySelector('.citadel-hub-dialog [data-citadel-unlock]').textContent,
+        overlap: Math.min(a.right, b.right) - Math.max(a.left, b.left) > 0 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 0 };
+    });
+    assert(labels.level && !labels.overlap, 'Decorative route label covers the unlock level');
+    return labels;
+  };
   await step('Native fullscreen start and WebGL2 renderer', async row => {
     row.screen = await page.evaluate(() => ({ fullscreen: !!document.fullscreenElement, request: app.appModeView.lastLandscapeRequest }));
     assert(row.screen.request, 'Start never requested screen mode');
@@ -74,6 +84,7 @@ export async function runMobileJourneyChecks({ page, device, nativeCall, shortTo
     await shortTouch('[data-journey-node="star_archive"]'); await shortTouch('#journey-prepare');
     await page.locator(`${modal}[open]`).waitFor();
     assert(await page.locator(`${modal} .citadel-hub-go`).isDisabled(), 'Locked route allowed departure');
+    row.preparationLabels = await checkPreparationLabels();
     await shortTouch(`${modal} .citadel-hub-cancel`);
     await shortTouch('[data-journey-node="glass_garden"]'); await shortTouch('#journey-prepare');
     await shortTouch(`${modal} .citadel-hub-cancel`);
@@ -132,6 +143,7 @@ export async function runMobileJourneyChecks({ page, device, nativeCall, shortTo
     assert(row.progress.expedition.claimed.includes('garden_scout') && row.progress.expedition.level >= 2, 'Quest did not unlock next region');
     assert(row.progress.energy === row.before.energy && row.progress.pending === null, 'Next preparation consumed admission early');
     assert(await page.locator('#citadel-destination-title').innerText() === '잿불 금고', 'Prepared wrong region');
+    row.preparationLabels = await checkPreparationLabels();
     await screenshot('next-ember-preparation');
     await shortTouch(`${modal} .citadel-hub-cancel`); await boot(true);
     const reloaded = await state();

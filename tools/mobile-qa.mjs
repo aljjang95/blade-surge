@@ -191,6 +191,10 @@ try {
         responseAt: row.started + (event.timestamp - row.nativeStarted) * 1000,
         contentRange: event.response.headers['content-range'] || event.response.headers['Content-Range'] || null, mimeType: event.response.mimeType });
     });
+    session.on('Network.loadingFinished', event => {
+      const row = requests.get(event.requestId); if (!row) return;
+      Object.assign(row, { nativeFinishedAt: event.timestamp, encodedDataLength: event.encodedDataLength });
+    });
     session.on('Network.loadingFailed', event => {
       const row = requests.get(event.requestId) || { engine: 'chromium', documentId, requestId: event.requestId };
       Object.assign(row, { nativeFailedAt: event.timestamp, failedAt: Number.isFinite(row.started) ? row.started + (event.timestamp - row.nativeStarted) * 1000 : stamp(),
@@ -236,12 +240,32 @@ try {
     }
     async function screenshot(name) {
       const file = `${name}.png`;
+      const started = Date.now();
+      // 실제 표시할 이미지의 로드·decode와 CSS 배경의 native 완료를 기다린다.
+      // 파일을 미리 요청하거나 DOM·게임·저장·프레임 시계를 바꾸지 않는다.
+      await page.waitForFunction(() => [...document.images].filter(el => {
+        const r = el.getBoundingClientRect();
+        return el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) && r.width > 0 && r.height > 0 && r.right > 0 && r.left < innerWidth && r.bottom > 0 && r.top < innerHeight;
+      }).every(el => el.complete && el.naturalWidth > 0), undefined, { timeout: 30000 });
+      const artwork = await page.evaluate(async () => {
+        const visible = el => { const r = el.getBoundingClientRect(); return el.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }) && r.width > 0 && r.height > 0 && r.right > 0 && r.left < innerWidth && r.bottom > 0 && r.top < innerHeight; };
+        const images = [...document.images].filter(visible);
+        await Promise.all(images.map(el => el.decode()));
+        const backgrounds = [...document.querySelectorAll('.dungeon-journey-map,.citadel-hub-destination-art')].filter(visible)
+          .flatMap(el => [...getComputedStyle(el).backgroundImage.matchAll(/url\("([^"]+)"\)/g)].map(match => match[1]));
+        return { images: images.map(el => ({ src: el.currentSrc, width: el.naturalWidth, height: el.naturalHeight })), backgrounds };
+      });
+      while (!artwork.backgrounds.every(url => r.network.some(row => row.documentId === documentId && row.url === url && Number.isFinite(row.nativeFinishedAt)))) {
+        if (Date.now() - started > 30000) throw Error(`${name}: visible CSS artwork did not finish loading`);
+        await page.waitForTimeout(100);
+      }
+      await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       const nativeImage = await nativeCall('Page.captureScreenshot', { format: 'png', fromSurface: true, captureBeyondViewport: false }, 60000);
       await fs.writeFile(path.join(dir, file), Buffer.from(nativeImage.data, 'base64'));
       const layout = await page.evaluate(() => [...document.querySelectorAll('.citadel-hub-near,.citadel-hub-interact,#hud.show #btn-pause,#hud.show #btn-attack,#hud.show .skill-btn,#hud.show #joy,.exp-result-shell,.exp-result-shell .exp-close')].map(el => {
         const b = el.getBoundingClientRect(); return { id: el.id, class: el.className, text: el.innerText?.slice(0, 160), x: b.x, y: b.y, width: b.width, height: b.height }; }));
       const s = await state(); assert(s.viewport.scrollWidth <= s.viewport.width + 1, `${name}: horizontal overflow`);
-      r.screenshots.push({ file: `${profileName}/${file}`, sha256: hash(await fs.readFile(path.join(dir, file))), state: s, layout }); await save();
+      r.screenshots.push({ file: `${profileName}/${file}`, sha256: hash(await fs.readFile(path.join(dir, file))), state: s, layout, artwork: { ...artwork, waitMs: Date.now() - started } }); await save();
     }
     async function boot(reload = false) {
       if (reload) { await checkpoints.beforeNavigation(documentId); r.input.push({ documentId, events: await page.evaluate(() => __mobileInput) }); }
