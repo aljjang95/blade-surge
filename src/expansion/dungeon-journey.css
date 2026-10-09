@@ -1,0 +1,44 @@
+.dungeon-journey { margin: 0 0 18px; color: #f0e8cb; }
+#tab-stage .dungeon-journey-heading { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 10px; }
+#tab-stage .dungeon-journey-heading small { font-size: 9px; color: #95cbb7; letter-spacing: .18em; }
+#tab-stage .dungeon-journey-heading h2 { margin: 3px 0 0; font-size: 20px; letter-spacing: 0; }
+.dungeon-journey-heading > span { flex-shrink: 0; padding: 6px 10px; border-radius: 20px; background: #d1cfab15; font-size: 11px; }
+.dungeon-journey-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(200px, 25%); gap: 12px; }
+.dungeon-journey-map { position: relative; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); grid-template-rows: repeat(2, 128px); align-items: center; padding: 14px 8px; isolation: isolate; border: 1px solid #bed0a83b; border-radius: 14px; background: linear-gradient(#0c302ddd, #152a23e8), url('/img/expansion/guild_map.webp') center / cover; }
+.journey-path { position: absolute; inset: 14px 8px; width: calc(100% - 16px); height: calc(100% - 28px); z-index: -1; fill: none; stroke: #b9bc83; stroke-width: 2; stroke-dasharray: 5 4; opacity: .7; }
+.journey-path-tall { display: none; }
+#tab-stage .journey-node { grid-column: var(--journey-col); grid-row: var(--journey-row); min-width: 0; border: 0; background: none; padding: 5px 2px; display: flex; align-items: center; flex-direction: column; gap: 4px; }
+.journey-node-art { position: relative; display: block; width: 64px; height: 64px; padding: 3px; border: 2px solid #849888; border-radius: 50%; background: #0b201d; box-shadow: 0 5px 14px #0005; }
+.journey-node-art > img:first-child { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
+#tab-stage .journey-node[data-state=locked] .journey-node-art { filter: grayscale(.85); opacity: .6; }
+#tab-stage .journey-node[aria-pressed=true] .journey-node-art { border-color: #ecd497; box-shadow: 0 0 0 4px #e3c78a24, 0 5px 15px #0005; }
+.journey-node-art > i { position: absolute; right: -2px; bottom: -2px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #a9c990; color: #18281d; font-style: normal; }
+.journey-node-art > .journey-hero { position: absolute; top: -12px; right: -10px; width: 30px; height: 30px; object-fit: cover; border: 2px solid #eed4a4; border-radius: 50%; }
+.journey-node b { font-size: 11px; max-width: 100%; overflow-wrap: anywhere; text-align: center; line-height: 1.3; }
+.journey-node small { font-size: 9px; color: #a9c3b5; }
+.journey-destination { overflow: hidden; border: 1px solid #d5c88a48; border-radius: 14px; background: #173d33; }
+.journey-destination-art { width: 100%; height: 116px; object-fit: cover; display: block; }
+.journey-destination > div { padding: 12px; }
+.journey-destination small { color: #bfd1ad; font-size: 10px; }
+#tab-stage .journey-destination h3 { margin: 5px 0; font-size: 19px; }
+#tab-stage .journey-destination p { margin: 5px 0; font-size: 11px; line-height: 1.5; }
+.journey-rewards { display: flex; gap: 8px; margin: 10px 0; font-size: 11px; }
+.journey-rewards span { display: flex; align-items: center; gap: 3px; }
+.journey-rewards img { width: 20px; height: 20px; object-fit: contain; }
+#tab-stage .journey-destination button { display: flex; justify-content: space-between; align-items: center; width: 100%; min-height: 44px; border-color: #a1c0a2; background: #d5dcb1; color: #19382e; padding: 10px 12px; }
+#tab-stage .journey-destination-note { font-size: 10px; color: #bdcec0; }
+#tab-stage .exp-next-dungeon { display: flex; align-items: center; gap: 8px; }
+.exp-next-dungeon img { width: 38px; height: 30px; border-radius: 5px; object-fit: cover; }
+#tab-stage .exp-result-footer:has(.exp-next-dungeon) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#tab-stage .exp-next-dungeon { min-width: 0; }
+.exp-next-dungeon img { flex-shrink: 0; }
+.exp-next-dungeon span { min-width: 0; }
+.exp-dungeon-details > summary { min-height: 44px; }
+@media (max-width: 700px) { #tab-stage .exp-result-footer:has(.exp-next-dungeon) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 1050px) { .dungeon-journey-layout { grid-template-columns: 1fr; }.journey-destination { display: grid; grid-template-columns: 32% 1fr; }.journey-destination-art { height: 100%; min-height: 160px; } }
+@media (max-width: 600px) {
+  .dungeon-journey-map { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(4, 120px); }
+  #tab-stage .journey-node { grid-column: var(--journey-col-tall); grid-row: var(--journey-row-tall); }
+  .journey-path-wide { display: none; }.journey-path-tall { display: block; }
+  #tab-stage .dungeon-journey-heading h2 { font-size: 17px; }
+}
