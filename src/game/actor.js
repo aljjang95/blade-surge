@@ -6,6 +6,10 @@ import { attackPhase, attackBody } from './combat-motion.js';
 const _v = new THREE.Vector3();
 const _weaponQuaternion = new THREE.Quaternion();
 export const ARENA_R = 15.5;
+// 처치 연출(위로 튀며 회전)의 길이와 결정적 변주. 게임 난수를 소비하지 않는다.
+const LAUNCH_SEC = 0.55;
+let launchSerial = 0x2f6e2b1;
+const launchNoise = () => (launchSerial = (Math.imul(launchSerial, 1664525) + 1013904223) >>> 0) / 4294967296;
 
 export class Actor {
   /** @param {*} game @param {*} gltf @param {{scale?: number, tint?: string|number|null, rig?: string}} options */
@@ -28,7 +32,7 @@ export class Actor {
     // 틴트: 곱하면 Quaternius 텍스처가 통짜 색으로 뭉개진다 → 원래 색과 lerp
     // KayKit 은 밝은 아틀라스라 틴트가 잘 먹지만, Quaternius 는 채도가 높아 색을 건드리면 통짜로 뭉갠다.
     if (tint && rig === 'kaykit' && !this.model.userData.authoredContract) { const c = new THREE.Color(tint); for (const m of this.mats) if (!m.userData.tllAuthored) m.color?.lerp(c, 0.85); }
-    this.deathT = -1; this.hurtAnimT = 0;
+    this.deathT = -1; this.hurtAnimT = 0; this.launchT = -1; this.launchH = 0; this.launchTilt = 0; this.launchSpin = 0;
     this.mixer.addEventListener('finished', (e) => this.onAnimFinished?.(e));
     game.scene.add(this.root);
   }
@@ -72,6 +76,13 @@ export class Actor {
     const angle = (Math.hypot(dirx, dirz) > 0 ? Math.atan2(dirx, dirz) : this.yaw) - this.yaw - (this.rig.faceFlip ? Math.PI : 0);
     this._impact = { t: 0, strength: Math.min(1, Math.max(0, strength)), x: Math.sin(angle), z: Math.cos(angle) };
   }
+  /** 처치 연출: 렌더 피벗만 위로 튀며 한 바퀴 돈다. 판정 위치·드랍·충돌 루트는 건드리지 않고 제자리로 돌아온다. */
+  launchOnKill(strength = 1) {
+    if (this.game.app?.reducedMotion?.matches) return;
+    this.launchT = 0; this.launchH = (0.9 + launchNoise() * 0.4) * Math.min(1.6, Math.max(0.6, strength));
+    this.launchTilt = (launchNoise() < 0.5 ? -1 : 1) * (0.7 + launchNoise() * 0.5);
+    this.launchSpin = (launchNoise() < 0.5 ? -1 : 1);
+  }
   receiveStrikeRecoil(strength = .5) {
     if (!this.game.app?.reducedMotion?.matches) this._strikeRecoil = {t:0,strength:Math.min(1,Math.max(0,strength))};
   }
@@ -101,6 +112,17 @@ export class Actor {
       if (s.t >= .21 || reduced) this._strikeRecoil = null;
       else { const kick = (1 - s.t / .21) ** 2 * s.strength;
         pivot.position.z -= kick * .16; pivot.rotation.x -= kick * .12; pivot.rotation.z += kick * .035;
+      }
+    }
+    if (this.launchT >= 0) {
+      this.launchT += dt;
+      const k = this.launchT / LAUNCH_SEC;
+      if (k >= 1 || reduced) this.launchT = -1;
+      else {
+        // 포물선 높이와 한 바퀴 회전은 모두 k=0 과 k=1 에서 0(또는 한 바퀴)이라 끝날 때 튀지 않는다.
+        pivot.position.y += this.launchH * 4 * k * (1 - k);
+        pivot.rotation.x += this.launchTilt * Math.sin(k * Math.PI);
+        pivot.rotation.y += this.launchSpin * k * Math.PI * 2;
       }
     }
     if (this._impact) {

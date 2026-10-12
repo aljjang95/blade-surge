@@ -78,6 +78,8 @@ export function normalizeSave(raw, fresh) {
   s.mail = fresh.mail.map((mail) => ({ ...mail, read: s.mail.some((saved) => saved?.id === mail.id && saved.read === true) }));
   if (!['auto', 'low', 'mid', 'high'].includes(s.settings.quality)) s.settings.quality = 'auto';
   if (!['auto', 'top', 'action', 'wide'].includes(s.settings.camera)) s.settings.camera = 'auto';
+  // 화면 흔들림은 사람이 직접 고른 true/false 만 저장한다. null(미선택)이면 동작 줄이기 선호를 따라 정한다.
+  s.settings.screenShake = typeof raw.settings?.screenShake === 'boolean' ? raw.settings.screenShake : null;
   s.settings.lobbyCamera = normalizeLobbyCamera(raw.settings?.lobbyCamera);
   s.name = s.name.trim().slice(0, 20) || fresh.name;
   s.expedition = normalizeExpedition(raw.expedition);

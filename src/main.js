@@ -108,6 +108,8 @@ class App {
     this.last = performance.now();
     this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.applySettings();
+    // 운영체제의 동작 줄이기 설정이 실행 중에 바뀌면 흔들림·후처리 왜곡 기본값도 따라간다.
+    this.reducedMotion.addEventListener?.('change', () => this.applySettings());
     this.canvas.addEventListener('webglcontextlost', event => {
       event.preventDefault(); this.contextLost = true; this.input.clear(); this.citadel.clearInput();
       this._graphicsGeneration = (this._graphicsGeneration || 0) + 1;
@@ -193,6 +195,11 @@ class App {
     window.addEventListener('pageshow', () => { this.last = performance.now(); this.input.clear(); this.renderer.resize(); audio.resume(); });
     requestAnimationFrame((t) => this.loop(t));
   }
+  /** 화면 흔들림: 직접 고른 값이 우선이고, 미선택이면 동작 줄이기 선호일 때만 기본 OFF 다. */
+  screenShakeOn() {
+    const chosen = this.eco.s.settings.screenShake;
+    return typeof chosen === 'boolean' ? chosen : !this.reducedMotion?.matches;
+  }
   applySettings() {
     const st = this.eco.s.settings; audio.setSfxOn(st.sfx); audio.setMusicOn(st.music); audio.haptics = st.haptics; if (!st.haptics) audio.vibe(0); audio.setVoiceOn(st.voice !== false);
     audio.setMix(this.arsenal.s.mix);
@@ -200,6 +207,8 @@ class App {
       touch: window.matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints > 0 });
     this.renderer.setQuality(q); this.fx.setQuality(q);
     this.renderer.setCameraPreset(st.camera || 'auto');
+    this.renderer.shakeEnabled = this.screenShakeOn();
+    this.renderer.postFxEnabled = !this.reducedMotion?.matches;
     this.lobbyCameraControls?.sync();
     this.companionAgent?.syncQuality();
   }

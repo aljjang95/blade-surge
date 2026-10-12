@@ -52,12 +52,18 @@ const FinalShader = {
       float g = dot(col, vec3(0.299, 0.587, 0.114));
       col = mix(col, vec3(g), uDesat);
       col *= 1.0 - uVignette * smoothstep(0.35, 0.95, d);
-      // 전면 백색 플래시는 시야와 접근성을 해친다. 타격 색은 바깥 테두리에만 남긴다.
-      float impactEdge = smoothstep(0.42, 0.96, d);
-      col = mix(col, uFlashColor * 0.72, clamp(uFlash * impactEdge * 0.28, 0.0, 0.22));
+      // 전면 백색 플래시는 시야와 접근성을 해친다. 타격 색은 바깥 테두리에만 남기되,
+      // 화면 중앙(영웅·적)은 그대로 두고 가장자리는 실제로 보일 만큼 짙게 물들인다.
+      float impactEdge = smoothstep(0.34, 0.9, d);
+      col = mix(col, uFlashColor * 0.78, clamp(uFlash * impactEdge * 0.85, 0.0, 0.46));
       gl_FragColor = vec4(playerOutline(col, uv), 1.0);
     }`,
 };
+
+// 카메라 킥은 월드 단위, FOV 펀치는 도 단위다. 프레이밍이 깨지지 않도록 작은 상한을 둔다.
+const KICK_PUSH = 0.62, KICK_LATERAL = 0.3, KICK_DIP = 0.2, FOV_PUNCH = 1.8, FOV_PUNCH_MAX = 3.4;
+const FLASH_MAX = 0.6, ABERR_MAX = 2, ABERR_SCALE = 0.012, RADIAL_MAX = 0.6, RADIAL_SCALE = 0.1;
+const _kickFwd = new THREE.Vector3();
 
 /** 카메라 프리셋 — y/z 는 타겟 기준 오프셋, fov 는 가로모드 기준(세로는 +14), lookY 는 시선 높이, lag 는 추적 탄성 */
 export const CAMERA_PRESETS = {
@@ -112,6 +118,8 @@ export class Renderer {
     this.u = this.finalPass.uniforms;
     this.playerSilhouette = new PlayerSilhouette(this.u, this.finalPass);
     this.flash = 0; this.aberr = 0; this.radial = 0; this.desat = 0;
+    // 설정의 '화면 흔들림'과 동작 줄이기 선호가 카메라 킥·FOV 펀치·후처리 왜곡을 끈다
+    this.shakeEnabled = true; this.postFxEnabled = true;
 
     const scheduleResize = () => {
       if (this._resizeFrame) return;
@@ -159,7 +167,7 @@ export class Renderer {
     }
     this.camera.aspect = w / h;
     // 세로 화면이면 시야를 넓혀 전장 확보
-    this.camera.fov = (this.rig?.fov ?? 46) + (w < h ? 14 : 0);
+    this.camera.fov = (this.rig?.fov ?? 46) + (w < h ? 14 : 0); this._fovPunch = 0;
     this.camera.updateProjectionMatrix();
     // 블룸 내부 해상도를 직접 강제한다.
     // 함정: UnrealBloomPass 의 `resolution` 필드는 생성자에서만 쓰인다. 그 뒤에는
@@ -192,16 +200,28 @@ export class Renderer {
     const want = this.rig.fov + (this._width < this._height ? 14 : 0);
     if (Math.abs(this.camera.fov - want) > 0.05) { this.camera.fov += (want - this.camera.fov) * Math.min(1, realDt * 3); this.camera.updateProjectionMatrix(); }
   }
-  // 호출부 호환 이름은 유지하되, 실제 동작은 노이즈 없는 단방향 임팩트다.
-  shake(amount) { this.rig.trauma = Math.min(1, Math.max(this.rig.trauma, amount)); }
-  punch(z) { this.rig.zoom = Math.max(this.rig.zoom, z); }
-  flashScreen(strength = 1, color = 0xffffff) { this.flash = Math.max(this.flash, Math.min(0.25, strength)); this.u.uFlashColor.value.set(color); }
+  /** 방향성 카메라 킥. 진동·랜덤 노이즈 없이 한 방향으로 밀렸다가 감쇠해 복귀한다.
+   * dx/dz 는 타격이 나아가는 월드 방향(선택). 없으면 화면 안쪽으로 밀리는 킥만 쓴다. */
+  shake(amount, dx = 0, dz = 0) {
+    if (!this.shakeEnabled || !(amount > 0)) return;
+    const rig = this.rig, a = Math.min(1, amount);
+    if (a < rig.trauma) return;   // 더 큰 킥이 진행 중이면 그 방향을 유지한다
+    rig.trauma = a;
+    const len = Math.hypot(dx, dz);
+    rig.kickX = len > 1e-4 ? dx / len : 0; rig.kickZ = len > 1e-4 ? dz / len : 0;
+  }
+  punch(z) { if (this.shakeEnabled && z > 0) this.rig.zoom = Math.max(this.rig.zoom, Math.min(2, z)); }
+  flashScreen(strength = 1, color = 0xffffff) {
+    // 동작 줄이기에서는 예전 상한(0.25)을 유지하고, 일반 설정에서만 가장자리 틴트를 더 짙게 쓴다.
+    this.flash = Math.max(this.flash, Math.min(this.postFxEnabled ? FLASH_MAX : 0.25, strength)); this.u.uFlashColor.value.set(color);
+  }
   update(dt, realDt) {
     this.time += realDt;
     const rig = this.rig, cam = this.camera;
     // 타격 카메라는 한 방향으로 밀렸다가 감쇠해 복귀한다. 진동·랜덤 노이즈는 금지한다.
+    // 실시간 dt 로 줄여 히트스탑 동안에도 킥이 화면에 남았다가 정상 속도로 돌아온다.
     rig.trauma = Math.max(0, rig.trauma - realDt * 3.4);
-    const t = rig.trauma * rig.trauma;
+    const kick = rig.trauma * (2 - rig.trauma);   // 작은 타격도 읽히도록 앞쪽을 키운 감쇠 곡선
     rig.zoom = Math.max(0, rig.zoom - realDt * 3);
     let desired;
     if (rig.mode === 'lobby') {
@@ -213,6 +233,7 @@ export class Renderer {
       this.lobbySightline ??= new LobbySightline();
       if (!walking) desired.y += this.lobbySightline.solve(desired,rig.target,this.lobbyOccluders,performance.now());
       const lobbyFov = 46 + (window.innerWidth < window.innerHeight ? 14 : 0);
+      this._fovPunch = 0;
       if (cam.fov !== lobbyFov) { cam.fov = lobbyFov; cam.updateProjectionMatrix(); }
       rig.pos.lerp(desired, 1 - Math.exp(-realDt * (walking ? 6 : 3)));
       cam.position.copy(rig.pos);
@@ -220,7 +241,8 @@ export class Renderer {
       const editorialShift = walking ? { x: 0, z: 0 } : lobbyCompositionShift(p, this._width >= this._height);
       cam.lookAt(rig.target.x + editorialShift.x, rig.target.y + (walking ? .6 : 1.1), rig.target.z + editorialShift.z);
     } else {
-      // Hits never displace or pulse the whole camera; preserve user framing.
+      // 이전 프레임의 FOV 펀치를 걷어낸 뒤 목표 FOV 로 보간하고, 이번 프레임의 펀치를 다시 얹는다.
+      if (this._fovPunch) cam.fov += this._fovPunch;
       const off = rig.offset.clone();
       off.x += rig.side + (rig.environmentSide || 0);   // 지역마다 전투 중심을 여는 비대칭 구도
       const controlled = battleCameraOffset(off, this.battleCamera);
@@ -232,17 +254,32 @@ export class Renderer {
       rig.pos.lerp(desired, 1 - Math.exp(-realDt * rig.lag));
       cam.position.copy(rig.pos);
       const look = rig.target.clone().add(rig.lookOffset);
+      // 킥은 렌더 카메라에만 얹는다. rig.pos 에 섞이지 않아 감쇠가 끝나면 원래 구도로 정확히 돌아온다.
+      if (kick > 0.002 && this.shakeEnabled) {
+        _kickFwd.subVectors(look, cam.position).normalize();
+        cam.position.addScaledVector(_kickFwd, KICK_PUSH * kick);
+        cam.position.y -= KICK_DIP * kick;
+        const lateral = KICK_LATERAL * kick;
+        cam.position.x -= (rig.kickX || 0) * lateral; cam.position.z -= (rig.kickZ || 0) * lateral;
+      }
       cam.lookAt(look);
+      const punch = this.shakeEnabled ? Math.min(FOV_PUNCH_MAX, rig.zoom * FOV_PUNCH) : 0;
+      const wasPunched = this._fovPunch;
+      cam.fov -= punch; this._fovPunch = punch;
+      if (punch || wasPunched) cam.updateProjectionMatrix();
     }
     // Arena supplies actual hero coordinates before this final camera update.
     this.battleOcclusion.update(cam.position, rig.mode !== 'lobby');
     // 포스트 유니폼 감쇠
-    this.flash = Math.max(0, this.flash - realDt * 5);
+    this.flash = Math.max(0, this.flash - realDt * 3.5);
     this.aberr = Math.max(0, this.aberr - realDt * 1.6);
     this.radial = Math.max(0, this.radial - realDt * 1.2);
     this.u.uFlash.value = this.flash;
-    this.u.uAberr.value = 0; // Preserve clear attack silhouettes in every quality mode.
-    this.u.uRadial.value = 0; // No fullscreen blur; gameplay dt and contact feedback remain unchanged.
+    // 색수차·방사형 블러는 궁극기·마무리타·보스 처치처럼 skills/battle 이 직접 올린 값만 쓰고, 상한을 둔다.
+    // 로비·동작 줄이기에서는 공격 실루엣을 지키기 위해 끄고, 8탭 방사형 블러는 낮음 화질에서도 끈다(색수차는 3탭이라 유지).
+    const post = this.postFxEnabled && rig.mode !== 'lobby';
+    this.u.uAberr.value = post ? Math.min(this.aberr, ABERR_MAX) * ABERR_SCALE : 0;
+    this.u.uRadial.value = post && this.quality !== 'low' ? Math.min(this.radial, RADIAL_MAX) * RADIAL_SCALE : 0;
     this.u.uDesat.value = this.desat;
     this.u.uTime.value = this.time;
   }

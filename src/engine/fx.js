@@ -304,6 +304,9 @@ export class ParticlePool {
   }
 }
 
+// 처치 확정 섬광: 한 프레임에 낼 수 있는 상한과 색(공유 인스턴스라 호출마다 할당하지 않는다)
+const KILL_CONFIRM_PER_FRAME = 10;
+const KILL_COLOR = new THREE.Color(0xffe9a8);
 // ============ 일회성 메시 이펙트(스프라이트/링/참격/기둥) 관리 ============
 export class FX {
   constructor(scene, camera) {
@@ -317,7 +320,7 @@ export class FX {
     this.impactLights = new ImpactLights(scene);
     this.lights = this.impactLights.slots;
     this.dmgLayer = document.getElementById('dmg-layer');
-    this.dmgPool = []; this.maxDmg = 40;
+    this.dmgPool = []; this.maxDmg = 40; this._killBudget = KILL_CONFIRM_PER_FRAME;
     this._damageRecent = []; this._damageSerial = 0;
     this._damageRandomState = 0x6d2b79f5;
     this._combatTextRegions = [];
@@ -334,6 +337,7 @@ export class FX {
   get lite() { return this.quality === 'low'; }
   add(obj, life, update, onEnd) { this.scene.add(obj); this.items.push({ obj, t: 0, life, update, onEnd }); return obj; }
   update(dt) {
+    this._killBudget = KILL_CONFIRM_PER_FRAME;
     this.sparks.update(dt); this.glow.update(dt); this.smoke.update(dt);
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i]; it.t += dt; const k = it.t / it.life;
@@ -607,6 +611,19 @@ export class FX {
     for (let i = 0; i < n; i++) { const a = Math.random() * Math.PI * 2, r = Math.random() * radius; this.glow.emit(pos.x + Math.cos(a) * r, pos.y + Math.random() * 0.5, pos.z + Math.sin(a) * r, (Math.random() - 0.5) * 1.2, rise * (0.5 + Math.random()), (Math.random() - 0.5) * 1.2, c, size * (0.5 + Math.random()), life * (0.6 + Math.random() * 0.8), { grav: -1, drag: 0.97, shrink: 0.2 }); }
   }
   aura(pos, color, n = 3) { this.embers(pos, color, { n, radius: 0.8, life: 0.8, size: 0.3, rise: 2 }); }
+
+  /** 처치 확정 섬광: 파티클 풀만 써서 드로우콜·메시·재질을 늘리지 않는다. 한 프레임 상한이 있어 군중 처치에도 일정하다. */
+  killConfirm(pos) {
+    if (!(this._killBudget > 0)) return;
+    this._killBudget--;
+    // 크게 터졌다 빠르게 사그라드는 따뜻한 섬광 한 점 + 방사형 불꽃 몇 점
+    this.glow.emit(pos.x, pos.y + 1, pos.z, 0, 0.5, 0, KILL_COLOR, this.lite ? 2.4 : 3.4, 0.2, { grav: 0, drag: 0.9, shrink: 0.2 });
+    const n = this.lite ? 3 : 6;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + this._killBudget * 0.7, s = 7 + (i % 2) * 3;
+      this.sparks.emit(pos.x, pos.y + 1, pos.z, Math.cos(a) * s, 2.5 + (i % 3), Math.sin(a) * s, KILL_COLOR, 0.34, 0.32, { grav: 14, shrink: 0.1 });
+    }
+  }
 
   // ---------- 스프라이트 플래시 ----------
   /** @param {THREE.Vector3} pos @param {THREE.ColorRepresentation} color

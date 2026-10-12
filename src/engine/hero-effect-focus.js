@@ -11,7 +11,8 @@ float heroEffectFactor(vec2 uv) {
   vec2 p = abs(uv - heroFocus.xy);
   p.y = max(0.0, p.y - heroFocus.w * .55);
   float d = length(p / vec2(heroFocus.z, heroFocus.w * .45));
-  return mix(.04, 1.0, smoothstep(.78, 1.22, d));
+  // 영웅 주변에서도 이펙트가 완전히 사라지지 않게 최소 비율을 둔다(영웅 윤곽은 별도 실루엣 패스가 지킨다).
+  return mix(.45, 1.0, smoothstep(.78, 1.22, d));
 }
 `;
 
@@ -23,7 +24,7 @@ float heroCosmeticFactor(vec2 uv) {
   float factor = heroEffectFactor(uv);
   if (heroCosmeticMaskActive < .5 || heroCosmeticMaskAllowed < .5) return factor;
   float mask = clamp(texture2D(heroCosmeticMask, uv).r, 0.0, 1.0);
-  return min(factor, mix(1.0, .02, mask));
+  return min(factor, mix(1.0, .35, mask));
 }
 `;
 

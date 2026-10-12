@@ -502,7 +502,12 @@ export class Battle {
     const big = e.isBoss || e.isElite;
     this.fx.burst(e.pos.clone().setY(1), 0xe0e0ff, { n: big ? 40 : 12, speed: 8, size: 0.4, up: 1 });
     if (big) { this.fx.explosion(e.pos, { size: e.isBoss ? 7 : 4, color: e.isBoss ? 0xff8080 : 0xffd080 }); this.renderer.shake(0.4); }
-    else this.fx.dustPuff(e.pos, { size: 2, life: 0.6 });
+    else {
+      // 군중 처치에서 먼지 메시가 한 프레임에 수십 개 생기지 않도록 짧은 창마다 상한을 둔다.
+      if (!(this.elapsed - this._dustAt < 0.12)) { this._dustAt = this.elapsed; this._dustN = 0; }
+      if (this._dustN++ < 6) this.fx.dustPuff(e.pos, { size: 2, life: 0.6 });
+      if (e.killFlair) this.fx.killConfirm?.(e.pos);
+    }
     audio.play('hit_wood', { vol: 0.3, rate: 1.35, min: 0.05 }); if (big) audio.dark({ vol: 0.4, base: 200, dur: 0.5 });
     // 지속 스폰: 죽은 만큼 큐에서 보충
     if (this.pending.length && this.active) this.after(0.5 + Math.random() * 0.5, () => { if (this.pending.length && this.active && this.enemies.filter(e => e.alive).length < this.maxAlive) { const n = this.pending.shift(); this.spawnEnemy(n.t, null, n.room); } });
@@ -640,7 +645,7 @@ export class Battle {
       if (budget.emit && contact.particles) this.fx.directional(hitPos, _v.set(dirx, 0, dirz).normalize(), color, { n: contact.particles, speed: contact.heavy ? 9 : 6 });
       audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy || crit || !!e.isBoss, finisher: !!opts.finisher, boss: !!e.isBoss });
       if (contact.stop) this.timeCtl.hitstop(contact.stop);
-      if (contact.tier !== 'light' || crit) { this.renderer?.shake?.(contact.tier === 'finisher' ? 0.16 : 0.055); this.renderer?.punch?.(contact.tier === 'finisher' ? 0.12 : 0.035); }
+      if (contact.tier !== 'light' || crit) { this.renderer?.shake?.(contact.tier === 'finisher' ? 0.5 : 0.2, dirx, dirz); this.renderer?.punch?.(contact.tier === 'finisher' ? 0.5 : 0.18); }
       if (p === this.player && !p.auto && contact.haptic) audio.vibe(contact.haptic);
       if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);
     }

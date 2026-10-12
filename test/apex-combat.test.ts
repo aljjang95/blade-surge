@@ -21,8 +21,8 @@ test('cooldown selection excludes ultimate and awakening and resolves ties stabl
 });
 test('contact feedback keeps recoil while reduced motion removes freezes and particles',()=>{
   const regular=contactFeedback(),heavy=contactFeedback({finisher:true}),boss=contactFeedback({finisher:true,boss:true}),reduced=contactFeedback({crit:true,reduced:true});
-  expect(regular).toMatchObject({heavy:false,hitstop:.035,particles:5,light:false});
-  expect(heavy.hitstop).toBe(.09);expect(heavy.particles).toBe(10);expect(heavy.light).toBe(true);expect(heavy.recoil).toBeGreaterThan(regular.recoil);
+  expect(regular).toMatchObject({heavy:false,hitstop:.045,particles:5,light:false});
+  expect(heavy.hitstop).toBe(.11);expect(heavy.particles).toBe(10);expect(heavy.light).toBe(true);expect(heavy.recoil).toBeGreaterThan(regular.recoil);
   expect(boss.recoil).toBeLessThan(regular.recoil);expect(boss.recoil).toBeGreaterThan(0);
   expect(reduced).toMatchObject({heavy:true,hitstop:0,particles:0,light:false});expect(reduced.recoil).toBeGreaterThan(0);
 });

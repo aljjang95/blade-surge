@@ -16,8 +16,8 @@ export function compactCombatStatus(text) {
 
 export function decorativeBurstGain(size) {
   // 작은 접촉은 그대로 두고 넓은 폭발·충격파가 겹칠 때의 백색 번짐만 낮춘다.
-  // 크기·판정·수명·알파 곡선은 바꾸지 않는 장식 RGB 상한이다.
-  return Number.isFinite(size) ? 1 - Math.max(0, Math.min(1, (size - 4) / 8)) * .72 : 1;
+  // 크기·판정·수명·알파 곡선은 바꾸지 않는 장식 RGB 상한이다. 큰 폭발도 70% 까지는 남겨 화려함을 지킨다.
+  return Number.isFinite(size) ? 1 - Math.max(0, Math.min(1, (size - 4) / 8)) * .3 : 1;
 }
 
 export function boundedFeedbackGain(gain) {

@@ -73,10 +73,10 @@ test('zero damage or a dodge causes no contact sound, stop or recoil',()=>{
 test('crowd damage retains all hits but bounds impact VFX and sound',()=>{
  const {b,counts}=setup();played=0;let impacts=0;
  for(let i=0;i<30;i++)b.damageEnemy({alive:true,spawning:false,def:{scale:1},pos:new Vector(),hurt:()=>10,receiveImpact:()=>impacts++},10,{dirx:1,dirz:0});
- const profile=contactProfile({},false,false,false);assert.equal(profile.stop,.022);
+ const profile=contactProfile({},false,false,false);assert.equal(profile.stop,.045);
  assert.equal(b.combo,30);assert.equal(b.dmgDealt,300);assert.equal(impacts,30);assert.equal(counts().flashes,1);assert.equal(played,1);assert.equal(b.timeCtl.stop,profile.stop);
  // Advance the real clock through stop consumption and rearm, and reset the per-frame budget.
- b.elapsed+=b.timeCtl.step(.03);b.elapsed+=b.timeCtl.step(.06);
+ b.elapsed+=b.timeCtl.step(.03);b.elapsed+=b.timeCtl.step(.12);b.elapsed+=b.timeCtl.step(.06); // 정지가 .045 로 늘어 정지 소비 + 재무장(.045s) + 60ms 창을 모두 지나도록 진행한다
  assert.ok(b.elapsed>=.06);assert.equal(b.timeCtl.stop,0);
  b.feedbackCount=0;b.feedbackSound=false;
  b.damageEnemy({alive:true,spawning:false,def:{scale:1},pos:new Vector(),hurt:()=>10,receiveImpact:()=>impacts++},10,{dirx:1,dirz:0});

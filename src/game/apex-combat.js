@@ -23,7 +23,7 @@ export function longestRegularCooldown(player) {
 export function contactFeedback({finisher=false,crit=false,boss=false,elite=false,reduced=false}={}) {
   const heavy=!!finisher||!!crit;
   return {heavy,recoil:impactStrength({finisher,crit,boss,elite}),
-    hitstop:reduced?0:finisher?.09:crit?.055:.035,
+    hitstop:reduced?0:finisher?.11:crit?.06:.045,
     flashSize:reduced?(heavy?1.7:1.25):(heavy?2.5:1.6),
     particles:reduced?0:(heavy?10:5),light:!reduced&&heavy};
 }

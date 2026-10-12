@@ -45,13 +45,15 @@ export function impactStrength({ finisher = false, crit = false, boss = false, e
   return (finisher ? 1 : crit ? 0.75 : 0.5) * (boss ? 0.22 : elite ? 0.55 : 1);
 }
 
+// 연속 타격이 정지를 합산해도 한 번의 정지 묶음이 이 값(초)을 넘지 않는다.
+export const HITSTOP_CAP = 0.18;
 /** Uses the unscaled clock, and consumes partial-frame stops rather than dropping a whole frame.
  * Repeated hits extend a stop to a maximum, never sum a stop per enemy. */
 export class ImpactClock {
   constructor() { this.stop = 0; this.slow = 1; this.slowT = 0; this.scale = 1; this._stopped = 0; this._rearm = 0; }
   hitstop(seconds) {
     if (!Number.isFinite(seconds) || seconds <= 0 || this._rearm > 0) return;
-    this.stop = Math.max(this.stop, Math.min(seconds, Math.max(0, 0.12 - this._stopped)));
+    this.stop = Math.max(this.stop, Math.min(seconds, Math.max(0, HITSTOP_CAP - this._stopped)));
   }
   slowmo(scale, seconds) {
     if (!Number.isFinite(scale) || !Number.isFinite(seconds) || seconds <= 0) return;

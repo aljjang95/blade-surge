@@ -224,7 +224,7 @@ export class Enemy extends Actor {
     ring.scale.setScalar(1.02 + (1 - remaining) * .22 + pulse * .06);
     ring.material.opacity = .35 + (1 - remaining) * .42 + pulse * .12;
   }
-  hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false } = {}) {
+  hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false } = {}) {
     if (!this.alive || this.spawning) return 0;
     if (this.def.dodge && Math.random() < this.def.dodge && this.state === 'chase' && !this.stun) {
       this.play(this.A('dodge'), { once: true, fade: 0.05, speed: 1.5 }); this.state = 'dodge'; this.stateT = 0; this.kb.set(-dirx, 0, -dirz).normalize().multiplyScalar(-8);
@@ -265,10 +265,11 @@ export class Enemy extends Actor {
       this.state === 'hurt' ? this.stagger : 0);
     if (this.supportCastKind && (this.state !== 'attack' || this.stun > 0 || this.breakT > 0)) this.clearSupportCast();
     if (this.state !== 'attack' || this.stun > 0 || this.breakT > 0) this.clearDashWarning();
-    if (this.hp <= 0) { this.hp = 0; this.kill(dirx, dirz, kb); }
+    // 마무리타·치명타·스킬로 쓰러뜨릴 때만 처치 연출을 건다(일반 평타 처치는 기존 그대로).
+    if (this.hp <= 0) { this.hp = 0; this.kill(dirx, dirz, kb, crit || finisher || !basic ? { crit, finisher } : null); }
     return dmg;
   }
-  kill(dirx, dirz, kb) {
+  kill(dirx, dirz, kb, flair = null) {
     this.gatherT = 0; this.gatherBlockT = 0; this.gatherWindupOwner = null;
     this.clearDashWarning();
     this.clearSupportCast();
@@ -277,6 +278,9 @@ export class Enemy extends Actor {
     this.die(); this.state = 'dead'; this.telegraph = 0;
     this.kb.set(dirx, 0, dirz).normalize().multiplyScalar(Math.max(4, kb * 1.5));
     if (this.eyeMat) this.eyeMat.emissiveIntensity = 0;
+    // 보스·정예는 기존 대형 처치 연출이 있으므로 제외한다. 일반 몹만 튀어 오르며 처치 섬광을 남긴다.
+    this.killFlair = !!flair && !this.isBoss && !this.isElite;
+    if (this.killFlair) { this.launchOnKill(flair.finisher ? 1.3 : flair.crit ? 1 : 0.8); this.flash(0xffe9a0, 0.26); }
     this.game.onEnemyDeath(this);
   }
   update(dt) {
