@@ -37,7 +37,7 @@ export function nextBossPattern(def, turn, phase = 0) {
 
 export class Enemy extends Actor {
   constructor(game, gltf, weaponsGltf, def, scaleMult, pos) {
-    const rig = rigOf(def.model);
+    const rig = rigOf(def.model, gltf.scene.userData.libraryAsset);
     super(game, gltf, { scale: def.scale * (RIGS[rig].scale || 1), tint: def.tint || (def.boss ? '#ffb0b0' : null), rig });
     this.def = def; this.type = def.name; this.isBoss = !!def.boss; this.isElite = !!def.elite;
     this.maxHp = Math.floor(def.hp * scaleMult); this.hp = this.maxHp; this.atk = def.atk * Math.pow(scaleMult, 0.7);

@@ -1,4 +1,7 @@
-import { PointLight } from 'three';
+import { Color, PointLight } from 'three';
+
+// 타격 빛은 원색 그대로가 아니라 따뜻한 크림색을 조금 섞어 동화풍의 부드러운 번쩍임으로 만든다.
+const SOFT_WARM = new Color(1, 0.93, 0.8), SOFT_MIX = 0.18;
 
 /** Keep the lighting shader layout stable while impact lights fade in and out. */
 export class ImpactLights {
@@ -24,7 +27,7 @@ export class ImpactLights {
     });
     slot.t = 0; slot.life = life; slot.i0 = intensity;
     slot.light.position.copy(pos); slot.light.position.y += 1;
-    slot.light.color.set(color); slot.light.distance = distance; slot.light.intensity = intensity;
+    slot.light.color.set(color).lerp(SOFT_WARM, SOFT_MIX); slot.light.distance = distance; slot.light.intensity = intensity;
   }
   update(dt) {
     for (const slot of this.slots) {

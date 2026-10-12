@@ -187,7 +187,9 @@ export class Actor {
   }
   die() {
     if (!this.alive) return; this.alive = false; this.deathT = 0; this.vel.set(0, 0, 0);
-    this.play(Math.random() < 0.5 ? 'Death_A' : 'Death_B', { once: true, clamp: true, fade: 0.08 });
+    // 리그별 사망 클립(KayKit Death_A/B, Tripo 라이브러리 death)을 논리 키로 고른다. 난수 소비는 1회로 동일하다.
+    const deathClip = this.rig?.death === 'death' || (Array.isArray(this.rig?.death) && this.rig.death[0] === 'death') ? 'death' : null;
+    this.play(deathClip && this.clips?.[deathClip] ? deathClip : (Math.random() < 0.5 ? 'Death_A' : 'Death_B'), { once: true, clamp: true, fade: 0.08 });
     for (const m of this.mats) { m.transparent = true; }
   }
   dispose() {

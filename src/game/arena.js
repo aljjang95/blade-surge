@@ -1,14 +1,17 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VFX_TEX } from '../engine/assets.js';
 import { getPart } from '../engine/assets.js';
-import { buildRegionArchitecture } from './region-architecture.js';
+import { buildRegionArchitecture, buildTownDecor, townDecorFor } from './region-architecture.js';
 import { ROOM_TYPE, mulberry32 } from './world.js';
-import { buildCitadelHubScene } from './citadel-hub-scene.js';
+import { buildCitadelHubScene, townLibraryProps } from './citadel-hub-scene.js';
+import { activeTownId, TOWN_THEMES } from '../data/citadel-hub.js';
 import { buildLobbyWorld } from './lobby-world.js';
 import { BattleOcclusion } from '../engine/battle-occlusion.js';
 import { softCircleTex } from '../engine/assets.js';
 import { applyDungeonSurface, collectDungeonTiles, projectDungeonSurface } from './dungeon-surface.js';
 import { buildOpenFieldScene, FIELD_ATMOSPHERES } from './open-field-scene.js';
+import { libraryAssets } from '../engine/library-assets.js';
 
 const THEMES = {
   garden: { fog: 0x172b2b, bg: 0x172b2b, hemi: [0xa0b5ae, 0x283930], sun: 0xffedca, sunI: 2.3, torch: 0x8adbd0, tint: 0xcbd0b8 },
@@ -94,6 +97,7 @@ export class Arena {
     this.lobbyWorld?.userData.dispose(); this.lobbyWorld = null; this.renderer.lobbyOccluders = [];
     this.regionArchitecture?.userData.dispose(); this.regionArchitecture = null;
     this.fieldScene?.userData.dispose(); this.fieldScene = null;
+    this.townDecor?.userData.dispose(); this.townDecor = null;
     for (const material of this.ownedMaterials) material.dispose(); this.ownedMaterials.clear();
     for (const geometry of this.ownedGeometry) geometry.dispose(); this.ownedGeometry.clear();
     for (const s of this.seals) disposeSeal(s);
@@ -145,21 +149,44 @@ export class Arena {
     this.group.add(p); return p;
   }
 
+  placeLibraryProps(asset, transforms) {
+    const source = this.hubModels[asset.id]?.scene;
+    if (!source || !this.hubModels[asset.id]?.scene.userData.libraryAsset || !transforms.length) return false;
+    source.updateMatrixWorld(true);
+    source.traverse((node) => {
+      if (!node.isMesh || node.isSkinnedMesh) return;
+      const material = node.material;
+      const mesh = new THREE.InstancedMesh(node.geometry, material, transforms.length);
+      const local = node.matrixWorld.clone();
+      const object = new THREE.Object3D();
+      transforms.forEach((transform, index) => {
+        object.position.set(transform.x, 0, transform.z); object.rotation.set(0, transform.ry || 0, 0); object.scale.setScalar(transform.s || 1); object.updateMatrix();
+        mesh.setMatrixAt(index, object.matrix.multiply(local));
+      });
+      mesh.castShadow = true; mesh.receiveShadow = true; mesh.computeBoundingSphere();
+      this.group.add(mesh);
+    });
+    return true;
+  }
+
   // ================= 로비 (기존 소형 아레나) =================
   buildLobby() {
     this.clear();
     const T = THEMES.lobby;
-    this.scene.background = new THREE.Color(0x172c36); this.scene.fog.color.set(0x172c36); this.scene.fog.density = 0.017;
-    const hemi = new THREE.HemisphereLight(0x9dc6d7, 0x263f32, .8); this.scene.add(hemi); this.lights.push(hemi);
-    const sun = new THREE.DirectionalLight(0xffdca9, 2.6); sun.position.set(-8, 20, 14); sun.castShadow = true;
+    // 현재 마을의 하늘·안개·조명. 서약의 성채 값은 기존 광장과 같다.
+    const townId = activeTownId(), A = (TOWN_THEMES[townId] || TOWN_THEMES.oathhold).atmosphere;
+    this.scene.background = new THREE.Color(A.bg); this.scene.fog.color.set(A.fog); this.scene.fog.density = A.density;
+    const hemi = new THREE.HemisphereLight(A.hemi[0], A.hemi[1], A.hemiI); this.scene.add(hemi); this.lights.push(hemi);
+    const sun = new THREE.DirectionalLight(A.sun, A.sunI); sun.position.set(...A.sunPos); sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024); sun.shadow.camera.left = sun.shadow.camera.bottom = -15; sun.shadow.camera.right = sun.shadow.camera.top = 15;
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 50; sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.02;
     this.scene.add(sun); this.lights.push(sun);
-    this.lobbyHall = buildCitadelHubScene({ models: this.hubModels, environmentTexture: this.renderer.characterEnvironment.texture, quality: this.renderer.quality, camera: this.renderer.camera }); this.group.add(this.lobbyHall);
-    this.lobbyWorld = buildLobbyWorld({ quality: this.renderer.quality }); this.group.add(this.lobbyWorld);
+    this.lobbyHall = buildCitadelHubScene({ models: this.hubModels, environmentTexture: this.renderer.characterEnvironment.texture, quality: this.renderer.quality, camera: this.renderer.camera,
+      townId, libraryProps: townLibraryProps(townId, this.hubModels) }); this.group.add(this.lobbyHall);
+    this.lobbyWorld = buildLobbyWorld({ quality: this.renderer.quality, townId }); this.group.add(this.lobbyWorld);
     this.renderer.lobbyOccluders = [];this.lobbyHall.traverse(o=>{if(o.isMesh)this.renderer.lobbyOccluders.push(o);});
     this.lobbyHall.traverse((o) => { if (o.isMesh && o.material.isMeshStandardMaterial) { o.material.envMap = this.renderer.characterEnvironment.texture; o.material.envMapIntensity = .3; } });
-    const rim = new THREE.DirectionalLight(0x83c9e0, 1.8); rim.position.set(2, 4, -4);
+    const rim = new THREE.DirectionalLight(A.rim, A.rimI); rim.position.set(2, 4, -4);
     this.scene.add(rim); this.lights.push(rim);
     this.floorData = null;
   }
@@ -196,12 +223,53 @@ export class Arena {
     }
     this.scene.add(group);
   }
+  /** 랜드마크 원본을 재질별 병합 지오메트리로 만든다(층 정리 때 소유 지오메트리로 회수). 병합할 수 없으면 null → 기존 복제 경로. */
+  _landmarkBatches(source) {
+    source.updateMatrixWorld(true);
+    const inverse = new THREE.Matrix4().copy(source.matrixWorld).invert(), local = new THREE.Matrix4();
+    const bins = new Map(); let failed = false;
+    source.traverse((node) => {
+      if (failed || !node.isMesh) return;
+      if (node.isSkinnedMesh || Array.isArray(node.material)) { failed = true; return; }
+      const geometry = node.geometry.index ? node.geometry.toNonIndexed() : node.geometry.clone();
+      geometry.applyMatrix4(local.multiplyMatrices(inverse, node.matrixWorld));
+      if (!bins.has(node.material)) bins.set(node.material, { parts: [], castShadow: false, receiveShadow: false });
+      const bin = bins.get(node.material); bin.parts.push(geometry);
+      bin.castShadow ||= node.castShadow; bin.receiveShadow ||= node.receiveShadow;
+    });
+    const batches = [];
+    for (const [material, bin] of bins) {
+      const geometry = failed ? null : mergeGeometries(bin.parts);
+      for (const part of bin.parts) part.dispose();
+      if (!geometry) failed = true;
+      else { this.ownedGeometry.add(geometry); batches.push({ geometry, material, castShadow: bin.castShadow, receiveShadow: bin.receiveShadow }); }
+    }
+    if (failed) { for (const batch of batches) { batch.geometry.dispose(); this.ownedGeometry.delete(batch.geometry); } return null; }
+    return batches;
+  }
   mountLandmarks(floorData, visual) {
     if (!this.landmarkGltf || !visual?.landmark) return;
     const source = this.landmarkGltf.scene.getObjectByName(`TLL_Dungeon_${visual.landmark}_Landmark`);
     if (!source) return;
     const slots = floorData.rooms.filter((room) => !room.objectiveProp &&
       (room.type === ROOM_TYPE.BOSS || room.type === ROOM_TYPE.ELITE || room.type === ROOM_TYPE.TREASURE)).slice(0, 4);
+    if (!slots.length) return;
+    // 랜드마크 하나가 메시 수십 개(별빛 서고 58개)라 방마다 통째로 복제하면 draw call이 수백 개 늘어난다.
+    // 재질별로 한 번 병합한 뒤 방 슬롯에 인스턴싱해 같은 모양·배치를 재질 수만큼의 draw call로 그린다.
+    const batches = this._landmarkBatches(source);
+    if (batches) {
+      const object = new THREE.Object3D();
+      for (const batch of batches) {
+        const mesh = new THREE.InstancedMesh(batch.geometry, batch.material, slots.length);
+        slots.forEach((room, index) => {
+          object.position.set(room.x, 0, room.z - room.h / 2 + 2.6); object.rotation.copy(source.rotation); object.rotation.y = (room.id % 4) * Math.PI / 2;
+          object.scale.setScalar(room.type === ROOM_TYPE.BOSS ? 1.18 : .72); object.updateMatrix(); mesh.setMatrixAt(index, object.matrix);
+        });
+        mesh.name = `${source.name}-batch`; mesh.castShadow = batch.castShadow; mesh.receiveShadow = batch.receiveShadow;
+        mesh.computeBoundingSphere(); this.group.add(mesh);
+      }
+      return;
+    }
     for (const room of slots) {
       const landmark = source.clone(true); landmark.position.set(room.x, 0, room.z - room.h / 2 + 2.6); landmark.rotation.y = (room.id % 4) * Math.PI / 2; landmark.scale.setScalar(room.type === ROOM_TYPE.BOSS ? 1.18 : .72); landmark.name = `${source.name}-${room.id}`; this.group.add(landmark);
     }
@@ -228,7 +296,7 @@ export class Arena {
     if (field) {
       this.fieldScene = buildOpenFieldScene(floorData, this.renderer.quality);
       this.fieldScene.traverse(node => { if(node.isMesh && node.name !== 'field-walkable-ground' && node.name !== 'field-ocean' && node.name !== 'field-backdrop')this.occlusion.bind(node.material); });
-      this.group.add(this.fieldScene); this.buildSeals(floorData); return;
+      this.group.add(this.fieldScene); this.buildSeals(floorData); this.mountTownDecor(floorData); return;
     }
 
     // ---- 바닥 (방 + 복도) ----
@@ -264,6 +332,14 @@ export class Arena {
     // ---- 방 장식 ----
     const pillars = [], banners = [];
     const props = ['barrel_large', 'barrel_small_stack', 'crates_stacked', 'box_stacked', 'rubble_half', 'keg', 'trunk_large_A', 'table_medium_broken', 'candle_triple', 'sword_shield_broken'];
+    const libraryPropByTarget = new Map(libraryAssets('prop').filter((asset) => asset.replaces).map((asset) => [asset.replaces, asset]));
+    const libraryPropTransforms = new Map();
+    const addLibraryProp = (name, transform) => {
+      const asset = libraryPropByTarget.get(name);
+      if (!asset) return false;
+      if (!this.hubModels[asset.id]?.scene.userData.libraryAsset) return false;
+      const list = libraryPropTransforms.get(asset) || []; list.push(transform); libraryPropTransforms.set(asset, list); return true;
+    };
     for (const r of floorData.rooms) {
       const hw = r.w / 2 - 1.6, hh = r.h / 2 - 1.6;
       for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) pillars.push({ x: r.x + sx * hw, z: r.z + sz * hh, s: r.type === ROOM_TYPE.BOSS ? 1.25 : 1 });
@@ -271,12 +347,12 @@ export class Arena {
         banners.push({ x: r.x - 5, z: r.z - r.h / 2 + 0.6, ry: 0 }, { x: r.x + 5, z: r.z - r.h / 2 + 0.6, ry: 0 });
         if (!floorData.layout) this.place('stairs_wide', r.x, r.z - r.h / 2 + 2.2, 0, 1, T.tint);
       }
-      if (r.type === ROOM_TYPE.TREASURE && !r.objectiveProp) { this.place('chest_gold', r.x, r.z, rnd(0, 6.28), 1.2); this.place('coin_stack_large', r.x + 1.6, r.z + 1.2, 0, 1); this.place('coin_stack_medium', r.x - 1.7, r.z + 0.9, 0, 1); }
+      if (r.type === ROOM_TYPE.TREASURE && !r.objectiveProp) { const chest = { x: r.x, z: r.z, ry: rnd(0, 6.28), s: 1.2 }; if (!addLibraryProp('chest_gold', chest)) this.place('chest_gold', chest.x, chest.z, chest.ry, chest.s); this.place('coin_stack_large', r.x + 1.6, r.z + 1.2, 0, 1); this.place('coin_stack_medium', r.x - 1.7, r.z + 0.9, 0, 1); }
       const n = floorData.layout ? 0 : 2 + Math.floor(random() * 3);
       for (let i = 0; i < n; i++) {
         const px = r.x + rnd(-1, 1) * (r.w / 2 - 2.2), pz = r.z + rnd(-1, 1) * (r.h / 2 - 2.2);
         if (Math.hypot(px - r.x, pz - r.z) < 3.5) continue;
-        this.place(props[Math.floor(random() * props.length)], px, pz, rnd(0, 6.28), rnd(0.9, 1.1));
+        const prop = props[Math.floor(random() * props.length)], transform = { x: px, z: pz, ry: rnd(0, 6.28), s: rnd(0.9, 1.1) }; if (!addLibraryProp(prop, transform)) this.place(prop, transform.x, transform.z, transform.ry, transform.s);
       }
       // 방마다 횃불 2개
       for (const [ox, oz] of [[-hw, 0], [hw, 0]]) {
@@ -289,6 +365,7 @@ export class Arena {
       }
       // 방 역할은 기존 지역 건축 배치에 병합된 실제 회랑 문턱 표식이 나타낸다.
     }
+    for (const [asset, transforms] of libraryPropTransforms) this.placeLibraryProps(asset, transforms);
     this.instanced('pillar_decorated', pillars, T.tint, { cutaway: true });
     this.instanced('banner_shield_red', banners);
     this.regionArchitecture = buildRegionArchitecture(floorData, theme);
@@ -296,8 +373,18 @@ export class Arena {
       if (node.isMesh) for (const material of Array.isArray(node.material) ? node.material : [node.material]) this.occlusion.bind(material);
     });
     this.group.add(this.regionArchitecture);
+    this.mountTownDecor(floorData);
     this.mountLandmarks(floorData, visual || { landmark: visualKey });
     this.buildSeals(floorData);
+  }
+
+  /** 잿불 항구·별마루 설원 던전과 필드에 마을 테마 장식(라이브러리 소품 우선, 없으면 절차적)을 얹는다. */
+  mountTownDecor(floorData) {
+    const townId = townDecorFor(floorData); if (!townId) return;
+    const libraryProps = libraryAssets('prop').filter((asset) => asset.tags?.includes('town:' + townId))
+      .map((asset) => ({ asset, scene: this.hubModels[asset.id]?.scene })).filter((entry) => entry.scene?.userData?.libraryAsset);
+    this.townDecor = buildTownDecor(floorData, townId, { libraryProps });
+    this.group.add(this.townDecor);
   }
 
   update(dt, fx, playerPos) {

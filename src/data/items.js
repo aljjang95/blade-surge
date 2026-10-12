@@ -135,6 +135,17 @@ for (const s of SLOTS) { const seen = {}; ITEM_POOL[s].forEach((it) => {
   ITEM_BY_ID[it.id] = { ...it, slot: s, set: it.set || RARITY_SET[it.rarity] || null, variant: k, sheetIcon };
 }); }
 /** 등급별 아이템 목록 */
+// 마을 상인 전용 무기·갑옷. 드랍·가챠 풀(ITEM_POOL)에는 넣지 않아 기존 확률을 보존하고 ITEM_BY_ID에만 등록한다.
+// appearanceTier는 판매 마을 tier(성채 1·항구 2·설원 3)와 같다. 기존 아이템은 이 필드 없이 등급으로 계산된다.
+export const TOWN_ITEMS = [
+  { ...W('w_town_oath', '서약 수비대검', 'S', 1.15, { crit: 0.02, appearanceTier: 1, icon: '/img/it_s_weapon_3.webp' }), slot: 'weapon' },
+  { ...A('a_town_oath', '서약 수비대 갑주', 'S', 1.15, { appearanceTier: 1, icon: '/img/it_s_armor_3.webp' }), slot: 'armor' },
+  { ...W('w_town_ember', '잿불 항해검', 'E', 1.2, { crit: 0.05, appearanceTier: 2, icon: '/img/it_e_weapon_3.webp' }), slot: 'weapon' },
+  { ...A('a_town_ember', '잿불 항해 갑주', 'E', 1.2, { appearanceTier: 2, icon: '/img/it_e_armor_3.webp' }), slot: 'armor' },
+  { ...W('w_town_star', '별마루 성검', 'L', 1.12, { crit: 0.1, appearanceTier: 3, icon: '/img/it_l_weapon_3.webp' }), slot: 'weapon' },
+  { ...A('a_town_star', '별마루 설원 갑주', 'L', 1.12, { crit: 0.03, appearanceTier: 3, icon: '/img/it_l_armor_3.webp' }), slot: 'armor' },
+];
+for (const it of TOWN_ITEMS) ITEM_BY_ID[it.id] = { ...it, set: RARITY_SET[it.rarity] || null, variant: 3, sheetIcon: null };
 export const ITEMS_OF = (rarity, slot = null) => Object.values(ITEM_BY_ID).filter((it) => it.rarity === rarity && (!slot || it.slot === slot));
 /** 등급 순서 인덱스 (정렬용) */
 export const rarityRank = (r) => RARITIES.indexOf(r);

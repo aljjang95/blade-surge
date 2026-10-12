@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { applyDungeonStoneDetail, applySurfaceDetail } from '../engine/surface-textures.js';
 import { GARDEN_MASTERY } from '../data/garden-mastery.js';
+import { mulberry32 } from './world.js';
 
 const PALETTES = {
   crypt: [0x8e98ae, 0x938269, 0x749ebd],
@@ -466,6 +467,156 @@ export function buildRegionArchitecture(floor, theme) {
     mesh.userData.roomRanges = batch.ranges[i];
     mesh.castShadow = i !== 2; mesh.receiveShadow = true;
     geometry.computeBoundingBox(); geometry.computeBoundingSphere(); group.add(mesh);
+  }
+  return group;
+}
+
+// ===================== 마을 테마 던전·필드 장식 =====================
+// 잿불 항구(따뜻한 부두 소품)와 별마루 설원(얼음 결정·눈더미)의 던전·필드에만 덧붙인다.
+// 이동 마스크·충돌·기존 건축은 건드리지 않고, 걷는 칸 위에는 두지 않는다.
+const TOWN_DECOR_DUNGEONS = Object.freeze({
+  emberport: ['cinder_tide_lock', 'ashforge_catacomb', 'star_archive', 'nightglass_observatory'],
+  starcrest: ['astral_leviathan_spire', 'verdigris_sanctum', 'sable_mirage_basin', 'comet_bastion'],
+});
+const TOWN_DECOR_FIELDS = Object.freeze({ coast: 'emberport', mountain: 'starcrest' });
+const seedOfRoute = id => [...id].reduce((n, c) => n * 31 + c.charCodeAt(0), 17) >>> 0;
+const townByRoute = new Map(Object.entries(TOWN_DECOR_DUNGEONS).flatMap(([town, ids]) => ids.map(id => [id, town])));
+const townBySeed = new Map(Object.entries(TOWN_DECOR_DUNGEONS).flatMap(([town, ids]) => ids.map(id => [seedOfRoute(id), town])));
+
+/** 던전 층(시드로 경로를 역산)이나 필드 층이 어느 마을의 장식을 쓰는지. 해당 없으면 null. */
+export function townDecorFor(floor) {
+  const field = floor?.layout?.field;
+  if (field) return TOWN_DECOR_FIELDS[field] || null;
+  if (floor?.expeditionRouteId) return townByRoute.get(floor.expeditionRouteId) || null;
+  return townBySeed.get(floor?.seed) || null;
+}
+
+const DECOR_HEIGHT = Object.freeze({ lamp: 2.2, crates: 1.2, barrels: 1, crystal: 1.8, deco: 1.6 });
+const LIBRARY_DECOR_ROLES = Object.freeze({ lamp: 'lamp', lantern: 'lamp', crate: 'crates', crates: 'crates', barrel: 'barrels', barrels: 'barrels', crystal: 'crystal', deco: 'deco' });
+
+/** 장식 자리: 방 모서리 벽쪽(던전) 또는 길 바깥 가장자리(필드). 회랑 입구와 걷는 칸은 비운다. */
+export function townDecorPlacements(floor, townId) {
+  const random = mulberry32((floor.seed ^ 0x7d3c91) >>> 0), out = [], field = !!floor.layout?.field;
+  const kinds = townId === 'emberport' ? ['lamp', 'barrels', 'crates', 'lamp'] : ['crystal', 'drift', 'lamp', 'crystal'];
+  const inCorridor = (x, z) => (floor.corridors || []).some(c => Math.abs(x - c.x) < c.w / 2 + 2.6 && Math.abs(z - c.z) < c.h / 2 + 2.6);
+  const near = (x, z, r) => out.some(p => Math.hypot(p.x - x, p.z - z) < r);
+  for (const room of floor.rooms) {
+    const hw = room.w / 2, hh = room.h / 2, boss = room.type === 'boss';
+    const count = field ? 5 : boss ? 7 : 4;
+    for (let i = 0; i < count; i++) {
+      let x, z;
+      if (field) {
+        // 필드는 방 둘레 바깥 고리에서, 길(걷는 칸)이 아닌 자리만 쓴다.
+        const angle = random() * Math.PI * 2, reach = 1.18 + random() * .22;
+        x = room.x + Math.cos(angle) * hw * reach; z = room.z + Math.sin(angle) * hh * reach;
+        if (floor.walkable(x, z) || floor.walkable(x + 1, z) || floor.walkable(x - 1, z) || floor.walkable(x, z + 1) || floor.walkable(x, z - 1)) continue;
+      } else {
+        // 던전은 네 모서리 안쪽 벽 가까이 한 줄(기둥은 hw-1.6 이므로 그 바깥).
+        const sx = i % 2 ? 1 : -1, sz = i < 2 ? -1 : 1, slide = (random() - .5) * 2.4;
+        x = room.x + sx * (hw - .95); z = room.z + sz * (hh - 3.4 + slide);
+        if (i >= 4) { x = room.x + (random() - .5) * (room.w - 8); z = room.z - hh + .95 + (random() < .5 ? 0 : room.h - 1.9); }
+        if (inCorridor(x, z)) continue;
+      }
+      if (near(x, z, 1.6)) continue;
+      out.push({ kind: kinds[i % kinds.length], x, z, yaw: random() * Math.PI * 2, scale: .9 + random() * .3, room: room.id });
+    }
+  }
+  return out;
+}
+
+/**
+ * 마을 테마 장식 그룹. 라이브러리 소품(manifest kind 'prop' + tags ['town:<id>', ...])이 읽혔으면 그 모델을
+ * 역할별로 인스턴싱하고, 없으면 절차적 도형을 재질별로 병합한다. 공간 청크로 나눠 컬링이 먹게 한다.
+ * @param {any} floor
+ * @param {string} townId
+ * @param {{ libraryProps?: Array<{asset:any, scene:THREE.Object3D}> }} [options]
+ */
+export function buildTownDecor(floor, townId, { libraryProps = [] } = {}) {
+  const group = new THREE.Group(); group.name = 'town-decor-' + townId;
+  const placements = townDecorPlacements(floor, townId), owned = [], materials = [];
+  let disposed = false;
+  group.userData = { townId, count: placements.length, dispose() {
+    if (disposed) return; disposed = true;
+    group.traverse(node => { if (node.isInstancedMesh) node.dispose(); });
+    for (const geometry of owned) geometry.dispose();
+    for (const material of materials) material.dispose();
+    group.removeFromParent();
+  } };
+  const lib = new Map();
+  for (const entry of libraryProps) for (const tag of entry.asset?.tags || []) if (LIBRARY_DECOR_ROLES[tag]) {
+    const role = LIBRARY_DECOR_ROLES[tag]; if (!lib.has(role)) lib.set(role, []); lib.get(role).push(entry); break;
+  }
+  const roleOf = kind => kind === 'lamp' ? 'lamp' : kind === 'drift' ? null : kind;
+  const procedural = [], instanced = new Map();
+  for (const p of placements) {
+    const entries = lib.get(roleOf(p.kind));
+    if (entries?.length) { const entry = entries[p.room % entries.length]; if (!instanced.has(entry)) instanced.set(entry, []); instanced.get(entry).push(p); } else procedural.push(p);
+  }
+  // 라이브러리 소품: 인스턴싱(원본 높이를 역할 높이로 정규화).
+  const object = new THREE.Object3D();
+  for (const [entry, list] of instanced) {
+    const role = LIBRARY_DECOR_ROLES[(entry.asset.tags || []).find(tag => LIBRARY_DECOR_ROLES[tag])] || 'deco';
+    entry.scene.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(entry.scene), size = box.getSize(new THREE.Vector3());
+    if (!(size.y > 0)) { procedural.push(...list); continue; }
+    const base = (DECOR_HEIGHT[role] || 1.6) / size.y;
+    entry.scene.traverse(node => {
+      if (!node.isMesh || node.isSkinnedMesh) return;
+      const mesh = new THREE.InstancedMesh(node.geometry, node.material, list.length);
+      list.forEach((p, index) => {
+        const scale = base * p.scale;
+        object.position.set(p.x, -box.min.y * scale, p.z); object.rotation.set(0, p.yaw, 0); object.scale.setScalar(scale); object.updateMatrix();
+        mesh.setMatrixAt(index, object.matrix.clone().multiply(node.matrixWorld));
+      });
+      mesh.name = 'town-decor-library-' + entry.asset.id; mesh.castShadow = false; mesh.receiveShadow = true; mesh.computeBoundingSphere(); group.add(mesh);
+    });
+  }
+  if (!procedural.length) return group;
+  // 절차적 소품: 재질 3종(불투명 두 가지 + 발광)을 청크별로 병합.
+  const embers = townId === 'emberport';
+  const lit = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  const glow = new THREE.MeshBasicMaterial({ vertexColors: true, fog: true });
+  materials.push(lit, glow);
+  const chunks = new Map(), tr = new THREE.Object3D(), color = new THREE.Color();
+  const bucket = p => { const key = Math.floor(p.x / 44) + ',' + Math.floor(p.z / 44); if (!chunks.has(key)) chunks.set(key, { lit: [], glow: [] }); return chunks.get(key); };
+  const put = (list, geometry, hex, p, lx, ly, lz, sx = 1, sy = 1, sz = 1) => {
+    const flat = geometry.index ? geometry.toNonIndexed() : geometry; if (flat !== geometry) geometry.dispose();
+    const c = Math.cos(p.yaw), s = Math.sin(p.yaw);
+    tr.position.set(p.x + (lx * c + lz * s) * p.scale, ly * p.scale, p.z + (-lx * s + lz * c) * p.scale); tr.rotation.set(0, p.yaw, 0); tr.scale.set(sx * p.scale, sy * p.scale, sz * p.scale); tr.updateMatrix();
+    flat.applyMatrix4(tr.matrix); flat.deleteAttribute('uv'); color.set(hex);
+    const values = new Float32Array(flat.getAttribute('position').count * 3);
+    for (let i = 0; i < values.length; i += 3) { values[i] = color.r; values[i + 1] = color.g; values[i + 2] = color.b; }
+    flat.setAttribute('color', new THREE.BufferAttribute(values, 3)); list.push(flat);
+  };
+  for (const p of procedural) {
+    const { lit: L, glow: G } = bucket(p);
+    if (p.kind === 'lamp') {
+      if (embers) {
+        put(L, new THREE.CylinderGeometry(.09, .12, 2, 7), 0x5c3d2c, p, 0, 1, 0); put(L, new THREE.BoxGeometry(.5, .06, .06), 0x5c3d2c, p, .18, 1.9, 0);
+        put(G, new THREE.BoxGeometry(.26, .34, .26), 0xffb868, p, .36, 1.64, 0); put(L, new THREE.ConeGeometry(.22, .2, 4), 0xb8742c, p, .36, 1.9, 0);
+      } else {
+        put(L, new THREE.CylinderGeometry(.08, .11, 1.8, 7), 0xcfe0f2, p, 0, .9, 0);
+        put(G, new THREE.OctahedronGeometry(.28, 0), 0x9fe8ff, p, 0, 2.05, 0);
+      }
+    } else if (p.kind === 'barrels') {
+      for (const x of [-.55, 0, .55]) { put(L, new THREE.CylinderGeometry(.26, .3, .74, 9), 0x6a4630, p, x, .37, 0); put(L, new THREE.CylinderGeometry(.31, .31, .05, 9), 0xc98a3c, p, x, .34, 0); }
+    } else if (p.kind === 'crates') {
+      put(L, new THREE.BoxGeometry(.84, .62, .62), 0x7a5232, p, -.45, .31, 0); put(L, new THREE.BoxGeometry(.8, .6, .6), 0x5d4630, p, .45, .3, .05); put(L, new THREE.BoxGeometry(.7, .5, .55), 0x866040, p, 0, .87, 0);
+    } else if (p.kind === 'crystal') {
+      for (const [x, h, r, tilt] of [[-.5, 1, .2, -.1], [0, 1.7, .26, .04], [.5, 1.2, .2, .12]]) put(G, new THREE.ConeGeometry(r, h, 5), 0x8fe4ff, p, x, h / 2, 0, 1, 1, 1);
+      put(L, new THREE.BoxGeometry(1.7, .14, .6), 0xcfe0f2, p, 0, .07, 0);
+    } else if (p.kind === 'drift') {
+      put(L, new THREE.SphereGeometry(1, 9, 6), 0xf1f7ff, p, 0, -.12, 0, 1.5, .42, 1.1);
+    }
+  }
+  for (const [key, { lit: litParts, glow: glowParts }] of chunks) {
+    for (const [parts, material, name] of [[litParts, lit, 'lit'], [glowParts, glow, 'glow']]) {
+      if (!parts.length) continue;
+      const geometry = mergeGeometries(parts); for (const part of parts) part.dispose();
+      if (!geometry) continue;
+      owned.push(geometry); geometry.computeBoundingSphere();
+      const mesh = new THREE.Mesh(geometry, material); mesh.name = 'town-decor-' + name + '-' + key; mesh.castShadow = false; mesh.receiveShadow = false; group.add(mesh);
+    }
   }
   return group;
 }

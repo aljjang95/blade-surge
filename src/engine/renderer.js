@@ -10,9 +10,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { displaySize, renderPixelRatio } from '../platform/mobile-display.js';
-import { rebindEnvironment } from './environment.js';
+import { rebindEnvironment, createStorybookEnvironment } from './environment.js';
 import { ShaderProgramValidator } from './shader-program-validator.js';
 import { PlayerSilhouette, PLAYER_SILHOUETTE_FRAGMENT } from './player-silhouette.js';
 
@@ -30,10 +29,18 @@ const FinalShader = {
     uPlayerMask: { value: null },
     uPlayerOutlineStep: { value: new THREE.Vector2() },
     uPlayerOutlineActive: { value: 0 },
+    // 동화풍 색 보정 — 같은 패스 안의 산술 몇 줄이라 추가 패스가 없다. uGrade=0 이면 건너뛴다(낮음 화질).
+    uGrade: { value: 1 },
+    uSat: { value: 0.22 },
+    uCool: { value: new THREE.Color(0.9, 0.98, 1.1) },      // 그림자 쪽 곱
+    uWarm: { value: new THREE.Color(1.1, 1.03, 0.9) },      // 하이라이트 쪽 곱
+    uLift: { value: new THREE.Color(0.012, 0.016, 0.03) },  // 그림자 들뜸(먹먹한 검정 방지)
+    uRegion: { value: new THREE.Color(1, 1, 1) },           // 지역 색조 곱
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader: `
     uniform sampler2D tDiffuse; uniform float uAberr, uFlash, uVignette, uRadial, uDesat, uTime; uniform vec3 uFlashColor;
+    uniform float uGrade, uSat; uniform vec3 uCool, uWarm, uLift, uRegion;
     varying vec2 vUv;
     ${PLAYER_SILHOUETTE_FRAGMENT}
     void main(){
@@ -49,9 +56,19 @@ const FinalShader = {
         col.g = texture2D(tDiffuse, uv).g;
         col.b = texture2D(tDiffuse, uv - c * a).b;
       }
+      if (uGrade > 0.001) {
+        // 채도를 올리고, 그림자는 시원하게 · 하이라이트는 따뜻하게 나눠 칠한다.
+        float l0 = dot(col, vec3(0.299, 0.587, 0.114));
+        col = max(mix(vec3(l0), col, 1.0 + uGrade * uSat), 0.0);
+        float sh = 1.0 - smoothstep(0.0, 0.45, l0);
+        float hi = smoothstep(0.35, 1.2, l0);
+        col *= mix(vec3(1.0), uCool, sh * uGrade) * mix(vec3(1.0), uWarm, hi * uGrade) * mix(vec3(1.0), uRegion, uGrade);
+        col += uLift * sh * uGrade;
+      }
       float g = dot(col, vec3(0.299, 0.587, 0.114));
       col = mix(col, vec3(g), uDesat);
-      col *= 1.0 - uVignette * smoothstep(0.35, 0.95, d);
+      // 모서리는 검정 대신 푸른 그늘로 눌러 화면이 먹먹해지지 않게 한다.
+      col *= vec3(1.0) - uVignette * smoothstep(0.35, 0.95, d) * vec3(0.92, 0.95, 0.8);
       // 전면 백색 플래시는 시야와 접근성을 해친다. 타격 색은 바깥 테두리에만 남기되,
       // 화면 중앙(영웅·적)은 그대로 두고 가장자리는 실제로 보일 만큼 짙게 물들인다.
       float impactEdge = smoothstep(0.34, 0.9, d);
@@ -64,6 +81,35 @@ const FinalShader = {
 const KICK_PUSH = 0.62, KICK_LATERAL = 0.3, KICK_DIP = 0.2, FOV_PUNCH = 1.8, FOV_PUNCH_MAX = 3.4;
 const FLASH_MAX = 0.6, ABERR_MAX = 2, ABERR_SCALE = 0.012, RADIAL_MAX = 0.6, RADIAL_SCALE = 0.1;
 const _kickFwd = new THREE.Vector3();
+
+// 지역별 색 보정 — 키는 dungeon-visuals 의 key. cool/warm/lift 는 기본값에 지역 색조만 얹는다.
+const GRADE_BASE = { sat: 0.22, cool: [0.9, 0.98, 1.1], warm: [1.1, 1.03, 0.9], lift: [0.012, 0.016, 0.03], region: [1, 1, 1], fog: 0.4 };
+const GRADES = {
+  default:    {},
+  lobby:      { sat: 0.16, region: [1.02, 1.01, 0.98], fog: 0 },
+  memorial:   { region: [0.96, 1.07, 1.03], lift: [0.008, 0.026, 0.03] },
+  kiln:       { region: [1.1, 0.98, 0.9], cool: [0.98, 0.93, 1.08], lift: [0.03, 0.012, 0.012], sat: 0.2 },
+  archive:    { region: [0.94, 1.0, 1.13], lift: [0.012, 0.018, 0.04] },
+  beacon:     { region: [0.92, 1.07, 1.08], lift: [0.006, 0.028, 0.034] },
+  tribunal:   { region: [1.07, 0.95, 1.09], lift: [0.024, 0.012, 0.034] },
+  confluence: { region: [1.0, 1.09, 0.94], lift: [0.012, 0.026, 0.016] },
+  meadow:     { region: [1.02, 1.07, 0.96], sat: 0.3, fog: 0.5 },
+  coast:      { region: [0.96, 1.04, 1.09], sat: 0.28, fog: 0.5 },
+  mountain:   { region: [1.0, 1.02, 1.07], sat: 0.26, fog: 0.5 },
+  city:       { region: [1.07, 1.02, 0.95], sat: 0.26, fog: 0.5 },
+};
+// 배열까지 복사한다 — 보간이 기본값 상수를 오염시키지 않게.
+const gradeFor = (key) => {
+  const g = { ...GRADE_BASE, ...(GRADES[key] || GRADES.default) };
+  for (const k of ['cool', 'warm', 'lift', 'region']) g[k] = [...g[k]];
+  return g;
+};
+// 림라이트는 카메라 반대편(피사체 뒤쪽 위)에서 비춘다. 전투 중 카메라가 돌아도 같은 자리에 머물도록 프레임마다 따라간다.
+const RIM_INTENSITY = 1.15, RIM_DISTANCE = 8, RIM_HEIGHT = 5.5;
+const LOBBY_GRADE = gradeFor('lobby');
+const GRADE_CHANNELS = Object.freeze(['cool', 'warm', 'lift', 'region']);
+const _rimDir = new THREE.Vector3();
+const _tintTarget = new THREE.Color();
 
 /** 카메라 프리셋 — y/z 는 타겟 기준 오프셋, fov 는 가로모드 기준(세로는 +14), lookY 는 시선 높이, lag 는 추적 탄성 */
 export const CAMERA_PRESETS = {
@@ -82,7 +128,7 @@ export class Renderer {
     this.isWebGL2 = r.capabilities.isWebGL2;
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.ACESFilmicToneMapping;
-    r.toneMappingExposure = 1.05;
+    r.toneMappingExposure = 1.12;
     r.shadowMap.enabled = true;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
     this.r = r;
@@ -108,7 +154,7 @@ export class Renderer {
     this.composer.setPixelRatio(this.pixelRatio);
     this.renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(this.renderPass);
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.55, 0.5, 0.88);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.62, 0.62, 0.84);
     this.composer.addPass(this.bloom);
     this.finalPass = new ShaderPass(FinalShader);
     this.composer.addPass(this.finalPass);
@@ -117,6 +163,10 @@ export class Renderer {
     this.composer.addPass(this.lobbyAA);
     this.u = this.finalPass.uniforms;
     this.playerSilhouette = new PlayerSilhouette(this.u, this.finalPass);
+    // 림라이트: 그림자 없는 약한 방향광 하나. 구성이 고정이라 셰이더가 다시 컴파일되지 않는다.
+    this.rimLight = new THREE.DirectionalLight(0xb4d6ff, RIM_INTENSITY);
+    this.scene.add(this.rimLight, this.rimLight.target);
+    this._gradeKey = 'default'; this._grade = gradeFor('default'); this._gradeTarget = gradeFor('default');
     this.flash = 0; this.aberr = 0; this.radial = 0; this.desat = 0;
     // 설정의 '화면 흔들림'과 동작 줄이기 선호가 카메라 킥·FOV 펀치·후처리 왜곡을 끈다
     this.shakeEnabled = true; this.postFxEnabled = true;
@@ -133,13 +183,15 @@ export class Renderer {
     this.quality = q;
     this.bloom.enabled = q !== 'low';
     this.r.shadowMap.enabled = q !== 'low';
+    // 낮음: 색 보정과 림라이트를 끈다(조명 개수는 그대로 두어 셰이더를 다시 짜지 않는다).
+    if (this.rimLight) this.rimLight.intensity = q === 'low' ? 0 : RIM_INTENSITY;
     this.resize(true);
   }
   rebuildEnvironment(templates = []) {
     const previous = this.characterEnvironment;
-    const studio = new RoomEnvironment(), pmrem = new THREE.PMREMGenerator(this.r);
+    const studio = createStorybookEnvironment(), pmrem = new THREE.PMREMGenerator(this.r);
     this.characterEnvironment = pmrem.fromScene(studio, .04, .1, 100);
-    studio.dispose(); pmrem.dispose();
+    studio.traverse((o) => { o.geometry?.dispose(); o.material?.dispose(); }); pmrem.dispose();
     // Render-target textures have no image to re-upload after WebGL context restoration.
     for (const root of [this.scene, ...templates]) rebindEnvironment(root, previous?.texture, this.characterEnvironment.texture);
     previous?.dispose();
@@ -189,6 +241,7 @@ export class Renderer {
     // be shared by standard/deep routes and cannot own this scope.
     this.battleMinimumAspect = minimumBattleAspect(stage);
     this.battleVisual = visual;
+    this._applyRegionLook(visual);
     const c = visual?.camera;
     if (!c) return;
     this.rig.environmentCamera = c;
@@ -282,6 +335,7 @@ export class Renderer {
     this.u.uRadial.value = post && this.quality !== 'low' ? Math.min(this.radial, RADIAL_MAX) * RADIAL_SCALE : 0;
     this.u.uDesat.value = this.desat;
     this.u.uTime.value = this.time;
+    this._updateGrade(realDt, rig.mode === 'lobby'); this._updateRim();
   }
   render() {
     this.playerSilhouette.render(this.r, this.camera, this.playerSilhouetteTarget?.());
@@ -292,5 +346,31 @@ export class Renderer {
     }
     this.lobbyAA.enabled = this.rig.mode === 'lobby'; this.composer.render();
     this.programValidator.validate(this.r);
+  }
+  /** 지역 색 보정 목표를 정하고, 아레나가 깐 안개를 지역 하늘의 지평선 색 쪽으로 밝힌다(대기 원근). */
+  _applyRegionLook(visual) {
+    this._gradeKey = visual?.key || 'default';
+    this._gradeTarget = gradeFor(this._gradeKey);
+    const fog = this.scene?.fog, horizon = visual?.sky?.horizon;
+    if (fog && horizon != null && this._gradeTarget.fog > 0) fog.color.lerp(_tintTarget.set(horizon), this._gradeTarget.fog);
+  }
+  /** 보정 값을 목표로 부드럽게 끌어간다(지역 전환 시 색이 튀지 않게). 유니폼이 없는 테스트 고정물에서는 건너뛴다. */
+  _updateGrade(realDt, lobby) {
+    const U = this.u; if (!U.uGrade || !this._grade) return;
+    if (this.quality === 'low') { U.uGrade.value = 0; return; }
+    const target = lobby ? LOBBY_GRADE : this._gradeTarget, g = this._grade, k = 1 - Math.exp(-realDt * 2.5);
+    g.sat += (target.sat - g.sat) * k;
+    for (const key of GRADE_CHANNELS) for (let i = 0; i < 3; i++) g[key][i] += (target[key][i] - g[key][i]) * k;
+    U.uGrade.value = 1; U.uSat.value = g.sat;
+    U.uCool.value.setRGB(g.cool[0], g.cool[1], g.cool[2]); U.uWarm.value.setRGB(g.warm[0], g.warm[1], g.warm[2]);
+    U.uLift.value.setRGB(g.lift[0], g.lift[1], g.lift[2]); U.uRegion.value.setRGB(g.region[0], g.region[1], g.region[2]);
+  }
+  _updateRim() {
+    const light = this.rimLight; if (!light) return;
+    this.camera.getWorldDirection(_rimDir); _rimDir.y = 0;
+    if (_rimDir.lengthSq() < 1e-6) _rimDir.set(0, 0, -1); else _rimDir.normalize();
+    const t = this.rig.target;
+    light.target.position.copy(t);
+    light.position.set(t.x + _rimDir.x * RIM_DISTANCE, t.y + RIM_HEIGHT, t.z + _rimDir.z * RIM_DISTANCE);
   }
 }
