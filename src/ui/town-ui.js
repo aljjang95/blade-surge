@@ -1,5 +1,5 @@
 import './town-ui.css';
-import { MATERIALS, DUNGEONS } from '../data/expansion.js';
+import { MATERIALS, ALL_DUNGEONS as DUNGEONS } from '../data/expansion.js';
 import { HEROES } from '../data/heroes.js';
 import { ITEM_BY_ID, ITEM_ICON, RARITY_COLOR, RARITY_INFO } from '../data/items.js';
 import { CITADEL_TOWN_IDS, TOWN_THEMES, townHub, setActiveTownId, setTownDungeonIds, defaultTownDungeonIds } from '../data/citadel-hub.js';
@@ -7,6 +7,7 @@ import { audio } from '../engine/audio.js';
 import { uiArt, resourceArt } from './illustrated.js';
 import { townServiceFor } from './town-service-adapter.js';
 import { TOWN_SHOP_BY_ID } from '../data/towns.js';
+import { TownContent, CONTENT_TABS, CONTENT_VIEW_IDS, CONTENT_REASONS, safe as contentSafe } from './town-content.js';
 
 const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const fmt = value => Math.floor(Number(value) || 0).toLocaleString('ko-KR');
@@ -31,7 +32,7 @@ const REASONS = Object.freeze({
   storage: '저장하지 못했습니다. 다시 시도해 주세요.', 'unknown-offer': '이 마을에서 팔지 않는 상품입니다.', 'unknown-town': '알 수 없는 마을입니다.',
   'invalid-item': '상품 정보를 읽을 수 없습니다.',
 });
-const reason = (result, fallback) => { const raw = result?.reason || result?.error; return REASONS[raw] || raw || fallback; };
+const reason = (result, fallback) => { const raw = result?.reason || result?.error; return REASONS[raw] || CONTENT_REASONS[raw] || raw || fallback; };
 const tier = offer => offer.appearanceTier || TOWN_SHOP_BY_ID[offer.id]?.appearanceTier || 0;
 
 /**
@@ -42,6 +43,7 @@ export class TownUI {
   constructor(app, service = townServiceFor(app)) {
     this.app = app; this.service = service; this.view = 'map'; this.heroId = null; this.message = ''; this.tone = '';
     this.opened = false; this.activeId = null; this.trigger = null;
+    this.notices = []; this.content = new TownContent(this);
     this.dialog = document.createElement('dialog'); this.dialog.className = 'town-dialog';
     this.dialog.setAttribute('aria-labelledby', 'town-dialog-title');
     document.body.append(this.dialog);
@@ -58,6 +60,9 @@ export class TownUI {
     this.unsubscribeEco = app.eco?.onChange?.(this.changeHandler);
     this.unsubscribeService = service.onChange?.(this.changeHandler);
     this.sync();
+    // 처음 보는 저장은 지금 열린 것을 기준선으로 삼아 조용히 넘어가고, 이후에 새로 열린 것만 알린다.
+    this.content.checkUnlocks();
+    this.updateBadge();
   }
 
   // ------------------------------------------------------------ 데이터
@@ -86,16 +91,55 @@ export class TownUI {
   onChange() {
     const current = attempt(() => this.service.currentTownId(), this.activeId);
     if (current !== this.activeId) { this.sync(); this.app.hubMovement?.reset(); this.app.syncHub?.(); }
+    // 전투 중에 열린 것은 알림을 미뤄 두었다가 로비로 돌아온 첫 변경에서 알린다.
+    if (this.app.mode === 'lobby') this.announce(this.content.checkUnlocks());
+    this.updateBadge();
     if (this.dialog.open) this.render();
+  }
+  /** 서비스 사유 코드 → 한국어 안내(마을 상인·교관·콘텐츠 공용). */
+  reason(result, fallback) { return reason(result, fallback); }
+  sound(ok) { audio.play(ok ? 'ui_glass' : 'ui_error', { vol: ok ? .4 : .35 }); }
+  isContent(view = this.view) { return CONTENT_VIEW_IDS.includes(view); }
+  /**
+   * 새로 열린 곳을 알린다. 패널이 열려 있으면 본문 위 안내 카드로, 닫혀 있으면 인장 연출과 토스트로 보여 준다.
+   * 이 함수는 다시 그리지 않는다 — 호출한 쪽이 이어서 render()한다.
+   */
+  announce(events) {
+    if (!events?.length) return;
+    this.sound(true);
+    if (this.dialog.open) { this.notices = [...this.notices, ...events.map(({ title, text, tab }) => ({ title, text, tab }))].slice(-4); return; }
+    this.app.ui?.toast?.(contentSafe(events[0].title) + (events.length > 1 ? ' 외 ' + (events.length - 1) + '건' : ''), 'gold');
+    this.seal(events[0]);
+  }
+  /** 해금 인장 연출. 모션 감소 설정에서는 움직임 없이 같은 시간만 보인다. */
+  seal(event) {
+    const theme = TOWN_THEMES[event.town] || TOWN_THEMES[this.activeId] || TOWN_THEMES.oathhold, node = document.createElement('div');
+    node.className = 'town-unlock-seal'; node.setAttribute('role', 'status'); node.style.setProperty('--town-accent', theme.accent);
+    node.innerHTML = '<span aria-hidden="true">★</span><strong>' + safe(event.title) + '</strong><small>' + safe(event.text) + '</small>';
+    document.body.append(node); setTimeout(() => node.remove(), 3400);
+  }
+  /** 걷기 HUD의 '마을 일' 칩에 받을 보상 수를 표시한다(버튼을 새로 만들지 않아 초점을 잃지 않는다). */
+  updateBadge(root = this.placeRoot || this.app.hubUI?.root) {
+    const chip = root?.querySelector('.town-work-chip'); if (!chip) return;
+    const ready = this.content.claimable(), badge = chip.querySelector('.town-work-badge');
+    chip.dataset.ready = String(ready);
+    chip.setAttribute('aria-label', ready ? '마을 일 열기, 받을 보상 ' + ready + '건' : '마을 일 열기');
+    if (badge) { badge.textContent = ready ? String(ready) : ''; badge.hidden = !ready; }
   }
   /** 걷기 HUD의 장소 표시와 마을 지도 버튼. */
   renderPlace(root = this.app.hubUI?.root) {
     const place = root?.querySelector('.citadel-hub-place'); if (!place) return;
+    this.placeRoot = root;
     const theme = TOWN_THEMES[this.activeId] || TOWN_THEMES.oathhold;
     place.innerHTML = '<small>' + safe(theme.subtitle) + '</small><div class="town-place-row"><strong>' + safe(theme.name) + '</strong>' +
       '<button type="button" class="town-map-chip" aria-haspopup="dialog" aria-label="마을 이동 지도 열기">이동</button></div><span>' + safe(theme.mood) + '</span>';
     place.style.setProperty('--town-accent', theme.accent);
     place.querySelector('.town-map-chip').addEventListener('click', event => { event.stopPropagation(); this.openMap(event.currentTarget); });
+    // 의뢰 게시판 · 필드 · 대장장이 · 마을 이야기는 '마을 일' 칩에서 연다.
+    const row = place.querySelector('.town-place-row');
+    row.insertAdjacentHTML('beforeend', '<button type="button" class="town-map-chip town-work-chip" aria-haspopup="dialog" aria-label="마을 일 열기">마을 일<b class="town-work-badge" hidden></b></button>');
+    place.querySelector('.town-work-chip').addEventListener('click', event => { event.stopPropagation(); this.openContent('dungeons', event.currentTarget); });
+    this.updateBadge(root);
   }
   /** 이동석 앞에서 보이는 한 줄 안내. */
   placeName() { return (TOWN_THEMES[this.activeId] || TOWN_THEMES.oathhold).name + ' 광장'; }
@@ -113,6 +157,8 @@ export class TownUI {
   openMap(trigger) { return this.open('map', trigger); }
   openMerchant(trigger) { return this.open('merchant', trigger); }
   openTrainer(trigger) { return this.open('trainer', trigger); }
+  /** 마을 콘텐츠(던전 · 필드 · 의뢰 · 대장장이 · 이야기) 패널. */
+  openContent(tab = 'dungeons', trigger) { return this.open(CONTENT_VIEW_IDS.includes(tab) ? tab : 'dungeons', trigger); }
   /** 현재 마을에 팔 물건이 있는지 — 없으면 호출한 쪽이 기존 상점으로 돌아간다. */
   hasMerchant() { return attempt(() => this.service.shop(this.activeId), []).length > 0; }
   hasTrainer() { return attempt(() => this.service.trainer(this.activeId, this.heroId || this.app.eco.s.selected), []).length > 0; }
@@ -120,6 +166,7 @@ export class TownUI {
     if (!this.canOpen()) return false;
     if (view === 'trainer' && !this.heroId) this.heroId = this.app.eco?.s?.selected || HERO_IDS[0];
     this.view = view; this.message = ''; this.tone = '';
+    if (this.isContent(view)) this.announce(this.content.checkUnlocks());
     if (this.dialog.open) { this.render(); return true; }
     this.trigger = trigger;
     this.app.hubControls?.clear(); this.app.citadel?.clearInput?.(); this.app.input?.clear?.();
@@ -145,7 +192,13 @@ export class TownUI {
     if (name === 'buy') return this.buy(data.offer);
     if (name === 'learn') return this.learn(data.offer);
     if (name === 'hero') { this.heroId = data.hero; this.message = ''; return this.render(); }
-    if (name === 'view') { this.view = data.view; this.message = ''; return this.render(); }
+    if (name === 'view') {
+      this.view = data.view; this.message = ''; this.notices = this.notices.filter(notice => notice.tab !== data.view);
+      if (this.isContent(data.view)) this.announce(this.content.checkUnlocks());
+      return this.render();
+    }
+    if (name === 'dismiss-notice') { this.notices.splice(Number(data.index), 1); return this.render(); }
+    if (this.content.handles(name)) return this.content.act(name, data);
     if (name === 'potions') { const trigger = this.trigger; this.close(); return this.app.citadelShop?.open(trigger); }
     if (name === 'build') { const trigger = this.trigger; this.close(); return this.app.battle?.chronicle?.open('build', trigger); }
   }
@@ -204,14 +257,17 @@ export class TownUI {
   render(focusId, focusKind) {
     const body = this.dialog.querySelector('.town-body'), scroll = body?.scrollTop || 0;
     const town = TOWN_THEMES[this.activeId] || TOWN_THEMES.oathhold;
-    const titles = { map: ['마을 이동', 'WAYSTONE'], merchant: [town.name + ' 상인', 'MERCHANT'], trainer: [town.name + ' 스킬 교관', 'TRAINER'] };
+    const titles = { map: ['마을 이동', 'WAYSTONE'], merchant: [town.name + ' 상인', 'MERCHANT'], trainer: [town.name + ' 스킬 교관', 'TRAINER'],
+      ...Object.fromEntries(CONTENT_TABS.map(tab => [tab.id, [tab.title(town.name), tab.eyebrow]])) };
     const [title, eyebrow] = titles[this.view] || titles.map;
     this.dialog.dataset.view = this.view; this.dialog.dataset.town = this.activeId;
     const art = TOWN_ART[this.activeId] || TOWN_ART.oathhold;
     this.dialog.style.setProperty('--town-a', art[0]); this.dialog.style.setProperty('--town-b', art[1]); this.dialog.style.setProperty('--town-accent', town.accent);
-    const content = this.view === 'merchant' ? this.merchantHtml() : this.view === 'trainer' ? this.trainerHtml() : this.mapHtml();
-    const footer = this.view === 'merchant' ? '<button type="button" data-town-act="potions">전투 물약 보급소</button>'
-      : this.view === 'trainer' ? '<button type="button" data-town-act="build">전투 방식 · 스킬 강화</button>' : '<span class="town-foot-hint">던전을 클리어하면 다음 마을이 열립니다</span>';
+    const content = this.isContent() ? this.content.html(this.view) : this.view === 'merchant' ? this.merchantHtml() : this.view === 'trainer' ? this.trainerHtml() : this.mapHtml();
+    const footer = this.isContent() ? '<button type="button" data-town-act="view" data-view="map">마을 이동 지도</button>'
+      : this.view === 'merchant' ? '<button type="button" data-town-act="potions">전투 물약 보급소</button>'
+        : this.view === 'trainer' ? '<button type="button" data-town-act="build">전투 방식 · 스킬 강화</button>'
+          : '<span class="town-foot-hint">던전을 클리어하면 다음 마을이 열립니다</span><button type="button" data-town-act="view" data-view="dungeons">마을 일 보기</button>';
     this.dialog.innerHTML = '<div class="town-shell"><header class="town-head"><div><small class="town-eyebrow">' + safe(town.subtitle) + ' · ' + eyebrow + '</small><h2 id="town-dialog-title">' + safe(title) + '</h2></div>' +
       '<button type="button" class="town-close" data-town-act="close">닫기</button></header>' +
       '<div class="town-body" tabindex="-1">' + content + '</div>' +
@@ -219,7 +275,7 @@ export class TownUI {
     const nextBody = this.dialog.querySelector('.town-body'); nextBody.scrollTop = scroll;
     if (focusId) {
       const target = [...this.dialog.querySelectorAll('[data-town-act="' + focusKind + '"]')].find(control => control.dataset.offer === focusId)
-        || this.dialog.querySelector('.town-close');
+        || (this.isContent() ? this.dialog.querySelector('.town-c-tabs [aria-pressed="true"]') : null) || this.dialog.querySelector('.town-close');
       target?.focus({ preventScroll: true });
     }
   }

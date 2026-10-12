@@ -1,4 +1,4 @@
-import { DUNGEONS, RECIPES, MATERIALS, CONSUMABLES } from '../data/expansion.js';
+import { ALL_DUNGEONS as DUNGEONS, RECIPES, MATERIALS, CONSUMABLES } from '../data/expansion.js';
 import { ITEM_BY_ID, SETS, ITEM_ICON } from '../data/items.js';
 import { HEROES } from '../data/heroes.js';
 import { riftForDay } from '../game/journey-rifts.js';

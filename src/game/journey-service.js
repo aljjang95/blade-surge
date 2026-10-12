@@ -1,5 +1,5 @@
 import { normalizeJourney, refreshPeriods, journeySteps, contractRows, claimJourneyStep, claimContract, setTargetRecipe } from './journey-core.js';
-import { DUNGEONS, RECIPES } from '../data/expansion.js';
+import { ALL_DUNGEONS as DUNGEONS, RECIPES } from '../data/expansion.js';
 import { ITEM_BY_ID } from '../data/items.js';
 
 /** New grants share the workshop's save, rollback and recovery receipt boundary. */

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { DUNGEONS, MATERIALS, MATERIAL_REFINING, CONSUMABLES, JOBS, RECIPES, ARENA_RIVALS } from '../data/expansion.js';
+import { ALL_DUNGEONS as DUNGEONS, MATERIALS, MATERIAL_REFINING, CONSUMABLES, JOBS, RECIPES, ARENA_RIVALS } from '../data/expansion.js';
 import { FIELD_DUNGEONS } from '../data/open-fields.js';
 import { ITEM_BY_ID, ITEM_ICON, SETS, RARITY_COLOR, rarityRank } from '../data/items.js';
 import { HEROES } from '../data/heroes.js';

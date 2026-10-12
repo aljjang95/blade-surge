@@ -1,14 +1,35 @@
 import { DUNGEONS } from './expansion.js';
 import { ITEM_BY_ID } from './items.js';
 
-const orderedDungeons = [...DUNGEONS].sort((a, b) => a.minLevel - b.minLevel);
-const dungeonGroups = [0, 1, 2].map((index) => orderedDungeons.slice(index * 4, index * 4 + 4));
-
 export const TOWNS = Object.freeze([
-  Object.freeze({ id: 'oathhold', name: '서약의 성채', subtitle: 'OATHHOLD CITADEL', tier: 1, theme: 'oathhold', dungeonIds: dungeonGroups[0].map(d => d.id), requiredClears: 0, requiredLevel: 1 }),
-  Object.freeze({ id: 'emberport', name: '잿불 항구', subtitle: 'EMBERPORT HARBOR', tier: 2, theme: 'emberport', dungeonIds: dungeonGroups[1].map(d => d.id), requiredClears: 3, requiredLevel: 5 }),
-  Object.freeze({ id: 'starcrest', name: '별마루 설원', subtitle: 'STARCREST SNOWFIELD', tier: 3, theme: 'starcrest', dungeonIds: dungeonGroups[2].map(d => d.id), requiredClears: 3, requiredLevel: 15 }),
+  Object.freeze({ id: 'oathhold', name: '서약의 성채', subtitle: 'OATHHOLD CITADEL', tier: 1, theme: 'oathhold', fieldId: 'windmeadow', dungeonIds: ['glass_garden', 'eclipse_hydra_vault', 'ember_vault', 'bellfall_crypt', 'rootbound_grotto', 'hollowbell_arboretum'], requiredClears: 0, requiredLevel: 1 }),
+  Object.freeze({ id: 'emberport', name: '잿불 항구', subtitle: 'EMBERPORT HARBOR', tier: 2, theme: 'emberport', fieldId: 'dawnward_city', dungeonIds: ['cinder_tide_lock', 'ashforge_catacomb', 'star_archive', 'nightglass_observatory', 'slagwater_foundry', 'emberwake_drydock'], requiredClears: 4, requiredLevel: 5 }),
+  Object.freeze({ id: 'starcrest', name: '별마루 설원', subtitle: 'STARCREST SNOWFIELD', tier: 3, theme: 'starcrest', fieldId: 'skywind_pass', dungeonIds: ['astral_leviathan_spire', 'verdigris_sanctum', 'sable_mirage_basin', 'comet_bastion', 'aurora_icewell', 'crownfall_glacier'], requiredClears: 4, requiredLevel: 15 }),
 ]);
+
+export const TOWN_FIELDS = Object.freeze({ oathhold: 'windmeadow', emberport: 'dawnward_city', starcrest: 'skywind_pass' });
+
+export const TOWN_REQUESTS = Object.freeze([
+  { id: 'oathhold_daily_clear', townId: 'oathhold', kind: 'daily', name: '성채 주변 정화', description: '서약의 성채 던전을 한 번 클리어하세요.', target: { type: 'dungeon', amount: 1 }, rewards: { gold: 450, materials: { glass_leaf: 1 } } },
+  { id: 'oathhold_repeat_gather', townId: 'oathhold', kind: 'repeatable', name: '바람 잎 수집', description: '필드에서 유리 잎을 모으세요.', target: { type: 'gather', amount: 5 }, rewards: { gold: 280, materials: { glass_leaf: 2 } } },
+  { id: 'emberport_daily_elite', townId: 'emberport', kind: 'daily', name: '항구의 정예 경계', description: '잿불 항구 던전의 정예를 한 번 제압하세요.', target: { type: 'elite', amount: 1 }, rewards: { gold: 900, materials: { ember_core: 1 } } },
+  { id: 'emberport_repeat_event', townId: 'emberport', kind: 'repeatable', name: '배수문 점검', description: '필드 이벤트를 두 번 해결하세요.', target: { type: 'event', amount: 2 }, rewards: { gold: 650, materials: { ember_core: 2 } } },
+  { id: 'starcrest_daily_treasure', townId: 'starcrest', kind: 'daily', name: '빙정호의 잔광', description: '별마루 필드의 숨은 보물을 찾으세요.', target: { type: 'treasure', amount: 1 }, rewards: { gold: 1500, materials: { star_dust: 1 } } },
+  { id: 'starcrest_repeat_clear', townId: 'starcrest', kind: 'repeatable', name: '설원 순찰', description: '별마루 설원 던전을 세 번 클리어하세요.', target: { type: 'dungeon', amount: 3 }, rewards: { gold: 1100, materials: { star_dust: 2 } } },
+]);
+export const TOWN_REQUEST_BY_ID = Object.freeze(Object.fromEntries(TOWN_REQUESTS.map(request => [request.id, request])));
+
+export const TOWN_STORY = Object.freeze(Object.fromEntries(TOWNS.map(town => [town.id, Object.freeze([
+  { id: `${town.id}_chapter_1`, name: `${town.name}의 첫 증언`, target: { type: 'dungeon', amount: 1 }, rewards: { gold: 500, xp: 40 } },
+  { id: `${town.id}_chapter_2`, name: `${town.name}의 숨은 길`, target: { type: 'field', amount: 1 }, rewards: { gold: 800, materials: { [town.id === 'oathhold' ? 'glass_leaf' : town.id === 'emberport' ? 'ember_core' : 'star_dust']: 2 } } },
+  { id: `${town.id}_chapter_3`, name: `${town.name}의 귀환 맹세`, target: { type: 'dungeon', amount: 4 }, rewards: { gold: 1400, xp: 100 } },
+])] )));
+
+export const TOWN_BLACKSMITH = Object.freeze({
+  oathhold: Object.freeze(['storm_blade', 'brew_tonic']),
+  emberport: Object.freeze(['phoenix_blade', 'brew_overdrive']),
+  starcrest: Object.freeze(['frost_blade', 'brew_aegis']),
+});
 
 // 무기·갑옷 오퍼의 appearanceTier는 아이템 정의 값을 그대로 노출한다(UI 표시용 사본).
 const offer = (id, townId, itemId, rarity, gold, materials) => ({ id, townId, itemId, rarity,
@@ -60,13 +81,19 @@ export const TOWN_SHOP_BY_ID = Object.fromEntries(TOWN_SHOP.map(item => [item.id
 export const TOWN_TRAINER_BY_ID = Object.fromEntries(TOWN_TRAINER.map(item => [item.id, item]));
 
 export function freshTownState() {
-  return { currentTownId: 'oathhold', unlockedTownIds: ['oathhold'], purchased: [], learned: {} };
+  return { version: 2, currentTownId: 'oathhold', unlockedTownIds: ['oathhold'], purchased: [], learned: {},
+    fields: Object.fromEntries(TOWNS.map(town => [town.id, { visited: 0, gathered: 0, elite: 0, treasure: 0, event: 0 }])),
+    requests: { day: '', active: [], completed: [], progress: {} },
+    blacksmith: { crafted: [], enhancements: {} },
+    story: Object.fromEntries(TOWNS.map(town => [town.id, { stage: 0, progress: {} }])),
+  };
 }
 
 export function normalizeTownState(raw) {
   const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const validTowns = new Set(TOWNS.map(town => town.id));
   const unlocked = new Set(['oathhold']);
+  const hasPersistedUnlocks = Array.isArray(source.unlockedTownIds);
   if (Array.isArray(source.unlockedTownIds)) for (const id of source.unlockedTownIds) if (validTowns.has(id)) unlocked.add(id);
   const purchased = Array.isArray(source.purchased) ? [...new Set(source.purchased.filter(id => TOWN_SHOP_BY_ID[id]))] : [];
   const learned = {};
@@ -83,6 +110,52 @@ export function normalizeTownState(raw) {
     const cleared = previous.dungeonIds.filter(id => Number(stats[id]) > 0).length;
     if (cleared >= town.requiredClears && heroLevel >= town.requiredLevel) unlocked.add(town.id);
   }
+  // towns 필드가 없던 구 저장은 당시 4개 구성의 3곳 클리어 해금을 보존한다.
+  if (!hasPersistedUnlocks) {
+    const legacyGroups = [
+      ['glass_garden', 'eclipse_hydra_vault', 'ember_vault', 'bellfall_crypt'],
+      ['cinder_tide_lock', 'ashforge_catacomb', 'star_archive', 'nightglass_observatory'],
+    ];
+    for (let index = 1; index < legacyGroups.length + 1; index++) {
+      const legacyClears = legacyGroups[index - 1].filter(id => Number(stats[id]) > 0).length;
+      if (legacyClears >= 3 && heroLevel >= TOWNS[index].requiredLevel) unlocked.add(TOWNS[index].id);
+    }
+  }
+  const fields = {};
+  for (const town of TOWNS) {
+    const input = source.fields?.[town.id];
+    fields[town.id] = {
+      visited: Number.isSafeInteger(input?.visited) ? Math.max(0, input.visited) : 0,
+      gathered: Number.isSafeInteger(input?.gathered) ? Math.max(0, input.gathered) : 0,
+      elite: Number.isSafeInteger(input?.elite) ? Math.max(0, input.elite) : 0,
+      treasure: Number.isSafeInteger(input?.treasure) ? Math.max(0, input.treasure) : 0,
+      event: Number.isSafeInteger(input?.event) ? Math.max(0, input.event) : 0,
+    };
+  }
+  const requestsSource = source.requests && typeof source.requests === 'object' && !Array.isArray(source.requests) ? source.requests : {};
+  const validRequestIds = new Set(TOWN_REQUESTS.map(request => request.id));
+  const active = Array.isArray(requestsSource.active) ? [...new Set(requestsSource.active.filter(id => validRequestIds.has(id)))] : [];
+  const completed = Array.isArray(requestsSource.completed) ? [...new Set(requestsSource.completed.filter(id => validRequestIds.has(id)))] : [];
+  const progress = {};
+  if (requestsSource.progress && typeof requestsSource.progress === 'object' && !Array.isArray(requestsSource.progress)) {
+    for (const [id, value] of Object.entries(requestsSource.progress)) if (validRequestIds.has(id) && Number.isSafeInteger(value)) progress[id] = Math.max(0, value);
+  }
+  const blacksmithSource = source.blacksmith && typeof source.blacksmith === 'object' && !Array.isArray(source.blacksmith) ? source.blacksmith : {};
+  const recipeIds = new Set(Object.values(TOWN_BLACKSMITH).flat());
+  const crafted = Array.isArray(blacksmithSource.crafted) ? [...new Set(blacksmithSource.crafted.filter(id => recipeIds.has(id)))] : [];
+  const enhancements = {};
+  if (blacksmithSource.enhancements && typeof blacksmithSource.enhancements === 'object' && !Array.isArray(blacksmithSource.enhancements)) {
+    for (const [uid, value] of Object.entries(blacksmithSource.enhancements)) if (/^\d+$/.test(uid) && Number.isSafeInteger(value)) enhancements[uid] = Math.max(0, value);
+  }
+  const story = {};
+  for (const town of TOWNS) {
+    const input = source.story?.[town.id], stage = Number.isSafeInteger(input?.stage) ? Math.max(0, Math.min(3, input.stage)) : 0;
+    const storyProgress = {};
+    if (input?.progress && typeof input.progress === 'object' && !Array.isArray(input.progress)) for (const [key, value] of Object.entries(input.progress)) if (Number.isSafeInteger(value)) storyProgress[key] = Math.max(0, value);
+    story[town.id] = { stage, progress: storyProgress };
+  }
+  const day = typeof requestsSource.day === 'string' ? requestsSource.day.slice(0, 20) : '';
   const currentTownId = validTowns.has(source.currentTownId) && unlocked.has(source.currentTownId) ? source.currentTownId : 'oathhold';
-  return { currentTownId, unlockedTownIds: [...unlocked], purchased, learned };
+  return { version: 2, currentTownId, unlockedTownIds: [...unlocked], purchased, learned, fields,
+    requests: { day, active, completed, progress }, blacksmith: { crafted, enhancements }, story };
 }
