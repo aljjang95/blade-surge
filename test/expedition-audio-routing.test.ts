@@ -25,21 +25,23 @@ for (const [crit,finisher,accent] of [[false,false,null],[true,false,'light'],[f
     expect(heard).toEqual(accent ? [`expansion/flow-impact-${accent}`] : []);
   });
 }
-test('crowd burst preserves a finisher over later critical hits and emits one accent after 50ms',()=>{
+test('crowd burst: 창당 2음 안에서 마무리가 즉시 울리고 이후 치명타는 창이 열릴 때 가장 센 하나만 낸다',()=>{
   const {sound,heard}=soundFixture(); let timer:()=>void=()=>{};
   spyOn(globalThis,'setTimeout').mockImplementation(((fn:()=>void)=>{timer=fn;return 99;}) as any);
   sound.hit();
   sound.hit('slash',{heavy:true,finisher:true});
   for(let i=0;i<30;i++) sound.hit('slash',{crit:true,heavy:true,finisher:false});
-  expect(heard).toHaveLength(0);
-  sound.ctx.currentTime+=.05; timer();
+  // 첫 두 타격은 즉시 재생되고(마무리의 강타 accent 포함) 나머지 30개는 대기열 하나로 합쳐진다.
   expect(heard).toEqual(['expansion/flow-impact-heavy']);
+  sound.ctx.currentTime+=.05; timer();
+  expect(heard).toEqual(['expansion/flow-impact-heavy','expansion/flow-impact-light']);
   sound.setSfxOn(false);
 });
 test('mute cancels a queued critical accent before it can sound',()=>{
   const {sound,heard}=soundFixture(); let timer:()=>void=()=>{};
   spyOn(globalThis,'setTimeout').mockImplementation(((fn:()=>void)=>{timer=fn;return 99;}) as any);
-  sound.hit(); sound.hit('slash',{crit:true,heavy:true}); sound.setSfxOn(false);
+  // 창당 2음을 채운 뒤의 세 번째(치명타)만 대기열에 남고, 음소거가 그것을 취소한다.
+  sound.hit(); sound.hit(); sound.hit('slash',{crit:true,heavy:true}); sound.setSfxOn(false);
   sound.ctx.currentTime+=.1; timer();
   expect(heard).toHaveLength(0);
 });
