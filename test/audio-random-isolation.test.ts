@@ -48,13 +48,14 @@ test('real sampled, bark, noise and compound hit paths leave the gameplay random
   expect(gameRandom).not.toHaveBeenCalled();
 });
 
-test('a delayed native hit flush consumes only audio randomness and preserves the 50ms throttle',()=>{
+test('a delayed native hit flush consumes only audio randomness and preserves the 2-voices-per-50ms window',()=>{
   const gameRandom=spyOn(Math,'random').mockImplementation(()=>{throw new Error('Timer consumed gameplay RNG');});
   const callbacks:Array<()=>void>=[],delays:number[]=[];
   spyOn(globalThis,'setTimeout').mockImplementation(((fn:()=>void,delay:number)=>{
     callbacks.push(fn);delays.push(delay);return 123;
   }) as any);
-  const s=fixture();s._hitLast=.97;
+  // 50ms 창에 이미 2음이 찼을 때만 다음 타격이 지연된다(창당 최대 2음 계약).
+  const s=fixture();s._hitRecent=[.97,.98];
   s.hit('slash',{crit:true,heavy:true});
   expect(callbacks).toHaveLength(1);expect(delays[0]).toBeGreaterThanOrEqual(20);expect(delays[0]).toBeLessThanOrEqual(21);
   expect(s._voices.size).toBe(0);

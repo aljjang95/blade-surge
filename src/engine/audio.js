@@ -1,4 +1,8 @@
-import { COMBAT_SOUND_FILES, attackSound, skillSound, ULTIMATE_SOUND } from './combat-sound-library.js';
+import {
+  COMBAT_SOUND_FILES, attackSound, skillSound, ULTIMATE_SOUND,
+  COMBO_STINGERS, HIT_BUS_GAIN, HIT_PRIORITY, HIT_SOUND_FILES, HIT_VARIANTS, HIT_VOICES, HIT_VOICES_PREMIUM, HIT_WINDOW, KILL_SOUND,
+  comboSoundName, hitLayers, hitSoundName, hitTier, isPremiumHit,
+} from './combat-sound-library.js';
 
 // Web Audio: 샘플(Kenney CC0) + 프로시저럴 합성 SFX + BGM 크로스페이드 + 햅틱
 // 오디오 타이머/음소거가 전투와 보상의 Math.random 순서를 바꾸지 않는다.
@@ -16,7 +20,17 @@ function createAudioRandom() {
 const SFX_FILES = ['hit_punch0', 'hit_punch1', 'hit_punch2', 'hit_metal0', 'hit_metal1', 'hit_metal2', 'hit_soft0', 'hit_soft1', 'hit_bell', 'hit_mining', 'hit_wood', 'hit_plate', 'hit_glass',
   'ui_click', 'ui_confirm', 'ui_select', 'ui_back', 'ui_error', 'ui_open', 'ui_close', 'ui_max', 'ui_drop', 'ui_bong', 'ui_glass', 'ui_pluck',
   'coin0', 'coin1', 'coin_stack', 'pack_open', 'card_fan', 'card_place', 'jingle_win0', 'jingle_win1', 'jingle_legend',
-  'expansion/flow-impact-light', 'expansion/flow-impact-heavy', ...COMBAT_SOUND_FILES];
+  'expansion/flow-impact-light', 'expansion/flow-impact-heavy', ...COMBAT_SOUND_FILES, ...HIT_SOUND_FILES];
+
+/** |x| 0.8 까지는 그대로, 그 위는 1 에 부드럽게 접근한다. */
+function softClipCurve() {
+  const size = 2049, curve = new Float32Array(size);
+  for (let i = 0; i < size; i++) {
+    const x = (i / (size - 1)) * 2 - 1, a = Math.abs(x);
+    curve[i] = Math.sign(x) * (a <= 0.8 ? a : 0.8 + 0.2 * Math.tanh((a - 0.8) / 0.2));
+  }
+  return curve;
+}
 
 export class AudioSys {
   constructor() {
@@ -25,6 +39,10 @@ export class AudioSys {
     this.music = null; this.musicName = null; this.musicGain = null; this.sfxGain = null; this.master = null;
     this.lastPlay = {};
     this._hitLast = -Infinity; this._hitPending = null; this._hitTimer = null;
+    // 최근 타격 재생 시각(50ms 창당 동시 2음), 최근 타격 요청 시각(혼잡도), 처치 시각, 콤보 스팅어 상태.
+    this._hitRecent = []; this._hitEvents = []; this._hitDropped = 0; this._variantLast = {};
+    this._killTimes = []; this._killRecent = []; this._killMassAt = -Infinity;
+    this._comboLast = 0; this._comboFired = new Set();
     this.voiceOn = true; this.voiceBuf = {}; this._voiceSrc = null; this._voiceLast = {};
     this._barkLast = {}; this._voiceEpoch = 0; this._voiceLoads = new Map();
     this.mix = { music: 0.55, sfx: 0.9, voice: 1 };
@@ -43,7 +61,19 @@ export class AudioSys {
     this.musicDuckGain = this.ctx.createGain(); this.musicGain.connect(this.musicDuckGain); this.musicDuckGain.connect(this.master);
     // 컴프레서로 타격음 펀치감
     const comp = this.ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 6; comp.attack.value = 0.002; comp.release.value = 0.12;
-    this.sfxGain.disconnect(); this.sfxGain.connect(comp); comp.connect(this.master);
+    this.sfxGain.disconnect(); this.sfxGain.connect(comp);
+    // 타격·처치·콤보(hit 버스)는 따로 약하게 압축한다. 기존 -14dB/6:1 컴프레서만 거치면 새 샘플의 펀치가 눌려
+    // 예전 타격보다 작게 들린다(오프라인 측정). 두 버스를 합친 뒤 마지막 소프트 클립이 0dBFS 를 넘지 않게 막는다.
+    let out = this.master;
+    try {
+      const sum = this.ctx.createGain(), shaper = this.ctx.createWaveShaper();
+      shaper.curve = softClipCurve(); sum.connect(shaper); shaper.connect(this.master); out = sum;
+      this.hitGain = this.ctx.createGain(); this.hitGain.gain.value = this.mix.sfx * HIT_BUS_GAIN;
+      const hitComp = this.ctx.createDynamicsCompressor();
+      hitComp.threshold.value = -12; hitComp.knee.value = 6; hitComp.ratio.value = 4; hitComp.attack.value = 0.003; hitComp.release.value = 0.1;
+      this.hitGain.connect(hitComp); hitComp.connect(sum);
+    } catch { this.hitGain = null; /* 구형 호스트는 기존 버스만 쓴다 */ }
+    comp.connect(out);
     this.voiceGain = this.ctx.createGain(); this.voiceGain.gain.value = 1; this.voiceGain.connect(this.master); this._barkLast = {};
     this.setMix(this.mix);
     await Promise.all(SFX_FILES.map(async (n) => {
@@ -60,7 +90,7 @@ export class AudioSys {
   getDiagnostics() {
     const counts = { sfx: 0, bark: 0, narration: 0 };
     for (const v of this._voices) counts[v.group]++;
-    return { voices: counts, limits: { ...this.voiceLimits }, musicTracks: this._musicTracks.size, voiceLoads: this._voiceLoads.size, ducks: this._ducks.filter(d => d.end > this.now()).length, combatLevel: this._combatLevel, mix: this.getMix() };
+    return { voices: counts, limits: { ...this.voiceLimits }, musicTracks: this._musicTracks.size, voiceLoads: this._voiceLoads.size, ducks: this._ducks.filter(d => d.end > this.now()).length, combatLevel: this._combatLevel, hitDropped: this._hitDropped, mix: this.getMix() };
   }
   _loadVoice(name) {
     if (this.voiceBuf[name]) return Promise.resolve(this.voiceBuf[name]);
@@ -73,6 +103,7 @@ export class AudioSys {
   setMix(values = {}) {
     for (const key of ['music', 'sfx', 'voice']) if (Number.isFinite(values[key])) this.mix[key] = Math.max(0, Math.min(1, values[key]));
     if (this.sfxGain) this.sfxGain.gain.setValueAtTime(this.enabled ? this.mix.sfx : 0, this.now());
+    if (this.hitGain) this.hitGain.gain.setValueAtTime(this.enabled ? this.mix.sfx * HIT_BUS_GAIN : 0, this.now());
     if (this.voiceGain) this.voiceGain.gain.setValueAtTime(this.voiceOn ? this.mix.voice : 0, this.now());
     if (this.musicGain) this.musicGain.gain.setValueAtTime(this.musicOn ? this.mix.music * this._combatLevel : 0, this.now());
     if (!this.mix.voice) { this._voiceEpoch++; this._stopVoices('bark'); this._stopVoices('narration'); }
@@ -91,7 +122,7 @@ export class AudioSys {
   }
   _stopVoice(v) { try { v.src.stop(); } catch {} v.cleanup(); }
   _stopVoices(group) { for (const v of [...this._voices]) if (v.group === group) this._stopVoice(v); }
-  _sample(buffer, { group, priority = 1, vol = 1, rate = 1, delay = 0 }) {
+  _sample(buffer, { group, priority = 1, vol = 1, rate = 1, delay = 0, bus = '' }) {
     const peers = [...this._voices].filter(v => v.group === group);
     if (peers.length >= this.voiceLimits[group]) {
       const victim = peers.reduce((a, b) => a.priority <= b.priority ? a : b);
@@ -100,7 +131,7 @@ export class AudioSys {
     }
     const src = this.ctx.createBufferSource(), gain = this.ctx.createGain();
     src.buffer = buffer; src.playbackRate.value = rate; gain.gain.value = vol;
-    src.connect(gain); gain.connect(group === 'sfx' ? this.sfxGain : this.voiceGain);
+    src.connect(gain); gain.connect(group !== 'sfx' ? this.voiceGain : bus === 'hit' && this.hitGain ? this.hitGain : this.sfxGain);
     const voice = { src, gain, group, priority, cleanup: () => {
       src.onended = null; src.disconnect(); gain.disconnect(); this._voices.delete(voice);
       if (this._voiceSrc === src) this._voiceSrc = null;
@@ -109,11 +140,11 @@ export class AudioSys {
     return src;
   }
   /** 샘플 재생 (피치 랜덤, 볼륨, 최소 간격) */
-  play(name, { vol = 1, rate = 1, vary = 0.08, min = 0.03, delay = 0, priority = name.startsWith('ui_') ? 4 : name.includes('flow-impact-heavy') ? 5 : name.includes('flow-impact') ? 3 : 1 } = {}) {
+  play(name, { vol = 1, rate = 1, vary = 0.08, min = 0.03, delay = 0, bus = name.startsWith('hit-v2/') ? 'hit' : '', priority = name.startsWith('ui_') ? 4 : name.includes('flow-impact-heavy') ? 5 : name.includes('flow-impact') ? 3 : 1 } = {}) {
     if (!this.enabled || !this.mix.sfx || !this.ctx) return;
     const b = this.buffers[name]; if (!b) return;
     const t = this.now(); if (this.lastPlay[name] !== undefined && t - this.lastPlay[name] < min) return; this.lastPlay[name] = t;
-    return this._sample(b, { group: 'sfx', priority, vol, rate: rate * (1 + (this._random() * 2 - 1) * vary), delay });
+    return this._sample(b, { group: 'sfx', priority, vol, rate: rate * (1 + (this._random() * 2 - 1) * vary), delay, bus });
   }
   pick(prefix, n, opts) { this.play(prefix + Math.floor(this._random() * n), opts); }
   /** 나레이션(TTS, /sfx/voice/*.mp3 — edge-tts InJoon 생성). 새 대사가 이전 대사를 끊고, BGM 을 잠깐 덕킹한다. min 은 같은 대사 최소 간격(초) */
@@ -205,27 +236,64 @@ export class AudioSys {
     const g = this.ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
     o.connect(g); g.connect(this.sfxGain); o.start(t); o.stop(t + 0.32);
   }
-  /** 타격 복합음: 재질 샘플 + 저역 펀치 + 짧은 접촉 스냅 + 크리티컬 링 */
-  hit(kind = 'slash', { crit = false, heavy = false, finisher = heavy && !crit, boss = false } = {}) {
+  /** 타격 복합음: 트랜지언트(접촉) + 바디(무게) 2레이어. hit-v2 샘플이 없으면 기존 합성 경로로 내려간다.
+   *  weapon/basic/counter/light 는 선택 입력이다(없으면 kind·등급 플래그만으로 고른다). */
+  hit(kind = 'slash', { crit = false, heavy = false, finisher = heavy && !crit, boss = false, counter = false, weapon = '', light = false } = {}) {
     if (!this.enabled || !this.ctx) return;
-    const event = { kind, crit, heavy, finisher, boss, priority: (finisher ? 4 : 0) + (heavy ? 2 : 0) + (crit ? 1 : 0) + (boss ? 1 : 0) };
-    if (!this._hitPending || event.priority >= this._hitPending.priority) this._hitPending = event;
+    const now = this.now();
+    // 몹몰이 혼잡도: 150ms 안에 6번째 이상의 요청이면 일반 타격은 가벼운 등급으로 내려간다.
+    while (this._hitEvents.length && now - this._hitEvents[0] >= 0.15) this._hitEvents.shift();
+    this._hitEvents.push(now);
+    const crowd = this._hitEvents.length > 6;
+    const tier = hitTier({ crit, heavy, finisher, boss, counter, light, crowd });
+    const event = { kind, crit, heavy, finisher, boss, counter, weapon, tier, premium: isPremiumHit(tier),
+      priority: (finisher ? 4 : 0) + (heavy ? 2 : 0) + (crit ? 1 : 0) + (boss ? 1 : 0) + (counter ? 4 : 0) };
+    if (!this._hitPending || event.priority >= this._hitPending.priority) {
+      if (this._hitPending) this._hitDropped++;
+      this._hitPending = event;
+    } else this._hitDropped++;
     this._flushHit();
   }
-  /** 50ms마다 하나만 출력. 대기 중인 일반 타격은 강타/크리티컬이 대체한다. */
+  /** 50ms 창마다 최대 2음(마무리·보스·카운터는 3음)을 낸다. 넘치는 일반 타격은 대기 중 가장 센 하나만 남는다. */
   _flushHit() {
     if (this._hitTimer !== null) return;
     if (!this.enabled || !this.ctx || this.ctx.state === 'suspended') { this._hitPending = null; return; }
     if (!this._hitPending) return;
-    const remaining = 0.05 - (this.now() - this._hitLast);
-    if (remaining > 0.0001) {
-      this._hitTimer = setTimeout(() => { this._hitTimer = null; this._flushHit(); }, Math.ceil(remaining * 1000));
+    const now = this.now();
+    while (this._hitRecent.length && now - this._hitRecent[0] >= HIT_WINDOW - 0.0001) this._hitRecent.shift();
+    const limit = this._hitPending.premium ? HIT_VOICES_PREMIUM : HIT_VOICES;
+    if (this._hitRecent.length >= limit) {
+      const remaining = HIT_WINDOW - (now - this._hitRecent[0]);
+      this._hitTimer = setTimeout(() => { this._hitTimer = null; this._flushHit(); }, Math.ceil(Math.max(remaining, 0.001) * 1000));
       return;
     }
-    const event = this._hitPending; this._hitPending = null; this._hitLast = this.now();
+    const event = this._hitPending; this._hitPending = null; this._hitLast = now; this._hitRecent.push(now);
     this._renderHit(event.kind, event);
   }
-  _renderHit(kind, { crit, heavy, finisher, boss }) {
+  /** 같은 id 의 변형을 연속으로 반복하지 않고 오디오 전용 난수로 고른다. */
+  _variant(id) {
+    const count = HIT_VARIANTS[id] || 1; if (count < 2) return 0;
+    const last = this._variantLast[id] ?? -1, next = (last + 1 + Math.floor(this._random() * (count - 1))) % count;
+    this._variantLast[id] = next; return next;
+  }
+  _hasHitLibrary() { return !!(this.buffers[hitSoundName('b_basic', 0)] && this.buffers[hitSoundName('t_slash', 0)]); }
+  _renderLayeredHit(kind, { crit, finisher, tier, weapon }) {
+    for (const layer of hitLayers(kind, tier, { weapon, crit })) {
+      const name = hitSoundName(layer.id, this._variant(layer.id));
+      if (!this.buffers[name]) continue;
+      this.play(name, { vol: layer.vol, rate: layer.rate, vary: layer.role === 'body' ? 0.04 : 0.06, min: 0.008, priority: layer.priority });
+    }
+    // Flow Music score-derived impact accent; 기본 타격음에만 낮게 겹친다.
+    if (tier === 'heavy' || crit || finisher) {
+      const weight = finisher || !crit ? 'heavy' : 'light';
+      this.play(`expansion/flow-impact-${weight}`, { vol: weight === 'heavy' ? 0.14 : 0.1, vary: 0, min: 0.05 });
+    }
+  }
+  _renderHit(kind, event) {
+    if (kind !== 'hurt' && this._hasHitLibrary()) { this._renderLayeredHit(kind, event); return; }
+    this._renderLegacyHit(kind, event);
+  }
+  _renderLegacyHit(kind, { crit, heavy, finisher, boss }) {
     const accent = finisher ? 1.12 : boss ? 1.05 : heavy ? 1 : 0.9;
     if (kind === 'slash') {
       this.pick('hit_metal', 3, { vol: (heavy ? 1 : 0.7) * accent, rate: heavy ? 0.82 : 1.1, vary: 0.12 });
@@ -361,6 +429,52 @@ export class AudioSys {
     this.thump({ vol: vol * (boss ? 1.4 : 0.7), freq: boss ? 45 : 70, dur: dur * 0.6 });
   }
 
+  /** 처치 확정음. 일반 타격과 다른 '팝+저역' 음으로 쓰러진 순간을 알린다.
+   *  일반 처치는 80ms 창당 2음까지만 내고, 5킬 이상 몰리면 대량 처치음 한 번이 대신한다. 정예·보스는 항상 들린다. */
+  kill({ boss = false, elite = false } = {}) {
+    if (!this.enabled || !this.mix.sfx || !this.ctx) return null;
+    const now = this.now();
+    while (this._killTimes.length && now - this._killTimes[0] >= 0.3) this._killTimes.shift();
+    this._killTimes.push(now);
+    while (this._killRecent.length && now - this._killRecent[0] >= 0.08) this._killRecent.shift();
+    const premium = boss || elite;
+    let spec = boss ? KILL_SOUND.boss : elite ? KILL_SOUND.elite : KILL_SOUND.normal;
+    if (!premium) {
+      if (this._killTimes.length >= 5 && now - this._killMassAt > 0.35) { spec = KILL_SOUND.mass; this._killMassAt = now; }
+      else if (this._killRecent.length >= 2) return null;
+    }
+    this._killRecent.push(now);
+    const variant = spec.id === 'k_pop' ? this._variant('k_pop') : 0, name = hitSoundName(spec.id, variant);
+    if (!this.buffers[name]) {
+      // 샘플이 없을 때는 기존 합성음으로 최소한의 확정음을 낸다.
+      this.thump({ vol: boss ? 0.8 : 0.4, freq: boss ? 50 : 84, dur: boss ? 0.5 : 0.18 }); this.contactSnap({ vol: 0.12, freq: 1500 });
+      return null;
+    }
+    // 연속 처치가 이어질수록 음이 살짝 올라가 쾌감이 쌓인다(상한 +12%).
+    const climb = Math.min(0.12, Math.max(0, this._killTimes.length - 1) * 0.02);
+    return this.play(name, { vol: spec.vol, rate: 1 + climb, vary: 0.05, min: premium ? 0 : 0.006, priority: spec.priority });
+  }
+
+  /** 콤보 수가 10/25/50 을 처음 넘을 때 스팅어 한 번. 콤보가 줄어든(끊긴) 뒤에는 다시 장전된다. */
+  comboStep(count) {
+    if (!Number.isFinite(count)) return null;
+    if (count < this._comboLast) this._comboFired.clear();
+    this._comboLast = count;
+    let hit = null;
+    for (const stinger of COMBO_STINGERS) if (count >= stinger.at && !this._comboFired.has(stinger.at)) { this._comboFired.add(stinger.at); hit = stinger; }
+    if (!hit || !this.enabled || !this.mix.sfx || !this.ctx) return null;
+    const name = comboSoundName(hit);
+    if (hit.duck) this.duck(hit.duck, hit.at >= 50 ? 1.1 : 0.7, { hold: hit.at >= 50 ? 0.25 : 0.12, smooth: true });
+    if (!this.buffers[name]) return null;
+    this.vibe(hit.at >= 50 ? [20, 20, 50] : hit.at >= 25 ? [15, 15, 30] : 10);
+    return this.play(name, { vol: hit.vol, vary: 0, min: 0, priority: 5 });
+  }
+
+  /** 궁극기 BGM 덕킹: 빠르게 눌렀다가(attack) 잠깐 유지(hold)하고 부드러운 S 곡선으로 돌아온다(recover). */
+  ultimateDuck({ amount = 0.12, hold = 0.9, recover = 1.6 } = {}) {
+    this.duck(amount, hold + recover + 0.06, { hold, smooth: true, attack: 0.06 });
+  }
+
   /** 공격 시작과 접촉 사이를 분리해 입력 순간과 실제 타격 순간을 귀로 읽게 한다. */
   attackRelease({ weapon = 'blade', finisher = false, ranged = false } = {}) {
     if (this.enabled && this.mix.sfx && this.ctx) {
@@ -383,10 +497,10 @@ export class AudioSys {
       const sample = skillSound(school, hero);
       if (this.buffers[sample]) {
         this.play(sample, { vol: ult ? .74 : .64, rate: ult ? .88 : 1, vary: .02, min: .08, priority: 5 });
-        if (ult) this.play(ULTIMATE_SOUND, { vol: .42, vary: 0, min: .2, priority: 5 });
+        if (ult) { this.play(ULTIMATE_SOUND, { vol: .42, vary: 0, min: .2, priority: 5 }); this.ultimateDuck(); }
       } else {
         const base = school.includes('fire') ? 210 : school.includes('ice') ? 520 : school.includes('void') ? 150 : 360;
-        if (ult) { this.charge({ vol: 0.5, dur: 0.52 }); this.thump({ vol: 0.5, freq: 52, dur: 0.24 }); }
+        if (ult) { this.charge({ vol: 0.5, dur: 0.52 }); this.thump({ vol: 0.5, freq: 52, dur: 0.24 }); this.ultimateDuck(); }
         else this.magic({ vol: 0.24, base, notes: [0, 3, 7], step: 0.035, type: school.includes('void') ? 'sawtooth' : 'triangle' });
       }
     }
@@ -442,21 +556,32 @@ export class AudioSys {
     this.music = { el, gain: g, src, volume };
     this._musicTracks.add(this.music);
   }
-  duck(amount = 0.25, dur = 1.5) {
+  /** BGM 덕킹. options.hold: 최저 구간 유지 시간(초), smooth: 복귀를 S 곡선으로, attack: 내려가는 시간(기본 0.1초). */
+  duck(amount = 0.25, dur = 1.5, { hold = 0, smooth = false, attack = 0.1 } = {}) {
     if (!this.musicDuckGain) return;
     const t = this.now(), g = this.musicDuckGain.gain;
     amount = Number.isFinite(amount) ? Math.max(0, Math.min(1, amount)) : 1;
     dur = Number.isFinite(dur) ? Math.max(0.11, Math.min(30, dur)) : 1.5;
+    attack = Number.isFinite(attack) ? Math.max(0.01, Math.min(attack, dur - 0.01)) : 0.1;
+    hold = Number.isFinite(hold) ? Math.max(0, Math.min(hold, dur - attack - 0.01)) : 0;
     this._ducks = this._ducks.filter(d => d.end > t);
-    this._ducks.push({ start: t, attack: t + 0.1, end: t + dur, amount });
+    this._ducks.push({ start: t, attack: t + attack, hold: t + attack + hold, end: t + dur, amount, smooth: !!smooth });
     // At most 32 envelopes; merge excess into a conservative stronger tail.
     if (this._ducks.length > 32) {
       const merged = this._ducks.splice(0, 2);
-      this._ducks.unshift({ start: t - 0.1, attack: t, end: Math.max(...merged.map(d => d.end)), amount: Math.min(...merged.map(d => d.amount)) });
+      this._ducks.unshift({ start: t - 0.1, attack: t, hold: t, end: Math.max(...merged.map(d => d.end)), amount: Math.min(...merged.map(d => d.amount)), smooth: false });
     }
-    const value = (d, at) => at <= d.start || at >= d.end ? 1 : at < d.attack ? 1 + (d.amount - 1) * (at - d.start) / (d.attack - d.start) : d.amount + (1 - d.amount) * (at - d.attack) / (d.end - d.attack);
+    const value = (d, at) => {
+      if (at <= d.start || at >= d.end) return 1;
+      if (at < d.attack) return 1 + (d.amount - 1) * (at - d.start) / (d.attack - d.start);
+      if (at <= d.hold) return d.amount;
+      const u = (at - d.hold) / (d.end - d.hold);
+      return d.amount + (1 - d.amount) * (d.smooth ? u * u * (3 - 2 * u) : u);
+    };
     const level = at => Math.min(1, ...this._ducks.map(d => value(d, at)));
-    const bounds = [...new Set([t, ...this._ducks.flatMap(d => [d.attack, d.end]).filter(x => x > t)])].sort((a, b) => a - b);
+    // S 곡선 복귀는 12구간으로 쪼개 선형 램프로 근사한다.
+    const knots = this._ducks.flatMap(d => d.smooth ? Array.from({ length: 11 }, (_, k) => d.hold + (d.end - d.hold) * (k + 1) / 12) : []);
+    const bounds = [...new Set([t, ...this._ducks.flatMap(d => [d.attack, d.hold, d.end]).concat(knots).filter(x => x > t)])].sort((a, b) => a - b);
     const times = [...bounds];
     // Add crossings, so a weaker newer duck cannot erase a stronger older one.
     for (let k = 1; k < bounds.length; k++) {
@@ -479,7 +604,7 @@ export class AudioSys {
     } else if (this._pendingMusic) this.playMusic(this._pendingMusic, this._pendingMusicOptions);
     this.setMix();
   }
-  setSfxOn(on) { this.enabled = !!on; if (!on) { clearTimeout(this._hitTimer); this._hitTimer = null; this._hitPending = null; this._stopVoices('sfx'); } this.setMix(); }
+  setSfxOn(on) { this.enabled = !!on; if (!on) { clearTimeout(this._hitTimer); this._hitTimer = null; this._hitPending = null; this._hitRecent = []; this._killRecent = []; this._stopVoices('sfx'); } this.setMix(); }
 
   // ---------- 햅틱 ----------
   vibe(pattern) {
