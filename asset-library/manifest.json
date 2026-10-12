@@ -151,6 +151,45 @@
       },
       "license": "owner-generated (Tripo subscription)",
       "shared": true
+    },
+    {
+      "id": "hero_barbarian_t1",
+      "kind": "character",
+      "body": "biped",
+      "replaces": null,
+      "file": "/models/library/hero_barbarian_t1.glb",
+      "heightM": 1.8,
+      "triangles": 11525,
+      "bytes": 1352196,
+      "sha256": "6336178ffe1477dda153c6f49a67c34881fea2b1ba0a06e5bac3294aaf0c4513",
+      "clips": {
+        "idle": "idle",
+        "run": "run",
+        "dodge": "dodge",
+        "hit": "hit",
+        "death": "death",
+        "cheer": "cheer",
+        "interact": "interact",
+        "cast_shoot": "cast_shoot",
+        "slash_h": "slash_h",
+        "stab": "stab",
+        "spin": "spin",
+        "chop": "chop",
+        "jump_attack": "jump_attack"
+      },
+      "provenance": {
+        "tool": "Blender 5.2",
+        "account": "owner subscription",
+        "taskId": "mixamo-hero-barbarian-20261013",
+        "prompt": "Mixamo rigged hero barbarian tier1",
+        "createdAt": "2026-10-12T19:04:14.358Z",
+        "rawSha256": "4800ae033a79373d15131f71d488cffc1c074268919475a5127dae94a892bb95"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true,
+      "role": "hero",
+      "heroId": "barbarian",
+      "armorTier": 1
     }
   ]
 }
