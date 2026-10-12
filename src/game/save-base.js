@@ -5,6 +5,7 @@ import { BATTLE_PASS, GACHA } from '../data/shop.js';
 import { normalizeLobbyCamera } from '../engine/lobby-camera.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
+import { normalizeTownState } from '../data/towns.js';
 
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const integer = (value, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) =>
@@ -83,6 +84,7 @@ export function normalizeSave(raw, fresh) {
   s.settings.lobbyCamera = normalizeLobbyCamera(raw.settings?.lobbyCamera);
   s.name = s.name.trim().slice(0, 20) || fresh.name;
   s.expedition = normalizeExpedition(raw.expedition);
+  s.towns = normalizeTownState({ ...raw.towns, _migrationExpedition: raw.expedition, _migrationHeroes: raw.heroes });
   // 천장 카운터는 0..pity-1 범위만 의미가 있다. 범위 밖 값은 확정 천장을 건너뛰게 만들 수 있어 보정한다.
   // 스키마 1부터 gacha.pity가 정본이고, 버전 없는 저장은 레거시 pity에서 옮긴다. s.pity는 미러로 남긴다.
   const legacyPity = integer(raw.pity, 0, 0, GACHA.pity - 1);

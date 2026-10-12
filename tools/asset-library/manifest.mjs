@@ -1,5 +1,6 @@
 export const LIBRARY_SCHEMA = 'tll.game-asset-library.v1';
 export const LOGICAL_CLIPS = ['idle', 'walk', 'run', 'attack', 'attackHeavy', 'hit', 'death'];
+export const HERO_LOGICAL_CLIPS = ['idle', 'run', 'dodge', 'hit', 'death', 'cheer', 'interact', 'slash_h', 'slash_d', 'stab', 'spin', 'chop', 'jump_attack', 'block', 'cast_shoot', 'cast_long', 'cast_raise', 'throw', 'bow_shoot'];
 export const OPTIONAL_CLIPS = ['spawn', 'cast'];
 const digest = /^[a-f0-9]{64}$/;
 
@@ -15,6 +16,8 @@ export function validateManifest(value) {
     ids.add(asset.id);
     if (!['character', 'prop'].includes(asset.kind) || !['biped', 'quadruped', 'none'].includes(asset.body) ||
         (asset.kind === 'prop' && asset.body !== 'none') || (asset.kind === 'character' && asset.body === 'none')) throw new Error('invalid asset kind/body');
+    if (asset.role !== undefined && (asset.role !== 'hero' || asset.kind !== 'character' || typeof asset.heroId !== 'string' || !/^[a-z][a-z0-9_-]{0,63}$/.test(asset.heroId))) throw new Error('invalid hero role');
+    if (asset.armorTier !== undefined && (!Number.isInteger(asset.armorTier) || asset.armorTier < 1 || asset.armorTier > 3 || asset.role !== 'hero')) throw new Error('invalid armor tier');
     if (asset.replaces !== null && (typeof asset.replaces !== 'string' || !asset.replaces || replacements.has(asset.replaces))) throw new Error('invalid or duplicate replaces');
     if (asset.replaces !== null) replacements.add(asset.replaces);
     if (asset.file !== `/models/library/${asset.id}.glb`) throw new Error('invalid asset file');
@@ -22,11 +25,12 @@ export function validateManifest(value) {
     if (!Number.isInteger(asset.triangles) || asset.triangles <= 0 || asset.triangles > triangleLimit(asset)) throw new Error('triangle budget exceeded');
     if (!Number.isInteger(asset.bytes) || asset.bytes <= 0 || typeof asset.sha256 !== 'string' || !digest.test(asset.sha256)) throw new Error('invalid artifact digest');
     if (!asset.clips || typeof asset.clips !== 'object' || Array.isArray(asset.clips)) throw new Error('invalid clips');
-    if (asset.kind === 'character') for (const key of LOGICAL_CLIPS) {
+    if (asset.kind === 'character' && asset.role !== 'hero') for (const key of LOGICAL_CLIPS) {
       if (asset.clips[key] !== key) throw new Error(`missing required clip key: ${key}`);
     }
     for (const [key, name] of Object.entries(asset.clips)) {
-      if (![...LOGICAL_CLIPS, ...OPTIONAL_CLIPS].includes(key) || name !== key || asset.kind === 'prop') throw new Error('invalid logical clip mapping');
+      const allowed = asset.role === 'hero' ? HERO_LOGICAL_CLIPS : [...LOGICAL_CLIPS, ...OPTIONAL_CLIPS];
+      if (!allowed.includes(key) || typeof name !== 'string' || !name || (asset.role !== 'hero' && name !== key) || asset.kind === 'prop') throw new Error('invalid logical clip mapping');
     }
     const provenance = asset.provenance;
     if (!provenance || typeof provenance.rawSha256 !== 'string' || !digest.test(provenance.rawSha256) ||

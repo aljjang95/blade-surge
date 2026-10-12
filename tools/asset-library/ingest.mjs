@@ -22,10 +22,19 @@ const staged = resolve(outputDir, `${assetId}.staged.glb`);
 const manifestPath = resolve(args.manifest || `${root}/asset-library/manifest.json`);
 const heightM = Number(args.height || 1.6);
 const kind = args.kind || 'character';
+const role = args.role || undefined;
+const heroId = args.heroId || undefined;
+if (role === 'hero' && (!heroId || !/^[a-z][a-z0-9_-]{0,63}$/.test(heroId))) throw new Error('hero assets require --heroId');
+if (role && role !== 'hero') throw new Error(`invalid --role: ${role}`);
+// 영웅 갑옷 단계(1|2|3). 메시만 있는 2·3단계는 --map '{}' 로 넣으면 1단계 클립을 런타임에서 공유한다.
+const armorTier = args.armorTier === undefined ? undefined : Number(args.armorTier);
+if (armorTier !== undefined && (role !== 'hero' || ![1, 2, 3].includes(armorTier))) throw new Error('--armorTier requires --role hero and 1|2|3');
 const body = args.body || (kind === 'prop' ? 'none' : 'biped');
 const boss = args.boss === true || args.boss === 'true';
 const triangleLimit = kind === 'prop' ? 4000 : boss ? 20000 : 12000;
-const map = args.map || (kind === 'prop' ? '{}' : JSON.stringify({ idle: 'idle', walk: 'walk', run: 'run', attack: 'attack', attackHeavy: 'attackHeavy', hit: 'hit', death: 'death' }));
+const map = args.map || (kind === 'prop' ? '{}' : JSON.stringify(role === 'hero'
+  ? { idle: 'idle', run: 'run', hit: 'hit', death: 'death' }
+  : { idle: 'idle', walk: 'walk', run: 'run', attack: 'attack', attackHeavy: 'attackHeavy', hit: 'hit', death: 'death' }));
 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 // Blender 임시 파일(WebP 변환 등)은 프로젝트 안 work/tmp/blender 에서만 만든다.
@@ -53,7 +62,7 @@ try {
   const triangles = Math.floor(countTriangles(gltfJson));
   if (triangles > triangleLimit) throw new Error(`triangle budget exceeded: ${triangles} > ${triangleLimit}`);
   const animations = new Set((gltfJson.animations || []).map((animation) => animation.name));
-  const clips = kind === 'prop' ? [] : LOGICAL_CLIPS;
+  const clips = kind === 'prop' ? [] : Object.keys(JSON.parse(map));
   for (const clip of clips) if (!animations.has(clip)) throw new Error(`missing required clip: ${clip}`);
   const manifest = JSON.parse(await readFile(manifestPath, 'utf8'));
   manifest.assets = manifest.assets.filter((asset) => asset.id !== assetId);
@@ -62,7 +71,7 @@ try {
     bytes: bytes.length, sha256: sha256(bytes),
     clips: Object.fromEntries(clips.map((key) => [key, key])),
     provenance: { tool: 'Blender 5.2', account: 'owner subscription', taskId: args.taskId || '', prompt: args.prompt || '', createdAt: new Date().toISOString(), rawSha256: sha256(rawBytes) },
-    license: 'owner-generated (Tripo subscription)', shared: args.shared !== 'false', ...(boss ? { boss: true } : {}),
+    license: 'owner-generated (Tripo subscription)', shared: args.shared !== 'false', ...(role ? { role, heroId } : {}), ...(armorTier ? { armorTier } : {}), ...(boss ? { boss: true } : {}),
   });
   validateManifest(manifest);
   await rename(staged, output);

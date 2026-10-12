@@ -1,17 +1,17 @@
 {
   "errors": 0,
-  "bootMs": 3015,
-  "floorClearSec": 180.7,
-  "killsPerFloor": 193,
-  "maxAliveSeen": 23,
-  "_maxAliveSampled": 22,
-  "dropsPerFloor": 40,
-  "longestDryStreakSec": 18,
-  "hitTakenRatio": 0.139,
-  "avgFrameMs": 0.54,
-  "p95FrameMs": 1.9,
+  "bootMs": 3192,
+  "floorClearSec": 192.8,
+  "killsPerFloor": 191,
+  "maxAliveSeen": 24,
+  "_maxAliveSampled": 20,
+  "dropsPerFloor": 36,
+  "longestDryStreakSec": 19.9,
+  "hitTakenRatio": 0.277,
+  "avgFrameMs": 1.38,
+  "p95FrameMs": 4.3,
   "rhythmBeats": 7,
-  "drawCalls": 301,
+  "drawCalls": 270,
   "_beats": {
     "explore": true,
     "encounter": true,
@@ -33,7 +33,16 @@
   "_heroLevelStart": 1,
   "_heroLevelEnd": 4,
   "_endReason": "전구역클리어",
-  "_avgAlive": 3.8,
+  "_avgAlive": 3.2,
   "_errorSamples": [],
-  "_at": "2026-09-21T05:09:07.381Z"
+  "_at": "2026-10-12T17:15:58.209Z",
+  "_build": {
+    "sha": "13d426265f55559a5c2011b763e80ef4c053cfe9",
+    "dirty": true,
+    "builtAt": "2026-10-12T17:15:11.320Z",
+    "pwaRelease": "700f08ce60ab2422e918"
+  },
+  "_dryRewardSource": "frame-collected-gold-stones-fragments-gear-v3",
+  "_renderEvery": 3,
+  "_timeoutSec": 600
 }

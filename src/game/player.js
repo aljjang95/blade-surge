@@ -31,6 +31,12 @@ export class Player extends Actor {
     const dressedMaterials = new Set();
     this.model.traverse(o => { if (o.isMesh) for (const m of materialsOf(o)) if (m.emissive) dressedMaterials.add(m); });
     this.mats = [...dressedMaterials];
+    // 라이브러리 영웅의 갑옷 단계 몸체가 바뀌면 피격 발광 대상 재질을 다시 모은다.
+    this.model.userData.onLibraryBodySwap = () => {
+      const next = new Set();
+      this.model.traverse(o => { if (o.isMesh) for (const m of materialsOf(o)) if (m.emissive) next.add(m); });
+      this.mats = [...next];
+    };
     this.auraT = 0;
     this.state = 'idle'; this.stateT = 0;
     this.comboIdx = 0; this.comboQueued = false; this.attackBufferT = 0; this.dodgeBufferT = 0; this.hitDone = false; this.comboWindow = 0;
@@ -69,7 +75,7 @@ export class Player extends Actor {
   combatSkillIndex(slot) { return skillIndexForCombatSlot(this.skillLoadout, slot); }
   combatSkill(slot) { const index = this.combatSkillIndex(slot); return { index, skill: this.def.skills[index] }; }
   tryCastCombatSkill(slot) { const index = this.combatSkillIndex(slot); return index >= 0 && this.tryCastSkill(index); }
-  dispose() { this._offDodgeInputClear?.(); this._offDodgeInputClear = null; this.attackBufferYaw = null; this.comboQueuedYaw = null; this.beacon?.dispose(); super.dispose(); }
+  dispose() { this.model.userData.libraryDisposed = true; this._offDodgeInputClear?.(); this._offDodgeInputClear = null; this.attackBufferYaw = null; this.comboQueuedYaw = null; this.beacon?.dispose(); super.dispose(); }
 
   // ---------------- 입력 처리 ----------------
   handleInput(input, dt) {

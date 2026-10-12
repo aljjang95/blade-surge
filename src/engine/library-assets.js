@@ -47,7 +47,9 @@ export function createLibraryLoader(value, load, prepare = (gltf) => gltf, warn 
   const cache = new Map();
   return {
     assetFor(name) { return assets.find((asset) => asset.id === name || (asset.kind === 'character' && asset.replaces === name)) || null; },
-    load(asset, fallback) {
+    assetForHero(heroId, tier = 1) { return selectHeroLibraryAsset(value, heroId, tier); },
+    heroAssets(heroId) { return heroLibraryAssets(value, heroId); },
+    load(asset, fallback, prepareAsset = prepare) {
       if (cache.has(asset.id)) return cache.get(asset.id);
       const promise = Promise.resolve().then(() => load(resolveAssetSource(asset))).then((gltf) => {
         validateLibraryModel(gltf, asset);
@@ -55,7 +57,7 @@ export function createLibraryLoader(value, load, prepare = (gltf) => gltf, warn 
         gltf.scene.traverse((node) => {
           if (node.isMesh) for (const material of Array.isArray(node.material) ? node.material : [node.material]) material.userData.tllAuthored = true;
         });
-        return prepare(gltf);
+        return prepareAsset(gltf, asset);
       }).catch((error) => {
         warn(`library asset failed, using legacy model: ${asset.id}`, error);
         // 폴백까지 실패하면 캐시를 비워 다음 호출에서 다시 시도한다.
@@ -82,4 +84,19 @@ export function libraryAssetIds() {
 
 export function libraryAssetForModel(modelName) {
   return resolveLibraryAsset(manifest, modelName);
+}
+
+export function libraryAssetForHero(heroId) {
+  return selectHeroLibraryAsset(manifest, heroId, 1);
+}
+
+export function heroLibraryAssets(value, heroId) {
+  validateManifest(value);
+  return value.assets.filter((asset) => asset.kind === 'character' && asset.role === 'hero' && asset.heroId === heroId)
+    .sort((a, b) => (a.armorTier || 1) - (b.armorTier || 1));
+}
+
+export function selectHeroLibraryAsset(value, heroId, requestedTier = 1) {
+  const assets = heroLibraryAssets(value, heroId), tier = Math.min(3, Math.max(1, requestedTier));
+  return [...assets].reverse().find((asset) => (asset.armorTier || 1) <= tier) || null;
 }

@@ -1,12 +1,13 @@
 import './citadel-hub.css';
 import { DUNGEONS, MATERIALS, CONSUMABLES } from '../data/expansion.js';
-import { CITADEL_HUB_HOTSPOTS } from '../data/citadel-hub.js';
+import { CITADEL_HUB_HOTSPOTS, findHotspot } from '../data/citadel-hub.js';
+import { TownUI } from './town-ui.js';
 import { citadelPreparation } from '../game/citadel-preparation.js';
 import { HEROES } from '../data/heroes.js';
 import { personalMetricLabel, personalMetricValue } from './personal-goal-labels.js';
 
 const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-const verbs = { dungeon: '입장 확인', campaign: '캠페인 보기', arena: '상대 고르기', merchant: '물약 구매', trainer: '전투 준비', steward: '결투 안내' };
+const verbs = { dungeon: '입장 확인', campaign: '캠페인 보기', arena: '상대 고르기', merchant: '상점 보기', trainer: '기술 배우기', steward: '결투 안내', waystone: '이동석 사용' };
 const count = value => Number(value).toLocaleString('ko-KR');
 const potionArt = id => `/img/departure-journal/icons/potion-${id === 'hp_tonic' ? 'health' : id === 'overdrive' ? 'power' : 'guard'}.webp`;
 const rewardCards = rewards => {
@@ -90,6 +91,9 @@ export class CitadelHubUI {
     this.dialog.addEventListener('keydown', event => this.containDestinationTab(event));
     this.ecoListener = () => { if (this.opened && this.dialogSpot) this.refreshDestination(); };
     this.unsub = this.app.eco?.onChange?.(this.ecoListener);
+    // 마을 이동·상인·교관 패널과 마을 장면 동기화(app.townUI). 서비스는 app.towns 를 우선한다.
+    this.app.townUI ??= new TownUI(this.app);
+    this.app.townUI.renderPlace(this.root);
   }
   containDestinationTab(event) {
     if (!this.opened || !this.dialog.open || event.key !== 'Tab' || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
@@ -118,27 +122,36 @@ export class CitadelHubUI {
     if (!this.visible) this.clear();
   }
   update(nearest, state = {}) {
-    const spot = typeof nearest === 'string' ? CITADEL_HUB_HOTSPOTS.find(s => s.id === nearest) : nearest;
+    const spot = typeof nearest === 'string' ? findHotspot(nearest) : nearest;
     this.nearest = spot || null;
     this.root.dataset.nearby = spot ? 'true' : 'false';
-    this.name.textContent = spot?.label || '성채의 길';
+    this.name.textContent = spot?.label || this.app.townUI?.placeName() || '성채의 길';
     this.detail.textContent = spot ? spot.kind === 'dungeon'
-      ? `탐험 Lv.${spot.minLevel} · 에너지 ${spot.energy}` : spot.description : '던전과 안내관에게 다가가세요';
+      ? `탐험 Lv.${spot.minLevel} · 에너지 ${spot.energy}` : spot.kind === 'waystone' && this.app.townUI
+        ? `${spot.description} ${this.app.townUI.waystoneSummary()}` : spot.description : '던전과 안내관에게 다가가세요';
     this.interactLabel.textContent = spot ? verbs[spot.kind] || '확인' : '대화 · 입장';
     this.interactButton.disabled = !spot || !!state.blocked || this.opened || this.busy;
     this.root.style.setProperty('--citadel-near-accent', spot?.accent || '#d3c29c');
   }
   interact(spot = this.nearest, trigger = this.interactButton) {
     if (!spot || this.busy || this.opened || this.app.stageStarting || this.app.mode !== 'lobby') return false;
-    const canonical = CITADEL_HUB_HOTSPOTS.find(s => s.id === spot.id); if (!canonical) return false;
+    const canonical = findHotspot(spot.id); if (!canonical) return false;
     this.app.hubControls?.clear(); this.app.citadelControls?.clear();
     if (this.onDestination) {
       const handled = this.onDestination(canonical, trigger);
       if (handled !== undefined) return handled;
     }
     if (canonical.kind === 'dungeon') return this.openDestination(canonical, trigger);
-    if (canonical.kind === 'merchant') { this.app.citadelShop?.open(trigger); return true; }
-    if (canonical.kind === 'trainer') { this.app.battle?.chronicle?.open('build'); return true; }
+    if (canonical.kind === 'merchant') {
+      // 마을 상점에 물건이 있으면 마을 상인 패널, 없으면 기존 물약 상점.
+      if (this.app.townUI?.hasMerchant()) return !!this.app.townUI.openMerchant(trigger);
+      this.app.citadelShop?.open(trigger); return true;
+    }
+    if (canonical.kind === 'trainer') {
+      if (this.app.townUI?.hasTrainer()) return !!this.app.townUI.openTrainer(trigger);
+      this.app.battle?.chronicle?.open('build'); return true;
+    }
+    if (canonical.kind === 'waystone') return !!this.app.townUI?.openMap(trigger);
     if (canonical.kind === 'arena' || canonical.kind === 'steward') { this.app.expeditionUI.open('arena'); return true; }
     if (canonical.kind === 'campaign') { this.app.meta.openTab('stage'); return true; }
     return false;
@@ -320,6 +333,7 @@ export class CitadelHubUI {
     const listeners = this.app.eco?.listeners, listenerIndex = listeners?.indexOf(this.ecoListener);
     if (listenerIndex >= 0) listeners.splice(listenerIndex, 1);
     this.interactButton.removeEventListener('click', this.clickHandler);
+    this.app.townUI?.destroy(); this.app.townUI = null;
     this.root.remove(); this.dialog.remove();
   }
 }

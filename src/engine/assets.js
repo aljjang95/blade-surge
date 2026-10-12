@@ -13,7 +13,8 @@ import { assembleEncounterIdentity } from './encounter-identity.js';
 import { ENCOUNTER_MODELS } from '../data/encounter-models.js';
 import { preloadSurfaceTextures, projectSurfaceUV, surfaceRole, applySurfaceDetail } from './surface-textures.js';
 import { preloadDungeonSurface } from '../game/dungeon-surface.js';
-import { libraryAssetIds, createDefaultLibraryLoader } from './library-assets.js';
+import { libraryAssets, createDefaultLibraryLoader } from './library-assets.js';
+import { heroIdForModel, heroModelContract, heroHandBones, heroGripRotation, librarySocketScale, resolveSharedHeroClips, LIBRARY_SOCKET_NAMES } from '../data/hero-library.js';
 
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
@@ -39,14 +40,19 @@ export const MONSTER_MODELS = [
   'Flying_Ghost', 'Flying_Ghost_Skull', 'Flying_Dragon', 'Flying_Dragon_Evolved',
   'Flying_Armabee', 'Flying_Armabee_Evolved', 'Flying_Hywirl', 'Flying_Squidle', 'Flying_Glub', 'Flying_Goleling_Evolved',
 ];
-export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, ...Object.keys(ENCOUNTER_MODELS), ...libraryAssetIds(), 'dungeon', 'tllDungeonLandmarks', 'skel_weapons'];
+// 영웅 갑옷 단계 GLB 는 영웅 모델 이름과 장비 교체 경로에서만 받는다(부팅 시 전 단계 선로딩 금지).
+export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, ...Object.keys(ENCOUNTER_MODELS),
+  ...libraryAssets().filter((asset) => asset.role !== 'hero').map((asset) => asset.id), 'dungeon', 'tllDungeonLandmarks', 'skel_weapons'];
 const SPECIAL_MODELS = Object.freeze({ tllDungeonLandmarks: '/models/tll/dungeons/dungeon-landmarks-v1.glb',
   tllCoolingValve: '/models/tll/props/cooling-valve-v1.glb',
   tllNightglassRecord: '/models/tll/props/nightglass-record-v1.glb' });
 
 /** @param {string} name @param {ModelContract|null} contract */
 export async function loadModel(name, contract = null, allowLibrary = true) {
-  const libraryAsset = !contract && allowLibrary ? libraryLoader.assetFor(name) : null;
+  const heroId = !contract && allowLibrary ? heroIdForModel(name) : null;
+  if (heroId && libraryLoader.assetForHero(heroId, 1)) return loadHeroModel(heroId, 1);
+  const libraryAsset = !contract && allowLibrary && !heroId ? libraryLoader.assetFor(name) : null;
+  if (libraryAsset?.role === 'hero') return loadHeroModel(libraryAsset.heroId, libraryAsset.armorTier || 1);
   const key = name + '|' + JSON.stringify(contract) + '|' + (libraryAsset?.id || 'legacy');
   if (cache.has(key)) return cache.get(key);
   if (libraryAsset) {
@@ -100,6 +106,104 @@ export async function loadModel(name, contract = null, allowLibrary = true) {
   });
   cache.set(key, p);
   try { return await p; } catch (error) { cache.delete(key); throw error; }
+}
+
+// ---------- 라이브러리 영웅(갑옷 3단계) ----------
+const heroClipCache = new Map();
+const heroBodies = new Map();
+
+/** 요청 단계 이하의 가장 높은 영웅 GLB 를 받는다. 없거나 실패하면 기존 KayKit 영웅으로 폴백한다. */
+export function loadHeroModel(heroId, tier = 1) {
+  const hero = HEROES[heroId];
+  if (!hero) return Promise.reject(new Error(`invalid hero id: ${heroId}`));
+  const asset = libraryLoader.assetForHero(heroId, tier);
+  if (!asset) return loadModel(hero.model, null, false);
+  return libraryLoader.load(asset, () => loadModel(hero.model, null, false), (gltf, entry) => prepareLibraryHero(gltf, entry));
+}
+
+async function prepareLibraryHero(gltf, asset) {
+  const heroId = asset.heroId, hero = HEROES[heroId];
+  if (!gltf.animations.length && !heroClipCache.has(heroId)) {
+    // 메시만 있는 단계는 클립을 가진 가장 낮은 단계를 먼저 받아 같은 클립을 쓴다.
+    const source = libraryLoader.heroAssets(heroId).find((entry) => entry.id !== asset.id && Object.keys(entry.clips).length);
+    if (source) await loadHeroModel(heroId, source.armorTier || 1);
+  }
+  const { animations, clipAsset } = resolveSharedHeroClips(heroClipCache, heroId, asset, gltf.animations);
+  gltf.animations = animations;
+  const handBones = heroHandBones(gltf.scene);
+  const legacy = await loader.loadAsync(heroModelPaths(hero.model).base);
+  attachLegacyWeapons(gltf.scene, legacy.scene, heroId, handBones);
+  gltf.scene.traverse((node) => {
+    if (!node.isSkinnedMesh) return;
+    node.userData.libraryBody = asset.armorTier || 1;
+    // 병기고 장식은 TLL_ 스킨에만 붙는다.
+    if (!node.name.startsWith('TLL_')) node.name = `TLL_Library_${heroId}`;
+  });
+  await forgeHeroWeapons(gltf, hero.model);
+  prepareModel(gltf, heroModelContract(asset, gltf.scene, clipAsset));
+  heroBodies.set(asset.id, gltf);
+  return gltf;
+}
+
+/** KayKit handslot 의 무기·방패 노드를 축 보정 소켓 아래로 옮긴다. 기존 단조 무기·장비 표시가 그대로 동작한다. */
+function attachLegacyWeapons(scene, legacyScene, heroId, handBones) {
+  scene.updateMatrixWorld(true);
+  const scale = new THREE.Vector3(), position = new THREE.Vector3();
+  for (const side of ['r', 'l']) {
+    const bone = scene.getObjectByName(handBones[side]);
+    const slot = legacyScene.getObjectByName(`handslot${side}`) || legacyScene.getObjectByName(`handslot.${side}`);
+    if (!bone || !slot) throw new Error(`hero weapon socket missing: ${heroId}:${side}`);
+    const socket = new THREE.Group(); socket.name = LIBRARY_SOCKET_NAMES[`handslot.${side}`];
+    socket.rotation.fromArray(heroGripRotation(heroId, side));
+    bone.getWorldScale(scale); bone.getWorldPosition(position);
+    socket.scale.setScalar(librarySocketScale(scale.x, position.y));
+    bone.add(socket);
+    for (const child of [...slot.children]) socket.add(child.clone(true));
+  }
+}
+
+/**
+ * 장비 갑옷 단계에 맞는 몸체로 같은 인스턴스 안에서 교체한다. 믹서·클립·무기 소켓은 그대로 둔다.
+ * 캐시된 몸체면 즉시 교체해 true, 비동기 로드가 필요하면 false 를 돌려주고 완료 시 onAsyncSwap 을 부른다.
+ */
+export function applyLibraryHeroTier(root, tier, onAsyncSwap = null) {
+  const contract = root.userData.authoredContract;
+  if (contract?.role !== 'hero') return false;
+  const target = libraryLoader.assetForHero(contract.heroId, tier);
+  const current = root.userData.libraryBodyAssetId;
+  if (!target || !current || target.id === current) { root.userData.libraryTargetId = current; return false; }
+  root.userData.libraryTargetId = target.id;
+  const ready = heroBodies.get(target.id);
+  if (ready) return swapLibraryHeroBody(root, ready, target);
+  loadHeroModel(contract.heroId, target.armorTier || 1).then((gltf) => {
+    // 폴백(KayKit) 결과나 그 사이 바뀐 요청·해제된 인스턴스는 교체하지 않는다.
+    if (gltf.scene.userData.libraryAsset?.id !== target.id || root.userData.libraryDisposed || root.userData.libraryTargetId !== target.id) return;
+    if (swapLibraryHeroBody(root, gltf, target)) onAsyncSwap?.();
+  }).catch((error) => console.warn(`hero tier body failed: ${target.id}`, error));
+  return false;
+}
+
+function swapLibraryHeroBody(root, gltf, target) {
+  const sources = [], old = [], built = [];
+  gltf.scene.traverse((node) => { if (node.isSkinnedMesh && node.userData.libraryBody) sources.push(node); });
+  root.traverse((node) => { if (node.isSkinnedMesh && node.userData.libraryBody) old.push(node); });
+  if (!sources.length || !old.length) return false;
+  const release = (mesh) => { mesh.skeleton.dispose(); for (const material of materialsOf(mesh)) material.dispose(); };
+  for (const source of sources) {
+    const bones = source.skeleton.bones.map((bone) => root.getObjectByName(bone.name));
+    if (bones.some((bone) => !bone?.isBone)) { for (const entry of built) release(entry.mesh); return false; }   // 같은 스켈레톤이 아니면 유지
+    const material = Array.isArray(source.material) ? source.material.map((m) => cloneCharacterMaterial(m, true)) : cloneCharacterMaterial(source.material, true);
+    const mesh = new THREE.SkinnedMesh(source.geometry, material);
+    mesh.name = source.name; mesh.userData.libraryBody = source.userData.libraryBody;
+    mesh.position.copy(source.position); mesh.quaternion.copy(source.quaternion); mesh.scale.copy(source.scale);
+    mesh.castShadow = true; mesh.receiveShadow = true; mesh.frustumCulled = false; mesh.bindMode = source.bindMode;
+    mesh.bind(new THREE.Skeleton(bones, source.skeleton.boneInverses.map((matrix) => matrix.clone())), source.bindMatrix);
+    built.push({ mesh, parent: (source.parent && root.getObjectByName(source.parent.name)) || old[0].parent });
+  }
+  for (const { mesh, parent } of built) parent.add(mesh);
+  for (const mesh of old) { mesh.removeFromParent(); release(mesh); }
+  root.userData.libraryBodyAssetId = target.id; root.userData.libraryHeroTier = target.armorTier || 1;
+  return true;
 }
 
 export const materialsOf = (mesh) => (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).filter(Boolean);
@@ -191,6 +295,7 @@ export function spawnCharacter(gltf) {
   if (contract) {
     root.userData.authoredContract = structuredClone(contract);
     root.scale.setScalar(contract.scale); root.add(rigRoot);
+    if (contract.role === 'hero') root.userData.libraryBodyAssetId = rigRoot.userData.libraryAsset?.id || null;
   }
   const mixer = new THREE.AnimationMixer(rigRoot);
   /** @type {Record<string, THREE.AnimationClip>} */
@@ -200,23 +305,27 @@ export function spawnCharacter(gltf) {
   // 히트 플래시용: 재질을 개별 복제 (emissive 조절)
   root.traverse((o) => {
     if (!o.isMesh) return;
-    const clone = (material) => {
-      const next = material.clone();
-      if (oathKnight) finishOathKnightMaterial(next);
-      if (next.emissive) {
-        if (!contract && !next.userData.tllAuthored) next.emissive.setScalar(0);
-        next.userData.authoredEmissive = next.emissive.clone();
-        next.userData.baseEmissive = next.emissive.clone();
-      }
-      return next;
-    };
+    const clone = (material) => cloneCharacterMaterial(material, !!contract, oathKnight);
     o.material = Array.isArray(o.material) ? o.material.map(clone) : clone(o.material);
   });
   return { root, mixer, clips };
 }
 
+/** 인스턴스 전용 재질: 피격 발광 기준값(authored/base emissive)을 함께 둔다. */
+function cloneCharacterMaterial(material, authored, oathKnight = false) {
+  const next = material.clone();
+  if (oathKnight) finishOathKnightMaterial(next);
+  if (next.emissive) {
+    if (!authored && !next.userData.tllAuthored) next.emissive.setScalar(0);
+    next.userData.authoredEmissive = next.emissive.clone();
+    next.userData.baseEmissive = next.emissive.clone();
+  }
+  return next;
+}
+
 /** Release instance-owned skin textures/materials; preserve shared source geometry. */
 export function disposeCharacter(root, mixer) {
+  root.userData.libraryDisposed = true;
   root.removeFromParent(); mixer.stopAllAction(); mixer.uncacheRoot(mixer.getRoot());
   const skeletons = new Set(), materials = new Set();
   root.traverse((o) => {

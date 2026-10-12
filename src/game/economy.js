@@ -9,6 +9,7 @@ import { normalizeSkillLoadout } from './progression.js';
 import { resolveDifficulty } from './difficulty.js';
 import { heroTrainingQuote } from './hero-training.js';
 import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
+import { freshTownState } from '../data/towns.js';
 
 const KEY = 'bladesurge_save_v1';
 const now = () => Date.now();
@@ -94,6 +95,7 @@ export class Economy {
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, { level: 1, exp: 0, star: 1, shards: 0, skills: HEROES[id].skills.map(() => 1), skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } }])),
       selected: 'knight', inventory: [], invSeq: 1,
       progress: { unlocked: 1, stars: {}, difficulty: 'story' }, // stars['1-1'] = 3
+      towns: freshTownState(),
       pity: 0, gacha: { pity: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
       daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false }],

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RARITY_INFO, ITEM_BY_ID } from '../data/items.js';
-import { materialsOf } from '../engine/assets.js';
+import { materialsOf, applyLibraryHeroTier } from '../engine/assets.js';
+import { heroAppearanceTier } from '../data/hero-library.js';
 import { applyArmorAppearance } from './armor-appearance.js';
 import { applyArmoryAppearance } from '../engine/armory-assets.js';
 import { weaponLook, WEAPON_GLOW } from '../data/weapon-looks.js';
@@ -57,8 +58,15 @@ const BODY_GLOW = { N: 0, S: 0.02, E: 0.035, U: 0.05, L: 0.07 };
 export function applyLook(model, def, equip = {}) {
   const L = LOOKS[def.id];
   const w = equip.weapon ? ITEM_BY_ID[equip.weapon.id] : null, a = equip.armor ? ITEM_BY_ID[equip.armor.id] : null;
+  // 라이브러리 영웅: 갑옷 단계 몸체로 교체. 아직 받지 않은 단계는 비동기로 받은 뒤 외형을 다시 적용한다.
+  if (model.userData.authoredContract?.role === 'hero') {
+    const swapped = applyLibraryHeroTier(model, heroAppearanceTier(equip, ITEM_BY_ID), () => {
+      applyLook(model, def, equip); model.userData.onLibraryBodySwap?.();
+    });
+    if (swapped) model.userData.onLibraryBodySwap?.();
+  }
   applyArmorAppearance(model, def, a?.slot === 'armor' ? a : null);
-  applyArmoryAppearance(model, equip, ITEM_BY_ID, def);
+  applyLibraryArmoryAppearance(model, equip, def);
   // 보일 노드: 슬롯이 비었으면 def.show 중 그 그룹 것, 있으면 등급표
   let show = new Set(def.show);
   if (L) {
@@ -99,4 +107,25 @@ export function applyLook(model, def, equip = {}) {
   const enhMax = Math.max(...['weapon', 'armor', 'ring', 'boots'].map((s) => equip[s]?.enh || 0));
   const auraCol = enhMax >= 20 ? 0xff8af0 : enhMax >= 15 ? 0xffd060 : enhMax >= 10 ? (wCol ? wCol.getHex() : def.color) : null;
   return { trailColor: w && w.rarity !== 'N' ? wCol.getHex() : new THREE.Color(def.color).getHex(), aura: auraCol, enhMax, weapon: wLook };
+}
+
+function applyLibraryArmoryAppearance(model, equip, def) {
+  const contract = model.userData.authoredContract;
+  if (contract?.role !== 'hero' || !contract.handBones) { applyArmoryAppearance(model, equip, ITEM_BY_ID, def); return; }
+  // 병기고 장식은 이름이 handslot.* 인 스킨 본을 찾으므로 Mixamo 손 본 이름을 잠시 바꾼다.
+  const renamed = [];
+  for (const side of ['r', 'l']) {
+    const bone = model.getObjectByName(contract.handBones[side]);
+    if (!bone) continue;
+    renamed.push([bone, bone.name, `handslot.${side}`]); bone.name = `handslot.${side}`;
+  }
+  try { applyArmoryAppearance(model, equip, ITEM_BY_ID, def); }
+  finally {
+    for (const [bone, name, key] of renamed) {
+      bone.name = name;
+      // 장식 변환은 KayKit handslot 프레임 기준이므로 축 보정 소켓으로 옮긴다.
+      const socket = model.getObjectByName(contract.sockets[key]);
+      if (socket) for (const child of [...bone.children]) if (child.userData.armoryItem) socket.add(child);
+    }
+  }
 }
