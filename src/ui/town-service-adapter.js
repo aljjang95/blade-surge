@@ -10,7 +10,7 @@ export class ProvisionalTownService {
     CITADEL_TOWN_IDS.forEach((id, index) => {
       if (!index) return;
       const previous = defaultTownDungeonIds(CITADEL_TOWN_IDS[index - 1]);
-      if (open.has(CITADEL_TOWN_IDS[index - 1]) && previous.filter(dungeon => this.wins(dungeon) > 0).length >= 3) open.add(id);
+      if (open.has(CITADEL_TOWN_IDS[index - 1]) && previous.filter(dungeon => this.wins(dungeon) > 0).length >= 4) open.add(id);
     });
     return open;
   }
@@ -20,9 +20,9 @@ export class ProvisionalTownService {
       const previous = index ? defaultTownDungeonIds(CITADEL_TOWN_IDS[index - 1]) : [];
       const cleared = index ? previous.filter(dungeon => this.wins(dungeon) > 0).length : 0;
       const theme = TOWN_THEMES[id];
-      return { id, name: theme.name, subtitle: theme.subtitle, tier: index + 1, theme: id, dungeonIds: defaultTownDungeonIds(id),
-        unlocked: open.has(id), progress: { cleared, required: index ? 3 : 0 },
-        requirement: { text: index ? '이전 마을 던전 4곳 중 3곳 클리어' : '처음부터 열려 있습니다' } };
+      return { id, name: theme.name, subtitle: theme.subtitle, tier: index + 1, theme: id, fieldId: { oathhold: 'windmeadow', emberport: 'dawnward_city', starcrest: 'skywind_pass' }[id], dungeonIds: defaultTownDungeonIds(id),
+        unlocked: open.has(id), progress: { cleared, required: index ? 4 : 0 },
+        requirement: { text: index ? '이전 마을 던전 6곳 중 4곳 클리어' : '처음부터 열려 있습니다' } };
     });
   }
   currentTownId() { return this.unlockedIds().has(this.current) ? this.current : CITADEL_TOWN_IDS[0]; }

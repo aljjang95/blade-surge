@@ -63,7 +63,7 @@ export class CitadelCommand {
     this.supply = action('보급 상점', button => app.citadelShop.open(button));
     this.supply.id = 'citadel-command-supply';
     tools.append(this.supply,
-      action('제작 공방', () => app.expeditionUI.open('forge')),
+      action('제작 공방', () => app.expeditionUI.open('forge')), action('마을 일 · 의뢰', button => app.townUI?.openContent('quests', button)),
       action('성장 · 전투 방식', button => app.battle?.chronicle?.open('build', button)),
       action('상점 · 교환', () => app.meta.openTab('shop')),
       action('동행', button => this.openCompanion(button)));
@@ -81,7 +81,7 @@ export class CitadelCommand {
       const card = action('', button => {
         if (app.mode !== 'lobby' || app.stageStarting || app.expeditionUI.opened) return;
         app.citadel.clearInput();
-        app.hubUI.openDestination(spot, button);
+        if (spot) app.hubUI.openDestination(spot, button); else app.townUI?.openContent('dungeons', button);
       }, 'citadel-command-route');
       card.dataset.commandRoute = dungeon.id;
       card.style.setProperty('--route-accent', dungeon.accent);

@@ -1,4 +1,5 @@
-import { DUNGEONS } from './expansion.js';
+import { ALL_DUNGEONS, DUNGEONS } from './expansion.js';
+import { TOWNS } from './towns.js';
 
 // One spatial contract is shared by the visible plaza and player collision.
 export const CITADEL_HUB_BOUNDS = Object.freeze({ minX: -12, maxX: 12, minZ: -12, maxZ: 12 });
@@ -22,7 +23,7 @@ const gatePlaces = [
   [10.7, -7.2, -Math.PI / 2, 'spire'], [10.7, -2.4, -Math.PI / 2, 'leaf'],
   [10.7, 2.4, -Math.PI / 2, 'crescent'], [10.7, 7.2, -Math.PI / 2, 'comet'],
 ];
-const dungeonGates = DUNGEONS.map((d, i) => {
+const dungeonGates = DUNGEONS.slice(0, 12).map((d, i) => {
   const [x, z, yaw, emblem] = gatePlaces[i];
   return Object.freeze({
     id: `dungeon:${d.id}`, kind: 'dungeon', route: d.id, label: d.name,
@@ -101,26 +102,22 @@ export const TOWN_THEMES = Object.freeze({
   }),
 });
 
-/** 던전을 요구 레벨 순(동률은 목록 순서)으로 4개씩 나눈 계약 §1의 기본 배정. TownService가 주면 그 값이 우선한다. */
+/** 던전을 요구 레벨 순(동률은 목록 순서)으로 6개씩 나눈 계약 §1의 기본 배정. TownService가 주면 그 값이 우선한다. */
 export function defaultTownDungeonIds(townId) {
-  const index = CITADEL_TOWN_IDS.indexOf(townId);
-  if (index < 0) return [];
-  return DUNGEONS.map((dungeon, order) => ({ dungeon, order }))
-    .sort((a, b) => a.dungeon.minLevel - b.dungeon.minLevel || a.order - b.order)
-    .slice(index * 4, index * 4 + 4).map(({ dungeon }) => dungeon.id);
+  return TOWNS.find(town => town.id === townId)?.dungeonIds.slice() || [];
 }
 export function townOfDungeon(dungeonId) {
   return CITADEL_TOWN_IDS.find(id => defaultTownDungeonIds(id).includes(dungeonId)) || null;
 }
 
 const GATE_SLOTS = Object.freeze({
-  north: [[-9, -10.7, 0], [-3, -10.7, 0], [3, -10.7, 0], [9, -10.7, 0]],
-  east: [[10.7, -7.2, -Math.PI / 2], [10.7, -2.4, -Math.PI / 2], [10.7, 2.4, -Math.PI / 2], [10.7, 7.2, -Math.PI / 2]],
-  west: [[-10.7, -7.2, Math.PI / 2], [-10.7, -2.4, Math.PI / 2], [-10.7, 2.4, Math.PI / 2], [-10.7, 7.2, Math.PI / 2]],
+  north: [[-10, -10.7, 0], [-6, -10.7, 0], [-2, -10.7, 0], [2, -10.7, 0], [6, -10.7, 0], [10, -10.7, 0]],
+  east: [[10.7, -10, -Math.PI / 2], [10.7, -6, -Math.PI / 2], [10.7, -2, -Math.PI / 2], [10.7, 2, -Math.PI / 2], [10.7, 6, -Math.PI / 2], [10.7, 10, -Math.PI / 2]],
+  west: [[-10.7, -10, Math.PI / 2], [-10.7, -6, Math.PI / 2], [-10.7, -2, Math.PI / 2], [-10.7, 2, Math.PI / 2], [-10.7, 6, Math.PI / 2], [-10.7, 10, Math.PI / 2]],
 });
-const EMBLEMS = ['glass', 'vault', 'star', 'bell', 'valve', 'orbit', 'hydra', 'anvil', 'spire', 'leaf', 'crescent', 'comet'];
+const EMBLEMS = ['glass', 'vault', 'star', 'bell', 'valve', 'orbit', 'hydra', 'anvil', 'spire', 'leaf', 'crescent', 'comet', 'root', 'hollowbell', 'slag', 'drydock', 'aurora', 'crownfall'];
 const townGate = (dungeon, x, z, yaw) => {
-  const index = DUNGEONS.indexOf(dungeon);
+  const index = ALL_DUNGEONS.indexOf(dungeon);
   return Object.freeze({
     id: 'dungeon:' + dungeon.id, kind: 'dungeon', route: dungeon.id, label: dungeon.name,
     subtitle: dungeon.subtitle, description: dungeon.description, theme: dungeon.theme, accent: dungeon.accent,
@@ -196,17 +193,17 @@ const dungeonOverrides = new Map(), hubCache = new Map();
 /** TownService가 정한 마을별 던전 배정을 장면에 알린다(없으면 계약 기본 규칙). */
 export function setTownDungeonIds(townId, ids) {
   if (!CITADEL_TOWN_IDS.includes(townId) || !Array.isArray(ids)) return;
-  const next = ids.filter(id => DUNGEONS.some(dungeon => dungeon.id === id)).slice(0, 4);
+  const next = ids.filter(id => ALL_DUNGEONS.some(dungeon => dungeon.id === id)).slice(0, 6);
   if (next.join() !== (dungeonOverrides.get(townId) || []).join()) { dungeonOverrides.set(townId, next); hubCache.delete(townId); }
 }
 
-/** 마을 하나의 걷기 데이터: 던전 게이트 4개 + 캠페인·결투장 + 상인·교관·안내관 + 이동석. */
+/** 마을 하나의 걷기 데이터: 던전 게이트 6개 + 캠페인·결투장 + 상인·교관·안내관 + 이동석. */
 export function townHub(townId) {
   if (!TOWN_THEMES[townId]) townId = 'oathhold';
   if (hubCache.has(townId)) return hubCache.get(townId);
   const theme = TOWN_THEMES[townId], ids = dungeonOverrides.get(townId) || defaultTownDungeonIds(townId);
   const slots = GATE_SLOTS[theme.gateLayout];
-  const gates = ids.map((id, index) => townGate(DUNGEONS.find(dungeon => dungeon.id === id), ...slots[index]));
+  const gates = ids.map((id, index) => townGate(ALL_DUNGEONS.find(dungeon => dungeon.id === id), ...slots[index]));
   const campaign = CITADEL_HUB_HOTSPOTS.find(spot => spot.kind === 'campaign'), arena = CITADEL_HUB_HOTSPOTS.find(spot => spot.kind === 'arena');
   const hotspots = Object.freeze([...gates, campaign, arena, ...townNpcs(townId), WAYSTONE]);
   const props = townProps(townId), blockers = Object.freeze(townBlockers(hotspots, props));

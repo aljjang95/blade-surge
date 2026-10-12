@@ -22,10 +22,11 @@ const dungeon = (id, name, theme, ch, minLevel, material, description, options =
   const base = stageDef(ch, 1);
   return { id, name, theme, minLevel, energy: 4, description, ...options,
     stage: { ...base, theme, code: id, name, title: name, scale: 1 + (minLevel - 1) * 0.18, energy: 4, recPower: 2600 + (minLevel - 1) * 450,
-      waves: base.waves.slice(0, 2).map(w => w.slice(0, 9)), objective: options.objective || description },
+      waves: base.waves.slice(0, 2).map(w => w.slice(0, 9)), objective: options.objective || description,
+      encounter: { ...base.encounter, ...(options.bossPattern ? { pattern: [...options.bossPattern] } : {}) } },
     rewards: { gold: 280 + minLevel * 80, xp: 80 + minLevel * 20, materials: { [material]: 3 }, consumables: { hp_tonic: 1 } } };
 };
-export const DUNGEONS = [
+const BASE_DUNGEONS = [
   dungeon('glass_garden', '유리 정원', 'garden', 1, 1, 'glass_leaf', '정원의 망령을 정화하고 유리 잎을 회수하세요.', {
     art: '/img/expansion/glass_garden.webp', accent: '#9be1ba', subtitle: 'GLASS CONSERVATORY',
     objective: '보물방 1곳에서 적 처치 후 중심 2초 공명 → 모든 구역 정화 → 정원의 수호자 처치',
@@ -107,6 +108,70 @@ export const DUNGEONS = [
     roster: { trash: ['comet_spark', 'comet_orbit_mote', 'astral_pagelet', 'comet_spark', 'ghost_skull', 'frost_mirror'], ranged: ['comet_orbit_mote', 'archive_scribe', 'astral_pagelet'], elite: ['comet_bastion_warden', 'celestial_warden', 'elite_yeti'] },
   }),
 ];
+
+export const NEW_DUNGEONS = [
+  dungeon('rootbound_grotto', '뿌리잠식 동굴', 'garden', 1, 3, 'glass_leaf', '뿌리 아래 잠든 샘을 되살리고 독성 포자를 걷어내세요.', {
+    art: '/img/expansion/verdigris_sanctum.webp', accent: '#81dfa6', subtitle: 'ROOTBOUND GROTTO', rosterMode: 'rootbound',
+    mechanic: { id: 'root_pulse', name: '뿌리 맥동', trigger: '포자 둥지를 먼저 파괴하면 안전한 샘이 열린다.', resolve: '샘 안에서 2초 유지하면 다음 구역의 맥동이 멈춘다.' },
+    objective: '포자 둥지 2곳 파괴 → 샘 2곳 정화 → 모든 구역 정화 → 뿌리심장 수호자 처치',
+    tactic: `포자 둥지를 먼저 끊고 샘 안에서 2초 유지하세요. 맥동하는 고리 바깥으로 이동한 뒤 빈틈에 반격하세요. ${ENEMIES.verdigris_sentinel.tactic}`,
+    bossEnemy: 'verdigris_sentinel', bossHp: 24600, bossName: '뿌리심장 수호자',
+    roster: { trash: ['mossbound_scout', 'blob_green', 'glass_shardling', 'bell_wisp', 'bomb_slime', 'mossbound_scout'], ranged: ['verdigris_rootcaller', 'glass_tollmage', 'skel_priest'], elite: ['ironbark_bulwark', 'glass_warden', 'elite_wraith'] },
+    bossPattern: ['oath_tethers', 'oath_shelter', 'summon'],
+  }),
+  dungeon('hollowbell_arboretum', '공명목 수목원', 'garden', 1, 4, 'glass_leaf', '울리지 않는 나무종의 뿌리를 따라 잃어버린 공명편을 회수하세요.', {
+    art: '/img/expansion/glass_garden.webp', accent: '#a4e8b9', subtitle: 'HOLLOWBELL ARBORETUM', rosterMode: 'hollowbell',
+    mechanic: { id: 'bell_echo', name: '공명 메아리', trigger: '세 개의 공명 씨앗을 같은 순서로 깨운다.', resolve: '오답 씨앗은 잠시 봉인되며 다시 시도할 수 있다.' },
+    objective: '공명 씨앗 3개 순서대로 활성화 → 모든 구역 정화 → 공명목의 파수자 처치',
+    tactic: `씨앗을 1번부터 3번 순서로 활성화하세요. 오답 뒤에는 안전 고리 안에서 다음 신호를 기다리세요. ${ENEMIES.glass_hour_sovereign.tactic}`,
+    bossEnemy: 'glass_hour_sovereign', bossHp: 25200, bossName: '공명목의 파수자',
+    roster: { trash: ['bell_wisp', 'glass_shardling', 'ghost', 'skel_rogue', 'bomb_slime', 'bone_orc'], ranged: ['glass_tollmage', 'verdigris_rootcaller', 'ghost_skull'], elite: ['glass_warden', 'ironbark_bulwark', 'elite_wraith'] },
+    bossPattern: ['bell_toll', 'bell_clap', 'bell_toll'],
+  }),
+  dungeon('slagwater_foundry', '슬래그워터 제련소', 'forge', 2, 5, 'ember_core', '식지 않는 슬래그 강을 건너 제련소의 압력핵을 차단하세요.', {
+    art: '/img/expansion/ashforge_catacomb.webp', accent: '#ff9e66', subtitle: 'SLAGWATER FOUNDRY', rosterMode: 'slagwater',
+    mechanic: { id: 'slag_pressure', name: '슬래그 압력', trigger: '압력 밸브를 순서대로 끊으면 과열 수치가 내려간다.', resolve: '붉은 띠가 사라진 뒤 다음 밸브를 2초 유지한다.' },
+    objective: '압력 밸브 3개 순서대로 차단 → 모든 구역 정화 → 슬래그 압력왕 처치',
+    tactic: `붉은 띠가 지나간 뒤 청록 밸브에서 2초 유지하세요. 밸브를 건너뛰면 압력이 다시 오릅니다. ${ENEMIES.ash_colossus.tactic}`,
+    bossEnemy: 'ash_colossus', bossHp: 26800, bossName: '슬래그 압력왕',
+    roster: { trash: ['ash_chainling', 'cinderling', 'chain_forger', 'bomb_imp', 'orc_blob', 'ash_chainling'], ranged: ['ash_smith', 'ember_scribe', 'tribal_shaman'], elite: ['foundry_bulwark', 'slag_colossus', 'elite_orc_chief'] },
+    bossPattern: ['kiln_vents', 'kiln_hammer', 'dash'],
+  }),
+  dungeon('emberwake_drydock', '불씨항 건선거', 'forge', 2, 6, 'ember_core', '불씨항의 봉인된 건선거에서 도망친 제련 짐승을 추적하세요.', {
+    art: '/img/expansion/cinder_tide_lock.webp', accent: '#ffb16b', subtitle: 'EMBERWAKE DRYDOCK', rosterMode: 'emberwake',
+    mechanic: { id: 'furnace_tide', name: '용광로 밀물', trigger: '두 개의 배수문을 열어 불길의 방향을 바꾼다.', resolve: '배수문 반대편의 안전 구역에서 다음 파도를 기다린다.' },
+    objective: '배수문 2개 개방 → 증원 2회 격파 → 모든 구역 정화 → 불씨항의 집행자 처치',
+    tactic: `파도가 지나간 통로로 이동하고 배수문 반대편에서 조작하세요. 증원을 모두 끊어야 보스 봉인이 열립니다. ${ENEMIES.cinder_chain_executor.tactic}`,
+    bossEnemy: 'cinder_chain_executor', bossHp: 27600, bossName: '불씨항의 집행자',
+    roster: { trash: ['cinderling', 'chain_forger', 'bomb_imp', 'ash_chainling', 'imp', 'orc_blob'], ranged: ['ember_scribe', 'ash_smith', 'hywirl'], elite: ['slag_colossus', 'foundry_bulwark', 'elite_bluedemon'] },
+    bossPattern: ['tide_sweep', 'tide_undertow', 'summon'],
+  }),
+  dungeon('aurora_icewell', '오로라 빙정호', 'frost', 3, 7, 'star_dust', '빙정호에 갇힌 오로라 조각을 회수하고 얼음의 역류를 멈추세요.', {
+    art: '/img/expansion/nightglass_observatory.webp', accent: '#9edbff', subtitle: 'AURORA ICEWELL', rosterMode: 'aurora',
+    mechanic: { id: 'aurora_retrace', name: '오로라 역행', trigger: '방금 지나온 안전 지점을 역순으로 다시 확인한다.', resolve: '기록된 원이 터지기 전 다음 빛점으로 이동한다.' },
+    objective: '오로라 기록 3개 역순 복원 → 모든 구역 정화 → 빙정호의 기록관 처치',
+    tactic: `3번에서 1번으로 역순 복원하세요. 기록된 원은 잠시 뒤 폭발하므로 이전 자리로 되돌아가지 마세요. ${ENEMIES.nightglass_archivist.tactic}`,
+    bossEnemy: 'nightglass_archivist', bossHp: 28600, bossName: '빙정호의 기록관',
+    roster: { trash: ['nightglass_page', 'frost_mirror', 'ghost', 'astral_orbitling', 'skel_shield', 'golem_guard'], ranged: ['archive_scribe', 'astral_pagelet', 'skel_mage'], elite: ['archive_warden', 'celestial_warden', 'elite_golem'] },
+    bossPattern: ['archive_retrace', 'archive_hourglass', 'soulrain'],
+  }),
+  dungeon('crownfall_glacier', '왕관붕괴 빙하', 'frost', 3, 8, 'star_dust', '빙하에 박힌 왕관 파편을 모아 거짓 왕좌의 신호를 끊으세요.', {
+    art: '/img/expansion/sable_mirage_basin.webp', accent: '#c4d8ff', subtitle: 'CROWNFALL GLACIER', rosterMode: 'crownfall',
+    mechanic: { id: 'crown_verdict', name: '빙하의 판결', trigger: '두 개의 낙인을 바깥쪽 안전 지점으로 유도한다.', resolve: '중앙 절단선이 사라진 후 왕관 파편을 회수한다.' },
+    objective: '왕관 파편 2개 회수 → 모든 구역 정화 → 빙하의 환영 여왕 처치',
+    tactic: `낙인이 생기면 중앙 절단선에서 벗어나고, 판결이 끝난 뒤 파편을 회수하세요. ${ENEMIES.sable_mirage_empress.tactic}`,
+    bossEnemy: 'sable_mirage_empress', bossHp: 29800, bossName: '빙하의 환영 여왕',
+    roster: { trash: ['mirage_hound', 'frost_mirror', 'ninja', 'nightglass_page', 'bomb_abyss', 'ghost'], ranged: ['sandglass_seer', 'archive_scribe', 'abyss_seer'], elite: ['mirage_colossus', 'archive_warden', 'elite_wraith'] },
+    bossPattern: ['crown_orbit', 'crown_verdict', 'fan'],
+  }),
+];
+
+// 기존 12곳 공개 계약은 유지하고, 확장 통합 경로는 별도 카탈로그로 노출한다.
+export const DUNGEONS = Object.freeze(BASE_DUNGEONS);
+export const ALL_DUNGEONS = Object.freeze([...BASE_DUNGEONS, ...NEW_DUNGEONS]);
+
+export const DUNGEON_MECHANICS = Object.freeze(Object.fromEntries(ALL_DUNGEONS.map(dungeon => [dungeon.id, dungeon.mechanic || null])));
+export const DUNGEON_BOSS_PATTERNS = Object.freeze(Object.fromEntries(ALL_DUNGEONS.map(dungeon => [dungeon.id, Object.freeze([...(dungeon.bossPattern || dungeon.stage.encounter?.pattern || [])])] )));
 export const JOBS = [
   { id: 'guardian', name: '수호 기사', heroId: 'knight', baseHero: 'knight', questId: 'first_oath', description: '기사 기반 · 생존과 보호에 특화' },
   { id: 'ranger', name: '바람 추적자', heroId: 'rogue', baseHero: 'rogue', questId: 'garden_scout', description: '도적 기반 · 민첩한 공격에 특화' },

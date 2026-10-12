@@ -1,12 +1,13 @@
-import { ARENA_RIVALS } from '../data/expansion.js';
+import { ALL_DUNGEONS, ARENA_RIVALS } from '../data/expansion.js';
 import { FIELD_DUNGEONS } from '../data/open-fields.js';
-import { EXPEDITION_ROUTES as DUNGEONS } from '../data/expedition-routes.js';
+import { EXPEDITION_ROUTES as ROUTES } from '../data/expedition-routes.js';
 import { ENEMIES } from '../data/stages.js';
 import { Floor } from './world.js';
 import { expeditionDepth, depthStage } from '../data/expedition-depths.js';
 import { conquestForRun } from '../data/expedition-conquests.js';
 import { frontierFromSnapshot, frontierEffectForStage } from '../data/seasonal-content.js';
 import { gardenMasteryForStage, gardenMasteryDiagonals } from '../data/garden-mastery.js';
+const DUNGEONS = Object.freeze([...ALL_DUNGEONS, ...ROUTES.filter(route => !ALL_DUNGEONS.some(dungeon => dungeon.id === route.id))]);
 
 export const EXPEDITION_LAYOUTS = {
   ...Object.fromEntries(FIELD_DUNGEONS.map(d => [d.id, d.layout])),
@@ -24,9 +25,17 @@ export const EXPEDITION_LAYOUTS = {
   comet_bastion: { spacing: [29, 32], size: [20, 24], width: 7, cells: [[0,0],[1,0],[1,1],[2,1],[2,0],[3,0],[3,-1],[4,-1],[5,-1]], edges: [[0,1],[1,2],[1,3],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]], types: ['start','normal','treasure','normal','elite','normal','elite','treasure','boss'] },
   arena: { spacing: [32, 32], size: [24, 24], width: 8, cells: [[0,0],[1,0]], edges: [[0,1]], types: ['start','boss'] },
 };
+Object.assign(EXPEDITION_LAYOUTS, {
+  rootbound_grotto: { spacing: [30, 28], size: [22, 20], width: 7, cells: [[0,0],[1,0],[1,1],[2,1],[2,0],[3,0],[4,0]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]], types: ['start','normal','treasure','normal','elite','treasure','boss'] },
+  hollowbell_arboretum: { spacing: [28, 30], size: [20, 22], width: 7, cells: [[0,0],[1,0],[1,-1],[2,-1],[2,0],[3,0],[4,0]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]], types: ['start','normal','treasure','normal','elite','treasure','boss'] },
+  slagwater_foundry: { spacing: [34, 25], size: [24, 17], width: 8, cells: [[0,0],[1,0],[2,0],[2,1],[3,1],[4,1],[5,1]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]], types: ['start','normal','elite','treasure','normal','elite','boss'] },
+  emberwake_drydock: { spacing: [32, 24], size: [22, 18], width: 8, cells: [[0,0],[1,0],[1,1],[2,1],[3,1],[3,0],[4,0]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]], types: ['start','normal','treasure','normal','elite','treasure','boss'] },
+  aurora_icewell: { spacing: [27, 32], size: [18, 22], width: 7, cells: [[0,0],[0,1],[1,1],[1,2],[2,2],[2,1],[3,1]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]], types: ['start','normal','treasure','normal','elite','treasure','boss'] },
+  crownfall_glacier: { spacing: [31, 27], size: [22, 18], width: 7, cells: [[0,0],[1,0],[1,-1],[2,-1],[3,-1],[3,0],[4,0]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]], types: ['start','normal','elite','normal','treasure','elite','boss'] },
+});
 // Keep fallback advice on the same contract as the published route card.
-const TACTICS = Object.fromEntries(DUNGEONS.map(d => [d.id, d.tactic]));
-const BELLFALL_SUPPORT_CASTING = DUNGEONS.find(dungeon => dungeon.id === 'bellfall_crypt').supportCasting;
+const TACTICS = Object.fromEntries(ROUTES.map(d => [d.id, d.tactic]));
+const BELLFALL_SUPPORT_CASTING = ROUTES.find(dungeon => dungeon.id === 'bellfall_crypt').supportCasting;
 const DUELS = {
   rookie: { enemyId: 'garden_captain', pattern: ['slam','spin'], behavior: 'shield', hp: 6500, tactic: '푸른 가드 때 공격을 멈추고 강타 뒤 반격하세요. 강한 타격 4회로 방패를 깰 수 있습니다.' },
   duelist: { enemyId: 'garden_captain', pattern: ['dash','spin','dash'], dodge: 0.22, hp: 8500, tactic: '회피하는 결투사의 돌진을 옆으로 피하세요. 회전이 끝나는 순간이 빈틈입니다.' },

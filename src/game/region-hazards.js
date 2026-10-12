@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
+import { ALL_DUNGEONS } from '../data/expansion.js';
 
 const RULES = {
   garden: { color: 0xe8be74, name: '종의 공명 · 고리 사이로 이동', period: 12 },
@@ -43,6 +44,21 @@ export function hazardPattern(theme, room, player, cycle, full = true) {
   return [];
 }
 
+export function townHazardPattern(dungeonId, theme, room, player, cycle, full = true) {
+  const dungeon = ALL_DUNGEONS.find(entry => entry.id === dungeonId);
+  const mechanicId = dungeon?.mechanic?.id;
+  const base = hazardPattern(theme || dungeon?.theme || 'garden', room, player, cycle, full);
+  if (!dungeon?.mechanic) return base;
+  if (!mechanicId || !base.length) return base;
+  if (mechanicId === 'root_pulse') return base.map((hazard, index) => ({ ...hazard, delay: hazard.delay + index * .2, safeRadius: Math.max(hazard.safeRadius || 0, 1.2) }));
+  if (mechanicId === 'bell_echo') return base.map((hazard, index) => ({ ...hazard, angle: hazard.angle + (cycle % 2 ? Math.PI / 3 : 0), delay: 1.2 + index * .7 }));
+  if (mechanicId === 'slag_pressure') return base.map((hazard, index) => ({ ...hazard, delay: 1.1 + index * .45, push: 4 }));
+  if (mechanicId === 'furnace_tide') return base.map((hazard, index) => ({ ...hazard, delay: 1.3 + index * .6, push: 8 }));
+  if (mechanicId === 'aurora_retrace') return base.map((hazard, index) => ({ ...hazard, delay: 1.8 + (base.length - index - 1) * .35, slow: true }));
+  if (mechanicId === 'crown_verdict') return base.map((hazard, index) => ({ ...hazard, safeRadius: Math.max(hazard.safeRadius || 0, 2.8), delay: 1.6 + index * .3 }));
+  return base;
+}
+
 // 여섯 장의 재사용 평면. 중앙 안전 영역과 고리 안쪽은 실제로 비워 둔다.
 export const hazardVertexShader = `varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
 export const hazardFragmentShader = `
@@ -76,7 +92,9 @@ export class RegionHazards {
   dispose() { this.clear(); this.group.removeFromParent(); this.geometry.dispose(); for (const s of this.slots) s.mesh.material.dispose(); }
   spawn(room, anchor = this.game.player) {
     const g = this.game, theme = g.stage.chapter.theme;
-    const pattern = hazardPattern(theme, room, anchor.pos, this.cycle++, room.type === 'boss' && g.stage.encounter?.rank !== 'captain');
+    const pattern = g.stage.expedition?.kind === 'dungeon'
+      ? townHazardPattern(g.stage.expedition.id, theme, room, anchor.pos, this.cycle++, room.type === 'boss' && g.stage.encounter?.rank !== 'captain')
+      : hazardPattern(theme, room, anchor.pos, this.cycle++, room.type === 'boss' && g.stage.encounter?.rank !== 'captain');
     this.clear(); this.triggered++;
     const frontier = frontierEffectForStage(g.stage);
     const radiusMul = frontier?.kind === 'hazardRadiusMultiplier' ? frontier.value : 1;
