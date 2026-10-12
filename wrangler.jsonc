@@ -4,6 +4,7 @@
   "name": "blade-surge",
   "main": "worker/index.ts",
   "routes": [{ "pattern": "blade.tllhouse.com", "custom_domain": true }],
+  "mtls_certificates": [{ "binding": "TOSS_MTLS", "certificate_id": "a9deb444-9316-4529-a76c-2e2c1b71fd8e", "remote": true }],
   "compatibility_date": "2025-06-01",
   "assets": {
     "binding": "ASSETS",
@@ -24,6 +25,7 @@
     "COMMERCE_DATABASE_ID": "88d8e114-6c6d-408a-acca-52ede4e94d28",
     "STORE_BILLING_ENABLED": "false",
     "TOSS_REMOVE_ADS_ACTIVE": "false",
+    "TOSS_MTLS_APP_NAME": "blade-surge",
     "TOSS_AD_GROUP_ID": "ait.v2.live.b311470e6321418c",
     "TOSS_AD_GROUP_ENABLED": "true"
   },
