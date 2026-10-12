@@ -1,4 +1,4 @@
-import { DUNGEONS, MATERIALS } from '../data/expansion.js';
+import { ALL_DUNGEONS as DUNGEONS, MATERIALS } from '../data/expansion.js';
 import { HEROES } from '../data/heroes.js';
 import { citadelHotspot } from '../data/citadel-hub.js';
 import { dungeonJourney } from './dungeon-journey.js';

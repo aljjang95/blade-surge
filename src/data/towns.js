@@ -81,7 +81,7 @@ export const TOWN_SHOP_BY_ID = Object.fromEntries(TOWN_SHOP.map(item => [item.id
 export const TOWN_TRAINER_BY_ID = Object.fromEntries(TOWN_TRAINER.map(item => [item.id, item]));
 
 export function freshTownState() {
-  return { currentTownId: 'oathhold', unlockedTownIds: ['oathhold'], purchased: [], learned: {},
+  return { version: 2, currentTownId: 'oathhold', unlockedTownIds: ['oathhold'], purchased: [], learned: {},
     fields: Object.fromEntries(TOWNS.map(town => [town.id, { visited: 0, gathered: 0, elite: 0, treasure: 0, event: 0 }])),
     requests: { day: '', active: [], completed: [], progress: {} },
     blacksmith: { crafted: [], enhancements: {} },
@@ -93,6 +93,7 @@ export function normalizeTownState(raw) {
   const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
   const validTowns = new Set(TOWNS.map(town => town.id));
   const unlocked = new Set(['oathhold']);
+  const hasPersistedUnlocks = Array.isArray(source.unlockedTownIds);
   if (Array.isArray(source.unlockedTownIds)) for (const id of source.unlockedTownIds) if (validTowns.has(id)) unlocked.add(id);
   const purchased = Array.isArray(source.purchased) ? [...new Set(source.purchased.filter(id => TOWN_SHOP_BY_ID[id]))] : [];
   const learned = {};
@@ -108,6 +109,17 @@ export function normalizeTownState(raw) {
     const town = TOWNS[index], previous = TOWNS[index - 1];
     const cleared = previous.dungeonIds.filter(id => Number(stats[id]) > 0).length;
     if (cleared >= town.requiredClears && heroLevel >= town.requiredLevel) unlocked.add(town.id);
+  }
+  // towns 필드가 없던 구 저장은 당시 4개 구성의 3곳 클리어 해금을 보존한다.
+  if (!hasPersistedUnlocks) {
+    const legacyGroups = [
+      ['glass_garden', 'eclipse_hydra_vault', 'ember_vault', 'bellfall_crypt'],
+      ['cinder_tide_lock', 'ashforge_catacomb', 'star_archive', 'nightglass_observatory'],
+    ];
+    for (let index = 1; index < legacyGroups.length + 1; index++) {
+      const legacyClears = legacyGroups[index - 1].filter(id => Number(stats[id]) > 0).length;
+      if (legacyClears >= 3 && heroLevel >= TOWNS[index].requiredLevel) unlocked.add(TOWNS[index].id);
+    }
   }
   const fields = {};
   for (const town of TOWNS) {
@@ -144,6 +156,6 @@ export function normalizeTownState(raw) {
   }
   const day = typeof requestsSource.day === 'string' ? requestsSource.day.slice(0, 20) : '';
   const currentTownId = validTowns.has(source.currentTownId) && unlocked.has(source.currentTownId) ? source.currentTownId : 'oathhold';
-  return { currentTownId, unlockedTownIds: [...unlocked], purchased, learned, fields,
+  return { version: 2, currentTownId, unlockedTownIds: [...unlocked], purchased, learned, fields,
     requests: { day, active, completed, progress }, blacksmith: { crafted, enhancements }, story };
 }

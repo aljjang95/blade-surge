@@ -6,6 +6,7 @@ import { TownService } from '../src/game/town-service.js';
 import { townBossPattern, townDungeonCombat } from '../src/game/town-combat.js';
 import { townHazardPattern } from '../src/game/region-hazards.js';
 import { Economy } from '../src/game/economy.js';
+import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
 import { buildExpeditionStage, buildExpeditionWorld, EXPEDITION_LAYOUTS } from '../src/game/expedition-combat.js';
 import { townHub } from '../src/data/citadel-hub.js';
 
@@ -158,5 +159,21 @@ test('필드·의뢰·스토리 진행은 저장 실패 때 상태를 남기지 
   expect((service.ensureState() as any).fields.oathhold.gathered).toBe(0);
   expect(service.progressStory('oathhold', 'dungeon', 1)).toEqual({ ok: false, reason: 'storage' });
   expect((service.ensureState() as any).story.oathhold.progress).toEqual({});
+});
+
+test('신규 던전은 원정 경제 카탈로그에서 시작되고 강화 저장 실패는 원복된다', () => {
+  const { eco, service } = make();
+  const route = new ExpeditionEconomy(eco);
+  eco.s.expedition.level = 3;
+  expect(route.dungeonAccess('rootbound_grotto').ok).toBe(true);
+  expect(route.begin('dungeon', 'rootbound_grotto')).toMatchObject({ ok: true });
+  const crafted = service.craft('oathhold', 'storm_blade');
+  expect(crafted.ok).toBe(true);
+  const item: any = eco.s.inventory.at(-1);
+  eco.s.stones = 100;
+  eco.save = () => false;
+  expect(service.enhance('oathhold', item.uid)).toEqual({ ok: false, reason: 'storage' });
+  expect(eco.s.inventory.find((entry: any) => entry.uid === item.uid)?.enh).toBe(0);
+  expect((service.ensureState() as any).blacksmith.enhancements).toEqual({});
 });
 

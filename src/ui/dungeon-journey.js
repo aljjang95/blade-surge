@@ -1,4 +1,4 @@
-import { DUNGEONS, accountLevelXp } from '../data/expansion.js';
+import { ALL_DUNGEONS as DUNGEONS, accountLevelXp } from '../data/expansion.js';
 
 /** 정산된 기존 진행과 해금 판정만 읽는다. 지도를 보거나 선택해도 저장을 바꾸지 않는다. */
 export function dungeonJourney(service) {

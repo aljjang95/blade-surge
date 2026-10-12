@@ -263,6 +263,7 @@ export class TownService {
     if (!town) return { ok: false, reason: 'unknown-town' };
     if (!state.unlockedTownIds.includes(townId)) return { ok: false, reason: 'locked' };
     if (!this.eco.s.inventory.some(item => item.uid === uid)) return { ok: false, reason: 'item' };
+    const before = structuredClone(this.eco.s);
     const result = this.eco.enhance(uid, options);
     if (!result?.ok) return result || { ok: false, reason: 'enhance' };
     state.blacksmith.enhancements[String(uid)] = (state.blacksmith.enhancements[String(uid)] || 0) + 1;
