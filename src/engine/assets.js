@@ -13,11 +13,13 @@ import { assembleEncounterIdentity } from './encounter-identity.js';
 import { ENCOUNTER_MODELS } from '../data/encounter-models.js';
 import { preloadSurfaceTextures, projectSurfaceUV, surfaceRole, applySurfaceDetail } from './surface-textures.js';
 import { preloadDungeonSurface } from '../game/dungeon-surface.js';
+import { libraryAssetIds, createDefaultLibraryLoader } from './library-assets.js';
 
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
 
 const cache = new Map();
+const libraryLoader = createDefaultLibraryLoader((path) => loader.loadAsync(path), (gltf) => prepareModel(gltf));
 /** @typedef {{materials: string, role: string, heroId?: string, scale: number, aliases: Record<string, string>, sockets?: Record<string, string>}} ModelContract */
 
 export function requiredModelAliases(role, heroId) {
@@ -37,18 +39,29 @@ export const MONSTER_MODELS = [
   'Flying_Ghost', 'Flying_Ghost_Skull', 'Flying_Dragon', 'Flying_Dragon_Evolved',
   'Flying_Armabee', 'Flying_Armabee_Evolved', 'Flying_Hywirl', 'Flying_Squidle', 'Flying_Glub', 'Flying_Goleling_Evolved',
 ];
-export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, ...Object.keys(ENCOUNTER_MODELS), 'dungeon', 'tllDungeonLandmarks', 'skel_weapons'];
+export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, ...Object.keys(ENCOUNTER_MODELS), ...libraryAssetIds(), 'dungeon', 'tllDungeonLandmarks', 'skel_weapons'];
 const SPECIAL_MODELS = Object.freeze({ tllDungeonLandmarks: '/models/tll/dungeons/dungeon-landmarks-v1.glb',
   tllCoolingValve: '/models/tll/props/cooling-valve-v1.glb',
   tllNightglassRecord: '/models/tll/props/nightglass-record-v1.glb' });
 
 /** @param {string} name @param {ModelContract|null} contract */
-export async function loadModel(name, contract = null) {
-  const key = name + '|' + JSON.stringify(contract);
+export async function loadModel(name, contract = null, allowLibrary = true) {
+  const libraryAsset = !contract && allowLibrary ? libraryLoader.assetFor(name) : null;
+  const key = name + '|' + JSON.stringify(contract) + '|' + (libraryAsset?.id || 'legacy');
   if (cache.has(key)) return cache.get(key);
+  if (libraryAsset) {
+    const p = libraryLoader.load(libraryAsset, () => {
+      // 교체 대상이 기본 몬스터든 변형(encounter) 몬스터든 원래 모델로 되돌린다.
+      if (libraryAsset.kind === 'character' && libraryAsset.replaces) return loadModel(libraryAsset.replaces, contract, false);
+      return { scene: new THREE.Group(), animations: [] };
+    });
+    cache.set(key, p);
+    try { return await p; } catch (error) { cache.delete(key); throw error; }
+  }
   const variant = !contract && ENCOUNTER_MODELS[name];
   const heroPaths = !contract && HERO_MODELS.includes(name) ? heroModelPaths(name) : null;
-  const p = (variant ? Promise.all([loadModel(variant.base), loader.loadAsync(`/models/tll/encounters/${variant.file}.glb`)]).then(([base, authored]) => {
+  // 변형 장식은 KayKit 본에 붙으므로 베이스는 라이브러리 교체 없이 원본 리그를 쓴다.
+  const p = (variant ? Promise.all([loadModel(variant.base, null, false), loader.loadAsync(`/models/tll/encounters/${variant.file}.glb`)]).then(([base, authored]) => {
     // Skeleton clone keeps the cached original unchanged. Immutable base buffers/textures are shared.
     return assembleEncounterIdentity({ scene: skeletonClone(base.scene), animations: base.animations }, authored, name, variant);
   }) : loader.loadAsync(heroPaths?.base || SPECIAL_MODELS[name] || `/models/${name}.glb`)).then(async (gltf) => {

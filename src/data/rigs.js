@@ -4,6 +4,13 @@
  * Enemy 는 논리 이름(idle/run/attack/hit/death…)으로만 재생하고, 여기서 실제 클립으로 번역한다.
  */
 export const RIGS = {
+  library: {
+    idle: 'idle', idleCombat: 'idle', walk: 'walk', run: 'run', back: 'walk',
+    hit: ['hit'], death: ['death'], spawn: null, dodge: 'run',
+    attack: 'attack', attackHeavy: 'attackHeavy', attackSpin: 'attackHeavy',
+    attackJump: 'attack', cast: 'attack', summon: 'attack', raise: 'attack', dash: 'run',
+    scale: 1, hover: 0, faceFlip: false,
+  },
   // ---- KayKit 스켈레톤 (기존) ----
   kaykit: {
     idle: 'Idle', idleCombat: 'Idle_Combat',
@@ -51,7 +58,8 @@ export const RIGS = {
 // All 26 shipped Quaternius GLBs face +Z in idle/run/attack, like KayKit.
 // Actor and party replicas must not add a second 180-degree facing correction.
 /** 모델 파일명 → 리그 추론 */
-export function rigOf(model) {
+export function rigOf(model, libraryAsset = null) {
+  if (libraryAsset) return 'library';
   if (model.startsWith('Big_')) return 'big';
   if (model.startsWith('Blob_')) return 'blob';
   if (model.startsWith('Flying_')) return 'flying';

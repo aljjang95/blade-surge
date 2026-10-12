@@ -1,0 +1,39 @@
+export const LIBRARY_SCHEMA = 'tll.game-asset-library.v1';
+export const LOGICAL_CLIPS = ['idle', 'walk', 'run', 'attack', 'attackHeavy', 'hit', 'death'];
+export const OPTIONAL_CLIPS = ['spawn', 'cast'];
+const digest = /^[a-f0-9]{64}$/;
+
+export function triangleLimit(asset) {
+  return asset.kind === 'prop' ? 4000 : asset.boss === true ? 20000 : 12000;
+}
+
+export function validateManifest(value) {
+  if (!value || value.schema !== LIBRARY_SCHEMA || !Array.isArray(value.assets)) throw new Error('invalid asset library schema');
+  const ids = new Set(), replacements = new Set();
+  for (const asset of value.assets) {
+    if (!asset || typeof asset.id !== 'string' || !/^[a-z0-9][a-z0-9_-]{0,63}$/.test(asset.id) || ids.has(asset.id)) throw new Error('invalid or duplicate asset id');
+    ids.add(asset.id);
+    if (!['character', 'prop'].includes(asset.kind) || !['biped', 'quadruped', 'none'].includes(asset.body) ||
+        (asset.kind === 'prop' && asset.body !== 'none') || (asset.kind === 'character' && asset.body === 'none')) throw new Error('invalid asset kind/body');
+    if (asset.replaces !== null && (typeof asset.replaces !== 'string' || !asset.replaces || replacements.has(asset.replaces))) throw new Error('invalid or duplicate replaces');
+    if (asset.replaces !== null) replacements.add(asset.replaces);
+    if (asset.file !== `/models/library/${asset.id}.glb`) throw new Error('invalid asset file');
+    if (!Number.isFinite(asset.heightM) || asset.heightM <= 0) throw new Error('invalid asset height');
+    if (!Number.isInteger(asset.triangles) || asset.triangles <= 0 || asset.triangles > triangleLimit(asset)) throw new Error('triangle budget exceeded');
+    if (!Number.isInteger(asset.bytes) || asset.bytes <= 0 || typeof asset.sha256 !== 'string' || !digest.test(asset.sha256)) throw new Error('invalid artifact digest');
+    if (!asset.clips || typeof asset.clips !== 'object' || Array.isArray(asset.clips)) throw new Error('invalid clips');
+    if (asset.kind === 'character') for (const key of LOGICAL_CLIPS) {
+      if (asset.clips[key] !== key) throw new Error(`missing required clip key: ${key}`);
+    }
+    for (const [key, name] of Object.entries(asset.clips)) {
+      if (![...LOGICAL_CLIPS, ...OPTIONAL_CLIPS].includes(key) || name !== key || asset.kind === 'prop') throw new Error('invalid logical clip mapping');
+    }
+    const provenance = asset.provenance;
+    if (!provenance || typeof provenance.rawSha256 !== 'string' || !digest.test(provenance.rawSha256) ||
+        !['tool', 'account', 'taskId', 'prompt', 'createdAt'].every((key) => typeof provenance[key] === 'string') ||
+        !provenance.tool || !Number.isFinite(Date.parse(provenance.createdAt))) throw new Error('invalid provenance');
+    if (typeof asset.shared !== 'boolean' || typeof asset.license !== 'string' || !asset.license) throw new Error('invalid sharing/license');
+    if (asset.boss !== undefined && typeof asset.boss !== 'boolean') throw new Error('invalid boss flag');
+  }
+  return value;
+}

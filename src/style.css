@@ -1,3 +1,5 @@
+/* 동화풍 스킨은 별도 파일에 둔다(:root 를 겹쳐 쓴 선택자라 로드 순서와 무관하게 이긴다). */
+@import './ui/storybook.css';
 :root {
   --gold: #ffcf5a; --gold2: #ff9a1f; --blue: #4cc3ff; --blue2: #2266ff; --red: #ff3b5c; --purple: #b26bff; --green: #6bff8f;
   --bg: #0b0a12; --panel: rgba(16, 14, 30, .86); --panel2: rgba(30, 26, 52, .9); --line: rgba(255, 215, 120, .25);

@@ -9,6 +9,7 @@ import { BattleOcclusion } from '../engine/battle-occlusion.js';
 import { softCircleTex } from '../engine/assets.js';
 import { applyDungeonSurface, collectDungeonTiles, projectDungeonSurface } from './dungeon-surface.js';
 import { buildOpenFieldScene, FIELD_ATMOSPHERES } from './open-field-scene.js';
+import { libraryAssets } from '../engine/library-assets.js';
 
 const THEMES = {
   garden: { fog: 0x172b2b, bg: 0x172b2b, hemi: [0xa0b5ae, 0x283930], sun: 0xffedca, sunI: 2.3, torch: 0x8adbd0, tint: 0xcbd0b8 },
@@ -145,6 +146,26 @@ export class Arena {
     this.group.add(p); return p;
   }
 
+  placeLibraryProps(asset, transforms) {
+    const source = this.hubModels[asset.id]?.scene;
+    if (!source || !this.hubModels[asset.id]?.scene.userData.libraryAsset || !transforms.length) return false;
+    source.updateMatrixWorld(true);
+    source.traverse((node) => {
+      if (!node.isMesh || node.isSkinnedMesh) return;
+      const material = node.material;
+      const mesh = new THREE.InstancedMesh(node.geometry, material, transforms.length);
+      const local = node.matrixWorld.clone();
+      const object = new THREE.Object3D();
+      transforms.forEach((transform, index) => {
+        object.position.set(transform.x, 0, transform.z); object.rotation.set(0, transform.ry || 0, 0); object.scale.setScalar(transform.s || 1); object.updateMatrix();
+        mesh.setMatrixAt(index, object.matrix.multiply(local));
+      });
+      mesh.castShadow = true; mesh.receiveShadow = true; mesh.computeBoundingSphere();
+      this.group.add(mesh);
+    });
+    return true;
+  }
+
   // ================= 로비 (기존 소형 아레나) =================
   buildLobby() {
     this.clear();
@@ -264,6 +285,14 @@ export class Arena {
     // ---- 방 장식 ----
     const pillars = [], banners = [];
     const props = ['barrel_large', 'barrel_small_stack', 'crates_stacked', 'box_stacked', 'rubble_half', 'keg', 'trunk_large_A', 'table_medium_broken', 'candle_triple', 'sword_shield_broken'];
+    const libraryPropByTarget = new Map(libraryAssets('prop').filter((asset) => asset.replaces).map((asset) => [asset.replaces, asset]));
+    const libraryPropTransforms = new Map();
+    const addLibraryProp = (name, transform) => {
+      const asset = libraryPropByTarget.get(name);
+      if (!asset) return false;
+      if (!this.hubModels[asset.id]?.scene.userData.libraryAsset) return false;
+      const list = libraryPropTransforms.get(asset) || []; list.push(transform); libraryPropTransforms.set(asset, list); return true;
+    };
     for (const r of floorData.rooms) {
       const hw = r.w / 2 - 1.6, hh = r.h / 2 - 1.6;
       for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) pillars.push({ x: r.x + sx * hw, z: r.z + sz * hh, s: r.type === ROOM_TYPE.BOSS ? 1.25 : 1 });
@@ -271,12 +300,12 @@ export class Arena {
         banners.push({ x: r.x - 5, z: r.z - r.h / 2 + 0.6, ry: 0 }, { x: r.x + 5, z: r.z - r.h / 2 + 0.6, ry: 0 });
         if (!floorData.layout) this.place('stairs_wide', r.x, r.z - r.h / 2 + 2.2, 0, 1, T.tint);
       }
-      if (r.type === ROOM_TYPE.TREASURE && !r.objectiveProp) { this.place('chest_gold', r.x, r.z, rnd(0, 6.28), 1.2); this.place('coin_stack_large', r.x + 1.6, r.z + 1.2, 0, 1); this.place('coin_stack_medium', r.x - 1.7, r.z + 0.9, 0, 1); }
+      if (r.type === ROOM_TYPE.TREASURE && !r.objectiveProp) { const chest = { x: r.x, z: r.z, ry: rnd(0, 6.28), s: 1.2 }; if (!addLibraryProp('chest_gold', chest)) this.place('chest_gold', chest.x, chest.z, chest.ry, chest.s); this.place('coin_stack_large', r.x + 1.6, r.z + 1.2, 0, 1); this.place('coin_stack_medium', r.x - 1.7, r.z + 0.9, 0, 1); }
       const n = floorData.layout ? 0 : 2 + Math.floor(random() * 3);
       for (let i = 0; i < n; i++) {
         const px = r.x + rnd(-1, 1) * (r.w / 2 - 2.2), pz = r.z + rnd(-1, 1) * (r.h / 2 - 2.2);
         if (Math.hypot(px - r.x, pz - r.z) < 3.5) continue;
-        this.place(props[Math.floor(random() * props.length)], px, pz, rnd(0, 6.28), rnd(0.9, 1.1));
+        const prop = props[Math.floor(random() * props.length)], transform = { x: px, z: pz, ry: rnd(0, 6.28), s: rnd(0.9, 1.1) }; if (!addLibraryProp(prop, transform)) this.place(prop, transform.x, transform.z, transform.ry, transform.s);
       }
       // 방마다 횃불 2개
       for (const [ox, oz] of [[-hw, 0], [hw, 0]]) {
@@ -289,6 +318,7 @@ export class Arena {
       }
       // 방 역할은 기존 지역 건축 배치에 병합된 실제 회랑 문턱 표식이 나타낸다.
     }
+    for (const [asset, transforms] of libraryPropTransforms) this.placeLibraryProps(asset, transforms);
     this.instanced('pillar_decorated', pillars, T.tint, { cutaway: true });
     this.instanced('banner_shield_red', banners);
     this.regionArchitecture = buildRegionArchitecture(floorData, theme);

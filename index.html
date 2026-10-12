@@ -14,8 +14,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <!-- 웹폰트는 렌더를 막지 않는다. 회선이 느리거나 폰트 CDN 이 죽으면 부트가 통째로 그만큼 늦어졌다 (하네스 실측 0.9초 → 14.9초) -->
-  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all';this.onload=null" />
-  <noscript><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet" /></noscript>
+  <!-- Jua(OFL)는 동화풍 제목·숫자용 둥근 디스플레이 서체. 못 받으면 Black Han Sans 로 떨어진다 -->
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all';this.onload=null" />
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet" /></noscript>
 </head>
 <body>
   <canvas id="gl"></canvas>
