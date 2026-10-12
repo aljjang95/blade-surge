@@ -480,12 +480,14 @@ const TOWN_DECOR_DUNGEONS = Object.freeze({
 });
 const TOWN_DECOR_FIELDS = Object.freeze({ coast: 'emberport', mountain: 'starcrest' });
 const seedOfRoute = id => [...id].reduce((n, c) => n * 31 + c.charCodeAt(0), 17) >>> 0;
+const townByRoute = new Map(Object.entries(TOWN_DECOR_DUNGEONS).flatMap(([town, ids]) => ids.map(id => [id, town])));
 const townBySeed = new Map(Object.entries(TOWN_DECOR_DUNGEONS).flatMap(([town, ids]) => ids.map(id => [seedOfRoute(id), town])));
 
 /** 던전 층(시드로 경로를 역산)이나 필드 층이 어느 마을의 장식을 쓰는지. 해당 없으면 null. */
 export function townDecorFor(floor) {
   const field = floor?.layout?.field;
   if (field) return TOWN_DECOR_FIELDS[field] || null;
+  if (floor?.expeditionRouteId) return townByRoute.get(floor.expeditionRouteId) || null;
   return townBySeed.get(floor?.seed) || null;
 }
 

@@ -88,6 +88,8 @@ export function buildExpeditionWorld(stage) {
   if (!layout) throw new RangeError('탐험 동선이 없습니다.');
   const seed = [...(id + (depth === 'deep' ? ':deep' : ''))].reduce((n, c) => n * 31 + c.charCodeAt(0), 17) >>> 0;
   const world = new Floor(stage.idx, stage.theme || stage.chapter.theme, seed, layout);
+  world.expeditionRouteId = id;
+  world.expeditionDepth = depth;
   if (kind === 'dungeon' && id === 'glass_garden' && depth === 'standard' &&
       !stage.party && !stage.riftId && !stage.expedition.riftId && !stage.expedition.conquestId) {
     // 기존 방·봉인·난수 진행을 만든 뒤 보물방과 장치방 사이의 실제 순환만 연다.

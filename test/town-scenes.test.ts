@@ -8,7 +8,7 @@ import { buildTownDecor, townDecorFor, townDecorPlacements } from '../src/game/r
 import { ProvisionalTownService } from '../src/ui/town-service-adapter.js';
 import { normalizePrice } from '../src/ui/town-ui.js';
 import { Floor } from '../src/game/world.js';
-import { EXPEDITION_LAYOUTS } from '../src/game/expedition-combat.js';
+import { buildExpeditionWorld, EXPEDITION_LAYOUTS } from '../src/game/expedition-combat.js';
 
 test('three towns split the twelve dungeons into four each in level order with only their own gates', () => {
   const all = CITADEL_TOWN_IDS.flatMap(id => defaultTownDungeonIds(id));
@@ -74,6 +74,9 @@ test('library props tagged for a town replace the procedural stand-ins and keep 
 test('dungeon and field decoration appears only for routes that belong to the two themed towns', () => {
   const emberport = new Floor(1, 'forge', 123, EXPEDITION_LAYOUTS.cinder_tide_lock);
   expect(townDecorFor({ ...emberport, seed: [...'cinder_tide_lock'].reduce((n, c) => n * 31 + c.charCodeAt(0), 17) >>> 0 })).toBe('emberport');
+  const deepWorld = buildExpeditionWorld({ idx: 1, theme: 'forge', chapter: { theme: 'forge' }, expedition: { kind: 'dungeon', id: 'cinder_tide_lock', depth: 'deep' } } as any);
+  expect(deepWorld.expeditionRouteId).toBe('cinder_tide_lock');
+  expect(townDecorFor(deepWorld)).toBe('emberport');
   expect(townDecorFor({ layout: { field: 'mountain' } })).toBe('starcrest');
   expect(townDecorFor({ layout: { field: 'meadow' } })).toBe(null);
   expect(townDecorFor({ seed: 1, layout: {} })).toBe(null);
