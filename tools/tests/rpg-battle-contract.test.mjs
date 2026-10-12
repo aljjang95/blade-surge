@@ -12,7 +12,7 @@ class Vector { set(x,y,z){this.x=x;this.y=y;this.z=z;return this} normalize(){re
 class Base { onEnemyDeath(){this.baseDeaths=(this.baseDeaths||0)+1} }
 const ENEMIES={a:{exp:8,hp:490,atk:20}};
 const HEROES={knight:{skills:[{unlock:10}]}};
-let played=0;const audio={hit:()=>played++,vibe:()=>{}};
+let played=0;const killCalls=[],comboCalls=[];const audio={hit:()=>played++,vibe:()=>{},kill:o=>killCalls.push(o),comboStep:n=>comboCalls.push(n)};
 const source=readFileSync(new URL('../../src/game/rpg-battle.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replace('export class Battle','class Battle');
 const names=['THREE','BaseBattle','ENEMIES','HEROES','heroStats','levelExp','audio','ImpactClock','contactFeedback','contactProfile','contactBudget','normalizeRpg','recordMonster','monsterLevel','monsterXp','grantCombatXp','KillLedger','buildCatalogue','RpgView','stageExpeditionEncounter','encounterLevelLabel','CONTROL_MP_GAIN','CONTROL_ULT_GAIN','ultHitGain'];
 const Battle=new Function(...names,source+'\nreturn Battle;')({Vector3:Vector},Base,ENEMIES,HEROES,(_d,h)=>({hp:100+h.level*10,atk:h.level*2,crit:0,critDmg:1.5,ultGain:1}),()=>100,audio,motion.ImpactClock,apex.contactFeedback,contactProfile,contactBudget,core.normalizeRpg,core.recordMonster,core.monsterLevel,core.monsterXp,core.grantCombatXp,core.KillLedger,()=>[],class{},encounters.stageExpeditionEncounter,encounters.encounterLevelLabel,control.CONTROL_MP_GAIN,control.CONTROL_ULT_GAIN,control.ultHitGain);
@@ -99,4 +99,15 @@ test('awakened skill unlocks immediately without setupHud resetting cooldowns',(
  const {b,h}=setup();h.level=9;h.exp=95;b.player.heroLevel=9;
  let locked=true,banner=0;b.ui.skillBtns=[{classList:{toggle:(_name,value)=>locked=value}}];b.ui.awakenBanner=()=>banner++;
  b.onEnemyDeath(dead(8));assert.equal(locked,false);assert.equal(banner,1);assert.deepEqual(b.player.cds,[3,2]);
+});
+
+test('처치음과 콤보 스팅어가 실제 전투 경로에서 호출된다',()=>{
+ const {b}=setup();killCalls.length=0;comboCalls.length=0;
+ const elite={alive:false,speciesId:'a',level:1,xpReward:8,isElite:true};
+ b.onEnemyDeath(elite);
+ assert.deepEqual(killCalls,[{boss:false,elite:true}]);
+ b.onEnemyDeath(elite); // 같은 개체의 중복 사망 콜백은 소리도 한 번뿐이다
+ assert.equal(killCalls.length,1);
+ for(let i=0;i<3;i++)b.damageEnemy({alive:true,spawning:false,def:{scale:1},pos:new Vector(),hurt:()=>10,receiveImpact(){}},10,{dirx:1,dirz:0});
+ assert.deepEqual(comboCalls,[1,2,3]);
 });

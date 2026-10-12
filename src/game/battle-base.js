@@ -726,7 +726,7 @@ export class Battle {
   ultCinematic(sk, p) {
     this.ui.ultCinema(sk.name, p.def);
     this.timeCtl.slowmo(0.25, 0.7); this.renderer.radial = 0.35; this.renderer.punch(1.2); this.renderer.aberr = 0.8;
-    audio.duck(0.2, 2.5); audio.play('ui_max', { vol: 0.8, rate: 0.6 }); audio.vibe([60, 30, 60, 30, 120]);
+    audio.ultimateDuck(); audio.play('ui_max', { vol: 0.8, rate: 0.6 }); audio.vibe([60, 30, 60, 30, 120]);
     this.fx.castCircle(p.pos, p.def.color, { radius: 5, life: 1.2 });
     this.fx.light(p.pos, p.def.color, 12, 14, 1.2);
     for (const e of this.enemies) if (e.alive && !e.isBoss && e.pos.distanceToSquared(p.pos) <= 4.5 ** 2) e.stun = Math.max(e.stun, 0.3);

@@ -87,6 +87,7 @@ export class Battle extends BaseBattle {
     // Result presentation keeps animation timers alive, but its reward ledger is closed.
     if (!this.active) return;
     if (!this.killLedger.claim(enemy)) return;
+    audio.kill({ boss: !!enemy.isBoss, elite: !!enemy.isElite });
     const rpg = this.ensureRpg();
     if (enemy.speciesId && Object.hasOwn(ENEMIES, enemy.speciesId)) {
       recordMonster(rpg, enemy.speciesId, enemy.level, this.stage.idx, true, stageExpeditionEncounter(this.stage));
@@ -132,7 +133,7 @@ export class Battle extends BaseBattle {
     const dealt = enemy.hurt(amount, { ...opts, crit });
     if (!(dealt > 0)) return;
     if (this.sp && !opts.noProc) this.sp.onHit(enemy, opts);
-    this.dmgDealt += dealt; this.combo++; this.comboT = 2.5;
+    this.dmgDealt += dealt; this.combo++; this.comboT = 2.5; audio.comboStep(this.combo);
     this.maxCombo = Math.max(this.maxCombo, this.combo); this.ui.setCombo(this.combo);
     const gain = ultHitGain({ basic: opts.basic === true, crit });
     if (gain) p.addUlt(gain * (p.stats.ultGain || 1));
@@ -163,7 +164,7 @@ export class Battle extends BaseBattle {
       this.fx.contact(hitPos,direction.set(dx,0,dz).normalize(),color,{size:contact.size,particles:contact.particles,light:false,kind:opts.kind||'slash',tier:contact.tier});
     }
     {
-      audio.hit(opts.kind || 'slash', { crit, heavy:contact.heavy || crit || !!enemy.isBoss, finisher: !!opts.finisher, boss: !!enemy.isBoss });
+      audio.hit(opts.kind || 'slash', { crit, heavy:contact.heavy || crit || !!enemy.isBoss, finisher: !!opts.finisher, boss: !!enemy.isBoss, counter: !!opts.counter, weapon: p.def?.weapon, light: !opts.basic && !opts.finisher });
       if (p === this.player && !p.auto && contact.haptic) audio.vibe(contact.haptic);
       if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);
     }
