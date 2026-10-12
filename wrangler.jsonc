@@ -20,7 +20,14 @@
     "DIALOGUE_ENABLED": "false",
     "DIALOGUE_APPROVAL_ID": "",
     "DIALOGUE_APPROVAL_ISSUED_AT": "",
-    "DIALOGUE_APPROVAL_UNTIL": ""
+    "DIALOGUE_APPROVAL_UNTIL": "",
+    "COMMERCE_DATABASE_ID": "88d8e114-6c6d-408a-acca-52ede4e94d28",
+    "STORE_BILLING_ENABLED": "false",
+    "TOSS_REMOVE_ADS_ACTIVE": "false",
+    "TOSS_AD_GROUP_ID": "ait.v2.live.b311470e6321418c",
+    "TOSS_AD_GROUP_ENABLED": "true"
   },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  "triggers": { "crons": ["17 * * * *"] },
+  "d1_databases": [{ "binding": "COMMERCE_DB", "database_name": "blade-surge-commerce-production", "database_id": "88d8e114-6c6d-408a-acca-52ede4e94d28" }]
 }

@@ -1,0 +1,27 @@
+{
+  "packageId": "com.theluxurylord.bladesurge",
+  "observedAt": "2026-10-12",
+  "googleplay": {
+    "consoleAppId": "4972354349803875793",
+    "adMobAppId": "ca-app-pub-2682150499836559~7085430828",
+    "interstitialId": "ca-app-pub-2682150499836559/7872908048",
+    "adsApproval": "pending",
+    "published": false
+  },
+  "onestore": {
+    "consoleAppId": null,
+    "adMobAppId": "ca-app-pub-2682150499836559~3088230082",
+    "interstitialId": "ca-app-pub-2682150499836559/8739267157",
+    "adsApproval": "pending",
+    "published": false
+  },
+  "apps-in-toss": {
+    "workspaceId": 42391,
+    "miniAppId": 85379,
+    "appName": "blade-surge",
+    "adGroupId": "ait.v2.live.b311470e6321418c",
+    "adFreeProductId": "ait.0000085379.795abd69.3e2153580e.1772243239",
+    "iapStatus": "INACTIVE",
+    "published": false
+  }
+}

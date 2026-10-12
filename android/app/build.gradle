@@ -2,10 +2,32 @@ apply plugin: 'com.android.application'
 
 def signingPath = System.getenv('BLADESURGE_KEYSTORE')
 def signingPassword = System.getenv('BLADESURGE_KEYSTORE_PASSWORD')
+def providers = new groovy.json.JsonSlurper().parse(rootProject.file('../config/store-providers.json'))
+def adProvider = { channel ->
+    def prefix = 'BLADESURGE_' + channel.toUpperCase()
+    [app: System.getenv(prefix + '_ADMOB_APP_ID') ?: providers[channel].adMobAppId,
+     unit: System.getenv(prefix + '_ADMOB_INTERSTITIAL_ID') ?: providers[channel].interstitialId]
+}
 
 android {
     namespace = "com.theluxurylord.bladesurge"
     compileSdk = rootProject.ext.compileSdkVersion
+    buildFeatures { buildConfig true }
+    flavorDimensions 'store'
+    productFlavors {
+        googleplay {
+            dimension 'store'
+            buildConfigField 'String', 'STORE_CHANNEL', '"googleplay"'
+            buildConfigField 'String', 'STORE_AD_UNIT_ID', '"' + adProvider('googleplay').unit + '"'
+            manifestPlaceholders = [adMobAppId: adProvider('googleplay').app]
+        }
+        onestore {
+            dimension 'store'
+            buildConfigField 'String', 'STORE_CHANNEL', '"onestore"'
+            buildConfigField 'String', 'STORE_AD_UNIT_ID', '"' + adProvider('onestore').unit + '"'
+            manifestPlaceholders = [adMobAppId: adProvider('onestore').app]
+        }
+    }
     defaultConfig {
         applicationId "com.theluxurylord.bladesurge"
         minSdkVersion rootProject.ext.minSdkVersion
@@ -30,6 +52,11 @@ android {
         }
     }
     buildTypes {
+        debug {
+            // QA는 공식 샘플 광고만 사용하며 운영 광고 요청/클릭으로 검증하지 않는다.
+            manifestPlaceholders = [adMobAppId: 'ca-app-pub-3940256099942544~3347511713']
+            buildConfigField 'String', 'STORE_AD_UNIT_ID', '"ca-app-pub-3940256099942544/1033173712"'
+        }
         release {
             if (signingPath && signingPassword) signingConfig signingConfigs.release
             minifyEnabled false
@@ -39,10 +66,16 @@ android {
 }
 
 // A release must use the app's own persistent key, never the debug certificate.
-tasks.matching { it.name == 'preReleaseBuild' }.configureEach {
+tasks.matching { it.name == 'preReleaseBuild' || it.name.matches('pre.+ReleaseBuild') }.configureEach {
     doFirst {
         if (!signingPath || !signingPassword || !file(signingPath).isFile()) {
             throw new GradleException('Provide BLADESURGE_KEYSTORE and BLADESURGE_KEYSTORE_PASSWORD for a signed release.')
+        }
+        def channel = name.toLowerCase().contains('googleplay') ? 'googleplay' : name.toLowerCase().contains('onestore') ? 'onestore' : null
+        if (!channel) throw new GradleException('스토어 채널이 지정된 릴리스가 필요합니다.')
+        def approved = adProvider(channel)
+        if (!approved.app || !approved.unit || !approved.app.matches('ca-app-pub-[0-9]{16}~[0-9]{10}') || !approved.unit.matches('ca-app-pub-[0-9]{16}/[0-9]{10}') || approved.app.startsWith('ca-app-pub-3940256099942544') || approved.unit.startsWith('ca-app-pub-3940256099942544')) {
+            throw new GradleException('실제 제품의 AdMob 앱/광고 ID를 확인해야 운영 릴리스를 만들 수 있습니다.')
         }
     }
 }
@@ -63,6 +96,13 @@ dependencies {
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
     implementation project(':capacitor-cordova-android-plugins')
+    googleplayImplementation 'com.android.billingclient:billing:9.1.0'
+    onestoreImplementation 'com.onestorecorp.sdk:sdk-iap:21.04.00'
+    implementation 'com.google.android.gms:play-services-ads:25.5.0'
+    implementation 'com.google.android.ump:user-messaging-platform:4.0.0'
+    implementation 'androidx.credentials:credentials:1.6.0'
+    implementation 'androidx.credentials:credentials-play-services-auth:1.6.0'
+    implementation 'com.google.android.libraries.identity.googleid:googleid:1.2.1'
 }
 
 apply from: 'capacitor.build.gradle'

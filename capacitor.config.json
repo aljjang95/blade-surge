@@ -3,6 +3,7 @@
   "appName": "블레이드 서지",
   "webDir": "dist",
   "android": {
+    "loggingBehavior": "none",
     "allowMixedContent": false,
     "captureInput": true,
     "webContentsDebuggingEnabled": false,
