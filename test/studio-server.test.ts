@@ -1,4 +1,6 @@
-import { afterAll, beforeAll, expect, test } from 'bun:test';
+import { afterAll, beforeAll, expect, setDefaultTimeout, test } from 'bun:test';
+// 실제 자식 프로세스·렌더를 쓰므로 PC가 바쁠 때 기본 5초 제한에 걸리지 않게 한다.
+setDefaultTimeout(30_000);
 import { spawn, type ChildProcess } from 'node:child_process';
 import { createServer } from 'node:net';
 import { request } from 'node:http';
