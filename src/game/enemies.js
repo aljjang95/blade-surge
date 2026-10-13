@@ -6,6 +6,7 @@ import { rigOf, RIGS } from '../data/rigs.js';
 import { BOSS_SIGNATURES, isBossSignature } from '../data/boss-encounters.js';
 import { BossSignatures } from './boss-signatures.js';
 import { MobRole } from './mob-roles.js';
+import { Burrow, BURROW } from './burrow.js';
 import { canCommitMelee, packSeparation, packSteer } from './combat-craft.js';
 import { supportCastingForStage } from './expedition-combat.js';
 import { beginEnemyGather, prepareEnemyGather } from './crowd-gather.js';
@@ -20,7 +21,7 @@ export function enemySkillLabel(enemy) {
   const key = enemy?.special || enemy?.mobRole?.key || (enemy?.def?.ranged ? 'magic' : 'melee');
   return ({
     melee: '적의 공격', magic: '적의 주문', spin: '회전 강타', slam: '지면 강타', dash: '돌진',
-    fan: '부채꼴 탄막', soulrain: '영혼비', summon: '지원 소환', bomber: '자폭 경고',
+    fan: '부채꼴 탄막', soulrain: '영혼비', summon: '지원 소환', bomber: '자폭 경고', burrow: '잠행 습격',
     support_heal: '치유 준비', support_summon: '소환 준비',
     crusher: '분쇄 강타', charger: '돌진', flanker: '측면 습격', 'role:crusher': '분쇄 강타',
     'role:charger': '돌진', 'role:flanker': '측면 습격',
@@ -66,6 +67,8 @@ export class Enemy extends Actor {
     this.patternTurn = 0;
     this.signatures = def.signatureBoss ? new BossSignatures(this) : null;
     this.mobRole = def.meleeRole && !def.boss && !def.elite ? new MobRole(this) : null;
+    // 잠복형(burrower): 땅속 잠행 → 예고 원 → 솟구침 → 무방비. 보스·정예에는 붙이지 않는다.
+    this.burrow = def.behavior === 'burrower' && !def.boss && !def.elite ? new Burrow(this) : null;
     this.packId = game._packSpawnSeq = (game._packSpawnSeq || 0) + 1;
     this.packSide = (this.packId & 1) ? 1 : -1;
     // 행동형 (bomber / shaman / shield)
@@ -101,6 +104,7 @@ export class Enemy extends Actor {
     this.clearSupportCast(); this.supportOwner = null;
     this.signatures?.dispose();
     this.mobRole?.dispose();
+    this.burrow?.dispose();
     if (this.marker) { this.marker.geometry.dispose(); this.marker.material.dispose(); this.marker = null; }
     if (this.telegraphRing) { this.telegraphRing.geometry.dispose(); this.telegraphRing.material.dispose(); this.telegraphRing = null; }
     super.dispose();
@@ -216,12 +220,14 @@ export class Enemy extends Actor {
     ring.visible = active;
     if (!active) { if (this.supportCastKind) this.clearSupportCue(); return; }
     const kind = this.special || this.mobRole?.key || (this.def.ranged ? 'magic' : 'melee');
-    const danger = kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind === 'support_heal' ? 0x86f7b2 : kind === 'slam' || kind === 'crusher' ? 0xffb04c : 0xff4b63;
+    const danger = kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind === 'support_heal' ? 0x86f7b2 : kind === 'slam' || kind === 'crusher' || kind === 'burrow' ? 0xffb04c : 0xff4b63;
     ring.material.color.set(danger);
-    const max = this.supportCastKind ? this.supportOwner.rule.windupSeconds : Math.max(.22, (this.attackDur || 1) * (this.hitAt || .5));
+    // 잠행 습격은 링 하나가 실제 솟구침 반경을 그대로 보여 준다(바닥 예고 원과 크기를 맞춘다).
+    const burrowing = kind === 'burrow';
+    const max = this.supportCastKind ? this.supportOwner.rule.windupSeconds : burrowing ? BURROW.mark : Math.max(.22, (this.attackDur || 1) * (this.hitAt || .5));
     const remaining = Math.max(0, Math.min(1, this.telegraph / max));
     const pulse = Math.abs(Math.sin((this.game.elapsed || 0) * 18));
-    ring.scale.setScalar(1.02 + (1 - remaining) * .22 + pulse * .06);
+    ring.scale.setScalar(burrowing ? BURROW.radius / .9 * (1 + pulse * .02) : 1.02 + (1 - remaining) * .22 + pulse * .06);
     ring.material.opacity = .35 + (1 - remaining) * .42 + pulse * .12;
   }
   hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false } = {}) {
@@ -244,6 +250,7 @@ export class Enemy extends Actor {
       }
     }
     const armor = this.def.armor || 0; dmg *= 1 - armor;
+    if (this.burrow) dmg *= this.burrow.damageMul();
     this.hp -= dmg;
     // 강타·띄우기는 몰이를 끝내고 기존 저항·넉백을 그대로 적용한다.
     if (kb >= 6 || up) this.gatherT = 0;
@@ -251,6 +258,8 @@ export class Enemy extends Actor {
     const resist = this.isBoss ? 0.25 : this.isElite ? 0.5 : 1;
     this.knockback(dirx, dirz, kb * resist * (this.def.armor ? 0.6 : 1));
     if (stun > 0) this.stun = Math.max(this.stun, stun * (this.isBoss ? 0.4 : 1));
+    // 예고 중 기절은 피격 순간 바로 솟구치기를 끊는다(한 프레임보다 짧은 기절도 놓치지 않는다).
+    if (stun > 0) this.burrow?.interrupt();
     if (this.stun > 0) this.mobRole?.cancel();
     if (slow > 0) { this.slow = 0.5; this.slowT = slow; }
     if (poison) { this.poison = 4; }
@@ -275,6 +284,7 @@ export class Enemy extends Actor {
     this.clearSupportCast();
     this.signatures?.clear();
     this.mobRole?.clear();
+    this.burrow?.dispose();
     this.die(); this.state = 'dead'; this.telegraph = 0;
     this.kb.set(dirx, 0, dirz).normalize().multiplyScalar(Math.max(4, kb * 1.5));
     if (this.eyeMat) this.eyeMat.emissiveIntensity = 0;
@@ -323,6 +333,7 @@ export class Enemy extends Actor {
       if (this.stateT > this.spawnLen * 0.8) { this.spawning = false; this.state = 'chase'; this.play(this.A('idleCombat'), { fade: 0.2 }); if (this.isBoss) { this.game.renderer.shake(0.6); audio.play('hit_bell', { vol: 0.6, rate: 0.5 }); } }
       return;
     }
+    if (this.burrow?.update(dt, d)) return;
     if (this.stun > 0 && this.state !== 'dead') { this.vel.set(0, 0, 0); if (!this.rig.hit.includes(this.actionName) && this.state !== 'hurt') { this.play(this.A('hit'), { once: true, clamp: true, fade: 0.05 }); } this.telegraph = 0; this.attackDone = false; if (this.state === 'attack') this.state = 'chase'; return; }
     if (this.isBoss) {
       const q = Math.floor((1 - this.hp / this.maxHp) * 5);   // 20% 마다 파편(장비) — 보스전 중 보상 공백 방지
