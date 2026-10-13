@@ -330,3 +330,10 @@
 #tab-stage .exp-close { min-height: 44px !important; min-width: 44px; }
 #tab-stage .exp-shell p, #tab-stage .exp-refining b { font-size: max(12px, 1em); }
 
+/* 짧은 가로 화면에서도 접힌 출격 패널은 하단 바와 핵심 출격만 남긴다. */
+:root:root:root .citadel-command[data-collapsed='true'] { top: auto; bottom: var(--sab, 0px); width: min(560px, calc(100% - var(--sal, 0px) - var(--sar, 0px))); max-height: 60px; overflow: hidden; padding: 7px 10px; border-radius: 14px 14px 0 0; }
+:root:root:root .citadel-command[data-collapsed='true'] .citadel-command-heading { min-height: 44px; margin: 0; }
+:root:root:root .citadel-command[data-collapsed='true'] .citadel-command-heading h1 { margin: 0; font-size: 17px; }
+:root:root:root .citadel-command[data-collapsed='true'] .citadel-command-kicker, :root:root:root .citadel-command[data-collapsed='true'] .citadel-command-heading p, :root:root:root .citadel-command[data-collapsed='true'] .citadel-command-explore { display: none; }
+:root:root:root .citadel-command[data-collapsed='true'] .citadel-command-quick-launch { display: block; min-height: 44px; padding: 8px 12px; background: #b99a5a; color: #1a2823; }
+

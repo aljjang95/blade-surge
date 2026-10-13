@@ -9,7 +9,9 @@ import { DropSystem, fieldDropsAllowed } from './drops.js';
 import { Floor, ROOM_TYPE } from './world.js';
 import { ENEMIES } from '../data/stages.js';
 import { HEROES, heroStats } from '../data/heroes.js';
-import { loadModel, preloadAvatarBody } from '../engine/assets.js';
+import { loadModel, preloadHeroBody } from '../engine/assets.js';
+import { heroAppearanceTier } from '../data/hero-library.js';
+import { ITEM_BY_ID } from '../data/items.js';
 import { RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_BOSS } from '../data/items.js';
 import { audio } from '../engine/audio.js';
 import { heroVoiceName } from '../engine/hero-voice.js';
@@ -100,9 +102,10 @@ export class Battle {
 
     const gltf = await loadModel(def.model);
     const avatar = stage.party ? avatarId : this.app.eco.equippedAvatar(heroId);
-    await preloadAvatarBody(avatar);
+    const equip = stage.party ? {} : this.app.eco.heroEquipInsts(heroId);
+    await preloadHeroBody(heroId, heroAppearanceTier(equip, ITEM_BY_ID), avatar);
     if (this._startGeneration !== startGeneration) return;
-    this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], stage.party ? {} : this.app.eco.heroEquipInsts(heroId), heroState.level || 1, heroState.skillLoadout || [4, 5], avatar);
+    this.player = new Player(this, gltf, def, stats, heroState.skills || [1, 1, 1, 1, 1, 1], equip, heroState.level || 1, heroState.skillLoadout || [4, 5], avatar);
     this.sp.configureSummons?.(equipBonus.summons || []);
     const sr = this.world.startRoom;
     this.player.pos.set(sr.x, 0, sr.z); this.player.yaw = 0;

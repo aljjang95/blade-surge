@@ -16,12 +16,20 @@ const action = (label, callback, className = '') => {
   button.addEventListener('click', () => callback(button));
   return button;
 };
+export const CITADEL_COMMAND_COLLAPSED_KEY = 'blade-surge.citadel-command.collapsed';
+export function readCitadelCommandCollapsed(storage = globalThis.localStorage) {
+  try { return storage?.getItem(CITADEL_COMMAND_COLLAPSED_KEY) === 'true'; } catch { return false; }
+}
+export function writeCitadelCommandCollapsed(collapsed, storage = globalThis.localStorage) {
+  try { storage?.setItem(CITADEL_COMMAND_COLLAPSED_KEY, String(!!collapsed)); } catch {}
+}
 
 /** 출격·정비는 기존 서비스에 연결하고, 마을 이동은 명시적으로 선택한다. */
 export class CitadelCommand {
   constructor(app) {
     this.app = app;
     this.visible = false;
+    this.collapsed = readCitadelCommandCollapsed();
     this.root = element('section', 'citadel-command');
     this.root.id = 'citadel-command';
     this.root.hidden = true;
@@ -34,7 +42,11 @@ export class CitadelCommand {
     heading.append(this.title, element('p', '', '던전을 고르고, 준비를 마친 뒤 출격하세요.'));
     this.explore = action('마을 둘러보기', () => app.setHubWalkMode(true), 'citadel-command-explore');
     this.explore.id = 'citadel-explore';
-    header.append(heading, this.explore);
+    this.quickLaunch = action('출격', () => app.expeditionUI.open('dungeons', { depth: 'standard' }), 'citadel-command-quick-launch');
+    this.collapseToggle = action('패널 접기', () => this.setCollapsed(!this.collapsed), 'citadel-command-collapse');
+    this.collapseToggle.setAttribute('aria-controls', 'citadel-command');
+    this.collapseToggle.setAttribute('aria-expanded', String(!this.collapsed));
+    header.append(heading, this.explore, this.quickLaunch, this.collapseToggle);
     this.hero = element('div', 'citadel-command-hero');
     this.portrait = element('img');
     this.portrait.alt = '';
@@ -110,6 +122,8 @@ export class CitadelCommand {
     }
     routes.append(routeHeader, element('p', 'citadel-command-route-help', '게이트를 선택하면 기본·심층 원정의 조건, 보상과 전투 준비를 확인합니다.'), grid);
     this.root.append(header, this.hero, destinations, tools, routes);
+    this.root.dataset.collapsed = String(this.collapsed);
+    this.setCollapsed(this.collapsed);
     document.getElementById('tab-home').append(this.root);
     this.returnButton = action('← 출격 메뉴로', () => app.setHubWalkMode(false), 'citadel-command-return');
     this.returnButton.id = 'citadel-command-return';
@@ -169,5 +183,13 @@ export class CitadelCommand {
       if (visible) this.refresh();
     }
     this.returnButton.hidden = !exploring;
+  }
+
+  setCollapsed(collapsed) {
+    this.collapsed = !!collapsed;
+    this.root.dataset.collapsed = String(this.collapsed);
+    this.collapseToggle.textContent = this.collapsed ? '패널 펼치기' : '패널 접기';
+    this.collapseToggle.setAttribute('aria-expanded', String(!this.collapsed));
+    writeCitadelCommandCollapsed(this.collapsed);
   }
 }

@@ -21,6 +21,8 @@ const SFX_FILES = ['hit_punch0', 'hit_punch1', 'hit_punch2', 'hit_metal0', 'hit_
   'ui_click', 'ui_confirm', 'ui_select', 'ui_back', 'ui_error', 'ui_open', 'ui_close', 'ui_max', 'ui_drop', 'ui_bong', 'ui_glass', 'ui_pluck',
   'coin0', 'coin1', 'coin_stack', 'pack_open', 'card_fan', 'card_place', 'jingle_win0', 'jingle_win1', 'jingle_legend',
   'expansion/flow-impact-light', 'expansion/flow-impact-heavy', ...COMBAT_SOUND_FILES, ...HIT_SOUND_FILES];
+// TTS 원본은 보정하지 않고, 영웅별 실측 편차만 재생 버스에서 맞춘다.
+const HERO_VOICE_GAIN = { barbarian: .2, knight: .32, mage: 1, ranger: 1.2, rogue: 3.8 };
 
 /** |x| 0.8 까지는 그대로, 그 위는 1 에 부드럽게 접근한다. */
 function softClipCurve() {
@@ -92,13 +94,18 @@ export class AudioSys {
     for (const v of this._voices) counts[v.group]++;
     return { voices: counts, limits: { ...this.voiceLimits }, musicTracks: this._musicTracks.size, voiceLoads: this._voiceLoads.size, ducks: this._ducks.filter(d => d.end > this.now()).length, combatLevel: this._combatLevel, hitDropped: this._hitDropped, mix: this.getMix() };
   }
+  _heroVoiceId(name) { return /^hero_(knight|barbarian|mage|rogue|ranger)_/.exec(name)?.[1] || null; }
+  // 레인저도 전용 보이스(hero_ranger_*)를 쓰므로 키 이름 그대로 불러온다.
+  _voiceAssetName(name) { return name; }
+  _voiceAssetGain(name) { return HERO_VOICE_GAIN[this._heroVoiceId(name)] || 1; }
   _loadVoice(name) {
-    if (this.voiceBuf[name]) return Promise.resolve(this.voiceBuf[name]);
-    if (this._voiceLoads.has(name)) return this._voiceLoads.get(name);
-    const pending = fetch(`/sfx/voice/${name}.mp3`).then(r => r.arrayBuffer()).then(ab => this.ctx.decodeAudioData(ab))
-      .then(buffer => { this.voiceBuf[name] = buffer; return buffer; }).catch(() => null)
-      .finally(() => this._voiceLoads.delete(name));
-    this._voiceLoads.set(name, pending); return pending;
+    const assetName = this._voiceAssetName(name);
+    if (this.voiceBuf[assetName]) return Promise.resolve(this.voiceBuf[assetName]);
+    if (this._voiceLoads.has(assetName)) return this._voiceLoads.get(assetName);
+    const pending = fetch(`/sfx/voice/${assetName}.mp3`).then(r => r.arrayBuffer()).then(ab => this.ctx.decodeAudioData(ab))
+      .then(buffer => { this.voiceBuf[assetName] = buffer; return buffer; }).catch(() => null)
+      .finally(() => this._voiceLoads.delete(assetName));
+    this._voiceLoads.set(assetName, pending); return pending;
   }
   setMix(values = {}) {
     for (const key of ['music', 'sfx', 'voice']) if (Number.isFinite(values[key])) this.mix[key] = Math.max(0, Math.min(1, values[key]));
@@ -150,13 +157,14 @@ export class AudioSys {
   /** 나레이션(TTS, /sfx/voice/*.mp3 — edge-tts InJoon 생성). 새 대사가 이전 대사를 끊고, BGM 을 잠깐 덕킹한다. min 은 같은 대사 최소 간격(초) */
   async voice(name, { vol = 1, min = 2, duck = 0.45, dur = 1.6 } = {}) {
     if (!this.voiceOn || !this.mix.voice || !this.ctx) return;
-    const t = this.now(); if (this._voiceLast[name] !== undefined && t - this._voiceLast[name] < min) return; this._voiceLast[name] = t;
+    const assetName = this._voiceAssetName(name);
+    const t = this.now(); if (this._voiceLast[assetName] !== undefined && t - this._voiceLast[assetName] < min) return; this._voiceLast[assetName] = t;
     const epoch = ++this._voiceEpoch;
-    let b = this.voiceBuf[name];
-    if (!b) b = await this._loadVoice(name);
+    let b = this.voiceBuf[assetName];
+    if (!b) b = await this._loadVoice(assetName);
     if (!b || !this.voiceOn || !this.mix.voice || epoch !== this._voiceEpoch) return;
     this._stopVoices('narration');
-    this._voiceSrc = this._sample(b, { group: 'narration', priority: 5, vol });
+    this._voiceSrc = this._sample(b, { group: 'narration', priority: 5, vol: vol * this._voiceAssetGain(assetName) });
     this.duck(duck, Math.max(dur, b.duration + 0.4));
   }
   setVoiceOn(on) { this.voiceOn = !!on; if (!on) { this._voiceEpoch++; this._stopVoices('narration'); this._stopVoices('bark'); } this.setMix(); }
@@ -164,14 +172,15 @@ export class AudioSys {
    *  n = 변형 수(name0..name{n-1}), n 이 없으면 name.mp3 하나. min = 같은 이름 최소 간격(초) */
   bark(name, { n = 0, vol = 0.9, min = 0.25, rate = 1, priority = 1 } = {}) {
     if (!this.voiceOn || !this.mix.voice || !this.ctx) return;
-    const t = this.now(); if (this._barkLast[name] !== undefined && t - this._barkLast[name] < min) return; this._barkLast[name] = t;
-    const key = n ? name + Math.floor(this._random() * n) : name;
+    const assetName = this._voiceAssetName(name);
+    const t = this.now(); if (this._barkLast[assetName] !== undefined && t - this._barkLast[assetName] < min) return; this._barkLast[assetName] = t;
+    const key = n ? assetName + Math.floor(this._random() * n) : assetName;
     const b = this.voiceBuf[key];
     if (!b) { this._loadVoice(key); return; }
-    return this._sample(b, { group: 'bark', vol, rate, priority });
+    return this._sample(b, { group: 'bark', vol: vol * this._voiceAssetGain(key), rate, priority });
   }
   /** 기합 미리 로드 — 첫 공격에서 소리가 비지 않게 */
-  preloadBarks(names) { if (this.ctx) for (const k of names) this._loadVoice(k); }
+  preloadBarks(names) { if (this.ctx) for (const k of names) this._loadVoice(this._voiceAssetName(k)); }
 
   // ---------- 프로시저럴 SFX ----------
   _noise(dur) {
