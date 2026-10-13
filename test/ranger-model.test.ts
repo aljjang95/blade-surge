@@ -35,6 +35,12 @@ test('Ranger ships a real bow action, required clips, original head and equipmen
   const instance=spawnCharacter(source);
   expect(instance.root.getObjectByName('Bow')).toBeDefined();
   expect(instance.root.getObjectByName('Ranger_Head')).toBeDefined();
+  const head = instance.root.getObjectByName('Ranger_Head')!;
+  let fittedSkin: THREE.SkinnedMesh | undefined;
+  instance.root.traverse(object => {
+    if (object instanceof THREE.SkinnedMesh && object.name.startsWith('TLL_') && !fittedSkin) fittedSkin = object;
+  });
+  expect(fittedSkin).toBeDefined();
   const arm=instance.root.getObjectByName('handslotl')!;
   const clip=instance.mixer.clipAction(instance.clips.Bow_Shoot!);clip.play();
   instance.mixer.update(.1);instance.root.updateMatrixWorld(true);const before=arm.getWorldPosition(new THREE.Vector3());
@@ -44,8 +50,11 @@ test('Ranger ships a real bow action, required clips, original head and equipmen
   for(const id of ['a_leather','a_chain','a_scale','exp_glasswarden_armor','exp_emberknight_armor','exp_starreader_armor']){
     applyLook(instance.root,HEROES.ranger,{armor:{id,enh:3}});
     const meshes:THREE.Mesh[]=[];instance.root.traverse(o=>{if(o instanceof THREE.Mesh&&o.userData.equippedArmor)meshes.push(o);});
-    expect(meshes.length).toBeGreaterThanOrEqual(10);
-    expect(meshes.every(o=>o.parent instanceof THREE.Bone)).toBe(true);
+    expect(meshes).toHaveLength(3);
+    // 파츠별 직접 본 부착 대신 원본 맞춤 스켈레톤과 바인드 행렬을 공유한다.
+    expect(meshes.every(mesh => mesh instanceof THREE.SkinnedMesh
+      && mesh.skeleton === fittedSkin!.skeleton && mesh.bindMatrix.equals(fittedSkin!.bindMatrix))).toBe(true);
+    expect(instance.root.getObjectByName('Ranger_Head')).toBe(head);
     for(const name of ['Idle','Bow_Shoot','Running_A','Death_A']){
       instance.mixer.stopAllAction();instance.mixer.clipAction(instance.clips[name]!).play();instance.mixer.update(.2);instance.root.updateMatrixWorld(true);
       for(const mesh of meshes) expect(mesh.matrixWorld.elements.every(Number.isFinite)).toBe(true);

@@ -2,6 +2,7 @@
 import { EXPEDITION_SETS, EXPEDITION_ITEMS } from './expedition-items.js';
 import { SUMMON_GEAR } from './summon-gear.js';
 import { ARMORY_SETS, ARMORY_ITEMS } from './armory.js';
+import { GEAR_ITEMS, assignGearLooks } from './gear-catalog.js';
 export const SLOTS = ['weapon', 'armor', 'ring', 'boots'];
 export const SLOT_NAME = { weapon: '무기', armor: '방어구', ring: '반지', boots: '신발' };
 
@@ -124,6 +125,8 @@ export const ITEM_POOL = {
   ],
 };
 export const ITEM_BY_ID = {};
+for (const slot of SLOTS) for (const item of ITEM_POOL[slot]) if (!item.set) item.icon = `/img/gear/${item.id}.webp`;
+for (const item of GEAR_ITEMS) ITEM_POOL[item.slot].push(item);
 for (const set of ARMORY_SETS) { SETS[set.id] = set; THEMED_SETS.push(set.id); }
 for (const item of ARMORY_ITEMS) ITEM_POOL[item.slot].push(item);
 for (const set of EXPEDITION_SETS) SETS[set.id] = set;
@@ -145,7 +148,8 @@ export const TOWN_ITEMS = [
   { ...W('w_town_star', '별마루 성검', 'L', 1.12, { crit: 0.1, appearanceTier: 3, icon: '/img/it_l_weapon_3.webp' }), slot: 'weapon' },
   { ...A('a_town_star', '별마루 설원 갑주', 'L', 1.12, { crit: 0.03, appearanceTier: 3, icon: '/img/it_l_armor_3.webp' }), slot: 'armor' },
 ];
-for (const it of TOWN_ITEMS) ITEM_BY_ID[it.id] = { ...it, set: RARITY_SET[it.rarity] || null, variant: 3, sheetIcon: null };
+for (const it of TOWN_ITEMS) ITEM_BY_ID[it.id] = { ...it, icon: `/img/gear/${it.id}.webp`, set: RARITY_SET[it.rarity] || null, variant: 3, sheetIcon: null };
+assignGearLooks(ITEM_BY_ID);
 export const ITEMS_OF = (rarity, slot = null) => Object.values(ITEM_BY_ID).filter((it) => it.rarity === rarity && (!slot || it.slot === slot));
 /** 등급 순서 인덱스 (정렬용) */
 export const rarityRank = (r) => RARITIES.indexOf(r);

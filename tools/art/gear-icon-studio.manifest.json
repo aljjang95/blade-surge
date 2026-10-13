@@ -1,0 +1,483 @@
+{
+  "sourceHashes": {
+    "src/data/gear-catalog.js": "4c28bb17f47bb1a77d39b9a44241483cd71361c0e62e42cac51a890643ab7cc9",
+    "src/data/items.js": "03caafcf7139c2af50ae7f453c83a12e33100ef466f7d2bc8592ae386c1996c7",
+    "src/engine/item-forge.js": "7c71d0722677a0e95cfd06dcfd324fe805c444e68a4469fd060886dcf5cc8391",
+    "src/game/armor-appearance.js": "b5a97a0f992c774f114ad2c6418693826498a8fa88a7d5efa1fb8e1cc066e3b8",
+    "tools/art/gear-icon-studio.html": "4ba65aa4fe6db72228f08d53d58e5fa8c41e89fe8ddad173ae076d5b794357b4"
+  },
+  "items": [
+    {
+      "id": "w_iron",
+      "sha256": "8a7ce889e1105886cffedfccf0c034e73f73fc033fdf4d537179a0244564491f"
+    },
+    {
+      "id": "w_rusty",
+      "sha256": "077c333a0e4e832702db29252cf34a2e85d03e0c0801fe7aa754db34d400f4ab"
+    },
+    {
+      "id": "w_wood",
+      "sha256": "c5b42ca93e8b1cae91fc706db51301ad75f6d560fbaabdc214ea81a6d3cc9288"
+    },
+    {
+      "id": "w_cleaver",
+      "sha256": "4f20986c68f553858f1fb7eb4bdec6c6b491ba049583059c66b927e7fcea3a85"
+    },
+    {
+      "id": "w_steel",
+      "sha256": "b418982aaf7692545dd4dc103d586a321c87c6cc952f4b4249b67d8415d7ee78"
+    },
+    {
+      "id": "w_bronze",
+      "sha256": "9332c27182f727af8855013f293f7bff228b0f2d6a3ff9f52c314edd7be6cd38"
+    },
+    {
+      "id": "w_hunter",
+      "sha256": "6c4b3745c954f64bb805947399a4db6de9f71c98e323cdb6111a2561d0a7b55a"
+    },
+    {
+      "id": "w_guard",
+      "sha256": "d49defa59d67a48f56ce53de169bd9270eecc77678996a4234f47c216df8adab"
+    },
+    {
+      "id": "w_flame",
+      "sha256": "6962d95e2da9bf0e414382821c48d7891ec04156104c57d6a5ee47c7ebeb9a5c"
+    },
+    {
+      "id": "w_frost",
+      "sha256": "bd3d163bb183e603e141419088fe506a8012f6dc221fa3568d58a6524d6fb9ba"
+    },
+    {
+      "id": "w_rune",
+      "sha256": "fa9f87616058a17fb7ef76ce9d9e4bb2c7c6cd2a640d71b980e7aaeb955d1b23"
+    },
+    {
+      "id": "w_knight",
+      "sha256": "ce2a77786a813e89151dec22c62b48c4075e34765fd1410458840f9be9797ee6"
+    },
+    {
+      "id": "w_void",
+      "sha256": "681ec2cb3dbedb77ab3158ae2d343dfe4d86c6ff547555482f4052e1f8d0e6d2"
+    },
+    {
+      "id": "w_dragon",
+      "sha256": "37e35bb47adbd2a86dba219c1258bf65519240a30c21a8bf27145e73723ca653"
+    },
+    {
+      "id": "w_sun",
+      "sha256": "ac279d06bf8b99177b76953db62e7b8ed9028d258e0658d8cdc41ed67043e502"
+    },
+    {
+      "id": "w_king",
+      "sha256": "0dcc807c0de8a9c3cb6ee6243a81756b2f9aad01a11d3238b9cf641b05917613"
+    },
+    {
+      "id": "gear_weapon_n_1",
+      "sha256": "06ee8b1ce0423ffc90650e0655f458700ae195f681f739f68a7118c01ec15894"
+    },
+    {
+      "id": "gear_weapon_n_2",
+      "sha256": "a0d7b07abbd821452277810f6a29176dd6d814b7cb9fac8ff92eaad3a7625884"
+    },
+    {
+      "id": "gear_weapon_n_3",
+      "sha256": "4a4cca9bc1794a338ba9cb0ad3f270b085335d84b49e2b2117c821e5ebf4bff8"
+    },
+    {
+      "id": "gear_weapon_s_1",
+      "sha256": "3f6bc9155b1aed7b61b3f1408810b92cfe0a2068f310db233f4319afe5619a01"
+    },
+    {
+      "id": "gear_weapon_s_2",
+      "sha256": "3c6b1a40c032e1b84d8e8c4b098cb7c77e4b09da20ac4b6c397d53d5b9702847"
+    },
+    {
+      "id": "gear_weapon_s_3",
+      "sha256": "fb29478becd2deb1ccd3022916a2f22b9d0c40c7ad6bcec772f8300c0010fc56"
+    },
+    {
+      "id": "gear_weapon_e_1",
+      "sha256": "6a1567583baf1218e632294b417724c3db5dc80725f1b20980b6914e2b8e6eaa"
+    },
+    {
+      "id": "gear_weapon_e_2",
+      "sha256": "614c67cff74d2e09ee1ceaa4bdf6c64d2fe2abdaccad707aba95755483600034"
+    },
+    {
+      "id": "gear_weapon_e_3",
+      "sha256": "7ed68a028317cb6eebb9112aa2830e79ff35cd7e794f5778d76a7019ccc3571e"
+    },
+    {
+      "id": "gear_weapon_l_1",
+      "sha256": "e22ca02aa87a81b26dc104124242513ea6c6d91d59737131a62d1a50d55fbe2c"
+    },
+    {
+      "id": "gear_weapon_l_2",
+      "sha256": "72606aeffe54eb8b344cdbb5ed5f1406225f9b3b95aca50e7324d28d2bf9c49d"
+    },
+    {
+      "id": "gear_weapon_l_3",
+      "sha256": "d64de45636f44388391ac2af200fc7b0595023c5d64b87384f249f3691e22c22"
+    },
+    {
+      "id": "a_leather",
+      "sha256": "071deb3471c1bd2b3b4d05f9eb916e21f6fbdeb8568af664967cbd608c715426"
+    },
+    {
+      "id": "a_cloth",
+      "sha256": "137a7a3739beea67afe6673eeef4e749ddc14c5910f1c4ed71114ed8380d42ef"
+    },
+    {
+      "id": "a_padded",
+      "sha256": "64dccc8bbe18f1f62de2b5394fe4d7d17e845fb3ab83d1c4f9f6d4877ecee913"
+    },
+    {
+      "id": "a_scrap",
+      "sha256": "49e223ac903ca3e8193a95abae670c2aa8414a6a5ef2d6eb74a642d0d75d2763"
+    },
+    {
+      "id": "a_chain",
+      "sha256": "ed342303eaf49899a147adf0648397fa86f3d2afa4a7443ef7f2d3470807db72"
+    },
+    {
+      "id": "a_scale",
+      "sha256": "e89d0ac7d4752c5e023e1e29f03cde124fc5b924a08539fdaed61ff1b7b9dd70"
+    },
+    {
+      "id": "a_ranger",
+      "sha256": "009e2647b927dbc388131580de609ef5205908dcdd28918b7425b6924c0eba96"
+    },
+    {
+      "id": "a_bronze",
+      "sha256": "02f318f43225d623ed7524ecb715924c2bb9baaabea2ce054d07f9b8049ad60d"
+    },
+    {
+      "id": "a_knight",
+      "sha256": "579251f5f1b90d4f462e6ae497400263c7e9a5da2841db2ef09eb34f6b417b9b"
+    },
+    {
+      "id": "a_mithril",
+      "sha256": "ae229742f5b48565602cbdca0f7e9756df91cc193b70bf48c0d470dcdd9d84e9"
+    },
+    {
+      "id": "a_wyvern",
+      "sha256": "11e83fdde164b67c5ef7318cc643c84bcdc137b0b60c588767a406fe56d9dda1"
+    },
+    {
+      "id": "a_paladin",
+      "sha256": "fd27e4b05e219745e30f589d88972ac8d1529a886e84a730a9ce8d8343ff1eff"
+    },
+    {
+      "id": "a_void",
+      "sha256": "41da323b5f2929c5c3d59e41b65746119022371efe742218a0016337406839ee"
+    },
+    {
+      "id": "a_titan",
+      "sha256": "7d3ff5ce86d1b526482d6b38cd723201250056d56ec3184006fa0060b9344412"
+    },
+    {
+      "id": "a_sun",
+      "sha256": "a1437ff3f5f500aa60ea6ad81647485ae78be6ba57c76329b5edfabfe936af51"
+    },
+    {
+      "id": "a_king",
+      "sha256": "a0f34027c6647ddbb9716bb09dfd923978449d30c69b93323b2db8cda0f8c39d"
+    },
+    {
+      "id": "gear_armor_n_1",
+      "sha256": "7207ba9aeba2b62f7afa67db07f45813126b6e3ff5bb9098a7bd1838fbdc993f"
+    },
+    {
+      "id": "gear_armor_n_2",
+      "sha256": "96332a206e38e8197b0ea779864e948c589d4da8e54873761aaca4fa5e626675"
+    },
+    {
+      "id": "gear_armor_n_3",
+      "sha256": "5c0607901c0d9135771d6ed603dc6231515bf289a813a14ca3882121ad496074"
+    },
+    {
+      "id": "gear_armor_s_1",
+      "sha256": "c9df5473da80ef79ca2eeeca3f010381da2584a2f43924650aae0be9b4915053"
+    },
+    {
+      "id": "gear_armor_s_2",
+      "sha256": "68caa1502056cc81b477bbb3827cf3906ab718d2b8e097f4e8f0ef4e68b6d401"
+    },
+    {
+      "id": "gear_armor_s_3",
+      "sha256": "9f840bda7119e5c9fd9e83344d89636d5016c101d185fcce3e37230ac3f9987f"
+    },
+    {
+      "id": "gear_armor_e_1",
+      "sha256": "0fc385a4f18a983ac9e946a2263e830777fac99bd07c9dad12b0df13579a926b"
+    },
+    {
+      "id": "gear_armor_e_2",
+      "sha256": "a0e29bb94fbd8823854e854c3823fa045cfa1c11d0e533da2ffc1663d850d525"
+    },
+    {
+      "id": "gear_armor_e_3",
+      "sha256": "9c13bdcc6f73049182d0f9ed3046b82f16d832c3cde7f8a3c151b2ee0701b151"
+    },
+    {
+      "id": "gear_armor_l_1",
+      "sha256": "219c69ba4773d0d097592c8e8f1108d26c04eb6998e4604bbb0dce0ec15a6c06"
+    },
+    {
+      "id": "gear_armor_l_2",
+      "sha256": "d2752ee2b87b5cd371a3bf9319ef4e5760fe3aa513287062cbe07eb990ce65c5"
+    },
+    {
+      "id": "gear_armor_l_3",
+      "sha256": "eea9cdfe99d8694baab5459d40a3e83bf204e72e7a3447eed827ad455cb1710b"
+    },
+    {
+      "id": "r_copper",
+      "sha256": "d6a8fd039227b39f839edaf9f0bd0b95f04fd6f7343ef4e44429cd6c0b405ac1"
+    },
+    {
+      "id": "r_bone",
+      "sha256": "2b4b65baacf2ec32a5060b3bc2e3c6480d46c80b635600ce6bbbc8399502a9c7"
+    },
+    {
+      "id": "r_wood",
+      "sha256": "9af6ba04adf91635be88f6c4db0e771d94ae186b36c70e8d1eb83da95baac173"
+    },
+    {
+      "id": "r_iron",
+      "sha256": "0ce4ecb02b4fe5f59433c015524004fa76b11570a5cfdc097c00fba9029c79b1"
+    },
+    {
+      "id": "r_silver",
+      "sha256": "3c41e6ce7776816ba5861ab1fbacf3add33017337c95cdd09bcd9ebba121f8c5"
+    },
+    {
+      "id": "r_jade",
+      "sha256": "be8c3525a64f4a41ba17115867065ffeabdca02f6fd2432c0bcf818560e5007c"
+    },
+    {
+      "id": "r_amber",
+      "sha256": "c55f96e6138e2eb38a79090298dad8e5fbd193fda40c41be8e91134f55358a07"
+    },
+    {
+      "id": "r_pearl",
+      "sha256": "7c21045a82f8ecb333e563bae0b27ba6265d4386eae8fce4217398d7e30e46e5"
+    },
+    {
+      "id": "r_ruby",
+      "sha256": "04aceb4eaad9846e73d673e7c7b7a6fa877052599ca46394a33bcdd6fdc92006"
+    },
+    {
+      "id": "r_sapphire",
+      "sha256": "e2122b9e764fa73a968730664d884695406d12a63c75fa4b9fde1c845e206c02"
+    },
+    {
+      "id": "r_emerald",
+      "sha256": "6e21047d0bdbaf22b7ff242b49e67c6c961ab1386218744f11d088362ab6e9fd"
+    },
+    {
+      "id": "r_moon",
+      "sha256": "ea462bdfd16428f6b06a4daba5a84b328ce03d68fd93eace33e4f7882666fbb8"
+    },
+    {
+      "id": "r_void",
+      "sha256": "013ae2ab7adf8c80bba05645f23f53bc2c070227ecd6fa9f236cb92b2dd38d77"
+    },
+    {
+      "id": "r_abyss",
+      "sha256": "b260019ea30eeab1b2021d6a24258a925333ccf88276bc7bb01b00447675929a"
+    },
+    {
+      "id": "r_sun",
+      "sha256": "9954d58468d124d76f044d2e32b4553f952bb60c40b1314d3cdc7609b1152fb2"
+    },
+    {
+      "id": "r_king",
+      "sha256": "7f40e1ef277eb2b54214e9c8d9a8778f2a4359f8a2d60638ced9b7386532afed"
+    },
+    {
+      "id": "gear_ring_n_1",
+      "sha256": "b2134e3b352340552587b99f5edf9bf4c9aee995547d3d23a5173fb34c2395d9"
+    },
+    {
+      "id": "gear_ring_n_2",
+      "sha256": "403208fbd55a31eacd408d7e63381533cc33ef0c2f841b7c38283f18563d690b"
+    },
+    {
+      "id": "gear_ring_n_3",
+      "sha256": "349bc7d3a3aee01a6946dbd5add5f12ef7453556986b42f4a949c7973ffa6453"
+    },
+    {
+      "id": "gear_ring_s_1",
+      "sha256": "53748b6c33dd4fb1111f379da72e1b7408d63dd3f288bc3058751bded5f53997"
+    },
+    {
+      "id": "gear_ring_s_2",
+      "sha256": "4b05315fa4a436dd3f7c15ea01e9a32431dfeff60a639518c421a477ea3360c0"
+    },
+    {
+      "id": "gear_ring_s_3",
+      "sha256": "655112add46a0683fd3c93a92b5bd4f7219776d479f1b57aaefaa267fb3f73d3"
+    },
+    {
+      "id": "gear_ring_e_1",
+      "sha256": "2b3a181c1c4db11a4558af13c211db13dd196625925b6e6a963b9e27fc56b7f7"
+    },
+    {
+      "id": "gear_ring_e_2",
+      "sha256": "11ed6a79322da91b109038776256d5568222679b7c9d7745fccb144fe68a8751"
+    },
+    {
+      "id": "gear_ring_e_3",
+      "sha256": "999da16df16c14a04674cbd555a32a2c3dcd002b99d9de5e9970039c5f9e286a"
+    },
+    {
+      "id": "gear_ring_l_1",
+      "sha256": "43ae89409f63e9d749e0a26c8d3cadb5514f043a60a010845140f9ecb6cb7e85"
+    },
+    {
+      "id": "gear_ring_l_2",
+      "sha256": "9ade7b970665f32ef0231f82193c9bde9b73b305854ceba8da5c24d55d3b9b13"
+    },
+    {
+      "id": "gear_ring_l_3",
+      "sha256": "742f4beeb4b74fcc19a2fb800aa4e0c412609df8b10acbbaaccb89f6810a4720"
+    },
+    {
+      "id": "b_cloth",
+      "sha256": "476c7892072a1e631e46e2884590a3239007889c944fb6c0ad467d976bf2b183"
+    },
+    {
+      "id": "b_straw",
+      "sha256": "f9536a2a03dad8b5d1f5470bf2b3060849aef9dcd4439e503c69ea3cb3ba70ba"
+    },
+    {
+      "id": "b_worn",
+      "sha256": "0d03dccd390d53292e4b16501e20e5cb09cf2696c252405d2dd813f85a1149a3"
+    },
+    {
+      "id": "b_wooden",
+      "sha256": "b03e1dcb7e765559eb1bf727575bea8a3adccdc6dbe7724b2b13909aa8641386"
+    },
+    {
+      "id": "b_swift",
+      "sha256": "5e4b99bb2a0634f0492d6f0301bd8d5cc099dc7f4afc3793f35f7df3c723b8f2"
+    },
+    {
+      "id": "b_ranger",
+      "sha256": "f65b2e3c385ffffa49bee6ce8572f5cc4b509008000eed876e149acdfe5324e0"
+    },
+    {
+      "id": "b_chain",
+      "sha256": "576b7323c2eb454a62db44ac52ccdf0cbc3643af03f0fe3b65e2ef542c12aa00"
+    },
+    {
+      "id": "b_silk",
+      "sha256": "93fabb5ad9c85a225c5cdd458ffc67a03b4664705836cd938b19d9e4b3250594"
+    },
+    {
+      "id": "b_wind",
+      "sha256": "56b933309c38e2b93513116e8e28e2bb9967d0e8c64486f539ff00db1d1a2efe"
+    },
+    {
+      "id": "b_knight",
+      "sha256": "07c55521394b6e1c8cd9a908607f88b0d4a27c56ed6a4ed5e498999fe296a14f"
+    },
+    {
+      "id": "b_shadow",
+      "sha256": "b38d99e6c473b27a4aa153e6d893864113e47a09fb3b314b2e05e12ddb9523bb"
+    },
+    {
+      "id": "b_mithril",
+      "sha256": "9221d3b1f588b37610ddcab35c5b8516d70e69fd3bf9fe89f44a027d5bc563e7"
+    },
+    {
+      "id": "b_void",
+      "sha256": "fe18d5035cf5d1ea0ae74c478302a75d392be61e4a6592be4d056ef120006654"
+    },
+    {
+      "id": "b_sky",
+      "sha256": "0fe1bc89898008be462582e5607bdec270e1390329dd470009c690796468bbce"
+    },
+    {
+      "id": "b_sun",
+      "sha256": "2f2e484a1acbac9ba15d26ddd79c12f51b0afc000ac12c741ca5ee80b8d069fd"
+    },
+    {
+      "id": "b_king",
+      "sha256": "9d0b2a3e8c29d16c73ea070711941211fad26724386efb7bc5240c709b5377b4"
+    },
+    {
+      "id": "gear_boots_n_1",
+      "sha256": "f85b40c5ea438a3b3813398d730266947fe6333df97e6980c06e4ddc3606dbee"
+    },
+    {
+      "id": "gear_boots_n_2",
+      "sha256": "310fdc4d279f430255de172055b6fed48e71f0136114b69ee71c34e9da5a0fdf"
+    },
+    {
+      "id": "gear_boots_n_3",
+      "sha256": "5d774451532e8ae3a364c2c2469d1cd0da6634b698b807b0c0dd1704aa6cdf45"
+    },
+    {
+      "id": "gear_boots_s_1",
+      "sha256": "a4019b2b1d0ad7a701a3aa5e7cd741c5c19bf4a893fa2963ebb20220aaf6edeb"
+    },
+    {
+      "id": "gear_boots_s_2",
+      "sha256": "16497c8e1523206c8339053fddf0e3c607cf071d47e2a4c42a49bf3838d336fb"
+    },
+    {
+      "id": "gear_boots_s_3",
+      "sha256": "34a85811a3edff26c25804a74b32451962da3b400bca3d3c1694e4e18e1767c2"
+    },
+    {
+      "id": "gear_boots_e_1",
+      "sha256": "66b3862f1e87e48bcbc625c3fb4a1a2653be664b7827e60de35f11af06e2988d"
+    },
+    {
+      "id": "gear_boots_e_2",
+      "sha256": "c6750766138fab88591468f296f1b1c055f7490a251b17c91d170b1a48875c6b"
+    },
+    {
+      "id": "gear_boots_e_3",
+      "sha256": "8a224eb5f54c0ca707b573bf7da1e16bdbc5f936e574740c640771717598204b"
+    },
+    {
+      "id": "gear_boots_l_1",
+      "sha256": "4e4c0c3bb0b8ec9eebefb2b22a4f074a16b73d15d6c64d2f0f8a87f9262b2712"
+    },
+    {
+      "id": "gear_boots_l_2",
+      "sha256": "91f3b200764b570496e87ab49e49182a6f3517d4c1113e5e898e6a122884df46"
+    },
+    {
+      "id": "gear_boots_l_3",
+      "sha256": "12842490fac95430480f7c5927951b09cb1ec74af9926f2793cfc0ce916296f0"
+    },
+    {
+      "id": "w_town_oath",
+      "sha256": "a89843c3c1db51e4c75bd5af19865a03a5cd10fc8dac109a15d67ce7e7224819"
+    },
+    {
+      "id": "a_town_oath",
+      "sha256": "d847631b5e03e30e48f0d94891f3c8120f7e5fd4060c2b7bc636c33b29e2b438"
+    },
+    {
+      "id": "w_town_ember",
+      "sha256": "0ade7d542eb1cae09bb12d24dc58946f862176d862da5bfbd07b70ed88f71016"
+    },
+    {
+      "id": "a_town_ember",
+      "sha256": "19202c9dbd6f0b703730a06ddbc29374ea91764d53cffca3513dead644d11559"
+    },
+    {
+      "id": "w_town_star",
+      "sha256": "4b365b962b88d0937902024371ef5e529014438e2aa6ee63d90fedfddd775f69"
+    },
+    {
+      "id": "a_town_star",
+      "sha256": "50c71f6a2b60d94d9cd263d4b4082497d4daec9f4aef4eccc60bbeaaaa17b6d7"
+    }
+  ]
+}

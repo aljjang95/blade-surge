@@ -305,7 +305,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     materialsOwned.add(material);
     const sprite = new THREE.Sprite(material); sprite.position.set(spot.x, y, spot.z);
     const isNpc = ['merchant', 'trainer', 'steward', 'waystone'].includes(spot.kind);
-    sprite.scale.set(isNpc ? 2.3 : 3.6, isNpc ? .539 : .844, 1);
+    sprite.scale.set(isNpc ? 2.3 : 2.4, isNpc ? .539 : .562, 1);   // 게이트 이름표는 화면을 가리지 않도록 작게 둔다
     if (isNpc) sprite.position.y = spot.kind === 'waystone' ? 3.4 : 2.25;
     sprite.userData.hotspotId = spot.id; root.add(sprite); labels.push({ sprite, spot, isNpc }); return sprite;
   }
@@ -535,7 +535,10 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
       if (!reducedMotion) for (const actor of characters) actor.mixer.update(Math.min(dt, .05));
       if (playerPosition) for (const { sprite, spot, isNpc } of labels) {
         const distance = Math.hypot(spot.x - playerPosition.x, spot.z - playerPosition.z), selected = spot.id === nearestId;
-        sprite.visible = (!nearestId || (selected && !isNpc)) && (selected || distance < (isNpc ? 9 : quality === 'low' ? 12 : 30));
+        const range = isNpc ? 9 : quality === 'low' ? 9 : 14;
+        sprite.visible = (!nearestId || (selected && !isNpc)) && (selected || distance < range);
+        // 게이트 이름표: 멀수록 흐려지고, 가장 가까운 입구는 하단 카드가 이름을 알려 주므로 반투명으로 둔다.
+        if (!isNpc) { sprite.material.opacity = selected ? .6 : Math.min(.5, Math.max(.12, (range - distance) / 8)); sprite.scale.set(selected ? 2.6 : 2.2, selected ? .61 : .516, 1); }
         if (isNpc) {
           sprite.material.opacity = selected ? 1 : Math.min(.65, Math.max(.2, (9 - distance) / 5));
           sprite.scale.set(selected ? 2.75 : 2.3, selected ? .645 : .539, 1);
