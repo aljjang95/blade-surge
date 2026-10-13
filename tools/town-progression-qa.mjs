@@ -217,7 +217,8 @@ try {
   await closeTown();
   }
   await walkTo({ x: 0, z: 3 });
-  if (GATE_SPOT.z < -8) {
+  // 첫 마을은 게이트가 북쪽 한 줄(|x|<10.5), 다른 마을은 동·서 기둥(|x|=10.7)에 선다.
+  if (Math.abs(GATE_SPOT.x) < 10.5) {
     // 첫 마을 게이트는 북쪽 한 줄에 서 있다. x=±6의 벤치·화단을 피해 옆 통로로 올라간 뒤 정면에서 다가간다.
     const lane = Math.abs(GATE_SPOT.x) >= 5 && Math.abs(GATE_SPOT.x) <= 7 ? GATE_SPOT.x - Math.sign(GATE_SPOT.x) * 2 : GATE_SPOT.x;
     await walkTo({ x: lane, z: 0 });
