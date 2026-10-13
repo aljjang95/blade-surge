@@ -8,6 +8,8 @@ import { AppModeView } from './platform/app-mode.js';
 import { mobileScreen } from './platform/landscape-screen.js';
 import { resolveQuality } from './platform/mobile-display.js';
 import { isNativeApp, setupNativeApp } from './platform/native-app.js';
+import { STORE_CHANNEL } from './platform/store-channel.js';
+import { setupStoreAccess } from './ui/store-access.js';
 import { FX } from './engine/fx.js';
 import { Input } from './engine/input.js';
 import { audio } from './engine/audio.js';
@@ -102,7 +104,7 @@ class App {
     this.canvas.setAttribute('aria-label', '성채와 던전 게임 화면');
     this.lobbyCameraControls = new LobbyCameraControls(this);
     this.cameraControls = new CameraControls(this);
-    this.pwa = isNativeApp() ? null : setupPwa({ canApplyUpdate: () => this.mode === 'lobby' && !this.stageStarting && !this.party?.run });
+    this.pwa = isNativeApp() || STORE_CHANNEL !== 'web' ? null : setupPwa({ canApplyUpdate: () => this.mode === 'lobby' && !this.stageStarting && !this.party?.run });
     if (this.pwa) this.appModeView = new AppModeView(this);
     this.nativeApp = setupNativeApp(this);
     this.last = performance.now();
@@ -185,6 +187,7 @@ class App {
     if (!this.companionAgent) this.companionAgent = createCompanion(this);
     this.party = new PartySession(this);
     this.oathShell = new OathShell(this);
+    this.store = setupStoreAccess(this);
     this.meta.refreshMenuBadge();
     this.experienceView = new ExperienceView(this);
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
@@ -314,6 +317,7 @@ class App {
     return companionReset && gameReset;
   }
   async startStage(stage) {
+    if (this.store?.busy) return false;
     if (this.party?.party?.status === 'lobby') { this.party.view.open(); this.party.view.message('파티에서 준비를 마치고 함께 출격하세요.'); return false; }
     if (stage?.expedition) return this.startExpedition(stage.expedition.kind, stage.expedition.id, { rift: !!stage.riftId, depth: stage.expedition.depth, conquestId: stage.expedition.conquestId });
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;
@@ -353,6 +357,7 @@ class App {
     } finally { $('stage-loading').hidden = true; this.stageStarting = false; }
   }
   async startExpedition(kind, id, options = {}) {
+    if (this.store?.busy) return false;
     if (this.party?.party?.status === 'lobby') { this.party.view.open(); return false; }
     if (this.expeditionUI.result?.saveError) { this.ui.toast('전리품 정산을 먼저 저장해 주세요.', 'red'); return false; }
     if (this.stageStarting || (this.mode === 'battle' && this.battle.active)) return false;

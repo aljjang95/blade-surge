@@ -1,5 +1,15 @@
 import {afterEach, expect, spyOn, mock, test} from 'bun:test';
 import {AudioSys} from '../src/engine/audio.js';
+
+test('겹친 스토어 음악 음소거는 소유한 토큰만 해제하고 믹스·SFX·음성은 유지한다', () => {
+  const s: any = new AudioSys(), values: number[] = [];
+  s.musicMuteGain = { gain: { setValueAtTime(value: number) { values.push(value); } } };
+  const first = s.acquireMusicMute(), second = s.acquireMusicMute(), mix = s.getMix();
+  first(); first(); expect(values.at(-1)).toBe(0);
+  s.setMix({ music: .2, sfx: .7, voice: .8 }); expect(values.at(-1)).toBe(0);
+  second(); expect(values.at(-1)).toBe(1); expect(s.getMix()).toEqual({ music: .2, sfx: .7, voice: .8 });
+  expect(mix).toEqual({ music: .55, sfx: .9, voice: 1 }); expect(s.enabled).toBe(true); expect(s.voiceOn).toBe(true);
+});
 class Param {
   value=1; events:{t:number,v:number}[]=[];
   setValueAtTime(v:number,t:number){this.value=v;this.events.push({t,v});}

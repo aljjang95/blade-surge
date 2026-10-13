@@ -17,5 +17,5 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "worker/**/*.ts", "test/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "worker/**/*.ts", "test/**/*.ts", "capacitor.config.ts", "apps-in-toss.config.ts"]
 }
