@@ -20,6 +20,11 @@ export const CITADEL_GATE_PORTALS = Object.freeze({
   verdigris_sanctum: 0x5fe5aa, sable_mirage_basin: 0xffcf79, comet_bastion: 0xbd8fff,
 });
 
+const EXTRA_GATE_DESIGNS = Object.freeze({ rootbound_grotto: 'verdigris_sanctum', hollowbell_arboretum: 'bellfall_crypt',
+  slagwater_foundry: 'ashforge_catacomb', emberwake_drydock: 'cinder_tide_lock', aurora_icewell: 'nightglass_observatory', crownfall_glacier: 'sable_mirage_basin' });
+const EXTRA_GATE_PORTALS = Object.freeze({ rootbound_grotto: 0x5fe5aa, hollowbell_arboretum: 0x88dfc3,
+  slagwater_foundry: 0xff7146, emberwake_drydock: 0x51dfe3, aurora_icewell: 0xa48aff, crownfall_glacier: 0xffcf79 });
+
 const P = 1.27;
 const COLORS = Object.freeze({
   ivory: 0xe1dfca, stone: 0x72898b, dark: 0x293842, iron: 0x45535e, bronze: 0xb98a48,
@@ -97,7 +102,7 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
   }
 
   function addPortal(root, route) {
-    const color = CITADEL_GATE_PORTALS[route];
+    const color = CITADEL_GATE_PORTALS[route] ?? EXTRA_GATE_PORTALS[route];
     if (color === undefined) return;
     // 에너지 원판은 충돌·선택 대상이 아니다. 기존 좌우 기둥의 이동 통로를 바꾸지 않는다.
     const geometry = new THREE.CircleGeometry(1, quality === 'low' ? 32 : 48);
@@ -115,7 +120,8 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
 
   function build(spot) {
     if (disposed) throw new Error('폐기한 입구 라이브러리는 다시 사용할 수 없습니다.');
-    const design = CITADEL_GATE_DESIGNS[spot.route];
+    const visualRoute = EXTRA_GATE_DESIGNS[spot.route] || spot.route;
+    const design = CITADEL_GATE_DESIGNS[visualRoute];
     if (!design) throw new Error(`입구 디자인이 없는 경로: ${spot.route}`);
     const root = new THREE.Group(); root.name = `Citadel_Gate_${design}`;
     const bins = new Map(), transform = new THREE.Object3D(), tint = new THREE.Color();
@@ -199,7 +205,7 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
       add(new THREE.SphereGeometry(.07, 6, 4), 'metal', COLORS.gold, x, y, z + .03);
     }
 
-    switch (spot.route) {
+    switch (visualRoute) {
       case 'glass_garden': {
         posts(COLORS.glass, 'crystal'); pointed(COLORS.bronze, 'metal', 3.7, .095);
         // 온실 지붕은 빈 아치 위에 얹힌 불투명 유리 면과 실제 격자다.
@@ -405,7 +411,7 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
     } finally { for (const pieces of bins.values()) for (const piece of pieces) piece.dispose(); }
     addPortal(root, spot.route);
     root.userData = { designId: design, route: spot.route, reference: CITADEL_GATE_REFERENCE,
-      portal: Object.hasOwn(CITADEL_GATE_PORTALS, spot.route),
+      portal: Object.hasOwn(CITADEL_GATE_PORTALS, spot.route) || Object.hasOwn(EXTRA_GATE_PORTALS, spot.route),
       batchCount: root.children.length, originalGeometry: true };
     groups.add(root); return root;
   }

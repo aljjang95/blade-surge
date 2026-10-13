@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
-import { DUNGEONS } from '../src/data/expansion.js';
+import { ALL_DUNGEONS } from '../src/data/expansion.js';
 import { CITADEL_TOWN_IDS, townHub, defaultTownDungeonIds, townOfDungeon, setActiveTownId, activeTownHub, findHotspot } from '../src/data/citadel-hub.js';
 import { buildCitadelHubScene, libraryRoleOf } from '../src/game/citadel-hub-scene.js';
 import { buildLobbyWorld } from '../src/game/lobby-world.js';
@@ -10,9 +10,9 @@ import { normalizePrice } from '../src/ui/town-ui.js';
 import { Floor } from '../src/game/world.js';
 import { buildExpeditionWorld, EXPEDITION_LAYOUTS } from '../src/game/expedition-combat.js';
 
-test('three towns split the twelve dungeons into four each in level order with only their own gates', () => {
+test('three towns split the eighteen dungeons into six each with only their own gates', () => {
   const all = CITADEL_TOWN_IDS.flatMap(id => defaultTownDungeonIds(id));
-  expect(all.sort()).toEqual(DUNGEONS.map(d => d.id).sort());
+  expect(all.sort()).toEqual(ALL_DUNGEONS.map(d => d.id).sort());
   for (const id of CITADEL_TOWN_IDS) {
     const hub = townHub(id);
     expect(hub.hotspots.filter((s: any) => s.kind === 'dungeon').map((s: any) => s.route)).toEqual(defaultTownDungeonIds(id));
@@ -55,7 +55,7 @@ test('each town scene builds without authored assets, stays under a modest mesh 
     expect(meshes).toBeLessThan(140);
     expect(hall.userData.townId).toBe(id === 'oathhold' ? 'oathhold' : id);
     const gates = [...hall.userData.hotspotNodes.keys()].filter((key: string) => key.startsWith('dungeon:'));
-    expect(gates).toHaveLength(4);
+    expect(gates).toHaveLength(6);
     hall.userData.dispose(); hall.userData.dispose(); world.userData.dispose(); world.userData.dispose();
   }
 });
@@ -91,17 +91,17 @@ test('dungeon and field decoration appears only for routes that belong to the tw
   }
 });
 
-test('provisional service follows the contract: first town open, later towns need three clears', () => {
+test('provisional service follows the contract: first town open, later towns need four clears', () => {
   const wins: Record<string, number> = {};
   const app: any = { expedition: { snapshot: () => ({ stats: wins }) } };
   const service: any = new ProvisionalTownService(app);
   let towns = service.towns();
   expect(towns.map((t: any) => t.unlocked)).toEqual([true, false, false]);
-  expect(towns[1].progress).toEqual({ cleared: 0, required: 3 });
+  expect(towns[1].progress).toEqual({ cleared: 0, required: 4 });
   expect(service.travel('emberport').ok).toBe(false);
-  for (const id of defaultTownDungeonIds('oathhold').slice(0, 3)) wins[id] = 1;
+  for (const id of defaultTownDungeonIds('oathhold').slice(0, 4)) wins[id] = 1;
   towns = service.towns();
-  expect(towns[1].unlocked).toBe(true); expect(towns[1].progress.cleared).toBe(3);
+  expect(towns[1].unlocked).toBe(true); expect(towns[1].progress.cleared).toBe(4);
   expect(service.travel('emberport')).toEqual({ ok: true });
   expect(service.currentTownId()).toBe('emberport');
   expect(service.travel('nowhere').ok).toBe(false);

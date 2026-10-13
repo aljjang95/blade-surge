@@ -28,14 +28,15 @@ function make() {
   return { eco, service: new TownService(eco) };
 }
 
-test('마을은 정렬된 던전 4개씩을 노출하고 성채만 기본 해금한다', () => {
+test('마을은 6개 던전과 필드를 노출하고 성채만 기본 해금한다', () => {
   const { service } = make();
   expect(TOWNS).toHaveLength(3);
   expect(service.towns().map(town => town.dungeonIds)).toEqual([
-    ['glass_garden', 'eclipse_hydra_vault', 'ember_vault', 'bellfall_crypt'],
-    ['cinder_tide_lock', 'ashforge_catacomb', 'star_archive', 'nightglass_observatory'],
-    ['astral_leviathan_spire', 'verdigris_sanctum', 'sable_mirage_basin', 'comet_bastion'],
+    ['glass_garden', 'eclipse_hydra_vault', 'ember_vault', 'bellfall_crypt', 'rootbound_grotto', 'hollowbell_arboretum'],
+    ['cinder_tide_lock', 'ashforge_catacomb', 'star_archive', 'nightglass_observatory', 'slagwater_foundry', 'emberwake_drydock'],
+    ['astral_leviathan_spire', 'verdigris_sanctum', 'sable_mirage_basin', 'comet_bastion', 'aurora_icewell', 'crownfall_glacier'],
   ]);
+  expect(service.towns().map(town => town.fieldId)).toEqual(['windmeadow', 'dawnward_city', 'skywind_pass']);
   expect(service.towns().map(town => town.unlocked)).toEqual([true, false, false]);
   const gear = TOWN_SHOP.flatMap(item => 'itemId' in item ? [{ ...item, def: (ITEM_BY_ID as any)[item.itemId] }] : []).filter(item => ['weapon', 'armor'].includes(item.def.slot));
   expect(gear.map(item => item.def.appearanceTier)).toEqual(gear.map(item => TOWNS.find(town => town.id === item.townId)?.tier));
@@ -48,7 +49,7 @@ test('기존 던전 승리와 영웅 레벨을 마이그레이션해 즉시 마�
   const raw = structuredClone(eco.s);
   raw.towns = undefined;
   raw.heroes.knight.level = 15;
-  for (const id of TOWNS[0].dungeonIds.slice(0, 3)) raw.expedition.stats[id] = 1;
+  for (const id of TOWNS[0].dungeonIds.slice(0, 4)) raw.expedition.stats[id] = 1;
   const migrated = eco.migrate(raw);
   expect(migrated.towns.unlockedTownIds).toEqual(['oathhold', 'emberport']);
   expect(migrated.gold).toBe(raw.gold);
@@ -58,7 +59,7 @@ test('기존 던전 승리와 영웅 레벨을 마이그레이션해 즉시 마�
 test('이동·장비 구매·소모품 구매는 저장되고 잠금·재구매·재료 부족을 거부한다', () => {
   const { eco, service } = make();
   expect(service.travel('emberport')).toEqual({ ok: false, reason: 'locked' });
-  for (const id of TOWNS[0].dungeonIds.slice(0, 3)) eco.s.expedition.stats[id] = 1;
+  for (const id of TOWNS[0].dungeonIds.slice(0, 4)) eco.s.expedition.stats[id] = 1;
   eco.hero().level = 5;
   expect(service.travel('emberport')).toEqual({ ok: true });
   const item = service.buy('emberport', 'emberport_mail');

@@ -1,4 +1,4 @@
-import { DUNGEONS, MATERIALS } from '../data/expansion.js';
+import { ALL_DUNGEONS as DUNGEONS, MATERIALS } from '../data/expansion.js';
 import { HEROES } from '../data/heroes.js';
 import { citadelHotspot } from '../data/citadel-hub.js';
 import { dungeonJourney } from './dungeon-journey.js';
@@ -62,11 +62,22 @@ export class CitadelCommand {
     tools.setAttribute('aria-label', '출격 전 정비');
     this.supply = action('보급 상점', button => app.citadelShop.open(button));
     this.supply.id = 'citadel-command-supply';
+    // 자주 쓰는 셋(보급 · 공방 · 의뢰)만 바로 보이고, 나머지는 '더보기'로 묶는다.
+    this.more = element('details', 'citadel-command-more');
+    const moreSummary = element('summary', '', '더보기');
+    const moreList = element('div', 'citadel-command-more-list');
+    // 닫힌 <details> 안의 버튼은 포커스를 받을 수 없으므로, 열린 화면이 닫히면 보이는 '더보기'로 돌아온다.
+    const closeMore = callback => () => { this.more.open = false; callback(moreSummary); };
+    moreList.append(
+      action('성장 · 전투 방식', closeMore(button => app.battle?.chronicle?.open('build', button))),
+      action('상점 · 교환', closeMore(() => app.meta.openTab('shop'))),
+      action('동행', closeMore(button => this.openCompanion(button))));
+    this.more.append(moreSummary, moreList);
+    this.more.addEventListener('keydown', event => { if (event.key === 'Escape' && this.more.open) { event.stopPropagation(); this.more.open = false; moreSummary.focus(); } });
+    document.addEventListener('pointerdown', event => { if (this.more.open && !this.more.contains(event.target)) this.more.open = false; });
     tools.append(this.supply,
-      action('제작 공방', () => app.expeditionUI.open('forge')),
-      action('성장 · 전투 방식', button => app.battle?.chronicle?.open('build', button)),
-      action('상점 · 교환', () => app.meta.openTab('shop')),
-      action('동행', button => this.openCompanion(button)));
+      action('제작 공방', () => app.expeditionUI.open('forge')), action('마을 일 · 의뢰', button => app.townUI?.openContent('quests', button)),
+      this.more);
     const routes = element('section', 'citadel-command-routes');
     routes.setAttribute('aria-labelledby', 'citadel-command-routes-title');
     const routeHeader = element('div', 'citadel-command-route-heading');
@@ -81,7 +92,7 @@ export class CitadelCommand {
       const card = action('', button => {
         if (app.mode !== 'lobby' || app.stageStarting || app.expeditionUI.opened) return;
         app.citadel.clearInput();
-        app.hubUI.openDestination(spot, button);
+        if (spot) app.hubUI.openDestination(spot, button); else app.townUI?.openContent('dungeons', button);
       }, 'citadel-command-route');
       card.dataset.commandRoute = dungeon.id;
       card.style.setProperty('--route-accent', dungeon.accent);

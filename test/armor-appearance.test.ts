@@ -52,23 +52,24 @@ for (const id of ['knight', 'barbarian', 'mage', 'rogue', 'ranger'] as const) {
       applyLook(instance.root, def, { armor: { id: itemId, enh: 0 } });
       expect(body.geometry).toBe(bodyGeometry);
       expect(instance.root.userData.armorAppearance).toMatchObject({ itemId, identity: 'expedition-v3' });
-      const meshes = attachments(instance.root), details = meshes.filter(m => m.name.startsWith(`Armor_theme_${set}_`));
+      const meshes = attachments(instance.root), details = meshes.flatMap(mesh => mesh.userData.armorParts
+        .filter((part: ArmorPart) => part.name.startsWith(`Armor_theme_${set}_`)).map((part: ArmorPart) => ({ mesh, part })));
       expect(details).toHaveLength(3);
-      expect(meshes.every(m => m.parent instanceof THREE.Bone)).toBe(true);
-      expect(details.every(m => m.userData.equippedArmor === itemId)).toBe(true);
+      expect(meshes).toHaveLength(3);
+      expect(meshes.every(m => m.skeleton === body.skeleton)).toBe(true);
+      expect(meshes.every(m => m.userData.equippedArmor === itemId)).toBe(true);
       instance.root.updateMatrixWorld(true);
       const bounds = new THREE.Box3();
-      for (const mesh of details) bounds.union(new THREE.Box3().setFromObject(mesh));
+      for (const { mesh, part } of details) for (let i = part.start; i < part.start + part.count; i++) bounds.expandByPoint(skinnedPoint(mesh, i));
       expect(bounds.min.y).toBeGreaterThan(.85);
       expect(bounds.max.y).toBeLessThan(1.67);
       expect(bounds.max.x - bounds.min.x).toBeLessThan(2.1);
-      const detail = details[0]!, bone = detail.parent as THREE.Bone;
-      const point = new THREE.Vector3().fromBufferAttribute(detail.geometry.attributes.position!, 0);
-      const before = point.clone().applyMatrix4(detail.matrixWorld), rotation = bone.quaternion.clone();
+      const { mesh: detail, part } = details.find(({ part }) => part.name.includes('_right_'))!, bone = detail.skeleton.bones.find((b: THREE.Bone) => b.name === part.bone)!;
+      const before = skinnedPoint(detail, part.start), rotation = bone.quaternion.clone();
       bone.rotateZ(.3); instance.root.updateMatrixWorld(true);
-      expect(point.clone().applyMatrix4(detail.matrixWorld).distanceTo(before)).toBeGreaterThan(.01);
+      expect(skinnedPoint(detail, part.start).distanceTo(before)).toBeGreaterThan(.01);
       bone.quaternion.copy(rotation); instance.root.updateMatrixWorld(true);
-      signatures.add(`${details.map(m => m.geometry.type).join('/')}:${details.map(m => m.geometry.attributes.position.count).join('/')}:${bounds.max.y.toFixed(3)}`);
+      signatures.add(`${details.map(({ part }) => part.name).join('/')}:${details.map(({ part }) => part.count).join('/')}:${bounds.max.y.toFixed(3)}`);
       let disposed = 0;
       meshes.forEach(m => m.geometry.addEventListener('dispose', () => disposed++));
       applyLook(instance.root, def, {});
@@ -79,10 +80,22 @@ for (const id of ['knight', 'barbarian', 'mage', 'rogue', 'ranger'] as const) {
     disposeCharacter(instance.root, instance.mixer);
   });
 }
+type ArmorPart = { name: string; bone: string; start: number; count: number };
 function attachments(root: THREE.Object3D) {
-  const result: THREE.Mesh[] = [];
-  root.traverse(o => { if (o instanceof THREE.Mesh && o.userData.equippedArmor) result.push(o); });
+  const result: THREE.SkinnedMesh[] = [];
+  root.traverse(o => { if (o instanceof THREE.SkinnedMesh && o.userData.equippedArmor) result.push(o); });
   return result;
+}
+function findPart(root: THREE.Object3D, name: string) {
+  for (const mesh of attachments(root)) {
+    const part = mesh.userData.armorParts.find((part: ArmorPart) => part.name === name) as ArmorPart | undefined;
+    if (part) return { mesh, part };
+  }
+  throw new Error(`방어구 파츠 없음: ${name}`);
+}
+function skinnedPoint(mesh: THREE.SkinnedMesh, index: number) {
+  const point = new THREE.Vector3().fromBufferAttribute(mesh.geometry.attributes.position!, index);
+  return mesh.applyBoneTransform(index, point).applyMatrix4(mesh.matrixWorld);
 }
 
 for (const id of ['knight', 'barbarian', 'mage', 'rogue'] as const) {
@@ -100,8 +113,8 @@ for (const id of ['knight', 'barbarian', 'mage', 'rogue'] as const) {
       expect(identity.geometry).toBe(originalGeometry);
       expect(identity.visible).toBe(true);
       const meshes = attachments(instance.root);
-      expect(meshes.length).toBeGreaterThanOrEqual(10);
-      expect(meshes.every(m => m.parent instanceof THREE.Bone)).toBe(true);
+      expect(meshes).toHaveLength(3);
+      expect(meshes.every(m => m.skeleton === identity.skeleton)).toBe(true);
       expect(meshes.every(m => m.userData.equippedArmor === itemId)).toBe(true);
       const material = identity.material as THREE.MeshStandardMaterial;
       expect(material.emissive.getHex()).toBe(0);
@@ -113,20 +126,20 @@ for (const id of ['knight', 'barbarian', 'mage', 'rogue'] as const) {
       expect(fitted.max.x - fitted.min.x).toBeLessThan(1.3);
       const appearance = instance.root.userData.armorAppearance;
       if (['a_scale', 'a_chain', 'a_padded'].includes(itemId)) {
-        const surface = instance.root.getObjectByName(`Armor_${appearance.cut}_surface`) as THREE.Mesh;
-        expect(surface).toBeDefined();
-        expect(surface.parent!.name).toBe('chest');
-        expect(surface.geometry.attributes.position!.count).toBeGreaterThan(100);
+        const { part } = findPart(instance.root, `Armor_${appearance.cut}_surface`);
+        expect(part.bone).toBe('chest');
+        expect(part.count).toBeGreaterThan(100);
       }
       cuts.add(appearance.cut);
       fingerprints.add(`${appearance.cut}/${(meshes[0]!.material as THREE.MeshStandardMaterial).color.getHex()}`);
-      const shoulder = instance.root.getObjectByName('Armor_shoulder_left') as THREE.Mesh;
-      const bone = shoulder.parent!;
-      const localPoint = new THREE.Vector3().fromBufferAttribute(shoulder.geometry.attributes.position!, 0);
-      const before = localPoint.clone().applyMatrix4(shoulder.matrixWorld);
+      const shoulder = meshes.flatMap(mesh => mesh.userData.armorParts
+        .filter((part: ArmorPart) => part.bone.replaceAll('.', '') === 'upperarml').map((part: ArmorPart) => ({ mesh, part })))[0]
+        || findPart(instance.root, `Armor_cut_${appearance.cut}_cuirass`);
+      const bone = shoulder.mesh.skeleton.bones.find((b: THREE.Bone) => b.name === shoulder.part.bone)!;
+      const before = skinnedPoint(shoulder.mesh, shoulder.part.start);
       const rotation = bone.quaternion.clone();
       bone.rotateZ(.6); instance.root.updateMatrixWorld(true);
-      const after = localPoint.clone().applyMatrix4(shoulder.matrixWorld);
+      const after = skinnedPoint(shoulder.mesh, shoulder.part.start);
       expect(after.distanceTo(before)).toBeGreaterThan(.01);
       bone.quaternion.copy(rotation); instance.root.updateMatrixWorld(true);
       let freed = 0;

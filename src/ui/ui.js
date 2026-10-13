@@ -208,10 +208,13 @@ export class UI {
   rewardToast(got, cls = 'gold') { if (got && got.length) this.toast(this.rewardHtml(got), cls); }
 
   // ---------------- 모달 ----------------
-  modal(html, { onOpen } = {}) { this.el.modalBox.innerHTML = html; this.show(this.el.modal, true); audio.play('ui_open', { vol: 0.5 }); onOpen?.(this.el.modalBox); }
-  closeModal() { this.show(this.el.modal, false); audio.play('ui_close', { vol: 0.4 }); }
+  /** 모달을 연다. 이전 모달이 남긴 키 처리기 · onClose 정리는 교체 전에 끝낸다. modalSeq 로 현재 모달 소유권을 확인할 수 있다. */
+  modal(html, { onOpen, onClose } = {}) { this.endModal(); this.modalSeq = (this.modalSeq || 0) + 1; this._modalOnClose = onClose || null; this.el.modalBox.innerHTML = html; this.show(this.el.modal, true); audio.play('ui_open', { vol: 0.5 }); onOpen?.(this.el.modalBox); }
+  closeModal() { this.endModal(); this.show(this.el.modal, false); audio.play('ui_close', { vol: 0.4 }); }
+  /** 현재 모달의 수명이 끝날 때(닫힘 · 다른 모달로 교체) 한 번만 정리한다. */
+  endModal() { const done = this._modalOnClose; this._modalOnClose = null; this.el.modalBox.onkeydown = null; try { done?.(); } catch (error) { console.error(error); } }
   confirm(title, body, { ok = '확인', cancel = '취소', okCls = 'btn-gold' } = {}) {
-    return new Promise((res) => { this.modal(`<h2>${title}</h2><p>${body}</p><div class="modal-btns">${cancel ? `<button class="btn btn-ghost" id="m-cancel">${cancel}</button>` : ''}<button class="btn ${okCls}" id="m-ok">${ok}</button></div>`, { onOpen: (b) => { b.querySelector('#m-ok').onclick = () => { this.closeModal(); res(true); }; const c = b.querySelector('#m-cancel'); if (c) c.onclick = () => { this.closeModal(); res(false); }; } }); });
+    return new Promise((res) => { this.modal(`<h2>${title}</h2><p>${body}</p><div class="modal-btns">${cancel ? `<button class="btn btn-ghost" id="m-cancel">${cancel}</button>` : ''}<button class="btn ${okCls}" id="m-ok">${ok}</button></div>`, { onOpen: (b) => { b.querySelector('#m-ok').onclick = () => { this.closeModal(); res(true); }; const c = b.querySelector('#m-cancel'); if (c) c.onclick = () => { this.closeModal(); res(false); }; b.onkeydown = (event) => { if (event.key === 'Escape' && c) { event.preventDefault(); c.click(); } }; (c || b.querySelector('#m-ok')).focus({ preventScroll: true }); } }); });
   }
   /** No store billing provider is connected. Never resolve a simulated purchase success. */
   paySheet(sku) {
