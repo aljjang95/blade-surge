@@ -198,6 +198,39 @@
 :root:root .citadel-hub-depth { background: linear-gradient(#2a7a96, #195a76); border: 2px solid rgba(255, 224, 138, .55); }
 :root:root .citadel-hub-depth:has(input:checked) { border-color: #ffe08a; background: linear-gradient(#3b9db8, #226f8d); box-shadow: 0 0 12px rgba(255, 214, 90, .55); }
 
+/* 출격 준비창: 동화풍 파란 패널 위에 남아 있던 모험 수첩(양피지)용 진한 글자를 밝은 색으로 바꾼다.
+   이름표(양피지 카드)와 시작 버튼은 자체 배경이 있어 그대로 둔다. 작은 글씨 카드는 한 단계 짙은 바탕을 깐다. */
+:root:root.oath-visual .citadel-hub-destination-body :where(p, span, small, strong, b, h3, legend, summary, li, div, label),
+:root:root.oath-visual .citadel-hub-destination-footer :where(p, span, small, strong, b, div, label) { color: #e8f5fa; text-shadow: 0 1px 2px rgba(4, 30, 46, .55); }
+:root:root.oath-visual .citadel-hub-destination-body :where(h3, strong, b),
+:root:root.oath-visual .citadel-hub-destination-footer :where(strong, b) { color: #fffbe6; }
+:root:root.oath-visual .citadel-hub-destination-body :where(h3 small, legend, .citadel-hub-preparation-note, .citadel-hub-depth small),
+:root:root.oath-visual .citadel-hub-destination-stats span,
+:root:root.oath-visual .citadel-hub-journal-oaths > summary > span:last-child,
+:root:root.oath-visual .citadel-hub-dialog .citadel-hub-risk-persistence,
+:root:root.oath-visual .citadel-hub-dialog #citadel-fury-rule { color: #d3ecf5; }
+:root:root.oath-visual .citadel-hub-dialog #citadel-challenge-active { color: #fffbe6; }
+:root:root.oath-visual .citadel-hub-depth.is-locked small,
+:root:root.oath-visual .citadel-hub-dialog .citadel-hub-unlock-note { color: #ffe6b0; }
+:root:root.oath-visual .citadel-hub-dialog .citadel-hub-access { color: #fff3c4; font-size: 11px; text-shadow: 0 1px 2px rgba(4, 30, 46, .7); }
+:root:root.oath-visual .citadel-hub-dialog .citadel-hub-access[data-blocked="true"],
+:root:root.oath-visual .citadel-hub-dialog .citadel-hub-challenge-notice { justify-self: start; width: fit-content; padding: 3px 9px; border-radius: 7px; background: rgba(6, 34, 52, .62); color: #ffe2a0; font-weight: 700; }
+:root:root.oath-visual .citadel-hub-rewards li,
+:root:root.oath-visual .citadel-hub-potions li,
+:root:root.oath-visual .citadel-hub-journal-rules,
+:root:root.oath-visual .citadel-hub-journal-oaths,
+:root:root.oath-visual .citadel-hub-frontier,
+:root:root.oath-visual .citadel-hub-personal-goal,
+:root:root.oath-visual .citadel-hub-challenge-details { background: rgba(6, 38, 56, .38); border-color: rgba(255, 224, 138, .38); }
+:root:root.oath-visual .citadel-hub-dialog :focus-visible { outline-color: #ffe08a; }
+:root:root.oath-visual .citadel-hub-depth strong { font-weight: 700; }
+:root:root.oath-visual .citadel-hub-depth:has(input:checked) { background: linear-gradient(#2b87a2, #1b5e7a); }
+@media (max-height: 560px) and (orientation: landscape) {
+  /* 낮은 가로 화면에서 버튼 글자가 두 줄로 꺾이지 않도록 버튼 칸을 넓힌다. */
+  :root:root.oath-visual .citadel-hub-destination-footer { grid-template-columns: minmax(0, 1fr) min(300px, 52%); }
+  :root:root.oath-visual .citadel-hub-destination-actions button { white-space: nowrap; }
+}
+
 /* ---------- 결과 화면 ---------- */
 :root:root #result { background: radial-gradient(ellipse at 50% 30%, rgba(255, 210, 90, .22), rgba(6, 22, 44, .78) 65%); }
 :root:root:root #result .result-box {
