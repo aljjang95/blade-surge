@@ -37,6 +37,9 @@ const map = args.map || (kind === 'prop' ? '{}' : JSON.stringify(role === 'hero'
   : { idle: 'idle', walk: 'walk', run: 'run', attack: 'attack', attackHeavy: 'attackHeavy', hit: 'hit', death: 'death' }));
 
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
+// 갑옷 단계 메시를 1단계 정규화 골격에 다시 묶은 파일은 재정규화하면 골격 배율·원점이 1단계와 어긋나므로 그대로 들인다.
+const prenormalized = args.prenormalized === true || args.prenormalized === 'true';
+if (prenormalized && !(role === 'hero' && armorTier > 1)) throw new Error('--prenormalized is only for hero armor tiers 2|3');
 // Blender 임시 파일(WebP 변환 등)은 프로젝트 안 work/tmp/blender 에서만 만든다.
 const blenderTemp = resolve(root, 'work/tmp/blender');
 const run = (command, commandArgs) => new Promise((resolveRun, reject) => {
@@ -55,7 +58,8 @@ const rawBytes = await readFile(input);
 // 임시 파일에 정규화하고, 검증과 manifest 갱신이 모두 끝난 뒤에만 기존 결과를 교체한다.
 await rm(staged, { force: true });
 try {
-  await run(blender, ['--background', '--python-exit-code', '1', '--python', resolve(root, 'tools/asset-library/blender_normalize.py'), '--', '--source', input, '--output', staged,
+  if (prenormalized) await writeFile(staged, rawBytes);
+  else await run(blender, ['--background', '--python-exit-code', '1', '--python', resolve(root, 'tools/asset-library/blender_normalize.py'), '--', '--source', input, '--output', staged,
     '--height', String(heightM), '--kind', kind, '--map', map, ...(boss ? ['--boss'] : []), ...(args.yaw ? ['--yaw', String(args.yaw)] : [])]);
   const bytes = await readFile(staged);
   const gltfJson = JSON.parse(bytes.subarray(20, 20 + bytes.readUInt32LE(12)).toString('utf8'));
