@@ -12,9 +12,13 @@ function clearCount(eco, town) {
   return town.dungeonIds.filter(id => (eco.s.expedition?.stats?.[id] || 0) > 0).length;
 }
 
+// 진행 막대가 클리어 수를 보여 주므로 문구는 아직 남은 조건만 말한다. 레벨 조건은 막대에 없으니 현재 값을 함께 적는다.
 function requirementText(town, cleared, level) {
   if (town.tier === 1) return '처음부터 이용할 수 있습니다.';
-  return `이전 지역 던전 ${town.requiredClears}곳 클리어 · 영웅 레벨 ${town.requiredLevel} 필요`;
+  const parts = [];
+  if (cleared < town.requiredClears) parts.push(`이전 마을 던전 ${town.requiredClears - cleared}곳 더 클리어`);
+  if (level < town.requiredLevel) parts.push(`영웅 레벨 ${town.requiredLevel} 필요 (현재 ${level})`);
+  return parts.length ? parts.join(' · ') : '해금 조건을 모두 채웠습니다.';
 }
 
 export class TownService {
@@ -56,11 +60,14 @@ export class TownService {
   towns() {
     this.refreshUnlocks();
     const state = this.ensureState(), level = ownHeroLevel(this.eco);
-    return TOWNS.map(town => {
-      const cleared = clearCount(this.eco, town);
+    return TOWNS.map((town, index) => {
+      // 해금 진행도는 이 마을 자신이 아니라 이전 마을 던전의 클리어 수로 판정한다(refreshUnlocks와 같은 기준).
+      const previous = TOWNS[index - 1];
+      const cleared = previous ? clearCount(this.eco, previous) : 0;
       const required = town.requiredClears;
       return { id: town.id, name: town.name, subtitle: town.subtitle, tier: town.tier, theme: town.theme,
-        fieldId: town.fieldId, field: fieldForTown(town.id), dungeonIds: [...town.dungeonIds], unlocked: state.unlockedTownIds.includes(town.id), progress: { cleared, required },
+        fieldId: town.fieldId, field: fieldForTown(town.id), dungeonIds: [...town.dungeonIds], unlocked: state.unlockedTownIds.includes(town.id),
+        progress: { cleared, required, level: { current: level, required: town.requiredLevel } },
         requirement: { text: requirementText(town, cleared, level) } };
     });
   }

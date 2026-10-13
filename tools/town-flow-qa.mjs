@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { launchOpts } from './chrome.mjs';
-import { TOWN_SHOP_BY_ID, TOWN_TRAINER_BY_ID } from '../src/data/towns.js';
+import { TOWNS, TOWN_SHOP_BY_ID, TOWN_TRAINER_BY_ID } from '../src/data/towns.js';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const out = resolve(root, 'work/qa/town-flow-' + new Date().toISOString().replace(/[:.]/g, '-'));
@@ -150,6 +150,8 @@ try {
     s.expedition.materials.glass_leaf = 20;
     s.heroes[s.selected].level = 3;
     s.gold = 20000;
+    // 잠긴 마을 막대가 이전 마을 클리어 수를 실제로 반영하는지 보려고 유리 정원 외 두 던전을 클리어 상태로 둔다.
+    for (const id of ['ember_vault', 'bellfall_crypt']) s.expedition.stats[id] = Math.max(1, s.expedition.stats[id] || 0);
     const saved = a.eco.save(); a.eco.emit();
     return { saved, heroId: s.selected };
   });
@@ -193,6 +195,14 @@ try {
   await walkTo({ x: 3.3, z: 7.1 });
   await interact('waystone:main', 'map');
   check('이동석 지도 3개 마을', await page.locator('.town-dialog[open] .town-map > li').count() === 3, null);
+  const lock = await page.evaluate(() => {
+    const card = document.querySelector('.town-dialog[open] .town-map > li[data-town="emberport"]');
+    return { progress: card?.querySelector('.town-progress-text')?.textContent, text: card?.querySelector('.town-lock p')?.textContent,
+      stats: window.app.eco.s.expedition.stats, level: Math.max(1, ...Object.values(window.app.eco.s.heroes).map(hero => hero.level || 1)) };
+  });
+  const cleared = Math.min(TOWNS[1].requiredClears, TOWNS[0].dungeonIds.filter(id => (lock.stats[id] || 0) > 0).length);
+  check('잠긴 마을 막대=이전 마을 클리어·레벨 현재값', cleared > 0 && lock.progress === cleared + '/' + TOWNS[1].requiredClears
+    && lock.text?.includes('레벨 ' + TOWNS[1].requiredLevel + ' 필요 (현재 ' + lock.level + ')'), { progress: lock.progress, text: lock.text, cleared, level: lock.level });
   await closeTown();
   await page.locator('#citadel-command-return').click();
   await page.locator('[data-command-route="glass_garden"]').click();

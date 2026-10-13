@@ -91,3 +91,20 @@ test('교관은 영웅 레벨·골드·재료·중복 습득 실패를 반환하
   expect(service.learn('oathhold', 'oathhold_knight_aftershock', 'knight')).toEqual({ ok: false, reason: 'learned' });
   expect(service.trainer('oathhold', 'knight').find(item => item.id === 'oathhold_knight_aftershock')?.learned).toBe(true);
 });
+
+test('잠긴 마을의 해금 진행도는 이전 마을 클리어 수와 남은 레벨 조건을 보여 준다', () => {
+  const { eco, service } = make();
+  for (const id of TOWNS[0].dungeonIds.slice(0, 3)) eco.s.expedition.stats[id] = 1;
+  eco.hero().level = 3;
+  const [, ember, star] = service.towns();
+  // 막대는 이전 마을(서약의 성채) 던전 3곳을 센다. 잠긴 마을 자신의 던전 수(0)가 아니다.
+  expect(ember.progress).toEqual({ cleared: 3, required: 4, level: { current: 3, required: 5 } });
+  expect(ember.requirement.text).toBe('이전 마을 던전 1곳 더 클리어 · 영웅 레벨 5 필요 (현재 3)');
+  expect(star.progress.cleared).toBe(0);
+  eco.s.expedition.stats[TOWNS[0].dungeonIds[3]] = 1;
+  // 던전 조건을 채워도 레벨이 모자라면 레벨 조건만 남는다.
+  expect(service.towns()[1]).toMatchObject({ unlocked: false, requirement: { text: '영웅 레벨 5 필요 (현재 3)' } });
+  eco.hero().level = 5;
+  expect(service.towns()[1].unlocked).toBe(true);
+});
+
