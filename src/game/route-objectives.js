@@ -33,13 +33,13 @@ export class RouteObjectives {
   constructor(def, world) {
     this.def = def; this.world = world;
     const { minX, minZ, cols } = world;
-    if (typeof minX !== 'number' || typeof minZ !== 'number' || typeof cols !== 'number') throw new RangeError('종문 이동 지도가 준비되지 않았습니다.');
+    if (typeof minX !== 'number' || typeof minZ !== 'number' || typeof cols !== 'number') throw new RangeError(`${def.noun || '종문'} 이동 지도가 준비되지 않았습니다.`);
     const flow = world.buildFlow(world.startRoom.x, world.startRoom.z);
     this.gates = def.gates.map(({ roomId, label }) => {
       const room = world.rooms.find(r => r.id === roomId);
       if (!room || room.type === 'boss' || room.type === 'start' || !flow ||
           flow[Math.floor(room.z - minZ) * cols + Math.floor(room.x - minX)] < 0) {
-        throw new RangeError(`종문 ${roomId}에 봉인 밖 접근 경로가 없습니다.`);
+        throw new RangeError(`${def.noun || '종문'} ${roomId}에 봉인 밖 접근 경로가 없습니다.`);
       }
       room.label = label;
       return { room, label, ready: false, attuned: false, expected: 0, spawned: 0, prepared: false };
@@ -48,6 +48,9 @@ export class RouteObjectives {
   get progress() { return this.#progress; }
   get hold() { return this.#hold; }
   get complete() { return this.#progress === this.gates.length; }
+  /** 종문·역류 밸브처럼 같은 순차 유지 규칙을 쓰는 목표의 이름. */
+  get noun() { return this.def.noun || '종문'; }
+  get verb() { return this.def.verb || '조율'; }
   autoRoom() { return this.#closed || this.#report ? null : this.gates[this.#progress]?.room || null; }
   interrupt() { this.#hold = 0; }
   stop() { this.#closed = true; this.interrupt(); }
@@ -87,9 +90,9 @@ export class RouteObjectives {
   }
   canWin() { return this.canUnseal() && !this.world.sealed && this.world.bossRoom.cleared; }
   hint() {
-    const gate = this.gates[this.#progress];
-    if (!gate) return `종문 3/3 조율 완료 · ${this.canUnseal() ? '보스 처치' : '남은 구역 정화'}`;
-    return `종문 ${this.#progress}/3 · 다음 ${gate.label} · ${gate.ready ? `중심 2초 유지 (${this.#hold.toFixed(1)}/2)` : '적 처치 후 중심 2초'}`;
+    const gate = this.gates[this.#progress], n = this.gates.length, hold = this.def.holdSeconds;
+    if (!gate) return `${this.noun} ${n}/${n} ${this.verb} 완료 · ${this.canUnseal() ? '보스 처치' : '남은 구역 정화'}`;
+    return `${this.noun} ${this.#progress}/${n} · 다음 ${gate.label} · ${gate.ready ? `중심 ${hold}초 유지 (${this.#hold.toFixed(1)}/${hold})` : `적 처치 후 중심 ${hold}초`}`;
   }
   /** @param {Game} game */
   refreshHint(game) {
@@ -110,7 +113,7 @@ export class RouteObjectives {
         gate.attuned = true; this.#progress++; this.interrupt(); this.#markerT = 0;
         game.markCleared(gate.room);
         game.autoTarget = this.autoRoom();
-        game.ui.toast(`${gate.label} 조율 완료 · ${this.#progress}/3`, 'gold');
+        game.ui.toast(`${gate.label} ${this.verb} 완료 · ${this.#progress}/${this.gates.length}`, 'gold');
       }
     }
     // Existing shipped magic circle and pooled text; no new asset/mesh ownership.
@@ -122,8 +125,8 @@ export class RouteObjectives {
         if (cue.attuned || !room.discovered || Math.hypot(game.player.pos.x - room.x, game.player.pos.z - room.z) > 22) continue;
         const next = i === this.#progress;
         const pos = new Vector3(room.x, 0, room.z);
-        game.fx.castCircle(pos, next ? 0xffd060 : 0x8394ac, { radius: this.def.radius, life: 2 });
-        game.fx.damage(pos, 0, { text: `${i + 1}번 종문 · ${next ? cue.ready ? '중심 2초' : '적 정화' : '순서 대기'}` });
+        game.fx.castCircle(pos, next ? this.def.cueColor ?? 0xffd060 : 0x8394ac, { radius: this.def.radius, life: 2 });
+        game.fx.damage(pos, 0, { text: `${i + 1}번 ${this.noun} · ${next ? cue.ready ? `중심 ${this.def.holdSeconds}초` : '적 정화' : '순서 대기'}` });
       }
     }
     this.refreshHint(game);

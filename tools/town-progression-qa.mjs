@@ -14,10 +14,12 @@ import { townHub } from '../src/data/citadel-hub.js';
 
 const TOWN_ID = process.env.QA_TOWN || 'emberport';
 const TOWN_INDEX = TOWNS.findIndex(town => town.id === TOWN_ID);
-if (TOWN_INDEX < 1) throw new Error('QA_TOWN은 emberport 또는 starcrest 여야 합니다: ' + TOWN_ID);
-const TOWN = TOWNS[TOWN_INDEX], LABEL = TOWN.name, GATE = TOWN.dungeonIds[0];
+if (TOWN_INDEX < 0) throw new Error('알 수 없는 QA_TOWN: ' + TOWN_ID);
+// QA_GATE로 마을 안의 다른 던전을 고를 수 있다. 첫 마을(oathhold)은 이동석·상점 순회 없이 바로 게이트로 간다.
+const TOWN = TOWNS[TOWN_INDEX], LABEL = TOWN.name, GATE = process.env.QA_GATE || TOWN.dungeonIds[0];
+if (!TOWN.dungeonIds.includes(GATE)) throw new Error(TOWN_ID + '에 없는 QA_GATE: ' + GATE);
 const GATE_SPOT = townHub(TOWN_ID).hotspots.find(spot => spot.id === 'dungeon:' + GATE);
-const SIDE = Math.sign(GATE_SPOT.x);
+const SIDE = Math.sign(GATE_SPOT.x) || 1;
 // 대상 마을까지 열리도록 앞선 마을마다 다음 마을이 요구하는 수만큼 던전을 클리어 상태로 둔다.
 const PRIOR_CLEARS = TOWNS.slice(0, TOWN_INDEX).flatMap((town, index) => town.dungeonIds.slice(0, TOWNS[index + 1].requiredClears));
 
@@ -172,6 +174,7 @@ try {
   await page.locator('#meta [data-tab="home"]').click();
   await page.locator('#citadel-explore').click();
   check('출격 탭→마을 걷기', (await state()).walking, null);
+  if (TOWN_INDEX > 0) {
   await walkTo({ x: 0, z: 6.6 });
   await walkTo({ x: 3.3, z: 7.1 });
   await interact('waystone:main', 'map');
@@ -212,10 +215,17 @@ try {
   }
   await capture(TOWN_ID + '-trainer');
   await closeTown();
+  }
   await walkTo({ x: 0, z: 3 });
-  await walkTo({ x: SIDE * 8.5, z: 3 });
-  await walkTo({ x: SIDE * 8.5, z: GATE_SPOT.z });
-  await walkTo({ x: GATE_SPOT.x - SIDE * 1.4, z: GATE_SPOT.z });
+  if (GATE_SPOT.z < -8) {
+    // 첫 마을 게이트는 북쪽 한 줄에 서 있다. 정면에서 다가간다.
+    await walkTo({ x: GATE_SPOT.x, z: 0 });
+    await walkTo({ x: GATE_SPOT.x, z: GATE_SPOT.z + 1.4 });
+  } else {
+    await walkTo({ x: SIDE * 8.5, z: 3 });
+    await walkTo({ x: SIDE * 8.5, z: GATE_SPOT.z });
+    await walkTo({ x: GATE_SPOT.x - SIDE * 1.4, z: GATE_SPOT.z });
+  }
   const near = await state();
   report.gateNear = near.nearest;
   check(LABEL + ' 게이트 접근', near.nearest === 'dungeon:' + GATE, { nearest: near.nearest, position: near.position });
@@ -265,6 +275,7 @@ try {
   console.log('CONTRAST total', report.contrast.length, 'below-need(avg)', lowRows.length, 'worst-below', report.contrast.filter(r => r.ratio !== null && r.worst < r.need).length, 'image-bg', report.contrast.filter(r => r.ratio === null).length);
   if (LOW_EXP) { check('차단 사유 강조', report.blockedLine.blocked === 'true' && report.blockedLine.go && /탐험 레벨/.test(report.blockedLine.text), report.blockedLine); report.status = 'pass'; throw Object.assign(new Error('done'), { done: true }); }
   report.expedition = { before: await state(), chunks: [] };
+  report.objectiveTitles = [];
   await page.locator('.citadel-hub-go').click();
   await page.waitForFunction(() => window.app.mode === 'battle' && window.app.battle.active && !window.app.stageStarting, null, { timeout: 120000 });
   const admission = await page.evaluate(() => ({ route: window.app.battle.stage.expedition, auto: window.app.battle.player.auto }));
@@ -278,6 +289,8 @@ try {
       return { active: b.active, paused: b.paused, hp: b.player.hp, auto: b.player.auto, elapsed: b.elapsed, kills: b.kills, win: b.result?.win };
     });
     report.expedition.chunks.push(current);
+    const goal = await page.evaluate(() => document.querySelector('.battle-objective-title')?.textContent?.trim() || '');
+    if (goal && report.objectiveTitles.at(-1) !== goal) report.objectiveTitles.push(goal);
     if (current.paused && current.active) {
       const choice = page.locator('#masterworks[open] .mw-choices button:not([disabled]), #masterworks[open] .mw-story-choices button:not([disabled])').first();
       await choice.waitFor(); report.choices.push({ text: await choice.innerText(), elapsed: current.elapsed });
@@ -295,6 +308,12 @@ try {
   report.expedition.after = { stats: res.stats, pending: res.pending, win: res.result?.win, saveError: res.result?.saveError };
   await capture(TOWN_ID + '-result');
   check(LABEL + ' 던전 정산', !res.result?.saveError && res.pending === null, report.expedition.after);
+  report.routeObjective = await page.evaluate(() => window.app.battle.result?.routeObjective || null);
+  if (GATE === 'eclipse_hydra_vault') {
+    console.log('OBJECTIVES', JSON.stringify(report.objectiveTitles), JSON.stringify(report.routeObjective));
+    check('역류 밸브 3/3 잠금 기록', report.routeObjective?.id === 'eclipse_backflow_valves' && report.routeObjective.complete && JSON.stringify(report.routeObjective.rooms) === '[2,5,7]', report.routeObjective);
+    check('전투 목표창에 역류 밸브 진행 표시', report.objectiveTitles.some(t => t.startsWith('역류 밸브 잠금')), report.objectiveTitles);
+  }
   check('콘솔 오류 0', report.errors.length === 0, report.errors);
   report.status = 'pass';
 } catch (error) {
@@ -310,6 +329,8 @@ try {
   await save();
   console.log('QA report:', join(out, 'report.json'));
 }
+
+
 
 
 
