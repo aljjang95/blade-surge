@@ -2,157 +2,6 @@
   "schema": "tll.game-asset-library.v1",
   "assets": [
     {
-      "id": "skeleton_mage",
-      "kind": "character",
-      "body": "biped",
-      "replaces": "Skeleton_Runekeeper",
-      "file": "/models/library/skeleton_mage.glb",
-      "heightM": 2.5,
-      "triangles": 11400,
-      "bytes": 1525616,
-      "sha256": "4d8bbc5df292e09d5f77f3a036c228f020d5cb56f7bb16d1b4c51a4a93242174",
-      "clips": {
-        "idle": "idle",
-        "walk": "walk",
-        "run": "run",
-        "attack": "attack",
-        "attackHeavy": "attackHeavy",
-        "hit": "hit",
-        "death": "death"
-      },
-      "provenance": {
-        "tool": "Blender 5.2",
-        "account": "owner subscription",
-        "taskId": "6abf6dfa-23a4-4ccf-9a9f-5bd71b68d207",
-        "prompt": "Cute chibi skeleton mage (Tripo Studio H3.1, Mixamo rig, preset clips)",
-        "createdAt": "2026-10-12T12:36:59.226Z",
-        "rawSha256": "301eade0a47c4d8e36e32b1aef72841c542c3f2db6948518cf3f97165701b479"
-      },
-      "license": "owner-generated (Tripo subscription)",
-      "shared": true
-    },
-    {
-      "id": "goblin_brute",
-      "kind": "character",
-      "body": "biped",
-      "replaces": "Big_Orc",
-      "file": "/models/library/goblin_brute.glb",
-      "heightM": 2.3,
-      "triangles": 11400,
-      "bytes": 1460056,
-      "sha256": "7555fa5de52c4344e590b6e61833b09f4a8fa981f695fe49ca2d612c3566f7f3",
-      "clips": {
-        "idle": "idle",
-        "walk": "walk",
-        "run": "run",
-        "attack": "attack",
-        "attackHeavy": "attackHeavy",
-        "hit": "hit",
-        "death": "death"
-      },
-      "provenance": {
-        "tool": "Blender 5.2",
-        "account": "owner subscription",
-        "taskId": "73f060c2-0c6f-479d-87db-bc31dce01ae7",
-        "prompt": "Cute chibi goblin brute (Tripo Studio H3.1, Mixamo rig, 7 preset clips)",
-        "createdAt": "2026-10-12T12:43:33.566Z",
-        "rawSha256": "60cb5bf6c4c5de1c5e4ac5983fb9b1af1de495539c2c2a667b50b48d3bc3f3bd"
-      },
-      "license": "owner-generated (Tripo subscription)",
-      "shared": true
-    },
-    {
-      "id": "frost_yeti",
-      "kind": "character",
-      "body": "biped",
-      "replaces": "Big_Yeti",
-      "file": "/models/library/frost_yeti.glb",
-      "heightM": 2.2,
-      "triangles": 11400,
-      "bytes": 1510268,
-      "sha256": "b92ce96ce28e651a1e94ede502fdb6903c456ec4d942ed160a97b343bc0d2486",
-      "clips": {
-        "idle": "idle",
-        "walk": "walk",
-        "run": "run",
-        "attack": "attack",
-        "attackHeavy": "attackHeavy",
-        "hit": "hit",
-        "death": "death"
-      },
-      "provenance": {
-        "tool": "Blender 5.2",
-        "account": "owner subscription",
-        "taskId": "289d113b-5a1b-44ce-80ab-655f27287ee0",
-        "prompt": "Cute chibi frost yeti (Tripo Studio H3.1, Mixamo rig, 7 preset clips)",
-        "createdAt": "2026-10-12T12:43:39.421Z",
-        "rawSha256": "9ab77ffee936cd25435d5557673ccb8c8468cf41b54e889d746c1cd935ada079"
-      },
-      "license": "owner-generated (Tripo subscription)",
-      "shared": true
-    },
-    {
-      "id": "demon_lord",
-      "kind": "character",
-      "body": "biped",
-      "replaces": "Big_Demon",
-      "file": "/models/library/demon_lord.glb",
-      "heightM": 2.4,
-      "triangles": 18876,
-      "bytes": 1833928,
-      "sha256": "702f1fed86d3378c2744ca4f13b87299d7739ed532f7cf6e52285b3b8a19791d",
-      "clips": {
-        "idle": "idle",
-        "walk": "walk",
-        "run": "run",
-        "attack": "attack",
-        "attackHeavy": "attackHeavy",
-        "hit": "hit",
-        "death": "death"
-      },
-      "provenance": {
-        "tool": "Blender 5.2",
-        "account": "owner subscription",
-        "taskId": "03669049-4c12-4fb6-b221-0e9c3bd20d4d",
-        "prompt": "Chibi demon lord boss (Tripo Studio H3.1, Mixamo rig, 7 preset clips)",
-        "createdAt": "2026-10-12T12:43:46.759Z",
-        "rawSha256": "395d6369775106d58b81a0a79e4db768005a0f7fefa95ee5766f7019fb02b441"
-      },
-      "license": "owner-generated (Tripo subscription)",
-      "shared": true,
-      "boss": true
-    },
-    {
-      "id": "bone_knight",
-      "kind": "character",
-      "body": "biped",
-      "replaces": "Skeleton_Vanguard",
-      "file": "/models/library/bone_knight.glb",
-      "heightM": 2.5,
-      "triangles": 11399,
-      "bytes": 1554960,
-      "sha256": "90daf4ce065a6e170ef467262c6a76bc2a896385aaab17509c65dd0fd622984d",
-      "clips": {
-        "idle": "idle",
-        "walk": "walk",
-        "run": "run",
-        "attack": "attack",
-        "attackHeavy": "attackHeavy",
-        "hit": "hit",
-        "death": "death"
-      },
-      "provenance": {
-        "tool": "Blender 5.2",
-        "account": "owner subscription",
-        "taskId": "544697a2-bf90-43e5-9000-b0041f31aa34",
-        "prompt": "Cute chibi stylized skeleton knight (Tripo Studio H3.1, Mixamo rig, 7 preset clips)",
-        "createdAt": "2026-10-12T13:09:40.219Z",
-        "rawSha256": "840330ad614ed34e8ce5e34884a12b160b53d1f2af2e65177aceb57ac0c12407"
-      },
-      "license": "owner-generated (Tripo subscription)",
-      "shared": true
-    },
-    {
       "id": "hero_knight_t1",
       "kind": "character",
       "body": "biped",
@@ -346,6 +195,157 @@
       "role": "hero",
       "heroId": "ranger",
       "armorTier": 1
+    },
+    {
+      "id": "skeleton_mage",
+      "kind": "character",
+      "body": "biped",
+      "replaces": "Skeleton_Runekeeper",
+      "file": "/models/library/skeleton_mage.glb",
+      "heightM": 2.5,
+      "triangles": 11904,
+      "bytes": 1410472,
+      "sha256": "5049197b36e215288fb4429e9eb93e925d4ef84498c28262b005d187e2f14b71",
+      "clips": {
+        "idle": "idle",
+        "walk": "walk",
+        "run": "run",
+        "attack": "attack",
+        "attackHeavy": "attackHeavy",
+        "hit": "hit",
+        "death": "death"
+      },
+      "provenance": {
+        "tool": "Blender 5.2",
+        "account": "owner subscription",
+        "taskId": "7be108eb-4641-4146-b2c1-c48e1f31f771",
+        "prompt": "skeletal mage in blue and gold robes (GPT Image 2.5 concept, Tripo H3.1, Tripo Mixamo-spec rig, Mixamo clips)",
+        "createdAt": "2026-10-13T04:09:27.150Z",
+        "rawSha256": "315c019a3cd2bd67f4240114a902897cf1007feee7e82ac14119c76f57486da7"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true
+    },
+    {
+      "id": "goblin_brute",
+      "kind": "character",
+      "body": "biped",
+      "replaces": "Big_Orc",
+      "file": "/models/library/goblin_brute.glb",
+      "heightM": 2.3,
+      "triangles": 11786,
+      "bytes": 1143864,
+      "sha256": "32a6439f7657c95e283348bfba968eb49cf26fe556fbe7537bf1dcc06cd08e46",
+      "clips": {
+        "idle": "idle",
+        "walk": "walk",
+        "run": "run",
+        "attack": "attack",
+        "attackHeavy": "attackHeavy",
+        "hit": "hit",
+        "death": "death"
+      },
+      "provenance": {
+        "tool": "Blender 5.2",
+        "account": "owner subscription",
+        "taskId": "6743a577-2496-4f21-a9cf-618781947c56",
+        "prompt": "green goblin creature in leather armor (GPT Image 2.5 concept, Tripo H3.1, Tripo Mixamo-spec rig, Mixamo mutant clips)",
+        "createdAt": "2026-10-13T04:09:34.023Z",
+        "rawSha256": "2f4f5ac7a6052092868de94fc113692a00a3e8e3f8a59099be3252315b41de3f"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true
+    },
+    {
+      "id": "frost_yeti",
+      "kind": "character",
+      "body": "biped",
+      "replaces": "Big_Yeti",
+      "file": "/models/library/frost_yeti.glb",
+      "heightM": 2.2,
+      "triangles": 11988,
+      "bytes": 1080232,
+      "sha256": "4bfedc29027038c622c97cafa42713a71ffaf34dab0ebda3b619e1ac7177d511",
+      "clips": {
+        "idle": "idle",
+        "walk": "walk",
+        "run": "run",
+        "attack": "attack",
+        "attackHeavy": "attackHeavy",
+        "hit": "hit",
+        "death": "death"
+      },
+      "provenance": {
+        "tool": "Blender 5.2",
+        "account": "owner subscription",
+        "taskId": "76aa1965-f19d-4273-80ae-9215a1d62e4d",
+        "prompt": "frosty crystal yeti (GPT Image 2.5 concept, Tripo H3.1, Tripo Mixamo-spec rig, Mixamo mutant clips)",
+        "createdAt": "2026-10-13T04:09:42.647Z",
+        "rawSha256": "a2b555c1bef63490b58818861d31dc0ebc5a7816980cbabd6be206cb5ba40d58"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true
+    },
+    {
+      "id": "demon_lord",
+      "kind": "character",
+      "body": "biped",
+      "replaces": "Big_Demon",
+      "file": "/models/library/demon_lord.glb",
+      "heightM": 2.4,
+      "triangles": 11721,
+      "bytes": 1637632,
+      "sha256": "53ecbad9ec72f49c32c630eae18241f6e774e01c9c5cd3e091fdd30abaf27982",
+      "clips": {
+        "idle": "idle",
+        "walk": "walk",
+        "run": "run",
+        "attack": "attack",
+        "attackHeavy": "attackHeavy",
+        "hit": "hit",
+        "death": "death"
+      },
+      "provenance": {
+        "tool": "Blender 5.2",
+        "account": "owner subscription",
+        "taskId": "899baa74-f2bf-4b43-8875-18693ee30f05",
+        "prompt": "red demon warrior with spiked armor (GPT Image 2.5 concept, Tripo H3.1, Tripo Mixamo-spec rig, Mixamo mutant clips)",
+        "createdAt": "2026-10-13T04:09:46.958Z",
+        "rawSha256": "2c79c964dd6d9d537e4b353b9c9bb6f0d791ef02e386ecea85a48f9df261b362"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true,
+      "boss": true
+    },
+    {
+      "id": "bone_knight",
+      "kind": "character",
+      "body": "biped",
+      "replaces": "Skeleton_Vanguard",
+      "file": "/models/library/bone_knight.glb",
+      "heightM": 2.5,
+      "triangles": 11892,
+      "bytes": 1325028,
+      "sha256": "6406cf73f99ffb29bc7f6ef42da4a48c6920ee4d5233ca230b5f226d1545af2c",
+      "clips": {
+        "idle": "idle",
+        "walk": "walk",
+        "run": "run",
+        "attack": "attack",
+        "attackHeavy": "attackHeavy",
+        "hit": "hit",
+        "death": "death"
+      },
+      "provenance": {
+        "tool": "Blender 5.2",
+        "account": "owner subscription",
+        "taskId": "39a9c1d8-8fa0-4e65-b088-07ba24309c14",
+        "prompt": "skeleton knight with purple cloth and shield (GPT Image 2.5 concept, Tripo H3.1, Tripo Mixamo-spec rig, Mixamo clips)",
+        "createdAt": "2026-10-13T04:09:52.367Z",
+        "rawSha256": "3d2f55688764ffd8ee04ade5d8faca3c50df00344bbe6deb41a1084166112e4d"
+      },
+      "license": "owner-generated (Tripo subscription)",
+      "shared": true
     }
   ]
 }
