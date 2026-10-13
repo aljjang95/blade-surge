@@ -11,7 +11,7 @@ const _dir = new THREE.Vector3();
  */
 export class CompanionCombatant extends Actor {
   constructor(game, gltf, onSignal) {
-    super(game, gltf, { scale: 0.82, tint: '#69c8d8', rig: 'kaykit' });
+    super(game, gltf, { scale: 0.82, tint: '#69c8d8', rig: 'library' });
     this.onSignal = onSignal;
     this.tactic = 'gather';
     this.attackCd = 0.8;

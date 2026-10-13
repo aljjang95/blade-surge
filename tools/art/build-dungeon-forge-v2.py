@@ -8,9 +8,8 @@ from mathutils import Vector
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / 'public/models/dungeon-forge-v2'
-FITTINGS = ROOT / 'public/models/tll/encounters'
 SOURCE = ROOT / 'tools/art/source/dungeon-forge-v2'
-for folder in [OUT, FITTINGS, SOURCE]: folder.mkdir(parents=True, exist_ok=True)
+for folder in [OUT, SOURCE]: folder.mkdir(parents=True, exist_ok=True)
 bpy.context.preferences.filepaths.save_version=0
 manifest = {'revision': 'dungeon-forge-v2', 'authoring': 'Blender headless', 'blender': bpy.app.version_string, 'license': 'Original project-authored geometry; source character rigs unchanged', 'files': []}
 colors = {'iron': (.065,.095,.14), 'steel': (.43,.57,.68), 'gold': (.78,.48,.17), 'jade': (.07,.68,.51), 'violet': (.44,.19,.69), 'ivory': (.73,.79,.83), 'leather': (.085,.046,.039), 'ember': (.83,.20,.055)}
@@ -182,8 +181,6 @@ def export(name,folder,join=False):
     source=SOURCE/(name+'.blend');bpy.ops.wm.save_as_mainfile(filepath=str(source))
     for p in [glb,source]:manifest['files'].append({'path':str(p.relative_to(ROOT)), 'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()})
 
-for kind in ['vanguard','skirmisher','runekeeper','bulwark']:
-    material=clear();fitting(kind);export('forge-'+kind+'-v2',FITTINGS)
 for kind in ['sword','greatsword','axe','greataxe','dagger','wand','staff','bow']:
     material=clear()
     if kind in ['sword','greatsword']:blade(kind)
@@ -195,6 +192,6 @@ for kind in ['sword','greatsword','axe','greataxe','dagger','wand','staff','bow'
 manifest['deliveryCompression']='EXT_meshopt_compression, lossless meshoptimizer'
 manifest['compressionScript']={'path':'tools/art/compress-dungeon-forge.mjs','sha256':hashlib.sha256((ROOT/'tools/art/compress-dungeon-forge.mjs').read_bytes()).hexdigest()}
 manifest['sourceScript']={'path':str(Path(__file__).relative_to(ROOT)),'sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest()}
-manifest['preservedSources']={str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in [ROOT/'public/models'/f'{n}.glb' for n in ['Knight','Barbarian','Mage','Rogue','Ranger','Skeleton_Minion','Skeleton_Warrior','Skeleton_Rogue','Skeleton_Mage']]}
+manifest['preservedSources']={str(p.relative_to(ROOT)):hashlib.sha256(p.read_bytes()).hexdigest() for p in [ROOT/'public/models'/f'{n}.glb' for n in ['Knight','Barbarian','Mage','Rogue','Ranger']]}
 (ROOT/'docs/assets/dungeon-forge-v2.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf8')
 print(json.dumps({'status':'PASS','blender':bpy.app.version_string,'files':len(manifest['files'])}))

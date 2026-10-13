@@ -13,6 +13,7 @@ import { Input } from './engine/input.js';
 import { audio } from './engine/audio.js';
 import { musicForScene, musicAfterIntro, MUSIC_MIX } from './data/music.js';
 import { preloadAll, preloadVfx, loadModel, MODEL_LIST, spawnCharacter, disposeCharacter } from './engine/assets.js';
+import { MONSTER_ROSTER } from './data/monster-roster.js';
 import { Economy } from './game/economy.js';
 import { Battle } from './game/battle.js';
 import { Arena } from './game/arena.js';
@@ -155,6 +156,10 @@ class App {
     setP(0.72, '이펙트 텍스처 로딩 중…');
     await preloadVfx();
     for (const n of MODEL_LIST) this.models[n] = await loadModel(n);
+    for (const [legacy, roster] of Object.entries(MONSTER_ROSTER)) {
+      const source = this.models[roster.asset] || this.models[roster.fallback];
+      if (source) this.models[legacy] = source;
+    }
     for (const gltf of Object.values(this.models)) gltf.scene.traverse((o) => {
       if (o.isMesh && o.material?.userData.tllAuthored) {
         o.material.envMap = this.renderer.characterEnvironment.texture; o.material.envMapIntensity = .7;

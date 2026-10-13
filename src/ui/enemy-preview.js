@@ -17,9 +17,9 @@ export function createPreviewEnemy(scene, gltf, weapons, def) {
     audio.enabled = false;
     enemy = new Enemy(game, gltf, weapons, def, 1, new THREE.Vector3());
   } finally { audio.enabled = enabled; }
-  // getPart shares cached weapon materials; disposal must only release our own copies.
+  // 라이브러리 몬스터는 외부 무기를 소유하지 않는다.
   const shared = new Set();
-  weapons.scene.traverse(o => { if (o.isMesh) for (const material of materialsOf(o)) shared.add(material); });
+  weapons?.scene?.traverse(o => { if (o.isMesh) for (const material of materialsOf(o)) shared.add(material); });
   enemy.model.traverse(o => {
     if (!o.isMesh) return;
     const own = material => shared.has(material) ? material.clone() : material;
@@ -27,7 +27,7 @@ export function createPreviewEnemy(scene, gltf, weapons, def) {
   });
   // A still idle pose uses no combat update, rewards, AI, timers or continuous render loop.
   enemy.spawning = false;
-  enemy.model.scale.setScalar(enemy.scale);
+  enemy.model.scale.setScalar(enemy.scale * (enemy.libraryAsset ? (enemy.libraryRoster?.scale || 1) : 1));
   enemy.pos.y = enemy.rig.hover || 0;
   enemy.root.rotation.y = enemy.rig.faceFlip ? Math.PI : 0;
   enemy.mixer.stopAllAction();
@@ -79,7 +79,7 @@ export function mountEnemyPreview(host, def) {
   const ready = (async () => {
     try {
       if (!def?.model) throw new Error('Missing enemy model');
-      const [gltf, weapons] = await Promise.all([loadModel(def.model), loadModel('skel_weapons')]);
+      const gltf = await loadModel(def.model);
       if (disposed || !host.isConnected) return;
       if (renderer?.getContext().isContextLost()) { renderer.dispose(); renderer = null; }
       if (!renderer) {
@@ -92,7 +92,7 @@ export function mountEnemyPreview(host, def) {
       canvas = renderer.domElement;
       canvas.setAttribute('role', 'img'); canvas.setAttribute('aria-label', `${def.name} 실제 전투 모델`);
       canvas.addEventListener('webglcontextlost', contextLost);
-      enemy = createPreviewEnemy(scene, gltf, weapons, def);
+      enemy = createPreviewEnemy(scene, gltf, null, def);
       const bounds = new THREE.Box3().setFromObject(enemy.model);
       const sphere = bounds.getBoundingSphere(new THREE.Sphere());
       const radius = Math.max(.25, sphere.radius);
