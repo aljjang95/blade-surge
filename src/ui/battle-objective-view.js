@@ -20,7 +20,7 @@ function mainObjectiveView(battle) {
     if (gate) {
       const kind = route.def?.kind;
       const title = kind === 'constellations' ? '별자리 복원' : kind === 'records' ? '기록 복원'
-        : kind === 'cooling' ? '냉각선 복구' : `${route.noun || '종문'} ${route.verb || '조율'}`;
+        : kind === 'cooling' ? route.copy?.title || '냉각선 복구' : `${route.noun || '종문'} ${route.verb || '조율'}`;
       const values = { progress: count(route.progress), total: route.gates.length,
         roomId: gate.room.discovered ? gate.room.id : null };
       if (!gate.room.discovered) return step(title, '다음 구역을 찾아 이동', values);

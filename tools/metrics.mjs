@@ -166,6 +166,9 @@ const started = await page.evaluate(async (seed) => {
 }, SEED);
 if (started !== true) await bail('startStage: ' + started, br);
 await page.waitForTimeout(1200);
+// 바쁜 PC에서는 1.2초 안에 전투 영웅이 준비되지 않을 수 있다(2026-10-13 r2-series head-1). 실제 준비를 기다린다.
+try { await page.waitForFunction(() => !!window.app.battle?.player && window.app.battle.active, null, { timeout: 60000 }); }
+catch { await bail('전투 영웅이 60초 안에 준비되지 않음', br); }
 
 // 결정적 스텝으로 전환 + AUTO
 await page.evaluate(() => { window.app.testPause = true; window.app.battle.player.auto = true; });
