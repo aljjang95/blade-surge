@@ -306,7 +306,12 @@ export class CitadelHubUI {
     goalSection.querySelector('.citadel-hub-goal-copy').innerHTML = `<h3>${safe(goal.title)}</h3>${goal.condition ? `<p class="citadel-hub-goal-context">${safe(goal.condition)}</p>` : ''}${goal.target ? `<strong class="citadel-hub-goal-target">${safe(goal.target)}</strong>` : ''}${goal.baseline ? `<span class="citadel-hub-goal-baseline">${safe(goal.baseline)}</span>` : ''}<p>${safe(goal.description)}</p><small>개인 목표는 추가 보상을 지급하지 않습니다.</small>`;
     go.disabled = !access.ok || this.busy;
     go.textContent = `${preparation.depth === 'deep' ? '심층 원정 시작' : '원정 시작'} · 에너지 ${access.cost}`;
-    this.dialog.querySelector('.citadel-hub-access').textContent = access.error || '입장을 확정하면 에너지가 소모됩니다.';
+    const accessLine = this.dialog.querySelector('.citadel-hub-access');
+    accessLine.textContent = access.error || '입장을 확정하면 에너지가 소모됩니다.';
+    // 입장 불가 사유는 평소 안내와 구분해 강조한다.
+    accessLine.dataset.blocked = String(!access.ok);
+    // 서약 변경 제한 사유가 입장 사유와 같으면 같은 문장을 두 번 보이지 않는다.
+    if (notice.textContent === accessLine.textContent) notice.hidden = true;
     this.reviewedPreparation = preparationSignature(preparation);
   }
   close() {
