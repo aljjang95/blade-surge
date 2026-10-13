@@ -6,6 +6,9 @@ import {
 } from '../src/data/hero-library.js';
 import { libraryAssetForHero, selectHeroLibraryAsset } from '../src/engine/library-assets.js';
 import { validateManifest } from '../tools/asset-library/manifest.mjs';
+import { HEROES } from '../src/data/heroes.js';
+import { Actor } from '../src/game/actor.js';
+import { Player } from '../src/game/player.js';
 
 const SCHEMA = 'tll.game-asset-library.v1';
 const hero = (id: string, armorTier?: number, clips: Record<string, string> = { idle: 'idle', run: 'run', hit: 'hit', death: 'death' }) => ({
@@ -112,5 +115,29 @@ test('KayKit action names map to the contract logical keys', () => {
   expect(logicalClipForAnimation('2H_Melee_Attack_Spinning')).toBe('spin');
   expect(logicalClipForAnimation('Bow_Shoot')).toBe('bow_shoot');
   expect(requiredHeroLogicalClips('knight')).toEqual(expect.arrayContaining(['slash_h', 'slash_d', 'stab', 'spin', 'chop', 'block', 'cast_raise']));
+});
+
+test('광전사 공유 spin 클립은 콤보 뒤 회오리 스킬의 정의된 이름으로 반복 재생한다', () => {
+  const asset = { ...hero('hero_barbarian_t1', 1), heroId: 'barbarian', clips: { idle: 'idle', spin: 'spin' } };
+  const scene = handScene('mixamorigRightHand', 'mixamorigLeftHand');
+  scene.userData.authoredContract = heroModelContract(asset, scene);
+  const spin = new THREE.AnimationClip('spin', 1, []);
+  const game = { scene: new THREE.Scene(), hasProc: () => false, fx: { castCircle() {} } };
+  const player: any = new Actor(game, { scene, animations: [new THREE.AnimationClip('idle', 1, []), spin] });
+  Object.setPrototypeOf(player, Player.prototype);
+  Object.assign(player, { def: HEROES.barbarian, stats: { atk: 100 }, buffs: { atk: 1 }, heroLevel: 3,
+    skillLevels: [1, 1, 1, 1], cds: [0, 0, 0, 0], mp: 100, state: 'idle', stateT: 0,
+    auto: false, stopTrail() {}, startTrail() {} });
+  // 같은 물리 클립을 가리키는 두 별칭이 실제 인스턴스에 모두 있어야 한다.
+  expect(player.clips['2H_Melee_Attack_Spin']).toBe(spin);
+  expect(player.clips['2H_Melee_Attack_Spinning']).toBe(spin);
+  player.playTimed('2H_Melee_Attack_Spinning', .85);
+  expect(player.tryCastSkill(0)).toBe(true);
+  player.mixer.update(1 / 60);
+  expect(player.actionName).toBe(HEROES.barbarian.skills[0].anim);
+  expect(player.action.getClip()).toBe(spin);
+  expect(player.action.isRunning()).toBe(true);
+  expect(player.action.loop).toBe(THREE.LoopRepeat);
+  expect(player.action.timeScale).toBe(2.2);
 });
 
