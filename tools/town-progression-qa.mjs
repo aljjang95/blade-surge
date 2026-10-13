@@ -321,6 +321,7 @@ try {
   const ROUTE_CHECKS = {
     eclipse_hydra_vault: { id: 'eclipse_backflow_valves', label: '역류 밸브 잠금', rooms: [2, 5, 7] },
     ashforge_catacomb: { id: 'ashforge_furnaces_standard', label: '용광로 냉각', rooms: [1, 2, 3, 5] },
+    cinder_tide_lock: { id: 'cinder_cooling_standard', label: '냉각선 복구', rooms: [2, 5] },
   };
   const expectRoute = ROUTE_CHECKS[GATE];
   if (expectRoute) {
