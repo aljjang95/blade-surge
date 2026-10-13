@@ -2,6 +2,7 @@
 // 같은 등급 무기도 이름에 맞는 속성색으로 빛나고, 등급이 오르면 영웅에 따라 무기 모양이 바뀐다(한손검→양손 대검 등).
 // 강화 단계는 발광 세기와 오라로 보인다: +5 은은한 광, +10 속성색 오라, +15 금빛 오라, +20 신화 오라.
 import { ITEM_BY_ID, RARITY_INFO } from './items.js';
+import { GEAR_ITEMS } from './gear-catalog.js';
 
 /** 영웅별 무기 모양 이름. key는 모델 안의 무기 노드. 드라칸 도끼는 한손·양손 메시가 같아 이름도 같다. */
 export const WEAPON_FORMS = {
@@ -18,6 +19,8 @@ export const WEAPON_ELEMENT = {
   w_flame: ['#ff6a2a', '불꽃'], w_frost: ['#8fe3ff', '서리'], w_rune: ['#ffd35a', '룬'], w_knight: ['#7fb8ff', '기사단 청광'],
   w_dragon: ['#ff5a2e', '용염'], w_sun: ['#ffd060', '태양'], w_king: ['#fff0a8', '성광'], sg_solar_grimoire: ['#ffd060', '태양'],
 };
+// 신규 무기는 표에 명시한 속성명만 쓴다. 아이템 이름을 속성으로 읽지 않는다.
+for (const item of GEAR_ITEMS) if (item.slot === 'weapon') WEAPON_ELEMENT[item.id] = [item.look.weapon.palette.accent, item.look.weapon.element];
 
 export const ENHANCE_LOOK = [
   { min: 20, name: '신화 오라', color: '#ff8af0' },

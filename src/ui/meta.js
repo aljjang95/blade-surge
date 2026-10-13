@@ -11,6 +11,7 @@ import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../data/stages.
 import { resolveEnemyPortrait } from '../data/encounter-art.js';
 import { REWARD_LABEL, gachaRates, gachaChances } from '../game/economy.js';
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
+import { renderOwnedHero, renderBag, showItemSheet } from './gear-panel.js';
 import { weaponLook, weaponLookText } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
 import { createFunnelLog } from '../game/funnel-events.js';
@@ -217,52 +218,10 @@ export class Meta {
   // ================= 영웅 =================
   focusInventory(uid, slot) {
     const bag = $('hero-bag');
-    (bag?.querySelector(`[data-inv="${uid}"]`) || bag?.querySelector(`[data-bag-slot="${slot}"]`) || $('h-next'))?.focus();
+    // 가방 → 부위 필터 → 장착 슬롯 → 출격 순으로 포커스를 돌려준다(다른 탭을 보고 있어도 키보드 경로가 끊기지 않는다).
+    (bag?.querySelector('[data-inv="' + uid + '"]') || bag?.querySelector('[data-bag-slot="' + slot + '"]') || $('hero-detail')?.querySelector('.hs-slot[data-slot="' + slot + '"]') || $('h-next'))?.focus();
   }
-  renderInventory(heroId) {
-    const bag = $('hero-bag'); if (!bag) return;
-    const slot = SLOTS.includes(this.bagSlot) ? this.bagSlot : 'all';
-    const items = this.eco.s.inventory.filter((x) => slot === 'all' || ITEM_BY_ID[x.id].slot === slot)
-      .slice().sort((a, b) => rarityRank(ITEM_BY_ID[b.id].rarity) - rarityRank(ITEM_BY_ID[a.id].rarity) || (b.enh || 0) - (a.enh || 0));
-    const equipped = new Set(Object.values(this.eco.s.heroes).flatMap((h) => Object.values(h.equip)));
-    bag.innerHTML = `<div class="bag-filters" role="group" aria-label="장비 부위 필터">${['all', ...SLOTS].map((s) => `<button type="button" data-bag-slot="${s}" aria-pressed="${s === slot}">${s === 'all' ? '전체' : SLOT_NAME[s]}</button>`).join('')}</div>
-      <div class="inv-list">${items.map((inst) => {
-        const it = ITEM_BY_ID[inst.id], eq = equipped.has(inst.uid);
-        return `<button type="button" class="equip-slot has inventory-item rar-${it.rarity}" data-inv="${inst.uid}" aria-label="${it.name} +${inst.enh}${eq ? ' 장착 중' : ''}" title="${it.name}"><img src="${ITEM_ICON(it)}" alt=""><span class="inventory-name">${it.name}</span><span class="inventory-level">+${inst.enh}${it.summon ? ' · ✦ 소환' : ''}${eq ? ' · 장착 중' : ''}</span></button>`;
-      }).join('') || '<p class="bag-empty">이 부위의 장비가 없습니다. 던전에서 전리품을 모아 보세요.</p>'}</div>`;
-    bag.querySelectorAll('[data-bag-slot]').forEach((button) => button.onclick = () => {
-      this.bagSlot = button.dataset.bagSlot; this.renderInventory(heroId);
-      bag.querySelector(`[data-bag-slot="${this.bagSlot}"]`)?.focus();
-    });
-    bag.querySelectorAll('[data-inv]').forEach((button) => button.onclick = () => this.showItem(+button.dataset.inv, heroId));
-  }
-  nextChallengeHtml() {
-    const next = this.eco.nextStage(), power = this.eco.heroPower(this.eco.s.selected);
-    if (campaignFinished(this.eco.s.progress)) return `<section class="next-challenge" aria-label="캠페인 이후 원정"><div><b>구한 세계에 남은 이야기</b><p>심층 원정의 새로운 동선과 수호자에 도전하고 제작 재료를 모으세요.</p><small>12개 원정 · 최초 정복 보상</small></div><button type="button" class="btn btn-gold" id="h-next">심층 원정 보기</button></section>`;
-    return `<section class="next-challenge" aria-label="다음 층 도전"><div><b>${next.name}</b><p>구역을 정화해 봉인을 풀고, 보스를 처치하세요.</p><small>권장 전투력 ${fmt(next.recPower)} · 출전 ${HEROES[this.eco.s.selected].name} ${fmt(power)}</small></div><button type="button" class="btn btn-gold" id="h-next">정비 마치고 출격 <small>에너지 -${next.energy}</small></button></section>`;
-  }
-  itemComparisonHtml(heroId, uid) {
-    const p = this.eco.previewItem(heroId, uid); if (!p) return '';
-    const label = p.remove ? '해제 후' : '장착 후';
-    const rows = [['power', '전투력'], ['atk', '공격력'], ['hp', 'HP'], ['def', '방어'], ['crit', '치명타'], ['critDmg', '치명 피해'], ['ultGain', '궁극기 수급']];
-    const number = (key, value) => ['crit', 'critDmg', 'ultGain'].includes(key) ? (value * 100).toFixed(1) + '%' : fmt(value);
-    const sets = [...new Set([...Object.keys(p.beforeBonus.sets), ...Object.keys(p.afterBonus.sets)])].map((sid) => {
-      const before = p.beforeBonus.sets[sid] || 0, after = p.afterBonus.sets[sid] || 0;
-      if (before === after) return '';
-      const set = SETS[sid]; if (!set) return '';
-      const tier = (n) => n >= 4 ? 4 : n >= 2 ? 2 : 0;
-      const changed = tier(before) !== tier(after), effect = after >= 4 ? set.four : after >= 2 ? set.two : null;
-      const effectText = effect?.text || (effect ? Object.entries(effect).filter(([k, v]) => typeof v === 'number').map(([k, v]) => `${({ atk: '공격력', hp: 'HP', crit: '치명타', critDmg: '치명 피해', ultGain: '궁극기 수급' })[k] || k} +${Math.round(v * 100)}%`).join(' · ') : '활성 효과 없음');
-      return `<li><b>${set.name}</b> ${before}/4 → ${after}/4${changed ? `<strong class="${tier(after) > tier(before) ? 'stat-up' : 'stat-down'}"> ${tier(before)}세트 → ${tier(after)}세트</strong>` : ''}<small>${effectText}</small></li>`;
-    }).filter(Boolean).join('');
-    const current = p.current ? `${ITEM_BY_ID[p.current.id].name} +${p.current.enh}` : '없음';
-    return `<section class="item-comparison"><h3>${HEROES[heroId].name} · ${label} 비교</h3><p>현재 ${SLOT_NAME[p.slot]}: ${current}</p>
-      ${p.owner && p.owner !== heroId ? `<p class="stat-down">${HEROES[p.owner].name}에게 장착 중입니다. 장착하면 해당 영웅에게서 옮겨옵니다.</p>` : ''}
-      <table><thead><tr><th>능력치</th><th>현재</th><th>${label}</th><th>변화</th></tr></thead><tbody>${rows.map(([key, name]) => {
-        const delta = p.after[key] - p.before[key];
-        return `<tr><th>${name}</th><td>${number(key, p.before[key])}</td><td>${number(key, p.after[key])}</td><td class="${delta > 0 ? 'stat-up' : delta < 0 ? 'stat-down' : ''}">${delta > 0 ? '+' : delta < 0 ? '−' : ''}${number(key, Math.abs(delta))}</td></tr>`;
-      }).join('')}</tbody></table><ul>${sets || '<li>세트 구성 변화 없음</li>'}</ul><small>전투력과 세트 효과를 함께 비교해 선택하세요.</small></section>`;
-  }
+  renderInventory(heroId) { return renderBag(this, heroId); }
   selectHero(id, restoreKeyboardFocus = false) {
     if (!HEROES[id] || !this.eco.ownHero(id)) return false;
     this.heroSel = id;
@@ -292,33 +251,8 @@ export class Meta {
     }
     const id = this.heroSel; const def = HEROES[id]; const own = this.eco.ownHero(id); const det = $('hero-detail');
     this.app.wardrobe?.show(id);
-    if (!own) { det.innerHTML = `<h2>${def.name}</h2><div class="sub">${def.title} · ${def.rarity}</div><p style="color:var(--muted);font-size:13px">${def.skills.map((s) => s.name).join(' · ')}</p><button class="btn btn-gold" id="h-summon">소환으로 획득</button>`; $('h-summon').onclick = () => this.openTab('gacha'); return; }
-    const h = this.eco.hero(id); const st = heroStats(def, h, this.eco.heroEquipBonus(id)); const sel = this.eco.s.selected === id;
-    const training = this.eco.trainingQuote(id);
-    det.innerHTML = `<h2>${def.name} <small style="font-size:12px;color:${RC[def.rarity]}">${def.rarity}</small></h2><div class="sub">${def.title} · Lv.${h.level} · ${'★'.repeat(h.star)}${'☆'.repeat(5 - h.star)} · 전투력 <b style="color:var(--gold)">${fmt(st.power)}</b></div>
-      <div class="hero-actions hero-actions-top"><button class="btn btn-blue btn-sm" id="h-lv" aria-describedby="hero-training-hint" ${training.ok ? '' : 'disabled'}>${trainingButtonLabel(training)}<small>${training.reason === 'hunt' ? '현재 레벨 EXP 50%부터' : training.reason === 'cap' ? 'Lv.80' : `<i class="ic ic-gold"></i> ${fmt(training.cost)}${training.reason === 'gold' ? ' · 골드 부족' : ''}`}</small></button><button class="btn btn-gold btn-sm" id="h-star" ${h.star >= 5 ? 'disabled' : ''}>승급 <small>조각 ${h.shards}/${starShards(h.star)}</small></button>${sel ? '<button class="btn btn-ghost btn-sm" disabled>출전 중</button>' : '<button class="btn btn-ghost btn-sm" id="h-sel">출전 영웅으로</button>'}</div>
-      ${heroProgressionHtml(h, def, this.eco.s.gold)}
-      <div class="stat-grid"><div class="stat">HP <b>${fmt(st.hp)}</b></div><div class="stat">공격력 <b>${fmt(st.atk)}</b></div><div class="stat">방어력 <b>${st.def}</b></div><div class="stat">치명타 <b>${Math.round(st.crit * 100)}%</b></div></div>
-      <h3 style="margin:12px 0 6px;font-size:14px">스킬북 <small style="color:#ff9ad8">Q / E 빌드</small></h3>
-      <div class="skill-book">${def.skills.map((sk, i) => { const ok = !sk.unlock || h.level >= sk.unlock; const loadout = h.skillLoadout || [4,5]; const equipped = loadout.includes(i); const info = i < 4 ? (sk.ult ? '고정 · 궁극기' : `기본 스킬 · 쿨타임 ${sk.cd}초 · MP ${sk.mp || 0}`) : ok ? `각성 Lv.${h.skills[i] || 1} · MP ${sk.mp || 0}` : `해금 Lv.${sk.unlock}`; return `<div class="skill-book-card${ok ? '' : ' locked'}${equipped ? ' equipped' : ''}" data-skill-card="${i}"><button type="button" class="skill-book-icon" data-sk="${i}" aria-label="${sk.name} 설명 보기" style="border-color:${ok ? def.color : 'rgba(255,255,255,.18)'}"><img src="${sk.icon}" onerror="this.style.display='none';this.parentNode.style.background='${def.color}'"></button><div class="skill-book-main"><b>${sk.name}</b><small>${info}</small></div>${i >= 4 ? `<div class="skill-equip"><button type="button" data-equip="0:${i}" class="${loadout[0] === i ? 'on' : ''}" ${ok ? '' : 'disabled'}>Q</button><button type="button" data-equip="1:${i}" class="${loadout[1] === i ? 'on' : ''}" ${ok ? '' : 'disabled'}>E</button></div>` : ''}</div>`; }).join('')}</div>
-      <div class="awk-note">${(() => { const nx = def.skills.find((sk) => sk.unlock && h.level < sk.unlock); return nx ? `다음 해금 Lv.${nx.unlock} · <b style="color:#ff9ad8">${nx.name}</b>` : '모든 고위 스킬 해금 완료'; })()}</div>
-      <h3 style="margin:12px 0 6px;font-size:14px">세트 효과</h3>${this.setListHtml(id)}
-      <h3 style="margin:12px 0 6px;font-size:14px">장비</h3><div class="equip-grid">${SLOTS.map((sl) => { const uid = h.equip[sl]; const inst = this.eco.s.inventory.find((x) => x.uid === uid); if (!inst) return `<div class="equip-slot" data-slot="${sl}"><img class="empty-equip-art" src="${uiArt(`slot-${sl}`)}" alt=""><small>${SLOT_NAME[sl]}</small></div>`; const it = ITEM_BY_ID[inst.id]; return `<div class="equip-slot has rar-${it.rarity}" data-slot="${sl}" data-uid="${uid}"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><span class="plus">+${inst.enh}</span></div>`; }).join('')}</div>
-      <h3 style="margin:12px 0 6px;font-size:14px">가방 <small style="color:var(--muted)">${this.eco.s.inventory.length}개</small></h3><div id="hero-bag"></div>${this.nextChallengeHtml()}`;
-    this.renderInventory(id);
-    $('h-next').onclick = () => this.launchNextChallenge();
-    $('h-lv').onclick = () => {
-      if (this.app.mode !== 'lobby' || this.app.stageStarting || this.app.battle?.active) return;
-      if (this.eco.levelUpHero(id)) { this.trackFunnel('upgrade', { kind: 'hero_level', level: this.eco.hero(id).level }); audio.levelUp({ vol: 0.42 }); audio.vibe(20); this.ui.toast(`사냥과 훈련으로 Lv.${this.eco.hero(id).level} 달성!`, 'gold'); }
-      else { this.ui.toast(this.eco.lastTrainingError === 'storage' ? '훈련을 저장하지 못해 경험치와 골드를 그대로 돌려두었습니다.' : this.eco.lastTrainingError === 'hunt' ? '사냥으로 현재 레벨 경험치를 절반 이상 쌓아 주세요.' : '경험치와 보유 골드를 확인해 주세요.', 'red'); audio.play('ui_error'); }
-      this.renderHeroes();
-    };
-    $('h-star').onclick = () => { if (this.eco.promoteHero(id)) { this.trackFunnel('upgrade', { kind: 'hero_star', level: this.eco.hero(id).star }); audio.play('jingle_legend', { vol: 0.7 }); this.ui.toast('승급 성공! ★' + this.eco.hero(id).star, 'gold'); this.renderHeroes(); } else { this.ui.toast(`영웅 조각 부족 — 중복 영웅은 조각 ${GACHA.dupShards}개로 바뀝니다`, 'red'); } };
-    const hs = $('h-sel'); if (hs) hs.onclick = () => this.selectHero(id);
-    det.querySelectorAll('[data-sk]').forEach((el) => el.onclick = () => this.showSkill(id, +el.dataset.sk));
-    det.querySelectorAll('[data-equip]').forEach((el) => el.onclick = (event) => { event.stopPropagation(); const [slot, skillIndex] = el.dataset.equip.split(':').map(Number); if (this.eco.setSkillLoadout(id, slot, skillIndex)) { audio.play('ui_confirm', { vol: 0.5 }); this.ui.toast(`${slot === 0 ? 'Q' : 'E'} · ${def.skills[skillIndex].name} 장착`, 'gold'); this.renderHeroes(); } else this.ui.toast('해금 상태와 다른 슬롯 장착을 확인해 주세요', 'red'); });
-    const hc = $('h-craft'); if (hc) hc.onclick = () => this.showCraft(id);
-    det.querySelectorAll('.equip-slot[data-slot]').forEach((el) => el.onclick = () => { const uid = el.dataset.uid; if (uid) this.showItem(+uid, id); else this.ui.toast('가방에서 장비를 선택해 장착하세요'); });
+    if (!own) { det.innerHTML = `<div class="hs-locked"><h2>${def.name}</h2><div class="sub">${def.title} · ${def.rarity}</div><p style="color:var(--muted);font-size:13px">${def.skills.map((s) => s.name).join(' · ')}</p><button class="btn btn-gold" id="h-summon">소환으로 획득</button></div>`; $('h-summon').onclick = () => this.openTab('gacha'); return; }
+    renderOwnedHero(this, id, det);
   }
   setListHtml(heroId) {
     const b = this.eco.heroEquipBonus(heroId); const counts = b.sets || {};
@@ -355,87 +289,10 @@ export class Meta {
     this.ui.modal(`<h2>${sk.name} ${sk.unlock ? '<small style="font-size:11px;color:#ff9ad8">각성</small>' : ''} <small style="font-size:12px">Lv.${lv}</small></h2><p>${sk.desc}</p>${lockNote}<p>피해 배율 <b style="color:var(--gold)">${(sk.dmg * (1 + (lv - 1) * 0.12)).toFixed(1)}x${sk.ticks ? ` × ${sk.ticks}회` : ''}</b> ${sk.ult ? '· 궁극기 (게이지 100)' : `· 쿨타임 ${sk.cd}초 · MP ${sk.mp || 0}`}</p>
       <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-up" ${lv >= 10 || locked ? 'disabled' : ''}>${locked ? `Lv.${sk.unlock}에 해금` : '강화'} <small>${locked ? '' : `<i class="ic ic-gold"></i> ${fmt(cost)}`}</small></button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-up').onclick = () => { if (locked) return; if (this.eco.upgradeSkill(id, i)) { this.trackFunnel('upgrade', { kind: 'skill', level: lv + 1 }); audio.play('jingle_win1', { vol: 0.5 }); this.ui.closeModal(); this.renderHeroes(); this.ui.toast(`${sk.name} Lv.${lv + 1}!`, 'gold'); } else { this.ui.toast('골드 부족', 'red'); this.offerGold(); } }; } });
   }
-  showItem(uid, heroId) {
-    const inst = this.eco.s.inventory.find((x) => x.uid === uid); if (!inst) return;
-    const it = ITEM_BY_ID[inst.id]; const h = this.eco.hero(heroId); const equipped = h.equip[it.slot] === uid;
-    const st = itemStats(inst);
-    const statTxt = [st.atk ? `공격력 +${st.atk}` : '', st.hp ? `HP +${st.hp}` : '', st.def ? `방어 +${st.def}` : '', st.crit ? `치명 +${Math.round(st.crit * 100)}%` : ''].filter(Boolean).join(' · ');
-    const set = it.set ? SETS[it.set] : null;
-    this.ui.modal(`<div class="item-detail"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><div><div style="font-weight:900;font-size:16px;color:${RARITY_COLOR[it.rarity]}">${it.name} <span style="color:var(--gold)">+${inst.enh}</span></div><div style="font-size:12px;color:var(--muted)"><b style="color:${RARITY_COLOR[it.rarity]}">${RARITY_INFO[it.rarity].name}</b> · ${SLOT_NAME[it.slot]}${set ? ' · ' + set.name : ''}</div><div style="font-size:13px;margin-top:4px">${statTxt}</div>${it.slot === 'weapon' ? `<div class="item-look" style="--wl:${weaponLook(heroId, inst, LOOKS).color}">착용 모습 · ${weaponLookText(weaponLook(heroId, inst, LOOKS))}</div>` : ''}${it.summon ? `<div style="margin-top:7px;color:${RARITY_COLOR[it.rarity]};font-weight:900">✦ ${it.summon.name} 소환 · ${it.summon.interval}초마다 ${Math.round(it.summon.ratio * 100)}% 공격</div><small style="color:var(--muted)">장착 중인 모든 소환 장비가 함께 궤도를 돌며 전투를 돕습니다.</small>` : ''}</div></div>
-      ${this.itemComparisonHtml(heroId, uid)}
-      <div class="modal-btns item-actions"><button class="btn btn-ghost btn-sm" id="i-close">닫기</button><button class="btn btn-ghost btn-sm" id="i-sell">판매</button><button class="btn btn-blue btn-sm" id="i-enh">강화</button><button class="btn btn-gold btn-sm" id="i-eq">${equipped ? '해제' : '장착'}</button></div>`, { onOpen: (b) => {
-      b.querySelector('#i-close').onclick = () => { this.ui.closeModal(); this.focusInventory(uid, it.slot); };
-      b.querySelector('#i-eq').onclick = () => { if (equipped) this.eco.unequip(heroId, it.slot); else this.eco.equip(heroId, uid); audio.play('ui_confirm', { vol: 0.5 }); this.ui.closeModal(); this.renderHeroes(); if (heroId === this.eco.s.selected) this.app.showcaseHero(heroId); this.focusInventory(uid, it.slot); };   // 장착 즉시 외형 반영
-      b.querySelector('#i-sell').onclick = async () => { if (await this.ui.confirm('판매', `${it.name} +${inst.enh} 을(를) 판매할까요?`)) { const g = this.eco.sellItem(uid); this.ui.toast(`골드 +${fmt(g)}`, 'gold'); audio.pick('coin', 2); this.renderHeroes(); this.focusInventory(uid, it.slot); } else this.showItem(uid, heroId); };
-      b.querySelector('#i-enh').onclick = () => { this.ui.closeModal(); this.showEnhance(uid, heroId); };
-      const actions = [...b.querySelectorAll('.item-actions button')];
-      for (const button of actions) button.onkeydown = (event) => {
-        if (event.key === 'Escape') { event.preventDefault(); b.querySelector('#i-close').click(); }
-        else if (event.key === 'Tab' && ((event.shiftKey && button === actions[0]) || (!event.shiftKey && button === actions.at(-1)))) {
-          event.preventDefault(); (event.shiftKey ? actions.at(-1) : actions[0]).focus();
-        }
-      };
-      b.querySelector('#i-close').focus();
-    } });
-  }
-  /** 강화 패널 — 과금 유도 핵심 화면 */
-  showEnhance(uid, heroId) {
-    const render = () => {
-      const inst = this.eco.s.inventory.find((x) => x.uid === uid);
-      if (!inst) { this.ui.modal(`<h2 style="color:var(--red)">장비 파괴</h2><p>강화에 실패해 장비가 파괴되었습니다.</p><div class="modal-btns"><button class="btn btn-gold" id="m-ok">확인</button></div>`, { onOpen: (b) => b.querySelector('#m-ok').onclick = () => { this.ui.closeModal(); this.renderHeroes(); } }); return; }
-      const it = ITEM_BY_ID[inst.id]; const lv = inst.enh; const s = this.eco.s;
-      const cur = itemStats(inst); const nextInst = { ...inst, enh: Math.min(ENH_MAX, lv + 1) }; const nxt = itemStats(nextInst);
-      const cost = enhanceCost(lv), stones = enhanceStones(lv); const tier = enhanceStoneTier(lv), skey = STONE_KEY[tier];
-      const chance = enhanceChance(lv), destroy = destroyChance(lv);
-      const maxed = lv >= ENH_MAX;
-      const rows = [['공격력', cur.atk, nxt.atk], ['HP', cur.hp, nxt.hp], ['방어', cur.def, nxt.def]].filter((r) => r[1] || r[2]);
-      const html = `<div class="enh-wrap">
-        <h2>장비 강화</h2>
-        <div class="enh-item">
-          <div class="enh-icon" style="--rc:${RARITY_COLOR[it.rarity]}"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><span class="lv">+${lv}</span></div>
-          ${maxed ? '' : `<div class="enh-arrow">▶</div><div class="enh-icon" style="--rc:${RARITY_COLOR[it.rarity]}"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><span class="lv">+${lv + 1}</span></div>`}
-        </div>
-        <div style="font-weight:900;color:${RARITY_COLOR[it.rarity]}">${it.name}</div>
-        ${maxed ? '<p style="color:var(--gold);font-weight:900">최대 강화 달성!</p>' : `
-        <div class="enh-stats">${rows.map((r) => `<div><span>${r[0]}</span><span>${fmt(r[1])} → <b>${fmt(r[2])}</b></span></div>`).join('')}</div>
-        <div class="enh-rate">성공 확률 <b id="e-rate">${Math.round(chance * 100)}%</b>${destroy > 0 ? ` · <span class="warn" id="e-destroy">파괴 ${Math.round(destroy * 100)}%</span>` : ''}${enhanceDown(lv) ? ' · 실패 시 <b>-1</b> 하락' : ''}</div>
-        <div class="enh-opts">
-          <div class="enh-opt" data-opt="bless"><img src="${resourceArt('bless')}" onerror="this.remove()"><span>축복 +20%</span><span class="cnt">×${s.bless}</span></div>
-          ${destroy > 0 ? `<div class="enh-opt" data-opt="protect"><img src="${resourceArt('protect')}" onerror="this.remove()"><span>보호 (파괴 방지)</span><span class="cnt">×${s.protect}</span></div>` : ''}
-        </div>
-        <div class="enh-cost"><span class="${s.gold < cost ? 'lack' : ''}"><i class="ic ic-gold"></i> ${fmt(cost)}</span>${stones ? `<span class="${(s[skey] || 0) < stones ? 'lack' : ''}"><img src="${resourceArt(skey)}" style="width:14px;height:14px;vertical-align:-2px" onerror="this.remove()"> ${STONE_NAME[tier]} ${stones} <span style="color:var(--muted)">(보유 ${s[skey] || 0})</span></span>` : ''}</div>`}
-        <div class="modal-btns"><button class="btn btn-ghost" id="e-close">닫기</button>${maxed ? '' : '<button class="btn btn-gold" id="e-go">강화하기</button>'}</div>
-        <p style="font-size:10px">+8 달성까지 성공 100% · 현재 +10부터 실패 시 하락 · 현재 +12부터 파괴 위험 · 비석 3종: 강화석(현재 +9까지) · 상급(현재 +14까지) · 전설(현재 +15↑)</p>
-      </div>`;
-      this.ui.modal(html, { onOpen: (b) => {
-        const opts = { bless: false, protect: false };
-        b.querySelectorAll('.enh-opt').forEach((el) => el.onclick = () => {
-          const k = el.dataset.opt; if (s[k] <= 0) { this.ui.toast(`${k === 'bless' ? '축복' : '보호'} 주문서가 없습니다`, 'red'); this.offerScroll(k); return; }
-          opts[k] = !opts[k]; el.classList.toggle('on', opts[k]);
-          const rt = b.querySelector('#e-rate'); if (rt) rt.textContent = Math.round(Math.min(1, chance + (opts.bless ? 0.2 : 0)) * 100) + '%';
-          const dt = b.querySelector('#e-destroy'); if (dt) dt.textContent = opts.protect ? '파괴 0% (보호)' : `파괴 ${Math.round(destroy * 100)}%`;
-          audio.play('ui_click', { vol: 0.4 });
-        });
-        b.querySelector('#e-close').onclick = () => { this.ui.closeModal(); this.renderHeroes(); };
-        const go = b.querySelector('#e-go'); if (go) go.onclick = () => {
-          const r = this.eco.enhance(uid, opts);
-          if (!r.ok) {
-            if (r.reason === 'gold') { this.ui.toast('골드 부족', 'red'); this.offerGold(); }
-            else if (r.reason === 'stones') { this.ui.toast(`${STONE_NAME[r.tier || 1]} 부족${r.tier > 1 ? ' — ' + (r.tier === 3 ? '보스' : '엘리트') + '가 떨굽니다' : ''}`, 'red'); if (!r.tier || r.tier === 1) this.offerStones(); }
-            else this.ui.toast('강화할 수 없습니다', 'red');
-            audio.play('ui_error'); return;
-          }
-          this.trackFunnel('upgrade', { kind: 'item_enhance', level: r.enh, success: r.success });
-          const icon = b.querySelector('.enh-icon');
-          if (r.destroyed) { audio.shatter({ vol: 0.75 }); audio.voice('enh_destroy'); audio.vibe([120, 60, 120]); this.ui.toast('장비가 파괴되었습니다…', 'red'); setTimeout(render, 350); }
-          else if (r.success) { audio.levelUp({ vol: 0.4, base: 440 + r.enh * 18 }); if (r.enh >= 8) audio.voice('enh_success', { min: 3 }); if (r.enh >= 12) audio.play('jingle_legend', { vol: 0.55 }); audio.vibe([20, 20, 50]); icon?.classList.add('enh-flash'); this.ui.toast(`강화 성공! +${r.enh}`, 'gold'); setTimeout(render, 380); }
-          else { audio.fail({ vol: 0.55 }); audio.vibe(60); if (lv >= 8) audio.voice('enh_fail', { min: 3 }); icon?.classList.add('enh-fail'); this.ui.toast(r.down ? `강화 실패… +${r.enh}로 하락` : '강화 실패…', 'red'); setTimeout(render, 380); }
-          this.refreshTop();
-        };
-      } });
-    };
-    render();
-  }
+  /** 가방 장비 시트 — 현재 장비와 나란히 비교하고 장착·강화를 한 곳에서 한다. */
+  showItem(uid, heroId, options) { return showItemSheet(this, uid, heroId, options); }
+  /** 강화는 비교 시트의 강화 영역으로 연다. */
+  showEnhance(uid, heroId) { return showItemSheet(this, uid, heroId, { focus: 'enhance' }); }
   offerStones() { setTimeout(() => this.ui.modal(`<h2>강화석이 부족합니다</h2><p>강화석은 전투 필드 드랍 또는 상점에서 얻을 수 있어요</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">나중에</button><button class="btn btn-gold" id="m-ok">강화 상점</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-ok').onclick = () => { this.ui.closeModal(); this.openTab('shop', 'enh'); }; } }), 500); }
   offerScroll(k) { setTimeout(() => this.ui.modal(`<h2>${k === 'bless' ? '축복' : '보호'} 주문서가 없습니다</h2><p>${k === 'bless' ? '성공률을 20% 올려줍니다.' : '실패해도 장비가 파괴되지 않습니다.'}<br>상점에서 구매할 수 있어요.</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">나중에</button><button class="btn btn-gold" id="m-ok">강화 상점</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-ok').onclick = () => { this.ui.closeModal(); this.openTab('shop', 'enh'); }; } }), 500); }
   offerGold() { setTimeout(() => this.ui.modal(`<h2>골드가 부족합니다</h2><p>보석으로 골드를 즉시 충전할 수 있어요</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">나중에</button><button class="btn btn-gold" id="m-ok">골드 상점</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-ok').onclick = () => { this.ui.closeModal(); this.openTab('shop', 'gold'); }; } }), 600); }

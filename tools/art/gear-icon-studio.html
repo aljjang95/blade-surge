@@ -1,0 +1,84 @@
+<!-- 실행: bun run dev --host 127.0.0.1 --port 5181 --strictPort
+     다른 터미널: CHROME_PATH를 Chrome 실행 파일로 설정하고 node tools/art/gear-icon-studio.mjs
+     생성 완료 후 직접 시작한 dev 서버를 종료한다. -->
+<!doctype html>
+<html lang="ko"><meta charset="utf-8"><link rel="icon" href="data:,"><title>장비 아이콘 스튜디오</title>
+<body style="margin:0;background:#22303c"><script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { ITEM_BY_ID } from '/src/data/items.js';
+import { buildGearModel } from '/src/engine/item-forge.js';
+import { assembleHeroIdentity } from '/src/engine/hero-identity.js';
+import { applyArmorAppearance, removeArmorAppearance } from '/src/game/armor-appearance.js';
+
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+// 3배 슈퍼샘플링 후 저장 도구에서 256px로 축소해 투명 가장자리 계단을 줄인다.
+renderer.setSize(768, 768); renderer.setPixelRatio(1); renderer.setClearColor(0, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05; document.body.append(renderer.domElement);
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer), room = new RoomEnvironment();
+scene.environment = pmrem.fromScene(room).texture; room.dispose(); pmrem.dispose();
+scene.add(new THREE.HemisphereLight(0xe9f2ff, 0x324151, 1.25));
+for (const [x, y, z, power] of [[-3, 5, 6, 2.8], [4, 2, -2, 4.5]]) {
+  const light = new THREE.DirectionalLight(0xffffff, power); light.position.set(x, y, z); scene.add(light);
+}
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .01, 100);
+const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
+let armorRig;
+async function armorModel(item) {
+  if (!armorRig) {
+    const [base, casual] = await Promise.all([loader.loadAsync('/models/Knight.glb'), loader.loadAsync('/models/tll/knight-casual-v2.glb')]);
+    armorRig = assembleHeroIdentity(base, casual, 'Knight', 'casual-v2').scene;
+  }
+  applyArmorAppearance(armorRig, { id: 'knight' }, item);
+  armorRig.updateMatrixWorld(true);
+  const group = new THREE.Group(), materials = new Set();
+  armorRig.traverse(node => {
+    if (!node.isMesh || !node.userData.equippedArmor) return;
+    const material = node.material.clone(); materials.add(material);
+    const geometry = node.geometry.clone(), position = geometry.attributes.position, point = new THREE.Vector3();
+    // 재질별 병합된 스킨 갑옷을 현재 바인드 포즈로 굽는다. 단순 복제하면 본 변환이 사라진다.
+    if (node.isSkinnedMesh) for (let i = 0; i < position.count; i++) {
+      point.fromBufferAttribute(position, i); node.applyBoneTransform(i, point); position.setXYZ(i, point.x, point.y, point.z);
+    }
+    geometry.applyMatrix4(node.matrixWorld); geometry.computeVertexNormals();
+    const mesh = new THREE.Mesh(geometry, material); mesh.name = node.name;
+    group.add(mesh);
+  });
+  removeArmorAppearance(armorRig);
+  if (!group.children.length) throw Error(`방어구 메시 없음: ${item.id}`);
+  group.userData.dispose = () => { group.removeFromParent(); group.traverse(node => node.geometry?.dispose()); for (const material of materials) material.dispose(); };
+  return group;
+}
+window.gearIconItems = Object.values(ITEM_BY_ID).filter(item => item.icon?.startsWith('/img/gear/')).map(item => item.id);
+window.renderGearIcon = async (id) => {
+  const item = ITEM_BY_ID[id], model = item.slot === 'armor' ? await armorModel(item) : buildGearModel(item);
+  const stage = new THREE.Group(); stage.add(model);
+  if (item.slot === 'weapon') model.rotation.z = -Math.PI / 4;
+  const bounds = new THREE.Box3().setFromObject(stage), center = bounds.getCenter(new THREE.Vector3());
+  stage.position.sub(center); scene.add(stage);
+  // 반지는 위에서 비스듬히 내려다봐 이중 띠·인장판·발톱의 깊이가 보이게 한다.
+  const direction = item.slot === 'weapon' ? new THREE.Vector3(.28, .08, 1) : item.slot === 'ring' ? new THREE.Vector3(.5, .42, 1) : new THREE.Vector3(.72, .42, 1);
+  camera.position.copy(direction.normalize().multiplyScalar(5)); camera.lookAt(0, 0, 0); camera.updateMatrixWorld(true);
+  // 카메라 공간의 실제 투영 폭으로 프레이밍하여 긴 검과 폭 넓은 갑옷도 잘리지 않는다.
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  stage.updateMatrixWorld(true);
+  stage.traverse(node => {
+    if (!node.isMesh) return;
+    const positions = node.geometry.attributes.position, point = new THREE.Vector3();
+    for (let i = 0; i < positions.count; i++) {
+      point.fromBufferAttribute(positions, i).applyMatrix4(node.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
+      minX = Math.min(minX, point.x); maxX = Math.max(maxX, point.x); minY = Math.min(minY, point.y); maxY = Math.max(maxY, point.y);
+    }
+  });
+  const extent = Math.max(maxX - minX, maxY - minY) / 2 / .85, cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+  camera.left = cx - extent; camera.right = cx + extent; camera.bottom = cy - extent; camera.top = cy + extent; camera.updateProjectionMatrix();
+  renderer.render(scene, camera);
+  const result = { id, data: renderer.domElement.toDataURL('image/webp', .96), drawCalls: renderer.info.render.calls };
+  model.userData.dispose(); stage.removeFromParent(); return result;
+};
+window.gearIconReady = true;
+</script></body></html>

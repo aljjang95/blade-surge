@@ -480,7 +480,7 @@ export class TownContent {
     const forge = this.forge(this.ui.activeId);
     if (!forge) return this.empty('이 마을의 대장장이는 아직 일을 시작하지 않았습니다.');
     const ui = this.ui, wallet = ui.wallet();
-    const head = '<div class="town-wallet"><span><img src="' + uiArt('gold') + '" alt="">보유 골드</span><strong>' + fmt(wallet.gold) + '</strong></div>';
+    const head = '<p class="town-intro">마을 대장장이에게 골드로 제작 · 강화를 맡깁니다. 내 장비 착용 · 비교는 영웅 · 장비, 원정 재료 제작은 제작 공방에서 합니다.</p><div class="town-wallet"><span><img src="' + uiArt('gold') + '" alt="">보유 골드</span><strong>' + fmt(wallet.gold) + '</strong></div>';
     if (!forge.unlocked) return head + this.empty('대장장이의 공방이 아직 열리지 않았습니다.');
     const recipe = entry => {
       const ok = ui.affordable(entry.price, wallet) && !entry.locked && !entry.crafted;
