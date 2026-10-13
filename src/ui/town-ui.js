@@ -146,6 +146,8 @@ export class TownUI {
   waystoneSummary() {
     const towns = this.towns(), next = towns.find(town => !town.unlocked);
     if (!next) return '세 마을이 모두 열렸습니다. 이동석으로 오가세요.';
+    // 던전 수가 다 차도 레벨 조건이 남을 수 있으므로 서비스가 계산한 남은 조건 문구를 우선한다.
+    if (next.requirement?.text) return next.name + ' · ' + next.requirement.text;
     return next.name + ' · 던전 ' + (next.progress?.cleared ?? 0) + '/' + (next.progress?.required ?? 0) + ' 클리어';
   }
 
