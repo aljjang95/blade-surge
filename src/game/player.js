@@ -20,12 +20,12 @@ const COMBO_QUEUE_OPEN = 0.28;
 const SKILL_CANCEL_AFTER_HIT = 0.05;
 
 export class Player extends Actor {
-  constructor(game, gltf, def, stats, skillLevels = [1, 1, 1, 1, 1, 1], equip = {}, heroLevel = 1, skillLoadout = [4, 5]) {
+  constructor(game, gltf, def, stats, skillLevels = [1, 1, 1, 1, 1, 1], equip = {}, heroLevel = 1, skillLoadout = [4, 5], avatarId = null) {
     super(game, gltf, { scale: 1.0 });
     this.def = def; this.stats = stats; this.skillLevels = def.skills.map((_, i) => skillLevels[i] || 1);
     this.heroLevel = heroLevel; this.skillLoadout = normalizeSkillLoadout(def, skillLoadout);   // 각성 스킬 해금 판정용
     this.maxHp = stats.hp; this.hp = stats.hp;
-    this.look = applyLook(this.model, def, equip);   // 장비 외형: 무기/방패 메시 + 등급 발광 + 궤적색
+    this.look = applyLook(this.model, def, equip, { avatarId });   // 장비 외형: 무기/방패 메시 + 등급 발광 + 궤적색
     this.beacon = new HeroBeacon(this.root, this.model);
     // The outfit is attached after Actor construction; include it in hit/death/revive effects.
     const dressedMaterials = new Set();

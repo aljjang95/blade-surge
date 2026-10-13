@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RARITY_INFO, ITEM_BY_ID } from '../data/items.js';
-import { materialsOf, applyLibraryHeroTier } from '../engine/assets.js';
+import { materialsOf, applyLibraryHeroBody, applyLibraryHeroTier } from '../engine/assets.js';
+import { libraryAssetForAvatar } from '../engine/library-assets.js';
 import { heroAppearanceTier } from '../data/hero-library.js';
 import { applyArmorAppearance } from './armor-appearance.js';
 import { applyArmoryAppearance } from '../engine/armory-assets.js';
@@ -56,18 +57,22 @@ const BODY_GLOW = { N: 0, S: 0.02, E: 0.035, U: 0.05, L: 0.07 };
  * @param equip  { weapon: inst|null, armor: inst|null, ... }  (inst = { id, enh })
  * @returns { trailColor, aura }  — 무기 궤적 색, 오라 색(없으면 null)
  */
-export function applyLook(model, def, equip = {}) {
+export function applyLook(model, def, equip = {}, opts = {}) {
   const L = LOOKS[def.id];
   const w = equip.weapon ? ITEM_BY_ID[equip.weapon.id] : null, a = equip.armor ? ITEM_BY_ID[equip.armor.id] : null;
+  const avatarAsset = opts.avatarId ? libraryAssetForAvatar(opts.avatarId) : null;
+  const hasAvatar = !!avatarAsset;
   // 라이브러리 영웅: 갑옷 단계 몸체로 교체. 아직 받지 않은 단계는 비동기로 받은 뒤 외형을 다시 적용한다.
   if (model.userData.authoredContract?.role === 'hero') {
-    const swapped = applyLibraryHeroTier(model, heroAppearanceTier(equip, ITEM_BY_ID), () => {
-      applyLook(model, def, equip); model.userData.onLibraryBodySwap?.();
-    });
+    const swapped = hasAvatar
+      ? applyLibraryHeroBody(model, avatarAsset, () => { applyLook(model, def, equip, opts); model.userData.onLibraryBodySwap?.(); })
+      : applyLibraryHeroTier(model, heroAppearanceTier(equip, ITEM_BY_ID), () => { applyLook(model, def, equip, opts); model.userData.onLibraryBodySwap?.(); });
     if (swapped) model.userData.onLibraryBodySwap?.();
   }
-  applyArmorAppearance(model, def, a?.slot === 'armor' ? a : null);
-  applyLibraryArmoryAppearance(model, equip, def);
+  // 아바타 몸체가 흉갑·어깨·허리 장식을 소유하므로 기존 몸통 장식은 겹치지 않게 끈다.
+  // 무기/방패 노드와 병기고의 반지·장화는 외형 계약상 그대로 유지한다.
+  applyArmorAppearance(model, def, hasAvatar ? null : (a?.slot === 'armor' ? a : null));
+  applyLibraryArmoryAppearance(model, hasAvatar ? { ...equip, armor: null } : equip, def);
   // 보일 노드: 슬롯이 비었으면 def.show 중 그 그룹 것, 있으면 등급표
   let show = new Set(def.show);
   if (L) {

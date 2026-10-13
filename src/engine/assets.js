@@ -52,7 +52,7 @@ export async function loadModel(name, contract = null, allowLibrary = true) {
   const heroId = !contract && allowLibrary ? heroIdForModel(name) : null;
   if (heroId && libraryLoader.assetForHero(heroId, 1)) return loadHeroModel(heroId, 1);
   const libraryAsset = !contract && allowLibrary && !heroId ? libraryLoader.assetFor(name) : null;
-  if (libraryAsset?.role === 'hero') return loadHeroModel(libraryAsset.heroId, libraryAsset.armorTier || 1);
+  if (libraryAsset?.role === 'hero') return libraryAsset.avatar ? loadHeroAsset(libraryAsset) : loadHeroModel(libraryAsset.heroId, libraryAsset.armorTier || 1);
   const key = name + '|' + JSON.stringify(contract) + '|' + (libraryAsset?.id || 'legacy');
   if (cache.has(key)) return cache.get(key);
   if (libraryAsset) {
@@ -118,7 +118,19 @@ export function loadHeroModel(heroId, tier = 1) {
   if (!hero) return Promise.reject(new Error(`invalid hero id: ${heroId}`));
   const asset = libraryLoader.assetForHero(heroId, tier);
   if (!asset) return loadModel(hero.model, null, false);
-  return libraryLoader.load(asset, () => loadModel(hero.model, null, false), (gltf, entry) => prepareLibraryHero(gltf, entry));
+  return loadHeroAsset(asset);
+}
+
+/** 아바타 몸체를 미리 받아 둔다. 렌더 준비 중 비동기 몸체 교체로 재질이 바뀌지 않게 Player 생성 전에 기다린다. */
+export function preloadAvatarBody(avatarId) {
+  const asset = avatarId ? libraryLoader.assetForAvatar(avatarId) : null;
+  if (!asset) return Promise.resolve(false);
+  return loadHeroAsset(asset).then((gltf) => gltf.scene.userData.libraryAsset?.id === asset.id, (error) => { console.warn('avatar body preload failed: ' + asset.id, error); return false; });
+}
+
+export function loadHeroAsset(asset) {
+  if (asset?.role !== 'hero' || !asset.heroId || !HEROES[asset.heroId]) return Promise.reject(new Error('invalid hero asset'));
+  return libraryLoader.load(asset, () => loadModel(HEROES[asset.heroId].model, null, false), (gltf, entry) => prepareLibraryHero(gltf, entry));
 }
 
 async function prepareLibraryHero(gltf, asset) {
@@ -170,16 +182,23 @@ export function applyLibraryHeroTier(root, tier, onAsyncSwap = null) {
   const contract = root.userData.authoredContract;
   if (contract?.role !== 'hero') return false;
   const target = libraryLoader.assetForHero(contract.heroId, tier);
+  return applyLibraryHeroBody(root, target, onAsyncSwap);
+}
+
+/** 아바타와 갑옷 단계가 공유하는 영웅 몸체 교체 경로. 골격이 맞지 않으면 기존 몸체를 유지한다. */
+export function applyLibraryHeroBody(root, target, onAsyncSwap = null) {
+  const contract = root.userData.authoredContract;
+  if (contract?.role !== 'hero' || !target || target.role !== 'hero') return false;
   const current = root.userData.libraryBodyAssetId;
   if (!target || !current || target.id === current) { root.userData.libraryTargetId = current; return false; }
   root.userData.libraryTargetId = target.id;
   const ready = heroBodies.get(target.id);
   if (ready) return swapLibraryHeroBody(root, ready, target);
-  loadHeroModel(contract.heroId, target.armorTier || 1).then((gltf) => {
+  loadHeroAsset(target).then((gltf) => {
     // 폴백(KayKit) 결과나 그 사이 바뀐 요청·해제된 인스턴스는 교체하지 않는다.
     if (gltf.scene.userData.libraryAsset?.id !== target.id || root.userData.libraryDisposed || root.userData.libraryTargetId !== target.id) return;
     if (swapLibraryHeroBody(root, gltf, target)) onAsyncSwap?.();
-  }).catch((error) => console.warn(`hero tier body failed: ${target.id}`, error));
+  }).catch((error) => console.warn(`hero body failed: ${target.id}`, error));
   return false;
 }
 

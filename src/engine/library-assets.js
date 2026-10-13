@@ -48,6 +48,7 @@ export function createLibraryLoader(value, load, prepare = (gltf) => gltf, warn 
   return {
     assetFor(name) { return assets.find((asset) => asset.id === name || (asset.kind === 'character' && asset.replaces === name)) || null; },
     assetForHero(heroId, tier = 1) { return selectHeroLibraryAsset(value, heroId, tier); },
+    assetForAvatar(avatarId) { return assetForAvatar(value, avatarId); },
     heroAssets(heroId) { return heroLibraryAssets(value, heroId); },
     load(asset, fallback, prepareAsset = prepare) {
       if (cache.has(asset.id)) return cache.get(asset.id);
@@ -90,9 +91,18 @@ export function libraryAssetForHero(heroId) {
   return selectHeroLibraryAsset(manifest, heroId, 1);
 }
 
+export function assetForAvatar(value, avatarId) {
+  validateManifest(value);
+  return value.assets.find((asset) => asset.id === avatarId && asset.avatar === true && asset.role === 'hero') || null;
+}
+
+export function libraryAssetForAvatar(avatarId) {
+  return assetForAvatar(manifest, avatarId);
+}
+
 export function heroLibraryAssets(value, heroId) {
   validateManifest(value);
-  return value.assets.filter((asset) => asset.kind === 'character' && asset.role === 'hero' && asset.heroId === heroId)
+  return value.assets.filter((asset) => asset.kind === 'character' && asset.role === 'hero' && asset.avatar !== true && asset.heroId === heroId)
     .sort((a, b) => (a.armorTier || 1) - (b.armorTier || 1));
 }
 

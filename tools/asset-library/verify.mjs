@@ -22,11 +22,12 @@ for (const asset of manifest.assets) {
   if (digest !== asset.sha256 || bytes.length !== asset.bytes) throw new Error(`artifact mismatch: ${asset.id}`);
   // 런타임은 2·3단계 메시를 1단계 골격에 본 이름으로 다시 묶으므로, 1단계에 없는 본(예: neutral_bone)이 있으면 조용히 1단계로 남는다.
   if (asset.role === 'hero') {
-    if ((asset.armorTier || 1) === 1) heroJoints.set(asset.heroId, jointNames(glbJson(bytes)));
+    // 아바타 몸체도 2·3단계처럼 1단계 골격에 묶인 메시 전용 자산이다.
+    if ((asset.armorTier || 1) === 1 && asset.avatar !== true) heroJoints.set(asset.heroId, jointNames(glbJson(bytes)));
     else tierChecks.push({ asset, joints: jointNames(glbJson(bytes)) });
   }
-  // 영웅은 대기·달리기, 몬스터는 대기·공격이 최소 논리 클립이다. 메시 전용 갑옷 단계(armorTier>1)는 1단계 클립을 공유한다.
-  const meshOnly = asset.role === 'hero' && (asset.armorTier || 1) > 1 && !Object.keys(asset.clips || {}).length;
+  // 영웅은 대기·달리기, 몬스터는 대기·공격이 최소 논리 클립이다. 메시 전용 갑옷 단계(armorTier>1)와 아바타는 1단계 클립을 공유한다.
+  const meshOnly = asset.role === 'hero' && ((asset.armorTier || 1) > 1 || asset.avatar === true) && !Object.keys(asset.clips || {}).length;
   const requiredClips = asset.role === 'hero' ? ['idle', 'run'] : asset.kind === 'prop' ? [] : ['idle', 'attack'];
   if (!meshOnly && requiredClips.some((key) => !asset.clips?.[key])) throw new Error(`missing clip key: ${asset.id}`);
   // 보스는 manifest 규칙과 같은 20,000 삼각형 예산을 쓴다.

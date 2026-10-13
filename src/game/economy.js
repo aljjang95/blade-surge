@@ -10,6 +10,7 @@ import { resolveDifficulty } from './difficulty.js';
 import { heroTrainingQuote } from './hero-training.js';
 import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
 import { freshTownState } from '../data/towns.js';
+import { AVATAR_BY_ID } from '../data/avatars.js';
 
 const KEY = 'bladesurge_save_v1';
 const now = () => Date.now();
@@ -93,7 +94,7 @@ export class Economy {
       expedition: normalizeExpedition(), journey: normalizeJourney(), actionSequence: 0,
       schemaVersion: 1, created: now(), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: now(), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, { level: 1, exp: 0, star: 1, shards: 0, skills: HEROES[id].skills.map(() => 1), skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } }])),
-      selected: 'knight', inventory: [], invSeq: 1,
+      selected: 'knight', inventory: [], invSeq: 1, avatars: { owned: [], equipped: {} },
       progress: { unlocked: 1, stars: {}, difficulty: 'story' }, // stars['1-1'] = 3
       towns: freshTownState(),
       pity: 0, gacha: { pity: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
@@ -397,6 +398,27 @@ export class Economy {
     else got = this.addRewards(sku.rewards);
     this.emit(); return { ok: true, got, vipUp: s.vip > vipBefore ? s.vip : 0 };
   }
+  /** @param {string} id */
+  buyAvatar(id) {
+    const avatar = AVATAR_BY_ID[id], s = this.s;
+    if (!avatar) return { ok: false, reason: 'avatar' };
+    if (s.avatars.owned.includes(id)) return { ok: false, reason: 'owned' };
+    if (s.gems < avatar.price) return { ok: false, reason: 'gems' };
+    // 보석 차감과 소유 추가는 저장이 성공해야 확정한다(소환과 같은 롤백 규칙).
+    s.gems -= avatar.price; s.avatars.owned.push(id);
+    if (!this.save()) { s.gems += avatar.price; s.avatars.owned.pop(); return { ok: false, reason: 'storage' }; }
+    for (const f of this.listeners) f(this.s);
+    return { ok: true };
+  }
+  /** @param {string} heroId @param {string|null} [id] */
+  equipAvatar(heroId, id = null) {
+    if (!Object.hasOwn(HEROES, heroId)) return { ok: false, reason: 'hero' };
+    if (id === null) { delete this.s.avatars.equipped[heroId]; this.emit(); return { ok: true }; }
+    const avatar = AVATAR_BY_ID[id];
+    if (!avatar || avatar.heroId !== heroId || !this.s.avatars.owned.includes(id)) return { ok: false, reason: 'avatar' };
+    this.s.avatars.equipped[heroId] = id; this.emit(); return { ok: true };
+  }
+  equippedAvatar(heroId = this.s.selected) { const id = this.s.avatars?.equipped?.[heroId]; return AVATAR_BY_ID[id]?.heroId === heroId ? id : null; }
   claimMonthly() { const s = this.s; if (s.monthlyUntil < now()) return false; const day = Math.floor(now() / 86400000); if (s.monthlyClaimed === day) return false; s.monthlyClaimed = day; this.addRewards({ gems: 100 }); return true; }
   // ---------- 배틀패스 ----------
   get passLevel() { return Math.min(BATTLE_PASS.maxLevel, Math.floor(this.s.pass.xp / BATTLE_PASS.xpPerLevel) + 1); }

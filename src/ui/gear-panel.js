@@ -8,6 +8,8 @@ import { weaponLook, weaponLookText } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
 import { campaignFinished } from '../data/expedition-depths.js';
 import { GACHA } from '../data/shop.js';
+import { AVATARS } from '../data/avatars.js';
+import { libraryAssetForAvatar } from '../engine/library-assets.js';
 
 /**
  * 영웅 · 장비 화면의 구성 요소.
@@ -54,13 +56,29 @@ export function renderOwnedHero(meta, id, det) {
     const it = ITEM_BY_ID[inst.id];
     return '<button type="button" class="equip-slot has hs-slot rar-' + it.rarity + '" data-slot="' + slot + '" data-uid="' + inst.uid + '" aria-label="' + SLOT_NAME[slot] + ': ' + esc(it.name) + ' +' + inst.enh + ', 비교와 강화 열기" title="' + esc(it.name) + '">' + iconImg(it) + '<span class="plus">+' + inst.enh + '</span><span class="hs-slot-name">' + SLOT_NAME[slot] + '</span></button>';
   }).join('');
+  const avatar = AVATARS.find((entry) => entry.heroId === id), avatarReady = !!avatar && !!libraryAssetForAvatar(avatar.id), avatarOwned = !!avatar && eco.s.avatars.owned.includes(avatar.id), avatarEquipped = !!avatar && eco.equippedAvatar(id) === avatar.id;
+  const avatarRow = avatar ? '<section class="hero-avatar-row" aria-label="' + esc(def.name) + ' 아바타"><div><b>캐시 아바타</b><small>' + esc(avatar.name) + ' · 순수 외형 · 성능 영향 없음</small></div><button type="button" class="btn ' + (avatarOwned ? 'btn-ghost' : 'btn-gold') + ' btn-sm" data-avatar-action="' + avatar.id + '" ' + (avatarReady ? '' : 'disabled') + '>' + (avatarReady ? (avatarOwned ? (avatarEquipped ? '착용 중 · 해제' : '보유 중 · 착용') : '<i class="ic ic-gem"></i> ' + fmt(avatar.price) + ' 보석') : '준비 중') + '</button></section>' : '';
   det.innerHTML = '<div class="hs-slots" role="group" aria-label="' + esc(def.name) + ' 장착 장비">' + slots + '</div>' +
     '<header class="hs-head"><div class="hs-id"><h2>' + esc(def.name) + ' <small style="color:' + RC[def.rarity] + '">' + def.rarity + '</small></h2><div class="sub">' + esc(def.title) + ' · Lv.' + h.level + ' · ' + '★'.repeat(h.star) + '☆'.repeat(5 - h.star) + ' · 전투력 <b>' + fmt(st.power) + '</b></div></div>' +
     '<div class="hs-go">' + (selected ? '<span class="hs-on">출전 중</span>' : '<button type="button" class="btn btn-ghost btn-sm" id="h-sel">출전시키기</button>') +
     '<button type="button" class="btn btn-gold btn-sm" id="h-next">' + (finished ? '심층 원정' : '출격') + '<small>' + (finished ? '새 원정' : '에너지 -' + next.energy) + '</small></button></div></header>' +
-    '<div class="hs-main"><div class="hs-tabs" role="tablist" aria-label="영웅 정보">' + HERO_PANES.map((entry) => '<button type="button" role="tab" id="hs-tab-' + entry.id + '" data-pane="' + entry.id + '" aria-controls="hs-panel" aria-selected="' + (entry.id === pane) + '" tabindex="' + (entry.id === pane ? 0 : -1) + '">' + entry.label + (entry.id === 'gear' ? '<small>가방 ' + eco.s.inventory.length + '</small>' : '') + '</button>').join('') + '</div>' +
+    // 가로 화면의 hero-detail 은 display:contents 격자라 새 형제 요소가 엉뚱한 칸에 앉는다. 아바타 줄은 본문 안에 둔다.
+    '<div class="hs-main">' + avatarRow + '<div class="hs-tabs" role="tablist" aria-label="영웅 정보">' + HERO_PANES.map((entry) => '<button type="button" role="tab" id="hs-tab-' + entry.id + '" data-pane="' + entry.id + '" aria-controls="hs-panel" aria-selected="' + (entry.id === pane) + '" tabindex="' + (entry.id === pane ? 0 : -1) + '">' + entry.label + (entry.id === 'gear' ? '<small>가방 ' + eco.s.inventory.length + '</small>' : '') + '</button>').join('') + '</div>' +
     '<div class="hs-panel" id="hs-panel" role="tabpanel" tabindex="-1"></div></div>';
   renderPane(meta, id);
+  const avatarButton = det.querySelector('[data-avatar-action]');
+  if (avatarButton && avatar) avatarButton.onclick = async () => {
+    if (!avatarReady) return;
+    const ownedNow = eco.s.avatars.owned.includes(avatar.id), equippedNow = eco.equippedAvatar(id) === avatar.id;
+    if (!ownedNow) {
+      if (eco.s.gems < avatar.price) { meta.ui.toast('보석이 부족합니다.', 'red'); return; }
+      if (!await meta.ui.confirm('아바타 구매', avatar.name + '을(를) ' + fmt(avatar.price) + ' 보석으로 구매할까요?')) return;
+      const bought = eco.buyAvatar(avatar.id); if (!bought.ok) { meta.ui.toast('아바타를 구매하지 못했습니다.', 'red'); return; }
+    }
+    if (!eco.equipAvatar(id, equippedNow ? null : avatar.id).ok) return;
+    if (eco.s.selected === id) meta.app.showcaseHero(id);
+    meta.renderHeroes();
+  };
   $('h-next').onclick = () => meta.launchNextChallenge();
   const pick = $('h-sel'); if (pick) pick.onclick = () => meta.selectHero(id);
   const tabs = [...det.querySelectorAll('.hs-tabs [role=tab]')];

@@ -17,7 +17,9 @@ export function validateManifest(value) {
     if (!['character', 'prop'].includes(asset.kind) || !['biped', 'quadruped', 'none'].includes(asset.body) ||
         (asset.kind === 'prop' && asset.body !== 'none') || (asset.kind === 'character' && asset.body === 'none')) throw new Error('invalid asset kind/body');
     if (asset.role !== undefined && (asset.role !== 'hero' || asset.kind !== 'character' || typeof asset.heroId !== 'string' || !/^[a-z][a-z0-9_-]{0,63}$/.test(asset.heroId))) throw new Error('invalid hero role');
-    if (asset.armorTier !== undefined && (!Number.isInteger(asset.armorTier) || asset.armorTier < 1 || asset.armorTier > 3 || asset.role !== 'hero')) throw new Error('invalid armor tier');
+    if (asset.avatar !== undefined && typeof asset.avatar !== 'boolean') throw new Error('invalid avatar flag');
+    if (asset.avatar === true && (asset.role !== 'hero' || asset.armorTier !== undefined)) throw new Error('invalid avatar role/tier');
+    if (asset.armorTier !== undefined && (!Number.isInteger(asset.armorTier) || asset.armorTier < 1 || asset.armorTier > 3 || asset.role !== 'hero' || asset.avatar === true)) throw new Error('invalid armor tier');
     if (asset.replaces !== null && (typeof asset.replaces !== 'string' || !asset.replaces || replacements.has(asset.replaces))) throw new Error('invalid or duplicate replaces');
     if (asset.replaces !== null) replacements.add(asset.replaces);
     if (asset.file !== `/models/library/${asset.id}.glb`) throw new Error('invalid asset file');
