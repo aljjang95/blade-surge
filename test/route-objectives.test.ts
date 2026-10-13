@@ -226,3 +226,42 @@ test('실제 종문 목표 표시와 기존 FX가 다음 대상과 부분 유지
   tickAt(f, 2, 1.5);
   expect(battleObjectiveView(f.g)).toMatchObject({ title: '종문 조율', progress: 1, total: 3, hold: 0, roomId: null });
 });
+
+test('일식 수문 일반: 역류 밸브 3개를 순서대로 잠가야 봉인이 풀리고, 순서가 아닌 밸브는 기다린다', () => {
+  const f = fixture(buildExpeditionStage('dungeon', 'eclipse_hydra_vault', null));
+  expect(f.route.def.id).toBe('eclipse_backflow_valves');
+  expect(f.route.gates.map((gate: any) => gate.room.id)).toEqual([2, 5, 7]);
+  // 세 밸브 모두 시작 구역에서 봉인 밖 경로로 닿고, 보스 구역은 닫혀 있다.
+  const flow = f.world.buildFlow(f.world.startRoom.x, f.world.startRoom.z)!;
+  for (const id of [2, 5, 7]) expect(flow[cell(f.world, f.world.rooms[id])]).toBeGreaterThanOrEqual(0);
+  expect(flow[cell(f.world, f.world.bossRoom)]).toBe(-1);
+  expect(f.world.rooms[7].label).toContain('3번 역류 밸브');
+  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'eclipse_hydra_vault', null, { depth: 'deep' }))).toBeNull();
+
+  // 2번 밸브를 먼저 정리해도 1번 전에는 잠기지 않는다.
+  clearCombat(f, 5); tickAt(f, 5, 3);
+  expect(f.route.progress).toBe(0); expect(f.world.rooms[5].cleared).toBe(false);
+  expect(f.route.hint()).toBe('역류 밸브 0/3 · 다음 1번 역류 밸브 · 북쪽 저수조 · 적 처치 후 중심 2초');
+
+  clearCombat(f, 2);
+  // 표식은 1.8초마다 갱신된다. 빛 바깥(반경 3 밖)에서 한 주기를 보내 다음 밸브 표식을 확인한다.
+  f.g.player.pos.set(f.world.rooms[2].x + 4, 0, f.world.rooms[2].z); f.g.updateExpedition(1.8);
+  expect(f.route.hold).toBe(0);
+  tickAt(f, 2, .5);
+  expect(f.circles.some(c => c.radius === 3 && c.color === 0x63e7dd)).toBe(true);
+  expect(f.labels).toContain('1번 역류 밸브 · 중심 2초');
+  expect(battleObjectiveView(f.g)).toMatchObject({ title: '역류 밸브 잠금', progress: 0, total: 3, roomId: 2, hold: .5, holdTotal: 2 });
+  // 빛 밖으로 나가면 유지 시간이 처음부터 다시 시작된다.
+  tickAt(f, 1, .1); expect(f.route.hold).toBe(0);
+  tickAt(f, 2, 2); expect(f.route.progress).toBe(1);
+  tickAt(f, 5, 2); expect(f.route.progress).toBe(2); expect(f.world.rooms[5].cleared).toBe(true);
+
+  for (const id of [1, 3, 4, 6]) clearCombat(f, id);
+  expect(f.route.canUnseal()).toBe(false);
+  attune(f, 7);
+  expect(f.route.complete).toBe(true);
+  expect(f.route.canUnseal()).toBe(true);
+  expect(f.route.hint()).toBe('역류 밸브 3/3 잠금 완료 · 보스 처치');
+  expect(f.route.finish(false)).toMatchObject({ id: 'eclipse_backflow_valves', complete: false, progress: 3, target: 3, rooms: [2, 5, 7] });
+});
+

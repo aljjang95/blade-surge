@@ -67,8 +67,8 @@ const BASE_DUNGEONS = [
   }),
   dungeon('eclipse_hydra_vault', '일식의 심연 수문', 'tide', 4, 1, 'glass_leaf', '검은 파도가 잠시 멈춘 수문에는 세 머리의 맹세가 남아 있습니다.', {
     art: ENCOUNTER_ART.boss_obsidian_hydra, accent: '#72e0d3', subtitle: 'ECLIPSE HYDRA VAULT',
-    objective: '모든 구역 정화 → 흑요의 삼두룡 처치',
-    tactic: `수문의 적을 처치하고 모든 구역을 정화하세요. ${ENEMIES.obsidian_hydra.tactic}`,
+    objective: '역류 밸브 세 개를 순서대로 잠그고 모든 구역을 정화한 뒤 흑요의 삼두룡을 쓰러뜨리세요.',
+    tactic: `각 밸브 구역의 적을 처치한 뒤 1번 → 2번 → 3번 순서로 청록 빛 안에서 각각 연속 2초간 밸브를 잠그세요. 순서가 아닌 밸브는 기다리며, 밸브 3개와 모든 구역을 정화하면 보스 봉인이 풀립니다. ${ENEMIES.obsidian_hydra.tactic}`,
     bossEnemy: 'obsidian_hydra', bossHp: 18800, bossName: '흑요의 삼두룡', rosterMode: 'eclipse',
     roster: { trash: ['eclipse_scalelet', 'glass_shardling', 'bomb_abyss', 'eclipse_tidecaller', 'squidle', 'blob_spiky'], ranged: ['abyss_seer', 'eclipse_tidecaller', 'glub'], elite: ['hydra_scaleguard', 'elite_dragonling', 'elite_golem'] },
   }),
