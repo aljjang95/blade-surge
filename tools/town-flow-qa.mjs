@@ -122,6 +122,8 @@ try {
   }
   await writeFile(join(out, 'driver.mjs'), await readFile(fileURLToPath(import.meta.url)));
   report.build = JSON.parse(await readFile(join(root, 'dist/version.json'), 'utf8'));
+  // 오래된 dist 로 통과하지 않도록 빌드 SHA 가 현재 HEAD 와 같은지 먼저 확인한다(작업 중 dirty 빌드는 기록만 남긴다).
+  check('dist 빌드 SHA = HEAD', report.build.sha === report.head, { build: report.build.sha, head: report.head, dirty: report.build.dirty });
   const index = await readFile(join(root, 'dist/index.html'));
   report.indexSha256 = hash(index);
   server = await preview({ root, logLevel: 'error', preview: { host: '127.0.0.1', port: 0, open: false } });

@@ -21,6 +21,8 @@ const manifest = JSON.parse(readFileSync(resolve(PROJ, 'asset-library/manifest.j
 const fixtureGlb = {};
 let outDir = null;
 if (heroFixture) {
+  // 정본 manifest 의 실제 영웅 항목과 id 가 겹치지 않도록 픽스처 실행에서는 실제 영웅 항목을 뺀다.
+  manifest.assets = manifest.assets.filter((asset) => asset.role !== 'hero');
   const base = manifest.assets.find((asset) => asset.id === 'bone_knight');
   if (!base) throw new Error('hero fixture requires the bone_knight library asset');
   const fixture = (id, armorTier, clips) => ({ ...base, id, replaces: null, file: '/models/library/' + id + '.glb', role: 'hero', heroId: 'knight', armorTier, clips });
@@ -40,7 +42,7 @@ if (heroFixture) {
     name: 'tll-hero-library-fixture', enforce: 'pre',
     load(id) {
       if (!id.replace(/\\/g, '/').endsWith('asset-library/manifest.json')) return null;
-      const value = JSON.parse(readFileSync(id, 'utf8')); value.assets.push(...assets); return JSON.stringify(value);
+      const value = JSON.parse(readFileSync(id, 'utf8')); value.assets = value.assets.filter((asset) => asset.role !== 'hero'); value.assets.push(...assets); return JSON.stringify(value);
     },
   }] }));
 }
@@ -89,6 +91,8 @@ try {
     console.log("SKIP 영웅 모드: manifest 에 role:'hero' 항목 없음 (--hero-fixture 로 계약 경로만 검증 가능)");
   }
   for (const heroId of heroIds) {
+    // 앞 영웅의 전투 검사가 남긴 testPause·battle 상태를 정리해야 로비 쇼케이스 믹서가 다시 돈다.
+    await page.evaluate(() => { const a = window.app; a.battle?.stop?.(); a.testPause = false; if (a.mode !== 'lobby') a.toLobby(); });
     const tiers = manifest.assets.filter((a) => a.role === 'hero' && a.heroId === heroId);
     const expected = (tier) => tiers.filter((a) => (a.armorTier || 1) <= tier).sort((a, b) => (b.armorTier || 1) - (a.armorTier || 1))[0]?.id || null;
     // A. 1단계 로드·축 보정 손 소켓·기존 무기 노드
@@ -100,7 +104,9 @@ try {
       const socket = (key) => (c?.sockets?.[key] ? root.getObjectByName(c.sockets[key]) : null);
       const shown = (node) => (node ? node.children.filter((n) => n.visible).map((n) => ({ name: n.name, forged: n.userData.forgedWeapon || null })) : []);
       root.updateMatrixWorld(true);
-      const weapon = socket('handslot.r')?.children.find((n) => n.visible), size = new T.Vector3();
+      // 활 영웅처럼 주무기를 왼손에 드는 경우도 단조 무기가 있는 손을 잰다.
+      const weapon = [socket('handslot.r'), socket('handslot.l')].flatMap((node) => node ? node.children.filter((n) => n.visible && n.userData.forgedWeapon) : [])[0]
+        || socket('handslot.r')?.children.find((n) => n.visible), size = new T.Vector3();
       if (weapon) new T.Box3().setFromObject(weapon).getSize(size);
       return { library: a.models[s.def.model]?.scene.userData.libraryAsset?.id || null, role: c?.role, heroId: c?.heroId, body: root.userData.libraryBodyAssetId,
         right: shown(socket('handslot.r')), left: shown(socket('handslot.l')), show: s.def.show, handBones: c?.handBones || null,
@@ -109,7 +115,7 @@ try {
     const visible = [...base.right, ...base.left].map((n) => n.name);
     check(`${heroId}: 1단계 라이브러리 로드`, base.library === expected(1) && base.body === expected(1), `${base.library} / body ${base.body}`);
     check(`${heroId}: ModelContract hero·Mixamo 손 본`, base.role === 'hero' && base.heroId === heroId && !!base.handBones?.r && !!base.handBones?.l, JSON.stringify(base.handBones));
-    check(`${heroId}: 손 소켓 무기·보조 표시`, base.show.every((name) => visible.includes(name)) && base.right.some((n) => n.forged), JSON.stringify({ right: base.right, left: base.left }));
+    check(`${heroId}: 손 소켓 무기·보조 표시`, base.show.every((name) => visible.includes(name)) && [...base.right, ...base.left].some((n) => n.forged), JSON.stringify({ right: base.right, left: base.left }));
     check(`${heroId}: 무기 크기 정상`, base.weaponSize > 0.3 && base.weaponSize < 3, base.weaponSize.toFixed(3));
     check(`${heroId}: 콤보·스킬 클립 별칭`, base.missing.length === 0, base.missing.join(','));
     await page.screenshot({ path: `${OUT}/${heroId}-tier1.png` });
@@ -152,14 +158,15 @@ try {
         p.state = 'idle'; p.stateT = 0; p.comboResume = null; p.startCombo(i);
         for (let k = 0; k < 3; k++) a.step(1 / 60, false);
         const pts = p.weaponPoints('handslot.r', 1.2);
-        combos.push({ anim: p.def.combo[i].anim, playing: p.actionName === p.def.combo[i].anim && !!p.action, trail: !!pts && pts[0].distanceTo(pts[1]) > 0.1 });
+        // 이름이 아니라 실제로 재생 중인 클립 객체를 비교한다(별칭 두 개가 같은 클립을 가리킬 수 있다).
+        combos.push({ anim: p.def.combo[i].anim, playing: !!p.action && p.action.getClip() === p.clips[p.def.combo[i].anim], trail: !!pts && pts[0].distanceTo(pts[1]) > 0.1 });
         for (let k = 0; k < 120 && p.state === 'attack'; k++) a.step(1 / 60, false);
       }
       for (let i = 0; i < 4; i++) {
         p.state = 'idle'; p.stateT = 0; p.maxMp = 999; p.mp = 999; p.cds[i] = 0; p.ult = p.ultMax;
         const ok = p.tryCastSkill(i);
         a.step(1 / 60, false);
-        skills.push({ anim: p.def.skills[i].anim, ok, playing: p.actionName === p.def.skills[i].anim });
+        skills.push({ anim: p.def.skills[i].anim, ok, playing: !!p.action && p.action.getClip() === p.clips[p.def.skills[i].anim] });
         for (let k = 0; k < 240 && p.busy; k++) a.step(1 / 60, false);
       }
       return { role: p.model.userData.authoredContract?.role, body: p.model.userData.libraryBodyAssetId, combos, skills };
@@ -216,7 +223,8 @@ try {
   }
 } finally {
   check('콘솔 오류 0', errors.length === 0, errors.slice(0, 5).join(' | '));
-  writeFileSync(resolve(OUT, 'result.json'), JSON.stringify({ at: new Date().toISOString(), results, errors }, null, 2));
+  let build = null; try { build = JSON.parse(readFileSync(resolve(outDir || resolve(PROJ, 'dist'), 'version.json'), 'utf8')); } catch {}
+  writeFileSync(resolve(OUT, 'result.json'), JSON.stringify({ at: new Date().toISOString(), heroFixture, build, results, errors, fallbacks }, null, 2));
   await br.close(); srv.kill();
 }
 process.exitCode = results.every((r) => r.ok) ? 0 : 1;

@@ -57,8 +57,8 @@ test('tier fallback picks the closest lower tier, then the legacy KayKit model',
   expect(selectHeroLibraryAsset(manifestOf(hero('hero_knight_t1')), 'knight', 3)?.id).toBe('hero_knight_t1');
   expect(selectHeroLibraryAsset(manifestOf(hero('hero_knight_t2', 2, {})), 'knight', 1)).toBeNull();
   expect(selectHeroLibraryAsset(sparse, 'mage', 3)).toBeNull();
-  // 정본 manifest 에 영웅 항목이 없으면 기존 영웅 경로를 유지한다.
-  expect(libraryAssetForHero('knight')).toBeNull();
+  // 정본 manifest 는 다섯 영웅의 1단계 몸체를 등록한다.
+  for (const id of ['knight', 'barbarian', 'mage', 'rogue', 'ranger']) expect(libraryAssetForHero(id)?.id).toBe('hero_' + id + '_t1');
 });
 
 test('mesh-only tiers reuse the same AnimationClip objects cached per hero', () => {
@@ -117,7 +117,7 @@ test('KayKit action names map to the contract logical keys', () => {
   expect(requiredHeroLogicalClips('knight')).toEqual(expect.arrayContaining(['slash_h', 'slash_d', 'stab', 'spin', 'chop', 'block', 'cast_raise']));
 });
 
-test('광전사 공유 spin 클립은 콤보 뒤 회오리 스킬의 정의된 이름으로 반복 재생한다', () => {
+test('광전사 회오리는 KayKit 짧은 회전 이름을 유지하고 라이브러리에서는 같은 spin 클립으로 반복 재생한다', () => {
   const asset = { ...hero('hero_barbarian_t1', 1), heroId: 'barbarian', clips: { idle: 'idle', spin: 'spin' } };
   const scene = handScene('mixamorigRightHand', 'mixamorigLeftHand');
   scene.userData.authoredContract = heroModelContract(asset, scene);
@@ -134,7 +134,9 @@ test('광전사 공유 spin 클립은 콤보 뒤 회오리 스킬의 정의된 �
   player.playTimed('2H_Melee_Attack_Spinning', .85);
   expect(player.tryCastSkill(0)).toBe(true);
   player.mixer.update(1 / 60);
-  expect(player.actionName).toBe(HEROES.barbarian.skills[0].anim);
+  // 회오리 시전은 KayKit 0.667초 반복 클립 이름을 그대로 쓴다(2.4초 Spin 으로 바꾸면 KayKit 폴백에서 회전 수가 줄어든다).
+  expect(player.actionName).toBe('2H_Melee_Attack_Spinning');
+  expect(player.action.getClip()).toBe(player.clips[HEROES.barbarian.skills[0].anim]);
   expect(player.action.getClip()).toBe(spin);
   expect(player.action.isRunning()).toBe(true);
   expect(player.action.loop).toBe(THREE.LoopRepeat);
