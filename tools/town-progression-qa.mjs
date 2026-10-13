@@ -293,6 +293,17 @@ try {
         a.step(1 / 60, frame % 90 === 0);
         // 순차 목표 위에서 유지 중인 장면을 한 번 남긴다(렌더 프레임 포함).
         if (wantHold && (b.routeObjectives?.hold || 0) > .8) { a.step(1 / 60, true); holding = true; break; }
+        // 포자 폭발 탐침(공개된 개입): 1번 제단 전에 영웅을 2번 방 중심에 고정해 AUTO가 그곳 적을 처리하게 하고,
+        // 차례가 아닌 그 제단이 정화 준비되면 1.2초 더 세워 둔다. 한 번만 실행한다.
+        const r = b.routeObjectives;
+        if (r?.def?.wrongStep && !window.__wrongProbe && r.progress === 0 && !r.gates[1].room.spawned && b.active && !b.paused) {
+          const room = r.gates[1].room, pin = () => b.player.pos.set(room.x, b.player.pos.y, room.z);
+          let k = 0;
+          for (; k < 60 * 60 && b.active && !b.paused && !r.gates[1].ready; k++) { pin(); a.step(1 / 60, k % 90 === 0); }
+          const hp = b.player.hp, before = r.bursts, ready = r.gates[1].ready;
+          for (let j = 0; j < 72 && b.active && !b.paused; j++) { pin(); a.step(1 / 60, j === 71); }
+          if (ready) window.__wrongProbe = { room: room.id, readyAfterFrames: k, ready, bursts: r.bursts - before, hpBefore: hp, hpAfter: b.player.hp, progress: r.progress };
+        }
       }
       return { active: b.active, paused: b.paused, hp: b.player.hp, auto: b.player.auto, elapsed: b.elapsed, kills: b.kills, win: b.result?.win, holding };
     }, !report.holdShot);
@@ -323,11 +334,17 @@ try {
     eclipse_hydra_vault: { id: 'eclipse_backflow_valves', label: '역류 밸브 잠금', rooms: [2, 5, 7] },
     ashforge_catacomb: { id: 'ashforge_furnaces_standard', label: '용광로 냉각', rooms: [1, 2, 3, 5] },
     cinder_tide_lock: { id: 'cinder_cooling_standard', label: '냉각선 복구', rooms: [2, 5] },
+    verdigris_sanctum: { id: 'verdigris_life_altars', label: '생명 제단 정화', rooms: [3, 2, 6] },
   };
   const expectRoute = ROUTE_CHECKS[GATE];
   if (expectRoute) {
     const n = expectRoute.rooms.length;
     console.log('OBJECTIVES', JSON.stringify(report.objectiveTitles), JSON.stringify(report.routeObjective));
+    report.wrongProbe = await page.evaluate(() => window.__wrongProbe || null);
+    if (report.routeObjective?.sporeBursts !== undefined) {
+      console.log('WRONG_PROBE', JSON.stringify(report.wrongProbe));
+      check('차례가 아닌 제단 1.2초 → 포자 폭발 1회·피해·순서 유지', report.wrongProbe?.bursts === 1 && report.wrongProbe.hpAfter < report.wrongProbe.hpBefore && report.wrongProbe.progress === 0 && report.routeObjective.sporeBursts >= 1, report.wrongProbe);
+    }
     check(expectRoute.label + ' ' + n + '/' + n + ' 기록', report.routeObjective?.id === expectRoute.id && report.routeObjective.complete && JSON.stringify(report.routeObjective.rooms) === JSON.stringify(expectRoute.rooms), report.routeObjective);
     check('결과 화면 ' + expectRoute.label + ' 기록', (await page.locator('[aria-label="' + expectRoute.label + ' 결과"]').textContent())?.includes(n + '/' + n), null);
     check('전투 목표창에 ' + expectRoute.label + ' 진행 표시', report.objectiveTitles.some(t => t.startsWith(expectRoute.label)), report.objectiveTitles);
@@ -347,6 +364,12 @@ try {
   await save();
   console.log('QA report:', join(out, 'report.json'));
 }
+
+
+
+
+
+
 
 
 
