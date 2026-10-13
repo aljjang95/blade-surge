@@ -122,9 +122,7 @@ export class Battle {
     if (silhouette && !silhouette.complete()) throw new Error('player silhouette preparation canceled');
     this.drops.setup(this.app.models.dungeon);
     this.renderer.rig.mode = 'battle'; this.renderer.rig.target.copy(this.player.pos); this.renderer.rig.pos.copy(this.player.pos).add(this.renderer.rig.offset);
-    const weaponsGltf = await loadModel('skel_weapons');
-    if (this._startGeneration !== startGeneration) return;
-    this.weaponsGltf = weaponsGltf;
+    this.weaponsGltf = null;
     this.ui.setupHud(def, this.player);
     this.ui.setupMinimap(this.world);
     this.active = true; this.input.enabled = true; this.input.clear();

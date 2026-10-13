@@ -8,6 +8,9 @@ import { createPortal } from 'react-dom';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 import type { CompanionTactic } from './companion-agent';
 import type { CompanionDirector } from './director';
+import { resolveAssetSource } from '../engine/library-assets';
+import { COMPANION_ASSET } from '../data/monster-roster';
+import manifest from '../../asset-library/manifest.json';
 
 const TACTICS: Array<{ id: CompanionTactic; label: string; detail: string }> = [
   { id: 'gather', label: '몰이', detail: '적을 한곳에 견인' },
@@ -43,7 +46,8 @@ class PortraitBoundary extends Component<{ children: ReactNode }, PortraitBounda
 }
 
 function PortraitModel() {
-  const gltf = useLoader(GLTFLoader, '/models/Skeleton_Mage.glb', (loader) => loader.setMeshoptDecoder(MeshoptDecoder)) as GLTF;
+  const source = resolveAssetSource(manifest.assets.find((asset) => asset.id === COMPANION_ASSET) as any);
+  const gltf = useLoader(GLTFLoader, source, (loader) => loader.setMeshoptDecoder(MeshoptDecoder)) as GLTF;
   const { model, mixer } = useMemo(() => {
     const next = cloneSkeleton(gltf.scene);
     next.traverse((node) => {
@@ -52,7 +56,7 @@ function PortraitModel() {
       node.receiveShadow = false;
     });
     const nextMixer = new AnimationMixer(next);
-    const idle = gltf.animations.find((clip) => clip.name === 'Idle_Combat') ?? gltf.animations.find((clip) => clip.name === 'Idle');
+    const idle = gltf.animations.find((clip) => clip.name === 'idle');
     if (idle) {
       nextMixer.clipAction(idle).play();
       nextMixer.setTime(idle.duration * 0.27);

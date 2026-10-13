@@ -1,7 +1,11 @@
 export const LIBRARY_SCHEMA = 'tll.game-asset-library.v1';
 export const LOGICAL_CLIPS = ['idle', 'walk', 'run', 'attack', 'attackHeavy', 'hit', 'death'];
 export const HERO_LOGICAL_CLIPS = ['idle', 'run', 'dodge', 'hit', 'death', 'cheer', 'interact', 'slash_h', 'slash_d', 'stab', 'spin', 'chop', 'jump_attack', 'block', 'cast_shoot', 'cast_long', 'cast_raise', 'throw', 'bow_shoot'];
-export const OPTIONAL_CLIPS = ['spawn', 'cast'];
+// 몬스터 선택 클립: 공격 변주·시전·포효·강피격. 런타임 리그(library)가 논리 키로 고른다.
+export const OPTIONAL_CLIPS = ['spawn', 'cast', 'attack2', 'attackSpin', 'attackJump', 'roar', 'raise', 'summon', 'hitHeavy'];
+// 공격류 클립만 타격 프레임(클립 길이 대비 접촉 비율)을 가진다.
+export const IMPACT_CLIPS = ['attack', 'attack2', 'attackHeavy', 'attackSpin', 'attackJump', 'cast', 'raise', 'summon'];
+export const MONSTER_PROFILES = ['brute', 'soldier', 'caster', 'blob', 'flyer', 'drake'];
 const digest = /^[a-f0-9]{64}$/;
 
 export function triangleLimit(asset) {
@@ -40,6 +44,14 @@ export function validateManifest(value) {
         !provenance.tool || !Number.isFinite(Date.parse(provenance.createdAt))) throw new Error('invalid provenance');
     if (typeof asset.shared !== 'boolean' || typeof asset.license !== 'string' || !asset.license) throw new Error('invalid sharing/license');
     if (asset.boss !== undefined && typeof asset.boss !== 'boolean') throw new Error('invalid boss flag');
+    if (asset.impacts !== undefined) {
+      if (!asset.impacts || typeof asset.impacts !== 'object' || Array.isArray(asset.impacts) || asset.role === 'hero') throw new Error('invalid impacts');
+      for (const [key, value] of Object.entries(asset.impacts)) {
+        if (!IMPACT_CLIPS.includes(key) || asset.clips[key] !== key || !Number.isFinite(value) || value <= 0.05 || value >= 0.95) throw new Error(`invalid impact: ${key}`);
+      }
+    }
+    if (asset.profile !== undefined && (asset.role === 'hero' || !MONSTER_PROFILES.includes(asset.profile))) throw new Error('invalid monster profile');
+    if (asset.hover !== undefined && (!Number.isFinite(asset.hover) || asset.hover < 0 || asset.hover > 3)) throw new Error('invalid hover');
   }
   return value;
 }

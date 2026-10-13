@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { CHAPTERS, ENEMIES, stageDef } from '../src/data/stages.js';
 import { CAMPAIGN, CHAPTER_SCENES, journalEntries } from '../src/data/campaign-story.js';
 import { MODEL_LIST } from '../src/engine/assets.js';
+import { MONSTER_ROSTER } from '../src/data/monster-roster.js';
 import { BOSS_SIGNATURES } from '../src/data/boss-encounters.js';
 
 const stages = CHAPTERS.flatMap(ch => Array.from({ length: 10 }, (_, i) => stageDef(ch.id, i + 1)));
@@ -45,7 +46,9 @@ describe('다섯 맹세 캠페인 데이터', () => {
     for (const stage of stages) {
       const enemy = enemies[stage.encounter.enemyId];
       expect(enemy.boss).toBe(true);
-      expect(loadedModels.has(enemy.model)).toBe(true);
+      const modelRoster = MONSTER_ROSTER[enemy.model];
+      expect(modelRoster).toBeDefined();
+      expect(loadedModels.has(modelRoster.asset) || loadedModels.has(modelRoster.fallback)).toBe(true);
       expect(enemies[enemy.summon]).toBeDefined();
       expect(enemy.pattern.every((key: string) => patterns.has(key))).toBe(true);
       if (enemy.phasePatterns) expect(enemy.phasePatterns.flat().every((key: string) => patterns.has(key))).toBe(true);

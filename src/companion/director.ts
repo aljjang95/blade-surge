@@ -184,7 +184,7 @@ export class CompanionDirector {
     this.syncQuality();
     this.mind.setConnected(true);
     this.updateTelemetry(battle);
-    const model = this.app.models.Skeleton_Mage;
+    const model = this.app.models.skeleton_mage;
     if (model && battle.player) {
       this.actor = new CompanionCombatant(battle, model, (event: string) => this.mind.observe(event));
       this.actor.setTactic(this.mind.getSnapshot().tactic);

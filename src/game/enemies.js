@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { Actor } from './actor.js';
-import { getPart } from '../engine/assets.js';
 import { audio } from '../engine/audio.js';
 import { rigOf, RIGS } from '../data/rigs.js';
 import { BOSS_SIGNATURES, isBossSignature } from '../data/boss-encounters.js';
@@ -12,8 +11,10 @@ import { supportCastingForStage } from './expedition-combat.js';
 import { beginEnemyGather, prepareEnemyGather } from './crowd-gather.js';
 import { EnemyDashWarning } from './enemy-dash-warning.js';
 import { hazardContains } from './region-hazards.js';
+import { monsterRosterEntry } from '../data/monster-roster.js';
 
 const _v = new THREE.Vector3();
+const _impactPoint = new THREE.Vector3();
 const areaPlayers = game => [...new Set(game.stage?.party ? game.app.party.livingPlayers() : [game.player])].filter(p => p?.alive);
 const PATTERN_ANIMS = { basic: 'attack', spin: 'attackSpin', slam: 'attackJump', summon: 'summon', fan: 'cast', soulrain: 'raise', dash: 'dash' };
 
@@ -39,16 +40,12 @@ export function nextBossPattern(def, turn, phase = 0) {
 export class Enemy extends Actor {
   constructor(game, gltf, weaponsGltf, def, scaleMult, pos) {
     const rig = rigOf(def.model, gltf.scene.userData.libraryAsset);
-    super(game, gltf, { scale: def.scale * (RIGS[rig].scale || 1), tint: def.tint || (def.boss ? '#ffb0b0' : null), rig });
+    super(game, gltf, { scale: def.scale * (RIGS[rig].scale || 1), tint: def.tint || (def.boss ? '#ffb0b0' : null), rig, roster: rig === 'library' ? monsterRosterEntry(def.model) : null });
     this.def = def; this.type = def.name; this.isBoss = !!def.boss; this.isElite = !!def.elite;
     this.maxHp = Math.floor(def.hp * scaleMult); this.hp = this.maxHp; this.atk = def.atk * Math.pow(scaleMult, 0.7);
     this.pos.copy(pos); this.face(0, 0);
-    // 무기 장착
-    if (this.rigName === 'kaykit') {
-      if (def.weapon) { const w = getPart(weaponsGltf, def.weapon); const h = this.node('handslot.r'); if (h) h.add(w); }
-      if (def.shield) { const s = getPart(weaponsGltf, def.shield); const h = this.node('handslot.l'); if (h) h.add(s); }
-      if (/자객|암살|사신/.test(def.name)) { const w = getPart(weaponsGltf, 'Skeleton_Blade'); const h = this.node('handslot.l'); if (h) h.add(w); }
-    }
+    this.libraryRoster = monsterRosterEntry(def.model) || this.libraryRoster;
+    this.libraryAsset = gltf.scene.userData.libraryAsset || this.libraryAsset;
     // 잡몹은 몸통만 그림자를 드리운다 — 눈·무기 그림자 패스는 안 보이는데 드로우콜만 2배로 먹는다 (밀도 복구 후 계측)
     if (!def.boss && !def.elite) {
       let body = null;
@@ -159,7 +156,10 @@ export class Enemy extends Actor {
     const game = this.game, rule = this.supportOwner.rule;
     this.supportCastKind = kind; this.special = kind === 'heal' ? 'support_heal' : 'support_summon';
     this.state = 'attack'; this.stateT = 0; this.attackDone = false; this.telegraph = rule.windupSeconds;
-    this.vel.set(0, 0, 0); this.playTimed(this.A('cast'), rule.windupSeconds, { fade: .1 });
+    this.vel.set(0, 0, 0);
+    const cast = this.A('cast');
+    this._monsterAttackPose = this.rigName === 'library' ? { duration: rule.windupSeconds, hitAt: 1, profile: this.libraryAsset?.profile || 'caster', heightM: this.libraryAsset?.heightM || 1, boss: this.isBoss, elite: this.isElite } : null;
+    this.playTimed(cast, rule.windupSeconds, { fade: .1, phase: this.rigName === 'library' ? 'monster' : undefined, hitAt: 1, impactAt: 1 });
     if (this.supportOwnerVisible()) {
       const label = `${this.def.name} · ${kind === 'heal' ? rule.healCue : rule.summonCue}`;
       game.ui?.combatCue?.(label, 'red', rule.windupSeconds * 1000, this); this.supportCueLabel = label;
@@ -255,6 +255,7 @@ export class Enemy extends Actor {
     // 강타·띄우기는 몰이를 끝내고 기존 저항·넉백을 그대로 적용한다.
     if (kb >= 6 || up) this.gatherT = 0;
     this.flash(crit ? 0xffd040 : 0xffffff, crit ? 0.18 : 0.12);
+    this.receiveImpact(dirx, dirz, Math.min(1, .35 + kb * .08));
     const resist = this.isBoss ? 0.25 : this.isElite ? 0.5 : 1;
     this.knockback(dirx, dirz, kb * resist * (this.def.armor ? 0.6 : 1));
     if (stun > 0) this.stun = Math.max(this.stun, stun * (this.isBoss ? 0.4 : 1));
@@ -267,7 +268,7 @@ export class Enemy extends Actor {
     if (staggerOK && !warrior && this.state !== 'dead') {
       // 일반 몹은 수동 기본 공격의 접촉에서 공격을 끊는다. 보스/엘리트의
       // 슈퍼아머는 유지해 강적과 잡몹의 타격 언어를 구분한다.
-      if (this.state !== 'attack' || kb >= 4 || (hitReact && !this.isBoss && !this.isElite)) { this.signatures?.clear(); this.mobRole?.clear(); this.state = 'hurt'; this.stateT = 0; this.stagger = 0.22 + Math.min(0.4, kb * 0.03); this.play(this.A('hit'), { once: true, fade: 0.04, speed: 1.8 }); this.telegraph = 0; this.attackDone = false; }
+      if (this.state !== 'attack' || kb >= 4 || (hitReact && !this.isBoss && !this.isElite)) { this.signatures?.clear(); this.mobRole?.clear(); this.state = 'hurt'; this.stateT = 0; this.stagger = 0.22 + Math.min(0.4, kb * 0.03); this.play(this.A(kb >= 4 || crit || finisher ? 'hitHeavy' : 'hit'), { once: true, fade: 0.04, speed: 1.8 }); this.telegraph = 0; this.attackDone = false; }
     }
     // 채널이 다음 프레임 재몰이해 강타 관성을 지우지 못하게 제어 소유 시간을 둔다.
     if (kb >= 6 || up) this.gatherBlockT = Math.max(this.gatherBlockT || 0, .35, this.stun,
@@ -329,8 +330,9 @@ export class Enemy extends Actor {
     this.stateT += dt; const p = this.player; if (!p) return;
     const d = this.distTo(p); const spdMul = (this.slow ? 0.5 : 1) * (this.enraged ? 1.35 : 1);
     if (this.state === 'spawn') {
-      if (this.popIn !== undefined) { const k = Math.min(1, this.stateT / this.spawnLen); const e = 1 + Math.sin(Math.min(1, k) * Math.PI) * 0.25; this.model.scale.setScalar(this.scale * (k < 1 ? k * e : 1)); }
-      if (this.stateT > this.spawnLen * 0.8) { this.spawning = false; this.state = 'chase'; this.play(this.A('idleCombat'), { fade: 0.2 }); if (this.isBoss) { this.game.renderer.shake(0.6); audio.play('hit_bell', { vol: 0.6, rate: 0.5 }); } }
+      if (this.popIn !== undefined) { const k = Math.min(1, this.stateT / this.spawnLen); const e = 1 + Math.sin(Math.min(1, k) * Math.PI) * 0.25; this.model.scale.setScalar(this.modelScale * (k < 1 ? k * e : 1)); }
+      // 등장은 80% 지점에서 끝나므로 팝인 배율도 그때 원래 크기로 확정한다(남겨 두면 0.94배로 굳는다).
+      if (this.stateT > this.spawnLen * 0.8) { if (this.popIn !== undefined) this.model.scale.setScalar(this.modelScale); this.spawning = false; this.state = 'chase'; this.play(this.A('idleCombat'), { fade: 0.2 }); if (this.isBoss) { this.game.renderer.shake(0.6); audio.play('hit_bell', { vol: 0.6, rate: 0.5 }); } }
       return;
     }
     if (this.burrow?.update(dt, d)) return;
@@ -356,7 +358,7 @@ export class Enemy extends Actor {
     if (this.behavior === 'bomber') {
       if (this.fuse >= 0) {   // 도화선: 부풀며 점멸, 0.7초 뒤 자폭
         this.fuse += dt; this.vel.set(0, 0, 0);
-        const k = this.fuse / 0.7; this.model.scale.setScalar(this.scale * (1 + k * 0.5)); this.tintEmissive = new THREE.Color(1, 0.25 + 0.6 * Math.abs(Math.sin(this.fuse * 40)), 0);
+        const k = this.fuse / 0.7; this.model.scale.setScalar(this.modelScale * (1 + k * 0.5)); this.tintEmissive = new THREE.Color(1, 0.25 + 0.6 * Math.abs(Math.sin(this.fuse * 40)), 0);
         if (this.fuse >= 0.7) this.explode();
         return;
       }
@@ -432,7 +434,7 @@ export class Enemy extends Actor {
     this.state = 'attack'; this.stateT = 0; this.attackDone = false;
     // 예고를 그린 다음 프레임에 추격·분리 속도가 남아 원점을 옮기지 않는다.
     this.vel.set(0, 0, 0);
-    let anim = this.def.ranged ? this.A('cast') : this.A('attack'); this.special = null;
+    let anim = this.def.ranged ? this.A('cast') : this.A((this.attackVariant = 1 - (this.attackVariant || 0)) ? 'attack2' : 'attack'); this.special = null;
     if (this.isBoss) {
       const r = Math.random(); const kit = this.def.kit;
       if (kit === 'warlord') { if (r < 0.3) { anim = this.A('attackSpin'); this.special = 'spin'; } else if (r < 0.55) { anim = this.A('attackJump'); this.special = 'slam'; } else if (this.phase >= 1 && r < 0.7) { anim = this.A('summon'); this.special = 'summon'; } }
@@ -445,13 +447,17 @@ export class Enemy extends Actor {
     if(this.signatures&&isBossSignature(this.special)){
       this.announceSkill();
       const plan=this.signatures.start(this.special);this.attackDur=plan.duration;this.hitAt=plan.lastStrike/plan.duration;
-      this.telegraph=plan.lastStrike;this.dashV=null;this.playTimed(anim,plan.lastStrike,{fade:.1});return;
+      this.telegraph=plan.lastStrike;this.dashV=null;
+      this._monsterAttackPose = this.rigName === 'library' ? { duration: plan.lastStrike, hitAt: this.hitAt, profile: this.libraryAsset?.profile || 'soldier', heightM: this.libraryAsset?.heightM || 1, boss: this.isBoss, elite: this.isElite } : null;
+      this.playTimed(anim,plan.lastStrike,{fade:.1,phase:this.rigName === 'library' ? 'monster' : undefined,hitAt:this.hitAt,impactAt:this.libraryAsset?.impacts?.[Object.entries(this.libraryAsset.clips || {}).find(([, clip]) => clip === anim)?.[0]] ?? this.hitAt});return;
     }
     if (this.isElite && !this.isBoss && Math.random() < 0.3) { anim = this.A('attackHeavy'); this.special = 'spin'; }
     let dur = (this.def.atkTime) * (this.enraged ? 0.75 : 1) * (this.special === 'spin' ? 1.4 : this.special === 'dash' ? 0.9 : 1);
     this.attackDur = dur; this.hitAt = this.special === 'spin' ? 0.55 : this.special === 'summon' ? 0.6 : this.special === 'dash' ? 0.85 : this.special === 'soulrain' ? 0.6 : 0.52;
     this.telegraph = dur * this.hitAt;
-    this.playTimed(anim, dur, { fade: 0.08 });
+    const clipKey = Object.entries(this.libraryAsset?.clips || {}).find(([, clip]) => clip === anim)?.[0];
+    this._monsterAttackPose = this.rigName === 'library' ? { duration: dur, hitAt: this.hitAt, profile: this.libraryAsset?.profile || 'soldier', heightM: this.libraryAsset?.heightM || 1, boss: this.isBoss, elite: this.isElite } : null;
+    this.playTimed(anim, dur, { fade: 0.08, phase: this.rigName === 'library' ? 'monster' : undefined, hitAt: this.hitAt, impactAt: this.libraryAsset?.impacts?.[clipKey] ?? this.hitAt });
     this.announceSkill();
     const f = this.forward(_v.clone()); const g = this.game;
     if (this.special === 'dash') {
@@ -475,6 +481,21 @@ export class Enemy extends Actor {
     else g.fx.slashArc(this.pos, this.yaw, 0xff3030, { radius: this.def.range + 0.6, arc: THREE.MathUtils.radToDeg(2.2), height: 0.1, telegraph: true, life: dur * this.hitAt, tilt: 0, thickness: 1 });
     if (this.isBoss && this.special !== 'dash') audio.whoosh({ vol: 0.4, pitch: 0.5, dur: 0.5 });
   }
+  playerHit(target, damage, options, point = target.pos) {
+    if (!target?.hurt || !target.hurt(damage, options)) return false;
+    const size = Math.min(1.7, Math.max(.65, this.def.scale * (this.libraryAsset?.heightM || 1) * .45));
+    const hit = _impactPoint.copy(point).setY(Math.max(.8, this.def.scale * .9));
+    const g = this.game;
+    // 접촉 섬광은 모든 적중에 작게 남긴다. 플레이어 hurt 가 잔타 흔들림·피격음을 이미 묶어 처리하므로
+    // 정지·흔들림은 무거운 타격(넉백 6 이상)과 정예·보스 공격에만 더해 몹몰이 입력을 덮지 않는다.
+    g.fx.flash?.(hit, 0xffd08a, { size: size * .8, life: .1, contact: true });
+    if ((options?.kb || 0) >= 6 || this.isBoss || this.isElite) {
+      g.timeCtl?.hitstop(Math.min(.07, .03 + size * .012));
+      g.renderer?.shake(Math.min(.34, .1 + size * .09));
+      g.fx.burst?.(hit, 0xffb35b, { n: this.isBoss ? 10 : 6, speed: 5 + size * 2, size: .22, life: .28 });
+    }
+    return true;
+  }
   doAttack() {
     if (this.mobRole) return;
     if(isBossSignature(this.special))return;
@@ -488,7 +509,7 @@ export class Enemy extends Actor {
       // One strike per actor even when several rain circles overlap; hurt owns invulnerability.
       for (const target of areaPlayers(g)) {
         const pt = (this.rainPts || []).find(pt => Math.hypot(target.pos.x-pt.x,target.pos.z-pt.z)<2.2);
-        if (pt) target.hurt(dmg,{dirx:target.pos.x-pt.x,dirz:target.pos.z-pt.z,kb:6,kind:'magic'});
+        if (pt) this.playerHit(target, dmg, {dirx:target.pos.x-pt.x,dirz:target.pos.z-pt.z,kb:6,kind:'magic'}, pt);
       }
       audio.boom({ vol: 0.6, dur: 0.6, low: 70 }); g.renderer.shake(0.4); return;
     }
@@ -508,25 +529,28 @@ export class Enemy extends Actor {
     }
     if (this.special === 'spin') {
       g.fx.slashArc(this.pos, this.yaw, 0xff5050, { radius: 4.8, arc: 330, height: 1.2, life: 0.35, thickness: 0.5 }); g.fx.dust(this.pos, { n: 14, size: 2 }); g.renderer.shake(0.4);
-      for (const p of areaPlayers(g)) if (p.distTo(this) < 4.8) p.hurt(dmg, { dirx: p.pos.x - this.pos.x, dirz: p.pos.z - this.pos.z, kb: 9, kind: 'blunt' });
+      for (const p of areaPlayers(g)) if (p.distTo(this) < 4.8) this.playerHit(p, dmg, { dirx: p.pos.x - this.pos.x, dirz: p.pos.z - this.pos.z, kb: 9, kind: 'blunt' }, this.pos);
       return;
     }
     if (this.special === 'slam') {
       const c = this.pos.clone().addScaledVector(f, 2);
       g.fx.shockTex(c, 0xff6a3a, { r1: 5.5, life: 0.5 }); g.fx.dustPuff(c, { size: 5 }); g.fx.burst(c.clone().setY(0.4), 0xff7a40, { n: 24, speed: 9, size: 0.4 }); g.renderer.shake(0.7); audio.boom({ vol: 0.7, dur: 0.5, low: 50 });
-      for (const p of areaPlayers(g)) if (Math.hypot(p.pos.x - c.x, p.pos.z - c.z) < 4.2) p.hurt(dmg, { dirx: p.pos.x - c.x, dirz: p.pos.z - c.z, kb: 10, kind: 'blunt' });
+      for (const p of areaPlayers(g)) if (Math.hypot(p.pos.x - c.x, p.pos.z - c.z) < 4.2) this.playerHit(p, dmg, { dirx: p.pos.x - c.x, dirz: p.pos.z - c.z, kb: 10, kind: 'blunt' }, c);
       return;
     }
     if (this.special === 'dash') {
       this.dashV = null; g.fx.slashArc(this.pos, this.yaw, 0xd070ff, { radius: 3.2, arc: 160, height: 1.2, life: 0.25, tilt: 0.8 }); g.fx.ghost(this.model, 0xb26bff, { life: 0.35, opacity: 0.5 }); audio.whoosh({ vol: 0.6, pitch: 1.2, dur: 0.2 });
-      if (this.partyDashWarning && p.distTo(this) < 3.2 && hazardContains(this.partyDashWarning, p.pos.x, p.pos.z)) p.hurt(dmg, { dirx: p.pos.x - this.pos.x, dirz: p.pos.z - this.pos.z, kb: 7, kind: 'blunt' });
+      if (this.partyDashWarning && p.distTo(this) < 3.2 && hazardContains(this.partyDashWarning, p.pos.x, p.pos.z)) this.playerHit(p, dmg, { dirx: p.pos.x - this.pos.x, dirz: p.pos.z - this.pos.z, kb: 7, kind: 'blunt' }, this.pos);
       this.clearDashWarning();
       return;
     }
     audio.whoosh({ vol: 0.35, pitch: this.isBoss ? 0.5 : 0.9, dur: 0.3 });
     const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z; const d = Math.hypot(dx, dz);
     const ang = Math.atan2(dx, dz); let diff = Math.abs(ang - this.yaw); diff = Math.min(diff, Math.PI * 2 - diff);
-    if (d < this.def.range + 0.6 && diff < 1.1) { p.hurt(dmg, { dirx: dx, dirz: dz, kb: this.isBoss ? 6 : 3, kind: 'blunt' }); g.fx.slashArc(this.pos, this.yaw, 0xff5050, { radius: this.def.range, arc: 110, height: 1.2, life: 0.2, tilt: 0.8 }); }
+    if (d < this.def.range + 0.6 && diff < 1.1) {
+      const landed = this.playerHit(p, dmg, { dirx: dx, dirz: dz, kb: this.isBoss ? 6 : 3, kind: 'blunt' }, this.pos.clone().addScaledVector(f, Math.min(this.def.range, d)));
+      g.fx.slashArc(this.pos, this.yaw, 0xff5050, { radius: this.def.range, arc: 110, height: 1.2, life: 0.2, tilt: 0.8 });
+    }
   }
 }
 

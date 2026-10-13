@@ -2,19 +2,21 @@ import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { createLibraryLoader, libraryAssetForModel, resolveAssetSource, validateManifest } from '../src/engine/library-assets.js';
+import { MONSTER_ROSTER } from '../src/data/monster-roster.js';
 
 const asset = {
-  id: 'bone-knight-test', kind: 'character', body: 'biped', replaces: 'Skeleton_Warrior', file: '/models/library/bone-knight-test.glb',
+  id: 'bone-knight-test', kind: 'character', body: 'biped', replaces: null, file: '/models/library/bone-knight-test.glb',
   heightM: 1.6, triangles: 1, bytes: 1, sha256: 'a'.repeat(64), clips: { idle: 'idle', walk: 'walk', run: 'run', attack: 'attack', attackHeavy: 'attackHeavy', hit: 'hit', death: 'death' },
   provenance: { tool: 'Blender 5.2', account: 'owner subscription', taskId: '', prompt: '', createdAt: '2026-10-12T00:00:00.000Z', rawSha256: 'b'.repeat(64) }, license: 'owner-generated', shared: true,
 };
 
-test('manifest asset resolves to the game loader path and replaces legacy model', () => {
+test('manifest asset resolves to the game loader path and roster model', () => {
   const manifest = { schema: 'tll.game-asset-library.v1', assets: [asset] };
   expect(validateManifest(manifest).assets[0].id).toBe('bone-knight-test');
   expect(resolveAssetSource(asset, '/')).toBe('/models/library/bone-knight-test.glb');
-  // 실제 정본 manifest 에서 1층 주력 '해골 병사'(Skeleton_Vanguard)는 Tripo 해골기사로 교체된다.
+  // 적 모델은 manifest의 replaces가 아니라 로스터가 직접 자산을 선택한다.
   expect(libraryAssetForModel('Skeleton_Vanguard')?.id).toBe('bone_knight');
+  expect(MONSTER_ROSTER.Skeleton_Vanguard.asset).toBe('bone_knight');
 });
 
 test('missing logical clip key is rejected', () => {
@@ -29,10 +31,9 @@ test('triangle budget is rejected', () => {
   expect(() => validateManifest({ schema: 'tll.game-asset-library.v1', assets: [{ ...asset, triangles: 12001 }] })).toThrow('triangle budget exceeded');
 });
 
-test('legacy replacement selection has a null fallback', () => {
+test('로스터 선택은 manifest 교체 별칭에 의존하지 않는다', () => {
   const manifest = { schema: 'tll.game-asset-library.v1', assets: [asset] };
-  expect(manifest.assets.find((entry) => entry.replaces === 'Unknown_Model') || null).toBeNull();
-  expect(manifest.assets.find((entry) => entry.replaces === 'Skeleton_Warrior')).toEqual(asset);
+  expect(MONSTER_ROSTER.Skeleton_Warrior.fallback).toBe('bone_knight');
 });
 
 test('replacement loader falls back when the library artifact fails to load', async () => {

@@ -9,11 +9,10 @@ import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { HEROES } from '../data/heroes.js';
 import { assembleHeroIdentity } from './hero-identity.js';
-import { assembleEncounterIdentity } from './encounter-identity.js';
-import { ENCOUNTER_MODELS } from '../data/encounter-models.js';
 import { preloadSurfaceTextures, projectSurfaceUV, surfaceRole, applySurfaceDetail } from './surface-textures.js';
 import { preloadDungeonSurface } from '../game/dungeon-surface.js';
 import { libraryAssets, createDefaultLibraryLoader } from './library-assets.js';
+import { MONSTER_ROSTER, COMPANION_ASSET, monsterRosterEntry } from '../data/monster-roster.js';
 import { heroIdForModel, heroModelContract, heroHandBones, heroGripRotation, librarySocketScale, resolveSharedHeroClips, LIBRARY_SOCKET_NAMES } from '../data/hero-library.js';
 
 const loader = new GLTFLoader();
@@ -24,7 +23,7 @@ const libraryLoader = createDefaultLibraryLoader((path) => loader.loadAsync(path
 /** @typedef {{materials: string, role: string, heroId?: string, scale: number, aliases: Record<string, string>, sockets?: Record<string, string>}} ModelContract */
 
 export function requiredModelAliases(role, heroId) {
-  if (role === 'companion') return ['Idle', 'Idle_Combat', 'Running_A', 'Spellcast_Raise', 'Spellcast_Shoot', 'Hit_A', 'Hit_B', 'Death_A', 'Death_B'];
+  if (role === 'companion') return ['idle', 'run', 'cast', 'raise', 'hit', 'hitHeavy', 'death'];
   const hero = role === 'hero' && HEROES[heroId];
   if (!hero) throw new Error('invalid model role');
   return [...new Set(['Idle', 'Running_A', 'Dodge_Forward', 'Hit_A', 'Hit_B', 'Death_A', 'Death_B', 'Cheer', 'Interact',
@@ -32,17 +31,10 @@ export function requiredModelAliases(role, heroId) {
 }
 
 export const HERO_MODELS = ['Knight', 'Barbarian', 'Mage', 'Rogue', 'Ranger'];
-export const MONSTER_MODELS = [
-  'Skeleton_Minion', 'Skeleton_Warrior', 'Skeleton_Rogue', 'Skeleton_Mage',
-  'Big_Orc', 'Big_Orc_Skull', 'Big_Demon', 'Big_BlueDemon', 'Big_Yeti', 'Big_MushroomKing',
-  'Big_Tribal', 'Big_Cactoro', 'Big_Alien', 'Big_Ninja',
-  'Blob_GreenBlob', 'Blob_PinkBlob', 'Blob_GreenSpikyBlob', 'Blob_Mushnub', 'Blob_Mushnub_Evolved', 'Blob_Orc',
-  'Flying_Ghost', 'Flying_Ghost_Skull', 'Flying_Dragon', 'Flying_Dragon_Evolved',
-  'Flying_Armabee', 'Flying_Armabee_Evolved', 'Flying_Hywirl', 'Flying_Squidle', 'Flying_Glub', 'Flying_Goleling_Evolved',
-];
+const MONSTER_LIBRARY_IDS = new Set(Object.values(MONSTER_ROSTER).flatMap((entry) => [entry.asset, entry.fallback]));
+export const MONSTER_MODELS = libraryAssets().filter((asset) => asset.role !== 'hero' && MONSTER_LIBRARY_IDS.has(asset.id)).map((asset) => asset.id);
 // 영웅 갑옷 단계 GLB 는 영웅 모델 이름과 장비 교체 경로에서만 받는다(부팅 시 전 단계 선로딩 금지).
-export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, ...Object.keys(ENCOUNTER_MODELS),
-  ...libraryAssets().filter((asset) => asset.role !== 'hero').map((asset) => asset.id), 'dungeon', 'tllDungeonLandmarks', 'skel_weapons'];
+export const MODEL_LIST = [...HERO_MODELS, ...MONSTER_MODELS, ...libraryAssets().filter((asset) => asset.role !== 'hero' && !MONSTER_LIBRARY_IDS.has(asset.id)).map((asset) => asset.id), 'dungeon', 'tllDungeonLandmarks'];
 const SPECIAL_MODELS = Object.freeze({ tllDungeonLandmarks: '/models/tll/dungeons/dungeon-landmarks-v1.glb',
   tllCoolingValve: '/models/tll/props/cooling-valve-v1.glb',
   tllNightglassRecord: '/models/tll/props/nightglass-record-v1.glb' });
@@ -51,26 +43,32 @@ const SPECIAL_MODELS = Object.freeze({ tllDungeonLandmarks: '/models/tll/dungeon
 export async function loadModel(name, contract = null, allowLibrary = true) {
   const heroId = !contract && allowLibrary ? heroIdForModel(name) : null;
   if (heroId && libraryLoader.assetForHero(heroId, 1)) return loadHeroModel(heroId, 1);
-  const libraryAsset = !contract && allowLibrary && !heroId ? libraryLoader.assetFor(name) : null;
+  const roster = !contract && allowLibrary ? monsterRosterEntry(name) : null;
+  const requestedAsset = roster?.asset || (name === COMPANION_ASSET ? COMPANION_ASSET : null);
+  const fallbackAsset = roster?.fallback || requestedAsset;
+  const libraryAsset = !contract && allowLibrary && !heroId
+    ? libraryLoader.assetFor(requestedAsset || name) || (roster ? libraryLoader.assetFor(fallbackAsset) : null)
+    : null;
   if (libraryAsset?.role === 'hero') return libraryAsset.avatar ? loadHeroAsset(libraryAsset) : loadHeroModel(libraryAsset.heroId, libraryAsset.armorTier || 1);
   const key = name + '|' + JSON.stringify(contract) + '|' + (libraryAsset?.id || 'legacy');
   if (cache.has(key)) return cache.get(key);
   if (libraryAsset) {
-    const p = libraryLoader.load(libraryAsset, () => {
-      // 교체 대상이 기본 몬스터든 변형(encounter) 몬스터든 원래 모델로 되돌린다.
-      if (libraryAsset.kind === 'character' && libraryAsset.replaces) return loadModel(libraryAsset.replaces, contract, false);
-      return { scene: new THREE.Group(), animations: [] };
+    const p = libraryLoader.load(libraryAsset, async () => {
+      const fallback = fallbackAsset && fallbackAsset !== libraryAsset.id ? libraryLoader.assetFor(fallbackAsset) : null;
+      if (fallback) return libraryLoader.load(fallback, () => { throw new Error(`library fallback failed: ${fallback.id}`); }).then((gltf) => {
+        gltf.scene.userData.libraryRoster = roster ? { ...roster, asset: fallback.id } : null;
+        return gltf;
+      });
+      throw new Error(`library asset unavailable: ${libraryAsset.id}`);
+    }, (gltf, asset) => {
+      gltf.scene.userData.libraryRoster = roster ? { ...roster, asset: asset?.id || libraryAsset.id } : null;
+      return prepareModel(gltf);
     });
     cache.set(key, p);
     try { return await p; } catch (error) { cache.delete(key); throw error; }
   }
-  const variant = !contract && ENCOUNTER_MODELS[name];
   const heroPaths = !contract && HERO_MODELS.includes(name) ? heroModelPaths(name) : null;
-  // 변형 장식은 KayKit 본에 붙으므로 베이스는 라이브러리 교체 없이 원본 리그를 쓴다.
-  const p = (variant ? Promise.all([loadModel(variant.base, null, false), loader.loadAsync(`/models/tll/encounters/${variant.file}.glb`)]).then(([base, authored]) => {
-    // Skeleton clone keeps the cached original unchanged. Immutable base buffers/textures are shared.
-    return assembleEncounterIdentity({ scene: skeletonClone(base.scene), animations: base.animations }, authored, name, variant);
-  }) : loader.loadAsync(heroPaths?.base || SPECIAL_MODELS[name] || `/models/${name}.glb`)).then(async (gltf) => {
+  const p = loader.loadAsync(heroPaths?.base || SPECIAL_MODELS[name] || `/models/${name}.glb`).then(async (gltf) => {
     if (!contract && name === 'Ranger') {
       // Silva ships as one Blender-authored skin on the same KayKit medium rig.
       gltf.scene.userData.tllIdentity = 'casual-v2';
@@ -404,7 +402,7 @@ export function disposeCharacter(root, mixer) {
   for (const material of materials) material.dispose();
 }
 
-/** dungeon.glb / skel_weapons.glb 등 합본에서 이름으로 파트 추출 (복제) */
+/** 합본 GLB에서 이름으로 파트를 추출한다. */
 export function getPart(gltf, name) {
   const n = gltf.scene.getObjectByName(name);
   if (!n) { console.warn('part not found', name); return new THREE.Group(); }

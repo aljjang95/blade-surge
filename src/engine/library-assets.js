@@ -1,5 +1,6 @@
 import manifest from '../../asset-library/manifest.json';
 import { LIBRARY_SCHEMA, triangleLimit, validateManifest as validateManifestShape } from '../../tools/asset-library/manifest.mjs';
+import { monsterRosterEntry } from '../data/monster-roster.js';
 
 export { LIBRARY_SCHEMA, triangleLimit };
 let bundledFiles = {};
@@ -17,7 +18,7 @@ export function validateManifest(value, { files = null } = {}) {
 
 export function resolveLibraryAsset(value, modelName) {
   validateManifest(value);
-  return value.assets.find((asset) => asset.id === modelName || asset.replaces === modelName) || null;
+  return value.assets.find((asset) => asset.id === modelName) || null;
 }
 
 export function resolveAssetSource(asset, root = '') {
@@ -46,7 +47,7 @@ export function createLibraryLoader(value, load, prepare = (gltf) => gltf, warn 
   const assets = validateManifest(value).assets;
   const cache = new Map();
   return {
-    assetFor(name) { return assets.find((asset) => asset.id === name || (asset.kind === 'character' && asset.replaces === name)) || null; },
+    assetFor(name) { return assets.find((asset) => asset.id === name) || null; },
     assetForHero(heroId, tier = 1) { return selectHeroLibraryAsset(value, heroId, tier); },
     assetForAvatar(avatarId) { return assetForAvatar(value, avatarId); },
     heroAssets(heroId) { return heroLibraryAssets(value, heroId); },
@@ -60,7 +61,7 @@ export function createLibraryLoader(value, load, prepare = (gltf) => gltf, warn 
         });
         return prepareAsset(gltf, asset);
       }).catch((error) => {
-        warn(`library asset failed, using legacy model: ${asset.id}`, error);
+        warn(`library asset failed, using configured library fallback: ${asset.id}`, error);
         // 폴백까지 실패하면 캐시를 비워 다음 호출에서 다시 시도한다.
         return Promise.resolve().then(fallback).catch((fallbackError) => { cache.delete(asset.id); throw fallbackError; });
       });
@@ -84,7 +85,9 @@ export function libraryAssetIds() {
 }
 
 export function libraryAssetForModel(modelName) {
-  return resolveLibraryAsset(manifest, modelName);
+  const roster = monsterRosterEntry(modelName);
+  return roster ? manifest.assets.find((asset) => asset.id === roster.asset) || manifest.assets.find((asset) => asset.id === roster.fallback) || null
+    : resolveLibraryAsset(manifest, modelName);
 }
 
 export function libraryAssetForHero(heroId) {

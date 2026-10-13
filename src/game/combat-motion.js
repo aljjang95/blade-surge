@@ -12,6 +12,16 @@ export function attackPhase(t, contact = 0.4) {
   return contact + (1 - contact) * (0.63 + 0.37 * smooth((t - settle) / (1 - settle)));
 }
 
+/** 라이브러리 클립의 실제 접촉 프레임을 게임 판정 시점에 맞춘다. */
+export function monsterAttackPhase(t, hitAt = 0.52, impactAt = hitAt) {
+  hitAt = Math.max(0.05, Math.min(0.95, Number.isFinite(hitAt) ? hitAt : 0.52));
+  impactAt = Math.max(0.05, Math.min(0.95, Number.isFinite(impactAt) ? impactAt : hitAt));
+  if (Math.abs(impactAt - hitAt) < 1e-9) return attackPhase(t, hitAt);
+  const source = attackPhase(t, hitAt);
+  if (source <= hitAt) return impactAt * source / hitAt;
+  return impactAt + (1 - impactAt) * (source - hitAt) / (1 - hitAt);
+}
+
 export function attackBody(t, contact, weapon = '1h', ranged = false, warriorIndex = -1, move = '', finisher = false) {
   t = clamp01(t); contact = Math.max(0.1, Math.min(0.85, contact || 0.4));
   const weight = ranged ? 0.45 : weapon === '2h' ? 1.15 : weapon === 'dual' ? 0.7 : 1;

@@ -2,7 +2,8 @@ import { expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { ENCOUNTER_ART, MOB_ART, RIFT_ART, resolveEnemyPortrait } from '../src/data/encounter-art.js';
-import { ENCOUNTER_MODELS, CAMPAIGN_MODELS } from '../src/data/encounter-models.js';
+import { CAMPAIGN_MODELS } from '../src/data/encounter-models.js';
+import { MONSTER_ROSTER } from '../src/data/monster-roster.js';
 import { BOSS_SIGNATURES } from '../src/data/boss-encounters.js';
 import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../src/data/stages.js';
 import { RIGS, rigOf } from '../src/data/rigs.js';
@@ -90,9 +91,10 @@ test('portraits only use authored identity bindings and all referenced image/mod
   for (const [id, def] of Object.entries(enemies)) {
     if (def.portrait) expect(art.has(def.portrait)).toBe(true);
     else expect(resolveEnemyPortrait(id, def)).toBeNull();
-    const variant = (ENCOUNTER_MODELS as Record<string, { base: string, file: string }>)[def.model];
-    expect(existsSync(new URL(`../public/models/${variant?.base || def.model}.glb`, import.meta.url))).toBe(true);
-    if (variant) expect(existsSync(new URL(`../public/models/tll/encounters/${variant.file}.glb`, import.meta.url))).toBe(true);
+    const roster = MONSTER_ROSTER[def.model];
+    expect(roster).toBeDefined();
+    expect(existsSync(new URL(`../asset-library/normalized/${roster.asset}.glb`, import.meta.url)) ||
+      existsSync(new URL(`../asset-library/normalized/${roster.fallback}.glb`, import.meta.url))).toBe(true);
   }
   for (const id of ['skel_minion', 'ghost', 'orc', 'elite_skel_captain']) {
     expect(enemies[id].portrait).toBeUndefined();
@@ -107,16 +109,11 @@ test('portraits only use authored identity bindings and all referenced image/mod
 
 function visualFixture() {
   const bodyMaterial = new THREE.MeshStandardMaterial({ color: '#ddd3ab' });
-  const weaponMaterial = new THREE.MeshStandardMaterial({ color: '#aaaaaa' });
   const geometry = new THREE.BoxGeometry(1, 2, 1);
   const root = new THREE.Group(), body = new THREE.Mesh(geometry, bodyMaterial); body.name = 'Body'; root.add(body);
   const right = new THREE.Bone(), left = new THREE.Bone(); right.name = 'handslotr'; left.name = 'handslotl'; root.add(right, left);
-  const weapons = new THREE.Group();
-  for (const name of ['Skeleton_Blade', 'Skeleton_Axe', 'Skeleton_Shield_Large_A']) {
-    const part = new THREE.Mesh(geometry, weaponMaterial); part.name = name; weapons.add(part);
-  }
   const animations = ['Idle', 'Idle_Combat', 'Flying_Idle'].map(name => new THREE.AnimationClip(name, 1, []));
-  return { gltf: { scene: root, animations }, weapons: { scene: weapons }, bodyMaterial, weaponMaterial, geometry };
+  return { gltf: { scene: root, animations }, bodyMaterial, geometry };
 }
 
 test('preview uses real Enemy visuals, including weapons, ghost/elite treatment and rig scale, without consuming source resources', () => {
@@ -124,8 +121,8 @@ test('preview uses real Enemy visuals, including weapons, ghost/elite treatment 
     const def = enemies[id], f = visualFixture(), scene = new THREE.Scene();
     const enabled = audio.enabled;
     let sourceDisposals = 0, instanceDisposals = 0;
-    for (const source of [f.bodyMaterial, f.weaponMaterial, f.geometry]) source.addEventListener('dispose', () => sourceDisposals++);
-    const enemy = createPreviewEnemy(scene, f.gltf, f.weapons, def);
+    for (const source of [f.bodyMaterial, f.geometry]) source.addEventListener('dispose', () => sourceDisposals++);
+    const enemy = createPreviewEnemy(scene, f.gltf, null, def);
     expect(enemy).toBeInstanceOf(Enemy);
     expect(audio.enabled).toBe(enabled);
     expect(enemy.def).toBe(def);
@@ -133,14 +130,11 @@ test('preview uses real Enemy visuals, including weapons, ghost/elite treatment 
     expect(enemy.spawning).toBe(false);
     expect(enemy.model.scale.x).toBeCloseTo(def.scale * RIGS[rigOf(def.model)].scale);
     expect(enemy.pos.y).toBe(RIGS[rigOf(def.model)].hover);
-    if (def.weapon) expect(enemy.node('handslot.r')?.getObjectByName(def.weapon)).toBeDefined();
-    if (def.shield) expect(enemy.node('handslot.l')?.getObjectByName(def.shield)).toBeDefined();
-    if (id === 'skel_rogue') expect(enemy.node('handslot.l')?.getObjectByName('Skeleton_Blade')).toBeDefined();
     const instanceMaterials = new Set<THREE.Material>();
     enemy.model.traverse((node: any) => {
       if (!node.isMesh) return;
       for (const material of Array.isArray(node.material) ? node.material : [node.material]) {
-        expect(material).not.toBe(f.bodyMaterial); expect(material).not.toBe(f.weaponMaterial);
+        expect(material).not.toBe(f.bodyMaterial);
         instanceMaterials.add(material);
       }
     });
@@ -150,6 +144,6 @@ test('preview uses real Enemy visuals, including weapons, ghost/elite treatment 
     expect(scene.children).toHaveLength(0);
     expect(sourceDisposals).toBe(0);
     expect(instanceDisposals).toBe(instanceMaterials.size);
-    f.bodyMaterial.dispose(); f.weaponMaterial.dispose(); f.geometry.dispose();
+    f.bodyMaterial.dispose(); f.geometry.dispose();
   }
 });

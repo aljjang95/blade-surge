@@ -12,6 +12,7 @@ import { CHROME } from './chrome.mjs';
 import { spawn } from 'child_process';
 import { resolve } from 'path';
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { MONSTER_ROSTER } from '../src/data/monster-roster.js';
 
 const PROJ = resolve(decodeURIComponent(new URL('..', import.meta.url).pathname).replace(/^\/([A-Za-z]:)/, '$1'));
 const argv = process.argv.slice(2), heroFixture = argv.includes('--hero-fixture');
@@ -176,9 +177,12 @@ try {
     check(`${heroId}: 기본 스킬 시전·재생`, battle.skills.every((c) => c.ok && c.playing), JSON.stringify(battle.skills));
     await page.screenshot({ path: `${OUT}/${heroId}-battle.png` });
   }
-  for (const asset of manifest.assets.filter((a) => a.kind === 'character' && a.replaces)) {
-    const enemyKey = await page.evaluate((model) => Object.entries(window.__EN || {}).find(([, d]) => d.model === model)?.[0] || null, asset.replaces);
-    if (!enemyKey) { check(`${asset.id}: 교체 대상 적 정의`, false, asset.replaces); continue; }
+  for (const [model, roster] of Object.entries(MONSTER_ROSTER)) {
+    const asset = manifest.assets.find((entry) => entry.id === roster.asset) || manifest.assets.find((entry) => entry.id === roster.fallback);
+    const enemyKey = await page.evaluate((legacyModel) => Object.entries(window.__EN || {}).find(([, d]) => d.model === legacyModel)?.[0] || null, model);
+    if (!asset) { check(`${model}: 로스터 자산`, false, JSON.stringify(roster)); continue; }
+    // 기본 리그 이름(Skeleton_Minion 등)은 동행·하위 호환용 로스터 항목이라 적 정의가 없을 수 있다.
+    if (!enemyKey) { results.push({ name: `${model}: 적 정의 없음(미사용 로스터 항목)`, ok: true, skipped: true }); console.log(`SKIP ${model}: 적 정의 없음`); continue; }
     const info = await page.evaluate(async ({ enemyKey }) => {
       const a = window.app, e = a.eco;
       a.testPause = false; e.s.energy = 9999; e.save();
@@ -190,10 +194,10 @@ try {
       for (let i = 0; i < 90; i++) a.step(1 / 60, i === 89);
       const list = b.enemies.filter((x) => x.alive && x.def.model && x.type === window.__EN[enemyKey].name);
       const first = list[0];
-      return { count: list.length, rig: first?.rigName, role: window.__EN[enemyKey].meleeRole || null, library: first?.model?.userData?.libraryAsset?.id || first?.model?.children?.[0]?.userData?.libraryAsset?.id || null,
+      return { count: list.length, rig: first?.rigName, role: window.__EN[enemyKey].meleeRole || (window.__EN[enemyKey].behavior === 'bomber' ? 'bomber' : null), library: first?.model?.userData?.libraryAsset?.id || first?.model?.children?.[0]?.userData?.libraryAsset?.id || null,
         clips: first ? Object.keys(first.clips) : [], action: first?.actionName };
     }, { enemyKey });
-    check(`${asset.id}: '${asset.replaces}' 스폰`, info.count > 0, `${info.count}마리`);
+    check(`${asset.id}: '${model}' 스폰`, info.count > 0, `${info.count}마리`);
     check(`${asset.id}: library 리그 사용`, info.rig === 'library', info.rig);
     check(`${asset.id}: 7개 논리 클립 보유`, ['idle','walk','run','attack','attackHeavy','hit','death'].every((c) => info.clips.includes(c)), info.clips.join(','));
     await page.screenshot({ path: `${OUT}/${asset.id}-approach.png` });
@@ -216,7 +220,8 @@ try {
     });
     // 공격과 사망은 반드시 재생돼야 한다(사망은 처치 순간 die() 경로).
     // 돌진(charger) 역할은 원작 설계상 달리기 몸통 박치기로 공격한다.
-    const attackClips = info.role === 'charger' ? ['run'] : ['attack', 'attackHeavy'];
+    // 자폭(bomber)은 원작 설계상 공격 대신 폭발해 사망 경로로 끝난다.
+    const attackClips = info.role === 'charger' ? ['run'] : info.role === 'bomber' ? ['death'] : ['attack', 'attack2', 'attackHeavy'];
     check(`${asset.id}: 공격 클립 재생${info.role ? ` (${info.role})` : ''}`, attackClips.some((clip) => after.includes(clip)), after.join(','));
     check(`${asset.id}: 사망 클립 재생`, after.includes('death'), after.join(','));
     await page.screenshot({ path: `${OUT}/${asset.id}-combat.png` });
