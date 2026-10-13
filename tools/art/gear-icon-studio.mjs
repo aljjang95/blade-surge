@@ -89,7 +89,8 @@ try {
     console.log(`실제 영웅 5명 × 무기 5종 렌더 · 폐기 후 캐시 ${runtime.cacheSize}`);
   }
   const sources = ['src/data/gear-catalog.js', 'src/data/items.js', 'src/engine/item-forge.js', 'src/game/armor-appearance.js', 'tools/art/gear-icon-studio.html'];
-  const sourceHashes = Object.fromEntries(await Promise.all(sources.map(async path => [path, createHash('sha256').update(await readFile(fileURLToPath(new URL('../../' + path, import.meta.url)))).digest('hex')])));
+  // Windows autocrlf 체크아웃에서도 같은 값이 나오도록 줄바꿈을 LF 로 정규화해 소스를 해시한다.
+  const sourceHashes = Object.fromEntries(await Promise.all(sources.map(async path => [path, createHash('sha256').update((await readFile(fileURLToPath(new URL('../../' + path, import.meta.url)), 'utf8')).replace(/\r\n/g, '\n')).digest('hex')])));
   const observedAt = new Date().toISOString();
   if (partial) {
     await writeFile(`${reviewDir}/partial-${observedAt.replace(/[:.]/g, '-')}.json`, JSON.stringify({ partial: true, sourceHashes, observedAt, items: receipt, errors }, null, 2));
