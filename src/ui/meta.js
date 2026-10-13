@@ -19,6 +19,8 @@ import { campaignFinished } from '../data/expedition-depths.js';
 import { storyText, encounterLabel, journalHtml, dungeonBriefHtml } from './campaign.js';
 import { guideHtml } from './guide.js';
 import { availableDifficulties } from '../game/difficulty.js';
+import { AVATARS } from '../data/avatars.js';
+import { libraryAssetForAvatar } from '../engine/library-assets.js';
 // 공개 확률은 실제 소환 코드와 같은 식(gachaRates/gachaChances)에서만 계산한다. 화면에 숫자를 따로 적지 않는다.
 const pct = (p, d = 1) => (p * 100).toFixed(d) + '%';
 const clampPity = (n) => Math.max(0, Math.min(GACHA.pity, Math.floor(Number(n) || 0)));
@@ -363,14 +365,40 @@ export class Meta {
   }
 
   // ================= 상점 =================
+  renderAvatarShop(grid) {
+    const owned = this.eco.s.avatars.owned, equipped = this.eco.s.avatars.equipped;
+    for (const avatar of AVATARS) {
+      const hero = HEROES[avatar.heroId], ready = !!libraryAssetForAvatar(avatar.id), isOwned = owned.includes(avatar.id), isEquipped = equipped[avatar.heroId] === avatar.id;
+      const d = document.createElement('div'); d.className = 'shop-item avatar-shop-item' + (ready ? '' : ' avatar-pending');
+      d.innerHTML = `<img src="${avatar.portrait || hero.portrait}" alt="${hero.name}" onerror="this.remove()"><div class="si-body"><div class="si-name">${avatar.name}</div><div class="si-desc">${hero.name}</div><div class="si-desc">${avatar.desc}</div><button class="btn ${isOwned ? 'btn-ghost' : 'btn-gold'}" data-avatar="${avatar.id}" ${ready ? '' : 'disabled'}>${ready ? (isOwned ? (isEquipped ? '착용 중 · 해제' : '보유 중 · 착용') : `<i class="ic ic-gem"></i> ${fmt(avatar.price)} 보석`) : '준비 중'}</button></div>`;
+      d.querySelector('[data-avatar]').onclick = () => this.buyOrEquipAvatar(avatar.id);
+      grid.appendChild(d);
+    }
+  }
+  async buyOrEquipAvatar(id) {
+    const avatar = AVATARS.find((entry) => entry.id === id), s = this.eco.s;
+    if (!avatar || !libraryAssetForAvatar(id)) { this.ui.toast('아바타가 아직 준비되지 않았습니다.', 'red'); return; }
+    const owned = s.avatars.owned.includes(id), equipped = s.avatars.equipped[avatar.heroId] === id;
+    if (!owned) {
+      if (s.gems < avatar.price) { this.ui.toast(`보석 부족 · ${fmt(avatar.price)}개 필요`, 'red'); return; }
+      if (!await this.ui.confirm('아바타 구매', `${avatar.name}을(를) ${fmt(avatar.price)} 보석으로 구매할까요?\n${avatar.desc}`)) return;
+      const bought = this.eco.buyAvatar(id); if (!bought.ok) { this.ui.toast('아바타를 구매하지 못했습니다.', 'red'); return; }
+    }
+    const result = this.eco.equipAvatar(avatar.heroId, equipped ? null : id);
+    if (!result.ok) { this.ui.toast('아바타 착용 상태를 바꾸지 못했습니다.', 'red'); return; }
+    this.ui.toast(equipped ? `${avatar.name} 해제` : `${avatar.name} 착용`, 'gold');
+    if (this.eco.s.selected === avatar.heroId) this.app.showcaseHero(avatar.heroId);
+    this.renderShop(); this.refreshTop();
+  }
   renderShop() {
     const tabs = $('shop-tabs'); tabs.innerHTML = SHOP_TABS.map((t) => `<button data-t="${t.id}" class="${t.id === this.shopTab ? 'on' : ''}">${t.name}</button>`).join('');
     tabs.querySelectorAll('button').forEach((b) => b.onclick = () => { if (this.shopTab === b.dataset.t) return; this.shopTab = b.dataset.t; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); });
     const notice = $('shop-notice');
-    if (notice) notice.innerHTML = `<b>가격·상품은 미리보기입니다.</b> 결제 연결 전에는 유료 구매와 지급이 없습니다.`
+    if (notice) notice.innerHTML = this.shopTab === 'avatar' ? '<b>아바타는 보석으로 구매하는 순수 외형 상품입니다.</b> 전투 수치에는 영향이 없습니다.' : `<b>가격·상품은 미리보기입니다.</b> 결제 연결 전에는 유료 구매와 지급이 없습니다.`
       + (this.shopTab === 'gem' || this.shopTab === 'hot' ? ` 첫 결제 2배는 결제 연결 후 확인된 구매에 상품별 1회 적용됩니다.` : '')
       + `<br>무료 보석: 출석·임무·첫 클리어·패스 무료 보상 / 사용: 소환 ${fmt(GACHA.single)} (10회 ${fmt(GACHA.ten)})·강화 재료·골드·에너지`;
     const grid = $('shop-grid'); grid.innerHTML = ''; const s = this.eco.s;
+    if (this.shopTab === 'avatar') { this.renderAvatarShop(grid); return; }
     for (const sku of SKUS.filter((x) => x.tab === this.shopTab || (this.shopTab === 'hot' && x.badge && x.tab !== 'gem' && x.tab !== 'energy' && x.tab !== 'gold'))) {
       const d = document.createElement('div'); const big = sku.tab === 'hot' || sku.tab === 'pack'; d.className = 'shop-item' + (sku.badge ? ' hot' : '') + (big ? ' big' : '');
       const first = sku.gems && !s.firstPurchaseUsed[sku.id]; const sold = sku.once && s.purchases.includes(sku.id);

@@ -39,7 +39,13 @@ def main():
     h1, d1 = world(arm1, 'Hips'), world(arm1, 'Head')
     h2, d2 = world(arm2, 'Hips'), world(arm2, 'Head')
     s = (d1 - h1).length / (d2 - h2).length
-    align = Matrix.Translation(h1) @ Matrix.Scale(s, 4) @ Matrix.Translation(-h2)
+    # 어깨선(오른팔→왼팔) 수평 방향을 1단계와 맞춘다. Tripo 리깅 GLB 는 정면 축이 90° 돌아 나오기도 한다.
+    import math
+    def yaw(arm):
+        v = world(arm, 'LeftArm') - world(arm, 'RightArm'); return math.atan2(v.y, v.x)
+    # 팔 본 위치는 리그마다 조금씩 달라 측정값을 가장 가까운 90° 배수로 맞춘다.
+    turn = round((yaw(arm1) - yaw(arm2)) / (math.pi / 2)) * (math.pi / 2)
+    align = Matrix.Translation(h1) @ Matrix.Scale(s, 4) @ Matrix.Rotation(turn, 4, 'Z') @ Matrix.Translation(-h2)
     names1 = {b.name for b in arm1.data.bones}
     parent2 = {b.name: (b.parent.name if b.parent else None) for b in arm2.data.bones}
     remap = {}
@@ -101,7 +107,7 @@ def main():
     tris = sum(sum(len(p.vertices) - 2 for p in m.data.polygons) for m in m2)
     bpy.ops.export_scene.gltf(filepath=a['output'], export_format='GLB', export_yup=True, export_animations=bool(keep), export_apply=False,
         export_cameras=False, export_lights=False, export_image_format='WEBP', export_image_quality=82)
-    Path(a['report']).write_text(json.dumps({'ok': True, 'scale': s, 'mergedGroups': merged, 'filledVertices': filled, 'bones': len(arm1.data.bones), 'triangles': tris}), encoding='utf-8')
+    Path(a['report']).write_text(json.dumps({'ok': True, 'scale': s, 'yawDeg': math.degrees(turn), 'mergedGroups': merged, 'filledVertices': filled, 'bones': len(arm1.data.bones), 'triangles': tris}), encoding='utf-8')
 
 try: main()
 except Exception as e:

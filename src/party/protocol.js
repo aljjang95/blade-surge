@@ -1,4 +1,5 @@
 import { PARTY_VISUAL_LIMIT, validPartyVisual } from './visual-protocol.js';
+import { AVATAR_BY_ID } from '../data/avatars.js';
 // The host simulates combat. The relay validates membership, lifecycle and bounded data,
 // not damage correctness. No competitive/account reward authority is implied.
 export const PARTY_HEROES = Object.freeze(['knight', 'barbarian', 'mage', 'rogue', 'ranger']);
@@ -38,8 +39,8 @@ export function validPartySnapshot(v) {
     && (v.visuals === undefined || array(v.visuals, PARTY_VISUAL_LIMIT, effect => validPartyVisual(effect) && effect.at <= v.elapsed))
     && (v.warnings === undefined || (array(v.warnings, PARTY_LIMITS.warnings, warning) && unique(v.warnings.map(w => w.id))))
     && int(v.tick) && num(v.elapsed, 0, 3600)
-    && array(v.players, 4, p => actor(p) && PARTY_HEROES.includes(p.heroId) && num(p.ult, 0, 1000)
-      && keys(p, ['id','heroId','x','z','yaw','hp','maxHp','state','anim','ult','cds'])
+    && array(v.players, 4, p => actor(p) && PARTY_HEROES.includes(p.heroId) && (p.avatar === undefined || (typeof p.avatar === 'string' && AVATAR_BY_ID[p.avatar]?.heroId === p.heroId)) && num(p.ult, 0, 1000)
+      && keys(p, ['id','heroId','avatar','x','z','yaw','hp','maxHp','state','anim','ult','cds'])
       && array(p.cds, 12, cd => num(cd, 0, 3600))) && v.players.length >= 2 && unique(v.players.map(p => p.id))
     && array(v.enemies, PARTY_LIMITS.enemies, e => actor(e) && str(e.key) && bool(e.boss) && bool(e.elite)
       && (e.sub === undefined || num(e.sub, 0, 1))

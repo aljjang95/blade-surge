@@ -55,7 +55,7 @@ function Character({ app, id, equipment, yaw, reduced, onLook, onFit }) {
   const instance = useMemo(() => {
     const def = HEROES[id];
     const copy = spawnCharacter(app.models[def.model]);
-    copy.look = applyLook(copy.root, def, equipment);
+    copy.look = applyLook(copy.root, def, equipment, { avatarId: app.eco.equippedAvatar(id) });
     if (copy.clips.Idle) copy.mixer.clipAction(copy.clips.Idle).play();
     copy.frame = measureWardrobeFrame(copy);
     return copy;
@@ -129,7 +129,8 @@ export class Wardrobe {
   show(id) {
     if (!this.app.models[HEROES[id].model]) return;
     const equipment=this.app.eco.heroEquipInsts(id);
-    this.root.render(<WardrobeView key={id+JSON.stringify(equipment)} app={this.app} id={id} equipment={equipment}/>);
+    // 아바타 착용·해제도 새 인스턴스로 다시 그리도록 키에 넣는다.
+    this.root.render(<WardrobeView key={id+JSON.stringify(equipment)+(this.app.eco.equippedAvatar(id)||'')} app={this.app} id={id} equipment={equipment}/>);
   }
   hide() { this.root.render(null); }
   /** 소환 구성품의 무기 외형 미리보기. 모달 안 요소에 별도 React 루트를 둔다. */

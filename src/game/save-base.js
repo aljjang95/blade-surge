@@ -6,6 +6,7 @@ import { normalizeLobbyCamera } from '../engine/lobby-camera.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { normalizeTownState } from '../data/towns.js';
+import { AVATAR_BY_ID } from '../data/avatars.js';
 
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const integer = (value, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) =>
@@ -74,6 +75,13 @@ export function normalizeSave(raw, fresh) {
   for (const key of ['claimedFree', 'claimedPrem']) s.pass[key] = [...new Set(s.pass[key].filter((v) => Number.isInteger(v) && v >= 1 && v <= BATTLE_PASS.maxLevel))];
   s.quests.claimed = s.quests.claimed.filter((id) => ['k30', 'k100', 's3', 's10', 'p10'].includes(id));
   s.purchases = s.purchases.filter((id) => typeof id === 'string');
+  const ownedAvatars = [...new Set((Array.isArray(raw.avatars?.owned) ? raw.avatars.owned : []).filter((id) => typeof id === 'string' && AVATAR_BY_ID[id]))];
+  const equippedAvatars = {};
+  for (const [heroId, avatarId] of Object.entries(record(raw.avatars?.equipped) ? raw.avatars.equipped : {})) {
+    const avatar = AVATAR_BY_ID[avatarId];
+    if (Object.hasOwn(HEROES, heroId) && avatar && ownedAvatars.includes(avatarId) && avatar.heroId === heroId) equippedAvatars[heroId] = avatarId;
+  }
+  s.avatars = { owned: ownedAvatars, equipped: equippedAvatars };
   s.firstPurchaseUsed = Object.fromEntries(Object.entries(record(raw.firstPurchaseUsed) ? raw.firstPurchaseUsed : {}).filter(([key, value]) => key !== '__proto__' && value === true));
   // 우편 본문과 보상 정의는 제품 데이터가 소유하고 저장에는 수령 여부만 신뢰한다.
   s.mail = fresh.mail.map((mail) => ({ ...mail, read: s.mail.some((saved) => saved?.id === mail.id && saved.read === true) }));
