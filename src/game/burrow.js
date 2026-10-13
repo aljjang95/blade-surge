@@ -20,11 +20,22 @@ export class Burrow {
     this.cd = BURROW.firstCooldown + random() * BURROW.firstJitter;
   }
   get hidden() { return this.phase === 'sink' || this.phase === 'tunnel'; }
-  /** 파티 모드는 숨기·예고 원 표시가 게스트로 복제되지 않으므로 일반 근접으로 싸운다(호스트 적도 partyId 를 가진다). */
-  get enabled() { return !this.enemy.game.stage?.party; }
+  /** 0=완전히 드러남, 1=완전히 숨음. 파티 스냅샷으로 게스트에게 그대로 보낸다. */
+  depth() {
+    if (this.phase === 'sink') return Math.min(1, this.t / BURROW.sink);
+    if (this.phase === 'tunnel') return 1;
+    if (this.phase === 'mark') return 1 - .55 * Math.min(1, this.t / BURROW.mark);
+    return 0;
+  }
+  /** 파티 경고 원판(게스트는 적 자신의 예고 링을 돌리지 않는다). 피해·시계와 무관한 표시 전용 값이다. */
+  partyWarning(id) {
+    if (this.phase !== 'mark') return null;
+    return { id: `${id}:burrow:${this.erupted + this.fizzled}`, kind: 'disk', x: this.x, z: this.z, radius: BURROW.radius, width: 0, length: 0, angle: 0,
+      safeRadius: 0, remaining: Math.max(0, BURROW.mark - this.t), duration: BURROW.mark, color: 0xffb04c };
+  }
   available(distance) {
     const e = this.enemy, g = e.game;
-    return this.enabled && !this.phase && this.cd <= 0 && e.alive && !e.spawning && e.state === 'chase' && !(e.stun > 0) &&
+    return !this.phase && this.cd <= 0 && e.alive && !e.spawning && e.state === 'chase' && !(e.stun > 0) &&
       !((e.gatherT || 0) > 0) && g.active !== false && !g.bossDefeated && !!g.player?.alive &&
       distance >= BURROW.minDistance && distance <= BURROW.maxDistance;
   }
@@ -126,4 +137,13 @@ export class Burrow {
 function burrowTargets(game) {
   const list = game.stage?.party ? game.app?.party?.livingPlayers?.() || [] : [game.player];
   return [...new Set(list)].filter((p) => p?.alive);
+}
+
+/** 게스트 복제본: 호스트가 보낸 깊이로 몸을 가라앉히고, 완전히 숨으면 감추고 로컬 조준 대상에서도 뺀다. */
+export function applyBurrowDepth(enemy, sub) {
+  const depth = Number.isFinite(sub) ? Math.max(0, Math.min(1, sub)) : 0;
+  enemy.model.position.y = depth > 0 ? -depth * BURROW.depth * (enemy.scale || 1) : 0;
+  const hidden = depth >= .999;
+  enemy.model.visible = !hidden;
+  enemy.spawning = hidden;
 }

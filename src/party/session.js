@@ -3,6 +3,7 @@ import { HEROES, heroStats } from '../data/heroes.js';
 import { ENEMIES, stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 import { Player } from '../game/player.js';
 import { Enemy } from '../game/enemies.js';
+import { applyBurrowDepth } from '../game/burrow.js';
 import { loadModel, disposeCharacter } from '../engine/assets.js';
 import { audio } from '../engine/audio.js';
 import { PARTY_CODE, PARTY_ACTIONS, PARTY_LIMITS, sanitizePartyName, validPartySnapshot } from './protocol.js';
@@ -214,7 +215,8 @@ export class PartySession {
     const events = this.events.splice(0, Math.max(0, PARTY_LIMITS.events - mpEvents.length)); events.push(...mpEvents);
     return { tick:++this.tick,elapsed:b.elapsed,paused:b.paused,warnings:capturePartyWarnings(b),visuals:this.visuals.splice(0),
       players:this.members.map(m => { const p = this.players.get(m.id); return {...actorSnapshot(p,m.id),heroId:m.heroId,ult:p.ult,cds:p.cds.map(v => Math.max(0,v))}; }),
-      enemies:b.enemies.filter(e => e.partyId).slice(0,180).map(e => ({...actorSnapshot(e,e.partyId),key:e.speciesId,boss:e.isBoss,elite:e.isElite})),
+      // 잠행 중인 적만 숨은 깊이(sub)를 싣는다. 평소 스냅샷 크기는 그대로다.
+      enemies:b.enemies.filter(e => e.partyId).slice(0,180).map(e => ({...actorSnapshot(e,e.partyId),key:e.speciesId,boss:e.isBoss,elite:e.isElite,...(e.burrow?.phase ? {sub:+e.burrow.depth().toFixed(3)} : {})})),
       rooms:b.world.rooms.map((r,i) => ({id:i,discovered:!!r.discovered,cleared:!!r.cleared,activated:!!r.spawned})), roomsCleared:b.roomsCleared,
       bossDefeated:!!b.bossDefeated,portal:b.portal ? {x:b.portal.pos.x,z:b.portal.pos.z} : null,events,
       projectiles:b.projectiles.slice(0,160).map((p,i)=>({id:'p'+i,x:p.pos.x,y:p.pos.y,z:p.pos.z,yaw:Math.atan2(p.dir.x,p.dir.z)})) };
@@ -258,6 +260,7 @@ export class PartySession {
         enemy.partyId=item.id; enemy.speciesId=item.key; enemy.spawning=false; this.replicas.set(item.id,enemy);
       }
       this.applyPose(enemy,item,dt);
+      if (item.sub !== undefined || enemy.burrow) applyBurrowDepth(enemy,item.sub);
     }
     for (const [id, enemy] of this.replicas) if (!ids.has(id)) { enemy.dispose(); this.replicas.delete(id); }
     b.enemies = [...this.replicas.values()]; b.boss = b.enemies.find(e => e.isBoss && e.alive) || null;

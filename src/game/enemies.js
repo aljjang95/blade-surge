@@ -534,6 +534,8 @@ export class Enemy extends Actor {
 export function enemyPartyWarnings(enemy) {
   if (!enemy.alive || enemy.spawning || !enemy.partyId) return [];
   const base = {id:`${enemy.partyId}:${enemy.attackSequence || 0}`,kind:'disk',x:enemy.pos.x,z:enemy.pos.z,radius:0,width:0,length:0,angle:0,safeRadius:0,remaining:0,duration:1,color:0xff6040};
+  const burrowWarning = enemy.burrow?.partyWarning(enemy.partyId);
+  if (burrowWarning) return [burrowWarning];
   if (enemy.behavior === 'bomber' && enemy.fuse >= 0 && enemy.fuse < .7) return [{...base,id:`${enemy.partyId}:fuse`,radius:3.4,duration:.7,remaining:.7-enemy.fuse}];
   if (enemy.state !== 'attack' || enemy.attackDone) return [];
   const duration = enemy.attackDur * enemy.hitAt, remaining = Math.max(0,duration-enemy.stateT);
