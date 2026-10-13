@@ -1,6 +1,6 @@
-// 두 번째 마을(잿불 항구) 진행을 실제 키보드·DOM 입력으로 검증하고, 출격 준비창 글자 대비를 측정한다.
+// 두 번째(잿불 항구)·세 번째(별마루 설원) 마을 진행을 실제 키보드·DOM 입력으로 검증하고, 출격 준비창 글자 대비를 측정한다.
 // 실행: CHROME_PATH 설정 후 node tools/town-progression-qa.mjs (먼저 bun run build).
-// QA_LOW_EXP=1 이면 탐험 레벨을 올리지 않아 입장 차단 사유 표시를 확인하고 출격 전에 끝낸다. QA_VP=844x390 처럼 화면 크기를 바꿀 수 있다.
+// QA_TOWN=starcrest 로 세 번째 마을을 검사한다(기본 emberport). QA_LOW_EXP=1 이면 탐험 레벨을 올리지 않아 입장 차단 사유 표시를 확인하고 출격 전에 끝낸다. QA_VP=844x390 처럼 화면 크기를 바꿀 수 있다.
 import { chromium } from 'playwright';
 import { preview } from 'vite';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
@@ -10,17 +10,27 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { launchOpts } from './chrome.mjs';
 import { TOWNS, TOWN_SHOP_BY_ID, TOWN_TRAINER_BY_ID } from '../src/data/towns.js';
+import { townHub } from '../src/data/citadel-hub.js';
+
+const TOWN_ID = process.env.QA_TOWN || 'emberport';
+const TOWN_INDEX = TOWNS.findIndex(town => town.id === TOWN_ID);
+if (TOWN_INDEX < 1) throw new Error('QA_TOWN은 emberport 또는 starcrest 여야 합니다: ' + TOWN_ID);
+const TOWN = TOWNS[TOWN_INDEX], LABEL = TOWN.name, GATE = TOWN.dungeonIds[0];
+const GATE_SPOT = townHub(TOWN_ID).hotspots.find(spot => spot.id === 'dungeon:' + GATE);
+const SIDE = Math.sign(GATE_SPOT.x);
+// 대상 마을까지 열리도록 앞선 마을마다 다음 마을이 요구하는 수만큼 던전을 클리어 상태로 둔다.
+const PRIOR_CLEARS = TOWNS.slice(0, TOWN_INDEX).flatMap((town, index) => town.dungeonIds.slice(0, TOWNS[index + 1].requiredClears));
 
 const LOW_EXP = !!process.env.QA_LOW_EXP;
 const root = fileURLToPath(new URL('..', import.meta.url));
-const out = resolve(root, 'work/qa/town-progression-' + new Date().toISOString().replace(/[:.]/g, '-'));
+const out = resolve(root, 'work/qa/town-progression-' + TOWN_ID + '-' + new Date().toISOString().replace(/[:.]/g, '-'));
 await mkdir(out, { recursive: true });
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const report = {
   status: 'running', startedAt: new Date().toISOString(),
   scope: '로컬 dist · headless Chrome · 실제 WASD/DOM 입력 · 고정 dt AUTO. 물리 모바일·GPU·발열 검증 아님.',
   viewport: process.env.QA_VP ? { width: +process.env.QA_VP.split('x')[0], height: +process.env.QA_VP.split('x')[1] } : { width: 1280, height: 720 },
-  fixture: { disclosed: true, naturalProgression: false, overrides: { selectedHeroLevel: 16, expeditionLevel: '12 (QA_LOW_EXP 제외)', oathholdClears: 4, materials: 60, gold: 200000 },
+  fixture: { disclosed: true, naturalProgression: false, overrides: { selectedHeroLevel: 16, expeditionLevel: '12 (QA_LOW_EXP 제외)', town: TOWN_ID, priorClears: PRIOR_CLEARS, materials: 60, gold: 200000 },
     pacing: '부트 후 testPause=true; app.step(1/60)으로 진행', randomness: '게임 난수 원본 유지' },
   checks: [], walks: [], choices: [], screenshots: [], errors: [], sources: {},
 };
@@ -147,17 +157,17 @@ try {
   await dismissPopups();
 
   report.fixture.before = await state();
-  const setup = await page.evaluate(LOW_EXP => {
+  const setup = await page.evaluate(({ LOW_EXP, clears }) => {
     const a = window.app, s = a.eco.s;
     a.testPause = true;
     s.heroes[s.selected].level = 16;
     if (!LOW_EXP) s.expedition.level = Math.max(s.expedition.level || 1, 12);
-    for (const id of ['glass_garden', 'eclipse_hydra_vault', 'ember_vault', 'bellfall_crypt']) s.expedition.stats[id] = Math.max(1, s.expedition.stats[id] || 0);
+    for (const id of clears) s.expedition.stats[id] = Math.max(1, s.expedition.stats[id] || 0);
     Object.assign(s.expedition.materials, { glass_leaf: 60, ember_core: 60, star_dust: 60 });
     s.gold = 200000;
     const saved = a.eco.save(); a.eco.emit();
     return { saved, heroId: s.selected };
-  }, LOW_EXP);
+  }, { LOW_EXP, clears: PRIOR_CLEARS });
   check('fixture 저장', setup.saved, setup);
   await page.locator('#meta [data-tab="home"]').click();
   await page.locator('#citadel-explore').click();
@@ -166,52 +176,52 @@ try {
   await walkTo({ x: 3.3, z: 7.1 });
   await interact('waystone:main', 'map');
   const card = await page.evaluate(() => [...document.querySelectorAll('.town-dialog[open] .town-map > li')].map(li => ({ id: li.dataset.town, state: li.dataset.state, go: !li.querySelector('.town-go')?.disabled })));
-  check('잿불 항구 해금 카드', card.find(c => c.id === 'emberport')?.state === 'open' && card.find(c => c.id === 'emberport').go, card);
-  await page.locator('.town-dialog[open] [data-town-act="travel"][data-town="emberport"]').click();
+  check(LABEL + ' 해금 카드', card.find(c => c.id === TOWN_ID)?.state === 'open' && card.find(c => c.id === TOWN_ID).go, card);
+  await page.locator('.town-dialog[open] [data-town-act="travel"][data-town="' + TOWN_ID + '"]').click();
   await page.locator('.town-dialog[open]').waitFor({ state: 'hidden' });
   await page.evaluate(() => { for (let i = 0; i < 120; i++) window.app.step(1 / 60, i % 30 === 0); });
   const arrived = await page.evaluate(() => ({ ui: window.app.townUI.activeId, scene: window.app.arena.lobbyHall?.userData?.townId, saved: JSON.parse(localStorage.getItem('bladesurge_save_v1')).towns.currentTownId,
     hotspots: window.app.hubMovement.hotspots.map(h => h.id), pos: { ...window.app.hubMovement.position }, walking: window.app.canWalkHub(), place: document.querySelector('.town-place-name, .town-place h2, .town-place strong')?.textContent }));
   report.arrived = arrived;
-  check('잿불 항구 도착·장면·저장', arrived.ui === 'emberport' && arrived.scene === 'emberport' && arrived.saved === 'emberport' && arrived.hotspots.includes('dungeon:cinder_tide_lock') && arrived.walking, arrived);
-  await capture('emberport-arrived');
+  check(LABEL + ' 도착·장면·저장', arrived.ui === TOWN_ID && arrived.scene === TOWN_ID && arrived.saved === TOWN_ID && arrived.hotspots.includes('dungeon:' + GATE) && arrived.walking, arrived);
+  await capture(TOWN_ID + '-arrived');
   await walkTo({ x: -6.4, z: 4.1 });
   await interact('npc:potion-merchant', 'merchant');
   const offers = await page.evaluate(() => [...document.querySelectorAll('.town-dialog[open] [data-town-act="buy"]')].map(b => ({ id: b.dataset.offer, disabled: b.disabled })));
   report.emberOffers = offers;
-    check('잿불 상인 상품 노출', offers.length > 0 && offers.every(o => o.id.startsWith('emberport')), offers);
+    check(LABEL + ' 상인 상품 노출', offers.length > 0 && offers.every(o => o.id.startsWith(TOWN_ID)), offers);
   const buyId = offers.find(o => !o.disabled)?.id;
   const before = await state();
   await page.locator('.town-dialog[open] [data-town-act="buy"][data-offer="' + buyId + '"]').click();
   const after = await state();
-  check('잿불 상인 구매', after.towns.purchased.includes(buyId) && after.gold < before.gold, { buyId, gold: [before.gold, after.gold] });
-  await capture('emberport-merchant');
+  check(LABEL + ' 상인 구매', after.towns.purchased.includes(buyId) && after.gold < before.gold, { buyId, gold: [before.gold, after.gold] });
+  await capture(TOWN_ID + '-merchant');
   await closeTown();
   await walkTo({ x: -3.8, z: 4.1 });
   await walkTo({ x: -3.8, z: 6.6 });
   await interact('npc:trainer', 'trainer');
   const lessons = await page.evaluate(() => [...document.querySelectorAll('.town-dialog[open] [data-town-act="learn"]')].map(b => ({ id: b.dataset.offer, disabled: b.disabled })));
   report.emberLessons = lessons;
-  check('잿불 교관 기술 노출', lessons.length > 0 && lessons.every(l => l.id.startsWith('emberport')), lessons);
+  check(LABEL + ' 교관 기술 노출', lessons.length > 0 && lessons.every(l => l.id.startsWith(TOWN_ID)), lessons);
   const learnId = lessons.find(l => !l.disabled)?.id;
   if (learnId) {
     const lb = await state();
     await page.locator('.town-dialog[open] [data-town-act="learn"][data-offer="' + learnId + '"]').click();
     const la = await state();
-    check('잿불 교관 습득', la.towns.learned[la.heroId]?.includes(learnId), { learnId, learned: la.towns.learned });
+    check(LABEL + ' 교관 습득', la.towns.learned[la.heroId]?.includes(learnId), { learnId, learned: la.towns.learned });
   }
-  await capture('emberport-trainer');
+  await capture(TOWN_ID + '-trainer');
   await closeTown();
   await walkTo({ x: 0, z: 3 });
-  await walkTo({ x: 8.5, z: 3 });
-  await walkTo({ x: 8.5, z: -10 });
-  await walkTo({ x: 9.3, z: -10 });
+  await walkTo({ x: SIDE * 8.5, z: 3 });
+  await walkTo({ x: SIDE * 8.5, z: GATE_SPOT.z });
+  await walkTo({ x: GATE_SPOT.x - SIDE * 1.4, z: GATE_SPOT.z });
   const near = await state();
   report.gateNear = near.nearest;
-  check('잿불 게이트 접근', near.nearest === 'dungeon:cinder_tide_lock', { nearest: near.nearest, position: near.position });
+  check(LABEL + ' 게이트 접근', near.nearest === 'dungeon:' + GATE, { nearest: near.nearest, position: near.position });
   await page.locator('.citadel-hub-interact').click();
   await page.locator('.citadel-hub-dialog[open]').waitFor();
-  await capture('emberport-gate');
+  await capture(TOWN_ID + '-gate');
   report.contrast = await page.evaluate(() => {
     const parse = s => { const m = String(s).match(/rgba?\(([^)]+)\)/); if (!m) return null; const p = m[1].split(',').map(Number); return { r: p[0], g: p[1], b: p[2], a: p[3] ?? 1 }; };
     const lum = c => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }; return .2126 * f(c.r) + .7152 * f(c.g) + .0722 * f(c.b); };
@@ -258,8 +268,8 @@ try {
   await page.locator('.citadel-hub-go').click();
   await page.waitForFunction(() => window.app.mode === 'battle' && window.app.battle.active && !window.app.stageStarting, null, { timeout: 120000 });
   const admission = await page.evaluate(() => ({ route: window.app.battle.stage.expedition, auto: window.app.battle.player.auto }));
-  check('재의 밀물 수문 실제 출격', admission.route.id === 'cinder_tide_lock', admission);
-  await capture('emberport-battle');
+  check(LABEL + ' 첫 던전 실제 출격', admission.route.id === GATE, admission);
+  await capture(TOWN_ID + '-battle');
   if (!admission.auto) await page.locator('#btn-auto').click();
   for (let chunk = 0; chunk < 240; chunk++) {
     const current = await page.evaluate(() => {
@@ -277,14 +287,14 @@ try {
     if (chunk % 12 === 0) { console.log('AUTO', JSON.stringify(current)); await save(); }
   }
   const last = report.expedition.chunks.at(-1);
-  check('잿불 던전 AUTO 결과', last && !last.active, last);
+  check(LABEL + ' 던전 AUTO 결과', last && !last.active, last);
   report.expedition.win = last.win;
   await page.evaluate(() => { for (let frame = 0; frame < 240 && !window.app.expeditionUI.result; frame++) window.app.step(1 / 60, frame % 60 === 0); });
   await page.locator('.exp-result-shell').waitFor();
   const res = await state();
   report.expedition.after = { stats: res.stats, pending: res.pending, win: res.result?.win, saveError: res.result?.saveError };
-  await capture('emberport-result');
-  check('잿불 던전 정산', !res.result?.saveError && res.pending === null, report.expedition.after);
+  await capture(TOWN_ID + '-result');
+  check(LABEL + ' 던전 정산', !res.result?.saveError && res.pending === null, report.expedition.after);
   check('콘솔 오류 0', report.errors.length === 0, report.errors);
   report.status = 'pass';
 } catch (error) {
@@ -300,6 +310,8 @@ try {
   await save();
   console.log('QA report:', join(out, 'report.json'));
 }
+
+
 
 
 
