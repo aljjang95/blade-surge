@@ -19,7 +19,7 @@ const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   eclipse_hydra_vault: { standard: [3, 0], deep: [0, 4] },
   ashforge_catacomb: { standard: [4, 0], deep: [0, 4] },
   astral_leviathan_spire: { standard: [0, 0], deep: [2, 2] },
-  verdigris_sanctum: { standard: [0, 0], deep: [2, 4] },
+  verdigris_sanctum: { standard: [3, 0], deep: [2, 4] },
   sable_mirage_basin: { standard: [0, 0], deep: [0, 4] },
   comet_bastion: { standard: [0, 0], deep: [2, 4] },
 };
@@ -72,6 +72,11 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(stage.encounter.tactic).toMatch(/모래시계 단서를 1초 읽고.*문자·도형 판에서 1초 유지/);
         expect(stage.encounter.tactic).toMatch(/오답.*판 밖.*재시도/);
         expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번', '4번']);
+      } else if (id === 'verdigris_sanctum' && depth === 'standard') {
+        expect(stage.objective).toMatch(/생명 제단 세 개/);
+        expect(stage.encounter.tactic).toMatch(/적.*처치.*빛 안.*2초.*정화/);
+        expect(stage.encounter.tactic).toMatch(/차례가 아닌.*1초.*포자/);
+        expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번']);
       } else if (id === 'ashforge_catacomb' && depth === 'standard') {
         expect(Number(stage.objective.match(/과열 용광로\s*(\d+)곳/)?.[1])).toBe(holds);
         expect(stage.encounter.tactic).toMatch(/1\.4초 예고/);
@@ -97,6 +102,7 @@ for (const [id, contract] of Object.entries(contracts)) {
       for (const copy of [definition.objective, definition.tactic, stage.objective, stage.encounter.tactic]) {
         const checked = id === 'cinder_tide_lock' ? copy.replaceAll('밸브', '')
           : id === 'eclipse_hydra_vault' && depth === 'standard' ? copy.replaceAll('밸브', '')
+          : id === 'verdigris_sanctum' && depth === 'standard' ? copy.replaceAll('생명 제단', '').replaceAll('포자가 터져', '')
           : id === 'nightglass_observatory' ? copy.replace(/기록\s*3장/g, '')
           : id === 'astral_leviathan_spire' && depth === 'standard' && selectionRoute
             ? copy.replaceAll('별자리 4개 순서대로 복원', '') : copy;
