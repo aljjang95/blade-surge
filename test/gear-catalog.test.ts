@@ -97,7 +97,8 @@ test('모든 일반 장비 아이콘은 현재 소스로 렌더한 256px 투명 
   const receipt = JSON.parse(readFileSync('tools/art/gear-icon-studio.manifest.json', 'utf8'));
   const targets = Object.values(items).filter(item => item.icon?.startsWith('/img/gear/'));
   expect(receipt.items).toHaveLength(targets.length);
-  for (const [path, hash] of Object.entries(receipt.sourceHashes)) expect(createHash('sha256').update(readFileSync(path)).digest('hex')).toBe(hash as string);
+  // 렌더 소스 해시는 줄바꿈을 LF 로 정규화한 내용 기준이다(autocrlf 체크아웃 차이를 무시).
+  for (const [path, hash] of Object.entries(receipt.sourceHashes)) expect(createHash('sha256').update(readFileSync(path, 'utf8').replace(/\r\n/g, '\n')).digest('hex')).toBe(hash as string);
   const hashes = new Set<string>();
   for (const item of targets) {
     const bytes = readFileSync(`public${item.icon}`), metadata = await sharp(bytes).metadata(), stats = await sharp(bytes).stats();

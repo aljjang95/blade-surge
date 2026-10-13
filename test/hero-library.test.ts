@@ -6,6 +6,9 @@ import {
 } from '../src/data/hero-library.js';
 import { libraryAssetForHero, selectHeroLibraryAsset } from '../src/engine/library-assets.js';
 import { validateManifest } from '../tools/asset-library/manifest.mjs';
+import { HEROES } from '../src/data/heroes.js';
+import { Actor } from '../src/game/actor.js';
+import { Player } from '../src/game/player.js';
 
 const SCHEMA = 'tll.game-asset-library.v1';
 const hero = (id: string, armorTier?: number, clips: Record<string, string> = { idle: 'idle', run: 'run', hit: 'hit', death: 'death' }) => ({
@@ -54,8 +57,8 @@ test('tier fallback picks the closest lower tier, then the legacy KayKit model',
   expect(selectHeroLibraryAsset(manifestOf(hero('hero_knight_t1')), 'knight', 3)?.id).toBe('hero_knight_t1');
   expect(selectHeroLibraryAsset(manifestOf(hero('hero_knight_t2', 2, {})), 'knight', 1)).toBeNull();
   expect(selectHeroLibraryAsset(sparse, 'mage', 3)).toBeNull();
-  // 정본 manifest 에 영웅 항목이 없으면 기존 영웅 경로를 유지한다.
-  expect(libraryAssetForHero('knight')).toBeNull();
+  // 정본 manifest 는 다섯 영웅의 1단계 몸체를 등록한다.
+  for (const id of ['knight', 'barbarian', 'mage', 'rogue', 'ranger']) expect(libraryAssetForHero(id)?.id).toBe('hero_' + id + '_t1');
 });
 
 test('mesh-only tiers reuse the same AnimationClip objects cached per hero', () => {
@@ -112,5 +115,31 @@ test('KayKit action names map to the contract logical keys', () => {
   expect(logicalClipForAnimation('2H_Melee_Attack_Spinning')).toBe('spin');
   expect(logicalClipForAnimation('Bow_Shoot')).toBe('bow_shoot');
   expect(requiredHeroLogicalClips('knight')).toEqual(expect.arrayContaining(['slash_h', 'slash_d', 'stab', 'spin', 'chop', 'block', 'cast_raise']));
+});
+
+test('광전사 회오리는 KayKit 짧은 회전 이름을 유지하고 라이브러리에서는 같은 spin 클립으로 반복 재생한다', () => {
+  const asset = { ...hero('hero_barbarian_t1', 1), heroId: 'barbarian', clips: { idle: 'idle', spin: 'spin' } };
+  const scene = handScene('mixamorigRightHand', 'mixamorigLeftHand');
+  scene.userData.authoredContract = heroModelContract(asset, scene);
+  const spin = new THREE.AnimationClip('spin', 1, []);
+  const game = { scene: new THREE.Scene(), hasProc: () => false, fx: { castCircle() {} } };
+  const player: any = new Actor(game, { scene, animations: [new THREE.AnimationClip('idle', 1, []), spin] });
+  Object.setPrototypeOf(player, Player.prototype);
+  Object.assign(player, { def: HEROES.barbarian, stats: { atk: 100 }, buffs: { atk: 1 }, heroLevel: 3,
+    skillLevels: [1, 1, 1, 1], cds: [0, 0, 0, 0], mp: 100, state: 'idle', stateT: 0,
+    auto: false, stopTrail() {}, startTrail() {} });
+  // 같은 물리 클립을 가리키는 두 별칭이 실제 인스턴스에 모두 있어야 한다.
+  expect(player.clips['2H_Melee_Attack_Spin']).toBe(spin);
+  expect(player.clips['2H_Melee_Attack_Spinning']).toBe(spin);
+  player.playTimed('2H_Melee_Attack_Spinning', .85);
+  expect(player.tryCastSkill(0)).toBe(true);
+  player.mixer.update(1 / 60);
+  // 회오리 시전은 KayKit 0.667초 반복 클립 이름을 그대로 쓴다(2.4초 Spin 으로 바꾸면 KayKit 폴백에서 회전 수가 줄어든다).
+  expect(player.actionName).toBe('2H_Melee_Attack_Spinning');
+  expect(player.action.getClip()).toBe(player.clips[HEROES.barbarian.skills[0].anim]);
+  expect(player.action.getClip()).toBe(spin);
+  expect(player.action.isRunning()).toBe(true);
+  expect(player.action.loop).toBe(THREE.LoopRepeat);
+  expect(player.action.timeScale).toBe(2.2);
 });
 
