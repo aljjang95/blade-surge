@@ -56,6 +56,17 @@ export const ROUTE_OBJECTIVES = Object.freeze({
       Object.freeze({ roomId: 7, label: '3번 역류 밸브 · 수문 앞 갑문' }),
     ]),
   }),
+  // 녹청의 성역 일반의 원안: 뿌리 문양이 켜진 생명 제단만 정화된다. 순서는 길 순서와 다르며,
+  // 정화가 끝났지만 차례가 아닌 제단 중심에 1초 머물면 포자가 터진다.
+  verdigris_standard: Object.freeze({
+    id: 'verdigris_life_altars', holdSeconds: 2, radius: 3, noun: '생명 제단', verb: '정화', cueColor: 0x72e6ae,
+    wrongStep: Object.freeze({ seconds: 1, damage: .08, cooldown: 2, color: 0xb06cff }),
+    gates: Object.freeze([
+      Object.freeze({ roomId: 3, label: '1번 생명 제단 · 이끼 회랑' }),
+      Object.freeze({ roomId: 2, label: '2번 생명 제단 · 뿌리 샘' }),
+      Object.freeze({ roomId: 6, label: '3번 생명 제단 · 포자 정원' }),
+    ]),
+  }),
   cinder_standard: cooling('standard', [[2, '1번 밸브 · 서쪽 수문'], [5, '2번 밸브 · 동쪽 수문']]),
   cinder_deep: cooling('deep', [[2, '1번 밸브 · 상류 냉각선'], [5, '2번 밸브 · 하류 냉각선'], [6, '3번 밸브 · 귀환 냉각선']]),
   // 재벼림 제련소 일반의 원안: 과열 용광로 4곳을 식혀야 거수의 봉인이 풀린다. 두 갈래 길을 모두 지난다.
@@ -77,6 +88,7 @@ export function routeObjectiveForStage(stage) {
   if (expedition.id === 'nightglass_observatory') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.nightglass_standard
     : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.nightglass_deep : null;
   if (expedition.id === 'eclipse_hydra_vault') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.eclipse_standard : null;
+  if (expedition.id === 'verdigris_sanctum') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.verdigris_standard : null;
   if (expedition.id === 'ashforge_catacomb') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.ashforge_standard : null;
   return expedition.id === 'bellfall_crypt' && expedition.depth === 'standard' ? ROUTE_OBJECTIVES.bellfall_crypt : null;
 }

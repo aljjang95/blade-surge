@@ -265,3 +265,42 @@ test('일식 수문 일반: 역류 밸브 3개를 순서대로 잠가야 봉인�
   expect(f.route.finish(false)).toMatchObject({ id: 'eclipse_backflow_valves', complete: false, progress: 3, target: 3, rooms: [2, 5, 7] });
 });
 
+
+test('녹청의 성역 일반: 생명 제단 3곳은 길과 다른 순서이며, 차례가 아닌 정화된 제단에 1초 머물면 포자가 터진다', () => {
+  const f = fixture(buildExpeditionStage('dungeon', 'verdigris_sanctum', null));
+  const hits: number[] = [];
+  f.g.player.hurt = (n: number) => { hits.push(n); return true; };
+  expect(f.route.def.id).toBe('verdigris_life_altars');
+  expect(f.route.gates.map((gate: any) => gate.room.id)).toEqual([3, 2, 6]);
+  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'verdigris_sanctum', null, { depth: 'deep' }))).toBeNull();
+
+  // 길에서 먼저 만나는 2번 방 제단을 정화해도 차례가 아니다. 중심 0.9초는 안전, 1초가 차면 포자 폭발.
+  clearCombat(f, 2);
+  tickAt(f, 2, .9); expect(hits).toHaveLength(0);
+  tickAt(f, 2, .1); expect(hits).toHaveLength(1);
+  expect(hits[0]).toBeCloseTo(100 * .08);
+  expect(f.route.progress).toBe(0); expect(f.world.rooms[2].cleared).toBe(false);
+  // 폭발 뒤 2초 동안은 다시 터지지 않는다.
+  tickAt(f, 2, 1.5); expect(hits).toHaveLength(1);
+  expect(f.labels.some(l => l === '2번 생명 제단 · 차례 아님 · 밟으면 포자 폭발')).toBe(true);
+
+  attune(f, 3); expect(f.route.progress).toBe(1);
+  // 이제 2번 방이 차례이므로 머물러도 폭발하지 않고 정화된다.
+  tickAt(f, 2, 2); expect(f.route.progress).toBe(2); expect(hits).toHaveLength(1);
+  expect(battleObjectiveView(f.g)).toMatchObject({ title: '생명 제단 정화', progress: 2, total: 3 });
+  for (const id of [1, 4, 5, 7]) clearCombat(f, id);
+  expect(f.route.canUnseal()).toBe(false);
+  attune(f, 6);
+  expect(f.route.canUnseal()).toBe(true);
+  expect(f.route.finish(false)).toMatchObject({ id: 'verdigris_life_altars', label: '생명 제단 정화', progress: 3, target: 3, rooms: [3, 2, 6], sporeBursts: 1 });
+});
+
+test('종문과 역류 밸브에는 포자 폭발 규칙이 없다', () => {
+  const f = fixture(buildExpeditionStage('dungeon', 'eclipse_hydra_vault', null));
+  const hits: number[] = [];
+  f.g.player.hurt = (n: number) => { hits.push(n); return true; };
+  clearCombat(f, 5); tickAt(f, 5, 3);
+  expect(hits).toHaveLength(0);
+  expect(f.route.finish(false)).not.toHaveProperty('sporeBursts');
+});
+

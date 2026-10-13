@@ -88,8 +88,8 @@ const BASE_DUNGEONS = [
   }),
   dungeon('verdigris_sanctum', '녹청의 성역', 'garden', 4, 4, 'glass_leaf', '잠든 성역의 뿌리 심장에 녹청의 수호자가 깃들어 있습니다.', {
     art: ENCOUNTER_ART.boss_verdigris_sentinel, accent: '#72e6ae', subtitle: 'VERDIGRIS SANCTUM',
-    objective: '모든 구역 정화 → 녹청의 성역 거수 처치',
-    tactic: `성역의 적을 처치하고 모든 구역을 정화하세요. ${ENEMIES.verdigris_sentinel.tactic}`,
+    objective: '뿌리 문양이 켜진 생명 제단 세 개를 순서대로 정화하고 모든 구역을 정화한 뒤 녹청의 성역 거수를 쓰러뜨리세요.',
+    tactic: `각 제단 구역의 적을 처치한 뒤 1번 → 2번 → 3번 순서로 초록 빛 안에서 각각 연속 2초간 정화하세요. 제단 순서는 길 순서와 다릅니다. 정화됐지만 차례가 아닌 보라 빛 제단 중심에 1초 머물면 포자가 터져 피해를 받습니다. 제단 3곳과 모든 구역을 정화하면 보스 봉인이 풀립니다. ${ENEMIES.verdigris_sentinel.tactic}`,
     bossEnemy: 'verdigris_sentinel', bossHp: 23800, bossName: '녹청의 성역 거수', rosterMode: 'verdigris',
     roster: { trash: ['mossbound_scout', 'verdigris_rootcaller', 'blob_green', 'mossbound_scout', 'bomb_slime', 'bell_wisp'], ranged: ['verdigris_rootcaller', 'skel_priest', 'glub'], elite: ['ironbark_bulwark', 'glass_warden', 'elite_golem'] },
   }),
