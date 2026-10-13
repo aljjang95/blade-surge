@@ -218,8 +218,10 @@ try {
   }
   await walkTo({ x: 0, z: 3 });
   if (GATE_SPOT.z < -8) {
-    // 첫 마을 게이트는 북쪽 한 줄에 서 있다. 정면에서 다가간다.
-    await walkTo({ x: GATE_SPOT.x, z: 0 });
+    // 첫 마을 게이트는 북쪽 한 줄에 서 있다. x=±6의 벤치·화단을 피해 옆 통로로 올라간 뒤 정면에서 다가간다.
+    const lane = Math.abs(GATE_SPOT.x) >= 5 && Math.abs(GATE_SPOT.x) <= 7 ? GATE_SPOT.x - Math.sign(GATE_SPOT.x) * 2 : GATE_SPOT.x;
+    await walkTo({ x: lane, z: 0 });
+    await walkTo({ x: lane, z: -8 });
     await walkTo({ x: GATE_SPOT.x, z: GATE_SPOT.z + 1.4 });
   } else {
     await walkTo({ x: SIDE * 8.5, z: 3 });
