@@ -8,9 +8,9 @@ test('auto quality is capability based while a player choice is preserved', () =
   expect(resolveQuality('high', { cores: 2, memory: 2, touch: true })).toBe('high');
 });
 
-test('keyboard and browser toolbar resize uses visual viewport; pinch zoom does not reallocate', () => {
+test('canvas sizing stays on the layout viewport during browser visual viewport changes', () => {
   const host = { innerWidth: 390, innerHeight: 844, visualViewport: { width: 390, height: 430, scale: 1 } };
-  expect(displaySize(host)).toEqual({ width: 390, height: 430 });
+  expect(displaySize(host)).toEqual({ width: 390, height: 844 });
   host.visualViewport.scale = 2;
   expect(displaySize(host)).toEqual({ width: 390, height: 844 });
   expect(displaySize({ innerWidth: 0, innerHeight: NaN })).toEqual({ width: 1, height: 1 });

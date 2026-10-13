@@ -6,11 +6,9 @@ export function resolveQuality(requested, { cores = 4, memory = 4, touch = false
 }
 
 export function displaySize(host) {
-  const viewport = host.visualViewport;
-  // Pinch zoom must not resize the drawing buffer on every gesture frame.
-  const visible = viewport && Math.abs((viewport.scale || 1) - 1) < .01 ? viewport : host;
+  // 캔버스는 컷아웃을 포함한 레이아웃 뷰포트에 맞춰야 하므로 visualViewport로 줄이지 않는다.
   const positive = (n, fallback) => Number.isFinite(n) && n > 0 ? Math.round(n) : fallback;
-  return { width: positive(visible.width, positive(host.innerWidth, 1)), height: positive(visible.height, positive(host.innerHeight, 1)) };
+  return { width: positive(host.innerWidth, 1), height: positive(host.innerHeight, 1) };
 }
 
 export function renderPixelRatio({ width, height, dpr = 1, quality = 'mid', touch = false }) {

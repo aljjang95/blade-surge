@@ -1,4 +1,11 @@
 const clamp = (value, fallback, min, max) => Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
+export function pinchZoom(startZoom, startDistance, distance, min = 70, max = 140) {
+  if (!Number.isFinite(startZoom) || !Number.isFinite(startDistance) || startDistance <= 0 || !Number.isFinite(distance)) return startZoom;
+  return Math.max(min, Math.min(max, startZoom * distance / startDistance));
+}
+export function pointerDistance(first, second) {
+  return Math.max(1, Math.hypot(first.x - second.x, first.y - second.y));
+}
 export function normalizeBattleCamera(value = {}) {
   value = value || {};
   return { yaw: Number.isFinite(value.yaw) ? ((value.yaw + 180) % 360 + 360) % 360 - 180 : 0,
@@ -22,6 +29,8 @@ export class CameraControls {
     this.app = app;
     this.pad = document.getElementById('battle-camera-pad');
     this.value = normalizeBattleCamera();
+    this.pointers = new Map();
+    this.pinch = null;
     app.renderer.battleCamera = this.value;
     // Battle pause, death, modal and stage transitions already clear gameplay input.
     // End capture at that same boundary, even if no pointer event arrives while paused.
@@ -30,9 +39,32 @@ export class CameraControls {
       const e = app.renderer.camera.matrixWorld.elements;
       return Math.atan2(-e[2], e[0]);
     };
-    const ui = '#joy, #actions, button, input, select, textarea, a, [role="dialog"], #battle-camera-controls';
+    const ui = '#joy, .actions, #actions, button, input, select, textarea, a, [role="dialog"], #battle-camera-controls';
+    const canPinch = target => !!this.pad?.contains(target) || !target?.closest?.(ui);
     document.addEventListener('pointerdown', event => {
       const onPad = !!this.pad && this.pad.contains(event.target);
+      if (event.pointerType === 'touch') {
+        if (!this.active || !canPinch(event.target)) return;
+        const value = this.currentValue();
+        const pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY,
+          yaw: value.yaw, pitch: value.pitch, surface: onPad ? this.pad : event.target };
+        // 시점 패드 드래그와 빈 화면 두 손가락 핀치는 서로 다른 손가락 묶음이다. 화면을 짚은 손가락이 패드 드래그를 빼앗지 않는다.
+        if (onPad) {
+          if (this.drag) return;
+          this.drag = pointer;
+          try { this.pad.setPointerCapture?.(pointer.id); } catch { this.drag = null; return; }
+          event.preventDefault();
+          return;
+        }
+        if (this.pointers.size >= 2) return;
+        this.pointers.set(pointer.id, pointer);
+        if (this.pointers.size === 2) {
+          const [first, second] = this.pointers.values();
+          this.pinch = { ids: [first.id, second.id], distance: pointerDistance(first, second), zoom: this.currentValue().zoom };
+          event.preventDefault();
+        }
+        return;
+      }
       if (!this.active || this.drag || (!onPad && (event.pointerType === 'touch' || event.button !== 2 || event.target.closest?.(ui)))) return;
       if (onPad && event.button !== 0 && event.button !== 2) return;
       const surface = onPad ? this.pad : event.target;
@@ -43,6 +75,23 @@ export class CameraControls {
       event.preventDefault();
     });
     document.addEventListener('pointermove', event => {
+      if (this.drag?.id === event.pointerId && this.drag.startX !== undefined) {
+        if (!this.active) { this.finish(); return; }
+        this.set({ ...this.currentValue(), yaw: this.drag.yaw - (event.clientX - this.drag.startX) * .35,
+          pitch: this.drag.pitch + (event.clientY - this.drag.startY) * .15 });
+        event.preventDefault();
+        return;
+      }
+      const pointer = this.pointers.get(event.pointerId);
+      if (pointer) {
+        pointer.x = event.clientX; pointer.y = event.clientY;
+        if (this.pinch?.ids.includes(event.pointerId)) {
+          const first = this.pointers.get(this.pinch.ids[0]), second = this.pointers.get(this.pinch.ids[1]);
+          if (first && second) this.set({ ...this.currentValue(), zoom: pinchZoom(this.pinch.zoom, this.pinch.distance, pointerDistance(first, second)) });
+          event.preventDefault();
+        }
+        return;
+      }
       if (!this.drag || event.pointerId !== this.drag.id) return;
       if (!this.active) { this.finish(); return; }
       this.set({ ...this.value, yaw: this.drag.yaw - (event.clientX - this.drag.x) * .35,
@@ -50,6 +99,11 @@ export class CameraControls {
       event.preventDefault();
     });
     for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) document.addEventListener(name, event => {
+      if (this.pointers.has(event.pointerId)) {
+        this.pointers.delete(event.pointerId);
+        if (this.pinch?.ids.includes(event.pointerId)) { this.pinch = null; this.pointers.clear(); event.preventDefault(); }
+        return;
+      }
       if (this.drag?.id === event.pointerId) this.finish();
     });
     window.addEventListener('blur', () => this.finish());
@@ -90,6 +144,7 @@ export class CameraControls {
   reset() { this.finish(); this.set({}); }
   finish() {
     const drag = this.drag; this.drag = null;
+    this.pinch = null; this.pointers.clear();
     if (drag?.surface.hasPointerCapture?.(drag.id)) drag.surface.releasePointerCapture(drag.id);
   }
 }

@@ -360,7 +360,7 @@ export class Player extends Actor {
     if (!sk.ult && this.def.id === 'ranger') audio.whoosh({ vol: .45, pitch: 1.6, dur: .2 });
     else if (!sk.ult) audio.bark(`hero_${this.def.voiceId || this.def.id}_skill${i}`, { vol: 0.95, min: 1.5 });   // 스킬 이름 외침
     audio.skillRelease({ ult: !!sk.ult, school: sk.id || 'arcane', hero: this.def.id });
-    if (sk.ult) { this.game.ultCinematic(sk, this); audio.charge({ vol: 0.35, dur: 0.7 }); if (this.def.id !== 'ranger') audio.voice(`hero_${this.def.voiceId || this.def.id}_ult`, { min: 8, duck: 0.5, dur: 1.6 }); if (this.game.hasProc('phoenix_burn')) this.game.after(0.35, () => this.game.phoenixBurn(this)); }
+    if (sk.ult) { this.game.ultCinematic(sk, this); audio.charge({ vol: 0.35, dur: 0.7 }); audio.voice(`hero_${this.def.voiceId || this.def.id}_ult`, { min: 8, duck: 0.5, dur: 1.6 }); if (this.game.hasProc('phoenix_burn')) this.game.after(0.35, () => this.game.phoenixBurn(this)); }
     else if (this.game.hasProc('gravity_hole')) { const t = this.lockTarget && this.lockTarget.alive ? this.lockTarget.pos.clone() : this.pos.clone().addScaledVector(this.forward(_v.clone()), 4); this.game.singularity(t); }
     if (!sk.ult) this.game.sp?.onSkillCast(i, sk);   // 룬 4세트: 만장전이면 과부하 — 이 스킬의 쿨타임이 0이 된다
     impl.start?.(this.game, this, this.skillCtx);

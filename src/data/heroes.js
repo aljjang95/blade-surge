@@ -112,7 +112,7 @@ export const HEROES = {
   // A distinct free adventurer; the Rogue's ranger job remains unchanged.
   ranger: {
   id: 'ranger', name: '바람추적자 실바', title: '숲의 명사수', rarity: 'SR', model: 'Ranger',
-  portrait: '/img/ranger-portrait.webp', voiceId: 'rogue', weapon: 'bow', ranged: true, jobId: 'ranger',
+  portrait: '/img/ranger-portrait.webp', voiceId: 'ranger', weapon: 'bow', ranged: true, jobId: 'ranger',
   color: '#7feac0', accent: '#d4ffdb', show: ['Bow'],
   base: { hp: 1120, atk: 145, def: 24, crit: .25, critDmg: 1.8, spd: 6.6 },
   combo: [

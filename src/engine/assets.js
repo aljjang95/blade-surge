@@ -124,8 +124,21 @@ export function loadHeroModel(heroId, tier = 1) {
 /** 아바타 몸체를 미리 받아 둔다. 렌더 준비 중 비동기 몸체 교체로 재질이 바뀌지 않게 Player 생성 전에 기다린다. */
 export function preloadAvatarBody(avatarId) {
   const asset = avatarId ? libraryLoader.assetForAvatar(avatarId) : null;
+  return preloadLibraryBody(asset);
+}
+
+/**
+ * 전투 영웅이 실제로 입을 몸체(아바타 → 갑옷 단계)를 Player 생성 전에 받아 둔다.
+ * 받지 않은 2·3단계 몸체가 렌더 준비 도중 비동기로 교체되면 준비가 "cached material ... replaced"로 실패해 출격이 막혔다.
+ */
+export function preloadHeroBody(heroId, tier = 1, avatarId = null) {
+  const avatar = avatarId ? libraryLoader.assetForAvatar(avatarId) : null;
+  return preloadLibraryBody(avatar || libraryLoader.assetForHero(heroId, tier));
+}
+
+function preloadLibraryBody(asset) {
   if (!asset) return Promise.resolve(false);
-  return loadHeroAsset(asset).then((gltf) => gltf.scene.userData.libraryAsset?.id === asset.id, (error) => { console.warn('avatar body preload failed: ' + asset.id, error); return false; });
+  return loadHeroAsset(asset).then((gltf) => gltf.scene.userData.libraryAsset?.id === asset.id, (error) => { console.warn('hero body preload failed: ' + asset.id, error); return false; });
 }
 
 export function loadHeroAsset(asset) {
@@ -147,6 +160,7 @@ async function prepareLibraryHero(gltf, asset) {
   attachLegacyWeapons(gltf.scene, legacy.scene, heroId, handBones);
   gltf.scene.traverse((node) => {
     if (!node.isSkinnedMesh) return;
+    for (const material of materialsOf(node)) normalizeLibrarySkinMaterial(material);
     node.userData.libraryBody = asset.armorTier || 1;
     // 병기고 장식은 TLL_ 스킨에만 붙는다.
     if (!node.name.startsWith('TLL_')) node.name = `TLL_Library_${heroId}`;
@@ -157,18 +171,53 @@ async function prepareLibraryHero(gltf, asset) {
   return gltf;
 }
 
+/**
+ * Tripo PBR 몸체는 금속도 1·반투명 블렌드로 나온다. 이 게임에는 금속이 비출 환경 맵이 없어 금속 부위가 검게 뭉개지고,
+ * 반투명 정렬 때문에 몸 일부가 비쳐 보였다(2026-10-13 대표님 '뿌옇다·어둡다' 제보). 금속 지도는 살리고 세기만 낮춘다.
+ */
+export const LIBRARY_SKIN_METALNESS_MAX = 0.22;
+export function normalizeLibrarySkinMaterial(material) {
+  if (!material || material.userData.librarySkinFinish) return material;
+  if (material.metalness > LIBRARY_SKIN_METALNESS_MAX) material.metalness = LIBRARY_SKIN_METALNESS_MAX;
+  if (material.transparent && material.opacity >= 1) {
+    // 머리카락 끝 같은 알파 가장자리는 잘라 내고 몸 전체는 불투명으로 그린다.
+    material.transparent = false; material.depthWrite = true; material.alphaTest = Math.max(material.alphaTest || 0, .5);
+  }
+  material.userData.librarySkinFinish = true; material.needsUpdate = true;
+  return material;
+}
+
+/**
+ * 라이브러리 손 소켓을 KayKit handslot 과 같은 자리·방향에 둔다. 두 모델 모두 정지(T) 자세에서 정면이 +Z 이므로,
+ * KayKit handslot 의 월드 방향과 손목→handslot 거리(키 비율로 환산)를 라이브러리 손 본의 로컬 값으로 옮긴다.
+ * 예전에는 모든 리그에 같은 회전 상수(Z±90°)를 쓰고 소켓을 손목에 붙여, 리그마다 손 본 축이 다른 Tripo 리그(도적·레인저·마법사)에서
+ * 무기가 머리 위로 눕거나 손목에 매달려 보였다(2026-10-13 대표님 제보).
+ */
+export function fitLibrarySocket(socket, bone, slot, slotHand, heightRatio) {
+  const boneQuat = bone.getWorldQuaternion(new THREE.Quaternion()), slotQuat = slot.getWorldQuaternion(new THREE.Quaternion());
+  socket.quaternion.copy(boneQuat.invert().multiply(slotQuat));
+  const reach = slot.getWorldPosition(new THREE.Vector3()).sub(slotHand.getWorldPosition(new THREE.Vector3())).multiplyScalar(heightRatio);
+  const target = bone.getWorldPosition(new THREE.Vector3()).add(reach);
+  socket.position.copy(bone.worldToLocal(target));
+  return socket;
+}
+
 /** KayKit handslot 의 무기·방패 노드를 축 보정 소켓 아래로 옮긴다. 기존 단조 무기·장비 표시가 그대로 동작한다. */
 function attachLegacyWeapons(scene, legacyScene, heroId, handBones) {
   scene.updateMatrixWorld(true);
+  legacyScene.updateMatrixWorld(true);
   const scale = new THREE.Vector3(), position = new THREE.Vector3();
   for (const side of ['r', 'l']) {
     const bone = scene.getObjectByName(handBones[side]);
     const slot = legacyScene.getObjectByName(`handslot${side}`) || legacyScene.getObjectByName(`handslot.${side}`);
     if (!bone || !slot) throw new Error(`hero weapon socket missing: ${heroId}:${side}`);
     const socket = new THREE.Group(); socket.name = LIBRARY_SOCKET_NAMES[`handslot.${side}`];
-    socket.rotation.fromArray(heroGripRotation(heroId, side));
     bone.getWorldScale(scale); bone.getWorldPosition(position);
     socket.scale.setScalar(librarySocketScale(scale.x, position.y));
+    const slotHand = slot.parent;
+    const heightRatio = position.y / Math.max(1e-6, slotHand.getWorldPosition(new THREE.Vector3()).y);
+    if (slotHand) fitLibrarySocket(socket, bone, slot, slotHand, heightRatio);
+    else socket.rotation.fromArray(heroGripRotation(heroId, side));
     bone.add(socket);
     for (const child of [...slot.children]) socket.add(child.clone(true));
   }

@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "started": "2026-10-13T14:24:35.438Z",
+  "target": "http://127.0.0.1:4401/",
+  "scope": "Playwright Chromium Android viewport with CDP Input.dispatchTouchEvent; physical Android and PWA install remain unverified",
+  "viewport": {
+    "width": 844,
+    "height": 390
+  },
+  "screenshots": [
+    "C:\\Users\\heart\\.codex\\worktrees\\71f9\\블레이드 서지 2\\docs\\qa\\mobile-touch-camera-20261013\\citadel-command-expanded-844x390.png",
+    "C:\\Users\\heart\\.codex\\worktrees\\71f9\\블레이드 서지 2\\docs\\qa\\mobile-touch-camera-20261013\\citadel-command-collapsed-844x390.png",
+    "C:\\Users\\heart\\.codex\\worktrees\\71f9\\블레이드 서지 2\\docs\\qa\\mobile-touch-camera-20261013\\battle-pinch-zoom.png"
+  ],
+  "safeArea": {
+    "supported": true,
+    "insets": {
+      "top": 0,
+      "right": 24,
+      "bottom": 0,
+      "left": 24
+    }
+  },
+  "checks": [
+    {
+      "name": "citadel-command-expanded",
+      "status": "pass",
+      "evidence": {
+        "hidden": false,
+        "collapsed": "false",
+        "height": 342,
+        "bottom": 386
+      },
+      "screenshot": "C:\\Users\\heart\\.codex\\worktrees\\71f9\\블레이드 서지 2\\docs\\qa\\mobile-touch-camera-20261013\\citadel-command-expanded-844x390.png"
+    },
+    {
+      "name": "citadel-command-collapsed-and-canvas",
+      "status": "pass",
+      "evidence": {
+        "state": "true",
+        "height": 60,
+        "bottom": 390,
+        "quickLaunchVisible": true,
+        "stored": "true",
+        "canvas": {
+          "x": 0,
+          "y": 0,
+          "width": 844,
+          "height": 390
+        },
+        "viewport": {
+          "width": 844,
+          "height": 390
+        }
+      },
+      "screenshot": "C:\\Users\\heart\\.codex\\worktrees\\71f9\\블레이드 서지 2\\docs\\qa\\mobile-touch-camera-20261013\\citadel-command-collapsed-844x390.png"
+    },
+    {
+      "name": "battle-cdp-pinch-zoom",
+      "status": "pass",
+      "evidence": {
+        "before": 102,
+        "afterOpen": 140,
+        "afterClose": 70,
+        "firstDistance": 109.72000000000003
+      }
+    },
+    {
+      "name": "battle-pinch-screenshot",
+      "status": "pass",
+      "screenshot": "C:\\Users\\heart\\.codex\\worktrees\\71f9\\블레이드 서지 2\\docs\\qa\\mobile-touch-camera-20261013\\battle-pinch-zoom.png"
+    },
+    {
+      "name": "battle-action-touch-isolation",
+      "status": "pass",
+      "evidence": {
+        "beforeButton": 70,
+        "afterButton": 70,
+        "afterMixed": 70
+      }
+    }
+  ],
+  "status": "pass",
+  "finished": "2026-10-13T14:24:46.964Z"
+}
