@@ -285,11 +285,17 @@ try {
   await capture(TOWN_ID + '-battle');
   if (!admission.auto) await page.locator('#btn-auto').click();
   for (let chunk = 0; chunk < 240; chunk++) {
-    const current = await page.evaluate(() => {
+    const current = await page.evaluate(wantHold => {
       const a = window.app, b = a.battle;
-      for (let frame = 0; frame < 600 && b.active && !b.paused; frame++) a.step(1 / 60, frame % 90 === 0);
-      return { active: b.active, paused: b.paused, hp: b.player.hp, auto: b.player.auto, elapsed: b.elapsed, kills: b.kills, win: b.result?.win };
-    });
+      let holding = false;
+      for (let frame = 0; frame < 600 && b.active && !b.paused; frame++) {
+        a.step(1 / 60, frame % 90 === 0);
+        // 순차 목표 위에서 유지 중인 장면을 한 번 남긴다(렌더 프레임 포함).
+        if (wantHold && (b.routeObjectives?.hold || 0) > .8) { a.step(1 / 60, true); holding = true; break; }
+      }
+      return { active: b.active, paused: b.paused, hp: b.player.hp, auto: b.player.auto, elapsed: b.elapsed, kills: b.kills, win: b.result?.win, holding };
+    }, !report.holdShot);
+    if (current.holding) { report.holdShot = true; await capture(TOWN_ID + '-objective-hold'); }
     report.expedition.chunks.push(current);
     const goal = await page.evaluate(() => document.querySelector('.battle-objective-title')?.textContent?.trim() || '');
     if (goal && report.objectiveTitles.at(-1) !== goal) report.objectiveTitles.push(goal);
@@ -314,6 +320,7 @@ try {
   if (GATE === 'eclipse_hydra_vault') {
     console.log('OBJECTIVES', JSON.stringify(report.objectiveTitles), JSON.stringify(report.routeObjective));
     check('역류 밸브 3/3 잠금 기록', report.routeObjective?.id === 'eclipse_backflow_valves' && report.routeObjective.complete && JSON.stringify(report.routeObjective.rooms) === '[2,5,7]', report.routeObjective);
+    check('결과 화면 역류 밸브 기록', (await page.locator('[aria-label="역류 밸브 잠금 결과"]').textContent())?.includes('3/3'), null);
     check('전투 목표창에 역류 밸브 진행 표시', report.objectiveTitles.some(t => t.startsWith('역류 밸브 잠금')), report.objectiveTitles);
   }
   check('콘솔 오류 0', report.errors.length === 0, report.errors);
@@ -331,6 +338,8 @@ try {
   await save();
   console.log('QA report:', join(out, 'report.json'));
 }
+
+
 
 
 

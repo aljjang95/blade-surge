@@ -134,7 +134,7 @@ export class RouteObjectives {
   /** A result never manufactures missing holds or turns a loss into completion.
    * @param {boolean} win */
   finish(win) {
-    if (!this.#report) this.#report = Object.freeze({ id: this.def.id, complete: !!win && !this.#closed && this.canWin(),
+    if (!this.#report) this.#report = Object.freeze({ id: this.def.id, label: `${this.noun} ${this.verb}`, complete: !!win && !this.#closed && this.canWin(),
       progress: this.#progress, target: this.gates.length, rooms: Object.freeze(this.gates.slice(0, this.#progress).map(g => g.room.id)) });
     return this.#report;
   }
