@@ -16,22 +16,22 @@ export const CHAPTERS = [
 ];
 export const STAGES_PER_CHAPTER = 10;
 const ROSTER = {
-  garden: { trash: ['skel_minion', 'skel_rogue', 'ghost', 'bomb_slime', 'skel_shield', 'bone_orc'], ranged: ['skel_mage', 'ghost_skull', 'skel_priest'], elite: ['elite_skel_captain', 'elite_bone_lord', 'elite_wraith'] },
-  forge: { trash: ['orc', 'orc_blob', 'tribal', 'cacto_wall', 'bomb_imp', 'imp'], ranged: ['hywirl', 'armabee', 'tribal_shaman'], elite: ['elite_orc_chief', 'elite_bluedemon'] },
-  frost: { trash: ['ghost', 'skel_shield', 'blob_green', 'bone_orc', 'skel_rogue', 'golem_guard'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_yeti', 'elite_wraith', 'elite_golem'] },
+  garden: { trash: ['skel_minion', 'skel_rogue', 'ghost', 'bomb_slime', 'skel_shield', 'bone_orc', 'grave_burrower'], ranged: ['skel_mage', 'ghost_skull', 'skel_priest'], elite: ['elite_skel_captain', 'elite_bone_lord', 'elite_wraith'] },
+  forge: { trash: ['orc', 'orc_blob', 'tribal', 'cacto_wall', 'bomb_imp', 'imp', 'ash_burrower'], ranged: ['hywirl', 'armabee', 'tribal_shaman'], elite: ['elite_orc_chief', 'elite_bluedemon'] },
+  frost: { trash: ['ghost', 'skel_shield', 'blob_green', 'bone_orc', 'skel_rogue', 'golem_guard', 'frost_burrower'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_yeti', 'elite_wraith', 'elite_golem'] },
   tide: { trash: ['squidle', 'blob_pink', 'alien', 'mushnub', 'bomb_abyss', 'golem_guard'], ranged: ['glub', 'abyss_seer', 'armabee_evo'], elite: ['elite_golem', 'elite_mushroom_king', 'elite_dragonling'] },
   crown: { trash: ['ninja', 'skel_shield', 'alien', 'bomb_abyss', 'bone_orc', 'imp'], ranged: ['abyss_seer', 'tribal_shaman', 'hywirl'], elite: ['elite_bluedemon', 'elite_skel_captain', 'elite_dragonling'] },
 };
 // The dungeon route is also a combat identity. Each authored layout gets its own
 // pack composition so a different map changes the pressure, silhouettes and ranged mix.
 const DUNGEON_ROSTERS = {
-  procession: { trash: ['skel_minion', 'ghost', 'skel_rogue', 'skel_shield', 'bomb_slime', 'bone_orc'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_skel_captain', 'elite_wraith', 'elite_bone_lord'] },
+  procession: { trash: ['skel_minion', 'ghost', 'skel_rogue', 'skel_shield', 'bomb_slime', 'bone_orc', 'grave_burrower'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_skel_captain', 'elite_wraith', 'elite_bone_lord'] },
   greenhouse: { trash: ['ghost', 'bomb_slime', 'skel_rogue', 'skel_minion', 'skel_shield', 'bone_orc'], ranged: ['skel_priest', 'ghost_skull', 'skel_mage'], elite: ['elite_wraith', 'elite_bone_lord', 'elite_skel_captain'] },
   tribunal: { trash: ['skel_shield', 'bone_orc', 'skel_minion', 'ghost', 'bomb_slime', 'skel_rogue'], ranged: ['skel_mage', 'skel_priest', 'ghost_skull'], elite: ['elite_bone_lord', 'elite_skel_captain', 'elite_wraith'] },
   confluence: { trash: ['squidle', 'ghost', 'alien', 'mushnub', 'bomb_abyss', 'skel_minion'], ranged: ['glub', 'ghost_skull', 'abyss_seer'], elite: ['elite_golem', 'elite_skel_captain', 'elite_dragonling'] },
-  kiln: { trash: ['orc', 'orc_blob', 'tribal', 'cacto_wall', 'bomb_imp', 'imp'], ranged: ['tribal_shaman', 'hywirl', 'armabee'], elite: ['elite_orc_chief', 'elite_bluedemon', 'elite_orc_chief'] },
+  kiln: { trash: ['orc', 'orc_blob', 'tribal', 'cacto_wall', 'bomb_imp', 'imp', 'ash_burrower'], ranged: ['tribal_shaman', 'hywirl', 'armabee'], elite: ['elite_orc_chief', 'elite_bluedemon', 'elite_orc_chief'] },
   uprising: { trash: ['orc_blob', 'bomb_imp', 'orc', 'imp', 'tribal', 'cacto_wall'], ranged: ['hywirl', 'tribal_shaman', 'armabee'], elite: ['elite_bluedemon', 'elite_orc_chief', 'elite_bluedemon'] },
-  archive: { trash: ['ghost', 'blob_green', 'skel_shield', 'bone_orc', 'skel_rogue', 'golem_guard'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_wraith', 'elite_yeti', 'elite_golem'] },
+  archive: { trash: ['ghost', 'blob_green', 'skel_shield', 'bone_orc', 'skel_rogue', 'golem_guard', 'frost_burrower'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_wraith', 'elite_yeti', 'elite_golem'] },
   reverseRiver: { trash: ['blob_green', 'golem_guard', 'ghost', 'skel_rogue', 'skel_shield', 'bone_orc'], ranged: ['skel_mage', 'ghost_skull', 'skel_priest'], elite: ['elite_golem', 'elite_wraith', 'elite_yeti'] },
   beacon: { trash: ['squidle', 'blob_pink', 'alien', 'mushnub', 'bomb_abyss', 'golem_guard'], ranged: ['abyss_seer', 'glub', 'armabee_evo'], elite: ['elite_dragonling', 'elite_golem', 'elite_mushroom_king'] },
   lostShip: { trash: ['blob_pink', 'squidle', 'bomb_abyss', 'alien', 'golem_guard', 'mushnub'], ranged: ['glub', 'armabee_evo', 'abyss_seer'], elite: ['elite_mushroom_king', 'elite_dragonling', 'elite_golem'] },
@@ -107,6 +107,11 @@ export const ENEMIES = {
   skel_priest: { name: '해골 사제', model: 'Skeleton_Runekeeper', hp: 595, atk: 18, spd: 3.2, range: 8.0, atkTime: 2.4, weapon: 'Skeleton_Staff', ranged: true, exp: 18, scale: 1.05, gold: 3, projColor: 0xa0ffb0, behavior: 'shaman', summon: 'skel_minion', tint: '#b0ffc0' },
   // shield: 정면 피해 80% 감소. 뒤·옆에서 치거나, 마무리 타격(kb≥4) 4번이면 가드 브레이크 3초
   skel_shield: { name: '해골 방패병', model: 'Skeleton_Bulwark', hp: 1260, atk: 26, spd: 3.4, range: 2.2, atkTime: 1.6, weapon: 'Skeleton_Blade', shield: 'Skeleton_Shield_Large_A', exp: 16, scale: 1.05, gold: 2, armor: 0.1, behavior: 'shield' },
+  // burrower: 땅속으로 숨어(조준·몰이·피격 불가) 다가온 뒤 0.75초 예고 원 자리에서 솟구쳐 띄운다.
+  // 예고 중에는 반쯤 드러나 맞을 수 있고 기절시키면 취소된다. 솟은 직후 0.9초는 무방비(받는 피해 1.5배).
+  grave_burrower: { name: '무덤 균사 잠행꾼', model: 'Blob_Mushnub_Evolved', hp: 640, atk: 24, spd: 4.4, range: 1.9, atkTime: 1.2, exp: 13, scale: 0.6, gold: 1, behavior: 'burrower', tint: '#c9a27a' },
+  ash_burrower: { name: '잿더미 굴착꾼', model: 'Big_Cactoro', hp: 900, atk: 33, spd: 4.2, range: 2.0, atkTime: 1.25, exp: 16, scale: 0.95, gold: 2, behavior: 'burrower', tint: '#ff9a62' },
+  frost_burrower: { name: '서리굴 잠행꾼', model: 'Blob_Orc', hp: 820, atk: 28, spd: 4.3, range: 2.0, atkTime: 1.2, exp: 15, scale: 1.0, gold: 2, behavior: 'burrower', tint: '#9fd8ff' },
   // ================= 2장 · 불타는 왕좌 (오크 · 악마) =================
   orc:      { name: '오크 전사', model: 'Big_Orc', hp: 1050, atk: 29, spd: 4.0, range: 2.2, atkTime: 1.3, exp: 12, scale: 1.0, gold: 2 },
   orc_blob: { name: '꼬마 오크', model: 'Blob_Orc', hp: 595, atk: 22, spd: 4.8, range: 1.8, atkTime: 1.0, exp: 10, scale: 1.0, gold: 1 },

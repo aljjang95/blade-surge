@@ -140,11 +140,13 @@ test('finale ambient hazards yield to the boss schedule but regular rooms retain
   f.enemy.def={};h.cooldown=0;h.update(.1);expect(h.triggered).toBe(1);h.dispose();f.caster.dispose();
 });
 
-test('campaign rooms cycle all six melee and three ranged species without altering capacity',()=>{
+// 근접 종 수는 장마다 다르다(잠복종이 더해진 장은 7종). 모든 근접·원거리 종이 빠짐없이 돌고 방 정원은 그대로여야 한다.
+test('campaign rooms cycle every melee and all three ranged species without altering capacity',()=>{
   for(const chapter of CHAPTERS){const stage=stageDef(chapter.id,4),roster=stage.rosterFor();
     const room={id:5,type:'test',reinforced:0};
     const list=Battle.prototype.roomRoster.call({stage,rosterSize:()=>18},room);
-    expect(list.length).toBe(18);expect(new Set(list.filter(id=>roster.trash.includes(id))).size).toBe(6);expect(new Set(list.filter(id=>roster.ranged.includes(id))).size).toBe(3);
+    expect(roster.trash.length).toBeGreaterThanOrEqual(6);
+    expect(list.length).toBe(18);expect(new Set(list.filter(id=>roster.trash.includes(id))).size).toBe(roster.trash.length);expect(new Set(list.filter(id=>roster.ranged.includes(id))).size).toBe(3);
     room.reinforced=4;expect(Battle.prototype.roomRoster.call({stage,rosterSize:()=>18},room).length).toBe(14);
     expect(list).toEqual(Battle.prototype.roomRoster.call({stage,rosterSize:()=>18},{...room,reinforced:0}));
   }
