@@ -1,6 +1,8 @@
 import { expect, test } from 'bun:test';
 import * as THREE from 'three';
-import { BURROW, Burrow } from '../src/game/burrow.js';
+import { BURROW, Burrow, applyBurrowDepth } from '../src/game/burrow.js';
+import { validPartyWarning } from '../src/party/combat-effects.js';
+import { validPartySnapshot } from '../src/party/protocol.js';
 import { ENEMIES } from '../src/data/stages.js';
 
 function fixture(playerAt = 8) {
@@ -148,11 +150,60 @@ test('전투가 끝나면 진행 중인 잠행을 피해 없이 거둔다', () =
   expect(f.burrow.damageMul()).toBe(1);
 });
 
-test('파티 모드에서는 잠행하지 않는다(표시가 게스트로 복제되지 않는다)', () => {
+test('파티 모드 호스트도 잠행하고, 솟구침은 반경 안의 모든 생존 파티원에게 들어간다', () => {
   const f = fixture(8);
+  const ally: any[] = [];
+  const friend = { alive: true, pos: new THREE.Vector3(0, 0, 0), hurt: (dmg: number) => ally.push(dmg) };
+  const far = { alive: true, pos: new THREE.Vector3(40, 0, 0), hurt: () => { throw new Error('far member hit'); } };
   f.enemy.game.stage = { party: true };
-  for (let i = 0; i < 600; i++) step(f);
-  expect(f.burrow.phase).toBe(null);
-  expect(f.burrow.erupted).toBe(0);
+  f.enemy.game.app = { party: { livingPlayers: () => [f.player, friend, far] } };
+  for (let i = 0; i < 600 && f.burrow.phase !== 'mark'; i++) step(f);
+  expect(f.burrow.phase).toBe('mark');
+  friend.pos.set(f.burrow.x + 1, 0, f.burrow.z);
+  for (let i = 0; i < 120 && f.burrow.phase === 'mark'; i++) step(f);
+  expect(f.burrow.erupted).toBe(1);
+  expect(f.hits.length).toBe(1);
+  expect(ally.length).toBe(1);
+});
+
+test('호스트는 숨은 깊이와 예고 원판을 파티 표시용 값으로 내보낸다', () => {
+  const f = fixture(8);
+  expect(f.burrow.depth()).toBe(0);
+  expect(f.burrow.partyWarning('e1')).toBe(null);
+  for (let i = 0; i < 600 && f.burrow.phase !== 'tunnel'; i++) step(f);
+  expect(f.burrow.depth()).toBe(1);
+  for (let i = 0; i < 600 && f.burrow.phase !== 'mark'; i++) step(f);
+  step(f);
+  expect(f.burrow.depth()).toBeGreaterThan(.4);
+  expect(f.burrow.depth()).toBeLessThan(1);
+  const w: any = f.burrow.partyWarning('e1');
+  expect(validPartyWarning(w)).toBe(true);
+  expect(w).toMatchObject({ kind: 'disk', radius: BURROW.radius, x: f.burrow.x, z: f.burrow.z, duration: BURROW.mark });
+  expect(w.remaining).toBeGreaterThan(0);
+  expect(w.id).toBe('e1:burrow:0');
+});
+
+test('게스트 복제본은 받은 깊이로 가라앉고, 완전히 숨으면 감추고 조준에서 빠진다', () => {
+  const replica: any = { scale: 1, spawning: false, model: { position: new THREE.Vector3(), visible: true } };
+  applyBurrowDepth(replica, 1);
+  expect(replica.model.visible).toBe(false);
+  expect(replica.spawning).toBe(true);
+  applyBurrowDepth(replica, .5);
+  expect(replica.model.visible).toBe(true);
+  expect(replica.spawning).toBe(false);
+  expect(replica.model.position.y).toBeCloseTo(-.5 * BURROW.depth);
+  applyBurrowDepth(replica, undefined);
+  expect(replica.model.position.y).toBe(0);
+});
+
+test('파티 스냅샷 검증은 0~1 범위의 숨은 깊이만 받는다', () => {
+  const actor = (id: string) => ({ id, x: 0, z: 0, yaw: 0, hp: 10, maxHp: 10, state: 'idle', anim: null });
+  const snap = (sub?: number) => ({ tick: 1, elapsed: 1, roomsCleared: 0, bossDefeated: false, portal: null, events: [], rooms: [],
+    players: ['a', 'b'].map((id) => ({ ...actor(id), heroId: 'knight', ult: 0, cds: [] })),
+    enemies: [{ ...actor('e1'), key: 'grave_burrower', boss: false, elite: false, ...(sub === undefined ? {} : { sub }) }] });
+  expect(validPartySnapshot(snap())).toBe(true);
+  expect(validPartySnapshot(snap(.5))).toBe(true);
+  expect(validPartySnapshot(snap(1.5))).toBe(false);
+  expect(validPartySnapshot(snap(-.1))).toBe(false);
 });
 
