@@ -1,10 +1,15 @@
 // Authored solo objectives are separate from Conquest/party/rift rules.
-/** @param {string} depth @param {Array<[number, string]>} gates */
-const cooling = (depth, gates) => Object.freeze({
-  id: `cinder_cooling_${depth}`, kind: 'cooling', holdSeconds: 2, radius: 1.6,
+// 냉각 장치 문구. 재의 수문(밸브·냉각선)이 기본이고, 재벼림 제련소는 용광로 문구를 쓴다.
+const CINDER_COPY = Object.freeze({ title: '냉각선 복구', unit: '밸브', done: '냉각선', doneVerb: '복구', cooled: '개방' });
+const ASHFORGE_COPY = Object.freeze({ title: '용광로 냉각', unit: '용광로', done: '용광로', doneVerb: '냉각', cooled: '냉각' });
+/** @param {string} id @param {Array<[number, string]>} gates @param {typeof CINDER_COPY} copy */
+const coolingDef = (id, gates, copy = CINDER_COPY) => Object.freeze({
+  id, kind: 'cooling', holdSeconds: 2, radius: 1.6, copy,
   padOffset: 3.5, heatSeconds: 4, warningSeconds: 1.4, ventSeconds: .8,
   gates: Object.freeze(gates.map(([roomId, label]) => Object.freeze({ roomId, label }))),
 });
+/** @param {string} depth @param {Array<[number, string]>} gates */
+const cooling = (depth, gates) => coolingDef(`cinder_cooling_${depth}`, gates);
 const RECORD_PAGES = Object.freeze([
   Object.freeze({ id: 'departure_coordinates', pageId: 1, label: '1쪽 · 출발 좌표' }),
   Object.freeze({ id: 'lost_transit', pageId: 2, label: '2쪽 · 잃어버린 항로' }),
@@ -53,6 +58,9 @@ export const ROUTE_OBJECTIVES = Object.freeze({
   }),
   cinder_standard: cooling('standard', [[2, '1번 밸브 · 서쪽 수문'], [5, '2번 밸브 · 동쪽 수문']]),
   cinder_deep: cooling('deep', [[2, '1번 밸브 · 상류 냉각선'], [5, '2번 밸브 · 하류 냉각선'], [6, '3번 밸브 · 귀환 냉각선']]),
+  // 재벼림 제련소 일반의 원안: 과열 용광로 4곳을 식혀야 거수의 봉인이 풀린다. 두 갈래 길을 모두 지난다.
+  ashforge_standard: coolingDef('ashforge_furnaces_standard', [[1, '1번 용광로 · 입구 송풍로'], [2, '2번 용광로 · 사슬 단조장'],
+    [3, '3번 용광로 · 북쪽 주조실'], [5, '4번 용광로 · 남쪽 슬래그 통로']], ASHFORGE_COPY),
   nightglass_standard: records('standard', [[2, 1], [5, 2], [6, 3]]),
   nightglass_deep: records('deep', [[6, 3], [4, 2], [1, 1]]),
   astral_standard: constellations,
@@ -69,5 +77,6 @@ export function routeObjectiveForStage(stage) {
   if (expedition.id === 'nightglass_observatory') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.nightglass_standard
     : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.nightglass_deep : null;
   if (expedition.id === 'eclipse_hydra_vault') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.eclipse_standard : null;
+  if (expedition.id === 'ashforge_catacomb') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.ashforge_standard : null;
   return expedition.id === 'bellfall_crypt' && expedition.depth === 'standard' ? ROUTE_OBJECTIVES.bellfall_crypt : null;
 }

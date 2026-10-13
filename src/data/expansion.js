@@ -74,8 +74,8 @@ const BASE_DUNGEONS = [
   }),
   dungeon('ashforge_catacomb', '재벼림 지하 제련소', 'forge', 2, 2, 'ember_core', '꺼지지 않는 망치 소리를 따라가 재벼림의 심장을 회수하세요.', {
     art: ENCOUNTER_ART.boss_ash_colossus, accent: '#ff9b66', subtitle: 'ASHFORGE CATACOMB',
-    objective: '모든 구역 정화 → 잿빛 재벼림 거수 처치',
-    tactic: `제련소의 적을 처치하고 모든 구역을 정화하세요. ${ENEMIES.ash_colossus.tactic}`,
+    objective: '과열 용광로 4곳을 순서대로 식히고 모든 구역을 정화한 뒤 잿빛 재벼림 거수를 쓰러뜨리세요.',
+    tactic: `1번 → 2번 → 3번 → 4번 용광로 구역의 적을 처치하세요. 붉은 과열 띠는 1.4초 예고 뒤 피해를 주며 매 분출 뒤 좌우가 바뀝니다. 반대편 청록 조작판에서 공격하지 않고 2초 유지하면 용광로가 식습니다. 이탈·피격·일시정지는 조작을 중단하며 다시 시도할 수 있습니다. 용광로 4곳과 모든 구역을 정화하면 보스 봉인이 풀립니다. ${ENEMIES.ash_colossus.tactic}`,
     bossEnemy: 'ash_colossus', bossHp: 20400, bossName: '잿빛 재벼림 거수', rosterMode: 'ashforge',
     roster: { trash: ['ash_chainling', 'chain_forger', 'bomb_imp', 'ash_smith', 'orc_blob', 'cinderling'], ranged: ['ember_scribe', 'ash_smith', 'tribal_shaman'], elite: ['foundry_bulwark', 'slag_colossus', 'elite_orc_chief'] },
   }),

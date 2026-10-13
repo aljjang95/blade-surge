@@ -217,7 +217,8 @@ try {
   await closeTown();
   }
   await walkTo({ x: 0, z: 3 });
-  if (GATE_SPOT.z < -8) {
+  // 첫 마을은 게이트가 북쪽 한 줄(|x|<10.5), 다른 마을은 동·서 기둥(|x|=10.7)에 선다.
+  if (Math.abs(GATE_SPOT.x) < 10.5) {
     // 첫 마을 게이트는 북쪽 한 줄에 서 있다. x=±6의 벤치·화단을 피해 옆 통로로 올라간 뒤 정면에서 다가간다.
     const lane = Math.abs(GATE_SPOT.x) >= 5 && Math.abs(GATE_SPOT.x) <= 7 ? GATE_SPOT.x - Math.sign(GATE_SPOT.x) * 2 : GATE_SPOT.x;
     await walkTo({ x: lane, z: 0 });
@@ -317,11 +318,19 @@ try {
   await capture(TOWN_ID + '-result');
   check(LABEL + ' 던전 정산', !res.result?.saveError && res.pending === null, report.expedition.after);
   report.routeObjective = await page.evaluate(() => window.app.battle.result?.routeObjective || null);
-  if (GATE === 'eclipse_hydra_vault') {
+  // 던전 고유 목표가 있는 경로는 목표창 진행·결과 기록·결과 화면 줄을 함께 확인한다.
+  const ROUTE_CHECKS = {
+    eclipse_hydra_vault: { id: 'eclipse_backflow_valves', label: '역류 밸브 잠금', rooms: [2, 5, 7] },
+    ashforge_catacomb: { id: 'ashforge_furnaces_standard', label: '용광로 냉각', rooms: [1, 2, 3, 5] },
+    cinder_tide_lock: { id: 'cinder_cooling_standard', label: '냉각선 복구', rooms: [2, 5] },
+  };
+  const expectRoute = ROUTE_CHECKS[GATE];
+  if (expectRoute) {
+    const n = expectRoute.rooms.length;
     console.log('OBJECTIVES', JSON.stringify(report.objectiveTitles), JSON.stringify(report.routeObjective));
-    check('역류 밸브 3/3 잠금 기록', report.routeObjective?.id === 'eclipse_backflow_valves' && report.routeObjective.complete && JSON.stringify(report.routeObjective.rooms) === '[2,5,7]', report.routeObjective);
-    check('결과 화면 역류 밸브 기록', (await page.locator('[aria-label="역류 밸브 잠금 결과"]').textContent())?.includes('3/3'), null);
-    check('전투 목표창에 역류 밸브 진행 표시', report.objectiveTitles.some(t => t.startsWith('역류 밸브 잠금')), report.objectiveTitles);
+    check(expectRoute.label + ' ' + n + '/' + n + ' 기록', report.routeObjective?.id === expectRoute.id && report.routeObjective.complete && JSON.stringify(report.routeObjective.rooms) === JSON.stringify(expectRoute.rooms), report.routeObjective);
+    check('결과 화면 ' + expectRoute.label + ' 기록', (await page.locator('[aria-label="' + expectRoute.label + ' 결과"]').textContent())?.includes(n + '/' + n), null);
+    check('전투 목표창에 ' + expectRoute.label + ' 진행 표시', report.objectiveTitles.some(t => t.startsWith(expectRoute.label)), report.objectiveTitles);
   }
   check('콘솔 오류 0', report.errors.length === 0, report.errors);
   report.status = 'pass';
@@ -338,6 +347,8 @@ try {
   await save();
   console.log('QA report:', join(out, 'report.json'));
 }
+
+
 
 
 
