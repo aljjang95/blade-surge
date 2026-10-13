@@ -54,7 +54,7 @@ export class Burrow {
       if (p.alive && d > BURROW.closeEnough && this.t < BURROW.maxTunnel) {
         e.vel.set(dx / d * BURROW.speed, 0, dz / d * BURROW.speed);
         this.trailT -= dt;
-        if (this.trailT <= 0) { this.trailT = .09; e.game.fx?.dust?.(e.pos, { n: 2, size: .9 }); }
+        if (this.trailT <= 0) { this.trailT = .14; e.game.fx?.dust?.(e.pos, { n: 1, size: .8 }); }
         return true;
       }
       this.mark();
@@ -91,8 +91,8 @@ export class Burrow {
     const e = this.enemy;
     this.x = e.pos.x; this.z = e.pos.z; this.go('mark');
     e.model.visible = true; e.spawning = false; e.telegraph = BURROW.mark;
-    e.game.fx?.ring?.(e.pos, 0xd09050, { telegraph: true, r0: BURROW.radius - .3, r1: BURROW.radius, life: BURROW.mark, y: .06, width: 1 });
-    e.game.fx?.dust?.(e.pos, { n: 8, size: 1.6 });
+    // 반경 예고는 적 자신의 예고 링(실제 반경으로 키운다) 하나로 보여 준다. 바닥 원판을 겹치면 같은 정보가 두 번 그려진다.
+    e.game.fx?.dust?.(e.pos, { n: 4, size: 1.2 });
     e.announceSkill?.();
   }
   surface(hit) {
@@ -103,8 +103,7 @@ export class Burrow {
     if (hit) {
       this.erupted++;
       const c = { x: this.x, z: this.z };
-      g.fx?.shockTex?.(e.pos, 0xd09050, { r1: BURROW.radius + .6, life: .4 });
-      g.fx?.dustPuff?.(e.pos, { size: 3.5, life: .6 });
+      g.fx?.dustPuff?.(e.pos, { size: 2.6, life: .45 });
       g.renderer?.shake?.(.4); audio.boom?.({ vol: .5, dur: .35, low: 60 });
       for (const p of burrowTargets(g)) {
         if (Math.hypot(p.pos.x - c.x, p.pos.z - c.z) < BURROW.radius) p.hurt(e.atk * BURROW.damageMul, { dirx: p.pos.x - c.x, dirz: p.pos.z - c.z, kb: BURROW.knockback, kind: 'blunt' });
