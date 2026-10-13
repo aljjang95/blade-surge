@@ -22,7 +22,7 @@ export class ProvisionalTownService {
       const theme = TOWN_THEMES[id];
       return { id, name: theme.name, subtitle: theme.subtitle, tier: index + 1, theme: id, fieldId: { oathhold: 'windmeadow', emberport: 'dawnward_city', starcrest: 'skywind_pass' }[id], dungeonIds: defaultTownDungeonIds(id),
         unlocked: open.has(id), progress: { cleared, required: index ? 4 : 0 },
-        requirement: { text: index ? '이전 마을 던전 6곳 중 4곳 클리어' : '처음부터 열려 있습니다' } };
+        requirement: { text: !index ? '처음부터 열려 있습니다' : cleared < 4 ? '이전 마을 던전 ' + (4 - cleared) + '곳 더 클리어' : '해금 조건을 모두 채웠습니다.' } };
     });
   }
   currentTownId() { return this.unlockedIds().has(this.current) ? this.current : CITADEL_TOWN_IDS[0]; }

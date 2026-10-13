@@ -57,7 +57,7 @@
 .town-progress { height: 11px; overflow: hidden; border: 2px solid #c9a85f; border-radius: 999px; background: #f1e1b5; }
 .town-progress i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(180deg, #ffe773, #f48c14); }
 .town-progress-text { font-size: 12px; font-weight: 900; color: #7a410f; font-variant-numeric: tabular-nums; }
-.town-lock p { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.5; color: #8a4a1a; font-weight: 700; }
+.town-lock p { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.5; color: #8a4a1a; font-weight: 700; word-break: keep-all; overflow-wrap: anywhere; }
 .town-go { margin-top: auto; min-height: 44px; padding: 8px 12px; color: #4a2406; border: 2px solid #874a0e; border-radius: 12px; font-weight: 900; font-size: 14px;
   background: linear-gradient(180deg, rgba(255,255,255,.5) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #ffe773, #ffb52c 58%, #f48c14); box-shadow: 0 3px 0 #874a0e, inset 0 1px 0 #ffffffb3; }
 .town-go:disabled { color: #7d6d57; border-color: #b9a77d; background: #e8dcba; box-shadow: none; }
