@@ -22,16 +22,18 @@ export class CoolingValves {
   view = null;
   constructor(def, world) {
     this.def = def; this.world = world;
+    // 문구가 없는 정의(기존 재의 수문)는 밸브·냉각선 문구를 그대로 쓴다.
+    this.copy = def.copy || { title: '냉각선 복구', unit: '밸브', done: '냉각선', doneVerb: '복구', cooled: '개방' };
     const flow = world.buildFlow(world.startRoom.x, world.startRoom.z);
     this.gates = def.gates.map(({ roomId, label }, i) => {
       const room = world.rooms.find(r => r.id === roomId);
       if (!room || ['boss', 'start'].includes(room.type) || !flow ||
           typeof world.minX !== 'number' || typeof world.minZ !== 'number' || typeof world.cols !== 'number') {
-        throw new RangeError(`냉각 밸브 ${roomId}의 이동 지도가 없습니다.`);
+        throw new RangeError(`냉각 ${this.copy.unit} ${roomId}의 이동 지도가 없습니다.`);
       }
       for (const dx of [0, -def.padOffset, def.padOffset]) {
         const index = Math.floor(room.z - world.minZ) * world.cols + Math.floor(room.x + dx - world.minX);
-        if (!(flow[index] >= 0)) throw new RangeError(`냉각 밸브 ${roomId}에 봉인 밖 접근 경로가 없습니다.`);
+        if (!(flow[index] >= 0)) throw new RangeError(`냉각 ${this.copy.unit} ${roomId}에 봉인 밖 접근 경로가 없습니다.`);
       }
       room.label = label;
       room.objectiveProp = 'cooling-valve';
@@ -88,9 +90,9 @@ export class CoolingValves {
   }
   hint() {
     const gate = this.gates[this.#progress], n = this.gates.length;
-    if (!gate) return `냉각선 ${n}/${n} 복구 · ${this.canUnseal() ? '보스 처치' : '남은 구역 정화'}`;
+    if (!gate) return `${this.copy.done} ${n}/${n} ${this.copy.doneVerb} · ${this.canUnseal() ? '보스 처치' : '남은 구역 정화'}`;
     const vent = gate.phase === 'warning' ? '과열 예고' : gate.phase === 'vent' ? '증기 분출' : '가열 중';
-    return `밸브 ${this.#progress}/${n} · ${gate.label} · ${vent} · ${gate.ready ? `청록판 2초 (${this.#hold.toFixed(1)}/2)` : '적과 증원 처치'}`;
+    return `${this.copy.unit} ${this.#progress}/${n} · ${gate.label} · ${vent} · ${gate.ready ? `청록판 2초 (${this.#hold.toFixed(1)}/2)` : '적과 증원 처치'}`;
   }
   refreshHint(game) {
     const hint = this.hint();
@@ -126,7 +128,7 @@ export class CoolingValves {
     if (this.#hold + 1e-9 >= this.def.holdSeconds) {
       gate.attuned = true; gate.phase = 'cooled'; this.#progress++; this.interrupt();
       game.markCleared(gate.room); game.autoTarget = this.autoRoom();
-      game.ui.toast(`${gate.label} 개방 · 냉각선 ${this.#progress}/${this.gates.length} 복구`, 'gold');
+      game.ui.toast(`${gate.label} ${this.copy.cooled} · ${this.copy.done} ${this.#progress}/${this.gates.length} ${this.copy.doneVerb}`, 'gold');
       audio.magic({ vol: .3, base: 330, notes: [0, 4, 7], step: .09 });
     }
   }
@@ -148,13 +150,13 @@ export class CoolingValves {
       this.#markerT = 1.8;
       for (const [i, g] of this.gates.entries()) {
         if (!g.room.discovered || g.attuned || Math.hypot(game.player.pos.x - g.room.x, game.player.pos.z - g.room.z) > 22) continue;
-        game.fx.damage(g.pos, 0, { text: i !== this.#progress ? `${i + 1}번 밸브 · 순서 대기` : g.ready ? '청록 조작판 · 2초' : '밸브 방어 · 증원 처치' });
+        game.fx.damage(g.pos, 0, { text: i !== this.#progress ? `${i + 1}번 ${this.copy.unit} · 순서 대기` : g.ready ? '청록 조작판 · 2초' : `${this.copy.unit} 방어 · 증원 처치` });
       }
     }
     this.view?.update(this); this.refreshHint(game);
   }
   finish(win) {
-    if (!this.#report) this.#report = Object.freeze({ id: this.def.id, complete: !!win && !this.#closed && this.canWin(),
+    if (!this.#report) this.#report = Object.freeze({ id: this.def.id, label: this.copy.title, complete: !!win && !this.#closed && this.canWin(),
       progress: this.#progress, target: this.gates.length, rooms: Object.freeze(this.gates.filter(g => g.attuned).map(g => g.room.id)),
       overheatHits: this.gates.reduce((n, g) => n + g.hits, 0) });
     return this.#report;

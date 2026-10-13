@@ -17,7 +17,7 @@ const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   cinder_tide_lock: { standard: [2, 4], deep: [3, 4] },
   nightglass_observatory: { standard: [3, 0], deep: [5, 0] },
   eclipse_hydra_vault: { standard: [3, 0], deep: [0, 4] },
-  ashforge_catacomb: { standard: [0, 0], deep: [0, 4] },
+  ashforge_catacomb: { standard: [4, 0], deep: [0, 4] },
   astral_leviathan_spire: { standard: [0, 0], deep: [2, 2] },
   verdigris_sanctum: { standard: [0, 0], deep: [2, 4] },
   sable_mirage_basin: { standard: [0, 0], deep: [0, 4] },
@@ -71,6 +71,11 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(Number(stage.objective.match(/별자리\s*(\d+)개/)?.[1])).toBe(4);
         expect(stage.encounter.tactic).toMatch(/모래시계 단서를 1초 읽고.*문자·도형 판에서 1초 유지/);
         expect(stage.encounter.tactic).toMatch(/오답.*판 밖.*재시도/);
+        expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번', '4번']);
+      } else if (id === 'ashforge_catacomb' && depth === 'standard') {
+        expect(Number(stage.objective.match(/과열 용광로\s*(\d+)곳/)?.[1])).toBe(holds);
+        expect(stage.encounter.tactic).toMatch(/1\.4초 예고/);
+        expect(stage.encounter.tactic).toMatch(/청록 조작판.*2초 유지/);
         expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번', '4번']);
       } else if (id === 'eclipse_hydra_vault' && depth === 'standard') {
         expect(Number(stage.objective.match(/역류 밸브 (세|3) ?개/) ? 3 : 0)).toBe(holds);
