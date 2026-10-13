@@ -35,11 +35,20 @@ const constellations = Object.freeze({
 });
 export const ROUTE_OBJECTIVES = Object.freeze({
   bellfall_crypt: Object.freeze({
-    id: 'bellfall_bell_gates', holdSeconds: 2, radius: 3,
+    id: 'bellfall_bell_gates', holdSeconds: 2, radius: 3, noun: '종문', verb: '조율', cueColor: 0xffd060,
     gates: Object.freeze([
       Object.freeze({ roomId: 2, label: '1번 종문 · 북쪽 예배실' }),
       Object.freeze({ roomId: 3, label: '2번 종문 · 남쪽 회랑' }),
       Object.freeze({ roomId: 5, label: '3번 종문 · 남동쪽 납골실' }),
+    ]),
+  }),
+  // 일식 수문 일반의 원안: 역류 밸브 3개를 순서대로 잠가야 삼두룡의 봉인이 풀린다.
+  eclipse_standard: Object.freeze({
+    id: 'eclipse_backflow_valves', holdSeconds: 2, radius: 3, noun: '역류 밸브', verb: '잠금', cueColor: 0x63e7dd,
+    gates: Object.freeze([
+      Object.freeze({ roomId: 2, label: '1번 역류 밸브 · 북쪽 저수조' }),
+      Object.freeze({ roomId: 5, label: '2번 역류 밸브 · 남쪽 배수로' }),
+      Object.freeze({ roomId: 7, label: '3번 역류 밸브 · 수문 앞 갑문' }),
     ]),
   }),
   cinder_standard: cooling('standard', [[2, '1번 밸브 · 서쪽 수문'], [5, '2번 밸브 · 동쪽 수문']]),
@@ -59,5 +68,6 @@ export function routeObjectiveForStage(stage) {
     : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.cinder_deep : null;
   if (expedition.id === 'nightglass_observatory') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.nightglass_standard
     : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.nightglass_deep : null;
+  if (expedition.id === 'eclipse_hydra_vault') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.eclipse_standard : null;
   return expedition.id === 'bellfall_crypt' && expedition.depth === 'standard' ? ROUTE_OBJECTIVES.bellfall_crypt : null;
 }
