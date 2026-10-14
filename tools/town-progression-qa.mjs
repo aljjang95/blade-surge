@@ -301,12 +301,14 @@ try {
         if (tg?.ready && tg.phase === 'spin' && tg.age < .3 && !window.__reflectProbe && b.active && !b.paused) {
           const r = b.routeObjectives, hp = b.player.hp, before = r.reflects, hits = tg.hits;
           let k = 0;
-          for (; k < 40 && b.active && !b.paused && r.reflects === before; k++) {
+          // 공격 모션이 끝나 판정이 닿을 때까지 회전 구간 안에서만 기다린다(최대 2.4초).
+          for (; k < 144 && tg.phase === 'spin' && b.active && !b.paused && r.reflects === before; k++) {
             b.player.pos.set(tg.stand.x, b.player.pos.y, tg.stand.z);
+            b.player.yaw = Math.atan2(tg.pos.x - b.player.pos.x, tg.pos.z - b.player.pos.z);
             if (k % 8 === 0) b.input.press('attack');
             a.step(1 / 60, k % 20 === 0);
           }
-          window.__reflectProbe = { room: tg.room.id, frames: k, phase: tg.phase, reflects: r.reflects - before, hpBefore: hp, hpAfter: b.player.hp, hitsBefore: hits, hitsAfter: tg.hits };
+          window.__reflectProbe = { room: tg.room.id, frames: k, phase: tg.phase, state: b.player.state, reflects: r.reflects - before, hpBefore: hp, hpAfter: b.player.hp, hitsBefore: hits, hitsAfter: tg.hits };
         }
         // 포자 폭발 탐침(공개된 개입): 1번 제단 전에 영웅을 2번 방 중심에 고정해 AUTO가 그곳 적을 처리하게 하고,
         // 차례가 아닌 그 제단이 정화 준비되면 1.2초 더 세워 둔다. 한 번만 실행한다.
