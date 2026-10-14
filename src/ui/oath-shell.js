@@ -1,4 +1,13 @@
 const el=(tag,cls,text)=>{const n=document.createElement(tag);n.className=cls||'';if(text)n.textContent=text;return n;};
+/** 메뉴 창 묶음(메이플식). order 는 묶음 안의 표시 순서이고, 목록에 없는 버튼은 시스템 묶음 끝에 붙는다. */
+const MENU_GROUPS=[
+ {id:'character',title:'캐릭터 · 성장',order:['rpg-open','mw-open','journey-lobby']},
+ {id:'reward',title:'보상',order:['btn-daily','btn-mail','tab:pass','btn-quest']},
+ {id:'shop',title:'상점 · 소환',order:['tab:gacha','tab:shop']},
+ {id:'system',title:'시스템',order:['btn-guide','btn-settings','app-mode-open','party-open']},
+];
+const MENU_ART={'rpg-open':'nav-journal','mw-open':'nav-mastery','journey-lobby':'nav-journey','app-mode-open':'settings','party-open':'nav-arena'};
+const menuKey=b=>b.dataset.tab?'tab:'+b.dataset.tab:b.id&&MENU_GROUPS.some(g=>g.order.includes(b.id))?b.id:['rpg-open','mw-open','journey-lobby'].find(c=>b.classList.contains(c))||b.id||'';
 /** Reparent existing controls, preserving their listeners, IDs, policies and contents. */
 export class OathShell {
  constructor(app){
@@ -7,13 +16,14 @@ export class OathShell {
   const nav=document.querySelector('#meta .bottomnav'),home=document.querySelector('#tab-home');
   this.menu=el('dialog','oath-menu');this.menu.id='oath-menu';this.menu.setAttribute('aria-labelledby','oath-menu-title');
   const head=el('header','oath-menu-heading'),title=el('h2','','메뉴');title.id='oath-menu-title';
-  const close=el('button','oath-menu-close','닫기');close.type='button';close.addEventListener('click',()=>this.close());head.append(title,close);
+  const close=el('button','oath-menu-close','✕');close.type='button';close.setAttribute('aria-label','닫기');close.addEventListener('click',()=>this.close());head.append(title,close);
   this.grid=el('div','oath-menu-grid');this.menu.append(head,this.grid);document.body.append(this.menu);
+  this.groups=new Map(MENU_GROUPS.map(g=>{const section=el('section','oath-menu-group'),heading=el('h3','',g.title),list=el('div','oath-menu-list');section.dataset.group=g.id;section.hidden=true;section.append(heading,list);this.grid.append(section);return [g.id,{def:g,section,list}];}));
   const trigger=el('button','oath-nav-menu','메뉴');trigger.type='button';trigger.setAttribute('aria-controls',this.menu.id);trigger.setAttribute('aria-expanded','false');
   trigger.addEventListener('click',()=>this.open());this.trigger=trigger;
   const original=[...nav.querySelectorAll('button')];
   const selected=['home','heroes','stage'].map(id=>original.find(b=>b.dataset.tab===id));
-  for(const button of original)if(!selected.includes(button))this.grid.append(button);
+  for(const button of original)if(!selected.includes(button))this.place(button);
   for(const button of selected)if(button)nav.append(button);
   const homeButton=selected[0];if(homeButton){for(const node of homeButton.childNodes)if(node.nodeType===3&&node.textContent.trim())node.textContent='출격';homeButton.addEventListener('click',()=>app.setHubWalkMode(false));}
   const offers=home.querySelector('.lobby-right');if(offers?.children.length){const detail=el('details','oath-menu-offers'),summary=el('summary','','추가 상품 안내'),items=el('div');items.append(...offers.children);detail.append(summary,items);this.menu.append(detail);}
@@ -24,13 +34,13 @@ export class OathShell {
   }
   for(const button of document.querySelectorAll('#tab-home .lobby-left > button')){
    if(button.classList.contains('companion-launcher'))continue; // React/bootstrap retains its original parent.
-   if(button.classList.contains('arsenal-open')){button.classList.add('oath-build-entry');home.append(button);}else this.grid.append(button);
+   if(button.classList.contains('arsenal-open')){button.classList.add('oath-build-entry');home.append(button);}else this.place(button);
   }
   const destination=el('section','oath-destination');destination.setAttribute('aria-label','다음 모험');
   destination.append(el('small','oath-kicker','다음 모험'));
   for(const node of [home.querySelector('.journey-strip'),home.querySelector('.stage-pill'),home.querySelector('#btn-battle')])if(node)destination.append(node);
   home.append(destination);
-  const actions=home.querySelector('.lobby-left');this.observer=new MutationObserver(()=>{for(const button of [...actions.children])if(button.tagName==='BUTTON'&&!button.classList.contains('companion-launcher'))this.grid.append(button);});this.observer.observe(actions,{childList:true});
+  const actions=home.querySelector('.lobby-left');this.observer=new MutationObserver(()=>{for(const button of [...actions.children])if(button.tagName==='BUTTON'&&!button.classList.contains('companion-launcher'))this.place(button);});this.observer.observe(actions,{childList:true});
   this.menu.addEventListener('cancel',e=>{e.preventDefault();this.close();});
   this.menu.addEventListener('click',e=>{const button=e.target.closest('button');if(button&&button!==close){this.restoreFocus=false;this.launchedFromMenu=true;this.menu.close();this.trigger.setAttribute('aria-expanded','false');queueMicrotask(()=>{if(!document.querySelector('dialog[open]')&&!document.querySelector('#modal.show')){this.launchedFromMenu=false;const heading=document.querySelector('#meta .tab.show h2');if(heading){heading.setAttribute('tabindex','-1');heading.focus({preventScroll:true});}}});}},true);
   this.menu.addEventListener('close',()=>{this.trigger.setAttribute('aria-expanded','false');if(this.restoreFocus&&this.trigger.isConnected)this.trigger.focus({preventScroll:true});this.restoreFocus=true;});
@@ -45,6 +55,15 @@ export class OathShell {
   const pause=document.querySelector('#btn-pause');pause.textContent='Ⅱ';pause.setAttribute('aria-label','일시정지');
  }
  open(){if(this.disposed||this.app.mode!=='lobby'||this.app.stageStarting||this.menu.open)return;this.app.setHubWalkMode(false);this.app.input.clear();this.restoreFocus=true;this.menu.showModal();this.trigger.setAttribute('aria-expanded','true');}
+ /** 버튼을 알맞은 묶음에 넣는다. DOM · id · 리스너는 그대로 옮기기만 한다. */
+ place(button){
+  const key=menuKey(button),found=this.groups.get(MENU_GROUPS.find(g=>g.order.includes(key))?.id)||this.groups.get('system'),{def,section,list}=found;
+  button.dataset.menuKey=key;
+  // 아이콘이 없는 버튼에는 기존 그림을 장식으로만 붙인다(이름·리스너는 그대로).
+  if(MENU_ART[key]&&!button.querySelector('.ic,img')){const art=document.createElement('img');art.className='oath-menu-art';art.alt='';art.setAttribute('aria-hidden','true');art.src='/img/ui-crafted/'+MENU_ART[key]+'.webp';button.prepend(art);}
+  const rank=b=>{const i=def.order.indexOf(b.dataset.menuKey);return i<0?99:i;};
+  const before=[...list.children].find(b=>rank(b)>rank(button));before?list.insertBefore(button,before):list.append(button);section.hidden=false;
+ }
  close(){if(!this.menu.open)return;this.restoreFocus=true;this.menu.close();}
  dispose(){if(this.disposed)return;this.disposed=true;this.observer.disconnect();this.modalObserver.disconnect();document.removeEventListener('close',this.returnMenuFocus,true);this.close();}
 }
