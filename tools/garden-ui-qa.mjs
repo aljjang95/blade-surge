@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { ALL_DUNGEONS } from '../src/data/expansion.js';
+import { citadelHotspot } from '../src/data/citadel-hub.js';
 const root = process.cwd(), out = path.resolve(process.argv[2]), origin = process.argv[4] || 'http://127.0.0.1:4173';
 const assert = (v, m) => { if (!v) throw Error(m); };
 const profile = process.argv[3];
@@ -63,6 +64,14 @@ try {
       for (const card of await page.locator('[data-command-route]').all()) {
         const before = await page.evaluate(() => ({ energy:app.eco.s.energy,gold:app.eco.s.gold,pending:app.expedition.s.pending }));
         const route = await card.getAttribute('data-command-route'), locked = await card.getAttribute('data-locked');
+        // 다른 마을의 게이트는 성채 출격 준비창 대신 그 마을의 던전 목록을 연다(기존 동작). 열리고 Esc 로 닫히는지만 본다.
+        if (!citadelHotspot('dungeon:' + route)) {
+          if (options.hasTouch) await card.tap(); else await card.click();
+          await page.locator('dialog.town-dialog[open]').waitFor();
+          await page.keyboard.press('Escape'); await page.waitForFunction(() => app.commandUI.visible && !document.querySelector('dialog.town-dialog[open]'));
+          row.selectionRoutes.push({ route, locked, opens: 'town-dungeon-list' });
+          continue;
+        }
         if (options.hasTouch) await card.tap(); else await card.click();
         await page.locator('.citadel-hub-dialog[open]').waitFor();
         assert(await page.locator('.citadel-hub-go').isDisabled() === (locked === 'true'), 'Selection access state mismatch');

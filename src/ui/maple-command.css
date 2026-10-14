@@ -75,3 +75,9 @@
   #citadel-command.mpl-command { left: calc(80px + var(--sal, 0px)); top: calc(50px + var(--sat, 0px)); width: min(360px, calc(100vw - 96px)); max-height: calc(var(--app-height, 100vh) - 56px - var(--sat, 0px) - var(--sab, 0px)); }
   #citadel-command .mpl-cmd-hero { display: none; }
 }
+/* 아주 좁은 가로 화면: 오른쪽 아래 빠른 메뉴 바(약 210px)를 가리지 않게 폭을 줄인다. */
+@media (orientation: landscape) and (max-height: 550px) and (max-width: 700px) {
+  #citadel-command.mpl-command { width: min(360px, calc(100vw - 310px)); }
+  #citadel-command .mpl-cmd-go { width: 64px; font-size: 14px; }
+  #citadel-command .mpl-cmd-route-copy small { display: none; }
+}
