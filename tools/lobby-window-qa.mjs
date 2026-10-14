@@ -6,6 +6,8 @@ import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { launchOpts } from './chrome.mjs';
+// 빌드본에는 /src 경로가 없으므로 세트·부위 목록은 Node 쪽에서 읽어 페이지에 넘긴다.
+import { SETS, SLOTS } from '../src/data/items.js';
 const origin = process.argv[2] || 'http://127.0.0.1:5310/', out = path.resolve(process.argv[3] || 'work/lobby-window-qa');
 await fs.mkdir(out, { recursive: true });
 const PROFILES = [
@@ -40,9 +42,8 @@ for (const spec of PROFILES) {
     await settle(1200);
     for (let n = 0; n < 4; n++) { const c = page.locator('#modal.show #m-cancel'); if (!await c.isVisible()) break; await act('#modal.show #m-cancel'); await settle(200); }
     // ---- 주입 fixture ----
-    const fixture = await page.evaluate(async () => {
-      const { SETS, SLOTS } = await import('/src/data/items.js');
-      const eco = window.app.eco, ids = Object.keys(SETS);
+    const fixture = await page.evaluate(async ({ ids, SLOTS }) => {
+      const eco = window.app.eco;
       eco.addRewards({ fragments: 400, stones: 30, tickets: 4, gold: 50000 }, { silent: true });
       const made = [];
       for (const [i, slot] of SLOTS.entries()) { const r = eco.craftSetItem(ids[i % ids.length], slot); if (r.ok) made.push(r.inst.uid); }
@@ -50,7 +51,7 @@ for (const spec of PROFILES) {
       const sel = eco.s.selected; if (made[0] !== undefined) eco.equip(sel, made[0]);
       eco.emit();
       return { made, equipped: made[0], hero: sel, bag: eco.s.inventory.length };
-    });
+    }, { ids: Object.keys(SETS), SLOTS });
     row.fixture = fixture; check('fixture items crafted', fixture.made.length >= 4, fixture);
     await settle(300); await shot('00-lobby');
 
