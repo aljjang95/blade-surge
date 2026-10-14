@@ -95,8 +95,8 @@ const BASE_DUNGEONS = [
   }),
   dungeon('sable_mirage_basin', '흑사막 환영 분지', 'crown', 5, 5, 'star_dust', '거울 모래폭풍 속 왕좌에 흑사막 환영 여왕이 기다립니다.', {
     art: ENCOUNTER_ART.boss_sable_mirage_empress, accent: '#d9a1ff', subtitle: 'SABLE MIRAGE BASIN',
-    objective: '모든 구역 정화 → 흑사막 환영 여왕 처치',
-    tactic: `분지의 적을 처치하고 모든 구역을 정화하세요. ${ENEMIES.sable_mirage_empress.tactic}`,
+    objective: '가짜 왕좌 세 개를 부숴 환영 여왕의 본체를 드러내고 모든 구역을 정화한 뒤 흑사막 환영 여왕을 쓰러뜨리세요.',
+    tactic: `각 왕좌 구역의 적을 처치한 뒤 보라 모래시계가 멈춘 동안 왕좌를 다섯 차례 공격해 부수세요. 모래시계가 도는 동안 때리면 모래가 반사되어 피해를 받습니다. 1번·2번·3번 왕좌는 어느 순서로 부숴도 됩니다. 왕좌 3개와 모든 구역을 정화하면 보스 봉인이 풀립니다. ${ENEMIES.sable_mirage_empress.tactic}`,
     bossEnemy: 'sable_mirage_empress', bossHp: 25800, bossName: '흑사막 환영 여왕', rosterMode: 'sable',
     roster: { trash: ['mirage_hound', 'sandglass_seer', 'ninja', 'mirage_hound', 'bomb_abyss', 'squidle'], ranged: ['sandglass_seer', 'abyss_seer', 'glub'], elite: ['mirage_colossus', 'elite_bluedemon', 'elite_wraith'] },
   }),

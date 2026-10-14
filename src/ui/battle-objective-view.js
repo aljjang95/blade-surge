@@ -20,7 +20,17 @@ function mainObjectiveView(battle) {
     if (gate) {
       const kind = route.def?.kind;
       const title = kind === 'constellations' ? '별자리 복원' : kind === 'records' ? '기록 복원'
+        : kind === 'thrones' ? '가짜 왕좌 파괴'
         : kind === 'cooling' ? route.copy?.title || '냉각선 복구' : `${route.noun || '종문'} ${route.verb || '조율'}`;
+      if (kind === 'thrones') {
+        // 순서가 자유라 다음 왕좌는 아직 부수지 않은 첫 왕좌다. 균열 수만 보여준다.
+        const next = route.current || gate;
+        const values = { progress: count(route.progress), total: route.gates.length, roomId: next.room.discovered ? next.room.id : null,
+          hold: count(next.hits), holdTotal: count(route.def.hits) };
+        if (!next.room.discovered) return step(title, '다음 구역을 찾아 이동', values);
+        if (!next.ready) return step(title, '이 구역의 적을 먼저 처치', values);
+        return step(title, next.phase === 'still' ? '모래시계 멈춤 · 지금 왕좌 공격' : '모래시계 회전 · 멈출 때까지 대기', values);
+      }
       const values = { progress: count(route.progress), total: route.gates.length,
         roomId: gate.room.discovered ? gate.room.id : null };
       if (!gate.room.discovered) return step(title, '다음 구역을 찾아 이동', values);

@@ -522,6 +522,14 @@ export class Player extends Actor {
       g.autoTarget = target;
     }
     const point = g.routeObjectives?.autoPoint?.(target) || target;
+    // 공격으로 부수는 목표(가짜 왕좌): 멈춘 모래시계 옆이면 왕좌를 향해 친다.
+    const strike = g.routeObjectives?.autoStrike?.(this);
+    if (strike) {
+      this.yaw = Math.atan2(strike.pos.x - this.pos.x, strike.pos.z - this.pos.z);
+      // 콤보를 이어 붙이면 마지막 타격이 회전 구간에 닿아 반사된다. 새 공격은 쉬는 상태에서만 시작한다.
+      if (this.state === 'idle' || this.state === 'move') g.input.press('attack');
+      return out;
+    }
     if (point !== target && Math.hypot(point.x - this.pos.x, point.z - this.pos.z) < .65) return out;
     const flow = W.buildFlow(point.x, point.z);
     const d = W.flowDir(flow, this.pos.x, this.pos.z);

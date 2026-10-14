@@ -52,6 +52,8 @@ import './ui/citadel-integration.css';
 import './ui/garden-ui.css';
 import './ui/departure-journal.css';
 import './ui/mobile-menu.css';
+import './ui/maple-window.css';
+import { MapleUI } from './ui/maple-ui.js';
 const BOOT_TIPS = [
   '<b>진공기</b>로 적을 끌어모은 뒤 한 번에 쓸어담는 것이 몹몰이의 기본이다.',
   '적의 공격 직전 <b>회피</b>하면 퍼펙트 회피 — 시간이 느려지고 반격 창이 열린다.',
@@ -190,6 +192,7 @@ class App {
     if (!this.companionAgent) this.companionAgent = createCompanion(this);
     this.party = new PartySession(this);
     this.oathShell = new OathShell(this);
+    this.mapleUI = new MapleUI(this);
     this.meta.refreshMenuBadge();
     this.experienceView = new ExperienceView(this);
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);

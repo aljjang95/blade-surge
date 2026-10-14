@@ -293,6 +293,23 @@ try {
         a.step(1 / 60, frame % 90 === 0);
         // 순차 목표 위에서 유지 중인 장면을 한 번 남긴다(렌더 프레임 포함).
         if (wantHold && (b.routeObjectives?.hold || 0) > .8) { a.step(1 / 60, true); holding = true; break; }
+        // 가짜 왕좌: 모래시계가 멈춘 왕좌에 균열이 생긴 장면을 한 번 남긴다.
+        const tg = b.routeObjectives?.def?.kind === 'thrones' ? b.routeObjectives.current : null;
+        if (wantHold && tg?.ready && tg.phase === 'still' && tg.hits >= 2) { a.step(1 / 60, true); holding = true; break; }
+        // 모래 반사 탐침(공개된 개입): 첫 왕좌가 준비되고 모래시계가 도는 동안 영웅을 왕좌 옆에 세우고
+        // 실제 공격 입력(input.press('attack'))을 1회 넣는다. AUTO 는 회전 중에 치지 않으므로 이 경로를 밟지 않는다.
+        if (tg?.ready && tg.phase === 'spin' && tg.age < .3 && !window.__reflectProbe && b.active && !b.paused) {
+          const r = b.routeObjectives, hp = b.player.hp, before = r.reflects, hits = tg.hits;
+          let k = 0;
+          // 공격 모션이 끝나 판정이 닿을 때까지 회전 구간 안에서만 기다린다(최대 2.4초).
+          for (; k < 144 && tg.phase === 'spin' && b.active && !b.paused && r.reflects === before; k++) {
+            b.player.pos.set(tg.stand.x, b.player.pos.y, tg.stand.z);
+            b.player.yaw = Math.atan2(tg.pos.x - b.player.pos.x, tg.pos.z - b.player.pos.z);
+            if (k % 8 === 0) b.input.press('attack');
+            a.step(1 / 60, k % 20 === 0);
+          }
+          window.__reflectProbe = { room: tg.room.id, frames: k, phase: tg.phase, state: b.player.state, reflects: r.reflects - before, hpBefore: hp, hpAfter: b.player.hp, hitsBefore: hits, hitsAfter: tg.hits };
+        }
         // 포자 폭발 탐침(공개된 개입): 1번 제단 전에 영웅을 2번 방 중심에 고정해 AUTO가 그곳 적을 처리하게 하고,
         // 차례가 아닌 그 제단이 정화 준비되면 1.2초 더 세워 둔다. 한 번만 실행한다.
         const r = b.routeObjectives;
@@ -335,6 +352,7 @@ try {
     ashforge_catacomb: { id: 'ashforge_furnaces_standard', label: '용광로 냉각', rooms: [1, 2, 3, 5] },
     cinder_tide_lock: { id: 'cinder_cooling_standard', label: '냉각선 복구', rooms: [2, 5] },
     verdigris_sanctum: { id: 'verdigris_life_altars', label: '생명 제단 정화', rooms: [3, 2, 6] },
+    sable_mirage_basin: { id: 'sable_false_thrones', label: '가짜 왕좌 파괴', rooms: [2, 5, 6] },
   };
   const expectRoute = ROUTE_CHECKS[GATE];
   if (expectRoute) {
@@ -344,6 +362,11 @@ try {
     if (report.routeObjective?.sporeBursts !== undefined) {
       console.log('WRONG_PROBE', JSON.stringify(report.wrongProbe));
       check('차례가 아닌 제단 1.2초 → 포자 폭발 1회·피해·순서 유지', report.wrongProbe?.bursts === 1 && report.wrongProbe.hpAfter < report.wrongProbe.hpBefore && report.wrongProbe.progress === 0 && report.routeObjective.sporeBursts >= 1, report.wrongProbe);
+    }
+    if (report.routeObjective?.sandReflects !== undefined) {
+      report.reflectProbe = await page.evaluate(() => window.__reflectProbe || null);
+      console.log('REFLECT_PROBE', JSON.stringify(report.reflectProbe));
+      check('회전 중 왕좌 공격 → 모래 반사 1회·피해·균열 없음', report.reflectProbe?.reflects === 1 && report.reflectProbe.hpAfter < report.reflectProbe.hpBefore && report.reflectProbe.hitsAfter === report.reflectProbe.hitsBefore && report.routeObjective.sandReflects >= 1, report.reflectProbe);
     }
     check(expectRoute.label + ' ' + n + '/' + n + ' 기록', report.routeObjective?.id === expectRoute.id && report.routeObjective.complete && JSON.stringify(report.routeObjective.rooms) === JSON.stringify(expectRoute.rooms), report.routeObjective);
     check('결과 화면 ' + expectRoute.label + ' 기록', (await page.locator('[aria-label="' + expectRoute.label + ' 결과"]').textContent())?.includes(n + '/' + n), null);

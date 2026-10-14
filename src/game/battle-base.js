@@ -593,6 +593,8 @@ export class Battle {
       this.damageEnemy(e, dmg, { ...opts, dirx: dx, dirz: dz }); n++;
       if (n >= 24) break;
     }
+    // 흑사막 가짜 왕좌처럼 적이 아닌 공격 대상. 한 판정에 왕좌 하나 최대 1타.
+    if (this.routeObjectives?.strike?.(this, pos.x, pos.z, range)) n++;
     return n;
   }
   hitRadius(center, radius, dmg, opts = {}) {
@@ -606,6 +608,7 @@ export class Battle {
       this.damageEnemy(e, dmg, { ...opts, dirx: e.pos.x - from.x, dirz: e.pos.z - from.z }); n++;
       if (n >= 30) break;
     }
+    if (this.routeObjectives?.strike?.(this, center.x, center.z, radius)) n++;
     return n;
   }
   /** 몹몰이 진공: 반경 안 적을 중심으로 끌어당김 */
@@ -688,6 +691,7 @@ export class Battle {
             if (!p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); break; }
           }
         }
+        if (!done && this.routeObjectives?.strikeProjectile?.(this, p) && !p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); }
       }
       if (done) { if (p.explode && p.t >= p.life && !p.hit.size) this.explode(p); releaseProjectileVisual(p.mesh); this.projectiles.splice(i, 1); }
     }
