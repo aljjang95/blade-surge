@@ -114,10 +114,13 @@ try {
       row.layout = await page.evaluate(() => {
         const selectors = ['#meta .bottomnav', '#meta .profile', '#meta .currencies', '.citadel-hub-place', '.citadel-hub-near', '.lobby-camera-tools', '.companion-launcher', '#citadel-command-return', ...(matchMedia('(any-pointer:coarse)').matches ? ['.citadel-hub-stick', '#lobby-camera-pad'] : [])];
         const boxes = Object.fromEntries(selectors.map(s => { const el = document.querySelector(s), b = el.getBoundingClientRect(); return [s, { x: b.x, y: b.y, w: b.width, h: b.height }]; }));
-        const buttons = [...document.querySelectorAll('#meta .bottomnav button')].map(el => { const b = el.getBoundingClientRect(); return { text: el.textContent.trim(), w: b.width, h: b.height, hit: el.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)) }; });
-        return { boxes, buttons, overflow: document.documentElement.scrollWidth > innerWidth, viewport: { width: innerWidth, height: innerHeight } };
+        // 가로 모바일 걷기 모드는 하단 탭을 의도적으로 숨긴다(ux-pass.css 6절). 그때는 '출격 메뉴로' 버튼이 돌아가는 길이다.
+        const navShown = getComputedStyle(document.querySelector('#meta .bottomnav')).display !== 'none';
+        const targets = navShown ? [...document.querySelectorAll('#meta .bottomnav button')] : [document.querySelector('#citadel-command-return')];
+        const buttons = targets.map(el => { const b = el.getBoundingClientRect(); return { text: el.textContent.trim(), w: b.width, h: b.height, hit: el.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)) }; });
+        return { boxes, buttons, navShown, overflow: document.documentElement.scrollWidth > innerWidth, viewport: { width: innerWidth, height: innerHeight } };
       });
-      for (const [name, b] of Object.entries(row.layout.boxes)) assert(b.x >= -1 && b.y >= -1 && b.x + b.w <= row.layout.viewport.width + 1 && b.y + b.h <= row.layout.viewport.height + 1, `${name} outside viewport`);
+      for (const [name, b] of Object.entries(row.layout.boxes)) if (name !== '#meta .bottomnav' || row.layout.navShown) assert(b.x >= -1 && b.y >= -1 && b.x + b.w <= row.layout.viewport.width + 1 && b.y + b.h <= row.layout.viewport.height + 1, `${name} outside viewport`);
       for (const b of row.layout.buttons) assert(b.w >= 44 && b.h >= 44 && b.hit, `${b.text} touch target or hit failed`);
       assert(!row.layout.overflow, 'Horizontal overflow');
       const a = row.layout.boxes['#meta .bottomnav'], b = row.layout.boxes['.citadel-hub-near'];
