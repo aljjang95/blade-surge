@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import { ALL_DUNGEONS } from '../src/data/expansion.js';
 const root = process.cwd(), out = path.resolve(process.argv[2]), origin = process.argv[4] || 'http://127.0.0.1:4173';
 const assert = (v, m) => { if (!v) throw Error(m); };
 const profile = process.argv[3];
@@ -55,8 +56,9 @@ try {
       if (await page.locator('#modal.show #m-cancel').isVisible()) await tap('#modal.show #m-cancel');
       await page.waitForFunction(() => app.showcase && app.commandUI.visible);
       await shot('selection');
-      row.selectionLayout = await page.evaluate(() => { const p = document.querySelector('#citadel-command').getBoundingClientRect(), n = document.querySelector('#meta .bottomnav').getBoundingClientRect(); return { panelBottom:p.bottom, navTop:n.top, cards:document.querySelectorAll('[data-command-route]').length }; });
-      assert(row.selectionLayout.cards === 12 && row.selectionLayout.panelBottom <= row.selectionLayout.navTop, 'Selection cards or dock overlap');
+      // 독은 데스크톱에서 아래, 좁은 가로 화면에서는 왼쪽 세로 줄이다. 두 사각형이 실제로 겹치는지 본다.
+      row.selectionLayout = await page.evaluate(() => { const p = document.querySelector('#citadel-command').getBoundingClientRect(), n = document.querySelector('#meta .bottomnav').getBoundingClientRect(); return { panel:[p.left,p.top,p.right,p.bottom], nav:[n.left,n.top,n.right,n.bottom], overlap: Math.min(p.right,n.right)-Math.max(p.left,n.left) > 1 && Math.min(p.bottom,n.bottom)-Math.max(p.top,n.top) > 1, cards:document.querySelectorAll('[data-command-route]').length }; });
+      assert(row.selectionLayout.cards === ALL_DUNGEONS.length && !row.selectionLayout.overlap, 'Selection cards or dock overlap ' + JSON.stringify(row.selectionLayout));
       row.selectionRoutes = [];
       for (const card of await page.locator('[data-command-route]').all()) {
         const before = await page.evaluate(() => ({ energy:app.eco.s.energy,gold:app.eco.s.gold,pending:app.expedition.s.pending }));

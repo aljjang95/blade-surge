@@ -145,7 +145,7 @@ test('standard bellfall promises three ordered gates, deep keeps two unordered t
   const route = routeObjectiveForStage(standard)!;
   expect(route.gates.map(g => g.roomId)).toEqual([2, 3, 5]);
   expect((route as { holdSeconds?: number }).holdSeconds).toBe(2);
-  expect(route.radius).toBe(3);
+  expect((route as { radius?: number }).radius).toBe(3);
   expect(standard.objective).toMatch(/세 개의 종문.*순서/);
   expect(standard.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번']);
   expect(standard.encounter.tactic).toMatch(/순서가 아닌 종문.*기다/);

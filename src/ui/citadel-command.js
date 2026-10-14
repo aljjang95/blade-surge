@@ -3,6 +3,7 @@ import { HEROES } from '../data/heroes.js';
 import { citadelHotspot } from '../data/citadel-hub.js';
 import { dungeonJourney } from './dungeon-journey.js';
 import './citadel-command.css';
+import './maple-command.css';
 
 const element = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -30,74 +31,73 @@ export class CitadelCommand {
     this.app = app;
     this.visible = false;
     this.collapsed = readCitadelCommandCollapsed();
-    this.root = element('section', 'citadel-command');
+    // 메이플식 작은 창: 제목줄 + 다음 모험 한 줄 + 모드 버튼 + 탭(던전 게이트 / 마을 정비).
+    // 예전 크림색 대형 패널의 컨테이너 클래스는 쓰지 않는다(그 스타일이 남지 않도록). 버튼 객체·id·동작은 그대로다.
+    this.root = element('section', 'mpl-command');
     this.root.id = 'citadel-command';
     this.root.hidden = true;
     this.root.setAttribute('aria-labelledby', 'citadel-command-title');
-    const header = element('header', 'citadel-command-heading');
-    const heading = element('div');
-    heading.append(element('small', 'citadel-command-kicker', 'BLADE SURGE · ADVENTURE'));
-    this.title = element('h1', '', '어디로 떠날까요?');
+    const header = element('header', 'mpl-cmd-title');
+    const icon = element('img', 'mpl-cmd-icon'); icon.src = '/img/ui-crafted/nav-dungeon.webp'; icon.alt = '';
+    this.title = element('h1', 'mpl-cmd-title-text', '모험 안내');
     this.title.id = 'citadel-command-title';
-    heading.append(this.title, element('p', '', '던전을 고르고, 준비를 마친 뒤 출격하세요.'));
-    this.explore = action('마을 둘러보기', () => app.setHubWalkMode(true), 'citadel-command-explore');
+    this.explore = action('마을 둘러보기', () => app.setHubWalkMode(true), 'mpl-cmd-explore');
     this.explore.id = 'citadel-explore';
-    this.quickLaunch = action('출격', () => app.expeditionUI.open('dungeons', { depth: 'standard' }), 'citadel-command-quick-launch');
-    this.collapseToggle = action('패널 접기', () => this.setCollapsed(!this.collapsed), 'citadel-command-collapse');
+    this.quickLaunch = action('출격', () => app.expeditionUI.open('dungeons', { depth: 'standard' }), 'citadel-command-quick-launch mpl-cmd-quick');
+    this.collapseToggle = action('', () => this.setCollapsed(!this.collapsed), 'citadel-command-collapse mpl-cmd-min');
     this.collapseToggle.setAttribute('aria-controls', 'citadel-command');
     this.collapseToggle.setAttribute('aria-expanded', String(!this.collapsed));
-    header.append(heading, this.explore, this.quickLaunch, this.collapseToggle);
-    this.hero = element('div', 'citadel-command-hero');
-    this.portrait = element('img');
-    this.portrait.alt = '';
-    this.heroInfo = element('div');
-    this.hero.append(this.portrait, this.heroInfo, action('영웅 · 장비', () => app.meta.openTab('heroes')));
-    const destinations = element('nav', 'citadel-command-destinations');
-    destinations.setAttribute('aria-label', '모험 선택');
-    this.campaign = action('', () => app.meta.openTab('stage', 'campaign'), 'citadel-command-campaign');
-    this.campaign.append(element('small', '', 'STORY CAMPAIGN'), element('strong', '', '캠페인'), element('span', '', '다음 이야기를 이어가기'));
-    this.nextStory = element('small', 'citadel-command-next');
-    this.campaign.append(this.nextStory);
-    const arena = action('', () => app.expeditionUI.open('arena'), 'citadel-command-arena');
-    arena.append(element('small', '', 'SOLO ARENA'), element('strong', '', '결투장'), element('span', '', 'AI 상대와 무료 연습'));
-    this.journey = action('', () => app.expeditionUI.open('dungeons', { depth: 'standard' }), 'citadel-command-journey');
+    header.append(icon, this.title, this.quickLaunch, this.explore, this.collapseToggle);
+    const body = element('div', 'mpl-cmd-body');
+    // 다음 모험: 지금 이어갈 던전 여정과 가장 눈에 띄는 출격 버튼.
+    const next = element('div', 'mpl-cmd-next');
+    this.journey = action('', () => app.expeditionUI.open('dungeons', { depth: 'standard' }), 'mpl-cmd-journey');
     this.journey.id = 'citadel-dungeon-journey';
     this.journeyArt = element('img'); this.journeyArt.alt = '';
     this.journeyName = element('strong'); this.journeyStatus = element('span');
-    const journeyCopy = element('div'); journeyCopy.append(element('small', '', 'Lv.1부터 이어지는 던전 여정'), this.journeyName, this.journeyStatus);
+    const journeyCopy = element('div'); journeyCopy.append(element('small', '', '다음 던전 여정'), this.journeyName, this.journeyStatus);
     this.journey.append(this.journeyArt, journeyCopy);
-    const fields = action('', () => app.expeditionUI.open('dungeons', { depth: 'fields' }), 'citadel-command-arena');
+    this.go = action('출격', () => app.expeditionUI.open('dungeons', { depth: 'standard' }), 'mpl-cmd-go');
+    next.append(this.journey, this.go);
+    this.hero = element('div', 'mpl-cmd-hero');
+    this.portrait = element('img');
+    this.portrait.alt = '';
+    this.heroInfo = element('div');
+    this.hero.append(this.portrait, this.heroInfo, action('영웅 · 장비', () => app.meta.openTab('heroes'), 'mpl-cmd-link'));
+    const modes = element('nav', 'mpl-cmd-modes');
+    modes.setAttribute('aria-label', '모험 선택');
+    this.campaign = action('', () => app.meta.openTab('stage', 'campaign'), 'citadel-command-campaign mpl-cmd-mode');
+    this.nextStory = element('small', 'mpl-cmd-mode-sub');
+    this.campaign.append(element('strong', '', '캠페인'), this.nextStory);
+    const fields = action('', () => app.expeditionUI.open('dungeons', { depth: 'fields' }), 'mpl-cmd-mode');
     fields.id = 'citadel-command-fields';
-    fields.append(element('small', '', 'OPEN FIELD'), element('strong', '', '야외 필드'), element('span', '', '초원 · 해안 · 산길 · 도시'));
-    destinations.append(this.journey, this.campaign, fields, arena);
-    const tools = element('nav', 'citadel-command-tools');
-    tools.setAttribute('aria-label', '출격 전 정비');
-    this.supply = action('보급 상점', button => app.citadelShop.open(button));
-    this.supply.id = 'citadel-command-supply';
-    // 자주 쓰는 셋(보급 · 공방 · 의뢰)만 바로 보이고, 나머지는 '더보기'로 묶는다.
-    this.more = element('details', 'citadel-command-more');
-    const moreSummary = element('summary', '', '더보기');
-    const moreList = element('div', 'citadel-command-more-list');
-    // 닫힌 <details> 안의 버튼은 포커스를 받을 수 없으므로, 열린 화면이 닫히면 보이는 '더보기'로 돌아온다.
-    const closeMore = callback => () => { this.more.open = false; callback(moreSummary); };
-    moreList.append(
-      action('성장 · 전투 방식', closeMore(button => app.battle?.chronicle?.open('build', button))),
-      action('상점 · 교환', closeMore(() => app.meta.openTab('shop'))),
-      action('동행', closeMore(button => this.openCompanion(button))));
-    this.more.append(moreSummary, moreList);
-    this.more.addEventListener('keydown', event => { if (event.key === 'Escape' && this.more.open) { event.stopPropagation(); this.more.open = false; moreSummary.focus(); } });
-    document.addEventListener('pointerdown', event => { if (this.more.open && !this.more.contains(event.target)) this.more.open = false; });
-    tools.append(this.supply,
-      action('제작 공방', () => app.expeditionUI.open('forge')), action('마을 일 · 의뢰', button => app.townUI?.openContent('quests', button)),
-      this.more);
-    const routes = element('section', 'citadel-command-routes');
-    routes.setAttribute('aria-labelledby', 'citadel-command-routes-title');
-    const routeHeader = element('div', 'citadel-command-route-heading');
-    const routeTitle = element('h2', '', '던전 게이트');
-    routeTitle.id = 'citadel-command-routes-title';
-    this.routeSummary = element('span');
-    routeHeader.append(routeTitle, this.routeSummary);
-    const grid = element('div', 'citadel-command-grid');
+    fields.append(element('strong', '', '야외 필드'), element('small', 'mpl-cmd-mode-sub', '초원 · 해안 · 산길'));
+    const arena = action('', () => app.expeditionUI.open('arena'), 'mpl-cmd-mode');
+    arena.append(element('strong', '', '결투장'), element('small', 'mpl-cmd-mode-sub', 'AI 무료 연습'));
+    modes.append(this.campaign, fields, arena);
+    // 탭: 던전 게이트(기본) / 마을 정비.
+    const tabs = element('div', 'mpl-cmd-tabs');
+    tabs.setAttribute('role', 'tablist');
+    this.panes = {};
+    this.tabButtons = {};
+    const tab = (id, label) => {
+      const button = action(label, () => this.showPane(id), 'mpl-cmd-tab');
+      button.setAttribute('role', 'tab'); button.id = `citadel-command-tab-${id}`;
+      button.setAttribute('aria-controls', `citadel-command-pane-${id}`);
+      this.tabButtons[id] = button; tabs.append(button);
+      return button;
+    };
+    const pane = (id) => {
+      const node = element('section', 'mpl-cmd-pane');
+      node.id = `citadel-command-pane-${id}`; node.setAttribute('role', 'tabpanel');
+      node.setAttribute('aria-labelledby', `citadel-command-tab-${id}`);
+      this.panes[id] = node; return node;
+    };
+    this.routeTab = tab('routes', '던전 게이트');
+    tab('tools', '마을 정비');
+    const routes = pane('routes');
+    this.routeSummary = element('p', 'mpl-cmd-route-summary');
+    const list = element('div', 'mpl-cmd-routes');
     this.cards = new Map();
     for (const dungeon of DUNGEONS) {
       const spot = citadelHotspot(`dungeon:${dungeon.id}`);
@@ -105,23 +105,34 @@ export class CitadelCommand {
         if (app.mode !== 'lobby' || app.stageStarting || app.expeditionUI.opened) return;
         app.citadel.clearInput();
         if (spot) app.hubUI.openDestination(spot, button); else app.townUI?.openContent('dungeons', button);
-      }, 'citadel-command-route');
+      }, 'mpl-cmd-route');
       card.dataset.commandRoute = dungeon.id;
       card.style.setProperty('--route-accent', dungeon.accent);
-      const image = element('img', 'citadel-command-art');
+      const image = element('img', 'mpl-cmd-route-art');
       image.src = dungeon.art;
       image.alt = '';
       image.loading = 'lazy';
-      const content = element('div', 'citadel-command-route-copy');
+      const content = element('div', 'mpl-cmd-route-copy');
       const reward = Object.keys(dungeon.rewards.materials).map(id => MATERIALS.find(material => material.id === id)?.name).filter(Boolean).join(' · ');
-      const status = element('span', 'citadel-command-route-status');
-      content.append(element('small', '', dungeon.subtitle), element('h3', '', dungeon.name), element('span', 'citadel-command-reward', `${reward} · 에너지 ${dungeon.energy}`), status);
-      card.append(image, content);
-      grid.append(card);
+      const status = element('span', 'mpl-cmd-route-status');
+      content.append(element('strong', '', dungeon.name), element('small', '', `${reward} · 에너지 ${dungeon.energy}`));
+      card.append(image, content, status);
+      list.append(card);
       this.cards.set(dungeon.id, { card, status });
     }
-    routes.append(routeHeader, element('p', 'citadel-command-route-help', '게이트를 선택하면 기본·심층 원정의 조건, 보상과 전투 준비를 확인합니다.'), grid);
-    this.root.append(header, this.hero, destinations, tools, routes);
+    routes.append(this.routeSummary, list);
+    const tools = pane('tools');
+    this.supply = action('보급 상점', button => app.citadelShop.open(button), 'mpl-cmd-row');
+    this.supply.id = 'citadel-command-supply';
+    tools.append(this.supply,
+      action('제작 공방', () => app.expeditionUI.open('forge'), 'mpl-cmd-row'),
+      action('마을 일 · 의뢰', button => app.townUI?.openContent('quests', button), 'mpl-cmd-row'),
+      action('성장 · 전투 방식', button => app.battle?.chronicle?.open('build', button), 'mpl-cmd-row'),
+      action('상점 · 교환', () => app.meta.openTab('shop'), 'mpl-cmd-row'),
+      action('동행', button => this.openCompanion(button), 'mpl-cmd-row'));
+    body.append(next, this.hero, modes, tabs, routes, tools);
+    this.root.append(header, body);
+    this.showPane('routes');
     this.root.dataset.collapsed = String(this.collapsed);
     this.setCollapsed(this.collapsed);
     document.getElementById('tab-home').append(this.root);
@@ -155,6 +166,17 @@ export class CitadelCommand {
       if (access.ok) ready++;
     }
     this.routeSummary.textContent = `탐험 Lv.${expedition.s.level} · 개방 ${ready}/${DUNGEONS.length}`;
+    this.routeTab.textContent = `던전 게이트 ${ready}/${DUNGEONS.length}`;
+  }
+
+  /** 탭 전환. 다른 패널은 hidden 으로 숨긴다(던전 게이트가 기본). @param {'routes'|'tools'} id */
+  showPane(id) {
+    for (const [key, node] of Object.entries(this.panes)) {
+      const on = key === id;
+      node.hidden = !on;
+      this.tabButtons[key].setAttribute('aria-selected', String(on));
+      this.tabButtons[key].tabIndex = on ? 0 : -1;
+    }
   }
 
   openCompanion(button) {
@@ -188,7 +210,8 @@ export class CitadelCommand {
   setCollapsed(collapsed) {
     this.collapsed = !!collapsed;
     this.root.dataset.collapsed = String(this.collapsed);
-    this.collapseToggle.textContent = this.collapsed ? '패널 펼치기' : '패널 접기';
+    this.collapseToggle.textContent = this.collapsed ? '+' : '–';
+    this.collapseToggle.setAttribute('aria-label', this.collapsed ? '패널 펼치기' : '패널 접기');
     this.collapseToggle.setAttribute('aria-expanded', String(!this.collapsed));
     writeCitadelCommandCollapsed(this.collapsed);
   }
