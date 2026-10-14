@@ -87,6 +87,19 @@ export const ROUTE_OBJECTIVES = Object.freeze({
       Object.freeze({ roomId: 6, label: '3번 가짜 왕좌 · 환영 정원' }),
     ]),
   }),
+  // 혜성 요새 일반의 원안: 궤도 고리 4개 정렬. 궤도 위 룬석을 몸으로 밀어 별 표식에 맞춘다.
+  // 정렬 중 유성은 평소 푸른 궤도선 바깥 고리에 떨어지고, 세 번째마다 안쪽 전체를 덮는 중심 유성이 온다.
+  comet_standard: Object.freeze({
+    id: 'comet_orbit_rings', kind: 'orbits', track: 4, band: 1.5, contact: 1.3, tolerance: .14, lockSeconds: .4,
+    safe: 5.2, outerMin: 5.8, outerMax: 9, escape: 6.4,
+    meteor: Object.freeze({ every: 3.2, warning: 1.4, centerEvery: 3, damage: .07 }),
+    gates: Object.freeze([
+      Object.freeze({ roomId: 1, label: '1번 궤도 고리 · 북문 관측대', target: 0, start: 2.2 }),
+      Object.freeze({ roomId: 3, label: '2번 궤도 고리 · 중앙 성벽', target: Math.PI / 2, start: Math.PI / 2 - 2.2 }),
+      Object.freeze({ roomId: 5, label: '3번 궤도 고리 · 유성 포대', target: Math.PI, start: Math.PI - 2.2 }),
+      Object.freeze({ roomId: 7, label: '4번 궤도 고리 · 혜성 보고', target: -Math.PI / 2, start: -Math.PI / 2 + 2.2 }),
+    ]),
+  }),
 });
 
 /** @param {any} stage */
@@ -103,5 +116,6 @@ export function routeObjectiveForStage(stage) {
   if (expedition.id === 'verdigris_sanctum') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.verdigris_standard : null;
   if (expedition.id === 'ashforge_catacomb') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.ashforge_standard : null;
   if (expedition.id === 'sable_mirage_basin') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.sable_standard : null;
+  if (expedition.id === 'comet_bastion') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.comet_standard : null;
   return expedition.id === 'bellfall_crypt' && expedition.depth === 'standard' ? ROUTE_OBJECTIVES.bellfall_crypt : null;
 }
