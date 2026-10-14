@@ -78,7 +78,7 @@ export const ROUTE_OBJECTIVES = Object.freeze({
   // 흑사막 환영 분지 일반의 원안: 가짜 왕좌 3개를 실제 공격으로 부숴야 여왕의 본체가 드러난다.
   // 보라 모래시계가 멈춘 동안에만 균열이 쌓이고, 도는 동안 때리면 모래가 반사된다. 부수는 순서는 자유다.
   sable_standard: Object.freeze({
-    id: 'sable_false_thrones', kind: 'thrones', radius: 1.4, standOff: 2.3, hits: 5, hitGap: .2, autoMargin: .6,
+    id: 'sable_false_thrones', kind: 'thrones', radius: 1.4, standOff: 2.3, hits: 5, hitGap: .2, autoMargin: .8,
     spinSeconds: 2.4, stillSeconds: 2, spinColor: 0x6b45a8, stillColor: 0xe0b0ff,
     reflect: Object.freeze({ damage: .05, cooldown: 1.2 }),
     gates: Object.freeze([

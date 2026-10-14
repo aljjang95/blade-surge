@@ -526,7 +526,8 @@ export class Player extends Actor {
     const strike = g.routeObjectives?.autoStrike?.(this);
     if (strike) {
       this.yaw = Math.atan2(strike.pos.x - this.pos.x, strike.pos.z - this.pos.z);
-      if (this.state === 'idle' || this.state === 'move' || (this.state === 'attack' && this.hitDone)) g.input.press('attack');
+      // 콤보를 이어 붙이면 마지막 타격이 회전 구간에 닿아 반사된다. 새 공격은 쉬는 상태에서만 시작한다.
+      if (this.state === 'idle' || this.state === 'move') g.input.press('attack');
       return out;
     }
     if (point !== target && Math.hypot(point.x - this.pos.x, point.z - this.pos.z) < .65) return out;
