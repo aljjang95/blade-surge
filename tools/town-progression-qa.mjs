@@ -296,6 +296,17 @@ try {
         // 가짜 왕좌: 모래시계가 멈춘 왕좌에 균열이 생긴 장면을 한 번 남긴다.
         const tg = b.routeObjectives?.def?.kind === 'thrones' ? b.routeObjectives.current : null;
         if (wantHold && tg?.ready && tg.phase === 'still' && tg.hits >= 2) { a.step(1 / 60, true); holding = true; break; }
+        // 궤도 고리: 룬석을 밀고 있는 장면을 한 번 남긴다.
+        const og = b.routeObjectives?.def?.kind === 'orbits' ? b.routeObjectives.current : null;
+        if (wantHold && og?.ready && og.pushes >= 20) { a.step(1 / 60, true); holding = true; break; }
+        // 중심 유성 탐침(공개된 개입): 첫 고리의 중심 유성 예고가 뜨면 영웅을 푸른 선 안쪽(중심)에 고정해
+        // 실제 낙하 판정을 받는다. AUTO 는 예고 때 바깥으로 피하므로 이 경로를 밟지 않는다.
+        if (og?.warn === 'center' && !window.__centerProbe && b.active && !b.paused) {
+          const r = b.routeObjectives, hp = b.player.hp, before = r.meteorHits;
+          let k = 0;
+          for (; k < 120 && og.warn === 'center' && b.active && !b.paused; k++) { b.player.pos.set(og.center.x, b.player.pos.y, og.center.z); a.step(1 / 60, k % 30 === 0); }
+          window.__centerProbe = { room: og.room.id, frames: k, hits: r.meteorHits - before, hpBefore: hp, hpAfter: b.player.hp, progress: r.progress };
+        }
         // 모래 반사 탐침(공개된 개입): 첫 왕좌가 준비되고 모래시계가 도는 동안 영웅을 왕좌 옆에 세우고
         // 실제 공격 입력(input.press('attack'))을 1회 넣는다. AUTO 는 회전 중에 치지 않으므로 이 경로를 밟지 않는다.
         if (tg?.ready && tg.phase === 'spin' && tg.age < .3 && !window.__reflectProbe && b.active && !b.paused) {
@@ -353,6 +364,7 @@ try {
     cinder_tide_lock: { id: 'cinder_cooling_standard', label: '냉각선 복구', rooms: [2, 5] },
     verdigris_sanctum: { id: 'verdigris_life_altars', label: '생명 제단 정화', rooms: [3, 2, 6] },
     sable_mirage_basin: { id: 'sable_false_thrones', label: '가짜 왕좌 파괴', rooms: [2, 5, 6] },
+    comet_bastion: { id: 'comet_orbit_rings', label: '궤도 고리 정렬', rooms: [1, 3, 5, 7] },
   };
   const expectRoute = ROUTE_CHECKS[GATE];
   if (expectRoute) {
@@ -367,6 +379,11 @@ try {
       report.reflectProbe = await page.evaluate(() => window.__reflectProbe || null);
       console.log('REFLECT_PROBE', JSON.stringify(report.reflectProbe));
       check('회전 중 왕좌 공격 → 모래 반사 1회·피해·균열 없음', report.reflectProbe?.reflects === 1 && report.reflectProbe.hpAfter < report.reflectProbe.hpBefore && report.reflectProbe.hitsAfter === report.reflectProbe.hitsBefore && report.routeObjective.sandReflects >= 1, report.reflectProbe);
+    }
+    if (report.routeObjective?.meteorHits !== undefined) {
+      report.centerProbe = await page.evaluate(() => window.__centerProbe || null);
+      console.log('CENTER_PROBE', JSON.stringify(report.centerProbe));
+      check('중심 유성 예고 중 안쪽에 서 있으면 → 피해 1회', report.centerProbe?.hits === 1 && report.centerProbe.hpAfter < report.centerProbe.hpBefore && report.routeObjective.meteorHits >= 1, report.centerProbe);
     }
     check(expectRoute.label + ' ' + n + '/' + n + ' 기록', report.routeObjective?.id === expectRoute.id && report.routeObjective.complete && JSON.stringify(report.routeObjective.rooms) === JSON.stringify(expectRoute.rooms), report.routeObjective);
     check('결과 화면 ' + expectRoute.label + ' 기록', (await page.locator('[aria-label="' + expectRoute.label + ' 결과"]').textContent())?.includes(n + '/' + n), null);

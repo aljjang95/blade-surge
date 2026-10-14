@@ -144,4 +144,5 @@
 }
 @media (prefers-reduced-motion: reduce) { .town-travel-veil { animation-duration: .01s; } }
 /* 마을 이름 칸(가장 긴 '별마루 설원 마을' + 이동 칩)이 가로 화면의 '출격 메뉴로' 버튼과 겹치지 않게 비켜 준다. */
-@media (orientation: landscape) and (min-width: 700px) { .oath-visual .citadel-hub-active .citadel-command-return { left: calc(272px + var(--sal, 0px)); } }
+/* 마을 이름판(왼쪽 20px부터 폭 약 280px) 오른쪽에 붙인다. 272px 일 때 이름판 끝(300px)과 겹쳤다. */
+@media (orientation: landscape) and (min-width: 700px) { .oath-visual .citadel-hub-active .citadel-command-return { left: calc(312px + var(--sal, 0px)); } }

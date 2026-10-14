@@ -1,0 +1,83 @@
+/* 로비 '모험 안내' 창. 공통 메이플 창 프레임(maple-window.css 의 --mpl-* 변수)과 같은 모양으로,
+   예전 크림색 대형 패널 대신 마을이 보이도록 왼쪽에 작은 창으로 띄운다. 아이디 선택자로 예전 규칙보다 앞선다. */
+#citadel-command[hidden] { display: none !important; }
+#citadel-command.mpl-command { position: absolute; left: max(14px, var(--sal, 0px)); top: calc(84px + var(--sat, 0px)); z-index: 12; display: flex; flex-direction: column; width: min(392px, calc(100vw - 28px)); max-height: calc(var(--app-height, 100vh) - 84px - 116px - var(--sat, 0px) - var(--sab, 0px)); margin: 0; padding: 0; overflow: hidden; color: var(--mpl-text); font: 600 12px/1.35 var(--font); text-shadow: none; background: linear-gradient(180deg, var(--mpl-body-top), var(--mpl-body-bot)); border: 1px solid var(--mpl-border); border-radius: 4px; box-shadow: inset 0 0 0 1px var(--mpl-hi), 0 6px 22px #0009; pointer-events: auto; }
+/* 기본 초기화는 :where 로 낮춰 아래 버튼별 규칙이 이기게 한다. */
+#citadel-command :where(button) { min-height: 0; margin: 0; cursor: pointer; font: inherit; color: inherit; text-align: left; text-shadow: none; box-shadow: none; border-radius: 3px; }
+#citadel-command :where(button):focus-visible { outline: 2px solid #fff0b3; outline-offset: 1px; }
+
+/* 제목줄 */
+#citadel-command .mpl-cmd-title { display: flex; align-items: center; gap: 6px; flex: none; min-height: 32px; padding: 0 4px 0 8px; border-radius: 3px 3px 0 0; background: linear-gradient(180deg, var(--mpl-title-top), var(--mpl-title-bot)); border-bottom: 1px solid var(--mpl-border); }
+#citadel-command .mpl-cmd-icon { width: 20px; height: 20px; object-fit: contain; flex: none; }
+#citadel-command .mpl-cmd-title-text { flex: 1; min-width: 0; margin: 0; font: 800 13px/1 var(--font); letter-spacing: .02em; color: #fff; text-shadow: 0 1px 0 #0a1222; }
+#citadel-command .mpl-cmd-explore { flex: none; min-height: 22px; padding: 0 8px; border: 1px solid var(--mpl-border); background: #1b2b49; color: var(--mpl-text); font: 700 11px/1 var(--font); }
+#citadel-command .mpl-cmd-quick { display: none; flex: none; min-height: 22px; padding: 0 10px; border: 1px solid #6a4410; background: linear-gradient(180deg, #ffe39a, #f2b84b); color: #3a2605; font: 900 12px/1 var(--font); }
+#citadel-command .mpl-cmd-min { display: grid; place-items: center; flex: none; width: 24px; height: 22px; padding: 0; border: 1px solid var(--mpl-border); background: linear-gradient(#8aa6d8, #4a6aa3); color: #fff; font: 900 14px/1 var(--font); text-align: center; }
+#citadel-command button:is(.mpl-cmd-explore, .mpl-cmd-min, .mpl-cmd-tab, .mpl-cmd-row, .mpl-cmd-mode, .mpl-cmd-link):hover { filter: brightness(1.15); }
+
+/* 본문 */
+#citadel-command .mpl-cmd-body { display: flex; flex-direction: column; gap: 6px; min-height: 0; padding: 7px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+#citadel-command .mpl-cmd-next { display: flex; gap: 5px; flex: none; }
+#citadel-command .mpl-cmd-journey { display: flex; align-items: center; gap: 7px; flex: 1; min-width: 0; padding: 4px; border: 1px solid var(--mpl-line); background: #101c33; }
+#citadel-command .mpl-cmd-journey > img { width: 44px; height: 44px; flex: none; object-fit: cover; border: 1px solid var(--mpl-border); border-radius: 2px; }
+#citadel-command .mpl-cmd-journey > div { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+#citadel-command .mpl-cmd-journey small { color: var(--mpl-accent); font-size: 10px; }
+#citadel-command .mpl-cmd-journey strong { overflow: hidden; color: #fff; font-size: 14px; white-space: nowrap; text-overflow: ellipsis; }
+#citadel-command .mpl-cmd-journey span { overflow: hidden; color: var(--mpl-muted); font-size: 10px; white-space: nowrap; text-overflow: ellipsis; }
+#citadel-command .mpl-cmd-go { flex: none; width: 84px; padding: 0; border: 1px solid #6a4410; background: linear-gradient(180deg, #ffe39a, #f2b84b); color: #3a2605; font: 900 16px/1 var(--font); text-align: center; letter-spacing: .1em; }
+#citadel-command .mpl-cmd-go:hover { filter: brightness(1.08); }
+#citadel-command .mpl-cmd-hero { display: flex; align-items: center; gap: 7px; flex: none; padding: 3px 4px; border: 1px solid var(--mpl-border); border-radius: 3px; background: #0f1a2f; }
+#citadel-command .mpl-cmd-hero > img { width: 26px; height: 26px; flex: none; object-fit: cover; border-radius: 2px; }
+#citadel-command .mpl-cmd-hero > div { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+#citadel-command .mpl-cmd-hero strong { color: #fff; font-size: 12px; }
+#citadel-command .mpl-cmd-hero span { color: var(--mpl-muted); font-size: 10px; }
+#citadel-command .mpl-cmd-link { flex: none; min-height: 22px; padding: 0 8px; border: 1px solid var(--mpl-border); background: #2c4979; color: #fff; font: 700 11px/1 var(--font); }
+#citadel-command .mpl-cmd-modes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; flex: none; }
+#citadel-command .mpl-cmd-mode { display: flex; flex-direction: column; gap: 1px; min-width: 0; padding: 4px 6px; border: 1px solid var(--mpl-border); background: #1b2b49; }
+#citadel-command .mpl-cmd-mode strong { color: #fff; font-size: 12px; }
+#citadel-command .mpl-cmd-mode-sub { overflow: hidden; color: var(--mpl-muted); font-size: 10px; white-space: nowrap; text-overflow: ellipsis; }
+
+/* 탭 */
+#citadel-command .mpl-cmd-tabs { display: flex; gap: 2px; flex: none; margin-top: 2px; border-bottom: 1px solid var(--mpl-border); }
+#citadel-command .mpl-cmd-tab { flex: 1; min-height: 26px; padding: 0 6px; border: 1px solid var(--mpl-border); border-bottom: 0; border-radius: 3px 3px 0 0; background: #1b2b49; color: var(--mpl-muted); font: 800 12px/1 var(--font); text-align: center; }
+#citadel-command .mpl-cmd-tab[aria-selected="true"] { background: linear-gradient(180deg, #ffe39a, #f2b84b); color: #3a2605; }
+#citadel-command .mpl-cmd-pane[hidden] { display: none; }
+#citadel-command .mpl-cmd-pane { display: flex; flex-direction: column; gap: 2px; min-height: 0; }
+#citadel-command .mpl-cmd-route-summary { margin: 0 0 2px; color: var(--mpl-muted); font-size: 10px; }
+#citadel-command .mpl-cmd-routes { display: flex; flex-direction: column; gap: 2px; }
+#citadel-command .mpl-cmd-route { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 34px; padding: 2px 6px 2px 2px; border: 1px solid #22314f; border-left: 3px solid var(--route-accent, var(--mpl-line)); background: linear-gradient(180deg, var(--mpl-slot-hi), var(--mpl-slot)); }
+#citadel-command .mpl-cmd-route:hover { background: #22375e; }
+#citadel-command .mpl-cmd-route-art { width: 30px; height: 30px; flex: none; object-fit: cover; border-radius: 2px; }
+#citadel-command .mpl-cmd-route-copy { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+#citadel-command .mpl-cmd-route-copy strong { overflow: hidden; color: #fff; font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+#citadel-command .mpl-cmd-route-copy small { overflow: hidden; color: #7f90b3; font-size: 10px; white-space: nowrap; text-overflow: ellipsis; }
+#citadel-command .mpl-cmd-route-status { flex: none; max-width: 42%; overflow: hidden; color: #8be0a4; font-size: 10px; font-weight: 800; white-space: nowrap; text-overflow: ellipsis; }
+#citadel-command .mpl-cmd-route[data-locked="true"] .mpl-cmd-route-art { filter: grayscale(.7) brightness(.7); }
+#citadel-command .mpl-cmd-route[data-locked="true"] .mpl-cmd-route-copy strong { color: #b7c2d8; }
+#citadel-command .mpl-cmd-route[data-locked="true"] .mpl-cmd-route-status { color: #8d98ad; font-weight: 700; }
+#citadel-command .mpl-cmd-row { min-height: 32px; padding: 0 10px; border: 1px solid #22314f; background: linear-gradient(180deg, var(--mpl-slot-hi), var(--mpl-slot)); color: #fff; font: 700 12px/1 var(--font); }
+
+/* 접힘: 제목줄만 남고 출격 버튼이 제목줄에 보인다. */
+#citadel-command.mpl-command[data-collapsed="true"] { max-height: none; }
+#citadel-command[data-collapsed="true"] .mpl-cmd-body { display: none; }
+#citadel-command[data-collapsed="true"] .mpl-cmd-title { border-bottom: 0; border-radius: 3px; }
+#citadel-command[data-collapsed="true"] .mpl-cmd-quick { display: block; }
+
+/* 터치: 누를 수 있는 것은 모두 44px 이상 */
+@media (pointer: coarse) {
+  #citadel-command .mpl-cmd-title { min-height: 44px; padding-right: 0; }
+  #citadel-command :is(.mpl-cmd-explore, .mpl-cmd-quick, .mpl-cmd-link) { min-height: 44px; }
+  #citadel-command .mpl-cmd-min { width: 44px; height: 44px; }
+  #citadel-command :is(.mpl-cmd-tab, .mpl-cmd-route, .mpl-cmd-row, .mpl-cmd-mode, .mpl-cmd-journey) { min-height: 44px; }
+}
+/* 좁은 가로 화면: 왼쪽 세로 독 오른쪽에 붙이고 화면 높이 안에서 내부 스크롤한다. */
+@media (orientation: landscape) and (max-height: 550px) {
+  #citadel-command.mpl-command { left: calc(80px + var(--sal, 0px)); top: calc(50px + var(--sat, 0px)); width: min(360px, calc(100vw - 96px)); max-height: calc(var(--app-height, 100vh) - 56px - var(--sat, 0px) - var(--sab, 0px)); }
+  #citadel-command .mpl-cmd-hero { display: none; }
+}
+/* 아주 좁은 가로 화면: 오른쪽 아래 빠른 메뉴 바(약 210px)를 가리지 않게 폭을 줄인다. */
+@media (orientation: landscape) and (max-height: 550px) and (max-width: 700px) {
+  #citadel-command.mpl-command { width: min(360px, calc(100vw - 310px)); }
+  #citadel-command .mpl-cmd-go { width: 64px; font-size: 14px; }
+  #citadel-command .mpl-cmd-route-copy small { display: none; }
+}

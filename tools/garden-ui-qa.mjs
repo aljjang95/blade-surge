@@ -4,6 +4,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
+import { ALL_DUNGEONS } from '../src/data/expansion.js';
+import { citadelHotspot } from '../src/data/citadel-hub.js';
 const root = process.cwd(), out = path.resolve(process.argv[2]), origin = process.argv[4] || 'http://127.0.0.1:4173';
 const assert = (v, m) => { if (!v) throw Error(m); };
 const profile = process.argv[3];
@@ -55,12 +57,21 @@ try {
       if (await page.locator('#modal.show #m-cancel').isVisible()) await tap('#modal.show #m-cancel');
       await page.waitForFunction(() => app.showcase && app.commandUI.visible);
       await shot('selection');
-      row.selectionLayout = await page.evaluate(() => { const p = document.querySelector('#citadel-command').getBoundingClientRect(), n = document.querySelector('#meta .bottomnav').getBoundingClientRect(); return { panelBottom:p.bottom, navTop:n.top, cards:document.querySelectorAll('[data-command-route]').length }; });
-      assert(row.selectionLayout.cards === 12 && row.selectionLayout.panelBottom <= row.selectionLayout.navTop, 'Selection cards or dock overlap');
+      // 독은 데스크톱에서 아래, 좁은 가로 화면에서는 왼쪽 세로 줄이다. 두 사각형이 실제로 겹치는지 본다.
+      row.selectionLayout = await page.evaluate(() => { const p = document.querySelector('#citadel-command').getBoundingClientRect(), n = document.querySelector('#meta .bottomnav').getBoundingClientRect(); return { panel:[p.left,p.top,p.right,p.bottom], nav:[n.left,n.top,n.right,n.bottom], overlap: Math.min(p.right,n.right)-Math.max(p.left,n.left) > 1 && Math.min(p.bottom,n.bottom)-Math.max(p.top,n.top) > 1, cards:document.querySelectorAll('[data-command-route]').length }; });
+      assert(row.selectionLayout.cards === ALL_DUNGEONS.length && !row.selectionLayout.overlap, 'Selection cards or dock overlap ' + JSON.stringify(row.selectionLayout));
       row.selectionRoutes = [];
       for (const card of await page.locator('[data-command-route]').all()) {
         const before = await page.evaluate(() => ({ energy:app.eco.s.energy,gold:app.eco.s.gold,pending:app.expedition.s.pending }));
         const route = await card.getAttribute('data-command-route'), locked = await card.getAttribute('data-locked');
+        // 다른 마을의 게이트는 성채 출격 준비창 대신 그 마을의 던전 목록을 연다(기존 동작). 열리고 Esc 로 닫히는지만 본다.
+        if (!citadelHotspot('dungeon:' + route)) {
+          if (options.hasTouch) await card.tap(); else await card.click();
+          await page.locator('dialog.town-dialog[open]').waitFor();
+          await page.keyboard.press('Escape'); await page.waitForFunction(() => app.commandUI.visible && !document.querySelector('dialog.town-dialog[open]'));
+          row.selectionRoutes.push({ route, locked, opens: 'town-dungeon-list' });
+          continue;
+        }
         if (options.hasTouch) await card.tap(); else await card.click();
         await page.locator('.citadel-hub-dialog[open]').waitFor();
         assert(await page.locator('.citadel-hub-go').isDisabled() === (locked === 'true'), 'Selection access state mismatch');
@@ -103,10 +114,13 @@ try {
       row.layout = await page.evaluate(() => {
         const selectors = ['#meta .bottomnav', '#meta .profile', '#meta .currencies', '.citadel-hub-place', '.citadel-hub-near', '.lobby-camera-tools', '.companion-launcher', '#citadel-command-return', ...(matchMedia('(any-pointer:coarse)').matches ? ['.citadel-hub-stick', '#lobby-camera-pad'] : [])];
         const boxes = Object.fromEntries(selectors.map(s => { const el = document.querySelector(s), b = el.getBoundingClientRect(); return [s, { x: b.x, y: b.y, w: b.width, h: b.height }]; }));
-        const buttons = [...document.querySelectorAll('#meta .bottomnav button')].map(el => { const b = el.getBoundingClientRect(); return { text: el.textContent.trim(), w: b.width, h: b.height, hit: el.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)) }; });
-        return { boxes, buttons, overflow: document.documentElement.scrollWidth > innerWidth, viewport: { width: innerWidth, height: innerHeight } };
+        // 가로 모바일 걷기 모드는 하단 탭을 의도적으로 숨긴다(ux-pass.css 6절). 그때는 '출격 메뉴로' 버튼이 돌아가는 길이다.
+        const navShown = getComputedStyle(document.querySelector('#meta .bottomnav')).display !== 'none';
+        const targets = navShown ? [...document.querySelectorAll('#meta .bottomnav button')] : [document.querySelector('#citadel-command-return')];
+        const buttons = targets.map(el => { const b = el.getBoundingClientRect(); return { text: el.textContent.trim(), w: b.width, h: b.height, hit: el.contains(document.elementFromPoint(b.x + b.width / 2, b.y + b.height / 2)) }; });
+        return { boxes, buttons, navShown, overflow: document.documentElement.scrollWidth > innerWidth, viewport: { width: innerWidth, height: innerHeight } };
       });
-      for (const [name, b] of Object.entries(row.layout.boxes)) assert(b.x >= -1 && b.y >= -1 && b.x + b.w <= row.layout.viewport.width + 1 && b.y + b.h <= row.layout.viewport.height + 1, `${name} outside viewport`);
+      for (const [name, b] of Object.entries(row.layout.boxes)) if (name !== '#meta .bottomnav' || row.layout.navShown) assert(b.x >= -1 && b.y >= -1 && b.x + b.w <= row.layout.viewport.width + 1 && b.y + b.h <= row.layout.viewport.height + 1, `${name} outside viewport`);
       for (const b of row.layout.buttons) assert(b.w >= 44 && b.h >= 44 && b.hit, `${b.text} touch target or hit failed`);
       assert(!row.layout.overflow, 'Horizontal overflow');
       const a = row.layout.boxes['#meta .bottomnav'], b = row.layout.boxes['.citadel-hub-near'];

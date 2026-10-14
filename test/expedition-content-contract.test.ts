@@ -21,7 +21,7 @@ const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   astral_leviathan_spire: { standard: [0, 0], deep: [2, 2] },
   verdigris_sanctum: { standard: [3, 0], deep: [2, 4] },
   sable_mirage_basin: { standard: [3, 0], deep: [0, 4] },
-  comet_bastion: { standard: [0, 0], deep: [2, 4] },
+  comet_bastion: { standard: [4, 0], deep: [2, 4] },
 };
 
 // Disallow the specific unsupported interactions, without freezing prose or
@@ -86,6 +86,12 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(Number(stage.objective.match(/역류 밸브 (세|3) ?개/) ? 3 : 0)).toBe(holds);
         expect(stage.encounter.tactic).toMatch(/적.*처치.*빛 안.*2초.*잠그/);
         expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번']);
+      } else if (id === 'comet_bastion' && depth === 'standard') {
+        expect(Number(stage.objective.match(/궤도 고리 (네|4) ?개/) ? 4 : 0)).toBe(holds);
+        expect(stage.encounter.tactic).toMatch(/적.*처치.*룬석을 몸으로 밀어 별 표식/);
+        expect(stage.encounter.tactic).toMatch(/안쪽이 안전.*중심 유성.*푸른 선 밖/);
+        expect(stage.encounter.tactic).toMatch(/어느 순서/);
+        expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번', '4번']);
       } else if (id === 'sable_mirage_basin' && depth === 'standard') {
         expect(Number(stage.objective.match(/가짜 왕좌 (세|3) ?개/) ? 3 : 0)).toBe(holds);
         expect(stage.encounter.tactic).toMatch(/적.*처치.*보라 모래시계가 멈춘 동안.*다섯 차례 공격/);
@@ -111,6 +117,7 @@ for (const [id, contract] of Object.entries(contracts)) {
           : id === 'eclipse_hydra_vault' && depth === 'standard' ? copy.replaceAll('밸브', '')
           : id === 'verdigris_sanctum' && depth === 'standard' ? copy.replaceAll('생명 제단', '').replaceAll('포자가 터져', '')
           : id === 'sable_mirage_basin' && depth === 'standard' ? copy.replaceAll('가짜 왕좌', '왕좌')
+          : id === 'comet_bastion' && depth === 'standard' ? copy.replaceAll('궤도 고리', '고리').replaceAll('푸른 궤도선', '푸른 선')
           : id === 'nightglass_observatory' ? copy.replace(/기록\s*3장/g, '')
           : id === 'astral_leviathan_spire' && depth === 'standard' && selectionRoute
             ? copy.replaceAll('별자리 4개 순서대로 복원', '') : copy;
@@ -138,7 +145,7 @@ test('standard bellfall promises three ordered gates, deep keeps two unordered t
   const route = routeObjectiveForStage(standard)!;
   expect(route.gates.map(g => g.roomId)).toEqual([2, 3, 5]);
   expect((route as { holdSeconds?: number }).holdSeconds).toBe(2);
-  expect(route.radius).toBe(3);
+  expect((route as { radius?: number }).radius).toBe(3);
   expect(standard.objective).toMatch(/세 개의 종문.*순서/);
   expect(standard.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번']);
   expect(standard.encounter.tactic).toMatch(/순서가 아닌 종문.*기다/);

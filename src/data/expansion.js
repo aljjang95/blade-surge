@@ -102,8 +102,8 @@ const BASE_DUNGEONS = [
   }),
   dungeon('comet_bastion', '혜성의 유성 요새', 'frost', 6, 6, 'ember_core', '부서진 혜성 요새에는 유성 기사단장의 맹세가 남아 있습니다.', {
     art: ENCOUNTER_ART.boss_comet_bastion, accent: '#82bfff', subtitle: 'COMET BASTION',
-    objective: '모든 구역 정화 → 혜성의 유성 기사단장 처치',
-    tactic: `요새의 적을 처치하고 모든 구역을 정화하세요. ${ENEMIES.comet_bastion.tactic}`,
+    objective: '궤도 고리 네 개를 정렬해 혜성 요새의 봉인을 흔들고 모든 구역을 정화한 뒤 혜성의 유성 기사단장을 쓰러뜨리세요.',
+    tactic: `각 고리 구역의 적을 처치한 뒤 궤도 위 룬석을 몸으로 밀어 별 표식에 맞추면 고리가 정렬됩니다. 지나치면 반대편에서 되밀어야 합니다. 정렬 중 유성은 평소 푸른 궤도선 바깥에 떨어져 안쪽이 안전하지만, 붉은 원이 안쪽을 덮는 중심 유성 예고가 뜨면 푸른 선 밖으로 피하세요. 1번·2번·3번·4번 고리는 어느 순서로 정렬해도 됩니다. 고리 4개와 모든 구역을 정화하면 보스 봉인이 풀립니다. ${ENEMIES.comet_bastion.tactic}`,
     bossEnemy: 'comet_bastion', bossHp: 28200, bossName: '혜성의 유성 기사단장', rosterMode: 'comet',
     roster: { trash: ['comet_spark', 'comet_orbit_mote', 'astral_pagelet', 'comet_spark', 'ghost_skull', 'frost_mirror'], ranged: ['comet_orbit_mote', 'archive_scribe', 'astral_pagelet'], elite: ['comet_bastion_warden', 'celestial_warden', 'elite_yeti'] },
   }),
