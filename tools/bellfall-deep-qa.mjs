@@ -3,12 +3,15 @@
 // 실제 빌드(dist)를 production preview 로 띄우고, 실제 UI 버튼으로 출격해 종문 phase 타임라인을 기록한다.
 // 공유 tools/expedition-qa-runtime.mjs 를 수정 없이 쓴다(clean HEAD·dist·소스 해시 결속, 콘솔/네트워크/미디어 분류).
 // 컨트롤러(kind === 'reverse-bells')가 없는 기준선 빌드에서는 종 검사를 건너뛰고 같은 측정만 남긴다.
+// BUNDLE-05: 보스 합창 장막(ROUTE_OBJECTIVES.bellfall_deep.counter)이 있는 후보 빌드에서는 보스전을 스텝마다 관측해 반격 창을 판정한다.
+// counter 정의가 없는 기준선 빌드(예: 9d7b85e)에서는 보스 판정을 건너뛰고 보스 등장·처치 시각, 보스방 첫 진입 draw call, 보스 구간 스텝 ms 만 남긴다.
 // 판정 함수는 tools/bellfall-deep-checks.mjs 에 있고 test/bellfall-deep-checks.test.ts 가 합격·불합격 입력을 모두 검사한다.
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createExpeditionQa, nativeGameplayFocus, qaArgument, qaAssert, qaHash } from './expedition-qa-runtime.mjs';
-import { FRAME, analyzeBells, checkDiscord, checkGuideText, checkResult, discordEvents, reverseOrder, stepStats } from './bellfall-deep-checks.mjs';
+import { FRAME, analyzeBells, analyzeCounter, checkCounterObjective, checkCounterPause, checkDiscord, checkGuideText, checkResult, discordEvents, reverseOrder, stepStats,
+  summarizeBoss } from './bellfall-deep-checks.mjs';
 
 const HELP = [
   '사용법: node tools/bellfall-deep-qa.mjs --expected-sha=<40hex> --out=<새 절대경로> [옵션]',
@@ -19,7 +22,7 @@ const HELP = [
   '',
   '옵션',
   '  --project=<절대경로>      검사 대상 프로젝트 루트(기본: 이 도구가 있는 저장소). dist 가 미리 빌드돼 있어야 한다(이 도구는 빌드하지 않는다).',
-  '  --profile=<목록>          auto|discord|pause|refresh|screens|all (쉼표로 여러 개, 기본 auto)',
+  '  --profile=<목록>          auto|discord|pause|refresh|screens|counter|all (쉼표로 여러 개, 기본 auto)',
   '  --seed=<uint32>           Math.random 시드(기본 20261015)',
   '  --hero=<id>               fixture 영웅 knight|mage 등(기본 knight)',
   '  --viewport=WxH            기본 844x390',
@@ -30,11 +33,15 @@ const HELP = [
   '',
   '프로필(F = fixture, R = 실제 UI·입력, C = 제어 실행)',
   '  auto     F 저장 주입(해금·영웅·장비·에너지) → R 출격 버튼 → R AUTO → C 고정 1/60 스텝 완주 → 불협 0·결과 줄·R 새로고침 보존',
+  '           + 보스전 관측·판정(후보 빌드): 반격 창 열림 시점·길이·새 공격 없음·피해 배수·처치 뒤 ended·결과 counterWindows 와 결과 줄 "반격 창 w회"',
   '  discord  AUTO 로 answer 까지 간 뒤 R AUTO 끔 → R 키보드(KeyW/A/S/D)로 오답 종 중심에 2초 이상 머문다.',
   '           1회째: 불협 1·HP 약 6%·toll·progress 0·목표창에 정답 노출 없음. 2회째 뒤: 목표창에 다음 + 정답 label. R AUTO 로 완주·결과 불협 2회',
-  '  pause    R #btn-pause/#btn-resume: 소등 중 tollClock 불변·재개 뒤 이어짐, answer 유지 중 pause 면 hold 0, 이후 완주',
+  '  pause    R #btn-pause/#btn-resume: 소등 중 tollClock 불변·재개 뒤 이어짐, answer 유지 중 pause 면 hold 0,',
+  '           반격 창이 열릴 때까지 AUTO 로 진행한 뒤 창 중 pause 면 windowLeft 불변·재개 뒤 이어짐(후보 빌드), 이후 완주',
   '  refresh  answer 단계 R 새로고침: pending 취소·에너지 1회 환급',
-  '  screens  wake 점등·소등 중·answer 유지·불협 직후·결과 순간마다 640x360, 844x390, 390x844 스크린샷(PNG)',
+  '  screens  wake 점등·소등 중·answer 유지·불협 직후·장막(veiled)·반격 창(open)·결과 순간마다 640x360, 844x390, 390x844 스크린샷(PNG)',
+  '  counter  AUTO 로 보스방까지 → 보스전 판정(위 auto 와 같음) + 목표창 DOM 이 veiled 문구와 open 의 "반격 창 n.n초"를 보임',
+  '           → 창 1회 이상 확인 뒤 AUTO 로 완주. counter 정의가 없는 기준선 빌드에서는 건너뛴다',
   '',
   '주의: 좌표 이동·무적·HP 주입으로 정상 플레이를 증명하지 않는다. viewport 검사는 실제 Android/GPU/터치/발열 검증이 아니다.',
   'SwiftShader 소프트웨어 렌더라 프레임 ms 는 JS 측 측정값이다. discord 의 키보드 입력은 Playwright 가 보낸 에뮬레이터 키 이벤트다.',
@@ -45,7 +52,7 @@ const arg = (name, fallback) => qaArgument(name) ?? fallback;
 // 값 없는 플래그(--quality, --motion)도 받는다.
 const flag = (name, bare, fallback) => qaArgument(name) ?? (process.argv.includes('--' + name) ? bare : fallback);
 const projectRoot = path.resolve(arg('project', path.resolve(import.meta.dirname, '..')));
-const PROFILES = ['auto', 'discord', 'pause', 'refresh', 'screens'];
+const PROFILES = ['auto', 'discord', 'pause', 'refresh', 'screens', 'counter'];
 const profileArg = arg('profile', 'auto');
 const selected = profileArg === 'all' ? [...PROFILES] : profileArg.split(',');
 qaAssert(selected.every(name => PROFILES.includes(name)), '--profile must be one of ' + PROFILES.join('|') + '|all');
@@ -77,19 +84,25 @@ const bellDef = (await load('src/data/route-objectives.js')).ROUTE_OBJECTIVES?.b
 const bellRooms = bellDef?.kind === 'reverse-bells' ? bellDef.gates.map(gate => gate.roomId) : null;
 const answerOrder = bellRooms ? reverseOrder(bellDef.tollOrder) : null;
 const labelOf = room => bellDef?.gates.find(gate => gate.roomId === room)?.label ?? null;
+// 합창 장막 정의(BUNDLE-05 후보 빌드에만 있다). 기준선 빌드에서는 null 이고 보스 판정을 건너뛴다.
+const counterDef = bellDef?.counter ?? null;
 const chosenNeedsKeyboard = selected.includes('discord') || selected.includes('screens');
 
 const report = { kind: 'bellfall-deep-qa', releaseApproved: false, seed, heroId, viewport, motion, quality, selectedProfiles: selected, projectRoot,
   driverSha256: qaHash(fs.readFileSync(import.meta.filename)),
   checksSha256: qaHash(fs.readFileSync(path.join(import.meta.dirname, 'bellfall-deep-checks.mjs'))), profiles: {}, checks: [],
   bellDefinition: bellDef ? JSON.parse(JSON.stringify(bellDef)) : null,
+  counterDefinition: counterDef ? JSON.parse(JSON.stringify(counterDef)) : null,
   catalog: { id: depthDef.id, energy: depthDef.energy, unlockCode: depthDef.unlockCode, minLevel: depthDef.minLevel, rewards: depthDef.rewards,
     firstRewards: depthDef.firstRewards, objective: depthDef.objective },
   selectors: { launch: ['#btn-expedition', '.adventure-nav [data-section="dungeons"]', '.exp-route-tabs button /^심층 원정/', '[data-dungeon="bellfall_crypt"][data-depth="deep"] .exp-primary'],
-    battle: ['#btn-auto', '#btn-pause', '#btn-resume', '#pause-overlay.show', '#gl (canvas 포커스)', '#objective (목표창, 하위 .battle-objective-title/.battle-objective-action)'],
-    result: ['.exp-result-shell (결과 줄 innerText)', '.exp-result-footer .exp-primary', '.exp-result-shell .exp-close'],
+    battle: ['#btn-auto', '#btn-pause', '#btn-resume', '#pause-overlay.show', '#gl (canvas 포커스)', '#objective (목표창, 하위 .battle-objective-title/.battle-objective-action; 합창 장막 문구는 textContent)'],
+    result: ['.exp-result-shell (결과 줄 innerText, "반격 창 w회")', '.exp-result-footer .exp-primary', '.exp-result-shell .exp-close'],
     page: ['window.app.battle.routeObjectives (getter: phase/progress/lit/discords/tolls/tollIndex/tollClock/hold/holdGate/lastToll/lastDiscord/discordT/guide/here/gates)',
-      'window.app.expeditionUI.result.routeObjective', 'window.app.battle.world.rooms/sealed', 'window.app.expedition.dungeonAccess'] },
+      'window.app.expeditionUI.result.routeObjective', 'window.app.battle.world.rooms/sealed', 'window.app.expedition.dungeonAccess',
+      'window.app.battle.routeObjectives.counter (getter: state/windowLeft/windowTotal/windows/broken/veiledHits/openHits/veiledDamage/openDamage/damageMul())',
+      'window.app.battle.boss (hp/alive/spawning/attackSequence/state/special/signatures.plan.key/signatures.age/signatures.plan.lastStrike)',
+      'window.app.expeditionUI.result.routeObjective.counterWindows'] },
   classification: {
     fixture: ['저장 주입: 해금(진행 별·탐험 레벨·기본 원정 승리)·영웅 레벨/별/스킬·장비·에너지 최대·AUTO 설정', 'Math.random 시드(LCG)', quality === 'low' ? '낮은 화질 설정(설정 핸들러와 같은 경로)' : null].filter(Boolean),
     realInput: ['#btn-expedition → 던전 탭 → 심층 원정 → 카드 출격 버튼', '#btn-auto', '#btn-pause/#btn-resume', '결과 화면 버튼(로비로)', '선택지 모달 버튼', '브라우저 새로고침',
@@ -98,7 +111,8 @@ const report = { kind: 'bellfall-deep-qa', releaseApproved: false, seed, heroId,
     notProven: ['실제 Android/GPU/터치/발열', '자연 해금·장비 획득', '수동 플레이 밸런스', '사람의 실제 키보드·터치 조작 감각'] },
   scope: '로컬 production preview + SwiftShader headless Chromium. fixture 영웅/장비로 합법 범위 값만 주입하고 전투 중 HP·위치·적·결과는 건드리지 않는다.' };
 
-const sourceFiles = ['src/game/bellfall-deep-bells.js', 'src/game/bellfall-deep-bell-view.js', 'src/game/route-objectives.js', 'src/data/route-objectives.js',
+const sourceFiles = ['src/game/bellfall-deep-bells.js', 'src/game/bellfall-deep-bell-view.js', 'src/game/bellfall-deep-counter.js', 'src/game/bellfall-deep-counter-view.js',
+  'src/game/boss-signatures.js', 'src/game/enemies.js', 'src/game/route-objectives.js', 'src/data/route-objectives.js',
   'src/data/expedition-depths.js', 'src/ui/battle-objective-view.js', 'src/ui/battle-readability.js', 'src/expansion/hub.jsx', 'src/game/battle-base.js',
   'src/game/expedition-economy.js', 'src/game/player.js', 'src/main.js'].filter(file => fs.existsSync(path.join(projectRoot, file)));
 const qa = await createExpeditionQa({ root: projectRoot, driver: import.meta.filename, report, sourceFiles });
@@ -117,6 +131,18 @@ function installProbe({ bellRooms }) {
       aegis: armory?.aegisUntil > b.elapsed ? armory.aegis || 0 : 0, tonicGuard: (p.tonicGuardT || 0) > 0 ? 1 : 0 };
   };
   const isBells = r => r?.def?.kind === 'reverse-bells';
+  const counterOf = () => routeOf()?.counter ?? null;
+  const counterRow = () => {
+    const c = counterOf(); if (!c) return null;
+    return { state: c.state, windowLeft: c.windowLeft, windowTotal: c.windowTotal, windows: c.windows, broken: c.broken, veiledHits: c.veiledHits, openHits: c.openHits,
+      veiledDamage: c.veiledDamage, openDamage: c.openDamage, mul: c.damageMul() };
+  };
+  const bossRow = () => {
+    const boss = app.battle.boss ?? P.bossRef; if (!boss) return null;
+    const sg = boss.signatures, plan = sg?.plan ?? null;
+    return { hp: boss.hp, alive: !!boss.alive, state: boss.state, special: boss.special ?? null, seq: boss.attackSequence || 0, plan: plan ? plan.key : null,
+      age: sg ? sg.age : null, lastStrike: plan ? plan.lastStrike : null };
+  };
   const num = value => Number.isFinite(value) ? value : null;
   const gateRows = () => (routeOf()?.gates || []).map(g => ({ room: g.room.id, label: g.label, phase: g.phase, purgePending: !!g.purgePending, spawned: !!g.spawned, prepared: !!g.prepared }));
   const ctlRow = () => {
@@ -138,10 +164,14 @@ function installProbe({ bellRooms }) {
   P.begin = () => {
     const b = app.battle, r = routeOf();
     Object.assign(P, { log: [], hpDrops: [], clears: [], samples: [], stepMs: [], renderMs: [], slow: [], maxAlive: 0, minHpRatio: 1, steps: 0,
-      sampledRooms: new Set(), darkSampled: false, sealT: null, startElapsed: b.elapsed });
+      sampledRooms: new Set(), darkSampled: false, sealT: null, startElapsed: b.elapsed,
+      // 보스 구간(보스가 처음 나타난 스텝부터 처치까지): 행 trace·스텝 ms·영웅 HP 최소 비율. 처치 뒤 4스텝까지 더 남겨 counter 'ended' 를 본다.
+      bossRef: null, bossDone: false, bossPost: 0, bossTrace: [], bossSlow: [], bossStepMs: [], bossRenderMs: [], bossMinHpRatio: 1,
+      bossEnterSampled: false, bossReadySampled: false, counterOpenSampled: false });
     P.prev = { phase: r?.phase ?? null, gp: (r?.gates || []).map(g => g.phase), discords: r?.discords ?? 0, hold: r?.hold ?? 0, holdRoom: r?.holdGate?.room?.id ?? null,
       cleared: b.world.rooms.map(x => !!x.cleared), sealed: !!b.world.sealed, hp: b.player.hp, room: b.curRoom?.id ?? null, def: b.player.stats?.def ?? null, red: reductionState() };
-    return { kind: r?.def?.kind ?? null, controller: r ? r.constructor.name : null, gates: gateRows().length, rooms: b.world.rooms.length, sealed: !!b.world.sealed };
+    return { kind: r?.def?.kind ?? null, controller: r ? r.constructor.name : null, gates: gateRows().length, rooms: b.world.rooms.length, sealed: !!b.world.sealed,
+      counter: !!counterOf() };
   };
   P.sample = (label, extra) => {
     const b = app.battle, info = app.renderer.r.info, prev = info.autoReset;
@@ -150,7 +180,29 @@ function installProbe({ bellRooms }) {
     const row = { label, ...(extra || {}), t: b.elapsed, room: b.curRoom?.id ?? null, calls: info.render.calls, triangles: info.render.triangles, ms: +ms.toFixed(2), bells: bellView() };
     info.autoReset = prev; P.samples.push(row); return row;
   };
-  const observe = () => {
+  // 보스 구간 관측. 스텝 뒤 page.evaluate 한 번(P.run)에 묶인 기존 방식 그대로이고 게임 객체에는 아무것도 붙이지 않는다.
+  // 처치 스텝까지가 보스 구간이고, 그 뒤 4스텝은 counter 가 ended 로 바뀌는지 보려고 행만 남긴다.
+  const bossObserve = (ms, render) => {
+    const b = app.battle, p = b.player;
+    let boss = P.bossRef;
+    if (!boss) { if (!b.boss) return; boss = P.bossRef = b.boss; }
+    if (P.bossPost >= 4) return;
+    const inSegment = !P.bossDone, c = counterOf(), sg = boss.signatures, plan = sg?.plan ?? null, alive = !!boss.alive;
+    if (inSegment) {
+      (render ? P.bossRenderMs : P.bossStepMs).push(+ms.toFixed(3));
+      if (ms > 50) P.bossSlow.push({ t: b.elapsed, ms: +ms.toFixed(1), render, state: boss.state, special: boss.special ?? null, counter: c ? c.state : null });
+      if (p.maxHp > 0) P.bossMinHpRatio = Math.min(P.bossMinHpRatio, p.hp / p.maxHp);
+    } else P.bossPost++;
+    P.bossTrace.push({ n: P.steps, t: b.elapsed, hp: boss.hp, alive, spn: !!boss.spawning, seq: boss.attackSequence || 0, st: boss.state, sp: boss.special ?? null,
+      plan: plan ? plan.key : null, age: sg ? sg.age : null, last: plan ? plan.lastStrike : null,
+      cs: c ? c.state : null, wl: c ? c.windowLeft : null, wins: c ? c.windows : null, brk: c ? c.broken : null, vh: c ? c.veiledHits : null, oh: c ? c.openHits : null,
+      vd: c ? c.veiledDamage : null, od: c ? c.openDamage : null, mul: c ? c.damageMul() : null });
+    if (!alive) P.bossDone = true;
+    // 보스 등장 연출이 끝난 첫 프레임(장막이 붙는 시점)과 첫 반격 창 프레임의 draw call. 기준선과 같은 'bossReady' 끼리 비교한다.
+    if (!boss.spawning && !P.bossReadySampled) { P.bossReadySampled = true; P.sample('bossReady', { counter: c ? c.state : null }); }
+    if (c && c.state === 'open' && !P.counterOpenSampled) { P.counterOpenSampled = true; P.sample('counterOpen', { counter: c.state }); }
+  };
+  const observe = (ms, render) => {
     const b = app.battle, r = routeOf(), t = b.elapsed, p = b.player;
     if (isBells(r)) {
       const gp = r.gates.map(g => g.phase);
@@ -186,9 +238,12 @@ function installProbe({ bellRooms }) {
     const room = b.curRoom?.id ?? null;
     if (room !== P.prev.room) {
       P.prev.room = room;
+      // 보스방 첫 진입 프레임의 draw call(기준선 비교 대상). 보스 방은 종 방이 아니므로 아래 종 방 표본과 겹치지 않는다.
+      if (b.curRoom?.type === 'boss' && !P.bossEnterSampled) { P.bossEnterSampled = true; P.sample('bossEnter'); }
       // 종 방(정의가 있으면 gate 방, 없으면 모든 방)의 첫 진입 프레임을 잰다.
       if (room !== null && (!P.bellRooms || P.bellRooms.includes(room)) && !P.sampledRooms.has(room)) { P.sampledRooms.add(room); P.sample('enter:room' + room); }
     }
+    bossObserve(ms, render);
   };
   const hit = stop => {
     const b = app.battle, r = routeOf(), ok = isBells(r);
@@ -200,6 +255,8 @@ function installProbe({ bellRooms }) {
       case 'discords': return ok && r.discords >= stop.n;
       case 'time': return b.elapsed >= stop.t;
       case 'boss': return !!b.boss?.alive;
+      case 'bossReady': return !!b.boss?.alive && !b.boss.spawning;
+      case 'counter': return counterOf()?.state === stop.state;
       case 'result': return !!app.expeditionUI.result;
       default: return false;
     }
@@ -213,7 +270,7 @@ function installProbe({ bellRooms }) {
       const t0 = performance.now(); app.step(P.dt, render); const ms = performance.now() - t0;
       P.steps++; (render ? P.renderMs : P.stepMs).push(+ms.toFixed(3));
       if (ms > 50) P.slow.push({ t: b.elapsed, ms: +ms.toFixed(1), render, room: b.curRoom?.id ?? null, phase: routeOf()?.phase ?? null });
-      observe();
+      observe(ms, render);
       if (stop && hit(stop)) { reason = 'stop'; ran++; break; }
     }
     return { ran, reason, active: b.active, paused: b.paused, elapsed: b.elapsed, pauseReasons: [...b.pauseReasons] };
@@ -222,13 +279,15 @@ function installProbe({ bellRooms }) {
   P.freeze = () => {
     const b = app.battle; let alive = 0; for (const e of b.enemies) if (e.alive) alive++;
     return { elapsed: b.elapsed, paused: b.paused, active: b.active, hp: b.player.hp, maxHp: b.player.maxHp, pos: { x: b.player.pos.x, z: b.player.pos.z }, alive, kills: b.kills,
-      ctl: ctlRow(), gates: gateRows(), bells: bellView() };
+      ctl: ctlRow(), gates: gateRows(), bells: bellView(), counter: counterRow(), boss: bossRow() };
   };
   // 목표창 DOM 텍스트(게임이 실제로 그린 값). 10Hz 갱신이라 호출 전에 몇 스텝 진행한다.
   P.objectiveText = () => {
     const el = document.getElementById('objective');
     return { text: el ? el.textContent : null, action: el?.querySelector('.battle-objective-action')?.textContent ?? null, title: el?.querySelector('.battle-objective-title')?.textContent ?? null };
   };
+  // 목표창 DOM 과 counter 값을 한 호출에서 함께 읽는다(상태가 바뀌는 사이에 읽은 값을 섞지 않으려고).
+  P.counterObjective = () => ({ dom: P.objectiveText(), counter: counterRow() });
   // 키보드 이동용: 종 중심까지 거리와 화면 방향(영웅 → 중심 투영 차). 입력은 밖에서 키로 보낸다.
   P.aimGate = room => {
     const b = app.battle, r = routeOf(), g = r?.gates?.find(x => x.room.id === room); if (!g) return null;
@@ -239,7 +298,9 @@ function installProbe({ bellRooms }) {
   };
   // 느린 스텝 목록은 자르지 않는다(기준선 비교가 개수와 종문 구간을 정확히 세야 한다).
   P.summary = () => ({ steps: P.steps, stepMs: P.stepMs, renderMs: P.renderMs, slow: P.slow, maxAlive: P.maxAlive, minHpRatio: P.minHpRatio, samples: P.samples,
-    log: P.log, clears: P.clears, hpDrops: P.hpDrops, sealT: P.sealT });
+    log: P.log, clears: P.clears, hpDrops: P.hpDrops, sealT: P.sealT,
+    // finalCounter: 전투가 끝난 뒤(routeObjectives 가 아직 있으면) counter 가 남긴 마지막 값. 없으면 null.
+    boss: { trace: P.bossTrace, slow: P.bossSlow, stepMs: P.bossStepMs, renderMs: P.bossRenderMs, minHpRatio: P.bossMinHpRatio, finalCounter: counterRow() } });
   return true;
 }
 
@@ -319,6 +380,10 @@ async function beginRun(tag) {
   row.begin = await page.evaluate(() => window.__bellQa.begin());
   row.bells = row.begin.kind === 'reverse-bells';
   report.bellsDetected = row.bells;
+  row.counter = !!row.begin.counter;
+  report.counterDetected = row.counter;
+  // 장막 정의가 있는 후보 빌드인데 종문 컨트롤러에 counter 가 없으면 기준선으로 오인하지 않도록 실패로 남긴다.
+  if (counterDef && !row.counter) check(tag + ': 장막 정의가 있는데 routeObjectives.counter 가 없음', false, { kind: row.begin.kind, controller: row.begin.controller });
   // 정의가 있는 후보 빌드인데 컨트롤러가 다르면 기준선으로 오인하지 않도록 실패로 남긴다.
   if (bellDef && !row.bells) check(tag + ': 종문 정의가 있는데 컨트롤러 kind 가 reverse-bells 가 아님', false, { kind: row.begin.kind, controller: row.begin.controller });
   await qa.save(); return row;
@@ -469,9 +534,56 @@ async function checkObjectiveLeak(row, discords) {
   return verdict;
 }
 
+/**
+ * 목표창 DOM 이 counter 상태(veiled/open)에 맞는 문구로 바뀔 때까지 몇 스텝 진행한 뒤 읽는다(10Hz 갱신 때문).
+ * DOM 과 counter 값은 한 호출에서 함께 읽는다. 상태가 기대와 달라지면 더 기다리지 않고 그 값을 돌려준다.
+ */
+async function readCounterObjective(row, state) {
+  let last = null, verdict = null;
+  for (let n = 0; n < 14; n++) {
+    const run = await runSteps(6);
+    if (run.reason === 'paused') await takeChoice(row);
+    last = await page.evaluate(() => window.__bellQa.counterObjective());
+    if (last.counter?.state !== state) { verdict = { ok: false, state: last.counter?.state ?? null, expected: state }; break; }
+    verdict = checkCounterObjective(last, counterDef);
+    if (verdict.ok) return { ...last, verdict, tries: n + 1 };
+  }
+  return { ...last, verdict };
+}
+const COUNTER_LABELS = {
+  bossObserved: '보스 등장·처치 관측', windowCount: '반격 창 1회 이상', windowsConsistent: 'counter.windows = 관측한 창 수',
+  noEarlyOpen: 'bell_toll 마지막 울림(age ≥ lastStrike) 전·다른 시그니처에서는 열리지 않음', openTiming: '창이 트리거 1스텝 이내에 열리고 한 조종에 한 번',
+  windowLength: '창 길이 window ± 1/60·windowLeft 단조 감소', noNewAttack: '창 동안 attackSequence 증가 없음', noMissedOpen: '끝까지 이어진 조종은 모두 창이 열림',
+  damageMultiplier: 'damageMul: veiled = veil, open = open, 그 밖 1', counterStats: 'windows/hits/damage 단조 증가', endedAfterDefeat: '보스 처치 뒤 counter ended',
+  resultWindows: '결과 routeObjective.counterWindows = 관측 창 수', resultLine: "결과 줄 '반격 창 w회'",
+};
+/**
+ * 보스 구간 관측을 report 에 정리한다. 큰 스텝별 trace 는 파일로 빼고, 후보 빌드(counter 정의 있음)는 반격 창을 판정한다.
+ * 기준선(counter 정의 없음)은 보스 등장·처치 시각, 보스방 첫 진입 draw call, 보스 구간 스텝 ms 만 남긴다.
+ */
+function recordBoss(row) {
+  const s = row.summary, raw = s.boss;
+  delete s.boss;
+  const summary = summarizeBoss(raw.trace), over50 = [...raw.stepMs, ...raw.renderMs].filter(v => v > 50).length;
+  const file = row.tag + '-boss-trace.json';
+  fs.writeFileSync(path.join(qa.out, file), JSON.stringify(raw.trace), { flag: 'wx' });
+  const sample = label => s.samples.find(x => x.label === label) ?? null;
+  row.boss = { traceFile: file, traceRows: raw.trace.length, ...summary, hero: { minHpRatio: raw.minHpRatio }, simulation: stepStats(raw.stepMs), render: stepStats(raw.renderMs), over50, slow: raw.slow,
+    drawCalls: { enter: sample('bossEnter'), ready: sample('bossReady'), counterOpen: sample('counterOpen') } };
+  check(row.tag + ': 보스 등장·처치 관측(app.step 마다)', summary.observed && summary.defeated === true, { rows: summary.rows, appearT: summary.appearT, defeatT: summary.defeatT });
+  check(row.tag + ': 보스방 첫 진입 프레임 draw call 표본', !!sample('bossEnter'), row.boss.drawCalls.enter);
+  if (!counterDef) { row.boss.skipped = 'counter 정의 없음(기준선 빌드): 반격 창 판정 생략, 공통 측정만 기록'; return; }
+  if (!row.counter) { row.boss.skipped = 'routeObjectives.counter 없음: beginRun 검사가 실패로 남긴다'; return; }
+  const analysis = analyzeCounter({ trace: raw.trace, result: row.result?.routeObjective, resultText: row.resultText, finalCounter: raw.finalCounter }, counterDef);
+  row.counterAnalysis = analysis;
+  for (const [name, ok] of Object.entries(analysis.acceptance)) check(row.tag + ': 반격 창 ' + (COUNTER_LABELS[name] ?? name), ok, ok ? undefined : { name, windows: analysis.windows.filter(w => !w.ok), missed: analysis.missed,
+    multiplier: analysis.multiplier, stats: analysis.stats, post: analysis.post, resultWindows: analysis.resultWindows, resultLineMatches: analysis.resultLineMatches });
+  const sampled = sample('counterOpen');
+  check(row.tag + ': 첫 반격 창 프레임 draw call 표본', analysis.observedWindows === 0 || !!sampled, sampled);
+}
 /** 승리까지 AUTO 완주하고 정산·결과·보상·저장 해시·종문 판정을 기록한다. */
 async function playToEnd(row, { moments = [], expectedDiscords = 0, expectFirstClear = true } = {}) {
-  row.shots = [];
+  row.shots ??= [];
   for (const moment of moments) {
     const r = await advance(row, moment.stop, { renderEvery: 0 });
     if (r.reason !== 'stop') { row.shots.push({ label: moment.label, reached: false }); break; }
@@ -502,6 +614,7 @@ async function playToEnd(row, { moments = [], expectedDiscords = 0, expectFirstC
     minHpRatio: s.minHpRatio, maxAlive: s.maxAlive, simulation: stepStats(s.stepMs), render: stepStats(s.renderMs), over50ms: s.slow.length, slow: s.slow,
     drawCalls: s.samples.map(x => ({ label: x.label, room: x.room, t: ms(x.t), calls: x.calls, triangles: x.triangles, ms: x.ms, bells: x.bells })) };
   check(row.tag + ': 50ms 초과 스텝 없음(SwiftShader JS ms)', s.slow.length === 0, s.slow);
+  recordBoss(row);
   if (row.bells) {
     const ro = row.result?.routeObjective;
     row.bellAnalysis = analyzeBells({ log: s.log, clears: s.clears, sealT: s.sealT, result: ro, resultText: row.resultText, expectedDiscords }, bellDef);
@@ -629,6 +742,26 @@ const profiles = {
     const holdResumed = await freeze();
     check('pause: 재개 뒤 hold 는 0 에서 다시 쌓임(이전 유지를 이어받지 않음)', holdResumed.ctl.hold <= 31 * FRAME + 1e-9 && holdResumed.ctl.discords === held1.ctl.discords, { held: held1.ctl.hold, resumed: holdResumed.ctl.hold });
     row.holdAfterResume = holdResumed.ctl;
+    if (row.counter) {
+      // 반격 창 중 일시정지: AUTO 로 창이 열릴 때까지 진행한 뒤 #btn-pause → windowLeft·windows·attackSequence 불변 → 재개 뒤 게임 시간만큼 이어서 줄어든다.
+      const reached = await advance(row, { type: 'counter', state: 'open' }, { max: 60 * 60 * 12 });
+      check('pause: AUTO 로 반격 창이 열릴 때까지 진행', reached.reason === 'stop', { reason: reached.reason });
+      if (reached.reason === 'stop') {
+        const before = await freeze();
+        await pauseBattle();
+        const paused = await freeze();
+        await page.evaluate(() => window.__bellQa.stepRaw(120)); await page.waitForTimeout(1000);
+        const still = await freeze();
+        row.pauseCounterShot = await shot('paused-counter-open');
+        await resumeBattle();
+        const resumedRun = await runSteps(60);
+        const resumed = await freeze();
+        const verdict = checkCounterPause({ before, paused, still, resumed, steps: 60 });
+        row.counterPause = { before: before.counter, paused: paused.counter, still: still.counter, resumed: resumed.counter, resumeReason: resumedRun.reason, verdict };
+        check('pause: 반격 창 중 120스텝+1초 동안 게임 시간·windowLeft·windows·attackSequence 불변', verdict.frozen, row.counterPause);
+        check('pause: 재개 뒤 windowLeft 가 게임 시간만큼만 이어서 줄고 창은 계속 열려 있음', verdict.ok, row.counterPause);
+      }
+    }
     await playToEnd(row, { expectedDiscords: 0 });
     await closeResultToLobby();
     return { runs: [row] };
@@ -669,9 +802,45 @@ const profiles = {
       await verifyLastDiscord(row, 1);
       row.shots.push({ label: 'discord-after', reached: true, files: await captureScreens('discord-after-' + row.tag), ctl: (await freeze()).ctl });
       await setAuto(true);
-      await playToEnd(row, { expectedDiscords: 1 });
+      // 장막(veiled)·반격 창(open) 순간은 AUTO 로 완주하는 도중 멈춰 3개 화면 크기로 찍는다(후보 빌드만).
+      const counterMoments = row.counter ? [{ label: 'counter-veil', stop: { type: 'counter', state: 'veiled' } }, { label: 'counter-open', stop: { type: 'counter', state: 'open' } }] : [];
+      await playToEnd(row, { moments: counterMoments, expectedDiscords: 1 });
+      if (row.counter) check('screens: 장막·반격 창 순간에 도달해 3개 화면 크기 PNG 를 남김', counterMoments.every(m => row.shots.some(s => s.label === m.label && s.reached && s.files?.length === SCREEN_VIEWPORTS.length)),
+        row.shots.filter(s => s.label.startsWith('counter-')).map(s => ({ label: s.label, reached: s.reached, files: s.files })));
     }
     row.resultShots = await captureScreens('result-' + row.tag);
+    await closeResultToLobby();
+    return { runs: [row] };
+  },
+  async counter() {
+    await applyFixture();
+    const row = await beginRun('counter');
+    if (!counterDef) return { skipped: '기준선 빌드에는 합창 장막(counter) 정의가 없다' };
+    if (!row.counter) return { skipped: 'routeObjectives.counter 가 없다(beginRun 검사가 실패로 남김)' };
+    // AUTO 로 종문을 풀고 보스방까지 간다. 장막이 붙는 첫 스텝에서 멈춰 목표창을 읽는다.
+    const veiled = await advance(row, { type: 'counter', state: 'veiled' }, { max: 60 * 60 * 12 });
+    check('counter: AUTO 로 보스방까지 와서 장막(veiled)이 붙음', veiled.reason === 'stop', { reason: veiled.reason, elapsed: veiled.elapsed });
+    if (veiled.reason === 'stop') {
+      row.veiledAt = await freeze();
+      check('counter: 장막 상태의 보스는 살아 있고 피해 배수 = veil', row.veiledAt.boss?.alive === true && row.veiledAt.counter.mul === counterDef.veil, { boss: row.veiledAt.boss, counter: row.veiledAt.counter });
+      row.veiledObjective = await readCounterObjective(row, 'veiled');
+      check('counter: 목표창에 합창 장막 문구·받는 피해 ' + Math.round((1 - counterDef.veil) * 100) + '% 감소', row.veiledObjective.verdict.ok, row.veiledObjective);
+      row.veiledShot = await shot('counter-veiled');
+      // 첫 반격 창이 열릴 때까지 AUTO 로 진행한다(좌표 이동·무적·HP 주입 없음).
+      const open = await advance(row, { type: 'counter', state: 'open' }, { max: 60 * 60 * 12 });
+      check('counter: AUTO 로 반격 창이 열림', open.reason === 'stop', { reason: open.reason, elapsed: open.elapsed });
+      if (open.reason === 'stop') {
+        row.openAt = await freeze();
+        check('counter: 열린 직후 windowLeft ≈ ' + counterDef.window + '초·피해 배수 = open·같은 조종의 bell_toll', row.openAt.counter.state === 'open' && row.openAt.counter.windows >= 1
+          && row.openAt.counter.windowLeft <= counterDef.window + 1e-9 && row.openAt.counter.windowLeft >= counterDef.window - FRAME - 1e-9 && row.openAt.counter.mul === counterDef.open, { counter: row.openAt.counter, boss: row.openAt.boss });
+        row.openObjective = await readCounterObjective(row, 'open');
+        check('counter: 목표창에 반격 창 n.n초·받는 피해 ' + Math.round(counterDef.open * 100) + '%', row.openObjective.verdict.ok, row.openObjective);
+        row.openShot = await shot('counter-open');
+      }
+    }
+    // 창을 1회 이상 확인한 뒤(실패하면 위 검사가 남긴다) AUTO 로 완주하고 보스 판정을 받는다.
+    await playToEnd(row, { expectedDiscords: 0 });
+    check('counter: 길이를 끝까지 본(처치로 잘리지 않은) 반격 창 1회 이상', (row.counterAnalysis?.fullWindows ?? 0) >= 1, { windows: row.counterAnalysis?.windows?.map(w => ({ t: w.t, length: w.length, truncated: w.truncated, ok: w.ok })) });
     await closeResultToLobby();
     return { runs: [row] };
   },

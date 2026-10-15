@@ -197,9 +197,13 @@ export function checkResult(ro, def, { discords, win = true } = {}) {
   return out;
 }
 
-/** 결과 화면 줄: '종문 역순 공명 n/3 · 불협 k회'(+ ' · 완료')가 정확히 한 번 있고 일반 줄과 중복되지 않는다. */
+/**
+ * 결과 화면 줄: '종문 역순 공명 n/3 · 불협 k회'(+ ' · 반격 창 w회')(+ ' · 완료')가 정확히 한 번 있고 일반 줄과 중복되지 않는다.
+ * 반격 창 횟수(counterWindows, BUNDLE-05)는 숫자일 때만 붙는다. 기준선 빌드의 결과에는 이 필드가 없다.
+ */
 export function checkResultLine(text, ro) {
-  const line = '종문 역순 공명 ' + ro?.progress + '/' + ro?.target + ' · 불협 ' + ro?.discords + '회' + (ro?.complete ? ' · 완료' : '');
+  const counter = typeof ro?.counterWindows === 'number' ? ' · 반격 창 ' + ro.counterWindows + '회' : '';
+  const line = '종문 역순 공명 ' + ro?.progress + '/' + ro?.target + ' · 불협 ' + ro?.discords + '회' + counter + (ro?.complete ? ' · 완료' : '');
   const body = String(text ?? ''), occurrences = body.split('종문 역순 공명').length - 1;
   return { ok: body.includes(line) && occurrences === 1 && (ro?.complete ? true : !body.includes(line + ' · 완료')), line, occurrences };
 }
@@ -277,4 +281,204 @@ export function analyzeBells(obs, def) {
   const acceptance = { phaseOrderValid: timeline.ok, reachedDone: !!doneEvent, litAllBeforeToll: litBeforeToll(log, gateRooms), tollSequence: replays.ok,
     reverseAnswer: answers.ok, clearedOnlyAfterDone: clearCheck.ok, resultObjective: resultCheck.ok, resultLine: lineCheck.ok };
   return { acceptance, ok: Object.values(acceptance).every(Boolean), timeline, replays, answers, clears: clearCheck, result: resultCheck, resultLine: lineCheck };
+}
+// ---------- BUNDLE-05 합창 장막(counter) 판정 ----------
+// 입력은 tools/bellfall-deep-qa.mjs 의 보스 관측 행(trace)이다. 보스가 처음 나타난 스텝부터 처치 몇 스텝 뒤까지 app.step 한 번(고정 1/60)마다 한 행이다.
+// { n, t, hp, alive, spn, seq, st, sp, plan, age, last, cs, wl, wins, brk, vh, oh, vd, od, mul }
+//   n 스텝 번호, t 게임 시각, hp 보스 hp, alive 생존, spn 등장 연출 중, seq boss.attackSequence, st boss.state, sp boss.special,
+//   plan signatures.plan?.key, age signatures.age, last signatures.plan?.lastStrike, cs counter.state(counter 없는 빌드는 null),
+//   wl windowLeft, wins windows, brk broken, vh/oh veiledHits/openHits, vd/od veiledDamage/openDamage, mul damageMul().
+// 컨트롤러는 enemies update 보다 앞서 돌기 때문에 관측(스텝 끝)보다 1스텝 늦게 열리는 것이 정상이다. 그래서 "열림 ≤ 트리거 + 1스텝"을 허용한다.
+
+/** def.signature 의 마지막 고리가 터진 상태인지(PLAN 3.1 열림 조건). */
+export const isTrigger = (row, def) => !!row && row.st === 'attack' && row.sp === def.signature && row.plan === def.signature
+  && Number.isFinite(row.age) && Number.isFinite(row.last) && row.age + EPS >= row.last;
+
+/** counter.state 가 open 인 연속 구간. closedBy 는 구간 바로 다음 행의 counter.state, 관측이 거기서 끝나면 null 이다. */
+export function openRuns(trace) {
+  const runs = [];
+  let run = null;
+  (trace || []).forEach((row, i) => {
+    if (row.cs === 'open') {
+      if (!run) { run = { startIdx: i, endIdx: i, closedBy: null }; runs.push(run); } else run.endIdx = i;
+    } else if (run) { run.closedBy = row.cs ?? null; run = null; }
+  });
+  return runs;
+}
+
+/**
+ * 반격 창마다 판정한다: 열림 시점(같은 attackSequence 의 def.signature 에서 age ≥ lastStrike 가 된 행부터 1스텝 이내, 그 전에는 열리지 않음),
+ * 길이(def.window ± 1/60, 처치로 끝난 창은 truncated 로 길이를 보지 않는다), 창 동안 attackSequence 불변, windowLeft 단조 감소, 한 attackSequence 에 창 하나.
+ */
+export function checkWindows(trace, def) {
+  const rows = trace || [], runs = openRuns(rows), seen = new Set(), windows = [];
+  for (const run of runs) {
+    const open = rows[run.startIdx], reasons = [];
+    // 열림을 이끈 트리거 행: 같은 attackSequence 안에서 가장 먼저 age ≥ lastStrike 가 된 행(열린 행 자신 포함, 거슬러 올라가며 찾는다).
+    let triggerIdx = -1;
+    for (let i = run.startIdx; i >= 0 && rows[i].seq === open.seq; i--) if (isTrigger(rows[i], def)) triggerIdx = i;
+    let cause = null;
+    if (triggerIdx < 0) {
+      const ref = rows[Math.max(0, run.startIdx - 1)];
+      cause = ref.sp !== def.signature || ref.plan !== def.signature ? 'wrong-signature' : 'before-last-strike';
+      reasons.push('no-trigger');
+    } else if (run.startIdx - triggerIdx > 1) reasons.push('late-open');
+    if (seen.has(open.seq)) reasons.push('duplicate-sequence');
+    seen.add(open.seq);
+    const span = rows.slice(run.startIdx, run.endIdx + 1);
+    const seqStable = span.every(r => r.seq === open.seq);
+    let monotonic = true;
+    for (let i = 1; i < span.length; i++) if (!(span[i].wl <= span[i - 1].wl + EPS)) monotonic = false;
+    const startOk = Number.isFinite(open.wl) && open.wl <= def.window + EPS && open.wl >= def.window - FRAME - EPS;
+    const after = rows[run.endIdx + 1] ?? null;
+    let truncated = false;
+    if (!after) truncated = true;
+    else if (after.cs === 'veiled') truncated = false;
+    else if (!after.alive) truncated = true; // 보스 처치로 끝난 창
+    else reasons.push('closed-without-expiry');
+    const length = after ? after.t - open.t : null;
+    const lengthOk = truncated ? null : close(length, def.window, FRAME);
+    const ok = reasons.length === 0 && seqStable && monotonic && startOk && lengthOk !== false;
+    windows.push({ index: windows.length, startIdx: run.startIdx, t: open.t, seq: open.seq, triggerIdx, delaySteps: triggerIdx < 0 ? null : run.startIdx - triggerIdx,
+      cause, reasons, seqStable, monotonic, startWindowLeft: open.wl, length, truncated, lengthOk, openRows: span.length, ok });
+  }
+  return windows;
+}
+
+/** 트리거 뒤 1스텝을 더 보고도 한 번도 열지 않은 attackSequence 목록(끊김이 아니라 컨트롤러 누락). */
+export function missedOpens(trace, def) {
+  const rows = trace || [], opened = new Set(openRuns(rows).map(r => rows[r.startIdx].seq)), missed = [], seen = new Set();
+  for (let i = 0; i + 1 < rows.length; i++) {
+    const a = rows[i], b = rows[i + 1];
+    if (a.cs === null || a.cs === undefined || a.cs === 'ended' || !a.alive || !b.alive || !isTrigger(a, def) || !isTrigger(b, def) || b.seq !== a.seq) continue;
+    if (a.cs === 'open' || b.cs === 'open' || opened.has(a.seq) || seen.has(a.seq)) continue;
+    seen.add(a.seq);
+    missed.push({ idx: i, t: a.t, seq: a.seq, counterState: b.cs });
+  }
+  return missed;
+}
+
+/** 상태별 피해 배수: veiled = veil, open = open, 그 밖(idle·ended) = 1. */
+export function checkDamageMultiplier(trace, def) {
+  const violations = [];
+  (trace || []).forEach((row, i) => {
+    if (row.cs === null || row.cs === undefined) return;
+    const want = row.cs === 'open' ? def.open : row.cs === 'veiled' ? def.veil : 1;
+    if (!close(row.mul, want, 1e-9)) violations.push({ idx: i, t: row.t, state: row.cs, mul: row.mul, want });
+  });
+  return { ok: violations.length === 0, violations: violations.slice(0, 20), count: violations.length };
+}
+
+/** windows 는 스텝마다 최대 +1, 맞은 횟수·피해 합은 줄어들지 않는다. broken 도 줄지 않는다. 마지막 행 값을 돌려준다. */
+export function checkCounterStats(trace) {
+  const rows = (trace || []).filter(r => r.cs !== null && r.cs !== undefined), violations = [];
+  for (let i = 1; i < rows.length; i++) {
+    const a = rows[i - 1], b = rows[i];
+    if (!(b.wins >= a.wins && b.wins - a.wins <= 1)) violations.push({ idx: i, field: 'wins', from: a.wins, to: b.wins });
+    for (const field of ['brk', 'vh', 'oh', 'vd', 'od']) if (!(b[field] >= a[field] - EPS)) violations.push({ idx: i, field, from: a[field], to: b[field] });
+  }
+  const last = rows.at(-1) ?? null;
+  return { ok: violations.length === 0, violations: violations.slice(0, 20), windows: last?.wins ?? null, broken: last?.brk ?? null,
+    veiledHits: last?.vh ?? null, openHits: last?.oh ?? null, veiledDamage: last?.vd ?? null, openDamage: last?.od ?? null };
+}
+
+/** 보스 구간 요약: 등장·등장 연출 끝·처치 시각(게임 시간)과 보스전 길이. 기준선(counter 없는 빌드)에서도 같은 값이 나온다. */
+export function summarizeBoss(trace) {
+  const rows = trace || [];
+  if (!rows.length) return { observed: false, appearT: null, readyT: null, defeatT: null, fightSeconds: null, rows: 0 };
+  const defeat = rows.findIndex(r => !r.alive), ready = rows.find(r => !r.spn);
+  const defeatT = defeat >= 0 ? rows[defeat].t : null;
+  return { observed: true, defeated: defeat >= 0, appearT: rows[0].t, readyT: ready ? ready.t : null, defeatT,
+    fightSeconds: defeatT === null ? null : defeatT - rows[0].t, rows: rows.length, defeatIdx: defeat,
+    hpStart: rows[0].hp, hpEnd: rows.at(-1).hp, sequences: rows.reduce((m, r) => Math.max(m, r.seq || 0), 0) };
+}
+
+/**
+ * 보스 관측 전체 판정(PLAN 5절·QA 도구 계약).
+ * obs: { trace, result: 결과 routeObjective, resultText: 결과 줄 DOM 텍스트, finalCounter: 전투 종료 뒤 읽은 { state } 또는 null }
+ * acceptance 의 값이 전부 true 여야 한다. counter 정의(def)가 있는 후보 빌드에서만 부른다.
+ */
+export function analyzeCounter(obs, def) {
+  const trace = obs.trace || [], summary = summarizeBoss(trace), windows = checkWindows(trace, def), missed = missedOpens(trace, def);
+  const multiplier = checkDamageMultiplier(trace, def), stats = checkCounterStats(trace);
+  const defeatIdx = summary.defeatIdx ?? -1, post = defeatIdx >= 0 ? trace.slice(defeatIdx + 1) : [];
+  const endedOk = defeatIdx >= 0 && post.length >= 1 && post.every(r => r.cs === 'ended') && (obs.finalCounter == null || obs.finalCounter.state === 'ended');
+  const bad = reason => windows.filter(w => w.reasons.includes(reason));
+  const observedWindows = windows.length, ro = obs.result, body = String(obs.resultText ?? '');
+  const lineMatches = body.match(/반격 창 \d+회/g) || [];
+  const acceptance = {
+    bossObserved: summary.observed && summary.defeated === true,
+    windowCount: observedWindows >= 1,
+    windowsConsistent: stats.windows === observedWindows,
+    noEarlyOpen: bad('no-trigger').length === 0,
+    openTiming: bad('late-open').length === 0 && bad('duplicate-sequence').length === 0,
+    windowLength: windows.every(w => w.monotonic && w.reasons.indexOf('closed-without-expiry') < 0 && w.lengthOk !== false && (Number.isFinite(w.startWindowLeft) && w.startWindowLeft <= def.window + EPS && w.startWindowLeft >= def.window - FRAME - EPS)),
+    noNewAttack: windows.every(w => w.seqStable),
+    noMissedOpen: missed.length === 0,
+    damageMultiplier: multiplier.ok,
+    counterStats: stats.ok,
+    endedAfterDefeat: endedOk,
+    resultWindows: Number.isInteger(ro?.counterWindows) && ro.counterWindows === observedWindows,
+    resultLine: lineMatches.length === 1 && lineMatches[0] === '반격 창 ' + observedWindows + '회',
+  };
+  return { acceptance, ok: Object.values(acceptance).every(Boolean), summary, windows, observedWindows, fullWindows: windows.filter(w => !w.truncated).length,
+    missed, multiplier, stats, post: { rows: post.length, states: [...new Set(post.map(r => r.cs))] }, resultWindows: ro?.counterWindows ?? null, resultLineMatches: lineMatches };
+}
+
+/**
+ * 목표창 DOM 검사(PLAN 3.2). read: { dom: { text }, counter: { state, windowLeft, windowTotal } }는 같은 호출에서 읽은 값이다.
+ * veiled: '합창 장막' + 문구 + 받는 피해 (1-veil)% 감소. open: '합창 장막' + '반격 창 n.n초'(올림 0.1초, 10Hz 갱신 지연 허용) + 받는 피해 open%.
+ */
+export function checkCounterObjective(read, def) {
+  const body = String(read?.dom?.text ?? ''), state = read?.counter?.state ?? null;
+  const veilPct = Math.round((1 - def.veil) * 100), openPct = Math.round(def.open * 100);
+  /** @type {any} */
+  const out = { state, hasTitle: body.includes('합창 장막') };
+  if (state === 'veiled') {
+    out.veilText = body.includes('마지막 울림 직후에만 장막이 걷힘');
+    out.damageText = body.includes('받는 피해 ' + veilPct + '% 감소');
+    out.noWindowText = !/반격 창 \d/.test(body);
+    out.ok = out.hasTitle && out.veilText && out.damageText && out.noWindowText;
+  } else if (state === 'open') {
+    const m = /반격 창 (\d+\.\d)초/.exec(body), seconds = m ? Number(m[1]) : NaN, left = read.counter.windowLeft, total = read.counter.windowTotal;
+    out.seconds = Number.isFinite(seconds) ? seconds : null;
+    out.windowText = !!m;
+    // 표시는 올림이고 10Hz 로 갱신되므로 현재 windowLeft 보다 작을 수 없고(미세 오차 제외), 갱신 지연 한 틱 + 올림 0.1 이상 크지 않다.
+    out.secondsOk = Number.isFinite(seconds) && seconds >= left - .05 && seconds <= left + .35 && seconds <= Math.ceil(total * 10) / 10 + 1e-6;
+    out.damageText = body.includes('받는 피해 ' + openPct + '%');
+    out.ok = out.hasTitle && out.windowText && out.secondsOk && out.damageText;
+  } else out.ok = false;
+  return out;
+}
+
+/**
+ * 반격 창 중 일시정지 검사. before: 창이 열린 직후, paused: 일시정지 직후, still: 120스텝+실시간 1초 뒤(여전히 일시정지), resumed: 재개 뒤 steps 스텝.
+ * 각 값은 { elapsed, counter: { state, windowLeft, windows }, boss: { seq } }. 정지 중 값은 정확히 같아야 한다.
+ * 재개 뒤 windowLeft 는 그 사이 흐른 게임 시간(elapsed 차)만큼 줄어야 한다. 처치·치명타 슬로모션이 dt 를 줄일 수 있으므로 고정 steps × 1/60 이 아니라
+ * elapsed 차와 비교하고, elapsed 차가 0 보다 크고 steps × 1/60 + 2/60 을 넘지 않는지만 본다.
+*/
+export function checkCounterPause({ before, paused, still, resumed, steps }) {
+  const snap = x => [x.elapsed, x.counter?.state, x.counter?.windowLeft, x.counter?.windows, x.boss?.seq];
+  const frozen = JSON.stringify(snap(paused)) === JSON.stringify(snap(still)) && JSON.stringify(snap(before)) === JSON.stringify(snap(paused));
+  const decreased = before.counter?.windowLeft - resumed.counter?.windowLeft;
+  const elapsedDelta = resumed.elapsed - still.elapsed;
+  const resumedOpen = resumed.counter?.state === 'open';
+  return { ok: frozen && before.counter?.state === 'open' && paused.counter?.state === 'open' && still.counter?.state === 'open'
+      && resumedOpen && elapsedDelta > 0 && elapsedDelta <= steps * FRAME + 2 * FRAME + EPS && close(decreased, elapsedDelta, 1e-6) && resumed.boss?.seq === before.boss?.seq,
+    frozen, openBefore: before.counter?.state === 'open', resumedOpen, decreased, elapsedDelta, maxElapsed: steps * FRAME + 2 * FRAME, sequenceKept: resumed.boss?.seq === before.boss?.seq };
+}
+
+/**
+ * 기준선 비교(PLAN 5절 5번). 후보·기준선 auto 실행 요약 { fight, time, samples, bossOver50 }:
+ * 보스전 시간 비 ≤ fightRatio, 완주 시간 비 ≤ timeRatio, 보스방 첫 진입 draw call('bossEnter') 증가 ≤ drawLimit(짝이 없으면 실패),
+ * 보스 구간 50ms 초과 수 ≤ 기준선 + slowExtra.
+ */
+export function compareBoss(cand, base, { fightRatio = 2, timeRatio = 2, drawLimit = 3, slowExtra = 2 } = {}) {
+  const ratioOf = (a, b, limit) => { const ratio = a > 0 && b > 0 ? a / b : null; return { cand: a ?? null, base: b ?? null, ratio, limit, ok: ratio !== null && ratio <= limit }; };
+  const fight = ratioOf(cand?.fight, base?.fight, fightRatio), time = ratioOf(cand?.time, base?.time, timeRatio);
+  const only = run => (run?.samples || []).filter(s => s.label === 'bossEnter');
+  const draw = drawCallIncrease(only(cand), only(base), drawLimit);
+  const c = cand?.bossOver50, b = base?.bossOver50;
+  const slow = { cand: c ?? null, base: b ?? null, limit: Number.isFinite(b) ? b + slowExtra : null, ok: Number.isFinite(c) && Number.isFinite(b) && c <= b + slowExtra };
+  return { ok: fight.ok && time.ok && draw.ok && slow.ok, fight, time, draw, slow };
 }
