@@ -388,7 +388,10 @@ function installProbe(cfg) {
     // 경유점 방향으로 영웅 앞 2 유닛 점만 투영해 화면 방향을 얻는다.
     const ex = wp.x - p.x, ez = wp.z - p.z, el = Math.hypot(ex, ez) || 1;
     const a = p.clone().project(cam), z = p.clone().set(p.x + ex / el * 2, p.y, p.z + ez / el * 2).project(cam);
-    return { dx: (z.x - a.x) * innerWidth / 2, dy: -(z.y - a.y) * innerHeight / 2, left: P.wp.length, final: fin, dist: Math.hypot(fin.x - p.x, fin.z - p.z) };
+    // live: 게임 입력층이 지금 눌려 있다고 아는 키. 일시정지 해제 등에서 input.clear() 가 키 상태를 지우면 다시 눌러야 한다.
+    const ks = app.input.keys || {}, live = [];
+    for (const k in ks) if (ks[k]) live.push(k);
+    return { dx: (z.x - a.x) * innerWidth / 2, dy: -(z.y - a.y) * innerHeight / 2, left: P.wp.length, final: fin, dist: Math.hypot(fin.x - p.x, fin.z - p.z), live };
   };
   // 느린 스텝 목록은 자르지 않는다(기준선 비교가 개수를 정확히 세야 한다).
   P.summary = () => ({ steps: P.steps, stepMs: P.stepMs, renderMs: P.renderMs, slow: P.slow, maxAlive: P.maxAlive, minHpRatio: P.minHpRatio, samples: P.samples, viewAB: P.viewAB,
@@ -588,8 +591,10 @@ async function resumeBattle() {
 
 // ---------- 키보드 이동(order) ----------
 const held = new Set();
-async function setKeys(next) {
+/** live 를 주면, 도구가 누르고 있다고 아는 키 중 게임 입력층에서 지워진 키(input.clear: 각인 창 닫힘 뒤 정지 해제 등)를 떼었다 다시 누른다(실제 사용자의 재입력과 같다). */
+async function setKeys(next, live = null) {
   for (const key of [...held]) if (!next.has(key)) { await page.keyboard.up(key); held.delete(key); }
+  if (live) for (const key of [...held]) if (!live.includes(key)) { await page.keyboard.up(key); held.delete(key); }
   for (const key of next) if (!held.has(key)) { await page.keyboard.down(key); held.add(key); }
 }
 /** 화면 방향(영웅 → 경유점 투영 차)을 8방향 키 조합으로 바꾼다. 입력 키는 화면 기준이다(카메라 요를 입력층이 처리). */
@@ -610,7 +615,7 @@ async function walkTo(row, target, stop, { maxSteps = 60 * 40 } = {}) {
     while (total < maxSteps) {
       if (await page.evaluate(s => window.__mirrorQa.hit(s), stop)) return { steps: total, trail };
       const aim = await page.evaluate(() => window.__mirrorQa.aim());
-      await setKeys(keysToward(aim));
+      await setKeys(keysToward(aim), aim.live);
       const r = await page.evaluate(opts => window.__mirrorQa.run(opts), { n: 4, stop });
       total += r.ran;
       if (trail.length < 300 && (total / 4) % 15 === 0) trail.push({ steps: total, t: ms(r.elapsed), dist: +aim.dist.toFixed(2), left: aim.left });
