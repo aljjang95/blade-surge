@@ -2,6 +2,9 @@
 // 냉각 장치 문구. 재의 수문(밸브·냉각선)이 기본이고, 재벼림 제련소는 용광로 문구를 쓴다.
 const CINDER_COPY = Object.freeze({ title: '냉각선 복구', unit: '밸브', done: '냉각선', doneVerb: '복구', cooled: '개방' });
 const ASHFORGE_COPY = Object.freeze({ title: '용광로 냉각', unit: '용광로', done: '용광로', doneVerb: '냉각', cooled: '냉각' });
+// 재벼림 심층 심장로(BUNDLE-08): 분출을 '망치 충격파'로 부르고, 냉각하면 사슬에 묶인 불씨가 풀려난다.
+const ASHFORGE_DEEP_COPY = Object.freeze({ title: '심장로 냉각', unit: '심장로', done: '심장로', doneVerb: '냉각', cooled: '냉각 · 불씨 해방',
+  warning: '망치 예고', vent: '망치 충격파' });
 /** @param {string} id @param {Array<[number, string]>} gates @param {typeof CINDER_COPY} copy */
 const coolingDef = (id, gates, copy = CINDER_COPY) => Object.freeze({
   id, kind: 'cooling', holdSeconds: 2, radius: 1.6, copy,
@@ -92,6 +95,16 @@ export const ROUTE_OBJECTIVES = Object.freeze({
   // 재벼림 제련소 일반의 원안: 과열 용광로 4곳을 식혀야 거수의 봉인이 풀린다. 두 갈래 길을 모두 지난다.
   ashforge_standard: coolingDef('ashforge_furnaces_standard', [[1, '1번 용광로 · 입구 송풍로'], [2, '2번 용광로 · 사슬 단조장'],
     [3, '3번 용광로 · 북쪽 주조실'], [5, '4번 용광로 · 남쪽 슬래그 통로']], ASHFORGE_COPY),
+  // 재벼림 제련소 심층의 원안(BUNDLE-08): 심장로 4곳 냉각과 사슬에 묶인 불씨 해방. 일반과 같은 냉각 장치 엔진(CoolingValves)을 쓴다.
+  // shockWindow: 조작판은 그 심장로에서 망치 충격파(증기 분출)가 한 번 지나간 뒤, 가열 구간(다음 망치 예고 전)에만 열린다.
+  // 충격파가 끝나면 조작판이 반대편으로 옮겨 가므로 '사슬이 끌리는 반대편'으로 이동해 유지한다. 예고·분출 중에는 유지가 0이 된다.
+  // release 'ember-chains': 냉각한 심장로의 사슬이 끊기고 불씨가 풀려나는 연출(규칙 아님). 정예방(2·5)은 증원 2회 뒤에만 조작된다.
+  // 보스방의 거수 망치·사슬 끌기와는 별개다(보스 규칙은 바뀌지 않는다).
+  ashforge_deep: Object.freeze({
+    ...coolingDef('ashforge_heart_furnaces_deep', [[2, '1번 심장로 · 사슬 단조장'], [4, '2번 심장로 · 북쪽 불씨 저장고'],
+      [5, '3번 심장로 · 남쪽 주조로'], [7, '4번 심장로 · 거수의 관문']], ASHFORGE_DEEP_COPY),
+    shockWindow: true, release: 'ember-chains', releaseSeconds: 1.6,
+  }),
   nightglass_standard: records('standard', [[2, 1], [5, 2], [6, 3]]),
   nightglass_deep: records('deep', [[6, 3], [4, 2], [1, 1]]),
   astral_standard: constellations,
