@@ -64,6 +64,20 @@ function sporeAltarsView(route) {
   return step('포자 수로 돌파', `포자 물결이 지나간 뒤 동쪽 출구로 · ${Math.ceil(count(channel.left))}초`, { ...values, roomId });
 }
 
+/** 성운 첨탑 심층 외곽 고리(BUNDLE-12). 성좌 4/4 뒤에만 부른다. 고리가 끝나면 null(기존 보스 흐름). */
+function astralDeepRingView(route) {
+  const ring = route.ring, def = route.def.ring, total = route.gates.length, progress = count(route.progress);
+  if (!ring || ring.phase === 'idle') return step('별자리 복원', '남은 구역 정화', { progress, total });
+  if (ring.phase !== 'open' && ring.phase !== 'running') return null;
+  const room = ring.room, roomId = room && typeof room === 'object' ? room.discovered === false ? null : room.id ?? def.roomId ?? null
+    : Number.isFinite(room) ? room : def.roomId ?? null;
+  if (ring.phase === 'open') return step('외곽 고리 정화', '성좌 외곽 고리로 이동', { progress: count(ring.purified), total: ring.marks.length, roomId });
+  // 남은 시간은 올림이라 시계가 남아 있으면 0초를 보이지 않는다. 유지량은 지금 유지 중인 성표의 값이다.
+  const held = ring.held >= 0 ? ring.marks[ring.held] : null;
+  return step('외곽 고리 정화', `파편이 모이면 중심 밖으로 · ${Math.ceil(count(ring.left))}초`, { progress: count(ring.purified), total: ring.marks.length,
+    hold: held ? seconds(held.hold) : 0, holdTotal: count(def.holdSeconds), roomId });
+}
+
 /** 현재 컨트롤러의 상태만 투영하며 전투 정산과 퍼즐 정답에는 접근하지 않는다. */
 function mainObjectiveView(battle) {
   const world = battle?.world;
@@ -87,6 +101,10 @@ function mainObjectiveView(battle) {
       if (spore) return spore;
     }
     if (route.def?.kind === 'reverse-bells' && route.phase !== 'done') return reverseBellsView(route);
+    if (route.def?.kind === 'deep-constellations' && route.complete) {
+      const deep = astralDeepRingView(route);
+      if (deep) return deep;
+    }
     if (route.def?.kind === 'reverse-bells') {
       const veil = counterView(route);
       if (veil) return veil;
@@ -102,7 +120,7 @@ function mainObjectiveView(battle) {
     const gate = route.gates[route.progress];
     if (gate) {
       const kind = route.def?.kind;
-      const title = kind === 'constellations' ? '별자리 복원' : kind === 'records' ? '기록 복원'
+      const title = kind === 'constellations' || kind === 'deep-constellations' ? '별자리 복원' : kind === 'records' ? '기록 복원'
         : kind === 'thrones' ? '가짜 왕좌 파괴'
         : kind === 'orbits' ? '궤도 고리 정렬'
         : kind === 'deep-orbits' ? '궤도 고리 연결'
@@ -151,7 +169,7 @@ function mainObjectiveView(battle) {
         roomId: gate.room.discovered ? gate.room.id : null };
       if (!gate.room.discovered) return step(title, '다음 구역을 찾아 이동', values);
       if (!gate.ready) return step(title, '이 구역의 적과 증원 처치', values);
-      if (kind === 'constellations') {
+      if (kind === 'constellations' || kind === 'deep-constellations') {
         // 단계만 읽고 단서의 실제 내용은 월드 소품에 유지한다.
         const action = route.phase === 'retry' ? '판 밖으로 나와 다시 읽기' : route.phase === 'select'
           ? '월드 단서와 같은 판에서 1초 유지' : route.phase === 'read'
