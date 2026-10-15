@@ -202,16 +202,20 @@ export function checkMazeLimit(rows, def) {
 }
 /** 미궁 시계. 연속한 running 두 스텝(붕괴 없음)에서 left 는 게임 시간만큼 줄고 elapsed 는 늘어난다. 확인한 쌍이 minPairs 개 이상이어야 한다. */
 export function checkMazeClock(rows, { minPairs = 30 } = {}) {
-  const list = stepRows(rows), bad = [];
+  const list = stepRows(rows), bad = [], pauseEntry = [];
   let pairs = 0;
   for (let i = 1; i < list.length; i++) {
     const a = list[i - 1], b = list[i];
     if (!a.mz || !b.mz || a.mz.ph !== MAZE_PHASE_CODE.running || b.mz.ph !== MAZE_PHASE_CODE.running || b.n !== a.n + 1 || a.mz.col !== b.mz.col) continue;
     pairs++;
     const dt = b.t - a.t;
+    // 정상 경로 하나만 면제한다: 그 스텝 안에서 전투가 일시정지됐다(pz). Battle.update 가 게임 시간을 먼저 올린 뒤
+    // 게임 타이머(마지막 구역 정화 0.45초 뒤 각인 선택 창)가 정지를 걸면, 같은 스텝의 경로 목표 갱신은 돌지 않는다.
+    // 이때는 시계·경과가 정확히 그대로여야 한다(조금이라도 바뀌면 위반).
+    if (b.pz === 1 && b.mz.lf === a.mz.lf && b.mz.el === a.mz.el) { pauseEntry.push({ n: b.n, dt }); continue; }
     if (Math.abs((a.mz.lf - b.mz.lf) - dt) > EPS || Math.abs((b.mz.el - a.mz.el) - dt) > EPS) bad.push({ n: b.n, dt, left: [a.mz.lf, b.mz.lf], elapsed: [a.mz.el, b.mz.el] });
   }
-  return { pairs, bad: bad.slice(0, 6), badCount: bad.length, ok: pairs >= minPairs && bad.length === 0 };
+  return { pairs, bad: bad.slice(0, 6), badCount: bad.length, pauseEntry, ok: pairs >= minPairs && bad.length === 0 };
 }
 /**
  * 진짜 거울 도달. done 은 직전 행이 running 이고 done 스텝 영웅–진짜 거울 거리 ≤ radius + .01 에서만 처음 관측된다.

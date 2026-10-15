@@ -412,6 +412,19 @@ describe('미궁 시작·제한 시간·시계', () => {
     expect(K.checkMazeClock(tweak(rows, (_, k) => k === i, r => { r.mz.lf += 0.01; })).ok).toBe(false);
     expect(K.checkMazeClock(tweak(rows, (_, k) => k === i, r => { r.mz.el += 0.01; })).ok).toBe(false);
   });
+  test('스텝 안에서 일시정지가 시작된 행(pz)만 시계가 그대로여도 면제하고, 값이 조금이라도 바뀌거나 pz 가 없으면 실패', () => {
+    const rows = deepRun().rows;
+    const i = rows.findIndex(r => r.mz?.ph === 1) + 60, prev = rows[i - 1];
+    const frozen = (r: any) => { r.mz.lf = prev.mz.lf; r.mz.el = prev.mz.el; };
+    const shifted = (r: any) => { r.mz.lf = r.mz.lf - 1e-9; };
+    // 면제 뒤에도 다음 쌍의 차이가 그대로 맞도록 이후 행 전체를 한 스텝만큼 되돌린다.
+    const later = (r: any) => { r.mz.lf += rows[i].t - prev.t; r.mz.el -= rows[i].t - prev.t; };
+    const exempt = tweak(tweak(rows, (_, k) => k > i, later), (_, k) => k === i, (r: any) => { frozen(r); r.pz = 1; });
+    const res = K.checkMazeClock(exempt);
+    expect(res.ok).toBe(true); expect(res.pauseEntry.length).toBe(1);
+    expect(K.checkMazeClock(tweak(tweak(rows, (_, k) => k > i, later), (_, k) => k === i, frozen)).ok).toBe(false);
+    expect(K.checkMazeClock(tweak(exempt, (_, k) => k === i, shifted)).ok).toBe(false);
+  });
   test('확인한 쌍이 모자라면(running 이 짧거나 없음) 실패', () => {
     const s = new Sim(DEEP, DEEP_ROOMS, REINFORCEMENTS, true);
     expect(K.checkMazeClock(s.rows).ok).toBe(false);

@@ -218,6 +218,8 @@ function installProbe(cfg) {
       if (m.trailN > 0 && (full || P.trSum !== s[15])) { row.tr = Array.from(m.trail.subarray(0, m.trailN * 2)); P.trSum = s[15]; }
     }
     if (mv) row.mv = { s: [s[10], s[11]], f: s[12], c: s[14], d: s[13] };
+    // 스텝 끝에 전투가 일시정지돼 있으면 표시한다(스텝 안에서 정지가 시작된 경우를 시계 판정이 구분한다).
+    if (b.paused) row.pz = 1;
     if (mk) row.mk = mk;
     return row;
   };
