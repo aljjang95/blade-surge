@@ -148,7 +148,7 @@ async function boot(page, { tapStart = true } = {}) {
 async function enterDungeon(page) {
   const before = await page.evaluate(() => ({ energy: window.app.eco.s.energy, mode: window.app.mode }));
   // 새 던전 중심 로비의 단일 추천 CTA가 있으면 그것을, 없으면 기존 던전 카드(유리 정원)를 쓴다.
-  const candidates = ['[data-dungeon-cta]:visible', '[data-command-route="glass_garden"]:visible'];
+  const candidates = ['#citadel-dungeon-prepare:visible', '[data-dungeon-cta]:visible', '[data-command-route="glass_garden"]:visible'];
   let used = null;
   for (const selector of candidates) {
     const el = page.locator(selector).first();
