@@ -56,16 +56,16 @@ describe('아이템 표현 단일 규칙', () => {
     expect(itemVisual(ITEM_BY_ID.w_storm).source).toBe('forge');
   });
 
-  test('3D 미리보기는 선택 영웅이 실제로 드는 무기 형태를 쓰고 그 범위를 말한다', () => {
+  test('3D 미리보기는 선택 영웅이 실제로 드는 무기 형태를 쓰고 사실만 짧게 말한다', () => {
     const bowItem = (Object.values(ITEM_BY_ID) as any[]).find((item) => item.slot === 'weapon' && item.rarity === 'N' && !item.modelNode);
     expect(previewForm(bowItem, 'ranger')).toBe('bow');
     expect(previewForm(bowItem, 'knight')).toBe('sword');
     expect(previewForm(ITEM_BY_ID.w_storm, 'knight')).toBe('greatsword');
     expect(previewForm(ITEM_BY_ID.a_storm, 'knight')).toBe('armor');
-    expect(previewCaption(bowItem, 'ranger', '바람추적자 실바')).toBe('바람추적자 실바가 들면 활 형태 · 목록 그림은 한손검 기준 같은 장비입니다');
+    expect(previewCaption(bowItem, 'ranger', '바람추적자 실바')).toBe('실바 착용 · 장궁');
     expect(josa('암살자 카인', '이', '가')).toBe('암살자 카인이');
     expect(josa('검성 아르카', '은', '는')).toBe('검성 아르카는');
-    expect(previewCaption(ITEM_BY_ID.arm_aegis_weapon, 'mage', '대마도사 리아')).toContain('기본 무기');
-    expect(previewCaption(ITEM_BY_ID.a_storm, 'knight')).toContain('등급 단계 외형');
+    expect(previewCaption(ITEM_BY_ID.arm_aegis_weapon, 'mage', '대마도사 리아')).toContain('병기고 장식');
+    expect(previewCaption(ITEM_BY_ID.a_storm, 'knight')).toContain('등급 외형');
   });
 });

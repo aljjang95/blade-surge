@@ -1,0 +1,255 @@
+{
+  "generator": "tools/item-visual-forms.mjs",
+  "canonicalWeaponForm": "sword",
+  "armoryRarity": "U",
+  "formLabels": {
+    "sword": "한손검",
+    "greatsword": "양손 대검",
+    "axe": "한손 도끼",
+    "axe-pair": "쌍도끼",
+    "greataxe": "양손 도끼",
+    "wand": "마법봉",
+    "staff": "대마법 지팡이",
+    "dagger": "단검",
+    "dagger-pair": "쌍단검",
+    "bow": "장궁"
+  },
+  "heroes": {
+    "knight": {
+      "model": "Knight",
+      "weapon": {
+        "N": {
+          "nodes": [
+            "1H_Sword"
+          ],
+          "form": "sword",
+          "count": 1
+        },
+        "S": {
+          "nodes": [
+            "1H_Sword"
+          ],
+          "form": "sword",
+          "count": 1
+        },
+        "E": {
+          "nodes": [
+            "1H_Sword"
+          ],
+          "form": "sword",
+          "count": 1
+        },
+        "U": {
+          "nodes": [
+            "2H_Sword"
+          ],
+          "form": "greatsword",
+          "count": 1
+        },
+        "L": {
+          "nodes": [
+            "2H_Sword"
+          ],
+          "form": "greatsword",
+          "count": 1
+        }
+      },
+      "armoryWeapon": {
+        "mode": "own-mesh"
+      }
+    },
+    "barbarian": {
+      "model": "Barbarian",
+      "weapon": {
+        "N": {
+          "nodes": [
+            "1H_Axe"
+          ],
+          "form": "axe",
+          "count": 1
+        },
+        "S": {
+          "nodes": [
+            "1H_Axe"
+          ],
+          "form": "axe",
+          "count": 1
+        },
+        "E": {
+          "nodes": [
+            "1H_Axe",
+            "1H_Axe_Offhand"
+          ],
+          "form": "axe",
+          "count": 2
+        },
+        "U": {
+          "nodes": [
+            "2H_Axe"
+          ],
+          "form": "greataxe",
+          "count": 1
+        },
+        "L": {
+          "nodes": [
+            "2H_Axe"
+          ],
+          "form": "greataxe",
+          "count": 1
+        }
+      },
+      "armoryWeapon": {
+        "mode": "own-mesh"
+      }
+    },
+    "mage": {
+      "model": "Mage",
+      "weapon": {
+        "N": {
+          "nodes": [
+            "1H_Wand"
+          ],
+          "form": "wand",
+          "count": 1
+        },
+        "S": {
+          "nodes": [
+            "2H_Staff"
+          ],
+          "form": "staff",
+          "count": 1
+        },
+        "E": {
+          "nodes": [
+            "2H_Staff"
+          ],
+          "form": "staff",
+          "count": 1
+        },
+        "U": {
+          "nodes": [
+            "2H_Staff"
+          ],
+          "form": "staff",
+          "count": 1
+        },
+        "L": {
+          "nodes": [
+            "2H_Staff"
+          ],
+          "form": "staff",
+          "count": 1
+        }
+      },
+      "armoryWeapon": {
+        "mode": "ornament",
+        "nodes": [
+          "2H_Staff"
+        ],
+        "form": "staff",
+        "count": 1
+      }
+    },
+    "rogue": {
+      "model": "Rogue",
+      "weapon": {
+        "N": {
+          "nodes": [
+            "Knife"
+          ],
+          "form": "dagger",
+          "count": 1
+        },
+        "S": {
+          "nodes": [
+            "Knife",
+            "Knife_Offhand"
+          ],
+          "form": "dagger",
+          "count": 2
+        },
+        "E": {
+          "nodes": [
+            "Knife",
+            "Knife_Offhand"
+          ],
+          "form": "dagger",
+          "count": 2
+        },
+        "U": {
+          "nodes": [
+            "Knife",
+            "Knife_Offhand"
+          ],
+          "form": "dagger",
+          "count": 2
+        },
+        "L": {
+          "nodes": [
+            "Knife",
+            "Knife_Offhand"
+          ],
+          "form": "dagger",
+          "count": 2
+        }
+      },
+      "armoryWeapon": {
+        "mode": "ornament",
+        "nodes": [
+          "Knife",
+          "Knife_Offhand"
+        ],
+        "form": "dagger",
+        "count": 2
+      }
+    },
+    "ranger": {
+      "model": "Ranger",
+      "weapon": {
+        "N": {
+          "nodes": [
+            "Bow"
+          ],
+          "form": "bow",
+          "count": 1
+        },
+        "S": {
+          "nodes": [
+            "Bow"
+          ],
+          "form": "bow",
+          "count": 1
+        },
+        "E": {
+          "nodes": [
+            "Bow"
+          ],
+          "form": "bow",
+          "count": 1
+        },
+        "U": {
+          "nodes": [
+            "Bow"
+          ],
+          "form": "bow",
+          "count": 1
+        },
+        "L": {
+          "nodes": [
+            "Bow"
+          ],
+          "form": "bow",
+          "count": 1
+        }
+      },
+      "armoryWeapon": {
+        "mode": "ornament",
+        "nodes": [
+          "Bow"
+        ],
+        "form": "bow",
+        "count": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,3486 @@
+{
+  "renderer": "tools/item-render-variants.mjs + tools/item-render-variants.html (Three.js WebGL2, item-render-studio 카메라·조명, 모델 = src/ui/item-visual-model.js)",
+  "recipe": "bun x vite --host 127.0.0.1 --port 5497 --strictPort; node tools/item-render-variants.mjs --url http://127.0.0.1:5497",
+  "encode": {
+    "size": 256,
+    "format": "webp",
+    "quality": 92,
+    "alphaQuality": 100,
+    "effort": 6,
+    "kernel": "lanczos3",
+    "capture": 768
+  },
+  "sourceHashes": {
+    "src/data/gear-catalog.js": "4c28bb17f47bb1a77d39b9a44241483cd71361c0e62e42cac51a890643ab7cc9",
+    "src/data/items.js": "ec9c112de6648a36616c2a862d6a45371ce1ea4d9502d1f6c91ce78be5a4ea8d",
+    "src/data/armory.js": "5551d3b7a8543b08bd5e53d350027877a7f6283535c0ca489bbd9c222346efeb",
+    "src/engine/item-forge.js": "7c71d0722677a0e95cfd06dcfd324fe805c444e68a4469fd060886dcf5cc8391",
+    "src/engine/forged-weapons.js": "40607f711885609e3c2eb63d66070800fee8a5840d9dbe6079d77e99ccab7b01",
+    "src/engine/armory-assets.js": "cbb1345a845cac3077480cfde1e335300914513b4150ea68e43caaaa3475e21a",
+    "src/engine/hero-model-paths.js": "48d5a8977b1aa4421064674185711965b58092f0562a7037f035fa40dd5ec057",
+    "src/ui/item-visual-model.js": "4f459be6072597ffac4ba1d1171cee710762494b876c17b078d16b56bbeabd64",
+    "src/data/item-presentation-forms.json": "b7ef83a6382902cf6204b8e8084185717ac3b784eb7021d7549b88e76d80a4b2",
+    "tools/item-render-variants.html": "c11f2f40600f6d3daf0c7baa5fca4400e4e8746fa7ae8a17db6edb040d2086b0"
+  },
+  "assetHashes": {
+    "public/models/dungeon-forge-v2/forge-axe-v2.glb": "01004353cd0f906f24f8ff43ae3327546024c5e96cb7b1dab32ca7a7a3b8b3f0",
+    "public/models/dungeon-forge-v2/forge-bow-v2.glb": "7bd240d25f3a550c3fd84edc29a2e0fcb52c96121ee0db6e41d40a377d6e5db8",
+    "public/models/dungeon-forge-v2/forge-dagger-v2.glb": "a2f2cc9c9de7b276cf1da7e821370775e0586a0610beb086d987f87130fdcc00",
+    "public/models/dungeon-forge-v2/forge-greataxe-v2.glb": "61136fdbfc97f8b1be5047b0bc1544539bc01002f3e2e94564c4cb12cad5d96c",
+    "public/models/dungeon-forge-v2/forge-greatsword-v2.glb": "9996d5499840b6fa1ebcac2658d3f972f5a1eac534441e8e8df89aebe36a7145",
+    "public/models/dungeon-forge-v2/forge-staff-v2.glb": "98f2e856ad84ba732cd5dcf7b05ccd95ffefd3f3b90df700b16594afa994fc39",
+    "public/models/dungeon-forge-v2/forge-sword-v2.glb": "0616b17860de699372d102a31dfe23de9ca0697bf9e1bc8ae070d219eb22fffc",
+    "public/models/dungeon-forge-v2/forge-wand-v2.glb": "24e7352a12b944221b65fe33c98635bb40420408bdfb584b93451213aea6a355",
+    "public/models/armory-v1/arm_aegis_weapon.glb": "958523efe658559c60a25d3a2bfd7fe38cafb54ea8a6f7f8bc2bdcd40ee5f2c7",
+    "public/models/armory-v1/arm_anchor_weapon.glb": "b4b75898a507feb767967af05b6c29bc39464c5c5ba64a34d84b458b905cc1e8",
+    "public/models/armory-v1/arm_echo_weapon.glb": "5ef9fb4f3c9d3be2301144e79ae34cbc30bcb47ac93b192362d631cd14614cd5",
+    "public/models/armory-v1/arm_lance_weapon.glb": "194f0336a75599593dd0b83346e4520c45f7760770a409c6e700e80c22753697",
+    "public/models/armory-v1/arm_mercy_weapon.glb": "78022ba88c6202f7c05a46cc8cac5e640549e7eb36919c18b94411be7716afde",
+    "public/models/armory-v1/arm_relay_weapon.glb": "b903e47b3738de4af93dd02d6c379d153a3095c9c62ad47bf2674c0fb1711ed7",
+    "public/models/Mage.glb": "5ddeb9c41099d4efe7b93774167826ae1c36ad057ab51d64d39797103e463538",
+    "public/models/Rogue.glb": "c626cbbeea606a309caa6af3d3fbbd49c5fbea7495c4b6f5f747a3aaf46bf99d",
+    "public/models/Ranger.glb": "4a1db924132836b29b1a63f55b8031e06eb6ec103037017864859786982727cb"
+  },
+  "variants": [
+    {
+      "key": "arm_aegis_weapon@ornament-bow",
+      "id": "arm_aegis_weapon",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "armory-ornament",
+      "form": "bow",
+      "count": 1,
+      "formKey": "ornament-bow",
+      "file": "arm_aegis_weapon--ornament-bow.webp",
+      "bytes": 12000,
+      "sha256": "ab9592ea03a24ad733164e88459aa8dccae76c194e97ce878ab236f35e025de7",
+      "occupancy": 0.852,
+      "meshes": 4
+    },
+    {
+      "key": "arm_aegis_weapon@ornament-dagger-pair",
+      "id": "arm_aegis_weapon",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "armory-ornament",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "ornament-dagger-pair",
+      "file": "arm_aegis_weapon--ornament-dagger-pair.webp",
+      "bytes": 12940,
+      "sha256": "3920be29829b26912aa4874af21a8708fadae365393706d9fe913cdc018be00a",
+      "occupancy": 0.852,
+      "meshes": 5
+    },
+    {
+      "key": "arm_aegis_weapon@ornament-staff",
+      "id": "arm_aegis_weapon",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "armory-ornament",
+      "form": "staff",
+      "count": 1,
+      "formKey": "ornament-staff",
+      "file": "arm_aegis_weapon--ornament-staff.webp",
+      "bytes": 6768,
+      "sha256": "2354d99ffa0a9b4bec434447ded916f608442dce07c06d522aa748a670355bd8",
+      "occupancy": 0.852,
+      "meshes": 4
+    },
+    {
+      "key": "arm_anchor_weapon@ornament-bow",
+      "id": "arm_anchor_weapon",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "armory-ornament",
+      "form": "bow",
+      "count": 1,
+      "formKey": "ornament-bow",
+      "file": "arm_anchor_weapon--ornament-bow.webp",
+      "bytes": 12224,
+      "sha256": "79323dd474974eca45177a636df3b02b206ed42e07d0cf7d33a888c454d0df46",
+      "occupancy": 0.852,
+      "meshes": 4
+    },
+    {
+      "key": "arm_anchor_weapon@ornament-dagger-pair",
+      "id": "arm_anchor_weapon",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "armory-ornament",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "ornament-dagger-pair",
+      "file": "arm_anchor_weapon--ornament-dagger-pair.webp",
+      "bytes": 13140,
+      "sha256": "9a038db893c3ae0acdd64ef17f5052487c5a8f30fbf3b5e181ae72fe0bc1fcb3",
+      "occupancy": 0.852,
+      "meshes": 5
+    },
+    {
+      "key": "arm_anchor_weapon@ornament-staff",
+      "id": "arm_anchor_weapon",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "armory-ornament",
+      "form": "staff",
+      "count": 1,
+      "formKey": "ornament-staff",
+      "file": "arm_anchor_weapon--ornament-staff.webp",
+      "bytes": 6864,
+      "sha256": "b27ee0e19b0bc94a0e77fbfaac27230b917abe62e099d09efeb36f460af795af",
+      "occupancy": 0.852,
+      "meshes": 4
+    },
+    {
+      "key": "arm_echo_weapon@ornament-bow",
+      "id": "arm_echo_weapon",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "armory-ornament",
+      "form": "bow",
+      "count": 1,
+      "formKey": "ornament-bow",
+      "file": "arm_echo_weapon--ornament-bow.webp",
+      "bytes": 12068,
+      "sha256": "57f7955db1f4407fa9750260979cd328b5bac92cdeb7d2d1fbe9e00ece9f8005",
+      "occupancy": 0.852,
+      "meshes": 4
+    },
+    {
+      "key": "arm_echo_weapon@ornament-dagger-pair",
+      "id": "arm_echo_weapon",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "armory-ornament",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "ornament-dagger-pair",
+      "file": "arm_echo_weapon--ornament-dagger-pair.webp",
+      "bytes": 12964,
+      "sha256": "42095c5a4e51de8b394053fb70d13e119d73c0eb0717fe7543df2b762df9c831",
+      "occupancy": 0.852,
+      "meshes": 5
+    },
+    {
+      "key": "arm_echo_weapon@ornament-staff",
+      "id": "arm_echo_weapon",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "armory-ornament",
+      "form": "staff",
+      "count": 1,
+      "formKey": "ornament-staff",
+      "file": "arm_echo_weapon--ornament-staff.webp",
+      "bytes": 6774,
+      "sha256": "731bda0f1b6c885e3c075cfe1528bae0752d371567f438546125d150ade2666d",
+      "occupancy": 0.852,
+      "meshes": 4
+    },
+    {
+      "key": "arm_lance_weapon@ornament-bow",
+      "id": "arm_lance_weapon",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "armory-ornament",
+      "form": "bow",
+      "count": 1,
+      "formKey": "ornament-bow",
+      "file": "arm_lance_weapon--ornament-bow.webp",
+      "bytes": 12300,
+      "sha256": "e2ae3a121cdea4b7fd9434a7e0f2dbe56a2dd1413cc995db4e4d5d40373ea39c",
+      "occupancy": 0.852,
+      "meshes": 4
+    },
+    {
+      "key": "arm_lance_weapon@ornament-dagger-pair",
+      "id": "arm_lance_weapon",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "armory-ornament",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "ornament-dagger-pair",
+      "file": "arm_lance_weapon--ornament-dagger-pair.webp",
+      "bytes": 13160,
+      "sha256": "786d8d4cb421605d60fbdd3807cd626f59f83adf3e422fb39b6054e279511cef",
+      "occupancy": 0.852,
+      "meshes": 5
+    },
+    {
+      "key": "arm_lance_weapon@ornament-staff",
+      "id": "arm_lance_weapon",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "armory-ornament",
+      "form": "staff",
+      "count": 1,
+      "formKey": "ornament-staff",
+      "file": "arm_lance_weapon--ornament-staff.webp",
+      "bytes": 6988,
+      "sha256": "0aeb186f16fa96db1584f8457676cd1d6a31f92231e953f397c5450a52712b38",
+      "occupancy": 0.852,
+      "meshes": 4
+    },
+    {
+      "key": "arm_mercy_weapon@ornament-bow",
+      "id": "arm_mercy_weapon",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "armory-ornament",
+      "form": "bow",
+      "count": 1,
+      "formKey": "ornament-bow",
+      "file": "arm_mercy_weapon--ornament-bow.webp",
+      "bytes": 11976,
+      "sha256": "75ffcafa7c585e8ef95cb8d1b2e7579b036a018745b2f984307e6972a556f5bb",
+      "occupancy": 0.852,
+      "meshes": 4
+    },
+    {
+      "key": "arm_mercy_weapon@ornament-dagger-pair",
+      "id": "arm_mercy_weapon",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "armory-ornament",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "ornament-dagger-pair",
+      "file": "arm_mercy_weapon--ornament-dagger-pair.webp",
+      "bytes": 12854,
+      "sha256": "52e5477ecc2c57c89cff07893b488c81b72196bdb8d3c7a1c886ffa83fbe1b3a",
+      "occupancy": 0.852,
+      "meshes": 5
+    },
+    {
+      "key": "arm_mercy_weapon@ornament-staff",
+      "id": "arm_mercy_weapon",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "armory-ornament",
+      "form": "staff",
+      "count": 1,
+      "formKey": "ornament-staff",
+      "file": "arm_mercy_weapon--ornament-staff.webp",
+      "bytes": 6758,
+      "sha256": "9e5d688ba9d29c2f858d5ea4c52011514291e1af601f8a4f3b5aa374bb1e8826",
+      "occupancy": 0.852,
+      "meshes": 4
+    },
+    {
+      "key": "arm_relay_weapon@ornament-bow",
+      "id": "arm_relay_weapon",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "armory-ornament",
+      "form": "bow",
+      "count": 1,
+      "formKey": "ornament-bow",
+      "file": "arm_relay_weapon--ornament-bow.webp",
+      "bytes": 11976,
+      "sha256": "57f0f0c3d3d46b9267c5f4ebd0d9628c8cb48927d91aeb653d78ce0319a20744",
+      "occupancy": 0.852,
+      "meshes": 4
+    },
+    {
+      "key": "arm_relay_weapon@ornament-dagger-pair",
+      "id": "arm_relay_weapon",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "armory-ornament",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "ornament-dagger-pair",
+      "file": "arm_relay_weapon--ornament-dagger-pair.webp",
+      "bytes": 12974,
+      "sha256": "7d232e68058db3cc05c9f3369e8baf62d347c7db5151afda461d4294952f3150",
+      "occupancy": 0.852,
+      "meshes": 5
+    },
+    {
+      "key": "arm_relay_weapon@ornament-staff",
+      "id": "arm_relay_weapon",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "armory-ornament",
+      "form": "staff",
+      "count": 1,
+      "formKey": "ornament-staff",
+      "file": "arm_relay_weapon--ornament-staff.webp",
+      "bytes": 6826,
+      "sha256": "e4a68f6fd850ef56a6154edcec4cb42429dcfae442a2d30e0b8d6701f80a03c3",
+      "occupancy": 0.852,
+      "meshes": 4
+    },
+    {
+      "key": "exp_emberknight_weapon@bow",
+      "id": "exp_emberknight_weapon",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "exp_emberknight_weapon--bow.webp",
+      "bytes": 9336,
+      "sha256": "1691bfcc2790fa210a3b65f6634d64f4d2bafd339cc1812b60ebd9105e03c698",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "exp_emberknight_weapon@dagger-pair",
+      "id": "exp_emberknight_weapon",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "exp_emberknight_weapon--dagger-pair.webp",
+      "bytes": 16498,
+      "sha256": "e8cd8eb1791f02f9dfeace176559506f8750a4cf0bf32169243d2beb509a7b94",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "exp_emberknight_weapon@greataxe",
+      "id": "exp_emberknight_weapon",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "exp_emberknight_weapon--greataxe.webp",
+      "bytes": 9260,
+      "sha256": "b862c455c57988646158445d9a60c99a0a75c8a7c954771e223fdf1371872fa4",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "exp_emberknight_weapon@greatsword",
+      "id": "exp_emberknight_weapon",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "exp_emberknight_weapon--greatsword.webp",
+      "bytes": 9134,
+      "sha256": "dc973f1dc2a405346d861bb921a727709d409eb547385cd011a7b41eb7338716",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "exp_emberknight_weapon@staff",
+      "id": "exp_emberknight_weapon",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "exp_emberknight_weapon--staff.webp",
+      "bytes": 7838,
+      "sha256": "044c8f0f7bbb831d48d86dc95af3449671df11fbd966c2168be23bd7d4b03805",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "exp_glasswarden_weapon@bow",
+      "id": "exp_glasswarden_weapon",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "exp_glasswarden_weapon--bow.webp",
+      "bytes": 8306,
+      "sha256": "f59ddbd9f06c0e2de84ad6800aef1455d552b341ccee078feabe0c3d45908c62",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "exp_glasswarden_weapon@dagger-pair",
+      "id": "exp_glasswarden_weapon",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "exp_glasswarden_weapon--dagger-pair.webp",
+      "bytes": 12268,
+      "sha256": "973898cd232ae162f57e2bbce2c0cd8080ec7880f8ad8375a77638d163b63a90",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "exp_glasswarden_weapon@greataxe",
+      "id": "exp_glasswarden_weapon",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "exp_glasswarden_weapon--greataxe.webp",
+      "bytes": 8306,
+      "sha256": "a46599e288f94209a93d0d6ace4e03ea20f52be2c571f9b4586ddf86466d6b49",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "exp_glasswarden_weapon@greatsword",
+      "id": "exp_glasswarden_weapon",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "exp_glasswarden_weapon--greatsword.webp",
+      "bytes": 8224,
+      "sha256": "ac8f9d2e59d87a111c8e1902b3b089a95e2f35a7e100ab02e56faebcf16e6513",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "exp_glasswarden_weapon@staff",
+      "id": "exp_glasswarden_weapon",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "exp_glasswarden_weapon--staff.webp",
+      "bytes": 6120,
+      "sha256": "e3ab7e3b019911e5d4e51cd063fd2a7e9c1b48bed27613c2e0d8e5211eed2367",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "exp_starreader_weapon@bow",
+      "id": "exp_starreader_weapon",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "exp_starreader_weapon--bow.webp",
+      "bytes": 8612,
+      "sha256": "91efed41e1f6ba2bcc5e3ab1689539f9dbf9fe3e53981e7c103cc18feecf9902",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "exp_starreader_weapon@dagger-pair",
+      "id": "exp_starreader_weapon",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "exp_starreader_weapon--dagger-pair.webp",
+      "bytes": 11574,
+      "sha256": "7ea2e2c245e8588d63e0d88dc861cf231c17c89339edf040cffed96ef33b80c8",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "exp_starreader_weapon@greataxe",
+      "id": "exp_starreader_weapon",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "exp_starreader_weapon--greataxe.webp",
+      "bytes": 8210,
+      "sha256": "588d556a8ef01248aafe119e29f409e64b6b7d02d376516ae5b7eab6bd854b0d",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "exp_starreader_weapon@greatsword",
+      "id": "exp_starreader_weapon",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "exp_starreader_weapon--greatsword.webp",
+      "bytes": 6258,
+      "sha256": "2591aadf2169fe7b5cd56b84ff16110ed254e31e7fd91547a6e4734e24181c90",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "exp_starreader_weapon@staff",
+      "id": "exp_starreader_weapon",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "exp_starreader_weapon--staff.webp",
+      "bytes": 5998,
+      "sha256": "7f1f7ba10d20ea113182a53cd0782dd8b9ba97b29eb492078a6721352f031f81",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_e_1@axe-pair",
+      "id": "gear_weapon_e_1",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 2,
+      "formKey": "axe-pair",
+      "file": "gear_weapon_e_1--axe-pair.webp",
+      "bytes": 12430,
+      "sha256": "a2e36ec387cec6ee3e19ad3494943dff868f95cc7273208422a999db1696b68c",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "gear_weapon_e_1@bow",
+      "id": "gear_weapon_e_1",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "gear_weapon_e_1--bow.webp",
+      "bytes": 8742,
+      "sha256": "f8b5d97827bcc424876ed068fee23e6137548973c0214bf5588b7cd056b15e2c",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_e_1@dagger-pair",
+      "id": "gear_weapon_e_1",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "gear_weapon_e_1--dagger-pair.webp",
+      "bytes": 10940,
+      "sha256": "00531598206facaad518995d43535f39c4bc8e745aa2fa9895152a488e4802c2",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "gear_weapon_e_1@staff",
+      "id": "gear_weapon_e_1",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "gear_weapon_e_1--staff.webp",
+      "bytes": 6660,
+      "sha256": "5f49b53989cfb4b9a2dc7929f7b9931678374a1f98b8722e8c24c676236ce1ea",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_e_2@axe-pair",
+      "id": "gear_weapon_e_2",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 2,
+      "formKey": "axe-pair",
+      "file": "gear_weapon_e_2--axe-pair.webp",
+      "bytes": 13554,
+      "sha256": "85d5dda08eb000cab6af9244f735816fd415a8053fe6406eeaa13d9953f8fb60",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "gear_weapon_e_2@bow",
+      "id": "gear_weapon_e_2",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "gear_weapon_e_2--bow.webp",
+      "bytes": 8508,
+      "sha256": "b225095cae049804c49662a3b80ef1c1c39039ecb3b25b7c20a66b6a987fb30f",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_e_2@dagger-pair",
+      "id": "gear_weapon_e_2",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "gear_weapon_e_2--dagger-pair.webp",
+      "bytes": 13382,
+      "sha256": "d8495440eb891f14c96f04e3c671ca5f6eaf398bf397f6a6fbfb9957ac6f842b",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "gear_weapon_e_2@staff",
+      "id": "gear_weapon_e_2",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "gear_weapon_e_2--staff.webp",
+      "bytes": 5956,
+      "sha256": "fa021375d0d66b47bdb60d6da1f36131e15b80799d8a0ef2d1714db05a6b7946",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_e_3@axe-pair",
+      "id": "gear_weapon_e_3",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 2,
+      "formKey": "axe-pair",
+      "file": "gear_weapon_e_3--axe-pair.webp",
+      "bytes": 13166,
+      "sha256": "309ed13e799c0af3ccfb33018b3b81b4b37d9ba89e93bb85b2825ca57ea34160",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "gear_weapon_e_3@bow",
+      "id": "gear_weapon_e_3",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "gear_weapon_e_3--bow.webp",
+      "bytes": 8304,
+      "sha256": "db0b9176e01f9878fccaad6a8160d90d53cf667a5f32309e436d18c73a5488ad",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_e_3@dagger-pair",
+      "id": "gear_weapon_e_3",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "gear_weapon_e_3--dagger-pair.webp",
+      "bytes": 14572,
+      "sha256": "50522bea7b56bdfaec130afbe32184077e43df1910d959f798f92de14773ce8d",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "gear_weapon_e_3@staff",
+      "id": "gear_weapon_e_3",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "gear_weapon_e_3--staff.webp",
+      "bytes": 6914,
+      "sha256": "9c61904c4946fc4f5df5e18057283c5fc3ee4ed2ebbd448704428bfbf5f11218",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_l_1@bow",
+      "id": "gear_weapon_l_1",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "gear_weapon_l_1--bow.webp",
+      "bytes": 8440,
+      "sha256": "83bb00b8b185d340a941b322b23f8286e4c9c3ce2b6328ec432cbe91a885a277",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_l_1@dagger-pair",
+      "id": "gear_weapon_l_1",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "gear_weapon_l_1--dagger-pair.webp",
+      "bytes": 12230,
+      "sha256": "b5cd1846ae5a42f879df2d7f7f40e3b918595e866357ee1ae5f16fa5ee7a8c0b",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "gear_weapon_l_1@greataxe",
+      "id": "gear_weapon_l_1",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "gear_weapon_l_1--greataxe.webp",
+      "bytes": 9164,
+      "sha256": "0c4bbc04993603d7f627beae0fbbc5e7088cf9e76d4cdbda9bbf5511e044ecba",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_l_1@greatsword",
+      "id": "gear_weapon_l_1",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "gear_weapon_l_1--greatsword.webp",
+      "bytes": 7708,
+      "sha256": "f624ad470deb4301d82df7f00bdf6cd6e57e9318e30891e9ea78d553628b0d14",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_l_1@staff",
+      "id": "gear_weapon_l_1",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "gear_weapon_l_1--staff.webp",
+      "bytes": 7034,
+      "sha256": "8394c8cfdc051a17049defd3826c86b1340f6f1bc099de67d24c794d4356210a",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_l_2@bow",
+      "id": "gear_weapon_l_2",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "gear_weapon_l_2--bow.webp",
+      "bytes": 8660,
+      "sha256": "111b75c0e0c935749b3cf59af5618de41c11b58dbeda9fd665e30a1deb8311b8",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_l_2@dagger-pair",
+      "id": "gear_weapon_l_2",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "gear_weapon_l_2--dagger-pair.webp",
+      "bytes": 15112,
+      "sha256": "977e6b0663c0b66a76594528fa706ef000fd798a86513c787846518b19f13735",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "gear_weapon_l_2@greataxe",
+      "id": "gear_weapon_l_2",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "gear_weapon_l_2--greataxe.webp",
+      "bytes": 8650,
+      "sha256": "2f34bbac39e2131f8c2573d3216f67ed936cde2a7cbe8a8fc035f179a8f1ef8b",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_l_2@greatsword",
+      "id": "gear_weapon_l_2",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "gear_weapon_l_2--greatsword.webp",
+      "bytes": 8860,
+      "sha256": "8d78f7e7d565eaca76c574ba6f96fc5a158abadb50249591b3905236103f6711",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_l_2@staff",
+      "id": "gear_weapon_l_2",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "gear_weapon_l_2--staff.webp",
+      "bytes": 6554,
+      "sha256": "bce3dc390328389386af756781ca9a3e04635ee6e087e8b985a8d0a63e0d6247",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_l_3@bow",
+      "id": "gear_weapon_l_3",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "gear_weapon_l_3--bow.webp",
+      "bytes": 10092,
+      "sha256": "57f98d5b850ab5f123849cda691ae3969d95b8fcbd7bbbb2fedc4eaa1810c7cf",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_l_3@dagger-pair",
+      "id": "gear_weapon_l_3",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "gear_weapon_l_3--dagger-pair.webp",
+      "bytes": 14470,
+      "sha256": "343b6b85925ef3e8bf3080dc869030669dcd7ee33b49e5c81115b0b745df7de4",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "gear_weapon_l_3@greataxe",
+      "id": "gear_weapon_l_3",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "gear_weapon_l_3--greataxe.webp",
+      "bytes": 9438,
+      "sha256": "060a61fe85254b17e03b0de89a123abb5003d5f4ac930b4014d0600b97d446d6",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_l_3@greatsword",
+      "id": "gear_weapon_l_3",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "gear_weapon_l_3--greatsword.webp",
+      "bytes": 10836,
+      "sha256": "dd48ea52b5046e56beb7e4ccaa7aa006678e8a8019ab9ab485efaddc2a7807ce",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_l_3@staff",
+      "id": "gear_weapon_l_3",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "gear_weapon_l_3--staff.webp",
+      "bytes": 7854,
+      "sha256": "5f80847ab8d5647793162424764b4662df959ed9c648488af5a3563bba7c3317",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_n_1@axe",
+      "id": "gear_weapon_n_1",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "gear_weapon_n_1--axe.webp",
+      "bytes": 7476,
+      "sha256": "24f991efa1d780c7d4ac09d460829900bec54aa978e1e739cefc400bf637fef2",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_n_1@bow",
+      "id": "gear_weapon_n_1",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "gear_weapon_n_1--bow.webp",
+      "bytes": 7550,
+      "sha256": "e26eba1c53a246bebe4802d793c84333da273f4dc70acc9045b289c881adc086",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_n_1@dagger",
+      "id": "gear_weapon_n_1",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 1,
+      "formKey": "dagger",
+      "file": "gear_weapon_n_1--dagger.webp",
+      "bytes": 7762,
+      "sha256": "32edbeacfa5460bcdeb4a73649b87dce5f9af9c2812d28afb9dcce3db84dc087",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_n_1@wand",
+      "id": "gear_weapon_n_1",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "wand",
+      "count": 1,
+      "formKey": "wand",
+      "file": "gear_weapon_n_1--wand.webp",
+      "bytes": 7324,
+      "sha256": "fb1f080bc5abfe046e587e9c5a2c376947e0d7f18cc2f8c0fe1aa912af4a0d9c",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_n_2@axe",
+      "id": "gear_weapon_n_2",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "gear_weapon_n_2--axe.webp",
+      "bytes": 5884,
+      "sha256": "572d4508930589c676b2b72550a4008cea2ea08c01a800f2e9ee86e969adb9aa",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_n_2@bow",
+      "id": "gear_weapon_n_2",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "gear_weapon_n_2--bow.webp",
+      "bytes": 7876,
+      "sha256": "e783309f0d65e2f0e75fa28143f8eb6c0a92e1f7c7bb7825eb05500cd4c3d705",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_n_2@dagger",
+      "id": "gear_weapon_n_2",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 1,
+      "formKey": "dagger",
+      "file": "gear_weapon_n_2--dagger.webp",
+      "bytes": 7392,
+      "sha256": "a6b6dba60973ca3cec5e18d78e30857c035f3ac58c864818287199265dc91350",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_n_2@wand",
+      "id": "gear_weapon_n_2",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "wand",
+      "count": 1,
+      "formKey": "wand",
+      "file": "gear_weapon_n_2--wand.webp",
+      "bytes": 5866,
+      "sha256": "e60f3da9953014919610e74b5962bba2c5c810b01870485c98e6c7bcc6acac45",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_n_3@axe",
+      "id": "gear_weapon_n_3",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "gear_weapon_n_3--axe.webp",
+      "bytes": 7834,
+      "sha256": "2bdc6d10f5bf1e487f085f105757ce5337f8fa215632aaf0ec4f037064fd14a5",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_n_3@bow",
+      "id": "gear_weapon_n_3",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "gear_weapon_n_3--bow.webp",
+      "bytes": 8952,
+      "sha256": "2c8bba727d1fcd0ee3c3ad89c8e5ce51f667df7bada01375fa1928f9d1cfa7c7",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_n_3@dagger",
+      "id": "gear_weapon_n_3",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 1,
+      "formKey": "dagger",
+      "file": "gear_weapon_n_3--dagger.webp",
+      "bytes": 8746,
+      "sha256": "961f9f78670e89fbcbe6c2ca4b8fb6a77d51a5168c8a11236e3a715f7621ef99",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_n_3@wand",
+      "id": "gear_weapon_n_3",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "wand",
+      "count": 1,
+      "formKey": "wand",
+      "file": "gear_weapon_n_3--wand.webp",
+      "bytes": 8176,
+      "sha256": "c939f578984066359c63f4595ba9b271434ddcb5a00917ffdf62705e49a51c8c",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_s_1@axe",
+      "id": "gear_weapon_s_1",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "gear_weapon_s_1--axe.webp",
+      "bytes": 6230,
+      "sha256": "8d0b5de631cfdb806fa14c29f0ff71d47069b627bcee5154e154e38741c585b5",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_s_1@bow",
+      "id": "gear_weapon_s_1",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "gear_weapon_s_1--bow.webp",
+      "bytes": 7762,
+      "sha256": "46036c5664318e0b58b78796761ae5f40d857c9f6b996eeecbc4e3fa41837d5b",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_s_1@dagger-pair",
+      "id": "gear_weapon_s_1",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "gear_weapon_s_1--dagger-pair.webp",
+      "bytes": 10864,
+      "sha256": "1f56bab1fd97af409fd2c8c51ba42373b9e068c9911e57ebb32201c2254cc3b9",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "gear_weapon_s_1@staff",
+      "id": "gear_weapon_s_1",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "gear_weapon_s_1--staff.webp",
+      "bytes": 4770,
+      "sha256": "c80d631d2d7e086a54916a57154e6aedbf1ae708c4c9ab14bd54da3ec627d975",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_s_2@axe",
+      "id": "gear_weapon_s_2",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "gear_weapon_s_2--axe.webp",
+      "bytes": 8736,
+      "sha256": "e8b431eb37e1499b1b10ec47824cd925239792295e546337da7d4702c214b0a8",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_s_2@bow",
+      "id": "gear_weapon_s_2",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "gear_weapon_s_2--bow.webp",
+      "bytes": 9390,
+      "sha256": "afe90cc8772c8b936b5890bed00ba618fdf8a3d40aa55c11f42fdea7370afb64",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_s_2@dagger-pair",
+      "id": "gear_weapon_s_2",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "gear_weapon_s_2--dagger-pair.webp",
+      "bytes": 12138,
+      "sha256": "7dde2dad0e7451fef73e34f53cdebd6afe3af51395b65e18c14362a2b53ee56e",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "gear_weapon_s_2@staff",
+      "id": "gear_weapon_s_2",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "gear_weapon_s_2--staff.webp",
+      "bytes": 6888,
+      "sha256": "b2f776eec632642bd7145990ffc2d1c9424d0343b25ba7540c8b3f786dc44230",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_s_3@axe",
+      "id": "gear_weapon_s_3",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "gear_weapon_s_3--axe.webp",
+      "bytes": 7414,
+      "sha256": "97d993796be911df9c0bd8529d0f2e55455595346e7fb30fa063f49ba15ef0c1",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_s_3@bow",
+      "id": "gear_weapon_s_3",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "gear_weapon_s_3--bow.webp",
+      "bytes": 8714,
+      "sha256": "cad2006bd0aba4b9f5bf48a048d001681a54f03915777312e1627a4b740589f3",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "gear_weapon_s_3@dagger-pair",
+      "id": "gear_weapon_s_3",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "gear_weapon_s_3--dagger-pair.webp",
+      "bytes": 11666,
+      "sha256": "15e9da1a2c00e3ca1ce5555b13cd4032d5832401b81c35f6aee41261eda2c1aa",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "gear_weapon_s_3@staff",
+      "id": "gear_weapon_s_3",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "gear_weapon_s_3--staff.webp",
+      "bytes": 6020,
+      "sha256": "c7167c4a0d02550cbc5191ea1962a4ea8a78c76a9701ebf05b34dae441fe210b",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "sg_ember_lantern@bow",
+      "id": "sg_ember_lantern",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "sg_ember_lantern--bow.webp",
+      "bytes": 10398,
+      "sha256": "c9c32efdea45be8c86149c076c04760649fe3fcce0a15a686a3c3ae7d09af345",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "sg_ember_lantern@dagger-pair",
+      "id": "sg_ember_lantern",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "sg_ember_lantern--dagger-pair.webp",
+      "bytes": 13096,
+      "sha256": "e7c873d428a7673681e3f2a13ae00bc3f345159186a73ba3dd127bb70e73bf60",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "sg_ember_lantern@greataxe",
+      "id": "sg_ember_lantern",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "sg_ember_lantern--greataxe.webp",
+      "bytes": 10134,
+      "sha256": "a9a41d47922640c2eee861f5401be35cb9b09d80127be159bc0171bc30f66b2e",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "sg_ember_lantern@greatsword",
+      "id": "sg_ember_lantern",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "sg_ember_lantern--greatsword.webp",
+      "bytes": 11068,
+      "sha256": "5218cf6ee35eb71ea66deff31c51e3e1ae90bfea0c3bcbfef4146426dfa832fb",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "sg_ember_lantern@staff",
+      "id": "sg_ember_lantern",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "sg_ember_lantern--staff.webp",
+      "bytes": 8810,
+      "sha256": "1cf463b021b095f8362ab0417e3cf87eab6bd6ce76b74615f76e85d4d2f11505",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "sg_solar_grimoire@bow",
+      "id": "sg_solar_grimoire",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "sg_solar_grimoire--bow.webp",
+      "bytes": 9288,
+      "sha256": "a22729058c7f0be20bc2ffddebd89b907012b7cf2db9038714112287a62ebd0a",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "sg_solar_grimoire@dagger-pair",
+      "id": "sg_solar_grimoire",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "sg_solar_grimoire--dagger-pair.webp",
+      "bytes": 12870,
+      "sha256": "4c4e848d518c28472e0dacf3375605626986080d48d3e04f039c4ccd357ac2be",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "sg_solar_grimoire@greataxe",
+      "id": "sg_solar_grimoire",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "sg_solar_grimoire--greataxe.webp",
+      "bytes": 9536,
+      "sha256": "4297cf7a59a5e15d7f5bc0b9fedb935622237bcb489e3953196d8418e7351b1c",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "sg_solar_grimoire@greatsword",
+      "id": "sg_solar_grimoire",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "sg_solar_grimoire--greatsword.webp",
+      "bytes": 8308,
+      "sha256": "2408f5058c4a179b1cba923bc7b6438566a1a94b943990a5f41908bea16493c0",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "sg_solar_grimoire@staff",
+      "id": "sg_solar_grimoire",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "sg_solar_grimoire--staff.webp",
+      "bytes": 7510,
+      "sha256": "ac22952be4fe84eddc8c353d4dbc9beb0dd66af7e011f8d4c9cb2d1ff785ad68",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_blood@bow",
+      "id": "w_blood",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_blood--bow.webp",
+      "bytes": 9474,
+      "sha256": "9a4a4b8eafcfd92d90a593aa0314208d0f2bee7b5656b1f578c47641dde47201",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_blood@dagger-pair",
+      "id": "w_blood",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_blood--dagger-pair.webp",
+      "bytes": 15468,
+      "sha256": "aece0ca339612faf1cc0e36cb49b2a373dce36127da423f73cc6ddb88d9e4877",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_blood@greataxe",
+      "id": "w_blood",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "w_blood--greataxe.webp",
+      "bytes": 9018,
+      "sha256": "c7889a4909c0933628b1edb850c9dc8b1516aedcd084ca7b859deeee74d0866f",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_blood@greatsword",
+      "id": "w_blood",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "w_blood--greatsword.webp",
+      "bytes": 8544,
+      "sha256": "611d933c9291c498dcbb6d333d2110e95e0aee13b6393e25f6ecae4ea07e9435",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_blood@staff",
+      "id": "w_blood",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_blood--staff.webp",
+      "bytes": 7154,
+      "sha256": "e9263a007bda7b8b6c9fb986b17fb15b315a503d66f48525f35045b2b777af35",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_bronze@axe",
+      "id": "w_bronze",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "w_bronze--axe.webp",
+      "bytes": 8422,
+      "sha256": "d18d34158b6f75f48006b4594761bbe82f03d7773166e33c850a21425d3cf1a0",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_bronze@bow",
+      "id": "w_bronze",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_bronze--bow.webp",
+      "bytes": 9010,
+      "sha256": "8c61690aa8a07b77d4998eaf9f9b123d4d5253d0bf2b43fa2739f407a3687e4e",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_bronze@dagger-pair",
+      "id": "w_bronze",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_bronze--dagger-pair.webp",
+      "bytes": 14434,
+      "sha256": "e09d4d96df25d40d57cd761054b3175dfbc64b4fce218397157ee1513adb01ae",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_bronze@staff",
+      "id": "w_bronze",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_bronze--staff.webp",
+      "bytes": 7320,
+      "sha256": "805f599e1e5cecea036be9d319b223a043d3eed3185ef6316748fcd6cc5ebcd0",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_chain@bow",
+      "id": "w_chain",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_chain--bow.webp",
+      "bytes": 9032,
+      "sha256": "23d3361b82beacea22619eddde9ad7550df0649fc771c3ab61c6aadce3264986",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_chain@dagger-pair",
+      "id": "w_chain",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_chain--dagger-pair.webp",
+      "bytes": 13252,
+      "sha256": "eb5bd6810af118c0f389fd0d92b91e09f8b8c9052be9bd6fafe9cd63dd3ff4ae",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_chain@greataxe",
+      "id": "w_chain",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "w_chain--greataxe.webp",
+      "bytes": 8812,
+      "sha256": "564e8eb2eb8e93e0154b274c6c96339a85621a816459e4e3ae2a0aec07f900d4",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_chain@greatsword",
+      "id": "w_chain",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "w_chain--greatsword.webp",
+      "bytes": 8878,
+      "sha256": "b1be9a07d26fb5e299fd4c53aaf81a01a4ad9349a50454a9488b1202405b116f",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_chain@staff",
+      "id": "w_chain",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_chain--staff.webp",
+      "bytes": 7308,
+      "sha256": "6d197f9e6d345264df7acb09069550ee277e7af5f8db86c0e62f473ff2a1dcff",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_cleaver@axe",
+      "id": "w_cleaver",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "w_cleaver--axe.webp",
+      "bytes": 6316,
+      "sha256": "183efbb175f97de677aa510a94cbd3f2939209d07199c3b57d78c3c01b4aeba9",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_cleaver@bow",
+      "id": "w_cleaver",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_cleaver--bow.webp",
+      "bytes": 8196,
+      "sha256": "79eff3faaec49c44a3299cef6446ffbb66588a1d322af49bc1111ed84012177f",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_cleaver@dagger",
+      "id": "w_cleaver",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 1,
+      "formKey": "dagger",
+      "file": "w_cleaver--dagger.webp",
+      "bytes": 7106,
+      "sha256": "f147bdf23db9f35e494e37b195bc1733a38ad13afacdbf4f468d3ee244df5137",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_cleaver@wand",
+      "id": "w_cleaver",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "wand",
+      "count": 1,
+      "formKey": "wand",
+      "file": "w_cleaver--wand.webp",
+      "bytes": 6556,
+      "sha256": "e146a234d81b40c70115dad957b4383bd5a8a8a3ccaffa892903632db793680f",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_dragon@bow",
+      "id": "w_dragon",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_dragon--bow.webp",
+      "bytes": 8444,
+      "sha256": "0f6fb6133203642ba185b6744a10e6e8f844655f068e8f5556fee3a8b35d7375",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_dragon@dagger-pair",
+      "id": "w_dragon",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_dragon--dagger-pair.webp",
+      "bytes": 14924,
+      "sha256": "661e4197f247ab53a880c0ae185af33c12a7eb1558c84cd41b6f378974089717",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_dragon@greataxe",
+      "id": "w_dragon",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "w_dragon--greataxe.webp",
+      "bytes": 8558,
+      "sha256": "7077d59b930eed1183cacf3d17e57b8783172e7e7c93023ec7af3ff97dee2a00",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_dragon@greatsword",
+      "id": "w_dragon",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "w_dragon--greatsword.webp",
+      "bytes": 8410,
+      "sha256": "84527a3a4b71040587175ee8770be11b1c9075f18279ab3266b318e8245a9f9a",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_dragon@staff",
+      "id": "w_dragon",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_dragon--staff.webp",
+      "bytes": 6718,
+      "sha256": "4a8d57d39dafe8fcf48956764a28a81da5cf75af9d8f269b3725f1c78a63c381",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_flame@axe-pair",
+      "id": "w_flame",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 2,
+      "formKey": "axe-pair",
+      "file": "w_flame--axe-pair.webp",
+      "bytes": 13510,
+      "sha256": "30de46d9ee4b59281ab4a07aed11a68e39f24607acda6bc521aed91c185cd46c",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_flame@bow",
+      "id": "w_flame",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_flame--bow.webp",
+      "bytes": 9734,
+      "sha256": "0997fb3a0988d88cdbeed97fe0269acb872fef0cbf8748c9c53f6577107c4e72",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_flame@dagger-pair",
+      "id": "w_flame",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_flame--dagger-pair.webp",
+      "bytes": 15358,
+      "sha256": "07156557c52cf68fe7bbdbce906caf5135deb498e6b17ef3eb97314f09f8ec26",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_flame@staff",
+      "id": "w_flame",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_flame--staff.webp",
+      "bytes": 7620,
+      "sha256": "277a31fd45970870c00a53a0ae011027dbb4f87207c46aadd782acf07cf1691c",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_frost@axe-pair",
+      "id": "w_frost",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 2,
+      "formKey": "axe-pair",
+      "file": "w_frost--axe-pair.webp",
+      "bytes": 13020,
+      "sha256": "bc7c1aabef12bcce5a38252da69c75829a92ac4e30e1fb27bf843cdf03087cc3",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_frost@bow",
+      "id": "w_frost",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_frost--bow.webp",
+      "bytes": 8532,
+      "sha256": "443c7b10beb90c782624275ffb168e8b366811eac5a1649b97bd59d6d18c88b1",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_frost@dagger-pair",
+      "id": "w_frost",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_frost--dagger-pair.webp",
+      "bytes": 12646,
+      "sha256": "787aae50623866e1228024be895cc8692681615aa16c3921c57981bc6c141de6",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_frost@staff",
+      "id": "w_frost",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_frost--staff.webp",
+      "bytes": 6574,
+      "sha256": "b61cd6558f2640455386aed5f7502c9513eca5dd0e8ef77a0e3e2c68d2275ea3",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_gravity@bow",
+      "id": "w_gravity",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_gravity--bow.webp",
+      "bytes": 7974,
+      "sha256": "14a01be512f3778360a1977bbb6af91a6eb87af721a1378b064540bf85b94a48",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_gravity@dagger-pair",
+      "id": "w_gravity",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_gravity--dagger-pair.webp",
+      "bytes": 10674,
+      "sha256": "d1b8cc6085b3f219f5503740d2a89af3eb83e801bdbda87e167cc2435d7dc72e",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_gravity@greataxe",
+      "id": "w_gravity",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "w_gravity--greataxe.webp",
+      "bytes": 7324,
+      "sha256": "fd1628d90ff2f7df02c6a360dc7fceae8adfbee356c0fa0ac364b62de733ef96",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_gravity@greatsword",
+      "id": "w_gravity",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "w_gravity--greatsword.webp",
+      "bytes": 6954,
+      "sha256": "27730fd2fb3d5a7ac59686f3a07c549af83f84a152ab036dab494a39d383cd95",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_gravity@staff",
+      "id": "w_gravity",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_gravity--staff.webp",
+      "bytes": 5542,
+      "sha256": "fac4270aa691b226e8662886dd5fdf544d4bdebb115904691f764759483e1477",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_guard@axe",
+      "id": "w_guard",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "w_guard--axe.webp",
+      "bytes": 8128,
+      "sha256": "bc8ef868a6a55bde3423994e176294e4f6a230d816c5ae73d0a08f73bc1b9bc0",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_guard@bow",
+      "id": "w_guard",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_guard--bow.webp",
+      "bytes": 8076,
+      "sha256": "d7346cd596dfdfb7d309b9a79d411ca8f0a6ab260f698be7717216362b096fc5",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_guard@dagger-pair",
+      "id": "w_guard",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_guard--dagger-pair.webp",
+      "bytes": 13992,
+      "sha256": "684c40657bb34d0da356ca23eb2ef53bcc59f3c1b6dbb26e9d6dc1c8f2eb3748",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_guard@staff",
+      "id": "w_guard",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_guard--staff.webp",
+      "bytes": 6826,
+      "sha256": "5bc2610703f76d1cf3e1e68a24ad3536c74927f1b17df66888193df785259e2e",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_hunter@axe",
+      "id": "w_hunter",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "w_hunter--axe.webp",
+      "bytes": 8486,
+      "sha256": "032ba52f8c983e7b7a2812a8b46112b3632bb1e794d26a16fad34d8db813492c",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_hunter@bow",
+      "id": "w_hunter",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_hunter--bow.webp",
+      "bytes": 9246,
+      "sha256": "91d81a2f3764cd00e5031a02a3e838e9b4866a33edda97b9d6767309c43e025a",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_hunter@dagger-pair",
+      "id": "w_hunter",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_hunter--dagger-pair.webp",
+      "bytes": 12046,
+      "sha256": "0b779912b5ac8dd6dd640f636c82f3e4b3b29d3f6be357d78a18f1e208b97ba7",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_hunter@staff",
+      "id": "w_hunter",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_hunter--staff.webp",
+      "bytes": 7440,
+      "sha256": "b62bf4c7de6fd7b82762076a1a3e0f08979442539d4d444130b40a47a6ad00ed",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_iron@axe",
+      "id": "w_iron",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "w_iron--axe.webp",
+      "bytes": 6590,
+      "sha256": "3292032a9c14ceb4feaaf00463f16293dd20f256a7ae25ef949385f1009c8de1",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_iron@bow",
+      "id": "w_iron",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_iron--bow.webp",
+      "bytes": 7622,
+      "sha256": "1f7ea5b113a1f8bce0ecfc81667962517f7e328b4122822fc0842e2bd6d68eea",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_iron@dagger",
+      "id": "w_iron",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 1,
+      "formKey": "dagger",
+      "file": "w_iron--dagger.webp",
+      "bytes": 6864,
+      "sha256": "b6c608e1ed20e04444189a6ade567c738bf544d0a4968f620425e6a26e4f66d3",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_iron@wand",
+      "id": "w_iron",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "wand",
+      "count": 1,
+      "formKey": "wand",
+      "file": "w_iron--wand.webp",
+      "bytes": 6884,
+      "sha256": "421ddb5f383abcb30cf75af4d1640efec59b118a22ce4db871a2263e035b7359",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_king@bow",
+      "id": "w_king",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_king--bow.webp",
+      "bytes": 7836,
+      "sha256": "c40e6e5f72d31ffaa7d0912a3504ad54bf83c305f2cdf262d6d4a1d659c1c0b0",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_king@dagger-pair",
+      "id": "w_king",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_king--dagger-pair.webp",
+      "bytes": 13568,
+      "sha256": "441ad1aa466eaebf774add483e8e4254f05b9a3c8b8601e9c55948bb25bc3fcc",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_king@greataxe",
+      "id": "w_king",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "w_king--greataxe.webp",
+      "bytes": 8596,
+      "sha256": "5dea87b554604c5f63fa319bf036dc9170ab52b993962b7dbff0d8c73da6ca92",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_king@greatsword",
+      "id": "w_king",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "w_king--greatsword.webp",
+      "bytes": 6786,
+      "sha256": "a1daf2c39130a042fdd6238c78d085a3599b370e2f619944388b1785ccc562eb",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_king@staff",
+      "id": "w_king",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_king--staff.webp",
+      "bytes": 6384,
+      "sha256": "f0a80f61b243607278d98ad5e66787b90e10ce8eeada45ebbf7b0176ac64d756",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_knight@axe-pair",
+      "id": "w_knight",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 2,
+      "formKey": "axe-pair",
+      "file": "w_knight--axe-pair.webp",
+      "bytes": 14760,
+      "sha256": "392c86e4676d303be8ee62dfdee9880803656cc1c548504be438f0cc92eac3ec",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_knight@bow",
+      "id": "w_knight",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_knight--bow.webp",
+      "bytes": 8784,
+      "sha256": "b585133953d750a2b80e97341fa2181ca9e902624bc0ad44f4c13396beb23dc5",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_knight@dagger-pair",
+      "id": "w_knight",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_knight--dagger-pair.webp",
+      "bytes": 13320,
+      "sha256": "4a1bebd855031522da3874e6b49fe99aead0341e7f4676b1ccab0f5e8040d698",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_knight@staff",
+      "id": "w_knight",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_knight--staff.webp",
+      "bytes": 6862,
+      "sha256": "e7d51db98bbe1c268ef643d0a3ac8e0d961eb9106ceb741b1259f9e33e371fda",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_phoenix@bow",
+      "id": "w_phoenix",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_phoenix--bow.webp",
+      "bytes": 8930,
+      "sha256": "0582e74c33a12f3a7e04e6102562f8504902ac62c56817e334e3bd1f422b481d",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_phoenix@dagger-pair",
+      "id": "w_phoenix",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_phoenix--dagger-pair.webp",
+      "bytes": 14666,
+      "sha256": "30cd32f90ce31c8f23be8a661c432638f743471650afc139c48928f5f3072033",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_phoenix@greataxe",
+      "id": "w_phoenix",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "w_phoenix--greataxe.webp",
+      "bytes": 8880,
+      "sha256": "00be3974a01abfcd901b1de0204f97c7af610aca94c240ffde734cf79496a67f",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_phoenix@greatsword",
+      "id": "w_phoenix",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "w_phoenix--greatsword.webp",
+      "bytes": 8632,
+      "sha256": "e06407f01f51bffbbd7f2fba0c0d03faa51c12072dc8468edc838127d61e07aa",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_phoenix@staff",
+      "id": "w_phoenix",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_phoenix--staff.webp",
+      "bytes": 7374,
+      "sha256": "815a9d4f28d33024ac96ca8c83e97d9287dc80556173ae68cfd4295ed88d70c9",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_plague@bow",
+      "id": "w_plague",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_plague--bow.webp",
+      "bytes": 9186,
+      "sha256": "0b4d8c56f9ab1f0e1297a6ed7b59a0e1467350a0916405fac7eb5fd10bfb4fc5",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_plague@dagger-pair",
+      "id": "w_plague",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_plague--dagger-pair.webp",
+      "bytes": 11368,
+      "sha256": "8bc5e705997fb00c8b6d5170f7fd70d56ab2cad147470268c255358e39d9b24f",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_plague@greataxe",
+      "id": "w_plague",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "w_plague--greataxe.webp",
+      "bytes": 8180,
+      "sha256": "77f3929c1b1012d0701ba05a51fd89eb0523a229ba7a113f2aea9b14955cfec9",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_plague@greatsword",
+      "id": "w_plague",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "w_plague--greatsword.webp",
+      "bytes": 7678,
+      "sha256": "4e601d1130018d0b10e2a176289cd36bb5c089e382206e066f7d9889987f8751",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_plague@staff",
+      "id": "w_plague",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_plague--staff.webp",
+      "bytes": 6508,
+      "sha256": "359418756e8a2f39652f089b3a5bb6fe4726ef5db1cc03f58b6fac0ffa1ebe29",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_rime@bow",
+      "id": "w_rime",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_rime--bow.webp",
+      "bytes": 9036,
+      "sha256": "dd8b01421096f2fe399462201b53ef4acd82eecf5295706962af5528ce4d13f5",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_rime@dagger-pair",
+      "id": "w_rime",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_rime--dagger-pair.webp",
+      "bytes": 12594,
+      "sha256": "e924991fd14d23c321b90ebe1f3895ac9f40ca1de1b7a0e599fe213ecc0a0fa0",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_rime@greataxe",
+      "id": "w_rime",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "w_rime--greataxe.webp",
+      "bytes": 9372,
+      "sha256": "d281362f03eb8a44dfbc65461ffdfde8c2420e1e62360bf98cf7f97dc14c9cc4",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_rime@greatsword",
+      "id": "w_rime",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "w_rime--greatsword.webp",
+      "bytes": 8094,
+      "sha256": "38e9fe7d4eae2126179c6135d9f9394a465b39757658ede9c1e8628105d950b4",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_rime@staff",
+      "id": "w_rime",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_rime--staff.webp",
+      "bytes": 6674,
+      "sha256": "cd9dfd74a4df429484a37747e05e1f90e1132956c5a9136ebae4aed2b4bb4438",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_rune@axe-pair",
+      "id": "w_rune",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 2,
+      "formKey": "axe-pair",
+      "file": "w_rune--axe-pair.webp",
+      "bytes": 13482,
+      "sha256": "8584da5f13f3ab486c39639562da59fb07095a6c398c376f784e1d37170584df",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_rune@bow",
+      "id": "w_rune",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_rune--bow.webp",
+      "bytes": 8384,
+      "sha256": "96400be63f3023582b7f5344bdf09b6797048416882bb524e18d1ff12c32eee1",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_rune@dagger-pair",
+      "id": "w_rune",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_rune--dagger-pair.webp",
+      "bytes": 12262,
+      "sha256": "0c44f98aa3adaa4172e42f8269bdb00fcc75de033fdd5e56a50593383e23819f",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_rune@staff",
+      "id": "w_rune",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_rune--staff.webp",
+      "bytes": 6086,
+      "sha256": "d85113ad20643323416496d10bd5eee1f7bedf40c0539d6c072c3750fca44963",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_rusty@axe",
+      "id": "w_rusty",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "w_rusty--axe.webp",
+      "bytes": 7110,
+      "sha256": "e058135a469e8e7035ca1bc06b8704919ebec0884ffa915cc9a0881eef3a6b5b",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_rusty@bow",
+      "id": "w_rusty",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_rusty--bow.webp",
+      "bytes": 8460,
+      "sha256": "9a9998349c4e19c2838ed3aa389eb349ce8f0fe27b1e8ba3ee929369511d3ac2",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_rusty@dagger",
+      "id": "w_rusty",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 1,
+      "formKey": "dagger",
+      "file": "w_rusty--dagger.webp",
+      "bytes": 8350,
+      "sha256": "57e71f8f20abde7eb5e387ad82b36f5fd53da3db6465fd7d1afef6d2bc3b66f0",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_rusty@wand",
+      "id": "w_rusty",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "wand",
+      "count": 1,
+      "formKey": "wand",
+      "file": "w_rusty--wand.webp",
+      "bytes": 7840,
+      "sha256": "1d249d3ca4e660f828ae8ea09d636eb22c6acb5c42b4028c165a330bfa3535bb",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_sigil@bow",
+      "id": "w_sigil",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_sigil--bow.webp",
+      "bytes": 8746,
+      "sha256": "969ef498f1c4c45d1d27f4e261532a6f76a4ce7e988a4146b1789d124c6c18fb",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_sigil@dagger-pair",
+      "id": "w_sigil",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_sigil--dagger-pair.webp",
+      "bytes": 13014,
+      "sha256": "490088404f5bf223ef1f103bd2e4205b0ff08286867aa55eed39df93a079643e",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_sigil@greataxe",
+      "id": "w_sigil",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "w_sigil--greataxe.webp",
+      "bytes": 8638,
+      "sha256": "46464f9188fa5eabdb23ee5c3b23a39ac7f94a679bcb09b394f093942fd3e949",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_sigil@greatsword",
+      "id": "w_sigil",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "w_sigil--greatsword.webp",
+      "bytes": 7396,
+      "sha256": "cec65aa16ce94c607921c563dadfdbf77ef3a387d71274f622c3254c9aead922",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_sigil@staff",
+      "id": "w_sigil",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_sigil--staff.webp",
+      "bytes": 6882,
+      "sha256": "42eb9ca5a9b72f2b2b2bae94eadf9c3cc76d1dcee0110a39f596ef5b3e6f1714",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_steel@axe",
+      "id": "w_steel",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "w_steel--axe.webp",
+      "bytes": 6898,
+      "sha256": "6fdd91cd21c681008ef9e813384098232111b2f302bee9a769572cbcd81fcfac",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_steel@bow",
+      "id": "w_steel",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_steel--bow.webp",
+      "bytes": 7442,
+      "sha256": "aa6f7253870f1938a41df79c25773cb8ef51e7d7921b76da6a6abe40cea004d0",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_steel@dagger-pair",
+      "id": "w_steel",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_steel--dagger-pair.webp",
+      "bytes": 9840,
+      "sha256": "99ff36ca6d017526f6f2771a1ca0b4f2ed854fbe883e2328bb0ee7cba9fbf43a",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_steel@staff",
+      "id": "w_steel",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_steel--staff.webp",
+      "bytes": 5384,
+      "sha256": "93477918c70dba176a1977a25e57a2e2685c50331b222f78ae525441faa6c7e9",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_storm@bow",
+      "id": "w_storm",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_storm--bow.webp",
+      "bytes": 8340,
+      "sha256": "b75fa5f4ce1d629e9460a58b1143b38d3d0db350f63b1c9561a565c588e09150",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_storm@dagger-pair",
+      "id": "w_storm",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_storm--dagger-pair.webp",
+      "bytes": 13562,
+      "sha256": "9df6a126488cdf6383249962d976c1198dbd835c6bf55976d2783c2d0a86216a",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_storm@greataxe",
+      "id": "w_storm",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "w_storm--greataxe.webp",
+      "bytes": 8828,
+      "sha256": "6aa01f8497c94a1c675928064a172e813f07a1acd18f0ca9aae881911144d546",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_storm@greatsword",
+      "id": "w_storm",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "w_storm--greatsword.webp",
+      "bytes": 8648,
+      "sha256": "cfcbaa59728e03915113099ea376086883147cbf42660ac7966d0934222284c3",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_storm@staff",
+      "id": "w_storm",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_storm--staff.webp",
+      "bytes": 6662,
+      "sha256": "02b056b8f4a752eede7658bb0ef70eacdb06b7f8a4e2937d46e2c836df92caf8",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_sun@bow",
+      "id": "w_sun",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_sun--bow.webp",
+      "bytes": 9154,
+      "sha256": "5ccc6e157f338037c559be81f21f7106dfb509115aecd342fdf0a2292bbf9dec",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_sun@dagger-pair",
+      "id": "w_sun",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_sun--dagger-pair.webp",
+      "bytes": 14222,
+      "sha256": "a06f49d59f1c9ae5e85ded6d7f0d0535bd65cbbb44646a00e04f368ed4cffae6",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_sun@greataxe",
+      "id": "w_sun",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "w_sun--greataxe.webp",
+      "bytes": 8870,
+      "sha256": "12575378762685f55ff61bc4c6fdd78c14fc724b4a4d91b21eb234529da64061",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_sun@greatsword",
+      "id": "w_sun",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "w_sun--greatsword.webp",
+      "bytes": 8980,
+      "sha256": "ac922159eda33fad5b00c147e442595a440f12c80590e3b646f3e3cd5f4e8d68",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_sun@staff",
+      "id": "w_sun",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_sun--staff.webp",
+      "bytes": 6958,
+      "sha256": "796925127b1a9c8851ed3544b1504bd707a3511d5f05395317f6d281e281564a",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_town_ember@axe-pair",
+      "id": "w_town_ember",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 2,
+      "formKey": "axe-pair",
+      "file": "w_town_ember--axe-pair.webp",
+      "bytes": 13676,
+      "sha256": "6d37032ead0e6fc47e728a84169185b705552e94b7f12c0b5f124e46921330b0",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_town_ember@bow",
+      "id": "w_town_ember",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_town_ember--bow.webp",
+      "bytes": 9814,
+      "sha256": "cae67cdb7b2c73ed702bf5d59f4b08e51e704c9f377dd7258c0deb88aab48ecd",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_town_ember@dagger-pair",
+      "id": "w_town_ember",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_town_ember--dagger-pair.webp",
+      "bytes": 13800,
+      "sha256": "b06ac6c7acf433a9cd932c4bc7e630504ae4ae4dcdd5ca57d22ea568401869f7",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_town_ember@staff",
+      "id": "w_town_ember",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_town_ember--staff.webp",
+      "bytes": 8018,
+      "sha256": "3b247f816d82d69df7897e474bcdb4414e877a12acc3114ea9871f594d5a6f59",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_town_oath@axe",
+      "id": "w_town_oath",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "w_town_oath--axe.webp",
+      "bytes": 8966,
+      "sha256": "6ab5017210993a5c149aeb4e20d1e472b1acee43432bd9fecf6decfe44dc2a8d",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_town_oath@bow",
+      "id": "w_town_oath",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_town_oath--bow.webp",
+      "bytes": 9004,
+      "sha256": "71a62433ef0737579437400dd0cedf87955c57126b09c5a90ae90d5df49b6945",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_town_oath@dagger-pair",
+      "id": "w_town_oath",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_town_oath--dagger-pair.webp",
+      "bytes": 12694,
+      "sha256": "c26dd28ccb56bd5f84ee2f980c2ad6aa838d80217e7d8c438d636c913be3c90f",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_town_oath@staff",
+      "id": "w_town_oath",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_town_oath--staff.webp",
+      "bytes": 7666,
+      "sha256": "23a9423a631f6d5c692bc8e18cd672feb0562e5ec07b10d9b9c8647d3e945ade",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_town_star@bow",
+      "id": "w_town_star",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_town_star--bow.webp",
+      "bytes": 8086,
+      "sha256": "bd1cd0e28ee3dd5c1a040e482faffb69603e65b66984bf5efbf317847348b90e",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_town_star@dagger-pair",
+      "id": "w_town_star",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_town_star--dagger-pair.webp",
+      "bytes": 11398,
+      "sha256": "35ad727b23b4c15bbee056c70f8886a310dceaf0db2ca69f61d5612c5bbe03dc",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_town_star@greataxe",
+      "id": "w_town_star",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "w_town_star--greataxe.webp",
+      "bytes": 8202,
+      "sha256": "5a436397726676f74f0f850e112f9e26f9735de47e2a198a6139c2b49c04c00a",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_town_star@greatsword",
+      "id": "w_town_star",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "w_town_star--greatsword.webp",
+      "bytes": 6906,
+      "sha256": "314aa14141c13e2a56ed91ae288459ea63a0cbbbc0cc28a27a112ef08219055f",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_town_star@staff",
+      "id": "w_town_star",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_town_star--staff.webp",
+      "bytes": 6196,
+      "sha256": "02f3e6f3b27e9d916d5120c727fb5dcb67d08da117b44e323b95d19e97982510",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_void@bow",
+      "id": "w_void",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_void--bow.webp",
+      "bytes": 8974,
+      "sha256": "8e5c4c85d1f5615e4e87833c913c125ca734ae659bb7c396864e97b42583f4fd",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_void@dagger-pair",
+      "id": "w_void",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 2,
+      "formKey": "dagger-pair",
+      "file": "w_void--dagger-pair.webp",
+      "bytes": 11432,
+      "sha256": "8497a1c41709ca82c4b59c9c64717e54a55ab717512b2f44135824a5d0d6f0b9",
+      "occupancy": 0.852,
+      "meshes": 2
+    },
+    {
+      "key": "w_void@greataxe",
+      "id": "w_void",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "greataxe",
+      "count": 1,
+      "formKey": "greataxe",
+      "file": "w_void--greataxe.webp",
+      "bytes": 8212,
+      "sha256": "c6f4284f87dd21b6e0cf7abcaf668fd9fcb0d9f7a8d97c01a8cae4e6316e4f98",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_void@greatsword",
+      "id": "w_void",
+      "heroes": [
+        "knight"
+      ],
+      "variant": "hero-form",
+      "form": "greatsword",
+      "count": 1,
+      "formKey": "greatsword",
+      "file": "w_void--greatsword.webp",
+      "bytes": 6194,
+      "sha256": "8e2b4592a4f25ccae7d1908e3a440a106e5316da13bc5b41e79f3240d20451b4",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_void@staff",
+      "id": "w_void",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "staff",
+      "count": 1,
+      "formKey": "staff",
+      "file": "w_void--staff.webp",
+      "bytes": 6478,
+      "sha256": "134e76f00f81b6c66d81819e29bc43f7ec46da7892717b86c9c3050b338cf950",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_wood@axe",
+      "id": "w_wood",
+      "heroes": [
+        "barbarian"
+      ],
+      "variant": "hero-form",
+      "form": "axe",
+      "count": 1,
+      "formKey": "axe",
+      "file": "w_wood--axe.webp",
+      "bytes": 6586,
+      "sha256": "3b44881ede89e29efba2aa9f0d3dfc74ab0369d53aa9dfaeb268eb804c0730aa",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_wood@bow",
+      "id": "w_wood",
+      "heroes": [
+        "ranger"
+      ],
+      "variant": "hero-form",
+      "form": "bow",
+      "count": 1,
+      "formKey": "bow",
+      "file": "w_wood--bow.webp",
+      "bytes": 8460,
+      "sha256": "c6d293f8ce89ec28586234be5856c11d754a405bfec114987c5bd722e63fc9e2",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_wood@dagger",
+      "id": "w_wood",
+      "heroes": [
+        "rogue"
+      ],
+      "variant": "hero-form",
+      "form": "dagger",
+      "count": 1,
+      "formKey": "dagger",
+      "file": "w_wood--dagger.webp",
+      "bytes": 7322,
+      "sha256": "ffb0fe3da3b728932f078bf2a8afa58f973eccebd179b8ad023e765b738e4e7e",
+      "occupancy": 0.852,
+      "meshes": 1
+    },
+    {
+      "key": "w_wood@wand",
+      "id": "w_wood",
+      "heroes": [
+        "mage"
+      ],
+      "variant": "hero-form",
+      "form": "wand",
+      "count": 1,
+      "formKey": "wand",
+      "file": "w_wood--wand.webp",
+      "bytes": 6156,
+      "sha256": "a800ca93168ee104bacd620c80a0640df6bd64b9269a61fb0b317121693891e3",
+      "occupancy": 0.852,
+      "meshes": 1
+    }
+  ]
+}
