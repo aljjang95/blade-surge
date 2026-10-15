@@ -4,7 +4,7 @@ This source-only candidate consciously replaces the earlier camera-unmodified li
 
 ## Exact scope and geometry
 
-Only normal solo `astral_leviathan_spire`, dungeon kind, explicit standard depth, with no party/rift/conquest, receives `battleMinimumAspect = 0.8`. All other stages and missing/invalid scope receive zero. The visual profile is shared by other routes/deep and cannot activate this feature alone.
+Only solo `astral_leviathan_spire`, dungeon kind, explicit standard or deep depth (deep added in BUNDLE-12 because the deep constellations reuse the same station/pad layout), with no party/rift/conquest, receives `battleMinimumAspect = 0.8`. All other stages and missing/invalid scope receive zero. The visual profile is shared by other routes/deep and cannot activate this feature alone.
 
 At actual projection aspect below0.8, scale is `min(2.4, 0.8/aspect)`. At/above0.8 or invalid aspect/minimum it is exactly1 and returns the existing controlled offset without further arithmetic. Desktop and all other routes preserve existing camera results.
 
