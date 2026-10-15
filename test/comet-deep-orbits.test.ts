@@ -652,3 +652,28 @@ test('목표 패널·AUTO 가 읽는 값: current 는 영웅이 있는 활성/�
 });
 
 
+
+test('15. 연결 순간 그 방에 적이 남아 정화가 거부돼도, 적을 처치한 첫 update 에서 정화·보상이 한 번만 나간다', () => {
+  const f = fixture();
+  for (const id of RING_ROOMS.slice(0, 4)) connectRing(f, id);
+  for (const id of [4, 6]) { const room = clearRoom(f, id); killAll(f, room); f.g.markCleared(room); killAll(f, room); f.g.markCleared(room); }
+  const g = toStorm(f, 7), room = g.room;
+  // 폭풍 중 그 방 소속 적이 한 명 살아 있는 채로 마지막 고리가 연결된다.
+  f.g.enemies.push({ alive: true, homeRoom: room, dispose: noop });
+  autoWalk(f, g, 30);
+  expect(g.phase).toBe('connected'); expect(f.route.progress).toBe(5);
+  const items = rewardItems(f), treasure = f.g.treasureRooms, cleared = f.g.roomsCleared;
+  expect(room.cleared).toBe(false); expect(f.route.canUnseal()).toBe(false);
+  // 적이 살아 있는 동안은 몇 프레임이 지나도 정화되지 않는다.
+  for (let i = 0; i < 60; i++) f.route.update(f.g, DT);
+  expect(room.cleared).toBe(false); expect(f.route.canUnseal()).toBe(false);
+  expect([rewardItems(f), f.g.treasureRooms, f.g.roomsCleared]).toEqual([items, treasure, cleared]);
+  // 적을 처치한 뒤 첫 update 에서 한 번 정화된다(보물방 보상: 장비 3개, 상자 1개).
+  killAll(f, room);
+  f.route.update(f.g, DT);
+  expect(room.cleared).toBe(true); expect(f.route.canUnseal()).toBe(true);
+  expect([rewardItems(f), f.g.treasureRooms, f.g.roomsCleared]).toEqual([items + 3, treasure + 1, cleared + 1]);
+  // 이후 update 를 반복해도 보상·정화는 늘지 않는다.
+  for (let i = 0; i < 120; i++) f.route.update(f.g, DT);
+  expect([rewardItems(f), f.g.treasureRooms, f.g.roomsCleared]).toEqual([items + 3, treasure + 1, cleared + 1]);
+});
