@@ -19,7 +19,7 @@ const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   eclipse_hydra_vault: { standard: [3, 0], deep: [4, 4] },
   ashforge_catacomb: { standard: [4, 0], deep: [4, 4] },
   astral_leviathan_spire: { standard: [0, 0], deep: [2, 2] },
-  verdigris_sanctum: { standard: [3, 0], deep: [2, 4] },
+  verdigris_sanctum: { standard: [3, 0], deep: [4, 4] },
   sable_mirage_basin: { standard: [3, 0], deep: [4, 4] },
   comet_bastion: { standard: [4, 0], deep: [5, 4] },
 };
@@ -90,6 +90,29 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(stage.encounter.tactic).toMatch(/적.*처치.*빛 안.*2초.*정화/);
         expect(stage.encounter.tactic).toMatch(/차례가 아닌.*1초.*포자/);
         expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번']);
+      } else if (id === 'verdigris_sanctum' && depth === 'deep') {
+        // 보물방 공명 2곳은 생명 제단 4곳(점등 이동)과 포자 수로 돌파로 바뀌었다. 문구의 숫자는 정의(def)에서 읽어 맞춘다.
+        const deep = route as typeof ROUTE_OBJECTIVES.verdigris_deep;
+        expect(deep).toBe(ROUTE_OBJECTIVES.verdigris_deep);
+        expect(deep.gates.map(g => g.roomId)).toEqual([2, 5, 3, 6]);
+        expect('coexistAttunement' in deep).toBe(false);
+        expect(Number(stage.objective.match(/생명 제단 (\d+)곳을 뿌리 빛이 옮겨 가는 순서대로 정화/)?.[1])).toBe(holds);
+        expect(stage.objective).not.toMatch(/공명|보물방/);
+        expect(stage.objective).toMatch(/모든 구역 정화 → 포자 수로 돌파 → 녹청 수호자 처치$/);
+        const tactic = stage.encounter.tactic;
+        const bossTactic = (ENEMIES as Record<string, any>).verdigris_sentinel.tactic as string;
+        expect(tactic).toMatch(/적을 처치한 뒤\(정예방은 증원 2회까지\)/);
+        expect(Number(tactic.match(/중심에서 연속 (\d+(?:\.\d+)?)초간 정화/)?.[1])).toBe(deep.holdSeconds);
+        expect(Number(tactic.match(/중심에 (\d+(?:\.\d+)?)초 머물면 포자가 터져/)?.[1])).toBe(deep.wrongStep.seconds);
+        // 점등 순서는 길 순서와 다르고 번호를 알리지 않는다.
+        expect(tactic).toMatch(/제단 번호는 보이지 않고/);
+        expect(tactic).toMatch(/뿌리 빛이 길 순서와 다른 다음 제단으로 옮겨 갑니다/);
+        expect(tactic.slice(0, tactic.indexOf(bossTactic))).not.toMatch(/\d번|공명|보물방/);
+        expect(tactic).toContain('생명 제단 ' + deep.gates.length + '곳과 모든 구역을 정화하면 보스방 앞 정예방에 포자 수로가 열립니다');
+        expect(tactic).toMatch(/서쪽 입구에서 제한 시간 안에 포자 물결이 지나간 틈을 타 동쪽 출구로 건너면 보스 봉인이 풀립니다/);
+        expect(tactic).toMatch(/시간이 다 되면 수로가 범람해 피해를 입은 뒤 시간을 다시 잽니다/);
+        // 제단·수로 안내는 보스 전술보다 앞에 있다.
+        expect(tactic.indexOf('포자 수로')).toBeLessThan(tactic.indexOf(bossTactic));
       } else if (id === 'eclipse_hydra_vault' && depth === 'deep') {
         // 공명 제단이 없는 심층은 역류 밸브 4곳 봉인으로 바뀌었다. 문구의 숫자·순서는 정의(def)에서 읽어 맞춘다.
         const deep = route as typeof ROUTE_OBJECTIVES.eclipse_deep;
@@ -272,6 +295,8 @@ for (const [id, contract] of Object.entries(contracts)) {
           // 잿불금고 심층은 약속한 '냉각 밸브'만 면제한다. 그 밖의 '밸브'(냉각로·역류 밸브 등)는 계속 거른다.
           : id === 'ember_vault' && depth === 'deep' ? copy.replaceAll('냉각 밸브', '')
           : id === 'verdigris_sanctum' && depth === 'standard' ? copy.replaceAll('생명 제단', '').replaceAll('포자가 터져', '')
+          // 심층은 약속한 '생명 제단' 안내만 면제한다. 그 밖의 금지어(포자 폭발·밸브 등)는 계속 거른다.
+          : id === 'verdigris_sanctum' && depth === 'deep' ? copy.replaceAll('생명 제단', '')
           : id === 'sable_mirage_basin' && depth === 'standard' ? copy.replaceAll('가짜 왕좌', '왕좌')
           // 심층은 약속한 거울 미궁 안내 문장 하나(발자국을 따라 진짜 거울로)만 면제하고 그 밖의 발자국·환영 안내는 계속 거른다.
           : id === 'sable_mirage_basin' && depth === 'deep'

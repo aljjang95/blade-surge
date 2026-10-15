@@ -96,6 +96,36 @@ export const ROUTE_OBJECTIVES = Object.freeze({
       Object.freeze({ roomId: 6, label: '3번 생명 제단 · 포자 정원' }),
     ]),
   }),
+  // 녹청의 성역 심층(뿌리 심장)의 원안(BUNDLE-11): "생명 제단 4곳 정화 → 포자 수로 돌파, 제단 점등 순서 이동".
+  // 제단 규칙은 일반판과 같은 순차 유지 엔진(RouteObjectives)이다: 방의 적을 처치하면(정예방이 아니라 증원 없음) 정화 준비,
+  // 점등된 제단 중심(radius)에서 holdSeconds 유지하면 정화. 정화됐지만 점등되지 않은 제단 중심에 wrongStep.seconds 머물면 포자 폭발.
+  // 점등 이동(hiddenOrder): 뿌리 빛은 한 번에 한 제단에만 켜지고, 정화할 때마다 길 순서와 다른 다음 제단으로 옮겨 간다
+  // (방 2 → 5 → 3 → 6). 일반판처럼 번호를 미리 보여 주지 않고 지금 켜진 제단만 밝힌다(표지·목표창·빛 기둥).
+  // 포자 수로(channel): 4/4 와 모든 구역 정화 뒤 방 7(정예, 보스 앞)의 수로가 열린다. 좌표는 모두 방 중심 기준 x 오프셋이다.
+  //   startLine 서쪽(방 안)에 들어서면 돌파가 시작되고 제한 시간 = ceil(도착 지점까지 거리장 칸 수 / pace + grace) 초다.
+  //   finishLine 을 동쪽으로 넘으면(방 안) 돌파이고 그때 보스 봉인이 풀린다.
+  //   수로를 가로지르는 포자 띠(bands, 띠 중심 x 오프셋, 폭 2 × bandHalf, 방 높이 전체)가 열린 뒤 first 초부터
+  //   서쪽 띠부터 lag 초 간격으로 경고(warning) → 분출(burst)을 period 주기로 되풀이한다(포자 물결).
+  //   분출 중인 띠 안에 있으면 그 분출마다 한 번 최대 체력 damage 피해. 제한 시간이 다 되면 수로 범람(floodDamage 피해 뒤 지금 위치에서 다시 계산).
+  //   어느 실패도 진행을 막지 않는다. 보스(녹청 거수) 규칙은 바뀌지 않는다.
+  verdigris_deep: Object.freeze({
+    id: 'verdigris_root_heart_deep', kind: 'spore-altars', holdSeconds: 2, radius: 3, noun: '생명 제단', verb: '정화', cueColor: 0x72e6ae,
+    hiddenOrder: true,
+    wrongStep: Object.freeze({ seconds: 1, damage: .08, cooldown: 2, color: 0xb06cff }),
+    gates: Object.freeze([
+      Object.freeze({ roomId: 2, label: '뿌리 샘 제단' }),
+      Object.freeze({ roomId: 5, label: '이끼 못 제단' }),
+      Object.freeze({ roomId: 3, label: '덩굴 회랑 제단' }),
+      Object.freeze({ roomId: 6, label: '포자 정원 제단' }),
+    ]),
+    channel: Object.freeze({
+      roomId: 7, label: '포자 수로',
+      startLine: -7.5, finishLine: 7.5, entry: Object.freeze([-9, 0]), exit: Object.freeze([9, 0]),
+      bands: Object.freeze([-5.4, -1.8, 1.8, 5.4]), bandHalf: 1.1,
+      first: 1, period: 4, lag: .8, warning: 1, burst: .7, damage: .06,
+      pace: 3, grace: 6, floodDamage: .06, color: 0x9be86a,
+    }),
+  }),
   cinder_standard: cooling('standard', [[2, '1번 밸브 · 서쪽 수문'], [5, '2번 밸브 · 동쪽 수문']]),
   cinder_deep: cooling('deep', [[2, '1번 밸브 · 상류 냉각선'], [5, '2번 밸브 · 하류 냉각선'], [6, '3번 밸브 · 귀환 냉각선']]),
   // 재벼림 제련소 일반의 원안: 과열 용광로 4곳을 식혀야 거수의 봉인이 풀린다. 두 갈래 길을 모두 지난다.
@@ -231,7 +261,8 @@ export function routeObjectiveForStage(stage) {
     : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.nightglass_deep : null;
   if (expedition.id === 'eclipse_hydra_vault') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.eclipse_standard
     : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.eclipse_deep : null;
-  if (expedition.id === 'verdigris_sanctum') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.verdigris_standard : null;
+  if (expedition.id === 'verdigris_sanctum') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.verdigris_standard
+    : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.verdigris_deep : null;
   if (expedition.id === 'ashforge_catacomb') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.ashforge_standard
     : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.ashforge_deep : null;
   if (expedition.id === 'sable_mirage_basin') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.sable_standard

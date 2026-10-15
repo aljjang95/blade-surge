@@ -7,6 +7,7 @@ import { FalseThrones } from './false-thrones.js';
 import { CometOrbits } from './comet-orbits.js';
 import { CometDeepOrbits } from './comet-deep-orbits.js';
 import { BellfallDeepBells } from './bellfall-deep-bells.js';
+import { defineVerdigrisDeepAltars } from './verdigris-deep-altars.js';
 
 /** @typedef {{id:number, x:number, z:number, type:string, label:string, spawned:boolean, cleared:boolean, discovered:boolean}} Room */
 /** @typedef {{rooms:Room[], startRoom:Room, bossRoom:Room, sealed?:boolean, minX?:number, minZ?:number, cols?:number, buildFlow:(x:number,z:number)=>Int32Array|null|undefined}} World */
@@ -23,6 +24,8 @@ export function createRouteObjectives(stage, world) {
   if ('kind' in def && def.kind === 'orbits') return new CometOrbits(def, world);
   if ('kind' in def && def.kind === 'deep-orbits') return new CometDeepOrbits(def, world);
   if ('kind' in def && def.kind === 'reverse-bells') return new BellfallDeepBells(def, world);
+  // 녹청 심층은 RouteObjectives 를 상속하므로 클래스를 정의 함수로 만든다(순환 가져오기 때문, verdigris-deep-altars.js 설명 참고).
+  if ('kind' in def && def.kind === 'spore-altars') return new (defineVerdigrisDeepAltars())(def, world);
   return 'kind' in def && def.kind === 'cooling' ? new CoolingValves(def, world) : new RouteObjectives(def, world);
 }
 
@@ -104,7 +107,8 @@ export class RouteObjectives {
     if (!this.#closed && !this.#report && game.active && !game.paused && this.enemiesCleared(game, gate)) {
       if (!gate.ready) {
         gate.ready = true;
-        game.ui.toast(`${gate.label} 정화 · ${this.hint()}`, 'gold');
+        // 순서를 숨기는 정의(녹청 심층)는 적만 처치한 제단을 '정화'라고 부르지 않는다(정화는 점등 제단 2초 유지뿐, BUNDLE-11 리뷰 P3).
+        game.ui.toast(`${gate.label} ${this.def.hiddenOrder ? '적 처치' : '정화'} · ${this.hint()}`, 'gold');
         this.refreshHint(game);
       }
     }
@@ -154,7 +158,8 @@ export class RouteObjectives {
         gate.attuned = true; this.#progress++; this.interrupt(); this.#markerT = 0;
         game.markCleared(gate.room);
         game.autoTarget = this.autoRoom();
-        game.ui.toast(`${gate.label} ${this.verb} 완료 · ${this.#progress}/${this.gates.length}`, 'gold');
+        // 순서를 숨기는 정의는 하위 클래스가 점등 이동 토스트 하나로 알린다(같은 스텝 두 번 알림 방지, BUNDLE-11 리뷰 P3).
+        if (!this.def.hiddenOrder) game.ui.toast(`${gate.label} ${this.verb} 완료 · ${this.#progress}/${this.gates.length}`, 'gold');
       }
     }
     this.wrongStepUpdate(game, dt);
@@ -169,7 +174,10 @@ export class RouteObjectives {
         const pos = new Vector3(room.x, 0, room.z);
         const danger = !next && cue.ready && !!this.def.wrongStep;
         game.fx.castCircle(pos, next ? this.def.cueColor ?? 0xffd060 : danger ? this.def.wrongStep.color : 0x8394ac, { radius: this.def.radius, life: 2 });
-        game.fx.damage(pos, 0, { text: `${i + 1}번 ${this.noun} · ${next ? cue.ready ? `중심 ${this.def.holdSeconds}초` : '적 정화' : danger ? '차례 아님 · 밟으면 포자 폭발' : '순서 대기'}` });
+        // 순서를 숨기는 정의(녹청 심층)는 번호 없이 지금 켜진 제단만 알린다.
+        game.fx.damage(pos, 0, { text: this.def.hiddenOrder
+          ? next ? cue.ready ? `뿌리 빛 · 중심 ${this.def.holdSeconds}초` : '뿌리 빛 · 적 정화' : danger ? '빛 없음 · 밟으면 포자 폭발' : '빛 없음'
+          : `${i + 1}번 ${this.noun} · ${next ? cue.ready ? `중심 ${this.def.holdSeconds}초` : '적 정화' : danger ? '차례 아님 · 밟으면 포자 폭발' : '순서 대기'}` });
       }
     }
     this.refreshHint(game);
@@ -199,3 +207,6 @@ export class RouteObjectives {
     return this.#report;
   }
 }
+
+// RouteObjectives 가 정의된 뒤에 녹청 심층 클래스를 미리 만들어 둔다(verdigris-deep-altars.js 의 VerdigrisDeepAltars 가 채워진다).
+defineVerdigrisDeepAltars();

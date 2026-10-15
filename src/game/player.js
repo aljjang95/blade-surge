@@ -521,6 +521,7 @@ export class Player extends Actor {
     if (g.portal && (!g.stage?.party || !this.partyPortaled)) { const dx = g.portal.pos.x - this.pos.x, dz = g.portal.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; return out; }   // 봉인 해제 포탈 → 보스방 앞
     const goal = g.routeObjectives?.autoGoal?.();   // 경로 목표가 정한 지점(거울 미궁의 진짜 거울)으로 거리장 이동
     if (goal) {
+      if (Math.hypot(goal.x - this.pos.x, goal.z - this.pos.z) < .65) return out;   // 목표 지점(또는 기다리는 제자리)에 닿았으면 멈춘다
       const flow = W.buildFlow(goal.x, goal.z), d = W.flowDir(flow, this.pos.x, this.pos.z);
       if (d) { out.x = d[0]; out.y = d[1]; }
       else { const dx = goal.x - this.pos.x, dz = goal.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; }
