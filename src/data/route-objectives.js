@@ -54,12 +54,26 @@ export const ROUTE_OBJECTIVES = Object.freeze({
     ]),
   }),
   // 일식 수문 일반의 원안: 역류 밸브 3개를 순서대로 잠가야 삼두룡의 봉인이 풀린다.
+  // view 'backflow-valves'(BUNDLE-07): 밸브마다 물줄기가 솟고, 유지하는 동안 줄어들며, 잠그거나 봉인하면 멈춘다(연출만, 규칙은 같다).
   eclipse_standard: Object.freeze({
-    id: 'eclipse_backflow_valves', holdSeconds: 2, radius: 3, noun: '역류 밸브', verb: '잠금', cueColor: 0x63e7dd,
+    id: 'eclipse_backflow_valves', holdSeconds: 2, radius: 3, noun: '역류 밸브', verb: '잠금', cueColor: 0x63e7dd, view: 'backflow-valves',
     gates: Object.freeze([
       Object.freeze({ roomId: 2, label: '1번 역류 밸브 · 북쪽 저수조' }),
       Object.freeze({ roomId: 5, label: '2번 역류 밸브 · 남쪽 배수로' }),
       Object.freeze({ roomId: 7, label: '3번 역류 밸브 · 수문 앞 갑문' }),
+    ]),
+  }),
+  // 일식 수문 심층의 원안(BUNDLE-07): 역류 밸브 4곳 봉인. 일반과 같은 순차 유지 엔진(RouteObjectives)을 쓴다.
+  // 심층 동선은 한 줄(0→…→8)이다. 순서 2 → 4 → 7 → 5 라서 4번 밸브(방 5)는 3번(방 7)을 봉인하러 가는 길에 먼저 정리되고
+  // 차례를 기다린다. 3번을 봉인한 뒤 지나온 물길로 두 구역 되돌아가 4번을 봉인한다. 정예방(4·7)의 밸브는 증원 2회가 끝나야 조작된다.
+  // 세 머리 동시 예고·물결 뒤 안전 통로는 보스 리그·애니메이션 동기화가 필요해 이 정의의 범위가 아니다.
+  eclipse_deep: Object.freeze({
+    id: 'eclipse_deep_backflow_seals', holdSeconds: 2, radius: 3, noun: '역류 밸브', verb: '봉인', cueColor: 0x63e7dd, view: 'backflow-valves',
+    gates: Object.freeze([
+      Object.freeze({ roomId: 2, label: '1번 역류 밸브 · 잠긴 저수조' }),
+      Object.freeze({ roomId: 4, label: '2번 역류 밸브 · 맹세의 갑문' }),
+      Object.freeze({ roomId: 7, label: '3번 역류 밸브 · 심연 수문' }),
+      Object.freeze({ roomId: 5, label: '4번 역류 밸브 · 되돌아온 물길' }),
     ]),
   }),
   // 녹청의 성역 일반의 원안: 뿌리 문양이 켜진 생명 제단만 정화된다. 순서는 길 순서와 다르며,
