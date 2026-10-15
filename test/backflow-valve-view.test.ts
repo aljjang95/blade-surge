@@ -80,12 +80,16 @@ test('hidden 은 세 인스턴스 모두 scale 0, sealed 는 물줄기 scale 0 �
   view.dispose();
 });
 
-test('배치: 기둥·물줄기는 방 중심 +x (radius + .8), 고리는 방 중심, 고리 바깥 반지름 = def.radius', () => {
+test('배치: 기둥·물줄기는 방 중심에서 대각선(+x, −z)으로 radius + .8, 고리는 방 중심, 고리 바깥 반지름 = def.radius', () => {
   const scene = new THREE.Scene(), route: any = makeRoute(), view = new BackflowValveView(scene, route), v = v$(view);
   view.update(route, DT, OPTS);
   route.gates.forEach((g: any, i: number) => {
-    expect(readPos(v.pillar, i).x).toBeCloseTo(g.room.x + DEEP.radius + .8, 4); expect(readPos(v.pillar, i).z).toBeCloseTo(g.room.z, 4);
-    expect(readPos(v.stream, i).x).toBeCloseTo(g.room.x + DEEP.radius + .8, 4);
+    const d = (DEEP.radius + .8) * Math.SQRT1_2;
+    expect(readPos(v.pillar, i).x).toBeCloseTo(g.room.x + d, 4); expect(readPos(v.pillar, i).z).toBeCloseTo(g.room.z - d, 4);
+    expect(readPos(v.stream, i).x).toBeCloseTo(g.room.x + d, 4); expect(readPos(v.stream, i).z).toBeCloseTo(g.room.z - d, 4);
+    // 유지 원 밖이고, 축 방향 복도 중심선에서 2 이상 떨어져 있다.
+    expect(Math.hypot(readPos(v.pillar, i).x - g.room.x, readPos(v.pillar, i).z - g.room.z)).toBeGreaterThan(DEEP.radius);
+    expect(Math.min(Math.abs(readPos(v.pillar, i).x - g.room.x), Math.abs(readPos(v.pillar, i).z - g.room.z))).toBeGreaterThan(2);
     expect(readPos(v.ring, i).x).toBeCloseTo(g.room.x, 4); expect(readPos(v.ring, i).z).toBeCloseTo(g.room.z, 4);
   });
   const p = v.ring.geometry.getAttribute('position'); let max = 0;
@@ -220,3 +224,29 @@ test('dispose 는 반복 안전하며 scene 에서 제거하고 geometry·materi
   expect(() => view.update(route, DT, OPTS)).not.toThrow();
   expect(view.count).toBe(0); expect(view.drawCalls).toBe(0);
 });
+
+// 리뷰 P1-1: 반투명 양면 재질은 three 가 두 번 그린다. 모든 반투명 재질은 한 번에 그려야 한다(실제 draw call ≤ 3).
+test('반투명 재질은 한 패스로 그린다: 양면이면 forceSinglePass, 바닥 고리는 앞면만', () => {
+  const view = new BackflowValveView(new THREE.Scene(), makeRoute()), v = v$(view);
+  for (const m of [v.pillarMat, v.streamMat, v.ringMat]) {
+    if (m.transparent) expect(m.side !== THREE.DoubleSide || m.forceSinglePass === true).toBe(true);
+  }
+  expect(v.ringMat.side).toBe(THREE.FrontSide);
+  view.dispose();
+});
+
+// 리뷰 P2-2: 출격 준비 compile 은 보이는 객체만 순회한다. 첫 update 전에는 세 메시가 보이되(프로그램 미리 컴파일) 아무것도 그리지 않는다.
+test('생성 직후 첫 update 전에는 세 메시가 보이고 모든 인스턴스가 scale 0, 첫 update 뒤에는 보이는 인스턴스가 있는 메시만 보인다', () => {
+  const route: any = makeRoute();
+  route.gates.forEach((g: any) => { g.room.discovered = false; });
+  const view = new BackflowValveView(new THREE.Scene(), route), v = v$(view);
+  for (const mesh of [v.pillar, v.stream, v.ring]) {
+    expect(mesh.visible).toBe(true);
+    for (let i = 0; i < route.gates.length; i++) expect(readScale(mesh, i).x).toBe(0);
+  }
+  expect(view.drawCalls).toBe(0);
+  view.update(route, DT, OPTS);
+  for (const mesh of [v.pillar, v.stream, v.ring]) expect(mesh.visible).toBe(false);
+  view.dispose();
+});
+
