@@ -73,15 +73,22 @@ test('three numbered authored bellfall rooms are accessible through the sealed f
   expect(f.world.rooms[5].label).toContain('3번 종문');
 });
 
-test('only standard solo bellfall is selected; party, rift, deep, conquest and other routes keep legacy paths', () => {
+test('only solo bellfall standard and deep are selected; party, rift, conquest and other routes keep legacy paths', () => {
   const base: any = buildExpeditionStage('dungeon', 'bellfall_crypt', null);
   const variants = [
     { ...base, party: {} }, { ...base, riftId: 'iron' },
-    ...[{ depth: 'deep' }, { depth: undefined }, { conquestId: 'fake' }, { riftId: 'iron' },
+    ...[{ depth: undefined }, { depth: 'unknown' }, { conquestId: 'fake' }, { riftId: 'iron' },
       { kind: 'arena' }, { id: 'glass_garden' }, { id: '__proto__' }].map(change => ({ ...base, expedition: { ...base.expedition, ...change } })),
     { ...base, expedition: undefined },
   ];
   expect(routeObjectiveForStage(base)).toBe(ROUTE_OBJECTIVES.bellfall_crypt);
+  // 심층은 종문 역순 공명이고, 같은 원정의 파티·균열·정복·결투 변형은 일반 경로를 유지한다.
+  const deep: any = buildExpeditionStage('dungeon', 'bellfall_crypt', null, { depth: 'deep' });
+  expect(routeObjectiveForStage(deep)).toBe(ROUTE_OBJECTIVES.bellfall_deep);
+  for (const change of [{ party: {} }, { riftId: 'iron' }, { expedition: { ...deep.expedition, conquestId: 'fake' } },
+    { expedition: { ...deep.expedition, riftId: 'iron' } }, { expedition: { ...deep.expedition, kind: 'arena' } }]) {
+    expect(createRouteObjectives({ ...deep, ...change }, buildExpeditionWorld(deep))).toBeNull();
+  }
   for (const stage of variants) {
     expect(createRouteObjectives(stage, buildExpeditionWorld(base))).toBeNull();
   }
@@ -303,4 +310,3 @@ test('종문과 역류 밸브에는 포자 폭발 규칙이 없다', () => {
   expect(hits).toHaveLength(0);
   expect(f.route.finish(false)).not.toHaveProperty('sporeBursts');
 });
-

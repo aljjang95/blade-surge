@@ -13,7 +13,7 @@ const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   glass_garden: { standard: [1, 0], deep: [2, 0] },
   ember_vault: { standard: [0, 2], deep: [0, 2] },
   star_archive: { standard: [0, 0], deep: [2, 0] },
-  bellfall_crypt: { standard: [3, 0], deep: [2, 2] },
+  bellfall_crypt: { standard: [3, 0], deep: [3, 2] },
   cinder_tide_lock: { standard: [2, 4], deep: [3, 4] },
   nightglass_observatory: { standard: [3, 0], deep: [5, 0] },
   eclipse_hydra_vault: { standard: [3, 0], deep: [0, 4] },
@@ -111,6 +111,29 @@ for (const [id, contract] of Object.entries(contracts)) {
         // 보스 신호 문구(oath_shelter 의 '공명 속 빈 원')는 보스 전술 소유이므로 고리 안내 부분만 검사한다.
         expect(tactic.slice(0, tactic.indexOf((ENEMIES as Record<string, any>).comet_bastion.tactic))).not.toMatch(/공명|제단/);
         expect(tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번', '4번', '5번']);
+      } else if (id === 'bellfall_crypt' && depth === 'deep') {
+        // 공명 제단은 종문 3개로 교체됐다. 문구의 숫자는 정의(def)에서 읽어 맞춘다.
+        const deep = route as typeof ROUTE_OBJECTIVES.bellfall_deep;
+        expect(deep.kind).toBe('reverse-bells');
+        expect('coexistAttunement' in deep).toBe(false);
+        expect(deep.gates.map(g => g.roomId)).toEqual([2, 3, 5]);
+        expect(stage.objective).toMatch(/종문 3개 점등.*소등 순서의 역순으로 공명/);
+        expect(stage.objective).not.toMatch(/보물방|제단/);
+        const tactic = stage.encounter.tactic;
+        expect(Number(tactic.match(/(\d+(?:\.\d+)?)초 뒤부터/)?.[1])).toBe(deep.toll.lead);
+        expect(Number(tactic.match(/(\d+(?:\.\d+)?)초 간격/)?.[1])).toBe(deep.toll.gap);
+        expect(Number(tactic.match(/반경 (\d+)/)?.[1])).toBe(deep.radius);
+        expect(Number(tactic.match(/(\d+)초 머물러/)?.[1])).toBe(deep.holdSeconds);
+        expect(Number(tactic.match(/(\d+)초를 채우면 불협/)?.[1])).toBe(deep.holdSeconds);
+        // 불협 피해는 hurt 에 넘기는 최대 체력 비율이고 방어로 경감된다(리뷰 b04-review P1). 문구가 그 사실을 함께 적어야 한다.
+        expect(Number(tactic.match(/최대 체력 (\d+)% 기준의 피해\(방어력으로 줄어듭니다\)/)?.[1])).toBe(Math.round(deep.discord.damage * 100));
+        expect(Number(tactic.match(/불협 (\d+)회부터/)?.[1])).toBe(deep.guideAfter);
+        expect(tactic).toMatch(/마지막에 꺼진 종부터 거꾸로/);
+        expect(tactic).toMatch(/다시 켜져 소등을 처음부터/);
+        // 보스 신호 문구('마지막 울림 뒤 반격')는 보스 전술 소유이므로 종문 안내 부분만 검사한다.
+        expect(tactic.slice(0, tactic.indexOf((ENEMIES as Record<string, any>).glass_hour_sovereign.tactic))).not.toMatch(/공명 순서는 자유|마지막 울림|제단/);
+        // 정답 순서는 문구에 쓰지 않는다. 종문 번호는 위치 안내(1번 → 2번 → 3번)로만 나온다.
+        expect(tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번']);
       } else if (id === 'sable_mirage_basin' && depth === 'standard') {
         expect(Number(stage.objective.match(/가짜 왕좌 (세|3) ?개/) ? 3 : 0)).toBe(holds);
         expect(stage.encounter.tactic).toMatch(/적.*처치.*보라 모래시계가 멈춘 동안.*다섯 차례 공격/);
@@ -159,7 +182,7 @@ for (const [id, contract] of Object.entries(contracts)) {
   }
 }
 
-test('standard bellfall promises three ordered gates, deep keeps two unordered treasure holds', () => {
+test('standard bellfall promises three ordered gates, deep promises reverse-order bells instead of free altars', () => {
   const standard = buildExpeditionStage('dungeon', 'bellfall_crypt', null);
   const route = routeObjectiveForStage(standard)!;
   expect(route.gates.map(g => g.roomId)).toEqual([2, 3, 5]);
@@ -171,9 +194,10 @@ test('standard bellfall promises three ordered gates, deep keeps two unordered t
   expect(standard.encounter.tactic).toMatch(/종문 3곳.*모든 구역.*봉인/);
 
   const deep = buildExpeditionStage('dungeon', 'bellfall_crypt', null, { depth: 'deep' });
-  expect(routeObjectiveForStage(deep)).toBeNull();
-  expect(deep.objective).not.toMatch(/종문|역순/);
-  expect(deep.encounter.tactic).toMatch(/공명 순서는 자유/);
+  expect(routeObjectiveForStage(deep)).toBe(ROUTE_OBJECTIVES.bellfall_deep);
+  expect(deep.objective).toMatch(/종문.*역순/);
+  expect(deep.objective).not.toMatch(/보물방/);
+  expect(deep.encounter.tactic).not.toMatch(/공명 순서는 자유/);
 });
 
 test('atmospheric descriptions do not retain removed interaction instructions', () => {
