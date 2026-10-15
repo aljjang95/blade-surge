@@ -248,7 +248,17 @@ export function checkRestorations(rows, def, { setup } = {}) {
     const rs0 = hs >= 0 ? runStart(list, i - 1, r => r.rs > 0) : -1;
     const before = hs >= 1 ? list[hs - 1] : null;
     const readRows = rs0 >= 0 && hs >= 1 && hs - 1 >= rs0 ? list.slice(rs0, hs) : [];
-    const readRise = readRows.every((r, k) => k === 0 || near(r.rs - readRows[k - 1].rs, r.t - readRows[k - 1].t, EPS));
+    // 읽기는 게임 시간만큼 늘다가 readSeconds 에서 멈춘다(엔진이 min 으로 묶는다). 정상 경로는 하나다:
+    // 늘어나는 행은 증가량이 경과 시간과 같고, readSeconds 에 닿는 행만 증가량이 경과 시간 이하이며,
+    // 닿은 뒤(단서를 읽고 판으로 걸어가는 동안)는 앞 행과 지금 행이 모두 readSeconds 이상이고 값이 같다. 그 밖(제자리·감소·더 빠른 증가)은 실패.
+    const atCap = r => r.rs + EPS >= def.readSeconds;
+    const readRise = readRows.every((r, k) => {
+      if (k === 0) return true;
+      const p = readRows[k - 1], d = r.rs - p.rs, dt = r.t - p.t;
+      if (near(d, dt, EPS)) return true;
+      if (!atCap(p) && atCap(r)) return d > 0 && d <= dt + EPS;
+      return atCap(p) && atCap(r) && Math.abs(d) <= EPS;
+    });
     const readSpan = readRows.length * FRAME;
     const allRows = hrows.length && readRows.length ? [...readRows, ...hrows] : [];
     const hourglass = sg ? { x: sg.x, z: sg.z } : null;

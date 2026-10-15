@@ -181,6 +181,8 @@ class Sim {
     const answer = DEF.gates[k].answer;
     this.at(SG(k).x, -5);
     for (let s = 1; s <= 70 && this.rs + 1e-9 < this.readNeed; s++) { if (s === 36) this.domNext = objDom(this.pr, '모래시계 단서 1초 읽기'); this.step(); }
+    // 실제 AUTO 처럼 단서를 읽은 뒤 판까지 걸어간다(판 밖, 모래시계 반경 안). 그동안 읽기는 readSeconds 에 멈춰 있다(스모크 1 에서 관측).
+    for (let s = 0; s < (this.flags.walkSteps ?? 18); s++) { const p = padOf(k, answer), q = SG(k), f = (s + 1) / 40; this.at(q.x + (p.x - q.x) * f, -5 + (p.z + 5) * f); this.step(); }
     this.at(padOf(k, answer).x, padOf(k, answer).z);
     for (let s = 1; s <= 140 && this.pr === k; s++) { if (s === 36) this.domNext = objDom(this.pr, '월드 단서와 같은 판에서 1초 유지'); this.step(); }
     this.step();
@@ -392,6 +394,19 @@ describe('성좌 4곳: 복원 순서·읽기·유지', () => {
     const a = auto(legitRun({ readNeed: .5 }));
     expect(a.acceptance.restoreRead).toBe(false);
     expect(a.restorations.violations.some((v: any) => v.kind === 'read')).toBe(true);
+  });
+  test('읽기는 readSeconds 에 닿은 뒤 판까지 걷는 동안 그 값에 멈춰 있어도 통과하고, 멈춘 값이 readSeconds 아래이거나 중간에 줄면 실패한다', () => {
+    const s = legitRun();
+    const ev = (rows: any[]) => K.checkRestorations(rows, DEF, { setup: SETUP });
+    const ok = ev(s.rows);
+    expect(ok.violations).toEqual([]);
+    // 정상 trace 에 실제로 멈춘 구간(앞 행과 같은 rs = 1, 유지 전)이 있다.
+    const plateau = (rows: any[]) => rows.filter((x: any, i: number) => i > 0 && x.pr === 0 && x.hd === 0 && x.rs >= 1 - 1e-9 && rows[i - 1].rs >= 1 - 1e-9);
+    expect(plateau(s.rows).length).toBeGreaterThan(5);
+    expect(ev(mut(s.rows, rows => { const p = plateau(rows); p[3].rs = .97; })).ok.read).toBe(false);
+    expect(ev(mut(s.rows, rows => { const p = plateau(rows); for (const r of p.slice(2)) r.rs = .95; })).ok.read).toBe(false);
+    // 늘어나는 구간에서 한 스텝이 경과 시간보다 많이 늘면 실패.
+    expect(ev(mut(s.rows, rows => { const i = rows.findIndex((x: any) => x.pr === 0 && x.rs > .3 && x.rs < .5); rows[i].rs += .05; })).ok.read).toBe(false);
   });
   test('판 유지가 1초에 못 미치면 실패한다', () => {
     const a = auto(legitRun({ holdNeed: .5 }));
