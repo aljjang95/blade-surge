@@ -261,7 +261,8 @@ export function routeObjectiveForStage(stage) {
     : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.nightglass_deep : null;
   if (expedition.id === 'eclipse_hydra_vault') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.eclipse_standard
     : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.eclipse_deep : null;
-  if (expedition.id === 'verdigris_sanctum') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.verdigris_standard : null;
+  if (expedition.id === 'verdigris_sanctum') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.verdigris_standard
+    : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.verdigris_deep : null;
   if (expedition.id === 'ashforge_catacomb') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.ashforge_standard
     : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.ashforge_deep : null;
   if (expedition.id === 'sable_mirage_basin') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.sable_standard
