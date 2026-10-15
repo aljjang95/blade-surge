@@ -1222,3 +1222,652 @@ test('ring 프로필: 두 번째 피격 뒤 다른 집결 터짐 동안 core 안
   });
   expect(K.analyzeRingManual(missedRows, DEF, SETUP).hits.ok).toBe(false);
 });
+
+
+// =====================================================================================================================
+// BUNDLE-13: 일반판(astral_standard) 조율판 4곳(방 1 → 3 → 4 → 6) + 기록 외곽 고리 이탈(항로 표지 3개). 위 심층 테스트는 그대로 두고 일반판 판정만 더한다.
+// =====================================================================================================================
+const SDEF: any = (ROUTE_OBJECTIVES as any).astral_standard;
+const SRING: any = SDEF.ring;
+const SCX = room(7).x, SCZ = 0;
+const SSETUP: any = {
+  gates: SDEF.gates.map((g: any) => ({ id: g.roomId, roomX: room(g.roomId).x, roomZ: 0, x: room(g.roomId).x, z: 0, answer: g.answer,
+    pads: SDEF.choices.map((c: any) => ({ id: c.id, x: room(g.roomId).x + c.dx, z: c.dz })) })),
+  ring: { roomId: 7, roomX: SCX, roomZ: SCZ, cx: SCX, cz: SCZ, minX: SCX - 11, maxX: SCX + 11, minZ: -12, maxZ: 12,
+    marks: SRING.marks.map((m: number[]) => ({ x: SCX + m[0], z: SCZ + m[1] })) },
+};
+const SSG = (k: number) => SSETUP.gates[k];
+const sPadOf = (k: number, id: string) => SSG(k).pads.find((p: any) => p.id === id);
+const sWrongPadOf = (k: number) => SSG(k).pads.find((p: any) => p.id !== SSG(k).answer);
+const sMark = (i: number) => SSETUP.ring.marks[i];
+const SLABELS = ['1번 조율판 · 첫 항로', '2번 조율판 · 먼 좌표', '3번 조율판 · 귀환 별', '4번 조율판 · 마지막 항로'];
+// 일반판 문구: PLAN 3.1 틀에 두 정의의 낱말을 넣은 결과를 이 파일이 따로 적는다(판정 함수의 틀 함수를 가져오지 않는다).
+const STX = {
+  all: '모든 별자리 복원 · 모든 구역을 정화하면 기록 외곽 고리가 열립니다', open: '기록 외곽 고리 개방 · 고리 위 항로 표지 3개를 밝히세요',
+  hit: '기록 파편 집결 피격 · 기록 파편이 모이면 중심 밖으로', done: '외곽 고리 이탈 · 레비아탄의 봉인이 풀립니다',
+  start: (limit: number) => '외곽 고리 이탈 시작 · ' + limit + '초', collapse: (limit: number) => '외곽 고리 붕괴 · 항로 표지가 흐려졌습니다 · 다시 ' + limit + '초',
+  mark: (k: number) => '항로 표지 점등 · ' + k + '/3', ready: (k: number, current: boolean) => SLABELS[k] + ' 정화 · ' + (current ? '모래시계 단서를 읽으세요' : '복원 순서 대기'),
+  restore: (k: number) => SLABELS[k] + ' 복원 완료 · ' + (k + 1) + '/4', tactic: '보스 전술 문구 · 별빛을 삼킨 레비아탄',
+};
+const sObjDom = (pr: number, action: string) => '별자리 복원 ' + pr + '/4 ' + action + ' 0.6/1';
+const sRingDom = (left: number) => '외곽 고리 이탈 0/3 기록 파편이 모이면 중심 밖으로 · ' + Math.ceil(left) + '초';
+function sShardOf(ck: number) {
+  const u = ck - SRING.first;
+  if (u < 0) return { s: 0, c: -1, a: 0 };
+  const cyc = Math.floor(u / SRING.period), m = u - cyc * SRING.period;
+  if (m < SRING.warning) return { s: 1, c: cyc, a: m };
+  if (m < SRING.warning + SRING.burst) return { s: 2, c: cyc, a: m - SRING.warning };
+  return { s: 0, c: cyc, a: m - SRING.warning - SRING.burst };
+}
+const sInRect = (x: number, z: number) => x >= SSETUP.ring.minX && x <= SSETUP.ring.maxX && z >= SSETUP.ring.minZ && z <= SSETUP.ring.maxZ;
+
+/**
+ * 일반판 모의 세션(위 Sim 과 같은 구조, 일반판 정의·문구·수치). 방 1·3·4·6 의 조율판 4곳, 방 2·5 는 보물방, 방 7 이 고리, 대기 조율판은 없다.
+ * flags: 일부러 어긋나게 만드는 장치(gateRooms 순서, openAt3 4/4 전 열림, unsealEarly, sealStays, doubleHit, hitDamage, collapseDamage, keepPurified, limit 변경, startDelay).
+ */
+class SSim {
+  rows: any[] = []; toasts: any[] = []; n = 0; hero = { x: 0, z: 0 }; hp = 100; hrNow: number[] = []; hn = 0;
+  pr = 0; rem = 7; sl = 1; au = 1; ps = 'move'; rm = 0;
+  rs = 0; hd = 0; se = ''; mi = 0; wrongLatch = false; confirm: string | null = null;
+  g: any[]; rg: any; pendingOpen = false; hitCycles = new Set<number>(); doubled = false; cond = 0; inside = 0; domNext: string | null = null; flags: any;
+  constructor(flags: any = {}) {
+    this.flags = flags;
+    const rooms: number[] = flags.gateRooms ?? SDEF.gates.map((x: any) => x.roomId);
+    this.g = rooms.map(id => ({ id, rdy: 0, av: 0, at: 0, cl: 0, dc: 0, al: 0, pd: 0 }));
+    this.rg = { ph: 0, ck: 0, lf: 0, lim: 0, el: 0, co: 0, sh: 0, pu: 0, m: SRING.marks.map(() => ({ h: 0, d: 0 })) };
+    this.snap({ mk: 'start' });
+  }
+  phaseCode() {
+    if (this.pr >= 4) return 4;
+    if (!this.g[this.pr].av) return 0;
+    return this.wrongLatch ? 3 : this.rs + 1e-9 >= SDEF.readSeconds ? 2 : 1;
+  }
+  heldIndex() { return this.rg.m.findIndex((m: any) => !m.d && m.h > 0); }
+  snap(extra: any = {}) {
+    const c = this.rg, live = c.ph === 1 || c.ph === 2, sd = live ? sShardOf(c.ck) : { s: 0, c: -1, a: 0 };
+    const ph = this.phaseCode();
+    const row: any = { n: this.n, t: this.n * FRAME, x: this.hero.x, z: this.hero.z, hp: this.hp, mhp: 100, al: 1, rm: this.rm, pr: this.pr, sl: this.sl, rem: this.rem,
+      au: this.au, ah: 0, ps: this.ps, rs: this.rs, hd: this.hd, ph, rv: this.rs + 1e-9 >= SDEF.readSeconds ? 1 : 0, se: this.se, mi: this.mi, hn: this.hn,
+      ec: this.pr < 4 ? this.g[this.pr].al : 0, g: this.g.map(x => ({ ...x })),
+      rg: { ph: c.ph, rid: 7, ck: c.ck, lf: c.lf, lim: c.lim, el: c.el, co: c.co, sh: c.sh, pu: c.pu, ho: this.heldIndex(), m: c.m.map((m: any) => ({ h: m.h, d: m.d })), sd }, ...extra };
+    if (this.domNext) { row.dom = this.domNext; this.domNext = null; }
+    if (this.hrNow.length) { row.hr = this.hrNow; this.hrNow = []; }
+    this.rows.push(row); return row;
+  }
+  hurt(raw: number) { this.hrNow.push(raw); this.hn++; this.hp -= raw * 100 * MIT; }
+  toast(msg: string, kind = 'gold') { this.toasts.push({ n: this.n, t: this.n * FRAME, msg, kind }); }
+  at(x: number, z = 0) { this.hero = { x, z }; }
+  gateUpdate() {
+    for (const q of this.g) q.av = 0;
+    const gate = this.g[this.pr];
+    if (!gate) { this.rs = 0; this.hd = 0; this.se = ''; this.confirm = null; return; }
+    const sg = SSG(this.pr);
+    gate.av = gate.rdy && gate.al === 0 && gate.pd === 0 && gate.dc && d2(this.hero, sg) <= SDEF.readRadius ? 1 : 0;
+    if (!gate.av) { this.rs = 0; this.hd = 0; this.se = ''; this.confirm = null; return; }
+    const pad = sg.pads.find((p: any) => d2(this.hero, p) <= SDEF.radius);
+    if (this.wrongLatch) {
+      this.hd = 0; this.rs = 0;
+      if (!pad) this.wrongLatch = false;
+    } else if (this.rs + 1e-9 < SDEF.readSeconds) {
+      this.rs = Math.min(SDEF.readSeconds, this.rs + FRAME); this.hd = 0; this.se = '';
+    } else {
+      const cur = pad ? pad.id : '';
+      if (cur !== this.se) { this.hd = 0; this.confirm = null; }
+      this.se = cur;
+      const confirming = this.confirm !== null && this.confirm === cur;
+      this.hd = pad ? Math.min(SDEF.holdSeconds, this.hd + FRAME) : 0;
+      if (confirming) {
+        this.confirm = null;
+        if (cur === SDEF.gates[this.pr].answer) {
+          gate.at = 1; gate.av = 0; gate.cl = 1; this.pr++; this.rs = 0; this.hd = 0; this.se = ''; this.rem--;
+          this.toast(STX.restore(this.pr - 1));
+          if (this.pr === 4) this.toast(STX.all);
+        } else {
+          this.mi++; this.wrongLatch = true; this.rs = 0; this.hd = 0; this.se = '';
+          const wrong = SDEF.choices.find((c: any) => c.id === cur), clue = SDEF.choices.find((c: any) => c.id === SDEF.gates[this.pr].answer);
+          this.toast(wrong.code + ' ' + wrong.glyph + ' 오답 · 단서는 ' + clue.code + ' ' + clue.glyph + ' · 판 밖으로 나와 다시 읽으세요.');
+        }
+      } else if (pad && this.hd + 1e-9 >= SDEF.holdSeconds) this.confirm = cur;
+    }
+  }
+  ringUpdate() {
+    const c = this.rg, f = this.flags, limit = f.limit ?? SRING.limit;
+    if (this.pendingOpen) {
+      c.ph = 1; c.ck = 0; this.pendingOpen = false; this.toast(STX.open);
+      if (f.unsealEarly) this.sl = 0;
+      return;
+    }
+    if (c.ph !== 1 && c.ph !== 2) return;
+    c.ck += FRAME;
+    if (c.ph === 1) {
+      if (sInRect(this.hero.x, this.hero.z) && this.inside++ >= (f.startDelay ?? 0)) { c.ph = 2; c.el = 0; c.lim = limit; c.lf = c.lim; this.toast(STX.start(c.lim)); }
+    } else { c.el += FRAME; c.lf -= FRAME; }
+    if (c.ph === 2) {
+      c.m.forEach((m: any, i: number) => {
+        if (m.d) return;
+        m.h = d2(this.hero, sMark(i)) <= SRING.markRadius ? m.h + FRAME : 0;
+        if (m.h + 1e-9 >= SRING.holdSeconds) {
+          m.d = 1; c.pu++; if (f.resetOnDone) m.h = 0;
+          if (c.pu < SRING.marks.length) this.toast(STX.mark(c.pu));
+        }
+      });
+      if (c.pu === SRING.marks.length) { c.ph = 3; this.sl = f.sealStays ? 1 : 0; this.toast(STX.done); return; }
+    }
+    const sd = sShardOf(c.ck);
+    if (sd.s === 2 && d2(this.hero, { x: SCX, z: SCZ }) <= SRING.core && (!this.hitCycles.has(sd.c) || (f.doubleHit && !this.doubled))) {
+      if (this.hitCycles.has(sd.c)) this.doubled = true;
+      this.hitCycles.add(sd.c); c.sh++; this.hurt(f.hitDamage ?? SRING.damage); this.toast(STX.hit, 'red');
+    }
+    if (c.ph === 2 && c.lf <= 1e-9) {
+      c.co++; this.hurt(f.collapseDamage ?? SRING.collapseDamage); c.lf = c.lim; this.toast(STX.collapse(c.lim), 'red');
+      if (!f.keepPurified) { c.pu = 0; c.m.forEach((m: any) => { m.h = 0; m.d = 0; }); } else c.m.forEach((m: any) => { if (!m.d) m.h = 0; });
+    }
+  }
+  step(extra: any = {}) {
+    this.n++;
+    this.gateUpdate();
+    this.ringUpdate();
+    const openAt = this.flags.openAt3 ? this.pr >= 3 : this.pr === 4 && this.rem === 0;
+    if (openAt && this.rg.ph === 0 && !this.pendingOpen) { this.cond++; if (this.cond > (this.flags.openDelay ?? 0)) this.pendingOpen = true; }
+    return this.snap(extra);
+  }
+  run(k: number) { for (let i = 0; i < k; i++) this.step(); }
+  until(cond: () => boolean, max = 6000) { for (let i = 0; i < max; i++) { if (cond()) return; this.step(); } throw new Error('until: 조건에 닿지 못함 (n=' + this.n + ')'); }
+  mark(label: string) { return this.snap({ mk: label }); }
+  clearRoom(id: number) { this.rem--; this.rm = id; this.at(room(id).x, 0); this.step(); }
+  discover(k: number) { this.g[k].dc = 1; this.rm = this.g[k].id; this.at(SSG(k).x, -5); this.step(); }
+  fight(k: number) { this.g[k].al = 4; this.run(20); this.g[k].al = 0; this.step(); this.g[k].rdy = 1; this.toast(STX.ready(k, this.pr === k)); this.step(); }
+  restore(k: number) {
+    const answer = SDEF.gates[k].answer;
+    this.at(SSG(k).x, -5);
+    for (let s = 1; s <= 70 && this.rs + 1e-9 < SDEF.readSeconds; s++) { if (s === 36) this.domNext = sObjDom(this.pr, '모래시계 단서 1초 읽기'); this.step(); }
+    for (let s = 0; s < (this.flags.walkSteps ?? 18); s++) { const p = sPadOf(k, answer), q = SSG(k), f = (s + 1) / 40; this.at(q.x + (p.x - q.x) * f, -5 + (p.z + 5) * f); this.step(); }
+    this.at(sPadOf(k, answer).x, sPadOf(k, answer).z);
+    for (let s = 1; s <= 140 && this.pr === k; s++) { if (s === 36) this.domNext = sObjDom(this.pr, '월드 단서와 같은 판에서 1초 유지'); this.step(); }
+    this.step();
+  }
+  /** 방 1 의 1번 조율판이 시작 방 바로 다음에서 먼저 준비된다. */
+  prefix() { this.discover(0); this.fight(0); return this; }
+  /** 1번 복원 뒤: 보물방 2 정리 → 2번(방 3) → 3번(방 4) → 보물방 5 정리 → 4번(방 6) → 정예방 7 정리, 고리 열림까지. opts.inside 면 열리는 스텝에 영웅이 고리 방 안(서쪽 문 안쪽). */
+  afterFirst(opts: { inside?: boolean } = {}) {
+    this.clearRoom(2);
+    this.discover(1); this.fight(1); this.restore(1);
+    this.discover(2); this.fight(2); this.restore(2);
+    this.clearRoom(5);
+    this.discover(3); this.fight(3); this.restore(3);
+    this.rem--; this.rm = 7; this.at(SCX + 15, 0); this.step();
+    this.at(opts.inside ? SCX - 10 : SCX + 15, 0); this.step();
+    return this;
+  }
+  toOpen(opts: { inside?: boolean } = {}) { this.prefix(); this.restore(0); return this.afterFirst(opts); }
+  /** 영웅이 (tx, tz) 까지 한 스텝에 .12(가장 빠른 영웅 7.2/60)씩 걷는다. 직선이 중심 core 근처를 지나면 북쪽 표지 위치를 경유한다(AUTO 는 중심을 피해 걷는다). */
+  walk(tx: number, tz: number) {
+    const c = { x: SCX, z: SCZ }, a = { ...this.hero };
+    const dx = tx - a.x, dz = tz - a.z, len2 = dx * dx + dz * dz;
+    const t = len2 > 0 ? Math.max(0, Math.min(1, ((c.x - a.x) * dx + (c.z - a.z) * dz) / len2)) : 0;
+    const near = Math.hypot(a.x + dx * t - c.x, a.z + dz * t - c.z);
+    const via = near < SRING.core + .5 ? [{ x: c.x, z: c.z - 6 }] : [];
+    for (const p of [...via, { x: tx, z: tz }]) {
+      const from = { ...this.hero }, steps = Math.max(1, Math.ceil(d2(from, p) / .12));
+      for (let s = 1; s <= steps; s++) { this.at(from.x + (p.x - from.x) * s / steps, from.z + (p.z - from.z) * s / steps); this.step(); }
+    }
+  }
+  /** AUTO 처럼 중심(core)을 피해 표지를 하나씩 점등한다. 열려 있고 영웅이 밖이면 서쪽 문 안쪽으로 들어서며 시작한다. 표지 사이는 걸어서 이동한다. */
+  autoRing(order = [0, 1, 2]) {
+    if (this.rg.ph === 1) { this.run(3); this.at(SCX - 10, 0); this.step(); }
+    order.forEach((i, k) => {
+      if (this.rg.m[i].d) return;
+      this.walk(sMark(i).x, sMark(i).z);
+      for (let s = 1; s <= 80 && !this.rg.m[i].d && this.rg.ph === 2; s++) { if (k === 0 && s === 36) this.domNext = sRingDom(this.rg.lf); this.step(); }
+    });
+    this.run(30);
+    return this;
+  }
+  result(over: any = {}) {
+    const c = this.rg, doneRow = this.rows.find(r => r.rg.ph === 3);
+    return { win: true, ro: { id: SDEF.id, complete: true, progress: 4, target: 4, mistakes: this.mi, rooms: [1, 3, 4, 6],
+      constellations: SDEF.gates.map((g: any) => ({ stationId: g.stationId, roomId: g.roomId, label: g.label, choice: g.answer })),
+      ring: { purified: c.ph === 3, marks: c.m.filter((m: any) => m.d).length, collapses: c.co, shardHits: c.sh, seconds: doneRow?.rg.el ?? 0 }, ...over } };
+  }
+}
+const sLinesOf = (ro: any) => [
+  { aria: '별자리 복원 결과', text: '별자리 복원 ' + ro.progress + '/' + ro.target + ' · ' + SLABELS.join(' → ') + ' · 오답 ' + ro.mistakes + '회' },
+  { aria: '외곽 고리 이탈 결과', text: '외곽 고리 이탈 ' + (ro.ring.purified ? '완료' : '미완료') + ' · 항로 표지 ' + ro.ring.marks + '/3 · 기록 파편 피격 ' + ro.ring.shardHits + '회 · 붕괴 ' + ro.ring.collapses + '회' },
+];
+const sAuto = (s: SSim, over: any = {}, opts: any = {}) => {
+  const res = s.result(), ro = over.ro ?? res.ro, lines = sLinesOf(ro);
+  return K.analyzeAuto({ rows: s.rows, setup: SSETUP, result: ro, resultText: '결과 ' + lines.map(l => l.text).join(' / '), resultLines: lines, win: true,
+    toasts: s.toasts, encounterTactic: null, ...over }, SDEF, opts);
+};
+const sLegit = (flags: any = {}) => { const s = new SSim(flags).toOpen(); s.autoRing(); return s; };
+
+/** choice: 1번 조율판(방 1, 답 A △)이 준비된 순간 AUTO 끔 → 오답 판 1초 → 판 밖에서 다시 읽기 → 정답 판 1초 → AUTO 완주. */
+function sChoiceRun(over: { hurtDuring?: boolean } = {}) {
+  const s = new SSim().prefix();
+  s.au = 0; s.ps = 'idle';
+  s.mark('ch-manual');
+  s.at(SSG(0).x, -5);
+  s.until(() => s.phaseCode() === 2);
+  s.mark('ch-read1');
+  const wrong = sWrongPadOf(0);
+  s.at(wrong.x, wrong.z);
+  s.until(() => s.mi === 1);
+  s.mark('ch-wrong');
+  if (over.hurtDuring) s.hurt(.05);
+  s.at(SSG(0).x, 0);
+  s.until(() => s.phaseCode() === 2);
+  s.mark('ch-reread');
+  const ans = sPadOf(0, SDEF.gates[0].answer);
+  s.at(ans.x, ans.z);
+  s.until(() => s.pr === 1);
+  s.mark('ch-correct');
+  s.au = 1; s.ps = 'move';
+  return s.afterFirst().autoRing();
+}
+/** ring: 고리 open 에서 AUTO 끔 → 방 밖 3초 대기 → 진입 → 중심 core 에서 두 cycle 피격 → 표지 하나 점등 → 안전한 곳에서 붕괴 → AUTO → 3/3. */
+function sRingRun(over: { inside?: boolean; flags?: any } = {}) {
+  const s = new SSim(over.flags ?? {}).toOpen({ inside: over.inside });
+  s.au = 0; s.ps = 'idle';
+  s.mark('rg-manual');
+  if (over.inside) s.step(); else s.run(180);
+  s.mark('rg-wait-end');
+  if (!over.inside) { s.at(SCX - 10, 0); s.step(); }
+  s.mark('rg-started');
+  s.at(SCX, SCZ);
+  s.until(() => s.rg.sh === 1); s.mark('sh1');
+  s.until(() => sShardOf(s.rg.ck).s === 0); s.mark('sh1-end');
+  s.until(() => s.rg.sh === 2); s.mark('sh2');
+  s.until(() => sShardOf(s.rg.ck).s === 0); s.mark('sh2-end');
+  s.at(sMark(0).x, sMark(0).z);
+  s.until(() => s.rg.pu === 1); s.mark('pu1');
+  s.at(SCX - 6, SCZ - 3);   // 서쪽 표지에서 접선 방향 3: 표지 밖 · core 밖
+  s.until(() => s.rg.co === 1); s.mark('collapse');
+  s.mark('rg-auto'); s.au = 1; s.ps = 'move';
+  return s.autoRing();
+}
+
+describe('일반판: 계약 상수·정의·문구 틀', () => {
+  test('STANDARD · STANDARD_RING 계약 상수는 공유 정의(ROUTE_OBJECTIVES.astral_standard)와 같다', () => {
+    expect(K.checkDefinition(SDEF)).toEqual({ ok: true, issues: [] });
+    expect(K.contractOf(SDEF).depth).toBe('standard');
+    expect(K.contractOf(DEF).depth).toBe('deep');
+    expect(K.contractOf(null).depth).toBe('deep');
+    expect(K.STANDARD_RING).toEqual(SRING);
+    expect(K.RING).toEqual(RING);
+    expect(K.CONTRACTS.standard.gates.rooms).toEqual([1, 3, 4, 6]);
+    expect(K.CONTRACTS.standard.requireEarly).toBe(false);
+    expect(K.CONTRACTS.deep.requireEarly).toBe(true);
+    expect(K.STANDARD_LEAK_WORDS).toEqual(['공명', '성좌', '성표']);
+    expect(K.LEAK_WORDS).toEqual(['공명', '조율판']);
+  });
+  test('정의가 계약과 다르면 어긋난 항목을 알린다(심층 값 섞임, ring 없음 등)', () => {
+    const fields = (def: any) => K.checkDefinition(def).issues.map((i: any) => i.field);
+    expect(fields({ ...SDEF, ring: { ...SRING, limit: 20 } })).toEqual(['ring']);
+    expect(fields({ ...SDEF, ring: { ...SRING, damage: .06 } })).toEqual(['ring']);
+    expect(fields({ ...SDEF, ring: { ...SRING, marks: [...SRING.marks, [0, 6]] } })).toEqual(['ring']);
+    expect(fields({ ...SDEF, ring: { ...SRING, mark: '성표' } })).toEqual(['ring']);
+    expect(fields({ ...SDEF, ring: undefined })).toEqual(['ring']);
+    expect(fields({ ...SDEF, gates: [SDEF.gates[1], SDEF.gates[0], SDEF.gates[2], SDEF.gates[3]] })).toEqual(expect.arrayContaining(['rooms', 'labels']));
+    expect(fields({ ...SDEF, gates: SDEF.gates.map((g: any, i: number) => (i === 3 ? { ...g, answer: 'circle' } : g)) })).toEqual(['answers']);
+    // 심층 정의를 일반판 계약으로 보면 id · kind · 방 · 라벨 · 답 · 고리가 모두 어긋난다.
+    const crossed = K.checkDefinition(DEF, K.CONTRACTS.standard).issues.map((i: any) => i.field);
+    expect(crossed).toEqual(expect.arrayContaining(['id', 'kind', 'rooms', 'labels', 'answers', 'ring']));
+    expect(K.checkDefinition(SDEF, K.CONTRACTS.deep).ok).toBe(false);
+  });
+  test('정적 setup 이 일반판 정의의 오프셋(표지 3개)과 맞는지 본다', () => {
+    expect(K.checkSetup(SSETUP, SDEF).ok).toBe(true);
+    const moved = (patch: (s: any) => void) => { const s = structuredClone(SSETUP); patch(s); return K.checkSetup(s, SDEF); };
+    expect(moved(s => { s.ring.marks.pop(); }).checks.marks).toBe(false);
+    expect(moved(s => { s.ring.marks[2].x += 1; }).checks.marks).toBe(false);
+    expect(moved(s => { s.ring.minX = s.ring.cx - 3; }).checks.coreInside).toBe(false);
+    expect(moved(s => { s.gates[0].answer = 'circle'; }).checks.gates).toBe(false);
+  });
+  test('문구 틀(ringCopy)이 심층 정의에서는 기존 COPY 문자열과 글자 하나까지 같다', () => {
+    const c = K.ringCopy(RING);
+    expect(c.allRestored).toBe(K.COPY.allRestored);
+    expect(c.ringOpen).toBe(K.COPY.ringOpen);
+    expect(c.shardHit).toBe(K.COPY.shardHit);
+    expect(c.done).toBe(K.COPY.done);
+    expect(c.title).toBe(K.COPY.ringTitle);
+    expect(c.openAction).toBe(K.COPY.ringOpenAction);
+    expect(c.runAction).toBe(K.COPY.ringRunAction);
+    expect(c.start(20)).toBe(K.startToast(20));
+    expect(c.mark(1, 4)).toBe(K.markToast(1, 4));
+    expect(c.collapse(20)).toBe(K.collapseToast(20));
+    // 기존 상수가 아니라 이 파일이 적은 계약 문장과도 같다.
+    expect(c.allRestored).toBe(TXT.all);
+    expect(c.ringOpen).toBe(TXT.open);
+    expect(c.shardHit).toBe(TXT.hit);
+    expect(c.done).toBe(TXT.done);
+    expect(c.start(20)).toBe(TXT.start(20));
+    expect(c.mark(2)).toBe(TXT.mark(2));
+    expect(c.collapse(20)).toBe(TXT.collapse(20));
+    expect(c.resultAria).toBe('외곽 고리 정화 결과');
+    expect(c.resultLine({ purified: true, marks: 4, shardHits: 0, collapses: 0 })).toBe('외곽 고리 정화 완료 · 성표 4/4 · 파편 피격 0회 · 붕괴 0회');
+    expect(K.ringResultLine({ purified: false, marks: 2, shardHits: 1, collapses: 3 })).toBe('외곽 고리 정화 미완료 · 성표 2/4 · 파편 피격 1회 · 붕괴 3회');
+  });
+  test('문구 틀이 일반판 정의에서는 일반판 낱말과 조사로 채워진다', () => {
+    const c = K.ringCopy(SRING);
+    expect(c.allRestored).toBe(STX.all);
+    expect(c.ringOpen).toBe(STX.open);
+    expect(c.shardHit).toBe(STX.hit);
+    expect(c.done).toBe(STX.done);
+    expect(c.start(24)).toBe(STX.start(24));
+    expect(c.mark(1)).toBe(STX.mark(1));
+    expect(c.mark(2)).toBe(STX.mark(2));
+    expect(c.collapse(24)).toBe(STX.collapse(24));
+    expect(c.title).toBe('외곽 고리 이탈');
+    expect(c.openAction).toBe('기록 외곽 고리로 이동');
+    expect(c.runAction).toBe('기록 파편이 모이면 중심 밖으로 · ');
+    expect(c.resultAria).toBe('외곽 고리 이탈 결과');
+    expect(c.resultLine({ purified: true, marks: 3, shardHits: 0, collapses: 0 })).toBe('외곽 고리 이탈 완료 · 항로 표지 3/3 · 기록 파편 피격 0회 · 붕괴 0회');
+    expect(c.resultLine({ purified: false, marks: 1, shardHits: 2, collapses: 1 })).toBe('외곽 고리 이탈 미완료 · 항로 표지 1/3 · 기록 파편 피격 2회 · 붕괴 1회');
+    expect(K.ringResultLine({ purified: true, marks: 3, shardHits: 0, collapses: 0 }, 3, SRING)).toBe(c.resultLine({ purified: true, marks: 3, shardHits: 0, collapses: 0 }));
+  });
+});
+
+describe('일반판: 정상 AUTO 경로', () => {
+  const a = sAuto(sLegit());
+  test('모든 판정이 통과한다(대기 조율판 요구 없이)', () => { expect(failed(a)).toEqual([]); expect(a.ok).toBe(true); });
+  test('복원 순서 [1,3,4,6], 복원마다 읽기 1초와 유지 1초가 직전에 관측된다', () => {
+    expect(a.restorations.observedOrder).toEqual([1, 3, 4, 6]);
+    expect(a.restorations.count).toBe(4);
+    for (const e of a.restorations.events) {
+      expect(e.read.readBeforeHold).toBeGreaterThanOrEqual(1 - 1e-6);
+      expect(e.hold.seconds).toBeGreaterThanOrEqual(1 - 1e-6);
+      expect(e.pad.selected).toBe(true);
+    }
+  });
+  test('일반판 기본은 대기 조율판 요구를 끄고, 요구하면 관측이 없어 실패한다', () => {
+    expect(a.turn.early.required).toBe(false);
+    expect(a.turn.early.rows).toBe(0);
+    expect(sAuto(sLegit(), {}, { requireEarly: true }).acceptance.turnRooms).toBe(false);
+    // 심층은 기본이 요구 켬이다: 같은 형태(대기 성좌 없음)의 심층 trace 는 기본 호출로 실패한다.
+    const noEarly = new Sim();
+    noEarly.clearRoom(1); noEarly.discover(0); noEarly.fight(0); noEarly.restore(0);
+    noEarly.discover(1); noEarly.fight(1); noEarly.restore(1); noEarly.clearRoom(4);
+    noEarly.discover(2); noEarly.fight(2); noEarly.restore(2); noEarly.discover(3); noEarly.fight(3); noEarly.restore(3);
+    noEarly.rem--; noEarly.at(CX + 15, 0); noEarly.step(); noEarly.step(); noEarly.autoRing();
+    expect(auto(noEarly).acceptance.turnRooms).toBe(false);
+  });
+  test('고리는 4/4 와 모든 구역 정화 뒤 열리고(clock 0), limit 24, 봉인은 고리 완료 스텝에 풀린다', () => {
+    expect(a.open.ok).toBe(true);
+    expect(a.open.clock).toBe(0);
+    expect(a.open.progress).toBe(4);
+    expect(a.open.remaining).toBe(0);
+    expect(a.open.roomId).toBe(7);
+    expect(a.start.limit).toBe(24);
+    expect(a.limit.ok).toBe(true);
+    expect(a.seal.firstUnsealed).toBe(a.seal.doneIdx);
+    expect(a.counts.collapses).toBe(0);
+    expect(a.counts.purified).toBe(3);
+  });
+  test('항로 표지 3개는 순서와 상관없이 0 에서 시작한 1초 유지로 점등되고, 목표창 표본은 선택 단계와 고리 이탈 중을 포함한다', () => {
+    expect(a.marks.count).toBe(3);
+    expect(a.marks.order.sort()).toEqual([0, 1, 2]);
+    expect(a.objective.kinds.select).toBeGreaterThanOrEqual(1);
+    expect(a.objective.kinds.run).toBeGreaterThanOrEqual(1);
+    for (const order of [[2, 1, 0], [1, 0, 2], [2, 0, 1]]) expect(sAuto(new SSim().toOpen().autoRing(order)).ok).toBe(true);
+    expect(failed(sAuto(sLegit({ resetOnDone: true })))).toEqual([]);
+  });
+  test('집결 위상(첫 1.5 · 주기 5 · 예고 2 · 터짐 .5)이 clock 계산값과 같고 예고와 터짐이 관측된다', () => {
+    expect(a.shards.ok).toBe(true);
+    expect(a.shards.seen.warning).toBeGreaterThan(0);
+    expect(a.shards.seen.burst).toBeGreaterThan(0);
+    const s = sLegit();
+    // 심층 위상(첫 1 · 주기 4.5 · 예고 1.5)이었다면 일반판 정의 기준으로 어긋난다: 예고 구간(2초) 끝부분을 calm 으로 바꾸면 실패한다.
+    const shortened = mut(s.rows, rows => rows.forEach((r: any) => { if (r.rg.ph === 2 && r.rg.sd.s === 1 && r.rg.sd.a > 1.6) r.rg.sd.s = 0; }));
+    expect(K.checkShards(shortened, SDEF).ok).toBe(false);
+    expect(K.checkShards(s.rows, DEF).ok).toBe(false);   // 일반판 trace 를 심층 정의로 보면 위상이 다르다
+  });
+  test('결과 필드·두 줄·줄 요소·토스트·목표창이 일반판 문구로 통과한다', () => {
+    expect(a.result.ok).toBe(true);
+    expect(a.resultLines.ok).toBe(true);
+    expect(a.resultElements.ok).toBe(true);
+    expect(a.resultElements.ringAria).toBe('외곽 고리 이탈 결과');
+    expect(a.resultElements.ring).toBe('외곽 고리 이탈 완료 · 항로 표지 3/3 · 기록 파편 피격 0회 · 붕괴 0회');
+    expect(a.resultElements.constellation).toBe('별자리 복원 4/4 · ' + SLABELS.join(' → ') + ' · 오답 0회');
+    expect(a.toasts.ok).toBe(true);
+    expect(a.objective.ok).toBe(true);
+  });
+});
+
+describe('일반판: 깨진 trace 는 실패한다', () => {
+  test('복원 순서가 틀리면(방 3 이 먼저) 순서 판정이 실패한다', () => {
+    const a = sAuto(sLegit({ gateRooms: [3, 1, 4, 6] }));
+    expect(a.acceptance.restoreOrder).toBe(false);
+    expect(a.restorations.violations.some((v: any) => v.kind === 'order')).toBe(true);
+    expect(a.ok).toBe(false);
+    // 심층 순서 [3,2,5,6] 도 일반판 계약에서는 실패다.
+    expect(sAuto(sLegit({ gateRooms: [3, 2, 5, 6] })).acceptance.restoreOrder).toBe(false);
+  });
+  test('고리가 4/4 전에 열리면 실패한다', () => {
+    const a = sAuto(sLegit({ openAt3: true }));
+    expect(a.acceptance.ringOpen).toBe(false);
+    expect(a.open.early.length).toBeGreaterThan(0);
+    expect(a.ok).toBe(false);
+  });
+  test('보스 봉인이 고리 완료 전에 풀리면 실패하고, 끝까지 안 풀려도 실패한다', () => {
+    const early = sAuto(sLegit({ unsealEarly: true }));
+    expect(early.acceptance.sealed).toBe(false);
+    expect(early.seal.reason).toBe('early-or-inconsistent');
+    expect(sAuto(sLegit({ sealStays: true })).acceptance.sealed).toBe(false);
+  });
+  test('같은 cycle 에 두 번 피격하면 실패한다', () => {
+    const s = sRingRun({ flags: { doubleHit: true } });
+    expect(K.checkShardHits(s.rows, SDEF, SSETUP).bad.some((b: any) => b.kind === 'double')).toBe(true);
+    expect(K.analyzeRingManual(s.rows, SDEF, SSETUP).ok).toBe(false);
+  });
+  test('피해 값이 심층 값 .06 이면 일반판 strict 판정(.04)에서 실패한다', () => {
+    const s = sRingRun({ flags: { hitDamage: .06 } });
+    expect(K.checkShardHits(s.rows, SDEF, SSETUP, { strict: true }).bad.some((b: any) => b.kind === 'damage' && b.want === .04)).toBe(true);
+    expect(K.analyzeRingManual(s.rows, SDEF, SSETUP).hits.ok).toBe(false);
+    const c = sRingRun({ flags: { collapseDamage: .06 } });
+    expect(K.checkCollapses(c.rows, SDEF, { strict: true }).bad.some((b: any) => b.kind === 'damage')).toBe(true);
+    // 정상 값 .04 는 같은 판정을 통과한다.
+    const ok = sRingRun();
+    expect(K.checkShardHits(ok.rows, SDEF, SSETUP, { strict: true }).ok).toBe(true);
+    expect(K.checkCollapses(ok.rows, SDEF, { strict: true }).ok).toBe(true);
+  });
+  test('붕괴 뒤 표지가 그대로 남으면 실패한다', () => {
+    const s = sRingRun({ flags: { keepPurified: true } });
+    expect(K.checkCollapses(s.rows, SDEF).bad.some((b: any) => b.kind === 'marks-kept')).toBe(true);
+    expect(K.analyzeRingManual(s.rows, SDEF, SSETUP).ok).toBe(false);
+  });
+  test('제한 시간이 심층 값 20 이면 시작 · 제한 판정이 실패한다', () => {
+    const a = sAuto(sLegit({ limit: 20 }));
+    expect(a.acceptance.ringStart).toBe(false);
+    expect(a.acceptance.ringLimit).toBe(false);
+    expect(K.analyzeRingManual(sRingRun({ flags: { limit: 20 } }).rows, SDEF, SSETUP).start.ok).toBe(false);
+  });
+  test('표지 4개를 기대하면(심층 개수) 일반판 trace 의 3개 점등으로는 완료가 아니다', () => {
+    const rows = sLegit().rows;
+    const four = { ...SDEF, ring: { ...SRING, marks: [...SRING.marks, [0, 6]] } };
+    expect(K.checkAutoCounts(rows, SDEF).ok).toBe(true);
+    expect(K.checkAutoCounts(rows, four).ok).toBe(false);
+    expect(K.checkAutoCounts(rows, DEF).ok).toBe(false);
+    expect(K.checkRingDone(rows, four).ok).toBe(false);
+    expect(K.checkObservation(rows, four).ok).toBe(false);   // 표지 4개분의 칸이 읽히지 않는다
+  });
+  test('누출 낱말: 일반판에서 성표 · 성좌 · 공명은 금지, 심층의 금지어(조율판)와 다르다', () => {
+    const s = sLegit();
+    expect(K.checkToasts(s.toasts, SDEF, { startLimit: 24, purifyCounts: [1, 2, 3] }).ok).toBe(true);
+    for (const word of ['성표', '성좌', '공명']) {
+      const t = K.checkToasts([...s.toasts, { msg: '항로 ' + word + ' 안내' }], SDEF);
+      expect(t.leaked).toEqual(['항로 ' + word + ' 안내']);
+      expect(t.ok).toBe(false);
+    }
+    // 일반판 토스트에 '조율판' 은 정상 문구다(라벨). 심층에서는 이 낱말이 누출이다.
+    expect(K.checkToasts(s.toasts, SDEF).leaked).toEqual([]);
+    const deep = legitRun();
+    expect(K.checkToasts([...deep.toasts, { msg: '성표 안내' }], DEF).leaked).toEqual([]);
+    expect(K.checkToasts([...deep.toasts, { msg: '2번 조율판 복원' }], DEF).leaked.length).toBe(1);
+    // 목표창 문구의 누출도 depth 별 낱말로 본다.
+    const dom = mut(s.rows, rows => { rows.find((x: any) => typeof x.dom === 'string' && x.dom.includes('중심 밖으로')).dom += ' 성표'; });
+    expect(K.checkObjectiveSamples(dom, SDEF).ok).toBe(false);
+    expect(K.checkObjectiveSamples(s.rows, SDEF).ok).toBe(true);
+  });
+  test('심층 문구(성표·파편·정화)가 일반판 토스트로 뜨면 실패한다', () => {
+    const s = sLegit();
+    const swap = (from: string, to: string) => s.toasts.map(t => (t.msg === from ? { ...t, msg: to } : t));
+    expect(K.checkToasts(swap(STX.open, TXT.open), SDEF).ok).toBe(false);
+    expect(K.checkToasts(swap(STX.done, TXT.done), SDEF).ok).toBe(false);
+    expect(K.checkToasts(swap(STX.all, TXT.all), SDEF).ok).toBe(false);
+    expect(K.checkToasts(swap(STX.start(24), TXT.start(24)), SDEF).startOk).toBe(false);
+    expect(K.checkToasts(swap(STX.mark(1), TXT.mark(1)), SDEF, { purifyCounts: [1, 2, 3] }).markOk).toBe(false);
+  });
+  test('결과 줄에 심층 문구(성표 · 외곽 고리 정화)가 쓰이면 실패한다', () => {
+    const s = sLegit(), ro = s.result().ro, lines = sLinesOf(ro);
+    const body = lines.map(l => l.text).join(' ');
+    expect(K.checkResultLines('결과 ' + body, SDEF, ro).ok).toBe(true);
+    const deepLine = '외곽 고리 정화 완료 · 성표 3/3 · 파편 피격 0회 · 붕괴 0회';
+    expect(K.checkResultLines('결과 ' + lines[0].text + ' / ' + deepLine, SDEF, ro).ok).toBe(false);
+    expect(K.checkResultLines('결과 ' + body.replace('항로 표지', '성표'), SDEF, ro).ok).toBe(false);
+    expect(K.checkResultElements(lines, SDEF, ro).ok).toBe(true);
+    expect(K.checkResultElements([lines[0], { ...lines[1], text: deepLine }], SDEF, ro).ok).toBe(false);
+    expect(K.checkResultElements([lines[0], { ...lines[1], aria: '외곽 고리 정화 결과' }], SDEF, ro).ok).toBe(false);
+    expect(K.checkResultElements([lines[0], { ...lines[1], text: lines[1].text.replace('3/3', '4/4') }], SDEF, ro).ok).toBe(false);
+  });
+  test('결과 필드: 표지 수 · 방 순서가 일반판 계약과 다르면 실패한다', () => {
+    const ro = sLegit().result().ro;
+    const f = (patch: any) => K.checkResultFields({ ...ro, ...patch }, SDEF, true, { mistakes: 0, collapses: 0, shardHits: 0, seconds: ro.ring.seconds }).ok;
+    expect(f({})).toBe(true);
+    expect(f({ ring: { ...ro.ring, marks: 4, purified: 4 } })).toBe(false);
+    expect(f({ rooms: [3, 2, 5, 6] })).toBe(false);
+    expect(f({ id: 'astral_fallen_constellations_deep' })).toBe(false);
+  });
+  test('목표창: 일반판 제목 · 행동 문구가 아니면 실패한다', () => {
+    const s = sLegit();
+    const runRow = (rows: any[]) => rows.find((x: any) => typeof x.dom === 'string' && x.dom.includes('중심 밖으로'));
+    expect(K.checkObjectiveSamples(mut(s.rows, rows => { runRow(rows).dom = runRow(rows).dom.replace('외곽 고리 이탈', '외곽 고리 정화'); }), SDEF).ok).toBe(false);
+    expect(K.checkObjectiveSamples(mut(s.rows, rows => { runRow(rows).dom = runRow(rows).dom.replace('기록 파편이', '파편이'); }), SDEF).ok).toBe(false);
+    expect(K.checkObjectiveSamples(mut(s.rows, rows => { const r = runRow(rows); r.dom = sRingDom(r.rg.lf + 5); }), SDEF).ok).toBe(false);
+    // 고리가 열린 직후 표본의 행동 문구는 '기록 외곽 고리로 이동' 이다.
+    const open = mut(s.rows, rows => { const r = rows.find((x: any) => x.rg.ph === 1); r.dom = '외곽 고리 이탈 0/3 기록 외곽 고리로 이동'; });
+    expect(K.checkObjectiveSamples(open, SDEF).kinds.open).toBe(1);
+    expect(K.checkObjectiveSamples(open, SDEF).ok).toBe(true);
+    const wrongOpen = mut(s.rows, rows => { const r = rows.find((x: any) => x.rg.ph === 1); r.dom = '외곽 고리 이탈 0/3 성좌 외곽 고리로 이동'; });
+    expect(K.checkObjectiveSamples(wrongOpen, SDEF).ok).toBe(false);
+  });
+});
+
+describe('일반판: 토스트 표본', () => {
+  test('시작 · 붕괴 · 표지 · 피격 토스트가 일반판 틀 그대로 정확히 한 번씩이다', () => {
+    const m = sRingRun();
+    const t = K.checkToasts(m.toasts, SDEF, { shardHits: 2, collapses: 1, startLimit: 24, collapseLimits: [24], purifyCounts: [1, 1, 2, 3] });
+    expect(t.ok).toBe(true);
+    expect(t.startToasts).toEqual(['외곽 고리 이탈 시작 · 24초']);
+    expect(t.collapseToasts).toEqual(['외곽 고리 붕괴 · 항로 표지가 흐려졌습니다 · 다시 24초']);
+    expect(t.markExpect).toEqual(['항로 표지 점등 · 1/3', '항로 표지 점등 · 1/3', '항로 표지 점등 · 2/3']);
+    expect(t.hitCount).toBe(2);
+    expect(K.checkToasts(m.toasts, SDEF, { shardHits: 2, collapses: 1, collapseLimits: [20] }).collapseOk).toBe(false);
+    expect(K.checkToasts(m.toasts, SDEF, { shardHits: 2, collapses: 1, startLimit: 20 }).startOk).toBe(false);
+    expect(K.checkToasts(m.toasts, SDEF, { shardHits: 3, collapses: 1 }).ok).toBe(false);
+  });
+});
+
+describe('일반판: choice · ring 수동 프로필', () => {
+  test('choice: 1번 조율판(방 1)에서 오답 판 → 재시도 → 정답 판, 피해 호출 0, AUTO 가 나머지를 이어받는다', () => {
+    const s = sChoiceRun();
+    const ch = K.analyzeChoice(s.rows, SDEF, SSETUP);
+    expect(ch.ok).toBe(true);
+    expect(ch.wrong.pad).toBe('circle');
+    expect(ch.wrong.mistakes).toBe(1);
+    expect(ch.wrong.phase).toBe(3);
+    expect(ch.hurts.total).toBe(0);
+    expect(ch.retry.ok).toBe(true);
+    expect(ch.correct.progress).toBe(1);
+    expect(ch.correct.cleared).toBe(1);
+    expect(ch.read.distance).toBeLessThanOrEqual(8.2);
+    const a = sAuto(s);
+    expect(failed(a)).toEqual([]);
+    expect(a.counts.mistakes).toBe(1);
+    expect(a.restorations.observedOrder).toEqual([1, 3, 4, 6]);
+  });
+  test('choice: hurt 가 불리거나 오답 수가 둘 늘거나 정답 판이 오답이면 실패한다', () => {
+    expect(K.analyzeChoice(sChoiceRun({ hurtDuring: true }).rows, SDEF, SSETUP).hurts.ok).toBe(false);
+    const s = sChoiceRun();
+    const run = (patch: (rows: any[]) => void) => K.analyzeChoice(mut(s.rows, patch), SDEF, SSETUP);
+    const at = (rows: any[], label: string) => rows.find((x: any) => x.mk === label);
+    expect(run(rows => { at(rows, 'ch-wrong').mi = 2; }).wrong.ok).toBe(false);
+    expect(run(rows => { at(rows, 'ch-wrong').se = 'triangle'; }).wrong.ok).toBe(false);
+    expect(run(rows => { at(rows, 'ch-correct').pr = 0; }).correct.ok).toBe(false);
+    expect(run(rows => { at(rows, 'ch-reread').ph = 3; }).retry.ok).toBe(false);
+    // 심층의 1번 성좌(방 3, 답 B ○)로 보면 일반판 trace 의 오답 판이 정답이라 실패한다.
+    expect(K.analyzeChoice(s.rows, DEF, SSETUP).ok).toBe(false);
+  });
+  test('ring: 방 밖 3초 대기 → 진입 첫 스텝 running(limit 24) → 두 cycle 피격(.04) → 표지 1/3 → 붕괴 1회(0/3, left 24) → AUTO 3/3 · 봉인 해제', () => {
+    const s = sRingRun();
+    const m = K.analyzeRingManual(s.rows, SDEF, SSETUP);
+    expect(m.ok).toBe(true);
+    expect(m.start.mode).toBe('waited-outside');
+    expect(m.start.limit).toBe(24);
+    expect(m.hits.cycle2).toBe(m.hits.cycle1 + 1);
+    expect(m.hits.all.total).toBe(2);
+    expect(m.purify.purified).toBe(1);
+    expect(m.collapse.purified).toBe(0);
+    expect(m.collapse.limit).toBe(24);
+    expect(m.collapse.outside.ok).toBe(true);
+    expect(m.final.purified).toBe(3);
+    expect(m.final.collapses).toBe(1);
+    expect(failed(sAuto(s, {}, { clean: false }))).toEqual([]);
+    expect(sAuto(s).acceptance.autoCounts).toBe(false);   // 붕괴가 있어 clean AUTO 판정은 실패
+  });
+  test('ring: 열림 순간 이미 방 안이면 열린 다음 스텝 running 으로 대신하고, 시작이 늦으면 실패한다', () => {
+    const r = K.analyzeRingManual(sRingRun({ inside: true }).rows, SDEF, SSETUP);
+    expect(r.start.mode).toBe('inside-at-open');
+    expect(r.ok).toBe(true);
+    expect(K.analyzeRingManual(sRingRun({ inside: true, flags: { startDelay: 5 } }).rows, SDEF, SSETUP).start.ok).toBe(false);
+  });
+  test('ring: 안전한 점 · 접선 거리가 일반판 core 3.2 · 표지 반경 1.4 기준으로 밖이어야 한다', () => {
+    const s = sRingRun();
+    const col = s.rows.find((x: any) => x.mk === 'collapse');
+    expect(d2(col, { x: SCX, z: SCZ })).toBeGreaterThan(SRING.core);
+    for (let i = 0; i < 3; i++) expect(d2(col, sMark(i))).toBeGreaterThan(SRING.markRadius);
+    const onMark = K.analyzeRingManual(mut(s.rows, rows => { const c = rows.find((x: any) => x.mk === 'collapse'); c.x = sMark(2).x; c.z = sMark(2).z; }), SDEF, SSETUP);
+    expect(onMark.collapse.outside.ok).toBe(false);
+  });
+});
+
+describe('일반판: 기준선 비교와 screens', () => {
+  const side = (over: any = {}) => ({ head: 'a'.repeat(40), status: 'pass', runStatus: 'pass', heroId: 'knight', seed: 20261015, depth: 'standard', reseedOn: true, viewport: { width: 844, height: 390 },
+    motion: 'reduce', quality: 'low', routeDefinition: SDEF, deepOk: true, ...over });
+  const noRing = { ...SDEF, ring: undefined };
+  const base = (over: any = {}) => side({ head: 'b'.repeat(40), routeDefinition: noRing, deepOk: null, ...over });
+  test('후보는 ring 이 있는 일반판 정의 · 기준선은 ring 없음(조율판 정의만 있거나 정의 없음) · HEAD 가 다르고 depth 가 같아야 한다', () => {
+    expect(K.compareTargetsOk(side(), base())).toBe(true);
+    expect(K.compareTargetsOk(side(), base({ routeDefinition: null }))).toBe(true);
+    expect(K.compareTargetsOk(side(), side({ head: 'b'.repeat(40) }))).toBe(false);   // 기준선에 ring 이 있으면 안 된다
+    expect(K.compareTargetsOk(side({ routeDefinition: noRing }), base())).toBe(false);   // 후보에 ring 이 없다
+    expect(K.compareTargetsOk(side({ routeDefinition: null }), base())).toBe(false);
+    expect(K.compareTargetsOk(side({ deepOk: false }), base())).toBe(false);
+    expect(K.compareTargetsOk(side({ deepOk: null }), base())).toBe(false);
+    expect(K.compareTargetsOk(side(), base({ head: 'a'.repeat(40) }))).toBe(false);
+    expect(K.compareTargetsOk(side(), base({ status: 'fail' }))).toBe(false);
+    expect(K.compareTargetsOk(side({ runStatus: 'fail' }), base())).toBe(false);
+    expect(K.compareTargetsOk(base(), side())).toBe(false);
+    expect(K.compareTargetsOk(side(), base({ depth: 'deep' }))).toBe(false);
+    expect(K.compareTargetsOk(side({ depth: 'deep' }), base({ depth: 'deep' }))).toBe(false);   // 후보 depth 와 정의 id 가 맞지 않는다
+    expect(K.compareTargetsOk(side({ depth: undefined }), base({ depth: undefined }))).toBe(false);
+    expect(K.compareTargetsOk(side({ routeDefinition: DEF }), base())).toBe(false);   // 일반판 비교에 심층 정의
+    expect(K.compareTargetsOk(side(), base({ routeDefinition: { ...noRing, id: 'astral_fallen_constellations_deep' } }))).toBe(false);
+  });
+  test('심층 비교는 기존대로 동작한다(후보 심층 정의 + 정의 없는 기준선, 또는 ring 이 없는 심층 정의)', () => {
+    const deepSide = (over: any = {}) => ({ ...side(), depth: 'deep', routeDefinition: DEF, ...over });
+    expect(K.compareTargetsOk(deepSide(), { ...deepSide(), head: 'b'.repeat(40), routeDefinition: null, deepOk: null })).toBe(true);
+    expect(K.compareTargetsOk(deepSide(), { ...deepSide(), head: 'b'.repeat(40), routeDefinition: { ...DEF, ring: undefined }, deepOk: null })).toBe(true);
+    expect(K.compareTargetsOk(deepSide(), { ...deepSide(), head: 'b'.repeat(40), deepOk: null })).toBe(false);
+  });
+  test('screens: 일반판 집결 예고 · 터짐 순간은 고리 방 안 영웅과 집결 상태가 맞아야 통과한다', () => {
+    const s = sLegit();
+    const pick = (state: number) => structuredClone(s.rows.find((x: any) => x.rg.ph === 2 && x.rg.sd.s === state && sInRect(x.x, x.z) && (state !== 1 || x.rg.sd.a >= .5)));
+    const warn = pick(1), burst = pick(2);
+    expect(K.checkScreenMoment({ capture: warn }, SDEF, 'warning', SSETUP).ok).toBe(true);
+    expect(K.checkScreenMoment({ capture: burst }, SDEF, 'burst', SSETUP).ok).toBe(true);
+    expect(K.checkScreenMoment({ capture: warn }, SDEF, 'burst', SSETUP).ok).toBe(false);
+    expect(K.checkScreenMoment({ capture: { ...burst, x: SCX + 30 } }, SDEF, 'burst', SSETUP).ok).toBe(false);
+    expect(K.checkScreenMoment({ capture: { ...burst, rg: { ...burst.rg, m: burst.rg.m.slice(0, 2) } } }, SDEF, 'burst', SSETUP).ok).toBe(false);
+    const open = structuredClone(s.rows.find((x: any) => x.rg.ph === 1));
+    expect(K.checkScreenMoment({ capture: open }, SDEF, 'ringOpen', SSETUP).ok).toBe(true);
+  });
+});

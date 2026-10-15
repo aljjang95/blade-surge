@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// 성운 첨탑 심층(astral_leviathan_spire deep) 성좌 4곳 복원·외곽 고리 정화 실제 UI QA 도구 (BUNDLE-12 qa lane).
+// 성운 첨탑(astral_leviathan_spire) 성좌 4곳 복원·외곽 고리 정화 실제 UI QA 도구 (BUNDLE-12 qa lane, BUNDLE-13 에서 일반판까지 확장).
+// --depth=deep(기본): 심층 성좌 4곳 + 성좌 외곽 고리 정화. --depth=standard: 일반판 조율판 4곳(방 1·3·4·6) + 기록 외곽 고리 이탈(표지 3개).
 // 실제 빌드(dist)를 production preview 로 띄우고, 실제 UI 버튼으로 출격해 성좌 복원과 외곽 고리 정화 전 과정을 app.step 한 번마다 관측한다.
 // 공유 tools/expedition-qa-runtime.mjs 를 수정 없이 쓴다(clean HEAD·dist·소스 해시 결속, 콘솔/네트워크/미디어 분류).
 // 읽기 경로: app.battle.routeObjectives (progress/phase/read/hold/selected/mistakes/revealed/gates[i].{room,pos,ready,available,attuned,answer,pads[].{id,code,pos}}/
@@ -7,13 +8,13 @@
 // gates[i].room.{id,x,z,type,cleared,discovered}, app.battle.world.{sealed,rooms,roomAt,linkPending,minX,minZ,cols},
 // app.battle.{enemies[].homeRoom/alive, pending[].room, curRoom, stage.expedition.mechanics, stage.encounter.tactic, paused}, 목표창 #objective textContent(같은 상태가 0.6초 이어진 뒤 표본),
 // 결과 화면 .exp-result-shell innerText·p[aria-label] 와 app.expeditionUI.result.routeObjective, app.ui.toast 호출(감싸개로 기록만), app.input.keys, app.renderer.r.info.render.calls(방 첫 진입 draw call 표본).
-// 규칙·뷰 구현은 읽지 않는다(PLAN 3.1 읽기 계약만). 경로 정의(ROUTE_OBJECTIVES.astral_deep)가 없는 기준선 빌드(--project, 예: a737875)에서는 성좌·고리 판정을 건너뛰고 완주·시간·50ms 만 기록한다.
+// 규칙·뷰 구현은 읽지 않는다(PLAN 3.1 읽기 계약만). 경로 정의가 없거나(심층 기준선 a737875) ring 이 없는(일반판 기준선 099eb32) 기준선 빌드(--project)에서는 성좌·고리 판정을 건너뛰고 완주·시간·50ms 만 기록한다.
 // 판정 함수는 tools/astral-deep-checks.mjs 에 있고 test/astral-deep-checks.test.ts 가 합격·불합격 입력을 모두 검사한다. 기준선 비교는 tools/astral-deep-compare.mjs 다(한 짝씩).
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createExpeditionQa, nativeGameplayFocus, qaArgument, qaAssert, qaHash } from './expedition-qa-runtime.mjs';
-import { DEEP, GATE_PHASE_CODE, MOMENTS, PHASE_CODE, SHARD_CODE, analyzeAuto, analyzeChoice, analyzeRingManual, checkScreenMoment, checkScreens, inRoom, stepStats } from './astral-deep-checks.mjs';
+import { CONTRACTS, GATE_PHASE_CODE, MOMENTS, PHASE_CODE, SHARD_CODE, analyzeAuto, analyzeChoice, analyzeRingManual, checkScreenMoment, checkScreens, inRoom, ringCopy, stepStats } from './astral-deep-checks.mjs';
 
 const HELP = [
   '사용법: node tools/astral-deep-qa.mjs --expected-sha=<40hex> --out=<새 절대경로> [옵션]',
@@ -22,11 +23,13 @@ const HELP = [
   '  --expected-sha=<40hex>   검사 대상 프로젝트의 clean HEAD 이자 dist/version.json 의 sha',
   '  --out=<절대경로>          새로 만들 결과 폴더(부모 폴더는 이미 있어야 하며 기존 폴더를 덮지 않는다)',
   '',
-  '옵션 (성운 첨탑 심층 카드만: 일반 성운 첨탑에는 이 정의가 없다)',
+  '옵션 (성운 첨탑 카드: 심층은 성좌 4곳·성좌 외곽 고리, 일반은 조율판 4곳·기록 외곽 고리)',
+  '  --depth=<standard|deep>  기본 deep. deep = 심층 원정 카드(성좌 방 [3,2,5,6] → 성좌 외곽 고리 정화, 성표 4개·제한 20초·피해 .06).',
+  '                           standard = 기본 원정 카드(조율판 방 [1,3,4,6] → 기록 외곽 고리 이탈, 항로 표지 3개·제한 24초·피해 .04). 접근·에너지·정의는 대상 프로젝트 데이터에서 읽는다.',
   '  --project=<절대경로>      검사 대상 프로젝트 루트(기본: 이 도구가 있는 저장소). dist 가 미리 빌드돼 있어야 한다(이 도구는 빌드하지 않는다).',
-  '                           심층 정의(ROUTE_OBJECTIVES.astral_deep)가 없는 기준선 빌드(예: a737875)도 받는다. 그때는 성좌·고리 판정을 건너뛰고 완주·시간·50ms 만 기록·판정한다(choice·ring·screens 는 건너뜀).',
-  '  --profile=<목록>          auto|choice|ring|screens|all (쉼표로 여러 개, 기본 auto). choice·ring·screens 는 경로 정의가 있는 빌드(후보)에서만 돈다.',
-  '  --depth=deep              심층 고정(다른 값은 거부)',
+  '                           고리가 없는 기준선 빌드(심층: 정의 ROUTE_OBJECTIVES.astral_deep 자체가 없는 a737875, 일반: 조율판 정의만 있고 ring 이 없는 099eb32)도 받는다.',
+  '                           그때는 조율판·고리 판정을 건너뛰고 완주·시간·50ms 만 기록·판정한다(choice·ring·screens 는 건너뜀).',
+  '  --profile=<목록>          auto|choice|ring|screens|all (쉼표로 여러 개, 기본 auto). choice·ring·screens 는 고리 정의가 있는 빌드(후보)에서만 돈다.',
   '  --seed=<uint32>           Math.random 시드(기본 20261015)',
   '  --no-reseed               전투 시작 직후 재시드(window.__qaReseed)를 끈다. 기본은 켬: 전투가 활성이고 route.prepareView 가 끝난 뒤 첫 app.step 전에 한 번 같은 시드로 되돌린다',
   '  --hero=<id>               fixture 영웅 knight|mage 등(기본 knight)',
@@ -37,21 +40,24 @@ const HELP = [
   '  --origin=<url>            공유 런타임 옵션(로컬 preview 또는 고정 라이브 주소만 허용)',
   '  --help                    이 도움말',
   '',
-  '프로필(F = fixture, R = 실제 UI·입력, C = 제어 실행)',
+  '프로필(F = fixture, R = 실제 UI·입력, C = 제어 실행). 아래 방 번호·수치는 심층 값이고 일반(--depth=standard)은 괄호 안 값이다',
   '  auto     F 저장 주입(해금·영웅·장비·에너지) → R 출격 카드 버튼 → R #btn-auto → C 고정 1/60 스텝 완주 → R 결과 화면 → R 새로고침 보존',
-  '           + 성좌·고리 판정: 완주 · 복원 순서 [3,2,5,6](보고 rooms · constellations) · 방 2 성좌가 1번 복원 전에 준비되고 그동안 미정화 · 차례 아닌 성좌 방은 복원 전 미정화(매 관측 행) ·',
-  '             복원 직전 read ≥ 1초 · hold ≥ 1초 관측(0 에서 시작, 모래시계 8m 안, 정답 판 반경 안, 그 방 적 0) · 고리 열림(4/4 와 시작·보스 뺀 모든 방 정화 뒤, 열리는 스텝 clock 0) ·',
-  '             정화 시작(방 사각형 안 첫 스텝, limit 20) · 고리 시계 · 집결 위상(첫 1초 · 주기 4.5 · 예고 1.5 · 터짐 .5) · 파편 피격(cycle 당 한 번, 기록) · 성표 4개(0 에서 시작한 1초 유지) · 붕괴 0 ·',
+  '           + 조율판·고리 판정: 완주 · 복원 순서 [3,2,5,6]([1,3,4,6]; 보고 rooms · constellations) · 심층만: 방 2 성좌가 1번 복원 전에 준비되고 그동안 미정화(일반은 대기 조율판이 없어 이 요구를 끈다) ·',
+  '             차례 아닌 성좌 방은 복원 전 미정화(매 관측 행) · 복원 직전 read ≥ 1초 · hold ≥ 1초 관측(0 에서 시작, 모래시계 8m 안, 정답 판 반경 안, 그 방 적 0) ·',
+  '             고리 열림(4/4 와 시작·보스 뺀 모든 방 정화 뒤, 열리는 스텝 clock 0) · 정화 시작(방 사각형 안 첫 스텝, limit 20(24)) · 고리 시계 ·',
+  '             집결 위상(첫 1(1.5)초 · 주기 4.5(5) · 예고 1.5(2) · 터짐 .5) · 파편 피격(cycle 당 한 번, 기록) · 성표 4개(항로 표지 3개; 0 에서 시작한 1초 유지) · 붕괴 0 ·',
   '             고리 완료 · world.sealed 는 고리 완료 전까지 true → 완료 뒤 해제 · 결과 보고 { id, complete, progress, target, mistakes, rooms, constellations, ring{ purified, marks, collapses, shardHits, seconds } } ·',
-  '             결과 두 줄(별자리 복원 4/4 · … / 외곽 고리 정화 완료 · 성표 4/4 · …) · 목표창 문구 · 토스트(전술 토스트는 정확 일치만 면제)',
-  '           + 보고 항목: 성좌·고리 방 첫 진입 draw call, 50ms 초과 집계, 파편 피격 · 오답 수 · ring.seconds, 실행 전후 1분 load',
-  '  choice   AUTO 로 1번 성좌(방 3)가 ready 가 될 때까지 → R #btn-auto 끔 → R 키보드(KeyW/A/S/D)로 모래시계 근처에서 단서 읽기(select) → 오답 판(가까운 것)에서 1초 + 다음 프레임 →',
-  '           mistakes +1 · phase retry · 진행 불변 · hurt 호출 0 → 판 밖으로 나와 다시 읽기(select) → 정답 판 1초 → progress 1(방 3 정화) → R AUTO 켬 → 완주. 공격 키 없음',
-  '  ring     AUTO 로 고리 open 까지 → R #btn-auto 끔 → 방 밖이면 3초 대기(running 아님; 열림 순간 이미 방 안이면 그 사실을 기록하고 열린 다음 스텝 running 으로 대신) → R 키보드로 진입(첫 스텝 running · limit 20) →',
-  '           중심(core) 안에서 집결 터짐마다 피격 1회(같은 cycle 두 번 없음, 두 cycle 관측, 넘긴 값 .06) → 성표 하나 정화(1/4) → 성표 밖 · core 밖에서 제한 시간 초과 붕괴 1회(넘긴 값 .06, 성표 0/4, left 20) → R AUTO 켬 → 4/4 · 봉인 해제 → 완주',
+  '             결과 두 줄(별자리 복원 4/4 · … / 외곽 고리 정화 완료 · 성표 4/4 · …; 일반은 외곽 고리 이탈 완료 · 항로 표지 3/3 · 기록 파편 피격 n회 · …) · 목표창 문구 · 토스트(문구는 정의의 문구 필드로 만든 틀)',
+  '             · 일반판에 나오면 안 되는 낱말: 공명 · 성좌 · 성표(심층: 공명 · 조율판)',
+  '           + 보고 항목: 조율판·고리 방 첫 진입 draw call, 50ms 초과 집계, 파편 피격 · 오답 수 · ring.seconds, 실행 전후 1분 load',
+  '  choice   AUTO 로 1번 성좌(방 3; 일반은 1번 조율판, 방 1, 답 A △)가 ready 가 될 때까지 → R #btn-auto 끔 → R 키보드(KeyW/A/S/D)로 모래시계 근처에서 단서 읽기(select) → 오답 판(가까운 것)에서 1초 + 다음 프레임 →',
+  '           mistakes +1 · phase retry · 진행 불변 · hurt 호출 0 → 판 밖으로 나와 다시 읽기(select) → 정답 판 1초 → progress 1(그 방 정화) → R AUTO 켬 → 완주. 공격 키 없음',
+  '  ring     AUTO 로 고리 open 까지 → R #btn-auto 끔 → 방 밖이면 3초 대기(running 아님; 열림 순간 이미 방 안이면 그 사실을 기록하고 열린 다음 스텝 running 으로 대신) → R 키보드로 진입(첫 스텝 running · limit 20(24)) →',
+  '           중심(core) 안에서 집결 터짐마다 피격 1회(같은 cycle 두 번 없음, 두 cycle 관측, 넘긴 값 .06(.04)) → 성표 하나 정화(1/4(1/3)) → 성표 밖 · core 밖에서 제한 시간 초과 붕괴 1회(넘긴 값 .06(.04), 성표 0, left 20(24)) → R AUTO 켬 → 완주 · 봉인 해제',
   '  screens  단서 읽기(read) · 판 선택(select) · 고리 열림(ringOpen) · 집결 예고(warning) · 집결 터짐(burst) 순간마다 640x360, 844x390, 390x844 PNG + 그 순간 route 상태 JSON + 결과 PNG(캡처 대기 90초)',
   '',
   '주의: 좌표 이동·무적·HP 주입·적 hp 조작으로 정상 플레이를 증명하지 않는다. viewport 검사는 실제 Android/GPU/터치/발열 검증이 아니다.',
+  '일반판 결과는 합법 저장 기반 실제 입력 helper(tools/astral-constellation-qa.mjs), 엄격한 metrics 5쌍 게이트, 세로 화면 원본 확인을 대신하지 않는다.',
   'SwiftShader 소프트웨어 렌더라 프레임 ms 는 JS 측 측정값이다. choice·ring·screens 의 키보드 입력은 Playwright 가 보낸 에뮬레이터 키 이벤트다.',
 ].join('\n');
 if (process.argv.includes('--help') || process.argv.includes('-h')) { console.log(HELP); process.exit(0); }
@@ -67,8 +73,11 @@ const PROFILES = ['auto', 'choice', 'ring', 'screens'];
 const profileArg = arg('profile', 'auto');
 const selected = profileArg === 'all' ? [...PROFILES] : profileArg.split(',');
 qaAssert(selected.every(name => PROFILES.includes(name)), '--profile must be one of ' + PROFILES.join('|') + '|all');
-qaAssert(arg('depth', 'deep') === 'deep', '--depth must be deep (성운 첨탑 일반에는 심층 성좌·고리 정의가 없다)');
-const depth = 'deep';
+const depth = arg('depth', 'deep');
+qaAssert(['standard', 'deep'].includes(depth), '--depth must be standard|deep');
+const deep = depth === 'deep';
+/** 이 depth 의 계약 상수(조율판·성좌 gates, 외곽 고리 ring, 누출 낱말). 대상 프로젝트의 정의가 이 계약과 같은지는 checkDefinition 이 본다. */
+const C = CONTRACTS[depth];
 const seed = Number(arg('seed', '20261015'));
 qaAssert(Number.isSafeInteger(seed) && seed >= 0 && seed <= 0xffffffff, '--seed must be uint32');
 const reseedOn = !process.argv.includes('--no-reseed');
@@ -93,17 +102,20 @@ const WALK_CHUNK = 4;
 // 대상 프로젝트의 데이터를 그 경로에서 읽는다(기준선 빌드와 후보 빌드가 각자의 데이터를 쓴다). 접근·에너지·증원 횟수를 이 파일에 박지 않는다.
 const load = async file => import(pathToFileURL(path.join(projectRoot, file)).href);
 const { EXPEDITION_DEPTHS } = await load('src/data/expedition-depths.js');
+const { DUNGEONS } = await load('src/data/expansion.js');
 const { EXPEDITION_ITEMS } = await load('src/data/expedition-items.js');
 const { ENERGY } = await load('src/data/shop.js');
 const { HEROES } = await load('src/data/heroes.js');
 qaAssert(HEROES[heroId], 'Unknown --hero ' + heroId);
-const dungeonDef = EXPEDITION_DEPTHS.find(d => d.id === DUNGEON_ID && d.depth === 'deep');
-qaAssert(dungeonDef, 'Target project has no ' + DUNGEON_ID + ' deep definition');
-// 성좌·고리 정의. 기준선(a737875)에는 astral_deep 이 없어 null 이고 성좌·고리 판정을 건너뛴다.
+const dungeonDef = deep ? EXPEDITION_DEPTHS.find(d => d.id === DUNGEON_ID && d.depth === 'deep') : DUNGEONS.find(d => d.id === DUNGEON_ID);
+qaAssert(dungeonDef, 'Target project has no ' + DUNGEON_ID + ' ' + depth + ' definition');
+// 성좌·고리 정의. 심층 기준선(a737875)에는 astral_deep 이 없어 null 이고, 일반판 기준선(099eb32)의 astral_standard 에는 ring 이 없다.
+// 고리가 있는 정의(후보)만 조율판·고리를 판정한다. 그 밖의 기준선은 완주·시간·50ms 만 기록한다.
 const routeData = (await load('src/data/route-objectives.js')).ROUTE_OBJECTIVES ?? {};
-const routeDef = routeData.astral_deep ?? null;
+const routeDef = routeData[C.routeKey] ?? null;
 const deepRooms = routeDef ? [...routeDef.gates.map(g => g.roomId), routeDef.ring?.roomId].filter(id => Number.isInteger(id)) : null;
-const judgedProfiles = !!routeDef && routeDef.kind === DEEP.kind;
+// kind 가 계약과 다른 정의는 기준선으로 오인하지 않고 판정에 넣어 checkDefinition 이 어긋난 항목을 알리게 한다.
+const judgedProfiles = !!routeDef?.ring;
 const needsKeyboard = selected.some(name => name !== 'auto');
 
 const STEP_CLASS = {
@@ -121,26 +133,31 @@ const report = { kind: 'astral-deep-qa', releaseApproved: false, seed, heroId, d
   driverSha256: qaHash(fs.readFileSync(import.meta.filename)),
   checksSha256: qaHash(fs.readFileSync(path.join(import.meta.dirname, 'astral-deep-checks.mjs'))), profiles: {}, checks: [], reportItems: {},
   reseed: { on: reseedOn, elapsed: null }, load: { start: loadStart, waitedMs: 0, end: null, waitLoad }, routeDefinition: routeDef ? JSON.parse(JSON.stringify(routeDef)) : null, deepRooms,
+  // 정의 id 와 고리 유무(고리가 없으면 기준선: 조율판·고리 판정을 건너뜀)
+  definitionId: routeDef?.id ?? null, hasRingDefinition: judgedProfiles,
   catalog: { id: dungeonDef.id, depth, energy: dungeonDef.energy, minLevel: dungeonDef.minLevel, unlockCode: dungeonDef.unlockCode ?? null, rewards: dungeonDef.rewards,
     firstRewards: dungeonDef.firstRewards ?? null, objective: dungeonDef.objective ?? null, tactic: dungeonDef.tactic ?? null, mechanics: dungeonDef.mechanics ?? null, routeId: routeDef?.id ?? null },
-  selectors: { launch: ['#btn-expedition', '.adventure-nav [data-section="dungeons"]', '.exp-route-tabs button /^심층 원정/', '[data-dungeon="' + DUNGEON_ID + '"][data-depth="deep"] .exp-primary'],
+  selectors: { launch: ['#btn-expedition', '.adventure-nav [data-section="dungeons"]', deep ? '.exp-route-tabs button /^심층 원정/' : '.exp-route-tabs button /^기본 원정/',
+      ...(deep ? [] : ['details.exp-dungeon-details > summary (닫혀 있으면)']), '[data-dungeon="' + DUNGEON_ID + '"][data-depth="' + depth + '"] .exp-primary'],
     battle: ['#btn-auto', '#btn-pause', '#btn-resume', '#pause-overlay.show', '#gl (canvas 포커스)', '#objective (목표창 textContent, 같은 상태 0.6초 뒤 표본)'],
-    result: ['.exp-result-shell (결과 줄 innerText)', '.exp-result-shell p[aria-label] (aria-label "별자리 복원 결과" · "외곽 고리 정화 결과")', '.exp-result-footer .exp-primary', '.exp-result-shell .exp-close'],
+    result: ['.exp-result-shell (결과 줄 innerText)', '.exp-result-shell p[aria-label] (aria-label "별자리 복원 결과" · "' + ringCopy(C.ring).resultAria + '")', '.exp-result-footer .exp-primary', '.exp-result-shell .exp-close'],
     page: ['window.app.battle.routeObjectives (progress/phase/read/hold/selected/mistakes/revealed/gates[i].*/ring.*/def/view/ringView)',
       'window.app.battle.world (sealed/rooms/roomAt/linkPending/minX/minZ/cols)', 'window.app.battle (enemies[].homeRoom/alive, pending[].room, curRoom, stage.expedition.mechanics, stage.encounter.tactic, player.pos/hp/auto/state)',
       'window.app.input.attackHeld', 'window.app.input.keys / enabled', 'window.app.ui.toast (호출 기록 감싸개)', 'window.app.battle.player.hurt (호출 기록 감싸개)', 'window.app.renderer.r.info.render.calls',
       'window.app.expeditionUI.result.routeObjective', 'window.__qaReseed (init script)', 'window.app.expedition.dungeonAccess'] },
   classification: {
-    fixture: ['저장 주입: 해금(진행 별·탐험 레벨·기본 원정 승리)·영웅 레벨/별/스킬·장비·에너지 최대·AUTO 설정', 'Math.random 시드(LCG)와 window.__qaReseed(seed) 재시드(전투 활성·prepareView 뒤 첫 스텝 전 1회)',
+    fixture: [deep ? '저장 주입: 해금(진행 별·탐험 레벨·기본 원정 승리)·영웅 레벨/별/스킬·장비·에너지 최대·AUTO 설정' : '저장 주입: 탐험 레벨·영웅 레벨/별/스킬·장비·에너지 최대·AUTO 설정(일반 카드는 심층 해금이 필요 없다)',
+      'Math.random 시드(LCG)와 window.__qaReseed(seed) 재시드(전투 활성·prepareView 뒤 첫 스텝 전 1회)',
       quality === 'low' ? '낮은 화질 설정(설정 핸들러와 같은 경로)' : null].filter(Boolean),
-    realInput: ['#btn-expedition → 던전 탭 → 심층 원정 → 카드 출격 버튼', '#btn-auto', '결과 화면 버튼(로비로)', '선택지 모달 버튼', '브라우저 새로고침',
+    realInput: ['#btn-expedition → 던전 탭 → ' + (deep ? '심층 원정' : '기본 원정(접힌 목록이면 요약을 눌러 연다)') + ' → 카드 출격 버튼', '#btn-auto', '결과 화면 버튼(로비로)', '선택지 모달 버튼', '브라우저 새로고침',
       needsKeyboard ? 'Playwright 키보드 이벤트(KeyW/A/S/D, 에뮬레이터 입력): 걷는 방향은 도구가 목표 위치의 화면 투영으로 정함(게임 입력층이 지운 키는 다시 누름). 텔레포트·무적·HP 주입·공격 키 없음' : null].filter(Boolean),
     controlled: ['app.testPause + 고정 1/60초 app.step (자연 RAF 아님)', 'renderer.render() 단독 호출(스크린샷·draw call 샘플, 시뮬레이션 tick 없음)', 'app.ui.toast · player.hurt 감싸개(호출을 그대로 넘기고 기록만)'],
-    notProven: ['실제 Android/GPU/터치/발열', '자연 해금·장비 획득', '수동 플레이 밸런스', '사람의 실제 키보드·터치 조작 감각', '모래시계 단서·판·고리·파편의 실제 모습(PNG 는 사람이 본다)'],
+    notProven: ['실제 Android/GPU/터치/발열', '자연 해금·장비 획득', '수동 플레이 밸런스', '사람의 실제 키보드·터치 조작 감각', '모래시계 단서·판·고리·파편의 실제 모습(PNG 는 사람이 본다)',
+      ...(deep ? [] : ['합법 저장 기반 실제 입력 helper(tools/astral-constellation-qa.mjs) 증거', '엄격한 metrics 5쌍 게이트', '세로 화면 원본 확인'])],
     steps: Object.fromEntries(selected.map(name => [name, STEP_CLASS[name].map(([kind, detail]) => ({ kind, detail }))])) },
   scope: '로컬 production preview + SwiftShader headless Chromium. fixture 영웅/장비로 합법 범위 값만 주입하고 전투 중 HP·위치·적·결과는 건드리지 않는다.' };
 
-const sourceFiles = ['src/game/route-objectives.js', 'src/game/astral-constellations.js', 'src/game/astral-deep-constellations.js', 'src/game/astral-constellation-view.js', 'src/game/astral-deep-ring-view.js',
+const sourceFiles = ['src/game/route-objectives.js', 'src/game/astral-constellations.js', 'src/game/astral-ring-constellations.js', 'src/game/astral-deep-constellations.js', 'src/game/astral-constellation-view.js', 'src/game/astral-deep-ring-view.js',
   'src/data/route-objectives.js', 'src/data/expedition-depths.js', 'src/data/expansion.js', 'src/data/stages.js', 'src/ui/battle-objective-view.js', 'src/ui/battle-readability.js', 'src/expansion/hub.jsx',
   'src/game/battle-base.js', 'src/game/world.js', 'src/engine/input.js', 'src/game/expedition-combat.js', 'src/game/enemies.js', 'src/game/player.js', 'src/game/expedition-economy.js', 'src/main.js']
   .filter(file => fs.existsSync(path.join(projectRoot, file)));
@@ -451,37 +468,45 @@ function energyChange(before, after, cost, label) {
 async function applyFixture() {
   const items = EXPEDITION_ITEMS.filter(item => item.set === 'glasswarden').map(({ id, rarity, slot }) => ({ id, rarity, slot }));
   qaAssert(items.length > 0, 'No glasswarden fixture items in target project');
-  const fixture = await page.evaluate(({ heroId, id, items, unlockCode, minLevel, quality }) => {
+  const fixture = await page.evaluate(({ heroId, id, items, unlockCode, minLevel, depth, quality }) => {
     const a = window.app, e = a.eco;
     a.expeditionUI.result = null; a.toLobby(); a.testPause = true; a.ui.closeModal();
     e.grantHero(heroId); e.s.selected = heroId;
     const h = e.hero(heroId); h.level = 50; h.star = 3; h.skills = h.skills.map(() => 5); h.exp = 0; h.equip = {};
     for (const def of items) { const inst = e.addItem(def.rarity, def.slot); inst.id = def.id; inst.enh = 15; h.equip[def.slot] = inst.uid; }
     a.expedition.s.level = Math.max(a.expedition.s.level, minLevel, 10);
-    e.s.progress.stars[unlockCode] = Math.max(1, e.s.progress.stars[unlockCode] || 0);
-    a.expedition.s.stats[id] = Math.max(1, a.expedition.s.stats[id] || 0);
-    if (a.expedition.s.depthWins) a.expedition.s.depthWins[id] = 0;
+    // 심층 접근은 캠페인 별 + 기본 원정 승리가 필요하다. 일반 카드는 탐험 레벨만 본다(기본 원정 승리 수 stats[id] 는 건드리지 않는다).
+    if (depth === 'deep') {
+      e.s.progress.stars[unlockCode] = Math.max(1, e.s.progress.stars[unlockCode] || 0);
+      a.expedition.s.stats[id] = Math.max(1, a.expedition.s.stats[id] || 0);
+      if (a.expedition.s.depthWins) a.expedition.s.depthWins[id] = 0;
+    }
     e.s.energy = e.energyMax; e.s.energyT = Date.now(); a.journey.s.autoBattle = true;
     if (quality === 'low') { e.s.settings.quality = 'low'; a.applySettings(); }
     e.save(); a.meta.refreshHome?.();
     return { heroId, level: h.level, star: h.star, skills: [...h.skills], equip: Object.keys(h.equip), energy: e.s.energy, expeditionLevel: a.expedition.s.level,
-      access: a.expedition.dungeonAccess(id, { depth: 'deep' }), quality: e.s.settings.quality || 'auto' };
-  }, { heroId, id: DUNGEON_ID, items, unlockCode: dungeonDef.unlockCode ?? null, minLevel: dungeonDef.minLevel, quality });
-  qaAssert(fixture.access.ok, 'Fixture did not open deep access: ' + fixture.access.error);
+      access: a.expedition.dungeonAccess(id, { depth }), quality: e.s.settings.quality || 'auto' };
+  }, { heroId, id: DUNGEON_ID, items, unlockCode: dungeonDef.unlockCode ?? null, minLevel: dungeonDef.minLevel, depth, quality });
+  qaAssert(fixture.access.ok, 'Fixture did not open ' + depth + ' access: ' + fixture.access.error);
   report.fixture = { ...fixture, items: items.map(item => item.id), kind: 'FIXTURE' };
   await qa.save(); return fixture;
 }
 async function launchFromLobby(row) {
   await page.locator('#btn-expedition').click();
   await page.locator('.adventure-nav [data-section="dungeons"]').click();
-  await page.locator('.exp-route-tabs').getByRole('button', { name: /^심층 원정/ }).click();
-  const card = page.locator('[data-dungeon="' + DUNGEON_ID + '"][data-depth="deep"]');
+  await page.locator('.exp-route-tabs').getByRole('button', { name: deep ? /^심층 원정/ : /^기본 원정/ }).click();
+  const card = page.locator('[data-dungeon="' + DUNGEON_ID + '"][data-depth="' + depth + '"]');
+  if (!deep) {
+    // 기본 원정 목록은 접혀 있다(<details open={deep||fields}>). 닫혀 있으면 요약을 눌러 연다.
+    const details = page.locator('details.exp-dungeon-details').first();
+    if (!await details.evaluate(el => el.open)) await details.locator('> summary').click();
+  }
   await card.waitFor({ state: 'visible' });
   row.cardText = await card.innerText();
   const energyOnCard = Number(/에너지 (\d+)/.exec(row.cardText)?.[1]);
   check('card energy matches catalog', energyOnCard === dungeonDef.energy, { card: energyOnCard, catalog: dungeonDef.energy });
   const button = card.locator('.exp-primary');
-  qaAssert(await button.isEnabled(), 'deep card departure button disabled');
+  qaAssert(await button.isEnabled(), depth + ' card departure button disabled');
   await button.click();
 }
 /** 출격 → AUTO 확인 → 프로브 설치 → 재시드 → 시작 관측. 재시드는 battle.active 이고 prepareView 가 끝났으며 아직 step 하지 않은 시점이다(Battle.start: prepareView await 는 active = true 보다 앞). */
@@ -496,18 +521,20 @@ async function beginRun(tag) {
     routeKind: r?.def?.kind ?? null, routeId: r?.def?.id ?? null, rooms: b.world.rooms.length, gates: r && r.gates ? r.gates.length : 0, controller: r ? r.constructor.name : null,
     hasView: !!r?.view, hasRingView: !!r?.ringView, hasRing: !!r?.ring, hasPhase: r ? 'phase' in r : false, mechanics: b.stage.expedition?.mechanics ?? null }; });
   Object.assign(row, info);
-  check(tag + ': route/depth/ticket', info.route.id === DUNGEON_ID && info.route.depth === 'deep' && row.started.pending?.energy === dungeonDef.energy
-    && row.started.pending.id === before.seq + 1 && row.started.pending.depth === 'deep' && row.started.pending.target === DUNGEON_ID, { route: info.route, pending: row.started.pending, seqBefore: before.seq });
-  // 정의가 있는 후보 빌드인데 컨트롤러가 없으면(규칙 lane 미병합) 기준선으로 오인하지 않도록 실패로 남긴다. 정의가 없는 기준선인데 컨트롤러가 있어도 실패로 남긴다.
-  if (routeDef) check(tag + ': 성좌 컨트롤러 id = ' + routeDef.id, info.routeId === routeDef.id && info.gates === routeDef.gates.length && info.hasRing && info.hasPhase, { routeId: info.routeId, gates: info.gates, controller: info.controller, hasRing: info.hasRing, hasPhase: info.hasPhase });
+  check(tag + ': route/depth/ticket', info.route.id === DUNGEON_ID && (info.route.depth ?? 'standard') === depth && row.started.pending?.energy === dungeonDef.energy
+    && row.started.pending.id === before.seq + 1 && row.started.pending.depth === depth && row.started.pending.target === DUNGEON_ID, { route: info.route, pending: row.started.pending, seqBefore: before.seq });
+  // 고리 정의가 있는 후보 빌드인데 컨트롤러가 없으면(규칙 lane 미병합) 기준선으로 오인하지 않도록 실패로 남긴다.
+  // 고리 없는 기준선은 정의가 없어 routeObjectives 가 없거나(심층 a737875), 조율판 컨트롤러만 있고 ring 이 없다(일반 099eb32). 다르면 실패로 남긴다.
+  if (judgedProfiles) check(tag + ': 성좌 컨트롤러 id = ' + routeDef.id, info.routeId === routeDef.id && info.gates === routeDef.gates.length && info.hasRing && info.hasPhase, { routeId: info.routeId, gates: info.gates, controller: info.controller, hasRing: info.hasRing, hasPhase: info.hasPhase });
+  else if (routeDef) check(tag + ': 고리 없는 기준선: 조율판 컨트롤러 id = ' + routeDef.id + ' · ring 없음', info.routeId === routeDef.id && info.gates === routeDef.gates.length && !info.hasRing, { routeId: info.routeId, gates: info.gates, controller: info.controller, hasRing: info.hasRing });
   else check(tag + ': 성좌 정의가 없는 기준선인데 routeObjectives 가 있음', !info.routeId, { routeId: info.routeId, controller: info.controller });
-  if (routeDef) check(tag + ': 출격 직후(prepareView 뒤) route.view(성좌 뷰) · route.ringView(고리 뷰) 존재', info.hasView && info.hasRingView, { hasView: info.hasView, hasRingView: info.hasRingView });
+  if (judgedProfiles) check(tag + ': 출격 직후(prepareView 뒤) route.view(성좌 뷰) · route.ringView(고리 뷰) 존재', info.hasView && info.hasRingView, { hasView: info.hasView, hasRingView: info.hasRingView });
   if (!info.auto) await page.locator('#btn-auto').click();
   row.nativeAuto = await page.evaluate(() => ({ player: window.app.battle.player.auto, persisted: window.app.journey.s.autoBattle }));
   qaAssert(row.nativeAuto.player === true, 'AUTO is not active after native button');
   row.focus = await nativeGameplayFocus(page);
   row.probe = await page.evaluate(installProbe, { ringPhase: { idle: PHASE_CODE.idle, open: PHASE_CODE.open, running: PHASE_CODE.running, done: PHASE_CODE.done },
-    gatePhase: GATE_PHASE_CODE, shard: SHARD_CODE, choiceIds: (routeDef?.choices ?? DEEP.choices).map(c => c.id), combatRadius: routeDef?.combatRadius ?? DEEP.combatRadius });
+    gatePhase: GATE_PHASE_CODE, shard: SHARD_CODE, choiceIds: (routeDef?.choices ?? C.gates.choices).map(c => c.id), combatRadius: routeDef?.combatRadius ?? C.gates.combatRadius });
   row.begin = await page.evaluate(() => window.__astralDeepQa.begin());
   row.reinforcements = row.begin.reinforcements;
   // 재시드: 첫 app.step 전 한 번. --no-reseed 면 호출하지 않는다.
@@ -515,7 +542,7 @@ async function beginRun(tag) {
     window.__qaReseed(s); return r; }, seed) : { on: false, elapsed: null };
   report.reseed = { on: row.reseed.on, elapsed: row.reseed.elapsed };
   if (reseedOn) check(tag + ': 재시드는 전투 활성·첫 스텝 전(elapsed 0)', row.reseed.active === true && row.reseed.steps === 0 && row.reseed.elapsed === 0, row.reseed);
-  if (routeDef) check(tag + ': 정예방 증원 횟수 = 대상 프로젝트 mechanics.reinforcements', row.reinforcements === (dungeonDef.mechanics?.reinforcements ?? 0), { page: row.reinforcements, project: dungeonDef.mechanics?.reinforcements ?? null });
+  if (judgedProfiles) check(tag + ': 정예방 증원 횟수 = 대상 프로젝트 mechanics.reinforcements', row.reinforcements === (dungeonDef.mechanics?.reinforcements ?? 0), { page: row.reinforcements, project: dungeonDef.mechanics?.reinforcements ?? null });
   await qa.save(); return row;
 }
 /**
@@ -638,21 +665,26 @@ async function walkTo(row, target, stop, { maxSteps = 60 * 40 } = {}) {
 }
 
 // ---------- 완주·정리 ----------
+const R = C.ring, RC = ringCopy(R), MARKS = R.marks.length, STATIONS = C.gates.rooms.length;
 const LABELS = {
-  observation: '관측 완전성: 읽기 · 유지 · 단계 · 선택 · 오답 수 · 피해 호출 수 · 성좌 칸 · 고리 칸(성표 · 집결)이 모든 행에서 읽힘(-1 · null 은 실패)',
-  definition: '정의 = PLAN 3.0 계약(성좌 방 [3,2,5,6]·라벨·답, 고리 방 7·성표·limit 20·집결 수치)', setup: '정적 setup(모래시계 = 방 중심, 판 = 모래시계 + 오프셋, 고리 중심 = 방 중심, 성표 = 중심 + 오프셋, 사각형)',
-  restoreCount: '성좌 복원 4회(progress 증가 스텝, 한 번에 +1)', restoreOrder: '복원 순서 = 정의 순서 [' + (routeDef ? routeDef.gates.map(g => g.roomId).join(', ') : DEEP.rooms.join(', ')) + '] (보고 rooms)',
+  observation: '관측 완전성: 읽기 · 유지 · 단계 · 선택 · 오답 수 · 피해 호출 수 · 조율판/성좌 칸 · 고리 칸(' + R.mark + ' · 집결)이 모든 행에서 읽힘(-1 · null 은 실패)',
+  definition: '정의 = PLAN 3.0 계약(' + (deep ? '성좌' : '조율판') + ' 방 [' + C.gates.rooms.join(',') + ']·라벨·답, 고리 방 ' + R.roomId + '·' + R.mark + ' ' + MARKS + '개·limit ' + R.limit + '·집결 수치·문구 필드)',
+  setup: '정적 setup(모래시계 = 방 중심, 판 = 모래시계 + 오프셋, 고리 중심 = 방 중심, ' + R.mark + ' = 중심 + 오프셋, 사각형)',
+  restoreCount: (deep ? '성좌' : '조율판') + ' 복원 ' + STATIONS + '회(progress 증가 스텝, 한 번에 +1)', restoreOrder: '복원 순서 = 정의 순서 [' + (routeDef ? routeDef.gates.map(g => g.roomId).join(', ') : C.gates.rooms.join(', ')) + '] (보고 rooms)',
   restoreHold: '복원마다 직전 연속 유지(0 에서 시작, hold 증가 = 게임 시각 증가)가 hold ≥ 1초 · 게임 시각 길이 ≥ 1초 − 1/60, 내내 route.selected 가 정답 판이고 영웅이 정답 판 반경 안',
-  restoreRead: '유지 앞 읽기 구간이 0 에서 시작해 게임 시간만큼 늘어 read ≥ 1초(유지 시작 직전 행 read ≥ 1)', restoreAvailable: '읽기·유지 내내 그 성좌가 ready · available · 그 방 적 0 · 전투 중 적 0 · 모래시계 8m 안',
-  restoreState: '복원 상태(앞 성좌 attuned · 뒤 성좌 아직 · 복원 전 cleared 아님 · 오답 수 불변)', turnRooms: '차례 아닌 성좌 방은 복원 전 미정화(매 관측 행) · 방 2 성좌는 1번 복원 전에 준비되고 그동안 미정화',
-  readyTiming: '성좌 준비 시점: 방 발견·적/대기열 0, 준비 전 읽기·유지 0', ringOpen: '고리 열림: 4/4 와 시작·보스를 뺀 모든 방 정화 뒤(조건 관측 최대 한 스텝 뒤), 열리는 스텝 clock 0, phase 순서',
-  ringStart: '정화 시작: 방 사각형 안 첫 스텝 running · limit 20 · 열린 동안 늦은 시작 없음', ringLimit: '제한 시간: 정화 중 limit 20 · 0 ≤ left ≤ limit', ringClock: '고리 시계(clock · left · elapsed 가 게임 시간만큼, 일시정지 스텝은 값이 정확히 같을 때만 면제)',
-  shards: '집결 위상(첫 1초 · 주기 4.5 · 예고 1.5 · 터짐 .5) = clock 계산값', shardHits: '파편 피격: 터지는 동안 중심 core 3.4 안에서만·같은 cycle 한 번(기록: 파편 피격 수)',
-  marks: '성표: 정화 = 0 에서 시작한 1초 유지·반경 1.4 안, 벗어나면 초기화, purified = done 수', collapses: '붕괴: 제한 시간이 바닥난 스텝·성표 초기화·left = limit(AUTO 는 0)', ringDone: '고리 완료: 성표 4/4 스텝 done·그 뒤 유지',
+  restoreRead: '유지 앞 읽기 구간이 0 에서 시작해 게임 시간만큼 늘어 read ≥ 1초(유지 시작 직전 행 read ≥ 1)', restoreAvailable: '읽기·유지 내내 그 ' + (deep ? '성좌' : '조율판') + '가 ready · available · 그 방 적 0 · 전투 중 적 0 · 모래시계 8m 안',
+  restoreState: '복원 상태(앞 판 attuned · 뒤 판 아직 · 복원 전 cleared 아님 · 오답 수 불변)',
+  turnRooms: '차례 아닌 판 방은 복원 전 미정화(매 관측 행)' + (C.requireEarly ? ' · 방 2 성좌는 1번 복원 전에 준비되고 그동안 미정화' : ' · 대기 조율판 관측은 요구하지 않음(일반판에는 대기 조율판이 없다)'),
+  readyTiming: '준비 시점: 방 발견·적/대기열 0, 준비 전 읽기·유지 0', ringOpen: '고리 열림: ' + STATIONS + '/' + STATIONS + ' 와 시작·보스를 뺀 모든 방 정화 뒤(조건 관측 최대 한 스텝 뒤), 열리는 스텝 clock 0, phase 순서',
+  ringStart: '정화 시작: 방 사각형 안 첫 스텝 running · limit ' + R.limit + ' · 열린 동안 늦은 시작 없음', ringLimit: '제한 시간: 정화 중 limit ' + R.limit + ' · 0 ≤ left ≤ limit',
+  ringClock: '고리 시계(clock · left · elapsed 가 게임 시간만큼, 일시정지 스텝은 값이 정확히 같을 때만 면제)',
+  shards: '집결 위상(첫 ' + R.first + '초 · 주기 ' + R.period + ' · 예고 ' + R.warning + ' · 터짐 ' + R.burst + ') = clock 계산값', shardHits: R.shard + ' 피격: 터지는 동안 중심 core ' + R.core + ' 안에서만·같은 cycle 한 번(기록: 피격 수)',
+  marks: R.mark + ': ' + R.markVerb + ' = 0 에서 시작한 ' + R.holdSeconds + '초 유지·반경 ' + R.markRadius + ' 안, 벗어나면 초기화, purified = done 수',
+  collapses: '붕괴: 제한 시간이 바닥난 스텝·' + R.mark + ' 초기화·left = limit(AUTO 는 0)', ringDone: '고리 완료: ' + R.mark + ' ' + MARKS + '/' + MARKS + ' 스텝 done·그 뒤 유지',
   sealed: 'world.sealed 는 고리 완료(done) 전까지 true, 완료 스텝에 해제', resultFields: '결과 routeObjective { id, complete, progress, target, mistakes, rooms, constellations, ring{ purified, marks, collapses, shardHits, seconds } }',
-  resultLine: "결과 줄 '별자리 복원 4/4 · … · 오답 n회' + '외곽 고리 정화 완료 · 성표 4/4 · 파편 피격 n회 · 붕괴 n회'", resultElements: '결과 줄 요소 aria-label 두 개 본문',
-  objectiveText: '목표창 단계별 문구(선택 단계·고리 정화 중 표본 필수, 공명·조율판 문구 없음)',
-  toasts: '토스트: 준비(차례/대기)·복원 4회·모든 별자리 복원·고리 열림·시작 limit·성표·피격·붕괴·오답·완료, 전술 토스트는 정확 일치만 면제', autoCounts: '고리 성표 4개 정화(AUTO 는 붕괴 0)',
+  resultLine: "결과 줄 '별자리 복원 " + STATIONS + "/" + STATIONS + " · … · 오답 n회' + '" + RC.resultLine({ purified: true, marks: MARKS, shardHits: 'n', collapses: 'n' }) + "'", resultElements: '결과 줄 요소 aria-label 두 개 본문(' + RC.resultAria + ')',
+  objectiveText: '목표창 단계별 문구(선택 단계·고리 정화 중 표본 필수, 금지 낱말: ' + C.leakWords.join(' · ') + ')',
+  toasts: '토스트: 준비(차례/대기)·복원 ' + STATIONS + '회·모든 별자리 복원·고리 열림·시작 limit·' + R.mark + '·피격·붕괴·오답·완료(문구 틀은 정의 문구 필드), 전술 토스트는 정확 일치만 면제', autoCounts: '고리 ' + R.mark + ' ' + MARKS + '개 ' + R.markVerb + '(AUTO 는 붕괴 0)',
 };
 /** 관측 행을 파일로 빼고, 성좌·고리 정의가 있는 빌드는 전 과정을 판정한다. 기준선(정의 없음)은 공통 측정만 남긴다. */
 function recordRun(row, raw, { clean = true } = {}) {
@@ -664,7 +696,7 @@ function recordRun(row, raw, { clean = true } = {}) {
   row.traceFile = row.tag + '-trace.json'; row.toastFile = row.tag + '-toasts.json'; row.traceRows = rows.length;
   const roomSamples = raw.samples.filter(x => x.label === 'roomEnter');
   check(row.tag + ': 방 첫 진입 draw call 표본(roomEnter) 1개 이상', roomSamples.length > 0, { rooms: roomSamples.map(x => x.roomId) });
-  if (!routeDef) { row.deep = { skipped: '성좌·고리 정의(ROUTE_OBJECTIVES.astral_deep)가 없는 기준선 빌드: 성좌·고리 판정 생략, 완주·시간·50ms 만 기록' }; return; }
+  if (!judgedProfiles) { row.deep = { skipped: '고리 정의(ROUTE_OBJECTIVES.' + C.routeKey + '.ring)가 없는 기준선 빌드: 조율판·고리 판정 생략, 완주·시간·50ms 만 기록' }; return; }
   const missingRooms = deepRooms.filter(id => !roomSamples.some(x => x.roomId === id));
   check(row.tag + ': 성좌·고리 방마다 첫 진입 draw call 표본', missingRooms.length === 0, { deepRooms, missing: missingRooms });
   const analysis = analyzeAuto({ rows, setup: row.begin.setup, result: row.result?.routeObjective, resultText: row.resultText, resultLines: row.resultLines,
@@ -675,7 +707,8 @@ function recordRun(row, raw, { clean = true } = {}) {
     seconds: doneRow?.rg.el ?? null, limitAtStart: rows.find(r => r.rg?.ph === PHASE_CODE.running)?.rg.lim ?? null, result: row.result?.routeObjective?.ring ?? null,
     note: '보고 항목(판정 아님): 파편 피격 · 오답 · 붕괴 수와 고리 정화에 걸린 초(AUTO 의 붕괴 0 만 게이트)' });
   (report.reportItems.objectiveSamples ??= []).push({ tag: row.tag, samples: analysis.objective.samples, kinds: analysis.objective.kinds, note: '보고 항목: 목표창 단계별 표본 수' });
-  (report.reportItems.earlyReady ??= []).push({ tag: row.tag, early: analysis.turn.early, observedOutOfTurn: analysis.turn.observed, gates: analysis.turn.gates, note: '보고 항목: 차례 아닌 성좌가 먼저 준비된 관측(방 2 는 필수, 나머지는 AUTO 경로에 따라 없을 수 있다)' });
+  (report.reportItems.earlyReady ??= []).push({ tag: row.tag, early: analysis.turn.early, observedOutOfTurn: analysis.turn.observed, gates: analysis.turn.gates,
+    note: '보고 항목: 차례 아닌 성좌가 먼저 준비된 관측(' + (C.requireEarly ? '방 2 는 필수, 나머지는 AUTO 경로에 따라 없을 수 있다' : '일반판은 대기 조율판 관측을 요구하지 않는다') + ')' });
   (report.reportItems.viewDrawCalls ??= []).push({ tag: row.tag, samples: raw.samples.filter(x => x.view !== null || x.ringView !== null).map(x => ({ roomId: x.roomId ?? null, calls: x.calls, view: x.view, ringView: x.ringView })), note: '보고 항목: route.view.drawCalls · route.ringView.drawCalls (뷰 계약 get drawCalls)' });
   for (const [name, ok] of Object.entries(analysis.acceptance)) check(row.tag + ': ' + (LABELS[name] ?? name), ok, ok ? undefined : { name, observation: analysis.observation, restorations: { ...analysis.restorations, events: analysis.restorations.events?.slice(0, 4) },
     turn: analysis.turn, ready: analysis.ready, open: analysis.open, start: analysis.start, limit: analysis.limit, clock: analysis.clock, shards: analysis.shards,
@@ -703,11 +736,19 @@ async function playToEnd(row, { expectFirstClear = true, clean = true } = {}) {
     check(row.tag + ': pending 비움', row.after.pending === null && row.after.seq === row.before.seq + 1);
     check(row.tag + ': 저장 바이트 변경', row.after.saveSha256 !== row.before.saveSha256 && row.after.saveSha256 !== row.started.saveSha256);
     const gotMaterials = Object.fromEntries(Object.keys(dungeonDef.rewards.materials || {}).map(m => [m, (row.after.materials[m] || 0) - (row.before.materials[m] || 0)]));
-    check(row.tag + ': depthWins +1', row.after.depthWins === row.before.depthWins + 1, { before: row.before.depthWins, after: row.after.depthWins });
-    const wantMaterials = {};
-    for (const [m, n] of Object.entries(dungeonDef.rewards.materials || {})) wantMaterials[m] = n + (expectFirstClear ? dungeonDef.firstRewards?.materials?.[m] || 0 : 0);
-    check(row.tag + ': 재료 보상 ' + (expectFirstClear ? '첫 보상 포함 1회' : '첫 보상 미지급'), JSON.stringify(wantMaterials) === JSON.stringify(gotMaterials), { want: wantMaterials, got: gotMaterials });
-    check(row.tag + ': firstClear 표시', row.result.rewards.firstClear === expectFirstClear);
+    if (deep) {
+      check(row.tag + ': depthWins +1', row.after.depthWins === row.before.depthWins + 1, { before: row.before.depthWins, after: row.after.depthWins });
+      const wantMaterials = {};
+      for (const [m, n] of Object.entries(dungeonDef.rewards.materials || {})) wantMaterials[m] = n + (expectFirstClear ? dungeonDef.firstRewards?.materials?.[m] || 0 : 0);
+      check(row.tag + ': 재료 보상 ' + (expectFirstClear ? '첫 보상 포함 1회' : '첫 보상 미지급'), JSON.stringify(wantMaterials) === JSON.stringify(gotMaterials), { want: wantMaterials, got: gotMaterials });
+      check(row.tag + ': firstClear 표시', row.result.rewards.firstClear === expectFirstClear);
+    } else {
+      // 기본 원정의 승리 수는 stats[id] 다. 주간 원정 효과가 보상을 더할 수 있어 재료는 정의 이상인지만 본다.
+      check(row.tag + ': 기본 원정 승리 수 +1', row.after.dungeonWins === row.before.dungeonWins + 1, { before: row.before.dungeonWins, after: row.after.dungeonWins });
+      const short = Object.entries(dungeonDef.rewards.materials || {}).filter(([m, n]) => gotMaterials[m] < n);
+      check(row.tag + ': 재료 보상이 정의 이상', short.length === 0, { want: dungeonDef.rewards.materials, got: gotMaterials });
+      check(row.tag + ': 첫 정복 표시 없음(기본 원정)', row.result.rewards.firstClear === false);
+    }
   }
   const s = row.summary;
   row.metrics = { elapsed: row.result?.time ?? null, kills: row.result?.kills ?? null, hpDrops: s.hpDrops.length, hpDropTotal: ms(s.hpDrops.reduce((sum, d) => sum + d.drop, 0)),
@@ -717,7 +758,7 @@ async function playToEnd(row, { expectFirstClear = true, clean = true } = {}) {
   delete s.stepMs; delete s.renderMs;
   (report.reportItems.absolute50ms ??= []).push({ tag: row.tag, runOver50: row.metrics.over50ms, steps: s.steps, note: '보고 항목(판정 아님). 기준선 대비 증가는 astral-deep-compare 가 판정한다.' });
   recordRun(row, s, { clean });
-  if (!routeDef) {
+  if (!judgedProfiles) {
     row.baseline = { skipped: row.deep.skipped, elapsed: row.metrics.elapsed, kills: row.metrics.kills, hits: row.metrics.hpDrops, frames: { simulation: row.metrics.simulation, render: row.metrics.render }, drawCalls: row.metrics.drawCalls };
   }
   row.status = 'pass';
@@ -738,7 +779,7 @@ async function reloadCheck(row) {
   row.reload = { beforeSha: before.saveSha256, afterSha: after.saveSha256, energy: energyChange(before, after, 0, row.tag + ' reload') };
 }
 /** choice·ring·screens 는 성좌·고리 정의가 있는 후보에서만 돈다. 정의가 없는 기준선이면 출격하기 전에 건너뛴다. */
-const skipUnlessJudged = () => (judgedProfiles ? null : { skipped: '성좌·고리 정의(ROUTE_OBJECTIVES.astral_deep)가 있는 빌드에서만 도는 프로필이다' });
+const skipUnlessJudged = () => (judgedProfiles ? null : { skipped: '고리 정의(ROUTE_OBJECTIVES.' + C.routeKey + '.ring)가 있는 빌드에서만 도는 프로필이다' });
 const nearest = (list, p) => list.reduce((best, item) => (!best || Math.hypot(item.x - p.x, item.z - p.z) < Math.hypot(best.x - p.x, best.z - p.z) ? item : best), null);
 
 // ---------- 프로필 ----------
@@ -758,9 +799,9 @@ const profiles = {
     const row = await beginRun('choice');
     const setup = row.begin.setup, sg = setup.gates[0], answerPad = sg.pads.find(p => p.id === routeDef.gates[0].answer);
     qaAssert(sg && answerPad, 'gate 0 setup is not readable from the page');
-    // 1) AUTO 로 1번 성좌(방 3)가 ready 가 될 때까지(적과 증원 처치). 읽기는 그 다음 스텝부터라 아직 시작 전이다.
+    // 1) AUTO 로 1번 성좌(심층 방 3, 일반 1번 조율판 방 1)가 ready 가 될 때까지(적과 증원 처치). 읽기는 그 다음 스텝부터라 아직 시작 전이다.
     const ready = await advance(row, { type: 'gateReady', index: 0 }, { max: 60 * 60 * 15 });
-    check('choice: AUTO 로 1번 성좌(방 ' + routeDef.gates[0].roomId + ') ready 까지', ready.reason === 'stop', { reason: ready.reason, elapsed: ready.elapsed });
+    check('choice: AUTO 로 1번 ' + (deep ? '성좌' : '조율판') + '(방 ' + routeDef.gates[0].roomId + ') ready 까지', ready.reason === 'stop', { reason: ready.reason, elapsed: ready.elapsed });
     qaAssert(ready.reason === 'stop', 'First constellation never became ready: ' + ready.reason);
     // 2) AUTO 를 실제 버튼으로 끈다. 여기부터 ch-correct 까지 매 스텝을 관측한다.
     await setAuto(false);
@@ -794,12 +835,12 @@ const profiles = {
     const analysis = analyzeChoice(traces.get(row.tag), routeDef, setup);
     row.choice = analysis;
     check('choice: 키보드 구간(AUTO 꺼짐·공격 입력/동작 없음·생존)', analysis.keyboard?.ok, analysis.keyboard);
-    check('choice: 1번 성좌가 준비된 순간(진행 0, ready, 미정화)에 AUTO 를 끔', analysis.start?.ok, analysis.start);
+    check('choice: 1번 ' + (deep ? '성좌' : '조율판') + '가 준비된 순간(진행 0, ready, 미정화)에 AUTO 를 끔', analysis.start?.ok, analysis.start);
     check('choice: 모래시계 8m 안에서 단서를 읽어 select(revealed, read ≥ 1)', analysis.read?.ok, analysis.read);
     check('choice: 오답 판 1초 + 다음 프레임 → mistakes +1 · phase retry · 진행 불변 · 읽기/유지 0', analysis.wrong?.ok, analysis.wrong);
     check('choice: 읽기부터 정답 확정까지 player.hurt 호출 0(오답은 피해 없음)', analysis.hurts?.ok, analysis.hurts);
     check('choice: 판 밖에서 retry 후 읽기가 0 에서 새로 시작해 select 로 돌아옴', analysis.retry?.ok, analysis.retry);
-    check('choice: 정답 판 확정 → progress 1 · 1번 성좌 attuned · 방 정화 · 오답 1회', analysis.correct?.ok, analysis.correct);
+    check('choice: 정답 판 확정 → progress 1 · 1번 ' + (deep ? '성좌' : '조율판') + ' attuned · 방 정화 · 오답 1회', analysis.correct?.ok, analysis.correct);
     await closeResultToLobby();
     return { runs: [row] };
   },
@@ -835,7 +876,7 @@ const profiles = {
     row.walkCenter = await walkTo(row, { x: rs.cx, z: rs.cz }, { type: 'nearOrHits', x: rs.cx, z: rs.cz, r: RING_RUN.centerNear, min: s0 + 1 });
     if ((await freeze()).rg.sh < s0 + 1) {
       const hit = await advance(row, { type: 'ringHits', min: s0 + 1 }, { max: 60 * 10 });
-      check('ring: 중심 core 안에서 집결 터짐에 파편 피격 +1', hit.reason === 'stop', { reason: hit.reason });
+      check('ring: 중심 core 안에서 집결 터짐에 ' + R.shard + ' 피격 +1', hit.reason === 'stop', { reason: hit.reason });
       qaAssert(hit.reason === 'stop', 'First shard hit never happened: ' + hit.reason);
     }
     await mark('sh1');
@@ -843,13 +884,13 @@ const profiles = {
     qaAssert(end1.reason === 'stop', 'First burst never ended: ' + end1.reason);
     await mark('sh1-end');
     const hit2 = await advance(row, { type: 'ringHits', min: s0 + 2 }, { max: 60 * 8 });
-    check('ring: 다음 cycle 에 파편 피격 +1(같은 cycle 두 번 없음)', hit2.reason === 'stop', { reason: hit2.reason });
+    check('ring: 다음 cycle 에 ' + R.shard + ' 피격 +1(같은 cycle 두 번 없음)', hit2.reason === 'stop', { reason: hit2.reason });
     qaAssert(hit2.reason === 'stop', 'Second shard hit never happened: ' + hit2.reason);
     await mark('sh2');
     const end2 = await advance(row, { type: 'shard', state: 'calm' }, { max: 60 * 3 });
     qaAssert(end2.reason === 'stop', 'Second burst never ended: ' + end2.reason);
     await mark('sh2-end');
-    // 6) 가장 가까운 성표 하나를 정화한다(성표는 core 밖, 순서 자유).
+    // 6) 가장 가까운 성표(일반은 항로 표지) 하나를 정화한다(core 밖, 순서 자유).
     const hero = await freeze();
     const target = nearest(rs.marks, hero);
     row.markIndex = rs.marks.indexOf(target);
@@ -872,11 +913,11 @@ const profiles = {
     const analysis = analyzeRingManual(traces.get(row.tag), routeDef, setup, { minWait: 2.5 });
     row.ringManual = analysis;
     check('ring: 키보드 구간(AUTO 꺼짐·공격 입력/동작 없음·생존)', analysis.keyboard?.ok, analysis.keyboard);
-    check('ring: ' + (row.insideAtOpen ? '열림 순간 이미 방 안(inside-at-open): 열린 다음 스텝에 running · limit 20' : '방 밖 3초 대기 중 running 아님(대기 ' + (analysis.start?.seconds ?? '?') + '초) · 진입 첫 스텝 running · limit 20'), analysis.start?.ok, analysis.start);
-    check('ring: 중심 core 에서 집결 터짐마다 피해 1회, 다음 cycle 에 다시 1회(넘긴 값 .06)', analysis.hits?.ok, analysis.hits);
-    check('ring: 성표 하나 정화(purified 1, 붕괴 0, 0 에서 시작한 1초 유지)', analysis.purify?.ok, analysis.purify);
-    check('ring: 성표 밖 · core 밖에서 제한 시간 초과 붕괴 1회(넘긴 값 .06, purified 0, 모든 성표 done false, left = limit)', analysis.collapse?.ok, analysis.collapse);
-    check('ring: AUTO 가 이어받아 4/4 · 고리 완료 · world.sealed 해제 · 붕괴는 끝까지 1회', analysis.final?.ok, analysis.final);
+    check('ring: ' + (row.insideAtOpen ? '열림 순간 이미 방 안(inside-at-open): 열린 다음 스텝에 running · limit ' + R.limit : '방 밖 3초 대기 중 running 아님(대기 ' + (analysis.start?.seconds ?? '?') + '초) · 진입 첫 스텝 running · limit ' + R.limit), analysis.start?.ok, analysis.start);
+    check('ring: 중심 core 에서 집결 터짐마다 피해 1회, 다음 cycle 에 다시 1회(넘긴 값 ' + R.damage + ')', analysis.hits?.ok, analysis.hits);
+    check('ring: ' + R.mark + ' 하나 ' + R.markVerb + '(purified 1, 붕괴 0, 0 에서 시작한 ' + R.holdSeconds + '초 유지)', analysis.purify?.ok, analysis.purify);
+    check('ring: ' + R.mark + ' 밖 · core 밖에서 제한 시간 초과 붕괴 1회(넘긴 값 ' + R.collapseDamage + ', purified 0, 모든 ' + R.mark + ' done false, left = limit)', analysis.collapse?.ok, analysis.collapse);
+    check('ring: AUTO 가 이어받아 ' + STATIONS + '/' + STATIONS + ' · 고리 완료 · world.sealed 해제 · 붕괴는 끝까지 1회', analysis.final?.ok, analysis.final);
     await closeResultToLobby();
     return { runs: [row] };
   },
@@ -916,7 +957,7 @@ const profiles = {
         row.walkEdge = await walkTo(row, { room: setup.ring.roomId }, { type: 'nearRect', d: RING_RUN.edgeNear });
         await grab('ringOpen');
       }
-      // 3) 집결 예고(warning) · 터짐(burst): 방 안 안전한 점(서쪽 문 안쪽 북서, core 밖 · 성표 밖)에 서서 기다린다.
+      // 3) 집결 예고(warning) · 터짐(burst): 방 안 안전한 점(서쪽 문 안쪽 북서, 중심에서 약 6.4 · 가장 가까운 성표·항로 표지에서 약 4.7 — 두 depth 모두 core 밖 · 표지 밖)에 서서 기다린다.
       const safe = { x: setup.ring.cx - 4.5, z: setup.ring.cz - 4.5 };
       const wait = ['warning', 'burst'];
       while (wait.length) {
@@ -991,5 +1032,5 @@ finally {
   report.load.end = loadNow();
   report.finished = new Date().toISOString(); await qa.save();
 }
-console.log(JSON.stringify({ status: report.status, out: qa.out, depth, deepDefinition: !!routeDef, reseed: report.reseed, load: report.load, profiles: Object.fromEntries(Object.entries(report.profiles).map(([k, v]) => [k, v.status])),
+console.log(JSON.stringify({ status: report.status, out: qa.out, depth, definitionId: routeDef?.id ?? null, deepDefinition: !!routeDef, ringDefinition: judgedProfiles, reseed: report.reseed, load: report.load, profiles: Object.fromEntries(Object.entries(report.profiles).map(([k, v]) => [k, v.status])),
   failedChecks: report.failedChecks, mediaGates: report.mediaGates, failure: report.failure, cleanupFailure: report.cleanupFailure, releaseApproved: false }));
