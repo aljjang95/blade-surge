@@ -75,7 +75,13 @@ async function openPage(context) {
       for (let i = 1; i <= steps; i++) { touches.set(id, { x: from.x + (x - from.x) * i / steps, y: from.y + (y - from.y) * i / steps }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: points() }); }
       await frames(page);
     },
-    up: async id => { touches.delete(id); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: points() }); await frame(page); },
+    // CDP touchEnd의 touchPoints는 "떼는 손가락"이다. 남은 손가락을 보내면 그 손가락들이 떨어진다(root PC 보정 실험).
+    up: async id => {
+      const ended = touches.get(id);
+      if (!ended) return;
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [{ id, x: ended.x, y: ended.y, radiusX: 4, radiusY: 4, force: 1 }] });
+      touches.delete(id); await frame(page);
+    },
     cancel: async () => { touches.clear(); await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] }); await frame(page); },
     clear: () => touches.clear(),
   };
