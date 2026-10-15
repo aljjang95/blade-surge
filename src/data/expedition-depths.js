@@ -52,6 +52,16 @@ const EMBER_STEPS = EMBER_TIDE.gates.map((_, i) => `${i + 1}번`).join(' → ');
 const EMBER_OBJECTIVE = `${EMBER_COPY.unit} ${EMBER_COUNT}곳을 ${EMBER_COPY.vent} 뒤 순서대로 ${EMBER_COPY.doneVerb}하고 정예방 ${EMBER_ELITES}곳의 증원 각 ${EMBER_REINFORCEMENTS}회 격파 → 모든 구역 정화 → 선단 압류관 처치`;
 const EMBER_TACTIC = `각 ${EMBER_COPY.unit} 구역의 적을 처치한 뒤(정예방은 증원 ${EMBER_REINFORCEMENTS}회까지) ${EMBER_STEPS} 순서로 ${EMBER_COPY.doneVerb}하세요. ${EMBER_COPY.vent}이 한 번 지나가면 조작판이 반대편으로 옮겨 가 열립니다. 다음 ${EMBER_COPY.warning} 전까지 그 청록 조작판에서 행동 없이 ${EMBER_TIDE.holdSeconds}초 유지하면 ${EMBER_COPY.unit}가 열립니다. 파란 ${EMBER_COPY.vent} 띠 안에 있으면 피해를 입습니다. `;
 
+// 녹청 성역 심층 생명 제단·포자 수로 문구의 숫자는 규칙 정의(ROUTE_OBJECTIVES.verdigris_deep)에서 계산한다(BUNDLE-11).
+// 정예방 수·증원 횟수는 아래 verdigris_sanctum 의 레이아웃·mechanics 와 같은 값이며 계약 테스트가 일치를 검사한다.
+// 이 원정에는 전술 공략(conquest)이 없고 전술 공략 실행은 경로 목표를 쓰지 않으므로(routeObjectiveForStage null) conquestTactic 은 두지 않는다.
+const VERDIGRIS_ALTARS = ROUTE_OBJECTIVES.verdigris_deep;
+const VERDIGRIS_ELITES = 2;
+const VERDIGRIS_REINFORCEMENTS = 2;
+const VERDIGRIS_COUNT = VERDIGRIS_ALTARS.gates.length;
+const VERDIGRIS_OBJECTIVE = `${VERDIGRIS_ALTARS.noun} ${VERDIGRIS_COUNT}곳을 뿌리 빛이 옮겨 가는 순서대로 ${VERDIGRIS_ALTARS.verb}하고 정예방 ${VERDIGRIS_ELITES}곳의 증원 각 ${VERDIGRIS_REINFORCEMENTS}회 격파 → 모든 구역 정화 → 포자 수로 돌파 → 녹청 수호자 처치`;
+const VERDIGRIS_TACTIC = `각 제단 구역의 적을 처치한 뒤(정예방은 증원 ${VERDIGRIS_REINFORCEMENTS}회까지) 지금 뿌리 빛이 켜진 제단 중심에서 연속 ${VERDIGRIS_ALTARS.holdSeconds}초간 ${VERDIGRIS_ALTARS.verb}하세요. 제단 번호는 보이지 않고, ${VERDIGRIS_ALTARS.verb}할 때마다 뿌리 빛이 길 순서와 다른 다음 제단으로 옮겨 갑니다. ${VERDIGRIS_ALTARS.verb}됐지만 빛이 꺼진 제단 중심에 ${VERDIGRIS_ALTARS.wrongStep.seconds}초 머물면 포자가 터져 피해를 받습니다. ${VERDIGRIS_ALTARS.noun} ${VERDIGRIS_COUNT}곳과 모든 구역을 ${VERDIGRIS_ALTARS.verb}하면 보스방 앞 정예방에 포자 수로가 열립니다. 서쪽 입구에서 제한 시간 안에 포자 물결이 지나간 틈을 타 동쪽 출구로 건너면 보스 봉인이 풀립니다. 물결에 맞으면 피해를 입고, 시간이 다 되면 수로가 범람해 피해를 입은 뒤 시간을 다시 잽니다. `;
+
 // Authored follow-up expeditions. The base material runs keep their original
 // price and rewards; these routes unlock at explicit campaign milestones.
 export const EXPEDITION_DEPTHS = [
@@ -190,8 +200,8 @@ export const EXPEDITION_DEPTHS = [
     id: 'verdigris_sanctum', depth: 'deep', name: '녹청 성역 · 뿌리 심장', unlockCode: '6-10', minLevel: 5,
     energy: 7, chapter: 4, stage: 7, scale: 20, bossEnemy: 'verdigris_sentinel', bossHp: 31600,
     description: '뿌리 심장 깊은 곳에서 살아 있는 성역을 깨우고, 녹청 수호자의 오래된 명령을 정화하세요.',
-    objective: '보물방 2곳에서 적 처치 후 중심 2초 공명 → 정예방 2곳의 증원 각 2회 격파 → 모든 구역 정화 → 녹청 수호자 처치', bossName: '뿌리 심장을 지키는 녹청 거수', art: '/img/encounters/boss_verdigris_sentinel.webp',
-    tactic: `보물방의 적을 처치하고 각 제단 중심의 빛 안에서 2초간 공명하세요. 제단의 공명 순서는 자유이며, 정예방마다 2회 증원이 이어집니다. ${ENEMIES.verdigris_sentinel.tactic}`,
+    objective: VERDIGRIS_OBJECTIVE, bossName: '뿌리 심장을 지키는 녹청 거수', art: '/img/encounters/boss_verdigris_sentinel.webp',
+    tactic: `${VERDIGRIS_TACTIC}${ENEMIES.verdigris_sentinel.tactic}`,
     layout: { spacing: [30, 28], size: [20, 20], width: 7,
       cells: [[0,0],[1,0],[1,-1],[2,-1],[2,0],[3,0],[3,1],[4,1],[5,1]],
       edges: [[0,1],[1,2],[1,4],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]],

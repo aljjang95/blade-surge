@@ -281,7 +281,7 @@ test('녹청의 성역 일반: 생명 제단 3곳은 길과 다른 순서이며,
   f.g.player.hurt = (n: number) => { hits.push(n); return true; };
   expect(f.route.def.id).toBe('verdigris_life_altars');
   expect(f.route.gates.map((gate: any) => gate.room.id)).toEqual([3, 2, 6]);
-  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'verdigris_sanctum', null, { depth: 'deep' }))).toBeNull();
+  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'verdigris_sanctum', null, { depth: 'deep' }))).toBe(ROUTE_OBJECTIVES.verdigris_deep);   // 심층은 BUNDLE-11 의 별도 목표
 
   // 길에서 먼저 만나는 2번 방 제단을 정화해도 차례가 아니다. 중심 0.9초는 안전, 1초가 차면 포자 폭발.
   clearCombat(f, 2);
