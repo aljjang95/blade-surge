@@ -68,6 +68,14 @@ function mainObjectiveView(battle) {
       const veil = counterView(route);
       if (veil) return veil;
     }
+    if (route.def?.kind === 'thrones' && route.maze && route.complete) {
+      // 왕좌를 모두 부순 뒤: 구역이 남았으면 정화 안내, 거울 미궁이 도는 동안은 탈출 안내. 탈출하면 보스 흐름으로 이어진다.
+      const values = { progress: count(route.progress), total: route.gates.length };
+      if (route.maze.phase === 'idle') return step('가짜 왕좌 파괴', '남은 구역 정화', values);
+      if (route.maze.phase === 'running') {
+        return step('거울 미궁 탈출', `모래 발자국을 따라 진짜 거울로 · ${Math.ceil(count(route.maze.left))}초`, { ...values, roomId: route.maze.room.id });
+      }
+    }
     const gate = route.gates[route.progress];
     if (gate) {
       const kind = route.def?.kind;
