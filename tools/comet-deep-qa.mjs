@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createExpeditionQa, nativeGameplayFocus, qaArgument, qaAssert, qaHash } from './expedition-qa-runtime.mjs';
+import { compositeSteps, legalStep as legalStepRule } from './comet-deep-transitions.mjs';
 
 const HELP = `사용법: node tools/comet-deep-qa.mjs --expected-sha=<40hex> --out=<새 절대경로> [옵션]
 
@@ -129,8 +130,12 @@ function installProbe({ ringRooms }) {
     const b = app.battle, r = routeOf(), t = b.elapsed, p = b.player;
     (r?.gates || []).forEach((g, i) => {
       if (g.phase !== P.prev.phase[i]) {
+        // 합성 전이 판정 증거: 이 스텝 끝에 고리 방에 남은 살아 있는 적(homeRoom)과 대기 증원(pending) 수.
+        let roomAlive = 0, roomPending = 0;
+        for (const e of b.enemies) if (e.alive && e.homeRoom === g.room) roomAlive++;
+        for (const q of b.pending) if (q.room === g.room) roomPending++;
         P.events.push({ t, kind: 'phase', gate: i, room: g.room.id, from: P.prev.phase[i], to: g.phase, clock: g.clock, connectT: g.connectT, slack: g.slack,
-          failures: g.failures, hits: g.hits, hpRatio: p.hp / p.maxHp, here: r.here?.id ?? null });
+          failures: g.failures, hits: g.hits, hpRatio: p.hp / p.maxHp, here: r.here?.id ?? null, roomAlive, roomPending });
         P.prev.phase[i] = g.phase;
       }
       if (!!g.stormWarn !== P.prev.warn[i]) {
@@ -339,19 +344,14 @@ async function captureScreens(label) {
 const shot = async label => { const file = label + '.png'; await page.evaluate(() => window.app.renderer.render()); await page.screenshot({ path: path.join(qa.out, file) }); return file; };
 
 // ---------- 타임라인 분석(고리 빌드 전용) ----------
-const ALLOWED = { locked: ['ready'], ready: ['collapse'], collapse: ['shelter', 'ready'], shelter: ['storm', 'ready'], storm: ['connected'], connected: [] };
-// 관측은 app.step 한 번(1/60초) 끝에서만 한다. 설계 4절상 같은 스텝 안에서 locked→ready(적 처치로 열림)와
-// ready→collapse(궤도 위 영웅의 첫 실제 밀기)가 이어질 수 있다. 이 합성 전이는 그 스텝에서 붕괴가 막 시작된 증거
-// (남은 시계가 붕괴 시간에서 한 판정 단계 1/30초 이내)가 있을 때만 허용한다. 그 밖의 건너뛰기는 그대로 실패다.
-const legalStep = e => ALLOWED[e.from]?.includes(e.to)
-  || (e.from === 'locked' && e.to === 'collapse' && !!deepRoute && Number.isFinite(e.clock)
-    && e.clock <= deepRoute.collapseSeconds + 1e-9 && e.clock >= deepRoute.collapseSeconds - 1 / 30 - 1e-9);
+// 합성 전이 판정(붕괴 시작 시계 + 그 스텝 고리 방 적·pending 0 증거)은 tools/comet-deep-transitions.mjs 에 있다.
+const legalStep = e => legalStepRule(e, deepRoute?.collapseSeconds);
 function analyzeRings(summary, routeObjective, result) {
   const gates = {};
   for (const e of summary.events.filter(e => e.kind === 'phase')) (gates[e.room] ??= []).push(e);
   const rows = Object.entries(gates).map(([room, list]) => {
     const orderOk = list.every(legalStep);
-    const composite = list.filter(e => !ALLOWED[e.from]?.includes(e.to) && legalStep(e)).map(e => ({ t: ms(e.t), from: e.from, to: e.to, clock: ms(e.clock) }));
+    const composite = compositeSteps(list, deepRoute?.collapseSeconds).map(e => ({ t: ms(e.t), from: e.from, to: e.to, clock: ms(e.clock), roomAlive: e.roomAlive, roomPending: e.roomPending }));
     const connect = list.find(e => e.to === 'connected'), toStorm = list.find(e => e.to === 'storm');
     const warns = summary.events.filter(e => e.kind === 'stormWarn' && e.on && String(e.room) === room);
     const cleared = summary.clears.find(c => String(c.room) === room);

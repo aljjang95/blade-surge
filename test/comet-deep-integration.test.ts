@@ -216,3 +216,28 @@ test('실제 AUTO 흐름장 이동: 문 입구에서 5고리 모두 실패 없�
     expect(f.hurts).toEqual([]);
   }
 });
+
+// QA 타임라인의 합성 전이(locked→collapse 한 스텝) 판정: 붕괴 시작 시계와 그 스텝 고리 방 적·pending 0 증거가 모두 있어야 한다.
+// BUNDLE-01 retry 첫 판 방 3 사례(clock 8.983)는 증거와 함께 허용되고, 적이나 증원이 남은 같은 전이는 거부된다.
+test('QA composite locked→collapse step requires collapse-start clock and empty ring room evidence', async () => {
+  const { legalStep, compositeSteps } = await import('../tools/comet-deep-transitions.mjs');
+  const { ROUTE_OBJECTIVES } = await import('../src/data/route-objectives.js');
+  const T = ROUTE_OBJECTIVES.comet_deep.collapseSeconds;
+  const base = { from: 'locked', to: 'collapse', clock: 8.983, roomAlive: 0, roomPending: 0 };
+  expect(T).toBe(9);
+  expect(legalStep(base, T)).toBe(true);
+  expect(legalStep({ ...base, roomAlive: 1 }, T)).toBe(false);
+  expect(legalStep({ ...base, roomPending: 2 }, T)).toBe(false);
+  const { roomAlive, roomPending, ...withoutEvidence } = base;
+  expect(legalStep(withoutEvidence, T)).toBe(false);
+  expect(legalStep({ ...base, roomAlive: undefined }, T)).toBe(false);
+  expect(legalStep({ ...base, clock: T - 0.05 }, T)).toBe(false);
+  expect(legalStep(base, undefined)).toBe(false);
+  expect(legalStep({ ...base, to: 'shelter' }, T)).toBe(false);
+  for (const [from, to] of [['locked', 'ready'], ['ready', 'collapse'], ['collapse', 'ready'], ['shelter', 'storm'], ['storm', 'connected']]) {
+    expect(legalStep({ from, to, clock: 0, roomAlive: 3, roomPending: 1 }, T)).toBe(true);
+  }
+  const list = [{ from: 'locked', to: 'ready', clock: 9 }, base, { ...base, roomAlive: 1 }];
+  expect(compositeSteps(list, T)).toEqual([base]);
+});
+
