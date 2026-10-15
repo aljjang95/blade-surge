@@ -54,7 +54,7 @@
 .hs-tabs button small { font-size: 12px; font-weight: 600; color: #bfe0ec; }
 /* 탭 이름은 한 줄로 둔다. 좁은 세로 화면에서는 가방 개수를 접는다(가방 목록 위에 다시 보인다). */
 .hs-tabs button { white-space: nowrap; }
-@media (orientation: portrait) and (max-width: 520px) { .hs-tabs button small { display: none; } }
+@media (orientation: portrait) and (max-width: 520px), (orientation: landscape) and (max-width: 700px) and (max-height: 420px) { .hs-tabs button small { display: none; } }
 .hs-tabs button[aria-selected="true"] { border-color: #874a0e; background: linear-gradient(180deg, #ffe773, #ffb52c 58%, #f48c14); color: #4a2406; text-shadow: 0 1px 0 rgba(255, 255, 255, .5); }
 .hs-tabs button[aria-selected="true"] small { color: #6a3a10; }
 .hs-panel { min-height: 0; min-width: 0; }
