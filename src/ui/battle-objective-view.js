@@ -22,6 +22,18 @@ function reverseBellsView(route) {
   return step('종문 점등', '이 구역의 적을 처치해 종 깨우기', values);
 }
 
+/** 합창 장막(심층 종락 보스, BUNDLE-05). 카운터가 장막 또는 반격 창일 때만 보스방 목표창을 대신한다. 배율은 def 값에서 계산한다. */
+function counterView(route) {
+  const counter = route.counter, def = route.def?.counter;
+  if (!def || (counter?.state !== 'veiled' && counter?.state !== 'open')) return null;
+  const percent = value => Math.round(count(value) * 100);
+  if (counter.state === 'veiled') return step('합창 장막', `마지막 울림 직후에만 장막이 걷힘 · 받는 피해 ${100 - percent(def.veil)}% 감소`);
+  // 남은 시간은 올림(0.1초)이라 시계가 남아 있으면 0.0을 보이지 않는다.
+  const left = (Math.ceil(count(counter.windowLeft) * 10 - 1e-9) / 10).toFixed(1);
+  return step('합창 장막', `반격 창 ${left}초 · 받는 피해 ${percent(def.open)}%`,
+    { hold: seconds(counter.windowLeft), holdTotal: count(counter.windowTotal) });
+}
+
 /** 현재 컨트롤러의 상태만 투영하며 전투 정산과 퍼즐 정답에는 접근하지 않는다. */
 function mainObjectiveView(battle) {
   const world = battle?.world;
@@ -36,6 +48,10 @@ function mainObjectiveView(battle) {
   }
   if (route?.world === world && !route.closed && Array.isArray(route.gates)) {
     if (route.def?.kind === 'reverse-bells' && route.phase !== 'done') return reverseBellsView(route);
+    if (route.def?.kind === 'reverse-bells') {
+      const veil = counterView(route);
+      if (veil) return veil;
+    }
     const gate = route.gates[route.progress];
     if (gate) {
       const kind = route.def?.kind;

@@ -1,5 +1,6 @@
 import { Vector3 } from 'three';
 import { audio } from '../engine/audio.js';
+import { BellfallDeepCounter } from './bellfall-deep-counter.js';
 
 /** 판정 하위 단계. dt가 크거나 작아도 같은 단계 순서로 진행해 결과가 같다. */
 const STEP = 1 / 60;
@@ -46,9 +47,15 @@ export class BellfallDeepBells {
   /** 뷰에 넘기는 옵션 객체(재사용). */
   #opts = { reduced: false };
   view = null;
+  /** 보스 합창 장막 뷰(counter-view 파일이 있을 때만). */
+  #counterView = null;
+  /** @type {BellfallDeepCounter|null} */
+  #counter = null;
 
   constructor(def, world) {
     this.def = def; this.world = world;
+    // 보스 합창 장막: 정의에 counter 가 있을 때만 만든다. 월드가 바뀌면 스스로 끝난다.
+    this.#counter = def.counter ? new BellfallDeepCounter(def.counter, world) : null;
     const { minX, minZ, cols } = world;
     if (typeof minX !== 'number' || typeof minZ !== 'number' || typeof cols !== 'number') throw new RangeError('종문 이동 지도가 준비되지 않았습니다.');
     const flow = world.buildFlow(world.startRoom.x, world.startRoom.z);
@@ -75,6 +82,8 @@ export class BellfallDeepBells {
   }
 
   // ---------------- 읽기 상태 ----------------
+  /** 보스 합창 장막 컨트롤러(읽기 전용). 정의에 counter 가 없으면 null. */
+  get counter() { return this.#counter; }
   get phase() { return this.#phase; }
   /** 이번 시도에서 공명한 종 수(0..3). 불협이면 0으로 돌아간다. */
   get progress() { return this.#progress; }
@@ -116,8 +125,16 @@ export class BellfallDeepBells {
   async prepareView(scene) {
     const { BellfallDeepBellView } = await import('./bellfall-deep-bell-view.js');
     if (!this.closed) this.view = new BellfallDeepBellView(scene, this);
+    if (!this.#counter) return;
+    try {
+      const { BellfallDeepCounterView } = await import('./bellfall-deep-counter-view.js');
+      if (!this.closed && !this.#counterView) this.#counterView = new BellfallDeepCounterView(scene, this.#counter);
+    } catch { /* 장막 뷰가 없어도 규칙은 그대로 동작한다. */ }
   }
-  #refreshView(dt) { this.view?.update(this, dt, this.#opts); }
+  #refreshView(dt) {
+    this.view?.update(this, dt, this.#opts);
+    this.#counterView?.update(this.#counter, dt, this.#opts);
+  }
 
   // ---------------- Battle 인터페이스 ----------------
   /** AUTO: 점등 대기에는 첫 미점등 종문 방, 소등·공명에는 다음 정답 종문 방. */
@@ -133,8 +150,11 @@ export class BellfallDeepBells {
   stop() {
     this.#closed = true;
     this.interrupt();
+    this.#counter?.stop();
     const view = this.view; this.view = null;
     view?.dispose();
+    const counterView = this.#counterView; this.#counterView = null;
+    counterView?.dispose();
   }
   prepareRoom(room, count) {
     const gate = this.#gate(room);
@@ -201,6 +221,8 @@ export class BellfallDeepBells {
 
   // ---------------- 프레임 ----------------
   update(game, dt) {
+    // 보스 장막은 종문 규칙의 조기 반환(보스 처치·일시정지 등)과 상관없이 먼저 갱신한다. 보스방에서 종문이 끝난 뒤에도 계속 돈다.
+    this.#counter?.update(game, dt);
     const player = game.player;
     if (this.closed || !game.active || game.paused || !player?.alive || game.bossDefeated || game.world !== this.world) {
       this.interrupt();
@@ -314,7 +336,7 @@ export class BellfallDeepBells {
     if (!this.#report) {
       this.#report = Object.freeze({ id: this.def.id, label: '종문 역순 공명', complete: !!win && !this.#closed && this.canWin(),
         progress: this.#progress, target: this.gates.length, rooms: Object.freeze(this.#order.slice(0, this.#progress)),
-        discords: this.#discords, tolls: this.#tolls });
+        discords: this.#discords, tolls: this.#tolls, counterWindows: this.#counter ? this.#counter.windows : 0 });
       this.interrupt();
       this.#refreshView(0);
     }

@@ -22,6 +22,8 @@ import './app-content.css';
 import './depths.css';
 
 const fmt = n => Math.floor(n || 0).toLocaleString('ko-KR');
+/** 종락 심층 종문 결과 줄. counterWindows(합창 장막 반격 창 횟수)는 숫자일 때만 불협 뒤, 완료 앞에 붙인다. */
+export const bellfallDeepBellsResultLine = report => `종문 역순 공명 ${report.progress}/${report.target} · 불협 ${report.discords}회${Number.isFinite(report.counterWindows)?` · 반격 창 ${report.counterWindows}회`:''}${report.complete?' · 완료':''}`;
 const MATERIAL_ART = Object.fromEntries(MATERIALS.map(m=>[m.id,resourceArt(m.id)]));
 const ART = { arena: '/img/expansion/arena.webp', guild_map: '/img/expansion/guild_map.webp' };
 const COLORS = { glass_garden: '#9be1ba', ember_vault: '#ffad6e', star_archive: '#9bbdff' };
@@ -70,7 +72,7 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
         {result.routeObjective?.pages && <p aria-label="기록 복원 결과">기록 복원 {result.routeObjective.progress}/{result.routeObjective.target} · {result.routeObjective.pages.map(page=>page.label).join(' → ') || '복원한 기록 없음'}</p>}
         {result.routeObjective?.constellations && <p aria-label="별자리 복원 결과">별자리 복원 {result.routeObjective.progress}/{result.routeObjective.target} · {result.routeObjective.constellations.map(station=>station.label).join(' → ') || '복원한 별자리 없음'} · 오답 {result.routeObjective.mistakes}회</p>}
         {result.routeObjective?.id==='comet_deep_orbits' && <p aria-label="궤도 고리 연결 결과">궤도 고리 연결 {result.routeObjective.progress}/{result.routeObjective.target} · 붕괴 실패 {result.routeObjective.collapseFailures}회 · 유성 피격 {result.routeObjective.stormHits}회{result.routeObjective.complete?' · 완료':''}</p>}
-        {result.routeObjective?.id==='bellfall_deep_bells' && <p aria-label="종문 역순 공명 결과">종문 역순 공명 {result.routeObjective.progress}/{result.routeObjective.target} · 불협 {result.routeObjective.discords}회{result.routeObjective.complete?' · 완료':''}</p>}
+        {result.routeObjective?.id==='bellfall_deep_bells' && <p aria-label="종문 역순 공명 결과">{bellfallDeepBellsResultLine(result.routeObjective)}</p>}
         {result.routeObjective?.label && result.routeObjective.id!=='comet_deep_orbits' && result.routeObjective.id!=='bellfall_deep_bells' && !result.routeObjective.pages && !result.routeObjective.constellations && <p aria-label={result.routeObjective.label+' 결과'}>{result.routeObjective.label} {result.routeObjective.progress}/{result.routeObjective.target}{result.routeObjective.complete?' · 완료':''}</p>}
         {mapTactics&&<section className="map-tactics-result" data-map-tactics-result aria-label="정원의 장치 사용 결과"><strong>{mapTactics.title}</strong><p>{mapTactics.detail}</p></section>}
         <div className="exp-result-save" data-save={result.saveError?'error':'saved'} role={result.saveError?'alert':'status'}>

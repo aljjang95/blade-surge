@@ -6,6 +6,7 @@ import { BellfallDeepBells } from '../src/game/bellfall-deep-bells.js';
 import { BellfallDeepBellView } from '../src/game/bellfall-deep-bell-view.js';
 import { battleObjectiveView } from '../src/ui/battle-objective-view.js';
 import { Battle } from '../src/game/battle-base.js';
+import { bellfallDeepBellsResultLine } from '../src/expansion/hub.jsx';
 
 // 교차 lane 통합 검사: rules lane 의 실제 컨트롤러와 worldui lane 의 실제 뷰·목표창을
 // 실제 심층 월드와 Battle 메서드(enterRoom·markCleared·updateExpedition) 위에서 함께 돌린다.
@@ -184,3 +185,95 @@ test('일시정지는 소등 시계와 공명 유지를 멈추고, 재개하면 
   expect(f.route.hold).toBe(0);
   expect(f.route.progress).toBe(0);
 });
+
+// BUNDLE-05 교차 lane 통합: rules lane 의 실제 합창 장막 컨트롤러가 worldui lane 의 실제 장막 뷰·목표창·결과 줄과
+// 같은 상태를 읽는지, 실제 BellfallDeepBells.prepareView 경로와 Battle.updateExpedition 위에서 확인한다.
+// 보스는 카운터가 읽는 필드만 가진 가짜다(실제 Enemy·BossSignatures 경로는 test/bellfall-deep-counter.test.ts 가 맡는다).
+test('합창 장막: 종문 완료 뒤 보스가 나타나면 장막 → 마지막 울림 직후 반격 창 → 장막이 뷰·목표창·결과 줄에 같은 값으로 보인다', async () => {
+  const f = await fixture();
+  const counter = f.route.counter as any;
+  expect(counter).not.toBeNull();
+  const def = (f.route.def as any).counter;
+  const group = f.g.scene.getObjectByName('TLL_BellfallDeepCounter');
+  expect(group).toBeTruthy();
+  const shell = group!.getObjectByName('TLL_BellfallDeepVeil')!, ring = group!.getObjectByName('TLL_BellfallDeepCounterRing')!;
+
+  for (const id of [2, 3, 5]) { stand(f, id); clearRoom(f, id); }
+  run(f, 4.9);
+  expect(f.route.phase).toBe('answer');
+  for (const id of [2, 5, 3]) { stand(f, id); run(f, 2); }
+  expect(f.route.phase).toBe('done');
+  expect(counter.state).toBe('idle');
+  expect(shell.visible).toBe(false);
+
+  // 보스 등장 전(등장 연출 중)에는 붙지 않는다.
+  const boss: any = { alive: true, spawning: true, isBoss: true, runtimeSpeciesId: 'glass_hour_sovereign', state: 'chase', special: null,
+    attackSequence: 0, atkCd: .5, pos: new Vector3(f.world.bossRoom.x, 0, f.world.bossRoom.z), def: { scale: 2.25 },
+    signatures: { plan: null, age: 0 } };
+  // BossSignatures 처럼 마지막 고리 시각에 닿은 조종을 완료로 남긴다.
+  let completed = 0;
+  Object.defineProperty(boss, 'completedAttackSequence', { get() { const p = boss.signatures?.plan; if (boss.state === 'attack' && p && boss.signatures.age >= p.lastStrike) completed = boss.attackSequence; return completed; } });
+  f.g.boss = boss;
+  run(f, .1);
+  expect(counter.state).toBe('idle');
+  boss.spawning = false;
+  run(f, DT);
+  expect(counter.state).toBe('veiled');
+  expect(boss.damageVeil).toBe(counter);
+  let panel: any = battleObjectiveView(f.g);
+  expect(panel.title).toBe('합창 장막');
+  expect(panel.action).toBe('마지막 울림 직후에만 장막이 걷힘 · 받는 피해 ' + Math.round((1 - def.veil) * 100) + '% 감소');
+  expect(shell.visible).toBe(true);
+  expect(ring.visible).toBe(false);
+  expect(shell.position.x).toBeCloseTo(boss.pos.x, 6);
+
+  // 다른 시그니처의 마지막 고리, 삼중 조종의 마지막 고리 전에는 열리지 않는다.
+  Object.assign(boss, { state: 'attack', special: 'bell_clap', attackSequence: 1 });
+  boss.signatures = { plan: { key: 'bell_clap', lastStrike: 2.65 }, age: 3 };
+  run(f, DT);
+  expect(counter.state).toBe('veiled');
+  Object.assign(boss, { special: 'bell_toll', attackSequence: 2 });
+  boss.signatures = { plan: { key: 'bell_toll', lastStrike: 3.05 }, age: 3 };
+  run(f, DT);
+  expect(counter.state).toBe('veiled');
+  boss.signatures.age = 3.05;
+  run(f, DT);
+  expect(counter.state).toBe('open');
+  expect(counter.windowLeft).toBeCloseTo(def.window, 9);
+  panel = battleObjectiveView(f.g);
+  expect(panel.action).toBe('반격 창 ' + def.window.toFixed(1) + '초 · 받는 피해 ' + Math.round(def.open * 100) + '%');
+  expect(panel.holdTotal).toBe(def.window);
+  expect(shell.visible).toBe(false);
+  expect(ring.visible).toBe(true);
+
+  // 조종이 끝나 보스가 쫓기 상태가 돼도 창이 남은 동안 공격 대기는 창 남은 시간 이상이다.
+  Object.assign(boss, { state: 'chase', special: null, atkCd: 0 });
+  boss.signatures = { plan: null, age: 0 };
+  run(f, 1);
+  expect(counter.state).toBe('open');
+  expect(boss.atkCd).toBeGreaterThanOrEqual(counter.windowLeft);
+  const left = counter.windowLeft;
+  panel = battleObjectiveView(f.g);
+  expect(panel.action.startsWith('반격 창 ' + (Math.ceil(left * 10 - 1e-9) / 10).toFixed(1) + '초')).toBe(true);
+  // 일시정지 동안 창 시계와 뷰는 멈춘다.
+  f.g.paused = true; run(f, 2);
+  expect(counter.windowLeft).toBe(left);
+  f.g.paused = false;
+  run(f, def.window - 1 + 2 * DT);
+  expect(counter.state).toBe('veiled');
+  expect(shell.visible).toBe(true);
+  expect(ring.visible).toBe(false);
+
+  // 보스 처치: 장막이 풀리고 뷰가 숨으며, 결과 줄에 반격 창 횟수가 실린다.
+  boss.alive = false; f.g.bossDefeated = true;
+  run(f, DT);
+  expect(counter.state).toBe('ended');
+  expect(boss.damageVeil).toBeNull();
+  expect(shell.visible).toBe(false);
+  const report = f.route.finish(true) as any;
+  expect(report.counterWindows).toBe(1);
+  expect(bellfallDeepBellsResultLine(report)).toContain(' · 불협 0회 · 반격 창 1회');
+  f.route.stop();
+  expect(f.g.scene.getObjectByName('TLL_BellfallDeepCounter')).toBeUndefined();
+});
+

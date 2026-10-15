@@ -130,8 +130,19 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(Number(tactic.match(/불협 (\d+)회부터/)?.[1])).toBe(deep.guideAfter);
         expect(tactic).toMatch(/마지막에 꺼진 종부터 거꾸로/);
         expect(tactic).toMatch(/다시 켜져 소등을 처음부터/);
-        // 보스 신호 문구('마지막 울림 뒤 반격')는 보스 전술 소유이므로 종문 안내 부분만 검사한다.
-        expect(tactic.slice(0, tactic.indexOf((ENEMIES as Record<string, any>).glass_hour_sovereign.tactic))).not.toMatch(/공명 순서는 자유|마지막 울림|제단/);
+        // 종문 안내 부분(보스 합창 장막 문장 앞까지)에는 제단·자유 순서 문구가 없다.
+        const gateCopy = tactic.slice(0, tactic.indexOf('보스는 합창 장막'));
+        expect(gateCopy.length).toBeGreaterThan(0);
+        expect(gateCopy).not.toMatch(/공명 순서는 자유|마지막 울림|제단/);
+        // 보스 합창 장막: 문구의 숫자는 counter 정의에서 읽어 맞추고, 원안 문구가 목표와 전술 양쪽에 있다.
+        const counter = deep.counter;
+        expect(Number(tactic.match(/받는 피해가 (\d+)% 줄어듭니다/)?.[1])).toBe(Math.round((1 - counter.veil) * 100));
+        expect(Number(tactic.match(/마지막 울림 직후 (\d+(?:\.\d+)?)초 동안만 장막이 걷혀/)?.[1])).toBe(counter.window);
+        expect(Number(tactic.match(/걷혀 (\d+(?:\.\d+)?)배 피해/)?.[1])).toBe(counter.open);
+        expect(tactic).toMatch(/그 동안 보스는 새 공격을 시작하지 않습니다/);
+        expect(tactic).toMatch(/삼중 조종은 기절·경직으로 끊기지 않으니/);
+        expect(tactic.indexOf('보스는 합창 장막')).toBeLessThan(tactic.indexOf((ENEMIES as Record<string, any>).glass_hour_sovereign.tactic));
+        expect(stage.objective).toMatch(/마지막 울림 직후 반격으로 멈춘 합창의 주권자 처치$/);
         // 정답 순서는 문구에 쓰지 않는다. 종문 번호는 위치 안내(1번 → 2번 → 3번)로만 나온다.
         expect(tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번']);
       } else if (id === 'sable_mirage_basin' && depth === 'standard') {
