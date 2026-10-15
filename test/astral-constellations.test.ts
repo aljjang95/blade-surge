@@ -95,7 +95,7 @@ test('corpse presentation leaves alive actors, other rooms, combat, closed and u
   unrelated.update(.05); expect(unrelated.model.visible).toBe(true); expect(unrelated.deathT).toBe(.05);
 });
 
-test('only solo standard Astral has four distinct stations; other modes and deep keep their existing contract', () => {
+test('only solo standard Astral has four distinct stations; other modes keep their existing contract (deep has its own controller)', () => {
   const f = fixture(), base = f.g.stage;
   expect(f.route).toBeInstanceOf(AstralConstellations); expect(f.world.sealed).toBe(true);
   expect(f.route.gates.map((g: any) => g.room.id)).toEqual([1, 3, 4, 6]);
@@ -103,7 +103,7 @@ test('only solo standard Astral has four distinct stations; other modes and deep
   expect(f.route.gates.map((g: any) => g.answer)).toEqual(['triangle', 'diamond', 'circle', 'triangle']);
   expect(f.route.def.radius).toBe(1.2); expect(f.route.def.readSeconds).toBe(1); expect(f.route.def.holdSeconds).toBe(1);
   for (const stage of [{ ...base, party: {} }, { ...base, riftId: 'x' },
-    ...[{ kind: 'arena' }, { riftId: 'x' }, { conquestId: 'x' }, { depth: 'deep' }, { depth: 'unknown' }, { id: 'star_archive' }]
+    ...[{ kind: 'arena' }, { riftId: 'x' }, { conquestId: 'x' }, { depth: 'unknown' }, { id: 'star_archive' }]
       .map(extra => ({ ...base, expedition: { ...base.expedition, ...extra } }))]) {
     expect(createRouteObjectives(stage, f.world)).toBeNull();
   }
