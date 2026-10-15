@@ -20,8 +20,9 @@ export const FRAME = 1 / 60;
 const EPS = 1e-6;
 /** 위치 경계 판정의 부동소수 여유. 규칙은 같은 스텝의 영웅 위치로 판정하므로 넓은 여유가 필요 없다. */
 export const POSITION_SLACK = .01;
-/** 띠 피격 위치 여유: 피격 스텝 끝의 위치는 넉백이 시작된 뒤라 띠 경계에서 조금 벗어날 수 있다. 반대로 분출 중 띠 '깊숙이'(경계 − 이 값) 있으면 반드시 피격이어야 한다. */
-const BAND_OUTER_SLACK = .6;
+/** 띠 피격 위치 여유: 띠 피해에는 넉백이 없다(kb 0). 행 위치는 스텝 끝이라 규칙이 본 위치와 한 스텝 이동량(최대 약 .12)만 다를 수 있다(BUNDLE-11 리뷰 P3: .6 은 띠 밖 피해를 가렸다).
+ * 반대로 분출 중 띠 '깊숙이'(경계 − BAND_INNER_MARGIN) 있으면 반드시 피격이어야 한다. */
+const BAND_OUTER_SLACK = .2;
 const BAND_INNER_MARGIN = .3;
 const SETTLE_STEPS = 10;
 const CARRY_MAX_STEPS = 90;
@@ -671,8 +672,10 @@ export function checkToasts(toasts, def, { sporeHits = null, floods = null, star
   const leaked = items.filter(i => !isTactic(i) && leaks(i.msg)).map(i => i.msg);
   const startOk = startAll.length === 1 && (startLimit === null || startAll[0] === startToast(startLimit));
   const floodOk = (floods === null || floodAll.length === floods) && (floodLimits === null || (floodAll.length === floodLimits.length && floodAll.every((m, i) => m === floodToast(floodLimits[i]))));
-  const ok = purify.every(p => p.count === 1) && ordered && openCount === 1 && startOk && doneCount === 1 && sequence && floodOk && leaked.length === 0 && (sporeHits === null || hitCount === sporeHits);
-  return { ok, purify, ordered, sequence, openCount, startToasts: startAll, startOk, hitCount, sporeHits, floodToasts: floodAll, floodOk, doneCount, leaked, tacticToasts, total: list.length };
+  // 제단 이름 뒤에 '정화'가 붙는 토스트는 점등 이동 토스트 하나뿐이어야 한다(적만 처치한 제단을 '정화'로 알리거나 같은 정화를 두 번 알리면 실패).
+  const purifyOnly = def.gates.map((g, i) => list.filter(m => m.startsWith(g.label + ' 정화')).length === 1 && purify[i].count === 1);
+  const ok = purifyOnly.every(Boolean) && purify.every(p => p.count === 1) && ordered && openCount === 1 && startOk && doneCount === 1 && sequence && floodOk && leaked.length === 0 && (sporeHits === null || hitCount === sporeHits);
+  return { ok, purify, purifyOnly, ordered, sequence, openCount, startToasts: startAll, startOk, hitCount, sporeHits, floodToasts: floodAll, floodOk, doneCount, leaked, tacticToasts, total: list.length };
 }
 
 // ---------- 키보드 구간 ----------
@@ -756,12 +759,20 @@ export function analyzeOrder(rows, def, { rooms = [], minDwell = 2 } = {}) {
   const first = wrong.bursts[0] ?? null;
   const post = rows.slice(b, c + 1);
   const insideNow = r => !!room && Math.hypot(r.x - room.x, r.z - room.z) <= def.radius + POSITION_SLACK;
-  // 폭발의 넉백으로 잠깐 반경을 벗어날 수 있어(도구가 키로 중심으로 되돌린다) 반경 밖 행은 기록하고, 반경 안에 머문 시간과 끝 시점의 위치를 판정한다.
-  const away = post.filter(r => !insideNow(r)).length, insideSeconds = stepRows(post).filter(insideNow).length * FRAME;
+  // 폭발의 넉백으로 잠깐 반경을 벗어날 수 있어(도구가 키로 중심으로 되돌린다) 반경 밖 행은 기록하고, 끊김 없는 반경 안 체류가 규칙의 유지 시간(holdSeconds − 1/60) 이상인지와
+  // 끝 시점의 위치를 판정한다. 연속 체류가 유지 시간보다 짧으면 '머물러도 정화되지 않음'의 근거가 되지 않는다.
+  // 반경 안 체류는 끊김 없는 가장 긴 연속 스텝 구간으로 잰다(BUNDLE-11 리뷰 P3: 합계는 끊긴 체류도 통과시켰다).
+  const away = post.filter(r => !insideNow(r)).length;
+  let insideRun = 0, insideBest = 0, prevN = null;
+  for (const r of stepRows(post)) {
+    insideRun = !insideNow(r) ? 0 : prevN !== null && r.n === prevN + 1 ? insideRun + 1 : 1;
+    prevN = r.n; insideBest = Math.max(insideBest, insideRun);
+  }
+  const insideSeconds = insideBest * FRAME;
   const seconds = end.t - burst.t;
   const burstRec = { count: end.bu - start.bu, atBurst: burst.bu - start.bu, beforeBurst: rows.slice(a, b).filter(r => r.n < burst.n && r.bu !== start.bu).length, gate: j, dwellBefore: first?.dwell ?? null, ratio: first?.ratio ?? null, raw: first?.raw ?? null,
     progressSame: burst.pr === start.pr, ok: j >= 0 && end.bu - start.bu === 1 && burst.bu - start.bu === 1 && rows.slice(a, b).filter(r => r.n < burst.n).every(r => r.bu === start.bu) && wrong.ok && wrong.count === 1 && burst.pr === start.pr };
-  const dwell = { seconds, need: minDwell - 2 * FRAME, awayRows: away, insideSeconds, insideNeed: minDwell - .4, endInside: insideNow(end), holdRows: post.filter(r => r.hd !== 0).length,
+  const dwell = { seconds, need: minDwell - 2 * FRAME, awayRows: away, insideSeconds, insideNeed: def.holdSeconds - FRAME, endInside: insideNow(end), holdRows: post.filter(r => r.hd !== 0).length,
     attuned: post.filter(r => j < 0 || r.g[j].at !== 0).length, cleared: post.filter(r => j < 0 || r.g[j].cl !== 0).length, progressChanged: post.filter(r => r.pr !== start.pr).length,
     litChanged: seg.filter(r => r.lt !== def.gates[start.pr].roomId).length, secondBurst: end.bu - burst.bu };
   dwell.ok = j >= 0 && seconds + EPS >= dwell.need && insideSeconds + EPS >= dwell.insideNeed && dwell.endInside && dwell.holdRows === 0 && dwell.attuned === 0 && dwell.cleared === 0 && dwell.progressChanged === 0 && dwell.litChanged === 0 && dwell.secondBurst === 0;

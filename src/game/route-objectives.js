@@ -107,7 +107,8 @@ export class RouteObjectives {
     if (!this.#closed && !this.#report && game.active && !game.paused && this.enemiesCleared(game, gate)) {
       if (!gate.ready) {
         gate.ready = true;
-        game.ui.toast(`${gate.label} 정화 · ${this.hint()}`, 'gold');
+        // 순서를 숨기는 정의(녹청 심층)는 적만 처치한 제단을 '정화'라고 부르지 않는다(정화는 점등 제단 2초 유지뿐, BUNDLE-11 리뷰 P3).
+        game.ui.toast(`${gate.label} ${this.def.hiddenOrder ? '적 처치' : '정화'} · ${this.hint()}`, 'gold');
         this.refreshHint(game);
       }
     }
@@ -157,7 +158,8 @@ export class RouteObjectives {
         gate.attuned = true; this.#progress++; this.interrupt(); this.#markerT = 0;
         game.markCleared(gate.room);
         game.autoTarget = this.autoRoom();
-        game.ui.toast(`${gate.label} ${this.verb} 완료 · ${this.#progress}/${this.gates.length}`, 'gold');
+        // 순서를 숨기는 정의는 하위 클래스가 점등 이동 토스트 하나로 알린다(같은 스텝 두 번 알림 방지, BUNDLE-11 리뷰 P3).
+        if (!this.def.hiddenOrder) game.ui.toast(`${gate.label} ${this.verb} 완료 · ${this.#progress}/${this.gates.length}`, 'gold');
       }
     }
     this.wrongStepUpdate(game, dt);

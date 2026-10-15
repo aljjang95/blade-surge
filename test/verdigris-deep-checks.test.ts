@@ -124,7 +124,7 @@ class Sim {
     this.hd = 0; this.g[k].at = 1; this.g[k].cl = 1; this.pr = k + 1; this.rem--; this.pendingMove = k + 1 < 4;
     if (k + 1 < 4) this.lm = k + 1;
     this.step();
-    if (toasts) { this.toast(LABELS[k] + ' 정화 완료 · ' + (k + 1) + '/4'); this.toast(purifyText(k)); }
+    if (toasts) this.toast(purifyText(k));
   }
   /** 정상 진행: 제단 4곳(2 → 5 → 3 → 6), 정예방 4·7 정리, 수로 열림까지. 영웅은 수로 방 동쪽(출발선 밖)에 선다. */
   toOpen() {
@@ -418,6 +418,9 @@ describe('띠 위상·피격·범람', () => {
     expect(m.ok).toBe(false);
     const outside = mut(s.rows, rows => { for (let k = i - 6; k <= i + 2; k++) rows[k].x = SETUP.startX - 1; });
     expect(K.checkChannelHits(outside, DEF, SETUP).bad.map((b: any) => b.kind)).toContain('unexplained');
+    // 띠 피해에는 넉백이 없다. 띠 경계 밖 .5 에서 늘어난 피격은 설명되지 않는다(BUNDLE-11 리뷰 P3: 여유 .6 은 이것을 통과시켰다).
+    const near = mut(s.rows, rows => { for (let k = i - 1; k <= i; k++) { const b = rows[k].ch.b[0]; rows[k].x = b.x + b.h + .5; } });
+    expect(K.checkChannelHits(near, DEF, SETUP).bad.map((b: any) => b.kind)).toContain('unexplained');
   });
   test('피해 비율이 6% 가 아니면 strict 에서 실패한다', () => {
     const s = manualChannel();
@@ -538,6 +541,15 @@ describe('토스트·문구 누출', () => {
     const swapped = [...s.toasts]; const a = swapped.findIndex(t => t.msg === purifyText(1)), b = swapped.findIndex(t => t.msg === purifyText(2));
     [swapped[a], swapped[b]] = [swapped[b], swapped[a]];
     expect(K.checkToasts(swapped, DEF).ordered).toBe(false);
+  });
+  test('제단 이름 뒤 정화 토스트는 점등 이동 토스트 하나뿐이다(같은 정화 두 번 알림·적만 처치한 제단의 정화 알림은 실패)', () => {
+    const s = base();
+    expect(K.checkToasts(s.toasts, DEF).purifyOnly).toEqual([true, true, true, true]);
+    const dup = [...s.toasts, { msg: LABELS[0] + ' 정화 완료 · 1/4' }];
+    expect(K.checkToasts(dup, DEF).ok).toBe(false);
+    const ready = [...s.toasts, { msg: LABELS[2] + ' 정화 · 생명 제단 1/4 · 다음 이끼 못 제단 · 적 처치 후 중심 2초' }];
+    expect(K.checkToasts(ready, DEF).purifyOnly[2]).toBe(false);
+    expect(K.checkToasts([...s.toasts, { msg: LABELS[2] + ' 적 처치 · 생명 제단 1/4 · 다음 이끼 못 제단 · 적 처치 후 중심 2초' }], DEF).ok).toBe(true);
   });
   test('이전 보물방 공명 문구와 일반판 번호 문구는 누출이다', () => {
     const s = base();
@@ -690,9 +702,14 @@ describe('order: 비점등 제단 포자 폭발', () => {
     expect(o.wrong.bad.map((b: any) => b.kind)).toContain('cooldown');
     const left = mut(s.rows, rows => { const d = rows.findIndex((r: any) => r.mk === 'dwell-end'); for (let k = d - 70; k <= d; k++) rows[k].x = room(3).x + 6; });
     expect(K.analyzeOrder(left, DEF, { rooms: ROOMS }).dwell.ok).toBe(false);
-    // 넉백으로 한두 스텝 반경을 벗어난 것은 통과한다(도구가 키로 되돌린다).
+    // 폭발 넉백으로 폭발 직후 한 스텝 반경을 벗어나도, 그 뒤 끊김 없이 유지 시간 이상 머물렀으면 통과한다(도구가 키로 되돌린다).
+    const early = mut(s.rows, rows => { const b = rows.findIndex((r: any) => r.mk === 'burst1'); const k = rows.findIndex((r: any, j: number) => j > b && r.n === rows[b].n + 1); rows[k].x = room(3).x + 3.4; });
+    expect(K.analyzeOrder(early, DEF, { rooms: ROOMS }).dwell.ok).toBe(true);
+    // 중간에 한 스텝이라도 끊겨 연속 체류가 유지 시간보다 짧으면 '머물러도 정화되지 않음'의 근거가 아니다(BUNDLE-11 리뷰 P3).
     const bump = mut(s.rows, rows => { const d = rows.findIndex((r: any) => r.mk === 'dwell-end'); rows[d - 40].x = room(3).x + 3.4; });
-    expect(K.analyzeOrder(bump, DEF, { rooms: ROOMS }).dwell.ok).toBe(true);
+    const o2 = K.analyzeOrder(bump, DEF, { rooms: ROOMS });
+    expect(o2.dwell.insideSeconds).toBeLessThan(DEF.holdSeconds - 1 / 60);
+    expect(o2.dwell.ok).toBe(false);
   });
   test('수동 구간에 AUTO 가 켜져 있거나 공격 입력·동작이 있으면 실패한다', () => {
     const s = orderRun();

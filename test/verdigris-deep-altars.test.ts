@@ -164,8 +164,8 @@ test('점등 이동: 정화마다 뿌리 빛이 길 순서와 다른 다음 제�
     const text = i < 3 ? gate.label + ' 정화 · ' + (i + 1) + '/4 · 뿌리 빛이 ' + next.label + '으로 옮겨 갑니다'
       : '포자 정원 제단 정화 · 4/4 · 모든 구역을 정화하면 포자 수로가 열립니다';
     expect(f.messages.filter(m => m === text)).toHaveLength(1);
-    // 부모의 '… 정화 완료 · n/4' 토스트도 함께 나온다(대체하지 않는다).
-    expect(f.messages).toContain(gate.label + ' 정화 완료 · ' + (i + 1) + '/4');
+    // 정화 알림은 점등 이동 토스트 하나뿐이다(부모의 '… 정화 완료 · n/4' 는 순서를 숨기는 정의에서 나오지 않는다).
+    expect(f.messages.filter(m => m.startsWith(gate.label + ' 정화'))).toEqual([text]);
     expect(f.messages.filter(m => m.includes('옮겨 갑니다'))).toHaveLength(i < 3 ? 1 : 0);
   }
   expect(lits).toEqual(ALTAR_ORDER); expect(moves).toEqual([1, 2, 3, 3]);

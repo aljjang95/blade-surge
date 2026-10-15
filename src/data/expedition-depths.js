@@ -60,7 +60,7 @@ const VERDIGRIS_ELITES = 2;
 const VERDIGRIS_REINFORCEMENTS = 2;
 const VERDIGRIS_COUNT = VERDIGRIS_ALTARS.gates.length;
 const VERDIGRIS_OBJECTIVE = `${VERDIGRIS_ALTARS.noun} ${VERDIGRIS_COUNT}곳을 뿌리 빛이 옮겨 가는 순서대로 ${VERDIGRIS_ALTARS.verb}하고 정예방 ${VERDIGRIS_ELITES}곳의 증원 각 ${VERDIGRIS_REINFORCEMENTS}회 격파 → 모든 구역 정화 → 포자 수로 돌파 → 녹청 수호자 처치`;
-const VERDIGRIS_TACTIC = `각 제단 구역의 적을 처치한 뒤(정예방은 증원 ${VERDIGRIS_REINFORCEMENTS}회까지) 지금 뿌리 빛이 켜진 제단 중심에서 연속 ${VERDIGRIS_ALTARS.holdSeconds}초간 ${VERDIGRIS_ALTARS.verb}하세요. 제단 번호는 보이지 않고, ${VERDIGRIS_ALTARS.verb}할 때마다 뿌리 빛이 길 순서와 다른 다음 제단으로 옮겨 갑니다. ${VERDIGRIS_ALTARS.verb}됐지만 빛이 꺼진 제단 중심에 ${VERDIGRIS_ALTARS.wrongStep.seconds}초 머물면 포자가 터져 피해를 받습니다. ${VERDIGRIS_ALTARS.noun} ${VERDIGRIS_COUNT}곳과 모든 구역을 ${VERDIGRIS_ALTARS.verb}하면 보스방 앞 정예방에 포자 수로가 열립니다. 서쪽 입구에서 제한 시간 안에 포자 물결이 지나간 틈을 타 동쪽 출구로 건너면 보스 봉인이 풀립니다. 물결에 맞으면 피해를 입고, 시간이 다 되면 수로가 범람해 피해를 입은 뒤 시간을 다시 잽니다. `;
+const VERDIGRIS_TACTIC = `각 제단 구역의 적을 처치한 뒤(정예방은 증원 ${VERDIGRIS_REINFORCEMENTS}회까지) 지금 뿌리 빛이 켜진 제단 중심에서 연속 ${VERDIGRIS_ALTARS.holdSeconds}초간 ${VERDIGRIS_ALTARS.verb}하세요. 제단 번호는 보이지 않고, ${VERDIGRIS_ALTARS.verb}할 때마다 뿌리 빛이 길 순서와 다른 다음 제단으로 옮겨 갑니다. 적을 처치했지만 빛이 꺼진 제단 중심에 ${VERDIGRIS_ALTARS.wrongStep.seconds}초 머물면 포자가 터져 피해를 받습니다. ${VERDIGRIS_ALTARS.noun} ${VERDIGRIS_COUNT}곳과 모든 구역을 ${VERDIGRIS_ALTARS.verb}하면 보스방 앞 정예방에 포자 수로가 열립니다. 서쪽 입구에서 제한 시간 안에 포자 물결이 지나간 틈을 타 동쪽 출구로 건너면 보스 봉인이 풀립니다. 물결에 맞으면 피해를 입고, 시간이 다 되면 수로가 범람해 피해를 입은 뒤 시간을 다시 잽니다. `;
 
 // Authored follow-up expeditions. The base material runs keep their original
 // price and rewards; these routes unlock at explicit campaign milestones.
