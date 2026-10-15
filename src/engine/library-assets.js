@@ -1,8 +1,10 @@
 import manifest from '../../asset-library/manifest.json';
 import { LIBRARY_SCHEMA, triangleLimit, validateManifest as validateManifestShape } from '../../tools/asset-library/manifest.mjs';
 import { monsterRosterEntry } from '../data/monster-roster.js';
+import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v1.json';
 
 export { LIBRARY_SCHEMA, triangleLimit };
+export const RANGER_LIBRARY_REVISION_ID = 'ranger-library-v1';
 let bundledFiles = {};
 try {
   bundledFiles = import.meta.glob('../../asset-library/normalized/*.glb', { eager: true, query: '?url', import: 'default' });
@@ -23,9 +25,29 @@ export function resolveLibraryAsset(value, modelName) {
 
 export function resolveAssetSource(asset, root = '') {
   if (!asset?.file) throw new Error('asset file is required');
+  const revised = revisedLibraryFile(asset);
+  if (revised) return root ? root.replace(/\/$/, '') + revised : revised;
   if (!root && bundledFiles[`../../asset-library/normalized/${asset.id}.glb`]) return bundledFiles[`../../asset-library/normalized/${asset.id}.glb`];
   return root ? `${root.replace(/\/$/, '')}/${asset.file.replace(/^\//, '')}` : asset.file;
 }
+
+/**
+ * Blender 로 팔·활 클립을 다시 저작한 궁수 1단계 몸체. 원본 manifest 항목·원본 GLB 는 그대로 두고,
+ * 같은 원본 SHA 에서 생성이 끝난 교정본만 대신 받는다. 2·3단계와 아바타는 이 1단계 클립을 공유한다.
+ * @param {{id?: string, sha256?: string}|null} asset
+ * @returns {string|null}
+ */
+export function revisedLibraryFile(asset, revision = RANGER_LIBRARY_REVISION) {
+  if (!asset || asset.id !== revision.asset || !revision.useInGame) return null;
+  if (revision.id !== RANGER_LIBRARY_REVISION_ID || revision.status !== 'GENERATED' || revision.source?.sha256 !== asset.sha256
+    || !/^[a-f0-9]{64}$/.test(revision.output?.sha256 || '') || !String(revision.output?.path || '').startsWith('/models/heroes-next/ranger-')
+    || !String(revision.output.path).endsWith('.glb')) {
+    throw new Error('Ranger library revision requires the exact generated file for the shipped source');
+  }
+  return revision.output.path;
+}
+
+export const rangerLibraryRevision = () => RANGER_LIBRARY_REVISION;
 
 export function validateLibraryModel(gltf, asset) {
   const names = new Set(gltf.animations.map((clip) => clip.name));
