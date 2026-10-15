@@ -28,7 +28,8 @@ const FOOT_DELAY = .04, FOOT_Y = .03, SPIN_SPEED = 5;
 const FRAME_W = 1.9, FRAME_H = 3.1, FRAME_D = .22, FACE_W = 1.5, FACE_H = 2.7, FACE_D = .08;
 const GLASS_Y = FRAME_H + .8;                       // 모래시계 중심 높이(두 원뿔의 뾰족한 끝이 만나는 곳)
 const CONE_RADIUS = .42, CONE_HEIGHT = .62;
-const FRAME_COLOR = 0xc9a25e, SAND_COLOR = 0xd9b779;
+// 발자국은 탈출 단서라 보라 바닥 위에서 읽혀야 한다. smoke-screens-1 844x390 에서 반지름 .2 는 몇 픽셀이라 보이지 않았다.
+const FRAME_COLOR = 0xc9a25e, SAND_COLOR = 0xf4dc9c, FOOT_RADIUS = .42;
 // 단계 코드(캐시 비교용 정수). mirrorState 의 문자열과 대응한다.
 const HIDDEN = 0, RUNNING = 1, DONE = 2;
 const FRAME_STATES = Object.freeze([['hidden', 'real', 'shattered'], ['hidden', 'illusion', 'shattered']]);
@@ -87,7 +88,7 @@ export class MirrorMazeView {
     const frame = new THREE.BoxGeometry(FRAME_W, FRAME_H, FRAME_D); frame.translate(0, FRAME_H / 2, 0);
     const face = new THREE.BoxGeometry(FACE_W, FACE_H, FACE_D); face.translate(0, FRAME_H / 2, FRAME_D / 2 + FACE_D / 2 - .02);
     const cone = new THREE.ConeGeometry(CONE_RADIUS, CONE_HEIGHT, 12); cone.translate(0, -CONE_HEIGHT / 2, 0);
-    const foot = new THREE.CircleGeometry(.2, 10); foot.rotateX(-Math.PI / 2); foot.scale(.7, 1, 1.35);
+    const foot = new THREE.CircleGeometry(FOOT_RADIUS, 10); foot.rotateX(-Math.PI / 2); foot.scale(.7, 1, 1.35);
     /** @type {import('three').BufferGeometry[]} */ this.geometries = [frame, face, cone, foot];
     this.frameMat = new THREE.MeshStandardMaterial({ color: FRAME_COLOR, roughness: .4, metalness: .7 });
     this.faceMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
