@@ -504,7 +504,7 @@ test('10. finish: 패배는 완료가 아니고, 결과는 처음 만든 동결 
   for (let t = 0; t < 10; t += DT) f.route.update(f.g, DT);
   expect(f.route.collapseFailures).toBe(1);
   const report = f.route.finish(false);
-  expect(report).toEqual({ id: 'comet_deep_orbits', label: '궤도 고리 연결', complete: false, progress: 1, target: 5, rooms: [1], collapseFailures: 1, stormHits: 0 });
+  expect(report).toEqual({ id: 'comet_deep_orbits', label: '궤도 고리 연결', complete: false, progress: 1, target: 5, rooms: [1], collapseFailures: 1, stormHits: 0, bossMeteors: 0, bossCenterMeteors: 0, bossMeteorHits: 0 });
   expect(Object.isFrozen(report)).toBe(true); expect(Object.isFrozen(report.rooms)).toBe(true);
   expect(f.route.finish(true)).toBe(report);   // 나중에 이겼다고 해도 처음 결과를 동결해 돌려준다
   expect(f.route.finish(false)).toBe(report);

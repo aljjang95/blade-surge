@@ -206,7 +206,7 @@ export const ENEMIES = {
   comet_bastion: { name: '혜성의 유성 기사단장', model: 'Big_ArchiveMonarch', hp: 28200, atk: 88, spd: 3.1, range: 3.8, atkTime: 1.8, exp: 420, scale: 2.6, boss: true, armor: 0.33, gold: 88, kit: 'lich', summon: 'comet_spark', portrait: ENCOUNTER_ART.boss_comet_bastion, signatureBoss: true,
     phasePatterns: [['oath_tethers','archive_retrace','oath_shelter','slam'], ['oath_shelter','oath_tethers','summon','archive_retrace'], ['oath_tethers','oath_shelter','dash']],
     phaseHints: ['궤도선과 연결된 선 옆으로 이동하세요.', '빈 쉼터가 옮겨 가면 다음 고리로 빠지세요.', '마지막 혜성 파편이 닫힐 때 반격하세요.'],
-    tactic: '푸른 궤도선 안쪽은 안전합니다. 유성 경고가 겹치면 중앙을 버리고 고리 바깥을 도세요.', projColor: 0x82bfff },
+    tactic: '끊어진 명령의 연결선 예고 옆으로 비켜서고, 함께 잇는 귀환의 빈 쉼터 원을 따라 다음 쉼터로 옮기며, 되감는 기록의 지나온 자리로는 돌아가지 마세요.', projColor: 0x82bfff },
   glass_hour_sovereign: { name: '시계유리의 주권자', model: 'Skeleton_BellKing', hp: 14500, atk: 62, spd: 3.8, range: 3.2, atkTime: 1.65, exp: 240, scale: 2.25, boss: true, armor: 0.23, gold: 48, kit: 'warlord', summon: 'bell_wisp', portrait: RIFT_ART.glass_hour_sovereign, signatureBoss: true,
     phasePatterns: [['bell_toll','slam','bell_clap','spin'], ['bell_clap','summon','bell_toll','slam'], ['bell_toll','bell_clap','spin']],
     phaseHints: ['세 종의 빛이 켜지는 순서를 읽으세요.', '양옆 종 뒤 중앙의 공명을 피하세요.', '마지막 울림 뒤에만 긴 반격 창이 열립니다.'],

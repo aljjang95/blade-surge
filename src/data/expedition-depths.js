@@ -6,6 +6,10 @@ const BELLFALL_COUNTER = ROUTE_OBJECTIVES.bellfall_deep.counter;
 const BELLFALL_VEIL_PERCENT = Math.round((1 - BELLFALL_COUNTER.veil) * 100);
 const BELLFALL_OPEN_TIMES = Math.round(BELLFALL_COUNTER.open * 10) / 10;
 
+// 혜성 기사단장 보스방 푸른 궤도선 문구의 숫자는 규칙 정의(ROUTE_OBJECTIVES.comet_deep.boss)에서 계산한다.
+const COMET_BOSS_ORBIT = ROUTE_OBJECTIVES.comet_deep.boss;
+const COMET_BOSS_COPY = `보스방에는 푸른 궤도선이 그려집니다. 기사단장이 공격하지 않는 틈에 ${COMET_BOSS_ORBIT.warning}초 유성 예고가 뜨고, 평소 유성은 푸른 선 바깥에 떨어지니 선 안쪽이 안전합니다. ${['첫', '두', '세', '네', '다섯'][COMET_BOSS_ORBIT.centerEvery - 1]} 번째마다 중심 유성이 선 안쪽을 덮으면 중앙을 버리고 푸른 선 바깥으로 피하세요(맞으면 최대 체력 ${Math.round(COMET_BOSS_ORBIT.damage * 100)}%). 유성 예고 동안 기사단장은 새 공격을 시작하지 않습니다.`;
+
 // Authored follow-up expeditions. The base material runs keep their original
 // price and rewards; these routes unlock at explicit campaign milestones.
 export const EXPEDITION_DEPTHS = [
@@ -171,7 +175,7 @@ export const EXPEDITION_DEPTHS = [
     energy: 8, chapter: 6, stage: 7, scale: 24, bossEnemy: 'comet_bastion', bossHp: 36400,
     description: '혜성 요새의 무너진 궤도 고리 사이로 기사단장의 맹세가 울려 퍼집니다.',
     objective: '궤도 고리 5곳 정렬·쉼터 연결 → 정예방 2곳의 증원 각 2회 격파 → 모든 구역 정화 → 혜성 기사단장 처치', bossName: '궤도 붕괴를 부르는 혜성 기사단장', art: '/img/encounters/boss_comet_bastion.webp',
-    tactic: `각 고리 구역의 적을 처치한 뒤 궤도 위 룬석을 몸으로 밀면 궤도 붕괴 9초가 시작됩니다. 붕괴 전에 룬석을 별 표식에 맞추고 중심 쉼터에 0.5초 머물러 연결하세요. 연결하면 유성 폭풍이 세 번 떨어집니다. 붉은 원 안에서는 청록 빈 원만 안전하니 빈 원을 따라 이동하세요. 시간 안에 연결하지 못하면 그 고리만 처음 위치로 돌아갑니다. 1번·2번·3번·4번·5번 고리는 어느 순서로 연결해도 되며, 정예방마다 2회 증원이 이어집니다. ${ENEMIES.comet_bastion.tactic}`,
+    tactic: `각 고리 구역의 적을 처치한 뒤 궤도 위 룬석을 몸으로 밀면 궤도 붕괴 9초가 시작됩니다. 붕괴 전에 룬석을 별 표식에 맞추고 중심 쉼터에 0.5초 머물러 연결하세요. 연결하면 유성 폭풍이 세 번 떨어집니다. 붉은 원 안에서는 청록 빈 원만 안전하니 빈 원을 따라 이동하세요. 시간 안에 연결하지 못하면 그 고리만 처음 위치로 돌아갑니다. 1번·2번·3번·4번·5번 고리는 어느 순서로 연결해도 되며, 정예방마다 2회 증원이 이어집니다. ${COMET_BOSS_COPY} ${ENEMIES.comet_bastion.tactic}`,
     layout: { spacing: [29, 32], size: [20, 24], width: 7,
       cells: [[0,0],[1,0],[1,1],[2,1],[2,0],[3,0],[4,0],[4,-1],[5,-1]],
       edges: [[0,1],[1,2],[1,3],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]],
