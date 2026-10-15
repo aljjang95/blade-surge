@@ -231,7 +231,6 @@ class App {
       touch: window.matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints > 0 });
     this.renderer.setQuality(q); this.fx.setQuality(q);
     this.renderer.setCameraPreset(st.camera || 'auto');
-    this.renderer.shakeEnabled = this.screenShakeOn();
     this.renderer.postFxEnabled = !this.reducedMotion?.matches;
     this.lobbyCameraControls?.sync();
     this.companionAgent?.syncQuality();

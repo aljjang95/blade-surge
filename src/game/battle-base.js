@@ -643,7 +643,7 @@ export class Battle {
     const color = opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
     const contact = this.paused ? null : contactProfile(opts, crit, e.isBoss, this.app?.reducedMotion?.matches, p.def?.weapon);
     if (contact) e.receiveImpact?.(dirx, dirz, contactFeedback({ finisher: opts.finisher, crit, boss: e.isBoss, elite: e.isElite, reduced: !!this.app?.reducedMotion?.matches }).recoil);
-    if (opts.basic && p === this.player && !p.auto) { this.impactTarget = e; this.impactT = .16; }
+    // 수동 평타가 맞을 때마다 카메라 구도를 대상 쪽으로 당기지 않는다(사용자 시점 유지).
     const budget = contactBudget(this._contactBudget, this.elapsed, contact);
     if (budget) {
       this._contactBudget = budget; this._contactAt = budget.at;
@@ -651,7 +651,6 @@ export class Battle {
       if (budget.emit && contact.particles) this.fx.directional(hitPos, _v.set(dirx, 0, dirz).normalize(), color, { n: contact.particles, speed: contact.heavy ? 9 : 6 });
       audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy || crit || !!e.isBoss, finisher: !!opts.finisher, boss: !!e.isBoss });
       if (contact.stop) this.timeCtl.hitstop(contact.stop);
-      if (contact.tier !== 'light' || crit) { this.renderer?.shake?.(contact.tier === 'finisher' ? 0.5 : 0.2, dirx, dirz); this.renderer?.punch?.(contact.tier === 'finisher' ? 0.5 : 0.18); }
       if (p === this.player && !p.auto && contact.haptic) audio.vibe(contact.haptic);
       if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);
     }
