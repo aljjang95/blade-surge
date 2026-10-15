@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { launchOpts } from './chrome.mjs';
 import { installConquestMediaObserver } from './conquest-media-observer.mjs';
-import { assessMediaObservations, createMediaCheckpoints, failuresAwaitingObservation } from './qa-media-checkpoints.mjs';
+import { assessMediaObservations, bindMediaRequestIssues, createMediaCheckpoints, failuresAwaitingObservation } from './qa-media-checkpoints.mjs';
 
 export const qaArgument = name => process.argv.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 export const qaHash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -23,7 +23,7 @@ export async function createExpeditionQa({ root, driver, report, sourceFiles }) 
   await fs.mkdir(out); // Exclusive creation: do not modify any prior evidence.
   const git = args => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
   Object.assign(report, { started: new Date().toISOString(), head: git(['rev-parse', 'HEAD']), expectedSha: expected,
-    status: 'running', releaseApproved: false, errors: [], httpErrors: [], requestFailures: [], media: [], mediaCheckpointDiagnostics: [], documents: [], sources: {} });
+    status: 'running', releaseApproved: false, errors: [], httpErrors: [], requestFailures: [], mediaRequestIssues: [], media: [], mediaCheckpointDiagnostics: [], documents: [], sources: {} });
   for (const file of sourceFiles) report.sources[file] = qaHash(await fs.readFile(path.join(root, file)));
   await fs.writeFile(path.join(out, 'driver.mjs'), await fs.readFile(driver), { flag: 'wx' });
   await fs.writeFile(path.join(out, 'runtime.mjs'), await fs.readFile(import.meta.filename), { flag: 'wx' });
@@ -73,6 +73,20 @@ export async function createExpeditionQa({ root, driver, report, sourceFiles }) 
     report.contextInitiallyEmpty = true;
     page = await context.newPage(); page.setDefaultTimeout(30000);
     await page.addInitScript(installConquestMediaObserver);
+    // 미디어 요청의 렌더러 발행 시각(CDP requestWillBeSent). 요청 시작 증거로만 쓰고(bindMediaRequestIssues) 판정 규칙은 바꾸지 않는다.
+    const cdp = await context.newCDPSession(page), issues = new Map();
+    cdp.on('Network.requestWillBeSent', event => {
+      if (event.type !== 'Media') return;
+      const known = issues.get(event.requestId);
+      if (known) { known.redirected = true; return; }
+      const row = { documentId, requestId: event.requestId, url: event.request.url, wallTime: event.wallTime, timestamp: event.timestamp, failed: false, redirected: false };
+      issues.set(event.requestId, row); report.mediaRequestIssues.push(row);
+    });
+    cdp.on('Network.loadingFailed', event => {
+      const row = issues.get(event.requestId);
+      if (row) Object.assign(row, { failed: true, failedTimestamp: event.timestamp, errorText: event.errorText, canceled: !!event.canceled });
+    });
+    await cdp.send('Network.enable');
     on('pageerror', error => report.errors.push(String(error)));
     on('console', message => { if (message.type() === 'error') report.errors.push(message.text()); });
     checkpoints = createMediaCheckpoints(page, report.media, report.mediaCheckpointDiagnostics, report.documents);
@@ -130,6 +144,7 @@ export async function createExpeditionQa({ root, driver, report, sourceFiles }) 
     await save();
   }
   function mediaGates() {
+    bindMediaRequestIssues(report.requestFailures, report.mediaRequestIssues);
     const assessment = assessMediaObservations(report);
     report.mediaCancellations = assessment.mediaCancellations;
     // Empty, incomplete, erroneous or ambiguous native evidence cannot pass,
