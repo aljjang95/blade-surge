@@ -518,10 +518,19 @@ async function beginRun(tag) {
   if (routeDef) check(tag + ': 정예방 증원 횟수 = 대상 프로젝트 mechanics.reinforcements', row.reinforcements === (dungeonDef.mechanics?.reinforcements ?? 0), { page: row.reinforcements, project: dungeonDef.mechanics?.reinforcements ?? null });
   await qa.save(); return row;
 }
-async function takeChoice(row) {
+async function takeChoice(row, last = null) {
   const buttons = page.locator('#masterworks[open] .mw-choices button:not([disabled]), #masterworks[open] .mw-story-choices button:not([disabled])');
+  const snap = () => page.evaluate(() => ({ reasons: [...window.app.battle.pauseReasons], paused: window.app.battle.paused, active: window.app.battle.active,
+    elapsed: window.app.battle.elapsed, open: [...document.querySelectorAll('dialog[open]')].map(d => d.id),
+    count: document.querySelectorAll('#masterworks[open] .mw-choices button:not([disabled]), #masterworks[open] .mw-story-choices button:not([disabled])').length }));
+  const before = await snap(); const waitStart = Date.now();
   try { await buttons.first().waitFor({ state: 'visible', timeout: 10000 }); }
-  catch { throw Error('Battle paused without a visible native choice: ' + JSON.stringify(await page.evaluate(() => [...window.app.battle.pauseReasons]))); }
+  catch {
+    // 진단: 정지가 걸린 스텝의 정지 사유와 지금 열린 dialog 를 함께 남긴다(smoke-std-auto-1: 확인 시점엔 사유가 비어 있었다).
+    const now = await page.evaluate(() => ({ reasons: [...window.app.battle.pauseReasons], paused: window.app.battle.paused,
+      dialogs: [...document.querySelectorAll('dialog[open]')].map(d => ({ id: d.id || d.className, offer: d.dataset.offer ?? null, view: d.dataset.view ?? null, text: (d.innerText || '').slice(0, 400), buttons: [...d.querySelectorAll('button')].slice(0, 12).map(b => ({ cls: b.className, dis: b.disabled, vis: !!(b.offsetWidth || b.offsetHeight), text: (b.innerText || '').slice(0, 30) })) })) }));
+    throw Error('Battle paused without a visible native choice: ' + JSON.stringify({ atPause: last?.pauseReasons ?? null, elapsed: last?.elapsed ?? null, before, waitedMs: Date.now() - waitStart, now }));
+  }
   row.choices.push({ text: await buttons.first().innerText(), elapsed: await page.evaluate(() => window.app.battle.elapsed) });
   await buttons.first().click();
 }
@@ -533,7 +542,7 @@ async function advance(row, stop, { max = 60 * 60 * 12, chunk = 600, renderEvery
     last = await page.evaluate(opts => window.__furnaceQa.run(opts), { n: Math.min(chunk, max - total), stop, renderEvery });
     total += last.ran;
     if (last.reason === 'stop' || last.reason === 'inactive') return { ...last, total };
-    if (last.reason === 'paused') { await takeChoice(row); if (keyboardMode) await nativeGameplayFocus(page); continue; }
+    if (last.reason === 'paused') { await takeChoice(row, last); if (keyboardMode) await nativeGameplayFocus(page); continue; }
     if (total % (chunk * 10) === 0) { await qa.save(); console.log(JSON.stringify({ tag: row.tag, elapsed: ms(last.elapsed), total })); }
   }
   throw Error('Bounded fixed steps exhausted: ' + JSON.stringify(last));
@@ -621,7 +630,7 @@ async function walkTo(row, target, stop, { maxSteps = 60 * 40 } = {}) {
       if (trail.length < 300 && (total / 4) % 15 === 0) trail.push({ steps: total, t: ms(r.elapsed), dist: +aim.dist.toFixed(2), left: aim.left });
       if (r.reason === 'stop') return { steps: total, trail };
       if (r.reason === 'inactive') throw Error('Battle ended while walking by keyboard (hero down?): ' + JSON.stringify(trail.slice(-6)));
-      if (r.reason === 'paused') { await setKeys(new Set()); await takeChoice(row); await nativeGameplayFocus(page); }
+      if (r.reason === 'paused') { await setKeys(new Set()); await takeChoice(row, r); await nativeGameplayFocus(page); }
     }
     throw Error('Keyboard walking did not reach its stop within ' + maxSteps + ' steps: ' + JSON.stringify(trail.slice(-6)));
   } finally { await setKeys(new Set()); }
