@@ -164,7 +164,9 @@ test('재벼림 제련소 일반: 과열 용광로 4곳을 순서대로 식혀�
   expect(f.route.def.id).toBe('ashforge_furnaces_standard');
   expect(f.route.gates.map((g: any) => g.room.id)).toEqual([1, 2, 3, 5]);
   for (const gate of f.route.gates) expect(['normal', 'elite']).toContain(gate.room.type);
-  expect(createRouteObjectives(buildExpeditionStage('dungeon', 'ashforge_catacomb', null, { depth: 'deep' }), buildExpeditionWorld(buildExpeditionStage('dungeon', 'ashforge_catacomb', null, { depth: 'deep' })))).toBeNull();
+  // 심층은 심장로 4곳 정의(BUNDLE-08)를 받는다. 일반판 정의와 섞이지 않는다.
+  const deepStage = buildExpeditionStage('dungeon', 'ashforge_catacomb', null, { depth: 'deep' });
+  expect((createRouteObjectives(deepStage, buildExpeditionWorld(deepStage)) as CoolingValves).def.id).toBe('ashforge_heart_furnaces_deep');
 
   // 3번 용광로를 먼저 정리해도 1번 전에는 식힐 수 없다.
   const third = open(f, 3);
@@ -198,4 +200,3 @@ test('재벼림 제련소 일반: 과열 용광로 4곳을 순서대로 식혀�
   expect(f.route.hint()).toBe('용광로 4/4 냉각 · 보스 처치');
   expect(f.route.finish(false)).toMatchObject({ id: 'ashforge_furnaces_standard', complete: false, progress: 4, target: 4, overheatHits: 1 });
 });
-
