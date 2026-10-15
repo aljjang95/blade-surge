@@ -384,7 +384,10 @@ function installProbe(cfg) {
     while (P.wp.length > 1 && Math.hypot(P.wp[0].x - p.x, P.wp[0].z - p.z) < 1.5) P.wp.shift();
     const wp = P.wp[0], fin = P.wp.at(-1);
     cam.updateMatrixWorld();
-    const a = p.clone().project(cam), z = p.clone().set(wp.x, p.y, wp.z).project(cam);
+    // 먼 경유점을 그대로 투영하면 카메라 뒤·시야 밖에서 부호가 뒤집힌다(smoke-order-1: 방 5 아래 구석에 갇힘).
+    // 경유점 방향으로 영웅 앞 2 유닛 점만 투영해 화면 방향을 얻는다.
+    const ex = wp.x - p.x, ez = wp.z - p.z, el = Math.hypot(ex, ez) || 1;
+    const a = p.clone().project(cam), z = p.clone().set(p.x + ex / el * 2, p.y, p.z + ez / el * 2).project(cam);
     return { dx: (z.x - a.x) * innerWidth / 2, dy: -(z.y - a.y) * innerHeight / 2, left: P.wp.length, final: fin, dist: Math.hypot(fin.x - p.x, fin.z - p.z) };
   };
   // 느린 스텝 목록은 자르지 않는다(기준선 비교가 개수를 정확히 세야 한다).
