@@ -104,8 +104,9 @@ async function openPage(context) {
 const settle = async page => { await frames(page); await frames(page); };
 const emptyPoint = async (page, region) => { await settle(page); return page.evaluate(({ x0, x1, y0, y1, clear }) => {
   // hit test와 함께 보이는 상호작용 요소의 사각형에서도 떨어진 점만 쓴다(표시 직전 패널·터치 보정 대비).
+  // world 표면 자체(#gl 캔버스는 tabIndex=0, #tab-home)는 상호작용 요소에서 뺀다.
   const rects = [...document.querySelectorAll('button, a[href], input, select, textarea, summary, [role="button"], [tabindex]:not([tabindex="-1"])')]
-    .map(el => el.getBoundingClientRect()).filter(r => r.width > 2 && r.height > 2);
+    .filter(el => el.id !== 'gl' && el.id !== 'tab-home').map(el => el.getBoundingClientRect()).filter(r => r.width > 2 && r.height > 2);
   const nearUi = (px, py) => rects.some(r => px > r.left - clear && px < r.right + clear && py > r.top - clear && py < r.bottom + clear);
   const world = (px, py) => { const el = document.elementFromPoint(px, py); return !!el && (el.id === 'gl' || el.id === 'tab-home'); };
   for (let y = y0; y <= y1; y += .04) for (let x = x0; x <= x1; x += .04) {
@@ -238,7 +239,8 @@ try {
     await shot('town-walk-after-rotate');
     const back = page.getByRole('button', { name: '출격 메뉴로' });
     if (await back.isVisible()) { await back.tap(); await page.waitForFunction(() => !window.app.canWalkHub?.(), null, { timeout: 30000 }); }
-    return r;
+    // 안쪽 검사가 실행되지 않았으면 이 단계도 PASS가 아니다.
+    return r.rotate?.notRun || r.tap?.notRun ? { ...r, notRun: true, reason: 'inner town-walk check not run' } : r;
   });
   await step('lobby scroll panel still scrolls by touch', async () => {
     const info = await page.evaluate(() => {
