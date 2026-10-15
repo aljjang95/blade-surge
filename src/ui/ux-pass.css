@@ -320,3 +320,11 @@
 #tab-stage .exp-shell p, #tab-stage .exp-refining b { font-size: max(12px, 1em); }
 
 /* 짧은 가로 화면에서도 접힌 출격 패널은 하단 바와 핵심 출격만 남긴다. */
+
+/* 640x360 같은 좁고 짧은 가로 화면: 영웅 이름과 전투력이 출격 행동에 밀려 잘리지 않게 한다.
+   출격 준비 버튼은 출전 중인 영웅에게만 나오므로 '출전 중' 표시는 접고, 보조 줄은 두 줄까지 허용한다. */
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 760px) {
+  .hs-on { display: none; }
+  .hs-id h2 { font-size: 18px !important; }
+  .hs-id .sub { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3; }
+}
