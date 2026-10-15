@@ -64,17 +64,19 @@ function sporeAltarsView(route) {
   return step('포자 수로 돌파', `포자 물결이 지나간 뒤 동쪽 출구로 · ${Math.ceil(count(channel.left))}초`, { ...values, roomId });
 }
 
-/** 성운 첨탑 심층 외곽 고리(BUNDLE-12). 성좌 4/4 뒤에만 부른다. 고리가 끝나면 null(기존 보스 흐름). */
-function astralDeepRingView(route) {
+/** 성운 첨탑 외곽 고리(심층 BUNDLE-12 '외곽 고리 정화', 일반 BUNDLE-13 '외곽 고리 이탈'). 별자리 4/4 뒤에만 부른다.
+ * 제목·행동 문구는 정의의 문구 필드(title·label·shard)로 만든다(BUNDLE-13 PLAN 3.1). 고리가 끝나면 null(기존 보스 흐름). */
+function astralRingView(route) {
   const ring = route.ring, def = route.def.ring, total = route.gates.length, progress = count(route.progress);
   if (!ring || ring.phase === 'idle') return step('별자리 복원', '남은 구역 정화', { progress, total });
   if (ring.phase !== 'open' && ring.phase !== 'running') return null;
+  const title = def.title ?? '외곽 고리 정화', shard = def.shard ?? '파편';
   const room = ring.room, roomId = room && typeof room === 'object' ? room.discovered === false ? null : room.id ?? def.roomId ?? null
     : Number.isFinite(room) ? room : def.roomId ?? null;
-  if (ring.phase === 'open') return step('외곽 고리 정화', '성좌 외곽 고리로 이동', { progress: count(ring.purified), total: ring.marks.length, roomId });
+  if (ring.phase === 'open') return step(title, `${def.label ?? '성좌 외곽 고리'}로 이동`, { progress: count(ring.purified), total: ring.marks.length, roomId });
   // 남은 시간은 올림이라 시계가 남아 있으면 0초를 보이지 않는다. 유지량은 지금 유지 중인 성표의 값이다.
   const held = ring.held >= 0 ? ring.marks[ring.held] : null;
-  return step('외곽 고리 정화', `파편이 모이면 중심 밖으로 · ${Math.ceil(count(ring.left))}초`, { progress: count(ring.purified), total: ring.marks.length,
+  return step(title, `${shard}이 모이면 중심 밖으로 · ${Math.ceil(count(ring.left))}초`, { progress: count(ring.purified), total: ring.marks.length,
     hold: held ? seconds(held.hold) : 0, holdTotal: count(def.holdSeconds), roomId });
 }
 
@@ -101,9 +103,10 @@ function mainObjectiveView(battle) {
       if (spore) return spore;
     }
     if (route.def?.kind === 'reverse-bells' && route.phase !== 'done') return reverseBellsView(route);
-    if (route.def?.kind === 'deep-constellations' && route.complete) {
-      const deep = astralDeepRingView(route);
-      if (deep) return deep;
+    // 일반 성운(constellations)은 정의에 ring 이 있는 경우에만(BUNDLE-13) 고리 단계를 보인다.
+    if ((route.def?.kind === 'deep-constellations' || (route.def?.kind === 'constellations' && route.ring && route.def.ring)) && route.complete) {
+      const ringStep = astralRingView(route);
+      if (ringStep) return ringStep;
     }
     if (route.def?.kind === 'reverse-bells') {
       const veil = counterView(route);
