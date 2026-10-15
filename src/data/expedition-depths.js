@@ -10,6 +10,17 @@ const BELLFALL_OPEN_TIMES = Math.round(BELLFALL_COUNTER.open * 10) / 10;
 const COMET_BOSS_ORBIT = ROUTE_OBJECTIVES.comet_deep.boss;
 const COMET_BOSS_COPY = `보스방에는 푸른 궤도선이 그려집니다. 기사단장이 공격하지 않는 틈에 ${COMET_BOSS_ORBIT.warning}초 유성 예고가 뜨고, 평소 유성은 푸른 선 바깥에 떨어지니 선 안쪽이 안전합니다. ${['첫', '두', '세', '네', '다섯'][COMET_BOSS_ORBIT.centerEvery - 1]} 번째마다 중심 유성이 선 안쪽을 덮으면 중앙을 버리고 푸른 선 바깥으로 피하세요(맞으면 최대 체력 ${Math.round(COMET_BOSS_ORBIT.damage * 100)}%). 유성 예고 동안 기사단장은 새 공격을 시작하지 않습니다.`;
 
+// 일식 수문 심층 역류 밸브 문구의 숫자·번호 순서는 규칙 정의(ROUTE_OBJECTIVES.eclipse_deep)에서 계산한다(BUNDLE-07).
+// 정예방 수·증원 횟수는 아래 eclipse_hydra_vault 의 레이아웃·mechanics 와 같은 값이며 계약 테스트가 일치를 검사한다.
+const ECLIPSE_VALVES = ROUTE_OBJECTIVES.eclipse_deep;
+const ECLIPSE_ELITES = 2;
+const ECLIPSE_REINFORCEMENTS = 2;
+const ECLIPSE_LAST = ECLIPSE_VALVES.gates.length;
+const ECLIPSE_STEPS = ECLIPSE_VALVES.gates.map((_, i) => `${i + 1}번`).join(' → ');
+const ECLIPSE_OBJECTIVE = `${ECLIPSE_VALVES.noun} ${ECLIPSE_LAST}곳을 순서대로 ${ECLIPSE_VALVES.verb}하고 정예방 ${ECLIPSE_ELITES}곳의 증원 각 ${ECLIPSE_REINFORCEMENTS}회 격파 → 모든 구역 정화 → 흑요의 삼두룡 처치`;
+// 길은 한 줄이라 마지막 번호의 밸브(방 5)는 바로 앞 번호의 밸브(방 7)로 가는 길에 먼저 지나친다.
+const ECLIPSE_TACTIC = `각 밸브 구역의 적을 처치한 뒤(정예방은 증원 ${ECLIPSE_REINFORCEMENTS}회까지) ${ECLIPSE_STEPS} 순서로 청록 빛 안에서 각각 연속 ${ECLIPSE_VALVES.holdSeconds}초간 밸브를 ${ECLIPSE_VALVES.verb}하세요. ${ECLIPSE_LAST}번 밸브는 ${ECLIPSE_LAST - 1}번으로 가는 길에 먼저 지나치니 차례를 기다렸다가, ${ECLIPSE_LAST - 1}번을 ${ECLIPSE_VALVES.verb}한 뒤 지나온 물길로 되돌아가 ${ECLIPSE_VALVES.verb}하세요. 밸브 ${ECLIPSE_LAST}곳과 모든 구역을 정화하면 보스 봉인이 풀립니다. ${ENEMIES.obsidian_hydra.tactic}`;
+
 // Authored follow-up expeditions. The base material runs keep their original
 // price and rewards; these routes unlock at explicit campaign milestones.
 export const EXPEDITION_DEPTHS = [
@@ -104,8 +115,8 @@ export const EXPEDITION_DEPTHS = [
     id: 'eclipse_hydra_vault', depth: 'deep', name: '일식 수문 · 세 머리의 맹세', unlockCode: '4-10', minLevel: 4,
     energy: 7, chapter: 4, stage: 5, scale: 14, bossEnemy: 'obsidian_hydra', bossHp: 25800,
     description: '일식에 잠긴 검은 수문에서 세 머리의 맹세와 역류의 메아리가 울려 퍼집니다.',
-    objective: '정예방 2곳의 증원 각 2회 격파 → 모든 구역 정화 → 흑요의 삼두룡 처치', bossName: '일식에 잠긴 흑요 삼두룡', art: '/img/encounters/boss_obsidian_hydra.webp',
-    tactic: `각 정예방에서 적과 2회 증원을 격파하고 모든 구역을 정화하세요. ${ENEMIES.obsidian_hydra.tactic}`,
+    objective: ECLIPSE_OBJECTIVE, bossName: '일식에 잠긴 흑요 삼두룡', art: '/img/encounters/boss_obsidian_hydra.webp',
+    tactic: ECLIPSE_TACTIC,
     layout: { spacing: [31, 29], size: [22, 20], width: 8,
       cells: [[0,0],[1,0],[1,-1],[2,-1],[2,0],[3,0],[3,1],[4,1],[5,1]],
       edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]],
