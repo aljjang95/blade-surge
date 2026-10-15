@@ -121,7 +121,7 @@ test('2. 개인 기본 원정의 심층만 BellfallDeepBells 를 고르고 일�
   // 다른 심층 원정의 선택은 바뀌지 않는다.
   expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'nightglass_observatory', null, { depth: 'deep' }))?.id).toBe('nightglass_records_deep');
   expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'sable_mirage_basin', null, { depth: 'deep' }))?.id).toBe('sable_mirror_thrones_deep');
-  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'verdigris_sanctum', null, { depth: 'deep' }))).toBeNull();
+  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'verdigris_sanctum', null, { depth: 'deep' }))?.id).toBe('verdigris_root_heart_deep');
 });
 
 test('3. 생성자는 소등 순서가 종문 방의 순열이 아니면 RangeError, 시작·보스방과 지도 없는 월드도 거부한다', () => {
