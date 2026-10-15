@@ -239,6 +239,8 @@ test('회피 중 예약한 반격은 방향 입력을 놓거나 바꾸어도 누
     const f = fixture(hero), p: any = f.player, dt = 1 / fps;
     p.dodge(new THREE.Vector3(1, 0, 0)); advanceUntil(f, () => p.stateT >= .24, dt);
     f.game.input.move.x = -1; f.game.input.press('attack'); p.handleInput(f.game.input, dt);
+    // 수동 궁수는 회피 0.16초 뒤 입력을 바로 사격으로 잇는다(회피 중 사격). 방향은 누른 순간의 입력이다.
+    if (hero === 'ranger') { expect(p.state).toBe('attack'); expect(p.yaw).toBeCloseTo(-Math.PI / 2); expect(p.attackBufferYaw).toBeNull(); continue; }
     expect(p.yaw).toBeCloseTo(Math.PI / 2);
     f.game.input.move.x = 0; f.game.input.move.y = 1;
     advanceUntil(f, () => p.state === 'attack', dt);

@@ -1,11 +1,11 @@
 /**
  * 수동 궁수 기본 공격의 조준 보조. 이동 입력과 조준을 분리한다.
  *  · 대상: 살아 있고 등장·잠복 중이 아니며(spawning) 사거리(화살 도달 거리 + 몸 반경) 안에 있고 벽에 가리지 않은 적.
- *  · 기존 조준 대상이 여전히 유효하면 유지한다(이력 여유 15%). 아니면 가장 가까운 대상, 동률은 적 목록 순서.
+ *  · 기존 조준 대상이 같은 사거리 안에서 여전히 유효하면 더 가까운 적이 생겨도 유지한다(대상 튐 방지).
+ *    사거리 밖·현재 적 목록에서 빠진 대상(소멸·방 교체)은 유지하지 않는다. 아니면 가장 가까운 대상, 동률은 적 목록 순서.
  *  · 대상이 없으면 null 을 돌려 호출자가 기존 방향으로 쏜다. 위치 이동·순간 이동·AUTO 전환을 만들지 않는다.
  *  · 난수를 쓰지 않으므로 같은 입력·같은 상태에서 같은 대상을 고른다(리플레이 결정성).
  */
-const LOCK_KEEP = 1.15;
 const SIGHT_STEP = .5;
 
 /** 월드 보행 마스크를 따라 직선 시야를 검사한다. 마스크가 없는 아레나는 막힘이 없다. */
@@ -35,10 +35,11 @@ export class RangerAim {
    * @returns {any|null}
    */
   select(shooter, range) {
-    const world = shooter.game?.world;
-    if (this.target && aimTargetValid(shooter, this.target, range * LOCK_KEEP, world)) return this.target;
+    const world = shooter.game?.world, enemies = shooter.game?.enemies || [];
+    // 잠금 유지도 실제 화살 도달 범위 안에서만 한다. 범위 밖까지 늘리는 여유는 두지 않는다.
+    if (this.target && enemies.includes(this.target) && aimTargetValid(shooter, this.target, range, world)) return this.target;
     let best = null, bestDistance = Infinity;
-    for (const enemy of shooter.game?.enemies || []) {
+    for (const enemy of enemies) {
       if (!aimTargetValid(shooter, enemy, range, world)) continue;
       const distance = Math.hypot(enemy.pos.x - shooter.pos.x, enemy.pos.z - shooter.pos.z);
       if (distance < bestDistance - 1e-6) { best = enemy; bestDistance = distance; }
@@ -53,4 +54,3 @@ export class RangerAim {
     return dx || dz ? Math.atan2(dx, dz) : null;
   }
 }
-

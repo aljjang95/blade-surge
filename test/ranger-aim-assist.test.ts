@@ -19,10 +19,20 @@ test('가장 가까운 유효 대상을 고르고, 기존 대상은 유효한 �
   expect(aim.select(shooter, 12)).toBe(near);
   far.pos.set(1, 0, 0);                       // 더 가까운 적이 생겨도 잠금 유지(대상 튐 방지)
   expect(aim.select(shooter, 12)).toBe(near);
-  near.pos.set(0, 0, 13.6);                   // 사거리 12 × 1.15 이력 여유 안 → 유지
+  near.pos.set(0, 0, 12.4);                   // 몸 반경 포함 사거리 12 안 → 유지
   expect(aim.select(shooter, 12)).toBe(near);
-  near.pos.set(0, 0, 14.4);                   // 여유 밖 → 다음 대상
+  near.pos.set(0, 0, 12.6);                   // 사거리 밖 → 유지하지 않고 다음 대상(사거리 밖 잠금 여유 없음)
   expect(aim.select(shooter, 12)).toBe(far);
+});
+
+test('적 목록에서 빠진 대상(소멸·방 교체)은 살아 있어도 잠금을 유지하지 않는다', () => {
+  const held = enemy(0, 3), other = enemy(0, 6), aim = new RangerAim(), game = { enemies: [held, other], world: null };
+  const shooter = { pos: new THREE.Vector3(), game };
+  expect(aim.select(shooter, 12)).toBe(held);
+  game.enemies = [other];
+  expect(aim.select(shooter, 12)).toBe(other);
+  game.enemies = [];
+  expect(aim.select(shooter, 12)).toBeNull(); expect(aim.target).toBeNull();
 });
 
 test('사망·등장 중·무적·사거리 밖·벽 너머는 대상이 아니며, 없으면 null 이다', () => {
@@ -224,6 +234,5 @@ test('같은 입력·같은 배치의 이동 사격은 반복 실행에서 같�
   expect(a.log).toEqual(b.log); expect(a.shots).toEqual(b.shots);
   expect(a.shots.length).toBeGreaterThan(0);
 });
-
 
 
