@@ -126,11 +126,16 @@ export class RouteObjectives {
   }
   /** @param {Game} game @param {number} dt */
   update(game, dt) {
-    // 뷰는 규칙의 조기 반환(보스 처치·결과 등)과 상관없이 마지막 상태를 이어서 그린다. 일시정지에는 갱신하지 않는다.
+    this.#updateRules(game, dt);
+    // 뷰는 규칙을 갱신한 뒤 같은 스텝의 상태(유지량·봉인)를 그린다(앞에서 그리면 한 스텝 늦다 — smoke-screens-1).
+    // 규칙의 조기 반환(보스 처치·결과 등)과 상관없이 마지막 상태를 이어서 그린다. 일시정지에는 갱신하지 않는다.
     if (this.view && !game.paused && Number.isFinite(dt) && dt > 0) {
       this.#opts.reduced = !!game.app?.reducedMotion?.matches;
       this.view.update(this, dt, this.#opts);
     }
+  }
+  /** @param {Game} game @param {number} dt */
+  #updateRules(game, dt) {
     if (this.#closed || this.#report || !game.active || game.paused || !game.player?.alive ||
         game.bossDefeated || game.world !== this.world) { this.interrupt(); return; }
     if (!Number.isFinite(dt) || dt <= 0) return;

@@ -51,14 +51,16 @@ test('심층 규칙 update 가 뷰를 끌고 간다: 다음 밸브 → 유지 �
   route.update(game, 1 / 60);
   expect([0, 1, 2, 3].map(i => valveState(route, i))).toEqual(['next', 'waiting', 'waiting', 'waiting']);
   pos.set(rooms[2].x, 0, rooms[2].z);
-  route.update(game, 1);
-  route.update(game, 1 / 60); // 뷰는 다음 프레임 첫머리에서 유지량을 읽는다.
+  // 뷰는 규칙 갱신 뒤 같은 스텝의 상태를 그린다: 유지가 시작된 바로 그 스텝에 '유지 중'(상태 코드 2)이다.
+  route.update(game, 1 / 60);
   expect(valveState(route, 0)).toBe('holding');
+  expect(route.view.state[0]).toBe(2);
+  route.update(game, 1);
   expect(route.view.drawCalls).toBeLessThanOrEqual(3);
   route.update(game, 1);
-  route.update(game, 1 / 60);
   expect(route.progress).toBe(1);
   expect(valveState(route, 0)).toBe('sealed');
+  expect(route.view.state[0]).toBe(1);
   expect(valveState(route, 3)).toBe('waiting');
   // 일시정지 중에는 뷰를 갱신하지 않는다(뷰 update 호출 없음).
   let calls = 0; const original = route.view.update.bind(route.view);
