@@ -157,4 +157,20 @@ describe('눌린 이동 키 되살리기', () => {
     input.update();
     expect(input.move).toEqual({ x: 0, y: 1 });
   });
+  test('resize·orientationchange 는 keys 를 비우지만 held 는 남아 다음 갱신에서 이동이 이어진다(키는 계속 눌려 있다)', () => {
+    for (const type of ['resize', 'orientationchange']) {
+      key('keydown', 'KeyD'); input.update();
+      host.dispatchEvent(new Event(type));
+      expect(keys().KeyD).toBeUndefined();
+      input.update();
+      expect(input.move.x).toBe(1); expect(keys().KeyD).toBe(true);
+      key('keyup', 'KeyD'); input.update();
+    }
+  });
+  test('Meta keyup 은 held 를 비운다(macOS 는 Cmd 를 누른 동안 다른 키의 keyup 을 보내지 않는다)', () => {
+    key('keydown', 'KeyD'); input.update();
+    key('keyup', 'MetaLeft', { key: 'Meta' });
+    pause(); resume(); input.update();
+    expect(input.move.x).toBe(0); expect(keys().KeyD).toBeUndefined();
+  });
 });

@@ -204,6 +204,17 @@ describe('밸브 개방 판정(checkCoolings)', () => {
     expect(r.ok.hold).toBe(false);
     expect(r.violations.find((v: any) => v.kind === 'hold').roomId).toBe(3);
   });
+  test('유지 경계: 119행(2초 − 1/60)은 통과하고, 엔진 hold 와 게임 시각 길이 중 하나만 모자라도 실패한다(리뷰 P3-7)', () => {
+    expect(COOL(tideSession({ hold1: { rows: 119 } }).rows).ok.hold).toBe(true);
+    // 게임 시각 길이는 119행이지만 엔진 hold 가 그 절반만 쌓였다.
+    const slowHold = tideSession();
+    for (const row of slowHold.rows) if (row.hd > 0) row.hd /= 2;
+    expect(COOL(slowHold.rows).ok.hold).toBe(false);
+    // 엔진 hold 는 2초에 닿았지만 행(게임 시각)은 60개뿐이다.
+    const fastHold = tideSession({ hold1: { rows: 60 } });
+    for (const row of fastHold.rows) if (row.pr === 1 && row.hd > 0) row.hd *= 2;
+    expect(COOL(fastHold.rows).ok.hold).toBe(false);
+  });
   test('닫힌 상태 유지: 유지 도중 조작판이 닫혔는데 hold 가 이어지면 padOpen 이 실패한다', () => {
     const r = COOL(tideSession({ hold0: { closedAt: 50 } }).rows);
     expect(r.ok.padOpen).toBe(false);
@@ -574,12 +585,12 @@ describe('밸브 뷰(checkTideView)', () => {
     expect(r.labelBad.length).toBeGreaterThan(0);
     expect(r.leakBad.length).toBeGreaterThan(0);
   });
-  test('라벨을 관측할 수 없으면(lb null) 라벨은 요구하지 않고 observable false 로 알린다', () => {
+  test('라벨을 관측할 수 없으면(lb null) observable false 로 알리고 실패한다(관측 누락을 통과로 두지 않는다, 리뷰 P3-5)', () => {
     const s = tideSession();
     for (const r of s.rows) for (const g of r.g) g.lb = null;
     const r = run(s);
     expect(r.labelObservable).toBe(false);
-    expect(r.ok).toBe(true);
+    expect(r.ok).toBe(false);
   });
   test('경고·밀물 중 띠가 숨어 있거나 가열 중 띠가 보이면 실패한다', () => {
     const hidden = tideSession();
@@ -908,6 +919,11 @@ describe('screens 프로필', () => {
   });
   test('닫힌 순간의 라벨이 충격파 대기이거나, 경고·밀물 순간 띠가 숨었거나 색이 주황이면 실패한다', () => {
     expect(K.checkScreenMoment(cap({ lb: '충격파 대기' }), DEF, 'closed').ok).toBe(false);
+    // 관측 누락(-1·null)은 통과가 아니다(리뷰 P3-5).
+    expect(K.checkScreenMoment(cap({ lb: null }), DEF, 'closed').ok).toBe(false);
+    expect(K.checkScreenMoment(cap({ ph: 1, vn: -1 }), DEF, 'warning').ok).toBe(false);
+    expect(K.checkScreenMoment(cap({ ph: 2, vn: 1, vc: -1 }), DEF, 'vent').ok).toBe(false);
+    expect(K.checkScreenMoment(cap({ po: 1, sk: 1, ph: 0, lb: '조작 2초', pv: -1 }, { hd: 1.2 }), DEF, 'open').ok).toBe(false);
     expect(K.checkScreenMoment(cap({ ph: 1, vn: 0 }), DEF, 'warning').ok).toBe(false);
     expect(K.checkScreenMoment(cap({ ph: 2, vn: 1, vc: 0xff863e }), DEF, 'vent').ok).toBe(false);
   });

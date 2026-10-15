@@ -126,8 +126,12 @@ export class Input {
       if (!this.enabled || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target?.closest?.('input, textarea, select, [contenteditable]')) return;
       const i = MOVE_CODES.indexOf(e.code); if (i >= 0) this.held[i] = 1;
     });
-    // keyup 은 대상·활성 여부와 상관없이 held 에서 뺀다.
-    window.addEventListener('keyup', (e) => { const i = MOVE_CODES.indexOf(e.code); if (i >= 0) this.held[i] = 0; });
+    // keyup 은 대상·활성 여부와 상관없이 held 에서 뺀다. 마을·상점 대화상자가 keyup 전파를 막아도 받도록 캡처 단계에서 듣는다.
+    // macOS 는 Cmd 를 누른 동안 다른 키의 keyup 을 보내지 않으므로 Meta keyup 에서 held 를 비운다(BUNDLE-10 리뷰 P3-1).
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'Meta' || e.code === 'MetaLeft' || e.code === 'MetaRight') { this.held.fill(0); return; }
+      const i = MOVE_CODES.indexOf(e.code); if (i >= 0) this.held[i] = 0;
+    }, true);
     window.addEventListener('keydown', (e) => {
       if (!this.enabled || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.target?.closest?.('button, input, textarea, select, [contenteditable], [role="dialog"], dialog, #battle-camera-controls')) return;
       if (!/^(Key[WASDJKRQEF]|Arrow(Left|Right|Up|Down)|Space|Shift(Left|Right)|Digit[1-6])$/.test(e.code)) return;

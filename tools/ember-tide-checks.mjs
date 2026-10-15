@@ -414,7 +414,7 @@ export function checkToasts(toasts, def, { overheatHits = null, encounterTactic 
 
 /**
  * 밸브 뷰 표시(PLAN 3.2): 밀물 띠 색 = def.ventColor(파란 물빛), 닫힌 조작판(ready · 닫힘)의 라벨 = '밀물 대기', 재벼림 문구 없음, 현재 밸브가 경고·밀물 중일 때 띠가 보이고 가열 중에는 숨음.
- * 라벨은 관측할 수 있을 때만(lb 가 문자열인 행이 있을 때) 요구한다(관측 못 하면 labelObservable false 로 알린다).
+ * 라벨·띠 색·띠 표시는 모두 관측돼야 한다. 관측하지 못하면(lb 문자열 없음, vc·vn -1) 실패한다(BUNDLE-10 리뷰 P3-5: 관측 누락을 통과로 두지 않는다).
  */
 export function checkTideView(rows, def) {
   const cells = rows.flatMap(r => (r.g || []).map((g, i) => ({ r, g, i })));
@@ -427,7 +427,7 @@ export function checkTideView(rows, def) {
   const hotRows = cells.filter(c => c.r.pr === c.i && (c.g.ph === 1 || c.g.ph === 2) && c.g.vn !== -1 && c.g.vn !== undefined);
   const calmRows = cells.filter(c => c.r.pr === c.i && c.g.ph === 0 && c.g.vn !== -1 && c.g.vn !== undefined);
   const stripBad = [...hotRows.filter(c => c.g.vn !== 1), ...calmRows.filter(c => c.g.vn !== 0)].slice(0, 4).map(c => ({ n: c.r.n, gate: c.i, ph: c.g.ph, vn: c.g.vn }));
-  const ok = colors.length > 0 && colorBad.length === 0 && labelBad.length === 0 && leakBad.length === 0 && stripBad.length === 0 && hotRows.length > 0 && (!labelObservable || labelRows.length > 0);
+  const ok = colors.length > 0 && colorBad.length === 0 && labelBad.length === 0 && leakBad.length === 0 && stripBad.length === 0 && hotRows.length > 0 && labelObservable && labelRows.length > 0;
   return { ok, ventColor: def.ventColor, colorRows: colors.length, colorBad, labelObservable, labelRows: labelRows.length, labelBad, leakBad, hotRows: hotRows.length, calmRows: calmRows.length, stripBad };
 }
 /** 밸브 뷰가 방 발견 같은 스텝에 보이는지(vv = dc). 보고 항목이다(냉각 장치 GLB 뷰는 기존 뷰). */
@@ -658,11 +658,13 @@ export function checkScreenMoment(shot, def, label) {
   const state = { closed: !!g && row.pr === idx && g.rd === 1 && g.at === 0 && g.ph === 0 && g.po === 0 && row.hd === 0,
     warning: !!g && row.pr === idx && g.rd === 1 && g.ph === 1, vent: !!g && row.pr === idx && g.rd === 1 && g.ph === 2,
     open: !!g && row.pr === idx && isOpenRow(row, idx) && row.hd >= 1 - EPS, opened: !!g && g.at === 1 && g.cl === 1 && ra !== null && ra >= .1 - EPS }[label] ?? false;
-  const stripColor = !!g && (g.vc === -1 || g.vc === def.ventColor);
+  // 띠 색·띠 표시·조작판 표시·라벨은 촬영 스텝에 관측돼야 한다(-1·null 은 관측 누락이라 실패, 리뷰 P3-5).
+  const stripColor = !!g && g.vc === def.ventColor;
+  const seen = !!g && g.vn !== -1 && g.vn !== undefined && g.pv !== -1 && g.pv !== undefined;
   const view = {
-    closed: !g || g.lb === null || g.lb === undefined || g.lb === TIDE.waitLabel,
-    warning: !!g && g.vn !== 0 && stripColor, vent: !!g && g.vn !== 0 && stripColor,
-    open: !!g && g.pv !== 0, opened: !!g && g.vn !== 1,
+    closed: seen && g.lb === TIDE.waitLabel,
+    warning: seen && g.vn === 1 && stripColor, vent: seen && g.vn === 1 && stripColor,
+    open: seen && g.pv === 1, opened: seen && g.vn === 0,
   }[label] ?? false;
   return { ok: state && view && !leaks(g?.lb), state, view, label, gate: g ? { id: g.id, rd: g.rd, at: g.at, ph: g.ph, sk: g.sk, po: g.po, hd: row.hd, vn: g.vn, pv: g.pv, lb: g.lb ?? null, vc: g.vc } : null };
 }
