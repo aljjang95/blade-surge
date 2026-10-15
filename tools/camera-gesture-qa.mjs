@@ -49,6 +49,8 @@ const step = async (name, fn, { required = true, needs = null } = {}) => {
 };
 /** pointermove는 애니메이션 프레임에 맞춰 전달되므로 값을 읽기 전에 두 프레임을 기다린다. */
 const frames = page => page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
+/** 시작·끝·취소는 즉시 전달되고 남은 move를 먼저 비운다. 처리 확인용으로 한 프레임만 기다린다. */
+const frame = page => page.evaluate(() => new Promise(r => requestAnimationFrame(r)));
 
 try { report.head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); } catch { report.head = null; }
 try { report.servedVersion = await (await fetch(new URL('version.json', target), { cache: 'no-store' })).json(); } catch (error) { report.servedVersion = { error: String(error) }; }
@@ -67,13 +69,14 @@ async function openPage(context) {
   const points = () => [...touches.entries()].map(([id, p]) => ({ id, x: p.x, y: p.y, radiusX: 4, radiusY: 4, force: 1 }));
   const touch = {
     get size() { return touches.size; },
-    down: async (id, x, y) => { touches.set(id, { x, y }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: points() }); await frames(page); },
+    down: async (id, x, y) => { touches.set(id, { x, y }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: points() }); await frame(page); },
     move: async (id, x, y, steps = 6) => {
       const from = touches.get(id);
-      for (let i = 1; i <= steps; i++) { touches.set(id, { x: from.x + (x - from.x) * i / steps, y: from.y + (y - from.y) * i / steps }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: points() }); await frames(page); }
+      for (let i = 1; i <= steps; i++) { touches.set(id, { x: from.x + (x - from.x) * i / steps, y: from.y + (y - from.y) * i / steps }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: points() }); }
+      await frames(page);
     },
-    up: async id => { touches.delete(id); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: points() }); await frames(page); },
-    cancel: async () => { touches.clear(); await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] }); await frames(page); },
+    up: async id => { touches.delete(id); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: points() }); await frame(page); },
+    cancel: async () => { touches.clear(); await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] }); await frame(page); },
     clear: () => touches.clear(),
   };
   const shot = async name => {
@@ -83,14 +86,20 @@ async function openPage(context) {
   return { page, touch, shot };
 }
 
-/** 빈 world 표면(캔버스 또는 로비 tab-home)인 점을 화면 격자에서 찾는다. */
-const emptyPoint = (page, region) => page.evaluate(({ x0, x1, y0, y1 }) => {
+/**
+ * 빈 world 표면(캔버스 또는 로비 tab-home)인 점을 화면 격자에서 찾는다.
+ * 브라우저 터치 보정은 손가락 근처의 버튼으로 대상을 옮기므로(실제 손가락과 같다) 주변 반경도 모두 world인 점만 쓴다.
+ */
+const emptyPoint = (page, region) => page.evaluate(({ x0, x1, y0, y1, clear }) => {
+  const world = (px, py) => { const el = document.elementFromPoint(px, py); return !!el && (el.id === 'gl' || el.id === 'tab-home'); };
   for (let y = y0; y <= y1; y += .04) for (let x = x0; x <= x1; x += .04) {
-    const px = Math.round(innerWidth * x), py = Math.round(innerHeight * y), el = document.elementFromPoint(px, py);
-    if (el && (el.id === 'gl' || el.id === 'tab-home')) return { x: px, y: py };
+    const px = Math.round(innerWidth * x), py = Math.round(innerHeight * y);
+    let ok = world(px, py);
+    for (let a = 0; ok && a < 8; a++) ok = world(px + Math.round(Math.cos(a * Math.PI / 4) * clear), py + Math.round(Math.sin(a * Math.PI / 4) * clear));
+    if (ok) return { x: px, y: py, clear };
   }
   return null;
-}, region);
+}, { clear: 28, ...region });
 const padState = (page, selector) => page.evaluate(s => { const el = document.querySelector(s); if (!el) return 'missing'; const r = el.getBoundingClientRect(); return r.width <= 1 && r.height <= 1 ? 'hidden' : 'visible:' + Math.round(r.width) + 'x' + Math.round(r.height); }, selector);
 
 /** 부팅 버튼과 자연 모달은 실제 버튼으로만 처리한다. */
@@ -226,7 +235,10 @@ try {
   const joy = await page.locator('#joy').boundingBox();
   const world = await emptyPoint(page, { x0: .42, x1: .72, y0: .16, y1: .5 });
   assert(joy && world, 'No joystick or empty battle world point');
-  report.points = { joy, world };
+  // 핀치 두 번째 손가락도 버튼 보정이 없는 빈 world 점에서 내린다(첫 손가락 오른쪽).
+  const world2 = await emptyPoint(page, { x0: (world.x + 110) / 844, x1: .8, y0: Math.max(.12, world.y / 390 - .08), y1: .62 });
+  assert(world2, 'No second empty battle world point for pinch');
+  report.points = { joy, world, world2 };
   diagnose = () => page.evaluate(() => { const app = window.app, b = app.battle;
     return { mode: app.mode, active: !!b?.active, paused: b?.paused, pauseReasons: b?.pauseReasons ? [...b.pauseReasons] : undefined, alive: b?.player?.alive,
       modal: !!document.querySelector('#modal.show'), inputEnabled: app.input.enabled, joy: app.input.joy.active, camera: { ...app.renderer.battleCamera },
@@ -249,7 +261,7 @@ try {
     return { start, rotated };
   });
   const pinchRow = await step('joystick held + two world fingers pinch without rotating', async () => {
-    await touch.down(3, world.x + 150, world.y + 20); await touch.move(3, world.x + 240, world.y + 20);
+    await touch.down(3, world2.x, world2.y); await touch.move(3, world2.x + 90, world2.y);
     pinched = await cam(page);
     assert(pinched.joy && pinched.zoom !== rotated.zoom && pinched.yaw === rotated.yaw, 'Pinch failed or rotated: ' + JSON.stringify({ rotated, pinched }));
     return { pinched };
@@ -257,9 +269,9 @@ try {
   await step('pinch -> remaining finger re-anchors without jump', async () => {
     await touch.up(2);
     const resumedStart = await cam(page);
-    await touch.move(3, world.x + 241, world.y + 20, 1);
+    await touch.move(3, world2.x + 91, world2.y, 1);
     const noJump = await cam(page);
-    await touch.move(3, world.x + 300, world.y + 20);
+    await touch.move(3, world2.x + 150, world2.y);
     const resumed = await cam(page);
     assert(Math.abs(noJump.yaw - resumedStart.yaw) < 1 && Math.abs(resumed.yaw - noJump.yaw) > 5 && resumed.zoom === pinched?.zoom, 'Remaining finger jumped or did not rotate: ' + JSON.stringify({ resumedStart, noJump, resumed }));
     await touch.up(3); await touch.up(1);
