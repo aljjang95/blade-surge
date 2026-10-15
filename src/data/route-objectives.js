@@ -38,6 +38,12 @@ const constellations = Object.freeze({
     Object.freeze({ roomId: 6, stationId: 4, label: '4번 조율판 · 마지막 항로', answer: 'triangle' }),
   ]),
 });
+// 혜성 기사단장 보스전의 푸른 궤도선(BUNDLE-06). 개인 기본 원정 혜성 요새 일반·심층의 보스방에서만 쓴다.
+// 보스방 중심의 푸른 선(safe) 안쪽은 평소 유성(바깥 고리 outerMin~outerMax)에서 안전하고, centerEvery 번째마다 중심 유성이 선 안쪽을 덮는다.
+// 예고(warning)는 보스가 공격하지 않을 때만 시작하고, 예고 동안 보스는 새 공격을 시작하지 않는다.
+// safe·outerMin·outerMax·escape·warning·centerEvery·damage 는 일반판 고리 유성과 같다. first·every 는 BUNDLE-06 PLAN 4.4 시뮬로 확인한다.
+const COMET_BOSS_ORBIT = Object.freeze({ id: 'comet_boss_orbit', enemy: 'comet_bastion',
+  safe: 5.2, outerMin: 5.8, outerMax: 9, escape: 6.4, first: 2, every: 3.2, warning: 1.4, centerEvery: 3, damage: .07 });
 export const ROUTE_OBJECTIVES = Object.freeze({
   bellfall_crypt: Object.freeze({
     id: 'bellfall_bell_gates', holdSeconds: 2, radius: 3, noun: '종문', verb: '조율', cueColor: 0xffd060,
@@ -93,6 +99,7 @@ export const ROUTE_OBJECTIVES = Object.freeze({
     id: 'comet_orbit_rings', kind: 'orbits', track: 4, band: 1.5, contact: 1.3, tolerance: .14, lockSeconds: .4,
     safe: 5.2, outerMin: 5.8, outerMax: 9, escape: 6.4,
     meteor: Object.freeze({ every: 3.2, warning: 1.4, centerEvery: 3, damage: .07 }),
+    boss: COMET_BOSS_ORBIT,
     gates: Object.freeze([
       Object.freeze({ roomId: 1, label: '1번 궤도 고리 · 북문 관측대', target: 0, start: 2.2 }),
       Object.freeze({ roomId: 3, label: '2번 궤도 고리 · 중앙 성벽', target: Math.PI / 2, start: Math.PI / 2 - 2.2 }),
@@ -109,6 +116,7 @@ export const ROUTE_OBJECTIVES = Object.freeze({
     collapseSeconds: 9, shelterRadius: 2.2, connectSeconds: .5,
     storm: Object.freeze({ warning: 1.4, gap: .6, tail: .4, damage: .08, radius: 12,
       shelters: Object.freeze(['center', 'star', 'side']) }),
+    boss: COMET_BOSS_ORBIT,
     gates: Object.freeze([
       Object.freeze({ roomId: 1, label: '1번 궤도 고리 · 붕괴한 관측대', target: Math.PI / 2, start: Math.PI / 2 - 2.2 }),
       Object.freeze({ roomId: 2, label: '2번 궤도 고리 · 혜성 보고', target: 0, start: 2.2 }),

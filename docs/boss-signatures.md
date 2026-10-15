@@ -25,6 +25,10 @@ Acceptance and regression requirements:
   owns invulnerability and damage mitigation; the host owns party simulation.
 - Boss signatures replace automatic ambient hazards in the final boss room;
   regular rooms and existing bosses retain their established hazards.
+  Exception (BUNDLE-06): in the personal Comet Bastion expedition (standard and deep), the
+  knight-commander's room draws a blue orbit line with its own meteors. A meteor warning
+  starts only while the boss is not attacking and holds the boss's next attack until the
+  meteor lands, so it never overlaps a signature warning (docs/comet-deep-orbits.md).
 - Mob pool iteration reaches all six melee and all three ranged species without
   changing normal-room capacity, reinforcement accounting or boss reward ledgers.
 - Actual app QA covers both signatures for all six bosses, phase selection,

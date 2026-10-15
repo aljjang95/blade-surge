@@ -28,6 +28,19 @@ const contracts: Record<string, { standard: number[]; deep: number[] }> = {
 // rejecting narrative names such as a hydra's three heads or a ruined orbit.
 const unsupportedInstructions = /밸브|냉각로|(?:기록|기록물)\s*(?:세|3)\s*장|(?:별자리|성좌).*(?:복원|밟)|가짜 왕좌.*(?:깨|파괴)|궤도 고리.*정렬|생명 제단|포자 폭발|(?:세|3) 머리.*(?:들리|고개)|발자국.*환영|보라색 모래시계|푸른 궤도선/;
 
+/** 혜성 기사단장 보스방 푸른 궤도선 문구: 숫자는 정의(route.boss)에서 읽어 맞추고, 보스 시그니처 안내보다 앞에 있다(BUNDLE-06). */
+function expectCometBossCopy(tactic: string, boss: any) {
+  expect(boss.enemy).toBe('comet_bastion');
+  expect(Number(tactic.match(/보스방에는 푸른 궤도선이 그려집니다\. 기사단장이 공격하지 않는 틈에 (\d+(?:\.\d+)?)초 유성 예고/)?.[1])).toBe(boss.warning);
+  expect(tactic).toContain(['첫', '두', '세', '네', '다섯'][boss.centerEvery - 1] + ' 번째마다 중심 유성이 선 안쪽을 덮으면');
+  expect(Number(tactic.match(/최대 체력 (\d+)%\)/)?.[1])).toBe(Math.round(boss.damage * 100));
+  expect(tactic).toMatch(/평소 유성은 푸른 선 바깥에 떨어지니 선 안쪽이 안전/);
+  expect(tactic).toMatch(/중앙을 버리고 푸른 선 바깥으로 피하세요/);
+  expect(tactic).toMatch(/유성 예고 동안 기사단장은 새 공격을 시작하지 않습니다/);
+  expect(tactic.indexOf('보스방에는 푸른 궤도선이')).toBeGreaterThan(0);
+  expect(tactic.indexOf('보스방에는 푸른 궤도선이')).toBeLessThan(tactic.indexOf((ENEMIES as Record<string, any>).comet_bastion.tactic));
+}
+
 test('all twelve exported dungeons have exactly one standard and one deep contract', () => {
   const ids = Object.keys(contracts).sort();
   expect(DUNGEONS.map(d => d.id).sort()).toEqual(ids);
@@ -90,6 +103,7 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(Number(stage.objective.match(/궤도 고리 (네|4) ?개/) ? 4 : 0)).toBe(holds);
         expect(stage.encounter.tactic).toMatch(/적.*처치.*룬석을 몸으로 밀어 별 표식/);
         expect(stage.encounter.tactic).toMatch(/안쪽이 안전.*중심 유성.*푸른 선 밖/);
+        expectCometBossCopy(stage.encounter.tactic, (route as any).boss);
         expect(stage.encounter.tactic).toMatch(/어느 순서/);
         expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번', '4번']);
       } else if (id === 'comet_bastion' && depth === 'deep') {
@@ -107,6 +121,7 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(tactic).toContain('유성 폭풍이 ' + ['한', '두', '세', '네'][deep.storm.shelters.length - 1] + ' 번');
         expect(tactic).toMatch(/붉은 원 안에서는 청록 빈 원만 안전/);
         expect(tactic).toMatch(/그 고리만 처음 위치/);
+        expectCometBossCopy(tactic, (deep as any).boss);
         expect(tactic).toMatch(/어느 순서/);
         // 보스 신호 문구(oath_shelter 의 '공명 속 빈 원')는 보스 전술 소유이므로 고리 안내 부분만 검사한다.
         expect(tactic.slice(0, tactic.indexOf((ENEMIES as Record<string, any>).comet_bastion.tactic))).not.toMatch(/공명|제단/);
@@ -227,5 +242,19 @@ test('Astral exact implemented standard promise does not permit deep or unsuppor
   // stripped above. These fragments must still be rejected in every route.
   for (const copy of ['별자리 5개 복원', '성좌 4곳 복원', '별자리를 밟으세요', '별자리 파편을 모아 복원']) {
     expect(copy.replaceAll('별자리 4개 순서대로 복원', '')).toMatch(unsupportedInstructions);
+  }
+});
+
+test('혜성 기사단장 전술(캠페인 공용)은 보스방 궤도선을 약속하지 않고 실제 시그니처 세 가지만 안내한다', () => {
+  const tactic = (ENEMIES as Record<string, any>).comet_bastion.tactic as string;
+  expect(tactic).not.toMatch(/푸른 궤도선|궤도선 안쪽/);
+  // 궤도선·유성 규칙은 개인 기본 원정 일반·심층의 boss 정의가 있는 경로에서만 약속한다.
+  for (const depth of ['standard', 'deep'] as const) {
+    const stage = buildExpeditionStage('dungeon', 'comet_bastion', null, { depth });
+    expect((routeObjectiveForStage(stage) as any).boss.enemy).toBe('comet_bastion');
+    expect(stage.encounter.tactic).toContain(tactic);
+  }
+  for (const key of Object.keys(ROUTE_OBJECTIVES)) {
+    if (key !== 'comet_standard' && key !== 'comet_deep') expect('boss' in (ROUTE_OBJECTIVES as Record<string, object>)[key]).toBe(false);
   }
 });

@@ -1,11 +1,12 @@
 import { Vector3 } from 'three';
 import { audio } from '../engine/audio.js';
 import { angleDiff } from './comet-orbits.js';
+import { CometBossOrbit } from './comet-boss-orbit.js';
 
 const TAU = Math.PI * 2;
 /** 판정 하위 단계. dt가 크거나 작아도 같은 단계 순서로 진행해 결과가 같다. */
 const STEP = 1 / 30;
-/** @typedef {{id:string, label:string, complete:boolean, progress:number, target:number, rooms:readonly number[], collapseFailures:number, stormHits:number}} DeepOrbitReport */
+/** @typedef {{id:string, label:string, complete:boolean, progress:number, target:number, rooms:readonly number[], collapseFailures:number, stormHits:number, bossMeteors:number, bossCenterMeteors:number, bossMeteorHits:number}} DeepOrbitReport */
 const PHASE_ORDER = Object.freeze({ locked: 0, ready: 1, collapse: 2, shelter: 3, storm: 4, connected: 5 });
 
 /** 혜성 요새 심층의 원안: 궤도 고리 5개를 연결해야 기사단장의 봉인이 풀린다.
@@ -34,6 +35,11 @@ export class CometDeepOrbits {
   #hintSig = -1;
   /** 뷰에 넘기는 옵션 객체(재사용). */
   #opts = { reduced: false };
+  /** 보스방 푸른 궤도선 유성(정의에 boss 가 있을 때만). 보스방에서 고리가 끝난 뒤에도 계속 돈다. */
+  /** @type {CometBossOrbit|null} */
+  #bossOrbit = null;
+  /** 푸른 궤도선 뷰(뷰 파일이 있을 때만). */
+  #bossView = null;
   view = null;
   constructor(def, world) {
     this.def = def; this.world = world;
@@ -65,6 +71,7 @@ export class CometDeepOrbits {
     });
     this.#order = new Array(this.gates.length).fill(0);
     for (const g of this.gates) this.#place(g);
+    this.#bossOrbit = def.boss ? new CometBossOrbit(def.boss, world) : null;
   }
 
   // ---------------- 읽기 상태 ----------------
@@ -73,6 +80,8 @@ export class CometDeepOrbits {
   get closed() { return this.#closed || !!this.#report; }
   get collapseFailures() { return this.#failures; }
   get stormHits() { return this.#stormHits; }
+  /** 보스방 푸른 궤도선 컨트롤러(읽기 전용). 정의에 boss 가 없으면 null. */
+  get bossOrbit() { return this.#bossOrbit; }
   /** 영웅이 있는 방(고리 방이 아니어도 된다). 방 밖이면 null. */
   get here() { return this.#here; }
   /** 공명 제단은 이 목표로 교체된다. */
@@ -101,6 +110,11 @@ export class CometDeepOrbits {
   async prepareView(scene) {
     const { CometDeepOrbitView } = await import('./comet-deep-orbit-view.js');
     if (!this.closed) this.view = new CometDeepOrbitView(scene, this);
+    if (!this.#bossOrbit) return;
+    try {
+      const { CometBossOrbitView } = await import('./comet-boss-orbit-view.js');
+      if (this.#bossOrbit.state !== 'ended' && !this.#bossView) this.#bossView = new CometBossOrbitView(scene, this.#bossOrbit);
+    } catch { /* 궤도선 뷰가 없어도 규칙은 그대로 동작한다. */ }
   }
   #refreshView(dt) { this.view?.update(this, dt, this.#opts); }
 
@@ -133,11 +147,16 @@ export class CometDeepOrbits {
     return !this.closed && !!g && g.phase !== 'locked' && g.phase !== 'connected';
   }
   interrupt() { for (let i = 0; i < this.gates.length; i++) this.gates[i].connectT = 0; }
+  /** AUTO: 보스방 유성 예고 중 피격 구역에 있으면 안전 지점을 돌려준다(없으면 null). */
+  autoEvade(player) { return this.#bossOrbit ? this.#bossOrbit.autoEvade(player) : null; }
   stop() {
     this.#closed = true;
     this.#clearWarn();
     const view = this.view; this.view = null;
     view?.dispose();
+    this.#bossOrbit?.stop();
+    const bossView = this.#bossView; this.#bossView = null;
+    bossView?.dispose();
   }
   #clearWarn() {
     for (let i = 0; i < this.gates.length; i++) { const g = this.gates[i]; g.stormWarn = false; g.connectT = 0; }
@@ -205,6 +224,12 @@ export class CometDeepOrbits {
 
   // ---------------- 프레임 ----------------
   update(game, dt) {
+    // 보스방 유성은 고리 규칙의 조기 반환(보스 처치·일시정지 등)과 상관없이 먼저 갱신한다. 고리가 끝난 뒤 보스전에서도 계속 돈다.
+    const bossOrbit = this.#bossOrbit;
+    if (bossOrbit) {
+      bossOrbit.update(game, dt);
+      if (this.#bossView && !game.paused) { this.#opts.reduced = !!game.app?.reducedMotion?.matches; this.#bossView.update(bossOrbit, dt, this.#opts); }
+    }
     const player = game.player;
     if (this.closed || !game.active || game.paused || !player?.alive || game.bossDefeated || game.world !== this.world) {
       this.interrupt();
@@ -347,8 +372,11 @@ export class CometDeepOrbits {
       const complete = !!win && !this.#closed && this.canWin();
       this.#clearWarn();
       this.#report = Object.freeze({ id: this.def.id, label: '궤도 고리 연결', complete, progress: this.#connected, target: this.gates.length,
-        rooms: Object.freeze(this.#order.slice(0, this.#connected)), collapseFailures: this.#failures, stormHits: this.#stormHits });
+        rooms: Object.freeze(this.#order.slice(0, this.#connected)), collapseFailures: this.#failures, stormHits: this.#stormHits,
+        bossMeteors: this.#bossOrbit?.strikes ?? 0, bossCenterMeteors: this.#bossOrbit?.centerStrikes ?? 0, bossMeteorHits: this.#bossOrbit?.hits ?? 0 });
       this.#refreshView(0);
+      // 결과가 정해지면 보스방 유성도 끝낸다. 패배 뒤에는 Battle 이 더 이상 갱신하지 않으므로 여기서 예고 표시를 거둔다.
+      if (this.#bossOrbit && this.#bossOrbit.state !== 'ended') { this.#bossOrbit.stop(); this.#bossView?.update(this.#bossOrbit, 0, this.#opts); }
     }
     return /** @type {DeepOrbitReport} */ (this.#report);
   }
