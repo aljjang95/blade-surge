@@ -199,3 +199,155 @@ test.skipIf(!existsSync(replayFailure))('preserved replay failure without native
   expect(classifyMediaCancellations(doc2Failures, doc2Media).unresolved).toHaveLength(1);
   expect(r.status).toBe('fail');
 });
+
+// ---- BUNDLE-02 M1·M2: 취소 분류기 시간 경계와 다중 인스턴스 ----
+// 아래 고정 입력은 보존 report에서 분류에 필요한 필드만 잘라 낸 것이다(수정 전 판정은 expectedBeforeFix에 기록).
+const unresolvedBeforeFix = 'ambiguous-or-missing-request-start-instance';
+const loadCut = (name: string) => JSON.parse(readFileSync(new URL('./fixtures/media-cancellation/' + name + '.json', import.meta.url), 'utf8'));
+for (const name of ['m1-base-auto-0315z', 'm1-cand-bca5e98-auto', 'm2-cand-bca5e98-all-doc5', 'm2-cand-all-1-doc1']) {
+  test('preserved cut ' + name + ': unresolved before fix, confirmed after', () => {
+    const cut = loadCut(name), before = JSON.stringify(cut);
+    expect(cut.expectedBeforeFix).toBe(unresolvedBeforeFix);
+    const result = classifyMediaCancellations([cut.failure], cut.media);
+    expect(result.unresolved).toEqual([]); expect(result.classified).toHaveLength(1);
+    const [c] = result.classified;
+    expect(c.matchedInstanceId).toBe(cut.expectedAfterFix.matchedInstanceId);
+    expect(c.requestStartEvidence.anchorKind).toBe('trusted-native-loadstart');
+    expect(c.stoppedInstances.map((s: any) => s.id)).toEqual(cut.expectedAfterFix.stoppedInstanceIds);
+    expect(c.replacement.id).toBe(cut.expectedAfterFix.replacementId);
+    expect(c.requestStartEvidence.candidateInstances).toBe(cut.expectedAfterFix.stoppedInstanceIds.length);
+    expect(JSON.stringify(cut)).toBe(before);
+  });
+}
+test('preserved M2 cut: a stop-unproven sibling instance keeps the whole request unresolved', () => {
+  const cut = loadCut('m2-cand-all-1-doc1'), events = cut.media[0].snapshot.events;
+  const sibling = events.filter((e: any) => e.kind === 'source-disconnect' && e.id !== cut.expectedAfterFix.matchedInstanceId).at(-1);
+  events.splice(events.indexOf(sibling), 1);
+  const result = classifyMediaCancellations([cut.failure], cut.media);
+  expect(result.classified).toHaveLength(0); expect(result.unresolved.map((u: any) => u.reason)).toEqual(['same-url-instance-not-proven-stopped']);
+});
+
+type Case = ReturnType<typeof nativeInitiationFixture>;
+// 같은 URL을 쓰는 인스턴스가 둘인 문서: 1번이 요청 시작 창 안의 유일한 loadstart를 가진다.
+function multiInstanceFixture() {
+  const f: any = fixture(); f.failure.documentId = 1; f.media[0].documentId = 1;
+  const base = f.events[1], url = f.failure.url;
+  const native = (id: number, at: number, extra: any = {}) => ({ ...base, id, kind: 'loadstart', at, isTrusted: true,
+    nativeTimeStamp: at, nativeTimeOrigin: 0, nativeAt: at, ...extra });
+  const stop = (id: number, at: number) => [{ ...base, id, kind: 'pause-return', at: at - 1, paused: true, currentTime: .5 },
+    { ...base, id, kind: 'source-disconnect', at, currentTime: .5, paused: true, connected: false, argumentCount: 0, connectionAmbiguous: false }];
+  const replacement = f.events.filter((e: any) => e.id === 2).map((e: any) => ({ ...e, id: 3 }));
+  f.media[0].snapshot.tracks[1].id = 3;
+  f.events.length = 0;
+  f.events.push({ ...base, id: 1, kind: 'source-created', at: 400, currentTime: 0, connected: false }, native(1, 1000),
+    { ...base, id: 1, kind: 'playing', at: 1100 },
+    { ...base, id: 2, kind: 'source-created', at: 500, currentTime: 0, connected: false }, native(2, 505),
+    { ...base, id: 2, kind: 'playing', at: 600 }, ...stop(1, 1701), ...stop(2, 1601), ...replacement);
+  f.url = url; return f;
+}
+const kindIndex = (f: any, kind: string, id: number) => f.events.findIndex((e: any) => e.kind === kind && e.id === id);
+test('multi-instance request with a single trusted start-window loadstart is confirmed', () => {
+  for (const status of [206, 200]) {
+    const f = multiInstanceFixture(); f.failure.status = status;
+    if (status === 200) { delete f.failure.range; delete f.failure.contentRange; }
+    const result = classifyMediaCancellations([f.failure], f.media), [c] = result.classified;
+    expect(result.unresolved).toEqual([]);
+    expect(c).toMatchObject({ matchedInstanceId: 1, requestStartEvidence: { anchorKind: 'trusted-native-loadstart', candidateInstances: 2, nativeLoadstartAt: 1000 },
+      stoppedInstances: [{ id: 1 }, { id: 2 }], replacement: { id: 3 } });
+  }
+});
+
+// 두 경로(M1: 인스턴스 1개, M2: 인스턴스 2개)에 같은 반례를 적용한다.
+const sharedNegative: Record<string, (f: any) => void> = {
+  'loadstart only after the failure': f => {
+    const i = kindIndex(f, 'loadstart', 1); Object.assign(f.events[i], { at: 2500, nativeAt: 2500, nativeTimeStamp: 2500 });
+  },
+  'two loadstarts in the start window, one untrusted': f => {
+    f.events.push({ ...f.events[kindIndex(f, 'loadstart', 1)], isTrusted: false, nativeAt: 1010, nativeTimeStamp: 1010, at: 1010 });
+  },
+  'sole start-window loadstart is untrusted': f => { f.events[kindIndex(f, 'loadstart', 1)].isTrusted = false; },
+  'rival loadstart observed after failure with native time in window': f => {
+    f.events.push({ ...f.events[kindIndex(f, 'loadstart', 1)], at: 2500, nativeAt: 1100, nativeTimeStamp: 1100 });
+  },
+  'rival loadstart with unusable observation time still counts by native time': f => {
+    f.events.push({ ...f.events[kindIndex(f, 'loadstart', 1)], at: NaN, nativeAt: 1100, nativeTimeStamp: 1100 });
+  },
+  'rival loadstart observed after failure has unknown native time': f => {
+    f.events.push({ ...f.events[kindIndex(f, 'loadstart', 1)], at: 2500, nativeAt: NaN, nativeTimeStamp: NaN });
+  },
+};
+for (const [name, change] of Object.entries(sharedNegative)) {
+  test('M1 unresolved: ' + name, () => {
+    const f = nativeInitiationFixture(); change(f);
+    const result = classifyMediaCancellations([f.failure], f.media);
+    expect(result.classified).toHaveLength(0); expect(result.unresolved.map((u: any) => u.reason)).toEqual([unresolvedBeforeFix]);
+  });
+  test('M2 unresolved: ' + name, () => {
+    const f = multiInstanceFixture(); change(f);
+    const result = classifyMediaCancellations([f.failure], f.media);
+    expect(result.classified).toHaveLength(0); expect(result.unresolved.map((u: any) => u.reason)).toEqual([unresolvedBeforeFix]);
+  });
+}
+test('M1 and M2 keep the proof of stopping and replacement playback', () => {
+  const m1 = nativeInitiationFixture(); m1.events.splice(3, 1);
+  expect(classifyMediaCancellations([m1.failure], m1.media).unresolved.map((u: any) => u.reason)).toEqual(['same-url-instance-not-proven-stopped']);
+  const m1NoReplacement = nativeInitiationFixture(); m1NoReplacement.media[0].snapshot.tracks[1].currentTime = 0;
+  m1NoReplacement.events.splice(5, 1); // 대체 곡 playing 제거
+  expect(classifyMediaCancellations([m1NoReplacement.failure], m1NoReplacement.media).unresolved.map((u: any) => u.reason)).toEqual(['no-replacement-playback-proof']);
+  const m2 = multiInstanceFixture(); m2.events.splice(kindIndex(m2, 'source-disconnect', 2), 1);
+  expect(classifyMediaCancellations([m2.failure], m2.media).unresolved.map((u: any) => u.reason)).toEqual(['same-url-instance-not-proven-stopped']);
+  const m2Reconnected = multiInstanceFixture(); m2Reconnected.events.push({ ...m2Reconnected.events[2], id: 2, kind: 'source-connect', at: 1900 });
+  expect(classifyMediaCancellations([m2Reconnected.failure], m2Reconnected.media).unresolved.map((u: any) => u.reason)).toEqual(['same-url-instance-not-proven-stopped']);
+  const m2NoReplacement = multiInstanceFixture(); m2NoReplacement.events.splice(kindIndex(m2NoReplacement, 'playing', 3), 1);
+  expect(classifyMediaCancellations([m2NoReplacement.failure], m2NoReplacement.media).unresolved.map((u: any) => u.reason)).toEqual(['no-replacement-playback-proof']);
+});
+
+const multiNegative: Record<string, (f: any) => void> = {
+  'range request does not start at byte 0': f => { f.failure.range = 'bytes=100-'; f.failure.contentRange = 'bytes 100-999/1000'; },
+  'status 200 with a mid-resource range': f => { f.failure.status = 200; f.failure.range = 'bytes=100-'; delete f.failure.contentRange; },
+  'NaN native time on a loadstart observed before the failure': f => {
+    f.events[kindIndex(f, 'loadstart', 2)].nativeAt = NaN;
+  },
+  'NaN native timestamp on a loadstart outside the start window': f => { f.events[kindIndex(f, 'loadstart', 2)].nativeTimeStamp = NaN; },
+  'native clock identity broken outside the start window': f => { f.events[kindIndex(f, 'loadstart', 2)].nativeAt = 506; },
+  'unrelated-instance loadstart before the failure has NaN native time': f => {
+    f.events.push({ ...f.events[kindIndex(f, 'loadstart', 2)], id: 9, nativeAt: NaN });
+  },
+  'unrelated-instance loadstart before the failure breaks the native clock identity': f => {
+    f.events.push({ ...f.events[kindIndex(f, 'loadstart', 2)], id: 9, nativeAt: 506 });
+  },
+  'start-window loadstart is untrusted although an earlier trusted one exists': f => {
+    f.events.push({ ...f.events[kindIndex(f, 'loadstart', 1)], at: 450, nativeAt: 450, nativeTimeStamp: 450 });
+    f.events[kindIndex(f, 'loadstart', 1)].isTrusted = false;
+  },
+  'second instance has no trusted loadstart': f => { f.events.splice(kindIndex(f, 'loadstart', 2), 1); },
+  'second instance has only an untrusted loadstart': f => { f.events[kindIndex(f, 'loadstart', 2)].isTrusted = false; },
+  'second instance earliest loadstart predates its creation': f => {
+    Object.assign(f.events[kindIndex(f, 'loadstart', 2)], { at: 499, nativeAt: 499, nativeTimeStamp: 499 });
+  },
+  'second instance earliest loadstart follows its first playing': f => {
+    Object.assign(f.events[kindIndex(f, 'loadstart', 2)], { at: 601, nativeAt: 601, nativeTimeStamp: 601 });
+  },
+  'second instance never plays': f => { f.events.splice(kindIndex(f, 'playing', 2), 1); },
+  'window loadstart belongs to an unknown instance': f => { f.events[kindIndex(f, 'loadstart', 1)].id = 9; },
+  'second instance also starts inside the window': f => {
+    Object.assign(f.events[kindIndex(f, 'loadstart', 2)], { at: 1100, nativeAt: 1100, nativeTimeStamp: 1100 });
+  },
+  'duplicate source id': f => { f.events.push({ ...f.events[0], at: 450 }); },
+  'document is not bound': f => { delete f.failure.documentId; },
+  'document differs': f => { f.media[0].documentId = 2; },
+};
+for (const [name, change] of Object.entries(multiNegative)) {
+  test('M2 unresolved: ' + name, () => {
+    const f = multiInstanceFixture(); change(f);
+    const result = classifyMediaCancellations([f.failure], f.media);
+    expect(result.classified).toHaveLength(0);
+    expect(result.unresolved).toHaveLength(1);
+  });
+}
+test('a created instance inside the old 250ms window keeps the original path and anchor kind', () => {
+  const f = multiInstanceFixture(); f.events[0].at = 900;
+  const result = classifyMediaCancellations([f.failure], f.media);
+  expect(result.unresolved).toEqual([]);
+  expect(result.classified[0]).toMatchObject({ matchedInstanceId: 1, requestStartEvidence: { anchorKind: 'source-created' } });
+});

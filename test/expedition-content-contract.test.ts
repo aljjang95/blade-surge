@@ -3,7 +3,7 @@ import { DUNGEONS } from '../src/data/expansion.js';
 import { EXPEDITION_DEPTHS } from '../src/data/expedition-depths.js';
 import { BOSS_SIGNATURES } from '../src/data/boss-encounters.js';
 import { ENEMIES } from '../src/data/stages.js';
-import { routeObjectiveForStage } from '../src/data/route-objectives.js';
+import { routeObjectiveForStage, ROUTE_OBJECTIVES } from '../src/data/route-objectives.js';
 import { buildExpeditionStage, buildExpeditionWorld } from '../src/game/expedition-combat.js';
 
 // Independent accepted totals: [existing altar/route holds, additional waves].
@@ -21,7 +21,7 @@ const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   astral_leviathan_spire: { standard: [0, 0], deep: [2, 2] },
   verdigris_sanctum: { standard: [3, 0], deep: [2, 4] },
   sable_mirage_basin: { standard: [3, 0], deep: [0, 4] },
-  comet_bastion: { standard: [4, 0], deep: [2, 4] },
+  comet_bastion: { standard: [4, 0], deep: [5, 4] },
 };
 
 // Disallow the specific unsupported interactions, without freezing prose or
@@ -92,6 +92,25 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(stage.encounter.tactic).toMatch(/안쪽이 안전.*중심 유성.*푸른 선 밖/);
         expect(stage.encounter.tactic).toMatch(/어느 순서/);
         expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번', '4번']);
+      } else if (id === 'comet_bastion' && depth === 'deep') {
+        // 공명 제단은 궤도 고리 5개로 교체됐다. 문구의 숫자는 정의(def)에서 읽어 맞춘다.
+        const deep = route as typeof ROUTE_OBJECTIVES.comet_deep;
+        expect(deep.kind).toBe('deep-orbits');
+        expect('coexistAttunement' in deep).toBe(false);
+        expect(deep.gates.map(g => g.roomId)).toEqual([1, 2, 3, 5, 7]);
+        expect(Number(stage.objective.match(/궤도 고리 (\d+)곳/)?.[1])).toBe(holds);
+        expect(stage.objective).toMatch(/정렬·쉼터 연결/);
+        expect(stage.objective).not.toMatch(/공명|제단|보물방/);
+        const tactic = stage.encounter.tactic;
+        expect(Number(tactic.match(/붕괴 (\d+(?:\.\d+)?)초/)?.[1])).toBe(deep.collapseSeconds);
+        expect(Number(tactic.match(/쉼터에 (\d+(?:\.\d+)?)초 머물러/)?.[1])).toBe(deep.connectSeconds);
+        expect(tactic).toContain('유성 폭풍이 ' + ['한', '두', '세', '네'][deep.storm.shelters.length - 1] + ' 번');
+        expect(tactic).toMatch(/붉은 원 안에서는 청록 빈 원만 안전/);
+        expect(tactic).toMatch(/그 고리만 처음 위치/);
+        expect(tactic).toMatch(/어느 순서/);
+        // 보스 신호 문구(oath_shelter 의 '공명 속 빈 원')는 보스 전술 소유이므로 고리 안내 부분만 검사한다.
+        expect(tactic.slice(0, tactic.indexOf((ENEMIES as Record<string, any>).comet_bastion.tactic))).not.toMatch(/공명|제단/);
+        expect(tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번', '4번', '5번']);
       } else if (id === 'sable_mirage_basin' && depth === 'standard') {
         expect(Number(stage.objective.match(/가짜 왕좌 (세|3) ?개/) ? 3 : 0)).toBe(holds);
         expect(stage.encounter.tactic).toMatch(/적.*처치.*보라 모래시계가 멈춘 동안.*다섯 차례 공격/);
@@ -117,7 +136,7 @@ for (const [id, contract] of Object.entries(contracts)) {
           : id === 'eclipse_hydra_vault' && depth === 'standard' ? copy.replaceAll('밸브', '')
           : id === 'verdigris_sanctum' && depth === 'standard' ? copy.replaceAll('생명 제단', '').replaceAll('포자가 터져', '')
           : id === 'sable_mirage_basin' && depth === 'standard' ? copy.replaceAll('가짜 왕좌', '왕좌')
-          : id === 'comet_bastion' && depth === 'standard' ? copy.replaceAll('궤도 고리', '고리').replaceAll('푸른 궤도선', '푸른 선')
+          : id === 'comet_bastion' ? copy.replaceAll('궤도 고리', '고리').replaceAll('푸른 궤도선', '푸른 선')
           : id === 'nightglass_observatory' ? copy.replace(/기록\s*3장/g, '')
           : id === 'astral_leviathan_spire' && depth === 'standard' && selectionRoute
             ? copy.replaceAll('별자리 4개 순서대로 복원', '') : copy;

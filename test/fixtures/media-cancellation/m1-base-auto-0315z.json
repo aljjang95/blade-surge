@@ -1,0 +1,241 @@
+{
+ "source": "blade-self-improve-20261015/qa-out/20261015T0315Z-base-auto/report.json documentId 1",
+ "expectedBeforeFix": "ambiguous-or-missing-request-start-instance",
+ "expectedAfterFix": {
+  "matchedInstanceId": 1,
+  "anchorKind": "trusted-native-loadstart",
+  "stoppedInstanceIds": [
+   1
+  ],
+  "replacementId": 2
+ },
+ "failure": {
+  "engine": "chromium",
+  "url": "http://127.0.0.1:42121/bgm/regions/lobby.mp3",
+  "started": 1792033986555.35,
+  "responseAt": 1792033986588.2942,
+  "failedAt": 1792034022264.438,
+  "type": "media",
+  "status": 206,
+  "error": "net::ERR_ABORTED",
+  "range": "bytes=0-",
+  "contentRange": "bytes 0-3391051/3391052",
+  "documentId": 1
+ },
+ "media": [
+  {
+   "engine": "chromium",
+   "documentId": 1,
+   "snapshot": {
+    "at": 1792034029570,
+    "droppedEvents": 0,
+    "events": [
+     {
+      "id": 1,
+      "kind": "source-created",
+      "src": "http://127.0.0.1:42121/bgm/regions/lobby.mp3",
+      "at": 1792033981011.5,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": true,
+      "connected": false,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 1,
+      "kind": "source-connect",
+      "src": "http://127.0.0.1:42121/bgm/regions/lobby.mp3",
+      "at": 1792033981011.8,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": true,
+      "connected": true,
+      "error": null,
+      "collected": false,
+      "argumentCount": 1,
+      "connectionAmbiguous": false
+     },
+     {
+      "id": 1,
+      "kind": "play-call",
+      "src": "http://127.0.0.1:42121/bgm/regions/lobby.mp3",
+      "at": 1792033981011.9,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": true,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 1,
+      "kind": "play-return",
+      "src": "http://127.0.0.1:42121/bgm/regions/lobby.mp3",
+      "at": 1792033981012.0999,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 1,
+      "kind": "loadstart",
+      "src": "http://127.0.0.1:42121/bgm/regions/lobby.mp3",
+      "at": 1792033986628.4,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false,
+      "isTrusted": true,
+      "nativeAt": 1792033986536.7,
+      "nativeTimeStamp": 17686.5,
+      "nativeTimeOrigin": 1792033968850.2
+     },
+     {
+      "id": 1,
+      "kind": "loadedmetadata",
+      "src": "http://127.0.0.1:42121/bgm/regions/lobby.mp3",
+      "at": 1792033986753.2,
+      "currentTime": 0,
+      "readyState": 4,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 1,
+      "kind": "playing",
+      "src": "http://127.0.0.1:42121/bgm/regions/lobby.mp3",
+      "at": 1792033986753.3,
+      "currentTime": 0,
+      "readyState": 4,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 2,
+      "kind": "source-created",
+      "src": "http://127.0.0.1:42121/bgm/regions/frost.mp3",
+      "at": 1792033998397.4,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": true,
+      "connected": false,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 1,
+      "kind": "pause-call",
+      "src": "http://127.0.0.1:42121/bgm/regions/lobby.mp3",
+      "at": 1792034003440.2,
+      "currentTime": 16.461333,
+      "readyState": 4,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 1,
+      "kind": "pause-return",
+      "src": "http://127.0.0.1:42121/bgm/regions/lobby.mp3",
+      "at": 1792034003440.5999,
+      "currentTime": 16.461333,
+      "readyState": 4,
+      "paused": true,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 1,
+      "kind": "source-disconnect",
+      "src": "http://127.0.0.1:42121/bgm/regions/lobby.mp3",
+      "at": 1792034003440.7,
+      "currentTime": 16.461333,
+      "readyState": 4,
+      "paused": true,
+      "connected": false,
+      "error": null,
+      "collected": false,
+      "argumentCount": 0,
+      "connectionAmbiguous": false
+     },
+     {
+      "id": 1,
+      "kind": "pause",
+      "src": "http://127.0.0.1:42121/bgm/regions/lobby.mp3",
+      "at": 1792034004303.7,
+      "currentTime": 16.461333,
+      "readyState": 4,
+      "paused": true,
+      "connected": false,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 2,
+      "kind": "playing",
+      "src": "http://127.0.0.1:42121/bgm/regions/frost.mp3",
+      "at": 1792034005037.5,
+      "currentTime": 0.717356,
+      "readyState": 4,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 4,
+      "kind": "source-created",
+      "src": "http://127.0.0.1:42121/bgm/regions/lobby.mp3",
+      "at": 1792034029483.2,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": true,
+      "connected": false,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 4,
+      "kind": "loadstart",
+      "src": "http://127.0.0.1:42121/bgm/regions/lobby.mp3",
+      "at": 1792034029536,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false,
+      "isTrusted": true,
+      "nativeAt": 1792034029533.2,
+      "nativeTimeStamp": 60683,
+      "nativeTimeOrigin": 1792033968850.2
+     }
+    ],
+    "tracks": [
+     {
+      "id": 2,
+      "src": "http://127.0.0.1:42121/bgm/regions/frost.mp3",
+      "currentTime": 15.829619,
+      "readyState": 4,
+      "paused": true,
+      "connected": false,
+      "error": null,
+      "collected": false
+     }
+    ]
+   }
+  }
+ ]
+}

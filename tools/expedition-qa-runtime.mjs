@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { launchOpts } from './chrome.mjs';
 import { installConquestMediaObserver } from './conquest-media-observer.mjs';
-import { assessMediaObservations, createMediaCheckpoints } from './qa-media-checkpoints.mjs';
+import { assessMediaObservations, createMediaCheckpoints, failuresAwaitingObservation } from './qa-media-checkpoints.mjs';
 
 export const qaArgument = name => process.argv.find(a => a.startsWith(`--${name}=`))?.slice(name.length + 3);
 export const qaHash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -56,13 +56,18 @@ export async function createExpeditionQa({ root, driver, report, sourceFiles }) 
     }
     for (const [file, hash] of Object.entries(report.sources)) qaAssert(qaHash(await fs.readFile(path.join(root, file))) === hash, `Driver dependency changed: ${file}`);
   }
-  async function start({ viewport = { width: 844, height: 390 } } = {}) {
+  // context는 터치·모바일·모션 설정만 허용한다. 생략하면 기존과 같은 reduced-motion 데스크톱 컨텍스트다.
+  async function start({ viewport = { width: 844, height: 390 }, context: contextOptions = {} } = {}) {
+    const allowed = ['hasTouch', 'isMobile', 'reducedMotion'];
+    qaAssert(Object.keys(contextOptions).every(key => allowed.includes(key)), 'QA context accepts only hasTouch/isMobile/reducedMotion');
+    qaAssert(contextOptions.reducedMotion === undefined || ['reduce', 'no-preference'].includes(contextOptions.reducedMotion), 'reducedMotion must be reduce or no-preference');
     await versionGuard();
     if (!origin) server = await preview({ root, logLevel: 'error', preview: { host: '127.0.0.1', port: 0 } });
     url = origin || `http://127.0.0.1:${server.httpServer.address().port}`; report.origin = url;
     await versionGuard();
     browser = await chromium.launch(launchOpts());
-    context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
+    context = await browser.newContext({ viewport, reducedMotion: 'reduce', ...contextOptions });
+    report.contextOptions = { viewport, reducedMotion: 'reduce', ...contextOptions };
     const storage = await context.storageState();
     qaAssert(storage.cookies.length === 0 && storage.origins.length === 0, 'Expected an isolated fresh browser context');
     report.contextInitiallyEmpty = true;
@@ -99,9 +104,16 @@ export async function createExpeditionQa({ root, driver, report, sourceFiles }) 
     qaAssert(!closed && checkpoints, 'No active native observation document');
     await checkpoints.capture(documentId, label); await checkpoints.drain();
   }
+  // 문서 관측을 끝내기 직전, 실패 뒤 스냅샷이 아직 없는 실패가 있으면 250ms 간격으로 최대 8번 다시 관측한다.
+  // 페이지 시계가 실패 시각(리소스 타이밍)을 넘어설 때까지 기다리는 것이며, 그래도 없으면 미디어 게이트는 그대로 실패한다.
+  async function settleObservations(label) {
+    for (let i = 0; i < 8 && failuresAwaitingObservation(report, documentId).length; i++) {
+      await page.waitForTimeout(250); await captureMedia(label);
+    }
+  }
   async function boot({ reload = false } = {}) {
     qaAssert(!ended, 'Observation window has ended');
-    if (reload) await checkpoints.beforeNavigation(documentId);
+    if (reload) { await settleObservations('settle-before-native-navigation'); await checkpoints.beforeNavigation(documentId); }
     documentId++;
     if (reload) await page.reload({ waitUntil: 'domcontentloaded', timeout: 120000 });
     else await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 120000 });
@@ -132,6 +144,7 @@ export async function createExpeditionQa({ root, driver, report, sourceFiles }) 
     qaAssert(!ended && !closed, 'Observation was already finalized');
     await versionGuard(); await captureMedia('final-before-context-close');
     await checkpoints.drain();
+    await settleObservations('final-settle-before-context-close');
     report.functionalEndedAt = new Date().toISOString();
     report.status = 'functional-pass-pending-final-observation';
     ended = true; await save();

@@ -65,3 +65,23 @@ test.skipIf(!existsSync(oldRaw))('checkpoint collection cannot promote the prese
   const result = classifyMediaCancellations(r.requestFailures.filter((f: any) => f.documentId === 2), r.media.filter((m: any) => m.documentId === 2));
   expect(result.classified).toHaveLength(0); expect(result.unresolved[0].reason).toBe('missing-or-incomplete-observation');
 });
+
+// BUNDLE-02 cand-screens-default: frost.mp3 중단 직후 스냅샷이 리소스 타이밍 failedAt 보다 287ms(페이지 시계) 앞섰고,
+// 관측 종료 스냅샷도 165ms 앞서 실패 뒤 관측이 없었다. 런타임은 이 목록이 빌 때까지만 다시 관측한다.
+test('failures awaiting a post-failure observation follow the page-clock snapshot times per document', async () => {
+  const { failuresAwaitingObservation } = await import('../tools/qa-media-checkpoints.mjs');
+  const end = 1792042949535.877;
+  const frost = { documentId: 1, url: 'http://127.0.0.1/bgm/regions/frost.mp3', failedAt: end };
+  const lobby = { documentId: 1, url: 'http://127.0.0.1/bgm/lobby.mp3', failedAt: end - 33000 };
+  const snap = (documentId: number, at: number) => ({ documentId, snapshot: { at } });
+  const report: any = { requestFailures: [lobby, frost], media: [-32999, -6125, -287, -165].map(d => snap(1, end + d)) };
+  expect(failuresAwaitingObservation(report, 1)).toEqual([frost]);
+  report.media.push(snap(2, end + 500));
+  expect(failuresAwaitingObservation(report, 1)).toEqual([frost]);
+  report.media.push(snap(1, end));
+  expect(failuresAwaitingObservation(report, 1)).toEqual([]);
+  report.requestFailures.push({ documentId: 1, url: 'x', failedAt: NaN });
+  expect(failuresAwaitingObservation(report, 1)).toEqual([]);
+  expect(failuresAwaitingObservation({ requestFailures: [frost], media: [] }, 1)).toEqual([frost]);
+});
+
