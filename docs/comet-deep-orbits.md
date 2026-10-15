@@ -4,7 +4,7 @@
 
 ## 제품 계약
 
-- 해당 방의 적을 처치하면 룬석을 몸으로 밀 수 있다(밀기 물리는 일반판과 같다). **첫 실제 밀기에서 궤도 붕괴 9초**가 시작된다.
+- 해당 방의 적을 처치하면 룬석을 몸으로 밀 수 있다(밀기 물리는 일반판과 같다). **첫 실제 밀기에서 궤도 붕괴 9초**가 시작된다. 마지막 적을 쓰러뜨린 순간 영웅이 궤도 위에서 룬석에 닿아 있으면 같은 프레임에 밀려 붕괴가 바로 시작된다(이것도 실제 밀기다).
 - 9초 안에 룬석을 별 표식에 8° 안으로 0.4초 맞추고, 방 중심 쉼터(반경 2.2)에 0.5초 머물면 고리가 연결된다.
 - 연결 직후 **유성 폭풍 3회**. 매번 1.4초 예고 동안 반경 12의 붉은 영역 안에서 청록 빈 원(반경 2.2)이 중심 → 별 → 옆자리로 옮겨 간다. 빈 원 밖에 있으면 최대 체력의 8%를 잃는다. 세 쉼터는 한 변 4.0의 정삼각형이라 어디서든 다음 빈 원까지 4.0 이동이면 닿는다.
 - 폭풍이 끝나야 그 방이 정화되고 방 보상이 한 번 나온다. 붕괴 시간이 다 되면 그 고리만 처음 위치로 돌아가 다시 민다(피해·정화 없음).
@@ -47,7 +47,7 @@
 
 ## 측정 방법
 
-도구는 `tools/comet-deep-qa.mjs`다. 공유 `tools/expedition-qa-runtime.mjs`(clean HEAD·dist·소스 해시 결속, 콘솔·네트워크·미디어 분류)를 그대로 쓰며 빌드는 하지 않는다. 대상 프로젝트는 미리 빌드돼 있어야 하고 `--project`로 기준선 빌드도 가리킬 수 있다.
+도구는 `tools/comet-deep-qa.mjs`다. 공유 `tools/expedition-qa-runtime.mjs`(clean HEAD·dist·소스 해시 결속, 콘솔·네트워크·미디어 분류)를 그대로 쓰며 빌드는 하지 않는다. 대상 프로젝트는 미리 빌드돼 있어야 하고 `--project`로 기준선 빌드도 가리킬 수 있다. 이 묶음에서 공유 런타임 `start()`에 `context` 선택 인자(`hasTouch`·`isMobile`·`reducedMotion`만 허용)를 더했다. 생략하면 이전과 같은 reduced-motion 컨텍스트다.
 
 ```
 node tools/comet-deep-qa.mjs --expected-sha=<40hex> --out=/new/absolute/dir --profile=auto --seed=20261015 --hero=knight
@@ -59,6 +59,7 @@ node tools/comet-deep-qa.mjs --help
 - **fixture**: 저장 주입(해금·영웅 Lv.50 별3 스킬5·장비·에너지 최대·AUTO), Math.random 시드. **실제 UI·입력**: 출격 카드 버튼, `#btn-auto`, `#btn-pause`/`#btn-resume`/`#btn-giveup`, 결과 화면 버튼, 선택지 모달, 새로고침. **제어 실행**: `app.testPause` 아래 고정 1/60초 `app.step`. 좌표 이동·무적·HP 주입으로 정상 플레이를 증명하지 않는다. 각 구분은 report.json의 `classification`에 적힌다.
 - 프로필: `auto`(완주·결과·새로고침 보존), `fail`(AUTO를 끄고 붕괴 실패를 관찰한 뒤 재연결), `pause`, `giveup`(패배 결과와 재도전), `save-fault`(정산 저장 실패 주입은 이 프로필 안에서만), `refresh`(전투 중 새로고침: pending 취소·에너지 1회 환급), `retry`(승리 뒤 다시 도전: 첫 보상 미지급), `touch`(CDP 터치 이벤트로 가상 조이스틱, 에뮬레이터 입력), `screens`(준비·붕괴·쉼터·폭풍 예고·보스·결과마다 640×360, 844×390, 390×844 PNG). 낮은 화질과 reduced motion은 `--quality=low --motion=reduce`로 같은 프로필을 다시 돌린다.
 - 기록: 고리별 phase 타임라인(게임 시간)과 slack, 실패, 폭풍 피격, 방 정화 순서, 결과 객체(routeObjective), 고리 방 첫 진입과 첫 폭풍 예고 프레임의 draw call·렌더 ms·보이는 고리 메시 수, 스텝 ms 분포(p50/p95/max, 50ms 초과 목록), 최대 동시 적, 최소 HP 비율, HP 감소 이벤트.
+- phase 관측은 `app.step` 한 번(1/60초)이 끝날 때만 한다. 그래서 한 스텝 안에서 locked→ready→collapse가 이어지면 locked→collapse로 보인다. 도구는 그 스텝에서 붕괴가 막 시작된 증거(남은 시계가 붕괴 시간에서 1/30초 이내)가 있을 때만 이 합성 전이를 허용하고 report의 `composite`에 남긴다. 그 밖의 건너뛰기는 실패다.
 - `kind !== 'deep-orbits'`인 기준선 빌드에서는 고리 검사를 건너뛰고 원정 시간·처치·피격·프레임·draw call만 남긴다. 기준선과 후보는 같은 시드·영웅·fixture·1/60초로 직렬 실행해 비교한다. 후보 완주·오류 0·draw call 증가 ≤ 12·50ms 초과 프레임 없음을 보고, 원정 시간은 기준선의 2배 이하만 확인한다.
 
 ### 한계
