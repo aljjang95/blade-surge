@@ -75,13 +75,14 @@ test('concurrent prepare shares one group, stopped late import never attaches, a
   const restoreDocument = documentFixture([]);
   try {
     const f = fixture(); const a = f.route.prepareView(f.scene), b = f.route.prepareView(f.scene); await Promise.all([a, b]);
-    expect(f.scene.children).toHaveLength(1); expect(f.route.view).toBeInstanceOf(AstralConstellationView);
+    // 일반판은 고리가 있어 조율판 뷰 그룹 하나와 고리 뷰 그룹 하나가 붙는다(동시 준비로 두 배가 되지 않는다).
+    expect(f.scene.children).toHaveLength(2); expect(f.route.view).toBeInstanceOf(AstralConstellationView);
     f.route.stop(); expect(f.scene.children).toHaveLength(0);
     const late = fixture(), pending = late.route.prepareView(late.scene); late.route.stop(); await pending;
     expect(late.route.view).toBeNull(); expect(late.scene.children).toHaveLength(0);
     await late.route.prepareView(late.scene); expect(late.scene.children).toHaveLength(0);
     const next = fixture(); await next.route.prepareView(next.scene);
-    expect(next.route.progress).toBe(0); expect(next.scene.children).toHaveLength(1); next.route.stop();
+    expect(next.route.progress).toBe(0); expect(next.scene.children).toHaveLength(2); next.route.stop();
   } finally { restoreDocument(); }
 });
 

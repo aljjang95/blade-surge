@@ -3,6 +3,7 @@ import { Group, Scene, Vector3 } from 'three';
 import { buildExpeditionStage, buildExpeditionWorld, expeditionRoster } from '../src/game/expedition-combat.js';
 import { createRouteObjectives } from '../src/game/route-objectives.js';
 import { AstralConstellations } from '../src/game/astral-constellations.js';
+import { AstralRingConstellations } from '../src/game/astral-ring-constellations.js';
 import { Battle } from '../src/game/battle-base.js';
 import { Player } from '../src/game/player.js';
 import { Actor } from '../src/game/actor.js';
@@ -10,7 +11,8 @@ import { Economy } from '../src/game/economy.js';
 import { ExpeditionEconomy } from '../src/game/expedition-economy.js';
 
 const noop = () => {};
-function fixture() {
+// plain: 외곽 고리가 없는 정의 사본으로 부모 AstralConstellations 의 기존 동작(4/4 + 모든 구역 → 봉인 해제)을 그대로 검사한다.
+function fixture(options: { plain?: boolean } = {}) {
   const stage = buildExpeditionStage('dungeon', 'astral_leviathan_spire', null);
   const world = buildExpeditionWorld(stage), messages: string[] = [], drops: any[] = [];
   const g: any = Object.create(Battle.prototype);
@@ -32,7 +34,11 @@ function fixture() {
       g.routeObjectives.spawn(room); g.enemies.push({ alive: true, homeRoom: room, pos: new Vector3(room.x, 0, room.z), dispose: noop });
     },
   });
-  const route = createRouteObjectives(stage, world) as AstralConstellations;
+  let route = createRouteObjectives(stage, world) as AstralConstellations;
+  if (options.plain) {
+    const { ring: _ring, ...plainDef } = route.def;
+    route = new AstralConstellations(plainDef, world);
+  }
   g.routeObjectives = route; g.autoTarget = route.autoRoom();
   return { g, world, route, messages, drops };
 }
@@ -56,6 +62,16 @@ function select(f: Fixture, id: string, index = f.route.progress) {
   f.g.updateExpedition(.01); return gate;
 }
 function restore(f: Fixture, index = f.route.progress) { defend(f, f.route.gates[index].room.id); const gate = read(f, index); select(f, gate.answer, index); return gate; }
+// 고리를 걸어 마치는 최소 흐름: 열림 → 방 안 → 표지 3개를 차례로 1초(전부 중심 밖이라 집결 피해 없음).
+function finishRing(f: Fixture) {
+  const ring = (f.route as any).ring, g = f.g;
+  for (let i = 0; i < 3 && ring.phase === 'idle'; i++) g.updateExpedition(.1);
+  expect(ring.phase).toBe('open');
+  g.player.pos.set(ring.center.x + 9, 0, ring.center.z); g.updateExpedition(.1);
+  expect(ring.phase).toBe('running');
+  for (const mark of ring.marks) { g.player.pos.copy(mark.pos); g.updateExpedition(.5); g.updateExpedition(.5); }
+  expect(ring.phase).toBe('done');
+}
 function cell(world: any, point: any) { return Math.floor(point.z - world.minZ) * world.cols + Math.floor(point.x - world.minX); }
 
 function deathActor(f: Fixture, room: any) {
@@ -231,8 +247,8 @@ test('dead, stopped, inactive, paused, replaced-world and ended-boss controllers
   }
 });
 
-test('4/4 AND every nonboss room gate the actual Battle seal/victory; frozen report and repeated clear cannot pay twice', () => {
-  const f = fixture(); for (let i = 0; i < 4; i++) restore(f, i);
+test('without a ring definition, 4/4 AND every nonboss room gate the actual Battle seal/victory; frozen report and repeated clear cannot pay twice', () => {
+  const f = fixture({ plain: true }); for (let i = 0; i < 4; i++) restore(f, i);
   expect(f.route.complete).toBe(true); expect(f.route.canUnseal()).toBe(false); f.g.unsealBoss(); expect(f.world.sealed).toBe(true);
   f.g.bossDefeated = true; f.g.victory(); expect(f.g.result).toBeNull(); f.g.bossDefeated = false;
   for (const room of f.world.rooms) if (!['start', 'boss'].includes(room.type) && !room.cleared) defend(f, room.id);
@@ -246,6 +262,19 @@ test('4/4 AND every nonboss room gate the actual Battle seal/victory; frozen rep
   const label = report.constellations[0].label, paid = f.drops.length; f.route.gates[0].label = 'changed';
   expect(report.constellations[0].label).toBe(label); expect(f.route.finish(false)).toBe(report); expect(f.route.autoRoom()).toBeNull();
   f.g.victory(); for (const gate of f.route.gates) f.g.markCleared(gate.room); expect(f.drops.length).toBe(paid);
+});
+
+test('with the standard ring, 4/4 and every nonboss room are not enough: the ring must be completed before Battle unseals', () => {
+  const f = fixture(); expect(f.route.constructor).toBe(AstralRingConstellations); for (let i = 0; i < 4; i++) restore(f, i);
+  for (const room of f.world.rooms) if (!['start', 'boss'].includes(room.type) && !room.cleared) defend(f, room.id);
+  f.g.unsealBoss(); expect(f.world.sealed).toBe(true); expect(f.route.canUnseal()).toBe(false);
+  finishRing(f);
+  expect(f.world.sealed).toBe(false); expect(f.route.canUnseal()).toBe(true);
+  f.world.bossRoom.cleared = true; f.g.bossDefeated = true; f.g.victory();
+  const report = f.g.result.routeObjective;
+  expect(report.complete).toBe(true); expect(report.progress).toBe(4);
+  expect(report.ring).toEqual({ purified: true, marks: 3, collapses: 0, shardHits: 0, seconds: expect.any(Number) });
+  expect(Object.isFrozen(report)).toBe(true); expect(Object.isFrozen(report.ring)).toBe(true);
 });
 
 test('loss preserves only actual restored identities; stop/new run starts 0/4 with no old pending confirmation', () => {
@@ -281,6 +310,7 @@ test('actual Astral catalog ticket pays once, rejects replay after save/reload, 
     expect(x.dungeonAccess('astral_leviathan_spire').ok).toBe(true);
     const f = fixture(); for (let i = 0; i < 4; i++) restore(f, i);
     for (const room of f.world.rooms) if (!['start', 'boss'].includes(room.type) && !room.cleared) defend(f, room.id);
+    finishRing(f);
     f.g.unsealBoss(); f.world.bossRoom.cleared = true; f.g.bossDefeated = true; f.g.victory();
     const entry = x.begin('dungeon', 'astral_leviathan_spire'); expect(entry.ok).toBe(true);
     expect(x.settle(entry.ticket, f.g.result).ok).toBe(true); const paid = eco.s.gold, stats = x.s.stats.astral_leviathan_spire;
