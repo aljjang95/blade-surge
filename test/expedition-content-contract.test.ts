@@ -11,7 +11,7 @@ import { buildExpeditionStage, buildExpeditionWorld } from '../src/game/expediti
 // A treasure room alone is not an altar, and reinforcement counts are per elite.
 const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   glass_garden: { standard: [1, 0], deep: [2, 0] },
-  ember_vault: { standard: [0, 2], deep: [0, 2] },
+  ember_vault: { standard: [0, 2], deep: [3, 2] },
   star_archive: { standard: [0, 0], deep: [2, 0] },
   bellfall_crypt: { standard: [3, 0], deep: [3, 2] },
   cinder_tide_lock: { standard: [2, 4], deep: [3, 4] },
@@ -131,6 +131,30 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(tactic).toContain('심장로 ' + deep.gates.length + '곳과 모든 구역을 정화하면 보스 봉인이 풀립니다');
         // 심장로 안내는 보스 전술보다 앞에 있다.
         expect(tactic.indexOf('심장로')).toBeLessThan(tactic.indexOf((ENEMIES as Record<string, any>).ash_colossus.tactic));
+      } else if (id === 'ember_vault' && depth === 'deep') {
+        // 정예방 증원만 있던 심층은 냉각 밸브 3곳 개방으로 바뀌었다. 문구의 숫자·번호 순서는 정의(def)에서 읽어 맞춘다.
+        const deep = route as typeof ROUTE_OBJECTIVES.ember_deep;
+        expect(deep).toBe(ROUTE_OBJECTIVES.ember_deep);
+        expect(deep.gates.map(g => g.roomId)).toEqual([2, 3, 4]);
+        expect('coexistAttunement' in deep).toBe(false);
+        expect(Number(stage.objective.match(/냉각 밸브 (\d+)곳을 밀물 뒤 순서대로 개방/)?.[1])).toBe(holds);
+        expect(stage.objective).not.toMatch(/공명|제단|보물방/);
+        expect(stage.objective).toMatch(/모든 구역 정화 → 선단 압류관 처치$/);
+        const tactic = stage.encounter.tactic;
+        const bossTactic = (ENEMIES as Record<string, any>).cinder_chain_executor.tactic as string;
+        expect(tactic).toMatch(/적을 처치한 뒤\(정예방은 증원 1회까지\)/);
+        const steps = tactic.match(/\d번 → (?:\d번 → )*\d번/)![0];
+        expect(steps).toBe(deep.gates.map((_, i) => (i + 1) + '번').join(' → '));
+        expect(tactic.match(/\d번/g)).toEqual(deep.gates.map((_, i) => (i + 1) + '번'));
+        expect(tactic).toMatch(/밀물이 한 번 지나가면 조작판이 반대편으로 옮겨 가 열립니다/);
+        expect(tactic).toMatch(/다음 밀물 경고 전까지/);
+        expect(Number(tactic.match(/행동 없이 (\d+(?:\.\d+)?)초 유지/)?.[1])).toBe(deep.holdSeconds);
+        expect(tactic).toMatch(/청록 조작판/);
+        expect(tactic).toMatch(/파란 밀물 띠 안에 있으면 피해를 입습니다/);
+        // 밀물 문구 안에 재벼림 심층의 망치 충격파 문구가 섞이지 않는다.
+        expect(stage.objective + tactic.slice(0, tactic.indexOf(bossTactic))).not.toMatch(/망치|충격파|심장로|불씨/);
+        // 냉각 밸브 안내는 보스 전술보다 앞에 있다.
+        expect(tactic.indexOf('냉각 밸브')).toBeLessThan(tactic.indexOf(bossTactic));
       } else if (id === 'ashforge_catacomb' && depth === 'standard') {
         expect(Number(stage.objective.match(/과열 용광로\s*(\d+)곳/)?.[1])).toBe(holds);
         expect(stage.encounter.tactic).toMatch(/1\.4초 예고/);
@@ -245,6 +269,8 @@ for (const [id, contract] of Object.entries(contracts)) {
       for (const copy of [definition.objective, definition.tactic, stage.objective, stage.encounter.tactic]) {
         const checked = id === 'cinder_tide_lock' ? copy.replaceAll('밸브', '')
           : id === 'eclipse_hydra_vault' ? copy.replaceAll('밸브', '')
+          // 잿불금고 심층은 약속한 '냉각 밸브'만 면제한다. 그 밖의 '밸브'(냉각로·역류 밸브 등)는 계속 거른다.
+          : id === 'ember_vault' && depth === 'deep' ? copy.replaceAll('냉각 밸브', '')
           : id === 'verdigris_sanctum' && depth === 'standard' ? copy.replaceAll('생명 제단', '').replaceAll('포자가 터져', '')
           : id === 'sable_mirage_basin' && depth === 'standard' ? copy.replaceAll('가짜 왕좌', '왕좌')
           // 심층은 약속한 거울 미궁 안내 문장 하나(발자국을 따라 진짜 거울로)만 면제하고 그 밖의 발자국·환영 안내는 계속 거른다.
