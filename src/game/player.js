@@ -519,6 +519,13 @@ export class Player extends Actor {
     const out = { x: 0, y: 0 };
     const g = this.game, W = g.world; if (!W) return out;
     if (g.portal && (!g.stage?.party || !this.partyPortaled)) { const dx = g.portal.pos.x - this.pos.x, dz = g.portal.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; return out; }   // 봉인 해제 포탈 → 보스방 앞
+    const goal = g.routeObjectives?.autoGoal?.();   // 경로 목표가 정한 지점(거울 미궁의 진짜 거울)으로 거리장 이동
+    if (goal) {
+      const flow = W.buildFlow(goal.x, goal.z), d = W.flowDir(flow, this.pos.x, this.pos.z);
+      if (d) { out.x = d[0]; out.y = d[1]; }
+      else { const dx = goal.x - this.pos.x, dz = goal.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; }
+      return out;
+    }
     let target = g.conquest?.autoRoom() || g.autoTarget;
     if (!target || target.cleared || !W.rooms.includes(target)) {
       const cands = W.rooms.filter((r) => !r.cleared && !(W.sealed && r === W.bossRoom));   // 봉인된 보스방은 못 들어간다

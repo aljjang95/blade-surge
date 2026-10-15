@@ -32,6 +32,15 @@ const ASHFORGE_STEPS = ASHFORGE_FURNACES.gates.map((_, i) => `${i + 1}번`).join
 const ASHFORGE_OBJECTIVE = `${ASHFORGE_COPY.unit} ${ASHFORGE_COUNT}곳을 ${ASHFORGE_COPY.vent} 뒤 순서대로 ${ASHFORGE_COPY.doneVerb}하고 정예방 ${ASHFORGE_ELITES}곳의 증원 각 ${ASHFORGE_REINFORCEMENTS}회 격파 → 모든 구역 정화 → 잿빛 재벼림 거수 처치`;
 const ASHFORGE_TACTIC = `각 ${ASHFORGE_COPY.unit} 구역의 적을 처치한 뒤(정예방은 증원 ${ASHFORGE_REINFORCEMENTS}회까지) ${ASHFORGE_STEPS} 순서로 ${ASHFORGE_COPY.doneVerb}하세요. ${ASHFORGE_COPY.vent}가 한 번 지나가면 조작판이 반대편으로 옮겨 가 열립니다. 다음 ${ASHFORGE_COPY.warning} 전까지 그 청록 조작판에서 행동 없이 ${ASHFORGE_FURNACES.holdSeconds}초 유지하면 ${ASHFORGE_COPY.unit}가 식고 사슬에 묶인 불씨가 풀려납니다. 예고·충격파 중이거나 이탈·공격·회피·피격·일시정지하면 유지 시간이 초기화됩니다. ${ASHFORGE_COPY.unit} ${ASHFORGE_COUNT}곳과 모든 구역을 정화하면 보스 봉인이 풀립니다. `;
 
+// 흑사막 분지 심층 가짜 왕좌 4곳·거울 미궁 문구의 숫자는 규칙 정의(ROUTE_OBJECTIVES.sable_deep)에서 계산한다(BUNDLE-09).
+// 정예방 수·증원 횟수는 아래 sable_mirage_basin 의 레이아웃·mechanics 와 같은 값이며 계약 테스트가 일치를 검사한다.
+const SABLE_THRONES = ROUTE_OBJECTIVES.sable_deep;
+const SABLE_ELITES = 2;
+const SABLE_REINFORCEMENTS = 2;
+const SABLE_COUNT = SABLE_THRONES.gates.length;
+const SABLE_OBJECTIVE = `가짜 왕좌 ${SABLE_COUNT}곳 파괴와 정예방 ${SABLE_ELITES}곳의 증원 각 ${SABLE_REINFORCEMENTS}회 격파 → 모든 구역 정화 → 거울 미궁 탈출 → 환영 여왕 처치`;
+const SABLE_TACTIC = `각 왕좌 구역의 적을 처치한 뒤(정예방은 증원 ${SABLE_REINFORCEMENTS}회까지) 보라 모래시계가 멈춘 동안 왕좌를 ${SABLE_THRONES.hits}번 공격해 ${SABLE_COUNT}곳을 모두 부수세요. 모래시계가 도는 동안 때리면 모래가 반사됩니다. 왕좌 ${SABLE_COUNT}곳과 모든 구역을 정화하면 거울 전당에 거울 두 개가 섭니다. 사라지는 모래 발자국과 멈춘 모래시계를 따라 제한 시간 안에 진짜 거울에 닿으면 보스 봉인이 풀립니다. 환영 거울은 모래를 반사하고, 시간이 다 되면 거울이 무너져 피해를 입은 뒤 다시 시작합니다. `;
+
 // Authored follow-up expeditions. The base material runs keep their original
 // price and rewards; these routes unlock at explicit campaign milestones.
 export const EXPEDITION_DEPTHS = [
@@ -182,8 +191,8 @@ export const EXPEDITION_DEPTHS = [
     id: 'sable_mirage_basin', depth: 'deep', name: '흑사막 분지 · 왕좌의 거울', unlockCode: '5-10', minLevel: 5,
     energy: 7, chapter: 5, stage: 7, scale: 22, bossEnemy: 'sable_mirage_empress', bossHp: 33800,
     description: '흑사막의 가짜 왕좌가 만든 거울 미궁에 환영 여왕이 숨어 있습니다.',
-    objective: '정예방 2곳의 증원 각 2회 격파 → 모든 구역 정화 → 환영 여왕 처치', bossName: '왕좌의 거울을 두른 환영 여왕', art: '/img/encounters/boss_sable_mirage_empress.webp',
-    tactic: `각 정예방에서 적과 2회 증원을 격파하고 모든 구역을 정화하세요. ${ENEMIES.sable_mirage_empress.tactic}`,
+    objective: SABLE_OBJECTIVE, bossName: '왕좌의 거울을 두른 환영 여왕', art: '/img/encounters/boss_sable_mirage_empress.webp',
+    tactic: `${SABLE_TACTIC}${ENEMIES.sable_mirage_empress.tactic}`,
     layout: { spacing: [31, 27], size: [22, 18], width: 7,
       cells: [[0,0],[0,1],[1,1],[1,0],[2,0],[2,-1],[3,-1],[4,-1],[4,0]],
       edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8],[2,6]],

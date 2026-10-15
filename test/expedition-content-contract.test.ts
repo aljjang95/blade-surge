@@ -20,7 +20,7 @@ const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   ashforge_catacomb: { standard: [4, 0], deep: [4, 4] },
   astral_leviathan_spire: { standard: [0, 0], deep: [2, 2] },
   verdigris_sanctum: { standard: [3, 0], deep: [2, 4] },
-  sable_mirage_basin: { standard: [3, 0], deep: [0, 4] },
+  sable_mirage_basin: { standard: [3, 0], deep: [4, 4] },
   comet_bastion: { standard: [4, 0], deep: [5, 4] },
 };
 
@@ -208,6 +208,27 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(stage.encounter.tactic).toMatch(/도는 동안.*반사/);
         expect(stage.encounter.tactic).toMatch(/어느 순서/);
         expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번']);
+      } else if (id === 'sable_mirage_basin' && depth === 'deep') {
+        // 정예방 증원만 있던 심층은 가짜 왕좌 4곳 파괴와 거울 미궁 탈출로 바뀌었다. 문구의 숫자는 정의(def)에서 읽어 맞춘다.
+        const deep = route as typeof ROUTE_OBJECTIVES.sable_deep;
+        expect(deep).toBe(ROUTE_OBJECTIVES.sable_deep);
+        expect(deep.gates.map(g => g.roomId)).toEqual([2, 3, 5, 6]);
+        expect('coexistAttunement' in deep).toBe(false);
+        expect(Number(stage.objective.match(/가짜 왕좌 (\d+)곳 파괴/)?.[1])).toBe(holds);
+        expect(stage.objective).not.toMatch(/공명|제단|보물방/);
+        expect(stage.objective).toMatch(/모든 구역 정화 → 거울 미궁 탈출 → 환영 여왕 처치$/);
+        const tactic = stage.encounter.tactic;
+        expect(tactic).toMatch(/적을 처치한 뒤\(정예방은 증원 2회까지\)/);
+        expect(Number(tactic.match(/멈춘 동안 왕좌를 (\d+)번 공격해/)?.[1])).toBe(deep.hits);
+        expect(Number(tactic.match(/번 공격해 (\d+)곳을 모두 부수세요/)?.[1])).toBe(deep.gates.length);
+        expect(tactic).toMatch(/도는 동안 때리면 모래가 반사됩니다/);
+        expect(tactic).toContain('왕좌 ' + deep.gates.length + '곳과 모든 구역을 정화하면 거울 전당에 거울 두 개가 섭니다');
+        expect(tactic).toMatch(/사라지는 모래 발자국과 멈춘 모래시계를 따라 제한 시간 안에 진짜 거울에 닿으면 보스 봉인이 풀립니다/);
+        expect(tactic).toMatch(/환영 거울은 모래를 반사하고, 시간이 다 되면 거울이 무너져 피해를 입은 뒤 다시 시작합니다/);
+        // 왕좌 번호 순서 안내는 없고(순서 자유), 숫자 번호는 균열 횟수와 같은 '5번'뿐이다.
+        expect(tactic.match(/\d번/g)).toEqual([deep.hits + '번']);
+        // 왕좌·거울 안내는 보스 전술보다 앞에 있다.
+        expect(tactic.indexOf('거울 전당')).toBeLessThan(tactic.indexOf((ENEMIES as Record<string, any>).sable_mirage_empress.tactic));
       } else if (holds) {
         expect(stage.encounter.tactic).toMatch(/적.*처치.*중심.*2초.*공명/);
         if (!route) expect(stage.objective).toMatch(/2초\s*공명/);
@@ -226,6 +247,9 @@ for (const [id, contract] of Object.entries(contracts)) {
           : id === 'eclipse_hydra_vault' ? copy.replaceAll('밸브', '')
           : id === 'verdigris_sanctum' && depth === 'standard' ? copy.replaceAll('생명 제단', '').replaceAll('포자가 터져', '')
           : id === 'sable_mirage_basin' && depth === 'standard' ? copy.replaceAll('가짜 왕좌', '왕좌')
+          // 심층은 약속한 거울 미궁 안내 문장 하나(발자국을 따라 진짜 거울로)만 면제하고 그 밖의 발자국·환영 안내는 계속 거른다.
+          : id === 'sable_mirage_basin' && depth === 'deep'
+            ? copy.replaceAll('가짜 왕좌', '왕좌').replaceAll('사라지는 모래 발자국과 멈춘 모래시계를 따라', '')
           : id === 'comet_bastion' ? copy.replaceAll('궤도 고리', '고리').replaceAll('푸른 궤도선', '푸른 선')
           : id === 'nightglass_observatory' ? copy.replace(/기록\s*3장/g, '')
           : id === 'astral_leviathan_spire' && depth === 'standard' && selectionRoute
