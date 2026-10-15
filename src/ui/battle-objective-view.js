@@ -34,6 +34,17 @@ function counterView(route) {
     { hold: seconds(counter.windowLeft), holdTotal: count(counter.windowTotal) });
 }
 
+/** 혜성 기사단장 푸른 궤도선(BUNDLE-06). 보스 궤도가 armed·warn 일 때 고리 단계 대신 보스방 목표를 보인다. 남은 시간은 올림(0.1초)이다. */
+function bossOrbitView(route, bossRoom) {
+  const orbit = route.bossOrbit, state = orbit?.state;
+  if (state !== 'armed' && state !== 'warn') return null;
+  const title = '푸른 궤도선', roomId = bossRoom?.id ?? null;
+  if (state === 'armed') return step(title, '평소 유성은 푸른 선 바깥 · 중심 유성 예고 땐 선 밖으로', { roomId });
+  const left = (Math.ceil(count(orbit.warnLeft) * 10 - 1e-9) / 10).toFixed(1);
+  return step(title, orbit.kind === 'center' ? `중심 유성 ${left}초 · 푸른 선 밖으로` : `바깥 유성 ${left}초 · 푸른 선 안쪽으로`,
+    { roomId, hold: count(orbit.warnLeft), holdTotal: count(orbit.warnTotal) });
+}
+
 /** 현재 컨트롤러의 상태만 투영하며 전투 정산과 퍼즐 정답에는 접근하지 않는다. */
 function mainObjectiveView(battle) {
   const world = battle?.world;
@@ -41,6 +52,11 @@ function mainObjectiveView(battle) {
   const boss = world.bossRoom;
   if (boss?.cleared) return step('정화 완료', '원정 결과를 확인하세요.');
   const route = battle.routeObjectives;
+  const routeKind = route?.def?.kind;
+  if (route?.world === world && (routeKind === 'orbits' || routeKind === 'deep-orbits')) {
+    const orbit = bossOrbitView(route, boss);
+    if (orbit) return orbit;
+  }
   const pendingAltar = world.rooms.find(room => room.attunementPending && !room.attuned && !room.cleared);
   if (pendingAltar && (!route || route.coexistsAttunement)) {
     return step('보물 제단 공명', '중심에서 2초 유지', { roomId: pendingAltar.discovered ? pendingAltar.id : null,
