@@ -277,19 +277,37 @@ try {
     if (!info.found) { const used = await returnToLanding(); await restoreViewport(); const row = report.steps[report.steps.length - 1]; row.tried = tried;
       throw Error('No overflowing secondary list at 844x390 or 640x360: ' + JSON.stringify({ tried, closedWith: used })); }
     await touch.down(2, info.x, info.y); await touch.move(2, info.x, Math.max(info.top + 8, info.y - 120), 8); await touch.up(2);
-    await page.waitForTimeout(400);
+    // 손을 뗀 뒤 Chrome 관성 스크롤(fling)이 끝날 때까지 기다린다. PC 설치 Chrome 추적에서 scrollTop이 아직 움직이는 중(387→391)의
+    // 첫 탭은 pointerdown/up/touchend만 받고 click이 없었고(fling 정지에 쓰임), 실제 scrollTop이 300ms 그대로인 뒤의 첫 탭은 click으로 착지에 갔다.
+    // 고정 대기 대신 매 프레임 실제 scrollTop을 보고 300ms 무변화를 조건으로 삼는다(최대 5초, 못 멈추면 FAIL). 탭 재시도·강제 click·scrollTop 쓰기 없음.
+    const quiet = await page.evaluate(({ quietMs, maxMs }) => new Promise((resolve) => {
+      const el = document.querySelector('[data-qa-scroll]'), start = performance.now(), samples = [];
+      let last = el.scrollTop, since = start, frames = 0; samples.push({ t: 0, top: last });
+      const check = () => {
+        const top = el.scrollTop, now = performance.now(); frames++;
+        if (top !== last) { last = top; since = now; if (samples.length < 60) samples.push({ t: Math.round(now - start), top }); }
+        if (now - since >= quietMs) return resolve({ settled: true, top, elapsedMs: Math.round(now - start), quietMs, maxMs, frames, samples });
+        if (now - start >= maxMs) return resolve({ settled: false, top, elapsedMs: Math.round(now - start), quietMs, maxMs, frames, samples });
+        requestAnimationFrame(check);
+      };
+      requestAnimationFrame(check);
+    }), { quietMs: 300, maxMs: 5000 });
     const after = await page.evaluate(() => ({ scrollTop: document.querySelector('[data-qa-scroll]').scrollTop, camera: { ...window.app.renderer.lobbyCamera }, gesture: window.app.lobbyCameraControls.touch.size }));
     // 닫기 실패가 스크롤 근거를 가리지 않게 먼저 기록하고 캡처한다.
-    const row = report.steps[report.steps.length - 1]; row.scrollEvidence = { info, after, cameraBefore }; await save();
+    const row = report.steps[report.steps.length - 1]; row.scrollEvidence = { info, quiet, after, cameraBefore }; await save();
     await shot('secondary-list-after-scroll');
+    assert(quiet.settled, 'Secondary list scroll did not settle (scrollTop unchanged ' + quiet.quietMs + 'ms) within ' + quiet.maxMs + 'ms: ' + JSON.stringify(quiet));
+    // 복귀는 한 번의 실제 탭으로 판정한다(returnToLanding 안에서 재시도하지 않는다). 실패 뒤 정리 탭은 이 판정에 들어가지 않는다.
     let closedWith = null, closeError = null;
+    const tapAt = Date.now();
     try { closedWith = await returnToLanding(); } catch (error) { closeError = String(error?.message || error).slice(0, 400); }
+    const firstTapToLandingMs = closeError ? null : Date.now() - tapAt;
     await restoreViewport();
     const back = await page.evaluate(() => ({ landing: !!window.app.commandUI?.visible, tab: window.app.meta.tab, camera: { ...window.app.renderer.lobbyCamera } }));
     assert(after.scrollTop > info.scrollTop, 'Secondary list did not scroll by touch: ' + JSON.stringify({ info, after }));
     assert(after.gesture === 0 && after.camera.yaw === cameraBefore.yaw && after.camera.pitch === cameraBefore.pitch, 'List scroll moved the lobby camera: ' + JSON.stringify({ cameraBefore, after }));
     assert(!closeError && back.landing && back.tab === 'home', 'Closing the list did not return to the landing: ' + JSON.stringify({ closedWith, closeError, back }));
-    return { ...info, tried: tried.length > 1 ? tried : undefined, after, back, closedWith, restoredViewport: page.viewportSize() };
+    return { ...info, tried: tried.length > 1 ? tried : undefined, quiet, after, back, closedWith, firstTapToLandingMs, restoredViewport: page.viewportSize() };
   });
   }
   if (groups.has('battle')) {

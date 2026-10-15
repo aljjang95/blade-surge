@@ -24,6 +24,8 @@ import { launchOpts } from './chrome.mjs';
 import { decodeGrid, inferCell, distanceField, pathDirection, worldToStick, clearLine, evasiveDirection } from './playability-journey-nav.mjs';
 import { installObserver, setObserverPhase, drainObserver, readBattle, readGrid, readLobby, probeNode, scrollerOf, readImages, readWardrobe, readGpu, readRangerRig } from './playability-journey-observer.mjs';
 import { assessManual, MANUAL_THRESHOLDS } from './playability-journey-assess.mjs';
+import { pickResultLoot } from './playability-journey-loot.mjs';
+import { ITEM_BY_ID } from '../src/data/items.js';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const argv = process.argv.slice(2);
@@ -699,8 +701,13 @@ try {
         try { await tapHandle(h, 'result loot details summary'); } finally { await h.dispose(); }
         await waitFor(() => !!document.querySelector('.exp-loot-reveal'), null, 10000, 'loot reveal');
         J.result.lootImages = await page.evaluate(readImages, '.exp-loot-reveal article img');
+        // 결과 카드의 등급 글자·이름·그림을 따로 읽는다(아이템 선택은 등급+이름의 정본 정체성, 그림은 뒤 비교에만 쓴다).
+        J.result.lootCards = await page.evaluate(() => [...document.querySelectorAll('.exp-loot-reveal article')].map((a) => {
+          const t = (el) => (el?.textContent || '').trim().replace(/\s+/g, ' '), img = a.querySelector('img');
+          return { rarity: t(a.querySelector('small')), name: t(a.querySelector('b')), src: img?.getAttribute('src') || null, currentSrc: img?.currentSrc || null, data: { ...(img?.dataset || {}) }, complete: !!img?.complete, naturalWidth: img?.naturalWidth || 0 };
+        }));
         await screenshot('08b-result-loot', { images: J.result.lootImages.length });
-      } else J.result.lootImages = [];
+      } else { J.result.lootImages = []; J.result.lootCards = []; }
     }
     return J.result;
   }, { needs: [entry], timeoutSec: 120 });
@@ -736,10 +743,15 @@ try {
   const item = await step('loot item opened and equipped via UI; same item identity on bag/sheet/slot', async () => {
     if (!lootFound) return { notRun: true, reason: J.result?.win ? 'no loot' : 'no natural victory loot' };
     const inv = await page.evaluate((loot) => loot.map((l) => { const i = window.app.eco.s.inventory.find((x) => x.uid === l.uid); return i ? { uid: i.uid, id: i.id, enh: i.enh } : null; }).filter(Boolean), J.result.rewards.loot);
-    const pick = [];
-    for (const it of inv) if ((await probe('#hero-bag [data-inv="' + it.uid + '"]')).exists) pick.push(it);
-    if (!pick.length) fail('loot items not shown in the Ranger bag', { inv });
-    const it = pick[0];
+    const bagUids = await page.evaluate(() => [...document.querySelectorAll('#hero-bag [data-inv]')].map((el) => el.dataset.inv));
+    const pick = inv.filter((it) => bagUids.includes(String(it.uid)));
+    if (!pick.length) fail('loot items not shown in the Ranger bag', { inv, bagUids: bagUids.length });
+    // 결과 화면에 실제로 보인 전리품(희귀도 상위 6) 중 가방에 있는 아이템을 먼저 고른다(궁수는 무기 우선). 보상 순서·경제·결과 UI는 바꾸지 않는다.
+    // 결과에 보인 아이템이 가방에 없으면 첫 가방 전리품으로 가방/시트/칸 검사만 하고 결과 그림 비교는 NOT_RUN으로 남긴다.
+    const selection = pickResultLoot({ cards: J.result.lootCards || [], loot: J.result.rewards.loot, bagUids, itemById: ITEM_BY_ID, preferSlot: 'weapon' });
+    const it = (selection.pick && pick.find((x) => x.uid === selection.pick.uid)) || pick[0];
+    const card = selection.pick && it.uid === selection.pick.uid ? J.result.lootCards[selection.pick.cardIndex] : null;
+    J.itemSelection = { via: card ? 'result-visible-card' : 'first-bag-loot (no result-visible loot in the Ranger bag)', pick: selection.pick, cards: selection.cards };
     const cell = '#hero-bag [data-inv="' + it.uid + '"]';
     const bagLabel = await page.evaluate((sel) => document.querySelector(sel)?.getAttribute('aria-label') || '', cell);
     const name = bagLabel.split(' +')[0];
@@ -763,23 +775,24 @@ try {
     await waitFor(() => !document.querySelector('#modal.show'), null, 10000, 'item sheet closed');
     const slot = await page.evaluate(readImages, '.hs-slot[data-uid="' + it.uid + '"] img');
     const bagAfter = await page.evaluate(readImages, cell + ' img');
-    const resultImg = (J.result.lootImages || []).find((x) => x.host?.text?.includes(name)) || null;
+    const resultImg = card;
     await page.waitForFunction(() => { const c = document.querySelector('#hero-wardrobe canvas'), r = c?.getBoundingClientRect(); return !!window.app?.wardrobe?.instance && !!r && r.width > 100; }, null, { timeout: Math.min(60000, remainingMs()), polling: 200 }).catch(() => {});
-    J.item = { uid: it.uid, itemId: it.id, name, bagLabel, sheet, equipped, primaryAction: sheet.primary, bag: bagBefore[0] || null, bagAfter: bagAfter[0] || null, slot: slot[0] || null, result: resultImg,
+    J.item = { uid: it.uid, itemId: it.id, name, bagLabel, sheet, equipped, primaryAction: sheet.primary, bag: bagBefore[0] || null, bagAfter: bagAfter[0] || null, slot: slot[0] || null, result: resultImg, selection: J.itemSelection,
       rangerEquip: await page.evaluate(() => ({ ...window.app.eco.s.heroes.ranger.equip })), wardrobe: await page.evaluate(readWardrobe) };
     await screenshot('10b-equipped', { uid: it.uid, equipped });
     if (!equipped) fail('loot not equipped (primary action was "' + sheet.primary + '")', J.item);
     if (!sheet.title.includes(name)) fail('item sheet title does not match the bag item', J.item);
+    if (card && (card.name !== name || ITEM_BY_ID[it.id]?.name !== name)) fail('result card, bag item and catalog name differ for the selected item', J.item);
     const srcs = [J.item.bag?.src, sheet.images[0]?.src, J.item.slot?.src];
     if (srcs.some((s) => !s) || new Set(srcs).size !== 1) fail('bag / sheet / equipped slot thumbnails differ for the same item', { srcs, item: J.item });
     return J.item;
   }, { needs: [equipment], timeoutSec: 180 });
   await step('result loot thumbnail matches equipment thumbnail for the same item', async () => {
     if (!J.item?.slot) return { notRun: true, reason: 'no equipped loot item' };
-    if (!J.item.result) return { notRun: true, reason: 'item not among the result loot reveal (top 6) or reveal not opened' };
+    if (!J.item.result) return { notRun: true, reason: 'no result-visible loot item (reveal top 6) found in the Ranger bag, or reveal not opened', selection: J.itemSelection };
     const a = J.item.result.src, b = J.item.slot.src;
     if (a !== b) fail('result loot image and equipment image differ', { result: J.item.result, slot: J.item.slot });
-    return { src: a, resultData: J.item.result.data, slotData: J.item.slot.data };
+    return { uid: J.item.uid, itemId: J.item.itemId, card: { rarity: J.item.result.rarity, name: J.item.result.name }, via: J.itemSelection?.via, src: a, resultData: J.item.result.data, slotData: J.item.slot.data };
   }, { needs: [item], timeoutSec: 10 });
 
   // 12. 같은 던전 준비 → 재입장 1회 차감
