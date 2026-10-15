@@ -154,5 +154,7 @@ export function routeObjectiveForStage(stage) {
   if (expedition.id === 'sable_mirage_basin') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.sable_standard : null;
   if (expedition.id === 'comet_bastion') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.comet_standard
     : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.comet_deep : null;
-  return expedition.id === 'bellfall_crypt' && expedition.depth === 'standard' ? ROUTE_OBJECTIVES.bellfall_crypt : null;
+  if (expedition.id === 'bellfall_crypt') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.bellfall_crypt
+    : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.bellfall_deep : null;
+  return null;
 }
