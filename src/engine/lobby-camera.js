@@ -1,3 +1,6 @@
+import './camera-gestures.css';
+import { WorldTouchGesture } from './world-gesture.js';
+
 export const LOBBY_VIEWS = {
   oath: { label: '기본', yaw: 19, pitch: 11, zoom: 100 },
   front: { label: '정면', yaw: 27, pitch: 11, zoom: 90 },
@@ -41,14 +44,17 @@ const WALKING_LOBBY_VIEWS = {
   back: { yaw: -161, pitch: 16, zoom: 100 },
 };
 const CAMERA_UI = 'button, input, select, textarea, a, [contenteditable], [role="dialog"], dialog, .citadel-hub-stick, .citadel-hub-near, .lobby-camera-tools, .bottomnav, .topbar, .lobby-left, .companion-launcher';
+const LOBBY_ROTATE_YAW = .45, LOBBY_ROTATE_PITCH = .14;
 
-/** 로비 조작은 전투 카메라와 전투 입력에 영향을 주지 않는다. */
+/** 로비 빈 화면 터치 회전·핀치와 마우스 드래그. 전투 카메라와 전투 입력에 영향을 주지 않는다. */
 export class LobbyCameraControls {
   constructor(app) {
     this.app = app;
     this.pad = document.getElementById('lobby-camera-pad');
     this.panel = document.getElementById('lobby-camera-panel');
     this.toggle = document.getElementById('lobby-camera-toggle');
+    this.touch = new WorldTouchGesture();
+    this.touchBase = this.value;
     this.toggle.onclick = () => {
       if (!this.active) return;
       this.finish();
@@ -65,43 +71,62 @@ export class LobbyCameraControls {
     document.addEventListener('pointerdown', event => {
       const onPad = this.pad.contains(event.target);
       const world = event.target === this.app.canvas || event.target?.id === 'tab-home';
-      if (!this.active || event.defaultPrevented || (event.button !== 0 && event.button !== 2) ||
-        (!onPad && (!world || event.pointerType === 'touch' || event.target.closest?.(CAMERA_UI)))) return;
-      if (this.drag && (!onPad || event.pointerType !== 'touch' || this.drag.type !== 'touch' || this.second)) return;
+      // 성채 조이스틱·상호작용·메뉴는 자기 터치를 소유한다. 숨긴 시점 패드는 빈 화면과 같다.
+      if (!this.active || event.defaultPrevented || (!onPad && (!world || event.target.closest?.(CAMERA_UI)))) return;
+      if (event.pointerType === 'touch') {
+        if (this.drag) return;
+        const role = this.touch.down(event.pointerId, event.clientX, event.clientY, onPad ? this.pad : event.target);
+        if (role === 'pending') this.gestureChanged = false;
+        if (role !== 'pinch') return;
+        if (!this.capture(this.touch.first) || !this.capture(this.touch.second)) { this.finish(); return; }
+        this.touchBase = this.value;
+        event.preventDefault();
+        return;
+      }
+      if ((event.button !== 0 && event.button !== 2) || this.drag || this.touch.size) return;
       const surface = onPad ? this.pad : this.app.canvas;
-      const pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, startX: event.clientX, startY: event.clientY,
-        type: event.pointerType, surface, ...this.value };
+      const pointer = { id: event.pointerId, startX: event.clientX, startY: event.clientY, surface, ...this.value };
       try { surface.setPointerCapture?.(pointer.id); } catch { return; }
-      if (this.drag) {
-        this.second = pointer;
-        this.pinch = { distance: Math.max(1, Math.hypot(this.drag.x - pointer.x, this.drag.y - pointer.y)), zoom: this.value.zoom };
-      } else { this.drag = pointer; this.gestureChanged = false; }
+      this.drag = pointer; this.gestureChanged = false;
       event.preventDefault();
     });
     document.addEventListener('pointermove', event => {
-      const pointer = this.drag?.id === event.pointerId ? this.drag : this.second?.id === event.pointerId ? this.second : null;
-      if (!pointer) return;
-      if (!this.active) { this.finish(); return; }
-      pointer.x = event.clientX; pointer.y = event.clientY;
-      if (this.second) {
-        const distance = Math.hypot(this.drag.x - this.second.x, this.drag.y - this.second.y);
-        this.set({ ...this.value, zoom: this.pinch.zoom * distance / this.pinch.distance }, false);
-      } else {
-        const yaw = this.drag.yaw - (pointer.x - this.drag.startX) * .45;
-        this.set({ ...this.value, yaw: ((yaw + 540) % 360) - 180, pitch: this.drag.pitch + (pointer.y - this.drag.startY) * .14 }, false);
+      if (this.drag?.id === event.pointerId && event.pointerType !== 'touch') {
+        if (!this.active) { this.finish(); return; }
+        this.orbit(this.drag, event.clientX - this.drag.startX, event.clientY - this.drag.startY);
+        event.preventDefault();
+        return;
       }
-      event.preventDefault();
+      if (!this.touch.has(event.pointerId)) return;
+      if (!this.active) { this.finish(); return; }
+      const step = this.touch.move(event.pointerId, event.clientX, event.clientY);
+      if (step === 'rotate-start') {
+        if (!this.capture(this.touch.first)) { this.finish(); return; }
+        this.touchBase = this.value;
+      }
+      if (step === 'rotate-start' || step === 'rotate') {
+        this.orbit(this.touchBase, this.touch.dx, this.touch.dy);
+        event.preventDefault();
+      } else if (step === 'pinch') {
+        this.set({ ...this.value, zoom: this.touchBase.zoom * this.touch.ratio }, false);
+        event.preventDefault();
+      }
     });
     for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) document.addEventListener(name, event => {
-      if (this.drag?.id !== event.pointerId && this.second?.id !== event.pointerId) return;
-      if (name !== 'pointerup') { this.finish(); return; }
-      if (this.second) {
-        const finished = this.drag.id === event.pointerId ? this.drag : this.second;
-        const remaining = this.drag.id === event.pointerId ? this.second : this.drag;
-        this.drag = remaining; this.second = this.pinch = null;
-        Object.assign(remaining, this.value, { startX: remaining.x, startY: remaining.y });
-        this.release(finished);
-      } else this.finish();
+      const pointer = this.touch.get(event.pointerId);
+      if (pointer) {
+        // 다른 요소가 잃은 캡처 알림은 이 제스처의 종료가 아니다.
+        if (name === 'lostpointercapture' && event.target && event.target !== pointer.surface) return;
+        if (name !== 'pointerup') { this.finish(); return; }
+        const engaged = this.touch.mode === 'rotate' || this.touch.mode === 'pinch';
+        const step = this.touch.up(event.pointerId);
+        this.release(pointer);
+        // 핀치 뒤 남은 손가락은 지금 시점과 위치를 새 기준으로 삼아 튀지 않는다.
+        if (step === 'resume') this.touchBase = this.value; else this.finish();
+        if (engaged && event.cancelable) event.preventDefault();
+        return;
+      }
+      if (this.drag?.id === event.pointerId) this.finish();
     });
     document.addEventListener('contextmenu', event => {
       if (this.active && (event.target === this.app.canvas || event.target?.id === 'tab-home' || this.pad.contains(event.target))) event.preventDefault();
@@ -158,11 +183,18 @@ export class LobbyCameraControls {
     if (save && changed) this.app.eco.save();
   }
   reset() { this.finish(); this.set(LOBBY_VIEWS.oath); }
-  release(pointer) { if (pointer?.surface.hasPointerCapture?.(pointer.id)) pointer.surface.releasePointerCapture(pointer.id); }
+  orbit(base, dx, dy) {
+    const yaw = base.yaw - dx * LOBBY_ROTATE_YAW;
+    this.set({ ...this.value, yaw: ((yaw + 540) % 360) - 180, pitch: base.pitch + dy * LOBBY_ROTATE_PITCH }, false);
+  }
+  capture(pointer) {
+    try { pointer?.surface?.setPointerCapture?.(pointer.id); return !!pointer; } catch { return false; }
+  }
+  release(pointer) { if (pointer?.surface?.hasPointerCapture?.(pointer.id)) pointer.surface.releasePointerCapture(pointer.id); }
   finish() {
-    const first = this.drag, second = this.second, changed = this.gestureChanged;
-    this.drag = this.second = this.pinch = null; this.gestureChanged = false;
-    this.release(first); this.release(second);
+    const drag = this.drag, first = this.touch?.first, second = this.touch?.second, changed = this.gestureChanged;
+    this.drag = null; this.touch?.clear(); this.gestureChanged = false;
+    this.release(drag); this.release(first); this.release(second);
     if (changed) this.app.eco.save();
   }
   updateActivity() {

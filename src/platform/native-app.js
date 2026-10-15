@@ -1,7 +1,21 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, SystemBars, SystemBarsStyle } from '@capacitor/core';
+import './native-app.css';
 
 const sessions = new WeakMap();
 export const isNativeApp = () => Capacitor.isNativePlatform();
+
+/**
+ * 설치된 Capacitor 8.5.1 SystemBars로 밝은 아이콘 스타일과 상태·탐색 막대 숨김을 요청한다.
+ * 'requested'는 플러그인이 호출을 받았다는 뜻일 뿐 OS가 실제로 숨겼다는 증거가 아니다.
+ * @param {Pick<import('@capacitor/core').SystemBarsPlugin, 'hide' | 'setStyle'> | null | undefined} bars
+ * @returns {Promise<'requested' | 'unavailable'>}
+ */
+export async function requestImmersiveSystemBars(bars = SystemBars) {
+  if (typeof bars?.hide !== 'function') return 'unavailable';
+  // 막대가 스와이프로 잠시 드러날 때 어두운 게임 배경 위에서 아이콘이 보이도록 먼저 맞춘다.
+  try { await bars.setStyle?.({ style: SystemBarsStyle.Dark }); } catch { /* 스타일 실패는 숨김 요청을 막지 않는다. */ }
+  try { await bars.hide(); return 'requested'; } catch { return 'unavailable'; }
+}
 
 /** Back never grants, abandons a run, resumes manual pause, or exits the app. */
 export function handleNativeBack(app, doc = document) {
@@ -28,13 +42,25 @@ export function handleNativeBack(app, doc = document) {
 
 /** Own only native-background; never remove someone else's pause reason/listener.
  * @param {any} app
- * @param {{native?: boolean, loadPlugin?: () => Promise<{App: Pick<import('@capacitor/app').AppPlugin, 'addListener' | 'getState'>}>, doc?: Document}} [options]
+ * @param {{native?: boolean, loadPlugin?: () => Promise<{App: Pick<import('@capacitor/app').AppPlugin, 'addListener' | 'getState'>}>, doc?: Document,
+ *   systemBars?: Pick<import('@capacitor/core').SystemBarsPlugin, 'hide' | 'setStyle'> | null}} [options]
  */
-export function setupNativeApp(app, { native = isNativeApp(), loadPlugin = () => import('@capacitor/app'), doc = globalThis.document } = {}) {
+export function setupNativeApp(app, { native = isNativeApp(), loadPlugin = () => import('@capacitor/app'), doc = globalThis.document, systemBars = SystemBars } = {}) {
   if (sessions.has(app)) return sessions.get(app);
   let disposed = false, background = false, ownedBattle = null, stateRevision = 0;
   let nativeActive = true, pageActive = doc?.hidden !== true;
   const handles = [];
+  /** @type {Promise<'requested' | 'unavailable' | 'disposed'>} */
+  let barsRequest = Promise.resolve('unavailable');
+  // 시작과 복귀마다 다시 요청한다. Android는 백그라운드를 다녀오면 막대를 다시 보일 수 있다.
+  const hideSystemBars = () => {
+    if (disposed || !native) return barsRequest;
+    barsRequest = requestImmersiveSystemBars(systemBars).then(result => {
+      if (!disposed) api.systemBars = result;
+      return disposed ? 'disposed' : result;
+    });
+    return barsRequest;
+  };
   const sync = () => {
     if (disposed || !native) return;
     const battle = app.battle;
@@ -57,10 +83,15 @@ export function setupNativeApp(app, { native = isNativeApp(), loadPlugin = () =>
       try { app.input?.clear(); } catch {}
       try { app.eco?.save(); } catch {}
     }
+    if (!background && wasBackground) hideSystemBars();
   };
   const setActive = isActive => setSourceActive(isActive, true);
   const setVisible = isVisible => setSourceActive(isVisible, false);
-  const api = { ready: Promise.resolve(), sync, setActive, setVisible, async dispose() {
+  const api = { ready: Promise.resolve(), sync, setActive, setVisible, hideSystemBars,
+    /** @type {'idle' | 'requested' | 'unavailable'} */
+    systemBars: 'idle',
+    get systemBarsRequest() { return barsRequest; },
+    async dispose() {
     disposed = true;
     if (ownedBattle) { ownedBattle.setPaused('native-background', false); ownedBattle = null; }
     await Promise.allSettled(handles.splice(0).map(h => h.remove()));
@@ -69,6 +100,7 @@ export function setupNativeApp(app, { native = isNativeApp(), loadPlugin = () =>
   sessions.set(app, api);
   if (!native) return api;
   setVisible(pageActive);
+  hideSystemBars();
   api.ready = (async () => {
     try {
       const { App } = await loadPlugin();

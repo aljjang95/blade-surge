@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { setupNativeApp, handleNativeBack } from '../src/platform/native-app.js';
+import { setupNativeApp, handleNativeBack, requestImmersiveSystemBars } from '../src/platform/native-app.js';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 
@@ -79,4 +79,46 @@ test('native PWA never registers SW or offers web install/update',async()=>{
   runInNewContext(source+'\nglobalThis.api=setupPwa({native:true});',context);
   expect(registrations).toBe(0);expect(context.api.getState().supported).toBe(false);
   expect((await context.api.install()).outcome).toBe('unavailable');expect(context.api.applyUpdate()).toBe(false);
+});
+
+function barsFixture(fail:{style?:boolean,hide?:boolean}={}) {
+  const calls:string[]=[];
+  return {calls,bars:{
+    setStyle:async(o:{style:string})=>{calls.push('style:'+o.style);if(fail.style)throw Error('style');},
+    hide:async()=>{calls.push('hide');if(fail.hide)throw Error('UNIMPLEMENTED');},
+  }};
+}
+
+test('네이티브 시작과 백그라운드 복귀마다 SystemBars 숨김을 다시 요청하고 웹은 호출하지 않는다',async()=>{
+  const f=fixture(),b=barsFixture();
+  const api=setupNativeApp(f.app,{native:true,loadPlugin:async()=>({App:f.App}),systemBars:b.bars});
+  expect(await api.systemBarsRequest).toBe('requested');await api.ready;
+  expect(b.calls).toEqual(['style:DARK','hide']);expect(api.systemBars).toBe('requested');
+  f.callbacks.pause();f.callbacks.pause();expect(b.calls.length).toBe(2);
+  f.callbacks.resume();await api.systemBarsRequest;expect(b.calls).toEqual(['style:DARK','hide','style:DARK','hide']);
+  // 문서만 숨었다 돌아와도 같은 복귀로 본다.
+  api.setVisible(false);api.setVisible(true);await api.systemBarsRequest;expect(b.calls.length).toBe(6);
+  await api.dispose();
+  const web=barsFixture(),webApi=setupNativeApp(fixture().app,{native:false,systemBars:web.bars});
+  await webApi.systemBarsRequest;expect(web.calls).toEqual([]);expect(webApi.systemBars).toBe('idle');await webApi.dispose();
+});
+
+test('SystemBars 미구현·거절은 숨김 성공으로 기록하지 않고 시작과 생명주기 처리를 막지 않는다',async()=>{
+  expect(await requestImmersiveSystemBars(null)).toBe('unavailable');
+  expect(await requestImmersiveSystemBars({} as any)).toBe('unavailable');
+  const styleFails=barsFixture({style:true});
+  expect(await requestImmersiveSystemBars(styleFails.bars as any)).toBe('requested');
+  const f=fixture(),b=barsFixture({hide:true});
+  const api=setupNativeApp(f.app,{native:true,loadPlugin:async()=>({App:f.App}),systemBars:b.bars as any});
+  expect(await api.systemBarsRequest).toBe('unavailable');await api.ready;expect(api.systemBars).toBe('unavailable');
+  f.callbacks.appStateChange({isActive:false});expect(f.reasons.has('native-background')).toBe(true);
+  f.callbacks.appStateChange({isActive:true});expect(f.reasons.has('native-background')).toBe(false);
+  await api.dispose();
+});
+
+test('Android safe area는 Capacitor 주입 변수를 먼저 쓰고 없으면 env()로 돌아간다',()=>{
+  const css=readFileSync(new URL('../src/platform/native-app.css',import.meta.url),'utf8');
+  for(const [name,side] of [['sat','top'],['sab','bottom'],['sal','left'],['sar','right']])
+    expect(css).toContain('--'+name+': var(--safe-area-inset-'+side+', env(safe-area-inset-'+side+', 0px));');
+  expect(css).toMatch(/html:root\s*\{/);
 });
