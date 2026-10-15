@@ -8,7 +8,8 @@ const BOSS_ENEMY = 'glass_hour_sovereign';
  * 보스가 나타나면 장막(veiled)에 싸여 받는 피해가 def.veil 배로 줄어든다.
  * 삼중 조종(def.signature)의 마지막 울림이 터진 직후 def.window 초 동안만 장막이 걷혀(open) def.open 배 피해를 받고,
  * 그동안 보스의 다음 공격 대기(atkCd)를 창 남은 시간 이상으로 붙잡아 새 공격을 시작하지 못하게 한다.
- * 마지막 울림 전에 조종이 끊기면(기절·강타) 그 조종에서는 창이 열리지 않는다. 같은 attackSequence 로는 한 번만 연다.
+ * 장막이 덮인 동안 보스의 삼중 조종은 마지막 울림까지 기절·경직·브레이크로 끊기지 않는다(guards). 그래도 조종이 열리지 못하고 끝나면
+ * (보스 처치 직전 등) broken 으로 센다. 같은 attackSequence 로는 한 번만 연다.
  * 상태는 idle(보스 미부착) → veiled ⇄ open → ended(보스 처치·stop·전투 종료)이고 ended 는 되돌아오지 않는다.
  * 게임 시간(dt)만 쓰고 Math.random·Date 를 쓰지 않으며, update·filter 는 객체를 만들지 않는다.
  * 읽기 상태는 뷰·목표창이 읽기만 한다. 피해 감쇄는 Enemy.hurt 가 boss.damageVeil.filter 로 부른다. */
@@ -58,6 +59,15 @@ export class BellfallDeepCounter {
     if (this.#state === 'open') { this.#openHits++; this.#openDamage += out; }
     else if (this.#state === 'veiled') { this.#veiledHits++; this.#veiledDamage += out; }
     return out;
+  }
+
+  /** 장막이 삼중 조종을 지키는 중인가: veiled 동안 부착된 보스가 이 시그니처를 마지막 울림 전까지 시전하고 있으면 참.
+   * Enemy.hurt·Enemy.update·postureHit 가 이 동안 기절·경직·브레이크로 조종을 끊지 않도록 묻는다. 객체를 만들지 않는다.
+   * @param {any} enemy */
+  guards(enemy) {
+    if (this.#state !== 'veiled' || enemy !== this.#boss) return false;
+    const sig = this.def.signature, plan = enemy.signatures?.plan;
+    return enemy.state === 'attack' && enemy.special === sig && plan?.key === sig && enemy.signatures.age + EPS < plan.lastStrike;
   }
 
   // ---------------- 프레임 ----------------

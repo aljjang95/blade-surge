@@ -261,14 +261,16 @@ export class Enemy extends Actor {
     this.receiveImpact(dirx, dirz, Math.min(1, .35 + kb * .08));
     const resist = this.isBoss ? 0.25 : this.isElite ? 0.5 : 1;
     this.knockback(dirx, dirz, kb * resist * (this.def.armor ? 0.6 : 1));
-    if (stun > 0) this.stun = Math.max(this.stun, stun * (this.isBoss ? 0.4 : 1));
+    // 종락 심층 합창 장막이 삼중 조종을 지키는 동안에는 기절·경직으로 조종을 끊지 않는다(마지막 울림은 반드시 온다).
+    const guarded = this.damageVeil ? this.damageVeil.guards(this) : false;
+    if (stun > 0 && !guarded) this.stun = Math.max(this.stun, stun * (this.isBoss ? 0.4 : 1));
     // 예고 중 기절은 피격 순간 바로 솟구치기를 끊는다(한 프레임보다 짧은 기절도 놓치지 않는다).
     if (stun > 0) this.burrow?.interrupt();
     if (this.stun > 0) this.mobRole?.cancel();
     if (slow > 0) { this.slow = 0.5; this.slowT = slow; }
     if (poison) { this.poison = 4; }
     const staggerOK = (!this.isBoss || crit || kb >= 6) && (!this.isElite || crit || kb >= 4); const warrior = this.def.armor && !crit && kb < 4;
-    if (staggerOK && !warrior && this.state !== 'dead') {
+    if (staggerOK && !warrior && !guarded && this.state !== 'dead') {
       // 일반 몹은 수동 기본 공격의 접촉에서 공격을 끊는다. 보스/엘리트의
       // 슈퍼아머는 유지해 강적과 잡몹의 타격 언어를 구분한다.
       if (this.state !== 'attack' || kb >= 4 || (hitReact && !this.isBoss && !this.isElite)) { this.signatures?.clear(); this.mobRole?.clear(); this.state = 'hurt'; this.stateT = 0; this.stagger = 0.22 + Math.min(0.4, kb * 0.03); this.play(this.A(kb >= 4 || crit || finisher ? 'hitHeavy' : 'hit'), { once: true, fade: 0.04, speed: 1.8 }); this.telegraph = 0; this.attackDone = false; }
@@ -319,6 +321,8 @@ export class Enemy extends Actor {
     this.mobRole?.beforeStep(dt);
     const gathering = prepareEnemyGather(this, dt);
     super.update(dt);
+    // 스킬·세트 효과가 기절을 직접 써도 장막이 지키는 삼중 조종은 끊기지 않는다(Enemy.hurt 와 같은 규칙).
+    if (this.stun > 0 && this.damageVeil?.guards(this)) this.stun = 0;
     this.gatherBlockT = Math.max(0, (this.gatherBlockT || 0) - dt);
     if (gathering) this.vel.set(0, 0, 0);
     if(this.signatures){
@@ -327,7 +331,7 @@ export class Enemy extends Actor {
     }
     if (this.marker) { if (this.alive) { this.marker.rotation.z += dt * 1.2; this.marker.material.opacity = 0.5 + Math.sin(this.game.elapsed * 3) * 0.18; } else this.marker.visible = false; }
     this.updateSkillTelegraph();
-    if (this.poison > 0) { this.poison -= dt; this.poisonT -= dt; if (this.poisonT <= 0) { this.poisonT = 0.5; if (this.alive) { const d = this.maxHp * 0.02 + 8; this.hp -= d; this.game.fx.damage(this.pos, d, { kind: 'skill' }); this.game.fx.embers(this.pos, 0x80ff90, { n: 3, radius: 0.5, life: 0.6 }); if (this.hp <= 0) { this.hp = 0; this.kill(0, 0, 2); } } } this.tintEmissive = new THREE.Color(0, 0.25, 0.05); }
+    if (this.poison > 0) { this.poison -= dt; this.poisonT -= dt; if (this.poisonT <= 0) { this.poisonT = 0.5; if (this.alive) { const raw = this.maxHp * 0.02 + 8, d = this.damageVeil ? this.damageVeil.filter(raw) : raw; this.hp -= d; this.game.fx.damage(this.pos, d, { kind: 'skill' }); this.game.fx.embers(this.pos, 0x80ff90, { n: 3, radius: 0.5, life: 0.6 }); if (this.hp <= 0) { this.hp = 0; this.kill(0, 0, 2); } } } this.tintEmissive = new THREE.Color(0, 0.25, 0.05); }
     else if (this.tintEmissive && !this.enraged && !this.isElite && !(this._crystal > 0)) this.tintEmissive = null;   // 결정화 틴트는 세트 쪽이 되돌린다
     if (!this.alive) return;
     this.stateT += dt; const p = this.player; if (!p) return;

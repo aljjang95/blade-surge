@@ -140,7 +140,7 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(Number(tactic.match(/마지막 울림 직후 (\d+(?:\.\d+)?)초 동안만 장막이 걷혀/)?.[1])).toBe(counter.window);
         expect(Number(tactic.match(/걷혀 (\d+(?:\.\d+)?)배 피해/)?.[1])).toBe(counter.open);
         expect(tactic).toMatch(/그 동안 보스는 새 공격을 시작하지 않습니다/);
-        expect(tactic).toMatch(/조종을 끊으면 그 조종에서는 장막이 걷히지 않습니다/);
+        expect(tactic).toMatch(/삼중 조종은 기절·경직으로 끊기지 않으니/);
         expect(tactic.indexOf('보스는 합창 장막')).toBeLessThan(tactic.indexOf((ENEMIES as Record<string, any>).glass_hour_sovereign.tactic));
         expect(stage.objective).toMatch(/마지막 울림 직후 반격으로 멈춘 합창의 주권자 처치$/);
         // 정답 순서는 문구에 쓰지 않는다. 종문 번호는 위치 안내(1번 → 2번 → 3번)로만 나온다.

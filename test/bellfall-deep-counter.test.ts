@@ -6,6 +6,7 @@ import { createRouteObjectives, RouteObjectives } from '../src/game/route-object
 import { BellfallDeepBells } from '../src/game/bellfall-deep-bells.js';
 import { BellfallDeepCounter } from '../src/game/bellfall-deep-counter.js';
 import { BossSignatures, planBossSignature } from '../src/game/boss-signatures.js';
+import { postureHit } from '../src/game/masterworks-combat.js';
 import { createCombatFlowFixture, loadCombatFlowRuntime, spawnCombatFlowEnemy, stepCombatFlow } from '../tools/combat-flow-sim.mjs';
 
 const runtime = await loadCombatFlowRuntime();
@@ -260,24 +261,65 @@ test('끊긴 조종은 열리지 않고 broken 이 늘며, 다음 조종은 정�
   expect(c.broken).toBe(1);
 });
 
-test('실제 보스를 강타(kb 8)로 끊으면 그 조종에서는 열리지 않는다', () => {
+test('장막이 지키는 실제 삼중 조종은 강타·기절·직접 기절 쓰기·브레이크로 끊기지 않고 마지막 울림 뒤 열린다(카운터가 없으면 같은 강타가 끊는다)', () => {
+  const toToll = (f: any, g: any, boss: any, c: BellfallDeepCounter | null) => {
+    for (let frame = 0; frame < 300 && !(boss.state === 'attack' && boss.signatures.plan); frame++) { c?.update(g, DT); stepCombatFlow(f, DT); }
+    expect(boss.special).toBe('bell_toll');
+    for (let i = 0; i < 20; i++) { c?.update(g, DT); stepCombatFlow(f, DT); }
+  };
+  // 대조군: 장막이 없으면 강타(kb 8)가 조종을 끊는다.
+  withFixedRandom(() => {
+    const { f, g, boss } = realBossFixture();
+    toToll(f, g, boss, null);
+    boss.hurt(10, { kb: 8 });
+    expect(boss.state).toBe('hurt');
+    expect(boss.signatures.plan).toBeNull();
+  });
   withFixedRandom(() => {
     const { f, g, boss } = realBossFixture();
     const c = new BellfallDeepCounter(DEF);
     c.update(g, DT);
-    for (let frame = 0; frame < 300 && !(boss.state === 'attack' && boss.signatures.plan); frame++) { c.update(g, DT); stepCombatFlow(f, DT); }
-    expect(boss.special).toBe('bell_toll');
+    toToll(f, g, boss, c);
     const seq = boss.attackSequence;
-    for (let i = 0; i < 20; i++) { c.update(g, DT); stepCombatFlow(f, DT); }
-    boss.hurt(10, { kb: 8 });
-    expect(boss.state).toBe('hurt');
-    for (let i = 0; i < 10; i++) { c.update(g, DT); stepCombatFlow(f, DT); }
-    expect(c.broken).toBe(1);
-    expect(c.windows).toBe(0);
-    expect(c.state).toBe('veiled');
+    expect(c.guards(boss)).toBe(true);
+    boss.hurt(10, { kb: 8, stun: 2, crit: true });
+    expect(boss.state).toBe('attack');
+    expect(boss.stun).toBe(0);
+    // 스킬·세트 효과처럼 기절을 직접 써도 다음 Enemy.update 에서 지워지고 조종 계획이 남는다.
+    boss.stun = 2;
+    c.update(g, DT); stepCombatFlow(f, DT);
+    expect(boss.stun).toBe(0);
+    expect(boss.state).toBe('attack');
+    expect(boss.signatures.plan?.key).toBe('bell_toll');
+    // 브레이크(자세 붕괴)도 조종 중에는 일어나지 않는다.
+    expect(postureHit(boss, 1e9, { finisher: true })).toBe(false);
+    expect(boss.state).toBe('attack');
+    for (let i = 0; i < 300 && c.state !== 'open'; i++) { c.update(g, DT); stepCombatFlow(f, DT); }
+    expect(c.state).toBe('open');
+    expect(c.windows).toBe(1);
+    expect(c.broken).toBe(0);
     expect(boss.attackSequence).toBe(seq);
+    // 반격 창에서는 지키지 않는다: 기절이 그대로 들어간다.
+    expect(c.guards(boss)).toBe(false);
+    boss.hurt(10, { stun: 2 });
+    expect(boss.stun).toBeGreaterThan(0);
   });
 });
+
+test('독 피해도 장막·반격 창 배수를 따른다', () => {
+  withFixedRandom(() => {
+    const { f, g, boss } = realBossFixture();
+    const c = new BellfallDeepCounter(DEF);
+    c.update(g, DT);
+    const tickPoison = () => { boss.poison = 4; boss.poisonT = 0; const before = boss.hp; boss.update(DT); return before - boss.hp; };
+    const raw = boss.maxHp * 0.02 + 8;
+    expect(tickPoison()).toBeCloseTo(raw * DEF.veil, 0);
+    expect(c.veiledHits).toBe(1);
+    boss.damageVeil = null;
+    expect(tickPoison()).toBeCloseTo(raw, 0);
+  });
+});
+
 
 test('열린 뒤 조종이 끊겨도 창은 유지된다', () => {
   const x = attach();
