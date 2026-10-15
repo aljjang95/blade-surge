@@ -47,6 +47,39 @@ const constellations = Object.freeze({
     Object.freeze({ roomId: 6, stationId: 4, label: '4번 조율판 · 마지막 항로', answer: 'triangle' }),
   ]),
 });
+// 성운 첨탑 심층(무너진 성좌)의 원안(BUNDLE-12): "성좌 4곳 복원 → 외곽 고리 정화, 모래시계 별자리 선택과 파편 집결 후 이탈".
+// 성좌 4곳은 일반판 조율판 엔진(AstralConstellations)과 같은 규칙·수치다: 방의 적과 증원을 처치하면 준비되고,
+// 모래시계 readRadius 안에서 행동·피격 없이 단서를 readSeconds 읽은 뒤 같은 도형 판(radius)에 holdSeconds 머물면 복원된다.
+// 오답은 피해 없이 판 밖으로 나와 다시 읽는다. combatRadius 안에 살아 있는 적이 있으면 단서·판을 숨긴다.
+// 복원 순서는 길 순서와 다르다: 1번 성좌(방 3)는 막다른 갈래 끝이라 2번 성좌(방 2)를 지나야 닿는다.
+// 그래서 2번은 먼저 정리돼 차례를 기다리고, 1번을 복원하고 돌아오는 길에 복원한다. 그 뒤 3번(방 5) → 4번(방 6).
+// 외곽 고리(ring): 4/4 와 시작·보스방을 뺀 모든 구역 정화 뒤, 보스 앞 정예방(방 7)에 성좌 외곽 고리가 열린다(열리는 스텝에는 시간이 흐르지 않음).
+//   좌표는 모두 방 중심 기준 (x, z) 오프셋이다. 열린 뒤 영웅이 방 사각형 안에 들어서면 정화가 시작되고 제한 시간 limit 초가 흐른다.
+//   고리 위 성표 4개(marks) 중 하나의 중심 markRadius 안에 holdSeconds 연속으로 머물면 그 성표가 정화된다(순서 자유, 벗어나면 유지 초기화).
+//   4개를 모두 정화하면 외곽 고리 정화 완료이고 그때 보스 봉인이 풀린다.
+//   파편 집결: 열린 뒤 first 초부터 period 주기로 고리의 별 파편(shards 개)이 warning 초 동안 중심으로 모이고(예고) burst 초 동안 터진다.
+//   터지는 동안 방 중심 core 반경 안(경계 포함)에 있으면 그 집결마다 한 번 최대 체력 damage 피해. 중심을 벗어나면(외곽 고리 위) 안전하다.
+//   제한 시간이 다 되면 고리 붕괴: 최대 체력 collapseDamage 피해, 정화한 성표가 모두 흐려지고(0/4) 시간을 limit 부터 다시 잰다.
+//   어느 실패도 진행을 막지 않는다. 보물방 공명 2곳은 이 목표로 교체되고, 정예방 2곳 × 증원 1회와 보스(레비아탄) 규칙은 바뀌지 않는다.
+const astralDeep = Object.freeze({
+  id: 'astral_fallen_constellations_deep', kind: 'deep-constellations', radius: 1.2,
+  readRadius: 8, readSeconds: 1, holdSeconds: 1, combatRadius: 22,
+  choices: ASTRAL_CHOICES,
+  gates: Object.freeze([
+    Object.freeze({ roomId: 3, stationId: 1, label: '1번 성좌 · 끊어진 별길', answer: 'circle' }),
+    Object.freeze({ roomId: 2, stationId: 2, label: '2번 성좌 · 되돌아온 빛', answer: 'diamond' }),
+    Object.freeze({ roomId: 5, stationId: 3, label: '3번 성좌 · 가라앉은 닻별', answer: 'triangle' }),
+    Object.freeze({ roomId: 6, stationId: 4, label: '4번 성좌 · 귀환 좌표', answer: 'circle' }),
+  ]),
+  ring: Object.freeze({
+    roomId: 7, label: '성좌 외곽 고리',
+    // 서(-x) · 북(-z) · 동(+x) · 남(+z). 이웃한 두 성표를 잇는 직선은 중심에서 6 × cos 45° ≈ 4.24 떨어져 core 밖이다.
+    marks: Object.freeze([Object.freeze([-6, 0]), Object.freeze([0, -6]), Object.freeze([6, 0]), Object.freeze([0, 6])]),
+    markRadius: 1.4, holdSeconds: 1, limit: 20,
+    first: 1, period: 4.5, warning: 1.5, burst: .5, core: 3.4, damage: .06,
+    collapseDamage: .06, shards: 8, color: 0x8fb8ff,
+  }),
+});
 // 혜성 기사단장 보스전의 푸른 궤도선(BUNDLE-06). 개인 기본 원정 혜성 요새 일반·심층의 보스방에서만 쓴다.
 // 보스방 중심의 푸른 선(safe) 안쪽은 평소 유성(바깥 고리 outerMin~outerMax)에서 안전하고, centerEvery 번째마다 중심 유성이 선 안쪽을 덮는다.
 // 예고(warning)는 보스가 공격하지 않을 때만 시작하고, 예고 동안 보스는 새 공격을 시작하지 않는다.
@@ -154,6 +187,7 @@ export const ROUTE_OBJECTIVES = Object.freeze({
   nightglass_standard: records('standard', [[2, 1], [5, 2], [6, 3]]),
   nightglass_deep: records('deep', [[6, 3], [4, 2], [1, 1]]),
   astral_standard: constellations,
+  astral_deep: astralDeep,
   // 흑사막 환영 분지 일반의 원안: 가짜 왕좌 3개를 실제 공격으로 부숴야 여왕의 본체가 드러난다.
   // 보라 모래시계가 멈춘 동안에만 균열이 쌓이고, 도는 동안 때리면 모래가 반사된다. 부수는 순서는 자유다.
   sable_standard: Object.freeze({
