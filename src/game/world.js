@@ -236,10 +236,14 @@ export class Floor {
     const key = sz * this.cols + sx;
     if (this._flowKey === key) return this._flow;
     const N = this.cols * this.rows;
-    const dist = new Int32Array(N).fill(-1);
-    const q = new Int32Array(N); let head = 0, tail = 0;
     const si = sz * this.cols + sx;
+    // 걸을 수 없는 시작 칸은 할당 없이 null 을 돌려주고 직전 캐시를 건드리지 않는다.
     if (this.inner[si] !== 1) return null;
+    // 거리장은 호출자가 이후에도 들고 쓰므로 매번 새로 만들고, 큐는 칸 수가 같으면 인스턴스 버퍼를 재사용한다.
+    const dist = new Int32Array(N).fill(-1);
+    let q = this._flowQ;
+    if (!q || q.length !== N) q = this._flowQ = new Int32Array(N);
+    let head = 0, tail = 0;
     dist[si] = 0; q[tail++] = si;
     while (head < tail) {
       const cur = q[head++]; const cz = (cur / this.cols) | 0, cx = cur - cz * this.cols; const d = dist[cur];

@@ -14,6 +14,7 @@ const PHASE_ORDER = Object.freeze({ locked: 0, ready: 1, collapse: 2, shelter: 3
  * 시간 안에 못 맞추면 그 고리만 처음 위치로 돌아간다. 정렬 뒤 중심 쉼터에 머물면 연결되고,
  * 연결 직후 유성 폭풍이 세 번 떨어진다. 붉은 원 안에서는 청록 빈 원(쉼터)만 안전하다.
  * 방 정화·보상은 연결이 끝난 순간 한 번만 Battle.markCleared 로 넘기고, 봉인·승리는 Battle 이 소유한다.
+ * 그 순간 방에 적·대기 소환이 남아 거부되면 purgePending 으로 기억했다가 그 방 적이 정리된 첫 프레임에 다시 한 번 넘긴다.
  * 공명 제단은 이 목표로 교체된다(allowsAttunement / coexistsAttunement 가 false).
  * 읽기 상태(gates·current·progress 등)는 뷰·UI 가 읽기만 한다. */
 export class CometDeepOrbits {
@@ -59,6 +60,7 @@ export class CometDeepOrbits {
       return { room, label, index: i, phase: 'locked', present: false, prepared: false, expected: 0, spawned: 0,
         target, start, angle: start, lockT: 0, connectT: 0, clock: 0, slack: null, failures: 0, hits: 0,
         stormIndex: 0, stormT: 0, stormWarn: false, stormWarnT: 0, detour: false,
+        purgePending: false,
         center: at(0, 0), stone: new Vector3(), approach: new Vector3(), shelters, stormShelter: shelters[0].clone() };
     });
     this.#order = new Array(this.gates.length).fill(0);
@@ -220,7 +222,12 @@ export class CometDeepOrbits {
     for (let i = 0; i < gs.length; i++) {
       const g = gs[i];
       if (g.phase === 'locked' && this.enemiesCleared(game, g)) this.#ready(game, g);
-      if (g.phase === 'locked' || g.phase === 'connected') continue;
+      if (g.phase === 'connected') {
+        // 연결 순간 적·대기 소환이 남아 markCleared 가 거부됐다면, 그 방 적이 정리된 첫 프레임에 한 번 더 정화한다.
+        if (g.purgePending && this.enemiesCleared(game, g)) { game.markCleared(g.room); g.purgePending = g.room.cleared !== true; }
+        continue;
+      }
+      if (g.phase === 'locked') continue;
       // 고정 프레임 결정성: 1/30초 하위 단계로 밀기·시계·폭풍을 진행한다.
       for (let left = dt; left > 1e-9 && g.phase !== 'connected' && player.alive; left -= STEP) this.#tick(game, g, Math.min(left, STEP));
     }
@@ -326,6 +333,7 @@ export class CometDeepOrbits {
     this.#place(g);
     audio.magic?.({ vol: .3, base: 392, notes: [0, 4, 7, 12], step: .08, type: 'triangle' });
     game.markCleared(g.room);
+    g.purgePending = g.room.cleared !== true;
     game.autoTarget = this.autoRoom();
     const n = this.#connected, total = this.gates.length;
     game.ui.toast(n === total ? `궤도 고리 ${total}개 연결 · 혜성 요새의 봉인이 흔들립니다` : `${g.label} 연결 완료 · ${n}/${total}`, 'gold');
