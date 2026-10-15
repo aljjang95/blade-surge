@@ -26,7 +26,8 @@ const HIDE_SECONDS = .5, TIME_EPS = 1e-6;
 const LINE_Y = .09, MARK_Y = .10, FILL_Y = .11, BORDER_Y = .11, FLASH_Y = .12;
 const LINE_WIDTH = .45, MARK_WIDTH = .4, BORDER_WIDTH = .4, FILL_GAP = .1;
 const SHARD_RADIUS = .45, SHARD_Y = 1.2, SHARD_DROP = .4, BOB = .12;
-const COLOR = Object.freeze({ purified: 0xffd060, idle: 0x8394ac, ring: 0x8fb8ff, border: 0xffb060, flash: 0xdfe8ff, shard: 0xcfe0ff });
+const COLOR = Object.freeze({ purified: 0xffd060, idle: 0x8394ac, ring: 0x8fb8ff, border: 0xffb060, flash: 0xff6a3d, shard: 0xcfe0ff });
+// 섬광은 밝은 하늘빛 바닥과 구분되도록 채도 높은 주황빛 빨강이다(smoke 1 의 844x390·390x844 PNG 에서 흰 섬광 0xdfe8ff 는 얼음 바닥과 거의 같았다).
 // 성표 상태 코드. markState 의 문자열과 1:1.
 const IDLE = 0, HELD = 1, PURIFIED = 2;
 const MARK_NAMES = Object.freeze(['idle', 'held', 'purified']);
