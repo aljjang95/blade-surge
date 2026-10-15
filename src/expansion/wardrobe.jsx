@@ -86,9 +86,18 @@ function WardrobeView({ app, id, equipment }) {
   const [yaw, setYaw] = useState(.28);
   const [frame, setFrame] = useState(null);
   const reduced = app.reducedMotion.matches;
+  // 아이템 시트 같은 모달이 패널을 덮는 동안에는 매 프레임 그리지 않는다(시트의 3D 미리보기와 GPU를 나눠 쓰지 않게).
+  const [covered, setCovered] = useState(() => !!document.querySelector('#modal.show'));
+  useEffect(() => {
+    const modal = document.getElementById('modal');
+    if (!modal) return undefined;
+    const sync = () => setCovered(modal.classList.contains('show'));
+    const watch = new MutationObserver(sync); watch.observe(modal, { attributes: true, attributeFilter: ['class'] }); sync();
+    return () => watch.disconnect();
+  }, []);
   const armor = ITEM_BY_ID[equipment.armor?.id];
   return <div className="wardrobe-view"><h3>{HEROES[id].name} · 착용 모습</h3>
-    <div className="wardrobe-canvas"><Canvas dpr={[1,1.5]} camera={{position:[0,1.5,5.4],fov:36}} frameloop={reduced?'demand':'always'} gl={{antialias:true,alpha:true,powerPreference:'low-power'}} onCreated={({camera})=>camera.lookAt(0,1.35,0)}>
+    <div className="wardrobe-canvas"><Canvas dpr={[1,1.5]} camera={{position:[0,1.5,5.4],fov:36}} frameloop={reduced||covered?'demand':'always'} gl={{antialias:true,alpha:true,powerPreference:'low-power'}} onCreated={({camera})=>camera.lookAt(0,1.35,0)}>
       <FitCamera frame={frame}/><ambientLight intensity={1.3}/><directionalLight position={[3,5,4]} intensity={2.5}/><directionalLight position={[-3,2,-2]} color="#97d9d2" intensity={1.6}/>
       <Character app={app} id={id} equipment={equipment} yaw={yaw} reduced={reduced} onFit={setFrame}/>
       <mesh rotation={[-Math.PI/2,0,0]} position={[0,-.025,0]}><circleGeometry args={[1.25,48]}/><meshStandardMaterial color="#365849" roughness={.9}/></mesh>
