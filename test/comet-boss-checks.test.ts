@@ -243,8 +243,16 @@ describe('예고 중 새 공격 없음(noAttackDuringWarn)', () => {
   });
   test('예고가 시작된 스텝에 보스가 이미 공격 중(state attack)이었으면 실패한다', () => {
     const s = session({ strikes: 2 });
-    s.rows[s.strikeIdx[0] - WARN_FRAMES - 1].st = 'attack';
+    const start = s.strikeIdx[0] - WARN_FRAMES;
+    s.rows[start - 1].st = 'attack'; s.rows[start].st = 'attack';
     expect(run(s).acceptance.noAttackDuringWarn).toBe(false);
+  });
+  test('영웅 타격으로 공격이 끊긴 스텝(직전 행 attack, 시작 행 hurt)에 시작한 예고는 합격이다', () => {
+    // Battle 순서상 player 단계에서 보스가 hurt 로 바뀐 뒤 컨트롤러가 예고를 시작한다(BUNDLE-06 smoke-deep-auto-1 에서 관측).
+    const s = session({ strikes: 2 });
+    const start = s.strikeIdx[0] - WARN_FRAMES;
+    s.rows[start - 1].st = 'attack'; s.rows[start].st = 'hurt';
+    expect(run(s).acceptance.noAttackDuringWarn).toBe(true);
   });
   test('예고 시작 스텝에 곧바로 새 공격이 시작돼도 실패한다', () => {
     const s = session({ strikes: 2 });
@@ -261,7 +269,9 @@ describe('예고 중 새 공격 없음(noAttackDuringWarn)', () => {
     const start = s.strikeIdx[0] - WARN_FRAMES;
     for (let i = start - 30; i < start; i++) { s.rows[i].st = 'attack'; s.rows[i].seq = 1; }
     for (let i = start; i < s.rows.length; i++) s.rows[i].seq = 1;
-    expect(run(s).acceptance.noAttackDuringWarn).toBe(false); // start - 1 행이 attack 이면 실패
+    s.rows[start].st = 'attack';
+    expect(run(s).acceptance.noAttackDuringWarn).toBe(false); // 시작 행까지 같은 공격이 이어지면 실패
+    s.rows[start].st = 'chase';
     for (let i = start - 1; i < start; i++) s.rows[i].st = 'chase';
     expect(run(s).acceptance.noAttackDuringWarn).toBe(true);
   });
@@ -597,4 +607,3 @@ describe('기준선 비교(compareRuns)', () => {
     expect(drawCallIncrease([{ label: 'bossEnter', calls: 50 }], [{ label: 'bossEnter', calls: 60 }], 'bossEnter').increase).toBe(-10);
   });
 });
-

@@ -115,10 +115,14 @@ export function analyzeStrikes(rows, def) {
     const expectedKind = run.ordinal % def.centerEvery === 0 ? 'center' : 'outer';
     const baseSeq = before ? before.seq : start.seq;
     const seqSteady = rows.slice(run.start, run.last + 1).every(r => r.seq === baseSeq);
+    // 예고가 공격 중에 시작됐는가: 직전 행이 attack 이고 시작 행에서도 같은 공격이 이어질 때만이다.
+    // Battle 순서는 player → routeObjectives → enemies 라서, 영웅 타격으로 보스 공격이 끊겨(hurt 등) 컨트롤러가 그 스텝에 예고를 시작하면
+    // 직전 행은 attack 이지만 시작 행은 attack 이 아니다. 컨트롤러가 attack 중에 예고를 시작했다면 시작 행도 같은 attackSequence 의 attack 이다.
+    const startedDuringAttack = !!before && before.st === 'attack' && start.st === 'attack' && start.seq === before.seq;
     const warn = { ordinal: run.ordinal, startIdx: run.start, startT: start.t, kind: start.ok, expectedKind, kindOk: start.ok === expectedKind,
       startWarnLeft: start.wl, startWarnLeftOk: Number.isFinite(start.wl) && start.wl <= def.warning + EPS && start.wl >= def.warning - FRAME - EPS,
-      seqSteady, startedDuringAttack: before ? before.st === 'attack' : false, aswDuring: rows.slice(run.start, run.last + 1).reduce((m, r) => Math.max(m, r.asw || 0), 0),
-      bossState: start.st, outcome, rows: run.last - run.start + 1 };
+      seqSteady, startedDuringAttack, aswDuring: rows.slice(run.start, run.last + 1).reduce((m, r) => Math.max(m, r.asw || 0), 0),
+      bossStateBefore: before ? before.st : null, bossState: start.st, outcome, rows: run.last - run.start + 1 };
     if (outcome === 'strike') {
       const row = next;
       warn.endT = row.t; warn.duration = row.t - start.t; warn.durationOk = close(warn.duration, def.warning, FRAME);
@@ -286,5 +290,4 @@ export function compareRuns(cand, base, { fightRatio = 2, timeRatio = 2, drawLim
   const slow = { cand: c ?? null, base: b ?? null, limit: Number.isFinite(b) ? b + slowExtra : null, ok: Number.isFinite(c) && Number.isFinite(b) && c <= b + slowExtra };
   return { ok: fight.ok && time.ok && bossEnter.ok && bossReady.ok && slow.ok, fight, time, bossEnter, bossReady, slow };
 }
-
 
