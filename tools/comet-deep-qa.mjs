@@ -652,6 +652,19 @@ try {
     } catch (error) {
       report.profiles[name] = { status: 'fail', failure: String(error?.stack || error), wallMs: Date.now() - started };
       process.exitCode = 1;
+      // 실패 표본의 원인을 남긴다: 고리 phase 이벤트·정화 순서·AUTO 목표·방별 생존 적. 새로고침 전에 읽는다.
+      report.profiles[name].diagnostic = await page.evaluate(() => {
+        const a = window.app, b = a.battle, q = window.__deepQa;
+        if (!b?.world) return null;
+        const alive = {};
+        for (const e of b.enemies) if (e.alive) alive[e.homeRoom?.id ?? 'none'] = (alive[e.homeRoom?.id ?? 'none'] || 0) + 1;
+        const pending = {};
+        for (const n of b.pending) pending[n.room?.id ?? 'none'] = (pending[n.room?.id ?? 'none'] || 0) + 1;
+        return { freeze: q?.freeze?.() ?? null, summary: q?.summary ? (({ events, clears, hpDrops, trace }) => ({ events, clears, hpDrops, trace }))(q.summary()) : null,
+          autoTarget: b.autoTarget?.id ?? null, curRoom: b.curRoom?.id ?? null, sealed: !!b.world.sealed, alive, pending,
+          rooms: b.world.rooms.map(r => ({ id: r.id, type: r.type, spawned: !!r.spawned, cleared: !!r.cleared, discovered: !!r.discovered, forgeWave: r.forgeWave || 0 })),
+          auto: !!b.player?.auto, playerState: b.player?.state ?? null };
+      }).catch(diagError => ({ error: String(diagError) }));
       await qa.save();
       try { await qa.boot({ reload: true }); } catch (bootError) { report.profiles[name].recoverFailure = String(bootError); break; }
     }
