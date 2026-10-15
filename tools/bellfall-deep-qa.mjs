@@ -110,6 +110,12 @@ function installProbe({ bellRooms }) {
   const app = window.app;
   const P = window.__bellQa = { dt: 1 / 60, bellRooms, steps: 0 };
   const routeOf = () => app.battle.routeObjectives;
+  // player.js hurt 의 방어 외 경감(가드·성역·아이기스·물약 방어). 하나라도 켜져 있으면 불협 피해를 정확히 판정할 수 없다.
+  const reductionState = () => {
+    const b = app.battle, p = b.player, armory = b.sp?.armory;
+    return { guard: (p.guardT || 0) > 0 && p.def?.jobId === 'guardian' ? 1 : 0, sanctum: p.dr > 0 && p.drT > 0 ? p.dr : 0,
+      aegis: armory?.aegisUntil > b.elapsed ? armory.aegis || 0 : 0, tonicGuard: (p.tonicGuardT || 0) > 0 ? 1 : 0 };
+  };
   const isBells = r => r?.def?.kind === 'reverse-bells';
   const num = value => Number.isFinite(value) ? value : null;
   const gateRows = () => (routeOf()?.gates || []).map(g => ({ room: g.room.id, label: g.label, phase: g.phase, purgePending: !!g.purgePending, spawned: !!g.spawned, prepared: !!g.prepared }));
@@ -134,7 +140,7 @@ function installProbe({ bellRooms }) {
     Object.assign(P, { log: [], hpDrops: [], clears: [], samples: [], stepMs: [], renderMs: [], slow: [], maxAlive: 0, minHpRatio: 1, steps: 0,
       sampledRooms: new Set(), darkSampled: false, sealT: null, startElapsed: b.elapsed });
     P.prev = { phase: r?.phase ?? null, gp: (r?.gates || []).map(g => g.phase), discords: r?.discords ?? 0, hold: r?.hold ?? 0, holdRoom: r?.holdGate?.room?.id ?? null,
-      cleared: b.world.rooms.map(x => !!x.cleared), sealed: !!b.world.sealed, hp: b.player.hp, room: b.curRoom?.id ?? null };
+      cleared: b.world.rooms.map(x => !!x.cleared), sealed: !!b.world.sealed, hp: b.player.hp, room: b.curRoom?.id ?? null, def: b.player.stats?.def ?? null, red: reductionState() };
     return { kind: r?.def?.kind ?? null, controller: r ? r.constructor.name : null, gates: gateRows().length, rooms: b.world.rooms.length, sealed: !!b.world.sealed };
   };
   P.sample = (label, extra) => {
@@ -156,7 +162,8 @@ function installProbe({ bellRooms }) {
         if (phase === 'dark' && !P.darkSampled) { P.darkSampled = true; P.sample('firstDark', { gate: g.room.id }); }
       });
       if (r.discords > P.prev.discords) {
-        P.log.push({ kind: 'discord', t, discords: r.discords, discordsBefore: P.prev.discords, hpBefore: P.prev.hp, hpAfter: p.hp, maxHp: p.maxHp, prevHold: P.prev.hold,
+        // 방어력과 다른 경감 상태는 피해가 들어간 스텝 직전 값이다(가드는 피격 때 0 이 되므로 직후 값으로는 알 수 없다).
+        P.log.push({ kind: 'discord', t, discords: r.discords, discordsBefore: P.prev.discords, hpBefore: P.prev.hp, hpAfter: p.hp, maxHp: p.maxHp, def: P.prev.def, reductions: P.prev.red, prevHold: P.prev.hold,
           prevHoldRoom: P.prev.holdRoom, wrongRoom: r.lastDiscord?.room?.id ?? null, phaseAfter: r.phase, progressAfter: r.progress, gatesAfter: gp.slice(), tolls: r.tolls, here: r.here?.id ?? null });
       }
       if (r.phase !== P.prev.phase) {
@@ -172,6 +179,7 @@ function installProbe({ bellRooms }) {
     if (P.prev.sealed && !b.world.sealed) { P.sealT = t; P.prev.sealed = false; }
     if (p.hp < P.prev.hp - 1e-6) P.hpDrops.push({ t, drop: P.prev.hp - p.hp, hp: p.hp, maxHp: p.maxHp, room: b.curRoom?.id ?? null });
     P.prev.hp = p.hp;
+    P.prev.def = p.stats?.def ?? null; P.prev.red = reductionState();
     if (p.maxHp > 0) P.minHpRatio = Math.min(P.minHpRatio, p.hp / p.maxHp);
     let alive = 0; for (const e of b.enemies) if (e.alive) alive++;
     P.maxAlive = Math.max(P.maxAlive, alive);
@@ -409,13 +417,34 @@ async function dwellOnGate(row, roomId, { maxSteps = 60 * 40 } = {}) {
     throw Error('Dwelling on room ' + roomId + ' did not reach discord within ' + maxSteps + ' steps: ' + JSON.stringify(trail.slice(-6)));
   } finally { await setKeys(new Set()); }
 }
+/** 불협 직후(소등 재생 중) 키보드로 종 원 밖(반경 + 1)까지 걸어 나간다. 다음 공명 단계에서 목표창을 읽는 동안 유지가 쌓이지 않게 한다(리뷰 b04-review P3). */
+async function leaveGate(roomId, { maxSteps = 600 } = {}) {
+  qaAssert(await page.evaluate(() => window.app.battle.player.auto) === false, 'AUTO must be off for keyboard leaving');
+  await nativeGameplayFocus(page);
+  let total = 0;
+  try {
+    while (total < maxSteps) {
+      const aim = await page.evaluate(id => window.__bellQa.aimGate(id), roomId);
+      qaAssert(aim, 'No bell gate for room ' + roomId);
+      qaAssert(aim.phase !== 'dark', 'Gate turned dark before leaving room ' + roomId);
+      if (aim.dist > aim.radius + 1) return { room: roomId, steps: total, dist: +aim.dist.toFixed(2) };
+      // 화면상 중심 반대쪽. 영웅이 중심과 겹쳐 방향이 없으면 아래(KeyS)로 나간다.
+      const away = Math.hypot(aim.dx, aim.dy) > 1 ? keysToward({ dx: -aim.dx, dy: -aim.dy }) : new Set(['KeyS']);
+      await setKeys(away);
+      const r = await page.evaluate(opts => window.__bellQa.run(opts), { n: 6 });
+      total += r.ran;
+      if (r.reason !== 'n') throw Error('Leaving room ' + roomId + ' stopped: ' + r.reason);
+    }
+    throw Error('Leaving room ' + roomId + ' did not exit the bell circle within ' + maxSteps + ' steps');
+  } finally { await setKeys(new Set()); }
+}
 /** 불협 직후 사건을 로그에서 읽어 정답 방과 함께 판정한다. */
 async function verifyLastDiscord(row, ordinal) {
   const log = await page.evaluate(() => window.__bellQa.log);
   const events = discordEvents(log, bellDef), event = events.at(-1);
   qaAssert(event && events.length === ordinal, 'Expected discord #' + ordinal + ' in log, found ' + events.length);
   const result = checkDiscord(event, bellDef);
-  check(row.tag + ': 불협 ' + ordinal + '회째 사건(1회 증가·피해 ' + Math.round(bellDef.discord.damage * 100) + '%·2초 유지·오답 종·toll·progress 0·모든 종 lit)', result.ok, { event, result });
+  check(row.tag + ': 불협 ' + ordinal + '회째 사건(1회 증가·방어 경감 적용 ' + Math.round(bellDef.discord.damage * 100) + '% 기준 피해·2초 유지·오답 종·toll·progress 0·모든 종 lit)', result.ok, { event, result });
   (row.discordChecks ??= []).push({ ordinal, event, result });
   return result;
 }
@@ -551,6 +580,7 @@ const profiles = {
     await checkObjectiveLeak(row, 1);
     row.dwell2 = await dwellOnGate(row, wrongRoom());
     await verifyLastDiscord(row, 2);
+    row.leave2 = await leaveGate(wrongRoom());
     await advance(row, { type: 'ctl', phase: 'answer' }, { max: 60 * 60 });
     const guide = await checkObjectiveLeak(row, 2);
     row.guideRoom = (await freeze()).ctl.guideRoom;

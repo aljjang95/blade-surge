@@ -5,8 +5,15 @@
 /** 고정 스텝 한 번의 길이. 관측이 스텝 끝에서만 이뤄지므로 모든 시간 비교는 이 값만큼의 양자화 오차를 허용한다. */
 export const FRAME = 1 / 60;
 const EPS = 1e-9;
-/** 불협 피해 비율 허용 오차(최대 체력 대비 절대값). 컨트롤러가 hurt 에 최대 체력 × damage 를 넘기고 방어 보정이 없다는 가정이다. */
-export const DISCORD_TOLERANCE = .01;
+/** 방어 경감 상한. src/game/player.js hurt 의 `1 - min(0.6, def / (def + 250))` 과 같은 식이다(리뷰 b04-review P1). */
+export const DEFENSE_CAP = .6;
+export const DEFENSE_SCALE = 250;
+
+/** 컨트롤러가 hurt 에 넘기는 값(최대 체력 × damage)에 영웅 방어 경감을 적용한 실제 HP 감소량. 다른 경감이 없을 때만 정확하다. */
+export function mitigatedDamage(maxHp, ratio, def) {
+  if (!(maxHp > 0) || !Number.isFinite(ratio) || !Number.isFinite(def) || def < 0) return NaN;
+  return Math.max(1, Math.round(maxHp * ratio * (1 - Math.min(DEFENSE_CAP, def / (def + DEFENSE_SCALE)))));
+}
 
 /** 컨트롤러 단계 전이 허용표. wake → answer 같은 단계 건너뛰기는 목록에 없으므로 실패한다. 불협은 answer → toll 이다. */
 export const ALLOWED = Object.freeze({ wake: ['toll'], toll: ['answer'], answer: ['toll', 'done'], done: [] });
@@ -130,19 +137,24 @@ export function checkClears({ clears, gateRooms, tollOrder, doneT, sealT }) {
 
 /**
  * 불협 사건 하나를 검사한다.
- * ev: { discords, discordsBefore, hpBefore, hpAfter, maxHp, prevHold, wrongRoom, expectedRoom, phaseAfter, progressAfter, gatesAfter }
+ * ev: { discords, discordsBefore, hpBefore, hpAfter, maxHp, def, reductions, prevHold, wrongRoom, expectedRoom, phaseAfter, progressAfter, gatesAfter }
+ * 피해는 방어 경감을 적용한 기대값과 정확히 같아야 한다. 다른 경감(성역·보호막·물약 방어)이 켜져 있거나
+ * 같은 스텝에 다른 피해가 섞이면 값이 달라지므로 합격하지 않는다(거짓 합격 대신 실패).
  */
 export function checkDiscord(ev, def) {
   const drop = ev.hpBefore - ev.hpAfter, ratio = ev.maxHp > 0 ? drop / ev.maxHp : NaN;
+  const reductions = ev.reductions && typeof ev.reductions === 'object' ? ev.reductions : null;
+  const otherReduction = !reductions || Object.values(reductions).some(v => v !== 0);
+  const expected = mitigatedDamage(ev.maxHp, def.discord.damage, ev.def);
   /** @type {any} */
   const out = {
     countStep: ev.discords === ev.discordsBefore + 1,
-    damageOk: close(ratio, def.discord.damage, DISCORD_TOLERANCE),
+    damageOk: !otherReduction && close(drop, expected, 1e-6),
     heldLongEnough: Number.isFinite(ev.prevHold) && ev.prevHold >= def.holdSeconds - FRAME - EPS && ev.prevHold <= def.holdSeconds + EPS,
     wrongGate: ev.wrongRoom != null && ev.wrongRoom !== ev.expectedRoom,
     toll: ev.phaseAfter === 'toll', progressReset: ev.progressAfter === 0,
     allLit: Array.isArray(ev.gatesAfter) && ev.gatesAfter.length === def.gates.length && ev.gatesAfter.every(phase => phase === 'lit'),
-    drop, ratio,
+    drop, ratio, expected, otherReduction,
   };
   out.ok = out.countStep && out.damageOk && out.heldLongEnough && out.wrongGate && out.toll && out.progressReset && out.allLit;
   return out;
@@ -205,18 +217,34 @@ export function stepStats(values, limit = 50) {
 }
 
 /**
- * 후보와 기준선의 draw call 표본(라벨 'enter:room N', 'firstDark' 등 { label, calls })을 비교한다.
- * 후보 각 표본에서 기준선 같은 라벨(없으면 기준선 전체 최댓값)을 뺀 증가량의 최댓값이 limit 이하여야 한다.
+ * 후보와 기준선의 draw call 표본({ label, calls, room })을 비교한다(리뷰 b04-review P2).
+ * 'enter:roomN' 은 기준선의 같은 라벨과, 'firstDark' 는 같은 후보 실행에서 그 순간 영웅이 있던 방의 'enter:roomN' 과 비교한다.
+ * 짝이 없는 표본은 실패다(기준선 최댓값과 비교하는 거짓 합격을 막는다). 모든 증가량이 limit 이하여야 한다.
  */
 export function drawCallIncrease(candidate, baseline, limit = 12) {
-  const baseAll = baseline.reduce((max, row) => Math.max(max, row.calls), 0);
   const rows = candidate.map(row => {
-    const base = baseline.find(b => b.label === row.label);
-    const reference = base ? base.calls : baseAll;
-    return { label: row.label, calls: row.calls, reference, increase: row.calls - reference, matched: !!base };
+    const pair = row.label === 'firstDark'
+      ? candidate.find(c => c.label === 'enter:room' + row.room)
+      : baseline.find(b => b.label === row.label);
+    const reference = pair ? pair.calls : null;
+    return { label: row.label, calls: row.calls, reference, against: pair ? (row.label === 'firstDark' ? 'candidate ' : 'baseline ') + pair.label : null,
+      increase: pair ? row.calls - reference : null, matched: !!pair };
   });
-  const max = rows.reduce((m, row) => Math.max(m, row.increase), -Infinity);
-  return { ok: rows.length > 0 && baseline.length > 0 && max <= limit, max: Number.isFinite(max) ? max : null, limit, rows };
+  const max = rows.reduce((m, row) => row.matched ? Math.max(m, row.increase) : m, -Infinity);
+  return { ok: rows.length > 0 && baseline.length > 0 && rows.every(row => row.matched) && max <= limit, max: Number.isFinite(max) ? max : null, limit, rows };
+}
+
+/**
+ * PLAN 5절 4번 기준선 비교. 후보·기준선 auto 실행 요약에서 완주 시간 비(≤ timeRatio), draw call 증가(≤ drawLimit)를 판정하고,
+ * 50ms 초과 스텝은 전체 개수와 함께 종문 구간(toll·answer 단계)만 따로 센다. 50ms 절대 검사는 각 실행 report 의 검사가 그대로 판정한다.
+ * cand/base: { time, samples, slow }
+ */
+export function compareToBaseline(cand, base, { timeRatio = 2, drawLimit = 12 } = {}) {
+  const ratio = cand?.time > 0 && base?.time > 0 ? cand.time / base.time : null;
+  const draw = drawCallIncrease(cand?.samples || [], base?.samples || [], drawLimit);
+  const featureSlow = (cand?.slow || []).filter(s => s.phase === 'toll' || s.phase === 'answer');
+  return { ok: ratio !== null && ratio <= timeRatio && draw.ok, time: { cand: cand?.time ?? null, base: base?.time ?? null, ratio, limit: timeRatio },
+    draw, over50: { cand: (cand?.slow || []).length, base: (base?.slow || []).length, featureWindow: featureSlow.length, featureSlow } };
 }
 
 /** 첫 소등(wake → toll) 전에 모든 gate 가 lit 이 된 사건이 있었는지. */

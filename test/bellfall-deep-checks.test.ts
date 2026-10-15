@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { ROUTE_OBJECTIVES } from '../src/data/route-objectives.js';
 import { ALLOWED, FRAME, analyzeBells, buildAttempts, buildReplays, checkAnswerOrder, checkClears, checkDiscord, checkGuideText, checkPhaseTimeline,
-  checkReplay, checkReplays, checkResult, checkResultLine, discordEvents, drawCallIncrease, percentile, reverseOrder, stepStats } from '../tools/bellfall-deep-checks.mjs';
+  checkReplay, checkReplays, checkResult, checkResultLine, compareToBaseline, discordEvents, drawCallIncrease, mitigatedDamage, percentile, reverseOrder, stepStats } from '../tools/bellfall-deep-checks.mjs';
 
 // 정의는 대상 프로젝트의 데이터에서 읽는다(도구와 같은 방식). 판정 함수는 값을 박지 않는다.
 const DEF: any = ROUTE_OBJECTIVES.bellfall_deep;
@@ -176,16 +176,27 @@ describe('방 정화와 봉인', () => {
 });
 
 describe('불협', () => {
-  const good: any = { discords: 1, discordsBefore: 0, hpBefore: 1000, hpAfter: 1000 - 1000 * DEF.discord.damage, maxHp: 1000, prevHold: DEF.holdSeconds - FRAME,
+  // 실제 smoke(work/b04/diag/smoke-discord-1) 값: 최대 체력 30824, 방어 302.5 → round(30824 × .06 × (1 − 302.5/552.5)) = 837.
+  const reductions = { tonicGuard: 0, sanctum: 0, aegis: 0 };
+  const good: any = { discords: 1, discordsBefore: 0, hpBefore: 30824, hpAfter: 30824 - 837, maxHp: 30824, def: 302.5, reductions, prevHold: DEF.holdSeconds - FRAME,
     wrongRoom: DEF.tollOrder[0], expectedRoom: ANSWER[0], phaseAfter: 'toll', progressAfter: 0, gatesAfter: DEF.gates.map(() => 'lit') };
-  test('정답 외 종에서 2초를 채우면 피해 6%·toll·progress 0·모든 종 lit 로 합격한다', () => {
+  test('정답 외 종에서 2초를 채우면 방어 경감을 적용한 6% 기준 피해·toll·progress 0·모든 종 lit 로 합격한다', () => {
     const result = checkDiscord(good, DEF);
     expect(result.ok).toBe(true);
-    expect(result.ratio).toBeCloseTo(DEF.discord.damage, 6);
+    expect(result.expected).toBe(837);
+    expect(mitigatedDamage(1000, .06, 0)).toBe(60);
+    // 경감 상한 60%: 방어가 아무리 높아도 6% 기준의 40% 아래로 내려가지 않는다.
+    expect(mitigatedDamage(1000, .06, 1e9)).toBe(24);
   });
   test('피해 비율·유지 시간·단계·초기화 중 하나라도 어긋나면 실패한다', () => {
     expect(checkDiscord({ ...good, hpAfter: 1000 }, DEF).damageOk).toBe(false);
-    expect(checkDiscord({ ...good, hpAfter: 1000 - 300 }, DEF).damageOk).toBe(false);
+    // 경감 없는 6%(1849)나 1 차이도 실패한다. 같은 스텝에 다른 피해가 섞이면 실패한다.
+    expect(checkDiscord({ ...good, hpAfter: 30824 - 1849 }, DEF).damageOk).toBe(false);
+    expect(checkDiscord({ ...good, hpAfter: 30824 - 838 }, DEF).damageOk).toBe(false);
+    // 방어 기록이 없거나 다른 경감이 켜져 있으면 판정할 수 없으므로 합격하지 않는다.
+    expect(checkDiscord({ ...good, def: undefined }, DEF).damageOk).toBe(false);
+    expect(checkDiscord({ ...good, reductions: undefined }, DEF).damageOk).toBe(false);
+    expect(checkDiscord({ ...good, reductions: { ...reductions, aegis: .2 } }, DEF).damageOk).toBe(false);
     expect(checkDiscord({ ...good, prevHold: .5 }, DEF).heldLongEnough).toBe(false);
     expect(checkDiscord({ ...good, wrongRoom: ANSWER[0] }, DEF).wrongGate).toBe(false);
     expect(checkDiscord({ ...good, phaseAfter: 'answer' }, DEF).ok).toBe(false);
@@ -284,12 +295,28 @@ describe('측정 보조', () => {
     expect(stepStats([1, 2, 3]).over).toBe(0);
     expect(stepStats([]).max).toBeNull();
   });
-  test('drawCallIncrease 는 같은 라벨 증가가 12 이하일 때만 합격한다', () => {
-    const base = [{ label: 'enter:room 2', calls: 100 }, { label: 'enter:room 3', calls: 110 }];
-    expect(drawCallIncrease([{ label: 'enter:room 2', calls: 108 }, { label: 'enter:room 3', calls: 122 }], base).ok).toBe(true);
-    expect(drawCallIncrease([{ label: 'enter:room 2', calls: 113 }], base).ok).toBe(false);
-    expect(drawCallIncrease([{ label: 'firstDark', calls: 120 }], base).ok).toBe(true);
-    expect(drawCallIncrease([{ label: 'firstDark', calls: 123 }], base).ok).toBe(false);
+  test('drawCallIncrease 는 짝이 있는 표본의 증가가 모두 12 이하일 때만 합격한다', () => {
+    const base = [{ label: 'enter:room2', calls: 100 }, { label: 'enter:room3', calls: 110 }, { label: 'enter:room8', calls: 200 }];
+    const cand = [{ label: 'enter:room2', calls: 108, room: 2 }, { label: 'enter:room3', calls: 122, room: 3 }];
+    expect(drawCallIncrease(cand, base).ok).toBe(true);
+    expect(drawCallIncrease([{ label: 'enter:room2', calls: 113, room: 2 }], base).ok).toBe(false);
+    // firstDark 는 같은 후보 실행의 그 방 첫 진입과 비교한다(기준선 최댓값 200 과 비교하지 않는다).
+    expect(drawCallIncrease([...cand, { label: 'firstDark', calls: 134, room: 3 }], base).ok).toBe(true);
+    expect(drawCallIncrease([...cand, { label: 'firstDark', calls: 135, room: 3 }], base).ok).toBe(false);
+    // 짝이 없으면 실패한다: 후보 실행에 그 방 첫 진입이 없거나 기준선에 같은 라벨이 없을 때.
+    expect(drawCallIncrease([...cand, { label: 'firstDark', calls: 100, room: 5 }], base).ok).toBe(false);
+    expect(drawCallIncrease([{ label: 'enter:room5', calls: 90, room: 5 }], base).ok).toBe(false);
     expect(drawCallIncrease([], base).ok).toBe(false);
+  });
+  test('compareToBaseline 은 완주 시간 2배 이하와 draw call 판정을 함께 요구하고, 종문 구간 50ms 초과를 따로 센다', () => {
+    const base = { time: 100, samples: [{ label: 'enter:room2', calls: 100 }], slow: [{ t: 0, ms: 3000, phase: null }] };
+    const cand = { time: 150, samples: [{ label: 'enter:room2', calls: 105, room: 2 }],
+      slow: [{ t: 0, ms: 4000, phase: 'wake' }, { t: 50, ms: 60, phase: 'answer' }] };
+    const result = compareToBaseline(cand, base);
+    expect(result.ok).toBe(true);
+    expect(result.over50).toMatchObject({ cand: 2, base: 1, featureWindow: 1 });
+    expect(compareToBaseline({ ...cand, time: 201 }, base).ok).toBe(false);
+    expect(compareToBaseline({ ...cand, samples: [{ label: 'enter:room2', calls: 113, room: 2 }] }, base).ok).toBe(false);
+    expect(compareToBaseline(cand, { ...base, time: 0 }).ok).toBe(false);
   });
 });

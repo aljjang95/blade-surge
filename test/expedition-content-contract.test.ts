@@ -125,7 +125,8 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(Number(tactic.match(/반경 (\d+)/)?.[1])).toBe(deep.radius);
         expect(Number(tactic.match(/(\d+)초 머물러/)?.[1])).toBe(deep.holdSeconds);
         expect(Number(tactic.match(/(\d+)초를 채우면 불협/)?.[1])).toBe(deep.holdSeconds);
-        expect(Number(tactic.match(/체력의 (\d+)% 피해/)?.[1])).toBe(Math.round(deep.discord.damage * 100));
+        // 불협 피해는 hurt 에 넘기는 최대 체력 비율이고 방어로 경감된다(리뷰 b04-review P1). 문구가 그 사실을 함께 적어야 한다.
+        expect(Number(tactic.match(/최대 체력 (\d+)% 기준의 피해\(방어력으로 줄어듭니다\)/)?.[1])).toBe(Math.round(deep.discord.damage * 100));
         expect(Number(tactic.match(/불협 (\d+)회부터/)?.[1])).toBe(deep.guideAfter);
         expect(tactic).toMatch(/마지막에 꺼진 종부터 거꾸로/);
         expect(tactic).toMatch(/다시 켜져 소등을 처음부터/);
