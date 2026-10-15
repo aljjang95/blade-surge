@@ -271,6 +271,7 @@ function installProbe(cfg) {
     return { kind: r?.def?.kind ?? null, controller: r ? r.constructor.name : null, routeId: r?.def?.id ?? null, gates: gn, rooms, hasView: !!r?.view,
       hasSyncView: typeof r?.syncView === 'function', hasPadOpen: typeof r?.padOpen === 'function',
       allRooms: b.world.rooms.map(x => ({ id: x.id, type: x.type, x: x.x, z: x.z })), reinforcements: b.stage?.expedition?.mechanics?.reinforcements ?? 0,
+      encounterTactic: typeof b.stage?.encounter?.tactic === 'string' ? b.stage.encounter.tactic : null,
       def: r ? { id: r.def.id, holdSeconds: r.def.holdSeconds, radius: r.def.radius, shockWindow: !!r.def.shockWindow, ventColor: r.def.ventColor ?? null, copy: r.def.copy ?? null } : null };
   };
   P.sample = (label, extra) => {
@@ -680,7 +681,7 @@ function recordTide(row, raw) {
   const missingRooms = valveRooms.filter(id => !roomSamples.some(x => x.roomId === id));
   check(row.tag + ': 밸브 방마다 첫 진입 draw call 표본', missingRooms.length === 0, { valveRooms, missing: missingRooms });
   const analysis = analyzeTide({ rows, result: row.result?.routeObjective, resultText: row.resultText, resultLines: row.resultLines, win: row.result?.win === true, rooms: row.begin.rooms,
-    toasts: raw.toasts, viewAB: raw.viewAB }, routeDef, { reinforcements: row.reinforcements });
+    toasts: raw.toasts, viewAB: raw.viewAB, encounterTactic: row.begin.encounterTactic ?? null }, routeDef, { reinforcements: row.reinforcements });
   row.tide = analysis;
   (report.reportItems.routeViewAB ??= []).push({ tag: row.tag, ...analysis.viewAB });
   (report.reportItems.viewSync ??= []).push({ tag: row.tag, observable: analysis.sync.observable, mismatches: analysis.sync.mismatchCount, note: '보고 항목: 밸브 뷰 root.visible = room.discovered (냉각 장치 GLB 뷰는 기존 뷰라 게이트 아님)' });

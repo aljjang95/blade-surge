@@ -541,6 +541,14 @@ describe('토스트(checkToasts)', () => {
     expect(leak.ok).toBe(false);
     expect(leak.leaked.length).toBe(1);
   });
+  test('보스 전술 토스트(stage.encounter.tactic 과 정확히 같음)의 시그니처 망치 문구는 면제하고, 한 글자라도 다르면 누출로 센다', () => {
+    const tactic = '각 냉각 밸브 구역의 적을 처치한 뒤 … 파란 밀물 띠 안에 있으면 피해를 입습니다. 용광로 개방: 중앙 통로 → 바깥 통로 과열 · 용재 망치: 발밑 강타를 피한 뒤 고리 안으로';
+    const ok = K.checkToasts(list([...full(), tactic]), DEF, { overheatHits: 0, encounterTactic: tactic });
+    expect(ok.ok).toBe(true); expect(ok.tacticToasts).toBe(1);
+    expect(K.checkToasts(list([...full(), tactic]), DEF, { overheatHits: 0 }).ok).toBe(false);
+    expect(K.checkToasts(list([...full(), tactic + ' ']), DEF, { overheatHits: 0, encounterTactic: tactic }).ok).toBe(false);
+    expect(K.checkToasts(list([...full(), tactic, '밀물 피해 · 망치 충격파 뒤 옮겨 간 조작판으로 이동']), DEF, { overheatHits: 0, encounterTactic: tactic }).ok).toBe(false);
+  });
 });
 
 describe('밸브 뷰(checkTideView)', () => {
