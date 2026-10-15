@@ -120,6 +120,32 @@ export const ROUTE_OBJECTIVES = Object.freeze({
       Object.freeze({ roomId: 6, label: '3번 가짜 왕좌 · 환영 정원' }),
     ]),
   }),
+  // 흑사막 분지 심층(왕좌의 거울)의 원안: 가짜 왕좌 4곳 파괴 → 거울 미궁 탈출 → 본체 처치.
+  // 왕좌 규칙(모래시계 멈춤 때만 균열 5회, 회전 중 공격은 모래 반사, 부수는 순서 자유)은 일반과 같고 수만 4곳이다.
+  // 4/4 파괴와 모든 구역 정화가 끝나면 거울 미궁이 열린다. 방 4(거울 전당)에 거울 두 개가 서고,
+  // 사라지는 모래 발자국과 멈춘 모래시계가 진짜 거울을 가리킨다. 시작 위치에서 진짜 거울까지의 길 길이로 정한
+  // 제한 시간(칸 수 / pace + grace, 올림) 안에 진짜 거울에 닿으면 탈출이고 그때 보스 봉인이 풀린다.
+  // 환영 거울에 닿으면 모래 반사(피해·밀침·재사용 대기), 시간이 다 되면 거울 붕괴(피해 뒤 지금 위치에서 다시 계산)다.
+  // 어느 실패도 진행을 막지 않는다. 보스(환영 여왕) 규칙은 바뀌지 않는다.
+  sable_deep: Object.freeze({
+    id: 'sable_mirror_thrones_deep', kind: 'thrones', radius: 1.4, standOff: 2.3, hits: 5, hitGap: .2, autoMargin: .8,
+    spinSeconds: 2.4, stillSeconds: 2, spinColor: 0x6b45a8, stillColor: 0xe0b0ff,
+    reflect: Object.freeze({ damage: .05, cooldown: 1.2 }),
+    gates: Object.freeze([
+      Object.freeze({ roomId: 2, label: '1번 가짜 왕좌 · 거울 회랑' }),
+      Object.freeze({ roomId: 3, label: '2번 가짜 왕좌 · 모래 신전' }),
+      Object.freeze({ roomId: 5, label: '3번 가짜 왕좌 · 환영 정원' }),
+      Object.freeze({ roomId: 6, label: '4번 가짜 왕좌 · 거울 교차로' }),
+    ]),
+    escape: Object.freeze({
+      roomId: 4, label: '거울 전당',
+      // 방 중심 기준 (x, z) 오프셋. 0 = 진짜 거울, 1 = 환영 거울.
+      real: Object.freeze([5, 3.5]), illusion: Object.freeze([-5, 3.5]),
+      radius: 1.4, pace: 4, grace: 6,
+      collapseDamage: .06, illusionDamage: .06, illusionCooldown: 1.5,
+      trailCount: 10, trailSpacing: 1.6, trailEvery: .5,
+    }),
+  }),
   // 혜성 요새 일반의 원안: 궤도 고리 4개 정렬. 궤도 위 룬석을 몸으로 밀어 별 표식에 맞춘다.
   // 정렬 중 유성은 평소 푸른 궤도선 바깥 고리에 떨어지고, 세 번째마다 안쪽 전체를 덮는 중심 유성이 온다.
   comet_standard: Object.freeze({
