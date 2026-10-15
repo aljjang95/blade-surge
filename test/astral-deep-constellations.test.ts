@@ -366,10 +366,12 @@ test('같은 스텝에서 정화 완료가 붕괴보다 먼저다', () => {
   run(f, 20 - 3 - 1 - .5 - 1e-9 - 0, .25);                                                 // 남은 시간이 1.0 이 될 때까지 대기(안전한 자리)
   expect(r.left).toBeCloseTo(1.5);
   atMark(f, 3); f.route.update(f.g, .5);                                                   // left 1.0, hold .5
-  expect(r.left).toBeCloseTo(1); expect(r.purified).toBe(3);
-  f.route.update(f.g, .5);                                                                 // left .5
-  f.route.update(f.g, .5);                                                                 // hold 1.5 ≥ 1 and left 0 → 완료가 우선
+  expect(r.left).toBeCloseTo(1); expect(r.purified).toBe(3); expect(r.marks[3].hold).toBeCloseTo(.5);
+  // 리뷰 P2: 같은 스텝에서 hold 가 차고 left 가 바닥나게 맞춘다(left .5 → 다음 .5 스텝에 0, hold .5 → 1).
+  r.left = .5;
+  f.route.update(f.g, .5);                                                                 // hold 1.0 ≥ 1 and left 0 → 완료가 우선
   expect(r.phase).toBe('done'); expect(r.collapses).toBe(0); expect(f.hurts).toHaveLength(0);
+  expect(r.left).toBeLessThanOrEqual(1e-9);                                                // 정말 같은 스텝에 시간이 바닥났다
 });
 
 test('완료 전에는 봉인이 유지되고, 4/4 성표를 정화하면 실제 Battle 봉인이 풀린다', () => {
@@ -565,7 +567,7 @@ test('AUTO 모의(고리): 5 위치 × 위상 0~4.4초 × 속도 5.6·7.2 에서
     const phase = k / 10, res = ringRun(where, phase, speed);
     // 중심에서 열린 고리는 예고 시작(1초) 뒤 터짐(2.5초)까지 중심 반경 3.4 를 벗어날 시간이 모자라면 어떤 AUTO 로도 한 번 맞는다:
     // 반경을 벗어나는 데 3.4 / 속도 초(5.6 이면 약 .61초)가 걸린다. 그 구간(터짐이 끝나는 3.0초 전까지)만 최대 1회 피격을 허용한다.
-    const forcedHit = name === 'center' && phase > 2.5 - 3.4 / speed - .15 && phase < 3;
+    const forcedHit = name === 'center' && phase > 2.5 - 3.4 / speed - .05 && phase < 3;
     if (res.phase !== 'done' || res.collapses !== 0) failures.push(name + ' @' + speed + ' phase ' + phase + ' ' + JSON.stringify(res));
     else if (forcedHit) { forced.push(name + ' @' + speed + ' phase ' + phase); if (res.shardHits > 1 || res.hurts !== res.shardHits) failures.push('forced ' + phase + ' ' + JSON.stringify(res)); }
     else if (res.shardHits !== 0 || res.hurts !== 0) failures.push(name + ' @' + speed + ' phase ' + phase + ' ' + JSON.stringify(res));
@@ -603,4 +605,57 @@ test('무할당: 고리가 도는 동안 update 는 상태 객체를 바꿔 끼�
   expect(r.phase).toBe('running');
   // 가비지 수집 뒤에도 남는 증가(누수)가 없어야 한다. 한 스텝에 객체를 하나씩 쌓으면 6만 스텝에 수 MB 가 남는다.
   expect(grown).toBeLessThan(1_000_000);
+});
+
+/* ------------------------------------------------------------ 리뷰 수리(BUNDLE-12 P2·P3) ------------------------------------------------------------ */
+
+test('core 경계: 중심에서 정확히 core(부동소수 오차 안) 떨어진 자리는 맞고, 그보다 조금 밖은 맞지 않는다', () => {
+  const hit = (extra: number) => {
+    const f = opened(); at(f, 7, SAFE[0], SAFE[1]); f.route.update(f.g, .25);
+    const r = ring(f);
+    while (r.shard.state !== 'burst') { f.g.player.pos.set(r.center.x + RING.core + extra, 0, r.center.z); f.route.update(f.g, 1 / 60); }
+    f.g.player.pos.set(r.center.x + RING.core + extra, 0, r.center.z); f.route.update(f.g, 1 / 60);
+    return [Math.hypot(f.g.player.pos.x - r.center.x, f.g.player.pos.z - r.center.z), r.shardHits];
+  };
+  const [d0, h0] = hit(5e-10), [d1, h1] = hit(1e-6);
+  expect(d0).toBeGreaterThanOrEqual(RING.core); expect(h0).toBe(1);                       // 경계 포함(정확히 core 이상이어도 EPS 안이면 맞는다)
+  expect(d1).toBeGreaterThan(RING.core + 1e-7); expect(h1).toBe(0);
+});
+
+test('회피 무적·완벽 방어로 피해가 흡수되면(hurt false) 파편 피격으로 세지 않고 알리지 않으며, 같은 집결에서 다시 맞지 않는다', () => {
+  const f = opened(); at(f, 7, SAFE[0], SAFE[1]); f.route.update(f.g, .25);
+  const r = ring(f); let calls = 0;
+  f.g.player.hurt = () => { calls++; return false; };
+  while (r.shard.state !== 'burst') f.route.update(f.g, 1 / 60);
+  at(f, 7);
+  const cycle = r.shard.cycle;
+  while (r.shard.state === 'burst' && r.shard.cycle === cycle) f.route.update(f.g, 1 / 60);
+  expect(calls).toBe(1); expect(r.shardHits).toBe(0);
+  expect(f.messages).not.toContain('파편 집결 피격 · 파편이 모이면 중심 밖으로');
+});
+
+import { heapStats } from 'bun:jsc';
+/** 가비지 수집 직후 살아 있는 객체 수를 재고, 수집 없이 steps 번 update 한 뒤 다시 잰다. 늘어난 수 = 그 동안 만든 객체(쓰레기 포함). */
+function allocPerUpdate(f: F, steps: number) {
+  const count = () => { const t: any = heapStats().objectTypeCounts; return { o: (t.Object || 0) + (t.Array || 0) + (t.Function || 0), s: (t.string || 0) + (t.String || 0) }; };
+  Bun.gc(true); const a = count();
+  for (let i = 0; i < steps; i++) {
+    f.route.update(f.g, 1 / 4096);
+    if (ring(f).phase === 'running' && ring(f).left < 18.5) ring(f).left = 18.99;          // 올림 초(19)가 바뀌지 않는 구간을 되풀이(문구·붕괴 없음)
+  }
+  const b = count();
+  return { objects: (b.o - a.o) / steps, strings: (b.s - a.s) / steps };
+}
+
+test('무할당(일시 할당): 고리 running · 열리기 전 · 끝난 뒤 update 가 스텝마다 객체·문자열을 새로 만들지 않는다(부모 엔진 몫 1개 이하)', () => {
+  const running_ = running(); at(running_, 7, SAFE[0], SAFE[1]); running_.route.update(running_.g, .25);
+  const done = fixture(); untilRoomSeven(done); clearRoom(done, 7); at(done, 7, SAFE[0], SAFE[1]); done.route.update(done.g, .25); done.route.update(done.g, .25);
+  for (const i of [0, 1, 2, 3]) { atMark(done, i); done.route.update(done.g, 1); }
+  const idle = fixture(); untilRoomSeven(idle);
+  expect([ring(running_).phase, ring(done).phase, ring(idle).phase]).toEqual(['running', 'done', 'idle']);
+  // 부모 AstralConstellations.observePlayer 의 ['idle','move'] 배열 리터럴이 스텝마다 하나 생긴다(일반판 엔진 그대로, 이번 범위에서 고치지 않음).
+  for (const [name, f] of [['running', running_], ['done', done], ['idle', idle]] as const) {
+    const m = allocPerUpdate(f, 4000);
+    expect([name, m.objects <= 1.25, m.strings <= .01]).toEqual([name, true, true]);
+  }
 });

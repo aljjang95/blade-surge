@@ -31,6 +31,9 @@ export class AstralDeepConstellations extends AstralConstellations {
   #ringLoading = false;
   #hintKey = -1;
   #hintText = '';
+  /** 4/4 뒤 고리가 열리기 전·끝난 뒤의 목표 문구(부모 hint 와 같은 글자). 매 프레임 템플릿 문자열을 만들지 않도록 생성 때 한 번 만든다. */
+  #hintRemain = '';
+  #hintBoss = '';
   ringView = null;
   /** 고리 상태. 생성 때 한 번 만들고 필드만 바꾼다. */
   ring;
@@ -38,6 +41,9 @@ export class AstralDeepConstellations extends AstralConstellations {
   constructor(def, world) {
     super(def, world);
     this.ring = this.#createRing(def.ring, world);
+    const n = this.gates.length;
+    this.#hintRemain = '별자리 ' + n + '/' + n + ' 복원 · 남은 구역 정화';
+    this.#hintBoss = '별자리 ' + n + '/' + n + ' 복원 · 레비아탄 처치';
   }
 
   #createRing(c, world) {
@@ -86,7 +92,8 @@ export class AstralDeepConstellations extends AstralConstellations {
     const ring = this.ring;
     return super.ownsHazards(room) || (!this.closed && room === ring.room && (ring.phase === 'open' || ring.phase === 'running'));
   }
-  canUnseal() { return super.canUnseal() && this.ring.phase === 'done'; }
+  /** 부모 조건(닫히지 않음 · 4/4 · 시작·보스방을 뺀 모든 구역 정화)과 고리 완료. 보스전 내내 불리므로 할당 없이 센다. */
+  canUnseal() { return !this.closed && this.complete && this.#zonesCleared() && this.ring.phase === 'done'; }
 
   hint() {
     const ring = this.ring;
@@ -101,6 +108,8 @@ export class AstralDeepConstellations extends AstralConstellations {
         }
         return this.#hintText;
       }
+      // 열리기 전·끝난 뒤는 부모 문구와 같은 글자를 미리 만든 문자열로 돌려준다(보스전 내내 매 프레임 불린다).
+      return this.canUnseal() ? this.#hintBoss : this.#hintRemain;
     }
     return super.hint();
   }
@@ -217,8 +226,10 @@ export class AstralDeepConstellations extends AstralConstellations {
     const ring = this.ring, c = this.def.ring, shard = ring.shard;
     if (shard.state !== BURST || this.#hitCycle === shard.cycle) return;
     if (Math.hypot(hero.x - ring.center.x, hero.z - ring.center.z) > c.core + EPS) return;
-    this.#hitCycle = shard.cycle; ring.shardHits++;
-    game.player.hurt?.(game.player.maxHp * c.damage, { kb: 0, kind: 'magic' });
+    // 같은 집결은 한 번만 시도한다. 회피 무적·완벽 방어로 피해가 흡수되면(hurt false) 피격으로 세지 않고 알리지 않는다.
+    this.#hitCycle = shard.cycle;
+    if (game.player.hurt?.(game.player.maxHp * c.damage, { kb: 0, kind: 'magic' }) === false) return;
+    ring.shardHits++;
     game.ui.toast('파편 집결 피격 · 파편이 모이면 중심 밖으로', 'red');
   }
 

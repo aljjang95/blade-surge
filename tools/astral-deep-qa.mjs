@@ -956,7 +956,11 @@ try {
     try {
       report.profiles[name] = { status: 'running' }; await qa.save();
       const result = await profiles[name]();
-      report.profiles[name] = { status: result.skipped ? 'skipped' : 'pass', ...result, wallMs: Date.now() - started };
+      // 리뷰 P3: 그 프로필의 판정('<프로필>: …')이 하나라도 실패하면 프로필·실행 상태도 fail 이다(예전에는 판정과 상관없이 pass 로 적었다).
+      const failed = report.checks.filter(item => !item.ok && item.name.startsWith(name + ': ')).map(item => item.name);
+      const status = result.skipped ? 'skipped' : failed.length ? 'fail' : 'pass';
+      if (!result.skipped && typeof result.status === 'string') result.status = status;
+      report.profiles[name] = { ...result, status, failedChecks: failed, wallMs: Date.now() - started };
     } catch (error) {
       report.profiles[name] = { status: 'fail', failure: String(error?.stack || error), wallMs: Date.now() - started };
       process.exitCode = 1;

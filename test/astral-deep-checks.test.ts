@@ -1200,3 +1200,25 @@ describe('통계 보조', () => {
     expect(st).toMatchObject({ n: 5, max: 60, over: 2 });
   });
 });
+
+// 리뷰 P3(BUNDLE-12): 피해 판정의 상한과 ring 프로필의 놓친 피격(strictMissed) 판정을 지킨다.
+test('damageMatches: 넘긴 값이 정의 값과 같고 실제 감소가 0 초과·정의 값 이하일 때만 통과한다', () => {
+  expect(K.damageMatches({ hr: [.06] }, .0286, .06)).toBe(true);
+  expect(K.damageMatches({ hr: [.06] }, .06, .06)).toBe(true);
+  expect(K.damageMatches({ hr: [.06] }, .0601, .06)).toBe(false);                         // 실제 감소가 정의 값보다 크면 설명되지 않는다
+  expect(K.damageMatches({ hr: [.06] }, 0, .06)).toBe(false);
+  expect(K.damageMatches({ hr: [.07] }, .03, .06)).toBe(false);
+  expect(K.damageMatches({}, .03, .06)).toBe(false);
+});
+
+test('ring 프로필: 두 번째 피격 뒤 다른 집결 터짐 동안 core 안에 있었는데 피격이 늘지 않으면(놓친 피격) 실패한다', () => {
+  const s = ringRun();
+  expect(K.analyzeRingManual(s.rows, DEF, SETUP).hits.ok).toBe(true);
+  const missedRows = mut(s.rows, rows => {
+    const c2 = rows.find((r: any) => r.rg?.sh === 2).rg.sd.c;                              // 두 번째 피격이 난 집결 번호
+    const later = rows.filter((r: any) => r.rg?.ph === 2 && r.rg.sd.s === 2 && r.rg.sh === 2 && r.rg.co === 0 && r.rg.sd.c > c2);
+    const cycle = later[0].rg.sd.c;
+    for (const r of later) if (r.rg.sd.c === cycle) { r.x = CX; r.z = CZ; }
+  });
+  expect(K.analyzeRingManual(missedRows, DEF, SETUP).hits.ok).toBe(false);
+});
