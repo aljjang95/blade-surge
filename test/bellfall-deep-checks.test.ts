@@ -520,15 +520,15 @@ describe('보스 요약·목표창·일시정지', () => {
     expect(summarizeBoss(base).fightSeconds).toBeGreaterThan(0);
     expect(checkDamageMultiplier(base, CDEF).ok).toBe(true);
   });
-  test('veiled 목표창은 제목·문구·받는 피해 70% 감소가 있고 반격 창 숫자가 없어야 한다', () => {
+  test('veiled 목표창은 제목·문구·받는 피해 50% 감소가 있고 반격 창 숫자가 없어야 한다', () => {
     const text = '합창 장막 마지막 울림 직후에만 장막이 걷힘 · 받는 피해 ' + Math.round((1 - CDEF.veil) * 100) + '% 감소';
     const read = (t: string) => ({ dom: { text: t }, counter: { state: 'veiled', windowLeft: 0, windowTotal: CDEF.window } });
     expect(checkCounterObjective(read(text), CDEF).ok).toBe(true);
     expect(checkCounterObjective(read('종문 역순 공명 3/3'), CDEF).ok).toBe(false);
-    expect(checkCounterObjective(read(text.replace('70%', '30%')), CDEF).ok).toBe(false);
+    expect(checkCounterObjective(read(text.replace('50%', '30%')), CDEF).ok).toBe(false);
     expect(checkCounterObjective(read(text + ' 반격 창 3.5초'), CDEF).ok).toBe(false);
   });
-  test('open 목표창은 반격 창 n.n초가 windowLeft 와 맞고 받는 피해 130% 가 있어야 한다', () => {
+  test('open 목표창은 반격 창 n.n초가 windowLeft 와 맞고 받는 피해 150% 가 있어야 한다', () => {
     const read = (t: string, windowLeft: number, state = 'open') => ({ dom: { text: t }, counter: { state, windowLeft, windowTotal: CDEF.window } });
     const text = (sec: string) => '합창 장막 반격 창 ' + sec + '초 · 받는 피해 ' + Math.round(CDEF.open * 100) + '%';
     expect(checkCounterObjective(read(text('3.5'), 3.5), CDEF).ok).toBe(true);
@@ -536,8 +536,8 @@ describe('보스 요약·목표창·일시정지', () => {
     expect(checkCounterObjective(read(text('3.5'), 1.2), CDEF).ok).toBe(false); // 너무 오래된 값
     expect(checkCounterObjective(read(text('1.0'), 2.0), CDEF).ok).toBe(false); // 현재 값보다 작음
     expect(checkCounterObjective(read(text('4.0'), 3.9), CDEF).ok).toBe(false); // 창 길이보다 큼
-    expect(checkCounterObjective(read('합창 장막 반격 창 3초 · 받는 피해 130%', 3), CDEF).ok).toBe(false); // n.n 형식 아님
-    expect(checkCounterObjective(read(text('3.5').replace('130%', '100%'), 3.5), CDEF).ok).toBe(false);
+    expect(checkCounterObjective(read('합창 장막 반격 창 3초 · 받는 피해 150%', 3), CDEF).ok).toBe(false); // n.n 형식 아님
+    expect(checkCounterObjective(read(text('3.5').replace('150%', '100%'), 3.5), CDEF).ok).toBe(false);
     expect(checkCounterObjective(read('마지막 울림 직후에만 장막이 걷힘', 3.5), CDEF).ok).toBe(false);
     expect(checkCounterObjective(read(text('3.5'), 0, 'idle'), CDEF).ok).toBe(false);
   });

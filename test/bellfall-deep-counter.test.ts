@@ -68,7 +68,7 @@ function withFixedRandom<T>(fn: () => T): T {
   try { return fn(); } finally { Math.random = original; }
 }
 
-test('실제 Enemy.hurt: 같은 원피해에 방어 감쇄 뒤 장막 0.3배·반격 창 1.3배, 카운터 없는 적은 불변', () => {
+test('실제 Enemy.hurt: 같은 원피해에 방어 감쇄 뒤 장막 veil배·반격 창 open배, 카운터 없는 적은 불변', () => {
   withFixedRandom(() => {
     const { f, g, boss } = realBossFixture();
     const other: any = spawnCombatFlowEnemy(f, f.room.x - 3, f.room.z, { id: 'glass_hour_sovereign', hp: 1e12, maxHp: 1e12 });

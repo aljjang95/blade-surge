@@ -3,7 +3,8 @@
 // 판정(JSON 출력의 ok): 보스전 시간 비 ≤ 2.0, 완주 시간 비 ≤ 2.0, 보스방 첫 진입 프레임 draw call 증가 ≤ 3(짝 없으면 실패),
 // 보스 구간 50ms 초과 수 ≤ 기준선 + 2, 같은 영웅·시드. 후보와 기준선은 같은 도구로 같은 --hero(기사) --seed 에서 돌린 report 여야 한다.
 // 50ms 절대 검사는 각 report 의 검사가 그대로 판정한다(여기서 대신하거나 완화하지 않고, 아래 absolute50ms 보고 항목으로만 남긴다).
-// 종 방 draw call(B04 기준)과 장막이 붙은 직후 draw call 은 gating 하지 않는 참고 항목(info)이다.
+// 장막이 붙은 직후(bossReady) draw call 증가 ≤ 3도 판정한다. 보스방 첫 진입 프레임에는 보스가 아직 없어 장막 껍질이 잡히지 않을 수 있어서다(Opus가 시리즈 전에 더함).
+// 종 방 draw call(B04 기준)은 gating 하지 않는 참고 항목(info)이다.
 import fs from 'node:fs';
 import { compareBoss, drawCallIncrease } from './bellfall-deep-checks.mjs';
 
@@ -28,7 +29,8 @@ const result = { candidate: { head: cand.head, status: cand.status, heroId: cand
   baseline: { head: base.head, status: base.status, heroId: base.heroId, counterDefinition: base.counterDefinition }, sameHeroSeed: same, ...verdict,
   absolute50ms: { note: '절대 검사는 각 report 의 검사가 판정한다. 여기는 보고 항목', candidateBoss: cand.bossOver50, baselineBoss: base.bossOver50, candidateRun: cand.runOver50, baselineRun: base.runOver50 },
   info: { bellRoomDraw: drawCallIncrease(pick(cand, 'enter:room*', 'firstDark'), pick(base, 'enter:room*', 'firstDark'), 12), bossReadyDraw: drawCallIncrease(pick(cand, 'bossReady'), pick(base, 'bossReady'), 3) } };
-result.ok = verdict.ok && same;
+result.bossReadyDraw = result.info.bossReadyDraw;
+result.ok = verdict.ok && same && !!result.bossReadyDraw?.ok;
 const text = JSON.stringify(result, null, 2);
 if (arg('out')) fs.writeFileSync(arg('out'), text + '\n', { flag: 'wx' });
 console.log(text);

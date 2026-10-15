@@ -137,7 +137,8 @@ export const ROUTE_OBJECTIVES = Object.freeze({
     tollOrder: Object.freeze([3, 5, 2]),
     // 보스 합창 장막(BUNDLE-05): 보스는 장막 동안 받는 피해가 veil 배로 줄고, signature 시그니처의 마지막 울림 직후
     // window초 동안만 장막이 걷혀 open 배 피해를 받으며 새 공격을 시작하지 않는다. 같은 심층 개인 원정에서만 쓴다.
-    counter: Object.freeze({ id: 'bellfall_deep_counter', signature: 'bell_toll', window: 3.5, veil: .3, open: 1.3 }),
+    // 수치는 BUNDLE-05 PLAN 4.5 밸런스 시뮬로 정했다(장막 .3·창 1.3은 처치 시간 비 2.0을 넘었다).
+    counter: Object.freeze({ id: 'bellfall_deep_counter', signature: 'bell_toll', window: 3.5, veil: .5, open: 1.5 }),
   }),
 });
 

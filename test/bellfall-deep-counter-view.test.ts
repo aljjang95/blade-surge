@@ -138,21 +138,21 @@ const panel = (route: any) => battleObjectiveView({ world: route.world, routeObj
 
 test('목표창: 장막 상태는 피해 감소율을 def 에서 계산해 보이고 hold 를 비운다', () => {
   const route = makeRoute(makeCounter({ state: 'veiled' }));
-  expect(panel(route)).toMatchObject({ title: '합창 장막', action: '마지막 울림 직후에만 장막이 걷힘 · 받는 피해 70% 감소', hold: 0, holdTotal: 0, progress: 0, total: 0, roomId: null });
+  expect(panel(route)).toMatchObject({ title: '합창 장막', action: '마지막 울림 직후에만 장막이 걷힘 · 받는 피해 50% 감소', hold: 0, holdTotal: 0, progress: 0, total: 0, roomId: null });
   // veil 값을 바꾸면 문구도 따라간다(하드코딩 아님).
-  route.def = { ...DEF, counter: { ...COUNTER, veil: .5 } };
-  expect(panel(route).action).toContain('받는 피해 50% 감소');
+  route.def = { ...DEF, counter: { ...COUNTER, veil: .25 } };
+  expect(panel(route).action).toContain('받는 피해 75% 감소');
 });
 
-test('목표창: 반격 창은 남은 시간을 0.1초 올림으로 보이고 받는 피해 130%와 hold/holdTotal 을 채운다', () => {
+test('목표창: 반격 창은 남은 시간을 0.1초 올림으로 보이고 받는 피해 150%와 hold/holdTotal 을 채운다', () => {
   const counter: any = makeCounter({ state: 'open', windowLeft: 3.5 });
   const route = makeRoute(counter);
-  expect(panel(route)).toMatchObject({ title: '합창 장막', action: '반격 창 3.5초 · 받는 피해 130%', hold: 3.5, holdTotal: 3.5 });
-  counter.windowLeft = 2.31; expect(panel(route)).toMatchObject({ action: '반격 창 2.4초 · 받는 피해 130%', hold: 2.3, holdTotal: 3.5 });
-  counter.windowLeft = .01; expect(panel(route).action).toBe('반격 창 0.1초 · 받는 피해 130%');
-  counter.windowLeft = 1; expect(panel(route).action).toBe('반격 창 1.0초 · 받는 피해 130%');
-  route.def = { ...DEF, counter: { ...COUNTER, open: 1.5 } };
-  expect(panel(route).action).toContain('받는 피해 150%');
+  expect(panel(route)).toMatchObject({ title: '합창 장막', action: '반격 창 3.5초 · 받는 피해 150%', hold: 3.5, holdTotal: 3.5 });
+  counter.windowLeft = 2.31; expect(panel(route)).toMatchObject({ action: '반격 창 2.4초 · 받는 피해 150%', hold: 2.3, holdTotal: 3.5 });
+  counter.windowLeft = .01; expect(panel(route).action).toBe('반격 창 0.1초 · 받는 피해 150%');
+  counter.windowLeft = 1; expect(panel(route).action).toBe('반격 창 1.0초 · 받는 피해 150%');
+  route.def = { ...DEF, counter: { ...COUNTER, open: 1.8 } };
+  expect(panel(route).action).toContain('받는 피해 180%');
 });
 
 test('목표창: 단계가 done 이 아니면 기존 종문 문구를 쓴다', () => {
