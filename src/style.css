@@ -92,6 +92,16 @@ b { font-weight: 900; }
 .boot-tip.on { opacity: 1; }
 .boot-tip b { color: var(--gold); }
 .boot-credit { position: absolute; bottom: calc(10px + var(--sab)); font-size: 10px; color: rgba(255,255,255,.35); z-index: 1; }
+/* 시작 실패 안내: 원인별 문구 · 오류 코드 · 다시 시도 · 문의용 정보(허용 목록 필드만) */
+.boot-failure { position: relative; z-index: 1; max-width: min(88vw, 520px); display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; color: rgba(255,255,255,.86); font-size: 13px; line-height: 1.5; }
+.boot-failure[hidden] { display: none; }
+.boot-failure p { margin: 0; }
+.boot-failure-code { color: var(--muted); font-size: 12px; }
+.boot-failure-code b { color: var(--gold); letter-spacing: .04em; }
+.boot-failure details { font-size: 12px; color: rgba(255,255,255,.7); }
+.boot-failure summary { cursor: pointer; min-height: 32px; line-height: 32px; }
+.boot-failure pre { margin: 4px 0 8px; padding: 8px 10px; text-align: left; white-space: pre-wrap; user-select: text; -webkit-user-select: text; background: rgba(0,0,0,.4); border-radius: 6px; font-size: 11px; line-height: 1.5; }
+#boot:has(.boot-failure:not([hidden])) .boot-tip { display: none; }
 @keyframes pulse { 0%,100% { transform: scale(1) } 50% { transform: scale(1.05) } }
 @keyframes buttonGlow { 0%,100% { opacity:1 } 50% { opacity:.88 } }
 

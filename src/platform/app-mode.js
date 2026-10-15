@@ -1,5 +1,6 @@
 import './app-mode.css';
 import { mobileScreen, requestLandscapeScreen } from './landscape-screen.js';
+import { onMediaQueryChange } from './startup-compat.js';
 
 export function displayState(view = window, nav = navigator, doc = document) {
   const fullscreen = !!doc.fullscreenElement;
@@ -44,7 +45,8 @@ export class AppModeView {
     dialog.querySelector('#app-mode-fullscreen').onclick = () => this.toggleFullscreen(this.opener);
     document.addEventListener('fullscreenchange', () => this.render());
     window.addEventListener('bladesurge:pwa-state', () => this.render());
-    for (const mode of ['standalone', 'fullscreen']) window.matchMedia(`(display-mode: ${mode})`).addEventListener('change', () => this.render());
+    // 구형 MediaQueryList(addListener 만 있음)에서도 생성자가 실패하지 않고 화면 모드 변경을 구독한다.
+    for (const mode of ['standalone', 'fullscreen']) onMediaQueryChange(window.matchMedia(`(display-mode: ${mode})`), () => this.render());
     this.render();
     const rotate = document.getElementById('btn-rotate-fullscreen');
     rotate.onclick = () => this.startLandscape();
