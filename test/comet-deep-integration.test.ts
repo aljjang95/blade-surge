@@ -111,7 +111,7 @@ test('실제 컨트롤러·뷰·패널: 준비→붕괴→쉼터→폭풍→연�
   expect(e.red.visible).toBe(false);
   expect(e.arc.visible).toBe(false);
   expect(f.route.progress).toBe(1);
-  expect(battleObjectiveView(f.g).progress).toBe(1);
+  expect(battleObjectiveView(f.g).progress as number).toBe(1);
 });
 
 test('붕괴 시간 초과: 패널은 0.1 다음 판정 프레임에 실패하며 방·보상은 그대로, 다시 연결하면 보상 1회', async () => {
