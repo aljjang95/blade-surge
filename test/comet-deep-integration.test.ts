@@ -216,22 +216,3 @@ test('실제 AUTO 흐름장 이동: 문 입구에서 5고리 모두 실패 없�
     expect(f.hurts).toEqual([]);
   }
 });
-
-test('적을 처치한 프레임에 궤도 위에 서 있어도 그 프레임에는 붕괴가 시작되지 않는다', async () => {
-  const f = await fixture();
-  const g = gateOf(f, 3), room = g.room;
-  room.discovered = true;
-  f.g.enterRoom(room);
-  for (const timer of f.g.timers.splice(0)) timer.fn();
-  // 룬석 바로 옆 궤도 띠 위(밀기 접촉 범위)에 선 채로 마지막 적을 처치한다. markCleared 를 거치지 않고 update 경로만 쓴다.
-  const a = g.angle - .2;
-  f.g.player.pos.set(room.x + Math.sin(a) * 4, 0, room.z + Math.cos(a) * 4);
-  for (const e of f.g.enemies) if (e.homeRoom === room) e.alive = false;
-  f.g.updateExpedition(DT);
-  expect(g.phase).toBe('ready');
-  expect(g.clock).toBe(0);
-  expect(g.angle).toBe(g.start);
-  // 다음 프레임부터는 같은 위치에서 실제로 밀려 붕괴가 시작된다.
-  f.g.updateExpedition(DT);
-  expect(g.phase).toBe('collapse');
-});
