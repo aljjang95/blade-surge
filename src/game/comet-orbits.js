@@ -1,5 +1,6 @@
 import { Vector3 } from 'three';
 import { audio } from '../engine/audio.js';
+import { CometBossOrbit } from './comet-boss-orbit.js';
 
 const TAU = Math.PI * 2;
 /** 부호 있는 각도 차(-π~π). */
@@ -19,6 +20,12 @@ export class CometOrbits {
   #meteorHits = 0;
   /** AUTO 경로 계산용으로 마지막 영웅 위치를 기억한다(할당 없이 참조만). */
   #player = null;
+  /** 보스방 푸른 궤도선 유성(정의에 boss 가 있을 때만). 보스방에서 고리가 끝난 뒤에도 계속 돈다. */
+  /** @type {CometBossOrbit|null} */
+  #bossOrbit = null;
+  /** 푸른 궤도선 뷰(뷰 파일이 있을 때만). */
+  #bossView = null;
+  #bossOpts = { reduced: false };
   view = null;
   constructor(def, world) {
     this.def = def; this.world = world;
@@ -42,16 +49,24 @@ export class CometOrbits {
         center: new Vector3(room.x, 0, room.z), stone: new Vector3(), approach: new Vector3() };
     });
     for (const g of this.gates) this.#place(g);
+    this.#bossOrbit = def.boss ? new CometBossOrbit(def.boss, world) : null;
   }
   get progress() { return this.gates.filter(g => g.aligned).length; }
   get complete() { return this.gates.every(g => g.aligned); }
   get closed() { return this.#closed || !!this.#report; }
   get meteorHits() { return this.#meteorHits; }
+  /** 보스방 푸른 궤도선 컨트롤러(읽기 전용). 정의에 boss 가 없으면 null. */
+  get bossOrbit() { return this.#bossOrbit; }
   /** 아직 정렬하지 않은 고리 중 길 순서상 첫 번째(순서 제약은 없다). */
   get current() { return this.gates.find(g => !g.aligned) || null; }
   async prepareView(scene) {
     const { CometOrbitView } = await import('./comet-orbit-view.js');
     if (!this.closed) this.view = new CometOrbitView(scene, this);
+    if (!this.#bossOrbit) return;
+    try {
+      const { CometBossOrbitView } = await import('./comet-boss-orbit-view.js');
+      if (this.#bossOrbit.state !== 'ended' && !this.#bossView) this.#bossView = new CometBossOrbitView(scene, this.#bossOrbit);
+    } catch { /* 궤도선 뷰가 없어도 규칙은 그대로 동작한다. */ }
   }
   #place(g) { g.stone.set(g.room.x + Math.sin(g.angle) * this.def.track, 0, g.room.z + Math.cos(g.angle) * this.def.track); }
   autoRoom() { return this.closed ? null : this.current?.room || null; }
@@ -77,7 +92,14 @@ export class CometOrbits {
   }
   ownsHazards(room) { return this.gates.some(g => g.room === room && !g.aligned); }
   interrupt() {}
-  stop() { this.#closed = true; this.view?.dispose(); this.view = null; }
+  /** AUTO: 보스방 유성 예고 중 피격 구역에 있으면 안전 지점을 돌려준다(없으면 null). */
+  autoEvade(player) { return this.#bossOrbit ? this.#bossOrbit.autoEvade(player) : null; }
+  stop() {
+    this.#closed = true; this.view?.dispose(); this.view = null;
+    this.#bossOrbit?.stop();
+    const bossView = this.#bossView; this.#bossView = null;
+    bossView?.dispose();
+  }
   prepareRoom(room, count) {
     const gate = this.gates.find(g => g.room === room);
     if (gate && !gate.prepared) { gate.prepared = true; gate.expected = count; }
@@ -154,6 +176,12 @@ export class CometOrbits {
     g.warn = null;
   }
   update(game, dt) {
+    // 보스방 유성은 고리 규칙의 조기 반환(보스 처치·일시정지 등)과 상관없이 먼저 갱신한다. 고리가 끝난 뒤 보스전에서도 계속 돈다.
+    const bossOrbit = this.#bossOrbit;
+    if (bossOrbit) {
+      bossOrbit.update(game, dt);
+      if (this.#bossView && !game.paused) { this.#bossOpts.reduced = !!game.app?.reducedMotion?.matches; this.#bossView.update(bossOrbit, dt, this.#bossOpts); }
+    }
     if (this.closed || !game.active || game.paused || !game.player?.alive || game.bossDefeated || game.world !== this.world) return;
     if (!Number.isFinite(dt) || dt <= 0) return;
     this.#player = game.player;
@@ -198,7 +226,8 @@ export class CometOrbits {
   finish(win) {
     if (!this.#report) this.#report = Object.freeze({ id: this.def.id, label: '궤도 고리 정렬', complete: !!win && !this.#closed && this.canWin(),
       progress: this.progress, target: this.gates.length, rooms: Object.freeze(this.gates.filter(g => g.aligned).map(g => g.room.id)),
-      meteorHits: this.#meteorHits });
+      meteorHits: this.#meteorHits, bossMeteors: this.#bossOrbit?.strikes ?? 0, bossCenterMeteors: this.#bossOrbit?.centerStrikes ?? 0,
+      bossMeteorHits: this.#bossOrbit?.hits ?? 0 });
     return this.#report;
   }
 }

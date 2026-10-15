@@ -445,6 +445,14 @@ export class Player extends Actor {
     const out = { x: 0, y: 0 };
     const list = this.game.enemies.filter((e) => e.alive && !e.spawning);
     if (!list.length) return this.autoExplore(dt);
+    // 보스방 유성 예고(푸른 궤도선) 중 피격 구역에 있으면 공격·스킬을 멈추고 안전 지점으로 간다. 공격 동작 중이면 타격 뒤 회피로 빠진다.
+    const evade = this.game.routeObjectives?.autoEvade?.(this);
+    if (evade) {
+      const ex = evade.x - this.pos.x, ez = evade.z - this.pos.z, el = Math.hypot(ex, ez);
+      if (el > .3) { out.x = ex / el; out.y = ez / el; }
+      if (this.state === 'attack' && this.hitDone && (this.dodgeCd || 0) <= 0) this.game.input.press('dodge');
+      return out;
+    }
     const counts = this._autoHubCounts || (this._autoHubCounts = []);
     // 같은 적 쌍의 거리는 한 번만 읽고 양쪽에 상대 가중치를 더한다.
     // 자기항도 원래 비교를 유지해 비유한 좌표를 이웃으로 세지 않는다.
