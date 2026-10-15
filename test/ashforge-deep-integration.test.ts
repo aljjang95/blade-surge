@@ -93,6 +93,8 @@ test('실제 해방 뷰: 방에 들어선 스텝과 인접 미리보기로 발�
   for (const t of f.g.timers.splice(0)) t.fn();
   for (let i = 0; i < 3; i++) killWave(f, f.world.rooms[2]);
   expect(g0.ready).toBe(true);
+  // 준비는 Battle.markCleared → beforeClear 에서 오며 경로 목표 갱신 밖일 수 있다(투사체 처치, b08-cand-deep-mage). 같은 호출 안에 뷰가 맞아야 한다.
+  expect(view.states[0]).toBe('shock');
   f.g.player.pos.copy(g0.pad); f.g.updateExpedition(1 / 60);
   // 준비 직후에는 충격파가 아직 0 이라 어느 위상이든 닫혀 있다(shock).
   expect(g0.shocks).toBe(0); expect(view.states[0]).toBe('shock');

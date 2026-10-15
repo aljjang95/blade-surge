@@ -101,6 +101,9 @@ export class CoolingValves {
       gate.ready = true; gate.shocks = 0;
       game.ui.toast(`${gate.label} 방어 완료 · ${this.def.shockWindow ? '망치 충격파 뒤 ' : ''}청록 조작판에서 2초 유지`, 'gold');
       this.refreshHint(game);
+      // 준비는 Battle.markCleared 에서 오고, 마지막 적을 투사체가 잡으면 같은 스텝의 경로 목표 갱신보다 뒤다.
+      // 뷰가 한 스텝 늦지 않게 시간 진행 없이 맞춘다(b08-cand-deep-mage).
+      this.syncView(game);
     }
     return true;
   }
