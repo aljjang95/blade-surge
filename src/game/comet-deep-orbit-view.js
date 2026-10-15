@@ -18,6 +18,11 @@ const TAU = Math.PI * 2;
 const ARC_SEGMENTS = 90;            // 붕괴 시간 9초 기준 한 칸 0.1초
 const RAY_SEGMENTS = 72;            // 붉은 영역 둘레 표본 수(방 모서리 방향은 따로 더한다)
 const COUNTDOWN_RADIUS_GAP = .3;    // 룬석 접촉대(track + band) 바로 바깥
+// 폭풍 예고 붉은 영역의 불투명도: 첫 프레임부터 바닥과 구분되되 청록 빈 원(ring .95)보다 약해야 한다.
+const STORM_RED_BASE = .3, STORM_RED_GAIN = .15;
+// 바닥 표식의 그리기 순서. 지면 VFX(fx.groundTex 8, fx.ring 9)보다 뒤, 빌보드·플립북(11 이상)보다 앞이다.
+// 같은 순서 안에서는 붉은 영역 → 빈 원 채움 → 빈 원 테두리 → 궤도선·홈·호 순으로 쌓는다.
+const FLOOR_ORDER = Object.freeze({ red: 10, fill: 10.1, ring: 10.2, track: 10.3, notch: 10.4, arc: 10.5 });
 const PALETTE = Object.freeze({
   trackIdle: 0x9fb4cc, trackLive: 0xcfe6ff, gold: 0xffd060,
   stoneIdle: 0x6f86a8, stoneReady: 0x3a7cff, stoneNear: 0x7dffb0, stoneDone: 0xffd060,
@@ -101,6 +106,8 @@ export class CometDeepOrbitView {
         // 마지막으로 보인 빈 원 위치(방 중심 기준). 폭풍 대기 중 안전한 쉼터를 계속 보여 준다.
         lastX: 0, lastZ: 0, arcCount: -1, arcTone: -1, stoneTone: -1, phase: '',
       };
+      // depthTest 는 유지한다(룬석·기사 모델 뒤로 가려지게). 기사 성역 같은 지면 VFX 가 표식을 덮지 않게 순서만 올린다.
+      for (const key of Object.keys(FLOOR_ORDER)) e[key].renderOrder = FLOOR_ORDER[key];
       e.star.position.set(Math.sin(gate.target) * d.track, 1.4, Math.cos(gate.target) * d.track); e.star.rotation.x = Math.PI;
       e.notch.position.set(Math.sin(gate.target) * d.track, .08, Math.cos(gate.target) * d.track);
       return e;
@@ -168,7 +175,7 @@ export class CometDeepOrbitView {
         // 예고 영역 = 판정 영역: 붉은 영역(방 안) + stormShelter 위치의 청록 빈 원.
         const progress = Math.max(0, Math.min(1, 1 - g.stormWarnT / warning));
         e.lastX = g.stormShelter.x - g.center.x; e.lastZ = g.stormShelter.z - g.center.z;
-        e.red.visible = true; e.redMat.opacity = .12 + .3 * progress;
+        e.red.visible = true; e.redMat.opacity = STORM_RED_BASE + STORM_RED_GAIN * progress;
         e.ring.position.x = e.lastX; e.ring.position.z = e.lastZ;
         e.ringMat.color.setHex(PALETTE.hollow); e.ringMat.opacity = .95;
         e.fill.visible = true; e.fill.position.x = e.lastX; e.fill.position.z = e.lastZ;

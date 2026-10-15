@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { Floor } from '../src/game/world.js';
 import { battleObjectiveView, discoveredMapBounds, discoveredMapView, discoveredPoint } from '../src/ui/battle-objective-view.js';
 
@@ -83,4 +84,46 @@ test('보스 안내는 발견과 실제 입장·출현·완료를 따르며 전�
   bossRoom.cleared = true;
   expect(battleObjectiveView(battle)).toMatchObject({ title: '정화 완료', roomId: null });
   expect(boss.alive).toBe(true); expect(world.sealed).toBe(false);
+});
+
+// ---- 목표창 CSS(BUNDLE-02 U3) ----
+// 레이아웃 엔진이 없는 테스트라 공유 목표창 규칙의 선언을 직접 읽는다. 모든 원정(혜성·verdigris·sable 등)이 같은 규칙을 쓴다.
+const css = readFileSync(new URL('../src/ui/battle-readability.css', import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+function rulesFor(selectorPart: string) {
+  const rules: { selector: string; body: string }[] = [];
+  for (const match of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const selector = match[1].trim();
+    if (selector.startsWith('@')) continue;
+    if (selector.includes(selectorPart)) rules.push({ selector, body: match[2] });
+  }
+  return rules;
+}
+const declaration = (body: string, property: string) => new RegExp('(?:^|;)\\s*' + property + '\\s*:\\s*([^;]+)', 'g');
+
+test('목표 행동 줄은 한글을 공백에서만 줄바꿈하고 긴 토큰만 강제로 자른다', () => {
+  const rules = rulesFor('.battle-objective-action');
+  expect(rules.length).toBeGreaterThan(0);
+  // 같은 속성은 파일 뒤쪽 규칙이 이긴다.
+  const last = (property: string) => {
+    let value: string | null = null;
+    for (const rule of rules) for (const m of rule.body.matchAll(declaration(rule.body, property))) value = m[1].trim();
+    return value;
+  };
+  expect(last('word-break')).toBe('keep-all');
+  expect(last('overflow-wrap')).toBe('anywhere');
+  for (const rule of rules) expect(rule.body).not.toMatch(/word-break\s*:\s*break-all/);
+});
+
+test('좁은 화면에서도 목표창 규칙은 높이를 고정하거나 넘친 줄을 숨기지 않는다', () => {
+  // 유지 진행 막대(.battle-objective-hold)의 5px 높이는 글줄이 아니라 막대 자체의 크기다.
+  const rules = [...rulesFor('#objective'), ...rulesFor('.battle-objective-')].filter(rule => !rule.selector.endsWith('.battle-objective-hold'));
+  expect(rules.length).toBeGreaterThanOrEqual(5);
+  for (const rule of rules) {
+    // 높이 상한·overflow 숨김·줄 수 제한은 640×360 의 긴 목표 문구를 잘라 먹는다.
+    expect(rule.body).not.toMatch(/(?:^|;)\s*(?:max-)?height\s*:/);
+    expect(rule.body).not.toMatch(/(?:^|;)\s*overflow(?:-[xy])?\s*:\s*(?:hidden|clip)/);
+    expect(rule.body).not.toMatch(/line-clamp|text-overflow\s*:\s*ellipsis/);
+  }
+  // 목표창은 공유 규칙이라 가로 크기도 고정하지 않는다(넓이는 부모 grid 열이 정한다).
+  for (const rule of rulesFor('#objective')) expect(rule.body).not.toMatch(/(?:^|;)\s*(?:max-)?width\s*:\s*\d/);
 });
