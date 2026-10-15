@@ -4,6 +4,7 @@
 // CDP Input.dispatchTouchEvent는 브라우저 입력 파이프라인을 거치는 자동화 터치다. 실기기 터치·GPU·발열·OS 막대 숨김 증거가 아니다.
 // 실행: 빌드한 dist를 loopback preview로 띄운 뒤
 //   node tools/camera-gesture-qa.mjs --url=http://127.0.0.1:5231/ --label=<이름> [--expected-sha=<40hex>]
+//   선택: --groups=lobby,battle,fullscreen(일부만이면 최대 partial) --deadline-sec=<초>(넘은 단계는 NOT_RUN)
 import { chromium, devices } from 'playwright';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
@@ -17,6 +18,9 @@ if (!/^[\w-]+$/.test(label)) throw Error('Invalid --label');
 const expectedSha = arg('expected-sha');
 // 정해진 시간 안의 기능 스모크: 넘으면 남은 단계를 실행하지 않고 NOT_RUN으로 남긴다(PASS로 세지 않는다).
 const deadlineSec = Number(arg('deadline-sec') || 0);
+// 묶음 선택(기본 전체). 일부만 고르면 결과는 최대 partial이다.
+const ALL_GROUPS = ['lobby', 'battle', 'fullscreen'];
+const groups = new Set((arg('groups') || ALL_GROUPS.join(',')).split(',').filter(g => ALL_GROUPS.includes(g)));
 const startedAt = Date.now();
 const dir = 'work/qa/camera-gesture/' + label;
 await mkdir('work/qa/camera-gesture', { recursive: true });
@@ -96,16 +100,26 @@ async function openPage(context) {
  * 빈 world 표면(캔버스 또는 로비 tab-home)인 점을 화면 격자에서 찾는다.
  * 브라우저 터치 보정은 손가락 근처의 버튼으로 대상을 옮기므로(실제 손가락과 같다) 주변 반경도 모두 world인 점만 쓴다.
  */
-const emptyPoint = (page, region) => page.evaluate(({ x0, x1, y0, y1, clear }) => {
+/** 로비 UI는 메인 루프의 syncHub가 다음 프레임에 다시 표시한다. 점을 고르기 전에 프레임이 진행되게 한다. */
+const settle = async page => { await frames(page); await frames(page); };
+const emptyPoint = async (page, region) => { await settle(page); return page.evaluate(({ x0, x1, y0, y1, clear }) => {
+  // hit test와 함께 보이는 상호작용 요소의 사각형에서도 떨어진 점만 쓴다(표시 직전 패널·터치 보정 대비).
+  const rects = [...document.querySelectorAll('button, a[href], input, select, textarea, summary, [role="button"], [tabindex]:not([tabindex="-1"])')]
+    .map(el => el.getBoundingClientRect()).filter(r => r.width > 2 && r.height > 2);
+  const nearUi = (px, py) => rects.some(r => px > r.left - clear && px < r.right + clear && py > r.top - clear && py < r.bottom + clear);
   const world = (px, py) => { const el = document.elementFromPoint(px, py); return !!el && (el.id === 'gl' || el.id === 'tab-home'); };
   for (let y = y0; y <= y1; y += .04) for (let x = x0; x <= x1; x += .04) {
     const px = Math.round(innerWidth * x), py = Math.round(innerHeight * y);
-    let ok = world(px, py);
+    let ok = world(px, py) && !nearUi(px, py);
     for (let a = 0; ok && a < 8; a++) ok = world(px + Math.round(Math.cos(a * Math.PI / 4) * clear), py + Math.round(Math.sin(a * Math.PI / 4) * clear));
     if (ok) return { x: px, y: py, clear };
   }
   return null;
-}, { clear: 28, ...region });
+}, { clear: 28, ...region }); };
+/** 실제 pointerdown이 어느 요소로 갔는지 기록한다(실패 원인 구분용 관측). */
+const watchDown = page => page.evaluate(() => { window.__qaDown = []; if (window.__qaDownOn) return; window.__qaDownOn = true;
+  document.addEventListener('pointerdown', e => window.__qaDown.push({ target: e.target?.id || e.target?.tagName, type: e.pointerType, dp: e.defaultPrevented }), true); });
+const downs = page => page.evaluate(() => window.__qaDown || []);
 const padState = (page, selector) => page.evaluate(s => { const el = document.querySelector(s); if (!el) return 'missing'; const r = el.getBoundingClientRect(); return r.width <= 1 && r.height <= 1 ? 'hidden' : 'visible:' + Math.round(r.width) + 'x' + Math.round(r.height); }, selector);
 
 /** 부팅 버튼과 자연 모달은 실제 버튼으로만 처리한다. */
@@ -190,22 +204,29 @@ try {
     const point = await emptyPoint(page, { x0: .4, x1: .95, y0: .15, y1: .6 });
     if (!point) return { notRun: true, reason: 'no empty lobby world point visible' };
     const before = await page.evaluate(() => ({ ...window.app.renderer.lobbyCamera }));
+    await watchDown(page);
     await touch.down(1, point.x, point.y); await touch.move(1, point.x + 80, point.y); await touch.up(1);
     await frames(page);
     const after = await page.evaluate(() => ({ ...window.app.renderer.lobbyCamera }));
     const saved = await page.evaluate(() => ({ ...(window.app.eco.s.settings.lobbyCamera || {}) }));
-    assert(before.yaw !== after.yaw, 'Lobby world drag did not rotate');
-    return { point, before, after, saved, walking: await page.evaluate(() => !!window.app.canWalkHub?.()) };
+    const down = await downs(page);
+    assert(before.yaw !== after.yaw, 'Lobby world drag did not rotate: ' + JSON.stringify({ point, down }));
+    return { point, down, before, after, saved, walking: await page.evaluate(() => !!window.app.canWalkHub?.()) };
   };
   const lobbyTap = async () => {
     const point = await emptyPoint(page, { x0: .4, x1: .95, y0: .15, y1: .6 });
     if (!point) return { notRun: true, reason: 'no empty lobby world point visible' };
     const tapBefore = await page.evaluate(() => ({ ...window.app.renderer.lobbyCamera }));
+    await watchDown(page);
     await touch.down(1, point.x, point.y); await touch.move(1, point.x + 4, point.y + 2, 2); await touch.up(1);
     const tapAfter = await page.evaluate(() => ({ ...window.app.renderer.lobbyCamera }));
+    const down = await downs(page);
     assert(tapBefore.yaw === tapAfter.yaw && tapBefore.pitch === tapAfter.pitch, 'Sub-slop tap rotated lobby');
-    return { point, tapBefore, tapAfter };
+    // 탭이 버튼으로 가서 다른 화면을 연 것이 아니라 빈 world에 닿았음을 확인한다.
+    assert(down.length && down.every(d => d.target === 'gl' || d.target === 'tab-home'), 'Tap did not land on empty world: ' + JSON.stringify({ point, down }));
+    return { point, down, tapBefore, tapAfter };
   };
+  if (groups.has('lobby')) {
   await step('lobby empty-world one-finger rotate', lobbyRotate);
   await step('lobby tap without drag does not rotate', lobbyTap);
   await step('town walk (optional entry): empty-world rotate, tap no-rotate, return', async () => {
@@ -234,6 +255,8 @@ try {
     assert(scrollTop > info.scrollTop, 'Panel did not scroll by touch (touch-action may block it)');
     return { ...info, after: scrollTop };
   });
+  }
+  if (groups.has('battle')) {
   await step('enter dungeon through real lobby control and preparation', async () => { const r = await enterDungeon(page); entered = true; report.entry = r; assert(r.spent > 0, 'Final start spent no energy'); return r; });
   if (!entered) throw Error('Battle not entered; remaining battle steps not run');
   await step('battle old camera pad hidden', async () => { const s = await padState(page, '#battle-camera-pad'); assert(s === 'hidden' || s === 'missing', s); return { pad: s }; });
@@ -360,9 +383,11 @@ try {
     return { after };
   });
   await shot('battle-after-gestures');
+  }
   await context.close();
   cleanup = diagnose = null;
 
+  if (groups.has('fullscreen')) {
   // 전체화면 결과: 실제 탭에서 요청 → 실제 브라우저 결과를 그대로 기록한다.
   const real = await browser.newContext(contextOptions);
   const realPage = await openPage(real);
@@ -405,12 +430,15 @@ try {
     return { ...r, hint, fullscreenButtonVisible: fsButton };
   });
   await unsupported.close();
+  }
 } catch (error) {
   report.error = String(error?.stack || error);
 } finally {
   const required = report.steps.filter(s => s.required);
   report.summary = { pass: report.steps.filter(s => s.status === 'PASS').length, fail: report.steps.filter(s => s.status === 'FAIL').length, notRun: report.steps.filter(s => s.status === 'NOT_RUN').length };
   report.status = report.error || required.some(s => s.status === 'FAIL') || report.errors.length ? 'fail' : required.some(s => s.status === 'NOT_RUN') ? 'partial' : 'pass';
+  report.groups = [...groups];
+  if (report.status === 'pass' && groups.size < ALL_GROUPS.length) report.status = 'partial';
   report.finished = new Date().toISOString(); await save(); await browser.close();
   console.log('camera-gesture-qa ' + report.status + ' ' + JSON.stringify(report.summary) + ' -> ' + dir);
   if (report.status !== 'pass') process.exitCode = 1;
