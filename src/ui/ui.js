@@ -423,7 +423,8 @@ export class UI {
     this.refreshSkillFeedback(b);
     this.refreshDodgeFeedback(b);
     this.readability?.update(b, dt);
-    const astralChoice = !!b.active && b.routeObjectives?.def?.id === 'astral_constellations_standard';
+    const astralId = b.routeObjectives?.def?.id;
+    const astralChoice = !!b.active && (astralId === 'astral_constellations_standard' || astralId === 'astral_fallen_constellations_deep');
     if (this._astralChoiceHud !== astralChoice) {
       this.el.hud.classList.toggle('astral-choice-hud', astralChoice);
       this._astralChoiceHud = astralChoice;
