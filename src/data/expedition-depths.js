@@ -1,4 +1,10 @@
 import { ENEMIES, stageDef } from './stages.js';
+import { ROUTE_OBJECTIVES } from './route-objectives.js';
+
+// 종락 심층 보스 합창 장막 문구의 숫자는 규칙 정의(ROUTE_OBJECTIVES.bellfall_deep.counter)에서 계산한다.
+const BELLFALL_COUNTER = ROUTE_OBJECTIVES.bellfall_deep.counter;
+const BELLFALL_VEIL_PERCENT = Math.round((1 - BELLFALL_COUNTER.veil) * 100);
+const BELLFALL_OPEN_TIMES = Math.round(BELLFALL_COUNTER.open * 10) / 10;
 
 // Authored follow-up expeditions. The base material runs keep their original
 // price and rewards; these routes unlock at explicit campaign milestones.
@@ -52,8 +58,8 @@ export const EXPEDITION_DEPTHS = [
     id: 'bellfall_crypt', depth: 'deep', name: '종락 회랑 · 멈춘 합창', unlockCode: '1-10', minLevel: 2,
     energy: 6, chapter: 1, stage: 5, scale: 9, bossEnemy: 'glass_hour_sovereign', bossHp: 20500,
     description: '멈춘 종 아래 남겨진 합창단의 이름을 되찾고, 봉인된 시계유리의 심장을 깨우세요.',
-    objective: '종문 3개 점등 → 소등 순서의 역순으로 공명 → 정예방 2곳의 증원 각 1회 격파 → 모든 구역 정화 → 멈춘 합창의 주권자 처치', bossName: '멈춘 합창의 주권자', art: '/img/encounters/chronicle_glass_hour_sovereign.webp',
-    tactic: `종문 3곳(1번 북쪽 예배실 · 2번 북동쪽 종탑 · 3번 남쪽 납골실)의 적을 처치하면 그 종이 켜집니다. 세 종이 모두 켜지면 1초 뒤부터 1.4초 간격으로 하나씩 꺼지니 꺼지는 순서를 기억하세요. 마지막에 꺼진 종부터 거꾸로 각 종 중심 반경 3 안에서 2초 머물러 공명합니다. 틀린 종에서 2초를 채우면 불협이 울려 최대 체력 6% 기준의 피해(방어력으로 줄어듭니다)를 입고, 공명한 종이 모두 다시 켜져 소등을 처음부터 다시 듣습니다. 불협 2회부터는 목표창이 다음 종을 알려줍니다. 3/3 공명이면 세 방이 정화되며, 정예방마다 1회 증원이 이어집니다. ${ENEMIES.glass_hour_sovereign.tactic}`,
+    objective: '종문 3개 점등 → 소등 순서의 역순으로 공명 → 정예방 2곳의 증원 각 1회 격파 → 모든 구역 정화 → 마지막 울림 직후 반격으로 멈춘 합창의 주권자 처치', bossName: '멈춘 합창의 주권자', art: '/img/encounters/chronicle_glass_hour_sovereign.webp',
+    tactic: `종문 3곳(1번 북쪽 예배실 · 2번 북동쪽 종탑 · 3번 남쪽 납골실)의 적을 처치하면 그 종이 켜집니다. 세 종이 모두 켜지면 1초 뒤부터 1.4초 간격으로 하나씩 꺼지니 꺼지는 순서를 기억하세요. 마지막에 꺼진 종부터 거꾸로 각 종 중심 반경 3 안에서 2초 머물러 공명합니다. 틀린 종에서 2초를 채우면 불협이 울려 최대 체력 6% 기준의 피해(방어력으로 줄어듭니다)를 입고, 공명한 종이 모두 다시 켜져 소등을 처음부터 다시 듣습니다. 불협 2회부터는 목표창이 다음 종을 알려줍니다. 3/3 공명이면 세 방이 정화되며, 정예방마다 1회 증원이 이어집니다. 보스는 합창 장막에 싸여 받는 피해가 ${BELLFALL_VEIL_PERCENT}% 줄어듭니다. 삼중 조종의 마지막 울림 직후 ${BELLFALL_COUNTER.window}초 동안만 장막이 걷혀 ${BELLFALL_OPEN_TIMES}배 피해가 들어가고, 그 동안 보스는 새 공격을 시작하지 않습니다. ${ENEMIES.glass_hour_sovereign.tactic}`,
     layout: { spacing: [34, 30], size: [20, 20], width: 7,
       cells: [[0,0],[1,0],[1,-1],[2,-1],[2,0],[2,1],[3,1],[4,1],[5,1]],
       edges: [[0,1],[1,2],[1,4],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]],

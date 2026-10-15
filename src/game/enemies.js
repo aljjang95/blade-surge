@@ -59,6 +59,8 @@ export class Enemy extends Actor {
     if (def.ghostly) { for (const m of this.mats) { m.transparent = true; m.opacity = 0.8; m.depthWrite = false; } this.tintEmissive = new THREE.Color(0.18, 0.34, 0.5); }
     this.state = 'spawn'; this.stateT = 0; this.spawning = true; this.telegraph = 0;
     this.atkCd = 0.6 + Math.random() * 1.2; this.hitAt = 0.5; this.attackDur = def.atkTime; this.attackDone = false;
+    /** 종락 심층 합창 장막(BellfallDeepCounter)이 붙는 자리. 없으면 피해가 그대로다. */
+    this.damageVeil = null;
     this.stagger = 0; this.poison = 0; this.poisonT = 0; this.phase = 0; this.enraged = false; this.special = null;
     this.gatherT = 0; this.gatherBlockT = 0; this.gatherX = 0; this.gatherZ = 0; this.gatherSpeed = 0; this.gatherWindupOwner = null;
     this.patternTurn = 0;
@@ -251,6 +253,7 @@ export class Enemy extends Actor {
     }
     const armor = this.def.armor || 0; dmg *= 1 - armor;
     if (this.burrow) dmg *= this.burrow.damageMul();
+    if (this.damageVeil) dmg = this.damageVeil.filter(dmg);
     this.hp -= dmg;
     // 강타·띄우기는 몰이를 끝내고 기존 저항·넉백을 그대로 적용한다.
     if (kb >= 6 || up) this.gatherT = 0;
