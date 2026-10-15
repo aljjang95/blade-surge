@@ -18,7 +18,7 @@ const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   nightglass_observatory: { standard: [3, 0], deep: [5, 0] },
   eclipse_hydra_vault: { standard: [3, 0], deep: [4, 4] },
   ashforge_catacomb: { standard: [4, 0], deep: [4, 4] },
-  astral_leviathan_spire: { standard: [0, 0], deep: [2, 2] },
+  astral_leviathan_spire: { standard: [0, 0], deep: [0, 2] },
   verdigris_sanctum: { standard: [3, 0], deep: [4, 4] },
   sable_mirage_basin: { standard: [3, 0], deep: [4, 4] },
   comet_bastion: { standard: [4, 0], deep: [5, 4] },
@@ -59,10 +59,10 @@ for (const [id, contract] of Object.entries(contracts)) {
       const elites = world.rooms.filter(r => r.type === 'elite').length;
       const { attunement, reinforcements } = stage.expedition.mechanics;
       const altarHolds = attunement && (!route || ('coexistAttunement' in route && route.coexistAttunement)) ? treasure : 0;
-      const selectionRoute = !!route && 'kind' in route && route.kind === 'constellations';
+      const selectionRoute = !!route && 'kind' in route && (route.kind === 'constellations' || route.kind === 'deep-constellations');
       const holds = (selectionRoute ? 0 : route?.gates.length || 0) + altarHolds;
       const selections = selectionRoute ? route!.gates.length : 0;
-      expect(selections).toBe(id === 'astral_leviathan_spire' && depth === 'standard' ? 4 : 0);
+      expect(selections).toBe(id === 'astral_leviathan_spire' ? 4 : 0);
       expect([holds, elites * reinforcements]).toEqual(contract[depth]);
       expect(stage.objective).toBe(definition.objective);
       expect(stage.encounter.tactic).toBe(definition.tactic);
@@ -85,6 +85,30 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(stage.encounter.tactic).toMatch(/모래시계 단서를 1초 읽고.*문자·도형 판에서 1초 유지/);
         expect(stage.encounter.tactic).toMatch(/오답.*판 밖.*재시도/);
         expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번', '4번']);
+      } else if (id === 'astral_leviathan_spire' && depth === 'deep') {
+        // 보물방 공명 2곳은 성좌 4곳 복원과 성좌 외곽 고리 정화로 바뀌었다. 문구의 숫자는 정의(def)에서 읽어 맞춘다.
+        const deep = route as typeof ROUTE_OBJECTIVES.astral_deep;
+        expect(deep).toBe(ROUTE_OBJECTIVES.astral_deep);
+        expect(deep.gates.map(g => g.roomId)).toEqual([3, 2, 5, 6]);
+        expect('coexistAttunement' in deep).toBe(false);
+        expect(Number(stage.objective.match(/성좌 (\d+)곳을 순서대로 복원하고/)?.[1])).toBe(deep.gates.length);
+        expect(stage.objective).not.toMatch(/공명|보물방/);
+        expect(stage.objective).toMatch(/모든 구역 정화 → 성좌 외곽 고리 정화 → 레비아탄 처치$/);
+        const tactic = stage.encounter.tactic;
+        const bossTactic = (ENEMIES as Record<string, any>).astral_leviathan.tactic as string;
+        expect(tactic).toMatch(/적을 처치한 뒤\(정예방은 증원 1회까지\)/);
+        expect(Number(tactic.match(/모래시계 단서를 (\d+(?:\.\d+)?)초 읽고/)?.[1])).toBe(deep.readSeconds);
+        expect(Number(tactic.match(/판에서 (\d+(?:\.\d+)?)초 유지하면 복원됩니다/)?.[1])).toBe(deep.holdSeconds);
+        expect(tactic).toMatch(/오답은 피해 없이 판 밖으로 나와 다시 읽으며/);
+        expect(tactic).toMatch(/차례가 올 때까지 두 번째 판은 정리만 해 두고 첫 판을 복원한 뒤 돌아와 이으세요/);
+        expect(tactic).toContain(deep.gates.length + '곳과 모든 구역을 정화하면 보스방 앞 정예방에 성좌 외곽 고리가 열립니다');
+        expect(Number(tactic.match(/제한 시간 (\d+)초 안에 고리 위 성표 (\d+)개에서 각각 (\d+(?:\.\d+)?)초 머물러/)?.[1])).toBe(deep.ring.limit);
+        expect(Number(tactic.match(/고리 위 성표 (\d+)개에서/)?.[1])).toBe(deep.ring.marks.length);
+        expect(Number(tactic.match(/성표 \d+개에서 각각 (\d+(?:\.\d+)?)초 머물러/)?.[1])).toBe(deep.ring.holdSeconds);
+        expect(Number(tactic.match(/맞으면 최대 체력 (\d+)%/)?.[1])).toBe(Math.round(deep.ring.damage * 100));
+        expect(tactic).toMatch(/시간이 다 되면 고리가 붕괴해 피해를 입고 성표가 흐려진 뒤 시간을 다시 잽니다/);
+        // 성좌 복원 안내와 고리 안내는 보스 전술보다 앞에 있다.
+        expect(tactic.indexOf('성좌 외곽 고리')).toBeLessThan(tactic.indexOf(bossTactic));
       } else if (id === 'verdigris_sanctum' && depth === 'standard') {
         expect(stage.objective).toMatch(/생명 제단 세 개/);
         expect(stage.encounter.tactic).toMatch(/적.*처치.*빛 안.*2초.*정화/);
@@ -304,7 +328,10 @@ for (const [id, contract] of Object.entries(contracts)) {
           : id === 'comet_bastion' ? copy.replaceAll('궤도 고리', '고리').replaceAll('푸른 궤도선', '푸른 선')
           : id === 'nightglass_observatory' ? copy.replace(/기록\s*3장/g, '')
           : id === 'astral_leviathan_spire' && depth === 'standard' && selectionRoute
-            ? copy.replaceAll('별자리 4개 순서대로 복원', '') : copy;
+            ? copy.replaceAll('별자리 4개 순서대로 복원', '')
+          // 심층은 약속한 '성좌 4곳을 순서대로 복원' 문구만 면제한다. 그 밖의 성좌·별자리 복원/밟기 안내는 계속 거른다.
+          : id === 'astral_leviathan_spire' && depth === 'deep'
+            ? copy.replaceAll('성좌 ' + (route as typeof ROUTE_OBJECTIVES.astral_deep).gates.length + '곳을 순서대로 복원', '') : copy;
         expect(checked).not.toMatch(unsupportedInstructions);
       }
 
@@ -348,12 +375,12 @@ test('atmospheric descriptions do not retain removed interaction instructions', 
   }
 });
 
-test('Astral exact implemented standard promise does not permit deep or unsupported star interactions', () => {
+test('Astral exact implemented promises (standard 조율판, deep 성좌 4곳·외곽 고리) do not permit unsupported star interactions', () => {
   const standard = buildExpeditionStage('dungeon', 'astral_leviathan_spire', null);
   expect(routeObjectiveForStage(standard)?.gates.map(g => g.roomId)).toEqual([1, 3, 4, 6]);
   const deep = buildExpeditionStage('dungeon', 'astral_leviathan_spire', null, { depth: 'deep' });
-  expect(routeObjectiveForStage(deep)).toBeNull();
-  expect(deep.objective).not.toMatch(/별자리|성좌/);
+  expect(routeObjectiveForStage(deep)).toBe(ROUTE_OBJECTIVES.astral_deep);
+  expect(deep.objective).not.toMatch(/별자리/);
   // The shared rejection stays intact: only the exact standard promise is
   // stripped above. These fragments must still be rejected in every route.
   for (const copy of ['별자리 5개 복원', '성좌 4곳 복원', '별자리를 밟으세요', '별자리 파편을 모아 복원']) {

@@ -288,7 +288,8 @@ export function routeObjectiveForStage(stage) {
   const expedition = stage?.expedition;
   if (stage?.party || stage?.riftId || expedition?.riftId || expedition?.conquestId ||
       expedition?.kind !== 'dungeon') return null;
-  if (expedition.id === 'astral_leviathan_spire') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.astral_standard : null;
+  if (expedition.id === 'astral_leviathan_spire') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.astral_standard
+    : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.astral_deep : null;
   if (expedition.id === 'cinder_tide_lock') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.cinder_standard
     : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.cinder_deep : null;
   if (expedition.id === 'nightglass_observatory') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.nightglass_standard
