@@ -260,9 +260,9 @@ test('목표창: 제목 심장로 냉각, 닫힘·예고·열림 action 이 상�
   defend(f, 2); const gate = gateOf(f, 2);
   expect(battleObjectiveView(f.g)).toMatchObject({ title: '심장로 냉각', action: '망치 충격파 뒤 옮겨 간 조작판으로 이동', progress: 0, total: 4, roomId: 2, hold: 0, holdTotal: 2 });
   run(f, () => gate.pad, () => gate.phase === 'warning');
-  expect(battleObjectiveView(f.g).action).toBe('망치 충격파를 피하고 반대편 조작판으로 이동');
+  expect(battleObjectiveView(f.g).action).toBe('망치 충격파를 피한 뒤 옮겨 간 조작판으로 이동');
   run(f, () => gate.pad, () => gate.phase === 'vent');
-  expect(battleObjectiveView(f.g).action).toBe('망치 충격파를 피하고 반대편 조작판으로 이동');
+  expect(battleObjectiveView(f.g).action).toBe('망치 충격파를 피한 뒤 옮겨 간 조작판으로 이동');
   run(f, () => gate.pad, () => gate.phase === 'heat');
   f.g.player.pos.copy(gate.pad); f.g.updateExpedition(.5);
   expect(battleObjectiveView(f.g)).toMatchObject({ title: '심장로 냉각', action: '청록 조작판에서 2초 유지', holdTotal: 2 });
@@ -447,3 +447,25 @@ test('prepareReleaseView: 해방 정의가 아니면 releaseView 를 만들지 �
   await deep.route.prepareReleaseView(new Scene());
   expect(deep.route.releaseView).toBeNull();
 });
+
+test('충격파는 준비된 뒤 시작된 분출만 센다: 분출 도중 준비되면 그 분출 끝은 세지 않고, 예고 중 준비되면 센다(리뷰 P2-1)', () => {
+  for (const readyIn of ['vent', 'warning'] as const) {
+    const f = fixture(); const gate = gateOf(f, 2);
+    const room = enter(f, 2);
+    // 영웅을 방 중심(분출 띠 |x| 1.5~5.5 밖)에 두고, 첫 분출(또는 예고)이 시작될 때까지 전투 중 시간을 흘린다.
+    run(f, () => new Vector3(room.x, 0, room.z), () => gate.phase === readyIn);
+    for (let i = 0; i < 3; i++) killWave(f, room);
+    expect(gate.ready).toBe(true); expect(gate.shocks).toBe(0); expect(gate.phase).toBe(readyIn);
+    // 지금 주기의 분출이 끝나 가열로 돌아간 첫 스텝.
+    run(f, () => new Vector3(room.x, 0, room.z), () => gate.phase === 'heat');
+    if (readyIn === 'vent') {
+      expect(gate.shocks).toBe(0); expect(f.route.padOpen(gate)).toBe(false);
+      // 다음 주기의 분출(준비된 뒤 시작)이 끝나야 열린다.
+      run(f, () => new Vector3(room.x, 0, room.z), () => gate.shocks >= 1);
+      expect(gate.phase).toBe('heat'); expect(f.route.padOpen(gate)).toBe(true);
+    } else {
+      expect(gate.shocks).toBe(1); expect(f.route.padOpen(gate)).toBe(true);
+    }
+  }
+});
+

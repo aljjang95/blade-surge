@@ -131,7 +131,7 @@ function mainObjectiveView(battle) {
       // 충격파 창이 있는 정의(재벼림 심층)는 충격파가 지나간 가열 구간에만 조작판이 열린다.
       const shocked = kind === 'cooling' && !!route.def?.shockWindow;
       const action = shocked ? gate.phase === 'warning' || gate.phase === 'vent'
-        ? '망치 충격파를 피하고 반대편 조작판으로 이동' : route.padOpen(gate) ? '청록 조작판에서 2초 유지' : '망치 충격파 뒤 옮겨 간 조작판으로 이동'
+        ? '망치 충격파를 피한 뒤 옮겨 간 조작판으로 이동' : route.padOpen(gate) ? '청록 조작판에서 2초 유지' : '망치 충격파 뒤 옮겨 간 조작판으로 이동'
         : kind === 'cooling' ? gate.phase === 'warning' || gate.phase === 'vent'
         ? '분출을 피하고 청록 조작판으로 이동' : '청록 조작판에서 2초 유지'
         : kind === 'records' ? '기록대에서 2초 유지' : '중심에서 2초 유지';

@@ -21,8 +21,10 @@ const EPS = 1e-6;
  * 영웅 위치 관측은 스텝 끝이다. battle.update 는 player.update 뒤에 updateExpedition(route.update)을 부르므로 판정 위치는 이동이 반영된 뒤다.
  * 그 뒤 같은 스텝의 군중 밀림과 투사체·넉백 후처리가 위치를 조금 더 옮길 수 있어 한 프레임 이동량(≈0.15)보다 넉넉한 여유를 둔다.
  */
-export const POSITION_SLACK = .25;
+// 유지(inside) 판정의 부동소수 여유. 규칙은 같은 스텝의 영웅 위치로 반경을 판정하므로 넓은 여유가 필요 없다(리뷰 P2-2: .25 는 반경 회귀를 가렸다).
+export const POSITION_SLACK = .01;
 const SETTLE_STEPS = 10;
+const CARRY_MAX_STEPS = 90;
 const ACTION_STATES = Object.freeze(['attack', 'skill', 'ult', 'dodge']);
 /** 해방 연출 상태 이름(PLAN 3.2). rv.s 는 이 순서의 번호다(알 수 없는 이름은 9). */
 export const STATE_NAMES = Object.freeze(['hidden', 'bound', 'shock', 'open', 'releasing', 'released']);
@@ -36,7 +38,7 @@ const VIEW_AB_MIN_SAMPLES = 3;
 /** 목표창 action 문구(PLAN 3.1). 열림 문구는 정의의 holdSeconds 로 만든다. */
 export const ACTION = Object.freeze({
   closed: '망치 충격파 뒤 옮겨 간 조작판으로 이동',
-  avoid: '망치 충격파를 피하고 반대편 조작판으로 이동',
+  avoid: '망치 충격파를 피한 뒤 옮겨 간 조작판으로 이동',
   plainAvoid: '분출을 피하고 청록 조작판으로 이동',
 });
 /** 목표창 열림 action: '청록 조작판에서 2초 유지'. */
@@ -70,7 +72,8 @@ export const isOpenRow = (row, index) => {
 /** 닫힌 조작판 대기 행: 현재 심장로가 ready 이고 닫혀 있으며 영웅이 그 조작판 위에 있고 유지가 0 이다. */
 export const isWaitRow = (row, def) => {
   const g = row?.g?.[row.pr];
-  return !!g && g.rd === 1 && g.at === 0 && g.po === 0 && row.hd === 0 && padDistance(row, row.pr) <= def.radius + POSITION_SLACK;
+  // 대기는 규칙 반경 안에서만 센다(반경 밖의 유지 0 은 반경 때문이라 닫힘의 증거가 아니다).
+  return !!g && g.rd === 1 && g.at === 0 && g.po === 0 && row.hd === 0 && padDistance(row, row.pr) <= def.radius;
 };
 
 /**
@@ -421,7 +424,8 @@ export function checkKeyboardSegment(rows, from, to) {
   // 그 구간에 공격 입력이 하나라도 있으면 면제하지 않는다(smoke-order-1: AUTO 의 회전 베기가 끈 뒤 56스텝 이어졌다).
   let carry = 0;
   if (ACTION_STATES.includes(a.ps)) {
-    while (carry < seg.length && ACTION_STATES.includes(seg[carry].ps) && seg[carry].ah !== 1) carry++;
+    // 상한 CARRY_MAX_STEPS(1.5초): 한 동작이 끝나는 시간 안에서만 면제한다(smoke 실측 56스텝).
+    while (carry < seg.length && ACTION_STATES.includes(seg[carry].ps) && seg[carry].ah !== 1 && seg[carry].n - a.n < CARRY_MAX_STEPS) carry++;
   }
   const carryRows = seg.slice(0, carry);
   const carried = new Set(carryRows);
@@ -449,7 +453,7 @@ export function analyzeOrder(rows, def, { rooms = [], minDwell = 2, minPartial =
   const keyboard = checkKeyboardSegment(rows, 'manual-start', 'cooled');
   // 닫힌 체류: 마지막 닫힌 체류 끝(dwell-end)까지 영웅이 조작판 위에서 ready · 닫힘으로 기다린 스텝(n 중복 제거).
   const dwellSeg = rows.slice(at('manual-start'), at('dwell-end') + 1);
-  const isOnPad = r => { const g = r.g?.[idx]; return r.pr === idx && !!g && g.rd === 1 && g.at === 0 && g.po === 0 && padDistance(r, idx) <= def.radius + POSITION_SLACK; };
+  const isOnPad = r => { const g = r.g?.[idx]; return r.pr === idx && !!g && g.rd === 1 && g.at === 0 && g.po === 0 && padDistance(r, idx) <= def.radius; };
   const onPad = dwellSeg.filter(isOnPad);
   const steps = new Set(onPad.map(r => r.n));
   const windowSeconds = (a, b) => new Set(rows.slice(at(a), at(b) + 1).filter(isOnPad).map(r => r.n)).size * FRAME;

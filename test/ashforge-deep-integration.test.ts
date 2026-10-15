@@ -94,7 +94,8 @@ test('실제 해방 뷰: 방에 들어선 스텝과 인접 미리보기로 발�
   for (let i = 0; i < 3; i++) killWave(f, f.world.rooms[2]);
   expect(g0.ready).toBe(true);
   f.g.player.pos.copy(g0.pad); f.g.updateExpedition(1 / 60);
-  if (g0.shocks === 0 && g0.phase === 'heat') expect(view.states[0]).toBe('shock');
+  // 준비 직후에는 충격파가 아직 0 이라 어느 위상이든 닫혀 있다(shock).
+  expect(g0.shocks).toBe(0); expect(view.states[0]).toBe('shock');
   run(f, () => g0.pad, () => g0.shocks >= 1 && g0.phase === 'heat');
   f.g.updateExpedition(1 / 60);
   expect(view.states[0]).toBe('open');

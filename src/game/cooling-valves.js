@@ -42,7 +42,7 @@ export class CoolingValves {
       room.label = label;
       room.objectiveProp = 'cooling-valve';
       return { room, label, ready: false, attuned: false, prepared: false, expected: 0, spawned: 0,
-        side: i % 2 ? -1 : 1, phase: 'heat', age: 0, cycles: 0, ventHit: false, hits: 0, shocks: 0,
+        side: i % 2 ? -1 : 1, phase: 'heat', age: 0, cycles: 0, ventHit: false, hits: 0, shocks: 0, armed: false,
         pos: new Vector3(room.x, 0, room.z), pad: new Vector3(room.x, 0, room.z) };
     });
     this.updatePad();
@@ -137,18 +137,24 @@ export class CoolingValves {
         gate.phase = 'warning'; gate.ventHit = false;
         if (game.world.roomAt(game.player.pos.x, game.player.pos.z) === gate.room) audio.ting({ vol: .22, freq: 760 });
       } else if (gate.phase === 'warning') {
-        gate.phase = 'vent';
+        // 이 분출이 준비된 뒤 시작됐는지 기억한다. 분출 도중에 준비되면 그 분출은 충격파로 세지 않는다(리뷰 P2-1).
+        gate.phase = 'vent'; gate.armed = !!gate.ready;
         if (game.world.roomAt(game.player.pos.x, game.player.pos.z) === gate.room) audio.whoosh({ vol: .28, pitch: .65, dur: .3 });
       } else {
-        // 준비된 심장로의 분출이 끝나 가열로 돌아가면 충격파가 한 번 지나간 것이다(조작판이 열리는 조건).
-        gate.phase = 'heat'; gate.side *= -1; gate.cycles++; if (gate.ready) gate.shocks++;
+        // 준비된 뒤 시작된 분출이 끝나 가열로 돌아가면 충격파가 한 번 지나간 것이다(조작판이 열리는 조건).
+        // 예고 중에 준비되면 분출 전체를 겪으므로 센다. 분출 도중에 준비되면 다음 주기를 기다린다.
+        gate.phase = 'heat'; gate.side *= -1; gate.cycles++; if (gate.ready && gate.armed) gate.shocks++;
+        gate.armed = false;
         this.interrupt(); this.updatePad();
       }
     }
     if (gate.phase === 'vent' && !gate.ventHit && coolingVentContains(gate, game.player.pos)) {
       gate.ventHit = true; this.interrupt();
       const hit = game.player.hurt(game.player.maxHp * .06, { dirx: gate.side, dirz: 0, kb: 2, kind: 'magic' });
-      if (hit) { gate.hits++; game.ui.toast('과열 피해 · 반대편 청록 조작판으로 이동', 'red'); }
+      if (hit) {
+        gate.hits++;
+        game.ui.toast(this.def.shockWindow ? `${this.copy.vent} 피해 · 충격파 뒤 옮겨 간 조작판으로 이동` : '과열 피해 · 반대편 청록 조작판으로 이동', 'red');
+      }
     }
     if (!game.active || !game.player.alive) { this.interrupt(); return; }
     const inside = Math.hypot(game.player.pos.x - gate.pad.x, game.player.pos.z - gate.pad.z) <= this.def.radius;

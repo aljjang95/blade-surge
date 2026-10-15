@@ -305,7 +305,7 @@ function installProbe(cfg) {
     if (okey !== P.okey) { P.okey = okey; P.ostable = 0; } else P.ostable++;
     const wantDom = okey >= 0 && P.ostable === 36;
     // 닫힌 조작판 대기: 현재 심장로가 ready 인데 닫혀 있고 영웅이 조작판 위에서 유지 0. 이 스텝은 모두 행으로 남긴다.
-    if (gc && gc.ready && !gc.attuned) { const o = G0 + r.progress * K; wait = s[o + 9] === 0 && hd === 0 && Math.hypot(p.pos.x - gc.pad.x, p.pos.z - gc.pad.z) <= cfg.radius + .25; }
+    if (gc && gc.ready && !gc.attuned) { const o = G0 + r.progress * K; wait = s[o + 9] === 0 && hd === 0 && Math.hypot(p.pos.x - gc.pad.x, p.pos.z - gc.pad.z) <= cfg.radius; }
     if (wait) P.dwellSteps++;
     if (changed || hd > 0 || P.prevHd > 0 || wait || wantDom || P.dense || P.steps % 60 === 0) {
       const row = build(null);

@@ -15,7 +15,7 @@ const STD_ROOMS = [{ id: 1, x: 31, z: 0, type: 'normal' }, { id: 2, x: 62, z: -2
 const REINFORCEMENTS = 2;
 const PAD_OFFSET = 3.5;
 // 목표창 문구는 PLAN 3.1 의 계약 문장을 그대로 적는다(판정 함수의 상수를 가져오지 않는다).
-const TXT = { closed: '망치 충격파 뒤 옮겨 간 조작판으로 이동', avoid: '망치 충격파를 피하고 반대편 조작판으로 이동', open: '청록 조작판에서 2초 유지', plainAvoid: '분출을 피하고 청록 조작판으로 이동' };
+const TXT = { closed: '망치 충격파 뒤 옮겨 간 조작판으로 이동', avoid: '망치 충격파를 피한 뒤 옮겨 간 조작판으로 이동', open: '청록 조작판에서 2초 유지', plainAvoid: '분출을 피하고 청록 조작판으로 이동' };
 
 /**
  * 페이지 프로브가 남기는 행을 같은 규칙으로 만들어 내는 모의 세션. 한 스텝에 행 하나, 건너뛴 스텝은 skip 으로 센다.
@@ -295,6 +295,22 @@ describe('닫힌 대기(checkWaiting)', () => {
     const row = s.rows.find(r => r.n > 0 && K.isWaitRow(r, DEEP))!;
     row.g[0].cl = 1;
     expect(K.checkWaiting(s.rows, DEEP).ok).toBe(false);
+  });
+  test('대기는 규칙 반경(def.radius) 안에서만 센다: 반경 밖(1.7)의 유지 0 은 닫힘의 증거가 아니다', () => {
+    const s = deepSession();
+    const row = s.rows.find(r => r.n > 0 && K.isWaitRow(r, DEEP))!;
+    const g = row.g[row.pr];
+    row.x = g.px + 1.55; row.z = g.pz; expect(K.isWaitRow(row, DEEP)).toBe(true);
+    row.x = g.px + 1.7; expect(K.isWaitRow(row, DEEP)).toBe(false);
+  });
+});
+describe('유지 위치 여유(리뷰 P2-2)', () => {
+  test('유지 구간 영웅이 조작판 반경 1.6 을 넘어(1.7) 있으면 inside 가 실패한다', () => {
+    const s = deepSession();
+    for (const r of s.rows) if (r.pr === 0 && r.hd > 0) { r.x = r.g[0].px + 1.7; r.z = r.g[0].pz; }
+    const c = K.checkCoolings(s.rows, DEEP, { reinforcements: REINFORCEMENTS, rooms: DEEP_ROOMS });
+    expect(c.cools[0].inside.ok).toBe(false);
+    expect(c.cools[0].inside.limit).toBeLessThan(DEEP.radius + .02);
   });
 });
 
@@ -645,6 +661,11 @@ describe('order 프로필(analyzeOrder)', () => {
       expect(b.ok).toBe(false); expect(b.carriedActionRows).toBe(0);
       const pressed = seg([...Array.from({ length: 30 }, (_, i) => row(i, 'attack', i === 12 ? { ah: 1 } : {})), row(30, 'idle')]);
       expect(K.checkKeyboardSegment(pressed, 'from', 'to').ok).toBe(false);
+    });
+    test('이어진 동작 면제는 90스텝(1.5초)까지다', () => {
+      const long = seg([...Array.from({ length: 120 }, (_, i) => row(i, 'attack')), row(120, 'idle')]);
+      const a = K.checkKeyboardSegment(long, 'from', 'to');
+      expect(a.ok).toBe(false); expect(a.carriedActionRows).toBe(90);
     });
   });
   test('AUTO 가 켜진 행이 구간에 있으면 실패하고, 영웅이 쓰러져도 실패한다', () => {
