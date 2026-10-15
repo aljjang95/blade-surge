@@ -1,11 +1,11 @@
-// Portrait fit belongs only to solo Astral standard. The normal threat target,
+// Portrait fit belongs only to solo Astral standard and deep. The normal threat target,
 // camera controls, authored preset/offset and every other route remain owners.
 /** @param {any} stage */
 export function minimumBattleAspect(stage) {
   const expedition = stage?.expedition;
   return !stage?.party && !stage?.riftId && !expedition?.riftId && !expedition?.conquestId
     && expedition?.kind === 'dungeon' && expedition.id === 'astral_leviathan_spire'
-    && expedition.depth === 'standard' ? .8 : 0;
+    && (expedition.depth === 'standard' || expedition.depth === 'deep') ? .8 : 0;
 }
 export function battleAspectScale(aspect, minimumAspect = 0) {
   if (!Number.isFinite(aspect) || aspect <= 0 || !Number.isFinite(minimumAspect)
