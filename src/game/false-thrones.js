@@ -4,6 +4,9 @@ import { audio } from '../engine/audio.js';
 // 거울 미궁 발자국이 거리장을 따라 내려가는 이웃 칸의 탐색 순서: x+ → x− → z+ → z−.
 const NEIGHBOR_DX = [1, -1, 0, 0];
 const NEIGHBOR_DZ = [0, 0, 1, -1];
+// AUTO 는 거울 전당 중심(이 반경 안)을 먼저 지난 뒤 진짜 거울로 간다. 서쪽 문에서 진짜 거울로 바로 가는 8방향 거리장 경로는
+// 환영 거울 줄(z +3.5)을 따라가 환영 거울을 밟았다(BUNDLE-09 리뷰 P2). 중심에서 진짜 거울까지는 환영 거울과 5 이상 떨어진다.
+const AUTO_VIA_RADIUS = 2;
 
 /** 흑사막 환영 분지 일반의 원안: 가짜 왕좌 세 개를 부숴야 여왕의 본체가 드러난다.
  * 기존 목표(중심에서 n초 유지)와 다른 동사다. 왕좌는 실제 공격으로만 깎이며,
@@ -58,7 +61,8 @@ export class FalseThrones {
       if (i < 0 || world.inner?.[i] !== 1 || !flow || !(flow[i] >= 0)) throw new RangeError('거울이 설 자리에 봉인 밖 접근 경로가 없습니다.');
     }
     room.label = escape.label;
-    return { room, phase: 'idle', real, illusion, limit: 0, left: 0, elapsed: 0, collapses: 0, illusions: 0, cooldown: 0,
+    return { room, phase: 'idle', real, illusion, center: new Vector3(room.x, 0, room.z), via: false, flow: null,
+      limit: 0, left: 0, elapsed: 0, collapses: 0, illusions: 0, cooldown: 0,
       trail: new Float32Array(escape.trailCount * 2), trailN: 0, trailT: 0 };
   }
   /** 월드 좌표의 이동 지도 칸 번호. 지도 밖이면 -1. */
@@ -92,8 +96,11 @@ export class FalseThrones {
     } catch { /* 뷰가 없거나 만들 수 없어도 규칙은 그대로 동작한다. */ }
   }
   autoRoom() { return this.closed ? null : this.current?.room || null; }
-  /** 거울 미궁이 도는 동안 AUTO 가 향할 지점(진짜 거울). 그 밖에는 null 이다. */
-  autoGoal() { return !this.closed && this.maze?.phase === 'running' ? this.maze.real : null; }
+  /** 거울 미궁이 도는 동안 AUTO 가 향할 지점: 거울 전당 중심을 지나기 전에는 중심, 그 뒤에는 진짜 거울. 그 밖에는 null 이다. */
+  autoGoal() {
+    const maze = this.maze;
+    return !this.closed && maze?.phase === 'running' ? (maze.via ? maze.real : maze.center) : null;
+  }
   autoPoint(room) {
     const gate = this.current;
     return !this.closed && gate?.room === room && gate.ready ? gate.stand : null;
@@ -212,7 +219,9 @@ export class FalseThrones {
     game.markCleared(gate.room);
     game.autoTarget = this.autoRoom();
     const n = this.progress, total = this.gates.length;
-    game.ui.toast(n === total ? `마지막 가짜 왕좌 파괴 · 환영 여왕의 본체가 드러납니다` : `${gate.label} 파괴 · ${n}/${total}`, 'gold');
+    // 심층은 왕좌 뒤에 거울 미궁이 남아 있어 본체 노출은 탈출 때 알린다.
+    const last = this.maze ? '마지막 가짜 왕좌 파괴 · 모든 구역을 정화하면 거울 미궁이 열립니다' : '마지막 가짜 왕좌 파괴 · 환영 여왕의 본체가 드러납니다';
+    game.ui.toast(n === total ? last : `${gate.label} 파괴 · ${n}/${total}`, 'gold');
     this.refreshHint(game);
   }
   /** 규칙을 갱신한 뒤 같은 스텝의 상태를 거울 뷰에 그린다. 규칙의 조기 반환(보스 처치·결과 등)에도 일시정지가 아니면 이어서 그린다. */
@@ -266,6 +275,9 @@ export class FalseThrones {
     if (maze.phase === 'idle') {
       if (!this.#readyToOpen()) return;
       maze.phase = 'running'; maze.trailT = this.def.escape.trailEvery;
+      // 거울 미궁 동안 지도는 바뀌지 않는다(봉인 해제는 탈출 뒤). 진짜 거울 거리장을 한 번 만들어 들고 쓴다.
+      maze.flow = this.world.buildFlow(maze.real.x, maze.real.z);
+      maze.via = Math.hypot(game.player.pos.x - maze.center.x, game.player.pos.z - maze.center.z) <= AUTO_VIA_RADIUS;
       this.#resetLimit(game.player.pos);
       this.#stampTrail(game.player.pos);
       game.ui.toast(`거울 미궁 · 모래 발자국을 따라 진짜 거울로 ${maze.limit}초 안에 탈출`, 'gold');
@@ -274,6 +286,7 @@ export class FalseThrones {
     }
     const e = this.def.escape, p = game.player;
     maze.elapsed += dt; maze.left -= dt; maze.cooldown = Math.max(0, maze.cooldown - dt);
+    if (!maze.via && Math.hypot(p.pos.x - maze.center.x, p.pos.z - maze.center.z) <= AUTO_VIA_RADIUS) maze.via = true;
     maze.trailT -= dt;
     if (maze.trailT <= 0) { this.#stampTrail(p.pos); maze.trailT += e.trailEvery; if (maze.trailT <= 0) maze.trailT = e.trailEvery; }
     // 같은 스텝에서는 진짜 거울 도달이 시간 초과보다 먼저다.
@@ -315,7 +328,7 @@ export class FalseThrones {
   /** 영웅 칸에서 진짜 거울까지의 거리장 칸 수로 제한 시간을 정한다. 칸이 거리장 밖이면 직선 거리 × 1.5 로 대신한다. */
   #resetLimit(pos) {
     const maze = this.maze, e = this.def.escape;
-    const flow = this.world.buildFlow(maze.real.x, maze.real.z), i = this.#cellIndex(pos.x, pos.z);
+    const flow = maze.flow || this.world.buildFlow(maze.real.x, maze.real.z), i = this.#cellIndex(pos.x, pos.z);
     let dist = flow && i >= 0 ? flow[i] : -1;
     if (!(dist >= 0)) dist = Math.hypot(pos.x - maze.real.x, pos.z - maze.real.z) * 1.5;
     maze.limit = maze.left = Math.ceil(dist / e.pace + e.grace);
@@ -324,7 +337,7 @@ export class FalseThrones {
   #stampTrail(pos) {
     const maze = this.maze, e = this.def.escape, { minX, minZ } = this.world;
     maze.trailN = 0;
-    const flow = this.world.buildFlow(maze.real.x, maze.real.z);
+    const flow = maze.flow || this.world.buildFlow(maze.real.x, maze.real.z);
     if (!flow) return;
     let cx = Math.floor(pos.x - minX), cz = Math.floor(pos.z - minZ), here = this.#flowAt(flow, cx, cz), acc = 0;
     if (here < 0) {

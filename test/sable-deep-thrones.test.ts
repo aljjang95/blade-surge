@@ -178,7 +178,7 @@ test('마지막 정화·파괴 뒤 첫 경로 목표 갱신에서 미궁이 열�
   expect(m.limit).toBe(30);   // 방 7에서 시작하는 심층의 계약 값
   expect(m.elapsed).toBe(0); expect(m.trailT).toBe(ESC.trailEvery);
   expect(f.messages).toContain('거울 미궁 · 모래 발자국을 따라 진짜 거울로 30초 안에 탈출');
-  expect(f.route.autoGoal()).toBe(m.real);
+  expect(f.route.autoGoal()).toBe(m.center);   // AUTO 는 거울 전당 중심을 먼저 지난다(리뷰 P2)
   expect(f.route.hint()).toBe('거울 미궁 탈출 · 모래 발자국을 따라 진짜 거울로 · 30초');
   expect(f.world.sealed).toBe(true);
   // 더 가까운 곳(방 6)에서 시작하면 제한 시간이 줄어든다.
@@ -343,11 +343,13 @@ test('일시정지·사망·보스 처치 동안 시계와 발자국과 재사�
   expect(snap()).toBe(after);
 });
 
-test('autoGoal 은 미궁이 도는 동안에만 진짜 거울이고, AUTO 는 그 지점으로 거리장을 따라 걸어 탈출한다', () => {
+for (const startRoom of [7, 3, 1, 0]) test(`autoGoal 은 미궁이 도는 동안 거울 전당 중심을 거쳐 진짜 거울이고, AUTO 는 방 ${startRoom} 에서 환영 거울을 밟지 않고 탈출한다`, () => {
   const f = fixture(); finishRooms(f);
   expect(f.route.autoGoal()).toBeNull();
-  at(f, 7); f.route.update(f.g, 1 / 60);
-  expect(f.route.autoGoal()).toBe(maze(f).real);
+  at(f, startRoom); f.route.update(f.g, 1 / 60);
+  // 서쪽 문(방 3 쪽)에서 진짜 거울로 바로 가는 8방향 경로는 환영 거울 줄을 지난다(리뷰 P2). 먼저 중심으로 간다.
+  expect(f.route.autoGoal()).toBe(maze(f).center);
+  let minIllusion = Infinity, sawReal = false;
   // 실제 Player.autoExplore 의 이동 방향으로 걷는다(속도 5, 1/30초 스텝).
   const ctx: any = { game: f.g, pos: f.g.player.pos };
   const random = Math.random;
@@ -358,9 +360,13 @@ test('autoGoal 은 미궁이 도는 동안에만 진짜 거울이고, AUTO 는 �
       const dir = Player.prototype.autoExplore.call(ctx, 1 / 30);
       f.g.player.pos.x += dir.x * 5 / 30; f.g.player.pos.z += dir.y * 5 / 30;
       f.route.update(f.g, 1 / 30); t++;
+      if (maze(f).phase === 'running' && f.route.autoGoal() === maze(f).real) sawReal = true;
+      minIllusion = Math.min(minIllusion, Math.hypot(f.g.player.pos.x - maze(f).illusion.x, f.g.player.pos.z - maze(f).illusion.z));
     }
   } finally { Math.random = random; }
   expect(maze(f).phase).toBe('done');
+  expect(sawReal).toBe(true);
+  expect(minIllusion).toBeGreaterThan(ESC.radius + 1);
   expect(maze(f).collapses).toBe(0); expect(maze(f).illusions).toBe(0);
   expect(maze(f).elapsed).toBeLessThan(maze(f).limit);
   expect(f.world.sealed).toBe(false);

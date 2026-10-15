@@ -388,11 +388,11 @@ describe('미궁 시작·제한 시간·시계', () => {
     expect(K.checkMazeLimit(tweak(rows, (_, i) => i === start, r => { r.mz.lim = 29; r.mz.lf = 29; }), DEEP).ok).toBe(false);
     expect(K.checkMazeLimit(tweak(rows, (_, i) => i === start, r => { r.mz.lim = 25; r.mz.lf = 25; }), DEEP).ok).toBe(false);
   });
-  test('칸 경계에서 인접 위치 거리 후보(97 → 31)는 허용한다', () => {
+  test('제한 시간은 다시 잰 영웅 칸 거리(fd)로만 판정한다: 인접 위치 거리 후보(97 → 31)나 floor 값은 실패', () => {
     const rows = deepRun().rows;
     const start = rows.findIndex(r => r.mz?.ph === 1);
     const alt = tweak(rows, (_, i) => i === start, r => { r.mz.lim = 31; r.mz.lf = 31; });
-    expect(K.checkMazeLimit(alt, DEEP).ok).toBe(true);
+    expect(K.checkMazeLimit(alt, DEEP).ok).toBe(false);
   });
   test('시작 스텝에 거리를 다시 재지 못했으면 실패', () => {
     const rows = tweak(deepRun().rows, r => r.mz?.fd !== undefined, r => { delete r.mz.fd; delete r.mz.fa; });
@@ -557,6 +557,13 @@ describe('거울 뷰 같은 프레임 A/B', () => {
     expect(r.max).toBe(4);
     expect(r.coverage).toEqual({ hidden: true, running: true, shattered: true });
     expect(r.route.mismatches).toBe(0);
+  });
+  test('첫 update 전 start 표본(scale 0 메시가 보여 4 calls)은 일치 검사만 받고 hidden 표본으로 세지 않는다', () => {
+    const onlyStart = AB({ 0: { mzCalls: 4, on: 24 } }).filter(x => x.label !== 'hidden-after');
+    const r = K.checkMazeViewGpu(onlyStart, DEEP);
+    expect(r.coverage.hidden).toBe(false); expect(r.ok).toBe(false);
+    const withGate = [...onlyStart, { label: 'gate', n: 100, ph: 0, mzCalls: 0, rtCalls: 3, on: 20, offMaze: 20, offAll: 17 }];
+    expect(K.checkMazeViewGpu(withGate, DEEP).coverage.hidden).toBe(true);
   });
   test('차이가 5 이상이면 실패', () => {
     expect(K.checkMazeViewGpu(AB({ 1: { on: 25, mzCalls: 5 } }), DEEP).ok).toBe(false);

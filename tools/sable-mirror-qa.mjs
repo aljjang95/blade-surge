@@ -567,13 +567,14 @@ async function captureScreens(label) {
     await page.waitForTimeout(250);
     await page.evaluate(() => window.app.renderer.render()); // 시뮬레이션 tick 없이 그리기만
     const file = label + '-' + size.width + 'x' + size.height + '.png';
-    await page.screenshot({ path: path.join(qa.out, file) }); shots.push(file);
+    // 컨테이너 부하(다른 세션 chromium 동시 실행)에서 30초 기본 대기가 넘쳤다(smoke-screens-2·3·5). 판정과 무관한 캡처 대기만 늘린다.
+    await page.screenshot({ path: path.join(qa.out, file), timeout: 90000 }); shots.push(file);
   }
   await page.setViewportSize(viewport); await page.waitForTimeout(150);
   await page.evaluate(() => window.app.renderer.render());
   return shots;
 }
-const shot = async label => { const file = label + '.png'; await page.evaluate(() => window.app.renderer.render()); await page.screenshot({ path: path.join(qa.out, file) }); return file; };
+const shot = async label => { const file = label + '.png'; await page.evaluate(() => window.app.renderer.render()); await page.screenshot({ path: path.join(qa.out, file), timeout: 90000 }); return file; };
 /** 실제 #btn-auto 버튼으로 AUTO 를 원하는 상태로 맞춘다. */
 async function setAuto(on) {
   const now = await page.evaluate(() => window.app.battle.player.auto);

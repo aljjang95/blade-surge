@@ -160,15 +160,15 @@ export function checkSeal(rows, def, { maze = false } = {}) {
 
 // ---------- 거울 미궁 ----------
 /**
- * 영웅 칸 거리 d 에서의 제한 시간: ceil(d / pace + grace). 도구가 브라우저 안에서 world.buildFlow(real.x, real.z) 로 다시 읽은 거리(fd)와
- * 인접 위치 거리 후보(fa, 칸 경계에서 관측 위치와 규칙 위치가 칸 하나 어긋나는 경우)에서 기대 값 집합을 만든다.
+ * 영웅 칸 거리 d 에서의 제한 시간: ceil(d / pace + grace). 도구가 브라우저 안에서 world.buildFlow(real.x, real.z) 로 다시 읽은 거리(fd)만 쓴다.
+ * 규칙은 같은 스텝의 영웅 위치(= 행의 위치)로 거리를 읽으므로 인접 위치 후보(fa)는 허용하지 않는다(BUNDLE-09 리뷰 P3: fa 를 허용하면 floor 도 통과했다).
+ * fa 는 진단용으로 행에 남는다.
  */
 export const limitOf = (escape, dist) => Math.ceil(dist / escape.pace + escape.grace);
 export function expectedLimits(escape, mz) {
   if (!Number.isFinite(mz?.fd)) return { exact: null, allowed: [] };
   const exact = limitOf(escape, mz.fd);
-  const allowed = [...new Set([exact, ...(mz.fa || []).filter(Number.isFinite).map(d => limitOf(escape, d))])];
-  return { exact, allowed };
+  return { exact, allowed: [exact] };
 }
 
 /**
@@ -307,7 +307,10 @@ export function checkMazeViewGpu(samples, def, { limit = VIEW_DRAW_LIMIT, minSam
   });
   const bad = rows.filter(r => !r.matches || !r.within);
   const phases = new Set(rows.map(r => r.phase));
-  const coverage = { hidden: phases.has(MAZE_PHASE_CODE.idle), running: phases.has(MAZE_PHASE_CODE.running), shattered: phases.has(MAZE_PHASE_CODE.done) };
+  // hidden 표본은 실제로 그리지 않는 표본만 센다. 첫 update 전 'start' 표본(출격 준비 compile 을 위해 scale 0 메시가 보임, 4 calls)은
+  // 일치·상한 검사는 받지만 hidden 표본으로 세지 않는다(BUNDLE-09 리뷰 P3).
+  const coverage = { hidden: rows.some(r => r.phase === MAZE_PHASE_CODE.idle && r.claimed === 0 && r.viewGpuCalls === 0),
+    running: phases.has(MAZE_PHASE_CODE.running), shattered: phases.has(MAZE_PHASE_CODE.done) };
   const unseen = rows.filter(r => r.phase === MAZE_PHASE_CODE.running && !(r.viewGpuCalls >= 1));
   const gpus = rows.map(r => r.viewGpuCalls).filter(Number.isFinite), routeGpus = rows.map(r => r.routeGpuCalls).filter(Number.isFinite);
   const ok = rows.length >= minSamples && bad.length === 0 && coverage.hidden && coverage.running && coverage.shattered && unseen.length === 0;
