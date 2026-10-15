@@ -29,6 +29,11 @@ export function aimTargetValid(shooter, enemy, range, world = shooter.game?.worl
 export class RangerAim {
   constructor() { this.target = null; this.yaw = null; }
   clear() { this.target = null; this.yaw = null; }
+  /** 현재 대상이 select와 같은 조건(현재 적 목록 소속·사거리·시야)으로 아직 유효한가. 발사 전 추적에 쓴다. */
+  holds(shooter, range) {
+    const target = this.target;
+    return !!target && (shooter.game?.enemies || []).includes(target) && aimTargetValid(shooter, target, range, shooter.game?.world);
+  }
   /**
    * @param {{pos:{x:number,z:number}, game:{enemies:any[], world?:any}}} shooter
    * @param {number} range 화살 도달 거리

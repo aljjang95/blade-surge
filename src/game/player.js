@@ -145,7 +145,9 @@ export class Player extends Actor {
     }
     // 수동 궁수는 사격 중에도 이동한다. 몸은 조준 방향을 유지하고 속도만 입력을 따라 부드럽게 맞춘다.
     if (this.state === 'attack' && this.manualBow && this.stun <= 0) {
-      const speed = wantMove ? this.stats.spd * this.buffs.spd * (this.slow ? 0.5 : 1) * RANGER_MOVE_SHOT_SPEED : 0;
+      const frontier = wantMove ? frontierEffectForStage(this.game.stage) : null;
+      const frontierSpeed = frontier?.kind === 'moveSpeedMultiplier' ? frontier.value : 1;
+      const speed = wantMove ? this.stats.spd * this.buffs.spd * frontierSpeed * (this.slow ? 0.5 : 1) * RANGER_MOVE_SHOT_SPEED : 0;
       _v.copy(this.moveDir); if (wantMove) _v.normalize().multiplyScalar(speed);
       this.vel.lerp(_v, 1 - Math.exp(-14 * dt));
     }
@@ -658,10 +660,13 @@ export class Player extends Actor {
     if (this.state === 'attack') {
       const c = this.current; const dur = c.dur / (this.buffs.atkSpd * (this.stormT > 0 ? 1.4 : 1)); const t = this.stateT / dur;
       const moveShot = this.manualBow && c.projectile === 'arrow';
-      // 발사 전까지 수동 궁수의 몸은 살아 있는 조준 대상을 따라 돈다(이동 방향과 무관). 대상이 무효가 되면 방향을 유지한다.
+      // 발사 전까지 수동 궁수의 몸은 유효한 조준 대상을 따라 돈다(이동 방향과 무관).
+      // 대상이 벽 뒤·사거리 밖·목록 밖으로 무효가 되면 그쪽으로 돌지 않고 마지막 유효 방향을 유지한다. 발사 순간 다른 유효 대상을 다시 고른다.
       if (moveShot && !this.hitDone && this.rangerAim.target) {
-        if (!this.rangerAim.target.alive || this.rangerAim.target.spawning) this.rangerAim.target = null;
-        else { const yaw = this.rangerAim.yawTo(this); if (yaw !== null) this.yaw = yaw; }
+        if (!this.rangerAim.holds(this, c.range)) {
+          if (this.lockTarget === this.rangerAim.target) this.lockTarget = null;
+          this.rangerAim.target = null;
+        } else { const yaw = this.rangerAim.yawTo(this); if (yaw !== null) this.yaw = yaw; }
       }
       if (c.move === 'spin' && !this.hitDone) gatherEnemies(this.game, this.pos, c.range + 1.5, 9);
       if (!this.hitDone && t >= c.hitAt) { this.hitDone = true; this.doComboHit(0); if (c.move !== 'spin' && !moveShot) this.vel.multiplyScalar(c.move === 'lunge' ? 0.35 : 0.2); this.nextTick = c.hitAt + (1 - c.hitAt) / (c.ticks || 1); }

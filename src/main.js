@@ -1,7 +1,8 @@
 import './style.css';
 import * as THREE from 'three';
 import { Renderer } from './engine/renderer.js';
-import { LobbyCameraControls } from './engine/lobby-camera.js';
+import { LobbyCameraControls, releaseBlockedLobbyInput } from './engine/lobby-camera.js';
+import { bindSecondaryTouchActivation } from './engine/secondary-touch.js';
 import { CameraControls } from './engine/camera-control.js';
 import { setupPwa } from './platform/pwa.js';
 import { AppModeView } from './platform/app-mode.js';
@@ -114,6 +115,8 @@ class App {
     this.canvas.setAttribute('aria-label', '성채와 던전 게임 화면');
     this.lobbyCameraControls = new LobbyCameraControls(this);
     this.cameraControls = new CameraControls(this);
+    // 조이스틱·시점 손가락을 누른 채 탭하는 전투 핵심 버튼은 보조 터치로도 동작해야 한다.
+    for (const id of ['btn-pause', 'btn-resume', 'btn-auto', 'btn-map', 'btn-boss-shortcut']) bindSecondaryTouchActivation(document.getElementById(id));
     startup.stage = 'platform';
     this.pwa = isNativeApp() ? null : setupPwa({ canApplyUpdate: () => this.mode === 'lobby' && !this.stageStarting && !this.party?.run });
     if (this.pwa) this.appModeView = new AppModeView(this);
@@ -273,7 +276,7 @@ class App {
     this.lobbyCameraControls?.updateActivity();
     if (this.hubUI.visible !== (visible && this.hubWalkMode)) this.hubUI.setVisible(visible && this.hubWalkMode);
     this.commandUI?.setVisible(visible && !this.hubWalkMode, visible && this.hubWalkMode);
-    if (!this.canWalkHub()) this.citadel.clearInput();
+    releaseBlockedLobbyInput(this);
     this.hubUI.update(this.hubMovement.nearest, { blocked: !this.canWalkHub() });
   }
   async showcaseHero(id, first = false) {

@@ -180,6 +180,29 @@ test('벽 너머 적은 조준하지 않는다(실제 원정 Floor 보행 마스
   expect(p.rangerAim.target).toBeNull(); expect(p.yaw).toBe(0);
 });
 
+test('사격 준비 중 대상이 벽 뒤로 숨으면 그쪽으로 돌지 않고, 마지막 유효 방향으로 쏘아 숨은 대상을 맞히지 않는다', () => {
+  // fresh ranger 리뷰 P2-2 재현(wall-track-probe)의 회귀. 투사체는 원래 벽을 검사하지 않으므로 조준 추적이 막아야 한다.
+  const f: any = ranger(), p: any = f.player, w = f.game.world, base = w.walkable.bind(w);
+  const px = p.pos.x, pz = p.pos.z; let wallOn = false;
+  w.walkable = (x: number, z: number) => (wallOn && x - px > 2.5 && x - px < 3.5 && z - pz > .5 ? false : base(x, z));
+  const e: any = spawnCombatFlowEnemy(f, px + 6, pz, { atkCd: 999, stun: 999 });
+  const pin = e.pos.clone(); p.yaw = Math.PI;
+  f.game.input.press('attack');
+  const hp0 = e.hp; let validYaw = NaN, dir: any = null;
+  for (let i = 0; i < 90; i++) {
+    if (i === 3) { validYaw = p.yaw; wallOn = true; pin.set(px + 6, 0, pz + 3); }   // 발사 전 벽 뒤로 옆걸음
+    e.pos.copy(pin); e.stun = 999;
+    step(f);
+    const a = arrows(f)[0]; if (a && !dir) dir = { x: a.dir.x, z: a.dir.z };
+  }
+  expect(angle(validYaw, Math.PI / 2)).toBeLessThan(.02);
+  expect(dir).not.toBeNull();
+  const shot = Math.atan2(dir.x, dir.z);
+  expect(angle(shot, Math.atan2(6, 3))).toBeGreaterThan(.2);   // 숨은 대상 방향이 아니다
+  expect(angle(shot, validYaw)).toBeLessThan(.05);              // 마지막 유효 방향
+  expect(e.hp).toBe(hp0);
+  expect(p.rangerAim.target).toBeNull(); expect(p.lockTarget).not.toBe(e);
+});
 test('회피 중 공격 입력은 회피 0.16초 뒤 사격으로 이어지고 회피 속도를 이어 받는다', () => {
   const f = ranger(), p: any = f.player, room = f.room;
   const target = spawnCombatFlowEnemy(f, room.x, room.z + 6, { atkCd: 99 });
@@ -234,5 +257,3 @@ test('같은 입력·같은 배치의 이동 사격은 반복 실행에서 같�
   expect(a.log).toEqual(b.log); expect(a.shots).toEqual(b.shots);
   expect(a.shots.length).toBeGreaterThan(0);
 });
-
-

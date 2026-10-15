@@ -218,6 +218,16 @@ export class LobbyCameraControls {
   }
 }
 
+/**
+ * 매 프레임 로비 입력 소유 정리. 걷기가 막히면 이동 입력만 놓고, 시점 조작까지 막혔을 때만 시점 제스처를 끝낸다.
+ * 기본 선택 로비(걷기 꺼짐·시점 허용)에서 대기 중인 손가락을 매 프레임 지우던 결함을 막는다.
+ */
+export function releaseBlockedLobbyInput(app) {
+  if (!app.canWalkHub()) app.hubControls?.clear();
+  const orbit = app.canOrbitLobby ? app.canOrbitLobby() : app.canWalkHub();
+  if (!orbit) app.lobbyCameraControls?.finish();
+}
+
 /** Keep the hero left of centre in camera-local space even when the owner orbits. */
 export function lobbyCompositionShift(position, landscape) {
  const length=Math.hypot(position?.x,position?.z);

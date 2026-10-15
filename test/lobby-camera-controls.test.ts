@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { LobbyCameraControls, normalizeLobbyCamera, walkingLobbyCameraPosition } from '../src/engine/lobby-camera.js';
+import { LobbyCameraControls, normalizeLobbyCamera, releaseBlockedLobbyInput, walkingLobbyCameraPosition } from '../src/engine/lobby-camera.js';
 import { HubControls } from '../src/engine/hub-controls.js';
 
 class Surface extends EventTarget {
@@ -125,6 +125,26 @@ test('default selection lobby without town walk still orbits by empty-world touc
     expect(controls.value.yaw).toBe(10); expect(world.captures.size).toBe(0);
     send(doc, 'pointerup', pointer(5, world, true));
   }
+});
+test('per-frame lobby input release keeps a selection-lobby camera finger while walking is off, and ends it at a real boundary', () => {
+  // main.js syncHub가 매 프레임 부르는 정리. 이전에는 걷기 불가면 시점 제스처까지 지워 첫 move 전에 손가락이 사라졌다.
+  let hubClears = 0;
+  app.renderer.lobbyNavigation = false; app.canWalkHub = () => false;
+  app.canOrbitLobby = () => app.mode === 'lobby' && !app.blocked && app.lobbyVisible;
+  app.hubControls = { clear: () => { hubClears++; } }; app.lobbyCameraControls = controls;
+  send(doc, 'pointerdown', pointer(1, world, true));
+  releaseBlockedLobbyInput(app);
+  expect(controls.touch.size).toBe(1); expect(controls.touch.mode).toBe('pending');
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 128 });
+  expect(controls.value.yaw).toBe(10);
+  releaseBlockedLobbyInput(app);
+  expect(controls.touch.mode).toBe('rotate'); expect(world.hasPointerCapture(1)).toBe(true);
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 148 }); expect(controls.value.yaw).toBe(1);
+  expect(hubClears).toBe(2); expect(saveCount).toBe(0);
+  // 모달 등으로 시점 조작이 막히면 같은 프레임 정리가 제스처를 끝내고 한 번 저장한다.
+  app.blocked = true; releaseBlockedLobbyInput(app);
+  expect(controls.touch.size).toBe(0); expect(world.captures.size).toBe(0); expect(saveCount).toBe(1);
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 300 }); expect(controls.value.yaw).toBe(1);
 });
 test('two camera-pad touches pinch and the remaining touch continues without an orbit jump', () => {
   send(doc, 'pointerdown', pointer(2, pad, true));
