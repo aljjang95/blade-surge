@@ -199,7 +199,18 @@ try {
   diagnose = () => page.evaluate(() => { const app = window.app;
     return { mode: app.mode, tab: app.meta?.tab, walking: !!app.canWalkHub?.(), orbit: !!app.lobbyCameraControls?.active, camera: { ...app.renderer.lobbyCamera },
       gesture: { size: app.lobbyCameraControls?.touch.size, mode: app.lobbyCameraControls?.touch.mode }, modal: !!document.querySelector('dialog[open], #modal.show') }; });
-  cleanup = async () => { if (touch.size) await touch.cancel(); };
+  // 실제로 보이는 복귀 컨트롤로 착지에 돌아온다. 원정 머리글 '로비'가 보이면 그것, 짧은 가로처럼 머리글을 숨긴 화면에서는
+  // 항상 보이는 하단 '던전' 목적지(mobile-menu.css의 복귀 경로). 숨은 요소를 강제로 누르지 않는다.
+  const returnToLanding = async () => {
+    if (!await page.evaluate(() => !!document.querySelector('#expedition-root .exp-shell'))) return 'already-landing';
+    const control = page.locator('#expedition-root .exp-close:visible, #meta .bottomnav [data-tab="home"]:visible').first();
+    const used = await control.evaluate(el => el.matches('.exp-close') ? 'exp-close' : 'bottomnav-home');
+    await control.tap();
+    await page.waitForFunction(() => !document.querySelector('#expedition-root .exp-shell') && window.app.commandUI?.visible && window.app.meta.tab === 'home', null, { timeout: 60000 });
+    return used;
+  };
+  // 실패한 로비 단계가 원정 화면을 연 채로 두면 전투 진입이 연쇄로 실패한다. 정리에서 착지로 복원한다.
+  cleanup = async () => { if (touch.size) await touch.cancel(); await returnToLanding().catch(() => {}); };
   // 기본 선택 로비(마을 걷기 아님)에서 빈 화면 한 손가락 회전과 탭 무회전을 검사한다. 걷기 모드는 필수 경로가 아니다.
   const lobbyRotate = async () => {
     const point = await emptyPoint(page, { x0: .4, x1: .95, y0: .15, y1: .6 });
@@ -257,17 +268,20 @@ try {
       el.dataset.qaScroll = '1'; const r = el.getBoundingClientRect();
       return { selector: el.id || String(el.className), x: r.x + r.width / 2, y: r.y + Math.min(r.height - 10, r.height * .7), top: r.top, bottom: r.bottom, scrollTop: el.scrollTop };
     });
-    const close = async () => { await page.locator('#expedition-root .exp-close').first().tap(); await page.waitForFunction(() => !document.querySelector('#expedition-root .exp-shell') && window.app.commandUI?.visible, null, { timeout: 60000 }); };
-    if (!info) { await close(); return { notRun: true, reason: 'secondary dungeon list does not overflow in this viewport' }; }
+    if (!info) { const used = await returnToLanding(); return { notRun: true, reason: 'secondary dungeon list does not overflow in this viewport', closedWith: used }; }
     await touch.down(2, info.x, info.y); await touch.move(2, info.x, Math.max(info.top + 8, info.y - 120), 8); await touch.up(2);
     await page.waitForTimeout(400);
     const after = await page.evaluate(() => ({ scrollTop: document.querySelector('[data-qa-scroll]').scrollTop, camera: { ...window.app.renderer.lobbyCamera }, gesture: window.app.lobbyCameraControls.touch.size }));
-    await close();
+    // 닫기 실패가 스크롤 근거를 가리지 않게 먼저 기록하고 캡처한다.
+    const row = report.steps[report.steps.length - 1]; row.scrollEvidence = { info, after, cameraBefore }; await save();
+    await shot('secondary-list-after-scroll');
+    let closedWith = null, closeError = null;
+    try { closedWith = await returnToLanding(); } catch (error) { closeError = String(error?.message || error).slice(0, 400); }
     const back = await page.evaluate(() => ({ landing: !!window.app.commandUI?.visible, tab: window.app.meta.tab, camera: { ...window.app.renderer.lobbyCamera } }));
     assert(after.scrollTop > info.scrollTop, 'Secondary list did not scroll by touch: ' + JSON.stringify({ info, after }));
     assert(after.gesture === 0 && after.camera.yaw === cameraBefore.yaw && after.camera.pitch === cameraBefore.pitch, 'List scroll moved the lobby camera: ' + JSON.stringify({ cameraBefore, after }));
-    assert(back.landing && back.tab === 'home', 'Closing the list did not return to the landing: ' + JSON.stringify(back));
-    return { ...info, after, back };
+    assert(!closeError && back.landing && back.tab === 'home', 'Closing the list did not return to the landing: ' + JSON.stringify({ closedWith, closeError, back }));
+    return { ...info, after, back, closedWith };
   });
   }
   if (groups.has('battle')) {
