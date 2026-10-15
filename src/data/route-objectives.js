@@ -5,6 +5,12 @@ const ASHFORGE_COPY = Object.freeze({ title: '용광로 냉각', unit: '용광�
 // 재벼림 심층 심장로(BUNDLE-08): 분출을 '망치 충격파'로 부르고, 냉각하면 사슬에 묶인 불씨가 풀려난다.
 const ASHFORGE_DEEP_COPY = Object.freeze({ title: '심장로 냉각', unit: '심장로', done: '심장로', doneVerb: '냉각', cooled: '냉각 · 불씨 해방',
   warning: '망치 예고', vent: '망치 충격파' });
+// 잿불금고 심층 냉각 밸브(BUNDLE-10): 분출을 '밀물'로 부르고, 밀물이 빠진 뒤에만 밸브를 연다.
+// calm·afterShort·afterLong·avoidLong·waitShort 가 없는 정의는 엔진·화면이 지금의 문구(가열 중·충격파 뒤·망치 충격파 뒤·
+// 망치 충격파를 피한 뒤·충격파 대기)를 그대로 쓴다.
+const EMBER_DEEP_COPY = Object.freeze({ title: '냉각 밸브 개방', unit: '냉각 밸브', done: '냉각 밸브', doneVerb: '개방', cooled: '개방',
+  warning: '밀물 경고', vent: '밀물', calm: '물 빠짐', afterShort: '밀물 뒤', afterLong: '밀물이 빠진 뒤', avoidLong: '밀물을 피한 뒤',
+  waitShort: '밀물 대기' });
 /** @param {string} id @param {Array<[number, string]>} gates @param {typeof CINDER_COPY} copy */
 const coolingDef = (id, gates, copy = CINDER_COPY) => Object.freeze({
   id, kind: 'cooling', holdSeconds: 2, radius: 1.6, copy,
@@ -104,6 +110,16 @@ export const ROUTE_OBJECTIVES = Object.freeze({
     ...coolingDef('ashforge_heart_furnaces_deep', [[2, '1번 심장로 · 사슬 단조장'], [4, '2번 심장로 · 북쪽 불씨 저장고'],
       [5, '3번 심장로 · 남쪽 주조로'], [7, '4번 심장로 · 거수의 관문']], ASHFORGE_DEEP_COPY),
     shockWindow: true, release: 'ember-chains', releaseSeconds: 1.6,
+  }),
+  // 잿불금고 심층(침몰한 운반선)의 원안(BUNDLE-10): "밀물 경고가 끝난 뒤 냉각 밸브를 열고".
+  // 재벼림 심층과 같은 냉각 장치 엔진(CoolingValves)과 shockWindow 규칙을 쓴다: 준비된 뒤 시작된 밀물이 한 번 지나가면
+  // 조작판이 반대편으로 옮겨 가 다음 밀물 경고 전까지만 열린다. 밸브는 좌현 화물칸(2, 정예) → 우현 화물칸(3, 정예) → 기관실 격벽(4) 순서다.
+  // 화물칸 두 곳은 1에서 갈라져 4에서 만나므로 2번 밸브로 가는 길이 두 갈래이고, 3번(방 4)은 그 길에 먼저 정리돼 차례를 기다릴 수 있다.
+  // ventColor: 밀물 띠는 파란 물빛이라 보스(사슬 집행자)의 주황 용광로 경고와 구분된다. 보스 규칙(후방 공격 등)은 바뀌지 않는다.
+  ember_deep: Object.freeze({
+    ...coolingDef('ember_tide_valves_deep', [[2, '1번 냉각 밸브 · 좌현 화물칸'], [3, '2번 냉각 밸브 · 우현 화물칸'],
+      [4, '3번 냉각 밸브 · 기관실 격벽']], EMBER_DEEP_COPY),
+    shockWindow: true, ventColor: 0x3d8cff,
   }),
   nightglass_standard: records('standard', [[2, 1], [5, 2], [6, 3]]),
   nightglass_deep: records('deep', [[6, 3], [4, 2], [1, 1]]),
