@@ -15,7 +15,7 @@ const HOTKEYS = Object.freeze({ KeyE: 'equipment', KeyI: 'inventory', KeyQ: 'que
 export class MapleUI {
   constructor(app) {
     this.app = app; this.meta = app.meta; this.eco = app.eco; this.disposed = false;
-    this.manager = new MapleWindowManager({ storage: globalThis.localStorage });
+    this.manager = new MapleWindowManager();
     this.inventory = new MapleInventory({ app, meta: this.meta, eco: this.eco, manager: this.manager });
     this.equipment = new MapleEquipment({ app, meta: this.meta, eco: this.eco, manager: this.manager, inventory: this.inventory });
     this.buildQuickBar();

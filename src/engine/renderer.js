@@ -14,6 +14,7 @@ import { displaySize, renderPixelRatio } from '../platform/mobile-display.js';
 import { rebindEnvironment, createStorybookEnvironment } from './environment.js';
 import { ShaderProgramValidator } from './shader-program-validator.js';
 import { PlayerSilhouette, PLAYER_SILHOUETTE_FRAGMENT } from './player-silhouette.js';
+import { acquireWebGL2Context, GraphicsStartupError } from '../platform/startup-compat.js';
 
 // 최종 합성 셰이더: 색수차 · 비네트 · 히트 플래시 · 방사형 블러(궁극기) · 색보정
 const FinalShader = {
@@ -120,7 +121,18 @@ export const CAMERA_PRESETS = {
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
-    const r = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false, depth: true });
+    // 컨텍스트를 직접 하나만 만든다. 고성능 요청이 거절되면 기본 GPU 선택으로 한 번만 다시 시도한다.
+    const { context, powerPreference } = acquireWebGL2Context(canvas);
+    this.contextPowerPreference = powerPreference;
+    let r;
+    try { r = new THREE.WebGLRenderer({ canvas, context, antialias: false, powerPreference, stencil: false, depth: true }); }
+    catch (error) { throw new GraphicsStartupError('gfx-init', error); }
+    // 외부 컨텍스트를 받으면 Three 는 컨텍스트의 alpha(true)로 기본 클리어 알파를 0 으로 잡는다.
+    // Three 가 직접 만들던 기존 경로와 같은 불투명 클리어(1)를 유지한다.
+    r.setClearAlpha(1);
+    // 컨텍스트 복구 때 Three 는 같은 alpha(true) 기준으로 배경 상태를 새로 만들어 클리어 알파가 0 으로 돌아간다.
+    // Three 의 복구 처리 다음에 실행되도록 생성 직후 등록해 기존 경로와 같은 1 을 다시 맞춘다.
+    canvas.addEventListener('webglcontextrestored', () => r.setClearAlpha(1));
     // Development keeps full Three diagnostics. Production still rejects failed links,
     // without synchronously fetching three success logs for every new program.
     r.debug.checkShaderErrors = import.meta.env?.DEV !== false;

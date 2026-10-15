@@ -36,7 +36,9 @@ export function hotkeyBlockedReason(ctx) {
 const el = (tag, cls, text) => { const node = document.createElement(tag); if (cls) node.className = cls; if (text) node.textContent = text; return node; };
 
 export class MapleWindowManager {
-  constructor({ storage = globalThis.localStorage, root = document.body } = {}) {
+  constructor({ storage, root = document.body } = {}) {
+    // 사이트 데이터가 차단되면 localStorage getter 가 예외를 던진다. 창 위치는 이번 접속에서만 유지한다.
+    if (storage === undefined) { try { storage = globalThis.localStorage; } catch { storage = null; } }
     this.storage = storage; this.windows = new Map(); this.zCounter = 10; this.disposed = false;
     this.positions = this.readPositions();
     this.layer = el('div', 'mpl-layer'); this.layer.id = 'maple-windows';

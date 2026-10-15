@@ -54,6 +54,7 @@ import './ui/departure-journal.css';
 import './ui/mobile-menu.css';
 import './ui/maple-window.css';
 import { MapleUI } from './ui/maple-ui.js';
+import { buildIdentity, classifyStartupFailure, onMediaQueryChange, startupFailureDetails, storageAvailability } from './platform/startup-compat.js';
 const BOOT_TIPS = [
   '<b>진공기</b>로 적을 끌어모은 뒤 한 번에 쓸어담는 것이 몹몰이의 기본이다.',
   '적의 공격 직전 <b>회피</b>하면 퍼펙트 회피 — 시간이 느려지고 반격 창이 열린다.',
@@ -70,21 +71,29 @@ const BOOT_TIPS = [
 import { applyLook } from './game/look.js';
 import { createFunnelLog, sessionOpenEvents } from './game/funnel-events.js';
 
+// 시작 실패를 단계별로 분류하기 위한 현재 단계. App 생성자가 실패하면 인스턴스가 없으므로 모듈에 둔다.
+const startup = { stage: 'renderer', failed: false };
+
 class App {
   constructor() {
+    startup.stage = 'renderer';
     this.canvas = $('gl');
     this.renderer = new Renderer(this.canvas);
     this.scene = this.renderer.scene;
+    startup.stage = 'effects';
     this.fx = new FX(this.scene, this.renderer.camera);
     this.fx.focus.bindBloom(this.renderer.bloom);
     this.renderer.heroEffectFocus = this.fx.focus;
     this.renderer.heroEffectTarget = () => this.mode === 'battle' && this.battle?.active ? this.battle.player : null;
     this.renderer.playerSilhouetteTarget = () => this.mode === 'battle' && !this.stageStarting && !this.contextLost
       && this.battle?.active ? this.battle.player : null;
+    startup.stage = 'input';
     this.input = new Input();
+    startup.stage = 'save';
     this.eco = new Economy();
     this.funnel = createFunnelLog();
     for (const [name, payload] of sessionOpenEvents({ hasStoredSave: this.eco.hasStoredSave, previousSession: this.funnel.latestSession(), now: Date.now() })) this.funnel.track(name, payload);
+    startup.stage = 'interface';
     this.ui = new UI(this);
     this.meta = new Meta(this);
     this.tutorial = new BattleTutorial(this);
@@ -105,14 +114,16 @@ class App {
     this.canvas.setAttribute('aria-label', '성채와 던전 게임 화면');
     this.lobbyCameraControls = new LobbyCameraControls(this);
     this.cameraControls = new CameraControls(this);
+    startup.stage = 'platform';
     this.pwa = isNativeApp() ? null : setupPwa({ canApplyUpdate: () => this.mode === 'lobby' && !this.stageStarting && !this.party?.run });
     if (this.pwa) this.appModeView = new AppModeView(this);
     this.nativeApp = setupNativeApp(this);
+    startup.stage = 'settings';
     this.last = performance.now();
     this.reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     this.applySettings();
     // 운영체제의 동작 줄이기 설정이 실행 중에 바뀌면 흔들림·후처리 왜곡 기본값도 따라간다.
-    this.reducedMotion.addEventListener?.('change', () => this.applySettings());
+    onMediaQueryChange(this.reducedMotion, () => this.applySettings());
     this.canvas.addEventListener('webglcontextlost', event => {
       event.preventDefault(); this.contextLost = true; this.input.clear(); this.citadel.clearInput();
       this._graphicsGeneration = (this._graphicsGeneration || 0) + 1;
@@ -146,6 +157,7 @@ class App {
     $('render-reload').addEventListener('click', () => location.reload());
   }
   async boot() {
+    startup.stage = 'assets';
     const citadelReady = preloadCitadelHubAssets({ quality: this.renderer.quality });
     const fill = $('boot-fill'), msg = $('boot-msg'), pct = $('boot-pct');
     const setP = (p, m) => { fill.style.width = (p * 100) + '%'; pct.textContent = Math.round(p * 100) + '%'; if (m) msg.textContent = m; };
@@ -168,15 +180,18 @@ class App {
       }
     });
     this.citadelAssets = await citadelReady;
+    startup.stage = 'world';
     setP(0.85, '월드 구성 중…');
     this.arena = new Arena(this.scene, this.models.dungeon, this.renderer, this.models.tllDungeonLandmarks, this.models);
     this.battle = new Battle(this);
     this.journeyView = new JourneyView(this);
     this.arsenalView = new ArsenalView(this);
     await this.showcaseHero(this.eco.s.selected, true);
+    startup.stage = 'shaders';
     setP(0.95, '게임 화면 준비 중…');
     // 셰이더 프리컴파일 (첫 프레임 끊김 방지)
     await this.fx.prepare(this.renderer.r, this.models, this.renderer.composer.readBuffer);
+    startup.stage = 'start';
     setP(1, '준비 완료');
     const start = $('boot-start'); start.classList.remove('hidden'); msg.textContent = '';
     this.appModeView?.render();
@@ -185,6 +200,7 @@ class App {
       start.disabled = true; start.textContent = '사운드 준비 중…';
       await audio.init(); audio.resume(); await screenReady; res();
     }; start.addEventListener('click', go, { once: true }); });
+    startup.stage = 'lobby';
     clearInterval(this._tipTimer);
     const bootEl = $('boot'); bootEl.classList.add('leaving');
     this.toLobby(true);
@@ -455,15 +471,46 @@ class App {
   }
 }
 
-function bootFailure(error) {
-  console.error(error);
-  $('boot-msg').textContent = '게임 화면을 준비하지 못했습니다. 인터넷 연결과 브라우저의 WebGL 2 지원을 확인해 주세요.';
-  const retry = $('boot-start'); retry.disabled = false; retry.classList.remove('hidden'); retry.textContent = '다시 시도';
-  retry.onclick = () => location.reload();
+const BUILD_ID = buildIdentity(import.meta.url);
+
+/** 시작 실패 안내. 첫 실패만 표시하고, 다시 시도는 사용자가 누를 때 한 번만 새로고침한다(자동 새로고침 없음). */
+function bootFailure(error, app = null) {
+  if (startup.failed) return;
+  startup.failed = true;
+  const failure = classifyStartupFailure(error, startup.stage);
+  console.error('Blade Surge startup failed', failure.code, error);
+  try { showStartupFailure(failure, app); } catch (uiError) { console.error('startup failure view failed', uiError); }
 }
+function showStartupFailure(failure, app) {
+  if (app?._tipTimer) clearInterval(app._tipTimer);
+  const boot = $('boot'); boot.classList.remove('leaving'); boot.classList.add('show');
+  $('boot-msg').textContent = failure.title;
+  // 시작 버튼은 플랫폼 화면 갱신이 문구를 덮어쓸 수 있어 실패 안내에 쓰지 않는다.
+  const start = $('boot-start'); start.disabled = true; start.classList.add('hidden');
+  $('boot-failure-message').textContent = failure.message;
+  $('boot-failure-code').textContent = failure.code;
+  const detail = $('boot-failure-detail');
+  detail.textContent = startupFailureDetails(failure, { build: BUILD_ID, webgl2Api: typeof WebGL2RenderingContext === 'function',
+    storage: storageAvailability(window), at: new Date().toISOString() });
+  const retry = $('boot-retry');
+  retry.onclick = () => { retry.disabled = true; retry.textContent = '다시 여는 중…'; location.reload(); };
+  const copy = $('boot-failure-copy');
+  copy.onclick = async () => {
+    try { await navigator.clipboard.writeText(detail.textContent); copy.textContent = '복사했습니다'; }
+    catch {
+      // 클립보드 권한이 없으면 내용을 선택해 직접 복사할 수 있게 한다.
+      const range = document.createRange(); range.selectNodeContents(detail);
+      const selection = getSelection(); selection?.removeAllRanges(); selection?.addRange(range);
+      copy.textContent = '선택된 정보를 직접 복사해 주세요';
+    }
+  };
+  $('boot-failure').hidden = false;
+  retry.focus({ preventScroll: true });
+}
+let app = null;
 try {
-  const app = new App();
+  app = new App();
   window.app = app;
   window.__EN = ENEMIES; window.__stageDef = stageDef; window.__THREE = THREE;
-  app.boot().catch(bootFailure);
 } catch (error) { bootFailure(error); }
+if (app) app.boot().catch(error => bootFailure(error, app));

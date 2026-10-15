@@ -35,6 +35,12 @@
       <div class="boot-row"><div id="boot-msg">에셋 로딩 중…</div><div id="boot-pct">0%</div></div>
     </div>
     <button id="boot-start" class="btn btn-gold btn-xl hidden">터치하여 시작</button>
+    <section id="boot-failure" class="boot-failure" role="alert" hidden>
+      <p id="boot-failure-message"></p>
+      <p class="boot-failure-code">오류 코드 <b id="boot-failure-code"></b></p>
+      <button type="button" class="btn btn-gold" id="boot-retry">다시 시도</button>
+      <details><summary>문의용 정보 보기</summary><pre id="boot-failure-detail"></pre><button type="button" class="btn btn-ghost btn-sm" id="boot-failure-copy">정보 복사</button></details>
+    </section>
     <div id="boot-tip" class="boot-tip"></div>
     <div class="boot-credit">3D: KayKit · Quaternius (CC0) · SFX: Kenney (CC0) · BGM: 자체 생성</div>
   </div>

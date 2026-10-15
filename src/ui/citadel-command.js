@@ -18,11 +18,13 @@ const action = (label, callback, className = '') => {
   return button;
 };
 export const CITADEL_COMMAND_COLLAPSED_KEY = 'blade-surge.citadel-command.collapsed';
-export function readCitadelCommandCollapsed(storage = globalThis.localStorage) {
-  try { return storage?.getItem(CITADEL_COMMAND_COLLAPSED_KEY) === 'true'; } catch { return false; }
+// 저장 공간 접근 자체가 거부되는 브라우저(사이트 데이터 차단)는 localStorage getter 가 예외를 던진다.
+// 기본 저장소 조회도 try 안에서 해야 성채 명령창 생성자가 시작을 막지 않는다.
+export function readCitadelCommandCollapsed(storage) {
+  try { return (storage === undefined ? globalThis.localStorage : storage)?.getItem(CITADEL_COMMAND_COLLAPSED_KEY) === 'true'; } catch { return false; }
 }
-export function writeCitadelCommandCollapsed(collapsed, storage = globalThis.localStorage) {
-  try { storage?.setItem(CITADEL_COMMAND_COLLAPSED_KEY, String(!!collapsed)); } catch {}
+export function writeCitadelCommandCollapsed(collapsed, storage) {
+  try { (storage === undefined ? globalThis.localStorage : storage)?.setItem(CITADEL_COMMAND_COLLAPSED_KEY, String(!!collapsed)); } catch {}
 }
 
 /** 출격·정비는 기존 서비스에 연결하고, 마을 이동은 명시적으로 선택한다. */
