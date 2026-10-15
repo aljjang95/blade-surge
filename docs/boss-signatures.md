@@ -18,6 +18,9 @@ Acceptance and regression requirements:
   retained and offset-room cases; screenshots must show readable safe areas.
 - At most six reusable warning meshes per boss. Pause freezes warnings, and
   stun/death/stop cancel pending damage and remove the owned graphics.
+  Exception (BUNDLE-05): in the personal deep Bellfall Crypt, the chorus veil keeps
+  the sovereign's triple toll from being cut by stun, stagger or posture break until
+  its final ring opens the 3.5-second counter window (docs/bellfall-deep-bells.md).
 - Simultaneous overlapping shapes hit each living actor only once. Player.hurt
   owns invulnerability and damage mitigation; the host owns party simulation.
 - Boss signatures replace automatic ambient hazards in the final boss room;
