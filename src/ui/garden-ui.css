@@ -171,7 +171,7 @@
 .oath-visual .oath-menu-grid button { border-radius: 20px; background: #285040; color: #fff1d2; }
 
 @media (orientation: portrait) {
-  .oath-visual .citadel-command-return { left: 12px; top: calc(140px + var(--sat)); }
+  .oath-visual .citadel-command-return { left: 12px; top: calc(166px + var(--sat)); } /* 세로 걷기의 장소 칩(아래 끝 약 156px) 아래 */
   .oath-visual #meta .topbar { padding: calc(8px + var(--sat)) 8px 8px; gap: 6px; }
   .oath-visual #meta .profile { padding: 3px; }
   .oath-visual #meta .topbar .avatar { width: 38px; height: 38px; }
