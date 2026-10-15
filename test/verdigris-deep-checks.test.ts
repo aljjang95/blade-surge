@@ -239,6 +239,11 @@ describe('점등·제단 순서', () => {
     const s = legitRun();
     const skewed = mut(s.rows, rows => rows.forEach(r => { if (r.pr === 2) r.lT += 1; }));
     expect(K.checkLit(skewed, DEF).bad.map((b: any) => b.kind)).toContain('litT-clock');
+    // 1초 뒤에 값이 멈춰도(상한) 통과하지만, 이동과 상관없이 0 으로 되돌아가면 실패한다.
+    const capped = mut(s.rows, rows => rows.forEach(r => { r.lT = Math.min(r.lT, 1.2); }));
+    expect(K.checkLit(capped, DEF).ok).toBe(true);
+    const reset = mut(s.rows, rows => rows.forEach(r => { if (r.pr === 2 && r.lT > 1.5) r.lT = 0; }));
+    expect(K.checkLit(reset, DEF).bad.map((b: any) => b.kind)).toContain('litT-clock');
   });
   test('비점등 제단 방은 정화 전에 정리됨으로 보이면 안 된다 (제단 attuned 와 같은 행에서만)', () => {
     const s = legitRun();
@@ -470,11 +475,22 @@ describe('관측 누락은 실패다', () => {
       ['clock NaN', r => { r.ch.ck = NaN; }],
     ];
     for (const [name, apply] of cases) {
-      const rows = mut(s.rows, list => apply(list[Math.floor(list.length / 2)]));
+      const rows = mut(s.rows, list => apply(list.find((r: any) => r.ch.ph === 2)));
       const o = K.checkObservation(rows, DEF);
       expect({ name, ok: o.ok }).toEqual({ name, ok: false });
       expect(auto(withRows(s, rows)).acceptance.observation).toBe(false);
     }
+  });
+  test('수로 숫자는 단계에 맞게만 요구한다(idle 의 초기값은 규칙에 맡기고, 돌파 중 left · limit 을 못 읽으면 실패)', () => {
+    const s = legitRun();
+    const idleBlank = mut(s.rows, rows => rows.forEach(r => { if (r.ch.ph === 0) { r.ch.ck = null; r.ch.lf = null; r.ch.lim = null; r.ch.el = null; r.ch.b.forEach((b: any) => { b.a = null; b.c = null; }); } }));
+    expect(K.checkObservation(idleBlank, DEF).ok).toBe(true);
+    const runBlank = mut(s.rows, rows => { rows.find((r: any) => r.ch.ph === 2).ch.lf = null; });
+    expect(K.checkObservation(runBlank, DEF).ok).toBe(false);
+    const openBlank = mut(s.rows, rows => { rows.find((r: any) => r.ch.ph === 1).ch.ck = null; });
+    expect(K.checkObservation(openBlank, DEF).ok).toBe(false);
+    const bandBlank = mut(s.rows, rows => { rows.find((r: any) => r.ch.ph === 1).ch.b[2].a = null; });
+    expect(K.checkObservation(bandBlank, DEF).ok).toBe(false);
   });
   test('화면 순간도 관측 필드가 하나라도 누락이면 실패한다', () => {
     const s = new Sim(); s.discover(0); s.rm = 2;
@@ -523,6 +539,16 @@ describe('토스트·문구 누출', () => {
     expect(K.checkToasts(withTactic, DEF, { encounterTactic: tactic.replace('공명 파동', '공명  파동') }).ok).toBe(false);
     expect(K.checkToasts([...s.toasts, { msg: tactic + ' ' }], DEF, { encounterTactic: tactic }).ok).toBe(false);
     expect(K.checkToasts(withTactic, DEF, { encounterTactic: '' }).ok).toBe(false);
+  });
+  test('토스트가 뜬 순간의 tactic(tac)을 함께 남기면 그 값과 정확히 같을 때만 면제된다', () => {
+    const s = base();
+    const exact = [...s.toasts, { msg: tactic, tac: tactic }];
+    expect(K.checkToasts(exact, DEF).ok).toBe(true);
+    expect(K.checkToasts(exact, DEF).tacticToasts).toBe(1);
+    expect(K.checkToasts([...s.toasts, { msg: tactic, tac: tactic + '.' }], DEF).ok).toBe(false);
+    expect(K.checkToasts([...s.toasts, { msg: tactic, tac: tactic + '.' }], DEF, { encounterTactic: tactic }).ok).toBe(false);   // 그 순간의 tac 이 우선한다
+    expect(K.checkToasts([...s.toasts, { msg: tactic, tac: null }], DEF, { encounterTactic: tactic }).ok).toBe(true);           // tac 을 못 읽었으면 인자로 대신한다
+    expect(K.checkToasts([...s.toasts, { msg: tactic, tac: null }], DEF).ok).toBe(false);
   });
   test('시작 limit 문구가 시작 스텝의 limit 과 다르거나 피격·범람 토스트 수가 결과와 다르면 실패한다', () => {
     const s = base();
@@ -640,8 +666,11 @@ describe('order: 비점등 제단 포자 폭발', () => {
     const o = K.analyzeOrder(twice, DEF, { rooms: ROOMS });
     expect(o.ok).toBe(false);
     expect(o.wrong.bad.map((b: any) => b.kind)).toContain('cooldown');
-    const left = mut(s.rows, rows => { const d = rows.findIndex((r: any) => r.mk === 'dwell-end'); rows[d - 5].x = room(3).x + 6; });
+    const left = mut(s.rows, rows => { const d = rows.findIndex((r: any) => r.mk === 'dwell-end'); for (let k = d - 70; k <= d; k++) rows[k].x = room(3).x + 6; });
     expect(K.analyzeOrder(left, DEF, { rooms: ROOMS }).dwell.ok).toBe(false);
+    // 넉백으로 한두 스텝 반경을 벗어난 것은 통과한다(도구가 키로 되돌린다).
+    const bump = mut(s.rows, rows => { const d = rows.findIndex((r: any) => r.mk === 'dwell-end'); rows[d - 40].x = room(3).x + 3.4; });
+    expect(K.analyzeOrder(bump, DEF, { rooms: ROOMS }).dwell.ok).toBe(true);
   });
   test('수동 구간에 AUTO 가 켜져 있거나 공격 입력·동작이 있으면 실패한다', () => {
     const s = orderRun();

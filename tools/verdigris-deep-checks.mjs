@@ -119,7 +119,8 @@ export function checkChannelSetup(setup, def) {
 }
 
 /**
- * 관측 완전성. 모든 행에서 lit(-1 이상)·litMoves(≥ 0)·litT(≥ 0)·bursts(≥ 0)·제단 칸이 읽혀야 하고, channel 이 있는 정의에서는 모든 행의 ch(띠 개수만큼 b, 상태 코드 0~2)가 읽혀야 한다.
+ * 관측 완전성. 모든 행에서 lit(-1 이상)·litMoves(≥ 0)·litT(≥ 0)·bursts(≥ 0)·제단 칸이 읽혀야 하고, channel 이 있는 정의에서는 모든 행의 ch(띠 개수만큼 b, 상태 코드 0~2)가 읽혀야 한다
+ * (수로 숫자는 단계에 맞게: clock 은 열린 뒤, left · limit · elapsed 는 돌파 시작 뒤, 띠의 age · cycle 은 열린 동안).
  * -1(읽지 못함)·null·undefined 는 통과가 아니라 실패다(BUNDLE-10 리뷰 P3-5).
  */
 export function checkObservation(rows, def) {
@@ -134,8 +135,15 @@ export function checkObservation(rows, def) {
     if (!Array.isArray(r.g) || r.g.length !== gateCount || r.g.some(g => !g || ['id', 'rd', 'at', 'cl', 'dc', 'al', 'pd'].some(k => !finite(g[k])))) miss.push('g');
     if (bandCount > 0) {
       const ch = r.ch;
-      if (!ch || ![ch.ck, ch.lf, ch.lim, ch.el, ch.fl, ch.sh, ch.rid].every(finite) || !(ch.ph >= 0 && ch.ph <= 3)) miss.push('ch');
-      else if (!Array.isArray(ch.b) || ch.b.length !== bandCount || ch.b.some(b => !b || !finite(b.x) || !finite(b.h) || !finite(b.a) || !isInt(b.c) || !(b.s >= 0 && b.s <= 2))) miss.push('ch.b');
+      // 수로 숫자: 카운터와 방은 항상, clock 은 열린 뒤, left · limit · elapsed 는 돌파 시작 뒤에 읽혀야 한다(idle 의 초기값은 규칙에 맡긴다).
+      if (!ch || ![ch.fl, ch.sh, ch.rid].every(finite) || !(ch.ph >= 0 && ch.ph <= 3)) miss.push('ch');
+      else {
+        if (ch.ph >= PHASE_CODE.open && !finite(ch.ck)) miss.push('ch.ck');
+        if (ch.ph >= PHASE_CODE.running && ![ch.lf, ch.lim, ch.el].every(finite)) miss.push('ch.run');
+        const strictBands = ch.ph === PHASE_CODE.open || ch.ph === PHASE_CODE.running;
+        if (!Array.isArray(ch.b) || ch.b.length !== bandCount || ch.b.some(b => !b || !finite(b.x) || !finite(b.h) || !(b.s >= 0 && b.s <= 2))) miss.push('ch.b');
+        else if (strictBands && ch.b.some(b => !finite(b.a) || !isInt(b.c))) miss.push('ch.b');
+      }
     }
     if (miss.length) bad.push({ n: r.n, miss });
   }
@@ -221,7 +229,7 @@ export function checkAltars(rows, def, { rooms = [] } = {}) {
 /**
  * 점등 이동. 점등은 한 번에 한 제단: 모든 행에서 progress < n 이면 lit = 지금 차례 제단의 방, 끝나면(progress = n) lit 은 null(-1).
  * litMoves 는 정화 스텝에서만 +1 씩 늘어 progress 와 함께 움직이고(마지막 정화는 옮길 제단이 없어 늘지 않는다 → 끝 값 n − 1), 첫 행은 lit = 첫 제단 · litMoves 0.
- * litT 는 마지막 점등 이동 뒤 게임 시간이라 이동 스텝에서 한 프레임 이하이고 그 뒤 게임 시간만큼 흐른다.
+ * litT 는 마지막 점등 이동 뒤 게임 시간이라 이동 스텝에서 한 프레임 이하이고 이동 뒤 1초까지는 게임 시간만큼 흐른다(그 뒤에는 1초 이상이면 된다).
  */
 export function checkLit(rows, def, { finalMoves = def.gates.length - 1 } = {}) {
   const n = def.gates.length, bad = [];
@@ -244,7 +252,11 @@ export function checkLit(rows, def, { finalMoves = def.gates.length - 1 } = {}) 
         moveT = r.t;
       }
     }
-    if (moveT !== null && r.lm > 0 && Math.abs(r.lT - (r.t - moveT)) > 2 * FRAME + EPS) bad.push({ kind: 'litT-clock', n: r.n, lT: r.lT, expected: r.t - moveT });
+    // 이동 직후 1초(연출 구간)는 게임 시간과 같이 흘러야 하고, 그 뒤에는 줄어들지 않고 1초 이상이면 된다(규칙이 값을 어디서 멈춰도 통과).
+    if (moveT !== null && r.lm > 0) {
+      const since = r.t - moveT;
+      if (since <= 1 ? Math.abs(r.lT - since) > 2 * FRAME + EPS : r.lT + 2 * FRAME + EPS < 1) bad.push({ kind: 'litT-clock', n: r.n, lT: r.lT, expected: since });
+    }
     prev = r;
   }
   const last = rows.at(-1);
@@ -443,7 +455,8 @@ export function checkBands(rows, def, setup, { minRows = 30 } = {}) {
       checked++;
       if (b.s !== e.state) bad.push({ kind: 'state', n: r.n, band: i, clock: r.ch.ck, got: BAND_NAMES[b.s], want: BAND_NAMES[e.state] });
       else if (b.c !== e.cycle) bad.push({ kind: 'cycle', n: r.n, band: i, clock: r.ch.ck, got: b.c, want: e.cycle });
-      else if (e.age !== null && Math.abs(b.a - e.age) > 1e-4) bad.push({ kind: 'age', n: r.n, band: i, clock: r.ch.ck, got: b.a, want: e.age });
+      // age 는 경고·분출 상태에서만 판정한다(calm 의 경과 기준은 규칙 구현에 맡긴다: 값이 유한한지는 관측 완전성이 본다).
+      else if (e.age !== null && e.state !== BAND_CODE.calm && Math.abs(b.a - e.age) > 1e-4) bad.push({ kind: 'age', n: r.n, band: i, clock: r.ch.ck, got: b.a, want: e.age });
     });
   }
   return { rows: rowsChecked, checked, skipped, seen, bad: bad.slice(0, 8), badCount: bad.length, ok: rowsChecked >= minRows && bad.length === 0 && seen.warning > 0 && seen.burst > 0 };
@@ -628,10 +641,13 @@ export function checkObjectiveSamples(rows, def) {
  * 토스트 표본({ n, t, msg, kind }). 정화 토스트 4개가 각각 1회·정의 순서, 수로 열림 1회, 시작 '포자 수로 돌파 시작 · <limit>초' 1회(startLimit 이 시작 스텝 limit 과 같음),
  * 피격 토스트는 결과의 sporeHits 와 같은 횟수, 범람 토스트 '포자 수로 범람 · 다시 <limit>초'는 floods 와 같은 횟수(floodLimits 가 있으면 순서대로 같은 limit), 완료 토스트 1회.
  * 순서: 정화 4번째 < 열림 < 시작 < 완료. 이전(공명)·일반판 번호 문구가 있으면 누출이다.
- * encounterTactic: 보스 입장 때 뜨는 실제 전술 토스트(stage.encounter.tactic). 그 문자열과 정확히 같은 토스트만 누출 검사에서 뺀다. 한 글자라도 다르면 그대로 검사한다.
+ * 보스 입장 때 뜨는 실제 전술 토스트(stage.encounter.tactic)는 그 순간의 tactic 문자열(토스트의 tac, 없으면 encounterTactic)과 정확히 같은 토스트만 누출 검사에서 뺀다. 한 글자라도 다르면 그대로 검사한다.
  */
 export function checkToasts(toasts, def, { sporeHits = null, floods = null, startLimit = null, floodLimits = null, encounterTactic = null } = {}) {
-  const list = (toasts || []).map(t => String(t?.msg ?? ''));
+  // 각 토스트는 뜬 순간의 stage.encounter.tactic(tac)을 함께 남길 수 있다. 있으면 그 값과, 없으면 인자 encounterTactic 과 정확히 같을 때만 면제한다.
+  const fallback = typeof encounterTactic === 'string' && encounterTactic.length > 0 ? encounterTactic : null;
+  const items = (toasts || []).map(t => ({ msg: String(t?.msg ?? ''), tac: typeof t?.tac === 'string' && t.tac.length > 0 ? t.tac : fallback }));
+  const list = items.map(i => i.msg);
   const count = text => list.filter(m => m === text).length;
   const purify = def.gates.map((_, i) => ({ text: purifyToast(def, i), count: count(purifyToast(def, i)), at: list.indexOf(purifyToast(def, i)) }));
   const startAll = list.filter(m => /^포자 수로 돌파 시작 · \d+초$/.test(m)), floodAll = list.filter(m => /^포자 수로 범람 · 다시 \d+초$/.test(m));
@@ -639,9 +655,9 @@ export function checkToasts(toasts, def, { sporeHits = null, floods = null, star
   const ordered = purify.every((p, i) => p.at >= 0 && (i === 0 || p.at > purify[i - 1].at));
   const seq = [purify.at(-1).at, list.indexOf(COPY.open), startAll.length ? list.indexOf(startAll[0]) : -1, list.indexOf(COPY.done)];
   const sequence = seq.every((at, i) => at >= 0 && (i === 0 || at > seq[i - 1]));
-  const exempt = typeof encounterTactic === 'string' && encounterTactic.length > 0 ? encounterTactic : null;
-  const tacticToasts = exempt ? list.filter(m => m === exempt).length : 0;
-  const leaked = list.filter(m => m !== exempt && leaks(m));
+  const isTactic = i => !!i.tac && i.msg === i.tac;
+  const tacticToasts = items.filter(isTactic).length;
+  const leaked = items.filter(i => !isTactic(i) && leaks(i.msg)).map(i => i.msg);
   const startOk = startAll.length === 1 && (startLimit === null || startAll[0] === startToast(startLimit));
   const floodOk = (floods === null || floodAll.length === floods) && (floodLimits === null || (floodAll.length === floodLimits.length && floodAll.every((m, i) => m === floodToast(floodLimits[i]))));
   const ok = purify.every(p => p.count === 1) && ordered && openCount === 1 && startOk && doneCount === 1 && sequence && floodOk && leaked.length === 0 && (sporeHits === null || hitCount === sporeHits);
@@ -728,14 +744,16 @@ export function analyzeOrder(rows, def, { rooms = [], minDwell = 2 } = {}) {
   const wrong = checkWrongStep(rows.slice(0, c + 1), def, { rooms, strict: true, after: start.n });
   const first = wrong.bursts[0] ?? null;
   const post = rows.slice(b, c + 1);
-  const away = room ? post.filter(r => Math.hypot(r.x - room.x, r.z - room.z) > def.radius + POSITION_SLACK).length : post.length;
+  const insideNow = r => !!room && Math.hypot(r.x - room.x, r.z - room.z) <= def.radius + POSITION_SLACK;
+  // 폭발의 넉백으로 잠깐 반경을 벗어날 수 있어(도구가 키로 중심으로 되돌린다) 반경 밖 행은 기록하고, 반경 안에 머문 시간과 끝 시점의 위치를 판정한다.
+  const away = post.filter(r => !insideNow(r)).length, insideSeconds = stepRows(post).filter(insideNow).length * FRAME;
   const seconds = end.t - burst.t;
   const burstRec = { count: end.bu - start.bu, atBurst: burst.bu - start.bu, beforeBurst: rows.slice(a, b).filter(r => r.n < burst.n && r.bu !== start.bu).length, gate: j, dwellBefore: first?.dwell ?? null, ratio: first?.ratio ?? null,
     progressSame: burst.pr === start.pr, ok: j >= 0 && end.bu - start.bu === 1 && burst.bu - start.bu === 1 && rows.slice(a, b).filter(r => r.n < burst.n).every(r => r.bu === start.bu) && wrong.ok && wrong.count === 1 && burst.pr === start.pr };
-  const dwell = { seconds, need: minDwell - 2 * FRAME, awayRows: away, holdRows: post.filter(r => r.hd !== 0).length,
+  const dwell = { seconds, need: minDwell - 2 * FRAME, awayRows: away, insideSeconds, insideNeed: minDwell - .4, endInside: insideNow(end), holdRows: post.filter(r => r.hd !== 0).length,
     attuned: post.filter(r => j < 0 || r.g[j].at !== 0).length, cleared: post.filter(r => j < 0 || r.g[j].cl !== 0).length, progressChanged: post.filter(r => r.pr !== start.pr).length,
     litChanged: seg.filter(r => r.lt !== def.gates[start.pr].roomId).length, secondBurst: end.bu - burst.bu };
-  dwell.ok = j >= 0 && seconds + EPS >= dwell.need && away === 0 && dwell.holdRows === 0 && dwell.attuned === 0 && dwell.cleared === 0 && dwell.progressChanged === 0 && dwell.litChanged === 0 && dwell.secondBurst === 0;
+  dwell.ok = j >= 0 && seconds + EPS >= dwell.need && insideSeconds + EPS >= dwell.insideNeed && dwell.endInside && dwell.holdRows === 0 && dwell.attuned === 0 && dwell.cleared === 0 && dwell.progressChanged === 0 && dwell.litChanged === 0 && dwell.secondBurst === 0;
   const lit = { moved: litMoved, startLit: start.lt, startProgress: start.pr, ok: litMoved && start.lt === def.gates[start.pr]?.roomId && start.pr >= 1 };
   return { ok: keyboard.ok && burstRec.ok && dwell.ok && lit.ok, keyboard, burst: burstRec, dwell, lit, wrong, rows: seg.length };
 }
