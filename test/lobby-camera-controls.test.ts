@@ -109,6 +109,23 @@ test('성채 조이스틱을 쥔 채 빈 화면 한 손가락 회전과 두 손�
   send(doc, 'pointerdown', pointer(3, world, true)); send(doc, 'pointerup', pointer(3, world, true)); expect(saveCount).toBe(1);
   hub.destroy();
 });
+test('default selection lobby without town walk still orbits by empty-world touch and keeps modal boundaries', () => {
+  // 걷기 모드가 꺼진 기본 선택 로비: canWalkHub는 거짓이지만 시점 조작은 받아야 한다.
+  app.renderer.lobbyNavigation = false; app.canWalkHub = () => false;
+  app.canOrbitLobby = () => app.mode === 'lobby' && app.meta.tab === 'home' && !app.blocked && app.lobbyVisible;
+  controls.updateActivity(); expect(controls.active).toBe(true);
+  send(doc, 'pointerdown', pointer(1, world, true));
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 128 });
+  expect(controls.value.yaw).toBe(10); expect(world.hasPointerCapture(1)).toBe(true);
+  send(doc, 'pointerup', { ...pointer(1, world, true), clientX: 128 }); expect(saveCount).toBe(1);
+  for (const state of [{ blocked: true }, { lobbyVisible: false }, { mode: 'battle' }]) {
+    Object.assign(app, { blocked: false, lobbyVisible: true, mode: 'lobby' }, state); controls.updateActivity();
+    expect(controls.active).toBe(false);
+    send(doc, 'pointerdown', pointer(5, world, true)); send(doc, 'pointermove', { ...pointer(5, world, true), clientX: 200 });
+    expect(controls.value.yaw).toBe(10); expect(world.captures.size).toBe(0);
+    send(doc, 'pointerup', pointer(5, world, true));
+  }
+});
 test('two camera-pad touches pinch and the remaining touch continues without an orbit jump', () => {
   send(doc, 'pointerdown', pointer(2, pad, true));
   send(doc, 'pointerdown', { ...pointer(3, pad, true), clientX: 140 });

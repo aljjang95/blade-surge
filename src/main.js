@@ -236,10 +236,14 @@ class App {
     this.companionAgent?.syncQuality();
   }
   // ---------- 로비 ----------
-  canWalkHub() {
-    return this.hubWalkMode && this.mode === 'lobby' && this.meta.tab === 'home' && this.lobbyVisible && !this.stageStarting && !this.contextLost &&
+  /** 로비 빈 화면 시점 회전·핀치를 받을 수 있는 상태. 마을 걷기 모드가 아니어도 기본 선택 로비에서 허용한다. */
+  canOrbitLobby() {
+    return this.mode === 'lobby' && this.meta.tab === 'home' && this.lobbyVisible && !this.stageStarting && !this.contextLost &&
       !this.expeditionUI?.opened && !this.companionAgent?.getSnapshot().open &&
       !document.querySelector('dialog[open], #modal.show');
+  }
+  canWalkHub() {
+    return !!this.hubWalkMode && this.canOrbitLobby();
   }
   interactHub(spot) {
     if (!this.canWalkHub()) return false;

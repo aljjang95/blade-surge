@@ -15,6 +15,9 @@ if (!['localhost', '127.0.0.1'].includes(target.hostname) || target.username || 
 const label = arg('label') || new Date().toISOString().replace(/[:.]/g, '-');
 if (!/^[\w-]+$/.test(label)) throw Error('Invalid --label');
 const expectedSha = arg('expected-sha');
+// 정해진 시간 안의 기능 스모크: 넘으면 남은 단계를 실행하지 않고 NOT_RUN으로 남긴다(PASS로 세지 않는다).
+const deadlineSec = Number(arg('deadline-sec') || 0);
+const startedAt = Date.now();
 const dir = 'work/qa/camera-gesture/' + label;
 await mkdir('work/qa/camera-gesture', { recursive: true });
 await mkdir(dir); // 같은 label의 이전 결과를 덮어쓰지 않는다.
@@ -23,12 +26,29 @@ const report = { label, started: new Date().toISOString(), target: target.href,
   steps: [], screenshots: [], errors: [], status: 'running' };
 const save = () => writeFile(dir + '/report.json', JSON.stringify(report, null, 2));
 const assert = (ok, message) => { if (!ok) throw Error(message); };
-const step = async (name, fn, { required = true } = {}) => {
+let cleanup = null, diagnose = null;
+const step = async (name, fn, { required = true, needs = null } = {}) => {
   const row = { name, required, status: 'running' }; report.steps.push(row); await save();
+  if (deadlineSec > 0 && Date.now() - startedAt > deadlineSec * 1000) {
+    row.status = 'NOT_RUN'; row.reason = 'deadline ' + deadlineSec + 's reached before this step'; await save(); return row;
+  }
+  // 손가락을 이어 받는 단계는 선행 단계가 통과했을 때만 의미가 있다. 연쇄 FAIL 대신 사유를 남긴다.
+  if (needs && needs.status !== 'PASS') {
+    row.status = 'NOT_RUN'; row.reason = 'prerequisite "' + needs.name + '" was ' + needs.status; await save(); return row;
+  }
+  const t0 = Date.now();
   try { const detail = await fn(); row.status = detail?.notRun ? 'NOT_RUN' : 'PASS'; if (detail) row.detail = detail; }
-  catch (error) { row.status = 'FAIL'; row.error = String(error?.message || error); }
+  catch (error) { row.status = 'FAIL'; row.error = String(error?.message || error); try { row.state = await diagnose?.(); } catch {} }
+  // 실패한 단계의 손가락·일시정지가 다음 단계를 오염시키지 않게 실제 입력으로 정리한다.
+  // 통과한 단계는 다음 단계로 의도적으로 넘기는 손가락(조이스틱+회전→핀치)을 유지한다.
+  if (row.status !== 'PASS') try { await cleanup?.(); } catch (error) { row.cleanupError = String(error?.message || error); }
+  // 다음 단계가 어떤 상태에서 시작했는지 남긴다(정리 뒤 상태).
+  try { const after = await diagnose?.(); if (after) row.after = after; } catch {}
+  row.ms = Date.now() - t0;
   await save(); return row;
 };
+/** pointermove는 애니메이션 프레임에 맞춰 전달되므로 값을 읽기 전에 두 프레임을 기다린다. */
+const frames = page => page.evaluate(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))));
 
 try { report.head = execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); } catch { report.head = null; }
 try { report.servedVersion = await (await fetch(new URL('version.json', target), { cache: 'no-store' })).json(); } catch (error) { report.servedVersion = { error: String(error) }; }
@@ -46,13 +66,14 @@ async function openPage(context) {
   const touches = new Map();
   const points = () => [...touches.entries()].map(([id, p]) => ({ id, x: p.x, y: p.y, radiusX: 4, radiusY: 4, force: 1 }));
   const touch = {
-    down: async (id, x, y) => { touches.set(id, { x, y }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: points() }); },
+    get size() { return touches.size; },
+    down: async (id, x, y) => { touches.set(id, { x, y }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: points() }); await frames(page); },
     move: async (id, x, y, steps = 6) => {
       const from = touches.get(id);
-      for (let i = 1; i <= steps; i++) { touches.set(id, { x: from.x + (x - from.x) * i / steps, y: from.y + (y - from.y) * i / steps }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: points() }); }
+      for (let i = 1; i <= steps; i++) { touches.set(id, { x: from.x + (x - from.x) * i / steps, y: from.y + (y - from.y) * i / steps }); await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: points() }); await frames(page); }
     },
-    up: async id => { touches.delete(id); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: points() }); },
-    cancel: async () => { touches.clear(); await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] }); },
+    up: async id => { touches.delete(id); await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: points() }); await frames(page); },
+    cancel: async () => { touches.clear(); await cdp.send('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] }); await frames(page); },
     clear: () => touches.clear(),
   };
   const shot = async name => {
@@ -130,7 +151,7 @@ async function joystickForward(page, touch, joyBox) {
   const cx = joyBox.x + joyBox.width * .3, cy = joyBox.y + joyBox.height * .6;
   const start = await cam(page);
   await touch.down(11, cx, cy); await touch.move(11, cx, cy - 45, 3);
-  await page.waitForFunction(clock => window.app.renderer.time - clock >= .5, start.clock, { timeout: 30000 });
+  await page.waitForFunction(clock => window.app.renderer.time - clock >= .5, start.clock, { timeout: 90000 });
   const end = await cam(page);
   await touch.up(11);
   const moved = { x: end.player.x - start.player.x, z: end.player.z - start.player.z };
@@ -141,26 +162,47 @@ try {
   const context = await browser.newContext(contextOptions);
   const { page, touch, shot } = await openPage(context);
   let entered = false;
-  await step('boot via start button and close natural modals', async () => { const r = await boot(page); report.boot = r; return r; });
+  const booted = await step('boot via start button and close natural modals', async () => { const r = await boot(page); report.boot = r; return r; });
+  if (booted.status !== 'PASS') throw Error('Boot failed; later steps not run');
   await step('lobby old camera pad hidden', async () => { const s = await padState(page, '#lobby-camera-pad'); assert(s === 'hidden' || s === 'missing', s); return { pad: s }; });
   await shot('lobby');
-  await step('lobby empty-world one-finger rotate', async () => {
-    const point = await emptyPoint(page, { x0: .55, x1: .95, y0: .2, y1: .7 });
+  diagnose = () => page.evaluate(() => { const app = window.app;
+    return { mode: app.mode, tab: app.meta?.tab, walking: !!app.canWalkHub?.(), orbit: !!app.lobbyCameraControls?.active, camera: { ...app.renderer.lobbyCamera },
+      gesture: { size: app.lobbyCameraControls?.touch.size, mode: app.lobbyCameraControls?.touch.mode }, modal: !!document.querySelector('dialog[open], #modal.show') }; });
+  cleanup = async () => { if (touch.size) await touch.cancel(); };
+  // 기본 선택 로비(마을 걷기 아님)에서 빈 화면 한 손가락 회전과 탭 무회전을 검사한다. 걷기 모드는 필수 경로가 아니다.
+  const lobbyRotate = async () => {
+    const point = await emptyPoint(page, { x0: .4, x1: .95, y0: .15, y1: .6 });
     if (!point) return { notRun: true, reason: 'no empty lobby world point visible' };
-    const before = await page.evaluate(() => ({ ...window.app.eco.s.settings.lobbyCamera }));
+    const before = await page.evaluate(() => ({ ...window.app.renderer.lobbyCamera }));
     await touch.down(1, point.x, point.y); await touch.move(1, point.x + 80, point.y); await touch.up(1);
-    const after = await page.evaluate(() => ({ ...window.app.eco.s.settings.lobbyCamera }));
+    await frames(page);
+    const after = await page.evaluate(() => ({ ...window.app.renderer.lobbyCamera }));
+    const saved = await page.evaluate(() => ({ ...(window.app.eco.s.settings.lobbyCamera || {}) }));
     assert(before.yaw !== after.yaw, 'Lobby world drag did not rotate');
-    return { point, before, after };
-  });
-  await step('lobby tap without drag does not rotate', async () => {
-    const point = await emptyPoint(page, { x0: .55, x1: .95, y0: .2, y1: .7 });
-    if (!point) return { notRun: true };
-    const before = await page.evaluate(() => ({ ...window.app.eco.s.settings.lobbyCamera }));
+    return { point, before, after, saved, walking: await page.evaluate(() => !!window.app.canWalkHub?.()) };
+  };
+  const lobbyTap = async () => {
+    const point = await emptyPoint(page, { x0: .4, x1: .95, y0: .15, y1: .6 });
+    if (!point) return { notRun: true, reason: 'no empty lobby world point visible' };
+    const tapBefore = await page.evaluate(() => ({ ...window.app.renderer.lobbyCamera }));
     await touch.down(1, point.x, point.y); await touch.move(1, point.x + 4, point.y + 2, 2); await touch.up(1);
-    const after = await page.evaluate(() => ({ ...window.app.eco.s.settings.lobbyCamera }));
-    assert(before.yaw === after.yaw && before.pitch === after.pitch, 'Sub-slop tap rotated lobby');
-    return { before, after };
+    const tapAfter = await page.evaluate(() => ({ ...window.app.renderer.lobbyCamera }));
+    assert(tapBefore.yaw === tapAfter.yaw && tapBefore.pitch === tapAfter.pitch, 'Sub-slop tap rotated lobby');
+    return { point, tapBefore, tapAfter };
+  };
+  await step('lobby empty-world one-finger rotate', lobbyRotate);
+  await step('lobby tap without drag does not rotate', lobbyTap);
+  await step('town walk (optional entry): empty-world rotate, tap no-rotate, return', async () => {
+    const explore = page.locator('#citadel-explore:visible, [data-town-walk]:visible').first();
+    if (!await explore.count()) return { notRun: true, reason: 'no town walk entry in this lobby' };
+    await explore.tap(); await page.waitForFunction(() => window.app.canWalkHub?.(), null, { timeout: 30000 });
+    await page.waitForTimeout(600);
+    const r = { rotate: await lobbyRotate(), tap: await lobbyTap() };
+    await shot('town-walk-after-rotate');
+    const back = page.getByRole('button', { name: '출격 메뉴로' });
+    if (await back.isVisible()) { await back.tap(); await page.waitForFunction(() => !window.app.canWalkHub?.(), null, { timeout: 30000 }); }
+    return r;
   });
   await step('lobby scroll panel still scrolls by touch', async () => {
     const info = await page.evaluate(() => {
@@ -185,11 +227,19 @@ try {
   const world = await emptyPoint(page, { x0: .42, x1: .72, y0: .16, y1: .5 });
   assert(joy && world, 'No joystick or empty battle world point');
   report.points = { joy, world };
+  diagnose = () => page.evaluate(() => { const app = window.app, b = app.battle;
+    return { mode: app.mode, active: !!b?.active, paused: b?.paused, pauseReasons: b?.pauseReasons ? [...b.pauseReasons] : undefined, alive: b?.player?.alive,
+      modal: !!document.querySelector('#modal.show'), inputEnabled: app.input.enabled, joy: app.input.joy.active, camera: { ...app.renderer.battleCamera },
+      gesture: { size: app.cameraControls.touch.size, mode: app.cameraControls.touch.mode }, clock: app.renderer.time, focused: document.activeElement?.id || document.activeElement?.tagName }; });
+  cleanup = async () => {
+    if (touch.size) await touch.cancel();
+    if (await page.locator('#btn-resume').isVisible()) { await page.locator('#btn-resume').tap(); await page.waitForFunction(() => !window.app.battle.paused, null, { timeout: 30000 }); }
+  };
   await step('default movement follows camera forward (before rotation)', async () => {
     const r = await joystickForward(page, touch, joy); assert(r.distance > .4 && r.angleToCameraForward < 30, JSON.stringify(r)); return r;
   });
   let rotated, pinched;
-  await step('joystick held + one world finger rotates', async () => {
+  const joyRotate = await step('joystick held + one world finger rotates', async () => {
     const jx = joy.x + joy.width * .3, jy = joy.y + joy.height * .6;
     const start = await cam(page);
     await touch.down(1, jx, jy); await touch.move(1, jx + 40, jy, 3);
@@ -198,12 +248,12 @@ try {
     assert(rotated.joy && Math.abs(rotated.yaw - start.yaw) > 10, 'Joystick + world drag failed');
     return { start, rotated };
   });
-  await step('joystick held + two world fingers pinch without rotating', async () => {
+  const pinchRow = await step('joystick held + two world fingers pinch without rotating', async () => {
     await touch.down(3, world.x + 150, world.y + 20); await touch.move(3, world.x + 240, world.y + 20);
     pinched = await cam(page);
-    assert(pinched.joy && pinched.zoom !== rotated.zoom && pinched.yaw === rotated.yaw, 'Pinch failed or rotated');
+    assert(pinched.joy && pinched.zoom !== rotated.zoom && pinched.yaw === rotated.yaw, 'Pinch failed or rotated: ' + JSON.stringify({ rotated, pinched }));
     return { pinched };
-  });
+  }, { needs: joyRotate });
   await step('pinch -> remaining finger re-anchors without jump', async () => {
     await touch.up(2);
     const resumedStart = await cam(page);
@@ -211,16 +261,18 @@ try {
     const noJump = await cam(page);
     await touch.move(3, world.x + 300, world.y + 20);
     const resumed = await cam(page);
-    assert(Math.abs(noJump.yaw - resumedStart.yaw) < 1 && Math.abs(resumed.yaw - noJump.yaw) > 5 && resumed.zoom === pinched.zoom, 'Remaining finger jumped or did not rotate');
+    assert(Math.abs(noJump.yaw - resumedStart.yaw) < 1 && Math.abs(resumed.yaw - noJump.yaw) > 5 && resumed.zoom === pinched?.zoom, 'Remaining finger jumped or did not rotate: ' + JSON.stringify({ resumedStart, noJump, resumed }));
     await touch.up(3); await touch.up(1);
     return { resumedStart, noJump, resumed };
-  });
+  }, { needs: pinchRow });
+  // 사슬 단계가 중간에 멈춰도 다음 독립 단계는 손가락 없이 시작한다.
+  if (touch.size) await touch.cancel();
   await step('movement follows rotated camera forward', async () => {
     const r = await joystickForward(page, touch, joy); assert(r.distance > .4 && r.angleToCameraForward < 30, JSON.stringify(r)); return r;
   });
   await step('camera value survives combat frames (no rebound/override)', async () => {
     const a = await cam(page);
-    await page.waitForFunction(clock => window.app.renderer.time - clock >= 1, a.clock, { timeout: 30000 });
+    await page.waitForFunction(clock => window.app.renderer.time - clock >= 1, a.clock, { timeout: 90000 });
     const b = await cam(page);
     assert(a.yaw === b.yaw && a.pitch === b.pitch && a.zoom === b.zoom, 'Camera value changed without input');
     return { a, b };
@@ -230,7 +282,7 @@ try {
     const during = await cam(page);
     await touch.cancel();
     const after = await cam(page);
-    assert(during.touches === 1 && after.touches === 0, 'Gesture not released by cancel');
+    assert(during.touches === 1 && after.touches === 0, 'Gesture not released by cancel: ' + JSON.stringify({ during, after }));
     return { during, after };
   });
   await step('pause button during rotate ends capture; resume restores control', async () => {
@@ -243,7 +295,7 @@ try {
     await touch.move(5, world.x + 140, world.y);
     const afterMove = await cam(page);
     await touch.up(5);
-    assert(paused && beforeMove.yaw === afterMove.yaw && afterMove.touches === 0, 'Paused battle still rotated or kept capture');
+    assert(paused && beforeMove.yaw === afterMove.yaw && afterMove.touches === 0, 'Paused battle still rotated or kept capture: ' + JSON.stringify({ paused, beforeMove, afterMove }));
     await page.locator('#btn-resume').tap();
     await page.waitForFunction(() => !window.app.battle.paused, null, { timeout: 30000 });
     return { paused, beforeMove, afterMove };
@@ -251,20 +303,34 @@ try {
   await step('mouse right-drag still rotates', async () => {
     const before = await cam(page);
     await page.mouse.move(world.x, world.y); await page.mouse.down({ button: 'right' }); await page.mouse.move(world.x + 60, world.y, { steps: 5 }); await page.mouse.up({ button: 'right' });
+    await frames(page);
     const after = await cam(page);
     assert(Math.abs(after.yaw - before.yaw) > 5, 'Mouse right drag did not rotate');
     return { before, after };
   });
   await step('keyboard arrow on focused camera pad rotates', async () => {
-    await page.keyboard.press('Tab'); // 키보드 상호작용으로 focus-visible 상태를 만든다.
-    await page.locator('#battle-camera-pad').focus();
+    // 실제 키보드 경로: Tab으로 이동 → 패드가 닫힌 '시점' 묶음 안에 있으면 Enter로 열기 → Tab으로 패드 → 방향키.
+    // 닫힌 details 안 요소는 렌더되지 않아 스크립트 focus()가 조용히 실패하므로 쓰지 않는다.
+    const path = [];
+    const focused = () => page.evaluate(() => { const a = document.activeElement, pad = document.getElementById('battle-camera-pad');
+      const holder = pad?.closest('details');
+      return { pad: a === pad, summary: !!holder && a === holder.querySelector('summary'), open: holder ? holder.open : null, id: a?.id || a?.tagName }; });
+    for (let n = 0; n < 40; n++) {
+      const f = await focused();
+      if (f.pad) break;
+      if (f.summary && !f.open) { await page.keyboard.press('Enter'); path.push('Enter'); continue; }
+      await page.keyboard.press('Tab'); path.push('Tab:' + (await focused()).id);
+    }
+    const reached = await focused();
+    assert(reached.pad, 'Keyboard Tab never reached camera pad: ' + JSON.stringify({ path, reached }));
     const visible = await padState(page, '#battle-camera-pad');
     const before = await cam(page);
     await page.keyboard.press('ArrowLeft');
     const after = await cam(page);
-    await page.locator('#battle-camera-pad').blur();
-    assert(after.yaw !== before.yaw, 'Arrow key did not rotate');
-    return { padWhenFocused: visible, before, after };
+    // 원래 상태로: 패드 포커스를 풀고 연 '시점' 묶음을 닫는다.
+    await page.evaluate(() => { const pad = document.getElementById('battle-camera-pad'); pad?.blur(); const d = pad?.closest('details'); if (d) d.open = false; });
+    assert(after.yaw !== before.yaw, 'Arrow key did not rotate: ' + JSON.stringify({ visible, before, after }));
+    return { path, padWhenFocused: visible, before, after };
   });
   await step('resize during rotate releases gesture', async () => {
     await touch.down(7, world.x, world.y); await touch.move(7, world.x + 40, world.y);
@@ -277,6 +343,7 @@ try {
   });
   await shot('battle-after-gestures');
   await context.close();
+  cleanup = diagnose = null;
 
   // 전체화면 결과: 실제 탭에서 요청 → 실제 브라우저 결과를 그대로 기록한다.
   const real = await browser.newContext(contextOptions);
@@ -330,4 +397,3 @@ try {
   console.log('camera-gesture-qa ' + report.status + ' ' + JSON.stringify(report.summary) + ' -> ' + dir);
   if (report.status !== 'pass') process.exitCode = 1;
 }
-

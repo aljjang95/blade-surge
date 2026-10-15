@@ -164,6 +164,8 @@ export class LobbyCameraControls {
   }
   get active() {
     if (document.hidden) return false;
+    // 시점 조작은 마을 걷기 모드 전용이 아니다. 기본 선택 로비도 같은 모달·동행·전환 경계에서 받는다.
+    if (this.app.canOrbitLobby) return this.app.canOrbitLobby();
     if (this.app.canWalkHub) return this.app.canWalkHub();
     return this.app.mode === 'lobby' && this.app.meta.tab === 'home' && this.app.lobbyVisible !== false &&
       !this.app.stageStarting && !this.app.contextLost && !this.app.companionAgent?.getSnapshot().open &&
