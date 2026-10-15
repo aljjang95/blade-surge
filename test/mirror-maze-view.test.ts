@@ -169,7 +169,7 @@ test('발자국: 앞 trailN 개가 trail 점에 놓이고 i ≥ trailN 은 scale
     if (i < 6) {
       expect(readScale(v.feet, i)).toBeGreaterThan(0);
       const p = readPos(v.feet, i);
-      expect(p.x).toBeCloseTo(route.maze.trail[i * 2], 3); expect(p.z).toBeCloseTo(route.maze.trail[i * 2 + 1], 3); expect(p.y).toBeCloseTo(.03, 4);
+      expect(p.x).toBeCloseTo(route.maze.trail[i * 2], 3); expect(p.z).toBeCloseTo(route.maze.trail[i * 2 + 1], 3); expect(p.y).toBeCloseTo(.09, 4);
     } else expect(readScale(v.feet, i)).toBe(0);
   }
   // trail 이 짧아져 재계산되면 남는 칸은 다시 scale 0 이 된다.

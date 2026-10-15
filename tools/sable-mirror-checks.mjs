@@ -19,10 +19,12 @@ export const FRAME = 1 / 60;
 const EPS = 1e-6;
 /** 진짜 거울 도달(done) 스텝의 영웅 위치 여유. 규칙은 같은 스텝의 영웅 위치로 반경을 판정하므로 부동소수 여유만 둔다(PLAN 6절 2). */
 export const POSITION_SLACK = .01;
-/** running 인데 영웅이 반경 안 깊숙이(반경 − 이 값) 있으면 도달 판정이 빠진 것이다. 한 프레임 이동량(≈.15)과 후처리 밀림에 넉넉한 여유를 둔다. */
-export const INSIDE_MARGIN = .3;
-/** 환영 거울 접촉 스텝의 위치 여유: 접촉 판정 뒤 같은 스텝의 밀침·군중 후처리가 위치를 옮길 수 있다. */
-export const TOUCH_SLACK = .3;
+/** running 인데 영웅이 반경 안(반경 − 이 값)에 있으면 도달 판정이 빠진 것이다. 미궁 판정은 같은 스텝의 영웅 위치를 쓰고
+ * (Battle.update: player.update → updateExpedition), 그 뒤 위치를 옮기는 군중 후처리는 적이 없는 미궁에서 일어나지 않는다.
+ * 밀침은 속도로 다음 스텝에 적용된다. 그래서 규칙 반경 그대로에 부동소수 여유만 둔다(B08 리뷰 P2-2 교훈). 미궁이 열린 스텝만 면제한다(그 스텝은 도달을 판정하지 않는다, PLAN 3.1). */
+export const INSIDE_MARGIN = POSITION_SLACK;
+/** 환영 거울 접촉 스텝의 위치 여유: 같은 이유로 규칙 반경 그대로 + 부동소수 여유. */
+export const TOUCH_SLACK = POSITION_SLACK;
 const SETTLE_STEPS = 10;
 const CARRY_MAX_STEPS = 90;
 const ACTION_STATES = Object.freeze(['attack', 'skill', 'ult', 'dodge']);
@@ -225,7 +227,8 @@ export function checkMazeDone(rows, def) {
   const esc = def.escape, idx = rows.findIndex(r => r.mz?.ph === MAZE_PHASE_CODE.done);
   if (idx < 1) return { ok: false, reason: 'never-done' };
   const row = rows[idx], prev = rows[idx - 1];
-  const inside = rows.filter(r => r.mz?.ph === MAZE_PHASE_CODE.running && r.mz.dm <= esc.radius - INSIDE_MARGIN).map(r => ({ n: r.n, dm: r.mz.dm }));
+  const opened = rows.find(r => r.mz?.ph === MAZE_PHASE_CODE.running)?.n;
+  const inside = rows.filter(r => r.mz?.ph === MAZE_PHASE_CODE.running && r.n !== opened && r.mz.dm <= esc.radius - INSIDE_MARGIN).map(r => ({ n: r.n, dm: r.mz.dm }));
   const back = rows.slice(idx).filter(r => r.mz?.ph !== MAZE_PHASE_CODE.done).length;
   return { n: row.n, t: row.t, distance: row.mz.dm, limit: esc.radius + POSITION_SLACK, previous: prev.mz?.ph ?? null, insideNotDone: inside.slice(0, 4), insideCount: inside.length, back,
     elapsed: row.mz.el, hpAlive: row.al === 1 && row.hp > 0,

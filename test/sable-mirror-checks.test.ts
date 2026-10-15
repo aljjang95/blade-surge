@@ -119,15 +119,16 @@ class Sim {
     const dx = to.x - this.hero.x, dz = to.z - this.hero.z, d = Math.hypot(dx, dz) || 1, m = Math.min(this.speed, d);
     this.hero = { x: this.hero.x + dx / d * m, z: this.hero.z + dz / d * m };
   }
-  /** running 중 진짜 거울까지 걸어가 done. 36스텝마다 목표창 표본, 30스텝마다 발자국 갱신. */
+  /** running 중 진짜 거울까지 걸어가 done. 36스텝마다 목표창 표본, 30스텝마다 발자국 갱신.
+   * 실제 규칙처럼 반경 안에 들어간 그 스텝이 done 이다(반경 안 running 행이 없다). */
   runToReal({ stopShort = false }: any = {}) {
     let k = 0;
-    while (Math.hypot(this.hero.x - REAL.x, this.hero.z - REAL.z) > ESC.radius) {
+    while (Math.hypot(this.hero.x - REAL.x, this.hero.z - REAL.z) - this.speed > ESC.radius) {
       k++;
       this.step(() => { this.walk(REAL); if (k % 36 === 0) this.sampleDom(); if (k % 30 === 0) { this.setTrail(); this.mv.f = Math.min(10, this.mv.f + 3); } });
       if (stopShort && k > 40) return;
     }
-    this.step(() => { this.mz.ph = 2; this.sl = 0; this.mv.s = [STATE.shattered, STATE.shattered]; }, {});
+    this.step(() => { this.walk(REAL); this.mz.ph = 2; this.sl = 0; this.mv.s = [STATE.shattered, STATE.shattered]; }, {});
   }
   /** done 뒤: 거울이 부서져 0.5초 뒤 사라진다. */
   afterDone(rows = 120) {
@@ -453,6 +454,14 @@ describe('진짜 거울 도달', () => {
     const i = rows.findIndex(r => r.mz?.ph === 2) - 3;
     expect(K.checkMazeDone(tweak(rows, (_, k) => k === i, r => { r.mz.dm = 0.5; }), DEEP).ok).toBe(false);
   });
+  test('위치 여유는 규칙 반경 그대로: running 행이 반경 − .02 안이면 실패, 미궁이 열린 스텝의 행만 면제', () => {
+    const rows = deepRun().rows;
+    const i = rows.findIndex(r => r.mz?.ph === 2) - 3, open = rows.findIndex(r => r.mz?.ph === 1);
+    expect(K.checkMazeDone(tweak(rows, (_, k) => k === i, r => { r.mz.dm = ESC.radius - .02; }), DEEP).ok).toBe(false);
+    expect(K.checkMazeDone(tweak(rows, (_, k) => k === i, r => { r.mz.dm = ESC.radius + .001; }), DEEP).ok).toBe(true);
+    expect(K.checkMazeDone(tweak(rows, (_, k) => k === open, r => { r.mz.dm = 0.5; }), DEEP).ok).toBe(true);
+    expect(K.checkMazeDone(tweak(rows, (_, k) => k === open + 1, r => { r.mz.dm = 0.5; }), DEEP).ok).toBe(false);
+  });
   test('done 뒤 다시 running 이 되거나 done 이 없으면 실패', () => {
     const rows = deepRun().rows;
     const i = rows.findIndex(r => r.mz?.ph === 2) + 10;
@@ -763,8 +772,8 @@ function orderRun(over: any = {}) {
   t.step(() => { t.mz.col = 1; t.hp -= over.collapseDrop ?? 6; t.mz.lim = t.mz.lf = 8; t.flow = { fd: 8, fa: [7, 9, 8, 8] }; });
   t.mark('collapse');
   guard = 0;
-  while (Math.hypot(t.hero.x - REAL.x, t.hero.z - REAL.z) > ESC.radius && guard++ < 2000) t.step(() => t.walk(REAL));
-  t.step(() => { t.mz.ph = 2; t.sl = 0; t.mv.s = [STATE.shattered, STATE.shattered]; });
+  while (Math.hypot(t.hero.x - REAL.x, t.hero.z - REAL.z) - t.speed > ESC.radius && guard++ < 2000) t.step(() => t.walk(REAL));
+  t.step(() => { t.walk(REAL); t.mz.ph = 2; t.sl = 0; t.mv.s = [STATE.shattered, STATE.shattered]; });
   t.mark('real-reach');
   t.au = 1;
   for (let k = 0; k < 10; k++) t.step();
@@ -781,6 +790,12 @@ describe('order 프로필', () => {
     expect(a.done.ok).toBe(true);
     expect(a.result.ok).toBe(true);
     expect(a.ok).toBe(true);
+  });
+  test('환영 접촉 거리 여유는 규칙 반경 + .01: 반경 + .02 에서 늘어난 접촉은 실패', () => {
+    const rows = orderRun().rows;
+    const i = rows.findIndex(r => r.mz?.ill > 0);
+    expect(K.analyzeOrder(tweak(rows, (_, k) => k === i, r => { r.mz.di = ESC.radius + .005; }), DEEP, { result: result() }).illusion.ok).toBe(true);
+    expect(K.analyzeOrder(tweak(rows, (_, k) => k === i, r => { r.mz.di = ESC.radius + .02; }), DEEP, { result: result() }).illusion.ok).toBe(false);
   });
   test('표식이 빠지면 실패', () => {
     const rows = orderRun().rows.filter(r => r.mk !== 'center');

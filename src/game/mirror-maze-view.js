@@ -24,7 +24,8 @@ import * as THREE from 'three';
 /** @typedef {'hidden'|'real'|'illusion'|'shattered'} MirrorState */
 
 const RISE_SECONDS = .4, SHATTER_SECONDS = .5, TIME_EPS = 1e-6;
-const FOOT_DELAY = .04, FOOT_Y = .03, SPIN_SPEED = 5;
+// 발자국 높이: 바닥 타일 윗면보다 위(왕좌 바닥 고리 .08, 냉각 조작판 .10 과 같은 대역). .03 은 smoke-screens-4 에서 바닥에 묻혀 보이지 않았다.
+const FOOT_DELAY = .04, FOOT_Y = .09, SPIN_SPEED = 5;
 const FRAME_W = 1.9, FRAME_H = 3.1, FRAME_D = .22, FACE_W = 1.5, FACE_H = 2.7, FACE_D = .08;
 const GLASS_Y = FRAME_H + .8;                       // 모래시계 중심 높이(두 원뿔의 뾰족한 끝이 만나는 곳)
 const CONE_RADIUS = .42, CONE_HEIGHT = .62;
