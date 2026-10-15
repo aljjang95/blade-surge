@@ -255,6 +255,9 @@ function fakeView() {
 test('update 는 일시정지에는 view.update 를 부르지 않고, 그 밖에는 (route, dt, opts) 로 같은 opts 참조를 넘긴다', () => {
   const f = fixture(); const view: any = fakeView(); f.route.view = view;
   clear(f, 2);
+  // 방 입장(enterRoom)은 시간 진행 없이(dt 0) 뷰를 한 번 맞춘다(syncView). 그 뒤의 프레임 갱신만 센다.
+  expect(view.calls.map((c: any[]) => c[1])).toEqual([0]);
+  view.calls.length = 0;
   f.g.updateExpedition(1 / 60);
   expect(view.calls).toHaveLength(1);
   expect(view.calls[0][0]).toBe(f.route); expect(view.calls[0][1]).toBe(1 / 60);
@@ -299,4 +302,23 @@ test('Battle.stop 은 실제 정지 경로에서 뷰를 한 번 dispose 한다',
   f.g.stop();
   expect(view.disposed).toBe(1); expect(f.g.routeObjectives).toBeNull();
   f.g.stop(); expect(view.disposed).toBe(1);
+});
+
+
+// b07-cand-screens(65848a7) 실패: Battle 은 경로 목표 갱신 뒤에 방을 발견하므로, 발견한 스텝에 밸브가 한 스텝 늦게 보였다.
+// 이제 enterRoom 이 syncView 로 같은 프레임에 반영한다(시간은 진행하지 않는다).
+test('방에 들어선 바로 그 enterRoom 에서 뷰가 그 방 밸브를 그린다(시간 진행 없음)', async () => {
+  const f = fixture();
+  await f.route.prepareView(new Scene());
+  const view: any = f.route.view;
+  expect(view).toBeTruthy();
+  const t0 = view.t;
+  expect(view.state[0]).toBe(0);           // 미발견: hidden
+  f.g.enterRoom(f.world.rooms[2]);
+  expect(view.state[0]).toBe(3);           // 같은 호출 안에서 next
+  expect(view.drawCalls).toBeGreaterThan(0);
+  expect(view.t).toBe(t0);                 // 맥동 시계는 그대로
+  f.g.paused = true; f.g.enterRoom(f.world.rooms[4]);
+  expect(view.state[1]).toBe(0);           // 일시정지 중에는 뷰를 갱신하지 않는다
+  f.route.stop();
 });

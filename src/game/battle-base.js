@@ -303,6 +303,8 @@ export class Battle {
     if (!room || room === this.curRoom) return;
     this.curRoom = room;
     room.discovered = true;
+    // 방 발견은 경로 목표 갱신 뒤에 일어난다. 발견을 읽는 목표 뷰(역류 밸브)가 같은 프레임에 그 방을 그리게 맞춘다.
+    this.routeObjectives?.syncView?.(this);
     if (room.type === ROOM_TYPE.BOSS && !this.bossFound) { this.bossFound = true; this.ui.toast('보스의 기척이 느껴진다…', 'red'); audio.waveHorn({ vol: 0.55, boss: true }); audio.voice('boss_found'); }
     if (room.cleared || room.spawned) return;
     room.spawned = true;

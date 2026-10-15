@@ -134,6 +134,12 @@ export class RouteObjectives {
       this.view.update(this, dt, this.#opts);
     }
   }
+  /** 스텝 안에서 규칙 갱신 뒤 바뀐 표시 입력(방 발견)을 시간 진행 없이 뷰에 반영한다(BUNDLE-07 b07-cand-screens 한 스텝 지연). @param {any} game */
+  syncView(game) {
+    if (!this.view || game?.paused) return;
+    this.#opts.reduced = !!game.app?.reducedMotion?.matches;
+    this.view.update(this, 0, this.#opts);
+  }
   /** @param {Game} game @param {number} dt */
   #updateRules(game, dt) {
     if (this.#closed || this.#report || !game.active || game.paused || !game.player?.alive ||
