@@ -4,6 +4,7 @@ import { CoolingValves } from './cooling-valves.js';
 import { NightglassRecords } from './nightglass-records.js';
 import { AstralConstellations } from './astral-constellations.js';
 import { AstralDeepConstellations } from './astral-deep-constellations.js';
+import { AstralRingConstellations } from './astral-ring-constellations.js';
 import { FalseThrones } from './false-thrones.js';
 import { CometOrbits } from './comet-orbits.js';
 import { CometDeepOrbits } from './comet-deep-orbits.js';
@@ -19,7 +20,7 @@ import { defineVerdigrisDeepAltars } from './verdigris-deep-altars.js';
 export function createRouteObjectives(stage, world) {
   const def = routeObjectiveForStage(stage);
   if (!def) return null;
-  if ('kind' in def && def.kind === 'constellations') return new AstralConstellations(def, world);
+  if ('kind' in def && def.kind === 'constellations') return def.ring ? new AstralRingConstellations(def, world) : new AstralConstellations(def, world);
   if ('kind' in def && def.kind === 'deep-constellations') return new AstralDeepConstellations(def, world);
   if ('kind' in def && def.kind === 'records') return new NightglassRecords(def, world);
   if ('kind' in def && def.kind === 'thrones') return new FalseThrones(def, world);
