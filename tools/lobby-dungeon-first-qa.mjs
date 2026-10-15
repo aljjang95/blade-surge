@@ -137,6 +137,16 @@ try {
         row.itemFixture = fixture;
         check('item fixture crafted with real economy', fixture.made.length >= 4, fixture);
         await act('#meta .bottomnav [data-tab="heroes"]'); await settle(1500);
+        // 소프트웨어 렌더에서는 착용 모습(R3F)과 장비 그림이 늦게 준비된다. 캡처 전에 실제 준비를 기다리고 결과를 기록한다.
+        const wardrobe = await page.waitForFunction(() => {
+          const canvas = document.querySelector('#hero-wardrobe canvas'), r = canvas?.getBoundingClientRect();
+          const imgs = [...document.querySelectorAll('#tab-heroes img')].filter(img => img.getBoundingClientRect().width > 0);
+          return window.app.wardrobe?.instance && r && r.width > 100 && r.height > 100 && imgs.every(img => img.complete && img.naturalWidth > 0)
+            ? { canvas: [Math.round(r.width), Math.round(r.height)], images: imgs.length } : null;
+        }, null, { timeout: 90000 }).then(h => h.jsonValue()).catch(() => null);
+        row.wardrobeReady = wardrobe;
+        check('equipped hero 3D preview and item images ready before capture', !!wardrobe, wardrobe);
+        await settle(600);
         await shot('10-heroes-equipped');
         const surfaces = await page.evaluate((made) => made.map(({ uid, id }) => {
           const slot = document.querySelector('.hs-slot[data-uid="' + uid + '"] img');

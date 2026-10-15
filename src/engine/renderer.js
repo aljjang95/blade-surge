@@ -285,7 +285,10 @@ export class Renderer {
       if (!walking) desired.y += this.lobbySightline.solve(desired,rig.target,this.lobbyOccluders,performance.now());
       const lobbyFov = 46 + (window.innerWidth < window.innerHeight ? 14 : 0);
       if (cam.fov !== lobbyFov) { cam.fov = lobbyFov; cam.updateProjectionMatrix(); }
-      rig.pos.lerp(desired, 1 - Math.exp(-realDt * (walking ? 6 : 3)));
+      // 부팅·전투에서 로비로 바뀐 첫 프레임은 바로 자리 잡는다. 전투 좌표의 카메라에서 보간하면 광장을 가로질러 나무를 지난다.
+      // 로비 안의 시점·걷기 전환은 계속 부드럽게 보간한다.
+      if (!this._rigInLobby) rig.pos.copy(desired);
+      else rig.pos.lerp(desired, 1 - Math.exp(-realDt * (walking ? 6 : 3)));
       cam.position.copy(rig.pos);
       // Editorial offset reserves the right-hand destination panel, without moving the hero.
       const editorialShift = walking ? { x: 0, z: 0 } : lobbyCompositionShift(p, this._width >= this._height);
@@ -306,6 +309,7 @@ export class Renderer {
     }
     // Arena supplies actual hero coordinates before this final camera update.
     this.battleOcclusion.update(cam.position, rig.mode !== 'lobby');
+    this._rigInLobby = rig.mode === 'lobby';
     // 포스트 유니폼 감쇠
     this.flash = Math.max(0, this.flash - realDt * 3.5);
     this.aberr = Math.max(0, this.aberr - realDt * 1.6);

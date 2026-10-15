@@ -92,7 +92,7 @@ function WardrobeView({ app, id, equipment }) {
       <FitCamera frame={frame}/><ambientLight intensity={1.3}/><directionalLight position={[3,5,4]} intensity={2.5}/><directionalLight position={[-3,2,-2]} color="#97d9d2" intensity={1.6}/>
       <Character app={app} id={id} equipment={equipment} yaw={yaw} reduced={reduced} onFit={setFrame}/>
       <mesh rotation={[-Math.PI/2,0,0]} position={[0,-.025,0]}><circleGeometry args={[1.25,48]}/><meshStandardMaterial color="#365849" roughness={.9}/></mesh>
-    </Canvas></div>
+    </Canvas>{!frame && <p className="wardrobe-loading" role="status">착용 모습을 불러오는 중</p>}</div>
     <div className="wardrobe-controls"><button aria-label="착용 모습 왼쪽 회전" onClick={()=>setYaw(yaw-Math.PI/4)}>↶</button><button onClick={()=>setYaw(0)}>정면</button><button aria-label="착용 모습 오른쪽 회전" onClick={()=>setYaw(yaw+Math.PI/4)}>↷</button></div>
     <p className="wardrobe-caption">{armor?armor.name:'기본 의상'}<br/>장착 즉시 외형 반영</p>
   </div>;
