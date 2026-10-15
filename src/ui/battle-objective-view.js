@@ -22,7 +22,30 @@ function mainObjectiveView(battle) {
       const title = kind === 'constellations' ? '별자리 복원' : kind === 'records' ? '기록 복원'
         : kind === 'thrones' ? '가짜 왕좌 파괴'
         : kind === 'orbits' ? '궤도 고리 정렬'
+        : kind === 'deep-orbits' ? '궤도 고리 연결'
         : kind === 'cooling' ? route.copy?.title || '냉각선 복구' : `${route.noun || '종문'} ${route.verb || '조율'}`;
+      if (kind === 'deep-orbits') {
+        // 순서가 자유라 다음 고리는 영웅이 있는 활성 고리 또는 첫 미연결 고리다. 판정 값은 컨트롤러가 정한 것만 읽는다.
+        const next = route.current || gate;
+        const values = { progress: count(route.progress), total: route.gates.length, roomId: next.room.discovered ? next.room.id : null };
+        // 남은 시간은 올림(0.1초)이라 시계가 남아 있으면 0.0을 보이지 않는다.
+        const left = `${(Math.ceil(count(next.clock) * 10 - 1e-9) / 10).toFixed(1)}`;
+        if (!next.room.discovered) return step(title, '다음 구역을 찾아 이동', values);
+        const offBy = () => route.offBy(next);
+        switch (next.phase) {
+          case 'ready': return step(title, `룬석을 밀면 붕괴 ${route.def.collapseSeconds}초 시작 · 별까지 ${offBy()}°`, values);
+          case 'collapse': return step(title, `붕괴 ${left}초 · 룬석을 별에 맞추기 · ${offBy()}°`, values);
+          case 'shelter': return step(title, `붕괴 ${left}초 · 중심 쉼터 연결`,
+            { ...values, hold: seconds(next.connectT), holdTotal: count(route.def.connectSeconds) });
+          case 'storm': {
+            if (!next.present) return step(title, '유성 폭풍 중단 · 고리 구역으로 돌아가기', values);
+            const shots = count(route.def.storm?.shelters?.length) || 3, k = Math.min(shots, count(next.stormIndex) + 1);
+            return step(title, next.stormWarn ? `유성 폭풍 ${k}/${shots} · 빈 원으로 이동` : `유성 폭풍 ${k}/${shots} · 빈 원 안에서 대기`, values);
+          }
+          case 'connected': return step(title, '고리 연결 완료', values);
+          default: return step(title, '이 구역의 적을 먼저 처치', values);
+        }
+      }
       if (kind === 'orbits') {
         // 순서가 자유라 다음 고리는 아직 정렬하지 않은 첫 고리다. 남은 각도만 보여준다.
         const next = route.current || gate;
