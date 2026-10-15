@@ -44,7 +44,11 @@ function bandOf(i: number, ck: number) {
  * 페이지 프로브가 남기는 행을 같은 규칙으로 만들어 내는 모의 세션. 한 스텝에 행 하나, 표식은 같은 스텝의 행을 하나 더 넣는다.
  * 규칙(포자 폭발·띠 피해·범람·돌파)은 PLAN 3.1 의 문장대로 모의한다. 판정 함수가 이 모의의 정상 경로를 통과하고 깨뜨린 경로를 잡는지 본다.
  */
+/** 영웅 방어로 줄어든 실제 체력 감소 비(smoke-cand-order-1 기사 관측 .038 / .08). 규칙이 넘긴 값(hr)과 실제 감소를 따로 본다. */
+const MIT = .476;
+
 class Sim {
+  hrNow: number[] = [];
   rows: any[] = []; toasts: any[] = []; n = 0; hero = { x: 0, z: 0 }; hp = 100; pr = 0; lm = 0; moveT = 0; bu = 0; hd = 0; sl = 1; au = 1; ps = 'move'; rm = 0; rem = 7;
   g: any[]; ch: any; wrongT = 0; cooldown = 0; hit = new Set<string>(); fd = 18; pendingOpen = false; pendingMove = false; domNext: string | null = null; autoDom = false;
   constructor(gateRooms: number[] = DEF.gates.map((x: any) => x.roomId)) {
@@ -61,8 +65,11 @@ class Sim {
         const b = bandOf(i, c.ck); return { x: BAND_X(i), h: CH.bandHalf, s: live ? b.s : 0, a: b.a, c: live ? b.c : -1 }; }) }, ...extra };
     if (c.fdNow !== undefined) { row.ch.fd = c.fdNow; c.fdNow = undefined; }
     if (this.domNext) { row.dom = this.domNext; this.domNext = null; }
+    if (this.hrNow.length) { row.hr = this.hrNow; this.hrNow = []; }
     this.rows.push(row); return row;
   }
+  /** 규칙이 최대 체력 × raw 를 hurt 에 넘기고 방어로 MIT 배만 깎인다. */
+  hurt(raw: number) { this.hrNow.push(raw); this.hp -= raw * 100 * MIT; }
   toast(msg: string, kind = 'gold') { this.toasts.push({ n: this.n, t: this.n * FRAME, msg, kind }); }
   inRoom7(x: number, z: number) { return x >= SETUP.minX && x <= SETUP.maxX && z >= SETUP.minZ && z <= SETUP.maxZ; }
   step(extra: any = {}) {
@@ -72,7 +79,7 @@ class Sim {
     this.cooldown = Math.max(0, this.cooldown - FRAME);
     const j = this.g.findIndex((q, k) => k > this.pr && q.rd && !q.at && Math.hypot(this.hero.x - room(q.id).x, this.hero.z - room(q.id).z) <= DEF.radius);
     this.wrongT = j >= 0 && this.cooldown <= 0 ? this.wrongT + FRAME : 0;
-    if (j >= 0 && this.wrongT + 1e-9 >= DEF.wrongStep.seconds) { this.wrongT = 0; this.cooldown = DEF.wrongStep.cooldown; this.bu++; this.hp -= DEF.wrongStep.damage * 100; }
+    if (j >= 0 && this.wrongT + 1e-9 >= DEF.wrongStep.seconds) { this.wrongT = 0; this.cooldown = DEF.wrongStep.cooldown; this.bu++; this.hurt(DEF.wrongStep.damage); }
     const c = this.ch;
     if (this.pendingOpen) { c.ph = 1; c.ck = 0; this.pendingOpen = false; this.toast(TXT.open); }
     else if (c.ph === 1 || c.ph === 2) {
@@ -88,14 +95,14 @@ class Sim {
         CH.bands.forEach((_: number, i: number) => {
           const b = bandOf(i, c.ck), key = i + ':' + b.c;
           if (b.s === 2 && this.inRoom7(this.hero.x, this.hero.z) && Math.abs(this.hero.x - BAND_X(i)) <= CH.bandHalf && !this.hit.has(key)) {
-            this.hit.add(key); c.sh++; this.hp -= CH.damage * 100; this.toast(TXT.hit, 'red');
+            this.hit.add(key); c.sh++; this.hurt(CH.damage); this.toast(TXT.hit, 'red');
           }
         });
       }
       if (c.ph === 2 && this.inRoom7(this.hero.x, this.hero.z) && this.hero.x >= SETUP.finishX && c.el > 0) {
         c.ph = 3; this.sl = 0; this.toast(TXT.done);
       } else if (c.ph === 2 && c.lf <= 1e-9) {
-        c.fl++; this.hp -= CH.floodDamage * 100; c.lim = ceilLimit(this.fd); c.lf = c.lim; c.fdNow = this.fd; this.toast(TXT.flood(c.lim), 'red');
+        c.fl++; this.hurt(CH.floodDamage); c.lim = ceilLimit(this.fd); c.lf = c.lim; c.fdNow = this.fd; this.toast(TXT.flood(c.lim), 'red');
       }
     }
     if (this.autoDom && c.ph === 2 && this.n % 40 === 0) this.domNext = runDom(c.lf);
@@ -415,9 +422,19 @@ describe('띠 위상·피격·범람', () => {
   test('피해 비율이 6% 가 아니면 strict 에서 실패한다', () => {
     const s = manualChannel();
     expect(K.checkChannelHits(s.rows, DEF, SETUP, { strict: true }).ok).toBe(true);
-    const i = s.rows.findIndex((r: any) => r.mk === 'hit1' );
-    const cheap = mut(s.rows, rows => { for (let k = i - 1; k < rows.length; k++) rows[k].hp += 5; });
-    expect(K.checkChannelHits(cheap, DEF, SETUP, { strict: true }).bad.map((b: any) => b.kind)).toContain('damage');
+    let i = s.rows.findIndex((r: any) => r.mk === 'hit1' );
+    const kinds = (rows: any[]) => K.checkChannelHits(rows, DEF, SETUP, { strict: true }).bad.map((b: any) => b.kind);
+    // 표식 행은 같은 스텝의 두 번째 행이다. 피해가 기록된 스텝 행(hr 이 있는 마지막 행)을 고친다.
+    while (i > 0 && !Array.isArray(s.rows[i].hr)) i--;
+    expect(s.rows[i].hr).toEqual([CH.damage]);
+    // 규칙이 넘긴 값이 6% 가 아니다.
+    expect(kinds(mut(s.rows, rows => { rows[i].hr = [.05]; }))).toContain('damage');
+    // hurt 기록이 없다(관측 누락).
+    expect(kinds(mut(s.rows, rows => { delete rows[i].hr; }))).toContain('damage');
+    // 실제 체력이 줄지 않았다(무적 등).
+    expect(kinds(mut(s.rows, rows => { const d = rows[i - 1].hp - rows[i].hp; for (let k = i; k < rows.length; k++) rows[k].hp += d; }))).toContain('damage');
+    // 실제 감소가 6% 를 넘는다(같은 스텝의 다른 피해).
+    expect(kinds(mut(s.rows, rows => { for (let k = i; k < rows.length; k++) rows[k].hp -= 5; }))).toContain('damage');
   });
   test('범람은 제한 시간이 바닥난 스텝에만, 재계산한 limit 으로 일어난다', () => {
     const s = manualChannel();
@@ -630,16 +647,21 @@ describe('order: 비점등 제단 포자 폭발', () => {
     expect(o.ok).toBe(true);
     expect(o.lit.moved).toBe(true);
     expect(o.burst.gate).toBe(2);
-    expect(o.burst.ratio).toBeCloseTo(.08, 5);
+    expect(o.burst.raw).toEqual([.08]);
+    expect(o.burst.ratio).toBeCloseTo(.08 * MIT, 5);
     expect(o.burst.dwellBefore).toBeGreaterThanOrEqual(1);
     expect(o.dwell.seconds).toBeGreaterThanOrEqual(2);
     expect(s.rows.at(-1).g[2].at).toBe(0);
   });
   test('폭발 피해가 8% 가 아니면 실패한다', () => {
     const s = orderRun();
-    const i = s.rows.findIndex((r: any) => r.mk === 'burst1');
-    const light = mut(s.rows, rows => { for (let k = i - 1; k < rows.length; k++) rows[k].hp += 5; });
-    expect(K.analyzeOrder(light, DEF, { rooms: ROOMS }).burst.ok).toBe(false);
+    const m = s.rows.findIndex((r: any) => r.mk === 'burst1');
+    let i = m;
+    while (i > 0 && !Array.isArray(s.rows[i].hr)) i--;
+    expect(s.rows[i].hr).toEqual([DEF.wrongStep.damage]);
+    expect(K.analyzeOrder(mut(s.rows, rows => { rows[i].hr = [.06]; }), DEF, { rooms: ROOMS }).burst.ok).toBe(false);
+    expect(K.analyzeOrder(mut(s.rows, rows => { delete rows[i].hr; }), DEF, { rooms: ROOMS }).burst.ok).toBe(false);
+    expect(K.analyzeOrder(mut(s.rows, rows => { for (let k = i; k < rows.length; k++) rows[k].hp -= 5; }), DEF, { rooms: ROOMS }).burst.ok).toBe(false);
   });
   test('1초가 되기 전에 폭발했다고 읽히면 실패한다', () => {
     const s = orderRun();
