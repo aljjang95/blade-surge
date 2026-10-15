@@ -39,6 +39,10 @@ export class RouteObjectives {
   #wrongT = 0;
   #burstCooldown = 0;
   #bursts = 0;
+  /** 뷰에 넘기는 옵션 객체(재사용, 프레임 루프 무할당). */
+  #opts = { reduced: false };
+  /** 역류 밸브 물줄기 뷰(def.view === 'backflow-valves' 이고 뷰 파일이 준비됐을 때만). 없어도 규칙은 그대로다. */
+  view = null;
 
   /** @param {NonNullable<ReturnType<typeof routeObjectiveForStage>>} def @param {World} world */
   constructor(def, world) {
@@ -65,7 +69,16 @@ export class RouteObjectives {
   get bursts() { return this.#bursts; }
   autoRoom() { return this.#closed || this.#report ? null : this.gates[this.#progress]?.room || null; }
   interrupt() { this.#hold = 0; }
-  stop() { this.#closed = true; this.interrupt(); }
+  stop() { this.#closed = true; this.interrupt(); this.view?.dispose(); this.view = null; }
+
+  /** 연출 전용: def.view 가 있는 정의에서만 뷰를 만든다. 가져오기·생성 실패는 규칙에 영향을 주지 않는다. @param {any} scene */
+  async prepareView(scene) {
+    if (this.def.view !== 'backflow-valves') return;
+    try {
+      const { BackflowValveView } = await import('./backflow-valve-view.js');
+      if (!this.#closed && !this.view) this.view = new BackflowValveView(scene, this);
+    } catch { /* 뷰가 없거나 만들 수 없어도 규칙은 그대로 동작한다. */ }
+  }
 
   /** @param {Room} room @param {number} count */
   prepareRoom(room, count) {
@@ -113,6 +126,11 @@ export class RouteObjectives {
   }
   /** @param {Game} game @param {number} dt */
   update(game, dt) {
+    // 뷰는 규칙의 조기 반환(보스 처치·결과 등)과 상관없이 마지막 상태를 이어서 그린다. 일시정지에는 갱신하지 않는다.
+    if (this.view && !game.paused && Number.isFinite(dt) && dt > 0) {
+      this.#opts.reduced = !!game.app?.reducedMotion?.matches;
+      this.view.update(this, dt, this.#opts);
+    }
     if (this.#closed || this.#report || !game.active || game.paused || !game.player?.alive ||
         game.bossDefeated || game.world !== this.world) { this.interrupt(); return; }
     if (!Number.isFinite(dt) || dt <= 0) return;
