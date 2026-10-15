@@ -21,6 +21,17 @@ const ECLIPSE_OBJECTIVE = `${ECLIPSE_VALVES.noun} ${ECLIPSE_LAST}곳을 순서�
 // 길은 한 줄이라 마지막 번호의 밸브(방 5)는 바로 앞 번호의 밸브(방 7)로 가는 길에 먼저 지나친다.
 const ECLIPSE_TACTIC = `각 밸브 구역의 적을 처치한 뒤(정예방은 증원 ${ECLIPSE_REINFORCEMENTS}회까지) ${ECLIPSE_STEPS} 순서로 청록 빛 안에서 각각 연속 ${ECLIPSE_VALVES.holdSeconds}초간 밸브를 ${ECLIPSE_VALVES.verb}하세요. ${ECLIPSE_LAST}번 밸브는 ${ECLIPSE_LAST - 1}번으로 가는 길에 먼저 지나치니 차례를 기다렸다가, ${ECLIPSE_LAST - 1}번을 ${ECLIPSE_VALVES.verb}한 뒤 지나온 물길로 되돌아가 ${ECLIPSE_VALVES.verb}하세요. 밸브 ${ECLIPSE_LAST}곳과 모든 구역을 정화하면 보스 봉인이 풀립니다. ${ENEMIES.obsidian_hydra.tactic}`;
 
+// 재벼림 제련소 심층 심장로 문구의 숫자·번호 순서는 규칙 정의(ROUTE_OBJECTIVES.ashforge_deep)에서 계산한다(BUNDLE-08).
+// 정예방 수·증원 횟수는 아래 ashforge_catacomb 의 레이아웃·mechanics 와 같은 값이며 계약 테스트가 일치를 검사한다.
+const ASHFORGE_FURNACES = ROUTE_OBJECTIVES.ashforge_deep;
+const ASHFORGE_ELITES = 2;
+const ASHFORGE_REINFORCEMENTS = 2;
+const ASHFORGE_COPY = ASHFORGE_FURNACES.copy;
+const ASHFORGE_COUNT = ASHFORGE_FURNACES.gates.length;
+const ASHFORGE_STEPS = ASHFORGE_FURNACES.gates.map((_, i) => `${i + 1}번`).join(' → ');
+const ASHFORGE_OBJECTIVE = `${ASHFORGE_COPY.unit} ${ASHFORGE_COUNT}곳을 ${ASHFORGE_COPY.vent} 뒤 순서대로 ${ASHFORGE_COPY.doneVerb}하고 정예방 ${ASHFORGE_ELITES}곳의 증원 각 ${ASHFORGE_REINFORCEMENTS}회 격파 → 모든 구역 정화 → 잿빛 재벼림 거수 처치`;
+const ASHFORGE_TACTIC = `각 ${ASHFORGE_COPY.unit} 구역의 적을 처치한 뒤(정예방은 증원 ${ASHFORGE_REINFORCEMENTS}회까지) ${ASHFORGE_STEPS} 순서로 ${ASHFORGE_COPY.doneVerb}하세요. ${ASHFORGE_COPY.vent}가 한 번 지나가면 조작판이 반대편으로 옮겨 가 열립니다. 다음 ${ASHFORGE_COPY.warning} 전까지 그 청록 조작판에서 행동 없이 ${ASHFORGE_FURNACES.holdSeconds}초 유지하면 ${ASHFORGE_COPY.unit}가 식고 사슬에 묶인 불씨가 풀려납니다. 예고·충격파 중이거나 이탈·공격·회피·피격·일시정지하면 유지 시간이 초기화됩니다. ${ASHFORGE_COPY.unit} ${ASHFORGE_COUNT}곳과 모든 구역을 정화하면 보스 봉인이 풀립니다. `;
+
 // Authored follow-up expeditions. The base material runs keep their original
 // price and rewards; these routes unlock at explicit campaign milestones.
 export const EXPEDITION_DEPTHS = [
@@ -129,8 +140,8 @@ export const EXPEDITION_DEPTHS = [
     id: 'ashforge_catacomb', depth: 'deep', name: '재벼림 제련소 · 심장로', unlockCode: '5-10', minLevel: 3,
     energy: 7, chapter: 2, stage: 7, scale: 16, bossEnemy: 'ash_colossus', bossHp: 27600,
     description: '재벼림 제련소의 심장로에 잿빛 거수의 사슬에 묶인 불씨가 남아 있습니다.',
-    objective: '정예방 2곳의 증원 각 2회 격파 → 모든 구역 정화 → 잿빛 재벼림 거수 처치', bossName: '심장로를 삼킨 잿빛 거수', art: '/img/encounters/boss_ash_colossus.webp',
-    tactic: `각 정예방에서 적과 2회 증원을 격파하고 모든 구역을 정화하세요. ${ENEMIES.ash_colossus.tactic}`,
+    objective: ASHFORGE_OBJECTIVE, bossName: '심장로를 삼킨 잿빛 거수', art: '/img/encounters/boss_ash_colossus.webp',
+    tactic: `${ASHFORGE_TACTIC}${ENEMIES.ash_colossus.tactic}`,
     layout: { spacing: [34, 25], size: [24, 17], width: 8,
       cells: [[0,0],[1,0],[2,0],[2,1],[3,1],[3,0],[4,0],[5,0],[6,0]],
       edges: [[0,1],[1,2],[2,3],[2,5],[3,4],[4,6],[5,6],[6,7],[7,8]],
