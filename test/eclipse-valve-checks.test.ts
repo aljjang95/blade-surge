@@ -411,6 +411,32 @@ describe('뷰(checkView·checkLook)', () => {
     row.hd = .4;
     expect(K.expectedLook(row, 1)).toBe('holding');
   });
+  // smoke-deep-auto-1 오탐 수리: 실제 뷰는 바닥 고리도 반투명이고, 차례 고리는 청록을 흰색 쪽으로 밝힌 색(0xbff1ed)이다.
+  const realLike = (vis: any, row: any) => {
+    vis.meshes[0].name = 'TLL_BackflowValvePillars';
+    vis.meshes[1].name = 'TLL_BackflowValveStreams';
+    vis.meshes[2].name = 'TLL_BackflowValveRings'; vis.meshes[2].transparent = true;
+    for (let i = 0; i < row.g.length; i++) if (K.expectedLook(row, i) === 'next') vis.meshes[2].inst[i].c = 0xbff1ed;
+  };
+  test('실제 뷰 모양(반투명 고리·밝힌 차례 고리)은 통과한다', () => {
+    const v = K.checkView(withViews(deepSession(), DEEP, realLike).rows, DEEP);
+    expect(v.ok).toEqual({ count: true, look: true });
+  });
+  test('실제 뷰 모양에서도 봉인된 밸브의 물줄기가 보이면 실패하고, 반투명 고리는 물줄기로 세지 않는다', () => {
+    const s = withViews(deepSession(), DEEP, (vis, row) => { realLike(vis, row); if (row.g[0].at === 1) vis.meshes[1].inst[0].s = [1, 1, 1]; });
+    const v = K.checkView(s.rows, DEEP);
+    expect(v.ok.look).toBe(false);
+    expect(v.mismatched[0].problems.map((p: any) => p.kind)).toEqual(['stream-visible-after-seal']);
+  });
+  test('차례 고리가 회색이거나 금색이면 밝힌 청록 면제를 받지 못하고 실패한다', () => {
+    for (const bad of [0x8394ac, 0xffd060]) {
+      const s = withViews(deepSession(), DEEP, (vis, row) => {
+        realLike(vis, row);
+        for (let i = 0; i < row.g.length; i++) if (K.expectedLook(row, i) === 'next') vis.meshes[2].inst[i].c = bad;
+      });
+      expect(K.checkView(s.rows, DEEP).ok.look).toBe(false);
+    }
+  });
 });
 
 // ---------- order 프로필 ----------

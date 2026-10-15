@@ -192,12 +192,25 @@ export function expectedLook(row, i) {
 const hexRgb = hex => [(hex >> 16 & 255) / 255, (hex >> 8 & 255) / 255, (hex & 255) / 255];
 const colorNear = (a, b) => Number.isFinite(a) && Number.isFinite(b) && Math.hypot(...hexRgb(a).map((v, k) => v - hexRgb(b)[k])) <= COLOR_TOLERANCE;
 const scaleOf = inst => inst?.s ? Math.max(...inst.s) : null;
+/** 차례(next) 고리는 뷰가 cueColor 를 흰색 쪽으로 밝혀 쓴다(PLAN 3.2 '밝은 청록'). cueColor 를 흰색 쪽으로 t ∈ [0, .6] 섞은 색만 면제한다. */
+const nearBrightened = (got, cue) => {
+  for (let t = 0; t <= .6 + 1e-9; t += .05) {
+    const c = hexRgb(cue).map(v => v + (1 - v) * t);
+    if (Number.isFinite(got) && Math.hypot(...hexRgb(got).map((v, k) => v - c[k])) <= COLOR_TOLERANCE / 4) return true;
+  }
+  return false;
+};
+/** 물줄기 메시: 이름에 stream 이 있는 메시. 이름으로 찾지 못하면 반투명 메시로 대신한다(바닥 고리도 반투명이라 이름이 우선이다 — smoke-deep-auto-1 오탐). */
+const streamMeshes = meshes => {
+  const named = meshes.filter(m => /stream/i.test(m.name || ''));
+  return named.length ? named : meshes.filter(m => m.transparent);
+};
 /** 렌더된 인스턴스 스냅샷을 기대 모습과 맞춰 본다. 반환: { ok, observable, problems, ringColor }. 인스턴스를 못 찾으면 observable false. */
 export function checkLook(vis, row, def) {
   const n = def.gates.length;
   const meshes = (vis?.meshes || []).filter(m => m.count === n && Array.isArray(m.inst) && m.inst.length >= n);
   if (!vis?.found || meshes.length === 0) return { ok: false, observable: false, problems: [{ kind: 'unobservable', by: vis?.by ?? null }], ringColor: 'unobservable' };
-  const streams = meshes.filter(m => m.transparent);
+  const streams = streamMeshes(meshes);
   const problems = [];
   let ringChecked = false;
   const colored = meshes.filter(m => m.inst.some(x => x.c !== null && x.c !== undefined));
@@ -210,12 +223,13 @@ export function checkLook(vis, row, def) {
     if (!streams.length) problems.push({ gate: i, want, kind: 'no-stream-mesh' });
     else if (want === 'sealed') {
       if (streams.some(m => scaleOf(m.inst[i]) > SCALE_EPS)) problems.push({ gate: i, want, kind: 'stream-visible-after-seal' });
-      if (!meshes.some(m => !m.transparent && scaleOf(m.inst[i]) > SCALE_EPS)) problems.push({ gate: i, want, kind: 'nothing-left-after-seal' });
+      if (!meshes.some(m => !streams.includes(m) && scaleOf(m.inst[i]) > SCALE_EPS)) problems.push({ gate: i, want, kind: 'nothing-left-after-seal' });
     } else if (streams.every(m => !(scaleOf(m.inst[i]) > SCALE_EPS))) problems.push({ gate: i, want, kind: 'stream-hidden' });
     if (colored.length) {
       ringChecked = true;
       const wantColor = want === 'sealed' ? RING_COLOR.sealed : want === 'waiting' ? RING_COLOR.waiting : def.cueColor;
-      if (!colored.some(m => colorNear(m.inst[i].c, wantColor))) problems.push({ gate: i, want, kind: 'ring-color', got: colored.map(m => m.inst[i].c), wantColor });
+      const okColor = colored.some(m => colorNear(m.inst[i].c, wantColor) || (want === 'next' && nearBrightened(m.inst[i].c, def.cueColor)));
+      if (!okColor) problems.push({ gate: i, want, kind: 'ring-color', got: colored.map(m => m.inst[i].c), wantColor });
     }
   }
   return { ok: problems.length === 0, observable: true, problems, ringColor: ringChecked ? 'checked' : 'unobservable' };
