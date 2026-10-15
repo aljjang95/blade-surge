@@ -62,6 +62,20 @@ const VERDIGRIS_COUNT = VERDIGRIS_ALTARS.gates.length;
 const VERDIGRIS_OBJECTIVE = `${VERDIGRIS_ALTARS.noun} ${VERDIGRIS_COUNT}곳을 뿌리 빛이 옮겨 가는 순서대로 ${VERDIGRIS_ALTARS.verb}하고 정예방 ${VERDIGRIS_ELITES}곳의 증원 각 ${VERDIGRIS_REINFORCEMENTS}회 격파 → 모든 구역 정화 → 포자 수로 돌파 → 녹청 수호자 처치`;
 const VERDIGRIS_TACTIC = `각 제단 구역의 적을 처치한 뒤(정예방은 증원 ${VERDIGRIS_REINFORCEMENTS}회까지) 지금 뿌리 빛이 켜진 제단 중심에서 연속 ${VERDIGRIS_ALTARS.holdSeconds}초간 ${VERDIGRIS_ALTARS.verb}하세요. 제단 번호는 보이지 않고, ${VERDIGRIS_ALTARS.verb}할 때마다 뿌리 빛이 길 순서와 다른 다음 제단으로 옮겨 갑니다. 적을 처치했지만 빛이 꺼진 제단 중심에 ${VERDIGRIS_ALTARS.wrongStep.seconds}초 머물면 포자가 터져 피해를 받습니다. ${VERDIGRIS_ALTARS.noun} ${VERDIGRIS_COUNT}곳과 모든 구역을 ${VERDIGRIS_ALTARS.verb}하면 보스방 앞 정예방에 포자 수로가 열립니다. 서쪽 입구에서 제한 시간 안에 포자 물결이 지나간 틈을 타 동쪽 출구로 건너면 보스 봉인이 풀립니다. 물결에 맞으면 피해를 입고, 시간이 다 되면 수로가 범람해 피해를 입은 뒤 시간을 다시 잽니다. `;
 
+// 성운 첨탑 심층 성좌 4곳·외곽 고리 문구의 숫자는 규칙 정의(ROUTE_OBJECTIVES.astral_deep)에서 계산한다(BUNDLE-12).
+// 정예방 수·증원 횟수는 아래 astral_leviathan_spire 의 레이아웃·mechanics 와 같은 값이며 계약 테스트가 일치를 검사한다.
+// 이 원정에는 전술 공략(conquest)이 없고 전술 공략 실행은 경로 목표를 쓰지 않으므로(routeObjectiveForStage null) conquestTactic 은 두지 않는다.
+const ASTRAL_DEEP = ROUTE_OBJECTIVES.astral_deep;
+const ASTRAL_ELITES = 2;
+const ASTRAL_REINFORCEMENTS = 1;
+const ASTRAL_COUNT = ASTRAL_DEEP.gates.length;
+const ASTRAL_RING = ASTRAL_DEEP.ring;
+const ASTRAL_MARKS = ASTRAL_RING.marks.length;
+// 복원 문구는 목표·전술에서 한 문장으로만 쓴다(계약 테스트가 이 정확한 문구만 면제한다).
+const ASTRAL_RESTORE = `성좌 ${ASTRAL_COUNT}곳을 순서대로 복원`;
+const ASTRAL_OBJECTIVE = `${ASTRAL_RESTORE}하고 정예방 ${ASTRAL_ELITES}곳의 증원 각 ${ASTRAL_REINFORCEMENTS}회 격파 → 모든 구역 정화 → 성좌 외곽 고리 정화 → 레비아탄 처치`;
+const ASTRAL_TACTIC = `각 구역의 적을 처치한 뒤(정예방은 증원 ${ASTRAL_REINFORCEMENTS}회까지) ${ASTRAL_RESTORE}하세요. 모래시계 단서를 ${ASTRAL_DEEP.readSeconds}초 읽고 같은 문자·도형 판에서 ${ASTRAL_DEEP.holdSeconds}초 유지하면 복원됩니다. 오답은 피해 없이 판 밖으로 나와 다시 읽으며, 공격·회피·피격·전투 재개·일시정지하면 현재 선택이 초기화됩니다. 첫 판은 막다른 길 끝이라 두 번째 판을 먼저 지나치니, 차례가 올 때까지 두 번째 판은 정리만 해 두고 첫 판을 복원한 뒤 돌아와 이으세요. ${ASTRAL_COUNT}곳과 모든 구역을 정화하면 보스방 앞 정예방에 성좌 외곽 고리가 열립니다. 제한 시간 ${ASTRAL_RING.limit}초 안에 고리 위 성표 ${ASTRAL_MARKS}개에서 각각 ${ASTRAL_RING.holdSeconds}초 머물러 정화하세요(순서 자유). 파편이 중심으로 모이면 터지기 전에 중심 밖 고리 위로 비키세요(맞으면 최대 체력 ${Math.round(ASTRAL_RING.damage * 100)}%). 시간이 다 되면 고리가 붕괴해 피해를 입고 성표가 흐려진 뒤 시간을 다시 잽니다. 성표 ${ASTRAL_MARKS}개를 모두 정화하면 보스 봉인이 풀립니다. `;
+
 // Authored follow-up expeditions. The base material runs keep their original
 // price and rewards; these routes unlock at explicit campaign milestones.
 export const EXPEDITION_DEPTHS = [
@@ -186,8 +200,8 @@ export const EXPEDITION_DEPTHS = [
     id: 'astral_leviathan_spire', depth: 'deep', name: '성운 첨탑 · 무너진 성좌', unlockCode: '6-10', minLevel: 4,
     energy: 7, chapter: 3, stage: 7, scale: 18, bossEnemy: 'astral_leviathan', bossHp: 29800,
     description: '무너진 성좌 사이로 귀환 좌표를 삼킨 성운 레비아탄이 떠돕니다.',
-    objective: '보물방 2곳에서 적 처치 후 중심 2초 공명 → 정예방 2곳의 증원 각 1회 격파 → 모든 구역 정화 → 레비아탄 처치', bossName: '무너진 성좌의 레비아탄', art: '/img/encounters/boss_astral_leviathan.webp',
-    tactic: `보물방의 적을 처치하고 각 제단 중심의 빛 안에서 2초간 공명하세요. 제단의 공명 순서는 자유이며, 정예방마다 1회 증원이 이어집니다. ${ENEMIES.astral_leviathan.tactic}`,
+    objective: ASTRAL_OBJECTIVE, bossName: '무너진 성좌의 레비아탄', art: '/img/encounters/boss_astral_leviathan.webp',
+    tactic: `${ASTRAL_TACTIC}${ENEMIES.astral_leviathan.tactic}`,
     layout: { spacing: [28, 34], size: [18, 24], width: 7,
       cells: [[0,0],[0,1],[1,1],[1,2],[0,2],[-1,2],[-1,3],[0,3],[1,3]],
       edges: [[0,1],[1,2],[2,3],[1,4],[4,5],[5,6],[6,7],[7,8]],
