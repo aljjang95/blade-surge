@@ -943,7 +943,8 @@ const profiles = {
       keyPhase = 'walk';
     }
     row.keysData = k;
-    const keysFile = 'keys-trace.json';
+    // 완주 뒤 recordTide 가 '<태그>-trace.json'(keys 프로필은 'keys-trace.json')을 쓰므로 이름을 겹치지 않게 둔다(smoke-cand-keys-1 EEXIST).
+    const keysFile = 'keys-input.json';
     fs.writeFileSync(path.join(qa.out, keysFile), JSON.stringify(k), { flag: 'wx' });
     row.keysFile = keysFile;
     if (routeDef) {
