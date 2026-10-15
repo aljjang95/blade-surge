@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { ROUTE_OBJECTIVES } from '../src/data/route-objectives.js';
 import { ALLOWED, FRAME, analyzeBells, analyzeCounter, buildAttempts, buildReplays, checkAnswerOrder, checkClears, checkCounterObjective, checkCounterPause, checkCounterStats,
-  checkDamageMultiplier, checkDiscord, checkGuideText, checkPhaseTimeline, checkReplay, checkReplays, checkResult, checkResultLine, checkWindows, compareBoss, compareToBaseline,
+  checkDamageMultiplier, checkDiscord, checkGuideText, checkHpMatchesCounter, checkPhaseTimeline, checkReplay, checkReplays, checkResult, checkResultLine, checkWindows, compareBoss, compareToBaseline,
   discordEvents, drawCallIncrease, isTrigger, missedOpens, mitigatedDamage, openRuns, percentile, reverseOrder, stepStats, summarizeBoss } from '../tools/bellfall-deep-checks.mjs';
 
 // 정의는 대상 프로젝트의 데이터에서 읽는다(도구와 같은 방식). 판정 함수는 값을 박지 않는다.
@@ -334,13 +334,15 @@ const WINDOW_STEPS = Math.round(CDEF.window / FRAME);
 /**
  * counter 계약(PLAN 3.1)대로 움직이는 보스 관측 행을 만든다: 등장 연출 → 장막 → 조종 개시 → 마지막 고리(트리거) 다음 행에서 열림 → window 뒤 장막 → … → 처치 → ended 4행.
  * 컨트롤러는 enemies update 앞에서 돌기 때문에 열린 행은 트리거 행의 다음 행이다(openAfter = 1).
+ * 트리거 행은 마지막 고리가 터져 boss.completedAttackSequence(cseq)가 attackSequence(seq)와 같아지는 첫 행이다. 그 전의 조종 행은 cseq = seq - 1 이다.
+ * hp 는 장막 구간에서 vd(veiled 피해 합)와 od(open 피해 합)가 늘어난 만큼 줄어든다(hpDrain 이 스텝당 피해량).
  */
-function fightTrace(opts: { windows?: number; openAfter?: number; windowSteps?: number; neverOpen?: boolean; signature?: string; startWindowLeft?: number } = {}) {
-  const { windows = 2, openAfter = 1, windowSteps = WINDOW_STEPS, neverOpen = false, signature = SIG, startWindowLeft = CDEF.window } = opts;
+function fightTrace(opts: { windows?: number; openAfter?: number; windowSteps?: number; neverOpen?: boolean; signature?: string; startWindowLeft?: number; hpDrain?: number } = {}) {
+  const { windows = 2, openAfter = 1, windowSteps = WINDOW_STEPS, neverOpen = false, signature = SIG, startWindowLeft = CDEF.window, hpDrain = 0 } = opts;
   const rows: any[] = [];
-  let wins = 0, seq = 0;
-  const push = (over: any) => rows.push({ n: rows.length + 1, t: 10 + rows.length * FRAME, hp: 1000, alive: true, spn: false, seq, st: 'chase', sp: null, plan: null, age: null, last: null,
-    cs: 'veiled', wl: 0, wins, brk: 0, vh: 0, oh: 0, vd: 0, od: 0, mul: CDEF.veil, ...over });
+  let wins = 0, seq = 0, hp = 100000, vd = 0, od = 0;
+  const push = (over: any) => rows.push({ n: rows.length + 1, t: 10 + rows.length * FRAME, hp, alive: true, spn: false, seq, cseq: seq, st: 'chase', sp: null, plan: null, age: null, last: null,
+    cs: 'veiled', wl: 0, wins, brk: 0, vh: 0, oh: 0, vd, od, mul: CDEF.veil, ...over });
   for (let i = 0; i < 30; i++) push({ spn: true, st: 'spawn', cs: 'idle', mul: 1 });
   for (let w = 0; w < windows; w++) {
     for (let i = 0; i < 30; i++) push({});
@@ -349,10 +351,13 @@ function fightTrace(opts: { windows?: number; openAfter?: number; windowSteps?: 
     for (let i = 0; i < openStart + windowSteps + 30; i++) {
       const attacking = i < ATTACK_ROWS, inWindow = !neverOpen && i >= openStart && i < openStart + windowSteps;
       if (!neverOpen && i === openStart) wins++;
-      push({ seq, st: attacking ? 'attack' : 'chase', sp: attacking ? signature : null, plan: attacking ? signature : null, age: attacking ? i * FRAME : null, last: attacking ? LAST : null,
+      // 매 스텝 hpDrain 만큼 맞는다: 열린 구간은 od, 그 밖은 vd 에 같은 양을 쌓고 hp 를 깎는다.
+      if (hpDrain > 0) { hp -= hpDrain; if (inWindow) od += hpDrain; else vd += hpDrain; }
+      push({ seq, cseq: i >= TRIGGER_ROW ? seq : seq - 1, st: attacking ? 'attack' : 'chase', sp: attacking ? signature : null, plan: attacking ? signature : null, age: attacking ? i * FRAME : null, last: attacking ? LAST : null,
         cs: inWindow ? 'open' : 'veiled', wl: inWindow ? (i === openStart ? startWindowLeft : CDEF.window - (i - openStart) * FRAME) : 0, wins, mul: inWindow ? CDEF.open : CDEF.veil });
     }
   }
+  hp = 0;
   push({ alive: false, hp: 0, st: 'dead' });
   for (let i = 0; i < 4; i++) push({ alive: false, hp: 0, st: 'dead', cs: 'ended', mul: 1 });
   return rows;
@@ -384,6 +389,22 @@ describe('보스 반격 창 판정(analyzeCounter)', () => {
     const early = analyze(fightTrace({ openAfter: -5 }));
     expect(failed(early)).toContain('noEarlyOpen');
     expect(early.windows[0].cause).toBe('before-last-strike');
+    // 마지막 고리 직전 행(cseq 가 아직 seq - 1)에서 열려도 실패한다: 트리거는 age 가 아니라 cseq 로 정한다.
+    const justBefore = analyze(fightTrace({ openAfter: -1 }));
+    expect(failed(justBefore)).toContain('noEarlyOpen');
+    expect(justBefore.windows[0].reasons).toContain('no-trigger');
+  });
+  test('age·lastStrike 가 이미 지났어도 cseq 가 seq 와 다르면 트리거가 아니다(P1: 격자 오차로 먼저 열림)', () => {
+    const rows = clone(fightTrace({ windows: 1 }));
+    // 모든 조종 행의 age 를 lastStrike 이상으로 만들어도 cseq 가 그대로면 트리거 위치는 변하지 않는다.
+    for (const r of rows) if (r.sp === SIG) r.age = LAST + 1;
+    expect(failed(analyze(rows, 1))).toEqual([]);
+    const open = rows.findIndex(r => r.cs === 'open');
+    const early = clone(rows);
+    for (let i = open - 20; i <= open; i++) if (early[i].cseq === early[i].seq) early[i].cseq = early[i].seq - 1;
+    const a = analyze(early, 1);
+    expect(a.windows[0].reasons).toContain('no-trigger');
+    expect(failed(a)).toContain('noEarlyOpen');
   });
   test('bell_toll 이 아닌 시그니처에서 열리면 실패한다', () => {
     const wrong = analyze(fightTrace({ signature: 'bell_clap' }));
@@ -427,7 +448,7 @@ describe('보스 반격 창 판정(analyzeCounter)', () => {
     const rows = clone(fightTrace({ windows: 1 }));
     const broken = rows.map(r => ({ ...r, cs: r.cs === 'open' ? 'veiled' : r.cs, wl: 0, wins: 0, mul: r.cs === 'ended' ? 1 : r.cs === 'idle' ? 1 : CDEF.veil }));
     // 조종을 lastStrike 직전(2초)에 끊는다: attack 행을 chase 로 바꾼다.
-    for (const r of broken) if (r.st === 'attack' && r.age >= 2) { r.st = 'chase'; r.sp = null; r.plan = null; r.age = null; r.last = null; }
+    for (const r of broken) if (r.st === 'attack' && r.age >= 2) { r.st = 'chase'; r.sp = null; r.plan = null; r.age = null; r.last = null; r.cseq = r.seq - 1; }
     expect(missedOpens(broken, CDEF)).toEqual([]);
     expect(checkWindows(broken, CDEF)).toEqual([]);
   });
@@ -492,12 +513,13 @@ describe('보스 반격 창 판정(analyzeCounter)', () => {
     expect(failed(analyze(alive)).includes('bossObserved')).toBe(true);
   });
   test('isTrigger / openRuns 는 마지막 고리 조건과 열린 구간을 정확히 잘라낸다', () => {
-    const row = { st: 'attack', sp: SIG, plan: SIG, age: LAST, last: LAST };
-    expect(isTrigger(row, CDEF)).toBe(true);
-    expect(isTrigger({ ...row, age: LAST - 0.01 }, CDEF)).toBe(false);
+    const row = { sp: SIG, seq: 3, cseq: 3, age: LAST - 1, last: LAST };
+    expect(isTrigger(row, CDEF)).toBe(true); // age 와 무관하게 cseq === seq 면 트리거
+    expect(isTrigger({ ...row, cseq: 2, age: LAST + 1 }, CDEF)).toBe(false); // age 가 지나도 cseq 가 아직이면 아니다
     expect(isTrigger({ ...row, sp: 'bell_clap' }, CDEF)).toBe(false);
-    expect(isTrigger({ ...row, plan: null }, CDEF)).toBe(false);
-    expect(isTrigger({ ...row, st: 'chase' }, CDEF)).toBe(false);
+    expect(isTrigger({ ...row, sp: null }, CDEF)).toBe(false);
+    expect(isTrigger({ ...row, seq: 0, cseq: 0 }, CDEF)).toBe(false);
+    expect(isTrigger({ ...row, cseq: undefined }, CDEF)).toBe(false);
     const runs = openRuns(fightTrace());
     expect(runs.length).toBe(2);
     expect(runs.every((run: any) => run.endIdx - run.startIdx + 1 === WINDOW_STEPS && run.closedBy === 'veiled')).toBe(true);
@@ -558,6 +580,69 @@ describe('보스 요약·목표창·일시정지', () => {
     expect(checkCounterPause({ before, paused, still, resumed: snap(53, 0.0), steps: 60 }).ok).toBe(false);
     // 일시정지 중 새 attackSequence
     expect(checkCounterPause({ before, paused, still, resumed: { ...snap(51, 2.0), boss: { seq: 5 } }, steps: 60 }).ok).toBe(false);
+  });
+});
+
+describe('보스 끊김·hp 회계(noBroken, hpMatchesCounter)', () => {
+  test('끊김 0 이고 hp 감소가 회계와 같으면 합격한다', () => {
+    const a = analyze(fightTrace({ hpDrain: 7.5 }));
+    expect(failed(a)).toEqual([]);
+    expect(a.stats.broken).toBe(0);
+    expect(a.hpMatch.pairs).toBeGreaterThan(100);
+    expect(a.hpMatch.skipped).toBeGreaterThanOrEqual(1);
+  });
+  test('관측 마지막 broken 이 0 이 아니면 noBroken 만 실패한다', () => {
+    const rows = clone(fightTrace({ windows: 2 }));
+    const at = rows.findIndex(r => r.wins === 1 && r.cs === 'veiled' && r.seq === 2);
+    for (let i = at; i < rows.length; i++) if (rows[i].cs !== null) rows[i].brk = 1;
+    const a = analyze(rows);
+    expect(failed(a)).toEqual(['noBroken']);
+    expect(a.stats.broken).toBe(1);
+    // 처치 뒤(ended) 행에서만 올라간 broken 도 마지막 값이므로 실패한다(예외 없음).
+    const tail = clone(fightTrace()); tail.at(-1).brk = 1;
+    expect(failed(analyze(tail))).toContain('noBroken');
+  });
+  test('counter 행이 없으면 broken 을 알 수 없어 noBroken 이 실패한다', () => {
+    const none = fightTrace().map(r => ({ ...r, cs: null, brk: null }));
+    expect(failed(analyze(none))).toContain('noBroken');
+  });
+  test('veiled/open 연속 행에서 hp 가 회계보다 더 줄거나 덜 줄면 hpMatchesCounter 가 실패한다', () => {
+    const base = fightTrace({ hpDrain: 5 });
+    const bypass = clone(base);
+    const k = bypass.findIndex(r => r.cs === 'open') + 10;
+    for (let i = k; i < bypass.length; i++) if (bypass[i].alive) bypass[i].hp -= 50; // 장막을 우회한 감소
+    const a = analyze(bypass);
+    expect(failed(a)).toEqual(['hpMatchesCounter']);
+    expect(a.hpMatch.violations[0]).toMatchObject({ idx: k, dropped: 55, accounted: 5 });
+    const heal = clone(base);
+    for (let i = k; i < heal.length; i++) if (heal[i].alive) heal[i].hp += 50; // 회계에 없는 회복
+    expect(failed(analyze(heal))).toEqual(['hpMatchesCounter']);
+    const missing = clone(base);
+    for (let i = k; i < missing.length; i++) missing[i].vd -= 0.5; // 회계가 모자란 경우(단조 감소는 counterStats 도 잡는다)
+    expect(checkHpMatchesCounter(missing).ok).toBe(false);
+  });
+  test('허용 오차는 상대 1e-6 또는 절대 1e-3 이다', () => {
+    const rows = [
+      { alive: true, hp: 1000, cs: 'veiled', vd: 0, od: 0 },
+      { alive: true, hp: 1000 - 100.00005, cs: 'veiled', vd: 100, od: 0 }, // 차이 5e-5 < 1e-3
+    ];
+    expect(checkHpMatchesCounter(rows).ok).toBe(true);
+    expect(checkHpMatchesCounter([rows[0], { ...rows[1], hp: 1000 - 100.01 }]).ok).toBe(false);
+    const big = [{ alive: true, hp: 1e9, cs: 'open', vd: 0, od: 0 }, { alive: true, hp: 1e9 - 5e8 - 400, cs: 'open', vd: 0, od: 5e8 }]; // 상대 8e-7 < 1e-6
+    expect(checkHpMatchesCounter(big).ok).toBe(true);
+    expect(checkHpMatchesCounter([big[0], { ...big[1], hp: 1e9 - 5e8 - 600 }]).ok).toBe(false);
+  });
+  test('처치 행으로 들어가는 구간과 idle/ended 행이 낀 구간은 제외한다', () => {
+    const rows = [
+      { alive: true, hp: 100, cs: 'idle', vd: 0, od: 0 },
+      { alive: true, hp: 90, cs: 'veiled', vd: 0, od: 0 }, // idle → veiled 구간은 대상이 아니다
+      { alive: true, hp: 40, cs: 'veiled', vd: 50, od: 0 },
+      { alive: false, hp: 0, cs: 'veiled', vd: 80, od: 0 }, // 마지막 타격이 hp 0 으로 잘림(80 > 40)
+      { alive: false, hp: 0, cs: 'ended', vd: 80, od: 0 },
+    ];
+    const r = checkHpMatchesCounter(rows);
+    expect(r).toMatchObject({ ok: true, pairs: 1, skipped: 1 });
+    expect(checkHpMatchesCounter([]).ok).toBe(true);
   });
 });
 

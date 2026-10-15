@@ -284,15 +284,19 @@ export function analyzeBells(obs, def) {
 }
 // ---------- BUNDLE-05 합창 장막(counter) 판정 ----------
 // 입력은 tools/bellfall-deep-qa.mjs 의 보스 관측 행(trace)이다. 보스가 처음 나타난 스텝부터 처치 몇 스텝 뒤까지 app.step 한 번(고정 1/60)마다 한 행이다.
-// { n, t, hp, alive, spn, seq, st, sp, plan, age, last, cs, wl, wins, brk, vh, oh, vd, od, mul }
-//   n 스텝 번호, t 게임 시각, hp 보스 hp, alive 생존, spn 등장 연출 중, seq boss.attackSequence, st boss.state, sp boss.special,
-//   plan signatures.plan?.key, age signatures.age, last signatures.plan?.lastStrike, cs counter.state(counter 없는 빌드는 null),
+// { n, t, hp, alive, spn, seq, cseq, st, sp, plan, age, last, cs, wl, wins, brk, vh, oh, vd, od, mul }
+//   n 스텝 번호, t 게임 시각, hp 보스 hp, alive 생존, spn 등장 연출 중, seq boss.attackSequence, cseq boss.completedAttackSequence,
+//   st boss.state, sp boss.special, plan signatures.plan?.key, age signatures.age, last signatures.plan?.lastStrike(age·last 는 진단용이고 판정에 쓰지 않는다),
+//   cs counter.state(counter 없는 빌드는 null),
 //   wl windowLeft, wins windows, brk broken, vh/oh veiledHits/openHits, vd/od veiledDamage/openDamage, mul damageMul().
 // 컨트롤러는 enemies update 보다 앞서 돌기 때문에 관측(스텝 끝)보다 1스텝 늦게 열리는 것이 정상이다. 그래서 "열림 ≤ 트리거 + 1스텝"을 허용한다.
 
-/** def.signature 의 마지막 고리가 터진 상태인지(PLAN 3.1 열림 조건). */
-export const isTrigger = (row, def) => !!row && row.st === 'attack' && row.sp === def.signature && row.plan === def.signature
-  && Number.isFinite(row.age) && Number.isFinite(row.last) && row.age + EPS >= row.last;
+/**
+ * def.signature 의 마지막 고리가 실제로 터진 행인지(PLAN 3.1 열림 조건). BossSignatures 가 마지막 고리를 터뜨리는 순간
+ * boss.completedAttackSequence 를 attackSequence 와 같게 쓰므로, 시그니처 시전 중(sp)이면서 cseq === seq 인 행부터가 트리거다.
+ * age·lastStrike 비교는 쓰지 않는다(1/60 격자 오차로 고리가 터지기 전에 참이 될 수 있다). seq 0 은 아직 조종이 없는 상태다.
+ */
+export const isTrigger = (row, def) => !!row && row.sp === def.signature && row.seq > 0 && row.cseq === row.seq;
 
 /** counter.state 가 open 인 연속 구간. closedBy 는 구간 바로 다음 행의 counter.state, 관측이 거기서 끝나면 null 이다. */
 export function openRuns(trace) {
@@ -307,20 +311,21 @@ export function openRuns(trace) {
 }
 
 /**
- * 반격 창마다 판정한다: 열림 시점(같은 attackSequence 의 def.signature 에서 age ≥ lastStrike 가 된 행부터 1스텝 이내, 그 전에는 열리지 않음),
+ * 반격 창마다 판정한다: 열림 시점(같은 attackSequence 의 def.signature 에서 cseq === seq 가 처음 된 트리거 행부터 1스텝 이내, 그 전에는 열리지 않음),
  * 길이(def.window ± 1/60, 처치로 끝난 창은 truncated 로 길이를 보지 않는다), 창 동안 attackSequence 불변, windowLeft 단조 감소, 한 attackSequence 에 창 하나.
  */
 export function checkWindows(trace, def) {
   const rows = trace || [], runs = openRuns(rows), seen = new Set(), windows = [];
   for (const run of runs) {
     const open = rows[run.startIdx], reasons = [];
-    // 열림을 이끈 트리거 행: 같은 attackSequence 안에서 가장 먼저 age ≥ lastStrike 가 된 행(열린 행 자신 포함, 거슬러 올라가며 찾는다).
+    // 열림을 이끈 트리거 행: 같은 attackSequence 안에서 가장 먼저 cseq === seq 가 된 행(열린 행 자신 포함, 거슬러 올라가며 찾는다).
+    // 트리거 전에 열렸다면(cseq !== seq 인데 open) 트리거가 없어 no-trigger 로 실패한다.
     let triggerIdx = -1;
     for (let i = run.startIdx; i >= 0 && rows[i].seq === open.seq; i--) if (isTrigger(rows[i], def)) triggerIdx = i;
     let cause = null;
     if (triggerIdx < 0) {
       const ref = rows[Math.max(0, run.startIdx - 1)];
-      cause = ref.sp !== def.signature || ref.plan !== def.signature ? 'wrong-signature' : 'before-last-strike';
+      cause = ref.sp !== def.signature ? 'wrong-signature' : 'before-last-strike';
       reasons.push('no-trigger');
     } else if (run.startIdx - triggerIdx > 1) reasons.push('late-open');
     if (seen.has(open.seq)) reasons.push('duplicate-sequence');
@@ -356,6 +361,27 @@ export function missedOpens(trace, def) {
     missed.push({ idx: i, t: a.t, seq: a.seq, counterState: b.cs });
   }
   return missed;
+}
+
+/**
+ * 카운터 피해 회계와 보스 hp 의 일치 검사(리뷰 P3-1). counter 가 veiled/open 인 연속 두 행 사이에서 보스 hp 감소량이 (vd + od) 증가량과 같아야 한다
+ * (상대 오차 1e-6 또는 절대 1e-3). 처치 행(alive 가 거짓이거나 hp 가 0 이하로 잘린 행)으로 들어가는 구간은 마지막 타격이 hp 0 으로 잘리므로 제외한다.
+ * 장막을 우회해 hp 를 깎는 경로가 있으면 감소량이 회계보다 커져서 실패한다. 회복으로 hp 가 늘어도 회계와 어긋나므로 실패한다.
+ */
+export function checkHpMatchesCounter(trace) {
+  const rows = trace || [], violations = [];
+  let pairs = 0, skipped = 0;
+  const live = r => r.cs === 'veiled' || r.cs === 'open';
+  for (let i = 1; i < rows.length; i++) {
+    const a = rows[i - 1], b = rows[i];
+    if (!live(a) || !live(b)) continue;
+    if (!a.alive || !b.alive || !(b.hp > 0)) { skipped++; continue; }
+    pairs++;
+    const dropped = a.hp - b.hp, accounted = (b.vd + b.od) - (a.vd + a.od);
+    if (!Number.isFinite(dropped) || !Number.isFinite(accounted) || Math.abs(dropped - accounted) > Math.max(1e-3, 1e-6 * Math.max(Math.abs(dropped), Math.abs(accounted))))
+      violations.push({ idx: i, t: b.t, state: b.cs, dropped, accounted });
+  }
+  return { ok: violations.length === 0, pairs, skipped, violations: violations.slice(0, 20), count: violations.length };
 }
 
 /** 상태별 피해 배수: veiled = veil, open = open, 그 밖(idle·ended) = 1. */
@@ -400,7 +426,7 @@ export function summarizeBoss(trace) {
  */
 export function analyzeCounter(obs, def) {
   const trace = obs.trace || [], summary = summarizeBoss(trace), windows = checkWindows(trace, def), missed = missedOpens(trace, def);
-  const multiplier = checkDamageMultiplier(trace, def), stats = checkCounterStats(trace);
+  const multiplier = checkDamageMultiplier(trace, def), stats = checkCounterStats(trace), hpMatch = checkHpMatchesCounter(trace);
   const defeatIdx = summary.defeatIdx ?? -1, post = defeatIdx >= 0 ? trace.slice(defeatIdx + 1) : [];
   const endedOk = defeatIdx >= 0 && post.length >= 1 && post.every(r => r.cs === 'ended') && (obs.finalCounter == null || obs.finalCounter.state === 'ended');
   const bad = reason => windows.filter(w => w.reasons.includes(reason));
@@ -417,12 +443,15 @@ export function analyzeCounter(obs, def) {
     noMissedOpen: missed.length === 0,
     damageMultiplier: multiplier.ok,
     counterStats: stats.ok,
+    // 보스 처치 때는 카운터가 broken 을 세지 않고 ended 가 되므로 예외 없이 0 이어야 한다. 조종이 끊기면 마지막 울림이 온다는 약속이 깨진 것이다.
+    noBroken: stats.broken === 0,
+    hpMatchesCounter: hpMatch.ok,
     endedAfterDefeat: endedOk,
     resultWindows: Number.isInteger(ro?.counterWindows) && ro.counterWindows === observedWindows,
     resultLine: lineMatches.length === 1 && lineMatches[0] === '반격 창 ' + observedWindows + '회',
   };
   return { acceptance, ok: Object.values(acceptance).every(Boolean), summary, windows, observedWindows, fullWindows: windows.filter(w => !w.truncated).length,
-    missed, multiplier, stats, post: { rows: post.length, states: [...new Set(post.map(r => r.cs))] }, resultWindows: ro?.counterWindows ?? null, resultLineMatches: lineMatches };
+    missed, multiplier, stats, hpMatch, post: { rows: post.length, states: [...new Set(post.map(r => r.cs))] }, resultWindows: ro?.counterWindows ?? null, resultLineMatches: lineMatches };
 }
 
 /**

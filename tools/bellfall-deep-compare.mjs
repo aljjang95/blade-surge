@@ -3,7 +3,9 @@
 // 판정(JSON 출력의 ok): 보스전 시간 비 ≤ 2.0, 완주 시간 비 ≤ 2.0, 보스방 첫 진입 프레임 draw call 증가 ≤ 3(짝 없으면 실패),
 // 보스 구간 50ms 초과 수 ≤ 기준선 + 2, 같은 영웅·시드. 후보와 기준선은 같은 도구로 같은 --hero(기사) --seed 에서 돌린 report 여야 한다.
 // 50ms 절대 검사는 각 report 의 검사가 그대로 판정한다(여기서 대신하거나 완화하지 않고, 아래 absolute50ms 보고 항목으로만 남긴다).
-// 장막이 붙은 직후(bossReady) draw call 증가 ≤ 3도 판정한다. 보스방 첫 진입 프레임에는 보스가 아직 없어 장막 껍질이 잡히지 않을 수 있어서다(Opus가 시리즈 전에 더함).
+// bossReady draw call 증가 ≤ 3도 판정한다. bossReady 는 보스 등장 연출(spawning)이 풀린 스텝의 다음 스텝 끝에서 찍는다(후보·기준선 같은 정의).
+// 후보는 그 스텝에 counter 가 veiled 이고 장막 껍질이 보인다(report 의 해당 표본에 counter·veilShell 로 적히고, 도구가 따로 검사한다).
+// 보스방 첫 진입 프레임(bossEnter)에는 보스가 아직 없어 장막 껍질이 잡히지 않으므로, 껍질 비용은 bossReady 로만 비교한다.
 // 종 방 draw call(B04 기준)은 gating 하지 않는 참고 항목(info)이다.
 import fs from 'node:fs';
 import { compareBoss, drawCallIncrease } from './bellfall-deep-checks.mjs';

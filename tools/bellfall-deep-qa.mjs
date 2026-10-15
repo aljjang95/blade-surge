@@ -101,7 +101,7 @@ const report = { kind: 'bellfall-deep-qa', releaseApproved: false, seed, heroId,
     page: ['window.app.battle.routeObjectives (getter: phase/progress/lit/discords/tolls/tollIndex/tollClock/hold/holdGate/lastToll/lastDiscord/discordT/guide/here/gates)',
       'window.app.expeditionUI.result.routeObjective', 'window.app.battle.world.rooms/sealed', 'window.app.expedition.dungeonAccess',
       'window.app.battle.routeObjectives.counter (getter: state/windowLeft/windowTotal/windows/broken/veiledHits/openHits/veiledDamage/openDamage/damageMul())',
-      'window.app.battle.boss (hp/alive/spawning/attackSequence/state/special/signatures.plan.key/signatures.age/signatures.plan.lastStrike)',
+      'window.app.battle.boss (hp/alive/spawning/attackSequence/completedAttackSequence/state/special/signatures.plan.key/signatures.age/signatures.plan.lastStrike)',
       'window.app.expeditionUI.result.routeObjective.counterWindows'] },
   classification: {
     fixture: ['저장 주입: 해금(진행 별·탐험 레벨·기본 원정 승리)·영웅 레벨/별/스킬·장비·에너지 최대·AUTO 설정', 'Math.random 시드(LCG)', quality === 'low' ? '낮은 화질 설정(설정 핸들러와 같은 경로)' : null].filter(Boolean),
@@ -137,10 +137,17 @@ function installProbe({ bellRooms }) {
     return { state: c.state, windowLeft: c.windowLeft, windowTotal: c.windowTotal, windows: c.windows, broken: c.broken, veiledHits: c.veiledHits, openHits: c.openHits,
       veiledDamage: c.veiledDamage, openDamage: c.openDamage, mul: c.damageMul() };
   };
+  // 합창 장막 껍질(TLL_BellfallDeepVeil)이 장면에서 보이는지: 이름으로 찾고 조상까지 모두 visible 이어야 한다. 없으면 null.
+  const veilShellVisible = () => {
+    const shell = app.renderer.scene.getObjectByName('TLL_BellfallDeepVeil');
+    if (!shell) return null;
+    for (let n = shell; n; n = n.parent) if (!n.visible) return false;
+    return true;
+  };
   const bossRow = () => {
     const boss = app.battle.boss ?? P.bossRef; if (!boss) return null;
     const sg = boss.signatures, plan = sg?.plan ?? null;
-    return { hp: boss.hp, alive: !!boss.alive, state: boss.state, special: boss.special ?? null, seq: boss.attackSequence || 0, plan: plan ? plan.key : null,
+    return { hp: boss.hp, alive: !!boss.alive, state: boss.state, special: boss.special ?? null, seq: boss.attackSequence || 0, cseq: boss.completedAttackSequence || 0, plan: plan ? plan.key : null,
       age: sg ? sg.age : null, lastStrike: plan ? plan.lastStrike : null };
   };
   const num = value => Number.isFinite(value) ? value : null;
@@ -167,7 +174,7 @@ function installProbe({ bellRooms }) {
       sampledRooms: new Set(), darkSampled: false, sealT: null, startElapsed: b.elapsed,
       // 보스 구간(보스가 처음 나타난 스텝부터 처치까지): 행 trace·스텝 ms·영웅 HP 최소 비율. 처치 뒤 4스텝까지 더 남겨 counter 'ended' 를 본다.
       bossRef: null, bossDone: false, bossPost: 0, bossTrace: [], bossSlow: [], bossStepMs: [], bossRenderMs: [], bossMinHpRatio: 1,
-      bossEnterSampled: false, bossReadySampled: false, counterOpenSampled: false });
+      bossEnterSampled: false, bossReadyAt: null, bossReadySampled: false, counterOpenSampled: false });
     P.prev = { phase: r?.phase ?? null, gp: (r?.gates || []).map(g => g.phase), discords: r?.discords ?? 0, hold: r?.hold ?? 0, holdRoom: r?.holdGate?.room?.id ?? null,
       cleared: b.world.rooms.map(x => !!x.cleared), sealed: !!b.world.sealed, hp: b.player.hp, room: b.curRoom?.id ?? null, def: b.player.stats?.def ?? null, red: reductionState() };
     return { kind: r?.def?.kind ?? null, controller: r ? r.constructor.name : null, gates: gateRows().length, rooms: b.world.rooms.length, sealed: !!b.world.sealed,
@@ -193,13 +200,19 @@ function installProbe({ bellRooms }) {
       if (ms > 50) P.bossSlow.push({ t: b.elapsed, ms: +ms.toFixed(1), render, state: boss.state, special: boss.special ?? null, counter: c ? c.state : null });
       if (p.maxHp > 0) P.bossMinHpRatio = Math.min(P.bossMinHpRatio, p.hp / p.maxHp);
     } else P.bossPost++;
-    P.bossTrace.push({ n: P.steps, t: b.elapsed, hp: boss.hp, alive, spn: !!boss.spawning, seq: boss.attackSequence || 0, st: boss.state, sp: boss.special ?? null,
+    P.bossTrace.push({ n: P.steps, t: b.elapsed, hp: boss.hp, alive, spn: !!boss.spawning, seq: boss.attackSequence || 0, cseq: boss.completedAttackSequence || 0, st: boss.state, sp: boss.special ?? null,
       plan: plan ? plan.key : null, age: sg ? sg.age : null, last: plan ? plan.lastStrike : null,
       cs: c ? c.state : null, wl: c ? c.windowLeft : null, wins: c ? c.windows : null, brk: c ? c.broken : null, vh: c ? c.veiledHits : null, oh: c ? c.openHits : null,
       vd: c ? c.veiledDamage : null, od: c ? c.openDamage : null, mul: c ? c.damageMul() : null });
     if (!alive) P.bossDone = true;
-    // 보스 등장 연출이 끝난 첫 프레임(장막이 붙는 시점)과 첫 반격 창 프레임의 draw call. 기준선과 같은 'bossReady' 끼리 비교한다.
-    if (!boss.spawning && !P.bossReadySampled) { P.bossReadySampled = true; P.sample('bossReady', { counter: c ? c.state : null }); }
+    // 'bossReady': spawning 이 풀린 스텝의 다음 스텝 끝에서 찍는다(후보·기준선 같은 정의). spawning 은 enemies update 에서 풀리고 장막은 다음 스텝의 routeObjectives
+    // 단계에서 붙으므로, 풀린 스텝에서 찍으면 counter 가 아직 idle 이라 껍질이 잡히지 않는다. 후보는 그 스텝에 counter 가 veiled 이고 껍질이 보이는지 표본에 적는다.
+    if (!boss.spawning && P.bossReadyAt === null) P.bossReadyAt = P.steps;
+    else if (P.bossReadyAt !== null && !P.bossReadySampled && P.steps > P.bossReadyAt) {
+      P.bossReadySampled = true;
+      P.sample('bossReady', c ? { counter: c.state, veilShell: veilShellVisible() } : { counter: null });
+    }
+    // 첫 반격 창 프레임의 draw call.
     if (c && c.state === 'open' && !P.counterOpenSampled) { P.counterOpenSampled = true; P.sample('counterOpen', { counter: c.state }); }
   };
   const observe = (ms, render) => {
@@ -552,9 +565,10 @@ async function readCounterObjective(row, state) {
 }
 const COUNTER_LABELS = {
   bossObserved: '보스 등장·처치 관측', windowCount: '반격 창 1회 이상', windowsConsistent: 'counter.windows = 관측한 창 수',
-  noEarlyOpen: 'bell_toll 마지막 울림(age ≥ lastStrike) 전·다른 시그니처에서는 열리지 않음', openTiming: '창이 트리거 1스텝 이내에 열리고 한 조종에 한 번',
+  noEarlyOpen: 'bell_toll 마지막 고리가 터지기 전(boss.completedAttackSequence ≠ attackSequence)·다른 시그니처에서는 열리지 않음', openTiming: '창이 트리거 1스텝 이내에 열리고 한 조종에 한 번',
   windowLength: '창 길이 window ± 1/60·windowLeft 단조 감소', noNewAttack: '창 동안 attackSequence 증가 없음', noMissedOpen: '끝까지 이어진 조종은 모두 창이 열림',
-  damageMultiplier: 'damageMul: veiled = veil, open = open, 그 밖 1', counterStats: 'windows/hits/damage 단조 증가', endedAfterDefeat: '보스 처치 뒤 counter ended',
+  damageMultiplier: 'damageMul: veiled = veil, open = open, 그 밖 1', counterStats: 'windows/hits/damage 단조 증가',
+  noBroken: '관측 마지막 counter.broken = 0(조종이 끊기지 않음)', hpMatchesCounter: '장막·열림 구간 보스 hp 감소량 = 카운터 피해 회계(vd+od) 증가량', endedAfterDefeat: '보스 처치 뒤 counter ended',
   resultWindows: '결과 routeObjective.counterWindows = 관측 창 수', resultLine: "결과 줄 '반격 창 w회'",
 };
 /**
@@ -572,8 +586,11 @@ function recordBoss(row) {
     drawCalls: { enter: sample('bossEnter'), ready: sample('bossReady'), counterOpen: sample('counterOpen') } };
   check(row.tag + ': 보스 등장·처치 관측(app.step 마다)', summary.observed && summary.defeated === true, { rows: summary.rows, appearT: summary.appearT, defeatT: summary.defeatT });
   check(row.tag + ': 보스방 첫 진입 프레임 draw call 표본', !!sample('bossEnter'), row.boss.drawCalls.enter);
+  check(row.tag + ': 보스 등장 연출 다음 스텝 draw call 표본(bossReady)', !!sample('bossReady'), row.boss.drawCalls.ready);
   if (!counterDef) { row.boss.skipped = 'counter 정의 없음(기준선 빌드): 반격 창 판정 생략, 공통 측정만 기록'; return; }
   if (!row.counter) { row.boss.skipped = 'routeObjectives.counter 없음: beginRun 검사가 실패로 남긴다'; return; }
+  const ready = sample('bossReady');
+  check(row.tag + ': bossReady 표본 스텝에 counter veiled 이고 장막 껍질(TLL_BellfallDeepVeil)이 보임', ready?.counter === 'veiled' && ready?.veilShell === true, ready ? { counter: ready.counter, veilShell: ready.veilShell } : null);
   const analysis = analyzeCounter({ trace: raw.trace, result: row.result?.routeObjective, resultText: row.resultText, finalCounter: raw.finalCounter }, counterDef);
   row.counterAnalysis = analysis;
   for (const [name, ok] of Object.entries(analysis.acceptance)) check(row.tag + ': 반격 창 ' + (COUNTER_LABELS[name] ?? name), ok, ok ? undefined : { name, windows: analysis.windows.filter(w => !w.ok), missed: analysis.missed,
