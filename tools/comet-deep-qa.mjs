@@ -73,6 +73,8 @@ const { HEROES } = await load('src/data/heroes.js');
 qaAssert(HEROES[heroId], 'Unknown --hero ' + heroId);
 const depthDef = EXPEDITION_DEPTHS.find(d => d.id === DUNGEON_ID);
 qaAssert(depthDef, 'Target project has no ' + DUNGEON_ID + ' deep definition');
+// 고리 정의(후보 빌드에만 있다). 한 스텝 안의 합성 전이 판정에 붕괴 시간을 쓴다.
+const deepRoute = (await load('src/data/route-objectives.js')).ROUTE_OBJECTIVES?.comet_deep ?? null;
 
 const report = { kind: 'comet-deep-qa', releaseApproved: false, seed, heroId, viewport, motion, quality, selectedProfiles: selected, projectRoot,
   driverSha256: qaHash(fs.readFileSync(import.meta.filename)), profiles: {}, checks: [],
@@ -338,15 +340,22 @@ const shot = async label => { const file = label + '.png'; await page.evaluate((
 
 // ---------- 타임라인 분석(고리 빌드 전용) ----------
 const ALLOWED = { locked: ['ready'], ready: ['collapse'], collapse: ['shelter', 'ready'], shelter: ['storm', 'ready'], storm: ['connected'], connected: [] };
+// 관측은 app.step 한 번(1/60초) 끝에서만 한다. 설계 4절상 같은 스텝 안에서 locked→ready(적 처치로 열림)와
+// ready→collapse(궤도 위 영웅의 첫 실제 밀기)가 이어질 수 있다. 이 합성 전이는 그 스텝에서 붕괴가 막 시작된 증거
+// (남은 시계가 붕괴 시간에서 한 판정 단계 1/30초 이내)가 있을 때만 허용한다. 그 밖의 건너뛰기는 그대로 실패다.
+const legalStep = e => ALLOWED[e.from]?.includes(e.to)
+  || (e.from === 'locked' && e.to === 'collapse' && !!deepRoute && Number.isFinite(e.clock)
+    && e.clock <= deepRoute.collapseSeconds + 1e-9 && e.clock >= deepRoute.collapseSeconds - 1 / 30 - 1e-9);
 function analyzeRings(summary, routeObjective, result) {
   const gates = {};
   for (const e of summary.events.filter(e => e.kind === 'phase')) (gates[e.room] ??= []).push(e);
   const rows = Object.entries(gates).map(([room, list]) => {
-    const orderOk = list.every(e => ALLOWED[e.from]?.includes(e.to));
+    const orderOk = list.every(legalStep);
+    const composite = list.filter(e => !ALLOWED[e.from]?.includes(e.to) && legalStep(e)).map(e => ({ t: ms(e.t), from: e.from, to: e.to, clock: ms(e.clock) }));
     const connect = list.find(e => e.to === 'connected'), toStorm = list.find(e => e.to === 'storm');
     const warns = summary.events.filter(e => e.kind === 'stormWarn' && e.on && String(e.room) === room);
     const cleared = summary.clears.find(c => String(c.room) === room);
-    return { room: Number(room), orderOk, transitions: list.map(e => ({ t: ms(e.t), from: e.from, to: e.to, clock: e.clock == null ? null : ms(e.clock), slack: e.slack == null ? null : ms(e.slack) })),
+    return { room: Number(room), orderOk, composite, transitions: list.map(e => ({ t: ms(e.t), from: e.from, to: e.to, clock: e.clock == null ? null : ms(e.clock), slack: e.slack == null ? null : ms(e.slack) })),
       attempts: list.filter(e => e.to === 'collapse').length, failures: list.filter(e => e.from !== 'locked' && e.to === 'ready' && e.from !== 'ready').length,
       slack: toStorm?.slack ?? null, connectedAt: connect?.t ?? null, stormWarnCount: warns.length, clearedAt: cleared?.t ?? null,
       clearedAfterConnect: cleared && connect ? cleared.t >= connect.t : null };
