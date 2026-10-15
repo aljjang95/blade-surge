@@ -117,6 +117,25 @@ export const ROUTE_OBJECTIVES = Object.freeze({
       Object.freeze({ roomId: 7, label: '5번 궤도 고리 · 기사단 보고', target: Math.PI, start: Math.PI + 2.2 }),
     ]),
   }),
+  // 종락 회랑 심층의 원안: 종문 3개 역순 공명. 방의 적을 처치하면 그 종이 켜진다(점등).
+  // 세 종이 모두 켜지면 tollOrder 순서로 하나씩 꺼진다(소등, lead 뒤 gap 간격, 마지막 소등 뒤 tail).
+  // 그다음 마지막에 꺼진 종부터 역순으로 종 중심(radius)에 holdSeconds 머물러 공명한다.
+  // 틀린 종에서 holdSeconds 를 채우면 불협: 최대 체력 discord.damage 피해, 공명한 종이 모두 다시 켜지고 소등을 다시 들려준다.
+  // 불협이 guideAfter 회 이상이면 목표창이 다음 종을 알려준다. 공명 제단 2곳(보물방 2·5)은 이 목표로 교체된다.
+  // "마지막 울림 직후에만 반격"(보스 피격 조건)은 이 정의의 범위가 아니다.
+  bellfall_deep: Object.freeze({
+    id: 'bellfall_deep_bells', kind: 'reverse-bells', holdSeconds: 2, radius: 3, noun: '종문', verb: '역순 공명',
+    toll: Object.freeze({ lead: 1, gap: 1.4, tail: 1 }),
+    discord: Object.freeze({ damage: .06 }),
+    guideAfter: 2,
+    gates: Object.freeze([
+      Object.freeze({ roomId: 2, label: '1번 종문 · 북쪽 예배실' }),
+      Object.freeze({ roomId: 3, label: '2번 종문 · 북동쪽 종탑' }),
+      Object.freeze({ roomId: 5, label: '3번 종문 · 남쪽 납골실' }),
+    ]),
+    // 소등 순서(방 id): 2번 → 3번 → 1번 종문. 정답은 그 역순인 방 2 → 5 → 3(1번 → 3번 → 2번 종문)이다.
+    tollOrder: Object.freeze([3, 5, 2]),
+  }),
 });
 
 /** @param {any} stage */
