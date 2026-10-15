@@ -141,12 +141,12 @@ test('ring 이 없는 일반 성운(조율판) 정의는 고리 문구 없이 �
 });
 
 // ---- 일반 성운 기록 외곽 고리 이탈(BUNDLE-13) ----
-test('일반 성운 고리: idle 은 남은 구역 정화, open 은 기록 외곽 고리로 이동(roomId 7·표지 3), done 은 보스 흐름', () => {
+test('일반 성운 고리: idle 은 남은 구역 정화, open 은 기록 외곽 고리로 이동(roomId 7·표지 4), done 은 보스 흐름', () => {
   const f = makeBattle(STANDARD); finish(f, { phase: 'idle' });
   expect(panel(f)).toMatchObject({ title: GATE_TITLE, action: '남은 구역 정화', progress: 4, total: 4 });
   f.route.ring.phase = 'open';
-  expect(panel(f)).toMatchObject({ title: '외곽 고리 이탈', action: '기록 외곽 고리로 이동', roomId: 7, progress: 0, total: 3 });
-  f.route.ring.phase = 'done'; f.route.ring.purified = 3;
+  expect(panel(f)).toMatchObject({ title: '외곽 고리 이탈', action: '기록 외곽 고리로 이동', roomId: 7, progress: 0, total: 4 });
+  f.route.ring.phase = 'done'; f.route.ring.purified = 4;
   expect(panel(f).title).toBe('보스 봉인 해제');
   expect(JSON.stringify(panel(f))).not.toContain('외곽');
 });
@@ -155,7 +155,7 @@ test('일반 성운 고리 running: 기록 파편 문구·올림 초·점등한 
   const f = makeBattle(STANDARD); finish(f, { phase: 'running', left: 23.2, purified: 2, held: 1 });
   f.route.ring.marks[0].done = true; f.route.ring.marks[2].done = true; f.route.ring.marks[1].hold = .55;
   expect(panel(f)).toMatchObject({ title: '외곽 고리 이탈', action: '기록 파편이 모이면 중심 밖으로 · 24초', roomId: 7,
-    progress: 2, total: 3, hold: .5, holdTotal: 1 });
+    progress: 2, total: 4, hold: .5, holdTotal: 1 });
   const text = JSON.stringify(panel(f));
   for (const word of ['성표', '성좌', '정화']) expect(text).not.toContain(word);
 });
@@ -166,9 +166,9 @@ test('결과 줄 문구: 완료·미완료와 성표·파편 피격·붕괴 횟�
   expect(astralDeepRingResultLine({ purified: false, marks: 2, shardHits: 0, collapses: 0, seconds: 0 })).toBe('외곽 고리 정화 미완료 · 성표 2/4 · 파편 피격 0회 · 붕괴 0회');
   // 횟수가 숫자가 아니면 0 으로 둔다.
   expect(astralDeepRingResultLine({ purified: true, marks: undefined, shardHits: NaN })).toBe('외곽 고리 정화 완료 · 성표 0/4 · 파편 피격 0회 · 붕괴 0회');
-  // 같은 틀이 일반 정의에서는 이탈·항로 표지·기록 파편과 표지 3개로 나온다.
-  expect(astralRingResultLine({ purified: true, marks: 3, shardHits: 1, collapses: 0 }, STANDARD.ring)).toBe('외곽 고리 이탈 완료 · 항로 표지 3/3 · 기록 파편 피격 1회 · 붕괴 0회');
-  expect(astralRingResultLine({ purified: false, marks: 1, shardHits: 0, collapses: 2 }, STANDARD.ring)).toBe('외곽 고리 이탈 미완료 · 항로 표지 1/3 · 기록 파편 피격 0회 · 붕괴 2회');
+  // 같은 틀이 일반 정의에서는 이탈·항로 표지·기록 파편으로 나온다.
+  expect(astralRingResultLine({ purified: true, marks: 4, shardHits: 1, collapses: 0 }, STANDARD.ring)).toBe('외곽 고리 이탈 완료 · 항로 표지 4/4 · 기록 파편 피격 1회 · 붕괴 0회');
+  expect(astralRingResultLine({ purified: false, marks: 1, shardHits: 0, collapses: 2 }, STANDARD.ring)).toBe('외곽 고리 이탈 미완료 · 항로 표지 1/4 · 기록 파편 피격 0회 · 붕괴 2회');
   // 보고 id 로 정의를 찾고, 모르는 id 는 심층 문구로 둔다.
   expect(astralRingDefFor({ id: STANDARD.id })).toBe(STANDARD.ring);
   expect(astralRingDefFor({ id: DEEP.id })).toBe(RING);
@@ -236,9 +236,9 @@ test('결과 화면: 일반 성운 고리 보고는 별자리 줄과 외곽 고�
   const standardStations = STANDARD.gates.map((g: any) => ({ stationId: g.stationId, roomId: g.roomId, label: g.label, choice: g.answer }));
   const lines = resultLines(Object.freeze({ id: STANDARD.id, complete: true, progress: 4, target: 4, mistakes: 0,
     rooms: Object.freeze(STANDARD.gates.map((g: any) => g.roomId)), constellations: Object.freeze(standardStations),
-    ring: Object.freeze({ purified: true, marks: 3, collapses: 0, shardHits: 1, seconds: 12.5 }) }));
+    ring: Object.freeze({ purified: true, marks: 4, collapses: 0, shardHits: 1, seconds: 12.5 }) }));
   expect(lines.filter(l => l.label === '별자리 복원 결과')).toHaveLength(1);
-  expect(lines.filter(l => l.label === '외곽 고리 이탈 결과')).toEqual([{ label: '외곽 고리 이탈 결과', text: '외곽 고리 이탈 완료 · 항로 표지 3/3 · 기록 파편 피격 1회 · 붕괴 0회' }]);
+  expect(lines.filter(l => l.label === '외곽 고리 이탈 결과')).toEqual([{ label: '외곽 고리 이탈 결과', text: '외곽 고리 이탈 완료 · 항로 표지 4/4 · 기록 파편 피격 1회 · 붕괴 0회' }]);
   expect(lines.some(l => l.label === '외곽 고리 정화 결과')).toBe(false);
   expect(lines.filter(l => l.label.includes('결과')).length).toBe(2);
 });

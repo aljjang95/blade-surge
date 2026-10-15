@@ -353,7 +353,7 @@ test('dispose 는 반복해도 안전하고 scene·geometry·material·mesh 를 
 });
 
 
-// ---- 일반 성운 기록 외곽 고리(BUNDLE-13): 같은 뷰가 정의(표지 3·기록 파편 6·core 3.2·색)만으로 그려진다 ----
+// ---- 일반 성운 기록 외곽 고리(BUNDLE-13): 같은 뷰가 정의(표지 4·기록 파편 6·core 3.2·색)만으로 그려진다 ----
 const STD = ROUTE_OBJECTIVES.astral_standard, STD_RING = STD.ring as any;
 function makeStandardRoute(phase = 'running', shard: any = { state: 'calm', age: 0, cycle: -1 }) {
   const route = makeRoute(phase, {
@@ -364,15 +364,15 @@ function makeStandardRoute(phase = 'running', shard: any = { state: 'calm', age:
   return route;
 }
 
-test('일반 고리: 표지 3개·기록 파편 6개·core 3.2 경계·섬광, 유지 중 색은 일반 정의 색이고 그 밖은 심층과 같다', () => {
+test('일반 고리: 표지 4개·기록 파편 6개·core 3.2 경계·섬광, 유지 중 색은 일반 정의 색이고 그 밖은 심층과 같다', () => {
   const scene = new THREE.Scene(), route = makeStandardRoute(), view = new AstralDeepRingView(scene, route), v = v$(view);
-  expect(STD_RING.marks.length).toBe(3); expect(STD_RING.shards).toBe(6); expect(STD_RING.core).toBe(3.2);
+  expect(STD_RING.marks.length).toBe(4); expect(STD_RING.shards).toBe(6); expect(STD_RING.core).toBe(3.2);
   route.ring.held = 1; route.ring.marks[1].hold = .5; route.ring.marks[0].done = true;
   view.update(route, DT, STILL);
-  expect(v.marks.count).toBe(3); expect(v.shards.count).toBe(6);
-  expect([0, 1, 2].map(i => shown(v.marks, i))).toEqual([true, true, true]);
-  expect([0, 1, 2].map(i => radial(posOf(v.marks, i)))).toEqual([RADIUS, RADIUS, RADIUS].map(r => expect.closeTo(r, 4)) as any);
-  expect([hexOf(v.marks, 0), hexOf(v.marks, 1), hexOf(v.marks, 2)]).toEqual([GOLD, STD_RING.color, GRAY]);
+  expect(v.marks.count).toBe(4); expect(v.shards.count).toBe(6);
+  expect([0, 1, 2, 3].map(i => shown(v.marks, i))).toEqual([true, true, true, true]);
+  expect([0, 1, 2, 3].map(i => radial(posOf(v.marks, i)))).toEqual([RADIUS, RADIUS, RADIUS, RADIUS].map(r => expect.closeTo(r, 4)) as any);
+  expect([0, 1, 2, 3].map(i => hexOf(v.marks, i))).toEqual([GOLD, STD_RING.color, GRAY, GRAY]);
   for (let k = 0; k < 6; k++) {
     const p = posOf(v.shards, k);
     expect(radial(p)).toBeCloseTo(RADIUS, 4);
@@ -395,7 +395,7 @@ test('일반 고리: 표지 3개·기록 파편 6개·core 3.2 경계·섬광, �
 });
 
 
-test('파편 시작 위상: 심층은 기존 22.5°(.5) 그대로, 일반은 표지에서 15° 떨어진 위상을 고른다', () => {
+test('파편 시작 위상: 심층은 기존 22.5°(.5) 그대로, 일반(파편 6·표지 4)은 표지에서 15° 떨어진 위상을 고른다', () => {
   const scene = new THREE.Scene();
   const deep = new AstralDeepRingView(scene, makeRoute()), std = new AstralDeepRingView(scene, makeStandardRoute());
   expect(v$(deep).shardPhase).toBe(.5);
