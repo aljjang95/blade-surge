@@ -243,7 +243,9 @@ test('일식 수문 일반: 역류 밸브 3개를 순서대로 잠가야 봉인�
   for (const id of [2, 5, 7]) expect(flow[cell(f.world, f.world.rooms[id])]).toBeGreaterThanOrEqual(0);
   expect(flow[cell(f.world, f.world.bossRoom)]).toBe(-1);
   expect(f.world.rooms[7].label).toContain('3번 역류 밸브');
-  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'eclipse_hydra_vault', null, { depth: 'deep' }))).toBeNull();
+  // 심층은 별도 정의(역류 밸브 4곳 봉인)를 받고, 일반 정의는 바뀌지 않는다.
+  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'eclipse_hydra_vault', null, { depth: 'deep' }))).toBe(ROUTE_OBJECTIVES.eclipse_deep);
+  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'eclipse_hydra_vault', null))).toBe(ROUTE_OBJECTIVES.eclipse_standard);
 
   // 2번 밸브를 먼저 정리해도 1번 전에는 잠기지 않는다.
   clearCombat(f, 5); tickAt(f, 5, 3);

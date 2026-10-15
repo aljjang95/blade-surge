@@ -16,7 +16,7 @@ const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   bellfall_crypt: { standard: [3, 0], deep: [3, 2] },
   cinder_tide_lock: { standard: [2, 4], deep: [3, 4] },
   nightglass_observatory: { standard: [3, 0], deep: [5, 0] },
-  eclipse_hydra_vault: { standard: [3, 0], deep: [0, 4] },
+  eclipse_hydra_vault: { standard: [3, 0], deep: [4, 4] },
   ashforge_catacomb: { standard: [4, 0], deep: [0, 4] },
   astral_leviathan_spire: { standard: [0, 0], deep: [2, 2] },
   verdigris_sanctum: { standard: [3, 0], deep: [2, 4] },
@@ -90,6 +90,26 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(stage.encounter.tactic).toMatch(/적.*처치.*빛 안.*2초.*정화/);
         expect(stage.encounter.tactic).toMatch(/차례가 아닌.*1초.*포자/);
         expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번']);
+      } else if (id === 'eclipse_hydra_vault' && depth === 'deep') {
+        // 공명 제단이 없는 심층은 역류 밸브 4곳 봉인으로 바뀌었다. 문구의 숫자·순서는 정의(def)에서 읽어 맞춘다.
+        const deep = route as typeof ROUTE_OBJECTIVES.eclipse_deep;
+        expect(deep).toBe(ROUTE_OBJECTIVES.eclipse_deep);
+        expect(deep.gates.map(g => g.roomId)).toEqual([2, 4, 7, 5]);
+        expect('coexistAttunement' in deep).toBe(false);
+        expect(Number(stage.objective.match(/역류 밸브 (\d+)곳을 순서대로 봉인/)?.[1])).toBe(holds);
+        expect(stage.objective).not.toMatch(/공명|제단|보물방/);
+        const tactic = stage.encounter.tactic;
+        expect(tactic).toMatch(/적을 처치한 뒤\(정예방은 증원 2회까지\)/);
+        expect(Number(tactic.match(/연속 (\d+(?:\.\d+)?)초간 밸브를 봉인/)?.[1])).toBe(deep.holdSeconds);
+        expect(tactic).toMatch(/청록 빛 안/);
+        // 번호는 1번부터 마지막 번호까지 순서대로 한 번 나오고, 마지막 밸브는 앞 번호로 가는 길에 먼저 지나쳐 기다린다.
+        const steps = tactic.match(/\d번 → (?:\d번 → )*\d번/)![0];
+        expect(steps).toBe(deep.gates.map((_, i) => (i + 1) + '번').join(' → '));
+        expect(tactic).toContain(deep.gates.length + '번 밸브는 ' + (deep.gates.length - 1) + '번으로 가는 길에 먼저 지나치니 차례를 기다렸다가');
+        expect(tactic).toMatch(/되돌아가 봉인하세요/);
+        expect(tactic).toContain('밸브 ' + deep.gates.length + '곳과 모든 구역을 정화하면 보스 봉인이 풀립니다');
+        // 밸브 안내는 보스 전술보다 앞에 있다.
+        expect(tactic.indexOf('밸브')).toBeLessThan(tactic.indexOf((ENEMIES as Record<string, any>).obsidian_hydra.tactic));
       } else if (id === 'ashforge_catacomb' && depth === 'standard') {
         expect(Number(stage.objective.match(/과열 용광로\s*(\d+)곳/)?.[1])).toBe(holds);
         expect(stage.encounter.tactic).toMatch(/1\.4초 예고/);
@@ -182,7 +202,7 @@ for (const [id, contract] of Object.entries(contracts)) {
       expect(stage.objective).toMatch(/처치|쓰러뜨리/);
       for (const copy of [definition.objective, definition.tactic, stage.objective, stage.encounter.tactic]) {
         const checked = id === 'cinder_tide_lock' ? copy.replaceAll('밸브', '')
-          : id === 'eclipse_hydra_vault' && depth === 'standard' ? copy.replaceAll('밸브', '')
+          : id === 'eclipse_hydra_vault' ? copy.replaceAll('밸브', '')
           : id === 'verdigris_sanctum' && depth === 'standard' ? copy.replaceAll('생명 제단', '').replaceAll('포자가 터져', '')
           : id === 'sable_mirage_basin' && depth === 'standard' ? copy.replaceAll('가짜 왕좌', '왕좌')
           : id === 'comet_bastion' ? copy.replaceAll('궤도 고리', '고리').replaceAll('푸른 궤도선', '푸른 선')
