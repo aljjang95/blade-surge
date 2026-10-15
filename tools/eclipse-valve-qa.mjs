@@ -5,7 +5,8 @@
 // 읽기 경로: app.battle.routeObjectives (progress/hold/gates[i].{room,ready,attuned}/def/view.count/view.drawCalls), gates[i].room.{id,x,z,type,cleared,discovered,forgeWave},
 // app.battle.world.{sealed,rooms,roomAt,linkPending}, app.battle.{enemies[].homeRoom/alive, pending[].room, curRoom, stage.expedition.mechanics, paused},
 // 목표창 #objective textContent(10Hz 갱신이라 유지 0.5초 뒤부터 표본), 결과 화면 .exp-result-shell innerText 와 app.expeditionUI.result.routeObjective,
-// app.renderer.r.info.render.calls(방 첫 진입 draw call 표본, renderer.render() 단독 호출), app.renderer.scene 의 InstancedMesh(뷰 인스턴스 스냅샷).
+// app.renderer.r.info.render.calls(방 첫 진입 draw call 표본, renderer.render() 단독 호출), app.renderer.scene 의 InstancedMesh(뷰 인스턴스 스냅샷),
+// route.view.group.visible(뷰 실제 draw call A/B: 밸브 모습이 바뀐 스텝 끝에서 같은 프레임을 그룹 켠 채·끈 채 renderer.render() 로 한 번씩 그려 calls 차이를 잰다. 시뮬레이션 스텝 없음, 끝나면 visible 복원).
 // 경로 정의(ROUTE_OBJECTIVES.eclipse_deep)가 없는 기준선 빌드(--project)에서는 밸브 판정을 건너뛰고 공통 측정만 남긴다.
 // 일반 기준선(정의는 있고 view 만 없음)은 밸브 3개 규칙 판정을 하고 뷰 판정만 건너뛴다.
 // 판정 함수는 tools/eclipse-valve-checks.mjs 에 있고 test/eclipse-valve-checks.test.ts 가 합격·불합격 입력을 모두 검사한다. 기준선 비교는 tools/eclipse-valve-compare.mjs 다.
@@ -13,7 +14,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createExpeditionQa, nativeGameplayFocus, qaArgument, qaAssert, qaHash } from './expedition-qa-runtime.mjs';
-import { analyzeOrder, analyzePauseSeal, analyzeValves, checkPause, checkScreenMoment, checkScreens, stepStats } from './eclipse-valve-checks.mjs';
+import { analyzeOrder, analyzePauseSeal, analyzeValves, checkPause, checkScreenMoment, checkScreens, stepStats, streamBase } from './eclipse-valve-checks.mjs';
 
 const HELP = [
   '사용법: node tools/eclipse-valve-qa.mjs --expected-sha=<40hex> --out=<새 절대경로> [옵션]',
@@ -38,7 +39,8 @@ const HELP = [
   '',
   '프로필(F = fixture, R = 실제 UI·입력, C = 제어 실행)',
   '  auto     F 저장 주입(해금·영웅·장비·에너지) → R 출격 카드 버튼 → R #btn-auto → C 고정 1/60 스텝 완주 → R 결과 화면 → R 새로고침 보존',
-  '           + 밸브 판정: 봉인마다 방 순서·직전 연속 유지(반경 안)·적/대기열 0·정예방 증원·순서 대기·보스 봉인 해제·결과/결과 줄·목표창·뷰',
+  '           + 밸브 판정: 봉인마다 방 순서·직전 연속 유지(게임 시각 길이·반경 안)·적/대기열 0·정예방 증원·순서 대기·보스 봉인 해제·결과/결과 줄·목표창·뷰(고리·물줄기 색, 물줄기 높이)',
+  '           + 뷰 실제 draw call A/B(C): 밸브 모습이 바뀐 스텝 끝에서 같은 프레임을 뷰 그룹 켠 채·끈 채 한 번씩 그려 calls 차이(viewGpuCalls) ≤ 3 이고 route.view.drawCalls 와 같은지(표본 ≥ 3, 차례·유지·봉인 포함)',
   '  order    AUTO 로 progress 2·방 5 ready·적 0 까지 → R #btn-auto 끔 → R 키보드(KeyW/A/S/D)로 방 5 중심 → 3초(progress 불변·방 5 cleared 아님) → R AUTO 켬 →',
   '           progress 3 에서 R AUTO 끔 → R 키보드로 방 5 중심에서 유지 ≥ 1.0 뒤 반경 밖(중심에서 4.0) → hold 0 → 다시 중심 → progress 4(공격 키 없음) → R AUTO 켬 → 완주',
   '  pause    유지 hold ≥ 0.8 에서 R #btn-pause → 120스텝+1초 게임 시간 불변·hold 0 → R #btn-resume → 새 유지 ≥ 2초 뒤 봉인 → 완주',
@@ -102,6 +104,9 @@ const STEP_CLASS = {
   pause: [['F', '저장 주입'], ['R', '출격 카드 버튼 · #btn-pause/#btn-resume'], ['C', 'AUTO 로 유지 hold ≥ 0.8 까지 고정 스텝'], ['C', '정지 중 app.step 120회(stepRaw)로 게임 시간 불변 확인'], ['C', 'AUTO 완주']],
   screens: [['F', '저장 주입'], ['R', '출격 카드 버튼'], ['C', 'AUTO 로 다음 밸브·유지 중·순서 대기·봉인 직후 순간까지 고정 스텝'], ['C', 'renderer.render() 단독 호출 + viewport 3종 스크린샷(시뮬레이션 tick 없음)']],
 };
+/** 뷰가 있는 빌드에서 모든 프로필의 프로브가 하는 제어 렌더. */
+const VIEW_AB_STEP = ['C', '뷰 실제 draw call A/B: 밸브 모습이 바뀐 스텝 끝에서 같은 프레임을 route.view.group.visible true/false 로 renderer.render() 한 번씩(시뮬레이션 스텝 없음, 끝나면 visible 복원)'];
+if (viewExpected) for (const list of Object.values(STEP_CLASS)) list.push(VIEW_AB_STEP);
 const report = { kind: 'eclipse-valve-qa', releaseApproved: false, seed, heroId, depth, viewport, motion, quality, selectedProfiles: selected, projectRoot,
   driverSha256: qaHash(fs.readFileSync(import.meta.filename)),
   checksSha256: qaHash(fs.readFileSync(path.join(import.meta.dirname, 'eclipse-valve-checks.mjs'))), profiles: {}, checks: [], reportItems: {},
@@ -112,7 +117,7 @@ const report = { kind: 'eclipse-valve-qa', releaseApproved: false, seed, heroId,
       ...(deep ? [] : ['details.exp-dungeon-details > summary (닫혀 있으면)']), '[data-dungeon="' + DUNGEON_ID + '"][data-depth="' + depth + '"] .exp-primary'],
     battle: ['#btn-auto', '#btn-pause', '#btn-resume', '#pause-overlay.show', '#gl (canvas 포커스)', '#objective (목표창 textContent, 10Hz 갱신이라 유지 0.5초 뒤부터 표본)'],
     result: ['.exp-result-shell (결과 줄 innerText, "역류 밸브 봉인 n/n · 완료")', '.exp-result-footer .exp-primary', '.exp-result-shell .exp-close'],
-    page: ['window.app.battle.routeObjectives (progress/hold/gates[i].room/ready/attuned/def/view.count/view.drawCalls)', 'window.app.battle.world (sealed/rooms/roomAt/linkPending)',
+    page: ['window.app.battle.routeObjectives (progress/hold/gates[i].room/ready/attuned/def/view.count/view.drawCalls/view.group.visible)', 'window.app.battle.world (sealed/rooms/roomAt/linkPending)',
       'window.app.battle (enemies[].homeRoom/alive, pending[].room, curRoom, stage.expedition.mechanics, player.pos/hp/auto/state)', 'window.app.input.attackHeld',
       'window.app.renderer.r.info.render.calls', 'window.app.renderer.scene (InstancedMesh: instanceMatrix 스케일·instanceColor)', 'window.app.expeditionUI.result.routeObjective',
       'window.__qaReseed (init script)', 'window.app.expedition.dungeonAccess'] },
@@ -121,7 +126,8 @@ const report = { kind: 'eclipse-valve-qa', releaseApproved: false, seed, heroId,
       quality === 'low' ? '낮은 화질 설정(설정 핸들러와 같은 경로)' : null].filter(Boolean),
     realInput: ['#btn-expedition → 던전 탭 → ' + (deep ? '심층' : '기본') + ' 원정 → 카드 출격 버튼', '#btn-auto', '#btn-pause/#btn-resume', '결과 화면 버튼(로비로)', '선택지 모달 버튼', '브라우저 새로고침',
       needsKeyboard ? 'Playwright 키보드 이벤트(KeyW/A/S/D, 에뮬레이터 입력): 걷는 방향은 도구가 방 연결(L자 복도) 경로의 화면 투영으로 정함. 텔레포트·무적·HP 주입·공격 키 없음' : null].filter(Boolean),
-    controlled: ['app.testPause + 고정 1/60초 app.step (자연 RAF 아님)', 'renderer.render() 단독 호출(스크린샷·draw call 샘플, 시뮬레이션 tick 없음)'],
+    controlled: ['app.testPause + 고정 1/60초 app.step (자연 RAF 아님)', 'renderer.render() 단독 호출(스크린샷·draw call 샘플, 시뮬레이션 tick 없음)',
+      viewExpected ? '뷰 draw call A/B: route.view.group.visible 을 켜고 끈 같은 프레임을 renderer.render() 로 각각 그려 calls 차이 측정(끝나면 visible 복원)' : null].filter(Boolean),
     notProven: ['실제 Android/GPU/터치/발열', '자연 해금·장비 획득', '수동 플레이 밸런스', '사람의 실제 키보드·터치 조작 감각'],
     steps: Object.fromEntries(selected.map(name => [name, STEP_CLASS[name].map(([kind, detail]) => ({ kind, detail }))])) },
   scope: '로컬 production preview + SwiftShader headless Chromium. fixture 영웅/장비로 합법 범위 값만 주입하고 전투 중 HP·위치·적·결과는 건드리지 않는다.' };
@@ -184,6 +190,31 @@ function installProbe(cfg) {
     }) };
   };
   const viewCounts = () => { const v = routeOf()?.view; return v ? { c: v.count, d: v.drawCalls } : null; };
+  // ---- 뷰 실제 draw call A/B: 밸브마다 모습 코드(0 hidden, 1 sealed, 2 holding, 3 next, 4 waiting)가 바뀐 스텝 끝에서 측정한다. 코드는 sig(관측값)로만 계산한다. ----
+  const abChanged = () => {
+    const r = routeOf(), s = P.sig;
+    if (!r) return null;
+    let changed = null;
+    for (let i = 0; i < r.gates.length; i++) {
+      const o = 6 + i * 7, code = s[o + 4] !== 1 ? 0 : s[o + 1] === 1 ? 1 : i === s[1] ? (s[5] === 1 ? 2 : 3) : 4;
+      if (code !== P.abCodes[i]) { (changed ??= []).push(i); P.abCodes[i] = code; }
+    }
+    return changed;
+  };
+  /** 같은 프레임을 뷰 그룹 켠 채·끈 채 한 번씩 그린다(P.sample 과 같은 info.reset + renderer.render 경로, app.step 없음). visible 과 autoReset 은 반드시 복원한다. */
+  P.measureView = changed => {
+    const b = app.battle, r = routeOf(), view = r?.view, group = view?.group;
+    const rec = { n: P.steps, t: b.elapsed, pr: r.progress, hd: r.hold, g: r.gates.map(g => ({ dc: g.room.discovered ? 1 : 0, at: g.attuned ? 1 : 0 })), changed,
+      viewCalls: view ? view.drawCalls : null, on: null, off: null };
+    if (!group) return rec;
+    const info = app.renderer.r.info, autoReset = info.autoReset, visible = group.visible;
+    info.autoReset = false;
+    try {
+      group.visible = true; info.reset(); app.renderer.render(); rec.on = info.render.calls;
+      group.visible = false; info.reset(); app.renderer.render(); rec.off = info.render.calls;
+    } finally { group.visible = visible; info.autoReset = autoReset; }
+    return rec;
+  };
   // ---- 행 만들기: 관측값만 읽는다. sig 는 상태 변화 감지용 숫자 배열이다. ----
   const gateClear = g => {
     const b = app.battle;
@@ -215,11 +246,12 @@ function installProbe(cfg) {
   const push = row => { P.rows.push(row); P.prevSig.set(P.sig); P.prevHd = row.hd; };
   P.begin = () => {
     const b = app.battle, r = routeOf(), gn = r ? r.gates.length : 0, size = 6 + gn * 7;
-    Object.assign(P, { hpDrops: [], clears: [], samples: [], stepMs: [], renderMs: [], slow: [], maxAlive: 0, minHpRatio: 1, steps: 0, startElapsed: b.elapsed, rows: [],
+    Object.assign(P, { hpDrops: [], clears: [], samples: [], viewAB: [], abCodes: new Int8Array(gn).fill(-1), stepMs: [], renderMs: [], slow: [], maxAlive: 0, minHpRatio: 1, steps: 0, startElapsed: b.elapsed, rows: [],
       sig: new Float64Array(size), prevSig: new Float64Array(size).fill(-1e9), prevHd: 0, vkey: null, vstable: 0, entered: new Set(), wp: [], marks: [] });
     P.prevRoom = b.curRoom?.id ?? null;
     P.prev = { cleared: b.world.rooms.map(x => !!x.cleared), hp: b.player.hp };
     fill();
+    abChanged();   // 시작 모습을 기준으로 삼는다(시작 직후는 측정하지 않는다)
     const row = build('start');
     if (cfg.viewExpected) row.vw = viewCounts();
     push(row);
@@ -241,7 +273,7 @@ function installProbe(cfg) {
     const s = P.sig, q = P.prevSig, hd = r ? r.hold : 0;
     let changed = false;
     for (let i = 0; i < s.length; i++) if (s[i] !== q[i]) { changed = true; break; }
-    // 뷰 표본 키: 진행·유지 여부·밸브별 ready/attuned/discovered. 키가 3스텝 변하지 않으면(뷰 갱신 1스텝 지연을 지난 뒤) 인스턴스를 한 번 읽는다.
+    // 뷰 표본 키: 진행·유지 여부·밸브별 ready/attuned/discovered. 키가 3스텝 변하지 않으면 안정된 모습으로 보고 인스턴스를 한 번 읽는다.
     let key = s[1] * 2 + s[5];
     for (let i = 0; i < (r ? r.gates.length : 0); i++) { const o = 6 + i * 7; key = key * 8 + s[o] * 4 + s[o + 1] * 2 + s[o + 4]; }
     if (key !== P.vkey) { P.vkey = key; P.vstable = 0; } else P.vstable++;
@@ -253,6 +285,8 @@ function installProbe(cfg) {
       push(row);
     }
     b.world.rooms.forEach((room, i) => { if (room.cleared && !P.prev.cleared[i]) { P.clears.push({ t: b.elapsed, room: room.id, type: room.type }); P.prev.cleared[i] = true; } });
+    // 밸브 모습이 바뀐 스텝 끝: 같은 프레임의 뷰 draw call A/B(최대 40회).
+    if (cfg.viewExpected && r) { const ch = abChanged(); if (ch && P.viewAB.length < 40) P.viewAB.push(P.measureView(ch)); }
     if (p.hp < P.prev.hp - 1e-6) P.hpDrops.push({ t: b.elapsed, drop: P.prev.hp - p.hp, hp: p.hp, maxHp: p.maxHp, room: b.curRoom?.id ?? null });
     P.prev.hp = p.hp;
     if (p.maxHp > 0) P.minHpRatio = Math.min(P.minHpRatio, p.hp / p.maxHp);
@@ -339,7 +373,7 @@ function installProbe(cfg) {
     return { dx: (z.x - a.x) * innerWidth / 2, dy: -(z.y - a.y) * innerHeight / 2, left: P.wp.length, final: fin, dist: Math.hypot(fin.x - p.x, fin.z - p.z) };
   };
   // 느린 스텝 목록은 자르지 않는다(기준선 비교가 개수를 정확히 세야 한다).
-  P.summary = () => ({ steps: P.steps, stepMs: P.stepMs, renderMs: P.renderMs, slow: P.slow, maxAlive: P.maxAlive, minHpRatio: P.minHpRatio, samples: P.samples,
+  P.summary = () => ({ steps: P.steps, stepMs: P.stepMs, renderMs: P.renderMs, slow: P.slow, maxAlive: P.maxAlive, minHpRatio: P.minHpRatio, samples: P.samples, viewAB: P.viewAB,
     clears: P.clears, hpDrops: P.hpDrops, rows: P.rows });
   return true;
 }
@@ -563,14 +597,18 @@ function recordValves(row, raw) {
   const missingRooms = valveRooms.filter(id => !roomSamples.some(x => x.roomId === id));
   check(row.tag + ': 밸브 방마다 첫 진입 draw call 표본', missingRooms.length === 0, { valveRooms, missing: missingRooms });
   if (!viewExpected) row.viewSkipped = '정의에 view 가 없는 기준선 빌드: 뷰 판정 생략';
-  const analysis = analyzeValves({ rows, result: row.result?.routeObjective, resultText: row.resultText, win: row.result?.win === true, rooms: row.begin.rooms },
+  const analysis = analyzeValves({ rows, result: row.result?.routeObjective, resultText: row.resultText, win: row.result?.win === true, rooms: row.begin.rooms, viewAB: raw.viewAB },
     routeDef, { reinforcements: row.reinforcements, expectWaiting: deep, viewExpected });
   row.valves = analysis;
+  if (analysis.view) (report.reportItems.viewGpuCalls ??= []).push({ tag: row.tag, classification: 'C', max: analysis.view.gpu.max, samples: analysis.view.gpu.samples, limit: analysis.view.gpu.limit,
+    note: '보고 항목: 뷰 실제 draw call A/B(같은 프레임, 뷰 그룹 켠 채 − 끈 채). 판정은 acceptance.viewGpu' });
   const LABELS = { sealCount: '봉인 ' + routeDef.gates.length + '회(progress 증가 스텝)', sealOrder: '봉인 순서 = 정의 순서 [' + valveRooms.join(', ') + ']',
-    holdDuration: '봉인마다 직전 연속 유지(0 에서 시작) ≥ ' + routeDef.holdSeconds + '초 − 1/60', holdInside: '유지 동안 영웅이 방 중심 반경 ' + routeDef.radius + ' 안',
+    holdDuration: '봉인마다 직전 연속 유지(0 에서 시작, hold 증가 = 게임 시각 증가)가 엔진 hold·게임 시각 길이 모두 ≥ ' + routeDef.holdSeconds + '초 − 1/60', holdInside: '유지 동안 영웅이 방 중심 반경 ' + routeDef.radius + ' 안',
     enemiesCleared: '봉인 시점 그 방의 적·대기열 0(유지 구간 전체 포함)', reinforcements: '정예방 forgeWave = 증원 횟수 ' + row.reinforcements, gateState: '봉인 순서 상태(앞 밸브 attuned·뒤 밸브 아직·봉인 전 cleared 아님)',
     waiting: '순서 대기 관측(마지막 밸브 ready 이고 차례 전 표본 ≥ 1, 심층만)', unseal: 'world.sealed 해제는 progress = n 이고 모든 비보스 방 cleared 뒤', resultFields: '결과 routeObjective { id, complete, progress, target, rooms }',
-    resultLine: "결과 줄 '" + analysis.resultLine.line + "'", objectiveText: '목표창 유지 표본에 제목과 유지 문구', viewCount: '뷰 count = 밸브 수·drawCalls ≤ 3', viewLook: '렌더된 뷰 인스턴스 = 관측 기대 모습(봉인 물줄기 숨김·금색 고리)' };
+    resultLine: "결과 줄 '" + analysis.resultLine.line + "'", objectiveText: '목표창 유지 표본에 제목과 유지 문구', viewCount: '뷰 count = 밸브 수·drawCalls ≤ 3',
+    viewLook: '렌더된 뷰 인스턴스 = 관측 기대 모습(고리 색·물줄기 색을 이름별 메시로 따로, 물줄기 높이 = 차례 표본 기준 비율' + (deep ? ', 순서 대기 표본 필수' : '') + ')',
+    viewGpu: '뷰 실제 draw call A/B(C 제어 렌더): 표본 ≥ 3(차례·유지·봉인 포함)·viewGpuCalls ≤ 3·route.view.drawCalls 와 같음' };
   for (const [name, ok] of Object.entries(analysis.acceptance)) check(row.tag + ': 밸브 ' + (LABELS[name] ?? name), ok, ok ? undefined : { name, violations: analysis.violations.slice(0, 8), waiting: analysis.waiting, unseal: analysis.unseal,
     result: analysis.result, line: analysis.resultLine, objective: analysis.objective, view: analysis.view, observedOrder: analysis.observedOrder, wantOrder: analysis.wantOrder });
 }
@@ -749,7 +787,7 @@ const profiles = {
     const judged = !!routeDef && row.gates > 0;
     const w = row.gates - 1;
     const moments = !judged ? [{ label: 'mid', stop: { type: 'time', t: 60 } }] : [
-      { label: 'next', stop: { type: 'next', gate: 0, progress: 0 }, settle: 1, want: { gate: 0, look: 'next' } },
+      { label: 'next', stop: { type: 'next', gate: 0, progress: 0 }, settle: 0, want: { gate: 0, look: 'next' } },
       { label: 'holding', stop: { type: 'hold', min: 1.0, progress: 0 }, settle: 0, want: { gate: 0, look: 'holding' } },
       { label: 'sealed', stop: { type: 'progress', n: 1 }, settle: 30, want: { gate: 0, look: 'sealed' } },
       ...(deep ? [{ label: 'waiting', stop: { type: 'waiting', gate: w, below: w, min: 1 }, settle: 12, want: { gate: w, look: 'waiting' } }] : []),
@@ -758,11 +796,14 @@ const profiles = {
     const verdict = checkScreens(row.shots, moments.map(m => m.label), SCREEN_VIEWPORTS.length);
     check('screens: 모든 순간에 도달해 3개 화면 크기 PNG 를 남김', verdict.ok, verdict.rows);
     row.screensCheck = verdict;
+    // 물줄기 높이 기준: 같은 런의 차례 표본(촬영 행의 뷰 스냅샷)에서 잰다.
+    const base = viewExpected && judged ? streamBase(row.shots.filter(x => x.reached && x.capture?.vis).map(x => ({ vis: x.capture.vis, row: x.capture })), routeDef) : undefined;
+    if (viewExpected && judged) check('screens: 같은 런의 차례 표본으로 물줄기 높이 기준을 잼', base !== null, { streamBase: base });
     if (judged) for (const m of moments) {
       const s = row.shots.find(x => x.label === m.label);
       if (!s?.reached) continue;
-      s.look = checkScreenMoment(s, routeDef, m.want, { viewExpected });
-      check('screens: ' + m.label + ' 순간의 밸브 ' + m.want.gate + ' 상태 = ' + m.want.look + (viewExpected ? ' (렌더된 뷰 인스턴스 포함)' : ''), s.look.ok, s.look);
+      s.look = checkScreenMoment(s, routeDef, m.want, { viewExpected, streamBase: base });
+      check('screens: ' + m.label + ' 순간의 밸브 ' + m.want.gate + ' 상태 = ' + m.want.look + ' (촬영 스텝 행' + (viewExpected ? ', 렌더된 뷰 인스턴스 포함' : '') + ')', s.look.ok, s.look);
     }
     row.resultShots = await captureScreens('result-' + row.tag);
     await closeResultToLobby();
