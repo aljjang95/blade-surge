@@ -56,13 +56,18 @@ export async function createExpeditionQa({ root, driver, report, sourceFiles }) 
     }
     for (const [file, hash] of Object.entries(report.sources)) qaAssert(qaHash(await fs.readFile(path.join(root, file))) === hash, `Driver dependency changed: ${file}`);
   }
-  async function start({ viewport = { width: 844, height: 390 } } = {}) {
+  // context는 터치·모바일·모션 설정만 허용한다. 생략하면 기존과 같은 reduced-motion 데스크톱 컨텍스트다.
+  async function start({ viewport = { width: 844, height: 390 }, context: contextOptions = {} } = {}) {
+    const allowed = ['hasTouch', 'isMobile', 'reducedMotion'];
+    qaAssert(Object.keys(contextOptions).every(key => allowed.includes(key)), 'QA context accepts only hasTouch/isMobile/reducedMotion');
+    qaAssert(contextOptions.reducedMotion === undefined || ['reduce', 'no-preference'].includes(contextOptions.reducedMotion), 'reducedMotion must be reduce or no-preference');
     await versionGuard();
     if (!origin) server = await preview({ root, logLevel: 'error', preview: { host: '127.0.0.1', port: 0 } });
     url = origin || `http://127.0.0.1:${server.httpServer.address().port}`; report.origin = url;
     await versionGuard();
     browser = await chromium.launch(launchOpts());
-    context = await browser.newContext({ viewport, reducedMotion: 'reduce' });
+    context = await browser.newContext({ viewport, reducedMotion: 'reduce', ...contextOptions });
+    report.contextOptions = { viewport, reducedMotion: 'reduce', ...contextOptions };
     const storage = await context.storageState();
     qaAssert(storage.cookies.length === 0 && storage.origins.length === 0, 'Expected an isolated fresh browser context');
     report.contextInitiallyEmpty = true;
