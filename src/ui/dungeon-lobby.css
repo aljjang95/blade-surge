@@ -1,6 +1,11 @@
 /* 던전 우선 로비 착지 패널. 영웅 3D 는 장면 중앙에 두고, 오른쪽(세로 화면은 아래)에 추천 던전 한 장과 단일 출격 준비만 둔다.
    글자 크기·굵기는 typography.css 의 토큰을 쓴다. 아이디 선택자 하나로 범위를 묶고 :root 반복 같은 특이도 쌓기는 하지 않는다. */
-#citadel-command[hidden] { display: none; }
+/* 걷기 모드·모달·동행 패널·전환 중에는 commandUI.setVisible(false)가 hidden을 단다. 아래 #citadel-command.dl-landing의 display가
+   같은 특이도로 뒤에 와서 hidden을 이기지 않게 한다(지운 citadel-command.css의 규칙 복원). */
+#citadel-command[hidden], .citadel-command-return[hidden] { display: none !important; }
+/* 마을 걷기의 착지 복귀 버튼. 지운 citadel-command.css의 위치 규칙을 복원한다. 가로·세로 위치는 garden-ui·town-ui·ux-pass가 상단 바 아래로 조정한다. */
+.citadel-command-return { position: absolute; left: max(18px, var(--sal)); top: calc(60px + var(--sat)); z-index: 29; min-height: 44px; padding: 10px 13px; border: 1px solid #dac48870; border-radius: 8px; background: #183631f2; color: #f0e6c8; font: 600 13px var(--font-ui, system-ui, sans-serif); cursor: pointer; pointer-events: auto; }
+.citadel-command-return:focus-visible { outline: 3px solid #ffe0a5; outline-offset: -3px; }
 #citadel-command.dl-landing {
   --dl-line: rgba(232, 204, 140, .32);
   --dl-panel: rgba(9, 20, 30, .86);

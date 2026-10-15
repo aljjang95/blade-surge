@@ -242,20 +242,32 @@ try {
     // 안쪽 검사가 실행되지 않았으면 이 단계도 PASS가 아니다.
     return r.rotate?.notRun || r.tap?.notRun ? { ...r, notRun: true, reason: 'inner town-walk check not run' } : r;
   });
-  await step('lobby scroll panel still scrolls by touch', async () => {
+  // 던전 우선 로비의 착지 패널은 스크롤하지 않는다. 실제 보조 목록('다른 던전' → 원정 던전 목록)을 열어 터치 스크롤이
+  // 로비 시점 제스처에 먹히지 않는지, 닫으면 착지로 돌아오는지 확인한다.
+  await step('lobby secondary dungeon list scrolls by touch without moving the lobby camera', async () => {
+    const other = page.locator('#citadel-other-dungeons:visible');
+    assert(await other.count(), 'No visible other-dungeons entry on the landing');
+    const cameraBefore = await page.evaluate(() => ({ ...window.app.renderer.lobbyCamera }));
+    await other.tap();
+    await page.locator('#expedition-root .exp-shell').waitFor({ timeout: 60000 }); await settle(page);
     const info = await page.evaluate(() => {
-      const all = [...document.querySelectorAll('#tab-home *')].filter(el => { const s = getComputedStyle(el); const r = el.getBoundingClientRect();
+      const all = [...document.querySelectorAll('#expedition-root .exp-shell, #expedition-root .exp-shell *')].filter(el => { const s = getComputedStyle(el); const r = el.getBoundingClientRect();
         return /(auto|scroll)/.test(s.overflowY) && el.scrollHeight > el.clientHeight + 20 && r.width > 40 && r.height > 60 && r.top < innerHeight && r.bottom > 0; });
       const el = all[0]; if (!el) return null;
       el.dataset.qaScroll = '1'; const r = el.getBoundingClientRect();
-      return { selector: el.id || el.className, x: r.x + r.width / 2, y: r.y + Math.min(r.height - 10, r.height * .7), top: r.top, bottom: r.bottom, scrollTop: el.scrollTop };
+      return { selector: el.id || String(el.className), x: r.x + r.width / 2, y: r.y + Math.min(r.height - 10, r.height * .7), top: r.top, bottom: r.bottom, scrollTop: el.scrollTop };
     });
-    if (!info) return { notRun: true, reason: 'no overflowing lobby panel in this layout' };
+    const close = async () => { await page.locator('#expedition-root .exp-close').first().tap(); await page.waitForFunction(() => !document.querySelector('#expedition-root .exp-shell') && window.app.commandUI?.visible, null, { timeout: 60000 }); };
+    if (!info) { await close(); return { notRun: true, reason: 'secondary dungeon list does not overflow in this viewport' }; }
     await touch.down(2, info.x, info.y); await touch.move(2, info.x, Math.max(info.top + 8, info.y - 120), 8); await touch.up(2);
     await page.waitForTimeout(400);
-    const scrollTop = await page.evaluate(() => document.querySelector('[data-qa-scroll]').scrollTop);
-    assert(scrollTop > info.scrollTop, 'Panel did not scroll by touch (touch-action may block it)');
-    return { ...info, after: scrollTop };
+    const after = await page.evaluate(() => ({ scrollTop: document.querySelector('[data-qa-scroll]').scrollTop, camera: { ...window.app.renderer.lobbyCamera }, gesture: window.app.lobbyCameraControls.touch.size }));
+    await close();
+    const back = await page.evaluate(() => ({ landing: !!window.app.commandUI?.visible, tab: window.app.meta.tab, camera: { ...window.app.renderer.lobbyCamera } }));
+    assert(after.scrollTop > info.scrollTop, 'Secondary list did not scroll by touch: ' + JSON.stringify({ info, after }));
+    assert(after.gesture === 0 && after.camera.yaw === cameraBefore.yaw && after.camera.pitch === cameraBefore.pitch, 'List scroll moved the lobby camera: ' + JSON.stringify({ cameraBefore, after }));
+    assert(back.landing && back.tab === 'home', 'Closing the list did not return to the landing: ' + JSON.stringify(back));
+    return { ...info, after, back };
   });
   }
   if (groups.has('battle')) {
