@@ -13,35 +13,44 @@ const NATIVE_CLICK_WINDOW_MS = 600;
  */
 export function bindSecondaryTouchActivation(el, { now = () => performance.now() } = {}) {
   if (!el) return () => {};
-  let pointer = null, suppressUntil = -Infinity;
+  // suppressed: 이미 활성화한 보조 터치의 pointerId. 같은 포인터가 만든 브라우저 click만 한 번 막는다.
+  let pointer = null, suppressed = null;
   const down = event => {
     if (event.pointerType !== 'touch' || event.isPrimary || pointer) return;
-    pointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
+    pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+  };
+  // 한 번이라도 문턱 밖으로 끌면 되돌아와도 탭이 아니다.
+  const move = event => {
+    if (!pointer || event.pointerId !== pointer.id || pointer.moved) return;
+    if (Math.hypot(event.clientX - pointer.x, event.clientY - pointer.y) > SECONDARY_TAP_SLOP) pointer.moved = true;
   };
   const up = event => {
     if (!pointer || event.pointerId !== pointer.id) return;
     const start = pointer; pointer = null;
-    if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > SECONDARY_TAP_SLOP) return;
+    if (start.moved || Math.hypot(event.clientX - start.x, event.clientY - start.y) > SECONDARY_TAP_SLOP) return;
     const rect = el.getBoundingClientRect();
     if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) return;
     if (el.disabled || el.hidden) return;
-    suppressUntil = now() + NATIVE_CLICK_WINDOW_MS;
+    suppressed = { id: start.id, until: now() + NATIVE_CLICK_WINDOW_MS };
     el.click();
   };
   const cancel = event => { if (pointer && event.pointerId === pointer.id) pointer = null; };
-  // 이미 활성화한 보조 탭 뒤에 브라우저가 진짜 click을 보내면 두 번 토글하지 않게 그 한 번만 막는다.
+  // 이미 활성화한 보조 탭과 같은 포인터의 브라우저 click이 뒤따르면 두 번 토글하지 않게 그 한 번만 막는다.
+  // 키보드(Enter/Space)·새 주 터치·마우스 click은 pointerId가 달라 그대로 처리한다.
   const click = event => {
-    if (!event.isTrusted || now() >= suppressUntil) return;
-    suppressUntil = -Infinity;
+    if (!event.isTrusted || !suppressed) return;
+    if (now() >= suppressed.until) { suppressed = null; return; }
+    if (event.pointerType !== 'touch' || event.pointerId !== suppressed.id) return;
+    suppressed = null;
     event.preventDefault(); event.stopImmediatePropagation();
   };
   el.addEventListener('pointerdown', down);
+  el.addEventListener('pointermove', move);
   el.addEventListener('pointerup', up);
   el.addEventListener('pointercancel', cancel);
   el.addEventListener('click', click, true);
   return () => {
-    el.removeEventListener('pointerdown', down); el.removeEventListener('pointerup', up);
+    el.removeEventListener('pointerdown', down); el.removeEventListener('pointermove', move); el.removeEventListener('pointerup', up);
     el.removeEventListener('pointercancel', cancel); el.removeEventListener('click', click, true);
   };
 }
-

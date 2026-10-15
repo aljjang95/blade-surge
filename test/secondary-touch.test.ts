@@ -47,15 +47,27 @@ test('primary touch, mouse, moved, outside, canceled, disabled and hidden taps d
   button.hidden = true; send(button, 'pointerdown', touch(8)); send(button, 'pointerup', touch(8)); button.hidden = false;
   expect(button.clicks).toBe(0);
 });
-test('a browser click that follows the activated secondary tap is not handled twice, later clicks still work', () => {
+test('a browser click from the same secondary pointer is handled once; keyboard and new primary clicks right after still activate', () => {
   const { button, tick } = setup();
   send(button, 'pointerdown', touch(9)); send(button, 'pointerup', touch(9));
   expect(button.clicks).toBe(1);
-  const duplicate = send(button, 'click', { isTrusted: true });
-  expect(button.clicks).toBe(1); expect(duplicate.defaultPrevented).toBe(true);
-  tick(10); send(button, 'click', { isTrusted: true }); expect(button.clicks).toBe(2);
-  send(button, 'pointerdown', touch(10)); send(button, 'pointerup', touch(10)); expect(button.clicks).toBe(3);
-  tick(700); send(button, 'click', { isTrusted: true }); expect(button.clicks).toBe(4);
+  // Chrome은 보조 터치에서 click을 만들지 않는다. 그 사이 키보드 Enter(pointerId -1)와 새 주 터치 click은 그대로 동작해야 한다.
+  tick(50); send(button, 'click', { isTrusted: true, pointerId: -1, pointerType: '' }); expect(button.clicks).toBe(2);
+  tick(30); send(button, 'click', { isTrusted: true, pointerId: 12, pointerType: 'touch' }); expect(button.clicks).toBe(3);
+  // 같은 보조 포인터의 브라우저 click이 뒤따르는 엔진에서는 한 번만 처리한다.
+  const duplicate = send(button, 'click', { isTrusted: true, pointerId: 9, pointerType: 'touch' });
+  expect(button.clicks).toBe(3); expect(duplicate.defaultPrevented).toBe(true);
+  send(button, 'click', { isTrusted: true, pointerId: 9, pointerType: 'touch' }); expect(button.clicks).toBe(4);
+  send(button, 'pointerdown', touch(10)); send(button, 'pointerup', touch(10)); expect(button.clicks).toBe(5);
+  tick(700); send(button, 'click', { isTrusted: true, pointerId: 10, pointerType: 'touch' }); expect(button.clicks).toBe(6);
+});
+test('a secondary touch dragged past the slop and back is not a tap', () => {
+  const { button } = setup();
+  send(button, 'pointerdown', touch(13)); send(button, 'pointermove', touch(13, 120, 30 + 30)); send(button, 'pointermove', touch(13, 121, 30));
+  send(button, 'pointerup', touch(13, 121, 30));
+  expect(button.clicks).toBe(0);
+  send(button, 'pointerdown', touch(14)); send(button, 'pointermove', touch(14, 125, 33)); send(button, 'pointerup', touch(14, 125, 33));
+  expect(button.clicks).toBe(1);
 });
 test('release removes every listener', () => {
   const { button, off } = setup();
