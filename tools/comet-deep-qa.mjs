@@ -86,7 +86,8 @@ const report = { kind: 'comet-deep-qa', releaseApproved: false, seed, heroId, vi
       selected.includes('save-fault') ? 'save-fault 프로필 한정 eco.save 실패 주입' : null].filter(Boolean),
     realInput: ['#btn-expedition → 던전 탭 → 심층 원정 → 카드 출격 버튼', '#btn-auto', '#btn-pause/#btn-resume/#btn-giveup', '결과 화면 버튼(다시 도전·정산 다시 저장·로비)', '선택지 모달 버튼',
       '브라우저 새로고침', needsTouch ? 'CDP 터치 이벤트(가상 조이스틱, 에뮬레이터)' : null].filter(Boolean),
-    controlled: ['app.testPause + 고정 1/60초 app.step (자연 RAF 아님)', 'renderer.render() 단독 호출(스크린샷·draw call 샘플, 시뮬레이션 tick 없음)'],
+    controlled: ['app.testPause + 고정 1/60초 app.step (자연 RAF 아님)', 'renderer.render() 단독 호출(스크린샷·draw call 샘플, 시뮬레이션 tick 없음)',
+      '출격 직후 현재 지역 BGM 요청이 끝날 때까지 Node 대기(시뮬레이션 정지 상태, 최대 15초, 넘겨도 실패로 만들지 않음)'],
     notProven: ['실제 Android/GPU/터치/발열', '자연 해금·장비 획득', '수동 플레이 밸런스'] },
   scope: '로컬 production preview + SwiftShader headless Chromium. fixture 영웅/장비로 합법 범위 값만 주입하고 전투 중 HP·위치·적·결과는 건드리지 않는다.' };
 
@@ -95,6 +96,14 @@ const sourceFiles = ['src/game/comet-deep-orbit-view.js', 'src/game/comet-deep-o
   'src/main.js'].filter(file => fs.existsSync(path.join(projectRoot, file)));
 const qa = await createExpeditionQa({ root: projectRoot, driver: import.meta.filename, report, sourceFiles });
 let page;
+// 미디어 요청 완료 추적. 출격 직후 BGM 정착 대기에만 쓰고 분류·게이트 판정에는 쓰지 않는다.
+const mediaRequests = new Map();
+function trackMediaRequests(target) {
+  const row = request => { let r = mediaRequests.get(request); if (!r) mediaRequests.set(request, r = { url: request.url(), finished: false, failed: false }); return r; };
+  target.on('request', request => { if (request.resourceType() === 'media') row(request); });
+  target.on('requestfinished', request => { if (request.resourceType() === 'media') row(request).finished = true; });
+  target.on('requestfailed', request => { if (request.resourceType() === 'media') row(request).failed = true; });
+}
 const check = (name, ok, detail) => { report.checks.push({ name, ok: !!ok, ...(detail === undefined ? {} : { detail }) }); return !!ok; };
 
 // ---------- 페이지 안 측정 프로브(게임 판정에는 쓰지 않는다) ----------
@@ -277,6 +286,7 @@ async function beginRun(tag, via) {
   const row = { tag, via, status: 'running', before, choices: [] };
   if (via === 'lobby') await launchFromLobby(row); else { row.retryButtonText = await page.locator('.exp-result-footer .exp-primary').filter({ hasText: '다시 도전' }).innerText(); await launchFromResult(); }
   await page.waitForFunction(() => window.app.battle.active && !window.app.stageStarting, null, { timeout: 120000 });
+  row.musicSettle = await settleRegionMusic();
   row.started = await state();
   row.energy = energyChange(before, row.started, depthDef.energy, tag + ' admission');
   const info = await page.evaluate(() => { const a = window.app, b = a.battle; return { route: structuredClone(b.stage.expedition), heroId: b.heroId, auto: b.player.auto,
@@ -293,6 +303,27 @@ async function beginRun(tag, via) {
   row.rings = row.begin.kind === 'deep-orbits';
   report.build ??= {}; report.ringsDetected = row.rings;
   await qa.save(); return row;
+}
+/**
+ * 출격 직후 지역 BGM 정착. battle.start가 만든 현재 곡(가장 최근의 연결·재생 중 트랙)이 메타데이터를 받고
+ * 그 URL의 요청이 모두 끝날 때까지 Node 쪽에서 기다려 메인 스레드를 브라우저에 양보한다. testPause라 시뮬레이션은 멈춰 있다.
+ * BUNDLE-03 진단: 이 양보 없이 곧바로 수백 스텝 동기 evaluate를 돌리면 미디어 로딩이 굶어 요청이 끝나지 못하고,
+ * 결과→로비 전환 때 중단돼 분류 대상이 된다(프레임마다 양보하는 실제 RAF 플레이에서는 생기지 않는 QA 유발 중단).
+ * 상한을 넘기면 그대로 진행한다(실패로 만들지 않음). 이후 생기는 중단은 기존 분류 규칙(250ms 창 등)이 그대로 판정한다.
+ */
+async function settleRegionMusic(limitMs = 15000) {
+  const began = Date.now();
+  for (;;) {
+    const tracks = await page.evaluate(() => globalThis.__conquestMedia.snapshot().tracks
+      .filter(t => t.connected && !t.paused && !t.collected).map(t => ({ id: t.id, src: t.src, readyState: t.readyState })));
+    const current = tracks.sort((a, b) => b.id - a.id)[0] ?? null;
+    const requests = current ? [...mediaRequests.values()].filter(r => r.url === current.src) : [];
+    // 메타데이터(readyState >= 1)가 있어야 새 요청이 이미 나갔다고 본다. 같은 URL의 이전 요청만 보고 정착으로 판정하지 않는다.
+    const settled = !current || (current.readyState >= 1 && requests.every(r => r.finished || r.failed));
+    const waitedMs = Date.now() - began;
+    if (settled || waitedMs >= limitMs) return { settled, waitedMs, limitMs, track: current, requests: requests.map(({ finished, failed }) => ({ finished, failed })) };
+    await page.waitForTimeout(100);
+  }
 }
 async function takeChoice(row) {
   const buttons = page.locator('#masterworks[open] .mw-choices button:not([disabled]), #masterworks[open] .mw-story-choices button:not([disabled])');
@@ -647,6 +678,7 @@ const profiles = {
 
 try {
   page = await qa.start({ viewport, context: contextOptions });
+  trackMediaRequests(page);
   await page.addInitScript(seedValue => { let n = seedValue; Math.random = () => { n = (Math.imul(n, 1664525) + 1013904223) >>> 0; return n / 4294967296; }; }, seed);
   await qa.boot();
   report.initial = await state();
