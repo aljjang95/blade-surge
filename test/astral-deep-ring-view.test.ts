@@ -210,7 +210,7 @@ test('파편 burst: 중심 core 원 섬광이 켜지고 파편은 숨으며, 끝
   v.flash.geometry.computeBoundingBox();
   expect(v.flash.geometry.boundingBox.max.x).toBeCloseTo(RING.core, 4);
   expect(scaleOf(v.flash, 0).x).toBe(1);
-  expect(hexOf(v.flash, 0)).toBe(0xdfe8ff);
+  expect(hexOf(v.flash, 0)).toBe(0xff6a3d);
   for (let k = 0; k < RING.shards; k++) expect(shown(v.shards, k)).toBe(false);
   expect(v.shards.visible).toBe(false);
   view.update(withShard('calm', 0), DT, OPTS);
