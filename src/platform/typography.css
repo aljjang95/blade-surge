@@ -1,0 +1,36 @@
+/* Blade Surge 타이포그래피 단일 정본.
+   UI 서체는 자체 호스트 Blade Sans KR(Noto Sans CJK KR 2.004 서브셋, SIL OFL 1.1) 한 벌이고, 제목은 같은 서체의 Bold 를 쓴다.
+   외부 폰트 CDN 은 쓰지 않는다. 파일을 못 받으면 같은 정보가 OS 한국어 서체로 그대로 보인다(font-display: swap).
+   출처·재현 명령·SHA 는 docs/dungeon-first-lobby.md 의 '타이포그래피' 절과 public/fonts/OFL-blade-sans-kr.txt. */
+@font-face {
+  font-family: 'Blade Sans KR';
+  src: url('/fonts/blade-sans-kr-400.woff2') format('woff2');
+  font-weight: 100 599; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: 'Blade Sans KR';
+  src: url('/fonts/blade-sans-kr-700.woff2') format('woff2');
+  font-weight: 600 1000; font-style: normal; font-display: swap;
+}
+/* 제목 계열. 기존 규칙이 굵기 400 으로 선언한 제목(예전 둥근 장식 서체 자리)도 Bold 한 벌로 그린다. */
+@font-face {
+  font-family: 'Blade Title KR';
+  src: url('/fonts/blade-sans-kr-700.woff2') format('woff2');
+  font-weight: 100 1000; font-style: normal; font-display: swap;
+}
+:root {
+  --font-ui: 'Blade Sans KR', 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', 'Noto Sans CJK KR', system-ui, -apple-system, sans-serif;
+  --font-title: 'Blade Title KR', var(--font-ui);
+  /* 크기 · 행간 · 굵기 토큰. 비용 · 오류 · 주요 버튼에는 --type-sm(14px) 미만을 쓰지 않는다. */
+  --type-xs: 12px;   --lh-xs: 1.45;
+  --type-sm: 14px;   --lh-sm: 1.45;
+  --type-body: 16px; --lh-body: 1.5;
+  --type-label: 16px; --lh-label: 1.25;
+  --type-title: 22px; --lh-title: 1.25;
+  --type-hero: clamp(24px, 3vw, 32px); --lh-hero: 1.15;
+  --weight-body: 500; --weight-label: 700; --weight-title: 800;
+}
+/* 한국어 줄바꿈과 숫자 정렬 기본값. 전투 숫자 외에는 글자 외곽선을 쓰지 않는다. */
+html { font-family: var(--font-ui); font-synthesis-weight: none; word-break: keep-all; overflow-wrap: anywhere; }
+:where(input, select, textarea, button) { font-family: inherit; }
+:where(.cur, .bar, .exp-cost, .citadel-hub-destination-stats, .mpl-money, .hs-head .sub) { font-variant-numeric: tabular-nums; }

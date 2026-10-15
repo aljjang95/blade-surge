@@ -1,10 +1,11 @@
 import { ALL_DUNGEONS as DUNGEONS, RECIPES, MATERIALS, CONSUMABLES } from '../data/expansion.js';
-import { ITEM_BY_ID, SETS, ITEM_ICON } from '../data/items.js';
+import { ITEM_BY_ID, SETS } from '../data/items.js';
 import { HEROES } from '../data/heroes.js';
 import { riftForDay } from '../game/journey-rifts.js';
 import { weeklyFrontier, frontierSnapshot } from '../data/seasonal-content.js';
 import { audio } from '../engine/audio.js';
 import './journey.css';
+import { itemVisual } from './item-presentation.js';
 
 const node=(tag,cls='',text='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=text;return e;};
 const button=(text,fn,key,cls='journey-action')=>{const e=node('button',cls,text);e.type='button';e.dataset.control=key;e.addEventListener('click',fn);return e;};
@@ -130,7 +131,7 @@ export class JourneyView {
     for(const r of RECIPES.filter(r=>r.itemId)){const o=node('option','',ITEM_BY_ID[r.itemId].name);o.value=r.id;select.append(o);}select.value=snap.target?.recipe.id||'';select.disabled=this.blocked;
     select.addEventListener('change',()=>this.act(()=>this.app.journey.track(select.value||null),'목표 장비를 저장했습니다.'));label.append(select);this.content.append(label);
     const t=snap.target;if(!t){this.content.append(node('p','journey-muted','공방의 실제 제작 장비 중 하나를 골라 주세요.'));return;}
-    const card=node('article','journey-card journey-target'),img=node('img','journey-item');img.src=ITEM_ICON(t.item);img.alt=t.item.name;card.append(img,node('h3','',t.item.name));
+    const card=node('article','journey-card journey-target'),img=node('img','journey-item');img.src=itemVisual(t.item).iconUrl;img.alt=t.item.name;card.append(img,node('h3','',t.item.name));
     const set=SETS[t.item.set];if(set)card.append(node('p','journey-rewards',set.name),detail(`2개: ${set.two?.text||'세트 능력치 강화'} · 4개: ${set.four?.text||'세트 능력치 강화'}`,'세트 효과'));
     card.append(illustration('gold'),node('p','',`골드 ${fmt(this.app.eco.s.gold)} / ${fmt(t.recipe.gold)}${t.goldMissing?' · '+fmt(t.goldMissing)+' 부족':' · 준비 완료'}`));
     for(const m of t.materials){card.append(illustration(resourceArt[m.id]||'treasure-chest'),node('p','',`${name(m.id)} ${fmt(m.have)} / ${fmt(m.need)}${m.missing?' · '+fmt(m.missing)+' 부족':' · 준비 완료'}`));

@@ -1,11 +1,12 @@
 // 소환 구성품·무기 외형 미리보기 화면. Meta가 this로 호출한다 (showGachaContents.call(meta, ...)).
 import { HEROES, HERO_ORDER } from '../data/heroes.js';
-import { ITEM_BY_ID, ITEM_ICON, RARITY_INFO, RARITY_COLOR } from '../data/items.js';
+import { ITEM_BY_ID, RARITY_INFO, RARITY_COLOR } from '../data/items.js';
 import { GACHA } from '../data/shop.js';
 import { REWARD_LABEL, gachaContents } from '../game/economy.js';
 import { weaponLook, weaponLookText, ENHANCE_STEPS } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
 import { resourceArt } from './illustrated.js';
+import { itemVisual } from './item-presentation.js';
 
 const pct = (p, d = 2) => (p * 100).toFixed(d) + '%';
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -13,7 +14,7 @@ const MATERIAL_NOTE = { stones: '+3~+9 강화용', stones2: '+10~+14 강화용',
 const TABS = [['weapon', '무기'], ['armor', '방어구'], ['ring', '반지'], ['boots', '신발'], ['hero', '영웅'], ['material', '강화 재료']];
 
 function labelOf(x) { return x.kind === 'hero' ? HEROES[x.id].name : x.kind === 'material' ? (REWARD_LABEL[x.id]?.[0] || x.id) + ' ×' + x.n : ITEM_BY_ID[x.id].name; }
-function iconOf(x) { return x.kind === 'hero' ? HEROES[x.id].portrait : x.kind === 'material' ? resourceArt(x.id) : ITEM_ICON(ITEM_BY_ID[x.id]); }
+function iconOf(x) { return x.kind === 'hero' ? HEROES[x.id].portrait : x.kind === 'material' ? resourceArt(x.id) : itemVisual(ITEM_BY_ID[x.id]).iconUrl; }
 function noteOf(x, heroId) {
   if (x.kind === 'hero') return x.id === GACHA.featured ? '픽업 영웅' : '영웅';
   if (x.kind === 'material') return MATERIAL_NOTE[x.id] || '';

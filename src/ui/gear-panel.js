@@ -3,13 +3,14 @@ import { resourceArt, uiArt } from './illustrated.js';
 import { audio } from '../engine/audio.js';
 import { HEROES, heroStats, starShards } from '../data/heroes.js';
 import { heroProgressionHtml, trainingButtonLabel } from './hero-progression.js';
-import { ITEM_BY_ID, ITEM_ICON, SLOTS, SLOT_NAME, SETS, itemStats, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, ENH_MAX, RARITY_COLOR, RARITY_INFO, RARITIES, rarityRank, enhanceDown } from '../data/items.js';
+import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, itemStats, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, ENH_MAX, RARITY_COLOR, RARITY_INFO, RARITIES, rarityRank, enhanceDown } from '../data/items.js';
 import { weaponLook, weaponLookText } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
-import { campaignFinished } from '../data/expedition-depths.js';
 import { GACHA } from '../data/shop.js';
 import { AVATARS } from '../data/avatars.js';
 import { libraryAssetForAvatar } from '../engine/library-assets.js';
+import { dungeonLanding } from './dungeon-landing.js';
+import { itemIconHtml } from './item-presentation.js';
 
 /**
  * 영웅 · 장비 화면의 구성 요소.
@@ -31,8 +32,8 @@ const BAG_SORTS = Object.freeze([
 const esc = (value) => String(value).replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 const signed = (value) => (value > 0 ? '▲ ' : value < 0 ? '▼ ' : '') + fmt(Math.abs(value));
 const trendClass = (value) => (value > 0 ? 'stat-up' : value < 0 ? 'stat-down' : '');
-/** 고유 아이콘이 없으면 부위 · 등급 기본 아이콘으로 한 번만 바꾸고, 그것도 없으면 숨긴다. */
-const iconImg = (it, attrs = '') => '<img src="' + ITEM_ICON(it) + '" alt=""' + attrs + ' onerror="if(this.dataset.fallback){this.onerror=null;this.style.visibility=\'hidden\'}else{this.dataset.fallback=1;this.src=\'' + ITEM_ICON({ slot: it.slot, rarity: it.rarity }) + '\'}">';
+/** 아이템 표현 단일 규칙(item-presentation). 그림을 못 읽으면 다른 장비 그림이 아니라 중립 부위 실루엣으로 바꾼다. */
+const iconImg = (it, attrs = '') => itemIconHtml(it, attrs);
 
 /** uid → 장착 중인 영웅 id. 가방 타일과 비교 시트가 같이 쓴다. */
 function equippedOwners(eco) {
@@ -49,7 +50,11 @@ export function renderOwnedHero(meta, id, det) {
   const selected = eco.s.selected === id;
   const pane = HERO_PANES.some((entry) => entry.id === meta.heroPane) ? meta.heroPane : 'gear';
   meta.heroPane = pane;
-  const next = eco.nextStage(), finished = campaignFinished(eco.s.progress);
+  // 정비를 마친 뒤 같은 추천 던전의 준비창으로 바로 돌아간다. 캠페인 스테이지를 바로 시작하지 않는다.
+  const landing = meta.app.expedition ? dungeonLanding({ expedition: meta.app.expedition, history: eco.s.masterworks?.history, energy: eco.s.energy }) : null;
+  const sortie = landing?.dungeon
+    ? '<button type="button" class="btn btn-gold btn-sm hs-sortie" id="h-next" aria-label="' + esc(landing.name + ' ' + landing.depthLabel + ' 출격 준비 열기, 입장 에너지 ' + landing.cost) + '">출격 준비<small>' + esc(landing.name) + ' · 에너지 ' + landing.cost + '</small></button>'
+    : '';
   const slots = SLOTS.map((slot) => {
     const inst = eco.s.inventory.find((x) => x.uid === h.equip[slot]);
     if (!inst) return '<button type="button" class="equip-slot hs-slot is-empty" data-slot="' + slot + '" aria-label="' + SLOT_NAME[slot] + ' 비어 있음, 가방에서 고르기"><img class="empty-equip-art" src="' + uiArt('slot-' + slot) + '" alt=""><span class="hs-slot-name">' + SLOT_NAME[slot] + '</span></button>';
@@ -60,8 +65,7 @@ export function renderOwnedHero(meta, id, det) {
   const avatarRow = avatar ? '<section class="hero-avatar-row" aria-label="' + esc(def.name) + ' 아바타"><div><b>캐시 아바타</b><small>' + esc(avatar.name) + ' · 순수 외형 · 성능 영향 없음</small></div><button type="button" class="btn ' + (avatarOwned ? 'btn-ghost' : 'btn-gold') + ' btn-sm" data-avatar-action="' + avatar.id + '" ' + (avatarReady ? '' : 'disabled') + '>' + (avatarReady ? (avatarOwned ? (avatarEquipped ? '착용 중 · 해제' : '보유 중 · 착용') : '<i class="ic ic-gem"></i> ' + fmt(avatar.price) + ' 보석') : '준비 중') + '</button></section>' : '';
   det.innerHTML = '<div class="hs-slots" role="group" aria-label="' + esc(def.name) + ' 장착 장비">' + slots + '</div>' +
     '<header class="hs-head"><div class="hs-id"><h2>' + esc(def.name) + ' <small style="color:' + RC[def.rarity] + '">' + def.rarity + '</small></h2><div class="sub">' + esc(def.title) + ' · Lv.' + h.level + ' · ' + '★'.repeat(h.star) + '☆'.repeat(5 - h.star) + ' · 전투력 <b>' + fmt(st.power) + '</b></div></div>' +
-    '<div class="hs-go">' + (selected ? '<span class="hs-on">출전 중</span>' : '<button type="button" class="btn btn-ghost btn-sm" id="h-sel">출전시키기</button>') +
-    '<button type="button" class="btn btn-gold btn-sm" id="h-next">' + (finished ? '심층 원정' : '출격') + '<small>' + (finished ? '새 원정' : '에너지 -' + next.energy) + '</small></button></div></header>' +
+    '<div class="hs-go">' + (selected ? '<span class="hs-on">출전 중</span>' + sortie : '<button type="button" class="btn btn-ghost btn-sm" id="h-sel">출전시키기</button>') + '</div></header>' +
     // 가로 화면의 hero-detail 은 display:contents 격자라 새 형제 요소가 엉뚱한 칸에 앉는다. 아바타 줄은 본문 안에 둔다.
     '<div class="hs-main">' + avatarRow + '<div class="hs-tabs" role="tablist" aria-label="영웅 정보">' + HERO_PANES.map((entry) => '<button type="button" role="tab" id="hs-tab-' + entry.id + '" data-pane="' + entry.id + '" aria-controls="hs-panel" aria-selected="' + (entry.id === pane) + '" tabindex="' + (entry.id === pane ? 0 : -1) + '">' + entry.label + (entry.id === 'gear' ? '<small>가방 ' + eco.s.inventory.length + '</small>' : '') + '</button>').join('') + '</div>' +
     '<div class="hs-panel" id="hs-panel" role="tabpanel" tabindex="-1"></div></div>';
@@ -79,7 +83,7 @@ export function renderOwnedHero(meta, id, det) {
     if (eco.s.selected === id) meta.app.showcaseHero(id);
     meta.renderHeroes();
   };
-  $('h-next').onclick = () => meta.launchNextChallenge();
+  const sortieButton = $('h-next'); if (sortieButton) sortieButton.onclick = () => meta.app.commandUI?.openPreparation();
   const pick = $('h-sel'); if (pick) pick.onclick = () => meta.selectHero(id);
   const tabs = [...det.querySelectorAll('.hs-tabs [role=tab]')];
   tabs.forEach((tab, index) => {
@@ -231,7 +235,11 @@ function enhanceHtml(meta, inst) {
 export function showItemSheet(meta, uid, heroId, { focus } = {}) {
   const { eco, ui } = meta;
   let rerenderTimer = 0;
+  // 선택형 3D 미리보기: 시트 하나에 렌더러 하나. 시트가 닫히거나 다른 모달로 바뀌면 해제하고, 강화 뒤 다시 그릴 때는 열림 상태를 이어 간다.
+  let preview = null, previewOpen = false, previewSeq = 0;
+  const disposePreview = () => { previewSeq++; preview?.dispose(); preview = null; };
   const render = () => {
+    disposePreview();
     const inst = eco.s.inventory.find((x) => x.uid === uid);
     if (!inst) {
       ui.modal('<h2 style="color:var(--red)">장비 파괴</h2><p>강화에 실패해 장비가 파괴되었습니다.</p><div class="modal-btns"><button class="btn btn-gold" id="m-ok">확인</button></div>', { onOpen: (b) => b.querySelector('#m-ok').onclick = () => { ui.closeModal(); meta.renderHeroes(); } });
@@ -250,7 +258,8 @@ export function showItemSheet(meta, uid, heroId, { focus } = {}) {
     const primary = equipped ? '해제하기' : owner ? HEROES[owner].name.split(' ').pop() + '에게서 옮겨 장착' : '장착하기';
     const look = it.slot === 'weapon' ? weaponLook(heroId, inst, LOOKS) : null;
     ui.modal('<div class="item-sheet rar-line-' + it.rarity + '" data-slot="' + it.slot + '">' +
-      '<header class="is-head"><span class="is-head-art rar-' + it.rarity + '">' + iconImg(it) + '</span><div class="is-head-copy"><h2 style="color:' + RARITY_COLOR[it.rarity] + '">' + esc(it.name) + ' <span class="is-plus">+' + inst.enh + '</span></h2><div class="is-tags"><b style="color:' + RARITY_COLOR[it.rarity] + '">' + RARITY_INFO[it.rarity].name + '</b> · ' + SLOT_NAME[it.slot] + (set ? ' · ' + esc(set.name) : '') + '</div></div><button type="button" class="btn btn-ghost btn-sm" id="i-close" aria-label="닫기">닫기</button></header>' +
+      '<header class="is-head"><span class="is-head-art rar-' + it.rarity + '">' + iconImg(it) + '</span><div class="is-head-copy"><h2 style="color:' + RARITY_COLOR[it.rarity] + '">' + esc(it.name) + ' <span class="is-plus">+' + inst.enh + '</span></h2><div class="is-tags"><b style="color:' + RARITY_COLOR[it.rarity] + '">' + RARITY_INFO[it.rarity].name + '</b> · ' + SLOT_NAME[it.slot] + (set ? ' · ' + esc(set.name) : '') + '</div></div><button type="button" class="btn btn-ghost btn-sm is-3d-toggle" id="i-3d" aria-controls="is-preview" aria-pressed="' + previewOpen + '">3D로 보기</button><button type="button" class="btn btn-ghost btn-sm" id="i-close" aria-label="닫기">닫기</button></header>' +
+      '<section class="is-preview" id="is-preview" aria-label="' + esc(it.name) + ' 3D 미리보기"' + (previewOpen ? '' : ' hidden') + '><div class="is-preview-stage" aria-busy="true">3D 모델을 불러오는 중…</div><p class="is-preview-caption"></p></section>' +
       '<div class="is-body"><div class="is-compare" aria-label="현재 장비와 비교">' +
       '<div class="is-power ' + trendClass(powerDelta) + '"><span>' + HEROES[heroId].name + ' · ' + label + ' 전투력</span><b>' + fmt(p.before.power) + ' → ' + fmt(p.after.power) + '</b><em>' + (powerDelta === 0 ? '변화 없음' : signed(powerDelta)) + '</em></div>' +
       (equipped ? '<div class="is-cards single">' + itemCardHtml(inst, '현재 장비', true) + '</div>' : '<div class="is-cards">' + itemCardHtml(p.current, '현재 ' + SLOT_NAME[it.slot], p.current && p.current.uid === uid) + '<span class="is-vs" aria-hidden="true">→</span>' + itemCardHtml(inst, '선택한 장비', false) + '</div>') +
@@ -260,10 +269,31 @@ export function showItemSheet(meta, uid, heroId, { focus } = {}) {
       (it.summon ? '<p class="is-note" style="color:' + RARITY_COLOR[it.rarity] + '">✦ ' + esc(it.summon.name) + ' 소환 · ' + it.summon.interval + '초마다 ' + Math.round(it.summon.ratio * 100) + '% 공격</p>' : '') +
       setChangesHtml(p) + '</div>' + enhanceHtml(meta, inst) + '</div>' +
       '<footer class="is-actions item-actions"><button type="button" class="btn btn-ghost btn-sm" id="i-sell">판매</button><button type="button" class="btn btn-gold" id="i-eq">' + primary + '</button></footer></div>',
-    { onClose: () => { clearTimeout(rerenderTimer); rerenderTimer = 0; },
+    { onClose: () => { clearTimeout(rerenderTimer); rerenderTimer = 0; disposePreview(); },
       onOpen: (b) => {
       // 강화 연출 뒤 다시 그리기는 이 시트가 아직 열린 현재 모달일 때만 한다(판매 확인 등으로 바뀌면 취소).
       const seq = ui.modalSeq;
+      const previewSection = b.querySelector('#is-preview'), previewToggle = b.querySelector('#i-3d');
+      const openPreview = async () => {
+        const token = ++previewSeq;
+        const stage = previewSection.querySelector('.is-preview-stage');
+        try {
+          const { mountItemPreview, previewCaption } = await import('./item-preview-3d.js');
+          if (token !== previewSeq || ui.modalSeq !== seq) return;
+          previewSection.querySelector('.is-preview-caption').textContent = previewCaption(it, heroId, HEROES[heroId]?.name || '');
+          const handle = await mountItemPreview(stage, it, { heroId, reducedMotion: !!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches });
+          if (token !== previewSeq || ui.modalSeq !== seq) { handle.dispose(); return; }
+          preview = handle; stage.removeAttribute('aria-busy');
+        } catch (error) {
+          if (token === previewSeq) { stage.removeAttribute('aria-busy'); stage.textContent = '3D 미리보기를 불러오지 못했습니다. 목록 그림은 같은 장비입니다.'; }
+          console.warn('item preview', error);
+        }
+      };
+      previewToggle.onclick = () => {
+        previewOpen = !previewOpen; previewToggle.setAttribute('aria-pressed', String(previewOpen)); previewSection.hidden = !previewOpen;
+        if (previewOpen) openPreview(); else disposePreview();
+      };
+      if (previewOpen) openPreview();
       const later = (ms) => { clearTimeout(rerenderTimer); rerenderTimer = setTimeout(() => { rerenderTimer = 0; if (ui.modalSeq === seq && ui.el.modal.classList.contains('show')) render(); }, ms); };
       const close = () => { ui.closeModal(); if (meta._sheetDirty) { meta._sheetDirty = false; meta.renderHeroes(); } meta.focusInventory(uid, it.slot); };
       b.querySelector('#i-close').onclick = close;

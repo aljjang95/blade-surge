@@ -1,4 +1,6 @@
 // 로비 메이플식 창(인벤토리 · 장비 · 메뉴) 실제 입력 검증.
+// 2026-10-15 던전 우선 로비: 빠른 메뉴 바를 제거했다. 창은 데스크톱 보조 진입(E / I / Q)으로만 열고, 메뉴는 하단 독의 '메뉴'로 연다.
+// 터치 프로필의 장비 · 가방 동선은 '영웅·장비' 탭이며 tools/lobby-dungeon-first-qa.mjs 가 검사한다.
 // 사용법: node tools/lobby-window-qa.mjs [origin=http://127.0.0.1:5310/] [out=work/lobby-window-qa]
 // 주입 fixture: 빈 가방에서는 칸 클릭을 검증할 수 없어 eco.addRewards(조각 · 강화석 · 소환권)와
 // 게임의 실제 제작 함수 eco.craftSetItem / eco.equip 으로 장비를 만들고 장착한다. 저장 스키마에는 새 필드가 없다.
@@ -12,8 +14,6 @@ const origin = process.argv[2] || 'http://127.0.0.1:5310/', out = path.resolve(p
 await fs.mkdir(out, { recursive: true });
 const PROFILES = [
   { id: 'desktop', viewport: { width: 1280, height: 720 } },
-  { id: 'touch-844x390', viewport: { width: 844, height: 390 }, hasTouch: true, isMobile: true },
-  { id: 'touch-640x360', viewport: { width: 640, height: 360 }, hasTouch: true, isMobile: true },
 ];
 const report = { started: new Date().toISOString(), fixture: 'Injected fixture: eco.addRewards({fragments,stones,tickets,gold}) then real eco.craftSetItem / eco.equip. Native click/tap/keyboard input; no DOM shortcuts.', profiles: [] };
 const failures = [];
@@ -55,17 +55,11 @@ for (const spec of PROFILES) {
     row.fixture = fixture; check('fixture items crafted', fixture.made.length >= 4, fixture);
     await settle(300); await shot('00-lobby');
 
-    // ---- 빠른 메뉴 바 ----
-    const bar = await rect('.mpl-quickbar'), nav = await rect('#meta .bottomnav');
-    check('quick bar inside viewport', inside(bar), bar);
-    const overlap = bar && nav && !(bar.r <= nav.x || bar.x >= nav.r || bar.b <= nav.y || bar.y >= nav.b);
-    check('quick bar does not overlap bottom dock', !overlap, { bar, nav });
-    const labels = await page.$$eval('.mpl-quick', (bs) => bs.map((b) => b.textContent.trim().replace(/\s+/g, '')));
-    check('quick bar has 장비/인벤/임무/메뉴', ['장비', '인벤', '임무', '메뉴'].every((t) => labels.some((l) => l.startsWith(t))), labels);
-    if (touch) check('touch quick bar targets >=44px', (await smallTargets('.mpl-quickbar')).length === 0, await smallTargets('.mpl-quickbar'));
+    // ---- 빠른 메뉴 바는 없다 ----
+    check('no quick bar on the lobby', !await page.evaluate(() => !!document.querySelector('.mpl-quickbar')));
 
     // ---- 인벤토리 ----
-    await act('[data-mpl-action="inventory"]'); await settle();
+    await page.keyboard.press('KeyI'); await settle();
     const inv = await rect('.mpl-win[data-win="inventory"]');
     check('inventory window opens inside viewport', await visible('.mpl-win[data-win="inventory"]') && inside(inv), inv);
     await shot('01-inventory');
@@ -94,7 +88,7 @@ for (const spec of PROFILES) {
 
     // ---- 장비 창 ----
     if (touch) await closeVisibleWindows();
-    await act('[data-mpl-action="equipment"]'); await settle();
+    await page.keyboard.press('KeyE'); await settle();
     const eq = await rect('.mpl-win[data-win="equipment"]');
     check('equipment window opens inside viewport', await visible('.mpl-win[data-win="equipment"]') && inside(eq), eq);
     await shot('04-equipment');
@@ -121,12 +115,12 @@ for (const spec of PROFILES) {
     }
 
     // ---- 메뉴 ----
-    await act('[data-mpl-action="menu"]'); await settle(400);
+    await act('.oath-nav-menu'); await settle(400);
     const menu = await rect('#oath-menu');
     check('menu opens inside viewport', await page.evaluate(() => document.querySelector('#oath-menu').open) && inside(menu), menu);
     await shot('06-menu');
     const groups = await page.$$eval('#oath-menu .oath-menu-group', (gs) => gs.filter((g) => !g.hidden).map((g) => ({ title: g.querySelector('h3').textContent, items: [...g.querySelectorAll('.oath-menu-list > button')].map((b) => b.textContent.trim().replace(/\s+/g, ' ')) })));
-    check('menu has 4 groups with short icon lists', groups.length === 4 && groups.every((g) => g.items.length >= 2), groups);
+    check('menu has 5 groups with short icon lists', groups.length === 5 && groups.every((g) => g.items.length >= 2), groups);
     row.menuGroups = groups;
     const ids = await page.$$eval('#oath-menu .oath-menu-list > button', (bs) => bs.map((b) => b.id || b.dataset.tab || b.className.split(' ').find((c) => /open|lobby/.test(c))));
     check('menu keeps existing button ids', ['btn-daily', 'btn-mail', 'btn-quest', 'btn-guide', 'btn-settings'].every((x) => ids.includes(x)), ids);
@@ -135,7 +129,7 @@ for (const spec of PROFILES) {
     check('menu item still opens its popup (settings)', await page.evaluate(() => !!document.querySelector('#modal.show')));
     await shot('07-settings-popup');
     await act('#modal.show #m-cancel'); await settle(250);
-    await act('[data-mpl-action="menu"]'); await settle(300);
+    await act('.oath-nav-menu'); await settle(300);
     await act('#oath-menu .oath-menu-close'); await settle(250);
     check('menu closes with X', !await page.evaluate(() => document.querySelector('#oath-menu').open));
 
@@ -191,7 +185,7 @@ for (const spec of PROFILES) {
       await page.keyboard.press('KeyI'); await settle(150);
       check('hotkey ignored while a modal is open', !await visible('.mpl-win[data-win="inventory"]'));
       await act('#modal.show #m-cancel'); await settle(250);
-      await act('[data-mpl-action="menu"]'); await settle(300);
+      await act('.oath-nav-menu'); await settle(300);
       await page.keyboard.press('KeyE'); await settle(150);
       check('hotkey ignored while menu dialog is open', !await visible('.mpl-win[data-win="equipment"]'));
       await page.keyboard.press('Escape'); await settle(250);
@@ -202,18 +196,14 @@ for (const spec of PROFILES) {
       check('hotkey ignored while typing in an input', !await visible('.mpl-win[data-win="inventory"]'));
       await page.evaluate(() => document.getElementById('qa-input')?.remove());
     }
-    // ---- 거점 걷기 모드: 빠른 메뉴가 이동 · 상호작용 버튼과 겹치지 않는다 ----
-    await page.evaluate(() => window.app.commandUI.explore.click()); await settle(1200);
+    // ---- 거점 걷기 모드: 착지 패널의 '마을 둘러보기'로 들어가고 '출격 메뉴로'로 돌아온다 ----
+    await act('#citadel-explore'); await settle(1200);
     const hubOn = await page.evaluate(() => window.app.hubWalkMode);
-    check('hub walk mode entered (explore button click)', hubOn);
+    check('hub walk mode entered (explore link)', hubOn);
     if (hubOn) {
-      const barRect = await rect('.mpl-quickbar');
-      const others = {};
-      for (const selector of ['.citadel-hub-interact', '.citadel-hub-stick', '.citadel-hub-near', '.citadel-hub-menu']) others[selector] = await visible(selector) ? await rect(selector) : null;
-      const hit = Object.entries(others).filter(([, r]) => r && barRect && !(barRect.r <= r.x || barRect.x >= r.r || barRect.b <= r.y || barRect.y >= r.b)).map(([s]) => s);
-      check('quick bar inside viewport and clear of hub controls in walk mode', inside(barRect) && hit.length === 0, { barRect, hit });
       await shot('10-hub-walk');
-      await page.evaluate(() => window.app.setHubWalkMode(false)); await settle(300);
+      await act('#citadel-command-return'); await settle(400);
+      check('return button restores dungeon landing', await page.evaluate(() => !window.app.hubWalkMode && !document.querySelector('#citadel-command').hidden));
     }
   } catch (error) { check('profile completed without exception', false, String(error?.stack || error).slice(0, 600)); await shot('zz-failure').catch(() => {}); }
   check('console errors = 0', row.errors.length === 0, row.errors.slice(0, 5));

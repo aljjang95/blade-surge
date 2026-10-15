@@ -1,13 +1,14 @@
 import './town-ui.css';
 import { MATERIALS, ALL_DUNGEONS as DUNGEONS } from '../data/expansion.js';
 import { HEROES } from '../data/heroes.js';
-import { ITEM_BY_ID, ITEM_ICON, RARITY_COLOR, RARITY_INFO } from '../data/items.js';
+import { ITEM_BY_ID, RARITY_COLOR, RARITY_INFO } from '../data/items.js';
 import { CITADEL_TOWN_IDS, TOWN_THEMES, townHub, setActiveTownId, setTownDungeonIds, defaultTownDungeonIds } from '../data/citadel-hub.js';
 import { audio } from '../engine/audio.js';
 import { uiArt, resourceArt } from './illustrated.js';
 import { townServiceFor } from './town-service-adapter.js';
 import { TOWN_SHOP_BY_ID } from '../data/towns.js';
 import { TownContent, CONTENT_TABS, CONTENT_VIEW_IDS, CONTENT_REASONS, safe as contentSafe } from './town-content.js';
+import { itemVisual } from './item-presentation.js';
 
 const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const fmt = value => Math.floor(Number(value) || 0).toLocaleString('ko-KR');
@@ -309,7 +310,7 @@ export class TownUI {
     const gear = offers.filter(offer => offer.itemId), supply = offers.filter(offer => !offer.itemId);
     const card = offer => {
       const item = offer.itemId ? ITEM_BY_ID[offer.itemId] : null, rarity = offer.rarity || item?.rarity, color = RARITY_COLOR[rarity] || '#f6e7b7';
-      const icon = item ? ITEM_ICON(item) : resourceArt(offer.consumableId || offer.id);
+      const icon = item ? itemVisual(item).iconUrl : resourceArt(offer.consumableId || offer.id);
       const stats = item ? [item.atk && '공격 +' + fmt(item.atk), item.hp && '체력 +' + fmt(item.hp), item.def && '방어 +' + fmt(item.def)].filter(Boolean).join(' · ') : '';
       const owned = !!offer.owned, soldOut = offer.stockLeft !== undefined && offer.stockLeft <= 0, ok = this.affordable(offer.price, wallet);
       const state = soldOut ? '품절' : owned ? '보유 중' : null;

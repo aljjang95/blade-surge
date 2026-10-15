@@ -11,12 +11,10 @@
   <link rel="icon" href="/img/icon.png" />
   <link rel="apple-touch-icon" href="/img/icon.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <!-- 웹폰트는 렌더를 막지 않는다. 회선이 느리거나 폰트 CDN 이 죽으면 부트가 통째로 그만큼 늦어졌다 (하네스 실측 0.9초 → 14.9초) -->
-  <!-- Jua(OFL)는 동화풍 제목·숫자용 둥근 디스플레이 서체. 못 받으면 Black Han Sans 로 떨어진다 -->
-  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all';this.onload=null" />
-  <noscript><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet" /></noscript>
+  <!-- UI 서체는 자체 호스트 Blade Sans KR(Noto Sans CJK KR 서브셋, SIL OFL 1.1) 한 벌이다. 외부 폰트 CDN 에 의존하지 않고,
+       파일을 못 받아도 font-display: swap 으로 OS 한국어 서체가 같은 정보를 그린다. 정의는 src/platform/typography.css -->
+  <link rel="preload" href="/fonts/blade-sans-kr-400.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="/fonts/blade-sans-kr-700.woff2" as="font" type="font/woff2" crossorigin />
 </head>
 <body>
   <canvas id="gl"></canvas>

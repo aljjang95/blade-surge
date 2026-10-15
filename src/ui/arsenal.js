@@ -1,12 +1,13 @@
 import { COMBAT_ARTS } from '../data/combat-arts.js';
 import { HEROES } from '../data/heroes.js';
-import { ITEM_BY_ID, ITEM_ICON, SLOTS, SLOT_NAME } from '../data/items.js';
+import { ITEM_BY_ID, SLOTS, SLOT_NAME } from '../data/items.js';
 import { PATHS, CHALLENGES } from '../data/masterworks.js';
 import { JOBS, resolveJobHero } from '../data/jobs.js';
 import { KNIGHT_SLASH_VARIANTS, knightSlashVariantInfo } from '../game/knight-builds.js';
 import { audio } from '../engine/audio.js';
 import { uiArt } from './illustrated.js';
 import './arsenal.css';
+import { itemVisual } from './item-presentation.js';
 
 const el=(tag,cls='',text='')=>{const e=document.createElement(tag);e.className=cls;e.textContent=text;return e;};
 const btn=(label,fn,cls='arsenal-action')=>{const b=el('button',cls,label);b.type='button';b.onclick=fn;return b;};
@@ -15,7 +16,7 @@ const artImage=(id,cls='')=>{const image=el('img',cls);image.src=uiArt(id);image
 const detail=(label,text)=>{const d=el('details','arsenal-details');d.append(el('summary','',label),el('p','arsenal-copy',text));return d;};
 const artEffects={rupture:'광역 파열',aegis:'보호막 12%',flow:'대기시간 −2초'};
 const supportsSlash=(id,config)=>id==='knight'&&resolveJobHero(HEROES[id],config?.jobId).skills.some(sk=>sk.id==='holy_slash');
-const gearStrip=(equipment,compact=false)=>{const strip=el('div',`arsenal-equipped${compact?' compact':''}`);for(const slot of SLOTS){const r=equipment?.[slot],item=r&&ITEM_BY_ID[r.id],cell=el('div');const image=item?el('img'):artImage(`slot-${slot}`);if(item){image.src=ITEM_ICON(item);image.alt='';}cell.setAttribute('aria-label',`${SLOT_NAME[slot]} · ${item?.name||'미착용'}`);cell.title=`${SLOT_NAME[slot]} · ${item?.name||'미착용'}`;cell.append(image);if(!compact)cell.append(el('small','',SLOT_NAME[slot]),el('span','',item?.name||'미착용'));strip.append(cell);}return strip;};
+const gearStrip=(equipment,compact=false)=>{const strip=el('div',`arsenal-equipped${compact?' compact':''}`);for(const slot of SLOTS){const r=equipment?.[slot],item=r&&ITEM_BY_ID[r.id],cell=el('div');const image=item?el('img'):artImage(`slot-${slot}`);if(item){image.src=itemVisual(item).iconUrl;image.alt='';}cell.setAttribute('aria-label',`${SLOT_NAME[slot]} · ${item?.name||'미착용'}`);cell.title=`${SLOT_NAME[slot]} · ${item?.name||'미착용'}`;cell.append(image);if(!compact)cell.append(el('small','',SLOT_NAME[slot]),el('span','',item?.name||'미착용'));strip.append(cell);}return strip;};
 const skillPair=(hero,loadout=[4,5])=>({q:hero.skills[loadout?.[0]??4]?.name||'미지정',e:hero.skills[loadout?.[1]??5]?.name||'미지정'});
 const skillSummary=(hero,loadout)=>{if(!Array.isArray(loadout))return 'Q/E 현재 설정 유지';const pair=skillPair(hero,loadout);return `Q ${pair.q} · E ${pair.e}`;};
 export class ArsenalView {

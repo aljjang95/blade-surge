@@ -156,14 +156,16 @@ export class CitadelHubUI {
     if (canonical.kind === 'campaign') { this.app.meta.openTab('stage'); return true; }
     return false;
   }
-  openDestination(spot, trigger = this.interactButton) {
+  /** @param {{ depth?: 'standard'|'deep' }} [options] 최근 원정이 심층이었다면 같은 단계로 준비창을 연다. */
+  openDestination(spot, trigger = this.interactButton, { depth = 'standard' } = {}) {
     const canonical = CITADEL_HUB_HOTSPOTS.find(item => item.id === spot?.id && item.kind === 'dungeon');
     const def = canonical && DUNGEONS.find(d => d.id === canonical.route);
     if (!def || this.opened || this.busy || this.app.mode !== 'lobby' || this.app.stageStarting) return false;
     spot = canonical;
     this.app.citadel?.clearInput?.();
     this.trigger = trigger; this.returnFocus = trigger?.isConnected ? trigger : document.activeElement;
-    this.dialogSpot = spot; this.selectedDepth = 'standard'; this.opened = true;
+    // 지원하지 않는 단계는 기본 원정으로 연다. 단계 선택은 준비창 안에서 다시 바꿀 수 있다.
+    this.dialogSpot = spot; this.selectedDepth = citadelPreparation(this.app, def.id, depth).ok ? depth : 'standard'; this.opened = true;
     this.renderDestination(def, spot);
     this.dialog.showModal(); this.dialog.querySelector('[data-citadel-depth]:checked')?.focus({ preventScroll: true });
     return true;
