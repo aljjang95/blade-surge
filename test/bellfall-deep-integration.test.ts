@@ -69,7 +69,8 @@ test('실제 컨트롤러·뷰·목표창: 점등 → 소등 → 불협 2회 →
   expect(f.world.rooms[2].attunementPending).toBeFalsy();
   expect(f.world.rooms[2].cleared).toBe(false);
   expect(bellHex(f, 2)).toBe(HEX.lit);
-  let panel = battleObjectiveView(f.g);
+  // 목표창 값은 step() 기본값(0·null) 리터럴로 추론되므로 비교를 위해 넓은 타입으로 읽는다.
+  let panel: any = battleObjectiveView(f.g);
   expect(panel.title).toBe('종문 점등');
   expect(panel.progress).toBe(1);
   stand(f, 3); clearRoom(f, 3);
@@ -109,7 +110,7 @@ test('실제 컨트롤러·뷰·목표창: 점등 → 소등 → 불협 2회 →
   stand(f, 3);
   run(f, 1);
   panel = battleObjectiveView(f.g);
-  expect(f.route.holdGate?.room.id).toBe(3);
+  expect((f.route.holdGate as any)?.room.id).toBe(3);
   expect(view(f).arc.visible).toBe(true);
   expect(view(f).arc.position.x).toBeCloseTo(f.world.rooms[3].x, 6);
   expect(panel.hold).toBe(Math.floor(f.route.hold * 10) / 10);
@@ -183,4 +184,3 @@ test('일시정지는 소등 시계와 공명 유지를 멈추고, 재개하면 
   expect(f.route.hold).toBe(0);
   expect(f.route.progress).toBe(0);
 });
-
