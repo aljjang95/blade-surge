@@ -219,8 +219,10 @@ export class CometDeepOrbits {
     for (let i = 0; i < gs.length; i++) gs[i].present = gs[i].room === here;
     for (let i = 0; i < gs.length; i++) {
       const g = gs[i];
-      if (g.phase === 'locked' && this.enemiesCleared(game, g)) this.#ready(game, g);
-      if (g.phase === 'locked' || g.phase === 'connected') continue;
+      // 고리가 열린 프레임에는 진행하지 않는다. 영웅이 궤도 위에 서 있으면 같은 단계에서 밀려
+      // '룬석을 밀면 붕괴 시작' 안내가 보이기 전에 시계가 시작됐다(cand-all-1 retry-first 방 3).
+      if (g.phase === 'locked') { if (this.enemiesCleared(game, g)) this.#ready(game, g); continue; }
+      if (g.phase === 'connected') continue;
       // 고정 프레임 결정성: 1/30초 하위 단계로 밀기·시계·폭풍을 진행한다.
       for (let left = dt; left > 1e-9 && g.phase !== 'connected' && player.alive; left -= STEP) this.#tick(game, g, Math.min(left, STEP));
     }
