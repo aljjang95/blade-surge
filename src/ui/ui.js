@@ -198,14 +198,16 @@ export class UI {
   toast(msg, cls = '', options = {}) { if (this.el.hud.classList.contains('show')) { this.combatNotices.push(msg, cls, options); return; } const d = document.createElement('div'); d.className = 'toast ' + cls; d.innerHTML = msg; this.el.toast.appendChild(d); setTimeout(() => d.remove(), 2200); while (this.el.toast.children.length > 4) this.el.toast.firstChild.remove(); }
   flyReward(worldPos, text, camera, kind = 'gold') { if (this.app.battle?.result || this.el.result.classList.contains('show') || document.querySelectorAll('.reward-fly').length > 8) return; const v = new THREE.Vector3().copy(worldPos).setY(1.5).project(camera); if (v.z > 1) return; const d = document.createElement('div'); d.className = 'reward-fly'; d.textContent = text; d.style.color = kind === 'stone' ? '#4cc3ff' : 'var(--gold)'; d.style.left = ((v.x * 0.5 + 0.5) * innerWidth) + 'px'; d.style.top = ((-v.y * 0.5 + 0.5) * innerHeight) + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 1000); }
   /** 필드 득템 팝업 */
+  /** 전리품 그림은 지금 싸운(출전) 영웅이 실제로 드는 형태로 그린다. */
+  lootHeroId() { return this.app.battle?.player?.def?.id ?? this.app.eco.s.selected; }
   lootPopup(def, rarity) {
     if (this.app.battle?.result || this.el.result.classList.contains('show')) return;
     while (this.lootLayer.children.length >= 2) this.lootLayer.firstChild.remove();
     const d = document.createElement('div'); d.className = 'loot-pop'; d.style.setProperty('--rc', RARITY_COLOR[rarity] || '#9aa3b2');
-    d.innerHTML = `<span class="lp-rar">${rarity}</span>${itemIconHtml(def)}<span>${def.name}</span>`;
+    d.innerHTML = `<span class="lp-rar">${rarity}</span>${itemIconHtml(def, '', { heroId: this.lootHeroId() })}<span>${def.name}</span>`;
     this.lootLayer.appendChild(d); setTimeout(() => d.remove(), 1250);
   }
-  rewardHtml(got) { return got.map((g) => { if (g.k === 'item') { const it = ITEM_BY_ID[g.item.id]; return `<span class="reward-chip rar-${it.rarity}" style="border:1px solid">${itemIconHtml(it, ' style="width:18px;height:18px"')} ${it.name}</span>`; } const [nm, ic] = REWARD_LABEL[g.k] || [g.k, '']; return `<span class="reward-chip"><img src="${ic}" style="width:18px;height:18px" onerror="this.remove()"> ${nm} +${fmt(g.n)}</span>`; }).join(''); }
+  rewardHtml(got) { return got.map((g) => { if (g.k === 'item') { const it = ITEM_BY_ID[g.item.id]; return `<span class="reward-chip rar-${it.rarity}" style="border:1px solid">${itemIconHtml(it, ' style="width:18px;height:18px"', { heroId: this.lootHeroId() })} ${it.name}</span>`; } const [nm, ic] = REWARD_LABEL[g.k] || [g.k, '']; return `<span class="reward-chip"><img src="${ic}" style="width:18px;height:18px" onerror="this.remove()"> ${nm} +${fmt(g.n)}</span>`; }).join(''); }
   rewardToast(got, cls = 'gold') { if (got && got.length) this.toast(this.rewardHtml(got), cls); }
 
   // ---------------- 모달 ----------------
@@ -565,7 +567,7 @@ export class UI {
             this.app.meta.openTab('heroes'); this.app.meta.showItem(x.it.uid, heroId);
           };
         }
-        if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}`; d.innerHTML = `${itemIconHtml(def)}<div class="nm">${def.name}</div>`; if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); }
+        if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}`; d.innerHTML = `${itemIconHtml(def, '', { heroId: this.lootHeroId() })}<div class="nm">${def.name}</div>`; if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); }
         else { const [nm, ic] = REWARD_LABEL[x.g.k] || [x.g.k, '']; d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(x.g.n)}</span><div class="nm">${x.g.label || nm}</div>`; audio.pick('coin', 2, { vol: 0.5 }); }
         loot.appendChild(d);
       }, 300 + Math.min(i * 60, 600)));

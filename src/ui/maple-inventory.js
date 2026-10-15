@@ -55,7 +55,7 @@ export function buildInventoryModel(eco, { tab = 'gear', slot = 'all' } = {}) {
       .sort((a, b) => rarityRank(ITEM_BY_ID[b.id].rarity) - rarityRank(ITEM_BY_ID[a.id].rarity) || (b.enh || 0) - (a.enh || 0) || b.uid - a.uid)
       .map((inst) => {
         const it = ITEM_BY_ID[inst.id], owner = owners.get(inst.uid) || null;
-        return { type: 'gear', key: 'g' + inst.uid, uid: inst.uid, itemId: it.id, name: it.name, icon: itemVisual(it).iconUrl, fallbackIcon: itemVisual(it).fallbackUrl, visual: itemVisual(it).renderSet, rarity: it.rarity, rarityName: RARITY_INFO[it.rarity]?.name || '', color: RARITY_COLOR[it.rarity] || '#9aa3b2', slot: it.slot, slotName: SLOT_NAME[it.slot], enh: inst.enh || 0, owner, ownerName: owner ? HEROES[owner]?.name || '' : '' };
+        return { type: 'gear', key: 'g' + inst.uid, uid: inst.uid, itemId: it.id, name: it.name, icon: itemVisual(it, { heroId: eco.s?.selected }).iconUrl, fallbackIcon: itemVisual(it, { heroId: eco.s?.selected }).fallbackUrl, visual: itemVisual(it, { heroId: eco.s?.selected }).renderSet, rarity: it.rarity, rarityName: RARITY_INFO[it.rarity]?.name || '', color: RARITY_COLOR[it.rarity] || '#9aa3b2', slot: it.slot, slotName: SLOT_NAME[it.slot], enh: inst.enh || 0, owner, ownerName: owner ? HEROES[owner]?.name || '' : '' };
       });
   } else if (safeTab === 'use') {
     cells = [...USE_STACKS, ...EXPEDITION_USE].map((def) => ({ def, qty: amount(state, def) })).filter((row) => row.qty > 0)

@@ -14,12 +14,12 @@ const MATERIAL_NOTE = { stones: '+3~+9 강화용', stones2: '+10~+14 강화용',
 const TABS = [['weapon', '무기'], ['armor', '방어구'], ['ring', '반지'], ['boots', '신발'], ['hero', '영웅'], ['material', '강화 재료']];
 
 function labelOf(x) { return x.kind === 'hero' ? HEROES[x.id].name : x.kind === 'material' ? (REWARD_LABEL[x.id]?.[0] || x.id) + ' ×' + x.n : ITEM_BY_ID[x.id].name; }
-function iconOf(x) { return x.kind === 'hero' ? HEROES[x.id].portrait : x.kind === 'material' ? resourceArt(x.id) : itemVisual(ITEM_BY_ID[x.id]).iconUrl; }
+function iconOf(x, heroId = null) { return x.kind === 'hero' ? HEROES[x.id].portrait : x.kind === 'material' ? resourceArt(x.id) : itemVisual(ITEM_BY_ID[x.id], { heroId }).iconUrl; }
 function noteOf(x, heroId) {
   if (x.kind === 'hero') return x.id === GACHA.featured ? '픽업 영웅' : '영웅';
   if (x.kind === 'material') return MATERIAL_NOTE[x.id] || '';
   const it = ITEM_BY_ID[x.id];
-  if (x.slot === 'weapon') return weaponLookText(weaponLook(heroId, { id: x.id, enh: 0 }, LOOKS));
+  if (x.slot === 'weapon') return itemVisual(it, { heroId }).formLabel;
   return RARITY_INFO[it.rarity].name + (it.summon ? ' · ' + it.summon.name + ' 소환' : '');
 }
 
@@ -34,7 +34,7 @@ export function showGachaContents(filter = 'weapon') {
       // 무기만 미리보기 버튼이다. 나머지는 정보 카드(div)로 두어 화면 낭독기가 '사용할 수 없음'으로 읽지 않게 한다.
       const tag = preview ? 'button' : 'div', p = pct(x.p, x.p < 0.001 ? 3 : 2);
       return '<' + tag + (preview ? ' type="button" data-preview="' + x.id + '" aria-label="' + esc(labelOf(x)) + ' ' + p + ', 외형 미리보기"' : '') + ' class="gc-item' + (x.rarity ? ' rar-' + x.rarity : '') + '">'
-        + '<img src="' + iconOf(x) + '" alt="" onerror="this.remove()"><span class="gc-name">' + esc(labelOf(x)) + '</span><span class="gc-note">' + esc(noteOf(x, heroId)) + '</span><b class="gc-p">' + p + '</b></' + tag + '>';
+        + '<img src="' + iconOf(x, heroId) + '" alt="" onerror="this.remove()"><span class="gc-name">' + esc(labelOf(x)) + '</span><span class="gc-note">' + esc(noteOf(x, heroId)) + '</span><b class="gc-p">' + p + '</b></' + tag + '>';
     }).join('') + '</div>';
   }).join('');
   const help = '1회 소환 기준 개별 확률 · 61번째 상승과 10회 SR 보장 보정 제외' + (filter === 'weapon' ? ' · 무기를 누르면 착용 모습을 볼 수 있어요' : '');

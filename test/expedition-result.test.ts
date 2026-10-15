@@ -16,7 +16,7 @@ function expand(node: any): any[] {
 const all = (node: any): any[] => typeof node !== 'object' ? [] : [node, ...node.children.flatMap(all)];
 const text = (node: any): string => typeof node !== 'object' ? String(node) : node.children.map(text).join('');
 
-function fixture(overrides: any = {}) {
+function fixture(overrides: any = {}, appExtra: any = {}) {
   const calls: any[] = [], item = Object.values(ITEM_BY_ID)[0];
   const result: any = { win: true, kind: 'dungeon', id: 'glass_garden', name: '유리 정원', depth: 'standard',
     kills: 37, combo: 12, time: 109.7, saveError: null,
@@ -26,6 +26,7 @@ function fixture(overrides: any = {}) {
     chronicle: { open: (tab: string) => calls.push(['mastery', tab]) } },
     journeyView: { open: (tab: string) => calls.push(['journey', tab]) }, toLobby: () => calls.push(['lobby']),
     meta: { openTab: (tab: string) => calls.push(['tab', tab]) } };
+  Object.assign(app, appExtra);
   const controller: any = { app, result, close: () => calls.push(['close']), open: (tab: string) => calls.push(['open', tab]),
     showResult: (...args: any[]) => calls.push(['save', ...args]) };
   const launch = (...args: any[]) => calls.push(['launch', ...args]);
@@ -105,6 +106,14 @@ test('retry preserves deep, rift and conquest identity; gear maintenance clears 
   expect(blocked.button('장비 정비').props.disabled).toBe(true);
 });
 
+// item-identity: 결과 전리품은 출전 영웅이 실제로 드는 형태의 그림이다(가방 · 장착 칸과 같은 그림). 장비 정비는 그 영웅의 장비 화면을 연다.
+test('ranger result loot uses the bow-form weapon art and gear maintenance opens that hero', () => {
+  const f = fixture({ rewards: { gold: 1, xp: 1, heroExp: 1, stones: 0, loot: [{ uid: 9, id: 'w_storm' }] } }, { eco: { s: { selected: 'ranger' } } });
+  const srcs = f.nodes.filter(n => n.type === 'img').map(n => String(n.props.src));
+  expect(srcs.some(src => src.endsWith('/forms/w_storm--bow.webp'))).toBe(true);
+  f.button('장비 정비').props.onClick();
+  expect(f.app.meta.heroSel).toBe('ranger'); expect(f.calls).toEqual([['lobby'], ['tab', 'heroes']]);
+});
 test('growth and journey keep their existing destinations after a successful save', () => {
   const f = fixture();
   f.button('명성으로 영구 숙련 배우기').props.onClick(); f.button('성장 여정 · 의뢰 보상').props.onClick();

@@ -310,7 +310,7 @@ export class TownUI {
     const gear = offers.filter(offer => offer.itemId), supply = offers.filter(offer => !offer.itemId);
     const card = offer => {
       const item = offer.itemId ? ITEM_BY_ID[offer.itemId] : null, rarity = offer.rarity || item?.rarity, color = RARITY_COLOR[rarity] || '#f6e7b7';
-      const icon = item ? itemVisual(item).iconUrl : resourceArt(offer.consumableId || offer.id);
+      const icon = item ? itemVisual(item, { heroId: this.app.eco?.s?.selected }).iconUrl : resourceArt(offer.consumableId || offer.id);
       const stats = item ? [item.atk && '공격 +' + fmt(item.atk), item.hp && '체력 +' + fmt(item.hp), item.def && '방어 +' + fmt(item.def)].filter(Boolean).join(' · ') : '';
       const owned = !!offer.owned, soldOut = offer.stockLeft !== undefined && offer.stockLeft <= 0, ok = this.affordable(offer.price, wallet);
       const state = soldOut ? '품절' : owned ? '보유 중' : null;

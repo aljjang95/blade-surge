@@ -13,7 +13,7 @@ export function buildEquipmentModel(eco, heroId = eco.s.selected) {
   const slots = SLOTS.map((slot) => {
     const inst = eco.s.inventory.find((x) => x.uid === hero.equip[slot]), it = inst && ITEM_BY_ID[inst.id];
     if (!it) return { slot, slotName: SLOT_NAME[slot], empty: true, art: uiArt('slot-' + slot) };
-    return { slot, slotName: SLOT_NAME[slot], empty: false, uid: inst.uid, itemId: it.id, name: it.name, icon: itemVisual(it).iconUrl, fallbackIcon: itemVisual(it).fallbackUrl, visual: itemVisual(it).renderSet, rarity: it.rarity, rarityName: RARITY_INFO[it.rarity]?.name || '', color: RARITY_COLOR[it.rarity] || '#9aa3b2', enh: inst.enh || 0 };
+    return { slot, slotName: SLOT_NAME[slot], empty: false, uid: inst.uid, itemId: it.id, name: it.name, icon: itemVisual(it, { heroId }).iconUrl, fallbackIcon: itemVisual(it, { heroId }).fallbackUrl, visual: itemVisual(it, { heroId }).renderSet, rarity: it.rarity, rarityName: RARITY_INFO[it.rarity]?.name || '', color: RARITY_COLOR[it.rarity] || '#9aa3b2', enh: inst.enh || 0 };
   });
   return { heroId, name: def.name, title: def.title, portrait: def.portrait, level: hero.level, star: hero.star, power: stats.power, slots, gold: eco.s.gold, gems: eco.s.gems };
 }

@@ -16,7 +16,7 @@ const artImage=(id,cls='')=>{const image=el('img',cls);image.src=uiArt(id);image
 const detail=(label,text)=>{const d=el('details','arsenal-details');d.append(el('summary','',label),el('p','arsenal-copy',text));return d;};
 const artEffects={rupture:'광역 파열',aegis:'보호막 12%',flow:'대기시간 −2초'};
 const supportsSlash=(id,config)=>id==='knight'&&resolveJobHero(HEROES[id],config?.jobId).skills.some(sk=>sk.id==='holy_slash');
-const gearStrip=(equipment,compact=false)=>{const strip=el('div',`arsenal-equipped${compact?' compact':''}`);for(const slot of SLOTS){const r=equipment?.[slot],item=r&&ITEM_BY_ID[r.id],cell=el('div');const image=item?el('img'):artImage(`slot-${slot}`);if(item){image.src=itemVisual(item).iconUrl;image.alt='';}cell.setAttribute('aria-label',`${SLOT_NAME[slot]} · ${item?.name||'미착용'}`);cell.title=`${SLOT_NAME[slot]} · ${item?.name||'미착용'}`;cell.append(image);if(!compact)cell.append(el('small','',SLOT_NAME[slot]),el('span','',item?.name||'미착용'));strip.append(cell);}return strip;};
+const gearStrip=(equipment,compact=false,heroId=null)=>{const strip=el('div',`arsenal-equipped${compact?' compact':''}`);for(const slot of SLOTS){const r=equipment?.[slot],item=r&&ITEM_BY_ID[r.id],cell=el('div');const image=item?el('img'):artImage(`slot-${slot}`);if(item){image.src=itemVisual(item,{heroId}).iconUrl;image.alt='';}cell.setAttribute('aria-label',`${SLOT_NAME[slot]} · ${item?.name||'미착용'}`);cell.title=`${SLOT_NAME[slot]} · ${item?.name||'미착용'}`;cell.append(image);if(!compact)cell.append(el('small','',SLOT_NAME[slot]),el('span','',item?.name||'미착용'));strip.append(cell);}return strip;};
 const skillPair=(hero,loadout=[4,5])=>({q:hero.skills[loadout?.[0]??4]?.name||'미지정',e:hero.skills[loadout?.[1]??5]?.name||'미지정'});
 const skillSummary=(hero,loadout)=>{if(!Array.isArray(loadout))return 'Q/E 현재 설정 유지';const pair=skillPair(hero,loadout);return `Q ${pair.q} · E ${pair.e}`;};
 export class ArsenalView {
@@ -54,10 +54,10 @@ export class ArsenalView {
     this.body.append(grid);
     const guide=detail('발동 조건 · 상세 효과','보스·정예의 강공격이 끝난 빈틈에 마무리를 맞히면 균형 피해가 15 추가됩니다. 균형이 무너진 적에게 다음 마무리를 맞혀 선택한 기예를 발동하세요. 한 번의 붕괴마다 1회. 모든 기예는 무료로 전환합니다. AI 결투장에는 기예·후딜 공략이 적용되지 않습니다.');
     guide.append(artImage('posture-break','arsenal-guide-image'));for(const art of COMBAT_ARTS)guide.append(el('p','arsenal-copy',`${art.name} · ${art.description}`));
-    this.body.append(guide,el('h3','','장비 구성'),gearStrip(current.equipment));
+    this.body.append(guide,el('h3','','장비 구성'),gearStrip(current.equipment,false,id));
     const presets=el('div','arsenal-presets');svc.s.heroes[id].presets.forEach((p,i)=>{
       const card=el('article'),label=el('label','arsenal-preset-label'),input=el('input');input.type='text';input.maxLength=20;input.value=p?.name||`구성 ${i+1}`;input.setAttribute('aria-label',`구성 ${i+1} 이름`);input.disabled=svc.blocked;label.append(input);
-      card.append(artImage(p?`art-${p.artId}`:'loadout','arsenal-preset-art'),label,gearStrip(p?.equipment,true));
+      card.append(artImage(p?`art-${p.artId}`:'loadout','arsenal-preset-art'),label,gearStrip(p?.equipment,true,id));
       if(p){const variant=supportsSlash(id,p)?` · ${knightSlashVariantInfo(svc.variantForConfig(p,id)).name}`:'';card.append(el('p','arsenal-preset-summary',`${JOBS.find(j=>j.id===p.jobId)?.name||'기본 직업'} · ${PATHS.find(x=>x.id===p.pathId)?.name} · ${skillSummary(HEROES[id],p.skillLoadout)}${variant}`));}else card.append(el('p','arsenal-preset-summary','빈 구성'));
       const save=btn(p?'현재 구성으로 덮어쓰기':'현재 구성 저장',()=>{this.previewIndex=null;this.act(()=>svc.savePreset(i,input.value),`${input.value||`구성 ${i+1}`} 저장 완료`);},p?'arsenal-action':'arsenal-primary');save.disabled=svc.blocked;
       if(p){const view=btn('변경 비교',()=>{this.previewIndex=i;this.render();this.body.querySelector('.arsenal-preview')?.scrollIntoView({block:'nearest'});},'arsenal-primary');view.disabled=svc.blocked;card.append(view);const manage=el('details','arsenal-details arsenal-manage');manage.append(el('summary','','구성 관리'),save);card.append(manage);}else card.append(save);presets.append(card);

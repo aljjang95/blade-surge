@@ -151,15 +151,20 @@ try {
         const surfaces = await page.evaluate((made) => made.map(({ uid, id }) => {
           const slot = document.querySelector('.hs-slot[data-uid="' + uid + '"] img');
           const bag = document.querySelector('#hero-bag [data-inv="' + uid + '"] img, #hero-bag [data-uid="' + uid + '"] img');
-          return { id, slot: slot?.getAttribute('src') || null, slotVisual: slot?.dataset.itemVisual || null, bag: bag?.getAttribute('src') || null };
+          return { id, slot: slot?.getAttribute('src') || null, slotVisual: slot?.dataset.itemVisual || null, bag: bag?.getAttribute('src') || null,
+            slotForm: slot?.dataset.itemForm || null, slotHero: slot?.dataset.itemHero || null, bagForm: bag?.dataset.itemForm || null, bagHero: bag?.dataset.itemHero || null };
         }), fixture.made);
         row.itemSurfaces = surfaces;
         check('equipped slot uses 3D-rendered thumbnail', surfaces.slice(0, 4).every((s) => s.slot && s.slotVisual !== 'slot-silhouette' && /\/img\/(gear|item-renders)\//.test(s.slot)), surfaces);
         check('slot and bag show same image for same item', surfaces.filter((s) => s.slot && s.bag).every((s) => s.slot === s.bag), surfaces);
+        // 영웅 문맥 형태: 장착 칸과 가방이 같은 영웅·같은 형태를 쓰고, 무기는 그 영웅의 형태 키를 남긴다.
+        check('slot and bag carry the same hero and weapon form', surfaces.filter((s) => s.slot && s.bag).every((s) => s.slotForm === s.bagForm && s.slotHero === s.bagHero) && surfaces.some((s) => s.slotHero === fixture.hero), surfaces);
         // 장착 무기 상세 → 3D 보기
         await act('.hs-slot[data-uid="' + fixture.made[0].uid + '"]'); await settle(700);
-        const sheet = await page.evaluate(() => ({ head: document.querySelector('#modal.show .is-head-art img')?.getAttribute('src') || null, title: document.querySelector('#modal.show .is-head h2')?.textContent || null }));
+        const sheet = await page.evaluate(() => { const img = document.querySelector('#modal.show .is-head-art img');
+          return { head: img?.getAttribute('src') || null, form: img?.dataset.itemForm || null, hero: img?.dataset.itemHero || null, chip: document.querySelector('#modal.show .is-form')?.textContent || null, title: document.querySelector('#modal.show .is-head h2')?.textContent || null }; });
         check('item sheet header uses same thumbnail', sheet.head === surfaces[0].slot, { sheet, slot: surfaces[0].slot });
+        check('item sheet header keeps the slot hero and form', sheet.form === surfaces[0].slotForm && sheet.hero === surfaces[0].slotHero, { sheet, slot: surfaces[0] });
         await act('#modal.show #i-3d'); await page.waitForFunction(() => !!document.querySelector('#modal.show .is-preview-canvas') || /불러오지 못/.test(document.querySelector('#modal.show .is-preview-stage')?.textContent || ''), undefined, { timeout: 60000 }).catch(() => {});
         await settle(1200);
         // 캔버스 픽셀은 drawing buffer 를 보존하지 않아 읽지 않는다. 그려진 모습은 11번 캡처를 직접 열어 확인한다.
