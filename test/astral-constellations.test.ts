@@ -273,7 +273,7 @@ test('with the standard ring, 4/4 and every nonboss room are not enough: the rin
   f.world.bossRoom.cleared = true; f.g.bossDefeated = true; f.g.victory();
   const report = f.g.result.routeObjective;
   expect(report.complete).toBe(true); expect(report.progress).toBe(4);
-  expect(report.ring).toEqual({ purified: true, marks: 3, collapses: 0, shardHits: 0, seconds: expect.any(Number) });
+  expect(report.ring).toEqual({ purified: true, marks: 4, collapses: 0, shardHits: 0, seconds: expect.any(Number) });
   expect(Object.isFrozen(report)).toBe(true); expect(Object.isFrozen(report.ring)).toBe(true);
 });
 

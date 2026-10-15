@@ -114,7 +114,7 @@ test('정의 연결: 고리가 있는 일반 정의는 공용 고리 엔진, 심
   expect(r).toMatchObject({ phase: 'idle', clock: 0, limit: 24, left: 24, elapsed: 0, collapses: 0, shardHits: 0, purified: 0, held: -1,
     minX: room.x - room.w / 2, maxX: room.x + room.w / 2, minZ: room.z - room.h / 2, maxZ: room.z + room.h / 2 });
   expect(r.center.toArray()).toEqual([room.x, 0, room.z]);
-  expect(r.marks.map((m: any) => [m.pos.x - room.x, m.pos.z - room.z])).toEqual([[-6, 0], [0, -6], [6, 0]]);
+  expect(r.marks.map((m: any) => [m.pos.x - room.x, m.pos.z - room.z])).toEqual([[-6, 0], [0, -6], [6, 0], [0, 6]]);
   expect(r.marks.every((m: any) => m.hold === 0 && m.done === false)).toBe(true);
   expect(r.shard).toEqual({ state: 'calm', age: 0, cycle: -1 });
   expect(f.route.autoGoal()).toBeNull(); expect(f.route.canUnseal()).toBe(false); expect(f.route.canWin()).toBe(false);
@@ -159,7 +159,7 @@ test('열림: 조율판 4/4 와 시작·보스방을 뺀 모든 구역 정화가
   clearRoom(c, 5); expect(ring(c).phase).toBe('idle');
   c.route.update(c.g, .5);
   expect(ring(c).phase).toBe('open'); expect(ring(c).clock).toBe(0); expect(ring(c).shard).toEqual({ state: 'calm', age: 0, cycle: -1 });
-  expect(ring(c).left).toBe(24); expect(c.messages).toContain('기록 외곽 고리 개방 · 고리 위 항로 표지 3개를 밝히세요');
+  expect(ring(c).left).toBe(24); expect(c.messages).toContain('기록 외곽 고리 개방 · 고리 위 항로 표지 4개를 밝히세요');
   expect(c.route.hint()).toBe('외곽 고리 이탈 · 기록 외곽 고리로 이동');
   // 열리는 스텝에도 봉인은 그대로
   flush(c); c.g.unsealBoss(); expect(c.world.sealed).toBe(true);
@@ -189,7 +189,7 @@ test('방 밖에서는 시작되지 않고, 방 사각형(경계 포함)에 들�
   f.messages.length = 0; f.route.update(f.g, .25);
   expect(r.phase).toBe('running'); expect(r.limit).toBe(24); expect(r.left).toBe(24); expect(r.elapsed).toBe(0);
   expect(f.messages).toContain('외곽 고리 이탈 시작 · 24초');
-  expect(f.route.hint()).toBe('외곽 고리 이탈 · 항로 표지 0/3 · 기록 파편이 모이면 중심 밖으로 · 24초');
+  expect(f.route.hint()).toBe('외곽 고리 이탈 · 항로 표지 0/4 · 기록 파편이 모이면 중심 밖으로 · 24초');
   f.route.update(f.g, .25);
   expect(r.elapsed).toBe(.25); expect(r.left).toBe(23.75);
 });
@@ -203,12 +203,12 @@ test('항로 표지: 중심 1.4 안에서 1초 머물면 점등, 벗어나면 �
   atMark(f, 2); f.route.update(f.g, .75); expect(r.purified).toBe(0); expect(r.marks[2].done).toBe(false);
   f.messages.length = 0; f.route.update(f.g, .25);
   expect(r.purified).toBe(1); expect(r.marks[2].done).toBe(true); expect(r.held).toBe(-1);
-  expect(f.messages).toEqual(['항로 표지 점등 · 1/3']);
-  expect(f.route.hint()).toMatch(/^외곽 고리 이탈 · 항로 표지 1\/3 · 기록 파편이 모이면 중심 밖으로 · \d+초$/);
+  expect(f.messages).toEqual(['항로 표지 점등 · 1/4']);
+  expect(f.route.hint()).toMatch(/^외곽 고리 이탈 · 항로 표지 1\/4 · 기록 파편이 모이면 중심 밖으로 · \d+초$/);
   // 점등한 표지 위에 다시 서도 유지로 세지 않는다. 순서는 자유(동 → 서 → 북).
   f.route.update(f.g, 1); expect(r.held).toBe(-1); expect(r.purified).toBe(1);
   atMark(f, 0); f.route.update(f.g, 1); expect(r.purified).toBe(2);
-  expect(r.marks.map((m: any) => m.done)).toEqual([true, false, true]);
+  expect(r.marks.map((m: any) => m.done)).toEqual([true, false, true, false]);
   expect(r.phase).toBe('running'); expect(f.route.canUnseal()).toBe(false);
   // 한 표지의 유지는 다른 표지로 옮기면 이어지지 않는다.
   atMark(f, 1); f.route.update(f.g, .5); atMark(f, 0); f.route.update(f.g, .5); atMark(f, 1); f.route.update(f.g, .5);
@@ -284,7 +284,7 @@ test('회피 무적·완벽 방어로 피해가 흡수되면(hurt false) 파편 
   expect(f.messages.some(m => m.includes('집결 피격'))).toBe(false);
 });
 
-test('붕괴: 시간이 다 되면 최대 체력 4% 피해, 표지 0/3, 시간 24초 다시, 진행은 막히지 않는다', () => {
+test('붕괴: 시간이 다 되면 최대 체력 4% 피해, 표지 0/4, 시간 24초 다시, 진행은 막히지 않는다', () => {
   const f = running(), r = ring(f);
   atMark(f, 0); f.route.update(f.g, 1);
   expect(r.purified).toBe(1);
@@ -300,34 +300,34 @@ test('붕괴: 시간이 다 되면 최대 체력 4% 피해, 표지 0/3, 시간 2
   expect(f.messages).toContain('외곽 고리 붕괴 · 항로 표지가 흐려졌습니다 · 다시 24초');
   expect(r.elapsed).toBeGreaterThan(23.5);
   // 다시 점등할 수 있다.
-  for (const i of [0, 1, 2]) { atMark(f, i); f.route.update(f.g, 1); }
+  for (const i of [0, 1, 2, 3]) { atMark(f, i); f.route.update(f.g, 1); }
   expect(r.phase).toBe('done'); expect(r.collapses).toBe(1);
 });
 
 test('같은 스텝에서 완료가 붕괴보다 먼저다: 남은 시간이 정확히 바닥나는 스텝에 마지막 표지가 켜지면 붕괴하지 않는다', () => {
   const f = running(), r = ring(f);
-  for (const i of [0, 1]) { atMark(f, i); f.route.update(f.g, 1); }                        // elapsed 2
-  at(f, 7, SAFE[0], SAFE[1]); run(f, 21, .25);                                             // elapsed 23, left 1
-  expect(r.left).toBeCloseTo(1, 9); expect(r.purified).toBe(2);
-  atMark(f, 2); f.route.update(f.g, 1);                                                    // hold 1 과 left 0 이 같은 스텝
+  for (const i of [0, 1, 2]) { atMark(f, i); f.route.update(f.g, 1); }                     // elapsed 3
+  at(f, 7, SAFE[0], SAFE[1]); run(f, 20, .25);                                             // elapsed 23, left 1
+  expect(r.left).toBeCloseTo(1, 9); expect(r.purified).toBe(3);
+  atMark(f, 3); f.route.update(f.g, 1);                                                    // hold 1 과 left 0 이 같은 스텝
   expect(r.left).toBeLessThanOrEqual(1e-9);                                                // 정말 같은 스텝에 시간이 바닥났다
   expect(r.phase).toBe('done'); expect(r.collapses).toBe(0); expect(f.hurts).toHaveLength(0);
 });
 
-test('완료 전에는 봉인이 유지되고, 표지 3개를 점등하면 완료 스텝에 실제 Battle 봉인이 풀린다', () => {
+test('완료 전에는 봉인이 유지되고, 표지 4개를 점등하면 완료 스텝에 실제 Battle 봉인이 풀린다', () => {
   const f = fixture(); untilRoomSeven(f); clearRoom(f, 7);
   flush(f); f.g.unsealBoss();                                                              // Battle.markCleared 의 지연 해제 시도 포함
   expect(f.world.sealed).toBe(true);
   at(f, 7, SAFE[0], SAFE[1]); f.route.update(f.g, .25); f.route.update(f.g, .25);
   expect(ring(f).phase).toBe('running');
-  for (const i of [0, 1]) { atMark(f, i); f.route.update(f.g, 1); }
+  for (const i of [0, 1, 2]) { atMark(f, i); f.route.update(f.g, 1); }
   f.g.unsealBoss(); expect(f.world.sealed).toBe(true); expect(f.counts.portal).toBe(0);
   expect(f.route.canUnseal()).toBe(false);
-  f.messages.length = 0; atMark(f, 2); f.route.update(f.g, 1);
+  f.messages.length = 0; atMark(f, 3); f.route.update(f.g, 1);
   expect(ring(f).phase).toBe('done'); expect(f.world.sealed).toBe(false); expect(f.counts.portal).toBe(1);
-  // 마지막 표지는 완료 토스트 하나로만 알린다(같은 순간 '항로 표지 점등 · 3/3' 을 따로 내지 않는다).
+  // 마지막 표지는 완료 토스트 하나로만 알린다(같은 순간 '항로 표지 점등 · 4/4' 을 따로 내지 않는다).
   expect(f.messages[0]).toBe('외곽 고리 이탈 · 레비아탄의 봉인이 풀립니다');
-  expect(f.messages).not.toContain('항로 표지 점등 · 3/3');
+  expect(f.messages).not.toContain('항로 표지 점등 · 4/4');
   expect(f.messages).toContain('보스의 봉인이 풀렸다!');
   expect(f.route.canUnseal()).toBe(true); expect(f.route.hint()).toBe('별자리 4/4 복원 · 레비아탄 처치');
   // 완료 뒤에는 상태가 더 바뀌지 않는다.
@@ -344,12 +344,13 @@ test('ownsHazards·AUTO 목표: 고리가 열려 있거나 도는 동안만 고�
   expect(g.route.ownsHazards(roomOf(g, 7))).toBe(true); expect(g.route.ownsHazards(roomOf(g, 6))).toBe(false);
   at(g, 6); g.route.update(g.g, .25);
   expect(g.route.autoGoal()).toBe(marks[0].pos);                                           // 서쪽 문 쪽에서 가장 가깝다
-  at(g, 7, 0, 3); g.route.update(g.g, .25);                                                // 서·동 표지가 같은 거리(6.7) → 첫 번째
+  at(g, 7, 0, 0); g.route.update(g.g, .25);                                                // 중심: 네 표지가 같은 거리(6) → 첫 번째(서)
   expect(ring(g).phase).toBe('running'); expect(g.route.autoGoal()).toBe(marks[0].pos); expect(g.route.ownsHazards(roomOf(g, 7))).toBe(true);
-  atMark(g, 0); g.route.update(g.g, 1);                                                    // 서쪽 점등: 북(8.5)이 동(12)보다 가깝다
+  atMark(g, 0); g.route.update(g.g, 1);                                                    // 서쪽 점등: 북·남(8.5)이 같고 동(12)보다 가깝다 → 앞 순서(북)
   expect(g.route.autoGoal()).toBe(marks[1].pos);
-  atMark(g, 1); g.route.update(g.g, 1); expect(g.route.autoGoal()).toBe(marks[2].pos);
-  atMark(g, 2); g.route.update(g.g, 1); expect(g.route.autoGoal()).toBeNull(); expect(g.route.ownsHazards(roomOf(g, 7))).toBe(false);
+  atMark(g, 1); g.route.update(g.g, 1); expect(g.route.autoGoal()).toBe(marks[2].pos);   // 북에서: 동(8.5) < 남(12)
+  atMark(g, 2); g.route.update(g.g, 1); expect(g.route.autoGoal()).toBe(marks[3].pos);
+  atMark(g, 3); g.route.update(g.g, 1); expect(g.route.autoGoal()).toBeNull(); expect(g.route.ownsHazards(roomOf(g, 7))).toBe(false);
   const h = running(); h.route.stop(); expect(h.route.autoGoal()).toBeNull(); expect(h.route.ownsHazards(roomOf(h, 7))).toBe(false);
 });
 
@@ -374,14 +375,14 @@ test('보고: 완료한 런은 조율판 보고에 고리 결과가 더해지고
   at(f, 7, 0, 0);
   run(f, 2.5, .25);                                                                        // clock 3.5~4 의 터짐(2.5 + .25 + 1 + ...)에 한 번 맞음
   expect(ring(f).shardHits).toBe(1);
-  for (const i of [1, 2]) { atMark(f, i); f.route.update(f.g, 1); }
+  for (const i of [1, 2, 3]) { atMark(f, i); f.route.update(f.g, 1); }
   expect(ring(f).phase).toBe('done');
   f.world.bossRoom.cleared = true; f.g.bossDefeated = true; f.g.victory();
   const report = f.g.result.routeObjective;
   expect(report).toMatchObject({ id: 'astral_constellations_standard', complete: true, progress: 4, target: 4, mistakes: 0, rooms: GATES });
   expect(report.constellations.map((c: any) => [c.stationId, c.roomId, c.choice])).toEqual(
     [[1, 1, 'triangle'], [2, 3, 'diamond'], [3, 4, 'circle'], [4, 6, 'triangle']]);
-  expect(report.ring).toEqual({ purified: true, marks: 3, collapses: 0, shardHits: 1, seconds: report.ring.seconds });
+  expect(report.ring).toEqual({ purified: true, marks: 4, collapses: 0, shardHits: 1, seconds: report.ring.seconds });
   expect(report.ring.seconds).toBeGreaterThan(3);
   expect(Object.keys(report).sort()).toEqual(['complete', 'constellations', 'id', 'mistakes', 'progress', 'ring', 'rooms', 'target']);
   expect(Object.isFrozen(report)).toBe(true); expect(Object.isFrozen(report.ring)).toBe(true); expect(Object.isFrozen(report.rooms)).toBe(true);
@@ -391,7 +392,7 @@ test('보고: 완료한 런은 조율판 보고에 고리 결과가 더해지고
 test('패배 보고: 고리 도중 패배는 완료로 바뀌지 않고 실제 점등·붕괴·피격만 센다', () => {
   const f = running(), r = ring(f);
   atMark(f, 0); f.route.update(f.g, 1);
-  at(f, 7, SAFE[0], SAFE[1]); run(f, 24, .25);                                             // 붕괴 1회로 표지 0/3
+  at(f, 7, SAFE[0], SAFE[1]); run(f, 24, .25);                                             // 붕괴 1회로 표지 0/4
   atMark(f, 1); f.route.update(f.g, 1);
   expect(r.collapses).toBeGreaterThanOrEqual(1);
   f.g.defeat();
@@ -410,12 +411,12 @@ test('패배 보고: 고리 도중 패배는 완료로 바뀌지 않고 실제 �
 // 두 정의의 문구를 글자 그대로 적는다(틀 함수가 아니라 기대 문자열). 심층 줄은 B12 문구 그대로여야 한다.
 const COPY: Record<string, any> = {
   standard: {
-    n: 3, label: '기록 외곽 고리', done4: '모든 별자리 복원 · 모든 구역을 정화하면 기록 외곽 고리가 열립니다',
-    open: '기록 외곽 고리 개방 · 고리 위 항로 표지 3개를 밝히세요', start: '외곽 고리 이탈 시작 · 24초',
-    mark: ['항로 표지 점등 · 1/3', '항로 표지 점등 · 2/3'],
+    n: 4, label: '기록 외곽 고리', done4: '모든 별자리 복원 · 모든 구역을 정화하면 기록 외곽 고리가 열립니다',
+    open: '기록 외곽 고리 개방 · 고리 위 항로 표지 4개를 밝히세요', start: '외곽 고리 이탈 시작 · 24초',
+    mark: ['항로 표지 점등 · 1/4', '항로 표지 점등 · 2/4', '항로 표지 점등 · 3/4'],
     hit: '기록 파편 집결 피격 · 기록 파편이 모이면 중심 밖으로', collapse: '외곽 고리 붕괴 · 항로 표지가 흐려졌습니다 · 다시 24초',
     done: '외곽 고리 이탈 · 레비아탄의 봉인이 풀립니다', hintOpen: '외곽 고리 이탈 · 기록 외곽 고리로 이동',
-    hintRun: (k: number, s: number) => '외곽 고리 이탈 · 항로 표지 ' + k + '/3 · 기록 파편이 모이면 중심 밖으로 · ' + s + '초',
+    hintRun: (k: number, s: number) => '외곽 고리 이탈 · 항로 표지 ' + k + '/4 · 기록 파편이 모이면 중심 밖으로 · ' + s + '초',
   },
   deep: {
     n: 4, label: '성좌 외곽 고리', done4: '모든 별자리 복원 · 모든 구역을 정화하면 성좌 외곽 고리가 열립니다',
@@ -509,7 +510,7 @@ test('무할당: 열림 · 도는 중(예고·터짐 포함) · 완료 · 4/4 �
   const warn = running(); run(warn, 2, .25);                                              // 예고(1.5~3.5) 안
   const burst = running(); run(burst, 3.25, .25);                                         // clock 3.5: 터짐(3.5~4.0) 시작. 영웅은 안전한 자리
   const done = fixture(); untilRoomSeven(done); clearRoom(done, 7); at(done, 7, SAFE[0], SAFE[1]); done.route.update(done.g, .25); done.route.update(done.g, .25);
-  for (const i of [0, 1, 2]) { atMark(done, i); done.route.update(done.g, 1); }
+  for (const i of [0, 1, 2, 3]) { atMark(done, i); done.route.update(done.g, 1); }
   expect([ring(idle).phase, ring(open).phase, ring(warn).phase, ring(burst).phase, ring(done).phase]).toEqual(['idle', 'open', 'running', 'running', 'done']);
   const states: Record<string, F> = { idle, open, warn, burst, done };
   for (const [name, f] of Object.entries(states)) {
@@ -543,7 +544,7 @@ function autoStep(f: F, speed: number, dt: number) {
 }
 
 test('AUTO 모의(조율판): 실제 일반판 Floor 에서 영웅이 모든 방에서 출발해도 1 → 3 → 4 → 6 조율판을 단서 → 정답 판 → 복원까지 끝낸다(적 없음, 오답·피해 없음)', () => {
-  const dt = 1 / 30;
+  const dt = 1 / 60;
   for (const speed of [SLOW, FAST]) for (let index = 0; index < 4; index++) for (let start = 0; start <= 7; start++) {
     const f = fixture(); f.g.player.auto = true;
     for (let k = 0; k < index; k++) restore(f, k);
@@ -557,3 +558,50 @@ test('AUTO 모의(조율판): 실제 일반판 Floor 에서 영웅이 모든 방
     expect(f.route.mistakes).toBe(0); expect(f.hurts).toHaveLength(0);
   }
 }, 120000);
+
+/** 방 7 안에서 영웅이 서 있을 수 있는 1m 격자 점(몸 반지름 .6 의 사방이 모두 이동 가능한 Floor). */
+function standableGrid() {
+  const f = fixture(), room = roomOf(f, 7), w: any = f.world, flow = w.buildFlow(w.startRoom.x, w.startRoom.z)!;
+  const ok = (x: number, z: number) => {
+    const cx = Math.floor(x - w.minX), cz = Math.floor(z - w.minZ);
+    return cx >= 0 && cx < w.cols && cz >= 0 && cz < w.rows && flow[cz * w.cols + cx] >= 0;
+  };
+  const points: [number, number][] = [];
+  for (let dx = -room.w / 2; dx <= room.w / 2; dx++) for (let dz = -room.h / 2; dz <= room.h / 2; dz++) {
+    const x = room.x + dx, z = room.z + dz;
+    if (ok(x, z) && [[.6, 0], [-.6, 0], [0, .6], [0, -.6], [.6, .6], [-.6, .6], [.6, -.6], [-.6, -.6]].every(([ox, oz]) => ok(x + ox, z + oz))) points.push([dx, dz]);
+  }
+  return points;
+}
+
+/** 고리 한 판: 열리는 스텝 영웅 위치에서 바로 다음 스텝부터 실제 AUTO 로 걸어 끝까지. 첫 피격·붕괴 시각(고리 clock)을 남긴다. */
+function ringRun(roomId: number, dx: number, dz: number, speed: number, dt: number) {
+  const f = opened([roomId, dx, dz]), r = ring(f);
+  f.g.player.auto = true;
+  let t = 0, firstHit = -1, firstCollapse = -1;
+  while (r.phase !== 'done' && t < 90) {
+    autoStep(f, speed, dt); t += dt;
+    if (firstHit < 0 && r.shardHits > 0) firstHit = r.clock;
+    if (firstCollapse < 0 && r.collapses > 0) firstCollapse = r.clock;
+  }
+  return { done: r.phase === 'done', hits: r.shardHits, hurts: f.hurts.length, collapses: r.collapses, seconds: r.elapsed, firstHit, firstCollapse };
+}
+
+test('AUTO 모의(고리): 열림 순간 방 7 안 도달 가능한 1m 격자 전부와 방 6·5·4·3·1 중심 × 속도 5.6·7.2 에서 열린 스텝 다음부터 걸어서 피격 0·붕괴 0 으로 완료한다', () => {
+  const grid = standableGrid();
+  expect(grid.length).toBeGreaterThan(300);                                                  // 격자가 비어 있어 통과하는 일이 없도록
+  const starts: [number, number, number][] = [...grid.map(([dx, dz]) => [7, dx, dz] as [number, number, number]),
+    ...[6, 5, 4, 3, 1].map(id => [id, 0, 0] as [number, number, number])];
+  const failures: string[] = [];
+  let runs = 0, slowest = 0;
+  for (const speed of [SLOW, FAST]) for (const [id, dx, dz] of starts) {
+    const res = ringRun(id, dx, dz, speed, 1 / 60); runs++;
+    slowest = Math.max(slowest, res.seconds);
+    if (!res.done || res.hits || res.hurts || res.collapses) {
+      failures.push('room ' + id + ' (' + dx + ',' + dz + ') @' + speed + ' ' + JSON.stringify(res));
+    }
+  }
+  expect(runs).toBe(starts.length * 2);
+  expect(failures).toEqual([]);
+  expect(slowest).toBeLessThan(RING.limit);                                                  // 가장 느린 완료도 제한 시간 안
+}, 900000);

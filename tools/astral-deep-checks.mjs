@@ -83,7 +83,7 @@ export const STANDARD = Object.freeze({
 /** BUNDLE-13 PLAN 3.0 공유 정의 계약 값(일반판 기록 외곽 고리: 표지 3개·제한 24초·피해 4%). */
 export const STANDARD_RING = Object.freeze({
   roomId: 7, label: '기록 외곽 고리', title: '외곽 고리 이탈', mark: '항로 표지', shard: '기록 파편', verb: '밝히', markVerb: '점등',
-  marks: Object.freeze([Object.freeze([-6, 0]), Object.freeze([0, -6]), Object.freeze([6, 0])]),
+  marks: Object.freeze([Object.freeze([-6, 0]), Object.freeze([0, -6]), Object.freeze([6, 0]), Object.freeze([0, 6])]),
   markRadius: 1.4, holdSeconds: 1, limit: 24, first: 1.5, period: 5, warning: 2, burst: .5, core: 3.2, damage: .04, collapseDamage: .04, shards: 6, color: 0x9ccaff,
 });
 /** 목표창·토스트·결과 문구(PLAN 2절 5, 3.1, 3.2). 판정 함수의 상수는 테스트가 따로 적은 문장과 맞춰 본다. */
