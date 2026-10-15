@@ -237,7 +237,8 @@ function installProbe({ bellRooms }) {
     return { room, phase: g.phase, radius: r.def.radius, dist: Math.hypot(g.center.x - p.x, g.center.z - p.z),
       dx: (z.x - a.x) * innerWidth / 2, dy: -(z.y - a.y) * innerHeight / 2 };
   };
-  P.summary = () => ({ steps: P.steps, stepMs: P.stepMs, renderMs: P.renderMs, slow: P.slow.slice(0, 20), maxAlive: P.maxAlive, minHpRatio: P.minHpRatio, samples: P.samples,
+  // 느린 스텝 목록은 자르지 않는다(기준선 비교가 개수와 종문 구간을 정확히 세야 한다).
+  P.summary = () => ({ steps: P.steps, stepMs: P.stepMs, renderMs: P.renderMs, slow: P.slow, maxAlive: P.maxAlive, minHpRatio: P.minHpRatio, samples: P.samples,
     log: P.log, clears: P.clears, hpDrops: P.hpDrops, sealT: P.sealT });
   return true;
 }

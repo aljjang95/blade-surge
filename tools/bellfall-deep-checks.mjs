@@ -237,14 +237,16 @@ export function drawCallIncrease(candidate, baseline, limit = 12) {
 /**
  * PLAN 5절 4번 기준선 비교. 후보·기준선 auto 실행 요약에서 완주 시간 비(≤ timeRatio), draw call 증가(≤ drawLimit)를 판정하고,
  * 50ms 초과 스텝은 전체 개수와 함께 종문 구간(toll·answer 단계)만 따로 센다. 50ms 절대 검사는 각 실행 report 의 검사가 그대로 판정한다.
- * cand/base: { time, samples, slow }
+ * cand/base: { time, samples, slow, stepMs?, renderMs? }. 개수는 전체 스텝 ms 배열이 있으면 그것으로 센다(옛 report 의 slow 는 20개로 잘려 있다).
  */
 export function compareToBaseline(cand, base, { timeRatio = 2, drawLimit = 12 } = {}) {
   const ratio = cand?.time > 0 && base?.time > 0 ? cand.time / base.time : null;
   const draw = drawCallIncrease(cand?.samples || [], base?.samples || [], drawLimit);
   const featureSlow = (cand?.slow || []).filter(s => s.phase === 'toll' || s.phase === 'answer');
+  const over = run => Array.isArray(run?.stepMs) || Array.isArray(run?.renderMs)
+    ? [...(run.stepMs || []), ...(run.renderMs || [])].filter(ms => ms > 50).length : (run?.slow || []).length;
   return { ok: ratio !== null && ratio <= timeRatio && draw.ok, time: { cand: cand?.time ?? null, base: base?.time ?? null, ratio, limit: timeRatio },
-    draw, over50: { cand: (cand?.slow || []).length, base: (base?.slow || []).length, featureWindow: featureSlow.length, featureSlow } };
+    draw, over50: { cand: over(cand), base: over(base), featureWindow: featureSlow.length, featureSlow } };
 }
 
 /** 첫 소등(wake → toll) 전에 모든 gate 가 lit 이 된 사건이 있었는지. */

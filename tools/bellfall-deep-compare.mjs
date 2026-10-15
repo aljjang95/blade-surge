@@ -15,7 +15,8 @@ const runOf = file => {
   const run = report.profiles?.auto?.runs?.[0];
   if (!run) throw Error('auto 실행이 없는 report: ' + file);
   return { head: report.head ?? null, status: report.status, heroId: report.heroId, seed: report.seed,
-    time: run.result?.win ? run.result.time : null, samples: run.summary?.samples || [], slow: run.summary?.slow || [] };
+    time: run.result?.win ? run.result.time : null, samples: run.summary?.samples || [], slow: run.summary?.slow || [],
+    stepMs: run.summary?.stepMs, renderMs: run.summary?.renderMs };
 };
 const cand = runOf(arg('candidate')), base = runOf(arg('baseline'));
 const same = cand.heroId === base.heroId && cand.seed === base.seed;
@@ -25,4 +26,3 @@ const text = JSON.stringify(result, null, 2);
 if (arg('out')) fs.writeFileSync(arg('out'), text + '\n', { flag: 'wx' });
 console.log(text);
 process.exit(result.ok ? 0 : 1);
-

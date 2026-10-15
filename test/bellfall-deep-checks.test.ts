@@ -318,5 +318,7 @@ describe('측정 보조', () => {
     expect(compareToBaseline({ ...cand, time: 201 }, base).ok).toBe(false);
     expect(compareToBaseline({ ...cand, samples: [{ label: 'enter:room2', calls: 113, room: 2 }] }, base).ok).toBe(false);
     expect(compareToBaseline(cand, { ...base, time: 0 }).ok).toBe(false);
+    // 전체 스텝 ms 배열이 있으면 잘린 slow 목록 대신 그것으로 센다.
+    expect(compareToBaseline({ ...cand, stepMs: [1, 51, 70], renderMs: [80] }, base).over50.cand).toBe(3);
   });
 });
