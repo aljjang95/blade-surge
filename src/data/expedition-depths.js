@@ -41,6 +41,17 @@ const SABLE_COUNT = SABLE_THRONES.gates.length;
 const SABLE_OBJECTIVE = `가짜 왕좌 ${SABLE_COUNT}곳 파괴와 정예방 ${SABLE_ELITES}곳의 증원 각 ${SABLE_REINFORCEMENTS}회 격파 → 모든 구역 정화 → 거울 미궁 탈출 → 환영 여왕 처치`;
 const SABLE_TACTIC = `각 왕좌 구역의 적을 처치한 뒤(정예방은 증원 ${SABLE_REINFORCEMENTS}회까지) 보라 모래시계가 멈춘 동안 왕좌를 ${SABLE_THRONES.hits}번 공격해 ${SABLE_COUNT}곳을 모두 부수세요. 모래시계가 도는 동안 때리면 모래가 반사됩니다. 왕좌 ${SABLE_COUNT}곳과 모든 구역을 정화하면 거울 전당에 거울 두 개가 섭니다. 사라지는 모래 발자국과 멈춘 모래시계를 따라 제한 시간 안에 진짜 거울에 닿으면 보스 봉인이 풀립니다. 환영 거울은 모래를 반사하고, 시간이 다 되면 거울이 무너져 피해를 입은 뒤 다시 시작합니다. `;
 
+// 잿불금고 심층 냉각 밸브 문구의 숫자·번호 순서는 규칙 정의(ROUTE_OBJECTIVES.ember_deep)에서 계산한다(BUNDLE-10).
+// 정예방 수·증원 횟수는 아래 ember_vault 의 레이아웃·mechanics 와 같은 값이며 계약 테스트가 일치를 검사한다.
+const EMBER_TIDE = ROUTE_OBJECTIVES.ember_deep;
+const EMBER_ELITES = 2;
+const EMBER_REINFORCEMENTS = 1;
+const EMBER_COPY = EMBER_TIDE.copy;
+const EMBER_COUNT = EMBER_TIDE.gates.length;
+const EMBER_STEPS = EMBER_TIDE.gates.map((_, i) => `${i + 1}번`).join(' → ');
+const EMBER_OBJECTIVE = `${EMBER_COPY.unit} ${EMBER_COUNT}곳을 ${EMBER_COPY.vent} 뒤 순서대로 ${EMBER_COPY.doneVerb}하고 정예방 ${EMBER_ELITES}곳의 증원 각 ${EMBER_REINFORCEMENTS}회 격파 → 모든 구역 정화 → 선단 압류관 처치`;
+const EMBER_TACTIC = `각 ${EMBER_COPY.unit} 구역의 적을 처치한 뒤(정예방은 증원 ${EMBER_REINFORCEMENTS}회까지) ${EMBER_STEPS} 순서로 ${EMBER_COPY.doneVerb}하세요. ${EMBER_COPY.vent}이 한 번 지나가면 조작판이 반대편으로 옮겨 가 열립니다. 다음 ${EMBER_COPY.warning} 전까지 그 청록 조작판에서 행동 없이 ${EMBER_TIDE.holdSeconds}초 유지하면 ${EMBER_COPY.unit}가 열립니다. 파란 ${EMBER_COPY.vent} 띠 안에 있으면 피해를 입습니다. `;
+
 // Authored follow-up expeditions. The base material runs keep their original
 // price and rewards; these routes unlock at explicit campaign milestones.
 export const EXPEDITION_DEPTHS = [
@@ -63,9 +74,11 @@ export const EXPEDITION_DEPTHS = [
     id: 'ember_vault', depth: 'deep', name: '잿불금고 · 침몰한 운반선', unlockCode: '4-10', minLevel: 2,
     energy: 6, chapter: 4, stage: 5, scale: 14, bossEnemy: 'cinder_chain_executor', bossHp: 22000,
     description: '해왕의 사슬 아래 가라앉은 운반선에 빼앗긴 불씨가 남아 있습니다. 잠긴 화물칸을 돌파하고 압류관의 명령을 끊으세요.',
-    objective: '정예방 2곳의 증원 각 1회 격파 → 모든 구역 정화 → 선단 압류관 처치',
+    objective: EMBER_OBJECTIVE,
     bossName: '가라앉은 선단의 압류관', art: '/img/expansion/ember_vault.webp',
-    tactic: `화물칸의 정예방마다 적과 1회 증원을 격파하세요. ${ENEMIES.cinder_chain_executor.tactic}`,
+    tactic: `${EMBER_TACTIC}${ENEMIES.cinder_chain_executor.tactic}`,
+    // 전술 공략(vault_signal·vault_manifest)은 냉각 밸브가 없는 심층 동선을 쓴다(routeObjectiveForStage null). 밸브 안내 없이 BUNDLE-10 이전 문구를 쓴다.
+    conquestTactic: `화물칸의 정예방마다 적과 1회 증원을 격파하세요. ${ENEMIES.cinder_chain_executor.tactic}`,
     layout: { spacing: [36,36], size: [22,20], width: 7,
       cells: [[0,0],[1,0],[1,1],[2,0],[2,1],[3,1]],
       edges: [[0,1],[1,2],[1,3],[2,4],[3,4],[4,5]],

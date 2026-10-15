@@ -81,7 +81,8 @@ export function buildExpeditionStage(kind, id, eco, { depth = 'standard', conque
     theme: def.theme, ...(def.field ? { field: def.field } : {}),
     code: deep?.name || def.name, name: deep?.name || def.name, title: conquest ? `${deep.name} · ${conquest.name}` : deep?.name || def.name,
     objective: conquest?.objective || deep?.objective || (duel ? `AI 모의 결투 · 150초 제한 · ${duel.tactic}` : def.objective || TACTICS[id]),
-    encounter: { ...base.encounter, enemyId, name: enemy.name, label: deep ? 'DEEP EXPEDITION' : kind === 'arena' ? 'AI DUEL' : 'DUNGEON BOSS', tactic: deep ? deep.tactic || base.encounter.tactic : duel?.tactic || def.tactic || TACTICS[id] },
+    // 전술 공략은 심층의 경로 목표(밸브 등)를 쓰지 않으므로, 심층에 conquestTactic 이 있으면 그 문구를 쓴다.
+    encounter: { ...base.encounter, enemyId, name: enemy.name, label: deep ? 'DEEP EXPEDITION' : kind === 'arena' ? 'AI DUEL' : 'DUNGEON BOSS', tactic: deep ? (conquest && deep.conquestTactic) || deep.tactic || base.encounter.tactic : duel?.tactic || def.tactic || TACTICS[id] },
     expeditionEnemy: enemy,
   };
   if (def.roster) stage.rosterFor = () => def.roster;
