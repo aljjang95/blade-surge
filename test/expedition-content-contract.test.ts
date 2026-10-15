@@ -17,7 +17,7 @@ const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   cinder_tide_lock: { standard: [2, 4], deep: [3, 4] },
   nightglass_observatory: { standard: [3, 0], deep: [5, 0] },
   eclipse_hydra_vault: { standard: [3, 0], deep: [4, 4] },
-  ashforge_catacomb: { standard: [4, 0], deep: [0, 4] },
+  ashforge_catacomb: { standard: [4, 0], deep: [4, 4] },
   astral_leviathan_spire: { standard: [0, 0], deep: [2, 2] },
   verdigris_sanctum: { standard: [3, 0], deep: [2, 4] },
   sable_mirage_basin: { standard: [3, 0], deep: [0, 4] },
@@ -110,6 +110,27 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(tactic).toContain('밸브 ' + deep.gates.length + '곳과 모든 구역을 정화하면 보스 봉인이 풀립니다');
         // 밸브 안내는 보스 전술보다 앞에 있다.
         expect(tactic.indexOf('밸브')).toBeLessThan(tactic.indexOf((ENEMIES as Record<string, any>).obsidian_hydra.tactic));
+      } else if (id === 'ashforge_catacomb' && depth === 'deep') {
+        // 정예방 증원만 있던 심층은 심장로 4곳 냉각으로 바뀌었다. 문구의 숫자·번호 순서는 정의(def)에서 읽어 맞춘다.
+        const deep = route as typeof ROUTE_OBJECTIVES.ashforge_deep;
+        expect(deep).toBe(ROUTE_OBJECTIVES.ashforge_deep);
+        expect(deep.gates.map(g => g.roomId)).toEqual([2, 4, 5, 7]);
+        expect('coexistAttunement' in deep).toBe(false);
+        expect(Number(stage.objective.match(/심장로 (\d+)곳을 망치 충격파 뒤 순서대로 냉각/)?.[1])).toBe(holds);
+        expect(stage.objective).not.toMatch(/공명|제단|보물방/);
+        const tactic = stage.encounter.tactic;
+        expect(tactic).toMatch(/적을 처치한 뒤\(정예방은 증원 2회까지\)/);
+        const steps = tactic.match(/\d번 → (?:\d번 → )*\d번/)![0];
+        expect(steps).toBe(deep.gates.map((_, i) => (i + 1) + '번').join(' → '));
+        expect(tactic.match(/\d번/g)).toEqual(deep.gates.map((_, i) => (i + 1) + '번'));
+        expect(tactic).toMatch(/망치 충격파가 한 번 지나가면 조작판이 반대편으로 옮겨 가 열립니다/);
+        expect(Number(tactic.match(/행동 없이 (\d+(?:\.\d+)?)초 유지/)?.[1])).toBe(deep.holdSeconds);
+        expect(tactic).toMatch(/청록 조작판/);
+        expect(tactic).toMatch(/사슬에 묶인 불씨가 풀려납니다/);
+        expect(tactic).toMatch(/이탈·공격·회피·피격·일시정지하면 유지 시간이 초기화/);
+        expect(tactic).toContain('심장로 ' + deep.gates.length + '곳과 모든 구역을 정화하면 보스 봉인이 풀립니다');
+        // 심장로 안내는 보스 전술보다 앞에 있다.
+        expect(tactic.indexOf('심장로')).toBeLessThan(tactic.indexOf((ENEMIES as Record<string, any>).ash_colossus.tactic));
       } else if (id === 'ashforge_catacomb' && depth === 'standard') {
         expect(Number(stage.objective.match(/과열 용광로\s*(\d+)곳/)?.[1])).toBe(holds);
         expect(stage.encounter.tactic).toMatch(/1\.4초 예고/);

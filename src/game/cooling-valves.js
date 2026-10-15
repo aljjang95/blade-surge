@@ -19,7 +19,11 @@ export class CoolingValves {
   #report = null;
   #lastHint = '';
   #markerT = 0;
+  /** 연출 뷰에 넘기는 옵션 객체(재사용, 프레임 루프 무할당). */
+  #opts = { reduced: false };
   view = null;
+  /** 정의에 release 가 있을 때만 붙는 불씨 해방 연출 뷰(BUNDLE-08). 없어도 규칙은 그대로다. */
+  releaseView = null;
   constructor(def, world) {
     this.def = def; this.world = world;
     // 문구가 없는 정의(기존 재의 수문)는 밸브·냉각선 문구를 그대로 쓴다.
@@ -38,7 +42,7 @@ export class CoolingValves {
       room.label = label;
       room.objectiveProp = 'cooling-valve';
       return { room, label, ready: false, attuned: false, prepared: false, expected: 0, spawned: 0,
-        side: i % 2 ? -1 : 1, phase: 'heat', age: 0, cycles: 0, ventHit: false, hits: 0,
+        side: i % 2 ? -1 : 1, phase: 'heat', age: 0, cycles: 0, ventHit: false, hits: 0, shocks: 0, armed: false,
         pos: new Vector3(room.x, 0, room.z), pad: new Vector3(room.x, 0, room.z) };
     });
     this.updatePad();
@@ -48,9 +52,22 @@ export class CoolingValves {
   get complete() { return this.#progress === this.gates.length; }
   get closed() { return this.#closed || !!this.#report; }
   async prepareView(scene) {
-    const [{ CoolingValveView }, { loadModel }] = await Promise.all([import('./cooling-valve-view.js'), import('../engine/assets.js')]);
-    const gltf = await loadModel('tllCoolingValve');
-    if (!this.closed) this.view = new CoolingValveView(scene, gltf, this);
+    try {
+      const [{ CoolingValveView }, { loadModel }] = await Promise.all([import('./cooling-valve-view.js'), import('../engine/assets.js')]);
+      const gltf = await loadModel('tllCoolingValve');
+      if (!this.closed) this.view = new CoolingValveView(scene, gltf, this);
+    } finally {
+      // 불씨 해방 연출은 냉각 장치 모델과 상관없이 만든다. 기존 뷰의 실패는 그대로 호출자에게 전달된다.
+      await this.prepareReleaseView(scene);
+    }
+  }
+  /** 연출 전용: def.release 가 'ember-chains' 일 때만 만든다. 가져오기·생성 실패는 규칙에 영향을 주지 않는다. @param {any} scene */
+  async prepareReleaseView(scene) {
+    if (this.def.release !== 'ember-chains' || this.closed || this.releaseView) return;
+    try {
+      const { EmberChainView } = await import('./ember-chain-view.js');
+      if (!this.closed && !this.releaseView) this.releaseView = new EmberChainView(scene, this);
+    } catch { /* 뷰가 없거나 만들 수 없어도 규칙은 그대로 동작한다. */ }
   }
   autoRoom() { return this.closed ? null : this.gates[this.#progress]?.room || null; }
   autoPoint(room) {
@@ -59,7 +76,11 @@ export class CoolingValves {
   }
   ownsHazards(room) { return this.gates.some(g => g.room === room); }
   interrupt() { this.#hold = 0; }
-  stop() { this.#closed = true; this.interrupt(); this.view?.dispose(); this.view = null; }
+  stop() {
+    this.#closed = true; this.interrupt();
+    this.view?.dispose(); this.view = null;
+    this.releaseView?.dispose(); this.releaseView = null;
+  }
   prepareRoom(room, count) {
     const gate = this.gates.find(g => g.room === room);
     if (gate && !gate.prepared) { gate.prepared = true; gate.expected = count; }
@@ -77,22 +98,31 @@ export class CoolingValves {
     const gate = this.gates.find(g => g.room === room);
     if (!gate || gate.attuned) return false;
     if (!this.closed && game.active && !game.paused && this.enemiesCleared(game, gate) && !gate.ready) {
-      gate.ready = true;
-      game.ui.toast(`${gate.label} 방어 완료 · 청록 조작판에서 2초 유지`, 'gold');
+      gate.ready = true; gate.shocks = 0;
+      game.ui.toast(`${gate.label} 방어 완료 · ${this.def.shockWindow ? '망치 충격파 뒤 ' : ''}청록 조작판에서 2초 유지`, 'gold');
       this.refreshHint(game);
+      // 준비는 Battle.markCleared 에서 오고, 마지막 적을 투사체가 잡으면 같은 스텝의 경로 목표 갱신보다 뒤다.
+      // 뷰가 한 스텝 늦지 않게 시간 진행 없이 맞춘다(b08-cand-deep-mage).
+      this.syncView(game);
     }
     return true;
   }
   canUnseal() { return this.complete && this.world.rooms.every(r => ['start', 'boss'].includes(r.type) || r.cleared); }
   canWin() { return this.canUnseal() && !this.world.sealed && this.world.bossRoom.cleared; }
+  /** 조작판이 열려 있는가. 충격파 창이 없는 정의는 늘 열려 있고(예고 중 유지 허용 포함),
+   * 있는 정의는 준비된 뒤 충격파가 한 번 지나간 가열 구간에만 열린다. */
+  padOpen(gate) {
+    return !this.def.shockWindow || (gate.ready && gate.phase === 'heat' && gate.shocks >= 1);
+  }
   updatePad() {
     for (const g of this.gates) g.pad.set(g.room.x - g.side * this.def.padOffset, 0, g.room.z);
   }
   hint() {
     const gate = this.gates[this.#progress], n = this.gates.length;
     if (!gate) return `${this.copy.done} ${n}/${n} ${this.copy.doneVerb} · ${this.canUnseal() ? '보스 처치' : '남은 구역 정화'}`;
-    const vent = gate.phase === 'warning' ? '과열 예고' : gate.phase === 'vent' ? '증기 분출' : '가열 중';
-    return `${this.copy.unit} ${this.#progress}/${n} · ${gate.label} · ${vent} · ${gate.ready ? `청록판 2초 (${this.#hold.toFixed(1)}/2)` : '적과 증원 처치'}`;
+    const vent = gate.phase === 'warning' ? this.copy.warning || '과열 예고' : gate.phase === 'vent' ? this.copy.vent || '증기 분출' : '가열 중';
+    const tail = !gate.ready ? '적과 증원 처치' : this.padOpen(gate) ? `청록판 2초 (${this.#hold.toFixed(1)}/2)` : '충격파 대기';
+    return `${this.copy.unit} ${this.#progress}/${n} · ${gate.label} · ${vent} · ${tail}`;
   }
   refreshHint(game) {
     const hint = this.hint();
@@ -110,21 +140,29 @@ export class CoolingValves {
         gate.phase = 'warning'; gate.ventHit = false;
         if (game.world.roomAt(game.player.pos.x, game.player.pos.z) === gate.room) audio.ting({ vol: .22, freq: 760 });
       } else if (gate.phase === 'warning') {
-        gate.phase = 'vent';
+        // 이 분출이 준비된 뒤 시작됐는지 기억한다. 분출 도중에 준비되면 그 분출은 충격파로 세지 않는다(리뷰 P2-1).
+        gate.phase = 'vent'; gate.armed = !!gate.ready;
         if (game.world.roomAt(game.player.pos.x, game.player.pos.z) === gate.room) audio.whoosh({ vol: .28, pitch: .65, dur: .3 });
       } else {
-        gate.phase = 'heat'; gate.side *= -1; gate.cycles++; this.interrupt(); this.updatePad();
+        // 준비된 뒤 시작된 분출이 끝나 가열로 돌아가면 충격파가 한 번 지나간 것이다(조작판이 열리는 조건).
+        // 예고 중에 준비되면 분출 전체를 겪으므로 센다. 분출 도중에 준비되면 다음 주기를 기다린다.
+        gate.phase = 'heat'; gate.side *= -1; gate.cycles++; if (gate.ready && gate.armed) gate.shocks++;
+        gate.armed = false;
+        this.interrupt(); this.updatePad();
       }
     }
     if (gate.phase === 'vent' && !gate.ventHit && coolingVentContains(gate, game.player.pos)) {
       gate.ventHit = true; this.interrupt();
       const hit = game.player.hurt(game.player.maxHp * .06, { dirx: gate.side, dirz: 0, kb: 2, kind: 'magic' });
-      if (hit) { gate.hits++; game.ui.toast('과열 피해 · 반대편 청록 조작판으로 이동', 'red'); }
+      if (hit) {
+        gate.hits++;
+        game.ui.toast(this.def.shockWindow ? `${this.copy.vent} 피해 · 충격파 뒤 옮겨 간 조작판으로 이동` : '과열 피해 · 반대편 청록 조작판으로 이동', 'red');
+      }
     }
     if (!game.active || !game.player.alive) { this.interrupt(); return; }
     const inside = Math.hypot(game.player.pos.x - gate.pad.x, game.player.pos.z - gate.pad.z) <= this.def.radius;
     const stable = ['idle', 'move'].includes(game.player.state);
-    this.#hold = inside && stable && gate.ready && this.enemiesCleared(game, gate) ? this.#hold + dt : 0;
+    this.#hold = inside && stable && gate.ready && this.enemiesCleared(game, gate) && this.padOpen(gate) ? this.#hold + dt : 0;
     if (this.#hold + 1e-9 >= this.def.holdSeconds) {
       gate.attuned = true; gate.phase = 'cooled'; this.#progress++; this.interrupt();
       game.markCleared(gate.room); game.autoTarget = this.autoRoom();
@@ -133,6 +171,23 @@ export class CoolingValves {
     }
   }
   update(game, dt) {
+    this.#updateRules(game, dt);
+    // 해방 연출은 규칙 뒤에 그린다. 규칙의 조기 반환(보스 처치·결과 등)에도 일시정지가 아니면 이어서 그려 연출을 끝낸다.
+    if (this.releaseView && !game.paused && Number.isFinite(dt) && dt > 0) {
+      this.#opts.reduced = !!game.app?.reducedMotion?.matches;
+      this.releaseView.update(this, dt, this.#opts);
+    }
+  }
+  /** 스텝 안에서 규칙 갱신 뒤 바뀐 표시 입력(방 발견)을 시간 진행 없이 두 뷰에 반영한다. @param {any} game */
+  syncView(game) {
+    if (game?.paused || (!this.view && !this.releaseView)) return;
+    this.view?.update(this);
+    if (this.releaseView) {
+      this.#opts.reduced = !!game.app?.reducedMotion?.matches;
+      this.releaseView.update(this, 0, this.#opts);
+    }
+  }
+  #updateRules(game, dt) {
     if (this.closed || !game.active || game.paused || !game.player?.alive || game.bossDefeated || game.world !== this.world) {
       this.interrupt(); return;
     }
@@ -150,7 +205,7 @@ export class CoolingValves {
       this.#markerT = 1.8;
       for (const [i, g] of this.gates.entries()) {
         if (!g.room.discovered || g.attuned || Math.hypot(game.player.pos.x - g.room.x, game.player.pos.z - g.room.z) > 22) continue;
-        game.fx.damage(g.pos, 0, { text: i !== this.#progress ? `${i + 1}번 ${this.copy.unit} · 순서 대기` : g.ready ? '청록 조작판 · 2초' : `${this.copy.unit} 방어 · 증원 처치` });
+        game.fx.damage(g.pos, 0, { text: i !== this.#progress ? `${i + 1}번 ${this.copy.unit} · 순서 대기` : g.ready ? (this.padOpen(g) ? '청록 조작판 · 2초' : '충격파 뒤 조작판') : `${this.copy.unit} 방어 · 증원 처치` });
       }
     }
     this.view?.update(this); this.refreshHint(game);

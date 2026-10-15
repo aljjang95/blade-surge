@@ -57,6 +57,8 @@ export class CoolingValveView {
     this.update(route);
   }
   update(route) {
+    // 충격파 뒤에만 조작판이 열리는 정의(shockWindow, 재벼림 심층)에서만 닫힘 표시를 쓴다. padOpen 이 없거나 다른 정의면 기존과 같다.
+    const gated = !!route.def.shockWindow && typeof route.padOpen === 'function';
     for (const entry of this.entries) {
       const gate = route.gates[entry.index], current = entry.index === route.progress;
       entry.root.visible = gate.room.discovered;
@@ -66,7 +68,10 @@ export class CoolingValveView {
       if (entry.wheel) entry.wheel.rotation.z = entry.wheelStart + (gate.attuned ? 1 : current ? route.hold / route.def.holdSeconds : 0) * Math.PI * 1.5;
       entry.pad.visible = current && gate.ready;
       entry.pad.position.x = gate.pad.x - gate.room.x;
-      entry.pad.material.opacity = .55 + .45 * (current ? route.hold / route.def.holdSeconds : 0);
+      // 닫힘(충격파 대기): 회색·옅게. 열림: 청록, 유지 비율만큼 진해진다.
+      const closed = gated && current && gate.ready && !route.padOpen(gate);
+      entry.pad.material.color.setHex(closed ? 0x6d7a86 : 0x56e6d5);
+      entry.pad.material.opacity = closed ? .45 : .55 + .45 * (current ? route.hold / route.def.holdSeconds : 0);
       const h = coolingVent(gate);
       entry.vent.visible = hot;
       entry.vent.position.x = h.x - gate.room.x; entry.vent.scale.set(h.width, 1, h.length);
@@ -74,12 +79,12 @@ export class CoolingValveView {
       entry.vent.material.uniforms.fired.value = gate.phase === 'vent' ? 1 : 0;
       entry.vent.material.uniforms.opacity.value = gate.phase === 'vent' ? .95 : .6;
       entry.pipe.material.color.setHex(gate.attuned ? 0x64e2c2 : 0x35444d);
-      const state = gate.attuned ? '냉각 완료' : !current ? '대기' : gate.ready ? '조작 2초' : '방어';
+      const state = gate.attuned ? '냉각 완료' : !current ? '대기' : gate.ready ? (closed ? '충격파 대기' : '조작 2초') : '방어';
       if (state !== entry.labelState && entry.context) {
         entry.labelState = state;
         const c = entry.context; c.clearRect(0, 0, 256, 64);
         c.fillStyle = 'rgba(9,18,27,.9)'; c.fillRect(0, 0, 256, 64);
-        c.fillStyle = gate.attuned ? '#64e2c2' : '#ffe0a5'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center';
+        c.fillStyle = gate.attuned ? '#64e2c2' : closed ? '#c3ccd4' : '#ffe0a5'; c.font = `bold ${closed ? 26 : 30}px sans-serif`; c.textAlign = 'center';
         c.fillText(`${String(entry.index + 1).padStart(2, '0')} · ${state}`, 128, 43); entry.texture.needsUpdate = true;
       }
     }
