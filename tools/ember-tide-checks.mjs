@@ -392,7 +392,9 @@ export function checkObjectiveSamples(rows, def, cools) {
  * 개방 토스트 '<이름> 개방 · 냉각 밸브 k/n 개방' 1회(k 순서), 밀물 피해 토스트 '밀물 피해 · 밀물 뒤 옮겨 간 조작판으로 이동'은 결과 overheatHits 와 같은 횟수.
  * 조작판·밸브·냉각·밀물을 말하는 토스트에는 재벼림 문구(망치·충격파)가 없어야 한다.
  */
-export function checkToasts(toasts, def, { overheatHits = null } = {}) {
+// encounterTactic: 보스 입장 때 뜨는 실제 전술 토스트(stage.encounter.tactic). 그 끝에는 보스 시그니처 안내('용재 망치: …')가 붙어
+// '망치'가 들어가는 것이 정상이다(smoke-cand-auto-1). 그 문자열과 정확히 같은 토스트만 누출 검사에서 뺀다. 한 글자라도 다르면 그대로 검사한다.
+export function checkToasts(toasts, def, { overheatHits = null, encounterTactic = null } = {}) {
   const list = (toasts || []).map(t => String(t?.msg ?? ''));
   const n = def.gates.length;
   const count = text => list.filter(m => m === text).length;
@@ -403,9 +405,11 @@ export function checkToasts(toasts, def, { overheatHits = null } = {}) {
   const hitCount = count(hitText);
   const order = cooled.map(c => list.indexOf(c.text));
   const ordered = order.every((at, i) => at >= 0 && (i === 0 || at > order[i - 1]));
-  const leaked = list.filter(m => /조작판|밸브|냉각|밀물/.test(m) && leaks(m));
+  const exempt = typeof encounterTactic === 'string' && encounterTactic.length > 0 ? encounterTactic : null;
+  const tacticToasts = exempt ? list.filter(m => m === exempt).length : 0;
+  const leaked = list.filter(m => m !== exempt && /조작판|밸브|냉각|밀물/.test(m) && leaks(m));
   const ok = ready.every(r => r.count === 1) && cooled.every(c => c.count === 1) && ordered && leaked.length === 0 && (overheatHits === null || hitCount === overheatHits);
-  return { ok, ready, cooled, hitText, hitCount, overheatHits, ordered, leaked, total: list.length };
+  return { ok, ready, cooled, hitText, hitCount, overheatHits, ordered, leaked, tacticToasts, total: list.length };
 }
 
 /**
@@ -468,7 +472,7 @@ export function analyzeTide(obs, def, { reinforcements = 0 } = {}) {
   const line = checkResultLine(obs.resultText, def);
   const element = checkResultElement(obs.resultLines, def);
   const objective = checkObjectiveSamples(rows, def, cools.cools);
-  const toasts = checkToasts(obs.toasts, def, { overheatHits: obs.result?.overheatHits ?? null });
+  const toasts = checkToasts(obs.toasts, def, { overheatHits: obs.result?.overheatHits ?? null, encounterTactic: obs.encounterTactic ?? null });
   const view = checkTideView(rows, def);
   const sync = checkViewSync(rows, def);
   const viewAB = summarizeViewAB(obs.viewAB);
