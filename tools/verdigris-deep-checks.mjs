@@ -11,7 +11,8 @@
 //   ch: route.channel 관측 { ph(0 idle · 1 open · 2 running · 3 done · 9 알 수 없음), rid 수로 방 id, ck clock, lf left, lim limit, el elapsed, fl floods, sh sporeHits,
 //      b: 띠마다 { x 월드 중심, h half, s(0 calm · 1 warning · 2 burst · 9 알 수 없음), a age, c cycle },
 //      fd 시작·범람 스텝에서 도구가 world.buildFlow(exit) 로 다시 잰 영웅 칸 거리(음수 = 읽지 못함) } 또는 null(channel 없음),
-//   mk 도구가 찍은 구간 표식(선택), dom 목표창 문구(같은 상태가 0.6초 이어진 뒤 표본)
+//   mk 도구가 찍은 구간 표식(선택), dom 목표창 문구(같은 상태가 0.6초 이어진 뒤 표본),
+//   hr 그 스텝에 player.hurt 가 받은 피해 ÷ 최대 체력 목록(도구의 관측 감싸개, 호출이 없으면 생략)
 // 토스트 표본({ n, t, msg, kind })과 수로 setup({ roomId, roomX, roomZ, minX, maxX, minZ, maxZ, startX, finishX, entry{x,z}, exit{x,z} })은 행과 따로 남긴다.
 
 /** 고정 스텝 한 번의 길이. 관측이 스텝 끝에서만 이뤄지므로 시간 비교는 이 값만큼의 양자화 오차를 허용한다. */
@@ -27,6 +28,16 @@ const CARRY_MAX_STEPS = 90;
 const ACTION_STATES = Object.freeze(['attack', 'skill', 'ult', 'dodge']);
 /** 띠 경계(상태가 바뀌는 시각)에서 부동소수 때문에 상태를 가를 수 없는 범위. */
 const BOUNDARY = 1e-6;
+
+/** 피해 판정(BUNDLE-11 smoke 수리). 규칙은 최대 체력 × 정의 값(damage)을 player.hurt 에 넘기고, 실제 체력 감소는 영웅 방어로 줄어든다
+ * (smoke-cand-order-1·channel-1: 기사 체력 감소 비 .038 = .08 × .476, .0286 = .06 × .476). 정상 경로는 하나만 면제한다:
+ * 그 스텝 행의 hr(도구가 감싼 player.hurt 가 받은 피해 ÷ 최대 체력 목록)에 정의 값과 1e-6 안으로 같은 값이 있고, 실제 감소 비가 0 보다 크고 정의 값 이하다.
+ * hr 이 없거나(관측 누락), 넘긴 값이 다르거나, 감소가 0(무적 등) 이거나 정의 값을 넘으면(같은 스텝의 다른 피해) 실패다. */
+export function damageMatches(row, ratio, want) {
+  const raw = Array.isArray(row?.hr) ? row.hr : null;
+  return !!raw && raw.some(x => Number.isFinite(x) && Math.abs(x - want) <= 1e-6) &&
+    ratio !== null && Number.isFinite(ratio) && ratio > 0 && ratio <= want + 1e-6;
+}
 
 export const PHASE_NAMES = Object.freeze(['idle', 'open', 'running', 'done']);
 export const PHASE_CODE = Object.freeze(Object.fromEntries(PHASE_NAMES.map((name, i) => [name, i])));
@@ -325,7 +336,7 @@ export function checkWrongStep(rows, def, { rooms = [], strict = false, after = 
       && Math.hypot(sr[dwellStart - 1].x - room.x, sr[dwellStart - 1].z - room.z) <= def.radius + POSITION_SLACK) dwellStart--;
     const dwell = j === null ? 0 : cur.t - sr[dwellStart].t + FRAME;
     const ratio = dense && cur.mhp > 0 ? (p.hp - cur.hp) / cur.mhp : null;
-    const rec = { n: cur.n, t: cur.t, gate: j, jump: cur.bu - p.bu, dense, dwell, ratio, progressSame: cur.pr === p.pr, gap: lastT === null ? null : cur.t - lastT };
+    const rec = { n: cur.n, t: cur.t, gate: j, jump: cur.bu - p.bu, dense, dwell, ratio, raw: cur.hr ?? null, progressSame: cur.pr === p.pr, gap: lastT === null ? null : cur.t - lastT };
     bursts.push(rec);
     if (rec.jump !== 1) bad.push({ kind: 'jump', n: cur.n, jump: rec.jump });
     if (!dense) bad.push({ kind: 'sparse', n: cur.n });
@@ -333,7 +344,7 @@ export function checkWrongStep(rows, def, { rooms = [], strict = false, after = 
     if (j !== null && dwell + EPS < ws.seconds) bad.push({ kind: 'dwell', n: cur.n, dwell, need: ws.seconds });
     if (!rec.progressSame) bad.push({ kind: 'progress-changed', n: cur.n });
     if (lastT !== null && cur.t - lastT + FRAME + EPS < ws.cooldown + ws.seconds) bad.push({ kind: 'cooldown', n: cur.n, gap: cur.t - lastT, need: ws.cooldown + ws.seconds - FRAME });
-    if (strict && !(ratio !== null && Math.abs(ratio - ws.damage) <= .01)) bad.push({ kind: 'damage', n: cur.n, ratio, want: ws.damage });
+    if (strict && !damageMatches(cur, ratio, ws.damage)) bad.push({ kind: 'damage', n: cur.n, ratio, raw: cur.hr ?? null, want: ws.damage });
     lastT = cur.t;
   }
   // 판정 대상 구간의 bursts 증가량(앞 구간 제외)이 판정한 폭발 수와 같아야 한다.
@@ -489,12 +500,12 @@ export function checkChannelHits(rows, def, setup, { strict = false, strictMisse
       src.ch.b.forEach((b, bi) => { if (!found && b?.s === BAND_CODE.burst && Math.abs(src.x - b.x) <= b.h + BAND_OUTER_SLACK) found = { band: bi, cycle: b.c, x: src.x }; });
     }
     const ratio = p.n === r.n - 1 && r.mhp > 0 ? (p.hp - r.hp) / r.mhp : null;
-    const rec = { n: r.n, t: r.t, jump, band: found?.band ?? null, cycle: found?.cycle ?? null, ratio, explained: !!found };
+    const rec = { n: r.n, t: r.t, jump, band: found?.band ?? null, cycle: found?.cycle ?? null, ratio, raw: r.hr ?? null, explained: !!found };
     hits.push(rec);
     if (jump !== 1) bad.push({ kind: 'jump', n: r.n, jump });
     if (!found) bad.push({ kind: 'unexplained', n: r.n, hero: [r.x, r.z] });
     else cell(found.band, found.cycle).inc += jump;
-    if (strict && !(ratio !== null && Math.abs(ratio - c.damage) <= .01)) bad.push({ kind: 'damage', n: r.n, ratio, want: c.damage });
+    if (strict && !damageMatches(r, ratio, c.damage)) bad.push({ kind: 'damage', n: r.n, ratio, raw: r.hr ?? null, want: c.damage });
   }
   const list = [...cells.values()];
   for (const k of list) if (k.inc > 1) bad.push({ kind: 'double', band: k.band, cycle: k.cycle, hits: k.inc });
@@ -525,7 +536,7 @@ export function checkFloods(rows, def, { strict = false } = {}) {
     if (p.ch.ph !== PHASE_CODE.running || !(p.ch.lf <= FRAME + EPS)) bad.push({ kind: 'not-expired', n: r.n, previousPhase: p.ch.ph, previousLeft: p.ch.lf });
     if (r.ch.ph !== PHASE_CODE.running) bad.push({ kind: 'phase', n: r.n, phase: r.ch.ph });
     if (exact === null || r.ch.lim !== exact || Math.abs(r.ch.lf - r.ch.lim) > FRAME + EPS) bad.push({ kind: 'limit', n: r.n, limit: r.ch.lim, exact, left: r.ch.lf, dist: r.ch.fd ?? null });
-    if (strict && !(ratio !== null && Math.abs(ratio - c.floodDamage) <= .01)) bad.push({ kind: 'damage', n: r.n, ratio, want: c.floodDamage });
+    if (strict && !damageMatches(r, ratio, c.floodDamage)) bad.push({ kind: 'damage', n: r.n, ratio, raw: r.hr ?? null, want: c.floodDamage });
   }
   const last = [...sr].reverse().find(r => r.ch);
   return { total: last?.ch?.fl ?? null, floods, bad: bad.slice(0, 8), badCount: bad.length, strict, ok: bad.length === 0 && (last?.ch?.fl ?? 0) === floods.reduce((a, f) => a + f.jump, 0) };
@@ -748,7 +759,7 @@ export function analyzeOrder(rows, def, { rooms = [], minDwell = 2 } = {}) {
   // 폭발의 넉백으로 잠깐 반경을 벗어날 수 있어(도구가 키로 중심으로 되돌린다) 반경 밖 행은 기록하고, 반경 안에 머문 시간과 끝 시점의 위치를 판정한다.
   const away = post.filter(r => !insideNow(r)).length, insideSeconds = stepRows(post).filter(insideNow).length * FRAME;
   const seconds = end.t - burst.t;
-  const burstRec = { count: end.bu - start.bu, atBurst: burst.bu - start.bu, beforeBurst: rows.slice(a, b).filter(r => r.n < burst.n && r.bu !== start.bu).length, gate: j, dwellBefore: first?.dwell ?? null, ratio: first?.ratio ?? null,
+  const burstRec = { count: end.bu - start.bu, atBurst: burst.bu - start.bu, beforeBurst: rows.slice(a, b).filter(r => r.n < burst.n && r.bu !== start.bu).length, gate: j, dwellBefore: first?.dwell ?? null, ratio: first?.ratio ?? null, raw: first?.raw ?? null,
     progressSame: burst.pr === start.pr, ok: j >= 0 && end.bu - start.bu === 1 && burst.bu - start.bu === 1 && rows.slice(a, b).filter(r => r.n < burst.n).every(r => r.bu === start.bu) && wrong.ok && wrong.count === 1 && burst.pr === start.pr };
   const dwell = { seconds, need: minDwell - 2 * FRAME, awayRows: away, insideSeconds, insideNeed: minDwell - .4, endInside: insideNow(end), holdRows: post.filter(r => r.hd !== 0).length,
     attuned: post.filter(r => j < 0 || r.g[j].at !== 0).length, cleared: post.filter(r => j < 0 || r.g[j].cl !== 0).length, progressChanged: post.filter(r => r.pr !== start.pr).length,

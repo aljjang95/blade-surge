@@ -250,12 +250,29 @@ function installProbe(cfg) {
     if (mk) row.mk = mk;
     return row;
   };
-  const push = row => { P.rows.push(row); P.prevSig.set(P.sig); P.prevHd = row.hd; };
+  // 피해 기록: player.hurt 를 그대로 넘기는 관측용 감싸개(게임 판정에는 쓰지 않는다). 규칙이 넘긴 피해(÷ 최대 체력)를 그 스텝 번호로 남긴다.
+  // app.step 안에서 불리므로 스텝 번호는 아직 올리기 전 값 + 1 이다(행의 n 과 같다). 전투마다 새 영웅이라 begin 에서 한 번 감싼다.
+  const wrapHurt = pl => {
+    if (!pl || pl.__verdigrisQaHurt || typeof pl.hurt !== 'function') return;
+    const original = pl.hurt;
+    pl.hurt = function (dmg, opts) {
+      const q = window.__verdigrisQa;
+      if (q?.hurts) q.hurts.push({ n: q.steps + 1, raw: this.maxHp > 0 && Number.isFinite(dmg) ? dmg / this.maxHp : null });
+      return original.call(this, dmg, opts);
+    };
+    pl.__verdigrisQaHurt = true;
+  };
+  const push = row => {
+    const hs = P.hurts;
+    if (hs && hs.length && hs[hs.length - 1].n === row.n) { const hr = []; for (const h of hs) if (h.n === row.n) hr.push(h.raw); row.hr = hr; }
+    P.rows.push(row); P.prevSig.set(P.sig); P.prevHd = row.hd;
+  };
   P.begin = () => {
     const b = app.battle, r = routeOf(), gn = r && r.gates ? r.gates.length : 0, size = H + gn * K;
-    Object.assign(P, { hpDrops: [], samples: [], stepMs: [], renderMs: [], slow: [], maxAlive: 0, minHpRatio: 1, steps: 0, startElapsed: b.elapsed, rows: [], toasts: [],
+    Object.assign(P, { hpDrops: [], samples: [], stepMs: [], renderMs: [], slow: [], maxAlive: 0, minHpRatio: 1, steps: 0, startElapsed: b.elapsed, rows: [], toasts: [], hurts: [],
       sig: new Float64Array(size), prevSig: new Float64Array(size).fill(-1e9), prevHd: 0, entered: new Set(), wp: [], okey: -1, ostable: 0, ckey: -1, cstable: 0,
       flowStep: -1, fd: null, burstT: -1, near: 0 });
+    wrapHurt(b.player);
     P.prevRoom = b.curRoom?.id ?? null;
     P.prevHp = b.player.hp;
     fill();
