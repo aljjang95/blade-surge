@@ -28,6 +28,10 @@ export class CoolingValves {
     this.def = def; this.world = world;
     // 문구가 없는 정의(기존 재의 수문)는 밸브·냉각선 문구를 그대로 쓴다.
     this.copy = def.copy || { title: '냉각선 복구', unit: '밸브', done: '냉각선', doneVerb: '복구', cooled: '개방' };
+    // 충격파 창 문구. 정의에 없으면 재벼림 심층의 '망치 충격파' 문구를 그대로 쓴다(잿불금고 심층은 '밀물' 문구를 정의에 둔다).
+    const { calm, afterShort, afterLong, avoidLong, waitShort } = this.copy;
+    this.words = { calm: calm ?? '가열 중', afterShort: afterShort ?? '충격파 뒤', afterLong: afterLong ?? '망치 충격파 뒤',
+      avoidLong: avoidLong ?? '망치 충격파를 피한 뒤', waitShort: waitShort ?? '충격파 대기' };
     const flow = world.buildFlow(world.startRoom.x, world.startRoom.z);
     this.gates = def.gates.map(({ roomId, label }, i) => {
       const room = world.rooms.find(r => r.id === roomId);
@@ -99,7 +103,7 @@ export class CoolingValves {
     if (!gate || gate.attuned) return false;
     if (!this.closed && game.active && !game.paused && this.enemiesCleared(game, gate) && !gate.ready) {
       gate.ready = true; gate.shocks = 0;
-      game.ui.toast(`${gate.label} 방어 완료 · ${this.def.shockWindow ? '망치 충격파 뒤 ' : ''}청록 조작판에서 2초 유지`, 'gold');
+      game.ui.toast(`${gate.label} 방어 완료 · ${this.def.shockWindow ? this.words.afterLong + ' ' : ''}청록 조작판에서 2초 유지`, 'gold');
       this.refreshHint(game);
       // 준비는 Battle.markCleared 에서 오고, 마지막 적을 투사체가 잡으면 같은 스텝의 경로 목표 갱신보다 뒤다.
       // 뷰가 한 스텝 늦지 않게 시간 진행 없이 맞춘다(b08-cand-deep-mage).
@@ -120,8 +124,8 @@ export class CoolingValves {
   hint() {
     const gate = this.gates[this.#progress], n = this.gates.length;
     if (!gate) return `${this.copy.done} ${n}/${n} ${this.copy.doneVerb} · ${this.canUnseal() ? '보스 처치' : '남은 구역 정화'}`;
-    const vent = gate.phase === 'warning' ? this.copy.warning || '과열 예고' : gate.phase === 'vent' ? this.copy.vent || '증기 분출' : '가열 중';
-    const tail = !gate.ready ? '적과 증원 처치' : this.padOpen(gate) ? `청록판 2초 (${this.#hold.toFixed(1)}/2)` : '충격파 대기';
+    const vent = gate.phase === 'warning' ? this.copy.warning || '과열 예고' : gate.phase === 'vent' ? this.copy.vent || '증기 분출' : this.words.calm;
+    const tail = !gate.ready ? '적과 증원 처치' : this.padOpen(gate) ? `청록판 2초 (${this.#hold.toFixed(1)}/2)` : this.words.waitShort;
     return `${this.copy.unit} ${this.#progress}/${n} · ${gate.label} · ${vent} · ${tail}`;
   }
   refreshHint(game) {
@@ -156,7 +160,7 @@ export class CoolingValves {
       const hit = game.player.hurt(game.player.maxHp * .06, { dirx: gate.side, dirz: 0, kb: 2, kind: 'magic' });
       if (hit) {
         gate.hits++;
-        game.ui.toast(this.def.shockWindow ? `${this.copy.vent} 피해 · 충격파 뒤 옮겨 간 조작판으로 이동` : '과열 피해 · 반대편 청록 조작판으로 이동', 'red');
+        game.ui.toast(this.def.shockWindow ? `${this.copy.vent} 피해 · ${this.words.afterShort} 옮겨 간 조작판으로 이동` : '과열 피해 · 반대편 청록 조작판으로 이동', 'red');
       }
     }
     if (!game.active || !game.player.alive) { this.interrupt(); return; }
@@ -205,7 +209,7 @@ export class CoolingValves {
       this.#markerT = 1.8;
       for (const [i, g] of this.gates.entries()) {
         if (!g.room.discovered || g.attuned || Math.hypot(game.player.pos.x - g.room.x, game.player.pos.z - g.room.z) > 22) continue;
-        game.fx.damage(g.pos, 0, { text: i !== this.#progress ? `${i + 1}번 ${this.copy.unit} · 순서 대기` : g.ready ? (this.padOpen(g) ? '청록 조작판 · 2초' : '충격파 뒤 조작판') : `${this.copy.unit} 방어 · 증원 처치` });
+        game.fx.damage(g.pos, 0, { text: i !== this.#progress ? `${i + 1}번 ${this.copy.unit} · 순서 대기` : g.ready ? (this.padOpen(g) ? '청록 조작판 · 2초' : `${this.words.afterShort} 조작판`) : `${this.copy.unit} 방어 · 증원 처치` });
       }
     }
     this.view?.update(this); this.refreshHint(game);
