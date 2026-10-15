@@ -83,6 +83,8 @@ export function holdRuns(rows) {
   rows.forEach((row, i) => {
     if (!(row.hd > 0)) { open = null; return; }
     const prev = open ? rows[open.end] : null;
+    // 같은 스텝을 한 번 더 기록한 표식 행(mk)은 유지 구간을 끊지 않는다(smoke-order-1: 'partial' 표식 행이 열린 유지를 둘로 나눴다).
+    if (prev && row.n === prev.n && row.hd === prev.hd) { open.end = i; return; }
     // 이음 규칙: 연속한 스텝 행에서 hold 증가량이 게임 시각 t 의 증가량과 같아야 한다. 엔진이 유지량을 2배로 쌓으면 구간이 끊긴다.
     const continues = !!prev && row.n === prev.n + 1 && row.hd > prev.hd && Math.abs((row.hd - prev.hd) - (row.t - prev.t)) <= EPS;
     if (continues) { open.end = i; open.max = row.hd; return; }
@@ -415,9 +417,18 @@ export function checkKeyboardSegment(rows, from, to) {
   const seg = rows.slice(ia, ib + 1);
   const settled = seg.filter(r => r.n >= a.n + SETTLE_STEPS);
   const autoRows = seg.filter(r => r.au === 1).length, held = seg.filter(r => r.ah === 1).length;
-  const action = settled.filter(r => ACTION_STATES.includes(r.ps)).length;
+  // 면제하는 정상 경로 하나: AUTO 를 끄기 전에 이미 시작된 동작(구간 첫 행이 동작 중)이 끝날 때까지의 첫 연속 구간.
+  // 그 구간에 공격 입력이 하나라도 있으면 면제하지 않는다(smoke-order-1: AUTO 의 회전 베기가 끈 뒤 56스텝 이어졌다).
+  let carry = 0;
+  if (ACTION_STATES.includes(a.ps)) {
+    while (carry < seg.length && ACTION_STATES.includes(seg[carry].ps) && seg[carry].ah !== 1) carry++;
+  }
+  const carryRows = seg.slice(0, carry);
+  const carried = new Set(carryRows);
+  const action = settled.filter(r => !carried.has(r) && ACTION_STATES.includes(r.ps)).length;
   const dead = seg.filter(r => r.al !== 1 || !(r.hp > 0)).length;
-  return { ok: seg.length > 0 && autoRows === 0 && held === 0 && action === 0 && dead === 0, rows: seg.length, steps: b.n - a.n, autoRows, attackHeld: held, actionRows: action, dead };
+  return { ok: seg.length > 0 && autoRows === 0 && held === 0 && action === 0 && dead === 0, rows: seg.length, steps: b.n - a.n, autoRows, attackHeld: held, actionRows: action,
+    carriedActionRows: carryRows.length, dead };
 }
 /**
  * order 프로필 판정(첫 심장로 index 0, 키보드만). 표식: manual-start(AUTO 끔) · pad1(조작판 반경 1.2 안) · shock1(첫 충격파 뒤, shocks 1) · partial(열린 유지 ≥ 1.0) ·

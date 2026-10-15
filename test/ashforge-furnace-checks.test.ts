@@ -193,6 +193,12 @@ describe('holdRuns', () => {
     const rows = [at(1, 2 * FRAME, FRAME), at(2, 4 * FRAME, 2 * FRAME), at(3, 6 * FRAME, 3 * FRAME)];
     expect(K.holdRuns(rows).map((r: any) => [r.start, r.end])).toEqual([[0, 0], [1, 1], [2, 2]]);
   });
+  test('같은 스텝을 한 번 더 기록한 표식 행은 구간을 끊지 않지만, 같은 스텝인데 hold 가 다르면 이어지지 않는다', () => {
+    const dup = [at(1, FRAME), at(2, 2 * FRAME), { ...at(2, 2 * FRAME), mk: 'partial' }, at(3, 3 * FRAME), at(4, 0)];
+    expect(K.holdRuns(dup).map((r: any) => [r.start, r.end, r.fromZero, r.max])).toEqual([[0, 3, true, 3 * FRAME]]);
+    const odd = [at(1, FRAME), at(2, 2 * FRAME), at(2, 5 * FRAME), at(3, 6 * FRAME)];
+    expect(K.holdRuns(odd).length).toBeGreaterThan(1);
+  });
 });
 
 describe('냉각 판정(checkCoolings)', () => {
@@ -621,6 +627,25 @@ describe('order 프로필(analyzeOrder)', () => {
     const a = run(orderSession({ attack: true }));
     expect(a.keyboard.ok).toBe(false);
     expect(a.keyboard.attackHeld).toBeGreaterThan(0);
+  });
+  describe('키보드 구간: AUTO 를 끄기 전에 시작된 동작의 이어짐만 면제한다', () => {
+    const row = (n: number, ps: string, extra: any = {}) => ({ n, t: n * FRAME, ps, au: 0, ah: 0, al: 1, hp: 100, ...extra });
+    const seg = (list: any[]) => { list[0].mk = 'from'; list[list.length - 1].mk = 'to'; return list; };
+    test('구간 첫 행부터 이어진 공격 동작(입력 0)은 면제되고, 끝난 뒤 다시 생기면 실패한다', () => {
+      const carried = seg([...Array.from({ length: 56 }, (_, i) => row(i, 'attack')), ...Array.from({ length: 30 }, (_, i) => row(56 + i, 'move'))]);
+      const a = K.checkKeyboardSegment(carried, 'from', 'to');
+      expect(a.ok).toBe(true); expect(a.carriedActionRows).toBe(56); expect(a.actionRows).toBe(0);
+      const again = seg([...Array.from({ length: 20 }, (_, i) => row(i, 'attack')), ...Array.from({ length: 20 }, (_, i) => row(20 + i, 'idle')),
+        ...Array.from({ length: 5 }, (_, i) => row(40 + i, 'dodge')), row(45, 'idle')]);
+      expect(K.checkKeyboardSegment(again, 'from', 'to').ok).toBe(false);
+    });
+    test('구간 첫 행이 동작 중이 아니면 면제가 없고, 이어진 동작 중 공격 입력이 있으면 실패한다', () => {
+      const fresh = seg([...Array.from({ length: 15 }, (_, i) => row(i, 'idle')), ...Array.from({ length: 5 }, (_, i) => row(15 + i, 'attack')), row(20, 'idle')]);
+      const b = K.checkKeyboardSegment(fresh, 'from', 'to');
+      expect(b.ok).toBe(false); expect(b.carriedActionRows).toBe(0);
+      const pressed = seg([...Array.from({ length: 30 }, (_, i) => row(i, 'attack', i === 12 ? { ah: 1 } : {})), row(30, 'idle')]);
+      expect(K.checkKeyboardSegment(pressed, 'from', 'to').ok).toBe(false);
+    });
   });
   test('AUTO 가 켜진 행이 구간에 있으면 실패하고, 영웅이 쓰러져도 실패한다', () => {
     const s = orderSession();
