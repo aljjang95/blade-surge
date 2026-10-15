@@ -67,7 +67,8 @@ export const DEEP = Object.freeze({
 });
 /** PLAN 3.0 공유 정의 계약 값(외곽 고리). */
 export const RING = Object.freeze({
-  roomId: 7, label: '성좌 외곽 고리', marks: Object.freeze([Object.freeze([-6, 0]), Object.freeze([0, -6]), Object.freeze([6, 0]), Object.freeze([0, 6])]),
+  roomId: 7, label: '성좌 외곽 고리', title: '외곽 고리 정화', mark: '성표', shard: '파편', verb: '정화하', markVerb: '정화',
+  marks: Object.freeze([Object.freeze([-6, 0]), Object.freeze([0, -6]), Object.freeze([6, 0]), Object.freeze([0, 6])]),
   markRadius: 1.4, holdSeconds: 1, limit: 20, first: 1, period: 4.5, warning: 1.5, burst: .5, core: 3.4, damage: .06, collapseDamage: .06, shards: 8, color: 0x8fb8ff,
 });
 /** 목표창·토스트·결과 문구(PLAN 2절 5, 3.1, 3.2). 판정 함수의 상수는 테스트가 따로 적은 문장과 맞춰 본다. */
