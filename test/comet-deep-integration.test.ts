@@ -6,6 +6,7 @@ import { CometDeepOrbits } from '../src/game/comet-deep-orbits.js';
 import { CometDeepOrbitView } from '../src/game/comet-deep-orbit-view.js';
 import { battleObjectiveView } from '../src/ui/battle-objective-view.js';
 import { Battle } from '../src/game/battle-base.js';
+import { Player } from '../src/game/player.js';
 
 // 교차 lane 통합 검사: rules lane 의 실제 컨트롤러, worldui lane 의 실제 뷰·목표 패널을
 // 실제 심층 월드와 Battle 메서드(enterRoom·markCleared·updateExpedition) 위에서 함께 돌린다.
@@ -166,4 +167,52 @@ test('폭풍 예고 중 사망하면 예고가 거둬지고 뷰도 같은 프레
   f.route.stop();
   expect(f.route.view).toBeNull();
   expect(f.g.scene.getObjectByName('TLL_CometDeepOrbits')).toBeUndefined();
+});
+
+/** 실제 Player.autoExplore(AUTO 목표·흐름장 길찾기)가 낸 방향으로 world.resolve 벽 충돌을 거쳐 걷는다.
+ * 직선 이동 모델과 달리 1칸 격자 흐름장의 방향 양자화가 들어가 실제 게임 AUTO 와 같은 경로 흔들림을 재현한다. */
+function nativeAutoStep(f: F, speed: number) {
+  const p = f.g.player.pos, actor: any = { game: f.g, pos: p };
+  const dir = (Player.prototype as any).autoExplore.call(actor, DT);
+  const l = Math.hypot(dir.x, dir.y);
+  if (l > 1e-9) { const [x, z] = f.world.resolve(p.x, p.z, p.x + dir.x / l * speed * DT, p.z + dir.y / l * speed * DT); p.x = x; p.z = z; }
+  f.g.updateExpedition(DT);
+}
+
+test('실제 AUTO 흐름장 이동: 룬석 바로 앞 안쪽(cand-auto-1 교착 위치)에서도 다시 밀어 연결한다', async () => {
+  const f = await fixture();
+  const g = gateOf(f, 1), room = g.room;
+  f.g.player.pos.set(room.x, 0, room.z - room.h / 2 + 1);
+  clearRoom(f, 1);
+  f.g.autoTarget = room;
+  // cand-auto-1 실패 표본의 정지 상태: 룬석 시작각보다 밀기 방향으로 0.09rad 앞, 반경 2.40.
+  f.g.player.pos.set(room.x - 1.2309, 0, room.z + 2.0627);
+  let t = 0;
+  for (; t < 20 && g.phase !== 'connected'; t += DT) nativeAutoStep(f, 5.6);
+  expect(g.failures).toBe(0);
+  expect(g.phase).toBe('connected');
+});
+
+test('실제 AUTO 흐름장 이동: 문 입구에서 5고리 모두 실패 없이 연결하고 고리별 남은 시간 4초 이상', async () => {
+  for (const speed of [5.6, 7.2]) {
+    const f = await fixture();
+    for (const id of [1, 2, 3, 5, 7]) {
+      const g = gateOf(f, id), room = g.room;
+      // 시작 방에서 그 방 사각형에 처음 들어서는 실제 흐름장 입구.
+      const flow = f.world.buildFlow(room.x, room.z);
+      const p = f.g.player.pos.set(f.world.startRoom.x, 0, f.world.startRoom.z);
+      for (let k = 0; k < 4000 && f.world.roomAt(p.x, p.z) !== room; k++) {
+        const d = f.world.flowDir(flow, p.x, p.z); if (!d) break;
+        const [x, z] = f.world.resolve(p.x, p.z, p.x + d[0] * 5 * DT, p.z + d[1] * 5 * DT); p.x = x; p.z = z;
+      }
+      expect(f.world.roomAt(p.x, p.z)).toBe(room);
+      clearRoom(f, id);
+      f.g.autoTarget = room;
+      for (let t = 0; t < 40 && g.phase !== 'connected'; t += DT) nativeAutoStep(f, speed);
+      expect({ id, speed, phase: g.phase, failures: g.failures }).toEqual({ id, speed, phase: 'connected', failures: 0 });
+      expect(g.slack).toBeGreaterThanOrEqual(4);
+    }
+    expect(f.route.progress).toBe(5);
+    expect(f.hurts).toEqual([]);
+  }
 });

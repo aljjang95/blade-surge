@@ -58,7 +58,7 @@ export class CometDeepOrbits {
       room.label = label; room.objectiveProp = 'comet-orbit';
       return { room, label, index: i, phase: 'locked', present: false, prepared: false, expected: 0, spawned: 0,
         target, start, angle: start, lockT: 0, connectT: 0, clock: 0, slack: null, failures: 0, hits: 0,
-        stormIndex: 0, stormT: 0, stormWarn: false, stormWarnT: 0,
+        stormIndex: 0, stormT: 0, stormWarn: false, stormWarnT: 0, detour: false,
         center: at(0, 0), stone: new Vector3(), approach: new Vector3(), shelters, stormShelter: shelters[0].clone() };
     });
     this.#order = new Array(this.gates.length).fill(0);
@@ -105,7 +105,9 @@ export class CometDeepOrbits {
   // ---------------- Battle 인터페이스 ----------------
   autoRoom() { return this.closed ? null : this.current?.room ?? null; }
   #at(g, a, r) { return g.approach.set(g.room.x + Math.sin(a) * r, 0, g.room.z + Math.cos(a) * r); }
-  /** AUTO: 밀기 단계는 룬석 바로 뒤(목표 반대쪽)에서 민다. 정렬되면 중심 쉼터, 폭풍에는 빈 원으로 간다. */
+  /** AUTO: 밀기 단계는 룬석 바로 뒤(목표 반대쪽)에서 민다. 정렬되면 중심 쉼터, 폭풍에는 빈 원으로 간다.
+   * 영웅이 룬석보다 밀기 방향 앞에 있으면 룬석 90° 뒤 안쪽 점으로 돌아 들어간다. 이 우회는 확실히 뒤로 돌아올 때까지 유지한다.
+   * 실제 AUTO 는 1칸 격자 흐름장으로 걸어 각도가 흔들리므로, 반경 경계 하나로만 고르면 두 점 사이를 영원히 오간다(cand-auto-1 실패 표본). */
   autoPoint(room) {
     const g = this.#gate(room);
     if (this.closed || !g || this.current !== g || g.phase === 'locked') return null;
@@ -113,11 +115,13 @@ export class CometDeepOrbits {
     if (g.phase === 'storm') return g.approach.copy(g.stormShelter);
     const d = this.def, p = this.#player?.pos;
     const off = angleDiff(g.target, g.angle), dir = Math.sign(off) || 1, gap = d.contact / d.track;
-    if (Math.abs(off) <= d.tolerance * .6) return this.#at(g, g.angle, d.track - d.band - 1);
+    if (Math.abs(off) <= d.tolerance * .6) { g.detour = false; return this.#at(g, g.angle, d.track - d.band - 1); }
     if (p) {
       const phi = Math.atan2(p.x - g.room.x, p.z - g.room.z), rel = angleDiff(phi, g.angle);
-      const ahead = Math.sign(rel) === dir && Math.abs(rel) < Math.PI / 2;
-      if (ahead && Math.hypot(p.x - g.room.x, p.z - g.room.z) > d.track - d.band - .2) return this.#at(g, g.angle - dir * gap * 1.2, d.track - d.band - 1.1);
+      const lead = rel * dir;
+      if (!g.detour && lead > 0 && lead < Math.PI / 2 && Math.hypot(p.x - g.room.x, p.z - g.room.z) > d.track - d.band - .2) g.detour = true;
+      else if (g.detour && (lead < -gap || lead >= Math.PI / 2)) g.detour = false;
+      if (g.detour) return this.#at(g, g.angle - dir * Math.PI / 2, d.track - d.band - .9);
     }
     return this.#at(g, g.angle - dir * gap * .3, d.track);
   }
@@ -276,7 +280,7 @@ export class CometDeepOrbits {
   #fail(game, g) {
     g.failures++; this.#failures++;
     g.angle = g.start; g.lockT = 0; g.connectT = 0; g.clock = 0; g.slack = null; g.phase = 'ready';
-    g.stormIndex = 0; g.stormT = 0; g.stormWarn = false; g.stormWarnT = 0;
+    g.stormIndex = 0; g.stormT = 0; g.stormWarn = false; g.stormWarnT = 0; g.detour = false;
     this.#place(g);
     game.fx.castCircle?.(g.center, 0xff6a5a, { radius: this.def.shelterRadius, life: .8 });
     audio.boom?.({ vol: .25, dur: .3 });
