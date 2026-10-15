@@ -7,7 +7,7 @@
   inset: 0;
   z-index: 18;
   pointer-events: none;
-  font-family: 'Noto Sans KR', system-ui, sans-serif;
+  font-family: var(--font-ui, system-ui, sans-serif);
 }
 
 /* 가방을 살필 때 고정 동행 버튼이 장비·출격 버튼을 덮지 않게 한다. */
@@ -262,7 +262,7 @@ body.party-playing .companion-launcher { display: none; }
 .companion-form > div { display: grid; grid-template-columns: minmax(0, 1fr) 64px; gap: 6px; }
 .companion-form input,
 .companion-form button { min-height: 46px; border-radius: 5px; }
-.companion-form input { min-width: 0; padding: 0 12px; color: #f4ffff; background: #060b0f; border: 1px solid rgba(115, 216, 220, .28); font: 400 16px/1.2 'Noto Sans KR', sans-serif; }
+.companion-form input { min-width: 0; padding: 0 12px; color: #f4ffff; background: #060b0f; border: 1px solid rgba(115, 216, 220, .28); font: 400 16px/1.2 var(--font-ui, sans-serif); }
 .companion-form input::placeholder { color: #64777b; }
 .companion-form button { color: #081013; background: var(--nev-cyan); border: 0; font-weight: 900; cursor: pointer; }
 .companion-form button:disabled { color: #718083; background: #263237; cursor: not-allowed; }
