@@ -79,7 +79,7 @@ viewport 검사는 실제 Android·GPU·터치·발열 검증이 아니다. Swif
 
 ## BUNDLE-03 검증·수리 결과(2026-10-15, 클라우드 SwiftShader)
 
-코드는 `codex/blade-b03-verify-20261015` c58bc10이다(이후 커밋은 문서뿐). 측정 기록은 이 컨테이너의 `work/b03/`(gitignore)에 있고, 요약은 팀 작업 폴더의 BUNDLE-03-RESULT.md에 있다.
+측정한 코드는 `codex/blade-b03-verify-20261015` c58bc10이다. 그 뒤 커밋은 문서와, c58bc10의 `bun run check` typecheck 실패(새 테스트의 never 추론)를 고친 테스트 타입 표기뿐이다. 측정 기록은 이 컨테이너의 `work/b03/`(gitignore)에 있고, 요약은 팀 작업 폴더의 BUNDLE-03-RESULT.md에 있다.
 
 - 원인: B02 화면 기본 프로필에서 미분류로 남은 frost.mp3는 렌더러가 loadstart 무렵에 이미 요청을 보낸 상태였다. 트레이스를 보면 발행은 loadstart 15ms 전이었다. 그런데 Playwright `timing.startTime`은 네트워크 스택이 요청을 실제로 시작한 시각이다. 전투 시작 때 VeryHigh 한글 부분 폰트 요청이 진행 중이면 Low 미디어 요청은 약 250~340ms 기다렸다. Google Fonts를 막은 진단 1회에서는 이 지연이 25ms였다. 다만 route 교란이 있고 n=1이라 원인은 가설로 둔다. 곡이 바뀔 때 BGM 요청이 중단되는 것은 앱의 일상 동작이다(Chromium이 버퍼를 채운 뒤 연결을 열어 둔다).
 - 수리: 공유 QA 런타임이 CDP `Network.requestWillBeSent`로 미디어 요청의 렌더러 발행 시각을 기록한다. 같은 문서·URL에서 실패한 발행 기록이 정확히 하나이고 그 시각이 네트워크 시작보다 늦지 않을 때만, 그 시각을 요청 시작 증거로 쓴다(`bindMediaRequestIssues`). 원래 값과 지연은 `startEvidence`에 남는다. mobile-qa는 이미 같은 정의를 쓴다. 분류기·250ms 창·정지 증명·대체 재생 요구는 바꾸지 않았다. 먼저 시도한 출격 직후 BGM 정착 대기(8f7b449)는 요청이 끝나지 않아 15초 고정 대기가 됐기 때문에 되돌렸다.
