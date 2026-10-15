@@ -133,7 +133,8 @@ test('1. deep 은 CometDeepOrbits(1·2·3·5·7), 일반판은 CometOrbits(1·3�
   // 다른 심층 원정의 라우트 목표는 그대로다.
   const nightglass = buildExpeditionStage('dungeon', 'nightglass_observatory', null, { depth: 'deep' });
   expect(routeObjectiveForStage(nightglass)?.id).toBe('nightglass_records_deep');
-  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'sable_mirage_basin', null, { depth: 'deep' }))).toBeNull();
+  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'sable_mirage_basin', null, { depth: 'deep' }))?.id).toBe('sable_mirror_thrones_deep');
+  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'verdigris_sanctum', null, { depth: 'deep' }))).toBeNull();
   // 고리 방이 시작·보스방이면 생성에 실패한다.
   for (const roomId of [0, 8]) {
     expect(() => new CometDeepOrbits({ ...DEF, gates: [{ ...DEF.gates[0], roomId }] }, f.world)).toThrow(RangeError);
