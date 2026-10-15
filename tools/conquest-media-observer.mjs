@@ -145,7 +145,8 @@ export function classifyMediaCancellations(failures, mediaSnapshots) {
     if (matches.length === 0 && created.length === 1 && documentBound) {
       // M1: 실패 뒤에 다시 만들어진 같은 곡의 loadstart는 이 요청을 시작할 수 없다.
       const born = created[0], firstPlay = firstPlayOf(born.id);
-      const initiations = sameUrlLoadstarts.filter(event => event.at <= end || inStartWindow(event));
+      // native 시각을 알 수 없는 loadstart는 관측 시각과 무관하게 창 안에서 시작했을 수 있으므로 경쟁자로 센다.
+      const initiations = sameUrlLoadstarts.filter(event => event.at <= end || inStartWindow(event) || !finite(event.nativeAt));
       const initiation = initiations[0];
       if (initiations.length === 1 && initiation.id === born.id && initiation.isTrusted === true
         && finite(born.at) && nativeClockSound(initiation) && firstPlay
@@ -160,9 +161,9 @@ export function classifyMediaCancellations(failures, mediaSnapshots) {
       // M2: 리소스 첫 바이트 요청이고 창 안 loadstart가 정확히 하나일 때만 소유 인스턴스를 확정한다.
       // 시각이 깨진 loadstart가 하나라도 있으면 창 집합을 신뢰할 수 없으므로 판단하지 않는다.
       const window = sameUrlLoadstarts.filter(inStartWindow);
-      const clockBroken = sameUrlLoadstarts.some(event => event.at <= end
-        && (![event.nativeAt, event.nativeTimeStamp, event.nativeTimeOrigin].every(finite)
-          || event.nativeAt !== event.nativeTimeOrigin + event.nativeTimeStamp));
+      // 실패 뒤에 관측된 loadstart도 시작 시각이 불명확하면 창 안 경쟁자를 배제할 수 없으므로 같이 본다.
+      const clockBroken = sameUrlLoadstarts.some(event => ![event.nativeAt, event.nativeTimeStamp, event.nativeTimeOrigin].every(finite)
+        || event.nativeAt !== event.nativeTimeOrigin + event.nativeTimeStamp);
       const initiation = window[0], born = initiation && created.find(e => e.id === initiation.id);
       const firstPlay = born && firstPlayOf(born.id);
       if (!clockBroken && window.length === 1 && initiation.isTrusted === true && born && firstPlay

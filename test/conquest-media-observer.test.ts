@@ -272,6 +272,9 @@ const sharedNegative: Record<string, (f: any) => void> = {
   'rival loadstart with unusable observation time still counts by native time': f => {
     f.events.push({ ...f.events[kindIndex(f, 'loadstart', 1)], at: NaN, nativeAt: 1100, nativeTimeStamp: 1100 });
   },
+  'rival loadstart observed after failure has unknown native time': f => {
+    f.events.push({ ...f.events[kindIndex(f, 'loadstart', 1)], at: 2500, nativeAt: NaN, nativeTimeStamp: NaN });
+  },
 };
 for (const [name, change] of Object.entries(sharedNegative)) {
   test('M1 unresolved: ' + name, () => {
