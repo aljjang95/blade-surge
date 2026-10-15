@@ -111,7 +111,7 @@ test('B03 frost cut: a single failed renderer issue record inside the unchanged 
   expect(cut.failure.startEvidence).toMatchObject({ kind: 'renderer-issue', issuedAt: issued, networkStartedAt: cut.times.networkStartedAt });
   expect(cut.failure.startEvidence.networkDelayMs).toBeCloseTo(cut.times.networkStartedAt - issued, 6);
   expect(result.passed).toBe(true);
-  const [c] = result.mediaCancellations.classified;
+  const [c]: any[] = result.mediaCancellations.classified;
   expect(c.matchedInstanceId).toBe(2); expect(c.requestStartEvidence.anchorKind).toBe('source-created');
   expect(Math.abs(c.requestStartEvidence.startDeltaMs)).toBeLessThanOrEqual(250);
 });
