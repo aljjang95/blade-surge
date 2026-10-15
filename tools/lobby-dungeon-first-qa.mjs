@@ -214,6 +214,8 @@ try {
     }
     check('no page errors', row.errors.length === 0, row.errors.slice(0, 5));
     await context.close();
+    // 긴 실행이 외부에서 끊겨도 끝난 프로필 결과는 남긴다.
+    await fs.writeFile(path.join(out, 'report.json'), JSON.stringify({ ...report, failures, partial: true }, null, 2));
   }
 } finally {
   await browser.close();

@@ -52,6 +52,9 @@
 .hs-tabs { display: flex; gap: 4px; flex: none; margin-bottom: 8px; padding: 3px; border-radius: 12px; background: rgba(6, 30, 50, .35); border: 1px solid rgba(255, 216, 112, .35); }
 .hs-tabs button { flex: 1 1 0; min-width: 0; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 5px; padding: 4px 8px; border: 2px solid transparent; border-radius: 9px; background: none; color: #e8f5fa; font: 800 14px/1.1 var(--font, sans-serif); cursor: pointer; }
 .hs-tabs button small { font-size: 12px; font-weight: 600; color: #bfe0ec; }
+/* 탭 이름은 한 줄로 둔다. 좁은 세로 화면에서는 가방 개수를 접는다(가방 목록 위에 다시 보인다). */
+.hs-tabs button { white-space: nowrap; }
+@media (orientation: portrait) and (max-width: 520px) { .hs-tabs button small { display: none; } }
 .hs-tabs button[aria-selected="true"] { border-color: #874a0e; background: linear-gradient(180deg, #ffe773, #ffb52c 58%, #f48c14); color: #4a2406; text-shadow: 0 1px 0 rgba(255, 255, 255, .5); }
 .hs-tabs button[aria-selected="true"] small { color: #6a3a10; }
 .hs-panel { min-height: 0; min-width: 0; }
@@ -290,6 +293,13 @@
    7) 전 화면 공통: + 버튼 터치 영역 44px, 공방은 모든 화면 크기에서 제작 카드 우선.
    ===================================================================== */
 :root:root:root:root #meta .cur .plus { min-width: 44px; min-height: 44px; }
+/* 세로 휴대폰: 재화 세 개가 한 줄에 들어가야 한다. 숫자는 줄바꿈하지 않고, + 는 메뉴의 상점과 같은 보조 입구라 접는다. */
+@media (orientation: portrait) and (max-width: 520px) {
+  :root:root:root:root #meta .cur { white-space: nowrap; min-width: 0; min-height: 36px; padding: 2px 8px; gap: 4px; font-size: 13px; font-variant-numeric: tabular-nums; }
+  :root:root:root:root #meta .cur .ic { width: 18px; height: 18px; }
+  :root:root:root:root #meta .cur .plus { display: none; }
+  :root:root:root:root #meta .cur-sub { display: none; }
+}
 #tab-stage .exp-scroll:has(.exp-forge-layout) > .exp-film-link { display: none; }
 #tab-stage .exp-scroll:has(.exp-forge-layout) .exp-section-heading { margin: 0 0 8px; align-items: center; }
 #tab-stage .exp-scroll:has(.exp-forge-layout) .exp-section-heading h2 { font-size: 20px; letter-spacing: 0; margin: 0; }
@@ -310,4 +320,3 @@
 #tab-stage .exp-shell p, #tab-stage .exp-refining b { font-size: max(12px, 1em); }
 
 /* 짧은 가로 화면에서도 접힌 출격 패널은 하단 바와 핵심 출격만 남긴다. */
-

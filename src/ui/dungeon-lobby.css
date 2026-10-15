@@ -67,13 +67,16 @@
   #citadel-command .dl-cta-label { font-size: 20px; }
   #citadel-command .dl-hero { display: none; }
 }
-/* 세로 화면: 영웅을 위에 두고 패널은 하단 독 위에 붙인다. 가로 스크롤 없이 폭 안에서 줄바꿈한다. */
+/* 세로 화면: 영웅을 위에 두고 패널은 하단 독 위에 붙인다. 설명 · 출전 줄을 접어 영웅이 보일 높이를 남긴다. 가로 스크롤 없이 폭 안에서 줄바꿈한다. */
 @media (orientation: portrait) {
-  #citadel-command.dl-landing { top: auto; left: max(12px, var(--sal, 0px)); right: max(12px, var(--sar, 0px)); bottom: calc(76px + var(--sab, 0px)); width: auto; max-height: 56%; padding: 14px; gap: 10px; }
-  #citadel-command .dl-card { grid-template-columns: 72px minmax(0, 1fr); gap: 12px; }
-  #citadel-command .dl-art { width: 72px; height: 72px; }
-  #citadel-command .dl-name { font-size: 24px; }
-  #citadel-command .dl-desc { -webkit-line-clamp: 2; }
+  #citadel-command.dl-landing { top: auto; left: max(12px, var(--sal, 0px)); right: max(12px, var(--sar, 0px)); bottom: calc(80px + var(--sab, 0px)); width: auto; max-height: 48%; padding: 12px 14px; gap: 8px; }
+  #citadel-command .dl-card { grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: center; }
+  #citadel-command .dl-art { width: 56px; height: 56px; border-radius: 8px; }
+  #citadel-command .dl-name { font-size: 22px; }
+  #citadel-command .dl-depth { margin-top: 2px; }
+  #citadel-command .dl-desc, #citadel-command .dl-hero { display: none; }
+  #citadel-command .dl-facts { padding-top: 8px; gap: 2px; }
+  #citadel-command .dl-cta { min-height: 54px; }
 }
 @media (prefers-reduced-motion: reduce) {
   #citadel-command .dl-cta:active { transform: none; }
