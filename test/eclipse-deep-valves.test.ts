@@ -322,3 +322,22 @@ test('방에 들어선 바로 그 enterRoom 에서 뷰가 그 방 밸브를 그�
   expect(view.state[1]).toBe(0);           // 일시정지 중에는 뷰를 갱신하지 않는다
   f.route.stop();
 });
+
+
+// b07-fix-screens(fed8fb0) 실패: 방은 들어가기 전에 0.4초마다 인접 미리보기(peekRooms)로도 발견된다. 그 경로도 같은 프레임에 뷰를 맞춘다.
+test('인접 방 미리보기(peekRooms)로 발견된 밸브 방도 같은 호출 안에서 뷰가 그린다', async () => {
+  const f = fixture();
+  await f.route.prepareView(new Scene());
+  const view: any = f.route.view, room = f.world.rooms[2];
+  f.g.player.pos.set(room.x - room.w / 2 - 6, 0, room.z);   // 방 가장자리 + 6(미리보기 거리 안), 방 밖
+  expect(room.discovered).toBe(false);
+  f.g.peekRooms(.5);
+  expect(room.discovered).toBe(true);
+  expect(view.state[0]).toBe(3);
+  // 0.4초 주기 안에서는 다시 훑지 않는다.
+  f.g.player.pos.set(f.world.rooms[4].x, 0, f.world.rooms[4].z);
+  f.g.peekRooms(.1);
+  expect(f.world.rooms[4].discovered).toBe(false);
+  f.route.stop();
+});
+

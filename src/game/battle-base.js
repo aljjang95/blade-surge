@@ -299,6 +299,21 @@ export class Battle {
       });
     }
   }
+  /** 인접 방 살짝 미리보기 (복도에서 보이도록). 0.4초마다 가까운 방을 발견한다.
+   * 발견은 경로 목표 갱신 뒤에 일어나므로, 발견을 읽는 목표 뷰(역류 밸브)가 같은 프레임에 그리게 맞춘다. @param {number} dt */
+  peekRooms(dt) {
+    if (this.roomPeekT === undefined) this.roomPeekT = 0;
+    this.roomPeekT -= dt;
+    if (this.roomPeekT > 0) return;
+    this.roomPeekT = 0.4;
+    let peeked = false;
+    for (const r of this.world.rooms) {
+      if (r.discovered || Math.hypot(r.x - this.player.pos.x, r.z - this.player.pos.z) > r.w / 2 + 12) continue;
+      r.discovered = true; peeked = true;
+      if (r.type === ROOM_TYPE.BOSS && !this.bossFound) { this.bossFound = true; this.ui.toast('보스의 기척이 느껴진다…', 'red'); audio.waveHorn({ vol: 0.5, boss: true }); this.ui.setObjective(this.world); }
+    }
+    if (peeked) this.routeObjectives?.syncView?.(this);
+  }
   enterRoom(room) {
     if (!room || room === this.curRoom) return;
     this.curRoom = room;
@@ -797,16 +812,7 @@ export class Battle {
     if (this.world && this.active) {
       const rm = this.world.roomAt(this.player.pos.x, this.player.pos.z);
       if (rm && rm !== this.curRoom) this.enterRoom(rm);
-      // 인접 방 살짝 미리보기 (복도에서 보이도록)
-      if (this.roomPeekT === undefined) this.roomPeekT = 0;
-      this.roomPeekT -= dt;
-      if (this.roomPeekT <= 0) { this.roomPeekT = 0.4;
-        for (const r of this.world.rooms) {
-          if (r.discovered || Math.hypot(r.x - this.player.pos.x, r.z - this.player.pos.z) > r.w / 2 + 12) continue;
-          r.discovered = true;
-          if (r.type === ROOM_TYPE.BOSS && !this.bossFound) { this.bossFound = true; this.ui.toast('보스의 기척이 느껴진다…', 'red'); audio.waveHorn({ vol: 0.5, boss: true }); this.ui.setObjective(this.world); }
-        }
-      }
+      this.peekRooms(dt);
     }
     this.arena.update(realDt, this.fx, this.player.pos);
     this.ui.updateHud(this, realDt);
