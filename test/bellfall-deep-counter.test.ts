@@ -28,8 +28,19 @@ afterEach(() => { for (const restore of restores) restore(); });
 
 // ---------------- 가짜 보스: 시그니처 시계를 직접 돌려 규칙만 본다 ----------------
 function fakeBoss(extra: any = {}) {
-  return { alive: true, spawning: false, isBoss: true, state: 'attack', special: 'bell_toll', attackSequence: 1, atkCd: 0,
+  const boss: any = { alive: true, spawning: false, isBoss: true, state: 'attack', special: 'bell_toll', attackSequence: 1, atkCd: 0,
     damageVeil: null, signatures: { plan: { key: 'bell_toll', lastStrike: 3.05 }, age: 0 }, ...extra };
+  return withCompletion(boss);
+}
+/** BossSignatures 처럼 시전 중 계획의 마지막 고리 시각(age ≥ lastStrike)에 닿은 조종의 attackSequence 를 완료로 남긴다. */
+function withCompletion(boss: any) {
+  let completed = 0;
+  Object.defineProperty(boss, 'completedAttackSequence', { configurable: true, get() {
+    const plan = boss.signatures?.plan;
+    if (boss.state === 'attack' && plan && boss.signatures.age >= plan.lastStrike) completed = boss.attackSequence;
+    return completed;
+  } });
+  return boss;
 }
 function fakeGame(boss: any, extra: any = {}) {
   const toasts: string[] = [];
@@ -90,7 +101,7 @@ test('실제 Enemy.hurt: 같은 원피해에 방어 감쇄 뒤 장막 veil배·�
     expect(hit(other, 1000)).toBeCloseTo(base, 6);
     expect(hit(minion, 1000)).toBeCloseTo(1000 * (1 - (minion.def.armor || 0)), 6);
 
-    boss.state = 'attack'; boss.special = 'bell_toll'; boss.attackSequence = 1; boss.signatures.plan = { key: 'bell_toll', lastStrike: 3.05 }; boss.signatures.age = 3.05;
+    boss.state = 'attack'; boss.special = 'bell_toll'; boss.attackSequence = 1; boss.signatures.plan = { key: 'bell_toll', lastStrike: 3.05 }; boss.signatures.age = 3.05; boss.completedAttackSequence = 1;
     c.update(g, DT);
     expect(c.state).toBe('open');
     expect(hit(boss, 1000)).toBeCloseTo(base * DEF.open, 6);
@@ -119,7 +130,8 @@ test('실제 삼중 조종: 마지막 고리 프레임 다음 update 에서 열�
       stepCombatFlow(f, DT);
       const plan = boss.signatures.plan;
       if (plan && lastStrike < 0) lastStrike = plan.lastStrike;
-      if (struckFrame < 0 && plan && boss.signatures.age + 1e-9 >= plan.lastStrike) struckFrame = frame;
+      // 마지막 고리가 실제로 터진 프레임: BossSignatures 가 completedAttackSequence 를 쓴다(EPS 비교로 앞당기지 않는다).
+      if (struckFrame < 0 && boss.special === 'bell_toll' && boss.attackSequence > 0 && boss.completedAttackSequence === boss.attackSequence) struckFrame = frame;
     }
     return { c, boss, log, lastStrike, struckFrame, openFrame, windowEnd, seqAtOpen };
   });
@@ -527,3 +539,31 @@ test('정의가 올바르지 않으면 생성을 거부한다', () => {
   expect(() => new BellfallDeepCounter({ ...DEF, veil: 0 })).toThrow(RangeError);
   expect(() => new BellfallDeepCounter(null as any)).toThrow(RangeError);
 });
+
+test('Battle 순서: 마지막 고리가 터진 다음 프레임 player 단계의 강타·브레이크도 조종을 끊지 못하고 그 프레임 컨트롤러 갱신에서 창이 열린다', () => {
+  for (const strike of ['kb', 'break'] as const) withFixedRandom(() => {
+    const { f, g, boss } = realBossFixture();
+    const c = new BellfallDeepCounter(DEF);
+    c.update(g, DT);
+    let completedFrame = -1, openFrame = -1, firedAtOpen = -1;
+    for (let frame = 0; frame < 60 * 14 && openFrame < 0; frame++) {
+      // player 단계: 완료 직후 프레임에 끊는 타격을 넣는다.
+      if (completedFrame >= 0 && frame === completedFrame + 1) {
+        expect(c.guards(boss)).toBe(true);
+        if (strike === 'kb') boss.hurt(10, { kb: 8, crit: true, stun: 2 });
+        else expect(postureHit(boss, 1e9, { finisher: true })).toBe(false);
+        expect(boss.state).toBe('attack');
+      }
+      c.update(g, DT); // routeObjectives 단계
+      if (c.state === 'open') { openFrame = frame; firedAtOpen = boss.signatures.fired; }
+      stepCombatFlow(f, DT); // enemies 단계(마지막 고리·completedAttackSequence)
+      if (completedFrame < 0 && boss.special === 'bell_toll' && boss.attackSequence > 0 && boss.completedAttackSequence === boss.attackSequence) completedFrame = frame;
+    }
+    expect(completedFrame).toBeGreaterThan(0);
+    expect(openFrame).toBe(completedFrame + 1);
+    expect(firedAtOpen).toBe(3); // 세 고리가 모두 터진 뒤에만 열린다.
+    expect(c.broken).toBe(0);
+    expect(c.windows).toBe(1);
+  });
+});
+

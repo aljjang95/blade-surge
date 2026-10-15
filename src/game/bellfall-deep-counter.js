@@ -3,6 +3,8 @@ import { audio } from '../engine/audio.js';
 const EPS = 1e-9;
 /** 합창 장막을 두를 보스의 적 id. 같은 보스를 쓰는 다른 던전은 이 컨트롤러가 만들어지지 않아 영향이 없다. */
 const BOSS_ENEMY = 'glass_hour_sovereign';
+/** 창이 열릴 때 한 번 내는 합성음 옵션(열 때마다 객체를 만들지 않는다). */
+const OPEN_SOUND = { vol: .3, base: 523, notes: [0, 4, 7, 12], step: .07, type: 'triangle' };
 
 /** 종락 회랑 심층 보스의 합창 장막.
  * 보스가 나타나면 장막(veiled)에 싸여 받는 피해가 def.veil 배로 줄어든다.
@@ -33,6 +35,8 @@ export class BellfallDeepCounter {
   constructor(def, world = null) {
     if (!def || !(def.window > 0) || !(def.veil > 0) || !(def.open > 0)) throw new RangeError('합창 장막 정의가 올바르지 않습니다.');
     this.def = def; this.world = world;
+    /** 창이 열릴 때의 토스트 문구(열 때마다 문자열을 만들지 않는다). */
+    this.openToast = '장막이 걷혔다 · ' + def.window + '초 반격';
   }
 
   // ---------------- 읽기 상태 ----------------
@@ -61,13 +65,14 @@ export class BellfallDeepCounter {
     return out;
   }
 
-  /** 장막이 삼중 조종을 지키는 중인가: veiled 동안 부착된 보스가 이 시그니처를 마지막 울림 전까지 시전하고 있으면 참.
+  /** 장막이 삼중 조종을 지키는 중인가: veiled 동안 부착된 보스가 이 시그니처를 시전 중이고 그 조종으로 아직 창을 열지 않았으면 참.
+   * 마지막 고리가 터진 프레임과 창이 열리는 다음 컨트롤러 갱신 사이(Battle 순서상 player 단계 한 번)도 지킨다. 창이 열리면 지키지 않는다.
    * Enemy.hurt·Enemy.update·postureHit 가 이 동안 기절·경직·브레이크로 조종을 끊지 않도록 묻는다. 객체를 만들지 않는다.
    * @param {any} enemy */
   guards(enemy) {
     if (this.#state !== 'veiled' || enemy !== this.#boss) return false;
     const sig = this.def.signature, plan = enemy.signatures?.plan;
-    return enemy.state === 'attack' && enemy.special === sig && plan?.key === sig && enemy.signatures.age + EPS < plan.lastStrike;
+    return enemy.state === 'attack' && enemy.special === sig && plan?.key === sig && enemy.attackSequence !== this.#openedSeq;
   }
 
   // ---------------- 프레임 ----------------
@@ -103,15 +108,16 @@ export class BellfallDeepCounter {
     const sig = this.def.signature, plan = boss.signatures?.plan;
     const casting = boss.state === 'attack' && boss.special === sig && plan?.key === sig;
     if (this.#watchSeq) {
-      // 감시 중인 조종이 열리지 못한 채 바뀌거나 끝났다 = 끊김.
+      // 마지막 울림 = BossSignatures 가 마지막 고리를 실제로 터뜨리며 completedAttackSequence 를 쓴 순간. 그 뒤 상태가 바뀌었어도 연다.
+      if (boss.completedAttackSequence === this.#watchSeq) { this.#watchSeq = 0; this.#open(game, boss, dt); return; }
+      // 감시 중인 조종이 마지막 울림 없이 바뀌거나 끝났다 = 끊김.
       if (!casting || boss.attackSequence !== this.#watchSeq) { this.#broken++; this.#watchSeq = 0; }
-      else if (boss.signatures.age + EPS >= plan.lastStrike) { this.#watchSeq = 0; this.#open(game, boss, dt); return; }
       else return;
     }
     if (casting && boss.attackSequence !== this.#openedSeq) {
       this.#watchSeq = boss.attackSequence;
-      // 이미 마지막 울림을 지난 프레임에 처음 보더라도 놓치지 않는다.
-      if (boss.signatures.age + EPS >= plan.lastStrike) { this.#watchSeq = 0; this.#open(game, boss, dt); }
+      // 이미 마지막 울림이 지난 프레임에 처음 보더라도 놓치지 않는다.
+      if (boss.completedAttackSequence === this.#watchSeq) { this.#watchSeq = 0; this.#open(game, boss, dt); }
     }
   }
 
@@ -119,8 +125,8 @@ export class BellfallDeepCounter {
     this.#openedSeq = boss.attackSequence;
     this.#state = 'open'; this.#windowLeft = this.def.window; this.#windows++;
     if (boss.atkCd < this.#windowLeft + dt) boss.atkCd = this.#windowLeft + dt;
-    audio.magic?.({ vol: .3, base: 523, notes: [0, 4, 7, 12], step: .07, type: 'triangle' });
-    game.ui?.toast?.(`장막이 걷혔다 · ${this.def.window}초 반격`, 'gold');
+    audio.magic?.(OPEN_SOUND);
+    game.ui?.toast?.(this.openToast, 'gold');
   }
 
   #end() {

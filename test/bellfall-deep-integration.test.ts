@@ -210,6 +210,9 @@ test('합창 장막: 종문 완료 뒤 보스가 나타나면 장막 → 마지�
   const boss: any = { alive: true, spawning: true, isBoss: true, runtimeSpeciesId: 'glass_hour_sovereign', state: 'chase', special: null,
     attackSequence: 0, atkCd: .5, pos: new Vector3(f.world.bossRoom.x, 0, f.world.bossRoom.z), def: { scale: 2.25 },
     signatures: { plan: null, age: 0 } };
+  // BossSignatures 처럼 마지막 고리 시각에 닿은 조종을 완료로 남긴다.
+  let completed = 0;
+  Object.defineProperty(boss, 'completedAttackSequence', { get() { const p = boss.signatures?.plan; if (boss.state === 'attack' && p && boss.signatures.age >= p.lastStrike) completed = boss.attackSequence; return completed; } });
   f.g.boss = boss;
   run(f, .1);
   expect(counter.state).toBe('idle');
