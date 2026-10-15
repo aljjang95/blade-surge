@@ -45,6 +45,25 @@ function bossOrbitView(route, bossRoom) {
     { roomId, hold: count(orbit.warnLeft), holdTotal: count(orbit.warnTotal) });
 }
 
+/** 녹청 심층 생명 제단과 포자 수로(BUNDLE-11). 점등 순서는 지금 켜진 제단만 알려 주고, 4/4 뒤에는 수로 단계를 보인다. 수로가 끝나면 null(기존 보스 흐름). */
+function sporeAltarsView(route) {
+  const title = '생명 제단 정화', total = route.gates.length, progress = count(route.progress);
+  if (!route.complete) {
+    const gate = (route.lit === undefined ? route.gates[route.progress] : route.lit) || route.gates[route.progress];
+    if (!gate) return null;
+    const values = { progress, total, roomId: gate.room.discovered ? gate.room.id : null };
+    if (!gate.room.discovered) return step(title, '다음 구역을 찾아 이동', values);
+    if (!gate.ready) return step(title, '뿌리 빛 제단 · 이 구역의 적 처치', values);
+    return step(title, `뿌리 빛 제단 중심에서 ${count(route.def.holdSeconds)}초 유지`, { ...values, hold: seconds(route.hold), holdTotal: count(route.def.holdSeconds) });
+  }
+  const channel = route.channel, values = { progress, total };
+  if (!channel || channel.phase === 'idle') return step(title, '남은 구역 정화', values);
+  if (channel.phase === 'done') return null;
+  const roomId = channel.room?.discovered === false ? null : channel.room?.id ?? route.def.channel?.roomId ?? null;
+  if (channel.phase === 'open') return step('포자 수로 돌파', '서쪽 수로 입구로 이동', { ...values, roomId });
+  return step('포자 수로 돌파', `포자 물결이 지나간 뒤 동쪽 출구로 · ${Math.ceil(count(channel.left))}초`, { ...values, roomId });
+}
+
 /** 현재 컨트롤러의 상태만 투영하며 전투 정산과 퍼즐 정답에는 접근하지 않는다. */
 function mainObjectiveView(battle) {
   const world = battle?.world;
@@ -63,6 +82,10 @@ function mainObjectiveView(battle) {
       hold: seconds(pendingAltar.attunementT), holdTotal: 2 });
   }
   if (route?.world === world && !route.closed && Array.isArray(route.gates)) {
+    if (route.def?.kind === 'spore-altars') {
+      const spore = sporeAltarsView(route);
+      if (spore) return spore;
+    }
     if (route.def?.kind === 'reverse-bells' && route.phase !== 'done') return reverseBellsView(route);
     if (route.def?.kind === 'reverse-bells') {
       const veil = counterView(route);

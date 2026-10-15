@@ -26,6 +26,8 @@ const fmt = n => Math.floor(n || 0).toLocaleString('ko-KR');
 export const bellfallDeepBellsResultLine = report => `종문 역순 공명 ${report.progress}/${report.target} · 불협 ${report.discords}회${Number.isFinite(report.counterWindows)?` · 반격 창 ${report.counterWindows}회`:''}${report.complete?' · 완료':''}`;
 /** 혜성 기사단장 푸른 궤도선 결과 줄(BUNDLE-06). bossMeteors(떨어진 유성 수)·bossMeteorHits(영웅 피격 수)로 만든다. 피격 수가 숫자가 아니면 0회로 둔다. */
 export const cometBossOrbitResultLine = report => `푸른 궤도선 유성 ${report.bossMeteors}회 · 피격 ${Number.isFinite(report.bossMeteorHits)?report.bossMeteorHits:0}회`;
+/** 녹청 심층 포자 수로 결과 줄(BUNDLE-11). channel{ crossed, sporeHits, floods }로 만든다. 숫자가 아닌 횟수는 0회로 둔다. */
+export const sporeChannelResultLine = channel => `포자 수로 돌파 ${channel.crossed?'완료':'미완료'} · 포자 피격 ${Number.isFinite(channel.sporeHits)?channel.sporeHits:0}회 · 범람 ${Number.isFinite(channel.floods)?channel.floods:0}회`;
 const MATERIAL_ART = Object.fromEntries(MATERIALS.map(m=>[m.id,resourceArt(m.id)]));
 const ART = { arena: '/img/expansion/arena.webp', guild_map: '/img/expansion/guild_map.webp' };
 const COLORS = { glass_garden: '#9be1ba', ember_vault: '#ffad6e', star_archive: '#9bbdff' };
@@ -77,6 +79,7 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
         {result.routeObjective?.id==='bellfall_deep_bells' && <p aria-label="종문 역순 공명 결과">{bellfallDeepBellsResultLine(result.routeObjective)}</p>}
         {result.routeObjective?.label && result.routeObjective.id!=='comet_deep_orbits' && result.routeObjective.id!=='bellfall_deep_bells' && !result.routeObjective.pages && !result.routeObjective.constellations && <p aria-label={result.routeObjective.label+' 결과'}>{result.routeObjective.label} {result.routeObjective.progress}/{result.routeObjective.target}{result.routeObjective.complete?' · 완료':''}</p>}
         {result.routeObjective?.escape && <p aria-label="거울 미궁 탈출 결과">거울 미궁 탈출 {result.routeObjective.escape.escaped?'완료':'미완료'} · 거울 붕괴 {result.routeObjective.escape.collapses}회 · 환영 거울 {result.routeObjective.escape.illusions}회</p>}
+        {result.routeObjective?.channel && <p aria-label="포자 수로 돌파 결과">{sporeChannelResultLine(result.routeObjective.channel)}</p>}
         {(result.routeObjective?.id==='comet_orbit_rings'||result.routeObjective?.id==='comet_deep_orbits') && Number.isFinite(result.routeObjective.bossMeteors) && <p aria-label="푸른 궤도선 결과">{cometBossOrbitResultLine(result.routeObjective)}</p>}
         {mapTactics&&<section className="map-tactics-result" data-map-tactics-result aria-label="정원의 장치 사용 결과"><strong>{mapTactics.title}</strong><p>{mapTactics.detail}</p></section>}
         <div className="exp-result-save" data-save={result.saveError?'error':'saved'} role={result.saveError?'alert':'status'}>
