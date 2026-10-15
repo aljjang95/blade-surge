@@ -229,12 +229,14 @@ export class Floor {
   }
   /** 목표 지점까지의 BFS 거리장 (길찾기). 목표가 바뀔 때만 다시 계산 */
   buildFlow(tx, tz) {
-    const key = Math.round(tx) + ',' + Math.round(tz);
+    const sx = Math.floor((tx - this.minX) / CELL), sz = Math.floor((tz - this.minZ) / CELL);
+    if (sx < 0 || sz < 0 || sx >= this.cols || sz >= this.rows) return null;
+    // 캐시 키는 BFS 시작 칸이다. 반올림 좌표로 묶으면 같은 키의 다른 칸 목표가 이전 칸의 거리장을 받아
+    // AUTO 가 두 칸 사이를 왕복했다(혜성 심층 룬석 밀기, BUNDLE-01 진단 seed 11·22).
+    const key = sz * this.cols + sx;
     if (this._flowKey === key) return this._flow;
     const N = this.cols * this.rows;
     const dist = new Int32Array(N).fill(-1);
-    const sx = Math.floor((tx - this.minX) / CELL), sz = Math.floor((tz - this.minZ) / CELL);
-    if (sx < 0 || sz < 0 || sx >= this.cols || sz >= this.rows) return null;
     const q = new Int32Array(N); let head = 0, tail = 0;
     const si = sz * this.cols + sx;
     if (this.inner[si] !== 1) return null;
