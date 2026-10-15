@@ -61,7 +61,9 @@ test('standard places four reachable orbit rings; deep and excluded modes keep t
     expect(gate.room.objectiveProp).toBe('comet-orbit');
     expect(Math.abs(angleDiff(gate.target, gate.angle))).toBeGreaterThan(2);
   }
-  expect(fixture('deep').route).toBeNull();
+  // 심층은 공명 대신 별도의 궤도 고리 5개 컨트롤러(kind 'deep-orbits')를 쓰고 일반판 컨트롤러를 쓰지 않는다.
+  expect(fixture('deep').route).not.toBeInstanceOf(CometOrbits);
+  expect((fixture('deep').route as any).def.kind).toBe('deep-orbits');
   const base = f.g.stage;
   for (const stage of [{ ...base, party: {} }, { ...base, riftId: 'x' }, { ...base, expedition: { ...base.expedition, conquestId: 'x' } }]) {
     expect(createRouteObjectives(stage, f.world)).toBeNull();
