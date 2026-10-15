@@ -97,6 +97,12 @@ export function readBattle() {
     input: { enabled: !!app?.input?.enabled, joy: !!app?.input?.joy?.active },
     modal: modal ? { head: (modal.querySelector('h2')?.textContent || modal.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 60), buttons: [...modal.querySelectorAll('button')].map((x) => x.id || String(x.className)).slice(0, 8) } : null,
     cinematic: !!document.querySelector('.exp-cinematic'),
+    // 자연 진행의 원정 각인·길 위의 만남 선택(dialog#masterworks[open]). 보이는 선택 카드만 읽는다(쓰기 없음).
+    masterworks: (() => { const d = document.querySelector('dialog#masterworks[open]'); if (!d) return null;
+      const vis = (el) => { const r = el.getBoundingClientRect(); return r.width > 1 && r.height > 1; };
+      return { title: (d.querySelector('#mw-title, h2')?.textContent || '').trim().slice(0, 40),
+        boons: [...d.querySelectorAll('[data-boon]')].filter(vis).map((el) => el.dataset.boon),
+        stories: [...d.querySelectorAll('[data-story-choice]')].filter(vis).map((el) => ({ id: el.dataset.storyChoice, reward: el.dataset.reward || null })) }; })(),
     result: app?.expeditionUI?.result ? { win: !!app.expeditionUI.result.win, saveError: app.expeditionUI.result.saveError || null } : null,
     resultVisible: shown('.exp-result-shell'), pausePanel: shown('#btn-resume'),
     potions: [...document.querySelectorAll('.exp-potions [data-potion]')].map((x) => ({ id: x.dataset.potion, n: Number(x.querySelector('b')?.textContent || 0), disabled: !!x.disabled })),

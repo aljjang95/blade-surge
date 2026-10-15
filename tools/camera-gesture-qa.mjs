@@ -210,7 +210,9 @@ try {
     return used;
   };
   // 실패한 로비 단계가 원정 화면을 연 채로 두면 전투 진입이 연쇄로 실패한다. 정리에서 착지로 복원한다.
-  cleanup = async () => { if (touch.size) await touch.cancel(); await returnToLanding().catch(() => {}); };
+  const BASE_VIEWPORT = { width: 844, height: 390 };
+  const restoreViewport = async () => { const v = page.viewportSize(); if (v && (v.width !== BASE_VIEWPORT.width || v.height !== BASE_VIEWPORT.height)) { await page.setViewportSize(BASE_VIEWPORT); await page.waitForTimeout(500); await settle(page); } };
+  cleanup = async () => { if (touch.size) await touch.cancel(); await returnToLanding().catch(() => {}); await restoreViewport().catch(() => {}); };
   // 기본 선택 로비(마을 걷기 아님)에서 빈 화면 한 손가락 회전과 탭 무회전을 검사한다. 걷기 모드는 필수 경로가 아니다.
   const lobbyRotate = async () => {
     const point = await emptyPoint(page, { x0: .4, x1: .95, y0: .15, y1: .6 });
@@ -261,14 +263,19 @@ try {
     const cameraBefore = await page.evaluate(() => ({ ...window.app.renderer.lobbyCamera }));
     await other.tap();
     await page.locator('#expedition-root .exp-shell').waitFor({ timeout: 60000 }); await settle(page);
-    const info = await page.evaluate(() => {
-      const all = [...document.querySelectorAll('#expedition-root .exp-shell, #expedition-root .exp-shell *')].filter(el => { const s = getComputedStyle(el); const r = el.getBoundingClientRect();
-        return /(auto|scroll)/.test(s.overflowY) && el.scrollHeight > el.clientHeight + 20 && r.width > 40 && r.height > 60 && r.top < innerHeight && r.bottom > 0; });
-      const el = all[0]; if (!el) return null;
+    const findScroller = () => page.evaluate(() => {
+      const cands = [...document.querySelectorAll('#expedition-root .exp-shell, #expedition-root .exp-shell *')].filter(el => /(auto|scroll)/.test(getComputedStyle(el).overflowY));
+      const all = cands.filter(el => { const r = el.getBoundingClientRect(); return el.scrollHeight > el.clientHeight + 20 && r.width > 40 && r.height > 60 && r.top < innerHeight && r.bottom > 0; });
+      const el = all[0];
+      if (!el) return { found: false, viewport: [innerWidth, innerHeight], scrollables: cands.slice(0, 6).map(c => ({ cls: String(c.className).slice(0, 40), sh: c.scrollHeight, ch: c.clientHeight, h: Math.round(c.getBoundingClientRect().height) })) };
       el.dataset.qaScroll = '1'; const r = el.getBoundingClientRect();
-      return { selector: el.id || String(el.className), x: r.x + r.width / 2, y: r.y + Math.min(r.height - 10, r.height * .7), top: r.top, bottom: r.bottom, scrollTop: el.scrollTop };
+      return { found: true, viewport: [innerWidth, innerHeight], selector: el.id || String(el.className), x: r.x + r.width / 2, y: r.y + Math.min(r.height - 10, r.height * .7), top: r.top, bottom: r.bottom, scrollTop: el.scrollTop, scrollHeight: el.scrollHeight, clientHeight: el.clientHeight };
     });
-    if (!info) { const used = await returnToLanding(); return { notRun: true, reason: 'secondary dungeon list does not overflow in this viewport', closedWith: used }; }
+    // 844x390에서 목록이 넘치지 않으면 지원하는 짧은 가로 640x360에서 실제로 넘치는 목록을 쓴다(강제 높이·scrollTop 없음).
+    let info = await findScroller(); const tried = [info];
+    if (!info.found) { await page.setViewportSize({ width: 640, height: 360 }); await page.waitForTimeout(600); await settle(page); info = await findScroller(); tried.push(info); }
+    if (!info.found) { const used = await returnToLanding(); await restoreViewport(); const row = report.steps[report.steps.length - 1]; row.tried = tried;
+      throw Error('No overflowing secondary list at 844x390 or 640x360: ' + JSON.stringify({ tried, closedWith: used })); }
     await touch.down(2, info.x, info.y); await touch.move(2, info.x, Math.max(info.top + 8, info.y - 120), 8); await touch.up(2);
     await page.waitForTimeout(400);
     const after = await page.evaluate(() => ({ scrollTop: document.querySelector('[data-qa-scroll]').scrollTop, camera: { ...window.app.renderer.lobbyCamera }, gesture: window.app.lobbyCameraControls.touch.size }));
@@ -277,11 +284,12 @@ try {
     await shot('secondary-list-after-scroll');
     let closedWith = null, closeError = null;
     try { closedWith = await returnToLanding(); } catch (error) { closeError = String(error?.message || error).slice(0, 400); }
+    await restoreViewport();
     const back = await page.evaluate(() => ({ landing: !!window.app.commandUI?.visible, tab: window.app.meta.tab, camera: { ...window.app.renderer.lobbyCamera } }));
     assert(after.scrollTop > info.scrollTop, 'Secondary list did not scroll by touch: ' + JSON.stringify({ info, after }));
     assert(after.gesture === 0 && after.camera.yaw === cameraBefore.yaw && after.camera.pitch === cameraBefore.pitch, 'List scroll moved the lobby camera: ' + JSON.stringify({ cameraBefore, after }));
     assert(!closeError && back.landing && back.tab === 'home', 'Closing the list did not return to the landing: ' + JSON.stringify({ closedWith, closeError, back }));
-    return { ...info, after, back, closedWith };
+    return { ...info, tried: tried.length > 1 ? tried : undefined, after, back, closedWith, restoredViewport: page.viewportSize() };
   });
   }
   if (groups.has('battle')) {

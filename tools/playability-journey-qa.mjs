@@ -185,7 +185,7 @@ async function waitFor(fn, argValue, timeoutMs, what) {
 const diagnose = () => page.evaluate(() => {
   const app = window.app, b = app?.battle;
   return { mode: app?.mode, tab: app?.meta?.tab, active: !!b?.active, paused: !!b?.paused, stageStarting: !!app?.stageStarting, selected: app?.eco?.s?.selected, energy: app?.eco?.s?.energy,
-    modal: (document.querySelector('#modal.show h2')?.textContent || '').trim() || null, dialog: !!document.querySelector('dialog[open]'), cinematic: !!document.querySelector('.exp-cinematic'),
+    modal: (document.querySelector('#modal.show h2')?.textContent || '').trim() || null, dialog: !!document.querySelector('dialog[open]'), masterworks: !!document.querySelector('dialog#masterworks[open]'), cinematic: !!document.querySelector('.exp-cinematic'),
     result: app?.expeditionUI?.result ? { win: app.expeditionUI.result.win } : null, focused: document.activeElement?.id || document.activeElement?.tagName };
 });
 
@@ -332,6 +332,24 @@ async function maybePotion(s, phase) {
   try { await tap('.exp-potions [data-potion="hp_tonic"]', 'potion hp_tonic', { id: POTION }); M.potions.push({ phase, clock: s.clock, hp: Math.round(p.hp), before: potion.n }); }
   catch (error) { M.potions.push({ phase, clock: s.clock, error: String(error.message) }); }
 }
+/**
+ * 자연 진행 중 열리는 원정 각인·길 위의 만남 선택(dialog#masterworks[open]). 이 화면은 전투를 멈추고 선택을 기다린다.
+ * 실제 보이는 선택 카드를 CDP 탭으로 고른다(각인은 첫 카드, 만남은 회복 선택이 있으면 그것). 대화상자를 닫거나 상태를 쓰지 않는다.
+ */
+async function handleMasterworksChoice(s, phase) {
+  const mw = s.masterworks; if (!mw) return null;
+  await setStick(null); await releaseTouches();
+  let selector = null, picked = null, kind = null;
+  if (mw.boons.length) { kind = 'boon'; picked = mw.boons[0]; selector = 'dialog#masterworks[open] [data-boon="' + picked + '"]'; }
+  else if (mw.stories.length) { kind = 'story'; picked = (mw.stories.find((c) => c.reward === 'heal') || mw.stories[0]).id; selector = 'dialog#masterworks[open] [data-story-choice="' + picked + '"]'; }
+  const entry = { phase, clock: s.clock, title: mw.title, kind, options: kind === 'boon' ? mw.boons : mw.stories.map((c) => c.id), picked };
+  if (!selector) { entry.waiting = true; (M.choices ||= []).push(entry); await waitMs(250); return 'waiting'; }
+  await tap(selector, 'masterworks ' + kind + ' choice ' + picked);
+  await page.waitForFunction((before) => { const d = document.querySelector('dialog#masterworks[open]'); return !d || !d.querySelector('[data-boon="' + before + '"], [data-story-choice="' + before + '"]'); }, picked, { timeout: 8000, polling: 100 }).catch(() => {});
+  entry.after = await page.evaluate(() => ({ open: !!document.querySelector('dialog#masterworks[open]'), paused: !!window.app.battle?.paused, reasons: window.app.battle?.pauseReasons ? [...window.app.battle.pauseReasons] : [] }));
+  (M.choices ||= []).push(entry);
+  return 'picked';
+}
 /** 전투 중 모달: 사망이면 보석 부활 대신 '전투 마치기', 닫기 버튼이 있으면 닫기. */
 async function handleBattleModal(s, phase) {
   await setStick(null);
@@ -384,6 +402,7 @@ async function controlLoop(token, { untilMs, phase, stopWhenAssessed }) {
     if (Date.now() >= untilMs) break;
     const s = await page.evaluate(readBattle);
     if (s.mode !== 'battle' || !s.active) { reason = s.result ? 'battle finished' : 'battle inactive'; break; }
+    if (s.masterworks) { await handleMasterworksChoice(s, phase); continue; }
     if (s.modal) { if (await handleBattleModal(s, phase) === 'death') { reason = 'player died'; break; } continue; }
     if (s.cinematic) { await setStick(null); const sk = await probe('.exp-cinematic button'); if (sk.visible && sk.hit) await tap('.exp-cinematic button', 'film skip'); else await waitMs(200); continue; }
     if (!s.player) { await waitMs(100); continue; }
@@ -580,7 +599,7 @@ try {
     const reason = await controlLoop(token, { untilMs: t0 + manualSec * 1000, phase: 'manual', stopWhenAssessed: true });
     const s1 = await page.evaluate(readBattle);
     J.manual = { installed, anchor, endReason: reason, wallSec: Math.round((Date.now() - t0) / 100) / 10, clock: [s0.clock, s1.clock], kills: [s0.kills, s1.kills], dmg: [s0.dmg, s1.dmg],
-      actions: M.actions, blockedTaps: M.blockedTaps.slice(0, 20), blockedTapCount: M.blockedTaps.length, potions: M.potions, deaths: M.deaths, modals: M.modals, stuck: M.stuck, gridLoads: M.gridLoads, inferredCell: M.cellCheck,
+      actions: M.actions, blockedTaps: M.blockedTaps.slice(0, 20), blockedTapCount: M.blockedTaps.length, potions: M.potions, deaths: M.deaths, modals: M.modals, choices: M.choices || [], stuck: M.stuck, gridLoads: M.gridLoads, inferredCell: M.cellCheck,
       observerError: acc.lastError, samples: { frames: acc.frames.length, shots: acc.shots.length, ended: acc.ended.length, damage: acc.damage.length } };
     if (M.unexpectedAuto) fail('AUTO turned on during the manual segment', J.manual);
     // 이 단계는 수동 구간을 실제로 실행했는지만 본다. 사격·명중·이동 판정은 아래 개별 단계가 같은 샘플로 PASS/FAIL 한다.
@@ -607,6 +626,8 @@ try {
     if (!M) M = { joyDown: false, actions: {}, blockedTaps: [], potions: [], potionAt: 0, deaths: [], modals: [], captured: {}, stickMoves: 0 };
     const until = Date.now() + finishSec * 1000;
     if (s.modal) { await handleBattleModal(s, 'completion'); s = await page.evaluate(readBattle); }
+    // AUTO 버튼을 누르기 전에 화면을 덮은 각인·만남 선택을 실제로 고른다.
+    for (let n = 0; n < 4 && s.masterworks; n++) { await handleMasterworksChoice(s, 'completion'); s = await page.evaluate(readBattle); }
     if (s.active && finishMode === 'auto') {
       await releaseTouches();
       await page.evaluate(setObserverPhase, 'auto');
@@ -623,19 +644,22 @@ try {
     while (!token.cancelled && Date.now() < until) {
       s = await page.evaluate(readBattle);
       if (s.result && s.resultVisible) break;
+      if (s.masterworks) { await handleMasterworksChoice(s, 'completion'); continue; }
       if (s.modal) { await handleBattleModal(s, 'completion'); continue; }
       if (s.cinematic) { const sk = await probe('.exp-cinematic button'); if (sk.visible && sk.hit) await tap('.exp-cinematic button', 'film skip'); continue; }
       if (s.active && s.player?.alive && !s.paused) await maybePotion(s, 'completion');
       await waitMs(300);
     }
     s = await page.evaluate(readBattle);
-    J.completion.deaths = M.deaths.filter((d) => d.phase !== 'manual'); J.completion.potions = M.potions;
+    J.completion.deaths = M.deaths.filter((d) => d.phase !== 'manual'); J.completion.potions = M.potions; J.completion.choices = (M.choices || []).filter((c) => c.phase !== 'manual');
     await pull();
     const later = acc.shots.filter((x) => x.phase !== 'manual');
     J.completion.observed = { shotsAfterManual: later.length, autoShots: later.filter((x) => x.auto).length, damageEventsAfterManual: acc.damage.filter((d) => d.phase !== 'manual').length };
     if (!(s.result && s.resultVisible)) {
       // 시간 초과: 결과 이후 흐름을 이어 검사하도록 실제 일시정지 → 포기로 끝낸다. 승리는 NOT_RUN 이다.
       const was = { clock: s.clock, active: s.active, hp: s.player ? Math.round(s.player.hp) : null, enemies: s.enemies.length, kills: s.kills };
+      // 일시정지 버튼을 덮은 선택 대화상자가 남아 있으면 먼저 실제로 고른다(덮인 버튼은 누르지 않는다).
+      for (let n = 0; n < 4 && s.masterworks; n++) { await handleMasterworksChoice(s, 'timeout'); s = await page.evaluate(readBattle); }
       if (s.active) {
         await releaseTouches();
         await tap('#btn-pause', 'pause (finish timeout)');
