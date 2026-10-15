@@ -49,7 +49,7 @@
 /* 캐릭터 측정·첫 프레임 전에는 빈 패널 대신 준비 중임을 알린다. */
 .wardrobe-loading { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; margin:0; color:#d7e4d6; font-size:12px; pointer-events:none; }
 .wardrobe-controls { display:flex; justify-content:center; gap:8px; padding:6px; }
-.wardrobe-controls button { border:1px solid #aac8b946; border-radius:8px; padding:7px 12px; background:#17342b; color:#e1ebda; font-size:11px; }
+.wardrobe-controls button { border:1px solid #aac8b946; border-radius:8px; padding:7px 12px; background:#17342b; color:#e1ebda; font-size:11px; white-space:nowrap; }
 .wardrobe-caption { font-size:10px; text-align:center; padding:0 10px 14px; color:#b4c7bb; }
 @media(max-width:900px) {
   #tab-stage .exp-dungeon-grid { grid-template-columns:1fr; }
