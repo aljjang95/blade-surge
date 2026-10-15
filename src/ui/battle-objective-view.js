@@ -3,6 +3,25 @@ const seconds = value => Math.floor(count(value) * 10) / 10;
 const step = (title, action, values = {}) => Object.freeze({ title, action, progress: 0, total: 0,
   hold: 0, holdTotal: 0, roomId: null, ...values });
 
+/** 종문 역순 공명(심층 종락 회랑). 정답 순서는 노출하지 않는다: roomId 는 점등 단계의 다음 방과 guide 가 있을 때의 guide 방뿐이다. */
+function reverseBellsView(route) {
+  const total = route.gates.length;
+  if (route.phase === 'toll') {
+    const last = route.lastToll;
+    return step('소등 순서 기억', last ? `${last.label} 소등` : '종소리를 듣는 중', { progress: count(route.tollIndex), total });
+  }
+  if (route.phase === 'answer') {
+    const guide = route.guide, values = { progress: count(route.progress), total, roomId: guide?.room.discovered ? guide.room.id : null };
+    if (route.holdGate) { values.hold = seconds(route.hold); values.holdTotal = count(route.def.holdSeconds); }
+    const hold = `중심 ${count(route.def.holdSeconds)}초`;
+    return step('종문 역순 공명', guide ? `다음 ${guide.label} · ${hold}` : `마지막에 꺼진 종부터 ${hold}`, values);
+  }
+  const next = route.gates.find(gate => gate.phase === 'locked');
+  const values = { progress: count(route.lit), total, roomId: next?.room.discovered ? next.room.id : null };
+  if (next && !next.room.discovered) return step('종문 점등', '다음 구역을 찾아 이동', values);
+  return step('종문 점등', '이 구역의 적을 처치해 종 깨우기', values);
+}
+
 /** 현재 컨트롤러의 상태만 투영하며 전투 정산과 퍼즐 정답에는 접근하지 않는다. */
 function mainObjectiveView(battle) {
   const world = battle?.world;
@@ -16,6 +35,7 @@ function mainObjectiveView(battle) {
       hold: seconds(pendingAltar.attunementT), holdTotal: 2 });
   }
   if (route?.world === world && !route.closed && Array.isArray(route.gates)) {
+    if (route.def?.kind === 'reverse-bells' && route.phase !== 'done') return reverseBellsView(route);
     const gate = route.gates[route.progress];
     if (gate) {
       const kind = route.def?.kind;
