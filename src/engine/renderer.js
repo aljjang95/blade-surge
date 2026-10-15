@@ -79,6 +79,8 @@ const FinalShader = {
 };
 
 const FLASH_MAX = 0.6, ABERR_MAX = 2, ABERR_SCALE = 0.012, RADIAL_MAX = 0.6, RADIAL_SCALE = 0.1;
+/** 세로 선택 로비에서 바라보는 점을 낮추는 양(월드 단위). 390x844 기본 시점에서 영웅 발 y 560→434px, 머리 315→183px. */
+export const LOBBY_PORTRAIT_LOOK_DROP = 1;
 
 // 지역별 색 보정 — 키는 dungeon-visuals 의 key. cool/warm/lift 는 기본값에 지역 색조만 얹는다.
 const GRADE_BASE = { sat: 0.22, cool: [0.9, 0.98, 1.1], warm: [1.1, 1.03, 0.9], lift: [0.012, 0.016, 0.03], region: [1, 1, 1], fog: 0.4 };
@@ -292,7 +294,10 @@ export class Renderer {
       cam.position.copy(rig.pos);
       // Editorial offset reserves the right-hand destination panel, without moving the hero.
       const editorialShift = walking ? { x: 0, z: 0 } : lobbyCompositionShift(p, this._width >= this._height);
-      cam.lookAt(rig.target.x + editorialShift.x, rig.target.y + (walking ? .6 : 1.1), rig.target.z + editorialShift.z);
+      // 세로 선택 로비는 하단 착지 패널이 화면 아래 절반 가까이를 덮는다. 카메라 위치는 그대로 두고
+      // 바라보는 점만 낮춰 영웅을 상단 바와 패널 사이에 둔다(UX R7). 줌·펄스 없이 고정 구도다.
+      const portraitDrop = !walking && portrait ? LOBBY_PORTRAIT_LOOK_DROP : 0;
+      cam.lookAt(rig.target.x + editorialShift.x, rig.target.y + (walking ? .6 : 1.1) - portraitDrop, rig.target.z + editorialShift.z);
     } else {
       const off = rig.offset.clone();
       off.x += rig.side + (rig.environmentSide || 0);   // 지역마다 전투 중심을 여는 비대칭 구도
