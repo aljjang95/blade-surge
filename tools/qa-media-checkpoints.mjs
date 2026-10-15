@@ -62,3 +62,13 @@ export function assessMediaObservations(report) {
   return { passed: report.errors.length === 0 && report.httpErrors.length === 0
     && report.mediaCheckpointDiagnostics.length === 0 && mediaCancellations.unresolved.length === 0, mediaCancellations };
 }
+
+/** 이 문서의 요청 실패 중, 실패 시각(failedAt) 이후에 찍힌 관측 스냅샷이 아직 없는 것.
+ * failedAt 은 리소스 타이밍 시계, 스냅샷 시각은 페이지 시계라서 실패 직후 스냅샷도 failedAt 보다 앞설 수 있다
+ * (BUNDLE-02 실측 −3~−287ms). 분류기는 failedAt 이후 스냅샷을 요구하므로, 관측 종료 직전 실패는 다시 관측해야 한다.
+ * 판정 기준을 바꾸지 않는다. 관측을 더할지 결정하는 데만 쓴다. */
+export function failuresAwaitingObservation(report, documentId) {
+  let latest = -Infinity;
+  for (const media of report.media) if (media.documentId === documentId && Number.isFinite(media.snapshot?.at)) latest = Math.max(latest, media.snapshot.at);
+  return report.requestFailures.filter(failure => failure.documentId === documentId && Number.isFinite(failure.failedAt) && latest < failure.failedAt);
+}

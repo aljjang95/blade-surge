@@ -59,7 +59,7 @@ node tools/comet-deep-qa.mjs --help
 - **fixture**: 저장 주입(해금·영웅 Lv.50 별3 스킬5·장비·에너지 최대·AUTO), Math.random 시드. **실제 UI·입력**: 출격 카드 버튼, `#btn-auto`, `#btn-pause`/`#btn-resume`/`#btn-giveup`, 결과 화면 버튼, 선택지 모달, 새로고침. **제어 실행**: `app.testPause` 아래 고정 1/60초 `app.step`. 좌표 이동·무적·HP 주입으로 정상 플레이를 증명하지 않는다. 각 구분은 report.json의 `classification`에 적힌다.
 - 프로필: `auto`(완주·결과·새로고침 보존), `fail`(AUTO를 끄고 붕괴 실패를 관찰한 뒤 재연결), `pause`, `giveup`(패배 결과와 재도전), `save-fault`(정산 저장 실패 주입은 이 프로필 안에서만), `refresh`(전투 중 새로고침: pending 취소·에너지 1회 환급), `retry`(승리 뒤 다시 도전: 첫 보상 미지급), `touch`(CDP 터치 이벤트로 가상 조이스틱, 에뮬레이터 입력), `screens`(준비·붕괴·쉼터·폭풍 예고·보스·결과마다 640×360, 844×390, 390×844 PNG). 낮은 화질과 reduced motion은 `--quality=low --motion=reduce`로 같은 프로필을 다시 돌린다.
 - 기록: 고리별 phase 타임라인(게임 시간)과 slack, 실패, 폭풍 피격, 방 정화 순서, 결과 객체(routeObjective), 고리 방 첫 진입과 첫 폭풍 예고 프레임의 draw call·렌더 ms·보이는 고리 메시 수, 스텝 ms 분포(p50/p95/max, 50ms 초과 목록), 최대 동시 적, 최소 HP 비율, HP 감소 이벤트.
-- phase 관측은 `app.step` 한 번(1/60초)이 끝날 때만 한다. 그래서 한 스텝 안에서 locked→ready→collapse가 이어지면 locked→collapse로 보인다. 도구는 그 스텝에서 붕괴가 막 시작된 증거(남은 시계가 붕괴 시간에서 1/30초 이내)가 있을 때만 이 합성 전이를 허용하고 report의 `composite`에 남긴다. 그 밖의 건너뛰기는 실패다.
+- phase 관측은 `app.step` 한 번(1/60초)이 끝날 때만 한다. 그래서 한 스텝 안에서 locked→ready→collapse가 이어지면 locked→collapse로 보인다. 도구는 두 증거가 모두 있을 때만 이 합성 전이를 허용한다. 그 스텝에서 붕괴가 막 시작됐고(남은 시계가 붕괴 시간에서 1/30초 이내), 같은 스텝 끝에 그 고리 방의 살아 있는 적(homeRoom)과 대기 증원(pending)이 모두 0이어야 한다(BUNDLE-02, 판정 함수 `tools/comet-deep-transitions.mjs`). 허용한 전이는 report의 `composite`에 남긴다. 그 밖의 건너뛰기는 실패다.
 - `kind !== 'deep-orbits'`인 기준선 빌드에서는 고리 검사를 건너뛰고 원정 시간·처치·피격·프레임·draw call만 남긴다. 기준선과 후보는 같은 시드·영웅·fixture·1/60초로 직렬 실행해 비교한다. 후보 완주·오류 0·draw call 증가 ≤ 12·50ms 초과 프레임 없음을 보고, 원정 시간은 기준선의 2배 이하만 확인한다.
 
 ### 한계
