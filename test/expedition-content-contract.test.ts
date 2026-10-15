@@ -100,7 +100,7 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(Number(tactic.match(/모래시계 단서를 (\d+(?:\.\d+)?)초 읽고/)?.[1])).toBe(deep.readSeconds);
         expect(Number(tactic.match(/판에서 (\d+(?:\.\d+)?)초 유지하면 복원됩니다/)?.[1])).toBe(deep.holdSeconds);
         expect(tactic).toMatch(/오답은 피해 없이 판 밖으로 나와 다시 읽으며/);
-        expect(tactic).toMatch(/차례가 올 때까지 두 번째 판은 정리만 해 두고 첫 판을 복원한 뒤 돌아와 이으세요/);
+        expect(tactic).toMatch(/1번은 막다른 길 끝이라 가는 길에 2번을 먼저 지나치니, 2번은 적만 정리해 두고 1번을 복원한 뒤 돌아오는 길에 복원하세요/);
         expect(tactic).toContain(deep.gates.length + '곳과 모든 구역을 정화하면 보스방 앞 정예방에 성좌 외곽 고리가 열립니다');
         expect(Number(tactic.match(/제한 시간 (\d+)초 안에 고리 위 성표 (\d+)개에서 각각 (\d+(?:\.\d+)?)초 머물러/)?.[1])).toBe(deep.ring.limit);
         expect(Number(tactic.match(/고리 위 성표 (\d+)개에서/)?.[1])).toBe(deep.ring.marks.length);

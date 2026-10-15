@@ -177,7 +177,8 @@ export class AstralDeepConstellations extends AstralConstellations {
       else mark.hold = 0;
       if (mark.hold + EPS >= c.holdSeconds) {
         mark.done = true; mark.hold = c.holdSeconds; ring.purified++; held = -1;
-        game.ui.toast('성표 정화 · ' + ring.purified + '/' + ring.marks.length, 'gold');
+        // 마지막 성표는 아래 완료 토스트 하나로 알린다(같은 순간 두 번 알리지 않는다).
+        if (ring.purified < ring.marks.length) game.ui.toast('성표 정화 · ' + ring.purified + '/' + ring.marks.length, 'gold');
       }
     }
     ring.held = held;

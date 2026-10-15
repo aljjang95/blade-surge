@@ -383,7 +383,9 @@ test('완료 전에는 봉인이 유지되고, 4/4 성표를 정화하면 실제
   expect(f.route.canUnseal()).toBe(false);
   f.messages.length = 0; atMark(f, 3); f.route.update(f.g, 1);
   expect(ring(f).phase).toBe('done'); expect(f.world.sealed).toBe(false); expect(f.counts.portal).toBe(1);
-  expect(f.messages.slice(0, 2)).toEqual(['성표 정화 · 4/4', '외곽 고리 정화 · 레비아탄의 봉인이 풀립니다']);
+  // 마지막 성표는 완료 토스트 하나로만 알린다(같은 순간 '성표 정화 · 4/4' 를 따로 내지 않는다).
+  expect(f.messages[0]).toBe('외곽 고리 정화 · 레비아탄의 봉인이 풀립니다');
+  expect(f.messages).not.toContain('성표 정화 · 4/4');
   expect(f.messages).toContain('보스의 봉인이 풀렸다!');
   expect(f.route.canUnseal()).toBe(true); expect(f.route.hint()).toBe('별자리 4/4 복원 · 레비아탄 처치');
   // 완료 뒤에는 상태가 더 바뀌지 않는다.
