@@ -77,6 +77,8 @@ export const EXPEDITION_DEPTHS = [
     objective: EMBER_OBJECTIVE,
     bossName: '가라앉은 선단의 압류관', art: '/img/expansion/ember_vault.webp',
     tactic: `${EMBER_TACTIC}${ENEMIES.cinder_chain_executor.tactic}`,
+    // 전술 공략(vault_signal·vault_manifest)은 냉각 밸브가 없는 심층 동선을 쓴다(routeObjectiveForStage null). 밸브 안내 없이 BUNDLE-10 이전 문구를 쓴다.
+    conquestTactic: `화물칸의 정예방마다 적과 1회 증원을 격파하세요. ${ENEMIES.cinder_chain_executor.tactic}`,
     layout: { spacing: [36,36], size: [22,20], width: 7,
       cells: [[0,0],[1,0],[1,1],[2,0],[2,1],[3,1]],
       edges: [[0,1],[1,2],[1,3],[2,4],[3,4],[4,5]],
