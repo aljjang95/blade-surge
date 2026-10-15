@@ -80,7 +80,7 @@ export const STANDARD = Object.freeze({
   answers: Object.freeze(['triangle', 'diamond', 'circle', 'triangle']),
   choices: DEEP.choices,
 });
-/** BUNDLE-13 PLAN 3.0 공유 정의 계약 값(일반판 기록 외곽 고리: 표지 3개·제한 24초·피해 4%). */
+/** BUNDLE-13 PLAN 3.0 공유 정의 계약 값(일반판 기록 외곽 고리: 항로 표지 4개·제한 24초·피해 4%). */
 export const STANDARD_RING = Object.freeze({
   roomId: 7, label: '기록 외곽 고리', title: '외곽 고리 이탈', mark: '항로 표지', shard: '기록 파편', verb: '밝히', markVerb: '점등',
   marks: Object.freeze([Object.freeze([-6, 0]), Object.freeze([0, -6]), Object.freeze([6, 0]), Object.freeze([0, 6])]),

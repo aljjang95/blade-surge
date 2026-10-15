@@ -1225,10 +1225,11 @@ test('ring 프로필: 두 번째 피격 뒤 다른 집결 터짐 동안 core 안
 
 
 // =====================================================================================================================
-// BUNDLE-13: 일반판(astral_standard) 조율판 4곳(방 1 → 3 → 4 → 6) + 기록 외곽 고리 이탈(항로 표지 3개). 위 심층 테스트는 그대로 두고 일반판 판정만 더한다.
+// BUNDLE-13: 일반판(astral_standard) 조율판 4곳(방 1 → 3 → 4 → 6) + 기록 외곽 고리 이탈(항로 표지 4개). 위 심층 테스트는 그대로 두고 일반판 판정만 더한다.
 // =====================================================================================================================
 const SDEF: any = (ROUTE_OBJECTIVES as any).astral_standard;
 const SRING: any = SDEF.ring;
+const SN: number = SRING.marks.length;   // 항로 표지 수(정의 기반, 계약은 4개)
 const SCX = room(7).x, SCZ = 0;
 const SSETUP: any = {
   gates: SDEF.gates.map((g: any) => ({ id: g.roomId, roomX: room(g.roomId).x, roomZ: 0, x: room(g.roomId).x, z: 0, answer: g.answer,
@@ -1243,14 +1244,14 @@ const sMark = (i: number) => SSETUP.ring.marks[i];
 const SLABELS = ['1번 조율판 · 첫 항로', '2번 조율판 · 먼 좌표', '3번 조율판 · 귀환 별', '4번 조율판 · 마지막 항로'];
 // 일반판 문구: PLAN 3.1 틀에 두 정의의 낱말을 넣은 결과를 이 파일이 따로 적는다(판정 함수의 틀 함수를 가져오지 않는다).
 const STX = {
-  all: '모든 별자리 복원 · 모든 구역을 정화하면 기록 외곽 고리가 열립니다', open: '기록 외곽 고리 개방 · 고리 위 항로 표지 3개를 밝히세요',
+  all: '모든 별자리 복원 · 모든 구역을 정화하면 기록 외곽 고리가 열립니다', open: '기록 외곽 고리 개방 · 고리 위 항로 표지 4개를 밝히세요',
   hit: '기록 파편 집결 피격 · 기록 파편이 모이면 중심 밖으로', done: '외곽 고리 이탈 · 레비아탄의 봉인이 풀립니다',
   start: (limit: number) => '외곽 고리 이탈 시작 · ' + limit + '초', collapse: (limit: number) => '외곽 고리 붕괴 · 항로 표지가 흐려졌습니다 · 다시 ' + limit + '초',
-  mark: (k: number) => '항로 표지 점등 · ' + k + '/3', ready: (k: number, current: boolean) => SLABELS[k] + ' 정화 · ' + (current ? '모래시계 단서를 읽으세요' : '복원 순서 대기'),
+  mark: (k: number) => '항로 표지 점등 · ' + k + '/4', ready: (k: number, current: boolean) => SLABELS[k] + ' 정화 · ' + (current ? '모래시계 단서를 읽으세요' : '복원 순서 대기'),
   restore: (k: number) => SLABELS[k] + ' 복원 완료 · ' + (k + 1) + '/4', tactic: '보스 전술 문구 · 별빛을 삼킨 레비아탄',
 };
 const sObjDom = (pr: number, action: string) => '별자리 복원 ' + pr + '/4 ' + action + ' 0.6/1';
-const sRingDom = (left: number) => '외곽 고리 이탈 0/3 기록 파편이 모이면 중심 밖으로 · ' + Math.ceil(left) + '초';
+const sRingDom = (left: number) => '외곽 고리 이탈 0/4 기록 파편이 모이면 중심 밖으로 · ' + Math.ceil(left) + '초';
 function sShardOf(ck: number) {
   const u = ck - SRING.first;
   if (u < 0) return { s: 0, c: -1, a: 0 };
@@ -1413,7 +1414,7 @@ class SSim {
     }
   }
   /** AUTO 처럼 중심(core)을 피해 표지를 하나씩 점등한다. 열려 있고 영웅이 밖이면 서쪽 문 안쪽으로 들어서며 시작한다. 표지 사이는 걸어서 이동한다. */
-  autoRing(order = [0, 1, 2]) {
+  autoRing(order: number[] = SRING.marks.map((_: any, i: number) => i)) {
     if (this.rg.ph === 1) { this.run(3); this.at(SCX - 10, 0); this.step(); }
     order.forEach((i, k) => {
       if (this.rg.m[i].d) return;
@@ -1432,7 +1433,7 @@ class SSim {
 }
 const sLinesOf = (ro: any) => [
   { aria: '별자리 복원 결과', text: '별자리 복원 ' + ro.progress + '/' + ro.target + ' · ' + SLABELS.join(' → ') + ' · 오답 ' + ro.mistakes + '회' },
-  { aria: '외곽 고리 이탈 결과', text: '외곽 고리 이탈 ' + (ro.ring.purified ? '완료' : '미완료') + ' · 항로 표지 ' + ro.ring.marks + '/3 · 기록 파편 피격 ' + ro.ring.shardHits + '회 · 붕괴 ' + ro.ring.collapses + '회' },
+  { aria: '외곽 고리 이탈 결과', text: '외곽 고리 이탈 ' + (ro.ring.purified ? '완료' : '미완료') + ' · 항로 표지 ' + ro.ring.marks + '/4 · 기록 파편 피격 ' + ro.ring.shardHits + '회 · 붕괴 ' + ro.ring.collapses + '회' },
 ];
 const sAuto = (s: SSim, over: any = {}, opts: any = {}) => {
   const res = s.result(), ro = over.ro ?? res.ro, lines = sLinesOf(ro);
@@ -1464,7 +1465,7 @@ function sChoiceRun(over: { hurtDuring?: boolean } = {}) {
   s.au = 1; s.ps = 'move';
   return s.afterFirst().autoRing();
 }
-/** ring: 고리 open 에서 AUTO 끔 → 방 밖 3초 대기 → 진입 → 중심 core 에서 두 cycle 피격 → 표지 하나 점등 → 안전한 곳에서 붕괴 → AUTO → 3/3. */
+/** ring: 고리 open 에서 AUTO 끔 → 방 밖 3초 대기 → 진입 → 중심 core 에서 두 cycle 피격 → 표지 하나 점등 → 안전한 곳에서 붕괴 → AUTO → 4/4. */
 function sRingRun(over: { inside?: boolean; flags?: any } = {}) {
   const s = new SSim(over.flags ?? {}).toOpen({ inside: over.inside });
   s.au = 0; s.ps = 'idle';
@@ -1489,6 +1490,7 @@ function sRingRun(over: { inside?: boolean; flags?: any } = {}) {
 describe('일반판: 계약 상수·정의·문구 틀', () => {
   test('STANDARD · STANDARD_RING 계약 상수는 공유 정의(ROUTE_OBJECTIVES.astral_standard)와 같다', () => {
     expect(K.checkDefinition(SDEF)).toEqual({ ok: true, issues: [] });
+    expect(SN).toBe(4);   // 정사각 4개(서·북·동·남)
     expect(K.contractOf(SDEF).depth).toBe('standard');
     expect(K.contractOf(DEF).depth).toBe('deep');
     expect(K.contractOf(null).depth).toBe('deep');
@@ -1505,6 +1507,7 @@ describe('일반판: 계약 상수·정의·문구 틀', () => {
     expect(fields({ ...SDEF, ring: { ...SRING, limit: 20 } })).toEqual(['ring']);
     expect(fields({ ...SDEF, ring: { ...SRING, damage: .06 } })).toEqual(['ring']);
     expect(fields({ ...SDEF, ring: { ...SRING, marks: [...SRING.marks, [0, 6]] } })).toEqual(['ring']);
+    expect(fields({ ...SDEF, ring: { ...SRING, marks: SRING.marks.slice(0, 3) } })).toEqual(['ring']);   // 이전 반원 3개 정의
     expect(fields({ ...SDEF, ring: { ...SRING, mark: '성표' } })).toEqual(['ring']);
     expect(fields({ ...SDEF, ring: undefined })).toEqual(['ring']);
     expect(fields({ ...SDEF, gates: [SDEF.gates[1], SDEF.gates[0], SDEF.gates[2], SDEF.gates[3]] })).toEqual(expect.arrayContaining(['rooms', 'labels']));
@@ -1560,9 +1563,9 @@ describe('일반판: 계약 상수·정의·문구 틀', () => {
     expect(c.openAction).toBe('기록 외곽 고리로 이동');
     expect(c.runAction).toBe('기록 파편이 모이면 중심 밖으로 · ');
     expect(c.resultAria).toBe('외곽 고리 이탈 결과');
-    expect(c.resultLine({ purified: true, marks: 3, shardHits: 0, collapses: 0 })).toBe('외곽 고리 이탈 완료 · 항로 표지 3/3 · 기록 파편 피격 0회 · 붕괴 0회');
-    expect(c.resultLine({ purified: false, marks: 1, shardHits: 2, collapses: 1 })).toBe('외곽 고리 이탈 미완료 · 항로 표지 1/3 · 기록 파편 피격 2회 · 붕괴 1회');
-    expect(K.ringResultLine({ purified: true, marks: 3, shardHits: 0, collapses: 0 }, 3, SRING)).toBe(c.resultLine({ purified: true, marks: 3, shardHits: 0, collapses: 0 }));
+    expect(c.resultLine({ purified: true, marks: 4, shardHits: 0, collapses: 0 })).toBe('외곽 고리 이탈 완료 · 항로 표지 4/4 · 기록 파편 피격 0회 · 붕괴 0회');
+    expect(c.resultLine({ purified: false, marks: 1, shardHits: 2, collapses: 1 })).toBe('외곽 고리 이탈 미완료 · 항로 표지 1/4 · 기록 파편 피격 2회 · 붕괴 1회');
+    expect(K.ringResultLine({ purified: true, marks: 4, shardHits: 0, collapses: 0 }, 4, SRING)).toBe(c.resultLine({ purified: true, marks: 4, shardHits: 0, collapses: 0 }));
   });
 });
 
@@ -1600,14 +1603,14 @@ describe('일반판: 정상 AUTO 경로', () => {
     expect(a.limit.ok).toBe(true);
     expect(a.seal.firstUnsealed).toBe(a.seal.doneIdx);
     expect(a.counts.collapses).toBe(0);
-    expect(a.counts.purified).toBe(3);
+    expect(a.counts.purified).toBe(SN);
   });
-  test('항로 표지 3개는 순서와 상관없이 0 에서 시작한 1초 유지로 점등되고, 목표창 표본은 선택 단계와 고리 이탈 중을 포함한다', () => {
-    expect(a.marks.count).toBe(3);
-    expect(a.marks.order.sort()).toEqual([0, 1, 2]);
+  test('항로 표지 4개는 순서와 상관없이 0 에서 시작한 1초 유지로 점등되고, 목표창 표본은 선택 단계와 고리 이탈 중을 포함한다', () => {
+    expect(a.marks.count).toBe(SN);
+    expect(a.marks.order.sort()).toEqual([0, 1, 2, 3]);
     expect(a.objective.kinds.select).toBeGreaterThanOrEqual(1);
     expect(a.objective.kinds.run).toBeGreaterThanOrEqual(1);
-    for (const order of [[2, 1, 0], [1, 0, 2], [2, 0, 1]]) expect(sAuto(new SSim().toOpen().autoRing(order)).ok).toBe(true);
+    for (const order of [[3, 2, 1, 0], [1, 0, 3, 2], [2, 0, 3, 1], [3, 0, 2, 1]]) expect(sAuto(new SSim().toOpen().autoRing(order)).ok).toBe(true);
     expect(failed(sAuto(sLegit({ resetOnDone: true })))).toEqual([]);
   });
   test('집결 위상(첫 1.5 · 주기 5 · 예고 2 · 터짐 .5)이 clock 계산값과 같고 예고와 터짐이 관측된다', () => {
@@ -1625,7 +1628,7 @@ describe('일반판: 정상 AUTO 경로', () => {
     expect(a.resultLines.ok).toBe(true);
     expect(a.resultElements.ok).toBe(true);
     expect(a.resultElements.ringAria).toBe('외곽 고리 이탈 결과');
-    expect(a.resultElements.ring).toBe('외곽 고리 이탈 완료 · 항로 표지 3/3 · 기록 파편 피격 0회 · 붕괴 0회');
+    expect(a.resultElements.ring).toBe('외곽 고리 이탈 완료 · 항로 표지 4/4 · 기록 파편 피격 0회 · 붕괴 0회');
     expect(a.resultElements.constellation).toBe('별자리 복원 4/4 · ' + SLABELS.join(' → ') + ' · 오답 0회');
     expect(a.toasts.ok).toBe(true);
     expect(a.objective.ok).toBe(true);
@@ -1680,14 +1683,18 @@ describe('일반판: 깨진 trace 는 실패한다', () => {
     expect(a.acceptance.ringLimit).toBe(false);
     expect(K.analyzeRingManual(sRingRun({ flags: { limit: 20 } }).rows, SDEF, SSETUP).start.ok).toBe(false);
   });
-  test('표지 4개를 기대하면(심층 개수) 일반판 trace 의 3개 점등으로는 완료가 아니다', () => {
+  test('일반판 정의와 표지 수가 다른 정의(이전 반원 3개 · 5개)를 기대하면 정의대로 4개를 점등한 trace 로는 완료가 아니다', () => {
     const rows = sLegit().rows;
-    const four = { ...SDEF, ring: { ...SRING, marks: [...SRING.marks, [0, 6]] } };
+    const withMarks = (marks: number[][]) => ({ ...SDEF, ring: { ...SRING, marks } });
+    const three = withMarks(SRING.marks.slice(0, 3)), five = withMarks([...SRING.marks, [4, 4]]);
     expect(K.checkAutoCounts(rows, SDEF).ok).toBe(true);
-    expect(K.checkAutoCounts(rows, four).ok).toBe(false);
-    expect(K.checkAutoCounts(rows, DEF).ok).toBe(false);
-    expect(K.checkRingDone(rows, four).ok).toBe(false);
-    expect(K.checkObservation(rows, four).ok).toBe(false);   // 표지 4개분의 칸이 읽히지 않는다
+    expect(K.checkRingDone(rows, SDEF).ok).toBe(true);
+    expect(K.checkObservation(rows, SDEF).ok).toBe(true);
+    for (const other of [three, five]) {
+      expect(K.checkAutoCounts(rows, other).ok).toBe(false);
+      expect(K.checkRingDone(rows, other).ok).toBe(false);
+      expect(K.checkObservation(rows, other).ok).toBe(false);   // 표지 칸 수가 정의와 맞지 않는다
+    }
   });
   test('누출 낱말: 일반판에서 성표 · 성좌 · 공명은 금지, 심층의 금지어(조율판)와 다르다', () => {
     const s = sLegit();
@@ -1720,19 +1727,20 @@ describe('일반판: 깨진 trace 는 실패한다', () => {
     const s = sLegit(), ro = s.result().ro, lines = sLinesOf(ro);
     const body = lines.map(l => l.text).join(' ');
     expect(K.checkResultLines('결과 ' + body, SDEF, ro).ok).toBe(true);
-    const deepLine = '외곽 고리 정화 완료 · 성표 3/3 · 파편 피격 0회 · 붕괴 0회';
+    const deepLine = '외곽 고리 정화 완료 · 성표 4/4 · 파편 피격 0회 · 붕괴 0회';
     expect(K.checkResultLines('결과 ' + lines[0].text + ' / ' + deepLine, SDEF, ro).ok).toBe(false);
     expect(K.checkResultLines('결과 ' + body.replace('항로 표지', '성표'), SDEF, ro).ok).toBe(false);
     expect(K.checkResultElements(lines, SDEF, ro).ok).toBe(true);
     expect(K.checkResultElements([lines[0], { ...lines[1], text: deepLine }], SDEF, ro).ok).toBe(false);
     expect(K.checkResultElements([lines[0], { ...lines[1], aria: '외곽 고리 정화 결과' }], SDEF, ro).ok).toBe(false);
-    expect(K.checkResultElements([lines[0], { ...lines[1], text: lines[1].text.replace('3/3', '4/4') }], SDEF, ro).ok).toBe(false);
+    expect(K.checkResultElements([lines[0], { ...lines[1], text: lines[1].text.replace('4/4', '3/4') }], SDEF, ro).ok).toBe(false);
   });
   test('결과 필드: 표지 수 · 방 순서가 일반판 계약과 다르면 실패한다', () => {
     const ro = sLegit().result().ro;
     const f = (patch: any) => K.checkResultFields({ ...ro, ...patch }, SDEF, true, { mistakes: 0, collapses: 0, shardHits: 0, seconds: ro.ring.seconds }).ok;
     expect(f({})).toBe(true);
-    expect(f({ ring: { ...ro.ring, marks: 4, purified: 4 } })).toBe(false);
+    expect(f({ ring: { ...ro.ring, marks: SN - 1, purified: SN - 1 } })).toBe(false);   // 이전 반원 3개 계약 값
+    expect(f({ ring: { ...ro.ring, marks: SN + 1, purified: SN + 1 } })).toBe(false);
     expect(f({ rooms: [3, 2, 5, 6] })).toBe(false);
     expect(f({ id: 'astral_fallen_constellations_deep' })).toBe(false);
   });
@@ -1743,10 +1751,10 @@ describe('일반판: 깨진 trace 는 실패한다', () => {
     expect(K.checkObjectiveSamples(mut(s.rows, rows => { runRow(rows).dom = runRow(rows).dom.replace('기록 파편이', '파편이'); }), SDEF).ok).toBe(false);
     expect(K.checkObjectiveSamples(mut(s.rows, rows => { const r = runRow(rows); r.dom = sRingDom(r.rg.lf + 5); }), SDEF).ok).toBe(false);
     // 고리가 열린 직후 표본의 행동 문구는 '기록 외곽 고리로 이동' 이다.
-    const open = mut(s.rows, rows => { const r = rows.find((x: any) => x.rg.ph === 1); r.dom = '외곽 고리 이탈 0/3 기록 외곽 고리로 이동'; });
+    const open = mut(s.rows, rows => { const r = rows.find((x: any) => x.rg.ph === 1); r.dom = '외곽 고리 이탈 0/4 기록 외곽 고리로 이동'; });
     expect(K.checkObjectiveSamples(open, SDEF).kinds.open).toBe(1);
     expect(K.checkObjectiveSamples(open, SDEF).ok).toBe(true);
-    const wrongOpen = mut(s.rows, rows => { const r = rows.find((x: any) => x.rg.ph === 1); r.dom = '외곽 고리 이탈 0/3 성좌 외곽 고리로 이동'; });
+    const wrongOpen = mut(s.rows, rows => { const r = rows.find((x: any) => x.rg.ph === 1); r.dom = '외곽 고리 이탈 0/4 성좌 외곽 고리로 이동'; });
     expect(K.checkObjectiveSamples(wrongOpen, SDEF).ok).toBe(false);
   });
 });
@@ -1754,11 +1762,11 @@ describe('일반판: 깨진 trace 는 실패한다', () => {
 describe('일반판: 토스트 표본', () => {
   test('시작 · 붕괴 · 표지 · 피격 토스트가 일반판 틀 그대로 정확히 한 번씩이다', () => {
     const m = sRingRun();
-    const t = K.checkToasts(m.toasts, SDEF, { shardHits: 2, collapses: 1, startLimit: 24, collapseLimits: [24], purifyCounts: [1, 1, 2, 3] });
+    const t = K.checkToasts(m.toasts, SDEF, { shardHits: 2, collapses: 1, startLimit: 24, collapseLimits: [24], purifyCounts: [1, 1, 2, 3, 4] });
     expect(t.ok).toBe(true);
     expect(t.startToasts).toEqual(['외곽 고리 이탈 시작 · 24초']);
     expect(t.collapseToasts).toEqual(['외곽 고리 붕괴 · 항로 표지가 흐려졌습니다 · 다시 24초']);
-    expect(t.markExpect).toEqual(['항로 표지 점등 · 1/3', '항로 표지 점등 · 1/3', '항로 표지 점등 · 2/3']);
+    expect(t.markExpect).toEqual(['항로 표지 점등 · 1/4', '항로 표지 점등 · 1/4', '항로 표지 점등 · 2/4', '항로 표지 점등 · 3/4']);
     expect(t.hitCount).toBe(2);
     expect(K.checkToasts(m.toasts, SDEF, { shardHits: 2, collapses: 1, collapseLimits: [20] }).collapseOk).toBe(false);
     expect(K.checkToasts(m.toasts, SDEF, { shardHits: 2, collapses: 1, startLimit: 20 }).startOk).toBe(false);
@@ -1796,7 +1804,7 @@ describe('일반판: choice · ring 수동 프로필', () => {
     // 심층의 1번 성좌(방 3, 답 B ○)로 보면 일반판 trace 의 오답 판이 정답이라 실패한다.
     expect(K.analyzeChoice(s.rows, DEF, SSETUP).ok).toBe(false);
   });
-  test('ring: 방 밖 3초 대기 → 진입 첫 스텝 running(limit 24) → 두 cycle 피격(.04) → 표지 1/3 → 붕괴 1회(0/3, left 24) → AUTO 3/3 · 봉인 해제', () => {
+  test('ring: 방 밖 3초 대기 → 진입 첫 스텝 running(limit 24) → 두 cycle 피격(.04) → 표지 1/4 → 붕괴 1회(0/4, left 24) → AUTO 4/4 · 봉인 해제', () => {
     const s = sRingRun();
     const m = K.analyzeRingManual(s.rows, SDEF, SSETUP);
     expect(m.ok).toBe(true);
@@ -1808,7 +1816,7 @@ describe('일반판: choice · ring 수동 프로필', () => {
     expect(m.collapse.purified).toBe(0);
     expect(m.collapse.limit).toBe(24);
     expect(m.collapse.outside.ok).toBe(true);
-    expect(m.final.purified).toBe(3);
+    expect(m.final.purified).toBe(SN);
     expect(m.final.collapses).toBe(1);
     expect(failed(sAuto(s, {}, { clean: false }))).toEqual([]);
     expect(sAuto(s).acceptance.autoCounts).toBe(false);   // 붕괴가 있어 clean AUTO 판정은 실패
@@ -1823,7 +1831,7 @@ describe('일반판: choice · ring 수동 프로필', () => {
     const s = sRingRun();
     const col = s.rows.find((x: any) => x.mk === 'collapse');
     expect(d2(col, { x: SCX, z: SCZ })).toBeGreaterThan(SRING.core);
-    for (let i = 0; i < 3; i++) expect(d2(col, sMark(i))).toBeGreaterThan(SRING.markRadius);
+    for (let i = 0; i < SN; i++) expect(d2(col, sMark(i))).toBeGreaterThan(SRING.markRadius);
     const onMark = K.analyzeRingManual(mut(s.rows, rows => { const c = rows.find((x: any) => x.mk === 'collapse'); c.x = sMark(2).x; c.z = sMark(2).z; }), SDEF, SSETUP);
     expect(onMark.collapse.outside.ok).toBe(false);
   });
