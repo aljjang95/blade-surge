@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { Vector3 } from 'three';
 import { buildExpeditionStage, buildExpeditionWorld } from '../src/game/expedition-combat.js';
@@ -177,6 +178,83 @@ test('청록 빈 원은 gate.stormShelter 위치와 def.shelterRadius 를 그대
   expect(e.ring.position.x).toBeCloseTo(3.46, 6); expect(e.ring.position.z).toBeCloseTo(-2, 6);
   e.ring.geometry.computeBoundingBox();
   expect(e.ring.geometry.boundingBox.max.x).toBeCloseTo(DEF.shelterRadius, 5);
+  view.dispose();
+});
+
+// ---- 화면 가독성(BUNDLE-02 U1·U2) ----
+/** src/engine/fx.js 에서 메서드 본문의 첫 renderOrder 대입값을 읽는다. 지면·빌보드 VFX 순서 기준이 바뀌면 이 테스트가 알려 준다. */
+function fxRenderOrder(method: string): number {
+  const source = readFileSync(new URL('../src/engine/fx.js', import.meta.url), 'utf8');
+  const start = source.search(new RegExp('\\n  ' + method + '\\('));
+  expect(start).toBeGreaterThan(-1);
+  const match = /renderOrder = (\d+)/.exec(source.slice(start, start + 1500));
+  expect(match).not.toBeNull();
+  return Number(match![1]);
+}
+const FLOOR_MARKS = ['track', 'notch', 'arc', 'ring', 'fill', 'red'] as const;
+
+test('폭풍 예고 붉은 영역은 첫 프레임부터 바닥과 구분되고 청록 빈 원이 항상 더 강한 신호다(일반·reduced 동일)', () => {
+  const scene = new THREE.Scene(), route = makeRoute(), view = new CometDeepOrbitView(scene, route);
+  const e = (view as any).entries[0], warning = DEF.storm.warning;
+  const red = (progress: number, opts: any) => {
+    setPhase(route, 'storm', { stormWarn: true, stormWarnT: warning * (1 - progress), stormIndex: 0 });
+    view.update(route, 1 / 60, opts);
+    return { red: e.redMat.opacity as number, ring: e.ringMat.opacity as number, fill: e.fillMat.opacity as number };
+  };
+  for (const opts of [OPTS, { reduced: true }]) {
+    let previous = 0;
+    for (const progress of [0, .25, .5, .75, 1]) {
+      const now = red(progress, opts);
+      // 결함 값(.12)은 바닥과 구분되지 않는다. 시작값 하한은 .25 로 둔다.
+      expect(now.red).toBeGreaterThanOrEqual(.25);
+      // 쉼터 대비: 청록 테두리가 붉은 영역보다 .3 이상 진하고, 붉은 영역은 항상 반투명이다.
+      expect(now.ring - now.red).toBeGreaterThanOrEqual(.3);
+      expect(now.red).toBeLessThanOrEqual(.6);
+      expect(now.red).toBeGreaterThanOrEqual(previous - 1e-9); previous = now.red;
+    }
+    // 쉼터 채움은 시작부터 보이고 시간이 갈수록 진해진다.
+    expect(red(0, opts).fill).toBeGreaterThanOrEqual(.15);
+    expect(red(1, opts).fill).toBeGreaterThan(red(0, opts).fill);
+  }
+  // 청록 빈 원(채움·테두리)은 붉은 영역 위에 그려야 쉼터가 붉은 막에 묻히지 않는다.
+  expect(e.fill.renderOrder).toBeGreaterThan(e.red.renderOrder);
+  expect(e.ring.renderOrder).toBeGreaterThan(e.fill.renderOrder);
+  view.dispose();
+});
+
+test('룬석 표식·카운트다운 호·쉼터 원은 지면 VFX(기사 성역) 뒤에 그려지고 깊이 검사는 유지한다', () => {
+  const scene = new THREE.Scene(), route = makeRoute(), view = new CometDeepOrbitView(scene, route);
+  // 기사 성역(castCircle 포함)은 fx.groundTex(8), 충격파 링은 fx.ring(9)이다. 표식이 이보다 앞서 그려지면 가산 합성에 덮인다.
+  const floorFx = Math.max(fxRenderOrder('groundTex'), fxRenderOrder('ring'));
+  // 빌보드 플래시(texFlash)와 플립북은 표식 위에 그대로 보여야 한다.
+  const billboardFx = Math.min(fxRenderOrder('texFlash'), fxRenderOrder('flipbook'));
+  expect(floorFx).toBeGreaterThan(0); expect(billboardFx).toBeGreaterThan(floorFx);
+  const check = () => {
+    for (const e of (view as any).entries) for (const key of FLOOR_MARKS) {
+      const mesh = e[key] as THREE.Mesh, material = mesh.material as THREE.MeshBasicMaterial;
+      expect(mesh.renderOrder).toBeGreaterThan(floorFx);
+      expect(mesh.renderOrder).toBeLessThan(billboardFx);
+      // 깊이 검사를 끄면 표식이 기사 모델과 룬석 위로 비치고, 깊이 쓰기를 켜면 뒤 VFX 가 잘린다.
+      expect(material.transparent).toBe(true); expect(material.depthTest).toBe(true); expect(material.depthWrite).toBe(false);
+    }
+  };
+  check();
+  // 갱신을 거쳐도 순서가 바뀌지 않는다(붕괴·쉼터·폭풍 예고).
+  for (const [phase, extra] of [['collapse', {}], ['shelter', {}], ['storm', { stormWarn: true, stormWarnT: 1 }]] as const) {
+    setPhase(route, phase, extra); view.update(route, 1 / 60, OPTS); check();
+  }
+  view.dispose();
+});
+
+test('폭풍 예고 프레임의 draw call 은 같은 방 진입 직후 대비 고리당 +12 이하다', () => {
+  const scene = new THREE.Scene(), route = makeRoute(), view = new CometDeepOrbitView(scene, route);
+  const total = () => route.gates.reduce((sum: number, _: any, i: number) => sum + visibleMeshes(view, i), 0);
+  setPhase(route, 'locked'); view.update(route, 1 / 60, OPTS);
+  const entry = total();
+  setPhase(route, 'storm', { stormWarn: true, stormWarnT: 1.4 }); view.update(route, 1 / 60, OPTS);
+  const warn = total();
+  expect(warn).toBeGreaterThan(entry);
+  expect(warn - entry).toBeLessThanOrEqual(12 * route.gates.length);
   view.dispose();
 });
 
