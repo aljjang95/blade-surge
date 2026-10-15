@@ -113,3 +113,38 @@ test('shockWindow 정의라도 padOpen 이 없으면 기존 표시 그대로', (
   expect(lastLabel(0, DEEP.gates.length)).toBe('01 · 조작 2초');
   view.dispose();
 });
+
+// 밀물 띠 색과 닫힘 라벨은 정의(ventColor·copy.waitShort)에서 온다.
+test('ventColor 정의: 밀물 띠 uniform 과 뜨거운 동안의 상태등이 파란 물빛, 라벨은 정의의 닫힘 문구', () => {
+  const EMBER = ROUTE_OBJECTIVES.ember_deep;
+  drawn.length = 0;
+  const route: any = makeRoute(EMBER, { padOpen: () => false, copy: EMBER.copy });
+  route.gates[0].ready = route.gates[0].prepared = true; route.gates[0].phase = 'warning';
+  const view = new CoolingValveView(new THREE.Scene(), makeGltf(), route), entry = (view as any).entries[0];
+  const uniforms = entry.vent.material.uniforms;
+  expect(uniforms.color.value.getHex()).toBe(0x3d8cff);
+  expect(uniforms.tint.value).toBe(1);
+  const lens = [...entry.statusMaterials][0] as any;
+  expect(lens.color.getHex()).toBe(0x3d8cff);
+  // 물이 빠지면(heat) 상태등은 뜨거운 색이 아니라 차례 색으로 돌아간다.
+  route.gates[0].phase = 'heat'; view.update(route);
+  expect(lens.color.getHex()).toBe(0xffd181);
+  route.gates[0].phase = 'vent'; view.update(route);
+  expect(lens.color.getHex()).toBe(0x3d8cff);
+  route.gates[0].phase = 'heat'; route.gates[0].prepared = true; view.update(route);
+  expect(lastLabel(0, EMBER.gates.length)).toBe('01 · 밀물 대기');
+  view.dispose();
+});
+
+test('ventColor 가 없는 정의는 기존 주황 띠와 충격파 대기 문구 그대로', () => {
+  drawn.length = 0;
+  const route: any = makeRoute(DEEP, { padOpen: () => false });
+  route.gates[0].ready = route.gates[0].prepared = true; route.gates[0].phase = 'vent';
+  const view = new CoolingValveView(new THREE.Scene(), makeGltf(), route), entry = (view as any).entries[0];
+  expect(entry.vent.material.uniforms.color.value.getHex()).toBe(0xff863e);
+  expect(entry.vent.material.uniforms.tint.value).toBe(0);
+  expect([...entry.statusMaterials][0].color.getHex()).toBe(0xff863e);
+  route.gates[0].phase = 'heat'; view.update(route);
+  expect(lastLabel(0, DEEP.gates.length)).toBe('01 · 충격파 대기');
+  view.dispose();
+});
