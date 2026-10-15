@@ -141,14 +141,16 @@ export class CitadelCommand {
     this.art.hidden = false;
     if (this.art.getAttribute('src') !== model.art) this.art.src = model.art;
     this.title.textContent = model.name;
-    this.depth.textContent = model.depthLabel + (model.wins ? ` · 클리어 ${model.wins}회` : ' · 첫 도전');
+    this.depth.textContent = model.depthLabel + (model.wins ? ` · 클리어 ${model.wins}회` : model.outcome ? ' · 아직 클리어 전' : ' · 첫 도전');
     this.description.textContent = model.description;
     this.costFact.value.textContent = model.energy === null ? `${model.cost}` : `${model.cost} / 보유 ${model.energy}`;
     this.costFact.wrap.dataset.short = String(!model.enoughEnergy);
     this.rewardFact.value.textContent = model.rewards.map((reward) => `${reward.name} ×${reward.amount}`).join(' · ') || '-';
     // 조건이 부족해도 준비창은 열어 내용을 읽을 수 있다. 최종 입장만 기존 판정이 막는다.
     const blocked = !model.unlocked ? model.lockReason : !model.enoughEnergy ? `에너지가 부족합니다. 준비 내용은 볼 수 있습니다.` : '';
-    this.status.textContent = [model.notice, blocked].filter(Boolean).join(' ');
+    // aria-live는 값이 바뀔 때만 다시 읽히도록 같은 문장은 다시 쓰지 않는다.
+    const statusText = [model.notice, blocked].filter(Boolean).join(' ');
+    if (this.status.textContent !== statusText) this.status.textContent = statusText;
     this.status.dataset.blocked = String(!!blocked);
     this.prepare.disabled = false;
     this.prepareCost.textContent = `에너지 ${model.cost}`;

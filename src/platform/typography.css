@@ -28,9 +28,9 @@
   --type-label: 16px; --lh-label: 1.25;
   --type-title: 22px; --lh-title: 1.25;
   --type-hero: clamp(24px, 3vw, 32px); --lh-hero: 1.15;
-  --weight-body: 500; --weight-label: 700; --weight-title: 800;
+  --weight-body: 400; --weight-label: 700; --weight-title: 800;
 }
 /* 한국어 줄바꿈과 숫자 정렬 기본값. 전투 숫자 외에는 글자 외곽선을 쓰지 않는다. */
-html { font-family: var(--font-ui); font-synthesis-weight: none; word-break: keep-all; overflow-wrap: anywhere; }
+html { font-family: var(--font-ui); font-synthesis-weight: none; word-break: keep-all; overflow-wrap: break-word; }
 :where(input, select, textarea, button) { font-family: inherit; }
 :where(.cur, .bar, .exp-cost, .citadel-hub-destination-stats, .mpl-money, .hs-head .sub) { font-variant-numeric: tabular-nums; }

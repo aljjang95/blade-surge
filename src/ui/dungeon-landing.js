@@ -4,6 +4,7 @@ import { ALL_DUNGEONS as DUNGEONS, MATERIALS } from '../data/expansion.js';
 import { expeditionDepth } from '../data/expedition-depths.js';
 import { normalizeRunRoute } from '../game/run-history.js';
 import { dungeonJourney } from './dungeon-journey.js';
+import { withTopic } from './korean.js';
 
 export const LANDING_REASON_LABEL = Object.freeze({
   recent: '최근 원정',
@@ -38,7 +39,7 @@ export function dungeonLanding({ expedition, history, energy }) {
     const dungeon = DUNGEONS.find((entry) => entry.id === recent.route.id);
     const access = dungeon ? expedition.dungeonAccess(dungeon.id, { depth: recent.route.depth }) : null;
     if (dungeon && access?.ok) pick = { dungeon, depth: recent.route.depth, reason: 'recent' };
-    else if (dungeon) notice = `최근 원정 ${dungeon.name}${recent.route.depth === 'deep' ? ' 심층' : ''}은 지금 입장할 수 없습니다. ${access?.error || ''}`.trim();
+    else if (dungeon) notice = `최근 원정 ${withTopic(dungeon.name + (recent.route.depth === 'deep' ? ' 심층' : ''))} 지금 입장할 수 없습니다. ${access?.error || ''}`.trim();
   }
   if (!pick && journey.current) pick = { dungeon: journey.current.dungeon, depth: 'standard', reason: recent ? 'fallback' : 'journey' };
   if (!pick) return { dungeon: null, depth: 'standard', reason: 'none', label: LANDING_REASON_LABEL.none, notice, open, total: DUNGEONS.length, cleared: journey.cleared };

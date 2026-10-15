@@ -5,6 +5,8 @@ taken from the Debian package fonts-noto-cjk 1:20240730+repack1-1
 (/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc, NotoSansCJK-Bold.ttc, face index 1).
 Upstream: https://github.com/notofonts/noto-cjk
 Font copyright string: (c) 2014-2021 Adobe (http://www.adobe.com/).
+Upstream LICENSE: Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'.
+(The family name "Blade Sans KR" does not use the Reserved Font Name.)
 Debian copyright file: Copyright 2010-2012, Google Corporation. License: SIL-1.1
 "Noto" is a trademark of Google Inc.; this subset is distributed under the family name "Blade Sans KR".
 The subset keeps the original copyright and license name records.

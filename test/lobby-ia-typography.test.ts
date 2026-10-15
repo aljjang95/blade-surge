@@ -39,6 +39,8 @@ describe('타이포그래피 정본', () => {
     for (const file of [...cssFiles('src'), 'index.html']) {
       const text = readFileSync(file, 'utf8');
       expect(/'Jua'|Black Han Sans|Georgia/.test(text)).toBe(false);
+      // 서체 토큰(--font-ui) 정의 밖에서 'Noto Sans KR'을 직접 고정하면 화면마다 기기 기본 서체로 갈라진다(rpg · masterworks · 동행 패널).
+      if (file !== 'src/platform/typography.css') expect(/font(-family)?\s*:[^;{}]*'Noto Sans KR'/.test(text)).toBe(false);
     }
     const typography = readFileSync('src/platform/typography.css', 'utf8');
     const urls = [...typography.matchAll(/url\('([^']+)'\)/g)].map((match) => match[1]);
