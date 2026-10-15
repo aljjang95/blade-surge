@@ -48,7 +48,7 @@ export function zoneStatus(kind, r, def) {
   return { inside: r <= def.safe + EPS, ambiguous: margin <= AMBIGUOUS + EPS, margin, valid: true };
 }
 
-/** warn 연속 구간. ordinal 은 warn 시작 순서(1부터)이고 취소된 warn 도 센다(컨트롤러의 n++ 와 같다). */
+/** warn 연속 구간. ordinal 은 warn 시작 순서(1부터)다. 순번을 쓰지 않는 취소 예고는 analyzeStrikes 가 다시 매긴다. */
 export function warnRuns(rows) {
   const runs = [];
   let open = null;
@@ -109,16 +109,20 @@ export function analyzeStrikes(rows, def) {
     if (rows[i].sk - rows[i - 1].sk !== 1) violations.push({ i, t: rows[i].t, reason: 'multi-strike', delta: rows[i].sk - rows[i - 1].sk });
   }
   if (rows[0] && rows[0].sk > 0) violations.push({ i: 0, t: rows[0].t, reason: 'strikes-before-observation', strikes: rows[0].sk });
+  // 컨트롤러는 떨어지지 않고 취소된 예고의 순번을 되돌린다(같은 순번이 다시 온다). 처치로 끝난 마지막 예고도 같다.
+  let ordinal = 0;
   for (const run of runs) {
+    run.ordinal = ++ordinal;
     const start = rows[run.start], end = rows[run.last], next = rows[run.last + 1] ?? null, before = rows[run.start - 1] ?? null;
     const outcome = !next ? 'open' : next.sk > end.sk ? 'strike' : 'cancelled';
+    if (outcome !== 'strike') ordinal--;
     const expectedKind = run.ordinal % def.centerEvery === 0 ? 'center' : 'outer';
     const baseSeq = before ? before.seq : start.seq;
     const seqSteady = rows.slice(run.start, run.last + 1).every(r => r.seq === baseSeq);
-    // 예고가 공격 중에 시작됐는가: 직전 행이 attack 이고 시작 행에서도 같은 공격이 이어질 때만이다.
-    // Battle 순서는 player → routeObjectives → enemies 라서, 영웅 타격으로 보스 공격이 끊겨(hurt 등) 컨트롤러가 그 스텝에 예고를 시작하면
-    // 직전 행은 attack 이지만 시작 행은 attack 이 아니다. 컨트롤러가 attack 중에 예고를 시작했다면 시작 행도 같은 attackSequence 의 attack 이다.
-    const startedDuringAttack = !!before && before.st === 'attack' && start.st === 'attack' && start.seq === before.seq;
+    // 예고가 공격 중에 시작됐는가. Battle 순서는 player → routeObjectives → enemies 다. 직전 행이 attack 인데 정상으로 예고가 시작되는 길은
+    // player 단계 타격으로 보스가 hurt 가 된 경우뿐이다(경직이 한 스텝보다 길어 시작 행에도 hurt 로 남는다. 기절은 enemies 단계까지 attack 으로 남는다).
+    // 시작 행이 chase 등이면 공격이 그 스텝의 enemies 단계에서 끝났다는 뜻이라, 컨트롤러가 attack 을 보고도 예고를 시작한 회귀다(BUNDLE-06 리뷰 P2-1).
+    const startedDuringAttack = !!before && before.st === 'attack' && start.st !== 'hurt';
     const warn = { ordinal: run.ordinal, startIdx: run.start, startT: start.t, kind: start.ok, expectedKind, kindOk: start.ok === expectedKind,
       startWarnLeft: start.wl, startWarnLeftOk: Number.isFinite(start.wl) && start.wl <= def.warning + EPS && start.wl >= def.warning - FRAME - EPS,
       seqSteady, startedDuringAttack, aswDuring: rows.slice(run.start, run.last + 1).reduce((m, r) => Math.max(m, r.asw || 0), 0),
@@ -128,7 +132,9 @@ export function analyzeStrikes(rows, def) {
       warn.endT = row.t; warn.duration = row.t - start.t; warn.durationOk = close(warn.duration, def.warning, FRAME);
       const dHits = row.ht - end.ht, dCenter = row.ck - end.ck, zone = zoneStatus(start.ok, row.hr, def);
       const heroAlive = end.hhp > 0, expectedHit = !!(heroAlive && zone.inside);
-      const actualHit = dHits >= 1, imm = !!(end.inv || row.inv);
+      // 무적 면제: 낙하 스텝에서 Player.hurt 가 불릴 때(player 단계에서 dt 만큼 줄어든 뒤)도 무적이 남아 있어야 한다.
+      // 낙하 뒤 같은 스텝에 붙은 무적(보스 처치 4초 등, row.inv)은 면제 근거가 아니다(BUNDLE-06 리뷰 P3-2). 옛 report 의 불리언도 숫자로 읽는다.
+      const actualHit = dHits >= 1, imm = Number(end.inv || 0) > FRAME + EPS;
       let verdict;
       if (zone.ambiguous) verdict = 'ambiguous';
       else if (!zone.valid || dHits > 1) verdict = 'fail';
@@ -226,17 +232,30 @@ export function analyzeBossOrbit(obs, def, { minStrikes = 1 } = {}) {
  * orbit 프로필: AUTO 를 끈 구간(rows 의 [from, to))의 판정. 낙하 minStrikes 이상·outer ≥ 1·center ≥ 1·궤도 피격 0, 영웅 생존,
  * 구간 중 AUTO 꺼짐·공격 입력 없음(키보드 이동만). 구간 앞 행(from - 1)의 카운터를 기준으로 구간 안 증가를 센다.
  */
-export function checkManualSegment(rows, from, to, { minStrikes = 3 } = {}) {
+export function checkManualSegment(rows, from, to, { minStrikes = 3, def = null } = {}) {
   const seg = rows.slice(from, to), base = rows[from - 1] ?? { sk: 0, ck: 0, ht: 0 }, last = seg.at(-1) ?? base;
   const strikes = (last.sk || 0) - (base.sk || 0), center = (last.ck || 0) - (base.ck || 0), outer = strikes - center, hits = (last.ht || 0) - (base.ht || 0);
   // AUTO 를 끈 직후에는 AUTO 가 시작한 공격·스킬·회피 동작이 몇 스텝 남을 수 있다. 처음으로 동작 state 를 벗어난 행부터 센다.
   const lead = seg.findIndex(r => !ACTION_STATES.includes(r.ps)), body = lead < 0 ? seg : seg.slice(lead);
   const autoSteps = seg.filter(r => r.au).length, attackHeld = seg.filter(r => r.ah).length, attackState = body.filter(r => ACTION_STATES.includes(r.ps)).length;
   const dead = seg.some(r => !(r.hhp > 0));
+  // 피격 0 만으로는 무적으로 피한 낙하를 가리지 못한다. def 가 있으면 구간 안 낙하마다 영웅이 그 종류의 피격 구역 밖(경계 모호 아님)이었는지 본다(BUNDLE-06 리뷰 P3-1).
+  const zones = [];
+  if (def) for (let i = Math.max(from, 1); i < Math.min(to, rows.length); i++) {
+    if (!(rows[i].sk > rows[i - 1].sk)) continue;
+    const z = zoneStatus(rows[i - 1].ok, rows[i].hr, def);
+    zones.push({ i, t: rows[i].t, kind: rows[i - 1].ok, r: rows[i].hr, inside: z.inside, ambiguous: z.ambiguous, valid: z.valid, inv: Number(rows[i - 1].inv || 0) });
+  }
+  const safeZone = !def || (zones.length === strikes && zones.every(z => z.valid && z.inside === false && !z.ambiguous));
   const checks = { segment: seg.length > 0, strikes: strikes >= minStrikes, outer: outer >= 1, center: center >= 1, noHits: hits === 0, heroAlive: !dead,
-    keyboardOnly: lead >= 0 && autoSteps === 0 && attackHeld === 0 && attackState === 0 };
+    keyboardOnly: lead >= 0 && autoSteps === 0 && attackHeld === 0 && attackState === 0, safeZone };
   return { ok: Object.values(checks).every(Boolean), checks, steps: seg.length, leadSteps: lead < 0 ? seg.length : lead, strikes, outer, center, hits, autoSteps, attackHeld, attackState,
-    minHpRatio: seg.reduce((m, r) => r.hmax > 0 ? Math.min(m, r.hhp / r.hmax) : m, 1) };
+    zones, minHpRatio: seg.reduce((m, r) => r.hmax > 0 ? Math.min(m, r.hhp / r.hmax) : m, 1) };
+}
+
+/** 기준선 비교의 대상 확인(BUNDLE-06 리뷰 P3-3): 기준선은 궤도선 정의가 없는 빌드, 후보는 정의가 있고 궤도선 판정이 통과했으며, 두 report 모두 pass 여야 한다. */
+export function compareTargetsOk(cand, base) {
+  return !!cand && !!base && !base.orbitDefinition && !!cand.orbitDefinition && cand.orbitOk === true && cand.status === 'pass' && base.status === 'pass';
 }
 
 /**
@@ -290,4 +309,3 @@ export function compareRuns(cand, base, { fightRatio = 2, timeRatio = 2, drawLim
   const slow = { cand: c ?? null, base: b ?? null, limit: Number.isFinite(b) ? b + slowExtra : null, ok: Number.isFinite(c) && Number.isFinite(b) && c <= b + slowExtra };
   return { ok: fight.ok && time.ok && bossEnter.ok && bossReady.ok && slow.ok, fight, time, bossEnter, bossReady, slow };
 }
-

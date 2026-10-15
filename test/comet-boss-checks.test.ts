@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { ROUTE_OBJECTIVES } from '../src/data/route-objectives.js';
 import { AMBIGUOUS, FRAME, OBJECTIVE_PHRASE, analyzeBossOrbit, analyzeStrikes, bossResultLine, checkManualSegment, checkObjectiveSamples, checkPause, checkResultFields, checkResultLine,
-  checkScreens, checkStateMachine, compareRuns, drawCallIncrease, percentile, stepStats, summarizeBoss, warnRuns, zoneStatus } from '../tools/comet-boss-checks.mjs';
+  checkScreens, checkStateMachine, compareRuns, compareTargetsOk, drawCallIncrease, percentile, stepStats, summarizeBoss, warnRuns, zoneStatus } from '../tools/comet-boss-checks.mjs';
 
 // 정의는 대상 프로젝트의 공유 정의에서 읽는다(도구와 같은 방식). 판정 함수는 값을 박지 않는다.
 const DEF: any = (ROUTE_OBJECTIVES as any).comet_standard.boss;
@@ -20,7 +20,8 @@ interface Session { rows: any[]; ro: any; text: string; strikeIdx: number[] }
  */
 function session(opts: { strikes?: number; radius?: (k: number, kind: string) => number; cancel?: number[] } = {}): Session {
   const strikes = opts.strikes ?? 4, rows: any[] = [], strikeIdx: number[] = [];
-  let t = 10, n = 0, sk = 0, ck = 0, ht = 0, ordinal = 0, seq = 0;
+  // ordinal 은 컨트롤러 순번(취소된 예고는 순번을 되돌린다), warnNo 는 예고 시작 횟수(cancel 옵션이 가리킨다).
+  let t = 10, n = 0, sk = 0, ck = 0, ht = 0, ordinal = 0, warnNo = 0, seq = 0;
   const push = (over: any) => { rows.push(baseRow({ n: n++, t, sk, ck, ht, seq, hp: 1000 - rows.length, ...over })); t += FRAME; };
   push({ os: 'idle', spn: true });
   push({ os: 'idle' });
@@ -28,14 +29,15 @@ function session(opts: { strikes?: number; radius?: (k: number, kind: string) =>
   let k = 0;
   while (k < strikes) {
     ordinal++;
+    warnNo++;
     const kind = ordinal % DEF.centerEvery === 0 ? 'center' : 'outer';
-    const cancelled = (opts.cancel ?? []).includes(ordinal);
+    const cancelled = (opts.cancel ?? []).includes(warnNo);
     const frames = cancelled ? 20 : WARN_FRAMES;
     for (let i = 0; i < frames; i++) {
       const left = DEF.warning - i * FRAME;
       push({ os: 'warn', ok: kind, wl: left, st: 'chase', ...(i * FRAME >= .25 && i % 6 === 0 ? { dom: domOf(kind, Math.ceil(left * 10 - 1e-9) / 10) } : {}) });
     }
-    if (cancelled) { push({ os: 'armed', inb: false }); for (let i = 0; i < Math.round((DEF.every - DEF.warning) / FRAME); i++) push({ os: 'armed', st: 'chase' }); continue; }
+    if (cancelled) { ordinal--; push({ os: 'armed', inb: false }); for (let i = 0; i < Math.round((DEF.every - DEF.warning) / FRAME); i++) push({ os: 'armed', st: 'chase' }); continue; }
     k++;
     const r = opts.radius ? opts.radius(k, kind) : kind === 'center' ? SAFE.center : SAFE.outer;
     sk++; if (kind === 'center') ck++;
@@ -108,14 +110,21 @@ describe('정상 보스전(analyzeBossOrbit)', () => {
       expect(run(s).acceptance.warnDuration).toBe(true);
     }
   });
-  test('취소된 예고(영웅이 보스방 밖)는 낙하로 세지 않고 순서에는 센다', () => {
+  test('취소된 예고(영웅이 보스방 밖)는 낙하로 세지 않고 순번도 쓰지 않는다', () => {
     const s = session({ strikes: 3, cancel: [2] });
     const a = run(s);
     expect(a.cancelled).toBe(1);
     expect(failing(a)).toEqual([]);
-    // 두 번째 예고가 취소돼도 세 번째 예고 순서는 3이라 center 다.
-    expect(a.warns.map((w: any) => w.kind)).toEqual(['outer', 'outer', 'center', 'outer']);
+    // 두 번째 예고가 취소되면 같은 순번(2, outer)이 다시 오고, 세 번째로 떨어지는 유성이 center 다.
+    expect(a.warns.map((w: any) => w.kind)).toEqual(['outer', 'outer', 'outer', 'center']);
     expect(a.warns.map((w: any) => w.outcome)).toEqual(['strike', 'cancelled', 'strike', 'strike']);
+  });
+  test('취소된 예고가 순번을 써 버린 관측(취소 뒤 바로 center)은 kind 순서 실패다', () => {
+    const s = session({ strikes: 3, cancel: [2] });
+    // 옛 규칙처럼 취소 뒤 세 번째 예고를 center 로 바꾸면 순번이 어긋난다.
+    const warnStarts = warnRuns(s.rows);
+    for (let i = warnStarts[2].start; i <= warnStarts[2].last; i++) s.rows[i].ok = 'center';
+    expect(run(s).acceptance.kindOrder).toBe(false);
   });
 });
 
@@ -163,11 +172,22 @@ describe('피격 = 구역 판정(hitMatchesZone)', () => {
   test('무적 시간이 남은 영웅이 구역 안에서 맞지 않은 것은 면제로 표시한다(실패 아님)', () => {
     const s = session({ strikes: 1, radius: () => 7 });
     s.rows.forEach((r, i) => { if (i >= s.strikeIdx[0]) r.ht = 0; });
-    strikeRow(s, 1).inv = true;
+    s.rows[s.strikeIdx[0] - 1].inv = .5;
     s.ro.bossMeteorHits = 0; s.text = bossResultLine(1, 0);
     const a = run(s);
     expect(a.acceptance.hitMatchesZone).toBe(true);
     expect(a.excused.length).toBe(1);
+  });
+  test('낙하 스텝에 새로 붙은 무적(낙하 행만 inv)이나 한 스텝 안에 끝나는 무적은 면제하지 않는다', () => {
+    for (const set of [(s: Session) => { strikeRow(s, 1).inv = 4; }, (s: Session) => { s.rows[s.strikeIdx[0] - 1].inv = FRAME / 2; }]) {
+      const s = session({ strikes: 1, radius: () => 7 });
+      s.rows.forEach((r, i) => { if (i >= s.strikeIdx[0]) r.ht = 0; });
+      set(s);
+      s.ro.bossMeteorHits = 0; s.text = bossResultLine(1, 0);
+      const a = run(s);
+      expect(a.acceptance.hitMatchesZone).toBe(false);
+      expect(a.excused.length).toBe(0);
+    }
   });
   test('이미 쓰러진 영웅은 구역 안이어도 맞지 않는 것이 맞다', () => {
     const s = session({ strikes: 1, radius: () => 7 });
@@ -253,6 +273,12 @@ describe('예고 중 새 공격 없음(noAttackDuringWarn)', () => {
     const start = s.strikeIdx[0] - WARN_FRAMES;
     s.rows[start - 1].st = 'attack'; s.rows[start].st = 'hurt';
     expect(run(s).acceptance.noAttackDuringWarn).toBe(true);
+  });
+  test('직전 행 attack 에서 시작 행 chase 로 바뀐 예고는 실패한다(공격이 enemies 단계에서 끝났다 = 공격 중 시작, 리뷰 P2-1)', () => {
+    const s = session({ strikes: 2 });
+    const start = s.strikeIdx[0] - WARN_FRAMES;
+    s.rows[start - 1].st = 'attack'; s.rows[start].st = 'chase';
+    expect(run(s).acceptance.noAttackDuringWarn).toBe(false);
   });
   test('예고 시작 스텝에 곧바로 새 공격이 시작돼도 실패한다', () => {
     const s = session({ strikes: 2 });
@@ -436,6 +462,20 @@ describe('orbit 프로필 키보드 구간(checkManualSegment)', () => {
     const a = checkManualSegment(s.rows, from, to, { minStrikes: 3 });
     expect(a.ok).toBe(true);
     expect(a).toMatchObject({ strikes: 3, outer: 2, center: 1, hits: 0 });
+    expect(checkManualSegment(s.rows, from, to, { minStrikes: 3, def: DEF }).ok).toBe(true);
+  });
+  test('def 가 있으면 낙하마다 영웅이 피격 구역 밖이어야 한다(무적으로 피한 낙하는 실패, 리뷰 P3-1)', () => {
+    const { s, from, to } = manual(3);
+    // 첫 낙하에서 바깥 고리 안(7.0)에 서 있었지만 무적으로 맞지 않았다.
+    s.rows[s.strikeIdx[0]].hr = 7; s.rows[s.strikeIdx[0] - 1].inv = 1;
+    const a = checkManualSegment(s.rows, from, to, { minStrikes: 3, def: DEF });
+    expect(a.checks.noHits).toBe(true);
+    expect(a.checks.safeZone).toBe(false);
+    expect(a.ok).toBe(false);
+    // 경계 모호(선 위)도 안전 증거가 아니다.
+    const b = manual(3);
+    b.s.rows[b.s.strikeIdx[2]].hr = DEF.safe + .01;
+    expect(checkManualSegment(b.s.rows, b.from, b.to, { minStrikes: 3, def: DEF }).checks.safeZone).toBe(false);
   });
   test('낙하가 2회뿐이거나 center 가 없으면 실패한다', () => {
     const { s, from } = manual(4);
@@ -562,6 +602,15 @@ describe('측정 보조', () => {
 });
 
 describe('기준선 비교(compareRuns)', () => {
+  test('비교 대상 확인: 기준선은 궤도선 정의 없음, 후보는 정의·궤도선 판정 통과, 둘 다 pass 여야 한다(리뷰 P3-3)', () => {
+    const c = { orbitDefinition: true, orbitOk: true, status: 'pass' }, b = { orbitDefinition: false, status: 'pass' };
+    expect(compareTargetsOk(c, b)).toBe(true);
+    expect(compareTargetsOk(b, c)).toBe(false);          // 뒤바뀜
+    expect(compareTargetsOk(c, { ...c })).toBe(false);   // 후보끼리
+    expect(compareTargetsOk({ ...c, orbitOk: false }, b)).toBe(false);
+    expect(compareTargetsOk({ ...c, status: 'fail' }, b)).toBe(false);
+    expect(compareTargetsOk(c, { ...b, status: 'fail' })).toBe(false);
+  });
   const samples = (enter: number | null, ready: number | null) => [...(enter === null ? [] : [{ label: 'bossEnter', calls: enter }]), ...(ready === null ? [] : [{ label: 'bossReady', calls: ready }])];
   const base: any = { fight: 40, time: 200, samples: samples(60, 61), bossOver50: 1 };
   const cand = (over: any = {}) => ({ fight: 50, time: 230, samples: samples(62, 63), bossOver50: 2, ...over });

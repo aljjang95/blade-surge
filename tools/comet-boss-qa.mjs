@@ -184,7 +184,7 @@ function installProbe(cfg) {
     const row = { n: P.steps, t: b.elapsed, hp: boss.hp, alive, spn: !!boss.spawning, st: boss.state, sp: boss.special ?? null, seq: boss.attackSequence || 0, cseq: boss.completedAttackSequence || 0,
       os: o ? o.state : null, ok: o ? (o.kind ?? null) : null, wl: o ? o.warnLeft : null, wt: o ? o.warnTotal : null, sk: o ? o.strikes : null, ck: o ? o.centerStrikes : null,
       ht: o ? o.hits : null, asw: o ? o.attackStartsDuringWarn : null, hr: o && c ? Math.hypot(p.pos.x - c.x, p.pos.z - c.z) : null,
-      hhp: p.hp, hmax: p.maxHp, inb: b.world.roomAt?.(p.pos.x, p.pos.z)?.type === 'boss', inv: (p.invuln || 0) > 0, au: !!p.auto, ah: !!app.input.attackHeld, ps: p.state };
+      hhp: p.hp, hmax: p.maxHp, inb: b.world.roomAt?.(p.pos.x, p.pos.z)?.type === 'boss', inv: p.invuln > 0 ? p.invuln : 0, au: !!p.auto, ah: !!app.input.attackHeld, ps: p.state };
     // 목표창은 10Hz 로 갱신되므로 warn 시작 0.25초 뒤부터 6스텝마다 표본을 남긴다.
     if (o && o.state === 'warn' && o.warnTotal - o.warnLeft >= .25 && P.steps % 6 === 0) row.dom = document.getElementById('objective')?.textContent ?? null;
     P.bossTrace.push(row);
@@ -501,12 +501,13 @@ function recordBoss(row, { minStrikes = 1 } = {}) {
   // 모호·면제·취소는 실패로 세지 않지만 숨기지 않는다.
   row.boss.orbitReport = { observed: analysis.observed, kinds: analysis.kinds, ambiguous: analysis.ambiguous, excused: analysis.excused, cancelled: analysis.cancelled };
   if (row.manualSegment) {
-    const seg = checkManualSegment(raw.trace, row.manualSegment.from, row.manualSegment.to, { minStrikes: 3 });
+    const seg = checkManualSegment(raw.trace, row.manualSegment.from, row.manualSegment.to, { minStrikes: 3, def: orbitDef });
     row.manualAnalysis = seg;
     check(row.tag + ': 키보드 구간 낙하 3회 이상(outer ≥ 1 · center ≥ 1)', seg.checks.strikes && seg.checks.outer && seg.checks.center, { strikes: seg.strikes, outer: seg.outer, center: seg.center });
     check(row.tag + ': 키보드 구간 궤도선 피격 0', seg.checks.noHits, { hits: seg.hits });
     check(row.tag + ': 키보드 구간 영웅 생존', seg.checks.heroAlive, { minHpRatio: seg.minHpRatio });
     check(row.tag + ': 키보드 구간 AUTO 꺼짐·공격 입력/동작 없음', seg.checks.keyboardOnly, { autoSteps: seg.autoSteps, attackHeld: seg.attackHeld, attackState: seg.attackState });
+    check(row.tag + ': 키보드 구간 낙하마다 영웅이 피격 구역 밖', seg.checks.safeZone, { zones: seg.zones });
   }
 }
 

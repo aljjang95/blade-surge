@@ -161,11 +161,13 @@ export class CometBossOrbit {
       const bx = p.x - this.#boss.pos.x, bz = p.z - this.#boss.pos.z, bl = Math.hypot(bx, bz);
       if (bl > 1e-6) { ux = bx / bl; uz = bz / bl; }
     }
-    const to = center ? d.escape : d.safe - 1.2;
+    // 바깥 유성: 띠의 바깥 절반에 있으면 띠를 가로질러 안쪽까지 걷지 않고 바깥(outerMax + 0.8, 생성자에서 도달성 확인)으로 빠진다.
+    const to = center ? d.escape : r >= (d.outerMin + d.outerMax) / 2 ? d.outerMax + .8 : d.safe - 1.2;
     return this.#safePoint.set(c.x + ux * to, 0, c.z + uz * to);
   }
 
-  #cancel() { this.#state = 'armed'; this.#kind = null; this.#warnLeft = 0; }
+  /** 예고 취소(영웅이 보스방 밖). 떨어지지 않은 예고는 순번을 쓰지 않는다: 다음 예고가 같은 순번·종류로 다시 온다("세 번째마다"를 지킨다). */
+  #cancel() { this.#state = 'armed'; this.#kind = null; this.#warnLeft = 0; this.#count--; }
   #end() { this.#state = 'ended'; this.#kind = null; this.#warnLeft = 0; }
   /** 전투 종료·중단. 반복 호출해도 안전하다. */
   stop() { this.#end(); }

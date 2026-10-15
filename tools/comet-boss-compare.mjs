@@ -5,7 +5,7 @@
 // 50ms 절대 검사는 각 report 의 보고 항목(reportItems.absolute50ms)이며 여기서 대신하거나 완화하지 않고 아래 absolute50ms 로만 남긴다.
 // 기준선은 같은 도구를 --project=<기준선 워크트리> 로 같은 --hero --seed --depth 에서 돌린 report 여야 한다.
 import fs from 'node:fs';
-import { compareRuns } from './comet-boss-checks.mjs';
+import { compareRuns, compareTargetsOk } from './comet-boss-checks.mjs';
 
 const arg = name => process.argv.find(a => a.startsWith('--' + name + '='))?.slice(name.length + 3);
 if (process.argv.includes('--help') || !arg('base') || !arg('cand')) {
@@ -27,7 +27,9 @@ const verdict = compareRuns(cand, base);
 const result = { candidate: { head: cand.head, status: cand.status, heroId: cand.heroId, depth: cand.depth, orbitDetected: cand.orbitDetected, orbitAnalysisOk: cand.orbitOk },
   baseline: { head: base.head, status: base.status, heroId: base.heroId, depth: base.depth, orbitDefinition: base.orbitDefinition }, same, sameHeroSeedDepth, ...verdict,
   absolute50ms: { note: '절대 검사는 각 report 의 reportItems.absolute50ms 가 보고한다. 여기는 보고 항목', candidateBoss: cand.bossOver50, baselineBoss: base.bossOver50, candidateRun: cand.runOver50, baselineRun: base.runOver50 } };
-result.ok = verdict.ok && sameHeroSeedDepth;
+// 기준선·후보가 뒤바뀌거나 후보끼리 비교되면 합격하지 않는다.
+result.targetsOk = compareTargetsOk(cand, base);
+result.ok = verdict.ok && sameHeroSeedDepth && result.targetsOk;
 const text = JSON.stringify(result, null, 2);
 if (arg('out')) fs.writeFileSync(arg('out'), text + '\n', { flag: 'wx' });
 console.log(text);

@@ -373,6 +373,21 @@ test('영웅이 보스방 밖이면 시계가 멈추고, 예고 중이면 피해
   expect(w.orbit.strikes).toBe(0);
 });
 
+test('취소된 예고는 순번을 쓰지 않는다: 두 번째(outer) 예고가 취소되면 다음 예고도 outer 이고, 세 번째로 떨어지는 유성이 center 다(리뷰 P3-4)', () => {
+  const f = fixture(); attach(f);
+  f.at(0);
+  expect(nextWarn(f)).toBe('outer'); fall(f);
+  expect(nextWarn(f)).toBe('outer');
+  f.hero.pos.set(f.world.startRoom.x, 0, f.world.startRoom.z);
+  f.orbit.update(f.g, DT);
+  expect(f.orbit.state).toBe('armed');
+  f.at(0);
+  expect(nextWarn(f)).toBe('outer'); fall(f);
+  expect(nextWarn(f)).toBe('center');
+  f.at(ESCAPE); fall(f);
+  expect([f.orbit.strikes, f.orbit.centerStrikes, f.hurts.length]).toEqual([3, 1, 0]);
+});
+
 test('일시정지 중에는 clock·warnLeft 가 변하지 않는다', () => {
   const base = fixture(); attach(base);
   const full = until(base, 'warn');
@@ -440,6 +455,8 @@ test('CometOrbits·CometDeepOrbits: update 첫머리에서 보스 유성이 돌�
     expect(first.bossOrbit!.state).toBe('armed');
     const zero: any = first.finish(false);
     expect([zero.bossMeteors, zero.bossCenterMeteors, zero.bossMeteorHits]).toEqual([0, 0, 0]);
+    // 결과가 정해지면(패배 포함) 보스 유성도 끝난다. 패배 뒤 Battle 은 route 를 갱신하지 않으므로 finish 가 거둔다(리뷰 P3-5).
+    expect(first.bossOrbit!.state).toBe('ended');
 
     const r2 = fixture(depth);
     const rt = createRouteObjectives(r2.g.stage, r2.world) as CometOrbits | CometDeepOrbits;
@@ -452,6 +469,7 @@ test('CometOrbits·CometDeepOrbits: update 첫머리에서 보스 유성이 돌�
     go('warn'); expect(bo.kind).toBe('center'); r2.at(3); go('armed');               // center, 선 안쪽: 피해
     const report: any = rt.finish(true);
     expect([report.bossMeteors, report.bossCenterMeteors, report.bossMeteorHits]).toEqual([3, 1, 2]);
+    expect(bo.state).toBe('ended');
     expect(rt.finish(false)).toBe(report); // 동결
     expect(Object.isFrozen(report)).toBe(true);
     // 기존 필드는 그대로다.
@@ -482,7 +500,8 @@ test('autoEvade: warn 이 아니면 null, 지점은 그 kind 의 피격 구역 �
         expect(margin(kind, r)).toBe(true);
         const er = Math.hypot(e.x - f.orbit.center.x, e.z - f.orbit.center.z);
         expect(zone(kind, er)).toBe(false);
-        expect(er).toBeCloseTo(kind === 'center' ? ESCAPE : SAFE - 1.2, 6);
+        // 바깥 유성은 띠의 바깥 절반이면 바깥(outerMax + 0.8)으로, 안쪽 절반이면 선 안쪽(safe − 1.2)으로 빠진다(리뷰 P3-6).
+        expect(er).toBeCloseTo(kind === 'center' ? ESCAPE : r >= (OUTER_MIN + OUTER_MAX) / 2 ? OUTER_MAX + .8 : SAFE - 1.2, 6);
         if (r > .01) expect(Math.atan2(e.z - f.orbit.center.z, e.x - f.orbit.center.x)).toBeCloseTo(Math.atan2(Math.sin(angle), Math.cos(angle)), 6);
         point ??= e;
         expect(e).toBe(point); // 같은 Vector3 재사용

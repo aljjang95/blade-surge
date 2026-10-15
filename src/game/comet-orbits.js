@@ -228,6 +228,8 @@ export class CometOrbits {
       progress: this.progress, target: this.gates.length, rooms: Object.freeze(this.gates.filter(g => g.aligned).map(g => g.room.id)),
       meteorHits: this.#meteorHits, bossMeteors: this.#bossOrbit?.strikes ?? 0, bossCenterMeteors: this.#bossOrbit?.centerStrikes ?? 0,
       bossMeteorHits: this.#bossOrbit?.hits ?? 0 });
+    // 결과가 정해지면 보스방 유성도 끝낸다. 패배 뒤에는 Battle 이 더 이상 갱신하지 않으므로 여기서 예고 표시를 거둔다.
+    if (this.#bossOrbit && this.#bossOrbit.state !== 'ended') { this.#bossOrbit.stop(); this.#bossView?.update(this.#bossOrbit, 0, this.#bossOpts); }
     return this.#report;
   }
 }
