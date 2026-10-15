@@ -5,6 +5,7 @@ import { NightglassRecords } from './nightglass-records.js';
 import { AstralConstellations } from './astral-constellations.js';
 import { FalseThrones } from './false-thrones.js';
 import { CometOrbits } from './comet-orbits.js';
+import { CometDeepOrbits } from './comet-deep-orbits.js';
 
 /** @typedef {{id:number, x:number, z:number, type:string, label:string, spawned:boolean, cleared:boolean, discovered:boolean}} Room */
 /** @typedef {{rooms:Room[], startRoom:Room, bossRoom:Room, sealed?:boolean, minX?:number, minZ?:number, cols?:number, buildFlow:(x:number,z:number)=>Int32Array|null|undefined}} World */
@@ -19,6 +20,7 @@ export function createRouteObjectives(stage, world) {
   if ('kind' in def && def.kind === 'records') return new NightglassRecords(def, world);
   if ('kind' in def && def.kind === 'thrones') return new FalseThrones(def, world);
   if ('kind' in def && def.kind === 'orbits') return new CometOrbits(def, world);
+  if ('kind' in def && def.kind === 'deep-orbits') return new CometDeepOrbits(def, world);
   return 'kind' in def && def.kind === 'cooling' ? new CoolingValves(def, world) : new RouteObjectives(def, world);
 }
 

@@ -100,6 +100,23 @@ export const ROUTE_OBJECTIVES = Object.freeze({
       Object.freeze({ roomId: 7, label: '4번 궤도 고리 · 혜성 보고', target: -Math.PI / 2, start: -Math.PI / 2 + 2.2 }),
     ]),
   }),
+  // 혜성 요새 심층의 원안: 궤도 고리 5개. 룬석을 별에 맞추는 밀기 물리는 일반판과 같고,
+  // 첫 밀기에서 붕괴 시계(9초)가 시작된다. 정렬 뒤 중심 쉼터에 머물면 연결되고, 연결 직후 유성 폭풍 3회가 온다.
+  // 폭풍 예고 중에는 청록 빈 원(쉼터, center → star → side 순)만 안전하다. 공명 제단은 이 목표로 교체된다(공존 키 없음).
+  comet_deep: Object.freeze({
+    id: 'comet_deep_orbits', kind: 'deep-orbits',
+    track: 4, band: 1.5, contact: 1.3, tolerance: .14, lockSeconds: .4,
+    collapseSeconds: 9, shelterRadius: 2.2, connectSeconds: .5,
+    storm: Object.freeze({ warning: 1.4, gap: .6, tail: .4, damage: .08, radius: 12,
+      shelters: Object.freeze(['center', 'star', 'side']) }),
+    gates: Object.freeze([
+      Object.freeze({ roomId: 1, label: '1번 궤도 고리 · 붕괴한 관측대', target: Math.PI / 2, start: Math.PI / 2 - 2.2 }),
+      Object.freeze({ roomId: 2, label: '2번 궤도 고리 · 혜성 보고', target: 0, start: 2.2 }),
+      Object.freeze({ roomId: 3, label: '3번 궤도 고리 · 중앙 성벽', target: Math.PI / 2, start: Math.PI / 2 + 2.2 }),
+      Object.freeze({ roomId: 5, label: '4번 궤도 고리 · 유성 포대', target: Math.PI / 2, start: Math.PI / 2 - 2.2 }),
+      Object.freeze({ roomId: 7, label: '5번 궤도 고리 · 기사단 보고', target: Math.PI, start: Math.PI + 2.2 }),
+    ]),
+  }),
 });
 
 /** @param {any} stage */
@@ -116,6 +133,7 @@ export function routeObjectiveForStage(stage) {
   if (expedition.id === 'verdigris_sanctum') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.verdigris_standard : null;
   if (expedition.id === 'ashforge_catacomb') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.ashforge_standard : null;
   if (expedition.id === 'sable_mirage_basin') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.sable_standard : null;
-  if (expedition.id === 'comet_bastion') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.comet_standard : null;
+  if (expedition.id === 'comet_bastion') return expedition.depth === 'standard' ? ROUTE_OBJECTIVES.comet_standard
+    : expedition.depth === 'deep' ? ROUTE_OBJECTIVES.comet_deep : null;
   return expedition.id === 'bellfall_crypt' && expedition.depth === 'standard' ? ROUTE_OBJECTIVES.bellfall_crypt : null;
 }
