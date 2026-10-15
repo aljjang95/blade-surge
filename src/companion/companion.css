@@ -17,8 +17,8 @@ body:has(#tab-heroes.show) .companion-ui:not(.is-connected) .companion-launcher 
   --nev-cyan: #73d8dc;
   --nev-brass: #c49355;
   position: absolute;
-  top: calc(76px + env(safe-area-inset-top, 0px));
-  left: calc(14px + env(safe-area-inset-left, 0px));
+  top: calc(76px + var(--sat));
+  left: calc(14px + var(--sal));
   display: grid;
   grid-template-columns: 40px minmax(0, 1fr) 8px;
   align-items: center;
@@ -59,8 +59,8 @@ body:has(#tab-heroes.show) .companion-ui:not(.is-connected) .companion-launcher 
 
 /* 전투 중에는 필요할 때 여는 작은 진입점만 둔다. */
 .companion-battle-launcher {
-  top: calc(70px + env(safe-area-inset-top, 0px));
-  left: calc(10px + env(safe-area-inset-left, 0px));
+  top: calc(70px + var(--sat));
+  left: calc(10px + var(--sal));
   width: 44px;
   min-width: 44px;
   min-height: 44px;
@@ -127,13 +127,13 @@ body.party-playing .companion-launcher { display: none; }
 
 .companion-ui:not(.is-connected) .companion-launcher {
   top: auto;
-  bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(74px + var(--sab));
 }
 
 .companion-panel {
   position: fixed;
-  top: max(10px, env(safe-area-inset-top, 0px));
-  right: max(12px, env(safe-area-inset-right, 0px));
+  top: max(10px, var(--sat));
+  right: max(12px, var(--sar));
   display: flex;
   width: min(390px, calc(100vw - 24px));
   height: min(650px, calc(var(--app-height, 100dvh) - 24px));
@@ -271,9 +271,9 @@ body.party-playing .companion-launcher { display: none; }
 .companion-quick button:disabled { opacity: .5; cursor: wait; }
 
 @media (orientation: landscape) and (max-height: 480px) {
-  .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher):not(.companion-pause-launcher) { top: calc(64px + env(safe-area-inset-top, 0px)); min-width: 132px; }
+  .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher):not(.companion-pause-launcher) { top: calc(64px + var(--sat)); min-width: 132px; }
   #pause-overlay .pause-btns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .companion-ui:not(.is-connected) .companion-launcher { top: auto; bottom: calc(68px + env(safe-area-inset-bottom, 0px)); }
+  .companion-ui:not(.is-connected) .companion-launcher { top: auto; bottom: calc(68px + var(--sab)); }
   .companion-panel { width: min(640px, calc(100vw - 24px)); }
   .companion-head { min-height: 50px; padding-block: 4px; }
   .companion-hero { min-height: 96px; grid-template-columns: 32% 68%; }
@@ -291,9 +291,9 @@ body.party-playing .companion-launcher { display: none; }
 }
 
 @media (orientation: portrait), (max-width: 600px) {
-  .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher):not(.companion-pause-launcher) { top: auto; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); left: calc(10px + env(safe-area-inset-left, 0px)); min-width: 130px; }
-  .companion-ui.is-connected .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher) { top: calc(64px + env(safe-area-inset-top, 0px)); bottom: auto; }
-  .companion-panel { top: max(8px, env(safe-area-inset-top, 0px)); right: 8px; width: calc(100vw - 16px); }
+  .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher):not(.companion-pause-launcher) { top: auto; bottom: calc(76px + var(--sab)); left: calc(10px + var(--sal)); min-width: 130px; }
+  .companion-ui.is-connected .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher) { top: calc(64px + var(--sat)); bottom: auto; }
+  .companion-panel { top: max(8px, var(--sat)); right: 8px; width: calc(100vw - 16px); }
   .companion-hero { min-height: 132px; }
   .companion-portrait-canvas,
   .companion-portrait-fallback { min-height: 132px; }
@@ -312,7 +312,7 @@ body.party-playing .companion-launcher { display: none; }
 
 @media (orientation: landscape) {
   .companion-ui:not(.is-connected) .companion-launcher:not(.companion-lobby-launcher):not(.companion-battle-launcher) {
-    left: calc(76px + env(safe-area-inset-left, 0px));
-    bottom: calc(116px + env(safe-area-inset-bottom, 0px));
+    left: calc(76px + var(--sal));
+    bottom: calc(116px + var(--sab));
   }
 }
