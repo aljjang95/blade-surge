@@ -79,10 +79,10 @@ export function conceptRingSegments(floor, room, step = 1.6) {
   const r = roomRadius(room), n = Math.max(16, Math.ceil(Math.PI * 2 * r / step)), out = [];
   for (let i = 0; i < n; i++) {
     const a = (i + .5) / n * Math.PI * 2, c = Math.cos(a), s = Math.sin(a);
-    // 조각 양 끝과 가운데에서 바깥 세 거리를 본다. 하나라도 열린 바닥(회랑)이면 입구 틈이다.
-    // 원 자체의 1m 셀은 반지름 + 셀 대각선 반(0.71) 안쪽까지 걸치므로 r+1.0부터 본다.
+    // 조각 양 끝과 가운데에서 바깥 두 거리를 본다. 원을 관통해 들어오는 회랑은 원 바로 바깥부터 열려 있다.
+    // 원 자체의 1m 셀은 반지름 + 셀 대각선 반(0.71) 안쪽까지 걸치므로 r+1.0부터, 가까운 이웃 방은 잡지 않게 r+1.5까지만 본다.
     let gap = false;
-    for (const t of [-.45, 0, .45]) for (const k of [1, 1.6, 2.4]) {
+    for (const t of [-.45, 0, .45]) for (const k of [1, 1.5]) {
       const b = a + t * Math.PI * 2 / n;
       if (conceptOpen(floor, room.x + Math.cos(b) * (r + k), room.z + Math.sin(b) * (r + k))) gap = true;
     }
@@ -119,7 +119,21 @@ function distanceField(floor, pad, cell = 2) {
     northNear[z * cols + x] = v;
   }
   const at = (wx, wz, grid) => { const x = Math.floor((wx - minX) / cell), z = Math.floor((wz - minZ) / cell); return x < 0 || z < 0 || x >= cols || z >= rows ? 1e6 : grid[z * cols + x]; };
-  return { minX, minZ, cols, rows, cell, dist: (x, z) => at(x, z, d), northGap: (x, z) => at(x, z, northNear) };
+  // 바깥 테두리에서 보행 영역을 건너지 않고 닿는 칸. 닿지 않는 칸은 순환 동선 안쪽(다리 사이 물, 채석장 안 구덩이)이다.
+  const outer = new Float32Array(cols * rows), queue = [];
+  for (let x = 0; x < cols; x++) for (const z of [0, rows - 1]) queue.push(z * cols + x);
+  for (let z = 0; z < rows; z++) for (const x of [0, cols - 1]) queue.push(z * cols + x);
+  for (const i of queue) outer[i] = d[i] > 0 ? 1 : 0;
+  while (queue.length) {
+    const i = queue.pop(); if (!outer[i]) continue;
+    const x = i % cols, z = (i - x) / cols;
+    for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, nz = z + dz, n = nz * cols + nx;
+      if (nx < 0 || nz < 0 || nx >= cols || nz >= rows || outer[n] || d[n] === 0) continue;
+      outer[n] = 1; queue.push(n);
+    }
+  }
+  return { minX, minZ, cols, rows, cell, dist: (x, z) => at(x, z, d), northGap: (x, z) => at(x, z, northNear), outer: (x, z) => at(x, z, outer) === 1 };
 }
 
 /** 표면 UV를 월드 좌표에 투영해 겹친 바닥 판이 같은 결을 보이게 한다. */
@@ -236,16 +250,23 @@ export function buildConceptTerrain(floor, key, { quality = 'high', bindSightlin
   const field = distanceField(floor, pad);
   const cliffs = [], islands = [];
   const cliff = style.cliff;
-  for (let z = field.minZ; z < field.minZ + field.rows * field.cell; z += 3.1) for (let x = field.minX; x < field.minX + field.cols * field.cell; x += 3.1) {
-    const px = x + (random() - .5) * 2.4, pz = z + (random() - .5) * 2.4, d = field.dist(px, pz), roll = random(), h0 = random(), r0 = random();
-    if (d >= cliff.near + cliff.far * .45 || (d >= cliff.near && roll < .55)) {
-      if (d < cliff.near) continue;
+  for (let z = field.minZ; z < field.minZ + field.rows * field.cell; z += 3.6) for (let x = field.minX; x < field.minX + field.cols * field.cell; x += 3.6) {
+    const px = x + (random() - .5) * 2.6, pz = z + (random() - .5) * 2.6, d = field.dist(px, pz), roll = random(), h0 = random(), r0 = random();
+    if (!field.outer(px, pz)) {
+      // 순환 동선 안쪽: 컨셉의 열린 청록 물/채석 구덩이를 살리고 시야를 막지 않게 낮은 얼음섬·잔해만.
+      if (d > 3 && roll < (cliff.islands ? .14 : .22)) islands.push({ x: px, z: pz, h: (cliff.islands ? .5 : .2) + h0 * 1.5, r: .9 + r0 * 1.1, yaw: roll * 9 });
+      continue;
+    }
+    if (d < cliff.near) { if (cliff.islands && d > 4.5 && roll < .1) islands.push({ x: px, z: pz, h: .8 + h0 * 1.6, r: .9 + r0 * 1.2, yaw: roll * 9 }); continue; }
+    // 먼 바깥은 안개에 묻히므로 성기게 둔다(삼각형·그림자 비용).
+    if (roll > (d < cliff.near + 10 ? .62 : d < cliff.near + 26 ? .78 : .22)) continue;
+    {
       let h = cliff.minH + (cliff.maxH - cliff.minH) * smooth(cliff.near, cliff.near + 22, d) * (.6 + .4 * h0);
       const gap = field.northGap(px, pz);
       // 2m 격자 거리는 실제보다 최대 한 칸 길다. 한 칸 덜어 카메라 쪽 시야를 보수적으로 지킨다.
       if (gap < 30) h = Math.min(h, Math.max(1.4, (gap - 5) * .5));
       cliffs.push({ x: px, z: pz, h, r: cliff.radius[0] + (cliff.radius[1] - cliff.radius[0]) * r0, yaw: roll * Math.PI * 2 });
-    } else if (cliff.islands && d > 4.5 && d < cliff.near && roll < .1) islands.push({ x: px, z: pz, h: .8 + h0 * 1.6, r: .9 + r0 * 1.2, yaw: roll * 9 });
+    }
   }
   stats.columns = cliffs.length + islands.length;
   const columnGeometry = key === 'glacier' ? new THREE.CylinderGeometry(.82, 1, 1, 6) : new THREE.BoxGeometry(1.6, 1, 1.25);
