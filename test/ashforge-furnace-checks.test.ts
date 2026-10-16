@@ -853,3 +853,687 @@ describe('기준선 비교(compareTargetsOk · compareSetup · compareRuns)', ()
     expect(K.percentile([], .5)).toBe(null);
   });
 });
+
+// ---------- 거수 사슬 끊기(BUNDLE-15) ----------
+// 문구·수치는 PLAN 3.1 · 3.2 · 3.4 계약을 이 파일에 그대로 적는다(판정 함수의 상수를 가져오지 않는다).
+const CH: any = { id: 'ashforge_deep_chains', boss: 'ash_colossus', signature: 'kiln_hammer', count: 3, window: 5, hold: 1.2, radius: 1.6, pillarOffset: 8.4, anchorMargin: 1.2, exposed: 5, exposedMult: 1.5 };
+const BR = { id: 8, x: 150, z: 29, w: 28, h: 28 };
+const SIG = 'kiln_hammer';
+const T = {
+  attach: '거수의 사슬 3개 · 망치가 끄는 반대편 기둥에서 버티세요', open: '사슬 기둥 열림 · 5초 안에 1.2초 버티기', free: '거수의 사슬이 모두 끊겼다',
+  cut: (n: number) => '사슬 끊김 ' + n + '/3 · 거수가 휘청인다', plain: (n: number) => '남은 사슬 ' + n + '/3 · 망치가 끄는 반대편 기둥에서 버티기',
+  pull: '사슬이 망치 쪽으로 끌림 · 반대편 기둥으로', openDom: (w: string, h: string) => '기둥 열림 ' + w + '초 · 행동 없이 ' + h + '/1.2초', exposedDom: (w: string) => '사슬 끊김 · 휘청 ' + w + '초 · 받는 피해 150%',
+};
+const ceil1 = (v: number) => (Math.ceil(v * 10 - 1e-9) / 10).toFixed(1);
+const floor1 = (v: number) => (Math.floor(v * 10 + 1e-9) / 10).toFixed(1);
+
+/**
+ * 페이지 프로브가 남기는 사슬 행을 만드는 모의 세션. 컨트롤러는 PLAN 3.2 의 읽기 상태 이름을 가진 평범한 모의(규칙을 이 파일이 직접 구현)이고,
+ * 보스·영웅은 시나리오가 스텝마다 선언한다. 옵션(o)으로 규칙을 일부러 어겨 변이 표본을 만든다.
+ */
+class ChainSim {
+  rows: any[] = []; toasts: any[] = []; filters: any[] = []; marks: any[] = []; n = 0;
+  st = 'idle'; cuts = 0; wins = 0; miss = 0; brk = 0; side = 0; pillar: any = { x: 0, z: 0 }; anchor: any = { x: 0, z: 0 }; hd = 0; wl = 0; el = 0; ed = 0; lc: number | null = null;
+  lastHp = Infinity; watch = 0; opened = 0; lagLeft = 0;
+  boss: any = { bo: 0, al: 0, spn: 1, bs: 'chase', sp: null, pk: null, ix: null, iz: null, sq: 0, cq: 0, by: 1.2, bx: BR.x, bz: BR.z, bvx: 0, bvz: 0 };
+  hero: any = { x: BR.x, z: BR.z + 6, hp: 100, ha: 1, ps: 'move', au: 1 };
+  cat: string | null = null; catSince = 0; stable = 0; shown: string | null = null; lastDom: string | null = null; pause = 0;
+  constructor(public o: any = {}, public def: any = CH) { this.o = { lag: 0, ...o }; }
+  toast(msg: string) { this.toasts.push({ n: this.n, t: this.n * FRAME, msg, kind: 'gold' }); }
+  step() { this.n++; this.ctl(); this.snap(); }
+  tick(k: number) { for (let i = 0; i < k; i++) this.step(); }
+  tickUntil(fn: () => boolean, max = 800) { let k = 0; while (!fn() && k++ < max) this.step(); }
+  heroAt(x: number, z: number, ps = 'move') { Object.assign(this.hero, { x, z, ps }); }
+  /** 영웅이 한 스텝에 최대 speed 씩 목표로 걷는다(순간이동이 아님). 도착하면 ps 로 선다. */
+  walk(x: number, z: number, ps = 'idle', speed = .12) {
+    let k = 0;
+    while (Math.hypot(x - this.hero.x, z - this.hero.z) > speed && k++ < 400) {
+      const dx = x - this.hero.x, dz = z - this.hero.z, l = Math.hypot(dx, dz);
+      this.hero.x += dx / l * speed; this.hero.z += dz / l * speed; this.hero.ps = 'move'; this.step();
+    }
+    this.heroAt(x, z, ps);
+  }
+  // ---- 컨트롤러 모의(PLAN 3.2) ----
+  ctl() {
+    const dt = FRAME, d = this.def, b = this.boss;
+    if (this.st === 'ended') return;
+    if (b.bo && !b.al) { this.st = 'ended'; return; }
+    if (this.st === 'idle') { if (b.bo && b.al && !b.spn && this.n >= (this.o.attachAt ?? 0)) { this.st = 'chained'; this.toast(T.attach); if (this.o.noAttachToast) this.toasts.pop(); } return; }
+    if (this.lc !== null) this.lc += dt;
+    if (this.st === 'open') {
+      this.wl -= dt;
+      const h = this.hero, hurt = h.hp < this.lastHp - 1e-9; this.lastHp = h.hp;
+      const inside = Math.hypot(h.x - this.pillar.x, h.z - this.pillar.z) <= (this.o.holdRadius ?? d.radius);
+      const stable = this.o.ignoreState ? true : (h.ps === 'idle' || h.ps === 'move');
+      this.hd = inside && stable && (this.o.ignoreHurt || !hurt) ? this.hd + dt : 0;
+      if (this.hd + 1e-9 >= (this.o.hold ?? d.hold)) { this.cut(); return; }
+      if (this.wl <= 1e-9) { this.wl = 0; this.hd = 0; this.side = 0; this.miss += this.o.doubleMiss ? 2 : 1; this.st = 'chained'; }
+      return;
+    }
+    if (this.st === 'exposed') {
+      this.el -= dt;
+      if (this.el <= 1e-9) { this.el = 0; if (this.cuts < d.count) this.st = 'chained'; else { this.st = 'unchained'; if (!this.o.noFreeToast) this.toast(T.free); } }
+      return;
+    }
+    this.watchHammer();
+  }
+  watchHammer() {
+    const b = this.boss, casting = b.bs === 'attack' && b.sp === SIG && b.pk === SIG;
+    if (this.watch) {
+      if (b.cq === this.watch) {
+        if (this.lagLeft < (this.o.openLag ?? 0)) { this.lagLeft++; return; }
+        this.lagLeft = 0; this.watch = 0; if (!this.o.skipOpen) this.open(); return;
+      }
+      if (!casting || b.sq !== this.watch) { if (!this.o.noBroken) this.brk++; this.watch = 0; this.side = 0; } else return;
+    }
+    if (casting && b.sq !== this.opened) {
+      this.watch = b.sq;
+      if (!this.o.noPull) this.startPull();
+    }
+  }
+  startPull() {
+    const b = this.boss, d = this.def, dx = b.ix - BR.x;
+    let side = Math.abs(dx) >= 1 ? Math.sign(dx) : (this.wins % 2 ? -1 : 1);
+    if (this.o.wrongSide) side = -side;
+    this.side = side;
+    const off = this.o.pillarOffset ?? d.pillarOffset;
+    this.pillar = { x: Math.max(BR.x - BR.w / 2 + 1.2, Math.min(BR.x + BR.w / 2 - 1.2, BR.x - side * off)), z: BR.z };
+    this.anchor = { x: BR.x + side * (BR.w / 2 - d.anchorMargin) + (this.o.anchorShift ?? 0), z: b.bz + (this.o.anchorZShift ?? 0) };
+  }
+  open() {
+    this.opened = this.boss.sq; this.st = 'open'; this.wl = this.def.window; this.wins++; this.hd = 0; this.lastHp = this.hero.hp;
+    if (!this.o.noOpenToast) this.toast(T.open);
+  }
+  forceOpen() { this.opened = this.boss.sq; this.st = 'open'; this.wl = this.def.window; this.wins++; this.hd = 0; this.lastHp = this.hero.hp; this.toast(T.open); }
+  cut() {
+    this.cuts++; this.hd = 0; this.wl = 0; this.side = 0; this.lc = 0; this.st = 'exposed'; this.el = this.def.exposed;
+    this.toast(T.cut(this.o.cutToastN ?? this.cuts));
+  }
+  // ---- 보스 시나리오 ----
+  appear() { Object.assign(this.boss, { bo: 1, al: 1, spn: 1 }); this.tick(3); this.boss.spn = 0; this.tick(1); }
+  startCast(ix: number, sig = SIG) { Object.assign(this.boss, { sq: this.boss.sq + 1, bs: 'attack', sp: sig, pk: sig, ix, iz: this.hero.z }); }
+  completeCast() { this.boss.cq = this.boss.sq; }
+  endCast() { Object.assign(this.boss, { bs: 'chase', sp: null, pk: null }); }
+  hurtBoss(dmg: number) {
+    const exposed = this.st === 'exposed', mult = this.o.mult ?? this.def.exposedMult;
+    const out = exposed ? dmg * mult : this.o.multOutside ? dmg * 1.5 : dmg;
+    if (exposed) this.ed += this.o.edBasisBonus ? out - dmg : out;
+    this.filters.push({ n: this.n + 1, dmg, out, st: this.st });
+  }
+  killBoss() { this.boss.al = 0; this.tick(5); }
+  /** 목표창 문구(제목 + 상태별 계약 문장). */
+  domText(cat: string) {
+    const title = '거수의 사슬';
+    if (cat === 'plain') return title + T.plain(this.def.count - this.cuts);
+    if (cat === 'pull') return title + T.pull;
+    if (cat === 'open') return title + T.openDom(ceil1(this.wl), floor1(this.hd));
+    return title + T.exposedDom(ceil1(this.el));
+  }
+  snap() {
+    const b = this.boss, h = this.hero, st = this.st, d = this.def;
+    const open = st === 'open', exposed = st === 'exposed', pulling = st === 'chained' && this.side !== 0;
+    const row: any = { n: this.n, t: this.n * FRAME, hx: h.x, hz: h.z, hp: h.hp, ha: h.ha, au: h.au, ps: h.ps,
+      cs: st, cl: d.count - this.cuts, cu: this.cuts, cw: this.wins, cm: this.miss, cb: this.brk, pu: pulling ? 1 : 0, sd: st === 'chained' || open ? this.side : 0,
+      qx: this.pillar.x, qz: this.pillar.z, ax: this.anchor.x, az: this.anchor.z, hd: open ? this.hd : 0, ht: d.hold, wl: open ? this.wl : 0, wt: d.window, el: exposed ? this.el : 0, et: d.exposed,
+      ed: this.ed, lc: this.lc, bo: b.bo, al: b.al, spn: b.spn, bs: b.bs, sp: b.sp, pk: b.pk, ix: b.ix, iz: b.iz, sq: b.sq, cq: b.cq, by: b.by, bx: b.bx, bz: b.bz, bvx: b.bvx, bvz: b.bvz };
+    // 목표창 표본: 범주가 바뀐 뒤 o.lag 스텝 동안은 바로 앞 문구가 남는다(10Hz 갱신 대기 모의). open·exposed 는 문구가 바뀐 스텝, plain·pull 은 36번째 행에서 읽는다.
+    const cat = exposed ? 'exposed' : open ? 'open' : pulling ? 'pull' : st === 'chained' ? 'plain' : null;
+    if (cat !== this.cat) { this.cat = cat; this.catSince = this.n; this.stable = 0; if (cat === 'open' || cat === 'exposed' || cat === null) this.lastDom = null; }
+    if (cat) {
+      if (this.n - this.catSince >= (this.o.lag ?? 0)) this.shown = this.o.domOverride?.(cat, row) ?? this.domText(cat);
+      if (cat === 'open' || cat === 'exposed') {
+        if (this.shown !== this.lastDom) { row.dom = this.shown; this.lastDom = this.shown; }
+        else if (this.n - this.catSince === 10) row.dom = this.shown;   // 갱신 주기를 넘긴 시점에는 바뀌지 않았어도 항상 읽는다
+      }
+      else if (++this.stable === 36) row.dom = this.shown;
+    }
+    this.rows.push(row);
+  }
+  /** 한 번의 망치: 끌기 → 마지막 고리 → 창 → (끊김 → 노출) 또는 놓침. 영웅은 평소 방 아래쪽에서 이동하고, 창이 열리면 기둥으로 간다. */
+  cycle({ ix, mode = 'cut', castSteps = 100, idle = 45, hits = 2, fightHero = false }: any) {
+    this.heroAt(BR.x, BR.z + 6, 'move'); this.tick(idle / 2); this.hurtBoss(30); this.tick(idle - idle / 2);
+    this.startCast(ix); this.tick(castSteps);
+    this.completeCast(); this.step();
+    const near = mode === 'cut' ? { x: this.pillar.x, z: this.pillar.z } : { x: BR.x, z: BR.z + 9 };
+    this.heroAt(this.o.heroOffset ? near.x + this.o.heroOffset : near.x, near.z, mode === 'cut' ? (this.o.heroState ?? 'idle') : 'move');
+    let k = 0;
+    while (this.st === 'open' && k < 500) { if (k === 63) this.endCast(); if (this.o.hurtAt === k) this.hero.hp -= 5; this.step(); k++; }
+    if (this.boss.bs === 'attack') this.endCast();
+    if (this.st === 'exposed') {
+      for (let i = 0; i < hits; i++) { this.tick(40); this.hurtBoss(100); }
+      if (fightHero) this.hurtBoss(50);
+      this.tickUntil(() => this.st !== 'exposed', 600);
+    }
+  }
+  result() {
+    const c = { id: this.def.id, count: this.def.count, windows: this.wins, cuts: this.cuts, misses: this.miss, exposedDamage: Math.round(this.ed), broken: this.brk };
+    const line = '거수의 사슬 끊음 ' + c.cuts + '/' + c.count + ' · 기둥 창 ' + c.windows + '번 · 놓침 ' + c.misses + '번';
+    return { ro: { id: 'ashforge_heart_furnaces_deep', complete: true, chains: c }, line };
+  }
+}
+const IMPACTS = [BR.x + 6, BR.x - 6, BR.x + 6];
+/** 정상 세션: 거수 등장 → 망치 3번 → 매번 끊김 → 노출 → 사슬 모두 끊김(unchained) → 보스 처치. */
+function chainSession(o: any = {}, cycles: any[] = [{ ix: IMPACTS[0] }, { ix: IMPACTS[1] }, { ix: IMPACTS[2] }], def: any = CH) {
+  const s = new ChainSim(o, def);
+  s.tick(5); s.appear();
+  for (const c of cycles) s.cycle(c);
+  s.tick(20); s.killBoss();
+  return s;
+}
+const chainObs = (s: ChainSim, over: any = {}) => {
+  const r = s.result();
+  return { rows: s.rows, filters: s.filters, toasts: s.toasts, room: BR, result: r.ro, resultText: '원정 결과 ' + r.line + ' 전투 시간', resultLines: [{ aria: '거수의 사슬 결과', text: r.line }], encounterTactic: null, ...over };
+};
+const analyzeCh = (s: ChainSim, over: any = {}, opts: any = { autoCuts: true }, def: any = CH) => K.analyzeChains(chainObs(s, over), def, opts);
+
+describe('거수 사슬 정의·기하(checkChainsDefinition · chainsExpectedGeometry)', () => {
+  test('계약 정의는 통과하고 수치 하나라도 다르면 해당 항목이 issues 에 남는다', () => {
+    expect(K.checkChainsDefinition(CH).ok).toBe(true);
+    for (const [key, value] of [['window', 6], ['count', 4], ['hold', 1], ['radius', 2], ['pillarOffset', 7], ['anchorMargin', 1], ['exposed', 4], ['exposedMult', 2], ['boss', 'x'], ['signature', 'y'], ['id', 'z']]) {
+      const r = K.checkChainsDefinition({ ...CH, [key as string]: value });
+      expect(r.ok).toBe(false);
+      expect(r.issues.map((i: any) => i.field)).toEqual([key]);
+    }
+    expect(K.checkChainsDefinition(null).ok).toBe(false);
+  });
+  test('통합 뒤 실제 정의(ROUTE_OBJECTIVES.ashforge_deep.chains)가 있으면 계약과 같고, 다른 정의에는 없다', () => {
+    const real = DEEP.chains;
+    if (real) expect(K.checkChainsDefinition(real).ok).toBe(true);
+    for (const id of Object.keys(ROUTE_OBJECTIVES as any)) if (id !== 'ashforge_deep') expect((ROUTE_OBJECTIVES as any)[id].chains).toBeUndefined();
+  });
+  test('끌기 방향: 착탄점이 방 중심에서 1 이상 떨어지면 그쪽 부호, 안쪽이면 이전 창 수의 짝홀이다', () => {
+    const g = (ix: number, w = 0) => K.chainsExpectedGeometry(BR, ix, w, 33, CH);
+    expect(g(BR.x + 6).side).toBe(1);
+    expect(g(BR.x - 6).side).toBe(-1);
+    expect(g(BR.x + 1).side).toBe(1);
+    expect(g(BR.x - 1).side).toBe(-1);
+    expect(g(BR.x + .99, 0).side).toBe(1);
+    expect(g(BR.x + .99, 1).side).toBe(-1);
+    expect(g(BR.x - .5, 2).side).toBe(1);
+    expect(g(BR.x, 3).side).toBe(-1);
+  });
+  test('기둥은 방 중심 반대편 pillarOffset 이고 방 안쪽(가장자리 1.2)으로 잘리며, 벽 지점은 벽 − anchorMargin 에 시전 때의 보스 z 다', () => {
+    const e = K.chainsExpectedGeometry(BR, BR.x + 6, 0, 33, CH);
+    expect(e.pillar).toEqual({ x: BR.x - 8.4, z: BR.z });
+    expect(e.anchor).toEqual({ x: BR.x + 14 - 1.2, z: 33 });
+    const small = { ...BR, w: 14, h: 28 };
+    expect(K.chainsExpectedGeometry(small, small.x + 6, 0, 30, CH).pillar.x).toBe(small.x - 5.8);   // 7 − 1.2 로 잘림
+    expect(K.chainsExpectedGeometry(small, small.x - 6, 0, 30, CH).pillar.x).toBe(small.x + 5.8);
+  });
+  test('tenths: 경계에서 올림·내림 두 구현의 문구를 모두 허용한다', () => {
+    expect(K.tenths(4.9, 'ceil')).toEqual(['4.9']);
+    expect(K.tenths(4.90000000001, 'ceil')).toEqual(['5.0', '4.9']);
+    expect(K.tenths(.95, 'floor')).toEqual(['0.9']);
+    expect(K.tenths(1.2 - 1e-12, 'floor')).toEqual(['1.1', '1.2']);
+  });
+});
+
+describe('거수 사슬 종합(analyzeChains)', () => {
+  test('정상 세션(끊김 3번·노출·unchained·보스 처치)은 모든 항목을 통과하고 AUTO 수용(끊김 ≥ 1)도 통과한다', () => {
+    const s = chainSession();
+    const a = analyzeCh(s);
+    expect(failing(a)).toEqual([]);
+    expect(a.ok).toBe(true);
+    expect(a.windowCount).toBe(3);
+    expect(a.cutCount).toBe(3);
+    expect(a.geometry.pulled).toBe(3);
+    expect(a.geometry.casts.map((c: any) => c.wantSide)).toEqual([1, -1, 1]);
+    expect(a.filters.basis).toBe('output');
+    expect(a.toasts).toMatchObject({ attach: 1, opened: 3, freed: 1, wantFreed: 1 });
+    expect(a.windows.every((w: any) => w.hold.seconds >= 1.2 - FRAME)).toBe(true);
+    expect(a.result.ok).toBe(true);
+  });
+  test('놓친 창(영웅이 기둥 밖)은 window ± 1/60 로 끝나고 misses 로 세며, 이어지는 끊김도 통과한다', () => {
+    const s = chainSession({}, [{ ix: IMPACTS[0], mode: 'miss' }, { ix: IMPACTS[1] }]);
+    const a = analyzeCh(s, {}, { autoCuts: true });
+    expect(failing(a)).toEqual(['toasts'].filter(() => false));
+    expect(a.ok).toBe(true);
+    expect(a.missCount).toBe(1);
+    expect(a.cutCount).toBe(1);
+    expect(a.windows[0].endKind).toBe('miss');
+    expect(Math.abs(a.windows[0].length - 5)).toBeLessThanOrEqual(FRAME + 1e-9);
+    expect(a.toasts.wantFreed).toBe(0);
+  });
+  test('마지막 고리 없이 끝난 망치는 broken 으로 세고(독립 집계 일치), 이어진 망치는 창을 연다', () => {
+    const s = new ChainSim();
+    s.tick(5); s.appear();
+    s.heroAt(BR.x, BR.z + 6); s.tick(10);
+    s.startCast(IMPACTS[0]); s.tick(40); s.endCast(); s.tick(5);   // 마지막 고리 없이 끝남
+    s.cycle({ ix: IMPACTS[1] });
+    s.tick(10); s.killBoss();
+    const a = analyzeCh(s, {}, { autoCuts: true });
+    expect(a.counts.derived.broken).toBe(1);
+    expect(a.ok).toBe(true);
+    const lazy = new ChainSim({ noBroken: true });
+    lazy.tick(5); lazy.appear(); lazy.heroAt(BR.x, BR.z + 6); lazy.tick(10);
+    lazy.startCast(IMPACTS[0]); lazy.tick(40); lazy.endCast(); lazy.tick(5);
+    lazy.cycle({ ix: IMPACTS[1] }); lazy.tick(10); lazy.killBoss();
+    const b = analyzeCh(lazy, {}, { autoCuts: true });
+    expect(b.acceptance.countsConsistent).toBe(false);
+    expect(failing(b)).toEqual(['countsConsistent']);
+  });
+  test('보스가 창 도중 쓰러지면(truncated) 길이 상한만 보고 통과한다', () => {
+    const s = new ChainSim();
+    s.tick(5); s.appear(); s.heroAt(BR.x, BR.z + 6); s.tick(10);
+    s.startCast(IMPACTS[0]); s.tick(100); s.completeCast(); s.step();
+    s.heroAt(BR.x + 9, BR.z + 9); s.tick(100); s.boss.al = 0; s.tick(5);
+    const a = analyzeCh(s, {}, { autoCuts: false });
+    expect(a.windows[0].endKind).toBe('truncated');
+    expect(a.acceptance.windowLength).toBe(true);
+    expect(a.ok).toBe(true);
+  });
+  test('열림 규칙 변이: 다른 시그니처 뒤·트리거 없음·늦은 열림·같은 망치 두 번·끌기 없음·열리지 않음은 각각 해당 항목이 실패한다', () => {
+    // 다른 시그니처가 완성된 뒤 열림
+    const wrong = new ChainSim(); wrong.tick(5); wrong.appear(); wrong.heroAt(BR.x, BR.z + 6); wrong.tick(10);
+    wrong.startCast(IMPACTS[0], 'slam'); wrong.tick(30); wrong.completeCast(); wrong.step(); wrong.boss.bs = 'chase'; wrong.forceOpen(); wrong.tick(310); wrong.killBoss();
+    const w = analyzeCh(wrong, {}, { autoCuts: false });
+    expect(w.windows[0].reasons).toContain('wrong-signature');
+    expect(w.acceptance.noEarlyOpen).toBe(false);
+    // 트리거 없음
+    const none = new ChainSim(); none.tick(5); none.appear(); none.tick(10); none.forceOpen(); none.tick(310); none.killBoss();
+    const n = analyzeCh(none, {}, { autoCuts: false });
+    expect(n.windows[0].reasons).toContain('no-trigger');
+    expect(n.acceptance.noEarlyOpen).toBe(false);
+    // 늦은 열림(3스텝 지연)
+    const late = chainSession({ openLag: 3 });
+    const l = analyzeCh(late);
+    expect(l.windows[0].reasons).toContain('late-open');
+    expect(l.acceptance.openTiming).toBe(false);
+    // 1스텝 지연은 허용
+    expect(analyzeCh(chainSession({ openLag: 1 })).acceptance.openTiming).toBe(true);
+    // 같은 망치로 두 번 열림
+    const dup = new ChainSim({}); dup.tick(5); dup.appear(); dup.cycle({ ix: IMPACTS[0], mode: 'miss' }); dup.forceOpen(); dup.tick(310); dup.killBoss();
+    const d = analyzeCh(dup, {}, { autoCuts: false });
+    expect(d.windows.at(-1).reasons.length).toBeGreaterThan(0);
+    expect(d.acceptance.openTiming && d.acceptance.noEarlyOpen).toBe(false);
+    // 끌기 없이 열림
+    const np = chainSession({ noPull: true });
+    const p = analyzeCh(np);
+    expect(p.windows[0].reasons).toContain('not-pulled');
+    expect(p.acceptance.openTiming).toBe(false);
+    expect(p.acceptance.pullGeometry).toBe(false);
+    // 마지막 고리가 터졌는데 열리지 않음
+    const skip = chainSession({ skipOpen: true }, [{ ix: IMPACTS[0], mode: 'miss' }]);
+    const sk = analyzeCh(skip, {}, { autoCuts: false });
+    expect(sk.acceptance.noMissedOpen).toBe(false);
+    expect(sk.missed.length).toBe(1);
+  });
+  test('끌기 방향·기둥·벽 지점 변이(방향 반대·기둥 거리·벽 x·벽 z)는 독립 계산과 달라 pullGeometry 가 실패한다', () => {
+    expect(failing(analyzeCh(chainSession({ wrongSide: true })))).toContain('pullGeometry');
+    const off = analyzeCh(chainSession({ pillarOffset: 7 }));
+    expect(off.acceptance.pullGeometry).toBe(false);
+    expect(off.geometry.bad[0].kind).toBe('geometry');
+    expect(analyzeCh(chainSession({ anchorShift: 1 })).acceptance.pullGeometry).toBe(false);
+    expect(analyzeCh(chainSession({ anchorZShift: 2 })).acceptance.pullGeometry).toBe(false);
+    // 벽 z 오차 .3 은 허용(시전 시작 행과 컨트롤러가 본 스텝의 차이)
+    expect(analyzeCh(chainSession({ anchorZShift: .3 })).acceptance.pullGeometry).toBe(true);
+    // 방 정보를 읽지 못하면 실패
+    expect(analyzeCh(chainSession(), { room: null }).acceptance.pullGeometry).toBe(false);
+    // 착탄점이 중심 안쪽이면 창 번호 짝홀(독립 계산이 같은 규칙을 쓴다)
+    const mid = chainSession({}, [{ ix: BR.x + .4 }, { ix: BR.x + .4 }, { ix: BR.x - .4 }]);
+    const m = analyzeCh(mid);
+    expect(m.geometry.casts.map((c: any) => c.wantSide)).toEqual([1, -1, 1]);
+    expect(m.ok).toBe(true);
+  });
+  test('끌기 상태 변이: 끌기가 없는 행에 pullSide 가 남거나 chained 가 아닌데 pulling 이면 실패한다', () => {
+    const s = chainSession();
+    const bad = s.rows.map((r: any) => ({ ...r }));
+    const idle = bad.find((r: any) => r.cs === 'exposed'); idle.sd = 1;
+    expect(K.analyzeChains(chainObs(s, { rows: bad }), CH).acceptance.pullGeometry).toBe(false);
+    const bad2 = s.rows.map((r: any) => ({ ...r }));
+    bad2.find((r: any) => r.cs === 'open').pu = 1;
+    expect(K.analyzeChains(chainObs(s, { rows: bad2 }), CH).acceptance.pullGeometry).toBe(false);
+  });
+  test('버티기 변이: 짧은 hold·기둥 밖(반경 2.5)·동작 state·피격은 컨트롤러가 끊어도 holdBeforeCut 이 실패한다', () => {
+    const base = analyzeCh(chainSession());
+    expect(base.acceptance.holdBeforeCut).toBe(true);
+    const short = analyzeCh(chainSession({ hold: .8 }));
+    expect(short.acceptance.holdBeforeCut).toBe(false);
+    expect(short.windows[0].hold.seconds).toBeLessThan(1.2 - FRAME);
+    // 컨트롤러 반경을 4 로 넓혀 영웅이 기둥에서 2.5 떨어진 채 끊김
+    const far = analyzeCh(chainSession({ holdRadius: 4, heroOffset: 2.5 }));
+    expect(far.acceptance.holdBeforeCut).toBe(false);
+    expect(analyzeCh(chainSession({ heroOffset: 1.5 })).acceptance.holdBeforeCut).toBe(true);   // 반경 1.6 안은 통과
+    // 공격 state 인데 hold 가 쌓임
+    const act = analyzeCh(chainSession({ ignoreState: true, heroState: 'attack' }));
+    expect(act.acceptance.holdBeforeCut).toBe(false);
+    // 피격(hp 감소)이 있었는데 hold 가 이어짐
+    const hurt = analyzeCh(chainSession({ ignoreHurt: true, hurtAt: 30 }));
+    expect(hurt.acceptance.holdBeforeCut).toBe(false);
+    // 끊김 행에서 cuts 가 두 번 늘어나면 실패
+    const s = chainSession();
+    const rows = s.rows.map((r: any) => ({ ...r }));
+    const k = rows.findIndex((r: any) => r.cs === 'exposed');
+    for (let i = k; i < rows.length; i++) rows[i].cu += 1;
+    expect(K.analyzeChains(chainObs(s, { rows }), CH).acceptance.holdBeforeCut).toBe(false);
+  });
+  test('창·노출 길이와 시계 변이: 6초 창·4초 노출·windowLeft 시계 어긋남·끝나지 않은 창은 실패한다', () => {
+    const longWin = analyzeCh(chainSession({}, [{ ix: IMPACTS[0], mode: 'miss' }], { ...CH, window: 6 }));
+    expect(longWin.acceptance.windowLength).toBe(false);
+    const shortExp = analyzeCh(chainSession({}, undefined, { ...CH, exposed: 4 }));
+    expect(shortExp.acceptance.exposedLength).toBe(false);
+    const s = chainSession();
+    const rows = s.rows.map((r: any) => ({ ...r }));
+    const open = rows.filter((r: any) => r.cs === 'open');
+    open[10].wl -= .05;   // windowLeft 가 게임 시간보다 빨리 줄어듦
+    expect(K.analyzeChains(chainObs(s, { rows }), CH).acceptance.windowLength).toBe(false);
+    // 노출 시계가 멈춤
+    const rows2 = s.rows.map((r: any) => ({ ...r }));
+    rows2.filter((r: any) => r.cs === 'exposed')[7].el += .02;
+    expect(K.analyzeChains(chainObs(s, { rows: rows2 }), CH).acceptance.exposedLength).toBe(false);
+    // 끝나지 않은 창(마지막 행이 open)
+    const cut = new ChainSim(); cut.tick(5); cut.appear(); cut.heroAt(BR.x, BR.z + 6); cut.tick(5); cut.startCast(IMPACTS[0]); cut.tick(50); cut.completeCast(); cut.step(); cut.heroAt(BR.x + 9, BR.z + 9); cut.tick(30);
+    const un = analyzeCh(cut, {}, { autoCuts: false });
+    expect(un.windows[0].endKind).toBe('unterminated');
+    expect(un.acceptance.windowLength).toBe(false);
+    // 노출이 끝난 뒤 사슬이 남았는데 unchained 로 가면 실패
+    const rows3 = s.rows.map((r: any) => ({ ...r }));
+    const e1 = rows3.findIndex((r: any) => r.cs === 'exposed');
+    let j = e1; while (rows3[j].cs === 'exposed') j++;
+    rows3[j].cs = 'unchained';
+    expect(K.analyzeChains(chainObs(s, { rows: rows3 }), CH).acceptance.exposedLength).toBe(false);
+  });
+  test('묶임 변이: 창·노출 안 새 공격·yaw 변경·추격 속도는 각각 실패한다', () => {
+    const s = chainSession();
+    const clone = () => s.rows.map((r: any) => ({ ...r }));
+    const a = clone(); a.filter((r: any) => r.cs === 'exposed').slice(10).forEach((r: any) => { r.sq += 1; });
+    expect(K.analyzeChains(chainObs(s, { rows: a }), CH).acceptance.noNewAttack).toBe(false);
+    const b = clone(); b.filter((r: any) => r.cs === 'open').slice(20).forEach((r: any) => { r.by += .3; });
+    expect(K.analyzeChains(chainObs(s, { rows: b }), CH).acceptance.yawFixed).toBe(false);
+    const c = clone(); c.filter((r: any) => r.cs === 'exposed' && r.bs === 'chase')[3].bvx = .5;
+    expect(K.analyzeChains(chainObs(s, { rows: c }), CH).acceptance.pinnedStill).toBe(false);
+    const d = clone(); d.filter((r: any) => r.cs === 'open' && r.bs === 'chase')[3].bvz = -.5;
+    expect(K.analyzeChains(chainObs(s, { rows: d }), CH).acceptance.pinnedStill).toBe(false);
+    // 속도가 0 인 이동(넉백)은 보고만 한다
+    const e = clone(); e.filter((r: any) => r.cs === 'exposed').slice(5).forEach((r: any) => { r.bx += .8; });
+    const ae = K.analyzeChains(chainObs(s, { rows: e }), CH);
+    expect(ae.acceptance.pinnedStill).toBe(true);
+    expect(ae.exposures[0].moveMax).toBeCloseTo(.8, 6);
+  });
+  test('피해 배율 변이: 1배·2배·창 밖 배율·exposedDamage 불일치·기록 누락은 multiplier 가 실패한다', () => {
+    expect(analyzeCh(chainSession()).acceptance.multiplier).toBe(true);
+    expect(analyzeCh(chainSession({ mult: 1 })).acceptance.multiplier).toBe(false);
+    expect(analyzeCh(chainSession({ mult: 2 })).acceptance.multiplier).toBe(false);
+    expect(analyzeCh(chainSession({ multOutside: true })).acceptance.multiplier).toBe(false);
+    const s = chainSession();
+    const rows = s.rows.map((r: any) => ({ ...r }));
+    rows.forEach((r: any) => { if (r.n >= rows.at(-1).n - 2) r.ed += 40; });
+    expect(K.analyzeChains(chainObs(s, { rows }), CH).acceptance.multiplier).toBe(false);
+    expect(K.analyzeChains(chainObs(s, { filters: null }), CH).acceptance.multiplier).toBe(false);
+    // 끊김이 있었는데 노출 중 피해 호출이 한 번도 없으면 배율을 확인할 수 없어 실패
+    const nohit = chainSession({}, [{ ix: IMPACTS[0], hits: 0 }]);
+    expect(analyzeCh(nohit, {}, { autoCuts: false }).acceptance.multiplier).toBe(false);
+    // 증분(출력 − 입력) 합계로 읽는 구현도 basis 로 인정한다
+    const bonus = analyzeCh(chainSession({ edBasisBonus: true }));
+    expect(bonus.acceptance.multiplier).toBe(true);
+    expect(bonus.filters.basis).toBe('bonus');
+    // exposedDamage 가 노출 밖에서 늘어도 실패
+    const out = s.rows.map((r: any) => ({ ...r }));
+    const k = out.findIndex((r: any) => r.cs === 'chained' && r.cu === 1);
+    for (let i = k; i < out.length; i++) out[i].ed += 10;
+    expect(K.analyzeChains(chainObs(s, { rows: out }), CH).acceptance.multiplier).toBe(false);
+  });
+  test('부착·집계·lastCutT 변이: 부착 지연·부착 토스트 누락·끊김 수 불일치·놓침 두 번 세기·lastCutT 어긋남은 각각 실패한다', () => {
+    expect(analyzeCh(chainSession({ attachAt: 12 })).acceptance.attach).toBe(false);
+    const early = chainSession();
+    const rows = early.rows.map((r: any) => ({ ...r }));
+    rows.find((r: any) => r.cs === 'chained').cl = 2;
+    expect(K.analyzeChains(chainObs(early, { rows }), CH).acceptance.attach).toBe(false);
+    const nt = analyzeCh(chainSession({ noAttachToast: true }));
+    expect(nt.acceptance.attachToast).toBe(false);
+    expect(nt.acceptance.toasts).toBe(false);
+    expect(analyzeCh(chainSession({ doubleMiss: true }, [{ ix: IMPACTS[0], mode: 'miss' }, { ix: IMPACTS[1] }]), {}, { autoCuts: false }).acceptance.countsConsistent).toBe(false);
+    const lc = chainSession();
+    const r2 = lc.rows.map((r: any) => ({ ...r }));
+    r2.filter((r: any) => r.cu === 1 && r.lc !== null).slice(12).forEach((r: any) => { r.lc += .2; });
+    expect(K.analyzeChains(chainObs(lc, { rows: r2 }), CH).acceptance.lastCut).toBe(false);
+    const r3 = lc.rows.map((r: any) => ({ ...r }));
+    r3.find((r: any) => r.cs === 'chained' && r.cu === 0).lc = 3;
+    expect(K.analyzeChains(chainObs(lc, { rows: r3 }), CH).acceptance.lastCut).toBe(false);
+    // 전이 그래프 위반(chained → exposed)
+    const r4 = lc.rows.map((r: any) => ({ ...r }));
+    const o = r4.findIndex((r: any) => r.cs === 'open'); r4[o].cs = 'unchained';
+    expect(K.analyzeChains(chainObs(lc, { rows: r4 }), CH).acceptance.attach).toBe(false);
+    // 끊김이 하나도 없으면 AUTO 수용이 실패한다
+    const noCut = chainSession({}, [{ ix: IMPACTS[0], mode: 'miss' }]);
+    expect(analyzeCh(noCut, {}, { autoCuts: true }).acceptance.autoCuts).toBe(false);
+    expect(analyzeCh(noCut, {}, { autoCuts: false }).acceptance.autoCuts).toBeUndefined();
+  });
+});
+
+describe('거수 사슬 목표창·토스트·결과', () => {
+  test('정상 세션의 목표창 표본은 범주별 정확한 문구이고 plain·pull·open·exposed 가 모두 관측된다', () => {
+    const o = K.checkChainsObjective(chainSession().rows, CH);
+    expect(o.ok).toBe(true);
+    expect(o.counts.plain).toBeGreaterThan(0);
+    expect(o.counts.pull).toBeGreaterThan(0);
+    expect(o.counts.open).toBeGreaterThan(0);
+    expect(o.counts.exposed).toBeGreaterThan(0);
+    expect(o.lagCount).toBe(0);
+  });
+  test('상태가 바뀐 직후 갱신 주기(0.1초 + 2스텝) 안의 앞 상태 문구는 갱신 대기로 세고 통과, 주기를 넘으면 실패한다', () => {
+    const ok = K.checkChainsObjective(chainSession({ lag: 6 }).rows, CH);
+    expect(ok.ok).toBe(true);
+    expect(ok.lagCount).toBeGreaterThan(0);
+    const late = K.checkChainsObjective(chainSession({ lag: 12 }).rows, CH);
+    expect(late.ok).toBe(false);
+    expect(late.bad[0].why).toBe('text');
+  });
+  test('문구 변이: 열림 남은 시간·hold·제목·분수·퍼센트가 어긋나면 실패한다', () => {
+    const mut = (fn: (cat: string, row: any) => string | undefined) => K.checkChainsObjective(chainSession({ domOverride: fn }).rows, CH);
+    expect(mut((cat, row) => (cat === 'open' ? '거수의 사슬' + T.openDom(ceil1(row.wl + .1), floor1(row.hd)) : undefined)).ok).toBe(false);
+    expect(mut((cat, row) => (cat === 'open' ? '거수의 사슬' + T.openDom(ceil1(row.wl), floor1(row.hd + .1)) : undefined)).ok).toBe(false);
+    expect(mut((cat, row) => (cat === 'open' ? '거수의 사슬' + '기둥 열림 ' + ceil1(row.wl) + '초 · 행동 없이 ' + floor1(row.hd) + '/1.0초' : undefined)).ok).toBe(false);
+    expect(mut(cat => (cat === 'plain' ? '거수의 사슬' + T.plain(1) : undefined)).ok).toBe(false);
+    expect(mut((cat, row) => (cat === 'exposed' ? '거수의 사슬' + '사슬 끊김 · 휘청 ' + ceil1(row.el) + '초 · 받는 피해 200%' : undefined)).ok).toBe(false);
+    expect(mut((cat, row) => (cat === 'exposed' ? T.exposedDom(ceil1(row.el)) : undefined)).ok).toBe(false);   // 제목 없음
+    expect(mut(cat => (cat === 'pull' ? '거수의 사슬' + '사슬이 망치 쪽으로 끌림' : undefined)).ok).toBe(false);
+  });
+  test('보스가 쓰러진 행의 문구(정화 완료)는 판정하지 않고, 36스텝 이어진 plain 에 표본이 없으면 실패한다', () => {
+    const s = chainSession();
+    const rows = s.rows.map((r: any) => ({ ...r }));
+    const dead = rows.filter((r: any) => r.al === 0);
+    expect(dead.length).toBeGreaterThan(0);
+    dead.forEach((r: any) => { r.dom = '거수 정화 완료'; });
+    expect(K.checkChainsObjective(rows, CH).ok).toBe(true);
+    const missing = rows.map((r: any) => ({ ...r }));
+    const first = missing.find((r: any) => typeof r.dom === 'string' && r.cs === 'chained');
+    delete first.dom;
+    const m = K.checkChainsObjective(missing, CH);
+    expect(m.ok).toBe(false);
+    expect(m.missing.length).toBe(1);
+  });
+  test('토스트: 부착 1회·열림 창마다 1회·끊김 n/3 순서·마지막에 모두 끊김 1회. 어긋나면 실패한다', () => {
+    const s = chainSession();
+    const ok = K.checkChainsToasts(s.toasts, CH, { windows: 3, cuts: 3, controllerWindows: 3, free: true });
+    expect(ok.ok).toBe(true);
+    const bad = (fn: (t: any[]) => any[], opts: any = {}) => K.checkChainsToasts(fn([...s.toasts]), CH, { windows: 3, cuts: 3, controllerWindows: 3, free: true, ...opts }).ok;
+    expect(bad(t => t.filter(x => x.msg !== T.open || x !== t.find((y: any) => y.msg === T.open)))).toBe(false);
+    expect(bad(t => [...t, t[0]])).toBe(false);
+    expect(bad(t => [...t, { msg: T.free }])).toBe(false);
+    expect(bad(t => t.filter(x => x.msg !== T.free))).toBe(false);
+    expect(bad(t => [...t, { msg: T.cut(4) }])).toBe(false);
+    expect(bad(t => [...t, { msg: '거수의 사슬 풀림' }])).toBe(false);
+    expect(bad(t => t.filter(x => x.msg !== T.cut(2)))).toBe(false);
+    expect(bad(t => [...t].reverse())).toBe(false);
+    expect(bad(t => t, { windows: 2 })).toBe(false);
+    expect(bad(t => t, { controllerWindows: 4 })).toBe(false);
+    // 보스 전술 토스트(정확히 같은 문장)는 누출로 세지 않는다
+    const tactic = '용재 망치가 내려칠 때 사슬이 망치 쪽으로 끌리고 반대편에 사슬 기둥이 섭니다.';
+    expect(bad(t => [...t, { msg: tactic }])).toBe(false);
+    expect(bad(t => [...t, { msg: tactic }], { encounterTactic: tactic })).toBe(true);
+    // 끊김 토스트의 n 이 컨트롤러와 어긋나면 실패(모의: 첫 끊김이 2/3 으로 표시)
+    expect(K.checkChainsToasts(chainSession({ cutToastN: 2 }).toasts, CH, { windows: 3, cuts: 3, controllerWindows: 3, free: true }).ok).toBe(false);
+  });
+  test('결과: 고정 객체 · 마지막 관측값과 같음 · 결과 줄 · aria 요소 하나. 하나라도 어긋나면 실패한다', () => {
+    const s = chainSession();
+    const base = chainObs(s);
+    const last = s.rows.at(-1);
+    expect(K.checkChainsResult(base.result, last, base.resultText, base.resultLines, CH).ok).toBe(true);
+    const bad = (over: any) => K.checkChainsResult({ ...base.result, chains: { ...base.result.chains, ...over } }, last, base.resultText, base.resultLines, CH).ok;
+    expect(bad({ cuts: 2 })).toBe(false);
+    expect(bad({ windows: 4 })).toBe(false);
+    expect(bad({ misses: 1 })).toBe(false);
+    expect(bad({ broken: 1 })).toBe(false);
+    expect(bad({ exposedDamage: base.result.chains.exposedDamage + 1 })).toBe(false);
+    expect(bad({ count: 2 })).toBe(false);
+    expect(bad({ extra: 1 })).toBe(false);
+    expect(bad({ exposedDamage: 1.5 })).toBe(false);
+    expect(K.checkChainsResult({ ...base.result, chains: undefined }, last, base.resultText, base.resultLines, CH).ok).toBe(false);
+    expect(K.checkChainsResult(base.result, last, '원정 결과', base.resultLines, CH).ok).toBe(false);
+    expect(K.checkChainsResult(base.result, last, base.resultText, [], CH).ok).toBe(false);
+    expect(K.checkChainsResult(base.result, last, base.resultText, [...base.resultLines, ...base.resultLines], CH).ok).toBe(false);
+    expect(K.checkChainsResult(base.result, last, base.resultText, [{ aria: '거수의 사슬 결과', text: '거수의 사슬 끊음 2/3 · 기둥 창 3번 · 놓침 0번' }], CH).ok).toBe(false);
+    expect(K.chainsResultLine({ cuts: 3, count: 3, windows: 4, misses: 1 })).toBe('거수의 사슬 끊음 3/3 · 기둥 창 4번 · 놓침 1번');
+  });
+});
+
+describe('chains 프로필(checkChainsManual · checkChainsPause)', () => {
+  /** 수동 세션: AUTO 로 거수가 붙은 뒤 끈다 → 기둥 밖에서 열림을 기다림 → 기둥 안 hold ≥ .5 → 공격 키 → hold 0 → 다시 버텨 끊김. */
+  function manual(o: any = {}) {
+    const s = new ChainSim(o);
+    s.tick(5); s.appear(); s.tick(3);
+    s.hero.au = 0; s.marks = [{ mk: 'manual-start', n: s.n }];
+    s.heroAt(BR.x, BR.z + 6, 'move'); s.tick(20);
+    s.startCast(IMPACTS[0]); s.tick(5);
+    s.walk(s.pillar.x + (o.outsideAtOpen ? 0 : 3.4), s.pillar.z + (o.outsideAtOpen ? 0 : 0), 'move');
+    s.tick(70);
+    s.completeCast(); s.step();
+    s.walk(s.pillar.x, s.pillar.z, 'idle');
+    const need = Math.round((o.attackAt ?? .5) / FRAME);
+    s.tickUntil(() => s.hd >= (o.attackAt ?? .5) - 1e-9 || s.st !== 'open', 300);
+    s.marks.push({ mk: 'attack-key', n: s.n });
+    s.heroAt(s.pillar.x, s.pillar.z, 'attack'); s.tick(o.attackSteps ?? 3); s.heroAt(s.pillar.x, s.pillar.z, 'idle');
+    if (o.noReset) s.hd = .6;
+    s.tickUntil(() => s.st !== 'open', 400);
+    s.marks.push({ mk: 'manual-end', n: s.n });
+    s.hero.au = o.autoOnAfter === false ? 0 : 1;
+    s.tick(30);
+    void need;
+    return s;
+  }
+  const mk = (o: any = {}) => { const s: any = manual(o); return s; };
+  test('정상 수동 세션: 기둥 밖에서 열림 → hold ≥ .5 → 공격 키 → hold 0 → 다시 버텨 끊김이 모두 통과한다', () => {
+    const s = mk();
+    const r = K.checkChainsManual(s.rows, s.marks, CH, { room: BR });
+    expect(r).toMatchObject({ ok: true });
+    expect(r.outside).toBe(true);
+    expect(r.preHold).toBeGreaterThanOrEqual(.5 - FRAME);
+    expect(r.cutHold.startN).toBeGreaterThan(s.marks[1].n);
+  });
+  test('수동 변이: AUTO 켜짐·순간이동·기둥 안에서 열림·공격 전 hold 부족·hold 가 0 이 되지 않음·표식 누락은 실패한다', () => {
+    const s = mk();
+    const run = (rows: any[], marks = s.marks) => K.checkChainsManual(rows, marks, CH, { room: BR });
+    const au = s.rows.map((r: any) => ({ ...r })); au.find((r: any) => r.n > s.marks[0].n + 3).au = 1;
+    expect(run(au).ok).toBe(false);
+    const tp = s.rows.map((r: any) => ({ ...r })); tp.filter((r: any) => r.n > s.marks[0].n)[10].hx += 4;
+    expect(run(tp).teleports).toBeGreaterThan(0);
+    expect(run(tp).ok).toBe(false);
+    expect(run(mk({ outsideAtOpen: true }).rows, mk({ outsideAtOpen: true }).marks).outside).toBe(false);
+    const early = mk({ attackAt: .2 });
+    expect(K.checkChainsManual(early.rows, early.marks, CH, { room: BR }).attackOk).toBe(false);
+    const noReset = mk({ noReset: true, attackSteps: 0 });
+    expect(K.checkChainsManual(noReset.rows, noReset.marks, CH, { room: BR }).ok).toBe(false);
+    expect(run(s.rows, s.marks.filter((m: any) => m.mk !== 'attack-key')).ok).toBe(false);
+    expect(run(s.rows, s.marks.filter((m: any) => m.mk !== 'manual-end')).reason).toBe('missing-marks');
+    expect(run(s.rows, [{ mk: 'manual-start', n: 999999 }, ...s.marks.slice(1)]).ok).toBe(false);
+    const dead = s.rows.map((r: any) => ({ ...r })); dead.find((r: any) => r.n > s.marks[0].n + 5).ha = 0;
+    expect(run(dead).ok).toBe(false);
+    expect(K.checkChainsManual(s.rows, s.marks, CH, { room: null }).ok).toBe(false);
+  });
+  const snap = (over: any = {}, chain: any = {}) => ({ elapsed: 12.5, paused: false, chain: { cs: 'open', hd: .4, wl: 3.2, by: 1.2, sq: 5, bx: 150, bz: 29, ...chain }, ...over });
+  test('창 안 정지: 게임 시간·windowLeft·hold 불변, 재개 뒤 windowLeft 는 흐른 시간만큼, hold 는 이어짐', () => {
+    const before = snap(), paused = snap({ paused: true }), still = snap({ paused: true });
+    const resumed = snap({ elapsed: 12.5 + 6 * FRAME, paused: false }, { hd: .4 + 6 * FRAME, wl: 3.2 - 6 * FRAME });
+    const r = K.checkChainsPause({ before, paused, still, resumed, steps: 6 });
+    expect(r.ok).toBe(true);
+    expect(r.holdKept).toBe(true);
+    const ck = (over: any) => K.checkChainsPause({ before, paused: over.paused ?? paused, still: over.still ?? still, resumed: over.resumed ?? resumed, steps: 6 }).ok;
+    expect(ck({ still: snap({ paused: true, elapsed: 13 }) })).toBe(false);   // 정지 중 게임 시간이 흐름
+    expect(ck({ still: snap({ paused: true }, { wl: 3.1 }) })).toBe(false);   // windowLeft 가 줆
+    expect(ck({ still: snap({ paused: true }, { hd: .5 }) })).toBe(false);   // hold 가 늚
+    expect(ck({ paused: snap({ paused: true }, { hd: 0 }) })).toBe(false);   // 정지 직후 hold 가 지워짐
+    expect(ck({ still: snap({ paused: true }, { by: 2 }) })).toBe(false);   // 보스 yaw 변화
+    expect(ck({ still: snap({ paused: true }, { sq: 6 }) })).toBe(false);   // 새 공격
+    expect(ck({ resumed: snap({ elapsed: 12.5 + 6 * FRAME }, { hd: 0, wl: 3.2 - 6 * FRAME }) })).toBe(false);   // 재개 뒤 hold 가 0 으로 지워짐
+    expect(ck({ resumed: snap({ elapsed: 12.5 + 6 * FRAME }, { hd: .4 + 6 * FRAME, wl: 3.2 }) })).toBe(false);   // windowLeft 가 흐르지 않음
+    expect(ck({ resumed: snap({ elapsed: 12.5 }, { hd: .4, wl: 3.2 }) })).toBe(false);   // 재개 뒤 시간이 흐르지 않음
+    expect(ck({ resumed: snap({ elapsed: 12.5 + 6 * FRAME }, { cs: 'chained', hd: 0, wl: 0 }) })).toBe(false);
+    expect(K.checkChainsPause({ before: snap({}, { hd: .1 }), paused, still, resumed, steps: 6 }).ok).toBe(false);   // 정지 직전 hold 부족
+    expect(K.checkChainsPause({ before: snap({}, { cs: 'chained' }), paused, still, resumed, steps: 6 }).ok).toBe(false);
+  });
+});
+
+describe('screens 사슬 순간(checkChainMoment) · 기준선 누출', () => {
+  const shot = (chain: any) => ({ capture: { chain: { bo: 1, al: 1, spn: 0, cs: 'chained', pu: 1, sd: 1, hd: 0, wl: 0, el: 0, cl: 3, dom: '거수의 사슬' + T.pull, ...chain } } });
+  test('끌기 중 · 기둥 열림(hold > 0) · 끊김(exposed, 노출 시작 .5초 뒤) 순간을 상태와 목표창 문구로 판정한다', () => {
+    expect(K.checkChainMoment(shot({}), CH, 'chain-pull').ok).toBe(true);
+    expect(K.checkChainMoment(shot({ pu: 0 }), CH, 'chain-pull').ok).toBe(false);
+    expect(K.checkChainMoment(shot({ dom: '거수의 사슬' + T.plain(3) }), CH, 'chain-pull').ok).toBe(false);
+    expect(K.checkChainMoment(shot({ dom: T.pull }), CH, 'chain-pull').ok).toBe(false);
+    const open = { cs: 'open', pu: 0, sd: 1, hd: .4, wl: 3.2, dom: '거수의 사슬' + T.openDom('3.2', '0.4') };
+    expect(K.checkChainMoment(shot(open), CH, 'chain-open').ok).toBe(true);
+    expect(K.checkChainMoment(shot({ ...open, hd: 0 }), CH, 'chain-open').ok).toBe(false);
+    expect(K.checkChainMoment(shot({ ...open, dom: '거수의 사슬' + T.pull }), CH, 'chain-open').ok).toBe(false);
+    const cut = { cs: 'exposed', pu: 0, sd: 0, el: 4.2, cl: 2, dom: '거수의 사슬' + T.exposedDom('4.2') };
+    expect(K.checkChainMoment(shot(cut), CH, 'chain-cut').ok).toBe(true);
+    expect(K.checkChainMoment(shot({ ...cut, el: 4.9 }), CH, 'chain-cut').ok).toBe(false);
+    expect(K.checkChainMoment(shot({ ...cut, dom: '거수의 사슬' + T.exposedDom('4.2').replace('150%', '100%') }), CH, 'chain-cut').ok).toBe(false);
+    expect(K.checkChainMoment({ capture: {} }, CH, 'chain-cut').ok).toBe(false);
+    expect(K.checkChainMoment(shot({ al: 0 }), CH, 'chain-pull').ok).toBe(false);
+    expect(K.checkChainMoment(shot({}), CH, 'unknown').ok).toBe(false);
+    expect([...K.CHAIN_MOMENTS]).toEqual(['chain-pull', 'chain-open', 'chain-cut']);
+  });
+  test('기준선 누출: 토스트·목표창·결과 화면에 사슬 문구가 없고 관측이 있어야 통과한다', () => {
+    const toasts = [{ msg: '보스의 기척이 느껴진다…' }, { msg: '사슬이 당기는 반대편으로 빠지세요' }];
+    const doms = ['심장로 냉각 4/4 · 완료', '잿빛 재벼림 거수'];
+    expect(K.checkChainsLeak(toasts, doms, '원정 결과 심장로 냉각 4/4 · 완료').ok).toBe(true);
+    expect(K.checkChainsLeak([...toasts, { msg: T.attach }], doms).ok).toBe(false);
+    expect(K.checkChainsLeak(toasts, [...doms, T.openDom('5.0', '0.0')], '').ok).toBe(true);   // 열림 문구 자체는 '기둥 열림'이라 누출어가 아니다
+    expect(K.checkChainsLeak(toasts, [...doms, '사슬 끊김 · 휘청'], '').ok).toBe(false);
+    expect(K.checkChainsLeak(toasts, doms, '거수의 사슬 끊음 0/3').ok).toBe(false);
+    expect(K.checkChainsLeak([], doms).ok).toBe(false);
+    expect(K.checkChainsLeak(toasts, []).ok).toBe(false);
+  });
+});
+
+describe('거수 사슬 짝 비교(compareChainsTargetsOk · compareChainRuns)', () => {
+  const defBase = { id: 'ashforge_heart_furnaces_deep', release: 'ember-chains', shockWindow: true, gates: [1, 2] };
+  const cand = (over: any = {}) => ({ head: 'a'.repeat(40), status: 'pass', runStatus: 'pass', furnacesOk: true, chainsOk: true, routeDefinition: { ...defBase, chains: CH }, ...over });
+  const base = (over: any = {}) => ({ head: 'b'.repeat(40), status: 'pass', runStatus: 'pass', furnacesOk: true, chainsOk: null, routeDefinition: { ...defBase }, ...over });
+  test('후보 정의에는 chains 가 있고 기준선에는 없으며 나머지 정의가 같고 HEAD 가 다르고 양쪽 판정이 통과해야 한다', () => {
+    expect(K.compareChainsTargetsOk(cand(), base())).toBe(true);
+    expect(K.compareChainsTargetsOk(cand({ chainsOk: false }), base())).toBe(false);
+    expect(K.compareChainsTargetsOk(cand({ chainsOk: null }), base())).toBe(false);
+    expect(K.compareChainsTargetsOk(cand({ furnacesOk: false }), base())).toBe(false);
+    expect(K.compareChainsTargetsOk(cand(), base({ furnacesOk: false }))).toBe(false);
+    expect(K.compareChainsTargetsOk(cand(), base({ head: 'a'.repeat(40) }))).toBe(false);
+    expect(K.compareChainsTargetsOk(cand(), base({ routeDefinition: { ...defBase, chains: CH } }))).toBe(false);   // 기준선에 chains 가 있음
+    expect(K.compareChainsTargetsOk(cand(), base({ routeDefinition: null }))).toBe(false);   // 기준선 정의 없음(다른 기준선)
+    expect(K.compareChainsTargetsOk(cand({ routeDefinition: { ...defBase } }), base())).toBe(false);   // 후보에 chains 없음
+    expect(K.compareChainsTargetsOk(cand(), base({ routeDefinition: { ...defBase, shockWindow: false } }))).toBe(false);   // 사슬 밖 정의가 다름
+    expect(K.compareChainsTargetsOk(cand({ status: 'fail' }), base())).toBe(false);
+    expect(K.compareChainsTargetsOk(cand(), base({ runStatus: 'fail' }))).toBe(false);
+    expect(K.compareChainsTargetsOk(null, base())).toBe(false);
+  });
+  const side = (time: number, over50: number, over: any = {}) => ({ time, runOver50: over50, steps: 70000, samples: [], furnaceRooms: [2, 4], kills: 40, ...over });
+  test('게이트는 50ms 초과 cand ≤ base + 2 하나이고, 시간 비·처치 수·사슬 결과는 보고 항목이다', () => {
+    const r = K.compareChainRuns(side(300, 3, { chainsSummary: { cuts: 3 } }), side(100, 1));
+    expect(r.ok).toBe(true);
+    expect(r.gates).toEqual({ slow: true });
+    expect(r.report.time.ratio).toBe(3);
+    expect(r.report.kills).toEqual({ cand: 40, base: 40 });
+    expect(r.report.chains).toEqual({ cuts: 3 });
+    expect(K.compareChainRuns(side(100, 4), side(100, 1)).ok).toBe(false);
+    expect(K.compareChainRuns(side(100, 3), side(100, 1)).ok).toBe(true);
+    expect(K.compareChainRuns(side(100, 0), side(100, null as any)).ok).toBe(false);
+    expect(K.compareChainRuns(side(null as any, 0), side(100, 0)).ok).toBe(true);   // 시간 비는 게이트가 아니다
+    expect(K.compareChainRuns(side(100, 0), side(100, 0)).report.over50PerThousandSteps.cand).toBe(0);
+  });
+  test('runOrder: 어느 쪽이 먼저 돌았는지 보고한다', () => {
+    expect(K.runOrder('2026-10-16T01:00:00Z', '2026-10-16T02:00:00Z')).toBe('cand-first');
+    expect(K.runOrder('2026-10-16T03:00:00Z', '2026-10-16T02:00:00Z')).toBe('base-first');
+    expect(K.runOrder('x', 'y')).toBe('unknown');
+    expect(K.compareChainRuns(side(1, 0, { started: '2026-10-16T01:00:00Z' }), side(1, 0, { started: '2026-10-16T02:00:00Z' })).report.order).toBe('cand-first');
+  });
+});

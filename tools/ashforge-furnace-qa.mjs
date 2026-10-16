@@ -8,12 +8,18 @@
 // app.renderer.r.info.render.calls(방 첫 진입 draw call 표본, renderer.render() 단독 호출), releaseView.group 안의 InstancedMesh(사슬: count = 심장로 수 × 4 의 instanceMatrix 스케일, 심장로별 최댓값),
 // 뷰 같은 프레임 A/B: 심장로 모습이 바뀐 스텝 끝에서 같은 프레임을 releaseView.group 표시/숨김(그리고 route.view.group 까지 숨김)으로 renderer.render() 해 calls 차이를 잰다(시뮬레이션 스텝 없음, 끝나면 visible 복원).
 // 경로 정의(ROUTE_OBJECTIVES.ashforge_deep)가 없는 기준선 빌드(--project)에서는 심장로 판정을 건너뛰고 공통 측정만 남긴다. 일반(ashforge_standard)은 냉각 규칙을 판정하고 syncView·release 판정은 후보에서만 한다.
+// BUNDLE-15: 거수 사슬 끊기(ROUTE_OBJECTIVES.ashforge_deep.chains)가 있는 후보 빌드는 보스방 진입 뒤 스텝마다 app.battle.routeObjectives.chains(state/chainsLeft/cuts/windows/misses/broken/pulling/pullSide/pillar/anchor/hold/holdTotal/
+// windowLeft/windowTotal/exposedLeft/exposedTotal/exposedDamage/lastCutT/boss)와 보스(pos/yaw/hp/alive/state/special/attackSequence/completedAttackSequence/signatures.plan.key·events[0].x/z/velocity), 영웅 pos/state/hp, 보스방 x/z/w/h,
+// #objective 문구, 토스트, 결과 routeObjective.chains 를 관측한다. chains.filter 는 (입력 피해, 출력, 그 순간 state)를 기록만 하는 감싸개로 둔다(동작을 바꾸지 않는다).
+// 끌기 방향·기둥·벽 지점은 도구가 직접 읽은 plan.events[0] 과 보스방으로 다시 계산해 대조하고(컨트롤러 값을 같은 식으로 되풀이하지 않는다), 버티기는 도구가 읽은 영웅 위치와 기둥 거리·영웅 state·hp 로 판정한다.
+// 사슬 정의가 없는 기준선(6316e0b)은 사슬 판정을 건너뛰고 route.chains·chainsView 가 없는지, 사슬 문구·토스트 누출이 없는지만 관찰한다.
 // 판정 함수는 tools/ashforge-furnace-checks.mjs 에 있고 test/ashforge-furnace-checks.test.ts 가 합격·불합격 입력을 모두 검사한다. 기준선 비교는 tools/ashforge-furnace-compare.mjs 다.
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createExpeditionQa, nativeGameplayFocus, qaArgument, qaAssert, qaHash } from './expedition-qa-runtime.mjs';
-import { CHAINS_PER_FURNACE, SCALE_EPS, STATE_CODE, analyzeFurnaces, analyzeOrder, analyzePauseCooling, checkPause, checkScreenMoment, checkScreens, stepStats } from './ashforge-furnace-checks.mjs';
+import { CHAINS, CHAINS_PER_FURNACE, CHAIN_MOMENTS, SCALE_EPS, STATE_CODE, analyzeChains, analyzeFurnaces, analyzeOrder, analyzePauseCooling, checkChainMoment, checkChainsLeak, checkChainsManual, checkChainsPause,
+  checkPause, checkScreenMoment, checkScreens, stepStats } from './ashforge-furnace-checks.mjs';
 
 const HELP = [
   '사용법: node tools/ashforge-furnace-qa.mjs --expected-sha=<40hex> --out=<새 절대경로> [옵션]',
@@ -26,7 +32,7 @@ const HELP = [
   '  --project=<절대경로>      검사 대상 프로젝트 루트(기본: 이 도구가 있는 저장소). dist 가 미리 빌드돼 있어야 한다(이 도구는 빌드하지 않는다).',
   '                           심층 정의(ROUTE_OBJECTIVES.ashforge_deep)나 releaseView 가 없는 기준선 빌드(예: 34676ef)도 받는다. 그때는 해당 판정을 건너뛰고 공통 측정만 남긴다.',
   '  --depth=<standard|deep>  개인 기본 원정 ashforge_catacomb 의 일반 카드 또는 심층 카드(기본 deep). 접근·에너지·증원 횟수는 대상 프로젝트 데이터에서 읽는다.',
-  '  --profile=<목록>          auto|order|pause|screens|all (쉼표로 여러 개, 기본 auto). order·pause·screens 는 심층 전용(충격파 창이 있는 정의)',
+  '  --profile=<목록>          auto|order|pause|screens|chains|all (쉼표로 여러 개, 기본 auto). order·pause·screens 는 심층 전용(충격파 창이 있는 정의), chains 는 사슬 정의(ashforge_deep.chains)가 있는 후보 심층 전용',
   '  --seed=<uint32>           Math.random 시드(기본 20261015)',
   '  --no-reseed               전투 시작 직후 재시드(window.__qaReseed)를 끈다. 기본은 켬: 전투가 활성이고 route.prepareView 가 끝난 뒤 첫 app.step 전에 한 번 같은 시드로 되돌린다',
   '  --hero=<id>               fixture 영웅 knight|mage 등(기본 knight)',
@@ -34,6 +40,7 @@ const HELP = [
   '  --motion=reduce|no-preference   브라우저 prefers-reduced-motion(기본 reduce). 값 없는 --motion 은 reduce',
   '  --quality=low|default     low 면 설정 핸들러와 같은 경로(settings.quality=low + applySettings)로 낮은 화질. 값 없는 --quality 는 low',
   '  --origin=<url>            공유 런타임 옵션(로컬 preview 또는 고정 라이브 주소만 허용)',
+  '  --wait-load=<수>          시작 전 1분 load 가 이 값 이하가 될 때까지 최대 180초 기다린다(기다린 시간과 실제 load 를 report.load 에 기록, 3분이 지나면 그대로 시작)',
   '  --help                    이 도움말',
   '',
   '프로필(F = fixture, R = 실제 UI·입력, C = 제어 실행)',
@@ -41,21 +48,34 @@ const HELP = [
   '           + 냉각 판정: 냉각마다 방 순서·직전 연속 유지(게임 시각 길이·조작판 반경 안·표본 전부 padOpen)·적/대기열 0·정예방 증원·닫힌 대기 표본(심층)·보스 봉인 해제·결과/결과 줄·목표창 닫힘/열림 문구',
   '           + 해방 연출(심층): count = 심장로 수 × 10, drawCalls ≤ 2, states = 관측 기대 상태, 방 발견 스텝 hidden 아님, 냉각 뒤 releaseSeconds + 1/60 안에 사슬 scale 0',
   '           + 뷰 같은 프레임 A/B(C): 모습이 바뀐 스텝 끝에서 releaseView.group 표시/숨김으로 calls 차이 ≤ 2 이고 releaseView.drawCalls 와 같은지(표본 ≥ 3, bound·open·releasing 포함). 냉각 장치 뷰까지 포함한 경로 목표 전체 A/B 는 보고 항목',
+  '           + 거수 사슬 판정(chains 정의가 있는 후보, 모든 프로필의 완주에 적용; 관측이 빠지면 실패): 정의 = PLAN 3.1 계약 · 보스 등장 뒤 한 스텝 안에 chained(사슬 3/3)·부착 토스트 1회 · 망치 시전마다 끌기 방향·기둥·벽 지점을 도구가 직접 읽은 plan.events[0] 과 보스방 x/z/w/h 로 다시 계산해 대조 ·',
+  '             창은 망치 마지막 고리(completedAttackSequence)와 같은 스텝 또는 다음 스텝에만 열리고 같은 망치로 한 번 · 창 길이 ≤ window + 1/60(놓침은 = window ± 1/60)·windowLeft 시계 · 끊김 직전 연속 버티기(도구가 영웅 위치로 잰 기둥 거리 ≤ radius·idle|move·hp 비감소)가 게임 시간 ≥ hold − 1/60 ·',
+  '             창·노출 안 보스 yaw 불변·새 공격 0·추격 속도 0(이동은 보고) · 노출 길이 = exposed ± 1/60·exposed 안 모든 피해 × exposedMult(필터 감싸개 기록)·exposedDamage 집계 · 끊김·창·놓침·broken 집계 일치 · 목표창 문구(10Hz 갱신 대기 규칙, 보스 쓰러진 행 제외) · 토스트 · 결과 routeObjective.chains·결과 줄 ·',
+  '             AUTO 수용(auto 프로필 심층: 끊김 ≥ 1). 사슬 정의가 없는 기준선은 route.chains·chainsView 가 없는지와 사슬 문구 누출이 없는지만 확인한다',
   '  order    AUTO 로 1번 심장로(방 2) ready·적 0 까지 → R #btn-auto 끔 → R 키보드(KeyW/A/S/D)로 조작판 반경 1.2 안 → 첫 충격파(shocks 0→1)까지 머묾 → 옮겨 간 조작판으로 → 유지 ≥ 1.0 뒤 조작판에서 3.0 밖 →',
   '           hold 0 → 망치 예고(warning)가 되면 현재 조작판으로 들어가 다음 충격파까지 머묾(닫힌 체류 합계 ≥ 2초) → 옮겨 간 조작판에서 냉각까지 → R AUTO 켬 → 완주. 공격 키 없음',
   '  pause    열린 유지 hold ≥ 0.8 에서 R #btn-pause → 120스텝+1초 게임 시간 불변·hold 0 → R #btn-resume → 새 유지 ≥ 2초 뒤 냉각 → 완주',
   '  screens  bound·shock·open(hold ≥ 1.0)·releasing(냉각 뒤 0.3초)·released(냉각 뒤 2초) 순간마다 640x360, 844x390, 390x844 PNG + 결과 PNG, PNG 마다 그 순간 states 기록',
+  '           + 후보는 순간 3개 더(보스 등장 뒤): chain-pull(끌기 중, 목표창 끌기 문구)·chain-open(기둥 열림, hold > 0)·chain-cut(끊김, exposed 시작 .5초 뒤) 각 640x360, 844x390, 390x844 PNG',
+  '  chains   (후보 심층만) AUTO 로 보스방까지(사슬이 붙으면 chained) → R #btn-auto 끔 → R 키보드(KeyW/A/S/D 이동, KeyJ 공격)로 (1) 기둥 열림까지 기둥 밖에서 회피 이동만 (2) 열리면 기둥 안으로 이동해 hold ≥ 0.5 → 공격 키 한 번 → hold 0 확인',
+  '           (3) 다시 버티는 중 R #btn-pause → 60스텝 + 0.5초 → R #btn-resume, 정지 동안 windowLeft·hold·보스 yaw·attackSequence 불변 (4) 계속 버텨 끊김(cuts 증가·exposed) → R AUTO 켬 → 완주. 단계 기준값은 단계 시작 시점으로 잡는다.',
+  '           창 안에 못 끝내면 다음 창에서 이어 하며 최대 창 수는 CHAINS_RUN.maxWindows(사전 선언). 좌표 이동·무적·HP 주입 없음(순간이동도 검사). 키보드 입력은 order 와 같은 방식이다',
   '',
   '주의: 좌표 이동·무적·HP 주입·적 hp 조작으로 정상 플레이를 증명하지 않는다. viewport 검사는 실제 Android/GPU/터치/발열 검증이 아니다.',
   'SwiftShader 소프트웨어 렌더라 프레임 ms 는 JS 측 측정값이다. order 의 키보드 입력은 Playwright 가 보낸 에뮬레이터 키 이벤트다.',
 ].join('\n');
 if (process.argv.includes('--help') || process.argv.includes('-h')) { console.log(HELP); process.exit(0); }
+// 필수 인자(--expected-sha, --out)가 없으면 사용법을 보이고 종료 코드 2 로 끝낸다(출격하지 않는다).
+if (!qaArgument('expected-sha') || !qaArgument('out')) { console.log(HELP); process.exit(2); }
 
 const arg = (name, fallback) => qaArgument(name) ?? fallback;
 // 값 없는 플래그(--quality, --motion)도 받는다.
 const flag = (name, bare, fallback) => qaArgument(name) ?? (process.argv.includes('--' + name) ? bare : fallback);
 const projectRoot = path.resolve(arg('project', path.resolve(import.meta.dirname, '..')));
-const PROFILES = ['auto', 'order', 'pause', 'screens'];
+// 시작 전 부하 기록(선택 대기): 1분 load 평균. --wait-load=<수> 면 그 값 이하가 될 때까지 최대 180초 기다린 뒤 시작한다.
+const loadNow = () => { try { const [a, b, c] = fs.readFileSync('/proc/loadavg', 'utf8').trim().split(/\s+/).map(Number); return { avg1: a, avg5: b, avg15: c, at: new Date().toISOString() }; } catch { return null; } };
+const loadStart = loadNow();
+const PROFILES = ['auto', 'order', 'pause', 'screens', 'chains'];
 const profileArg = arg('profile', 'auto');
 const selected = profileArg === 'all' ? [...PROFILES] : profileArg.split(',');
 qaAssert(selected.every(name => PROFILES.includes(name)), '--profile must be one of ' + PROFILES.join('|') + '|all');
@@ -65,6 +85,8 @@ const deep = depth === 'deep';
 const seed = Number(arg('seed', '20261015'));
 qaAssert(Number.isSafeInteger(seed) && seed >= 0 && seed <= 0xffffffff, '--seed must be uint32');
 const reseedOn = !process.argv.includes('--no-reseed');
+const waitLoad = qaArgument('wait-load') === undefined ? null : Number(qaArgument('wait-load'));
+qaAssert(waitLoad === null || (Number.isFinite(waitLoad) && waitLoad > 0), '--wait-load must be a positive number');
 const heroId = arg('hero', 'knight');
 const viewportMatch = /^(\d{3,4})x(\d{3,4})$/.exec(arg('viewport', '844x390'));
 qaAssert(viewportMatch, '--viewport must be WxH');
@@ -95,8 +117,10 @@ const routeData = (await load('src/data/route-objectives.js')).ROUTE_OBJECTIVES 
 const routeDef = (deep ? routeData.ashforge_deep : routeData.ashforge_standard) ?? null;
 const releaseExpected = !!routeDef?.release;
 const furnaceRooms = routeDef ? routeDef.gates.map(g => g.roomId) : null;
+// 거수 사슬 끊기 정의(BUNDLE-15). 기준선(6316e0b)에는 없어 null 이고 사슬 판정을 건너뛴다. 정의의 하위 항목(chains)이 있는지로만 후보와 기준선을 가른다.
+const chainsDef = (deep ? routeDef?.chains : null) ?? null;
 const judgedProfiles = !!routeDef?.shockWindow && deep;
-const needsKeyboard = selected.includes('order');
+const needsKeyboard = selected.includes('order') || selected.includes('chains');
 
 const STEP_CLASS = {
   auto: [['F', '저장 주입(해금·영웅 Lv.50 별3 스킬5·장비·에너지·AUTO)'], ['R', '출격 카드 버튼 · #btn-auto'], ['C', 'app.testPause + 고정 1/60 app.step 으로 완주'],
@@ -105,6 +129,9 @@ const STEP_CLASS = {
     ['R', '키보드 KeyW/A/S/D 로 조작판 이동·닫힌 체류·열린 유지·이탈·재진입(공격 키 없음)'], ['C', '키 입력 사이 4스텝씩 고정 진행(키보드 구간은 매 스텝 관측)'], ['C', 'AUTO 완주 · 결과 판정']],
   pause: [['F', '저장 주입'], ['R', '출격 카드 버튼 · #btn-pause/#btn-resume'], ['C', 'AUTO 로 열린 유지 hold ≥ 0.8 까지 고정 스텝'], ['C', '정지 중 app.step 120회(stepRaw)로 게임 시간·심장로 주기 불변 확인'], ['C', 'AUTO 완주']],
   screens: [['F', '저장 주입'], ['R', '출격 카드 버튼'], ['C', 'AUTO 로 bound·shock·open·releasing·released 순간까지 고정 스텝'], ['C', 'renderer.render() 단독 호출 + viewport 3종 스크린샷(시뮬레이션 tick 없음)']],
+  chains: [['F', '저장 주입'], ['R', '출격 카드 버튼 · #btn-auto 끔/켬 · #btn-pause/#btn-resume'], ['C', 'AUTO 로 보스방(심장로 4/4·봉인 해제·보스 등장, 사슬 chained)까지 고정 스텝'],
+    ['R', '키보드 KeyW/A/S/D 로 기둥 밖 회피 이동 · 기둥 안 이동 · KeyJ 공격 한 번 · 정지 후 이어 버티기(좌표 이동·무적·HP 주입 없음)'], ['C', '키 입력 사이 4스텝씩 고정 진행(보스방은 매 스텝 관측), chains.filter 감싸개는 호출을 그대로 넘기고 기록만'],
+    ['C', '창 안 정지 중 app.step 60회(stepRaw)로 windowLeft·hold·보스 yaw 불변 확인'], ['C', 'AUTO 완주 · 사슬 판정']],
 };
 /** 경로 뷰가 있는 빌드에서 모든 프로필의 프로브가 하는 제어 렌더. */
 const VIEW_AB_STEP = ['C', '뷰 같은 프레임 A/B: 모습이 바뀐 스텝 끝에서 releaseView.group · route.view.group visible 을 바꿔 renderer.render() 여러 번(시뮬레이션 스텝 없음, 끝나면 visible 복원)'];
@@ -112,7 +139,7 @@ for (const list of Object.values(STEP_CLASS)) list.push(VIEW_AB_STEP);
 const report = { kind: 'ashforge-furnace-qa', releaseApproved: false, seed, heroId, depth, viewport, motion, quality, selectedProfiles: selected, projectRoot,
   driverSha256: qaHash(fs.readFileSync(import.meta.filename)),
   checksSha256: qaHash(fs.readFileSync(path.join(import.meta.dirname, 'ashforge-furnace-checks.mjs'))), profiles: {}, checks: [], reportItems: {},
-  reseed: { on: reseedOn, elapsed: null }, routeDefinition: routeDef ? JSON.parse(JSON.stringify(routeDef)) : null, releaseExpected, furnaceRooms,
+  reseed: { on: reseedOn, elapsed: null }, load: { start: loadStart, beforeStart: null, waitedMs: 0, end: null, waitLoad }, chainsDefinition: chainsDef ? JSON.parse(JSON.stringify(chainsDef)) : null, routeDefinition: routeDef ? JSON.parse(JSON.stringify(routeDef)) : null, releaseExpected, furnaceRooms,
   catalog: { id: dungeonDef.id, depth, energy: dungeonDef.energy, minLevel: dungeonDef.minLevel, unlockCode: dungeonDef.unlockCode ?? null, rewards: dungeonDef.rewards,
     firstRewards: dungeonDef.firstRewards ?? null, objective: dungeonDef.objective ?? null, mechanics: dungeonDef.mechanics ?? null, routeId: routeDef?.id ?? null },
   selectors: { launch: ['#btn-expedition', '.adventure-nav [data-section="dungeons"]', '.exp-route-tabs button /^' + (deep ? '심층' : '기본') + ' 원정/',
@@ -127,16 +154,27 @@ const report = { kind: 'ashforge-furnace-qa', releaseApproved: false, seed, hero
     fixture: ['저장 주입: 해금(진행 별·탐험 레벨' + (deep ? '·기본 원정 승리' : '') + ')·영웅 레벨/별/스킬·장비·에너지 최대·AUTO 설정', 'Math.random 시드(LCG)와 window.__qaReseed(seed) 재시드(전투 활성·prepareView 뒤 첫 스텝 전 1회)',
       quality === 'low' ? '낮은 화질 설정(설정 핸들러와 같은 경로)' : null].filter(Boolean),
     realInput: ['#btn-expedition → 던전 탭 → ' + (deep ? '심층' : '기본') + ' 원정 → 카드 출격 버튼', '#btn-auto', '#btn-pause/#btn-resume', '결과 화면 버튼(로비로)', '선택지 모달 버튼', '브라우저 새로고침',
-      needsKeyboard ? 'Playwright 키보드 이벤트(KeyW/A/S/D, 에뮬레이터 입력): 걷는 방향은 도구가 조작판 위치의 화면 투영으로 정함. 텔레포트·무적·HP 주입·공격 키 없음' : null].filter(Boolean),
+      needsKeyboard ? 'Playwright 키보드 이벤트(KeyW/A/S/D, 에뮬레이터 입력): 걷는 방향은 도구가 조작판 위치의 화면 투영으로 정함. 텔레포트·무적·HP 주입 없음. order 는 공격 키 없음, chains 는 기둥 안에서 공격 키(KeyJ) 한 번(hold 가 0 으로 돌아가는지 확인)' : null].filter(Boolean),
     controlled: ['app.testPause + 고정 1/60초 app.step (자연 RAF 아님)', 'renderer.render() 단독 호출(스크린샷·draw call 샘플, 시뮬레이션 tick 없음)',
       '뷰 같은 프레임 A/B: releaseView.group · route.view.group 의 visible 을 바꿔 같은 프레임을 renderer.render() 로 각각 그려 calls 차이 측정(끝나면 visible 복원)'],
     notProven: ['실제 Android/GPU/터치/발열', '자연 해금·장비 획득', '수동 플레이 밸런스', '사람의 실제 키보드·터치 조작 감각', '불씨·사슬의 실제 모습(PNG 는 사람이 본다)'],
     steps: Object.fromEntries(selected.map(name => [name, STEP_CLASS[name].map(([kind, detail]) => ({ kind, detail }))])) },
   scope: '로컬 production preview + SwiftShader headless Chromium. fixture 영웅/장비로 합법 범위 값만 주입하고 전투 중 HP·위치·적·결과는 건드리지 않는다.' };
 
-const sourceFiles = ['src/game/route-objectives.js', 'src/game/cooling-valves.js', 'src/game/cooling-valve-view.js', 'src/game/ember-chain-view.js', 'src/data/route-objectives.js', 'src/data/expedition-depths.js', 'src/data/expansion.js',
+const sourceFiles = ['src/game/route-objectives.js', 'src/game/cooling-valves.js', 'src/game/cooling-valve-view.js', 'src/game/ember-chain-view.js', 'src/game/ashforge-chain-break.js', 'src/game/ashforge-chain-break-view.js', 'src/data/route-objectives.js', 'src/data/expedition-depths.js', 'src/data/expansion.js',
   'src/data/stages.js', 'src/ui/battle-objective-view.js', 'src/ui/battle-readability.js', 'src/expansion/hub.jsx', 'src/game/battle-base.js', 'src/game/world.js',
   'src/game/expedition-combat.js', 'src/game/enemies.js', 'src/game/player.js', 'src/game/expedition-economy.js', 'src/main.js'].filter(file => fs.existsSync(path.join(projectRoot, file)));
+report.classification.controlled.push('app.ui.toast 감싸개(호출을 그대로 넘기고 기록만)', 'chains.filter(dmg, attacker) 감싸개(입력·출력·그 순간 state 를 기록만 하고 반환값을 바꾸지 않음)');
+report.selectors.page.push('window.app.battle.routeObjectives.chains (state/chainsLeft/cuts/windows/misses/broken/pulling/pullSide/pillar/anchor/hold/holdTotal/windowLeft/windowTotal/exposedLeft/exposedTotal/exposedDamage/lastCutT/boss, filter 감싸개)',
+  'window.app.battle.routeObjectives.chainsView (존재 여부)', 'window.app.battle.world.bossRoom (x/z/w/h)', 'window.app.battle.boss (pos/yaw/hp/alive/state/special/attackSequence/completedAttackSequence/signatures.plan/vel)',
+  'window.app.ui.toast (호출 기록 감싸개)', '.exp-result-shell p[aria-label] (거수의 사슬 결과)', 'window.app.expeditionUI.result.routeObjective.chains');
+// 시작 전 부하 대기(선택): 1분 load 가 기준 이하가 될 때까지 최대 180초. 기다린 시간과 실제 load 를 남긴다. 3분이 지나면 그대로 시작한다.
+if (waitLoad !== null) {
+  const began = Date.now();
+  while (Date.now() - began < 180000 && (loadNow()?.avg1 ?? 0) > waitLoad) await new Promise(resolve => setTimeout(resolve, 5000));
+  report.load.waitedMs = Date.now() - began;
+}
+report.load.beforeStart = loadNow();
 const qa = await createExpeditionQa({ root: projectRoot, driver: import.meta.filename, report, sourceFiles });
 let page;
 const check = (name, ok, detail) => { report.checks.push({ name, ok: !!ok, ...(detail === undefined ? {} : { detail }) }); return !!ok; };
@@ -146,7 +184,7 @@ const traces = new Map();
 // ---------- 페이지 안 측정 프로브(게임 판정에는 쓰지 않는다) ----------
 function installProbe(cfg) {
   const app = window.app;
-  const P = window.__furnaceQa = { dt: 1 / 60, steps: 0, cfg, dense: false };
+  const P = window.__furnaceQa = { dt: 1 / 60, steps: 0, cfg, dense: false, toasts: [] };
   const routeOf = () => app.battle.routeObjectives;
   const EMPTY = [];
   const STATE = cfg.stateCode;
@@ -218,6 +256,74 @@ function installProbe(cfg) {
     } finally { if (rg) rg.visible = rgv; if (vg) vg.visible = vgv; info.autoReset = autoReset; }
     return rec;
   };
+  // ---- 토스트 기록: 호출을 그대로 넘기는 관측용 감싸개다(게임 판정에는 쓰지 않는다). 프로브를 다시 설치해도 한 번만 감싼다. ----
+  const ui = app.ui;
+  if (ui && !ui.__furnaceQaWrapped) {
+    const original = ui.toast;
+    ui.toast = function (...args) {
+      const q = window.__furnaceQa;
+      if (q?.toasts) q.toasts.push({ n: q.steps, t: app.battle?.elapsed ?? null, msg: String(args[0]), kind: args[1] ?? null });
+      return original.apply(this, args);
+    };
+    ui.__furnaceQaWrapped = true;
+  }
+  // ---- 거수 사슬 끊기(BUNDLE-15): 보스방 진입 뒤 스텝마다 행을 남긴다. 게임 객체는 읽기만 하고, chains.filter 만 호출을 그대로 넘기는 감싸개로 기록한다(반환값을 바꾸지 않는다). ----
+  const chainsOf = () => routeOf()?.chains ?? null;
+  const objectiveText = () => document.getElementById('objective')?.textContent ?? null;
+  const chainRoom = () => {
+    const w = app.battle.world, r = w?.bossRoom ?? w?.rooms?.find(x => x.type === 'boss') ?? null;
+    return r ? { id: r.id, x: r.x, z: r.z, w: r.w, h: r.h } : null;
+  };
+  const chainRow = () => {
+    const c = chainsOf();
+    if (!c) return null;
+    const b = app.battle, p = b.player, boss = c.boss ?? b.boss ?? P.cb.boss ?? null;
+    if (boss) P.cb.boss = boss;
+    const ev = boss?.signatures?.plan?.events?.[0], pil = c.pillar, anc = c.anchor;
+    return { n: P.steps, t: b.elapsed, hx: p.pos.x, hz: p.pos.z, hp: p.hp, ha: p.alive ? 1 : 0, au: p.auto ? 1 : 0, ps: p.state,
+      cs: c.state, cl: c.chainsLeft, cu: c.cuts, cw: c.windows, cm: c.misses, cb: c.broken, pu: c.pulling ? 1 : 0, sd: c.pullSide,
+      qx: pil ? pil.x : null, qz: pil ? pil.z : null, ax: anc ? anc.x : null, az: anc ? anc.z : null,
+      hd: c.hold, ht: c.holdTotal, wl: c.windowLeft, wt: c.windowTotal, el: c.exposedLeft, et: c.exposedTotal, ed: c.exposedDamage, lc: Number.isFinite(c.lastCutT) ? c.lastCutT : null,
+      bo: boss ? 1 : 0, al: boss?.alive ? 1 : 0, spn: boss?.spawning ? 1 : 0, bs: boss?.state ?? null, sp: boss?.special ?? null, pk: boss?.signatures?.plan?.key ?? null,
+      ix: ev ? ev.x : null, iz: ev ? ev.z : null, sq: boss?.attackSequence || 0, cq: boss?.completedAttackSequence || 0,
+      by: boss?.yaw ?? null, bx: boss?.pos?.x ?? null, bz: boss?.pos?.z ?? null, bvx: boss?.vel?.x ?? null, bvz: boss?.vel?.z ?? null };
+  };
+  const wrapChainsFilter = () => {
+    const c = chainsOf();
+    if (!c || c.__furnaceQaWrapped) return;
+    const original = c.filter;
+    // 계약: filter(dmg, attacker). 호출을 그대로 넘기고 (입력, 출력, 그 순간 state)만 남긴다.
+    c.filter = function (dmg, attacker) {
+      const state = this.state;
+      const out = original.call(this, dmg, attacker);
+      const q = window.__furnaceQa;
+      if (q?.cb && q.cb.filters.length < 20000) q.cb.filters.push({ n: q.steps + 1, dmg, out, st: state });
+      return out;
+    };
+    c.__furnaceQaWrapped = true;
+  };
+  /** 보스방 진입 뒤 스텝마다 사슬 행을 남긴다(보스 처치 뒤 4행까지). 목표창 문구 표본 위치(검사 함수의 CHAINS_PLAIN_SAMPLE · CHAINS_REFRESH_SAMPLE 와 같다):
+   * open·exposed 는 범주가 바뀐 뒤 문구가 바뀐 스텝마다와 범주 시작 10스텝 뒤(항상), plain·pull 은 범주 시작 35스텝 뒤(36번째 행). 컨트롤러가 없는 빌드(기준선)도 보스방 목표창 문구를 30스텝마다 모아 누출 관찰에 쓴다. */
+  const chainObserve = () => {
+    const b = app.battle, cb = P.cb;
+    if (!cb.on) { if (b.curRoom?.type === 'boss') { cb.on = true; cb.room = chainRoom(); } else return; }
+    if (P.steps % 30 === 0 && cb.doms.length < 40) {
+      const dom = objectiveText();
+      if (typeof dom === 'string' && !cb.doms.includes(dom)) cb.doms.push(dom);
+    }
+    if (cb.post >= 5) return;
+    const row = chainRow();
+    if (!row) return;
+    const cat = row.cs === 'exposed' ? 'exposed' : row.cs === 'open' ? 'open' : row.cs === 'chained' ? (row.pu ? 'pull' : 'plain') : null;
+    if (cat !== cb.cat) { cb.cat = cat; cb.age = 0; cb.lastDom = null; } else cb.age++;
+    if (cat === 'exposed' || cat === 'open') {
+      const dom = objectiveText();
+      if (dom !== cb.lastDom) { row.dom = dom; cb.lastDom = dom; } else if (cb.age === 10) row.dom = dom;
+    } else if (cat !== null && cb.age === 35) row.dom = objectiveText();
+    cb.rows.push(row);
+    if (row.bo === 1 && row.al === 0) cb.done = true;
+    if (cb.done) cb.post++;
+  };
   // ---- 행 만들기: 관측값만 읽는다. sig 는 상태 변화 감지용 숫자 배열이다. ----
   const gateClear = g => {
     const b = app.battle;
@@ -270,15 +376,18 @@ function installProbe(cfg) {
     Object.assign(P, { hpDrops: [], clears: [], samples: [], viewAB: [], abCodes: new Int8Array(gn).fill(-1), stepMs: [], renderMs: [], slow: [], maxAlive: 0, minHpRatio: 1, steps: 0, startElapsed: b.elapsed, rows: [],
       sig: new Float64Array(size), prevSig: new Float64Array(size).fill(-1e9), prevHd: 0, entered: new Set(), wp: [], padGate: null, marks: [],
       cs: new Float64Array(gn), coolT: new Float64Array(gn).fill(-1), layout: { seen: new Array(gn).fill(false), mismatches: [] }, chainOwner: null, chainMesh: null,
-      okey: -1, ostable: 0, dwellSteps: 0 });
+      okey: -1, ostable: 0, dwellSteps: 0, toasts: [],
+      cb: { on: false, rows: [], filters: [], marks: [], doms: [], post: 0, done: false, room: null, cat: null, age: 0, lastDom: null, waitIdx: 0, boss: null } });
     P.prevRoom = b.curRoom?.id ?? null;
+    wrapChainsFilter();
     P.prev = { cleared: b.world.rooms.map(x => !!x.cleared), hp: b.player.hp };
     fill();
     abChanged();   // 시작 모습을 기준으로 삼는다(시작 직후는 측정하지 않는다)
     push(build('start'));
     const rooms = r ? r.gates.map(g => ({ id: g.room.id, x: g.room.x, z: g.room.z, type: g.room.type })) : [];
     return { kind: r?.def?.kind ?? null, controller: r ? r.constructor.name : null, routeId: r?.def?.id ?? null, gates: gn, rooms, hasView: !!r?.view, hasRelease: !!r?.releaseView,
-      hasSyncView: typeof r?.syncView === 'function', hasPadOpen: typeof r?.padOpen === 'function', chainMesh: !!(r?.releaseView && chainMesh(r.releaseView)),
+      hasSyncView: typeof r?.syncView === 'function', hasPadOpen: typeof r?.padOpen === 'function', chainMesh: !!(r?.releaseView && chainMesh(r.releaseView)), hasChains: !!chainsOf(), hasChainsView: !!r?.chainsView, chainsViewCalls: Number.isFinite(r?.chainsView?.drawCalls) ? r.chainsView.drawCalls : null,
+      encounterTactic: typeof b.stage?.encounter?.tactic === 'string' ? b.stage.encounter.tactic : null,
       releaseCount: r?.releaseView ? r.releaseView.count : null, releaseDraw: r?.releaseView ? r.releaseView.drawCalls : null,
       allRooms: b.world.rooms.map(x => ({ id: x.id, type: x.type, x: x.x, z: x.z })), reinforcements: b.stage?.expedition?.mechanics?.reinforcements ?? 0,
       def: r ? { id: r.def.id, holdSeconds: r.def.holdSeconds, radius: r.def.radius, shockWindow: !!r.def.shockWindow, release: r.def.release ?? null, releaseSeconds: r.def.releaseSeconds ?? null, copy: r.def.copy ?? null } : null };
@@ -326,6 +435,7 @@ function installProbe(cfg) {
       const room = b.curRoom;
       if (room && room.type !== 'start' && room.type !== 'boss' && !P.entered.has(room.id)) { P.entered.add(room.id); P.sample('roomEnter', { roomId: room.id, roomType: room.type }); }
     }
+    chainObserve();
   };
   P.hit = stop => {
     const b = app.battle, r = routeOf(), p = b.player.pos, g = r && stop.gate !== undefined ? r.gates[stop.gate] : null;
@@ -343,6 +453,18 @@ function installProbe(cfg) {
       case 'cooled': return !!g && g.attuned && P.coolT[stop.gate] >= 0 && b.elapsed - P.coolT[stop.gate] >= stop.min - 1e-9;
       case 'shocks': return !!g && r.progress === stop.gate && g.ready && g.shocks >= stop.min;
       case 'phase': return !!g && r.progress === stop.gate && g.ready && g.phase === stop.phase;
+      // 거수 사슬: 컨트롤러 state 가 같고 보스가 살아 있는 순간 / 창이 열려 있지 않은 순간 / 열린 창에서 hold 가 min 이상인 순간 / screens 순간.
+      case 'chainState': { const c = chainsOf(); return !!c && c.state === stop.state && !!c.boss?.alive; }
+      case 'chainNotOpen': { const c = chainsOf(); return !!c && c.state !== 'open'; }
+      case 'chainHold': { const c = chainsOf(); return !!c && c.state === 'open' && c.hold >= stop.min; }
+      case 'chainMoment': {
+        const c = chainsOf();
+        if (!c || !c.boss?.alive || c.boss.spawning) return false;
+        const dom = objectiveText() ?? '';
+        if (stop.label === 'chain-pull') return c.state === 'chained' && c.pulling && dom.includes(cfg.texts.pull);
+        if (stop.label === 'chain-open') return c.state === 'open' && c.hold > 0 && dom.includes(cfg.texts.open);
+        return c.state === 'exposed' && c.exposedLeft > 0 && c.exposedLeft <= cfg.rule.exposed - .5 && dom.includes(cfg.texts.exposed);
+      }
       case 'near': return Math.hypot(p.x - stop.x, p.z - stop.z) <= stop.r;
       case 'nearPad': return !!g && Math.hypot(p.x - g.pad.x, p.z - g.pad.z) <= stop.r;
       case 'awayPad': return !!g && Math.hypot(p.x - g.pad.x, p.z - g.pad.z) >= stop.r;
@@ -378,6 +500,8 @@ function installProbe(cfg) {
     const row = build(null, true);
     Object.assign(row, { elapsed: b.elapsed, paused: b.paused, active: b.active, kills: b.kills });
     row.gx = (routeOf()?.gates || EMPTY).map(g => ({ ag: g.age, ph: g.phase === 'heat' ? 0 : g.phase === 'warning' ? 1 : g.phase === 'vent' ? 2 : 3, sk: Number.isFinite(g.shocks) ? g.shocks : -1 }));
+    row.chain = chainRow();
+    if (row.chain) row.chain.dom = objectiveText();
     return row;
   };
   // 키보드 이동용: 영웅 → 다음 경유점의 화면 투영 차. 경로는 방 연결(links)과 L자 복도(linkPending)의 모서리를 방 중심 경유로 따른다. pad 목표는 gate.pad 가 옮겨 가도 따라간다.
@@ -412,9 +536,53 @@ function installProbe(cfg) {
     const a = p.clone().project(cam), z = p.clone().set(wp.x, p.y, wp.z).project(cam);
     return { dx: (z.x - a.x) * innerWidth / 2, dy: -(z.y - a.y) * innerHeight / 2, left: P.wp.length, final: fin, dist: Math.hypot(fin.x - p.x, fin.z - p.z) };
   };
+  // chains 프로필: 현재 사슬 상태, 구간 표식, 영웅 → 목표의 화면 방향(기둥 · 기둥 밖 대기점).
+  P.chainState = () => {
+    const c = chainsOf();
+    return c ? { state: c.state, pulling: c.pulling, pullSide: c.pullSide, hold: c.hold, windowLeft: c.windowLeft, windows: c.windows, cuts: c.cuts, chainsLeft: c.chainsLeft, boss: !!c.boss?.alive } : null;
+  };
+  P.cmark = label => { P.cb.marks.push({ mk: label, n: P.steps }); return P.steps; };
+  const toward = (x, z) => {
+    const p = app.battle.player.pos, cam = app.renderer.camera;
+    cam.updateMatrixWorld();
+    const ex = x - p.x, ez = z - p.z, el = Math.hypot(ex, ez) || 1;
+    const a = p.clone().project(cam), z2 = p.clone().set(p.x + ex / el * 2, p.y, p.z + ez / el * 2).project(cam);
+    const ks = app.input.keys || {}, live = [];
+    for (const k in ks) if (ks[k]) live.push(k);
+    return { dx: (z2.x - a.x) * innerWidth / 2, dy: -(z2.y - a.y) * innerHeight / 2, dist: el, live };
+  };
+  /**
+   * kind 'pillar': 컨트롤러가 알려 주는 기둥(pillar)으로 가는 화면 방향과 거리(걷는 목표일 뿐이고, 판정의 기둥은 검사 함수가 따로 계산한다).
+   * kind 'wait': 기둥 밖 대기점들을 번갈아 걷는 화면 방향. 끌기·열림 중이면 기둥에서 radius + 2.2 떨어진 방 중심 쪽 두 점, 아니면 보스방 중심 둘레 네 점(방 가장자리 2 안쪽).
+   * 영웅이 계속 움직여 망치 착탄(영웅 위치에 떨어짐)을 피한다. 좌표 이동은 없다.
+   */
+  P.chainAim = kind => {
+    const b = app.battle, c = chainsOf(), boss = c?.boss, hero = b.player, room = P.cb.room;
+    if (!c || !boss?.alive || !hero?.alive || !room) return null;
+    const base = { state: c.state, pulling: c.pulling, windowLeft: c.windowLeft, hold: c.hold, cuts: c.cuts, windows: c.windows, hpRatio: hero.maxHp > 0 ? hero.hp / hero.maxHp : 1, heroState: hero.state };
+    if (kind === 'pillar') return { ...base, ...toward(c.pillar.x, c.pillar.z) };
+    const m = 2, R = cfg.rule.radius;
+    let pts;
+    if (c.pulling || c.state === 'open') {
+      const q = c.pillar;
+      let ux = room.x - q.x, uz = room.z - q.z;
+      const l = Math.hypot(ux, uz) || 1; ux /= l; uz /= l;
+      const d = R + 2.2, t = 2.4;
+      pts = [[q.x + ux * d - uz * t, q.z + uz * d + ux * t], [q.x + ux * d + uz * t, q.z + uz * d - ux * t]];
+    } else {
+      const rr = 7;
+      pts = [[room.x + rr, room.z + rr], [room.x - rr, room.z + rr], [room.x - rr, room.z - rr], [room.x + rr, room.z - rr]];
+    }
+    pts = pts.map(([x, z]) => [Math.max(room.x - room.w / 2 + m, Math.min(room.x + room.w / 2 - m, x)), Math.max(room.z - room.h / 2 + m, Math.min(room.z + room.h / 2 - m, z))]);
+    const cb = P.cb;
+    let idx = cb.waitIdx % pts.length;
+    if (Math.hypot(pts[idx][0] - hero.pos.x, pts[idx][1] - hero.pos.z) < 1) { cb.waitIdx++; idx = cb.waitIdx % pts.length; }
+    return { ...base, ...toward(pts[idx][0], pts[idx][1]), goal: pts[idx] };
+  };
   // 느린 스텝 목록은 자르지 않는다(기준선 비교가 개수를 정확히 세야 한다).
   P.summary = () => ({ steps: P.steps, stepMs: P.stepMs, renderMs: P.renderMs, slow: P.slow, maxAlive: P.maxAlive, minHpRatio: P.minHpRatio, samples: P.samples, viewAB: P.viewAB,
-    clears: P.clears, hpDrops: P.hpDrops, rows: P.rows, layout: P.layout, chainFound: !!P.chainMesh, dwellSeconds: P.dwellSteps / 60 });
+    clears: P.clears, hpDrops: P.hpDrops, rows: P.rows, layout: P.layout, chainFound: !!P.chainMesh, dwellSeconds: P.dwellSteps / 60, toasts: P.toasts,
+    chains: { rows: P.cb.rows, filters: chainsOf() ? P.cb.filters : null, marks: P.cb.marks, doms: P.cb.doms, room: P.cb.room } });
   return true;
 }
 
@@ -506,10 +674,16 @@ async function beginRun(tag) {
   qaAssert(row.nativeAuto.player === true, 'AUTO is not active after native button');
   row.focus = await nativeGameplayFocus(page);
   row.probe = await page.evaluate(installProbe, { gateCount: info.gates, stateCode: STATE_CODE, chains: CHAINS_PER_FURNACE, eps: CHAIN_SCALE_EPS,
-    releaseSeconds: routeDef?.releaseSeconds ?? 0, radius: routeDef?.radius ?? 1.6 });
+    releaseSeconds: routeDef?.releaseSeconds ?? 0, radius: routeDef?.radius ?? 1.6,
+    rule: chainsDef ? JSON.parse(JSON.stringify(chainsDef)) : null, texts: { pull: CHAINS.pullText, open: '기둥 열림', exposed: '휘청' } });
   row.begin = await page.evaluate(() => window.__furnaceQa.begin());
   row.reinforcements = row.begin.reinforcements;
   if (releaseExpected) check(tag + ': 사슬 InstancedMesh(count = 심장로 수 × ' + CHAINS_PER_FURNACE + ')를 releaseView.group 에서 찾음', row.begin.chainMesh, { hasRelease: row.begin.hasRelease });
+  // 사슬 정의가 있는 후보는 컨트롤러와 뷰가 출격 직후(prepareView 뒤)에 있어야 한다. 없으면 관측 누락이라 기준선으로 오인하지 않고 실패로 남긴다. 정의가 없는 기준선에는 없어야 한다.
+  if (chainsDef) {
+    check(tag + ': 거수 사슬 컨트롤러(routeObjectives.chains) 존재', row.begin.hasChains, { hasChains: row.begin.hasChains, controller: row.begin.controller });
+    check(tag + ': 거수 사슬 뷰(routeObjectives.chainsView) 존재(출격 직후 prepareView 뒤)', row.begin.hasChainsView, { hasChainsView: row.begin.hasChainsView });
+  } else if (routeDef) check(tag + ': 사슬 정의가 없는 기준선인데 routeObjectives.chains 또는 chainsView 가 있음', !row.begin.hasChains && !row.begin.hasChainsView, { hasChains: row.begin.hasChains, hasChainsView: row.begin.hasChainsView });
   // 재시드: 첫 app.step 전 한 번. --no-reseed 면 호출하지 않는다.
   row.reseed = reseedOn ? await page.evaluate(s => { const q = window.__furnaceQa, b = window.app.battle; const r = { on: true, elapsed: b.elapsed, active: b.active, steps: q.steps, hasRoute: !!b.routeObjectives, hasView: !!b.routeObjectives?.view, hasRelease: !!b.routeObjectives?.releaseView };
     window.__qaReseed(s); return r; }, seed) : { on: false, elapsed: null };
@@ -602,9 +776,14 @@ async function resumeBattle() {
 
 // ---------- 키보드 이동(order) ----------
 const held = new Set();
-async function setKeys(next) {
-  for (const key of [...held]) if (!next.has(key)) { await page.keyboard.up(key); held.delete(key); }
-  for (const key of next) if (!held.has(key)) { await page.keyboard.down(key); held.add(key); }
+/** 키 이벤트 로그: 모든 keyboard.down/up 을 남긴다(chains 프로필의 입력 증거). */
+const keyLog = [];
+async function kb(op, key) { await page.keyboard[op](key); keyLog.push({ op, key, n: await page.evaluate(() => window.__furnaceQa?.steps ?? null) }); }
+/** live 를 주면, 도구가 누르고 있다고 아는 키 중 게임 입력층에서 지워진 키(input.clear: 일시정지 해제 등)를 떼었다 다시 누른다(실제 사용자의 재입력과 같다). chains 의 걷기에서만 쓴다. */
+async function setKeys(next, live = null) {
+  for (const key of [...held]) if (!next.has(key)) { await kb('up', key); held.delete(key); }
+  if (live) for (const key of [...held]) if (!live.includes(key)) { await kb('up', key); held.delete(key); }
+  for (const key of next) if (!held.has(key)) { await kb('down', key); held.add(key); }
 }
 /** 화면 방향(영웅 → 경유점 투영 차)을 8방향 키 조합으로 바꾼다. 입력 키는 화면 기준이다(카메라 요를 입력층이 처리). */
 function keysToward(aim) {
@@ -636,7 +815,166 @@ async function walkTo(row, target, stop, { maxSteps = 60 * 40 } = {}) {
   } finally { await setKeys(new Set()); }
 }
 
+// ---------- chains 프로필(키보드) ----------
+/**
+ * chains 프로필 사전 선언 상수. attackKey: 공격 키(src/engine/input.js: KeyJ, 누르는 순간 press('attack')) · chunk: 키 입력 사이 고정 스텝 · attackSteps: 공격 키를 누르고 있는 스텝 ·
+ * maxWindows: 이어 하는 창의 최대 수 · attackHold/pauseHold: 공격 키·정지 전에 쌓을 hold · pauseSlack: 정지 뒤 끊김까지 남은 창 여유 · pauseSteps/pauseWaitMs: 정지 중 추가 스텝·실제 대기 ·
+ * resumeSteps: 재개 뒤 관측 스텝 · inside: 기둥 중심에서 이 거리 안이면 키를 떼고 서서 버틴다 · maxIterations: 걷기·버티기 반복 상한 · waitMaxSteps: 창 대기 상한 · minHpRatio: 영웅 HP 하한(아래면 중단).
+ */
+const CHAINS_RUN = Object.freeze({ attackKey: 'KeyJ', chunk: 4, attackSteps: 3, maxWindows: 6, attackHold: .5, pauseHold: .3, pauseSlack: .25, pauseSteps: 60, pauseWaitMs: 500, resumeSteps: 6,
+  inside: .45, maxIterations: 400, waitMaxSteps: 60 * 90, minHpRatio: .25 });
+const chainStateNow = () => page.evaluate(() => window.__furnaceQa.chainState());
+const chainAim = kind => page.evaluate(k => window.__furnaceQa.chainAim(k), kind);
+const cmark = label => page.evaluate(l => window.__furnaceQa.cmark(l), label);
+/** 사슬 정의가 있는 후보 심층에서만 도는 프로필이다. */
+const skipUnlessChains = () => (judgedProfiles && chainsDef ? null : { skipped: '사슬 정의(ROUTE_OBJECTIVES.ashforge_deep.chains)가 있는 후보 심층 빌드에서만 도는 프로필이다(기준선은 사슬 판정을 건너뛴다)' });
+/** 선택지 모달이 열려 멈추면 처리하고 키보드 포커스를 되찾는다. */
+async function chainsPausedChoice(row, r) { await setKeys(new Set()); await takeChoice(row, r); await nativeGameplayFocus(page); }
+/** stop 이 참이 될 때까지 기둥 밖 대기점을 번갈아 걸으며 회피한다(망치는 시전 시작의 영웅 위치에 떨어지므로 계속 움직인다). 키보드만 쓴다. */
+async function chainsEvade(row, stop, label) {
+  for (let i = 0; i < Math.ceil(CHAINS_RUN.waitMaxSteps / CHAINS_RUN.chunk); i++) {
+    if (await page.evaluate(x => window.__furnaceQa.hit(x), stop)) return { reason: 'stop', iterations: i };
+    const a = await chainAim('wait');
+    if (!a) throw Error('No chain controller, boss or hero while waiting for ' + label);
+    if (a.hpRatio < CHAINS_RUN.minHpRatio) throw Error('Hero hp ratio ' + a.hpRatio.toFixed(2) + ' fell under ' + CHAINS_RUN.minHpRatio + ' while waiting for ' + label);
+    await setKeys(keysToward(a), a.live);
+    const r = await page.evaluate(opts => window.__furnaceQa.run(opts), { n: CHAINS_RUN.chunk, stop });
+    if (r.reason === 'stop') return { reason: 'stop', iterations: i + 1 };
+    if (r.reason === 'inactive') throw Error('Battle ended while waiting for ' + label + ' by keyboard (hero down?)');
+    if (r.reason === 'paused') await chainsPausedChoice(row, r);
+  }
+  throw Error('Chain state ' + label + ' did not come within ' + CHAINS_RUN.waitMaxSteps + ' steps');
+}
+/** 열린 기둥 안에서 행동 없이 서서 hold 가 min 이상이 될 때까지(done) 또는 창이 닫힐 때까지(closed). 기둥 밖이면 기둥 쪽으로 걷고, 기둥 중심 inside 안이면 키를 떼고 선다. */
+async function chainsHoldUntil(row, min, label) {
+  for (let i = 0; i < CHAINS_RUN.maxIterations; i++) {
+    const a = await chainAim('pillar');
+    if (!a) throw Error('No chain controller, boss or hero while holding (' + label + ')');
+    if (a.state !== 'open') return { reason: 'closed', iterations: i, state: a.state, hold: a.hold };
+    if (a.hold >= min) return { reason: 'done', iterations: i, hold: a.hold, windowLeft: a.windowLeft };
+    if (a.hpRatio < CHAINS_RUN.minHpRatio) throw Error('Hero hp ratio ' + a.hpRatio.toFixed(2) + ' fell under ' + CHAINS_RUN.minHpRatio + ' while holding (' + label + ')');
+    await setKeys(a.dist <= CHAINS_RUN.inside ? new Set() : keysToward(a), a.live);
+    const r = await page.evaluate(opts => window.__furnaceQa.run(opts), { n: CHAINS_RUN.chunk, stop: { type: 'chainHold', min } });
+    if (r.reason === 'inactive') throw Error('Battle ended while holding the pillar by keyboard (' + label + ', hero down?)');
+    if (r.reason === 'paused') await chainsPausedChoice(row, r);
+  }
+  throw Error('Pillar hold (' + label + ') did not finish within ' + CHAINS_RUN.maxIterations + ' iterations');
+}
+/** 서 있는 채로 공격 키를 한 번 누른다(표식 attack-key 를 누르기 직전 스텝에 남긴다). */
+async function chainsAttack(row, rec) {
+  await setKeys(new Set());
+  await cmark('attack-key');
+  await kb('down', CHAINS_RUN.attackKey);
+  const r = await page.evaluate(opts => window.__furnaceQa.run(opts), { n: CHAINS_RUN.attackSteps });
+  await kb('up', CHAINS_RUN.attackKey);
+  if (r.reason === 'inactive') throw Error('Battle ended during the attack key press (hero down?)');
+  if (r.reason === 'paused') await chainsPausedChoice(row, r);
+  rec.steps.push({ step: 'attack-key', ran: r.ran });
+}
+/** 열린 창 안에서 R #btn-pause → 60스텝 + 0.5초 → R #btn-resume. 정지 동안 windowLeft·hold·보스 yaw·attackSequence 불변, 재개 뒤 hold 가 이어지는지는 검사 함수가 판정한다. */
+async function chainsPause(row, rec) {
+  await setKeys(new Set());
+  const before = await freeze();
+  await pauseBattle();
+  const paused = await freeze();
+  await page.evaluate(n => window.__furnaceQa.stepRaw(n), CHAINS_RUN.pauseSteps); await page.waitForTimeout(CHAINS_RUN.pauseWaitMs);
+  const still = await freeze();
+  row.pauseShot = await shot('chains-paused');
+  await resumeBattle();
+  await nativeGameplayFocus(page);
+  await advanceSteps(row, CHAINS_RUN.resumeSteps);
+  const resumed = await freeze();
+  const slim = x => ({ elapsed: x.elapsed, paused: x.paused, chain: x.chain });
+  row.chainsPause = { before: slim(before), paused: slim(paused), still: slim(still), resumed: slim(resumed),
+    verdict: checkChainsPause({ before, paused, still, resumed, steps: CHAINS_RUN.resumeSteps, minHold: CHAINS_RUN.pauseHold }) };
+  rec.steps.push({ step: 'pause', holdBefore: before.chain?.hd ?? null, windowLeftBefore: before.chain?.wl ?? null });
+  check('chains: 창 안 정지 60스텝+0.5초 동안 게임 시간·windowLeft·hold·보스 yaw·attackSequence·위치 불변, 재개 뒤 windowLeft 가 흐른 시간만큼 줄고 hold 는 정지 전 값에서 이어짐', row.chainsPause.verdict.ok, row.chainsPause.verdict);
+}
+/**
+ * AUTO 를 끄고 키보드만으로: (1) open 이 될 때까지 기둥 밖에서 회피 이동만 (2) open 에서 기둥 안으로 이동해 hold ≥ attackHold → 공격 키 → hold 0 (3) 다시 버티는 중 정지 → 재개 (4) 버텨서 끊김.
+ * 단계 기준값(hold·남은 시간)은 단계가 시작되는 시점의 관측으로 잡는다. 창 안에 못 끝내면 창이 닫히길 기다렸다 다음 창에서 이어 하고, 최대 CHAINS_RUN.maxWindows 개 창을 쓴다.
+ * 표식 manual-start / attack-key / manual-end 를 사슬 행 기록에 남긴다. 좌표 이동·무적·HP 주입 없음.
+ */
+async function chainsManual(row) {
+  const prog = { attacked: false, paused: false, cut: false };
+  row.manual = { windows: [], prog };
+  await setAuto(false);
+  keyboardMode = true;
+  row.focusKeyboard = await nativeGameplayFocus(page);
+  await cmark('manual-start');
+  try {
+    let abandon = false;
+    for (let w = 0; w < CHAINS_RUN.maxWindows && !prog.cut; w++) {
+      const rec = { window: w, steps: [] };
+      row.manual.windows.push(rec);
+      if (abandon) { rec.steps.push({ step: 'leave-open-window', ...await chainsEvade(row, { type: 'chainNotOpen' }, 'window close') }); abandon = false; }
+      rec.steps.push({ step: 'wait-open', ...await chainsEvade(row, { type: 'chainState', state: 'open' }, 'open') });
+      rec.openedLeft = (await chainStateNow()).windowLeft;
+      if (!prog.attacked) {
+        const a = await chainsHoldUntil(row, CHAINS_RUN.attackHold, 'before attack');
+        rec.steps.push({ step: 'hold-before-attack', ...a });
+        if (a.reason !== 'done') continue;
+        await chainsAttack(row, rec);
+        prog.attacked = true;
+      }
+      if (!prog.paused) {
+        const a = await chainsHoldUntil(row, CHAINS_RUN.pauseHold, 'before pause');
+        rec.steps.push({ step: 'hold-before-pause', ...a });
+        if (a.reason !== 'done') continue;
+        const st = await chainStateNow();
+        // 정지 뒤 끊김까지 필요한 시간(남은 hold)보다 창이 모자라면 이 창은 포기하고 다음 창에서 정지부터 다시 한다.
+        if (st.windowLeft < chainsDef.hold - st.hold + CHAINS_RUN.pauseSlack) { rec.steps.push({ step: 'pause-skipped', windowLeft: st.windowLeft, hold: st.hold }); abandon = true; continue; }
+        await chainsPause(row, rec);
+        prog.paused = true;
+      }
+      const c = await chainsHoldUntil(row, 1e9, 'until cut');
+      rec.steps.push({ step: 'hold-until-cut', ...c });
+      const after = await chainStateNow();
+      if (after.state === 'exposed' || after.cuts > 0) prog.cut = true;
+    }
+  } finally { await setKeys(new Set()); await cmark('manual-end'); keyboardMode = false; }
+  qaAssert(prog.cut, 'Chains manual profile did not cut a chain within ' + CHAINS_RUN.maxWindows + ' windows: ' + JSON.stringify(row.manual));
+}
+
 // ---------- 완주·정리 ----------
+const CHAINS_LABELS = {
+  definition: '정의 = PLAN 3.1 계약(id·보스 ash_colossus·서명 kiln_hammer·count 3·window 5·hold 1.2·radius 1.6·pillarOffset 8.4·anchorMargin 1.2·exposed 5·exposedMult 1.5)',
+  attach: '부착: 보스 등장 뒤 한 스텝 안에 chained(사슬 3/3), 전이는 idle → chained ⇄ open → exposed → chained … → unchained | ended 뿐', attachToast: '부착 토스트 정확히 1회',
+  pullGeometry: '망치마다 끌기 방향·기둥·벽 지점 = 도구가 읽은 plan.events[0] 과 보스방 x/z/w/h 로 다시 계산한 값(끌기 ≥ 1회), 끌기가 아닌 행에 pullSide 없음',
+  windowCount: '기둥 창 1회 이상', noEarlyOpen: '망치 마지막 고리(completedAttackSequence)가 쓰이기 전·다른 시그니처 뒤에는 열리지 않음', openTiming: '창이 마지막 고리와 같은 스텝 또는 다음 스텝에 열리고 같은 망치로 한 번, 끌기가 먼저 관측됨',
+  noMissedOpen: '끌기가 관측된 망치가 완성되면 반드시 열림(보스 처치 스텝 제외)', windowLength: '창 길이: 놓침 = window ± 1/60, 끊김·처치 ≤ window + 1/60, windowLeft 시계·windowTotal',
+  holdBeforeCut: '끊김마다 직전 연속 버티기(도구가 영웅 위치로 잰 기둥 거리 ≤ radius·idle|move·hp 비감소)가 게임 시간 ≥ hold − 1/60, cuts +1·chainsLeft −1',
+  noNewAttack: '창·노출 안 attackSequence 불변(새 공격 0)', yawFixed: '창·노출 안 보스 yaw 불변', pinnedStill: '창·노출 안 추격 상태 보스 속도 0(이동은 보고)', exposedLength: '노출 길이 = exposed ± 1/60(보스 처치 면제)·exposedLeft 시계·끝나면 chained 또는 unchained',
+  countsConsistent: '컨트롤러 창·끊김·놓침·broken 집계 = 독립 집계, chainsLeft = count − cuts', lastCut: 'lastCutT: 끊김 전 없음, 끊긴 뒤 끊김 행 기준 경과 시간',
+  multiplier: '피해 배율: exposed 의 모든 호출 = 입력 × exposedMult, 그 밖 1배, exposedDamage 집계', objectiveText: "목표창 제목 '거수의 사슬'·범주별 문구(10Hz 갱신 대기 규칙)", toasts: '토스트: 부착 1회·열림 창마다 1회·끊김 n/3 순서·모두 끊김',
+  resultChains: "결과 routeObjective.chains = 마지막 관측값 · 결과 줄 '거수의 사슬 끊음 n/3 · 기둥 창 n번 · 놓침 n번' · aria 요소 1개", autoCuts: 'AUTO 수용(사전 선언): 끊김 ≥ 1',
+};
+/** 보스방 사슬 관측을 파일로 빼고, 사슬 정의가 있는 후보는 판정한다. 정의가 없는 기준선은 문구·토스트 누출만 관찰한다. */
+function recordChains(row, raw, toasts) {
+  const file = row.tag + '-chains-trace.json';
+  fs.writeFileSync(path.join(qa.out, file), JSON.stringify({ rows: raw.rows, filters: raw.filters, marks: raw.marks, room: raw.room }), { flag: 'wx' });
+  row.chainsTraceFile = file; row.chainsTraceRows = raw.rows.length; row.chainsFilterCalls = raw.filters?.length ?? null;
+  if (!chainsDef) {
+    row.chainsLeak = checkChainsLeak(toasts, raw.doms, row.resultText);
+    row.chains = { skipped: '사슬 정의(ROUTE_OBJECTIVES.ashforge_deep.chains)가 없는 기준선 빌드: 사슬 판정 생략, 문구·토스트 누출만 관찰' };
+    check(row.tag + ': 사슬 정의가 없는 빌드에 사슬 문구·토스트 누출 없음(토스트·보스방 목표창 표본·결과 화면 관찰)', row.chainsLeak.ok, row.chainsLeak);
+    return;
+  }
+  const analysis = analyzeChains({ rows: raw.rows, filters: raw.filters, toasts, room: raw.room, result: row.result?.routeObjective, resultText: row.resultText, resultLines: row.resultLines,
+    encounterTactic: row.begin.encounterTactic ?? null }, chainsDef, { autoCuts: row.tag === 'auto' });
+  row.chains = analysis;
+  traces.set(row.tag + ':chains', raw);
+  (report.reportItems.chainsWindows ??= []).push({ tag: row.tag, windows: analysis.windows.map(w => ({ index: w.index, n: w.n, t: w.t, endKind: w.endKind, length: w.length, delaySteps: w.delaySteps, rows: w.rows, moveMax: w.moveMax, holdSeconds: w.hold?.seconds ?? null })),
+    exposures: analysis.exposures.map(e => ({ index: e.index, n: e.n, endKind: e.endKind, length: e.length, moveMax: e.moveMax })),
+    note: '보고 항목: 창마다 시작·종류(cut|miss|truncated)·길이·열림 지연 스텝·보스 이동(넉백) 최대 거리·끊김 직전 연속 버티기 초' });
+  (report.reportItems.chainsGeometry ??= []).push({ tag: row.tag, casts: analysis.geometry.casts, pulled: analysis.geometry.pulled, hammerCasts: analysis.geometry.hammerCasts,
+    note: '보고 항목: 망치 시전마다 끌기 지연 스텝·도구 계산 방향·기둥/벽 지점 최대 차이' });
+  (report.reportItems.chainsFilters ??= []).push({ tag: row.tag, calls: analysis.filters.calls, exposedCalls: analysis.filters.exposedCalls, basis: analysis.filters.basis, exposedDamage: analysis.filters.exposedDamage });
+  (report.reportItems.chainsObjective ??= []).push({ tag: row.tag, counts: analysis.objective.counts, lag: analysis.objective.lagCount, stepLag: analysis.objective.stepLagCount, note: '보고 항목: 갱신 대기(범주 전환 직후) 표본 수와 같은 범주 안 한 스텝 앞선 수치 표본 수' });
+  for (const [name, ok] of Object.entries(analysis.acceptance)) check(row.tag + ': 거수 사슬 ' + (CHAINS_LABELS[name] ?? name), ok, ok ? undefined : { name, definition: analysis.definition.issues, attach: analysis.attach,
+    windows: analysis.windows.slice(0, 6), exposures: analysis.exposures.slice(0, 6), missed: analysis.missed, geometry: analysis.geometry, counts: analysis.counts, lastCut: analysis.lastCut, filters: analysis.filters,
+    objective: analysis.objective, toasts: analysis.toasts, result: analysis.result, auto: analysis.auto });
+}
 /** 관측 행을 파일로 빼고, 심장로 정의가 있는 빌드는 냉각 전 과정을 판정한다. 기준선(정의 없음)은 공통 측정만 남긴다. */
 function recordFurnaces(row, raw) {
   const rows = raw.rows;
@@ -697,6 +1035,7 @@ async function playToEnd(row, { moments = [], expectFirstClear = true } = {}) {
   row.summary = await page.evaluate(() => window.__furnaceQa.summary());
   row.result = await resultSnapshot();
   row.resultText = await page.locator('.exp-result-shell').innerText();
+  row.resultLines = await page.locator('.exp-result-shell p[aria-label]').evaluateAll(els => els.map(el => ({ aria: el.getAttribute('aria-label'), text: el.textContent })));
   row.after = await state();
   row.settlement = await page.evaluate(() => { const b = window.app.battle; return { paid: !!b.result?.expeditionReceipt?.ok, receipt: b.result?.expeditionReceipt ? structuredClone({ ok: b.result.expeditionReceipt.ok, rewards: b.result.expeditionReceipt.rewards }) : null, dirty: !!b.rpgDirty }; });
   const win = row.result?.win === true;
@@ -720,6 +1059,8 @@ async function playToEnd(row, { moments = [], expectFirstClear = true } = {}) {
     }
   }
   const s = row.summary;
+  const chainsRaw = s.chains;
+  delete s.chains;
   row.metrics = { elapsed: row.result?.time ?? null, kills: row.result?.kills ?? null, hpDrops: s.hpDrops.length, hpDropTotal: ms(s.hpDrops.reduce((sum, d) => sum + d.drop, 0)),
     minHpRatio: s.minHpRatio, maxAlive: s.maxAlive, simulation: stepStats(s.stepMs), render: stepStats(s.renderMs), over50ms: [...s.stepMs, ...s.renderMs].filter(v => v > 50).length, slow: s.slow,
     drawCalls: s.samples.map(x => ({ label: x.label, roomId: x.roomId ?? null, room: x.room, t: ms(x.t), calls: x.calls, triangles: x.triangles, ms: x.ms, view: x.view })) };
@@ -727,6 +1068,7 @@ async function playToEnd(row, { moments = [], expectFirstClear = true } = {}) {
   delete s.stepMs; delete s.renderMs;
   (report.reportItems.absolute50ms ??= []).push({ tag: row.tag, runOver50: row.metrics.over50ms, note: '보고 항목(판정 아님). 기준선 대비 증가는 ashforge-furnace-compare 가 판정한다.' });
   recordFurnaces(row, s);
+  recordChains(row, chainsRaw, s.toasts);
   if (!routeDef) {
     row.baseline = { skipped: row.furnaces.skipped, elapsed: row.metrics.elapsed, kills: row.metrics.kills, hits: row.metrics.hpDrops, frames: { simulation: row.metrics.simulation, render: row.metrics.render }, drawCalls: row.metrics.drawCalls };
   }
@@ -872,17 +1214,46 @@ const profiles = {
     await closeResultToLobby();
     return { runs: [row] };
   },
+  async chains() {
+    const why = skipUnlessChains();
+    if (why) return why;
+    await applyFixture();
+    const row = await beginRun('chains');
+    keyLog.length = 0;
+    // 1) AUTO 로 보스방까지(심장로 4/4·봉인 해제·보스 등장) 진행해 사슬이 붙은 스텝(chained)에서 멈춘다.
+    const attached = await advance(row, { type: 'chainState', state: 'chained' }, { max: 60 * 60 * 20 });
+    check('chains: AUTO 로 보스방까지 가서 거수 사슬이 붙음(chained)', attached.reason === 'stop', { reason: attached.reason, elapsed: attached.elapsed });
+    qaAssert(attached.reason === 'stop', 'Chains never attached: ' + attached.reason);
+    row.attached = await freeze();
+    // 2) R #btn-auto 끔 → 키보드만: 기둥 밖 회피 → 기둥 안 hold ≥ 0.5 → 공격 키 → hold 0 → 다시 버티다 정지·재개 → 끊김.
+    await chainsManual(row);
+    row.cutShot = await shot('chains-cut');
+    // 3) R AUTO 켬 → 완주.
+    await setAuto(true); keyboardMode = false;
+    await playToEnd(row);
+    const raw = traces.get(row.tag + ':chains');
+    row.chainsManual = checkChainsManual(raw.rows, raw.marks, chainsDef, { room: raw.room, minHold: CHAINS_RUN.attackHold });
+    check('chains: 키보드 구간 — AUTO 꺼짐·영웅 생존·순간이동 없음·기둥 밖에서 열림을 기다림·hold ≥ ' + CHAINS_RUN.attackHold + ' 뒤 공격 키로 hold 0·공격 키 뒤 새 버티기로 끊김', row.chainsManual.ok, row.chainsManual);
+    const presses = keyLog.filter(k => k.key === CHAINS_RUN.attackKey && k.op === 'down').length;
+    check('chains: 공격 키(' + CHAINS_RUN.attackKey + ')는 기둥 안 공격 단계에서만 한 번 눌림', presses === 1, { presses });
+    row.keyEvents = keyLog.length;
+    await closeResultToLobby();
+    return { runs: [row] };
+  },
   async screens() {
     const why = skipUnlessShockWindow();
     if (why) return why;
     await applyFixture();
     const row = await beginRun('screens');
+    // 거수 사슬 순간(후보에만): 끌기 중 · 기둥 열림(hold > 0) · 끊김(exposed). 보스방에서만 일어나므로 심장로 순간들 뒤에 둔다.
+    const chainMoments = chainsDef ? CHAIN_MOMENTS.map(label => ({ label, stop: { type: 'chainMoment', label }, settle: 0, chain: true })) : [];
     const moments = [
       { label: 'bound', stop: { type: 'bound', gate: 0 }, settle: 0, want: { gate: 0, state: 'bound' } },
       { label: 'shock', stop: { type: 'shock', gate: 0 }, settle: 0, want: { gate: 0, state: 'shock' } },
       { label: 'open', stop: { type: 'hold', min: 1.0, progress: 0 }, settle: 0, want: { gate: 0, state: 'open' } },
       { label: 'releasing', stop: { type: 'cooled', gate: 0, min: .3 }, settle: 0, want: { gate: 0, state: 'releasing' } },
       { label: 'released', stop: { type: 'cooled', gate: 0, min: 2.0 }, settle: 0, want: { gate: 0, state: 'released' } },
+      ...chainMoments,
     ];
     await playToEnd(row, { moments });
     const verdict = checkScreens(row.shots, moments.map(m => m.label), SCREEN_VIEWPORTS.length);
@@ -891,10 +1262,10 @@ const profiles = {
     for (const m of moments) {
       const s = row.shots.find(x => x.label === m.label);
       if (!s?.reached) continue;
-      s.look = checkScreenMoment(s, routeDef, m.want, { releaseExpected });
+      s.look = m.chain ? checkChainMoment(s, chainsDef, m.label) : checkScreenMoment(s, routeDef, m.want, { releaseExpected });
       // PNG 마다 그 순간 states 를 남긴다(사람이 PNG 와 맞춰 본다).
-      s.pngStates = s.files.map(file => ({ file, states: s.look.states, elapsed: s.capture.elapsed }));
-      check('screens: ' + m.label + ' 순간의 1번 심장로 상태 = ' + m.want.state + ' (촬영 스텝 행 + 같은 스텝 releaseView.states·사슬 scale)', s.look.ok, s.look);
+      s.pngStates = s.files.map(file => ({ file, ...(m.chain ? { chain: s.look.chain } : { states: s.look.states }), elapsed: s.capture.elapsed }));
+      check('screens: ' + m.label + (m.chain ? ' 순간의 거수 사슬 상태·목표창 문구 (촬영 스텝 사슬 행)' : ' 순간의 1번 심장로 상태 = ' + m.want.state + ' (촬영 스텝 행 + 같은 스텝 releaseView.states·사슬 scale)'), s.look.ok, s.look);
     }
     row.resultShots = await captureScreens('result-' + row.tag);
     await closeResultToLobby();
@@ -925,9 +1296,10 @@ try {
         for (const e of b.enemies) if (e.alive) alive[e.homeRoom?.id ?? 'none'] = (alive[e.homeRoom?.id ?? 'none'] || 0) + 1;
         return { freeze: q?.freeze?.(false) ?? null, recentRows: q?.rows?.slice(-30) ?? null, hpDrops: q?.hpDrops?.slice(-20) ?? null,
           objective: document.getElementById('objective')?.textContent ?? null, curRoom: b.curRoom?.id ?? null, sealed: !!b.world.sealed, alive,
-          auto: !!b.player?.auto, playerState: b.player?.state ?? null };
+          auto: !!b.player?.auto, playerState: b.player?.state ?? null, toasts: q?.toasts?.slice(-20) ?? null, chain: q?.cb?.rows?.slice(-30) ?? null };
       }).catch(diagError => ({ error: String(diagError) }));
       await setKeys(new Set()).catch(() => {});
+      report.profiles[name].keyLog = keyLog.slice(-40);
       await qa.save();
       try { await qa.boot({ reload: true }); } catch (bootError) { report.profiles[name].recoverFailure = String(bootError); break; }
     }
@@ -941,7 +1313,8 @@ try {
 finally {
   try { await qa.close(); } catch (error) { report.status = 'fail'; report.cleanupFailure = String(error?.stack || error); process.exitCode = 1; }
   if (report.mediaGates !== 'pass') report.status = 'fail';
+  report.load.end = loadNow();
   report.finished = new Date().toISOString(); await qa.save();
 }
-console.log(JSON.stringify({ status: report.status, out: qa.out, depth, furnaceDefinition: !!routeDef, releaseExpected, reseed: report.reseed, profiles: Object.fromEntries(Object.entries(report.profiles).map(([k, v]) => [k, v.status])),
+console.log(JSON.stringify({ status: report.status, out: qa.out, depth, furnaceDefinition: !!routeDef, chainsDefinition: !!chainsDef, load: report.load, releaseExpected, reseed: report.reseed, profiles: Object.fromEntries(Object.entries(report.profiles).map(([k, v]) => [k, v.status])),
   failedChecks: report.failedChecks, mediaGates: report.mediaGates, failure: report.failure, cleanupFailure: report.cleanupFailure, releaseApproved: false }));
