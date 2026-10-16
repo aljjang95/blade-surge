@@ -5,14 +5,16 @@ import { buildExpeditionStage, buildExpeditionWorld } from '../src/game/expediti
 import { battleObjectiveView } from '../src/ui/battle-objective-view.js';
 import { ExpeditionResult, ashforgeChainResultLine } from '../src/expansion/hub.jsx';
 
-// 규칙 코어(AshforgeChainBreak)는 쓰지 않는다. 실제 재벼림 심층 냉각 경로를 만들고, chains 정의(PLAN 3.1)와 컨트롤러 읽기 상태(PLAN 3.2)를 가짜로 끼운다.
+// 규칙 코어(AshforgeChainBreak)는 쓰지 않는다. 실제 재벼림 심층 냉각 경로를 만들고, chains 정의(PLAN 3.1·3.6)와 컨트롤러 읽기 상태(PLAN 3.2)를 가짜로 끼운다.
+// 휘청 배율 문구가 정의 값에서 오는지 보려고 exposedMult 를 실제 정의(2)와 다른 1.5 로 둔다(컨트롤러 damageMult 가 없을 때의 대체 경로).
 const CHAINS = Object.freeze({ id: 'ashforge_deep_chains', boss: 'ash_colossus', signature: 'kiln_hammer', count: 3, window: 5, hold: 1.2, radius: 1.6,
-  pillarOffset: 8.4, anchorMargin: 1.2, exposed: 5, exposedMult: 1.5 });
+  pillarOffset: 8.4, anchorMargin: 1.2, exposed: 5, exposedMult: 1.5, weaken: .1 });
 
 function fixture(routeId = 'ashforge_catacomb', withDef = true) {
   const stage = buildExpeditionStage('dungeon', routeId, null, { depth: 'deep' });
   const world = buildExpeditionWorld(stage), route: any = createRouteObjectives(stage, world);
-  if (withDef) route.def = { ...route.def, chains: CHAINS };
+  // withDef 가 거짓이면 chains 정의가 없는 냉각 정의로 만든다(실제 정의에는 BUNDLE-15 부터 chains 가 있다).
+  route.def = withDef ? { ...route.def, chains: CHAINS } : { ...route.def, chains: undefined };
   const battle: any = { world, routeObjectives: route, curRoom: world.startRoom, conquest: null, boss: null };
   const set = (name: string, value: any) => Object.defineProperty(route, name, { configurable: true, value });
   return { stage, world, route, battle, setChains: (v: any) => set('chains', v), setRear: (v: any) => set('rear', v) };
@@ -23,7 +25,11 @@ const TITLE = '거수의 사슬';
 
 test('정의 전제: 실제 재벼림 심층 경로는 냉각 정의이고 첫 밸브 단계를 보인다', () => {
   const f = fixture('ashforge_catacomb', false);
-  expect(f.route.def.kind).toBe('cooling'); expect(f.route.def).toBe(ROUTE_OBJECTIVES.ashforge_deep);
+  expect(f.route.def.kind).toBe('cooling');
+  // fixture 는 정의를 복사해 chains 를 바꾸므로 실제 경로 정의는 새로 만든 경로로 확인한다.
+  const stage = buildExpeditionStage('dungeon', 'ashforge_catacomb', null, { depth: 'deep' });
+  const real: any = createRouteObjectives(stage, buildExpeditionWorld(stage));
+  expect(real.def).toBe(ROUTE_OBJECTIVES.ashforge_deep); expect(real.def.chains).toBeTruthy();
   expect(battleObjectiveView(f.battle).title).not.toBe(TITLE);
 });
 
@@ -65,6 +71,10 @@ test('exposed: 휘청 남은 시간은 0.1초 올림, 배율은 def 에서 계�
   chains.exposedLeft = .04; expect(panel()).toMatchObject({ action: '사슬 끊김 · 휘청 0.1초 · 받는 피해 150%', hold: 0 });
   f.route.def = { ...f.route.def, chains: { ...CHAINS, exposedMult: 2 } }; chains.exposedLeft = 1;
   expect(panel().action).toBe('사슬 끊김 · 휘청 1.0초 · 받는 피해 200%');
+  // 컨트롤러가 지금 배율(약화 × 휘청)을 주면 그 값을 쓴다(첫 끊김 1.1 × 2 = 220%, 셋째 1.3 × 2 = 260%).
+  chains.damageMult = 2.2; expect(panel().action).toBe('사슬 끊김 · 휘청 1.0초 · 받는 피해 220%');
+  chains.damageMult = 1.3 * 2; expect(panel().action).toBe('사슬 끊김 · 휘청 1.0초 · 받는 피해 260%');
+  chains.damageMult = NaN; expect(panel().action).toBe('사슬 끊김 · 휘청 1.0초 · 받는 피해 200%');
 });
 
 test('값이 숫자가 아니면 0 으로 방어한다', () => {
