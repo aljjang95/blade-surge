@@ -1,14 +1,15 @@
 import manifest from '../../asset-library/manifest.json';
 import { LIBRARY_SCHEMA, triangleLimit, validateManifest as validateManifestShape } from '../../tools/asset-library/manifest.mjs';
 import { monsterRosterEntry } from '../data/monster-roster.js';
-import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v2.json';
-import ROGUE_LIBRARY_REVISION from '../data/rogue-library-revision-v1.json';
+import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v3.json';
+import ROGUE_LIBRARY_REVISION from '../data/rogue-library-revision-v2.json';
 
 export { LIBRARY_SCHEMA, triangleLimit };
-// v2: 전신 rest 축 리타깃 + 실제 스킨 접지 + 활 사격·백스텝 재저작(art-src/ranger/author_ranger_library_v2.py). v1 기록·파일은 그대로 둔다.
-export const RANGER_LIBRARY_REVISION_ID = 'ranger-library-v2';
-// 도적 1단계: 궁수와 같은 Tripo 롤 배치라 같은 축 리타깃·접지·백스텝(art-src/hero-axis/author_hero_axis_v1.py)을 쓴다.
-export const ROGUE_LIBRARY_REVISION_ID = 'rogue-library-axis-v1';
+// v3: v2 저작(전신 rest 축 리타깃·실제 스킨 접지·활 사격·백스텝, art-src/ranger/author_ranger_library_v2.py)을 Blender 5.2.2 에서 다시 굽고
+// 몸 재질 보정을 GLB 에 고정했다(tools/art/finish-library-materials.mjs). v1·v2 기록·파일은 그대로 둔다.
+export const RANGER_LIBRARY_REVISION_ID = 'ranger-library-v3';
+// 도적 1단계: 축 교정 클립(rogue-library-axis-v1, art-src/hero-axis/author_hero_axis_v1.py) 그대로 + 같은 재질 마감. axis-v1 기록·파일은 그대로 둔다.
+export const ROGUE_LIBRARY_REVISION_ID = 'rogue-library-v2';
 const LIBRARY_REVISIONS = Object.freeze([
   Object.freeze({ id: RANGER_LIBRARY_REVISION_ID, prefix: '/models/heroes-next/ranger-', revision: RANGER_LIBRARY_REVISION }),
   Object.freeze({ id: ROGUE_LIBRARY_REVISION_ID, prefix: '/models/heroes-next/rogue-', revision: ROGUE_LIBRARY_REVISION }),

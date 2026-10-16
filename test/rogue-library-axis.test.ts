@@ -7,8 +7,10 @@ import { installRangerRuntimeLoader, stripImages } from '../tools/art/ranger-run
 import { loadHeroModel, loadHeroAsset, spawnCharacter, disposeCharacter } from '../src/engine/assets.js';
 import { resolveAssetSource, revisedLibraryFile, rogueLibraryRevision } from '../src/engine/library-assets.js';
 import manifest from '../asset-library/manifest.json';
+import { finishLibraryGLB } from '../tools/art/finish-library-materials.mjs';
+import REV_AXIS_V1 from '../src/data/rogue-library-revision-v1.json';
 
-// 도적 1단계 축 교정본(rogue-library-axis-v1): 궁수와 같은 Tripo 롤 결함을 같은 Blender 리타깃으로 고친 파일을 실제 loadHeroModel 경로로 잰다.
+// 도적 1단계 채택본(rogue-library-v2 = 축 교정 rogue-library-axis-v1 클립 + 재질 마감): 궁수와 같은 Tripo 롤 결함을 같은 Blender 리타깃으로 고친 파일을 실제 loadHeroModel 경로로 잰다.
 let restore = () => {};
 beforeAll(() => { restore = installRangerRuntimeLoader(); });
 afterAll(() => restore());
@@ -41,12 +43,30 @@ test('도적 교정본은 원본 SHA 에서 생성된 정확한 파일이고 메
   expect(() => revisedLibraryFile({ ...asset, sha256: 'f'.repeat(64) } as any)).toThrow('exact generated file');
   for (const id of ['hero_rogue_t2', 'hero_rogue_t3', 'avatar_rogue_crow', 'hero_knight_t1']) expect(revisedLibraryFile(manifest.assets.find((a: any) => a.id === id) as any)).toBeNull();
   const a = glbJson('../asset-library/normalized/hero_rogue_t1.glb'), b = glbJson('../public' + REV.output.path);
-  expect(b.materials).toEqual(a.materials); expect(b.skins.length).toBe(a.skins.length);
+  // 재질은 마감 규칙(library-skin-finish-v1) 세 필드만 원본과 다르다.
+  expect(a.materials.every((m: any) => m.alphaMode === 'BLEND' && m.pbrMetallicRoughness.metallicFactor === undefined)).toBe(true);
+  expect(b.materials).toEqual(a.materials.map((m: any) => ({ ...m, alphaMode: 'MASK', alphaCutoff: .5, pbrMetallicRoughness: { ...m.pbrMetallicRoughness, metallicFactor: .22 } })));
+  expect(b.skins.length).toBe(a.skins.length);
   for (const node of a.nodes) {
     const o = b.nodes.find((n: any) => n.name === node.name);
     for (const k of ['translation', 'rotation']) if (node[k]) node[k].forEach((x: number, i: number) => expect(Math.abs(o[k][i] - x)).toBeLessThan(.01));
   }
   expect(b.animations.map((c: any) => c.name).sort()).toEqual([...Object.keys(asset.clips), 'Dodge_Backward'].sort());
+});
+
+test('도적 v2 는 공개 axis-v1 파일에 재질 마감만 더한 정확한 파일이다: BIN·비재질 JSON 동일, axis-v1 파일·기록은 그대로', () => {
+  expect(sha('../public' + REV_AXIS_V1.output.path)).toBe(REV_AXIS_V1.output.sha256);
+  expect(REV.id).toBe('rogue-library-v2'); expect(REV.supersedes).toBe(REV_AXIS_V1.id); expect(REV.license).toBe(REV_AXIS_V1.license);
+  expect(REV.materialFinish.inputSha256).toBe(REV_AXIS_V1.output.sha256); expect(REV.clips).toEqual(REV_AXIS_V1.clips);
+  const before = readFileSync(new URL('../public' + REV_AXIS_V1.output.path, import.meta.url)), after = readFileSync(new URL('../public' + REV.output.path, import.meta.url));
+  expect(finishLibraryGLB(before, REV.id).output.equals(after)).toBe(true);
+  const split = (b: Buffer) => { const n = b.readUInt32LE(12); return { json: JSON.parse(b.subarray(20, 20 + n).toString()), bin: b.subarray(20 + n) }; };
+  const x = split(before), y = split(after);
+  expect(y.bin.equals(x.bin)).toBe(true);
+  expect(y.json.asset.extras.materialFinish).toEqual({ revision: REV.id, recipe: 'library-skin-finish-v1', tool: 'tools/art/finish-library-materials.mjs',
+    inputSha256: REV_AXIS_V1.output.sha256, metallicFactorMax: .22, opaqueBlendAlphaCutoff: .5 });
+  delete x.json.materials; delete y.json.materials; delete y.json.asset.extras.materialFinish;
+  expect(JSON.stringify(y.json)).toBe(JSON.stringify(x.json));
 });
 
 test('원본 달리기는 무릎이 옆으로 꺾이고, 교정본은 무릎이 정면으로 굽으며 발이 지면에 닿는다', async () => {
@@ -75,4 +95,3 @@ test('도적 2·3단계와 까마귀 아바타는 교정 클립을 함께 쓴다
     expect(gltf.animations.some((c: any) => c.name === 'Dodge_Backward')).toBe(true);
   }
 });
-

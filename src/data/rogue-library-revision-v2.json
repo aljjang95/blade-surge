@@ -1,0 +1,67 @@
+{
+  "id": "rogue-library-v2",
+  "useInGame": true,
+  "status": "GENERATED",
+  "asset": "hero_rogue_t1",
+  "reason": "축 교정 클립(rogue-library-axis-v1, Blender 4.3.2 저작)은 BIN 바이트 그대로 두고, 게임 로더가 매 로드마다 하던 몸 재질 보정(금속도 상한 0.22·불투명 BLEND→MASK 0.5)을 GLB 재질로 고정한 채택본. 5.2 재저작은 하지 않았다",
+  "supersedes": "rogue-library-axis-v1",
+  "source": {
+    "path": "asset-library/normalized/hero_rogue_t1.glb",
+    "sha256": "9d2dab5e01dd9df6b80f6343a1d32820772ca21080468011473893a009ea0539"
+  },
+  "axisReference": {
+    "path": "asset-library/normalized/hero_knight_t1.glb",
+    "role": "Mixamo 관례 본 축(읽기 전용)"
+  },
+  "authoring": {
+    "revision": "rogue-library-axis-v1",
+    "script": "art-src/hero-axis/author_hero_axis_v1.py",
+    "blender": "4.3.2",
+    "packedPath": "/models/heroes-next/rogue-library-t1-axis-v1.glb",
+    "packedSha256": "c24b8eab468924a07c2c23bda9feddc51ea25cc6024321f9e2eccc6e46a88ead"
+  },
+  "materialFinish": {
+    "tool": "tools/art/finish-library-materials.mjs",
+    "recipe": "library-skin-finish-v1",
+    "inputSha256": "c24b8eab468924a07c2c23bda9feddc51ea25cc6024321f9e2eccc6e46a88ead",
+    "rule": "src/engine/assets.js normalizeLibrarySkinMaterial 과 같은 의미: metallicFactor 상한 0.22(없으면 기본 1→0.22), 불투명 BLEND→MASK alphaCutoff 0.5",
+    "materials": [
+      {
+        "name": "tripo_mat_d0b67f64",
+        "changed": [
+          "pbrMetallicRoughness.metallicFactor",
+          "alphaMode",
+          "alphaCutoff"
+        ]
+      }
+    ],
+    "preserved": "BIN 청크 전체(메시·스킨·역바인드·텍스처·클립 바이트)와 materials 외 JSON. asset.extras.materialFinish 만 추가"
+  },
+  "output": {
+    "path": "/models/heroes-next/rogue-library-t1-v2.glb",
+    "sha256": "19f7e1492d947c6055cbbd8b51f3ee355c5c72f8ec4ab6296be32fb9d1e1c846"
+  },
+  "clips": {
+    "cast_raise": 2.9583,
+    "cast_shoot": 2.2917,
+    "cheer": 8.5,
+    "chop": 1.5,
+    "death": 1.25,
+    "Dodge_Backward": 0.5,
+    "hit": 0.5,
+    "idle": 9.9167,
+    "interact": 3.4167,
+    "run": 0.6667,
+    "slash_h": 1.6667,
+    "stab": 1.7083,
+    "throw": 2.1667,
+    "dodge": 0.5
+  },
+  "tool": {
+    "blender": "4.3.2",
+    "author": "art-src/hero-axis/author_hero_axis_v1.py",
+    "packer": "tools/art/pack-ranger-library.mjs",
+    "finisher": "tools/art/finish-library-materials.mjs"
+  },
+  "license": "owner-generated (Tripo subscription) mesh unchanged; Mixamo body clips retargeted to the same skeleton; backstep authored in Blender from the same skeleton"
+}
