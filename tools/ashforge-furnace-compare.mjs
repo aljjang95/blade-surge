@@ -6,9 +6,11 @@
 // 보고 항목(게이트 아님, PLAN 1절·5절 5에서 사전 선언): report.roomEnterDrawCalls 심장로 방 첫 진입 draw call 증가, report.over50PerThousandSteps 50ms 초과율,
 // report.timeParity 일반 완주 시간 비 1.00 ± 0.05 여부, report.routeViewGpu 냉각 장치 뷰까지 포함한 경로 목표 전체 A/B.
 // 50ms 절대 검사는 각 report 의 reportItems.absolute50ms 가 보고하며 여기서 대신하거나 완화하지 않는다.
+// BUNDLE-15 거수 사슬 짝(후보 report 의 routeDefinition 에 chains 가 있으면): 기준선(6316e0b)도 같은 재벼림 심층 심장로 정의를 갖고 chains 만 없다. 게이트는 같은 설정 · 기준선/후보 판별(chains 유무 외 같은 정의, HEAD 다름,
+// 양쪽 심장로 판정 통과·후보 사슬 판정 통과) · 전체 런 50ms 초과 수 cand ≤ base + 2 하나다. 완주 시간 비·처치 수·사슬 결과(끊김·창·놓침)·50ms 초과율·방 첫 진입 draw call·load·실행 순서는 보고 항목이다(JSON report).
 // 기준선은 같은 도구를 --project=<기준선 워크트리> 로 같은 --hero --seed --depth 에서 돌린 report 여야 한다.
 import fs from 'node:fs';
-import { compareRuns, compareSetup, compareTargetsOk } from './ashforge-furnace-checks.mjs';
+import { compareChainRuns, compareChainsTargetsOk, compareRuns, compareSetup, compareTargetsOk } from './ashforge-furnace-checks.mjs';
 
 const arg = name => process.argv.find(a => a.startsWith('--' + name + '='))?.slice(name.length + 3);
 if (process.argv.includes('--help') || !arg('base') || !arg('cand')) {
@@ -27,18 +29,23 @@ const runOf = file => {
     furnacesOk: run.furnaces?.ok ?? null, time: run.result?.win ? run.result.time : null, samples: run.summary?.samples || [], runOver50: run.metrics?.over50ms ?? null,
     steps: run.summary?.steps ?? (Number.isFinite(simulation) && Number.isFinite(render) ? simulation + render : null),
     // rows 는 크므로 판정에 쓰는 요약만 남긴다.
-    viewGpu: gpu ? { ok: gpu.ok, samples: gpu.samples, max: gpu.max, limit: gpu.limit, coverage: gpu.coverage } : null, routeViewGpu: gpu?.route ?? null };
+    viewGpu: gpu ? { ok: gpu.ok, samples: gpu.samples, max: gpu.max, limit: gpu.limit, coverage: gpu.coverage } : null, routeViewGpu: gpu?.route ?? null,
+    // 거수 사슬 짝(BUNDLE-15)용: 후보의 사슬 판정, 처치 수, 사슬 결과 요약, 실행 시각·load.
+    chainsOk: run.chains?.ok ?? null, kills: run.result?.kills ?? null, started: report.started ?? null,
+    chainsSummary: run.chains?.acceptance ? { ...(run.result?.routeObjective?.chains ?? {}), windowCount: run.chains.windowCount, cutCount: run.chains.cutCount, missCount: run.chains.missCount, castCount: run.chains.casts, objective: run.chains.objective?.counts ?? null } : null,
+    load: report.load ? { start: report.load.start ?? null, beforeStart: report.load.beforeStart ?? null, end: report.load.end ?? null, waitedMs: report.load.waitedMs ?? null } : null };
 };
 const cand = runOf(arg('cand')), base = runOf(arg('base'));
 const depth = cand.depth;
 const { same, ok: sameSetup } = compareSetup(cand, base);
-const verdict = compareRuns(cand, base, { depth });
+const chainsPair = !!cand.routeDefinition?.chains;
+const verdict = chainsPair ? compareChainRuns(cand, base) : compareRuns(cand, base, { depth });
 const setupOf = r => ({ viewport: r.viewport, motion: r.motion, quality: r.quality });
-const defOf = r => (r.routeDefinition ? { id: r.routeDefinition.id, release: r.routeDefinition.release ?? null, shockWindow: !!r.routeDefinition.shockWindow } : null);
+const defOf = r => (r.routeDefinition ? { id: r.routeDefinition.id, release: r.routeDefinition.release ?? null, shockWindow: !!r.routeDefinition.shockWindow, chains: r.routeDefinition.chains?.id ?? null } : null);
 // 기준선·후보가 뒤바뀌거나 후보끼리 비교되면 합격하지 않는다.
-const targetsOk = compareTargetsOk(cand, base, depth);
-const result = { candidate: { head: cand.head, status: cand.status, runStatus: cand.runStatus, heroId: cand.heroId, depth, reseed: cand.reseedOn, ...setupOf(cand), definition: defOf(cand), furnacesOk: cand.furnacesOk },
-  baseline: { head: base.head, status: base.status, runStatus: base.runStatus, heroId: base.heroId, depth: base.depth, reseed: base.reseedOn, ...setupOf(base), definition: defOf(base) },
+const targetsOk = chainsPair ? compareChainsTargetsOk(cand, base) : compareTargetsOk(cand, base, depth);
+const result = { mode: chainsPair ? 'chains-pair' : 'furnace-pair', candidate: { head: cand.head, status: cand.status, runStatus: cand.runStatus, heroId: cand.heroId, depth, reseed: cand.reseedOn, ...setupOf(cand), definition: defOf(cand), furnacesOk: cand.furnacesOk, chainsOk: cand.chainsOk },
+  baseline: { head: base.head, status: base.status, runStatus: base.runStatus, heroId: base.heroId, depth: base.depth, reseed: base.reseedOn, ...setupOf(base), definition: defOf(base), furnacesOk: base.furnacesOk },
   same, sameSetup, targetsOk, ...verdict,
   absolute50ms: { note: '절대 검사는 각 report 의 reportItems.absolute50ms 가 보고한다. 여기는 보고 항목', candidateRun: cand.runOver50, baselineRun: base.runOver50 } };
 result.gates = { sameSetup, targetsOk, ...verdict.gates };

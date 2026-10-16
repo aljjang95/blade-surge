@@ -388,7 +388,8 @@ export class Enemy extends Actor {
     const sx = steer.x, sz = steer.z;
 
     if (this.state === 'chase' && this.damageVeil?.pins?.(this)) {
-      // 잿불금고 심층 후방 노출: 망치가 박힌 동안 집행자는 제자리에 서고 방향을 바꾸지 않는다. 공격 대기는 그대로 흐르고 컨트롤러가 창 끝까지 붙잡는다.
+      // 보스 묶임(잿불금고 심층 후방 노출, 재벼림 심층 거수 사슬): 제자리에 서고 방향을 바꾸지 않는다. 공격 대기는 그대로 흐르고,
+      // 새 공격을 막아야 하는 동안은 컨트롤러가 대기를 붙잡는다. 거수 사슬 기둥이 열린 동안은 영웅이 사거리 밖일 때만 묶는다.
       this.atkCd -= dt; this.vel.set(0, 0, 0);
       if (this.actionName !== this.rig.idleCombat && this.actionName !== this.rig.idle) this.play(this.A('idleCombat'), { fade: 0.15 });
     } else if (this.state === 'chase') {

@@ -26,6 +26,12 @@ Acceptance and regression requirements:
   until its final ring; the executor then stays pinned for 4 seconds, starts no new
   attack, and takes double damage from a hero behind it and half from one in front
   (docs/ember-deep-tide-valves.md).
+  Exception (BUNDLE-15): in the personal deep Ashforge Catacomb, while chains remain, the colossus's
+  slag hammer (kiln_hammer) that started while chained is not cut by stun, stagger or posture break until
+  its final ring; a chain pillar then opens for 5 seconds, during which the colossus cannot chase (it still
+  attacks a hero within reach). Holding the pillar for 1.2 seconds breaks a chain: 5 seconds of stagger
+  with double damage taken and +10% damage taken for the rest of the fight per broken chain
+  (docs/ashforge-deep-furnaces.md).
 - Simultaneous overlapping shapes hit each living actor only once. Player.hurt
   owns invulnerability and damage mitigation; the host owns party simulation.
 - Boss signatures replace automatic ambient hazards in the final boss room;

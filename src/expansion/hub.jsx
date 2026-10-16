@@ -29,6 +29,8 @@ export const bellfallDeepBellsResultLine = report => `종문 역순 공명 ${rep
 export const cometBossOrbitResultLine = report => `푸른 궤도선 유성 ${report.bossMeteors}회 · 피격 ${Number.isFinite(report.bossMeteorHits)?report.bossMeteorHits:0}회`;
 /** 잿불금고 심층 사슬 집행자 후방 결과 줄(BUNDLE-14). rear{ rearHits, windows, frontHits }로 만든다. 숫자가 아닌 횟수는 0회로 둔다. */
 export const emberRearResultLine = rear => `사슬 집행자 후방 공격 ${Number.isFinite(rear.rearHits)?rear.rearHits:0}회 · 노출 ${Number.isFinite(rear.windows)?rear.windows:0}번 · 정면 막힘 ${Number.isFinite(rear.frontHits)?rear.frontHits:0}회`;
+/** 재벼림 심층 거수의 사슬 결과 줄(BUNDLE-15). chains{ cuts, count, windows, misses }로 만든다. 숫자가 아닌 값은 0으로 둔다. */
+export const ashforgeChainResultLine = chains => `거수의 사슬 끊음 ${Number.isFinite(chains.cuts)?chains.cuts:0}/${Number.isFinite(chains.count)?chains.count:0} · 기둥 창 ${Number.isFinite(chains.windows)?chains.windows:0}번 · 놓침 ${Number.isFinite(chains.misses)?chains.misses:0}번`;
 /** 녹청 심층 포자 수로 결과 줄(BUNDLE-11). channel{ crossed, sporeHits, floods }로 만든다. 숫자가 아닌 횟수는 0회로 둔다. */
 export const sporeChannelResultLine = channel => `포자 수로 돌파 ${channel.crossed?'완료':'미완료'} · 포자 피격 ${Number.isFinite(channel.sporeHits)?channel.sporeHits:0}회 · 범람 ${Number.isFinite(channel.floods)?channel.floods:0}회`;
 /** 성운 첨탑 외곽 고리 정의(ring)를 결과 보고의 id 로 찾는다. 못 찾으면 심층 정의(BUNDLE-12 문구). */
@@ -89,6 +91,7 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
         {result.routeObjective?.id==='bellfall_deep_bells' && <p aria-label="종문 역순 공명 결과">{bellfallDeepBellsResultLine(result.routeObjective)}</p>}
         {result.routeObjective?.label && result.routeObjective.id!=='comet_deep_orbits' && result.routeObjective.id!=='bellfall_deep_bells' && !result.routeObjective.pages && !result.routeObjective.constellations && !result.routeObjective.ring && <p aria-label={result.routeObjective.label+' 결과'}>{result.routeObjective.label} {result.routeObjective.progress}/{result.routeObjective.target}{result.routeObjective.complete?' · 완료':''}</p>}
         {result.routeObjective?.rear && <p aria-label="사슬 집행자 후방 결과">{emberRearResultLine(result.routeObjective.rear)}</p>}
+        {result.routeObjective?.chains && <p aria-label="거수의 사슬 결과">{ashforgeChainResultLine(result.routeObjective.chains)}</p>}
         {result.routeObjective?.ring && <p aria-label={astralRingDefFor(result.routeObjective).title+' 결과'}>{astralRingResultLine(result.routeObjective.ring, astralRingDefFor(result.routeObjective))}</p>}
         {result.routeObjective?.escape && <p aria-label="거울 미궁 탈출 결과">거울 미궁 탈출 {result.routeObjective.escape.escaped?'완료':'미완료'} · 거울 붕괴 {result.routeObjective.escape.collapses}회 · 환영 거울 {result.routeObjective.escape.illusions}회</p>}
         {result.routeObjective?.channel && <p aria-label="포자 수로 돌파 결과">{sporeChannelResultLine(result.routeObjective.channel)}</p>}
