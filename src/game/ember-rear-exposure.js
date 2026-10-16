@@ -2,6 +2,8 @@ import { Vector3 } from 'three';
 import { audio } from '../engine/audio.js';
 
 const EPS = 1e-9;
+/** AUTO 옆 경유점을 시도하는 순서(영웅이 있는 쪽 먼저). 프레임마다 배열을 만들지 않는다. */
+const SIDES_RIGHT_FIRST = Object.freeze([1, -1]), SIDES_LEFT_FIRST = Object.freeze([-1, 1]);
 /** 노출이 열릴 때 한 번 내는 합성음 옵션(열 때마다 객체를 만들지 않는다). */
 const OPEN_SOUND = { vol: .3, base: 330, notes: [0, 7, 12], step: .08, type: 'square' };
 
@@ -9,8 +11,9 @@ const OPEN_SOUND = { vol: .3, base: 330, notes: [0, 7, 12], step: .08, type: 'sq
  * 원안 "밀물 경고가 끝난 뒤 냉각 밸브를 열고 사슬 집행자의 후방을 공격"의 보스 규칙이다. 새 애니메이션·리그 없이 기존 논리 상태만 쓴다.
  * 용재 망치(def.signature)의 마지막 고리가 실제로 터진 직후(BossSignatures 가 completedAttackSequence 를 쓴 순간) def.window 초 동안
  * 망치가 바닥에 박혀 집행자가 그 자리에 묶이고(pins) 방향을 바꾸지 않으며, 다음 공격 대기(atkCd)를 창 남은 시간 이상으로 붙잡는다.
- * 그동안 받는 피해는 맞은 방향(공격자 → 보스, Enemy.hurt 의 dirx·dirz)과 보스 정면(yaw)의 내적으로 나눈다:
- * def.rearDot 이상이면 등 뒤(def.rear 배), -def.frontDot 이하면 정면 사슬 갑주(def.front 배), 그 사이(옆)와 방향 없는 피해(중독 등)는 1배다.
+ * 그동안 받는 피해는 공격자 위치(Battle.damageEnemy 가 넘기는 영웅) → 보스 방향과 보스 정면(yaw)의 내적으로 나눈다:
+ * def.rearDot 이상이면 등 뒤(def.rear 배), -def.frontDot 이하면 정면 사슬 갑주(def.front 배), 그 사이(옆)는 1배다.
+ * 공격자가 없는 피해(중독 틱 등)는 1배이고 세지 않는다. 광역기의 맞은 방향(폭발 중심 → 보스)은 쓰지 않는다(리뷰 P1).
  * 창 밖에서는 늘 1배다. 같은 attackSequence 로는 한 번만 연다.
  * armored 동안 시전 중인 용재 망치는 마지막 고리까지 기절·경직·자세 붕괴로 끊기지 않는다(guards, 종락 합창 장막과 같은 자리).
  * 장비를 갖춘 영웅은 치명타·기절로 망치를 거의 늘 끊어 창이 열리지 않았다(BUNDLE-14 PLAN 4.1, 브라우저 진단). 그래도 망치가 마지막 고리 없이 끝나면(보스 처치 직전 등) broken 으로 센다.
@@ -37,6 +40,12 @@ export class EmberRearExposure {
   #lastSideT = Infinity;
   /** AUTO 우회 지점(재사용). */
   #flank = new Vector3();
+  /** 이번 창에서 옆 경유점 단계를 마쳤는가(창이 열릴 때 거짓). 마치면 창이 끝날 때까지 등 뒤 점만 준다(경계에서 두 지점을 오가지 않게, 리뷰 P2-1). */
+  #flankRear = false;
+  /** 우회 진전 감시: 지금 목표까지 가장 가까웠던 거리와 그때의 windowLeft. 0.5초(게임 시간) 동안 0.05 이상 줄지 않으면 이 창에서 우회를 포기한다. */
+  #flankBest = Infinity;
+  #flankBestAt = 0;
+  #flankGiveUp = false;
 
   /** @param {{id:string, boss:string, signature:string, window:number, rearDot:number, frontDot:number, rear:number, front:number,
    *   autoDot:number, meleeReach:number, rangedReach:number, sidePad:number}} def
@@ -76,12 +85,13 @@ export class EmberRearExposure {
     const dot = (dirx / l) * Math.sin(boss.yaw) + (dirz / l) * Math.cos(boss.yaw);
     return dot >= this.def.rearDot ? 'rear' : dot <= -this.def.frontDot ? 'front' : 'side';
   }
-  /** Enemy.hurt 가 방어·잠행 감쇄 뒤, 체력을 깎기 전에 부른다. 중독 틱은 방향 없이 부른다(1배). 새 객체를 만들지 않는다.
-   * @param {number} dmg @param {number} [dirx] @param {number} [dirz] */
-  filter(dmg, dirx, dirz) {
+  /** Enemy.hurt 가 방어·잠행 감쇄 뒤, 체력을 깎기 전에 부른다. 공격자가 없으면(중독 틱 등) 1배이고 세지 않는다. 새 객체를 만들지 않는다.
+   * @param {number} dmg @param {{pos?:{x:number,z:number}}|null} [attacker] */
+  filter(dmg, attacker) {
     if (this.#state !== 'exposed') return dmg;
-    if (dirx === undefined && dirz === undefined) return dmg;
-    const side = this.sideOf(dirx, dirz);
+    const from = attacker?.pos, boss = this.#boss;
+    if (!from || !Number.isFinite(from.x) || !Number.isFinite(from.z)) return dmg;
+    const side = this.sideOf(boss.pos.x - from.x, boss.pos.z - from.z);
     this.#lastSide = side; this.#lastSideT = 0;
     if (side === 'rear') { const out = dmg * this.def.rear; this.#rearHits++; this.#rearDamage += out; return out; }
     if (side === 'front') { const out = dmg * this.def.front; this.#frontHits++; this.#frontDamage += out; return out; }
@@ -106,7 +116,7 @@ export class EmberRearExposure {
    * @param {any} player */
   autoFlank(player) {
     const boss = this.#boss;
-    if (this.#state !== 'exposed' || !boss?.alive || !player?.alive || !player.pos) return null;
+    if (this.#state !== 'exposed' || !boss?.alive || !player?.alive || !player.pos || this.#flankGiveUp) return null;
     const def = this.def, fx = Math.sin(boss.yaw), fz = Math.cos(boss.yaw);
     const vx = player.pos.x - boss.pos.x, vz = player.pos.z - boss.pos.z, dist = Math.hypot(vx, vz);
     const reach = player.def?.ranged ? def.rangedReach : def.meleeReach;
@@ -114,13 +124,49 @@ export class EmberRearExposure {
     const dot = dist > EPS ? (-vx / dist) * fx + (-vz / dist) * fz : -1;
     if (dot >= def.autoDot && dist <= reach + .6) return null;
     const room = boss.homeRoom;
-    if (dot < def.autoDot && vx * fx + vz * fz > -.5) {
-      // 정면·옆 앞쪽: 영웅이 있는 쪽 옆으로 돌아 들어간다(오른쪽 = (fz, -fx)).
-      const s = vx * fz - vz * fx >= 0 ? 1 : -1, r = reach + def.sidePad;
-      this.#clampTo(room, boss.pos.x + s * fz * r - fx * .8, boss.pos.z - s * fx * r - fz * .8);
-      if (Math.hypot(this.#flank.x - player.pos.x, this.#flank.z - player.pos.z) >= .6) return this.#flank;
+    // 보스 몸(+영웅 몸)보다 가까운 지점은 닿을 수 없다. 보스 몸 반지름이 없으면 0.7 × scale(Enemy 생성자와 같은 값)이다.
+    const body = (Number.isFinite(boss.radius) ? boss.radius : .7 * (boss.def?.scale || 1)) + .7;
+    // 등 뒤 점이 벽에 막혀 보스 몸 안으로 잘리면 등 뒤로 갈 수 없다: 평소 전투로 넘긴다(리뷰 P2-1).
+    const rx = boss.pos.x - fx * reach, rz = boss.pos.z - fz * reach;
+    this.#clampTo(room, rx, rz);
+    if (Math.hypot(this.#flank.x - boss.pos.x, this.#flank.z - boss.pos.z) < body) return null;
+    // 영웅이 옆선을 넘어 뒤쪽(along ≤ -.5)에 들어서면 이 창에서는 경유점 단계를 마친다.
+    if (vx * fx + vz * fz <= -.5) this.#latchRear();
+    if (!this.#flankRear && dot < def.autoDot) {
+      // 정면·옆 앞쪽: 영웅이 있는 쪽 옆으로 돌아 들어간다(오른쪽 = (fz, -fx)). 그쪽 경유점이 벽에 잘려 쓸 수 없으면 반대쪽으로 간다.
+      const s = vx * fz - vz * fx >= 0 ? 1 : -1;
+      for (const side of s > 0 ? SIDES_RIGHT_FIRST : SIDES_LEFT_FIRST) {
+        if (!this.#sideWaypoint(room, boss, fx, fz, side, reach + def.sidePad, body)) continue;
+        // 경유점에 닿으면 경유점 단계를 마친다.
+        if (Math.hypot(this.#flank.x - player.pos.x, this.#flank.z - player.pos.z) >= .6) return this.#progress(player);
+        this.#latchRear(); break;
+      }
+      // 양쪽 경유점을 모두 쓸 수 없으면(보스가 모서리에 끼임) 몸을 가로질러 등 뒤로 갈 수 없다: 평소 전투로 넘긴다.
+      if (!this.#flankRear) return null;
     }
-    return this.#clampTo(room, boss.pos.x - fx * reach, boss.pos.z - fz * reach);
+    this.#clampTo(room, rx, rz);
+    return this.#progress(player);
+  }
+  /** 경유점 단계를 마치고 등 뒤 점으로 목표를 바꾼다(진전 감시를 새 목표로 다시 시작). */
+  #latchRear() {
+    if (this.#flankRear) return;
+    this.#flankRear = true; this.#flankBest = Infinity;
+  }
+  /** 지금 목표(#flank)까지의 진전을 본다. 움직일 수 있는 상태에서 벽·보스 몸에 막혀 0.5초 동안 0.05 이상 가까워지지 못하면
+   * 이 창에서 우회를 포기하고 null(평소 전투)을 돌려준다(리뷰 P2-1). */
+  #progress(player) {
+    const d = Math.hypot(this.#flank.x - player.pos.x, this.#flank.z - player.pos.z);
+    if (d < this.#flankBest - .05) { this.#flankBest = d; this.#flankBestAt = this.#windowLeft; }
+    // 공격·회피·스킬 동작 중에는 이동 입력이 먹지 않으므로 진전 시계를 멈춘다(움직일 수 있는 idle·move 에서만 흐른다).
+    else if (player.state !== 'idle' && player.state !== 'move') this.#flankBestAt = this.#windowLeft;
+    else if (this.#flankBestAt - this.#windowLeft > .5) { this.#flankGiveUp = true; return null; }
+    return this.#flank;
+  }
+  /** side 쪽 옆 경유점을 방 안쪽으로 잘라 재사용 벡터에 담고, 쓸 수 있는지(보스 몸 밖이고 옆선 뒤쪽 along ≤ -.5에 남는지) 돌려준다. */
+  #sideWaypoint(room, boss, fx, fz, side, r, body) {
+    this.#clampTo(room, boss.pos.x + side * fz * r - fx * .8, boss.pos.z - side * fx * r - fz * .8);
+    const sx = this.#flank.x - boss.pos.x, sz = this.#flank.z - boss.pos.z;
+    return Math.hypot(sx, sz) >= body && sx * fx + sz * fz <= -.5;
   }
   /** 우회 지점을 보스방 안쪽(가장자리 1.2)으로 잘라 재사용 벡터에 담는다. */
   #clampTo(room, tx, tz) {
@@ -178,6 +224,7 @@ export class EmberRearExposure {
   #open(game, boss, dt) {
     this.#openedSeq = boss.attackSequence;
     this.#state = 'exposed'; this.#windowLeft = this.def.window; this.#windows++;
+    this.#flankRear = false; this.#flankBest = Infinity; this.#flankBestAt = this.#windowLeft; this.#flankGiveUp = false;
     if (boss.atkCd < this.#windowLeft + dt) boss.atkCd = this.#windowLeft + dt;
     audio.magic?.(OPEN_SOUND);
     game.ui?.toast?.(this.openToast, 'gold');

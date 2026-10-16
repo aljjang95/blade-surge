@@ -8,6 +8,7 @@ import { createRouteObjectives } from '../src/game/route-objectives.js';
 import { CoolingValves } from '../src/game/cooling-valves.js';
 import { EmberRearExposure } from '../src/game/ember-rear-exposure.js';
 import { BossSignatures } from '../src/game/boss-signatures.js';
+import { SKILLS } from '../src/game/skills.js';
 import { createCombatFlowFixture, loadCombatFlowRuntime, spawnCombatFlowEnemy, stepCombatFlow } from '../tools/combat-flow-sim.mjs';
 import { runBossSim } from '../tools/ember-deep-boss-sim.mjs';
 
@@ -156,7 +157,7 @@ test('일시정지·종료: 일시정지 중 창 시계가 멈추고, 보스 처
     const y = attach(); open(y); end(y.g); y.c.update(y.g, DT);
     expect(y.c.state).toBe('ended');
     expect(y.boss.damageVeil).toBeNull();
-    expect(y.c.filter(100, 0, 1)).toBe(100);
+    expect(y.c.filter(100, { pos: new Vector3(0, 0, -2) })).toBe(100);
     expect(y.c.pins(y.boss)).toBe(false);
   }
   const world = {}, boss = fakeBoss(), g = fakeGame(boss, { world }), c = new EmberRearExposure(DEF, world);
@@ -185,16 +186,21 @@ test('방향 판정: 공격자 → 보스 방향과 정면의 내적 .35 이상 
   expect(x.c.sideOf(0, 1)).toBe('side');
 });
 
-test('배율: 창 안에서만 등 뒤 2배·정면 50%·옆 1배, 창 밖·방향 없는 호출(중독 틱)은 1배이고 세지 않는다', () => {
+test('배율: 창 안에서만 공격자가 등 뒤면 2배·정면 50%·옆 1배, 창 밖·공격자 없는 호출(중독 틱)은 1배이고 세지 않는다', () => {
+  // 보스는 원점, yaw 0(정면 +z). 공격자 위치로만 가른다.
+  const BEHIND = { pos: new Vector3(0, 0, -2) }, FRONT = { pos: new Vector3(0, 0, 2) }, SIDE = { pos: new Vector3(2, 0, 0) };
   const x = attach();
-  expect(x.c.filter(100, 0, 1)).toBe(100);
-  expect(x.c.filter(100, 0, -1)).toBe(100);
+  expect(x.c.filter(100, BEHIND)).toBe(100);
+  expect(x.c.filter(100, FRONT)).toBe(100);
   open(x);
-  expect(x.c.filter(100, 0, 1)).toBe(200);
+  expect(x.c.filter(100, BEHIND)).toBe(200);
   expect(x.c.lastSide).toBe('rear');
-  expect(x.c.filter(100, 0, -1)).toBe(50);
-  expect(x.c.filter(100, 1, 0)).toBe(100);
+  expect(x.c.filter(100, FRONT)).toBe(50);
+  expect(x.c.filter(100, SIDE)).toBe(100);
   expect(x.c.filter(100)).toBe(100);
+  expect(x.c.filter(100, null)).toBe(100);
+  expect(x.c.filter(100, {} as any)).toBe(100);
+  expect(x.c.lastSide).toBe('side');
   expect([x.c.rearHits, x.c.frontHits, x.c.sideHits]).toEqual([1, 1, 1]);
   expect([x.c.rearDamage, x.c.frontDamage]).toEqual([200, 50]);
   expect(x.c.report()).toEqual({ id: 'ember_deep_rear', windows: 1, rearHits: 1, frontHits: 1, sideHits: 1, rearDamage: 200, frontDamage: 50, broken: 0 });
@@ -239,7 +245,12 @@ function withFixedRandom<T>(fn: () => T): T {
 test('실제 Enemy.hurt: 방어 감쇄 뒤 창 안 등 뒤 2배·정면 50%·옆 1배, 부착 전·창 밖·중독 틱은 그대로', () => {
   withFixedRandom(() => {
     const { g, boss } = realBossFixture();
-    const hit = (dirx: number, dirz: number) => { const before = boss.hp; boss.hurt(1000, { kb: 0, dirx, dirz }); return before - boss.hp; };
+    // 공격자는 보스 기준 등 뒤(-z)·정면(+z)·옆(+x)에 선다(보스 yaw 0 = 정면 +z). dirx·dirz 는 판정에 쓰지 않는다(리뷰 P1).
+    const at = (dx: number, dz: number) => ({ pos: new Vector3(boss.pos.x + dx, 0, boss.pos.z + dz) });
+    const BEHIND = at(0, -2.4), FRONT = at(0, 2.4), SIDE = at(2.4, 0);
+    const towards = (a: any) => ({ dirx: boss.pos.x - a.pos.x, dirz: boss.pos.z - a.pos.z });
+    const hits: Record<string, any> = { '0,1': BEHIND, '0,-1': FRONT, '1,0': SIDE };
+    const hit = (dirx: number, dirz: number) => { const a = hits[dirx + ',' + dirz]; const before = boss.hp; boss.hurt(1000, { kb: 0, ...towards(a), attacker: a }); return before - boss.hp; };
     const base = 1000 * (1 - ARMOR);
     expect(hit(0, 1)).toBeCloseTo(base, 6);
     const c = new EmberRearExposure(DEF);
@@ -254,11 +265,17 @@ test('실제 Enemy.hurt: 방어 감쇄 뒤 창 안 등 뒤 2배·정면 50%·옆
     expect(hit(0, -1)).toBeCloseTo(base * DEF.front, 6);
     expect(hit(1, 0)).toBeCloseTo(base, 6);
     expect([c.rearHits, c.frontHits, c.sideHits]).toEqual([1, 1, 1]);
-    // 중독 틱: Enemy.update 가 방향 없이 filter(raw) 를 부른다.
+    // 광역기처럼 맞은 방향이 '등 뒤에서 온 것'이어도 공격자가 정면이면 정면이다(리뷰 P1 재현: 폭발 중심이 보스 뒤).
+    { const before = boss.hp; boss.hurt(1000, { kb: 0, dirx: 0, dirz: 1, attacker: FRONT }); expect(before - boss.hp).toBeCloseTo(base * DEF.front, 6); }
+    { const before = boss.hp; boss.hurt(1000, { kb: 0, dirx: 0, dirz: -1, attacker: BEHIND }); expect(before - boss.hp).toBeCloseTo(base * DEF.rear, 6); }
+    // 공격자 없는 직접 피해(폭발 몹 등)는 방향과 상관없이 1배이고 세지 않는다.
+    { const before = boss.hp; boss.hurt(1000, { kb: 0, dirx: 0, dirz: 1 }); expect(before - boss.hp).toBeCloseTo(base, 6); }
+    expect([c.rearHits, c.frontHits, c.sideHits]).toEqual([2, 2, 1]);
+    // 중독 틱: Enemy.update 가 공격자 없이 filter(raw) 를 부른다.
     boss.poison = 1; boss.poisonT = 0; boss.state = 'chase';
     const before = boss.hp; boss.update(1e-6);
     expect(before - boss.hp).toBeCloseTo(boss.maxHp * .02 + 8, 3);
-    expect([c.rearHits, c.frontHits, c.sideHits]).toEqual([1, 1, 1]);
+    expect([c.rearHits, c.frontHits, c.sideHits]).toEqual([2, 2, 1]);
   });
 });
 
@@ -349,22 +366,117 @@ test('autoFlank: 정면이면 영웅 쪽 옆 경유점, 옆·뒤 바깥이면 �
   // 원거리 영웅은 rangedReach 거리의 등 뒤.
   player.def.ranged = true; player.pos.set(0, 0, -6);
   expect(x.c.autoFlank(player)).toBeNull();
+  // 같은 창에서 영웅이 이미 뒤쪽에 들어섰으므로(래치) 정면 경유점은 새 창에서 본다.
+  const y = attach(); open(y);
   player.pos.set(0, 0, 5);
-  expect(Math.hypot(x.c.autoFlank(player)!.x, 0)).toBeCloseTo(DEF.rangedReach + DEF.sidePad, 9);
+  expect(Math.hypot(y.c.autoFlank(player)!.x, 0)).toBeCloseTo(DEF.rangedReach + DEF.sidePad, 9);
   // 보스방 안쪽으로 자른다(가장자리 1.2).
   x.boss.homeRoom = { x: 0, z: 0, w: 6, h: 6 };
   player.def.ranged = false; player.pos.set(0, 0, -9);
   expect(x.c.autoFlank(player)!.z).toBeCloseTo(-1.8, 9);
-  // 방 가장자리에서 잘린 옆 경유점에 이미 닿았으면 같은 경유점에 세우지 않고 등 뒤 점을 준다(b14 모의 진단: 기사 L40 시드 5).
+  // 방 가장자리에서 잘린 옆 경유점이 보스 몸(+영웅 몸, 여기서는 0.7 + 0.7) 안이면 경유점 단계를 건너뛰고 등 뒤 점을 준다(리뷰 P2-1 근접).
   x.boss.homeRoom = { x: 0, z: 0, w: 4.4, h: 40 };
   player.pos.set(.5, 0, 3);
   const edge = x.c.autoFlank(player)!;
-  expect(edge.x).toBeCloseTo(1, 9); expect(edge.z).toBeCloseTo(-.8, 9);
-  player.pos.set(1, 0, -.6);
-  const behind = x.c.autoFlank(player)!;
-  expect(behind.x).toBeCloseTo(0, 9); expect(behind.z).toBeCloseTo(-DEF.meleeReach, 9);
+  expect(edge.x).toBeCloseTo(0, 9); expect(edge.z).toBeCloseTo(-DEF.meleeReach, 9);
+  // 등 뒤 점이 벽에 막혀 보스 몸 안으로 잘리면 갈 수 없으니 null(평소 전투)이다.
+  x.boss.homeRoom = { x: 0, z: 0, w: 40, h: 3.6 };
+  player.pos.set(.5, 0, .9);
+  expect(x.c.autoFlank(player)).toBeNull();
   player.alive = false; expect(x.c.autoFlank(player)).toBeNull();
   player.alive = true; x.boss.alive = false; expect(x.c.autoFlank(player)).toBeNull();
+});
+
+test('autoFlank 래치: 옆 경유점에 닿으면 그 창이 끝날 때까지 등 뒤 점만 주고(경계에서 두 지점을 오가지 않음), 다음 창에서 다시 경유점부터', () => {
+  const x = attach(); open(x);
+  const player: any = { alive: true, pos: new Vector3(.5, 0, 3), def: { ranged: true } };
+  const r = DEF.rangedReach + DEF.sidePad;
+  expect(x.c.autoFlank(player)!.x).toBeCloseTo(r, 9);
+  // 경유점 0.6 안에 닿음(아직 옆선 앞쪽 along > -.5) → 등 뒤 점.
+  player.pos.set(r - .2, 0, -.3);
+  expect(x.c.autoFlank(player)!.z).toBeCloseTo(-DEF.rangedReach, 9);
+  // 경유점 0.6 밖 앞쪽으로 다시 밀려나도 등 뒤 점을 유지한다(전에는 매 프레임 두 지점을 오갔다).
+  player.pos.set(r, 0, .5);
+  expect(x.c.autoFlank(player)!.z).toBeCloseTo(-DEF.rangedReach, 9);
+  // 창이 닫히고 다음 망치로 다시 열리면 경유점부터.
+  tick(x.c, x.g, DEF.window + .1);
+  Object.assign(x.boss, { attackSequence: 2, state: 'attack' }); x.boss.signatures.age = 0; tick(x.c, x.g, 2.7);
+  expect(x.c.state).toBe('exposed');
+  expect(x.c.autoFlank(player)!.x).toBeCloseTo(r, 9);
+});
+
+test('autoFlank 격자(리뷰 P2-1): 보스가 방 가장자리·모서리에 있어도 4초 창 안에 AUTO 가 등 뒤 사거리에 닿거나 평소 전투로 넘어간다(멈춤 0)', () => {
+  // 간이 운동 모형: 영웅은 autoFlank 지점으로 6/초로 걷고, 보스 몸(반지름 1.61 + 영웅 .7, 군중 접촉의 .9 배)과 방 벽(가장자리 .7)에 밀린다.
+  // autoMove 와 같이 지점까지 0.3 안이면 평소 전투로 넘어간 것으로 본다.
+  const room = { x: 0, z: 0, w: 22, h: 20 };
+  const R = .7 * 2.3, contact = (R + .7) * .9, speed = 6, dt = 1 / 60;
+  let cases = 0, stuck = 0, impossible = 0, center = 0, centerRear = 0;
+  const bossXs = [-9.4, -8, -5, 0, 5, 8, 9.4], bossZs = [-8.4, -7, 0, 7, 8.4];
+  for (const ranged of [false, true]) for (const bx of bossXs) for (const bz of bossZs) for (let yi = 0; yi < 8; yi++) for (let hi = 0; hi < 12; hi++) {
+    const yaw = yi * Math.PI / 4 + .1, ha = hi * Math.PI / 6;
+    const x = attach(); open(x);
+    Object.assign(x.boss, { yaw, homeRoom: room, radius: R }); x.boss.pos.set(bx, 0, bz);
+    const hr = contact + .4 + (hi % 2) * 2;
+    const p: any = { alive: true, state: 'move', def: { ranged }, pos: new Vector3(bx + Math.sin(ha) * hr, 0, bz + Math.cos(ha) * hr) };
+    p.pos.x = Math.max(-10.3, Math.min(10.3, p.pos.x)); p.pos.z = Math.max(-9.3, Math.min(9.3, p.pos.z));
+    // 방 안으로 자른 시작이 보스 몸과 겹치면 실제로 생길 수 없는 시작 상태다(군중 접촉이 허용하지 않는다). 따로 센다.
+    if (Math.hypot(p.pos.x - bx, p.pos.z - bz) < contact - 1e-9) { impossible++; continue; }
+    cases++;
+    let done = false;
+    for (let f = 0; f < 4 / dt && !done; f++) {
+      x.c.update(x.g, dt);
+      if (x.c.state !== 'exposed') break;
+      const t = x.c.autoFlank(p);
+      if (!t) { done = true; break; }
+      const dx = t.x - p.pos.x, dz = t.z - p.pos.z, l = Math.hypot(dx, dz);
+      if (l <= .3) { done = true; break; }
+      p.pos.x += dx / l * speed * dt; p.pos.z += dz / l * speed * dt;
+      const ox = p.pos.x - bx, oz = p.pos.z - bz, ol = Math.hypot(ox, oz);
+      if (ol < contact) { p.pos.x = bx + ox / (ol || 1) * contact; p.pos.z = bz + oz / (ol || 1) * contact; }
+      p.pos.x = Math.max(-10.3, Math.min(10.3, p.pos.x)); p.pos.z = Math.max(-9.3, Math.min(9.3, p.pos.z));
+    }
+    if (!done) stuck++;
+    const vx = p.pos.x - bx, vz = p.pos.z - bz, d = Math.hypot(vx, vz);
+    // 방 가운데 줄의 보스(벽에서 멀다)는 등 뒤가 막히지 않으므로 모두 등 뒤 원뿔에 닿아야 한다.
+    if (Math.abs(bx) <= 5 && bz === 0) { center++; if (d > 0 && (-vx / d) * Math.sin(yaw) + (-vz / d) * Math.cos(yaw) >= DEF.rearDot) centerRear++; }
+  }
+  expect(cases + impossible).toBe(2 * 7 * 5 * 8 * 12);
+  expect(cases).toBeGreaterThan(5500);
+  expect(stuck).toBe(0);
+  // 벽 근처(약 86%)·벽에 붙은 보스(약 71%)는 등 뒤가 막히면 평소 전투로 넘어가므로 비율을 단언하지 않는다(b14 진단 diag/flank-grid.mjs).
+  expect(center).toBe(2 * 3 * 8 * 12);
+  expect(centerRear).toBe(center);
+});
+
+test('실제 스킬 경로(리뷰 P1): 정면에 선 기사의 sunbreaker·judgment 는 정면, 등 뒤에 선 법사의 meteor 는 등 뒤로만 센다', () => {
+  withFixedRandom(() => {
+    const run = (heroId: string, behind: boolean, cast: (g: any, p: any) => void) => {
+      const f: any = createCombatFlowFixture(runtime, heroId), g: any = f.game;
+      g.fx.add = () => {}; g.fx.renderer = {};
+      g.stage = buildExpeditionStage('dungeon', 'ember_vault', null, { depth: 'deep' });
+      const boss: any = spawnCombatFlowEnemy(f, f.room.x, f.room.z, { id: 'cinder_chain_executor', hp: 1e12, maxHp: 1e12, atk: 1, atkCd: 9, radius: .7 * 2.3 });
+      boss.signatures = new BossSignatures(boss); boss.runtimeSpeciesId = 'cinder_chain_executor'; g.boss = boss;
+      g.enemies.length = 0; g.enemies.push(boss);
+      f.player.maxHp = f.player.hp = 1e12;
+      const c = new EmberRearExposure(DEF); c.update(g, DT);
+      boss.state = 'attack'; boss.special = 'kiln_hammer'; boss.attackSequence = 1; boss.signatures.plan = { key: 'kiln_hammer', lastStrike: 2.65 }; boss.completedAttackSequence = 1;
+      c.update(g, DT); boss.state = 'chase'; boss.yaw = 0;
+      expect(c.state).toBe('exposed');
+      f.player.pos.set(boss.pos.x, 0, boss.pos.z + (behind ? -2.4 : 2.4)); f.player.yaw = behind ? 0 : Math.PI;
+      cast(g, f.player);
+      for (let i = 0; i < 120; i++) for (let k = g.timers.length - 1; k >= 0; k--) { const t = g.timers[k]; t.t -= DT; if (t.t <= 0) { g.timers.splice(k, 1); t.fn(); } }
+      return [c.rearHits, c.frontHits, c.sideHits];
+    };
+    const front1 = run('knight', false, (g, p) => SKILLS.sunbreaker.cast(g, p, { dmg: 100, data: {} }));
+    expect(front1[1]).toBeGreaterThan(0); expect(front1[0]).toBe(0); expect(front1[2]).toBe(0);
+    const front2 = run('knight', false, (g, p) => SKILLS.judgment.cast(g, p, { dmg: 100, data: {} }));
+    expect(front2[1]).toBeGreaterThan(0); expect(front2[0]).toBe(0); expect(front2[2]).toBe(0);
+    const back = run('mage', true, (g, p) => SKILLS.meteor.cast(g, p, { dmg: 100, data: {} }));
+    expect(back[0]).toBeGreaterThan(0); expect(back[1]).toBe(0); expect(back[2]).toBe(0);
+    // 방향 없는 damageEnemy(세트·공명 효과 경로)도 공격자 위치로 가른다.
+    const proc = run('knight', true, (g, p) => g.damageEnemy(g.boss, 100, { kind: 'magic', source: p }));
+    expect(proc).toEqual([1, 0, 0]);
+  });
 });
 
 test('Player.autoMove: 경로 목표가 우회 지점을 주면 그쪽으로만 움직이고 공격·스킬을 누르지 않는다. null 이면 평소 전투', () => {

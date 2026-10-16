@@ -130,7 +130,8 @@ export class Battle extends BaseBattle {
     const crit = Math.random() < p.stats.crit;
     let amount = dmg * (0.9 + Math.random() * 0.2) * (crit ? p.stats.critDmg : 1);
     if (this.sp) amount *= this.sp.dmgMul(enemy);
-    const dealt = enemy.hurt(amount, { ...opts, crit });
+    // attacker: 보스 후방 노출이 등 뒤·정면을 공격자 위치로 가른다(BUNDLE-14).
+    const dealt = enemy.hurt(amount, { ...opts, crit, attacker: p });
     if (!(dealt > 0)) return;
     if (this.sp && !opts.noProc) this.sp.onHit(enemy, opts);
     this.dmgDealt += dealt; this.combo++; this.comboT = 2.5; audio.comboStep(this.combo);

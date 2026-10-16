@@ -232,7 +232,7 @@ export class Enemy extends Actor {
     ring.scale.setScalar(burrowing ? BURROW.radius / .9 * (1 + pulse * .02) : 1.02 + (1 - remaining) * .22 + pulse * .06);
     ring.material.opacity = .35 + (1 - remaining) * .42 + pulse * .12;
   }
-  hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false } = {}) {
+  hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false, attacker = null } = {}) {
     if (!this.alive || this.spawning) return 0;
     if (this.def.dodge && Math.random() < this.def.dodge && this.state === 'chase' && !this.stun) {
       this.play(this.A('dodge'), { once: true, fade: 0.05, speed: 1.5 }); this.state = 'dodge'; this.stateT = 0; this.kb.set(-dirx, 0, -dirz).normalize().multiplyScalar(-8);
@@ -253,8 +253,9 @@ export class Enemy extends Actor {
     }
     const armor = this.def.armor || 0; dmg *= 1 - armor;
     if (this.burrow) dmg *= this.burrow.damageMul();
-    // 보스 피해 배율(종락 합창 장막·잿불금고 후방 노출). 후방 노출은 맞은 방향(공격자 → 나)을 함께 받는다.
-    if (this.damageVeil) dmg = this.damageVeil.filter(dmg, dirx, dirz);
+    // 보스 피해 배율(종락 합창 장막·잿불금고 후방 노출). 후방 노출은 공격자(Battle.damageEnemy 의 영웅)의 위치로 등 뒤·정면을 가른다.
+    // 광역기·세트 효과의 dirx·dirz 는 폭발 중심 → 적 방향이라 영웅 위치와 다를 수 있다(BUNDLE-14 리뷰 P1).
+    if (this.damageVeil) dmg = this.damageVeil.filter(dmg, attacker);
     this.hp -= dmg;
     // 강타·띄우기는 몰이를 끝내고 기존 저항·넉백을 그대로 적용한다.
     if (kb >= 6 || up) this.gatherT = 0;

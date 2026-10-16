@@ -639,7 +639,8 @@ export class Battle {
     const p = opts.source?.stats ? opts.source : this.player; const crit = Math.random() < p.stats.crit;
     let amount = dmg * (0.9 + Math.random() * 0.2) * (crit ? p.stats.critDmg : 1);
     if (this.sp) amount *= this.sp.dmgMul(e);   // 서리 세트: 결정화된 적은 받는 피해 +30%
-    const dealt = e.hurt(amount, { ...opts, crit });
+    // attacker: 보스 후방 노출이 등 뒤·정면을 공격자 위치로 가른다(BUNDLE-14).
+    const dealt = e.hurt(amount, { ...opts, crit, attacker: p });
     if (dealt <= 0) return;
     if (this.sp && !opts.noProc) this.sp.onHit(e, opts);
     this.dmgDealt += dealt;

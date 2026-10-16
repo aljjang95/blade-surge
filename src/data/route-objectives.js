@@ -194,14 +194,15 @@ export const ROUTE_OBJECTIVES = Object.freeze({
   // 재벼림 심층과 같은 냉각 장치 엔진(CoolingValves)과 shockWindow 규칙을 쓴다: 준비된 뒤 시작된 밀물이 한 번 지나가면
   // 조작판이 반대편으로 옮겨 가 다음 밀물 경고 전까지만 열린다. 밸브는 좌현 화물칸(2, 정예) → 우현 화물칸(3, 정예) → 기관실 격벽(4) 순서다.
   // 화물칸 두 곳은 1에서 갈라져 4에서 만나므로 2번 밸브로 가는 길이 두 갈래이고, 3번(방 4)은 그 길에 먼저 정리돼 차례를 기다릴 수 있다.
-  // ventColor: 밀물 띠는 파란 물빛이라 보스(사슬 집행자)의 주황 용광로 경고와 구분된다. 보스 규칙(후방 공격 등)은 바뀌지 않는다.
+  // ventColor: 밀물 띠는 파란 물빛이라 보스(사슬 집행자)의 주황 용광로 경고와 구분된다. 보스 규칙은 아래 rear(BUNDLE-14 후방 노출)가 따로 정한다.
   ember_deep: Object.freeze({
     ...coolingDef('ember_tide_valves_deep', [[2, '1번 냉각 밸브 · 좌현 화물칸'], [3, '2번 냉각 밸브 · 우현 화물칸'],
       [4, '3번 냉각 밸브 · 기관실 격벽']], EMBER_DEEP_COPY),
     shockWindow: true, ventColor: 0x3d8cff,
     // 사슬 집행자 후방 노출(BUNDLE-14): 원안의 남은 문장 "사슬 집행자의 후방을 공격". 보스 규칙이며 이 심층 개인 원정에서만 쓴다.
     // 용재 망치(signature)의 마지막 고리가 터진 직후 window초 동안 집행자가 제자리에 묶여 방향을 바꾸지 않고 새 공격을 시작하지 않는다.
-    // 그동안 맞은 방향과 정면의 내적이 rearDot 이상이면 등 뒤(rear 배), -frontDot 이하면 정면 사슬 갑주(front 배), 옆은 1배다. 창 밖은 늘 1배다.
+    // 그동안 공격자 → 보스 방향과 정면의 내적이 rearDot 이상이면 등 뒤(rear 배), -frontDot 이하면 정면 사슬 갑주(front 배), 옆은 1배다. 창 밖은 늘 1배다.
+    // 시전 중인 용재 망치는 마지막 고리까지 기절·경직으로 끊기지 않는다(장비 영웅이 늘 끊어 창이 열리지 않던 문제, PLAN 4.1).
     // AUTO 는 내적 autoDot 이상·사거리(meleeReach/rangedReach) 안의 등 뒤로 돌아가 친다. 정면이면 옆으로 sidePad 만큼 돌아 들어간다.
     // 수치는 BUNDLE-14 PLAN 의 보스전 모의(tools/ember-deep-boss-sim.mjs)로 정했다.
     rear: Object.freeze({ id: 'ember_deep_rear', boss: 'cinder_chain_executor', signature: 'kiln_hammer', window: 4,
