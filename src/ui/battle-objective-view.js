@@ -34,6 +34,19 @@ function counterView(route) {
     { hold: seconds(counter.windowLeft), holdTotal: count(counter.windowTotal) });
 }
 
+/** 사슬 집행자 후방 노출(잿불금고 심층, BUNDLE-14). 밸브를 모두 연 뒤 보스방에서 컨트롤러가 armored·exposed 일 때만 쓴다(밸브 진행 중에는 idle 이다).
+ * 배율은 def.rear 에서 계산하고, 남은 시간은 올림(0.1초)이라 시계가 남아 있으면 0.0을 보이지 않는다. 컨트롤러 값은 읽기만 한다. */
+function emberRearView(route) {
+  const rear = route.rear, def = route.def?.rear;
+  if (route.def?.kind !== 'cooling' || !rear || !def || (rear.state !== 'armored' && rear.state !== 'exposed')) return null;
+  const title = '사슬 집행자 후방';
+  if (rear.state === 'armored') return step(title, '용재 망치가 박히면 등 뒤로 · 정면은 사슬 갑주');
+  const percent = value => Math.round(count(value) * 100);
+  const left = (Math.ceil(count(rear.windowLeft) * 10 - 1e-9) / 10).toFixed(1);
+  return step(title, `후방 노출 ${left}초 · 등 뒤 ${percent(def.rear)}% · 정면 ${percent(def.front)}%`,
+    { hold: seconds(rear.windowLeft), holdTotal: count(rear.windowTotal) });
+}
+
 /** 혜성 기사단장 푸른 궤도선(BUNDLE-06). 보스 궤도가 armed·warn 일 때 고리 단계 대신 보스방 목표를 보인다. 남은 시간은 올림(0.1초)이다. */
 function bossOrbitView(route, bossRoom) {
   const orbit = route.bossOrbit, state = orbit?.state;
@@ -111,6 +124,11 @@ function mainObjectiveView(battle) {
     if (route.def?.kind === 'reverse-bells') {
       const veil = counterView(route);
       if (veil) return veil;
+    }
+    if (route.def?.kind === 'cooling') {
+      // 밸브가 모두 열린 뒤 보스방에서만 컨트롤러가 armored 이므로 밸브 단계보다 앞에 둔다.
+      const rearStep = emberRearView(route);
+      if (rearStep) return rearStep;
     }
     if (route.def?.kind === 'thrones' && route.maze && route.complete) {
       // 왕좌를 모두 부순 뒤: 구역이 남았으면 정화 안내, 거울 미궁이 도는 동안은 탈출 안내. 탈출하면 보스 흐름으로 이어진다.
