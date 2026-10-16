@@ -1,0 +1,263 @@
+{
+ "blender": "4.3.2",
+ "source": "hero_rogue_t1.glb",
+ "reference": "hero_knight_t1.glb",
+ "hero": "rogue",
+ "axisRollDeg": {
+  "Hips": 90.0,
+  "LeftUpLeg": 88.1,
+  "LeftLeg": 94.0,
+  "LeftFoot": 41.8,
+  "LeftToeBase": 0.6,
+  "LeftToe_End": 0.6,
+  "RightUpLeg": 84.5,
+  "RightLeg": 93.5,
+  "RightFoot": 29.5,
+  "RightToeBase": 1.5,
+  "RightToe_End": 1.5,
+  "Spine": 90.0,
+  "Spine1": 86.2,
+  "Spine2": 79.7,
+  "LeftShoulder": 179.5,
+  "LeftArm": 176.9,
+  "LeftForeArm": 175.4,
+  "LeftHand": 175.6,
+  "Neck": 99.5,
+  "Head": 99.5,
+  "HeadTop_End": 99.5,
+  "RightShoulder": 40.2,
+  "RightArm": 17.6,
+  "RightForeArm": 179.5,
+  "RightHand": 17.7
+ },
+ "legPole": {
+  "Left": 0,
+  "Right": 5
+ },
+ "clips": {
+  "cast_raise": {
+   "frames": [
+    0,
+    71
+   ],
+   "fps": 24,
+   "seconds": 2.9583,
+   "hipsDzRange": [
+    -0.371,
+    -0.084
+   ],
+   "skinMinZ": [
+    -0.008,
+    0.005
+   ]
+  },
+  "cast_shoot": {
+   "frames": [
+    0,
+    55
+   ],
+   "fps": 24,
+   "seconds": 2.2917,
+   "hipsDzRange": [
+    -0.2,
+    -0.122
+   ],
+   "skinMinZ": [
+    -0.002,
+    0.002
+   ]
+  },
+  "cheer": {
+   "frames": [
+    0,
+    204
+   ],
+   "fps": 24,
+   "seconds": 8.5,
+   "hipsDzRange": [
+    -0.085,
+    -0.066
+   ],
+   "skinMinZ": [
+    -0.001,
+    0.001
+   ]
+  },
+  "chop": {
+   "frames": [
+    0,
+    36
+   ],
+   "fps": 24,
+   "seconds": 1.5,
+   "hipsDzRange": [
+    -0.261,
+    -0.157
+   ],
+   "skinMinZ": [
+    -0.007,
+    0.009
+   ]
+  },
+  "death": {
+   "frames": [
+    0,
+    30
+   ],
+   "fps": 24,
+   "seconds": 1.25,
+   "hipsDzRange": [
+    -0.474,
+    -0.077
+   ],
+   "skinMinZ": [
+    -0.0,
+    0.0
+   ]
+  },
+  "dodge": {
+   "frames": [
+    0,
+    48
+   ],
+   "fps": 96,
+   "seconds": 0.5,
+   "hipsDzRange": [
+    -0.426,
+    0.18
+   ],
+   "skinMinZ": [
+    -0.0,
+    0.0
+   ]
+  },
+  "hit": {
+   "frames": [
+    0,
+    12
+   ],
+   "fps": 24,
+   "seconds": 0.5,
+   "hipsDzRange": [
+    -0.171,
+    -0.144
+   ],
+   "skinMinZ": [
+    -0.0,
+    0.0
+   ]
+  },
+  "idle": {
+   "frames": [
+    0,
+    238
+   ],
+   "fps": 24,
+   "seconds": 9.9167,
+   "hipsDzRange": [
+    -0.056,
+    -0.026
+   ],
+   "skinMinZ": [
+    -0.0,
+    0.0
+   ]
+  },
+  "interact": {
+   "frames": [
+    0,
+    82
+   ],
+   "fps": 24,
+   "seconds": 3.4167,
+   "hipsDzRange": [
+    -0.098,
+    -0.038
+   ],
+   "skinMinZ": [
+    -0.001,
+    0.002
+   ]
+  },
+  "run": {
+   "frames": [
+    0,
+    16
+   ],
+   "fps": 24,
+   "seconds": 0.6667,
+   "hipsDzRange": [
+    -0.098,
+    -0.054
+   ],
+   "skinMinZ": [
+    0.0,
+    0.105
+   ]
+  },
+  "slash_h": {
+   "frames": [
+    0,
+    40
+   ],
+   "fps": 24,
+   "seconds": 1.6667,
+   "hipsDzRange": [
+    -0.19,
+    -0.066
+   ],
+   "skinMinZ": [
+    -0.006,
+    0.005
+   ]
+  },
+  "stab": {
+   "frames": [
+    0,
+    41
+   ],
+   "fps": 24,
+   "seconds": 1.7083,
+   "hipsDzRange": [
+    -0.317,
+    -0.165
+   ],
+   "skinMinZ": [
+    -0.012,
+    0.016
+   ]
+  },
+  "throw": {
+   "frames": [
+    0,
+    52
+   ],
+   "fps": 24,
+   "seconds": 2.1667,
+   "hipsDzRange": [
+    -0.071,
+    -0.037
+   ],
+   "skinMinZ": [
+    -0.004,
+    0.003
+   ]
+  },
+  "Dodge_Backward": {
+   "frames": [
+    0,
+    12
+   ],
+   "fps": 24,
+   "seconds": 0.5,
+   "hipsDzRange": [
+    -0.072,
+    0.156
+   ],
+   "skinMinZ": [
+    -0.0,
+    0.134
+   ]
+  }
+ }
+}

@@ -25,6 +25,12 @@ export const RANGER_DODGE_SHOT_AT = 0.16;
 const RANGER_LEG_BLEND = 10;
 const LOWER_BODY_TRACK = /hips|leg|foot|toe/i;
 const bowLayerCache = new WeakMap();
+// 상체 사격 층 클립 이름. 다리 층은 이 클립이 재생되는 동안(공격·스킬·궁극기)만 켠다.
+const RANGER_UPPER_CLIPS = new Set(['RangerBowUpper', 'RangerBowUpperRapid']);
+// 시전 뒤 +0.12·+0.24초에 화살을 더 쏘는 스킬은 세 번 당기는 클립(bow_shoot_rapid)으로 재생하고, 각 발사 직후 시위를 쉼 위치로 놓는다.
+const RANGER_RAPID_SKILLS = new Set(['ranger_quickshot', 'gale_hunt']);
+const RANGER_RAPID_RELEASES = [0, .12, .24];
+const RANGER_STRING_SNAP = .04;
 /** 활 사격 클립의 상체 트랙과 달리기·대기 클립의 하체 트랙을 나눈다. 같은 원본 클립은 인스턴스끼리 공유한다. */
 export function rangerBowLayers(clips) {
   const bow = clips?.Bow_Shoot, run = clips?.Running_A, idle = clips?.Idle;
@@ -32,8 +38,10 @@ export function rangerBowLayers(clips) {
   let entry = bowLayerCache.get(bow);
   if (!entry) {
     const lower = (track) => LOWER_BODY_TRACK.test(THREE.PropertyBinding.parseTrackName(track.name).nodeName || '');
+    const rapid = clips.bow_shoot_rapid;
     entry = {
       upper: new THREE.AnimationClip('RangerBowUpper', bow.duration, bow.tracks.filter((t) => !lower(t))),
+      rapid: rapid ? new THREE.AnimationClip('RangerBowUpperRapid', rapid.duration, rapid.tracks.filter((t) => !lower(t))) : null,
       run: new THREE.AnimationClip('RangerLegsRun', run.duration, run.tracks.filter(lower)),
       idle: new THREE.AnimationClip('RangerLegsIdle', idle.duration, idle.tracks.filter(lower)),
     };
@@ -81,6 +89,9 @@ export class Player extends Actor {
     this.rangerAim = def.weapon === 'bow' ? new RangerAim() : null;
     this.bowLayers = this.rangerAim ? rangerBowLayers(this.clips) : null;
     if (this.bowLayers) this.clips.RangerBowUpper = this.bowLayers.upper;
+    if (this.bowLayers?.rapid) this.clips.RangerBowUpperRapid = this.bowLayers.rapid;
+    // 궁수: 판정 방향(yaw)은 즉시 바뀌고, 렌더 피벗만 짧게 따라 돈다(회피 방향 전환·회피→조준 사격의 몸 전체 스냅 완화).
+    this.turnSmoothing = !!this.bowLayers;
     this._bowLegs = null; this._bowLegBlend = 0;
     this.play('Idle');
     this.footT = 0;
@@ -411,7 +422,11 @@ export class Player extends Actor {
     if (this.auto) this.autoAim(12);
     const lvMult = 1 + (this.skillLevels[i] - 1) * 0.12;
     this.skillCtx = { sk, impl, t: 0, cast: false, done: false, dmg: this.atk * sk.dmg * lvMult, level: this.skillLevels[i], data: {} };
-    if (sk.anim) this.playTimed(sk.anim, impl.dur || 0.8, { fade: 0.06 });
+    // 궁수 활 스킬: 상체 사격 층 + 속도에 맞춘 다리 층(후퇴 스킬이 서 있는 자세로 미끄러지지 않게). 연속 발사 스킬은 세 번 당기는 클립.
+    const bowSkillClip = sk.anim === 'Bow_Shoot' && this.bowLayers
+      ? (RANGER_RAPID_SKILLS.has(sk.id) && this.clips.RangerBowUpperRapid ? 'RangerBowUpperRapid' : 'RangerBowUpper') : null;
+    if (sk.anim) this.playTimed(bowSkillClip || sk.anim, impl.dur || 0.8, { fade: 0.06 });
+    if (bowSkillClip) this.startBowLegs();
     if (!sk.ult && this.def.id === 'ranger') audio.whoosh({ vol: .45, pitch: 1.6, dur: .2 });
     else if (!sk.ult) audio.bark(`hero_${this.def.voiceId || this.def.id}_skill${i}`, { vol: 0.95, min: 1.5 });   // 스킬 이름 외침
     audio.skillRelease({ ult: !!sk.ult, school: sk.id || 'arcane', hero: this.def.id });
@@ -511,7 +526,7 @@ export class Player extends Actor {
   updateBowRig(dt) {
     const legs = this._bowLegs;
     if (legs?.on) {
-      if (this.state !== 'attack' || this.actionName !== 'RangerBowUpper' || !this.alive) {
+      if (!['attack', 'skill', 'ult'].includes(this.state) || !RANGER_UPPER_CLIPS.has(this.actionName) || !this.alive) {
         legs.idle.fadeOut(.15); legs.run.fadeOut(.15); legs.on = false;
       } else {
         const top = Math.max(.01, this.stats.spd * RANGER_MOVE_SHOT_SPEED), speed = Math.hypot(this.vel.x, this.vel.z);
@@ -525,8 +540,15 @@ export class Player extends Actor {
     }
     const c = this.current, sk = this.skillCtx;
     const drawing = this.alive && ((this.state === 'attack' && !this.hitDone && c?.projectile === 'arrow')
-      || ((this.state === 'skill' || this.state === 'ult') && !!sk && !sk.cast));
+      || ((this.state === 'skill' || this.state === 'ult') && !!sk && this.skillDrawing(sk)));
     this.bowStringHeld = poseRangerBowString(this.model, drawing);
+  }
+  /** 스킬 시전 중 시위를 당기고 있는가. 연속 발사 스킬은 각 발사 직후 짧게 놓았다가 다음 당김에서 다시 잡는다. */
+  skillDrawing(sk) {
+    if (!sk.cast) return true;
+    if (this.actionName !== 'RangerBowUpperRapid') return false;
+    const since = sk.t - (sk.impl.dur || 0.8) * sk.sk.castAt;
+    return RANGER_RAPID_RELEASES.some((at, i) => i > 0 && since > RANGER_RAPID_RELEASES[i - 1] + RANGER_STRING_SNAP && since < at);
   }
   revive() { this.beacon?.setFocus(false); this.alive = true; this.dead = false; this.deathT = -1; this.hp = this.maxHp; this.state = 'idle'; this.invuln = 2; this.pos.y = 0; for (const m of this.mats) m.transparent = false; this.play('Idle'); }
 

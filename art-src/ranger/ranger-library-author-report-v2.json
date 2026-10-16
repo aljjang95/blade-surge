@@ -1,0 +1,455 @@
+{
+ "blender": "4.3.2",
+ "source": "hero_ranger_t1.glb",
+ "reference": "hero_knight_t1.glb",
+ "axisRollDeg": {
+  "Hips": 90.0,
+  "LeftUpLeg": 90.1,
+  "LeftLeg": 95.9,
+  "LeftFoot": 40.4,
+  "LeftToeBase": 0.6,
+  "LeftToe_End": 0.6,
+  "RightUpLeg": 87.5,
+  "RightLeg": 96.2,
+  "RightFoot": 27.2,
+  "RightToeBase": 1.5,
+  "RightToe_End": 1.5,
+  "Spine": 90.0,
+  "Spine1": 82.9,
+  "Spine2": 67.4,
+  "LeftShoulder": 176.8,
+  "LeftArm": 176.8,
+  "LeftForeArm": 175.4,
+  "LeftHand": 175.8,
+  "Neck": 96.3,
+  "Head": 96.3,
+  "HeadTop_End": 96.3,
+  "RightShoulder": 3.6,
+  "RightArm": 24.5,
+  "RightForeArm": 167.1,
+  "RightHand": 34.1
+ },
+ "twistSign": -1,
+ "legPole": {
+  "Left": 0,
+  "Right": 0
+ },
+ "clips": {
+  "idle": {
+   "frames": [
+    0,
+    238
+   ],
+   "fps": 24,
+   "seconds": 9.9167,
+   "keys": [],
+   "yawAlign": null,
+   "hipsDzRange": [
+    -0.055,
+    -0.02
+   ],
+   "skinMinZ": [
+    -0.0,
+    0.0
+   ],
+   "bowTipMinZ": 0.288
+  },
+  "run": {
+   "frames": [
+    0,
+    16
+   ],
+   "fps": 24,
+   "seconds": 0.6667,
+   "keys": [],
+   "yawAlign": null,
+   "hipsDzRange": [
+    -0.104,
+    -0.06
+   ],
+   "skinMinZ": [
+    0.0,
+    0.108
+   ],
+   "bowTipMinZ": 0.342
+  },
+  "dodge": {
+   "frames": [
+    0,
+    48
+   ],
+   "fps": 96,
+   "seconds": 0.5,
+   "keys": [],
+   "yawAlign": {
+    "mode": "track",
+    "before": [
+     -29.7,
+     -15.4,
+     -6.3,
+     1.7,
+     43.5,
+     47.0,
+     -49.6,
+     -51.3,
+     -55.7
+    ]
+   },
+   "hipsDzRange": [
+    -0.593,
+    -0.012
+   ],
+   "skinMinZ": [
+    -0.0,
+    0.0
+   ],
+   "bowTipMinZ": 0.239
+  },
+  "Dodge_Backward": {
+   "frames": [
+    0,
+    12
+   ],
+   "fps": 24,
+   "seconds": 0.5,
+   "keys": [],
+   "yawAlign": null,
+   "hipsDzRange": [
+    -0.063,
+    0.154
+   ],
+   "skinMinZ": [
+    -0.0,
+    0.156
+   ],
+   "bowTipMinZ": 0.215
+  },
+  "bow_shoot": {
+   "frames": [
+    0,
+    24
+   ],
+   "fps": 24,
+   "seconds": 1.0,
+   "keys": [
+    {
+     "frame": 0,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 3,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 7,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 10,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 11,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 14,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 18,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 24,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    }
+   ],
+   "yawAlign": null,
+   "hipsDzRange": [
+    -0.042,
+    -0.026
+   ],
+   "skinMinZ": [
+    -0.0,
+    0.0
+   ],
+   "bowTipMinZ": 0.14
+  },
+  "bow_shoot_rapid": {
+   "frames": [
+    0,
+    24
+   ],
+   "fps": 24,
+   "seconds": 1.0,
+   "keys": [
+    {
+     "frame": 0,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 3,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 7,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 10,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 11,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 12,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 13,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 14,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 15,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 17,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 18,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 21,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    },
+    {
+     "frame": 24,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0
+    }
+   ],
+   "yawAlign": null,
+   "hipsDzRange": [
+    -0.042,
+    -0.026
+   ],
+   "skinMinZ": [
+    -0.0,
+    0.0
+   ],
+   "bowTipMinZ": 0.139
+  },
+  "hit": {
+   "frames": [
+    0,
+    12
+   ],
+   "fps": 24,
+   "seconds": 0.5,
+   "keys": [],
+   "yawAlign": {
+    "mode": "start",
+    "before": [
+     -54.2,
+     -49.0,
+     -48.8,
+     -58.0,
+     -60.4,
+     -57.6,
+     -56.3,
+     -55.7,
+     -55.4,
+     -55.0,
+     -54.7,
+     -54.4,
+     -54.2
+    ]
+   },
+   "hipsDzRange": [
+    -0.15,
+    -0.137
+   ],
+   "skinMinZ": [
+    -0.0,
+    0.0
+   ],
+   "bowTipMinZ": 0.164
+  },
+  "death": {
+   "frames": [
+    0,
+    30
+   ],
+   "fps": 24,
+   "seconds": 1.25,
+   "keys": [],
+   "yawAlign": {
+    "mode": "start",
+    "before": [
+     -54.2,
+     -30.0,
+     -29.5,
+     -21.0,
+     -9.9,
+     -27.7,
+     -22.5,
+     -12.9,
+     3.7,
+     -4.0,
+     -1.9
+    ]
+   },
+   "hipsDzRange": [
+    -0.561,
+    -0.062
+   ],
+   "skinMinZ": [
+    -0.0,
+    0.0
+   ],
+   "bowTipMinZ": -0.08
+  },
+  "cheer": {
+   "frames": [
+    0,
+    204
+   ],
+   "fps": 24,
+   "seconds": 8.5,
+   "keys": [],
+   "yawAlign": null,
+   "hipsDzRange": [
+    -0.076,
+    -0.058
+   ],
+   "skinMinZ": [
+    -0.001,
+    0.001
+   ],
+   "bowTipMinZ": 0.068
+  },
+  "interact": {
+   "frames": [
+    0,
+    82
+   ],
+   "fps": 24,
+   "seconds": 3.4167,
+   "keys": [],
+   "yawAlign": null,
+   "hipsDzRange": [
+    -0.094,
+    -0.032
+   ],
+   "skinMinZ": [
+    -0.001,
+    0.001
+   ],
+   "bowTipMinZ": 0.23
+  },
+  "cast_shoot": {
+   "frames": [
+    0,
+    55
+   ],
+   "fps": 24,
+   "seconds": 2.2917,
+   "keys": [],
+   "yawAlign": null,
+   "hipsDzRange": [
+    -0.191,
+    -0.116
+   ],
+   "skinMinZ": [
+    -0.002,
+    0.002
+   ],
+   "bowTipMinZ": 0.304
+  }
+ },
+ "grip": {
+  "name": "RangerBowGrip_L",
+  "parent": "mixamorig:LeftHand",
+  "matrix_parent_space": [
+   [
+    -1.9830172061920166,
+    -42.281307220458984,
+    0.02571392059326172,
+    0.20923089981079102
+   ],
+   [
+    -42.26976776123047,
+    1.9830763339996338,
+    0.9880304336547852,
+    -4.067995548248291
+   ],
+   [
+    -0.9881496429443359,
+    0.020610332489013672,
+    -42.31625747680664,
+    -1.5624618530273438
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ]
+ },
+ "nock": {
+  "name": "RangerDrawNock_R",
+  "parent": "mixamorig:RightHand"
+ }
+}

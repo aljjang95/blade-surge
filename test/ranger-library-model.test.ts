@@ -40,7 +40,7 @@ test('메시·스킨·역바인드는 원본 바이트 그대로이고 관절 re
     for (const k of ['translation', 'rotation']) if (node[k]) node[k].forEach((x: number, i: number) => expect(Math.abs(o[k][i] - x)).toBeLessThan(.01));
   }
   const names = b.animations.map((c: any) => c.name).sort();
-  expect(names).toEqual([...Object.keys(asset().clips), 'Dodge_Backward'].sort());
+  expect(names).toEqual([...Object.keys(asset().clips), 'Dodge_Backward', 'bow_shoot_rapid'].sort());
   for (const [name, seconds] of Object.entries(REV.clips)) {
     const clip = b.animations.find((c: any) => c.name === name);
     expect(Math.max(...clip.samplers.map((s: any) => b.accessors[s.input].max[0]))).toBeCloseTo(seconds as number, 3);
@@ -132,7 +132,8 @@ test('갑옷 2·3단계와 여우 아바타는 1단계 교정 클립과 그립·
     const inst = spawnCharacter(gltf), n = nodes(inst);
     expect(n.grip && n.nock).toBeTruthy();
     pose(inst, 'Bow_Shoot', .3);
-    expect(n.grip.getWorldQuaternion(q()).angleTo(n.bow.getWorldQuaternion(q()))).toBeLessThan(1e-3);
+    // 1단계 검사와 같은 허용(굽힌 클립의 0.1° 이내 수치 오차)
+    expect(THREE.MathUtils.radToDeg(n.grip.getWorldQuaternion(q()).angleTo(n.bow.getWorldQuaternion(q())))).toBeLessThan(.5);
     disposeCharacter(inst.root, inst.mixer);
   }
   // 같은 인스턴스 몸체 교체(장비 단계): 소켓·시위·클립이 유지된다.
@@ -143,4 +144,103 @@ test('갑옷 2·3단계와 여우 아바타는 1단계 교정 클립과 그립·
   expect(pose(inst, 'Bow_Shoot', attackPhase(.38, .42) * inst.clips.Bow_Shoot.duration, true)).toBe(true);
   disposeCharacter(inst.root, inst.mixer);
   expect(libraryAssetForHero('ranger')?.id).toBe('hero_ranger_t1');
+});
+
+
+// ---- v2 전신 리타깃·접지·백스텝 계약(2026-10-16 사용자 재신고: 몸 꺾임) ----
+const bone = (inst: any, n: string) => inst.root.getObjectByName('mixamorig' + n);
+const wp = (o: any) => o.getWorldPosition(v());
+/** 무릎이 엉덩이–발목 선에서 벗어난 방향: 몸 정면(+Z) 성분과 좌우(X) 성분 */
+function kneeBend(inst: any, side: 'Left' | 'Right') {
+  const hip = wp(bone(inst, side + 'UpLeg')), knee = wp(bone(inst, side + 'Leg')), ankle = wp(bone(inst, side + 'Foot'));
+  const axis = ankle.clone().sub(hip).normalize(), off = knee.clone().sub(hip);
+  off.sub(axis.multiplyScalar(off.dot(axis)));
+  return { forward: off.z, lateral: Math.abs(off.x), depth: off.length() };
+}
+function skinMinY(inst: any) {
+  let min = Infinity; const p = v();
+  inst.root.updateMatrixWorld(true);
+  inst.root.traverse((o: any) => {
+    if (!o.isSkinnedMesh) return;
+    o.skeleton.update();
+    const n = o.geometry.attributes.position.count;
+    for (let i = 0; i < n; i++) { o.getVertexPosition(i, p); p.applyMatrix4(o.matrixWorld); if (p.y < min) min = p.y; }
+  });
+  return min;
+}
+function hipsFacing(inst: any) {
+  const q0 = bone(inst, 'Hips').getWorldQuaternion(q()), rest = bone(inst, 'Hips').userData.restQ as THREE.Quaternion;
+  return new THREE.Vector3(1, 0, 0).applyQuaternion(q0.multiply(rest.clone().invert()));
+}
+
+test('원인 재현과 교정: 원본 달리기는 무릎이 옆으로 꺾이고, 교정본은 무릎이 몸 정면으로 굽는다', async () => {
+  const gltf = await parse('../asset-library/normalized/hero_ranger_t1.glb'), mixer = new THREE.AnimationMixer(gltf.scene);
+  const raw = { root: gltf.scene }, run = gltf.animations.find((c) => c.name === 'run')!;
+  let rawLateral = 0;
+  for (const k of [0, .25, .5, .75]) {
+    mixer.stopAllAction(); const a = mixer.clipAction(run); a.reset(); a.play(); a.time = run.duration * k; mixer.update(0); gltf.scene.updateMatrixWorld(true);
+    for (const s of ['Left', 'Right'] as const) { const b = kneeBend(raw, s); if (b.depth > .03) rawLateral = Math.max(rawLateral, b.lateral / b.depth); }
+  }
+  expect(rawLateral).toBeGreaterThan(.6);   // 굽힘의 60% 이상이 옆 방향
+  const inst = await ranger();
+  for (const k of [0, .25, .5, .75]) {
+    pose(inst, 'Running_A', inst.clips.Running_A.duration * k);
+    for (const s of ['Left', 'Right'] as const) {
+      const b = kneeBend(inst, s);
+      if (b.depth > .03) { expect(b.forward).toBeGreaterThan(0); expect(b.lateral / b.depth).toBeLessThan(.45); }
+    }
+  }
+  disposeCharacter(inst.root, inst.mixer);
+});
+
+test('실제 스킨 접지: 대기·사격·피격은 발이 지면에, 구르기 중간과 사망 끝 자세는 몸이 지면에 닿는다', async () => {
+  const inst = await ranger();
+  const at = (name: string, k: number) => { pose(inst, name, inst.clips[name].duration * k); return skinMinY(inst); };
+  for (const [name, k] of [['Idle', 0], ['Idle', .5], ['Bow_Shoot', .4], ['Hit_A', .3], ['Dodge_Forward', .5], ['Death_A', 1]] as const) {
+    const y = at(name, k);
+    expect(Math.abs(y)).toBeLessThan(.03);
+  }
+  // 공개 v1(5bbc7e7b…)은 쓰러진 뒤 끝까지 0.3m 이상 떠 있었다
+  const gltf = await parse('../public/models/heroes-next/ranger-library-t1-v1.glb'), mixer = new THREE.AnimationMixer(gltf.scene);
+  const death = gltf.animations.find((c) => c.name === 'death')!; const a = mixer.clipAction(death); a.play();
+  for (const k of [.6, .8, 1]) { a.time = death.duration * k; mixer.update(0); expect(skinMinY({ root: gltf.scene })).toBeGreaterThan(.3); }
+  // 구르기는 키 사이(48fps 의 반 프레임)에서도 뜨거나 묻히지 않는다
+  for (let i = 0; i <= 48; i++) { pose(inst, 'Dodge_Forward', inst.clips.Dodge_Forward.duration * i / 48); expect(Math.abs(skinMinY(inst))).toBeLessThan(.03); }
+  disposeCharacter(inst.root, inst.mixer);
+});
+
+test('백스텝은 앞구르기의 역재생이 아닌 서 있는 뒤로 뛰기이고, 피격·사망은 대기와 같은 방향에서 시작한다', async () => {
+  const inst = await ranger();
+  inst.root.traverse((o: any) => { if (o.isBone) o.userData.restQ = o.getWorldQuaternion(q()); });
+  const head = (name: string, k: number) => { pose(inst, name, inst.clips[name].duration * k); return wp(bone(inst, 'Head')); };
+  let diff = 0;
+  for (const k of [.25, .5, .75]) diff = Math.max(diff, head('Dodge_Backward', k).distanceTo(head('Dodge_Forward', 1 - k)));
+  expect(diff).toBeGreaterThan(.25);
+  for (const k of [0, .25, .5, .75, 1]) {
+    pose(inst, 'Dodge_Backward', inst.clips.Dodge_Backward.duration * k);
+    expect(wp(bone(inst, 'Head')).y - wp(bone(inst, 'Hips')).y).toBeGreaterThan(.25);   // 머리가 골반 위(구르지 않는다)
+  }
+  pose(inst, 'Dodge_Backward', inst.clips.Dodge_Backward.duration * .35);
+  expect(skinMinY(inst)).toBeGreaterThan(.04);   // 실제로 발이 뜬다
+  const yaw = (name: string) => { pose(inst, name, 0); const f = hipsFacing(inst); return Math.atan2(f.z, f.x); };
+  const idle = yaw('Idle');
+  for (const name of ['Hit_A', 'Death_A', 'Dodge_Forward']) expect(Math.abs(Math.atan2(Math.sin(yaw(name) - idle), Math.cos(yaw(name) - idle)))).toBeLessThan(THREE.MathUtils.degToRad(12));
+  disposeCharacter(inst.root, inst.mixer);
+});
+
+test('사격: 만작에서 상체는 과녁 쪽으로 비틀리고(왼어깨 전방) 얼굴은 정면, 연속 발사 클립은 세 번 당긴다', async () => {
+  const inst = await ranger(), n = nodes(inst), clip = inst.clips.Bow_Shoot;
+  pose(inst, 'Bow_Shoot', attackPhase(.38, .42) * clip.duration, true);
+  const ls = wp(bone(inst, 'LeftArm')), rs = wp(bone(inst, 'RightArm'));
+  const shoulder = ls.clone().sub(rs); shoulder.y = 0; shoulder.normalize();
+  expect(shoulder.z).toBeGreaterThan(.55);   // 어깨선이 화살선(+Z) 쪽으로 35° 이상 돌았다
+  const rapid = inst.clips.bow_shoot_rapid; expect(rapid).toBeDefined();
+  let pulls = 0, wasDrawn = false;
+  for (let f = 0; f <= 24; f += .5) {
+    pose(inst, 'bow_shoot_rapid', f / 24 * rapid.duration, true);
+    const x = n.bow.worldToLocal(n.nock.getWorldPosition(v())).x, drawn = x > .5;
+    if (drawn && !wasDrawn) pulls++; wasDrawn = drawn;
+  }
+  expect(pulls).toBe(3);
+  disposeCharacter(inst.root, inst.mixer);
 });

@@ -1,10 +1,18 @@
 import manifest from '../../asset-library/manifest.json';
 import { LIBRARY_SCHEMA, triangleLimit, validateManifest as validateManifestShape } from '../../tools/asset-library/manifest.mjs';
 import { monsterRosterEntry } from '../data/monster-roster.js';
-import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v1.json';
+import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v2.json';
+import ROGUE_LIBRARY_REVISION from '../data/rogue-library-revision-v1.json';
 
 export { LIBRARY_SCHEMA, triangleLimit };
-export const RANGER_LIBRARY_REVISION_ID = 'ranger-library-v1';
+// v2: 전신 rest 축 리타깃 + 실제 스킨 접지 + 활 사격·백스텝 재저작(art-src/ranger/author_ranger_library_v2.py). v1 기록·파일은 그대로 둔다.
+export const RANGER_LIBRARY_REVISION_ID = 'ranger-library-v2';
+// 도적 1단계: 궁수와 같은 Tripo 롤 배치라 같은 축 리타깃·접지·백스텝(art-src/hero-axis/author_hero_axis_v1.py)을 쓴다.
+export const ROGUE_LIBRARY_REVISION_ID = 'rogue-library-axis-v1';
+const LIBRARY_REVISIONS = Object.freeze([
+  Object.freeze({ id: RANGER_LIBRARY_REVISION_ID, prefix: '/models/heroes-next/ranger-', revision: RANGER_LIBRARY_REVISION }),
+  Object.freeze({ id: ROGUE_LIBRARY_REVISION_ID, prefix: '/models/heroes-next/rogue-', revision: ROGUE_LIBRARY_REVISION }),
+]);
 let bundledFiles = {};
 try {
   bundledFiles = import.meta.glob('../../asset-library/normalized/*.glb', { eager: true, query: '?url', import: 'default' });
@@ -32,22 +40,26 @@ export function resolveAssetSource(asset, root = '') {
 }
 
 /**
- * Blender 로 팔·활 클립을 다시 저작한 궁수 1단계 몸체. 원본 manifest 항목·원본 GLB 는 그대로 두고,
+ * Blender 로 전신 리타깃(궁수는 활 클립 포함)을 다시 저작한 1단계 몸체(궁수·도적). 원본 manifest 항목·원본 GLB 는 그대로 두고,
  * 같은 원본 SHA 에서 생성이 끝난 교정본만 대신 받는다. 2·3단계와 아바타는 이 1단계 클립을 공유한다.
  * @param {{id?: string, sha256?: string}|null} asset
  * @returns {string|null}
  */
-export function revisedLibraryFile(asset, revision = RANGER_LIBRARY_REVISION) {
-  if (!asset || asset.id !== revision.asset || !revision.useInGame) return null;
-  if (revision.id !== RANGER_LIBRARY_REVISION_ID || revision.status !== 'GENERATED' || revision.source?.sha256 !== asset.sha256
-    || !/^[a-f0-9]{64}$/.test(revision.output?.sha256 || '') || !String(revision.output?.path || '').startsWith('/models/heroes-next/ranger-')
+export function revisedLibraryFile(asset, revision = null) {
+  if (!asset) return null;
+  const entry = revision ? LIBRARY_REVISIONS.find((e) => e.id === revision.id) : LIBRARY_REVISIONS.find((e) => e.revision.asset === asset.id);
+  revision = revision || entry?.revision;
+  if (!revision || asset.id !== revision.asset || !revision.useInGame) return null;
+  if (!entry || revision.status !== 'GENERATED' || revision.source?.sha256 !== asset.sha256
+    || !/^[a-f0-9]{64}$/.test(revision.output?.sha256 || '') || !String(revision.output?.path || '').startsWith(entry.prefix)
     || !String(revision.output.path).endsWith('.glb')) {
-    throw new Error('Ranger library revision requires the exact generated file for the shipped source');
+    throw new Error('Library revision requires the exact generated file for the shipped source');
   }
   return revision.output.path;
 }
 
 export const rangerLibraryRevision = () => RANGER_LIBRARY_REVISION;
+export const rogueLibraryRevision = () => ROGUE_LIBRARY_REVISION;
 
 export function validateLibraryModel(gltf, asset) {
   const names = new Set(gltf.animations.map((clip) => clip.name));
