@@ -453,6 +453,13 @@ export class Player extends Actor {
       if (this.state === 'attack' && this.hitDone && (this.dodgeCd || 0) <= 0) this.game.input.press('dodge');
       return out;
     }
+    // 보스 후방 노출(잿불금고 심층) 중 등 뒤 사거리 밖이면 공격·스킬을 멈추고 경로 목표가 준 옆·등 뒤 지점으로 간다. 닿으면 null 이라 평소처럼 친다.
+    const flank = this.game.routeObjectives?.autoFlank?.(this);
+    if (flank) {
+      const fx = flank.x - this.pos.x, fz = flank.z - this.pos.z, fl = Math.hypot(fx, fz);
+      if (fl > .3) { out.x = fx / fl; out.y = fz / fl; }
+      return out;
+    }
     const counts = this._autoHubCounts || (this._autoHubCounts = []);
     // 같은 적 쌍의 거리는 한 번만 읽고 양쪽에 상대 가중치를 더한다.
     // 자기항도 원래 비교를 유지해 비유한 좌표를 이웃으로 세지 않는다.

@@ -51,6 +51,9 @@ const EMBER_COUNT = EMBER_TIDE.gates.length;
 const EMBER_STEPS = EMBER_TIDE.gates.map((_, i) => `${i + 1}번`).join(' → ');
 const EMBER_OBJECTIVE = `${EMBER_COPY.unit} ${EMBER_COUNT}곳을 ${EMBER_COPY.vent} 뒤 순서대로 ${EMBER_COPY.doneVerb}하고 정예방 ${EMBER_ELITES}곳의 증원 각 ${EMBER_REINFORCEMENTS}회 격파 → 모든 구역 정화 → 선단 압류관 처치`;
 const EMBER_TACTIC = `각 ${EMBER_COPY.unit} 구역의 적을 처치한 뒤(정예방은 증원 ${EMBER_REINFORCEMENTS}회까지) ${EMBER_STEPS} 순서로 ${EMBER_COPY.doneVerb}하세요. ${EMBER_COPY.vent}이 한 번 지나가면 조작판이 반대편으로 옮겨 가 열립니다. 다음 ${EMBER_COPY.warning} 전까지 그 청록 조작판에서 행동 없이 ${EMBER_TIDE.holdSeconds}초 유지하면 ${EMBER_COPY.unit}가 열립니다. 파란 ${EMBER_COPY.vent} 띠 안에 있으면 피해를 입습니다. `;
+// 사슬 집행자 후방 노출(BUNDLE-14) 안내. 수치는 정의(ROUTE_OBJECTIVES.ember_deep.rear)에서 읽는다. 보스 전술 뒤에 붙인다(전술 공략 문구에는 없다).
+const EMBER_REAR = EMBER_TIDE.rear;
+const EMBER_REAR_TACTIC = `용재 망치의 마지막 고리가 터지면 ${EMBER_REAR.window}초 동안 집행자가 제자리에 묶입니다. 그동안 등 뒤에서 치면 피해 ${EMBER_REAR.rear}배, 정면은 사슬 갑주에 막혀 ${Math.round(EMBER_REAR.front * 100)}%입니다.`;
 
 // 녹청 성역 심층 생명 제단·포자 수로 문구의 숫자는 규칙 정의(ROUTE_OBJECTIVES.verdigris_deep)에서 계산한다(BUNDLE-11).
 // 정예방 수·증원 횟수는 아래 verdigris_sanctum 의 레이아웃·mechanics 와 같은 값이며 계약 테스트가 일치를 검사한다.
@@ -100,7 +103,7 @@ export const EXPEDITION_DEPTHS = [
     description: '해왕의 사슬 아래 가라앉은 운반선에 빼앗긴 불씨가 남아 있습니다. 잠긴 화물칸을 돌파하고 압류관의 명령을 끊으세요.',
     objective: EMBER_OBJECTIVE,
     bossName: '가라앉은 선단의 압류관', art: '/img/expansion/ember_vault.webp',
-    tactic: `${EMBER_TACTIC}${ENEMIES.cinder_chain_executor.tactic}`,
+    tactic: `${EMBER_TACTIC}${ENEMIES.cinder_chain_executor.tactic} ${EMBER_REAR_TACTIC}`,
     // 전술 공략(vault_signal·vault_manifest)은 냉각 밸브가 없는 심층 동선을 쓴다(routeObjectiveForStage null). 밸브 안내 없이 BUNDLE-10 이전 문구를 쓴다.
     conquestTactic: `화물칸의 정예방마다 적과 1회 증원을 격파하세요. ${ENEMIES.cinder_chain_executor.tactic}`,
     layout: { spacing: [36,36], size: [22,20], width: 7,

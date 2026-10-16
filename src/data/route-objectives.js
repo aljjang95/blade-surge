@@ -199,6 +199,13 @@ export const ROUTE_OBJECTIVES = Object.freeze({
     ...coolingDef('ember_tide_valves_deep', [[2, '1번 냉각 밸브 · 좌현 화물칸'], [3, '2번 냉각 밸브 · 우현 화물칸'],
       [4, '3번 냉각 밸브 · 기관실 격벽']], EMBER_DEEP_COPY),
     shockWindow: true, ventColor: 0x3d8cff,
+    // 사슬 집행자 후방 노출(BUNDLE-14): 원안의 남은 문장 "사슬 집행자의 후방을 공격". 보스 규칙이며 이 심층 개인 원정에서만 쓴다.
+    // 용재 망치(signature)의 마지막 고리가 터진 직후 window초 동안 집행자가 제자리에 묶여 방향을 바꾸지 않고 새 공격을 시작하지 않는다.
+    // 그동안 맞은 방향과 정면의 내적이 rearDot 이상이면 등 뒤(rear 배), -frontDot 이하면 정면 사슬 갑주(front 배), 옆은 1배다. 창 밖은 늘 1배다.
+    // AUTO 는 내적 autoDot 이상·사거리(meleeReach/rangedReach) 안의 등 뒤로 돌아가 친다. 정면이면 옆으로 sidePad 만큼 돌아 들어간다.
+    // 수치는 BUNDLE-14 PLAN 의 보스전 모의(tools/ember-deep-boss-sim.mjs)로 정했다.
+    rear: Object.freeze({ id: 'ember_deep_rear', boss: 'cinder_chain_executor', signature: 'kiln_hammer', window: 4,
+      rearDot: .35, frontDot: .35, rear: 2, front: .5, autoDot: .6, meleeReach: 2.4, rangedReach: 6, sidePad: .9 }),
   }),
   nightglass_standard: records('standard', [[2, 1], [5, 2], [6, 3]]),
   nightglass_deep: records('deep', [[6, 3], [4, 2], [1, 1]]),

@@ -253,7 +253,8 @@ export class Enemy extends Actor {
     }
     const armor = this.def.armor || 0; dmg *= 1 - armor;
     if (this.burrow) dmg *= this.burrow.damageMul();
-    if (this.damageVeil) dmg = this.damageVeil.filter(dmg);
+    // 보스 피해 배율(종락 합창 장막·잿불금고 후방 노출). 후방 노출은 맞은 방향(공격자 → 나)을 함께 받는다.
+    if (this.damageVeil) dmg = this.damageVeil.filter(dmg, dirx, dirz);
     this.hp -= dmg;
     // 강타·띄우기는 몰이를 끝내고 기존 저항·넉백을 그대로 적용한다.
     if (kb >= 6 || up) this.gatherT = 0;
@@ -385,7 +386,11 @@ export class Enemy extends Actor {
     const steer = packSteer(this, p, separation, canCommit);
     const sx = steer.x, sz = steer.z;
 
-    if (this.state === 'chase') {
+    if (this.state === 'chase' && this.damageVeil?.pins?.(this)) {
+      // 잿불금고 심층 후방 노출: 망치가 박힌 동안 집행자는 제자리에 서고 방향을 바꾸지 않는다. 공격 대기는 그대로 흐르고 컨트롤러가 창 끝까지 붙잡는다.
+      this.atkCd -= dt; this.vel.set(0, 0, 0);
+      if (this.actionName !== this.rig.idleCombat && this.actionName !== this.rig.idle) this.play(this.A('idleCombat'), { fade: 0.15 });
+    } else if (this.state === 'chase') {
       this.atkCd -= dt;
       if (this.mobRole && this.atkCd <= 0 && p.alive && this.mobRole.available(d)) { this.mobRole.start(); return; }
       const range = this.def.range;
