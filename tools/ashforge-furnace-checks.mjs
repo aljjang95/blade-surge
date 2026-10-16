@@ -617,7 +617,7 @@ export function compareRuns(cand, base, { depth = 'deep', timeRatio = 2, slowExt
 /** 거수 사슬 공유 정의 계약(PLAN 3.1). 판정은 정의 값을 읽고, 이 상수는 정의가 계약과 같은지와 문구에만 쓴다. */
 export const CHAINS = Object.freeze({
   id: 'ashforge_deep_chains', boss: 'ash_colossus', signature: 'kiln_hammer', title: '거수의 사슬', resultAria: '거수의 사슬 결과',
-  values: Object.freeze({ count: 3, window: 5, hold: 1.2, radius: 1.6, pillarOffset: 8.4, anchorMargin: 1.2, exposed: 5, exposedMult: 1.5 }),
+  values: Object.freeze({ count: 3, window: 5, hold: 1.2, radius: 1.6, pillarOffset: 8.4, anchorMargin: 1.2, exposed: 5, exposedMult: 2, weaken: .1 }),
   pullText: '사슬이 망치 쪽으로 끌림 · 반대편 기둥으로', freeToast: '거수의 사슬이 모두 끊겼다',
 });
 /** screens 프로필의 사슬 순간(후보에만): 끌기 중 · 기둥 열림(hold > 0) · 끊김(exposed). */
@@ -628,11 +628,17 @@ export const CHAINS_PILLAR_EDGE = 1.2;
 export const CHAINS_ANCHOR_Z_TOL = .5;
 /** 수동 구간에서 영웅이 한 스텝에 움직일 수 있는 최대 거리(순간이동 방지용 상한). */
 export const CHAINS_MAX_STEP_MOVE = 1.5;
+/** open 의 '쫓지 않음' 판정(PLAN 3.6): 영웅-보스 거리가 스텝 앞뒤 모두 range × .92 + .3 보다 먼 추격 스텝에만 적용한다(.92 는 Enemy 추격 분기와 같은 값, .3 은 한 스텝 안 이동 여유). */
+export const CHAINS_RANGE_FACTOR = .92;
+export const CHAINS_RANGE_SLACK = .3;
+/** 묶인 추격 스텝의 보스 이동 속도 상한(초당). 거수 추격 속도 3.4 의 약 절반이고, 모의에서 넉백은 초당 .75 가 최대였다(PLAN 4.1). */
+export const CHAINS_PIN_MAX_SPEED = 1.8;
+/** 도구가 읽은 보스 def.range 로 계산한 '사거리 밖' 거리 기준. */
+export const chainsFarLimit = range => range * CHAINS_RANGE_FACTOR + CHAINS_RANGE_SLACK;
 const CHAIN_TOL = 1e-6;
 const CHAIN_REL = 1e-9;
 const nearRel = (a, b) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= CHAIN_REL * Math.max(1, Math.abs(a), Math.abs(b));
 const nearAbs = (a, b, tol) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= tol;
-const pct = value => Math.round(value * 100);
 const clampTo = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 const escapeRe = text => String(text).split('').map(ch => '.*+?^$|(){}[]\\'.includes(ch) ? '\\' + ch : ch).join('');
 
@@ -652,10 +658,30 @@ export const chainsOpenTexts = (def, wl, hd) => {
   for (const n of tenths(wl, 'ceil')) for (const h of tenths(hd, 'floor')) out.push('기둥 열림 ' + n + '초 · 행동 없이 ' + h + '/' + def.hold + '초');
   return out;
 };
-/** 노출 문구: '사슬 끊김 · 휘청 n.n초 · 받는 피해 150%'(n 은 exposedLeft 0.1초 올림). */
-export const chainsExposedTexts = (def, el) => tenths(el, 'ceil').map(n => '사슬 끊김 · 휘청 ' + n + '초 · 받는 피해 ' + pct(def.exposedMult) + '%');
+/**
+ * 피해 배율(PLAN 3.6): 끊은 사슬 k 개마다 weaken 씩 늘어 (1 + weaken × k), 휘청임(exposed) 동안은 거기에 exposedMult 를 곱한다. idle·ended 는 1배.
+ * k 는 컨트롤러가 알려 주는 cuts 가 아니라 도구가 관측 행에서 직접 센 끊김 수(open → exposed 전이 수)여야 한다(독립 대조).
+ */
+export const chainsExpectedMult = (def, k, state) => (state === 'idle' || state === 'ended' ? 1 : (1 + def.weaken * k) * (state === 'exposed' ? def.exposedMult : 1));
+/** 목표창 노출 문구의 받는 피해 %: round((1 + weaken × k) × exposedMult × 100). 첫 끊김(k = 1)은 220%. */
+export const chainsExposedPct = (def, k) => Math.round((1 + def.weaken * k) * def.exposedMult * 100);
+/** 관측 행에서 도구가 센 끊김 전이(open → exposed)의 스텝 번호 목록. */
+export function chainsCutSteps(rows) {
+  const out = [];
+  for (let i = 1; i < rows.length; i++) if (rows[i - 1].cs === 'open' && rows[i].cs === 'exposed') out.push(rows[i].n);
+  return out;
+}
+/**
+ * 스텝 n 에서 부른 필터 시점까지 끊긴 수 k. 필터 기록의 n 은 그 호출이 일어난 스텝이고 st 는 호출 순간 state 다.
+ * exposed 호출이면 끊김은 이미 일어났으므로 n 이하의 전이를 세고, 그 밖의 state 는 같은 스텝의 컨트롤러 갱신이 호출보다 늦을 수 있어 n 보다 앞선 전이만 센다.
+ */
+export const chainsCutsAt = (cutSteps, n, state) => cutSteps.filter(s => (state === 'exposed' ? s <= n : s < n)).length;
+/** 노출 문구: '사슬 끊김 · 휘청 n.n초 · 받는 피해 220%'(n 은 exposedLeft 0.1초 올림, % 는 도구가 센 끊김 수 k 로 계산). */
+export const chainsExposedTexts = (def, el, k) => tenths(el, 'ceil').map(n => '사슬 끊김 · 휘청 ' + n + '초 · 받는 피해 ' + chainsExposedPct(def, k) + '%');
 const chainsOpenPattern = def => new RegExp('기둥 열림 \\d+\\.\\d초 · 행동 없이 \\d+\\.\\d/' + escapeRe(def.hold) + '초');
-const chainsExposedPattern = def => new RegExp('사슬 끊김 · 휘청 \\d+\\.\\d초 · 받는 피해 ' + pct(def.exposedMult) + '%');
+const chainsExposedPattern = (def, k) => new RegExp('사슬 끊김 · 휘청 \\d+\\.\\d초 · 받는 피해 ' + chainsExposedPct(def, k) + '%');
+/** 갱신 대기 판정용: 앞 범주(exposed)에서 남은 문구인지만 보므로 퍼센트는 가리지 않는다. */
+const chainsExposedLoose = /사슬 끊김 · 휘청 \d+\.\d초 · 받는 피해 \d+%/;
 const chainsPlainPattern = def => new RegExp('남은 사슬 \\d+/' + def.count + ' · 망치가 끄는 반대편 기둥에서 버티기');
 /** 결과 줄: '거수의 사슬 끊음 {cuts}/{count} · 기둥 창 {windows}번 · 놓침 {misses}번'. */
 export const chainsResultLine = c => '거수의 사슬 끊음 ' + c.cuts + '/' + c.count + ' · 기둥 창 ' + c.windows + '번 · 놓침 ' + c.misses + '번';
@@ -761,10 +787,15 @@ export function checkChainsAttach(rows, def) {
  * 망치가 완성됐는데 열리지 않으면(missed) 위반이다(보스 처치 스텝 제외).
  * 길이: 놓침(miss)으로 끝난 창 = def.window ± 1/60, 끊김(cut)·보스 처치로 끝난 창은 ≤ def.window + 1/60. windowLeft 시계는 스텝마다 게임 시각 증가량만큼 줄고 첫 값은 def.window(−1/60 허용), windowTotal = def.window.
  * 버티기: 끊김 행에서 거꾸로, 도구가 영웅 위치로 직접 잰 기둥(독립 계산) 거리 ≤ def.radius + POSITION_SLACK · state idle|move · hp 비감소가 연속된 시간 ≥ def.hold − 1/60, 모두 그 창 안.
- * 묶임: 창·노출 안 attackSequence 가 트리거 공격 그대로(새 공격 0), yaw 불변, 보스 state 가 chase 인 행은 속도 0. 위치 이동량(넉백 등)은 moveMax 로 보고한다.
+ * 묶임(PLAN 3.6): exposed 는 새 공격 없음(attackSequence 불변)·yaw 불변·추격 스텝 vel 0. open 은 영웅이 사거리 안이면 묶지 않으므로 새 공격·yaw 변화를 허용하고,
+ * 도구가 잰 영웅-보스 거리가 그 스텝 앞뒤 모두 range × .92 + .3 보다 먼 추격 스텝(앞뒤 행이 모두 open·chase)에만 '쫓지 않음'(vel 0 이고 이동 속도 ≤ 초당 1.8)을 본다.
+ * range 는 도구가 페이지에서 읽은 보스 def.range(opts.range)이고, 없으면 open 의 묶임을 판정할 수 없어 pinnedStill 이 실패한다. open 동안 영웅이 사거리 안에서 생긴 새 공격 수는 보고 항목이다.
+ * 위치 이동량(넉백 등)은 moveMax 로 보고한다.
  * 노출: 끊김 직후 이어지고 길이 = def.exposed ± 1/60(보스 처치 면제), exposedLeft 시계, exposedTotal, 끝나면 chainsLeft > 0 이면 chained 아니면 unchained.
  */
-export function checkChainsWindows(rows, def, room, casts, comps) {
+export function checkChainsWindows(rows, def, room, casts, comps, { range = null } = {}) {
+  const rangeKnown = Number.isFinite(range) && range > 0, farLimit = rangeKnown ? chainsFarLimit(range) : null;
+  const heroDist = r => Math.hypot(r.hx - r.bx, r.hz - r.bz);
   const openRuns = chainRuns(rows, r => r.cs === 'open'), exposedRuns = chainRuns(rows, r => r.cs === 'exposed');
   const castBySeq = new Map(casts.map(c => [c.seq, c]));
   const windows = [], seen = new Set();
@@ -797,10 +828,25 @@ export function checkChainsWindows(rows, def, room, casts, comps) {
     });
     const startOk = first.wl <= def.window + EPS && first.wl >= def.window - FRAME - EPS;
     const totalsOk = span.every(r => r.wt === def.window && r.ht === def.hold);
-    const seqStable = !!trig && span.every(r => r.sq === trig.seq);
-    const yawStable = span.every(r => r.by === first.by);
-    const chaseRows = span.filter(r => r.bs === 'chase'), movingChase = chaseRows.filter(r => r.bvx !== 0 || r.bvz !== 0).length;
+    const yawChanged = span.filter(r => r.by !== first.by).length;
     const moveMax = Math.max(...span.map(r => Math.hypot(r.bx - first.bx, r.bz - first.bz)));
+    // 묶임(open): 앞뒤 행이 모두 open·추격이고 영웅-보스 거리가 앞뒤 모두 사거리 기준보다 먼 스텝에서 보스가 쫓지 않아야 한다. 새 공격은 허용하되 영웅이 사거리 안이었던 수를 센다.
+    const pin = { observed: rangeKnown, farLimit, chaseSteps: 0, farChaseSteps: 0, movingFarChase: 0, maxFarSpeed: 0, maxFarDispSpeed: 0, newAttacks: 0, newAttacksInRange: 0, newAttacksOutOfRange: 0 };
+    for (let k = 1; k < span.length; k++) {
+      const p = span[k - 1], r = span[k];
+      if (r.n !== p.n + 1) continue;
+      if (r.sq > p.sq) {
+        pin.newAttacks++;
+        if (rangeKnown && (heroDist(p) <= farLimit || heroDist(r) <= farLimit)) pin.newAttacksInRange++; else pin.newAttacksOutOfRange++;
+      }
+      if (!(p.bs === 'chase' && r.bs === 'chase' && p.ha === 1 && r.ha === 1 && p.al === 1 && r.al === 1)) continue;
+      pin.chaseSteps++;
+      if (!rangeKnown || !(heroDist(p) > farLimit && heroDist(r) > farLimit)) continue;
+      pin.farChaseSteps++;
+      const speed = Math.hypot(r.bvx, r.bvz), dt = r.t - p.t, disp = dt > 0 ? Math.hypot(r.bx - p.bx, r.bz - p.bz) / dt : 0;
+      pin.maxFarSpeed = Math.max(pin.maxFarSpeed, speed); pin.maxFarDispSpeed = Math.max(pin.maxFarDispSpeed, disp);
+      if (!(speed <= CHAINS_PIN_MAX_SPEED) || !(disp <= CHAINS_PIN_MAX_SPEED)) pin.movingFarChase++;
+    }
     // 버티기(끊긴 창만): 끊김 행(exposed 첫 행)에서 거꾸로 연속으로 조건을 채운 시간.
     let hold = null, cutCounts = null;
     if (endKind === 'cut') {
@@ -815,7 +861,7 @@ export function checkChainsWindows(rows, def, room, casts, comps) {
       cutCounts = { cu: cutRow.cu === last.cu + 1, cl: cutRow.cl === last.cl - 1 };
     }
     windows.push({ index, startIdx: run.start, endIdx: run.end, n: first.n, t: first.t, seq: trig?.seq ?? null, delaySteps: trig || closest ? run.start - (trig ?? closest).idx : null, reasons, endKind,
-      contiguous, rows: span.length, length, lengthOk, startWindowLeft: first.wl, startOk, totalsOk, clockBad, seqStable, yawStable, chaseRows: chaseRows.length, movingChase, moveMax, hold, cutCounts, ok: false });
+      contiguous, rows: span.length, length, lengthOk, startWindowLeft: first.wl, startOk, totalsOk, clockBad, yawChanged, pin, moveMax, hold, cutCounts, ok: false });
   });
   const exposures = [];
   exposedRuns.forEach((run, index) => {
@@ -835,14 +881,22 @@ export function checkChainsWindows(rows, def, room, casts, comps) {
     });
     const startOk = first.el <= def.exposed + EPS && first.el >= def.exposed - FRAME - EPS;
     const totalsOk = span.every(r => r.et === def.exposed);
-    const seqStable = !!prev && prev.seq !== null && span.every(r => r.sq === prev.seq);
+    // 휘청이는 동안 새 공격이 없다: attackSequence 가 첫 행 그대로다(open 에서 영웅이 사거리 안일 때 시작한 공격은 이어질 수 있다).
+    const seqStable = span.every(r => r.sq === first.sq);
     const yawStable = span.every(r => r.by === first.by);
-    const chaseRows = span.filter(r => r.bs === 'chase'), movingChase = chaseRows.filter(r => r.bvx !== 0 || r.bvz !== 0).length;
+    // 추격 스텝(앞뒤 행이 모두 exposed·chase)은 vel 0 이다. 첫 행은 같은 스텝에서 컨트롤러 갱신과 추격 분기의 순서가 갈릴 수 있어 앞 행이 exposed 인 스텝만 본다.
+    let chaseSteps = 0, movingChase = 0;
+    for (let k = 1; k < span.length; k++) {
+      const p = span[k - 1], r = span[k];
+      if (r.n !== p.n + 1 || !(p.bs === 'chase' && r.bs === 'chase')) continue;
+      chaseSteps++;
+      if (r.bvx !== 0 || r.bvz !== 0) movingChase++;
+    }
     const moveMax = Math.max(...span.map(r => Math.hypot(r.bx - first.bx, r.bz - first.bz)));
     exposures.push({ index, startIdx: run.start, endIdx: run.end, n: first.n, t: first.t, cutWindow: prev?.index ?? null, endKind, contiguous, rows: span.length, length, lengthOk, startExposedLeft: first.el, startOk, totalsOk,
-      clockBad, seqStable, yawStable, movingChase, moveMax, ok: false });
+      clockBad, seqStable, yawStable, chaseSteps, movingChase, moveMax, ok: false });
   });
-  for (const w of windows) w.ok = w.reasons.length === 0 && w.contiguous && w.lengthOk && w.startOk && w.totalsOk && w.clockBad === 0 && w.endKind !== 'unterminated' && w.seqStable && w.yawStable && w.movingChase === 0
+  for (const w of windows) w.ok = w.reasons.length === 0 && w.contiguous && w.lengthOk && w.startOk && w.totalsOk && w.clockBad === 0 && w.endKind !== 'unterminated' && rangeKnown && w.pin.movingFarChase === 0
     && (w.endKind !== 'cut' || (w.hold?.ok === true && w.cutCounts?.cu === true && w.cutCounts?.cl === true));
   for (const e of exposures) e.ok = e.cutWindow !== null && e.contiguous && e.lengthOk && e.startOk && e.totalsOk && e.clockBad === 0 && e.endKind !== 'unterminated' && e.endKind !== 'wrong-next' && e.seqStable && e.yawStable && e.movingChase === 0;
   // 완성된 용재 망치(끌기가 관측된 것)는 보스 처치 스텝이 아니면 반드시 열려야 한다.
@@ -856,7 +910,9 @@ export function checkChainsWindows(rows, def, room, casts, comps) {
   }).map(c => ({ idx: c.idx, n: c.n, seq: c.seq }));
   const has = reason => windows.some(w => w.reasons.includes(reason));
   const cutWindows = windows.filter(w => w.endKind === 'cut');
-  return { windows, exposures, count: windows.length, cutCount: cutWindows.length, missCount: windows.filter(w => w.endKind === 'miss').length, missed, completions: comps.length, hammerCompletions: comps.filter(c => c.hammer).length,
+  const pinTotals = { rangeKnown, farLimit, farChaseSteps: windows.reduce((a, w) => a + w.pin.farChaseSteps, 0), movingFarChase: windows.reduce((a, w) => a + w.pin.movingFarChase, 0),
+    newAttacks: windows.reduce((a, w) => a + w.pin.newAttacks, 0), newAttacksInRange: windows.reduce((a, w) => a + w.pin.newAttacksInRange, 0), newAttacksOutOfRange: windows.reduce((a, w) => a + w.pin.newAttacksOutOfRange, 0) };
+  return { windows, exposures, pin: pinTotals, count: windows.length, cutCount: cutWindows.length, missCount: windows.filter(w => w.endKind === 'miss').length, missed, completions: comps.length, hammerCompletions: comps.filter(c => c.hammer).length,
     acceptance: {
       windowCount: windows.length >= 1,
       noEarlyOpen: !has('no-trigger') && !has('wrong-signature'),
@@ -864,9 +920,9 @@ export function checkChainsWindows(rows, def, room, casts, comps) {
       noMissedOpen: missed.length === 0,
       windowLength: windows.length > 0 && windows.every(w => w.contiguous && w.lengthOk && w.startOk && w.totalsOk && w.clockBad === 0 && w.endKind !== 'unterminated'),
       holdBeforeCut: windows.length > 0 && cutWindows.every(w => w.hold?.ok === true && w.cutCounts?.cu === true && w.cutCounts?.cl === true),
-      noNewAttack: windows.length > 0 && windows.every(w => w.seqStable) && exposures.every(e => e.seqStable),
-      yawFixed: windows.length > 0 && windows.every(w => w.yawStable) && exposures.every(e => e.yawStable),
-      pinnedStill: windows.length > 0 && windows.every(w => w.movingChase === 0) && exposures.every(e => e.movingChase === 0),
+      noNewAttack: windows.length > 0 && exposures.every(e => e.seqStable),
+      yawFixed: windows.length > 0 && exposures.every(e => e.yawStable),
+      pinnedStill: windows.length > 0 && rangeKnown && windows.every(w => w.pin.movingFarChase === 0) && exposures.every(e => e.movingChase === 0),
       exposedLength: exposures.every(e => e.cutWindow !== null && e.contiguous && e.lengthOk && e.startOk && e.totalsOk && e.clockBad === 0 && e.endKind !== 'unterminated' && e.endKind !== 'wrong-next') && exposures.length === cutWindows.length,
     } };
 }
@@ -951,18 +1007,25 @@ export function checkChainsLastCut(rows, windows) {
 }
 
 /**
- * 피해 배율(chains.filter 감싸개 기록). exposed 의 모든 호출(공격자 유무 상관없음)은 출력 = 입력 × def.exposedMult, 그 밖의 state 는 출력 = 입력(1배).
- * 마지막 행의 exposedDamage = exposed 호출 출력 합계(PLAN 3.2 '더한다'; 모호하게 읽는 구현을 위해 증분(출력 − 입력) 합계도 basis 로 허용하고 보고한다).
- * 끊김이 있었다면 exposed 호출이 1개 이상 관측돼야 한다(배율을 확인할 수 없으면 실패). filters 가 null(관측 누락)이면 실패한다.
+ * 피해 배율(chains.filter 감싸개 기록, PLAN 3.6). 호출마다 기대 배율 = (1 + weaken × k) × (exposed 이면 exposedMult, 아니면 1), idle·ended 는 1배다.
+ * k 는 컨트롤러의 cuts·damageMult 가 아니라 도구가 관측 행에서 직접 센 끊김 수(open → exposed 전이 수, 그 호출 시점까지)다. 컨트롤러 값을 그대로 쓰면 독립 대조가 아니다.
+ * chained(끊김 뒤)·open·unchained 의 약화 배율도 판정한다. 마지막 행의 exposedDamage 는 exposed 호출 출력 합계여야 한다(basis 'output').
+ * 증분(출력 − 입력) 합계는 sumBonus 로 보고만 하고 basis 'bonus' 는 실패다. exposed 가 아닌 행에서 exposedDamage 가 늘면 실패.
+ * 표본 없음: opts.requireCalls(auto 프로필)일 때만 끊김이 있었는데 exposed 호출이 없으면 실패한다. 수동 chains 프로필은 보고(exposedCalls)로 둔다.
+ * filters 가 null(관측 누락)이면 실패한다.
  */
-export function checkChainsFilters(filters, rows, def, { cuts = 0 } = {}) {
+export function checkChainsFilters(filters, rows, def, { cuts = 0, requireCalls = false } = {}) {
   if (!Array.isArray(filters)) return { ok: false, observed: false, bad: [{ kind: 'not-observed' }], badCount: 1 };
-  const bad = [];
-  let exposedCalls = 0, sumOut = 0, sumBonus = 0;
+  const bad = [], cutSteps = chainsCutSteps(rows), byState = {};
+  let exposedCalls = 0, weakenedCalls = 0, sumOut = 0, sumBonus = 0, kMax = 0;
   filters.forEach((f, i) => {
-    const want = f.st === 'exposed' ? f.dmg * def.exposedMult : f.dmg;
+    const k = chainsCutsAt(cutSteps, f.n, f.st), mult = chainsExpectedMult(def, k, f.st), want = f.dmg * mult;
+    kMax = Math.max(kMax, k);
+    const slot = byState[f.st] ??= { calls: 0, minK: k, maxK: k };
+    slot.calls++; slot.minK = Math.min(slot.minK, k); slot.maxK = Math.max(slot.maxK, k);
     if (f.st === 'exposed') { exposedCalls++; sumOut += f.out; sumBonus += f.out - f.dmg; }
-    if (!nearRel(f.out, want)) bad.push({ kind: f.st === 'exposed' ? 'exposed-multiplier' : 'outside-exposure', i, n: f.n, state: f.st, dmg: f.dmg, out: f.out, want });
+    else if (k > 0 && f.st !== 'idle' && f.st !== 'ended') weakenedCalls++;
+    if (!nearRel(f.out, want)) bad.push({ kind: f.st === 'exposed' ? 'exposed-multiplier' : k > 0 && f.st !== 'idle' && f.st !== 'ended' ? 'weaken-multiplier' : 'outside-exposure', i, n: f.n, state: f.st, k, dmg: f.dmg, out: f.out, want, mult });
   });
   const last = rows.at(-1) ?? null;
   const edTol = 1e-6 * Math.max(1, Math.abs(last?.ed ?? 0));
@@ -970,14 +1033,14 @@ export function checkChainsFilters(filters, rows, def, { cuts = 0 } = {}) {
   // exposedDamage 는 exposed 가 아닌 행에서 늘지 않는다.
   let growthOutside = 0;
   for (let i = 1; i < rows.length; i++) if (rows[i].ed > rows[i - 1].ed + 1e-9 && rows[i].cs !== 'exposed' && rows[i - 1].cs !== 'exposed') growthOutside++;
-  const needCalls = cuts >= 1;
-  return { ok: bad.length === 0 && basis !== null && growthOutside === 0 && (!needCalls || exposedCalls >= 1), observed: true, calls: filters.length, exposedCalls, sumOut, sumBonus, exposedDamage: last?.ed ?? null, basis,
-    growthOutside, bad: bad.slice(0, 8), badCount: bad.length };
+  const needCalls = requireCalls && cuts >= 1;
+  return { ok: bad.length === 0 && basis === 'output' && growthOutside === 0 && (!needCalls || exposedCalls >= 1), observed: true, calls: filters.length, exposedCalls, weakenedCalls, kMax, byState, sumOut, sumBonus,
+    exposedDamage: last?.ed ?? null, basis, growthOutside, requireCalls, bad: bad.slice(0, 8), badCount: bad.length };
 }
 
 /**
  * 목표창 표본(dom 이 있는 행). 제목 '거수의 사슬'. 범주별 정확한 문구: plain '남은 사슬 n/3 · 망치가 끄는 반대편 기둥에서 버티기'(n = chainsLeft), pull '사슬이 망치 쪽으로 끌림 · 반대편 기둥으로',
- * open '기둥 열림 n.n초 · 행동 없이 h.h/1.2초'(n 은 windowLeft 0.1초 올림, h 는 hold 내림), exposed '사슬 끊김 · 휘청 n.n초 · 받는 피해 150%'(n 은 exposedLeft 0.1초 올림).
+ * open '기둥 열림 n.n초 · 행동 없이 h.h/1.2초'(n 은 windowLeft 0.1초 올림, h 는 hold 내림), exposed '사슬 끊김 · 휘청 n.n초 · 받는 피해 220%'(n 은 exposedLeft 0.1초 올림, % 는 round((1 + weaken × k) × exposedMult × 100), k 는 도구가 센 끊김 수).
  * 목표창은 battle-readability.update 가 0.1초마다 다시 그리므로, 범주가 바뀐 뒤 이 주기(+2스텝) 안의 표본은 바로 앞 범주의 문구일 때만 '갱신 대기'(lag)로 따로 세고, 주기를 넘으면 실패한다.
  * 같은 범주 안에서 수치가 한 스텝 앞선 문구(stepLag)는 보고만 한다. 보스가 쓰러진 행(정화 완료 문구)은 판정하지 않는다.
  * plain·pull 범주는 36스텝 이어지면 36번째 행에 표본이 있어야 하고, open·exposed 는 범주 시작 10스텝 뒤 행에 항상 표본이 있어야 한다(갱신 주기를 넘겼는데 앞 문구가 남은 목표창을 잡는다).
@@ -988,8 +1051,11 @@ export const CHAINS_OBJECTIVE_REFRESH = .1 + 2 / 60;
 export const CHAINS_PLAIN_SAMPLE = 35;
 export const CHAINS_REFRESH_SAMPLE = 10;
 export function checkChainsObjective(rows, def) {
-  const patterns = { plain: chainsPlainPattern(def), open: chainsOpenPattern(def), exposed: chainsExposedPattern(def) };
-  const exactTexts = (cat, r) => (cat === 'plain' ? [chainsPlainText(def, r.cl)] : cat === 'pull' ? [CHAINS.pullText] : cat === 'open' ? chainsOpenTexts(def, r.wl, r.hd) : cat === 'exposed' ? chainsExposedTexts(def, r.el) : []);
+  const patterns = { plain: chainsPlainPattern(def), open: chainsOpenPattern(def), exposed: chainsExposedLoose };
+  // 노출 문구의 받는 피해 %는 도구가 센 끊김 수 k(그 행까지의 open → exposed 전이 수)로 계산한다. 컨트롤러의 cuts·damageMult 는 쓰지 않는다.
+  const cutSteps = chainsCutSteps(rows);
+  const exactTexts = (cat, r) => (cat === 'plain' ? [chainsPlainText(def, r.cl)] : cat === 'pull' ? [CHAINS.pullText] : cat === 'open' ? chainsOpenTexts(def, r.wl, r.hd)
+    : cat === 'exposed' ? chainsExposedTexts(def, r.el, chainsCutsAt(cutSteps, r.n, 'exposed')) : []);
   const looksLike = (cat, dom) => (cat === 'pull' ? dom.includes(CHAINS.pullText) : cat && patterns[cat] ? patterns[cat].test(dom) : false);
   const bad = [], lag = [], stepLag = [], counts = { plain: 0, pull: 0, open: 0, exposed: 0 };
   let cat = null, prevCat = null, changedAt = -Infinity, samples = 0;
@@ -1068,16 +1134,16 @@ export function checkChainsAuto(rows, windows) {
 
 /**
  * 후보 빌드 한 번 완주의 사슬 종합 판정. obs: { rows, filters, toasts, room, result(routeObjective), resultText, resultLines, encounterTactic }.
- * opts.autoCuts: auto 프로필이면 cuts ≥ 1 을 요구한다. ok 는 acceptance 의 모든 항목이 통과일 때만 true 다.
+ * obs.bossRange: 도구가 페이지에서 읽은 보스 def.range(open 묶임 판정). opts.autoCuts: auto 프로필이면 cuts ≥ 1 과 exposed 필터 표본 ≥ 1 을 요구한다(수동 chains 프로필은 표본 없음을 보고로 둔다). ok 는 acceptance 의 모든 항목이 통과일 때만 true 다.
  */
 export function analyzeChains(obs, def, { autoCuts = false } = {}) {
   const rows = obs.rows || [];
   const definition = checkChainsDefinition(def), attach = checkChainsAttach(rows, def);
   const comps = chainCompletions(rows, def), casts = chainCasts(rows, def);
-  const win = checkChainsWindows(rows, def, obs.room ?? null, casts, comps);
+  const win = checkChainsWindows(rows, def, obs.room ?? null, casts, comps, { range: obs.bossRange ?? null });
   const geometry = checkChainsGeometry(rows, def, obs.room ?? null, casts, win.windows);
   const counts = checkChainsCounts(rows, def, win, casts), lastCut = checkChainsLastCut(rows, win);
-  const filters = checkChainsFilters(obs.filters, rows, def, { cuts: win.cutCount });
+  const filters = checkChainsFilters(obs.filters, rows, def, { cuts: win.cutCount, requireCalls: autoCuts });
   const objective = checkChainsObjective(rows, def);
   const last = rows.at(-1) ?? null;
   const toasts = checkChainsToasts(obs.toasts, def, { windows: win.count, cuts: last?.cu ?? null, controllerWindows: last?.cw ?? null, free: rows.some(r => r.cs === 'unchained'), encounterTactic: obs.encounterTactic ?? null });
@@ -1087,7 +1153,7 @@ export function analyzeChains(obs, def, { autoCuts = false } = {}) {
     definition: definition.ok, attach: attach.ok, attachToast: toasts.attach === 1, pullGeometry: geometry.ok, ...win.acceptance, countsConsistent: counts.ok, lastCut: lastCut.ok,
     multiplier: filters.ok, objectiveText: objective.ok, toasts: toasts.ok, resultChains: result.ok, ...(autoCuts ? { autoCuts: auto.ok } : {}),
   };
-  return { ok: rows.length > 0 && Object.values(acceptance).every(Boolean), acceptance, definition, attach, windows: win.windows, exposures: win.exposures, windowCount: win.count, cutCount: win.cutCount, missCount: win.missCount,
+  return { ok: rows.length > 0 && Object.values(acceptance).every(Boolean), acceptance, definition, attach, windows: win.windows, exposures: win.exposures, pin: win.pin, windowCount: win.count, cutCount: win.cutCount, missCount: win.missCount,
     missed: win.missed, hammerCompletions: win.hammerCompletions, casts: casts.length, geometry, counts, lastCut, filters, objective, toasts, result, auto, rows: rows.length };
 }
 
@@ -1099,7 +1165,7 @@ export function analyzeChains(obs, def, { autoCuts = false } = {}) {
  *  (2) attack: attack-key 표식 직전 열린 행에서 hold 가 minHold − 1/60 이상 쌓였고, 표식 뒤 maxAfter 스텝 안에 hold 0 · 영웅 state 가 동작(attack 등)이다.
  *  (3) cut: 공격 키 뒤에 끊김(cuts 증가)이 있고, 그 끊김의 버티기 연속 구간(도구 독립 계산)이 공격 키 뒤에 새로 시작했다.
  */
-export function checkChainsManual(rows, marks, def, { room = null, minHold = .5, maxAfter = 8 } = {}) {
+export function checkChainsManual(rows, marks, def, { room = null, minHold = .5, maxAfter = 8, range = null } = {}) {
   const start = (marks || []).find(m => m.mk === 'manual-start'), attack = (marks || []).find(m => m.mk === 'attack-key'), end = (marks || []).find(m => m.mk === 'manual-end');
   if (!start || !attack || !end) return { ok: false, reason: 'missing-marks', found: [!!start, !!attack, !!end] };
   const inStint = r => r.n > start.n && r.n <= end.n;
@@ -1108,7 +1174,7 @@ export function checkChainsManual(rows, marks, def, { room = null, minHold = .5,
   let teleports = 0;
   for (let i = 1; i < rows.length; i++) if (inStint(rows[i]) && rows[i].n === rows[i - 1].n + 1 && Math.hypot(rows[i].hx - rows[i - 1].hx, rows[i].hz - rows[i - 1].hz) > CHAINS_MAX_STEP_MOVE) teleports++;
   const casts = chainCasts(rows, def), comps = chainCompletions(rows, def);
-  const win = checkChainsWindows(rows, def, room, casts, comps);
+  const win = checkChainsWindows(rows, def, room, casts, comps, { range });
   const firstWin = win.windows.find(w => rows[w.startIdx].n > start.n) ?? null;
   const castBySeq = new Map(casts.map(c => [c.seq, c]));
   const cast0 = firstWin?.seq != null ? castBySeq.get(firstWin.seq) : null;
@@ -1147,7 +1213,7 @@ export function checkChainsPause({ before, paused, still, resumed, steps, minHol
 
 /**
  * screens 사슬 순간. shot.capture.chain 은 PNG 를 찍은 스텝의 사슬 행(+ dom). chain-pull: 보스 등장 뒤 chained · 끌기 중(pu, sd ≠ 0) · 목표창 끌기 문구.
- * chain-open: open 이고 hold > 0 · 목표창 열림 문구(행동 없이). chain-cut: exposed 이고 exposedLeft ≤ def.exposed − .5 · 목표창 휘청 문구(받는 피해 150%). 관측 누락은 실패다.
+ * chain-open: open 이고 hold > 0 · 목표창 열림 문구(행동 없이). chain-cut: exposed 이고 exposedLeft ≤ def.exposed − .5 · 목표창 휘청 문구(받는 피해 % = round((1 + weaken × k) × exposedMult × 100), k 는 프로브가 센 끊김 수 kc — 컨트롤러 cuts 가 아님; 첫 끊김 220%). 관측 누락은 실패다.
  */
 export function checkChainMoment(shot, def, label) {
   const r = shot?.capture?.chain ?? null;
@@ -1158,8 +1224,8 @@ export function checkChainMoment(shot, def, label) {
       : label === 'chain-cut' ? base && r.cs === 'exposed' && r.el > 0 && r.el <= def.exposed - .5 + EPS : false;
   const view = label === 'chain-pull' ? dom.includes(CHAINS.title) && dom.includes(CHAINS.pullText)
     : label === 'chain-open' ? dom.includes(CHAINS.title) && chainsOpenPattern(def).test(dom)
-      : label === 'chain-cut' ? dom.includes(CHAINS.title) && chainsExposedPattern(def).test(dom) : false;
-  return { ok: state && view, state, view, label, chain: r ? { cs: r.cs, pu: r.pu, sd: r.sd, hd: r.hd, wl: r.wl, el: r.el, cl: r.cl, dom: dom || null } : null };
+      : label === 'chain-cut' ? dom.includes(CHAINS.title) && Number.isInteger(r?.kc) && r.kc >= 1 && chainsExposedPattern(def, r.kc).test(dom) : false;
+  return { ok: state && view, state, view, label, chain: r ? { cs: r.cs, pu: r.pu, sd: r.sd, hd: r.hd, wl: r.wl, el: r.el, cl: r.cl, kc: r.kc ?? null, dom: dom || null } : null };
 }
 
 /** 기준선 누출 관찰 대상 문구(사슬 정의가 없는 기준선 빌드에는 없어야 한다). */

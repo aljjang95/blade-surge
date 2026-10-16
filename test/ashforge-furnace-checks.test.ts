@@ -856,13 +856,16 @@ describe('기준선 비교(compareTargetsOk · compareSetup · compareRuns)', ()
 
 // ---------- 거수 사슬 끊기(BUNDLE-15) ----------
 // 문구·수치는 PLAN 3.1 · 3.2 · 3.4 계약을 이 파일에 그대로 적는다(판정 함수의 상수를 가져오지 않는다).
-const CH: any = { id: 'ashforge_deep_chains', boss: 'ash_colossus', signature: 'kiln_hammer', count: 3, window: 5, hold: 1.2, radius: 1.6, pillarOffset: 8.4, anchorMargin: 1.2, exposed: 5, exposedMult: 1.5 };
+const CH: any = { id: 'ashforge_deep_chains', boss: 'ash_colossus', signature: 'kiln_hammer', count: 3, window: 5, hold: 1.2, radius: 1.6, pillarOffset: 8.4, anchorMargin: 1.2, exposed: 5, exposedMult: 2, weaken: .1 };
+/** 도구가 페이지에서 읽는 보스 def.range(ash_colossus). open 의 '쫓지 않음'은 영웅-보스 거리가 이 값 × .92 + .3 보다 먼 추격 스텝에만 적용된다. */
+const RANGE = 3.6;
+const FAR = RANGE * .92 + .3;
 const BR = { id: 8, x: 150, z: 29, w: 28, h: 28 };
 const SIG = 'kiln_hammer';
 const T = {
   attach: '거수의 사슬 3개 · 망치가 끄는 반대편 기둥에서 버티세요', open: '사슬 기둥 열림 · 5초 안에 1.2초 버티기', free: '거수의 사슬이 모두 끊겼다',
   cut: (n: number) => '사슬 끊김 ' + n + '/3 · 거수가 휘청인다', plain: (n: number) => '남은 사슬 ' + n + '/3 · 망치가 끄는 반대편 기둥에서 버티기',
-  pull: '사슬이 망치 쪽으로 끌림 · 반대편 기둥으로', openDom: (w: string, h: string) => '기둥 열림 ' + w + '초 · 행동 없이 ' + h + '/1.2초', exposedDom: (w: string) => '사슬 끊김 · 휘청 ' + w + '초 · 받는 피해 150%',
+  pull: '사슬이 망치 쪽으로 끌림 · 반대편 기둥으로', openDom: (w: string, h: string) => '기둥 열림 ' + w + '초 · 행동 없이 ' + h + '/1.2초', exposedDom: (w: string, pct = 220) => '사슬 끊김 · 휘청 ' + w + '초 · 받는 피해 ' + pct + '%',
 };
 const ceil1 = (v: number) => (Math.ceil(v * 10 - 1e-9) / 10).toFixed(1);
 const floor1 = (v: number) => (Math.floor(v * 10 + 1e-9) / 10).toFixed(1);
@@ -946,7 +949,7 @@ class ChainSim {
   }
   forceOpen() { this.opened = this.boss.sq; this.st = 'open'; this.wl = this.def.window; this.wins++; this.hd = 0; this.lastHp = this.hero.hp; this.toast(T.open); }
   cut() {
-    this.cuts++; this.hd = 0; this.wl = 0; this.side = 0; this.lc = 0; this.st = 'exposed'; this.el = this.def.exposed;
+    this.cuts += this.o.cutStep ?? 1; this.hd = 0; this.wl = 0; this.side = 0; this.lc = 0; this.st = 'exposed'; this.el = this.def.exposed;
     this.toast(T.cut(this.o.cutToastN ?? this.cuts));
   }
   // ---- 보스 시나리오 ----
@@ -954,11 +957,20 @@ class ChainSim {
   startCast(ix: number, sig = SIG) { Object.assign(this.boss, { sq: this.boss.sq + 1, bs: 'attack', sp: sig, pk: sig, ix, iz: this.hero.z }); }
   completeCast() { this.boss.cq = this.boss.sq; }
   endCast() { Object.assign(this.boss, { bs: 'chase', sp: null, pk: null }); }
+  /**
+   * 모의 컨트롤러의 filter(PLAN 3.6): 배율 = 약화 (1 + weaken × 끊은 수) × 휘청(exposedMult, exposed 에서만). idle·ended 는 1배.
+   * 변이 옵션: noWeaken(약화 무시)·noWeakenExposed(휘청에서만 약화 빠짐)·noWeakenFree(unchained 에서 약화 빠짐)·exposedMult(휘청 배율 변경)·multOutside·filterCutsBias(곱하는 끊김 수가 틀림)·edBasisBonus.
+   */
   hurtBoss(dmg: number) {
-    const exposed = this.st === 'exposed', mult = this.o.mult ?? this.def.exposedMult;
-    const out = exposed ? dmg * mult : this.o.multOutside ? dmg * 1.5 : dmg;
+    const d = this.def, st = this.st, exposed = st === 'exposed', live = st !== 'idle' && st !== 'ended';
+    const k = (this.o.filterCuts ?? this.cuts) + (this.o.filterCutsBias ?? 0);
+    const dropWeaken = this.o.noWeaken || (this.o.noWeakenFree && st === 'unchained') || (this.o.noWeakenExposed && exposed);
+    let mult = live && !dropWeaken ? 1 + d.weaken * k : 1;
+    if (exposed) mult *= this.o.exposedMult ?? d.exposedMult;
+    else if (this.o.multOutside) mult *= 1.5;
+    const out = dmg * mult;
     if (exposed) this.ed += this.o.edBasisBonus ? out - dmg : out;
-    this.filters.push({ n: this.n + 1, dmg, out, st: this.st });
+    this.filters.push({ n: this.n + 1, dmg, out, st });
   }
   killBoss() { this.boss.al = 0; this.tick(5); }
   /** 목표창 문구(제목 + 상태별 계약 문장). */
@@ -967,7 +979,7 @@ class ChainSim {
     if (cat === 'plain') return title + T.plain(this.def.count - this.cuts);
     if (cat === 'pull') return title + T.pull;
     if (cat === 'open') return title + T.openDom(ceil1(this.wl), floor1(this.hd));
-    return title + T.exposedDom(ceil1(this.el));
+    return title + T.exposedDom(ceil1(this.el), Math.round((1 + this.def.weaken * this.cuts) * this.def.exposedMult * 100));
   }
   snap() {
     const b = this.boss, h = this.hero, st = this.st, d = this.def;
@@ -997,7 +1009,7 @@ class ChainSim {
     const near = mode === 'cut' ? { x: this.pillar.x, z: this.pillar.z } : { x: BR.x, z: BR.z + 9 };
     this.heroAt(this.o.heroOffset ? near.x + this.o.heroOffset : near.x, near.z, mode === 'cut' ? (this.o.heroState ?? 'idle') : 'move');
     let k = 0;
-    while (this.st === 'open' && k < 500) { if (k === 63) this.endCast(); if (this.o.hurtAt === k) this.hero.hp -= 5; this.step(); k++; }
+    while (this.st === 'open' && k < 500) { if (k === 63) this.endCast(); if (k === 10) this.hurtBoss(25); if (this.o.hurtAt === k) this.hero.hp -= 5; this.step(); k++; }
     if (this.boss.bs === 'attack') this.endCast();
     if (this.st === 'exposed') {
       for (let i = 0; i < hits; i++) { this.tick(40); this.hurtBoss(100); }
@@ -1017,19 +1029,20 @@ function chainSession(o: any = {}, cycles: any[] = [{ ix: IMPACTS[0] }, { ix: IM
   const s = new ChainSim(o, def);
   s.tick(5); s.appear();
   for (const c of cycles) s.cycle(c);
-  s.tick(20); s.killBoss();
+  s.tick(20); if (s.st === 'unchained') s.hurtBoss(40);   // unchained 에도 약화 배율(1 + weaken × count)이 남는다
+  s.tick(2); s.killBoss();
   return s;
 }
 const chainObs = (s: ChainSim, over: any = {}) => {
   const r = s.result();
-  return { rows: s.rows, filters: s.filters, toasts: s.toasts, room: BR, result: r.ro, resultText: '원정 결과 ' + r.line + ' 전투 시간', resultLines: [{ aria: '거수의 사슬 결과', text: r.line }], encounterTactic: null, ...over };
+  return { rows: s.rows, filters: s.filters, toasts: s.toasts, room: BR, bossRange: RANGE, result: r.ro, resultText: '원정 결과 ' + r.line + ' 전투 시간', resultLines: [{ aria: '거수의 사슬 결과', text: r.line }], encounterTactic: null, ...over };
 };
 const analyzeCh = (s: ChainSim, over: any = {}, opts: any = { autoCuts: true }, def: any = CH) => K.analyzeChains(chainObs(s, over), def, opts);
 
 describe('거수 사슬 정의·기하(checkChainsDefinition · chainsExpectedGeometry)', () => {
   test('계약 정의는 통과하고 수치 하나라도 다르면 해당 항목이 issues 에 남는다', () => {
     expect(K.checkChainsDefinition(CH).ok).toBe(true);
-    for (const [key, value] of [['window', 6], ['count', 4], ['hold', 1], ['radius', 2], ['pillarOffset', 7], ['anchorMargin', 1], ['exposed', 4], ['exposedMult', 2], ['boss', 'x'], ['signature', 'y'], ['id', 'z']]) {
+    for (const [key, value] of [['window', 6], ['count', 4], ['hold', 1], ['radius', 2], ['pillarOffset', 7], ['anchorMargin', 1], ['exposed', 4], ['exposedMult', 1.5], ['weaken', .2], ['boss', 'x'], ['signature', 'y'], ['id', 'z']]) {
       const r = K.checkChainsDefinition({ ...CH, [key as string]: value });
       expect(r.ok).toBe(false);
       expect(r.issues.map((i: any) => i.field)).toEqual([key]);
@@ -1233,45 +1246,188 @@ describe('거수 사슬 종합(analyzeChains)', () => {
     rows3[j].cs = 'unchained';
     expect(K.analyzeChains(chainObs(s, { rows: rows3 }), CH).acceptance.exposedLength).toBe(false);
   });
-  test('묶임 변이: 창·노출 안 새 공격·yaw 변경·추격 속도는 각각 실패한다', () => {
+  test('exposed 묶임 변이: 새 공격·yaw 변경·추격 스텝 속도는 각각 실패한다', () => {
     const s = chainSession();
     const clone = () => s.rows.map((r: any) => ({ ...r }));
+    const acc = (rows: any[], over: any = {}) => K.analyzeChains(chainObs(s, { rows, ...over }), CH).acceptance;
     const a = clone(); a.filter((r: any) => r.cs === 'exposed').slice(10).forEach((r: any) => { r.sq += 1; });
-    expect(K.analyzeChains(chainObs(s, { rows: a }), CH).acceptance.noNewAttack).toBe(false);
-    const b = clone(); b.filter((r: any) => r.cs === 'open').slice(20).forEach((r: any) => { r.by += .3; });
-    expect(K.analyzeChains(chainObs(s, { rows: b }), CH).acceptance.yawFixed).toBe(false);
+    expect(acc(a).noNewAttack).toBe(false);
+    const b = clone(); b.filter((r: any) => r.cs === 'exposed').slice(20).forEach((r: any) => { r.by += .3; });
+    expect(acc(b).yawFixed).toBe(false);
     const c = clone(); c.filter((r: any) => r.cs === 'exposed' && r.bs === 'chase')[3].bvx = .5;
-    expect(K.analyzeChains(chainObs(s, { rows: c }), CH).acceptance.pinnedStill).toBe(false);
-    const d = clone(); d.filter((r: any) => r.cs === 'open' && r.bs === 'chase')[3].bvz = -.5;
-    expect(K.analyzeChains(chainObs(s, { rows: d }), CH).acceptance.pinnedStill).toBe(false);
+    expect(acc(c).pinnedStill).toBe(false);
     // 속도가 0 인 이동(넉백)은 보고만 한다
     const e = clone(); e.filter((r: any) => r.cs === 'exposed').slice(5).forEach((r: any) => { r.bx += .8; });
     const ae = K.analyzeChains(chainObs(s, { rows: e }), CH);
     expect(ae.acceptance.pinnedStill).toBe(true);
     expect(ae.exposures[0].moveMax).toBeCloseTo(.8, 6);
+    // 노출 첫 행은 같은 스텝의 컨트롤러·추격 분기 순서가 갈릴 수 있어 앞 행이 exposed 인 스텝만 본다
+    const f = clone(); const firstExposed = f.find((r: any) => r.cs === 'exposed'); firstExposed.bvx = .5;
+    expect(acc(f).pinnedStill).toBe(true);
   });
-  test('피해 배율 변이: 1배·2배·창 밖 배율·exposedDamage 불일치·기록 누락은 multiplier 가 실패한다', () => {
-    expect(analyzeCh(chainSession()).acceptance.multiplier).toBe(true);
-    expect(analyzeCh(chainSession({ mult: 1 })).acceptance.multiplier).toBe(false);
-    expect(analyzeCh(chainSession({ mult: 2 })).acceptance.multiplier).toBe(false);
-    expect(analyzeCh(chainSession({ multOutside: true })).acceptance.multiplier).toBe(false);
+  test('open 묶임(PLAN 3.6): 먼 추격 스텝만 쫓지 않음(vel·이동 속도 ≤ 초당 1.8)으로 판정하고, 사거리 안 새 공격·yaw 변화는 허용하며 보고한다', () => {
+    const s = chainSession();
+    const clone = () => s.rows.map((r: any) => ({ ...r }));
+    const an = (rows: any[], over: any = {}) => K.analyzeChains(chainObs(s, { rows, ...over }), CH);
+    const openChase = (rows: any[]) => rows.filter((r: any) => r.cs === 'open' && r.bs === 'chase');
+    const base = an(s.rows);
+    expect(base.acceptance.pinnedStill).toBe(true);
+    expect(base.pin.farChaseSteps).toBeGreaterThanOrEqual(15);   // 기둥 쪽 영웅(8.4 밖)과 추격 중인 보스: 판정 대상이 실제로 있다(창 3개)
+    expect(base.pin.farLimit).toBeCloseTo(FAR, 9);
+    // 먼 추격 스텝에서 vel 이 추격 속도 3.4 → 실패, 1.7 → 통과(≤ 1.8), 1.9 → 실패
+    for (const [vx, ok] of [[3.4, false], [1.7, true], [1.9, false]] as [number, boolean][]) {
+      const r = clone(); openChase(r)[3].bvx = vx;
+      expect(an(r).acceptance.pinnedStill).toBe(ok);
+    }
+    // vel 은 0 인데 위치가 초당 3.6 으로 따라오면(추격) 실패, 초당 1.2(넉백 정도)는 통과
+    const chase = clone(); openChase(chase).forEach((r: any, i: number) => { r.bz += .06 * i; });
+    expect(an(chase).acceptance.pinnedStill).toBe(false);
+    const drift = clone(); openChase(drift).forEach((r: any, i: number) => { r.bz += .02 * i; });
+    expect(an(drift).acceptance.pinnedStill).toBe(true);
+    // 영웅이 사거리 안이면(앞뒤 모두) 묶지 않으므로 추격해도 통과, 한쪽만 안이면 판정 대상이 아니다, 둘 다 밖이면 실패
+    const near = (rows: any[], dist: number[], vx = 3.4) => {
+      const chaseRows = openChase(rows);
+      chaseRows.slice(0, dist.length).forEach((r: any, i: number) => { r.hx = r.bx; r.hz = r.bz + dist[i]; });
+      chaseRows[dist.length - 1].bvx = vx;
+      return rows;
+    };
+    expect(an(near(clone(), [2, 2])).acceptance.pinnedStill).toBe(true);
+    expect(an(near(clone(), [5, 3.5])).acceptance.pinnedStill).toBe(true);   // 뒤 행이 기준 안쪽
+    expect(an(near(clone(), [3.5, 5])).acceptance.pinnedStill).toBe(true);   // 앞 행이 기준 안쪽
+    expect(an(near(clone(), [FAR + .01, FAR + .01])).acceptance.pinnedStill).toBe(false);
+    expect(an(near(clone(), [FAR - .01, FAR - .01])).acceptance.pinnedStill).toBe(true);
+    // 보스 사거리를 도구가 못 읽었으면(null) open 묶임을 판정할 수 없어 실패한다
+    const unknown = an(s.rows, { bossRange: null });
+    expect(unknown.acceptance.pinnedStill).toBe(false);
+    expect(unknown.pin.rangeKnown).toBe(false);
+    // 사거리가 더 크면 기준이 넓어져 같은 거리의 스텝이 판정에서 빠진다(range 는 페이지에서 읽은 값을 쓴다)
+    const wide = clone(); openChase(wide)[3].bvx = 3.4;
+    expect(an(wide).acceptance.pinnedStill).toBe(false);
+    expect(an(wide, { bossRange: 20 }).acceptance.pinnedStill).toBe(true);
+  });
+  test('open 에서 영웅이 사거리 안일 때의 새 공격·yaw 변화는 통과하고 보고되며, 노출 안 새 공격은 여전히 실패한다', () => {
+    const s = chainSession();
+    const clone = () => s.rows.map((r: any) => ({ ...r }));
+    const an = (rows: any[]) => K.analyzeChains(chainObs(s, { rows }), CH);
+    const rows = clone();
+    const win = rows.filter((r: any) => r.cs === 'open' && r.cw === 1);
+    // 창 도중 영웅이 보스 사거리 안으로 들어와(2칸) 돌아서 치는 보스: yaw 변화 + 새 공격 1회(그 뒤 공격이 이어지다 창 끝에서 원래 번호로 돌아오게 하지 않고 창 안 행만 바꾼다)
+    const tail = win.slice(60, 68);
+    tail.forEach((r: any) => { r.hx = r.bx; r.hz = r.bz + 2; r.by += .5; r.sq += 1; });
+    const a = an(rows);
+    expect(a.acceptance.yawFixed).toBe(true);
+    expect(a.acceptance.noNewAttack).toBe(true);
+    expect(a.windows[0].yawChanged).toBe(tail.length);
+    expect(a.windows[0].pin.newAttacks).toBe(1);   // 번호가 올라간 스텝만 센다(원래 번호로 돌아오는 스텝은 새 공격이 아님)
+    expect(a.windows[0].pin.newAttacksInRange).toBe(1);
+    expect(a.windows[0].pin.newAttacksOutOfRange).toBe(0);
+    // 영웅이 사거리 밖인데 새 공격이 생기면 통과하되 사거리 밖 수로 따로 보고한다
+    const far = clone();
+    far.filter((r: any) => r.cs === 'open' && r.cw === 1).slice(60).forEach((r: any) => { r.sq += 1; });
+    const f = an(far);
+    expect(f.windows[0].pin.newAttacksInRange).toBe(0);
+    expect(f.windows[0].pin.newAttacksOutOfRange).toBe(1);
+    expect(f.acceptance.noNewAttack).toBe(true);
+    expect(f.pin.newAttacks).toBeGreaterThanOrEqual(1);
+    // 노출 안에서는 영웅이 가까워도 새 공격은 실패다
+    const ex = clone();
+    ex.filter((r: any) => r.cs === 'exposed').slice(15).forEach((r: any) => { r.sq += 1; r.hx = r.bx; r.hz = r.bz + 1.5; });
+    expect(an(ex).acceptance.noNewAttack).toBe(false);
+  });
+  test('피해 배율(PLAN 3.6): (1 + weaken × k) × (exposed 이면 exposedMult). 정상 표본은 휘청 220/240/260%·약화 110/120/130%·unchained 130% 를 모두 통과한다', () => {
+    const s = chainSession();
+    const a = analyzeCh(s);
+    expect(a.acceptance.multiplier).toBe(true);
+    expect(a.filters.basis).toBe('output');
+    // 모의 기록 자체를 이 파일이 따로 확인한다(도구 값이 아니라 계약 숫자)
+    const out = (st: string, dmg: number) => s.filters.filter((f: any) => f.st === st && f.dmg === dmg).map((f: any) => Math.round(f.out * 1e6) / 1e6);
+    expect(out('exposed', 100)).toEqual([220, 220, 240, 240, 260, 260]);
+    expect(out('chained', 30)[0]).toBe(30);                    // 첫 창 전: 약화 없음
+    expect(out('chained', 30).slice(1).map((v: number) => Math.round(v * 10) / 10)).toEqual([33, 36]);
+    expect(out('open', 25).map((v: number) => Math.round(v * 10) / 10)).toEqual([25, 27.5, 30]);
+    expect(out('unchained', 40).map((v: number) => Math.round(v * 10) / 10)).toEqual([52]);
+    expect(a.filters.weakenedCalls).toBeGreaterThanOrEqual(4);
+    expect(a.filters.kMax).toBe(3);
+    expect(a.filters.byState.exposed.minK).toBe(1);
+    expect(a.filters.byState.unchained.minK).toBe(3);
+  });
+  test('피해 배율 변이: 약화 무시(1배)·휘청 2배만·휘청 1배/3배·창 밖 배율·unchained 약화 누락은 multiplier 가 실패한다', () => {
+    const kinds = (o: any) => [...new Set(analyzeCh(chainSession(o)).filters.bad.map((b: any) => b.kind))].sort();
+    const ok = (o: any) => analyzeCh(chainSession(o)).acceptance.multiplier;
+    expect(ok({})).toBe(true);
+    // 약화를 아예 무시: 휘청은 2배만(220% 가 아님), 끊은 뒤의 chained·open 도 1배
+    expect(ok({ noWeaken: true })).toBe(false);
+    expect(kinds({ noWeaken: true })).toEqual(['exposed-multiplier', 'weaken-multiplier']);
+    // 휘청 동안에만 약화가 빠짐: 휘청 2배만
+    expect(ok({ noWeakenExposed: true })).toBe(false);
+    expect(kinds({ noWeakenExposed: true })).toEqual(['exposed-multiplier']);
+    // unchained 에서 약화가 빠짐(damageVeil 을 지워 버린 구현)
+    expect(ok({ noWeakenFree: true })).toBe(false);
+    expect(kinds({ noWeakenFree: true })).toEqual(['weaken-multiplier']);
+    expect(ok({ exposedMult: 1 })).toBe(false);
+    expect(ok({ exposedMult: 1.5 })).toBe(false);
+    expect(ok({ exposedMult: 3 })).toBe(false);
+    expect(ok({ multOutside: true })).toBe(false);
+  });
+  test('피해 배율은 컨트롤러 cuts 가 아니라 도구가 센 끊김 수로 대조한다(컨트롤러가 틀린 수를 곱하면 잡힌다)', () => {
+    // 곱하는 끊김 수가 하나 더 많음(행의 cuts 는 맞음) / 끊김이 한 번에 2씩 늘어 행 cuts 도 같이 틀림
+    expect(analyzeCh(chainSession({ filterCutsBias: 1 })).acceptance.multiplier).toBe(false);
+    const doubled = analyzeCh(chainSession({ cutStep: 2 }), {}, { autoCuts: false });
+    expect(doubled.acceptance.multiplier).toBe(false);
+    expect(doubled.filters.bad[0]).toMatchObject({ kind: 'exposed-multiplier', k: 1 });   // 도구는 open → exposed 전이 하나로 k = 1 을 센다
+    expect(doubled.acceptance.objectiveText).toBe(false);                                // 목표창 % 도 도구의 k 로 계산해 어긋남을 잡는다
+    // 반대로 행의 cu 가 틀려도(필터 기록은 맞음) 배율 판정은 컨트롤러 값에 기대지 않으므로 통과하고, 집계 판정이 따로 실패한다
+    const s = chainSession();
+    const rows = s.rows.map((r: any) => ({ ...r }));
+    const k = rows.findIndex((r: any) => r.cs === 'exposed');
+    for (let i = k; i < rows.length; i++) { rows[i].cu += 1; rows[i].cl -= 1; }
+    const a = K.analyzeChains(chainObs(s, { rows }), CH);
+    expect(a.acceptance.multiplier).toBe(true);
+    expect(a.acceptance.countsConsistent).toBe(false);
+  });
+  test('피해 배율의 k 경계: 호출 순간 state 가 exposed 이면 그 스텝의 끊김을 포함하고, 그 밖의 state 는 같은 스텝의 끊김을 포함하지 않는다', () => {
+    const s = chainSession();
+    const cutN = s.rows.find((r: any) => r.cs === 'exposed').n;
+    // 추가한 호출 하나의 판정만 본다(exposedDamage 합계는 기록과 따로 맞춰야 하므로 bad 목록만 확인)
+    const extraBad = (extra: any) => K.checkChainsFilters([...s.filters, extra], s.rows, CH).badCount;
+    const withExtra = (extra: any[]) => extraBad(extra[0]) === 0;
+    expect(withExtra([{ n: cutN, dmg: 100, out: 220, st: 'exposed' }])).toBe(true);
+    expect(withExtra([{ n: cutN, dmg: 100, out: 200, st: 'exposed' }])).toBe(false);
+    expect(withExtra([{ n: cutN, dmg: 100, out: 100, st: 'open' }])).toBe(true);     // 컨트롤러 갱신보다 앞선 호출: 아직 끊기지 않음(k = 0)
+    expect(withExtra([{ n: cutN, dmg: 100, out: 110, st: 'open' }])).toBe(false);
+    expect(withExtra([{ n: cutN + 1, dmg: 100, out: 110, st: 'open' }])).toBe(true);
+    // idle·ended 는 1배
+    expect(withExtra([{ n: 1, dmg: 10, out: 10, st: 'idle' }])).toBe(true);
+    expect(withExtra([{ n: 1, dmg: 10, out: 11, st: 'idle' }])).toBe(false);
+    expect(withExtra([{ n: s.rows.at(-1).n, dmg: 10, out: 13, st: 'ended' }])).toBe(false);
+    expect(withExtra([{ n: s.rows.at(-1).n, dmg: 10, out: 10, st: 'ended' }])).toBe(true);
+  });
+  test('exposedDamage 는 exposed 출력 합계(basis output). 증분 합계·불일치·노출 밖 증가·기록 누락은 실패한다', () => {
     const s = chainSession();
     const rows = s.rows.map((r: any) => ({ ...r }));
     rows.forEach((r: any) => { if (r.n >= rows.at(-1).n - 2) r.ed += 40; });
     expect(K.analyzeChains(chainObs(s, { rows }), CH).acceptance.multiplier).toBe(false);
     expect(K.analyzeChains(chainObs(s, { filters: null }), CH).acceptance.multiplier).toBe(false);
-    // 끊김이 있었는데 노출 중 피해 호출이 한 번도 없으면 배율을 확인할 수 없어 실패
-    const nohit = chainSession({}, [{ ix: IMPACTS[0], hits: 0 }]);
-    expect(analyzeCh(nohit, {}, { autoCuts: false }).acceptance.multiplier).toBe(false);
-    // 증분(출력 − 입력) 합계로 읽는 구현도 basis 로 인정한다
+    // 증분(출력 − 입력) 합계로 읽는 구현은 basis 'bonus' 로 보고되고 실패한다
     const bonus = analyzeCh(chainSession({ edBasisBonus: true }));
-    expect(bonus.acceptance.multiplier).toBe(true);
+    expect(bonus.acceptance.multiplier).toBe(false);
     expect(bonus.filters.basis).toBe('bonus');
+    expect(bonus.filters.badCount).toBe(0);
     // exposedDamage 가 노출 밖에서 늘어도 실패
     const out = s.rows.map((r: any) => ({ ...r }));
     const k = out.findIndex((r: any) => r.cs === 'chained' && r.cu === 1);
     for (let i = k; i < out.length; i++) out[i].ed += 10;
     expect(K.analyzeChains(chainObs(s, { rows: out }), CH).acceptance.multiplier).toBe(false);
+  });
+  test('표본 없음은 auto 프로필(requireCalls)에서만 실패이고, 수동 chains 프로필에서는 보고(exposedCalls 0)다', () => {
+    const nohit = chainSession({}, [{ ix: IMPACTS[0], hits: 0 }]);
+    const auto = analyzeCh(nohit, {}, { autoCuts: true });
+    expect(auto.filters.exposedCalls).toBe(0);
+    expect(auto.acceptance.multiplier).toBe(false);
+    const manualProfile = analyzeCh(nohit, {}, { autoCuts: false });
+    expect(manualProfile.filters.exposedCalls).toBe(0);
+    expect(manualProfile.acceptance.multiplier).toBe(true);
+    expect(manualProfile.filters.requireCalls).toBe(false);
   });
   test('부착·집계·lastCutT 변이: 부착 지연·부착 토스트 누락·끊김 수 불일치·놓침 두 번 세기·lastCutT 어긋남은 각각 실패한다', () => {
     expect(analyzeCh(chainSession({ attachAt: 12 })).acceptance.attach).toBe(false);
@@ -1319,6 +1475,24 @@ describe('거수 사슬 목표창·토스트·결과', () => {
     expect(late.ok).toBe(false);
     expect(late.bad[0].why).toBe('text');
   });
+  test('노출 문구의 받는 피해 %는 도구가 센 끊김 수 k 로 계산한다: 첫 끊김 220%, 둘째 240%, 셋째 260%', () => {
+    const s = chainSession();
+    const pcts = [...new Set(s.rows.filter((r: any) => r.cs === 'exposed' && typeof r.dom === 'string').map((r: any) => r.dom.match(/받는 피해 (\d+)%/)[1]))];
+    expect(pcts).toEqual(['220', '240', '260']);
+    expect(K.chainsExposedPct(CH, 1)).toBe(220);
+    expect(K.chainsExposedPct(CH, 2)).toBe(240);
+    expect(K.chainsExposedPct(CH, 3)).toBe(260);
+    expect(K.chainsExposedTexts(CH, 4.9, 2)).toEqual(['사슬 끊김 · 휘청 4.9초 · 받는 피해 240%']);
+    // 항상 220% 라고 쓰면 둘째·셋째 끊김에서 어긋난다(도구 k 와 다름)
+    const stuck = K.checkChainsObjective(chainSession({ domOverride: (cat: string, row: any) => (cat === 'exposed' ? '거수의 사슬' + T.exposedDom(ceil1(row.el), 220) : undefined) }).rows, CH);
+    expect(stuck.ok).toBe(false);
+    expect(stuck.bad.every((b: any) => b.cat === 'exposed')).toBe(true);
+    // 약화를 빼고 200% 로 쓰는 문구, 옛 계약 150% 는 첫 끊김부터 어긋난다
+    for (const pct of [200, 150]) {
+      const r = K.checkChainsObjective(chainSession({ domOverride: (cat: string, row: any) => (cat === 'exposed' ? '거수의 사슬' + T.exposedDom(ceil1(row.el), pct) : undefined) }).rows, CH);
+      expect(r.ok).toBe(false);
+    }
+  });
   test('문구 변이: 열림 남은 시간·hold·제목·분수·퍼센트가 어긋나면 실패한다', () => {
     const mut = (fn: (cat: string, row: any) => string | undefined) => K.checkChainsObjective(chainSession({ domOverride: fn }).rows, CH);
     expect(mut((cat, row) => (cat === 'open' ? '거수의 사슬' + T.openDom(ceil1(row.wl + .1), floor1(row.hd)) : undefined)).ok).toBe(false);
@@ -1326,7 +1500,7 @@ describe('거수 사슬 목표창·토스트·결과', () => {
     expect(mut((cat, row) => (cat === 'open' ? '거수의 사슬' + '기둥 열림 ' + ceil1(row.wl) + '초 · 행동 없이 ' + floor1(row.hd) + '/1.0초' : undefined)).ok).toBe(false);
     expect(mut(cat => (cat === 'plain' ? '거수의 사슬' + T.plain(1) : undefined)).ok).toBe(false);
     expect(mut((cat, row) => (cat === 'exposed' ? '거수의 사슬' + '사슬 끊김 · 휘청 ' + ceil1(row.el) + '초 · 받는 피해 200%' : undefined)).ok).toBe(false);
-    expect(mut((cat, row) => (cat === 'exposed' ? T.exposedDom(ceil1(row.el)) : undefined)).ok).toBe(false);   // 제목 없음
+    expect(mut((cat, row) => (cat === 'exposed' ? T.exposedDom(ceil1(row.el), 220) : undefined)).ok).toBe(false);   // 제목 없음
     expect(mut(cat => (cat === 'pull' ? '거수의 사슬' + '사슬이 망치 쪽으로 끌림' : undefined)).ok).toBe(false);
   });
   test('보스가 쓰러진 행의 문구(정화 완료)는 판정하지 않고, 36스텝 이어진 plain 에 표본이 없으면 실패한다', () => {
@@ -1406,6 +1580,11 @@ describe('chains 프로필(checkChainsManual · checkChainsPause)', () => {
     s.heroAt(s.pillar.x, s.pillar.z, 'attack'); s.tick(o.attackSteps ?? 3); s.heroAt(s.pillar.x, s.pillar.z, 'idle');
     if (o.noReset) s.hd = .6;
     s.tickUntil(() => s.st !== 'open', 400);
+    // 끊김 직후 휘청 동안 보스에게 걸어가 공격 키를 몇 번 눌러 친다(배율 표본). 걸음은 스텝당 .12 라 순간이동이 아니다.
+    if (o.fight) {
+      s.walk(s.boss.bx + 2.5, s.boss.bz, 'move');
+      for (let i = 0; i < 3; i++) { s.heroAt(s.hero.x, s.hero.z, 'attack'); s.tick(3); s.hurtBoss(60); s.heroAt(s.hero.x, s.hero.z, 'idle'); s.tick(5); }
+    }
     s.marks.push({ mk: 'manual-end', n: s.n });
     s.hero.au = o.autoOnAfter === false ? 0 : 1;
     s.tick(30);
@@ -1441,6 +1620,26 @@ describe('chains 프로필(checkChainsManual · checkChainsPause)', () => {
     expect(run(dead).ok).toBe(false);
     expect(K.checkChainsManual(s.rows, s.marks, CH, { room: null }).ok).toBe(false);
   });
+  test('끊김 직후 휘청 동안 보스를 치면 배율 표본이 생기고(220%), 치지 않으면 표본이 없어도 수동 프로필은 실패가 아니라 보고다', () => {
+    const fought = mk({ fight: true });
+    const run = K.checkChainsManual(fought.rows, fought.marks, CH, { room: BR, range: RANGE });
+    expect(run.ok).toBe(true);
+    expect(run.teleports).toBe(0);
+    const f = K.checkChainsFilters(fought.filters, fought.rows, CH, { cuts: 1, requireCalls: false });
+    expect(f.ok).toBe(true);
+    expect(f.exposedCalls).toBe(3);
+    expect(f.byState.exposed).toMatchObject({ calls: 3, minK: 1, maxK: 1 });
+    expect(fought.filters.filter((x: any) => x.st === 'exposed').every((x: any) => Math.abs(x.out - 132) < 1e-9)).toBe(true);   // 60 × 220%
+    // 같은 표본을 약화 무시(2배)로 만들면 실패한다
+    const wrong = mk({ fight: true, noWeakenExposed: true });
+    expect(K.checkChainsFilters(wrong.filters, wrong.rows, CH, { cuts: 1 }).ok).toBe(false);
+    // 치지 않은 수동 세션: 표본 없음
+    const idle = mk();
+    const quiet = K.checkChainsFilters(idle.filters, idle.rows, CH, { cuts: 1, requireCalls: false });
+    expect(quiet.exposedCalls).toBe(0);
+    expect(quiet.ok).toBe(true);
+    expect(K.checkChainsFilters(idle.filters, idle.rows, CH, { cuts: 1, requireCalls: true }).ok).toBe(false);
+  });
   const snap = (over: any = {}, chain: any = {}) => ({ elapsed: 12.5, paused: false, chain: { cs: 'open', hd: .4, wl: 3.2, by: 1.2, sq: 5, bx: 150, bz: 29, ...chain }, ...over });
   test('창 안 정지: 게임 시간·windowLeft·hold 불변, 재개 뒤 windowLeft 는 흐른 시간만큼, hold 는 이어짐', () => {
     const before = snap(), paused = snap({ paused: true }), still = snap({ paused: true });
@@ -1475,10 +1674,16 @@ describe('screens 사슬 순간(checkChainMoment) · 기준선 누출', () => {
     expect(K.checkChainMoment(shot(open), CH, 'chain-open').ok).toBe(true);
     expect(K.checkChainMoment(shot({ ...open, hd: 0 }), CH, 'chain-open').ok).toBe(false);
     expect(K.checkChainMoment(shot({ ...open, dom: '거수의 사슬' + T.pull }), CH, 'chain-open').ok).toBe(false);
-    const cut = { cs: 'exposed', pu: 0, sd: 0, el: 4.2, cl: 2, dom: '거수의 사슬' + T.exposedDom('4.2') };
+    // 받는 피해 % = round((1 + weaken × k) × exposedMult × 100), k 는 프로브가 센 끊김 수(kc). 첫 끊김 220%, 둘째 240%.
+    const cut = { cs: 'exposed', pu: 0, sd: 0, el: 4.2, cl: 2, kc: 1, dom: '거수의 사슬' + T.exposedDom('4.2', 220) };
     expect(K.checkChainMoment(shot(cut), CH, 'chain-cut').ok).toBe(true);
     expect(K.checkChainMoment(shot({ ...cut, el: 4.9 }), CH, 'chain-cut').ok).toBe(false);
-    expect(K.checkChainMoment(shot({ ...cut, dom: '거수의 사슬' + T.exposedDom('4.2').replace('150%', '100%') }), CH, 'chain-cut').ok).toBe(false);
+    expect(K.checkChainMoment(shot({ ...cut, dom: '거수의 사슬' + T.exposedDom('4.2', 200) }), CH, 'chain-cut').ok).toBe(false);   // 약화 무시
+    expect(K.checkChainMoment(shot({ ...cut, dom: '거수의 사슬' + T.exposedDom('4.2', 150) }), CH, 'chain-cut').ok).toBe(false);   // 옛 계약
+    expect(K.checkChainMoment(shot({ ...cut, kc: 2 }), CH, 'chain-cut').ok).toBe(false);                                            // 두 번째 끊김은 240%
+    expect(K.checkChainMoment(shot({ ...cut, kc: 2, dom: '거수의 사슬' + T.exposedDom('4.2', 240) }), CH, 'chain-cut').ok).toBe(true);
+    expect(K.checkChainMoment(shot({ ...cut, kc: 3, dom: '거수의 사슬' + T.exposedDom('4.2', 260) }), CH, 'chain-cut').ok).toBe(true);
+    expect(K.checkChainMoment(shot({ ...cut, kc: undefined }), CH, 'chain-cut').ok).toBe(false);                                  // 도구 집계 없음
     expect(K.checkChainMoment({ capture: {} }, CH, 'chain-cut').ok).toBe(false);
     expect(K.checkChainMoment(shot({ al: 0 }), CH, 'chain-pull').ok).toBe(false);
     expect(K.checkChainMoment(shot({}), CH, 'unknown').ok).toBe(false);
