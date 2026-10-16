@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// 잿불금고 심층 냉각 밸브 QA 기준선 비교(BUNDLE-10 PLAN 5절 5번). 두 ember-tide-qa report.json 의 auto 실행을 한 짝씩 기계적으로 비교한다.
-// 게이트(JSON 출력의 gates · ok): 같은 영웅·시드·depth·재시드·viewport·motion·quality 설정, 기준선이 실제로 다른 빌드(HEAD 가 다르고, 기준선에는 경로 정의 ember_deep 이 없고 후보에는 있음),
-// 양쪽 report·run 이 pass(후보는 밸브 판정까지 통과), 완주 시간 비 ≤ 2.0, 전체 런 50ms 초과 수 ≤ 기준선 + 2.
+// 잿불금고 심층 냉각 밸브·사슬 집행자 후방 QA 기준선 비교(BUNDLE-10 PLAN 5절 5번, BUNDLE-14). 두 ember-tide-qa report.json 의 auto 실행을 한 짝씩 기계적으로 비교한다.
+// 게이트(JSON 출력의 gates · ok): 같은 영웅·시드·depth·재시드·viewport·motion·quality 설정, 기준선이 실제로 다른 빌드(HEAD 가 다르고, 후보 ember_deep 정의에는 rear 가 있고 기준선에는 rear 가 없음 —
+// 기준선은 밸브 정의만 있는 8e89a51 이거나 정의 자체가 없는 B10 기준선 79883ad), 양쪽 report·run 이 pass(후보는 밸브·후방 판정까지 통과), 완주 시간 비 ≤ 2.0, 전체 런 50ms 초과 수 ≤ 기준선 + 2.
 // 보고 항목(게이트 아님, PLAN 5절 5에서 사전 선언): report.roomEnterDrawCalls 밸브 방 첫 진입 draw call 증가, report.over50PerThousandSteps 50ms 초과율,
 // report.routeViewAB 경로 목표 뷰 표시/숨김 같은 프레임 calls 차이, report.load 실행 전후 1분 load, report.order 어느 쪽이 먼저 돌았는지(짝은 순서를 섞어 돌린다).
 // 50ms 절대 검사는 각 report 의 reportItems.absolute50ms 가 보고하며 여기서 대신하거나 완화하지 않는다.
@@ -20,10 +20,15 @@ const runOf = file => {
   const run = report.profiles?.auto?.runs?.[0];
   if (!run) throw Error('auto 실행이 없는 report: ' + file);
   const simulation = run.metrics?.simulation?.n, render = run.metrics?.render?.n;
+  // 후보가 후방 정의를 가지면 후방 판정(run.rear.ok)까지 통과해야 tideOk 가 참이다. 기준선(후방 정의 없음)은 밸브 판정 값 그대로다.
+  const hasRear = !!report.routeDefinition?.rear;
+  const rearOk = hasRear ? run.rear?.ok === true : null;
+  const valveOk = run.tide?.ok ?? null;
   return { head: report.head ?? null, status: report.status, heroId: report.heroId, seed: report.seed, depth: report.depth ?? null, reseedOn: report.reseed?.on ?? null,
     viewport: report.viewport ?? null, motion: report.motion ?? null, quality: report.quality ?? null,
     routeDefinition: report.routeDefinition ?? null, valveRooms: report.valveRooms ?? null, runStatus: run.status ?? null,
-    tideOk: run.tide?.ok ?? null, time: run.result?.win ? run.result.time : null, samples: run.summary?.samples || [], runOver50: run.metrics?.over50ms ?? null,
+    tideOk: hasRear ? (valveOk === true && rearOk === true ? true : valveOk === null ? null : false) : valveOk, rearOk,
+    time: run.result?.win ? run.result.time : null, samples: run.summary?.samples || [], runOver50: run.metrics?.over50ms ?? null,
     steps: run.summary?.steps ?? (Number.isFinite(simulation) && Number.isFinite(render) ? simulation + render : null),
     routeViewAB: run.tide?.viewAB ?? null, started: report.started ?? null,
     load: report.load ? { start: report.load.start ?? null, beforeStart: report.load.beforeStart ?? null, end: report.load.end ?? null, waitedMs: report.load.waitedMs ?? null } : null };
@@ -32,10 +37,10 @@ const cand = runOf(arg('cand')), base = runOf(arg('base'));
 const { same, ok: sameSetup } = compareSetup(cand, base);
 const verdict = compareRuns(cand, base);
 const setupOf = r => ({ viewport: r.viewport, motion: r.motion, quality: r.quality });
-const defOf = r => (r.routeDefinition ? { id: r.routeDefinition.id, shockWindow: !!r.routeDefinition.shockWindow, gates: r.routeDefinition.gates?.length ?? null } : null);
+const defOf = r => (r.routeDefinition ? { id: r.routeDefinition.id, shockWindow: !!r.routeDefinition.shockWindow, gates: r.routeDefinition.gates?.length ?? null, rear: r.routeDefinition.rear?.id ?? null } : null);
 // 기준선·후보가 뒤바뀌거나 후보끼리 비교되면 합격하지 않는다.
 const targetsOk = compareTargetsOk(cand, base);
-const result = { candidate: { head: cand.head, status: cand.status, runStatus: cand.runStatus, heroId: cand.heroId, depth: cand.depth, reseed: cand.reseedOn, ...setupOf(cand), definition: defOf(cand), tideOk: cand.tideOk },
+const result = { candidate: { head: cand.head, status: cand.status, runStatus: cand.runStatus, heroId: cand.heroId, depth: cand.depth, reseed: cand.reseedOn, ...setupOf(cand), definition: defOf(cand), tideOk: cand.tideOk, rearOk: cand.rearOk },
   baseline: { head: base.head, status: base.status, runStatus: base.runStatus, heroId: base.heroId, depth: base.depth, reseed: base.reseedOn, ...setupOf(base), definition: defOf(base) },
   same, sameSetup, targetsOk, ...verdict,
   absolute50ms: { note: '절대 검사는 각 report 의 reportItems.absolute50ms 가 보고한다. 여기는 보고 항목', candidateRun: cand.runOver50, baselineRun: base.runOver50 } };

@@ -21,6 +21,11 @@ Acceptance and regression requirements:
   Exception (BUNDLE-05): in the personal deep Bellfall Crypt, the chorus veil keeps
   the sovereign's triple toll from being cut by stun, stagger or posture break until
   its final ring opens the 3.5-second counter window (docs/bellfall-deep-bells.md).
+  Exception (BUNDLE-14): in the personal deep Ember Vault, the chain armor keeps the
+  executor's slag hammer (kiln_hammer) from being cut by stun, stagger or posture break
+  until its final ring; the executor then stays pinned for 4 seconds, starts no new
+  attack, and takes double damage from a hero behind it and half from one in front
+  (docs/ember-deep-tide-valves.md).
 - Simultaneous overlapping shapes hit each living actor only once. Player.hurt
   owns invulnerability and damage mitigation; the host owns party simulation.
 - Boss signatures replace automatic ambient hazards in the final boss room;

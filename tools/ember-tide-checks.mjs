@@ -682,14 +682,16 @@ export function roomDrawCalls(candSamples, baseSamples, rooms) {
   return { pairs, matched: matchedPairs.length, maxIncrease: matchedPairs.length ? Math.max(...matchedPairs.map(p => p.increase)) : null };
 }
 /**
- * 기준선이 후보와 다른 빌드인지, 양쪽이 pass 인지. 심층 전용이라 기준선에는 경로 정의(ember_deep)가 없고 후보에는 있어야 한다.
- * 두 report 의 HEAD 는 달라야 한다(같은 빌드끼리의 비교는 합격하지 않는다). 후보는 밸브 판정(tideOk)까지 통과해야 한다.
+ * 기준선이 후보와 다른 빌드인지, 양쪽이 pass 인지. 후보는 밸브 정의(ember_deep)에 후방 노출 정의(rear)가 있고, 기준선은 rear 가 없어야 한다.
+ * 기준선은 밸브 정의만 있는 빌드(8e89a51)이거나 정의 자체가 없는 B10 기준선(79883ad)이다. 기준선 정의가 있으면 같은 ember_deep 정의여야 한다.
+ * 두 report 의 HEAD 는 달라야 한다(같은 빌드끼리의 비교는 합격하지 않는다). 후보는 밸브·후방 판정(tideOk)까지 통과해야 하고, rearOk 가 주어지면 true 여야 한다.
  */
 export function compareTargetsOk(cand, base) {
   if (!cand || !base) return false;
   const differs = !!cand.head && !!base.head && cand.head !== base.head;
-  const definition = !base.routeDefinition && cand.routeDefinition?.id === TIDE.id;
-  return differs && definition && cand.tideOk === true && cand.status === 'pass' && base.status === 'pass' && cand.runStatus === 'pass' && base.runStatus === 'pass';
+  const definition = cand.routeDefinition?.id === TIDE.id && !!cand.routeDefinition?.rear && !base.routeDefinition?.rear
+    && (!base.routeDefinition || base.routeDefinition.id === TIDE.id);
+  return differs && definition && cand.tideOk === true && cand.rearOk !== false && cand.status === 'pass' && base.status === 'pass' && cand.runStatus === 'pass' && base.runStatus === 'pass';
 }
 /** 두 report 의 실행 설정이 같은지: 영웅 · 시드 · depth · 재시드 · viewport · motion · quality 가 같아야 비교가 성립한다(없는 값은 같지 않다고 본다). */
 export function compareSetup(cand, base) {
@@ -725,4 +727,430 @@ export function compareRuns(cand, base, { timeRatio = 2, slowExtra = 2 } = {}) {
     order: runOrder(cand?.started, base?.started),
   };
   return { ok: Object.values(gates).every(Boolean), gates, time, slow, report };
+}
+
+// ---------- 사슬 집행자 후방 노출(BUNDLE-14) ----------
+// 입력은 qa 프로브가 보스방 진입 뒤 스텝마다 남기는 후방 행(rows)과 rear.filter 감싸개 기록(filters)이다. 모든 시간·배율·반각은 정의(def = ROUTE_OBJECTIVES.ember_deep.rear)에서 읽는다.
+// 후방 행: n 스텝, t 게임 시각, hx/hz 영웅 위치, hp, ha 영웅 생존, au AUTO, ah 공격 입력 유지, ps 영웅 state,
+//   rs rear.state(idle|armored|exposed|ended), wl rear.windowLeft, wn windows, rh/fh/sh rearHits/frontHits/sideHits, rd/fd rearDamage/frontDamage, br broken, ls lastSide,
+//   bo 보스 존재(1/0), al 보스 생존, spn spawning, bs 보스 state, sp boss.special, pk 서명 plan key, sq attackSequence, cq completedAttackSequence, ac atkCd,
+//   by yaw, bx/bz 위치, bvx/bvz 속도, wv/gv 부채꼴·갑주 호 visible(1/0, 못 찾으면 -1), wc/gc 색(hex, 없으면 -1), dom 목표창 문구 표본(선택).
+// 필터 기록(rear.filter(dmg, attacker) 감싸개): { n, dmg 입력, out 출력, st 그 순간 rear.state, yaw 보스 yaw, bx/bz 보스 위치, ax/az attacker.pos(없으면 null),
+//   hx/hz 그 순간 app.battle.player.pos(도구가 직접 읽은 영웅 위치), side 도구가 (보스 − 영웅 위치)로 직접 계산한 구분(attacker 가 없으면 null) }.
+
+/** 후방 노출 공유 정의 계약(PLAN 3절). 판정은 정의 값을 읽고, 이 상수는 정의가 계약과 같은지(checkRearDefinition)와 문구·색에만 쓴다. */
+export const REAR = Object.freeze({
+  id: 'ember_deep_rear', boss: 'cinder_chain_executor', signature: 'kiln_hammer', title: '사슬 집행자 후방',
+  attachToast: '사슬 갑주 · 용재 망치가 박히면 등 뒤를 노리세요', armoredText: '용재 망치가 박히면 등 뒤로 · 정면은 사슬 갑주', resultAria: '사슬 집행자 후방 결과',
+  wedge: Object.freeze({ name: 'TLL_EmberRearWedge', color: 0x5ff0d0 }), guard: Object.freeze({ name: 'TLL_EmberRearGuard', color: 0xd8a070 }),
+  values: Object.freeze({ window: 4, rearDot: .35, frontDot: .35, rear: 2, front: .5, autoDot: .6, meleeReach: 2.4, rangedReach: 6, sidePad: .9 }),
+});
+/** screens 프로필의 후방 순간(후보에만). */
+export const REAR_MOMENTS = Object.freeze(['rear-armored', 'rear-exposed']);
+/** 수동 구간에서 영웅이 한 스텝에 움직일 수 있는 최대 거리(순간이동 방지용 상한, 돌진 공격 포함 여유). */
+export const MAX_STEP_MOVE = 1.5;
+const REAR_CLOCK_TOL = 1e-6;
+const REL = 1e-9;
+const nearRel = (a, b) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= REL * Math.max(1, Math.abs(a), Math.abs(b));
+const nearAbs = (a, b, tol) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= tol;
+const pct = value => Math.round(value * 100);
+/** 열림 토스트 정확 문자열: '망치가 박혔다 · 4초 동안 등 뒤가 약점'. */
+export const rearOpenToast = def => '망치가 박혔다 · ' + def.window + '초 동안 등 뒤가 약점';
+/** 목표창 열림 문구의 정규식: '후방 노출 n.n초 · 등 뒤 200% · 정면 50%'(% 는 정의에서 계산). */
+export const rearExposedPattern = def => new RegExp('후방 노출 (\\d+\\.\\d)초 · 등 뒤 ' + pct(def.rear) + '% · 정면 ' + pct(def.front) + '%');
+/** 목표창이 보여야 하는 남은 시간: windowLeft 의 0.1초 올림 toFixed(1). */
+export const rearLeftText = left => (Math.ceil(left * 10 - 1e-9) / 10).toFixed(1);
+/** 결과 줄: '사슬 집행자 후방 공격 {rearHits}회 · 노출 {windows}번 · 정면 막힘 {frontHits}회'. */
+export const rearResultLine = ro => '사슬 집행자 후방 공격 ' + ro.rearHits + '회 · 노출 ' + ro.windows + '번 · 정면 막힘 ' + ro.frontHits + '회';
+/** 방향(공격자 → 보스)과 보스 정면(yaw)의 내적. 방향 길이가 0이거나 yaw 가 유한하지 않으면 null. */
+export function rearDotOf(dirx, dirz, yaw) {
+  const l = Math.hypot(dirx, dirz);
+  if (!(l > 1e-9) || !Number.isFinite(yaw)) return null;
+  return (dirx / l) * Math.sin(yaw) + (dirz / l) * Math.cos(yaw);
+}
+/** 맞은 방향(공격자 → 보스)과 보스 정면(yaw)의 내적으로 구분한다(컨트롤러와 독립으로 같은 식을 쓴다). */
+export function rearSideOf(dirx, dirz, yaw, def) {
+  const dot = rearDotOf(dirx, dirz, yaw);
+  if (dot === null) return 'side';
+  return dot >= def.rearDot ? 'rear' : dot <= -def.frontDot ? 'front' : 'side';
+}
+/** 구분별 배율(정의 값): rear → def.rear, front → def.front, side → 1. */
+export const rearMultiplier = (side, def) => (side === 'rear' ? def.rear : side === 'front' ? def.front : 1);
+/** 출력/입력 배율로 거꾸로 읽은 구분(2 → rear, .5 → front, 1 → side, 상대오차 1e-9). 읽을 수 없으면 null. */
+export function rearSideFromRatio(dmg, out, def) {
+  if (!(Number.isFinite(dmg) && dmg > 0) || !Number.isFinite(out)) return null;
+  for (const side of ['rear', 'front', 'side']) if (nearRel(out / dmg, rearMultiplier(side, def))) return side;
+  return null;
+}
+/** 필터 기록에 attacker 위치가 있는가(attacker 없는 호출 = 중독 틱 등). */
+export const hasAttacker = f => Number.isFinite(f?.ax) && Number.isFinite(f?.az);
+const FILTER_POS_TOL = 1e-6;
+/** 경계 ±.05: 보조 관측에서 내적이 rearDot·-frontDot 문턱에 이만큼 가까우면 따로 센다. */
+const EDGE_BAND = .05;
+
+/** 정의가 PLAN 계약과 같은지(id·보스·서명·수치). 어긋난 항목을 issues 로 돌려준다. */
+export function checkRearDefinition(def) {
+  if (!def) return { ok: false, issues: [{ field: 'rear', got: null }] };
+  const issues = [];
+  const want = (field, got, expected) => { if (JSON.stringify(got) !== JSON.stringify(expected)) issues.push({ field, got, want: expected }); };
+  want('id', def.id, REAR.id); want('boss', def.boss, REAR.boss); want('signature', def.signature, REAR.signature);
+  for (const [key, value] of Object.entries(REAR.values)) want(key, def[key], value);
+  return { ok: issues.length === 0, issues };
+}
+
+/** exposed 가 이어지는 구간(행 인덱스 start~end). */
+export function rearWindowRuns(rows) {
+  const runs = [];
+  let open = null;
+  rows.forEach((r, i) => {
+    if (r.rs !== 'exposed') { open = null; return; }
+    if (open && rows[i - 1].rs === 'exposed') { open.end = i; return; }
+    open = { start: i, end: i };
+    runs.push(open);
+  });
+  return runs;
+}
+/** attackSequence 마다 처음 본 boss.special(시그니처). */
+function rearSequenceSignatures(rows) {
+  const map = new Map();
+  for (const r of rows) if (r.sq > 0 && r.sp && !map.has(r.sq)) map.set(r.sq, r.sp);
+  return map;
+}
+/** completedAttackSequence 가 처음 쓰인 스텝(행 인덱스)과 그 공격의 시그니처. */
+export function rearCompletions(rows, def) {
+  const sig = rearSequenceSignatures(rows), out = [];
+  for (let i = 1; i < rows.length; i++) {
+    const a = rows[i - 1], b = rows[i];
+    if (b.bo === 1 && b.cq > 0 && b.cq > a.cq) out.push({ idx: i, n: b.n, t: b.t, seq: b.cq, sig: sig.get(b.cq) ?? null, hammer: sig.get(b.cq) === def.signature });
+  }
+  return out;
+}
+
+/** 부착: 보스가 나타난 뒤(spawning 이 풀린 행) 한 스텝 안에 armored, 그 전에는 idle, 상태 전이는 idle → armored ⇄ exposed → ended 뿐이다. */
+export function checkRearAttach(rows) {
+  const bossAt = rows.findIndex(r => r.bo === 1 && r.al === 1 && r.spn === 0);
+  const attachAt = rows.findIndex(r => r.rs === 'armored' || r.rs === 'exposed');
+  const early = rows.filter(r => (r.rs === 'armored' || r.rs === 'exposed') && (r.bo !== 1 || r.spn === 1)).length;
+  const allowed = { idle: ['idle', 'armored'], armored: ['armored', 'exposed', 'ended'], exposed: ['exposed', 'armored', 'ended'], ended: ['ended'] };
+  const bad = [];
+  for (let i = 1; i < rows.length; i++) if (!(allowed[rows[i - 1].rs] ?? []).includes(rows[i].rs)) bad.push({ idx: i, n: rows[i].n, from: rows[i - 1].rs, to: rows[i].rs });
+  const delay = bossAt >= 0 && attachAt >= 0 ? attachAt - bossAt : null;
+  const preIdle = attachAt < 0 ? false : rows.slice(0, attachAt).every(r => r.rs === 'idle');
+  return { ok: bossAt >= 0 && attachAt >= 0 && delay >= 0 && delay <= 1 && early === 0 && preIdle && bad.length === 0, bossAt, attachAt, delay, early, preIdle, badTransitions: bad.slice(0, 6) };
+}
+
+/**
+ * 열림·창 길이·묶임 판정(PLAN 3절). 창 = rs 가 exposed 인 연속 행.
+ * 열림: 가장 가까운 앞 completedAttackSequence 변화가 def.signature 시그니처이고 같은 스텝이거나 한 스텝 앞이다. 다른 시그니처 뒤(wrong-signature)·두 스텝 이상 지연(late-open)·
+ * 같은 공격으로 두 번(duplicate-sequence)·트리거 없음(no-trigger)은 위반이다. 시그니처가 완성됐는데 열리지 않으면(missed) 위반이다(보스 처치 스텝 제외).
+ * 길이: 연속 스텝 행의 게임 시각 합(마지막 행 t − 첫 행 t + 1/60)이 def.window ± 1/60. 보스 처치로 끝난 창은 면제하고 truncated 로 기록한다. 끝나지 않은 창은 위반이다.
+ * 시계: 첫 windowLeft 는 def.window(−1/60 허용)이고, 스텝마다 windowLeft 감소량이 게임 시각 증가량과 같다(시각도 windowLeft 도 정확히 같은 스텝만 면제).
+ * 묶임: 창 안 모든 행에서 yaw 가 첫 행과 정확히 같고, attackSequence 가 트리거 공격 그대로이며(새 공격 0), 보스 state 가 chase 인 행은 속도 0 이다. 이동은 보고한다.
+ */
+export function checkRearWindows(rows, def) {
+  const runs = rearWindowRuns(rows), comps = rearCompletions(rows, def), windows = [], seen = new Set();
+  runs.forEach((run, index) => {
+    const span = rows.slice(run.start, run.end + 1), first = span[0], last = span.at(-1), reasons = [];
+    const pre = comps.filter(c => c.idx <= run.start);
+    const closest = pre.at(-1) ?? null;
+    const trig = pre.filter(c => c.hammer && run.start - c.idx <= 1).at(-1) ?? null;
+    if (!trig) {
+      if (!closest) reasons.push('no-trigger');
+      else if (!closest.hammer && run.start - closest.idx <= 1) reasons.push('wrong-signature');
+      else if (closest.hammer) reasons.push('late-open');
+      else reasons.push('no-trigger');
+    } else if (seen.has(trig.seq)) reasons.push('duplicate-sequence');
+    if (trig) seen.add(trig.seq);
+    const contiguous = span.every((r, k) => k === 0 || r.n === span[k - 1].n + 1);
+    const length = last.t - first.t + FRAME;
+    const next = rows[run.end + 1] ?? null;
+    // 끝: 다음 행이 armored 면 만료, 보스 처치(다음 행 ended·보스 사망 또는 마지막 행에서 보스 사망)면 면제, 그 밖은 끝나지 않은 창이다.
+    const defeated = last.al === 0 || (next !== null && (next.rs === 'ended' || next.al === 0));
+    const expired = next !== null && next.rs === 'armored';
+    const truncated = !expired && defeated;
+    const unterminated = !expired && !defeated;
+    const lengthOk = truncated ? length <= def.window + FRAME + EPS : expired && contiguous && Math.abs(length - def.window) <= FRAME + EPS;
+    let clockBad = 0;
+    span.forEach((r, k) => {
+      if (k === 0) return;
+      const p = span[k - 1], dwl = p.wl - r.wl, dt = r.t - p.t;
+      if (!(Math.abs(dwl - dt) <= REAR_CLOCK_TOL) && !(dwl === 0 && dt === 0)) clockBad++;
+    });
+    const startOk = first.wl <= def.window + EPS && first.wl >= def.window - FRAME - EPS;
+    const seqStable = !!trig && span.every(r => r.sq === trig.seq);
+    const yawStable = span.every(r => r.by === first.by);
+    const chaseRows = span.filter(r => r.bs === 'chase'), movingChase = chaseRows.filter(r => r.bvx !== 0 || r.bvz !== 0).length;
+    const moveMax = Math.max(...span.map(r => Math.hypot(r.bx - first.bx, r.bz - first.bz)));
+    windows.push({ index, startIdx: run.start, endIdx: run.end, n: first.n, t: first.t, seq: trig?.seq ?? null, delaySteps: trig || closest ? run.start - (trig ?? closest).idx : null, reasons,
+      contiguous, rows: span.length, length, truncated, unterminated, lengthOk, startWindowLeft: first.wl, startOk, clockBad,
+      seqStable, yawStable, chaseRows: chaseRows.length, movingChase, moveMax, ok: false });
+  });
+  const missed = comps.filter(c => {
+    if (!c.hammer) return false;
+    const a = rows[c.idx], b = rows[c.idx + 1] ?? null;
+    if (a.rs === 'exposed' || a.rs === 'ended' || a.al === 0 || !b || b.al === 0 || b.rs === 'ended') return false;
+    return !runs.some(r => r.start === c.idx || r.start === c.idx + 1);
+  }).map(c => ({ idx: c.idx, n: c.n, seq: c.seq }));
+  for (const w of windows) w.ok = w.reasons.length === 0 && w.contiguous && w.lengthOk && w.startOk && w.clockBad === 0 && !w.unterminated && w.seqStable && w.yawStable && w.movingChase === 0;
+  const has = reason => windows.some(w => w.reasons.includes(reason));
+  return { windows, count: windows.length, missed, completions: comps.length, hammerCompletions: comps.filter(c => c.hammer).length,
+    acceptance: {
+      windowCount: windows.length >= 1,
+      noEarlyOpen: !has('no-trigger') && !has('wrong-signature'),
+      openTiming: !has('late-open') && !has('duplicate-sequence'),
+      noMissedOpen: missed.length === 0,
+      windowLength: windows.length > 0 && windows.every(w => w.contiguous && w.lengthOk && w.startOk && w.clockBad === 0 && !w.unterminated),
+      noNewAttack: windows.length > 0 && windows.every(w => w.seqStable),
+      yawFixed: windows.length > 0 && windows.every(w => w.yawStable),
+      pinnedStill: windows.length > 0 && windows.every(w => w.movingChase === 0),
+    } };
+}
+
+/**
+ * 피해 배율 판정(계약: rear.filter(dmg, attacker)). 기록마다:
+ *  - exposed 이고 attacker 가 있으면 출력 = 입력 × 배율(side)(rear|front|1, 상대오차 1e-9). side 는 도구가 (보스 − 영웅 위치)로 직접 계산한 구분이고 구분별로 센다.
+ *  - attacker 가 없으면(중독 틱 등) 출력 = 입력이고 세지 않는다. exposed 가 아닌 state 도 출력 = 입력이다.
+ * 컨트롤러 집계: 마지막 행의 rearHits·frontHits·sideHits 가 attacker 있는 exposed 호출의 구분별 수와 같다.
+ * 독립 대조(리뷰 P2-3): attacker 가 있는 호출마다 (a) attacker 위치가 그 순간 영웅 위치와 같고(1e-6, 단독 원정이라 공격자는 영웅),
+ * (b) 도구가 영웅 위치로 계산한 side 가 출력/입력 배율로 거꾸로 읽은 구분과 같다(exposed 호출, 입력 > 0). 하나라도 어긋나면 실패다.
+ * 보조 관측(판정 아님): 그 스텝 행(hx,hz,bx,bz,by)으로 다시 계산한 구분이 다른 호출 수(경계 ±.05 안은 따로).
+ * filters 가 null(관측 누락)이면 실패한다.
+ */
+export function checkRearFilters(filters, rows, def) {
+  if (!Array.isArray(filters)) return { ok: false, observed: false, counts: null, bad: [{ kind: 'not-observed' }], badCount: 1 };
+  const bad = [], counts = { rear: 0, front: 0, side: 0 };
+  const rowOf = new Map();
+  for (const r of rows) rowOf.set(r.n, r);
+  let exposedCalls = 0, attackerless = 0, unreadable = 0;
+  const rowCheck = { calls: 0, noRow: 0, differ: 0, differNearEdge: 0, differHard: 0 };
+  filters.forEach((f, i) => {
+    const withAttacker = hasAttacker(f);
+    let want = f.dmg;
+    if (!withAttacker) {
+      // attacker 가 없는 호출: 1배, 세지 않는다. exposed 안의 호출 수만 보고한다.
+      if (f.st === 'exposed') { exposedCalls++; attackerless++; }
+    } else {
+      // (a) 공격자 = 영웅(단독 원정): attacker.pos 가 그 순간 영웅 위치와 같다. 영웅 위치를 못 읽었으면 실패다.
+      if (!Number.isFinite(f.hx) || !Number.isFinite(f.hz)) bad.push({ kind: 'hero-not-observed', i, n: f.n });
+      else if (!nearAbs(f.ax, f.hx, FILTER_POS_TOL) || !nearAbs(f.az, f.hz, FILTER_POS_TOL)) bad.push({ kind: 'attacker-not-hero', i, n: f.n, attacker: [f.ax, f.az], hero: [f.hx, f.hz] });
+      const side = f.side;
+      if (!(side in counts)) bad.push({ kind: 'bad-side', i, n: f.n, side });
+      else if (f.st === 'exposed') {
+        exposedCalls++;
+        counts[side]++;
+        want = f.dmg * rearMultiplier(side, def);
+        // (b) 도구가 영웅 위치로 계산한 side 와 배율에서 거꾸로 읽은 side 가 같다.
+        const fromRatio = rearSideFromRatio(f.dmg, f.out, def);
+        if (!(f.dmg > 0)) unreadable++;
+        else if (fromRatio !== side) bad.push({ kind: 'side-mismatch', i, n: f.n, side, fromRatio, dmg: f.dmg, out: f.out });
+      }
+      // 보조 관측: 그 스텝 행으로 다시 계산한 구분.
+      if (side in counts) {
+        const row = rowOf.get(f.n);
+        if (!row || ![row.hx, row.hz, row.bx, row.bz, row.by].every(Number.isFinite)) rowCheck.noRow++;
+        else {
+          rowCheck.calls++;
+          const dx = row.bx - row.hx, dz = row.bz - row.hz, rowSide = rearSideOf(dx, dz, row.by, def);
+          if (rowSide !== side) {
+            rowCheck.differ++;
+            const dot = rearDotOf(dx, dz, row.by);
+            if (dot !== null && (Math.abs(dot - def.rearDot) <= EDGE_BAND || Math.abs(dot + def.frontDot) <= EDGE_BAND)) rowCheck.differNearEdge++;
+            else rowCheck.differHard++;
+          }
+        }
+      }
+    }
+    if (!nearRel(f.out, want)) bad.push({ kind: f.st === 'exposed' ? 'exposed-multiplier' : 'outside-window', i, n: f.n, state: f.st, dmg: f.dmg, out: f.out, want });
+  });
+  const last = rows.at(-1) ?? null;
+  const aggregate = !!last && counts.rear === last.rh && counts.front === last.fh && counts.side === last.sh;
+  return { ok: bad.length === 0 && aggregate, observed: true, calls: filters.length, exposedCalls, attackerless, unreadable, counts, controller: last ? { rear: last.rh, front: last.fh, side: last.sh } : null,
+    aggregate, rowCheck, bad: bad.slice(0, 8), badCount: bad.length };
+}
+
+/** AUTO 후방: 창 ≥ 1, 등 뒤 타격이 있는 창 ≥ 1, 전체 rearHits > frontHits. 창마다 등 뒤·정면 타격 여부와 첫 등 뒤 타격까지 시간은 보고 항목이다. */
+export function checkRearAuto(rows, windows) {
+  const per = windows.map(w => {
+    const after = Math.min(w.endIdx + 1, rows.length - 1), base = rows[w.startIdx];
+    let rearAt = null, frontAt = null;
+    for (let i = w.startIdx + 1; i <= after; i++) {
+      if (rearAt === null && rows[i].rh > rows[i - 1].rh) rearAt = rows[i].t - base.t;
+      if (frontAt === null && rows[i].fh > rows[i - 1].fh) frontAt = rows[i].t - base.t;
+    }
+    return { index: w.index, rearHits: rows[after].rh - base.rh, frontHits: rows[after].fh - base.fh, sideHits: rows[after].sh - base.sh, firstRearAfter: rearAt, firstFrontAfter: frontAt };
+  });
+  const last = rows.at(-1) ?? null;
+  const withRear = per.filter(p => p.rearHits > 0).length;
+  return { ok: windows.length >= 1 && withRear >= 1 && !!last && last.rh > last.fh, windows: windows.length, windowsWithRear: withRear, rearHits: last?.rh ?? null, frontHits: last?.fh ?? null, per };
+}
+
+/** 뷰: 부착 뒤 모든 행에서 부채꼴·갑주 호가 관측돼야 하고(못 찾으면 실패), exposed 에서만 보이며, 색이 정확히 같아야 한다. */
+export function checkRearView(rows) {
+  const attachAt = rows.findIndex(r => r.rs === 'armored' || r.rs === 'exposed' || r.rs === 'ended');
+  const after = attachAt < 0 ? [] : rows.slice(attachAt);
+  const seen = v => v === 0 || v === 1;
+  const missing = after.filter(r => !seen(r.wv) || !seen(r.gv));
+  const exposed = rows.filter(r => r.rs === 'exposed');
+  const exposedBad = exposed.filter(r => r.wv !== 1 || r.gv !== 1);
+  const hiddenBad = rows.filter(r => r.rs !== 'exposed' && (r.wv === 1 || r.gv === 1));
+  const wedgeColors = rows.filter(r => Number.isFinite(r.wc) && r.wc >= 0), guardColors = rows.filter(r => Number.isFinite(r.gc) && r.gc >= 0);
+  const colorBad = [...wedgeColors.filter(r => r.wc !== REAR.wedge.color).map(r => ({ n: r.n, wedge: r.wc })), ...guardColors.filter(r => r.gc !== REAR.guard.color).map(r => ({ n: r.n, guard: r.gc }))];
+  return { ok: after.length > 0 && missing.length === 0 && exposed.length > 0 && exposedBad.length === 0 && hiddenBad.length === 0 && wedgeColors.length > 0 && guardColors.length > 0 && colorBad.length === 0,
+    attachedRows: after.length, missing: missing.length, missingFirstN: missing[0]?.n ?? null, exposedRows: exposed.length, exposedBad: exposedBad.length, hiddenBad: hiddenBad.length,
+    wedgeColor: REAR.wedge.color, guardColor: REAR.guard.color, wedgeColorRows: wedgeColors.length, guardColorRows: guardColors.length, colorBad: colorBad.slice(0, 4) };
+}
+
+/**
+ * 목표창 표본(dom 이 있는 행). 제목 '사슬 집행자 후방'. armored 표본은 '용재 망치가 박히면 등 뒤로 · 정면은 사슬 갑주', exposed 표본은
+ * '후방 노출 n.n초 · 등 뒤 200% · 정면 50%'(퍼센트는 정의에서)이고 n.n 이 그 행 windowLeft 의 0.1초 올림과 같다. armored·exposed 표본이 각각 1개 이상이어야 한다.
+ */
+/** 목표창은 battle-readability.update 가 프레임 dt 로 0.1초마다 다시 그린다(src/ui/battle-readability.js). 결정적 스텝(1/60)에서 상태가 바뀐 뒤
+ * 이 주기(+2스텝 여유) 안의 표본은 바로 앞 상태의 정확한 문구일 때만 '갱신 대기'(lag)로 따로 센다. 주기를 넘거나 다른 문구면 실패다. */
+export const REAR_OBJECTIVE_REFRESH = .1 + 2 / 60;
+export function checkRearObjective(rows, def) {
+  const pattern = rearExposedPattern(def), bad = [], lag = [];
+  let samples = 0, armored = 0, exposed = 0, state = null, changedAt = -Infinity, prev = null;
+  for (const r of rows) {
+    if (r.rs !== state) { prev = state; state = r.rs; changedAt = r.t; }
+    // 보스가 쓰러진 행부터 목표창은 정당하게 '정화 완료'로 바뀐다(창 안 처치 포함, b14 smoke s-cand-auto-knight). 그 행은 판정하지 않는다.
+    if (r.al === 0) continue;
+    if (typeof r.dom !== 'string') continue;
+    samples++;
+    if (!r.dom.includes(REAR.title)) { bad.push({ n: r.n, state: r.rs, dom: r.dom, why: 'title' }); continue; }
+    const waiting = Number.isFinite(r.t) && r.t - changedAt <= REAR_OBJECTIVE_REFRESH + 1e-9;
+    const armoredText = r.dom.includes(REAR.armoredText) && !pattern.test(r.dom);
+    if (r.rs === 'armored') {
+      if (armoredText) armored++;
+      else if (waiting && prev === 'exposed' && pattern.test(r.dom)) lag.push({ n: r.n, state: r.rs, after: r.t - changedAt });
+      else bad.push({ n: r.n, state: r.rs, dom: r.dom, why: 'armored-text' });
+    } else if (r.rs === 'exposed') {
+      const m = pattern.exec(r.dom), want = rearLeftText(r.wl);
+      if (m && m[1] === want) exposed++;
+      else if (waiting && prev === 'armored' && armoredText) lag.push({ n: r.n, state: r.rs, after: r.t - changedAt });
+      else bad.push({ n: r.n, state: r.rs, dom: r.dom, want, got: m?.[1] ?? null, why: 'exposed-text' });
+    } else bad.push({ n: r.n, state: r.rs, dom: r.dom, why: 'state' });
+  }
+  return { ok: samples > 0 && bad.length === 0 && armored >= 1 && exposed >= 1, samples, armored, exposed, bad: bad.slice(0, 6), badCount: bad.length,
+    lag: lag.slice(0, 6), lagCount: lag.length, refresh: REAR_OBJECTIVE_REFRESH };
+}
+
+/** 토스트: 부착 토스트 정확히 1회, 열림 토스트('망치가 박혔다 · 4초 동안 등 뒤가 약점')는 창마다 1회(= 관측 창 수 = 컨트롤러 windows), 비슷한 다른 문구는 누출이다. */
+export function checkRearToasts(toasts, def, { windows = null, controllerWindows = null, encounterTactic = null } = {}) {
+  const list = (toasts || []).map(t => String(t?.msg ?? ''));
+  const open = rearOpenToast(def), attach = list.filter(m => m === REAR.attachToast).length, opened = list.filter(m => m === open).length;
+  const exempt = typeof encounterTactic === 'string' && encounterTactic.length > 0 ? encounterTactic : null;
+  const stray = list.filter(m => m !== exempt && m !== REAR.attachToast && m !== open && (m.includes('망치가 박혔다') || m.includes('사슬 갑주 ·')));
+  return { ok: attach === 1 && windows !== null && opened === windows && (controllerWindows === null || opened === controllerWindows) && stray.length === 0,
+    attach, opened, windows, controllerWindows, openText: open, stray: stray.slice(0, 4), total: list.length };
+}
+
+/**
+ * 결과: routeObjective.rear 가 고정 객체 { id, windows, rearHits, frontHits, sideHits, rearDamage, frontDamage, broken } 이고 마지막 관측값과 같으며,
+ * 결과 줄이 '사슬 집행자 후방 공격 {rearHits}회 · 노출 {windows}번 · 정면 막힘 {frontHits}회' 와 정확히 같고 aria-label 요소가 하나뿐이다.
+ */
+export function checkRearResult(ro, last, resultText, resultLines, def) {
+  const rear = ro?.rear ?? null, keys = ['broken', 'frontDamage', 'frontHits', 'id', 'rearDamage', 'rearHits', 'sideHits', 'windows'];
+  const ints = rear ? ['windows', 'rearHits', 'frontHits', 'sideHits', 'broken'].every(k => Number.isInteger(rear[k]) && rear[k] >= 0) : false;
+  const fields = !!rear && !!last && JSON.stringify(Object.keys(rear).sort()) === JSON.stringify(keys) && rear.id === def.id && ints
+    && rear.windows === last.wn && rear.rearHits === last.rh && rear.frontHits === last.fh && rear.sideHits === last.sh && rear.broken === last.br
+    && rear.rearDamage === Math.round(last.rd) && rear.frontDamage === Math.round(last.fd);
+  const line = rear ? rearResultLine(rear) : null;
+  const found = (resultLines || []).filter(l => l?.aria === REAR.resultAria);
+  const element = !!line && found.length === 1 && String(found[0].text).replace(/\s+/g, ' ').trim() === line;
+  const body = String(resultText ?? '').replace(/\s+/g, ' ');
+  return { fields, line, element, text: !!line && body.includes(line), ok: fields && element && !!line && body.includes(line),
+    got: rear, last: last ? { windows: last.wn, rearHits: last.rh, frontHits: last.fh, sideHits: last.sh, broken: last.br, rearDamage: Math.round(last.rd), frontDamage: Math.round(last.fd) } : null, found: found.map(l => l.text) };
+}
+
+/**
+ * 후보 빌드 한 번 완주의 후방 종합 판정. obs: { rows, filters, toasts, result(routeObjective), resultText, resultLines, encounterTactic }.
+ * opts.autoRear: AUTO 가 보스전을 치른 실행이면 AUTO 후방(창당 등 뒤 타격·rear > front)을 요구한다. ok 는 acceptance 의 모든 항목이 통과일 때만 true 다.
+ */
+export function analyzeRear(obs, def, { autoRear = true } = {}) {
+  const rows = obs.rows || [];
+  const definition = checkRearDefinition(def), attach = checkRearAttach(rows), win = checkRearWindows(rows, def), filters = checkRearFilters(obs.filters, rows, def);
+  const auto = checkRearAuto(rows, win.windows), view = checkRearView(rows), objective = checkRearObjective(rows, def);
+  const last = rows.at(-1) ?? null;
+  const toasts = checkRearToasts(obs.toasts, def, { windows: win.count, controllerWindows: last?.wn ?? null, encounterTactic: obs.encounterTactic ?? null });
+  const result = checkRearResult(obs.result, last, obs.resultText, obs.resultLines, def);
+  const acceptance = {
+    definition: definition.ok, attach: attach.ok, attachToast: toasts.attach === 1, ...win.acceptance,
+    windowsConsistent: !!last && last.wn === win.count, openToasts: toasts.ok, multiplier: filters.ok, rearView: view.ok, objectiveText: objective.ok, resultRear: result.ok,
+    ...(autoRear ? { autoRear: auto.ok } : {}),
+  };
+  return { ok: rows.length > 0 && Object.values(acceptance).every(Boolean), acceptance, definition, attach, windows: win.windows, windowCount: win.count, missed: win.missed, hammerCompletions: win.hammerCompletions,
+    filters, auto, view, objective, toasts, result, rows: rows.length };
+}
+
+/**
+ * 수동 후방(rear 프로필). marks: [{ mk, n }] — manual-start/manual-end 쌍(여러 번 가능)이 영웅 키보드 구간이다.
+ * 구간 안: AUTO 꺼짐·영웅 생존·한 스텝 이동 ≤ MAX_STEP_MOVE(순간이동 없음). 구간의 정면 타격 ≥ 1(배율 def.front)과 등 뒤 타격 ≥ 1(배율 def.rear)이 필터 기록과 컨트롤러 증가 모두에 있고,
+ * 첫 정면 타격이 첫 등 뒤 타격보다 앞선다.
+ */
+export function checkRearManual(rows, filters, marks, def) {
+  if (!Array.isArray(filters)) return { ok: false, observed: false };
+  const stints = [];
+  let openMark = null;
+  for (const m of marks || []) {
+    if (m.mk === 'manual-start') openMark = m;
+    else if (m.mk === 'manual-end' && openMark) { stints.push({ from: openMark.n, to: m.n }); openMark = null; }
+  }
+  const inStint = n => stints.some(s => n > s.from && n <= s.to);
+  const seg = rows.filter(r => inStint(r.n));
+  const autoRows = seg.filter(r => r.au !== 0).length, dead = seg.filter(r => r.ha !== 1).length;
+  let teleports = 0;
+  for (let i = 1; i < rows.length; i++) if (inStint(rows[i].n) && rows[i].n === rows[i - 1].n + 1 && Math.hypot(rows[i].hx - rows[i - 1].hx, rows[i].hz - rows[i - 1].hz) > MAX_STEP_MOVE) teleports++;
+  const gain = field => stints.reduce((sum, s) => {
+    const a = rows.find(r => r.n === s.from), b = rows.find(r => r.n === s.to);
+    return sum + (a && b ? b[field] - a[field] : 0);
+  }, 0);
+  const recs = side => filters.filter(f => inStint(f.n) && f.st === 'exposed' && f.side === side && hasAttacker(f));
+  const front = recs('front'), rear = recs('rear');
+  const frontMul = front.length > 0 && front.every(f => nearRel(f.out, f.dmg * def.front)), rearMul = rear.length > 0 && rear.every(f => nearRel(f.out, f.dmg * def.rear));
+  const frontGain = gain('fh'), rearGain = gain('rh');
+  // 키보드로 정면에서 친 뒤 옆을 돌아 등 뒤에서 친 순서: 첫 정면 타격 뒤에 등 뒤 타격이 있어야 한다.
+  // 창이 열릴 때 영웅이 이미 등 뒤에 있으면 AUTO 가 남긴 콤보가 먼저 등 뒤를 칠 수 있다(b14 smoke s-cand-rear). 그 타격은 순서 판정에 쓰지 않는다.
+  const rearAfterFront = front.length > 0 && rear.some(f => f.n > front[0].n);
+  return { ok: stints.length >= 1 && seg.length > 0 && autoRows === 0 && dead === 0 && teleports === 0 && frontGain >= 1 && rearGain >= 1 && front.length >= 1 && rear.length >= 1 && frontMul && rearMul && rearAfterFront,
+    observed: true, stints, rows: seg.length, autoRows, dead, teleports, frontHits: frontGain, rearHits: rearGain, frontRecords: front.length, rearRecords: rear.length, frontMul, rearMul,
+    firstFrontN: front[0]?.n ?? null, firstRearN: rear[0]?.n ?? null, rearAfterFront };
+}
+
+/**
+ * 창 안 일시정지(rear 프로필). 각 인자는 페이지 freeze 결과 { elapsed, paused, rear: { rs, wl, by, sq, bx, bz } }.
+ * before: 정지 직전(창 안), paused: 정지 직후, still: 60스텝 + 0.5초 뒤. 게임 시간·windowLeft·보스 yaw·attackSequence·위치가 정확히 같고,
+ * 재개 뒤 steps 스텝에서 windowLeft 가 흐른 게임 시간(elapsed 차)만큼 줄고 yaw·attackSequence 는 그대로여야 한다.
+ */
+export function checkRearPause({ before, paused, still, resumed, steps }) {
+  const snap = x => (x?.rear ? [x.elapsed, x.rear.rs, x.rear.wl, x.rear.by, x.rear.sq, x.rear.bx, x.rear.bz] : null);
+  const same = (a, b) => !!a && !!b && JSON.stringify(a) === JSON.stringify(b);
+  const frozen = !!before && before.rear?.rs === 'exposed' && paused?.paused === true && still?.paused === true && same(snap(before), snap(paused)) && same(snap(before), snap(still));
+  const delta = resumed && still ? resumed.elapsed - still.elapsed : null;
+  const decreased = resumed?.rear && before?.rear ? before.rear.wl - resumed.rear.wl : null;
+  const resumedOk = frozen && resumed?.rear?.rs === 'exposed' && delta > 0 && delta <= steps * FRAME + 2 * FRAME + EPS && nearAbs(decreased, delta, 1e-6)
+    && resumed.rear.by === before.rear.by && resumed.rear.sq === before.rear.sq;
+  return { ok: frozen && resumedOk, frozen, resumedOk, windowLeft: before?.rear?.wl ?? null, decreased, elapsedDelta: delta, yawKept: resumed?.rear?.by === before?.rear?.by, sequenceKept: resumed?.rear?.sq === before?.rear?.sq };
+}
+
+/** 기준선 누출 관찰 대상 문구(일반 잿불금고·후방 정의 없는 기준선 빌드에는 없어야 한다). */
+export const REAR_LEAK_WORDS = Object.freeze(['사슬 집행자 후방', '후방 노출', '사슬 갑주', '등 뒤가 약점', '용재 망치가 박히면']);
+/** 토스트·목표창 표본·결과 화면 글에 후방 문구가 없어야 한다. 관측이 하나도 없으면 통과하지 않는다. */
+export function checkRearLeak(toasts, doms, resultText = '') {
+  const texts = [...(toasts || []).map(t => String(t?.msg ?? '')), ...(doms || []).map(String), String(resultText ?? '')];
+  const leaked = texts.filter(m => REAR_LEAK_WORDS.some(w => m.includes(w)));
+  return { ok: (toasts || []).length > 0 && (doms || []).length > 0 && leaked.length === 0, toasts: (toasts || []).length, domSamples: (doms || []).length, leaked: leaked.slice(0, 4) };
+}
+
+/**
+ * screens 후방 순간. shot.capture.rear 는 PNG 를 찍은 스텝의 후방 행(+ dom). rear-armored: 보스 등장 뒤 armored 이고 목표창이 armored 문구, 부채꼴·갑주 호 숨김.
+ * rear-exposed: exposed 이고 windowLeft ≤ window − .5 이며 부채꼴·갑주 호가 보인다(색 정확). 관측 누락(-1)은 실패다.
+ */
+export function checkRearMoment(shot, def, label) {
+  const r = shot?.capture?.rear ?? null;
+  const dom = typeof r?.dom === 'string' ? r.dom : '';
+  const base = !!r && r.bo === 1 && r.al === 1 && r.spn === 0;
+  const state = label === 'rear-armored' ? base && r.rs === 'armored' : label === 'rear-exposed' ? base && r.rs === 'exposed' && r.wl > 0 && r.wl <= def.window - .5 + EPS : false;
+  const view = label === 'rear-armored' ? r?.wv === 0 && r?.gv === 0 && dom.includes(REAR.title) && dom.includes(REAR.armoredText)
+    : label === 'rear-exposed' ? r?.wv === 1 && r?.gv === 1 && r?.wc === REAR.wedge.color && r?.gc === REAR.guard.color : false;
+  return { ok: state && view, state, view, label, rear: r ? { rs: r.rs, wl: r.wl, wv: r.wv, gv: r.gv, wc: r.wc, gc: r.gc, dom: dom || null } : null };
 }

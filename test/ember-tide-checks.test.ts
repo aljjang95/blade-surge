@@ -1011,3 +1011,814 @@ describe('기준선 비교(compareTargetsOk · compareSetup · compareRuns)', ()
     expect(K.overPer1000(7, 0)).toBe(null);
   });
 });
+
+
+// ---------- 사슬 집행자 후방 노출(BUNDLE-14) ----------
+const REAR_DEF: any = DEF.rear;
+const RW: number = REAR_DEF.window;
+// 문구는 PLAN 3절의 계약 문장을 그대로 적는다(판정 함수의 상수를 가져오지 않는다).
+const R_TITLE = '사슬 집행자 후방';
+const R_ATTACH = '사슬 갑주 · 용재 망치가 박히면 등 뒤를 노리세요';
+const R_OPEN = '망치가 박혔다 · 4초 동안 등 뒤가 약점';
+const R_ARMORED = '용재 망치가 박히면 등 뒤로 · 정면은 사슬 갑주';
+const leftText = (wl: number) => (Math.ceil(wl * 10 - 1e-9) / 10).toFixed(1);
+const exposedText = (wl: number) => '후방 노출 ' + leftText(wl) + '초 · 등 뒤 200% · 정면 50%';
+const rearLine = (r: any) => '사슬 집행자 후방 공격 ' + r.rearHits + '회 · 노출 ' + r.windows + '번 · 정면 막힘 ' + r.frontHits + '회';
+
+/**
+ * 보스방 후방 행을 같은 규칙으로 만드는 모의 세션. 한 스텝에 행 하나. 보스 yaw 0 이면 정면은 +z 다.
+ * hit(side) 는 다음 스텝의 필터 기록(영웅 = 공격자 위치 포함)과 카운터 증가를 만든다.
+ */
+class RearSim {
+  rows: any[] = []; filters: any[] = []; toasts: string[] = []; n = 0; cur: any;
+  constructor() {
+    this.cur = { n: 0, t: 0, hx: 0, hz: 0, hp: 100, ha: 1, au: 1, ah: 0, ps: 'move', rs: 'idle', wl: 0, wn: 0, rh: 0, fh: 0, sh: 0, rd: 0, fd: 0, br: 0, ls: '',
+      bo: 0, al: 0, spn: 0, bs: null, sp: null, pk: null, sq: 0, cq: 0, ac: 1, by: 0, bx: 10, bz: 10, bvx: 0, bvz: 0, wv: 0, gv: 0, wc: 0x5ff0d0, gc: 0xd8a070 };
+  }
+  step(over: any = {}) {
+    const { dom, ...rest } = over;
+    this.n++;
+    this.cur = { ...this.cur, ...rest, n: this.n, t: this.n * FRAME };
+    const row: any = { ...this.cur };
+    if (dom !== undefined) row.dom = dom;
+    this.rows.push(row);
+    return row;
+  }
+  /**
+   * 다음 스텝에서 일어나는 타격 한 번. side 는 영웅이 선 자리(등 뒤 = 보스 정면 반대쪽, 정면 = 정면쪽, 옆 = 직각)이고 state 는 그 순간의 rear.state(기본 exposed).
+   * 영웅 = 공격자라 attacker.pos = 영웅 위치(ax·az = hx·hz). 필터 기록의 side 는 도구가 영웅 위치로 계산한 값이다.
+   * ctrlSide: 컨트롤러가 (잘못) 정한 구분(배율·집계에 쓴다, 기본은 side). attackerless: attacker 없는 호출(중독 틱 등: 1배, 세지 않음).
+   * heroOff: 기록의 영웅 위치를 attacker 위치에서 이만큼 어긋나게 한다.
+   */
+  hit(side: string, o: any = {}) {
+    const dmg = o.dmg ?? 100, st = o.st ?? 'exposed', yaw = this.cur.by, bx = this.cur.bx, bz = this.cur.bz;
+    const f = { x: Math.sin(yaw), z: Math.cos(yaw) };
+    const dir = side === 'rear' ? f : side === 'front' ? { x: -f.x, z: -f.z } : { x: f.z, z: -f.x };   // 공격자 → 보스
+    const ax = bx - dir.x * 2, az = bz - dir.z * 2;
+    const ctrl = o.ctrlSide ?? side;
+    const counted = st === 'exposed' && !o.attackerless && !o.uncounted;
+    const mult = !counted ? 1 : ctrl === 'rear' ? 2 : ctrl === 'front' ? .5 : 1;
+    const out = o.out ?? dmg * mult;
+    const hx = ax + (o.heroOff ?? 0);
+    this.filters.push({ n: this.n + 1, dmg, out, st, yaw, bx, bz, ax: o.attackerless ? null : ax, az: o.attackerless ? null : az, hx, hz: az,
+      side: o.attackerless ? null : (o.reportedSide ?? side) });
+    if (counted) {
+      if (ctrl === 'rear') { this.cur.rh++; this.cur.rd += out; } else if (ctrl === 'front') { this.cur.fh++; this.cur.fd += out; } else this.cur.sh++;
+      this.cur.ls = ctrl;
+    }
+  }
+  /** 보스 공격 한 번. complete 면 마지막 행에서 completedAttackSequence 가 attackSequence 와 같아진다. */
+  cast(sig: string, { complete = true, rows = 12 }: any = {}) {
+    const sq = this.cur.sq + 1;
+    for (let i = 0; i < rows; i++) this.step({ bs: 'attack', sp: sig, pk: sig, sq });
+    if (complete) this.step({ bs: 'attack', sp: sig, pk: sig, sq, cq: sq });
+    return sq;
+  }
+  idle(k: number, over: any = {}) { for (let i = 0; i < k; i++) this.step({ bs: 'chase', ...over }); }
+  /** 노출 창. 마지막 완성 행의 다음 스텝에 열린다(lag 1). hits: [{ k, side }]. */
+  window(o: any = {}) {
+    const len = o.rows ?? Math.round(RW / FRAME), toastOpen = o.toast ?? 1;
+    for (let i = 0; i < toastOpen; i++) this.toasts.push(R_OPEN);
+    for (let k = 0; k < len; k++) {
+      for (const h of (o.hits ?? []).filter((x: any) => x.k === k)) this.hit(h.side, h);
+      const wl = RW - k * FRAME;
+      const over: any = { rs: 'exposed', wl, wn: k === 0 ? this.cur.wn + 1 : this.cur.wn, wv: 1, gv: 1, bs: k < 5 ? 'attack' : 'chase', bvx: k < 5 ? .4 : 0, bvz: 0 };
+      if (k === o.yawAt) over.by = this.cur.by + .5;
+      if (k === o.seqAt) over.sq = this.cur.sq + 1;
+      if (k === o.velAt) { over.bs = 'chase'; over.bvx = .5; }
+      if (k === o.moveAt) over.bx = this.cur.bx + .7;
+      if (o.dom !== false && k % 6 === 0) over.dom = R_TITLE + (o.domText ? o.domText(wl) : exposedText(wl));
+      if (o.viewHidden === k) over.wv = 0;
+      if (o.viewMissing === k) over.wv = -1;
+      if (o.wedgeColor !== undefined && k === 3) over.wc = o.wedgeColor;
+      this.step(over);
+    }
+    if (o.kill) this.step({ rs: 'ended', al: 0, bs: 'dead', wl: 0, wv: 0, gv: 0 });
+    else this.step({ rs: o.after ?? 'armored', wl: 0, wv: 0, gv: 0, bs: 'chase', bvx: 0 });
+  }
+}
+/** 정상 세션: 보스 등장 → 부착 → 창 3번(마지막은 보스 처치로 끝남). 창마다 용재 망치 뒤에 열리고 등 뒤 타격이 있으며, 첫 창에는 정면·옆 타격도 있다. */
+function rearSession(over: any = {}) {
+  const s = new RearSim();
+  s.step(); s.step();
+  s.step({ bo: 1, al: 1, spn: 1, bs: 'spawn' });
+  for (let i = 0; i < 4; i++) s.step({ spn: 1 });
+  s.step({ spn: 0, bs: 'chase' });
+  if (over.attachToasts !== 0) for (let i = 0; i < (over.attachToasts ?? 1); i++) s.toasts.push(R_ATTACH);
+  s.step({ rs: 'armored', wv: 0, gv: 0 });
+  for (let i = 1; i <= 40; i++) s.step(i === 36 ? { dom: R_TITLE + R_ARMORED } : {});
+  s.cast('kiln_vents');
+  s.idle(20);
+  s.cast('kiln_hammer');
+  s.window({ hits: [{ k: 30, side: 'rear' }, { k: 60, side: 'front' }, { k: 70, side: 'side' }, { k: 90, side: 'rear' }], ...over.w1 });
+  s.idle(30);
+  s.cast(over.sig2 ?? 'kiln_hammer', over.cast2);
+  if (over.lag2) s.idle(over.lag2);
+  if (over.noOpen2) s.idle(40); else s.window({ hits: [{ k: 20, side: 'rear' }, { k: 100, side: 'rear' }], ...over.w2 });
+  s.idle(30);
+  s.cast('kiln_hammer');
+  s.window({ rows: 100, kill: true, hits: [{ k: 40, side: 'rear' }, { k: 99, side: 'rear' }], ...over.w3 });
+  return s;
+}
+const rearObs = (s: RearSim, over: any = {}) => {
+  const last = s.rows.at(-1);
+  const rear = { id: REAR_DEF.id, windows: last.wn, rearHits: last.rh, frontHits: last.fh, sideHits: last.sh, rearDamage: Math.round(last.rd), frontDamage: Math.round(last.fd), broken: last.br };
+  return { rows: s.rows, filters: s.filters, toasts: s.toasts.map(msg => ({ msg })), result: { rear }, resultText: '원정 결과 ' + rearLine(rear) + ' 전투 시간', resultLines: [{ aria: '사슬 집행자 후방 결과', text: rearLine(rear) }],
+    encounterTactic: null, ...over };
+};
+const analyzeR = (s: RearSim, over: any = {}, opts: any = {}) => K.analyzeRear(rearObs(s, over), REAR_DEF, opts);
+const failR = (a: any) => Object.entries(a.acceptance).filter(([, ok]) => !ok).map(([name]) => name);
+
+describe('후방 정의와 문구(checkRearDefinition · 도우미)', () => {
+  test('공유 정의 ember_deep.rear 는 PLAN 계약과 같다', () => {
+    expect(REAR_DEF).toBeTruthy();
+    expect(K.checkRearDefinition(REAR_DEF)).toEqual({ ok: true, issues: [] });
+  });
+  test('값이 어긋나면 어긋난 항목을 알린다', () => {
+    const r = K.checkRearDefinition({ ...REAR_DEF, window: 3, signature: 'kiln_vents' });
+    expect(r.ok).toBe(false);
+    expect(r.issues.map((i: any) => i.field).sort()).toEqual(['signature', 'window']);
+    expect(K.checkRearDefinition(null).ok).toBe(false);
+  });
+  test('열림 토스트·목표창 올림·결과 줄은 정의에서 만든다', () => {
+    expect(K.rearOpenToast(REAR_DEF)).toBe(R_OPEN);
+    expect(K.rearLeftText(4)).toBe('4.0');
+    expect(K.rearLeftText(3.9833)).toBe('4.0');
+    expect(K.rearLeftText(3.9)).toBe('3.9');
+    expect(K.rearLeftText(3.9000000000000004)).toBe('3.9');
+    expect(K.rearLeftText(.001)).toBe('0.1');
+    expect(K.rearExposedPattern(REAR_DEF).test('후방 노출 3.4초 · 등 뒤 200% · 정면 50%')).toBe(true);
+    expect(K.rearExposedPattern(REAR_DEF).test('후방 노출 3.4초 · 등 뒤 300% · 정면 50%')).toBe(false);
+    expect(K.rearResultLine({ rearHits: 5, windows: 3, frontHits: 1 })).toBe('사슬 집행자 후방 공격 5회 · 노출 3번 · 정면 막힘 1회');
+  });
+  test('방향 구분은 컨트롤러와 독립으로 같은 식을 쓴다(정면 +z, yaw 0)', () => {
+    expect(K.rearSideOf(0, 1, 0, REAR_DEF)).toBe('rear');
+    expect(K.rearSideOf(0, -1, 0, REAR_DEF)).toBe('front');
+    expect(K.rearSideOf(1, 0, 0, REAR_DEF)).toBe('side');
+    expect(K.rearSideOf(0, 0, 0, REAR_DEF)).toBe('side');
+    expect(K.rearSideOf(1, 1, 0, REAR_DEF)).toBe('rear');   // 내적 .707 ≥ .35
+    expect(K.rearSideOf(1, .3, 0, REAR_DEF)).toBe('side');   // .287 < .35
+    expect(K.rearSideOf(0, 1, Math.PI, REAR_DEF)).toBe('front');
+  });
+});
+
+describe('후방 종합 판정(analyzeRear)', () => {
+  test('정상 세션은 모든 항목을 통과한다(창 3번, 마지막 창은 보스 처치로 끝남)', () => {
+    const s = rearSession();
+    const a = analyzeR(s);
+    expect(failR(a)).toEqual([]);
+    expect(a.ok).toBe(true);
+    expect(a.windowCount).toBe(3);
+    expect(a.windows.map((w: any) => w.truncated)).toEqual([false, false, true]);
+    expect(a.windows.map((w: any) => w.delaySteps)).toEqual([1, 1, 1]);
+    expect(a.windows[0].length).toBeCloseTo(RW, 9);
+    expect(a.windows[2].length).toBeCloseTo(100 * FRAME, 9);
+    // 창 안 보스 이동(넉백)은 보고만 한다.
+    expect(a.windows[0].moveMax).toBe(0);
+    expect(a.filters.counts).toEqual({ rear: 6, front: 1, side: 1 });
+    expect(a.auto.windowsWithRear).toBe(3);
+    expect(a.auto.per[0].firstRearAfter).toBeCloseTo(31 * FRAME - 0 * FRAME - FRAME, 6);
+  });
+  test('열림은 완성 스텝(lag 0)이거나 다음 스텝(lag 1)이어도 통과한다', () => {
+    const s = new RearSim();
+    s.step({ bo: 1, al: 1, spn: 0, bs: 'chase' });
+    s.toasts.push(R_ATTACH);
+    s.step({ rs: 'armored' });
+    for (let i = 1; i <= 40; i++) s.step(i === 36 ? { dom: R_TITLE + R_ARMORED } : {});
+    s.cast('kiln_hammer', { complete: false });
+    // 완성 행이 곧 첫 노출 행이다.
+    s.toasts.push(R_OPEN);
+    const sq = s.cur.sq;
+    for (let k = 0; k < Math.round(RW / FRAME); k++) {
+      s.step({ rs: 'exposed', wl: RW - k * FRAME, wn: 1, wv: 1, gv: 1, bs: 'chase', sq, cq: sq, ...(k % 6 === 0 ? { dom: R_TITLE + exposedText(RW - k * FRAME) } : {}) });
+    }
+    s.step({ rs: 'armored', wl: 0, wv: 0, gv: 0 });
+    const w = K.checkRearWindows(s.rows, REAR_DEF);
+    expect(w.windows[0].delaySteps).toBe(0);
+    expect(w.acceptance.noEarlyOpen && w.acceptance.openTiming && w.acceptance.windowLength).toBe(true);
+  });
+  test('다른 시그니처(kiln_vents) 완성 뒤에 열리면 noEarlyOpen 이 실패한다', () => {
+    const a = analyzeR(rearSession({ sig2: 'kiln_vents' }));
+    expect(failR(a)).toContain('noEarlyOpen');
+    expect(a.windows[1].reasons).toEqual(['wrong-signature']);
+  });
+  test('열림이 2스텝 늦으면 openTiming 이 실패한다(1스텝 늦음은 통과)', () => {
+    const late = analyzeR(rearSession({ lag2: 1 }));
+    expect(late.windows[1].delaySteps).toBe(2);
+    expect(failR(late)).toContain('openTiming');
+    expect(late.windows[1].reasons).toEqual(['late-open']);
+  });
+  test('용재 망치가 완성됐는데 열리지 않으면 noMissedOpen 이 실패한다(보스 처치 스텝은 제외)', () => {
+    const a = analyzeR(rearSession({ noOpen2: true, w3: {} }));
+    expect(failR(a)).toContain('noMissedOpen');
+    expect(a.missed.length).toBe(1);
+    // 마지막 망치가 완성되는 순간 보스가 죽으면 열지 않아도 된다.
+    const s = rearSession();
+    expect(K.checkRearWindows(s.rows, REAR_DEF).missed).toEqual([]);
+  });
+  test('창 길이 3.5초(210스텝)는 windowLength 가 실패하고, 4초(240스텝)·4초 ± 1/60 은 통과한다', () => {
+    expect(failR(analyzeR(rearSession({ w1: { rows: 210 } })))).toEqual(expect.arrayContaining(['windowLength']));
+    const a = analyzeR(rearSession({ w1: { rows: 210, dom: false } }));
+    expect(a.windows[0].length).toBeCloseTo(3.5, 9);
+    expect(a.windows[0].lengthOk).toBe(false);
+    expect(analyzeR(rearSession({ w2: { rows: 241 } })).windows[1].lengthOk).toBe(true);    // 4.0167 = 4 + 1/60
+    expect(analyzeR(rearSession({ w2: { rows: 242 } })).windows[1].lengthOk).toBe(false);   // 4.0333
+    expect(analyzeR(rearSession({ w2: { rows: 239 } })).windows[1].lengthOk).toBe(true);
+    expect(analyzeR(rearSession({ w2: { rows: 238 } })).windows[1].lengthOk).toBe(false);
+  });
+  test('보스 처치로 끝난 마지막 창만 길이를 면제하고 기록한다. 다른 창이 짧게 끝나면 면제되지 않는다', () => {
+    const a = analyzeR(rearSession());
+    expect(a.windows[2].truncated).toBe(true);
+    expect(a.windows[2].lengthOk).toBe(true);
+    // 마지막 창이 4초보다 길면(처치 아님) 면제하지 않는다. 처치된 창도 window 보다 길 수는 없다.
+    const longKill = analyzeR(rearSession({ w3: { rows: 250 } }));
+    expect(longKill.windows[2].lengthOk).toBe(false);
+  });
+  test('끝나지 않은 창(행이 창 안에서 끊김)은 위반이다', () => {
+    const s = rearSession();
+    s.rows.length = s.rows.findIndex((r: any) => r.rs === 'ended') - 5;   // 마지막 창 한가운데에서 끊음
+    const w = K.checkRearWindows(s.rows, REAR_DEF);
+    expect(w.windows.at(-1).unterminated).toBe(true);
+    expect(w.acceptance.windowLength).toBe(false);
+  });
+  test('windowLeft 시계: 첫 값이 window 가 아니거나 감소량이 게임 시각과 다르면 실패한다', () => {
+    const s = rearSession();
+    const w1 = s.rows.findIndex((r: any) => r.rs === 'exposed');
+    s.rows[w1 + 10].wl += .05;
+    expect(K.checkRearWindows(s.rows, REAR_DEF).windows[0].clockBad).toBeGreaterThan(0);
+    const t = rearSession();
+    const i = t.rows.findIndex((r: any) => r.rs === 'exposed');
+    t.rows[i].wl = 3.5;
+    expect(K.checkRearWindows(t.rows, REAR_DEF).windows[0].startOk).toBe(false);
+  });
+  test('시계 면제는 게임 시각도 windowLeft 도 정확히 같은 스텝뿐이다', () => {
+    const s = rearSession();
+    const i = s.rows.findIndex((r: any) => r.rs === 'exposed') + 20;
+    // 같은 스텝 값이 그대로(시각·windowLeft 모두 같음): 면제
+    s.rows[i + 1] = { ...s.rows[i + 1], t: s.rows[i].t, wl: s.rows[i].wl };
+    for (let k = i + 2; k < i + 6; k++) { s.rows[k] = { ...s.rows[k], t: s.rows[k].t - FRAME, wl: s.rows[k].wl + FRAME }; }
+    const w = K.checkRearWindows(s.rows, REAR_DEF);
+    expect(w.windows[0].clockBad).toBe(0);
+    // windowLeft 만 같고 시각은 흐르면 위반
+    const u = rearSession();
+    const j = u.rows.findIndex((r: any) => r.rs === 'exposed') + 20;
+    for (let k = j + 1; k < u.rows.length && u.rows[k].rs === 'exposed'; k++) u.rows[k] = { ...u.rows[k], wl: u.rows[k].wl + FRAME };
+    expect(K.checkRearWindows(u.rows, REAR_DEF).windows[0].clockBad).toBe(1);
+  });
+  test('창 안 보스 yaw 가 바뀌면 yawFixed 가 실패한다', () => {
+    const a = analyzeR(rearSession({ w1: { yawAt: 100 } }));
+    expect(failR(a)).toContain('yawFixed');
+  });
+  test('창 안 attackSequence 가 늘면(새 공격) noNewAttack 이 실패한다', () => {
+    const a = analyzeR(rearSession({ w2: { seqAt: 120 } }));
+    expect(failR(a)).toContain('noNewAttack');
+    expect(a.windows[1].seqStable).toBe(false);
+  });
+  test('보스 state 가 chase 인데 속도가 0 이 아니면 pinnedStill 이 실패하고, attack 같은 다른 state 의 속도는 보지 않는다. 넉백 이동은 보고만 한다', () => {
+    expect(failR(analyzeR(rearSession({ w1: { velAt: 100 } })))).toContain('pinnedStill');
+    const ok = analyzeR(rearSession({ w1: { moveAt: 50 } }));
+    expect(failR(ok)).toEqual([]);
+    expect(ok.windows[0].moveMax).toBeCloseTo(.7, 9);
+    expect(ok.windows[0].chaseRows).toBeGreaterThan(0);
+  });
+  test('배율: 정면 타격 출력이 입력 그대로(1배)이면 multiplier 가 실패한다', () => {
+    const a = analyzeR(rearSession({ w1: { hits: [{ k: 30, side: 'rear' }, { k: 60, side: 'front', out: 100 }] } }));
+    expect(failR(a)).toContain('multiplier');
+    expect(a.filters.bad.map((b: any) => b.kind)).toContain('exposed-multiplier');
+    // 출력/입력 = 1 은 '옆'으로 읽히지만 영웅은 정면이라 독립 대조(b)도 실패한다.
+    expect(a.filters.bad.some((b: any) => b.kind === 'side-mismatch' && b.side === 'front' && b.fromRatio === 'side')).toBe(true);
+  });
+  test('배율: 창 밖(armored) 호출이 2배가 되면 multiplier 가 실패한다', () => {
+    const s = rearSession();
+    const i = s.rows.findIndex((r: any) => r.rs === 'armored');
+    s.filters.push({ n: s.rows[i + 3].n, dmg: 100, out: 200, st: 'armored', yaw: 0, bx: 10, bz: 10, ax: 10, az: 8, hx: 10, hz: 8, side: 'rear' });
+    const a = analyzeR(s);
+    expect(failR(a)).toEqual(['multiplier']);
+    expect(a.filters.bad[0].kind).toBe('outside-window');
+  });
+  test('배율: attacker 없는 호출(중독 틱)은 1배이고 세지 않는다. attacker 없는데 2배면 실패한다', () => {
+    const ok = rearSession();
+    ok.filters.push({ n: 100, dmg: 40, out: 40, st: 'exposed', yaw: 0, bx: 10, bz: 10, ax: null, az: null, hx: 10, hz: 8, side: null });
+    const a = analyzeR(ok);
+    expect(failR(a)).toEqual([]);
+    expect(a.filters.attackerless).toBe(1);
+    expect(a.filters.counts).toEqual({ rear: 6, front: 1, side: 1 });
+    const bad = rearSession();
+    bad.filters.push({ n: 100, dmg: 40, out: 80, st: 'exposed', yaw: 0, bx: 10, bz: 10, ax: null, az: null, hx: 10, hz: 8, side: null });
+    const b = analyzeR(bad);
+    expect(failR(b)).toEqual(['multiplier']);
+    expect(b.filters.bad[0].kind).toBe('exposed-multiplier');
+    // 시뮬레이터의 attackerless 타격도 같은 모양이다(창 안, 1배, 컨트롤러 집계 없음).
+    const sim = rearSession({ w1: { hits: [{ k: 30, side: 'rear' }, { k: 40, side: 'rear', attackerless: true }] } });
+    expect(failR(analyzeR(sim))).toEqual([]);
+    expect(analyzeR(sim).filters.attackerless).toBe(1);
+  });
+  test('필터 기록 모양: n·dmg·out·st·yaw·bx·bz·ax·az·hx·hz·side 가 있고 방향(dx·dz) 필드는 없다. 정상 기록은 영웅 = 공격자 위치다', () => {
+    const s = rearSession();
+    const f = s.filters.find((x: any) => x.side === 'rear');
+    expect(Object.keys(f).sort()).toEqual(['ax', 'az', 'bx', 'bz', 'dmg', 'hx', 'hz', 'n', 'out', 'side', 'st', 'yaw']);
+    expect(f.ax).toBe(f.hx);
+    expect(f.az).toBe(f.hz);
+    expect(f.st).toBe('exposed');
+    const none = rearSession({ w1: { hits: [{ k: 30, side: 'rear', attackerless: true }] } }).filters.find((x: any) => x.ax === null);
+    expect(none.az).toBeNull();
+    expect(none.side).toBeNull();
+    expect(K.hasAttacker(f)).toBe(true);
+    expect(K.hasAttacker(none)).toBe(false);
+  });
+  test('독립 대조 (b) — P1 재현: 정면에 선 영웅인데 컨트롤러가 등 뒤(배율 2)로 판정하면 실패한다', () => {
+    const a = analyzeR(rearSession({ w1: { hits: [{ k: 30, side: 'rear' }, { k: 60, side: 'front', ctrlSide: 'rear' }] } }));
+    expect(failR(a)).toContain('multiplier');
+    const kinds = a.filters.bad.map((b: any) => b.kind);
+    expect(kinds).toContain('side-mismatch');
+    expect(kinds).toContain('exposed-multiplier');
+    expect(a.filters.bad.find((b: any) => b.kind === 'side-mismatch')).toMatchObject({ side: 'front', fromRatio: 'rear', dmg: 100, out: 200 });
+    // 컨트롤러 집계(rearHits)는 도구가 센 구분별 수와도 어긋난다.
+    expect(a.filters.aggregate).toBe(false);
+    // 반대로 등 뒤에 선 영웅이 정면 50%를 받아도 실패한다(P1 의 다른 방향).
+    const b = analyzeR(rearSession({ w1: { hits: [{ k: 30, side: 'rear', ctrlSide: 'front' }, { k: 60, side: 'front' }] } }));
+    expect(b.filters.bad.some((x: any) => x.kind === 'side-mismatch' && x.side === 'rear' && x.fromRatio === 'front')).toBe(true);
+    expect(failR(b)).toContain('multiplier');
+  });
+  test('독립 대조 (b): 영웅 위치로 계산한 side 와 배율에서 읽은 side 가 같으면 구분 셋 모두 통과한다. 입력 0 은 읽을 수 없어 따로 센다', () => {
+    const ok = rearSession();
+    expect(K.checkRearFilters(ok.filters, ok.rows, REAR_DEF).bad).toEqual([]);
+    expect(K.rearSideFromRatio(100, 200, REAR_DEF)).toBe('rear');
+    expect(K.rearSideFromRatio(100, 50, REAR_DEF)).toBe('front');
+    expect(K.rearSideFromRatio(100, 100, REAR_DEF)).toBe('side');
+    expect(K.rearSideFromRatio(100, 150, REAR_DEF)).toBeNull();
+    expect(K.rearSideFromRatio(0, 0, REAR_DEF)).toBeNull();
+    expect(K.rearSideFromRatio(100, 200 * (1 + 5e-10), REAR_DEF)).toBe('rear');
+    expect(K.rearSideFromRatio(100, 200 * (1 + 2e-9), REAR_DEF)).toBeNull();
+    const zero = rearSession({ w1: { hits: [{ k: 30, side: 'rear' }, { k: 60, side: 'front', dmg: 0 }] } });
+    const f = K.checkRearFilters(zero.filters, zero.rows, REAR_DEF);
+    expect(f.unreadable).toBe(1);
+    expect(f.ok).toBe(true);
+  });
+  test('독립 대조 (a): attacker 위치가 그 순간 영웅 위치와 다르면(1e-6 초과) 실패하고, 이내면 통과한다. 영웅 위치를 못 읽어도 실패한다', () => {
+    const far = analyzeR(rearSession({ w1: { hits: [{ k: 30, side: 'rear', heroOff: 1e-3 }] } }));
+    expect(failR(far)).toContain('multiplier');
+    expect(far.filters.bad[0].kind).toBe('attacker-not-hero');
+    const near = analyzeR(rearSession({ w1: { hits: [{ k: 30, side: 'rear', heroOff: 5e-7 }] } }));
+    expect(near.filters.bad.some((b: any) => b.kind === 'attacker-not-hero')).toBe(false);
+    const edge = analyzeR(rearSession({ w1: { hits: [{ k: 30, side: 'rear', heroOff: 2e-6 }] } }));
+    expect(edge.filters.bad[0].kind).toBe('attacker-not-hero');
+    const s = rearSession();
+    s.filters.find((x: any) => x.side === 'rear').hx = null;
+    const miss = K.checkRearFilters(s.filters, s.rows, REAR_DEF);
+    expect(miss.ok).toBe(false);
+    expect(miss.bad[0].kind).toBe('hero-not-observed');
+    // 창 밖(armored) 호출도 attacker 가 있으면 (a)는 본다.
+    const t = rearSession();
+    const i = t.rows.findIndex((r: any) => r.rs === 'armored');
+    t.filters.push({ n: t.rows[i + 3].n, dmg: 100, out: 100, st: 'armored', yaw: 0, bx: 10, bz: 10, ax: 10, az: 8, hx: 10, hz: 7, side: 'rear' });
+    expect(analyzeR(t).filters.bad[0].kind).toBe('attacker-not-hero');
+  });
+  test('attacker 가 있는데 side 를 못 구했으면(null) 실패한다', () => {
+    const s = rearSession();
+    s.filters.find((x: any) => x.side === 'rear').side = null;
+    const f = K.checkRearFilters(s.filters, s.rows, REAR_DEF);
+    expect(f.ok).toBe(false);
+    expect(f.bad[0].kind).toBe('bad-side');
+  });
+  test('보조 관측: 그 스텝 행으로 다시 계산한 구분이 다른 호출은 판정 없이 세고, 경계 ±.05 안은 따로 센다', () => {
+    const s = rearSession();
+    const syncRow = (f: any) => { const row = s.rows.find((r: any) => r.n === f.n); Object.assign(row, { hx: f.hx, hz: f.hz, bx: f.bx, bz: f.bz, by: f.yaw }); return row; };
+    for (const f of s.filters) syncRow(f);
+    const same = K.checkRearFilters(s.filters, s.rows, REAR_DEF);
+    expect(same.ok).toBe(true);
+    expect(same.rowCheck).toEqual({ calls: 8, noRow: 0, differ: 0, differNearEdge: 0, differHard: 0 });
+    // 행의 영웅이 보스 옆으로 가 있으면(내적 0) 다른 구분이지만 판정은 그대로 통과한다.
+    const hard = s.filters.find((f: any) => f.side === 'rear');
+    Object.assign(s.rows.find((r: any) => r.n === hard.n), { hx: hard.bx - 2, hz: hard.bz });
+    // 행의 영웅이 등 뒤 문턱(.35) 바로 아래(내적 .33)로 가 있으면 경계 안으로 센다.
+    const edge = s.filters.filter((f: any) => f.side === 'rear')[1];
+    const dir = { x: Math.sqrt(1 - .33 * .33), z: .33 };
+    Object.assign(s.rows.find((r: any) => r.n === edge.n), { hx: edge.bx - dir.x * 2, hz: edge.bz - dir.z * 2 });
+    const diff = K.checkRearFilters(s.filters, s.rows, REAR_DEF);
+    expect(diff.rowCheck).toEqual({ calls: 8, noRow: 0, differ: 2, differNearEdge: 1, differHard: 1 });
+    expect(diff.ok).toBe(true);
+    // 행이 없으면 noRow 로 센다(판정 아님).
+    const none = K.checkRearFilters(s.filters, s.rows.filter((r: any) => r.n !== hard.n), REAR_DEF);
+    expect(none.rowCheck.noRow).toBe(1);
+    expect(none.ok).toBe(true);
+  });
+  test('배율: 상대오차 1e-9 이내는 통과, 그 밖은 실패. 비정수 피해도 같다', () => {
+    const s = rearSession();
+    const k = s.filters.find((f: any) => f.side === 'rear');
+    k.dmg = 123.456789; k.out = 123.456789 * 2 * (1 + 5e-10);
+    expect(K.checkRearFilters(s.filters, s.rows, REAR_DEF).ok).toBe(true);
+    k.out = 123.456789 * 2 * (1 + 2e-9);
+    expect(K.checkRearFilters(s.filters, s.rows, REAR_DEF).ok).toBe(false);
+  });
+  test('집계: 컨트롤러 rearHits 와 필터 기록 수가 다르면 multiplier 가 실패한다', () => {
+    const s = rearSession();
+    s.rows.at(-1).rh += 1;
+    const a = analyzeR(s);
+    expect(failR(a)).toContain('multiplier');
+    expect(a.filters.aggregate).toBe(false);
+    const t = rearSession();
+    t.rows.at(-1).fh += 1;
+    expect(analyzeR(t).filters.aggregate).toBe(false);
+    const u = rearSession();
+    u.rows.at(-1).sh += 1;
+    expect(analyzeR(u).filters.aggregate).toBe(false);
+  });
+  test('필터 기록을 관측하지 못했으면(null) 실패한다', () => {
+    expect(failR(analyzeR(rearSession(), { filters: null }))).toContain('multiplier');
+  });
+  test('AUTO 후방: 정면 타격이 등 뒤 이상이거나 등 뒤 타격이 있는 창이 없으면 실패하고, auto 요구가 없으면 항목에서 빠진다', () => {
+    const front = rearSession({ w1: { hits: [{ k: 30, side: 'front' }, { k: 60, side: 'front' }] }, w2: { hits: [{ k: 20, side: 'front' }] }, w3: { hits: [{ k: 40, side: 'rear' }] } });
+    const a = analyzeR(front);
+    expect(failR(a)).toEqual(['autoRear']);
+    expect(a.auto.rearHits).toBe(1);
+    expect(a.auto.frontHits).toBe(3);
+    const none = analyzeR(rearSession({ w1: { hits: [] }, w2: { hits: [] }, w3: { hits: [] } }));
+    expect(failR(none)).toContain('autoRear');
+    expect(none.auto.windowsWithRear).toBe(0);
+    expect(Object.keys(analyzeR(front, {}, { autoRear: false }).acceptance)).not.toContain('autoRear');
+    expect(analyzeR(front, {}, { autoRear: false }).ok).toBe(true);
+  });
+  test('뷰: exposed 인데 부채꼴이 숨어 있으면 rearView 가 실패한다', () => {
+    expect(failR(analyzeR(rearSession({ w1: { viewHidden: 50 } })))).toEqual(['rearView']);
+  });
+  test('뷰: 창 밖에서 보이면 실패하고, 관측을 못 하면(-1) 실패하며, 색이 다르면 실패한다', () => {
+    const s = rearSession();
+    const i = s.rows.findIndex((r: any) => r.rs === 'armored' && r.n > s.rows.find((x: any) => x.rs === 'exposed').n);
+    s.rows[i].gv = 1;
+    expect(failR(analyzeR(s))).toEqual(['rearView']);
+    expect(failR(analyzeR(rearSession({ w1: { viewMissing: 50 } })))).toEqual(['rearView']);
+    expect(failR(analyzeR(rearSession({ w1: { wedgeColor: 0xff0000 } })))).toEqual(['rearView']);
+    const v = K.checkRearView(rearSession({ w1: { viewMissing: 50 } }).rows);
+    expect(v.missing).toBe(1);
+  });
+  test('뷰: 부착 뒤 모든 행의 관측이 없으면(뷰 자체가 없음) 실패한다. 부착 전 행의 관측 누락은 보지 않는다', () => {
+    const s = rearSession();
+    for (const r of s.rows) { r.wv = -1; r.gv = -1; r.wc = -1; r.gc = -1; }
+    expect(K.checkRearView(s.rows).ok).toBe(false);
+    const t = rearSession();
+    for (const r of t.rows.filter((x: any) => x.rs === 'idle')) { r.wv = -1; r.gv = -1; }
+    expect(K.checkRearView(t.rows).ok).toBe(true);
+  });
+  test('목표창: 올림이 틀리면(내림 표기) objectiveText 가 실패한다', () => {
+    const floored = (wl: number) => '후방 노출 ' + (Math.floor(wl * 10) / 10).toFixed(1) + '초 · 등 뒤 200% · 정면 50%';
+    const a = analyzeR(rearSession({ w1: { domText: floored } }));
+    expect(failR(a)).toEqual(['objectiveText']);
+    expect(a.objective.bad[0].why).toBe('exposed-text');
+  });
+  test('목표창: 퍼센트가 정의와 다르거나 armored 문구가 틀리거나 제목이 없으면 실패한다', () => {
+    expect(failR(analyzeR(rearSession({ w1: { domText: (wl: number) => '후방 노출 ' + leftText(wl) + '초 · 등 뒤 300% · 정면 50%' } })))).toEqual(['objectiveText']);
+    const s = rearSession();
+    s.rows.find((r: any) => r.dom === R_TITLE + R_ARMORED).dom = R_TITLE + '용재 망치가 박히면 등 뒤로';
+    expect(failR(analyzeR(s))).toEqual(['objectiveText']);
+    const t = rearSession();
+    t.rows.find((r: any) => r.dom === R_TITLE + R_ARMORED).dom = R_ARMORED;
+    expect(K.checkRearObjective(t.rows, REAR_DEF).bad[0].why).toBe('title');
+  });
+  test('목표창: 창이 열린 직후 갱신 주기(0.1초+2스텝) 안의 armored 문구는 갱신 대기로 세고, 주기를 넘으면 실패한다', () => {
+    const s = rearSession();
+    const open = s.rows.findIndex((r: any) => r.rs === 'exposed');
+    const first = s.rows[open];
+    first.dom = R_TITLE + R_ARMORED;
+    const a = K.checkRearObjective(s.rows, REAR_DEF);
+    expect(a.ok).toBe(true);
+    expect(a.lagCount).toBe(1);
+    // 주기를 넘은 표본(열린 뒤 0.2초)에 armored 문구가 남아 있으면 실패다.
+    const t = rearSession();
+    const at = t.rows.findIndex((r: any) => r.rs === 'exposed');
+    const late = t.rows.slice(at).find((r: any) => r.rs === 'exposed' && r.t - t.rows[at].t >= .2 - 1e-9);
+    late.dom = R_TITLE + R_ARMORED;
+    const b = K.checkRearObjective(t.rows, REAR_DEF);
+    expect(b.ok).toBe(false);
+    expect(b.bad[0].why).toBe('exposed-text');
+    // 주기 안이라도 앞 상태 문구가 아닌 다른 문구는 실패다.
+    const u = rearSession();
+    const uo = u.rows.findIndex((r: any) => r.rs === 'exposed');
+    u.rows[uo].dom = R_TITLE + '아무 문구';
+    expect(K.checkRearObjective(u.rows, REAR_DEF).ok).toBe(false);
+  });
+  test('목표창(P3-2): armored 로 돌아간 뒤 갱신 주기를 넘은 표본(0.6초 뒤)에 창 문구가 남아 있으면 실패하고, 주기 안이면 갱신 대기로 센다', () => {
+    const s = rearSession();
+    const open = s.rows.findIndex((r: any) => r.rs === 'exposed');
+    const back = s.rows.findIndex((r: any, i: number) => i > open && r.rs === 'armored');
+    const at = (dt: number) => s.rows.findIndex((r: any, i: number) => i >= back && r.t - s.rows[back].t >= dt - 1e-9);
+    // 주기 안(0.05초 뒤)의 열림 문구: 갱신 대기.
+    s.rows[at(.05)].dom = R_TITLE + exposedText(.1);
+    const a = K.checkRearObjective(s.rows, REAR_DEF);
+    expect(a.ok).toBe(true);
+    expect(a.lagCount).toBe(1);
+    // 주기를 넘은 표본(0.2초·0.6초 뒤)에 열림 문구가 남아 있으면 실패다.
+    for (const dt of [.2, .6]) {
+      const t = rearSession();
+      const b = t.rows.findIndex((r: any, i: number) => i > open && r.rs === 'armored');
+      const late = t.rows.findIndex((r: any, i: number) => i >= b && r.t - t.rows[b].t >= dt - 1e-9);
+      expect(t.rows[late].rs).toBe('armored');
+      t.rows[late].dom = R_TITLE + exposedText(.1);
+      const c = K.checkRearObjective(t.rows, REAR_DEF);
+      expect(c.ok).toBe(false);
+      expect(c.bad[0]).toMatchObject({ n: t.rows[late].n, state: 'armored', why: 'armored-text' });
+    }
+  });
+  test('목표창: 보스가 쓰러진 행(al 0)의 정화 완료 문구는 판정하지 않는다. 살아 있는 행이면 실패한다', () => {
+    const s = rearSession();
+    const at = s.rows.findIndex((r: any) => r.rs === 'exposed');
+    const row = s.rows[at + 30];
+    row.dom = '정화 완료원정 결과를 확인하세요.'; row.al = 0;
+    expect(K.checkRearObjective(s.rows, REAR_DEF).ok).toBe(true);
+    row.al = 1;
+    const b = K.checkRearObjective(s.rows, REAR_DEF);
+    expect(b.ok).toBe(false);
+    expect(b.bad[0].why).toBe('title');
+  });
+  test('목표창: armored 표본이나 exposed 표본이 하나도 없으면 실패한다', () => {
+    const noExposed = analyzeR(rearSession({ w1: { dom: false }, w2: { dom: false }, w3: { dom: false } }));
+    expect(failR(noExposed)).toEqual(['objectiveText']);
+    const s = rearSession();
+    delete s.rows.find((r: any) => r.dom === R_TITLE + R_ARMORED).dom;
+    expect(failR(analyzeR(s))).toEqual(['objectiveText']);
+  });
+  test('결과: routeObjective.rear 가 마지막 관측값과 다르거나 키가 모자라면 실패한다', () => {
+    const s = rearSession();
+    const obs: any = rearObs(s);
+    obs.result.rear.rearHits += 1;
+    expect(K.checkRearResult(obs.result, s.rows.at(-1), obs.resultText, obs.resultLines, REAR_DEF).fields).toBe(false);
+    const t = rearSession();
+    const o2: any = rearObs(t);
+    delete o2.result.rear.broken;
+    expect(K.checkRearResult(o2.result, t.rows.at(-1), o2.resultText, o2.resultLines, REAR_DEF).fields).toBe(false);
+    const u = rearSession();
+    const o3: any = rearObs(u);
+    o3.result.rear.id = 'other';
+    expect(K.checkRearResult(o3.result, u.rows.at(-1), o3.resultText, o3.resultLines, REAR_DEF).fields).toBe(false);
+    expect(K.checkRearResult(null, u.rows.at(-1), '', [], REAR_DEF).ok).toBe(false);
+  });
+  test('결과 줄 문구가 한 글자라도 다르거나 요소가 없거나 둘이면 실패한다', () => {
+    const s = rearSession();
+    const wrong = analyzeR(s, { resultLines: [{ aria: '사슬 집행자 후방 결과', text: rearLine(rearObs(s).result.rear).replace('공격', '타격') }] });
+    expect(failR(wrong)).toEqual(['resultRear']);
+    const body = analyzeR(s, { resultText: '원정 결과 사슬 집행자 후방 공격 0회 · 노출 0번 · 정면 막힘 0회' });
+    expect(failR(body)).toEqual(['resultRear']);
+    const line = rearLine(rearObs(s).result.rear);
+    expect(failR(analyzeR(s, { resultLines: [] }))).toEqual(['resultRear']);
+    expect(failR(analyzeR(s, { resultLines: [{ aria: '사슬 집행자 후방 결과', text: line }, { aria: '사슬 집행자 후방 결과', text: line }] }))).toEqual(['resultRear']);
+    expect(failR(analyzeR(s, { resultLines: [{ aria: '냉각 밸브 개방 결과', text: line }] }))).toEqual(['resultRear']);
+    expect(failR(analyzeR(s, { resultLines: [{ aria: '사슬 집행자 후방 결과', text: ' ' + line.replace(' · ', '  ·  ') + ' ' }] }))).toEqual([]);   // 공백 정규화만 허용
+  });
+  test('토스트: 열림 토스트가 창마다 1회가 아니면(2회·0회) 실패하고, 문구가 비슷해도 정확히 같지 않으면 누출로 센다', () => {
+    expect(failR(analyzeR(rearSession({ w1: { toast: 2 } })))).toEqual(['openToasts']);
+    expect(failR(analyzeR(rearSession({ w2: { toast: 0 } })))).toEqual(['openToasts']);
+    const s = rearSession();
+    s.toasts.push('망치가 박혔다 · 4초 동안 등 뒤가 약점!');
+    const a = analyzeR(s);
+    expect(failR(a)).toEqual(['openToasts']);
+    expect(a.toasts.stray).toEqual(['망치가 박혔다 · 4초 동안 등 뒤가 약점!']);
+  });
+  test('토스트: 부착 토스트가 0회·2회면 attachToast 가 실패하고, 보스 전술 토스트(정확히 같음)는 누출에서 면제한다', () => {
+    expect(failR(analyzeR(rearSession({ attachToasts: 0 })))).toEqual(['attachToast', 'openToasts']);
+    expect(failR(analyzeR(rearSession({ attachToasts: 2 })))).toEqual(['attachToast', 'openToasts']);
+    const s = rearSession();
+    const tactic = '용재 망치의 마지막 고리가 터지면 4초 동안 집행자가 제자리에 묶입니다. 망치가 박혔다 · 4초 동안 등 뒤가 약점';
+    s.toasts.push(tactic);
+    expect(failR(analyzeR(s))).toEqual(['openToasts']);
+    expect(failR(analyzeR(s, { encounterTactic: tactic }))).toEqual([]);
+    expect(failR(analyzeR(s, { encounterTactic: tactic + '.' }))).toEqual(['openToasts']);
+  });
+  test('열림 토스트 수는 관측 창 수·컨트롤러 windows 와 모두 같아야 한다', () => {
+    const s = rearSession();
+    expect(K.checkRearToasts(s.toasts.map(msg => ({ msg })), REAR_DEF, { windows: 3, controllerWindows: 3 }).ok).toBe(true);
+    expect(K.checkRearToasts(s.toasts.map(msg => ({ msg })), REAR_DEF, { windows: 3, controllerWindows: 4 }).ok).toBe(false);
+    expect(K.checkRearToasts(s.toasts.map(msg => ({ msg })), REAR_DEF, {}).ok).toBe(false);
+  });
+  test('부착: 보스가 spawning 인데 armored 이거나, 부착이 3스텝 늦거나, 전이가 어긋나면 attach 가 실패한다', () => {
+    const early = new RearSim();
+    early.step({ bo: 1, al: 1, spn: 1, bs: 'spawn' });
+    early.step({ rs: 'armored' });
+    expect(K.checkRearAttach(early.rows).ok).toBe(false);
+    const late = new RearSim();
+    late.step({ bo: 1, al: 1, spn: 0 });
+    for (let i = 0; i < 3; i++) late.step({});
+    late.step({ rs: 'armored' });
+    const l = K.checkRearAttach(late.rows);
+    expect(l.ok).toBe(false);
+    expect(l.delay).toBe(4);
+    const bad = rearSession();
+    const i = bad.rows.findIndex((r: any) => r.rs === 'armored');
+    bad.rows[i + 3].rs = 'idle';
+    expect(K.checkRearAttach(bad.rows).badTransitions.length).toBeGreaterThan(0);
+    expect(K.checkRearAttach([]).ok).toBe(false);
+    expect(K.checkRearAttach(rearSession().rows).ok).toBe(true);
+  });
+  test('행이 하나도 없으면(보스방 관측 누락) 통과하지 않는다', () => {
+    const a = K.analyzeRear({ rows: [], filters: [], toasts: [], result: null, resultText: '', resultLines: [] }, REAR_DEF);
+    expect(a.ok).toBe(false);
+  });
+  test('판정에 쓰는 시간·배율은 정의에서 읽는다(정의 window 를 바꾸면 기대도 바뀐다)', () => {
+    const s = rearSession();
+    const a = K.analyzeRear(rearObs(s), { ...REAR_DEF, window: 3 });
+    expect(a.acceptance.windowLength).toBe(false);
+    expect(a.acceptance.openToasts).toBe(false);
+    expect(a.acceptance.definition).toBe(false);
+  });
+});
+
+describe('기존 판정은 rear 가 있어도 그대로(checkResultFields · analyzeTide)', () => {
+  test('결과에 rear 키가 있어도 기존 필드 판정은 같다', () => {
+    const plain = resultOf(DEF, { overheatHits: 2 });
+    const withRear = { ...plain, rear: { id: REAR_DEF.id, windows: 3, rearHits: 5, frontHits: 1, sideHits: 1, rearDamage: 1000, frontDamage: 50, broken: 0 } };
+    const a = K.checkResultFields(plain, DEF, true, { hitsTotal: 2 });
+    const b = K.checkResultFields(withRear, DEF, true, { hitsTotal: 2 });
+    expect(a.ok).toBe(true);
+    expect(b.ok).toBe(true);
+    expect(b.got).toEqual(a.got);
+    expect(K.checkResultFields({ ...withRear, progress: 2 }, DEF, true).ok).toBe(false);
+  });
+  test('밸브 종합 판정은 정의에 rear 가 있어도 후방 관측 없이 같은 결과를 낸다', () => {
+    const a = analyze(tideSession());
+    expect(a.ok).toBe(true);
+    expect(Object.keys(a.acceptance)).not.toContain('autoRear');
+  });
+  test('밸브 결과 줄 요소(aria-label)는 후방 줄과 따로 센다', () => {
+    const rearLineOnly = [{ aria: '사슬 집행자 후방 결과', text: '사슬 집행자 후방 공격 1회 · 노출 1번 · 정면 막힘 0회' }];
+    expect(K.checkResultElement(rearLineOnly, DEF).ok).toBe(false);
+    expect(K.checkResultElement([{ aria: DEF.copy.title + ' 결과', text: lineOf(DEF) }, ...rearLineOnly], DEF).ok).toBe(true);
+  });
+});
+
+describe('후방 수동 구간(checkRearManual) · 창 안 정지(checkRearPause)', () => {
+  /** 첫 창에서 AUTO 를 끈 뒤 정면 타격 → 등 뒤 타격을 한 세션. 표식은 AUTO 를 끈 스텝과 구간 끝 스텝이다. */
+  function manualSession(over: any = {}) {
+    const s = new RearSim();
+    s.step({ bo: 1, al: 1, spn: 0, bs: 'chase', au: 1 });
+    s.step({ rs: 'armored' });
+    s.idle(20);
+    s.cast('kiln_hammer');
+    // 열림 스텝 직후 AUTO 를 끈다(표식 n = 마지막 AUTO 행).
+    s.step({ rs: 'exposed', wl: RW, wn: 1, wv: 1, gv: 1 });
+    const start = s.n;
+    for (let k = 1; k < 150; k++) {
+      const wl = RW - k * FRAME;
+      if (k === 40) s.hit('front', over.front);
+      if (k === 100) s.hit('rear', over.rear);
+      if (k === over.autoAt) s.cur.au = 1;
+      if (k === over.jumpAt) { s.cur.hx += 5; }
+      s.step({ rs: 'exposed', wl, au: k === over.autoAt ? 1 : 0, hx: s.cur.hx + (k < 90 ? .05 : .05), hz: s.cur.hz });
+    }
+    const end = s.n;
+    s.idle(10);
+    return { s, marks: [{ mk: 'manual-start', n: start }, { mk: 'manual-end', n: end }] };
+  }
+  test('정상: AUTO 꺼짐·정면 타격 ≥ 1(×.5)·등 뒤 타격 ≥ 1(×2)·정면 타격 뒤 등 뒤 타격이면 통과한다', () => {
+    const { s, marks } = manualSession();
+    const m = K.checkRearManual(s.rows, s.filters, marks, REAR_DEF);
+    expect(m.ok).toBe(true);
+    expect(m.frontHits).toBe(1);
+    expect(m.rearHits).toBe(1);
+    expect(m.frontRecords).toBe(1);
+    expect(m.firstFrontN).toBeLessThan(m.firstRearN);
+  });
+  test('구간 안 AUTO 가 켜진 행이 있으면 실패한다. 표식 행(AUTO 를 끄기 직전 스텝)은 구간 밖이다', () => {
+    const { s, marks } = manualSession({ autoAt: 60 });
+    expect(K.checkRearManual(s.rows, s.filters, marks, REAR_DEF).autoRows).toBe(1);
+    expect(K.checkRearManual(s.rows, s.filters, marks, REAR_DEF).ok).toBe(false);
+  });
+  test('순간이동(한 스텝 1.5 초과 이동)이 있으면 실패한다', () => {
+    const { s, marks } = manualSession({ jumpAt: 70 });
+    const m = K.checkRearManual(s.rows, s.filters, marks, REAR_DEF);
+    expect(m.teleports).toBe(1);
+    expect(m.ok).toBe(false);
+  });
+  test('정면 타격 배율이 1배이거나 등 뒤 타격이 없으면 실패한다', () => {
+    const wrongFront = manualSession({ front: { out: 100 } });
+    expect(K.checkRearManual(wrongFront.s.rows, wrongFront.s.filters, wrongFront.marks, REAR_DEF).frontMul).toBe(false);
+    const { s, marks } = manualSession();
+    expect(K.checkRearManual(s.rows, s.filters.filter((f: any) => f.side !== 'rear'), marks, REAR_DEF).ok).toBe(false);
+    expect(K.checkRearManual(s.rows, s.filters, [], REAR_DEF).ok).toBe(false);
+    expect(K.checkRearManual(s.rows, null as any, marks, REAR_DEF).ok).toBe(false);
+  });
+  test('정면에 선 영웅인데 컨트롤러가 등 뒤(×2)로 판정한 타격은 정면 타격이 아니라 frontMul 이 실패한다(P1 재현). attacker 없는 호출은 기록으로 세지 않는다', () => {
+    const wrong = manualSession({ front: { ctrlSide: 'rear' } });
+    const m = K.checkRearManual(wrong.s.rows, wrong.s.filters, wrong.marks, REAR_DEF);
+    expect(m.frontRecords).toBe(1);
+    expect(m.frontMul).toBe(false);
+    expect(m.ok).toBe(false);
+    const none = manualSession({ rear: { attackerless: true } });
+    const n = K.checkRearManual(none.s.rows, none.s.filters, none.marks, REAR_DEF);
+    expect(n.rearRecords).toBe(0);
+    expect(n.ok).toBe(false);
+  });
+  test('등 뒤 타격이 정면 타격보다 앞서기만 하면(정면 뒤 등 뒤 타격 없음) rearAfterFront 가 실패한다', () => {
+    const { s, marks } = manualSession();
+    const f = s.filters.find((x: any) => x.side === 'front'), r = s.filters.find((x: any) => x.side === 'rear');
+    [f.n, r.n] = [r.n, f.n];
+    const m = K.checkRearManual(s.rows, s.filters, marks, REAR_DEF);
+    expect(m.rearAfterFront).toBe(false);
+    expect(m.ok).toBe(false);
+  });
+  test('창이 열릴 때 남은 콤보의 등 뒤 타격이 먼저 와도, 그 뒤 정면 → 등 뒤 순서가 있으면 통과한다(b14 smoke s-cand-rear)', () => {
+    const { s, marks } = manualSession();
+    const r = s.filters.find((x: any) => x.side === 'rear');
+    s.filters.push({ ...r, n: marks[0].n + 5 });
+    s.filters.sort((a: any, b: any) => a.n - b.n);
+    const m = K.checkRearManual(s.rows, s.filters, marks, REAR_DEF);
+    expect(m.firstRearN).toBeLessThan(m.firstFrontN);
+    expect(m.rearAfterFront).toBe(true);
+    expect(m.ok).toBe(true);
+  });
+  const frozen = (over: any = {}) => ({ elapsed: 10, paused: true, rear: { rs: 'exposed', wl: 2.5, by: 1.2, sq: 7, bx: 3, bz: 4 }, ...over });
+  test('창 안 정지: 60스텝+0.5초 동안 불변이고 재개 뒤 windowLeft 가 흐른 시간만큼 줄면 통과한다', () => {
+    const before = frozen({ paused: false }), paused = frozen(), still = frozen();
+    const resumed = { elapsed: 10 + 6 * FRAME, paused: false, rear: { rs: 'exposed', wl: 2.5 - 6 * FRAME, by: 1.2, sq: 7, bx: 3, bz: 4 } };
+    const v = K.checkRearPause({ before, paused, still, resumed, steps: 6 });
+    expect(v.ok).toBe(true);
+    expect(v.decreased).toBeCloseTo(6 * FRAME, 9);
+  });
+  test('창 안 정지: 정지 중 windowLeft·yaw·게임 시간이 변하면 실패한다', () => {
+    const before = frozen({ paused: false }), paused = frozen();
+    const resumed = { elapsed: 10 + 6 * FRAME, paused: false, rear: { rs: 'exposed', wl: 2.5 - 6 * FRAME, by: 1.2, sq: 7, bx: 3, bz: 4 } };
+    const run = (still: any) => K.checkRearPause({ before, paused, still, resumed, steps: 6 });
+    expect(run(frozen({ rear: { rs: 'exposed', wl: 2.49, by: 1.2, sq: 7, bx: 3, bz: 4 } })).frozen).toBe(false);
+    expect(run(frozen({ rear: { rs: 'exposed', wl: 2.5, by: 1.3, sq: 7, bx: 3, bz: 4 } })).frozen).toBe(false);
+    expect(run(frozen({ elapsed: 10.5 })).frozen).toBe(false);
+    expect(run(frozen({ paused: false })).frozen).toBe(false);
+  });
+  test('창 안 정지: 창 밖에서 멈췄거나 재개 뒤 windowLeft 감소가 흐른 시간과 다르거나 yaw 가 바뀌면 실패한다', () => {
+    const before = frozen({ paused: false }), paused = frozen(), still = frozen();
+    const ok = { elapsed: 10 + 6 * FRAME, paused: false, rear: { rs: 'exposed', wl: 2.5 - 6 * FRAME, by: 1.2, sq: 7, bx: 3, bz: 4 } };
+    expect(K.checkRearPause({ before: frozen({ paused: false, rear: { ...before.rear, rs: 'armored' } }), paused, still, resumed: ok, steps: 6 }).ok).toBe(false);
+    expect(K.checkRearPause({ before, paused, still, resumed: { ...ok, rear: { ...ok.rear, wl: 2.5 - 12 * FRAME } }, steps: 6 }).resumedOk).toBe(false);
+    expect(K.checkRearPause({ before, paused, still, resumed: { ...ok, rear: { ...ok.rear, by: 1.3 } }, steps: 6 }).resumedOk).toBe(false);
+    expect(K.checkRearPause({ before, paused, still, resumed: { ...ok, elapsed: 10 }, steps: 6 }).resumedOk).toBe(false);
+  });
+});
+
+describe('후방 기준선 판별 · 누출 · screens 순간', () => {
+  test('기준선 판별은 정의의 하위 항목(rear)이 없는지로 정한다: 후보는 rear 있음, 기준선은 rear 없음 또는 정의 없음', () => {
+    const { rear: _unused, ...valveOnly } = DEF;
+    const cand = (over: any = {}) => ({ head: 'a'.repeat(40), status: 'pass', runStatus: 'pass', tideOk: true, routeDefinition: DEF, ...over });
+    const base = (over: any = {}) => ({ head: 'b'.repeat(40), status: 'pass', runStatus: 'pass', tideOk: true, routeDefinition: valveOnly, ...over });
+    expect(DEF.rear).toBeTruthy();
+    expect(Object.keys(valveOnly)).not.toContain('rear');
+    // 8e89a51: 밸브 정의만 있는 기준선
+    expect(K.compareTargetsOk(cand(), base())).toBe(true);
+    // 79883ad: ember_deep 정의 자체가 없는 B10 기준선
+    expect(K.compareTargetsOk(cand(), base({ routeDefinition: null }))).toBe(true);
+    // 기준선에 rear 가 있으면 다른 빌드가 아니다
+    expect(K.compareTargetsOk(cand(), base({ routeDefinition: DEF }))).toBe(false);
+    // 후보에 rear 가 없으면 후보가 아니다
+    expect(K.compareTargetsOk(cand({ routeDefinition: valveOnly }), base())).toBe(false);
+    // 뒤바뀜
+    expect(K.compareTargetsOk(base(), cand())).toBe(false);
+    // 기준선 정의가 있는데 ember_deep 이 아닌 다른 정의면 기준선으로 보지 않는다
+    expect(K.compareTargetsOk(cand(), base({ routeDefinition: { ...valveOnly, id: 'something_else' } }))).toBe(false);
+  });
+  test('후보는 후방 판정(rearOk)을 통과해야 한다: rearOk 가 거짓이면 실패, 값이 없으면 tideOk 에 맡긴다', () => {
+    const { rear: _unused, ...valveOnly } = DEF;
+    const base = { head: 'b'.repeat(40), status: 'pass', runStatus: 'pass', tideOk: true, routeDefinition: valveOnly };
+    const cand = (over: any = {}) => ({ head: 'a'.repeat(40), status: 'pass', runStatus: 'pass', tideOk: true, routeDefinition: DEF, ...over });
+    expect(K.compareTargetsOk(cand({ rearOk: true }), base)).toBe(true);
+    expect(K.compareTargetsOk(cand({ rearOk: false }), base)).toBe(false);
+    expect(K.compareTargetsOk(cand({ rearOk: false, tideOk: false }), base)).toBe(false);
+    expect(K.compareTargetsOk(cand({ tideOk: false }), base)).toBe(false);
+  });
+  test('누출 관찰: 토스트·목표창 표본·결과 화면에 후방 문구가 없으면 통과하고, 있으면 실패한다. 관측이 없으면 통과하지 않는다', () => {
+    const toasts = [{ msg: '1번 냉각 밸브 · 좌현 화물칸 개방 · 냉각 밸브 1/3 개방' }];
+    const doms = ['보스 처치', '냉각 밸브 3/3 개방 · 보스 처치'];
+    expect(K.checkRearLeak(toasts, doms, '원정 결과 냉각 밸브 개방 3/3 · 완료').ok).toBe(true);
+    expect(K.checkRearLeak([...toasts, { msg: R_ATTACH }], doms, '').ok).toBe(false);
+    expect(K.checkRearLeak([...toasts, { msg: R_OPEN }], doms, '').ok).toBe(false);   // 열림 토스트('등 뒤가 약점')도 후방 문구다
+    expect(K.checkRearLeak(toasts, [...doms, R_TITLE + R_ARMORED], '').ok).toBe(false);
+    expect(K.checkRearLeak(toasts, doms, '사슬 집행자 후방 공격 1회 · 노출 1번 · 정면 막힘 0회').ok).toBe(false);
+    expect(K.checkRearLeak([], doms, '').ok).toBe(false);
+    expect(K.checkRearLeak(toasts, [], '').ok).toBe(false);
+  });
+  const cap = (rear: any) => ({ capture: { rear } });
+  const base = { bo: 1, al: 1, spn: 0 };
+  test('screens rear-armored: 보스 등장 뒤 armored·목표창 armored 문구·부채꼴/갑주 호 숨김이면 통과한다', () => {
+    const ok = cap({ ...base, rs: 'armored', wl: 0, wv: 0, gv: 0, dom: R_TITLE + R_ARMORED });
+    expect(K.checkRearMoment(ok, REAR_DEF, 'rear-armored').ok).toBe(true);
+    expect(K.checkRearMoment(cap({ ...base, rs: 'exposed', wl: 3, wv: 1, gv: 1, dom: R_TITLE + R_ARMORED }), REAR_DEF, 'rear-armored').ok).toBe(false);
+    expect(K.checkRearMoment(cap({ ...base, rs: 'armored', wl: 0, wv: 0, gv: 0, dom: R_TITLE + '다른 문구' }), REAR_DEF, 'rear-armored').ok).toBe(false);
+    expect(K.checkRearMoment(cap({ ...base, rs: 'armored', wl: 0, wv: 1, gv: 0, dom: R_TITLE + R_ARMORED }), REAR_DEF, 'rear-armored').ok).toBe(false);
+    expect(K.checkRearMoment(cap({ ...base, rs: 'armored', wl: 0, wv: -1, gv: -1, dom: R_TITLE + R_ARMORED }), REAR_DEF, 'rear-armored').ok).toBe(false);
+    expect(K.checkRearMoment(cap({ ...base, spn: 1, rs: 'armored', wl: 0, wv: 0, gv: 0, dom: R_TITLE + R_ARMORED }), REAR_DEF, 'rear-armored').ok).toBe(false);
+    expect(K.checkRearMoment({ capture: {} }, REAR_DEF, 'rear-armored').ok).toBe(false);
+  });
+  test('screens rear-exposed: exposed 이고 windowLeft ≤ window − .5 이며 부채꼴·갑주 호가 보이고 색이 맞으면 통과한다', () => {
+    const exposed = (over: any = {}) => cap({ ...base, rs: 'exposed', wl: RW - .5, wv: 1, gv: 1, wc: 0x5ff0d0, gc: 0xd8a070, ...over });
+    expect(K.checkRearMoment(exposed(), REAR_DEF, 'rear-exposed').ok).toBe(true);
+    expect(K.checkRearMoment(exposed({ wl: RW - .4 }), REAR_DEF, 'rear-exposed').ok).toBe(false);
+    expect(K.checkRearMoment(exposed({ wl: 0 }), REAR_DEF, 'rear-exposed').ok).toBe(false);
+    expect(K.checkRearMoment(exposed({ wv: 0 }), REAR_DEF, 'rear-exposed').ok).toBe(false);
+    expect(K.checkRearMoment(exposed({ gv: -1 }), REAR_DEF, 'rear-exposed').ok).toBe(false);
+    expect(K.checkRearMoment(exposed({ wc: 0xff0000 }), REAR_DEF, 'rear-exposed').ok).toBe(false);
+    expect(K.checkRearMoment(exposed({ rs: 'armored' }), REAR_DEF, 'rear-exposed').ok).toBe(false);
+    expect(K.checkRearMoment(exposed(), REAR_DEF, 'unknown').ok).toBe(false);
+  });
+  test('후방 순간 이름은 기존 순간(MOMENTS)과 따로 있고 기존 순간은 그대로다', () => {
+    expect([...K.REAR_MOMENTS]).toEqual(['rear-armored', 'rear-exposed']);
+    expect([...K.MOMENTS]).toEqual(['closed', 'warning', 'vent', 'open', 'opened']);
+    expect(K.checkScreens([{ label: 'rear-armored', reached: true, files: ['a', 'b', 'c'] }], ['rear-armored'], 3).ok).toBe(true);
+    expect(K.checkScreens([{ label: 'rear-exposed', reached: false }], ['rear-exposed'], 3).ok).toBe(false);
+  });
+});
+
