@@ -172,6 +172,41 @@ test('조수 범람·도르래 낙석은 실제 방 안에 예고되고 매 주�
   expect(Math.sign(a.z - deckRoom.z)).toBe(-Math.sign(b.z - deckRoom.z));
 });
 
+test('새 계정에서 컨셉 던전 출격·패배·재도전·승리 정산이 저장되고 재로딩 뒤 유지되며 중복 정산은 거절된다', () => {
+  const original = Object.getOwnPropertyDescriptor(globalThis, 'localStorage'), values = new Map<string, string>();
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: {
+    getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) } });
+  try {
+    for (const id of ids) {
+      values.clear();
+      const eco = new Economy(), service = new ExpeditionEconomy(eco), d: any = ALL_DUNGEONS.find((x: any) => x.id === id);
+      const energy0 = eco.s.energy, gold0 = eco.s.gold;
+      // 패배: 보상·승리 기록 없이 정산, 같은 던전 재도전 가능.
+      const lose = service.begin('dungeon', id); expect(lose.ok).toBe(true);
+      expect(eco.s.energy).toBe(energy0 - d.energy);
+      expect(service.settle(lose.ticket, { win: false })).toEqual({ ok: true, win: false, rewards: {} });
+      expect(service.s.stats[id]).toBe(0);
+      // 재도전 → 승리: 승리 기록·골드·재료가 저장된다.
+      const win = service.begin('dungeon', id); expect(win.ok).toBe(true);
+      expect(eco.s.energy).toBe(energy0 - d.energy * 2);
+      const material = Object.keys(d.rewards.materials)[0], before = service.s.materials[material];
+      const settled: any = service.settle(win.ticket, { win: true });
+      expect(settled.ok).toBe(true);
+      expect(service.s.stats[id]).toBe(1);
+      expect(service.s.materials[material]).toBeGreaterThanOrEqual(before + d.rewards.materials[material]);
+      expect(eco.s.gold).toBeGreaterThanOrEqual(gold0 + d.rewards.gold);
+      // 재로딩(같은 저장소에서 새 경제 객체): 기록 유지, 같은 영수증 중복 정산 거절.
+      const restored = new ExpeditionEconomy(new Economy());
+      expect(restored.s.stats[id]).toBe(1);
+      expect(restored.s.materials[material]).toBe(service.s.materials[material]);
+      expect(restored.settle(win.ticket, { win: true }).ok).toBe(false);
+      expect(restored.dungeonAccess(id).ok).toBe(true);
+    }
+  } finally {
+    if (original) Object.defineProperty(globalThis, 'localStorage', original); else Reflect.deleteProperty(globalThis, 'localStorage');
+  }
+});
+
 test('아레나는 컨셉 지형으로 층을 짓고 기본 벽 인스턴스를 만들지 않으며 정리 때 모두 회수한다', () => {
   const scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x111111);
   for (const id of ids) {
