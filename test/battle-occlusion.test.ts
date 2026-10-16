@@ -50,6 +50,25 @@ test('이전 평면 절단과 달리 영웅이 10cm씩 움직여도 벽 조각�
   expect(planeFlips).toBeGreaterThan(30);
 });
 
+test('영웅을 덮는 바로 앞 벽은 바로 비우고, 옆벽을 따라 달릴 때(0.1초=0.7m) 비움 변화는 절반 미만이다', () => {
+  const sight = new BattleOcclusion();
+  // 남쪽 벽에 붙어 선 영웅: 벽 중심선은 몸 반경+벽 반두께 1.05m 앞.
+  const hero = new THREE.Vector3(0, 0, 0); sight.setTarget(hero); sight.update(cameraFor(hero, { yaw: 0, pitch: 0, zoom: 100 }));
+  expect(sight.fadeAt(new THREE.Vector3(0, 2.2, 1.05))).toBeGreaterThan(.85);
+  // 동쪽 옆벽(영웅에서 1.5m) 표본을 영웅이 북쪽으로 0.7m씩 지나간다. 영웅 앞뒤 3m 안의 표본만 본다
+  // (카메라 바로 앞 조각은 시차로 화면에서 빠르게 움직이므로 비움도 그만큼 빨리 바뀐다).
+  const wall: THREE.Vector3[] = [];
+  for (let z = -10; z <= 10; z += .5) for (const y of [1.5, 2.5, 3.5]) wall.push(new THREE.Vector3(1.5, y, z));
+  let worst = 0, prev: number[] | null = null, prevZ = 0;
+  for (let z = 6; z >= -6; z -= .7) {
+    const p = new THREE.Vector3(0, 0, z); sight.setTarget(p); sight.update(cameraFor(p, { yaw: 0, pitch: 0, zoom: 100 }));
+    const now = wall.map(q => sight.fadeAt(q));
+    if (prev) now.forEach((f, i) => { if (Math.abs(wall[i].z - z) <= 3 && Math.abs(wall[i].z - prevZ) <= 3) worst = Math.max(worst, Math.abs(f - prev![i])); });
+    prev = now; prevZ = z;
+  }
+  expect(worst).toBeLessThan(.5);
+});
+
 test('카메라가 벽 속으로 들어가는 근접 시점에서는 카메라 앞 면을 비운다', () => {
   const sight = new BattleOcclusion(), player = new THREE.Vector3(0, 0, 0);
   sight.setTarget(player);
@@ -82,7 +101,7 @@ test('셰이더 결합은 기존 onBeforeCompile·캐시 키를 이어 받고 �
   material.customProgramCacheKey = () => 'stone-detail';
   sight.bind(material); sight.bind(material); sight.bind([material]);
   expect(sight.isBound(material)).toBe(true);
-  expect(material.customProgramCacheKey()).toBe('stone-detail|battle-sightline-v1');
+  expect(material.customProgramCacheKey()).toBe('stone-detail|battle-sightline-v2');
   const lib = THREE.ShaderLib.standard;
   const shader = { uniforms: THREE.UniformsUtils.clone(lib.uniforms), vertexShader: lib.vertexShader, fragmentShader: lib.fragmentShader } as any;
   material.onBeforeCompile(shader, null as any);
@@ -94,7 +113,7 @@ test('셰이더 결합은 기존 onBeforeCompile·캐시 키를 이어 받고 �
   // 렌더러 재생성 등으로 새 시선 객체가 같은 재질을 다시 묶어도 삽입은 한 번, 원래 훅도 한 번만 돈다.
   const next = new BattleOcclusion(); next.bind(material);
   expect(next.isBound(material)).toBe(true); expect(sight.isBound(material)).toBe(false);
-  expect(material.customProgramCacheKey()).toBe('stone-detail|battle-sightline-v1');
+  expect(material.customProgramCacheKey()).toBe('stone-detail|battle-sightline-v2');
   const again = { uniforms: THREE.UniformsUtils.clone(lib.uniforms), vertexShader: lib.vertexShader, fragmentShader: lib.fragmentShader } as any;
   material.onBeforeCompile(again, null as any);
   expect(earlier).toBe(2);

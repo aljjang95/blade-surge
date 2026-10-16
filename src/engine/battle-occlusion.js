@@ -38,8 +38,11 @@ export class PlaneCutaway {
 // 시선 원뿔 형태(월드 단위). 영웅 몸통 높이를 겨냥하고, 화면 가로가 넓은 모바일 가로 화면에 맞춰 옆으로 길게 연다.
 export const SIGHTLINE = Object.freeze({
   aimY: 1, core: 2.4, feather: 2.6, lateral: 1.45,
-  baseY: .45, rampTop: 1.35, maxFade: 1, frontStart: -.35, frontRamp: 1.9,
-  nearCamera: 1.4, nearCameraRamp: 2.2,
+  baseY: .45, rampTop: 1.35, maxFade: 1, frontStart: -.35, frontRamp: 3.2,
+  // 영웅 몸을 실제로 덮는 조각(가로 확장 없는 반경 body~bodyFeather)만 짧은 앞뒤 램프로 바로 비운다.
+  // 옆벽처럼 영웅 곁에 있는 조각은 긴 램프로 천천히 비워, 벽을 따라 걸을 때 비움 경계가 튀지 않게 한다.
+  body: .7, bodyFeather: .7, bodyFrontRamp: 1,
+  nearCamera: 1.4, nearCameraRamp: 3,
 });
 
 const VERTEX_WORLD = /* glsl */ `
@@ -60,6 +63,7 @@ uniform vec3 uSightRight;
 uniform vec4 uSightShape;
 uniform vec4 uSightBase;
 uniform vec4 uSightDepth;
+uniform vec4 uSightBody;
 const float SIGHT_BAYER[16] = float[16]( 0., 8., 2., 10., 12., 4., 14., 6., 3., 11., 1., 9., 15., 7., 13., 5. );
 float sightBayer4( vec2 p ) {
   ivec2 q = ivec2( mod( floor( p ), 4.0 ) );
@@ -77,10 +81,12 @@ if ( uSightShape.w > .5 ) {
   vec3 sightDir = sightRay / sightLen;
   vec3 sightHit = sightDir * ( sightTargetDist / max( dot( sightDir, sightAxis ), 1e-3 ) ) - sightToTarget;
   float sightLat = dot( sightHit, uSightRight );
-  float sightRadial = length( vec2( sightLat / uSightShape.z, length( sightHit - sightLat * uSightRight ) ) );
+  float sightVert = length( sightHit - sightLat * uSightRight );
+  float sightRadial = length( vec2( sightLat / uSightShape.z, sightVert ) );
   float sightFade = 1.0 - smoothstep( uSightShape.x, uSightShape.x + uSightShape.y, sightRadial );
+  float sightCover = 1.0 - smoothstep( uSightBody.x, uSightBody.x + uSightBody.y, length( vec2( sightLat, sightVert ) ) );
   float sightFront = dot( vSightWorld.xz - uSightTarget.xz, vec2( -uSightRight.z, uSightRight.x ) );
-  sightFade *= smoothstep( uSightDepth.x, uSightDepth.x + uSightDepth.y, sightFront );
+  sightFade *= smoothstep( uSightDepth.x, uSightDepth.x + mix( uSightDepth.y, uSightBody.z, sightCover ), sightFront );
   sightFade *= smoothstep( uSightBase.x, uSightBase.y, vSightWorld.y );
   sightFade = max( sightFade, 1.0 - smoothstep( uSightDepth.z, uSightDepth.z + uSightDepth.w, sightLen ) );
   if ( sightFade * uSightBase.z > sightBayer4( gl_FragCoord.xy ) ) discard;
@@ -107,6 +113,7 @@ export class BattleOcclusion {
       uSightShape: { value: new Vector4(shape.core, shape.feather, shape.lateral, 0) },
       uSightBase: { value: new Vector4(shape.baseY, shape.rampTop, shape.maxFade, 0) },
       uSightDepth: { value: new Vector4(shape.frontStart, shape.frontRamp, shape.nearCamera, shape.nearCameraRamp) },
+      uSightBody: { value: new Vector4(shape.body, shape.bodyFeather, shape.bodyFrontRamp, 0) },
     };
     this.reset();
   }
@@ -127,7 +134,7 @@ export class BattleOcclusion {
       shader.vertexShader = 'varying vec3 vSightWorld;\n' + shader.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n' + VERTEX_WORLD);
       shader.fragmentShader = FRAGMENT_HEAD + '\n' + shader.fragmentShader.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n' + FRAGMENT_DISCARD);
     };
-    const cacheKey = () => prefix + '|battle-sightline-v1';
+    const cacheKey = () => prefix + '|battle-sightline-v2';
     material.onBeforeCompile = hook; material.customProgramCacheKey = cacheKey;
     material.userData.battleSightline = true;
     material.needsUpdate = true;
@@ -172,7 +179,8 @@ export class BattleOcclusion {
     let fade = 1 - smooth(s.core, s.core + s.feather, radial);
     // 영웅보다 카메라 쪽(수평)에 있는 조각만. 뒤쪽 벽은 시점이 가팔라도 비우지 않는다.
     const front = (point.x - t.x) * -this.right.z + (point.z - t.z) * this.right.x;
-    fade *= smooth(s.frontStart, s.frontStart + s.frontRamp, front);
+    const cover = 1 - smooth(s.body, s.body + s.bodyFeather, Math.hypot(lat, vert));
+    fade *= smooth(s.frontStart, s.frontStart + s.frontRamp + (s.bodyFrontRamp - s.frontRamp) * cover, front);
     fade *= smooth(s.baseY, s.rampTop, point.y);
     fade = Math.max(fade, 1 - smooth(s.nearCamera, s.nearCamera + s.nearCameraRamp, len));
     return fade * s.maxFade;
