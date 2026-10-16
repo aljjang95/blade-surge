@@ -62,7 +62,7 @@ function select(f: Fixture, id: string, index = f.route.progress) {
   f.g.updateExpedition(.01); return gate;
 }
 function restore(f: Fixture, index = f.route.progress) { defend(f, f.route.gates[index].room.id); const gate = read(f, index); select(f, gate.answer, index); return gate; }
-// 고리를 걸어 마치는 최소 흐름: 열림 → 방 안 → 표지 3개를 차례로 1초(전부 중심 밖이라 집결 피해 없음).
+// 고리를 걸어 마치는 최소 흐름: 열림 → 방 안 → 표지 4개를 차례로 1초(전부 중심 밖이라 집결 피해 없음).
 function finishRing(f: Fixture) {
   const ring = (f.route as any).ring, g = f.g;
   for (let i = 0; i < 3 && ring.phase === 'idle'; i++) g.updateExpedition(.1);

@@ -672,7 +672,7 @@ const LABELS = {
   setup: '정적 setup(모래시계 = 방 중심, 판 = 모래시계 + 오프셋, 고리 중심 = 방 중심, ' + R.mark + ' = 중심 + 오프셋, 사각형)',
   restoreCount: (deep ? '성좌' : '조율판') + ' 복원 ' + STATIONS + '회(progress 증가 스텝, 한 번에 +1)', restoreOrder: '복원 순서 = 정의 순서 [' + (routeDef ? routeDef.gates.map(g => g.roomId).join(', ') : C.gates.rooms.join(', ')) + '] (보고 rooms)',
   restoreHold: '복원마다 직전 연속 유지(0 에서 시작, hold 증가 = 게임 시각 증가)가 hold ≥ 1초 · 게임 시각 길이 ≥ 1초 − 1/60, 내내 route.selected 가 정답 판이고 영웅이 정답 판 반경 안',
-  restoreRead: '유지 앞 읽기 구간이 0 에서 시작해 게임 시간만큼 늘어 read ≥ 1초(유지 시작 직전 행 read ≥ 1)', restoreAvailable: '읽기·유지 내내 그 ' + (deep ? '성좌' : '조율판') + '가 ready · available · 그 방 적 0 · 전투 중 적 0 · 모래시계 8m 안',
+  restoreRead: '유지 앞 읽기 구간이 0 에서 시작해 게임 시간만큼 늘어 read ≥ 1초(유지 시작 직전 행 read ≥ 1)', restoreAvailable: '읽기·유지 내내 그 ' + (deep ? '성좌가' : '조율판이') + ' ready · available · 그 방 적 0 · 전투 중 적 0 · 모래시계 8m 안',
   restoreState: '복원 상태(앞 판 attuned · 뒤 판 아직 · 복원 전 cleared 아님 · 오답 수 불변)',
   turnRooms: '차례 아닌 판 방은 복원 전 미정화(매 관측 행)' + (C.requireEarly ? ' · 방 2 성좌는 1번 복원 전에 준비되고 그동안 미정화' : ' · 대기 조율판 관측은 요구하지 않음(일반판에는 대기 조율판이 없다)'),
   readyTiming: '준비 시점: 방 발견·적/대기열 0, 준비 전 읽기·유지 0', ringOpen: '고리 열림: ' + STATIONS + '/' + STATIONS + ' 와 시작·보스를 뺀 모든 방 정화 뒤(조건 관측 최대 한 스텝 뒤), 열리는 스텝 clock 0, phase 순서',
@@ -835,7 +835,7 @@ const profiles = {
     const analysis = analyzeChoice(traces.get(row.tag), routeDef, setup);
     row.choice = analysis;
     check('choice: 키보드 구간(AUTO 꺼짐·공격 입력/동작 없음·생존)', analysis.keyboard?.ok, analysis.keyboard);
-    check('choice: 1번 ' + (deep ? '성좌' : '조율판') + '가 준비된 순간(진행 0, ready, 미정화)에 AUTO 를 끔', analysis.start?.ok, analysis.start);
+    check('choice: 1번 ' + (deep ? '성좌가' : '조율판이') + ' 준비된 순간(진행 0, ready, 미정화)에 AUTO 를 끔', analysis.start?.ok, analysis.start);
     check('choice: 모래시계 8m 안에서 단서를 읽어 select(revealed, read ≥ 1)', analysis.read?.ok, analysis.read);
     check('choice: 오답 판 1초 + 다음 프레임 → mistakes +1 · phase retry · 진행 불변 · 읽기/유지 0', analysis.wrong?.ok, analysis.wrong);
     check('choice: 읽기부터 정답 확정까지 player.hurt 호출 0(오답은 피해 없음)', analysis.hurts?.ok, analysis.hurts);

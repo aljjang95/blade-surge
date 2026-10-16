@@ -19,7 +19,7 @@ const STD = ROUTE_OBJECTIVES.astral_standard;
 const RING = STD.ring;
 const GATES = [1, 3, 4, 6];
 
-function fixture(opts: { depth?: string; noRoute?: boolean } = {}) {
+function fixture(opts: { depth?: string; noRoute?: boolean; def?: any } = {}) {
   const stage = buildExpeditionStage('dungeon', 'astral_leviathan_spire', null, { depth: opts.depth || 'standard' });
   const world = buildExpeditionWorld(stage);
   const messages: string[] = [], hurts: any[] = [], spawns: any[] = [];
@@ -43,7 +43,7 @@ function fixture(opts: { depth?: string; noRoute?: boolean } = {}) {
       g.routeObjectives?.spawn?.(room); g.enemies.push({ alive: true, homeRoom: room, dispose: noop, pos: new Vector3(9999, 0, 9999), radius: .5 });
     },
   });
-  const route: any = opts.noRoute ? null : createRouteObjectives(stage, world);
+  const route: any = opts.noRoute ? null : opts.def ? new AstralRingConstellations(opts.def, world) : createRouteObjectives(stage, world);
   g.routeObjectives = route; g.autoTarget = route?.autoRoom() || null;
   return { g, world, route, messages, hurts, spawns, counts, stage };
 }
@@ -384,6 +384,8 @@ test('보고: 완료한 런은 조율판 보고에 고리 결과가 더해지고
     [[1, 1, 'triangle'], [2, 3, 'diamond'], [3, 4, 'circle'], [4, 6, 'triangle']]);
   expect(report.ring).toEqual({ purified: true, marks: 4, collapses: 0, shardHits: 1, seconds: report.ring.seconds });
   expect(report.ring.seconds).toBeGreaterThan(3);
+  expect(report.ring.seconds).toBe(Math.round(ring(f).elapsed * 100) / 100);         // 보고 seconds 는 정화 시작 뒤 시간(clock 아님, B13 리뷰 R11)
+  expect(report.ring.seconds).not.toBe(Math.round(ring(f).clock * 100) / 100);
   expect(Object.keys(report).sort()).toEqual(['complete', 'constellations', 'id', 'mistakes', 'progress', 'ring', 'rooms', 'target']);
   expect(Object.isFrozen(report)).toBe(true); expect(Object.isFrozen(report.ring)).toBe(true); expect(Object.isFrozen(report.rooms)).toBe(true);
   ring(f).collapses = 9; expect(f.route.finish(false)).toBe(report); expect(f.route.finish(true).ring.collapses).toBe(0);
@@ -605,3 +607,17 @@ test('AUTO 모의(고리): 열림 순간 방 7 안 도달 가능한 1m 격자 �
   expect(failures).toEqual([]);
   expect(slowest).toBeLessThan(RING.limit);                                                  // 가장 느린 완료도 제한 시간 안
 }, 900000);
+
+test('문구 틀의 표지 수는 정의에서 온다: 표지 3개짜리 정의 사본이면 3개·k/3 으로 나온다(B13 리뷰 R22)', () => {
+  const def = { ...STD, ring: { ...STD.ring, marks: STD.ring.marks.slice(0, 3) } };
+  const f = fixture({ def }), r = ring(f);
+  expect(r.marks).toHaveLength(3);
+  untilRoomSeven(f); clearRoom(f, 7); at(f, 6); f.messages.length = 0; f.route.update(f.g, .25);
+  expect(r.phase).toBe('open');
+  expect(f.messages).toContain('기록 외곽 고리 개방 · 고리 위 항로 표지 3개를 밝히세요');
+  at(f, 7, SAFE[0], SAFE[1]); f.route.update(f.g, .25);
+  expect(r.phase).toBe('running');
+  expect(f.route.hint()).toBe('외곽 고리 이탈 · 항로 표지 0/3 · 기록 파편이 모이면 중심 밖으로 · 24초');
+  f.messages.length = 0; atMark(f, 0); f.route.update(f.g, 1);
+  expect(f.messages).toEqual(['항로 표지 점등 · 1/3']);
+});

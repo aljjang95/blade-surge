@@ -113,7 +113,7 @@ export class AstralDeepRingView {
     for (const m of this.meshes) for (let i = 0; i < m.count; i++) this.#put(m, i, 0, 0, 0, 0, 0, 0);
 
     // 파편 방향을 미리 계산해 update 에서 삼각함수 배열을 만들지 않는다. 파편은 같은 간격으로 놓고, 시작 위상은
-    // 성표 방향과 가장 멀리 떨어지는 값을 고른다(심층 8개·성표 4개는 기존 .5 = 22.5°, 일반 6개·표지 3개(서·북·동)는 15°).
+    // 성표 방향과 가장 멀리 떨어지는 값을 고른다(심층 8개·성표 4개는 기존 .5 = 22.5°, 일반 6개·표지 4개는 15°).
     // 같은 거리면 .5 를 먼저 고른다.
     const markAngles = def.marks.map(([dx, dz]) => Math.atan2(dz, dx)), step = Math.PI * 2 / this.nShards;
     const gapOf = phase => {

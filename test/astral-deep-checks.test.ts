@@ -406,6 +406,16 @@ describe('성좌 4곳: 복원 순서·읽기·유지', () => {
     expect(ev(mut(s.rows, rows => { const p = plateau(rows); p[3].rs = .97; })).ok.read).toBe(false);
     expect(ev(mut(s.rows, rows => { const p = plateau(rows); for (const r of p.slice(2)) r.rs = .95; })).ok.read).toBe(false);
     // 늘어나는 구간에서 한 스텝이 경과 시간보다 많이 늘면 실패.
+    // readSeconds 아래에서 몇 스텝 멈췄다가(값이 같음) 다시 경과 시간만큼 늘어 1 에 닿아도 실패한다(면제는 상한에 닿은 뒤 멈춤 하나뿐, B13 리뷰 Q14).
+    const stall = (steps: number) => (rows: any[]) => {
+      const i = rows.findIndex((x: any) => x.pr === 0 && x.rs > .3 && x.rs < .5);
+      let prev = rows[i].rs;
+      for (let k = i + 1, n = 0; rows[k].pr === 0 && rows[k].hd === 0; k++) {
+        if (n < steps) { rows[k].rs = prev; n++; } else { prev = Math.min(1, prev + (rows[k].t - rows[k - 1].t)); rows[k].rs = prev; }
+      }
+    };
+    expect(ev(mut(s.rows, stall(0))).violations).toEqual([]);                             // 같은 다시 쓰기에 멈춤이 없으면 정상 경로 그대로
+    expect(ev(mut(s.rows, stall(5))).ok.read).toBe(false);
     expect(ev(mut(s.rows, rows => { const i = rows.findIndex((x: any) => x.pr === 0 && x.rs > .3 && x.rs < .5); rows[i].rs += .05; })).ok.read).toBe(false);
   });
   test('판 유지가 1초에 못 미치면 실패한다', () => {
@@ -1517,7 +1527,7 @@ describe('일반판: 계약 상수·정의·문구 틀', () => {
     expect(crossed).toEqual(expect.arrayContaining(['id', 'kind', 'rooms', 'labels', 'answers', 'ring']));
     expect(K.checkDefinition(SDEF, K.CONTRACTS.deep).ok).toBe(false);
   });
-  test('정적 setup 이 일반판 정의의 오프셋(표지 3개)과 맞는지 본다', () => {
+  test('정적 setup 이 일반판 정의의 오프셋(표지 4개)과 맞는지 본다', () => {
     expect(K.checkSetup(SSETUP, SDEF).ok).toBe(true);
     const moved = (patch: (s: any) => void) => { const s = structuredClone(SSETUP); patch(s); return K.checkSetup(s, SDEF); };
     expect(moved(s => { s.ring.marks.pop(); }).checks.marks).toBe(false);
@@ -1551,6 +1561,12 @@ describe('일반판: 계약 상수·정의·문구 틀', () => {
   });
   test('문구 틀이 일반판 정의에서는 일반판 낱말과 조사로 채워진다', () => {
     const c = K.ringCopy(SRING);
+    // 정규식은 앞뒤 글자가 붙은 토스트를 받지 않는다(B13 리뷰 Q6·Q13).
+    expect(c.startPattern.test('외곽 고리 이탈 시작 · 24초')).toBe(true);
+    expect(c.startPattern.test('x외곽 고리 이탈 시작 · 24초')).toBe(false); expect(c.startPattern.test('외곽 고리 이탈 시작 · 24초 x')).toBe(false);
+    expect(c.markPattern.test('항로 표지 점등 · 1/4')).toBe(true);
+    expect(c.markPattern.test('x항로 표지 점등 · 1/4')).toBe(false); expect(c.markPattern.test('항로 표지 점등 · 1/4 x')).toBe(false);
+    expect(c.collapsePattern.test('외곽 고리 붕괴 · 항로 표지가 흐려졌습니다 · 다시 24초 ')).toBe(false);
     expect(c.allRestored).toBe(STX.all);
     expect(c.ringOpen).toBe(STX.open);
     expect(c.shardHit).toBe(STX.hit);
