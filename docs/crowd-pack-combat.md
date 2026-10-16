@@ -44,5 +44,6 @@
 ## 검증 도구
 
 - `tools/crowd-flow-sim.mjs`: 실제 BattleBase 방 흐름·Enemy 생성자/AI·Player 입력/갱신·Floor 충돌을 GLB/DOM/음향 없이 돌린다. 수동 봇·AUTO·몰이 주행(kite) 모드, 기존 명단 전용 지표와 졸개 포함 지표를 따로 낸다. `--project`로 기준선 소스와 비교한다. 화면·체감·실기기 증거가 아니다.
+  - 경로 `campaign:N`은 무한의 성 N층을 `BattleBase.start`와 같은 `Floor` 생성으로 돌린다(파티 시드 없음, 개인 층 전용). 그 밖의 경로는 원정 던전 id다.
+- `tools/crowd-combat-qa.mjs`: 실제 브라우저 관찰 전용(SwiftShader·CDP 터치, 실기기 아님). 위치·체력·보상을 강제하지 않고 상태를 읽기만 하며 보고서를 단계마다 저장해 중단돼도 근거가 남는다. `--auto-first`는 AUTO 버튼을 실제로 눌러 첫 방까지 가고, 8m 안 3마리 이상일 때 회피 버튼을 실제로 연타한다. 자연 RAF 시계는 느린 렌더러에서 게임 시간이 거의 흐르지 않으므로 무리 전투 전체 증명에는 통합 단계의 제어 시계(`app.step`)+실제 입력 경로를 따로 쓴다.
 - `test/crowd-pursuit.test.ts`, `test/player-dodge-buffer.test.ts`.
-

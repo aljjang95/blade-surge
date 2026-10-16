@@ -24,8 +24,11 @@ function seeded(seed) {
 
 /** 원정 던전 한 판. 진입·스폰·추격·정화·봉인·포탈은 실제 BattleBase.update 경로를 사용한다. */
 export function createCrowdFlowFixture(runtime, { route = 'bellfall_crypt', hero = 'knight', auto = false, maxAlive = 24 } = {}) {
-  const stage = runtime.buildExpeditionStage('dungeon', route, null);
-  const world = runtime.buildExpeditionWorld(stage);
+  // 'campaign:N' 은 무한의 성 N층(BattleBase.start 와 같은 Floor 생성), 그 밖은 원정 던전 id.
+  const floorNo = /^campaign:(\d+)$/.exec(route)?.[1];
+  const stage = floorNo ? runtime.stageDef(Math.floor((+floorNo - 1) / runtime.STAGES_PER_CHAPTER) + 1, (+floorNo - 1) % runtime.STAGES_PER_CHAPTER + 1)
+    : runtime.buildExpeditionStage('dungeon', route, null);
+  const world = floorNo ? new runtime.Floor(stage.idx, stage.chapter.theme, undefined, stage.dungeon?.layout) : runtime.buildExpeditionWorld(stage);
   const game = Object.create(runtime.Battle.prototype);
   const fakeModel = () => ({ scene: new Group(), animations: [] });
   const models = new Proxy({}, { get: () => fakeModel() });

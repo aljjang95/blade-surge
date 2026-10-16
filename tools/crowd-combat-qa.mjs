@@ -11,6 +11,8 @@ const url = get('--url', 'http://127.0.0.1:5291/'), out = path.resolve(get('--ou
 fs.mkdirSync(out, { recursive: true });
 const report = { url, hero, started: new Date().toISOString(), scope: 'Linux Chromium SwiftShader, 844x390 CDP 터치 프로필. 실기기·체감 증거 아님.', errors: [], console: [], frames: [], dodges: [] };
 let browser, page, shot = 0;
+// 느린 SwiftShader 에서 프로세스가 끊겨도 근거가 남도록 보고서를 단계마다 쓴다.
+const save = () => fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
 const snap = async (label) => { const file = String(++shot).padStart(2, '0') + '-' + label + '.png'; await page.screenshot({ path: path.join(out, file) }); return file; };
 // 관찰 전용: 상태를 읽기만 한다.
 const observe = () => page.evaluate(() => {
@@ -69,7 +71,38 @@ try {
   await page.waitForFunction(() => document.querySelector('.exp-cinematic') || (window.app.mode === 'battle' && window.app.battle.active));
   const skip = page.locator('.exp-cinematic button'); if (await skip.isVisible()) await skip.tap();
   await page.waitForFunction(() => window.app.battle.active && !window.app.stageStarting && !window.app.battle.paused && window.app.battle.elapsed > .1);
-  report.start = await observe(); await snap('start');
+  report.start = await observe(); await snap('start'); save();
+  if (args.includes('--auto-first')) {
+    // AUTO 버튼을 실제로 눌러 첫 방까지 걷고 무리 발각·합류·전투를 게임 시계 1초 간격으로 기록한다.
+    // 교전 중(8m 안 3마리 이상)에는 회피 버튼을 실제로 연타해 무쿨 회피를 확인한다.
+    await page.locator('#btn-auto').tap();
+    const realStart = Date.now(), gameStart = await clock(); let dodged = 0;
+    while (Date.now() - realStart < 1500000) {
+      const o = await observe();
+      o.file = await snap('auto-' + report.frames.length); report.frames.push(o); save();
+      if (dodged < 4 && o.enemies.filter(e => e.d < 8).length >= 3) {
+        for (; dodged < 4; dodged++) {
+          await page.locator('#btn-dodge').tap();
+          const ok = await page.waitForFunction(() => window.app.battle.player.state === 'dodge', null, { timeout: 30000 }).then(() => true, () => false);
+          const during = await observe();
+          await page.locator('#btn-dodge').tap();
+          await page.waitForFunction(() => window.app.battle.player.state !== 'dodge', null, { timeout: 60000 }).catch(() => {});
+          const after = await observe();
+          report.dodges.push({ i: dodged, started: ok, duringInvuln: during.invuln, duringCd: during.dodgeCd, cdLabelHidden: during.cdLabelHidden,
+            near: during.enemies.filter(e => e.d < 8).length, endCd: after.dodgeCd, clock: after.clock, hp: after.hp });
+          if (dodged === 1) await snap('dodge-in-crowd');
+          save();
+        }
+      }
+      if (o.cleared >= 1 && o.enemies.length === 0 || !o.active || o.clock - gameStart > 70) break;
+      await waitClock(o.clock + 1, 240000).catch(() => {});
+    }
+    report.end = await observe(); await snap('end');
+    report.peakNear = Math.max(...report.frames.map(f => f.enemies.filter(e => e.d < 7).length));
+    report.followersSeen = Math.max(...report.frames.map(f => f.enemies.filter(e => e.follower).length));
+    report.pass = report.errors.length === 0 && report.dodges.length > 0 && report.dodges.every(d => d.started && d.duringCd === 0 && d.endCd === 0 && d.cdLabelHidden) && report.end.cleared >= 1;
+    save(); await ctx.close();
+  } else {
   // 1) 첫 방으로 실제 키 이동 → 무리 발각·함께 도착을 0.5초 간격으로 기록한다.
   await holdToward(25, 'enter');
   for (let i = 0; i < 10; i++) { const o = await observe(); o.file = await snap('approach-' + i); report.frames.push(o); await waitClock(o.clock + .5); }
@@ -104,6 +137,7 @@ try {
   report.followersSeen = Math.max(...report.frames.map(f => f.enemies.filter(e => e.follower).length));
   report.pass = report.errors.length === 0 && report.dodges.every(d => d.duringCd === 0 && d.endCd === 0 && d.cdLabelHidden) && report.end.cleared >= 1;
   await ctx.close();
+  }
 } catch (e) { report.fail = String(e.stack || e).split('\n').slice(0, 5).join(' | '); process.exitCode = 1; }
 finally {
   report.finished = new Date().toISOString();
