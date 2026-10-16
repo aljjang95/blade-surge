@@ -4,7 +4,7 @@ import { Input } from '../src/engine/input.js';
 import { Player } from '../src/game/player.js';
 import { Battle } from '../src/game/battle-base.js';
 import { HEROES } from '../src/data/heroes.js';
-import { DODGE_COOLDOWN_SEC } from '../src/game/progression.js';
+import { DODGE_COOLDOWN_SEC, DODGE_INVULN_SEC } from '../src/game/progression.js';
 import { createCombatFlowFixture, loadCombatFlowRuntime, spawnCombatFlowEnemy, stepCombatFlow } from '../tools/combat-flow-sim.mjs';
 
 const runtime = await loadCombatFlowRuntime();
@@ -61,7 +61,7 @@ test('5영웅의 모든 평타 종료 직전 회피는 30·60·120fps에서 재�
       const hp = p.hp, mp = p.mp, position = p.pos.clone();
       stepCombatFlow(f, dt);
       expect(p.state).toBe('dodge'); expect(p.dodgeBufferT).toBe(0);
-      expect(p.dodgeCd).toBeCloseTo(DODGE_COOLDOWN_SEC - dt);
+      expect(p.dodgeCd).toBe(Math.max(0, DODGE_COOLDOWN_SEC - dt));
       expect(p.pos.x).toBeGreaterThan(position.x); expect(p.hp).toBe(hp);
       expect(p.mp).toBeGreaterThanOrEqual(mp);
       expect(p.comboResume).toBeNull();
@@ -102,7 +102,7 @@ test('공속 강화·폭풍·중첩 상태도 5영웅 마무리의 실제 종료
       expect(p.state).toBe('dodge'); expect(p.dodgeBufferT).toBe(0);
       const cooldown = p.dodgeCd;
       stepCombatFlow(f, dt);
-      expect(p.dodgeCd).toBeCloseTo(cooldown - dt);
+      expect(p.dodgeCd).toBe(Math.max(0, cooldown - dt));
     }
   }
 });
@@ -304,7 +304,7 @@ test('5영웅의 4방향 무입력 회피는 바라보는 방향을 유지한 �
     f.game.input.press('dodge'); p.handleInput(f.game.input, 1 / 60);
     expect(p.state).toBe('dodge'); expect(p.actionName).toBe('Dodge_Backward'); expect(p.yaw).toBe(yaw);
     expect(p.vel.dot(forward)).toBeCloseTo(-19); expect(p.dodgeCd).toBe(DODGE_COOLDOWN_SEC);
-    expect(p.invuln).toBe(.4); expect(p.perfectWindow).toBe(.28); expect(p.ult).toBe(ult); expect(p.mp).toBe(mp);
+    expect(p.invuln).toBe(DODGE_INVULN_SEC); expect(p.perfectWindow).toBe(.28); expect(p.ult).toBe(ult); expect(p.mp).toBe(mp);
     advanceUntil(f, () => p.state === 'idle', 1 / 60);
     expect(p.pos.clone().sub(from).dot(forward)).toBeLessThan(0); expect(p.yaw).toBe(yaw);
     expect(f.events.hits).toHaveLength(0); expect(p.comboIdx).toBe(0); expect(p.ult).toBe(ult);
@@ -379,4 +379,83 @@ test('회피 중 누른 공격의 짧은 버퍼는 pause·Input.clear에서 취�
     f.game.input.press('attack'); stepCombatFlow(f, dt);
     expect(p.state).toBe('attack'); expect(p.yaw).toBeCloseTo(Math.PI / 2);
   }
+});
+
+test('쿨타임 없는 회피: 구르기가 끝나면 바로 다시 구르고, 진행 중 회피·기절·사망·일시정지는 그대로 막는다', () => {
+  expect(DODGE_COOLDOWN_SEC).toBe(0);
+  for (const fps of [30, 60, 120]) {
+    const f = fixture(), p: any = f.player, dt = 1 / fps, input = f.game.input;
+    input.move.x = 1; input.press('dodge'); p.handleInput(input, dt);
+    expect(p.state).toBe('dodge'); expect(p.dodgeCd).toBe(0); expect(p.invuln).toBe(DODGE_INVULN_SEC);
+    // 구르는 중 다시 눌러도 새 회피로 덮어쓰지 않는다(시간·무적을 다시 채우지 않는다).
+    stepCombatFlow(f, dt); const stateT = p.stateT, invuln = p.invuln;
+    input.press('dodge'); p.handleInput(input, dt);
+    expect(p.stateT).toBe(stateT); expect(p.invuln).toBe(invuln);
+    advanceUntil(f, () => p.state !== 'dodge', dt);
+    // 무적은 구르기 안쪽에서 이미 끝났고, 다음 프레임 입력으로 곧바로 다시 구른다.
+    expect(p.invuln).toBeLessThanOrEqual(0);
+    input.press('dodge'); stepCombatFlow(f, dt);
+    expect(p.state).toBe('dodge'); expect(p.dodgeCd).toBe(0);
+    advanceUntil(f, () => p.state !== 'dodge', dt);
+    input.move.x = 0; stepCombatFlow(f, dt);
+    for (const blocked of ['stun', 'dead', 'pause']) {
+      if (blocked === 'stun') p.stun = .3;
+      if (blocked === 'dead') p.alive = false;
+      if (blocked === 'pause') Battle.prototype.setPaused.call(f.game, 'menu', true);
+      const before = p.state;
+      input.press('dodge');
+      if (blocked === 'pause') stepCombatFlow(f, dt); else p.handleInput(input, dt);
+      expect(p.state).toBe(before);
+      if (blocked === 'stun') p.stun = 0;
+      if (blocked === 'dead') p.alive = true;
+      if (blocked === 'pause') {
+        // 일시정지 중 입력은 재개 뒤 재생되지 않는다.
+        Battle.prototype.setPaused.call(f.game, 'menu', false); stepCombatFlow(f, dt); expect(p.state).not.toBe('dodge');
+      }
+      input.clear();
+    }
+  }
+});
+
+test('회피 연타는 3초 동안 매 구르기 사이에 맞을 수 있는 프레임을 남기고, 구르기를 사격으로 끊으면 회피 무적도 끝난다', () => {
+  for (const fps of [30, 60, 120]) {
+    const f = fixture(), p: any = f.player, dt = 1 / fps, input = f.game.input;
+    let starts = 0, gaps = 0, exposedSinceStart = true, covered = 0, frames = 0;
+    for (let t = 0; t < 3; t += dt) {
+      input.press('dodge'); const was = p.state === 'dodge' ? p.stateT : -1;
+      stepCombatFlow(f, dt); frames++;
+      if (p.state === 'dodge' && (was < 0 || p.stateT < was)) { starts++; if (exposedSinceStart) gaps++; exposedSinceStart = false; }
+      if (p.invuln > 0) covered++; else exposedSinceStart = true;
+    }
+    // 1프레임마다 눌러도 구르기는 약 0.32초마다 한 번이며, 매번 그 앞에 맞을 수 있는 프레임이 있었다.
+    expect(starts).toBeGreaterThanOrEqual(8); expect(gaps).toBe(starts);
+    expect(covered / frames).toBeLessThan(.9);
+  }
+  const f = fixture('ranger'), p: any = f.player, dt = 1 / 60, input = f.game.input;
+  p.yaw = 0; input.move.x = 1; input.press('dodge'); stepCombatFlow(f, dt);
+  input.move.x = 0; input.press('attack');
+  advanceUntil(f, () => p.state === 'attack', dt);
+  expect(p.stateT).toBeLessThan(DODGE_INVULN_SEC);
+  expect(p.invuln).toBe(0);
+  // 부활처럼 다른 출처의 무적은 회피를 끊어도 남은 만큼 유지한다.
+  const g = fixture('ranger'), q: any = g.player;
+  q.invuln = 1; g.game.input.press('dodge'); stepCombatFlow(g, dt); g.game.input.press('attack');
+  advanceUntil(g, () => q.state === 'attack', dt);
+  expect(q.invuln).toBeGreaterThan(.6); expect(q.invuln).toBeLessThan(1);
+});
+
+test('AUTO는 쿨타임 없이도 같은 예고 하나에 한 번만 구르고 무적 중에는 다시 구르지 않는다', () => {
+  const f = fixture(), p: any = f.player, dt = 1 / 60, random = Math.random;
+  const threat = spawnCombatFlowEnemy(f, p.pos.x + 2, p.pos.z, { telegraph: 1, state: 'attack', isElite: true });
+  Math.random = () => 0;
+  try {
+    // 스킬 우선 분기가 먼저 반환하지 않게 스킬 자원을 비운다(회피 판단만 본다).
+    p.auto = true; f.game.elapsed = 10; p.mp = 0; p.ult = 0; p.cds = p.cds.map(() => 99);
+    p.autoMove(dt); expect(f.game.input.queue.filter((n: string) => n === 'dodge')).toHaveLength(1);
+    f.game.input.clear(); p.dodge(null);
+    p.state = 'idle'; p.autoMove(dt); expect(f.game.input.queue).not.toContain('dodge');
+    p.invuln = 0; f.game.elapsed = 10.5; p.autoMove(dt); expect(f.game.input.queue).not.toContain('dodge');
+    // 그 예고가 끝난 뒤의 새 예고에는 다시 반응한다.
+    f.game.elapsed = 11.3; p.autoMove(dt); expect(f.game.input.queue).toContain('dodge');
+  } finally { Math.random = random; threat.mobRole?.dispose?.(); }
 });

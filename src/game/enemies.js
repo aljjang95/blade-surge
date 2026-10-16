@@ -12,9 +12,14 @@ import { beginEnemyGather, prepareEnemyGather } from './crowd-gather.js';
 import { EnemyDashWarning } from './enemy-dash-warning.js';
 import { hazardContains } from './region-hazards.js';
 import { monsterRosterEntry } from '../data/monster-roster.js';
+import { canCommitRanged, escapeWall, idlePursuit, packNoise, updatePursuit } from './pack-pursuit.js';
 
 const _v = new THREE.Vector3();
 const _impactPoint = new THREE.Vector3();
+// 추격 방향·무리 보폭 결과를 매 프레임 재사용한다.
+const _route = { x: 0, z: 0, pace: 1, los: true };
+// 원거리 적이 근접 영웅에게서 연속으로 물러설 수 있는 최대 시간. 끝없는 뒷걸음 추격을 막는다.
+const RANGED_RETREAT_SEC = 2.4;
 const areaPlayers = game => [...new Set(game.stage?.party ? game.app.party.livingPlayers() : [game.player])].filter(p => p?.alive);
 const PATTERN_ANIMS = { basic: 'attack', spin: 'attackSpin', slam: 'attackJump', summon: 'summon', fan: 'cast', soulrain: 'raise', dash: 'dash' };
 
@@ -232,6 +237,8 @@ export class Enemy extends Actor {
   }
   hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false } = {}) {
     if (!this.alive || this.spawning) return 0;
+    // 맞은 무리와 시야가 닿는 가까운 경계 무리는 피한 공격에도 깨어난다.
+    packNoise(this.game, this);
     if (this.def.dodge && Math.random() < this.def.dodge && this.state === 'chase' && !this.stun) {
       this.play(this.A('dodge'), { once: true, fade: 0.05, speed: 1.5 }); this.state = 'dodge'; this.stateT = 0; this.kb.set(-dirx, 0, -dirz).normalize().multiplyScalar(-8);
       this.game.fx.damage(this.pos, 0, { text: 'MISS' }); this.game.fx.ghost(this.model, 0x80ff90, { life: 0.3, opacity: 0.4 });
@@ -328,6 +335,8 @@ export class Enemy extends Actor {
     else if (this.tintEmissive && !this.enraged && !this.isElite && !(this._crystal > 0)) this.tintEmissive = null;   // 결정화 틴트는 세트 쪽이 되돌린다
     if (!this.alive) return;
     this.stateT += dt; const p = this.player; if (!p) return;
+    // 벽 속에 박힌 중심은 어떤 이동도 거부돼 방 정화를 막는다. 가장 가까운 바닥으로 보정한다(잠행 중 제외).
+    if (!this.burrow?.phase) escapeWall(this.game.world, this.pos);
     const d = this.distTo(p); const spdMul = (this.slow ? 0.5 : 1) * (this.enraged ? 1.35 : 1);
     if (this.state === 'spawn') {
       if (this.popIn !== undefined) { const k = Math.min(1, this.stateT / this.spawnLen); const e = 1 + Math.sin(Math.min(1, k) * Math.PI) * 0.25; this.model.scale.setScalar(this.modelScale * (k < 1 ? k * e : 1)); }
@@ -335,7 +344,8 @@ export class Enemy extends Actor {
       if (this.stateT > this.spawnLen * 0.8) { if (this.popIn !== undefined) this.model.scale.setScalar(this.modelScale); this.spawning = false; this.state = 'chase'; this.play(this.A('idleCombat'), { fade: 0.2 }); if (this.isBoss) { this.game.renderer.shake(0.6); audio.play('hit_bell', { vol: 0.6, rate: 0.5 }); } }
       return;
     }
-    if (this.burrow?.update(dt, d)) return;
+    // 경계 중인 잠복형은 발각 전에는 파고들지 않는다. 이미 시작한 잠행은 끝까지 진행한다.
+    if (this.burrow && (this.burrow.phase || this.pack?.aggro !== false) && this.burrow.update(dt, d)) return;
     if (this.stun > 0 && this.state !== 'dead') { this.vel.set(0, 0, 0); if (!this.rig.hit.includes(this.actionName) && this.state !== 'hurt') { this.play(this.A('hit'), { once: true, clamp: true, fade: 0.05 }); } this.telegraph = 0; this.attackDone = false; if (this.state === 'attack') this.state = 'chase'; return; }
     if (this.isBoss) {
       const q = Math.floor((1 - this.hp / this.maxHp) * 5);   // 20% 마다 파편(장비) — 보스전 중 보상 공백 방지
@@ -363,7 +373,7 @@ export class Enemy extends Actor {
         return;
       }
       if (d < 2.2 && this.state === 'chase') { this.fuse = 0; this.special = 'bomber'; this.telegraph = 0.7; this.game.fx.ring(this.pos, 0xff6030, { telegraph: true, r0: 3.3, r1: 3.6, life: 0.7, y: 0.06, width: 1 }); this.announceSkill(); audio.charge({ vol: 0.3, dur: 0.6 }); return; }
-    } else if (this.behavior === 'shaman') {
+    } else if (this.behavior === 'shaman' && this.pack?.aggro !== false) {
       if (this.supportOwner) { if (this.trySupportCast(dt)) return; }
       else {
         this.healT -= dt; this.summonT -= dt;
@@ -379,21 +389,36 @@ export class Enemy extends Actor {
     const sx = steer.x, sz = steer.z;
 
     if (this.state === 'chase') {
+      // 무리 경계·발각·경로 추격. 발각 전에는 앵커에서 경계하거나 추적을 잃은 뒤 자기 방으로 돌아간다.
+      if (!updatePursuit(this, this.game, p, d, dt, _route)) {
+        if (idlePursuit(this, this.game, sx, sz, _route)) {
+          this.faceDir(_route.x, _route.z);
+          const walk = this.def.spd < 4 ? this.A('walk') : this.A('run');
+          if (this.actionName !== walk) this.play(walk, { fade: 0.15 });
+        } else if (this.actionName !== this.rig.idleCombat && this.actionName !== this.rig.idle) this.play(this.A('idleCombat'), { fade: 0.2 });
+        return;
+      }
       this.atkCd -= dt;
-      if (this.mobRole && this.atkCd <= 0 && p.alive && this.mobRole.available(d)) { this.mobRole.start(); return; }
+      if (this.mobRole && this.atkCd <= 0 && p.alive && _route.los && this.mobRole.available(d)) { this.mobRole.start(); return; }
       const range = this.def.range;
       const dx = p.pos.x - this.pos.x, dz = p.pos.z - this.pos.z;
-      this.faceDir(dx, dz);
-      if (d > range * 0.92 && !(this.def.ranged && d < range * 0.6)) {
-        const spd = this.def.spd * spdMul; this.vel.set(dx / d * spd + sx, 0, dz / d * spd + sz);
+      // 벽을 돌아가는 중에는 가는 길을 보고, 직선이 열리면 플레이어를 본다.
+      if (this.routeClear === false) this.faceDir(_route.x, _route.z); else this.faceDir(dx, dz);
+      // 원거리 적은 시야가 없으면 사거리 안이어도 벽 너머로 쏘지 않고 길을 따라 시야를 찾는다.
+      const blind = this.def.ranged && !_route.los;
+      if (blind || (d > range * 0.92 && !(this.def.ranged && d < range * 0.6))) {
+        this.backT = Math.max(0, (this.backT || 0) - dt * .5);
+        const spd = this.def.spd * spdMul * _route.pace; this.vel.set(_route.x * spd + sx, 0, _route.z * spd + sz);
         const run = this.def.spd < 4 ? this.A('walk') : this.A('run');
         if (this.actionName !== run) this.play(run, { fade: 0.15, speed: spdMul * (this.def.spd > 5 ? 1.2 : 1) });
-      } else if (this.def.ranged && d < range * 0.45) {
+      } else if (this.def.ranged && d < range * 0.45 && (this.backT = (this.backT || 0) + dt) < RANGED_RETREAT_SEC) {
         const spd = this.def.spd * 0.8; this.vel.set(-dx / d * spd + sx, 0, -dz / d * spd + sz); if (this.actionName !== this.A('back')) this.play(this.A('back'), { fade: 0.15 });
       } else {
+        if (!(this.def.ranged && d < range * 0.45)) this.backT = Math.max(0, (this.backT || 0) - dt * .5);
         this.vel.set(sx, 0, sz);
-        if (this.atkCd <= 0 && p.alive && canCommit) this.startAttack(d);
-        else if (this.atkCd <= 0 && !canCommit) this.atkCd = .16;
+        const aimed = !this.def.ranged || canCommitRanged(this, this.game.enemies, p);
+        if (this.atkCd <= 0 && p.alive && canCommit && aimed) this.startAttack(d);
+        else if (this.atkCd <= 0 && (!canCommit || !aimed)) this.atkCd = .16;
         else if (this.actionName !== this.rig.idleCombat && this.actionName !== this.rig.idle) this.play(this.A('idleCombat'), { fade: 0.15 });
       }
     } else if (this.state === 'attack') {

@@ -21,17 +21,19 @@ import { contactFeedback } from './apex-combat.js';
 import { ImpactClock } from './combat-motion.js';
 import { RegionHazards } from './region-hazards.js';
 import { resolveJobHero } from '../data/jobs.js';
-import { buildExpeditionWorld, expeditionRoster, applyBattleConsumable, canApplyBattleConsumable } from './expedition-combat.js';
+import { buildExpeditionWorld, expeditionRoster, expeditionFollowers, packFollowerDef, applyBattleConsumable, canApplyBattleConsumable } from './expedition-combat.js';
 import { ConquestRun } from './expedition-conquests.js';
 import { createRouteObjectives } from './route-objectives.js';
 import { createMapTactics } from './map-tactics.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
+import { alertPack, joinPack, packSlot, planRoomPacks } from './pack-pursuit.js';
 import { preloadFieldSurface } from './open-field-scene.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
 import { dungeonVisualFor } from '../data/dungeon-visuals.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 
 const _v = new THREE.Vector3();
+const _slot = { x: 0, z: 0 };
 const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
 
 /** 히트스탑 / 슬로우모션 타임 컨트롤 */
@@ -311,6 +313,9 @@ export class Battle {
     this.conquest?.prepareRoom(room, list);
     if (!list.length) { this.markCleared(room); return; }
     const isBoss = room.type === ROOM_TYPE.BOSS;
+    // 방 명단을 진입 반대편의 무리로 나눠 경계시킨다. 보스방·증원·소환은 기존처럼 바로 교전한다.
+    room.packs = isBoss ? null : planRoomPacks(this.world, room, list.length, this.player.pos.x, this.player.pos.z);
+    room.packQuota = room.packs ? list.length : 0; room.packAssigned = 0;
     if (isBoss) {
       audio.playMusic(musicForScene({ stage: this.stage, boss: true }), MUSIC_MIX); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 }));
       if (this.stage.encounter?.tactic) this.ui.toast(this.stage.encounter.tactic, 'gold');
@@ -322,11 +327,37 @@ export class Battle {
     else if (room.type === ROOM_TYPE.ELITE) { this.ui.waveBanner('ELITE'); audio.waveHorn({ vol: 0.42 }); audio.voice('elite', { min: 8 }); }
     else if (room.type === ROOM_TYPE.TREASURE) audio.voice('treasure', { min: 8 });
     // 한 번에 다 깔되 동시 상한을 넘으면 큐로
-    const initial = Math.min(list.length, this.maxAlive - this.enemies.filter((e) => e.alive).length);
-    for (let i = 0; i < initial; i++) this.after(0.08 + i * 0.07, () => this.spawnEnemy(list[i], null, room));
+    // 상한을 이미 넘긴 순간(소환 직후 등)에도 음수 자르기로 명단 앞부분이 사라지지 않게 0에서 멈춘다.
+    const initial = Math.max(0, Math.min(list.length, this.maxAlive - this.enemies.filter((e) => e.alive).length));
+    // 원정 무리의 약한 졸개는 명단 전원이 바로 설 수 있을 때만 그 뒤에 세운다(전술 명단 순서·대기열 보존).
+    const followers = room.packs && initial === list.length ? expeditionFollowers(this.stage, room, list.length) : [];
+    // 예약된 생성이 남은 동안에는 먼저 선 적을 모두 쓰러뜨려도 방을 정화하지 않는다.
+    room.spawnsDue = (room.spawnsDue || 0) + initial + followers.length;
+    for (let i = 0; i < initial; i++) this.after(0.08 + i * 0.07, () => { this.spawnEnemy(list[i], null, room); this.settleRoomSpawn(room); });
+    followers.forEach((t, i) => this.after(0.12 + (initial + i) * 0.07, () => { this.spawnFollower(t, room); this.settleRoomSpawn(room); }));
     for (const t of list.slice(initial)) this.pending.push({ t, room });   // 덮어쓰면 이전 방 잔여가 증발해 그 방이 영영 안 닫힌다
     room.pendingCount = list.length;
     if (!isBoss && !this.stage.expedition) this.callReinforcements(room);
+  }
+  /** 예약 생성 하나가 끝났다. 생성이 취소돼 처치 이벤트가 없더라도 남은 적이 없으면 방을 닫는다. */
+  settleRoomSpawn(room) {
+    room.spawnsDue = Math.max(0, (room.spawnsDue || 0) - 1);
+    if (!this.active || room.cleared || room.spawnsDue > 0) return;
+    if (!this.enemies.some(e => e.alive && e.homeRoom === room) && !this.pending.some(n => n.room === room)) this.markCleared(room);
+  }
+  /** 무리 졸개(expedition-combat.js PACK_FOLLOWER 계약). 상한이 차 있으면 세우지 않는다(대기열 없음). */
+  spawnFollower(type, room) {
+    if (!this.active || room.cleared || !room.packs?.length) return null;
+    let alive = 0; for (const e of this.enemies) if (e.alive) alive++;
+    if (alive >= this.maxAlive) return null;
+    const pack = this.roomPackFor(room); packSlot(this.world, pack, _slot);
+    let e;
+    this._spawningFollower = true;
+    try { e = this.spawnEnemy(type, null, room, new THREE.Vector3(_slot.x, 0, _slot.z)); } finally { this._spawningFollower = false; }
+    if (!e) return null;
+    e.packFollower = true; e.summoned = true; e.xpReward = 0;
+    joinPack(e, pack);
+    return e;
   }
   markCleared(room) {
     if (room.cleared) return;
@@ -444,27 +475,52 @@ export class Battle {
       def = this.conquest.enemyDefinition(type, def, rm);
       const pattern = def.boss && this.conquest.bossPattern(); if (pattern) def = { ...def, pattern };
     }
-    let pos;
+    if (this._spawningFollower) def = packFollowerDef(def);
+    let pos, pack = null, rushing = false;
     if (at) { const [x, z] = this.world ? this.world.resolve(rm.x, rm.z, at.x, at.z, 0.6) : [at.x, at.z]; pos = new THREE.Vector3(x, 0, z); }
-    else if (near) { const a = Math.random() * Math.PI * 2; pos = near.clone().add(new THREE.Vector3(Math.cos(a) * 3, 0, Math.sin(a) * 3)); }
+    else if (near) {
+      const a = Math.random() * Math.PI * 2; pos = near.clone().add(new THREE.Vector3(Math.cos(a) * 3, 0, Math.sin(a) * 3));
+      // 소환 자리가 벽 속이면 소환자 쪽으로 미끄러뜨린다(벽에 박힌 소환수가 방 정화를 막았다).
+      if (this.world) { const [x, z] = this.world.resolve(near.x, near.z, pos.x, pos.z, 0.6); pos.x = x; pos.z = z; }
+    }
     else if (this.world && rm) {
-      let best = null;
-      for (let k = 0; k < 12; k++) {
-        const [x, z] = this.world.randomIn(rm, def.boss ? 4 : 2.2);
-        const d = this.player ? Math.hypot(x - this.player.pos.x, z - this.player.pos.z) : 99;
-        if (!best || d > best.d) best = { x, z, d };
-        if (d > (def.boss ? 7 : 5)) break;
+      pack = !def.boss && rm.packs?.length && rm.packAssigned < rm.packQuota ? this.roomPackFor(rm) : null;
+      if (pack) { rm.packAssigned++; packSlot(this.world, pack, _slot); pos = new THREE.Vector3(_slot.x, 0, _slot.z); }
+      else if (!def.boss && rm.packs?.length) {
+        // 명단 뒤의 증원 물결은 한 앵커에서 무리로 들어와 바로 교전한다(흩어진 한 마리씩 대신).
+        pack = this.roomPackFor(rm); packSlot(this.world, pack, _slot); pos = new THREE.Vector3(_slot.x, 0, _slot.z); rushing = true;
       }
-      pos = new THREE.Vector3(best.x, 0, best.z);
+      else {
+        let best = null;
+        for (let k = 0; k < 12; k++) {
+          const [x, z] = this.world.randomIn(rm, def.boss ? 4 : 2.2);
+          const d = this.player ? Math.hypot(x - this.player.pos.x, z - this.player.pos.z) : 99;
+          if (!best || d > best.d) best = { x, z, d };
+          if (d > (def.boss ? 7 : 5)) break;
+        }
+        pos = new THREE.Vector3(best.x, 0, best.z);
+      }
     } else { const a = Math.random() * Math.PI * 2, r = 11; pos = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r); }
     const e = new Enemy(this, gltf, this.weaponsGltf, def, this.stage.scale, pos);
     e.homeRoom = rm;
+    if (pack) { joinPack(e, pack); if (rushing) alertPack(this, pack, e); }
     e.runtimeSpeciesId = runtimeType;
-    this.conquest?.spawn(e, runtimeType, rm);
-    this.routeObjectives?.spawn(rm);
+    // 무리 졸개는 전술·경로 목표의 명단 영수증에 넣지 않는다(카탈로그 명단 수 보존).
+    if (!this._spawningFollower) { this.conquest?.spawn(e, runtimeType, rm); this.routeObjectives?.spawn(rm); }
     this.enemies.push(e);
     if (def.boss) { this.boss = e; this.ui.showBoss(def.name, true, def.portrait); this.app.companionAgent?.observe('boss-spotted', { name: def.name, id: `${this.stage.idx}:${def.name}` }); }
     return e;
+  }
+  /** 방 명단의 다음 무리. 순서대로 돌리되 플레이어가 서 있는 앵커(6m 안)에는 새 병력을 세우지 않는다. */
+  roomPackFor(room) {
+    const packs = room.packs, p = this.player?.pos;
+    const cursor = room.packCursor || 0; room.packCursor = cursor + 1;
+    let pack = packs[cursor % packs.length];
+    if (p && Math.hypot(pack.x - p.x, pack.z - p.z) < 6) {
+      let far = -1;
+      for (const other of packs) { const d = Math.hypot(other.x - p.x, other.z - p.z); if (d > far) { far = d; pack = other; } }
+    }
+    return pack;
   }
   summonMinions(boss, n) {
     if (this.stage?.expedition?.kind === 'arena') return;
@@ -500,7 +556,7 @@ export class Battle {
     this.player.addUlt(ultKillGain(e)); this.player.addMp?.(2);
     if (this.sp) this.sp.onKill(e);
     if (this.hasProc('blood_leech') && this.player.alive) { const heal = Math.floor(this.player.maxHp * 0.03); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); this.fx.embers(this.player.pos, 0xff3a5a, { n: 4, radius: 0.6, life: 0.6, rise: 2 }); if (this.fx.dmgLayer.children.length < 20) this.fx.damage(this.player.pos, heal, { kind: 'heal', text: '+' + heal }); }
-    if (!this.stage.party) this.app.eco.s.quests.kills++;
+    if (!this.stage.party && !e.packFollower) this.app.eco.s.quests.kills++;
     this.drops.onKill(e, this.stage);
     const big = e.isBoss || e.isElite;
     this.fx.burst(e.pos.clone().setY(1), 0xe0e0ff, { n: big ? 40 : 12, speed: 8, size: 0.4, up: 1 });
@@ -528,7 +584,7 @@ export class Battle {
     // 이 방 소속 적이 전멸하면 방 클리어
     const rm = e.homeRoom;
     if (rm && !rm.cleared) {
-      const left = this.enemies.some((x) => x.alive && x.homeRoom === rm) || this.pending.some((n) => n.room === rm);
+      const left = this.enemies.some((x) => x.alive && x.homeRoom === rm) || this.pending.some((n) => n.room === rm) || rm.spawnsDue > 0;
       if (!left) this.markCleared(rm);
     }
   }

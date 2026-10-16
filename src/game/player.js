@@ -9,7 +9,7 @@ import { materialsOf, poseRangerBowString } from '../engine/assets.js';
 import { HeroBeacon } from './hero-beacon.js';
 import { CONTROL_ULT_GAIN, ultimateLockDuration } from './control-rewards.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
-import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC } from './progression.js';
+import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC, DODGE_INVULN_SEC } from './progression.js';
 import { RangerAim } from './ranger-aim.js';
 
 const _v = new THREE.Vector3();
@@ -201,6 +201,8 @@ export class Player extends Actor {
   startCombo(idx, inputYaw = null) {
     if (idx === 0 && this.comboResume && this.comboResume.t > 0) { idx = this.comboResume.idx; this.comboResume = null; }
     const c = this.def.combo[idx]; if (!c) return;
+    // 구르기를 사격으로 끊으면 회피 무적도 그 순간 끝난다(다른 출처의 남은 무적은 유지). 회피→사격→회피 연쇄 무적 방지.
+    if (this.state === 'dodge') this.invuln = Math.max(0, (this.invulnOther || 0) - this.stateT);
     // 수동 궁수: 사거리 안의 보이는 적을 조준한다(공격 시작 시점). 대상이 없으면 아래 기존 규칙으로 쏜다.
     const manualBow = this.manualBow && this.alive && this.stun <= 0;
     const aimed = manualBow && c.projectile === 'arrow' ? this.rangerAim.select(this, c.range) : null;
@@ -381,7 +383,15 @@ export class Player extends Actor {
     // its own step; it cannot skip ahead to a free finishing blow.
     if (this.state === 'attack' && this.current) this.comboResume = {idx:this.hitDone?(this.comboIdx+1)%this.def.combo.length:this.comboIdx,t:1.25};
     this.attackBufferYaw = null; this.comboQueuedYaw = null;
-    this.dodgeBufferT = 0; this.stopTrail(); this.state = 'dodge'; this.stateT = 0; this.invuln = 0.4; this.dodgeCd = DODGE_COOLDOWN_SEC;
+    // 회피 무적은 구르기 안쪽에만 둔다. 부활·포탈 등 다른 출처의 남은 무적은 따로 기억해 줄이지 않는다.
+    const now = Number.isFinite(this.game?.elapsed) ? this.game.elapsed : NaN;
+    this.invulnOther = this.invuln > 0 ? this.invuln : 0;
+    // AUTO 가 요청한 회피가 실제로 시작된 순간에만 그 예고를 처리한 것으로 기록한다(버퍼 만료로 못 구른 요청은 다시 시도).
+    const threat = this.auto ? this._autoDodgeThreat : null;
+    if (threat) { this._autoDodgeFrom = threat; this._autoDodgeUntil = (Number.isFinite(now) ? now : 0) + Math.max(0, threat.telegraph || 0) + .15; }
+    this._autoDodgeThreat = null;
+    this.dodgeBufferT = 0; this.stopTrail(); this.state = 'dodge'; this.stateT = 0;
+    this.invuln = Math.max(this.invulnOther, DODGE_INVULN_SEC); this.dodgeCd = DODGE_COOLDOWN_SEC;
     this.perfectWindow = 0.28;   // 이 안에 피격 판정이 스치면 퍼펙트
     if (this.def.jobId === 'ranger') this.gainJobResource(1);
     // 수동 무방향 회피는 적을 보면서 물러선다. 방향 입력과 AUTO는 기존 전방 회피를 유지한다.
@@ -614,7 +624,12 @@ export class Player extends Actor {
     // 예고 회피 — 콤보 중에도 타격이 끝났으면 캔슬해서 구른다. 보스·엘리트의 큰 예고는 거의 확실히, 잡몹은 절반쯤 (적 위협 회전: 콤보 중 회피 불가라 보스전에서 HP 의 30% 를 그냥 맞았다)
     if (this.state === 'idle' || this.state === 'move' || (this.state === 'attack' && this.hitDone)) {
       const threat = list.find((x) => x.telegraph > 0 && this.distTo(x) < (x.isBoss ? 5.5 : x.isElite ? 5 : 4));
-      if (threat && (this.dodgeCd || 0) <= 0 && Math.random() < dt * (threat.isBoss || threat.isElite ? 9 : 3)) this.game.input.press('dodge');
+      // 쿨타임이 없어도 같은 예고 하나에는 실제로 한 번 구른 뒤 다시 구르지 않는다. 무적 중이면 다시 구르지 않는다.
+      const now = this.game.elapsed || 0;
+      const repeat = threat && threat === this._autoDodgeFrom && now < this._autoDodgeUntil;
+      if (threat && !repeat && !(this.invuln > 0) && (this.dodgeCd || 0) <= 0 && Math.random() < dt * (threat.isBoss || threat.isElite ? 9 : 3)) {
+        this.game.input.press('dodge'); this._autoDodgeThreat = threat;
+      }
     }
     return out;
   }

@@ -136,6 +136,8 @@ export class DropSystem {
   /** 적 처치 시 드랍 롤 */
   onKill(enemy, stage) {
     if (!fieldDropsAllowed(stage) || !fieldDropsAllowed(this.game.stage)) return;
+    // 무리 졸개는 몰이 밀도만 더한다. 보상은 기존 명단·방 정화에서만 나온다.
+    if (enemy.packFollower) return;
     const pos = enemy.pos.clone();
     const g = enemy.def.gold || 1;
     const goldAmt = Math.max(1, Math.floor(g * stage.scale * (0.8 + Math.random() * 0.5)));

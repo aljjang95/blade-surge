@@ -89,7 +89,8 @@ export class Battle extends BaseBattle {
     if (!this.killLedger.claim(enemy)) return;
     audio.kill({ boss: !!enemy.isBoss, elite: !!enemy.isElite });
     const rpg = this.ensureRpg();
-    if (enemy.speciesId && Object.hasOwn(ENEMIES, enemy.speciesId)) {
+    // 무리 졸개는 도감 처치·경험치에 넣지 않는다(기존 명단 보상만 유지).
+    if (enemy.speciesId && Object.hasOwn(ENEMIES, enemy.speciesId) && !enemy.packFollower) {
       recordMonster(rpg, enemy.speciesId, enemy.level, this.stage.idx, true, stageExpeditionEncounter(this.stage));
       const hero = this.app.eco.hero(this.heroId);
       const award = grantCombatXp(hero, enemy.xpReward || 0, levelExp);

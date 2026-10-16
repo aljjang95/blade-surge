@@ -48,10 +48,10 @@ test('MP pool uses base 100, slower passive regen, and clamps gain',()=>{
   expect(Player.prototype.addMp.call(p,-150)).toBe(0);
 });
 
-test('dodge starts the exact 1.35 second cooldown',()=>{
+test('dodge has no reuse cooldown (2026-10-16) while still entering the dodge state',()=>{
   const p=ranger({def:{...HEROES.ranger,jobId:null},game:{fx:{dust(){}},sp:null,hasProc:()=>false}});
   Player.prototype.dodge.call(p,new THREE.Vector3(1,0,0));
-  expect(DODGE_COOLDOWN_SEC).toBe(1.35); expect(p.dodgeCd).toBe(1.35); expect(p.state).toBe('dodge');
+  expect(DODGE_COOLDOWN_SEC).toBe(0); expect(p.dodgeCd).toBe(0); expect(p.state).toBe('dodge');
 });
 
 test('enemy death grants exactly two MP without changing the existing ultimate grant',()=>{
