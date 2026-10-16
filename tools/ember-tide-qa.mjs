@@ -1011,12 +1011,18 @@ async function rearManual(row) {
     const start = await rearState();
     await rmark('manual-start');
     const stint = { startLeft: start.windowLeft, fh: start.frontHits, rh: start.rearHits, results: [] };
+    // 등 뒤 타격은 정면 타격을 넣은 뒤의 것만 센다. 창이 열릴 때 영웅이 이미 등 뒤에 있으면 AUTO 가 남긴 콤보가 먼저 등 뒤를 칠 수 있다(b14 smoke s2-cand-rear).
+    let rearBase = null;
     try {
       if (gain.fh < 1) { const res = await strikeFrom(row, 'front', 'fh', start.frontHits); stint.results.push({ side: 'front', ...res }); }
-      if (stint.results.at(-1)?.reason !== 'closed' && gain.rh < 1) { const res = await strikeFrom(row, 'rear', 'rh', start.rearHits); stint.results.push({ side: 'rear', ...res }); }
+      if (stint.results.at(-1)?.reason !== 'closed' && gain.rh < 1) {
+        rearBase = (await rearState()).rearHits;
+        const res = await strikeFrom(row, 'rear', 'rh', rearBase); stint.results.push({ side: 'rear', ...res });
+      }
     } finally { await setKeys(new Set()); await rmark('manual-end'); keyboardMode = false; }
     const end = await rearState();
-    gain.fh += end.frontHits - start.frontHits; gain.rh += end.rearHits - start.rearHits;
+    gain.fh += end.frontHits - start.frontHits; if (rearBase !== null) gain.rh += end.rearHits - rearBase;
+    stint.rearBase = rearBase;
     stint.endLeft = end.windowLeft; stint.gain = { ...gain };
     row.manual.stints.push(stint);
   }
