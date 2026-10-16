@@ -91,6 +91,16 @@ test('셰이더 결합은 기존 onBeforeCompile·캐시 키를 이어 받고 �
   expect(shader.fragmentShader).toContain('discard;');
   expect(shader.uniforms.uSightCamera).toBe(sight.uniforms.uSightCamera);
   expect(material.clippingPlanes).toBeNull(); expect(material.transparent).toBe(false); expect(material.opacity).toBe(1);
+  // 렌더러 재생성 등으로 새 시선 객체가 같은 재질을 다시 묶어도 삽입은 한 번, 원래 훅도 한 번만 돈다.
+  const next = new BattleOcclusion(); next.bind(material);
+  expect(next.isBound(material)).toBe(true); expect(sight.isBound(material)).toBe(false);
+  expect(material.customProgramCacheKey()).toBe('stone-detail|battle-sightline-v1');
+  const again = { uniforms: THREE.UniformsUtils.clone(lib.uniforms), vertexShader: lib.vertexShader, fragmentShader: lib.fragmentShader } as any;
+  material.onBeforeCompile(again, null as any);
+  expect(earlier).toBe(2);
+  expect(again.vertexShader.split('varying vec3 vSightWorld;').length).toBe(2);
+  expect(again.fragmentShader.split('discard;').length - 1).toBe(shader.fragmentShader.split('discard;').length - 1);
+  expect(again.uniforms.uSightCamera).toBe(next.uniforms.uSightCamera);
 });
 
 test('모든 벽 청크는 원본 자산을 복제하지 않고 시선 셰이더를 공유하며 바닥 재질은 건드리지 않는다', () => {

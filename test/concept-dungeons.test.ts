@@ -60,10 +60,10 @@ test('모든 방은 시작방에서 이어지고 원형 마당은 원형 충돌�
     for (const d of disks) {
       const r = roomRadius(d);
       expect(r).toBeGreaterThanOrEqual(15);
-      // 원 안은 걸을 수 있고 외접 사각형 모서리는 막혀 있다.
-      expect(world.walkable(d.x + r * .76, d.z + r * .76)).toBe(false);
+      // 원 안은 걸을 수 있고 외접 사각형 모서리(원 밖 0.13r 이상, 1m 셀 반올림 여유 포함)는 막혀 있다.
+      expect(world.walkable(d.x + r * .8, d.z + r * .8)).toBe(false);
       expect(world.walkable(d.x + r * .6, d.z)).toBe(true);
-      expect(world.roomAt(d.x + r * .73, d.z + r * .73)).not.toBe(d);
+      expect(world.roomAt(d.x + r * .8, d.z + r * .8)).not.toBe(d);
       expect(world.roomAt(d.x + r * .5, d.z - r * .5)).toBe(d);
       for (let i = 0; i < 40; i++) { const [x, z] = world.randomIn(d, 2.2); expect(Math.hypot(x - d.x, z - d.z)).toBeLessThanOrEqual(r - 2.2 + 1e-6); expect(world.walkable(x, z)).toBe(true); }
     }

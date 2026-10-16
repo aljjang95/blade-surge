@@ -115,12 +115,14 @@ export class BattleOcclusion {
     if (Array.isArray(material)) { for (const entry of material) this.bind(entry); return; }
     if (!material) return;
     const prior = bindings.get(material);
-    if (prior && prior.owner === this && material.onBeforeCompile === prior.hook) return;
-    const original = material.onBeforeCompile, prefix = material.customProgramCacheKey();
+    const intact = prior && material.onBeforeCompile === prior.hook && material.customProgramCacheKey === prior.cacheKey;
+    if (intact && prior.owner === this) return;
+    // 다른 시선 객체(렌더러 재생성 등)가 이미 묶었으면 그 이전 원본에서 다시 묶어 삽입이 겹치지 않게 한다.
+    const original = intact ? prior.original : material.onBeforeCompile, prefix = intact ? prior.prefix : material.customProgramCacheKey();
     const uniforms = this.uniforms;
     const hook = function (shader, renderer) {
       original.call(this, shader, renderer);
-      if (!shader.fragmentShader.includes('#include <clipping_planes_fragment>') || !shader.vertexShader.includes('#include <project_vertex>')) return;
+      if (shader.vertexShader.includes('vSightWorld') || !shader.fragmentShader.includes('#include <clipping_planes_fragment>') || !shader.vertexShader.includes('#include <project_vertex>')) return;
       Object.assign(shader.uniforms, uniforms);
       shader.vertexShader = 'varying vec3 vSightWorld;\n' + shader.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n' + VERTEX_WORLD);
       shader.fragmentShader = FRAGMENT_HEAD + '\n' + shader.fragmentShader.replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\n' + FRAGMENT_DISCARD);
@@ -129,9 +131,9 @@ export class BattleOcclusion {
     material.onBeforeCompile = hook; material.customProgramCacheKey = cacheKey;
     material.userData.battleSightline = true;
     material.needsUpdate = true;
-    bindings.set(material, { owner: this, hook });
+    bindings.set(material, { owner: this, hook, cacheKey, original, prefix });
   }
-  isBound(material) { return bindings.get(material)?.owner === this && material.onBeforeCompile === bindings.get(material).hook; }
+  isBound(material) { const b = bindings.get(material); return b?.owner === this && material.onBeforeCompile === b.hook; }
   setTarget(position) {
     this.hasTarget = !!position && Number.isFinite(position.x) && Number.isFinite(position.z);
     if (this.hasTarget) this.target.set(position.x, this.shape.aimY, position.z);
