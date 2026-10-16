@@ -517,7 +517,9 @@ test('냉각 밸브 연결: 심층 잿불금고만 후방 노출을 만들고 �
     const r: any = createRouteObjectives(s, buildExpeditionWorld(s));
     expect(r).toBeInstanceOf(CoolingValves);
     expect(r.rear).toBeNull();
-    expect(Object.keys(r.finish(true))).toEqual(['id', 'label', 'complete', 'progress', 'target', 'rooms', 'overheatHits']);
+    // 재벼림 심층은 BUNDLE-15 거수 사슬 끊기 보고(chains)가 붙는다. 후방 노출 보고는 어디에도 없다.
+    const keys = ['id', 'label', 'complete', 'progress', 'target', 'rooms', 'overheatHits'];
+    expect(Object.keys(r.finish(true))).toEqual(routeId === 'ashforge_catacomb' && depth === 'deep' ? [...keys, 'chains'] : keys);
   }
   // stop 은 후방 노출도 끝낸다.
   const s2: any = buildExpeditionStage('dungeon', 'ember_vault', null, { depth: 'deep' });

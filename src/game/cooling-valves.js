@@ -1,6 +1,7 @@
 import { Vector3 } from 'three';
 import { audio } from '../engine/audio.js';
 import { EmberRearExposure } from './ember-rear-exposure.js';
+import { AshforgeChainBreak } from './ashforge-chain-break.js';
 
 /** A vent's visible strip and its hit test use these exact dimensions. */
 export function coolingVent(gate) {
@@ -29,10 +30,16 @@ export class CoolingValves {
   #rear = null;
   /** 후방 노출 뷰(파일이 있을 때만). 없어도 규칙은 그대로다. */
   rearView = null;
+  /** 정의에 chains 가 있을 때만 만드는 보스 사슬 끊기 컨트롤러(재벼림 심층, BUNDLE-15). */
+  #chains = null;
+  /** 사슬 끊기 뷰(파일이 있을 때만). 없어도 규칙은 그대로다. */
+  chainsView = null;
   constructor(def, world) {
     this.def = def; this.world = world;
     // 보스 후방 노출: 정의에 rear 가 있을 때만 만든다. 월드가 바뀌면 스스로 끝난다.
     this.#rear = def.rear ? new EmberRearExposure(def.rear, world) : null;
+    // 거수 사슬 끊기: 정의에 chains 가 있을 때만 만든다. 월드가 바뀌면 스스로 끝난다.
+    this.#chains = def.chains ? new AshforgeChainBreak(def.chains, world) : null;
     // 문구가 없는 정의(기존 재의 수문)는 밸브·냉각선 문구를 그대로 쓴다.
     this.copy = def.copy || { title: '냉각선 복구', unit: '밸브', done: '냉각선', doneVerb: '복구', cooled: '개방' };
     // 충격파 창 문구. 정의에 없으면 재벼림 심층의 '망치 충격파' 문구를 그대로 쓴다(잿불금고 심층은 '밀물' 문구를 정의에 둔다).
@@ -64,6 +71,8 @@ export class CoolingValves {
   get closed() { return this.#closed || !!this.#report; }
   /** 보스 후방 노출 컨트롤러(읽기 전용). 정의에 rear 가 없으면 null. */
   get rear() { return this.#rear; }
+  /** 거수 사슬 끊기 컨트롤러(읽기 전용). 정의에 chains 가 없으면 null. */
+  get chains() { return this.#chains; }
   async prepareView(scene) {
     try {
       const [{ CoolingValveView }, { loadModel }] = await Promise.all([import('./cooling-valve-view.js'), import('../engine/assets.js')]);
@@ -73,7 +82,16 @@ export class CoolingValves {
       // 불씨 해방 연출은 냉각 장치 모델과 상관없이 만든다. 기존 뷰의 실패는 그대로 호출자에게 전달된다.
       await this.prepareReleaseView(scene);
       await this.prepareRearView(scene);
+      await this.prepareChainsView(scene);
     }
+  }
+  /** 연출 전용: def.chains 가 있을 때만 사슬 끊기 뷰를 만든다. 가져오기·생성 실패는 규칙에 영향을 주지 않는다. @param {any} scene */
+  async prepareChainsView(scene) {
+    if (!this.#chains || this.closed || this.chainsView) return;
+    try {
+      const { AshforgeChainBreakView } = await import('./ashforge-chain-break-view.js');
+      if (!this.closed && !this.chainsView) this.chainsView = new AshforgeChainBreakView(scene, this.#chains);
+    } catch { /* 뷰가 없거나 만들 수 없어도 규칙은 그대로 동작한다. */ }
   }
   /** 연출 전용: def.rear 가 있을 때만 후방 노출 뷰를 만든다. 가져오기·생성 실패는 규칙에 영향을 주지 않는다. @param {any} scene */
   async prepareRearView(scene) {
@@ -94,6 +112,8 @@ export class CoolingValves {
   autoRoom() { return this.closed ? null : this.gates[this.#progress]?.room || null; }
   /** AUTO: 보스 후방 노출 중 등 뒤로 돌아갈 지점(없으면 null). @param {any} player */
   autoFlank(player) { return this.closed || !this.#rear ? null : this.#rear.autoFlank(player); }
+  /** AUTO: 거수 사슬 기둥이 열린 동안 버티러 갈 지점(없으면 null). @param {any} player */
+  autoHold(player) { return this.closed || !this.#chains ? null : this.#chains.autoHold(player); }
   autoPoint(room) {
     const gate = this.gates[this.#progress];
     return !this.closed && gate?.room === room && gate.ready ? gate.pad : null;
@@ -103,9 +123,11 @@ export class CoolingValves {
   stop() {
     this.#closed = true; this.interrupt();
     this.#rear?.stop();
+    this.#chains?.stop();
     this.view?.dispose(); this.view = null;
     this.releaseView?.dispose(); this.releaseView = null;
     this.rearView?.dispose(); this.rearView = null;
+    this.chainsView?.dispose(); this.chainsView = null;
   }
   prepareRoom(room, count) {
     const gate = this.gates.find(g => g.room === room);
@@ -199,6 +221,8 @@ export class CoolingValves {
   update(game, dt) {
     // 보스 후방 노출은 밸브 규칙의 조기 반환(보스 처치·일시정지 등)과 상관없이 먼저 갱신한다. 밸브가 모두 열린 뒤 보스방에서 돈다.
     this.#rear?.update(game, dt);
+    // 거수 사슬 끊기도 같은 자리에서 먼저 갱신한다(심장로를 모두 식힌 뒤 보스방에서 돈다).
+    this.#chains?.update(game, dt);
     this.#updateRules(game, dt);
     // 해방 연출은 규칙 뒤에 그린다. 규칙의 조기 반환(보스 처치·결과 등)에도 일시정지가 아니면 이어서 그려 연출을 끝낸다.
     if (this.releaseView && !game.paused && Number.isFinite(dt) && dt > 0) {
@@ -208,6 +232,10 @@ export class CoolingValves {
     if (this.rearView && !game.paused && Number.isFinite(dt) && dt > 0) {
       this.#opts.reduced = !!game.app?.reducedMotion?.matches;
       this.rearView.update(this.#rear, dt, this.#opts);
+    }
+    if (this.chainsView && !game.paused && Number.isFinite(dt) && dt > 0) {
+      this.#opts.reduced = !!game.app?.reducedMotion?.matches;
+      this.chainsView.update(this.#chains, dt, this.#opts);
     }
   }
   /** 스텝 안에서 규칙 갱신 뒤 바뀐 표시 입력(방 발견)을 시간 진행 없이 두 뷰에 반영한다. @param {any} game */
@@ -247,8 +275,8 @@ export class CoolingValves {
       const base = { id: this.def.id, label: this.copy.title, complete: !!win && !this.#closed && this.canWin(),
         progress: this.#progress, target: this.gates.length, rooms: Object.freeze(this.gates.filter(g => g.attuned).map(g => g.room.id)),
         overheatHits: this.gates.reduce((n, g) => n + g.hits, 0) };
-      // 후방 노출 보고는 정의에 rear 가 있을 때만 붙인다(다른 냉각 정의의 보고 모양은 그대로다).
-      this.#report = Object.freeze(this.#rear ? { ...base, rear: this.#rear.report() } : base);
+      // 후방 노출·사슬 끊기 보고는 정의에 rear·chains 가 있을 때만 붙인다(다른 냉각 정의의 보고 모양은 그대로다).
+      this.#report = Object.freeze({ ...base, ...(this.#rear ? { rear: this.#rear.report() } : {}), ...(this.#chains ? { chains: this.#chains.report() } : {}) });
     }
     return this.#report;
   }

@@ -460,6 +460,14 @@ export class Player extends Actor {
       const fx = flank.x - this.pos.x, fz = flank.z - this.pos.z, fl = Math.hypot(fx, fz);
       if (fl > .3) { out.x = fx / fl; out.y = fz / fl; return out; }
     }
+    // 거수 사슬 기둥(재벼림 심층)이 열린 동안 버티기를 끝낼 수 있으면 공격·스킬 없이 기둥으로 가서 선다(.3 안이면 0 이동).
+    // 기둥에 닿을 수 없거나 남은 창이 모자라면 경로 목표가 null 을 돌려줘 평소 전투로 넘어간다.
+    const hold = this.game.routeObjectives?.autoHold?.(this);
+    if (hold) {
+      const hx = hold.x - this.pos.x, hz = hold.z - this.pos.z, hl = Math.hypot(hx, hz);
+      if (hl > .3) { out.x = hx / hl; out.y = hz / hl; }
+      return out;
+    }
     const counts = this._autoHubCounts || (this._autoHubCounts = []);
     // 같은 적 쌍의 거리는 한 번만 읽고 양쪽에 상대 가중치를 더한다.
     // 자기항도 원래 비교를 유지해 비유한 좌표를 이웃으로 세지 않는다.

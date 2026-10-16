@@ -184,11 +184,20 @@ export const ROUTE_OBJECTIVES = Object.freeze({
   // shockWindow: 조작판은 그 심장로에서 망치 충격파(증기 분출)가 한 번 지나간 뒤, 가열 구간(다음 망치 예고 전)에만 열린다.
   // 충격파가 끝나면 조작판이 반대편으로 옮겨 가므로 '사슬이 끌리는 반대편'으로 이동해 유지한다. 예고·분출 중에는 유지가 0이 된다.
   // release 'ember-chains': 냉각한 심장로의 사슬이 끊기고 불씨가 풀려나는 연출(규칙 아님). 정예방(2·5)은 증원 2회 뒤에만 조작된다.
-  // 보스방의 거수 망치·사슬 끌기와는 별개다(보스 규칙은 바뀌지 않는다).
+  // 보스방의 거수 망치·사슬 끌기는 아래 chains(BUNDLE-15 사슬 끊기)가 따로 정한다.
   ashforge_deep: Object.freeze({
     ...coolingDef('ashforge_heart_furnaces_deep', [[2, '1번 심장로 · 사슬 단조장'], [4, '2번 심장로 · 북쪽 불씨 저장고'],
       [5, '3번 심장로 · 남쪽 주조로'], [7, '4번 심장로 · 거수의 관문']], ASHFORGE_DEEP_COPY),
     shockWindow: true, release: 'ember-chains', releaseSeconds: 1.6,
+    // 거수 사슬 끊기(BUNDLE-15): 원안의 남은 문장 "보스방 거수의 망치 충격파 뒤에만 열리는 조작 시간, 사슬 끌기 방향·끊기". 보스 규칙이며 이 심층 개인 원정에서만 쓴다.
+    // 거수는 사슬 count 개에 묶인다. 용재 망치(signature)를 시전하면 사슬이 착탄점(영웅 위치) 쪽 벽으로 끌리고, 보스방 중심에서 반대편 pillarOffset 에 사슬 기둥이 선다.
+    // 망치의 마지막 고리가 터진 직후 window 초 동안 기둥이 열리고 거수는 제자리에 묶인다(새 공격 없음). 열린 기둥 반경 radius 안에서 행동·피격 없이 hold 초 버티면
+    // 사슬 하나가 끊겨 거수가 exposed 초 동안 휘청이고(제자리·새 공격 없음) 받는 피해가 exposedMult 배다. 끊을 때마다 남은 전투 내내 받는 피해가 weaken 씩 는다.
+    // 기둥이 열린 동안 거수는 쫓아가지 못하지만 사거리 안의 영웅은 친다(기둥을 무시하고 붙어 싸우면 안전 시간이 없다). 사슬을 모두 끊으면 평소 전투로 돌아간다.
+    // 시전 중인 용재 망치는 사슬이 남은 동안 마지막 고리까지 기절·경직으로 끊기지 않는다(B14 교훈: 장비 영웅이 망치를 늘 끊음).
+    // 수치는 BUNDLE-15 PLAN 의 보스전 모의(tools/ashforge-deep-boss-sim.mjs)로 확인했다. 보스방은 28×28 이라 반대편 기둥까지 약 12칸이다.
+    chains: Object.freeze({ id: 'ashforge_deep_chains', boss: 'ash_colossus', signature: 'kiln_hammer', count: 3, window: 5, hold: 1.2, radius: 1.6,
+      pillarOffset: 8.4, anchorMargin: 1.2, exposed: 5, exposedMult: 2, weaken: .1 }),
   }),
   // 잿불금고 심층(침몰한 운반선)의 원안(BUNDLE-10): "밀물 경고가 끝난 뒤 냉각 밸브를 열고".
   // 재벼림 심층과 같은 냉각 장치 엔진(CoolingValves)과 shockWindow 규칙을 쓴다: 준비된 뒤 시작된 밀물이 한 번 지나가면

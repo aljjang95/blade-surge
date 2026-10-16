@@ -31,6 +31,9 @@ const ASHFORGE_COUNT = ASHFORGE_FURNACES.gates.length;
 const ASHFORGE_STEPS = ASHFORGE_FURNACES.gates.map((_, i) => `${i + 1}번`).join(' → ');
 const ASHFORGE_OBJECTIVE = `${ASHFORGE_COPY.unit} ${ASHFORGE_COUNT}곳을 ${ASHFORGE_COPY.vent} 뒤 순서대로 ${ASHFORGE_COPY.doneVerb}하고 정예방 ${ASHFORGE_ELITES}곳의 증원 각 ${ASHFORGE_REINFORCEMENTS}회 격파 → 모든 구역 정화 → 잿빛 재벼림 거수 처치`;
 const ASHFORGE_TACTIC = `각 ${ASHFORGE_COPY.unit} 구역의 적을 처치한 뒤(정예방은 증원 ${ASHFORGE_REINFORCEMENTS}회까지) ${ASHFORGE_STEPS} 순서로 ${ASHFORGE_COPY.doneVerb}하세요. ${ASHFORGE_COPY.vent}가 한 번 지나가면 조작판이 반대편으로 옮겨 가 열립니다. 다음 ${ASHFORGE_COPY.warning} 전까지 그 청록 조작판에서 행동 없이 ${ASHFORGE_FURNACES.holdSeconds}초 유지하면 ${ASHFORGE_COPY.unit}가 식고 사슬에 묶인 불씨가 풀려납니다. 예고·충격파 중이거나 이탈·공격·회피·피격·일시정지하면 유지 시간이 초기화됩니다. ${ASHFORGE_COPY.unit} ${ASHFORGE_COUNT}곳과 모든 구역을 정화하면 보스 봉인이 풀립니다. `;
+// 거수 사슬 끊기(BUNDLE-15) 안내. 수치는 정의(ROUTE_OBJECTIVES.ashforge_deep.chains)에서 읽는다. 보스 전술 뒤에 붙인다.
+const ASHFORGE_CHAINS = ASHFORGE_FURNACES.chains;
+const ASHFORGE_CHAIN_TACTIC = `용재 망치가 내려칠 때 사슬이 망치 쪽으로 끌리고 반대편에 사슬 기둥이 섭니다. 마지막 고리 뒤 ${ASHFORGE_CHAINS.window}초 동안 거수는 쫓아오지 못합니다. 그 안에 열린 기둥에서 행동 없이 ${ASHFORGE_CHAINS.hold}초 버티면 사슬이 끊겨 거수가 ${ASHFORGE_CHAINS.exposed}초 동안 휘청이며 받는 피해가 ${ASHFORGE_CHAINS.exposedMult}배가 되고, 끊을 때마다 남은 전투 동안 받는 피해가 ${Math.round(ASHFORGE_CHAINS.weaken * 100)}%씩 늘어납니다(사슬 ${ASHFORGE_CHAINS.count}개).`;
 
 // 흑사막 분지 심층 가짜 왕좌 4곳·거울 미궁 문구의 숫자는 규칙 정의(ROUTE_OBJECTIVES.sable_deep)에서 계산한다(BUNDLE-09).
 // 정예방 수·증원 횟수는 아래 sable_mirage_basin 의 레이아웃·mechanics 와 같은 값이며 계약 테스트가 일치를 검사한다.
@@ -190,7 +193,7 @@ export const EXPEDITION_DEPTHS = [
     energy: 7, chapter: 2, stage: 7, scale: 16, bossEnemy: 'ash_colossus', bossHp: 27600,
     description: '재벼림 제련소의 심장로에 잿빛 거수의 사슬에 묶인 불씨가 남아 있습니다.',
     objective: ASHFORGE_OBJECTIVE, bossName: '심장로를 삼킨 잿빛 거수', art: '/img/encounters/boss_ash_colossus.webp',
-    tactic: `${ASHFORGE_TACTIC}${ENEMIES.ash_colossus.tactic}`,
+    tactic: `${ASHFORGE_TACTIC}${ENEMIES.ash_colossus.tactic} ${ASHFORGE_CHAIN_TACTIC}`,
     layout: { spacing: [34, 25], size: [24, 17], width: 8,
       cells: [[0,0],[1,0],[2,0],[2,1],[3,1],[3,0],[4,0],[5,0],[6,0]],
       edges: [[0,1],[1,2],[2,3],[2,5],[3,4],[4,6],[5,6],[6,7],[7,8]],
