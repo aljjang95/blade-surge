@@ -58,7 +58,7 @@ const HELP = [
   '  pause    열린 유지 hold ≥ 0.8 에서 R #btn-pause → 120스텝+1초 게임 시간 불변·hold 0 → R #btn-resume → 새 유지 ≥ 2초 뒤 냉각 → 완주',
   '  screens  bound·shock·open(hold ≥ 1.0)·releasing(냉각 뒤 0.3초)·released(냉각 뒤 2초) 순간마다 640x360, 844x390, 390x844 PNG + 결과 PNG, PNG 마다 그 순간 states 기록',
   '           + 후보는 순간 3개 더(보스 등장 뒤): chain-pull(끌기 중, 목표창 끌기 문구)·chain-open(기둥 열림, hold > 0)·chain-cut(끊김, exposed 시작 .5초 뒤) 각 640x360, 844x390, 390x844 PNG',
-  '  chains   (후보 심층만) AUTO 로 보스방까지(사슬이 붙으면 chained) → R #btn-auto 끔 → R 키보드(KeyW/A/S/D 이동, KeyJ 공격)로 (1) 기둥 열림까지 기둥 밖에서 회피 이동만 (2) 열리면 기둥 안으로 이동해 hold ≥ 0.5 → 공격 키 한 번 → hold 0 확인',
+  '  chains   (후보 심층만) AUTO 로 보스방까지(사슬이 붙으면 chained) → R #btn-auto 끔 → R 키보드(KeyW/A/S/D 이동, KeyJ 공격)로 (1) 기둥 열림까지 끌기 전에는 보스와 싸우고(KeyJ) 끌기 중에는 기둥 밖 대기점으로 이동 (2) 열리면 기둥 안으로 이동해 hold ≥ 0.5 → 공격 키 한 번 → hold 0 확인',
   '           (3) 다시 버티는 중 R #btn-pause → 60스텝 + 0.5초 → R #btn-resume, 정지 동안 windowLeft·hold·보스 yaw·attackSequence 불변 (4) 계속 버텨 끊김(cuts 증가·exposed) → 휘청 동안 보스에게 걸어가 KeyJ 몇 번(배율 표본) → R AUTO 켬 → 완주. 단계 기준값은 단계 시작 시점으로 잡는다.',
   '           창 안에 못 끝내면 다음 창에서 이어 하며 최대 창 수는 CHAINS_RUN.maxWindows(사전 선언). 좌표 이동·무적·HP 주입 없음(순간이동도 검사). 키보드 입력은 order 와 같은 방식이다',
   '',
@@ -131,7 +131,7 @@ const STEP_CLASS = {
   pause: [['F', '저장 주입'], ['R', '출격 카드 버튼 · #btn-pause/#btn-resume'], ['C', 'AUTO 로 열린 유지 hold ≥ 0.8 까지 고정 스텝'], ['C', '정지 중 app.step 120회(stepRaw)로 게임 시간·심장로 주기 불변 확인'], ['C', 'AUTO 완주']],
   screens: [['F', '저장 주입'], ['R', '출격 카드 버튼'], ['C', 'AUTO 로 bound·shock·open·releasing·released 순간까지 고정 스텝'], ['C', 'renderer.render() 단독 호출 + viewport 3종 스크린샷(시뮬레이션 tick 없음)']],
   chains: [['F', '저장 주입'], ['R', '출격 카드 버튼 · #btn-auto 끔/켬 · #btn-pause/#btn-resume'], ['C', 'AUTO 로 보스방(심장로 4/4·봉인 해제·보스 등장, 사슬 chained)까지 고정 스텝'],
-    ['R', '키보드 KeyW/A/S/D 로 기둥 밖 회피 이동 · 기둥 안 이동 · KeyJ 공격 한 번 · 정지 후 이어 버티기(좌표 이동·무적·HP 주입 없음)'], ['C', '키 입력 사이 4스텝씩 고정 진행(보스방은 매 스텝 관측), chains.filter 감싸개는 호출을 그대로 넘기고 기록만'],
+    ['R', '키보드 KeyW/A/S/D·KeyJ 로 끌기 전 보스와 싸우기·끌기 중 기둥 밖 대기 · 기둥 안 이동 · KeyJ 공격 한 번 · 정지 후 이어 버티기(좌표 이동·무적·HP 주입 없음)'], ['C', '키 입력 사이 4스텝씩 고정 진행(보스방은 매 스텝 관측), chains.filter 감싸개는 호출을 그대로 넘기고 기록만'],
     ['C', '창 안 정지 중 app.step 60회(stepRaw)로 windowLeft·hold·보스 yaw 불변 확인'], ['C', 'AUTO 완주 · 사슬 판정']],
 };
 /** 경로 뷰가 있는 빌드에서 모든 프로필의 프로브가 하는 제어 렌더. */
@@ -561,8 +561,9 @@ function installProbe(cfg) {
   };
   /**
    * kind 'pillar': 컨트롤러가 알려 주는 기둥(pillar)으로 가는 화면 방향과 거리(걷는 목표일 뿐이고, 판정의 기둥은 검사 함수가 따로 계산한다).
-   * kind 'wait': 기둥 밖 대기점들을 번갈아 걷는 화면 방향. 끌기·열림 중이면 기둥에서 radius + 2.2 떨어진 방 중심 쪽 두 점, 아니면 보스방 중심 둘레 네 점(방 가장자리 2 안쪽).
-   * 영웅이 계속 움직여 망치 착탄(영웅 위치에 떨어짐)을 피한다. 좌표 이동은 없다.
+   * kind 'wait': 끌기·열림 중이면 기둥에서 radius + 2.2 떨어진 방 중심 쪽 두 대기점을 번갈아 걷는 화면 방향(망치 착탄은 시전 시작의 영웅 위치라 거기서 벗어난다).
+   *   chained 이고 끌기 전이면 보스로 가는 방향과 fight: true 를 준다. 거수는 사거리 안에서만 공격(망치 포함)을 시작하므로 다가가 싸워야 망치가 나온다(b15 진단 s2-chains: 방을 돌기만 하면 90초 동안 망치 0).
+   *   (unchained 등 그 밖의 상태는 보스방 중심 둘레 네 점.) 좌표 이동은 없다.
    */
   P.chainAim = kind => {
     const b = app.battle, c = chainsOf(), boss = c?.boss, hero = b.player, room = P.cb.room;
@@ -571,6 +572,7 @@ function installProbe(cfg) {
     if (kind === 'pillar') return { ...base, ...toward(c.pillar.x, c.pillar.z) };
     // 휘청 동안 보스에게 다가가 치기 위한 방향·거리(걷는 목표일 뿐이고 좌표 이동은 없다).
     if (kind === 'boss') return { ...base, ...toward(boss.pos.x, boss.pos.z) };
+    if (c.state === 'chained' && !c.pulling) return { ...base, ...toward(boss.pos.x, boss.pos.z), fight: true };
     const m = 2, R = cfg.rule.radius;
     let pts;
     if (c.pulling || c.state === 'open') {
@@ -842,13 +844,31 @@ const cmark = label => page.evaluate(l => window.__furnaceQa.cmark(l), label);
 const skipUnlessChains = () => (judgedProfiles && chainsDef ? null : { skipped: '사슬 정의(ROUTE_OBJECTIVES.ashforge_deep.chains)가 있는 후보 심층 빌드에서만 도는 프로필이다(기준선은 사슬 판정을 건너뛴다)' });
 /** 선택지 모달이 열려 멈추면 처리하고 키보드 포커스를 되찾는다. */
 async function chainsPausedChoice(row, r) { await setKeys(new Set()); await takeChoice(row, r); await nativeGameplayFocus(page); }
-/** stop 이 참이 될 때까지 기둥 밖 대기점을 번갈아 걸으며 회피한다(망치는 시전 시작의 영웅 위치에 떨어지므로 계속 움직인다). 키보드만 쓴다. */
+/** stop 이 참이 될 때까지 키보드만으로 기다린다. 끌기 전에는 보스에게 다가가 공격 키로 싸워 망치를 부르고(chainAim 'wait' 의 fight),
+ * 끌기·열림 중에는 기둥 밖 대기점을 번갈아 걸으며 착탄을 피한다. 대기 중 누른 공격 키 수는 row.manual.waitPresses 에 센다. */
 async function chainsEvade(row, stop, label) {
+  if (row.manual) row.manual.waitPresses ??= 0;
   for (let i = 0; i < Math.ceil(CHAINS_RUN.waitMaxSteps / CHAINS_RUN.chunk); i++) {
     if (await page.evaluate(x => window.__furnaceQa.hit(x), stop)) return { reason: 'stop', iterations: i };
     const a = await chainAim('wait');
     if (!a) throw Error('No chain controller, boss or hero while waiting for ' + label);
     if (a.hpRatio < CHAINS_RUN.minHpRatio) throw Error('Hero hp ratio ' + a.hpRatio.toFixed(2) + ' fell under ' + CHAINS_RUN.minHpRatio + ' while waiting for ' + label);
+    if (a.fight && a.dist <= CHAINS_RUN.fightReach) {
+      // 사거리 안: 서서 공격 키를 한 번 누르고(attackSteps) 틈(fightGap)을 둔다. stop 이 오면 그 자리에서 멈춘다.
+      await setKeys(new Set());
+      await kb('down', CHAINS_RUN.attackKey);
+      let r = await page.evaluate(opts => window.__furnaceQa.run(opts), { n: CHAINS_RUN.attackSteps, stop });
+      await kb('up', CHAINS_RUN.attackKey);
+      if (row.manual) row.manual.waitPresses++;
+      if (r.reason === 'stop') return { reason: 'stop', iterations: i + 1 };
+      if (r.reason === 'inactive') throw Error('Battle ended while fighting for ' + label + ' by keyboard (hero down?)');
+      if (r.reason === 'paused') { await chainsPausedChoice(row, r); continue; }
+      r = await page.evaluate(opts => window.__furnaceQa.run(opts), { n: CHAINS_RUN.fightGap, stop });
+      if (r.reason === 'stop') return { reason: 'stop', iterations: i + 1 };
+      if (r.reason === 'inactive') throw Error('Battle ended while fighting for ' + label + ' by keyboard (hero down?)');
+      if (r.reason === 'paused') await chainsPausedChoice(row, r);
+      continue;
+    }
     await setKeys(keysToward(a), a.live);
     const r = await page.evaluate(opts => window.__furnaceQa.run(opts), { n: CHAINS_RUN.chunk, stop });
     if (r.reason === 'stop') return { reason: 'stop', iterations: i + 1 };
@@ -941,7 +961,7 @@ async function chainsPause(row, rec) {
   check('chains: 창 안 정지 60스텝+0.5초 동안 게임 시간·windowLeft·hold·보스 yaw·attackSequence·위치 불변, 재개 뒤 windowLeft 가 흐른 시간만큼 줄고 hold 는 정지 전 값에서 이어짐', row.chainsPause.verdict.ok, row.chainsPause.verdict);
 }
 /**
- * AUTO 를 끄고 키보드만으로: (1) open 이 될 때까지 기둥 밖에서 회피 이동만 (2) open 에서 기둥 안으로 이동해 hold ≥ attackHold → 공격 키 → hold 0 (3) 다시 버티는 중 정지 → 재개 (4) 버텨서 끊김.
+ * AUTO 를 끄고 키보드만으로: (1) open 이 될 때까지 끌기 전에는 보스와 싸우고 끌기 중에는 기둥 밖 대기점으로 이동 (2) open 에서 기둥 안으로 이동해 hold ≥ attackHold → 공격 키 → hold 0 (3) 다시 버티는 중 정지 → 재개 (4) 버텨서 끊김.
  * 단계 기준값(hold·남은 시간)은 단계가 시작되는 시점의 관측으로 잡는다. 창 안에 못 끝내면 창이 닫히길 기다렸다 다음 창에서 이어 하고, 최대 CHAINS_RUN.maxWindows 개 창을 쓴다.
  * 표식 manual-start / attack-key / manual-end 를 사슬 행 기록에 남긴다. 좌표 이동·무적·HP 주입 없음.
  */
@@ -1283,7 +1303,7 @@ const profiles = {
     check('chains: AUTO 로 보스방까지 가서 거수 사슬이 붙음(chained)', attached.reason === 'stop', { reason: attached.reason, elapsed: attached.elapsed });
     qaAssert(attached.reason === 'stop', 'Chains never attached: ' + attached.reason);
     row.attached = await freeze();
-    // 2) R #btn-auto 끔 → 키보드만: 기둥 밖 회피 → 기둥 안 hold ≥ 0.5 → 공격 키 → hold 0 → 다시 버티다 정지·재개 → 끊김.
+    // 2) R #btn-auto 끔 → 키보드만: 끌기 전 보스와 싸우기·끌기 중 기둥 밖 대기 → 기둥 안 hold ≥ 0.5 → 공격 키 → hold 0 → 다시 버티다 정지·재개 → 끊김.
     await chainsManual(row);
     // 3) R AUTO 켬 → 완주.
     await setAuto(true); keyboardMode = false;
@@ -1292,8 +1312,8 @@ const profiles = {
     row.chainsManual = checkChainsManual(raw.rows, raw.marks, chainsDef, { room: raw.room, minHold: CHAINS_RUN.attackHold, range: raw.range ?? null });
     check('chains: 키보드 구간 — AUTO 꺼짐·영웅 생존·순간이동 없음·기둥 밖에서 열림을 기다림·hold ≥ ' + CHAINS_RUN.attackHold + ' 뒤 공격 키로 hold 0·공격 키 뒤 새 버티기로 끊김', row.chainsManual.ok, row.chainsManual);
     const presses = keyLog.filter(k => k.key === CHAINS_RUN.attackKey && k.op === 'down').length;
-    const fightPresses = row.manual?.fight?.presses ?? 0;
-    check('chains: 공격 키(' + CHAINS_RUN.attackKey + ')는 기둥 안 공격 단계의 한 번과 끊김 직후 휘청 중 보스 치기(표본 만들기)에서만 눌림', presses === 1 + fightPresses, { presses, fightPresses });
+    const fightPresses = row.manual?.fight?.presses ?? 0, waitPresses = row.manual?.waitPresses ?? 0;
+    check('chains: 공격 키(' + CHAINS_RUN.attackKey + ')는 끌기 전 보스와 싸우기, 기둥 안 공격 단계의 한 번, 끊김 직후 휘청 중 보스 치기(표본 만들기)에서만 눌림', presses === 1 + fightPresses + waitPresses, { presses, fightPresses, waitPresses });
     row.keyEvents = keyLog.length;
     await closeResultToLobby();
     return { runs: [row] };
