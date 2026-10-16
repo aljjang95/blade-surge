@@ -22,9 +22,11 @@ const result = { kind: 'dungeon', id: 'glass_garden', depth: 'standard', win: tr
 test('Lv.1 지도는 실제 첫 던전을 추천하고 탐색만으로 자원·진행을 바꾸지 않는다', () => {
   const { economy, service } = make(), before = JSON.stringify(economy.s);
   const journey = dungeonJourney(service);
-  expect(journey.nodes).toHaveLength(18);
+  expect(journey.nodes).toHaveLength(20);
   expect(journey.current?.dungeon.id).toBe('glass_garden');
   expect(journey.nodes.find(node => node.dungeon.id === 'ember_vault')?.unlocked).toBe(false);
+  // 컨셉 던전 2곳은 새 계정 Lv.1에서도 목록에 열려 있고, 추천 순서(첫 던전)는 바꾸지 않는다.
+  for (const id of ['glacier_tide_basin', 'sunbrass_quarry']) expect(journey.nodes.find(node => node.dungeon.id === id)?.unlocked).toBe(true);
   expect(journey.cleared).toBe(0);
   expect(JSON.stringify(economy.s)).toBe(before);
   expect(dungeonContinuation(service, result)).toBeNull();

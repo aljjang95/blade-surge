@@ -29,7 +29,9 @@ function fixture() {
     // rewards, seal, victory, result, Floor and AUTO navigation are production.
     roomRoster: () => ['guard', 'guard'],
     spawnEnemy(_id: string, _near: any, room: any) {
-      g.routeObjectives.spawn(room); g.enemies.push({ alive: true, homeRoom: room, pos: new Vector3(room.x, 0, room.z), dispose: noop });
+      // 실제 spawnEnemy 처럼 무리 졸개는 목표 명단 영수증에 넣지 않고 생성한 적을 돌려준다.
+      if (!g._spawningFollower) g.routeObjectives?.spawn(room);
+      const enemy = { alive: true, homeRoom: room, pos: new Vector3(room.x, 0, room.z), maxHp: 1, hp: 1, atk: 1, dispose: noop }; g.enemies.push(enemy); return enemy;
     },
   });
   const route = createRouteObjectives(stage, world) as AstralConstellations;

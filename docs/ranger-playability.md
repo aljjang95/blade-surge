@@ -71,3 +71,7 @@ node tools/art/update-ranger-revision.mjs
 
 뷰포트·헤드리스(SwiftShader) 검증이며 실제 Android/GPU/터치/발열 검증이 아니다. 전체 `bun run check`와 heavy browser metrics 는 통합 후 root 가 직렬로 실행한다. 손가락은 고정 쥠 자세이고, 화살을 시위에 메기는 메시(`Arrow`)는 기존처럼 숨긴다. 만작 근접 화면은 큰 후드가 일부 가린다.
 
+
+## 후속: v2 전신 축 교정
+
+게임은 이제 v1 대신 `ranger-library-v2`(전신 rest 축 리타깃·실제 스킨 접지·사망/피격/구르기 리타이밍·새 백스텝·rapid 사격)를 쓴다. 원인·재현·해시·한계는 [hero-animation-axis-v2.md](hero-animation-axis-v2.md)에 있다. 이 문서의 v1 기록은 이력으로 남긴다.

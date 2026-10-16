@@ -2,18 +2,24 @@ import React, { useState } from 'react';
 import { HEROES } from '../data/heroes.js';
 import { resourceArt } from '../ui/illustrated.js';
 import { dungeonJourney } from '../ui/dungeon-journey.js';
+import { citadelHotspot } from '../data/citadel-hub.js';
 import './dungeon-journey.css';
 
-export function DungeonJourney({ app, service }) {
+export function DungeonJourney({ app, service, launch }) {
   const journey = dungeonJourney(service);
   const [selected, setSelected] = useState(journey.current?.dungeon.id);
   const node = journey.nodes.find(entry => entry.dungeon.id === selected) || journey.current;
   if (!node) return null;
   const dungeon = node.dungeon;
+  // 성채 광장 관문이 있는 던전만 기존 준비창을 연다. 관문이 없는 확장·컨셉 던전은 아래 '전체 던전' 카드와 같은
+  // 직접 입장(기존 출격 서비스)을 쓰고, 버튼에 비용을 적어 누르는 순간 에너지를 쓴다는 것을 보인다.
+  const hubGate = !!citadelHotspot(`dungeon:${dungeon.id}`);
   const prepare = () => {
     // 준비창은 지도와 같은 기존 출격 서비스·소유권 경계를 사용한다.
-    app.expeditionUI.prepareDungeon(dungeon.id, document.getElementById('journey-prepare'));
+    if (hubGate) { app.expeditionUI.prepareDungeon(dungeon.id, document.getElementById('journey-prepare')); return; }
+    if (node.unlocked && !app.stageStarting) launch?.('dungeon', dungeon.id, { depth: 'standard' });
   };
+  const label = hubGate ? (node.unlocked ? '출격 준비' : '해금 조건 보기') : node.unlocked ? `던전 입장 · 에너지 ${dungeon.energy}` : `Lv.${dungeon.minLevel} 필요`;
   return <section className="dungeon-journey" aria-label="레벨 1부터 이어지는 던전 여정">
     <header className="dungeon-journey-heading"><div><small>YOUR ADVENTURE</small><h2>한 걸음씩, 다음 던전으로</h2></div><span>{journey.cleared} / {journey.nodes.length} 정복</span></header>
     <div className="dungeon-journey-layout">
@@ -39,7 +45,7 @@ export function DungeonJourney({ app, service }) {
         <div><small>{node.cleared ? '정복한 지역 · 다시 도전' : node.unlocked ? '다음 모험' : '해금할 다음 지역'}</small><h3>{dungeon.name}</h3>
           <p>원정 Lv.{dungeon.minLevel} · 에너지 {dungeon.energy}</p>
           <div className="journey-rewards"><span><img src={resourceArt('gold')} alt=""/>+{dungeon.rewards.gold}</span><span><img src={resourceArt('xp')} alt=""/>EXP +{dungeon.rewards.xp}</span></div>
-          <button type="button" id="journey-prepare" onClick={prepare}>{node.unlocked ? '출격 준비' : '해금 조건 보기'} <span>→</span></button>
+          <button type="button" id="journey-prepare" data-journey-entry={hubGate ? 'prepare' : 'direct'} disabled={!hubGate && !node.unlocked} onClick={prepare}>{label} <span>→</span></button>
           <p className="journey-destination-note">{node.reason || '승리하면 다음 던전이 이어집니다. 보상과 진행은 자동 저장됩니다.'}</p>
         </div>
       </article>

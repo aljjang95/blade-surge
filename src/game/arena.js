@@ -12,6 +12,7 @@ import { softCircleTex } from '../engine/assets.js';
 import { applyDungeonSurface, collectDungeonTiles, projectDungeonSurface } from './dungeon-surface.js';
 import { buildOpenFieldScene, FIELD_ATMOSPHERES } from './open-field-scene.js';
 import { libraryAssets } from '../engine/library-assets.js';
+import { buildConceptTerrain } from './concept-terrain.js';
 
 const THEMES = {
   garden: { fog: 0x172b2b, bg: 0x172b2b, hemi: [0xa0b5ae, 0x283930], sun: 0xffedca, sunI: 2.3, torch: 0x8adbd0, tint: 0xcbd0b8 },
@@ -33,6 +34,8 @@ const DUNGEON_ATMOSPHERES = {
   beacon: { fog: 0x0d3037, bg: 0x08212b, hemi: [0x80d2d2, 0x123643], sun: 0xb5f6ef, sunI: 2.55, torch: 0x4be6d2, tint: 0x9adbd1 },
   tribunal: { fog: 0x2a2139, bg: 0x171323, hemi: [0xd1b7d6, 0x342743], sun: 0xffe1bd, sunI: 2.65, torch: 0xf5a2d4, tint: 0xd5c0d8 },
   confluence: { fog: 0x19312b, bg: 0x0d211d, hemi: [0xb5dbc3, 0x204139], sun: 0xffe8b9, sunI: 2.55, torch: 0x9be6ba, tint: 0xb8d2ac },
+  glacier: { fog: 0x8fcfe0, bg: 0x6fb4d8, hemi: [0xe3f5ff, 0x2a5d76], sun: 0xfff6e8, sunI: 2.7, torch: 0xff7fbf, tint: 0xd5e2f2 },
+  quarry: { fog: 0xd8a47c, bg: 0xc98a5c, hemi: [0xffeeda, 0x5c3a24], sun: 0xffd9b0, sunI: 2.55, torch: 0xffa040, tint: 0xf2cfa0 },
 };
 const TILE = 4;
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -97,6 +100,7 @@ export class Arena {
     this.lobbyWorld?.userData.dispose(); this.lobbyWorld = null; this.renderer.lobbyOccluders = [];
     this.regionArchitecture?.userData.dispose(); this.regionArchitecture = null;
     this.fieldScene?.userData.dispose(); this.fieldScene = null;
+    this.conceptTerrain?.userData.dispose(); this.conceptTerrain = null;
     this.townDecor?.userData.dispose(); this.townDecor = null;
     for (const material of this.ownedMaterials) material.dispose(); this.ownedMaterials.clear();
     for (const geometry of this.ownedGeometry) geometry.dispose(); this.ownedGeometry.clear();
@@ -279,10 +283,12 @@ export class Arena {
     this.floorData = floorData;
     const visualKey = visual?.landmark || floorData.layout?.landmark || 'crypt';
     const field = floorData.layout?.field;
+    const concept = floorData.layout?.concept;
     const T = { ...(THEMES[theme] || THEMES.crypt), ...(DUNGEON_ATMOSPHERES[visualKey] || {}), ...(FIELD_ATMOSPHERES[field] || {}) };
     const random = mulberry32((floorData.seed || floorData.floor * 7919) ^ 0x51a7);
     const rnd = (a, b) => a + random() * (b - a);
-    this.scene.background = new THREE.Color(T.bg); this.scene.fog.color.set(T.fog); this.scene.fog.density = field ? .008 : .026;
+    // 컨셉 던전은 먼 절벽·수문이 보이는 열린 분지라 안개를 옅게 둔다.
+    this.scene.background = new THREE.Color(T.bg); this.scene.fog.color.set(T.fog); this.scene.fog.density = field ? .008 : concept ? .011 : .026;
     this.buildSky(visual, floorData.seed || floorData.floor || 1);
 
     const hemi = new THREE.HemisphereLight(T.hemi[0], T.hemi[1], 1.5); this.scene.add(hemi); this.lights.push(hemi);
@@ -297,6 +303,12 @@ export class Arena {
       this.fieldScene = buildOpenFieldScene(floorData, this.renderer.quality);
       this.fieldScene.traverse(node => { if(node.isMesh && node.name !== 'field-walkable-ground' && node.name !== 'field-ocean' && node.name !== 'field-backdrop')this.occlusion.bind(node.material); });
       this.group.add(this.fieldScene); this.buildSeals(floorData); this.mountTownDecor(floorData); return;
+    }
+
+    if (concept) {
+      // 자체 생성 컨셉 지형: 보행면·충돌 경계 난간·배경 볼륨을 한 모듈이 소유하고 시선 셰이더만 공유한다.
+      this.conceptTerrain = buildConceptTerrain(floorData, concept, { quality: this.renderer.quality, bindSightline: material => this.occlusion.bind(material) });
+      this.group.add(this.conceptTerrain); this.buildSeals(floorData); return;
     }
 
     // ---- 바닥 (방 + 복도) ----
@@ -389,6 +401,7 @@ export class Arena {
 
   update(dt, fx, playerPos) {
     this.fieldScene?.userData.update(dt);
+    this.conceptTerrain?.userData.update(dt);
     if (this.skyGroup && playerPos) this.skyGroup.position.set(playerPos.x, 0, playerPos.z);
     this.occlusion.setTarget(this.floorData ? playerPos : null);
     this.t += dt;

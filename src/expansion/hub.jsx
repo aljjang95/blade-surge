@@ -116,7 +116,7 @@ function DungeonRoutes({app, service, launch, controller}) {
   const frontierDungeon = DUNGEONS.find(d => d.id === frontier.routeId) || DUNGEONS[0];
   const choose = value => { setDepth(value); controller.dungeonDepth = value; };
   return <>
-    {depth === 'standard' && <DungeonJourney app={app} service={service}/>}
+    {depth === 'standard' && <DungeonJourney app={app} service={service} launch={launch}/>}
     <section className="exp-season-frontier" data-frontier-route={frontier.routeId} aria-label="이번 주 시즌 원정">
       <div><span className="exp-eyebrow">WEEKLY FRONTIER · {frontier.name.toUpperCase()}</span><h3>{frontierDungeon.name}</h3><p>{frontier.tagline} {frontier.modifier}</p></div>
       <button className="exp-season-route" onClick={()=>{choose('standard');document.querySelector(`[data-dungeon="${frontier.routeId}"]`)?.scrollIntoView({behavior:'smooth',block:'center'});}}>이번 주 원정 보기</button>

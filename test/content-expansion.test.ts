@@ -35,7 +35,9 @@ function make() {
 }
 
 test('콘텐츠 확장은 18개 던전을 세 마을에 6개씩 고유 기믹·조합·보스로 연결한다', () => {
-  expect(ALL_DUNGEONS).toHaveLength(18);
+  // 컨셉 던전 2곳(world 레인)은 마을 관문이 아니라 던전 목록으로만 노출되어 마을 18곳 계약과 별개다.
+  expect(ALL_DUNGEONS).toHaveLength(20);
+  expect(ALL_DUNGEONS.filter((d: any) => !d.layout?.concept)).toHaveLength(18);
   expect(TOWNS.every(town => town.dungeonIds)).toBe(true);
   expect(TOWNS.every(town => town.dungeonIds.length === 6)).toBe(true);
   expect(new Set(TOWNS.flatMap(town => town.dungeonIds)).size).toBe(18);
@@ -176,4 +178,3 @@ test('신규 던전은 원정 경제 카탈로그에서 시작되고 강화 저�
   expect(eco.s.inventory.find((entry: any) => entry.uid === item.uid)?.enh).toBe(0);
   expect((service.ensureState() as any).blacksmith.enhancements).toEqual({});
 });
-

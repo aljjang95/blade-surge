@@ -9,8 +9,9 @@ import { materialsOf, poseRangerBowString } from '../engine/assets.js';
 import { HeroBeacon } from './hero-beacon.js';
 import { CONTROL_ULT_GAIN, ultimateLockDuration } from './control-rewards.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
-import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC } from './progression.js';
+import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC, DODGE_INVULN_SEC } from './progression.js';
 import { RangerAim } from './ranger-aim.js';
+import { enemyImpactIn } from './enemies.js';
 
 const _v = new THREE.Vector3();
 const ATTACK_INPUT_BUFFER_SEC = 0.14;
@@ -22,9 +23,17 @@ const SKILL_CANCEL_AFTER_HIT = 0.05;
 // 수동 궁수: 사격 중 이동 속도 배율, 회피에서 사격으로 넘어가는 최소 회피 시간, 다리 층 블렌드 속도
 export const RANGER_MOVE_SHOT_SPEED = 0.55;
 export const RANGER_DODGE_SHOT_AT = 0.16;
+// 원거리 AUTO가 붙은 적에게서 연속으로 물러서는 최대 시간. 무리가 같이 따라붙으면 그 자리에서 싸운다(적 원거리 2.4초와 같은 장치).
+const AUTO_RANGED_RETREAT_SEC = 1.2;
 const RANGER_LEG_BLEND = 10;
 const LOWER_BODY_TRACK = /hips|leg|foot|toe/i;
 const bowLayerCache = new WeakMap();
+// 상체 사격 층 클립 이름. 다리 층은 이 클립이 재생되는 동안(공격·스킬·궁극기)만 켠다.
+const RANGER_UPPER_CLIPS = new Set(['RangerBowUpper', 'RangerBowUpperRapid']);
+// 시전 뒤 +0.12·+0.24초에 화살을 더 쏘는 스킬은 세 번 당기는 클립(bow_shoot_rapid)으로 재생하고, 각 발사 직후 시위를 쉼 위치로 놓는다.
+const RANGER_RAPID_SKILLS = new Set(['ranger_quickshot', 'gale_hunt']);
+const RANGER_RAPID_RELEASES = [0, .12, .24];
+const RANGER_STRING_SNAP = .04;
 /** 활 사격 클립의 상체 트랙과 달리기·대기 클립의 하체 트랙을 나눈다. 같은 원본 클립은 인스턴스끼리 공유한다. */
 export function rangerBowLayers(clips) {
   const bow = clips?.Bow_Shoot, run = clips?.Running_A, idle = clips?.Idle;
@@ -32,8 +41,10 @@ export function rangerBowLayers(clips) {
   let entry = bowLayerCache.get(bow);
   if (!entry) {
     const lower = (track) => LOWER_BODY_TRACK.test(THREE.PropertyBinding.parseTrackName(track.name).nodeName || '');
+    const rapid = clips.bow_shoot_rapid;
     entry = {
       upper: new THREE.AnimationClip('RangerBowUpper', bow.duration, bow.tracks.filter((t) => !lower(t))),
+      rapid: rapid ? new THREE.AnimationClip('RangerBowUpperRapid', rapid.duration, rapid.tracks.filter((t) => !lower(t))) : null,
       run: new THREE.AnimationClip('RangerLegsRun', run.duration, run.tracks.filter(lower)),
       idle: new THREE.AnimationClip('RangerLegsIdle', idle.duration, idle.tracks.filter(lower)),
     };
@@ -81,6 +92,9 @@ export class Player extends Actor {
     this.rangerAim = def.weapon === 'bow' ? new RangerAim() : null;
     this.bowLayers = this.rangerAim ? rangerBowLayers(this.clips) : null;
     if (this.bowLayers) this.clips.RangerBowUpper = this.bowLayers.upper;
+    if (this.bowLayers?.rapid) this.clips.RangerBowUpperRapid = this.bowLayers.rapid;
+    // 궁수: 판정 방향(yaw)은 즉시 바뀌고, 렌더 피벗만 짧게 따라 돈다(회피 방향 전환·회피→조준 사격의 몸 전체 스냅 완화).
+    this.turnSmoothing = !!this.bowLayers;
     this._bowLegs = null; this._bowLegBlend = 0;
     this.play('Idle');
     this.footT = 0;
@@ -190,6 +204,8 @@ export class Player extends Actor {
   startCombo(idx, inputYaw = null) {
     if (idx === 0 && this.comboResume && this.comboResume.t > 0) { idx = this.comboResume.idx; this.comboResume = null; }
     const c = this.def.combo[idx]; if (!c) return;
+    // 구르기를 사격으로 끊으면 회피 무적도 그 순간 끝난다(다른 출처의 남은 무적은 유지). 회피→사격→회피 연쇄 무적 방지.
+    if (this.state === 'dodge') this.invuln = Math.max(0, (this.invulnOther || 0) - this.stateT);
     // 수동 궁수: 사거리 안의 보이는 적을 조준한다(공격 시작 시점). 대상이 없으면 아래 기존 규칙으로 쏜다.
     const manualBow = this.manualBow && this.alive && this.stun <= 0;
     const aimed = manualBow && c.projectile === 'arrow' ? this.rangerAim.select(this, c.range) : null;
@@ -370,7 +386,15 @@ export class Player extends Actor {
     // its own step; it cannot skip ahead to a free finishing blow.
     if (this.state === 'attack' && this.current) this.comboResume = {idx:this.hitDone?(this.comboIdx+1)%this.def.combo.length:this.comboIdx,t:1.25};
     this.attackBufferYaw = null; this.comboQueuedYaw = null;
-    this.dodgeBufferT = 0; this.stopTrail(); this.state = 'dodge'; this.stateT = 0; this.invuln = 0.4; this.dodgeCd = DODGE_COOLDOWN_SEC;
+    // 회피 무적은 구르기 안쪽에만 둔다. 부활·포탈 등 다른 출처의 남은 무적은 따로 기억해 줄이지 않는다.
+    const now = Number.isFinite(this.game?.elapsed) ? this.game.elapsed : NaN;
+    this.invulnOther = this.invuln > 0 ? this.invuln : 0;
+    // AUTO 가 요청한 회피가 실제로 시작된 순간에만 그 예고를 처리한 것으로 기록한다(버퍼 만료로 못 구른 요청은 다시 시도).
+    const threat = this.auto ? this._autoDodgeThreat : null;
+    if (threat) { this._autoDodgeFrom = threat; this._autoDodgeUntil = (Number.isFinite(now) ? now : 0) + Math.max(0, this._autoDodgeLead ?? threat.telegraph ?? 0) + .15; }
+    this._autoDodgeThreat = null; this._autoDodgeLead = null;
+    this.dodgeBufferT = 0; this.stopTrail(); this.state = 'dodge'; this.stateT = 0;
+    this.invuln = Math.max(this.invulnOther, DODGE_INVULN_SEC); this.dodgeCd = DODGE_COOLDOWN_SEC;
     this.perfectWindow = 0.28;   // 이 안에 피격 판정이 스치면 퍼펙트
     if (this.def.jobId === 'ranger') this.gainJobResource(1);
     // 수동 무방향 회피는 적을 보면서 물러선다. 방향 입력과 AUTO는 기존 전방 회피를 유지한다.
@@ -411,7 +435,11 @@ export class Player extends Actor {
     if (this.auto) this.autoAim(12);
     const lvMult = 1 + (this.skillLevels[i] - 1) * 0.12;
     this.skillCtx = { sk, impl, t: 0, cast: false, done: false, dmg: this.atk * sk.dmg * lvMult, level: this.skillLevels[i], data: {} };
-    if (sk.anim) this.playTimed(sk.anim, impl.dur || 0.8, { fade: 0.06 });
+    // 궁수 활 스킬: 상체 사격 층 + 속도에 맞춘 다리 층(후퇴 스킬이 서 있는 자세로 미끄러지지 않게). 연속 발사 스킬은 세 번 당기는 클립.
+    const bowSkillClip = sk.anim === 'Bow_Shoot' && this.bowLayers
+      ? (RANGER_RAPID_SKILLS.has(sk.id) && this.clips.RangerBowUpperRapid ? 'RangerBowUpperRapid' : 'RangerBowUpper') : null;
+    if (sk.anim) this.playTimed(bowSkillClip || sk.anim, impl.dur || 0.8, { fade: 0.06 });
+    if (bowSkillClip) this.startBowLegs();
     if (!sk.ult && this.def.id === 'ranger') audio.whoosh({ vol: .45, pitch: 1.6, dur: .2 });
     else if (!sk.ult) audio.bark(`hero_${this.def.voiceId || this.def.id}_skill${i}`, { vol: 0.95, min: 1.5 });   // 스킬 이름 외침
     audio.skillRelease({ ult: !!sk.ult, school: sk.id || 'arcane', hero: this.def.id });
@@ -511,7 +539,7 @@ export class Player extends Actor {
   updateBowRig(dt) {
     const legs = this._bowLegs;
     if (legs?.on) {
-      if (this.state !== 'attack' || this.actionName !== 'RangerBowUpper' || !this.alive) {
+      if (!['attack', 'skill', 'ult'].includes(this.state) || !RANGER_UPPER_CLIPS.has(this.actionName) || !this.alive) {
         legs.idle.fadeOut(.15); legs.run.fadeOut(.15); legs.on = false;
       } else {
         const top = Math.max(.01, this.stats.spd * RANGER_MOVE_SHOT_SPEED), speed = Math.hypot(this.vel.x, this.vel.z);
@@ -525,8 +553,15 @@ export class Player extends Actor {
     }
     const c = this.current, sk = this.skillCtx;
     const drawing = this.alive && ((this.state === 'attack' && !this.hitDone && c?.projectile === 'arrow')
-      || ((this.state === 'skill' || this.state === 'ult') && !!sk && !sk.cast));
+      || ((this.state === 'skill' || this.state === 'ult') && !!sk && this.skillDrawing(sk)));
     this.bowStringHeld = poseRangerBowString(this.model, drawing);
+  }
+  /** 스킬 시전 중 시위를 당기고 있는가. 연속 발사 스킬은 각 발사 직후 짧게 놓았다가 다음 당김에서 다시 잡는다. */
+  skillDrawing(sk) {
+    if (!sk.cast) return true;
+    if (this.actionName !== 'RangerBowUpperRapid') return false;
+    const since = sk.t - (sk.impl.dur || 0.8) * sk.sk.castAt;
+    return RANGER_RAPID_RELEASES.some((at, i) => i > 0 && since > RANGER_RAPID_RELEASES[i - 1] + RANGER_STRING_SNAP && since < at);
   }
   revive() { this.beacon?.setFocus(false); this.alive = true; this.dead = false; this.deathT = -1; this.hp = this.maxHp; this.state = 'idle'; this.invuln = 2; this.pos.y = 0; for (const m of this.mats) m.transparent = false; this.play('Idle'); }
 
@@ -561,6 +596,9 @@ export class Player extends Actor {
     // Move past the escort line before firing at an ordered target. Ranged
     // bolts still collide normally; AUTO does not make other enemies immune.
     const d = this.distTo(e); const want = this.def.ranged ? (precision ? 2.8 : 7) : 1.9;
+    // 원거리 AUTO 후퇴 시간: 붙은 적이 없을 때만 천천히 회복한다. 계속 붙어 있으면 상한에 머물러 제자리 공격을 이어 간다.
+    const close = this.def.ranged && d < want - 3;
+    if (!close) this._autoBackT = Math.max(0, (this._autoBackT || 0) - dt * .5);
     if (this.state === 'idle' || this.state === 'move') {
       // 스킬 우선: 적이 3마리 이상 뭉쳤을 때 광역기 우선
       const cluster = list.reduce((a, x) => a + (x.distTo(e) < 4.5 ? 1 : 0), 0);
@@ -586,15 +624,43 @@ export class Player extends Actor {
         if (fd) { out.x = fd[0]; out.y = fd[1]; }
         else { const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; }
       }
-      else if (this.def.ranged && d < want - 3) { const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = -dx / l; out.y = -dz / l; }
+      else if (close && (this._autoBackT || 0) < AUTO_RANGED_RETREAT_SEC && this.autoBackStep(e, out)) this._autoBackT = (this._autoBackT || 0) + dt;
       else this.game.input.press('attack');
     } else if (!precision && this.state === 'attack' && d < want + 2.5) this.game.input.press('attack');   // 사거리 밖(물러서는 원거리 몹)이면 콤보를 끊고 이동으로 돌아간다 — 안 끊으면 허공 콤보가 영원히 이어진다
-    // 예고 회피 — 콤보 중에도 타격이 끝났으면 캔슬해서 구른다. 보스·엘리트의 큰 예고는 거의 확실히, 잡몹은 절반쯤 (적 위협 회전: 콤보 중 회피 불가라 보스전에서 HP 의 30% 를 그냥 맞았다)
-    if (this.state === 'idle' || this.state === 'move' || (this.state === 'attack' && this.hitDone)) {
-      const threat = list.find((x) => x.telegraph > 0 && this.distTo(x) < (x.isBoss ? 5.5 : x.isElite ? 5 : 4));
-      if (threat && (this.dodgeCd || 0) <= 0 && Math.random() < dt * (threat.isBoss || threat.isElite ? 9 : 3)) this.game.input.press('dodge');
+    // 예고 회피 — 콤보 중에도 지금 캔슬할 수 있는 프레임이면 구른다. 보스·엘리트의 큰 예고는 거의 확실히, 잡몹은 절반쯤 (적 위협 회전: 콤보 중 회피 불가라 보스전에서 HP 의 30% 를 그냥 맞았다)
+    // 캔슬 창 밖에서 누르면 회피 입력 버퍼가 나중에 굴려 무적이 타격과 어긋난다. 그래서 지금 바로 구를 수 있을 때만 판단한다.
+    // 회피 무적(DODGE_INVULN_SEC)은 구르기보다 짧다. 실제 타격까지 남은 시간이 그 창 안일 때만 눌러야 구르기가 피해를 막는다.
+    // 이 프레임 입력 뒤 Player.update가 무적을, Enemy.update가 예고를 같은 dt씩 줄이므로 한 프레임을 남긴다.
+    // 타격 정지로 짧아진 프레임 다음에는 실제 프레임 길이로 돌아오므로 남길 몫은 실제 프레임 길이(dt/scale)다.
+    if (this.state === 'idle' || this.state === 'move' || this.state === 'attack') {
+      const now = this.game.elapsed || 0;
+      const clock = this.game.timeCtl, frameDt = clock?.scale > 0 ? dt / clock.scale : dt;
+      let threat = null, lead = Infinity;
+      for (const x of list) {
+        if (!(x.telegraph > 0) || this.distTo(x) >= (x.isBoss ? 5.5 : x.isElite ? 5 : 4)) continue;
+        // 쿨타임이 없어도 같은 예고 하나에는 실제로 한 번 구른 뒤 다시 구르지 않는다.
+        if (x === this._autoDodgeFrom && now < this._autoDodgeUntil) continue;
+        const t = enemyImpactIn(x, this);
+        if (t < lead) { lead = t; threat = x; }
+      }
+      // 무적 중이면 다시 구르지 않는다. 확률은 무적 창 안에서만 쓴다(잡몹 약 절반, 보스·엘리트 약 9할).
+      if (threat && lead + frameDt < DODGE_INVULN_SEC && (this.state !== 'attack' || this.canDodgeCancel()) &&
+        !(this.invuln > 0) && (this.dodgeCd || 0) <= 0 && Math.random() < dt * (threat.isBoss || threat.isElite ? 9 : 3)) {
+        this.game.input.press('dodge'); this._autoDodgeThreat = threat; this._autoDodgeLead = lead;
+      }
     }
     return out;
+  }
+  /** 원거리 AUTO의 후퇴 한 걸음. 몸 길이만큼 뒤에 몸이 그대로 들어가지 않으면(World.resolve가 막거나 벽을 따라 미끄러뜨릴 자리) 물러서지 않는다. */
+  autoBackStep(e, out) {
+    const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1, ux = -dx / l, uz = -dz / l;
+    const W = this.game.world;
+    if (W) {
+      // Actor.update의 World.resolve(반경 0.8배)가 그대로 받아들이는 자리인지 같은 네 점으로 본다(프레임 할당 없음).
+      const r = this.radius * 0.8, step = r * 2, tx = this.pos.x + ux * step, tz = this.pos.z + uz * step;
+      if (!(W.walkable(tx + r, tz) && W.walkable(tx - r, tz) && W.walkable(tx, tz + r) && W.walkable(tx, tz - r))) return false;
+    }
+    out.x = ux; out.y = uz; return true;
   }
   /** 적이 없으면 다음 목표 방으로 이동 (보스 발견 시 보스방 우선) */
   autoExplore(dt) {
