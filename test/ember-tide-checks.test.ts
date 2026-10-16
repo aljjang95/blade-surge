@@ -1371,6 +1371,39 @@ describe('후방 종합 판정(analyzeRear)', () => {
     t.rows.find((r: any) => r.dom === R_TITLE + R_ARMORED).dom = R_ARMORED;
     expect(K.checkRearObjective(t.rows, REAR_DEF).bad[0].why).toBe('title');
   });
+  test('목표창: 창이 열린 직후 갱신 주기(0.1초+2스텝) 안의 armored 문구는 갱신 대기로 세고, 주기를 넘으면 실패한다', () => {
+    const s = rearSession();
+    const open = s.rows.findIndex((r: any) => r.rs === 'exposed');
+    const first = s.rows[open];
+    first.dom = R_TITLE + R_ARMORED;
+    const a = K.checkRearObjective(s.rows, REAR_DEF);
+    expect(a.ok).toBe(true);
+    expect(a.lagCount).toBe(1);
+    // 주기를 넘은 표본(열린 뒤 0.2초)에 armored 문구가 남아 있으면 실패다.
+    const t = rearSession();
+    const at = t.rows.findIndex((r: any) => r.rs === 'exposed');
+    const late = t.rows.slice(at).find((r: any) => r.rs === 'exposed' && r.t - t.rows[at].t >= .2 - 1e-9);
+    late.dom = R_TITLE + R_ARMORED;
+    const b = K.checkRearObjective(t.rows, REAR_DEF);
+    expect(b.ok).toBe(false);
+    expect(b.bad[0].why).toBe('exposed-text');
+    // 주기 안이라도 앞 상태 문구가 아닌 다른 문구는 실패다.
+    const u = rearSession();
+    const uo = u.rows.findIndex((r: any) => r.rs === 'exposed');
+    u.rows[uo].dom = R_TITLE + '아무 문구';
+    expect(K.checkRearObjective(u.rows, REAR_DEF).ok).toBe(false);
+  });
+  test('목표창: 보스가 쓰러진 행(al 0)의 정화 완료 문구는 판정하지 않는다. 살아 있는 행이면 실패한다', () => {
+    const s = rearSession();
+    const at = s.rows.findIndex((r: any) => r.rs === 'exposed');
+    const row = s.rows[at + 30];
+    row.dom = '정화 완료원정 결과를 확인하세요.'; row.al = 0;
+    expect(K.checkRearObjective(s.rows, REAR_DEF).ok).toBe(true);
+    row.al = 1;
+    const b = K.checkRearObjective(s.rows, REAR_DEF);
+    expect(b.ok).toBe(false);
+    expect(b.bad[0].why).toBe('title');
+  });
   test('목표창: armored 표본이나 exposed 표본이 하나도 없으면 실패한다', () => {
     const noExposed = analyzeR(rearSession({ w1: { dom: false }, w2: { dom: false }, w3: { dom: false } }));
     expect(failR(noExposed)).toEqual(['objectiveText']);
@@ -1508,7 +1541,7 @@ describe('후방 수동 구간(checkRearManual) · 창 안 정지(checkRearPause
     s.idle(10);
     return { s, marks: [{ mk: 'manual-start', n: start }, { mk: 'manual-end', n: end }] };
   }
-  test('정상: AUTO 꺼짐·정면 타격 ≥ 1(×.5)·등 뒤 타격 ≥ 1(×2)·정면이 먼저면 통과한다', () => {
+  test('정상: AUTO 꺼짐·정면 타격 ≥ 1(×.5)·등 뒤 타격 ≥ 1(×2)·정면 타격 뒤 등 뒤 타격이면 통과한다', () => {
     const { s, marks } = manualSession();
     const m = K.checkRearManual(s.rows, s.filters, marks, REAR_DEF);
     expect(m.ok).toBe(true);
@@ -1536,11 +1569,23 @@ describe('후방 수동 구간(checkRearManual) · 창 안 정지(checkRearPause
     expect(K.checkRearManual(s.rows, s.filters, [], REAR_DEF).ok).toBe(false);
     expect(K.checkRearManual(s.rows, null as any, marks, REAR_DEF).ok).toBe(false);
   });
-  test('등 뒤 타격이 정면 타격보다 앞서면 frontFirst 가 실패한다', () => {
+  test('등 뒤 타격이 정면 타격보다 앞서기만 하면(정면 뒤 등 뒤 타격 없음) rearAfterFront 가 실패한다', () => {
     const { s, marks } = manualSession();
     const f = s.filters.find((x: any) => x.side === 'front'), r = s.filters.find((x: any) => x.side === 'rear');
     [f.n, r.n] = [r.n, f.n];
-    expect(K.checkRearManual(s.rows, s.filters, marks, REAR_DEF).frontFirst).toBe(false);
+    const m = K.checkRearManual(s.rows, s.filters, marks, REAR_DEF);
+    expect(m.rearAfterFront).toBe(false);
+    expect(m.ok).toBe(false);
+  });
+  test('창이 열릴 때 남은 콤보의 등 뒤 타격이 먼저 와도, 그 뒤 정면 → 등 뒤 순서가 있으면 통과한다(b14 smoke s-cand-rear)', () => {
+    const { s, marks } = manualSession();
+    const r = s.filters.find((x: any) => x.side === 'rear');
+    s.filters.push({ ...r, n: marks[0].n + 5 });
+    s.filters.sort((a: any, b: any) => a.n - b.n);
+    const m = K.checkRearManual(s.rows, s.filters, marks, REAR_DEF);
+    expect(m.firstRearN).toBeLessThan(m.firstFrontN);
+    expect(m.rearAfterFront).toBe(true);
+    expect(m.ok).toBe(true);
   });
   const frozen = (over: any = {}) => ({ elapsed: 10, paused: true, rear: { rs: 'exposed', wl: 2.5, by: 1.2, sq: 7, bx: 3, bz: 4 }, ...over });
   test('창 안 정지: 60스텝+0.5초 동안 불변이고 재개 뒤 windowLeft 가 흐른 시간만큼 줄면 통과한다', () => {

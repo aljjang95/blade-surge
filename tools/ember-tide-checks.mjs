@@ -957,22 +957,34 @@ export function checkRearView(rows) {
  * 목표창 표본(dom 이 있는 행). 제목 '사슬 집행자 후방'. armored 표본은 '용재 망치가 박히면 등 뒤로 · 정면은 사슬 갑주', exposed 표본은
  * '후방 노출 n.n초 · 등 뒤 200% · 정면 50%'(퍼센트는 정의에서)이고 n.n 이 그 행 windowLeft 의 0.1초 올림과 같다. armored·exposed 표본이 각각 1개 이상이어야 한다.
  */
+/** 목표창은 battle-readability.update 가 프레임 dt 로 0.1초마다 다시 그린다(src/ui/battle-readability.js). 결정적 스텝(1/60)에서 상태가 바뀐 뒤
+ * 이 주기(+2스텝 여유) 안의 표본은 바로 앞 상태의 정확한 문구일 때만 '갱신 대기'(lag)로 따로 센다. 주기를 넘거나 다른 문구면 실패다. */
+export const REAR_OBJECTIVE_REFRESH = .1 + 2 / 60;
 export function checkRearObjective(rows, def) {
-  const samples = rows.filter(r => typeof r.dom === 'string');
-  const pattern = rearExposedPattern(def), bad = [];
-  let armored = 0, exposed = 0;
-  for (const r of samples) {
+  const pattern = rearExposedPattern(def), bad = [], lag = [];
+  let samples = 0, armored = 0, exposed = 0, state = null, changedAt = -Infinity, prev = null;
+  for (const r of rows) {
+    if (r.rs !== state) { prev = state; state = r.rs; changedAt = r.t; }
+    // 보스가 쓰러진 행부터 목표창은 정당하게 '정화 완료'로 바뀐다(창 안 처치 포함, b14 smoke s-cand-auto-knight). 그 행은 판정하지 않는다.
+    if (r.al === 0) continue;
+    if (typeof r.dom !== 'string') continue;
+    samples++;
     if (!r.dom.includes(REAR.title)) { bad.push({ n: r.n, state: r.rs, dom: r.dom, why: 'title' }); continue; }
+    const waiting = Number.isFinite(r.t) && r.t - changedAt <= REAR_OBJECTIVE_REFRESH + 1e-9;
+    const armoredText = r.dom.includes(REAR.armoredText) && !pattern.test(r.dom);
     if (r.rs === 'armored') {
-      armored++;
-      if (!r.dom.includes(REAR.armoredText) || pattern.test(r.dom)) bad.push({ n: r.n, state: r.rs, dom: r.dom, why: 'armored-text' });
+      if (armoredText) armored++;
+      else if (waiting && prev === 'exposed' && pattern.test(r.dom)) lag.push({ n: r.n, state: r.rs, after: r.t - changedAt });
+      else bad.push({ n: r.n, state: r.rs, dom: r.dom, why: 'armored-text' });
     } else if (r.rs === 'exposed') {
-      exposed++;
       const m = pattern.exec(r.dom), want = rearLeftText(r.wl);
-      if (!m || m[1] !== want) bad.push({ n: r.n, state: r.rs, dom: r.dom, want, got: m?.[1] ?? null, why: 'exposed-text' });
+      if (m && m[1] === want) exposed++;
+      else if (waiting && prev === 'armored' && armoredText) lag.push({ n: r.n, state: r.rs, after: r.t - changedAt });
+      else bad.push({ n: r.n, state: r.rs, dom: r.dom, want, got: m?.[1] ?? null, why: 'exposed-text' });
     } else bad.push({ n: r.n, state: r.rs, dom: r.dom, why: 'state' });
   }
-  return { ok: samples.length > 0 && bad.length === 0 && armored >= 1 && exposed >= 1, samples: samples.length, armored, exposed, bad: bad.slice(0, 6), badCount: bad.length };
+  return { ok: samples > 0 && bad.length === 0 && armored >= 1 && exposed >= 1, samples, armored, exposed, bad: bad.slice(0, 6), badCount: bad.length,
+    lag: lag.slice(0, 6), lagCount: lag.length, refresh: REAR_OBJECTIVE_REFRESH };
 }
 
 /** 토스트: 부착 토스트 정확히 1회, 열림 토스트('망치가 박혔다 · 4초 동안 등 뒤가 약점')는 창마다 1회(= 관측 창 수 = 컨트롤러 windows), 비슷한 다른 문구는 누출이다. */
@@ -1049,10 +1061,12 @@ export function checkRearManual(rows, filters, marks, def) {
   const front = recs('front'), rear = recs('rear');
   const frontMul = front.length > 0 && front.every(f => nearRel(f.out, f.dmg * def.front)), rearMul = rear.length > 0 && rear.every(f => nearRel(f.out, f.dmg * def.rear));
   const frontGain = gain('fh'), rearGain = gain('rh');
-  const frontFirst = front.length > 0 && rear.length > 0 && front[0].n <= rear[0].n;
-  return { ok: stints.length >= 1 && seg.length > 0 && autoRows === 0 && dead === 0 && teleports === 0 && frontGain >= 1 && rearGain >= 1 && front.length >= 1 && rear.length >= 1 && frontMul && rearMul && frontFirst,
+  // 키보드로 정면에서 친 뒤 옆을 돌아 등 뒤에서 친 순서: 첫 정면 타격 뒤에 등 뒤 타격이 있어야 한다.
+  // 창이 열릴 때 영웅이 이미 등 뒤에 있으면 AUTO 가 남긴 콤보가 먼저 등 뒤를 칠 수 있다(b14 smoke s-cand-rear). 그 타격은 순서 판정에 쓰지 않는다.
+  const rearAfterFront = front.length > 0 && rear.some(f => f.n > front[0].n);
+  return { ok: stints.length >= 1 && seg.length > 0 && autoRows === 0 && dead === 0 && teleports === 0 && frontGain >= 1 && rearGain >= 1 && front.length >= 1 && rear.length >= 1 && frontMul && rearMul && rearAfterFront,
     observed: true, stints, rows: seg.length, autoRows, dead, teleports, frontHits: frontGain, rearHits: rearGain, frontRecords: front.length, rearRecords: rear.length, frontMul, rearMul,
-    firstFrontN: front[0]?.n ?? null, firstRearN: rear[0]?.n ?? null, frontFirst };
+    firstFrontN: front[0]?.n ?? null, firstRearN: rear[0]?.n ?? null, rearAfterFront };
 }
 
 /**

@@ -855,7 +855,7 @@ function recordRear(row, raw, toasts) {
   if (row.tag === 'rear') {
     const manual = checkRearManual(raw.rows, raw.filters, raw.marks, rearDef);
     row.rearManual = manual;
-    check('rear: 키보드 구간 — AUTO 꺼짐·영웅 생존·순간이동 없음·정면 타격 ≥ 1(배율 front)·등 뒤 타격 ≥ 1(배율 rear)·정면이 먼저', manual.ok, manual);
+    check('rear: 키보드 구간 — AUTO 꺼짐·영웅 생존·순간이동 없음·정면 타격 ≥ 1(배율 front)·등 뒤 타격 ≥ 1(배율 rear)·정면 타격 뒤 등 뒤 타격', manual.ok, manual);
   }
 }
 /** 관측 행을 파일로 빼고, 밸브 정의가 있는 빌드는 개방 전 과정을 판정한다. 기준선(정의 없음)은 공통 측정만 남긴다. */
