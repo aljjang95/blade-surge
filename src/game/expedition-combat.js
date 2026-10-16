@@ -10,7 +10,8 @@ import { gardenMasteryForStage, gardenMasteryDiagonals } from '../data/garden-ma
 const DUNGEONS = Object.freeze([...ALL_DUNGEONS, ...ROUTES.filter(route => !ALL_DUNGEONS.some(dungeon => dungeon.id === route.id))]);
 
 export const EXPEDITION_LAYOUTS = {
-  ...Object.fromEntries(FIELD_DUNGEONS.map(d => [d.id, d.layout])),
+  // 필드와 컨셉 던전(world 레인)은 카탈로그 항목이 레이아웃을 직접 가진다.
+  ...Object.fromEntries([...FIELD_DUNGEONS, ...ALL_DUNGEONS.filter(d => d.layout)].map(d => [d.id, d.layout])),
   glass_garden: { spacing: [30, 30], size: [20, 20], width: 6, cells: [[0,0],[1,0],[1,-1],[2,0],[3,0]], edges: [[0,1],[1,2],[1,3],[3,4]], types: ['start','normal','treasure','normal','boss'] },
   ember_vault: { spacing: [34, 26], size: [24, 16], width: 8, cells: [[0,0],[1,0],[2,0]], edges: [[0,1],[1,2]], types: ['start','elite','boss'] },
   star_archive: { spacing: [28, 34], size: [16, 24], width: 6, cells: [[0,0],[0,1],[1,1],[1,2]], edges: [[0,1],[1,2],[2,3]], types: ['start','normal','elite','boss'] },

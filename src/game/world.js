@@ -98,6 +98,8 @@ export class Floor {
       const room = { id: i, gx, gy, x: wx, z: wz, w, h, type: isStart ? ROOM_TYPE.START : ROOM_TYPE.NORMAL,
         label: this.layout?.labels?.[i] || '', landmark: this.layout?.landmark || '',
         cleared: isStart, discovered: isStart, spawned: false, enemies: [], pathLen: 0 };
+      // 컨셉 던전의 원형 마당: 충돌·방 판정·스폰이 외접 사각형이 아니라 원을 쓴다.
+      if (this.layout?.shapes?.[i] === 'disk') room.shape = 'disk';
       this.rooms.push(room); cells.set(key(gx, gy), room);
     });
     // 복도
@@ -182,7 +184,7 @@ export class Floor {
     this.cols = Math.ceil((maxX - minX + pad * 2) / CELL);
     this.rows = Math.ceil((maxZ - minZ + pad * 2) / CELL);
     this.mask = new Uint8Array(this.cols * this.rows);
-    for (const r of rects) this.fillRect(r, 1);
+    for (const r of rects) r.shape === 'disk' ? this.fillDisk(r, 1) : this.fillRect(r, 1);
     if (this.sealed) for (const g of this.gates) this.fillRect(g, 0);
     this.bounds = { minX, maxX, minZ, maxZ };
     this.buildInner();
@@ -204,6 +206,16 @@ export class Floor {
     for (let z = Math.max(0, z0); z < Math.min(this.rows, z1); z++)
       for (let x = Math.max(0, x0); x < Math.min(this.cols, x1); x++) this.mask[z * this.cols + x] = v;
   }
+  /** 셀 중심이 원 안에 드는 셀만 채운다(원형 방). */
+  fillDisk(r, v) {
+    const radius = Math.min(r.w, r.h) / 2;
+    const x0 = Math.floor((r.x - radius - this.minX) / CELL), x1 = Math.ceil((r.x + radius - this.minX) / CELL);
+    const z0 = Math.floor((r.z - radius - this.minZ) / CELL), z1 = Math.ceil((r.z + radius - this.minZ) / CELL);
+    for (let z = Math.max(0, z0); z < Math.min(this.rows, z1); z++) for (let x = Math.max(0, x0); x < Math.min(this.cols, x1); x++) {
+      const cx = this.minX + (x + .5) * CELL - r.x, cz = this.minZ + (z + .5) * CELL - r.z;
+      if (cx * cx + cz * cz <= radius * radius) this.mask[z * this.cols + x] = v;
+    }
+  }
   walkable(wx, wz) {
     const x = Math.floor((wx - this.minX) / CELL), z = Math.floor((wz - this.minZ) / CELL);
     if (x < 0 || z < 0 || x >= this.cols || z >= this.rows) return false;
@@ -220,11 +232,18 @@ export class Floor {
     return [fromX, fromZ];
   }
   roomAt(wx, wz) {
-    for (const r of this.rooms) if (Math.abs(wx - r.x) < r.w / 2 && Math.abs(wz - r.z) < r.h / 2) return r;
+    for (const r of this.rooms) {
+      if (r.shape === 'disk') { const radius = Math.min(r.w, r.h) / 2; if ((wx - r.x) ** 2 + (wz - r.z) ** 2 < radius * radius) return r; continue; }
+      if (Math.abs(wx - r.x) < r.w / 2 && Math.abs(wz - r.z) < r.h / 2) return r;
+    }
     return null;
   }
   /** 방 안의 랜덤 위치 */
   randomIn(room, margin = 2.5) {
+    if (room.shape === 'disk') {
+      const a = this.r(0, Math.PI * 2), d = Math.sqrt(this.rand()) * Math.max(0, Math.min(room.w, room.h) / 2 - margin);
+      return [room.x + Math.cos(a) * d, room.z + Math.sin(a) * d];
+    }
     return [room.x + this.r(-1, 1) * (room.w / 2 - margin), room.z + this.r(-1, 1) * (room.h / 2 - margin)];
   }
   /** 목표 지점까지의 BFS 거리장 (길찾기). 목표가 바뀔 때만 다시 계산 */

@@ -168,7 +168,44 @@ export const NEW_DUNGEONS = [
 
 // 기존 12곳 공개 계약은 유지하고, 확장 통합 경로는 별도 카탈로그로 노출한다.
 export const DUNGEONS = Object.freeze(BASE_DUNGEONS);
-export const ALL_DUNGEONS = Object.freeze([...BASE_DUNGEONS, ...NEW_DUNGEONS]);
+
+// 2026-10-16 컨셉 원화(art-src/concepts/dungeon-concepts-glacier-quarry-20261016.png) 기반 신규 던전 2곳.
+// 기존 18곳·마을 6관문 계약을 그대로 두고 '다른 던전' 목록 끝에 Lv.1로 노출한다. 레이아웃은 자체 생성 지형(concept-terrain.js)이 그린다.
+export const CONCEPT_DUNGEONS = [
+  dungeon('glacier_tide_basin', '빙하 조수 분지', 'tide', 4, 1, 'star_dust', '청록 조수가 차오르는 얼음 분지에서 두 갈래 다리를 건너 수문의 왕좌를 되찾으세요.', {
+    art: '/img/expansion/glacier_tide_basin.webp', accent: '#5fe3dc', subtitle: 'GLACIER TIDE BASIN', rosterMode: 'glaciertide',
+    mechanic: { id: 'tidal_surge', name: '조수 범람', trigger: '다리 위로 조수가 한쪽 절반씩 차오른다.', resolve: '반대편 난간 쪽이나 다른 갈래 다리로 비켜서고, 원형 마당에서는 물결 사이 빈 고리로 들어간다.' },
+    objective: '두 갈래 다리와 조수 나침반 마당을 모두 정화 → 수문 봉인 해제 → 빙하 수문의 삼두룡 처치',
+    tactic: `다리 위로 청록 조수 예고가 한쪽 절반에 뜨면 반대편 난간 쪽이나 다른 갈래 다리로 비켜서세요. 원형 마당에서는 바깥 고리부터 물결이 밀려오니 빈 고리 안으로 들어가세요. ${ENEMIES.obsidian_hydra.tactic}`,
+    bossEnemy: 'obsidian_hydra', bossHp: 11800, bossName: '빙하 수문의 삼두룡',
+    roster: { trash: ['eclipse_scalelet', 'frost_mirror', 'squidle', 'blob_spiky', 'eclipse_scalelet', 'bomb_abyss'], ranged: ['eclipse_tidecaller', 'abyss_seer', 'glub'], elite: ['hydra_scaleguard', 'elite_yeti', 'elite_golem'] },
+    bossPattern: ['tide_sweep', 'tide_undertow', 'fan'],
+    layout: { concept: 'glacier', landmark: 'glacier', spacing: [36, 28], size: [26, 12], width: 10,
+      cells: [[0,1],[1,0],[1,2],[2,1],[3,0],[3,2],[4,1],[5,1]],
+      edges: [[0,1],[0,2],[1,3],[2,3],[3,4],[3,5],[4,6],[5,6],[6,7]],
+      types: ['start','normal','treasure','normal','elite','normal','elite','boss'],
+      sizes: [[20,20],[26,12],[26,12],[36,36],[26,12],[26,12],[22,22],[30,30]],
+      shapes: [null,null,null,'disk',null,null,null,'disk'],
+      labels: ['조수 분지 나루','북쪽 서리 다리','남쪽 수정 다리','조수 나침반 마당','북동 빙하 다리','남동 얼음 다리','동쪽 수문 테라스','빙하 수문의 왕좌'] },
+  }),
+  dungeon('sunbrass_quarry', '석양 황동 채석장', 'forge', 2, 1, 'ember_core', '석양이 비치는 구리빛 채석장에서 황동 도르래의 낙석을 피하며 원형 채석장의 무리를 몰아 정리하세요.', {
+    art: '/img/expansion/sunbrass_quarry.webp', accent: '#ffb35c', subtitle: 'SUNBRASS QUARRY', rosterMode: 'sunbrass',
+    mechanic: { id: 'pulley_drop', name: '도르래 낙석', trigger: '황동 도르래가 광석 상자를 원형 예고 위로 옮긴다.', resolve: '예고 원 밖으로 비켜서고, 북·남 우회 선반으로 무리를 끌고 돌아 다시 모은다.' },
+    objective: '하역장·우회 선반·원형 채석장을 모두 정화 → 승강장 봉인 해제 → 도르래 거수 처치',
+    tactic: `황동 도르래가 광석 상자를 옮기면 원형 예고 자리에 차례로 떨어집니다. 원 밖으로 비켜선 뒤 몰아 둔 무리를 정리하세요. 원형 채석장은 북·남 우회 선반과 이어져 무리를 끌고 돌 수 있습니다. ${ENEMIES.ash_colossus.tactic}`,
+    bossEnemy: 'ash_colossus', bossHp: 12600, bossName: '도르래 거수',
+    roster: { trash: ['cinderling', 'chain_forger', 'orc_blob', 'bomb_imp', 'ash_chainling', 'imp'], ranged: ['ember_scribe', 'ash_smith', 'tribal_shaman'], elite: ['foundry_bulwark', 'slag_colossus', 'elite_orc_chief'] },
+    bossPattern: ['kiln_hammer', 'kiln_vents', 'slam'],
+    layout: { concept: 'quarry', landmark: 'quarry', spacing: [36, 30], size: [22, 22], width: 10,
+      cells: [[0,1],[1,1],[2,0],[2,1],[2,2],[3,1],[4,1]],
+      edges: [[0,1],[1,3],[2,1],[2,5],[4,1],[4,5],[3,5],[3,2],[3,4],[5,6]],
+      types: ['start','normal','treasure','normal','elite','elite','boss'],
+      sizes: [[20,18],[22,22],[30,12],[38,38],[30,12],[22,22],[30,30]],
+      shapes: [null,null,null,'disk',null,null,'disk'],
+      labels: ['석양 채석장 입구','서쪽 하역장','북쪽 우회 선반','황동 나침반 채석장','남쪽 우회 선반','동쪽 승강장','도르래 거수의 단'] },
+  }),
+];
+export const ALL_DUNGEONS = Object.freeze([...BASE_DUNGEONS, ...NEW_DUNGEONS, ...CONCEPT_DUNGEONS]);
 
 export const DUNGEON_MECHANICS = Object.freeze(Object.fromEntries(ALL_DUNGEONS.map(dungeon => [dungeon.id, dungeon.mechanic || null])));
 export const DUNGEON_BOSS_PATTERNS = Object.freeze(Object.fromEntries(ALL_DUNGEONS.map(dungeon => [dungeon.id, Object.freeze([...(dungeon.bossPattern || dungeon.stage.encounter?.pattern || [])])] )));

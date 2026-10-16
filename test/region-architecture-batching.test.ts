@@ -266,7 +266,7 @@ test('기존 세 표면과 컷어웨이 재질을 공유하며 소유 지오메�
     expect(materials.size).toBe(3);
     for (const mesh of meshes) {
       const material = mesh.material as THREE.MeshStandardMaterial; occlusion.bind(material);
-      expect(material.clippingPlanes).toBe(occlusion.planes); expect(material.clipIntersection).toBe(true);
+      expect(occlusion.isBound(material)).toBe(true); expect(material.clippingPlanes).toBeNull();
       if (mesh.userData.materialRole === 0) {
         expect(material.map).toBe(textures[0]); expect(material.normalMap).toBe(textures[1]);
         expect(material.roughnessMap).toBe(textures[2]); expect(material.normalScale.toArray()).toEqual([.45, .45]);

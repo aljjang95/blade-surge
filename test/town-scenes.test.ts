@@ -12,7 +12,8 @@ import { buildExpeditionWorld, EXPEDITION_LAYOUTS } from '../src/game/expedition
 
 test('three towns split the eighteen dungeons into six each with only their own gates', () => {
   const all = CITADEL_TOWN_IDS.flatMap(id => defaultTownDungeonIds(id));
-  expect(all.sort()).toEqual(ALL_DUNGEONS.map(d => d.id).sort());
+  // 컨셉 던전 2곳은 마을 관문 없이 던전 목록으로 노출한다.
+  expect(all.sort()).toEqual(ALL_DUNGEONS.filter((d: any) => !d.layout?.concept).map(d => d.id).sort());
   for (const id of CITADEL_TOWN_IDS) {
     const hub = townHub(id);
     expect(hub.hotspots.filter((s: any) => s.kind === 'dungeon').map((s: any) => s.route)).toEqual(defaultTownDungeonIds(id));
