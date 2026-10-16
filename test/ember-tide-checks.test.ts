@@ -1027,7 +1027,7 @@ const rearLine = (r: any) => '사슬 집행자 후방 공격 ' + r.rearHits + '�
 
 /**
  * 보스방 후방 행을 같은 규칙으로 만드는 모의 세션. 한 스텝에 행 하나. 보스 yaw 0 이면 정면은 +z 다.
- * hit(side) 는 다음 스텝의 필터 기록과 카운터 증가를 만든다(등 뒤 = 정면과 같은 방향으로 공격자 → 보스, 정면 = 반대, 옆 = 직각).
+ * hit(side) 는 다음 스텝의 필터 기록(영웅 = 공격자 위치 포함)과 카운터 증가를 만든다.
  */
 class RearSim {
   rows: any[] = []; filters: any[] = []; toasts: string[] = []; n = 0; cur: any;
@@ -1044,17 +1044,27 @@ class RearSim {
     this.rows.push(row);
     return row;
   }
-  /** 다음 스텝에서 일어나는 타격 한 번. state 는 그 순간의 rear.state(기본 exposed). */
+  /**
+   * 다음 스텝에서 일어나는 타격 한 번. side 는 영웅이 선 자리(등 뒤 = 보스 정면 반대쪽, 정면 = 정면쪽, 옆 = 직각)이고 state 는 그 순간의 rear.state(기본 exposed).
+   * 영웅 = 공격자라 attacker.pos = 영웅 위치(ax·az = hx·hz). 필터 기록의 side 는 도구가 영웅 위치로 계산한 값이다.
+   * ctrlSide: 컨트롤러가 (잘못) 정한 구분(배율·집계에 쓴다, 기본은 side). attackerless: attacker 없는 호출(중독 틱 등: 1배, 세지 않음).
+   * heroOff: 기록의 영웅 위치를 attacker 위치에서 이만큼 어긋나게 한다.
+   */
   hit(side: string, o: any = {}) {
-    const dmg = o.dmg ?? 100, st = o.st ?? 'exposed', yaw = this.cur.by;
+    const dmg = o.dmg ?? 100, st = o.st ?? 'exposed', yaw = this.cur.by, bx = this.cur.bx, bz = this.cur.bz;
     const f = { x: Math.sin(yaw), z: Math.cos(yaw) };
-    const dir = side === 'rear' ? f : side === 'front' ? { x: -f.x, z: -f.z } : { x: f.z, z: -f.x };
-    const mult = st !== 'exposed' ? 1 : side === 'rear' ? 2 : side === 'front' ? .5 : 1;
+    const dir = side === 'rear' ? f : side === 'front' ? { x: -f.x, z: -f.z } : { x: f.z, z: -f.x };   // 공격자 → 보스
+    const ax = bx - dir.x * 2, az = bz - dir.z * 2;
+    const ctrl = o.ctrlSide ?? side;
+    const counted = st === 'exposed' && !o.attackerless && !o.uncounted;
+    const mult = !counted ? 1 : ctrl === 'rear' ? 2 : ctrl === 'front' ? .5 : 1;
     const out = o.out ?? dmg * mult;
-    this.filters.push({ n: this.n + 1, dmg, out, dx: dir.x, dz: dir.z, st, yaw, side: o.reportedSide ?? side });
-    if (st === 'exposed' && !o.uncounted) {
-      if (side === 'rear') { this.cur.rh++; this.cur.rd += out; } else if (side === 'front') { this.cur.fh++; this.cur.fd += out; } else this.cur.sh++;
-      this.cur.ls = side;
+    const hx = ax + (o.heroOff ?? 0);
+    this.filters.push({ n: this.n + 1, dmg, out, st, yaw, bx, bz, ax: o.attackerless ? null : ax, az: o.attackerless ? null : az, hx, hz: az,
+      side: o.attackerless ? null : (o.reportedSide ?? side) });
+    if (counted) {
+      if (ctrl === 'rear') { this.cur.rh++; this.cur.rd += out; } else if (ctrl === 'front') { this.cur.fh++; this.cur.fd += out; } else this.cur.sh++;
+      this.cur.ls = ctrl;
     }
   }
   /** 보스 공격 한 번. complete 면 마지막 행에서 completedAttackSequence 가 attackSequence 와 같아진다. */
@@ -1274,25 +1284,124 @@ describe('후방 종합 판정(analyzeRear)', () => {
   test('배율: 정면 타격 출력이 입력 그대로(1배)이면 multiplier 가 실패한다', () => {
     const a = analyzeR(rearSession({ w1: { hits: [{ k: 30, side: 'rear' }, { k: 60, side: 'front', out: 100 }] } }));
     expect(failR(a)).toContain('multiplier');
-    expect(a.filters.bad[0].kind).toBe('exposed-multiplier');
+    expect(a.filters.bad.map((b: any) => b.kind)).toContain('exposed-multiplier');
+    // 출력/입력 = 1 은 '옆'으로 읽히지만 영웅은 정면이라 독립 대조(b)도 실패한다.
+    expect(a.filters.bad.some((b: any) => b.kind === 'side-mismatch' && b.side === 'front' && b.fromRatio === 'side')).toBe(true);
   });
   test('배율: 창 밖(armored) 호출이 2배가 되면 multiplier 가 실패한다', () => {
     const s = rearSession();
     const i = s.rows.findIndex((r: any) => r.rs === 'armored');
-    s.filters.push({ n: s.rows[i + 3].n, dmg: 100, out: 200, dx: 0, dz: 1, st: 'armored', yaw: 0, side: 'rear' });
+    s.filters.push({ n: s.rows[i + 3].n, dmg: 100, out: 200, st: 'armored', yaw: 0, bx: 10, bz: 10, ax: 10, az: 8, hx: 10, hz: 8, side: 'rear' });
     const a = analyzeR(s);
     expect(failR(a)).toEqual(['multiplier']);
     expect(a.filters.bad[0].kind).toBe('outside-window');
   });
-  test('배율: 방향 없는 호출(중독 틱)은 1배이고 세지 않는다. 방향 없는데 2배면 실패한다', () => {
+  test('배율: attacker 없는 호출(중독 틱)은 1배이고 세지 않는다. attacker 없는데 2배면 실패한다', () => {
     const ok = rearSession();
-    ok.filters.push({ n: 100, dmg: 40, out: 40, dx: null, dz: null, st: 'exposed', yaw: 0, side: 'side' });
+    ok.filters.push({ n: 100, dmg: 40, out: 40, st: 'exposed', yaw: 0, bx: 10, bz: 10, ax: null, az: null, hx: 10, hz: 8, side: null });
     const a = analyzeR(ok);
     expect(failR(a)).toEqual([]);
-    expect(a.filters.directionless).toBe(1);
+    expect(a.filters.attackerless).toBe(1);
+    expect(a.filters.counts).toEqual({ rear: 6, front: 1, side: 1 });
     const bad = rearSession();
-    bad.filters.push({ n: 100, dmg: 40, out: 80, dx: null, dz: null, st: 'exposed', yaw: 0, side: 'side' });
-    expect(failR(analyzeR(bad))).toEqual(['multiplier']);
+    bad.filters.push({ n: 100, dmg: 40, out: 80, st: 'exposed', yaw: 0, bx: 10, bz: 10, ax: null, az: null, hx: 10, hz: 8, side: null });
+    const b = analyzeR(bad);
+    expect(failR(b)).toEqual(['multiplier']);
+    expect(b.filters.bad[0].kind).toBe('exposed-multiplier');
+    // 시뮬레이터의 attackerless 타격도 같은 모양이다(창 안, 1배, 컨트롤러 집계 없음).
+    const sim = rearSession({ w1: { hits: [{ k: 30, side: 'rear' }, { k: 40, side: 'rear', attackerless: true }] } });
+    expect(failR(analyzeR(sim))).toEqual([]);
+    expect(analyzeR(sim).filters.attackerless).toBe(1);
+  });
+  test('필터 기록 모양: n·dmg·out·st·yaw·bx·bz·ax·az·hx·hz·side 가 있고 방향(dx·dz) 필드는 없다. 정상 기록은 영웅 = 공격자 위치다', () => {
+    const s = rearSession();
+    const f = s.filters.find((x: any) => x.side === 'rear');
+    expect(Object.keys(f).sort()).toEqual(['ax', 'az', 'bx', 'bz', 'dmg', 'hx', 'hz', 'n', 'out', 'side', 'st', 'yaw']);
+    expect(f.ax).toBe(f.hx);
+    expect(f.az).toBe(f.hz);
+    expect(f.st).toBe('exposed');
+    const none = rearSession({ w1: { hits: [{ k: 30, side: 'rear', attackerless: true }] } }).filters.find((x: any) => x.ax === null);
+    expect(none.az).toBeNull();
+    expect(none.side).toBeNull();
+    expect(K.hasAttacker(f)).toBe(true);
+    expect(K.hasAttacker(none)).toBe(false);
+  });
+  test('독립 대조 (b) — P1 재현: 정면에 선 영웅인데 컨트롤러가 등 뒤(배율 2)로 판정하면 실패한다', () => {
+    const a = analyzeR(rearSession({ w1: { hits: [{ k: 30, side: 'rear' }, { k: 60, side: 'front', ctrlSide: 'rear' }] } }));
+    expect(failR(a)).toContain('multiplier');
+    const kinds = a.filters.bad.map((b: any) => b.kind);
+    expect(kinds).toContain('side-mismatch');
+    expect(kinds).toContain('exposed-multiplier');
+    expect(a.filters.bad.find((b: any) => b.kind === 'side-mismatch')).toMatchObject({ side: 'front', fromRatio: 'rear', dmg: 100, out: 200 });
+    // 컨트롤러 집계(rearHits)는 도구가 센 구분별 수와도 어긋난다.
+    expect(a.filters.aggregate).toBe(false);
+    // 반대로 등 뒤에 선 영웅이 정면 50%를 받아도 실패한다(P1 의 다른 방향).
+    const b = analyzeR(rearSession({ w1: { hits: [{ k: 30, side: 'rear', ctrlSide: 'front' }, { k: 60, side: 'front' }] } }));
+    expect(b.filters.bad.some((x: any) => x.kind === 'side-mismatch' && x.side === 'rear' && x.fromRatio === 'front')).toBe(true);
+    expect(failR(b)).toContain('multiplier');
+  });
+  test('독립 대조 (b): 영웅 위치로 계산한 side 와 배율에서 읽은 side 가 같으면 구분 셋 모두 통과한다. 입력 0 은 읽을 수 없어 따로 센다', () => {
+    const ok = rearSession();
+    expect(K.checkRearFilters(ok.filters, ok.rows, REAR_DEF).bad).toEqual([]);
+    expect(K.rearSideFromRatio(100, 200, REAR_DEF)).toBe('rear');
+    expect(K.rearSideFromRatio(100, 50, REAR_DEF)).toBe('front');
+    expect(K.rearSideFromRatio(100, 100, REAR_DEF)).toBe('side');
+    expect(K.rearSideFromRatio(100, 150, REAR_DEF)).toBeNull();
+    expect(K.rearSideFromRatio(0, 0, REAR_DEF)).toBeNull();
+    expect(K.rearSideFromRatio(100, 200 * (1 + 5e-10), REAR_DEF)).toBe('rear');
+    expect(K.rearSideFromRatio(100, 200 * (1 + 2e-9), REAR_DEF)).toBeNull();
+    const zero = rearSession({ w1: { hits: [{ k: 30, side: 'rear' }, { k: 60, side: 'front', dmg: 0 }] } });
+    const f = K.checkRearFilters(zero.filters, zero.rows, REAR_DEF);
+    expect(f.unreadable).toBe(1);
+    expect(f.ok).toBe(true);
+  });
+  test('독립 대조 (a): attacker 위치가 그 순간 영웅 위치와 다르면(1e-6 초과) 실패하고, 이내면 통과한다. 영웅 위치를 못 읽어도 실패한다', () => {
+    const far = analyzeR(rearSession({ w1: { hits: [{ k: 30, side: 'rear', heroOff: 1e-3 }] } }));
+    expect(failR(far)).toContain('multiplier');
+    expect(far.filters.bad[0].kind).toBe('attacker-not-hero');
+    const near = analyzeR(rearSession({ w1: { hits: [{ k: 30, side: 'rear', heroOff: 5e-7 }] } }));
+    expect(near.filters.bad.some((b: any) => b.kind === 'attacker-not-hero')).toBe(false);
+    const edge = analyzeR(rearSession({ w1: { hits: [{ k: 30, side: 'rear', heroOff: 2e-6 }] } }));
+    expect(edge.filters.bad[0].kind).toBe('attacker-not-hero');
+    const s = rearSession();
+    s.filters.find((x: any) => x.side === 'rear').hx = null;
+    const miss = K.checkRearFilters(s.filters, s.rows, REAR_DEF);
+    expect(miss.ok).toBe(false);
+    expect(miss.bad[0].kind).toBe('hero-not-observed');
+    // 창 밖(armored) 호출도 attacker 가 있으면 (a)는 본다.
+    const t = rearSession();
+    const i = t.rows.findIndex((r: any) => r.rs === 'armored');
+    t.filters.push({ n: t.rows[i + 3].n, dmg: 100, out: 100, st: 'armored', yaw: 0, bx: 10, bz: 10, ax: 10, az: 8, hx: 10, hz: 7, side: 'rear' });
+    expect(analyzeR(t).filters.bad[0].kind).toBe('attacker-not-hero');
+  });
+  test('attacker 가 있는데 side 를 못 구했으면(null) 실패한다', () => {
+    const s = rearSession();
+    s.filters.find((x: any) => x.side === 'rear').side = null;
+    const f = K.checkRearFilters(s.filters, s.rows, REAR_DEF);
+    expect(f.ok).toBe(false);
+    expect(f.bad[0].kind).toBe('bad-side');
+  });
+  test('보조 관측: 그 스텝 행으로 다시 계산한 구분이 다른 호출은 판정 없이 세고, 경계 ±.05 안은 따로 센다', () => {
+    const s = rearSession();
+    const syncRow = (f: any) => { const row = s.rows.find((r: any) => r.n === f.n); Object.assign(row, { hx: f.hx, hz: f.hz, bx: f.bx, bz: f.bz, by: f.yaw }); return row; };
+    for (const f of s.filters) syncRow(f);
+    const same = K.checkRearFilters(s.filters, s.rows, REAR_DEF);
+    expect(same.ok).toBe(true);
+    expect(same.rowCheck).toEqual({ calls: 8, noRow: 0, differ: 0, differNearEdge: 0, differHard: 0 });
+    // 행의 영웅이 보스 옆으로 가 있으면(내적 0) 다른 구분이지만 판정은 그대로 통과한다.
+    const hard = s.filters.find((f: any) => f.side === 'rear');
+    Object.assign(s.rows.find((r: any) => r.n === hard.n), { hx: hard.bx - 2, hz: hard.bz });
+    // 행의 영웅이 등 뒤 문턱(.35) 바로 아래(내적 .33)로 가 있으면 경계 안으로 센다.
+    const edge = s.filters.filter((f: any) => f.side === 'rear')[1];
+    const dir = { x: Math.sqrt(1 - .33 * .33), z: .33 };
+    Object.assign(s.rows.find((r: any) => r.n === edge.n), { hx: edge.bx - dir.x * 2, hz: edge.bz - dir.z * 2 });
+    const diff = K.checkRearFilters(s.filters, s.rows, REAR_DEF);
+    expect(diff.rowCheck).toEqual({ calls: 8, noRow: 0, differ: 2, differNearEdge: 1, differHard: 1 });
+    expect(diff.ok).toBe(true);
+    // 행이 없으면 noRow 로 센다(판정 아님).
+    const none = K.checkRearFilters(s.filters, s.rows.filter((r: any) => r.n !== hard.n), REAR_DEF);
+    expect(none.rowCheck.noRow).toBe(1);
+    expect(none.ok).toBe(true);
   });
   test('배율: 상대오차 1e-9 이내는 통과, 그 밖은 실패. 비정수 피해도 같다', () => {
     const s = rearSession();
@@ -1314,11 +1423,6 @@ describe('후방 종합 판정(analyzeRear)', () => {
     const u = rearSession();
     u.rows.at(-1).sh += 1;
     expect(analyzeR(u).filters.aggregate).toBe(false);
-  });
-  test('컨트롤러의 sideOf 결과가 기록한 yaw 의 독립 계산과 다르면 실패한다', () => {
-    const a = analyzeR(rearSession({ w1: { hits: [{ k: 30, side: 'rear' }, { k: 60, side: 'front', reportedSide: 'rear', out: 200 }] } }));
-    expect(failR(a)).toContain('multiplier');
-    expect(a.filters.bad.some((b: any) => b.kind === 'side-mismatch')).toBe(true);
   });
   test('필터 기록을 관측하지 못했으면(null) 실패한다', () => {
     expect(failR(analyzeR(rearSession(), { filters: null }))).toContain('multiplier');
@@ -1392,6 +1496,28 @@ describe('후방 종합 판정(analyzeRear)', () => {
     const uo = u.rows.findIndex((r: any) => r.rs === 'exposed');
     u.rows[uo].dom = R_TITLE + '아무 문구';
     expect(K.checkRearObjective(u.rows, REAR_DEF).ok).toBe(false);
+  });
+  test('목표창(P3-2): armored 로 돌아간 뒤 갱신 주기를 넘은 표본(0.6초 뒤)에 창 문구가 남아 있으면 실패하고, 주기 안이면 갱신 대기로 센다', () => {
+    const s = rearSession();
+    const open = s.rows.findIndex((r: any) => r.rs === 'exposed');
+    const back = s.rows.findIndex((r: any, i: number) => i > open && r.rs === 'armored');
+    const at = (dt: number) => s.rows.findIndex((r: any, i: number) => i >= back && r.t - s.rows[back].t >= dt - 1e-9);
+    // 주기 안(0.05초 뒤)의 열림 문구: 갱신 대기.
+    s.rows[at(.05)].dom = R_TITLE + exposedText(.1);
+    const a = K.checkRearObjective(s.rows, REAR_DEF);
+    expect(a.ok).toBe(true);
+    expect(a.lagCount).toBe(1);
+    // 주기를 넘은 표본(0.2초·0.6초 뒤)에 열림 문구가 남아 있으면 실패다.
+    for (const dt of [.2, .6]) {
+      const t = rearSession();
+      const b = t.rows.findIndex((r: any, i: number) => i > open && r.rs === 'armored');
+      const late = t.rows.findIndex((r: any, i: number) => i >= b && r.t - t.rows[b].t >= dt - 1e-9);
+      expect(t.rows[late].rs).toBe('armored');
+      t.rows[late].dom = R_TITLE + exposedText(.1);
+      const c = K.checkRearObjective(t.rows, REAR_DEF);
+      expect(c.ok).toBe(false);
+      expect(c.bad[0]).toMatchObject({ n: t.rows[late].n, state: 'armored', why: 'armored-text' });
+    }
   });
   test('목표창: 보스가 쓰러진 행(al 0)의 정화 완료 문구는 판정하지 않는다. 살아 있는 행이면 실패한다', () => {
     const s = rearSession();
@@ -1568,6 +1694,17 @@ describe('후방 수동 구간(checkRearManual) · 창 안 정지(checkRearPause
     expect(K.checkRearManual(s.rows, s.filters.filter((f: any) => f.side !== 'rear'), marks, REAR_DEF).ok).toBe(false);
     expect(K.checkRearManual(s.rows, s.filters, [], REAR_DEF).ok).toBe(false);
     expect(K.checkRearManual(s.rows, null as any, marks, REAR_DEF).ok).toBe(false);
+  });
+  test('정면에 선 영웅인데 컨트롤러가 등 뒤(×2)로 판정한 타격은 정면 타격이 아니라 frontMul 이 실패한다(P1 재현). attacker 없는 호출은 기록으로 세지 않는다', () => {
+    const wrong = manualSession({ front: { ctrlSide: 'rear' } });
+    const m = K.checkRearManual(wrong.s.rows, wrong.s.filters, wrong.marks, REAR_DEF);
+    expect(m.frontRecords).toBe(1);
+    expect(m.frontMul).toBe(false);
+    expect(m.ok).toBe(false);
+    const none = manualSession({ rear: { attackerless: true } });
+    const n = K.checkRearManual(none.s.rows, none.s.filters, none.marks, REAR_DEF);
+    expect(n.rearRecords).toBe(0);
+    expect(n.ok).toBe(false);
   });
   test('등 뒤 타격이 정면 타격보다 앞서기만 하면(정면 뒤 등 뒤 타격 없음) rearAfterFront 가 실패한다', () => {
     const { s, marks } = manualSession();
