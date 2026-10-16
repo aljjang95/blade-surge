@@ -79,10 +79,11 @@ export function runBossSim(runtime, EmberRearExposure, rearDef, { hero = 'knight
       stepCombatFlow(fixture, DT);
       const exposed = rear?.state === 'exposed';
       if (exposed) exposedFrames++;
-      if (!wasExposed && exposed) { openedAt = game.elapsed; rearSeen = false; rearBefore = rear.rearHits; windowLog.push({ heroState: player.alive ? player.state : 'dead', rear: false }); }
+      if (!wasExposed && exposed) { openedAt = game.elapsed; rearSeen = false; rearBefore = rear.rearHits; windowLog.push({ heroState: player.alive ? player.state : 'dead', rear: false, bossDied: false }); }
       if (exposed && !rearSeen && rear.rearHits > rearBefore) { rearSeen = true; windowsWithRear++; firstRear.push(game.elapsed - openedAt); windowLog[windowLog.length - 1].rear = true; }
       if (wasExposed && exposed && (boss.attackSequence || 0) !== seqBefore) attacksInWindow++;
-      if (!boss.alive) { killSeconds = game.elapsed; break; }
+      // 창이 열린 채 보스가 쓰러지면 그 창은 등 뒤로 갈 시간이 끝까지 없었던 창이다. 쓰러진 스텝에 컨트롤러가 ended 로 바뀌므로 스텝 전 상태도 본다.
+      if (!boss.alive) { killSeconds = game.elapsed; if ((exposed || wasExposed) && windowLog.length) windowLog[windowLog.length - 1].bossDied = true; break; }
     }
     if (rear) { game.bossDefeated = !boss.alive; rear.update(game, DT); rear.stop(); }
     return { hero, seed, mode, heroLevel, killSeconds: killSeconds === null ? null : round(killSeconds),

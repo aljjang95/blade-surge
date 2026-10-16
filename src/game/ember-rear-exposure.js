@@ -11,10 +11,12 @@ const OPEN_SOUND = { vol: .3, base: 330, notes: [0, 7, 12], step: .08, type: 'sq
  * 망치가 바닥에 박혀 집행자가 그 자리에 묶이고(pins) 방향을 바꾸지 않으며, 다음 공격 대기(atkCd)를 창 남은 시간 이상으로 붙잡는다.
  * 그동안 받는 피해는 맞은 방향(공격자 → 보스, Enemy.hurt 의 dirx·dirz)과 보스 정면(yaw)의 내적으로 나눈다:
  * def.rearDot 이상이면 등 뒤(def.rear 배), -def.frontDot 이하면 정면 사슬 갑주(def.front 배), 그 사이(옆)와 방향 없는 피해(중독 등)는 1배다.
- * 창 밖에서는 늘 1배다. 같은 attackSequence 로는 한 번만 연다. 망치가 마지막 고리 전에 끊기면 broken 으로 센다.
+ * 창 밖에서는 늘 1배다. 같은 attackSequence 로는 한 번만 연다.
+ * armored 동안 시전 중인 용재 망치는 마지막 고리까지 기절·경직·자세 붕괴로 끊기지 않는다(guards, 종락 합창 장막과 같은 자리).
+ * 장비를 갖춘 영웅은 치명타·기절로 망치를 거의 늘 끊어 창이 열리지 않았다(BUNDLE-14 PLAN 4.1, 브라우저 진단). 그래도 망치가 마지막 고리 없이 끝나면(보스 처치 직전 등) broken 으로 센다.
  * 상태는 idle(보스 미부착) → armored ⇄ exposed → ended(보스 처치·stop·전투 종료·다른 월드)이고 ended 는 되돌아오지 않는다.
  * 게임 시간(dt)만 쓰고 Math.random·Date 를 쓰지 않으며, update·filter·pins·autoFlank 는 객체를 만들지 않는다.
- * 피해 배율은 Enemy.hurt 가 boss.damageVeil.filter 로 부른다(합창 장막과 같은 자리). 기절·경직은 막지 않는다(guards 는 늘 거짓). */
+ * 피해 배율은 Enemy.hurt 가 boss.damageVeil.filter 로 부른다(합창 장막과 같은 자리). */
 export class EmberRearExposure {
   #state = 'idle';
   #boss = null;
@@ -60,7 +62,7 @@ export class EmberRearExposure {
   get sideHits() { return this.#sideHits; }
   get rearDamage() { return this.#rearDamage; }
   get frontDamage() { return this.#frontDamage; }
-  /** 용재 망치가 시작됐지만 마지막 고리 전에 끊긴 횟수(판정에는 쓰지 않는 관찰값). */
+  /** 용재 망치가 시작됐지만 마지막 고리 없이 끝난 횟수(판정에는 쓰지 않는 관찰값). 지키는 동안에도 보스 처치 등으로 생길 수 있다. */
   get broken() { return this.#broken; }
   /** 노출 창 안에서 마지막으로 맞은 방향과 그 뒤 경과 초(뷰의 짧은 반짝임용). */
   get lastSide() { return this.#lastSide; }
@@ -86,13 +88,21 @@ export class EmberRearExposure {
     this.#sideHits++;
     return dmg;
   }
-  /** 후방 노출은 기절·경직을 막지 않는다(합창 장막과 같은 자리에서 묻는 질문). */
-  guards() { return false; }
+  /** 후방 노출이 용재 망치를 지키는 중인가: armored 동안 부착된 보스가 이 시그니처를 시전 중이고 그 망치로 아직 창을 열지 않았으면 참.
+   * 마지막 고리가 터진 프레임과 창이 열리는 다음 컨트롤러 갱신 사이도 지킨다. 창이 열리면(exposed) 지키지 않는다.
+   * Enemy.hurt·Enemy.update·postureHit 가 이 동안 기절·경직·브레이크로 망치를 끊지 않도록 묻는다. 객체를 만들지 않는다.
+   * @param {any} enemy */
+  guards(enemy) {
+    if (this.#state !== 'armored' || enemy !== this.#boss) return false;
+    const sig = this.def.signature, plan = enemy.signatures?.plan;
+    return enemy.state === 'attack' && enemy.special === sig && plan?.key === sig && enemy.attackSequence !== this.#openedSeq;
+  }
   /** 노출 창 동안 부착된 보스는 추격 단계에서 제자리에 서고 방향을 바꾸지 않는다. Enemy.update 의 추격 분기가 묻는다. @param {any} enemy */
   pins(enemy) { return this.#state === 'exposed' && enemy === this.#boss; }
 
   /** AUTO: 노출 창 동안 영웅이 등 뒤 사거리 안에 없으면 갈 지점을 돌려준다(이미 있으면 null 이라 평소 전투를 한다).
    * 정면 쪽이면 몸을 가로지르지 않게 가까운 옆 경유점을, 옆·뒤쪽이면 등 뒤 점을 준다. 보스방 안쪽으로 자른다. 재사용 벡터를 돌려준다.
+   * 옆 경유점에 이미 닿았으면(방 가장자리에서 잘려 앞쪽으로 남은 경유점 포함) 등 뒤 점을 준다. 같은 경유점에 서서 멈추지 않는다.
    * @param {any} player */
   autoFlank(player) {
     const boss = this.#boss;
@@ -103,13 +113,17 @@ export class EmberRearExposure {
     // 공격자 → 보스 방향과 정면의 내적(filter 와 같은 식). 영웅이 보스 위에 겹쳐 있으면 정면 쪽으로 본다.
     const dot = dist > EPS ? (-vx / dist) * fx + (-vz / dist) * fz : -1;
     if (dot >= def.autoDot && dist <= reach + .6) return null;
-    let tx = boss.pos.x - fx * reach, tz = boss.pos.z - fz * reach;
+    const room = boss.homeRoom;
     if (dot < def.autoDot && vx * fx + vz * fz > -.5) {
       // 정면·옆 앞쪽: 영웅이 있는 쪽 옆으로 돌아 들어간다(오른쪽 = (fz, -fx)).
       const s = vx * fz - vz * fx >= 0 ? 1 : -1, r = reach + def.sidePad;
-      tx = boss.pos.x + s * fz * r - fx * .8; tz = boss.pos.z - s * fx * r - fz * .8;
+      this.#clampTo(room, boss.pos.x + s * fz * r - fx * .8, boss.pos.z - s * fx * r - fz * .8);
+      if (Math.hypot(this.#flank.x - player.pos.x, this.#flank.z - player.pos.z) >= .6) return this.#flank;
     }
-    const room = boss.homeRoom;
+    return this.#clampTo(room, boss.pos.x - fx * reach, boss.pos.z - fz * reach);
+  }
+  /** 우회 지점을 보스방 안쪽(가장자리 1.2)으로 잘라 재사용 벡터에 담는다. */
+  #clampTo(room, tx, tz) {
     if (room && Number.isFinite(room.w) && Number.isFinite(room.h)) {
       const m = 1.2;
       tx = Math.max(room.x - room.w / 2 + m, Math.min(room.x + room.w / 2 - m, tx));

@@ -199,7 +199,24 @@ test('배율: 창 안에서만 등 뒤 2배·정면 50%·옆 1배, 창 밖·방�
   expect([x.c.rearDamage, x.c.frontDamage]).toEqual([200, 50]);
   expect(x.c.report()).toEqual({ id: 'ember_deep_rear', windows: 1, rearHits: 1, frontHits: 1, sideHits: 1, rearDamage: 200, frontDamage: 50, broken: 0 });
   expect(Object.isFrozen(x.c.report())).toBe(true);
-  expect(x.c.guards()).toBe(false);
+});
+
+test('지킴: armored 동안 시전 중인 용재 망치만 지키고, 다른 시그니처·다른 적·창이 열린 뒤·종료 뒤에는 지키지 않는다', () => {
+  const x = attach();
+  expect(x.c.guards(x.boss)).toBe(true);
+  expect(x.c.guards({ ...x.boss })).toBe(false);
+  x.boss.state = 'chase'; expect(x.c.guards(x.boss)).toBe(false);
+  x.boss.state = 'attack'; x.boss.special = 'kiln_vents'; expect(x.c.guards(x.boss)).toBe(false);
+  x.boss.special = 'kiln_hammer'; x.boss.signatures.plan = { key: 'kiln_vents', lastStrike: 2.75 }; expect(x.c.guards(x.boss)).toBe(false);
+  x.boss.signatures.plan = { key: 'kiln_hammer', lastStrike: 2.65 };
+  // 마지막 고리가 터진 프레임(창이 열리기 전 갱신 사이)에도 지킨다.
+  x.boss.signatures.age = 2.65; expect(x.boss.completedAttackSequence).toBe(1); expect(x.c.guards(x.boss)).toBe(true);
+  x.c.update(x.g, DT); expect(x.c.state).toBe('exposed');
+  expect(x.c.guards(x.boss)).toBe(false);
+  tick(x.c, x.g, DEF.window + .1); expect(x.c.state).toBe('armored');
+  // 같은 망치(attackSequence)로는 다시 지키지 않는다.
+  expect(x.c.guards(x.boss)).toBe(false);
+  x.c.stop(); x.boss.attackSequence = 2; expect(x.c.guards(x.boss)).toBe(false);
 });
 
 // ---------------- 실제 Enemy/BossSignatures/Player 경로 ----------------
@@ -242,6 +259,34 @@ test('실제 Enemy.hurt: 방어 감쇄 뒤 창 안 등 뒤 2배·정면 50%·옆
     const before = boss.hp; boss.update(1e-6);
     expect(before - boss.hp).toBeCloseTo(boss.maxHp * .02 + 8, 3);
     expect([c.rearHits, c.frontHits, c.sideHits]).toEqual([1, 1, 1]);
+  });
+});
+
+test('실제 Enemy 경로: 용재 망치 중 치명타 강타·기절·스킬 기절은 망치를 끊지 않고 마지막 고리 뒤 창이 열린다. 창이 열린 뒤에는 경직이 그대로 걸린다', () => {
+  withFixedRandom(() => {
+    const { f, g, boss } = realBossFixture();
+    const c = new EmberRearExposure(DEF, null);
+    const playerUpdate = f.player.update;
+    f.player.update = function(dt: number) { playerUpdate.call(this, dt); c.update(g, dt); };
+    boss.patternTurn = 2;
+    let opened = false, interrupted = false, hits = 0;
+    for (let frame = 0; frame < 60 * 12 && !opened; frame++) {
+      stepCombatFlow(f, DT);
+      if (c.state === 'exposed') { opened = true; break; }
+      if (boss.special === 'kiln_hammer' && boss.state === 'attack' && !boss.attackDone && frame % 10 === 0) {
+        boss.hurt(10, { crit: true, kb: 8, stun: 1, dirx: 0, dirz: 1 });
+        boss.stun = .5; // 스킬·세트 효과가 기절을 직접 쓰는 경로(Enemy.update 가 지운다)
+        hits++;
+      }
+      if (hits > 0 && boss.state !== 'attack' && !opened) interrupted = true;
+    }
+    expect(hits).toBeGreaterThan(3);
+    expect(interrupted).toBe(false);
+    expect(opened).toBe(true);
+    expect(c.broken).toBe(0);
+    // 창이 열린 뒤에는 지키지 않는다: 기절이 그대로 걸린다.
+    boss.hurt(10, { crit: true, kb: 8, stun: 1, dirx: 0, dirz: 1 });
+    expect(boss.stun).toBeGreaterThan(0);
   });
 });
 
@@ -310,6 +355,14 @@ test('autoFlank: 정면이면 영웅 쪽 옆 경유점, 옆·뒤 바깥이면 �
   x.boss.homeRoom = { x: 0, z: 0, w: 6, h: 6 };
   player.def.ranged = false; player.pos.set(0, 0, -9);
   expect(x.c.autoFlank(player)!.z).toBeCloseTo(-1.8, 9);
+  // 방 가장자리에서 잘린 옆 경유점에 이미 닿았으면 같은 경유점에 세우지 않고 등 뒤 점을 준다(b14 모의 진단: 기사 L40 시드 5).
+  x.boss.homeRoom = { x: 0, z: 0, w: 4.4, h: 40 };
+  player.pos.set(.5, 0, 3);
+  const edge = x.c.autoFlank(player)!;
+  expect(edge.x).toBeCloseTo(1, 9); expect(edge.z).toBeCloseTo(-.8, 9);
+  player.pos.set(1, 0, -.6);
+  const behind = x.c.autoFlank(player)!;
+  expect(behind.x).toBeCloseTo(0, 9); expect(behind.z).toBeCloseTo(-DEF.meleeReach, 9);
   player.alive = false; expect(x.c.autoFlank(player)).toBeNull();
   player.alive = true; x.boss.alive = false; expect(x.c.autoFlank(player)).toBeNull();
 });
@@ -325,6 +378,12 @@ test('Player.autoMove: 경로 목표가 우회 지점을 주면 그쪽으로만 
     expect(g.input.queue).toEqual([]);
     g.routeObjectives.autoFlank = () => null;
     f.player.pos.set(boss.pos.x, 0, boss.pos.z - 2);
+    f.player.autoMove(DT);
+    expect(g.input.queue).toContain('attack');
+    // 우회 지점에 이미 닿았으면(0.3 안) 멈춰 서지 않고 평소 전투로 넘어간다.
+    g.input.clear();
+    const here = new Vector3(f.player.pos.x + .1, 0, f.player.pos.z);
+    g.routeObjectives.autoFlank = () => here;
     f.player.autoMove(DT);
     expect(g.input.queue).toContain('attack');
   });
@@ -381,14 +440,17 @@ test('전술 문구: 심층 잿불금고 보스 전술 뒤에 정의 값으로 �
   expect(standard.encounter.tactic).not.toMatch(/등 뒤|사슬 갑주/);
 });
 
-test('보스전 AUTO 모의(실제 Player/Enemy/BossSignatures/군중 접촉, 1/60초): 등 뒤 타격이 없는 창은 열린 순간 영웅이 채널 스킬 중이거나 쓰러진 창뿐이고, 창 안 새 공격은 0, 끔이면 창 없음', () => {
-  for (const hero of ['knight', 'mage']) for (const seed of [1, 2]) {
+test('보스전 AUTO 모의(실제 Player/Enemy/BossSignatures/군중 접촉, 1/60초): 등 뒤 타격이 없는 창은 열린 순간 채널 스킬·영웅 쓰러짐·창 도중 보스 처치뿐이고, 망치는 끊기지 않으며 창 안 새 공격은 0, 끔이면 창 없음', () => {
+  const cases: Array<[string, number]> = [['knight', 1], ['knight', 2], ['knight', 5], ['mage', 1], ['mage', 2]];
+  for (const [hero, seed] of cases) {
     const on: any = runBossSim(runtime, EmberRearExposure, DEF, { hero, seed, mode: 'on', heroLevel: 40, maxSeconds: 240 });
     expect(on.windows).toBeGreaterThan(0);
     expect(on.attacksInWindow).toBe(0);
     expect(on.windowLog.length).toBe(on.windows);
     // 채널 스킬(state 'skill')은 영웅을 묶어 우회할 수 없다(b14 진단: 법사 시드 2, 창이 열릴 때 3초 채널 중 정면 7타). 그 밖의 창은 모두 등 뒤 타격이 있어야 한다.
-    for (const w of on.windowLog) if (!w.rear) expect(['skill', 'dead']).toContain(w.heroState);
+    // 창 도중 보스가 쓰러진 마지막 창(b14 진단: 기사 시드 5)도 등 뒤로 갈 시간이 없었던 창이다.
+    for (const w of on.windowLog) if (!w.rear && !w.bossDied) expect(['skill', 'dead']).toContain(w.heroState);
+    expect(on.broken).toBe(0);
     expect(on.rearHits).toBeGreaterThan(on.frontHits);
     const off: any = runBossSim(runtime, EmberRearExposure, DEF, { hero, seed, mode: 'off', heroLevel: 40, maxSeconds: 240 });
     expect(off.windows).toBe(0);
