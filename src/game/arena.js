@@ -35,7 +35,7 @@ const DUNGEON_ATMOSPHERES = {
   tribunal: { fog: 0x2a2139, bg: 0x171323, hemi: [0xd1b7d6, 0x342743], sun: 0xffe1bd, sunI: 2.65, torch: 0xf5a2d4, tint: 0xd5c0d8 },
   confluence: { fog: 0x19312b, bg: 0x0d211d, hemi: [0xb5dbc3, 0x204139], sun: 0xffe8b9, sunI: 2.55, torch: 0x9be6ba, tint: 0xb8d2ac },
   glacier: { fog: 0x8fcfe0, bg: 0x6fb4d8, hemi: [0xe3f5ff, 0x2a5d76], sun: 0xfff6e8, sunI: 2.7, torch: 0xff7fbf, tint: 0xd5e2f2 },
-  quarry: { fog: 0xe0a06c, bg: 0xd98a52, hemi: [0xffe2bd, 0x6a3418], sun: 0xffc27a, sunI: 2.85, torch: 0xffa040, tint: 0xf2cfa0 },
+  quarry: { fog: 0xd8a47c, bg: 0xc98a5c, hemi: [0xffeeda, 0x5c3a24], sun: 0xffd9b0, sunI: 2.55, torch: 0xffa040, tint: 0xf2cfa0 },
 };
 const TILE = 4;
 const rnd = (a, b) => a + Math.random() * (b - a);

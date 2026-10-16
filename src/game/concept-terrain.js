@@ -14,9 +14,10 @@ export const CONCEPT_STYLES = Object.freeze({
     crystal: 0xff5fa2, crystalLight: 0xff7fbf, sigil: 0xe1c06a,
   }),
   quarry: Object.freeze({
-    key: 'quarry', deck: 0xe2bd8f, deckSide: 0x9a5a34, deckDepth: 1.6, parapet: 0xbf7d4c, parapetH: 1.15, post: 0x7a4024, cap: 0xe8b443,
-    ringH: 1.6, below: { y: -1.45, color: 0xffa23a, emissive: 0xff7a12, emissiveIntensity: 1.05, roughness: .5, metalness: .1 },
-    cliff: { side: 0xb46a3c, top: 0xe6a96c, near: 5, far: 8, minH: 4, maxH: 15, radius: [2.4, 4.4], islands: false },
+    // 컨셉의 모래빛 채석 바닥 / 구리 절벽 / 용융 금 해자 대비를 살린다(전체 주황 일색 방지).
+    key: 'quarry', deck: 0xe6d6bc, deckSide: 0x8a5232, deckDepth: 1.6, parapet: 0xa8643c, parapetH: 1.15, post: 0x5e3420, cap: 0xe8b443,
+    ringH: 1.6, below: { y: -1.45, color: 0xffa23a, emissive: 0xff7a12, emissiveIntensity: .85, roughness: .5, metalness: .1 },
+    cliff: { side: 0x9c5634, top: 0xcf9460, near: 5, far: 8, minH: 4, maxH: 15, radius: [2.4, 4.4], islands: false },
     crystal: 0xffb42e, crystalLight: 0xffa340, sigil: 0xe8b443,
   }),
 });
@@ -289,7 +290,7 @@ export function buildConceptTerrain(floor, key, { quality = 'high', bindSightlin
     }
   }
   stats.crystals = crystals.length;
-  instanced('concept-crystals', new THREE.OctahedronGeometry(1, 0), mat({ color: style.crystal, emissive: style.crystal, emissiveIntensity: .75, roughness: .2, metalness: .1, flatShading: true }), crystals,
+  instanced('concept-crystals', new THREE.OctahedronGeometry(1, 0), mat({ color: style.crystal, emissive: style.crystal, emissiveIntensity: .5, roughness: .2, metalness: .1, flatShading: true }), crystals,
     (o, c) => { o.position.set(c.x, c.s * 1.3, c.z); o.rotation.set(c.tilt, c.yaw, c.tilt * .5); o.scale.set(c.s * .45, c.s * 1.7, c.s * .45); });
 
   // ---- 원형 마당 문양(바닥 높이, 시선 셰이더 없음) ----
@@ -308,11 +309,11 @@ export function buildConceptTerrain(floor, key, { quality = 'high', bindSightlin
   if (key === 'glacier') buildGlacierLandmarks(floor, group, { mat, geo, instanced, animated, random, field, owned });
   else buildQuarryLandmarks(floor, group, { mat, geo, instanced, animated, random, field, owned });
 
-  // 지역 조명(점광원 수 고정: 수정·용융 빛 4개)
+  // 지역 조명(점광원 수 고정: 수정·용융 빛 4개). 물·수정 반사가 블룸으로 하얗게 번지지 않게 낮게 둔다.
   const lights = [];
   const lightRooms = [...floor.rooms].sort((a, b) => (isDiskRoom(b) ? 1 : 0) - (isDiskRoom(a) ? 1 : 0)).slice(0, 4);
   for (const room of lightRooms) {
-    const l = new THREE.PointLight(style.crystalLight, quality === 'low' ? 14 : 20, 24, 2); l.position.set(room.x, 4.5, room.z - (isDiskRoom(room) ? roomRadius(room) * .55 : room.h * .35));
+    const l = new THREE.PointLight(style.crystalLight, quality === 'low' ? 5 : 7, 22, 2); l.position.set(room.x, 4.5, room.z - (isDiskRoom(room) ? roomRadius(room) * .55 : room.h * .35));
     group.add(l); lights.push(l);
   }
   group.userData.lights = lights;

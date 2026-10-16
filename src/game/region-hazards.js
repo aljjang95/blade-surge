@@ -66,6 +66,8 @@ export const CONCEPT_HAZARD_TOASTS = Object.freeze({
   glacier_tide_basin: '조수 범람 · 반대편 난간이나 다른 다리로',
   sunbrass_quarry: '도르래 낙석 · 원형 예고 밖으로',
 });
+// 바닥색과 대비되는 예고색(회색 석재 위 밝은 청록 / 모래빛 채석 바닥 위 진홍).
+export const CONCEPT_HAZARD_COLORS = Object.freeze({ glacier_tide_basin: 0x8ff7ff, sunbrass_quarry: 0xff3355 });
 
 /** 빙하 조수 분지: 긴 다리는 한쪽 절반이 주기마다 번갈아 잠기고, 원형 마당은 바깥 고리부터 물결이 밀려온다. */
 export function tidalSurgePattern(room, cycle, full = true) {
@@ -143,7 +145,7 @@ export class RegionHazards {
     const frontier = frontierEffectForStage(g.stage);
     const radiusMul = frontier?.kind === 'hazardRadiusMultiplier' ? frontier.value : 1;
     const lead = frontier?.kind === 'telegraphLead' ? frontier.value : 0;
-    const frontierColor = frontier?.kind === 'warningColor' ? frontier.value : this.rule?.color || 0xffffff;
+    const frontierColor = frontier?.kind === 'warningColor' ? frontier.value : CONCEPT_HAZARD_COLORS[g.stage.expedition?.id] || this.rule?.color || 0xffffff;
     for (let i = 0; i < pattern.length; i++) {
       const source = pattern[i], h = { ...source, delay: source.delay + lead };
       if (h.type === 'lane') h.width *= radiusMul;
