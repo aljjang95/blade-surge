@@ -1,6 +1,6 @@
 # 성운 첨탑 심층 — 무너진 성좌 4곳 복원과 성좌 외곽 고리 정화 (BUNDLE-12)
 
-개인 기본 원정 성운 첨탑 심층(`astral_leviathan_spire` / `deep`, '무너진 성좌')의 원안 "성좌 4곳 복원 → 외곽 고리 정화, 모래시계 별자리 선택과 파편 집결 후 이탈"을 구현한 제품 계약이다. 성좌는 일반판 조율판 엔진(`AstralConstellations`, docs/astral-standard-constellation-contract.md)의 규칙·수치를 그대로 쓰고, 외곽 고리는 거울 미궁(docs/sable-deep-mirror.md)·포자 수로(docs/verdigris-deep-altars.md)의 구조(모든 구역 뒤 시작 → 제한 시간 → 실패는 피해만 → 완료하면 봉인 해제)를 따른다. 공유 정의는 `ROUTE_OBJECTIVES.astral_deep`(id `astral_fallen_constellations_deep`, kind `deep-constellations`), 규칙은 `src/game/astral-deep-constellations.js`(`AstralConstellations` 상속), 고리 연출은 `src/game/astral-deep-ring-view.js`다. 보스(레비아탄) 규칙은 바뀌지 않는다.
+개인 기본 원정 성운 첨탑 심층(`astral_leviathan_spire` / `deep`, '무너진 성좌')의 원안 "성좌 4곳 복원 → 외곽 고리 정화, 모래시계 별자리 선택과 파편 집결 후 이탈"을 구현한 제품 계약이다. 성좌는 일반판 조율판 엔진(`AstralConstellations`, docs/astral-standard-constellation-contract.md)의 규칙·수치를 그대로 쓰고, 외곽 고리는 거울 미궁(docs/sable-deep-mirror.md)·포자 수로(docs/verdigris-deep-altars.md)의 구조(모든 구역 뒤 시작 → 제한 시간 → 실패는 피해만 → 완료하면 봉인 해제)를 따른다. 공유 정의는 `ROUTE_OBJECTIVES.astral_deep`(id `astral_fallen_constellations_deep`, kind `deep-constellations`), 규칙은 `src/game/astral-deep-constellations.js`(BUNDLE-13 부터 일반판과 같은 공용 고리 엔진 `src/game/astral-ring-constellations.js` 의 빈 하위 클래스이고, 문구는 정의 낱말 ring.title·mark·shard·verb·markVerb 로 글자 그대로 재현한다. BUNDLE-13 심층 auto 회귀는 같은 시드에서 206.98초·고리 8.02초로 B12 와 같았다), 고리 연출은 `src/game/astral-deep-ring-view.js`다. 보스(레비아탄) 규칙은 바뀌지 않는다.
 
 ## 원문 해석
 

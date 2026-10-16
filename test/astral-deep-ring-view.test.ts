@@ -351,3 +351,64 @@ test('dispose 는 반복해도 안전하고 scene·geometry·material·mesh 를 
   expect(view.drawCalls).toBe(0);
   expect(() => view.update(route, DT, OPTS)).not.toThrow();
 });
+
+
+// ---- 일반 성운 기록 외곽 고리(BUNDLE-13): 같은 뷰가 정의(표지 4·기록 파편 6·core 3.2·색)만으로 그려진다 ----
+const STD = ROUTE_OBJECTIVES.astral_standard, STD_RING = STD.ring as any;
+function makeStandardRoute(phase = 'running', shard: any = { state: 'calm', age: 0, cycle: -1 }) {
+  const route = makeRoute(phase, {
+    room: { id: STD_RING.roomId, discovered: true }, left: STD_RING.limit, limit: STD_RING.limit, shard,
+    marks: STD_RING.marks.map(([dx, dz]: readonly number[]) => ({ pos: new THREE.Vector3(CENTER.x + dx, 0, CENTER.z + dz), hold: 0, done: false })),
+  });
+  route.def = STD;
+  return route;
+}
+
+test('일반 고리: 표지 4개·기록 파편 6개·core 3.2 경계·섬광, 유지 중 색은 일반 정의 색이고 그 밖은 심층과 같다', () => {
+  const scene = new THREE.Scene(), route = makeStandardRoute(), view = new AstralDeepRingView(scene, route), v = v$(view);
+  expect(STD_RING.marks.length).toBe(4); expect(STD_RING.shards).toBe(6); expect(STD_RING.core).toBe(3.2);
+  route.ring.held = 1; route.ring.marks[1].hold = .5; route.ring.marks[0].done = true;
+  view.update(route, DT, STILL);
+  expect(v.marks.count).toBe(4); expect(v.shards.count).toBe(6);
+  expect([0, 1, 2, 3].map(i => shown(v.marks, i))).toEqual([true, true, true, true]);
+  expect([0, 1, 2, 3].map(i => radial(posOf(v.marks, i)))).toEqual([RADIUS, RADIUS, RADIUS, RADIUS].map(r => expect.closeTo(r, 4)) as any);
+  expect([0, 1, 2, 3].map(i => hexOf(v.marks, i))).toEqual([GOLD, STD_RING.color, GRAY, GRAY]);
+  for (let k = 0; k < 6; k++) {
+    const p = posOf(v.shards, k);
+    expect(radial(p)).toBeCloseTo(RADIUS, 4);
+    for (const mark of route.ring.marks) expect(Math.hypot(p.x - mark.pos.x, p.z - mark.pos.z)).toBeGreaterThan(.5);
+  }
+  view.update(makeStandardRoute('running', { state: 'warning', age: STD_RING.warning / 2, cycle: 0 }), DT, STILL);
+  expect(shown(v.border, 0)).toBe(true);
+  v.border.geometry.computeBoundingBox();
+  expect(v.border.geometry.boundingBox.max.x).toBeCloseTo(STD_RING.core, 4);
+  // 예고 2초의 절반이면 파편은 반지름의 절반까지 모였다.
+  for (let k = 0; k < 6; k++) expect(radial(posOf(v.shards, k))).toBeCloseTo(RADIUS / 2, 4);
+  view.update(makeStandardRoute('running', { state: 'burst', age: .1, cycle: 0 }), DT, STILL);
+  expect(shown(v.flash, 0)).toBe(true);
+  v.flash.geometry.computeBoundingBox();
+  expect(v.flash.geometry.boundingBox.max.x).toBeCloseTo(STD_RING.core, 4);
+  expect(view.drawCalls).toBeLessThanOrEqual(6);
+  view.update(makeStandardRoute('idle'), DT, STILL);
+  expect(view.drawCalls).toBe(0);
+  view.dispose();
+});
+
+
+test('파편 시작 위상: 심층은 기존 22.5°(.5) 그대로, 일반(파편 6·표지 4)은 표지에서 15° 떨어진 위상을 고른다', () => {
+  const scene = new THREE.Scene();
+  const deep = new AstralDeepRingView(scene, makeRoute()), std = new AstralDeepRingView(scene, makeStandardRoute());
+  expect(v$(deep).shardPhase).toBe(.5);
+  const sp = v$(std).shardPhase;
+  expect(sp === .25 || sp === .75).toBe(true);
+  std.update(makeStandardRoute(), DT, STILL);
+  let min = Infinity;
+  for (let k = 0; k < 6; k++) for (const [dx, dz] of STD_RING.marks) {
+    const p = posOf(v$(std).shards, k); min = Math.min(min, Math.hypot(p.x - (CENTER.x + dx), p.z - (CENTER.z + dz)));
+  }
+  // 반지름 6 에서 15° 떨어진 현의 길이 ≈ 1.566 이고 표지 판정 반지름 1.4 밖이다.
+  expect(min).toBeCloseTo(2 * RADIUS * Math.sin(Math.PI / 24), 3);
+  expect(min).toBeGreaterThan(STD_RING.markRadius);
+  deep.dispose(); std.dispose();
+});
+

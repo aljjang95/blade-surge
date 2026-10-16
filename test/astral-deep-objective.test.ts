@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
 import { ROUTE_OBJECTIVES } from '../src/data/route-objectives.js';
 import { battleObjectiveView } from '../src/ui/battle-objective-view.js';
-import { ExpeditionResult, astralDeepRingResultLine } from '../src/expansion/hub.jsx';
+import { ExpeditionResult, astralDeepRingResultLine, astralRingResultLine, astralRingDefFor } from '../src/expansion/hub.jsx';
 import { UI } from '../src/ui/ui.js';
 
 // rules lane 의 컨트롤러(src/game/astral-deep-constellations.js)는 쓰지 않는다. BUNDLE-12 PLAN 3.1 의 읽기 계약 모양만 가진 가짜 route 로 목표창 분기와 결과 줄을 검증한다.
@@ -13,8 +13,8 @@ function makeBattle(def: any = DEEP, over: any = {}) {
     type: id === 0 ? 'start' : id === 8 ? 'boss' : 'normal' }));
   const world: any = { rooms, sealed: true, bossRoom: rooms[8] };
   const gates = def.gates.map((g: any) => ({ room: rooms[g.roomId], label: g.label, ready: false, available: false, attuned: false }));
-  const ring: any = def.ring ? { phase: 'idle', room: rooms[RING.roomId], left: 0, purified: 0, held: -1,
-    marks: RING.marks.map(() => ({ hold: 0, done: false })) } : undefined;
+  const ring: any = def.ring ? { phase: 'idle', room: rooms[def.ring.roomId], left: 0, purified: 0, held: -1,
+    marks: def.ring.marks.map(() => ({ hold: 0, done: false })) } : undefined;
   const route: any = { world, def, gates, progress: 0, read: 0, hold: 0, closed: false, phase: 'combat', ring, ...over,
     get complete() { return this.progress === this.gates.length; } };
   return { world, route, rooms, battle: { world, routeObjectives: route } as any };
@@ -125,14 +125,39 @@ test('route 가 닫혔거나 다른 월드의 것이면 이 분기를 타지 않
   expect(panel(g).title).not.toBe('외곽 고리 정화');
 });
 
-test('일반 성운(조율판)은 고리 문구 없이 기존 문구 그대로다', () => {
-  const f = makeBattle(STANDARD);
+test('ring 이 없는 일반 성운(조율판) 정의는 고리 문구 없이 기존 문구 그대로다', () => {
+  const { ring: _ring, ...noRing } = STANDARD as any;
+  const f = makeBattle(noRing);
   expect(panel(f)).toMatchObject({ title: GATE_TITLE, action: '이 구역의 적과 증원 처치' });
   f.route.progress = 3; f.route.gates.slice(0, 3).forEach((g: any) => { g.attuned = true; });
-  // 일반판에는 ring 이 없고 4/4 뒤에는 기존 보스 봉인 흐름이다.
+  // ring 이 없으면 4/4 뒤에는 기존 보스 봉인 흐름이다.
   f.route.progress = 3 + 1; f.world.rooms.forEach((r: any) => { if (r.type === 'normal') r.cleared = true; });
   expect(panel(f)).toMatchObject({ title: '보스 봉인 해제' });
   expect(JSON.stringify(panel(f))).not.toContain('외곽');
+  // 정의에 ring 이 있어도 컨트롤러에 ring 상태가 없으면(고리 없는 엔진) 고리 단계를 만들지 않는다.
+  const g = makeBattle(STANDARD); g.route.ring = undefined;
+  g.route.progress = 4; g.route.gates.forEach((x: any) => { x.attuned = true; }); g.world.rooms.forEach((r: any) => { if (r.type === 'normal') r.cleared = true; });
+  expect(panel(g)).toMatchObject({ title: '보스 봉인 해제' });
+});
+
+// ---- 일반 성운 기록 외곽 고리 이탈(BUNDLE-13) ----
+test('일반 성운 고리: idle 은 남은 구역 정화, open 은 기록 외곽 고리로 이동(roomId 7·표지 4), done 은 보스 흐름', () => {
+  const f = makeBattle(STANDARD); finish(f, { phase: 'idle' });
+  expect(panel(f)).toMatchObject({ title: GATE_TITLE, action: '남은 구역 정화', progress: 4, total: 4 });
+  f.route.ring.phase = 'open';
+  expect(panel(f)).toMatchObject({ title: '외곽 고리 이탈', action: '기록 외곽 고리로 이동', roomId: 7, progress: 0, total: 4 });
+  f.route.ring.phase = 'done'; f.route.ring.purified = 4;
+  expect(panel(f).title).toBe('보스 봉인 해제');
+  expect(JSON.stringify(panel(f))).not.toContain('외곽');
+});
+
+test('일반 성운 고리 running: 기록 파편 문구·올림 초·점등한 표지 수·유지량, 심층 낱말(성표·성좌)은 없다', () => {
+  const f = makeBattle(STANDARD); finish(f, { phase: 'running', left: 23.2, purified: 2, held: 1 });
+  f.route.ring.marks[0].done = true; f.route.ring.marks[2].done = true; f.route.ring.marks[1].hold = .55;
+  expect(panel(f)).toMatchObject({ title: '외곽 고리 이탈', action: '기록 파편이 모이면 중심 밖으로 · 24초', roomId: 7,
+    progress: 2, total: 4, hold: .5, holdTotal: 1 });
+  const text = JSON.stringify(panel(f));
+  for (const word of ['성표', '성좌', '정화']) expect(text).not.toContain(word);
 });
 
 // ---- 결과 줄 ----
@@ -141,6 +166,13 @@ test('결과 줄 문구: 완료·미완료와 성표·파편 피격·붕괴 횟�
   expect(astralDeepRingResultLine({ purified: false, marks: 2, shardHits: 0, collapses: 0, seconds: 0 })).toBe('외곽 고리 정화 미완료 · 성표 2/4 · 파편 피격 0회 · 붕괴 0회');
   // 횟수가 숫자가 아니면 0 으로 둔다.
   expect(astralDeepRingResultLine({ purified: true, marks: undefined, shardHits: NaN })).toBe('외곽 고리 정화 완료 · 성표 0/4 · 파편 피격 0회 · 붕괴 0회');
+  // 같은 틀이 일반 정의에서는 이탈·항로 표지·기록 파편으로 나온다.
+  expect(astralRingResultLine({ purified: true, marks: 4, shardHits: 1, collapses: 0 }, STANDARD.ring)).toBe('외곽 고리 이탈 완료 · 항로 표지 4/4 · 기록 파편 피격 1회 · 붕괴 0회');
+  expect(astralRingResultLine({ purified: false, marks: 1, shardHits: 0, collapses: 2 }, STANDARD.ring)).toBe('외곽 고리 이탈 미완료 · 항로 표지 1/4 · 기록 파편 피격 0회 · 붕괴 2회');
+  // 보고 id 로 정의를 찾고, 모르는 id 는 심층 문구로 둔다.
+  expect(astralRingDefFor({ id: STANDARD.id })).toBe(STANDARD.ring);
+  expect(astralRingDefFor({ id: DEEP.id })).toBe(RING);
+  expect(astralRingDefFor({ id: 'unknown' })).toBe(RING);
 });
 
 function expand(node: any): any[] {
@@ -198,6 +230,17 @@ test('결과 화면: 일반 성운 보고(ring 없음)에는 외곽 고리 줄�
   // 다른 경로의 label 줄은 영향받지 않는다.
   const other = resultLines(Object.freeze({ id: 'bellfall_bell_gates', label: '종문 조율', complete: true, progress: 3, target: 3 }));
   expect(other.find(l => l.label === '종문 조율 결과')?.text).toBe('종문 조율 3/3 · 완료');
+});
+
+test('결과 화면: 일반 성운 고리 보고는 별자리 줄과 외곽 고리 이탈 줄을 한 번씩 내고 심층 고리 줄은 없다', () => {
+  const standardStations = STANDARD.gates.map((g: any) => ({ stationId: g.stationId, roomId: g.roomId, label: g.label, choice: g.answer }));
+  const lines = resultLines(Object.freeze({ id: STANDARD.id, complete: true, progress: 4, target: 4, mistakes: 0,
+    rooms: Object.freeze(STANDARD.gates.map((g: any) => g.roomId)), constellations: Object.freeze(standardStations),
+    ring: Object.freeze({ purified: true, marks: 4, collapses: 0, shardHits: 1, seconds: 12.5 }) }));
+  expect(lines.filter(l => l.label === '별자리 복원 결과')).toHaveLength(1);
+  expect(lines.filter(l => l.label === '외곽 고리 이탈 결과')).toEqual([{ label: '외곽 고리 이탈 결과', text: '외곽 고리 이탈 완료 · 항로 표지 4/4 · 기록 파편 피격 1회 · 붕괴 0회' }]);
+  expect(lines.some(l => l.label === '외곽 고리 정화 결과')).toBe(false);
+  expect(lines.filter(l => l.label.includes('결과')).length).toBe(2);
 });
 
 // ---- 조율판 HUD 배치 ----

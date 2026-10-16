@@ -36,6 +36,14 @@ export const ASTRAL_CHOICES = Object.freeze([
   Object.freeze({ id: 'circle', code: 'B', glyph: '○', name: '원', dx: 0, dz: 3.5 }),
   Object.freeze({ id: 'diamond', code: 'C', glyph: '◇', name: '마름모', dx: 3.5, dz: 0 }),
 ]);
+// 성운 첨탑 일반의 원안 "별자리 4개 복원, 모래시계가 가리킨 별자리만 밟기, 기록 파편이 모이면 외곽 고리로 이탈"(BUNDLE-13).
+// 네 조율판은 기존 계약(docs/astral-standard-constellation-contract.md) 그대로다. ring 은 심층 성좌 외곽 고리(BUNDLE-12)와 같은 엔진을
+// 일반 난이도에 맞게 줄인 '기록 외곽 고리 이탈'이다: 4/4 와 시작·보스방을 뺀 모든 구역 정화 뒤 보스 앞 정예방(방 7)에 열리고,
+// 고리 위 항로 표지 4개(서·북·동·남, 순서 자유, 각 1초)를 제한 24초 안에 밝히면 보스 봉인이 풀린다.
+// 기록 파편은 1.5초부터 5초 주기로 2초 동안 중심에 모였다가(예고) .5초 터지며 중심 반경 3.2 안이면 4% 피해, 시간이 다 되면 고리 붕괴(4%·표지 0/4·24초 다시).
+// 표지 배치는 심층과 같은 정사각이다. 이웃한 두 표지를 잇는 직선은 중심에서 약 4.24 떨어져 core 밖이다(반원 위 3개는 가장 가까운 표지부터 가는 AUTO 가
+// 양 끝 사이로 중심을 가로질러 모의 1126회 중 108회 피격했다, BUNDLE-13 PLAN 3.0). 일반은 시간·예고·위험 반경·피해를 너그럽게 줄였다. 어느 실패도 진행을 막지 않는다.
+// copy 필드(title·mark·shard·verb)는 토스트·목표창·결과 줄 문구를 만든다. 심층 값은 BUNDLE-12 문구를 글자 그대로 재현한다.
 const constellations = Object.freeze({
   id: 'astral_constellations_standard', kind: 'constellations', radius: 1.2,
   readRadius: 8, readSeconds: 1, holdSeconds: 1, combatRadius: 22,
@@ -46,6 +54,14 @@ const constellations = Object.freeze({
     Object.freeze({ roomId: 4, stationId: 3, label: '3번 조율판 · 귀환 별', answer: 'circle' }),
     Object.freeze({ roomId: 6, stationId: 4, label: '4번 조율판 · 마지막 항로', answer: 'triangle' }),
   ]),
+  ring: Object.freeze({
+    roomId: 7, label: '기록 외곽 고리', title: '외곽 고리 이탈', mark: '항로 표지', shard: '기록 파편', verb: '밝히', markVerb: '점등',
+    // 서(-x) · 북(-z) · 동(+x) · 남(+z). 영웅은 서쪽 문(방 6)으로 들어온다.
+    marks: Object.freeze([Object.freeze([-6, 0]), Object.freeze([0, -6]), Object.freeze([6, 0]), Object.freeze([0, 6])]),
+    markRadius: 1.4, holdSeconds: 1, limit: 24,
+    first: 1.5, period: 5, warning: 2, burst: .5, core: 3.2, damage: .04,
+    collapseDamage: .04, shards: 6, color: 0x9ccaff,
+  }),
 });
 // 성운 첨탑 심층(무너진 성좌)의 원안(BUNDLE-12): "성좌 4곳 복원 → 외곽 고리 정화, 모래시계 별자리 선택과 파편 집결 후 이탈".
 // 성좌 4곳은 일반판 조율판 엔진(AstralConstellations)과 같은 규칙·수치다: 방의 적과 증원을 처치하면 준비되고,
@@ -72,7 +88,7 @@ const astralDeep = Object.freeze({
     Object.freeze({ roomId: 6, stationId: 4, label: '4번 성좌 · 귀환 좌표', answer: 'circle' }),
   ]),
   ring: Object.freeze({
-    roomId: 7, label: '성좌 외곽 고리',
+    roomId: 7, label: '성좌 외곽 고리', title: '외곽 고리 정화', mark: '성표', shard: '파편', verb: '정화하', markVerb: '정화',
     // 서(-x) · 북(-z) · 동(+x) · 남(+z). 이웃한 두 성표를 잇는 직선은 중심에서 6 × cos 45° ≈ 4.24 떨어져 core 밖이다.
     marks: Object.freeze([Object.freeze([-6, 0]), Object.freeze([0, -6]), Object.freeze([6, 0]), Object.freeze([0, 6])]),
     markRadius: 1.4, holdSeconds: 1, limit: 20,

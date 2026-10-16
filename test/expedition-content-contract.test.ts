@@ -85,6 +85,25 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(stage.encounter.tactic).toMatch(/모래시계 단서를 1초 읽고.*문자·도형 판에서 1초 유지/);
         expect(stage.encounter.tactic).toMatch(/오답.*판 밖.*재시도/);
         expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번', '4번']);
+        // 기록 외곽 고리 이탈(BUNDLE-13): 문구의 숫자와 낱말은 정의(ROUTE_OBJECTIVES.astral_standard.ring)와 일치해야 한다.
+        const standard = route as typeof ROUTE_OBJECTIVES.astral_standard;
+        expect(standard).toBe(ROUTE_OBJECTIVES.astral_standard);
+        const ring = standard.ring, tactic = stage.encounter.tactic;
+        const bossTactic = (ENEMIES as Record<string, any>).astral_leviathan.tactic as string;
+        expect(stage.objective).toBe('별자리 4개 순서대로 복원 → 모든 구역 정화 → ' + ring.label + ' 이탈 → 성운의 레비아탄 처치');
+        expect(tactic).toContain('모든 구역을 정화하면 보스방 앞 정예방에 ' + ring.label + '가 열립니다');
+        const reach = tactic.match(/제한 시간 (\d+)초 안에 고리 위 (\S+ \S+) (\d+)개에서 각각 (\d+(?:\.\d+)?)초 머물러 모두 (\S+)세요\(순서 자유\)/);
+        expect(reach).not.toBeNull();
+        expect([Number(reach![1]), reach![2], Number(reach![3]), Number(reach![4]), reach![5]])
+          .toEqual([ring.limit, ring.mark, ring.marks.length, ring.holdSeconds, ring.verb]);
+        expect(tactic).toContain(ring.shard + '이 중심으로 모이면 터지기 전에 중심 밖 고리 위로 비키세요');
+        expect(Number(tactic.match(/맞으면 최대 체력 (\d+)%/)?.[1])).toBe(Math.round(ring.damage * 100));
+        expect(tactic).toContain('시간이 다 되면 고리가 붕괴해 피해를 입고 ' + ring.mark + '가 흐려진 뒤 시간을 다시 잽니다');
+        expect(tactic).toContain(ring.mark + ' ' + ring.marks.length + '개를 모두 ' + ring.verb + '면 보스 봉인이 풀립니다');
+        // 조율판 안내 → 고리 안내 → 보스 전술 순서. 보스 전술과 시그니처 안내는 그대로 뒤에 붙는다.
+        expect(tactic.indexOf('조율판')).toBeLessThan(tactic.indexOf(ring.label));
+        expect(tactic.indexOf(ring.label)).toBeLessThan(tactic.indexOf(bossTactic));
+        expect(tactic.endsWith(bossTactic)).toBe(true);
       } else if (id === 'astral_leviathan_spire' && depth === 'deep') {
         // 보물방 공명 2곳은 성좌 4곳 복원과 성좌 외곽 고리 정화로 바뀌었다. 문구의 숫자는 정의(def)에서 읽어 맞춘다.
         const deep = route as typeof ROUTE_OBJECTIVES.astral_deep;

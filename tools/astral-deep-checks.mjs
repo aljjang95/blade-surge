@@ -1,7 +1,8 @@
-// 성운 첨탑 심층(astral_leviathan_spire deep) 성좌 4곳·외곽 고리 QA 판정 함수 (BUNDLE-12 qa lane). 브라우저 없이 단위 검사할 수 있게 분리했다.
-// 입력은 tools/astral-deep-qa.mjs 의 페이지 프로브가 app.step 한 번마다 관측해 남긴 행(게임 시간)과 대상 프로젝트의 공유 정의(ROUTE_OBJECTIVES.astral_deep)다.
-// 시간·반경·개수·방 번호는 정의(def)와 인자(opts, setup)에서 받는다. 문구·색·숫자 계약은 BUNDLE-12 PLAN 3.0·3.1 의 값을 DEEP/RING/COPY 상수로 적는다
-// (정의가 그 계약과 같은지는 checkDefinition 이 따로 본다). 읽기 계약은 app.battle.routeObjectives 의
+// 성운 첨탑 성좌 4곳·외곽 고리 QA 판정 함수. 심층(BUNDLE-12)과 일반판 조율판 4곳·기록 외곽 고리(BUNDLE-13)를 같은 함수로 판정한다. 브라우저 없이 단위 검사할 수 있게 분리했다.
+// 입력은 tools/astral-deep-qa.mjs 의 페이지 프로브가 app.step 한 번마다 관측해 남긴 행(게임 시간)과 대상 프로젝트의 공유 정의(ROUTE_OBJECTIVES.astral_deep | astral_standard)다.
+// 시간·반경·개수·방 번호는 정의(def)와 인자(opts, setup)에서 받는다. 어느 depth 의 계약인지는 정의 id 로 정한다(contractOf: 일반판 id 면 일반판, 그 밖은 심층).
+// 문구·색·숫자 계약은 BUNDLE-12 PLAN 3.0·3.1 과 BUNDLE-13 PLAN 3.0·3.1 의 값을 DEEP/RING/COPY(심층)와 STANDARD/STANDARD_RING(일반판) 상수로 적고,
+// 고리 문구는 3.1 틀 함수(ringCopy)로 정의의 문구 필드에서 만든다(정의가 그 계약과 같은지는 checkDefinition 이 따로 본다). 읽기 계약은 app.battle.routeObjectives 의
 //   progress · phase · read · hold · selected · mistakes · revealed · gates[i].{room,ready,available,attuned,answer,pads,pos} · ring · finish 보고뿐이다.
 //
 // 관측 행(상태가 바뀐 스텝, 읽기(rs > 0)·유지(hd > 0) 스텝, 고리가 open|running 인 모든 스텝, 1초 간격 스텝, 표식 스텝만 남긴다. 판정에 필요한 연속 구간은 빠짐없이 남는다):
@@ -67,8 +68,23 @@ export const DEEP = Object.freeze({
 });
 /** PLAN 3.0 공유 정의 계약 값(외곽 고리). */
 export const RING = Object.freeze({
-  roomId: 7, label: '성좌 외곽 고리', marks: Object.freeze([Object.freeze([-6, 0]), Object.freeze([0, -6]), Object.freeze([6, 0]), Object.freeze([0, 6])]),
+  roomId: 7, label: '성좌 외곽 고리', title: '외곽 고리 정화', mark: '성표', shard: '파편', verb: '정화하', markVerb: '정화',
+  marks: Object.freeze([Object.freeze([-6, 0]), Object.freeze([0, -6]), Object.freeze([6, 0]), Object.freeze([0, 6])]),
   markRadius: 1.4, holdSeconds: 1, limit: 20, first: 1, period: 4.5, warning: 1.5, burst: .5, core: 3.4, damage: .06, collapseDamage: .06, shards: 8, color: 0x8fb8ff,
+});
+/** BUNDLE-13 PLAN 3.0 공유 정의 계약 값(일반판 조율판 4곳: 방 1 → 3 → 4 → 6). 판 모양·읽기·유지 수치는 심층과 같다. */
+export const STANDARD = Object.freeze({
+  id: 'astral_constellations_standard', kind: 'constellations', title: '별자리 복원', radius: 1.2, readRadius: 8, readSeconds: 1, holdSeconds: 1, combatRadius: 22,
+  rooms: Object.freeze([1, 3, 4, 6]), stations: Object.freeze([1, 2, 3, 4]),
+  labels: Object.freeze(['1번 조율판 · 첫 항로', '2번 조율판 · 먼 좌표', '3번 조율판 · 귀환 별', '4번 조율판 · 마지막 항로']),
+  answers: Object.freeze(['triangle', 'diamond', 'circle', 'triangle']),
+  choices: DEEP.choices,
+});
+/** BUNDLE-13 PLAN 3.0 공유 정의 계약 값(일반판 기록 외곽 고리: 항로 표지 4개·제한 24초·피해 4%). */
+export const STANDARD_RING = Object.freeze({
+  roomId: 7, label: '기록 외곽 고리', title: '외곽 고리 이탈', mark: '항로 표지', shard: '기록 파편', verb: '밝히', markVerb: '점등',
+  marks: Object.freeze([Object.freeze([-6, 0]), Object.freeze([0, -6]), Object.freeze([6, 0]), Object.freeze([0, 6])]),
+  markRadius: 1.4, holdSeconds: 1, limit: 24, first: 1.5, period: 5, warning: 2, burst: .5, core: 3.2, damage: .04, collapseDamage: .04, shards: 6, color: 0x9ccaff,
 });
 /** 목표창·토스트·결과 문구(PLAN 2절 5, 3.1, 3.2). 판정 함수의 상수는 테스트가 따로 적은 문장과 맞춰 본다. */
 export const COPY = Object.freeze({
@@ -82,10 +98,43 @@ export const COPY = Object.freeze({
 });
 /** 이 심층에서 나오면 안 되는 이전(보물방 공명)·일반판(조율판) 문구. */
 export const LEAK_WORDS = Object.freeze(['공명', '조율판']);
-const leaks = text => typeof text === 'string' && LEAK_WORDS.some(word => text.includes(word));
+/** 일반판에서 나오면 안 되는 이전(보물방 공명)·심층(성좌·성표) 문구. */
+export const STANDARD_LEAK_WORDS = Object.freeze(['공명', '성좌', '성표']);
+/** depth 별 계약. gates = 조율판·성좌 계약, ring = 외곽 고리 계약, requireEarly = 대기 성좌(차례 전 준비) 관측 요구(일반판에는 대기 조율판이 없다). */
+export const CONTRACTS = Object.freeze({
+  deep: Object.freeze({ depth: 'deep', routeKey: 'astral_deep', gates: DEEP, ring: RING, leakWords: LEAK_WORDS, requireEarly: true }),
+  standard: Object.freeze({ depth: 'standard', routeKey: 'astral_standard', gates: STANDARD, ring: STANDARD_RING, leakWords: STANDARD_LEAK_WORDS, requireEarly: false }),
+});
+/** 정의에 맞는 depth 계약. 일반판 정의 id 면 일반판, 그 밖(심층·정의 없음)은 심층이다. */
+export const contractOf = def => (def?.id === STANDARD.id ? CONTRACTS.standard : CONTRACTS.deep);
+const leaks = (text, def) => typeof text === 'string' && contractOf(def).leakWords.some(word => text.includes(word));
+const escapeRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+/**
+ * 고리 문구 틀(BUNDLE-13 PLAN 3.1). 정의의 문구 필드(label · title · mark · shard · verb · markVerb)와 표지 수 n 으로 토스트·목표창·결과 줄을 만든다.
+ * 조사(가·이·로)는 두 정의의 낱말에 맞춘 고정 글자다. 심층 정의는 위 COPY 의 문장을 글자 그대로 낸다(테스트가 같음을 고정한다).
+ */
+export function ringCopy(ring) {
+  const L = ring.label, T = ring.title, M = ring.mark, S = ring.shard, V = ring.verb, Kv = ring.markVerb, n = ring.marks.length;
+  return Object.freeze({
+    allRestored: '모든 별자리 복원 · 모든 구역을 정화하면 ' + L + '가 열립니다',
+    ringOpen: L + ' 개방 · 고리 위 ' + M + ' ' + n + '개를 ' + V + '세요',
+    start: limit => T + ' 시작 · ' + limit + '초',
+    mark: (k, total = n) => M + ' ' + Kv + ' · ' + k + '/' + total,
+    shardHit: S + ' 집결 피격 · ' + S + '이 모이면 중심 밖으로',
+    collapse: limit => '외곽 고리 붕괴 · ' + M + '가 흐려졌습니다 · 다시 ' + limit + '초',
+    done: T + ' · 레비아탄의 봉인이 풀립니다',
+    title: T, openAction: L + '로 이동', runAction: S + '이 모이면 중심 밖으로 · ',
+    resultAria: T + ' 결과',
+    resultLine: info => T + ' ' + (info?.purified ? '완료' : '미완료') + ' · ' + M + ' ' + info?.marks + '/' + n + ' · ' + S + ' 피격 ' + info?.shardHits + '회 · 붕괴 ' + info?.collapses + '회',
+    startPattern: new RegExp('^' + escapeRe(T + ' 시작 · ') + '\\d+초$'),
+    collapsePattern: new RegExp('^' + escapeRe('외곽 고리 붕괴 · ' + M + '가 흐려졌습니다 · 다시 ') + '\\d+초$'),
+    markPattern: new RegExp('^' + escapeRe(M + ' ' + Kv + ' · ') + '\\d+\\/\\d+$'),
+  });
+}
 
 export const readyToast = (def, i, current) => def.gates[i].label + ' 정화 · ' + (current ? COPY.clue : COPY.waiting);
 export const restoreToast = (def, i) => def.gates[i].label + ' 복원 완료 · ' + (i + 1) + '/' + def.gates.length;
+// 아래 세 토스트는 심층 문구다(ringCopy(RING) 와 같다). 일반판을 포함한 일반 판정은 ringCopy(def.ring) 을 쓴다.
 export const startToast = limit => '외곽 고리 정화 시작 · ' + limit + '초';
 export const markToast = (k, n) => '성표 정화 · ' + k + '/' + n;
 export const collapseToast = limit => '외곽 고리 붕괴 · 성표가 흐려졌습니다 · 다시 ' + limit + '초';
@@ -97,8 +146,7 @@ export function wrongToast(def, gateIndex, padId) {
 /** 결과 화면 줄: '별자리 복원 4/4 · <라벨> → … · 오답 n회'(기존 일반 줄)와 '외곽 고리 정화 완료 · 성표 4/4 · 파편 피격 n회 · 붕괴 n회'. */
 export const constellationResultLine = ro => '별자리 복원 ' + ro?.progress + '/' + ro?.target + ' · '
   + ((ro?.constellations || []).map(s => s.label).join(' → ') || '복원한 별자리 없음') + ' · 오답 ' + ro?.mistakes + '회';
-export const ringResultLine = (ring, markCount = RING.marks.length) => '외곽 고리 정화 ' + (ring?.purified ? '완료' : '미완료') + ' · 성표 ' + ring?.marks + '/' + markCount
-  + ' · 파편 피격 ' + ring?.shardHits + '회 · 붕괴 ' + ring?.collapses + '회';
+export const ringResultLine = (ring, markCount = RING.marks.length, def = RING) => ringCopy({ ...def, marks: Array.from({ length: markCount }) }).resultLine(ring);
 
 export function percentile(values, q) {
   if (!values.length) return null;
@@ -133,17 +181,18 @@ export const inRoom = (setup, x, z, slack = POSITION_SLACK) => {
   return !!r && finite(x) && finite(z) && x >= r.minX - slack && x <= r.maxX + slack && z >= r.minZ - slack && z <= r.maxZ + slack;
 };
 
-/** 대상 프로젝트의 정의(ROUTE_OBJECTIVES.astral_deep)가 PLAN 3.0 계약과 같은지. 어긋난 항목을 issues 로 돌려준다. */
-export function checkDefinition(def) {
+/** 대상 프로젝트의 정의(ROUTE_OBJECTIVES.astral_deep | astral_standard)가 PLAN 3.0 계약과 같은지(정의 id 가 일반판이면 일반판 계약, 아니면 심층 계약). 어긋난 항목을 issues 로 돌려준다. */
+export function checkDefinition(def, contract = contractOf(def)) {
   if (!def) return { ok: false, issues: [{ field: 'definition', got: null }] };
   const issues = [];
+  const G = contract.gates, R = contract.ring;
   const want = (field, got, expected) => { if (!same(JSON.parse(JSON.stringify(got ?? null)), JSON.parse(JSON.stringify(expected)))) issues.push({ field, got, want: expected }); };
-  want('id', def.id, DEEP.id); want('kind', def.kind, DEEP.kind); want('radius', def.radius, DEEP.radius); want('readRadius', def.readRadius, DEEP.readRadius);
-  want('readSeconds', def.readSeconds, DEEP.readSeconds); want('holdSeconds', def.holdSeconds, DEEP.holdSeconds); want('combatRadius', def.combatRadius, DEEP.combatRadius);
-  want('choices', def.choices, DEEP.choices);
-  want('rooms', (def.gates || []).map(g => g.roomId), [...DEEP.rooms]); want('stations', (def.gates || []).map(g => g.stationId), [...DEEP.stations]);
-  want('labels', (def.gates || []).map(g => g.label), [...DEEP.labels]); want('answers', (def.gates || []).map(g => g.answer), [...DEEP.answers]);
-  want('ring', def.ring, RING);
+  want('id', def.id, G.id); want('kind', def.kind, G.kind); want('radius', def.radius, G.radius); want('readRadius', def.readRadius, G.readRadius);
+  want('readSeconds', def.readSeconds, G.readSeconds); want('holdSeconds', def.holdSeconds, G.holdSeconds); want('combatRadius', def.combatRadius, G.combatRadius);
+  want('choices', def.choices, G.choices);
+  want('rooms', (def.gates || []).map(g => g.roomId), [...G.rooms]); want('stations', (def.gates || []).map(g => g.stationId), [...G.stations]);
+  want('labels', (def.gates || []).map(g => g.label), [...G.labels]); want('answers', (def.gates || []).map(g => g.answer), [...G.answers]);
+  want('ring', def.ring, R);
   return { ok: issues.length === 0, issues };
 }
 /**
@@ -633,7 +682,7 @@ export function checkResultFields(ro, def, win = true, { mistakes = null, collap
 }
 /** 결과 화면 본문에 두 줄('별자리 복원 4/4 · … · 오답 n회', '외곽 고리 정화 완료 · 성표 4/4 · 파편 피격 n회 · 붕괴 n회')이 모두 있고 별자리 줄은 한 번만 나온다. */
 export function checkResultLines(text, def, ro) {
-  const constellation = constellationResultLine(ro), ring = ringResultLine(ro?.ring, def.ring.marks.length);
+  const constellation = constellationResultLine(ro), ring = ringResultLine(ro?.ring, def.ring.marks.length, def.ring);
   const body = norm(text);
   const countOf = needle => (needle ? body.split(needle).length - 1 : 0);
   const prefixCount = countOf('별자리 복원 ' + ro?.progress + '/' + ro?.target);
@@ -641,7 +690,7 @@ export function checkResultLines(text, def, ro) {
 }
 /** 결과 줄 요소: aria-label '별자리 복원 결과' 본문이 첫 줄, '외곽 고리 정화 결과' 본문이 둘째 줄과 정확히 같고 각각 하나뿐이다. lines: [{ aria, text }]. */
 export function checkResultElements(lines, def, ro) {
-  const constellationAria = '별자리 복원 결과', ringAria = '외곽 고리 정화 결과', constellation = constellationResultLine(ro), ring = ringResultLine(ro?.ring, def.ring.marks.length);
+  const constellationAria = '별자리 복원 결과', ringAria = ringCopy(def.ring).resultAria, constellation = constellationResultLine(ro), ring = ringResultLine(ro?.ring, def.ring.marks.length, def.ring);
   const pick = aria => (lines || []).filter(l => l?.aria === aria);
   const a = pick(constellationAria), c = pick(ringAria);
   const ok = a.length === 1 && norm(a[0].text) === constellation && c.length === 1 && norm(c[0].text) === ring;
@@ -656,19 +705,20 @@ export function checkResultElements(lines, def, ro) {
  */
 export function expectedObjective(row, def) {
   const n = def.gates.length, rg = row.rg;
+  const title = contractOf(def).gates.title;
   if (rg?.ph === PHASE_CODE.done) return null;
-  if (rg?.ph === PHASE_CODE.open) return { kind: 'open', title: COPY.ringTitle, action: COPY.ringOpenAction };
-  if (rg?.ph === PHASE_CODE.running) return { kind: 'run', title: COPY.ringTitle, actionPrefix: COPY.ringRunAction, seconds: [Math.ceil(rg.lf), Math.ceil(rg.lf) + 1] };
-  if (row.pr >= n) return { kind: 'remain', title: DEEP.title, count: n + '/' + n, action: COPY.remain };
+  if (rg?.ph === PHASE_CODE.open) { const c = ringCopy(def.ring); return { kind: 'open', title: c.title, action: c.openAction }; }
+  if (rg?.ph === PHASE_CODE.running) { const c = ringCopy(def.ring); return { kind: 'run', title: c.title, actionPrefix: c.runAction, seconds: [Math.ceil(rg.lf), Math.ceil(rg.lf) + 1] }; }
+  if (row.pr >= n) return { kind: 'remain', title, count: n + '/' + n, action: COPY.remain };
   const g = row.g?.[row.pr];
   if (!g) return null;
   const count = row.pr + '/' + n;
-  if (g.dc !== 1) return { kind: 'find', title: DEEP.title, count, action: COPY.find };
-  if (g.rdy !== 1) return { kind: 'fight', title: DEEP.title, count, action: COPY.fight };
-  if (row.ph === GATE_PHASE_CODE.retry) return { kind: 'retry', title: DEEP.title, count, action: COPY.retry };
-  if (row.ph === GATE_PHASE_CODE.select) return { kind: 'select', title: DEEP.title, count, action: COPY.select };
-  if (row.ph === GATE_PHASE_CODE.read) return { kind: 'read', title: DEEP.title, count, action: COPY.read };
-  return { kind: 'combat', title: DEEP.title, count, action: COPY.combat };
+  if (g.dc !== 1) return { kind: 'find', title, count, action: COPY.find };
+  if (g.rdy !== 1) return { kind: 'fight', title, count, action: COPY.fight };
+  if (row.ph === GATE_PHASE_CODE.retry) return { kind: 'retry', title, count, action: COPY.retry };
+  if (row.ph === GATE_PHASE_CODE.select) return { kind: 'select', title, count, action: COPY.select };
+  if (row.ph === GATE_PHASE_CODE.read) return { kind: 'read', title, count, action: COPY.read };
+  return { kind: 'combat', title, count, action: COPY.combat };
 }
 /**
  * 목표창 표본(같은 상태가 0.6초 이어진 뒤 10Hz 갱신이 지난 표본). 모든 표본이 그 상태의 기대 문구를 가지고 이전(공명)·일반판(조율판) 문구가 없어야 한다.
@@ -678,7 +728,7 @@ export function checkObjectiveSamples(rows, def) {
   const samples = rows.filter(r => typeof r.dom === 'string'), kinds = {}, bad = [];
   for (const r of samples) {
     const want = expectedObjective(r, def), dom = compact(r.dom);
-    let ok = !!want && !leaks(r.dom) && dom.includes(compact(want.title));
+    let ok = !!want && !leaks(r.dom, def) && dom.includes(compact(want.title));
     if (ok && want.count) ok = dom.includes(compact(want.count));
     if (ok && want.action) ok = dom.includes(compact(want.action));
     if (ok && want.actionPrefix) ok = want.seconds.some(s => dom.includes(compact(want.actionPrefix + s + '초')));
@@ -702,7 +752,7 @@ export function checkToasts(toasts, def, { shardHits = null, collapses = null, m
   const items = (toasts || []).map(t => ({ msg: String(t?.msg ?? ''), tac: typeof t?.tac === 'string' && t.tac.length > 0 ? t.tac : fallback }));
   const list = items.map(i => i.msg);
   const count = text => list.filter(m => m === text).length;
-  const n = def.gates.length, markCount = def.ring.marks.length;
+  const n = def.gates.length, markCount = def.ring.marks.length, copy = ringCopy(def.ring);
   const restore = def.gates.map((_, i) => ({ text: restoreToast(def, i), count: count(restoreToast(def, i)), at: list.indexOf(restoreToast(def, i)) }));
   const ready = def.gates.map((_, i) => {
     const cur = readyToast(def, i, true), wait = readyToast(def, i, false);
@@ -711,23 +761,23 @@ export function checkToasts(toasts, def, { shardHits = null, collapses = null, m
     const at = Math.max(list.indexOf(cur), list.indexOf(wait));
     return { total, exact, ok: exact && at >= 0 && at < restore[i].at };
   });
-  const startAll = list.filter(m => /^외곽 고리 정화 시작 · \d+초$/.test(m)), collapseAll = list.filter(m => /^외곽 고리 붕괴 · 성표가 흐려졌습니다 · 다시 \d+초$/.test(m));
-  const markAll = list.filter(m => /^성표 정화 · \d+\/\d+$/.test(m)), wrongAll = list.filter(m => /오답 · 단서는 .* · 판 밖으로 나와 다시 읽으세요\.$/.test(m));
-  const hitCount = count(COPY.shardHit), openCount = count(COPY.ringOpen), doneCount = count(COPY.done), allCount = count(COPY.allRestored);
+  const startAll = list.filter(m => copy.startPattern.test(m)), collapseAll = list.filter(m => copy.collapsePattern.test(m));
+  const markAll = list.filter(m => copy.markPattern.test(m)), wrongAll = list.filter(m => /오답 · 단서는 .* · 판 밖으로 나와 다시 읽으세요\.$/.test(m));
+  const hitCount = count(copy.shardHit), openCount = count(copy.ringOpen), doneCount = count(copy.done), allCount = count(copy.allRestored);
   const ordered = restore.every((p, i) => p.at >= 0 && (i === 0 || p.at > restore[i - 1].at));
-  const seq = [restore.at(-1).at, list.indexOf(COPY.allRestored), list.indexOf(COPY.ringOpen), startAll.length ? list.indexOf(startAll[0]) : -1, list.indexOf(COPY.done)];
+  const seq = [restore.at(-1).at, list.indexOf(copy.allRestored), list.indexOf(copy.ringOpen), startAll.length ? list.indexOf(startAll[0]) : -1, list.indexOf(copy.done)];
   const sequence = seq.every((at, i) => at >= 0 && (i === 0 || at > seq[i - 1]));
   const isTactic = i => !!i.tac && i.msg === i.tac;
   const tacticToasts = items.filter(isTactic).length;
-  const leaked = items.filter(i => !isTactic(i) && leaks(i.msg)).map(i => i.msg);
-  const startOk = startAll.length === 1 && (startLimit === null || startAll[0] === startToast(startLimit));
-  const collapseOk = (collapses === null || collapseAll.length === collapses) && (collapseLimits === null || (collapseAll.length === collapseLimits.length && collapseAll.every((m, i) => m === collapseToast(collapseLimits[i]))));
+  const leaked = items.filter(i => !isTactic(i) && leaks(i.msg, def)).map(i => i.msg);
+  const startOk = startAll.length === 1 && (startLimit === null || startAll[0] === copy.start(startLimit));
+  const collapseOk = (collapses === null || collapseAll.length === collapses) && (collapseLimits === null || (collapseAll.length === collapseLimits.length && collapseAll.every((m, i) => m === copy.collapse(collapseLimits[i]))));
   // 성표 토스트: 정화 이벤트마다 정확히 하나(마지막 4/4 는 선택). purifyCounts 가 없으면 형식만 본다.
   let markOk = true, markExpect = null;
   if (purifyCounts) {
-    markExpect = purifyCounts.filter(k => k < markCount).map(k => markToast(k, markCount));
+    markExpect = purifyCounts.filter(k => k < markCount).map(k => copy.mark(k, markCount));
     const finals = purifyCounts.filter(k => k === markCount).length;
-    const got = markAll.filter(m => m !== markToast(markCount, markCount));
+    const got = markAll.filter(m => m !== copy.mark(markCount, markCount));
     markOk = JSON.stringify(got) === JSON.stringify(markExpect) && markAll.length - got.length <= finals;
   }
   const mistakesOk = mistakes === null || wrongAll.length === mistakes;
@@ -763,9 +813,10 @@ export function checkKeyboardSegment(rows, from, to) {
 const lastOf = (rows, pick) => { for (let i = rows.length - 1; i >= 0; i--) if (rows[i].rg) return pick(rows[i]); return null; };
 /**
  * auto 프로필 종합 판정. obs: { rows, setup, result, resultText, resultLines, win, toasts, encounterTactic }.
- * clean: AUTO 가 붕괴 없이 고리를 정화했는지까지 요구한다. 수동 구간이 있는 ring 프로필은 false 로 부른다. requireEarly: 2번 성좌가 1번 복원 전에 준비돼 있어야 한다.
+ * clean: AUTO 가 붕괴 없이 고리를 정화했는지까지 요구한다. 수동 구간이 있는 ring 프로필은 false 로 부른다. requireEarly: 2번 성좌가 1번 복원 전에 준비돼 있어야 한다
+ * (기본은 depth 계약 값: 심층 true, 일반판 false — 일반판에는 대기 조율판이 없다).
  */
-export function analyzeAuto(obs, def, { clean = true, requireEarly = true } = {}) {
+export function analyzeAuto(obs, def, { clean = true, requireEarly = contractOf(def).requireEarly } = {}) {
   const rows = obs.rows || [], setup = obs.setup;
   // 관측이 빠진 행(null · 없는 칸)이 있어도 예외 없이 실패로 끝나야 한다: 판정 하나가 던지면 그 판정만 실패로 남긴다.
   const guard = (fn, fallback = {}) => { try { return fn(); } catch (error) { return { ...fallback, ok: false, error: String(error?.message ?? error) }; } };
@@ -970,13 +1021,18 @@ export function roomDrawCalls(candSamples, baseSamples, rooms) {
   return { pairs, matched: matchedPairs.length, maxIncrease: matchedPairs.length ? Math.max(...matchedPairs.map(p => p.increase)) : null };
 }
 /**
- * 기준선이 후보와 다른 빌드인지, 양쪽이 pass 인지. 기준선(a737875)에는 경로 정의(astral_deep)가 없고 후보에는 있어야 한다.
+ * 기준선이 후보와 다른 빌드인지, 양쪽이 pass 인지. 두 report 의 depth 가 같아야 한다(depth 에 맞는 계약으로 본다).
+ * 기준선에는 고리가 없어야 한다: 심층 기준선(a737875)은 경로 정의(astral_deep) 자체가 없고, 일반판 기준선(099eb32)은 조율판 정의는 있지만 ring 이 없다.
+ * 후보에는 그 depth 의 정의(id 가 계약과 같음)와 ring 이 있어야 한다.
  * 두 report 의 HEAD 는 달라야 한다(같은 빌드끼리의 비교는 합격하지 않는다). 후보는 성좌·고리 판정(deepOk)까지 통과해야 한다.
  */
 export function compareTargetsOk(cand, base) {
   if (!cand || !base) return false;
+  const contract = CONTRACTS[cand.depth] ?? null;
+  if (!contract || cand.depth !== base.depth) return false;
   const differs = !!cand.head && !!base.head && cand.head !== base.head;
-  const definition = !base.routeDefinition && cand.routeDefinition?.id === DEEP.id;
+  const definition = cand.routeDefinition?.id === contract.gates.id && !!cand.routeDefinition?.ring && !base.routeDefinition?.ring
+    && (!base.routeDefinition || base.routeDefinition.id === contract.gates.id);
   return differs && definition && cand.deepOk === true && cand.status === 'pass' && base.status === 'pass' && cand.runStatus === 'pass' && base.runStatus === 'pass';
 }
 /** 두 report 의 실행 설정이 같은지: 영웅 · 시드 · depth · 재시드 · viewport · motion · quality 가 같아야 비교가 성립한다(없는 값은 같지 않다고 본다). */

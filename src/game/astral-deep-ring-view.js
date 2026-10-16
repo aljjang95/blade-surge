@@ -112,10 +112,24 @@ export class AstralDeepRingView {
     }
     for (const m of this.meshes) for (let i = 0; i < m.count; i++) this.#put(m, i, 0, 0, 0, 0, 0, 0);
 
-    // 파편 방향(성표 사이 22.5° 어긋난 곳)을 미리 계산해 update 에서 삼각함수 배열을 만들지 않는다.
+    // 파편 방향을 미리 계산해 update 에서 삼각함수 배열을 만들지 않는다. 파편은 같은 간격으로 놓고, 시작 위상은
+    // 성표 방향과 가장 멀리 떨어지는 값을 고른다(심층 8개·성표 4개는 기존 .5 = 22.5°, 일반 6개·표지 4개는 15°).
+    // 같은 거리면 .5 를 먼저 고른다.
+    const markAngles = def.marks.map(([dx, dz]) => Math.atan2(dz, dx)), step = Math.PI * 2 / this.nShards;
+    const gapOf = phase => {
+      let gap = Infinity;
+      for (let k = 0; k < this.nShards; k++) for (const m of markAngles) {
+        const d = Math.abs(((k + phase) * step - m) % (Math.PI * 2));
+        gap = Math.min(gap, d, Math.PI * 2 - d);
+      }
+      return gap;
+    };
+    let shardPhase = .5, bestGap = gapOf(.5);
+    for (let i = 0; i < 16; i++) { const gap = gapOf(i / 16); if (gap > bestGap + 1e-9) { bestGap = gap; shardPhase = i / 16; } }
+    this.shardPhase = shardPhase;
     this.cos = new Float64Array(this.nShards); this.sin = new Float64Array(this.nShards);
     for (let k = 0; k < this.nShards; k++) {
-      const a = (k + .5) * Math.PI * 2 / this.nShards;
+      const a = (k + shardPhase) * step;
       this.cos[k] = Math.cos(a); this.sin[k] = Math.sin(a);
     }
     this.phase = P_IDLE; this.doneAge = HIDE_SECONDS;

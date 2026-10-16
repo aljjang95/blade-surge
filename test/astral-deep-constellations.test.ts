@@ -92,7 +92,7 @@ function running() {
 }
 function run(f: F, seconds: number, dt = .25) { for (let t = 0; t < seconds - 1e-9; t += dt) f.route.update(f.g, dt); }
 
-test('정의: 성좌는 방 3 → 2 → 5 → 6, 고리는 정예방 7 이고 일반 성운은 그대로 AstralConstellations', () => {
+test('정의: 성좌는 방 3 → 2 → 5 → 6, 고리는 정예방 7 이고 일반 성운은 심층 하위 클래스가 아니다', () => {
   const f = fixture();
   expect(routeObjectiveForStage(f.stage)).toBe(DEEP);
   expect(f.route).toBeInstanceOf(AstralDeepConstellations);
@@ -114,10 +114,11 @@ test('정의: 성좌는 방 3 → 2 → 5 → 6, 고리는 정예방 7 이고 �
   expect(f.route.autoGoal()).toBeNull(); expect(f.route.canUnseal()).toBe(false); expect(f.route.canWin()).toBe(false);
   expect(f.route.coexistsAttunement).toBe(false);
   expect(f.world.rooms.some((x: any) => f.route.allowsAttunement(x))).toBe(false);
-  // 일반 성운 첨탑은 그대로 부모 클래스다.
+  // 일반 성운 첨탑은 BUNDLE-13 부터 기록 외곽 고리 정의가 있어 공용 고리 엔진(심층의 부모)이다. 심층 하위 클래스는 아니다.
   const standard = fixture({ depth: 'standard' });
-  expect(standard.route.constructor).toBe(AstralConstellations);
-  expect(standard.route.ring).toBeUndefined();
+  expect(standard.route).toBeInstanceOf(AstralConstellations);
+  expect(standard.route).not.toBeInstanceOf(AstralDeepConstellations);
+  expect(standard.route.ring.room.label).toBe('기록 외곽 고리');
 });
 
 test('파티·균열·전술 공략·알 수 없는 난이도는 목표를 만들지 않고 이 원정에는 전술 공략 자체가 없다', () => {

@@ -1,5 +1,8 @@
 import { Vector3 } from 'three';
 
+// 조율판을 읽거나 고르는 동안 허용되는 영웅 상태. 스텝마다 배열을 만들지 않도록 모듈 상수로 둔다.
+const STABLE_STATES = ['idle', 'move'];
+
 // All progress and choice receipts live in the route controller; the view is a
 // projection, and Battle retains room rewards, seal, victory and settlement.
 export class AstralConstellations {
@@ -102,7 +105,7 @@ export class AstralConstellations {
       Math.hypot(e.pos.x - game.player.pos.x, e.pos.z - game.player.pos.z) <= this.def.combatRadius));
   }
   observePlayer(player) {
-    const stable = player?.alive && ['idle', 'move'].includes(player.state);
+    const stable = player?.alive && STABLE_STATES.includes(player.state);
     const damaged = Number.isFinite(this.#lastHp) && player?.hp < this.#lastHp;
     this.#lastHp = player?.hp ?? null;
     const game = player?.game, gate = this.gates[this.#progress];
