@@ -72,20 +72,22 @@ export function runBossSim(runtime, EmberRearExposure, rearDef, { hero = 'knight
     let attacksInWindow = 0, killSeconds = null, exposedFrames = 0, openedAt = -1;
     let windowsWithRear = 0, rearSeen = false, rearBefore = 0;
     const firstRear = [];
+    // 창마다 열린 순간 영웅 상태와 등 뒤 타격 여부. 등 뒤 타격이 없는 창의 사유(채널 스킬에 묶임 등)를 읽는 데 쓴다.
+    const windowLog = [];
     for (let frame = 0, n = Math.round(maxSeconds / DT); frame < n && game.active; frame++) {
       const wasExposed = rear?.state === 'exposed', seqBefore = boss.attackSequence || 0;
       stepCombatFlow(fixture, DT);
       const exposed = rear?.state === 'exposed';
       if (exposed) exposedFrames++;
-      if (!wasExposed && exposed) { openedAt = game.elapsed; rearSeen = false; rearBefore = rear.rearHits; }
-      if (exposed && !rearSeen && rear.rearHits > rearBefore) { rearSeen = true; windowsWithRear++; firstRear.push(game.elapsed - openedAt); }
+      if (!wasExposed && exposed) { openedAt = game.elapsed; rearSeen = false; rearBefore = rear.rearHits; windowLog.push({ heroState: player.alive ? player.state : 'dead', rear: false }); }
+      if (exposed && !rearSeen && rear.rearHits > rearBefore) { rearSeen = true; windowsWithRear++; firstRear.push(game.elapsed - openedAt); windowLog[windowLog.length - 1].rear = true; }
       if (wasExposed && exposed && (boss.attackSequence || 0) !== seqBefore) attacksInWindow++;
       if (!boss.alive) { killSeconds = game.elapsed; break; }
     }
     if (rear) { game.bossDefeated = !boss.alive; rear.update(game, DT); rear.stop(); }
     return { hero, seed, mode, heroLevel, killSeconds: killSeconds === null ? null : round(killSeconds),
       windows: rear ? rear.windows : 0, broken: rear ? rear.broken : 0, windowsWithRear,
-      firstRearMedian: round(median(firstRear)), exposedSeconds: round(exposedFrames * DT),
+      firstRearMedian: round(median(firstRear)), exposedSeconds: round(exposedFrames * DT), windowLog,
       heroDamageTaken: Math.round(events.damageTaken), heroDied: !player.alive,
       bossAttacks: boss.attackSequence || 0, attacksInWindow,
       ...(rear ? { rearHits: rear.rearHits, frontHits: rear.frontHits, sideHits: rear.sideHits, rearDamage: Math.round(rear.rearDamage), frontDamage: Math.round(rear.frontDamage) } : {}) };
