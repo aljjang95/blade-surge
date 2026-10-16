@@ -20,6 +20,37 @@ const _impactPoint = new THREE.Vector3();
 const _route = { x: 0, z: 0, pace: 1, los: true };
 // 원거리 적이 근접 영웅에게서 연속으로 물러설 수 있는 최대 시간. 끝없는 뒷걸음 추격을 막는다.
 const RANGED_RETREAT_SEC = 2.4;
+// 적 탄환과 자폭의 실제 타이밍 값. 공격 코드와 AUTO 위협 계산(enemyImpactIn)이 같은 값을 쓴다.
+export const ENEMY_BOLT = { speed: 11, radius: 0.7 };
+export const ENEMY_FAN_BOLT = { speed: 13, radius: 0.75 };
+const ENEMY_MUZZLE = 0.8;                 // 탄환은 적 앞 0.8 지점에서 생긴다
+export const HOSTILE_PROJECTILE_REACH = 0.6;   // 적 탄환 반경에 더하는 플레이어 접촉 거리(battle-base updateProjectiles)
+const BOMBER_FUSE_SEC = 0.7;
+
+/**
+ * 예고가 실제 피해로 바뀔 때까지 남은 게임 시간(초). 읽기 전용이며 난수·상태를 바꾸지 않는다.
+ * 예고 링 값(telegraph)은 화면 신호라서 타격 시각과 다를 수 있다: 돌진은 0.45 지점에서 예고가 끝나고
+ * 0.85 지점에서 맞으며, 고유기는 마지막 타격까지의 시간이고, 탄환은 발사 뒤 비행 시간이 더 있다.
+ * AUTO 회피가 짧은 회피 무적 안에서 실제 타격을 받도록 이 값을 쓴다.
+ */
+export function enemyImpactIn(enemy, target) {
+  // 지원 치유·소환 시전은 영웅에게 피해를 주지 않는다. 예고 링은 보이지만 피할 타격이 없다.
+  if (enemy.supportCastKind) return Infinity;
+  if (enemy.behavior === 'bomber' && enemy.fuse >= 0) return Math.max(0, BOMBER_FUSE_SEC - enemy.fuse);
+  if (enemy.state !== 'attack' || enemy.attackDone) return enemy.telegraph;
+  const plan = enemy.signatures?.plan;
+  if (plan) {
+    // 고유기는 마지막 타격 전에도 여러 번 친다. 아직 터지지 않은 가장 가까운 타격까지의 시간이다.
+    const age = enemy.signatures.age || 0; let next = Infinity;
+    for (const h of plan.events) if (h.at > age && h.at - age < next) next = h.at - age;
+    return Number.isFinite(next) ? next : enemy.telegraph;
+  }
+  if (!(enemy.attackDur > 0) || !Number.isFinite(enemy.hitAt)) return enemy.telegraph;
+  let lead = Math.max(0, enemy.hitAt * enemy.attackDur - enemy.stateT);
+  const bolt = enemy.special === 'fan' ? ENEMY_FAN_BOLT : enemy.def?.ranged && !enemy.special ? ENEMY_BOLT : null;
+  if (bolt && target) lead += Math.max(0, enemy.distTo(target) - ENEMY_MUZZLE - bolt.radius - HOSTILE_PROJECTILE_REACH) / bolt.speed;
+  return lead;
+}
 const areaPlayers = game => [...new Set(game.stage?.party ? game.app.party.livingPlayers() : [game.player])].filter(p => p?.alive);
 const PATTERN_ANIMS = { basic: 'attack', spin: 'attackSpin', slam: 'attackJump', summon: 'summon', fan: 'cast', soulrain: 'raise', dash: 'dash' };
 
@@ -368,11 +399,11 @@ export class Enemy extends Actor {
     if (this.behavior === 'bomber') {
       if (this.fuse >= 0) {   // 도화선: 부풀며 점멸, 0.7초 뒤 자폭
         this.fuse += dt; this.vel.set(0, 0, 0);
-        const k = this.fuse / 0.7; this.model.scale.setScalar(this.modelScale * (1 + k * 0.5)); this.tintEmissive = new THREE.Color(1, 0.25 + 0.6 * Math.abs(Math.sin(this.fuse * 40)), 0);
-        if (this.fuse >= 0.7) this.explode();
+        const k = this.fuse / BOMBER_FUSE_SEC; this.model.scale.setScalar(this.modelScale * (1 + k * 0.5)); this.tintEmissive = new THREE.Color(1, 0.25 + 0.6 * Math.abs(Math.sin(this.fuse * 40)), 0);
+        if (this.fuse >= BOMBER_FUSE_SEC) this.explode();
         return;
       }
-      if (d < 2.2 && this.state === 'chase') { this.fuse = 0; this.special = 'bomber'; this.telegraph = 0.7; this.game.fx.ring(this.pos, 0xff6030, { telegraph: true, r0: 3.3, r1: 3.6, life: 0.7, y: 0.06, width: 1 }); this.announceSkill(); audio.charge({ vol: 0.3, dur: 0.6 }); return; }
+      if (d < 2.2 && this.state === 'chase') { this.fuse = 0; this.special = 'bomber'; this.telegraph = BOMBER_FUSE_SEC; this.game.fx.ring(this.pos, 0xff6030, { telegraph: true, r0: 3.3, r1: 3.6, life: BOMBER_FUSE_SEC, y: 0.06, width: 1 }); this.announceSkill(); audio.charge({ vol: 0.3, dur: 0.6 }); return; }
     } else if (this.behavior === 'shaman' && this.pack?.aggro !== false) {
       if (this.supportOwner) { if (this.trySupportCast(dt)) return; }
       else {
@@ -542,13 +573,13 @@ export class Enemy extends Actor {
       const pc2 = this.def.projColor || 0x60ff80;
       // 기존 구형 보스의 하향 탄도는 유지하고 지면 방향만 예고에 고정한다.
       const aim = this.def.pattern ? f : f.clone().multiplyScalar(this.distTo(p)).setY(1.2 - 1.5).normalize();
-      for (let i = -2; i <= 2; i++) { const dir = aim.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.28); const sp = this.pos.clone().addScaledVector(f, 0.8).setY(1.5 * this.def.scale); g.spawnProjectile({ pos: sp, dir, speed: 13, radius: 0.75, dmg: dmg * 0.7, color: pc2, size: 0.6, owner: this, kb: 3, kind: 'magic', life: this.def.pattern ? 1 : 1.8, trail: pc2, hostile: true }); }
+      for (let i = -2; i <= 2; i++) { const dir = aim.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.28); const sp = this.pos.clone().addScaledVector(f, ENEMY_MUZZLE).setY(1.5 * this.def.scale); g.spawnProjectile({ pos: sp, dir, speed: ENEMY_FAN_BOLT.speed, radius: ENEMY_FAN_BOLT.radius, dmg: dmg * 0.7, color: pc2, size: 0.6, owner: this, kb: 3, kind: 'magic', life: this.def.pattern ? 1 : 1.8, trail: pc2, hostile: true }); }
       audio.magic({ vol: 0.3, base: 300, notes: [0, -5, -7], step: 0.05, type: 'square' }); return;
     }
     if (this.def.ranged && !this.special) {
-      const sp = this.pos.clone().addScaledVector(f, 0.8).setY(1.5 * this.def.scale); const dir = p.pos.clone().setY(1.2).sub(sp).normalize();
+      const sp = this.pos.clone().addScaledVector(f, ENEMY_MUZZLE).setY(1.5 * this.def.scale); const dir = p.pos.clone().setY(1.2).sub(sp).normalize();
       const pc = this.def.projColor || 0x60ff80;
-      g.spawnProjectile({ pos: sp, dir, speed: 11, radius: 0.7, dmg, color: pc, size: 0.5, owner: this, kb: 3, kind: 'magic', life: 1.6, trail: pc, hostile: true });
+      g.spawnProjectile({ pos: sp, dir, speed: ENEMY_BOLT.speed, radius: ENEMY_BOLT.radius, dmg, color: pc, size: 0.5, owner: this, kb: 3, kind: 'magic', life: 1.6, trail: pc, hostile: true });
       audio.magic({ vol: 0.2, base: 330, notes: [0, -5], step: 0.05, type: 'square' });
       return;
     }

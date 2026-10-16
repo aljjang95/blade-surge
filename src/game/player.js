@@ -11,6 +11,7 @@ import { CONTROL_ULT_GAIN, ultimateLockDuration } from './control-rewards.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC, DODGE_INVULN_SEC } from './progression.js';
 import { RangerAim } from './ranger-aim.js';
+import { enemyImpactIn } from './enemies.js';
 
 const _v = new THREE.Vector3();
 const ATTACK_INPUT_BUFFER_SEC = 0.14;
@@ -22,6 +23,8 @@ const SKILL_CANCEL_AFTER_HIT = 0.05;
 // 수동 궁수: 사격 중 이동 속도 배율, 회피에서 사격으로 넘어가는 최소 회피 시간, 다리 층 블렌드 속도
 export const RANGER_MOVE_SHOT_SPEED = 0.55;
 export const RANGER_DODGE_SHOT_AT = 0.16;
+// 원거리 AUTO가 붙은 적에게서 연속으로 물러서는 최대 시간. 무리가 같이 따라붙으면 그 자리에서 싸운다(적 원거리 2.4초와 같은 장치).
+const AUTO_RANGED_RETREAT_SEC = 1.2;
 const RANGER_LEG_BLEND = 10;
 const LOWER_BODY_TRACK = /hips|leg|foot|toe/i;
 const bowLayerCache = new WeakMap();
@@ -388,8 +391,8 @@ export class Player extends Actor {
     this.invulnOther = this.invuln > 0 ? this.invuln : 0;
     // AUTO 가 요청한 회피가 실제로 시작된 순간에만 그 예고를 처리한 것으로 기록한다(버퍼 만료로 못 구른 요청은 다시 시도).
     const threat = this.auto ? this._autoDodgeThreat : null;
-    if (threat) { this._autoDodgeFrom = threat; this._autoDodgeUntil = (Number.isFinite(now) ? now : 0) + Math.max(0, threat.telegraph || 0) + .15; }
-    this._autoDodgeThreat = null;
+    if (threat) { this._autoDodgeFrom = threat; this._autoDodgeUntil = (Number.isFinite(now) ? now : 0) + Math.max(0, this._autoDodgeLead ?? threat.telegraph ?? 0) + .15; }
+    this._autoDodgeThreat = null; this._autoDodgeLead = null;
     this.dodgeBufferT = 0; this.stopTrail(); this.state = 'dodge'; this.stateT = 0;
     this.invuln = Math.max(this.invulnOther, DODGE_INVULN_SEC); this.dodgeCd = DODGE_COOLDOWN_SEC;
     this.perfectWindow = 0.28;   // 이 안에 피격 판정이 스치면 퍼펙트
@@ -593,6 +596,9 @@ export class Player extends Actor {
     // Move past the escort line before firing at an ordered target. Ranged
     // bolts still collide normally; AUTO does not make other enemies immune.
     const d = this.distTo(e); const want = this.def.ranged ? (precision ? 2.8 : 7) : 1.9;
+    // 원거리 AUTO 후퇴 시간: 붙은 적이 없을 때만 천천히 회복한다. 계속 붙어 있으면 상한에 머물러 제자리 공격을 이어 간다.
+    const close = this.def.ranged && d < want - 3;
+    if (!close) this._autoBackT = Math.max(0, (this._autoBackT || 0) - dt * .5);
     if (this.state === 'idle' || this.state === 'move') {
       // 스킬 우선: 적이 3마리 이상 뭉쳤을 때 광역기 우선
       const cluster = list.reduce((a, x) => a + (x.distTo(e) < 4.5 ? 1 : 0), 0);
@@ -618,20 +624,43 @@ export class Player extends Actor {
         if (fd) { out.x = fd[0]; out.y = fd[1]; }
         else { const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; }
       }
-      else if (this.def.ranged && d < want - 3) { const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = -dx / l; out.y = -dz / l; }
+      else if (close && (this._autoBackT || 0) < AUTO_RANGED_RETREAT_SEC && this.autoBackStep(e, out)) this._autoBackT = (this._autoBackT || 0) + dt;
       else this.game.input.press('attack');
     } else if (!precision && this.state === 'attack' && d < want + 2.5) this.game.input.press('attack');   // 사거리 밖(물러서는 원거리 몹)이면 콤보를 끊고 이동으로 돌아간다 — 안 끊으면 허공 콤보가 영원히 이어진다
-    // 예고 회피 — 콤보 중에도 타격이 끝났으면 캔슬해서 구른다. 보스·엘리트의 큰 예고는 거의 확실히, 잡몹은 절반쯤 (적 위협 회전: 콤보 중 회피 불가라 보스전에서 HP 의 30% 를 그냥 맞았다)
-    if (this.state === 'idle' || this.state === 'move' || (this.state === 'attack' && this.hitDone)) {
-      const threat = list.find((x) => x.telegraph > 0 && this.distTo(x) < (x.isBoss ? 5.5 : x.isElite ? 5 : 4));
-      // 쿨타임이 없어도 같은 예고 하나에는 실제로 한 번 구른 뒤 다시 구르지 않는다. 무적 중이면 다시 구르지 않는다.
+    // 예고 회피 — 콤보 중에도 지금 캔슬할 수 있는 프레임이면 구른다. 보스·엘리트의 큰 예고는 거의 확실히, 잡몹은 절반쯤 (적 위협 회전: 콤보 중 회피 불가라 보스전에서 HP 의 30% 를 그냥 맞았다)
+    // 캔슬 창 밖에서 누르면 회피 입력 버퍼가 나중에 굴려 무적이 타격과 어긋난다. 그래서 지금 바로 구를 수 있을 때만 판단한다.
+    // 회피 무적(DODGE_INVULN_SEC)은 구르기보다 짧다. 실제 타격까지 남은 시간이 그 창 안일 때만 눌러야 구르기가 피해를 막는다.
+    // 이 프레임 입력 뒤 Player.update가 무적을, Enemy.update가 예고를 같은 dt씩 줄이므로 한 프레임을 남긴다.
+    // 타격 정지로 짧아진 프레임 다음에는 실제 프레임 길이로 돌아오므로 남길 몫은 실제 프레임 길이(dt/scale)다.
+    if (this.state === 'idle' || this.state === 'move' || this.state === 'attack') {
       const now = this.game.elapsed || 0;
-      const repeat = threat && threat === this._autoDodgeFrom && now < this._autoDodgeUntil;
-      if (threat && !repeat && !(this.invuln > 0) && (this.dodgeCd || 0) <= 0 && Math.random() < dt * (threat.isBoss || threat.isElite ? 9 : 3)) {
-        this.game.input.press('dodge'); this._autoDodgeThreat = threat;
+      const clock = this.game.timeCtl, frameDt = clock?.scale > 0 ? dt / clock.scale : dt;
+      let threat = null, lead = Infinity;
+      for (const x of list) {
+        if (!(x.telegraph > 0) || this.distTo(x) >= (x.isBoss ? 5.5 : x.isElite ? 5 : 4)) continue;
+        // 쿨타임이 없어도 같은 예고 하나에는 실제로 한 번 구른 뒤 다시 구르지 않는다.
+        if (x === this._autoDodgeFrom && now < this._autoDodgeUntil) continue;
+        const t = enemyImpactIn(x, this);
+        if (t < lead) { lead = t; threat = x; }
+      }
+      // 무적 중이면 다시 구르지 않는다. 확률은 무적 창 안에서만 쓴다(잡몹 약 절반, 보스·엘리트 약 9할).
+      if (threat && lead + frameDt < DODGE_INVULN_SEC && (this.state !== 'attack' || this.canDodgeCancel()) &&
+        !(this.invuln > 0) && (this.dodgeCd || 0) <= 0 && Math.random() < dt * (threat.isBoss || threat.isElite ? 9 : 3)) {
+        this.game.input.press('dodge'); this._autoDodgeThreat = threat; this._autoDodgeLead = lead;
       }
     }
     return out;
+  }
+  /** 원거리 AUTO의 후퇴 한 걸음. 몸 길이만큼 뒤에 몸이 그대로 들어가지 않으면(World.resolve가 막거나 벽을 따라 미끄러뜨릴 자리) 물러서지 않는다. */
+  autoBackStep(e, out) {
+    const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1, ux = -dx / l, uz = -dz / l;
+    const W = this.game.world;
+    if (W) {
+      // Actor.update의 World.resolve(반경 0.8배)가 그대로 받아들이는 자리인지 같은 네 점으로 본다(프레임 할당 없음).
+      const r = this.radius * 0.8, step = r * 2, tx = this.pos.x + ux * step, tz = this.pos.z + uz * step;
+      if (!(W.walkable(tx + r, tz) && W.walkable(tx - r, tz) && W.walkable(tx, tz + r) && W.walkable(tx, tz - r))) return false;
+    }
+    out.x = ux; out.y = uz; return true;
   }
   /** 적이 없으면 다음 목표 방으로 이동 (보스 발견 시 보스방 우선) */
   autoExplore(dt) {

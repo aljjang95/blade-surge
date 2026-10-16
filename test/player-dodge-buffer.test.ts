@@ -5,6 +5,7 @@ import { Player } from '../src/game/player.js';
 import { Battle } from '../src/game/battle-base.js';
 import { HEROES } from '../src/data/heroes.js';
 import { DODGE_COOLDOWN_SEC, DODGE_INVULN_SEC } from '../src/game/progression.js';
+import { ENEMY_BOLT, HOSTILE_PROJECTILE_REACH, enemyImpactIn } from '../src/game/enemies.js';
 import { createCombatFlowFixture, loadCombatFlowRuntime, spawnCombatFlowEnemy, stepCombatFlow } from '../tools/combat-flow-sim.mjs';
 
 const runtime = await loadCombatFlowRuntime();
@@ -446,16 +447,131 @@ test('회피 연타는 3초 동안 매 구르기 사이에 맞을 수 있는 프
 
 test('AUTO는 쿨타임 없이도 같은 예고 하나에 한 번만 구르고 무적 중에는 다시 구르지 않는다', () => {
   const f = fixture(), p: any = f.player, dt = 1 / 60, random = Math.random;
-  const threat = spawnCombatFlowEnemy(f, p.pos.x + 2, p.pos.z, { telegraph: 1, state: 'attack', isElite: true });
+  // 실제 타격까지 0.2초 남은 정예 공격(회피 무적 0.26초 안). 예고가 이보다 이르면 아래 타이밍 테스트가 본다.
+  const threat = spawnCombatFlowEnemy(f, p.pos.x + 2, p.pos.z, { telegraph: .2, state: 'attack', isElite: true, attackDur: 1, hitAt: .5, stateT: .3 });
   Math.random = () => 0;
   try {
     // 스킬 우선 분기가 먼저 반환하지 않게 스킬 자원을 비운다(회피 판단만 본다).
     p.auto = true; f.game.elapsed = 10; p.mp = 0; p.ult = 0; p.cds = p.cds.map(() => 99);
+    expect(enemyImpactIn(threat, p)).toBeCloseTo(.2, 9);
     p.autoMove(dt); expect(f.game.input.queue.filter((n: string) => n === 'dodge')).toHaveLength(1);
     f.game.input.clear(); p.dodge(null);
     p.state = 'idle'; p.autoMove(dt); expect(f.game.input.queue).not.toContain('dodge');
-    p.invuln = 0; f.game.elapsed = 10.5; p.autoMove(dt); expect(f.game.input.queue).not.toContain('dodge');
+    // 같은 타격은 그 시각(+0.15초)까지 다시 피하지 않는다.
+    p.invuln = 0; f.game.elapsed = 10.3; p.autoMove(dt); expect(f.game.input.queue).not.toContain('dodge');
     // 그 예고가 끝난 뒤의 새 예고에는 다시 반응한다.
-    f.game.elapsed = 11.3; p.autoMove(dt); expect(f.game.input.queue).toContain('dodge');
+    f.game.elapsed = 10.4; p.autoMove(dt); expect(f.game.input.queue).toContain('dodge');
   } finally { Math.random = random; threat.mobRole?.dispose?.(); }
+});
+
+// 실제 정예 공격 한 번을 Enemy.update로 진행시키며 AUTO가 언제 구르는지 본다. 확률 문은 0으로 고정해 '언제'만 남긴다.
+function eliteStrike(heroId: string, fps: number, auto: boolean) {
+  const f = fixture(heroId), p: any = f.player, dt = 1 / fps, random = Math.random;
+  const enemy: any = spawnCombatFlowEnemy(f, p.pos.x + 1.6, p.pos.z, { id: 'elite_yeti', isElite: true, hp: 1e7, maxHp: 1e7, atkCd: 99 });
+  enemy.yaw = Math.atan2(p.pos.x - enemy.pos.x, p.pos.z - enemy.pos.z);
+  p.auto = auto; p.mp = 0; p.ult = 0; p.cds = p.cds.map(() => 99);
+  try {
+    Math.random = () => .5; enemy.startAttack(1.6);   // 0.3 미만이면 정예 회전기가 된다. 기본 정예 타격을 고른다.
+    expect(enemy.state).toBe('attack'); expect(enemy.special).toBe(null);
+    expect(enemy.hitAt * enemy.attackDur).toBeGreaterThan(.6);
+    Math.random = () => 0;
+    const starts: number[] = []; let early = 0, strike: any = null;
+    for (let i = 0; i < fps * 2 && !strike; i++) {
+      const lead = enemyImpactIn(enemy, p), wasDodge = p.state === 'dodge', hp = p.hp, done = enemy.attackDone;
+      const ready = p.state === 'idle' || p.state === 'move' || (p.state === 'attack' && p.canDodgeCancel());
+      stepCombatFlow(f, dt);
+      if (p.state === 'dodge' && !wasDodge) starts.push(lead);
+      else if (ready && lead > .4) early++;
+      if (!done && enemy.attackDone) strike = { lost: hp - p.hp, invuln: p.invuln };
+    }
+    return { starts, early, strike, dt };
+  } finally { Math.random = random; }
+}
+
+test('AUTO는 실제 타격까지 0.4초 넘게 남은 정예 예고에는 구르지 않고, 남은 시간이 회피 무적 안에 들어온 뒤 한 번 굴러 그 타격을 막는다', () => {
+  // 대조: 같은 정예 타격을 가만히 맞으면 실제로 피해가 들어오는 위치·방향이다.
+  const still = eliteStrike('knight', 60, false);
+  expect(still.starts).toHaveLength(0); expect(still.strike.lost).toBeGreaterThan(0);
+  for (const heroId of ['knight', 'mage']) for (const fps of [30, 60, 120]) {
+    const { starts, early, strike, dt } = eliteStrike(heroId, fps, true);
+    // 구를 수 있는 프레임(대기·이동·공격 캔슬 창)에 남은 시간이 0.4초 넘는 예고가 보였지만 구르지 않았다.
+    expect(early).toBeGreaterThan(0);
+    expect(starts).toHaveLength(1);
+    expect(starts[0] + dt).toBeLessThan(DODGE_INVULN_SEC);
+    // 그 타격 순간 회피 무적이 남아 있었고 HP는 줄지 않았다.
+    expect(strike).not.toBeNull(); expect(strike.invuln).toBeGreaterThan(0); expect(strike.lost).toBe(0);
+  }
+});
+
+test('예고 링과 실제 타격 시각이 다른 공격은 실제 타격까지의 시간으로 판단한다(돌진·탄환·자폭·지원 시전)', () => {
+  const f = fixture('mage'), p: any = f.player;
+  // 돌진: 예고는 0.45 지점에서 끝나지만 타격은 0.85 지점이다.
+  const dash: any = spawnCombatFlowEnemy(f, p.pos.x + 3, p.pos.z, { state: 'attack', special: 'dash', attackDur: 1, hitAt: .85, stateT: .3, telegraph: .15 });
+  expect(enemyImpactIn(dash, p)).toBeCloseTo(.55, 9);
+  // 원거리 탄환: 발사까지 남은 시간에 실제 비행 거리(총구 0.8, 탄 반경, 접촉 0.6)/속도를 더한다.
+  const mage: any = spawnCombatFlowEnemy(f, p.pos.x + 3.5, p.pos.z, { id: 'skel_mage', state: 'attack', attackDur: 2, hitAt: .5, stateT: .9, telegraph: .1 });
+  expect(enemyImpactIn(mage, p)).toBeCloseTo(.1 + (3.5 - .8 - ENEMY_BOLT.radius - HOSTILE_PROJECTILE_REACH) / ENEMY_BOLT.speed, 9);
+  // 자폭: 도화선 0.7초 중 남은 시간.
+  const bomb: any = spawnCombatFlowEnemy(f, p.pos.x - 2, p.pos.z, { id: 'bomb_slime', fuse: .5, telegraph: .7 });
+  expect(enemyImpactIn(bomb, p)).toBeCloseTo(.2, 9);
+  // 지원 치유 시전: 예고 링은 있지만 영웅을 치지 않으므로 AUTO가 구를 대상이 아니다(이전 공격의 hitAt이 남아 있어도).
+  const healer: any = spawnCombatFlowEnemy(f, p.pos.x, p.pos.z + 2, { id: 'skel_priest', state: 'attack', supportCastKind: 'heal', special: 'support_heal', telegraph: .2, attackDur: 1, hitAt: .5, stateT: .4 });
+  expect(enemyImpactIn(healer, p)).toBe(Infinity);
+  p.auto = true; p.mp = 0; p.ult = 0; p.cds = p.cds.map(() => 99);
+  f.game.enemies = [healer]; const random = Math.random; Math.random = () => 0;
+  try { p.autoMove(1 / 60); expect(f.game.input.queue).not.toContain('dodge'); } finally { Math.random = random; }
+});
+
+// 원거리 영웅 AUTO 주위에 깨어 있는 근접 3마리를 붙여 두고 실제 Player/Enemy/Floor로 진행한다.
+function rangedPressed(heroId: string, place: (f: any) => { x: number, z: number, away: number }, slowed = false) {
+  const f = fixture(heroId), p: any = f.player, dt = 1 / 60, W = f.game.world, random = Math.random;
+  const at = place(f); p.pos.set(at.x, 0, at.z);
+  p.auto = true; p.mp = 0; p.ult = 0; p.cds = p.cds.map(() => 99); p.hp = p.maxHp = 1e7;
+  // 따라붙는 무리: 영웅은 실제 감속 상태(이동 0.5배)이고, 적은 공격 차례를 기다리며(큰 atkCd) 사거리 끝까지 계속 쫓는다.
+  if (slowed) { p.slow = .5; p.slowT = 99; }
+  const toward = -at.away;   // 적은 영웅이 물러설 방향의 반대편에 선다
+  const foes = [[2.2, 0], [1.8, 1.3], [1.8, -1.3]].map(([dx, dz]) =>
+    spawnCombatFlowEnemy(f, at.x + toward * dx, at.z + dz, { id: 'bell_wisp', hp: 1e7, maxHp: 1e7, atkCd: slowed ? 99 : .3 }));
+  let firstFight = -1, backFrames = 0, offFloor = 0, fightFrames = 0;
+  Math.random = () => .99;   // AUTO 확률 회피를 끄고 후퇴/공격 판단만 본다
+  try {
+    for (let i = 0; i < 360; i++) {
+      const near = foes.some((e: any) => e.alive && e.distTo(p) < 4), x0 = p.pos.x;
+      stepCombatFlow(f, dt);
+      if (!W.walkable(p.pos.x, p.pos.z)) offFloor++;
+      if (p.state === 'attack' || p.state === 'skill') { fightFrames++; if (firstFight < 0) firstFight = i * dt; }
+      if (near && p.state === 'move' && (p.pos.x - x0) * at.away > 0) backFrames++;
+    }
+  } finally { Math.random = random; }
+  return { firstFight, backSec: backFrames * dt, offFloor, fightSec: fightFrames * dt };
+}
+
+test('원거리 AUTO는 따라붙는 근접 무리에게서 끝없이 물러서지 않는다: 1.5초 안에 공격하고 후퇴는 상한을 넘지 않는다', () => {
+  for (const heroId of ['mage', 'ranger']) for (const slowed of [false, true]) {
+    const r = rangedPressed(heroId, f => ({ x: f.room.x, z: f.room.z, away: 1 }), slowed);
+    expect(r.firstFight).toBeGreaterThanOrEqual(0); expect(r.firstFight).toBeLessThan(1.5);
+    expect(r.backSec).toBeLessThanOrEqual(1.2 + 2 / 60);
+    expect(r.offFloor).toBe(0);
+    expect(r.fightSec).toBeGreaterThan(3);
+  }
+});
+
+test('원거리 AUTO는 등 뒤가 실제 Floor 벽이면 벽으로 밀지 않고 바로 그 자리에서 공격한다', () => {
+  for (const heroId of ['mage', 'ranger']) {
+    const r = rangedPressed(heroId, f => {
+      const W = f.game.world, room = f.room;
+      // 방 중심에서 동쪽으로 실제 마스크가 끝나는 x. 문이 없는 벽 구간(위아래 1.5까지 같은 벽)을 고른다.
+      const wallX = (z: number) => { let x = room.x; while (W.walkable(x, z) && x < room.x + room.w) x += .25; return x; };
+      let z = NaN;
+      for (let dz = 0; dz < room.h / 2 - 2 && Number.isNaN(z); dz += .5)
+        for (const c of [room.z + dz, room.z - dz]) if ([-1.5, 0, 1.5].every(o => wallX(c + o) < room.x + room.w / 2 + 2)) { z = c; break; }
+      expect(Number.isNaN(z)).toBe(false);
+      const x = wallX(z) - 1;
+      expect(W.walkable(x + 1, z)).toBe(false);
+      return { x, z, away: 1 };
+    });
+    expect(r.firstFight).toBeGreaterThanOrEqual(0); expect(r.firstFight).toBeLessThan(.2);
+    expect(r.backSec).toBeLessThan(.1);
+    expect(r.offFloor).toBe(0);
+  }
 });

@@ -4,7 +4,7 @@ import { createArrowVisual, releaseProjectileVisual } from '../engine/arrow-visu
 import { CAMERA_PRESETS } from '../engine/renderer.js';
 import { battleFraming, framingBlend } from '../engine/battle-framing.js';
 import { Player } from './player.js';
-import { Enemy } from './enemies.js';
+import { Enemy, HOSTILE_PROJECTILE_REACH } from './enemies.js';
 import { DropSystem, fieldDropsAllowed } from './drops.js';
 import { Floor, ROOM_TYPE } from './world.js';
 import { ENEMIES } from '../data/stages.js';
@@ -735,7 +735,7 @@ export class Battle {
       let done = p.t >= p.life;
       if (p.hostile) {
         const targets = this.stage?.party ? this.app.party.livingPlayers() : [this.player];
-        for (const pl of targets) if (pl && pl.alive && Math.hypot(pl.pos.x - p.pos.x, pl.pos.z - p.pos.z) < p.radius + 0.6) { pl.hurt(p.dmg, { dirx: p.dir.x, dirz: p.dir.z, kb: p.kb, kind: p.kind }); done = true; this.fx.burst(p.pos, p.color, { n: 12, speed: 5, size: 0.3 }); break; }
+        for (const pl of targets) if (pl && pl.alive && Math.hypot(pl.pos.x - p.pos.x, pl.pos.z - p.pos.z) < p.radius + HOSTILE_PROJECTILE_REACH) { pl.hurt(p.dmg, { dirx: p.dir.x, dirz: p.dir.z, kb: p.kb, kind: p.kind }); done = true; this.fx.burst(p.pos, p.color, { n: 12, speed: 5, size: 0.3 }); break; }
       } else {
         for (const e of this.enemies) {
           if (!e.alive || e.spawning || p.hit.has(e)) continue;
