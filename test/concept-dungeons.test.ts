@@ -81,6 +81,12 @@ test('봉인 중에는 보스 마당만 막히고 다른 방은 모두 닿는다
     const world: any = worldOf(id), ok = reach(world);
     expect(world.sealed).toBe(true);
     for (const room of world.rooms) expect(ok(room.x, room.z)).toBe(room.type !== 'boss');
+    // 봉인을 풀어도 결계 띠 중 방·회랑 밖(물·절벽) 셀은 열리지 않는다: 열린 셀 = 난간 안쪽 형상 그대로.
+    world.unseal();
+    for (let cz = 0; cz < world.rows; cz++) for (let cx = 0; cx < world.cols; cx++) {
+      if (!world.mask[cz * world.cols + cx]) continue;
+      expect(conceptOpen(world, world.minX + cx + .5, world.minZ + cz + .5)).toBe(true);
+    }
   }
 });
 

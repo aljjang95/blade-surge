@@ -155,7 +155,10 @@ export class Floor {
   unseal() {
     if (!this.sealed) return;
     this.sealed = false;
-    for (const g of this.gates) this.fillRect(g, 1);
+    // 컨셉 던전의 원형 보스 마당은 결계 띠(폭 2 × 방 높이)가 원 밖 물·절벽까지 걸친다. 띠를 통째로 열면
+    // 난간 바깥이 걸을 수 있게 되므로 방·회랑 형상으로 다시 채운다. 기존 레이아웃은 원래 동작을 유지한다.
+    if (this.layout?.concept) { this.mask.fill(0); for (const r of [...this.rooms, ...this.corridors]) r.shape === 'disk' ? this.fillDisk(r, 1) : this.fillRect(r, 1); }
+    else for (const g of this.gates) this.fillRect(g, 1);
     this.buildInner(); this._flowKey = null; this._flow = null;
   }
   /** 두 방을 잇는 L자 복도(폭 6) */
