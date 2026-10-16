@@ -2,6 +2,7 @@ import { afterAll, expect, test } from 'bun:test';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { stripImages } from '../tools/art/ranger-runtime-loader.mjs';
@@ -13,8 +14,8 @@ import RANGER_V2 from '../src/data/ranger-library-revision-v2.json';
 import RANGER_V3 from '../src/data/ranger-library-revision-v3.json';
 
 // 재질 마감 CLI(tools/art/finish-library-materials.mjs): 게임 로더 보정과 같은 규칙인지, 잘못된 입력·기존 출력에서 아무것도 쓰지 않는지 실제 프로세스로 확인한다.
-const TOOL = new URL('../tools/art/finish-library-materials.mjs', import.meta.url).pathname;
-const AXIS_V1 = new URL('../public' + ROGUE_AXIS_V1.output.path, import.meta.url).pathname;
+const TOOL = fileURLToPath(new URL('../tools/art/finish-library-materials.mjs', import.meta.url));
+const AXIS_V1 = fileURLToPath(new URL('../public' + ROGUE_AXIS_V1.output.path, import.meta.url));
 const dir = mkdtempSync(join(tmpdir(), 'finish-materials-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 const run = (...args: string[]) => spawnSync(process.execPath, [TOOL, ...args], { encoding: 'utf8' });
