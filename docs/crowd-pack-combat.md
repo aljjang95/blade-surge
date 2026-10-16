@@ -47,3 +47,9 @@
   - 경로 `campaign:N`은 무한의 성 N층을 `BattleBase.start`와 같은 `Floor` 생성으로 돌린다(파티 시드 없음, 개인 층 전용). 그 밖의 경로는 원정 던전 id다.
 - `tools/crowd-combat-qa.mjs`: 실제 브라우저 관찰 전용(SwiftShader·CDP 터치, 실기기 아님). 위치·체력·보상을 강제하지 않고 상태를 읽기만 하며 보고서를 단계마다 저장해 중단돼도 근거가 남는다. `--auto-first`는 AUTO 버튼을 실제로 눌러 첫 방까지 가고, 8m 안 3마리 이상일 때 회피 버튼을 실제로 연타한다. 자연 RAF 시계는 느린 렌더러에서 게임 시간이 거의 흐르지 않으므로 무리 전투 전체 증명에는 통합 단계의 제어 시계(`app.step`)+실제 입력 경로를 따로 쓴다.
 - `test/crowd-pursuit.test.ts`, `test/player-dodge-buffer.test.ts`.
+
+## 컨셉 던전 연동 (2026-10-16 통합)
+
+- 빙하 조수 분지(`glacier_tide_basin`)·석양 황동 채석장(`sunbrass_quarry`)은 카탈로그 항목의 `layout`을 `EXPEDITION_LAYOUTS` 첫 줄(필드 던전과 같은 합치기)로 받는다. 실제 출격 경로 `startExpedition → buildExpeditionStage → Battle.start → buildExpeditionWorld`가 이 레이아웃과 `layout.concept` 지형을 쓴다.
+- 두 곳 모두 `kind:'dungeon'` 개인 원정이라 무리 규칙과 졸개를 그대로 받는다(일반·정예·보물방 3~6명, 시작·보스방 0). 원형 방(`room.shape==='disk'`)의 외접 사각형 모서리는 보행 불가라 `planRoomPacks`의 `world.inner` 거름으로 앵커에서 빠진다.
+- `tools/crowd-flow-sim.mjs`는 `Battle` 생성자를 거치지 않아 `RegionHazards`(조수 범람·도르래 낙석)를 만들지 않는다. 이 시뮬의 새 맵 결과는 방 흐름·무리·경로·봉인만 본 것이고 기믹 피해·밀침 증거가 아니다. 기믹은 실제 빌드 `app.step` 경로로 따로 본다.
