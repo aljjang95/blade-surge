@@ -29,7 +29,7 @@
 #tab-stage .journey-destination-note { font-size: 10px; color: #bdcec0; }
 #tab-stage .exp-next-dungeon { display: flex; align-items: center; gap: 8px; }
 .exp-next-dungeon img { width: 38px; height: 30px; border-radius: 5px; object-fit: cover; }
-#tab-stage .exp-result-footer:has(.exp-next-dungeon) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+#tab-stage .exp-result-footer:has(.exp-next-dungeon) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 #tab-stage .exp-next-dungeon { min-width: 0; }
 .exp-next-dungeon img { flex-shrink: 0; }
 .exp-next-dungeon span { min-width: 0; }

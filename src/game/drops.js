@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { audio } from '../engine/audio.js';
 import { getPart, softCircleTex } from '../engine/assets.js';
-import { RARITY_COLOR, ITEM_BY_ID, ITEM_ICON } from '../data/items.js';
+import { RARITY_COLOR, ITEM_BY_ID } from '../data/items.js';
 import { createLootVisual } from './loot-visual.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 

@@ -1,0 +1,10 @@
+/* 빈 화면 드래그·두 손가락 핀치가 시점의 기본 경로다.
+   옛 시점 패드는 화면에서 숨기고 키보드 포커스를 받을 때만 보여 방향키 회전을 유지한다. */
+#battle-camera-pad:not(:focus-visible),
+#lobby-camera-pad:not(:focus-visible) {
+  position: absolute !important; width: 1px !important; height: 1px !important; min-height: 0 !important;
+  margin: -1px !important; padding: 0 !important; border: 0 !important; overflow: hidden !important;
+  clip-path: inset(50%) !important; white-space: nowrap !important; pointer-events: none !important;
+}
+/* 로비 빈 화면의 두 손가락 입력이 페이지 확대로 넘어가지 않게 한다(전투 #hud·#gl은 이미 none). */
+#tab-home.show { touch-action: none; }

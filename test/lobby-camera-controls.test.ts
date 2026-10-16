@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { LobbyCameraControls, normalizeLobbyCamera, walkingLobbyCameraPosition } from '../src/engine/lobby-camera.js';
+import { LobbyCameraControls, normalizeLobbyCamera, releaseBlockedLobbyInput, walkingLobbyCameraPosition } from '../src/engine/lobby-camera.js';
 import { HubControls } from '../src/engine/hub-controls.js';
 
 class Surface extends EventTarget {
@@ -75,15 +75,76 @@ test('joystick touch and a foreign UI touch never enter the camera gesture', () 
   const joystick = new Surface(), hub = new HubControls({ isActive: app.canWalkHub, joystick, host, document: doc });
   const stick = { ...pointer(8, joystick, true), clientX: 96, clientY: 215 };
   send(joystick, 'pointerdown', stick); send(doc, 'pointerdown', stick);
-  expect(hub.pointer?.id).toBe(8); expect(controls.drag).toBeUndefined();
+  expect(hub.pointer?.id).toBe(8); expect(controls.touch.size).toBe(0);
   send(doc, 'pointerdown', pointer(9, pad, true));
   send(doc, 'pointermove', { ...pointer(9, pad, true), clientX: 180 });
-  expect(controls.value.yaw).toBe(-17); expect(hub.pointer?.id).toBe(8); expect(hub.update().x).toBeGreaterThan(0);
+  // 문턱 8px을 뺀 72px만 회전한다: 19 - 72 * .45
+  expect(controls.value.yaw).toBe(-13); expect(hub.pointer?.id).toBe(8); expect(hub.update().x).toBeGreaterThan(0);
   send(doc, 'pointerup', stick); expect(pad.hasPointerCapture(9)).toBe(true);
   const interact = new Surface(); interact.ui = true;
-  send(doc, 'pointerdown', pointer(10, interact, true)); expect(controls.second).toBeUndefined();
+  send(doc, 'pointerdown', pointer(10, interact, true)); expect(controls.touch.has(10)).toBe(false);
   send(doc, 'pointerup', pointer(9, pad, true));
   expect(hub.pointer?.id).toBe(8); expect(hub.update().x).toBeGreaterThan(0); hub.destroy();
+});
+test('성채 조이스틱을 쥔 채 빈 화면 한 손가락 회전과 두 손가락 핀치가 함께 동작하고 놓을 때 한 번 저장한다', () => {
+  const joystick = new Surface(), hub = new HubControls({ isActive: app.canWalkHub, joystick, host, document: doc });
+  const stick = { ...pointer(8, joystick, true), clientX: 96, clientY: 215 };
+  send(joystick, 'pointerdown', stick); send(doc, 'pointerdown', stick);
+  send(doc, 'pointerdown', pointer(1, world, true));
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 104 }); expect(controls.value.yaw).toBe(19);
+  expect(world.hasPointerCapture(1)).toBe(false);
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 128 });
+  expect(controls.value.yaw).toBe(10); expect(world.hasPointerCapture(1)).toBe(true);
+  expect(send(doc, 'pointerdown', { ...pointer(2, world, true), clientX: 168 }).defaultPrevented).toBe(true);
+  send(doc, 'pointermove', { ...pointer(2, world, true), clientX: 208 });
+  expect(controls.value).toEqual({ yaw: 10, pitch: 11, zoom: 135 });
+  send(doc, 'pointermove', { ...pointer(2, world, true), clientX: 172 }); expect(controls.value.zoom).toBe(110);
+  expect(hub.pointer?.id).toBe(8); expect(hub.update().x).toBeGreaterThan(0); expect(saveCount).toBe(0);
+  send(doc, 'pointerup', { ...pointer(2, world, true), clientX: 172 });
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 128 }); expect(controls.value.yaw).toBe(10);
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 148 }); expect(controls.value.yaw).toBe(1);
+  expect(saveCount).toBe(0);
+  send(doc, 'pointerup', { ...pointer(1, world, true), clientX: 148 });
+  expect(saveCount).toBe(1); expect(world.captures.size).toBe(0); expect(hub.pointer?.id).toBe(8);
+  send(doc, 'pointerdown', pointer(3, world, true)); send(doc, 'pointerup', pointer(3, world, true)); expect(saveCount).toBe(1);
+  hub.destroy();
+});
+test('default selection lobby without town walk still orbits by empty-world touch and keeps modal boundaries', () => {
+  // 걷기 모드가 꺼진 기본 선택 로비: canWalkHub는 거짓이지만 시점 조작은 받아야 한다.
+  app.renderer.lobbyNavigation = false; app.canWalkHub = () => false;
+  app.canOrbitLobby = () => app.mode === 'lobby' && app.meta.tab === 'home' && !app.blocked && app.lobbyVisible;
+  controls.updateActivity(); expect(controls.active).toBe(true);
+  send(doc, 'pointerdown', pointer(1, world, true));
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 128 });
+  expect(controls.value.yaw).toBe(10); expect(world.hasPointerCapture(1)).toBe(true);
+  send(doc, 'pointerup', { ...pointer(1, world, true), clientX: 128 }); expect(saveCount).toBe(1);
+  for (const state of [{ blocked: true }, { lobbyVisible: false }, { mode: 'battle' }]) {
+    Object.assign(app, { blocked: false, lobbyVisible: true, mode: 'lobby' }, state); controls.updateActivity();
+    expect(controls.active).toBe(false);
+    send(doc, 'pointerdown', pointer(5, world, true)); send(doc, 'pointermove', { ...pointer(5, world, true), clientX: 200 });
+    expect(controls.value.yaw).toBe(10); expect(world.captures.size).toBe(0);
+    send(doc, 'pointerup', pointer(5, world, true));
+  }
+});
+test('per-frame lobby input release keeps a selection-lobby camera finger while walking is off, and ends it at a real boundary', () => {
+  // main.js syncHub가 매 프레임 부르는 정리. 이전에는 걷기 불가면 시점 제스처까지 지워 첫 move 전에 손가락이 사라졌다.
+  let hubClears = 0;
+  app.renderer.lobbyNavigation = false; app.canWalkHub = () => false;
+  app.canOrbitLobby = () => app.mode === 'lobby' && !app.blocked && app.lobbyVisible;
+  app.hubControls = { clear: () => { hubClears++; } }; app.lobbyCameraControls = controls;
+  send(doc, 'pointerdown', pointer(1, world, true));
+  releaseBlockedLobbyInput(app);
+  expect(controls.touch.size).toBe(1); expect(controls.touch.mode).toBe('pending');
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 128 });
+  expect(controls.value.yaw).toBe(10);
+  releaseBlockedLobbyInput(app);
+  expect(controls.touch.mode).toBe('rotate'); expect(world.hasPointerCapture(1)).toBe(true);
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 148 }); expect(controls.value.yaw).toBe(1);
+  expect(hubClears).toBe(2); expect(saveCount).toBe(0);
+  // 모달 등으로 시점 조작이 막히면 같은 프레임 정리가 제스처를 끝내고 한 번 저장한다.
+  app.blocked = true; releaseBlockedLobbyInput(app);
+  expect(controls.touch.size).toBe(0); expect(world.captures.size).toBe(0); expect(saveCount).toBe(1);
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 300 }); expect(controls.value.yaw).toBe(1);
 });
 test('two camera-pad touches pinch and the remaining touch continues without an orbit jump', () => {
   send(doc, 'pointerdown', pointer(2, pad, true));

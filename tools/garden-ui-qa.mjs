@@ -161,7 +161,7 @@ try {
         await tap('.oath-nav-menu'); await page.locator('#oath-menu[open]').waitFor();
         row.shortTouchRepeats.push({iteration:i+2,opened:true}); await page.keyboard.press('Escape'); await cdp.detach();
       }
-      await tap('.oath-nav-growth'); await page.locator('#masterworks[open]').waitFor(); await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.querySelector('#masterworks').open); row.steps.push('growth opens and closes');
+      await tap('.oath-nav-menu'); await tap('.mw-open'); await page.locator('#masterworks[open]').waitFor(); await page.keyboard.press('Escape'); await page.waitForFunction(() => !document.querySelector('#masterworks').open); row.steps.push('growth opens and closes');
       await tap('#meta .bottomnav [data-tab="heroes"]'); await page.waitForFunction(() => app.meta.tab === 'heroes');
       row.heroLayout = await page.evaluate(() => { const panel = document.querySelector('#tab-heroes').getBoundingClientRect(), nav = document.querySelector('#meta .bottomnav').getBoundingClientRect(); return { panelBottom: panel.bottom, navTop: nav.top }; });
       assert(row.heroLayout.panelBottom <= row.heroLayout.navTop, 'Hero content overlaps dock'); await shot('heroes');

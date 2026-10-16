@@ -295,7 +295,7 @@ async function healthyPath(page, sc, rec, check, shot, context) {
 async function openDeparture(page, rec) {
   if (await page.locator('#modal.show #m-cancel').isVisible()) { await page.click('#modal.show #m-cancel'); rec.steps.push('modal-cancel-click'); }
   await page.waitForFunction(() => app.commandUI?.visible, null, { timeout: 30000 });
-  await page.click('[data-command-route="glass_garden"]'); rec.steps.push('glass-garden-card-click');
+  await page.click('#citadel-dungeon-prepare'); rec.steps.push('dungeon-landing-prepare-click');
   await page.locator('.citadel-hub-dialog[open]').waitFor({ timeout: 30000 });
 }
 const departureState = page => page.evaluate(() => { const d = document.querySelector('.citadel-hub-dialog[open]');

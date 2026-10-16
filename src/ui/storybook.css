@@ -13,7 +13,8 @@
   --sb-grass: #78d576; --sb-grass-lo: #2f9358; --sb-sky: #74c4f6; --sb-sky-lo: #2f74cb; --sb-coral: #ffa070; --sb-coral-lo: #cf5a3e;
   --sb-frame: linear-gradient(180deg, #fff2a6 0%, #ffc83d 42%, #dd8a26 74%, #a35a14 100%);
   --sb-shadow: 0 5px 0 rgba(20, 12, 4, .3), 0 12px 26px rgba(6, 22, 44, .45);
-  --disp: 'Jua', 'Black Han Sans', 'Noto Sans KR', system-ui, sans-serif;
+  /* 제목도 UI 서체의 Bold 한 벌을 쓴다(typography.css). 둥근 장식 서체는 쓰지 않는다. */
+  --disp: var(--font-title);
   --bg: #0f2c44; --panel: rgba(21, 66, 96, .9); --panel2: rgba(32, 90, 120, .95); --line: rgba(255, 216, 112, .45);
   --txt: #fff8e8; --muted: #c4dce8; --gold: #ffd24d; --gold2: #ff9a1f;
 }
@@ -69,47 +70,7 @@
 :root:root:root #meta .bottomnav .dot, :root:root .dot { background: #ff4766; border: 2px solid #fff; box-shadow: 0 0 6px rgba(255, 60, 100, .8); }
 
 /* ---------- 출격 선택 패널: 금테 양피지 + 보석빛 카드 ---------- */
-:root:root .citadel-command {
-  border: 4px solid transparent;
-  border-radius: 28px;
-  background: linear-gradient(160deg, #fffaf0 0%, #fbeccb 52%, #f3d9a2 100%) padding-box, var(--sb-frame) border-box;
-  box-shadow: 0 6px 0 rgba(120, 70, 12, .35), 0 18px 40px rgba(6, 26, 46, .5), inset 0 0 0 2px rgba(255, 255, 255, .6), inset 0 0 40px rgba(255, 214, 120, .25);
-  color: var(--sb-ink);
-}
-:root:root .citadel-command-heading h1 { font-family: var(--disp); font-weight: 400; letter-spacing: 0; color: #4a2c0e; text-shadow: 0 2px 0 rgba(255, 255, 255, .8); }
-:root:root .citadel-command-kicker { color: #b0701c; font-weight: 900; }
-:root:root .citadel-command-heading p, :root:root .citadel-command-hero span, :root:root .citadel-command-route-heading span, :root:root .citadel-command-route-help { color: #7a5a30; }
-:root:root .citadel-command button {
-  border: 2px solid rgba(255, 255, 255, .85);
-  box-shadow: 0 4px 0 rgba(20, 50, 70, .45), 0 8px 14px rgba(20, 40, 60, .25), inset 0 1px 0 rgba(255, 255, 255, .55);
-  color: #fff;
-  text-shadow: 0 1px 2px rgba(0, 24, 40, .65);
-}
-:root:root .citadel-command button:hover { border-color: #fff; filter: brightness(1.06); }
-:root:root .citadel-command button:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(20, 50, 70, .45), inset 0 1px 0 rgba(255, 255, 255, .45); }
-:root:root .citadel-command .citadel-command-explore, :root:root .citadel-command .citadel-command-hero button {
-  background: linear-gradient(180deg, rgba(255,255,255,.5) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #ffe773, #ffb52c 58%, #f48c14);
-  color: #4a2406; text-shadow: 0 1px 0 rgba(255, 255, 255, .5); border-color: #874a0e;
-}
-:root:root .citadel-command-hero { background: rgba(255, 255, 255, .55); border: 2px solid #e7c27a; border-radius: 20px; }
-:root:root .citadel-command-hero img { border: 3px solid var(--sb-gold); border-radius: 14px; box-shadow: 0 0 0 2px #7a410f; }
-:root:root .citadel-command-hero strong { color: #4a2c0e; }
-:root:root .citadel-command-destinations .citadel-command-journey { background: linear-gradient(180deg, rgba(255,255,255,.28) 0 40%, rgba(255,255,255,0) 41%), linear-gradient(110deg, #3fae78, #1f7f64); border-color: #fff; }
-:root:root .citadel-command-destinations .citadel-command-campaign { background: linear-gradient(180deg, rgba(255,255,255,.3) 0 40%, rgba(255,255,255,0) 41%), linear-gradient(115deg, #ffb066, #e0653d); }
-:root:root .citadel-command-destinations .citadel-command-field, :root:root .citadel-command-destinations button:nth-child(3) { background: linear-gradient(180deg, rgba(255,255,255,.3) 0 40%, rgba(255,255,255,0) 41%), linear-gradient(115deg, #62bcf5, #2f6fcb); }
-:root:root .citadel-command-destinations .citadel-command-arena { background: linear-gradient(180deg, rgba(255,255,255,.3) 0 40%, rgba(255,255,255,0) 41%), linear-gradient(115deg, #b98cf2, #6f45c2); }
-:root:root .citadel-command-destinations strong { color: #fff; font-family: var(--disp); font-weight: 400; text-shadow: 0 2px 0 rgba(0, 30, 50, .45); }
-:root:root .citadel-command-destinations small, :root:root .citadel-command-destinations span { color: #fffbe8; }
-:root:root .citadel-command-destinations .citadel-command-next { color: #fff2a8; }
-:root:root .citadel-command-tools button {
-  background: linear-gradient(180deg, rgba(255,255,255,.28) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #3f9fb8, #22708b);
-}
-:root:root .citadel-command .citadel-command-route { background: linear-gradient(#fffdf4, #fbefd0); color: var(--sb-ink); border: 3px solid #e9c97c; text-shadow: none; box-shadow: 0 4px 0 rgba(150, 100, 30, .35), 0 8px 14px rgba(60, 40, 10, .2); }
-:root:root .citadel-command-route-copy h3 { color: #4a2c0e; font-family: var(--disp); font-weight: 400; }
-:root:root .citadel-command-reward { color: #7a5a30; }
-:root:root .citadel-command-route-status { color: #2f7a46; border-color: #e7cf9a; font-weight: 900; }
-:root:root .citadel-command-route[data-locked='true'] .citadel-command-route-status { color: #8a7a60; }
-:root:root .citadel-command-route-heading h2 { font-family: var(--disp); font-weight: 400; color: #4a2c0e; }
+
 :root:root .citadel-command-return { border: 2px solid transparent; background: linear-gradient(#3b95ad, #1e5f7b) padding-box, var(--sb-frame) border-box; color: #fff; text-shadow: 0 1px 2px rgba(0, 24, 40, .7); }
 
 /* ---------- 마을 알림·카메라 도구 ---------- */
@@ -411,5 +372,5 @@
 /* ---------- 초점·접근성: 금색 포커스 링은 유지하고 눌림 피드백만 부드럽게 ---------- */
 :root:root button:focus-visible { outline: 3px solid #fff4b4; outline-offset: 3px; }
 @media (prefers-reduced-motion: no-preference) {
-  :root:root .btn, :root:root .citadel-command button, :root:root #hud .attack-btn { transition: transform .08s, filter .15s; }
+  :root:root .btn, :root:root #hud .attack-btn { transition: transform .08s, filter .15s; }
 }

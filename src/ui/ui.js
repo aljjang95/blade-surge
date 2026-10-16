@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { audio } from '../engine/audio.js';
-import { ITEM_BY_ID, ITEM_ICON, RARITY_COLOR } from '../data/items.js';
+import { ITEM_BY_ID, RARITY_COLOR } from '../data/items.js';
 import { REWARD_LABEL } from '../game/economy.js';
 import { Minimap } from './minimap.js';
 import { CombatNoticeQueue } from './combat-notices.js';
@@ -16,6 +16,7 @@ import { combatHudAnimationRegion } from '../engine/combat-feedback.js';
 import './campaign.css';
 import './combo-feedback.css';
 import './skill-feedback.css';
+import { itemIconHtml } from './item-presentation.js';
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => Math.floor(n).toLocaleString('ko-KR');
@@ -60,7 +61,7 @@ export class UI {
     const cameraControls = document.createElement('div');
     cameraControls.id = 'battle-camera-controls';
     cameraControls.setAttribute('aria-label', '전투 시점 조작');
-    cameraControls.innerHTML = '<div id="battle-camera-pad" tabindex="0" role="group" aria-label="드래그 또는 방향키로 시점 회전, 더하기 빼기로 확대 축소, Home으로 복원"><span>시점 회전</span><small>드래그 ↔ ↕</small></div><div class="battle-camera-buttons"><button type="button" id="battle-camera-zoom-in" aria-label="시점 확대">+</button><button type="button" id="battle-camera-reset">복원</button><button type="button" id="battle-camera-zoom-out" aria-label="시점 축소">−</button></div>';
+    cameraControls.innerHTML = '<div id="battle-camera-pad" tabindex="0" role="group" aria-label="드래그 또는 방향키로 시점 회전, 더하기 빼기로 확대 축소, Home으로 복원"><span>시점 회전</span><small>방향키 ← → ↑ ↓</small></div><div class="battle-camera-buttons"><button type="button" id="battle-camera-zoom-in" aria-label="시점 확대">+</button><button type="button" id="battle-camera-reset">복원</button><button type="button" id="battle-camera-zoom-out" aria-label="시점 축소">−</button></div>';
     this.el.hud.append(cameraControls);
     // 타격마다 읽지 않고 레이아웃 변경 때 실제 HUD·조작 영역을 저장한다.
     this.combatTextRegionEls = [
@@ -197,14 +198,16 @@ export class UI {
   toast(msg, cls = '', options = {}) { if (this.el.hud.classList.contains('show')) { this.combatNotices.push(msg, cls, options); return; } const d = document.createElement('div'); d.className = 'toast ' + cls; d.innerHTML = msg; this.el.toast.appendChild(d); setTimeout(() => d.remove(), 2200); while (this.el.toast.children.length > 4) this.el.toast.firstChild.remove(); }
   flyReward(worldPos, text, camera, kind = 'gold') { if (this.app.battle?.result || this.el.result.classList.contains('show') || document.querySelectorAll('.reward-fly').length > 8) return; const v = new THREE.Vector3().copy(worldPos).setY(1.5).project(camera); if (v.z > 1) return; const d = document.createElement('div'); d.className = 'reward-fly'; d.textContent = text; d.style.color = kind === 'stone' ? '#4cc3ff' : 'var(--gold)'; d.style.left = ((v.x * 0.5 + 0.5) * innerWidth) + 'px'; d.style.top = ((-v.y * 0.5 + 0.5) * innerHeight) + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 1000); }
   /** 필드 득템 팝업 */
+  /** 전리품 그림은 지금 싸운(출전) 영웅이 실제로 드는 형태로 그린다. */
+  lootHeroId() { return this.app.battle?.player?.def?.id ?? this.app.eco.s.selected; }
   lootPopup(def, rarity) {
     if (this.app.battle?.result || this.el.result.classList.contains('show')) return;
     while (this.lootLayer.children.length >= 2) this.lootLayer.firstChild.remove();
     const d = document.createElement('div'); d.className = 'loot-pop'; d.style.setProperty('--rc', RARITY_COLOR[rarity] || '#9aa3b2');
-    d.innerHTML = `<span class="lp-rar">${rarity}</span><img src="${ITEM_ICON(def)}" onerror="this.remove()"><span>${def.name}</span>`;
+    d.innerHTML = `<span class="lp-rar">${rarity}</span>${itemIconHtml(def, '', { heroId: this.lootHeroId() })}<span>${def.name}</span>`;
     this.lootLayer.appendChild(d); setTimeout(() => d.remove(), 1250);
   }
-  rewardHtml(got) { return got.map((g) => { if (g.k === 'item') { const it = ITEM_BY_ID[g.item.id]; return `<span class="reward-chip rar-${it.rarity}" style="border:1px solid"><img src="${ITEM_ICON(it)}" style="width:18px;height:18px" onerror="this.remove()"> ${it.name}</span>`; } const [nm, ic] = REWARD_LABEL[g.k] || [g.k, '']; return `<span class="reward-chip"><img src="${ic}" style="width:18px;height:18px" onerror="this.remove()"> ${nm} +${fmt(g.n)}</span>`; }).join(''); }
+  rewardHtml(got) { return got.map((g) => { if (g.k === 'item') { const it = ITEM_BY_ID[g.item.id]; return `<span class="reward-chip rar-${it.rarity}" style="border:1px solid">${itemIconHtml(it, ' style="width:18px;height:18px"', { heroId: this.lootHeroId() })} ${it.name}</span>`; } const [nm, ic] = REWARD_LABEL[g.k] || [g.k, '']; return `<span class="reward-chip"><img src="${ic}" style="width:18px;height:18px" onerror="this.remove()"> ${nm} +${fmt(g.n)}</span>`; }).join(''); }
   rewardToast(got, cls = 'gold') { if (got && got.length) this.toast(this.rewardHtml(got), cls); }
 
   // ---------------- 모달 ----------------
@@ -564,7 +567,7 @@ export class UI {
             this.app.meta.openTab('heroes'); this.app.meta.showItem(x.it.uid, heroId);
           };
         }
-        if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}`; d.innerHTML = `<img src="${ITEM_ICON(def)}" onerror="this.remove()"><div class="nm">${def.name}</div>`; if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); }
+        if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}`; d.innerHTML = `${itemIconHtml(def, '', { heroId: this.lootHeroId() })}<div class="nm">${def.name}</div>`; if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); }
         else { const [nm, ic] = REWARD_LABEL[x.g.k] || [x.g.k, '']; d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(x.g.n)}</span><div class="nm">${x.g.label || nm}</div>`; audio.pick('coin', 2, { vol: 0.5 }); }
         loot.appendChild(d);
       }, 300 + Math.min(i * 60, 600)));

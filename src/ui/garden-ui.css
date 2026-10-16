@@ -4,27 +4,6 @@
   --garden-cream: #fff1d2;
   --garden-gold: #e7c681;
 }
-/* 선택형 출격 화면도 수첩 재질을 쓰고 떠 있는 독의 공간을 남긴다. */
-.oath-visual .citadel-command {
-  top: calc(88px + var(--sat));
-  bottom: calc(110px + var(--sab));
-  border: 1px solid #dac48e;
-  border-radius: 28px;
-  background: linear-gradient(125deg, #fff5dfee, #e9dcbfee);
-  color: #29453a;
-}
-.oath-visual .citadel-command-heading p,
-.oath-visual .citadel-command-kicker,
-.oath-visual .citadel-command-hero span,
-.oath-visual .citadel-command-route-heading span,
-.oath-visual .citadel-command-route-help { color: #596546; }
-.oath-visual .citadel-command-hero { background: #fff8e477; border-color: #b7bd9277; border-radius: 20px; }
-.oath-visual .citadel-command button { border-radius: 18px; }
-.oath-visual .citadel-command .citadel-command-route { background: #fff8e4; color: #29453a; }
-.oath-visual .citadel-command-reward { color: #465b4e; }
-.oath-visual .citadel-command-route-status { color: #365b3b; border-color: #a0ad8666; }
-.oath-visual .citadel-command-route-copy small { color: #6f6946; }
-.oath-visual .citadel-command-route[data-locked='true'] .citadel-command-route-status { color: #716951; }
 .oath-visual .citadel-command-return { left: calc(190px + var(--sal)); top: calc(80px + var(--sat)); border-radius: 22px; }
 .oath-visual #meta .topbar {
   padding: calc(14px + var(--sat)) max(18px, var(--sar)) 8px max(18px, var(--sal));
@@ -192,8 +171,7 @@
 .oath-visual .oath-menu-grid button { border-radius: 20px; background: #285040; color: #fff1d2; }
 
 @media (orientation: portrait) {
-  .oath-visual .citadel-command { top: calc(74px + var(--sat)); bottom: calc(98px + var(--sab)); }
-  .oath-visual .citadel-command-return { left: 12px; top: calc(140px + var(--sat)); }
+  .oath-visual .citadel-command-return { left: 12px; top: calc(166px + var(--sat)); } /* 세로 걷기의 장소 칩(아래 끝 약 156px) 아래 */
   .oath-visual #meta .topbar { padding: calc(8px + var(--sat)) 8px 8px; gap: 6px; }
   .oath-visual #meta .profile { padding: 3px; }
   .oath-visual #meta .topbar .avatar { width: 38px; height: 38px; }
@@ -213,7 +191,6 @@
   .oath-visual .citadel-hub-active #tab-home #lobby-camera-pad { right: 12px; bottom: calc(206px + var(--sab)); }
 }
 @media (max-height: 560px) and (orientation: landscape) {
-  .oath-visual .citadel-command { top: calc(72px + var(--sat)); bottom: calc(90px + var(--sab)); }
   .oath-visual .citadel-command-return { left: 144px; top: calc(68px + var(--sat)); }
   .oath-visual #meta .topbar { padding-top: calc(8px + var(--sat)); }
   .oath-visual #meta .topbar .avatar { width: 36px; height: 36px; }

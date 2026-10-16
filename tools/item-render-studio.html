@@ -1,0 +1,90 @@
+<!-- 아이템 렌더 스튜디오. 실행: node tools/item-render-studio.mjs [--url http://127.0.0.1:5391] [--only id,id]
+     gear-icon-studio.html 과 같은 카메라·조명·투명 배경·3/4 각도·여백(85%)을 쓴다. 대상은 아직 3D 렌더 아이콘이 없는 장비뿐이다.
+     형상 원본: 무기·반지·신발 = item-forge(gearLook), 방어구 = armor-appearance(기사 casual-v2 리그 바인드 포즈), 병기고 = /models/armory-v1/*.glb -->
+<!doctype html>
+<html lang="ko"><meta charset="utf-8"><link rel="icon" href="data:,"><title>아이템 렌더 스튜디오</title>
+<body style="margin:0;background:#22303c"><script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { ITEM_BY_ID } from '/src/data/items.js';
+import { buildGearModel } from '/src/engine/item-forge.js';
+import { assembleHeroIdentity } from '/src/engine/hero-identity.js';
+import { applyArmorAppearance, removeArmorAppearance } from '/src/game/armor-appearance.js';
+import { itemRenderTargets } from '/src/ui/item-presentation.js';
+
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(768, 768); renderer.setPixelRatio(1); renderer.setClearColor(0, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05; document.body.append(renderer.domElement);
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer), room = new RoomEnvironment();
+scene.environment = pmrem.fromScene(room).texture; room.dispose(); pmrem.dispose();
+scene.add(new THREE.HemisphereLight(0xe9f2ff, 0x324151, 1.25));
+for (const [x, y, z, power] of [[-3, 5, 6, 2.8], [4, 2, -2, 4.5]]) {
+  const light = new THREE.DirectionalLight(0xffffff, power); light.position.set(x, y, z); scene.add(light);
+}
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .01, 100);
+const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
+let armorRig;
+async function armorModel(item) {
+  if (!armorRig) {
+    const [base, casual] = await Promise.all([loader.loadAsync('/models/Knight.glb'), loader.loadAsync('/models/tll/knight-casual-v2.glb')]);
+    armorRig = assembleHeroIdentity(base, casual, 'Knight', 'casual-v2').scene;
+  }
+  applyArmorAppearance(armorRig, { id: 'knight' }, item);
+  armorRig.updateMatrixWorld(true);
+  const group = new THREE.Group(), materials = new Set();
+  armorRig.traverse(node => {
+    if (!node.isMesh || !node.userData.equippedArmor) return;
+    const material = node.material.clone(); materials.add(material);
+    const geometry = node.geometry.clone(), position = geometry.attributes.position, point = new THREE.Vector3();
+    if (node.isSkinnedMesh) for (let i = 0; i < position.count; i++) {
+      point.fromBufferAttribute(position, i); node.applyBoneTransform(i, point); position.setXYZ(i, point.x, point.y, point.z);
+    }
+    geometry.applyMatrix4(node.matrixWorld); geometry.computeVertexNormals();
+    const mesh = new THREE.Mesh(geometry, material); mesh.name = node.name;
+    group.add(mesh);
+  });
+  removeArmorAppearance(armorRig);
+  if (!group.children.length) throw Error(`방어구 메시 없음: ${item.id}`);
+  group.userData.dispose = () => { group.removeFromParent(); group.traverse(node => node.geometry?.dispose()); for (const material of materials) material.dispose(); };
+  return group;
+}
+async function armoryModel(item) {
+  const gltf = await loader.loadAsync(`/models/armory-v1/${item.modelNode}.glb`);
+  const group = gltf.scene; group.updateMatrixWorld(true);
+  group.userData.dispose = () => { group.removeFromParent(); group.traverse(node => { node.geometry?.dispose(); for (const m of [node.material].flat()) m?.dispose?.(); }); };
+  return group;
+}
+const targets = itemRenderTargets(ITEM_BY_ID);
+window.itemRenderTargets = targets;
+window.renderItem = async (id) => {
+  const target = targets.find(entry => entry.id === id); if (!target) throw Error(`렌더 대상 아님: ${id}`);
+  const item = ITEM_BY_ID[id];
+  const model = target.source === 'armory-glb' ? await armoryModel(item) : target.source === 'armor-rig' ? await armorModel(item) : buildGearModel(item);
+  const stage = new THREE.Group(); stage.add(model);
+  if (item.slot === 'weapon') model.rotation.z = -Math.PI / 4;
+  const bounds = new THREE.Box3().setFromObject(stage), center = bounds.getCenter(new THREE.Vector3());
+  stage.position.sub(center); scene.add(stage);
+  const direction = item.slot === 'weapon' ? new THREE.Vector3(.28, .08, 1) : item.slot === 'ring' ? new THREE.Vector3(.5, .42, 1) : new THREE.Vector3(.72, .42, 1);
+  camera.position.copy(direction.normalize().multiplyScalar(5)); camera.lookAt(0, 0, 0); camera.updateMatrixWorld(true);
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  stage.updateMatrixWorld(true);
+  stage.traverse(node => {
+    if (!node.isMesh) return;
+    const positions = node.geometry.attributes.position, point = new THREE.Vector3();
+    for (let i = 0; i < positions.count; i++) {
+      point.fromBufferAttribute(positions, i).applyMatrix4(node.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
+      minX = Math.min(minX, point.x); maxX = Math.max(maxX, point.x); minY = Math.min(minY, point.y); maxY = Math.max(maxY, point.y);
+    }
+  });
+  const extent = Math.max(maxX - minX, maxY - minY) / 2 / .85, cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+  camera.left = cx - extent; camera.right = cx + extent; camera.bottom = cy - extent; camera.top = cy + extent; camera.updateProjectionMatrix();
+  renderer.render(scene, camera);
+  const result = { id, source: target.source, data: renderer.domElement.toDataURL('image/png'), drawCalls: renderer.info.render.calls };
+  model.userData.dispose(); stage.removeFromParent(); return result;
+};
+window.itemRenderReady = true;
+</script></body></html>

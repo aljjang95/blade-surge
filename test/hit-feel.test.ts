@@ -16,7 +16,7 @@ function rendererFixture(extra: Record<string, unknown> = {}) {
     rig: { target: new THREE.Vector3(2, 0, -4), pos: new THREE.Vector3(2, 6.8, 4.4), offset: new THREE.Vector3(0, 6.8, 8.4),
       lookOffset: new THREE.Vector3(0, 1.1, 0), side: 0, mode: 'battle', fov: 43, lag: 7.5, trauma: 0, zoom: 0, base: { y: 6.8, z: 8.4, fov: 43 } },
     battleCamera: { yaw: 0, pitch: 0, zoom: 100 }, battleOcclusion: { update: noop }, time: 0, flash: 0, aberr: 0, radial: 0, desat: 0,
-    quality: 'high', shakeEnabled: true, postFxEnabled: true,
+    quality: 'high', postFxEnabled: true,
     u: Object.fromEntries(['uFlash', 'uAberr', 'uRadial', 'uDesat', 'uTime'].map(key => [key, { value: 0 }])), ...extra,
   });
   r.u.uFlashColor = { value: new THREE.Color() };
@@ -24,45 +24,28 @@ function rendererFixture(extra: Record<string, unknown> = {}) {
   return r;
 }
 
-test('카메라 킥은 한 방향으로 밀렸다가 진동 없이 감쇠해 원래 구도로 정확히 돌아온다', () => {
-  const r = rendererFixture();
-  const settled = r.camera.position.clone(), rigPos = r.rig.pos.clone();
-  r.shake(.8, 1, 0);
-  const offsets: number[] = [];
-  for (let i = 0; i < 40; i++) { r.update(1 / 60, 1 / 60); offsets.push(r.camera.position.distanceTo(r.rig.pos)); }
-  expect(offsets[0]).toBeGreaterThan(.3);                      // 실제로 보이는 변위
-  expect(offsets[0]).toBeLessThan(.9);                         // 프레이밍을 깨지 않는 상한
-  for (let i = 1; i < offsets.length; i++) expect(offsets[i]).toBeLessThanOrEqual(offsets[i - 1] + 1e-9);   // 단조 감쇠, 진동 없음
-  expect(offsets.at(-1)).toBe(0);
-  expect(r.camera.position.distanceTo(settled)).toBeLessThan(1e-6);
-  expect(r.rig.pos.distanceTo(rigPos)).toBeLessThan(1e-6);     // 킥이 추적 위치(rig.pos)에 섞이지 않는다
+test('타격 shake·punch 호출은 카메라 위치·FOV를 한 프레임도 바꾸지 않는다(줌 펄스·킥 없음)', () => {
+  const r = rendererFixture(), quiet = rendererFixture();
+  const fov = r.camera.fov;
+  for (let i = 0; i < 40; i++) {
+    if (i % 3 === 0) { r.shake(1, 1, 0); r.punch(2); }
+    r.update(1 / 60, 1 / 60); quiet.update(1 / 60, 1 / 60);
+    expect(r.camera.position.distanceTo(r.rig.pos)).toBe(0);
+    expect(r.camera.position.distanceTo(quiet.camera.position)).toBe(0);
+    expect(r.camera.fov).toBe(fov);
+  }
 });
 
-test('킥은 같은 입력에서 항상 같고 난수를 쓰지 않으며, 더 큰 킥이 진행 중이면 방향을 바꾸지 않는다', () => {
-  const a = rendererFixture(), b = rendererFixture(), random = Math.random; let calls = 0;
-  Math.random = () => { calls++; return .5; };
-  try {
-    a.shake(.6, 1, 0); b.shake(.6, 1, 0); a.update(1 / 60, 1 / 60); b.update(1 / 60, 1 / 60);
-    expect(a.camera.position.equals(b.camera.position)).toBe(true);
-    a.shake(.2, 0, 1);   // 약한 킥은 진행 중인 큰 킥을 덮지 못한다
-    expect(a.rig.kickX).toBe(1); expect(a.rig.kickZ).toBe(0); expect(a.rig.trauma).toBeGreaterThan(.5);
-    expect(calls).toBe(0);
-  } finally { Math.random = random; }
+test('사용자 드래그·핀치 시점 값은 연속 타격 중에도 그대로 반영되고 되튀지 않는다', () => {
+  const user = { yaw: 35, pitch: 8, zoom: 125 };
+  const hit = rendererFixture({ battleCamera: { ...user } }), calm = rendererFixture({ battleCamera: { ...user } });
+  for (let i = 0; i < 60; i++) { hit.shake(.8, 0, 1); hit.punch(1.5); hit.update(1 / 60, 1 / 60); calm.update(1 / 60, 1 / 60); }
+  expect(hit.battleCamera).toEqual(user);
+  expect(hit.camera.position.distanceTo(calm.camera.position)).toBe(0);
+  expect(hit.camera.fov).toBe(calm.camera.fov);
 });
 
-test('FOV 펀치는 목표 FOV 아래로 줄었다가 원래 값으로 복귀한다', () => {
-  const r = rendererFixture(), base = r.camera.fov;
-  r.punch(1.5); r.update(1 / 60, 1 / 60);
-  expect(r.camera.fov).toBeLessThan(base - 1); expect(r.camera.fov).toBeGreaterThan(base - 3.5);
-  for (let i = 0; i < 60; i++) r.update(1 / 60, 1 / 60);
-  expect(r.camera.fov).toBeCloseTo(base, 6);
-});
-
-test('화면 흔들림을 끄면 킥·펀치가 전혀 적용되지 않고, 동작 줄이기는 색수차·방사형 블러·강한 플래시를 끈다', () => {
-  const off = rendererFixture({ shakeEnabled: false });
-  off.shake(1, 1, 0); off.punch(2); off.update(1 / 60, 1 / 60);
-  expect(off.rig.trauma).toBe(0); expect(off.rig.zoom).toBe(0);
-  expect(off.camera.position.distanceTo(off.rig.pos)).toBe(0);
+test('동작 줄이기는 색수차·방사형 블러·강한 플래시를 끈다', () => {
   const reduced = rendererFixture({ postFxEnabled: false });
   reduced.aberr = 2; reduced.radial = .6; reduced.flashScreen(.9, 0xffffff); reduced.update(1 / 60, 1 / 60);
   expect(reduced.u.uAberr.value).toBe(0); expect(reduced.u.uRadial.value).toBe(0); expect(reduced.u.uFlash.value).toBeLessThanOrEqual(.25);

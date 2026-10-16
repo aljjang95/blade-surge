@@ -1,7 +1,8 @@
 import './style.css';
 import * as THREE from 'three';
 import { Renderer } from './engine/renderer.js';
-import { LobbyCameraControls } from './engine/lobby-camera.js';
+import { LobbyCameraControls, releaseBlockedLobbyInput } from './engine/lobby-camera.js';
+import { bindTouchActivation } from './engine/touch-activation.js';
 import { CameraControls } from './engine/camera-control.js';
 import { setupPwa } from './platform/pwa.js';
 import { AppModeView } from './platform/app-mode.js';
@@ -114,6 +115,8 @@ class App {
     this.canvas.setAttribute('aria-label', '성채와 던전 게임 화면');
     this.lobbyCameraControls = new LobbyCameraControls(this);
     this.cameraControls = new CameraControls(this);
+    // 조이스틱·시점 손가락을 누른 채, 또는 멀티터치 직후 탭하는 전투 핵심 버튼은 실제 터치 탭으로 동작해야 한다.
+    for (const id of ['btn-pause', 'btn-resume', 'btn-auto', 'btn-map', 'btn-boss-shortcut']) bindTouchActivation(document.getElementById(id));
     startup.stage = 'platform';
     this.pwa = isNativeApp() ? null : setupPwa({ canApplyUpdate: () => this.mode === 'lobby' && !this.stageStarting && !this.party?.run });
     if (this.pwa) this.appModeView = new AppModeView(this);
@@ -231,16 +234,19 @@ class App {
       touch: window.matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints > 0 });
     this.renderer.setQuality(q); this.fx.setQuality(q);
     this.renderer.setCameraPreset(st.camera || 'auto');
-    this.renderer.shakeEnabled = this.screenShakeOn();
     this.renderer.postFxEnabled = !this.reducedMotion?.matches;
     this.lobbyCameraControls?.sync();
     this.companionAgent?.syncQuality();
   }
   // ---------- 로비 ----------
-  canWalkHub() {
-    return this.hubWalkMode && this.mode === 'lobby' && this.meta.tab === 'home' && this.lobbyVisible && !this.stageStarting && !this.contextLost &&
+  /** 로비 빈 화면 시점 회전·핀치를 받을 수 있는 상태. 마을 걷기 모드가 아니어도 기본 선택 로비에서 허용한다. */
+  canOrbitLobby() {
+    return this.mode === 'lobby' && this.meta.tab === 'home' && this.lobbyVisible && !this.stageStarting && !this.contextLost &&
       !this.expeditionUI?.opened && !this.companionAgent?.getSnapshot().open &&
       !document.querySelector('dialog[open], #modal.show');
+  }
+  canWalkHub() {
+    return !!this.hubWalkMode && this.canOrbitLobby();
   }
   interactHub(spot) {
     if (!this.canWalkHub()) return false;
@@ -270,7 +276,7 @@ class App {
     this.lobbyCameraControls?.updateActivity();
     if (this.hubUI.visible !== (visible && this.hubWalkMode)) this.hubUI.setVisible(visible && this.hubWalkMode);
     this.commandUI?.setVisible(visible && !this.hubWalkMode, visible && this.hubWalkMode);
-    if (!this.canWalkHub()) this.citadel.clearInput();
+    releaseBlockedLobbyInput(this);
     this.hubUI.update(this.hubMovement.nearest, { blocked: !this.canWalkHub() });
   }
   async showcaseHero(id, first = false) {

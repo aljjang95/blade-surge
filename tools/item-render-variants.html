@@ -1,0 +1,69 @@
+<!-- 영웅 형태 아이템 렌더 스튜디오. 실행: node tools/item-render-variants.mjs [--url http://127.0.0.1:5497] [--only key,key] [--review 폴더] [--verify-canonical]
+     item-render-studio.html · gear-icon-studio.html 과 같은 768px 투명 렌더 · RoomEnvironment · 반구광 1 + 방향광 2 · 직교 카메라 · 3/4 시선 · 85% 프레이밍.
+     모델은 선택 3D 미리보기와 같은 src/ui/item-visual-model.js(buildItemVisualModel)로 만든다. 대상은 itemFormRenderTargets(실제 LOOKS 표에서 도달 가능한 조합)뿐이다. -->
+<!doctype html>
+<html lang="ko"><meta charset="utf-8"><link rel="icon" href="data:,"><title>영웅 형태 아이템 렌더 스튜디오</title>
+<body style="margin:0;background:#22303c"><script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { ITEM_BY_ID } from '/src/data/items.js';
+import { itemVisual } from '/src/ui/item-presentation.js';
+import { itemFormRenderTargets, itemFormHeroIds, resolveItemForm } from '/src/ui/item-visual-forms.js';
+import { buildItemVisualModel, itemViewDirection } from '/src/ui/item-visual-model.js';
+
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, preserveDrawingBuffer: true });
+renderer.setSize(768, 768); renderer.setPixelRatio(1); renderer.setClearColor(0, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace; renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05; document.body.append(renderer.domElement);
+const scene = new THREE.Scene();
+const pmrem = new THREE.PMREMGenerator(renderer), room = new RoomEnvironment();
+scene.environment = pmrem.fromScene(room).texture; room.dispose(); pmrem.dispose();
+scene.add(new THREE.HemisphereLight(0xe9f2ff, 0x324151, 1.25));
+for (const [x, y, z, power] of [[-3, 5, 6, 2.8], [4, 2, -2, 4.5]]) {
+  const light = new THREE.DirectionalLight(0xffffff, power); light.position.set(x, y, z); scene.add(light);
+}
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, .01, 100);
+
+async function shoot(item, form) {
+  const model = await buildItemVisualModel(item, form);
+  const stage = new THREE.Group(); stage.add(model);
+  const bounds = new THREE.Box3().setFromObject(stage), center = bounds.getCenter(new THREE.Vector3());
+  stage.position.sub(center); scene.add(stage);
+  camera.position.copy(itemViewDirection(item.slot).multiplyScalar(5)); camera.lookAt(0, 0, 0); camera.updateMatrixWorld(true);
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  stage.updateMatrixWorld(true);
+  const meshes = [];
+  stage.traverse(node => {
+    if (!node.isMesh) return;
+    meshes.push(node.name);
+    const positions = node.geometry.attributes.position, point = new THREE.Vector3();
+    for (let i = 0; i < positions.count; i++) {
+      point.fromBufferAttribute(positions, i).applyMatrix4(node.matrixWorld).applyMatrix4(camera.matrixWorldInverse);
+      minX = Math.min(minX, point.x); maxX = Math.max(maxX, point.x); minY = Math.min(minY, point.y); maxY = Math.max(maxY, point.y);
+    }
+  });
+  const extent = Math.max(maxX - minX, maxY - minY) / 2 / .85, cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+  camera.left = cx - extent; camera.right = cx + extent; camera.bottom = cy - extent; camera.top = cy + extent; camera.updateProjectionMatrix();
+  renderer.render(scene, camera);
+  const result = { data: renderer.domElement.toDataURL('image/png'), drawCalls: renderer.info.render.calls, meshes, model: model.userData.itemVisual };
+  model.userData.dispose(); stage.removeFromParent();
+  return result;
+}
+
+const targets = itemFormRenderTargets(ITEM_BY_ID);
+window.itemFormTargets = targets;
+window.renderItemForm = async (key) => {
+  const target = targets.find(entry => entry.key === key); if (!target) throw Error('렌더 대상 아님: ' + key);
+  const item = ITEM_BY_ID[target.id];
+  // 같은 key 를 쓰는 모든 영웅의 해석이 같아야 한 장을 공유할 수 있다.
+  const forms = target.heroes.map(heroId => resolveItemForm(item, heroId));
+  if (forms.some(form => form.renderKey !== key || form.formKey !== forms[0].formKey)) throw Error('영웅별 형태 해석 불일치: ' + key);
+  return { key, ...(await shoot(item, forms[0])) };
+};
+// 기존 썸네일 재현 확인용(쓰지 않는다): 문맥 없는 기본 형태를 같은 장면으로 다시 찍는다.
+window.renderCanonical = async (id) => ({ id, ...(await shoot(ITEM_BY_ID[id], resolveItemForm(ITEM_BY_ID[id]))) });
+// 검수판용: 영웅별로 화면이 실제로 고르는 그림 URL.
+window.heroIconMatrix = (ids) => ids.map(id => ({ id, canonical: itemVisual(ITEM_BY_ID[id]).iconUrl,
+  heroes: Object.fromEntries(itemFormHeroIds().map(heroId => { const v = itemVisual(ITEM_BY_ID[id], { heroId }); return [heroId, { url: v.iconUrl, label: v.formLabel, caption: v.caption }]; })) }));
+window.itemRenderReady = true;
+</script></body></html>

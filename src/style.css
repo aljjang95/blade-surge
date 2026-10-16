@@ -1,12 +1,14 @@
-/* 동화풍 스킨은 별도 파일에 둔다(:root 를 겹쳐 쓴 선택자라 로드 순서와 무관하게 이긴다). */
+/* 서체 · 글자 토큰 정본을 먼저 읽는다. 동화풍 스킨은 별도 파일에 둔다(:root 를 겹쳐 쓴 선택자라 로드 순서와 무관하게 이긴다). */
+@import './platform/typography.css';
 @import './ui/storybook.css';
 :root {
   --gold: #ffcf5a; --gold2: #ff9a1f; --blue: #4cc3ff; --blue2: #2266ff; --red: #ff3b5c; --purple: #b26bff; --green: #6bff8f;
   --bg: #0b0a12; --panel: rgba(16, 14, 30, .86); --panel2: rgba(30, 26, 52, .9); --line: rgba(255, 215, 120, .25);
   --txt: #f4efe6; --muted: #a49ec0;
   --r-n: #9aa3b2; --r-r: #4cc3ff; --r-sr: #b26bff; --r-ssr: #ffcf5a; --r-ur: #ff5a7a;
-  --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px);
-  --font: 'Noto Sans KR', system-ui, -apple-system, sans-serif; --disp: 'Black Han Sans', 'Noto Sans KR', sans-serif;
+  --sat: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)); --sab: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --sal: var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); --sar: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --font: var(--font-ui); --disp: var(--font-title);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
 html, body { margin: 0; width: 100%; min-width: 100vw; height: 100%; min-height: 100dvh; background: var(--bg); color: var(--txt); font-family: var(--font); overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
@@ -648,8 +650,8 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 @media (orientation: landscape) {
   /* ---- 좌측 세로 네비 레일 ---- */
   .bottomnav {
-    top: 0; bottom: 0; right: auto; left: 0; width: calc(62px + env(safe-area-inset-left, 0px));
-    height: auto; padding: 0 0 0 env(safe-area-inset-left, 0px);
+    top: 0; bottom: 0; right: auto; left: 0; width: calc(62px + var(--sal));
+    height: auto; padding: 0 0 0 var(--sal);
     flex-direction: column; justify-content: center; gap: 4px;
     border-top: 0; border-right: 1px solid var(--line);
     background: linear-gradient(90deg, #1a1630, #0d0b18);
@@ -660,14 +662,14 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .dot { top: 6px; right: 12px; }
 
   /* ---- 상단바 ---- */
-  .topbar { left: calc(62px + env(safe-area-inset-left, 0px)); padding: calc(4px + var(--sat)) 10px 4px; }
+  .topbar { left: calc(62px + var(--sal)); padding: calc(4px + var(--sat)) 10px 4px; }
   .avatar { width: 36px; height: 36px; border-radius: 10px; }
   .prof-name { font-size: 12px; } .prof-lv { font-size: 10px; }
   .cur { font-size: 12px; min-width: 66px; padding: 3px 5px 3px 7px; }
   .cur-sub { font-size: 8px; }
 
   /* ---- 패널: 레일 오른쪽 전체 ---- */
-  .panel { left: calc(62px + env(safe-area-inset-left, 0px)); top: calc(50px + var(--sat)); bottom: 0; }
+  .panel { left: calc(62px + var(--sal)); top: calc(50px + var(--sat)); bottom: 0; }
   .panel-head { padding: 6px 12px; }
   .panel h2 { font-size: 18px; }
   .stage-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; padding: 8px 12px; }
@@ -686,17 +688,17 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .pass-track { padding: 10px; }
 
   /* ---- 로비 ---- */
-  .lobby-left { left: calc(70px + env(safe-area-inset-left, 0px)); top: calc(56px + var(--sat)); flex-direction: row; flex-wrap: wrap; width: 120px; gap: 6px; }
+  .lobby-left { left: calc(70px + var(--sal)); top: calc(56px + var(--sat)); flex-direction: row; flex-wrap: wrap; width: 120px; gap: 6px; }
   .sq-btn { width: 50px; height: 50px; }
   .lobby-right { top: calc(56px + var(--sat)); right: 10px; flex-direction: row; }
   .promo-btn { width: 74px; }
-  .lobby-hero-name { left: calc(76px + env(safe-area-inset-left, 0px)); bottom: 16px; }
+  .lobby-hero-name { left: calc(76px + var(--sal)); bottom: 16px; }
   #lobby-hero-name { font-size: 24px; }
   .lobby-bottom { left: auto; right: 16px; bottom: calc(14px + var(--sab)); align-items: flex-end; gap: 6px; }
   .btn-battle { width: 210px; padding: 11px; font-size: 22px; }
 
   /* ---- 전투 HUD (가로 전용 배치) ---- */
-  .hud-top { top: calc(6px + var(--sat)); left: calc(10px + env(safe-area-inset-left, 0px)); right: 10px; }
+  .hud-top { top: calc(6px + var(--sat)); left: calc(10px + var(--sal)); right: 10px; }
   .hud-bars { width: 26vw; max-width: 230px; }
   .hud-portrait { width: 42px; height: 42px; }
   .wave { font-size: 15px; } .stage-name { font-size: 10px; }
@@ -705,7 +707,7 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .combo b { font-size: 46px; } .combo span { font-size: 14px; }
   .joy-base { left: 84px; bottom: calc(78px + var(--sab)); width: 112px; height: 112px; }
   .joystick { width: 42%; height: 78%; }
-  .actions { right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(14px + var(--sab)); width: 210px; height: 178px; }
+  .actions { right: calc(16px + var(--sar)); bottom: calc(14px + var(--sab)); width: 210px; height: 178px; }
   .attack-btn { width: 86px; height: 86px; font-size: 19px; }
   .dodge-btn { right: 96px; bottom: 4px; width: 58px; height: 58px; }
   .skill-btn { width: 58px; height: 58px; }

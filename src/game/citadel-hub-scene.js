@@ -292,15 +292,24 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     if (typeof document === 'undefined') return null;
     const canvas = document.createElement('canvas'); canvas.width = 768; canvas.height = 180;
     const context = canvas.getContext('2d'); if (!context) return null;
-    context.fillStyle = 'rgba(17,39,47,.72)'; context.fillRect(2, 2, 764, 176);
-    context.strokeStyle = spot.accent || '#c8bea8'; context.lineWidth = 5; context.strokeRect(2, 2, 764, 176);
-    context.textAlign = 'center'; context.textBaseline = 'middle';
-    context.fillStyle = '#f5efdf'; context.font = '600 46px "Noto Sans KR", system-ui, sans-serif';
-    context.fillText(spot.label, 384, 70, 722);
-    context.fillStyle = spot.accent || '#aec7ca'; context.font = '500 26px system-ui, sans-serif';
-    const subtitle = spot.kind === 'dungeon' ? `Lv.${spot.minLevel}  ·  에너지 ${spot.energy}` : spot.subtitle;
-    context.fillText(subtitle, 384, 128, 714);
+    const titleFont = '600 46px "Blade Sans KR", system-ui, sans-serif';
+    const paint = () => {
+      context.clearRect(0, 0, 768, 180);
+      context.fillStyle = 'rgba(17,39,47,.72)'; context.fillRect(2, 2, 764, 176);
+      context.strokeStyle = spot.accent || '#c8bea8'; context.lineWidth = 5; context.strokeRect(2, 2, 764, 176);
+      context.textAlign = 'center'; context.textBaseline = 'middle';
+      context.fillStyle = '#f5efdf'; context.font = titleFont;
+      context.fillText(spot.label, 384, 70, 722);
+      context.fillStyle = spot.accent || '#aec7ca'; context.font = '500 26px system-ui, sans-serif';
+      const subtitle = spot.kind === 'dungeon' ? `Lv.${spot.minLevel}  ·  에너지 ${spot.energy}` : spot.subtitle;
+      context.fillText(subtitle, 384, 128, 714);
+    };
+    paint();
     const texture = new THREE.CanvasTexture(canvas); texture.colorSpace = THREE.SRGBColorSpace; texturesOwned.add(texture);
+    // 캔버스 글자는 웹폰트가 늦게 오면 기본 서체로 굳는다. 서체가 준비되면 한 번 다시 그린다(해제된 이름표는 건너뛴다).
+    if (document.fonts?.check && !document.fonts.check(titleFont)) document.fonts.load(titleFont).then(() => {
+      if (texturesOwned.has(texture)) { paint(); texture.needsUpdate = true; }
+    }).catch(() => {});
     const material = new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, toneMapped: false });
     materialsOwned.add(material);
     const sprite = new THREE.Sprite(material); sprite.position.set(spot.x, y, spot.z);
@@ -554,6 +563,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
       for (const geometry of geometryOwned) geometry.dispose();
       for (const material of materialsOwned) material.dispose();
       for (const texture of texturesOwned) texture.dispose();
+      texturesOwned.clear();
       root.traverse(node => { if (node.isInstancedMesh) node.dispose(); });
       root.removeFromParent();
     },

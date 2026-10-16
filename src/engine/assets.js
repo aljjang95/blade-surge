@@ -18,6 +18,10 @@ import { heroIdForModel, heroModelContract, heroHandBones, heroGripRotation, lib
 const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
 
+// 궁수 교정본(ranger-library-v1)의 저작 소켓. GLTFLoader 는 이름의 '_' 를 보존한다.
+export const RANGER_BOW_GRIP = 'RangerBowGrip_L';
+export const RANGER_DRAW_NOCK = 'RangerDrawNock_R';
+
 const cache = new Map();
 const libraryLoader = createDefaultLibraryLoader((path) => loader.loadAsync(path), (gltf) => prepareModel(gltf));
 /** @typedef {{materials: string, role: string, heroId?: string, scale: number, aliases: Record<string, string>, sockets?: Record<string, string>}} ModelContract */
@@ -154,6 +158,8 @@ async function prepareLibraryHero(gltf, asset) {
   const { animations, clipAsset } = resolveSharedHeroClips(heroClipCache, heroId, asset, gltf.animations);
   gltf.animations = animations;
   const handBones = heroHandBones(gltf.scene);
+  // 메시 전용 단계·아바타는 1단계(클립 원본)의 활 그립·노크 소켓을 같은 이름의 본에 이어받는다.
+  if (heroId === 'ranger') adoptRangerSockets(gltf.scene, heroBodies.get(clipAsset.id)?.scene || null);
   const legacy = await loader.loadAsync(heroModelPaths(hero.model).base);
   attachLegacyWeapons(gltf.scene, legacy.scene, heroId, handBones);
   gltf.scene.traverse((node) => {
@@ -164,6 +170,7 @@ async function prepareLibraryHero(gltf, asset) {
     if (!node.name.startsWith('TLL_')) node.name = `TLL_Library_${heroId}`;
   });
   await forgeHeroWeapons(gltf, hero.model);
+  if (heroId === 'ranger') rigRangerBowString(gltf.scene);
   prepareModel(gltf, heroModelContract(asset, gltf.scene, clipAsset));
   heroBodies.set(asset.id, gltf);
   return gltf;
@@ -216,9 +223,139 @@ function attachLegacyWeapons(scene, legacyScene, heroId, handBones) {
     const heightRatio = position.y / Math.max(1e-6, slotHand.getWorldPosition(new THREE.Vector3()).y);
     if (slotHand) fitLibrarySocket(socket, bone, slot, slotHand, heightRatio);
     else socket.rotation.fromArray(heroGripRotation(heroId, side));
+    const grip = side === 'l' && heroId === 'ranger' ? scene.getObjectByName(RANGER_BOW_GRIP) : null;
+    const bow = grip ? slot.children.find((child) => child.name === 'Bow') : null;
+    if (grip && bow && grip.parent === bone) fitAuthoredGrip(socket, grip, bow);
     bone.add(socket);
     for (const child of [...slot.children]) socket.add(child.clone(true));
   }
+}
+
+/**
+ * Blender 에서 저작한 활 그립(활 로컬 축 = 그립 축)을 소켓에 옮긴다. 소켓 아래 KayKit 활 노드의 고유 회전·위치를
+ * 상쇄해 활이 그립 노드와 같은 자리·방향에 놓인다. 배율은 기존 손 높이 비율을 그대로 쓴다.
+ */
+export function fitAuthoredGrip(socket, grip, bow) {
+  socket.quaternion.copy(grip.quaternion).multiply(_gripQuat.copy(bow.quaternion).invert());
+  _gripOffset.copy(bow.position).multiply(socket.scale).applyQuaternion(socket.quaternion);
+  socket.position.copy(grip.position).sub(_gripOffset);
+  return socket;
+}
+const _gripQuat = new THREE.Quaternion(), _gripOffset = new THREE.Vector3();
+
+/** 1단계 몸체의 저작 소켓을 같은 골격의 다른 몸체에 복제한다(이미 있으면 유지). */
+export function adoptRangerSockets(scene, source) {
+  if (!source) return 0;
+  let adopted = 0;
+  for (const name of [RANGER_BOW_GRIP, RANGER_DRAW_NOCK]) {
+    const from = source.getObjectByName(name);
+    if (!from || scene.getObjectByName(name) || !from.parent) continue;
+    const bone = scene.getObjectByName(from.parent.name);
+    if (!bone?.isBone) continue;
+    const node = new THREE.Object3D(); node.name = name;
+    node.position.copy(from.position); node.quaternion.copy(from.quaternion); node.scale.copy(from.scale);
+    bone.add(node); adopted++;
+  }
+  return adopted;
+}
+
+// ---------- 궁수 시위 ----------
+// forge-bow-v2 의 정적 시위 형상은 손을 따라가지 못한다. 시위 성분만 떼어 내고 두 마디의 얇은 원기둥으로
+// 끝(활 로컬 tips)과 노크점을 잇는다. 당기는 동안에는 실제 오른손 노크 소켓을, 아니면 쉼 노크점을 쓴다.
+const STRING_RADIUS = 0.0075;
+const STRING_REST_NOCK = Object.freeze([0.177, 0, 0]);
+let stringGeometry = null;
+const stringSegmentGeometry = () => stringGeometry || (stringGeometry = new THREE.CylinderGeometry(1, 1, 1, 5, 1, true).translate(0, .5, 0));
+
+/** 활 형상에서 시위 성분(얇고 길며 사수 쪽 +x 에 있는 연결 성분)을 찾는다. */
+export function bowStringTriangles(geometry) {
+  const p = geometry.attributes.position, index = geometry.index;
+  if (!p || !index) return null;
+  const ids = new Map(), parent = [], vertex = new Int32Array(p.count);
+  const find = (a) => { while (parent[a] !== a) a = parent[a] = parent[parent[a]]; return a; };
+  for (let i = 0; i < p.count; i++) {
+    const key = Math.round(p.getX(i) * 1e4) + ',' + Math.round(p.getY(i) * 1e4) + ',' + Math.round(p.getZ(i) * 1e4);
+    if (!ids.has(key)) { ids.set(key, parent.length); parent.push(parent.length); }
+    vertex[i] = ids.get(key);
+  }
+  for (let t = 0; t < index.count; t += 3) {
+    const a = find(vertex[index.getX(t)]);
+    parent[find(vertex[index.getX(t + 1)])] = a; parent[find(vertex[index.getX(t + 2)])] = a;
+  }
+  const boxes = new Map();
+  for (let t = 0; t < index.count; t += 3) {
+    const root = find(vertex[index.getX(t)]);
+    const box = boxes.get(root) || { tris: [], min: [Infinity, Infinity, Infinity], max: [-Infinity, -Infinity, -Infinity] };
+    box.tris.push(t);
+    for (let k = 0; k < 3; k++) {
+      const i = index.getX(t + k), v = [p.getX(i), p.getY(i), p.getZ(i)];
+      for (let a = 0; a < 3; a++) { box.min[a] = Math.min(box.min[a], v[a]); box.max[a] = Math.max(box.max[a], v[a]); }
+    }
+    boxes.set(root, box);
+  }
+  const strings = [...boxes.values()].filter((b) => b.max[1] - b.min[1] < .03 && b.max[2] - b.min[2] > 1.5 && b.min[0] > 0);
+  return strings.length === 1 ? strings[0] : null;
+}
+
+export function rigRangerBowString(scene) {
+  const bow = scene.getObjectByName('Bow');
+  if (!bow?.isMesh || bow.getObjectByName('Bow_String_Upper')) return false;
+  const string = bowStringTriangles(bow.geometry);
+  if (!string) return false;
+  const drop = new Set(string.tris), source = bow.geometry.index, kept = [];
+  for (let t = 0; t < source.count; t += 3) if (!drop.has(t)) kept.push(source.getX(t), source.getX(t + 1), source.getX(t + 2));
+  const geometry = bow.geometry.clone(); geometry.setIndex(kept);
+  bow.geometry = geometry;
+  const tipZ = Math.max(Math.abs(string.min[2]), Math.abs(string.max[2]));
+  bow.userData.rangerString = { top: [string.min[0], 0, tipZ], bottom: [string.min[0], 0, -tipZ], nock: [...STRING_REST_NOCK] };
+  const material = new THREE.MeshStandardMaterial({ color: 0xe9dfc4, roughness: .72, metalness: 0 });
+  material.name = 'Ranger_Bow_String'; material.userData.tllAuthored = true;
+  for (const name of ['Bow_String_Upper', 'Bow_String_Lower']) {
+    const mesh = new THREE.Mesh(stringSegmentGeometry(), material); mesh.name = name; mesh.frustumCulled = false;
+    bow.add(mesh);
+  }
+  poseRangerBowString(scene, false);
+  return true;
+}
+
+const _stringNock = new THREE.Vector3(), _stringTip = new THREE.Vector3(), _stringDir = new THREE.Vector3(), _stringUp = new THREE.Vector3(0, 1, 0);
+const stringRigs = new WeakMap();
+function stringRig(model) {
+  let rig = stringRigs.get(model);
+  if (rig === undefined) {
+    const bow = model.getObjectByName('Bow');
+    const data = bow?.userData.rangerString;
+    rig = data ? { bow, data, upper: bow.getObjectByName('Bow_String_Upper'), lower: bow.getObjectByName('Bow_String_Lower'),
+      hand: model.getObjectByName(RANGER_DRAW_NOCK) } : null;
+    stringRigs.set(model, rig);
+  }
+  return rig;
+}
+function placeSegment(mesh, tip, nock) {
+  _stringDir.subVectors(nock, tip); const length = _stringDir.length();
+  mesh.position.copy(tip); mesh.quaternion.setFromUnitVectors(_stringUp, _stringDir.multiplyScalar(1 / Math.max(1e-6, length)));
+  mesh.scale.set(STRING_RADIUS, length, STRING_RADIUS);
+}
+
+/**
+ * 시위를 매 프레임 실제 손 위치로 맞춘다. drawing 은 시뮬레이션의 발사 전 상태(콤보 타격 전·스킬 시전 전)이며,
+ * 그때도 오른손 노크 소켓이 활 뒤쪽 당김 통로 안에 있을 때만 손을 따라간다. 할당하지 않는다.
+ * @returns {boolean} 시위가 손에 걸렸는가
+ */
+export function poseRangerBowString(model, drawing) {
+  const rig = stringRig(model);
+  if (!rig?.upper || !rig.lower) return false;
+  const { bow, data } = rig;
+  let held = false;
+  if (drawing && rig.hand) {
+    rig.hand.updateWorldMatrix(true, false); bow.updateWorldMatrix(true, false);
+    rig.hand.getWorldPosition(_stringNock); bow.worldToLocal(_stringNock);
+    held = _stringNock.x > .12 && _stringNock.x < 1.4 && Math.abs(_stringNock.y) < .3 && Math.abs(_stringNock.z) < .45;
+  }
+  if (!held) _stringNock.fromArray(data.nock);
+  placeSegment(rig.upper, _stringTip.fromArray(data.top), _stringNock);
+  placeSegment(rig.lower, _stringTip.fromArray(data.bottom), _stringNock);
+  return held;
 }
 
 /**
