@@ -1042,7 +1042,8 @@ export function checkChainsFilters(filters, rows, def, { cuts = 0, requireCalls 
  * 목표창 표본(dom 이 있는 행). 제목 '거수의 사슬'. 범주별 정확한 문구: plain '남은 사슬 n/3 · 망치가 끄는 반대편 기둥에서 버티기'(n = chainsLeft), pull '사슬이 망치 쪽으로 끌림 · 반대편 기둥으로',
  * open '기둥 열림 n.n초 · 행동 없이 h.h/1.2초'(n 은 windowLeft 0.1초 올림, h 는 hold 내림), exposed '사슬 끊김 · 휘청 n.n초 · 받는 피해 220%'(n 은 exposedLeft 0.1초 올림, % 는 round((1 + weaken × k) × exposedMult × 100), k 는 도구가 센 끊김 수).
  * 목표창은 battle-readability.update 가 0.1초마다 다시 그리므로, 범주가 바뀐 뒤 이 주기(+2스텝) 안의 표본은 바로 앞 범주의 문구일 때만 '갱신 대기'(lag)로 따로 세고, 주기를 넘으면 실패한다.
- * 같은 범주 안에서 수치가 한 스텝 앞선 문구(stepLag)는 보고만 한다. 보스가 쓰러진 행(정화 완료 문구)은 판정하지 않는다.
+ * 같은 범주 안에서도 패널은 상태가 바뀐 스텝이 아니라 자기 주기에 다시 그리므로, 이 주기 안의 앞 행 문구(stepLag)는 갱신 대기로 통과시키고 보고한다.
+ * 주기를 넘은 앞 문구는 실패다(b15 진단 s3-auto: 창이 열린 뒤 10스텝째 DOM 이 주기 안 앞 행의 '5.0초' 였는데 '한 스텝 앞'만 받아 거짓 실패). 보스가 쓰러진 행(정화 완료 문구)은 판정하지 않는다.
  * plain·pull 범주는 36스텝 이어지면 36번째 행에 표본이 있어야 하고, open·exposed 는 범주 시작 10스텝 뒤 행에 항상 표본이 있어야 한다(갱신 주기를 넘겼는데 앞 문구가 남은 목표창을 잡는다).
  * open·exposed 가 관측된 실행은 각 범주 표본 ≥ 1.
  */
@@ -1068,8 +1069,10 @@ export function checkChainsObjective(rows, def) {
     if (exactTexts(c, r).some(t => r.dom.includes(t))) { counts[c]++; return; }
     const waiting = r.t - changedAt <= CHAINS_OBJECTIVE_REFRESH + 1e-9;
     if (waiting && prevCat && looksLike(prevCat, r.dom)) { lag.push({ n: r.n, cat: c, from: prevCat, after: r.t - changedAt }); return; }
-    const p = rows[i - 1];
-    if (p && chainCat(p) === c && exactTexts(c, p).some(t => r.dom.includes(t))) { stepLag.push({ n: r.n, cat: c }); counts[c]++; return; }
+    for (let j = i - 1; j >= 0 && r.t - rows[j].t <= CHAINS_OBJECTIVE_REFRESH + 1e-9; j--) {
+      if (chainCat(rows[j]) !== c) break;
+      if (exactTexts(c, rows[j]).some(t => r.dom.includes(t))) { stepLag.push({ n: r.n, cat: c, behind: r.n - rows[j].n }); counts[c]++; return; }
+    }
     bad.push({ n: r.n, cat: c, dom: r.dom, why: 'text', want: exactTexts(c, r)[0] ?? null });
   });
   // 표본 위치 계약(프로브): plain·pull 은 36번째 행, open·exposed 는 범주가 바뀐 행들과 범주 시작 10스텝 뒤 행(항상)에 표본이 있다.
@@ -1087,7 +1090,8 @@ export function checkChainsObjective(rows, def) {
   }
   const sawOpen = rows.some(r => r.cs === 'open' && r.al === 1), sawExposed = rows.some(r => r.cs === 'exposed' && r.al === 1);
   return { ok: samples > 0 && bad.length === 0 && missing.length === 0 && (!sawOpen || counts.open >= 1) && (!sawExposed || counts.exposed >= 1) && counts.plain + counts.pull >= 1,
-    samples, counts, bad: bad.slice(0, 6), badCount: bad.length, missing: missing.slice(0, 4), lag: lag.slice(0, 6), lagCount: lag.length, stepLagCount: stepLag.length, refresh: CHAINS_OBJECTIVE_REFRESH };
+    samples, counts, bad: bad.slice(0, 6), badCount: bad.length, missing: missing.slice(0, 4), lag: lag.slice(0, 6), lagCount: lag.length, stepLagCount: stepLag.length,
+    stepLagMax: stepLag.reduce((m, s) => Math.max(m, s.behind), 0), refresh: CHAINS_OBJECTIVE_REFRESH };
 }
 
 /** 토스트: 부착 1회, 열림 창마다 1회, 끊김 '사슬 끊김 n/3 · 거수가 휘청인다' 가 n = 1..cuts 순서대로 1회씩, 모두 끊기면 '거수의 사슬이 모두 끊겼다' 1회(아니면 0회). 비슷한 다른 문구는 누출이다. */

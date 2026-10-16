@@ -992,7 +992,8 @@ class ChainSim {
     const cat = exposed ? 'exposed' : open ? 'open' : pulling ? 'pull' : st === 'chained' ? 'plain' : null;
     if (cat !== this.cat) { this.cat = cat; this.catSince = this.n; this.stable = 0; if (cat === 'open' || cat === 'exposed' || cat === null) this.lastDom = null; }
     if (cat) {
-      if (this.n - this.catSince >= (this.o.lag ?? 0)) this.shown = this.o.domOverride?.(cat, row) ?? this.domText(cat);
+      // o.refresh 가 있으면 범주와 상관없이 그 스텝 주기에만 다시 그린다(실제 패널의 10Hz 고정 주기 모의).
+      if (this.o.refresh ? this.n % this.o.refresh === 0 : this.n - this.catSince >= (this.o.lag ?? 0)) this.shown = this.o.domOverride?.(cat, row) ?? this.domText(cat);
       if (cat === 'open' || cat === 'exposed') {
         if (this.shown !== this.lastDom) { row.dom = this.shown; this.lastDom = this.shown; }
         else if (this.n - this.catSince === 10) row.dom = this.shown;   // 갱신 주기를 넘긴 시점에는 바뀌지 않았어도 항상 읽는다
@@ -1474,6 +1475,15 @@ describe('거수 사슬 목표창·토스트·결과', () => {
     const late = K.checkChainsObjective(chainSession({ lag: 12 }).rows, CH);
     expect(late.ok).toBe(false);
     expect(late.bad[0].why).toBe('text');
+  });
+  test('패널이 고정 주기로 다시 그릴 때: 주기 8스텝(실측 0.133초)이면 같은 범주의 앞 행 문구가 남아도 통과(stepLag 보고), 주기 14스텝이면 실패한다', () => {
+    const ok = K.checkChainsObjective(chainSession({ refresh: 8 }).rows, CH);
+    expect(ok.ok).toBe(true);
+    expect(ok.stepLagCount).toBeGreaterThan(0);
+    expect(ok.stepLagMax).toBeLessThanOrEqual(8);
+    const slow = K.checkChainsObjective(chainSession({ refresh: 14 }).rows, CH);
+    expect(slow.ok).toBe(false);
+    expect(slow.bad.some((b: any) => b.why === 'text')).toBe(true);
   });
   test('노출 문구의 받는 피해 %는 도구가 센 끊김 수 k 로 계산한다: 첫 끊김 220%, 둘째 240%, 셋째 260%', () => {
     const s = chainSession();
