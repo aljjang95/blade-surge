@@ -1,0 +1,95 @@
+{
+  "id": "ranger-library-v3",
+  "useInGame": true,
+  "status": "GENERATED",
+  "asset": "hero_ranger_t1",
+  "reason": "v2 저작 레시피(값·클립·소켓 동일)를 실제 Windows PC Blender 5.2.2 에서 슬롯 Action 호환으로 다시 실행해 구운 클립에, 게임 로더가 매 로드마다 하던 몸 재질 보정(금속도 상한 0.22·불투명 BLEND→MASK 0.5)을 GLB 재질로 고정한 채택본. 클립은 v2 와 채널·키 시간이 같고 회전 차 0.07° 이내라 동작 변화를 의도하지 않는다",
+  "supersedes": "ranger-library-v2",
+  "source": {
+    "path": "asset-library/normalized/hero_ranger_t1.glb",
+    "sha256": "2c88389c285019a4b2b0e948736f6f01b1a1a173f28b2dcac054981b45e99b23"
+  },
+  "axisReference": {
+    "path": "asset-library/normalized/hero_knight_t1.glb",
+    "role": "Mixamo 관례 본 축(읽기 전용)"
+  },
+  "authoring": {
+    "revision": "ranger-library-v2",
+    "script": "art-src/ranger/author_ranger_library_v2.py",
+    "executedScript": {
+      "name": "LOCAL-AUTHOR-BLENDER52.py",
+      "sha256": "1ae63d2a8031157826b614a705668c24e5cd0d03fa8c41d29a1a528f8dc8c5f1",
+      "relation": "커밋된 script 와 코드(AST) 동일, 머리말·주석만 다름"
+    },
+    "blender": "5.2.2 LTS",
+    "host": "Windows PC RTX3070, 작업 20261017-011754-8d99ed95",
+    "report": "art-src/ranger/ranger-library-author-report-v2-blender52.json",
+    "packedSha256": "a8fea05e39cadfd1b01bb4332a9cbf85a92eda45d701644600f3c3f089c66778",
+    "packedAuthoringExtra": "Blender Khronos glTF Blender I/O v5.2.40 / LOCAL-AUTHOR-BLENDER52.py(실행 당시 이름 그대로 둔다)"
+  },
+  "materialFinish": {
+    "tool": "tools/art/finish-library-materials.mjs",
+    "recipe": "library-skin-finish-v1",
+    "inputSha256": "a8fea05e39cadfd1b01bb4332a9cbf85a92eda45d701644600f3c3f089c66778",
+    "rule": "src/engine/assets.js normalizeLibrarySkinMaterial 과 같은 의미: metallicFactor 상한 0.22(없으면 기본 1→0.22), 불투명 BLEND→MASK alphaCutoff 0.5",
+    "materials": [
+      {
+        "name": "tripo_mat_43bf4cdf",
+        "changed": [
+          "pbrMetallicRoughness.metallicFactor",
+          "alphaMode",
+          "alphaCutoff"
+        ]
+      }
+    ],
+    "preserved": "BIN 청크 전체(메시·스킨·역바인드·텍스처·클립 바이트)와 materials 외 JSON. asset.extras.materialFinish 만 추가"
+  },
+  "output": {
+    "path": "/models/heroes-next/ranger-library-t1-v3.glb",
+    "sha256": "2eafd2ede689644606ac13daf6e47e1e5cebc1be84fa5e4d845b63fee1820718"
+  },
+  "sockets": {
+    "bowGrip": "RangerBowGrip_L",
+    "drawNock": "RangerDrawNock_R"
+  },
+  "bow": {
+    "nock": [
+      0.177,
+      0,
+      0
+    ],
+    "tips": [
+      [
+        0.014,
+        0,
+        1.1
+      ],
+      [
+        0.014,
+        0,
+        -1.1
+      ]
+    ],
+    "releasePhase": 0.42
+  },
+  "clips": {
+    "bow_shoot": 1,
+    "bow_shoot_rapid": 1,
+    "cast_shoot": 2.2917,
+    "cheer": 8.5,
+    "death": 1.25,
+    "Dodge_Backward": 0.5,
+    "hit": 0.5,
+    "idle": 9.9167,
+    "interact": 3.4167,
+    "run": 0.6667,
+    "dodge": 0.5
+  },
+  "tool": {
+    "blender": "5.2.2",
+    "author": "art-src/ranger/author_ranger_library_v2.py",
+    "packer": "tools/art/pack-ranger-library.mjs",
+    "finisher": "tools/art/finish-library-materials.mjs"
+  },
+  "license": "owner-generated (Tripo subscription) mesh unchanged; Mixamo body clips retargeted to the same skeleton; bow/backstep clips authored in Blender from the same skeleton"
+}

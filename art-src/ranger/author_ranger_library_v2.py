@@ -1,4 +1,11 @@
-"""궁수 라이브러리 몸체(hero_ranger_t1) 전신 리타깃·활 동작 재저작 v2 — Blender 4.3 배경 실행.
+"""궁수 라이브러리 몸체(hero_ranger_t1) 전신 리타깃·활 동작 재저작 v2 — Blender 배경 실행(4.3 레거시 Action · 5.2 슬롯 Action 겸용).
+
+실행 확인 범위(2026-10-16/17):
+ - Blender 4.3.2: 레거시 경로(act.fcurves·ad.action). 이 호환본을 4.3.2 에서 돌리면 애니 GLB·보고서가 호환 전 원본과 바이트 동일하고,
+   패킹 결과가 공개 ranger-library-v2(7c694b6c…)와 같다. v2 의 원래 저작 실행 버전이다.
+ - Blender 5.2.2 LTS: 실제 Windows PC(RTX3070)에서 실행해 ranger-library-v3 클립을 구웠다(실행 파일명 LOCAL-AUTHOR-BLENDER52.py,
+   sha256 1ae63d2a…; 이 파일과 코드가 같고 머리말·주석만 다르다). 4.4–5.1 은 실행해 보지 않았다.
+ 저작 값(상수·클립·소켓·출력 이름)은 버전과 무관하게 같다.
 
 v1 의 한계(실측): Mixamo 쿼터니언을 롤이 다른 Tripo 리그에 그대로 복사해(blender_merge_mixamo.py action.copy) 몸통·다리 축이
 돌아갔다. Hips/Spine/다리 로컬 X(Mixamo 의 굽힘 축)가 ranger 에서는 앞뒤 축이라, 무릎 굽힘이 옆꺾임이 되고 상체 숙임이 옆기울기가 된다.
@@ -20,6 +27,87 @@ v2:
 import bpy, json, math, os, sys
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
+
+# ---- [5.2 호환] Blender 4.3 레거시 Action.fcurves ↔ 4.4+ 슬롯 Action(레이어·키프레임 스트립·채널백) ----
+# 5.0 부터 Action.fcurves/groups 가 없다. F-Curve 는 Action → layers → strips(KEYFRAME) → channelbag(slot).fcurves 에 있고,
+# AnimData 는 action 과 함께 action_slot 을 묶어야 평가·내보내기 된다(glTF 5.2 내보내기는 action_slot 이 없으면 활성 액션을 건너뛴다).
+# 5.2 glTF 가져오기는 애니메이션마다 액션 하나를 만들고 대상 오브젝트마다 슬롯을 단다. 아래 도우미는 owner 의 슬롯만 다뤄
+# 다른 오브젝트·셰이프키 슬롯의 데이터를 건드리지 않는다. 4.3 에서는 원본과 같은 act.fcurves / ad.action 경로 그대로다.
+# bpy.types 는 바꾸지 않는다.
+# >>> COMPAT
+LAYERED_ACTIONS = bpy.app.version >= (4, 4, 0)
+
+def _find_channelbag(act, slot):
+    for layer in act.layers:
+        for strip in layer.strips:
+            if strip.type == 'KEYFRAME':
+                cb = strip.channelbag(slot)
+                if cb is not None: return cb
+    return None
+
+def _slot_ok(act, slot, owner):
+    """오브젝트용 슬롯이고, 뼈대라면 본 커브가 있거나 비어 있는 슬롯만 받는다(메시·빈 오브젝트 슬롯 오염 방지)."""
+    if slot.target_id_type not in ('OBJECT', 'UNSPECIFIED'): return False
+    if owner.type != 'ARMATURE': return True
+    cb = _find_channelbag(act, slot)
+    return cb is None or len(cb.fcurves) == 0 or any(fc.data_path.startswith('pose.bones[') for fc in cb.fcurves)
+
+def action_slot_for(act, owner, create=False):
+    """owner 가 act 에서 쓸 슬롯: 식별자 'OB'+이름 → 이미 묶인 슬롯 → (뼈대) 본 커브가 있는 유일 슬롯 → 유일 후보 → (빈 액션) 새 슬롯. 모호하면 멈춘다."""
+    ident = 'OB' + owner.name
+    for sl in act.slots:
+        if sl.identifier == ident and _slot_ok(act, sl, owner): return sl
+    ad = owner.animation_data
+    if ad is not None and ad.action == act and ad.action_slot is not None and _slot_ok(act, ad.action_slot, owner): return ad.action_slot
+    cand = [sl for sl in act.slots if _slot_ok(act, sl, owner)]
+    if owner.type == 'ARMATURE':
+        posed = [sl for sl in cand if (cb := _find_channelbag(act, sl)) is not None and any(fc.data_path.startswith('pose.bones[') for fc in cb.fcurves)]
+        if len(posed) == 1: return posed[0]
+        if len(posed) > 1: cand = []
+    if len(cand) == 1 and len(act.slots) == 1: return cand[0]
+    if create and len(act.slots) == 0: return act.slots.new(id_type='OBJECT', name=owner.name)
+    raise RuntimeError(f'action slot ambiguous: action={act.name!r} owner={owner.name!r} slots={[sl.identifier for sl in act.slots]}')
+
+def anim_fcurves(act, owner):
+    """act 에서 owner 슬롯의 F-Curve 컬렉션(4.3: act.fcurves). 4.4+ 는 레이어·스트립·채널백이 없으면 만든다."""
+    if not LAYERED_ACTIONS: return act.fcurves
+    slot = action_slot_for(act, owner, create=True)
+    cb = _find_channelbag(act, slot)
+    if cb is None:
+        layer = act.layers[0] if len(act.layers) else act.layers.new('Layer')
+        strip = layer.strips[0] if len(layer.strips) else layer.strips.new(type='KEYFRAME')
+        cb = strip.channelbag(slot, ensure=True)
+    return cb.fcurves
+
+def new_fcurve(fcs, data_path, index, group):
+    """fcurves.new: 4.3 action_group= / 채널백 group_name=(그룹은 표시용, 내보내기 무관)."""
+    if not LAYERED_ACTIONS: return fcs.new(data_path, index=index, action_group=group)
+    try: return fcs.new(data_path, index=index, group_name=group)
+    except TypeError: return fcs.new(data_path, index=index)
+
+def assign_action(owner, act):
+    """ad.action = act 와 같되, 4.4+ 는 슬롯을 할당 전에 직접 골라 묶는다(자동 슬롯 선택에 맡기지 않는다)."""
+    ad = owner.animation_data or owner.animation_data_create()
+    if not LAYERED_ACTIONS or act is None:
+        ad.action = act; return
+    slot = action_slot_for(act, owner, create=True)
+    ad.action = act
+    if ad.action_slot is None or ad.action_slot.handle != slot.handle: ad.action_slot = slot
+    if ad.action_slot is None or ad.action_slot.handle != slot.handle:
+        raise RuntimeError(f'action slot bind failed: {act.name!r} -> {owner.name!r}')
+
+def describe_actions(tag, acts):
+    """슬롯 구성 진단(stdout 만, 보고서 JSON 형식은 원본 그대로)."""
+    if not LAYERED_ACTIONS: return
+    info = {}
+    for a in acts:
+        info[a.name] = {'frame_range': [round(a.frame_range[0], 3), round(a.frame_range[1], 3)], 'slots': [
+            {'id': sl.identifier, 'type': sl.target_id_type,
+             'curves': len(cb.fcurves) if (cb := _find_channelbag(a, sl)) is not None else -1,
+             'pose': sum(1 for fc in cb.fcurves if fc.data_path.startswith('pose.bones[')) if cb is not None else 0}
+            for sl in a.slots]}
+    print('COMPAT ' + tag + ' ' + json.dumps(info, ensure_ascii=False))
+# <<< COMPAT
 
 argv = sys.argv[sys.argv.index('--') + 1:]
 SOURCE, REFERENCE, OUT = argv[0], argv[1], argv[2]
@@ -47,6 +135,9 @@ W = arm.matrix_world.copy()
 ARM_SCALE = W.to_scale().x
 Wr = W.to_3x3().normalized()
 SOURCE_ACTIONS = {a.name.replace('_Armature', ''): a for a in bpy.data.actions}
+# [5.2 호환] 5.2 가져오기 액션 이름 = 클립 이름 → 구운 클립 이름과 충돌하지 않게 원본만 내부 이름으로 옮긴다.
+for _k, _a in SOURCE_ACTIONS.items(): _a.name = '_imported_' + _k
+describe_actions('source', SOURCE_ACTIONS.values())
 pb = arm.pose.bones
 
 def bone_world_rest(name):
@@ -66,7 +157,7 @@ for b in arm.data.bones:
 
 def retarget_action(act):
     for name, c in AXIS.items():
-        fq = [act.fcurves.find(f'pose.bones["{name}"].rotation_quaternion', index=i) for i in range(4)]
+        fq = [anim_fcurves(act, arm).find(f'pose.bones["{name}"].rotation_quaternion', index=i) for i in range(4)]
         if fq[0] is not None:
             ci = c.inverted()
             for k in range(len(fq[0].keyframe_points)):
@@ -77,10 +168,10 @@ def retarget_action(act):
         # 위치: 수평 루트 이동은 게임이 맡고, 원본 수직은 평탄화되어 없다(접지로 다시 푼다). 다른 본 위치·배율 키는 rest 로.
         for path, value in (('location', 0.0), ('scale', 1.0)):
             for i in range(3):
-                fc = act.fcurves.find(f'pose.bones["{name}"].{path}', index=i)
+                fc = anim_fcurves(act, arm).find(f'pose.bones["{name}"].{path}', index=i)
                 if fc is not None:
                     for kp in fc.keyframe_points: kp.co[1] = value; kp.interpolation = 'LINEAR'
-    for fc in act.fcurves: fc.update()
+    for fc in anim_fcurves(act, arm): fc.update()
 for a in SOURCE_ACTIONS.values(): retarget_action(a)
 
 # ---- 2) IK 가 쓰는 팔·다리 본 길이만 자식 머리까지로 맞춘다(머리·Y축·롤 = 내보내는 rest 행렬은 그대로) ----
@@ -258,14 +349,14 @@ CLIPS = {
 }
 
 def fcurves_of(act, bone, path, n):
-    return [act.fcurves.find(f'pose.bones["{P + bone}"].{path}', index=i) for i in range(n)]
+    return [anim_fcurves(act, arm).find(f'pose.bones["{P + bone}"].{path}', index=i) for i in range(n)]
 
 def prepare_source(clip, spec):
     src = SOURCE_ACTIONS[spec['source']]
     act = src.copy(); act.name = '_src_' + clip
     if spec.get('window'):
         a0, a1 = spec['window']; out = spec.get('out', a1 - a0); k = out / (a1 - a0)
-        for fc in act.fcurves:
+        for fc in anim_fcurves(act, arm):
             pts = [(kp.co[0], kp.co[1]) for kp in fc.keyframe_points]
             vals = {}
             for f in range(out + 1):
@@ -283,7 +374,7 @@ def frame_range(act, spec):
 
 def renorm_quats(act):
     for b in arm.data.bones:
-        fq = [act.fcurves.find(f'pose.bones["{b.name}"].rotation_quaternion', index=i) for i in range(4)]
+        fq = [anim_fcurves(act, arm).find(f'pose.bones["{b.name}"].rotation_quaternion', index=i) for i in range(4)]
         if fq[0] is None: continue
         for k in range(len(fq[0].keyframe_points)):
             q = Quaternion([fq[i].keyframe_points[k].co[1] for i in range(4)]); q.normalize()
@@ -308,7 +399,7 @@ def twist_spine(act, f0, f1, keys):
             ang = math.radians(lerp_keys(keys, f, 'twist')) * w * TWIST_SIGN
             q = Quaternion([fq[i].keyframe_points[kp_i].co[1] for i in range(4)]) @ Quaternion((0, 1, 0), ang)
             for i in range(4): fq[i].keyframe_points[kp_i].co[1] = q[i]
-    for fc in act.fcurves: fc.update()
+    for fc in anim_fcurves(act, arm): fc.update()
 
 # 비틀기 방향을 실측으로 정한다: 왼어깨(LeftArm 머리)가 앞(-Y)으로 가는 부호.
 def _probe_twist(sign):
@@ -359,7 +450,7 @@ def align_yaw(act, f0, f1, mode):
             ax, ang = q.to_axis_angle()
             hips_world_rot(act, f, ax, math.degrees(ang))
     renorm_quats(act)
-    for fc in act.fcurves: fc.update()
+    for fc in anim_fcurves(act, arm): fc.update()
     return {'mode': mode, 'before': [round(yaws[f], 1) for f in sorted(yaws)][::max(1, (f1 - f0) // 8)]}
 
 def bone_local_rot(act, bone, f, axis_world, deg):
@@ -375,7 +466,7 @@ def set_hips_height(act, f0, f1, dz_of):
     rest = arm.data.bones[P + 'Hips'].matrix_local.to_3x3().normalized()
     fl = fcurves_of(act, 'Hips', 'location', 3)
     for i in range(3):
-        if fl[i] is None: fl[i] = act.fcurves.new(f'pose.bones["{P}Hips"].location', index=i, action_group=P + 'Hips')
+        if fl[i] is None: fl[i] = new_fcurve(anim_fcurves(act, arm), f'pose.bones["{P}Hips"].location', i, P + 'Hips')
     for f in range(f0, f1 + 1):
         loc = rest.transposed() @ Vector((0, 0, dz_of(f) / ARM_SCALE))
         for i in range(3):
@@ -392,7 +483,7 @@ BACKSTEP = [(0, -0.03, 5, -2, 0.00), (1, -0.08, 9, -4, 0.00), (2, 0.03, -12, 5, 
             (10, -0.06, 6, -3, 0.00), (11, -0.02, 2, -1, 0.00), (12, 0.0, 0, 0, 0.00)]
 
 def evaluate_frames(act, f0, f1, fn):
-    arm.animation_data.action = act
+    assign_action(arm, act)
     out = {}
     for f in range(f0, f1 + 1):
         scene.frame_set(f); bpy.context.view_layer.update(); out[f] = fn(f)
@@ -468,7 +559,7 @@ for clip, spec in CLIPS.items():
         for f, p in keys: targets[f] = key_shot(f, p)
         for e in TW.values():
             if e.animation_data and e.animation_data.action:
-                for fc in e.animation_data.action.fcurves:
+                for fc in anim_fcurves(e.animation_data.action, e):
                     for kp in fc.keyframe_points:
                         kp.interpolation = 'LINEAR' if int(round(kp.co[0])) in linear else 'BEZIER'
         set_arm('L', 'world'); set_arm('R', 'world')
@@ -508,14 +599,17 @@ for clip, spec in CLIPS.items():
             for f in range(f0, f1 + 1, step): key_left_chest(f, base, deltas.get(f, Vector()))
             if f1 not in range(f0, f1 + 1, step): key_left_chest(f1, base, deltas.get(f1, Vector()))
         set_arm('L', 'chest')
-    arm.animation_data.action = act
+    assign_action(arm, act)
     scene.frame_start, scene.frame_end = f0, f1
     bpy.ops.object.select_all(action='DESELECT'); arm.select_set(True); bpy.context.view_layer.objects.active = arm
     bpy.ops.nla.bake(frame_start=f0, frame_end=f1, step=1, only_selected=False, visual_keying=True, clear_constraints=False,
                      clear_parents=False, use_current_action=False, clean_curves=False, bake_types={'POSE'})
     out = arm.animation_data.action; out.name = clip
+    # [5.2 호환] 이름이 바뀌었거나(충돌) 굽기 결과가 원본 액션이거나 슬롯이 없으면 멈춘다.
+    assert out != act and out.name == clip, (clip, out.name)
+    assert not LAYERED_ACTIONS or arm.animation_data.action_slot is not None, clip
     # 시각 키 굽기가 본 배율에 1e-3 수준 잡음을 남긴다(갑옷 단계 소켓 각도 0.08° 오차). 이 리그는 배율 애니메이션이 없으므로 정확히 1 로 둔다.
-    for fc in out.fcurves:
+    for fc in anim_fcurves(out, arm):
         if fc.data_path.endswith('.scale'):
             for kp in fc.keyframe_points: kp.co[1] = 1.0
             fc.update()
@@ -524,8 +618,8 @@ for clip, spec in CLIPS.items():
     if spec.get('shoot'): fingers.update(DRAW_FINGERS)
     for n, q in fingers.items():
         for i in range(4):
-            fc = out.fcurves.find(f'pose.bones["{n}"].rotation_quaternion', index=i)
-            if fc is None: fc = out.fcurves.new(f'pose.bones["{n}"].rotation_quaternion', index=i, action_group=n)
+            fc = anim_fcurves(out, arm).find(f'pose.bones["{n}"].rotation_quaternion', index=i)
+            if fc is None: fc = new_fcurve(anim_fcurves(out, arm), f'pose.bones["{n}"].rotation_quaternion', i, n)
             fc.keyframe_points.clear(); fc.keyframe_points.insert(f0, q[i]); fc.keyframe_points.insert(f1, q[i])
     # 측정: 제약이 살아 있는 굽기 직후(목표 오차)
     errs = []
@@ -538,7 +632,7 @@ for clip, spec in CLIPS.items():
         errs.append({'frame': f, 'wristL_err': round((wl - tgt['wl']).length, 4), 'wristR_err': round((wr - tgt['wr']).length, 4), 'bowAxisErrDeg': round(ang, 2)})
     # 접지: 제약을 끄고 구운 동작 그대로 실제 스킨 최저점을 잰다
     mute_all()
-    arm.animation_data.action = out
+    assign_action(arm, out)
     mins = evaluate_frames(out, f0, f1, lambda f: mesh_min_z())
     mode = spec['ground']
     if mode == 'contact' and spec.get('window'):
@@ -577,7 +671,8 @@ for e in list(T.values()) + list(TW.values()) + [chest]: bpy.data.objects.remove
 for a in list(bpy.data.actions):
     if a.name not in baked: bpy.data.actions.remove(a)
 for a in baked.values(): a.use_fake_user = True
-arm.animation_data.action = baked['idle']
+describe_actions('baked', baked.values())
+assign_action(arm, baked['idle'])
 report['grip'] = {'name': grip.name, 'parent': grip.parent_bone, 'matrix_parent_space': [list(r) for r in grip.matrix_local]}
 report['nock'] = {'name': nock.name, 'parent': nock.parent_bone}
 
@@ -598,7 +693,7 @@ def export(path, keep, fps):
     a = next(o for o in s.objects if o.type == 'ARMATURE')
     for act in list(bpy.data.actions):
         if act.name not in keep: bpy.data.actions.remove(act)
-    a.animation_data.action = bpy.data.actions[sorted(keep)[0]]
+    assign_action(a, bpy.data.actions[sorted(keep)[0]])
     bpy.ops.object.select_all(action='DESELECT')
     for o in (a, s.objects['RangerBowGrip_L'], s.objects['RangerDrawNock_R']): o.select_set(True)
     bpy.context.view_layer.objects.active = a

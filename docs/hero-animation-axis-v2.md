@@ -2,6 +2,8 @@
 
 2026-10-16. 궁수 v1(`docs/ranger-playability.md`)은 팔·활만 다시 저작했다. 사용자 재신고("몸이 꺾인다")를 따라 원인을 전신에서 다시 찾았고, 같은 원인을 가진 도적 1단계도 함께 교정했다. 원본 정규화 GLB 와 manifest 는 바꾸지 않았고, 버전이 붙은 교정본·기록·로더로만 연결한다.
 
+> 후속(2026-10-17): 게임은 이 저작을 Blender 5.2.2 에서 다시 구운 `ranger-library-v3`와 axis-v1 클립 그대로인 `rogue-library-v2`(둘 다 재질 마감)를 쓴다. 아래 v2·axis-v1 기록·파일·해시는 이력으로 그대로 남는다. [hero-library-blender52-finish.md](hero-library-blender52-finish.md)
+
 ## 원인(실측)
 
 - 축: `tools/asset-library/blender_merge_mixamo.py`가 Mixamo 쿼터니언을 롤이 다른 Tripo 리그에 그대로 복사했다. Hips·Spine·다리의 로컬 X(Mixamo 굽힘 축)가 이 리그에서는 앞뒤 축이라 무릎 굽힘이 옆꺾임, 상체 숙임이 옆기울기가 된다. 본별 롤 차이는 Hips·Spine 90°, 다리 87–96°, 어깨·팔 최대 177°다(`art-src/ranger/ranger-library-author-report-v2.json`의 `axisRollDeg`).
