@@ -8,12 +8,16 @@
 // app.input.keys(keys 프로필), app.renderer.r.info.render.calls(방 첫 진입 draw call 표본, renderer.render() 단독 호출).
 // 뷰 같은 프레임 A/B(보고 항목): 밸브 모습이 바뀐 스텝 끝에서 같은 프레임을 route.view.group 표시/숨김으로 renderer.render() 해 calls 차이를 잰다(시뮬레이션 스텝 없음, 끝나면 visible 복원).
 // 경로 정의(ROUTE_OBJECTIVES.ember_deep)가 없는 기준선 빌드(--project, 예: 79883ad)에서는 밸브 판정을 건너뛰고 공통 측정만 남긴다. keys 프로필은 기준선에서도 돌고 이동 여부만 report.baselineKeys 에 기록한다.
+// BUNDLE-14: 사슬 집행자 후방 노출(ROUTE_OBJECTIVES.ember_deep.rear)이 있는 후보 빌드는 보스방 진입 뒤 스텝마다 app.battle.routeObjectives.rear(state/windowLeft/windows/rearHits/frontHits/sideHits/broken)와
+// rear.boss(pos/yaw/state/special/attackSequence/completedAttackSequence/atkCd/alive/vel), 부채꼴·갑주 호 메시(이름 TLL_EmberRearWedge·TLL_EmberRearGuard 의 visible·색), #objective 문구, 토스트, 결과 routeObjective.rear 를 관측한다.
+// rear.filter 는 (입력 피해, 출력, 방향, 그 순간 state, 보스 yaw, sideOf 결과)를 기록만 하는 감싸개로 둔다(동작을 바꾸지 않는다). 후방 정의가 없는 기준선(8e89a51 밸브만, 79883ad 정의 없음)은 후방 판정을 건너뛰고 문구 누출만 관찰한다.
 // 판정 함수는 tools/ember-tide-checks.mjs 에 있고 test/ember-tide-checks.test.ts 가 합격·불합격 입력을 모두 검사한다. 기준선 비교는 tools/ember-tide-compare.mjs 다(한 짝씩).
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createExpeditionQa, nativeGameplayFocus, qaArgument, qaAssert, qaHash } from './expedition-qa-runtime.mjs';
-import { MOMENTS, TIDE, analyzeOrder, analyzePauseCooling, analyzeTide, checkKeys, checkPause, checkScreenMoment, checkScreens, describeBaselineKeys, stepStats } from './ember-tide-checks.mjs';
+import { MOMENTS, REAR, REAR_MOMENTS, TIDE, analyzeOrder, analyzePauseCooling, analyzeRear, analyzeTide, checkKeys, checkPause, checkRearLeak, checkRearManual, checkRearMoment, checkRearPause, checkScreenMoment, checkScreens,
+  describeBaselineKeys, stepStats } from './ember-tide-checks.mjs';
 
 const HELP = [
   '사용법: node tools/ember-tide-qa.mjs --expected-sha=<40hex> --out=<새 절대경로> [옵션]',
@@ -24,8 +28,9 @@ const HELP = [
   '',
   '옵션 (잿불금고 심층 카드만: 일반 잿불금고에는 이 정의가 없다)',
   '  --project=<절대경로>      검사 대상 프로젝트 루트(기본: 이 도구가 있는 저장소). dist 가 미리 빌드돼 있어야 한다(이 도구는 빌드하지 않는다).',
-  '                           심층 정의(ROUTE_OBJECTIVES.ember_deep)가 없는 기준선 빌드(예: 79883ad)도 받는다. 그때는 밸브 판정을 건너뛰고 공통 측정만 남긴다(order·pause·screens 는 건너뜀).',
-  '  --profile=<목록>          auto|order|pause|keys|screens|all (쉼표로 여러 개, 기본 auto). order·pause·screens 는 밀물 창이 있는 정의(후보)에서만 돈다. keys 는 기준선에서도 돈다.',
+  '                           기준선 판별(정의의 하위 항목이 없는지로 정함): ROUTE_OBJECTIVES.ember_deep.rear 가 없는 빌드(8e89a51: 밸브 정의만 있음)는 후방 판정을 건너뛰고 기존 밸브 판정과 공통 측정을 그대로 한다.',
+  '                           ember_deep 정의 자체가 없는 B10 기준선(79883ad)은 밸브 판정도 건너뛰고 공통 측정만 남긴다(order·pause·screens 는 건너뜀). 어느 기준선이든 후방 문구·토스트 누출만 관찰해 판정한다.',
+  '  --profile=<목록>          auto|order|pause|keys|screens|rear|all (쉼표로 여러 개, 기본 auto). order·pause·screens·rear 는 밀물 창이 있는 정의(후보)에서만 돌고, rear 는 rear 정의가 있는 후보에서만 돈다. keys 는 기준선에서도 돈다.',
   '  --depth=deep              심층 고정(다른 값은 거부)',
   '  --seed=<uint32>           Math.random 시드(기본 20261015)',
   '  --no-reseed               전투 시작 직후 재시드(window.__qaReseed)를 끈다. 기본은 켬: 전투가 활성이고 route.prepareView 가 끝난 뒤 첫 app.step 전에 한 번 같은 시드로 되돌린다',
@@ -42,12 +47,20 @@ const HELP = [
   '           + 밸브 판정: 개방 방 순서 [2,3,4]·직전 연속 유지(게임 시각 길이·조작판 반경 안·표본 전부 padOpen)·적/대기열 0·정예방 증원 1회 뒤 준비·닫힌 조작판 대기 표본·순서 대기·밀물 주기(경고 1.4 · 밀물 0.8 · 물 빠짐 4)·',
   '             밀물 띠 피해(분출당 1회, 띠 안)·봉인 해제(3/3 과 모든 구역 뒤)·결과 보고/결과 줄/줄 요소·목표창 밀물 문구(닫힘·열림)·토스트·밸브 뷰(띠 색 파랑, 라벨 밀물 대기)',
   '           + 보고 항목: 밸브 방 첫 진입 draw call, 경로 목표 뷰 표시/숨김 같은 프레임 A/B calls 차이, 50ms 초과 집계, 실행 전후 1분 load',
+  '           + 후방 판정(rear 정의가 있는 후보, 모든 프로필의 완주에 적용; 관측이 빠지면 실패): 보스 등장 뒤 부착(armored)·부착 토스트 정확히 1회 · 용재 망치(kiln_hammer)의 completedAttackSequence 가 처음 쓰인 스텝(또는 다음 스텝)에만 exposed ·',
+  '             다른 시그니처 뒤·지연 열림·같은 망치 두 번 없음 · 열림 토스트 창마다 1회(정의 window 로 만든 문구) · 창 길이 = window ± 1/60(보스 처치로 끝난 마지막 창만 면제하고 기록)·windowLeft 시계 · 창 안 보스 yaw 불변·새 공격 0·chase 속도 0(이동은 보고) ·',
+  '             피해 배율(창 안 방향 있는 타격 = 입력 × rear|front|1, 그 밖 1배, 집계 = 컨트롤러 rearHits·frontHits·sideHits) · 부채꼴(TLL_EmberRearWedge 0x5ff0d0)·갑주 호(TLL_EmberRearGuard 0xd8a070)는 exposed 에서만 보임 ·',
+  '             목표창 제목 "사슬 집행자 후방"·armored/exposed 문구(남은 시간 0.1초 올림) · 결과 routeObjective.rear = 마지막 관측값, 결과 줄 "사슬 집행자 후방 공격 n회 · 노출 n번 · 정면 막힘 n회" · AUTO 후방(auto 계열: 창 ≥ 1, 등 뒤 타격이 있는 창 ≥ 1, rearHits > frontHits)',
   '  order    AUTO 로 1번 밸브(방 2) ready·적 0 까지 → R #btn-auto 끔 → R 키보드(KeyW/A/S/D)로 닫힌 조작판 위 체류(유지 0) → 첫 밀물이 지나가 옮겨 간 열린 조작판으로 → 유지 ≥ 1.0 뒤 3.0 밖으로 이탈(유지 0) →',
   '           다음 밀물 경고에 현재 조작판으로 들어가 밀물이 지나가는 동안 다시 체류(닫힌 체류 합계 ≥ 2초) → 옮겨 간 열린 조작판에서 새 2초로 개방 → R AUTO 켬 → 완주. 공격 키 없음',
   '  pause    열린 유지 hold ≥ 0.8 에서 R #btn-pause → 120스텝+1초 게임 시간 불변·hold 0 → R #btn-resume → 새 유지 ≥ 2초 뒤 개방 → 완주',
   '  keys     AUTO 로 첫 밸브 방 정화(후보 ready·적 0) → R #btn-auto 끔 → R 키보드 KeyD 를 누른 채 30스텝 이동 → R #btn-pause → 60스텝+0.5초 → R #btn-resume → 키를 다시 누르지 않고 30스텝:',
   '           영웅 x 가 0.5 이상 늘고 app.input.keys.KeyD true → keyup 뒤 30스텝 안에 멈춤 · KeyD false → R AUTO 켬 → 완주. 키 이벤트 로그가 정지~재개 구간에 비어 있어야 통과(재입력 우회 금지). 기준선은 같은 단계를 돌려 이동 여부만 기록',
   '  screens  닫힌 조작판(밀물 대기)·밀물 경고·밀물·열린 조작판·개방 직후 순간마다 640x360, 844x390, 390x844 PNG + 결과 PNG, PNG 마다 그 순간 gate 상태 기록(캡처 대기 90초)',
+  '           + 후방 정의가 있는 후보는 순간 2개 더: rear-armored(보스 등장 뒤 armored, 목표창 armored 문구, 부채꼴·갑주 호 숨김)·rear-exposed(exposed 이고 windowLeft ≤ window − 0.5, 부채꼴·갑주 호 보임)',
+  '  rear     (후보만) AUTO 로 보스방까지(밸브 3/3·봉인 해제·보스 등장) → 첫 창이 열리면 R #btn-auto 끔 → R 키보드(KeyW/A/S/D 이동 + KeyJ 공격)로 보스 정면 쪽에 서서 정면 타격 ≥ 1 → 옆으로 돌아 등 뒤에서 등 뒤 타격 ≥ 1',
+  '           (창이 부족하면 R #btn-auto 로 AUTO 를 켜 다음 창을 기다렸다 이어서) → 창 안에서 R #btn-pause → 60스텝 + 0.5초 동안 windowLeft·보스 yaw·attackSequence 불변 → R #btn-resume → R AUTO 켬 → 완주.',
+  '           정면·등 뒤 타격의 filter 기록 배율이 정의의 front·rear 인지 판정한다. 좌표 이동·무적·HP 주입 없음(키보드 구간의 순간이동도 검사). 키보드 이동은 order·keys 와 같은 방식이다',
   '',
   '주의: 좌표 이동·무적·HP 주입·적 hp 조작으로 정상 플레이를 증명하지 않는다. viewport 검사는 실제 Android/GPU/터치/발열 검증이 아니다.',
   'SwiftShader 소프트웨어 렌더라 프레임 ms 는 JS 측 측정값이다. order·keys 의 키보드 입력은 Playwright 가 보낸 에뮬레이터 키 이벤트다.',
@@ -61,7 +74,7 @@ const flag = (name, bare, fallback) => qaArgument(name) ?? (process.argv.include
 const loadNow = () => { try { const [a, b, c] = fs.readFileSync('/proc/loadavg', 'utf8').trim().split(/\s+/).map(Number); return { avg1: a, avg5: b, avg15: c, at: new Date().toISOString() }; } catch { return null; } };
 const loadStart = loadNow();
 const projectRoot = path.resolve(arg('project', path.resolve(import.meta.dirname, '..')));
-const PROFILES = ['auto', 'order', 'pause', 'keys', 'screens'];
+const PROFILES = ['auto', 'order', 'pause', 'keys', 'screens', 'rear'];
 const profileArg = arg('profile', 'auto');
 const selected = profileArg === 'all' ? [...PROFILES] : profileArg.split(',');
 qaAssert(selected.every(name => PROFILES.includes(name)), '--profile must be one of ' + PROFILES.join('|') + '|all');
@@ -87,6 +100,8 @@ const DUNGEON_ID = 'ember_vault';
 const ORDER = Object.freeze({ padNear: 1.2, exitDistance: 3.2, minPartialHold: 1.0, minDwell: 2.1, centerNear: 1.2, maxDwellLoops: 3 });
 /** keys 프로필(PLAN 3.3): 단계별 스텝 수, 정지 중 추가 스텝, 키를 누를 위치(첫 밸브 방 중심에서 서쪽으로), 전체 이동 하한. */
 const KEYS = Object.freeze({ steps: 30, pauseSteps: 60, pauseWaitMs: 500, startOffset: 6, startNear: 1.2, key: 'KeyD' });
+/** rear 프로필: 공격 키(src/engine/input.js: KeyJ 또는 Space, 누르는 순간 press('attack')), 한 번에 진행하는 스텝, 정지 중 추가 스텝, 시도 상한, 창 안 정지 전 남은 시간 하한. */
+const REAR_RUN = Object.freeze({ attackKey: 'KeyJ', chunk: 4, pauseSteps: 60, pauseWaitMs: 500, resumeSteps: 6, maxIterations: 240, maxCycles: 14, pauseMinLeft: 1.0 });
 
 // 대상 프로젝트의 데이터를 그 경로에서 읽는다(기준선 빌드와 후보 빌드가 각자의 데이터를 쓴다). 접근·에너지·증원 횟수를 이 파일에 박지 않는다.
 const load = async file => import(pathToFileURL(path.join(projectRoot, file)).href);
@@ -101,9 +116,11 @@ qaAssert(dungeonDef, 'Target project has no ' + DUNGEON_ID + ' deep definition')
 const routeData = (await load('src/data/route-objectives.js')).ROUTE_OBJECTIVES ?? {};
 const routeDef = routeData.ember_deep ?? null;
 const valveRooms = routeDef ? routeDef.gates.map(g => g.roomId) : null;
+// 사슬 집행자 후방 정의. 8e89a51(밸브 정의만)과 79883ad(정의 없음)에는 없어 null 이고 후방 판정을 건너뛴다. 정의의 하위 항목(rear)이 있는지로만 후보와 기준선을 가른다.
+const rearDef = routeDef?.rear ?? null;
 const firstValveRoom = routeDef ? routeDef.gates[0].roomId : TIDE.rooms[0];
 const judgedProfiles = !!routeDef?.shockWindow;
-const needsKeyboard = selected.includes('order') || selected.includes('keys');
+const needsKeyboard = selected.includes('order') || selected.includes('keys') || selected.includes('rear');
 
 const STEP_CLASS = {
   auto: [['F', '저장 주입(해금·영웅 Lv.50 별3 스킬5·장비·에너지·AUTO)'], ['R', '출격 카드 버튼 · #btn-auto'], ['C', 'app.testPause + 고정 1/60 app.step 으로 완주'],
@@ -114,6 +131,9 @@ const STEP_CLASS = {
   keys: [['F', '저장 주입'], ['R', '출격 카드 버튼 · #btn-auto 끔/켬 · #btn-pause/#btn-resume'], ['C', 'AUTO 로 첫 밸브 방 정화(후보: ready·적 0)까지 고정 스텝'], ['R', '키보드 KeyW/A/S/D 로 방 서쪽으로 이동(키를 누르는 위치 잡기)'],
     ['R', '키보드 KeyD 를 누른 채(down 1회) · 정지 · 재개 · 키 이벤트 없이 관측 · keyup 1회'], ['C', '단계마다 고정 30스텝(정지 중 stepRaw 60회) 관측'], ['C', 'AUTO 완주']],
   screens: [['F', '저장 주입'], ['R', '출격 카드 버튼'], ['C', 'AUTO 로 닫힘·경고·밀물·열림·개방 직후 순간까지 고정 스텝'], ['C', 'renderer.render() 단독 호출 + viewport 3종 스크린샷(시뮬레이션 tick 없음)']],
+  rear: [['F', '저장 주입'], ['R', '출격 카드 버튼 · #btn-auto 끔/켬 · #btn-pause/#btn-resume'], ['C', 'AUTO 로 보스방(밸브 3/3·봉인 해제·보스 등장)까지, 첫 후방 창이 열린 스텝까지 고정 스텝'],
+    ['R', '키보드 KeyW/A/S/D 로 보스 정면 쪽·옆·등 뒤로 걷고 KeyJ 로 공격(좌표 이동·무적·HP 주입 없음)'], ['C', '키 입력 사이 4스텝씩 고정 진행(보스방은 매 스텝 관측), rear.filter 감싸개는 호출을 그대로 넘기고 기록만'],
+    ['C', '창 안 정지 중 app.step 60회(stepRaw)로 windowLeft·보스 yaw 불변 확인'], ['C', 'AUTO 완주 · 후방 판정']],
 };
 /** 경로 뷰가 있는 빌드에서 모든 프로필의 프로브가 하는 제어 렌더. */
 const VIEW_AB_STEP = ['C', '뷰 같은 프레임 A/B: 모습이 바뀐 스텝 끝에서 route.view.group visible 을 바꿔 renderer.render() 여러 번(시뮬레이션 스텝 없음, 끝나면 visible 복원)'];
@@ -122,6 +142,7 @@ const report = { kind: 'ember-tide-qa', releaseApproved: false, seed, heroId, de
   driverSha256: qaHash(fs.readFileSync(import.meta.filename)),
   checksSha256: qaHash(fs.readFileSync(path.join(import.meta.dirname, 'ember-tide-checks.mjs'))), profiles: {}, checks: [], reportItems: {},
   reseed: { on: reseedOn, elapsed: null }, load: { start: loadStart, waitedMs: 0, end: null, waitLoad }, routeDefinition: routeDef ? JSON.parse(JSON.stringify(routeDef)) : null, valveRooms,
+  rearDefinition: rearDef ? JSON.parse(JSON.stringify(rearDef)) : null,
   catalog: { id: dungeonDef.id, depth, energy: dungeonDef.energy, minLevel: dungeonDef.minLevel, unlockCode: dungeonDef.unlockCode ?? null, rewards: dungeonDef.rewards,
     firstRewards: dungeonDef.firstRewards ?? null, objective: dungeonDef.objective ?? null, tactic: dungeonDef.tactic ?? null, mechanics: dungeonDef.mechanics ?? null, routeId: routeDef?.id ?? null },
   selectors: { launch: ['#btn-expedition', '.adventure-nav [data-section="dungeons"]', '.exp-route-tabs button /^심층 원정/', '[data-dungeon="' + DUNGEON_ID + '"][data-depth="deep"] .exp-primary'],
@@ -130,19 +151,22 @@ const report = { kind: 'ember-tide-qa', releaseApproved: false, seed, heroId, de
     page: ['window.app.battle.routeObjectives (progress/hold/gates[i].room/ready/attuned/phase/shocks/hits/pad/age/padOpen/def/view.entries[i].{root,vent,pad,labelState}/view.group)',
       'window.app.battle.world (sealed/rooms/roomAt/linkPending)', 'window.app.battle (enemies[].homeRoom/alive, pending[].room, curRoom, stage.expedition.mechanics, player.pos/hp/auto/state)',
       'window.app.input.attackHeld', 'window.app.input.keys / enabled', 'window.app.ui.toast (호출 기록 감싸개)', 'window.app.renderer.r.info.render.calls',
-      'window.app.expeditionUI.result.routeObjective', 'window.__qaReseed (init script)', 'window.app.expedition.dungeonAccess'] },
+      'window.app.battle.routeObjectives.rear (state/windowLeft/windowTotal/windows/rearHits/frontHits/sideHits/rearDamage/frontDamage/broken/lastSide/boss, filter 감싸개)', 'window.app.battle.routeObjectives.rearView (존재 여부)',
+      'scene.getObjectByName TLL_EmberRearWedge/TLL_EmberRearGuard (visible 조상 포함, material.color)', 'window.app.expeditionUI.result.routeObjective.rear',
+      'window.__qaReseed (init script)', 'window.app.expedition.dungeonAccess'] },
   classification: {
     fixture: ['저장 주입: 해금(진행 별·탐험 레벨·기본 원정 승리)·영웅 레벨/별/스킬·장비·에너지 최대·AUTO 설정', 'Math.random 시드(LCG)와 window.__qaReseed(seed) 재시드(전투 활성·prepareView 뒤 첫 스텝 전 1회)',
       quality === 'low' ? '낮은 화질 설정(설정 핸들러와 같은 경로)' : null].filter(Boolean),
     realInput: ['#btn-expedition → 던전 탭 → 심층 원정 → 카드 출격 버튼', '#btn-auto', '#btn-pause/#btn-resume', '결과 화면 버튼(로비로)', '선택지 모달 버튼', '브라우저 새로고침',
-      needsKeyboard ? 'Playwright 키보드 이벤트(KeyW/A/S/D, 에뮬레이터 입력): order 의 걷는 방향은 도구가 조작판 위치의 화면 투영으로 정함(게임 입력층이 지운 키는 다시 누름). keys 의 KeyD 는 down 1회·정지·재개 사이 키 이벤트 없음·up 1회. 텔레포트·무적·HP 주입·공격 키 없음' : null].filter(Boolean),
+      needsKeyboard ? 'Playwright 키보드 이벤트(KeyW/A/S/D, 에뮬레이터 입력): order 의 걷는 방향은 도구가 조작판 위치의 화면 투영으로 정함(게임 입력층이 지운 키는 다시 누름). keys 의 KeyD 는 down 1회·정지·재개 사이 키 이벤트 없음·up 1회. 텔레포트·무적·HP 주입 없음. order·keys 는 공격 키 없음, rear 는 KeyJ 공격(정면·등 뒤 타격)' : null].filter(Boolean),
     controlled: ['app.testPause + 고정 1/60초 app.step (자연 RAF 아님)', 'renderer.render() 단독 호출(스크린샷·draw call 샘플, 시뮬레이션 tick 없음)',
-      '뷰 같은 프레임 A/B: route.view.group 의 visible 을 바꿔 같은 프레임을 renderer.render() 로 각각 그려 calls 차이 측정(끝나면 visible 복원)', 'app.ui.toast 감싸개(호출을 그대로 넘기고 기록만)'],
-    notProven: ['실제 Android/GPU/터치/발열', '자연 해금·장비 획득', '수동 플레이 밸런스', '사람의 실제 키보드·터치 조작 감각', '밀물 띠·조작판의 실제 모습(PNG 는 사람이 본다)'],
+      '뷰 같은 프레임 A/B: route.view.group 의 visible 을 바꿔 같은 프레임을 renderer.render() 로 각각 그려 calls 차이 측정(끝나면 visible 복원)', 'app.ui.toast 감싸개(호출을 그대로 넘기고 기록만)',
+      'rear.filter 감싸개(입력·출력·방향·그 순간 state·보스 yaw·sideOf 결과를 기록만 하고 반환값을 바꾸지 않음)'],
+    notProven: ['실제 Android/GPU/터치/발열', '자연 해금·장비 획득', '수동 플레이 밸런스', '사람의 실제 키보드·터치 조작 감각', '밀물 띠·조작판·후방 부채꼴의 실제 모습(PNG 는 사람이 본다)'],
     steps: Object.fromEntries(selected.map(name => [name, STEP_CLASS[name].map(([kind, detail]) => ({ kind, detail }))])) },
   scope: '로컬 production preview + SwiftShader headless Chromium. fixture 영웅/장비로 합법 범위 값만 주입하고 전투 중 HP·위치·적·결과는 건드리지 않는다.' };
 
-const sourceFiles = ['src/game/route-objectives.js', 'src/game/cooling-valves.js', 'src/game/cooling-valve-view.js', 'src/data/route-objectives.js', 'src/data/expedition-depths.js', 'src/data/expansion.js',
+const sourceFiles = ['src/game/route-objectives.js', 'src/game/cooling-valves.js', 'src/game/cooling-valve-view.js', 'src/game/ember-rear-exposure.js', 'src/game/ember-rear-view.js', 'src/data/route-objectives.js', 'src/data/expedition-depths.js', 'src/data/expansion.js',
   'src/data/stages.js', 'src/ui/battle-objective-view.js', 'src/ui/battle-readability.js', 'src/expansion/hub.jsx', 'src/game/battle-base.js', 'src/game/world.js', 'src/engine/input.js',
   'src/game/expedition-combat.js', 'src/game/enemies.js', 'src/game/player.js', 'src/game/expedition-economy.js', 'src/main.js'].filter(file => fs.existsSync(path.join(projectRoot, file)));
 // 시작 전 부하 대기(선택): 1분 load 가 기준 이하가 될 때까지 최대 180초. 기다린 시간과 실제 load 를 남긴다. 3분이 지나면 그대로 시작한다.
@@ -184,6 +208,72 @@ function installProbe(cfg) {
     };
     ui.__tideQaWrapped = true;
   }
+  // ---- 사슬 집행자 후방(BUNDLE-14): 보스방 진입 뒤 스텝마다 행을 남긴다. 게임 객체는 읽기만 하고, rear.filter 만 호출을 그대로 넘기는 감싸개로 기록한다(반환값을 바꾸지 않는다). ----
+  const rearOf = () => routeOf()?.rear ?? null;
+  const objectiveText = () => document.getElementById('objective')?.textContent ?? null;
+  // 부채꼴·갑주 호 메시는 이름으로 찾아 캐시한다(없으면 매번 다시 찾는다 — 관측 누락은 판정이 실패로 센다). visible 은 조상까지 모두 보일 때만 1이다.
+  const rv = { wedge: null, guard: null };
+  const rvFind = key => (rv[key] ??= app.renderer.scene.getObjectByName(cfg.names[key]) ?? null);
+  const viewState = key => {
+    const o = rvFind(key);
+    if (!o) return [-1, -1];
+    let vis = 1;
+    for (let n = o; n; n = n.parent) if (!n.visible) { vis = 0; break; }
+    let m = o.material;
+    if (!m) o.traverse(c => { if (!m && c.material) m = c.material; });
+    if (Array.isArray(m)) m = m[0];
+    const col = m?.color ?? m?.uniforms?.color?.value;
+    return [vis, col?.getHex ? col.getHex() : -1];
+  };
+  const rearRow = () => {
+    const r = rearOf();
+    if (!r) return null;
+    const b = app.battle, p = b.player, boss = r.boss ?? b.boss ?? P.rearBoss ?? null;
+    if (boss) P.rearBoss = boss;
+    const [wv, wc] = viewState('wedge'), [gv, gc] = viewState('guard');
+    return { n: P.steps, t: b.elapsed, hx: p.pos.x, hz: p.pos.z, hp: p.hp, ha: p.alive ? 1 : 0, au: p.auto ? 1 : 0, ah: app.input.attackHeld ? 1 : 0, ps: p.state,
+      rs: r.state, wl: r.windowLeft, wn: r.windows, rh: r.rearHits, fh: r.frontHits, sh: r.sideHits, rd: r.rearDamage, fd: r.frontDamage, br: r.broken, ls: r.lastSide,
+      bo: boss ? 1 : 0, al: boss?.alive ? 1 : 0, spn: boss?.spawning ? 1 : 0, bs: boss?.state ?? null, sp: boss?.special ?? null, pk: boss?.signatures?.plan?.key ?? null,
+      sq: boss?.attackSequence || 0, cq: boss?.completedAttackSequence || 0, ac: boss?.atkCd ?? null, by: boss?.yaw ?? null, bx: boss?.pos?.x ?? null, bz: boss?.pos?.z ?? null,
+      bvx: boss?.vel?.x ?? null, bvz: boss?.vel?.z ?? null, wv, gv, wc, gc };
+  };
+  const wrapRearFilter = () => {
+    const rear = rearOf();
+    if (!rear || rear.__tideQaWrapped) return;
+    const original = rear.filter;
+    rear.filter = function (dmg, dirx, dirz) {
+      const state = this.state, yaw = this.boss?.yaw ?? null, side = this.sideOf(dirx, dirz);
+      const out = original.call(this, dmg, dirx, dirz);
+      const q = window.__tideQa;
+      if (q?.rearFilters && q.rearFilters.length < 20000) q.rearFilters.push({ n: q.steps + 1, dmg, out, dx: dirx ?? null, dz: dirz ?? null, st: state, yaw, side });
+      return out;
+    };
+    rear.__tideQaWrapped = true;
+  };
+  /** 보스방 진입 뒤 스텝마다 후방 행을 남긴다(보스 처치 뒤 4행까지). 목표창 문구는 exposed 에서는 바뀐 스텝마다, armored 에서는 같은 상태가 36스텝(0.6초) 이어진 뒤 한 번 읽는다.
+   * 후방 컨트롤러가 없는 빌드(기준선)도 보스방 목표창 문구를 30스텝마다 모아 누출 관찰에 쓴다. */
+  const rearObserve = () => {
+    const b = app.battle;
+    if (!P.rearOn) { if (b.curRoom?.type === 'boss') P.rearOn = true; else return; }
+    if (P.steps % 30 === 0 && P.rearDoms.length < 40) {
+      const dom = objectiveText();
+      if (typeof dom === 'string' && !P.rearDoms.includes(dom)) P.rearDoms.push(dom);
+    }
+    if (P.rearPost >= 5) return;
+    const row = rearRow();
+    if (!row) return;
+    if (row.rs === 'exposed') {
+      const dom = objectiveText();
+      if (dom !== P.rearLastDom) { row.dom = dom; P.rearLastDom = dom; }
+      P.rearStable = 0;
+    } else {
+      P.rearLastDom = null;
+      if (row.rs === 'armored') { if (++P.rearStable === 36) row.dom = objectiveText(); } else P.rearStable = 0;
+    }
+    P.rearRows.push(row);
+    if (row.bo === 1 && row.al === 0) P.rearDone = true;
+    if (P.rearDone) P.rearPost++;
+  };
   // ---- 뷰 같은 프레임 A/B: 밸브마다 모습 코드(0 hidden, 1 대기, 2 닫힘, 3 경고, 4 밀물, 5 열림, 6 개방됨)가 바뀐 스텝 끝에서 측정한다. 코드는 sig(관측값)로만 계산한다. ----
   const abChanged = () => {
     const r = routeOf(), s = P.sig;
@@ -262,6 +352,8 @@ function installProbe(cfg) {
     Object.assign(P, { hpDrops: [], clears: [], samples: [], viewAB: [], abCodes: new Int8Array(gn).fill(-1), stepMs: [], renderMs: [], slow: [], maxAlive: 0, minHpRatio: 1, steps: 0, startElapsed: b.elapsed,
       rows: [], sig: new Float64Array(size), prevSig: new Float64Array(size).fill(-1e9), prevHd: 0, entered: new Set(), wp: [], padGate: null, marks: [], toasts: [],
       coolT: new Float64Array(gn).fill(-1), okey: -1, ostable: 0, dwellSteps: 0 });
+    Object.assign(P, { rearOn: false, rearRows: [], rearFilters: [], rearMarks: [], rearDoms: [], rearPost: 0, rearDone: false, rearBoss: null, rearLastDom: null, rearStable: 0, hasRear: !!rearOf() });
+    wrapRearFilter();
     P.prevRoom = b.curRoom?.id ?? null;
     P.prev = { cleared: b.world.rooms.map(x => !!x.cleared), hp: b.player.hp };
     fill();
@@ -269,7 +361,7 @@ function installProbe(cfg) {
     push(build('start'));
     const rooms = r ? r.gates.map(g => ({ id: g.room.id, x: g.room.x, z: g.room.z, type: g.room.type })) : [];
     return { kind: r?.def?.kind ?? null, controller: r ? r.constructor.name : null, routeId: r?.def?.id ?? null, gates: gn, rooms, hasView: !!r?.view,
-      hasSyncView: typeof r?.syncView === 'function', hasPadOpen: typeof r?.padOpen === 'function',
+      hasSyncView: typeof r?.syncView === 'function', hasPadOpen: typeof r?.padOpen === 'function', hasRear: !!rearOf(), hasRearView: !!r?.rearView,
       allRooms: b.world.rooms.map(x => ({ id: x.id, type: x.type, x: x.x, z: x.z })), reinforcements: b.stage?.expedition?.mechanics?.reinforcements ?? 0,
       encounterTactic: typeof b.stage?.encounter?.tactic === 'string' ? b.stage.encounter.tactic : null,
       def: r ? { id: r.def.id, holdSeconds: r.def.holdSeconds, radius: r.def.radius, shockWindow: !!r.def.shockWindow, ventColor: r.def.ventColor ?? null, copy: r.def.copy ?? null } : null };
@@ -315,10 +407,18 @@ function installProbe(cfg) {
       const room = b.curRoom;
       if (room && room.type !== 'start' && room.type !== 'boss' && !P.entered.has(room.id)) { P.entered.add(room.id); P.sample('roomEnter', { roomId: room.id, roomType: room.type }); }
     }
+    rearObserve();
   };
   // screens 순간(첫 밸브 index 0, 관측 조건만으로 판정): 닫힌 조작판 · 밀물 경고 · 밀물 · 열린 조작판 · 개방 직후.
   const momentNow = label => {
     const b = app.battle, r = routeOf(), g = r?.gates?.[0];
+    // 후방 순간: 보스 등장 뒤 armored(목표창이 armored 문구로 바뀐 뒤) · exposed 이고 windowLeft ≤ window − 0.5(부채꼴이 보임).
+    if (label === 'rear-armored' || label === 'rear-exposed') {
+      const rear = rearOf();
+      if (!rear || !rear.boss?.alive || rear.boss.spawning) return false;
+      if (label === 'rear-armored') return rear.state === 'armored' && (objectiveText() ?? '').includes(cfg.armoredText);
+      return rear.state === 'exposed' && rear.windowLeft > 0 && rear.windowLeft <= cfg.rear.window - .5 && viewState('wedge')[0] === 1;
+    }
     if (!g) return false;
     switch (label) {
       case 'closed': return r.progress === 0 && g.ready && !g.attuned && g.phase === 'heat' && !r.padOpen(g) && r.hold === 0;
@@ -352,6 +452,7 @@ function installProbe(cfg) {
       case 'near': return Math.hypot(p.x - stop.x, p.z - stop.z) <= stop.r;
       case 'nearPad': return !!g && Math.hypot(p.x - g.pad.x, p.z - g.pad.z) <= stop.r;
       case 'awayPad': return !!g && Math.hypot(p.x - g.pad.x, p.z - g.pad.z) >= stop.r;
+      case 'rearState': return rearOf()?.state === stop.state && !!rearOf()?.boss?.alive;
       case 'moment': { for (const label of stop.pending) if (momentNow(label)) { P.momentHit = label; return true; } return false; }
       default: return false;
     }
@@ -390,6 +491,8 @@ function installProbe(cfg) {
     Object.assign(row, { elapsed: b.elapsed, paused: b.paused, active: b.active, kills: b.kills });
     row.gx = (routeOf()?.gates || EMPTY).map(g => ({ ag: g.age, ph: g.phase === 'heat' ? 0 : g.phase === 'warning' ? 1 : g.phase === 'vent' ? 2 : 3, sk: Number.isFinite(g.shocks) ? g.shocks : -1 }));
     row.inputKeys = { KeyD: !!app.input.keys.KeyD, enabled: !!app.input.enabled };
+    row.rear = rearRow();
+    if (row.rear) row.rear.dom = objectiveText();
     return row;
   };
   // 키보드 이동용: 영웅 → 다음 경유점의 화면 투영 차. 경로는 방 연결(links)과 L자 복도(linkPending)의 모서리를 방 중심 경유로 따른다. pad 목표는 gate.pad 가 옮겨 가도 따라간다.
@@ -429,9 +532,51 @@ function installProbe(cfg) {
     for (const k in ks) if (ks[k]) live.push(k);
     return { dx: (z.x - a.x) * innerWidth / 2, dy: -(z.y - a.y) * innerHeight / 2, left: P.wp.length, final: fin, dist: Math.hypot(fin.x - p.x, fin.z - p.z), live };
   };
+  // rear 프로필: 현재 후방 상태, 구간 표식, 보스 정면·등 뒤 쪽으로 걷기 위한 화면 방향.
+  P.rearState = () => { const r = rearOf(); return r ? { state: r.state, windowLeft: r.windowLeft, windows: r.windows, rearHits: r.rearHits, frontHits: r.frontHits, boss: !!r.boss?.alive } : null; };
+  P.rmark = label => { P.rearMarks.push({ mk: label, n: P.steps }); return P.steps; };
+  /**
+   * side('front'|'rear') 쪽 사거리 지점으로 가는 화면 방향. 지점은 보스 정면/등 뒤로 meleeReach(원거리 영웅은 rangedReach)만큼 떨어진 곳이다.
+   * 반대편에 있으면 몸을 가로지르지 않도록 영웅이 있는 쪽 옆 경유점(autoFlank 와 같은 sidePad)을 먼저 거친다. 입력은 밖에서 키로 보낸다(좌표 이동 없음).
+   * arrived: 이미 그 쪽 사거리 안(정의의 rearDot/frontDot 에 여유 .15)이라 공격해도 되는 상태. bdx/bdy 는 보스를 향하는 화면 방향이다.
+   */
+  P.rearAim = side => {
+    const b = app.battle, r = rearOf(), boss = r?.boss, hero = b.player;
+    if (!r || !boss?.alive || !hero?.alive) return null;
+    const def = r.def, p = hero.pos, cam = app.renderer.camera;
+    const fx = Math.sin(boss.yaw), fz = Math.cos(boss.yaw), vx = p.x - boss.pos.x, vz = p.z - boss.pos.z, dist = Math.hypot(vx, vz);
+    const reach = hero.def?.ranged ? def.rangedReach : def.meleeReach;
+    const dot = dist > 1e-9 ? (-vx / dist) * fx + (-vz / dist) * fz : -1;
+    const sign = side === 'rear' ? -1 : 1;
+    const arrived = side === 'rear' ? dot >= def.rearDot + .15 && dist <= reach + .6 : dot <= -(def.frontDot + .15) && dist <= reach + .6;
+    let tx = boss.pos.x + sign * fx * reach, tz = boss.pos.z + sign * fz * reach;
+    const along = vx * fx + vz * fz;   // 영웅이 정면 쪽(+)인지 등 쪽(-)인지
+    if (side === 'rear' ? along > -.5 : along < .5) {
+      const s = vx * fz - vz * fx >= 0 ? 1 : -1, rr = reach + def.sidePad;
+      tx = boss.pos.x + s * fz * rr + sign * fx * .8; tz = boss.pos.z - s * fx * rr + sign * fz * .8;
+    }
+    const room = boss.homeRoom;
+    if (room && Number.isFinite(room.w) && Number.isFinite(room.h)) {
+      const m = 1.2;
+      tx = Math.max(room.x - room.w / 2 + m, Math.min(room.x + room.w / 2 - m, tx));
+      tz = Math.max(room.z - room.h / 2 + m, Math.min(room.z + room.h / 2 - m, tz));
+    }
+    cam.updateMatrixWorld();
+    const toward = (x, z) => {
+      const ex = x - p.x, ez = z - p.z, el = Math.hypot(ex, ez) || 1;
+      const a = p.clone().project(cam), z2 = p.clone().set(p.x + ex / el * 2, p.y, p.z + ez / el * 2).project(cam);
+      return { dx: (z2.x - a.x) * innerWidth / 2, dy: -(z2.y - a.y) * innerHeight / 2 };
+    };
+    const go = toward(tx, tz), at = toward(boss.pos.x, boss.pos.z);
+    const ks = app.input.keys || {}, live = [];
+    for (const k in ks) if (ks[k]) live.push(k);
+    return { state: r.state, windowLeft: r.windowLeft, arrived, dist, dot, dx: go.dx, dy: go.dy, bdx: at.dx, bdy: at.dy, goalDist: Math.hypot(tx - p.x, tz - p.z),
+      fh: r.frontHits, rh: r.rearHits, heroState: hero.state, live };
+  };
   // 느린 스텝 목록은 자르지 않는다(기준선 비교가 개수를 정확히 세야 한다).
   P.summary = () => ({ steps: P.steps, stepMs: P.stepMs, renderMs: P.renderMs, slow: P.slow, maxAlive: P.maxAlive, minHpRatio: P.minHpRatio, samples: P.samples, viewAB: P.viewAB,
-    clears: P.clears, hpDrops: P.hpDrops, rows: P.rows, toasts: P.toasts, dwellSeconds: P.dwellSteps / 60 });
+    clears: P.clears, hpDrops: P.hpDrops, rows: P.rows, toasts: P.toasts, dwellSeconds: P.dwellSteps / 60,
+    rear: { rows: P.rearRows, filters: P.hasRear ? P.rearFilters : null, marks: P.rearMarks, doms: P.rearDoms } });
   return true;
 }
 
@@ -514,9 +659,15 @@ async function beginRun(tag) {
   row.nativeAuto = await page.evaluate(() => ({ player: window.app.battle.player.auto, persisted: window.app.journey.s.autoBattle }));
   qaAssert(row.nativeAuto.player === true, 'AUTO is not active after native button');
   row.focus = await nativeGameplayFocus(page);
-  row.probe = await page.evaluate(installProbe, { gateCount: info.gates, radius: routeDef?.radius ?? 1.6 });
+  row.probe = await page.evaluate(installProbe, { gateCount: info.gates, radius: routeDef?.radius ?? 1.6, rear: rearDef ? JSON.parse(JSON.stringify(rearDef)) : null,
+    names: { wedge: REAR.wedge.name, guard: REAR.guard.name }, armoredText: REAR.armoredText });
   row.begin = await page.evaluate(() => window.__tideQa.begin());
   row.reinforcements = row.begin.reinforcements;
+  // 후방 정의가 있는 후보는 컨트롤러와 뷰가 출격 직후(prepareView 뒤)에 있어야 한다. 없으면 관측 누락이라 기준선으로 오인하지 않고 실패로 남긴다.
+  if (rearDef) {
+    check(tag + ': 후방 컨트롤러(routeObjectives.rear) 존재', row.begin.hasRear, { hasRear: row.begin.hasRear, controller: row.begin.controller });
+    check(tag + ': 후방 뷰(routeObjectives.rearView) 존재(출격 직후 prepareView 뒤)', row.begin.hasRearView, { hasRearView: row.begin.hasRearView });
+  } else check(tag + ': 후방 정의가 없는 기준선인데 routeObjectives.rear 가 있음', !row.begin.hasRear, { hasRear: row.begin.hasRear });
   // 재시드: 첫 app.step 전 한 번. --no-reseed 면 호출하지 않는다.
   row.reseed = reseedOn ? await page.evaluate(s => { const q = window.__tideQa, b = window.app.battle; const r = { on: true, elapsed: b.elapsed, active: b.active, steps: q.steps, hasRoute: !!b.routeObjectives, hasView: !!b.routeObjectives?.view };
     window.__qaReseed(s); return r; }, seed) : { on: false, elapsed: null };
@@ -667,6 +818,46 @@ const LABELS = {
   resultFields: '결과 routeObjective { id, label, complete, progress, target, rooms, overheatHits }', resultLine: "결과 줄 '냉각 밸브 개방 3/3 · 완료'", resultElement: "결과 줄 요소 aria-label '냉각 밸브 개방 결과' 본문",
   objectiveText: '목표창 제목과 상태별 밀물 문구(닫힘·열림 표본 필수, 망치·충격파 없음)', toasts: '토스트: 준비·개방·밀물 피해 문구, 재벼림 문구 없음', tideView: '밸브 뷰: 밀물 띠 색 파랑 · 닫힘 라벨 밀물 대기 · 띠 표시/숨김',
 };
+const REAR_LABELS = {
+  definition: '정의 = PLAN 3절 계약(id·보스 cinder_chain_executor·서명 kiln_hammer·수치)', attach: '부착: 보스 등장 뒤 한 스텝 안에 armored, 전이는 idle → armored ⇄ exposed → ended 뿐',
+  attachToast: "부착 토스트 '사슬 갑주 · 용재 망치가 박히면 등 뒤를 노리세요' 정확히 1회", windowCount: '노출 창 1회 이상',
+  noEarlyOpen: '용재 망치 completedAttackSequence 가 쓰이기 전·다른 시그니처 뒤에는 열리지 않음', openTiming: '창이 트리거 같은 스텝 또는 다음 스텝에 열리고 한 망치에 한 번',
+  noMissedOpen: '용재 망치가 완성되면 반드시 열림(보스 처치 스텝 제외)', windowLength: '창 길이 = window ± 1/60(보스 처치로 끝난 마지막 창만 면제·기록)·windowLeft 시계',
+  noNewAttack: '창 안 attackSequence 불변(새 공격 0)', yawFixed: '창 안 보스 yaw 가 열린 순간과 정확히 같음', pinnedStill: '창 안 보스 state chase 인 스텝은 속도 0(이동은 보고)',
+  windowsConsistent: 'rear.windows = 관측한 창 수', openToasts: '열림 토스트(정의 window 문구) 창마다 1회·비슷한 다른 문구 없음',
+  multiplier: '피해 배율: 창 안 방향 있는 타격 = 입력 × rear|front|1, 그 밖 1배, 집계 = rearHits·frontHits·sideHits', rearView: '뷰: 부채꼴 0x5ff0d0·갑주 호 0xd8a070 은 exposed 에서만 보임',
+  objectiveText: "목표창 제목 '사슬 집행자 후방'·armored/exposed 문구(남은 시간 0.1초 올림)", resultRear: "결과 routeObjective.rear = 마지막 관측값 · 결과 줄 '사슬 집행자 후방 공격 n회 · 노출 n번 · 정면 막힘 n회'",
+  autoRear: 'AUTO 후방: 창 ≥ 1 · 등 뒤 타격이 있는 창 ≥ 1 · rearHits > frontHits',
+};
+/** 보스방 후방 관측을 파일로 빼고, 후방 정의가 있는 후보는 판정한다. 후방 정의가 없는 기준선은 문구·토스트 누출만 관찰한다(8e89a51·79883ad 공통). */
+function recordRear(row, raw, toasts) {
+  const file = row.tag + '-rear-trace.json';
+  fs.writeFileSync(path.join(qa.out, file), JSON.stringify(raw), { flag: 'wx' });
+  row.rearTraceFile = file; row.rearTraceRows = raw.rows.length; row.rearFilterCalls = raw.filters?.length ?? null;
+  if (!rearDef) {
+    row.rearLeak = checkRearLeak(toasts, raw.doms, row.resultText);
+    row.rear = { skipped: '후방 정의(ROUTE_OBJECTIVES.ember_deep.rear)가 없는 기준선 빌드: 후방 판정 생략, 문구·토스트 누출만 관찰' };
+    check(row.tag + ': 기준선에 후방 문구·토스트 누출 없음(토스트·보스방 목표창 표본·결과 화면 관찰)', row.rearLeak.ok, row.rearLeak);
+    return;
+  }
+  const analysis = analyzeRear({ rows: raw.rows, filters: raw.filters, toasts, result: row.result?.routeObjective, resultText: row.resultText, resultLines: row.resultLines,
+    encounterTactic: row.begin.encounterTactic ?? null }, rearDef, { autoRear: row.tag !== 'rear' });
+  row.rear = analysis;
+  traces.set(row.tag + ':rear', raw);
+  (report.reportItems.rearWindows ??= []).push({ tag: row.tag, windows: analysis.windows.map(w => ({ index: w.index, n: w.n, t: w.t, length: w.length, truncated: w.truncated, delaySteps: w.delaySteps, rows: w.rows,
+    moveMax: w.moveMax, startWindowLeft: w.startWindowLeft })), exempt: analysis.windows.filter(w => w.truncated).map(w => ({ index: w.index, length: w.length, why: '보스 처치로 끝난 창: 길이 판정 면제' })),
+    note: '보고 항목: 창마다 시작·길이·열림 지연 스텝·보스 이동(넉백) 최대 거리' });
+  (report.reportItems.rearAuto ??= []).push({ tag: row.tag, per: analysis.auto.per, windowsWithRear: analysis.auto.windowsWithRear, rearHits: analysis.auto.rearHits, frontHits: analysis.auto.frontHits,
+    note: '보고 항목: 창마다 등 뒤·정면 타격 수와 창 시작부터 첫 등 뒤 타격까지 게임 초' });
+  (report.reportItems.rearFilters ??= []).push({ tag: row.tag, calls: analysis.filters.calls, exposedCalls: analysis.filters.exposedCalls, directionless: analysis.filters.directionless, counts: analysis.filters.counts, controller: analysis.filters.controller });
+  for (const [name, ok] of Object.entries(analysis.acceptance)) check(row.tag + ': 후방 ' + (REAR_LABELS[name] ?? name), ok, ok ? undefined : { name, definition: analysis.definition.issues, attach: analysis.attach,
+    windows: analysis.windows, missed: analysis.missed, filters: analysis.filters, auto: analysis.auto, view: analysis.view, objective: analysis.objective, toasts: analysis.toasts, result: analysis.result });
+  if (row.tag === 'rear') {
+    const manual = checkRearManual(raw.rows, raw.filters, raw.marks, rearDef);
+    row.rearManual = manual;
+    check('rear: 키보드 구간 — AUTO 꺼짐·영웅 생존·순간이동 없음·정면 타격 ≥ 1(배율 front)·등 뒤 타격 ≥ 1(배율 rear)·정면이 먼저', manual.ok, manual);
+  }
+}
 /** 관측 행을 파일로 빼고, 밸브 정의가 있는 빌드는 개방 전 과정을 판정한다. 기준선(정의 없음)은 공통 측정만 남긴다. */
 function recordTide(row, raw) {
   const rows = raw.rows;
@@ -734,6 +925,8 @@ async function playToEnd(row, { momentLabels = null, expectFirstClear = true } =
     check(row.tag + ': firstClear 표시', row.result.rewards.firstClear === expectFirstClear);
   }
   const s = row.summary;
+  const rearRaw = s.rear;
+  delete s.rear;
   row.metrics = { elapsed: row.result?.time ?? null, kills: row.result?.kills ?? null, hpDrops: s.hpDrops.length, hpDropTotal: ms(s.hpDrops.reduce((sum, d) => sum + d.drop, 0)),
     minHpRatio: s.minHpRatio, maxAlive: s.maxAlive, simulation: stepStats(s.stepMs), render: stepStats(s.renderMs), over50ms: [...s.stepMs, ...s.renderMs].filter(v => v > 50).length, slow: s.slow,
     drawCalls: s.samples.map(x => ({ label: x.label, roomId: x.roomId ?? null, room: x.room, t: ms(x.t), calls: x.calls, triangles: x.triangles, ms: x.ms })) };
@@ -741,6 +934,7 @@ async function playToEnd(row, { momentLabels = null, expectFirstClear = true } =
   delete s.stepMs; delete s.renderMs;
   (report.reportItems.absolute50ms ??= []).push({ tag: row.tag, runOver50: row.metrics.over50ms, steps: s.steps, note: '보고 항목(판정 아님). 기준선 대비 증가는 ember-tide-compare 가 판정한다.' });
   recordTide(row, s);
+  recordRear(row, rearRaw, s.toasts);
   if (!routeDef) {
     row.baseline = { skipped: row.tide.skipped, elapsed: row.metrics.elapsed, kills: row.metrics.kills, hits: row.metrics.hpDrops, frames: { simulation: row.metrics.simulation, render: row.metrics.render }, drawCalls: row.metrics.drawCalls };
   }
@@ -761,6 +955,73 @@ async function reloadCheck(row) {
     && JSON.stringify(after.materials) === JSON.stringify(before.materials) && after.gold === before.gold, { beforeWins: before.depthWins, afterWins: after.depthWins, beforeDungeonWins: before.dungeonWins, afterDungeonWins: after.dungeonWins });
   row.reload = { beforeSha: before.saveSha256, afterSha: after.saveSha256, energy: energyChange(before, after, 0, row.tag + ' reload') };
 }
+/** rear 프로필은 후방 정의(ember_deep.rear)가 있는 후보에서만 돈다. */
+const skipUnlessRear = () => (rearDef ? null : { skipped: '후방 정의(ROUTE_OBJECTIVES.ember_deep.rear)가 있는 후보 빌드에서만 도는 프로필이다(기준선은 후방 판정을 건너뛴다)' });
+const rearState = () => page.evaluate(() => window.__tideQa.rearState());
+const rmark = label => page.evaluate(l => window.__tideQa.rmark(l), label);
+/** 후방 창이 열려 있고 남은 시간이 minLeft 이상이 될 때까지 맞춘다. 이미 그러면 그대로 둔다(AUTO 를 건드리지 않는다). 아니면 AUTO 를 켜 창이 닫히고 다시 열리기를 기다린다. */
+async function ensureRearWindow(row, minLeft) {
+  for (let k = 0; k < REAR_RUN.maxCycles; k++) {
+    const st = await rearState();
+    if (!st) throw Error('No rear controller while waiting for a window');
+    if (st.state === 'exposed' && st.windowLeft >= minLeft) return st;
+    if (st.state === 'ended') throw Error('Rear exposure ended before the window we wanted');
+    if (!(await page.evaluate(() => window.app.battle.player.auto))) { keyboardMode = false; await setAuto(true); }
+    if (st.state === 'exposed') {
+      const closed = await advance(row, { type: 'rearState', state: 'armored' }, { max: 60 * 30 });
+      qaAssert(closed.reason === 'stop', 'Rear window never closed: ' + closed.reason);
+    }
+    const opened = await advance(row, { type: 'rearState', state: 'exposed' }, { max: 60 * 60 * 5 });
+    qaAssert(opened.reason === 'stop', 'Rear window never opened: ' + opened.reason);
+  }
+  throw Error('Could not get a rear window with ' + minLeft + 's left');
+}
+/**
+ * 보스 side('front'|'rear') 쪽 사거리에서 공격 키(KeyJ)로 타격을 하나 더 넣을 때까지 키보드로 걷는다(counter field 'fh'|'rh' 가 base 보다 1 이상 늘 때).
+ * 4스텝마다 화면 방향을 다시 잡는다. 창이 닫히면 closed 로 돌려준다. 좌표 이동·무적은 없다. 사거리에 닿으면 보스 쪽 방향키를 누른 채 공격 키를 누른다(수동 공격은 입력 방향으로 선다).
+ */
+async function strikeFrom(row, side, field, base) {
+  for (let i = 0; i < REAR_RUN.maxIterations; i++) {
+    const a = await page.evaluate(s => window.__tideQa.rearAim(s), side);
+    if (!a) throw Error('Boss or hero gone while striking from ' + side);
+    if (a.state !== 'exposed') return { reason: 'closed', iterations: i };
+    if (a[field] - base >= 1) return { reason: 'done', iterations: i };
+    await setKeys(keysToward(a.arrived ? { dx: a.bdx, dy: a.bdy } : a), a.live);
+    const attack = a.arrived && a.heroState !== 'attack';
+    if (attack) await kb('down', REAR_RUN.attackKey);
+    const r = await page.evaluate(opts => window.__tideQa.run(opts), { n: REAR_RUN.chunk });
+    if (attack) await kb('up', REAR_RUN.attackKey);
+    if (r.reason === 'inactive') throw Error('Battle ended while striking the chain executor by keyboard (hero down?)');
+    if (r.reason === 'paused') { await setKeys(new Set()); await takeChoice(row, r); await nativeGameplayFocus(page); }
+  }
+  throw Error('No ' + side + ' strike landed within ' + REAR_RUN.maxIterations + ' iterations');
+}
+/** AUTO 를 끄고 정면 타격 → 옆으로 돌아 등 뒤 타격을 키보드로 한다. 창이 모자라면 AUTO 를 켜 다음 창을 기다렸다 이어서 한다. 구간마다 manual-start/manual-end 표식을 남긴다. */
+async function rearManual(row) {
+  const gain = { fh: 0, rh: 0 };
+  row.manual = { stints: [], cycles: 0 };
+  while (gain.fh < 1 || gain.rh < 1) {
+    if (++row.manual.cycles > REAR_RUN.maxCycles) throw Error('Manual rear strikes did not finish: ' + JSON.stringify(gain));
+    const st = await ensureRearWindow(row, 0);
+    qaAssert(st.state === 'exposed', 'Rear window not open for manual strikes');
+    await setAuto(false);
+    keyboardMode = true;
+    row.focusKeyboard = await nativeGameplayFocus(page);
+    keyPhase = 'walk';
+    const start = await rearState();
+    await rmark('manual-start');
+    const stint = { startLeft: start.windowLeft, fh: start.frontHits, rh: start.rearHits, results: [] };
+    try {
+      if (gain.fh < 1) { const res = await strikeFrom(row, 'front', 'fh', start.frontHits); stint.results.push({ side: 'front', ...res }); }
+      if (stint.results.at(-1)?.reason !== 'closed' && gain.rh < 1) { const res = await strikeFrom(row, 'rear', 'rh', start.rearHits); stint.results.push({ side: 'rear', ...res }); }
+    } finally { await setKeys(new Set()); await rmark('manual-end'); keyboardMode = false; }
+    const end = await rearState();
+    gain.fh += end.frontHits - start.frontHits; gain.rh += end.rearHits - start.rearHits;
+    stint.endLeft = end.windowLeft; stint.gain = { ...gain };
+    row.manual.stints.push(stint);
+  }
+}
+
 /** order·pause·screens 는 밀물 창이 있는 정의에서만 돈다. 정의가 없는 기준선이면 출격하기 전에 건너뛴다. */
 const skipUnlessShockWindow = () => (judgedProfiles ? null : { skipped: '밀물 창(shockWindow)이 있는 심층 정의(ROUTE_OBJECTIVES.ember_deep)가 있는 빌드에서만 도는 프로필이다' });
 
@@ -966,22 +1227,58 @@ const profiles = {
     await closeResultToLobby();
     return { runs: [row] };
   },
+  async rear() {
+    const why = skipUnlessRear();
+    if (why) return why;
+    await applyFixture();
+    const row = await beginRun('rear');
+    keyEvents.length = 0; keyPhase = 'walk';
+    // 1) AUTO 로 보스방까지(밸브 3/3·봉인 해제·보스 등장) 진행해 첫 후방 창이 열린 스텝에서 멈춘다.
+    const first = await advance(row, { type: 'rearState', state: 'exposed' }, { max: 60 * 60 * 20 });
+    check('rear: AUTO 로 보스방까지 가서 첫 후방 창이 열림', first.reason === 'stop', { reason: first.reason, elapsed: first.elapsed });
+    qaAssert(first.reason === 'stop', 'First rear window never opened: ' + first.reason);
+    row.firstWindow = await freeze();
+    // 2) R #btn-auto 끔 → 키보드로 정면 타격, 옆으로 돌아 등 뒤 타격.
+    await rearManual(row);
+    check('rear: 키보드로 정면 타격 ≥ 1 · 등 뒤 타격 ≥ 1 (AUTO 꺼짐, 구간 ' + row.manual.stints.length + '개)', row.manual.stints.length >= 1, row.manual);
+    // 3) 창 안에서 R #btn-pause → 60스텝 + 0.5초 동안 windowLeft·보스 yaw 불변 → R #btn-resume.
+    await ensureRearWindow(row, REAR_RUN.pauseMinLeft);
+    const before = await freeze();
+    await pauseBattle();
+    const paused = await freeze();
+    await page.evaluate(n => window.__tideQa.stepRaw(n), REAR_RUN.pauseSteps); await page.waitForTimeout(REAR_RUN.pauseWaitMs);
+    const still = await freeze();
+    row.pauseShot = await shot('rear-paused');
+    await resumeBattle();
+    await advanceSteps(row, REAR_RUN.resumeSteps);
+    const resumed = await freeze();
+    const slim = x => ({ elapsed: x.elapsed, paused: x.paused, rear: x.rear });
+    row.rearPause = { before: slim(before), paused: slim(paused), still: slim(still), resumed: slim(resumed), verdict: checkRearPause({ before, paused, still, resumed, steps: REAR_RUN.resumeSteps }) };
+    check('rear: 창 안 정지 60스텝+0.5초 동안 게임 시간·windowLeft·보스 yaw·attackSequence·위치 불변, 재개 뒤 windowLeft 가 흐른 시간만큼 줄고 yaw 유지', row.rearPause.verdict.ok, row.rearPause.verdict);
+    // 4) R AUTO 켬 → 완주.
+    await setAuto(true); keyboardMode = false;
+    await playToEnd(row);
+    await closeResultToLobby();
+    return { runs: [row] };
+  },
   async screens() {
     const why = skipUnlessShockWindow();
     if (why) return why;
     await applyFixture();
     const row = await beginRun('screens');
-    await playToEnd(row, { momentLabels: [...MOMENTS] });
-    const verdict = checkScreens(row.shots, [...MOMENTS], SCREEN_VIEWPORTS.length);
+    const labels = [...MOMENTS, ...(rearDef ? REAR_MOMENTS : [])];
+    await playToEnd(row, { momentLabels: labels });
+    const verdict = checkScreens(row.shots, labels, SCREEN_VIEWPORTS.length);
     check('screens: 모든 순간에 도달해 3개 화면 크기 PNG 를 남김', verdict.ok, verdict.rows);
     row.screensCheck = verdict;
-    for (const label of MOMENTS) {
+    for (const label of labels) {
       const s = row.shots.find(x => x.label === label);
       if (!s?.reached) continue;
-      s.look = checkScreenMoment(s, routeDef, label);
-      // PNG 마다 그 순간 gate 상태를 남긴다(사람이 PNG 와 맞춰 본다).
-      s.pngStates = s.files.map(file => ({ file, label, elapsed: s.capture.elapsed, gate: s.look.gate }));
-      check('screens: ' + label + ' 순간의 1번 밸브 상태·뷰 표시 (촬영 스텝 행)', s.look.ok, s.look);
+      const rearMoment = REAR_MOMENTS.includes(label);
+      s.look = rearMoment ? checkRearMoment(s, rearDef, label) : checkScreenMoment(s, routeDef, label);
+      // PNG 마다 그 순간 gate(후방 순간은 후방) 상태를 남긴다(사람이 PNG 와 맞춰 본다).
+      s.pngStates = s.files.map(file => ({ file, label, elapsed: s.capture.elapsed, gate: rearMoment ? s.look.rear : s.look.gate }));
+      check('screens: ' + label + (rearMoment ? ' 순간의 보스 후방 상태·부채꼴/갑주 호·목표창 (촬영 스텝 행)' : ' 순간의 1번 밸브 상태·뷰 표시 (촬영 스텝 행)'), s.look.ok, s.look);
     }
     row.resultShots = await captureScreens('result-' + row.tag);
     await closeResultToLobby();
@@ -1033,5 +1330,5 @@ finally {
   report.load.end = loadNow();
   report.finished = new Date().toISOString(); await qa.save();
 }
-console.log(JSON.stringify({ status: report.status, out: qa.out, depth, valveDefinition: !!routeDef, reseed: report.reseed, load: report.load, profiles: Object.fromEntries(Object.entries(report.profiles).map(([k, v]) => [k, v.status])),
+console.log(JSON.stringify({ status: report.status, out: qa.out, depth, valveDefinition: !!routeDef, rearDefinition: !!rearDef, reseed: report.reseed, load: report.load, profiles: Object.fromEntries(Object.entries(report.profiles).map(([k, v]) => [k, v.status])),
   failedChecks: report.failedChecks, mediaGates: report.mediaGates, failure: report.failure, cleanupFailure: report.cleanupFailure, releaseApproved: false }));
