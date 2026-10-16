@@ -63,18 +63,18 @@ test('open: 남은 시간은 0.1초 올림, 버틴 시간은 0.1초 내림이고
   expect(panel()).toMatchObject({ action: '기둥 열림 1.0초 · 행동 없이 1.0/2.0초', holdTotal: 2 });
 });
 
-test('exposed: 휘청 남은 시간은 0.1초 올림, 배율은 def 에서 계산하고 막대는 exposedLeft/exposedTotal 이다', () => {
+test('exposed: 휘청 남은 시간은 0.1초 올림, 배율은 컨트롤러 damageMult, 없으면 def 와 끊은 수((1 + weaken × k) × exposedMult)로 계산하고 막대는 exposedLeft/exposedTotal 이다', () => {
   const f = fixture(), chains: any = fake({ state: 'exposed', chainsLeft: 2, exposedLeft: 5 }); f.setChains(chains);
   const panel = () => battleObjectiveView(f.battle);
-  expect(panel()).toMatchObject({ title: TITLE, action: '사슬 끊김 · 휘청 5.0초 · 받는 피해 150%', hold: 5, holdTotal: 5 });
-  chains.exposedLeft = 2.21; expect(panel()).toMatchObject({ action: '사슬 끊김 · 휘청 2.3초 · 받는 피해 150%', hold: 2.2 });
-  chains.exposedLeft = .04; expect(panel()).toMatchObject({ action: '사슬 끊김 · 휘청 0.1초 · 받는 피해 150%', hold: 0 });
+  expect(panel()).toMatchObject({ title: TITLE, action: '사슬 끊김 · 휘청 5.0초 · 받는 피해 165%', hold: 5, holdTotal: 5 });
+  chains.exposedLeft = 2.21; expect(panel()).toMatchObject({ action: '사슬 끊김 · 휘청 2.3초 · 받는 피해 165%', hold: 2.2 });
+  chains.exposedLeft = .04; expect(panel()).toMatchObject({ action: '사슬 끊김 · 휘청 0.1초 · 받는 피해 165%', hold: 0 });
   f.route.def = { ...f.route.def, chains: { ...CHAINS, exposedMult: 2 } }; chains.exposedLeft = 1;
-  expect(panel().action).toBe('사슬 끊김 · 휘청 1.0초 · 받는 피해 200%');
+  expect(panel().action).toBe('사슬 끊김 · 휘청 1.0초 · 받는 피해 220%');
   // 컨트롤러가 지금 배율(약화 × 휘청)을 주면 그 값을 쓴다(첫 끊김 1.1 × 2 = 220%, 셋째 1.3 × 2 = 260%).
   chains.damageMult = 2.2; expect(panel().action).toBe('사슬 끊김 · 휘청 1.0초 · 받는 피해 220%');
   chains.damageMult = 1.3 * 2; expect(panel().action).toBe('사슬 끊김 · 휘청 1.0초 · 받는 피해 260%');
-  chains.damageMult = NaN; expect(panel().action).toBe('사슬 끊김 · 휘청 1.0초 · 받는 피해 200%');
+  chains.damageMult = NaN; expect(panel().action).toBe('사슬 끊김 · 휘청 1.0초 · 받는 피해 220%');
 });
 
 test('값이 숫자가 아니면 0 으로 방어한다', () => {

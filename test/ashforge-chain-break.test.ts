@@ -469,3 +469,24 @@ test('보스전 AUTO 모의(실제 Player/Enemy/BossSignatures/군중 접촉, 1/
   expect(on.killMedian).toBeLessThan(off.killMedian);
   expect(on.killMedian).toBeLessThan(nohold.killMedian);
 });
+
+test('리뷰 P2-1: open 중 사거리 안 영웅에게 시작한 용재 망치는 놓침 뒤 chained 로 이어져도 끌기·창·지킴이 없고, 다음에 chained 에서 시작한 망치가 끈다', () => {
+  const x = attach(); open(x, 6);
+  // 창 중에 거수가 새 망치를 시작한다(영웅이 사거리 안이라 묶이지 않음). 그 마지막 고리는 창 안에서 터진다.
+  x.g.player.pos.set(4.5, 0, 0);
+  x.boss.state = 'attack'; x.boss.special = 'kiln_hammer'; x.boss.attackSequence++;
+  x.boss.signatures.plan = { key: 'kiln_hammer', lastStrike: 2.65, events: [{ x: -6, z: 1 }] }; x.boss.signatures.age = 0;
+  x.c.update(x.g, DT);
+  expect(x.c.state).toBe('open'); expect(x.c.guards(x.boss)).toBe(false);
+  tick(x.c, x.g, DEF.window);
+  expect(x.c.state).toBe('chained'); expect(x.c.misses).toBe(1);
+  // 같은 시전이 이어지는 동안(회복 구간 포함) chained 에서도 끌지 않고 창을 열지 않으며 지키지 않는다.
+  tick(x.c, x.g, .5);
+  expect(x.c.pulling).toBe(false); expect(x.c.pullSide).toBe(0); expect(x.c.windows).toBe(1); expect(x.c.guards(x.boss)).toBe(false); expect(x.c.broken).toBe(0);
+  // 다음 망치(chained 에서 시작)는 평소처럼 끌고 창을 연다.
+  x.boss.state = 'chase'; x.c.update(x.g, DT);
+  cast(x, -6);
+  expect(x.c.pulling).toBe(true); expect(x.c.pullSide).toBe(-1); expect(x.c.pillar.x).toBeCloseTo(8.4, 9); expect(x.c.guards(x.boss)).toBe(true);
+  x.boss.signatures.age = 2.65; x.c.update(x.g, DT);
+  expect(x.c.state).toBe('open'); expect(x.c.windows).toBe(2);
+});

@@ -845,7 +845,9 @@ export function checkChainsWindows(rows, def, room, casts, comps, { range = null
       pin.farChaseSteps++;
       const speed = Math.hypot(r.bvx, r.bvz), dt = r.t - p.t, disp = dt > 0 ? Math.hypot(r.bx - p.bx, r.bz - p.bz) / dt : 0;
       pin.maxFarSpeed = Math.max(pin.maxFarSpeed, speed); pin.maxFarDispSpeed = Math.max(pin.maxFarDispSpeed, disp);
-      if (!(speed <= CHAINS_PIN_MAX_SPEED) || !(disp <= CHAINS_PIN_MAX_SPEED)) pin.movingFarChase++;
+      // 묶인 추격 스텝은 Enemy 가 vel 을 정확히 0 으로 둔다(감속된 거수의 추격 1.7/초도 잡도록 vel 은 0 만 받는다, 리뷰 P3-1).
+      // 위치 변위는 넉백이 있으므로 초당 CHAINS_PIN_MAX_SPEED 까지 받는다.
+      if (!(speed <= 1e-9) || !(disp <= CHAINS_PIN_MAX_SPEED)) pin.movingFarChase++;
     }
     // 버티기(끊긴 창만): 끊김 행(exposed 첫 행)에서 거꾸로 연속으로 조건을 채운 시간.
     let hold = null, cutCounts = null;
@@ -930,7 +932,9 @@ export function checkChainsWindows(rows, def, room, casts, comps, { range = null
 /**
  * 끌기·기둥·벽 지점 판정(독립 대조). 시전(chained 에서 시작한 것)마다: 끌기(pu)가 시작 행에서 2행 안에 나타나고, 도구가 시전 시작 행의 plan.events[0].x 와 보스방으로 계산한
  * 끌기 방향(sd)·기둥(qx,qz)·벽 지점(ax, az)이 컨트롤러 읽기 값과 같다(기둥·벽 x 1e-6, 벽 z ± CHAINS_ANCHOR_Z_TOL). 끌기 중(chained+pu)과 열림 행 전체에서 같다.
- * 끌기가 아닌 행(chained+pu 0, idle, exposed, unchained, ended)에서 sd 는 0, chained 가 아닌 state 에서 pu 는 0. chained 가 아닌 state 에서 시작한 시전에는 끌기가 없다.
+ * 끌기가 아닌 행(chained+pu 0, idle, exposed, unchained, ended)에서 sd 는 0, chained 가 아닌 state 에서 pu 는 0.
+ * 사슬을 끄는 것은 chained 에서 시작한 시전뿐이다. open(영웅이 사거리 안이면 거수가 망치를 시작할 수 있다, 3.6)·exposed 에서 시작한 시전은 chained 로 이어져도
+ * 끌기가 없어야 하고, 보이면 실패다(리뷰 P2-1: 규칙을 'chained 에서 시작한 망치만 끈다'로 정했다).
  */
 export function checkChainsGeometry(rows, def, room, casts, windows) {
   if (!room || ![room.x, room.z, room.w, room.h].every(Number.isFinite)) return { ok: false, observed: false, reason: 'room-not-observed', casts: [], pulled: 0 };
@@ -1189,7 +1193,8 @@ export function checkChainsManual(rows, marks, def, { room = null, minHold = .5,
   const before = rows.filter(r => r.n <= attack.n && r.cs === 'open').at(-1) ?? null;
   const preHold = before ? before.hd : null;
   const after = rows.filter(r => r.n > attack.n && r.n <= attack.n + maxAfter);
-  const reset = after.find(r => r.hd === 0 && ACTION_STATES.includes(r.ps)) ?? null;
+  // hold getter 는 open 이 아니면 0 이므로, 창이 닫혀 생긴 0 을 리셋 증거로 받지 않는다(리뷰 P3-2).
+  const reset = after.find(r => r.cs === 'open' && r.hd === 0 && ACTION_STATES.includes(r.ps)) ?? null;
   const attackOk = !!before && preHold + EPS >= minHold - FRAME && !!reset && before.n >= attack.n - 2;
   const cutWin = win.windows.find(w => w.endKind === 'cut' && rows[w.startIdx].n > start.n && rows[w.endIdx + 1].n > attack.n) ?? null;
   const cutOk = !!cutWin && cutWin.hold?.ok === true && cutWin.hold.startN > attack.n;

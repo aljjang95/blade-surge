@@ -12,9 +12,11 @@ const CUT_SOUND = { vol: .32, base: 220, notes: [12, 7, 0], step: .07, type: 'sa
  * 원안의 남은 문장 "보스방 거수의 망치 충격파 뒤에만 열리는 조작 시간, 사슬 끌기 방향·끊기"의 보스 규칙이다. 새 애니메이션·리그 없이 기존 논리 상태만 쓴다.
  * 거수는 사슬 def.count 개에 묶여 나타난다. 용재 망치(def.signature)를 시전하면 사슬이 망치 착탄점(영웅 위치) 쪽 벽으로 끌리고(pullSide),
  * 보스방 반대편(중심에서 def.pillarOffset)에 사슬 기둥이 선다. 망치의 마지막 고리가 실제로 터진 다음 갱신부터 def.window 초 동안 기둥이 열리고
- * 망치가 박힌 거수는 제자리에 묶여(pins) 방향을 바꾸지 않으며 새 공격 대기(atkCd)를 창 끝까지 붙잡는다.
+ * 망치가 박힌 거수는 쫓아가지 못한다: 영웅이 사거리 밖이면 제자리(pins)이고, 사거리 안이면 평소처럼 돌아서 공격한다(공격 대기를 붙잡지 않음, PLAN 3.6).
+ * 사슬을 끄는 것은 chained 에서 시작한 용재 망치뿐이다. open·exposed 중에 시작한 망치(사거리 안 영웅에게)는 chained 로 이어져도 끌기·창·지킴 대상이 아니다
+ * (그 망치의 마지막 고리는 대개 열린 창 안에서 이미 터져, 놓침 직후 창을 하나 더 여는 셈이 되기 때문이다, 리뷰 P2-1).
  * 열린 기둥(반경 def.radius) 안에서 영웅이 행동 없이(idle·move) 피해 없이 def.hold 초 버티면 사슬 하나가 끊긴다. 끊기면 def.exposed 초 동안
- * 거수가 휘청이며(제자리·새 공격 없음) 받는 모든 피해가 def.exposedMult 배가 되고, 끊을 때마다 남은 전투 내내 받는 피해가 def.weaken 씩 늘어난다
+ * 거수가 휘청이며(제자리·방향 고정·새 공격 없음, 이미 시작된 시전은 끊지 않는다) 받는 모든 피해가 def.exposedMult 배가 되고, 끊을 때마다 남은 전투 내내 받는 피해가 def.weaken 씩 늘어난다
  * (사슬 k개를 끊었으면 1 + weaken × k 배, 휘청임 동안은 거기에 exposedMult 를 곱한다). 창이 끊김 없이 끝나면 놓침이다.
  * 사슬이 모두 끊기면 unchained 로 끊기 규칙이 끝나 평소 전투로 돌아간다(지킴·묶임 없음, 약화 배율만 남음).
  * chained 동안 시전 중인 용재 망치는 마지막 고리까지 기절·경직·자세 붕괴로 끊기지 않는다(guards, B14 후방 노출·종락 합창 장막과 같은 자리).
@@ -41,6 +43,8 @@ export class AshforgeChainBreak {
   #openedSeq = 0;
   /** 용재 망치가 시작된 뒤 마지막 고리를 기다리는 attackSequence(없으면 0). */
   #watchSeq = 0;
+  /** chained 가 아닌 동안(open·exposed) 시작된 용재 망치의 attackSequence. 사슬을 끌지 않는다(리뷰 P2-1). */
+  #skipSeq = 0;
   /** 기둥 위치와 사슬이 끌리는 벽 지점(재사용). 끌기 중·열림에서만 뜻이 있다. */
   #pillar = new Vector3();
   #anchor = new Vector3();
@@ -119,7 +123,8 @@ export class AshforgeChainBreak {
   guards(enemy) {
     if (this.#state !== 'chained' || enemy !== this.#boss) return false;
     const sig = this.def.signature, plan = enemy.signatures?.plan;
-    return enemy.state === 'attack' && enemy.special === sig && plan?.key === sig && enemy.attackSequence !== this.#openedSeq;
+    // chained 밖에서 시작해 끌지 않는 망치(#skipSeq)는 창을 열지 않으므로 지키지도 않는다(리뷰 P2-1).
+    return enemy.state === 'attack' && enemy.special === sig && plan?.key === sig && enemy.attackSequence !== this.#openedSeq && enemy.attackSequence !== this.#skipSeq;
   }
   /** 끊긴 뒤 휘청이는 동안(exposed) 거수는 추격 단계에서 제자리에 서고 방향을 바꾸지 않으며 공격하지 않는다.
    * 기둥이 열린 동안(open, 망치가 박혀 사슬이 팽팽함)에는 쫓아가지 못한다: 영웅이 사거리(def.range × .92, Enemy 추격 분기와 같은 값) 밖이면 제자리에 서고,
@@ -206,6 +211,8 @@ export class AshforgeChainBreak {
     if (!boss.alive) { this.#end(); return; }
     if (!Number.isFinite(dt) || dt <= 0) return;
     this.#lastCutT += dt;
+    // chained 밖에서 시작한 용재 망치는 기억해 두고 끌지 않는다(리뷰 P2-1).
+    if (this.#state !== 'chained' && boss.state === 'attack' && boss.special === this.def.signature) this.#skipSeq = boss.attackSequence;
     if (this.#state === 'open') { this.#stepOpen(game, boss, dt); return; }
     if (this.#state === 'exposed') {
       this.#exposedLeft -= dt;
@@ -248,7 +255,7 @@ export class AshforgeChainBreak {
       if (!casting || boss.attackSequence !== this.#watchSeq) { this.#broken++; this.#watchSeq = 0; this.#pullSide = 0; }
       else return;
     }
-    if (casting && boss.attackSequence !== this.#openedSeq) {
+    if (casting && boss.attackSequence !== this.#openedSeq && boss.attackSequence !== this.#skipSeq) {
       this.#watchSeq = boss.attackSequence;
       this.#startPull(boss, plan);
       if (boss.completedAttackSequence === this.#watchSeq) { this.#watchSeq = 0; this.#open(game, boss, dt); }

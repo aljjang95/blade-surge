@@ -1275,8 +1275,8 @@ describe('거수 사슬 종합(analyzeChains)', () => {
     expect(base.acceptance.pinnedStill).toBe(true);
     expect(base.pin.farChaseSteps).toBeGreaterThanOrEqual(15);   // 기둥 쪽 영웅(8.4 밖)과 추격 중인 보스: 판정 대상이 실제로 있다(창 3개)
     expect(base.pin.farLimit).toBeCloseTo(FAR, 9);
-    // 먼 추격 스텝에서 vel 이 추격 속도 3.4 → 실패, 1.7 → 통과(≤ 1.8), 1.9 → 실패
-    for (const [vx, ok] of [[3.4, false], [1.7, true], [1.9, false]] as [number, boolean][]) {
+    // 먼 추격 스텝에서 vel 은 정확히 0 이어야 한다: 추격 속도 3.4·감속된 추격 1.7(리뷰 P3-1)·1.9 → 실패, 0 → 통과
+    for (const [vx, ok] of [[3.4, false], [1.7, false], [1.9, false], [0, true]] as [number, boolean][]) {
       const r = clone(); openChase(r)[3].bvx = vx;
       expect(an(r).acceptance.pinnedStill).toBe(ok);
     }
@@ -1750,5 +1750,30 @@ describe('거수 사슬 짝 비교(compareChainsTargetsOk · compareChainRuns)',
     expect(K.runOrder('2026-10-16T03:00:00Z', '2026-10-16T02:00:00Z')).toBe('base-first');
     expect(K.runOrder('x', 'y')).toBe('unknown');
     expect(K.compareChainRuns(side(1, 0, { started: '2026-10-16T01:00:00Z' }), side(1, 0, { started: '2026-10-16T02:00:00Z' })).report.order).toBe('cand-first');
+  });
+});
+
+describe('리뷰 P2-1: 사슬을 끄는 것은 chained 에서 시작한 용재 망치뿐이다', () => {
+  const room = { x: 0, z: 0, w: 28, h: 28 };
+  // 행 0: 이전 창(seq 4) open 중 거수가 사거리 안 영웅에게 망치(seq 5)를 시작 → 1~4: 창 놓침 뒤 chained 로 이어지는 같은 시전(마지막 고리 cq 5 는 행 2).
+  const rows = (startState = 'open', pullAt = -1) => {
+    const base = (n: number, o: any) => ({ n, t: n * FRAME, bo: 1, al: 1, bs: 'attack', sp: 'kiln_hammer', pk: 'kiln_hammer', sq: 5, cq: 4, ix: 6, iz: 1, bx: 3, bz: 0,
+      pu: 0, sd: 0, qx: 0, qz: 0, ax: 0, az: 0, ...o });
+    const rs = [base(0, { cs: startState, sd: startState === 'open' ? -1 : 0, qx: 8.4, ax: -12.8 }), base(1, { cs: 'chained' }), base(2, { cs: 'chained', cq: 5 }),
+      base(3, { cs: 'chained', cq: 5 }), base(4, { cs: 'chained', bs: 'chase', cq: 5 })];
+    if (pullAt >= 0) Object.assign(rs[pullAt], { pu: 1, sd: 1, qx: -8.4, qz: 0, ax: 12.8, az: 0 });
+    return rs;
+  };
+  const judge = (rs: any[]) => K.checkChainsGeometry(rs, CH, room, K.chainCasts(rs, CH), [{ startIdx: 0, endIdx: 0, seq: 4 }]);
+  test('open 에서 시작한 망치가 chained 로 이어져도 끌기가 없으면 통과(그 시전은 끌기·창 대상이 아니다)', () => {
+    const g = judge(rows());
+    expect(g.bad ?? []).toEqual([]);
+  });
+  test('open·exposed 에서 시작한 망치에 끌기가 보이면 pull-outside-chained 로 실패한다', () => {
+    for (const st of ['open', 'exposed']) {
+      const g = judge(rows(st, 1));
+      expect(g.ok).toBe(false);
+      expect(g.bad.some((b: any) => b.kind === 'pull-outside-chained' && b.state === st)).toBe(true);
+    }
   });
 });

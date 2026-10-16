@@ -64,8 +64,9 @@ function ashforgeChainView(route) {
   }
   if (state === 'exposed') {
     const left = (Math.ceil(count(chains.exposedLeft) * 10 - 1e-9) / 10).toFixed(1);
-    // 받는 피해는 컨트롤러의 지금 배율(약화 × 휘청, PLAN 3.6)이고, 읽을 수 없으면 정의의 휘청 배율이다.
-    const mult = Number.isFinite(chains.damageMult) && chains.damageMult > 0 ? chains.damageMult : count(def.exposedMult);
+    // 받는 피해는 컨트롤러의 지금 배율(약화 × 휘청, PLAN 3.6)이고, 읽을 수 없으면 정의와 끊은 수(count − chainsLeft)로 같은 식을 계산한다(리뷰 P3-4).
+    const cut = Math.max(0, total - count(chains.chainsLeft));
+    const mult = Number.isFinite(chains.damageMult) && chains.damageMult > 0 ? chains.damageMult : (1 + count(def.weaken) * cut) * count(def.exposedMult);
     return step(title, `사슬 끊김 · 휘청 ${left}초 · 받는 피해 ${Math.round(mult * 100)}%`,
       { hold: seconds(chains.exposedLeft), holdTotal: count(chains.exposedTotal) });
   }
