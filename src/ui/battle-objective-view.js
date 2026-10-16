@@ -47,6 +47,29 @@ function emberRearView(route) {
     { hold: seconds(rear.windowLeft), holdTotal: count(rear.windowTotal) });
 }
 
+/** 재벼림 심층 거수의 사슬(BUNDLE-15). 보스방에서 컨트롤러가 chained·open·exposed 일 때만 쓴다(심장로 진행 중에는 idle 이다).
+ * 사슬 수·버티기 시간·받는 피해 배율은 def.chains 에서 계산하고, 남은 시간은 올림(0.1초), 버틴 시간은 내림(0.1초)이다. 컨트롤러 값은 읽기만 한다. */
+function ashforgeChainView(route) {
+  const chains = route.chains, def = route.def?.chains;
+  if (route.def?.kind !== 'cooling' || !chains || !def) return null;
+  const state = chains.state, title = '거수의 사슬', total = count(def.count);
+  if (state === 'chained') {
+    if (chains.pulling) return step(title, '사슬이 망치 쪽으로 끌림 · 반대편 기둥으로');
+    return step(title, `남은 사슬 ${count(chains.chainsLeft)}/${total} · 망치가 끄는 반대편 기둥에서 버티기`);
+  }
+  if (state === 'open') {
+    const left = (Math.ceil(count(chains.windowLeft) * 10 - 1e-9) / 10).toFixed(1);
+    return step(title, `기둥 열림 ${left}초 · 행동 없이 ${seconds(chains.hold).toFixed(1)}/${count(def.hold).toFixed(1)}초`,
+      { hold: seconds(chains.hold), holdTotal: count(chains.holdTotal) || count(def.hold) });
+  }
+  if (state === 'exposed') {
+    const left = (Math.ceil(count(chains.exposedLeft) * 10 - 1e-9) / 10).toFixed(1);
+    return step(title, `사슬 끊김 · 휘청 ${left}초 · 받는 피해 ${Math.round(count(def.exposedMult) * 100)}%`,
+      { hold: seconds(chains.exposedLeft), holdTotal: count(chains.exposedTotal) });
+  }
+  return null;
+}
+
 /** 혜성 기사단장 푸른 궤도선(BUNDLE-06). 보스 궤도가 armed·warn 일 때 고리 단계 대신 보스방 목표를 보인다. 남은 시간은 올림(0.1초)이다. */
 function bossOrbitView(route, bossRoom) {
   const orbit = route.bossOrbit, state = orbit?.state;
@@ -129,6 +152,8 @@ function mainObjectiveView(battle) {
       // 밸브가 모두 열린 뒤 보스방에서만 컨트롤러가 armored 이므로 밸브 단계보다 앞에 둔다.
       const rearStep = emberRearView(route);
       if (rearStep) return rearStep;
+      const chainStep = ashforgeChainView(route);
+      if (chainStep) return chainStep;
     }
     if (route.def?.kind === 'thrones' && route.maze && route.complete) {
       // 왕좌를 모두 부순 뒤: 구역이 남았으면 정화 안내, 거울 미궁이 도는 동안은 탈출 안내. 탈출하면 보스 흐름으로 이어진다.
