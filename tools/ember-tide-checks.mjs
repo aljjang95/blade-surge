@@ -735,7 +735,8 @@ export function compareRuns(cand, base, { timeRatio = 2, slowExtra = 2 } = {}) {
 //   rs rear.state(idle|armored|exposed|ended), wl rear.windowLeft, wn windows, rh/fh/sh rearHits/frontHits/sideHits, rd/fd rearDamage/frontDamage, br broken, ls lastSide,
 //   bo 보스 존재(1/0), al 보스 생존, spn spawning, bs 보스 state, sp boss.special, pk 서명 plan key, sq attackSequence, cq completedAttackSequence, ac atkCd,
 //   by yaw, bx/bz 위치, bvx/bvz 속도, wv/gv 부채꼴·갑주 호 visible(1/0, 못 찾으면 -1), wc/gc 색(hex, 없으면 -1), dom 목표창 문구 표본(선택).
-// 필터 기록: { n, dmg 입력, out 출력, dx, dz 방향(없으면 null), st 그 순간 rear.state, yaw 그 순간 보스 yaw, side 그 순간 rear.sideOf 결과 }.
+// 필터 기록(rear.filter(dmg, attacker) 감싸개): { n, dmg 입력, out 출력, st 그 순간 rear.state, yaw 보스 yaw, bx/bz 보스 위치, ax/az attacker.pos(없으면 null),
+//   hx/hz 그 순간 app.battle.player.pos(도구가 직접 읽은 영웅 위치), side 도구가 (보스 − 영웅 위치)로 직접 계산한 구분(attacker 가 없으면 null) }.
 
 /** 후방 노출 공유 정의 계약(PLAN 3절). 판정은 정의 값을 읽고, 이 상수는 정의가 계약과 같은지(checkRearDefinition)와 문구·색에만 쓴다. */
 export const REAR = Object.freeze({
@@ -761,13 +762,31 @@ export const rearExposedPattern = def => new RegExp('후방 노출 (\\d+\\.\\d)�
 export const rearLeftText = left => (Math.ceil(left * 10 - 1e-9) / 10).toFixed(1);
 /** 결과 줄: '사슬 집행자 후방 공격 {rearHits}회 · 노출 {windows}번 · 정면 막힘 {frontHits}회'. */
 export const rearResultLine = ro => '사슬 집행자 후방 공격 ' + ro.rearHits + '회 · 노출 ' + ro.windows + '번 · 정면 막힘 ' + ro.frontHits + '회';
+/** 방향(공격자 → 보스)과 보스 정면(yaw)의 내적. 방향 길이가 0이거나 yaw 가 유한하지 않으면 null. */
+export function rearDotOf(dirx, dirz, yaw) {
+  const l = Math.hypot(dirx, dirz);
+  if (!(l > 1e-9) || !Number.isFinite(yaw)) return null;
+  return (dirx / l) * Math.sin(yaw) + (dirz / l) * Math.cos(yaw);
+}
 /** 맞은 방향(공격자 → 보스)과 보스 정면(yaw)의 내적으로 구분한다(컨트롤러와 독립으로 같은 식을 쓴다). */
 export function rearSideOf(dirx, dirz, yaw, def) {
-  const l = Math.hypot(dirx, dirz);
-  if (!(l > 1e-9) || !Number.isFinite(yaw)) return 'side';
-  const dot = (dirx / l) * Math.sin(yaw) + (dirz / l) * Math.cos(yaw);
+  const dot = rearDotOf(dirx, dirz, yaw);
+  if (dot === null) return 'side';
   return dot >= def.rearDot ? 'rear' : dot <= -def.frontDot ? 'front' : 'side';
 }
+/** 구분별 배율(정의 값): rear → def.rear, front → def.front, side → 1. */
+export const rearMultiplier = (side, def) => (side === 'rear' ? def.rear : side === 'front' ? def.front : 1);
+/** 출력/입력 배율로 거꾸로 읽은 구분(2 → rear, .5 → front, 1 → side, 상대오차 1e-9). 읽을 수 없으면 null. */
+export function rearSideFromRatio(dmg, out, def) {
+  if (!(Number.isFinite(dmg) && dmg > 0) || !Number.isFinite(out)) return null;
+  for (const side of ['rear', 'front', 'side']) if (nearRel(out / dmg, rearMultiplier(side, def))) return side;
+  return null;
+}
+/** 필터 기록에 attacker 위치가 있는가(attacker 없는 호출 = 중독 틱 등). */
+export const hasAttacker = f => Number.isFinite(f?.ax) && Number.isFinite(f?.az);
+const FILTER_POS_TOL = 1e-6;
+/** 경계 ±.05: 보조 관측에서 내적이 rearDot·-frontDot 문턱에 이만큼 가까우면 따로 센다. */
+const EDGE_BAND = .05;
 
 /** 정의가 PLAN 계약과 같은지(id·보스·서명·수치). 어긋난 항목을 issues 로 돌려준다. */
 export function checkRearDefinition(def) {
@@ -888,28 +907,56 @@ export function checkRearWindows(rows, def) {
 }
 
 /**
- * 피해 배율 판정. 기록마다: 창(exposed)이고 방향이 있으면 출력 = 입력 × (rear|front|1)(상대오차 1e-9), 그 밖의 state 거나 방향이 없으면 출력 = 입력.
- * 컨트롤러의 sideOf 결과가 기록한 yaw 로 독립 계산한 구분과 같아야 한다. 방향 있는 창 안 호출 수가 마지막 행의 rearHits·frontHits·sideHits 와 같아야 한다.
+ * 피해 배율 판정(계약: rear.filter(dmg, attacker)). 기록마다:
+ *  - exposed 이고 attacker 가 있으면 출력 = 입력 × 배율(side)(rear|front|1, 상대오차 1e-9). side 는 도구가 (보스 − 영웅 위치)로 직접 계산한 구분이고 구분별로 센다.
+ *  - attacker 가 없으면(중독 틱 등) 출력 = 입력이고 세지 않는다. exposed 가 아닌 state 도 출력 = 입력이다.
+ * 컨트롤러 집계: 마지막 행의 rearHits·frontHits·sideHits 가 attacker 있는 exposed 호출의 구분별 수와 같다.
+ * 독립 대조(리뷰 P2-3): attacker 가 있는 호출마다 (a) attacker 위치가 그 순간 영웅 위치와 같고(1e-6, 단독 원정이라 공격자는 영웅),
+ * (b) 도구가 영웅 위치로 계산한 side 가 출력/입력 배율로 거꾸로 읽은 구분과 같다(exposed 호출, 입력 > 0). 하나라도 어긋나면 실패다.
+ * 보조 관측(판정 아님): 그 스텝 행(hx,hz,bx,bz,by)으로 다시 계산한 구분이 다른 호출 수(경계 ±.05 안은 따로).
  * filters 가 null(관측 누락)이면 실패한다.
  */
 export function checkRearFilters(filters, rows, def) {
   if (!Array.isArray(filters)) return { ok: false, observed: false, counts: null, bad: [{ kind: 'not-observed' }], badCount: 1 };
   const bad = [], counts = { rear: 0, front: 0, side: 0 };
-  let exposedCalls = 0, directionless = 0;
+  const rowOf = new Map();
+  for (const r of rows) rowOf.set(r.n, r);
+  let exposedCalls = 0, attackerless = 0, unreadable = 0;
+  const rowCheck = { calls: 0, noRow: 0, differ: 0, differNearEdge: 0, differHard: 0 };
   filters.forEach((f, i) => {
-    const hasDir = (f.dx !== null && f.dx !== undefined) || (f.dz !== null && f.dz !== undefined);
+    const withAttacker = hasAttacker(f);
     let want = f.dmg;
-    if (f.st === 'exposed') {
-      exposedCalls++;
-      if (!hasDir) directionless++;
-      else {
-        const side = f.side;
-        if (!(side in counts)) bad.push({ kind: 'bad-side', i, n: f.n, side });
+    if (!withAttacker) {
+      // attacker 가 없는 호출: 1배, 세지 않는다. exposed 안의 호출 수만 보고한다.
+      if (f.st === 'exposed') { exposedCalls++; attackerless++; }
+    } else {
+      // (a) 공격자 = 영웅(단독 원정): attacker.pos 가 그 순간 영웅 위치와 같다. 영웅 위치를 못 읽었으면 실패다.
+      if (!Number.isFinite(f.hx) || !Number.isFinite(f.hz)) bad.push({ kind: 'hero-not-observed', i, n: f.n });
+      else if (!nearAbs(f.ax, f.hx, FILTER_POS_TOL) || !nearAbs(f.az, f.hz, FILTER_POS_TOL)) bad.push({ kind: 'attacker-not-hero', i, n: f.n, attacker: [f.ax, f.az], hero: [f.hx, f.hz] });
+      const side = f.side;
+      if (!(side in counts)) bad.push({ kind: 'bad-side', i, n: f.n, side });
+      else if (f.st === 'exposed') {
+        exposedCalls++;
+        counts[side]++;
+        want = f.dmg * rearMultiplier(side, def);
+        // (b) 도구가 영웅 위치로 계산한 side 와 배율에서 거꾸로 읽은 side 가 같다.
+        const fromRatio = rearSideFromRatio(f.dmg, f.out, def);
+        if (!(f.dmg > 0)) unreadable++;
+        else if (fromRatio !== side) bad.push({ kind: 'side-mismatch', i, n: f.n, side, fromRatio, dmg: f.dmg, out: f.out });
+      }
+      // 보조 관측: 그 스텝 행으로 다시 계산한 구분.
+      if (side in counts) {
+        const row = rowOf.get(f.n);
+        if (!row || ![row.hx, row.hz, row.bx, row.bz, row.by].every(Number.isFinite)) rowCheck.noRow++;
         else {
-          counts[side]++;
-          want = f.dmg * (side === 'rear' ? def.rear : side === 'front' ? def.front : 1);
-          const indep = rearSideOf(f.dx ?? 0, f.dz ?? 0, f.yaw, def);
-          if (indep !== side) bad.push({ kind: 'side-mismatch', i, n: f.n, side, independent: indep });
+          rowCheck.calls++;
+          const dx = row.bx - row.hx, dz = row.bz - row.hz, rowSide = rearSideOf(dx, dz, row.by, def);
+          if (rowSide !== side) {
+            rowCheck.differ++;
+            const dot = rearDotOf(dx, dz, row.by);
+            if (dot !== null && (Math.abs(dot - def.rearDot) <= EDGE_BAND || Math.abs(dot + def.frontDot) <= EDGE_BAND)) rowCheck.differNearEdge++;
+            else rowCheck.differHard++;
+          }
         }
       }
     }
@@ -917,8 +964,8 @@ export function checkRearFilters(filters, rows, def) {
   });
   const last = rows.at(-1) ?? null;
   const aggregate = !!last && counts.rear === last.rh && counts.front === last.fh && counts.side === last.sh;
-  return { ok: bad.length === 0 && aggregate, observed: true, calls: filters.length, exposedCalls, directionless, counts, controller: last ? { rear: last.rh, front: last.fh, side: last.sh } : null,
-    aggregate, bad: bad.slice(0, 8), badCount: bad.length };
+  return { ok: bad.length === 0 && aggregate, observed: true, calls: filters.length, exposedCalls, attackerless, unreadable, counts, controller: last ? { rear: last.rh, front: last.fh, side: last.sh } : null,
+    aggregate, rowCheck, bad: bad.slice(0, 8), badCount: bad.length };
 }
 
 /** AUTO 후방: 창 ≥ 1, 등 뒤 타격이 있는 창 ≥ 1, 전체 rearHits > frontHits. 창마다 등 뒤·정면 타격 여부와 첫 등 뒤 타격까지 시간은 보고 항목이다. */
@@ -1057,7 +1104,7 @@ export function checkRearManual(rows, filters, marks, def) {
     const a = rows.find(r => r.n === s.from), b = rows.find(r => r.n === s.to);
     return sum + (a && b ? b[field] - a[field] : 0);
   }, 0);
-  const recs = side => filters.filter(f => inStint(f.n) && f.st === 'exposed' && f.side === side && ((f.dx ?? null) !== null || (f.dz ?? null) !== null));
+  const recs = side => filters.filter(f => inStint(f.n) && f.st === 'exposed' && f.side === side && hasAttacker(f));
   const front = recs('front'), rear = recs('rear');
   const frontMul = front.length > 0 && front.every(f => nearRel(f.out, f.dmg * def.front)), rearMul = rear.length > 0 && rear.every(f => nearRel(f.out, f.dmg * def.rear));
   const frontGain = gain('fh'), rearGain = gain('rh');

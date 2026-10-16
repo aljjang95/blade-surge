@@ -10,7 +10,7 @@
 // 경로 정의(ROUTE_OBJECTIVES.ember_deep)가 없는 기준선 빌드(--project, 예: 79883ad)에서는 밸브 판정을 건너뛰고 공통 측정만 남긴다. keys 프로필은 기준선에서도 돌고 이동 여부만 report.baselineKeys 에 기록한다.
 // BUNDLE-14: 사슬 집행자 후방 노출(ROUTE_OBJECTIVES.ember_deep.rear)이 있는 후보 빌드는 보스방 진입 뒤 스텝마다 app.battle.routeObjectives.rear(state/windowLeft/windows/rearHits/frontHits/sideHits/broken)와
 // rear.boss(pos/yaw/state/special/attackSequence/completedAttackSequence/atkCd/alive/vel), 부채꼴·갑주 호 메시(이름 TLL_EmberRearWedge·TLL_EmberRearGuard 의 visible·색), #objective 문구, 토스트, 결과 routeObjective.rear 를 관측한다.
-// rear.filter 는 (입력 피해, 출력, 방향, 그 순간 state, 보스 yaw, sideOf 결과)를 기록만 하는 감싸개로 둔다(동작을 바꾸지 않는다). 후방 정의가 없는 기준선(8e89a51 밸브만, 79883ad 정의 없음)은 후방 판정을 건너뛰고 문구 누출만 관찰한다.
+// rear.filter(dmg, attacker) 는 (입력 피해, 출력, 그 순간 state, 보스 yaw·위치, attacker.pos, 도구가 직접 읽은 영웅 위치, 도구가 보스 − 영웅 위치로 계산한 구분)를 기록만 하는 감싸개로 둔다(동작을 바꾸지 않는다). 후방 정의가 없는 기준선(8e89a51 밸브만, 79883ad 정의 없음)은 후방 판정을 건너뛰고 문구 누출만 관찰한다.
 // 판정 함수는 tools/ember-tide-checks.mjs 에 있고 test/ember-tide-checks.test.ts 가 합격·불합격 입력을 모두 검사한다. 기준선 비교는 tools/ember-tide-compare.mjs 다(한 짝씩).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -49,7 +49,7 @@ const HELP = [
   '           + 보고 항목: 밸브 방 첫 진입 draw call, 경로 목표 뷰 표시/숨김 같은 프레임 A/B calls 차이, 50ms 초과 집계, 실행 전후 1분 load',
   '           + 후방 판정(rear 정의가 있는 후보, 모든 프로필의 완주에 적용; 관측이 빠지면 실패): 보스 등장 뒤 부착(armored)·부착 토스트 정확히 1회 · 용재 망치(kiln_hammer)의 completedAttackSequence 가 처음 쓰인 스텝(또는 다음 스텝)에만 exposed ·',
   '             다른 시그니처 뒤·지연 열림·같은 망치 두 번 없음 · 열림 토스트 창마다 1회(정의 window 로 만든 문구) · 창 길이 = window ± 1/60(보스 처치로 끝난 마지막 창만 면제하고 기록)·windowLeft 시계 · 창 안 보스 yaw 불변·새 공격 0·chase 속도 0(이동은 보고) ·',
-  '             피해 배율(창 안 방향 있는 타격 = 입력 × rear|front|1, 그 밖 1배, 집계 = 컨트롤러 rearHits·frontHits·sideHits) · 부채꼴(TLL_EmberRearWedge 0x5ff0d0)·갑주 호(TLL_EmberRearGuard 0xd8a070)는 exposed 에서만 보임 ·',
+  '             피해 배율(창 안 attacker 있는 타격 = 입력 × rear|front|1(구분 = 도구가 보스 − 영웅 위치로 계산), attacker 없는 호출·창 밖 = 1배이고 세지 않음, 집계 = 컨트롤러 rearHits·frontHits·sideHits와 구분별 수 일치) · 독립 대조(attacker 위치 = 그 순간 영웅 위치 1e-6, 영웅 위치 구분 = 배율에서 읽은 구분) · 부채꼴(TLL_EmberRearWedge 0x5ff0d0)·갑주 호(TLL_EmberRearGuard 0xd8a070)는 exposed 에서만 보임 ·',
   '             목표창 제목 "사슬 집행자 후방"·armored/exposed 문구(남은 시간 0.1초 올림) · 결과 routeObjective.rear = 마지막 관측값, 결과 줄 "사슬 집행자 후방 공격 n회 · 노출 n번 · 정면 막힘 n회" · AUTO 후방(auto 계열: 창 ≥ 1, 등 뒤 타격이 있는 창 ≥ 1, rearHits > frontHits)',
   '  order    AUTO 로 1번 밸브(방 2) ready·적 0 까지 → R #btn-auto 끔 → R 키보드(KeyW/A/S/D)로 닫힌 조작판 위 체류(유지 0) → 첫 밀물이 지나가 옮겨 간 열린 조작판으로 → 유지 ≥ 1.0 뒤 3.0 밖으로 이탈(유지 0) →',
   '           다음 밀물 경고에 현재 조작판으로 들어가 밀물이 지나가는 동안 다시 체류(닫힌 체류 합계 ≥ 2초) → 옮겨 간 열린 조작판에서 새 2초로 개방 → R AUTO 켬 → 완주. 공격 키 없음',
@@ -60,7 +60,7 @@ const HELP = [
   '           + 후방 정의가 있는 후보는 순간 2개 더: rear-armored(보스 등장 뒤 armored, 목표창 armored 문구, 부채꼴·갑주 호 숨김)·rear-exposed(exposed 이고 windowLeft ≤ window − 0.5, 부채꼴·갑주 호 보임)',
   '  rear     (후보만) AUTO 로 보스방까지(밸브 3/3·봉인 해제·보스 등장) → 첫 창이 열리면 R #btn-auto 끔 → R 키보드(KeyW/A/S/D 이동 + KeyJ 공격)로 보스 정면 쪽에 서서 정면 타격 ≥ 1 → 옆으로 돌아 등 뒤에서 등 뒤 타격 ≥ 1',
   '           (창이 부족하면 R #btn-auto 로 AUTO 를 켜 다음 창을 기다렸다 이어서) → 창 안에서 R #btn-pause → 60스텝 + 0.5초 동안 windowLeft·보스 yaw·attackSequence 불변 → R #btn-resume → R AUTO 켬 → 완주.',
-  '           정면·등 뒤 타격의 filter 기록 배율이 정의의 front·rear 인지 판정한다. 좌표 이동·무적·HP 주입 없음(키보드 구간의 순간이동도 검사). 키보드 이동은 order·keys 와 같은 방식이다',
+  '           정면·등 뒤 타격의 filter 기록은 attacker 가 있고 도구가 영웅 위치로 계산한 구분이 front·rear 이며 배율이 정의의 front·rear 인지 판정한다. 좌표 이동·무적·HP 주입 없음(키보드 구간의 순간이동도 검사). 키보드 이동은 order·keys 와 같은 방식이다',
   '',
   '주의: 좌표 이동·무적·HP 주입·적 hp 조작으로 정상 플레이를 증명하지 않는다. viewport 검사는 실제 Android/GPU/터치/발열 검증이 아니다.',
   'SwiftShader 소프트웨어 렌더라 프레임 ms 는 JS 측 측정값이다. order·keys 의 키보드 입력은 Playwright 가 보낸 에뮬레이터 키 이벤트다.',
@@ -161,7 +161,7 @@ const report = { kind: 'ember-tide-qa', releaseApproved: false, seed, heroId, de
       needsKeyboard ? 'Playwright 키보드 이벤트(KeyW/A/S/D, 에뮬레이터 입력): order 의 걷는 방향은 도구가 조작판 위치의 화면 투영으로 정함(게임 입력층이 지운 키는 다시 누름). keys 의 KeyD 는 down 1회·정지·재개 사이 키 이벤트 없음·up 1회. 텔레포트·무적·HP 주입 없음. order·keys 는 공격 키 없음, rear 는 KeyJ 공격(정면·등 뒤 타격)' : null].filter(Boolean),
     controlled: ['app.testPause + 고정 1/60초 app.step (자연 RAF 아님)', 'renderer.render() 단독 호출(스크린샷·draw call 샘플, 시뮬레이션 tick 없음)',
       '뷰 같은 프레임 A/B: route.view.group 의 visible 을 바꿔 같은 프레임을 renderer.render() 로 각각 그려 calls 차이 측정(끝나면 visible 복원)', 'app.ui.toast 감싸개(호출을 그대로 넘기고 기록만)',
-      'rear.filter 감싸개(입력·출력·방향·그 순간 state·보스 yaw·sideOf 결과를 기록만 하고 반환값을 바꾸지 않음)'],
+      'rear.filter(dmg, attacker) 감싸개(입력·출력·그 순간 state·보스 yaw·위치·attacker.pos·app.battle.player.pos·도구가 계산한 구분을 기록만 하고 반환값을 바꾸지 않음)'],
     notProven: ['실제 Android/GPU/터치/발열', '자연 해금·장비 획득', '수동 플레이 밸런스', '사람의 실제 키보드·터치 조작 감각', '밀물 띠·조작판·후방 부채꼴의 실제 모습(PNG 는 사람이 본다)'],
     steps: Object.fromEntries(selected.map(name => [name, STEP_CLASS[name].map(([kind, detail]) => ({ kind, detail }))])) },
   scope: '로컬 production preview + SwiftShader headless Chromium. fixture 영웅/장비로 합법 범위 값만 주입하고 전투 중 HP·위치·적·결과는 건드리지 않는다.' };
@@ -241,11 +241,25 @@ function installProbe(cfg) {
     const rear = rearOf();
     if (!rear || rear.__tideQaWrapped) return;
     const original = rear.filter;
-    rear.filter = function (dmg, dirx, dirz) {
-      const state = this.state, yaw = this.boss?.yaw ?? null, side = this.sideOf(dirx, dirz);
-      const out = original.call(this, dmg, dirx, dirz);
+    // 컨트롤러 계약: filter(dmg, attacker). 기록은 컨트롤러와 독립이다 — 영웅 위치는 app.battle.player.pos 를 직접 읽고, side 는 (보스 − 영웅) 방향과 보스 yaw 의 내적을
+    // 정의(cfg.rear)의 rearDot·frontDot 로 직접 계산한다(컨트롤러의 sideOf 를 부르지 않는다). attacker.pos 가 없으면 ax/az/side 는 null 이다.
+    rear.filter = function (dmg, attacker) {
+      const state = this.state, boss = this.boss ?? null, yaw = boss?.yaw ?? null, bx = boss?.pos?.x ?? null, bz = boss?.pos?.z ?? null;
+      const hero = app.battle?.player?.pos ?? null, hx = hero?.x ?? null, hz = hero?.z ?? null;
+      const apos = attacker?.pos ?? null, ax = apos ? apos.x : null, az = apos ? apos.z : null;
+      // 보스·영웅 위치를 읽지 못하면 side 는 null 로 남는다(판정이 관측 누락으로 실패시킨다).
+      let side = null;
+      if (apos && [bx, bz, hx, hz].every(Number.isFinite)) {
+        side = 'side';
+        const dx = bx - hx, dz = bz - hz, l = Math.hypot(dx, dz);
+        if (l > 1e-9 && Number.isFinite(yaw)) {
+          const dot = (dx / l) * Math.sin(yaw) + (dz / l) * Math.cos(yaw), def = P.cfg.rear;
+          side = dot >= def.rearDot ? 'rear' : dot <= -def.frontDot ? 'front' : 'side';
+        }
+      }
+      const out = original.call(this, dmg, attacker);
       const q = window.__tideQa;
-      if (q?.rearFilters && q.rearFilters.length < 20000) q.rearFilters.push({ n: q.steps + 1, dmg, out, dx: dirx ?? null, dz: dirz ?? null, st: state, yaw, side });
+      if (q?.rearFilters && q.rearFilters.length < 20000) q.rearFilters.push({ n: q.steps + 1, dmg, out, st: state, yaw, bx, bz, ax, az, hx, hz, side });
       return out;
     };
     rear.__tideQaWrapped = true;
@@ -825,7 +839,7 @@ const REAR_LABELS = {
   noMissedOpen: '용재 망치가 완성되면 반드시 열림(보스 처치 스텝 제외)', windowLength: '창 길이 = window ± 1/60(보스 처치로 끝난 마지막 창만 면제·기록)·windowLeft 시계',
   noNewAttack: '창 안 attackSequence 불변(새 공격 0)', yawFixed: '창 안 보스 yaw 가 열린 순간과 정확히 같음', pinnedStill: '창 안 보스 state chase 인 스텝은 속도 0(이동은 보고)',
   windowsConsistent: 'rear.windows = 관측한 창 수', openToasts: '열림 토스트(정의 window 문구) 창마다 1회·비슷한 다른 문구 없음',
-  multiplier: '피해 배율: 창 안 방향 있는 타격 = 입력 × rear|front|1, 그 밖 1배, 집계 = rearHits·frontHits·sideHits', rearView: '뷰: 부채꼴 0x5ff0d0·갑주 호 0xd8a070 은 exposed 에서만 보임',
+  multiplier: '피해 배율: 창 안 attacker 있는 타격 = 입력 × rear|front|1(영웅 위치 구분), 그 밖·attacker 없음 1배, 집계 = rearHits·frontHits·sideHits, attacker = 영웅 위치, 영웅 위치 구분 = 배율에서 읽은 구분', rearView: '뷰: 부채꼴 0x5ff0d0·갑주 호 0xd8a070 은 exposed 에서만 보임',
   objectiveText: "목표창 제목 '사슬 집행자 후방'·armored/exposed 문구(남은 시간 0.1초 올림)", resultRear: "결과 routeObjective.rear = 마지막 관측값 · 결과 줄 '사슬 집행자 후방 공격 n회 · 노출 n번 · 정면 막힘 n회'",
   autoRear: 'AUTO 후방: 창 ≥ 1 · 등 뒤 타격이 있는 창 ≥ 1 · rearHits > frontHits',
 };
@@ -849,7 +863,7 @@ function recordRear(row, raw, toasts) {
     note: '보고 항목: 창마다 시작·길이·열림 지연 스텝·보스 이동(넉백) 최대 거리' });
   (report.reportItems.rearAuto ??= []).push({ tag: row.tag, per: analysis.auto.per, windowsWithRear: analysis.auto.windowsWithRear, rearHits: analysis.auto.rearHits, frontHits: analysis.auto.frontHits,
     note: '보고 항목: 창마다 등 뒤·정면 타격 수와 창 시작부터 첫 등 뒤 타격까지 게임 초' });
-  (report.reportItems.rearFilters ??= []).push({ tag: row.tag, calls: analysis.filters.calls, exposedCalls: analysis.filters.exposedCalls, directionless: analysis.filters.directionless, counts: analysis.filters.counts, controller: analysis.filters.controller });
+  (report.reportItems.rearFilters ??= []).push({ tag: row.tag, calls: analysis.filters.calls, exposedCalls: analysis.filters.exposedCalls, attackerless: analysis.filters.attackerless, unreadable: analysis.filters.unreadable, rowCheck: analysis.filters.rowCheck, counts: analysis.filters.counts, controller: analysis.filters.controller });
   for (const [name, ok] of Object.entries(analysis.acceptance)) check(row.tag + ': 후방 ' + (REAR_LABELS[name] ?? name), ok, ok ? undefined : { name, definition: analysis.definition.issues, attach: analysis.attach,
     windows: analysis.windows, missed: analysis.missed, filters: analysis.filters, auto: analysis.auto, view: analysis.view, objective: analysis.objective, toasts: analysis.toasts, result: analysis.result });
   if (row.tag === 'rear') {
