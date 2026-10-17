@@ -42,6 +42,7 @@ test('다섯 revision은 정확한 원본 SHA와 개별 출력 경로를 가지�
       expect(revisedLibraryFile(asset)).toBeNull();
       expect(resolveAssetSource(asset)).toBe(asset.file);
     } else {
+      if (revision.status !== 'GENERATED' || typeof revision.output.sha256 !== 'string') throw new Error('생성 기록에는 실제 출력 SHA가 필요합니다.');
       expect(digest('public' + revision.output.path)).toBe(revision.output.sha256);
       expect(revisedLibraryFile(asset)).toBe(revision.useInGame ? revision.output.path : null);
     }

@@ -89,6 +89,7 @@ export function resolveAssetSource(asset, root = '') {
  * Blender 로 전신 리타깃(궁수는 활 클립 포함)을 다시 저작한 1단계 몸체(궁수·도적). 원본 manifest 항목·원본 GLB 는 그대로 두고,
  * 같은 원본 SHA 에서 생성이 끝난 교정본만 대신 받는다. 2·3단계와 아바타는 이 1단계 클립을 공유한다.
  * @param {{id?: string, sha256?: string}|null} asset
+ * @param {{id: string, asset: string, useInGame: boolean, status: string, source: {path: string, sha256: string}, output: {path: string, sha256: string|null}}|null} [revision=null]
  * @returns {string|null}
  */
 export function revisedLibraryFile(asset, revision = null) {
