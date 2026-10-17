@@ -1,0 +1,75 @@
+{
+  "schema": "blade-surge.higher-body-revisions.v1",
+  "revisions": [
+    {
+      "id": "ranger-t2-body-fit-v1",
+      "asset": "hero_ranger_t2",
+      "useInGame": false,
+      "status": "DRAFT",
+      "source": {
+        "path": "asset-library/normalized/hero_ranger_t2.glb",
+        "sha256": "e90f6b9c23458d26b47f9718803430c8efbd537740765f472fa48b80c79429db"
+      },
+      "output": {
+        "path": "/models/heroes-next/ranger-t2-body-fit-v1.glb",
+        "sha256": null
+      }
+    },
+    {
+      "id": "ranger-t3-body-fit-v1",
+      "asset": "hero_ranger_t3",
+      "useInGame": false,
+      "status": "DRAFT",
+      "source": {
+        "path": "asset-library/normalized/hero_ranger_t3.glb",
+        "sha256": "41a3a8cd9310ed8620f5a30cab45df1b20a29cb2055f7d35c1c3caaa12d4ad72"
+      },
+      "output": {
+        "path": "/models/heroes-next/ranger-t3-body-fit-v1.glb",
+        "sha256": null
+      }
+    },
+    {
+      "id": "rogue-t2-body-fit-v1",
+      "asset": "hero_rogue_t2",
+      "useInGame": false,
+      "status": "DRAFT",
+      "source": {
+        "path": "asset-library/normalized/hero_rogue_t2.glb",
+        "sha256": "73459cf328b31d53a8068ef6ed7e81b5d8a6da515fdb03a14e7e63344e22a48a"
+      },
+      "output": {
+        "path": "/models/heroes-next/rogue-t2-body-fit-v1.glb",
+        "sha256": null
+      }
+    },
+    {
+      "id": "rogue-t3-body-fit-v1",
+      "asset": "hero_rogue_t3",
+      "useInGame": false,
+      "status": "DRAFT",
+      "source": {
+        "path": "asset-library/normalized/hero_rogue_t3.glb",
+        "sha256": "78fad9b7e5386e0d35fc0ea96214c7bc46aa7528771d1aa0c6885c6c69664c08"
+      },
+      "output": {
+        "path": "/models/heroes-next/rogue-t3-body-fit-v1.glb",
+        "sha256": null
+      }
+    },
+    {
+      "id": "rogue-crow-body-fit-v1",
+      "asset": "avatar_rogue_crow",
+      "useInGame": false,
+      "status": "DRAFT",
+      "source": {
+        "path": "asset-library/normalized/avatar_rogue_crow.glb",
+        "sha256": "a5d5e919156669f243c93e483543ecc00b21f1a82a3a88efbe6772f0bb5a259b"
+      },
+      "output": {
+        "path": "/models/heroes-next/rogue-crow-body-fit-v1.glb",
+        "sha256": null
+      }
+    }
+  ]
+}
