@@ -309,6 +309,9 @@ test('신규 심층: 해금 순서·에너지 6·첫 정복 보상 1회·패배 
     // 재로딩: 같은 저장소에서 새 객체를 만들어도 기록이 남고 같은 영수증은 다시 정산되지 않는다.
     const restored = new ExpeditionEconomy(new Economy());
     expect(restored.s.depthWins[id]).toBe(2); expect(restored.s.stats[id]).toBe(1 + 2);
+    const restoredCard = conceptBossCard(restored, id)!;
+    expect(restoredCard.clears).toBe(1);
+    expect(conceptLoopStatus(restoredCard)).toBe('기본 클리어 1회 · 심층 2회 정복 · 첫 정복 보상 받음');
     expect(restored.settle(second.ticket, { win: true }).ok).toBe(false);
     // 출격 중 새로고침은 심층 에너지 6을 한 번만 돌려준다.
     energy = restored.eco.s.energy;
@@ -340,7 +343,7 @@ test('다음 도전은 실제 경로·단계·해금 판정만 읽고 아무것�
     expect(open.detail).toContain('첫 정복 보상 대기');
     const deepWin = conceptNextChallenge(service, { win: true, kind: 'dungeon', id, depth: 'deep' })!;
     expect(deepWin).toMatchObject({ action: 'retry', id, depth: 'deep', energy: 6, label: '다음 도전 · 심층 재도전' });
-    service.s.depthWins[id] = 1;
+    service.s.depthWins[id] = 1; service.s.stats[id] = 2;
     expect(conceptNextChallenge(service, { win: true, kind: 'dungeon', id, depth: 'deep' })!.detail).toContain('첫 정복 보상 받음');
     for (const result of [{ win: false }, { saveError: 'x' }, { riftId: 'r' }, { conquestId: 'c' }, { kind: 'arena' }, { id: 'glass_garden' }]) {
       expect(conceptNextChallenge(service, { win: true, kind: 'dungeon', id, depth: 'standard', ...result })).toBeNull();
@@ -351,7 +354,7 @@ test('다음 도전은 실제 경로·단계·해금 판정만 읽고 아무것�
     expect(conceptLoopStatus(card)).toBe('기본 클리어 1회 · 심층 1회 정복 · 첫 정복 보상 받음');
     expect(conceptBossCard(service, id, 'deep')!.bossName).toBe(deep.bossName);
     // 읽기만 했다: 해금·보상·기록·에너지가 바뀌지 않았다(별·승리 수는 테스트가 직접 넣은 값뿐).
-    service.s.depthWins[id] = 0; delete eco.s.progress.stars[deep.unlockCode];
+    service.s.depthWins[id] = 0; service.s.stats[id] = 1; delete eco.s.progress.stars[deep.unlockCode];
     expect(snapshot()).toBe(before);
   }
   expect(conceptLoopStatus(conceptBossCard(new ExpeditionEconomy(new Economy()), 'glacier_tide_basin')!)).toBe('기본 클리어 0회 · 심층 잠김 · 탐험 레벨 2 필요');

@@ -32,7 +32,7 @@ export function conceptBossCard(service, id, depth = 'standard') {
     bossName: depth === 'deep' ? deep.bossName : dungeon.bossName,
     signatures,
     cue: signatures.map(signature => `${signature.name}: ${signature.cue}`).join(' · '),
-    clears: service.s.stats?.[id] || 0,
+    clears: Math.max(0, (service.s.stats?.[id] || 0) - wins),
     deep: { name: deep.name, energy: deep.energy, unlocked: !!access.ok, lockReason: access.ok ? '' : access.error || '입장 조건을 확인해 주세요.',
       wins, firstRewardPending: wins === 0, firstRewards: structuredClone(deep.firstRewards) },
   };

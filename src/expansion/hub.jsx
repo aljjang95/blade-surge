@@ -136,6 +136,8 @@ function DungeonRoutes({app, service, launch, controller}) {
     controller.focusDungeon = null;
     const frame = requestAnimationFrame(() => {
       const card = document.querySelector(`.exp-dungeon[data-depth="${focus.depth}"][data-dungeon="${focus.id}"]`);
+      const details = card?.closest('details');
+      if (details) details.open = true;
       card?.scrollIntoView?.({ block: 'center' });
       card?.querySelector('.exp-primary')?.focus({ preventScroll: true });
     });
