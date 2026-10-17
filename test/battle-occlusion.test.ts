@@ -163,6 +163,9 @@ test('실제 층 건축은 기존 배치와 충돌 마스크를 쓰고 다시 �
   const pos = new THREE.Vector3(floor.startRoom.x, 0, floor.startRoom.z);
   arena.update(0, null, pos); expect(arena.occlusion.hasTarget).toBe(true);
   expect(Array.from(floor.mask!)).toEqual(mask);
+  expect(arena.group.userData.dungeonWalls.segments).toBeGreaterThan(0);
+  expect(arena.group.userData.dungeonWalls.legacyVariantDraws).toBeGreaterThan(0);
+  expect(floor.architectureMask).not.toBe(floor.mask);
   arena.buildFloor(floor, 'garden'); expect(arena.occlusion.hasTarget).toBe(false);
   arena.clear(); expect(arena.occlusion.hasTarget).toBe(false);
 });

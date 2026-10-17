@@ -188,6 +188,10 @@ export class Floor {
     this.rows = Math.ceil((maxZ - minZ + pad * 2) / CELL);
     this.mask = new Uint8Array(this.cols * this.rows);
     for (const r of rects) r.shape === 'disk' ? this.fillDisk(r, 1) : this.fillRect(r, 1);
+    // 건축은 현재와 봉인 해제 후에 열릴 셀의 합집합을 따른다. 닫힌 문은 별도 결계 메시가 맡는다.
+    this.architectureMask = this.mask.slice();
+    // 일반 던전은 unseal()이 문 사각형 전체를 연다. 컨셉 던전은 원래 지형만 다시 채운다.
+    if (this.sealed && !this.layout?.concept) for (const g of this.gates) this.fillRect(g, 1, this.architectureMask);
     if (this.sealed) for (const g of this.gates) this.fillRect(g, 0);
     this.bounds = { minX, maxX, minZ, maxZ };
     this.buildInner();
@@ -203,11 +207,11 @@ export class Floor {
       this.inner[i] = ok;
     }
   }
-  fillRect(r, v) {
+  fillRect(r, v, target = this.mask) {
     const x0 = Math.floor((r.x - r.w / 2 - this.minX) / CELL), x1 = Math.ceil((r.x + r.w / 2 - this.minX) / CELL);
     const z0 = Math.floor((r.z - r.h / 2 - this.minZ) / CELL), z1 = Math.ceil((r.z + r.h / 2 - this.minZ) / CELL);
     for (let z = Math.max(0, z0); z < Math.min(this.rows, z1); z++)
-      for (let x = Math.max(0, x0); x < Math.min(this.cols, x1); x++) this.mask[z * this.cols + x] = v;
+      for (let x = Math.max(0, x0); x < Math.min(this.cols, x1); x++) target[z * this.cols + x] = v;
   }
   /** 셀 중심이 원 안에 드는 셀만 채운다(원형 방). */
   fillDisk(r, v) {

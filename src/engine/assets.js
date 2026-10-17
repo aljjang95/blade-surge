@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { registerHeroBodyMotion, refreshHeroBodyMotion, disposeHeroBodyMotion } from './hero-body-motion.js';
 import { preloadArmory } from './armory-assets.js';
 import { forgeHeroWeapons } from './forged-weapons.js';
 import { finishOathKnightMaterial } from './hero-surface-finish.js';
@@ -133,6 +134,7 @@ export function preloadAvatarBody(avatarId) {
  * 전투 영웅이 실제로 입을 몸체(아바타 → 갑옷 단계)를 Player 생성 전에 받아 둔다.
  * 받지 않은 2·3단계 몸체가 렌더 준비 도중 비동기로 교체되면 준비가 "cached material ... replaced"로 실패해 출격이 막혔다.
  */
+/** @param {string} heroId @param {number} [tier] @param {string|null} [avatarId] */
 export function preloadHeroBody(heroId, tier = 1, avatarId = null) {
   const avatar = avatarId ? libraryLoader.assetForAvatar(avatarId) : null;
   return preloadLibraryBody(avatar || libraryLoader.assetForHero(heroId, tier));
@@ -359,7 +361,7 @@ export function poseRangerBowString(model, drawing) {
 }
 
 /**
- * 장비 갑옷 단계에 맞는 몸체로 같은 인스턴스 안에서 교체한다. 믹서·클립·무기 소켓은 그대로 둔다.
+ * 장비 갑옷 단계에 맞는 몸체로 같은 인스턴스 안에서 교체한다. 믹서·재생 중 액션·무기 소켓은 보존한다.
  * 캐시된 몸체면 즉시 교체해 true, 비동기 로드가 필요하면 false 를 돌려주고 완료 시 onAsyncSwap 을 부른다.
  */
 export function applyLibraryHeroTier(root, tier, onAsyncSwap = null) {
@@ -406,6 +408,7 @@ function swapLibraryHeroBody(root, gltf, target) {
   for (const { mesh, parent } of built) parent.add(mesh);
   for (const mesh of old) { mesh.removeFromParent(); release(mesh); }
   root.userData.libraryBodyAssetId = target.id; root.userData.libraryHeroTier = target.armorTier || 1;
+  refreshHeroBodyMotion(root);
   return true;
 }
 
@@ -505,6 +508,7 @@ export function spawnCharacter(gltf) {
   const clips = {};
   for (const c of gltf.animations) clips[c.name] = c;
   for (const [alias, name] of Object.entries(contract?.aliases || {})) clips[alias] = clips[name];
+  registerHeroBodyMotion(root, clips);
   // 히트 플래시용: 재질을 개별 복제 (emissive 조절)
   root.traverse((o) => {
     if (!o.isMesh) return;
@@ -529,6 +533,7 @@ function cloneCharacterMaterial(material, authored, oathKnight = false) {
 /** Release instance-owned skin textures/materials; preserve shared source geometry. */
 export function disposeCharacter(root, mixer) {
   root.userData.libraryDisposed = true;
+  disposeHeroBodyMotion(root);
   root.removeFromParent(); mixer.stopAllAction(); mixer.uncacheRoot(mixer.getRoot());
   const skeletons = new Set(), materials = new Set();
   root.traverse((o) => {
