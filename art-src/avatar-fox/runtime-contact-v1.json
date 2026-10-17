@@ -1,0 +1,127 @@
+{
+  "schema": "blade-surge.fox-contact-validation.v1",
+  "method": "301 uniform + all authored keys + previous worst timestamps; actual CPU-deformed loadHeroAsset/spawnCharacter and base-to-avatar body swap; Actor death sinking excluded",
+  "numericPassed": true,
+  "minimumAllowedMeters": -0.01,
+  "supportAbsoluteAllowedMeters": 0.02,
+  "sourceReportSha256": "852136b951d8ff0d002a387587c8272c11465e708e20918a908351b6fcb5e0a0",
+  "bodySha256": "d681fb91eb32622e5f106e2a02f055ba1fb7cbbd7385b22eaa4d703f66e6c7e9",
+  "motionSha256": "08b243941fdd209e6f93e4c1f1402d142a2d959db13151e8fd4421d95f9d0e9b",
+  "clips": [
+    {
+      "name": "bow_shoot",
+      "duration": 1,
+      "samples": 322,
+      "minimum": 0.00937539125140944,
+      "minimumAt": 1,
+      "maximumMinY": 0.012670774419241474,
+      "swappedMinimum": 0.009375392124560974,
+      "maxDirectSwapDelta": 1.1800578639253878e-09
+    },
+    {
+      "name": "bow_shoot_rapid",
+      "duration": 1,
+      "samples": 322,
+      "minimum": 0.00937539125140944,
+      "minimumAt": 1,
+      "maximumMinY": 0.012670774419241474,
+      "swappedMinimum": 0.009375392124560974,
+      "maxDirectSwapDelta": 1.1800578639253878e-09
+    },
+    {
+      "name": "cast_shoot",
+      "duration": 2.2916667461395264,
+      "samples": 358,
+      "minimum": 0.006713357396073884,
+      "minimumAt": 0.5416666865348816,
+      "maximumMinY": 0.04167291772614614,
+      "swappedMinimum": 0.0067133580213040835,
+      "maxDirectSwapDelta": 3.881093807445168e-09
+    },
+    {
+      "name": "cheer",
+      "duration": 8.5,
+      "samples": 504,
+      "minimum": -0.002611464627233853,
+      "minimumAt": 2.3333332538604736,
+      "maximumMinY": 0.00943831285845065,
+      "swappedMinimum": -0.002611464870445458,
+      "maxDirectSwapDelta": 8.790114469636734e-10
+    },
+    {
+      "name": "death",
+      "duration": 1.25,
+      "samples": 445,
+      "minimum": -0.003449083933586207,
+      "minimumAt": 0.0416666679084301,
+      "maximumMinY": 0.12325098337490063,
+      "swappedMinimum": -0.0034490842548071656,
+      "maxDirectSwapDelta": 1.1478644798557092e-08
+    },
+    {
+      "name": "Dodge_Backward",
+      "duration": 0.5,
+      "samples": 309,
+      "minimum": 0.0003228687798213442,
+      "minimumAt": 0.49666666666666665,
+      "maximumMinY": 0.1528871247855747,
+      "swappedMinimum": 0.000322868809890698,
+      "maxDirectSwapDelta": 1.4238725865034496e-08
+    },
+    {
+      "name": "hit",
+      "duration": 0.5,
+      "samples": 309,
+      "minimum": 0.012921397876282726,
+      "minimumAt": 0.4583333432674408,
+      "maximumMinY": 0.034931648149360436,
+      "swappedMinimum": 0.012921399079681782,
+      "maxDirectSwapDelta": 3.2532637556093036e-09
+    },
+    {
+      "name": "idle",
+      "duration": 9.916666984558105,
+      "samples": 540,
+      "minimum": -0.008509621843783724,
+      "minimumAt": 3.375,
+      "maximumMinY": 0.017868534635973057,
+      "swappedMinimum": -0.008509622636304219,
+      "maxDirectSwapDelta": 1.6641372134473809e-09
+    },
+    {
+      "name": "interact",
+      "duration": 3.4166667461395264,
+      "samples": 384,
+      "minimum": 0.004998857949521698,
+      "minimumAt": 2.6666667461395264,
+      "maximumMinY": 0.020577901566030808,
+      "swappedMinimum": 0.0049988584150767726,
+      "maxDirectSwapDelta": 1.916466711021636e-09
+    },
+    {
+      "name": "run",
+      "duration": 0.6666666865348816,
+      "samples": 316,
+      "minimum": 0.036754675048804517,
+      "minimumAt": 0.3800000113248825,
+      "maximumMinY": 0.12240999941396147,
+      "swappedMinimum": 0.036754678471851314,
+      "maxDirectSwapDelta": 1.1400321880961073e-08
+    },
+    {
+      "name": "dodge",
+      "duration": 0.5,
+      "samples": 394,
+      "minimum": -0.007707412825968908,
+      "minimumAt": 0.03833333333333333,
+      "maximumMinY": 0.251179168083884,
+      "swappedMinimum": -0.007707413543777872,
+      "maxDirectSwapDelta": 2.339288790453864e-08
+    }
+  ],
+  "limits": [
+    "numeric evidence is not visual approval",
+    "physical Android/heat not verified",
+    "other high-tier bodies remain separate unfinished art work"
+  ]
+}

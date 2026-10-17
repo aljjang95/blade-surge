@@ -3,6 +3,7 @@ import { LIBRARY_SCHEMA, triangleLimit, validateManifest as validateManifestShap
 import { monsterRosterEntry } from '../data/monster-roster.js';
 import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v4.json';
 import ROGUE_LIBRARY_REVISION from '../data/rogue-library-revision-v2.json';
+import FOX_BODY_REVISION from '../data/fox-body-revision-v1.json';
 
 export { LIBRARY_SCHEMA, triangleLimit };
 // v3: v2 저작(전신 rest 축 리타깃·실제 스킨 접지·활 사격·백스텝, art-src/ranger/author_ranger_library_v2.py)을 Blender 5.2.2 에서 다시 굽고
@@ -12,7 +13,9 @@ export { LIBRARY_SCHEMA, triangleLimit };
 export const RANGER_LIBRARY_REVISION_ID = 'ranger-library-v4';
 // 도적 1단계: 축 교정 클립(rogue-library-axis-v1, art-src/hero-axis/author_hero_axis_v1.py) 그대로 + 같은 재질 마감. axis-v1 기록·파일은 그대로 둔다.
 export const ROGUE_LIBRARY_REVISION_ID = 'rogue-library-v2';
+export const FOX_BODY_REVISION_ID = 'fox-body-fit-v1';
 const LIBRARY_REVISIONS = Object.freeze([
+  Object.freeze({ id: FOX_BODY_REVISION_ID, prefix: '/models/heroes-next/ranger-fox-', revision: FOX_BODY_REVISION }),
   Object.freeze({ id: RANGER_LIBRARY_REVISION_ID, prefix: '/models/heroes-next/ranger-', revision: RANGER_LIBRARY_REVISION }),
   Object.freeze({ id: ROGUE_LIBRARY_REVISION_ID, prefix: '/models/heroes-next/rogue-', revision: ROGUE_LIBRARY_REVISION }),
 ]);
@@ -61,6 +64,7 @@ export function revisedLibraryFile(asset, revision = null) {
   return revision.output.path;
 }
 
+export const foxBodyRevision = () => FOX_BODY_REVISION;
 export const rangerLibraryRevision = () => RANGER_LIBRARY_REVISION;
 export const rogueLibraryRevision = () => ROGUE_LIBRARY_REVISION;
 

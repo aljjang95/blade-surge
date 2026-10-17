@@ -1,0 +1,65 @@
+{
+  "schema": "blade-surge.body-contact-pack.v3",
+  "ok": true,
+  "asset": "avatar_ranger_fox",
+  "stage": "fit-arms-leg",
+  "source": {
+    "path": "C:\\Work\\repos\\aljjang95\\blade-surge\\asset-library\\normalized\\avatar_ranger_fox.glb",
+    "sha256": "ec4858d8ad8ae69ef8bb0729b613891120eee33b1d95bb6fef824ece0eb47903",
+    "bytes": 1609500
+  },
+  "patch": {
+    "path": "C:\\Work\\jobs\\20261017-170000-be70e395\\scratch\\fox-v3-01.patch.json",
+    "sha256": "a8e14eee0ea2fffe9a3d6a197230783bebd6ab88293dd132a4d56a4d78b7e9e6",
+    "authoring": {
+      "blender": "5.2.2 LTS",
+      "scriptSha256": "78ec15dfeb5e5908237586bc77f8b3e8a8e291efcc24fd35f35627088c5eaab1"
+    }
+  },
+  "output": {
+    "path": "C:\\Work\\jobs\\20261017-170000-be70e395\\scratch\\fox-v3-01.glb",
+    "sha256": "d681fb91eb32622e5f106e2a02f055ba1fb7cbbd7385b22eaa4d703f66e6c7e9",
+    "bytes": 1609660
+  },
+  "changedVertices": {
+    "positions": 8748,
+    "weights": 1182,
+    "normals": 8710,
+    "regions": {
+      "lower": 6123,
+      "armHand": 2625
+    }
+  },
+  "changedBinBytes": 145802,
+  "allowedBinBytes": 228408,
+  "maximumWeightQuantization": 2.9691112457541635e-8,
+  "positionBounds": {
+    "min": [
+      -0.8897825479507446,
+      0.016000019386410713,
+      -0.26347261667251587
+    ],
+    "max": [
+      0.8897826671600342,
+      1.8922361135482788,
+      0.4119950532913208
+    ]
+  },
+  "preserved": [
+    "all BIN bytes outside patched POSITION/WEIGHTS_0/NORMAL components",
+    "JOINTS_0",
+    "WEIGHTS_0 outside explicit pure-leg correction",
+    "indices",
+    "TANGENT",
+    "UV",
+    "image bytes",
+    "materials",
+    "nodes",
+    "skins",
+    "animations"
+  ],
+  "jsonChanges": [
+    "POSITION accessor min/max only; JSON text serialization and GLB chunk lengths can change"
+  ],
+  "limitation": "Candidate only. No runtime numeric validation or visual approval is claimed."
+}
