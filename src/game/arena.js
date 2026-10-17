@@ -13,6 +13,7 @@ import { applyDungeonSurface, collectDungeonTiles, projectDungeonSurface } from 
 import { buildOpenFieldScene, FIELD_ATMOSPHERES } from './open-field-scene.js';
 import { libraryAssets } from '../engine/library-assets.js';
 import { buildConceptTerrain } from './concept-terrain.js';
+import { collectDungeonWallSegments, fitDungeonWallSegments, DUNGEON_WALL_CLEARANCE } from './dungeon-walls.js';
 
 const THEMES = {
   garden: { fog: 0x172b2b, bg: 0x172b2b, hemi: [0xa0b5ae, 0x283930], sun: 0xffedca, sunI: 2.3, torch: 0x8adbd0, tint: 0xcbd0b8 },
@@ -95,6 +96,7 @@ export class Arena {
   }
   clear() {
     this.occlusion.reset();
+    delete this.group.userData.dungeonWalls;
     this.clearSky();
     this.lobbyHall?.userData.dispose(); this.lobbyHall = null;
     this.lobbyWorld?.userData.dispose(); this.lobbyWorld = null; this.renderer.lobbyOccluders = [];
@@ -124,6 +126,16 @@ export class Arena {
     if (opts.cutaway) this.occlusion.bind(mat);
     part.updateWorldMatrix(true, true);
     const local = new THREE.Matrix4().copy(part.matrixWorld).invert().multiply(src.matrixWorld);
+    let wallAlignment = null;
+    if (opts.alignedWall) {
+      // 압축 정점의 해독·파트 내부 변환을 먼저 적용한 치수다. 원본 버퍼와 지오메트리는 건드리지 않는다.
+      const bounds = new THREE.Box3().setFromBufferAttribute(src.geometry.getAttribute('position')).applyMatrix4(local);
+      const size = bounds.getSize(new THREE.Vector3()), center = bounds.getCenter(new THREE.Vector3());
+      if (![size.x, size.y, size.z].every(value => Number.isFinite(value) && value > 1e-6)) throw new Error('던전 벽 자산의 치수가 올바르지 않습니다.');
+      wallAlignment = { width: size.x, height: size.y, depth: size.z,
+        bounds: { min: bounds.min.toArray(), max: bounds.max.toArray() } };
+      local.premultiply(new THREE.Matrix4().makeTranslation(-center.x, -bounds.min.y, -center.z));
+    }
     let geometry = src.geometry;
     if (opts.dungeonSurface && applyDungeonSurface(mat)) {
       geometry = projectDungeonSurface(src.geometry, local, TILE);
@@ -140,7 +152,26 @@ export class Arena {
     for (const list of buckets.values()) {
       const im = new THREE.InstancedMesh(geometry, mat, list.length);
       if (opts.dungeonSurface) im.name = `dungeon-surface-${name}`;
-      list.forEach((t, i) => { o.position.set(t.x, t.y || 0, t.z); o.rotation.set(0, t.ry || 0, 0); o.scale.setScalar(t.s || 1); o.updateMatrix(); im.setMatrixAt(i, o.matrix.multiply(local)); });
+      if (wallAlignment) {
+        im.name = `dungeon-wall-${name}`;
+        im.userData.dungeonWall = { sourceName: name, sourceDimensions: wallAlignment,
+          clearance: DUNGEON_WALL_CLEARANCE, instances: [] };
+      }
+      list.forEach((t, i) => {
+        if (wallAlignment) {
+          const clearance = t.clearance ?? DUNGEON_WALL_CLEARANCE;
+          const outward = wallAlignment.depth / 2 + clearance;
+          o.position.set(t.x + t.normalX * outward, t.y || 0, t.z + t.normalZ * outward);
+          o.scale.set(t.length / wallAlignment.width, 1, 1);
+          im.userData.dungeonWall.instances.push({ index: i, boundary: { ...t.boundary },
+            length: t.length, normal: { x: t.normalX, z: t.normalZ },
+            center: { x: o.position.x, z: o.position.z },
+            clearance, innerFace: { x: t.x + t.normalX * clearance, z: t.z + t.normalZ * clearance } });
+        } else {
+          o.position.set(t.x, t.y || 0, t.z); o.scale.setScalar(t.s || 1);
+        }
+        o.rotation.set(0, t.ry || 0, 0); o.updateMatrix(); im.setMatrixAt(i, o.matrix.multiply(local));
+      });
       im.castShadow = castShadow; im.receiveShadow = true; im.frustumCulled = true;
       im.computeBoundingSphere?.();   // 청크 기준 타이트한 바운드 → 컬링이 실제로 걸린다
       this.group.add(im); out.push(im);
@@ -316,9 +347,10 @@ export class Arena {
     this.group.userData.dungeonSurface = { sampledTiles: tiles.sampledTiles, uniqueTiles: tiles.uniqueTiles };
     for (const k in tiles.transforms) this.instanced(k, tiles.transforms[k], T.tint, { castShadow: false, dungeonSurface: true });
 
-    // ---- 벽: 걷기 가능 셀의 경계에 세운다 ----
+    // ---- 벽: 1m 건축 마스크 경계 바깥에 정렬한다 ----
     const walls = { wall: [], wall_cracked: [], wall_broken: [], wall_arched: [], wall_window_open: [] };
-    const variants = ['wall', 'wall', 'wall', 'wall_cracked', 'wall_arched', 'wall_window_open', 'wall_broken'];
+    // 예전 4m 표본의 난수 소비 횟수는 그대로 두어 뒤의 방 장식 배치를 보존한다.
+    let legacyVariantDraws = 0;
     const W = floorData;
     const step = TILE;
     const seen = new Set();
@@ -334,12 +366,23 @@ export class Arena {
           if (W.walkable(nx, nz)) continue;
           const kk = `${Math.round(cx)}_${Math.round(cz)}_${dx}_${dz}`;
           if (seen.has(kk)) continue; seen.add(kk);
-          const v = variants[Math.floor(random() * variants.length)];
-          walls[v].push({ x: cx + dx * step / 2, z: cz + dz * step / 2, ry });
+          random(); legacyVariantDraws++;
         }
       }
     }
-    for (const k in walls) this.instanced(k, walls[k], T.tint, { cutaway: true });
+    // 자산의 실제 두께로 1m 홈의 반대편 보행 셀까지 검사한다.
+    const wallDepths = {};
+    for (const name in walls) {
+      const { mesh, part } = this._meshOf(name); if (!mesh) continue;
+      part.updateWorldMatrix(true, true);
+      const local = new THREE.Matrix4().copy(part.matrixWorld).invert().multiply(mesh.matrixWorld);
+      const bounds = new THREE.Box3().setFromBufferAttribute(mesh.geometry.getAttribute('position')).applyMatrix4(local);
+      wallDepths[name] = bounds.max.z - bounds.min.z;
+    }
+    const alignedWalls = fitDungeonWallSegments(floorData, collectDungeonWallSegments(floorData), wallDepths);
+    for (const wall of alignedWalls) walls[wall.variant].push(wall);
+    this.group.userData.dungeonWalls = { segments: alignedWalls.length, legacyVariantDraws };
+    for (const k in walls) this.instanced(k, walls[k], T.tint, { cutaway: true, alignedWall: true });
 
     // ---- 방 장식 ----
     const pillars = [], banners = [];
