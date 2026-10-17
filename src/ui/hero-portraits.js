@@ -152,18 +152,25 @@ export class HeroPortraits {
       }
     } finally { this.renderer.release(); this.running = false; }
   }
-  bind(img, id) {
-    if (!img || !HEROES[id]) return () => {};
-    const snapshot = heroPortraitSnapshot(this.app, id);
+  bind(img, id, { fallbackUrl = HEROES[id]?.portrait } = {}) {
+    if (!img) return () => {};
     const previous = this.bindings.get(img);
-    if (previous?.key === snapshot.key) return previous.cancel;
+    if (!HEROES[id]) {
+      previous?.cancel();
+      if (fallbackUrl) img.src = fallbackUrl;
+      img.dataset.portraitState = 'fallback';
+      delete img.dataset.heroPortrait; delete img.dataset.appearanceKey; delete img.dataset.portraitBody;
+      return () => {};
+    }
+    const snapshot = heroPortraitSnapshot(this.app, id);
+    if (previous?.key === snapshot.key && previous.fallbackUrl === fallbackUrl) return previous.cancel;
     previous?.cancel();
-    const record = { key: snapshot.key, active: true, cancel: null };
+    const record = { key: snapshot.key, fallbackUrl, active: true, cancel: null };
     const current = () => record.active && !this.disposed && img.isConnected &&
       this.bindings.get(img) === record && heroPortraitSnapshot(this.app, id)?.key === snapshot.key;
     const fallback = () => {
       img.dataset.portraitState = 'fallback'; delete img.dataset.portraitBody;
-      img.src = snapshot.def.portrait;
+      img.src = fallbackUrl;
     };
     const failed = () => { if (current() && img.dataset.portraitState === 'ready') fallback(); };
     record.cancel = () => {
@@ -173,7 +180,7 @@ export class HeroPortraits {
     this.bindings.set(img, record); img.addEventListener?.('error', failed);
     img.dataset.heroPortrait = id; img.dataset.appearanceKey = snapshot.key;
     img.dataset.portraitState = snapshot.model && snapshot.body ? 'pending' : 'fallback';
-    delete img.dataset.portraitBody; img.src = snapshot.def.portrait;
+    delete img.dataset.portraitBody; img.src = fallbackUrl;
     void this.request(snapshot).then(result => {
       if (!current()) return;
       if (!result) { fallback(); return; }
@@ -196,4 +203,4 @@ export function heroPortraitsFor(app) {
   }
   return service;
 }
-export function bindHeroPortrait(img, app, id) { return heroPortraitsFor(app).bind(img, id); }
+export function bindHeroPortrait(img, app, id, options) { return heroPortraitsFor(app).bind(img, id, options); }

@@ -269,7 +269,7 @@ export class UI {
       return label;
     });
     this._dodgeBtn = $('btn-dodge'); this._dodgeCd = this._dodgeBtn.querySelector('.dodge-cd'); this._dodgeDescription = null; this.refreshDodgeFeedback();
-    bindHeroPortrait($('hud-portrait'), this.app, def.id); $('hud-stage').textContent = '';
+    bindHeroPortrait($('hud-portrait'), this.app, def.id, { fallbackUrl: def.portrait }); $('hud-stage').textContent = '';
     this.skillBtns.forEach((b, slot) => {
       const { index, skill: sk } = player.combatSkill(slot);
       if (!sk) { b.style.display = 'none'; return; }

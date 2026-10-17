@@ -302,3 +302,5 @@
 - 레인별 좁은 테스트 목록은 바꾼 모듈을 import 하는 파일만 골라, `Actor.prototype.updateCombatPose.call(가짜객체)`처럼 프로토타입 메서드를 맨 객체에 빌려 부르는 테스트(mobile-world-contact)를 놓쳤다. 메서드 안에서 새 인스턴스 메서드(`this.updateTurnSmoothing`)를 부르기 시작하면 이런 테스트가 깨진다. 공통 클래스 메서드를 바꾸면 `rg "<Class>.prototype.<method>.call"`로 대역 호출부를 함께 돌린다.
 - 같은 파일(player.js)을 두 레인이 고친 cherry-pick이 자동 병합돼도 의미 보존은 따로 확인한다. 레인 기준(b069872→레인 HEAD)과 통합(앞 레인 HEAD→통합 HEAD)의 +/- 줄 묶음 해시가 파일별로 같으면 한쪽 변경이 빠지거나 겹쳐 쓰이지 않은 것이다. 그다음 회피 무적 0.26⊂구르기 0.32, 회피→사격 무적 종료, AUTO 실제 타격 시각 회피, 후퇴 상한을 코드에서 다시 읽는다.
 - crowd-flow-sim은 `Object.create(Battle.prototype)`로 판을 만들어 `RegionHazards`가 없다. 새 맵 기믹은 이 시뮬로 검증되지 않는다. 수동 기사 봇은 기존 22 원정 중 14곳에서도 420초 상한에 걸리므로, 새 맵의 수동 기사 시간 초과(보스방 진입 뒤)는 교착이 아니라 봇 처리 속도로 먼저 대조한다.
+
+- 2026-10-17 동적 영웅 초상: 공통 resolver를 연결할 때 전달된 def.portrait의 즉시 fallback을 지우면 id 없는 테스트/확장 영웅 HUD가 빈 이미지가 된다. 기존 fallback을 먼저 유지하고 실제 캡처 완료만 덮어쓰며, 미등록 영웅 전환은 이전 요청도 취소한다.

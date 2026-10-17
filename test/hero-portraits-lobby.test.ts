@@ -174,3 +174,41 @@ test('direct open 동기화는 정비 details를 열고 기본2탭으로 돌아�
     expect(controller.nav.querySelectorAll('button').every((b: any) => b.disabled)).toBe(true);
   } finally { if (original) Object.defineProperty(globalThis, 'document', original); else Reflect.deleteProperty(globalThis, 'document'); }
 });
+
+test('HUD가 전달한 초상은 id 없음·모델 미준비·렌더 실패 모두에서 즉시 유지된다', async () => {
+  const { app } = fixture(), img = image();
+  const gate = deferred();
+  const service = new HeroPortraits(app, { renderer: { async capture() { await gate.promise; return null; }, release() {} } });
+  service.bind(img, undefined, { fallbackUrl: 'provided-unknown.png' });
+  expect(img.src).toBe('provided-unknown.png'); expect(img.dataset.portraitState).toBe('fallback');
+  expect(img.dataset.heroPortrait).toBeUndefined();
+  service.bind(img, 'knight', { fallbackUrl: 'provided-knight.png' });
+  expect(img.src).toBe('provided-knight.png'); expect(img.dataset.portraitState).toBe('pending');
+  gate.resolve(true); await tick();
+  expect(img.src).toBe('provided-knight.png'); expect(img.dataset.portraitState).toBe('fallback');
+  delete app.models.Ranger;
+  service.bind(img, 'ranger', { fallbackUrl: 'provided-unloaded.png' }); await tick();
+  expect(img.src).toBe('provided-unloaded.png'); expect(img.dataset.portraitBody).toBeUndefined();
+  service.dispose();
+});
+
+test('HUD 제공 초상은 실제 ready만 교체하고 미등록 영웅으로 바뀌면 이전 완료도 무시한다', async () => {
+  const { app } = fixture(), img = image(), gate = deferred();
+  const service = new HeroPortraits(app, { renderer: {
+    async capture(snapshot: any) { await gate.promise; return result(snapshot); }, release() {},
+  } });
+  service.bind(img, 'knight', { fallbackUrl: 'first.png' });
+  service.bind(img, 'knight', { fallbackUrl: 'next.png' });
+  expect(img.src).toBe('next.png');
+  gate.resolve(true); await tick();
+  expect(img.dataset.portraitState).toBe('ready'); expect(img.src).toStartWith('data:image/');
+  img.fail(); expect(img.src).toBe('next.png'); expect(img.dataset.portraitBody).toBeUndefined();
+  const late = deferred(), other = new HeroPortraits(app, { renderer: {
+    async capture(snapshot: any) { await late.promise; return result(snapshot); }, release() {},
+  } });
+  other.bind(img, 'mage', { fallbackUrl: 'mage-custom.png' });
+  other.bind(img, 'unregistered', { fallbackUrl: 'outside-roster.png' });
+  late.resolve(true); await tick();
+  expect(img.src).toBe('outside-roster.png'); expect(img.dataset.portraitState).toBe('fallback');
+  expect(img.dataset.portraitBody).toBeUndefined(); service.dispose(); other.dispose();
+});
