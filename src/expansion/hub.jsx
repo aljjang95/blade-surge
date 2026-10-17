@@ -17,6 +17,7 @@ import { personalResultLabel } from '../ui/personal-goal-labels.js';
 import { mapTacticsReceiptView } from '../ui/map-tactics-receipt.js';
 import { citadelHotspot } from '../data/citadel-hub.js';
 import { dungeonContinuation } from '../ui/dungeon-journey.js';
+import { conceptNextChallenge, conceptBossCard, conceptLoopStatus, isConceptLoopRoute } from '../ui/concept-challenge.js';
 import { DungeonJourney } from './dungeon-journey.jsx';
 import './hub.css';
 import './app-content.css';
@@ -51,7 +52,9 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
   const mapTactics=mapTacticsReceiptView(result.mapTactics);
   const retryEnergy=retryEnergyForResult(result);
   const blocked=!!result.saveError || !!app.stageStarting;
-  const nextDungeon = app.expedition ? dungeonContinuation(app.expedition, result) : null;
+  // 컨셉 던전 승리는 같은 경로의 '다음 도전'(심층 준비 또는 재도전)을 기본 행동으로 둔다. 다른 던전 제안은 그때 숨긴다.
+  const nextChallenge = app.expedition ? conceptNextChallenge(app.expedition, result) : null;
+  const nextDungeon = app.expedition && !nextChallenge ? dungeonContinuation(app.expedition, result) : null;
   // Recheck the live receipt as well as disabling controls: old handlers must not leave a failed result.
   const depart=fn=>{if(controller.result!==result || result.saveError || app.stageStarting)return;return fn();};
   const openTab=tab=>depart(()=>{controller.result=null;app.toLobby();controller.open(tab);});
@@ -91,6 +94,17 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
       </div>
     </div>
     <footer className="exp-result-footer" aria-label="다음 행동">
+      {nextChallenge && <button className="exp-primary exp-next-challenge" data-next-challenge={nextChallenge.action} data-next-depth={nextChallenge.depth} disabled={blocked} onClick={()=>depart(()=>{
+        // 누르는 순간 저장된 해금·기록으로 다시 고른다. 화면에 보인 행동과 다르면 다시 그리기만 한다.
+        const live = conceptNextChallenge(app.expedition, result);
+        if (!live || live.action !== nextChallenge.action || live.depth !== nextChallenge.depth) { controller.render(); return; }
+        if (live.action === 'deep-prep') {
+          // 심층 준비는 이동만 한다. 에너지·해금·보상은 심층 카드의 출격 버튼이 기존 서비스로 판정한다.
+          controller.result=null; app.toLobby(); controller.focusDungeon={ id: live.id, depth: 'deep' };
+          controller.open('dungeons', {depth:'deep'}); return;
+        }
+        return launch('dungeon', live.id, { depth: live.depth });
+      })}><span>{nextChallenge.label}{nextChallenge.action==='retry'?` · 에너지 ${nextChallenge.energy}`:''}<br/><small data-next-challenge-detail>{nextChallenge.detail}</small></span></button>}
       {nextDungeon && <button className="exp-primary exp-next-dungeon" data-next-dungeon={nextDungeon.id} disabled={blocked} onClick={()=>depart(()=>{
         const next = dungeonContinuation(app.expedition, result);
         if (!next || next.id !== nextDungeon.id) { controller.render(); return; }
@@ -102,7 +116,8 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
         controller.result=null; app.toLobby(); controller.open('dungeons', {depth:'standard'});
         controller.prepareDungeon(nextDungeon.id, document.getElementById('btn-expedition'));
       })}><img src={nextDungeon.art} alt=""/><span>{nextDungeon.claimQuestIds.length ? `보상 받고 다음 던전 · EXP +${nextDungeon.claimXp}` : '다음 던전'}<br/>{nextDungeon.name} →</span></button>}
-      <button className="exp-primary" disabled={blocked} onClick={()=>depart(()=>launch(result.kind,result.id,{rift:!!result.riftId,depth:result.depth,conquestId:result.conquestId}))}>다시 도전 · {retryEnergy===null?'비용 확인 필요':`에너지 ${retryEnergy}`}</button>
+      {/* '다음 도전'이 같은 경로·단계 재도전이면 중복 버튼을 두지 않는다. 심층 준비일 때는 기본 재도전을 보조 버튼으로 남긴다. */}
+      {!(nextChallenge?.action === 'retry') && <button className={nextChallenge ? 'exp-result-retry' : 'exp-primary'} disabled={blocked} onClick={()=>depart(()=>launch(result.kind,result.id,{rift:!!result.riftId,depth:result.depth,conquestId:result.conquestId}))}>다시 도전 · {retryEnergy===null?'비용 확인 필요':`에너지 ${retryEnergy}`}</button>}
       {/* 결과 뒤 핵심 행동만 둔다: 다시 도전 · 다음 던전 · 장비 정비(로비는 머리글). 제작 공방 · 퀘스트는 메뉴에서 연다. */}
       <button className="exp-result-gear" disabled={blocked} onClick={()=>depart(()=>{const heroId=app.eco?.s?.selected;controller.result=null;app.toLobby();if(heroId)app.meta.heroSel=heroId;app.meta.openTab('heroes');})}>장비 정비</button>
     </footer>
@@ -115,6 +130,19 @@ function DungeonRoutes({app, service, launch, controller}) {
   const frontier = weeklyFrontier();
   const frontierDungeon = DUNGEONS.find(d => d.id === frontier.routeId) || DUNGEONS[0];
   const choose = value => { setDepth(value); controller.dungeonDepth = value; };
+  // 결과 화면 '다음 도전 · 심층 원정 준비'가 고른 카드로 화면과 초점을 옮긴다(부모 패널의 초점 이동 뒤에 실행).
+  useEffect(() => {
+    const focus = controller.focusDungeon; if (!focus) return;
+    controller.focusDungeon = null;
+    const frame = requestAnimationFrame(() => {
+      const card = document.querySelector(`.exp-dungeon[data-depth="${focus.depth}"][data-dungeon="${focus.id}"]`);
+      const details = card?.closest('details');
+      if (details) details.open = true;
+      card?.scrollIntoView?.({ block: 'center' });
+      card?.querySelector('.exp-primary')?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
   return <>
     {depth === 'standard' && <DungeonJourney app={app} service={service} launch={launch}/>}
     <section className="exp-season-frontier" data-frontier-route={frontier.routeId} aria-label="이번 주 시즌 원정">
@@ -134,11 +162,13 @@ function DungeonRoutes({app, service, launch, controller}) {
       const access=service.dungeonAccess(d.id,{depth:runDepth}), locked=!access.ok;
       const wins=deep ? s.depthWins?.[d.id]||0 : s.stats[d.id];
       const art=deep ? d.art || ENCOUNTER_ART[['garden_midboss','tide_midboss','homecoming_finalboss'][i]] : d.art || ART[d.id];
+      const concept=!fields && isConceptLoopRoute(d.id) ? conceptBossCard(service, d.id, runDepth) : null;
       return <article key={`${depth}:${d.id}`} className="exp-dungeon" data-depth={depth} data-dungeon={d.id} style={{'--exp-accent':d.accent || COLORS[d.id] || '#b7d8bd'}}>
         <div className="exp-dungeon-art"><Art src={art} alt={d.name+(fields?' 게임 화면':deep?' 수호자':' 던전 원화')} loading="lazy" decoding="async"/><span className="exp-number">0{i+1}</span>
           <div className="exp-dungeon-badges"><span>{deep ? `캠페인 ${d.unlockCode} 이후` : `원정 Lv.${d.minLevel}`}</span><span className="ui-resource"><Icon id="energy"/>에너지 {d.energy}</span></div>
         </div>
         <div className="exp-card-body"><small>{deep ? (wins ? `${wins}회 정복` : '첫 정복 보상 미획득') : d.subtitle || SUBTITLES[d.id] || d.theme.toUpperCase()}</small><h3>{d.name}</h3><p>{deep ? d.objective : d.objective || OBJECTIVES[d.id] || d.description}</p>
+          {concept && <p className="exp-concept-boss" data-concept-boss={d.id}><b>보스 {concept.bossName}</b> · {concept.cue}<br/><small data-concept-status>{conceptLoopStatus(concept)}</small></p>}
           {fields && <p>{d.description}</p>}
           {deep && <Detail label="이야기 · 첫 정복 보상"><p>{d.description}</p>{!wins ? <RewardChips rewards={d.firstRewards}/> : <p>첫 정복 보상을 받았습니다.</p>}</Detail>}
           <div className="exp-material-reward">{MATERIALS.filter(m=>d.rewards.materials?.[m.id]).map(m=><React.Fragment key={m.id}><img src={MATERIAL_ART[m.id]} alt=""/><span>{m.name}<b>확정 +{d.rewards.materials[m.id]}</b></span></React.Fragment>)}<em>EXP +{d.rewards.xp}</em></div>

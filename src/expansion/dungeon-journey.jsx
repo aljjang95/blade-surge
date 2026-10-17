@@ -3,6 +3,7 @@ import { HEROES } from '../data/heroes.js';
 import { resourceArt } from '../ui/illustrated.js';
 import { dungeonJourney } from '../ui/dungeon-journey.js';
 import { citadelHotspot } from '../data/citadel-hub.js';
+import { conceptBossCard, conceptLoopStatus, isConceptLoopRoute } from '../ui/concept-challenge.js';
 import './dungeon-journey.css';
 
 export function DungeonJourney({ app, service, launch }) {
@@ -20,6 +21,8 @@ export function DungeonJourney({ app, service, launch }) {
     if (node.unlocked && !app.stageStarting) launch?.('dungeon', dungeon.id, { depth: 'standard' });
   };
   const label = hubGate ? (node.unlocked ? '출격 준비' : '해금 조건 보기') : node.unlocked ? `던전 입장 · 에너지 ${dungeon.energy}` : `Lv.${dungeon.minLevel} 필요`;
+  // 컨셉 던전은 보스 기술 cue와 기본 클리어·심층 상태를 한 줄로 보인다(입구는 그대로 이 버튼 하나).
+  const concept = isConceptLoopRoute(dungeon.id) ? conceptBossCard(service, dungeon.id) : null;
   return <section className="dungeon-journey" aria-label="레벨 1부터 이어지는 던전 여정">
     <header className="dungeon-journey-heading"><div><small>YOUR ADVENTURE</small><h2>한 걸음씩, 다음 던전으로</h2></div><span>{journey.cleared} / {journey.nodes.length} 정복</span></header>
     <div className="dungeon-journey-layout">
@@ -45,6 +48,7 @@ export function DungeonJourney({ app, service, launch }) {
         <div><small>{node.cleared ? '정복한 지역 · 다시 도전' : node.unlocked ? '다음 모험' : '해금할 다음 지역'}</small><h3>{dungeon.name}</h3>
           <p>원정 Lv.{dungeon.minLevel} · 에너지 {dungeon.energy}</p>
           <div className="journey-rewards"><span><img src={resourceArt('gold')} alt=""/>+{dungeon.rewards.gold}</span><span><img src={resourceArt('xp')} alt=""/>EXP +{dungeon.rewards.xp}</span></div>
+          {concept && <p className="journey-concept-boss" data-concept-boss={dungeon.id}><b>보스 {concept.bossName}</b> · {concept.cue}<br/><small data-concept-status>{conceptLoopStatus(concept)}</small></p>}
           <button type="button" id="journey-prepare" data-journey-entry={hubGate ? 'prepare' : 'direct'} disabled={!hubGate && !node.unlocked} onClick={prepare}>{label} <span>→</span></button>
           <p className="journey-destination-note">{node.reason || '승리하면 다음 던전이 이어집니다. 보상과 진행은 자동 저장됩니다.'}</p>
         </div>

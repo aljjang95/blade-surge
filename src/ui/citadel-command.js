@@ -166,7 +166,11 @@ export class CitadelCommand {
     const model = this.readModel();
     if (!model.dungeon) return false;
     const spot = citadelHotspot(`dungeon:${model.dungeon.id}`);
-    if (!spot) { app.expeditionUI.open('dungeons', { depth: model.depth }); return true; }
+    if (!spot) {
+      // 관문 없는 컨셉 원정도 홈의 최근 도전에서 바로 그 카드로 이어진다. 준비 화면 이동은 에너지를 쓰지 않는다.
+      app.expeditionUI.focusDungeon = { id: model.dungeon.id, depth: model.depth };
+      app.expeditionUI.open('dungeons', { depth: model.depth }); return true;
+    }
     app.citadel?.clearInput?.();
     // 준비창을 닫으면 이 화면의 출격 준비 버튼으로 초점이 돌아온다.
     return app.hubUI.openDestination(spot, trigger?.isConnected && trigger.closest?.('#tab-home') ? trigger : this.prepare, { depth: model.depth });

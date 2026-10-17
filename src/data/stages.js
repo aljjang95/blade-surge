@@ -219,6 +219,16 @@ export const ENEMIES = {
     phasePatterns: [['archive_retrace','fan','archive_hourglass','slam'], ['archive_hourglass','archive_retrace','summon','fan'], ['archive_retrace','archive_hourglass','soulrain']],
     phaseHints: ['지나온 길이 역순으로 터집니다.', '바깥 고리 다음은 안쪽 원입니다.', '네 번째 기록과 마지막 공명까지 확인하세요.'],
     tactic: '방금 지나온 세 자리가 역순으로 폭발합니다. 모래시계가 닫히기 전에 바깥 고리로 이동하세요.', projColor: 0x9ed5ff },
+  // ================= 컨셉 던전 전용 보스 (2026-10-17) =================
+  // 전투 수치·판정 크기(scale)·kit는 교체 전 보스(obsidian_hydra / ash_colossus)와 같다. 바뀌는 것은 이름·외형·기술뿐이다.
+  // 외형은 다른 던전·심층·캠페인 최종 보스가 쓰지 않는 기존 라이브러리 자산(frost_golem / shadow_soldier)이며 새 GLB가 아니다.
+  // 전용 초상은 없다(보스 바 초상 숨김). tactic·phaseHints는 아래에서 실제 기술 이름·cue로 채운다.
+  tidegate_titan: { name: '빙하 수문의 거신', model: 'Big_TidegateTitan', hp: 18800, atk: 72, spd: 4.2, range: 3.4, atkTime: 1.55, exp: 300, scale: 2.5, boss: true, armor: 0.27, gold: 62, kit: 'dragon', signatureBoss: true, tint: '#8ff7ff',
+    phasePatterns: [['tidegate_flood','slam','tidegate_ring_gap','fan'], ['tidegate_ring_gap','tidegate_flood','spin','slam'], ['tidegate_flood','tidegate_ring_gap','dash']],
+    projColor: 0x8ff7ff },
+  pulley_colossus: { name: '도르래 거수', model: 'Big_PulleyColossus', hp: 20400, atk: 75, spd: 3.4, range: 3.6, atkTime: 1.6, exp: 320, scale: 2.45, boss: true, armor: 0.29, gold: 66, kit: 'reaper', signatureBoss: true, tint: '#ffb35c',
+    phasePatterns: [['pulley_ore_fall','slam','pulley_chain_line','spin'], ['pulley_chain_line','pulley_ore_fall','fan','slam'], ['pulley_ore_fall','pulley_chain_line','dash']],
+    projColor: 0xffb35c },
 };
 
 // 검수된 기존 리그만 재사용한다. 전용 원화의 3D 모델이 완성됐다는 뜻은 아니다.
@@ -298,6 +308,11 @@ for (const id of new Set(Object.values(DUNGEON_BOSS_BASE))) {
   const def = ENEMIES[id];
   def.tactic = signatureAdvice(def.phasePatterns.flat());
   def.phaseHints = def.phasePatterns.map(signatureAdvice);
+}
+// 컨셉 전용 보스도 같은 규칙으로 실제 기술의 이름·cue만 안내한다(카드·준비·페이즈 알림이 같은 문장을 쓴다).
+for (const id of ['tidegate_titan', 'pulley_colossus']) {
+  const def = ENEMIES[id];
+  Object.assign(def, { pattern: def.phasePatterns[0], tactic: signatureAdvice(def.phasePatterns.flat()), phaseHints: def.phasePatterns.map(signatureAdvice) });
 }
 
 // Keep each authored dungeon's boss silhouette and attack vocabulary distinct.

@@ -10,6 +10,19 @@ import { buildExpeditionStage } from '../src/game/expedition-combat.js';
 import { routeObjectiveForStage } from '../src/data/route-objectives.js';
 import { CHALLENGES } from '../src/data/masterworks.js';
 import { difficultyEffects } from '../src/game/masterworks-core.js';
+
+// 광장 관문(준비창)은 기존 12곳에만 있다. 컨셉 던전 심층은 관문 없이 던전 목록 카드로 들어가므로 아래 관문 계약에서 제외하고,
+// 준비창이 그 경로를 관문처럼 꾸며 열지 않는다는 것을 따로 확인한다.
+const GATE_DEPTHS = EXPEDITION_DEPTHS.filter(def => DUNGEONS.some(d => d.id === def.id));
+test('concept deep routes are not projected as citadel gates', () => {
+  expect(GATE_DEPTHS).toHaveLength(12);
+  const app = fixture();
+  for (const def of EXPEDITION_DEPTHS.filter(def => !GATE_DEPTHS.includes(def))) {
+    expect(['glacier_tide_basin', 'sunbrass_quarry']).toContain(def.id);
+    expect(citadelPreparation(app, def.id, 'deep').ok).toBe(false);
+    expect(citadelPreparation(app, def.id).ok).toBe(false);
+  }
+});
 import { MasterworksService } from '../src/game/masterworks-service.js';
 import { GARDEN_MASTERY } from '../src/data/garden-mastery.js';
 
@@ -91,7 +104,7 @@ test('세 기준문 이외에는 새 행동을 만들지 않으며 반복 준비
 });
 
 test('every gate projects canonical basic and deep routes; each deep lock uses actual expedition eligibility', () => {
-  for (const def of EXPEDITION_DEPTHS) {
+  for (const def of GATE_DEPTHS) {
     const app = fixture(), basic = DUNGEONS.find(d => d.id === def.id)!;
     app.expedition.s.level = 50;
     expect(preparation(app, def.id).definition).toEqual(basic);
@@ -217,7 +230,7 @@ test('gate challenge preview reads every saved vow and the actual combined diffi
 
 test('deep and basic gate vows preserve canonical access, costs and rewards while previewing only the existing fury addition', () => {
   const app = fixture(); app.masterworks = new MasterworksService(app);
-  for (const definition of EXPEDITION_DEPTHS) {
+  for (const definition of GATE_DEPTHS) {
     unlock(app, definition);
     for (const depth of ['standard', 'deep']) {
       const projected = preparation(app, definition.id, depth);

@@ -45,5 +45,10 @@ export const BOSS_SIGNATURES = {
   crown_verdict: { name:'갈라진 낙인', cue:'두 낙인 뒤 가운데 절단선을 피하세요', color:0xe9c785, anim:'cast' },
   oath_tethers: { name:'끊어진 명령', cue:'잔향과 나를 잇는 선 옆으로 이동', color:0x87cbb0, anim:'cast' },
   oath_shelter: { name:'함께 잇는 귀환', cue:'공명 속 빈 원을 따라 다음 쉼터로', color:0x87cbb0, anim:'raise' },
+  // 컨셉 던전 2곳의 전용 보스 기술. 맵 기믹(조수 범람 · 도르래 낙석)을 보스 무대로 옮긴 것이며 다른 보스는 쓰지 않는다.
+  tidegate_flood: { name:'수문 범람', cue:'먼 쪽 수문 → 내 쪽 수문 · 거신이 선 마른 수로로', color:0x8ff7ff, anim:'attackHeavy' },
+  tidegate_ring_gap: { name:'물결 고리 틈', cue:'바깥 물결과 소용돌이 사이 빈 고리 → 다음엔 안쪽으로', color:0x8ff7ff, anim:'cast' },
+  pulley_ore_fall: { name:'도르래 낙석', cue:'원을 도는 낙석 뒤 마지막 상자는 내 자리 · 계속 이동', color:0xff3355, anim:'attackJump' },
+  pulley_chain_line: { name:'사슬 당김', cue:'북쪽 도르래에서 뻗는 사슬 선 옆으로 비켜서기', color:0xff3355, anim:'attackSpin' },
 };
 export const isBossSignature = key => Object.hasOwn(BOSS_SIGNATURES, key);

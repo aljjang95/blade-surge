@@ -1,4 +1,12 @@
 import { ENEMIES, stageDef } from './stages.js';
+import { CONCEPT_DUNGEONS } from './expansion.js';
+
+// 컨셉 던전 심층은 같은 컨셉 지형(셀·간선·원형 방·이름표)을 그대로 쓰고 방 종류(정예 배치)만 바꾼다.
+const conceptLayout = (id, types) => {
+  const layout = CONCEPT_DUNGEONS.find(d => d.id === id).layout;
+  if (types.length !== layout.types.length) throw new RangeError('컨셉 심층 방 수가 기본 지형과 다릅니다.');
+  return { ...layout, types };
+};
 
 // Authored follow-up expeditions. The base material runs keep their original
 // price and rewards; these routes unlock at explicit campaign milestones.
@@ -173,6 +181,32 @@ export const EXPEDITION_DEPTHS = [
     mechanics: { attunement: true, reinforcements: 2 },
     rewards: { gold: 4400, xp: 880, materials: { ember_core: 14 }, consumables: { hp_tonic: 1 } },
     firstRewards: { gold: 3500, materials: { ember_core: 3 } },
+  },
+  // 2026-10-17 컨셉 던전 심층. 해금·에너지·보상은 같은 장의 에너지 6 심층과 같은 대역이다
+  // (빙하 = 4장·4-10 잿불금고 심층, 채석장 = 2장·2-10 재의 밀물 심층). 재료는 각 기본 컨셉 던전의 재료를 그대로 쓴다.
+  {
+    id: 'glacier_tide_basin', depth: 'deep', name: '빙하 조수 분지 · 잠긴 수문', unlockCode: '4-10', minLevel: 2,
+    energy: 6, chapter: 4, stage: 5, scale: 14, bossEnemy: 'tidegate_titan', bossHp: 22000,
+    description: '썰물이 끝난 밤, 얼어붙은 수문 아래로 다시 조수가 차오릅니다. 다리 어귀와 수문 테라스의 파수대를 넘어 거신을 다시 잠재우세요.',
+    objective: '정예방 3곳의 증원 각 1회 격파 → 모든 구역 정화 → 빙하 수문의 거신 처치',
+    bossName: '잠긴 수문의 빙하 거신', art: '/img/expansion/glacier_tide_basin.webp',
+    tactic: `두 갈래 다리 어귀와 동쪽 수문 테라스의 정예방마다 적과 1회 증원을 격파하세요. 다리 위 조수 예고가 한쪽 절반에 뜨면 반대편 난간 쪽이나 다른 갈래 다리로 비켜서세요. ${ENEMIES.tidegate_titan.tactic}`,
+    layout: conceptLayout('glacier_tide_basin', ['start','elite','elite','normal','treasure','normal','elite','boss']),
+    mechanics: { attunement: false, reinforcements: 1 },
+    rewards: { gold: 2200, xp: 450, materials: { star_dust: 8 }, consumables: { hp_tonic: 1 } },
+    firstRewards: { gold: 1800, materials: { star_dust: 3 } },
+  },
+  {
+    id: 'sunbrass_quarry', depth: 'deep', name: '석양 황동 채석장 · 끊어진 도르래', unlockCode: '2-10', minLevel: 2,
+    energy: 6, chapter: 2, stage: 5, scale: 10.5, bossEnemy: 'pulley_colossus', bossHp: 22400,
+    description: '해가 진 뒤에도 끊어진 도르래가 광석 상자를 실어 나릅니다. 하역장과 선반을 지키는 정예를 넘어 거수의 사슬을 끊으세요.',
+    objective: '정예방 3곳의 증원 각 1회 격파 → 모든 구역 정화 → 도르래 거수 처치',
+    bossName: '끊어진 도르래의 거수', art: '/img/expansion/sunbrass_quarry.webp',
+    tactic: `서쪽 하역장·북쪽 우회 선반·동쪽 승강장의 정예방마다 적과 1회 증원을 격파하세요. 도르래 낙석은 원형 예고 자리에 차례로 떨어지니 원 밖으로 비켜서세요. ${ENEMIES.pulley_colossus.tactic}`,
+    layout: conceptLayout('sunbrass_quarry', ['start','elite','elite','normal','treasure','elite','boss']),
+    mechanics: { attunement: false, reinforcements: 1 },
+    rewards: { gold: 2050, xp: 410, materials: { ember_core: 7 }, consumables: { hp_tonic: 1 } },
+    firstRewards: { gold: 1600, materials: { ember_core: 3 } },
   },
 ];
 
