@@ -178,3 +178,8 @@
   font-size: var(--type-xs) !important;
   line-height: var(--lh-xs);
 }
+
+/* 결과 헤더의 기존 important 규칙보다 구체적으로 최소 크기를 보장한다. */
+#tab-stage .exp-result-shell .exp-result-header .exp-close {
+  font-size: var(--type-sm) !important;
+}
