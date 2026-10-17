@@ -35,6 +35,11 @@
 .exp-next-dungeon span { min-width: 0; }
 .exp-dungeon-details > summary { min-height: 44px; }
 @media (max-width: 700px) { #tab-stage .exp-result-footer:has(.exp-next-dungeon) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+/* 컨셉 던전 결과: '다음 도전 · 심층 원정 준비' + 보조 재도전 + 장비 정비도 다음 던전과 같은 열 수를 쓴다. */
+#tab-stage .exp-result-footer:has(.exp-next-challenge + .exp-result-retry) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 700px) { #tab-stage .exp-result-footer:has(.exp-next-challenge + .exp-result-retry) { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+#tab-stage .exp-next-challenge small { font-size: 11px; opacity: .85; }
+#tab-stage .journey-concept-boss, #tab-stage .exp-concept-boss { font-size: 11px; line-height: 1.45; }
 @media (max-width: 1050px) { .dungeon-journey-layout { grid-template-columns: 1fr; }.journey-destination { display: grid; grid-template-columns: 32% 1fr; }.journey-destination-art { height: 100%; min-height: 160px; } }
 @media (max-width: 600px) {
   .dungeon-journey-map { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(4, 120px); }

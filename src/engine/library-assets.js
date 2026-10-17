@@ -1,13 +1,15 @@
 import manifest from '../../asset-library/manifest.json';
 import { LIBRARY_SCHEMA, triangleLimit, validateManifest as validateManifestShape } from '../../tools/asset-library/manifest.mjs';
 import { monsterRosterEntry } from '../data/monster-roster.js';
-import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v3.json';
+import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v4.json';
 import ROGUE_LIBRARY_REVISION from '../data/rogue-library-revision-v2.json';
 
 export { LIBRARY_SCHEMA, triangleLimit };
 // v3: v2 저작(전신 rest 축 리타깃·실제 스킨 접지·활 사격·백스텝, art-src/ranger/author_ranger_library_v2.py)을 Blender 5.2.2 에서 다시 굽고
-// 몸 재질 보정을 GLB 에 고정했다(tools/art/finish-library-materials.mjs). v1·v2 기록·파일은 그대로 둔다.
-export const RANGER_LIBRARY_REVISION_ID = 'ranger-library-v3';
+// 몸 재질 보정을 GLB 에 고정했다(tools/art/finish-library-materials.mjs).
+// v4: 저작 v3(art-src/ranger/author_ranger_library_v3.py)가 사망 정착의 왼팔 IK 목표만 프레임별 실제 가슴 자세로 다시 풀어
+// 실제 런타임 활이 바닥을 뚫던 결함(v3 사망 1.04초 -0.10m)을 고쳤다. 다른 클립·메시·재질 마감은 v3 와 같다. v1–v3 기록·파일은 그대로 둔다.
+export const RANGER_LIBRARY_REVISION_ID = 'ranger-library-v4';
 // 도적 1단계: 축 교정 클립(rogue-library-axis-v1, art-src/hero-axis/author_hero_axis_v1.py) 그대로 + 같은 재질 마감. axis-v1 기록·파일은 그대로 둔다.
 export const ROGUE_LIBRARY_REVISION_ID = 'rogue-library-v2';
 const LIBRARY_REVISIONS = Object.freeze([

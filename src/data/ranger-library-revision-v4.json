@@ -1,0 +1,106 @@
+{
+  "id": "ranger-library-v4",
+  "useInGame": true,
+  "status": "GENERATED",
+  "asset": "hero_ranger_t1",
+  "reason": "공개 v3(v2 레시피) 사망 클립에서 실제 런타임 활(Bow 정점)이 1.04초에 바닥 아래 0.10m 까지 내려가던 결함을 고친 채택본. 저작 v3 는 사망 정착 구간의 왼팔 IK 목표(평평한 활)를 프레임마다 실제 가슴 자세로 다시 계산한다. 몸 키·접지 방식·1.25초 길이·소켓·다른 10개 클립·메시·스킨·텍스처·재질 마감은 v3 와 같다",
+  "supersedes": "ranger-library-v3",
+  "source": {
+    "path": "asset-library/normalized/hero_ranger_t1.glb",
+    "sha256": "2c88389c285019a4b2b0e948736f6f01b1a1a173f28b2dcac054981b45e99b23"
+  },
+  "axisReference": {
+    "path": "asset-library/normalized/hero_knight_t1.glb",
+    "role": "Mixamo 관례 본 축(읽기 전용)"
+  },
+  "authoring": {
+    "revision": "ranger-library-v4",
+    "script": "art-src/ranger/author_ranger_library_v3.py",
+    "scriptSha256": "0303ab6867d428ef8d66a67d3e38902885a71bf36e04cc630db938c0e0210947",
+    "recipe": "author_ranger_library_v2 레시피 + 사망 정착 프레임별 평평한 활(왼팔 IK 목표만)",
+    "blender": "5.2.2 LTS",
+    "host": "Windows PC RTX3070, 작업 20261017-123614-e9fe41c3",
+    "report": "art-src/ranger/ranger-library-author-report-v3-blender52.json",
+    "packedSha256": "dd857d7e828e032107a7aeb4451b245536420e43acd71cc00f5dccd709a179f4",
+    "packedAuthoringExtra": "Blender Khronos glTF Blender I/O v5.2.40 / art-src/ranger/author_ranger_library_v3.py"
+  },
+  "materialFinish": {
+    "tool": "tools/art/finish-library-materials.mjs",
+    "recipe": "library-skin-finish-v1",
+    "inputSha256": "dd857d7e828e032107a7aeb4451b245536420e43acd71cc00f5dccd709a179f4",
+    "rule": "src/engine/assets.js normalizeLibrarySkinMaterial 과 같은 의미: metallicFactor 상한 0.22(없으면 기본 1→0.22), 불투명 BLEND→MASK alphaCutoff 0.5",
+    "materials": [
+      {
+        "name": "tripo_mat_43bf4cdf",
+        "changed": [
+          "pbrMetallicRoughness.metallicFactor",
+          "alphaMode",
+          "alphaCutoff"
+        ]
+      }
+    ],
+    "preserved": "BIN 청크 전체(메시·스킨·역바인드·텍스처·클립 바이트)와 materials 외 JSON. asset.extras.materialFinish 만 추가"
+  },
+  "output": {
+    "path": "/models/heroes-next/ranger-library-t1-v4.glb",
+    "sha256": "0a008c410e2e3df74b87ba7e00f317f4266c1edc0eda2951e43f8a9a6dce43d0"
+  },
+  "sockets": {
+    "bowGrip": "RangerBowGrip_L",
+    "drawNock": "RangerDrawNock_R"
+  },
+  "bow": {
+    "nock": [
+      0.177,
+      0,
+      0
+    ],
+    "tips": [
+      [
+        0.014,
+        0,
+        1.1
+      ],
+      [
+        0.014,
+        0,
+        -1.1
+      ]
+    ],
+    "releasePhase": 0.42
+  },
+  "deathContact": {
+    "method": "test/ranger-death-contact.test.ts: 실제 loadHeroModel → spawnCharacter 의 Bow 정점(시위 자식 포함)을 월드로 옮긴 최저 y. death 1.25초 301 균등 표본 + 모든 키 시간",
+    "runtimeBowMinY": 0.0066,
+    "atSeconds": 1.2083,
+    "v3RuntimeBowMinY": -0.0999,
+    "v3AtSeconds": 1.0417,
+    "authorReport": {
+      "bowMeshMinZ": 0.0122,
+      "atFrame": 29.0,
+      "subframeStep": 0.25,
+      "v2FlatLimbTiltDegAtFrame25": 17.88
+    },
+    "boundary": "수치 계약은 바닥(y=0) 비관통·몸 본 불변·활 회전 연속성이다. 쓰러진 실루엣의 예술적 승인은 렌더·실기기 검토 몫이다"
+  },
+  "clips": {
+    "bow_shoot": 1,
+    "bow_shoot_rapid": 1,
+    "cast_shoot": 2.2917,
+    "cheer": 8.5,
+    "death": 1.25,
+    "Dodge_Backward": 0.5,
+    "hit": 0.5,
+    "idle": 9.9167,
+    "interact": 3.4167,
+    "run": 0.6667,
+    "dodge": 0.5
+  },
+  "tool": {
+    "blender": "5.2.2",
+    "author": "art-src/ranger/author_ranger_library_v3.py",
+    "packer": "tools/art/pack-ranger-library.mjs",
+    "finisher": "tools/art/finish-library-materials.mjs"
+  },
+  "license": "owner-generated (Tripo subscription) mesh unchanged; Mixamo body clips retargeted to the same skeleton; bow/backstep clips authored in Blender from the same skeleton"
+}
