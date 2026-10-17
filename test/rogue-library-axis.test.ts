@@ -41,7 +41,8 @@ test('도적 교정본은 원본 SHA 에서 생성된 정확한 파일이고 메
   expect(sha('../public' + REV.output.path)).toBe(REV.output.sha256);
   expect(resolveAssetSource(asset)).toBe(REV.output.path);
   expect(() => revisedLibraryFile({ ...asset, sha256: 'f'.repeat(64) } as any)).toThrow('exact generated file');
-  for (const id of ['hero_rogue_t2', 'hero_rogue_t3', 'avatar_rogue_crow', 'hero_knight_t1']) expect(revisedLibraryFile(manifest.assets.find((a: any) => a.id === id) as any)).toBeNull();
+  for (const id of ['hero_rogue_t2', 'hero_rogue_t3', 'avatar_rogue_crow', 'hero_knight_t1']) expect(revisedLibraryFile(manifest.assets.find((a: any) => a.id === id) as any, REV)).toBeNull();
+  expect(revisedLibraryFile(manifest.assets.find((a: any) => a.id === 'hero_knight_t1') as any)).toBeNull();
   const a = glbJson('../asset-library/normalized/hero_rogue_t1.glb'), b = glbJson('../public' + REV.output.path);
   // 재질은 마감 규칙(library-skin-finish-v1) 세 필드만 원본과 다르다.
   expect(a.materials.every((m: any) => m.alphaMode === 'BLEND' && m.pbrMetallicRoughness.metallicFactor === undefined)).toBe(true);
