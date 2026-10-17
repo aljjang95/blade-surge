@@ -49,6 +49,7 @@ export async function mountItemPreview(host, item, { heroId = null, reducedMotio
   renderer.setClearColor(0, 0);
   const canvas = renderer.domElement; canvas.className = 'is-preview-canvas'; canvas.setAttribute('role', 'img');
   canvas.tabIndex = 0;
+  canvas.dataset.previewState = 'pending';
   canvas.setAttribute('aria-label', item.name + ' 3D 미리보기 · ' + itemFormCaption(form, item) + '. 끌거나 좌우 화살표로 돌려 볼 수 있습니다.');
   host.replaceChildren(canvas);
   const scene = new THREE.Scene();
@@ -83,6 +84,7 @@ export async function mountItemPreview(host, item, { heroId = null, reducedMotio
   canvas.addEventListener('webglcontextlost', lost);
   function dispose() {
     if (disposed) return; disposed = true;
+    canvas.dataset.previewState = 'disposed';
     if (frame) cancelAnimationFrame(frame); frame = 0;
     canvas.removeEventListener('webglcontextlost', lost);
     canvas.removeEventListener('keydown', onKey);
@@ -98,7 +100,19 @@ export async function mountItemPreview(host, item, { heroId = null, reducedMotio
     const radius = Math.max(.01, sphere.radius) * 1.05, aspect = width / height;
     camera.left = -radius * aspect; camera.right = radius * aspect; camera.top = radius; camera.bottom = -radius;
     camera.position.set(0, Math.sin(tilt) * 5, Math.cos(tilt) * 5); camera.lookAt(0, 0, 0); camera.updateProjectionMatrix();
-    render(); if (autoSpin) frame = requestAnimationFrame(tick);
+    render();
+    // 실제로 준비한 모델의 정체성을 제공한다. 요청값을 준비 완료로 가장하지 않는다.
+    const actual = model.userData.itemVisual;
+    if (actual) {
+      canvas.dataset.itemId = actual.itemId;
+      canvas.dataset.itemHero = actual.heroId || '';
+      canvas.dataset.itemForm = actual.formKey;
+      canvas.dataset.itemVariant = actual.variant;
+      canvas.dataset.itemRenderKey = actual.renderKey;
+      canvas.dataset.itemSource = actual.source;
+    }
+    canvas.dataset.previewState = 'ready';
+    if (autoSpin) frame = requestAnimationFrame(tick);
   } catch (error) {
     dispose(); host.textContent = '3D 미리보기를 불러오지 못했습니다.';
     console.warn('item preview', error);

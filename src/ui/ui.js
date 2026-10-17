@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { bindHeroPortrait } from './hero-portraits.js';
 import { audio } from '../engine/audio.js';
 import { ITEM_BY_ID, RARITY_COLOR } from '../data/items.js';
 import { REWARD_LABEL } from '../game/economy.js';
@@ -268,7 +269,7 @@ export class UI {
       return label;
     });
     this._dodgeBtn = $('btn-dodge'); this._dodgeCd = this._dodgeBtn.querySelector('.dodge-cd'); this._dodgeDescription = null; this.refreshDodgeFeedback();
-    $('hud-portrait').src = def.portrait; $('hud-stage').textContent = '';
+    bindHeroPortrait($('hud-portrait'), this.app, def.id, { fallbackUrl: def.portrait }); $('hud-stage').textContent = '';
     this.skillBtns.forEach((b, slot) => {
       const { index, skill: sk } = player.combatSkill(slot);
       if (!sk) { b.style.display = 'none'; return; }

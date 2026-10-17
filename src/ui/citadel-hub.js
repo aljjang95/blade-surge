@@ -3,7 +3,7 @@ import { DUNGEONS, MATERIALS, CONSUMABLES } from '../data/expansion.js';
 import { CITADEL_HUB_HOTSPOTS, findHotspot } from '../data/citadel-hub.js';
 import { TownUI } from './town-ui.js';
 import { citadelPreparation } from '../game/citadel-preparation.js';
-import { HEROES } from '../data/heroes.js';
+import { bindHeroPortrait } from './hero-portraits.js';
 import { personalMetricLabel, personalMetricValue } from './personal-goal-labels.js';
 
 const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
@@ -288,7 +288,7 @@ export class CitadelHubUI {
     const frontier = preparation.frontier;
     this.dialog.querySelector('.citadel-hub-frontier').innerHTML = frontier ? `<h3>이번 주 프론티어 · ${safe(frontier.name)}</h3><p>${safe(frontier.modifier)}</p>` : `<p>${preparation.depth === 'deep' ? '프론티어 효과는 기본 원정에만 적용됩니다.' : '이번 원정에 적용되는 프론티어 효과가 없습니다.'}</p>`;
     this.dialog.querySelector('.citadel-hub-hero p').textContent = `${preparation.hero.name} · 출격 Lv.${preparation.hero.level} · ${preparation.hero.controlLabel}`;
-    this.dialog.querySelector('.citadel-hub-hero img').src = HEROES[this.app.eco.s.selected].portrait;
+    bindHeroPortrait(this.dialog.querySelector('.citadel-hub-hero img'), this.app, this.app.eco.s.selected);
     this.dialog.querySelector('.citadel-hub-potions').innerHTML = preparation.potions.map(potion => `<li data-citadel-potion="${safe(potion.id)}"><img src="${potionArt(potion.id)}" alt="" width="44" height="44"><div><strong>${safe(potion.name)}</strong><span><kbd>${safe(potion.key)}</kbd><b data-citadel-potion-count>${count(potion.count)}개</b></span></div><details><summary>효과</summary><p>${safe(potion.description)}</p></details></li>`).join('');
     const challenges = preparation.challenges, fury = challenges.choices.find(challenge => challenge.id === 'fury');
     const toggle = this.dialog.querySelector('.citadel-hub-fury');
