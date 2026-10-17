@@ -5,6 +5,27 @@ import { Arena } from '../src/game/arena.js';
 import { collectDungeonTiles } from '../src/game/dungeon-surface.js';
 import { collectDungeonWallRuns, collectDungeonWallSegments, fitDungeonWallSegments, DUNGEON_WALL_CLEARANCE } from '../src/game/dungeon-walls.js';
 
+type BuiltFloor = Floor & {
+  mask: Uint8Array; architectureMask: Uint8Array; inner: Uint8Array;
+  cols: number; rows: number; minX: number; minZ: number;
+};
+function assertBuiltFloor(floor: Floor): asserts floor is BuiltFloor {
+  if (!(floor.mask instanceof Uint8Array) || !(floor.architectureMask instanceof Uint8Array) || !(floor.inner instanceof Uint8Array)
+    || typeof floor.cols !== 'number' || typeof floor.rows !== 'number' || typeof floor.minX !== 'number' || typeof floor.minZ !== 'number'
+    || floor.mask.length !== floor.cols * floor.rows || floor.architectureMask.length !== floor.mask.length || floor.inner.length !== floor.mask.length) {
+    throw new Error('테스트 층의 생성된 마스크가 없습니다.');
+  }
+}
+function positionAttribute(geometry: THREE.BufferGeometry): THREE.BufferAttribute {
+  const position = geometry.getAttribute('position');
+  if (!(position instanceof THREE.BufferAttribute)) throw new Error('이 테스트는 일반 정점 버퍼를 사용합니다.');
+  return position;
+}
+type FittedWallSegment = {
+  x: number; z: number; ry: number; length: number; normalX: number; normalZ: number; variant: string; clearance: number;
+  boundary: { axis: string; at: number; a: number; b: number };
+};
+
 function openAt(floor: any, x: number, z: number) {
   const ix = Math.floor(x - floor.minX), iz = Math.floor(z - floor.minZ);
   return ix >= 0 && iz >= 0 && ix < floor.cols && iz < floor.rows && floor.architectureMask[iz * floor.cols + ix] === 1;
@@ -45,6 +66,7 @@ function segmentedEdges(floor: any) {
 for (const theme of ['garden', 'forge', 'frost', 'tide', 'crown', 'crypt', 'throne', 'abyss']) {
   for (const seed of [7932, 20261017]) test(theme + ' seed ' + seed + ': 실제 셀 경계·봉인·난수를 보존한다', () => {
     const floor = new Floor(1, theme, seed), control = new Floor(1, theme, seed);
+    assertBuiltFloor(floor); assertBuiltFloor(control);
     const before = JSON.stringify([floor.rooms, floor.corridors, floor.mask, floor.inner, floor.gates]);
     const architecture = Array.from(floor.architectureMask);
     expect(floor.architectureMask).not.toBe(floor.mask);
@@ -116,7 +138,7 @@ test('실제 압축 자산형 변환은 높이·두께·공유 버퍼를 보존�
     expect(data.instances.length).toBe(mesh.count);
     for(const entry of data.instances) {
       const matrix=new THREE.Matrix4(); mesh.getMatrixAt(entry.index,matrix);
-      const bounds=new THREE.Box3().setFromBufferAttribute(geometry.getAttribute('position')).applyMatrix4(matrix);
+      const bounds=new THREE.Box3().setFromBufferAttribute(positionAttribute(geometry)).applyMatrix4(matrix);
       const size=bounds.getSize(new THREE.Vector3()), horizontal=entry.boundary.axis==='x';
       expect(bounds.min.y).toBeCloseTo(0,4);
       expect(size.y).toBeCloseTo(8062*.0004962017992511392,4);
@@ -199,7 +221,7 @@ function openCellOverlaps(arena: Arena, floor: any, mask = floor.architectureMas
     if (!mesh.userData.dungeonWall) continue;
     for (const entry of mesh.userData.dungeonWall.instances) {
       mesh.getMatrixAt(entry.index, matrix); matrix.premultiply(mesh.matrixWorld);
-      const box = new THREE.Box3().setFromBufferAttribute(mesh.geometry.attributes.position).applyMatrix4(matrix);
+      const box = new THREE.Box3().setFromBufferAttribute(positionAttribute(mesh.geometry)).applyMatrix4(matrix);
       // 구현의 바깥 방향 탐색과 독립적으로 모든 open 셀을 대조한다.
       for (let z = 0; z < floor.rows; z++) for (let x = 0; x < floor.cols; x++) {
         if (!mask[z * floor.cols + x]) continue;
@@ -236,7 +258,7 @@ for (const axis of ['x', 'z']) test(axis + ': 1m 홈은 네 방향의 반대 ope
     arena.instanced(name, segments, undefined, { alignedWall: true });
     expect(openCellOverlaps(arena, floor).length).toBeGreaterThan(0); arena.clear();
   }
-  const fitted = fitDungeonWallSegments(floor, segments, measuredDepths);
+  const fitted: FittedWallSegment[] = fitDungeonWallSegments(floor, segments, measuredDepths);
   for (const name of Object.keys(measuredDepths)) arena.instanced(name, fitted.filter(s => s.variant === name), undefined, { alignedWall: true });
   expect(openCellOverlaps(arena, floor)).toEqual([]);
   const changed = fitted.filter(s => s.variant === 'wall');
@@ -259,6 +281,7 @@ for (const axis of ['x', 'z']) test(axis + ': 1m 홈은 네 방향의 반대 ope
 
 for (const [theme, seed] of [['garden', 19], ['crypt', 182]] as const) test(theme + ' seed ' + seed + ': 실제 생성 1m 홈은 전 open 셀과 겹치지 않는다', () => {
   const floor = new Floor(1, theme, seed), { source, material } = measuredWallAssets();
+  assertBuiltFloor(floor);
   const scene = new THREE.Scene(); scene.fog = new THREE.FogExp2(0x111111);
   const arena = new Arena(scene, { scene: source }, {});
   arena.buildFloor(floor, theme);
@@ -285,6 +308,7 @@ test('컨셉 봉인은 문 사각형의 바깥 셀을 건축·이동 영역에 �
   const floor = new Floor(1, 'garden', 19);
   floor.layout = { ...floor.layout, concept: true };
   floor.buildMask();
+  assertBuiltFloor(floor);
   const architecture = Array.from(floor.architectureMask);
   floor.unseal();
   expect(Array.from(floor.mask)).toEqual(architecture);
