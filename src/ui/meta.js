@@ -1,4 +1,5 @@
 import { $, fmt } from './ui.js';
+import { bindHeroPortrait } from './hero-portraits.js';
 import { uiArt, resourceArt, RESOURCE_ART } from './illustrated.js';
 import { audio } from '../engine/audio.js';
 import { musicForScene, MUSIC_MIX } from '../data/music.js';
@@ -133,7 +134,7 @@ export class Meta {
       this.ui.toast(status === 'unavailable' ? '저장 공간을 사용할 수 없어 현재 진행은 이 창에서만 유지됩니다.' : status === 'recovered' ? '마지막 정상 저장에서 진행을 복구했습니다.' : '저장된 진행을 읽지 못했습니다. 복구용 원본은 보관했습니다.', 'red');
     }
     $('v-gold').textContent = fmt(s.gold); $('v-gem').textContent = fmt(s.gems); $('v-energy').textContent = s.energy; $('v-energy-max').textContent = this.eco.energyMax; $('v-energy-timer').textContent = this.eco.energyTimer();
-    $('top-vip').textContent = s.vip; $('top-lv').textContent = this.eco.hero().level; $('top-avatar').src = HEROES[s.selected].portrait; $('top-name').textContent = s.name;
+    $('top-vip').textContent = s.vip; $('top-lv').textContent = this.eco.hero().level; bindHeroPortrait($('top-avatar'), this.app, s.selected); $('top-name').textContent = s.name;
     $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
     $('dot-pass').classList.toggle('on', this.eco.passClaimable() > 0); $('dot-gacha').classList.toggle('on', s.tickets > 0 || s.ssrTickets > 0); $('dot-shop').classList.toggle('on', !s.purchases.includes('starter'));
     this.refreshMenuBadge();
@@ -251,6 +252,7 @@ export class Meta {
       c.innerHTML = `<img src="${def.portrait}" onerror="this.style.background='${def.color}'"><span class="rar bg-${def.rarity}">${def.rarity}</span>${own ? `<span class="lv">Lv.${h.level} ${'★'.repeat(h.star)}</span>` : '<span class="lockt">미보유</span>'}`;
       c.onclick = (event) => { if (own) this.selectHero(id, event.detail === 0 && document.activeElement === c); else { this.heroSel = id; this.renderHeroes(); } };
       list.appendChild(c);
+      bindHeroPortrait(c.querySelector('img'), this.app, id);
     }
     const id = this.heroSel; const def = HEROES[id]; const own = this.eco.ownHero(id); const det = $('hero-detail');
     this.app.wardrobe?.show(id);

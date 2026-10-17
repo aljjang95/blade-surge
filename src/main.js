@@ -54,6 +54,7 @@ import './ui/garden-ui.css';
 import './ui/departure-journal.css';
 import './ui/mobile-menu.css';
 import './ui/maple-window.css';
+import './ui/lobby-clarity.css';
 import { MapleUI } from './ui/maple-ui.js';
 import { buildIdentity, classifyStartupFailure, onMediaQueryChange, startupFailureDetails, storageAvailability } from './platform/startup-compat.js';
 const BOOT_TIPS = [
