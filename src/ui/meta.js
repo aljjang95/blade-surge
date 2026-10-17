@@ -249,7 +249,7 @@ export class Meta {
       c.dataset.heroId = id;
       c.setAttribute('aria-label', `${def.name}${own ? ' 출전 선택' : ' 미보유 정보'}`);
       c.setAttribute('aria-pressed', String(this.eco.s.selected === id));
-      c.innerHTML = `<img src="${def.portrait}" onerror="this.style.background='${def.color}'"><span class="rar bg-${def.rarity}">${def.rarity}</span>${own ? `<span class="lv">Lv.${h.level} ${'★'.repeat(h.star)}</span>` : '<span class="lockt">미보유</span>'}`;
+      c.innerHTML = `<img onerror="this.style.background='${def.color}'"><span class="rar bg-${def.rarity}">${def.rarity}</span>${own ? `<span class="lv">Lv.${h.level} ${'★'.repeat(h.star)}</span>` : '<span class="lockt">미보유</span>'}`;
       c.onclick = (event) => { if (own) this.selectHero(id, event.detail === 0 && document.activeElement === c); else { this.heroSel = id; this.renderHeroes(); } };
       list.appendChild(c);
       bindHeroPortrait(c.querySelector('img'), this.app, id);

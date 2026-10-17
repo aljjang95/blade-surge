@@ -16,8 +16,10 @@ function fixture() {
   return { app, gear, avatar: (id: any) => { avatar = id; } };
 }
 function image() {
-  const listeners = new Map();
-  return { src: '', dataset: {} as any, isConnected: true,
+  const listeners = new Map(), assignments: string[] = [];
+  let src = '';
+  return { get src() { return src; }, set src(value: string) { src = value; assignments.push(value); },
+    assignments, dataset: {} as any, isConnected: true,
     addEventListener: (key: string, fn: any) => listeners.set(key, fn),
     removeEventListener: (key: string, fn: any) => { if (listeners.get(key) === fn) listeners.delete(key); },
     fail: () => listeners.get('error')?.() };
@@ -211,4 +213,39 @@ test('HUD 제공 초상은 실제 ready만 교체하고 미등록 영웅으로 �
   late.resolve(true); await tick();
   expect(img.src).toBe('outside-roster.png'); expect(img.dataset.portraitState).toBe('fallback');
   expect(img.dataset.portraitBody).toBeUndefined(); service.dispose(); other.dispose();
+});
+
+test('재개방의 warm cache는 정적 URL 할당 없이 동기로 ready 이미지만 표시하고 LRU를 갱신한다', async () => {
+  const { app } = fixture(); let captures = 0;
+  const service = new HeroPortraits(app, { limit: 2, renderer: {
+    async capture(snapshot: any) { captures++; return result(snapshot); }, release() {},
+  } });
+  const knight = heroPortraitSnapshot(app, 'knight')!, mage = heroPortraitSnapshot(app, 'mage')!;
+  await service.request(knight); await service.request(mage);
+  const img = image();
+  service.bind(img, 'knight', { fallbackUrl: '/custom-fallback.png' });
+  // No microtask or browser tick is needed; no throwaway network URL was assigned.
+  expect(img.dataset.portraitState).toBe('ready');
+  expect(img.dataset.portraitBody).toBe(knight.body.id);
+  expect(img.assignments).toEqual([result(knight).url]); expect(captures).toBe(2);
+  await service.request(heroPortraitSnapshot(app, 'ranger')!);
+  expect(service.cache.has(knight.key)).toBe(true); expect(service.cache.has(mage.key)).toBe(false);
+  img.fail();
+  expect(img.assignments).toEqual([result(knight).url, '/custom-fallback.png']);
+  expect(img.dataset.portraitState).toBe('fallback'); expect(img.dataset.portraitBody).toBeUndefined();
+  service.dispose();
+});
+
+test('동기 캐시 적용도 body·data URL 검증을 통과해야 하며 miss는 제공 fallback을 유지한다', async () => {
+  const { app } = fixture(), snapshot = heroPortraitSnapshot(app, 'ranger')!;
+  for (const bad of [{ body: 'different-body', url: 'data:image/webp;base64,x' },
+    { body: snapshot.body.id, url: '/not-a-rendered-snapshot.webp' }]) {
+    const service = new HeroPortraits(app, { renderer: { capture: async () => null, release() {} } });
+    service.cache.set(snapshot.key, bad);
+    const img = image(); service.bind(img, 'ranger', { fallbackUrl: '/provided.png' });
+    expect(img.src).toBe('/provided.png'); expect(img.dataset.portraitState).toBe('pending');
+    expect(img.dataset.portraitBody).toBeUndefined(); await tick();
+    expect(img.dataset.portraitState).toBe('fallback'); expect(img.assignments.every(src => src === '/provided.png')).toBe(true);
+    expect(service.cache.size).toBe(0); service.dispose();
+  }
 });

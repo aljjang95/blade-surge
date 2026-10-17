@@ -10,3 +10,5 @@
 기존 자체 호스팅 Blade Sans KR/Blade Title KR를 유지한다. lobby-clarity.css는 로비·정비·출격의 주요 조작과 비용·잠금 안내14px, 부가정보12px, 조작 높이44px를 적용한다. 전투 HUD나 모바일 제스처·발열 정책은 이번 범위에 없다.
 
 검증은 test/hero-portraits-lobby.test.ts의 실제 nav factory·비동기 capture/cache/dispose 경계와 전체 check, 실제PC의 현재 착용/모험/출격·정산·복귀/작은뷰포트·폰트·미디어로 수행한다. 동적인 current-look 캡처가 실패하면 기존 초상을 보여 주며 새 장비가 반영됐다고 주장하지 않는다. PC뷰포트는 실제 Android 입력/열 검증을 대체하지 않는다.
+
+엄격 미디어에서 정적 대체 이미지 요청을 캐시된 data URL로 즉시 바꿀 때 ERR_ABORTED가 재현됐다. 이미 검증 완료된 현재 외형 캐시가 있으면 이를 동기적으로 적용해 불필요한 대체 이미지 요청을 만들지 않으며, 초기 src 소유권도 공통 바인더에 둔다. 캐시가 없거나 실패했을 때의 대체 이미지 계약과 엄격 미디어 분류 규칙은 유지한다.

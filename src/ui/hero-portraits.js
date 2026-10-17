@@ -113,13 +113,19 @@ export class HeroPortraits {
     this.cache = new Map(); this.pending = new Map(); this.queue = [];
     this.bindings = new WeakMap(); this.running = false; this.disposed = false;
   }
+  cached(snapshot) {
+    if (this.disposed || !snapshot?.model || !snapshot.body) return null;
+    const hit = this.cache.get(snapshot.key);
+    if (!hit) return null;
+    this.cache.delete(snapshot.key);
+    if (hit.body !== snapshot.body.id || typeof hit.url !== 'string' || !hit.url.startsWith('data:image/')) return null;
+    this.cache.set(snapshot.key, hit);
+    return hit;
+  }
   request(snapshot) {
     if (this.disposed || !snapshot?.model || !snapshot.body) return Promise.resolve(null);
-    if (this.cache.has(snapshot.key)) {
-      const hit = this.cache.get(snapshot.key);
-      this.cache.delete(snapshot.key); this.cache.set(snapshot.key, hit);
-      return Promise.resolve(hit);
-    }
+    const hit = this.cached(snapshot);
+    if (hit) return Promise.resolve(hit);
     if (this.pending.has(snapshot.key)) return this.pending.get(snapshot.key).promise;
     let resolve;
     const promise = new Promise(done => { resolve = done; });
@@ -179,12 +185,19 @@ export class HeroPortraits {
     };
     this.bindings.set(img, record); img.addEventListener?.('error', failed);
     img.dataset.heroPortrait = id; img.dataset.appearanceKey = snapshot.key;
+    const ready = result => {
+      if (!current()) return;
+      img.dataset.portraitBody = result.body; img.dataset.portraitState = 'ready'; img.src = result.url;
+    };
+    // A warm cache must not start a static request that a microtask immediately aborts.
+    const hit = this.cached(snapshot);
+    if (hit) { ready(hit); return record.cancel; }
     img.dataset.portraitState = snapshot.model && snapshot.body ? 'pending' : 'fallback';
     delete img.dataset.portraitBody; img.src = fallbackUrl;
     void this.request(snapshot).then(result => {
       if (!current()) return;
       if (!result) { fallback(); return; }
-      img.src = result.url; img.dataset.portraitBody = result.body; img.dataset.portraitState = 'ready';
+      ready(result);
     });
     return record.cancel;
   }

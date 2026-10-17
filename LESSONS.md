@@ -304,3 +304,5 @@
 - crowd-flow-sim은 `Object.create(Battle.prototype)`로 판을 만들어 `RegionHazards`가 없다. 새 맵 기믹은 이 시뮬로 검증되지 않는다. 수동 기사 봇은 기존 22 원정 중 14곳에서도 420초 상한에 걸리므로, 새 맵의 수동 기사 시간 초과(보스방 진입 뒤)는 교착이 아니라 봇 처리 속도로 먼저 대조한다.
 
 - 2026-10-17 동적 영웅 초상: 공통 resolver를 연결할 때 전달된 def.portrait의 즉시 fallback을 지우면 id 없는 테스트/확장 영웅 HUD가 빈 이미지가 된다. 기존 fallback을 먼저 유지하고 실제 캡처 완료만 덮어쓰며, 미등록 영웅 전환은 이전 요청도 취소한다.
+
+- 2026-10-17 초상 캐시: 준비창을 재개방할 때 fallback.src부터 설정하고 Promise cache hit로 즉시 data URL을 넣으면 불필요한 정적 이미지 ERR_ABORTED가 발생한다. 검증된 캐시는 동기로 적용하고 동적 초상 초기 src는 바인더 하나가 소유한다. 성공 응답 없는 취소는 strict 미디어 예외로 숨기지 않는다.

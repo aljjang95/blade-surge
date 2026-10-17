@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ALL_DUNGEONS as DUNGEONS, MATERIALS, MATERIAL_REFINING, CONSUMABLES, JOBS, RECIPES, ARENA_RIVALS } from '../data/expansion.js';
 import { FIELD_DUNGEONS } from '../data/open-fields.js';
@@ -34,8 +34,8 @@ const OBJECTIVES = { glass_garden: '갈림길을 돌파하고 정원의 수호�
 function Art({src, fallback='/img/bg_loading.webp', ...rest}) { return <img {...rest} src={src} onError={e => { if (!e.currentTarget.dataset.fallback) { e.currentTarget.dataset.fallback = '1'; e.currentTarget.src = fallback; } }} />; }
 function HeroPortrait({app, id, ...rest}) {
   const ref = useRef(null), key = heroPortraitSnapshot(app, id)?.key;
-  useEffect(() => bindHeroPortrait(ref.current, app, id), [app, id, key]);
-  return <img {...rest} ref={ref} src={HEROES[id].portrait}/>;
+  useLayoutEffect(() => bindHeroPortrait(ref.current, app, id), [app, id, key]);
+  return <img {...rest} ref={ref}/>;
 }
 function Icon({id}) { return <img src={uiArt(id)} alt="" loading="lazy" decoding="async"/>; }
 function Detail({children,label="효과 자세히"}) { return <details className="ui-details"><summary>{label}</summary>{children}</details>; }
