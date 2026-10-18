@@ -10,6 +10,7 @@ export const LANDING_REASON_LABEL = Object.freeze({
   recent: '최근 원정',
   journey: '추천 던전',
   fallback: '추천 던전',
+  selected: '선택한 던전',
   none: '던전',
 });
 
@@ -28,12 +29,18 @@ export function recentDungeonRun(history) {
 const definitionFor = (id, depth) => depth === 'deep' ? expeditionDepth(id) : DUNGEONS.find((dungeon) => dungeon.id === id);
 
 /**
- * @param {{ expedition: { s: any, dungeonAccess: (id: string, options: { depth: string }) => { ok: boolean, error?: string|null } }, history?: unknown, energy?: number }} input
+ * @param {{ expedition: { s: any, dungeonAccess: (id: string, options: { depth: string }) => { ok: boolean, error?: string|null } }, history?: unknown, energy?: number, selectedId?: string | null }} input
  */
-export function dungeonLanding({ expedition, history, energy }) {
+export function dungeonLanding({ expedition, history, energy, selectedId = null }) {
   const journey = dungeonJourney(expedition);
   const recent = recentDungeonRun(history);
   const open = journey.nodes.filter((node) => node.unlocked).length;
+  // 로비 캐러셀 카드. 기본 단계 기준 이름·그림·비용·잠금만 읽는다.
+  const cards = journey.nodes.map((node) => ({
+    id: node.dungeon.id, name: node.dungeon.name, art: node.dungeon.art, accent: node.dungeon.accent || '#d9c5a0',
+    cost: Number(node.dungeon.energy) || 0, unlocked: node.unlocked, lockReason: node.unlocked ? '' : node.reason || '입장 조건을 확인해 주세요.',
+    cleared: node.cleared, wins: node.wins,
+  }));
   let pick = null, notice = '';
   if (recent) {
     const dungeon = DUNGEONS.find((entry) => entry.id === recent.route.id);
@@ -42,7 +49,11 @@ export function dungeonLanding({ expedition, history, energy }) {
     else if (dungeon) notice = `최근 원정 ${withTopic(dungeon.name + (recent.route.depth === 'deep' ? ' 심층' : ''))} 지금 입장할 수 없습니다. ${access?.error || ''}`.trim();
   }
   if (!pick && journey.current) pick = { dungeon: journey.current.dungeon, depth: 'standard', reason: recent ? 'fallback' : 'journey' };
-  if (!pick) return { dungeon: null, depth: 'standard', reason: 'none', label: LANDING_REASON_LABEL.none, notice, open, total: DUNGEONS.length, cleared: journey.cleared };
+  if (!pick) return { dungeon: null, depth: 'standard', reason: 'none', label: LANDING_REASON_LABEL.none, notice, open, total: DUNGEONS.length, cleared: journey.cleared, cards, recommendedId: null, selectedId: null };
+  const recommendedId = pick.dungeon.id;
+  // 추천과 다른 던전을 카드에서 골랐으면 기본 단계로 그 던전을 보여 준다. 추천 던전을 다시 고르면 추천 그대로(최근 심층 포함)다.
+  const chosen = selectedId && selectedId !== recommendedId ? DUNGEONS.find((entry) => entry.id === selectedId) : null;
+  if (chosen) pick = { dungeon: chosen, depth: 'standard', reason: 'selected' };
   const definition = definitionFor(pick.dungeon.id, pick.depth) || pick.dungeon;
   const access = expedition.dungeonAccess(pick.dungeon.id, { depth: pick.depth });
   const cost = Number(definition.energy) || 0;
@@ -73,5 +84,8 @@ export function dungeonLanding({ expedition, history, energy }) {
     open,
     total: DUNGEONS.length,
     cleared: journey.cleared,
+    cards,
+    recommendedId,
+    selectedId: pick.dungeon.id,
   };
 }
