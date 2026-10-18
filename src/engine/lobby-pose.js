@@ -1,25 +1,31 @@
 import { Euler, Quaternion, MathUtils } from 'three';
 
 // 로비 Idle 한 주기의 12·120시점 실측값. 로컬 XYZ 추가 회전(도)이며 전투 리그·클립은 수정하지 않는다.
+// 2026-10-19: 몸통 축 기준 좌우 팔꿈치 거리·높이 차 5cm 이하가 되도록 마법사 빈 왼팔과 야만전사 왼팔을 다시 맞췄다.
 export const LOBBY_POSE_CORRECTIONS = {
   mage: {
-    mixamorigSpine1: [14.7, -1.2, 4.95],
-    mixamorigSpine2: [-15.55, 21.65, 10.7],
-    mixamorigLeftShoulder: [32.3, -52.2, -7.75],
-    mixamorigRightShoulder: [1.5, -22.95, -40.55],
-    mixamorigRightArm: [-74.55, 23.75, -21.2],
-    mixamorigRightForeArm: [-35.4, 18.1, 29.15],
-    mixamorigRightHand: [0.4, 12.8, 19.2],
+    mixamorigSpine1: [12.7, -12.2, -3.05],
+    mixamorigSpine2: [-15.55, 24.65, 10.7],
+    mixamorigLeftShoulder: [9.3, -86.2, -7.75],
+    mixamorigRightShoulder: [5.5, -22.95, -36.05],
+    mixamorigRightArm: [-66.05, 23.75, -19.2],
+    mixamorigRightForeArm: [-34.9, 9.6, 29.15],
+    mixamorigRightHand: [0.9, 16.8, 19.2],
+    mixamorigLeftArm: [3, -33.5, 8],
+    mixamorigLeftForeArm: [-38, -1.5, 3.5],
   },
   barbarian: {
-    mixamorigRightArm: [-20, -25, 30],
+    mixamorigRightArm: [-19.5, -25.5, 30],
     mixamorigRightForeArm: [-3, 5, -2],
     mixamorigRightHand: [6, 0, 0],
+    mixamorigLeftArm: [-16, 30.5, -17.5],
+    mixamorigLeftForeArm: [33.5, 13.5, 33],
   },
   ranger: {
-    mixamorigLeftArm: [18, -2, 1],
-    mixamorigLeftForeArm: [-13, -3, 24],
+    mixamorigLeftArm: [21, -1.5, -3],
+    mixamorigLeftForeArm: [-13, -4, 24.5],
     mixamorigLeftHand: [5, 5, 41],
+    mixamorigRightArm: [-0.5, 0, -10],
   },
   knight: {
     mixamorigRightHand: [0, -7, 6],
