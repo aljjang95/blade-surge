@@ -12,6 +12,8 @@ import { frontierEffectForStage } from '../data/seasonal-content.js';
 import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC, DODGE_INVULN_SEC } from './progression.js';
 import { RangerAim } from './ranger-aim.js';
 import { enemyImpactIn } from './enemies.js';
+import { SkillAimView } from './skill-aim/aim-view.js';
+import { skillAimShape, playerSkillAimShape } from './skill-aim/shapes.js';
 
 const _v = new THREE.Vector3();
 const ATTACK_INPUT_BUFFER_SEC = 0.14;
@@ -61,6 +63,7 @@ export class Player extends Actor {
     this.maxHp = stats.hp; this.hp = stats.hp;
     this.look = applyLook(this.model, def, equip, { avatarId });   // 장비 외형: 무기/방패 메시 + 등급 발광 + 궤적색
     this.beacon = new HeroBeacon(this.root, this.model);
+    this.skillAimView = new SkillAimView(game.scene); this._skillAimShape = {};
     // The outfit is attached after Actor construction; include it in hit/death/revive effects.
     const dressedMaterials = new Set();
     this.model.traverse(o => { if (o.isMesh) for (const m of materialsOf(o)) if (m.emissive) dressedMaterials.add(m); });
@@ -78,6 +81,7 @@ export class Player extends Actor {
     // 정지·초점 이탈·재출격은 짧은 입력 버퍼와 방향을 폐기하되 수락된 콤보는 보존한다.
     this._offDodgeInputClear = game.input?.onClear?.(() => {
       this.dodgeBufferT = 0; this.attackBufferT = 0; this.attackBufferYaw = null; this.comboQueuedYaw = null;
+      this.skillAimView.group.visible = false;
     });
     this.cds = def.skills.map(() => 0); this.ult = 0; this.ultMax = 100; this.ultGainLock = 0;
     this.maxMp = MP_BASE; this.mp = MP_BASE; this.mpRegen = MP_REGEN_PER_SEC; this.dodgeCd = 0;
@@ -116,8 +120,8 @@ export class Player extends Actor {
   addMp(n) { this.mp = Math.max(0, Math.min(this.maxMp, this.mp + n)); return this.mp; }
   combatSkillIndex(slot) { return skillIndexForCombatSlot(this.skillLoadout, slot); }
   combatSkill(slot) { const index = this.combatSkillIndex(slot); return { index, skill: this.def.skills[index] }; }
-  tryCastCombatSkill(slot) { const index = this.combatSkillIndex(slot); return index >= 0 && this.tryCastSkill(index); }
-  dispose() { this.model.userData.libraryDisposed = true; this._offDodgeInputClear?.(); this._offDodgeInputClear = null; this.attackBufferYaw = null; this.comboQueuedYaw = null; this.rangerAim?.clear(); this.beacon?.dispose(); super.dispose(); }
+  tryCastCombatSkill(slot, aim = null) { const index = this.combatSkillIndex(slot); return index >= 0 && this.tryCastSkill(index, aim); }
+  dispose() { this.model.userData.libraryDisposed = true; this._offDodgeInputClear?.(); this._offDodgeInputClear = null; this.attackBufferYaw = null; this.comboQueuedYaw = null; this.rangerAim?.clear(); this.skillAimView?.dispose(); this.beacon?.dispose(); super.dispose(); }
   /** 수동 궁수만 이동과 조준을 분리한다. AUTO 는 기존 autoAim 경로를 그대로 쓴다. */
   get manualBow() { return !!this.rangerAim && !this.auto; }
   canDodgeShoot() { return this.manualBow && this.state === 'dodge' && this.stateT >= RANGER_DODGE_SHOT_AT && this.stun <= 0; }
@@ -143,7 +147,7 @@ export class Player extends Actor {
     if (this.dodgeBufferT > 0 && this.dodgeCd <= 0 && this.stun <= 0 &&
       (this.state === 'idle' || this.state === 'move' || (this.state === 'attack' && this.canDodgeCancel()))) return this.dodge(wantMove ? this.moveDir : null);
     // 전투 입력은 0~3 고정 + Q/E 장착 슬롯 4/5만 노출한다.
-    for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot)) return; }
+    for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot, input.takeAim?.(slot))) return; }
     // 공격: 입력 버퍼는 버튼을 누른 순간의 의도를 보존하지만, 버튼 홀드 자체는
     // 다음 콤보를 예약하지 않는다. 수동 전투에서 타이밍을 직접 결정하게 하는 경계다.
     if (input.consume('attack')) {
@@ -416,7 +420,7 @@ export class Player extends Actor {
   unlocked(i) { const sk = this.def.skills[i]; return !!sk && (!sk.unlock || this.heroLevel >= sk.unlock); }
 
   // ---------------- 스킬 ----------------
-  tryCastSkill(i) {
+  tryCastSkill(i, aim = null) {
     const sk = this.def.skills[i]; if (!sk) return false;
     if (!this.unlocked(i)) { this.game.ui.toast(`Lv.${sk.unlock} 각성으로 해금됩니다`, 'red'); audio.play('ui_error', { vol: 0.5 }); return false; }
     if (sk.ult) { if (this.ult < this.ultMax) { this.game.ui.toast('궁극기 게이지 부족', 'red'); audio.play('ui_error', { vol: 0.5 }); return false; } }
@@ -432,9 +436,17 @@ export class Player extends Actor {
     this.attackBufferYaw = null; this.comboQueuedYaw = null;
     if (sk.ult) { this.ult = 0; this.ultGainLock = ultimateLockDuration(impl); this.state = 'ult'; } else { this.mp = currentMp - mpCost; this.cds[i] = this.game.skillCooldown?.(sk.cd) ?? sk.cd; this.state = 'skill'; }
     this.stateT = 0; this.vel.set(0, 0, 0);
-    if (this.auto) this.autoAim(12);
+    const aimed = aim && Number.isFinite(aim.x) && Number.isFinite(aim.z) && Math.hypot(aim.x, aim.z) > 1e-6;
+    if (aimed) this.yaw = Math.atan2(aim.x, aim.z);
+    else if (this.auto) this.autoAim(12);
     const lvMult = 1 + (this.skillLevels[i] - 1) * 0.12;
     this.skillCtx = { sk, impl, t: 0, cast: false, done: false, dmg: this.atk * sk.dmg * lvMult, level: this.skillLevels[i], data: {} };
+    if (aimed) {
+      const shape = skillAimShape(sk.id), length = Math.hypot(aim.x, aim.z);
+      const fraction = Number.isFinite(aim.dist01) ? Math.max(0, Math.min(1, aim.dist01)) : 1;
+      const distance = shape?.kind === 'circle' ? shape.range * fraction : Math.max(1, shape?.range || 1);
+      this.skillCtx.data.aimPoint = new THREE.Vector3(this.pos.x + aim.x / length * distance, this.pos.y, this.pos.z + aim.z / length * distance);
+    }
     // 궁수 활 스킬: 상체 사격 층 + 속도에 맞춘 다리 층(후퇴 스킬이 서 있는 자세로 미끄러지지 않게). 연속 발사 스킬은 세 번 당기는 클립.
     const bowSkillClip = sk.anim === 'Bow_Shoot' && this.bowLayers
       ? (RANGER_RAPID_SKILLS.has(sk.id) && this.clips.RangerBowUpperRapid ? 'RangerBowUpperRapid' : 'RangerBowUpper') : null;
@@ -696,6 +708,13 @@ export class Player extends Actor {
 
   // ---------------- 업데이트 ----------------
   update(dt) {
+    // 렌더 소유 메시만 변경한다. 드래그 상태는 전투 판정이나 시계에 관여하지 않는다.
+    if (this.skillAimView) {
+      const aim = this.game.input?.skillAim;
+      const id = aim?.active ? this.def.skills[this.combatSkillIndex(aim.slot)]?.id : null;
+      this.skillAimView.update(this, this.game.input?.enabled && !this.game.paused ? aim : null,
+        id ? playerSkillAimShape(this, id, this._skillAimShape) : null);
+    }
     if (!this.alive || this.auto || this.stun > 0) { this.attackBufferYaw = null; this.comboQueuedYaw = null; }
     super.update(dt);
     if (this.rangerAim) this.updateBowRig(dt);
