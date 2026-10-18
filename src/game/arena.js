@@ -3,7 +3,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VFX_TEX } from '../engine/assets.js';
 import { getPart } from '../engine/assets.js';
 import { buildRegionArchitecture, buildTownDecor, townDecorFor } from './region-architecture.js';
-import { ROOM_TYPE, mulberry32 } from './world.js';
+import { ROOM_TYPE, isStarArchive, mulberry32 } from './world.js';
+import { STAR_ARCHIVE_TEXTURES } from '../engine/surface-textures.js';
 import { buildCitadelHubScene, townLibraryProps } from './citadel-hub-scene.js';
 import { activeTownId, TOWN_THEMES } from '../data/citadel-hub.js';
 import { buildLobbyWorld } from './lobby-world.js';
@@ -39,6 +40,10 @@ const DUNGEON_ATMOSPHERES = {
   quarry: { fog: 0xd8a47c, bg: 0xc98a5c, hemi: [0xffeeda, 0x5c3a24], sun: 0xffd9b0, sunI: 2.55, torch: 0xffa040, tint: 0xf2cfa0 },
 };
 const TILE = 4;
+export const STAR_ARCHIVE_ATMOSPHERE = Object.freeze({
+  fog: 0x263448, bg: 0x162235, hemi: [0xc9d5eb, 0x363945],
+  sun: 0xe8f0ff, sunI: 2.15, torch: 0x8accff, tint: 0xd1d8e2,
+});
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 // A seal owns its three generated meshes. Texture maps remain shared VFX assets.
@@ -123,7 +128,6 @@ export class Arena {
     const { mesh: src, part } = this._meshOf(name); if (!src) return;
     const { castShadow = true, chunk = 44 } = opts;
     const mat = src.material.clone(); this.ownedMaterials.add(mat); if (tint) mat.color.multiply(new THREE.Color(tint));
-    if (opts.cutaway) this.occlusion.bind(mat);
     part.updateWorldMatrix(true, true);
     const local = new THREE.Matrix4().copy(part.matrixWorld).invert().multiply(src.matrixWorld);
     let wallAlignment = null;
@@ -141,6 +145,33 @@ export class Arena {
       geometry = projectDungeonSurface(src.geometry, local, TILE);
       this.ownedGeometry.add(geometry);
     }
+    if (opts.starArchiveSurface || opts.starArchiveStone) {
+      mat.color.set(opts.starArchiveStone ? 0xbfc5d2 : 0x9da3b0); mat.vertexColors = false;
+      mat.map = STAR_ARCHIVE_TEXTURES.floor || null;
+      mat.bumpMap = null; mat.normalMap = null; mat.roughnessMap = null;
+      mat.roughness = .64; mat.metalness = .12;
+      mat.userData.surfaceTexture = opts.starArchiveStone ? 'star-archive-marble-frame' : 'star-archive-floor';
+      const stone = !!opts.starArchiveStone;
+      // 이미지 내 4×4 줄눈을 10m마다 반복한다. 인스턴스 회전·청크와 무관한 월드 UV다.
+      mat.onBeforeCompile = shader => {
+        shader.vertexShader = shader.vertexShader.replace('#include <uv_vertex>', `#include <uv_vertex>
+          #ifdef USE_MAP
+            vec4 archivePoint = vec4(position, 1.0);
+            vec3 archiveNormal = normal;
+            #ifdef USE_INSTANCING
+              archivePoint = instanceMatrix * archivePoint;
+              archiveNormal = mat3(instanceMatrix) * archiveNormal;
+            #endif
+            vec3 archiveWorld = (modelMatrix * archivePoint).xyz;
+            archiveNormal = abs(mat3(modelMatrix) * archiveNormal);
+            vMapUv = ${stone ? '(archiveNormal.y > .5 ? archiveWorld.xz : archiveNormal.x > archiveNormal.z ? archiveWorld.zy : archiveWorld.xy)' : 'archiveWorld.xz'} / 10.0;
+          #endif`);
+      };
+      mat.customProgramCacheKey = () => 'star-archive-world-marble-v2-' + stone;
+      mat.envMap = this.renderer.characterEnvironment?.texture || null;
+      mat.envMapIntensity = .35;
+    }
+    if (opts.cutaway) this.occlusion.bind(mat);
 
     // 공간 버킷으로 분할
     const buckets = new Map();
@@ -315,14 +346,15 @@ export class Arena {
     const visualKey = visual?.landmark || floorData.layout?.landmark || 'crypt';
     const field = floorData.layout?.field;
     const concept = floorData.layout?.concept;
-    const T = { ...(THEMES[theme] || THEMES.crypt), ...(DUNGEON_ATMOSPHERES[visualKey] || {}), ...(FIELD_ATMOSPHERES[field] || {}) };
+    const archive = isStarArchive(floorData);
+    const T = { ...(THEMES[theme] || THEMES.crypt), ...(DUNGEON_ATMOSPHERES[visualKey] || {}), ...(FIELD_ATMOSPHERES[field] || {}), ...(archive ? STAR_ARCHIVE_ATMOSPHERE : {}) };
     const random = mulberry32((floorData.seed || floorData.floor * 7919) ^ 0x51a7);
     const rnd = (a, b) => a + random() * (b - a);
     // 컨셉 던전은 먼 절벽·수문이 보이는 열린 분지라 안개를 옅게 둔다.
-    this.scene.background = new THREE.Color(T.bg); this.scene.fog.color.set(T.fog); this.scene.fog.density = field ? .008 : concept ? .011 : .026;
+    this.scene.background = new THREE.Color(T.bg); this.scene.fog.color.set(T.fog); this.scene.fog.density = archive ? .014 : field ? .008 : concept ? .011 : .026;
     this.buildSky(visual, floorData.seed || floorData.floor || 1);
 
-    const hemi = new THREE.HemisphereLight(T.hemi[0], T.hemi[1], 1.5); this.scene.add(hemi); this.lights.push(hemi);
+    const hemi = new THREE.HemisphereLight(T.hemi[0], T.hemi[1], archive ? 1.05 : 1.5); this.scene.add(hemi); this.lights.push(hemi);
     // 넓은 맵이라 태양 그림자 카메라는 플레이어를 따라다니게 (update 에서 갱신)
     const sun = new THREE.DirectionalLight(T.sun, T.sunI); sun.position.set(10, 22, 8); sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
@@ -345,7 +377,7 @@ export class Arena {
     // ---- 바닥 (방 + 복도) ----
     const tiles = collectDungeonTiles(floorData, random, TILE);
     this.group.userData.dungeonSurface = { sampledTiles: tiles.sampledTiles, uniqueTiles: tiles.uniqueTiles };
-    for (const k in tiles.transforms) this.instanced(k, tiles.transforms[k], T.tint, { castShadow: false, dungeonSurface: true });
+    for (const k in tiles.transforms) this.instanced(k, tiles.transforms[k], T.tint, { castShadow: false, dungeonSurface: true, starArchiveSurface: archive });
 
     // ---- 벽: 1m 건축 마스크 경계 바깥에 정렬한다 ----
     const walls = { wall: [], wall_cracked: [], wall_broken: [], wall_arched: [], wall_window_open: [] };
@@ -382,7 +414,7 @@ export class Arena {
     const alignedWalls = fitDungeonWallSegments(floorData, collectDungeonWallSegments(floorData), wallDepths);
     for (const wall of alignedWalls) walls[wall.variant].push(wall);
     this.group.userData.dungeonWalls = { segments: alignedWalls.length, legacyVariantDraws };
-    for (const k in walls) this.instanced(k, walls[k], T.tint, { cutaway: true, alignedWall: true });
+    for (const k in walls) this.instanced(k, walls[k], T.tint, { cutaway: true, alignedWall: true, starArchiveStone: archive });
 
     // ---- 방 장식 ----
     const pillars = [], banners = [];
@@ -412,24 +444,31 @@ export class Arena {
       // 방마다 횃불 2개
       for (const [ox, oz] of [[-hw, 0], [hw, 0]]) {
         const lx = r.x + ox, lz = r.z + oz;
-        this.torchPos.push(new THREE.Vector3(lx, 2.6, lz));
+        if (!archive) this.torchPos.push(new THREE.Vector3(lx, 2.6, lz));
         if (this.torches.length < 14) {
-          const l = new THREE.PointLight(T.torch, 22, 15, 2); l.position.set(lx, 3, lz);
-          this.scene.add(l); this.lights.push(l); this.torches.push({ l, i0: 22, seed: this.torches.length * 1.7, room: r });
+          const intensity = archive ? 9 : 22;
+          const l = new THREE.PointLight(T.torch, intensity, 15, 2); l.position.set(lx, archive ? 5 : 3, lz);
+          this.scene.add(l); this.lights.push(l); this.torches.push({ l, i0: intensity, seed: this.torches.length * 1.7, room: r });
         }
       }
       // 방 역할은 기존 지역 건축 배치에 병합된 실제 회랑 문턱 표식이 나타낸다.
     }
     for (const [asset, transforms] of libraryPropTransforms) this.placeLibraryProps(asset, transforms);
-    this.instanced('pillar_decorated', pillars, T.tint, { cutaway: true });
+    if (!archive) this.instanced('pillar_decorated', pillars, T.tint, { cutaway: true });
     this.instanced('banner_shield_red', banners);
     this.regionArchitecture = buildRegionArchitecture(floorData, theme);
     this.regionArchitecture.traverse(node => {
-      if (node.isMesh) for (const material of Array.isArray(node.material) ? node.material : [node.material]) this.occlusion.bind(material);
+      if (archive && node.isMesh && node.material.isMeshStandardMaterial) {
+        node.material.envMap = this.renderer.characterEnvironment?.texture || null;
+        node.material.envMapIntensity = .45;
+      }
+      if (node.isMesh && !node.userData.surface) for (const material of Array.isArray(node.material) ? node.material : [node.material]) this.occlusion.bind(material);
     });
     this.group.add(this.regionArchitecture);
-    this.mountTownDecor(floorData);
-    this.mountLandmarks(floorData, visual || { landmark: visualKey });
+    if (!archive) {
+      this.mountTownDecor(floorData);
+      this.mountLandmarks(floorData, visual || { landmark: visualKey });
+    }
     this.buildSeals(floorData);
   }
 
@@ -443,6 +482,7 @@ export class Arena {
   }
 
   update(dt, fx, playerPos) {
+    this.regionArchitecture?.userData.update?.(dt);
     this.fieldScene?.userData.update(dt);
     this.conceptTerrain?.userData.update(dt);
     if (this.skyGroup && playerPos) this.skyGroup.position.set(playerPos.x, 0, playerPos.z);
@@ -450,7 +490,11 @@ export class Arena {
     this.t += dt;
     for (const s of this.seals) { s.material.opacity = 0.5 + Math.sin(this.t * 4) * 0.08; const r = s.userData.rune, g = s.userData.sigil; if (r) { r.rotation.z += dt * 0.8; r.material.opacity = 0.55 + Math.sin(this.t * 6) * 0.2; } if (g) { g.rotation.z -= dt * 0.5; g.material.opacity = 0.8 + Math.sin(this.t * 5) * 0.15; } }
     for (const t of this.torches) t.l.intensity = t.i0 * (0.85 + Math.sin(this.t * 13 + t.seed) * 0.08 + Math.sin(this.t * 31 + t.seed * 3) * 0.07);
-    if (this.sun && playerPos) { this.sun.position.set(playerPos.x + 10, 22, playerPos.z + 8); this.sun.target.position.copy(playerPos); this.sun.target.updateMatrixWorld(); }
+    if (this.sun && playerPos) {
+      const archive = isStarArchive(this.floorData);
+      this.sun.position.set(playerPos.x + (archive ? -6 : 10), archive ? 18 : 22, playerPos.z + (archive ? -8 : 8));
+      this.sun.target.position.copy(playerPos); this.sun.target.updateMatrixWorld();
+    }
     if (fx && this.torchPos.length && Math.random() < dt * 24 && playerPos) {
       const p = this.torchPos[Math.floor(Math.random() * this.torchPos.length)];
       if (Math.abs(p.x - playerPos.x) < 22 && Math.abs(p.z - playerPos.z) < 22)
