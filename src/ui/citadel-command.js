@@ -25,6 +25,8 @@ const NEXT = '<svg class="dl-ico" viewBox="0 0 24 24" aria-hidden="true" focusab
 const SWORDS = '<svg class="dl-swords" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><g fill="#fbe39a" stroke="#6a4210" stroke-width="2" stroke-linejoin="round"><g transform="rotate(42 32 34)"><path d="M32 3l5.5 8.5V37h-11V11.5z"/><path d="M20 37h24v5.5H20z"/><path d="M29.2 42.5h5.6V56h-5.6z"/><circle cx="32" cy="58.5" r="3.2"/></g><g transform="rotate(-42 32 34)"><path d="M32 3l5.5 8.5V37h-11V11.5z"/><path d="M20 37h24v5.5H20z"/><path d="M29.2 42.5h5.6V56h-5.6z"/><circle cx="32" cy="58.5" r="3.2"/></g></g></svg>';
 // 잠금 사유('탐험 레벨 2 필요')에서 카드에 넣을 짧은 조건만 뽑는다. 전체 문장은 상세와 읽기 이름에 남는다.
 const shortLock = (reason) => { const level = /레벨\s*(\d+)/.exec(reason || ''); return level ? `Lv.${level[1]}` : '잠김'; };
+/** 로비 카드(약 90px)는 원화(1672px) 대신 320px 썸네일을 쓴다. 상세 패널은 원화를 그대로 쓴다. */
+export const cardThumb = (art) => typeof art === 'string' && /^\/img\/expansion\/[^/]+\.webp$/.test(art) ? art.replace('/img/expansion/', '/img/expansion/thumb/') : art;
 export const CITADEL_COMMAND_COLLAPSED_KEY = 'blade-surge.citadel-command.collapsed';
 // 예전 접힘 저장값은 읽기만 호환한다. 새 착지 화면은 접지 않으며 이 값을 지우지 않는다.
 // 저장 공간 접근 자체가 거부되는 브라우저(사이트 데이터 차단)는 localStorage getter 가 예외를 던진다.
@@ -185,7 +187,8 @@ export class CitadelCommand {
       const view = this.cardViews.get(card.id);
       if (!view) continue;
       const { button } = view;
-      if (view.art.getAttribute('src') !== card.art) view.art.src = card.art;
+      const thumb = cardThumb(card.art);
+      if (view.art.getAttribute('src') !== thumb) view.art.src = thumb;
       if (view.name.textContent !== card.name) view.name.textContent = card.name;
       const cost = card.unlocked ? String(card.cost) : shortLock(card.lockReason);
       if (view.text.textContent !== cost) view.text.textContent = cost;
