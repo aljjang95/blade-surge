@@ -28,19 +28,21 @@ for (const [w, h] of views) {
     b.player.auto = false; b.killStreakT = 30; b.ui?.setKillStreak?.(b.killStreak);
     return { killStreak: b.killStreak, peak, kills: b.kills };
   });
-  await page.waitForTimeout(300);
+  // 화면 중앙을 차지하던 HUD 요소(경고·배너·긴 알림)를 실제 UI 경로로 띄워 함께 잰다.
+  await page.evaluate(() => { app.ui.combatCue('적의 공격', 'red', 4000); app.ui.waveBanner('봉인 해제'); app.ui.toast('이름의 장례길의 전투 방을 정리해 봉인을 해제하고 시계종의 주권자 · 관문 대장 처치'); });
+  await page.waitForTimeout(350);
   const rects = await page.evaluate(() => {
     const r = sel => { const el = document.querySelector(sel); if (!el) return null; const b = el.getBoundingClientRect(); const cs = getComputedStyle(el); return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height), visible: cs.visibility !== 'hidden' && cs.display !== 'none' && +cs.opacity > 0.05 && b.width > 0, cls: String(el.className) }; };
     const toasts = [...document.querySelectorAll('#toast-layer .toast')].map(t => { const b = t.getBoundingClientRect(); return { text: t.textContent, x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height) }; });
-    return { vw: innerWidth, vh: innerHeight, killStreak: r('#kill-streak'), combo: r('#combo'), portrait: r('.hud-top, #hud-top, .player-panel, .hpbox'), cue: r('#combat-cue'), cancel: r('#skill-aim-cancel'), toasts };
+    const top = document.querySelector('.hud-top')?.getBoundingClientRect().bottom || 0; const P = { left: innerWidth / 3, right: innerWidth * 2 / 3, top, bottom: innerHeight * .85 }; const shown = el => { const cs = getComputedStyle(el), b = el.getBoundingClientRect(); return cs.display !== 'none' && cs.visibility !== 'hidden' && +cs.opacity > .05 && b.width > 0 && b.height > 0; }; const hit = el => { const b = el.getBoundingClientRect(); return b.left < P.right && b.right > P.left && b.top < P.bottom && b.bottom > P.top; }; const violators = [...document.querySelectorAll('#hud > *, #toast-layer > *, #tutorial-toggle')].filter(el => !['dmg-layer', 'loot-layer', 'joy', 'battle-tutorial'].includes(el.id) && el.tagName !== 'CANVAS' && shown(el) && hit(el)).map(el => ({ id: el.id || el.className, text: (el.textContent || '').trim().slice(0, 30), r: (b => [b.left, b.top, b.right, b.bottom].map(Math.round))(el.getBoundingClientRect()) })); return { protectedArea: P, violators, vw: innerWidth, vh: innerHeight, killStreak: r('#kill-streak'), combo: r('#combo'), portrait: r('.hud-top, #hud-top, .player-panel, .hpbox'), cue: r('#combat-cue'), cancel: r('#skill-aim-cancel'), toasts };
   });
   const file = path.join(out, 'hud-' + w + 'x' + h + '.png');
   await page.screenshot({ path: file });
   const ks = rects.killStreak, cx0 = w * .3, cx1 = w * .7, cy0 = h * .25, cy1 = h * .75;
   const overlap = a => a && a.x < cx1 && a.x + a.w > cx0 && a.y < cy1 && a.y + a.h > cy0;
-  result.push({ viewport: w + 'x' + h, kills, rects, centerClear: !(ks && ks.visible && overlap(ks)), toastsCenterClear: rects.toasts.every(t => !overlap(t)), screenshot: file, errors });
+  result.push({ viewport: w + 'x' + h, kills, rects, centerClear: !(ks && ks.visible && overlap(ks)), playClear: rects.violators.length === 0, toastsCenterClear: rects.toasts.every(t => !overlap(t)), screenshot: file, errors });
   await ctx.close();
 }
 await browser.close();
 await fs.writeFile(path.join(out, 'report.json'), JSON.stringify(result, null, 2));
-console.log(JSON.stringify(result.map(r => ({ v: r.viewport, kills: r.kills, ks: r.rects.killStreak, combo: r.rects.combo, centerClear: r.centerClear, toastsClear: r.toastsCenterClear, toasts: r.rects.toasts, errors: r.errors.slice(0, 3) })), null, 1));
+console.log(JSON.stringify(result.map(r => ({ v: r.viewport, kills: r.kills, ks: r.rects.killStreak, combo: r.rects.combo, centerClear: r.centerClear, toastsClear: r.toastsCenterClear, playClear: r.playClear, violators: r.rects.violators, toasts: r.rects.toasts, errors: r.errors.slice(0, 3) })), null, 1));

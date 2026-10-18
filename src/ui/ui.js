@@ -153,13 +153,54 @@ export class UI {
       }
       // The fixed global toast is a HUD sibling, so its layout property must live on the toast itself.
       writeHudStyle(toast.style, '--battle-notice-top', `${Math.ceil(bottom + 6)}px`);
+      this.placeCombatNoticeStrip(hud, toast);
     } else {
       toast.style.removeProperty('--battle-notice-top');
+      toast.classList?.remove('edge-strip');
       this.combatNoticeHeaderEls = [];
     }
     const noticeBottom = shown && toast.childElementCount ? toast.getBoundingClientRect().bottom : 0;
     writeHudStyle(hud.style, '--combat-notice-bottom', `${noticeBottom}px`);
     this.refreshCombatTextRegions();
+  }
+  /** 가로 전투에서는 전투 경고(cue)·구역 배너·알림을 화면 중앙이 아니라 왼쪽 가장자리 열(콤보 아래, 시점 버튼 오른쪽)에 차례로 쌓는다.
+   *  대표님 규칙(2026-10-18): UI는 실제 플레이를 가리지 않는다. 화면 가운데 1/3은 비워 둔다. 공간이 모자라면 기존 배치를 유지한다. */
+  placeCombatNoticeStrip(hud, toast) {
+    const width = globalThis.innerWidth || 0, height = globalThis.innerHeight || 0;
+    const rect = el => { const r = el?.getBoundingClientRect?.(); return r && r.width > 0 && r.height > 0 ? r : null; };
+    const q = s => hud.querySelector?.(s);
+    const player = rect(q('.hud-player')), camera = rect(q('.oath-camera-details')), joy = rect(q('.joy-base'));
+    const cue = this.combatCueEl, banner = q('#wave-banner');
+    const px = v => Math.round(v) + 'px';
+    const clear = () => {
+      toast.classList?.remove('edge-strip'); hud.classList?.remove('side-stack');
+      for (const key of ['--battle-notice-left', '--battle-notice-right', '--battle-notice-max-h']) toast.style.removeProperty(key);
+    };
+    if (!(width > height) || !player) { clear(); return; }
+    const left = Math.max(camera ? camera.right : 58, 58) + 8, right = Math.floor(width / 3) - 8;
+    let top = player.bottom;
+    for (const el of [this.comboEl, this.killStreakEl]) { const r = rect(el); if (r && !el.classList?.contains('hidden')) top = Math.max(top, r.bottom); }
+    top += 8;
+    const limit = joy ? joy.top - 6 : height * .7;
+    if (right - left < 150 || limit - top < 60) { clear(); return; }
+    hud.classList?.add('side-stack');
+    const box = hud.getBoundingClientRect?.() || { left: 0, top: 0 };
+    writeHudStyle(hud.style, '--side-left', px(left - box.left));
+    writeHudStyle(hud.style, '--side-width', px(right - left));
+    let y = top;
+    // 켜져 있는 경고와 배너를 위에서부터 쌓는다(레이아웃 좌표: 변형 전 크기).
+    writeHudStyle(hud.style, '--side-cue-top', px(y - box.top));
+    if (cue?.classList?.contains('on') && cue.offsetWidth > 0) {
+      writeHudStyle(hud.style, '--side-cue-x', px(left - box.left + cue.offsetWidth / 2));
+      y += cue.offsetHeight + 6;
+    }
+    writeHudStyle(hud.style, '--side-banner-top', px(y - box.top));
+    if (banner?.classList?.contains('on') && banner.offsetHeight > 0) y += banner.offsetHeight + 6;
+    toast.classList?.add('edge-strip');
+    writeHudStyle(toast.style, '--battle-notice-top', px(y));
+    writeHudStyle(toast.style, '--battle-notice-left', px(left));
+    writeHudStyle(toast.style, '--battle-notice-right', px(width - right));
+    writeHudStyle(toast.style, '--battle-notice-max-h', px(Math.max(28, Math.min(44, limit - y))));
   }
   refreshCombatTextRegions() {
     if (typeof this.app.fx?.setCombatTextRegions !== 'function') return;
@@ -383,7 +424,7 @@ export class UI {
     $('hud-wave').textContent = stage?.code || `${floorNum}층`;
     $('hud-stage').textContent = `구역 ${clr}/${tot}${stage?.difficultyName ? ` · ${stage.difficultyName}` : ''}`;
   }
-  waveBanner(text) { const b = $('wave-banner'); b.textContent = text; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); }
+  waveBanner(text) { const b = $('wave-banner'); b.textContent = text; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); this.refreshCombatNoticeLayout?.(); }
   showBoss(name, on, portrait) { $('bossbar').classList.toggle('hidden', !on); $('boss-name').textContent = name; const im = $('boss-portrait'); if (portrait) { im.src = portrait; im.style.display = ''; } else im.style.display = 'none'; }
   setCombo(n) { if (n <= 1) { this.comboEl.classList.add('hidden'); if (this.killStreakEl?.classList.contains('show')) this.placeKillStreak(); return; } const wasHidden = this.comboEl.classList.contains('hidden'); this.comboEl.classList.remove('hidden'); this.comboN.textContent = n; this.comboEl.classList.toggle('hot', n >= 30); this.comboEl.classList.remove('pop'); void this.comboEl.offsetWidth; this.comboEl.classList.add('pop'); if (this.killStreakEl?.classList.contains('show') && (wasHidden || n === 10 || n === 100)) this.placeKillStreak(); }
   /** 연속 처치 알약을 콤보 배지 오른쪽(좁으면 아래)에 붙인다. 처치·콤보 표시가 바뀔 때만 레이아웃을 읽는다. */

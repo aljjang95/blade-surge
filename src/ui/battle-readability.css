@@ -157,3 +157,11 @@ body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,
  .experience-v2.oath-visual #hud.battle-readability .hud-top:has(.battle-earned-offer):has(#btn-boss-shortcut:not([hidden])) .hud-center .mw-posture{grid-row:7}
 }
 @media(prefers-reduced-motion:reduce){.battle-atlas *,#map-tactics-context *{animation:none;transition:none}}
+
+/* 가로 전투: 경고·구역 배너·알림은 왼쪽 가장자리 열에 쌓는다(대표님 규칙 2026-10-18 "UI는 실제 플레이를 가리지 않는다").
+   위치 값은 UI.placeCombatNoticeStrip()이 실제 HUD 좌표로 정한다. 공간이 모자라 side-stack이 없으면 기존 배치를 쓴다. */
+body:has(#hud.show.battle-readability) #toast-layer.edge-strip { left: var(--battle-notice-left); right: var(--battle-notice-right); align-items: flex-start; gap: 0; }
+body:has(#hud.show.battle-readability) #toast-layer.edge-strip .toast.combat-notice { max-width: 100%; max-height: var(--battle-notice-max-h, 40px); box-sizing: border-box; padding: 4px 8px; font-size: 10px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+body:has(#hud.show.battle-readability) #toast-layer.edge-strip .toast.combat-notice:not(:last-child) { display: none; }
+#hud.battle-readability.side-stack .combat-cue { left: var(--side-cue-x, 50%); top: var(--side-cue-top); max-width: var(--side-width); min-width: 0; padding: 5px 11px 6px; font-size: 11px; letter-spacing: .06em; white-space: nowrap; }
+#hud.battle-readability.side-stack #wave-banner { left: var(--side-left); right: auto; top: var(--side-banner-top); max-width: var(--side-width); text-align: left; font-size: 17px; line-height: 1.2; letter-spacing: .04em; transform-origin: left top; }

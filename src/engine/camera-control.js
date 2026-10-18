@@ -1,6 +1,25 @@
 import './camera-gestures.css';
+import { Vector3 } from 'three';
 import { WorldTouchGesture } from './world-gesture.js';
 const clamp = (value, fallback, min, max) => Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
+
+/** 화면에서 끈 방향을 영웅이 서 있는 바닥 평면의 월드 방향으로 바꾼다(원근 단축 보정). 결과를 out.x/out.z에 쓰고 성공 여부를 돌려준다. */
+export function screenDragToGround(camera, origin, sx, sy, out, scratch, width, height) {
+  if (!camera || !origin || !(width > 0) || !(height > 0)) return false;
+  const length = Math.hypot(sx, sy); if (length < 1e-6) return false;
+  const [hero, ray, eye] = scratch;
+  hero.set(origin.x, origin.y, origin.z).project(camera);
+  if (!Number.isFinite(hero.x) || hero.z > 1) return false;
+  // 화면에서 영웅 위치로부터 끈 방향으로 일정 픽셀 떨어진 점을 바닥에 다시 투영한다.
+  const step = Math.min(width, height) * .18;
+  ray.set(hero.x + sx / length * step * 2 / width, hero.y - sy / length * step * 2 / height, .5).unproject(camera);
+  eye.copy(camera.position); ray.sub(eye);
+  if (Math.abs(ray.y) < 1e-6) return false;
+  const t = (origin.y - eye.y) / ray.y; if (!(t > 0)) return false;
+  const dx = eye.x + ray.x * t - origin.x, dz = eye.z + ray.z * t - origin.z, d = Math.hypot(dx, dz);
+  if (!(d > 1e-6)) return false;
+  out.x = dx / d; out.z = dz / d; return true;
+}
 export function pinchZoom(startZoom, startDistance, distance, min = 70, max = 140) {
   if (!Number.isFinite(startZoom) || !Number.isFinite(startDistance) || startDistance <= 0 || !Number.isFinite(distance)) return startZoom;
   return Math.max(min, Math.min(max, startZoom * distance / startDistance));
@@ -45,6 +64,8 @@ export class CameraControls {
       const e = app.renderer.camera.matrixWorld.elements;
       return Math.atan2(-e[2], e[0]);
     };
+    const aimScratch = [new Vector3(), new Vector3(), new Vector3()];
+    app.input.screenAimDir = (sx, sy, out) => screenDragToGround(app.renderer.camera, app.battle?.player?.pos, sx, sy, out, aimScratch, innerWidth, innerHeight);
     const ui = BATTLE_UI;
     document.addEventListener('pointerdown', event => {
       const onPad = !!this.pad && this.pad.contains(event.target);

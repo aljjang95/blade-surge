@@ -49,6 +49,8 @@ export class Input {
     el?.classList?.toggle('hot', !!this.skillAim?.cancel);
   }
   _aimWorld(aim) {
+    // 바닥 평면 투영이 가능하면 화면에서 끈 방향과 지면 레인이 정확히 겹치게 한다.
+    if (this.screenAimDir?.(aim.sx, aim.sy, aim)) return;
     const yaw = this.getCameraYaw?.() ?? 0, angle = Number.isFinite(yaw) ? yaw : 0;
     const length = Math.hypot(aim.sx, aim.sy), c = Math.cos(angle), s = Math.sin(angle);
     if (length < 1e-6) return;
