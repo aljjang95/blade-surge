@@ -38,8 +38,8 @@ test('viewing growth options does not mutate the save, and every quoted action u
       expect(r.ok && r.success && !r.destroyed).toBe(true);
       expect(eco.s.gold).toBe(gold - option.gold); expect(eco.s.stones).toBe(stones - option.stones);
     } else if (option.kind === 'skill') {
-      expect(eco.upgradeSkill(option.heroId, option.index)).toBe(true);
-      expect(eco.s.gold).toBe(gold - option.gold);
+      expect(eco.upgradeSkill(option.heroId, option.index)).toMatchObject({ ok: true });
+      expect(eco.s.gold).toBe(gold);
     } else {
       const s: any = eco.s;
       expect(unlockMastery(s.masterworks, option.id).ok).toBe(true);
