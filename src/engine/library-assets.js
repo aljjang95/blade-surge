@@ -4,6 +4,7 @@ import { monsterRosterEntry } from '../data/monster-roster.js';
 import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v4.json';
 import ROGUE_LIBRARY_REVISION from '../data/rogue-library-revision-v2.json';
 import FOX_BODY_REVISION from '../data/fox-body-revision-v1.json';
+import HIGHER_BODY_REVISIONS from '../data/higher-body-revisions-v1.json';
 
 export { LIBRARY_SCHEMA, triangleLimit };
 // v3: v2 저작(전신 rest 축 리타깃·실제 스킨 접지·활 사격·백스텝, art-src/ranger/author_ranger_library_v2.py)을 Blender 5.2.2 에서 다시 굽고
@@ -14,7 +15,46 @@ export const RANGER_LIBRARY_REVISION_ID = 'ranger-library-v4';
 // 도적 1단계: 축 교정 클립(rogue-library-axis-v1, art-src/hero-axis/author_hero_axis_v1.py) 그대로 + 같은 재질 마감. axis-v1 기록·파일은 그대로 둔다.
 export const ROGUE_LIBRARY_REVISION_ID = 'rogue-library-v2';
 export const FOX_BODY_REVISION_ID = 'fox-body-fit-v1';
+// 자산별 출력 이름을 코드에서 고정한다. 초안은 원본을 고르고 실제 생성·검증된 기록만 활성화한다.
+const HIGHER_BODY_TARGETS = Object.freeze([
+  Object.freeze({ asset: 'hero_ranger_t2', id: 'ranger-t2-body-fit-v1', prefix: '/models/heroes-next/ranger-t2-body-fit-v1' }),
+  Object.freeze({ asset: 'hero_ranger_t3', id: 'ranger-t3-body-fit-v1', prefix: '/models/heroes-next/ranger-t3-body-fit-v1' }),
+  Object.freeze({ asset: 'hero_rogue_t2', id: 'rogue-t2-body-fit-v1', prefix: '/models/heroes-next/rogue-t2-body-fit-v1' }),
+  Object.freeze({ asset: 'hero_rogue_t3', id: 'rogue-t3-body-fit-v1', prefix: '/models/heroes-next/rogue-t3-body-fit-v1' }),
+  Object.freeze({ asset: 'avatar_rogue_crow', id: 'rogue-crow-body-fit-v1', prefix: '/models/heroes-next/rogue-crow-body-fit-v1' }),
+]);
+const requireHigherBody = (condition) => { if (!condition) throw new Error('Higher body revision requires an exact unique asset/source/public output contract'); };
+
+function validateHigherBodyRevision(revision, target) {
+  const source = manifest.assets.find(asset => asset.id === target.asset);
+  requireHigherBody(revision?.id === target.id && revision.asset === target.asset && typeof revision.useInGame === 'boolean');
+  requireHigherBody(source && revision.source?.path === 'asset-library/normalized/' + target.asset + '.glb'
+    && revision.source.sha256 === source.sha256);
+  // 정해진 전체 경로만 받으므로 다른 몸체 이름·하위 경로·query·상위 폴더 탈출을 허용하지 않는다.
+  requireHigherBody(revision.output?.path === target.prefix + '.glb');
+  requireHigherBody(revision.status === 'DRAFT'
+    ? revision.useInGame === false && revision.output.sha256 === null
+    : revision.status === 'GENERATED' && /^[a-f0-9]{64}$/.test(revision.output.sha256 || ''));
+  return revision;
+}
+
+/** 다섯 원본 자산과 기록이 일대일인지 번들 로드 시 검사한다. 생성 전 SHA를 만들어 넣지 않는다. */
+export function validateHigherBodyRevisions(value) {
+  requireHigherBody(value?.schema === 'blade-surge.higher-body-revisions.v1'
+    && Array.isArray(value.revisions) && value.revisions.length === HIGHER_BODY_TARGETS.length);
+  requireHigherBody(new Set(value.revisions.map(revision => revision?.id)).size === HIGHER_BODY_TARGETS.length
+    && new Set(value.revisions.map(revision => revision?.asset)).size === HIGHER_BODY_TARGETS.length
+    && new Set(value.revisions.map(revision => revision?.output?.path)).size === HIGHER_BODY_TARGETS.length);
+  return value.revisions.map(revision => {
+    const target = HIGHER_BODY_TARGETS.find(entry => entry.id === revision?.id);
+    requireHigherBody(target);
+    return validateHigherBodyRevision(revision, target);
+  });
+}
+
+const higherRevisions = validateHigherBodyRevisions(HIGHER_BODY_REVISIONS);
 const LIBRARY_REVISIONS = Object.freeze([
+  ...HIGHER_BODY_TARGETS.map(target => Object.freeze({ ...target, revision: higherRevisions.find(revision => revision.id === target.id) })),
   Object.freeze({ id: FOX_BODY_REVISION_ID, prefix: '/models/heroes-next/ranger-fox-', revision: FOX_BODY_REVISION }),
   Object.freeze({ id: RANGER_LIBRARY_REVISION_ID, prefix: '/models/heroes-next/ranger-', revision: RANGER_LIBRARY_REVISION }),
   Object.freeze({ id: ROGUE_LIBRARY_REVISION_ID, prefix: '/models/heroes-next/rogue-', revision: ROGUE_LIBRARY_REVISION }),
@@ -49,13 +89,17 @@ export function resolveAssetSource(asset, root = '') {
  * Blender 로 전신 리타깃(궁수는 활 클립 포함)을 다시 저작한 1단계 몸체(궁수·도적). 원본 manifest 항목·원본 GLB 는 그대로 두고,
  * 같은 원본 SHA 에서 생성이 끝난 교정본만 대신 받는다. 2·3단계와 아바타는 이 1단계 클립을 공유한다.
  * @param {{id?: string, sha256?: string}|null} asset
+ * @param {{id: string, asset: string, useInGame: boolean, status: string, source: {path: string, sha256: string}, output: {path: string, sha256: string|null}}|null} [revision=null]
  * @returns {string|null}
  */
 export function revisedLibraryFile(asset, revision = null) {
   if (!asset) return null;
   const entry = revision ? LIBRARY_REVISIONS.find((e) => e.id === revision.id) : LIBRARY_REVISIONS.find((e) => e.revision.asset === asset.id);
   revision = revision || entry?.revision;
-  if (!revision || asset.id !== revision.asset || !revision.useInGame) return null;
+  if (!revision || asset.id !== revision.asset) return null;
+  const higherTarget = HIGHER_BODY_TARGETS.find(target => target.id === revision.id);
+  if (higherTarget) validateHigherBodyRevision(revision, higherTarget);
+  if (!revision.useInGame) return null;
   if (!entry || revision.status !== 'GENERATED' || revision.source?.sha256 !== asset.sha256
     || !/^[a-f0-9]{64}$/.test(revision.output?.sha256 || '') || !String(revision.output?.path || '').startsWith(entry.prefix)
     || !String(revision.output.path).endsWith('.glb')) {
@@ -64,6 +108,7 @@ export function revisedLibraryFile(asset, revision = null) {
   return revision.output.path;
 }
 
+export const higherBodyRevisions = () => HIGHER_BODY_REVISIONS;
 export const foxBodyRevision = () => FOX_BODY_REVISION;
 export const rangerLibraryRevision = () => RANGER_LIBRARY_REVISION;
 export const rogueLibraryRevision = () => ROGUE_LIBRARY_REVISION;

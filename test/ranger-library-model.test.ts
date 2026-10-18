@@ -40,7 +40,7 @@ test('교정본은 원본 SHA 에서 생성된 정확한 파일이며 원본 GLB
   expect(sha('../public' + REV.output.path)).toBe(REV.output.sha256);
   expect(resolveAssetSource(asset)).toBe(REV.output.path);
   expect(() => revisedLibraryFile({ ...asset, sha256: 'f'.repeat(64) } as any)).toThrow('exact generated file');
-  expect(revisedLibraryFile(manifest.assets.find((a: any) => a.id === 'hero_ranger_t2') as any)).toBeNull();
+  expect(revisedLibraryFile(manifest.assets.find((a: any) => a.id === 'hero_ranger_t2') as any, REV)).toBeNull();
 });
 
 test('메시·스킨·역바인드는 원본 바이트 그대로이고 관절 rest 가 같으며 클립·소켓만 바뀐다', () => {

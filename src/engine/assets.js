@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { registerHeroBodyMotion, refreshHeroBodyMotion, disposeHeroBodyMotion } from './hero-body-motion.js';
+import { registerHeroBodyMotion, prepareHeroBodyMotion, commitHeroBodyMotion, selectedBodyMotionIdentity, disposeHeroBodyMotion } from './hero-body-motion.js';
 import { preloadArmory } from './armory-assets.js';
 import { forgeHeroWeapons } from './forged-weapons.js';
 import { finishOathKnightMaterial } from './hero-surface-finish.js';
@@ -147,7 +147,11 @@ function preloadLibraryBody(asset) {
 
 export function loadHeroAsset(asset) {
   if (asset?.role !== 'hero' || !asset.heroId || !HEROES[asset.heroId]) return Promise.reject(new Error('invalid hero asset'));
-  return libraryLoader.load(asset, () => loadModel(HEROES[asset.heroId].model, null, false), (gltf, entry) => prepareLibraryHero(gltf, entry));
+  const identity = selectedBodyMotionIdentity(asset);
+  return libraryLoader.load(asset, () => loadModel(HEROES[asset.heroId].model, null, false), (gltf, entry) => {
+    gltf.scene.userData.libraryBodyMotionIdentity = identity;
+    return prepareLibraryHero(gltf, entry);
+  });
 }
 
 async function prepareLibraryHero(gltf, asset) {
@@ -374,7 +378,7 @@ export function applyLibraryHeroTier(root, tier, onAsyncSwap = null) {
 /** 아바타와 갑옷 단계가 공유하는 영웅 몸체 교체 경로. 골격이 맞지 않으면 기존 몸체를 유지한다. */
 export function applyLibraryHeroBody(root, target, onAsyncSwap = null) {
   const contract = root.userData.authoredContract;
-  if (contract?.role !== 'hero' || !target || target.role !== 'hero') return false;
+  if (contract?.role !== 'hero' || !target || target.role !== 'hero' || target.heroId !== contract.heroId) return false;
   const current = root.userData.libraryBodyAssetId;
   if (!target || !current || target.id === current) { root.userData.libraryTargetId = current; return false; }
   root.userData.libraryTargetId = target.id;
@@ -389,6 +393,13 @@ export function applyLibraryHeroBody(root, target, onAsyncSwap = null) {
 }
 
 function swapLibraryHeroBody(root, gltf, target) {
+  const identity = gltf.scene.userData.libraryBodyMotionIdentity;
+  if (gltf.scene.userData.libraryAsset?.id !== target.id || identity?.asset !== target.id
+    || identity.heroId !== root.userData.authoredContract?.heroId || root.userData.libraryDisposed
+    || root.userData.libraryTargetId !== target.id) return false;
+  let motionPlan;
+  try { motionPlan = prepareHeroBodyMotion(root, identity); }
+  catch (error) { console.warn('hero body motion rejected: ' + target.id, error); return false; }
   const sources = [], old = [], built = [];
   gltf.scene.traverse((node) => { if (node.isSkinnedMesh && node.userData.libraryBody) sources.push(node); });
   root.traverse((node) => { if (node.isSkinnedMesh && node.userData.libraryBody) old.push(node); });
@@ -405,10 +416,17 @@ function swapLibraryHeroBody(root, gltf, target) {
     mesh.bind(new THREE.Skeleton(bones, source.skeleton.boneInverses.map((matrix) => matrix.clone())), source.bindMatrix);
     built.push({ mesh, parent: (source.parent && root.getObjectByName(source.parent.name)) || old[0].parent });
   }
+  if (built.some(entry => !entry.parent) || root.userData.libraryDisposed || root.userData.libraryTargetId !== target.id) {
+    for (const entry of built) release(entry.mesh); return false;
+  }
   for (const { mesh, parent } of built) parent.add(mesh);
-  for (const mesh of old) { mesh.removeFromParent(); release(mesh); }
+  // 모든 저작 검증은 기존 메시 제거 전에 끝낸다. stale 계획이면 새 메시만 정리한다.
+  if (!commitHeroBodyMotion(root, motionPlan)) {
+    for (const { mesh } of built) { mesh.removeFromParent(); release(mesh); } return false;
+  }
   root.userData.libraryBodyAssetId = target.id; root.userData.libraryHeroTier = target.armorTier || 1;
-  refreshHeroBodyMotion(root);
+  root.userData.libraryBodyMotionIdentity = identity;
+  for (const mesh of old) { mesh.removeFromParent(); release(mesh); }
   return true;
 }
 
@@ -501,14 +519,22 @@ export function spawnCharacter(gltf) {
   if (contract) {
     root.userData.authoredContract = structuredClone(contract);
     root.scale.setScalar(contract.scale); root.add(rigRoot);
-    if (contract.role === 'hero') root.userData.libraryBodyAssetId = rigRoot.userData.libraryAsset?.id || null;
+    if (contract.role === 'hero') {
+      root.userData.libraryBodyAssetId = rigRoot.userData.libraryAsset?.id || null;
+      root.userData.libraryBodyMotionIdentity = rigRoot.userData.libraryBodyMotionIdentity;
+    }
   }
   const mixer = new THREE.AnimationMixer(rigRoot);
   /** @type {Record<string, THREE.AnimationClip>} */
   const clips = {};
   for (const c of gltf.animations) clips[c.name] = c;
   for (const [alias, name] of Object.entries(contract?.aliases || {})) clips[alias] = clips[name];
-  registerHeroBodyMotion(root, clips);
+  try { registerHeroBodyMotion(root, clips); }
+  catch (error) {
+    // 아직 공유 재질을 쓰므로 실패한 clone의 skeleton·mixer만 정리한다.
+    rigRoot.traverse(node => { if (node.isSkinnedMesh) node.skeleton.dispose(); });
+    mixer.stopAllAction(); mixer.uncacheRoot(rigRoot); root.removeFromParent(); throw error;
+  }
   // 히트 플래시용: 재질을 개별 복제 (emissive 조절)
   root.traverse((o) => {
     if (!o.isMesh) return;
