@@ -187,6 +187,7 @@
     </div>
     <div class="bossbar hidden" id="bossbar"><img id="boss-portrait" alt="" /><div class="bb-body"><div class="boss-name" id="boss-name">해골 군주</div><div class="boss-hp"><div id="boss-hp"></div></div></div></div>
     <div class="combat-cue" id="combat-cue" aria-live="polite"></div>
+    <div id="skill-aim-cancel" aria-hidden="true"><b>✕</b><small>취소</small></div>
     <div class="combo hidden" id="combo"><b id="combo-n">0</b><span>COMBO</span></div>
     <div class="kill-streak" id="kill-streak"><b id="kill-streak-n">0</b><span>연속 처치</span><em id="kill-streak-tier">사냥 본능</em></div>
     <div class="joystick" id="joy"><div class="joy-base"><div class="joy-knob" id="joy-knob"></div></div></div>
@@ -195,12 +196,12 @@
       <button type="button" id="btn-map-interact" disabled aria-keyshortcuts="F"><span class="map-tactics-action-name">조작판으로 이동</span><small class="map-tactics-action-detail"></small></button>
     </section>
     <div class="actions">
-      <button class="skill-btn" data-skill="0"><img alt="" /><div class="cd"></div><span class="key">1</span></button>
-      <button class="skill-btn" data-skill="1"><img alt="" /><div class="cd"></div><span class="key">2</span></button>
-      <button class="skill-btn" data-skill="2"><img alt="" /><div class="cd"></div><span class="key">3</span></button>
-      <button class="skill-btn ult" data-skill="3"><img alt="" /><div class="cd"></div><span class="key">R</span></button>
-      <button class="skill-btn awk" data-skill="4"><img alt="" /><div class="cd"></div><span class="key">Q</span><div class="lock"><b>10</b></div></button>
-      <button class="skill-btn awk" data-skill="5"><img alt="" /><div class="cd"></div><span class="key">E</span><div class="lock"><b>20</b></div></button>
+      <button class="skill-btn" data-skill="0"><img alt="" /><div class="cd"></div><i class="aim-knob" aria-hidden="true"></i><span class="key">1</span></button>
+      <button class="skill-btn" data-skill="1"><img alt="" /><div class="cd"></div><i class="aim-knob" aria-hidden="true"></i><span class="key">2</span></button>
+      <button class="skill-btn" data-skill="2"><img alt="" /><div class="cd"></div><i class="aim-knob" aria-hidden="true"></i><span class="key">3</span></button>
+      <button class="skill-btn ult" data-skill="3"><img alt="" /><div class="cd"></div><i class="aim-knob" aria-hidden="true"></i><span class="key">R</span></button>
+      <button class="skill-btn awk" data-skill="4"><img alt="" /><div class="cd"></div><i class="aim-knob" aria-hidden="true"></i><span class="key">Q</span><div class="lock"><b>10</b></div></button>
+      <button class="skill-btn awk" data-skill="5"><img alt="" /><div class="cd"></div><i class="aim-knob" aria-hidden="true"></i><span class="key">E</span><div class="lock"><b>20</b></div></button>
       <button class="dodge-btn" id="btn-dodge"><span class="dodge-label">회피</span><span class="dodge-cd" hidden></span></button>
       <button class="attack-btn" id="btn-attack"><span>공격</span></button>
     </div>

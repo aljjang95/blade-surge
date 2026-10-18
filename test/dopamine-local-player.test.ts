@@ -62,7 +62,9 @@ test('enemy death grants exactly two MP without changing the existing ultimate g
   expect(mp).toBe(2); expect(ult).toBe(1); expect(g.kills).toBe(1);
 });
 
-test('kill achievements remain queued behind danger with the same payload, rewards and streak counters',()=>{
+// 2026-10-18 대표님: 연속 처치 표시가 전투 중앙을 가린다. 단계 달성은 콤보 옆 알약(setKillStreak)이 직접 빛나며 알리고,
+// 별도 알림을 띄우지 않아 위험 경고 큐를 밀어내지도 않는다. 보상·카운터는 그대로다.
+test('kill achievements light the streak pill without a separate notice, keeping rewards and streak counters',()=>{
   for (const milestone of [5, 10, 20, 30]) {
     let ult=0,mp=0; const visible:string[]=[], messages:any[][]=[], drops:any[][]=[], streaks:any[][]=[];
     const queue=new CombatNoticeQueue({show:({message}:{message:string})=>{
@@ -79,10 +81,9 @@ test('kill achievements remain queued behind danger with the same payload, rewar
       pending:[],active:true,enemies:[e],after(){}};
     Battle.prototype.onEnemyDeath.call(g,e);
     const tier=milestone>=20?'전장의 지배자':milestone>=10?'광란':'사냥 본능';
-    expect(messages).toEqual([[`${milestone}연속 처치 · ${tier}`,milestone>=20?'red':'gold',{urgent:false}]]);
+    expect(messages).toEqual([]);
     expect(visible).toEqual(['증원이 몰려온다!']);
-    expect(queue.pending).toHaveLength(1);
-    expect(queue.pending[0]).toMatchObject({message:messages[0][0],tone:messages[0][1],urgent:false});
+    expect(queue.pending).toHaveLength(0);
     expect(streaks).toEqual([[milestone,tier]]);expect(g.killStreak).toBe(milestone);expect(g.killStreakT).toBe(3.4);
     expect(g.kills).toBe(8);expect(g.waveKilled).toBe(4);expect(mp).toBe(2);expect(ult).toBe(1);
     expect(drops).toEqual([[e,stage]]);queue.clear();
