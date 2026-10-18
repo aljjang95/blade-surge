@@ -1,9 +1,11 @@
 // 영웅 정의 — 모델(KayKit Adventurers, CC0), 애니메이션, 스킬, 기본 스탯
+import { heroGrade } from './hero-grades.js';
 export const RARITY = {
   N:   { name: 'N',   color: '#9aa3b2', mult: 1.0 },
   R:   { name: 'R',   color: '#4cc3ff', mult: 1.2 },
   SR:  { name: 'SR',  color: '#b26bff', mult: 1.5 },
   SSR: { name: 'SSR', color: '#ffcf5a', mult: 2.0 },
+  SSSR: { name: 'SSSR', color: '#ff5a8a', mult: 2.6 },
 };
 
 export const HEROES = {
@@ -146,7 +148,8 @@ export const skillUpGold = (lv) => Math.floor(500 * Math.pow(1.4, lv - 1));
 
 export function heroStats(def, state, equipBonus = { atk: 0, hp: 0, crit: 0, def: 0 }) {
   const lv = state?.level || 1, star = state?.star || 1;
-  const rm = RARITY[def.rarity].mult;
+  // 초월로 오른 현재 등급이 배율을 정한다(시작 등급은 def.rarity).
+  const rm = RARITY[heroGrade(def, state)].mult;
   const lvm = 1 + (lv - 1) * 0.08;
   const stm = 1 + (star - 1) * 0.25;
   const eb = equipBonus;

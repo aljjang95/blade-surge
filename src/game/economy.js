@@ -11,9 +11,16 @@ import { heroTrainingQuote } from './hero-training.js';
 import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
 import { freshTownState } from '../data/towns.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
+import { heroBaseGrade } from '../data/hero-grades.js';
+import { baselineSkillLevels } from '../data/skill-tree.js';
 
 const KEY = 'bladesurge_save_v1';
 const now = () => Date.now();
+/** 새 영웅 상태: 시작 등급(def.rarity), 기본 스킬·궁극기 1레벨, 각성 스킬은 SP로 배우기 전 0레벨. */
+export function freshHeroState(id) {
+  const def = HEROES[id];
+  return { level: 1, exp: 0, star: 1, shards: 0, grade: heroBaseGrade(def), skills: baselineSkillLevels(def), skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } };
+}
 const pickWeighted = (w, rng = Math.random) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = rng() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
 
 /** 가챠 전용 결정적 RNG (mulberry32). 전투·드랍 RNG는 그대로 Math.random을 쓴다. */
@@ -93,7 +100,8 @@ export class Economy {
     return {
       expedition: normalizeExpedition(), journey: normalizeJourney(), actionSequence: 0,
       schemaVersion: 1, created: now(), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: now(), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
-      heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, { level: 1, exp: 0, star: 1, shards: 0, skills: HEROES[id].skills.map(() => 1), skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } }])),
+      transcendStones: 0, skillResets: 1,
+      heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
       selected: 'knight', inventory: [], invSeq: 1, avatars: { owned: [], equipped: {} },
       progress: { unlocked: 1, stars: {}, difficulty: 'story' }, // stars['1-1'] = 3
       towns: freshTownState(),
@@ -180,6 +188,8 @@ export class Economy {
     if (r.fragments) { s.fragments = (s.fragments || 0) + r.fragments; got.push({ k: 'fragments', n: r.fragments }); }
     if (r.protect) { s.protect += r.protect; got.push({ k: 'protect', n: r.protect }); }
     if (r.bless) { s.bless += r.bless; got.push({ k: 'bless', n: r.bless }); }
+    if (r.transcendStones) { s.transcendStones = (s.transcendStones || 0) + r.transcendStones; got.push({ k: 'transcendStones', n: r.transcendStones }); }
+    if (r.skillResets) { s.skillResets = (s.skillResets || 0) + r.skillResets; got.push({ k: 'skillResets', n: r.skillResets }); }
     if (r.monthly) { s.monthlyUntil = Math.max(now(), s.monthlyUntil) + r.monthly * 86400000; got.push({ k: 'monthly', n: r.monthly }); }
     if (r.vipDays) { s.vipUntil = Math.max(now(), s.vipUntil) + r.vipDays * 86400000; s.vip = Math.max(s.vip, 1); got.push({ k: 'vip', n: r.vipDays }); }
     if (r.ssrGear) { for (let i = 0; i < r.ssrGear; i++) { const it = this.addItem('SSR'); got.push({ k: 'item', item: it }); } }
@@ -240,7 +250,7 @@ export class Economy {
   promoteHero(id) { const h = this.hero(id); const need = starShards(h.star); if (h.shards < need || h.star >= 5) return false; h.shards -= need; h.star++; this.emit(); return true; }
   upgradeSkill(id, i) { const h = this.hero(id), sk = HEROES[id]?.skills[i]; if (!h || !sk || (sk.unlock && h.level < sk.unlock)) return false; const cost = skillUpGold(h.skills[i]); if (this.s.gold < cost || h.skills[i] >= 10) return false; this.s.gold -= cost; h.skills[i]++; this.emit(); return true; }
   setSkillLoadout(id, slot, skillIndex) { const h = this.hero(id), def = HEROES[id]; if (!h || !def || ![0,1].includes(slot) || !Number.isInteger(skillIndex) || skillIndex < 4 || skillIndex >= def.skills.length) return false; const sk = def.skills[skillIndex]; if (sk.unlock && h.level < sk.unlock) return false; const next = normalizeSkillLoadout(def, h.skillLoadout); if (next[slot] === skillIndex) return false; const other = 1 - slot; if (next[other] === skillIndex) [next[slot], next[other]] = [skillIndex, next[slot]]; else next[slot] = skillIndex; h.skillLoadout = next; this.emit(); return true; }
-  grantHero(id) { if (this.s.heroes[id]) { this.s.heroes[id].shards += GACHA.dupShards; return { dup: true, shards: GACHA.dupShards }; } this.s.heroes[id] = { level: 1, exp: 0, star: 1, shards: 0, skills: HEROES[id].skills.map(() => 1), skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } }; return { dup: false, shards: 0 }; }
+  grantHero(id) { if (this.s.heroes[id]) { this.s.heroes[id].shards += GACHA.dupShards; return { dup: true, shards: GACHA.dupShards }; } this.s.heroes[id] = freshHeroState(id); return { dup: false, shards: 0 }; }
   // ---------- 장비 ----------
   /** @param {string} rarity @param {string|null} slot */
   addItem(rarity, slot = null, rng = Math.random) {

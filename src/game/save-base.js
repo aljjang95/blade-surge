@@ -7,6 +7,8 @@ import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { normalizeTownState } from '../data/towns.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
+import { normalizeGrade } from '../data/hero-grades.js';
+import { skillBaseLevel, SKILL_MAX_LV } from '../data/skill-tree.js';
 
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const integer = (value, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) =>
@@ -36,7 +38,13 @@ export function normalizeSave(raw, fresh) {
   for (const id of Object.keys(HEROES)) {
     const h = fill(fresh.heroes.knight, sourceHeroes[id]);
     h.level = integer(h.level, 1, 1, 80); h.star = integer(h.star, 1, 1, 5);
-    h.skills = HEROES[id].skills.map((_, i) => integer(h.skills[i], 1, 1, 10));
+    // 각성 스킬은 0레벨(미습득)을 허용한다. SP 도입 전 저장(영웅에 grade 없음)은 예전처럼 빠진 칸을 1로 채워
+    // 이미 쓰던 스킬을 빼앗지 않는다. 새 저장은 각성 스킬을 0에서 시작해 SP로 배운다.
+    // SP 저장은 항상 전체 길이의 스킬 배열과 grade 를 함께 쓴다. 둘 중 하나라도 없으면 SP 이전 저장이다.
+    const savedSkills = sourceHeroes[id]?.skills;
+    const legacyHero = typeof sourceHeroes[id]?.grade !== 'string' || !Array.isArray(savedSkills) || savedSkills.length < HEROES[id].skills.length;
+    h.skills = HEROES[id].skills.map((skill, i) => integer(h.skills[i], legacyHero ? 1 : skillBaseLevel(skill), skillBaseLevel(skill), SKILL_MAX_LV));
+    h.grade = normalizeGrade(HEROES[id], typeof sourceHeroes[id]?.grade === 'string' ? sourceHeroes[id].grade : HEROES[id].rarity);
     h.skillLoadout = normalizeSkillLoadout(HEROES[id], h.skillLoadout);
     s.heroes[id] = h;
   }
