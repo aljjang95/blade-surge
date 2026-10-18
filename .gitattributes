@@ -1,3 +1,12 @@
 # 출처 SHA-256이 줄바꿈 변환으로 달라지지 않도록 생성기 소스를 고정한다.
 *.py text eol=lf
 test/fixtures/region-architecture-ae2260e.source.txt text eol=lf
+
+# 저작 패킷의 원본 바이트와 런타임 소스 SHA를 플랫폼 간 보존한다.
+public/models/heroes-next/ranger-t2-body-motion-v1.json -text
+public/models/heroes-next/ranger-t3-body-motion-v1.json -text
+public/models/heroes-next/rogue-t2-body-motion-v1.json -text
+public/models/heroes-next/rogue-t3-body-motion-v1.json -text
+public/models/heroes-next/rogue-crow-body-motion-v1.json -text
+public/models/heroes-next/rogue-t2-body-motion-v2.json -text
+src/engine/hero-body-motion.js text eol=lf

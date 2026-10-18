@@ -1,5 +1,21 @@
 # 상위 다섯 몸체 교정·채택 계약
 
+## 현재 저작 패킷과 검증 경계
+
+상위 궁수 2종·도적 2종·까마귀는 각자의 실제 교정 GLB를 사용한다. 도적 2단계는 별도 `rogue-t2-body-motion-v2.json`의 회피·사망·찌르기 3개 저작 트랙을 선택하고, 나머지 네 몸체는 v1 패킷을 사용한다. `higher-body-motion-v1.json`의 이전 도적 2단계 기록과 공개 v1 원본은 비교용으로 보존한다. 활성 레지스트리는 이전 도적 기록만 제외하고 새 v2를 더한 정확히 다섯 몸체다.
+
+도적 2단계 찌르기는 승인된 20개 고정 키의 -.012..0m 범위를 Blender에서 저작해 120Hz·원본 키를 포함한 Float32 LINEAR 트랙으로 저장한다. 기존 회피·사망 트랙은 수치 그대로다. 피부 최저점을 따라 게임에서 보정하거나 전 동작을 일정하게 올리지 않는다. 원본 decoded 트랙·다른 본 트랙·현재 재생 액션·외형 교체 시 사용자 별칭을 보존한다.
+
+형상 정책37은 불변 foot02와 frozen07이 같은 시각에서 모두 비퇴화하고 방향이 충돌할 때만 secondary 방향 비교를 적용하지 않는다. primary 방향·양쪽 면적·raw/REST 검사와 모든 접지 기준은 유지한다. 이는 수용 집합의 명시적 확대이며 이전 실패를 통과로 소급하지 않는다. 추가 시각에서도 후보와 무관한 원본 두 개로 조건을 다시 계산한다.
+
+REST 검사는 direct/swap/기존 모션 각각에서 전 16,299정점×4개 원본·후보 배열의 독립 스키닝과 실제 Three 결과를 1e-7m 이내로 대조한다. 저장09 direct 좌표는 direct·기존 모션 및 저장 행렬 재생에서 계속 1e-7m로 검사한다. 서로 다른 REST 표현인 swap 대 저장 direct 차이는 진단으로 남긴다. 대신 전체 기존 REST 계약의 이름·정점·형상·bind·부모·local/world/inverse 조건을 별도로 모두 요구한다. 본 local 이동은 양쪽 실제 부모 좌표계로 투영한 미터 norm 1e-5, 나머지 선형·world·inverse 1e-5, 모든 시각의 direct/swap 전정점 XYZ 1e-6를 유지한다.
+
+실제 후보 fresh39는 14클립·8,388시각(찌르기 3,377시각)에서 floor/support/적용 삼각형/이음새 실패0이었다. 원보고서 SHA는 `5f1249598fea762eb3d58cd509f2ec4fb9797076e0a68553ddf3d93a565f00da`다. 이 수치 결과만으로 GPU·시각·플레이·공개 배포를 통과했다고 부르지 않는다. 최종 채택은 실제 catalog/no-overrides 다섯 몸체, 정식 검사, 실제 화면·플레이·엄격 미디어와 정확한 공개 source/artifact 확인을 함께 요구한다. 실제 Android·터치·발열은 PC viewport로 대체하지 않는다.
+
+여섯 공개 모션 JSON은 저작 원본 CRLF 바이트를 Git `-text`로 보존한다. 소스 레지스트리 JSON의 직렬화와 공개 원본 SHA는 구분한다. 런타임 모션 선택 소스는 LF로 고정한다. 플랫폼별 checkout·빌드·공개 응답에서 각각 원바이트 SHA를 확인한다.
+
+## 이전 내부 후보03 기록
+
 기준 HEAD는 ff16796f4dd73f12cfc40b77e5b1cd2a4aadd6a8이다. 대상은 hero_ranger_t2, hero_ranger_t3, hero_rogue_t2, hero_rogue_t3, avatar_rogue_crow다. 현재 작업 트리에는 실제 생성한 다섯 교정 GLB와 자산별 모션 패킷이 내부 QA 후보로 설치되어 있다. 다섯 기록은 GENERATED/useInGame:true이며 정확한 output SHA를 가진다. 이는 로컬 후보 경로의 활성화이고 공개 채택·배포 승인을 뜻하지 않는다. INTERNAL-CANDIDATE-03.json은 candidateOnly:true/releaseApproved:false이며, 공개 서비스는 변경하지 않았다. 생성 전의 DRAFT/useInGame:false/output.sha256:null 기록은 과거 단계로 보존한다.
 
 ## 보존과 선택

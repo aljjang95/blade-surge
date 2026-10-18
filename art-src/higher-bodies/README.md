@@ -1,4 +1,23 @@
-# 상위 다섯 몸체: 내부 후보03 저작·재현
+# 상위 다섯 몸체 저작·재현
+
+현재 도적 2단계는 qualified37 형상과 Blender38 모션, 도적 3단계는 positions15/motion15, 까마귀는 positions29/motion29의 실제 산출물을 사용한다. 궁수 두 몸체의 승인 산출물과 기본 궁수·도적·여우 원본은 보존한다. 최신 선택·검증 기준은 [교정 계약](../../docs/higher-body-contact-contract.md)을 따른다.
+
+| 산출물 | GLB SHA256 | 모션 원본 SHA256 |
+|---|---|---|
+| 도적 2단계 | bfc139cafb098ae3c707cc3d64c978faa4a2c13614be106c6c013c08e63845ed | 2ac469e237461b6a143076bd0082a93cbac245e5e5caa7ffd77a617ec1b81602 |
+| 도적 3단계 | 2a5c0724d7d806283568bd9a3c6bb8a4646145bd91347dc90a602ee36a8d572f | 383ef5c78573f8f6ee3914248cfcc833800c1e26f40148e3d7e46e03a6a60918 |
+| 까마귀 | d6394ad14df1d0cab00183945cb199d02a85ee8d09d6c35e13c9a9aecb3b3f04 | 0b2541de030e5b6e85a1ee30c96ef9c2975c1e91cc3f48eea2a83ce439267dc6 |
+
+실제 Blender `.blend`, 패치·패커·프로필·원본 JSON과 실패 로그는 관리 작업 `20261018-010039-a721567d` 및 다음 원본 묶음에 보존한다. 각각 원격 raw 다운로드와 전체 manifest SHA를 검증했다.
+
+- [도적 2단계 Blender38 형상·모션 원본](https://drive.google.com/file/d/1Jb0HVxMJnx6ggGHHJXZHPxBf7YVNlGi1/view)
+- [도적 3단계 Blender 원본](https://drive.google.com/file/d/1b6OmEhlOaCYHiZn19lObU6BnKb2PKWzn/view)
+- [까마귀 Blender 원본](https://drive.google.com/file/d/1uTff8JcuXvRSXOYEZa7En07u6zyoaJsM/view)
+- [fresh39 수치 검사·원 실패·검증 소스 원본](https://drive.google.com/file/d/1A-jDTok5UIHkAswXpeWqZnfA2V6KMtmh/view)
+
+재현은 정본 재개 인덱스와 작업의 config·source manifest를 먼저 대조하고 기존 관리 checkout에서 한다. 새 출력 경로만 사용하며 원본·실패 증거를 덮어쓰지 않는다. `ralph-state init`은 이 환경에서 차단되어 실행하지 않는다. 파일 모드 기록을 정식 Ralph 장부·DOD 잠금으로 표현하지 않는다. 실제 모델은 Codex/Astra이며 Opus 실행이나 실제 Android 검증을 주장하지 않는다.
+
+## 이전 내부 후보03 저작·재현 기록
 
 현재 작업 트리의 5몸체 GENERATED/useInGame:true와 모션 bodies 5개는 실제 파일 SHA에 연결된 **내부 QA 후보**다. 공개 출시 승인이나 전체 접지 통과를 뜻하지 않는다. INTERNAL-CANDIDATE-03.json은 candidateOnly:true/releaseApproved:false다.
 

@@ -40,7 +40,7 @@
       },
       "output": {
         "path": "/models/heroes-next/rogue-t2-body-fit-v1.glb",
-        "sha256": "0e841ed76eb48ee6f308f5e3901f6f89fba55a525090096837a1456434150dfb"
+        "sha256": "bfc139cafb098ae3c707cc3d64c978faa4a2c13614be106c6c013c08e63845ed"
       }
     },
     {
@@ -54,7 +54,7 @@
       },
       "output": {
         "path": "/models/heroes-next/rogue-t3-body-fit-v1.glb",
-        "sha256": "72eec5ab13c6e0393c7b0e9e3b2171d5fdeabb4936fd215222ebfa15729b787f"
+        "sha256": "2a5c0724d7d806283568bd9a3c6bb8a4646145bd91347dc90a602ee36a8d572f"
       }
     },
     {
@@ -68,7 +68,7 @@
       },
       "output": {
         "path": "/models/heroes-next/rogue-crow-body-fit-v1.glb",
-        "sha256": "a373a5c2386350ac86d06c1ac45da90e4d58a238653a22093a0e3c0b7861c8bc"
+        "sha256": "d6394ad14df1d0cab00183945cb199d02a85ee8d09d6c35e13c9a9aecb3b3f04"
       }
     }
   ]

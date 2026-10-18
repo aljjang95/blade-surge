@@ -5,7 +5,7 @@
   "revisionId": "rogue-t3-body-fit-v1",
   "body": {
     "path": "/models/heroes-next/rogue-t3-body-fit-v1.glb",
-    "sha256": "72eec5ab13c6e0393c7b0e9e3b2171d5fdeabb4936fd215222ebfa15729b787f"
+    "sha256": "2a5c0724d7d806283568bd9a3c6bb8a4646145bd91347dc90a602ee36a8d572f"
   },
   "source": {
     "path": "asset-library/normalized/hero_rogue_t3.glb",
@@ -747,8 +747,8 @@
         "fixedProfileNotSkinMinCompensation": true
       },
       "validation": {
-        "supportStartMeters": 0.0036823872942477465,
-        "supportEndMeters": 0.005358001217246056
+        "supportStartMeters": 0.0024043500889092684,
+        "supportEndMeters": 0.0008349946001544595
       }
     },
     {
@@ -1577,7 +1577,7 @@
         "fixedProfileNotSkinMinCompensation": true
       },
       "validation": {
-        "supportStartMeters": 0.00822470709681511,
+        "supportStartMeters": 0.0028276012744754553,
         "supportEndMeters": 0.010293776169419289,
         "deathEndMeters": 0.010293776169419289
       }
@@ -1590,19 +1590,19 @@
       "sha256": "8fb6e55962ed851f3813bc9d3b6b5815728806220202fc2f6c52d2eb1eb754f4"
     },
     "profiles": {
-      "path": "C:\\Work\\jobs\\20261018-010039-a721567d\\scratch\\MOTION-PROFILES-03.json",
-      "bytes": 7434,
-      "sha256": "a64d5c33fae552e88fadaf3e98f57fb31ee6fb0636716fdb3756b61caba45333"
+      "path": "C:\\Work\\jobs\\20261018-010039-a721567d\\scratch\\MOTION-PROFILES-15-R3.json",
+      "bytes": 2586,
+      "sha256": "74856a3e3b2ccab1fd4aab83a213a42d57879cf6c78b5b33a33f1e7957348994"
     },
     "blend": {
-      "path": "C:\\Work\\jobs\\20261018-010039-a721567d\\artifacts\\higher-motion-03\\rogue-t3-body-motion-v1.blend",
-      "bytes": 3638531,
-      "sha256": "3211f29eaf66e55d8e08a4fb4c30f17712f455ab298f77e55ba3d3717013e21c"
+      "path": "C:\\Work\\jobs\\20261018-010039-a721567d\\artifacts\\higher-motion15-r3-01\\rogue-t3-body-motion-v1.blend",
+      "bytes": 3638426,
+      "sha256": "bf048624e2b57c2822a7477195cabe568528605f1b47be225de91384cce3fffe"
     },
     "candidateInput": {
-      "path": "C:\\Work\\jobs\\20261018-010039-a721567d\\artifacts\\higher-foot-02\\hero_rogue_t3.glb",
+      "path": "C:\\Work\\jobs\\20261018-010039-a721567d\\artifacts\\blender-positions15-r3-01\\hero_rogue_t3.glb",
       "bytes": 1541252,
-      "sha256": "72eec5ab13c6e0393c7b0e9e3b2171d5fdeabb4936fd215222ebfa15729b787f"
+      "sha256": "2a5c0724d7d806283568bd9a3c6bb8a4646145bd91347dc90a602ee36a8d572f"
     },
     "canonicalInput": {
       "path": "C:\\Work\\repos\\aljjang95\\blade-surge\\public\\models\\heroes-next\\rogue-library-t1-v2.glb",
@@ -1619,7 +1619,7 @@
         "maximum": 6.85949260059715e-07,
         "worst": {
           "vertex": 0,
-          "nearest": 3,
+          "nearest": 2,
           "distance": 6.85949260059715e-07
         }
       },
@@ -1627,7 +1627,7 @@
         "maximum": 6.85949260059715e-07,
         "worst": {
           "vertex": 0,
-          "nearest": 2,
+          "nearest": 3,
           "distance": 6.85949260059715e-07
         }
       },

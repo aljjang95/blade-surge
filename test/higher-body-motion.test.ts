@@ -4,10 +4,13 @@ import { readFileSync } from 'node:fs';
 import * as THREE from 'three';
 import { createHigherBodyMotionRegistry, createHigherBodyMotionClip, registerHeroBodyMotion, prepareHeroBodyMotion,
   commitHeroBodyMotion, refreshHeroBodyMotion, disposeHeroBodyMotion } from '../src/engine/hero-body-motion.js';
-import { loadHeroModel, preloadHeroBody, spawnCharacter, applyLibraryHeroBody, disposeCharacter } from '../src/engine/assets.js';
+import { loadHeroModel, loadHeroAsset, preloadHeroBody, spawnCharacter, applyLibraryHeroBody, disposeCharacter } from '../src/engine/assets.js';
 import { installRangerRuntimeLoader } from '../tools/art/ranger-runtime-loader.mjs';
 import REVISIONS from '../src/data/higher-body-revisions-v1.json';
 import MOTIONS from '../src/data/higher-body-motion-v1.json';
+import R2_MOTION from '../src/data/rogue-t2-body-motion-v2.json';
+const ACTIVE_MOTIONS = { schema: 'blade-surge.higher-body-motion.v2',
+  bodies: [...MOTIONS.bodies.filter(body => body.asset !== 'hero_rogue_t2'), R2_MOTION] };
 import RANGER from '../src/data/ranger-library-revision-v4.json';
 import manifest from '../asset-library/manifest.json';
 
@@ -57,7 +60,8 @@ const identity = (body: ReturnType<typeof fixture>['body']) => ({ asset: body.as
 
 test('빈 신규 모션 번들은 원본을 유지하고 실제 활성 패킷만 등록할 수 있다', () => {
   expect(createHigherBodyMotionRegistry({ schema: MOTIONS.schema, bodies: [] })).toEqual([]);
-  expect(createHigherBodyMotionRegistry(MOTIONS).length).toBe(MOTIONS.bodies.length);
+  expect(createHigherBodyMotionRegistry(ACTIVE_MOTIONS).length).toBe(5);
+  expect(() => createHigherBodyMotionRegistry(MOTIONS)).toThrow();
   const f = fixture();
   expect(() => createHigherBodyMotionRegistry(f.bundle)).toThrow();
   const registry = createHigherBodyMotionRegistry(f.bundle, f.revisions);
@@ -184,7 +188,7 @@ test('실제 swap preflight 거절은 기존 mesh·재질·skeleton·별칭을 �
 });
 
 test('활성 실제 패킷은 파일 SHA와 원본 decoded Float32 snapshot에 결합한다', async () => {
-  const registry = createHigherBodyMotionRegistry(MOTIONS);
+  const registry = createHigherBodyMotionRegistry(ACTIVE_MOTIONS);
   for (const body of registry) {
     expect(sha(readFileSync('public' + body.body.path))).toBe(body.body.sha256);
     const packet = readFileSync('public' + body.output.path);
@@ -199,5 +203,89 @@ test('활성 실제 패킷은 파일 SHA와 원본 decoded Float32 snapshot에 �
       expect(Array.from(track.times)).toEqual(entry.base.times); expect(Array.from(track.values)).toEqual(entry.base.values);
       createHigherBodyMotionClip(clip, body);
     }
+  }
+});
+
+// 통합 후 test/higher-body-motion.test.ts에 추가할 실제 R2 회귀검사 초안.
+// 실제 후보 full14 PASS 전에는 제품에 설치하거나 실행하지 않는다.
+// V02 source-only. 원 draft 보존; 이 파일 단독 실행용이 아니다.
+// 통합 전제: 기존 assets import에 loadHeroAsset 추가; R2_MOTION은 실제 설치된
+// ../src/data/rogue-t2-body-motion-v2.json registry record(output 포함)로 import.
+// 기존 positive registry 검사는 schema v2의 [MOTIONS.bodies에서 old R2 제외, R2_MOTION]
+// 조합을 사용한다. 기존 Ranger fixture와 historical R2 row는 변경하지 않는다.
+test('실제 R2의 세 저작 동작은 직접 생성·교체에서 같고 다른 외형에서는 STAB 원본을 복원한다', async () => {
+  const canonical = await loadHeroModel('rogue', 1);
+  const target = manifest.assets.find(item => item.id === 'hero_rogue_t2')!;
+  const r3 = manifest.assets.find(item => item.id === 'hero_rogue_t3')!;
+  const t1 = manifest.assets.find(item => item.id === 'hero_rogue_t1')!;
+  expect(await preloadHeroBody('rogue', 2)).toBe(true);
+  expect(await preloadHeroBody('rogue', 3)).toBe(true);
+  const loaded = await loadHeroAsset(target);
+  expect(loaded.scene.userData.libraryAsset?.id).toBe(target.id);
+  expect(loaded.animations).toBe(canonical.animations);
+  const direct = spawnCharacter(loaded), swapped = spawnCharacter(canonical), untouched = spawnCharacter(canonical);
+  const originalStab: THREE.AnimationClip = canonical.animations.find((clip: THREE.AnimationClip) => clip.name === 'stab')!;
+  const aliases = Object.entries(swapped.clips).filter(([, clip]) => clip === originalStab).map(([key]) => key);
+  const before = canonical.animations.map((clip: THREE.AnimationClip) => ({
+    name: clip.name, duration: clip.duration, tracks: clip.tracks.map(trackSha),
+  }));
+  const playing = swapped.mixer.clipAction(originalStab).play(); swapped.mixer.update(.125);
+  const actionTime = playing.time;
+  swapped.clips.PlayerCustomStab = originalStab;
+  try {
+    expect(applyLibraryHeroBody(swapped.root, target)).toBe(true);
+    expect(swapped.root.userData.libraryBodyMotionIdentity.sha256).toBe(R2_MOTION.body.sha256);
+    expect(direct.root.userData.libraryBodyMotionIdentity).toEqual(swapped.root.userData.libraryBodyMotionIdentity);
+    expect(aliases).toContain('stab');
+    const overlay = swapped.clips.stab;
+    expect(overlay).not.toBe(originalStab); expect(overlay).toBe(direct.clips.stab);
+    for (const key of aliases) expect(swapped.clips[key]).toBe(overlay);
+    expect(swapped.clips.PlayerCustomStab).toBe(originalStab);
+    expect(untouched.clips.stab).toBe(originalStab);
+    for (const entry of R2_MOTION.clipOverrides) {
+      const base: THREE.AnimationClip = canonical.animations.find((clip: THREE.AnimationClip) => clip.name === entry.base.clip)!;
+      const actual = swapped.clips[entry.base.clip];
+      expect(actual).toBe(direct.clips[entry.base.clip]);
+      base.tracks.forEach((track, index) => {
+        if (track.name === entry.base.hipsTrack) {
+          expect(Array.from(actual.tracks[index].times)).toEqual(entry.outputTrack.times.map(Math.fround));
+          expect(Array.from(actual.tracks[index].values)).toEqual(entry.outputTrack.values.map(Math.fround));
+        } else expect(actual.tracks[index]).toBe(track);
+      });
+    }
+    expect(playing.getClip()).toBe(originalStab); expect(playing.time).toBe(actionTime);
+    expect(playing.isRunning()).toBe(true);
+    const clipsBefore = { ...swapped.clips };
+    const identityBefore = swapped.root.userData.libraryBodyMotionIdentity;
+    expect(() => prepareHeroBodyMotion(swapped.root, { ...identityBefore, sha256: 'f'.repeat(64) })).toThrow();
+    expect(swapped.clips).toEqual(clipsBefore);
+    expect(swapped.root.userData.libraryBodyMotionIdentity).toBe(identityBefore);
+    expect(applyLibraryHeroBody(swapped.root, r3)).toBe(true);
+    expect(swapped.root.userData.libraryBodyAssetId).toBe(r3.id);
+    const r3Motion = MOTIONS.bodies.find(item => item.asset === r3.id)!;
+    expect(swapped.root.userData.libraryBodyMotionIdentity.sha256).toBe(r3Motion.body.sha256);
+    for (const key of aliases) expect(swapped.clips[key]).toBe(originalStab);
+    for (const entry of r3Motion.clipOverrides) {
+      const actual = swapped.clips[entry.base.clip];
+      const hips = actual.tracks.find(track => track.name === entry.base.hipsTrack)!;
+      expect(Array.from(hips.times)).toEqual(entry.outputTrack.times.map(Math.fround));
+      expect(Array.from(hips.values)).toEqual(entry.outputTrack.values.map(Math.fround));
+    }
+    expect(direct.clips.stab).toBe(overlay);
+    expect(applyLibraryHeroBody(swapped.root, target)).toBe(true);
+    for (const key of aliases) expect(swapped.clips[key]).toBe(overlay);
+    expect(swapped.root.userData.libraryBodyMotionIdentity.sha256).toBe(R2_MOTION.body.sha256);
+    expect(applyLibraryHeroBody(swapped.root, t1)).toBe(true);
+    expect(swapped.root.userData.libraryBodyAssetId).toBe(t1.id);
+    for (const key of aliases) expect(swapped.clips[key]).toBe(originalStab);
+    for (const name of ['dodge', 'death', 'stab']) expect(swapped.clips[name]).toBe(canonical.animations.find(clip => clip.name === name));
+    expect(playing.getClip()).toBe(originalStab); expect(playing.time).toBe(actionTime);
+    expect(playing.isRunning()).toBe(true);
+    expect(swapped.clips.PlayerCustomStab).toBe(originalStab);
+    expect(canonical.animations.map((clip: THREE.AnimationClip) => ({
+      name: clip.name, duration: clip.duration, tracks: clip.tracks.map(trackSha),
+    }))).toEqual(before);
+  } finally {
+    for (const inst of [direct, swapped, untouched]) disposeCharacter(inst.root, inst.mixer);
   }
 });
