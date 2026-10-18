@@ -13,8 +13,8 @@ function rangerArrows(game, p, dmg, count = 1, options = {}) {
   const f = p.forward(new THREE.Vector3());
   for (let i = 0; i < count; i++) {
     const dir = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (i - (count - 1) / 2) * .18);
-    game.spawnProjectile({ pos: rangerOrigin(p, dir), dir, speed: 28, radius: .7, dmg, color: 0x7feac0,
-      size: .45, owner: p, kb: 3, kind: 'slash', pierce: true, life: .75, visual: 'arrow', ...options });
+    game.spawnProjectile({ pos: rangerOrigin(p, dir), dir, speed: SKILL_PROJECTILES.ranger.speed, radius: SKILL_PROJECTILES.ranger.radius, dmg, color: 0x7feac0,
+      size: .45, owner: p, kb: 3, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.ranger.life, visual: 'arrow', ...options });
   }
   audio.whoosh({ vol: .4, pitch: 1.5, dur: .2 });
 }
@@ -27,6 +27,62 @@ function densest(game, p, range = 11, radius = 3.5) {
   return best ? best.pos.clone() : null;
 }
 
+export const SKILL_PROJECTILES = Object.freeze({
+  ranger: Object.freeze({ speed: 28, life: .75, radius: .7 }),
+  pierce: Object.freeze({ speed: 27, life: .85, radius: .65 }),
+  volley: Object.freeze({ speed: 23, life: .8, radius: .8 }),
+  holy: Object.freeze({ speed: 22, life: .7, radius: 2 }),
+  fire: Object.freeze({ speed: 15, life: 1, radius: 1 }),
+});
+
+// 판정의 기준 크기. range는 지점형의 중심 선택 거리, 투사체는 발사점부터의 이동 거리다.
+// 연쇄·무작위 다중 타격은 탐색/외곽 범위이며 모든 내부 지점의 적중을 보장하지 않는다.
+export const SKILL_AIM_SHAPES = Object.freeze({
+  guardian_guard: { kind: 'self', range: 0 },
+  guardian_rebuke: { kind: 'self', range: 4, radius: 4 },
+  ranger_pierce: { kind: 'line', range: SKILL_PROJECTILES.pierce.speed * SKILL_PROJECTILES.pierce.life, width: .65 * 2, origin: .8 },
+  ranger_volley: { kind: 'cone', range: SKILL_PROJECTILES.volley.speed * SKILL_PROJECTILES.volley.life, angle: .48 * 180 / Math.PI, width: 1.6, origin: .8 },
+  ranger_retreat: { kind: 'line', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, width: 1.4, origin: .8 },
+  ranger_tempest: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: 1.08 * 180 / Math.PI, width: 1.9, origin: .8 },
+  ranger_quickshot: { kind: 'line', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, width: 1.4, origin: .8 },
+  ranger_binding: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: .72 * 180 / Math.PI, width: 1.4, origin: .8 },
+  holy_slash: { kind: 'line', range: SKILL_PROJECTILES.holy.speed * SKILL_PROJECTILES.holy.life, width: 4, origin: 1 },
+  shield_bash: { kind: 'circle', range: 1.2, radius: 5 },
+  judgment: { kind: 'self', range: 12, radius: 2.2 },
+  dragon_slash: { kind: 'cone', range: 7.2, angle: 130, projectileRange: 20 * .8, projectileAngle: .64 * 180 / Math.PI, width: 3, origin: 1.5 },
+  whirlwind: { kind: 'self', range: 3.8, radius: 3.8 },
+  quake: { kind: 'circle', range: 1.5, radius: 8 },
+  berserk: { kind: 'self', range: 0 },
+  hell_axe: { kind: 'circle', range: 13, radius: 6 },
+  fireball: { kind: 'line', range: SKILL_PROJECTILES.fire.speed * SKILL_PROJECTILES.fire.life, width: 2, radius: 4.2, origin: 1 },
+  chain: { kind: 'self', range: 12 },
+  blizzard: { kind: 'self', range: 6.8, radius: 6.8 },
+  meteor: { kind: 'circle', range: 15, radius: 3.4 + 4.4 },
+  shadow_dash: { kind: 'line', range: 28 * (.42 + (1 - Math.pow(.001, .18)) / -Math.log(.001)), width: 5.2 },
+  poison_bomb: { kind: 'circle', range: 13, radius: 4.2 },
+  flurry: { kind: 'cone', range: 4, angle: 180 },
+  thousand: { kind: 'self', range: 8, radius: 1.8 },
+  chain_bind: { kind: 'self', range: 12, radius: 7.5 },
+  sanctuary: { kind: 'self', range: 8, radius: 8 },
+  bull_rush: { kind: 'line', range: 21 * (.55 + (1 - Math.pow(.002, .2)) / -Math.log(.002)), width: 7.2, radius: 6.2, endOffset: 2.4 },
+  magma_zone: { kind: 'self', range: 4.6 + 2.9, radius: 6.4 },
+  arc_reflect: { kind: 'line', range: 30 * 2.6, width: 3.4, origin: 1.2, radius: 4.5 },
+  chrono_seal: { kind: 'self', range: 9.5, radius: 3.8 },
+  shadow_mark: { kind: 'self', range: 13, radius: 5.5 },
+  void_step: { kind: 'self', range: 18, radius: 7.5 },
+  // 파일 끝의 AWAKENING_III 덮어쓰기가 실제 구현이다(2.5 간격 네 지점, 반경 3.2).
+  sunbreaker: { kind: 'line', range: 10, width: 6.4, radius: 3.2 },
+  heavenfall: { kind: 'circle', range: 15, radius: 8 },
+  bloodquake: { kind: 'self', range: 8, radius: 8 },
+  cataclysm: { kind: 'circle', range: 2, radius: 9 },
+  star_prison: { kind: 'circle', range: 16, radius: 7 },
+  absolute_zero: { kind: 'circle', range: 17, radius: 9 },
+  night_parade: { kind: 'circle', range: 13, radius: 5 },
+  eclipse_edge: { kind: 'circle', range: 16, radius: 8 },
+  gale_hunt: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: .36 * 180 / Math.PI, width: 1.8, origin: .8 },
+  skyfall_arrows: { kind: 'circle', range: 18, radius: 2.2 + 4.2 },
+});
+for (const shape of Object.values(SKILL_AIM_SHAPES)) Object.freeze(shape);
 export const SKILLS = {
   guardian_guard: {
     dur: .3, total: .4,
@@ -51,7 +107,7 @@ export const SKILLS = {
       const dir = p.forward(new THREE.Vector3()), pos = rangerOrigin(p, dir);
       // 별빛 관통(교관): 판정 반경 1.4배, 밀치기 4 → 7.
       const star = hasTownSkillVariant(p, 'ranger_pierce', 'star');
-      game.spawnProjectile({ pos, dir, speed: 27, radius: (empowered ? 1.3 : .65) * (star ? 1.4 : 1), dmg: c.dmg * (empowered ? 2 : 1), color: 0x7feac0, size: .45, owner: p, kb: star ? 7 : 4, kind: 'slash', pierce: true, life: .85, visual: p.def?.weapon === 'bow' ? 'arrow' : undefined });
+      game.spawnProjectile({ pos, dir, speed: SKILL_PROJECTILES.pierce.speed, radius: (empowered ? 1.3 : SKILL_PROJECTILES.pierce.radius) * (star ? 1.4 : 1), dmg: c.dmg * (empowered ? 2 : 1), color: 0x7feac0, size: .45, owner: p, kb: star ? 7 : 4, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.pierce.life, visual: p.def?.weapon === 'bow' ? 'arrow' : undefined });
       audio.whoosh({ vol: .4, pitch: 1.5, dur: .2 });
     },
   },
@@ -63,7 +119,7 @@ export const SKILLS = {
       for (let i = 0; i < count; i++) {
         const offset = i - (count - 1) / 2;
         const dir = f.clone().applyAxisAngle(new THREE.Vector3(0,1,0), offset * .24);
-        game.spawnProjectile({ pos: rangerOrigin(p, dir), dir, speed: 23, radius: .8, dmg: c.dmg, color: 0x7feac0, size: .35, owner: p, kb: 2, kind: 'slash', pierce: true, slow: 2, life: .8, visual: p.def?.weapon === 'bow' ? 'arrow' : undefined });
+        game.spawnProjectile({ pos: rangerOrigin(p, dir), dir, speed: SKILL_PROJECTILES.volley.speed, radius: SKILL_PROJECTILES.volley.radius, dmg: c.dmg, color: 0x7feac0, size: .35, owner: p, kb: 2, kind: 'slash', pierce: true, slow: 2, life: SKILL_PROJECTILES.volley.life, visual: p.def?.weapon === 'bow' ? 'arrow' : undefined });
       }
       audio.whoosh({ vol: .4, pitch: 1.7, dur: .3 });
     },
@@ -117,7 +173,7 @@ export const SKILLS = {
       game.fx.holyBurst(spawn, { size: 4, life: 0.3 }); game.fx.light(spawn, 0xffd060, 9, 12, 0.5);
       audio.bladeWave({ vol: 0.7 }); audio.holy({ vol: 0.3, base: 880, dur: 0.6 });
       game.renderer.shake(0.25); audio.vibe(30);
-      game.spawnProjectile({ pos: spawn.clone(), dir: f, speed: 22, radius: 2.0, dmg: c.dmg, color: 0xfff0a0, size: 0, owner: p, kb: 5, kind: 'slash', pierce: true, life: 0.7, visual: null });
+      game.spawnProjectile({ pos: spawn.clone(), dir: f, speed: SKILL_PROJECTILES.holy.speed, radius: SKILL_PROJECTILES.holy.radius, dmg: c.dmg, color: 0xfff0a0, size: 0, owner: p, kb: 5, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.holy.life, visual: null });
       applyKnightSlashVariant(game, p, c, variant);
       if (hasTownSkillVariant(p, 'holy_slash', 'nova')) game.after(.16, () => game.hitRadius(p.pos, 3.2, c.dmg * .35, { kb: 3, kind: 'slash', source: p, quietStop: true }));
     },
@@ -125,7 +181,7 @@ export const SKILLS = {
   shield_bash: {
     dur: 0.7,
     start(game, p, c) {
-      c.data.gatherCenter = fwd(p, 1.2);
+      c.data.gatherCenter = c.data.aimPoint?.clone() || fwd(p, SKILL_AIM_SHAPES.shield_bash.range);
       gatherEnemies(game, c.data.gatherCenter, 7, 22, .25);
       game.fx.castCircle(c.data.gatherCenter, 0xffe0a0, { radius: 5, life: .25 });
     },
@@ -133,7 +189,7 @@ export const SKILLS = {
     cast(game, p, c) {
       const center = c.data.gatherCenter || fwd(p, 1.2);
       // 준비 시간에 실제로 모인 적을 원래 접촉 시점에 강타한다.
-      game.hitRadius(center, 5.0, c.dmg, { kb: 7, kind: 'blunt', stun: 1.4, source: p });
+      game.hitRadius(center, SKILL_AIM_SHAPES.shield_bash.radius, c.dmg, { kb: 7, kind: 'blunt', stun: 1.4, source: p });
       if (hasTownSkillVariant(p, 'shield_bash', 'aftershock')) game.after(.22, () => game.hitRadius(center, 3.4, c.dmg * .45, { kb: 3, kind: 'blunt', stun: .45, source: p, quietStop: true }));
       game.fx.shockTex(center, 0xffe0a0, { r1: 6.5, life: 0.5 });
       game.fx.explosion(center, { size: 4.5, color: 0xffe0b0, life: 0.45 });
@@ -180,7 +236,7 @@ export const SKILLS = {
     update(game, p, c, dt) { c.data.vac -= dt; if (c.data.vac <= 0 && c.t < 1.1) { c.data.vac = 0.1; game.vacuum(p.pos, 12, 9); } },
     cast(game, p, c) {
       const f = p.forward(new THREE.Vector3());
-      game.hitArea(p, p.pos, p.yaw, 7.2, 130, c.dmg, { kb: 10, kind: 'slash', finisher: true, skillCast:c, up: true, source: p });
+      game.hitArea(p, p.pos, p.yaw, SKILL_AIM_SHAPES.dragon_slash.range, SKILL_AIM_SHAPES.dragon_slash.angle, c.dmg, { kb: 10, kind: 'slash', finisher: true, skillCast:c, up: true, source: p });
       // 3중 참격 + 관통 파동
       for (let i = -1; i <= 1; i++) {
         const d = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.32);
@@ -219,11 +275,11 @@ export const SKILLS = {
   },
   quake: {
     dur: 0.9,
-    start(game, p, c) { c.data.gatherCenter = fwd(p, 1.5); gatherEnemies(game, c.data.gatherCenter, 9, 12, .36); },
+    start(game, p, c) { c.data.gatherCenter = c.data.aimPoint?.clone() || fwd(p, SKILL_AIM_SHAPES.quake.range); gatherEnemies(game, c.data.gatherCenter, 9, 12, .36); },
     update(game, _p, c) { if (!c.cast) gatherEnemies(game, c.data.gatherCenter, 9, 12); },
     cast(game, p, c) {
       const center = c.data.gatherCenter || fwd(p, 1.5);
-      game.hitRadius(center, 8, c.dmg, { kb: 9, kind: 'blunt', up: true, stun: 0.8, source: p, dirFrom: center });
+      game.hitRadius(center, SKILL_AIM_SHAPES.quake.radius, c.dmg, { kb: 9, kind: 'blunt', up: true, stun: 0.8, source: p, dirFrom: center });
       if (hasTownSkillVariant(p, 'quake', 'aftershock')) game.after(.28, () => game.hitRadius(center, 6, c.dmg * .55, { kb: 5, kind: 'blunt', up: true, source: p, dirFrom: center, quietStop: true }));
       [0, 0.08, 0.16].forEach((d, i) => game.after(d, () => { game.fx.shockTex(center, i === 1 ? 0xffffff : 0xff9a4a, { r1: 5 + i * 4, life: 0.5 + i * 0.1 }); game.renderer.shake(0.5); audio.thump({ vol: 0.8, freq: 55 - i * 8, dur: 0.3 }); }));
       game.fx.explosion(center, { size: 8, color: 0xff9a50, life: 0.6 });
@@ -252,7 +308,7 @@ export const SKILLS = {
     dur: 1.0, total: 2.4,
     start(game, p, c) { audio.fire({ vol: 0.5, dur: 1.2 }); audio.magic({ vol: 0.5, base: 196, notes: [0, 5, 7, 12], step: 0.12, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff5020, { radius: 5, life: 1.0, demon: true }); game.fx.embers(p.pos, 0xff5020, { n: 30, radius: 2, life: 1.5, rise: 6 }); },
     cast(game, p, c) {
-      const target = densest(game, p, 13, 4) || fwd(p, 4);
+      const target = c.data.aimPoint?.clone() || densest(game, p, SKILL_AIM_SHAPES.hell_axe.range, 4) || fwd(p, 4);
       c.data.target = target;
       const orb = game.fx.orb(0xff5a20, 1.8); orb.position.copy(target).setY(16); game.scene.add(orb);
       game.fx.castCircle(target, 0xff5a20, { radius: 8, life: 0.8, demon: true });
@@ -261,7 +317,7 @@ export const SKILLS = {
       // 낙하 중 진공
       let vt = 0; game.fx.add(new THREE.Object3D(), fall, (k, t, dt) => { vt -= dt; if (vt <= 0) { vt = 0.08; game.vacuum(target, 7.5, 12); } });
       game.after(fall, () => {
-        game.hitRadius(target, 6, c.dmg, { kb: 10, kind: 'blunt', up: true, stun: .7, source: p, dirFrom: target });
+        game.hitRadius(target, SKILL_AIM_SHAPES.hell_axe.radius, c.dmg, { kb: 10, kind: 'blunt', up: true, stun: .7, source: p, dirFrom: target });
         game.fx.explosion(target, { size: 14, color: 0xffb070, life: 0.8 });
         game.fx.scorch(target, { radius: 6, life: 8 });
         [0, 0.1, 0.2].forEach((d, i) => game.after(d, () => game.fx.shockTex(target, i === 1 ? 0xffffff : 0xff6a20, { r1: 7 + i * 4, life: 0.6 })));
@@ -281,7 +337,7 @@ export const SKILLS = {
     cast(game, p, c) {
       const f = p.forward(new THREE.Vector3()); const sp = fwd(p, 1); sp.y = 1.4;
       const split = hasTownSkillVariant(p, 'fireball', 'split');
-      game.spawnProjectile({ pos: sp, dir: f, speed: 15, radius: 1.0, dmg: c.dmg, color: 0xff7a20, size: 0.9, owner: p, kb: 5, kind: 'magic', life: 1.0, trail: 0xff7a20, explode: { radius: split ? 5.2 : 4.2, color: 0xff7a20, profile: 'fire' } });
+      game.spawnProjectile({ pos: sp, dir: f, speed: SKILL_PROJECTILES.fire.speed, radius: SKILL_PROJECTILES.fire.radius, dmg: c.dmg, color: 0xff7a20, size: 0.9, owner: p, kb: 5, kind: 'magic', life: SKILL_PROJECTILES.fire.life, trail: 0xff7a20, explode: { radius: split ? 5.2 : 4.2, color: 0xff7a20, profile: 'fire' } });
       if (split) for (const angle of [-.22, .22]) game.spawnProjectile({ pos: sp.clone(), dir: f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), angle), speed: 15, radius: .55, dmg: c.dmg * .35, color: 0xffb040, size: .45, owner: p, kb: 3, kind: 'magic', life: .8, trail: 0xffa040 });
       game.fx.flash(sp, 0xff9a40, { size: 2.4 }); audio.fire({ vol: 0.5, dur: 0.5 }); audio.whoosh({ vol: 0.4, pitch: 0.6, dur: 0.4 });
     },
@@ -333,7 +389,7 @@ export const SKILLS = {
     dur: 1.0, total: 3.0,
     start(game, p, c) { audio.magic({ vol: 0.5, base: 261, notes: [0, 7, 12, 19, 24, 31], step: 0.1, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff9a40, { radius: 6, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 8, width: 2, life: 0.9, color: 0xff9a40 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 1.35, life: 0.78, heavy: true }); },
     cast(game, p, c) {
-      const focus = densest(game, p, 15, 5) || fwd(p, 4);
+      const focus = c.data.aimPoint?.clone() || densest(game, p, SKILL_AIM_SHAPES.meteor.range, 5) || fwd(p, 4);
       const pts = [];
       for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 + Math.random(); const r = i === 0 ? 0 : 1.2 + Math.random() * 3.2; pts.push(focus.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r))); }
       pts.forEach((pt, i) => game.after(i * 0.19, () => {
@@ -357,7 +413,7 @@ export const SKILLS = {
   shadow_dash: {
     dur: 0.6, total: 0.6,
     start(game, p, c) {
-      const t = densest(game, p, 13, 3.5); if (t) p.face(t.x, t.z);
+      const t = c.data.aimPoint || densest(game, p, 13, 3.5); if (t) p.face(t.x, t.z);
       const f = p.forward(new THREE.Vector3()); p.vel.copy(f).multiplyScalar(28); p.invuln = 0.6; c.data.hit = new Set(); c.data.g = 0;
       audio.whoosh({ vol: 0.7, pitch: 0.5, dur: 0.5 }); game.fx.dustPuff(p.pos, { size: 2.5, life: 0.5 }); game.fx.flash(p.pos.clone().setY(1), 0xb26bff, { size: 3.5 });
       game.fx.abilitySignature?.(p.pos, 'void', { scale: 0.72, life: 0.38 });
@@ -373,7 +429,7 @@ export const SKILLS = {
   poison_bomb: {
     dur: 0.8, total: 0.8,
     cast(game, p, c) {
-      const target = densest(game, p, 13, 3.5) || fwd(p, 5);
+      const target = c.data.aimPoint?.clone() || densest(game, p, SKILL_AIM_SHAPES.poison_bomb.range, 3.5) || fwd(p, 5);
       const orb = game.fx.orb(0x60ff80, 0.6); const start = p.pos.clone().setY(1.5); game.scene.add(orb);
       const fl = 0.5;
       game.fx.add(orb, fl, (k) => { orb.position.lerpVectors(start, target, k); orb.position.y = 1.5 + Math.sin(k * Math.PI) * 4; });
@@ -396,7 +452,7 @@ export const SKILLS = {
   },
   flurry: {
     dur: 1.4, total: 1.4,
-    start(game, p, c) { c.data.tick = 0; c.data.n = 0; p.startTrail(); game.fx.castCircle(p.pos, 0xb26bff, { radius: 3, life: 1.3 }); const e = p.nearestEnemy(9); if (e) { p.face(e.pos.x, e.pos.z); if (p.distTo(e) > 2.2) p.vel.copy(p.forward(new THREE.Vector3())).multiplyScalar((p.distTo(e) - 1.8) / 0.3); } },
+    start(game, p, c) { c.data.tick = 0; c.data.n = 0; p.startTrail(); game.fx.castCircle(p.pos, 0xb26bff, { radius: 3, life: 1.3 }); const e = c.data.aimPoint ? null : p.nearestEnemy(9); if (e) { p.face(e.pos.x, e.pos.z); if (p.distTo(e) > 2.2) p.vel.copy(p.forward(new THREE.Vector3())).multiplyScalar((p.distTo(e) - 1.8) / 0.3); } },
     update(game, p, c, dt) {
       if (c.t > 0.3) p.vel.set(0, 0, 0);
       game.vacuum(p.pos, 4.5, 6);
@@ -533,7 +589,7 @@ export const SKILLS = {
   bull_rush: {
     dur: 0.75, total: 0.75,
     start(game, p, c) {
-      const t = densest(game, p, 14, 4); if (t) p.face(t.x, t.z);
+      const t = c.data.aimPoint || densest(game, p, 14, 4); if (t) p.face(t.x, t.z);
       const f = p.forward(new THREE.Vector3());
       // 무적은 스킬 길이(0.75)만큼. 짧으면 끝자락에 무방비로 무리 한가운데 선다
       p.vel.copy(f).multiplyScalar(21); p.invuln = 0.8; c.data.hit = new Map(); c.data.g = 0;
@@ -827,18 +883,18 @@ export const SKILLS = {
   },
   // ================= 고위 액티브 Lv.35 / Lv.50 =================
   sunbreaker: { dur:.85, cast(game,p,c){ const at=fwd(p,4); game.vacuum(at,8,18); game.hitRadius(at,5.5,c.dmg,{kb:8,kind:'slash',source:p,dirFrom:at}); game.fx.shockTex(at,0xffd060,{r1:6,life:.45}); game.after(.18,()=>{if(game.active)game.hitRadius(at,6.5,c.dmg*.65,{kb:10,kind:'slash',source:p,dirFrom:at});}); } },
-  heavenfall: { dur:1, cast(game,p,c){ const at=densest(game,p,15,5)||p.pos.clone(); game.vacuum(at,12,24); game.fx.castCircle(at,0xfff0a0,{radius:7,life:.7}); game.after(.28,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.25,{kb:14,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xfff0a0,life:.55});}); } },
+  heavenfall: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,15,5)||p.pos.clone(); game.vacuum(at,12,24); game.fx.castCircle(at,0xfff0a0,{radius:7,life:.7}); game.after(.28,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.25,{kb:14,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xfff0a0,life:.55});}); } },
   // 설원의 혈진(교관): 두 번째 붕괴가 반경 8 → 9.5, 피해 0.8 → 1.1배가 된다.
   bloodquake: { dur:.9, cast(game,p,c){ const echo=hasTownSkillVariant(p,'bloodquake','echo'); const at=p.pos.clone(); game.vacuum(at,9,22); game.hitRadius(at,6,c.dmg,{kb:7,kind:'blunt',source:p,dirFrom:at}); game.after(.2,()=>{if(game.active)game.hitRadius(at,echo?9.5:8,c.dmg*(echo?1.1:.8),{kb:12,kind:'blunt',up:true,source:p,dirFrom:at});}); } },
-  cataclysm: { dur:1.1, cast(game,p,c){ const at=fwd(p,2); game.fx.castCircle(at,0xff5a3c,{radius:8,life:.8}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.3,{kb:16,kind:'blunt',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:12,color:0xff5a3c,life:.65});}); } },
-  star_prison: { dur:.9, cast(game,p,c){ const at=densest(game,p,16,5)||fwd(p,5); game.vacuum(at,13,28); game.fx.castCircle(at,0x74c8ff,{radius:7,life:.8}); game.after(.24,()=>{if(game.active)game.hitRadius(at,7,c.dmg*1.2,{kb:5,stun:1.2,kind:'magic',source:p,dirFrom:at});}); } },
+  cataclysm: { dur:1.1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||fwd(p,2); game.fx.castCircle(at,0xff5a3c,{radius:8,life:.8}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.3,{kb:16,kind:'blunt',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:12,color:0xff5a3c,life:.65});}); } },
+  star_prison: { dur:.9, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); game.vacuum(at,13,28); game.fx.castCircle(at,0x74c8ff,{radius:7,life:.8}); game.after(.24,()=>{if(game.active)game.hitRadius(at,7,c.dmg*1.2,{kb:5,stun:1.2,kind:'magic',source:p,dirFrom:at});}); } },
 
-  absolute_zero: { dur:1.05, cast(game,p,c){ const at=densest(game,p,17,6)||fwd(p,6); game.vacuum(at,12,18); game.fx.castCircle(at,0xccecff,{radius:8,life:.9}); game.after(.35,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.25,{kb:11,stun:1.8,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.iceBurst(at,{size:9,life:.55});}); } },
+  absolute_zero: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,17,6)||fwd(p,6); game.vacuum(at,12,18); game.fx.castCircle(at,0xccecff,{radius:8,life:.9}); game.after(.35,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.25,{kb:11,stun:1.8,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.iceBurst(at,{size:9,life:.55});}); } },
   // 별그림자 행렬(교관): 흡인 반경 9 → 13, 베기 반경 5 → 6.5.
-  night_parade: { dur:.85, cast(game,p,c){ const wide=hasTownSkillVariant(p,'night_parade','wide'); const at=densest(game,p,13,4)||fwd(p,3); game.vacuum(at,wide?13:9,25); for(let i=0;i<3;i++)game.after(i*.1,()=>{if(game.active)game.hitRadius(at,wide?6.5:5,c.dmg*.55,{kb:2,kind:'slash',source:p,dirFrom:at,quietStop:i>0});}); } },
-  eclipse_edge: { dur:1, cast(game,p,c){ const at=densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); game.fx.castCircle(at,0xb26bff,{radius:7,life:.7}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xb26bff,life:.55});}); } },
+  night_parade: { dur:.85, cast(game,p,c){ const wide=hasTownSkillVariant(p,'night_parade','wide'); const at=c.data.aimPoint?.clone()||densest(game,p,13,4)||fwd(p,3); game.vacuum(at,wide?13:9,25); for(let i=0;i<3;i++)game.after(i*.1,()=>{if(game.active)game.hitRadius(at,wide?6.5:5,c.dmg*.55,{kb:2,kind:'slash',source:p,dirFrom:at,quietStop:i>0});}); } },
+  eclipse_edge: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); game.fx.castCircle(at,0xb26bff,{radius:7,life:.7}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xb26bff,life:.55});}); } },
   gale_hunt: { dur:.9, cast(game,p,c){ rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4}); for(const delay of [.12,.24])game.after(delay,()=>{if(game.active&&p.alive)rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4});}); } },
-  skyfall_arrows: { dur:1.05, cast(game,p,c){ const at=densest(game,p,18,6)||fwd(p,7); game.fx.castCircle(at,0x7feac0,{radius:8,life:.8}); for(let i=0;i<5;i++)game.after(.16+i*.09,()=>{if(!game.active)return;const hit=at.clone().add(new THREE.Vector3(Math.cos(i*2.4)*2.2,0,Math.sin(i*2.4)*2.2));game.hitRadius(hit,4.2,c.dmg*.42,{kb:4,kind:'slash',source:p,dirFrom:hit,quietStop:i>1});game.fx.shockTex(hit,0x7feac0,{r1:3.8,life:.3});}); } },
+  skyfall_arrows: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,18,6)||fwd(p,7); game.fx.castCircle(at,0x7feac0,{radius:8,life:.8}); for(let i=0;i<5;i++)game.after(.16+i*.09,()=>{if(!game.active)return;const hit=at.clone().add(new THREE.Vector3(Math.cos(i*2.4)*2.2,0,Math.sin(i*2.4)*2.2));game.hitRadius(hit,4.2,c.dmg*.42,{kb:4,kind:'slash',source:p,dirFrom:hit,quietStop:i>1});game.fx.shockTex(hit,0x7feac0,{r1:3.8,life:.3});}); } },
 
   // Mechanics live outside the visual session's FX/SFX edits in this file.
   ...AWAKENING_III,

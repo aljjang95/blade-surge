@@ -1,0 +1,586 @@
+{
+  "scope": "격리 Chromium/CDP 터치, 초기 전투 상태 주입; 물리 기기 검증 아님",
+  "rows": [
+    {
+      "width": 1280,
+      "height": 590,
+      "holding": {
+        "aim": {
+          "slot": 0,
+          "active": true,
+          "sx": -0.9079593845004518,
+          "sy": -0.41905817746174695,
+          "x": -0.9648365630772384,
+          "z": -0.2628505403253006,
+          "dist01": 1,
+          "cancel": false
+        },
+        "queue": [],
+        "yaw": 0,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": true,
+        "meshes": 6,
+        "knob": {
+          "x": "-26.3308221505131px",
+          "y": "-12.152687146390662px",
+          "aiming": true
+        },
+        "cancelClasses": "on",
+        "pending": []
+      },
+      "released": {
+        "aim": null,
+        "queue": [
+          "skill0"
+        ],
+        "yaw": 0,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": true,
+        "meshes": 6,
+        "knob": {
+          "x": "",
+          "y": "",
+          "aiming": false
+        },
+        "cancelClasses": "",
+        "pending": [
+          {
+            "slot": 0,
+            "x": -0.9079593845004518,
+            "z": -0.41905817746174695,
+            "dist01": 1
+          }
+        ]
+      },
+      "cast": {
+        "aim": null,
+        "queue": [],
+        "yaw": -2.0032041023654346,
+        "mp": 84,
+        "cds": [
+          5,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": true,
+        "meshes": 6,
+        "knob": {
+          "x": "",
+          "y": "",
+          "aiming": false
+        },
+        "cancelClasses": "",
+        "pending": [],
+        "ctx": "holy_slash"
+      },
+      "cancelled": {
+        "aim": null,
+        "queue": [],
+        "yaw": -2.0032041023654346,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": false,
+        "meshes": 6,
+        "knob": {
+          "x": "",
+          "y": "",
+          "aiming": false
+        },
+        "cancelClasses": "",
+        "pending": []
+      },
+      "multi": {
+        "aim": {
+          "slot": 0,
+          "active": true,
+          "sx": -0.9079593845004518,
+          "sy": -0.41905817746174695,
+          "x": -0.9079593845004518,
+          "z": -0.41905817746174695,
+          "dist01": 1,
+          "cancel": false
+        },
+        "queue": [],
+        "yaw": -2.0032041023654346,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": true,
+        "view": false,
+        "meshes": 6,
+        "knob": {
+          "x": "-26.3308221505131px",
+          "y": "-12.152687146390662px",
+          "aiming": true
+        },
+        "cancelClasses": "on",
+        "pending": []
+      },
+      "tap": {
+        "aim": null,
+        "queue": [
+          "skill0"
+        ],
+        "yaw": -2.0032041023654346,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": false,
+        "meshes": 6,
+        "knob": {
+          "x": "",
+          "y": "",
+          "aiming": false
+        },
+        "cancelClasses": "",
+        "pending": []
+      },
+      "expectedYaw": -2.0032041023654346,
+      "angleError": 0,
+      "markup": "취소/knob 테스트 DOM 주입"
+    },
+    {
+      "width": 844,
+      "height": 390,
+      "holding": {
+        "aim": {
+          "slot": 0,
+          "active": true,
+          "sx": -0.9079593845004518,
+          "sy": -0.41905817746174695,
+          "x": -0.9079593845004518,
+          "z": -0.41905817746174695,
+          "dist01": 1,
+          "cancel": false
+        },
+        "queue": [],
+        "yaw": -2.0032041023654346,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": true,
+        "meshes": 6,
+        "knob": {
+          "x": "-23.606943997011744px",
+          "y": "-10.89551261400542px",
+          "aiming": true
+        },
+        "cancelClasses": "on",
+        "pending": []
+      },
+      "released": {
+        "aim": null,
+        "queue": [
+          "skill0"
+        ],
+        "yaw": -2.0032041023654346,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": true,
+        "meshes": 6,
+        "knob": {
+          "x": "",
+          "y": "",
+          "aiming": false
+        },
+        "cancelClasses": "",
+        "pending": [
+          {
+            "slot": 0,
+            "x": -0.9079593845004518,
+            "z": -0.41905817746174695,
+            "dist01": 1
+          }
+        ]
+      },
+      "cast": {
+        "aim": null,
+        "queue": [],
+        "yaw": -2.0032041023654346,
+        "mp": 84,
+        "cds": [
+          5,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": true,
+        "meshes": 6,
+        "knob": {
+          "x": "",
+          "y": "",
+          "aiming": false
+        },
+        "cancelClasses": "",
+        "pending": [],
+        "ctx": "holy_slash"
+      },
+      "cancelled": {
+        "aim": null,
+        "queue": [],
+        "yaw": -2.0032041023654346,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": false,
+        "meshes": 6,
+        "knob": {
+          "x": "",
+          "y": "",
+          "aiming": false
+        },
+        "cancelClasses": "",
+        "pending": []
+      },
+      "multi": {
+        "aim": {
+          "slot": 0,
+          "active": true,
+          "sx": -0.9079593845004518,
+          "sy": -0.41905817746174695,
+          "x": -0.9079593845004518,
+          "z": -0.41905817746174695,
+          "dist01": 1,
+          "cancel": false
+        },
+        "queue": [],
+        "yaw": -2.0032041023654346,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": true,
+        "view": false,
+        "meshes": 6,
+        "knob": {
+          "x": "-23.606943997011744px",
+          "y": "-10.89551261400542px",
+          "aiming": true
+        },
+        "cancelClasses": "on",
+        "pending": []
+      },
+      "tap": {
+        "aim": null,
+        "queue": [
+          "skill0"
+        ],
+        "yaw": -2.0032041023654346,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": false,
+        "meshes": 6,
+        "knob": {
+          "x": "",
+          "y": "",
+          "aiming": false
+        },
+        "cancelClasses": "",
+        "pending": []
+      },
+      "expectedYaw": -2.0032041023654346,
+      "angleError": 0,
+      "markup": "취소/knob 테스트 DOM 주입"
+    },
+    {
+      "width": 800,
+      "height": 360,
+      "holding": {
+        "aim": {
+          "slot": 0,
+          "active": true,
+          "sx": -0.9079593845004518,
+          "sy": -0.41905817746174695,
+          "x": -0.9079593845004518,
+          "z": -0.41905817746174695,
+          "dist01": 1,
+          "cancel": false
+        },
+        "queue": [],
+        "yaw": -2.0032041023654346,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": true,
+        "meshes": 6,
+        "knob": {
+          "x": "-21.79102522801084px",
+          "y": "-10.057396259081926px",
+          "aiming": true
+        },
+        "cancelClasses": "on",
+        "pending": []
+      },
+      "released": {
+        "aim": null,
+        "queue": [
+          "skill0"
+        ],
+        "yaw": -2.0032041023654346,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": true,
+        "meshes": 6,
+        "knob": {
+          "x": "",
+          "y": "",
+          "aiming": false
+        },
+        "cancelClasses": "",
+        "pending": [
+          {
+            "slot": 0,
+            "x": -0.9079593845004518,
+            "z": -0.41905817746174695,
+            "dist01": 1
+          }
+        ]
+      },
+      "cast": {
+        "aim": null,
+        "queue": [],
+        "yaw": -2.0032041023654346,
+        "mp": 84,
+        "cds": [
+          5,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": true,
+        "meshes": 6,
+        "knob": {
+          "x": "",
+          "y": "",
+          "aiming": false
+        },
+        "cancelClasses": "",
+        "pending": [],
+        "ctx": "holy_slash"
+      },
+      "cancelled": {
+        "aim": null,
+        "queue": [],
+        "yaw": -2.0032041023654346,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": false,
+        "meshes": 6,
+        "knob": {
+          "x": "",
+          "y": "",
+          "aiming": false
+        },
+        "cancelClasses": "",
+        "pending": []
+      },
+      "multi": {
+        "aim": {
+          "slot": 0,
+          "active": true,
+          "sx": -0.9079593845004518,
+          "sy": -0.41905817746174695,
+          "x": -0.9079593845004518,
+          "z": -0.41905817746174695,
+          "dist01": 1,
+          "cancel": false
+        },
+        "queue": [],
+        "yaw": -2.0032041023654346,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": true,
+        "view": false,
+        "meshes": 6,
+        "knob": {
+          "x": "-21.79102522801084px",
+          "y": "-10.057396259081926px",
+          "aiming": true
+        },
+        "cancelClasses": "on",
+        "pending": []
+      },
+      "tap": {
+        "aim": null,
+        "queue": [
+          "skill0"
+        ],
+        "yaw": -2.0032041023654346,
+        "mp": 100,
+        "cds": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "joy": false,
+        "view": false,
+        "meshes": 6,
+        "knob": {
+          "x": "",
+          "y": "",
+          "aiming": false
+        },
+        "cancelClasses": "",
+        "pending": []
+      },
+      "expectedYaw": -2.0032041023654346,
+      "angleError": 0,
+      "markup": "취소/knob 테스트 DOM 주입"
+    }
+  ],
+  "errors": [],
+  "pass": true
+}
