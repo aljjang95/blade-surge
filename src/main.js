@@ -2,6 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import { Renderer } from './engine/renderer.js';
 import { LobbyCameraControls, releaseBlockedLobbyInput } from './engine/lobby-camera.js';
+import { createLobbyPose } from './engine/lobby-pose.js';
 import { bindTouchActivation } from './engine/touch-activation.js';
 import { CameraControls } from './engine/camera-control.js';
 import { setupPwa } from './platform/pwa.js';
@@ -283,16 +284,18 @@ class App {
   async showcaseHero(id, first = false) {
     const def = HEROES[id];
     this.companionAgent?.cancelDialogue();
-    if (this.showcase) { this.hubMovement.detach(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
+    if (this.showcase) { this.hubMovement.detach(); this.showcase.pose?.dispose(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
     if (!this.arena.lobbyHall) this.arena.buildLobby();
     const { root, mixer, clips } = spawnCharacter(this.models[def.model]);
     root.rotation.y = Math.PI * 0.15;
     const look = applyLook(root, def, this.eco.heroEquipInsts(id), { avatarId: this.eco.equippedAvatar(id) });   // 로비 쇼케이스도 장착 장비대로
     const a = mixer.clipAction(clips['Idle']); a.play();
-    // Establish the authored idle pose even when reduced motion stops later ticks.
+    // 감소된 움직임에서도 교정된 정지 자세를 첫 프레임부터 적용한다.
     mixer.update(0);
+    const pose = createLobbyPose(root, id);
+    pose?.apply();
     this.scene.add(root);
-    this.showcase = { root, mixer, clips, def, look, t: 0, next: 4 + Math.random() * 3, auraT: 0 };
+    this.showcase = { root, mixer, clips, def, look, pose, t: 0, next: 4 + Math.random() * 3, auraT: 0 };
     this.hubMovement.attach(this.showcase);
     this.companionAgent?.syncLobbyContext();
     if (!first) { this.fx.pillar(root.position, def.color, { radius: 1.2, height: 8, life: 0.8 }); this.fx.burst(root.position.clone().setY(1), def.color, { n: 40, speed: 6, size: 0.4, up: 1 }); audio.magic({ vol: 0.3, base: 440, notes: [0, 4, 7, 12] }); }
@@ -367,7 +370,7 @@ class App {
       }
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
       $('stage-loading').hidden = false;
-      if (this.showcase) { this.hubMovement.detach(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
+      if (this.showcase) { this.hubMovement.detach(); this.showcase.pose?.dispose(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
       this.mode = 'battle';
       this._bossAttemptTracked = false;
       const id = this.eco.s.selected;
@@ -403,7 +406,7 @@ class App {
       this.journeyView?.close();
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
       $('stage-loading').hidden = false;
-      if (this.showcase) { this.hubMovement.detach(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
+      if (this.showcase) { this.hubMovement.detach(); this.showcase.pose?.dispose(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
       this.mode = 'battle';
       this._bossAttemptTracked = false;
       const heroId = this.eco.s.selected;
@@ -465,7 +468,9 @@ class App {
         this.hubMovement.update(realDt, move, yaw);
         if (this.hubControls.consumeInteract()) this.interactHub(this.hubMovement.nearest);
         // Walking animation remains functional when ambient motion is reduced.
+        s.pose?.restore();
         if (!this.reducedMotion.matches || this.hubMovement.moving) s.mixer.update(realDt);
+        s.pose?.apply();
         this.renderer.rig.target.copy(s.root.position);
         this.hubUI.update(this.hubMovement.nearest, { blocked: !this.canWalkHub() });
         this.arena.lobbyHall?.userData.update(realDt, { nearestId: this.hubMovement.nearest?.id, playerPosition: s.root.position, reducedMotion: this.reducedMotion.matches });
