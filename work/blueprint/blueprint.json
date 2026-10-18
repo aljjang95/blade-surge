@@ -135,6 +135,51 @@
       "chosen": true,
       "note": "던전 선택이 한눈에 보이고 영웅이 가려지지 않는다(대표님 규칙: UI는 플레이를 가리지 않는다)",
       "sha256": "fc8ea098fcb8124429804f191bf8dbae811ec6ff2159348fa448e9490d2d7bcf"
+    },
+    {
+      "id": "C9",
+      "group": "star-archive-20261018",
+      "title": "흰 대리석·금 별 나침반·크리스털 책장 별빛 서고",
+      "image": "images/star-s1.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": true,
+      "note": "지역 원화(star_archive.webp)와 같은 화풍, 밝은 바닥 위에 적·영웅이 또렷하다",
+      "sha256": "ccb2c07af67ee73834efa7e16ffa2fb21f8769d0530f4db1557b7b661a485de3"
+    },
+    {
+      "id": "C10",
+      "group": "star-archive-20261018",
+      "title": "밤하늘 별자리 선 서고",
+      "image": "images/star-s2.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": false,
+      "note": "보스 방·심층용 후보",
+      "sha256": "30ddd07b8b7d49fa54cfb986c4435c358e89cb7ee1493e4969a6338fcf04f4e3"
+    },
+    {
+      "id": "C11",
+      "group": "star-archive-20261018",
+      "title": "구름 위 발코니 서고",
+      "image": "images/star-s3.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 3,
+        "distinct": 5
+      },
+      "chosen": false,
+      "note": "외벽 개방이 넓어 전투 공간 경계가 약함",
+      "sha256": "afa4bd6c264f60abc460ab76df591b65e627a9a1a8d72f279e377325aca2cb0c"
     }
   ],
   "nodes": [
@@ -310,6 +355,31 @@
       "checks": [
         "대표님이 지적한 팔 균형 문제 없이 서 있는 자세"
       ]
+    },
+    {
+      "id": "star-archive-room",
+      "type": "screen",
+      "group": "star-archive-20261018",
+      "title": "별빛 서고 전투 방",
+      "image": "images/star-s1.jpg",
+      "checks": [
+        "흰·옅은 파랑 대리석 타일 바닥에 금색 줄눈",
+        "전투 공간 중앙 아래 큰 금 별 나침반 장식(남색 원판)",
+        "양쪽 벽 흰 대리석 책장과 빛나는 청색 크리스털 책",
+        "모서리 투명한 청색 크리스털 무리",
+        "뒤쪽 벽 위 금색 혼천의(아밀러리 구)",
+        "위에서 내리는 차가운 달빛과 은은한 청색 번짐",
+        "전투 중앙은 장식 없이 바닥만"
+      ],
+      "risks": [
+        "바닥은 public/textures/star-archive/floor-marble.webp 반복, 나침반은 rosette.webp 데칼 평면",
+        "책장 면은 crystal-books.webp를 기존 frost 책장 상자에 입히고 인스턴싱",
+        "크리스털은 crystal-cluster.webp 빌보드 또는 저폴리 기하+가산 발광",
+        "혼천의는 토러스 3~4개 병합 메시",
+        "모바일 프레임 p95 27ms 이하 유지(현재 기준)"
+      ],
+      "copy": [],
+      "sha256": "ccb2c07af67ee73834efa7e16ffa2fb21f8769d0530f4db1557b7b661a485de3"
     }
   ],
   "edges": [
@@ -367,6 +437,16 @@
       "from": "lobby-hero-idle",
       "to": "lobby-hero-pose",
       "type": "reads"
+    },
+    {
+      "from": "star-archive-room",
+      "to": "dungeon-map-art",
+      "type": "contains"
+    },
+    {
+      "from": "star-archive-room",
+      "to": "asset-foundry",
+      "type": "writes"
     }
   ],
   "acceptance": [
@@ -435,6 +515,12 @@
       "node": "lobby-screen",
       "criterion": "로비에서 던전 카드를 넘겨 고르고 큰 출격 버튼으로 기존 출격 준비 흐름에 들어가며, 어느 화면 크기에서도 영웅이 UI에 가려지지 않는다",
       "surface": "로비 1280x590·844x390·800x360 캡처, 카드 선택·출격 실제 터치, blueprint shot 비교"
+    },
+    {
+      "id": "A11",
+      "node": "star-archive-room",
+      "criterion": "별빛 서고 전투 방이 시안 C9처럼 흰 대리석 바닥·금 나침반·크리스털 책장·혼천의로 보이고 적·영웅이 바닥과 대비되어 또렷하며 프레임이 기존보다 크게 나빠지지 않는다",
+      "surface": "실제 로비→출격→전투 캡처 1280x590·844x390와 blueprint shot, 프레임 p50·p95"
     }
   ],
   "decisions": [
@@ -467,6 +553,11 @@
       "id": "D6",
       "text": "로비 UI는 C8(하단 카드 캐러셀·왼쪽 탭·큰 출격). C7은 현재와 차이가 작다",
       "source": "대표님 2026-10-18 \"여러 가지에 대한 맵 그래픽 UI\" + 점수표"
+    },
+    {
+      "id": "D7",
+      "text": "별빛 서고는 C9. 확장 던전 그림 5장(뿌리잠식 동굴·슬래그워터 제련소·불씨항 건선거·오로라 빙정호·왕관붕괴 빙하)은 기존 원화 화풍으로 생성해 채운다",
+      "source": "대표님 2026-10-18 맵 그래픽 UI + 3차 사이클 빠진 그림"
     }
   ],
   "outOfScope": [
@@ -485,6 +576,12 @@
       "reason": "로비 UI 시안 묶음(C7·C8) 추가, C8 선택, 노드 lobby-screen·lobby-hero-idle·기준 A10",
       "from": "2d3397e774ce",
       "to": "1f15de4e43b4"
+    },
+    {
+      "at": "2026-10-18T11:34:53.725Z",
+      "reason": "별빛 서고 시안 묶음(C9~C11) 추가, C9 선택, 노드 star-archive-room·기준 A11",
+      "from": "1f15de4e43b4",
+      "to": "9ed6cdc41d3d"
     }
   ],
   "shots": [
@@ -497,7 +594,7 @@
       "note": "1280x590 개발 서버 b81c1b5"
     }
   ],
-  "lockedDigest": "1f15de4e43b4c159d9e829313cd5b30910059c4f9435736a23cd7af81291b941",
-  "lockedAt": "2026-10-18T10:26:14.117Z",
+  "lockedDigest": "9ed6cdc41d3da8b82adeea82a26d30d278d1e5fbf4feadf938c9b6c794d8fed7",
+  "lockedAt": "2026-10-18T11:34:53.725Z",
   "firstLockedAt": "2026-10-18T07:12:43.638Z"
 }
