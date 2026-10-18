@@ -56,6 +56,7 @@ export class SkillAimView {
     this.rangeMaterial = discMaterial(.13);
     this.targetMaterial = discMaterial(.3);
     this.coneMaterial = discMaterial(.26);
+    this.fanMaterial = discMaterial(.26);
     this.laneMaterial = new THREE.ShaderMaterial({ vertexShader: LANE_VERTEX, fragmentShader: LANE_FRAGMENT, transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
       uniforms: { uColor: { value: AIM_COLOR }, uWidth: { value: 1 }, uLength: { value: 1 }, uOpacity: { value: 1 } } });
     this.headMaterial = new THREE.MeshBasicMaterial({ color: 0xc8f8ff, transparent: true, opacity: .92, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
@@ -69,7 +70,8 @@ export class SkillAimView {
     this.head = new THREE.Mesh(head, this.headMaterial); this.head.renderOrder = 13; this.head.frustumCulled = false;
     // 최대 한 바퀴의 고정 버퍼에서 drawRange만 바꿔 부채꼴 각도를 선택한다.
     this.cone = flat(new THREE.CircleGeometry(1, 360, 0, Math.PI * 2), this.coneMaterial);
-    this.direction.add(this.lane, this.head, this.cone);
+    this.fan = flat(new THREE.CircleGeometry(1, 360, 0, Math.PI * 2), this.fanMaterial);
+    this.direction.add(this.lane, this.head, this.cone, this.fan);
     this.group.add(this.range, this.direction, this.target);
     scene.add(this.group);
   }
@@ -77,31 +79,46 @@ export class SkillAimView {
     this.group.visible = !!player?.alive && !!aim?.active && !aim.cancel && !!shape;
     if (!this.group.visible) return;
     this.group.position.set(player.pos.x, player.pos.y + .07, player.pos.z);
-    const distance = shape.range, origin = shape.origin || 0;
-    const reach = Math.max(.8, distance + origin);
+    const distance = shape.range, origin = shape.origin || 0, tip = shape.tip || 0;
+    const reach = Math.max(.8, distance + origin + tip);
     this.range.scale.setScalar(reach); this.rangeMaterial.uniforms.uRadius.value = reach;
     this.rangeMaterial.uniforms.uEdge.value = Math.min(.32, .14 + reach * .008);
     this.direction.rotation.y = Math.atan2(aim.x, aim.z);
     const line = shape.kind === 'line', cone = shape.kind === 'cone', circle = shape.kind === 'circle';
     const showLane = line || circle || !!shape.projectileRange;
     const length = Math.max(.001, circle ? distance * aim.dist01 : (shape.projectileRange || distance));
+    // 직선 투사체·돌진 몸통은 경로 끝에서 반경(tip)만큼 더 나아간다. 끝 원(target)은 경로 끝 기준 그대로 둔다.
+    const laneLength = line ? length + tip : length;
     const width = circle ? .42 : Math.max(.7, shape.width || .3);
     this.lane.visible = showLane; this.head.visible = showLane && !circle;
     if (showLane) {
       this.lane.position.z = origin;
-      this.lane.scale.set(width, length, 1);
-      this.laneMaterial.uniforms.uWidth.value = width; this.laneMaterial.uniforms.uLength.value = length;
-      const headWidth = Math.max(1.3, width * 1.45), headLength = Math.min(length * .4, headWidth * .75);
+      this.lane.scale.set(width, laneLength, 1);
+      this.laneMaterial.uniforms.uWidth.value = width; this.laneMaterial.uniforms.uLength.value = laneLength;
+      const headWidth = Math.max(1.3, width * 1.45), headLength = Math.min(laneLength * .4, headWidth * .75);
       this.head.scale.set(headWidth, 1, headLength);
-      this.head.position.set(0, .01, origin + length - headLength * .35);
+      this.head.position.set(0, .01, origin + laneLength - headLength * .35);
     }
     this.cone.visible = cone;
     if (cone) {
       const angle = Math.min(360, Math.max(1, Math.round(shape.angle)));
       this.cone.geometry.setDrawRange(0, angle * 3);
       this.cone.rotation.z = -Math.PI / 2 - angle * Math.PI / 360;
-      this.cone.scale.setScalar(distance);
-      this.coneMaterial.uniforms.uRadius.value = distance; this.coneMaterial.uniforms.uEdge.value = .2;
+      // 화살 부채는 꼭짓점을 뒤로 물린 부채꼴(back)로 그려 각 화살 몸통이 훑는 바깥 선과 맞춘다.
+      const coneRadius = shape.coneRadius || distance;
+      this.cone.position.z = -(shape.back || 0);
+      this.cone.scale.setScalar(coneRadius);
+      this.coneMaterial.uniforms.uRadius.value = coneRadius; this.coneMaterial.uniforms.uEdge.value = .2;
+    }
+    const fan = cone && shape.fanAngle > 0;
+    this.fan.visible = fan;
+    if (fan) {
+      const angle = Math.min(360, Math.max(1, Math.round(shape.fanAngle)));
+      this.fan.geometry.setDrawRange(0, angle * 3);
+      this.fan.rotation.z = -Math.PI / 2 - angle * Math.PI / 360;
+      this.fan.position.z = -shape.fanBack;
+      this.fan.scale.setScalar(shape.fanRange);
+      this.fanMaterial.uniforms.uRadius.value = shape.fanRange; this.fanMaterial.uniforms.uEdge.value = .2;
     }
     this.target.visible = circle || (line && shape.radius > 0);
     if (this.target.visible) {
@@ -114,6 +131,6 @@ export class SkillAimView {
   dispose() {
     this.group.removeFromParent();
     this.group.traverse(node => { if (node.isMesh) node.geometry.dispose(); });
-    for (const m of [this.rangeMaterial, this.targetMaterial, this.coneMaterial, this.laneMaterial, this.headMaterial]) m.dispose();
+    for (const m of [this.rangeMaterial, this.targetMaterial, this.coneMaterial, this.fanMaterial, this.laneMaterial, this.headMaterial]) m.dispose();
   }
 }

@@ -40,12 +40,12 @@ export const SKILL_PROJECTILES = Object.freeze({
 export const SKILL_AIM_SHAPES = Object.freeze({
   guardian_guard: { kind: 'self', range: 0 },
   guardian_rebuke: { kind: 'self', range: 4, radius: 4 },
-  ranger_pierce: { kind: 'line', range: SKILL_PROJECTILES.pierce.speed * SKILL_PROJECTILES.pierce.life, width: .65 * 2, origin: .8 },
-  ranger_volley: { kind: 'cone', range: SKILL_PROJECTILES.volley.speed * SKILL_PROJECTILES.volley.life, angle: .48 * 180 / Math.PI, width: 1.6, origin: .8 },
-  ranger_retreat: { kind: 'line', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, width: 1.4, origin: .8 },
-  ranger_tempest: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: 1.08 * 180 / Math.PI, width: 1.9, origin: .8 },
-  ranger_quickshot: { kind: 'line', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, width: 1.4, origin: .8 },
-  ranger_binding: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: .72 * 180 / Math.PI, width: 1.4, origin: .8 },
+  ranger_pierce: { kind: 'line', range: SKILL_PROJECTILES.pierce.speed * SKILL_PROJECTILES.pierce.life, width: .65 * 2, origin: 1 },
+  ranger_volley: { kind: 'cone', range: SKILL_PROJECTILES.volley.speed * SKILL_PROJECTILES.volley.life, angle: .48 * 180 / Math.PI, width: 1.6, origin: 1 },
+  ranger_retreat: { kind: 'line', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, width: 1.4, origin: 1 },
+  ranger_tempest: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: 1.08 * 180 / Math.PI, width: 1.9, origin: 1 },
+  ranger_quickshot: { kind: 'line', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, width: 1.4, origin: 1 },
+  ranger_binding: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: .72 * 180 / Math.PI, width: 1.4, origin: 1 },
   holy_slash: { kind: 'line', range: SKILL_PROJECTILES.holy.speed * SKILL_PROJECTILES.holy.life, width: 4, origin: 1 },
   shield_bash: { kind: 'circle', range: 1.2, radius: 5 },
   judgment: { kind: 'self', range: 12, radius: 2.2 },
@@ -79,7 +79,7 @@ export const SKILL_AIM_SHAPES = Object.freeze({
   absolute_zero: { kind: 'circle', range: 17, radius: 9 },
   night_parade: { kind: 'circle', range: 13, radius: 5 },
   eclipse_edge: { kind: 'circle', range: 16, radius: 8 },
-  gale_hunt: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: .36 * 180 / Math.PI, width: 1.8, origin: .8 },
+  gale_hunt: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: .36 * 180 / Math.PI, width: 1.8, origin: 1 },
   skyfall_arrows: { kind: 'circle', range: 18, radius: 2.2 + 4.2 },
 });
 for (const shape of Object.values(SKILL_AIM_SHAPES)) Object.freeze(shape);

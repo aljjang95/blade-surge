@@ -72,6 +72,7 @@ const BOOT_TIPS = [
 ];
 
 import { applyLook } from './game/look.js';
+import { playerSkillAimShape } from './game/skill-aim/shapes.js';
 import { createFunnelLog, sessionOpenEvents } from './game/funnel-events.js';
 
 // 시작 실패를 단계별로 분류하기 위한 현재 단계. App 생성자가 실패하면 인스턴스가 없으므로 모듈에 둔다.
@@ -524,5 +525,7 @@ try {
   app = new App();
   window.app = app;
   window.__EN = ENEMIES; window.__stageDef = stageDef; window.__THREE = THREE;
+  // 조준 표시=판정 QA(tools/aim-hitbox-truth-qa.mjs)가 정식 빌드에서도 표시 모양을 읽도록 읽기 전용 함수만 노출한다.
+  window.__skillAimShape = playerSkillAimShape;
 } catch (error) { bootFailure(error); }
 if (app) app.boot().catch(error => bootFailure(error, app));
