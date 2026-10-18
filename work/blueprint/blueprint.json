@@ -487,7 +487,16 @@
       "to": "1f15de4e43b4"
     }
   ],
-  "shots": [],
+  "shots": [
+    {
+      "node": "lobby-screen",
+      "image": "images/shots/lobby-screen-20261018T110911-3d59c0.png",
+      "sha256": "8eef2862436a1e1bb46a56987fb2d11871b852169a32f64f5b44250b975d88cd",
+      "at": "2026-10-18T11:09:11.482Z",
+      "blueprintDigest": "1f15de4e43b4c159d9e829313cd5b30910059c4f9435736a23cd7af81291b941",
+      "note": "1280x590 개발 서버 b81c1b5"
+    }
+  ],
   "lockedDigest": "1f15de4e43b4c159d9e829313cd5b30910059c4f9435736a23cd7af81291b941",
   "lockedAt": "2026-10-18T10:26:14.117Z",
   "firstLockedAt": "2026-10-18T07:12:43.638Z"
