@@ -278,7 +278,7 @@ test('실제 R2의 세 저작 동작은 직접 생성·교체에서 같고 다�
     expect(applyLibraryHeroBody(swapped.root, t1)).toBe(true);
     expect(swapped.root.userData.libraryBodyAssetId).toBe(t1.id);
     for (const key of aliases) expect(swapped.clips[key]).toBe(originalStab);
-    for (const name of ['dodge', 'death', 'stab']) expect(swapped.clips[name]).toBe(canonical.animations.find(clip => clip.name === name));
+    for (const name of ['dodge', 'death', 'stab']) expect(swapped.clips[name]).toBe(canonical.animations.find((clip: THREE.AnimationClip) => clip.name === name));
     expect(playing.getClip()).toBe(originalStab); expect(playing.time).toBe(actionTime);
     expect(playing.isRunning()).toBe(true);
     expect(swapped.clips.PlayerCustomStab).toBe(originalStab);
