@@ -43,6 +43,19 @@ for (const data of Object.values(LOBBY_POSE_CORRECTIONS)) {
 }
 Object.freeze(LOBBY_POSE_CORRECTIONS);
 
+/**
+ * 교정은 Idle 한 주기에서 잰 값이므로 Idle 자세에만 맞는다. Running_A 같은 다른 클립 위에 그대로 얹으면 팔이 몸을 뚫는다
+ * (2026-10-19 전투 자세 감사: 마을 걷기에서 기사 무기가 몸통 16cm, 궁수 팔 5cm 관통). 그래서 Idle 액션의 실효 가중치만큼만 적용한다.
+ * Idle→달리기 전환(0.16초 교차 페이드)에서는 교정이 같은 속도로 사라졌다가 돌아온다. 할당 없음.
+ * @param {{ isRunning: () => boolean, getEffectiveWeight: () => number } | null | undefined} idleAction
+ */
+export function lobbyPoseWeight(idleAction) {
+  if (!idleAction) return 1;
+  if (!idleAction.isRunning()) return 0;
+  const w = idleAction.getEffectiveWeight();
+  return w > 1 ? 1 : w > 0 ? w : 0;
+}
+
 /** 쇼케이스만 명시적으로 소유한다. 교정 없는 직업·호환되지 않는 골격은 그대로 둔다. */
 export function createLobbyPose(root, heroId) {
   const data = LOBBY_POSE_CORRECTIONS[heroId];
@@ -56,6 +69,7 @@ export function createLobbyPose(root, heroId) {
     )) });
   }
   let applied = false, disposed = false;
+  const partial = new Quaternion();
   return {
     // mixer가 덮어쓰지 않는 트랙과 reducedMotion에서도 추가 회전이 누적되지 않게 원본을 복원한다.
     restore() {
@@ -63,12 +77,14 @@ export function createLobbyPose(root, heroId) {
       for (let i = 0; i < entries.length; i++) entries[i].bone.quaternion.copy(entries[i].base);
       applied = false;
     },
-    apply() {
-      if (disposed || applied) return;
+    /** @param {number} [weight] 0~1. 1이면 교정 전체, 0이면 원본 그대로(복원할 것이 없다). */
+    apply(weight = 1) {
+      if (disposed || applied || !(weight > 0)) return;
       for (let i = 0; i < entries.length; i++) {
         const entry = entries[i];
         entry.base.copy(entry.bone.quaternion);
-        entry.bone.quaternion.multiply(entry.correction);
+        if (weight >= 1) entry.bone.quaternion.multiply(entry.correction);
+        else entry.bone.quaternion.multiply(partial.identity().slerp(entry.correction, weight));
       }
       applied = true;
     },

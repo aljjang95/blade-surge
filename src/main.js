@@ -2,7 +2,7 @@ import './style.css';
 import * as THREE from 'three';
 import { Renderer } from './engine/renderer.js';
 import { LobbyCameraControls, releaseBlockedLobbyInput } from './engine/lobby-camera.js';
-import { createLobbyPose } from './engine/lobby-pose.js';
+import { createLobbyPose, lobbyPoseWeight } from './engine/lobby-pose.js';
 import { bindTouchActivation } from './engine/touch-activation.js';
 import { CameraControls } from './engine/camera-control.js';
 import { setupPwa } from './platform/pwa.js';
@@ -71,7 +71,7 @@ const BOOT_TIPS = [
   '<b>질주</b> 중 적과 부딪히면 넉백. 무리 사이를 가르며 달려라.',
 ];
 
-import { applyLook } from './game/look.js';
+import { applyLook, LOOKS } from './game/look.js';
 import { playerSkillAimShape } from './game/skill-aim/shapes.js';
 import { createFunnelLog, sessionOpenEvents } from './game/funnel-events.js';
 
@@ -296,7 +296,7 @@ class App {
     const pose = createLobbyPose(root, id);
     pose?.apply();
     this.scene.add(root);
-    this.showcase = { root, mixer, clips, def, look, pose, t: 0, next: 4 + Math.random() * 3, auraT: 0 };
+    this.showcase = { root, mixer, clips, def, look, pose, idleAction: a, t: 0, next: 4 + Math.random() * 3, auraT: 0 };
     this.hubMovement.attach(this.showcase);
     this.companionAgent?.syncLobbyContext();
     if (!first) { this.fx.pillar(root.position, def.color, { radius: 1.2, height: 8, life: 0.8 }); this.fx.burst(root.position.clone().setY(1), def.color, { n: 40, speed: 6, size: 0.4, up: 1 }); audio.magic({ vol: 0.3, base: 440, notes: [0, 4, 7, 12] }); }
@@ -471,7 +471,8 @@ class App {
         // Walking animation remains functional when ambient motion is reduced.
         s.pose?.restore();
         if (!this.reducedMotion.matches || this.hubMovement.moving) s.mixer.update(realDt);
-        s.pose?.apply();
+        // 교정은 Idle 값이므로 Idle 가중치만큼만 얹는다(걷기·다른 클립에서는 줄이거나 끈다).
+        s.pose?.apply(lobbyPoseWeight(s.idleAction));
         this.renderer.rig.target.copy(s.root.position);
         this.hubUI.update(this.hubMovement.nearest, { blocked: !this.canWalkHub() });
         this.arena.lobbyHall?.userData.update(realDt, { nearestId: this.hubMovement.nearest?.id, playerPosition: s.root.position, reducedMotion: this.reducedMotion.matches });
@@ -527,5 +528,7 @@ try {
   window.__EN = ENEMIES; window.__stageDef = stageDef; window.__THREE = THREE;
   // 조준 표시=판정 QA(tools/aim-hitbox-truth-qa.mjs)가 정식 빌드에서도 표시 모양을 읽도록 읽기 전용 함수만 노출한다.
   window.__skillAimShape = playerSkillAimShape;
+  // 전투 자세 QA(tools/combat-pose-qa.mjs)가 정식 빌드에서도 무기·방어구 노드 이름을 읽도록 읽기 전용 표만 노출한다.
+  window.__LOOKS = LOOKS;
 } catch (error) { bootFailure(error); }
 if (app) app.boot().catch(error => bootFailure(error, app));
