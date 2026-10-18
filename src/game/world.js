@@ -16,6 +16,11 @@ export function mulberry32(a) {
 
 export const ROOM_TYPE = { START: 'start', NORMAL: 'normal', ELITE: 'elite', TREASURE: 'treasure', BOSS: 'boss' };
 
+// 테마·시드·랜드마크는 여러 던전이 공유한다. 원정이 넘긴 실제 ID만 외형 분기 권한이다.
+export function isStarArchive(floor) {
+  return floor?.expeditionRouteId === 'star_archive';
+}
+
 const CELL = 1;              // 마스크 셀 크기(유닛)
 const MACRO = 34;            // 매크로 그리드 간격
 // 지역마다 동선·방 비례·통로 폭이 다르며 기존 세 테마는 원래 생성기를 유지한다.

@@ -4,6 +4,14 @@ import * as THREE from 'three';
 /** @type {Record<string, THREE.Texture>} */
 export const SURFACE_TEXTURES = {};
 let pending;
+export const STAR_ARCHIVE_TEXTURE_PATHS = Object.freeze({
+  floor: '/textures/star-archive/floor-marble.webp',
+  rosette: '/textures/star-archive/rosette.webp',
+  books: '/textures/star-archive/crystal-books.webp',
+  crystal: '/textures/star-archive/crystal-cluster.webp',
+});
+/** @type {Record<string, THREE.Texture>} */
+export const STAR_ARCHIVE_TEXTURES = {};
 export function preloadSurfaceTextures() {
   if (pending) return pending;
   const loader = new THREE.TextureLoader();
@@ -25,7 +33,17 @@ export function preloadSurfaceTextures() {
     texture.repeat.set(1.35, 1.35); texture.anisotropy = 4; texture.colorSpace = colorSpace;
     SURFACE_TEXTURES[name] = texture;
   });
-  pending = Promise.all([...crafted, ...dungeon]);
+  // 부팅의 기존 공유 로더에서 한 번만 읽는다. 방 전환은 텍스처를 복제하거나 해제하지 않는다.
+  const archive = Object.entries(STAR_ARCHIVE_TEXTURE_PATHS).map(async ([name, path]) => {
+    const texture = await loader.loadAsync(path);
+    texture.name = `star-archive-${name}`;
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.anisotropy = 4;
+    if (name === 'floor' || name === 'books') texture.wrapS = THREE.RepeatWrapping;
+    if (name === 'floor') texture.wrapT = THREE.RepeatWrapping;
+    STAR_ARCHIVE_TEXTURES[name] = texture;
+  });
+  pending = Promise.all([...crafted, ...dungeon, ...archive]);
   return pending;
 }
 
