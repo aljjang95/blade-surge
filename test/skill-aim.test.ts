@@ -218,3 +218,77 @@ test('표시는 동일 메시·버퍼를 재사용하고 전투 상태를 변경
   let disposed = 0; geometry.addEventListener('dispose', () => disposed++); view.dispose();
   expect(scene.children).toHaveLength(0); expect(disposed).toBe(1);
 });
+
+// ---- 표시 = 판정(tools/aim-hitbox-truth-qa.mjs 실측으로 고친 스킬) ----
+// 꼭짓점이 영웅 뒤 back에 있는 부채꼴의 경계 거리(음수면 안).
+function sectorSd(a: number, c: number, R: number, angleDeg: number, back: number) {
+  const x = a + back, h = angleDeg * Math.PI / 360, d = Math.hypot(x, c), ang = Math.atan2(Math.abs(c), x);
+  if (ang <= h) return Math.max(d - R, -Math.min(R - d, d * Math.sin(h - ang)));
+  return d * Math.sin(ang - h);
+}
+function projectilesOf(id: string) {
+  const p = player(id), list: any[] = [];
+  p.game.spawnProjectile = (value: any) => list.push(value);
+  p.game.hitArea = () => 0; p.game.timeCtl = { slowmo() {} }; p.game.renderer = new Proxy({}, { get: () => () => {}, set: () => true });
+  (SKILLS as any)[id].cast(p.game, p, { dmg: 10, data: {} });
+  return { p, list };
+}
+// 투사체 몸통 가장자리 두 점이 영웅 앞쪽 좌표(a 앞, c 오른쪽)에서 표시 부채꼴 안인지 시간 구간 전체로 확인한다.
+function expectSwept(p: any, list: any[], R: number, angle: number, back: number) {
+  const ux = Math.sin(p.yaw), uz = Math.cos(p.yaw), vx = Math.cos(p.yaw), vz = -Math.sin(p.yaw);
+  for (const q of list) for (let t = 0; t <= 1.001; t += .125) {
+    const cx = q.pos.x - p.pos.x + q.dir.x * q.speed * q.life * t, cz = q.pos.z - p.pos.z + q.dir.z * q.speed * q.life * t;
+    for (const side of [-1, 1]) {
+      const px = cx + q.dir.z * q.radius * side, pz = cz - q.dir.x * q.radius * side;
+      expect(sectorSd(px * ux + pz * uz, px * vx + pz * vz, R, angle, back)).toBeLessThanOrEqual(.05);
+    }
+  }
+}
+
+test('직선 투사체 표시는 몸통 반경만큼 끝이 더 나가 실제 최대 도달 지점을 덮는다', () => {
+  for (const id of ['holy_slash', 'ranger_pierce', 'ranger_quickshot', 'fireball']) {
+    const { p, list } = projectilesOf(id), shape: any = playerSkillAimShape(p, id, {});
+    const q = list[0], along = Math.hypot(q.pos.x - p.pos.x, q.pos.z - p.pos.z);
+    expect(shape.origin + shape.range + shape.tip).toBeGreaterThanOrEqual(along + q.speed * q.life + q.radius - .02);
+    expect(shape.tip).toBeGreaterThanOrEqual(shape.width / 2);
+  }
+});
+
+test('화살 부채 표시는 각 화살 몸통이 훑는 영역을 모두 덮고 꼭짓점이 뒤로 물려 있다', () => {
+  for (const id of ['ranger_volley', 'ranger_tempest', 'ranger_binding', 'gale_hunt']) {
+    const { p, list } = projectilesOf(id), shape: any = playerSkillAimShape(p, id, {});
+    expect(shape.back).toBeGreaterThan(0); expect(shape.coneRadius).toBeGreaterThan(shape.range); expect(list.length).toBeGreaterThan(1);
+    expectSwept(p, list, shape.coneRadius, shape.angle, shape.back);
+  }
+});
+
+test('용살검 파동 세 줄기는 바깥 부채 표시 안에 들어간다', () => {
+  const { p, list } = projectilesOf('dragon_slash'), shape: any = playerSkillAimShape(p, 'dragon_slash', {});
+  expect(shape.fanAngle).toBeCloseTo(shape.projectileAngle); expect(shape.fanBack).toBeGreaterThan(0); expect(list).toHaveLength(3);
+  expectSwept(p, list, shape.fanRange, shape.fanAngle, shape.fanBack);
+});
+
+test('확정 범위만 그리는 스킬과 끝 원이 없는 반사창', () => {
+  const p = player('meteor');
+  const meteor: any = playerSkillAimShape(p, 'meteor', {}), magma: any = playerSkillAimShape(p, 'magma_zone', {}), arc: any = playerSkillAimShape(p, 'arc_reflect', {});
+  // meteor: 첫 낙하(r 3.4)만 어느 방향에서도 확정. 바깥 한계 7.8은 운이 맞아야 닿는 띠다.
+  expect(meteor.radius).toBeCloseTo(3.4); expect(meteor.envelope).toBeCloseTo(7.8);
+  // magma_zone: 균열 장판(r 6.4)이 확정. 기둥 고리 7.5는 기둥 방향에서만 닿는다.
+  expect(magma.range).toBeCloseTo(6.4); expect(magma.envelope).toBeCloseTo(7.5);
+  // arc_reflect: 폭발은 열두 번째 반사 위치에서 터지므로 직선 끝 원이 없다.
+  expect(arc.radius).toBe(0);
+  // 원본 판정 기준 수치는 그대로다.
+  expect(skillAimShape('meteor')!.radius).toBeCloseTo(7.8); expect(skillAimShape('magma_zone')!.range).toBeCloseTo(7.5);
+});
+
+test('표시는 꼭짓점 이동·바깥 부채·끝 보정을 그린다', () => {
+  const view = new SkillAimView(new THREE.Scene()), p = player(), aim = { active: true, cancel: false, x: 0, z: 1, dist01: 1 };
+  const out: any = {};
+  view.update(p, aim, playerSkillAimShape(p, 'ranger_volley', out));
+  expect(view.cone.visible).toBe(true); expect(view.cone.position.z).toBeCloseTo(-out.back); expect(view.cone.scale.x).toBeCloseTo(out.coneRadius); expect(view.fan.visible).toBe(false);
+  view.update(p, aim, playerSkillAimShape(p, 'dragon_slash', out));
+  expect(view.fan.visible).toBe(true); expect(view.fan.position.z).toBeCloseTo(-out.fanBack); expect(view.cone.position.z).toBeCloseTo(0);
+  view.update(p, aim, playerSkillAimShape(p, 'holy_slash', out));
+  expect(view.fan.visible).toBe(false); expect(view.lane.scale.y).toBeCloseTo(out.range + out.tip);
+  view.dispose();
+});

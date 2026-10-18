@@ -17,7 +17,37 @@ function variant(player, id, name) {
 }
 
 /** 기본 판정/탐색 모양. angle은 hitArea와 같은 도 단위다. */
+const FRAME_PAD = .25;
 export function skillAimShape(skillId) { return SKILL_AIM_SHAPES[skillId] || null; }
+
+/**
+ * 표시 전용 보정(tools/aim-hitbox-truth-qa.mjs 실측 근거). 원본 SKILL_AIM_SHAPES는 판정 기준 수치(이동 거리·반경)를 그대로 둔다.
+ *  - 투사체·돌진의 몸통은 경로 끝과 옆으로 반경(width / 2)만큼 더 훑는다. 끝은 tip, 부채꼴 옆은 꼭짓점을 뒤로 물린 back으로 그린다.
+ *  - 무작위·고리 배치 다중 타격(meteor, magma_zone)은 어느 방향에서도 확정으로 맞는 반지름만 그리고, 운이 맞아야 닿는 바깥 한계는 envelope에 적는다.
+ */
+function bodyAdjust(out, skillId) {
+  out.tip = 0; out.back = 0; out.coneRadius = 0; out.fanAngle = 0; out.fanRange = 0; out.fanBack = 0; out.envelope = 0;
+  const body = out.width > 0 ? out.width / 2 : 0;
+  // 투사체는 life를 넘긴 마지막 프레임 걸음만큼 더 나간다(60fps에서 최대 약 0.3~0.5m). 절반쯤인 FRAME_PAD를 끝에 더한다.
+  const pad = out.origin > 0 ? FRAME_PAD : 0;
+  if (out.kind === 'line') out.tip = body + pad;
+  if (out.kind === 'cone' && body > 0 && !out.projectileRange && out.angle > 0) {
+    // 화살 부채: 각 화살 몸통이 훑는 영역의 바깥 선은 화살 방향선에서 body만큼 떨어진 평행선이다. 꼭짓점을 body / sin(반각)만큼 뒤로 물린 부채꼴이 그 선과 같다.
+    const half = Math.min(out.angle, 170) * Math.PI / 360;
+    out.tip = body + pad; out.back = body / Math.sin(half); out.coneRadius = out.range + out.origin + out.tip + out.back;
+  }
+  if (out.kind === 'cone' && body > 0 && out.projectileRange && out.projectileAngle > 0) {
+    // 용살검 파동 세 줄기: 같은 방식의 바깥 부채(파동 몸통 반경 width / 2, 시작점 origin).
+    const half = out.projectileAngle * Math.PI / 360;
+    out.fanAngle = out.projectileAngle; out.fanBack = body / Math.sin(half);
+    out.fanRange = out.origin + out.projectileRange + body + pad + out.fanBack;
+  }
+  // 반사창은 벽·적에 튕겨 열두 번째 반사 위치에서 터진다. 직선 끝에는 폭발이 없으므로 끝 원을 그리지 않는다.
+  if (skillId === 'arc_reflect') out.radius = 0;
+  if (skillId === 'meteor') { out.envelope = out.radius; out.radius = 3.4; }
+  if (skillId === 'magma_zone') { out.envelope = out.range; out.range = out.radius; }
+  return out;
+}
 
 /** 장착 변형과 현재 자원은 렌더 전용 재사용 객체에 반영한다. */
 export function playerSkillAimShape(player, skillId, out) {
@@ -39,5 +69,5 @@ export function playerSkillAimShape(player, skillId, out) {
   if (skillId === 'poison_bomb' && variant(player, skillId, 'wide')) out.radius = 5.4;
   if (skillId === 'night_parade' && variant(player, skillId, 'wide')) out.radius = 6.5;
   if (skillId === 'fireball' && variant(player, skillId, 'split')) out.radius = 5.2;
-  return out;
+  return bodyAdjust(out, skillId);
 }
