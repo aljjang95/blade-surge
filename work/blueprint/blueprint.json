@@ -149,7 +149,7 @@
       },
       "chosen": true,
       "note": "대표님이 말한 던파식 레벨·스킬 찍기·초기화 감각이 가장 직접 보이고, 잠긴 각성 스킬의 레벨 관문이 한 화면에 보여 레벨업 동기가 생긴다",
-      "sha256": "92d09d2a4558898922e28c3db1d1a1c05dcddf752776055282c2023f754dc69e"
+      "sha256": "fd0a833aa6d26ba2c6e6fc70d37e48855b11cdf4c4174910f37c4417b0d40366"
     },
     {
       "id": "C10",
@@ -164,7 +164,7 @@
       },
       "chosen": false,
       "note": "카드가 커서 8개 스킬이 한 화면에 다 안 들어가고 레벨 관문 흐름이 약하다",
-      "sha256": "77d4f916595d9b292b6a0ec61c459f1ea95c9bc4078388e77ed99c2b95885613"
+      "sha256": "ed74b1f4083451506c91067544a9389fbd15414ecc5c7b7f32449b98a6d7f6ab"
     }
   ],
   "nodes": [
@@ -374,7 +374,7 @@
         "스킬 포인트",
         "최대 레벨"
       ],
-      "sha256": "92d09d2a4558898922e28c3db1d1a1c05dcddf752776055282c2023f754dc69e"
+      "sha256": "fd0a833aa6d26ba2c6e6fc70d37e48855b11cdf4c4174910f37c4417b0d40366"
     },
     {
       "id": "transcend-screen",
@@ -403,7 +403,7 @@
         "초월 패키지",
         "최고 등급"
       ],
-      "sha256": "29d027ce33330a48906a4c21d4b9c0245aaf8b6c195f56c69613a9cdf66c2082"
+      "sha256": "560e6eed95b8cb31cef092af4aab74b55f9af2b59bd7fd8182c23840d3de17ba"
     },
     {
       "id": "grade-rules",
@@ -678,10 +678,16 @@
       "reason": "성장·과금 묶음(progression-20261019) 추가: 스킬 트리·초월 화면, 등급·SP 규칙, 과금 흐름",
       "from": "1f15de4e43b4",
       "to": "bdf0d7689e4f"
+    },
+    {
+      "at": "2026-10-18T19:30:51.210Z",
+      "reason": "대표님 지적(2026-10-19): Runware 시안이 블레이드 서지 화풍과 달라 폐기. 실제 로비(lobby-u1)·전투 HUD(hud-c1) 캡처를 참조로 GPT 이미지로 다시 생성한 스킬 트리·카드·초월 시안으로 교체",
+      "from": "bdf0d7689e4f",
+      "to": "f2ec82cf00eb"
     }
   ],
   "shots": [],
-  "lockedDigest": "bdf0d7689e4fd2db8d2ad6f76af54860955a26d774081be40b9693dc28143483",
-  "lockedAt": "2026-10-18T18:26:35.041Z",
+  "lockedDigest": "f2ec82cf00eb6fc4fd03e2d648563b190f3ee05a75c3c3d2f81b6858a8db8268",
+  "lockedAt": "2026-10-18T19:30:51.210Z",
   "firstLockedAt": "2026-10-18T07:12:43.638Z"
 }
