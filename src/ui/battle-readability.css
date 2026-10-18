@@ -36,7 +36,6 @@ body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,
 .experience-v2.oath-visual #hud.battle-readability .bossbar{left:244px;right:286px;top:66px}
 .experience-v2.oath-visual #hud.battle-readability .rpg-target,.experience-v2.oath-visual #hud.battle-readability .mw-posture{margin:2px 0;font-size:10px}
 .experience-v2.oath-visual #hud.battle-readability .combo{top:94px;left:14px;padding:4px 7px}
-.experience-v2.oath-visual #hud.battle-readability .kill-streak{top:106px;left:43%;padding:4px 8px}
 .experience-v2.oath-visual #hud.battle-readability .oath-camera-details>summary{min-height:44px;min-width:44px;display:grid;place-items:center;padding:8px}
 .experience-v2.oath-visual #hud.battle-readability .oath-camera-details{top:142px}
 .experience-v2.oath-visual #hud.battle-readability .oath-camera-details button{min-height:44px;min-width:44px}
@@ -130,7 +129,7 @@ body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,
  .experience-v2.oath-visual #hud.battle-readability .bossbar{position:relative;top:auto;left:auto;right:auto;margin:6px calc(14px + var(--sar,0px)) 0 calc(14px + var(--sal,0px))}
  .experience-v2.oath-visual #hud.battle-readability .bossbar .boss-name{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere}
  .experience-v2.oath-visual #hud.battle-readability .combat-cue{position:relative;top:auto;width:max-content;margin-top:8px}
- .experience-v2.oath-visual #hud.battle-readability .combo,.experience-v2.oath-visual #hud.battle-readability .kill-streak{top:calc(214px + var(--sat,0px))}
+ .experience-v2.oath-visual #hud.battle-readability .combo{top:calc(214px + var(--sat,0px))}
  .experience-v2.oath-visual #hud.battle-readability .oath-camera-details{top:auto;bottom:calc(284px + var(--sab,0px))}
  #hud.battle-readability #map-tactics-context{left:140px;right:14px;bottom:calc(236px + var(--sab,0px));display:grid;gap:5px}
  .map-tactics-context-copy>strong{display:none}

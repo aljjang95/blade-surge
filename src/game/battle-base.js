@@ -552,7 +552,7 @@ export class Battle {
     this.kills++; this.waveKilled++; this.killStreak++; this.killStreakT = 3.4;
     const streakTier = this.killStreak >= 20 ? '전장의 지배자' : this.killStreak >= 10 ? '광란' : '사냥 본능';
     this.ui?.setKillStreak?.(this.killStreak, streakTier);
-    if ([5, 10, 20, 30].includes(this.killStreak)) this.ui.toast(`${this.killStreak}연속 처치 · ${streakTier}`, this.killStreak >= 20 ? 'red' : 'gold', { urgent: false });
+    // 단계 알림은 콤보 옆 연속 처치 알약이 직접 빛나며 보여 준다. 전투 중앙에 알림을 띄우지 않는다.
     this.player.addUlt(ultKillGain(e)); this.player.addMp?.(2);
     if (this.sp) this.sp.onKill(e);
     if (this.hasProc('blood_leech') && this.player.alive) { const heal = Math.floor(this.player.maxHp * 0.03); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); this.fx.embers(this.player.pos, 0xff3a5a, { n: 4, radius: 0.6, life: 0.6, rise: 2 }); if (this.fx.dmgLayer.children.length < 20) this.fx.damage(this.player.pos, heal, { kind: 'heal', text: '+' + heal }); }

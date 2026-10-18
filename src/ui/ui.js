@@ -385,14 +385,48 @@ export class UI {
   }
   waveBanner(text) { const b = $('wave-banner'); b.textContent = text; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); }
   showBoss(name, on, portrait) { $('bossbar').classList.toggle('hidden', !on); $('boss-name').textContent = name; const im = $('boss-portrait'); if (portrait) { im.src = portrait; im.style.display = ''; } else im.style.display = 'none'; }
-  setCombo(n) { if (n <= 1) { this.comboEl.classList.add('hidden'); return; } this.comboEl.classList.remove('hidden'); this.comboN.textContent = n; this.comboEl.classList.toggle('hot', n >= 30); this.comboEl.classList.remove('pop'); void this.comboEl.offsetWidth; this.comboEl.classList.add('pop'); }
+  setCombo(n) { if (n <= 1) { this.comboEl.classList.add('hidden'); if (this.killStreakEl?.classList.contains('show')) this.placeKillStreak(); return; } const wasHidden = this.comboEl.classList.contains('hidden'); this.comboEl.classList.remove('hidden'); this.comboN.textContent = n; this.comboEl.classList.toggle('hot', n >= 30); this.comboEl.classList.remove('pop'); void this.comboEl.offsetWidth; this.comboEl.classList.add('pop'); if (this.killStreakEl?.classList.contains('show') && (wasHidden || n === 10 || n === 100)) this.placeKillStreak(); }
+  /** 연속 처치 알약을 콤보 배지 오른쪽(좁으면 아래)에 붙인다. 처치·콤보 표시가 바뀔 때만 레이아웃을 읽는다. */
+  placeKillStreak() {
+    const pill = this.killStreakEl, combo = this.comboEl, hud = this.el?.hud;
+    if (!pill || !combo) return;
+    const shown = !combo.classList.contains('hidden') && combo.offsetWidth > 0;
+    let left, top, height;
+    if (shown) { left = combo.offsetLeft; top = combo.offsetTop; height = combo.offsetHeight; }
+    else {
+      // 콤보가 숨겨져 있으면 콤보가 나타날 자리(계산된 left/top)에 알약을 둔다.
+      const cs = globalThis.getComputedStyle?.(combo);
+      left = Number.parseFloat(cs?.left); top = Number.parseFloat(cs?.top); height = 0;
+      if (!Number.isFinite(left)) left = 14; if (!Number.isFinite(top)) top = 140;
+    }
+    const pillHeight = Math.max(30, Math.min(40, height || 34));
+    const hudWidth = hud?.clientWidth || globalThis.innerWidth || 0;
+    const beside = shown ? left + combo.offsetWidth + 6 : left;
+    // 전투 중앙(가로 30% 이후)에 닿으면 글자를 줄인 알약으로 콤보 옆에 남긴다. 아래 줄은 시점 버튼과 겹치므로 쓰지 않는다.
+    pill.classList.remove('compact', 'mini');
+    const limit = hudWidth * .3;
+    if (hudWidth && beside + (pill.offsetWidth || 150) > limit) {
+      pill.classList.add('compact');
+      // 그래도 넘치면 단계 이름을 숨긴다(단계는 테두리 색으로 남는다).
+      if (beside + pill.offsetWidth > limit) pill.classList.add('mini');
+    }
+    pill.style.setProperty('--ks-left', beside + 'px');
+    pill.style.setProperty('--ks-top', top + (shown ? (height - pillHeight) / 2 : 0) + 'px');
+    pill.style.setProperty('--ks-height', pillHeight + 'px');
+  }
   setKillStreak(n, tier = '') {
     if (!this.killStreakEl) return;
-    if (n <= 1) { this.killStreakEl.classList.remove('show', 'hot'); return; }
+    if (n <= 1) { this.killStreakEl.classList.remove('show', 'hot', 'tier-up'); this._killStreakTier = ''; return; }
+    const label = tier || (n >= 20 ? '전장의 지배자' : n >= 10 ? '광란' : '사냥 본능');
     this.killStreakN.textContent = n;
-    this.killStreakTier.textContent = tier || (n >= 20 ? '전장의 지배자' : n >= 10 ? '광란' : '사냥 본능');
+    this.killStreakTier.textContent = label;
     this.killStreakEl.classList.toggle('hot', n >= 20);
-    this.killStreakEl.classList.remove('show'); void this.killStreakEl.offsetWidth; this.killStreakEl.classList.add('show');
+    this.placeKillStreak();
+    const tierUp = this._killStreakTier && this._killStreakTier !== label;
+    this._killStreakTier = label;
+    this.killStreakEl.classList.add('show');
+    // 단계가 올라갈 때만 알약 자체가 짧게 빛난다(중앙 알림을 대신한다).
+    if (tierUp) { this.killStreakEl.classList.remove('tier-up'); void this.killStreakEl.offsetWidth; this.killStreakEl.classList.add('tier-up'); }
   }
   ultCinema(name, def) { const c = $('ult-cinema'); $('ult-name').textContent = name; $('ult-name').style.textShadow = `0 0 20px ${def.color}, 0 4px 0 #000`; c.classList.remove('on'); void c.offsetWidth; c.classList.add('on'); setTimeout(() => c.classList.remove('on'), 1700); }
   updateHud(b, dt) {
