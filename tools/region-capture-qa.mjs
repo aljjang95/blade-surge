@@ -17,9 +17,9 @@ for (const [w, h] of vps.split(',').map(v => v.split('x').map(Number))) {
   await page.waitForTimeout(500);
   const row = { viewport: w + 'x' + h, dungeon, errors };
   try {
-    const name = await page.evaluate(async id => { const m = await import('/src/data/expansion.js'); const d = (m.ALL_DUNGEONS || []).find(x => x.id === id); return d?.name || null; }, dungeon);
-    row.name = name;
-    const target = page.locator('.dl-cards > *').filter({ hasText: name });
+    // 카드의 data-dungeon-id로 찾는다(정식 빌드에는 /src 모듈이 없다).
+    const target = page.locator('.dl-pick[data-dungeon-id="' + dungeon + '"]');
+    row.name = (await target.first().innerText()).split('\n')[0];
     await target.first().scrollIntoViewIfNeeded(); await target.first().tap(); await page.waitForTimeout(300);
     await page.locator('#citadel-dungeon-prepare').tap(); await page.waitForTimeout(700);
     row.prep = await page.evaluate(() => document.querySelector('#citadel-destination-title')?.textContent || null);
