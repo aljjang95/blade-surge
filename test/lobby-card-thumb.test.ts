@@ -5,7 +5,7 @@ import { ALL_DUNGEONS } from '../src/data/expansion.js';
 
 // 로비 카드는 작은 썸네일을, 상세 패널은 원화를 쓴다(2026-10-18 카드 디코드 지연·용량 낭비).
 test('expansion card art maps to an existing 320px thumbnail', () => {
-  const arts = [...new Set(ALL_DUNGEONS.map(d => d.art).filter(a => typeof a === 'string' && a.startsWith('/img/expansion/')))];
+  const arts = [...new Set((ALL_DUNGEONS as any[]).map(d => d.art).filter(a => typeof a === 'string' && a.startsWith('/img/expansion/')))];
   expect(arts.length).toBeGreaterThan(0);
   for (const art of arts) {
     const thumb = cardThumb(art);
