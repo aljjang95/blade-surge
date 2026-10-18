@@ -592,6 +592,14 @@
       "at": "2026-10-18T11:09:11.482Z",
       "blueprintDigest": "1f15de4e43b4c159d9e829313cd5b30910059c4f9435736a23cd7af81291b941",
       "note": "1280x590 개발 서버 b81c1b5"
+    },
+    {
+      "node": "star-archive-room",
+      "image": "images/shots/star-archive-room-20261018T120454-3b17ae.png",
+      "sha256": "3a4d982fd940567c92b97e5d3a8ee9a29b9a6465914f8ee39cde750078dbe11b",
+      "at": "2026-10-18T12:04:54.966Z",
+      "blueprintDigest": "9ed6cdc41d3da8b82adeea82a26d30d278d1e5fbf4feadf938c9b6c794d8fed7",
+      "note": "1280x590 개발 서버 556aaaf 실제 진입"
     }
   ],
   "lockedDigest": "9ed6cdc41d3da8b82adeea82a26d30d278d1e5fbf4feadf938c9b6c794d8fed7",
