@@ -60,6 +60,81 @@
       "chosen": false,
       "note": "엄지 조작 영역이라 오터치·가림 위험",
       "sha256": "de88e811006d7c271a30e73ce851e7f34f01935f8e243018e79382d04b1788cb"
+    },
+    {
+      "id": "C4",
+      "group": "map-art-20261018",
+      "title": "따뜻한 손그림풍 고대 서고 던전",
+      "image": "images/map-m1.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 4,
+        "feasibility": 4,
+        "distinct": 5
+      },
+      "chosen": true,
+      "note": "현재 지역 이름(별빛 서고)과 맞고, 밝은 바닥과 어두운 벽 대비로 적이 잘 보인다",
+      "sha256": "3edd2658ab284211d6964f35fb80f9c222234518e190477c92a6b317092d0723"
+    },
+    {
+      "id": "C5",
+      "group": "map-art-20261018",
+      "title": "달빛 크리스털 폐허",
+      "image": "images/map-m2.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": false,
+      "note": "성좌·심연 계열 지역 후보",
+      "sha256": "09d34767d6d2d8922ddb2bf6a5ea8f56e568914067d4e41c75361663aba5b397"
+    },
+    {
+      "id": "C6",
+      "group": "map-art-20261018",
+      "title": "장난감풍 로우폴리 석조 던전",
+      "image": "images/map-m3.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 5,
+        "feasibility": 5,
+        "distinct": 3
+      },
+      "chosen": false,
+      "note": "초반 장례길·기본 던전 후보, 가장 구현 쉬움",
+      "sha256": "b6db4f94265e27c32344840c2d1d5c4c4f33f91e50e9566b4bd4d55d27bdc6b7"
+    },
+    {
+      "id": "C7",
+      "group": "lobby-ui-20261018",
+      "title": "오른쪽 세로 추천 던전 패널 + 하단 3탭 도크",
+      "image": "images/lobby-u1.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 5,
+        "distinct": 2
+      },
+      "chosen": false,
+      "note": "현재와 가까워 위험이 적지만 개선 폭이 작다",
+      "sha256": "a6559ac732e71cbdc4b5814711a9875c0bcb4478b9c9ad323388a986e511556b"
+    },
+    {
+      "id": "C8",
+      "group": "lobby-ui-20261018",
+      "title": "하단 던전 카드 캐러셀 + 왼쪽 세로 탭 + 큰 출격 버튼",
+      "image": "images/lobby-u2.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": true,
+      "note": "던전 선택이 한눈에 보이고 영웅이 가려지지 않는다(대표님 규칙: UI는 플레이를 가리지 않는다)",
+      "sha256": "fc8ea098fcb8124429804f191bf8dbae811ec6ff2159348fa448e9490d2d7bcf"
     }
   ],
   "nodes": [
@@ -175,6 +250,66 @@
         "library-index.json에서 장르·용도·리그·폴리 수·라이선스로 찾을 수 있다",
         "웹·Roblox·Unity가 바로 쓸 내보내기 형식과 사용 안내가 있다"
       ]
+    },
+    {
+      "id": "dungeon-map-art",
+      "type": "screen",
+      "group": "map-art-20261018",
+      "title": "던전 맵 그래픽(지역별 환경 아트)",
+      "image": "images/map-m1.jpg",
+      "checks": [
+        "바닥은 밝고 읽기 쉬운 석재 타일(마모된 모서리·틈새 이끼), 벽·책장은 어둡게",
+        "바닥의 호박색 룬 원과 테두리 무늬",
+        "벽면 책장·스테인드글라스·촛불, 창에서 들어오는 빛줄기",
+        "먼지 입자, 따뜻한 색온도",
+        "전투 중앙은 장식 없이 비우고 소품은 가장자리"
+      ],
+      "risks": [
+        "큰 반복 바닥은 생성 텍스처(타일·룬)와 베이크 AO로, 책장·창·촛대는 Tripo 소품 → Blender 헤드리스 → 인스턴싱",
+        "빛줄기는 가산 혼합 평면, 먼지는 인스턴스 파티클로 모바일 프레임 예산 안",
+        "지역마다 C5·C6 방향을 별도 시안 묶음으로 확장"
+      ],
+      "copy": [],
+      "sha256": "3edd2658ab284211d6964f35fb80f9c222234518e190477c92a6b317092d0723"
+    },
+    {
+      "id": "lobby-screen",
+      "type": "screen",
+      "group": "lobby-ui-20261018",
+      "title": "로비 화면(던전 선택·출격)",
+      "image": "images/lobby-u2.jpg",
+      "checks": [
+        "영웅은 왼쪽 중앙에 가려지지 않고 서 있다",
+        "왼쪽 가장자리 세로 탭(던전, 영웅·장비, 메뉴)과 빨간 알림 점",
+        "오른쪽 위 추천 던전 상세(그림, 이름, 설명, 입장 에너지, 주요 보상)",
+        "오른쪽 아래 던전 카드 캐러셀(그림, 이름, 에너지 비용, 넘기기 화살표)",
+        "오른쪽 아래 모서리 큰 원형 금색 출격 버튼(교차 검)",
+        "금색 장식 테두리, 남색·양피지 톤"
+      ],
+      "risks": [
+        "카드 그림은 기존 던전 썸네일(public/img) 재사용, 없는 지역은 생성",
+        "기존 출격 준비 흐름(에너지·보상·저장)은 그대로 버튼만 연결",
+        "844x390·800x360에서 캐러셀 카드 수를 줄이고 영웅이 가려지지 않게"
+      ],
+      "copy": [
+        "던전",
+        "영웅·장비",
+        "메뉴",
+        "추천 던전",
+        "입장 에너지",
+        "주요 보상",
+        "출격"
+      ],
+      "sha256": "fc8ea098fcb8124429804f191bf8dbae811ec6ff2159348fa448e9490d2d7bcf"
+    },
+    {
+      "id": "lobby-hero-idle",
+      "type": "asset",
+      "group": "lobby-ui-20261018",
+      "title": "로비 영웅 대기 자세",
+      "checks": [
+        "대표님이 지적한 팔 균형 문제 없이 서 있는 자세"
+      ]
     }
   ],
   "edges": [
@@ -207,6 +342,31 @@
       "from": "lobby-hero-pose",
       "to": "asset-foundry",
       "type": "writes"
+    },
+    {
+      "from": "dungeon-map-art",
+      "to": "battle-hud",
+      "type": "contains"
+    },
+    {
+      "from": "dungeon-map-art",
+      "to": "asset-foundry",
+      "type": "reads"
+    },
+    {
+      "from": "lobby-screen",
+      "to": "lobby-hero-idle",
+      "type": "contains"
+    },
+    {
+      "from": "lobby-screen",
+      "to": "battle-hud",
+      "type": "navigates"
+    },
+    {
+      "from": "lobby-hero-idle",
+      "to": "lobby-hero-pose",
+      "type": "reads"
     }
   ],
   "acceptance": [
@@ -263,6 +423,18 @@
       "node": "asset-foundry",
       "criterion": "다른 게임 작업자가 index에서 에셋을 찾아 GLB·FBX·텍스처와 사용 안내를 바로 받아 쓸 수 있다",
       "surface": "G: TLL-Asset-Foundry 실제 폴더와 index 다시 읽기"
+    },
+    {
+      "id": "A9",
+      "node": "dungeon-map-art",
+      "criterion": "별빛 서고 지역 전투 화면이 시안 C4처럼 따뜻한 서고 환경으로 보이고, 전투 중앙의 적과 영웅이 바닥과 대비되어 또렷하다",
+      "surface": "개발 서버·정식 호스트 1280x590·844x390 전투 캡처와 blueprint shot 비교, 모바일 프레임 시간"
+    },
+    {
+      "id": "A10",
+      "node": "lobby-screen",
+      "criterion": "로비에서 던전 카드를 넘겨 고르고 큰 출격 버튼으로 기존 출격 준비 흐름에 들어가며, 어느 화면 크기에서도 영웅이 UI에 가려지지 않는다",
+      "surface": "로비 1280x590·844x390·800x360 캡처, 카드 선택·출격 실제 터치, blueprint shot 비교"
     }
   ],
   "decisions": [
@@ -285,16 +457,38 @@
       "id": "D4",
       "text": "큰 덩어리마다 새 채팅에서 진행하고 끝나면 보관한다",
       "source": "대표님 2026-10-18 \"큰 작업이 끝나면 새로운 세션에서\""
+    },
+    {
+      "id": "D5",
+      "text": "던전 맵 아트 첫 목표는 C4(서고). C5는 성좌·심연 계열, C6는 초반 기본 던전 후보로 지역별 시안 묶음에서 다시 고른다",
+      "source": "대표님 2026-10-18 \"나머지 부분들 컨셉 이미지 잘 뽑아서 세워 놨으면\" + 점수표"
+    },
+    {
+      "id": "D6",
+      "text": "로비 UI는 C8(하단 카드 캐러셀·왼쪽 탭·큰 출격). C7은 현재와 차이가 작다",
+      "source": "대표님 2026-10-18 \"여러 가지에 대한 맵 그래픽 UI\" + 점수표"
     }
   ],
   "outOfScope": [
-    "던전 맵 그래픽 전면 개편(다음 시안 묶음)",
     "새 스킬 추가",
     "결제·광고"
   ],
-  "changes": [],
+  "changes": [
+    {
+      "at": "2026-10-18T10:24:07.318Z",
+      "reason": "던전 맵 아트 시안 묶음(C4~C6) 추가와 C4 선택, 노드 dungeon-map-art·기준 A9",
+      "from": "967ba628fca4",
+      "to": "2d3397e774ce"
+    },
+    {
+      "at": "2026-10-18T10:26:14.117Z",
+      "reason": "로비 UI 시안 묶음(C7·C8) 추가, C8 선택, 노드 lobby-screen·lobby-hero-idle·기준 A10",
+      "from": "2d3397e774ce",
+      "to": "1f15de4e43b4"
+    }
+  ],
   "shots": [],
-  "lockedDigest": "967ba628fca414fd0751134568fc982cd86e834c37a07dfb3e5bf64539e638a6",
-  "lockedAt": "2026-10-18T07:12:43.638Z",
+  "lockedDigest": "1f15de4e43b4c159d9e829313cd5b30910059c4f9435736a23cd7af81291b941",
+  "lockedAt": "2026-10-18T10:26:14.117Z",
   "firstLockedAt": "2026-10-18T07:12:43.638Z"
 }
