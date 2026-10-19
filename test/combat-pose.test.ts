@@ -86,13 +86,17 @@ describe('전투·마을 가산 자세 층', () => {
     expect(Array.from(clip.tracks[0].times)).toEqual(times); expect(Array.from(clip.tracks[0].values)).toEqual(values);
     pose.dispose();
   });
-  test('실측 보정 표에는 Idle이 없고 회전은 뼈당 40도 이하다', () => {
-    for (const configs of Object.values(COMBAT_POSE_CORRECTIONS) as any[]) for (const config of Object.values(configs) as any[]) {
+  test('확대 저작 4개는 60도, 두 회전 클립의 오른손목만 120도를 허용한다', () => {
+    for (const [hero, configs] of Object.entries(COMBAT_POSE_CORRECTIONS) as any[]) for (const [name, config] of Object.entries(configs) as any[]) {
+      const expanded = (hero === 'knight' && ['slash_h', 'spin'].includes(name)) || (hero === 'barbarian' && name === 'spin') || (hero === 'ranger' && name === 'RangerBowUpper');
+      const wrist = ['knight', 'barbarian'].includes(hero) && name === 'spin';
+      expect(config.maxDegrees || 40).toBe(expanded ? 60 : 40);
+      expect(config.boneMaxDegrees || {}).toEqual(wrist ? { mixamorigRightHand: 120 } : {});
       expect(config.aliases).not.toContain('Idle');
-      for (const key of (config.keys || [{ bones: config.bones }])) for (const xyz of Object.values(key.bones) as number[][]) {
+      for (const key of (config.keys || [{ bones: config.bones }])) for (const [bone, xyz] of Object.entries(key.bones) as [string, number[]][]) {
         const [x, y, z] = xyz.map(n => n * Math.PI / 180);
         const w = Math.cos(x / 2) * Math.cos(y / 2) * Math.cos(z / 2) - Math.sin(x / 2) * Math.sin(y / 2) * Math.sin(z / 2);
-        expect(2 * Math.acos(Math.min(1, Math.abs(w))) * 180 / Math.PI).toBeLessThanOrEqual(40.01);
+        expect(2 * Math.acos(Math.min(1, Math.abs(w))) * 180 / Math.PI).toBeLessThanOrEqual((config.boneMaxDegrees?.[bone] || config.maxDegrees || 40) + .01);
       }
     }
   });
@@ -165,4 +169,9 @@ describe('전투·마을 가산 자세 층', () => {
     expect(main).toContain('s.combatPose?.restore();\n        s.pose?.restore();');
     expect(main.indexOf('s.pose?.apply(lobbyPoseWeight(s.idleAction));')).toBeLessThan(main.indexOf('s.combatPose?.apply(realDt);'));
   });
+  test('반복 저작 회전은 시작과 끝 보정이 같아 주기 경계에 별도 점프를 만들지 않는다', () => {
+    const keys = COMBAT_POSE_CORRECTIONS.barbarian.spin.keys;
+    expect(keys.at(-1)!.bones).toEqual(keys[0].bones);
+  });
+
 });
