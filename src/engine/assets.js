@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { registerHeroBodyMotion, prepareHeroBodyMotion, commitHeroBodyMotion, selectedBodyMotionIdentity, disposeHeroBodyMotion } from './hero-body-motion.js';
 import { preloadArmory } from './armory-assets.js';
 import { forgeHeroWeapons } from './forged-weapons.js';
+import { fitRogueKnifeGripAxes } from './rogue-grip-axis.js';
 import { finishOathKnightMaterial } from './hero-surface-finish.js';
 import { heroModelPaths, KNIGHT_HEAD_BALANCE_REVISION_ID } from './hero-model-paths.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -176,6 +177,7 @@ async function prepareLibraryHero(gltf, asset) {
     if (!node.name.startsWith('TLL_')) node.name = `TLL_Library_${heroId}`;
   });
   await forgeHeroWeapons(gltf, hero.model);
+  if (heroId === 'rogue') fitRogueKnifeGripAxes(gltf.scene, heroId, handBones);
   if (heroId === 'ranger') rigRangerBowString(gltf.scene);
   prepareModel(gltf, heroModelContract(asset, gltf.scene, clipAsset));
   heroBodies.set(asset.id, gltf);
