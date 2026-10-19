@@ -233,7 +233,21 @@ export const SKILLS = {
       audio.magic({ vol: 0.5, base: 330, notes: [0, 7, 12, 19, 24], step: 0.09, type: 'sawtooth' });
       c.data.vac = 0;
     },
-    update(game, p, c, dt) { c.data.vac -= dt; if (c.data.vac <= 0 && c.t < 1.1) { c.data.vac = 0.1; game.vacuum(p.pos, 12, 9); } },
+    update(game, p, c, dt) {
+      c.data.vac -= dt;
+      if (c.data.vac <= 0 && c.t < 1.1) {
+        c.data.vac = 0.1;
+        // 이미 부채꼴 안(130°, 사거리 7.2m)에 든 적은 끌지 않는다: 끌어도 맞는 위치인데 연속 힘으로 정면 표본이 영웅을 지나치거나 겹쳐 빠지는 것을 막는다(몰이 포함 판정 검사).
+        const half = THREE.MathUtils.degToRad(SKILL_AIM_SHAPES.dragon_slash.angle) / 2, R = SKILL_AIM_SHAPES.dragon_slash.range;
+        for (const e of game.enemies) {
+          if (!e.alive || e.spawning) continue;
+          const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d2 = dx * dx + dz * dz;
+          if (d2 > 144) continue;
+          if (d2 < R * R) { let diff = Math.abs(Math.atan2(dx, dz) - p.yaw); diff = Math.min(diff, Math.PI * 2 - diff); if (diff <= half) continue; }
+          e.pull(p.pos.x, p.pos.z, 9);
+        }
+      }
+    },
     cast(game, p, c) {
       const f = p.forward(new THREE.Vector3());
       game.hitArea(p, p.pos, p.yaw, SKILL_AIM_SHAPES.dragon_slash.range, SKILL_AIM_SHAPES.dragon_slash.angle, c.dmg, { kb: 10, kind: 'slash', finisher: true, skillCast:c, up: true, source: p });
