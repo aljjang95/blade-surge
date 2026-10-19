@@ -130,7 +130,7 @@ export class Player extends Actor {
 
   // ---------------- 입력 처리 ----------------
   handleInput(input, dt) {
-    if (!this.alive || this.auto) { this.attackBufferYaw = null; this.comboQueuedYaw = null; }
+    if (!this.alive || this.auto || this.stun > 0) { this.attackBufferYaw = null; this.comboQueuedYaw = null; }
     if (!this.alive) return;
     let mx = input.move.x, my = input.move.y;
     if (this.auto) { const m = this.autoMove(dt); mx = m.x; my = m.y; }
@@ -146,7 +146,8 @@ export class Player extends Actor {
         const c = this.skillCtx; wait = Math.max(wait, (c.impl.total || c.impl.dur || .8) - c.t);
       }
       this.attackBufferT = wait + ATTACK_INPUT_BUFFER_SEC;
-      this.attackBufferYaw = !this.auto && wantMove ? Math.atan2(mx, my) : null;
+      // 기절 중 누른 입력은 공격만 보존하고 방향은 버린다(기존 기절 경계 계약).
+      this.attackBufferYaw = !this.auto && this.stun <= 0 && wantMove ? Math.atan2(mx, my) : null;
       // 콤보 예약으로 바뀐 입력은 버퍼에서 비운다. 한 번 누른 입력이 두 번 공격으로 늘어나지 않는다.
       if (this.state === 'attack' && this.canQueueCombo()) { this.comboQueued = true; this.comboQueuedYaw = this.attackBufferYaw; this.attackBufferT = 0; }
     }
@@ -215,7 +216,7 @@ export class Player extends Actor {
   get basicAutoTarget() { return this.game.app?.eco?.s?.settings?.autoTarget !== false; }
   /** 공격 시작점에서만 선택한다. 이동 입력·난수와 무관하며 벽 뒤/소멸한 표적은 유지하지 않는다. */
   basicTarget(range = this.def.ranged ? 12 : 7) {
-    const enemies = this.game.enemies;
+    const enemies = this.game.enemies || [];
     if (enemies.includes(this.lockTarget) && aimTargetValid(this, this.lockTarget, range)) return this.lockTarget;
     let best = null, score = Infinity;
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
@@ -472,14 +473,14 @@ export class Player extends Actor {
     // 실제로 전환할 수 있는 스킬만 진행 중 평타의 궤적을 종료한다.
     this.stopTrail();
     this.attackBufferYaw = null; this.comboQueuedYaw = null;
-    const cooldown = sk.cd * (this.stats.cdMul ?? 1);
+    const cooldown = sk.cd * (this.stats?.cdMul ?? 1);
     if (sk.ult) { this.ult = 0; this.ultGainLock = ultimateLockDuration(impl); this.state = 'ult'; } else { this.mp = currentMp - mpCost; this.cds[i] = this.game.skillCooldown?.(cooldown) ?? cooldown; this.state = 'skill'; }
     this.stateT = 0; this.vel.set(0, 0, 0);
     const aimed = aim && Number.isFinite(aim.x) && Number.isFinite(aim.z) && Math.hypot(aim.x, aim.z) > 1e-6;
     if (aimed) this.yaw = Math.atan2(aim.x, aim.z);
     else if (this.auto) this.autoAim(12);
     const lvMult = 1 + (this.skillLevels[i] - 1) * 0.12;
-    this.skillCtx = { sk, impl, t: 0, cast: false, done: false, dmg: this.atk * sk.dmg * lvMult * (this.stats.skillMul ?? 1), level: this.skillLevels[i], data: {} };
+    this.skillCtx = { sk, impl, t: 0, cast: false, done: false, dmg: this.atk * sk.dmg * lvMult * (this.stats?.skillMul ?? 1), level: this.skillLevels[i], data: {} };
     if (aimed) {
       const shape = skillAimShape(sk.id), length = Math.hypot(aim.x, aim.z);
       const fraction = Number.isFinite(aim.dist01) ? Math.max(0, Math.min(1, aim.dist01)) : 1;
@@ -759,7 +760,8 @@ export class Player extends Actor {
     const length = Math.hypot(dx, dz);
     // 중심선만 보면 벽 모서리에 몸이 걸려 제자리걸음한다. 몸 반경만큼 양옆 선도 검사한다.
     const side = length > 1e-6 ? (this.radius || .7) * .8 / length : 0, ox = -dz * side, oz = dx * side;
-    if (W && (!W.walkable || !clearShot(W, this.pos.x, this.pos.z, x, z) ||
+    // 거리장이 없는 월드(아레나·단순 픽스처)는 직선으로 간다.
+    if (W?.buildFlow && (!W.walkable || !clearShot(W, this.pos.x, this.pos.z, x, z) ||
       !clearShot(W, this.pos.x + ox, this.pos.z + oz, x + ox, z + oz) || !clearShot(W, this.pos.x - ox, this.pos.z - oz, x - ox, z - oz))) {
       const flow = W.buildFlow(x, z), dir = W.flowDir(flow, this.pos.x, this.pos.z);
       if (dir) { out.x = dir[0]; out.y = dir[1]; return out; }
@@ -778,7 +780,7 @@ export class Player extends Actor {
       this.skillAimView.update(this, this.game.input?.enabled && !this.game.paused ? aim : null,
         id ? playerSkillAimShape(this, id, this._skillAimShape) : null);
     }
-    if (!this.alive || this.auto) { this.attackBufferYaw = null; this.comboQueuedYaw = null; }
+    if (!this.alive || this.auto || this.stun > 0) { this.attackBufferYaw = null; this.comboQueuedYaw = null; }
     super.update(dt);
     if (this.rangerAim) this.updateBowRig(dt);
     this.hurtFeedbackT = Math.max(0, (this.hurtFeedbackT || 0) - dt);

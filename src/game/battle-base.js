@@ -647,8 +647,9 @@ export class Battle {
       const d = distance - e.radius * (opts.basic ? 1 : opts.precision ? .35 : .6);
       if (d > range) continue;
       const ang = Math.atan2(dx, dz); let diff = Math.abs(ang - yaw); diff = Math.min(diff, Math.PI * 2 - diff);
-      // 평타는 적 몸의 가장자리가 칼날 부채꼴에 닿아도 명중한다. 중심점만 검사하면 시각적으로 겹쳐도 빗나갔다.
-      const bodyArc = opts.basic ? Math.asin(Math.min(1, e.radius / Math.max(e.radius, distance))) : 0;
+      // 평타는 적 몸이 칼날 부채꼴에 걸리면 명중한다. 중심점만 검사하면 시각적으로 겹쳐도 빗나갔다.
+      // 수동(정밀)은 몸 절반까지만 허용해 옆에 선 적을 앞 타격이 함께 베지 않게 한다(방향 선택 계약).
+      const bodyArc = opts.basic ? Math.asin(Math.min(1, e.radius * (opts.precision ? .5 : 1) / Math.max(e.radius, distance))) : 0;
       if (diff > half + bodyArc && (opts.precision || d > .9)) continue;
       if (opts.basic && !clearShot(this.world, pos.x, pos.z, e.pos.x, e.pos.z, e.radius)) continue;
       this.damageEnemy(e, dmg, { ...opts, dirx: dx, dirz: dz }); n++;
