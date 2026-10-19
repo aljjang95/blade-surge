@@ -41,6 +41,14 @@ export class GrowthOverlay {
     this.onResize = () => { if (this.isOpen) this.fit(); };
   }
   get eco() { return this.meta.eco; }
+  /**
+   * 로비 3D 쇼케이스(출전 영웅)는 이 화면 뒤에서 비쳐 다른 영웅을 볼 때 겹쳐 보인다.
+   * 화면이 열려 있는 동안만 숨기고, 닫을 때 현재 쇼케이스를 다시 보이게 한다(영웅 교체로 root 가 바뀌어도 안전).
+   */
+  setShowcaseHidden(hidden) {
+    const root = this.meta.app?.showcase?.root;
+    if (root) root.visible = !hidden;
+  }
   /** 초상은 화면에 붙은 뒤 바인딩한다(bindHeroPortrait 는 연결된 img 에만 결과를 반영한다). */
   bindPortraits(list) { for (const [img, id] of list) this.portrait(img, id); }
   mount() {
@@ -63,12 +71,14 @@ export class GrowthOverlay {
     this.isOpen = true; this.root.hidden = false;
     document.getElementById?.('meta')?.classList?.add('gx-open');
     this.meta.app?.wardrobe?.hide?.();
+    this.setShowcaseHidden(true);
     globalThis.addEventListener?.('resize', this.onResize);
     playSfx('ui_open', 0.45);
   }
   close({ rerender = true, restoreFocus = true } = {}) {
     if (!this.isOpen) return;
     this.isOpen = false; this.root.hidden = true;
+    this.setShowcaseHidden(false);
     document.getElementById?.('meta')?.classList?.remove('gx-open');
     globalThis.removeEventListener?.('resize', this.onResize);
     playSfx('ui_close', 0.35);
@@ -146,6 +156,7 @@ export class SkillTreeView extends GrowthOverlay {
   }
   render() {
     if (!this.root || !this.heroId) return;
+    this.setShowcaseHidden(true);
     const eco = this.eco, id = this.heroId, def = HEROES[id], h = eco.hero(id); if (!h) { this.close(); return; }
     const sp = heroSkillPoints(eco, id), keys = new Map();
     const key = (k, node) => { node.dataset.key = k; keys.set(k, node); return node; };
