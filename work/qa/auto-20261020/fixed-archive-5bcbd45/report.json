@@ -1,0 +1,1438 @@
+{
+  "tag": "fixed-archive-5bcbd45",
+  "head": "5bcbd459d6f673c19fc6447f3b94157ee1927582",
+  "build": {
+    "sha": "5bcbd459d6f673c19fc6447f3b94157ee1927582",
+    "dirty": false,
+    "builtAt": "2026-10-19T21:54:22.881Z",
+    "pwaRelease": "2ddaaf3372bcf9f372f7"
+  },
+  "harnessSha256": "51a7e7b40a6a1299e18ef4b9c633d8c39f8b7c809c9a77f4aa13ef8fc996ea10",
+  "artifactSha256": "bf3b48d366bda853cc6db03b23ed25026857c9e4c7290934061ea2dbbaa5b026",
+  "fixture": "시나리오마다 새 브라우저 저장, 기사 45레벨, 기본 장비·스킬, AUTO. 입장 제한만 해제. 사망 시 실제 부활 경로 호출(별도 집계).",
+  "viewport": {
+    "width": 844,
+    "height": 390
+  },
+  "seedBase": 1592594457,
+  "heroId": "knight",
+  "heroLevel": 45,
+  "stepsPerChunk": 600,
+  "maxChunks": 160,
+  "dt": 0.016666666666666666,
+  "started": "2026-10-19T21:54:29.106Z",
+  "runs": [
+    {
+      "id": "conquest-archive_break",
+      "kind": "dungeon",
+      "target": "star_archive",
+      "depth": "deep",
+      "conquestId": "archive_break",
+      "seed": 324347164,
+      "status": "win",
+      "deaths": 0,
+      "samples": [
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 10,
+          "kills": 3,
+          "enemyHp": 36907,
+          "pos": [
+            -77.4,
+            -30.9
+          ],
+          "state": "attack",
+          "hp": 12341,
+          "auto": true,
+          "aim": {
+            "id": "심연 폭탄",
+            "behavior": "bomber",
+            "alive": true
+          },
+          "cleared": 1,
+          "rooms": 8,
+          "sealed": true,
+          "room": 1,
+          "target": {
+            "id": 1,
+            "type": "normal",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 0,
+            "failed": false,
+            "hint": "전술 · 보스 BREAK · 0/2"
+          },
+          "portal": false,
+          "boss": null,
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 3,
+          "near": [
+            {
+              "d": 2.4,
+              "id": "심연 폭탄",
+              "behavior": "bomber",
+              "hp": 6107,
+              "room": 1,
+              "x": -75,
+              "z": -30.5
+            },
+            {
+              "d": 5.4,
+              "id": "심연 주시자",
+              "behavior": "shaman",
+              "hp": 16940,
+              "room": 1,
+              "x": -72,
+              "z": -30.9
+            },
+            {
+              "d": 7.6,
+              "id": "심연 눈알",
+              "behavior": null,
+              "hp": 13860,
+              "room": 1,
+              "x": -70,
+              "z": -29.3
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 39.7,
+          "kills": 15,
+          "enemyHp": 4519,
+          "pos": [
+            -33.8,
+            3.5
+          ],
+          "state": "attack",
+          "hp": 10806,
+          "auto": true,
+          "aim": {
+            "id": "심연 눈알",
+            "behavior": null,
+            "alive": true
+          },
+          "cleared": 2,
+          "rooms": 8,
+          "sealed": true,
+          "room": 5,
+          "target": {
+            "id": 6,
+            "type": "normal",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 0,
+            "failed": false,
+            "hint": "전술 · 보스 BREAK · 0/2"
+          },
+          "portal": false,
+          "boss": null,
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 1,
+          "near": [
+            {
+              "d": 10.1,
+              "id": "심연 눈알",
+              "behavior": null,
+              "hp": 4519,
+              "room": 5,
+              "x": -43.5,
+              "z": 6
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 69,
+          "kills": 25,
+          "enemyHp": 118535,
+          "pos": [
+            -108,
+            5.7
+          ],
+          "state": "attack",
+          "hp": 12913,
+          "auto": true,
+          "aim": {
+            "id": "심연 골렘",
+            "behavior": null,
+            "alive": true
+          },
+          "cleared": 4,
+          "rooms": 8,
+          "sealed": true,
+          "room": 4,
+          "target": {
+            "id": 4,
+            "type": "elite",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 0,
+            "failed": false,
+            "hint": "전술 · 보스 BREAK · 0/2"
+          },
+          "portal": false,
+          "boss": null,
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 2,
+          "near": [
+            {
+              "d": 2.3,
+              "id": "심연 골렘",
+              "behavior": null,
+              "hp": 112728,
+              "room": 4,
+              "x": -109.7,
+              "z": 4
+            },
+            {
+              "d": 7.8,
+              "id": "심연 눈알",
+              "behavior": null,
+              "hp": 5807,
+              "room": 4,
+              "x": -115.4,
+              "z": 3
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 98.6,
+          "kills": 26,
+          "enemyHp": 12272,
+          "pos": [
+            -103,
+            6.9
+          ],
+          "state": "attack",
+          "hp": 11842,
+          "auto": true,
+          "aim": {
+            "id": "심연 골렘",
+            "behavior": null,
+            "alive": true
+          },
+          "cleared": 4,
+          "rooms": 8,
+          "sealed": true,
+          "room": 4,
+          "target": {
+            "id": 4,
+            "type": "elite",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 0,
+            "failed": false,
+            "hint": "전술 · 보스 BREAK · 0/2"
+          },
+          "portal": false,
+          "boss": null,
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 1,
+          "near": [
+            {
+              "d": 1.1,
+              "id": "심연 골렘",
+              "behavior": null,
+              "hp": 12272,
+              "room": 4,
+              "x": -101.9,
+              "z": 6.9
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 128,
+          "kills": 31,
+          "enemyHp": 0,
+          "pos": [
+            -36.6,
+            -37.6
+          ],
+          "state": "idle",
+          "hp": 11876,
+          "auto": true,
+          "aim": null,
+          "cleared": 7,
+          "rooms": 8,
+          "sealed": true,
+          "room": 3,
+          "target": {
+            "id": 3,
+            "type": "treasure",
+            "cleared": true,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 0,
+            "failed": false,
+            "hint": "전술 · 보스 BREAK · 0/2"
+          },
+          "portal": false,
+          "boss": null,
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 0,
+          "near": [],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 157.3,
+          "kills": 31,
+          "enemyHp": 464182,
+          "pos": [
+            -82.4,
+            28.3
+          ],
+          "state": "attack",
+          "hp": 8411,
+          "auto": true,
+          "aim": {
+            "id": "남겨진 이름의 길잡이",
+            "behavior": null,
+            "alive": true
+          },
+          "cleared": 7,
+          "rooms": 8,
+          "sealed": false,
+          "room": 7,
+          "target": {
+            "id": 7,
+            "type": "boss",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 2,
+            "failed": false,
+            "hint": "전술 조건 달성 · 보스 처치 후 기록"
+          },
+          "portal": false,
+          "boss": {
+            "alive": true,
+            "hp": 464182
+          },
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 1,
+          "near": [
+            {
+              "d": 2,
+              "id": "남겨진 이름의 길잡이",
+              "behavior": null,
+              "hp": 464182,
+              "room": 7,
+              "x": -80.7,
+              "z": 27.1
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 186.4,
+          "kills": 31,
+          "enemyHp": 343196,
+          "pos": [
+            -79.2,
+            26.5
+          ],
+          "state": "attack",
+          "hp": 6893,
+          "auto": true,
+          "aim": {
+            "id": "남겨진 이름의 길잡이",
+            "behavior": null,
+            "alive": true
+          },
+          "cleared": 7,
+          "rooms": 8,
+          "sealed": false,
+          "room": 7,
+          "target": {
+            "id": 7,
+            "type": "boss",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 2,
+            "failed": false,
+            "hint": "전술 조건 달성 · 보스 처치 후 기록"
+          },
+          "portal": false,
+          "boss": {
+            "alive": true,
+            "hp": 343196
+          },
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 1,
+          "near": [
+            {
+              "d": 0.5,
+              "id": "남겨진 이름의 길잡이",
+              "behavior": null,
+              "hp": 343196,
+              "room": 7,
+              "x": -79.7,
+              "z": 26.7
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 216.1,
+          "kills": 31,
+          "enemyHp": 238554,
+          "pos": [
+            -81.2,
+            27.6
+          ],
+          "state": "attack",
+          "hp": 5375,
+          "auto": true,
+          "aim": {
+            "id": "남겨진 이름의 길잡이",
+            "behavior": null,
+            "alive": true
+          },
+          "cleared": 7,
+          "rooms": 8,
+          "sealed": false,
+          "room": 7,
+          "target": {
+            "id": 7,
+            "type": "boss",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 2,
+            "failed": false,
+            "hint": "전술 조건 달성 · 보스 처치 후 기록"
+          },
+          "portal": false,
+          "boss": {
+            "alive": true,
+            "hp": 238554
+          },
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 1,
+          "near": [
+            {
+              "d": 0.3,
+              "id": "남겨진 이름의 길잡이",
+              "behavior": null,
+              "hp": 238554,
+              "room": 7,
+              "x": -81.1,
+              "z": 27.3
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 244.1,
+          "kills": 31,
+          "enemyHp": 108007,
+          "pos": [
+            -83.3,
+            30.3
+          ],
+          "state": "attack",
+          "hp": 4286,
+          "auto": true,
+          "aim": {
+            "id": "남겨진 이름의 길잡이",
+            "behavior": null,
+            "alive": true
+          },
+          "cleared": 7,
+          "rooms": 8,
+          "sealed": false,
+          "room": 7,
+          "target": {
+            "id": 7,
+            "type": "boss",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 2,
+            "failed": false,
+            "hint": "전술 조건 달성 · 보스 처치 후 기록"
+          },
+          "portal": false,
+          "boss": {
+            "alive": true,
+            "hp": 108007
+          },
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 1,
+          "near": [
+            {
+              "d": 0.9,
+              "id": "남겨진 이름의 길잡이",
+              "behavior": null,
+              "hp": 108007,
+              "room": 7,
+              "x": -82.8,
+              "z": 29.5
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": false,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 265.1,
+          "kills": 32,
+          "enemyHp": 0,
+          "pos": [
+            -85.4,
+            32.9
+          ],
+          "state": "idle",
+          "hp": 4441,
+          "auto": true,
+          "aim": null,
+          "cleared": 8,
+          "rooms": 8,
+          "sealed": false,
+          "room": 7,
+          "target": {
+            "id": 7,
+            "type": "boss",
+            "cleared": true,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 2,
+            "failed": false,
+            "hint": "전술 조건 달성 · 보스 처치 후 기록"
+          },
+          "portal": false,
+          "boss": null,
+          "bossDefeated": true,
+          "pending": 0,
+          "alive": 0,
+          "near": [],
+          "result": {
+            "win": true,
+            "rooms": 7,
+            "route": null,
+            "conquest": true
+          }
+        }
+      ],
+      "stallSuspects": [],
+      "fixture": {
+        "heroLevel": 45,
+        "maxHp": 12655,
+        "atk": 1084,
+        "skills": [
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        "saveHero": {
+          "level": 45,
+          "exp": 0,
+          "star": 1,
+          "shards": 0,
+          "grade": "SSR",
+          "skills": [
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          "skillLoadout": [
+            4,
+            5
+          ],
+          "equip": {
+            "weapon": null,
+            "armor": null,
+            "ring": null,
+            "boots": null
+          }
+        }
+      },
+      "last": {
+        "active": false,
+        "paused": false,
+        "pauseError": null,
+        "deaths": 0,
+        "elapsed": 265.1,
+        "kills": 32,
+        "enemyHp": 0,
+        "pos": [
+          -85.4,
+          32.9
+        ],
+        "state": "idle",
+        "hp": 4441,
+        "auto": true,
+        "aim": null,
+        "cleared": 8,
+        "rooms": 8,
+        "sealed": false,
+        "room": 7,
+        "target": {
+          "id": 7,
+          "type": "boss",
+          "cleared": true,
+          "attunementPending": false
+        },
+        "route": null,
+        "conquest": {
+          "progress": 2,
+          "failed": false,
+          "hint": "전술 조건 달성 · 보스 처치 후 기록"
+        },
+        "portal": false,
+        "boss": null,
+        "bossDefeated": true,
+        "pending": 0,
+        "alive": 0,
+        "near": [],
+        "result": {
+          "win": true,
+          "rooms": 7,
+          "route": null,
+          "conquest": true
+        }
+      },
+      "prevEnemyHp": 3243,
+      "settle": {
+        "active": false,
+        "win": true,
+        "resultVisible": true,
+        "expeditionPending": false,
+        "receipt": {
+          "ok": true
+        }
+      },
+      "screenshot": "conquest-archive_break.png",
+      "unassistedWin": true
+    },
+    {
+      "id": "conquest-archive_opening",
+      "kind": "dungeon",
+      "target": "star_archive",
+      "depth": "deep",
+      "conquestId": "archive_opening",
+      "seed": 2672685422,
+      "status": "win",
+      "deaths": 0,
+      "samples": [
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 10,
+          "kills": 1,
+          "enemyHp": 33460,
+          "pos": [
+            -72.2,
+            -30.9
+          ],
+          "state": "attack",
+          "hp": 12341,
+          "auto": true,
+          "aim": {
+            "id": "심연 폭탄",
+            "behavior": "bomber",
+            "alive": true
+          },
+          "cleared": 1,
+          "rooms": 8,
+          "sealed": true,
+          "room": 1,
+          "target": {
+            "id": 1,
+            "type": "normal",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 0,
+            "failed": false,
+            "hint": "전술 · BREAK 중 명중 · 0/3"
+          },
+          "portal": false,
+          "boss": null,
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 5,
+          "near": [
+            {
+              "d": 2,
+              "id": "심연 폭탄",
+              "behavior": "bomber",
+              "hp": 2728,
+              "room": 1,
+              "x": -70.2,
+              "z": -30.7
+            },
+            {
+              "d": 2.4,
+              "id": "심연 주시자",
+              "behavior": "shaman",
+              "hp": 15820,
+              "room": 1,
+              "x": -69.7,
+              "z": -31.1
+            },
+            {
+              "d": 3.2,
+              "id": "심연 눈알",
+              "behavior": null,
+              "hp": 11694,
+              "room": 1,
+              "x": -69.2,
+              "z": -29.7
+            },
+            {
+              "d": 5.7,
+              "id": "해골 병사",
+              "behavior": null,
+              "hp": 570,
+              "room": 1,
+              "x": -77.8,
+              "z": -30.1
+            },
+            {
+              "d": 8.1,
+              "id": "해골 망령",
+              "behavior": null,
+              "hp": 2648,
+              "room": 1,
+              "x": -80.1,
+              "z": -32.7
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 40,
+          "kills": 15,
+          "enemyHp": 4666,
+          "pos": [
+            -39.5,
+            3.5
+          ],
+          "state": "move",
+          "hp": 10929,
+          "auto": true,
+          "aim": {
+            "id": "해골 망령",
+            "behavior": null,
+            "alive": true
+          },
+          "cleared": 2,
+          "rooms": 8,
+          "sealed": true,
+          "room": 5,
+          "target": {
+            "id": 6,
+            "type": "normal",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 0,
+            "failed": false,
+            "hint": "전술 · BREAK 중 명중 · 0/3"
+          },
+          "portal": false,
+          "boss": null,
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 1,
+          "near": [
+            {
+              "d": 3.7,
+              "id": "해골 망령",
+              "behavior": null,
+              "hp": 4666,
+              "room": 5,
+              "x": -35.9,
+              "z": 3.1
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 69.6,
+          "kills": 26,
+          "enemyHp": 113564,
+          "pos": [
+            -116,
+            -0.9
+          ],
+          "state": "attack",
+          "hp": 12879,
+          "auto": true,
+          "aim": {
+            "id": "심연 골렘",
+            "behavior": null,
+            "alive": true
+          },
+          "cleared": 4,
+          "rooms": 8,
+          "sealed": true,
+          "room": 4,
+          "target": {
+            "id": 4,
+            "type": "elite",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 0,
+            "failed": false,
+            "hint": "전술 · BREAK 중 명중 · 0/3"
+          },
+          "portal": false,
+          "boss": null,
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 1,
+          "near": [
+            {
+              "d": 1.9,
+              "id": "심연 골렘",
+              "behavior": null,
+              "hp": 113564,
+              "room": 4,
+              "x": -114.8,
+              "z": -2.4
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 99.2,
+          "kills": 26,
+          "enemyHp": 21044,
+          "pos": [
+            -116.1,
+            3.6
+          ],
+          "state": "attack",
+          "hp": 12325,
+          "auto": true,
+          "aim": {
+            "id": "심연 골렘",
+            "behavior": null,
+            "alive": true
+          },
+          "cleared": 4,
+          "rooms": 8,
+          "sealed": true,
+          "room": 4,
+          "target": {
+            "id": 4,
+            "type": "elite",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 0,
+            "failed": false,
+            "hint": "전술 · BREAK 중 명중 · 0/3"
+          },
+          "portal": false,
+          "boss": null,
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 1,
+          "near": [
+            {
+              "d": 1.3,
+              "id": "심연 골렘",
+              "behavior": null,
+              "hp": 21044,
+              "room": 4,
+              "x": -116.1,
+              "z": 4.9
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 128.9,
+          "kills": 31,
+          "enemyHp": 0,
+          "pos": [
+            -36.6,
+            -37.6
+          ],
+          "state": "idle",
+          "hp": 12485,
+          "auto": true,
+          "aim": null,
+          "cleared": 7,
+          "rooms": 8,
+          "sealed": true,
+          "room": 3,
+          "target": {
+            "id": 3,
+            "type": "treasure",
+            "cleared": true,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 0,
+            "failed": false,
+            "hint": "전술 · BREAK 중 명중 · 0/3"
+          },
+          "portal": false,
+          "boss": null,
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 0,
+          "near": [],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 158.6,
+          "kills": 31,
+          "enemyHp": 463420,
+          "pos": [
+            -80.6,
+            27.2
+          ],
+          "state": "attack",
+          "hp": 11231,
+          "auto": true,
+          "aim": {
+            "id": "남겨진 이름의 길잡이",
+            "behavior": null,
+            "alive": true
+          },
+          "cleared": 7,
+          "rooms": 8,
+          "sealed": false,
+          "room": 7,
+          "target": {
+            "id": 7,
+            "type": "boss",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 3,
+            "failed": false,
+            "hint": "전술 조건 달성 · 보스 처치 후 기록"
+          },
+          "portal": false,
+          "boss": {
+            "alive": true,
+            "hp": 463420
+          },
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 1,
+          "near": [
+            {
+              "d": 0.5,
+              "id": "남겨진 이름의 길잡이",
+              "behavior": null,
+              "hp": 463420,
+              "room": 7,
+              "x": -80.1,
+              "z": 27
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 187.9,
+          "kills": 31,
+          "enemyHp": 346057,
+          "pos": [
+            -80,
+            26.6
+          ],
+          "state": "skill",
+          "hp": 8030,
+          "auto": true,
+          "aim": {
+            "id": "남겨진 이름의 길잡이",
+            "behavior": null,
+            "alive": true
+          },
+          "cleared": 7,
+          "rooms": 8,
+          "sealed": false,
+          "room": 7,
+          "target": {
+            "id": 7,
+            "type": "boss",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 3,
+            "failed": false,
+            "hint": "전술 조건 달성 · 보스 처치 후 기록"
+          },
+          "portal": false,
+          "boss": {
+            "alive": true,
+            "hp": 346057
+          },
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 1,
+          "near": [
+            {
+              "d": 3,
+              "id": "남겨진 이름의 길잡이",
+              "behavior": null,
+              "hp": 346057,
+              "room": 7,
+              "x": -82.7,
+              "z": 28
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 216.7,
+          "kills": 33,
+          "enemyHp": 244652,
+          "pos": [
+            -86.4,
+            23.1
+          ],
+          "state": "dodge",
+          "hp": 4603,
+          "auto": true,
+          "aim": {
+            "id": "밤유리 서기관",
+            "behavior": "shaman",
+            "alive": true
+          },
+          "cleared": 7,
+          "rooms": 8,
+          "sealed": false,
+          "room": null,
+          "target": {
+            "id": 7,
+            "type": "boss",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 3,
+            "failed": false,
+            "hint": "전술 조건 달성 · 보스 처치 후 기록"
+          },
+          "portal": false,
+          "boss": {
+            "alive": true,
+            "hp": 233872
+          },
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 3,
+          "near": [
+            {
+              "d": 0.7,
+              "id": "밤유리 서기관",
+              "behavior": "shaman",
+              "hp": 2049,
+              "room": 7,
+              "x": -86.1,
+              "z": 22.4
+            },
+            {
+              "d": 7.4,
+              "id": "남겨진 이름의 길잡이",
+              "behavior": null,
+              "hp": 233872,
+              "room": 7,
+              "x": -83.3,
+              "z": 29.8
+            },
+            {
+              "d": 7.4,
+              "id": "밤유리 서기관",
+              "behavior": "shaman",
+              "hp": 8731,
+              "room": 7,
+              "x": -80.9,
+              "z": 28.1
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 245.9,
+          "kills": 41,
+          "enemyHp": 210535,
+          "pos": [
+            -82.1,
+            28.1
+          ],
+          "state": "skill",
+          "hp": 2388,
+          "auto": true,
+          "aim": {
+            "id": "밤유리 서기관",
+            "behavior": "shaman",
+            "alive": true
+          },
+          "cleared": 7,
+          "rooms": 8,
+          "sealed": false,
+          "room": 7,
+          "target": {
+            "id": 7,
+            "type": "boss",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 3,
+            "failed": false,
+            "hint": "전술 조건 달성 · 보스 처치 후 기록"
+          },
+          "portal": false,
+          "boss": {
+            "alive": true,
+            "hp": 196660
+          },
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 5,
+          "near": [
+            {
+              "d": 2.6,
+              "id": "남겨진 이름의 길잡이",
+              "behavior": null,
+              "hp": 196660,
+              "room": 7,
+              "x": -84.7,
+              "z": 28
+            },
+            {
+              "d": 4.4,
+              "id": "밤유리 서기관",
+              "behavior": "shaman",
+              "hp": 8518,
+              "room": 7,
+              "x": -85.5,
+              "z": 30.8
+            },
+            {
+              "d": 4.8,
+              "id": "밤유리 서기관",
+              "behavior": "shaman",
+              "hp": 806,
+              "room": 7,
+              "x": -78.5,
+              "z": 31.4
+            },
+            {
+              "d": 4.8,
+              "id": "밤유리 서기관",
+              "behavior": "shaman",
+              "hp": 2288,
+              "room": 7,
+              "x": -78.3,
+              "z": 25.2
+            },
+            {
+              "d": 5,
+              "id": "밤유리 서기관",
+              "behavior": "shaman",
+              "hp": 2263,
+              "room": 7,
+              "x": -77.1,
+              "z": 27.9
+            }
+          ],
+          "result": null
+        },
+        {
+          "active": true,
+          "paused": false,
+          "pauseError": null,
+          "deaths": 0,
+          "elapsed": 274.4,
+          "kills": 47,
+          "enemyHp": 65678,
+          "pos": [
+            -83.2,
+            28.9
+          ],
+          "state": "attack",
+          "hp": 965,
+          "auto": true,
+          "aim": {
+            "id": "남겨진 이름의 길잡이",
+            "behavior": null,
+            "alive": true
+          },
+          "cleared": 7,
+          "rooms": 8,
+          "sealed": false,
+          "room": 7,
+          "target": {
+            "id": 7,
+            "type": "boss",
+            "cleared": false,
+            "attunementPending": false
+          },
+          "route": null,
+          "conquest": {
+            "progress": 3,
+            "failed": false,
+            "hint": "전술 조건 달성 · 보스 처치 후 기록"
+          },
+          "portal": false,
+          "boss": {
+            "alive": true,
+            "hp": 65678
+          },
+          "bossDefeated": false,
+          "pending": 0,
+          "alive": 1,
+          "near": [
+            {
+              "d": 0.8,
+              "id": "남겨진 이름의 길잡이",
+              "behavior": null,
+              "hp": 65678,
+              "room": 7,
+              "x": -83.8,
+              "z": 28.3
+            }
+          ],
+          "result": null
+        }
+      ],
+      "stallSuspects": [],
+      "fixture": {
+        "heroLevel": 45,
+        "maxHp": 12655,
+        "atk": 1084,
+        "skills": [
+          1,
+          1,
+          1,
+          1,
+          0,
+          0,
+          0,
+          0
+        ],
+        "saveHero": {
+          "level": 45,
+          "exp": 0,
+          "star": 1,
+          "shards": 0,
+          "grade": "SSR",
+          "skills": [
+            1,
+            1,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0
+          ],
+          "skillLoadout": [
+            4,
+            5
+          ],
+          "equip": {
+            "weapon": null,
+            "armor": null,
+            "ring": null,
+            "boots": null
+          }
+        }
+      },
+      "last": {
+        "active": false,
+        "paused": false,
+        "pauseError": null,
+        "deaths": 0,
+        "elapsed": 290.4,
+        "kills": 48,
+        "enemyHp": 0,
+        "pos": [
+          -85.9,
+          26.2
+        ],
+        "state": "idle",
+        "hp": 1120,
+        "auto": true,
+        "aim": null,
+        "cleared": 8,
+        "rooms": 8,
+        "sealed": false,
+        "room": 7,
+        "target": {
+          "id": 7,
+          "type": "boss",
+          "cleared": true,
+          "attunementPending": false
+        },
+        "route": null,
+        "conquest": {
+          "progress": 3,
+          "failed": false,
+          "hint": "전술 조건 달성 · 보스 처치 후 기록"
+        },
+        "portal": false,
+        "boss": null,
+        "bossDefeated": true,
+        "pending": 0,
+        "alive": 0,
+        "near": [],
+        "result": {
+          "win": true,
+          "rooms": 7,
+          "route": null,
+          "conquest": true
+        }
+      },
+      "prevEnemyHp": 30632,
+      "settle": {
+        "active": false,
+        "win": true,
+        "resultVisible": true,
+        "expeditionPending": false,
+        "receipt": {
+          "ok": true
+        }
+      },
+      "unassistedWin": true
+    }
+  ],
+  "errors": [],
+  "finished": "2026-10-19T21:55:05.397Z"
+}

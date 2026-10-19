@@ -6,7 +6,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const arg = key => process.argv.find(s => s.startsWith(`--${key}=`))?.slice(key.length + 3);
 const out = path.join(root, 'work/qa/auto-20261020');
 const beforeTag = arg('before') || 'baseline-97bc087';
-const afterTag = arg('after') || 'fixed-af4a258';
+const afterTag = arg('after') || 'fixed-5bcbd45';
 const before = JSON.parse(await fs.readFile(path.join(out, beforeTag, 'report.json'), 'utf8'));
 const after = JSON.parse(await fs.readFile(path.join(out, afterTag, 'report.json'), 'utf8'));
 for (const report of [before, after]) {

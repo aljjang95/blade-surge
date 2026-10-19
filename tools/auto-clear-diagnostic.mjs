@@ -1,4 +1,4 @@
-// AUTO 끝까지 클리어 검증 드라이버. 실제 컴파일 빌드(vite preview)와 실제 Battle·Player·Enemy·월드를 사용한다.
+// 단기 원인 분석 전용. 실제 호출을 감싸 시전·피해 횟수를 관찰하며, 27개 완주 비교에는 auto-clear-qa.mjs를 쓴다.
 // 테스트 고정값: 새 저장, 영웅·레벨, 에너지, 원정 접근/레벨 조건만 맞춘다. 위치·체력·피해·처치·승리는 바꾸지 않는다.
 import { chromium } from 'playwright';
 import { preview } from 'vite';
@@ -33,7 +33,7 @@ const report = { tag, head: build.sha, build,
   artifactSha256: createHash('sha256').update(await fs.readFile(path.join(root, 'dist/index.html'))).digest('hex'),
   fixture: '시나리오마다 새 브라우저 저장, 기사 45레벨, 기본 장비·스킬, AUTO. 입장 제한만 해제. 사망 시 실제 부활 경로 호출(별도 집계).',
   viewport: { width: 844, height: 390 }, seedBase, heroId, heroLevel,
-  stepsPerChunk: 600, maxChunks: 160, dt: 1 / 60,
+  diagnostic: true, stepsPerChunk: 600, maxChunks: 40, dt: 1 / 60,
   started: new Date().toISOString(), runs: [], errors: [] };
 const save = () => fs.writeFile(path.join(out, 'report.json'), JSON.stringify(report, null, 2));
 const server = await preview({ root, logLevel: 'error', preview: { host: '127.0.0.1', port: 0 } });

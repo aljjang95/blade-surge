@@ -1,13 +1,27 @@
 {
   "sourceBefore": "594da23023290e6ca54d9adf0b6f939736b16fbf",
-  "sourceFix": "af4a2587fbfc52f54b109fe2bcbbe9f8942a8378",
+  "sourceFix": "5bcbd459d6f673c19fc6447f3b94157ee1927582",
   "defects": [
     {
       "id": "auto-healer-aim",
       "symptom": "archive_break·archive_opening에서 전술 목표는 달성했지만 보스 체력이 회복돼 각각 1534.1초·1532.3초까지 시간 초과, 사망 13회씩.",
       "causeVerified": "autoMove는 치유사를 이동 목표로 고른 뒤 기존 보스 lockTarget을 유지했다. autoAim이 유효한 기존 잠금을 우선하므로 실제 콤보는 보스를 향했다. 보스 무리에서 치유사로 전환하는 경우와 치유사 자체가 무리 중심인 경우 모두 실제 Player 콤보 회귀 테스트로 수정 전 실패·수정 후 통과를 확인했다.",
       "change": "선택한 AUTO 이동 목표로 lockTarget도 함께 바꾼다. 수동 입력·피해·적 체력·부활·승리 규칙은 수정하지 않는다.",
-      "runtimeRerun": "수정 빌드의 동일 시드 전체 실행 후 report.json·comparison.json에서 판정한다."
+      "runtimeRerun": "조준 잠금 수정만으로는 시간 초과가 남았다. 아래 누적 원인과 단계별 runtimeAttempts를 함께 본다. 최종 5bcbd45 표적 재실행은 두 보스 모두 무사망 승리·전술 조건·정산 성공."
+    },
+    {
+      "id": "auto-support-control",
+      "symptom": "방패병 밀집 무리에 시선이 쏠리거나 가까운 치유사 간 표적이 바뀌면서 보스 회복이 반복됐다.",
+      "causeVerified": "무리 중심이 보스일 때만 치유사 우선 분기가 실행됐고, 준비된 궁극기는 보스 체력 35% 이하까지 보류됐다. 치유사가 여럿이면 처치 직전 표적을 버리는 회귀도 실제 Player 테스트로 재현했다.",
+      "change": "전체 활성 보스·정예를 지원하는 치유사를 우선 선택하고, 유효한 치유사 표적을 유지하며 준비된 궁극기를 회복 무리에 사용한다.",
+      "runtimeRerun": "이 수정들만 적용한 af4a258·63220da·e07595e·71ce528에서도 일부 시간 초과가 남았다. 조준 개선만으로 해결됐다고 판정하지 않는다."
+    },
+    {
+      "id": "auto-skill-starvation",
+      "symptom": "71ce528 단기 계측 393.9초에서 MP=100, 궁극기=100, 모든 쿨다운=0인데 궁극기는 1회만 시전. 보스 누적 피해 732937에도 보스 체력은 550000으로 회복됐다.",
+      "causeVerified": "AUTO 스킬 선택이 idle·move에만 열려 평타를 계속 예약하는 attack 상태에서는 실제 스킬 취소 창도 사용하지 못했다. 실제 평타 취소 창에서 준비된 shield_bash를 시전하지 못하는 회귀 테스트가 수정 전 실패했다.",
+      "change": "치유사 대응일 때 실제 canSkillCancel 창에서도 기존 스킬·MP·쿨다운 규칙에 따라 시전한다. 이동 상태 갱신은 기존 idle·move에만 적용하고, 순서형 공략의 precision 제한을 유지한다.",
+      "runtimeRerun": "5bcbd45: archive_break 265.1초·사망 0, archive_opening 290.4초·사망 0. 두 전술 목표와 정산 영수증 성공. 이후 27개 전체 회귀를 실행한다."
     },
     {
       "id": "qa-expedition-result-selector",
@@ -22,6 +36,116 @@
       "causeVerified": "기존 하네스는 10초 단위 서명 3회가 같으면 즉시 중단했다. 현재 위치·처치 수가 같아도 전투가 진행될 수 있다. 과거 3건 각각의 오탐 여부는 이번 새 저장 픽스처만으로 확정하지 않는다.",
       "change": "같은 조건을 의심 기록으로 남기고 즉시 중단하지 않는다. 모든 시나리오에 같은 96000프레임 상한을 적용한다.",
       "runtimeRerun": "기준 빌드의 stallSuspects와 최종 결과를 대조해 실제 시간 초과와 구분한다."
+    }
+  ],
+  "runtimeAttempts": [
+    {
+      "tag": "fixed-archive-af4a258",
+      "source": "af4a2587fbfc52f54b109fe2bcbbe9f8942a8378",
+      "runs": [
+        {
+          "id": "conquest-archive_break",
+          "seed": 324347164,
+          "status": "timeout",
+          "seconds": 1564.9,
+          "deaths": 7
+        },
+        {
+          "id": "conquest-archive_opening",
+          "seed": 2672685422,
+          "status": "timeout",
+          "seconds": 1562.5,
+          "deaths": 7
+        }
+      ]
+    },
+    {
+      "tag": "fixed-archive-63220da",
+      "source": "63220da8213dbd0678d0b257d255da5c3ccda1aa",
+      "runs": [
+        {
+          "id": "conquest-archive_break",
+          "seed": 324347164,
+          "status": "timeout",
+          "seconds": 1572.9,
+          "deaths": 6
+        },
+        {
+          "id": "conquest-archive_opening",
+          "seed": 2672685422,
+          "status": "timeout",
+          "seconds": 1576.5,
+          "deaths": 5
+        }
+      ]
+    },
+    {
+      "tag": "fixed-archive-e07595e",
+      "source": "e07595ed498fa5e3f6cccb716bbc11656ebff8ed",
+      "runs": [
+        {
+          "id": "conquest-archive_break",
+          "seed": 324347164,
+          "status": "win",
+          "seconds": 716.1,
+          "deaths": 2,
+          "conquest": true,
+          "settled": true
+        },
+        {
+          "id": "conquest-archive_opening",
+          "seed": 2672685422,
+          "status": "timeout",
+          "seconds": 1541.7,
+          "deaths": 6
+        }
+      ]
+    },
+    {
+      "tag": "fixed-archive-71ce528",
+      "source": "71ce528244d43943ec96916f3dcf1dce6191577c",
+      "runs": [
+        {
+          "id": "conquest-archive_break",
+          "seed": 324347164,
+          "status": "timeout",
+          "seconds": 1551,
+          "deaths": 5
+        },
+        {
+          "id": "conquest-archive_opening",
+          "seed": 2672685422,
+          "status": "win",
+          "seconds": 1481.1,
+          "deaths": 5,
+          "conquest": true,
+          "settled": true
+        }
+      ]
+    },
+    {
+      "tag": "fixed-archive-5bcbd45",
+      "source": "5bcbd459d6f673c19fc6447f3b94157ee1927582",
+      "runs": [
+        {
+          "id": "conquest-archive_break",
+          "seed": 324347164,
+          "status": "win",
+          "seconds": 265.1,
+          "deaths": 0,
+          "conquest": true,
+          "settled": true
+        },
+        {
+          "id": "conquest-archive_opening",
+          "seed": 2672685422,
+          "status": "win",
+          "seconds": 290.4,
+          "deaths": 0,
+          "conquest": true,
+          "settled": true
+        }
+      ]
     }
   ]
 }
