@@ -40,7 +40,7 @@ test('묶음 관리자는 미리 굴린 보상을 상자에 담고, 정산 강�
   const spawned: any[] = [];
   const battle: any = { player: { alive: true, auto: false, pos: { x: 0, z: 0 } }, drops: { spawn: (_at: any, kind: string, payload: any) => spawned.push({ kind, payload }) }, renderer: null, scene: null, paused: false, app: {} };
   const chests = new TreasureChests(battle);
-  chests.add({ x: 0.5, z: 0, chestPose: { x: 0.5, z: 0, ry: 0, s: 1.2 } }, [{ kind: 'item', payload: 'a' }, { kind: 'stone', payload: 8 }]);
+  chests.add({ x: 0, z: 0 }, [{ kind: 'item', payload: 'a' }, { kind: 'stone', payload: 8 }], { x: 0.5, z: 0, ry: 0, s: 1.2 });
   chests.add({ x: 30, z: 0 }, [{ kind: 'item', payload: 'b' }]);
   chests.keyHeld = true;
   for (let i = 0; i < 90; i++) chests.update(1 / 60);
@@ -63,3 +63,4 @@ test('머리 위 표식은 전투 중 14m 안의 살아 있는 대상만 보이�
   battle.player.distTo = () => 5; enemy.alive = false; expect(targetTagState(battle)).toBeNull();
   enemy.alive = true; battle.run.enabled = false; expect(targetTagState(battle)!.posture).toBeNull();
 });
+

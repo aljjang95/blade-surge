@@ -96,7 +96,7 @@ export class Battle {
     if (stage.field) await preloadFieldSurface();
     if (this._startGeneration !== startGeneration) return;
     // 보물방 상자는 전투가 직접 소유하는 열 수 있는 상자로 놓는다. 보상이 없는 모드는 기존 장식 상자를 그대로 둔다.
-    this.arena.interactiveChests = fieldDropsAllowed(stage);
+    this.arena.interactiveChests = fieldDropsAllowed(stage); this.arena.chestPoses = new Map();
     this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
     this.treasureChests?.dispose(); this.treasureChests = fieldDropsAllowed(stage) ? new TreasureChests(this) : null;
     await this.routeObjectives?.prepareView?.(this.scene);
@@ -409,7 +409,7 @@ export class Battle {
         const rewards = [];
         for (let i = 0; i < 3; i++) { const inst = this.rollDrop('elite'); if (inst) rewards.push({ kind: 'item', payload: inst, count: 1, spread: 1.6 }); }
         rewards.push({ kind: 'stone', payload: 8, count: 3, spread: 2 });
-        if (this.treasureChests) this.treasureChests.add(room, rewards);
+        if (this.treasureChests) this.treasureChests.add(room, rewards, this.arena.chestPoses?.get(room.id));
         else for (const r of rewards) this.drops.spawn(new THREE.Vector3(room.x, 0.6, room.z), r.kind, r.payload, { count: r.count, spread: r.spread });
       }
     }
@@ -875,4 +875,5 @@ export class Battle {
     this.ui.updateHud(this, realDt);
   }
 }
+
 

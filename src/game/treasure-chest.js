@@ -132,8 +132,9 @@ export class TreasureChests {
     this.clearInput = battle.input?.onClear?.(() => { this.pointerId = null; this.keyHeld = false; this.buttonHeld = false; });
   }
   /** 보물방 정화 때 미리 굴린 보상을 담은 상자를 놓는다. */
-  add(room, rewards) {
-    const pose = room.chestPose || { x: room.x, z: room.z, ry: 0, s: 1.2 };
+  /** @param {*} room @param {Array<*>} rewards @param {{x:number,z:number,ry:number,s:number}|null} [pose] */
+  add(room, rewards, pose = null) {
+    pose ||= { x: room.x, z: room.z, ry: 0, s: 1.2 };
     const item = { room, state: new ChestState(rewards), view: null, x: pose.x, z: pose.z };
     if (this.battle.scene) item.view = new ChestView(this.battle.scene, pose.x, pose.z, pose.ry, pose.s);
     this.items.push(item);
@@ -195,3 +196,4 @@ export class TreasureChests {
     window.removeEventListener('pointerup', this.onPointerUp, true); window.removeEventListener('pointercancel', this.onPointerUp, true);
   }
 }
+

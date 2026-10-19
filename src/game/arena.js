@@ -434,7 +434,7 @@ export class Arena {
         banners.push({ x: r.x - 5, z: r.z - r.h / 2 + 0.6, ry: 0 }, { x: r.x + 5, z: r.z - r.h / 2 + 0.6, ry: 0 });
         if (!floorData.layout) this.place('stairs_wide', r.x, r.z - r.h / 2 + 2.2, 0, 1, T.tint);
       }
-      if (r.type === ROOM_TYPE.TREASURE && !r.objectiveProp) { const chest = { x: r.x, z: r.z, ry: rnd(0, 6.28), s: 1.2 }; r.chestPose = chest; if (!this.interactiveChests && !addLibraryProp('chest_gold', chest)) this.place('chest_gold', chest.x, chest.z, chest.ry, chest.s); this.place('coin_stack_large', r.x + 1.6, r.z + 1.2, 0, 1); this.place('coin_stack_medium', r.x - 1.7, r.z + 0.9, 0, 1); }
+      if (r.type === ROOM_TYPE.TREASURE && !r.objectiveProp) { const chest = { x: r.x, z: r.z, ry: rnd(0, 6.28), s: 1.2 }; this.chestPoses?.set(r.id, chest); if (!this.interactiveChests && !addLibraryProp('chest_gold', chest)) this.place('chest_gold', chest.x, chest.z, chest.ry, chest.s); this.place('coin_stack_large', r.x + 1.6, r.z + 1.2, 0, 1); this.place('coin_stack_medium', r.x - 1.7, r.z + 0.9, 0, 1); }
       const n = floorData.layout ? 0 : 2 + Math.floor(random() * 3);
       for (let i = 0; i < n; i++) {
         const px = r.x + rnd(-1, 1) * (r.w / 2 - 2.2), pz = r.z + rnd(-1, 1) * (r.h / 2 - 2.2);
@@ -502,4 +502,5 @@ export class Arena {
     }
   }
 }
+
 
