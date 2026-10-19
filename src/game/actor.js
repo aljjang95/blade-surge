@@ -213,8 +213,11 @@ export class Actor {
   }
   knockback(dirx, dirz, force) { const l = Math.hypot(dirx, dirz) || 1; this.kb.x += dirx / l * force; this.kb.z += dirz / l * force; }
   update(dt) {
+    // 영웅 가산 자세 층(heroPose): 이전 프레임 보정을 되돌린 뒤 mixer가 원본을 쓰고, 마지막에 보정을 얹는다.
+    this.heroPose?.restore();
     this.mixer.update(dt);
     this.updateCombatPose(dt);
+    this.heroPose?.apply(dt);
     // 넉백 감쇠
     const fx0 = this.pos.x, fz0 = this.pos.z;
     if (this.kb.lengthSq() > 0.0001) { this.pos.addScaledVector(this.kb, dt); this.kb.multiplyScalar(Math.pow(0.02, dt)); }
@@ -245,7 +248,7 @@ export class Actor {
   }
   dispose() {
     if (this.disposed) return; this.disposed = true;
-    this.game.scene.remove(this.root); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.mixer.getRoot());
+    this.game.scene.remove(this.root); this.heroPose?.dispose(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.mixer.getRoot());
     const skeletons = new Set(), materials = new Set();
     this.model.traverse((o) => {
       if (o.isSkinnedMesh) skeletons.add(o.skeleton);
