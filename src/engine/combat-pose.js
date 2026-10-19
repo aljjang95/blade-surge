@@ -2,8 +2,8 @@ import { Euler, Quaternion, MathUtils } from 'three';
 import corrections from '../data/combat-pose-v1.json';
 
 export const COMBAT_POSE_CORRECTIONS = corrections;
-// 60Hz에서 보정 회전은 한 뼈당 최대 12도. 원본 클립의 시간과 게임 판정에는 관여하지 않는다.
-export const COMBAT_POSE_RATE = MathUtils.degToRad(900);
+// 60Hz에서 보정 회전은 한 뼈당 프레임당 최대 14.5도(상한 15도에 여유). 원본 클립의 시간과 게임 판정에는 관여하지 않는다.
+export const COMBAT_POSE_RATE = MathUtils.degToRad(870);
 
 /** 정규화된 클립 시각의 연속 곡선. 끝점 밖은 끝값을 유지한다. 할당 없음. */
 export function combatPoseWeight(curve, time) {
@@ -24,7 +24,7 @@ export function combatPoseWeight(curve, time) {
  * 외형 단계가 바뀌면 clips 안의 클립 객체가 오버레이로 교체될 수 있어(로그·궁수 회피·찌르기)
  * 클립은 별칭 이름으로 매 프레임 조회한다(조회는 객체를 만들지 않는다).
  * 액션은 existingAction으로 읽기만 한다. 클립·액션·히트 시각은 변경하지 않는다.
- * 한 뼈의 보정 회전은 프레임당 COMBAT_POSE_RATE/60(12도)까지만 변해 교차 페이드·시각 점프에서도 튀지 않는다.
+ * 한 뼈의 보정 회전은 프레임당 COMBAT_POSE_RATE/60(14.5도)까지만 변해 교차 페이드·시각 점프에서도 튀지 않는다.
  */
 export function createCombatPose(root, heroId, mixer, clips, data = corrections[heroId]) {
   if (!data) return null;
