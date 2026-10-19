@@ -46,3 +46,17 @@ test('AUTO는 치유사를 마무리하기 전에 더 가까워진 다른 치유
   p.autoMove(1 / 60);
   expect(p.lockTarget === closer).toBe(true);
 });
+
+test('AUTO는 실제 평타 취소 창에서 준비된 방패 강타로 치유사를 제어한다', () => {
+  const f = createCombatFlowFixture(runtime, 'knight'), p: any = f.player;
+  spawnCombatFlowEnemy(f, p.pos.x, p.pos.z + 4, { isBoss: true, hp: 1e6, maxHp: 1e6, stun: 60 });
+  const healer: any = spawnCombatFlowEnemy(f, p.pos.x + 2, p.pos.z + 3, { behavior: 'shaman', hp: 1e6, maxHp: 1e6, stun: 60 });
+  p.lockTarget = healer;
+  p.startCombo(0);
+  for (let i = 0; i < 120 && !p.canSkillCancel(); i++) stepCombatFlow(f, 1 / 60);
+  expect(p.canSkillCancel()).toBe(true);
+  p.cds.fill(Infinity); p.cds[1] = 0; p.auto = true;
+  stepCombatFlow(f, 1 / 60);
+  expect(p.state).toBe('skill');
+  expect(p.skillCtx?.sk.id).toBe('shield_bash');
+});

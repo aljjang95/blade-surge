@@ -669,7 +669,10 @@ export class Player extends Actor {
     // 원거리 AUTO 후퇴 시간: 붙은 적이 없을 때만 천천히 회복한다. 계속 붙어 있으면 상한에 머물러 제자리 공격을 이어 간다.
     const close = this.def.ranged && d < want - 3;
     if (!close) this._autoBackT = Math.max(0, (this._autoBackT || 0) - dt * .5);
-    if (this.state === 'idle' || this.state === 'move') {
+    const canMove = this.state === 'idle' || this.state === 'move';
+    const healingPressure = !priority && e.behavior === 'shaman';
+    // 평타를 계속 예약하는 AUTO도 실제 취소 창에서는 회복 지원을 스킬로 끊을 수 있어야 한다.
+    if (canMove || (healingPressure && this.state === 'attack' && this.canSkillCancel())) {
       // 스킬 우선: 적이 3마리 이상 뭉쳤을 때 광역기 우선
       let cluster = 0, boss = null;
       for (const x of list) { if (x.distTo(e) < 4.5) cluster++; if (!boss && x.isBoss) boss = x; }
@@ -683,12 +686,14 @@ export class Player extends Actor {
         // 회복 무리를 그대로 두면 보스가 마무리 체력에 도달하지 않는다. 준비된 궁극기로 지원을 먼저 끊는다.
         const supportBurst = !!boss && e.behavior === 'shaman' && cluster >= 2;
         const linkReady = !!this.game.getComboLinkSnapshot?.().ready;
-        const controlOpening = linkReady || e.breakT > 0 || (e.telegraph > 0 && d < 5);
+        const controlOpening = healingPressure || linkReady || e.breakT > 0 || (e.telegraph > 0 && d < 5);
         if (sk.ult && !bossFinish && !emergencyCrowd && !supportBurst) continue;
         if (!sk.ult && !controlOpening && cluster < 5) continue;
         const wantCluster = this.game.stage?.expedition?.kind === 'arena' ? 1 : sk.ult ? 1 : sk.awaken ? 2 : 1;
         if (cluster >= wantCluster && d < (this.def.ranged ? 11 : 8)) { this.game.input.press('skill' + slot); return out; }
       }
+    }
+    if (canMove) {
       // 벽에 가린 적은 같은 방이어도 거리장을 따라 돌아간다(직선으로 벽에 박혀 제자리걸음하던 경로).
       if (d > want + .4 || !clearShot(this.game.world, this.pos.x, this.pos.z, e.pos.x, e.pos.z)) {
         Player.prototype.autoPath.call(this, e.pos.x, e.pos.z, out);
