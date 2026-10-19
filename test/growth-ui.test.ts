@@ -149,3 +149,22 @@ test('초월: 최고 등급이면 "최고 등급"으로 잠기고 초월 패키�
   expect(meta.tabs.at(-1)).toEqual(['shop', 'pack']);
   expect(view.isOpen).toBe(false);
 });
+
+test('스킬 초기화: 되돌릴 SP가 없으면 버튼이 꺼지고 이유가 보이며, Economy가 nothing 을 돌려주면 그 이유를 알린다', async () => {
+  const { eco, meta } = setup(); eco.hero('knight').level = 12;
+  const view: any = new SkillTreeView(meta); view.open('knight');
+  expect(eco.skillPoints('knight').spent).toBe(0);
+  const reset = view.root.key('reset');
+  expect(reset.disabled).toBe(true);
+  expect(view.root.byClass('st-reset-reason')[0].textContent).toBe('되돌릴 스킬 포인트가 없습니다');
+  expect(reset.getAttribute('aria-describedby')).toBe('st-reset-reason');
+  await reset.click(); expect(meta.asked.length).toBe(0);
+  // 견적과 실행 사이에 SP가 비면(다른 화면에서 이미 초기화) Economy 계약의 nothing 사유를 그대로 알린다.
+  view.root.key('plus-0').click();
+  expect(view.root.key('reset').disabled).toBe(false);
+  expect(view.root.byClass('st-reset-reason').length).toBe(0);
+  eco.resetSkills = () => ({ ok: false, reason: 'nothing' });
+  expect(await view.reset()).toEqual({ ok: false, reason: 'nothing' });
+  expect(meta.toasts.at(-1)).toBe('되돌릴 스킬 포인트가 없습니다');
+  expect(meta.tabs.length).toBe(0);
+});
