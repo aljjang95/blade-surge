@@ -7,6 +7,20 @@ import { hasTownSkillVariant } from './town-combat.js';
 
 const _v = new THREE.Vector3();
 const fwd = (p, d = 1) => p.forward(new THREE.Vector3()).multiplyScalar(d).add(p.pos);
+/** game.hitRadius와 같되 영웅에서 limit m 안의 적만 친다(표시 범위 밖 폭발 피해를 막는 스킬용). */
+function hitWithin(game, p, center, radius, limit, dmg, opts = {}) {
+  let n = 0;
+  for (const e of game.enemies) {
+    if (!e.alive || e.spawning || p.distTo(e) >= limit) continue;
+    const dx = e.pos.x - center.x, dz = e.pos.z - center.z;
+    if (Math.hypot(dx, dz) - e.radius * 0.5 > radius) continue;
+    const from = opts.dirFrom || center;
+    game.damageEnemy(e, dmg, { ...opts, dirx: e.pos.x - from.x, dirz: e.pos.z - from.z }); n++;
+    if (n >= 30) break;
+  }
+  game.routeObjectives?.strike?.(game, center.x, center.z, radius);
+  return n;
+}
 const targets = (game, p, max = 6, range = 10) => game.enemies.filter((e) => e.alive && !e.spawning && p.distTo(e) < range).sort((a, b) => p.distTo(a) - p.distTo(b)).slice(0, max);
 const rangerOrigin = (p, dir) => p.def?.weapon === 'bow' && p.arrowOrigin ? p.arrowOrigin(dir) : p.pos.clone().addScaledVector(dir, .9).setY(1.2);
 function rangerArrows(game, p, dmg, count = 1, options = {}) {
@@ -830,9 +844,16 @@ export const SKILLS = {
         if (!alive.length) return;
         const hub = alive.reduce((a, e) => a.add(e.pos), new THREE.Vector3()).multiplyScalar(1 / alive.length);
         for (const e of alive) game.fx.boltTex(e.pos.clone().setY(1), hub.clone().setY(1), 0xb26bff, { width: 1.4, life: 0.28 });
-        game.vacuum(hub, 14, 26);
+        // 표시(자기 중심 13m) 밖 적은 끌지도 치지도 않는다: 표식 대상이 먼 곳에 있으면 표시 밖 적이 몰려와 맞던 것을 막는다(3차 재감사 shadow_mark 다중 표적).
+        const reach = SKILL_AIM_SHAPES.shadow_mark.range;
+        audio.suck({ vol: 0.22, dur: 0.4 });
+        for (const e of game.enemies) {
+          if (!e.alive || e.spawning || p.distTo(e) >= reach) continue;
+          const dx = e.pos.x - hub.x, dz = e.pos.z - hub.z;
+          if (dx * dx + dz * dz <= 196) e.pull(hub.x, hub.z, 26);
+        }
         game.after(0.18, () => {
-          game.hitRadius(hub, 5.5, c.dmg * 1.6, { kb: 6, kind: 'slash', up: true, source: p, dirFrom: hub });
+          hitWithin(game, p, hub, 5.5, reach, c.dmg * 1.6, { kb: 6, kind: 'slash', up: true, source: p, dirFrom: hub });
           game.fx.texFlash(hub, 'singularity', 0xb26bff, { size: 9, life: 0.5, spin: 0.6, grow: 1.5, y: 0.6 });
           game.fx.explosion(hub, { size: 7, color: 0xd0a0ff, life: 0.5 });
           game.fx.shockTex(hub, 0xb26bff, { r1: 6.5, life: 0.5 });

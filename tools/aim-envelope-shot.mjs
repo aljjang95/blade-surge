@@ -11,7 +11,7 @@ const views = (process.argv[4] || '1280x590,844x390,800x360').split(',').map(v =
 const CASES = [['mage', 'meteor'], ['barbarian', 'magma_zone'], ['knight', 'shield_bash'], ['barbarian', 'quake'], ['barbarian', 'hell_axe'], ['barbarian', 'whirlwind'],
   ['ranger', 'ranger_volley', 'lanes'], ['ranger', 'ranger_tempest', 'lanes'], ['ranger', 'ranger_binding', 'lanes'], ['knight', 'dragon_slash', 'lanes'],
   ['knight', 'heavenfall'], ['barbarian', 'bloodquake'], ['mage', 'star_prison'], ['mage', 'absolute_zero'], ['rogue', 'night_parade'], ['rogue', 'eclipse_edge'],
-  ['knight', 'dragon_slash'], ['rogue', 'flurry'], ['mage', 'blizzard'], ['knight', 'sanctuary']];
+  ['knight', 'dragon_slash'], ['rogue', 'flurry'], ['mage', 'blizzard'], ['knight', 'sanctuary'], ['mage', 'chrono_seal']];
 await fs.mkdir(out, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-angle=d3d11', '--ignore-gpu-blocklist'] });
 const rows = []; let pass = true;
