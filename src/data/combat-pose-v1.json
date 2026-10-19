@@ -18120,19 +18120,19 @@
           "t": 0,
           "bones": {
             "mixamorigRightArm": [
-              2.5,
-              -18,
-              25.5
+              0.5,
+              -25,
+              20.5
             ],
             "mixamorigRightForeArm": [
-              3,
-              1,
+              8,
+              -5.5,
               34
             ],
             "mixamorigRightHand": [
-              16,
-              1,
-              11.5
+              6.5,
+              2.5,
+              7
             ],
             "mixamorigLeftArm": [
               0,
@@ -18150,9 +18150,9 @@
               0
             ],
             "mixamorigRightShoulder": [
-              -3,
-              -7.5,
-              1
+              -3.5,
+              -0.5,
+              13.5
             ]
           }
         },
@@ -18160,19 +18160,19 @@
           "t": 1,
           "bones": {
             "mixamorigRightArm": [
-              2.5,
-              -18,
-              25.5
+              0.5,
+              -25,
+              20.5
             ],
             "mixamorigRightForeArm": [
-              3,
-              1,
+              8,
+              -5.5,
               34
             ],
             "mixamorigRightHand": [
-              16,
-              1,
-              11.5
+              6.5,
+              2.5,
+              7
             ],
             "mixamorigLeftArm": [
               0,
@@ -18190,9 +18190,9 @@
               0
             ],
             "mixamorigRightShoulder": [
-              -3,
-              -7.5,
-              1
+              -3.5,
+              -0.5,
+              13.5
             ]
           }
         }
@@ -18209,19 +18209,19 @@
           "t": 0,
           "bones": {
             "mixamorigRightArm": [
-              0,
+              -9,
               -15,
-              4.5
+              14.5
             ],
             "mixamorigRightForeArm": [
-              0,
-              14,
-              20
+              15,
+              30,
+              10
             ],
             "mixamorigRightHand": [
-              35,
-              -10,
-              20
+              30,
+              0,
+              15
             ],
             "mixamorigLeftArm": [
               0,
@@ -18239,9 +18239,9 @@
               0
             ],
             "mixamorigRightShoulder": [
-              -4,
-              -10,
-              4
+              6,
+              0,
+              0
             ]
           }
         },
@@ -18249,19 +18249,19 @@
           "t": 1,
           "bones": {
             "mixamorigRightArm": [
-              0,
+              -9,
               -15,
-              4.5
+              14.5
             ],
             "mixamorigRightForeArm": [
-              0,
-              14,
-              20
+              15,
+              30,
+              10
             ],
             "mixamorigRightHand": [
-              35,
-              -10,
-              20
+              30,
+              0,
+              15
             ],
             "mixamorigLeftArm": [
               0,
@@ -18279,9 +18279,9 @@
               0
             ],
             "mixamorigRightShoulder": [
-              -4,
-              -10,
-              4
+              6,
+              0,
+              0
             ]
           }
         }
@@ -19473,18 +19473,18 @@
           "t": 0,
           "bones": {
             "mixamorigRightArm": [
-              18,
-              33,
-              9
+              9.5,
+              0.5,
+              19
             ],
             "mixamorigRightForeArm": [
-              32.5,
-              6,
-              20.5
+              17.5,
+              10,
+              30.5
             ],
             "mixamorigRightHand": [
-              32.5,
-              11,
+              31.5,
+              -5.5,
               17.5
             ],
             "mixamorigLeftArm": [
@@ -19503,9 +19503,9 @@
               0
             ],
             "mixamorigRightShoulder": [
-              -12.5,
-              -2.5,
-              15
+              18.5,
+              0,
+              0
             ]
           }
         },
@@ -19513,18 +19513,18 @@
           "t": 1,
           "bones": {
             "mixamorigRightArm": [
-              18,
-              33,
-              9
+              9.5,
+              0.5,
+              19
             ],
             "mixamorigRightForeArm": [
-              32.5,
-              6,
-              20.5
+              17.5,
+              10,
+              30.5
             ],
             "mixamorigRightHand": [
-              32.5,
-              11,
+              31.5,
+              -5.5,
               17.5
             ],
             "mixamorigLeftArm": [
@@ -19543,9 +19543,9 @@
               0
             ],
             "mixamorigRightShoulder": [
-              -12.5,
-              -2.5,
-              15
+              18.5,
+              0,
+              0
             ]
           }
         }
