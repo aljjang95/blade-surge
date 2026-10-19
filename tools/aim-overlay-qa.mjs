@@ -46,8 +46,10 @@ for (const hero of heroes) {
         const dx = c.x - start.x, dz = c.z - start.z, along = dx * ux + dz * uz, across = Math.abs(-dx * uz + dz * ux), dist = Math.hypot(dx, dz);
         const reach = c.t === 'r' ? c.r : c.range;
         const s = shapeCopy, o = s.origin || 0;
-        if (s.kind === 'self') return dist + reach - Math.max(s.range, s.radius || 0);
-        if (s.kind === 'circle') { const at = s.range * aim.dist01; const tx = ux * at, tz = uz * at; const okSelf = dist + reach - (s.range + (s.radius || 0)); return Math.min(Math.hypot(dx - tx, dz - tz) + reach - (s.radius || 0), okSelf); }
+        // 바깥 한계(envelope: 확률 띠·몰이 한계)는 점선으로 그려지므로 표시 경계에 포함한다.
+        const outer = Math.max(s.radius || 0, s.envelope || 0);
+        if (s.kind === 'self') return dist + reach - Math.max(s.range, outer);
+        if (s.kind === 'circle') { const at = s.range * aim.dist01; const tx = ux * at, tz = uz * at; const okSelf = dist + reach - (s.range + outer); return Math.min(Math.hypot(dx - tx, dz - tz) + reach - outer, okSelf); }
         if (s.kind === 'cone') return dist + reach - Math.max(s.range, s.projectileRange || 0) - (c.t === 'a' ? 0 : 0);
         // line: 레인(길이 L, 폭 w) + 끝 원(radius)을 합친 외곽
         const L = (s.projectileRange || s.range) + o + (s.endOffset || 0);
