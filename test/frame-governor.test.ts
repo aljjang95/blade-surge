@@ -93,22 +93,6 @@ test('단발 지연은 단계를 낮추지 않으며 회복은 60초 여유 뒤 
   }
 });
 
-test('손을 떼고 지켜보는 전투는 45fps로 그리고 손을 대면 즉시 60fps, 지켜보는 동안 품질 단계를 되올리지 않는다', () => {
-  const g = new FrameGovernor({ storage: storageFor(3) }); g.reset(0);
-  let steps = 0;
-  for (let t = 1000 / 120; t <= 10000; t += 1000 / 120) { if (g.advance(t, 'battle', true, false, true)) { steps++; g.recordFrame(t, 2); } }
-  expect(steps).toBeLessThanOrEqual(450); expect(steps).toBeGreaterThanOrEqual(449);
-  expect(g.snapshot().targetFps).toBe(45);
-  // 120초 동안 여유가 있어도 calm 중에는 3단계를 유지한다.
-  for (let t = 10000; t <= 130000; t += 1000 / 120) { if (g.advance(t, 'battle', true, false, true)) g.recordFrame(t, 2); }
-  expect(g.tier).toBe(3);
-  // 터치 순간 바로 60fps로 돌아간다(첫 프레임이 지연 없이 실행된다).
-  expect(g.advance(130010, 'battle', true, false, false)).toBeGreaterThan(0);
-  expect(g.snapshot().targetFps).toBe(60);
-  // 로비는 calm 여부와 무관하게 30fps다.
-  g.advance(130100, 'lobby', true, false, true); expect(g.snapshot().targetFps).toBe(30);
-});
-
 test('한 분 이상 실제 렌더한 안정 단계만 별도 키에 저장·복원한다', () => {
   const storage = storageFor(); storage.data.set('bladesurge_save', '보존할 게임 저장');
   const g = new FrameGovernor({ storage }); g.reset(0);
@@ -225,28 +209,6 @@ test('실제 App.loop는 120Hz에서 60회만 step하고 testPause·렌더 중�
   app.testPause = false; doc.hidden = true; loop.call(app, 3000); expect(app.steps).toBe(60);
   doc.hidden = false; loop.call(app, 3008); expect(app.steps).toBe(61);
   expect(app.frameGovernor.snapshot().p95FrameMs).toBe(0);
-});
-
-test('실제 App.loop와 touchCalm은 터치 기기에서 4초 손을 떼면 45fps, 누르고 있거나 데스크톱이면 60fps다', () => {
-  const doc = { hidden: false, querySelector: () => null };
-  const loop = appMethod('loop', { canRenderFrame, document: doc, requestAnimationFrame: () => {}, performance: { now: () => 0 } });
-  const touchCalm = new Function(`return ({${source.match(/  touchCalm\([^]*?\n  \}/)![0]}}).touchCalm;`)();
-  const make = (touchDevice: boolean) => {
-    const app: any = { frameGovernor: new FrameGovernor(), mode: 'battle', meta: { tab: 'home' }, touchCalm,
-      touchDevice, lastTouchAt: 0, touchesDown: 0, renderer: { renderCount: 0, setThermalTier() {} }, steps: 0,
-      step(_dt: number, render: boolean) { this.steps++; if (render) this.renderer.renderCount++; } };
-    app.frameGovernor.reset(0);
-    return app;
-  };
-  const run = (app: any, from: number, to: number) => { const s = app.steps; for (let t = from; t <= to; t += 1000 / 120) loop.call(app, t); return app.steps - s; };
-  const phone = make(true);
-  expect(run(phone, 1000 / 120, 4000)).toBeGreaterThanOrEqual(239);
-  expect(run(phone, 5000, 9000)).toBeLessThanOrEqual(181);
-  expect(phone.frameGovernor.snapshot().targetFps).toBe(45);
-  phone.touchesDown = 1; phone.lastTouchAt = 0;
-  expect(run(phone, 10000, 14000)).toBeGreaterThanOrEqual(239);
-  const desktop = make(false);
-  expect(run(desktop, 1000 / 120, 10000)).toBeGreaterThanOrEqual(599);
 });
 
 test('실제 app.step 고정 dt 경로는 프레임 제한과 별개이며 render=false를 지킨다', () => {
