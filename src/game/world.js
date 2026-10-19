@@ -255,13 +255,14 @@ export class Floor {
   }
   /** 목표 지점까지의 BFS 거리장 (길찾기). 목표가 바뀔 때만 다시 계산 */
   buildFlow(tx, tz) {
-    const key = Math.round(tx) + ',' + Math.round(tz);
-    if (this._flowKey === key) return this._flow;
+    const cellX = Math.floor((tx - this.minX) / CELL), cellZ = Math.floor((tz - this.minZ) / CELL);
+    if (this._flow && this._flowX === cellX && this._flowZ === cellZ) return this._flow;
     const N = this.cols * this.rows;
-    const dist = new Int32Array(N).fill(-1);
+    // 이동하는 목표도 같은 버퍼로 계산한다. BFS 큐/방향 배열을 매 프레임 만들지 않는다.
+    const dist = this._flowBuffer?.length === N ? this._flowBuffer : (this._flowBuffer = new Int32Array(N)); dist.fill(-1);
     const sx = Math.floor((tx - this.minX) / CELL), sz = Math.floor((tz - this.minZ) / CELL);
     if (sx < 0 || sz < 0 || sx >= this.cols || sz >= this.rows) return null;
-    const q = new Int32Array(N); let head = 0, tail = 0;
+    const q = this._flowQueue?.length === N ? this._flowQueue : (this._flowQueue = new Int32Array(N)); let head = 0, tail = 0;
     const si = sz * this.cols + sx;
     if (this.inner[si] !== 1) return null;
     dist[si] = 0; q[tail++] = si;
@@ -275,7 +276,7 @@ export class Floor {
         dist[ni] = d + 1; q[tail++] = ni;
       }
     }
-    this._flowKey = key; this._flow = dist; return dist;
+    this._flowX = cellX; this._flowZ = cellZ; this._flow = dist; return dist;
   }
   /** 거리장을 따라 내려가는 방향 (없으면 직선) */
   flowDir(flow, wx, wz) {
@@ -286,6 +287,8 @@ export class Floor {
     let best = -1, bx = 0, bz = 0;
     for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
       if (!dx && !dz) continue;
+      // 대각선으로 벽 모서리를 자르면 몸 반경이 양쪽 벽에 막혀 같은 방향만 반복한다.
+      if (dx && dz && (flow[cz * this.cols + cx + dx] < 0 || flow[(cz + dz) * this.cols + cx] < 0)) continue;
       const d = flow[(cz + dz) * this.cols + (cx + dx)];
       if (d < 0) continue;
       if (best === -1 || d < best) { best = d; bx = dx; bz = dz; }
@@ -295,7 +298,8 @@ export class Floor {
     // 다음 셀의 중심을 향한다 — 셀 방향만 주면 옆벽에 반경만큼 걸린 채 제자리걸음한다
     const tx = this.minX + (cx + bx + 0.5) * CELL, tz = this.minZ + (cz + bz + 0.5) * CELL;
     const vx = tx - wx, vz = tz - wz; const l = Math.hypot(vx, vz) || 1;
-    return [vx / l, vz / l];
+    const out = this._flowDirection || (this._flowDirection = [0, 0]);
+    out[0] = vx / l; out[1] = vz / l; return out;
   }
   get remaining() { return this.rooms.filter((r) => !r.cleared && r.type !== ROOM_TYPE.START).length; }
 }

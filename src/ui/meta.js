@@ -1,10 +1,12 @@
 import { $, fmt } from './ui.js';
 import { bindHeroPortrait } from './hero-portraits.js';
+import { SkillTreeView } from './skill-tree.js';
+import { TranscendView } from './transcend.js';
 import { uiArt, resourceArt, RESOURCE_ART } from './illustrated.js';
 import { audio } from '../engine/audio.js';
 import { musicForScene, MUSIC_MIX } from '../data/music.js';
 import { heroVoiceName } from '../engine/hero-voice.js';
-import { HEROES, HERO_ORDER, RARITY, heroStats, levelExp, starShards, skillUpGold } from '../data/heroes.js';
+import { HEROES, HERO_ORDER, RARITY, heroStats, levelExp, starShards } from '../data/heroes.js';
 import { heroProgressionHtml, trainingButtonLabel } from './hero-progression.js';
 import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST, craftable, itemStats, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, enhanceMult, ENH_MAX, RARITY_COLOR , RARITY_INFO, rarityRank, enhanceDown} from '../data/items.js';
 import { SKUS, SHOP_TABS, GACHA, BATTLE_PASS, PASS_TRACK, DAILY_REWARDS } from '../data/shop.js';
@@ -258,6 +260,13 @@ export class Meta {
     this.app.wardrobe?.show(id);
     if (!own) { det.innerHTML = `<div class="hs-locked"><h2>${def.name}</h2><div class="sub">${def.title} · ${def.rarity}</div><p style="color:var(--muted);font-size:13px">${def.skills.map((s) => s.name).join(' · ')}</p><button class="btn btn-gold" id="h-summon">소환으로 획득</button></div>`; $('h-summon').onclick = () => this.openTab('gacha'); return; }
     renderOwnedHero(this, id, det);
+    // 성장 진입: 스킬 트리(SP)와 초월(SR→SSR→SSSR). 이름 줄 아래에 작게 둔다.
+    const growthLinks = document.createElement('div'); growthLinks.className = 'hs-growth-links';
+    for (const [label, open] of [['스킬 트리', () => this.openSkillTree(id)], ['초월', () => this.openTranscend(id)]]) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-ghost btn-sm'; b.textContent = label;
+      b.setAttribute('aria-label', HEROES[id].name + ' ' + label + ' 열기'); b.onclick = open; growthLinks.append(b);
+    }
+    det.querySelector('.hs-id')?.append(growthLinks);
   }
   setListHtml(heroId) {
     const b = this.eco.heroEquipBonus(heroId); const counts = b.sets || {};
@@ -287,12 +296,19 @@ export class Meta {
       });
     } });
   }
-  showSkill(id, i) {
-    const def = HEROES[id]; const sk = def.skills[i]; const h = this.eco.hero(id); const lv = h.skills[i]; const cost = skillUpGold(lv);
-    const locked = !!(sk.unlock && h.level < sk.unlock);
-    const lockNote = locked ? `<p style="color:#ff9ad8;font-weight:900">영웅 Lv.${sk.unlock} 달성 시 해금 (현재 Lv.${h.level})</p>` : '';
-    this.ui.modal(`<h2>${sk.name} ${sk.unlock ? '<small style="font-size:11px;color:#ff9ad8">각성</small>' : ''} <small style="font-size:12px">Lv.${lv}</small></h2><p>${sk.desc}</p>${lockNote}<p>피해 배율 <b style="color:var(--gold)">${(sk.dmg * (1 + (lv - 1) * 0.12)).toFixed(1)}x${sk.ticks ? ` × ${sk.ticks}회` : ''}</b> ${sk.ult ? '· 궁극기 (게이지 100)' : `· 쿨타임 ${sk.cd}초 · MP ${sk.mp || 0}`}</p>
-      <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-up" ${lv >= 10 || locked ? 'disabled' : ''}>${locked ? `Lv.${sk.unlock}에 해금` : '강화'} <small>${locked ? '' : `<i class="ic ic-gold"></i> ${fmt(cost)}`}</small></button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-up').onclick = () => { if (locked) return; if (this.eco.upgradeSkill(id, i)) { this.trackFunnel('upgrade', { kind: 'skill', level: lv + 1 }); audio.play('jingle_win1', { vol: 0.5 }); this.ui.closeModal(); this.renderHeroes(); this.ui.toast(`${sk.name} Lv.${lv + 1}!`, 'gold'); } else { this.ui.toast('골드 부족', 'red'); this.offerGold(); } }; } });
+  /** 스킬 상세는 SP 스킬 트리 화면으로 연다(골드 강화 모달 대체). */
+  showSkill(id, i) { return this.openSkillTree(id, i); }
+  openSkillTree(id = this.heroSel || this.eco.s.selected, i = 0) {
+    if (!this.eco.ownHero(id)) return false;
+    this.skillTree ||= new SkillTreeView(this, { portrait: (img, heroId) => bindHeroPortrait(img, this.app, heroId) });
+    this.transcendView?.close({ rerender: false, restoreFocus: false });
+    return this.skillTree.open(id, i);
+  }
+  openTranscend(id = this.heroSel || this.eco.s.selected) {
+    if (!this.eco.ownHero(id)) return false;
+    this.transcendView ||= new TranscendView(this, { portrait: (img, heroId) => bindHeroPortrait(img, this.app, heroId) });
+    this.skillTree?.close({ rerender: false, restoreFocus: false });
+    return this.transcendView.open(id);
   }
   /** 가방 장비 시트 — 현재 장비와 나란히 비교하고 장착·강화를 한 곳에서 한다. */
   showItem(uid, heroId, options) { return showItemSheet(this, uid, heroId, options); }
@@ -362,7 +378,7 @@ export class Meta {
     const at = (k) => pct(rates.ssrByPull[k - 1], 1);
     const soft = softStart(rates), hard = rates.hardPity;
     const matRows = (grade, color) => (rates.materials[grade] || []).map((m) => row(`${grade} 강화 재료 · ${REWARD_LABEL[m.k]?.[0] || m.k} ×${m.n}`, b0[grade] * m.w, color)).join('');
-    this.ui.modal(`<h2>소환 확률</h2><p class="setting-help">1회 소환 기준 확률입니다. 10회 소환의 SR 이상 보장은 제외했습니다.</p><button class="btn btn-blue btn-sm" id="m-contents" style="width:100%;margin:4px 0">구성품 전체 보기 · 무기 외형 미리보기</button><table class="rates-table" aria-label="소환 등급별 확률">${row(`SSR 픽업 영웅 · ${featured}`, b0.SSR * sp.featuredHero, '--r-ssr')}${sp.otherSsrHero ? row(`SSR 다른 영웅${others ? ` · ${others}` : ''}`, b0.SSR * sp.otherSsrHero, '--r-ssr') : ''}${row('SSR 장비', b0.SSR * sp.ssrGear, '--r-ssr')}${row('SR 영웅', b0.SR * rates.srSplit.hero, '--r-sr')}${row('SR 장비', b0.SR * rates.srSplit.gear, '--r-sr')}${matRows('SR', '--r-sr')}${row('R 장비', b0.R * rates.rSplit.gear)}${matRows('R', '')}</table>
+    this.ui.modal(`<h2>소환 확률</h2><p class="setting-help">1회 소환 기준 확률입니다. 10회 소환의 SR 이상 보장은 제외했습니다.</p><button class="btn btn-blue btn-sm" id="m-contents" style="width:100%;margin:4px 0">구성품 전체 보기 · 무기 외형 미리보기</button><table class="rates-table" aria-label="소환 등급별 확률">${row(`SSR 픽업 영웅 · ${featured}`, b0.SSR * sp.featuredHero, '--r-ssr')}${sp.otherSsrHero ? row(`SSR 다른 영웅${others ? ` · ${others}` : ''}`, b0.SSR * sp.otherSsrHero, '--r-ssr') : ''}${row('SSR 장비', b0.SSR * sp.ssrGear, '--r-ssr')}${matRows('SSR', '--r-ssr')}${row('SR 영웅', b0.SR * rates.srSplit.hero, '--r-sr')}${row('SR 장비', b0.SR * rates.srSplit.gear, '--r-sr')}${matRows('SR', '--r-sr')}${row('R 장비', b0.R * rates.rSplit.gear)}${matRows('R', '')}</table>
       <p>SSR이 나오면 ${pct(sp.featuredHero, 0)} 확률로 픽업 영웅 ${featured}입니다.<br>${soft}번째 소환부터 SSR 확률이 오릅니다 (${soft}번째 ${at(soft)} · ${Math.min(hard - 1, soft + 9)}번째 ${at(Math.min(hard - 1, soft + 9))} · ${hard - 1}번째 ${at(hard - 1)}). ${hard}번째 소환은 SSR 확정입니다.<br>천장을 포함한 평균은 SSR 1회당 약 ${rates.expectedPullsPerSsr.toFixed(1)}회 (통합 SSR ${pct(rates.consolidatedSsr, 2)})입니다.<br>10회 소환은 SR 이상 1장을 보장합니다. 이미 가진 영웅이 나오면 조각 ${rates.dupShards}개로 바뀝니다.</p>
       <p><b>현재 누적 ${pity}회</b> · 다음 소환 SSR ${pct(gachaChances(pity + 1).SSR, 1)} · ${Math.max(1, hard - pity)}회 안에 SSR 확정</p>${this.eco.s.ssrTickets ? `<button class="btn btn-gold" style="width:100%" id="m-ssr">SSR 확정권 사용 (${this.eco.s.ssrTickets})</button>` : ''}<div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-contents').onclick = () => this.showGachaContents(); const s = b.querySelector('#m-ssr'); if (s) s.onclick = () => { this.ui.closeModal(); this.pullSSR(); }; } });
   }
@@ -469,7 +485,7 @@ export class Meta {
     const controlHelp = touchControls ? '왼쪽 조이스틱으로 이동 · 오른쪽 공격·회피 버튼 · 스킬 버튼 6개로 전투 · 빈 화면 드래그로 시점 회전, 두 손가락으로 확대'
       : '이동 WASD · 공격 J/Space · 회피 K/Shift · 스킬 1~6 (4~6은 R/Q/E도 가능)';
     const mixRows=[['sfx','효과음 음량'],['music','배경음악 음량'],['voice','목소리 음량']].map(([key,label])=>`<div class="setting-row"><label for="mix-${key}">${label}</label><div class="setting-mix"><input id="mix-${key}" data-mix="${key}" type="range" min="0" max="100" step="1" value="${Math.round(mix[key]*100)}"><output for="mix-${key}">${Math.round(mix[key]*100)}%</output></div></div>`).join('');
-    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('settings')}" alt="">설정</h2>${row('sfx', '효과음')}${row('music', '배경음악')}${row('voice', '나레이션')}${row('haptics', '진동')}${shakeRow}<div class="setting-row setting-description"><span id="haptic-help" class="setting-help">${typeof navigator.vibrate === 'function' ? '일반 명중은 짧게, 마무리는 강하게 진동합니다. 기기·브라우저·시스템 설정에 따라 작동하지 않을 수 있습니다.' : '이 브라우저는 기기 진동을 지원하지 않습니다. 명중 반동과 타격음은 유지됩니다.'}</span></div><div class="setting-row"><span>그래픽</span><div class="seg">${['auto','low', 'mid', 'high'].map((q) => `<button data-q="${q}" class="${(st.quality||'auto') === q ? 'on' : ''}">${{auto:'자동',low: '낮음', mid: '보통', high: '높음' }[q]}</button>`).join('')}</div></div><div class="setting-row"><span>카메라</span><div class="seg">${['auto', 'top', 'action', 'wide'].map((c) => `<button data-cam="${c}" class="${(st.camera || 'auto') === c ? 'on' : ''}">${{ auto: 'AUTO', top: '탑다운', action: '액션', wide: '시네마틱' }[c]}</button>`).join('')}</div></div>
+    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('settings')}" alt="">설정</h2>${row('sfx', '효과음')}${row('music', '배경음악')}${row('voice', '나레이션')}${row('haptics', '진동')}${row('autoTarget', '공격 자동 타겟팅')}${shakeRow}<div class="setting-row setting-description"><span id="haptic-help" class="setting-help">${typeof navigator.vibrate === 'function' ? '일반 명중은 짧게, 마무리는 강하게 진동합니다. 기기·브라우저·시스템 설정에 따라 작동하지 않을 수 있습니다.' : '이 브라우저는 기기 진동을 지원하지 않습니다. 명중 반동과 타격음은 유지됩니다.'}</span></div><div class="setting-row"><span>그래픽</span><div class="seg">${['auto','low', 'mid', 'high'].map((q) => `<button data-q="${q}" class="${(st.quality||'auto') === q ? 'on' : ''}">${{auto:'자동',low: '낮음', mid: '보통', high: '높음' }[q]}</button>`).join('')}</div></div><div class="setting-row"><span>카메라</span><div class="seg">${['auto', 'top', 'action', 'wide'].map((c) => `<button data-cam="${c}" class="${(st.camera || 'auto') === c ? 'on' : ''}">${{ auto: 'AUTO', top: '탑다운', action: '액션', wide: '시네마틱' }[c]}</button>`).join('')}</div></div>
       <div class="setting-row setting-description"><span id="cam-desc" class="setting-help">${CAM_DESC[st.camera || 'auto']}</span></div>
       <div class="setting-row"><span>조작</span><span id="input-help" class="setting-help">${controlHelp}</span></div>
       <div class="modal-btns"><button class="btn btn-red btn-sm" id="m-reset">데이터 초기화</button><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {

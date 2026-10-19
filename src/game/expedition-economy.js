@@ -191,7 +191,8 @@ export class ExpeditionEconomy {
         seen.add(item.uid); return true;
       }).map(item => ({ ...inventory.get(item.uid) }));
       const heroId = this.eco.s.heroes[p.heroId] ? p.heroId : this.eco.s.selected;
-      const extras = p.kind === 'dungeon' ? ledger || { heroShards: field.fieldHeroShards, transcendStones: field.fieldTranscendStones, materials: field.fieldMaterials } : null;
+      // 새 성장 재화는 장부에서만 지급한다. 결과 객체의 숫자는 믿지 않는다(리뷰 P2).
+      const extras = p.kind === 'dungeon' ? ledger : null;
       if (extras) got.push(...this.eco.applyFieldExtras(extras, heroId));
       const combatExp = p.kind === 'dungeon' ? ledger?.exp ?? Math.min(num(field.fieldExp), 100000000) : 0;
       const heroExp = applyFrontierRewards(def.rewards, frontier).xp + combatExp;

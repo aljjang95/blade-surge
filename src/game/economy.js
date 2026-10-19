@@ -282,6 +282,8 @@ export class Economy {
     const h = this.hero(id), def = HEROES[id], quote = this.skillResetQuote(id);
     if (!h || !def) return { ok: false, reason: 'scroll' };
     const used = quote.free ? 'free' : quote.scrolls > 0 ? 'scroll' : 'gems';
+    // 되돌릴 SP가 없으면 초기화서·보석을 쓰지 않는다(리뷰 P3: 빈 초기화로 재화가 사라지던 경로).
+    if (!quote.refund) return { ok: false, reason: 'nothing' };
     if (used === 'gems' && !useGems) return { ok: false, reason: 'scroll' };
     if (used === 'gems' && this.s.gems < quote.gemPrice) return { ok: false, reason: 'gems' };
     const before = { skills: h.skills, loadout: h.skillLoadout, gems: this.s.gems, scrolls: this.s.skillResets };
@@ -322,7 +324,8 @@ export class Economy {
     for (const f of this.listeners) f(this.s);
     return { ok: true, grade: quote.next };
   }
-  setSkillLoadout(id, slot, skillIndex) { const h = this.hero(id), def = HEROES[id]; if (!h || !def || ![0,1].includes(slot) || !Number.isInteger(skillIndex) || skillIndex < 4 || skillIndex >= def.skills.length) return false; const sk = def.skills[skillIndex]; if (sk.unlock && h.level < sk.unlock) return false; const next = normalizeSkillLoadout(def, h.skillLoadout); if (next[slot] === skillIndex) return false; const other = 1 - slot; if (next[other] === skillIndex) [next[slot], next[other]] = [skillIndex, next[slot]]; else next[slot] = skillIndex; h.skillLoadout = next; this.emit(); return true; }
+  // 레벨 해금과 SP 습득을 모두 마친 각성 스킬만 Q/E에 넣는다(리뷰 P1: 초기화 뒤 미습득 스킬이 다시 장착되던 경로).
+  setSkillLoadout(id, slot, skillIndex) { const h = this.hero(id), def = HEROES[id]; if (!h || !def || ![0,1].includes(slot) || !Number.isInteger(skillIndex) || skillIndex < 4 || skillIndex >= def.skills.length) return false; const sk = def.skills[skillIndex]; if (sk.unlock && h.level < sk.unlock) return false; if (!skillLearned(h.skills[skillIndex])) return false; const next = normalizeSkillLoadout(def, h.skillLoadout, h.skills, h.level); if (next[slot] === skillIndex) { if (next.every((v, k) => v === h.skillLoadout?.[k])) return false; h.skillLoadout = next; this.emit(); return true; } const other = 1 - slot; if (next[other] === skillIndex) [next[slot], next[other]] = [skillIndex, next[slot]]; else next[slot] = skillIndex; h.skillLoadout = next; this.emit(); return true; }
   grantHero(id) { if (this.s.heroes[id]) { this.s.heroes[id].shards += GACHA.dupShards; return { dup: true, shards: GACHA.dupShards }; } this.s.heroes[id] = freshHeroState(id); return { dup: false, shards: 0 }; }
   // ---------- 장비 ----------
   /** @param {string} rarity @param {string|null} slot */
@@ -440,7 +443,8 @@ export class Economy {
     if (fullClearBonus) loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_ELITE)));
     if (double && Math.random() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE))); }
     if (stage.boss && Math.random() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
-    got.push(...this.applyFieldExtras(ledger || { heroShards: fieldHeroShards, transcendStones: fieldTranscendStones, materials: fieldMaterials }, heroId));
+    // 초월석·영웅 조각·지역 재료는 전투 중 서비스가 쌓은 장부만 믿는다. 장부가 없으면 호출 인자로 새 재화를 주지 않는다(리뷰 P2).
+    if (ledger) got.push(...this.applyFieldExtras(ledger, heroId));
     const prevLv = this.hero(heroId).level;
     const combatExp = ledger?.exp ?? (Number.isSafeInteger(fieldExp) && fieldExp > 0 ? Math.min(fieldExp, 100000000) : 0);
     const stageExp = Math.floor((r.exp * m + (fullClearBonus?.exp || 0)) * levelExperienceMultiplier(prevLv, stageRecommendedLevel(stage, prevLv)));

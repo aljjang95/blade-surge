@@ -210,7 +210,8 @@ test('a first-gear suggestion rechecks ownership before leaving the result', () 
 
 test('changed currency rerenders choices, preserves the hunt snapshot, and never follows a stale option', () => {
   const f = fixture(); f.ui.showResult(f.battle, true); const button = f.action('skill');
-  f.save.gold = 0; f.save.heroes.mage.level = 50; button.click();
+  // 스킬 안내는 골드가 아니라 남은 SP를 본다(2026-10-19). 모든 스킬을 최대로 두어 SP를 쓸 곳을 없애 안내를 낡게 만든다.
+  f.save.gold = 0; f.save.heroes.mage.level = 50; f.save.heroes.mage.skills = f.save.heroes.mage.skills.map(() => 10); button.click();
   expect(f.action('skill')).toBeUndefined(); expect(f.calls).not.toContain('lobby');
   expect(get('result-growth').textContent).not.toContain('Lv.50');
   expect(f.action('mastery').focused).toBe(true);

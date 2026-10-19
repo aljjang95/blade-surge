@@ -14,7 +14,8 @@ function manualPlayer(overrides: any = {}) {
     comboIdx: 0, comboQueued: false, attackBufferT: 0, hitDone: false,
     buffs: { atk: 1, spd: 1, atkSpd: 1, t: 0 }, stormT: 0,
     vel: new THREE.Vector3(), pos: new THREE.Vector3(), moveDir: new THREE.Vector3(),
-    model: new THREE.Group(), game: { fx: { dust() {} } },
+    // 2026-10-19: 기본 공격 자동 타겟팅이 기본값이 되었다. 이 파일은 수동(자동 타겟팅 끔) 계약을 검증한다.
+    model: new THREE.Group(), game: { fx: { dust() {} }, app: { eco: { s: { settings: { autoTarget: false } } } } },
     playTimed() {}, play() {}, startTrail() {}, stopTrail() {},
     forward: (v: THREE.Vector3) => v.set(0, 0, 1),
     ...overrides,

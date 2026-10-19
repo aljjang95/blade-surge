@@ -21,6 +21,8 @@ function advanceUntil(f: any, ready: () => boolean, dt: number) {
 function fixture(heroId = 'knight') {
   const f = createCombatFlowFixture(runtime, heroId);
   f.game.fx.aura = () => {};
+  // 2026-10-19: 기본 공격 자동 타겟팅이 기본값이 되었다. 이 파일의 방향 계약은 수동(자동 타겟팅 끔) 기준이다.
+  f.game.app.eco = { s: { settings: { autoTarget: false } } };
   const input: any = Object.assign(Object.create(Input.prototype), {
     enabled: true, move: { x: 0, y: 0 }, screenMove: { x: 0, y: 0 }, queue: [],
     attackHeld: false, attackSources: new Set(), clearListeners: new Set(), keys: {},
@@ -249,7 +251,7 @@ test('회피 중 예약한 반격은 방향 입력을 놓거나 바꾸어도 누
   }
 });
 
-test('방향 없는 새 공격과 만료된 회피 중 공격 예약은 오래된 방향을 적용하지 않는다', () => {
+test('방향 없는 새 공격은 오래된 방향을 적용하지 않고, 회피 시작 직후 누른 공격은 회피 뒤 누른 방향으로 한 번 실행된다', () => {
   const f = fixture(), p: any = f.player, dt = 1 / 120;
   p.startCombo(0); advanceUntil(f, () => p.canQueueCombo(), dt);
   f.game.input.move.x = 1; f.game.input.press('attack'); p.handleInput(f.game.input, dt);
@@ -258,10 +260,11 @@ test('방향 없는 새 공격과 만료된 회피 중 공격 예약은 오래�
 
   p.dodge(new THREE.Vector3(1, 0, 0));
   f.game.input.move.x = -1; f.game.input.press('attack'); p.handleInput(f.game.input, dt); f.game.input.move.x = 0;
-  advanceUntil(f, () => p.state === 'idle', dt);
+  // 2026-10-19 의도 변경: 예전에는 0.14초 버퍼가 회피(0.32초) 중에 만료돼 이 입력이 사라졌다("어디서 눌러도 공격" 요구 위반).
+  // 이제 회피가 끝나는 프레임에 누른 순간의 방향으로 실행되고, 버퍼·방향은 남지 않는다.
+  advanceUntil(f, () => p.state !== 'dodge', dt);
+  expect(p.state).toBe('attack'); expect(p.yaw).toBeCloseTo(-Math.PI / 2);
   expect(p.attackBufferT).toBe(0); expect(p.attackBufferYaw).toBeNull();
-  f.game.input.press('attack'); stepCombatFlow(f, dt);
-  expect(p.state).toBe('attack'); expect(p.yaw).toBeCloseTo(Math.PI / 2);
 });
 
 test('pause·clear·기절·AUTO 경계는 수락된 콤보를 지우지 않고 이전 수동 방향만 폐기한다', () => {
@@ -365,7 +368,8 @@ test('회피 중 누른 공격의 짧은 버퍼는 pause·Input.clear에서 취�
     const f = fixture(), p: any = f.player, dt = 1 / 60;
     p.dodge(new THREE.Vector3(1, 0, 0)); advanceUntil(f, () => p.stateT >= .24, dt);
     f.game.input.move.x = -1; f.game.input.press('attack'); p.handleInput(f.game.input, dt);
-    expect(p.attackBufferT).toBe(.14); expect(p.attackBufferYaw).toBeCloseTo(-Math.PI / 2);
+    // 2026-10-19: 버퍼는 남은 회피 시간 + 0.14초다(회피가 끝나기 전에 만료되지 않는다).
+    expect(p.attackBufferT).toBeCloseTo(.32 - p.stateT + .14, 6); expect(p.attackBufferYaw).toBeCloseTo(-Math.PI / 2);
     if (boundary === 'pause') {
       Battle.prototype.setPaused.call(f.game, 'menu', true);
       const stateT = p.stateT;
