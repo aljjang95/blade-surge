@@ -281,6 +281,51 @@ test('확정 범위만 그리는 스킬과 끝 원이 없는 반사창', () => {
   expect(skillAimShape('meteor')!.radius).toBeCloseTo(7.8); expect(skillAimShape('magma_zone')!.range).toBeCloseTo(7.5);
 });
 
+// 확정 영역과 구분되는 바깥 한계(envelope): 확률 띠(chance)와 몰이 한계(pull)를 점선 원으로 그린다. 값은 tools/aim-hitbox-truth-qa.mjs 실측이다.
+test('envelope가 있는 스킬은 확정 반지름과 envelope 값이 고정되고 점선 원이 확정 영역과 따로 그려진다', () => {
+  const expected: Record<string, { confirmed: number; envelope: number; kind: string }> = {
+    meteor: { confirmed: 3.4, envelope: 7.8, kind: 'chance' }, magma_zone: { confirmed: 6.4, envelope: 7.5, kind: 'chance' },
+    shield_bash: { confirmed: 5, envelope: 7, kind: 'pull' }, quake: { confirmed: 8, envelope: 9, kind: 'pull' },
+    whirlwind: { confirmed: 3.8, envelope: 5.5, kind: 'pull' }, hell_axe: { confirmed: 6, envelope: 7.5, kind: 'pull' },
+  };
+  const p = player('meteor'), view = new SkillAimView(new THREE.Scene()), aim = { active: true, cancel: false, x: 0, z: 1, dist01: .5 };
+  const out: any = {}, withEnvelope: string[] = [];
+  for (const id of Object.keys(SKILLS)) {
+    const shape: any = playerSkillAimShape(p, id, out); view.update(p, aim, shape);
+    expect(shape.envelopeKind === '').toBe(!(shape.envelope > 0));
+    if (!(shape.envelope > 0)) { expect(view.envelope.visible).toBe(false); continue; }
+    withEnvelope.push(id);
+    const want = expected[id]; expect(want).toBeDefined();
+    // 확정 반지름: 지점형은 radius, 자기 중심형은 range. envelope는 항상 확정보다 크다.
+    const confirmed = shape.kind === 'circle' ? shape.radius : shape.range;
+    expect(confirmed).toBeCloseTo(want.confirmed); expect(shape.envelope).toBeCloseTo(want.envelope); expect(shape.envelopeKind).toBe(want.kind);
+    expect(shape.envelope).toBeGreaterThan(confirmed);
+    // 점선 원: 보이고, envelope 반지름이며, 지점형은 지점 중심(range × dist01), 자기 중심형은 영웅 중심이다. 확정 원 위에 덮이지 않도록 아래층이다.
+    expect(view.envelope.visible).toBe(true); expect(view.envelope.scale.x).toBeCloseTo(shape.envelope);
+    expect(view.envelopeMaterial.uniforms.uRadius.value).toBeCloseTo(shape.envelope);
+    expect(view.envelope.position.z).toBeCloseTo(shape.kind === 'circle' ? shape.range * aim.dist01 : 0);
+    expect(view.envelope.renderOrder).toBeLessThan(view.target.renderOrder);
+    if (shape.kind === 'circle') expect(view.target.scale.x).toBeCloseTo(shape.radius); else expect(view.range.scale.x).toBeCloseTo(shape.range);
+  }
+  expect(withEnvelope.sort()).toEqual(Object.keys(expected).sort());
+  view.dispose();
+});
+
+test('분열 화염 교관 변형은 옆으로 갈라지는 투사체를 덮는 바깥 부채를 더한다', () => {
+  const mage = (learned: any) => { const p = player('fireball', { def: { id: 'mage', skills: [{ id: 'fireball', cd: 5, dmg: 1, mp: 10 }] } }); p.game.app = { eco: { s: { towns: { learned } } } }; return p; };
+  const base: any = playerSkillAimShape(mage({}), 'fireball', {}), split: any = playerSkillAimShape(mage({ mage: ['oathhold_mage_split'] }), 'fireball', {});
+  expect(base.fanAngle).toBe(0); expect(base.radius).toBeCloseTo(4.2);
+  expect(split.radius).toBeCloseTo(5.2); expect(split.fanAngle).toBeCloseTo(.22 * 360 / Math.PI);
+  // 갈라지는 투사체 끝(속도 15 × 수명 .8 = 12m, 몸통 .55)이 부채 안에 들어간다.
+  for (const sign of [-1, 1]) for (const side of [-1, 1]) {
+    const along = split.origin + 12 * Math.cos(.22), across = sign * 12 * Math.sin(.22) + side * .55;
+    expect(sectorSd(along, across, split.fanRange, split.fanAngle, split.fanBack)).toBeLessThanOrEqual(.05);
+  }
+  const view = new SkillAimView(new THREE.Scene()), pl = mage({ mage: ['oathhold_mage_split'] });
+  view.update(pl, { active: true, cancel: false, x: 0, z: 1, dist01: 1 }, split);
+  expect(view.fan.visible).toBe(true); expect(view.fan.scale.x).toBeCloseTo(split.fanRange); view.dispose();
+});
+
 test('표시는 꼭짓점 이동·바깥 부채·끝 보정을 그린다', () => {
   const view = new SkillAimView(new THREE.Scene()), p = player(), aim = { active: true, cancel: false, x: 0, z: 1, dist01: 1 };
   const out: any = {};

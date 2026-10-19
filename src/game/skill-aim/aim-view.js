@@ -43,6 +43,24 @@ function discMaterial(fill) {
   return new THREE.ShaderMaterial({ vertexShader: DISC_VERTEX, fragmentShader: DISC_FRAGMENT, transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
     uniforms: { uColor: { value: AIM_COLOR }, uRadius: { value: 1 }, uEdge: { value: .2 }, uFill: { value: fill }, uOpacity: { value: 1 } } });
 }
+
+// 확률 띠(envelope): 확정 영역과 구분되도록 호박색 점선 테두리와 아주 옅은 채움만 그린다. 점선 길이는 월드 단위로 일정하다.
+const ENVELOPE_COLOR = new THREE.Color(0xffc46b);
+const ENVELOPE_FRAGMENT = [
+  'uniform vec3 uColor; uniform float uRadius; uniform float uOpacity;',
+  'varying vec2 vLocal;',
+  'void main(){',
+  '  float d = length(vLocal); if (d > 1.0) discard;',
+  '  float fromEdge = (1.0 - d) * uRadius;',
+  '  float rim = 1.0 - smoothstep(.1, .2, fromEdge);',
+  '  float dash = step(.5, fract(atan(vLocal.y, vLocal.x) * uRadius / .8));',
+  '  float a = max(rim * dash * .9, .07 + .05 * d * d);',
+  '  gl_FragColor = vec4(mix(uColor, vec3(1.0), rim * dash * .35), a * uOpacity);',
+  '}'].join('\n');
+function envelopeMaterial() {
+  return new THREE.ShaderMaterial({ vertexShader: DISC_VERTEX, fragmentShader: ENVELOPE_FRAGMENT, transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
+    uniforms: { uColor: { value: ENVELOPE_COLOR }, uRadius: { value: 1 }, uOpacity: { value: 1 } } });
+}
 function flat(geometry, material) {
   const node = new THREE.Mesh(geometry, material);
   node.rotation.x = -Math.PI / 2; node.renderOrder = 12; node.frustumCulled = false;
@@ -57,11 +75,14 @@ export class SkillAimView {
     this.targetMaterial = discMaterial(.3);
     this.coneMaterial = discMaterial(.26);
     this.fanMaterial = discMaterial(.26);
+    this.envelopeMaterial = envelopeMaterial();
     this.laneMaterial = new THREE.ShaderMaterial({ vertexShader: LANE_VERTEX, fragmentShader: LANE_FRAGMENT, transparent: true, depthWrite: false, side: THREE.DoubleSide, toneMapped: false,
       uniforms: { uColor: { value: AIM_COLOR }, uWidth: { value: 1 }, uLength: { value: 1 }, uOpacity: { value: 1 } } });
     this.headMaterial = new THREE.MeshBasicMaterial({ color: 0xc8f8ff, transparent: true, opacity: .92, depthWrite: false, side: THREE.DoubleSide, toneMapped: false });
     this.range = flat(new THREE.CircleGeometry(1, SEGMENTS), this.rangeMaterial);
     this.target = flat(new THREE.CircleGeometry(1, SEGMENTS), this.targetMaterial);
+    // 확률로만 닿는 바깥 한계. 확정 영역(range/target)보다 아래에 그려 점선 띠만 바깥에 남는다.
+    this.envelope = flat(new THREE.CircleGeometry(1, SEGMENTS), this.envelopeMaterial); this.envelope.renderOrder = 11; this.envelope.visible = false;
     this.direction = new THREE.Group();
     // 영웅에서 +z(조준 방향)로 뻗는 단위 레인과 화살촉
     this.lane = flat(new THREE.PlaneGeometry(1, 1).translate(0, -.5, 0), this.laneMaterial);
@@ -72,7 +93,7 @@ export class SkillAimView {
     this.cone = flat(new THREE.CircleGeometry(1, 360, 0, Math.PI * 2), this.coneMaterial);
     this.fan = flat(new THREE.CircleGeometry(1, 360, 0, Math.PI * 2), this.fanMaterial);
     this.direction.add(this.lane, this.head, this.cone, this.fan);
-    this.group.add(this.range, this.direction, this.target);
+    this.group.add(this.envelope, this.range, this.direction, this.target);
     scene.add(this.group);
   }
   update(player, aim, shape) {
@@ -110,7 +131,7 @@ export class SkillAimView {
       this.cone.scale.setScalar(coneRadius);
       this.coneMaterial.uniforms.uRadius.value = coneRadius; this.coneMaterial.uniforms.uEdge.value = .2;
     }
-    const fan = cone && shape.fanAngle > 0;
+    const fan = shape.fanAngle > 0;
     this.fan.visible = fan;
     if (fan) {
       const angle = Math.min(360, Math.max(1, Math.round(shape.fanAngle)));
@@ -127,10 +148,19 @@ export class SkillAimView {
       this.target.scale.setScalar(shape.radius);
       this.targetMaterial.uniforms.uRadius.value = shape.radius; this.targetMaterial.uniforms.uEdge.value = .18;
     }
+    // envelope: 확정 반지름보다 큰 값이 있을 때만 그린다. 지점형(circle)은 지점 중심, 자기 중심형(self)은 영웅 중심이다.
+    const confirmed = circle ? shape.radius : Math.max(.8, distance + origin);
+    this.envelope.visible = shape.envelope > confirmed;
+    if (this.envelope.visible) {
+      const cx = circle ? aim.x * length : 0, cz = circle ? aim.z * length : 0;
+      this.envelope.position.set(cx, .005, cz);
+      this.envelope.scale.setScalar(shape.envelope);
+      this.envelopeMaterial.uniforms.uRadius.value = shape.envelope;
+    }
   }
   dispose() {
     this.group.removeFromParent();
     this.group.traverse(node => { if (node.isMesh) node.geometry.dispose(); });
-    for (const m of [this.rangeMaterial, this.targetMaterial, this.coneMaterial, this.fanMaterial, this.laneMaterial, this.headMaterial]) m.dispose();
+    for (const m of [this.rangeMaterial, this.targetMaterial, this.coneMaterial, this.fanMaterial, this.envelopeMaterial, this.laneMaterial, this.headMaterial]) m.dispose();
   }
 }
