@@ -39,8 +39,8 @@ body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,
 .experience-v2.oath-visual #hud.battle-readability .oath-camera-details>summary{min-height:44px;min-width:44px;display:grid;place-items:center;padding:8px}
 .experience-v2.oath-visual #hud.battle-readability .oath-camera-details{top:142px}
 .experience-v2.oath-visual #hud.battle-readability .oath-camera-details button{min-height:44px;min-width:44px}
-.experience-v2.oath-visual #hud.battle-readability .exp-combat-status{left:150px;bottom:18px;max-width:calc(100% - 380px);padding:3px 6px;transform:none;font-size:10px;pointer-events:none}
-.experience-v2.oath-visual #hud.battle-readability:has(#map-tactics-context:not([hidden])) .exp-combat-status{bottom:144px}
+#hud .hud-bars>.hud-job-status{grid-column:1/-1;width:fit-content;max-width:100%;box-sizing:border-box;margin:2px 0 0;padding:1px 6px;border-radius:4px;background:#0c1724cc;color:#caf6df;font:600 10px/14px var(--font-ui,system-ui,sans-serif);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+#hud .hud-bars>.hud-job-status[hidden]{display:none}
 #map-tactics-context[hidden],#btn-map-interact[hidden]{display:none!important}
 #hud.battle-readability #map-tactics-context{position:absolute;left:calc(150px + var(--sal,0px));right:calc(226px + var(--sar,0px));bottom:calc(66px + var(--sab,0px));display:flex;justify-content:space-between;align-items:center;gap:10px;z-index:18;pointer-events:none;color:#edf0d9}
 .map-tactics-context-copy{display:grid;gap:3px;min-width:0;text-shadow:0 1px 4px #061a15}
@@ -134,8 +134,6 @@ body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,
  #hud.battle-readability #map-tactics-context{left:140px;right:14px;bottom:calc(236px + var(--sab,0px));display:grid;gap:5px}
  .map-tactics-context-copy>strong{display:none}
  #btn-map-interact{width:100%;min-width:0;max-width:none}
- .experience-v2.oath-visual #hud.battle-readability .exp-combat-status{left:14px;bottom:calc(272px + var(--sab,0px));max-width:116px;font-size:9px}
- .experience-v2.oath-visual #hud.battle-readability:has(#map-tactics-context:not([hidden])) .exp-combat-status{bottom:calc(340px + var(--sab,0px))}
  .battle-atlas-body{grid-template-columns:1fr;gap:12px;max-height:calc(var(--app-height,100dvh) - 145px)}
  .battle-atlas-canvas{height:290px;min-height:220px}
  .battle-atlas-rooms{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -165,3 +163,11 @@ body:has(#hud.show.battle-readability) #toast-layer.edge-strip .toast.combat-not
 body:has(#hud.show.battle-readability) #toast-layer.edge-strip .toast.combat-notice:not(:last-child) { display: none; }
 #hud.battle-readability.side-stack .combat-cue { left: var(--side-cue-x, 50%); top: var(--side-cue-top); max-width: var(--side-width); min-width: 0; padding: 5px 11px 6px; font-size: 11px; letter-spacing: .06em; white-space: nowrap; }
 #hud.battle-readability.side-stack #wave-banner { left: var(--side-left); right: auto; top: var(--side-banner-top); max-width: var(--side-width); text-align: left; font-size: 17px; line-height: 1.2; letter-spacing: .04em; transform-origin: left top; }
+
+/* 획득 장비 카드: 조작부와 플레이 영역 밖 가장자리에 둔다(UI.placeLootStrip이 좌표를 정한다). */
+#loot-layer.loot-strip{left:var(--loot-left);top:var(--loot-top);bottom:auto;transform:none;max-width:var(--loot-max-w);gap:4px;align-items:flex-start}
+#loot-layer.loot-row{flex-direction:row}
+#loot-layer.loot-col{flex-direction:column}
+#loot-layer.loot-strip .loot-pop{min-width:0;max-width:100%;box-sizing:border-box;animation-name:lootStripPop}
+#loot-layer.loot-strip .loot-pop>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@keyframes lootStripPop{0%{transform:translateY(-6px);opacity:0}12%{transform:none;opacity:1}75%{opacity:1}100%{opacity:0}}

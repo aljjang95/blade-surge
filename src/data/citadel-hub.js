@@ -57,8 +57,8 @@ for (const spot of CITADEL_HUB_HOTSPOTS) {
   if (spot.blockerRadius) blockers.push({ type: 'circle', x: spot.x, z: spot.z, radius: spot.blockerRadius });
   if (!['dungeon', 'campaign', 'arena'].includes(spot.kind)) continue;
   for (const side of [-1, 1]) blockers.push({ type: 'circle',
-    x: spot.x + side * 1.27 * Math.cos(spot.yaw),
-    z: spot.z - side * 1.27 * Math.sin(spot.yaw), radius: .29 });
+    x: spot.x + side * 1.5 * Math.cos(spot.yaw),
+    z: spot.z - side * 1.5 * Math.sin(spot.yaw), radius: .5 });
 }
 // The vendor's table sits behind the merchant; central routes remain clear.
 blockers.push({ type: 'rect', minX: -7.65, maxX: -5.15, minZ: 6.8, maxZ: 7.9 });
@@ -177,7 +177,7 @@ const townBlockers = (hotspots, props) => {
     if (spot.blockerRadius) blockers.push({ type: 'circle', x: spot.x, z: spot.z, radius: spot.blockerRadius });
     if (!['dungeon', 'campaign', 'arena'].includes(spot.kind)) continue;
     for (const side of [-1, 1]) blockers.push({ type: 'circle',
-      x: spot.x + side * 1.27 * Math.cos(spot.yaw), z: spot.z - side * 1.27 * Math.sin(spot.yaw), radius: .29 });
+      x: spot.x + side * 1.5 * Math.cos(spot.yaw), z: spot.z - side * 1.5 * Math.sin(spot.yaw), radius: .5 });
   }
   blockers.push({ type: 'rect', minX: -7.65, maxX: -5.15, minZ: 6.8, maxZ: 7.9 });
   for (const prop of props) {

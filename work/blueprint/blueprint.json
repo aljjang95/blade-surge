@@ -180,6 +180,51 @@
       "chosen": false,
       "note": "외벽 개방이 넓어 전투 공간 경계가 약함",
       "sha256": "afa4bd6c264f60abc460ab76df591b65e627a9a1a8d72f279e377325aca2cb0c"
+    },
+    {
+      "id": "C12",
+      "group": "citadel-gate-20261020",
+      "title": "고대 성채 석조 아치: 쐐기돌·룬 음각·이끼",
+      "image": "images/gate-concept-A.png",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": true,
+      "note": "기존 14종 던전별 관문 장식(왕관·결정·종 등)을 유지한 채 공통 기둥·아치 뼈대만 바꿔 품질을 올릴 수 있다. 룬 음각이 포털 색을 따라가 던전 구분도 유지",
+      "sha256": "c770c768b5edabf7c7fd02a0ef81b90cde40bcf63d997c21846a2183c7230949"
+    },
+    {
+      "id": "C13",
+      "group": "citadel-gate-20261020",
+      "title": "룬 단조 요새: 금속 띠·깃발·결정 왕관",
+      "image": "images/gate-concept-B.png",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": false,
+      "note": "금속 띠와 각진 기둥은 좋지만 깃발 천과 큰 왕관이 던전별 장식과 겹친다. 금속 띠·리벳은 A에 일부 차용",
+      "sha256": "fde0875fd79138b38c9e0caa04fb94b03dc66432f2d94414269d500f323d39ca"
+    },
+    {
+      "id": "C14",
+      "group": "citadel-gate-20261020",
+      "title": "성소: 대리석 꼬임 기둥·떠다니는 룬석·천",
+      "image": "images/gate-concept-C.png",
+      "scores": {
+        "fit": 3,
+        "clarity": 4,
+        "feasibility": 3,
+        "distinct": 5
+      },
+      "chosen": false,
+      "note": "꼬임 기둥과 천 휘장은 삼각형 수가 많고 다른 던전 테마와 톤이 맞지 않는다",
+      "sha256": "8a040cb6d2741c8e986b5ff39c5bcf9ef046f419a46486815b9986a80142b809"
     }
   ],
   "nodes": [
@@ -380,6 +425,28 @@
       ],
       "copy": [],
       "sha256": "ccb2c07af67ee73834efa7e16ffa2fb21f8769d0530f4db1557b7b661a485de3"
+    },
+    {
+      "id": "citadel-gate-structure",
+      "type": "component",
+      "group": "citadel-gate-20261020",
+      "title": "성채 관문 공통 구조물(기둥·아치·받침)",
+      "image": "images/gate-concept-A.png",
+      "checks": [
+        "기둥이 단일 상자가 아니라 계단식 받침(2~3단) + 모서리를 깎은 돌 블록 쌓기 + 기둥머리로 읽힌다",
+        "아치는 쐐기돌(voussoir) 조각들이 둥글게 이어지고 가운데 쐐기돌이 크고 앞으로 튀어나온다",
+        "기둥 앞면과 아치 돌에 포털 색으로 빛나는 룬 음각(가는 발광 선)이 있다",
+        "돌 표면에 균열·이끼 패치가 있어 평평한 단색 블록으로 보이지 않는다",
+        "던전별 고유 장식(온실 지붕, 종, 바퀴, 결정 등)과 포털 색은 그대로 유지된다",
+        "로비 기본 카메라와 근접 카메라 모두에서 컨셉 A의 실루엣(두꺼운 기둥, 둥근 쐐기돌 아치, 큰 쐐기돌)과 같다"
+      ],
+      "risks": [
+        "모바일 부하: 관문 하나의 draw call은 재질 역할 수(stone/metal/glow/crystal/portal) 그대로 유지, 삼각형은 관문당 기존 대비 2배 이하로 제한하고 수치를 기록",
+        "14종 루트마다 posts()/arch() 호출이 다르다: 공통 빌더를 바꾸면 모든 루트를 캡처로 확인",
+        "low 품질에서는 이끼·균열 디테일 생략 가능"
+      ],
+      "copy": [],
+      "sha256": "c770c768b5edabf7c7fd02a0ef81b90cde40bcf63d997c21846a2183c7230949"
     }
   ],
   "edges": [
@@ -447,6 +514,11 @@
       "from": "star-archive-room",
       "to": "asset-foundry",
       "type": "writes"
+    },
+    {
+      "from": "lobby-screen",
+      "to": "citadel-gate-structure",
+      "type": "contains"
     }
   ],
   "acceptance": [
@@ -582,6 +654,18 @@
       "reason": "별빛 서고 시안 묶음(C9~C11) 추가, C9 선택, 노드 star-archive-room·기준 A11",
       "from": "1f15de4e43b4",
       "to": "9ed6cdc41d3d"
+    },
+    {
+      "at": "2026-10-19T19:01:52.334Z",
+      "reason": "성채 관문 구조물 품질 개선 묶음 추가(대표님 2026-10-19 '게이트가 퀄리티가 너무 구리다'): 시안 3개 중 A 고대 성채 석조 아치 선택",
+      "from": "9ed6cdc41d3d",
+      "to": "a71f7f3111c7"
+    },
+    {
+      "at": "2026-10-19T19:02:14.184Z",
+      "reason": "관문 노드 연결 type 표기 수정",
+      "from": "a71f7f3111c7",
+      "to": "cb02ee4e527b"
     }
   ],
   "shots": [
@@ -602,7 +686,7 @@
       "note": "1280x590 개발 서버 556aaaf 실제 진입"
     }
   ],
-  "lockedDigest": "9ed6cdc41d3da8b82adeea82a26d30d278d1e5fbf4feadf938c9b6c794d8fed7",
-  "lockedAt": "2026-10-18T11:34:53.725Z",
+  "lockedDigest": "cb02ee4e527b7ecbe32348d07b2c11967e1415854ab195ed6fa50826b092f8df",
+  "lockedAt": "2026-10-19T19:02:14.184Z",
   "firstLockedAt": "2026-10-18T07:12:43.638Z"
 }

@@ -17,9 +17,11 @@ import { createCombatPose } from '../engine/combat-pose.js';
 import { skillAimShape, playerSkillAimShape } from './skill-aim/shapes.js';
 
 const _v = new THREE.Vector3();
-// 궁수 전투 시점(카메라 고도 약 50°)에서 앞머리·윗눈꺼풀이 오른쪽 눈을 가려 애꾸처럼 보이던 문제(2026-10-19 S26 실기기 확인).
-// 클립이 머리 뼈를 쓴 직후 턱을 일정량 들어 두 눈을 드러낸다. 판정·위치·난수와 무관한 렌더 뼈 보정이다.
-const RANGER_HEAD_LIFT = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(12));
+// 궁수 전투 시점(카메라 고도 약 36°)에서 모자 챙·앞머리가 눈을 가려 애꾸처럼 보이던 문제(2026-10-19 S26 실기기, 2026-10-20 재지적).
+// 클립이 머리 뼈를 쓴 직후 고개를 뒤로 젖혀 얼굴을 카메라 쪽으로 들어 두 눈을 드러낸다. 판정·위치·난수와 무관한 렌더 뼈 보정이다.
+// 머리 뼈 로컬 축: 앞 +x, 위 +y, 귀 +z. 피치(고개 젖힘)는 z 축 회전이다. 예전 값은 앞 축(x) 12°로 옆으로 기울이는 롤이라 눈이 드러나지 않았다.
+// 로비 포즈와 다른 직업은 이 보정을 쓰지 않는다. t1·t2·t3·여우 몸 모델의 머리 뼈 축은 같다.
+export const RANGER_HEAD_LIFT = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), THREE.MathUtils.degToRad(30));
 const ATTACK_INPUT_BUFFER_SEC = 0.14;
 const DODGE_INPUT_BUFFER_SEC = 0.12;
 const ATTACK_CANCEL_EARLY = 0.16;

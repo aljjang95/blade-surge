@@ -5,6 +5,21 @@ import { createCitadelGateDesignLibrary, CITADEL_GATE_DESIGNS, CITADEL_GATE_PORT
 import { buildCitadelHubScene, preloadCitadelHubAssets } from '../src/game/citadel-hub-scene.js';
 
 const gates = CITADEL_HUB_HOTSPOTS.filter(spot => ['dungeon', 'campaign', 'arena'].includes(spot.kind));
+// 쐐기돌 아치 개편 전(bdea615) 루트별 고형 삼각형(high)과 draw call 수. 개편 후 삼각형은 2배 이하, draw call 은 그대로여야 한다.
+const BASELINE: Record<string, { triangles: number; calls: number }> = {
+  glass_garden: { triangles: 660, calls: 3 }, ember_vault: { triangles: 1276, calls: 3 }, star_archive: { triangles: 1132, calls: 4 },
+  bellfall_crypt: { triangles: 1036, calls: 3 }, cinder_tide_lock: { triangles: 2240, calls: 3 }, nightglass_observatory: { triangles: 1568, calls: 4 },
+  eclipse_hydra_vault: { triangles: 1482, calls: 5 }, ashforge_catacomb: { triangles: 948, calls: 3 }, astral_leviathan_spire: { triangles: 766, calls: 4 },
+  verdigris_sanctum: { triangles: 1214, calls: 4 }, sable_mirage_basin: { triangles: 792, calls: 4 }, comet_bastion: { triangles: 794, calls: 4 },
+  campaign: { triangles: 726, calls: 3 }, arena: { triangles: 784, calls: 2 },
+};
+const OPENING = (mesh: any) => {
+  // 포털 메시의 uv.x >= 0 인 정점은 입구 면, uv.x = -1 인 정점은 돌에 새긴 룬·보석이다.
+  const uv = mesh.geometry.getAttribute('uv'), position = mesh.geometry.getAttribute('position');
+  const open: number[] = [];
+  for (let i = 0; i < position.count; i++) if (uv.getX(i) >= 0) open.push(i);
+  return open;
+};
 
 test('all fourteen canonical routes have distinct bounded geometry and preserve the open collision corridor', () => {
   const library = createCitadelGateDesignLibrary(), shapes = new Set<string>();
@@ -14,8 +29,8 @@ test('all fourteen canonical routes have distinct bounded geometry and preserve 
       const gate = library.build(spot), bounds = new THREE.Box3().setFromObject(gate);
       expect(bounds.min.y).toBeGreaterThanOrEqual(-.001);
       expect(bounds.min.y).toBeLessThan(.005);
-      expect(bounds.max.y).toBeLessThanOrEqual(3.8);
-      expect(bounds.max.x - bounds.min.x).toBeLessThan(4);
+      expect(bounds.max.y).toBeLessThanOrEqual(5);
+      expect(bounds.max.x - bounds.min.x).toBeLessThan(4.5);
       expect(gate.children.length).toBeLessThanOrEqual(5);
       let signature = '', triangles = 0;
       gate.traverse((node: any) => {
@@ -32,22 +47,45 @@ test('all fourteen canonical routes have distinct bounded geometry and preserve 
           expect(node.material.isShaderMaterial).toBe(true);
           expect(node.material.side).toBe(THREE.DoubleSide);
           expect(node.geometry.getAttribute('uv').count).toBe(position.count);
-          const portalBounds = node.geometry.boundingBox;
-          expect(portalBounds.min.x).toBeGreaterThan(-1.026);
-          expect(portalBounds.max.x).toBeLessThan(1.026);
-          expect(portalBounds.min.y).toBeGreaterThan(.039);
-          expect(portalBounds.max.y).toBeLessThan(2.541);
+          // 둥근 아치 루트는 쐐기돌 아치 안쪽(반원, 높이 3.48)까지, 상인방 루트는 기존 높이 2.5 까지 채운다.
+          const arched = gates.some(g => g.route === spot.route) && ['glass_garden', 'star_archive', 'bellfall_crypt', 'nightglass_observatory', 'eclipse_hydra_vault', 'astral_leviathan_spire', 'verdigris_sanctum', 'sable_mirage_basin'].includes(spot.route);
+          let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+          for (const i of OPENING(node)) {
+            minX = Math.min(minX, position.getX(i)); maxX = Math.max(maxX, position.getX(i));
+            minY = Math.min(minY, position.getY(i)); maxY = Math.max(maxY, position.getY(i));
+          }
+          expect(minX).toBeGreaterThan(-1.151);
+          expect(maxX).toBeLessThan(1.151);
+          expect(minY).toBeGreaterThan(.039);
+          expect(maxY).toBeLessThan(arched ? 3.501 : 2.541);
           return;
         }
         signature += Array.from(position.array).join(',');
         for (let i = 0; i < position.count; i++) {
           const x = position.getX(i), y = position.getY(i), z = position.getZ(i);
           expect(Number.isFinite(x + y + z)).toBe(true);
-          // 머리 아래의 입체는 기존 좌우 충돌 원 안에 두어 통로와 주변에 장애물을 늘리지 않는다.
-          if (y > .08 && y < 2.35) expect(Math.hypot(Math.abs(x) - 1.27, z)).toBeLessThanOrEqual(.291);
+          // 머리 아래의 입체는 좌우 충돌 원(중심 1.5, 반지름 .5, citadel-hub.js) 안에 두어 통로와 주변에 장애물을 늘리지 않는다.
+          if (y > .08 && y < 2.35) expect(Math.hypot(Math.abs(x) - 1.5, z)).toBeLessThanOrEqual(.501);
         }
       });
-      expect(triangles).toBeLessThan(2500);
+      expect(triangles).toBeLessThan(3200);
+      // 굵은 기둥: 맨 아래 받침 폭 .9 이상, 기둥 몸통 깊이 .5 이상(앞뒤 합), 앞쪽으로 나온 이맛돌·아치는 .45 이상.
+      let baseMin = Infinity, baseMax = -Infinity, frontMax = 0;
+      gate.traverse((node: any) => {
+        if (!node.isMesh || node.userData.portalVisual) return;
+        const p = node.geometry.getAttribute('position');
+        for (let i = 0; i < p.count; i++) {
+          if (p.getY(i) < .1 && p.getX(i) > 0) { baseMin = Math.min(baseMin, p.getX(i)); baseMax = Math.max(baseMax, p.getX(i)); }
+          if (p.getY(i) > 2.3 && p.getY(i) < 4) frontMax = Math.max(frontMax, p.getZ(i));
+        }
+      });
+      expect(baseMax - baseMin).toBeGreaterThanOrEqual(.9);
+      expect(frontMax).toBeGreaterThanOrEqual(.4);
+      // 삼각형은 개편 전 루트별 값의 2배 이하(포털 면 제외), draw call 은 같다.
+      let solid = 0, calls = 0;
+      gate.traverse((node: any) => { if (node.isMesh) { calls++; if (!node.userData.portalVisual) solid += (node.geometry.index?.count ?? node.geometry.getAttribute('position').count) / 3; } });
+      expect(solid).toBeLessThanOrEqual(BASELINE[spot.route].triangles * 2);
+      expect(calls).toBe(BASELINE[spot.route].calls);
       shapes.add(signature);
       const ray = new THREE.Raycaster(); gate.updateMatrixWorld(true);
       for (const x of [-.82, 0, .82]) for (const y of [.25, 1, 1.9, 2.32]) {
@@ -98,7 +136,10 @@ test('only the twelve dungeon routes own opaque energy interiors with one shared
         expect(energy.length).toBe(spot.kind === 'dungeon' ? 1 : 0);
         expect(gate.userData.portal).toBe(spot.kind === 'dungeon');
         for (const mesh of energy) {
-          expect(mesh.geometry.index!.count / 3).toBe(quality === 'low' ? 32 : 48);
+          expect(OPENING(mesh).length / 3).toBe(quality === 'low' ? 32 : 48);
+          // 룬·보석은 같은 포털 메시에 합쳐져 있어 별도 draw call 이 없다(입구 면보다 정점이 많다).
+          if (spot.route === 'star_archive') expect(mesh.geometry.getAttribute('position').count).toBeGreaterThan(OPENING(mesh).length);
+          else expect(mesh.geometry.getAttribute('position').count).toBeGreaterThanOrEqual(OPENING(mesh).length);
           expect(mesh.castShadow).toBe(false);
           expect(mesh.receiveShadow).toBe(false);
           const expected = new THREE.Color(CITADEL_GATE_PORTALS[spot.route as keyof typeof CITADEL_GATE_PORTALS]);
@@ -150,3 +191,8 @@ test('optional hub downloads retain NPC and prop assets while procedural gate de
   expect(requested).toContain('/models/citadel-hub-v1/bench.glb');
   expect(requested).toContain('/models/citadel-hub-v1/paving.glb');
 });
+
+
+
+
+
