@@ -21,6 +21,14 @@ function hitWithin(game, p, center, radius, limit, dmg, opts = {}) {
   game.routeObjectives?.strike?.(game, center.x, center.z, radius);
   return n;
 }
+/** void_step 표시 범위(자기 중심 18m). 점멸 표적과 피해를 시전 지점에서 이 안으로 제한한다. */
+const VOID_STEP_REACH = 18;
+/** fn 실행 동안 center에서 limit m 밖 적을 판정 대상에서 뺀다(hitArea·hitRadius가 spawning 적을 건너뛰는 규칙을 이용, 끝나면 원복). */
+function onlyWithin(game, center, limit, fn) {
+  const hidden = [];
+  for (const e of game.enemies) if (!e.spawning && Math.hypot(e.pos.x - center.x, e.pos.z - center.z) >= limit) { e.spawning = true; hidden.push(e); }
+  try { return fn(); } finally { for (const e of hidden) e.spawning = false; }
+}
 const targets = (game, p, max = 6, range = 10) => game.enemies.filter((e) => e.alive && !e.spawning && p.distTo(e) < range).sort((a, b) => p.distTo(a) - p.distTo(b)).slice(0, max);
 const rangerOrigin = (p, dir) => p.def?.weapon === 'bow' && p.arrowOrigin ? p.arrowOrigin(dir) : p.pos.clone().addScaledVector(dir, .9).setY(1.2);
 function rangerArrows(game, p, dmg, count = 1, options = {}) {
@@ -869,7 +877,7 @@ export const SKILLS = {
   void_step: {
     dur: 0.45, total: 2.0,
     start(game, p, c) {
-      c.data.n = 0; c.data.tick = 0; c.data.last = null;
+      c.data.n = 0; c.data.tick = 0; c.data.last = null; c.data.origin = p.pos.clone();
       p.invuln = 2.1; p.startTrail(); p.beacon?.setFocus(true, 0xd0a0ff);
       game.fx.texFlash(p.pos, 'singularity', 0x8a4aff, { size: 8, life: 0.5, spin: 0.8, grow: 1.4, y: 0.5 });
       game.fx.shockTex(p.pos, 0x8a4aff, { r1: 5, life: 0.4 });
@@ -881,7 +889,8 @@ export const SKILLS = {
       c.data.tick -= dt;
       if (c.data.tick > 0 || c.data.n >= 12) return;
       c.data.tick = 0.13;
-      const list = game.enemies.filter((e) => e.alive && !e.spawning && p.distTo(e) < 18);
+      // 점멸 표적과 피해는 시전 지점 18m(표시 범위) 안으로 묶는다: 점멸이 이어질수록 표시 밖까지 닿던 문제(3차 재감사 이후 대표님 결정).
+      const o = c.data.origin, list = game.enemies.filter((e) => e.alive && !e.spawning && Math.hypot(e.pos.x - o.x, e.pos.z - o.z) < VOID_STEP_REACH);
       if (!list.length) { c.data.n++; return; }
       const e = list[(c.data.n * 3 + 1) % list.length];
       const from = p.pos.clone();
@@ -897,7 +906,7 @@ export const SKILLS = {
       game.fx.boltTex(from.clone().setY(1), p.pos.clone().setY(1), 0xb26bff, { width: 1.6, life: 0.18 });
       game.fx.slashSprite(e.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0xd0a0ff, { size: 3.6, life: 0.18, tilt: (c.data.n % 2 ? 0.8 : -1.5), flip: c.data.n % 2 === 1 });
       game.fx.flash(p.pos.clone().setY(1), 0x8a4aff, { size: 2.4, life: 0.15 });
-      game.hitArea(p, p.pos, p.yaw, 3.6, 200, c.dmg, { kb: 1.4, kind: 'slash', source: p, quietStop: c.data.n % 3 !== 0 });
+      onlyWithin(game, o, VOID_STEP_REACH, () => game.hitArea(p, p.pos, p.yaw, 3.6, 200, c.dmg, { kb: 1.4, kind: 'slash', source: p, quietStop: c.data.n % 3 !== 0 }));
       audio.whoosh({ vol: 0.35, pitch: 1.2 + c.data.n * 0.06, dur: 0.14 });
       game.renderer.shake(0.16);
       c.data.n++; c.data.last = e;
@@ -906,7 +915,7 @@ export const SKILLS = {
       p.stopTrail(); p.beacon?.setFocus(false);
       game.renderer.desat = 0;
       const at = p.pos.clone();
-      game.hitRadius(at, 7.5, c.dmg * 3.2, { kb: 12, kind: 'slash', up: true, finisher: true, skillCast:c, source: p, dirFrom: at });
+      onlyWithin(game, c.data.origin || at, VOID_STEP_REACH, () => game.hitRadius(at, 7.5, c.dmg * 3.2, { kb: 12, kind: 'slash', up: true, finisher: true, skillCast:c, source: p, dirFrom: at }));
       game.fx.texFlash(at, 'singularity', 0xb26bff, { size: 12, life: 0.6, spin: 1.2, grow: 1.6, y: 1 });
       game.fx.explosion(at, { size: 10, color: 0xd0a0ff, life: 0.6 });
       game.fx.shockTex(at, 0x8a4aff, { r1: 9, life: 0.6 });
