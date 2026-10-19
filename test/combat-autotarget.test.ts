@@ -44,16 +44,18 @@ test('근접 자동 타겟팅은 사거리 밖 적에게 짧게 붙어 타격 �
   }
 });
 
-test('수동 평타는 적 몸 가장자리가 부채꼴에 걸리면 명중한다', () => {
+test('수동 평타는 적 몸 절반이 부채꼴에 걸리면 명중하고, 몸이 거의 벗어난 적은 맞히지 않는다', () => {
+  for (const [share, expectHit] of [[.8, true], [2.2, false]] as const) {
   const f = createCombatFlowFixture(runtime, 'knight'), p: any = f.player; setAutoTarget(f, false);
   const c = p.def.combo[0], d = c.range - .3;
   p.yaw = 0;
   const probe: any = dummy(f, 0, 0); const r = probe.radius; probe.alive = false; f.game.enemies.length = 0;
-  const angle = c.arc * Math.PI / 360 + Math.asin(r / d) * .7;
+  const angle = c.arc * Math.PI / 360 + Math.asin(r * .5 / d) * share;
   const e: any = dummy(f, Math.sin(angle) * d, Math.cos(angle) * d);
   f.game.input.press('attack');
   expect(advance(f, () => p.hitDone)).toBe(true);
-  expect(e.hp).toBeLessThan(1e6);
+  expect(e.hp < 1e6).toBe(expectHit);
+  }
 });
 
 test('회피·스킬·피격 경직·기절 중 누른 공격은 그 행동이 끝나면 실제 공격으로 이어진다', () => {

@@ -228,6 +228,8 @@ test('AUTO 궁수와 근접 영웅은 기존 경로(autoAim·정지·전신 클�
   expect(p.actionName).toBe('Bow_Shoot'); expect(p.vel.length()).toBe(0);
   expect(angle(p.yaw, Math.PI / 2)).toBeLessThan(.02);
   const k = ranger('knight'), q: any = k.player;
+  // 근접 수동 경로(입력 방향 유지·정지)는 자동 타겟팅을 끈 설정의 계약이다(2026-10-19 기본값 변경).
+  k.game.app.eco = { s: { settings: { autoTarget: false } } };
   spawnCombatFlowEnemy(k, k.room.x - 3, k.room.z, { atkCd: 99 });
   expect(q.rangerAim).toBeNull();
   q.vel.set(2, 0, 0); q.startCombo(0, .7);
