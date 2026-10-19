@@ -7,15 +7,23 @@ export const DODGE_COOLDOWN_SEC = 0;
 // 연타해도 끊김 없는 영구 무적이 되지 않는다. 구르기를 사격으로 끊으면 그 순간 회피 무적도 끝난다.
 export const DODGE_INVULN_SEC = 0.26;
 
-export function normalizeSkillLoadout(def, value) {
+export function normalizeSkillLoadout(def, value, skillLevels = null, heroLevel = Infinity) {
   const source = Array.isArray(value) ? value : DEFAULT_SKILL_LOADOUT;
   const choices = def?.skills || [];
+  // 저장/미리보기의 기존 두 인자 호출은 유지하고, 전투·습득 변경은 실제 레벨·습득 상태로 검사한다.
+  const available = (index) => index >= 4 && index < choices.length &&
+    (!choices[index].unlock || heroLevel >= choices[index].unlock) &&
+    (!skillLevels || skillLevels[index] >= 1);
+  // -1 은 스킬 초기화가 비운 칸이다. 그대로 비워 두고, 쓸 수 없는 칸(-2)만 다른 습득 스킬로 채운다.
   const next = DEFAULT_SKILL_LOADOUT.map((fallback, slot) => {
     const candidate = source[slot];
-    return Number.isInteger(candidate) && candidate >= 4 && candidate < choices.length ? candidate : fallback;
+    if (candidate === -1) return -1;
+    return Number.isInteger(candidate) && available(candidate) ? candidate : available(fallback) ? fallback : -2;
   });
-  if (next[0] === next[1]) {
-    next[1] = [4, 5, 6, 7].find((index) => index < choices.length && index !== next[0]) ?? 5;
+  for (let slot = 0; slot < next.length; slot++) {
+    if (next[slot] === -2 || (slot === 1 && next[0] >= 0 && next[0] === next[1])) {
+      next[slot] = choices.findIndex((_, index) => available(index) && index !== next[1 - slot]);
+    }
   }
   return next;
 }
