@@ -124,6 +124,26 @@ describe('전투·마을 가산 자세 층', () => {
       }
     } finally { restore(); }
   });
+  test('판정용 뼈 읽기: suspend는 보정 전 자세를, resume은 보정 후 자세를 정확히 되돌리고 반복해도 누적되지 않는다', () => {
+    const { bone, pose, action, mixer } = fixture(); action.time = .5; mixer.update(0);
+    pose.apply(); pose.apply(); const base = new Quaternion();
+    for (let i = 0; i < 5; i++) { pose.restore(); pose.apply(); }
+    const corrected = bone.quaternion.clone(); expect(corrected.angleTo(base)).toBeGreaterThan(.1);
+    for (let i = 0; i < 50; i++) {
+      pose.suspend(); expect(bone.quaternion.angleTo(base)).toBeLessThan(1e-9);
+      pose.apply(); expect(bone.quaternion.angleTo(base)).toBeLessThan(1e-9);
+      pose.resume(); expect(bone.quaternion.angleTo(corrected)).toBeLessThan(1e-9);
+    }
+    pose.suspend(); pose.restore(); pose.resume(); expect(bone.quaternion.angleTo(base)).toBeLessThan(1e-9);
+    pose.dispose();
+  });
+  test('활 화살 발사 위치(arrowOrigin)는 보정을 벗긴 자세에서 읽는다', () => {
+    const player = readFileSync(new URL('../src/game/player.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+    const body = player.slice(player.indexOf('  arrowOrigin('), player.indexOf('  doComboHit('));
+    expect(body.indexOf('this.heroPose?.suspend()')).toBeGreaterThan(-1);
+    expect(body.indexOf('this.heroPose?.suspend()')).toBeLessThan(body.indexOf('getWorldPosition'));
+    expect(body.indexOf('getWorldPosition')).toBeLessThan(body.indexOf('this.heroPose?.resume()'));
+  });
   test('외형 단계 변경으로 clips의 클립 객체가 오버레이로 교체돼도 같은 별칭의 보정이 이어진다', () => {
     const { root, bone, clip, mixer, config } = fixture();
     const clips: Record<string, AnimationClip> = { attack: clip };

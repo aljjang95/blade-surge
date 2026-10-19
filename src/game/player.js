@@ -272,7 +272,13 @@ export class Player extends Actor {
   stopTrail() { if (this.trail) { this.trail.stop(); this.trail = null; } }
   arrowOrigin(dir = this.forward(new THREE.Vector3())) {
     const bow = this.model?.getObjectByName('Bow');
-    if (bow) { this.model.updateWorldMatrix(true, true); return bow.getWorldPosition(new THREE.Vector3()).addScaledVector(dir, .35); }
+    if (bow) {
+      // 화살 발사 위치는 판정이므로 보정 전 클립 자세로 읽는다(보정은 화면 연출).
+      this.heroPose?.suspend(); this.model.updateWorldMatrix(true, true);
+      const origin = bow.getWorldPosition(new THREE.Vector3()).addScaledVector(dir, .35);
+      this.heroPose?.resume(); this.model.updateWorldMatrix(true, true);
+      return origin;
+    }
     return this.pos.clone().addScaledVector(dir, .8).setY(1.3);
   }
   doComboHit(tick = 0) {

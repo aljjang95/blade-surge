@@ -42,7 +42,7 @@ export function createCombatPose(root, heroId, mixer, clips, data = corrections[
       if (!node?.isBone) return null;
       let bone = byName.get(boneName);
       if (!bone) {
-        bone = { node, base: new Quaternion(), target: new Quaternion(), current: new Quaternion() };
+        bone = { node, base: new Quaternion(), corrected: new Quaternion(), target: new Quaternion(), current: new Quaternion() };
         byName.set(boneName, bone); bones.push(bone);
       }
       const angles = new Float64Array(keys.length * 3);
@@ -55,15 +55,29 @@ export function createCombatPose(root, heroId, mixer, clips, data = corrections[
   }
   if (!entries.length) return null;
   const partial = new Quaternion(), rotation = new Quaternion(), euler = new Euler();
-  let applied = false, disposed = false;
+  let applied = false, suspended = false, disposed = false;
   return {
     restore() {
       if (!applied) return;
       for (let i = 0; i < bones.length; i++) bones[i].node.quaternion.copy(bones[i].base);
-      applied = false;
+      applied = false; suspended = false;
+    },
+    /**
+     * 판정에 쓰이는 뼈 위치(화살 발사 위치)는 보정 전 클립 자세로 읽어야 하므로 보정을 잠시 벗긴다.
+     * 읽은 뒤 반드시 resume()을 부른다. 같은 프레임 안에서만 쓴다(할당 없음).
+     */
+    suspend() {
+      if (!applied || suspended) return;
+      for (let i = 0; i < bones.length; i++) bones[i].node.quaternion.copy(bones[i].base);
+      suspended = true;
+    },
+    resume() {
+      if (!suspended) return;
+      for (let i = 0; i < bones.length; i++) bones[i].node.quaternion.copy(bones[i].corrected);
+      suspended = false;
     },
     apply(dt = 1 / 60) {
-      if (disposed || applied) return;
+      if (disposed || applied || suspended) return;
       for (let i = 0; i < bones.length; i++) bones[i].target.identity();
       for (let i = 0; i < entries.length; i++) {
         const entry = entries[i], names = entry.aliases, times = entry.times;
@@ -100,6 +114,7 @@ export function createCombatPose(root, heroId, mixer, clips, data = corrections[
         bone.base.copy(bone.node.quaternion);
         bone.current.rotateTowards(bone.target, step);
         bone.node.quaternion.multiply(bone.current);
+        bone.corrected.copy(bone.node.quaternion);
       }
       applied = true;
     },
