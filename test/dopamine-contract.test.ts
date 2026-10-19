@@ -58,16 +58,26 @@ test('legacy six-skill saves migrate forward without losing trained levels', () 
 });
 
 test('unlocked Q and E selections persist as underlying indexes', () => {
-  const eco=new Economy(); eco.hero('knight').level=50;
+  // 저장소가 없는 테스트 환경이라 저장 성공으로 둔다(습득 규칙만 검사).
+  const eco=new Economy(); eco.save=()=>true; eco.hero('knight').level=50;
+  // 각성 스킬은 레벨 해금 뒤 SP로 배워야 Q/E에 넣을 수 있다.
+  for (const i of [6,7]) expect(eco.learnSkill('knight',i)).toMatchObject({ok:true});
+  // 저장된 [4,5]는 아직 배우지 않은 칸이라, 첫 장착 때 배운 스킬로 채워 [6,7]로 정리된다.
   expect(eco.setSkillLoadout('knight',0,6)).toBe(true);
-  expect(eco.setSkillLoadout('knight',1,7)).toBe(true);
   expect(eco.hero('knight').skillLoadout).toEqual([6,7]);
+  // 이미 그 칸에 있는 스킬을 다시 고르면 바뀐 것이 없어 false(화면은 아무것도 하지 않는다).
+  expect(eco.setSkillLoadout('knight',1,7)).toBe(false);
+  // 다른 칸의 스킬을 고르면 서로 바뀌고 그 인덱스로 저장된다.
+  expect(eco.setSkillLoadout('knight',0,7)).toBe(true);
+  expect(eco.hero('knight').skillLoadout).toEqual([7,6]);
 });
 
 test('loadout setter rejects locked skills and atomically swaps Q/E', () => {
-  const eco=new Economy(); eco.hero('knight').level=29;
+  const eco=new Economy(); eco.save=()=>true; eco.hero('knight').level=29;
   expect(eco.setSkillLoadout('knight',0,6)).toBe(false);
   eco.hero('knight').level=50;
+  expect(eco.setSkillLoadout('knight',0,6)).toBe(false);
+  for (const i of [4,5]) expect(eco.learnSkill('knight',i)).toMatchObject({ok:true});
   expect(eco.setSkillLoadout('knight',0,5)).toBe(true);
   expect(eco.hero('knight').skillLoadout).toEqual([5,4]);
 });

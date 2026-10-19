@@ -45,6 +45,7 @@ export class TranscendView extends GrowthOverlay {
   quote() { return typeof this.eco.transcendQuote === 'function' ? this.eco.transcendQuote(this.heroId) : null; }
   render() {
     if (!this.root || !this.heroId) return;
+    this.setShowcaseHidden(true);
     const id = this.heroId, def = HEROES[id], q = this.quote(), keys = new Map();
     const key = (k, node) => { node.dataset.key = k; keys.set(k, node); return node; };
     this.root.replaceChildren();

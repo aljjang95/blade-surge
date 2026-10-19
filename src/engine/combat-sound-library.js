@@ -111,6 +111,8 @@ const TIER_MIX = Object.freeze({
   boss: { kind: 0.14, accent: ['t_boss', 0.74], body: ['b_boss', 0.84], rate: 1 },
 });
 export const HIT_CRIT_LAYER = Object.freeze({ id: 't_crit', vol: 0.34, finisherVol: 0.4 });
+/** 한 타격의 레이어 이득 합 상한. 배송 타격 파일의 디코드 피크가 0.94 이하라 모든 레이어 피크가 겹쳐도 약 1.70 아래다. */
+export const HIT_VOL_BUDGET = 1.8;
 
 const layerCache = new Map();
 /** 한 번의 타격이 재생할 레이어 목록. 난수 없이 결정적이며 변형 선택은 호출 쪽(오디오 전용 RNG)이 한다.
@@ -135,18 +137,23 @@ function buildHitLayers(kind, tier, weapon, crit) {
     else if (weapon === '2h') kindRate *= 0.9;
   }
   const layers = [{ id: kindId, vol: kindGain, rate: kindRate, role: 'transient', priority }];
-  // 영웅 전용 무기 접촉음을 얹어 다섯 영웅의 타격이 서로 다르게 들리게 한다(공용 접촉음은 절반으로 줄인다).
-  if (Object.hasOwn(HERO_BY_WEAPON, weapon)) {
+  // 영웅 전용 무기 접촉음을 얹어 다섯 영웅의 타격이 서로 다르게 들리게 한다. 공용 접촉음은 절반으로, 등급 악센트는 0.6배로
+  // 줄이고 영웅 접촉음을 가장 큰 접촉 성분으로 둔다(강타·마무리에서도 영웅 소리가 묻히지 않는다).
+  const armed = Object.hasOwn(HERO_BY_WEAPON, weapon), accentGain = mix.accent ? mix.accent[1] : 0;
+  if (armed) {
     layers[0].vol = kindGain * 0.5;
-    layers.push({ id: 'hero', hero: HERO_BY_WEAPON[weapon], vol: Math.max(0.3, kindGain) * 0.95, rate: kindRate, role: 'hero', priority });
+    layers.push({ id: 'hero', hero: HERO_BY_WEAPON[weapon], vol: Math.max(0.3, kindGain, accentGain * 0.75) * 0.95, rate: kindRate, role: 'hero', priority });
   }
-  if (mix.accent) layers.push({ id: mix.accent[0], vol: mix.accent[1], rate: 1, role: 'transient', priority });
+  if (mix.accent) layers.push({ id: mix.accent[0], vol: accentGain * (armed ? 0.6 : 1), rate: 1, role: 'transient', priority });
   let [bodyId, bodyGain] = mix.body;
   if (kind === 'magic' && (bodyId === 'b_basic' || bodyId === 'b_heavy')) bodyId = 'b_magic';
   else if (key === 'basic' && weapon === '2h') { bodyId = 'b_heavy'; bodyGain *= 0.72; }
   else if (key === 'basic' && weapon === 'dual') { bodyId = 'b_light'; bodyGain *= 1.25; }
   layers.push({ id: bodyId, vol: bodyGain, rate: key === 'light' ? 1.05 : 1, role: 'body', priority });
   if (crit) layers.push({ id: HIT_CRIT_LAYER.id, vol: key === 'finisher' || key === 'boss' ? HIT_CRIT_LAYER.finisherVol : HIT_CRIT_LAYER.vol, rate: 1, role: 'transient', priority });
+  // 이득 합이 상한을 넘으면 비율을 지킨 채 함께 줄인다(치명타 마무리·보스처럼 레이어가 많은 타격의 클리핑 방지).
+  const total = layers.reduce((sum, layer) => sum + layer.vol, 0);
+  if (total > HIT_VOL_BUDGET) for (const layer of layers) layer.vol *= HIT_VOL_BUDGET / total;
   return layers;
 }
 
