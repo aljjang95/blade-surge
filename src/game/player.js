@@ -7,6 +7,7 @@ import { SKILLS } from './skills.js';
 import { applyLook } from './look.js';
 import { materialsOf, poseRangerBowString } from '../engine/assets.js';
 import { HeroBeacon } from './hero-beacon.js';
+import { GradeAura, resolveHeroGrade } from '../engine/grade-aura.js';
 import { CONTROL_ULT_GAIN, ultimateLockDuration } from './control-rewards.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC, DODGE_INVULN_SEC } from './progression.js';
@@ -64,6 +65,7 @@ export class Player extends Actor {
     this.maxHp = stats.hp; this.hp = stats.hp;
     this.look = applyLook(this.model, def, equip, { avatarId });   // 장비 외형: 무기/방패 메시 + 등급 발광 + 궤적색
     this.beacon = new HeroBeacon(this.root, this.model);
+    this.gradeAura = new GradeAura(this.root); this.gradeAura.prepare(resolveHeroGrade(this), game.fx);
     this.skillAimView = new SkillAimView(game.scene); this._skillAimShape = {};
     // The outfit is attached after Actor construction; include it in hit/death/revive effects.
     const dressedMaterials = new Set();
@@ -123,7 +125,7 @@ export class Player extends Actor {
   combatSkillIndex(slot) { return skillIndexForCombatSlot(this.skillLoadout, slot); }
   combatSkill(slot) { const index = this.combatSkillIndex(slot); return { index, skill: this.def.skills[index] }; }
   tryCastCombatSkill(slot, aim = null) { const index = this.combatSkillIndex(slot); return index >= 0 && this.tryCastSkill(index, aim); }
-  dispose() { this.model.userData.libraryDisposed = true; this._offDodgeInputClear?.(); this._offDodgeInputClear = null; this.attackBufferYaw = null; this.comboQueuedYaw = null; this.rangerAim?.clear(); this.skillAimView?.dispose(); this.beacon?.dispose(); super.dispose(); }
+  dispose() { this.model.userData.libraryDisposed = true; this._offDodgeInputClear?.(); this._offDodgeInputClear = null; this.attackBufferYaw = null; this.comboQueuedYaw = null; this.rangerAim?.clear(); this.skillAimView?.dispose(); this.beacon?.dispose(); this.gradeAura?.dispose(); super.dispose(); }
   /** 수동 궁수만 이동과 조준을 분리한다. AUTO 는 기존 autoAim 경로를 그대로 쓴다. */
   get manualBow() { return !!this.rangerAim && !this.auto; }
   canDodgeShoot() { return this.manualBow && this.state === 'dodge' && this.stateT >= RANGER_DODGE_SHOT_AT && this.stun <= 0; }
@@ -803,6 +805,7 @@ export class Player extends Actor {
     if (this.attackBufferT === 0) this.attackBufferYaw = null;
     this.dodgeBufferT = Math.max(0, (this.dodgeBufferT || 0) - dt);
     this.beacon.update(this.alive, this.yaw, { state: this.state, color: this.def.accent || this.def.color, reduced: !!this.game.app?.reducedMotion?.matches });
+    this.gradeAura?.update(dt, resolveHeroGrade(this), { alive: this.alive, reduced: !!this.game.app?.reducedMotion?.matches, lite: !!this.game.fx?.lite });
     this.guardT = Math.max(0, (this.guardT || 0) - dt);
     this.tonicAtkT = Math.max(0, (this.tonicAtkT || 0) - dt);
     this.tonicGuardT = Math.max(0, (this.tonicGuardT || 0) - dt);
