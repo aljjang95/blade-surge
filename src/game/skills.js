@@ -26,7 +26,7 @@ const VOID_STEP_REACH = 18;
 /** fn 실행 동안 center에서 limit m 밖 적을 판정 대상에서 뺀다(hitArea·hitRadius가 spawning 적을 건너뛰는 규칙을 이용, 끝나면 원복). */
 function onlyWithin(game, center, limit, fn) {
   const hidden = [];
-  for (const e of game.enemies) if (!e.spawning && Math.hypot(e.pos.x - center.x, e.pos.z - center.z) >= limit) { e.spawning = true; hidden.push(e); }
+  for (const e of game.enemies || []) if (!e.spawning && Math.hypot(e.pos.x - center.x, e.pos.z - center.z) >= limit) { e.spawning = true; hidden.push(e); }
   try { return fn(); } finally { for (const e of hidden) e.spawning = false; }
 }
 const targets = (game, p, max = 6, range = 10) => game.enemies.filter((e) => e.alive && !e.spawning && p.distTo(e) < range).sort((a, b) => p.distTo(a) - p.distTo(b)).slice(0, max);
