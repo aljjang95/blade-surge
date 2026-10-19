@@ -39,7 +39,7 @@ const TOWN_VARIANTS = {
   ranger_pierce: [['교관 판정강화', 'starcrest_ranger_pierce']],
 };
 // 끌어당김(몰이) 스킬: 실제 Enemy 물리로 끌려온 위치 기준으로 잰다. 필수 네 가지(shield_bash·quake·whirlwind·hell_axe) 외에 같은 방식으로 환경변수로 늘릴 수 있다.
-const PULL_SKILLS = (process.env.AIM_PULL || 'shield_bash,quake,whirlwind,hell_axe').split(',').filter(Boolean);
+const PULL_SKILLS = (process.env.AIM_PULL || 'shield_bash,quake,whirlwind,hell_axe,heavenfall,star_prison,absolute_zero,night_parade,eclipse_edge,bloodquake').split(',').filter(Boolean);
 
 // 브라우저 안에서 도는 함수(직렬화되므로 바깥 변수를 쓰지 않는다).
 function pageRun({ hero, jobId, inDepth, outGap, enemyRadius, only, noArea, randomSeeds, townVariants, pullSkills }) {
