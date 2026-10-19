@@ -6,6 +6,7 @@ import { battleFraming, framingBlend } from '../engine/battle-framing.js';
 import { Player } from './player.js';
 import { Enemy, HOSTILE_PROJECTILE_REACH } from './enemies.js';
 import { DropSystem, fieldDropsAllowed } from './drops.js';
+import { TreasureChests } from './treasure-chest.js';
 import { Floor, ROOM_TYPE } from './world.js';
 import { ENEMIES } from '../data/stages.js';
 import { HEROES, heroStats } from '../data/heroes.js';
@@ -94,7 +95,10 @@ export class Battle {
     this.visual = dungeonVisualFor(stage);
     if (stage.field) await preloadFieldSurface();
     if (this._startGeneration !== startGeneration) return;
+    // 보물방 상자는 전투가 직접 소유하는 열 수 있는 상자로 놓는다. 보상이 없는 모드는 기존 장식 상자를 그대로 둔다.
+    this.arena.interactiveChests = fieldDropsAllowed(stage);
     this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
+    this.treasureChests?.dispose(); this.treasureChests = fieldDropsAllowed(stage) ? new TreasureChests(this) : null;
     await this.routeObjectives?.prepareView?.(this.scene);
     if (this._startGeneration !== startGeneration) return;
     await this.mapTactics?.prepareView(this.scene, this);
@@ -401,8 +405,12 @@ export class Battle {
       // 보물방은 클리어 시 장비 상자
       if (fieldDropsAllowed(this.stage) && room.type === ROOM_TYPE.TREASURE) {
         this.treasureRooms++;
-        for (let i = 0; i < 3; i++) { const inst = this.rollDrop('elite'); if (inst) this.drops.spawn(new THREE.Vector3(room.x, 0.6, room.z), 'item', inst, { count: 1, spread: 1.6 }); }
-        this.drops.spawn(new THREE.Vector3(room.x, 0.6, room.z), 'stone', 8, { count: 3, spread: 2 });
+        // 보상은 정화 순간에 굴려 상자에 담는다(난수 순서 유지). 플레이어가 상자를 길게 눌러 열면 쏟아진다.
+        const rewards = [];
+        for (let i = 0; i < 3; i++) { const inst = this.rollDrop('elite'); if (inst) rewards.push({ kind: 'item', payload: inst, count: 1, spread: 1.6 }); }
+        rewards.push({ kind: 'stone', payload: 8, count: 3, spread: 2 });
+        if (this.treasureChests) this.treasureChests.add(room, rewards);
+        else for (const r of rewards) this.drops.spawn(new THREE.Vector3(room.x, 0.6, room.z), r.kind, r.payload, { count: r.count, spread: r.spread });
       }
     }
     this.ui.setObjective(this.world); this.ui.setFloorLabel(this.stage.idx, this.world);
@@ -465,7 +473,7 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
+  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.treasureChests?.dispose(); this.treasureChests = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const runtimeType = !this.stage.expedition && type === this.stage.encounter?.enemyId && this.stage.dungeonBossId ? this.stage.dungeonBossId : type;
@@ -622,6 +630,7 @@ export class Battle {
     this.player.play('Cheer', { fade: 0.2 }); audio.playMusic(null); audio.play('jingle_win0', { vol: 0.9 }); this.ui.showBoss('', false); this.after(1.2, () => audio.voice(heroVoiceName(this.heroId, 'win'))); this.after(3.8, () => audio.voice('floor_clear'));
     this.fx.burst(this.player.pos.clone().setY(1), 0xffd060, { n: 60, speed: 9, size: 0.5, up: 1.5, grav: 6, life: 1.2 }); this.fx.embers(this.player.pos, 0xffe080, { n: 40, radius: 2, life: 2, rise: 3 });
     // 남은 드랍 자동 수거
+    this.treasureChests?.openAll();
     this.player.magnetMul = 99;
     const explored = this.world ? this.world.rooms.filter((r) => r.cleared).length / this.world.rooms.length : 1;
     const hpRatio = this.player.hp / this.player.maxHp;
@@ -822,6 +831,7 @@ export class Battle {
     this.routeObjectives?.observePlayer?.(this.player);
     for (let i = this.holes.length - 1; i >= 0; i--) { const h = this.holes[i]; h.t -= dt; this.vacuum(h.pos, 7, 1.1); if (h.t <= 0) this.holes.splice(i, 1); }
     if (this.sp) this.sp.update(dt);
+    this.treasureChests?.update(dt);
     this.drops.update(dt);
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; this.ui.setCombo(0); } }
     if (this.killStreakT > 0) { this.killStreakT -= dt; if (this.killStreakT <= 0) { this.killStreak = 0; this.ui?.setKillStreak?.(0); } }
@@ -865,3 +875,4 @@ export class Battle {
     this.ui.updateHud(this, realDt);
   }
 }
+
