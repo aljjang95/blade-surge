@@ -17,8 +17,9 @@ export function renderPixelRatio({ width, height, dpr = 1, quality = 'mid', touc
   // 고해상도 태블릿을 포함해 모든 전체 화면 후처리 버퍼를 제한한다.
   const budget = quality === 'low' ? 600000 : quality === 'high' ? 1500000 : 1000000;
   const base = touch ? Math.min(ratio, Math.sqrt(budget / Math.max(1, width * height))) : ratio;
-  // 원래 픽셀 예산이 1 미만인 대형 화면은 확대하지 않는다.
-  return thermalTier >= 3 ? Math.min(base, Math.max(1, base * 0.85)) : base;
+  // 지속 부하 3단계: 해상도를 20% 낮춘다. 갤럭시 탭 S7+ 실측(2026-10-20)에서 기본값이 이미 0.94라
+  // 하한 1.0 규칙으로는 아무것도 줄지 않았으므로 하한을 0.6으로 둔다(GPU 채움 부하는 해상도 제곱에 비례).
+  return thermalTier >= 3 ? Math.min(base, Math.max(0.6, base * 0.8)) : base;
 }
 
 /** mid 터치는 그림자 면적을 1/4로, 블룸 밉의 입력 면적을 약 9/16으로 줄인다. */

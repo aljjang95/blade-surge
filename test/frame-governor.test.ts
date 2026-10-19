@@ -145,8 +145,15 @@ test('모바일 mid 기본 부하와 단계별 완화를 제한하고 데스크�
   const size = { width: 747, height: 298, dpr: 3.75, quality: 'mid', touch: true };
   expect(renderPixelRatio(size)).toBe(1.5);
   expect(renderPixelRatio({ ...size, thermalTier: 2 })).toBe(1.5);
-  expect(renderPixelRatio({ ...size, thermalTier: 3 })).toBeCloseTo(1.275, 8);
-  expect(renderPixelRatio({ ...size, dpr: 1, thermalTier: 4 })).toBe(1);
+  expect(renderPixelRatio({ ...size, thermalTier: 3 })).toBeCloseTo(1.2, 8);
+  // 기본값이 1 아래인 고해상도 태블릿도 3단계에서 실제로 줄어들고, 0.6 아래로는 내려가지 않는다.
+  expect(renderPixelRatio({ ...size, dpr: 1, thermalTier: 4 })).toBeCloseTo(0.8, 8);
+  const tablet = { width: 1493, height: 766, dpr: 1.875, quality: 'mid', touch: true };
+  expect(renderPixelRatio({ ...tablet, thermalTier: 3 })).toBeCloseTo(renderPixelRatio(tablet) * 0.8, 8);
+  // 픽셀 예산 때문에 기본값이 이미 0.6 아래면 더 낮추지 않는다.
+  const huge = { width: 4000, height: 3000, dpr: 3, quality: 'low', touch: true };
+  expect(renderPixelRatio({ ...huge, thermalTier: 3 })).toBe(renderPixelRatio(huge));
+  expect(renderPixelRatio({ width: 1000, height: 500, dpr: 1, quality: 'mid', touch: true, thermalTier: 3 })).toBe(0.8);
   const large = { ...size, width: 2732, height: 2048 };
   expect(renderPixelRatio({ ...large, thermalTier: 3 })).toBeLessThanOrEqual(renderPixelRatio(large));
 });
@@ -215,4 +222,6 @@ test('실제 app.step 고정 dt 경로는 프레임 제한과 별개이며 rende
   expect(app.renderer.frames).toBe(0);
   step.call(app, 1 / 60, true); expect(app.renderer.frames).toBe(1);
 });
+
+
 
