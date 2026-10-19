@@ -1,11 +1,12 @@
 // 기존 combat-mesh-qa는 그대로 두고 머리 장식의 절대 관통 깊이를 추가로 잰다.
-// 머리·목 지배 스킨 정점의 볼록 껍질(모자·머리카락 포함)은 오목한 빈 곳도 덮는 보수적 외피다.
+// 머리·목 지배 정점 + 척추·어깨에 묶인 긴 뒷머리의 볼록 껍질은 빈 곳·망토 일부도 덮는 보수적 외피다.
 // Idle을 빼지 않는다. 지팡이 정점·삼각형 중심·1cm 이하 간격 변 표본의 가장 깊은 점을 cm로 보고한다.
 import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { installProbe, openPage } from './combat-pose-qa.mjs';
 
 export const MAGE_JOBS = [
@@ -102,10 +103,10 @@ export function installMageHeadProbe() {
       const saved = {p:cam.position.clone(),q:cam.quaternion.clone()}, mats = [];
       // 발광 때문에 겹침이 가려지지 않도록 원본 색/텍스처를 그대로 쓰는 무조명 진단 캡처.
       rig.root.traverseVisible(o => { if (!o.isMesh || Array.isArray(o.material)) return; mats.push([o,o.material]); o.material = new T.MeshBasicMaterial({map:o.material.map,color:o.material.color,vertexColors:o.material.vertexColors,side:T.DoubleSide}); });
-      const out = document.createElement('canvas'); out.width = 1800; out.height = 700; const ctx = out.getContext('2d');
+      const out = document.createElement('canvas'); out.width = 1800; out.height = 600; const ctx = out.getContext('2d');
       for (const [i, dir] of [front, right, front.clone().negate()].entries()) {
         cam.position.copy(focus).addScaledVector(dir, 2.9).addScaledVector(up,.25); cam.lookAt(focus); cam.updateMatrixWorld(true); app.renderer.render();
-        const side = canvas.height; ctx.drawImage(canvas,(canvas.width-side)/2,0,side,side,i*600,0,600,700);
+        const side = canvas.height; ctx.drawImage(canvas,(canvas.width-side)/2,0,side,side,i*600,0,600,600);
       }
       cam.position.copy(saved.p); cam.quaternion.copy(saved.q); cam.updateMatrixWorld(true);
       for(const [o,m] of mats) {o.material.dispose();o.material=m;} for(const c of hidden)c.visible=true;
@@ -114,10 +115,10 @@ export function installMageHeadProbe() {
   };
 }
 
-export async function runMageHead(origin, out) {
+export async function runMageHead(origin, out, baseline = null) {
   await fs.mkdir(path.join(out,'captures'), {recursive:true});
   const browser = await chromium.launch({args:['--use-angle=d3d11','--ignore-gpu-blocklist']});
-  const report = {origin,source:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),method:'머리·목 지배 스킨 정점 볼록 껍질의 절대 깊이; Idle 차감 없음; 지팡이 변 1cm 표본 + 정점·면 중심; cm. 외피의 빈 공간은 보수적으로 포함. 격리 Chromium 1280×720, 실기기 아님.',thresholdCm:1.5,rows:[],errors:[]};
+  const report = {origin,source:{head:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),dirtyFiles:execFileSync('git',['status','--short'],{encoding:'utf8'}).trim().split('\n').filter(Boolean),correctionsSha256:createHash('sha256').update(await fs.readFile('src/data/combat-pose-v1.json')).digest('hex')},method:'머리·목 지배 스킨 정점 + 바인드 y>=0.72,z<-0.10인 척추·어깨·골반 정점(긴 뒷머리, 망토 일부 포함)의 볼록 껍질 절대 깊이. Idle 차감 없음. 지팡이 변 1cm 표본 + 정점·면 중심; cm. 외피의 빈 공간을 포함한 보수적 상한이며 실제 표면의 정확한 깊이와 구분. 격리 Chromium 1280×720, 실기기 아님.',thresholdCm:1.5,rows:[],errors:[]};
   try {
     const {page} = await openPage(browser, origin); page.on('pageerror',e=>report.errors.push(e.message));
     await page.evaluate(async()=>{app.eco.s.selected='mage';await app.showcaseHero('mage',true);});
@@ -127,8 +128,9 @@ export async function runMageHead(origin, out) {
       const res = await page.evaluate(j=>__poseQA[j.phase](j.kind,j.arg),job);
       if(!res.samples.length)throw new Error('측정 표본 없음: '+job.id);
       const worst = res.samples.reduce((a,b)=>b[9]>a[9]?b:a), representative=res.samples.find(s=>s[0]===job.frame);
-      const row={...job,anim:res.anim,dur:res.dur,hitAt:res.hitAt,castAt:res.castAt,maxCm:worst[9],worstFrame:worst[0],representativeCm:representative?.[9],handCm:Math.max(...res.samples.map(s=>s[2])),frames:res.samples,pass:worst[9]<=1.5,captures:[]};
-      for(const frame of new Set([job.frame,worst[0]])) {
+      const row={...job,anim:res.anim,dur:res.dur,hitAt:res.hitAt,castAt:res.castAt,maxCm:worst[9],worstFrame:worst[0],representativeCm:representative?.[9],handCm:Math.max(...res.samples.map(s=>s[2])),frames:res.samples,pass:worst[9]<=1.5&&Number.isFinite(representative?.[9]),captures:[]};
+      const before = baseline?.rows.find(r=>r.id===job.id);
+      for(const frame of new Set([job.frame,worst[0],...(before ? [before.worstFrame] : [])])) {
         const again=await page.evaluate(({job,frame})=>__poseQA[job.phase](job.kind,job.arg,{stopAt:frame}),{job,frame});
         if(again.image){const file=`captures/${job.id}-${frame}.png`;await fs.writeFile(path.join(out,file),Buffer.from(again.image.split(',')[1],'base64'));row.captures.push(file);}
       }
@@ -138,4 +140,4 @@ export async function runMageHead(origin, out) {
   report.pass=!report.errors.length&&report.rows.length===8&&report.rows.every(r=>r.pass);
   await fs.writeFile(path.join(out,'report.json'),JSON.stringify(report,null,2));return report;
 }
-if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){const r=await runMageHead(process.argv[2]||'http://127.0.0.1:5311',path.resolve(process.argv[3]||'work/mage-overlap/head'));if(!r.pass)process.exitCode=1;}
+if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){const baseline=process.argv[4]?JSON.parse(await fs.readFile(process.argv[4],'utf8')):null;const r=await runMageHead(process.argv[2]||'http://127.0.0.1:5311',path.resolve(process.argv[3]||'work/mage-overlap/head'),baseline);if(!r.pass)process.exitCode=1;}
