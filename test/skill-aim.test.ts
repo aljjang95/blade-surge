@@ -325,6 +325,8 @@ test('envelope가 있는 스킬은 확정 반지름과 envelope 값이 고정되
     // 영웅 중심 몰이(2026-10-19 2차 재감사 후 전 스킬 몰이 물리 검사): 부채꼴·자기 중심이라 점선 원은 영웅 중심이다.
     dragon_slash: { confirmed: 7.2, envelope: 12, kind: 'pull' }, flurry: { confirmed: 4, envelope: 4.5, kind: 'pull' },
     blizzard: { confirmed: 6.8, envelope: 8.5, kind: 'pull' }, sanctuary: { confirmed: 8, envelope: 11.5, kind: 'pull' },
+    // 봉인 대상 주변 폭발(3.8m)이 표시 9.5m 밖으로 번진다(3차 재감사 이후 표적 앵커 검사).
+    chrono_seal: { confirmed: 9.5, envelope: 13.3, kind: 'chance' },
   };
   const p = player('meteor'), view = new SkillAimView(new THREE.Scene()), aim = { active: true, cancel: false, x: 0, z: 1, dist01: .5 };
   const out: any = {}, withEnvelope: string[] = [];

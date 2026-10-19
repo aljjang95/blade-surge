@@ -40,6 +40,8 @@ const PULL_REACH = {
   // 영웅 중심 몰이: dragon_slash 채널 vacuum 12, flurry vacuum 4.5, blizzard gatherEnemies 8.5(교관 확장 10.5), sanctuary 경계 벽 R+3.5.
   dragon_slash: 12, flurry: 4.5, blizzard: 8.5, sanctuary: 11.5,
 };
+/** 표식·봉인 대상 주변에서 터지는 스킬의 바깥 한계(chance 띠): chrono_seal은 봉인된 적(표시 9.5m 안) 각각에서 3.8m 폭발이 일어나 표시 밖 최대 13.3m까지 닿는다. */
+const CHANCE_REACH = { chrono_seal: 9.5 + 3.8 };
 export function skillAimShape(skillId) { return SKILL_AIM_SHAPES[skillId] || null; }
 
 /**
@@ -72,6 +74,7 @@ function bodyAdjust(out, skillId) {
   if (skillId === 'arc_reflect') out.radius = 0;
   if (skillId === 'meteor') { out.envelope = out.radius; out.radius = 3.4; out.envelopeKind = 'chance'; }
   if (skillId === 'magma_zone') { out.envelope = out.range; out.range = out.radius; out.envelopeKind = 'chance'; }
+  if (CHANCE_REACH[skillId]) { out.envelope = CHANCE_REACH[skillId]; out.envelopeKind = 'chance'; }
   if (PULL_REACH[skillId]) { out.envelope = PULL_REACH[skillId]; out.envelopeKind = 'pull'; }
   return out;
 }
