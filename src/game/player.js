@@ -645,10 +645,14 @@ export class Player extends Actor {
     const priority = this.game.conquest?.autoEnemy(list);
     let e = priority || hub || list[0];
     // 보스·정예 곁의 치유 주술사를 먼저 처치한다. 남겨 두면 6초마다 최대 체력의 15%를 회복시켜 보스전이 끝나지 않았다.
-    if (!priority && (e.isBoss || e.isElite)) {
+    if (!priority) {
       let healer = null, best = Infinity;
       for (const x of list) {
-        if (x.behavior !== 'shaman' || x.distTo(e) > 7) continue;
+        if (x.behavior !== 'shaman') continue;
+        // 방패병 무리가 더 밀집해도 보스 치유 차단이 먼저다. 현재 무리 중심에만 매달리면 지원 소환마다 회복이 반복된다.
+        let supportsPriority = false;
+        for (const ally of list) if (ally !== x && (ally.isBoss || ally.isElite) && x.distTo(ally) <= 7) { supportsPriority = true; break; }
+        if (!supportsPriority) continue;
         const dd = this.distTo(x); if (dd < best) { best = dd; healer = x; }
       }
       if (healer) e = healer;
