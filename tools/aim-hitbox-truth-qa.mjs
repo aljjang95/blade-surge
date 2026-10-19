@@ -72,14 +72,27 @@ function pageRun({ hero, jobId, inDepth, outGap, enemyRadius, only, noArea, rand
     const o = s.origin || 0, tip = s.tip || 0, list = [];
     const line = s.kind === 'line', cone = s.kind === 'cone', circle = s.kind === 'circle';
     if (line || (cone && s.projectileRange)) list.push({ t: 'rect', a0: o, a1: o + (s.projectileRange || s.range) + (line ? tip : 0), hw: Math.max(0.7, s.width || 0.3) / 2 });
-    if (cone) list.push({ t: 'sector', R: s.coneRadius || s.range, angle: s.angle, back: s.back || 0 });
-    if (s.fanAngle > 0) list.push({ t: 'sector', R: s.fanRange, angle: s.fanAngle, back: s.fanBack || 0 });
+    // 화살 다발(레인만 있고 투사체 직선이 없는 부채꼴)은 부채꼴을 채우지 않는다. 용살검처럼 근접 부채꼴이 따로 있으면 그린다.
+    if (cone && !(s.lanes > 0 && !s.projectileRange)) list.push({ t: 'sector', R: s.range, angle: s.angle, back: 0 });
+    for (const q of laneParts(s)) list.push(q);
     if (line && s.radius > 0) list.push({ t: 'circle', ca: o + (s.projectileRange || s.range) + (s.endOffset || 0), cc: 0, r: s.radius });
     if (circle) list.push({ t: 'circle', ca: s.range * frac, cc: 0, r: s.radius });
     if (s.kind === 'self') list.push({ t: 'circle', ca: 0, cc: 0, r: Math.max(0.8, s.range + o) });
     return list;
   };
-  const sdOf = (list, a, c) => Math.min(...list.map(q => q.t === 'rect' ? sdRect(a, c, q.a0, q.a1, q.hw) : q.t === 'sector' ? sdSector(a, c, q.R, q.angle, q.back) : sdCircle(a, c, q.ca, q.cc, q.r)));
+  const sdLane = (a, c, q) => { const ra = a - q.sa, rc = c - q.sc, cs = Math.cos(q.ang), sn = Math.sin(q.ang); return sdRect(ra * cs + rc * sn, -ra * sn + rc * cs, 0, q.len, q.hw); };
+  const sdOf = (list, a, c) => Math.min(...list.map(q => q.t === 'rect' ? sdRect(a, c, q.a0, q.a1, q.hw) : q.t === 'lane' ? sdLane(a, c, q) : q.t === 'sector' ? sdSector(a, c, q.R, q.angle, q.back) : sdCircle(a, c, q.ca, q.cc, q.r)));
+  // 갈라지는 다발의 레인(src/game/skill-aim/aim-view.js와 같은 식): 레인 i의 방향각 (i-(n-1)/2)*step, 시작점 = (laneBaseA, laneBaseC) + 레인 방향 × laneReach.
+  const laneStart = (s, ang) => [s.laneBaseA + s.laneReach * Math.cos(ang), s.laneBaseC + s.laneReach * Math.sin(ang)];
+  function laneParts(s) {
+    const list = [], n = s.lanes | 0;
+    for (let i = 0; i < n; i++) {
+      const off = i - (n - 1) / 2; if (s.laneSkipCenter && off === 0) continue;
+      const ang = off * s.laneStep, [sa, sc] = laneStart(s, ang);
+      list.push({ t: 'lane', ang, hw: Math.max(0.7, s.laneHalf * 2) / 2, len: s.laneLen, sa, sc });
+    }
+    return list;
+  }
   const polar = (d, ang) => [d * Math.cos(ang), d * Math.sin(ang)];
   const samplesFor = (s, list, frac, skillId) => {
     const c = [], o = s.origin || 0;
@@ -109,16 +122,6 @@ function pageRun({ hero, jobId, inDepth, outGap, enemyRadius, only, noArea, rand
       add('out', '끝 밖', far + outGap, 0);
       add('out', '옆 밖(오른)', mid, hw + outGap); add('out', '옆 밖(왼)', mid, -(hw + outGap));
       if (er) { add('in', '끝원 옆 안(오른)', endA, er - inDepth); add('out', '끝원 옆 밖(오른)', endA, er + outGap); add('out', '끝원 옆 밖(왼)', endA, -(er + outGap)); }
-      if (s.fanAngle > 0) {
-        // 갈라지는 옆 투사체(fireball 분열): 바깥 부채의 각 경계 안/밖 표본.
-        const h = s.fanAngle * Math.PI / 360, R = s.fanRange, dm = R * 0.6, P = (d, ang) => { const [x, y] = polar(d, ang); return [x - s.fanBack, y]; };
-        for (const sg of [1, -1]) {
-          const side = sg > 0 ? '오른' : '왼';
-          add('in', '파동 각 경계 안(' + side + ')', ...P(dm, sg * Math.max(0, h - inDepth / dm)));
-          add('out', '파동 각 경계 밖(' + side + ')', ...P(dm, sg * Math.min(Math.PI, h + outGap / dm)));
-          add('out', '파동 호 모서리 밖(' + side + ')', ...P(R - 0.5, sg * Math.min(Math.PI, h + outGap / (R - 0.5))));
-        }
-      }
     } else if (s.kind === 'cone') {
       // 부채꼴(꼭짓점 back, 반지름 R)의 경계 표본. 극좌표는 꼭짓점 기준이라 앞쪽 거리로 바꿀 때 back을 뺀다.
       const coneSet = (tag, back, R, angleDeg) => {
@@ -136,9 +139,7 @@ function pageRun({ hero, jobId, inDepth, outGap, enemyRadius, only, noArea, rand
           add('out', tag + '호 모서리 밖(' + side + ')', ...P(R - 0.5, sg * Math.min(Math.PI, h + outGap / (R - 0.5))));
         } else add('out', tag + '뒤 밖', ...P(-(R + outGap), 0));
       };
-      coneSet('', s.back || 0, s.coneRadius || s.range, s.angle);
-      if (s.fanAngle > 0) coneSet('파동 ', s.fanBack || 0, s.fanRange, s.fanAngle);
-      if (s.projectileRange) { const hw = Math.max(0.7, s.width || 0.3) / 2, len = s.projectileRange; add('in', '레인 끝 안', o + len - inDepth, 0); add('out', '레인 끝 밖', o + len + outGap, 0); add('out', '레인 옆 밖', o + len / 2, hw + outGap); }
+      if (!(s.lanes > 0 && !s.projectileRange)) coneSet('', 0, s.range, s.angle);
     } else if (s.kind === 'circle') {
       // 원은 중심에서 15° 비켜 45° 간격 8방향을 모두 잰다(방향이 정해진 기둥·낙하 지점이 만드는 부분 틈을 놓치지 않기 위해).
       const ca = s.range * frac, r = s.radius;
@@ -153,6 +154,28 @@ function pageRun({ hero, jobId, inDepth, outGap, enemyRadius, only, noArea, rand
       }
     }
     // 실제 경계 거리로 검증: 안쪽은 표시 안(sd<0), 바깥은 0.75m 이상 밖이어야 한다. 다른 하위 도형 안에 들어가 어긋난 후보는 버린다.
+    // 레인 다발: 레인마다 끝·옆 안/밖 표본, 레인 사이 틈(이웃 레인 방향의 이등분선) 표본. 틈 표본은 표시 밖이므로 맞지 않아야 한다.
+    if (s.lanes > 0) {
+      const n = s.lanes | 0, hw = Math.max(0.7, s.laneHalf * 2) / 2, len = s.laneLen, d = Math.min(inDepth, hw);
+      const at = (sa, sc, ang, along, across) => [sa + along * Math.cos(ang) - across * Math.sin(ang), sc + along * Math.sin(ang) + across * Math.cos(ang)];
+      for (let i = 0; i < n; i++) {
+        const off = i - (n - 1) / 2, ang = off * s.laneStep, tag = '레인' + (i + 1) + ' ';
+        if (!(s.laneSkipCenter && off === 0)) {
+          const [sa, sc] = laneStart(s, ang);
+          add('in', tag + '끝 안', ...at(sa, sc, ang, len - inDepth, 0));
+          for (const sg of [1, -1]) {
+            const side = sg > 0 ? '오른' : '왼';
+            add('in', tag + '옆 안(' + side + ')', ...at(sa, sc, ang, len * 0.6, sg * (hw - d)));
+            add('out', tag + '옆 밖(' + side + ')', ...at(sa, sc, ang, len * 0.6, sg * (hw + outGap)));
+          }
+          add('out', tag + '끝 밖', ...at(sa, sc, ang, len + outGap, 0));
+        }
+        if (i < n - 1) {
+          const mid = (ang + (off + 1) * s.laneStep) / 2;
+          for (const f of [0.95, 0.75, 0.55, 0.35]) add('out', '틈 ' + (i + 1) + '-' + (i + 2) + ' ' + Math.round(f * 100) + '%', ...polar(o + len * f, mid));
+        }
+      }
+    }
     return c.map(q => ({ ...q, a: +q.a.toFixed(3), c: +q.c.toFixed(3), sd: +sdOf(list, q.a, q.c).toFixed(3) })).filter(q => q.group === 'in' ? q.sd < -0.05 : q.group === 'band' || q.group === 'pull' ? q.sd > 0.3 : q.group.startsWith('hop') ? true : q.sd >= outGap - 0.05);
   };
   const spawnPool = n => { for (let i = pool.length; i < n; i++) { const e = b.spawnEnemy(defKey, null, null, new THREE.Vector3(o0.x + 5000, 0, o0.z + 5000)); if (!e) throw new Error('표본 적 생성 실패: ' + defKey); freeze(e); park(e); pool.push(e); } };
@@ -208,7 +231,7 @@ function pageRun({ hero, jobId, inDepth, outGap, enemyRadius, only, noArea, rand
           const origSpawnLen = e.spawnLen;
           if (pull) { delete e.update; e.state = 'spawn'; e.stateT = 0; e.spawnLen = 1e9; }
           const t0 = b.elapsed; let hits = 0; const origHurt = Object.getPrototypeOf(e).hurt;
-          e.hurt = function (dmg, o) { const r = origHurt.call(this, dmg, o); if (pull) { this.state = 'spawn'; this.stateT = 0; } if (r > 0 || dmg > 0) { hits++; if (firstT === null) firstT = +(b.elapsed - t0).toFixed(3); } return r; };
+          e.hurt = function (dmg, o) { const r = origHurt.call(this, dmg, o); if (pull) { this.state = 'spawn'; this.stateT = 0; } if (r > 0 || dmg > 0) { hits++; if (firstT === null) { firstT = +(b.elapsed - t0).toFixed(3); if (window.__aimDebug) sm.stack = new Error().stack.split('\n').slice(1, 6).join(' | ') + ' src=' + (o && o.source ? 'p' : '?') + ' kind=' + (o && o.kind); } } return r; };
           const ok = p.tryCastSkill(idx, { x: ux, z: uz, dist01: frac });
           if (!ok) { castOk = false; delete e.hurt; if (pull) { e.update = noop; e.state = 'chase'; e.spawnLen = origSpawnLen; } break; }
           // 늦게 맞는 스킬(투사체·낙하·지속 장판·fx 구동 반사창)을 위해 바깥 표본은 최소 4초(240걸음)를 흘리고, 안쪽 표본은 맞는 즉시 끝낸다.
@@ -246,6 +269,7 @@ await page.locator('#boot-start:not(.hidden)').waitFor({ timeout: 120000 }); awa
 await page.waitForFunction(() => window.app?.mode === 'lobby' && !document.querySelector('#boot').classList.contains('show'), null, { timeout: 120000 });
 const build = await page.evaluate(() => ({ title: document.title, shapeFn: typeof window.__skillAimShape, version: window.app?.version || null }));
 if (build.shapeFn !== 'function') throw new Error('window.__skillAimShape 가 없다. src/main.js 노출이 들어간 빌드인지 확인');
+if (process.env.AIM_DEBUG) await page.evaluate(() => { window.__aimDebug = true; });
 const rows = [];
 for (const spec of heroArg) {
   const guardian = spec === 'guardian', hero = guardian ? 'knight' : spec;
@@ -320,7 +344,7 @@ for (const hero of [...new Set(finalRows.map(r => r.hero))]) {
       if (!v.parts) return;
       // 월드 -> (a,c) 좌표 -> 화면. a는 위쪽, c는 오른쪽.
       let ext = 2;
-      for (const q of v.parts) { if (q.t === 'rect') ext = Math.max(ext, q.a1, q.hw); if (q.t === 'sector') ext = Math.max(ext, q.R - (q.back || 0)); if (q.t === 'circle') ext = Math.max(ext, Math.abs(q.ca) + q.r, q.r); }
+      for (const q of v.parts) { if (q.t === 'rect') ext = Math.max(ext, q.a1, q.hw); if (q.t === 'lane') ext = Math.max(ext, Math.abs(q.sa + q.len * Math.cos(q.ang)) + q.hw, Math.abs(q.sc + q.len * Math.sin(q.ang)) + q.hw); if (q.t === 'sector') ext = Math.max(ext, q.R - (q.back || 0)); if (q.t === 'circle') ext = Math.max(ext, Math.abs(q.ca) + q.r, q.r); }
       const envC = s.envelope > 0 ? (s.kind === 'circle' ? s.range : 0) : null; if (envC !== null) ext = Math.max(ext, Math.abs(envC) + s.envelope);
       for (const m of v.samples) ext = Math.max(ext, Math.abs(m.a) + 1, Math.abs(m.c) + 1);
       const sc = Math.min((cw - 30) / (2 * ext), (ch - 60) / (2 * ext)), ox = cx0 + cw / 2, oy = cy0 + (ch - 22) / 2 + 8;
@@ -329,6 +353,11 @@ for (const hero of [...new Set(finalRows.map(r => r.hero))]) {
       for (const q of v.parts) {
         g.beginPath();
         if (q.t === 'rect') g.rect(X(-q.hw), Y(q.a1), 2 * q.hw * sc, (q.a1 - q.a0) * sc);
+        else if (q.t === 'lane') {
+          const cs = Math.cos(q.ang), sn = Math.sin(q.ang);
+          [[0, -q.hw], [q.len, -q.hw], [q.len, q.hw], [0, q.hw]].forEach(([al, ac], k) => { const a = q.sa + al * cs - ac * sn, c = q.sc + al * sn + ac * cs; if (k === 0) g.moveTo(X(c), Y(a)); else g.lineTo(X(c), Y(a)); });
+          g.closePath();
+        }
         else if (q.t === 'circle') g.arc(X(q.cc), Y(q.ca), q.r * sc, 0, Math.PI * 2);
         else { const h = q.angle * Math.PI / 360, bk = q.back || 0; g.moveTo(X(0), Y(-bk)); g.arc(X(0), Y(-bk), q.R * sc, -Math.PI / 2 - h, -Math.PI / 2 + h); g.closePath(); }
         g.fill(); g.stroke();

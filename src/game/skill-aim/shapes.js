@@ -19,6 +19,14 @@ function variant(player, id, name) {
 /** 기본 판정/탐색 모양. angle은 hitArea와 같은 도 단위다. */
 const FRAME_PAD = .25;
 const SPLIT_ANGLE = .22, SPLIT_SPEED = 15, SPLIT_LIFE = .8, SPLIT_RADIUS = .55;
+/** 화살 다발 스킬의 화살 사이 각(rad, skills.js rangerArrows .18 / volley .24). 화살 수는 angle(전체 퍼짐)에서 구한다. */
+const ARROW_STEP = { ranger_volley: .24, ranger_tempest: .18, ranger_binding: .18, gale_hunt: .18 };
+/**
+ * 활 화살의 시작점 = 활 소켓(영웅 기준 앞 .64, 오른쪽 .07) + 화살 방향 × .35 (player.js arrowOrigin). 실측: 세 발·네 발·일곱 발 모두 같은 값(tools 측정, 소수 셋째 자리까지).
+ * 화살마다 시작점이 방향에 따라 옆으로 달라지므로 레인의 시작점도 같은 식으로 둔다.
+ */
+export const BOW_SOCKET = Object.freeze({ a: .64, c: .07, reach: .35 });
+const DRAGON_WAVE_STEP = .32;
 /**
  * 시전 중 적을 끌어당기는(gather/vacuum) 스킬이 일반 적을 끌어와 맞히는 한계 반지름(표시 중심 기준).
  * 근거: skills.js의 gatherEnemies/vacuum 반경 중 tools/aim-hitbox-truth-qa.mjs 실측(실제 Enemy 물리)에서 표시 밖 적이 맞은 값.
@@ -29,25 +37,29 @@ export function skillAimShape(skillId) { return SKILL_AIM_SHAPES[skillId] || nul
 
 /**
  * 표시 전용 보정(tools/aim-hitbox-truth-qa.mjs 실측 근거). 원본 SKILL_AIM_SHAPES는 판정 기준 수치(이동 거리·반경)를 그대로 둔다.
- *  - 투사체·돌진의 몸통은 경로 끝과 옆으로 반경(width / 2)만큼 더 훑는다. 끝은 tip, 부채꼴 옆은 꼭짓점을 뒤로 물린 back으로 그린다.
+ *  - 투사체·돌진의 몸통은 경로 끝과 옆으로 반경(width / 2)만큼 더 훑는다. 끝은 tip으로 그린다.
+ *  - 여러 발이 갈라지는 다발(화살 부채·용살검 파동·분열 화염)은 부채꼴로 채우지 않는다. 화살 각도마다 좁은 레인(lanes)으로 그려 발 사이 틈을 비워 둔다.
  *  - 무작위·고리 배치 다중 타격(meteor, magma_zone)은 어느 방향에서도 확정으로 맞는 반지름만 그리고, 운이 맞아야 닿는 바깥 한계는 envelope에 적는다.
  */
 function bodyAdjust(out, skillId) {
-  out.tip = 0; out.back = 0; out.coneRadius = 0; out.fanAngle = 0; out.fanRange = 0; out.fanBack = 0; out.envelope = 0; out.envelopeKind = '';
+  out.tip = 0; out.envelope = 0; out.envelopeKind = '';
+  // 레인: 개수, 사이 각(rad), 반폭, 길이(시작점부터, 몸통·보정 포함), 시작점 = (앞 laneBaseA, 오른쪽 laneBaseC) + 레인 방향 × laneReach, 가운데 레인 생략(1)
+  out.lanes = 0; out.laneStep = 0; out.laneHalf = 0; out.laneLen = 0; out.laneBaseA = 0; out.laneBaseC = 0; out.laneReach = 0; out.laneSkipCenter = 0;
   const body = out.width > 0 ? out.width / 2 : 0;
   // 투사체는 life를 넘긴 마지막 프레임 걸음만큼 더 나간다(60fps에서 최대 약 0.3~0.5m). 절반쯤인 FRAME_PAD를 끝에 더한다.
   const pad = out.origin > 0 ? FRAME_PAD : 0;
   if (out.kind === 'line') out.tip = body + pad;
-  if (out.kind === 'cone' && body > 0 && !out.projectileRange && out.angle > 0) {
-    // 화살 부채: 각 화살 몸통이 훑는 영역의 바깥 선은 화살 방향선에서 body만큼 떨어진 평행선이다. 꼭짓점을 body / sin(반각)만큼 뒤로 물린 부채꼴이 그 선과 같다.
-    const half = Math.min(out.angle, 170) * Math.PI / 360;
-    out.tip = body + pad; out.back = body / Math.sin(half); out.coneRadius = out.range + out.origin + out.tip + out.back;
+  const step = ARROW_STEP[skillId];
+  if (out.kind === 'cone' && body > 0 && !out.projectileRange && out.angle > 0 && step) {
+    // 화살 다발: 화살마다 시작점(origin, 화살 방향)에서 range만큼 나가는 몸통 반폭 body짜리 레인. 발 사이는 비워 둔다.
+    out.tip = body + pad;
+    out.lanes = Math.round(out.angle * Math.PI / 180 / step) + 1; out.laneStep = step; out.laneHalf = body; out.laneLen = out.range + out.tip;
+    out.laneBaseA = BOW_SOCKET.a; out.laneBaseC = BOW_SOCKET.c; out.laneReach = BOW_SOCKET.reach;
   }
   if (out.kind === 'cone' && body > 0 && out.projectileRange && out.projectileAngle > 0) {
-    // 용살검 파동 세 줄기: 같은 방식의 바깥 부채(파동 몸통 반경 width / 2, 시작점 origin).
-    const half = out.projectileAngle * Math.PI / 360;
-    out.fanAngle = out.projectileAngle; out.fanBack = body / Math.sin(half);
-    out.fanRange = out.origin + out.projectileRange + body + pad + out.fanBack;
+    // 용살검 파동 세 줄기(±.32rad, 몸통 반폭 width / 2)는 근접 부채꼴(angle)과 별개로 레인으로 그린다.
+    out.lanes = Math.round(out.projectileAngle * Math.PI / 180 / DRAGON_WAVE_STEP) + 1; out.laneStep = DRAGON_WAVE_STEP; out.laneHalf = body;
+    out.laneLen = out.projectileRange + body + pad; out.laneReach = out.origin;
   }
   // 반사창은 벽·적에 튕겨 열두 번째 반사 위치에서 터진다. 직선 끝에는 폭발이 없으므로 끝 원을 그리지 않는다.
   if (skillId === 'arc_reflect') out.radius = 0;
@@ -80,10 +92,9 @@ export function playerSkillAimShape(player, skillId, out) {
   if (split) out.radius = 5.2;
   bodyAdjust(out, skillId);
   if (split) {
-    // 분열 화염: 옆으로 ±.22rad 갈라지는 작은 투사체 둘(속도 15, 수명 .8, 반경 .55). 그 몸통이 훑는 바깥 부채를 두 번째 부채로 그린다.
-    const h = SPLIT_ANGLE, body = SPLIT_RADIUS;
-    out.fanAngle = h * 360 / Math.PI; out.fanBack = Math.max(0, body / Math.sin(h) - out.origin);
-    out.fanRange = out.fanBack + out.origin + SPLIT_SPEED * SPLIT_LIFE + body + FRAME_PAD;
+    // 분열 화염: 주 투사체 직선 옆으로 ±.22rad 갈라지는 작은 투사체 둘(속도 15, 수명 .8, 반경 .55). 둘 다 조준 축 위 시작점(origin)에서 출발한다.
+    out.lanes = 3; out.laneStep = SPLIT_ANGLE; out.laneHalf = SPLIT_RADIUS; out.laneLen = SPLIT_SPEED * SPLIT_LIFE + SPLIT_RADIUS + FRAME_PAD;
+    out.laneBaseA = out.origin; out.laneSkipCenter = 1;
   }
   return out;
 }

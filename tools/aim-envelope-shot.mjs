@@ -7,7 +7,9 @@ import path from 'node:path';
 const origin = (process.argv[2] || 'http://127.0.0.1:5197').replace(/\/$/, '');
 const out = path.resolve(process.argv[3] || 'work/cycles/20261019-aim-envelope-ui/qa-envelope-shot');
 const views = (process.argv[4] || '1280x590,844x390,800x360').split(',').map(v => v.split('x').map(Number));
-const CASES = [['mage', 'meteor'], ['barbarian', 'magma_zone'], ['knight', 'shield_bash'], ['barbarian', 'quake'], ['barbarian', 'hell_axe'], ['barbarian', 'whirlwind']];
+// 세 번째 값 'lanes': 화살 다발·용살검 파동처럼 레인으로 그리는 스킬(발 사이 틈이 비어 있어야 한다).
+const CASES = [['mage', 'meteor'], ['barbarian', 'magma_zone'], ['knight', 'shield_bash'], ['barbarian', 'quake'], ['barbarian', 'hell_axe'], ['barbarian', 'whirlwind'],
+  ['ranger', 'ranger_volley', 'lanes'], ['ranger', 'ranger_tempest', 'lanes'], ['ranger', 'ranger_binding', 'lanes'], ['knight', 'dragon_slash', 'lanes']];
 await fs.mkdir(out, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-angle=d3d11', '--ignore-gpu-blocklist'] });
 const rows = []; let pass = true;
@@ -20,7 +22,7 @@ for (const [w, h] of views) {
   const cdp = await ctx.newCDPSession(page);
   const touch = (type, touchPoints) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
   let current = null;
-  for (const [hero, skill] of CASES) {
+  for (const [hero, skill, mode] of CASES) {
     const row = { viewport: w + 'x' + h, hero, skill, errors };
     try {
       if (current !== hero) {
@@ -35,10 +37,12 @@ for (const [w, h] of views) {
       // 짧게 끌어(버튼 반지름의 절반 정도) 조준 지점이 영웅 가까이에 오게 한다: 확정 원과 바깥 점선이 한 화면에 들어온다.
       await touch('touchStart', [{ id: 7, x: c.x, y: c.y }]); await touch('touchMove', [{ id: 7, x: c.x - 10, y: c.y - 8 }]); await touch('touchMove', [{ id: 7, x: c.x - 20, y: c.y - 16 }]);
       await page.waitForTimeout(400);
-      row.state = await page.evaluate(() => { const v = app.battle.player.skillAimView, s = app.battle.player._skillAimShape; return { visible: v.group.visible, envelopeVisible: v.envelope.visible, envelopeScale: +v.envelope.scale.x.toFixed(2), envelopeRenderOrder: v.envelope.renderOrder, targetVisible: v.target.visible, targetScale: +v.target.scale.x.toFixed(2), rangeScale: +v.range.scale.x.toFixed(2), shape: { kind: s.kind, range: +s.range.toFixed(2), radius: +s.radius.toFixed(2), envelope: +s.envelope.toFixed(2), envelopeKind: s.envelopeKind } }; });
+      row.state = await page.evaluate(() => { const v = app.battle.player.skillAimView, s = app.battle.player._skillAimShape; return { lanesShown: v.laneNodes.filter(n => n.pivot.visible).length, rangeVisible: v.range.visible, coneVisible: v.cone.visible, visible: v.group.visible, envelopeVisible: v.envelope.visible, envelopeScale: +v.envelope.scale.x.toFixed(2), envelopeRenderOrder: v.envelope.renderOrder, targetVisible: v.target.visible, targetScale: +v.target.scale.x.toFixed(2), rangeScale: +v.range.scale.x.toFixed(2), shape: { kind: s.kind, range: +s.range.toFixed(2), radius: +s.radius.toFixed(2), envelope: +s.envelope.toFixed(2), envelopeKind: s.envelopeKind, lanes: s.lanes } }; });
       await page.screenshot({ path: path.join(out, skill + '-' + w + 'x' + h + '.png') });
       await touch('touchEnd', []); await page.waitForTimeout(150);
-      row.ok = row.state.visible && row.state.envelopeVisible && row.state.envelopeScale > (row.state.shape.kind === 'circle' ? row.state.shape.radius : row.state.shape.range);
+      row.ok = mode === 'lanes'
+        ? row.state.visible && row.state.shape.lanes > 0 && row.state.lanesShown === row.state.shape.lanes && (row.state.shape.kind !== 'cone' || skill === 'dragon_slash' || (!row.state.coneVisible && !row.state.rangeVisible))
+        : row.state.visible && row.state.envelopeVisible && row.state.envelopeScale > (row.state.shape.kind === 'circle' ? row.state.shape.radius : row.state.shape.range);
     } catch (e) { row.failure = String(e.message || e); row.ok = false; }
     if (!row.ok || errors.length) pass = false;
     rows.push(row);
