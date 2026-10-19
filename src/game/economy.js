@@ -1,5 +1,5 @@
 // 경제·진행 상태 (localStorage 저장). 결제는 전부 목업.
-import { HEROES, HERO_ORDER, levelExp, starShards, skillUpGold, heroStats } from '../data/heroes.js';
+import { HEROES, HERO_ORDER, levelExp, starShards, heroStats } from '../data/heroes.js';
 import { ITEM_POOL, ITEM_BY_ID, SLOTS, SETS, itemStats, enhanceCost, enhanceStones, enhanceChance, destroyChance, ENH_MAX, RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_GACHA , STONE_KEY, enhanceStoneTier, craftable, CRAFT_COST, GACHA_ITEM_RARITY, RARITY_INFO, enhanceDown} from '../data/items.js';
 import { SKUS, GACHA, BATTLE_PASS, ENERGY, DAILY_REWARDS, PASS_TRACK } from '../data/shop.js';
 import { stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
@@ -11,11 +11,20 @@ import { heroTrainingQuote } from './hero-training.js';
 import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
 import { freshTownState } from '../data/towns.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
-import { heroBaseGrade } from '../data/hero-grades.js';
-import { baselineSkillLevels } from '../data/skill-tree.js';
+import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
+import { baselineSkillLevels, canLearnSkill, spEarned, spSpent, spAvailable, skillLearned, FREE_RESET_BELOW_LEVEL } from '../data/skill-tree.js';
+import { levelExperienceMultiplier, stageRecommendedLevel } from '../data/loot-tables.js';
 
 const KEY = 'bladesurge_save_v1';
 const now = () => Date.now();
+// 분해: 판매 골드의 절반과 강화석(에픽은 상급)을 돌려준다. 유니크 이상은 일괄 분해 대상에서 보호한다.
+export function salvageRewards(inst) {
+  const rarity = ITEM_BY_ID[inst?.id]?.rarity;
+  if (!['N', 'S', 'E'].includes(rarity)) return {};
+  const enhanced = Math.max(0, Math.min(ENH_MAX, Math.floor(Number(inst.enh) || 0)));
+  return { gold: Math.floor(RARITY_INFO[rarity].sell / 2),
+    [rarity === 'E' ? 'stones2' : 'stones']: ({ N: 1, S: 3, E: 2 })[rarity] + Math.floor(enhanced / 4) };
+}
 /** 새 영웅 상태: 시작 등급(def.rarity), 기본 스킬·궁극기 1레벨, 각성 스킬은 SP로 배우기 전 0레벨. */
 export function freshHeroState(id) {
   const def = HEROES[id];
@@ -51,7 +60,7 @@ export function gachaRates() {
   return {
     base: gachaChances(1), softPityFrom: GACHA.softPity, hardPity: GACHA.pity, ssrByPull,
     expectedPullsPerSsr: expected, consolidatedSsr: 1 / expected,
-    ssrSplit: { featuredHero: others.length ? featured : featured + pool, otherSsrHero: others.length ? pool : 0, ssrGear: gear, otherHeroes: others },
+    ssrSplit: { featuredHero: others.length ? featured : featured + pool, otherSsrHero: others.length ? pool : 0, ssrGear: gear, materials: GACHA.materials.SSR.reduce((sum, m) => sum + m.w, 0), otherHeroes: others },
     srSplit: { ...GACHA.srSplit }, tenPullSrPlus: 1, dupShards: GACHA.dupShards,
     rSplit: { ...GACHA.rSplit }, materials: structuredClone(GACHA.materials),
   };
@@ -75,7 +84,7 @@ export function gachaContents() {
   const mats = (grade) => { for (const m of rates.materials[grade] || []) out.push({ kind: 'material', grade, id: m.k, n: m.n, p: base[grade] * m.w }); };
   heroes('SSR', [GACHA.featured], base.SSR * rates.ssrSplit.featuredHero);
   if (rates.ssrSplit.otherSsrHero) heroes('SSR', rates.ssrSplit.otherHeroes, base.SSR * rates.ssrSplit.otherSsrHero);
-  gear('SSR', base.SSR * rates.ssrSplit.ssrGear);
+  gear('SSR', base.SSR * rates.ssrSplit.ssrGear); mats('SSR');
   heroes('SR', heroesOf('SR'), base.SR * rates.srSplit.hero);
   gear('SR', base.SR * rates.srSplit.gear); mats('SR');
   gear('R', base.R * rates.rSplit.gear); mats('R');
@@ -199,9 +208,9 @@ export class Economy {
   // ---------- 영웅 ----------
   hero(id = this.s.selected) { return this.s.heroes[id]; }
   ownHero(id) { return !!this.s.heroes[id]; }
-  heroEquipBonus(id, equipment = this.hero(id).equip) {
+  heroEquipBonus(id, equipment = this.hero(id).equip, inventory = this.s.inventory) {
     const b = { atk: 0, hp: 0, def: 0, crit: 0, atkPct: 0, hpPct: 0, critDmg: 0, ultGain: 0, sets: {}, procs: [], summons: [] };
-    for (const sl of SLOTS) { const iid = equipment[sl]; const inst = this.s.inventory.find((x) => x.uid === iid); if (inst) { const def = ITEM_BY_ID[inst.id]; const st = itemStats(inst); b.atk += st.atk; b.hp += st.hp; b.def += st.def; b.crit += st.crit; const set = def.set; b.sets[set] = (b.sets[set] || 0) + 1; for (const proc of def.procs || []) if (!b.procs.includes(proc)) b.procs.push(proc); if (def.summon && !b.summons.some((summon) => summon.id === def.summon.id)) b.summons.push({ ...def.summon, itemId: def.id }); } }
+    for (const sl of SLOTS) { const iid = equipment[sl]; const inst = inventory.find((x) => x.uid === iid); if (inst) { const def = ITEM_BY_ID[inst.id]; const st = itemStats(inst); b.atk += st.atk; b.hp += st.hp; b.def += st.def; b.crit += st.crit; const set = def.set; b.sets[set] = (b.sets[set] || 0) + 1; for (const proc of def.procs || []) if (!b.procs.includes(proc)) b.procs.push(proc); if (def.summon && !b.summons.some((summon) => summon.id === def.summon.id)) b.summons.push({ ...def.summon, itemId: def.id }); } }
     b.active = [];
     for (const sid in b.sets) {
       const n = b.sets[sid]; const S = SETS[sid]; if (!S) continue;
@@ -248,7 +257,71 @@ export class Economy {
     return true;
   }
   promoteHero(id) { const h = this.hero(id); const need = starShards(h.star); if (h.shards < need || h.star >= 5) return false; h.shards -= need; h.star++; this.emit(); return true; }
-  upgradeSkill(id, i) { const h = this.hero(id), sk = HEROES[id]?.skills[i]; if (!h || !sk || (sk.unlock && h.level < sk.unlock)) return false; const cost = skillUpGold(h.skills[i]); if (this.s.gold < cost || h.skills[i] >= 10) return false; this.s.gold -= cost; h.skills[i]++; this.emit(); return true; }
+  skillPoints(id) {
+    const def = HEROES[id], h = this.hero(id);
+    if (!def || !h) return { earned: 0, spent: 0, available: 0 };
+    return { earned: spEarned(h.level), spent: spSpent(def, h.skills), available: spAvailable(def, h) };
+  }
+  learnSkill(id, i) {
+    const h = this.hero(id), def = HEROES[id];
+    if (!h || !def || !Number.isInteger(i) || i < 0) return { ok: false, reason: 'skill' };
+    const quote = canLearnSkill(def, h, i);
+    if (!quote.ok) return quote;
+    const before = h.skills[i]; h.skills[i] = quote.toLevel;
+    if (!this.save()) { h.skills[i] = before; return { ok: false, reason: 'storage' }; }
+    for (const f of this.listeners) f(this.s);
+    return { ok: true, level: quote.toLevel };
+  }
+  upgradeSkill(id, i) { return this.learnSkill(id, i); }
+  skillResetQuote(id) {
+    const h = this.hero(id);
+    return { free: !!h && h.level < FREE_RESET_BELOW_LEVEL, scrolls: this.s.skillResets || 0,
+      gemPrice: this.sku('skill_reset1').price, refund: this.skillPoints(id).spent };
+  }
+  resetSkills(id, { useGems = false } = {}) {
+    const h = this.hero(id), def = HEROES[id], quote = this.skillResetQuote(id);
+    if (!h || !def) return { ok: false, reason: 'scroll' };
+    const used = quote.free ? 'free' : quote.scrolls > 0 ? 'scroll' : 'gems';
+    if (used === 'gems' && !useGems) return { ok: false, reason: 'scroll' };
+    if (used === 'gems' && this.s.gems < quote.gemPrice) return { ok: false, reason: 'gems' };
+    const before = { skills: h.skills, loadout: h.skillLoadout, gems: this.s.gems, scrolls: this.s.skillResets };
+    h.skills = baselineSkillLevels(def);
+    // 슬롯 위치는 유지한다. 빈 슬롯(-1)을 남겨 초기화가 다른 스킬을 자동 습득시키지 않는다.
+    h.skillLoadout = normalizeSkillLoadout(def, h.skillLoadout).map(i =>
+      def.skills[i] && skillLearned(h.skills[i]) && h.level >= (def.skills[i].unlock || 1) ? i : -1);
+    if (used === 'scroll') this.s.skillResets--;
+    if (used === 'gems') this.s.gems -= quote.gemPrice;
+    if (!this.save()) {
+      h.skills = before.skills; h.skillLoadout = before.loadout; this.s.gems = before.gems; this.s.skillResets = before.scrolls;
+      return { ok: false, reason: 'storage' };
+    }
+    for (const f of this.listeners) f(this.s);
+    return { ok: true, refunded: quote.refund, free: quote.free, used };
+  }
+  transcendQuote(id) {
+    const def = HEROES[id], h = this.hero(id);
+    if (!def || !h) return { grade: null, next: null, cost: null, have: { shards: 0, transcendStones: 0, gold: this.s.gold }, ok: false, before: null, after: null };
+    const grade = heroGrade(def, h), next = nextGrade(grade), cost = gradeUpCost(grade);
+    const have = { shards: h.shards, transcendStones: this.s.transcendStones || 0, gold: this.s.gold }, bonus = this.heroEquipBonus(id);
+    return { grade, next, cost: cost ? { ...cost } : null, have,
+      ok: !!cost && Object.keys(cost).every(k => have[k] >= cost[k]), before: heroStats(def, h, bonus),
+      after: next ? heroStats(def, { ...h, grade: next }, bonus) : null };
+  }
+  transcend(id) {
+    const quote = this.transcendQuote(id);
+    if (!quote.next || !quote.cost) return { ok: false, reason: 'max' };
+    for (const [key, reason] of [['shards', 'shards'], ['transcendStones', 'stones'], ['gold', 'gold']]) {
+      if (quote.have[key] < quote.cost[key]) return { ok: false, reason };
+    }
+    const h = this.hero(id), before = { grade: h.grade, shards: h.shards, stones: this.s.transcendStones, gold: this.s.gold };
+    h.shards -= quote.cost.shards; this.s.transcendStones -= quote.cost.transcendStones; this.s.gold -= quote.cost.gold; h.grade = quote.next;
+    if (!this.save()) {
+      h.grade = before.grade; h.shards = before.shards; this.s.transcendStones = before.stones; this.s.gold = before.gold;
+      return { ok: false, reason: 'storage' };
+    }
+    for (const f of this.listeners) f(this.s);
+    return { ok: true, grade: quote.next };
+  }
   setSkillLoadout(id, slot, skillIndex) { const h = this.hero(id), def = HEROES[id]; if (!h || !def || ![0,1].includes(slot) || !Number.isInteger(skillIndex) || skillIndex < 4 || skillIndex >= def.skills.length) return false; const sk = def.skills[skillIndex]; if (sk.unlock && h.level < sk.unlock) return false; const next = normalizeSkillLoadout(def, h.skillLoadout); if (next[slot] === skillIndex) return false; const other = 1 - slot; if (next[other] === skillIndex) [next[slot], next[other]] = [skillIndex, next[slot]]; else next[slot] = skillIndex; h.skillLoadout = next; this.emit(); return true; }
   grantHero(id) { if (this.s.heroes[id]) { this.s.heroes[id].shards += GACHA.dupShards; return { dup: true, shards: GACHA.dupShards }; } this.s.heroes[id] = freshHeroState(id); return { dup: false, shards: 0 }; }
   // ---------- 장비 ----------
@@ -284,8 +357,63 @@ export class Economy {
     this.emit(); return { ok: true, success, destroyed, down, enh: destroyed ? lv : inst.enh, chance };
   }
   sellItem(uid) { const i = this.s.inventory.findIndex((x) => x.uid === uid); if (i < 0) return; const inst = this.s.inventory[i]; const r = ITEM_BY_ID[inst.id].rarity; const gold = RARITY_INFO[r]?.sell || 200; for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } this.s.inventory.splice(i, 1); this.s.gold += gold; this.emit(); return gold; }
+  isUpgrade(heroId, inst) {
+    const h = this.hero(heroId), item = ITEM_BY_ID[inst?.id];
+    if (!h || !item || h.equip[item.slot] === inst.uid) return false;
+    const before = heroStats(HEROES[heroId], h, this.heroEquipBonus(heroId));
+    // 정산 직전 인벤토리에 없는 드롭도 비교하되 저장 상태는 바꾸지 않는다.
+    const inventory = [...this.s.inventory.filter(x => x.uid !== inst.uid), inst];
+    return heroStats(HEROES[heroId], h, this.heroEquipBonus(heroId, { ...h.equip, [item.slot]: inst.uid }, inventory)).power > before.power;
+  }
+  salvage(uids) {
+    if (!Array.isArray(uids) || !uids.length) return { ok: false, reason: 'items' };
+    const ids = new Set(uids), items = this.s.inventory.filter(x => ids.has(x.uid));
+    if (items.length !== ids.size || items.some(x => !ITEM_BY_ID[x.id] || !['N', 'S', 'E'].includes(ITEM_BY_ID[x.id].rarity))) return { ok: false, reason: 'items' };
+    if (Object.values(this.s.heroes).some(h => Object.values(h.equip).some(uid => ids.has(uid)))) return { ok: false, reason: 'equipped' };
+    const inventory = this.s.inventory, before = { gold: this.s.gold, stones: this.s.stones, stones2: this.s.stones2 };
+    const rewards = {};
+    for (const item of items) for (const [key, n] of Object.entries(salvageRewards(item))) rewards[key] = (rewards[key] || 0) + n;
+    this.s.inventory = inventory.filter(x => !ids.has(x.uid));
+    const got = this.addRewards(rewards, { silent: true, applyVip: false });
+    if (!this.save()) { this.s.inventory = inventory; Object.assign(this.s, before); return { ok: false, reason: 'storage' }; }
+    for (const f of this.listeners) f(this.s);
+    return { ok: true, count: items.length, got };
+  }
   /** 필드 드랍 아이템 (즉시 인벤토리) */
   fieldDrop(rarity) { const it = this.addItem(rarity); this.save(); return it; }
+  /** 전투 수집 장부는 저장하지 않는다. 정산 경로만 영웅·계정에 지급한다. */
+  beginFieldRewards(stage, heroId = this.s.selected) {
+    if (!stage || stage.party || stage.expedition?.kind === 'arena' || !this.hero(heroId)) return null;
+    if (this._fieldRewards?.stage === stage) return this._fieldRewards;
+    return this._fieldRewards = { stage, heroId, heroLevel: this.hero(heroId).level,
+      ticketId: stage.expedition ? this.s.expedition.pending?.id : null,
+      exp: 0, heroShards: 0, transcendStones: 0, materials: {}, settled: false };
+  }
+  discardFieldRewards(ledger) { if (this._fieldRewards === ledger) this._fieldRewards = null; }
+  /** RPG 처치 호출부에서 기존 즉시 grantCombatXp 대신 사용한다. */
+  queueCombatXp(stage, heroId, amount) {
+    const ledger = this.beginFieldRewards(stage, heroId), h = this.hero(heroId);
+    const beforeLevel = h?.level || 1;
+    const gained = !ledger || ledger.settled || beforeLevel >= 80 || !Number.isSafeInteger(amount) || amount <= 0 ? 0
+      : Math.floor(Math.min(amount, 1000000) * levelExperienceMultiplier(ledger.heroLevel, stageRecommendedLevel(stage, ledger.heroLevel)));
+    if (ledger) ledger.exp = Math.min(100000000, ledger.exp + gained);
+    return { gained, levels: 0, beforeLevel, level: beforeLevel, exp: h?.exp || 0 };
+  }
+  fieldRewardsFor(stage, ticket) {
+    const ledger = this._fieldRewards;
+    return ledger && !ledger.settled && (ticket ? ledger.ticketId === ticket.id : ledger.stage === stage) ? ledger : null;
+  }
+  applyFieldExtras(field, heroId) {
+    const count = (n, cap) => Number.isSafeInteger(n) && n > 0 ? Math.min(n, cap) : 0;
+    const got = this.addRewards({ transcendStones: count(field?.transcendStones, 100) }, { silent: true, applyVip: false });
+    const shards = count(field?.heroShards, 100);
+    if (shards && this.hero(heroId)) { this.hero(heroId).shards += shards; got.push({ k: 'heroShards', heroId, n: shards }); }
+    for (const key of Object.keys(this.s.expedition.materials)) {
+      const n = count(field?.materials?.[key], 1000);
+      if (n) { this.s.expedition.materials[key] += n; got.push({ k: key, n }); }
+    }
+    return got;
+  }
   // ---------- 스테이지 ----------
   stageKey(ch, st) { return `${ch}-${st}`; }
   stageIndex(ch, st) { return (ch - 1) * STAGES_PER_CHAPTER + st; }
@@ -298,7 +426,8 @@ export class Economy {
   }
   isUnlocked(ch, st) { return Number.isInteger(ch) && Number.isInteger(st) && ch >= 1 && ch <= CHAPTERS.length && st >= 1 && st <= STAGES_PER_CHAPTER && this.stageIndex(ch, st) <= this.s.progress.unlocked; }
   nextStage() { const idx = Math.min(this.s.progress.unlocked, CHAPTERS.length * STAGES_PER_CHAPTER); const ch = Math.ceil(idx / STAGES_PER_CHAPTER), st = ((idx - 1) % STAGES_PER_CHAPTER) + 1; return stageDef(ch, st); }
-  completeStage(stage, stars, { double = false, fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [], fullClear = false } = {}) {
+  completeStage(stage, stars, { double = false, fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [], fieldExp = 0, fieldHeroShards = 0, fieldTranscendStones = 0, fieldMaterials = {}, fullClear = false } = {}) {
+    const ledger = this.fieldRewardsFor(stage), heroId = ledger?.heroId || this.s.selected;
     const s = this.s; const key = this.stageKey(stage.ch, stage.st); const first = !s.progress.stars[key];
     s.progress.stars[key] = Math.max(s.progress.stars[key] || 0, stars);
     if (stage.idx >= s.progress.unlocked) s.progress.unlocked = Math.min(CHAPTERS.length * STAGES_PER_CHAPTER, stage.idx + 1);
@@ -311,15 +440,18 @@ export class Economy {
     if (fullClearBonus) loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_ELITE)));
     if (double && Math.random() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE))); }
     if (stage.boss && Math.random() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
-    const prevLv = this.hero(s.selected).level;
-    const stageExp = r.exp * m + (fullClearBonus?.exp || 0);
-    const ups = this.addHeroExp(s.selected, stageExp, { silent: true });
-    const nowLv = this.hero(s.selected).level;
+    got.push(...this.applyFieldExtras(ledger || { heroShards: fieldHeroShards, transcendStones: fieldTranscendStones, materials: fieldMaterials }, heroId));
+    const prevLv = this.hero(heroId).level;
+    const combatExp = ledger?.exp ?? (Number.isSafeInteger(fieldExp) && fieldExp > 0 ? Math.min(fieldExp, 100000000) : 0);
+    const stageExp = Math.floor((r.exp * m + (fullClearBonus?.exp || 0)) * levelExperienceMultiplier(prevLv, stageRecommendedLevel(stage, prevLv)));
+    const ups = this.addHeroExp(heroId, stageExp + combatExp, { silent: true });
+    const nowLv = this.hero(heroId).level;
+    if (ledger) ledger.settled = true;
     // 이번 판에 넘긴 각성 구간
-    const awakened = (HEROES[s.selected].skills || []).filter((k) => k.unlock && prevLv < k.unlock && nowLv >= k.unlock);
+    const awakened = (HEROES[heroId].skills || []).filter((k) => k.unlock && prevLv < k.unlock && nowLv >= k.unlock);
     const passUps = this.addPassXp(r.bp);
     s.quests.stages++; const saved = this.emit();
-    const receipt = { got, loot, ups, passUps, first, exp: stageExp, awakened, fullClearBonus,
+    const receipt = { got, loot, ups, passUps, first, exp: stageExp, combatExp, totalExp: stageExp + combatExp, heroId, awakened, fullClearBonus,
       ok: saved, saveError: !saved };
     this.bonusReceipts.add(receipt);
     return receipt;
@@ -367,10 +499,11 @@ export class Economy {
     const rng = this.gachaRng;
     const hero = (id) => { const g = this.grantHero(id); return { type: 'hero', rar, id, dup: g.dup, shards: g.shards, name: HEROES[id].name, img: HEROES[id].portrait }; };
     if (rar === 'SSR') {
-      const r = rng(), { featured, pool } = GACHA.ssrSplit;
+      const r = rng(), { featured, pool, gear } = GACHA.ssrSplit;
       if (heroOnly || r < featured) return hero(GACHA.featured);
       if (r < featured + pool) { const hs = otherSsrHeroes(); return hero(hs.length ? hs[Math.floor(rng() * hs.length)] : GACHA.featured); }
-      return { type: 'item', rar, item: this.addItem('SSR', null, rng) };
+      if (r < featured + pool + gear) return { type: 'item', rar, item: this.addItem('SSR', null, rng) };
+      return this.rollMaterial('SSR', r, featured + pool + gear);
     }
     if (rar === 'SR') {
       const r = rng(), { hero: heroShare, gear } = GACHA.srSplit;
@@ -397,7 +530,14 @@ export class Economy {
   paymentAvailable() { return false; }
   purchase(id) {
     const sku = this.sku(id); const s = this.s; if (!sku) return null;
-    if (sku.kind === 'gem') { if (s.gems < sku.price) return { ok: false, reason: 'gems' }; s.gems -= sku.price; const got = this.addRewards(sku.rewards); return { ok: true, got }; }
+    if (sku.kind === 'gem') {
+      if (s.gems < sku.price) return { ok: false, reason: 'gems' };
+      const before = structuredClone(s); s.gems -= sku.price;
+      const got = this.addRewards(sku.rewards, { silent: true });
+      if (!this.save()) { this.s = before; return { ok: false, reason: 'storage' }; }
+      for (const f of this.listeners) f(this.s);
+      return { ok: true, got };
+    }
     if (!this.paymentAvailable()) return { ok: false, reason: 'payment-unavailable' };
     if (sku.once && s.purchases.includes(id)) return { ok: false, reason: 'once' };
     // cash (목업): 첫 결제 2배 보너스
@@ -460,3 +600,5 @@ export class Economy {
 }
 
 export const REWARD_LABEL = { gold: ['골드', '/img/icon_gold.webp'], gems: ['보석', '/img/icon_gem.webp'], energy: ['에너지', '/img/icon_energy.webp'], tickets: ['소환권', '/img/icon_ticket.webp'], ssrTicket: ['SSR 확정권', '/img/icon_ticket_ssr.webp'], sweep: ['소탕권', '/img/icon_sweep.webp'], stones: ['강화석', '/img/icon_stone_1.webp'], stones2: ['상급 강화석', '/img/icon_stone_2.webp'], stones3: ['전설 강화석', '/img/icon_stone_3.webp'], fragments: ['세트 조각', '/img/icon_fragment.webp'], protect: ['보호 주문서', '/img/icon_protect.webp'], bless: ['축복 주문서', '/img/icon_bless.webp'], monthly: ['월정액(일)', '/img/icon_gem.webp'], vip: ['VIP(일)', '/img/icon_vip.webp'] };
+// 성장·초월·지역 드롭 보상 라벨(정산·우편·상점 공통).
+Object.assign(REWARD_LABEL, { transcendStones: ['초월석', '/img/icon_stone_3.webp'], skillResets: ['스킬 초기화서', '/img/icon_protect.webp'], heroShards: ['영웅 조각', '/img/icon_fragment.webp'], glass_leaf: ['유리 잎', '/img/icon_fragment.webp'], ember_core: ['잿불 핵', '/img/icon_fragment.webp'], star_dust: ['별가루', '/img/icon_fragment.webp'] });

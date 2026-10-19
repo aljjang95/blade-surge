@@ -86,15 +86,17 @@ test('full clear bonuses are additive and normal clears keep base rewards', () =
   expect(normal.fullClearBonus).toBeNull();
 });
 
-test('locked awakening skills cannot consume gold through the economy service', () => {
+test('각성 습득은 해금 레벨과 SP를 요구하고 골드를 쓰지 않는다', () => {
   const eco = new Economy();
+  eco.save = () => true;
   const hero = eco.hero('knight');
   const before = { gold: eco.s.gold, level: hero.level, skill: hero.skills[4] };
-  expect(eco.upgradeSkill('knight', 4)).toBe(false);
+  expect(eco.upgradeSkill('knight', 4)).toMatchObject({ ok: false, reason: 'level' });
   expect(eco.s.gold).toBe(before.gold);
   expect(hero.level).toBe(before.level);
   expect(hero.skills[4]).toBe(before.skill);
   hero.level = 10;
-  expect(eco.upgradeSkill('knight', 4)).toBe(true);
+  expect(eco.upgradeSkill('knight', 4)).toMatchObject({ ok: true, level: before.skill + 1 });
   expect(hero.skills[4]).toBe(before.skill + 1);
+  expect(eco.s.gold).toBe(before.gold);
 });

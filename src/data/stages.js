@@ -4,6 +4,7 @@ import { ENCOUNTER_ART, MOB_ART, RIFT_ART } from './encounter-art.js';
 import { CAMPAIGN_MODELS } from './encounter-models.js';
 import { BOSS_ENCOUNTERS, BOSS_SIGNATURES } from './boss-encounters.js';
 import { MOB_ROLE_ENEMIES } from './mob-roles.js';
+import { recommendedLevel, representativeDrops } from './loot-tables.js';
 
 // 지역별 맹세와 기믹은 모험 화면과 전투가 함께 사용한다.
 export const CHAPTERS = [
@@ -15,6 +16,10 @@ export const CHAPTERS = [
   { id: 6, name: '함께 잇는 귀환로', theme: 'garden', encounterPrefix: 'homecoming', color: '#87cbb0', boss: 'homecoming_finalboss', tagline: '구한 세계를, 함께 살아갈 곳으로.', summary: '왕관이 부서진 다음 날. 다섯 지역에 남은 명령의 잔향을 걷어 내고 사람들의 귀환로를 연결한다.', oath: '돌아오는 누구도 홀로 남겨 두지 않겠다는 약속', mechanic: { name: '귀환의 공명', description: '남겨진 명령이 공명 고리로 번집니다. 경고 띠 밖으로 이동하며 귀환문을 지키세요.' } },
 ];
 export const STAGES_PER_CHAPTER = 10;
+for (const chapter of CHAPTERS) {
+  // 표시용 진행 정보는 열거하지 않는다. 기존 경로·스테이지 JSON 지문과 저장 계약을 바꾸지 않는다.
+  Object.defineProperties(chapter, { recommendedLevel: { value: recommendedLevel(chapter.id) }, representativeDrops: { value: representativeDrops(chapter.id) } });
+}
 const ROSTER = {
   garden: { trash: ['skel_minion', 'skel_rogue', 'ghost', 'bomb_slime', 'skel_shield', 'bone_orc', 'grave_burrower'], ranged: ['skel_mage', 'ghost_skull', 'skel_priest'], elite: ['elite_skel_captain', 'elite_bone_lord', 'elite_wraith'] },
   forge: { trash: ['orc', 'orc_blob', 'tribal', 'cacto_wall', 'bomb_imp', 'imp', 'ash_burrower'], ranged: ['hywirl', 'armabee', 'tribal_shaman'], elite: ['elite_orc_chief', 'elite_bluedemon'] },
@@ -72,7 +77,7 @@ export function stageDef(ch, st) {
   }
   const enemy = ENEMIES[enemyId];
   const dungeonBoss = (dungeonBossId && ENEMIES[dungeonBossId]) || enemy;
-  return {
+  const stage = {
     ch, st, idx, code: `${ch}-${st}`, title: scene.title, chapter, name: `${ch}-${st} · ${scene.title}`,
     dungeon, dungeonBossId, epilogueFinale: ch === 6 && st === 10,
     boss, finale: ch === 5 && st === 10, waves, scale, energy: 6 + Math.floor(idx / 6),
@@ -82,6 +87,7 @@ export function stageDef(ch, st) {
     objective: `${dungeon.name}의 전투 방을 정리해 봉인을 해제하고 ${dungeonBoss.name} 처치`,
     rewards: { gold: Math.floor(400 * scale), exp: Math.floor(110 * scale), bp: 60 + (boss ? 60 : 0), firstGems: rank === 'finalboss' ? 300 : boss ? 150 : 60, dropChance: boss ? 1 : 0.6, stones: 2 + (boss ? 4 : 0) },
   };
+  return Object.defineProperties(stage, { recommendedLevel: { value: recommendedLevel(ch, st) }, representativeDrops: { value: chapter.representativeDrops } });
 }
 
 // scale = 모델 배율(리그 기본 배율에 곱해짐). hp/atk 은 스테이지 scale 로 곱해진다.
