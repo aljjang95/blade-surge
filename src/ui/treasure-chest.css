@@ -1,0 +1,6 @@
+/* 보물상자 길게 누르기 버튼: 화면 아래 가장자리의 얇은 알약. 플레이 영역을 가리지 않는다. */
+#btn-chest{position:absolute;left:50%;bottom:calc(10px + var(--sab,0px));transform:translateX(-50%);z-index:19;display:flex;align-items:center;gap:8px;height:38px;padding:0 16px 0 8px;border:1px solid #f2c25a99;border-radius:19px;background:#1b130be0;color:#ffe9b3;font:700 12px/1 var(--font-ui,sans-serif);letter-spacing:.01em;touch-action:none;user-select:none;-webkit-user-select:none;pointer-events:auto}
+#btn-chest[hidden]{display:none}
+#btn-chest:active{background:#2b1d0ee8}
+.chest-btn-ring{width:24px;height:24px;border-radius:50%;background:conic-gradient(#ffd36a calc(var(--chest-progress,0) * 360deg),#ffffff22 0);-webkit-mask:radial-gradient(circle,transparent 7px,#000 8px);mask:radial-gradient(circle,transparent 7px,#000 8px)}
+@media(prefers-reduced-motion:reduce){#btn-chest{transition:none}}

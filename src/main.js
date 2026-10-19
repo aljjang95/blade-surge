@@ -1,6 +1,7 @@
 import './style.css';
 import * as THREE from 'three';
 import { Renderer } from './engine/renderer.js';
+import { FrameGovernor, canRenderFrame } from './engine/frame-governor.js';
 import { LobbyCameraControls, releaseBlockedLobbyInput } from './engine/lobby-camera.js';
 import { createLobbyPose, lobbyPoseWeight } from './engine/lobby-pose.js';
 import { createCombatPose } from './engine/combat-pose.js';
@@ -232,6 +233,18 @@ class App {
     return typeof chosen === 'boolean' ? chosen : !this.reducedMotion?.matches;
   }
   applySettings() {
+    if (!this.frameGovernor) {
+      let storage = null;
+      try { storage = window.localStorage; } catch { /* 차단된 저장소에서는 세션 안에서만 조절한다. */ }
+      this.frameGovernor = new FrameGovernor({ storage });
+      this.frameGovernor.reset(performance.now());
+      window.__perfGovernor = this.frameGovernor;
+      const resetGovernor = () => this.frameGovernor.suspend(performance.now());
+      document.addEventListener('visibilitychange', resetGovernor);
+      window.addEventListener('pagehide', resetGovernor);
+      window.addEventListener('pageshow', resetGovernor);
+    }
+    this.renderer.setThermalTier(this.frameGovernor.tier);
     const st = this.eco.s.settings; audio.setSfxOn(st.sfx); audio.setMusicOn(st.music); audio.haptics = st.haptics; if (!st.haptics) audio.vibe(0); audio.setVoiceOn(st.voice !== false);
     audio.setMix(this.arsenal.s.mix);
     const q = resolveQuality(st.quality, { cores: navigator.hardwareConcurrency || 4, memory: navigator.deviceMemory || 4,
@@ -433,9 +446,18 @@ class App {
   // ---------- 루프 ----------
   loop(t) {
     requestAnimationFrame((tt) => this.loop(tt));
-    let realDt = Math.min(0.05, (t - this.last) / 1000); this.last = t;
-    if (this.testPause || this.stageStarting || this.contextLost || document.hidden) return;
-    this.step(realDt);
+    const governor = this.frameGovernor;
+    const suspended = !!(this.testPause || this.stageStarting || this.contextLost || document.hidden);
+    const render = !suspended && canRenderFrame(this, document);
+    const realDt = governor.advance(t, this.mode, render, suspended);
+    if (suspended) this.last = t;
+    if (!realDt) return;
+    this.last = t;
+    this.renderer.setThermalTier(governor.tier);
+    const count = this.renderer.renderCount, started = performance.now();
+    // 기존 장시간 정지의 dt 상한은 유지하며, 평소 간격 제어 시간은 시뮬레이션에 모두 넘긴다.
+    this.step(Math.min(0.05, realDt), render);
+    if (this.renderer.renderCount !== count) governor.recordFrame(t, performance.now() - started);
   }
   /** 한 프레임 진행 (테스트 시 고정 dt로 호출 가능) */
   step(realDt, render = true) {
@@ -459,7 +481,7 @@ class App {
       this.fx.update(dt);
       if (this.battle.player) { this._auto = this.battle.player.auto; }
       // 킬 카운트 → 임무
-      this.renderer.update(dt, realDt); if (render) this.renderer.render();
+      this.renderer.update(dt, realDt); if (render && canRenderFrame(this, document)) this.renderer.render();
     } else if (this.mode === 'lobby') {
       // 입장 준비 중에는 성채 장면을 정지하고 네이티브 UI와 음악을 유지한다.
       if (this.hubUI?.opened && this.hubUI.dialog?.open) return;
@@ -485,7 +507,7 @@ class App {
       }
       this.arena.update(realDt, this.fx, this.showcase ? this.showcase.root.position : null); this.fx.update(realDt);
       this.renderer.update(realDt, realDt);
-      if (render && (this.lobbyVisible || this.meta.tab === 'home')) this.renderer.render();
+      if (render && canRenderFrame(this, document)) this.renderer.render();
     }
   }
 }

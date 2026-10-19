@@ -26,6 +26,8 @@ export const LOBBY_POSE_CORRECTIONS = {
     mixamorigLeftForeArm: [-13, -4, 24.5],
     mixamorigLeftHand: [5, 5, 41],
     mixamorigRightArm: [-0.5, 0, -10],
+    // 로비 카메라(고도 약 30°)에서 오른쪽 눈이 앞머리·윗눈꺼풀에 가려 애꾸처럼 보이던 문제: 턱을 12° 들어 두 눈을 드러낸다(2026-10-19 S26 실기기 확인).
+    mixamorigHead: [12, 0, 0],
   },
   knight: {
     mixamorigRightHand: [0, -7, 6],
@@ -95,3 +97,4 @@ export function createLobbyPose(root, heroId) {
     },
   };
 }
+

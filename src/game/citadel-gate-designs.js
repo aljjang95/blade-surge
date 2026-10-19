@@ -25,6 +25,34 @@ const EXTRA_GATE_DESIGNS = Object.freeze({ rootbound_grotto: 'verdigris_sanctum'
 const EXTRA_GATE_PORTALS = Object.freeze({ rootbound_grotto: 0x5fe5aa, hollowbell_arboretum: 0x88dfc3,
   slagwater_foundry: 0xff7146, emberwake_drydock: 0x51dfe3, aurora_icewell: 0xa48aff, crownfall_glacier: 0xffcf79 });
 
+/** 입구 안쪽을 채우는 부채꼴 메시. 중심 하나와 아치 윤곽 정점 segments 개, 삼각형 segments 개. */
+function archPortalGeometry(segments) {
+  const halfWidth = 1.0, bottom = .06, shoulder = 1.62, crown = 2.5, center = 1.18;
+  const positions = [0, center, -.09], uvs = [.5, .5], index = [];
+  // 윤곽 둘레를 길이로 고르게 나눠 정점을 놓는다: 아래 → 오른 기둥 → 머리 반타원 → 왼 기둥.
+  const archRy = crown - shoulder, side = shoulder - bottom;
+  const arcLength = Math.PI * (3 * (halfWidth + archRy) - Math.sqrt((3 * halfWidth + archRy) * (halfWidth + 3 * archRy))) / 2;
+  const total = halfWidth * 2 + side * 2 + arcLength;
+  const pointAt = s => {
+    if (s < halfWidth) return [s, bottom];
+    s -= halfWidth; if (s < side) return [halfWidth, bottom + s];
+    s -= side; if (s < arcLength) { const a = (s / arcLength) * Math.PI; return [halfWidth * Math.cos(a), shoulder + archRy * Math.sin(a)]; }
+    s -= arcLength; if (s < side) return [-halfWidth, shoulder - s];
+    s -= side; return [-halfWidth + s, bottom];
+  };
+  for (let i = 0; i < segments; i++) {
+    const [x, y] = pointAt(total * i / segments);
+    const a = Math.atan2(y - center, x);
+    positions.push(x * .985, y, -.09); uvs.push(.5 + .5 * Math.cos(a), .5 + .5 * Math.sin(a));
+  }
+  for (let i = 0; i < segments; i++) index.push(0, 1 + i, 1 + (i + 1) % segments);
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
+  geometry.setIndex(index); geometry.computeVertexNormals();
+  return geometry;
+}
+
 const P = 1.27;
 const COLORS = Object.freeze({
   ivory: 0xe1dfca, stone: 0x72898b, dark: 0x293842, iron: 0x45535e, bronze: 0xb98a48,
@@ -76,21 +104,42 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
           varying vec2 portalUv;
           varying vec3 portalTint;
           #include <fog_pars_fragment>
+          float hash(vec2 q) { return fract(sin(dot(q, vec2(127.1, 311.7))) * 43758.5453); }
+          float noise(vec2 q) {
+            vec2 i = floor(q), f = fract(q); f = f * f * (3.0 - 2.0 * f);
+            return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), f.x), f.y);
+          }
           void main() {
+            // uv 는 입구 윤곽을 단위 원으로 펼친 좌표다. 반경 1 이 아치 테두리, 0 이 터널 가장 안쪽이다.
             vec2 p = (portalUv - 0.5) * 2.0;
-            float radius = length(p);
+            float radius = min(length(p), 1.0);
             float angle = atan(p.y, p.x);
             float phase = portalTint.r * 4.0 + portalTint.b * 3.0;
-            float twist = angle * 4.0 + radius * 17.0 - portalTime * 0.7 + phase;
-            float spiral = pow(0.5 + 0.5 * sin(twist), 6.0);
-            float wisps = pow(0.5 + 0.5 * sin(angle * 7.0 - radius * 13.0 + portalTime * 0.35), 12.0);
-            float edge = exp(-pow((radius - 0.91) * 27.0, 2.0));
-            float arcs = 0.64 + 0.36 * pow(0.5 + 0.5 * sin(angle * 9.0 - portalTime * 0.4 + phase), 3.0);
-            float depth = 1.0 - smoothstep(0.7, 1.0, radius);
-            vec3 abyss = mix(vec3(0.009, 0.018, 0.037), portalTint * 0.075, radius);
-            vec3 energy = portalTint * (0.13 + spiral * 0.55 + wisps * 0.15) * depth;
-            energy += mix(portalTint, vec3(1.0), 0.2) * edge * arcs * 1.45;
-            gl_FragColor = vec4(abyss + energy, 1.0);
+            float t = portalTime;
+            // 깊이: 바깥에서 안쪽으로 빨려 들어가는 터널. 1/r 원근으로 고리가 안쪽에서 촘촘해진다.
+            float depthCoord = 0.32 / (radius + 0.12) + t * 0.55;
+            float rings = pow(0.5 + 0.5 * sin(depthCoord * 6.2832 + phase), 3.0);
+            float swirl = noise(vec2(angle * 2.2 + depthCoord * 1.7, depthCoord * 2.4 - t * 0.2));
+            float mist = noise(p * 3.1 + vec2(t * 0.17, -t * 0.23)) * 0.6 + noise(p * 6.3 - vec2(t * 0.29, t * 0.11)) * 0.4;
+            float tunnel = smoothstep(1.0, 0.05, radius);
+            vec3 color = mix(portalTint * 0.06, vec3(0.006, 0.012, 0.03), smoothstep(0.15, 0.95, radius));
+            color += portalTint * (0.16 + 0.42 * rings * swirl) * tunnel * (0.45 + 0.55 * mist);
+            // 안쪽 깊은 곳의 부드러운 빛: 목적지가 저 너머에 있다는 신호.
+            float core = exp(-radius * radius * 9.0);
+            color += mix(portalTint, vec3(1.0), 0.55) * core * (0.85 + 0.15 * sin(t * 1.3 + phase));
+            // 위로 떠오르는 빛 알갱이.
+            vec2 grid = vec2(p.x * 7.0, p.y * 7.0 - t * 0.9);
+            vec2 cell = floor(grid), local = fract(grid) - 0.5;
+            float seed = hash(cell);
+            float mote = smoothstep(0.11, 0.0, length(local - (vec2(hash(cell + 3.1), hash(cell + 7.7)) - 0.5) * 0.6)) * step(0.72, seed);
+            color += mix(portalTint, vec3(1.0), 0.7) * mote * (0.5 + 0.5 * sin(t * 3.0 + seed * 40.0)) * smoothstep(1.0, 0.6, radius);
+            // 테두리: 안쪽 그늘 한 줄 뒤에 선명한 빛 가장자리가 아치를 따라 흐른다.
+            float edge = exp(-pow((radius - 0.955) * 30.0, 2.0));
+            float innerShade = smoothstep(0.78, 0.93, radius) * (1.0 - smoothstep(0.93, 0.97, radius));
+            float flow = 0.6 + 0.4 * pow(0.5 + 0.5 * sin(angle * 5.0 - t * 1.4 + phase), 2.0);
+            color *= 1.0 - innerShade * 0.55;
+            color += mix(portalTint, vec3(1.0), 0.35) * edge * flow * 1.6;
+            gl_FragColor = vec4(color, 1.0);
             #include <fog_fragment>
             #include <colorspace_fragment>
           }
@@ -105,8 +154,9 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
     const color = CITADEL_GATE_PORTALS[route] ?? EXTRA_GATE_PORTALS[route];
     if (color === undefined) return;
     // 에너지 원판은 충돌·선택 대상이 아니다. 기존 좌우 기둥의 이동 통로를 바꾸지 않는다.
-    const geometry = new THREE.CircleGeometry(1, quality === 'low' ? 32 : 48);
-    geometry.scale(1.025, 1.25, 1); geometry.translate(0, 1.29, -.09);
+    // 원판 대신 입구 윤곽(곧은 기둥 사이 + 둥근 머리)을 채우는 부채꼴. 테두리 정점의 uv 를 단위 원 위에 둬
+    // 셰이더의 반경 1 이 실제 아치 가장자리를 따라간다. 삼각형 수는 기존과 같다(높음 48, 낮음 32).
+    const geometry = archPortalGeometry(quality === 'low' ? 32 : 48);
     const count = geometry.getAttribute('position').count, tint = new THREE.Color(color);
     const colors = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) { colors[i * 3] = tint.r; colors[i * 3 + 1] = tint.g; colors[i * 3 + 2] = tint.b; }
@@ -434,3 +484,4 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
     },
   };
 }
+
