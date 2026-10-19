@@ -86,6 +86,8 @@ test('무기가 주어지면 그 무기 영웅의 전용 접촉 레이어가 하
     expect(heroLayers).toHaveLength(1); expect(heroLayers[0].hero).toBe(hero.id);
     expect(heroLayers[0].priority).toBe(HIT_PRIORITY[tier as keyof typeof HIT_PRIORITY]);
     expect(heroLayers[0].vol).toBeGreaterThan(0); expect(heroLayers[0].vol).toBeLessThanOrEqual(.85);
+    // 영웅 접촉음은 공용·등급·치명타 접촉음보다 커서 강타에서도 영웅마다 다른 소리로 들린다.
+    for (const layer of armed) if (layer.role === 'transient') expect(heroLayers[0].vol).toBeGreaterThan(layer.vol);
     expect(armed[0].role).toBe('transient'); expect(armed[0].vol).toBeLessThanOrEqual(plain[0].vol * .5 + 1e-9);
     expect(armed.filter(layer => layer.role === 'body')).toHaveLength(1);
   }
