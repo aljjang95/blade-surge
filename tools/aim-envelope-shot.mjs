@@ -9,7 +9,8 @@ const out = path.resolve(process.argv[3] || 'work/cycles/20261019-aim-envelope-u
 const views = (process.argv[4] || '1280x590,844x390,800x360').split(',').map(v => v.split('x').map(Number));
 // 세 번째 값 'lanes': 화살 다발·용살검 파동처럼 레인으로 그리는 스킬(발 사이 틈이 비어 있어야 한다).
 const CASES = [['mage', 'meteor'], ['barbarian', 'magma_zone'], ['knight', 'shield_bash'], ['barbarian', 'quake'], ['barbarian', 'hell_axe'], ['barbarian', 'whirlwind'],
-  ['ranger', 'ranger_volley', 'lanes'], ['ranger', 'ranger_tempest', 'lanes'], ['ranger', 'ranger_binding', 'lanes'], ['knight', 'dragon_slash', 'lanes']];
+  ['ranger', 'ranger_volley', 'lanes'], ['ranger', 'ranger_tempest', 'lanes'], ['ranger', 'ranger_binding', 'lanes'], ['knight', 'dragon_slash', 'lanes'],
+  ['knight', 'heavenfall'], ['barbarian', 'bloodquake'], ['mage', 'star_prison'], ['mage', 'absolute_zero'], ['rogue', 'night_parade'], ['rogue', 'eclipse_edge']];
 await fs.mkdir(out, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-angle=d3d11', '--ignore-gpu-blocklist'] });
 const rows = []; let pass = true;
@@ -31,7 +32,7 @@ for (const [w, h] of views) {
         await page.waitForFunction(() => app.battle?.active && app.battle.player && app.input.enabled, null, { timeout: 60000 });
         await page.waitForTimeout(1200); current = hero;
       }
-      const slot = await page.evaluate(skill => { const p = app.battle.player; p.auto = false; p.invuln = 1e6; p.heroLevel = 60; p.cds.fill(0); p.mp = p.maxMp; p.ult = p.ultMax; app.input.clear(); for (let s = 0; s < 6; s++) if (p.def.skills[p.combatSkillIndex(s)]?.id === skill) return s; return -1; }, skill);
+      const slot = await page.evaluate(skill => { const p = app.battle.player; p.auto = false; p.invuln = 1e6; p.heroLevel = 60; p.cds.fill(0); p.mp = p.maxMp; p.ult = p.ultMax; app.input.clear(); const ix = p.def.skills.findIndex(k => k.id === skill); if (ix >= 4) p.skillLoadout = [ix, ix === 5 ? 4 : 5]; for (let s = 0; s < 6; s++) if (p.def.skills[p.combatSkillIndex(s)]?.id === skill) return s; return -1; }, skill);
       if (slot < 0) { row.failure = '스킬이 슬롯에 없다'; pass = false; rows.push(row); continue; }
       const c = await page.evaluate(slot => { const b = document.querySelector('.skill-btn[data-skill="' + slot + '"]').getBoundingClientRect(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; }, slot);
       // 짧게 끌어(버튼 반지름의 절반 정도) 조준 지점이 영웅 가까이에 오게 한다: 확정 원과 바깥 점선이 한 화면에 들어온다.

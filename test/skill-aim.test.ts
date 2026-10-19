@@ -318,6 +318,10 @@ test('envelope가 있는 스킬은 확정 반지름과 envelope 값이 고정되
     meteor: { confirmed: 3.4, envelope: 7.8, kind: 'chance' }, magma_zone: { confirmed: 6.4, envelope: 7.5, kind: 'chance' },
     shield_bash: { confirmed: 5, envelope: 7, kind: 'pull' }, quake: { confirmed: 8, envelope: 9, kind: 'pull' },
     whirlwind: { confirmed: 3.8, envelope: 5.5, kind: 'pull' }, hell_axe: { confirmed: 6, envelope: 7.5, kind: 'pull' },
+    // 몰이 필살기: 확정 반지름은 hitRadius, 한계는 정식 빌드 몰이 물리 실측(재감사 2026-10-19: 표시 밖 8방향 전부 피격).
+    heavenfall: { confirmed: 8, envelope: 12, kind: 'pull' }, star_prison: { confirmed: 7, envelope: 12, kind: 'pull' },
+    absolute_zero: { confirmed: 9, envelope: 12, kind: 'pull' }, night_parade: { confirmed: 5, envelope: 9, kind: 'pull' },
+    eclipse_edge: { confirmed: 8, envelope: 10, kind: 'pull' }, bloodquake: { confirmed: 8, envelope: 9, kind: 'pull' },
   };
   const p = player('meteor'), view = new SkillAimView(new THREE.Scene()), aim = { active: true, cancel: false, x: 0, z: 1, dist01: .5 };
   const out: any = {}, withEnvelope: string[] = [];
