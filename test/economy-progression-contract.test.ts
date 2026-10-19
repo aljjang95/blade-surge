@@ -23,7 +23,7 @@ test('SP 시작값·10/20레벨 마일스톤·각성 첫 습득 2SP와 읽기 �
   for (const [level, earned] of [[1, 3], [9, 11], [10, 14], [19, 23], [20, 26]]) {
     h.level = level;
     const before = JSON.stringify(eco.s);
-    expect(eco.skillPoints('knight')).toEqual({ earned, spent: 0, available: earned });
+    expect(eco.skillPoints('knight')).toEqual({ earned, bonus: 0, spent: 0, available: earned });
     expect(JSON.stringify(eco.s)).toBe(before);
   }
   const i = HEROES.knight.skills.findIndex(sk => !!sk.unlock);

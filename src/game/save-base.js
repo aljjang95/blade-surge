@@ -8,7 +8,7 @@ import { normalizeSkillLoadout } from './progression.js';
 import { normalizeTownState } from '../data/towns.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
 import { normalizeGrade } from '../data/hero-grades.js';
-import { skillBaseLevel, SKILL_MAX_LV } from '../data/skill-tree.js';
+import { skillBaseLevel, spEarned, spSpent, SKILL_MAX_LV } from '../data/skill-tree.js';
 
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const integer = (value, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) =>
@@ -44,6 +44,9 @@ export function normalizeSave(raw, fresh) {
     const savedSkills = sourceHeroes[id]?.skills;
     const legacyHero = typeof sourceHeroes[id]?.grade !== 'string' || !Array.isArray(savedSkills) || savedSkills.length < HEROES[id].skills.length;
     h.skills = HEROES[id].skills.map((skill, i) => integer(h.skills[i], legacyHero ? 1 : skillBaseLevel(skill), skillBaseLevel(skill), SKILL_MAX_LV));
+    // SP 이전 저장은 골드로 올린 스킬이 레벨로 번 SP보다 많을 수 있다. 그 차이를 보상 SP로 남겨
+    // 남은 SP가 음수로 묶여 레벨을 올려도 스킬을 못 찍던 문제를 막는다(이미 올린 스킬은 그대로 둔다).
+    h.spBonus = legacyHero ? Math.max(0, spSpent(HEROES[id], h.skills) - spEarned(h.level)) : integer(h.spBonus, 0, 0, 999);
     h.grade = normalizeGrade(HEROES[id], typeof sourceHeroes[id]?.grade === 'string' ? sourceHeroes[id].grade : HEROES[id].rarity);
     h.skillLoadout = normalizeSkillLoadout(HEROES[id], h.skillLoadout);
     s.heroes[id] = h;

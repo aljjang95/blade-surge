@@ -30,7 +30,11 @@ export function spSpent(def, skillLevels = []) {
   });
   return total;
 }
-export function spAvailable(def, state) { return Math.max(0, spEarned(state?.level) - spSpent(def, state?.skills)); }
+/** SP 도입 전 저장의 보상 SP(예전에 골드로 올린 스킬이 레벨로 번 SP보다 많던 만큼). 초기화 뒤에도 남는 영웅별 예산이다. */
+export function spBonus(state) { const v = Math.floor(Number(state?.spBonus) || 0); return v > 0 ? Math.min(v, 999) : 0; }
+/** 영웅이 쓸 수 있는 SP 총예산 = 레벨로 번 SP + 보상 SP. */
+export function spBudget(state) { return spEarned(state?.level) + spBonus(state); }
+export function spAvailable(def, state) { return Math.max(0, spBudget(state) - spSpent(def, state?.skills)); }
 /** i번 스킬을 한 단계 올릴 수 있는지. reason: 'skill' | 'max' | 'level' | 'sp' */
 export function canLearnSkill(def, state, i) {
   const skill = def?.skills?.[i]; if (!skill) return { ok: false, reason: 'skill' };

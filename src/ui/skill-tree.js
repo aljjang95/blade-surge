@@ -2,7 +2,7 @@
 // 로비 위에 뜨는 오버레이다. 상단 재화 바와 내비는 그대로 두고 그 사이 공간만 쓴다(패널 사이로 로비가 보인다).
 // SP·습득·초기화는 Economy 계약(skillPoints/learnSkill/skillResetQuote/resetSkills)만 호출한다.
 import { HEROES } from '../data/heroes.js';
-import { SKILL_MAX_LV, spCostForLevel, skillRequiredLevel, spEarned, spSpent } from '../data/skill-tree.js';
+import { SKILL_MAX_LV, spCostForLevel, skillRequiredLevel, spBudget, spSpent } from '../data/skill-tree.js';
 import { gradeRules, heroGrade } from '../data/hero-grades.js';
 import { audio } from '../engine/audio.js';
 import './skill-tree.css';
@@ -101,7 +101,7 @@ const sec = (v) => v.toFixed(1) + '초';
 export function heroSkillPoints(eco, id) {
   const r = typeof eco?.skillPoints === 'function' ? eco.skillPoints(id) : null;
   if (r && Number.isFinite(r.available)) return r;
-  const def = HEROES[id], h = eco?.hero?.(id) || {}, earned = spEarned(h.level), spent = spSpent(def, h.skills);
+  const def = HEROES[id], h = eco?.hero?.(id) || {}, earned = spBudget(h), spent = spSpent(def, h.skills);
   return { earned, spent, available: Math.max(0, earned - spent) };
 }
 

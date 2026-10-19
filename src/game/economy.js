@@ -12,7 +12,7 @@ import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionC
 import { freshTownState } from '../data/towns.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
 import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
-import { baselineSkillLevels, canLearnSkill, spEarned, spSpent, spAvailable, skillLearned, FREE_RESET_BELOW_LEVEL } from '../data/skill-tree.js';
+import { baselineSkillLevels, canLearnSkill, spBonus, spBudget, spSpent, spAvailable, skillLearned, FREE_RESET_BELOW_LEVEL } from '../data/skill-tree.js';
 import { levelExperienceMultiplier, stageRecommendedLevel } from '../data/loot-tables.js';
 
 const KEY = 'bladesurge_save_v1';
@@ -28,7 +28,7 @@ export function salvageRewards(inst) {
 /** 새 영웅 상태: 시작 등급(def.rarity), 기본 스킬·궁극기 1레벨, 각성 스킬은 SP로 배우기 전 0레벨. */
 export function freshHeroState(id) {
   const def = HEROES[id];
-  return { level: 1, exp: 0, star: 1, shards: 0, grade: heroBaseGrade(def), skills: baselineSkillLevels(def), skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } };
+  return { level: 1, exp: 0, star: 1, shards: 0, grade: heroBaseGrade(def), skills: baselineSkillLevels(def), spBonus: 0, skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } };
 }
 const pickWeighted = (w, rng = Math.random) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = rng() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
 
@@ -259,8 +259,8 @@ export class Economy {
   promoteHero(id) { const h = this.hero(id); const need = starShards(h.star); if (h.shards < need || h.star >= 5) return false; h.shards -= need; h.star++; this.emit(); return true; }
   skillPoints(id) {
     const def = HEROES[id], h = this.hero(id);
-    if (!def || !h) return { earned: 0, spent: 0, available: 0 };
-    return { earned: spEarned(h.level), spent: spSpent(def, h.skills), available: spAvailable(def, h) };
+    if (!def || !h) return { earned: 0, bonus: 0, spent: 0, available: 0 };
+    return { earned: spBudget(h), bonus: spBonus(h), spent: spSpent(def, h.skills), available: spAvailable(def, h) };
   }
   learnSkill(id, i) {
     const h = this.hero(id), def = HEROES[id];
