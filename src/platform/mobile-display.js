@@ -11,11 +11,24 @@ export function displaySize(host) {
   return { width: positive(host.innerWidth, 1), height: positive(host.innerHeight, 1) };
 }
 
-export function renderPixelRatio({ width, height, dpr = 1, quality = 'mid', touch = false }) {
+export function renderPixelRatio({ width, height, dpr = 1, quality = 'mid', touch = false, thermalTier = 0 }) {
   const limit = quality === 'low' ? 1 : quality === 'mid' ? 1.5 : 2;
   const ratio = Math.min(Number.isFinite(dpr) && dpr > 0 ? dpr : 1, limit);
-  if (!touch) return ratio;
-  // Bound every full-screen postprocess target, including high-DPI tablets.
+  // 고해상도 태블릿을 포함해 모든 전체 화면 후처리 버퍼를 제한한다.
   const budget = quality === 'low' ? 600000 : quality === 'high' ? 1500000 : 1000000;
-  return Math.min(ratio, Math.sqrt(budget / Math.max(1, width * height)));
+  const base = touch ? Math.min(ratio, Math.sqrt(budget / Math.max(1, width * height))) : ratio;
+  // 원래 픽셀 예산이 1 미만인 대형 화면은 확대하지 않는다.
+  return thermalTier >= 3 ? Math.min(base, Math.max(1, base * 0.85)) : base;
+}
+
+/** mid 터치는 그림자 면적을 1/4로, 블룸 밉의 입력 면적을 약 9/16으로 줄인다. */
+export function thermalRenderProfile(quality, touch, tier = 0) {
+  const mobileMid = touch && quality === 'mid';
+  return {
+    softShadow: !mobileMid,
+    shadowScale: (mobileMid ? 0.5 : 1) * (tier >= 1 ? 0.5 : 1),
+    bloomEnabled: quality !== 'low' && tier < 2,
+    bloomDivisor: mobileMid ? 4 : 3,
+    bloomLimit: mobileMid ? 256 : 320,
+  };
 }
