@@ -83,6 +83,21 @@ export function installMageHeadProbe() {
     measure(rig, f) {
       const old = q.oldMeasure(rig), result = q.headMeasure(rig);
       q.headLast = { ...result, rig, frame: f }; delete q.headLast.hull;
+      const owner = app.mode === 'battle' ? app.battle.player : app.showcase;
+      const pose = owner.heroPose || owner.combatPose;
+      if (f === 0) q.rotationStats = { maxDegrees: 0, maxStepDegrees: 0, previous: new Map() };
+      if (pose) {
+        const nodes = ['RightArm', 'RightForeArm', 'RightHand', 'RightShoulder'].map(n => rig.root.getObjectByName('mixamorig' + n));
+        const corrected = nodes.map(n => n.quaternion.clone()); pose.suspend();
+        for (let i = 0; i < nodes.length; i++) {
+          const delta = nodes[i].quaternion.clone().invert().multiply(corrected[i]).normalize();
+          const prior = q.rotationStats.previous.get(nodes[i].name) || new T.Quaternion();
+          q.rotationStats.maxDegrees = Math.max(q.rotationStats.maxDegrees, delta.angleTo(new T.Quaternion()) * 180 / Math.PI);
+          q.rotationStats.maxStepDegrees = Math.max(q.rotationStats.maxStepDegrees, delta.angleTo(prior) * 180 / Math.PI);
+          q.rotationStats.previous.set(nodes[i].name, delta);
+        }
+        pose.resume();
+      }
       if (q.recordHeadFrames) {
         const nodes = []; rig.root.traverse(o => { if (o.isBone) nodes.push(o); });
         for (let p = rig.root; p && p !== app.scene; p = p.parent) nodes.push(p);
@@ -126,9 +141,10 @@ export async function runMageHead(origin, out, baseline = null) {
     for(const job of MAGE_JOBS) {
       if(job.id==='cheer') {await page.evaluate(()=>__poseQA.startBattle('mage'));await page.waitForFunction(()=>app.battle?.active&&app.battle.player&&app.input.enabled);await page.evaluate(()=>__poseQA.freeze());}
       const res = await page.evaluate(j=>__poseQA[j.phase](j.kind,j.arg),job);
+      const rotation = await page.evaluate(()=>({maxDegrees:__poseQA.rotationStats.maxDegrees,maxStepDegrees:__poseQA.rotationStats.maxStepDegrees}));
       if(!res.samples.length)throw new Error('측정 표본 없음: '+job.id);
       const worst = res.samples.reduce((a,b)=>b[9]>a[9]?b:a), representative=res.samples.find(s=>s[0]===job.frame);
-      const row={...job,anim:res.anim,dur:res.dur,hitAt:res.hitAt,castAt:res.castAt,maxCm:worst[9],worstFrame:worst[0],representativeCm:representative?.[9],handCm:Math.max(...res.samples.map(s=>s[2])),frames:res.samples,pass:worst[9]<=1.5&&Number.isFinite(representative?.[9]),captures:[]};
+      const row={...job,anim:res.anim,dur:res.dur,hitAt:res.hitAt,castAt:res.castAt,maxCm:worst[9],worstFrame:worst[0],representativeCm:representative?.[9],handCm:Math.max(...res.samples.map(s=>s[2])),rotation,frames:res.samples,pass:worst[9]<=1.5&&Number.isFinite(representative?.[9]),captures:[]};
       const before = baseline?.rows.find(r=>r.id===job.id);
       for(const frame of new Set([job.frame,worst[0],...(before ? [before.worstFrame] : [])])) {
         const again=await page.evaluate(({job,frame})=>__poseQA[job.phase](job.kind,job.arg,{stopAt:frame}),{job,frame});
