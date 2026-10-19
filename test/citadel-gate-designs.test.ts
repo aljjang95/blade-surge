@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { CITADEL_HUB_HOTSPOTS } from '../src/data/citadel-hub.js';
 import { createCitadelGateDesignLibrary, CITADEL_GATE_DESIGNS, CITADEL_GATE_PORTALS } from '../src/game/citadel-gate-designs.js';
 import { buildCitadelHubScene, preloadCitadelHubAssets } from '../src/game/citadel-hub-scene.js';
+import { GATE_STONE_SURFACE, setGateStoneSurface } from '../src/game/gate-stone-surface.js';
 
 const gates = CITADEL_HUB_HOTSPOTS.filter(spot => ['dungeon', 'campaign', 'arena'].includes(spot.kind));
 // 쐐기돌 아치 개편 전(bdea615) 루트별 고형 삼각형(high)과 draw call 수. 개편 후 삼각형은 2배 이하, draw call 은 그대로여야 한다.
@@ -190,6 +191,44 @@ test('optional hub downloads retain NPC and prop assets while procedural gate de
   expect(requested).toContain('/models/citadel-hub-v1/merchant.glb');
   expect(requested).toContain('/models/citadel-hub-v1/bench.glb');
   expect(requested).toContain('/models/citadel-hub-v1/paving.glb');
+});
+
+test('stone gate material multiplies a shared triplanar detail map only when the texture exists and quality is not low', () => {
+  const fakeShader = () => ({ uniforms: {} as Record<string, any>, vertexShader: '#include <common>\n#include <begin_vertex>', fragmentShader: '#include <common>\n#include <color_fragment>' });
+  const stoneOf = (library: any) => {
+    let found: any = null;
+    for (const spot of gates) library.build(spot).traverse((node: any) => { if (node.isMesh && node.material.name === 'Citadel_Gate_Shared_stone') found = node.material; });
+    return found;
+  };
+  const previous = GATE_STONE_SURFACE.texture, texture = new THREE.Texture();
+  try {
+    // 텍스처가 없으면 기존 정점 색 재질 그대로다(로드 전·실패 시 기존 모습).
+    setGateStoneSurface(null);
+    const plain = createCitadelGateDesignLibrary(), plainStone = stoneOf(plain);
+    expect(plainStone.userData.gateStoneSurface).toBeUndefined();
+    // 늦게 도착한 텍스처는 이미 만든 돌 재질에 한 번 적용된다.
+    const high = createCitadelGateDesignLibrary(), highStone = stoneOf(high);
+    setGateStoneSurface(texture);
+    expect(highStone.userData.gateStoneSurface).toBe('gpt-gate-stone-detail-v1');
+    expect(plainStone.userData.gateStoneSurface).toBe('gpt-gate-stone-detail-v1');
+    const shader = fakeShader(); highStone.onBeforeCompile(shader, null);
+    expect(shader.uniforms.gateDetailMap.value).toBe(texture);
+    expect(shader.vertexShader).toContain('gateObjPos = position');
+    expect(shader.fragmentShader.match(/texture2D\(gateDetailMap/g)).toHaveLength(3);
+    expect(shader.fragmentShader).toContain('clamp(1.0 + (gateV - 0.49) * 1.7, 0.6, 1.25)');
+    // 금속·결정·발광 재질과 낮음 품질은 질감 없이 그대로다.
+    const lowLibrary = createCitadelGateDesignLibrary({ quality: 'low' }), lowStone = stoneOf(lowLibrary);
+    expect(lowStone.userData.gateStoneSurface).toBeUndefined();
+    const other = new Set<string>();
+    for (const spot of gates) high.build(spot).traverse((node: any) => { if (node.isMesh && !node.userData.portalVisual && node.material.name !== 'Citadel_Gate_Shared_stone') other.add(node.material.name + ':' + !!node.material.userData.gateStoneSurface); });
+    expect(other.size).toBeGreaterThan(0);
+    expect([...other].every(entry => entry.endsWith(':false'))).toBe(true);
+    // 폐기한 라이브러리는 이후에 도착한 텍스처를 받지 않는다.
+    setGateStoneSurface(null);
+    const late = createCitadelGateDesignLibrary(), lateStone = stoneOf(late); late.dispose(); setGateStoneSurface(texture);
+    expect(lateStone.userData.gateStoneSurface).toBeUndefined();
+    plain.dispose(); high.dispose(); lowLibrary.dispose();
+  } finally { setGateStoneSurface(previous); texture.dispose(); }
 });
 
 

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
+import { applyGateStoneSurface, onGateStoneSurface, preloadGateStoneSurface } from './gate-stone-surface.js';
 
 // 자체 생성 12칸 원화의 큰 구조를 직접 모델링한다. 기존 입장·충돌 데이터는 읽기만 한다.
 export const CITADEL_GATE_REFERENCE = 'citadel-gates-20261008';
@@ -96,6 +97,7 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
   const materials = new Map(), geometries = new Set(), groups = new Set();
   let disposed = false, portalTime = 0;
   const segments = quality === 'low' ? 8 : 12, low = quality === 'low';
+  const stoneUnsubscribers = [];
   function material(role) {
     if (!materials.has(role)) {
       const next = role === 'glow'
@@ -105,6 +107,13 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
           metalness: role === 'metal' ? .65 : role === 'crystal' ? .12 : .025 });
       if (environmentTexture && next.isMeshStandardMaterial) { next.envMap = environmentTexture; next.envMapIntensity = .32; }
       next.name = `Citadel_Gate_Shared_${role}`; materials.set(role, next);
+      // 돌 재질만 손그림 돌 질감을 곱한다. 낮음 품질은 생략하고, 로드 전·실패 시에는 정점 색만으로 그대로 그린다.
+      if (role === 'stone' && !low) {
+        if (!applyGateStoneSurface(next)) {
+          stoneUnsubscribers.push(onGateStoneSurface(() => { if (!disposed) applyGateStoneSurface(next); }));
+          preloadGateStoneSurface();
+        }
+      }
     }
     return materials.get(role);
   }
@@ -369,6 +378,37 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
       blob(cx, Math.max(cy, h * .6 + .01), z, w, h, role, color);
     }
     function mossColor() { return MOSS_COLORS[Math.floor(rng() * MOSS_COLORS.length)]; }
+    /** 앞 평면 위 마름모 잎(삼각형 2개). angle 은 잎 끝이 향하는 기울기다. */
+    function leafQuad(cx, cy, w, h, angle, z, color) {
+      const c = Math.cos(angle), s = Math.sin(angle);
+      const at = (u, v) => [cx + u * c - v * s, cy + u * s + v * c];
+      const p = [at(0, h / 2), at(w / 2, 0), at(0, -h / 2), at(-w / 2, 0)], positions = [], normals = [];
+      for (const i of [0, 2, 1, 0, 3, 2]) { positions.push(p[i][0], p[i][1], z); normals.push(0, 0, 1); }
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+      geometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+      add(geometry, 'stone', color);
+    }
+    /**
+     * 늘어진 덩굴: 아래로 갈수록 가늘어지는 리본(구간마다 삼각형 2개)과 홀수 마디마다 달린 큰 잎.
+     * center±limit 안에서만 흔들려 기둥 충돌 원을 벗어나지 않는다.
+     */
+    function strand(sx, sy, length, z, { width = .07, center = sx, limit = .28, leaves = true } = {}) {
+      const count = Math.max(3, Math.round(length / .22)) + 1, step = length / (count - 1), points = [[sx, sy]];
+      let px = sx;
+      for (let i = 1; i < count; i++) { px = Math.min(center + limit, Math.max(center - limit, px + (rng() - .5) * .12)); points.push([px, sy - step * i]); }
+      for (let i = 0; i < count - 1; i++) {
+        const taper = 1 - .55 * i / (count - 1);
+        add(lineGeometry(points[i][0], points[i][1], points[i + 1][0], points[i + 1][1], width * taper, z), 'stone', 0x3a6326);
+      }
+      if (!leaves) return;
+      for (let i = 1; i < count; i++) {
+        const dir = i % 2 ? 1 : -1, taper = 1 - .35 * i / (count - 1);
+        // 잎은 기울어 옆으로 튀어나오므로 중심을 더 안쪽(±.2)에 둬 충돌 원(반지름 .5) 안에 둔다.
+        const lx = Math.min(center + .2, Math.max(center - .2, points[i][0] + dir * .09 * taper));
+        leafQuad(lx, points[i][1] - .02, .19 * taper, .29 * taper, -dir * (.5 + rng() * .4), z + .004, mossColor());
+      }
+    }
     /** 돌 윗면에 얹힌 납작한 초록 이끼 덩어리. rz 는 얹힌 면의 기울기다. */
     function clump(x, y, z, r, rz = 0) {
       // 아래 꼭짓점이 얹힌 면 위에 오도록 반높이(.55 r)만큼 띄운다.
@@ -450,19 +490,14 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
         { const course = courses[1 + Math.floor(rng() * 2)]; crack(x, rng() < .5 ? -.15 : .15, course.y1 - .06 - rng() * .08, course.face + .011, .26 + rng() * .1); }
         // 기둥머리 바깥쪽 윗면에 얹힌 이끼 덩어리와 앞면에서 아래로 늘어진 덩굴.
         const outward = side * (.28 + rng() * .08);
-        clump(x + outward, ARCH_CENTER + .005, (rng() - .5) * .16, .13 + rng() * .04, -side * .08);
-        clump(x + outward * .55, ARCH_CENTER + .005, .1 + rng() * .05, .09 + rng() * .03, 0);
-        const vineCount = moss >= .7 ? 3 : 2;
-        for (let v = 0; v < vineCount; v++) {
-          let vx = x + (v - (vineCount - 1) / 2) * .24 + (rng() - .5) * .04, vy = 2.03;
-          const vz = .268, bottom = 1.25 + rng() * .5 - (v % 2) * .2;
-          while (vy > bottom) {
-            const nx = Math.min(x + .3, Math.max(x - .3, vx + (rng() - .5) * .06)), ny = vy - .17 - rng() * .07;
-            add(lineGeometry(vx, vy, nx, ny, .032, vz), 'stone', 0x3f6a2a);
-            pillarBlob(x, nx - x + (rng() - .5) * .05, ny + .07, vz + .003, .1, .075, 'stone', mossColor());
-            vx = nx; vy = ny;
-          }
+        clump(x + outward, ARCH_CENTER + .005, (rng() - .5) * .16, .19 + rng() * .05, -side * .08);
+        clump(x + outward * .55, ARCH_CENTER + .005, .1 + rng() * .05, .14 + rng() * .04, 0);
+        // 아치 아랫돌 앞에서 기둥 앞면으로 길게 늘어진 덩굴(이끼가 많은 루트는 두 줄)과, 기둥 앞면 중간쯤 짧은 한 줄.
+        const longCount = moss >= .7 ? 2 : 1;
+        for (let v = 0; v < longCount; v++) {
+          strand(x - side * (.1 + v * .17), 2.72 - v * .12, 1.15 + rng() * .45, .345, { width: .085, center: x, limit: .28 });
         }
+        if (moss >= .5) strand(x + side * .13, 2.1, .55 + rng() * .25, .27, { width: .06, center: x, limit: .28, leaves: false });
       }
     }
     /**
@@ -478,14 +513,19 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
       backing.lineTo(-I, 0); backing.absarc(0, 0, I, Math.PI, 0, true);
       add(new THREE.ExtrudeGeometry(backing, { depth: .34, curveSegments: low ? 3 : 5, bevelEnabled: false }), role, mul(color, .22), 0, cy, -.17, 0, 0, 0);
       for (const side of [1, -1]) {
-        const weights = Array.from({ length: perSide }, () => .85 + rng() * .3), sum = weights.reduce((a, b) => a + b, 0);
+        const weights = Array.from({ length: perSide }, () => .72 + rng() * .56), sum = weights.reduce((a, b) => a + b, 0);
         let angle = 0; const span = Math.PI / 2 - half;
         weights.forEach((weight, index) => {
           const t0 = angle, t1 = angle + span * weight / sum; angle = t1;
-          const gap = bevel ? .045 : .03, outer = I + thick + (rng() - .5) * .1, mid = (t0 + t1) / 2;
+          // 풍화: 돌마다 바깥 두 모서리의 높이가 서로 다르고(이웃 돌과 계단처럼 어긋남), 지붕점이 뾰족하거나 한쪽 모서리가 떨어져 나간다.
+          const gap = bevel ? .045 : .03, rough = o.rough ?? .16, mid = (t0 + t1) / 2;
+          const outerA = I + thick + (rng() - .5) * rough, outerB = I + thick + (rng() - .5) * rough, outer = (outerA + outerB) / 2;
           const depth = .6 + (index % 2 ? -.05 : .04) + (rng() - .5) * .02, offset = (rng() - .5) * .012;
           const map = (r, t) => [side * r * Math.cos(t), r * Math.sin(t)];
-          const polygon = [map(I, t0 + gap), map(I, t1 - gap), map(outer, t1 - gap), map(outer + .03 + rng() * .025, mid), map(outer + (rng() - .5) * .02, t0 + gap)];
+          const polygon = [map(I, t0 + gap), map(I, t1 - gap), map(outerB, t1 - gap)];
+          // 떨어져 나간 모서리: 바깥 모서리 바로 안쪽으로 파인 꼭짓점 하나(삼각형 4개).
+          if (!low && rng() < .45) polygon.push(map(outerB - .07 - rng() * .05, t1 - gap - (t1 - t0) * (.16 + rng() * .1)));
+          polygon.push(map(Math.max(outerA, outerB) + .02 + rng() * .06, mid + (rng() - .5) * .12 * (t1 - t0)), map(outerA, t0 + gap));
           const shape = new THREE.Shape(); polygon.forEach(([px, py], i) => i ? shape.lineTo(px, py) : shape.moveTo(px, py)); shape.closePath();
           const geometry = new THREE.ExtrudeGeometry(shape, bevel
             ? { depth: depth - .04, steps: 1, bevelEnabled: true, bevelThickness: .02, bevelSize: .012, bevelSegments: 1 }
@@ -503,9 +543,9 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
             else if (kind === 1) for (const [p, q] of [[[.1, 0], [0, .1]], [[0, .1], [-.1, 0]], [[-.1, 0], [0, -.1]], [[0, -.1], [.1, 0]]]) seg(p[0], p[1], q[0], q[1], .035);
             else for (const k of [-.07, .07]) seg(k, -.14, k, .14, .035);
           }
-          if (!low && role === 'stone' && mossAmount > 0 && rng() < Math.min(1, mossAmount * 1.3)) {
+          if (!low && role === 'stone' && mossAmount > 0 && rng() < Math.min(1, mossAmount * 1.6)) {
             // 바깥 둘레 윗면에 얹힌 이끼 덩어리.
-            clump(side * (outer + .02) * Math.cos(mid), cy + (outer + .02) * Math.sin(mid), offset + (rng() - .5) * .12, .13 + rng() * .06, side > 0 ? mid - Math.PI / 2 : Math.PI / 2 - mid);
+            clump(side * (outer + .02) * Math.cos(mid), cy + (outer + .02) * Math.sin(mid), offset + (rng() - .5) * .12, .2 + rng() * .08, side > 0 ? mid - Math.PI / 2 : Math.PI / 2 - mid);
           }
         });
       }
@@ -516,6 +556,8 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
       geometry.translate(0, 0, -.415);
       add(geometry, role, tone(mul(color, 1.1), .05), 0, cy, 0, 0, 0, 0, (x, y) => .8 + .2 * Math.min(1, Math.max(0, (y - cy - I + .2) / .9)));
       if (o.gem !== false) gemPlate(0, cy + I + .4, .45, .17, .27);
+      // 이맛돌 윗면을 덮는 큰 이끼 덮개.
+      if (!low && role === 'stone' && mossAmount >= .4) clump(.03, cy + I + .74, -.02, .3 + rng() * .06, (rng() - .5) * .1);
     }
     /**
      * 상인방: 두꺼운 좌우 블록 사이에 가운데 이맛돌 블록이 .12 앞으로 나온다. 블록 사이 틈에는 어두운 심이 비친다.
@@ -741,6 +783,8 @@ export function createCitadelGateDesignLibrary({ environmentTexture = null, qual
     },
     dispose() {
       if (disposed) return; disposed = true;
+      for (const unsubscribe of stoneUnsubscribers) unsubscribe();
+      stoneUnsubscribers.length = 0;
       for (const group of groups) group.removeFromParent();
       for (const geometry of geometries) geometry.dispose();
       for (const next of materials.values()) next.dispose();
