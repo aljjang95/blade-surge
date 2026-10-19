@@ -248,6 +248,40 @@ export class UI {
     const d = document.createElement('div'); d.className = 'loot-pop'; d.style.setProperty('--rc', RARITY_COLOR[rarity] || '#9aa3b2');
     d.innerHTML = `<span class="lp-rar">${rarity}</span>${itemIconHtml(def, '', { heroId: this.lootHeroId() })}<span>${def.name}</span>`;
     this.lootLayer.appendChild(d); setTimeout(() => d.remove(), 1250);
+    this.placeLootStrip();
+  }
+  /** 획득 장비 카드는 조이스틱·물약·스킬 버튼과 플레이 영역(가운데 3분의 1)을 피해 가장자리에 둔다(대표님 규칙 2026-10-18).
+   *  가로: 화면 위 가장자리 좁은 한 줄(스테이지 표시 오른쪽~우상단 버튼 왼쪽). 세로: 왼쪽 가장자리 열(상단 HUD 아래).
+   *  카드가 생길 때 한 번만 계산한다(프레임 루프 아님). 자리가 모자라면 기존 배치를 쓴다. */
+  placeLootStrip() {
+    const layer = this.lootLayer, hud = this.el?.hud;
+    if (!layer?.style) return;
+    const clear = () => {
+      layer.classList?.remove('loot-strip', 'loot-row', 'loot-col');
+      for (const key of ['--loot-left', '--loot-top', '--loot-max-w']) layer.style.removeProperty?.(key);
+    };
+    if (!hud?.classList?.contains('show') || typeof hud.getBoundingClientRect !== 'function') { clear(); return; }
+    const width = globalThis.innerWidth || 0, height = globalThis.innerHeight || 0;
+    const rect = el => { const r = el?.getBoundingClientRect?.(); return r && r.width > 0 && r.height > 0 ? r : null; };
+    const q = s => hud.querySelector?.(s);
+    const px = v => Math.round(v) + 'px';
+    let left, top, maxW, mode;
+    if (width > height) {
+      const player = rect(q('.hud-player')), actions = rect(q('.hud-right-top'));
+      left = Math.max(player ? player.right : 0, ...['.hud-center .wave', '.hud-center .stage-name'].map(s => rect(q(s))?.right || 0)) + 12;
+      maxW = (actions ? actions.left : width) - 12 - left;
+      top = (actions ? actions.top : 0) + 6; mode = 'loot-row';
+    } else {
+      let bottom = 0;
+      for (const el of [q('.hud-top'), q('#bossbar'), this.comboEl, this.killStreakEl]) {
+        const r = rect(el); if (r && !el.classList?.contains('hidden')) bottom = Math.max(bottom, r.bottom);
+      }
+      // 세로 화면의 알림 토스트는 헤더 바로 아래에 한 줄(최대 44px) 뜨므로 그 아래에서 시작한다.
+      left = 12; top = bottom + 8 + 44; maxW = Math.floor(width / 3) - 8 - left; mode = 'loot-col';
+    }
+    if (!(maxW >= 100) || !(top > 0)) { clear(); return; }
+    layer.classList.remove('loot-row', 'loot-col'); layer.classList.add('loot-strip', mode);
+    layer.style.setProperty('--loot-left', px(left)); layer.style.setProperty('--loot-top', px(top)); layer.style.setProperty('--loot-max-w', px(maxW));
   }
   rewardHtml(got) { return got.map((g) => { if (g.k === 'item') { const it = ITEM_BY_ID[g.item.id]; return `<span class="reward-chip rar-${it.rarity}" style="border:1px solid">${itemIconHtml(it, ' style="width:18px;height:18px"', { heroId: this.lootHeroId() })} ${it.name}</span>`; } const [nm, ic] = REWARD_LABEL[g.k] || [g.k, '']; return `<span class="reward-chip"><img src="${ic}" style="width:18px;height:18px" onerror="this.remove()"> ${nm} +${fmt(g.n)}</span>`; }).join(''); }
   rewardToast(got, cls = 'gold') { if (got && got.length) this.toast(this.rewardHtml(got), cls); }
