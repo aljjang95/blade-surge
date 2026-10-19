@@ -42,7 +42,14 @@
   background: linear-gradient(180deg, var(--sb-teal), var(--sb-night)) padding-box, var(--sb-frame) border-box;
   font-family: var(--disp); font-size: clamp(12px, 1.7vw, 20px); color: var(--sb-cream); text-shadow: 0 1px 2px rgba(0, 0, 0, .6);
 }
-.gx-portrait { flex: 1 1 0; min-height: 0; width: 100%; object-fit: contain; object-position: 50% 100%; filter: drop-shadow(0 8px 10px rgba(6, 22, 44, .45)); }
+/* 3D 초상(hero-portraits.js)은 불투명 배경의 정사각 상반신 스냅샷이다. 금테 둥근 카드로 보여 의도된 초상으로 읽히게 한다. */
+.gx-portrait {
+  flex: 1 1 0; min-height: 0; width: auto; max-width: 100%; aspect-ratio: 1; align-self: center;
+  object-fit: cover; object-position: 50% 30%;
+  border: 3px solid transparent; border-radius: 18px;
+  background: var(--sb-night) padding-box, var(--sb-frame) border-box;
+  box-shadow: var(--sb-shadow);
+}
 /* 두루마리(스킬 초기화서) — 양피지 토큰으로 그린 작은 아이콘 */
 .gx-scroll {
   display: inline-block; flex: 0 0 auto; width: 16px; height: 21px; border-radius: 3px; transform: rotate(-14deg);
