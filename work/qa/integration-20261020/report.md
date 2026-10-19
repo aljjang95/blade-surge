@@ -25,3 +25,10 @@
 - 파티 게스트 쪽 원격 타격 이벤트에는 공격자 정보가 없어 영웅 접촉음을 구분하지 못함(프로토콜 화이트리스트·서버 검증 변경이 필요해 이번 범위 밖)
 - origin/main 20커밋 동기화와 공개 배포는 아직 하지 않음
 
+
+## 전투 진입 경로 확인(브라우저, 844x390·1280x590, dev 5344)
+- `#btn-battle` 0크기: **기존 UI 흐름**이다. 현재 로비는 `citadel-command-active` 상태라 예전 `.oath-destination`(#btn-battle 포함)이 `display:none`이고, 전투 진입은 오른쪽 '추천 던전' 패널의 "출격 준비"(`#citadel-dungeon-prepare`)가 맡는다. 출석 보상 모달 전후 모두 같다. 페이지 오류 0.
+- 실제 입력 재현(844x390): 출석 모달 닫기 → "출격 준비" 탭 → 원정 준비 팝업 "원정 시작 · 에너지 4" 탭 → 지역 인트로(건너뛰기 가능) → `app.mode==='battle'`, 전투 활성. 첫 탭부터 약 13.7초. 주입 없음.
+- 관찰된 결함(다른 세션 소유 파일이라 기록만): 1280x590에서 추천 던전 패널의 "주요 보상" 행이 "출격 준비" 버튼에 반쯤 가려진다(844x390은 정상). 소유: citadel-command/dungeon-landing 작업.
+- 캡처: work/debug/btn-battle-844.png, btn-battle-1280.png, entry-1-prepare.png, entry-2-battle.png(로컬, 미커밋)
+
