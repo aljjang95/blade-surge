@@ -10,7 +10,8 @@ const views = (process.argv[4] || '1280x590,844x390,800x360').split(',').map(v =
 // 세 번째 값 'lanes': 화살 다발·용살검 파동처럼 레인으로 그리는 스킬(발 사이 틈이 비어 있어야 한다).
 const CASES = [['mage', 'meteor'], ['barbarian', 'magma_zone'], ['knight', 'shield_bash'], ['barbarian', 'quake'], ['barbarian', 'hell_axe'], ['barbarian', 'whirlwind'],
   ['ranger', 'ranger_volley', 'lanes'], ['ranger', 'ranger_tempest', 'lanes'], ['ranger', 'ranger_binding', 'lanes'], ['knight', 'dragon_slash', 'lanes'],
-  ['knight', 'heavenfall'], ['barbarian', 'bloodquake'], ['mage', 'star_prison'], ['mage', 'absolute_zero'], ['rogue', 'night_parade'], ['rogue', 'eclipse_edge']];
+  ['knight', 'heavenfall'], ['barbarian', 'bloodquake'], ['mage', 'star_prison'], ['mage', 'absolute_zero'], ['rogue', 'night_parade'], ['rogue', 'eclipse_edge'],
+  ['knight', 'dragon_slash'], ['rogue', 'flurry'], ['mage', 'blizzard'], ['knight', 'sanctuary']];
 await fs.mkdir(out, { recursive: true });
 const browser = await chromium.launch({ args: ['--use-angle=d3d11', '--ignore-gpu-blocklist'] });
 const rows = []; let pass = true;

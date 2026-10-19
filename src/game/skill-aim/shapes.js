@@ -37,6 +37,8 @@ const PULL_REACH = {
   // 지점·자기 중심 몰이 필살기(skills.js vacuum 반경 안에서 tools/aim-hitbox-truth-qa.mjs 실측으로 줄인 값). 예: star_prison은 vacuum 13이지만
   // 힘 28로 .24초 안에 끌려와 맞는 한계는 12까지다.
   heavenfall: 12, star_prison: 12, absolute_zero: 12, night_parade: 9, eclipse_edge: 10, bloodquake: 9,
+  // 영웅 중심 몰이: dragon_slash 채널 vacuum 12, flurry vacuum 4.5, blizzard gatherEnemies 8.5(교관 확장 10.5), sanctuary 경계 벽 R+3.5.
+  dragon_slash: 12, flurry: 4.5, blizzard: 8.5, sanctuary: 11.5,
 };
 export function skillAimShape(skillId) { return SKILL_AIM_SHAPES[skillId] || null; }
 
@@ -98,6 +100,7 @@ export function playerSkillAimShape(player, skillId, out) {
   bodyAdjust(out, skillId);
   // 교관 확장 변형은 몰이 반경도 함께 커진다(night_parade wide: vacuum 13, 실측 한계 10.5). 몰이가 확정 영역 안에 들면 따로 그리지 않는다(bloodquake 혈진 9.5).
   if (skillId === 'night_parade' && variant(player, skillId, 'wide')) out.envelope = 10.5;
+  if (skillId === 'blizzard' && variant(player, skillId, 'wide')) out.envelope = 10.5;
   if (out.envelopeKind === 'pull' && out.envelope <= (out.kind === 'circle' ? out.radius : out.range)) { out.envelope = 0; out.envelopeKind = ''; }
   if (split) {
     // 분열 화염: 주 투사체 직선 옆으로 ±.22rad 갈라지는 작은 투사체 둘(속도 15, 수명 .8, 반경 .55). 둘 다 조준 축 위 시작점(origin)에서 출발한다.

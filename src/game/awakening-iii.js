@@ -75,7 +75,7 @@ export const AWAKENING_III = {
         game.fx.slashSprite(at.clone().setY(2.1), direction.clone().negate(), 0xffa33e,
           { size: 4.4, life: .38, speed: 3.2, tilt: .2, flip: true });
         game.fx.groundTex(at, 'circle_gold', 0xffc160, { r0: .4, r1: 3.2, life: .28, spin: -1, y: .08 });
-        game.vacuum(toward, 4.5, 12);
+        game.vacuum(toward, 3.2, 12);   // 표시된 낙점 원(반경 3.2) 안으로만 끌어 표시=판정을 지킨다(재감사 2026-10-19: 4.5였을 때 표시 밖 좌우 4m 적이 끌려와 맞음)
         hitSolarPulse(game, player, ctx, at, returnHit, .75, 0);
         if (i === nodes.length - 1) game.fx.holyBurst(origin, { size: 4.2, life: .32 });
       }));
