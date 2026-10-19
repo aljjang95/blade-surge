@@ -642,7 +642,16 @@ export class Player extends Actor {
       if (score > bestN) { bestN = score; hub = c; }
     }
     const priority = this.game.conquest?.autoEnemy(list);
-    const e = priority || hub || list[0];
+    let e = priority || hub || list[0];
+    // 보스·정예 곁의 치유 주술사를 먼저 처치한다. 남겨 두면 6초마다 최대 체력의 15%를 회복시켜 보스전이 끝나지 않았다.
+    if (!priority && (e.isBoss || e.isElite)) {
+      let healer = null, best = Infinity;
+      for (const x of list) {
+        if (x.behavior !== 'shaman' || x.distTo(e) > 7) continue;
+        const dd = this.distTo(x); if (dd < best) { best = dd; healer = x; }
+      }
+      if (healer) e = healer;
+    }
     if (priority) this.lockTarget = priority;
     const precision = this.game.conquest?.precisionNeeded(e);
     // Move past the escort line before firing at an ordered target. Ranged
