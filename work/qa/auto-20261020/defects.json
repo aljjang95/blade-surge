@@ -21,7 +21,7 @@
       "symptom": "71ce528 단기 계측 393.9초에서 MP=100, 궁극기=100, 모든 쿨다운=0인데 궁극기는 1회만 시전. 보스 누적 피해 732937에도 보스 체력은 550000으로 회복됐다.",
       "causeVerified": "AUTO 스킬 선택이 idle·move에만 열려 평타를 계속 예약하는 attack 상태에서는 실제 스킬 취소 창도 사용하지 못했다. 실제 평타 취소 창에서 준비된 shield_bash를 시전하지 못하는 회귀 테스트가 수정 전 실패했다.",
       "change": "치유사 대응일 때 실제 canSkillCancel 창에서도 기존 스킬·MP·쿨다운 규칙에 따라 시전한다. 이동 상태 갱신은 기존 idle·move에만 적용하고, 순서형 공략의 precision 제한을 유지한다.",
-      "runtimeRerun": "5bcbd45: archive_break 265.1초·사망 0, archive_opening 290.4초·사망 0. 두 전술 목표와 정산 영수증 성공. 이후 27개 전체 회귀를 실행한다."
+      "runtimeRerun": "표적 재실행과 27개 전체 재실행 모두 두 기록보관소 무사망 승리. 전체 27개 무사망, 전술·경로 목표와 정산 성공, 브라우저 예외 0."
     },
     {
       "id": "qa-expedition-result-selector",
@@ -35,7 +35,7 @@
       "symptom": "이전 담당의 수정 전 멈춤 3건은 보스전 대기·회복 등으로 인한 오탐일 수 있다는 인계가 있었다.",
       "causeVerified": "기존 하네스는 10초 단위 서명 3회가 같으면 즉시 중단했다. 현재 위치·처치 수가 같아도 전투가 진행될 수 있다. 과거 3건 각각의 오탐 여부는 이번 새 저장 픽스처만으로 확정하지 않는다.",
       "change": "같은 조건을 의심 기록으로 남기고 즉시 중단하지 않는다. 모든 시나리오에 같은 96000프레임 상한을 적용한다.",
-      "runtimeRerun": "기준 빌드의 stallSuspects와 최종 결과를 대조해 실제 시간 초과와 구분한다."
+      "runtimeRerun": "이번 새 저장·같은 시드 기준/수정 전체 실행에서 stallSuspects 0건. 과거 3건을 개별 오탐으로 확정하지 않는다. 기준의 두 기록보관소는 상한까지 실제 시간 초과."
     }
   ],
   "runtimeAttempts": [
@@ -147,5 +147,48 @@
         }
       ]
     }
-  ]
+  ],
+  "finalRuntime": {
+    "report": "fixed-5bcbd45/report.json",
+    "source": "5bcbd459d6f673c19fc6447f3b94157ee1927582",
+    "total": 27,
+    "wins": 27,
+    "unassistedWins": 27,
+    "deaths": 0,
+    "routeAndConquestFailures": 0,
+    "pageErrors": 0,
+    "archiveBreakSeconds": 265.1,
+    "archiveOpeningSeconds": 290.4
+  },
+  "changedFiles": [
+    "src/game/player.js",
+    "test/auto-healer-aim.test.ts",
+    "tools/auto-clear-diagnostic.mjs",
+    "tools/auto-clear-qa.mjs",
+    "tools/auto-clear-summary.mjs",
+    "work/qa/auto-20261020/baseline-97bc087/report.json",
+    "work/qa/auto-20261020/comparison.json",
+    "work/qa/auto-20261020/comparison.md",
+    "work/qa/auto-20261020/defects.json",
+    "work/qa/auto-20261020/diagnostic-71ce528/report.json",
+    "work/qa/auto-20261020/fixed-5bcbd45/report.json",
+    "work/qa/auto-20261020/fixed-5bcbd45/route-bellfall_crypt-standard.png",
+    "work/qa/auto-20261020/fixed-5bcbd45/stage-1-1.png",
+    "work/qa/auto-20261020/fixed-archive-5bcbd45/conquest-archive_break.png",
+    "work/qa/auto-20261020/fixed-archive-5bcbd45/report.json",
+    "work/qa/auto-20261020/fixed-archive-63220da/report.json",
+    "work/qa/auto-20261020/fixed-archive-71ce528/report.json",
+    "work/qa/auto-20261020/fixed-archive-af4a258/report.json",
+    "work/qa/auto-20261020/fixed-archive-e07595e/report.json",
+    "work/qa/auto-20261020/head-594da23/report.json",
+    "work/qa/auto-20261020/report.md",
+    "work/qa/auto-20261020/test-results.json"
+  ],
+  "writeScopeAudit": {
+    "forbiddenSourceFilesChanged": [],
+    "productFilesChanged": [
+      "src/game/player.js"
+    ],
+    "publication": "푸시·머지·배포를 실행하지 않았다."
+  }
 }

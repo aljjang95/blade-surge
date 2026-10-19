@@ -1,5 +1,5 @@
 {
-  "productSource": "c899684c903f1acbc53e3107e4100724434537a9",
+  "productSource": "5bcbd459d6f673c19fc6447f3b94157ee1927582",
   "typecheck": {
     "command": "bun run typecheck",
     "exitCode": 0,
@@ -9,12 +9,14 @@
     "command": "bun test --timeout 30000 --path-ignore-patterns '**/work/qa/auto-20261020/baseline-source/**'",
     "scope": "현재 저장소의 모든 테스트. 새로 추출한 과거 비교용 소스의 중복 테스트만 제외. 현재 제품 테스트의 제외·수정·완화 없음.",
     "exitCode": 1,
-    "passed": 2381,
+    "passed": 2386,
     "skipped": 4,
     "failed": 8,
     "files": 260,
-    "seconds": 115.33,
-    "log": "tests-current.log"
+    "seconds": 85.69,
+    "log": "tests-final.log",
+    "total": 2398,
+    "sameEightFailuresAsHandoff": true
   },
   "knownFailures": [
     {
@@ -45,7 +47,7 @@
   "regression": {
     "file": "test/auto-healer-aim.test.ts",
     "beforeFix": "실제 Player 콤보 진입 뒤 lockTarget이 치유사가 아닌 보스여서 실패.",
-    "afterFix": "치유사 잠금과 실제 평타 명중 통과. 전체 검사에서도 통과."
+    "afterFix": "실제 Player 기반 치유 표적·밀집 호위·궁극기·표적 유지·스킬 취소 창 6개 신규 회귀 테스트 통과. 관련 AUTO·조작 검사 24개 통과, 전체 검사에서도 모두 통과."
   },
   "build": {
     "command": "bun run build",
@@ -56,5 +58,11 @@
   "limitations": [
     "최초 bun test --timeout 30000은 비교용 추출 소스의 테스트까지 찾아 4701 통과·8 건너뜀·28 실패였다. 이 중 과거 소스의 PC bridge 실패 20개는 정본 검사에 포함하지 않는다.",
     "전체 테스트 통과라는 완료 조건은 아직 충족하지 못했다. 남은 8개는 독립된 레인의 통합 수정이 필요하다."
-  ]
+  ],
+  "autoRegressions": {
+    "command": "bun test --timeout 30000 ./test/auto-healer-aim.test.ts ./test/auto-healer-priority.test.ts ./test/auto-explore.test.ts ./test/combat-autotarget.test.ts",
+    "passed": 24,
+    "failed": 0,
+    "log": "auto-regression-final.log"
+  }
 }
