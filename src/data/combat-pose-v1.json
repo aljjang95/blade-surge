@@ -18120,19 +18120,19 @@
           "t": 0,
           "bones": {
             "mixamorigRightArm": [
-              0,
-              -2.5,
-              0
+              0.5,
+              -25,
+              20.5
             ],
             "mixamorigRightForeArm": [
-              0,
-              0,
-              0
+              8,
+              -5.5,
+              34
             ],
             "mixamorigRightHand": [
-              0,
-              0,
-              0
+              6.5,
+              2.5,
+              7
             ],
             "mixamorigLeftArm": [
               0,
@@ -18148,6 +18148,11 @@
               0,
               0,
               0
+            ],
+            "mixamorigRightShoulder": [
+              -3.5,
+              -0.5,
+              13.5
             ]
           }
         },
@@ -18155,19 +18160,19 @@
           "t": 1,
           "bones": {
             "mixamorigRightArm": [
-              0,
-              -2.5,
-              0
+              0.5,
+              -25,
+              20.5
             ],
             "mixamorigRightForeArm": [
-              0,
-              0,
-              0
+              8,
+              -5.5,
+              34
             ],
             "mixamorigRightHand": [
-              0,
-              0,
-              0
+              6.5,
+              2.5,
+              7
             ],
             "mixamorigLeftArm": [
               0,
@@ -18183,6 +18188,11 @@
               0,
               0,
               0
+            ],
+            "mixamorigRightShoulder": [
+              -3.5,
+              -0.5,
+              13.5
             ]
           }
         }
@@ -18199,19 +18209,19 @@
           "t": 0,
           "bones": {
             "mixamorigRightArm": [
-              -12.5,
-              2.5,
-              15
+              -9,
+              -15,
+              14.5
             ],
             "mixamorigRightForeArm": [
-              20,
-              -20,
-              5
+              15,
+              30,
+              10
             ],
             "mixamorigRightHand": [
+              30,
               0,
-              0,
-              0
+              15
             ],
             "mixamorigLeftArm": [
               0,
@@ -18225,6 +18235,11 @@
             ],
             "mixamorigLeftHand": [
               0,
+              0,
+              0
+            ],
+            "mixamorigRightShoulder": [
+              6,
               0,
               0
             ]
@@ -18234,19 +18249,19 @@
           "t": 1,
           "bones": {
             "mixamorigRightArm": [
-              -12.5,
-              2.5,
-              15
+              -9,
+              -15,
+              14.5
             ],
             "mixamorigRightForeArm": [
-              20,
-              -20,
-              5
+              15,
+              30,
+              10
             ],
             "mixamorigRightHand": [
+              30,
               0,
-              0,
-              0
+              15
             ],
             "mixamorigLeftArm": [
               0,
@@ -18260,6 +18275,11 @@
             ],
             "mixamorigLeftHand": [
               0,
+              0,
+              0
+            ],
+            "mixamorigRightShoulder": [
+              6,
               0,
               0
             ]
@@ -19348,6 +19368,182 @@
             ],
             "mixamorigLeftShoulder": [
               0,
+              0,
+              0
+            ]
+          }
+        }
+      ]
+    },
+    "dodge": {
+      "aliases": [
+        "dodge",
+        "Dodge_Forward"
+      ],
+      "keys": [
+        {
+          "t": 0,
+          "bones": {
+            "mixamorigRightArm": [
+              17.5,
+              0,
+              10
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigRightHand": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigLeftForeArm": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigLeftHand": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigRightShoulder": [
+              0,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 1,
+          "bones": {
+            "mixamorigRightArm": [
+              17.5,
+              0,
+              10
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigRightHand": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigLeftForeArm": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigLeftHand": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigRightShoulder": [
+              0,
+              0,
+              0
+            ]
+          }
+        }
+      ]
+    },
+    "cast_long": {
+      "aliases": [
+        "cast_long",
+        "Spellcast_Long"
+      ],
+      "keys": [
+        {
+          "t": 0,
+          "bones": {
+            "mixamorigRightArm": [
+              9.5,
+              0.5,
+              19
+            ],
+            "mixamorigRightForeArm": [
+              17.5,
+              10,
+              30.5
+            ],
+            "mixamorigRightHand": [
+              31.5,
+              -5.5,
+              17.5
+            ],
+            "mixamorigLeftArm": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigLeftForeArm": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigLeftHand": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigRightShoulder": [
+              18.5,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 1,
+          "bones": {
+            "mixamorigRightArm": [
+              9.5,
+              0.5,
+              19
+            ],
+            "mixamorigRightForeArm": [
+              17.5,
+              10,
+              30.5
+            ],
+            "mixamorigRightHand": [
+              31.5,
+              -5.5,
+              17.5
+            ],
+            "mixamorigLeftArm": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigLeftForeArm": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigLeftHand": [
+              0,
+              0,
+              0
+            ],
+            "mixamorigRightShoulder": [
+              18.5,
               0,
               0
             ]
