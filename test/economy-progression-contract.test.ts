@@ -69,7 +69,9 @@ for (const route of ['free', 'scroll', 'gems'] as const) test(`초기화 ${route
 });
 
 test('초기화는 초기화서 없을 때만 명시적으로 보석을 쓰며 부족하면 무변경', () => {
+  // 되돌릴 SP가 있어야 결제 경로를 탄다(빈 초기화는 'nothing' 으로 막힌다).
   const eco = new Economy(); eco.hero().level = 20; eco.s.skillResets = 0; eco.s.gems = 299;
+  expect(eco.learnSkill('knight', 0)).toMatchObject({ ok: true });
   const before = structuredClone(eco.s);
   expect(eco.resetSkills('knight')).toEqual({ ok: false, reason: 'scroll' });
   expect(eco.resetSkills('knight', { useGems: true })).toEqual({ ok: false, reason: 'gems' });
