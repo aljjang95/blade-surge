@@ -651,10 +651,10 @@ export class Player extends Actor {
         if (x.behavior !== 'shaman' || x.distTo(e) > 7) continue;
         const dd = this.distTo(x); if (dd < best) { best = dd; healer = x; }
       }
-      // 이동 목표와 다음 평타·스킬의 조준 잠금을 함께 전환한다. 보스 잠금을 남기면 치유사 곁에서도 보스만 계속 때린다.
-      if (healer) { e = healer; this.lockTarget = healer; }
+      if (healer) e = healer;
     }
-    if (priority) this.lockTarget = priority;
+    // 이동 목표와 다음 평타·스킬의 조준을 맞춘다. 치유사 자체가 무리 중심일 때도 이전 보스 잠금을 남기지 않는다.
+    this.lockTarget = e;
     const precision = this.game.conquest?.precisionNeeded(e);
     // Move past the escort line before firing at an ordered target. Ranged
     // bolts still collide normally; AUTO does not make other enemies immune.
