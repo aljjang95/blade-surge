@@ -1,0 +1,521 @@
+{
+  "generatedAt": "2026-10-19T22:02:14.410Z",
+  "beforeTag": "baseline-97bc087",
+  "afterTag": "fixed-5bcbd45",
+  "fixture": "시나리오마다 새 브라우저 저장, 기사 45레벨, 기본 장비·스킬, AUTO. 입장 제한만 해제. 사망 시 실제 부활 경로 호출(별도 집계).",
+  "viewport": {
+    "width": 844,
+    "height": 390
+  },
+  "seedBase": 1592594457,
+  "before": {
+    "head": "97bc0872e43abaa426148e81ed58d98be0065873",
+    "total": 27,
+    "wins": 25,
+    "clearRatePercent": 92.6,
+    "unassistedWins": 25,
+    "meanClearSeconds": 125.3,
+    "deaths": 12,
+    "objectiveFailures": [],
+    "failures": [
+      {
+        "id": "conquest-archive_break",
+        "status": "timeout",
+        "elapsed": 1561.8
+      },
+      {
+        "id": "conquest-archive_opening",
+        "status": "timeout",
+        "elapsed": 1567.4
+      }
+    ],
+    "stallSuspects": 0,
+    "errors": []
+  },
+  "after": {
+    "head": "5bcbd459d6f673c19fc6447f3b94157ee1927582",
+    "total": 27,
+    "wins": 27,
+    "clearRatePercent": 100,
+    "unassistedWins": 27,
+    "meanClearSeconds": 139.8,
+    "deaths": 0,
+    "objectiveFailures": [],
+    "failures": [],
+    "stallSuspects": 0,
+    "errors": []
+  },
+  "pairedWins": {
+    "count": 25,
+    "beforeMeanSeconds": 125.3,
+    "afterMeanSeconds": 128.7
+  },
+  "qualifications": [
+    "Windows Chromium + SwiftShader, 844×390 터치 뷰포트, 고정 1/60초로 실제 컴파일 게임을 가속 실행했다. 실기기 GPU·발열·실시간 조작·공개 배포 검증은 아니다.",
+    "사망 뒤 실제 revivePlayer 경로를 호출한 실행은 부활 포함 완주이며 무사망 AUTO 클리어와 구별했다.",
+    "이전 런타임은 저장에 0인 각성 스킬도 1로 바꾸었다. 같은 초기 저장을 사용했으며 이 제품 결함의 수정을 비교에서 숨기지 않았다.",
+    "평균 클리어 시간은 성공한 실행만 집계한다. 성공 집합 차이의 영향을 피하도록 공통 성공 시나리오 평균도 함께 적었다.",
+    "과거의 30초 무진행 판정은 의심 기록만 남겼으며 두 빌드 모두 같은 최대 프레임까지 실행했다."
+  ],
+  "rows": [
+    {
+      "id": "stage-1-1",
+      "seed": 2901865333,
+      "before": {
+        "status": "win",
+        "seconds": 127.1,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 121.9,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": -5.2
+    },
+    {
+      "id": "stage-1-2",
+      "seed": 3468578108,
+      "before": {
+        "status": "win",
+        "seconds": 115.4,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 115.5,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 0.1
+    },
+    {
+      "id": "stage-1-3",
+      "seed": 1885849287,
+      "before": {
+        "status": "win",
+        "seconds": 157.3,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 176.1,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 18.8
+    },
+    {
+      "id": "stage-1-4",
+      "seed": 2452570254,
+      "before": {
+        "status": "win",
+        "seconds": 87.8,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 85.1,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": -2.7
+    },
+    {
+      "id": "stage-1-5",
+      "seed": 873781833,
+      "before": {
+        "status": "win",
+        "seconds": 172.9,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 181.2,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 8.3
+    },
+    {
+      "id": "stage-1-6",
+      "seed": 1474057232,
+      "before": {
+        "status": "win",
+        "seconds": 103.9,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 102.4,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": -1.5
+    },
+    {
+      "id": "stage-1-7",
+      "seed": 4186287579,
+      "before": {
+        "status": "win",
+        "seconds": 118.2,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 128.8,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 10.6
+    },
+    {
+      "id": "stage-1-8",
+      "seed": 458041186,
+      "before": {
+        "status": "win",
+        "seconds": 129.2,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 154,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 24.8
+    },
+    {
+      "id": "stage-1-9",
+      "seed": 3174736173,
+      "before": {
+        "status": "win",
+        "seconds": 178.4,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 206,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 27.6
+    },
+    {
+      "id": "stage-1-10",
+      "seed": 346727239,
+      "before": {
+        "status": "win",
+        "seconds": 167.1,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 173.3,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 6.2
+    },
+    {
+      "id": "route-bellfall_crypt-standard",
+      "seed": 3892835514,
+      "before": {
+        "status": "win",
+        "seconds": 62.2,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 65.5,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 3.3
+    },
+    {
+      "id": "route-eclipse_hydra_vault-standard",
+      "seed": 3627435235,
+      "before": {
+        "status": "win",
+        "seconds": 65.3,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 65.3,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 0
+    },
+    {
+      "id": "route-verdigris_sanctum-standard",
+      "seed": 3304706493,
+      "before": {
+        "status": "win",
+        "seconds": 88.9,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 98.1,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 9.2
+    },
+    {
+      "id": "route-cinder_tide_lock-standard",
+      "seed": 4250691552,
+      "before": {
+        "status": "win",
+        "seconds": 61.8,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 63.5,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 1.7
+    },
+    {
+      "id": "route-cinder_tide_lock-deep",
+      "seed": 1783829984,
+      "before": {
+        "status": "win",
+        "seconds": 201.4,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 218.8,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 17.4
+    },
+    {
+      "id": "route-ashforge_catacomb-standard",
+      "seed": 3304706493,
+      "before": {
+        "status": "win",
+        "seconds": 75.2,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 79.1,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 3.9
+    },
+    {
+      "id": "route-nightglass_observatory-standard",
+      "seed": 887628258,
+      "before": {
+        "status": "win",
+        "seconds": 67.5,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 66.8,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": -0.7
+    },
+    {
+      "id": "route-nightglass_observatory-deep",
+      "seed": 2784800738,
+      "before": {
+        "status": "win",
+        "seconds": 235.1,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 230.9,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": -4.2
+    },
+    {
+      "id": "route-astral_leviathan_spire-standard",
+      "seed": 887628258,
+      "before": {
+        "status": "win",
+        "seconds": 86,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 84.1,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": -1.9
+    },
+    {
+      "id": "route-sable_mirage_basin-standard",
+      "seed": 3465878358,
+      "before": {
+        "status": "win",
+        "seconds": 106.9,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 107.3,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 0.4
+    },
+    {
+      "id": "route-comet_bastion-standard",
+      "seed": 2657782497,
+      "before": {
+        "status": "win",
+        "seconds": 137.1,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 111.9,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": -25.2
+    },
+    {
+      "id": "conquest-garden_dawn",
+      "seed": 1702174403,
+      "before": {
+        "status": "win",
+        "seconds": 112.3,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 99.5,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": -12.8
+    },
+    {
+      "id": "conquest-garden_dusk",
+      "seed": 1042067894,
+      "before": {
+        "status": "win",
+        "seconds": 110.5,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 107.3,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": -3.2
+    },
+    {
+      "id": "conquest-vault_signal",
+      "seed": 2875290890,
+      "before": {
+        "status": "win",
+        "seconds": 173.6,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 177.7,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 4.1
+    },
+    {
+      "id": "conquest-vault_manifest",
+      "seed": 2330187304,
+      "before": {
+        "status": "win",
+        "seconds": 191.9,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "after": {
+        "status": "win",
+        "seconds": 198.4,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": 6.5
+    },
+    {
+      "id": "conquest-archive_break",
+      "seed": 324347164,
+      "before": {
+        "status": "timeout",
+        "seconds": 1561.8,
+        "deaths": 6,
+        "unassistedWin": false
+      },
+      "after": {
+        "status": "win",
+        "seconds": 265.1,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": null
+    },
+    {
+      "id": "conquest-archive_opening",
+      "seed": 2672685422,
+      "before": {
+        "status": "timeout",
+        "seconds": 1567.4,
+        "deaths": 6,
+        "unassistedWin": false
+      },
+      "after": {
+        "status": "win",
+        "seconds": 290.4,
+        "deaths": 0,
+        "unassistedWin": true
+      },
+      "deltaSeconds": null
+    }
+  ]
+}
