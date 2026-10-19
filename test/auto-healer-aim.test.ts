@@ -33,3 +33,16 @@ test('AUTO는 준비된 궁극기로 보스 회복 무리를 끊고, 지원 적�
     expect(f.game.input.queue.includes(`skill${ultSlot}`)).toBe(withHealer);
   }
 });
+
+test('AUTO는 치유사를 마무리하기 전에 더 가까워진 다른 치유사로 조준을 분산하지 않는다', () => {
+  const f = createCombatFlowFixture(runtime, 'knight'), p: any = f.player;
+  spawnCombatFlowEnemy(f, p.pos.x, p.pos.z + 6, { isBoss: true, hp: 1e6, maxHp: 1e6, stun: 60 });
+  const current: any = spawnCombatFlowEnemy(f, p.pos.x + 4, p.pos.z + 4, { behavior: 'shaman', hp: 100, maxHp: 10000, stun: 60 });
+  const closer: any = spawnCombatFlowEnemy(f, p.pos.x + 3, p.pos.z + 4, { behavior: 'shaman', hp: 10000, maxHp: 10000, stun: 60 });
+  p.auto = true; p.lockTarget = current; p.cds.fill(Infinity);
+  p.autoMove(1 / 60);
+  expect(p.lockTarget === current).toBe(true);
+  current.alive = false;
+  p.autoMove(1 / 60);
+  expect(p.lockTarget === closer).toBe(true);
+});

@@ -653,7 +653,10 @@ export class Player extends Actor {
         let supportsPriority = false;
         for (const ally of list) if (ally !== x && (ally.isBoss || ally.isElite) && x.distTo(ally) <= 7) { supportsPriority = true; break; }
         if (!supportsPriority) continue;
-        const dd = this.distTo(x); if (dd < best) { best = dd; healer = x; }
+        const dd = this.distTo(x);
+        // 군중 밀침으로 거리가 뒤집힐 때마다 다른 치유사를 치면 서로 회복해 아무도 죽지 않는다. 접근 중인 유효 치유사는 끝까지 마무리한다.
+        if (x === this.lockTarget && dd <= 12) { healer = x; break; }
+        if (dd < best) { best = dd; healer = x; }
       }
       if (healer) e = healer;
     }
