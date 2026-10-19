@@ -1,0 +1,154 @@
+/*
+ * 성장 오버레이(스킬 트리·초월) 공용 틀 + 스킬 트리 화면. 설계도 skill-tree-screen.
+ * 밝은 로우폴리 로비 위에 남청 둥근 패널 + 얇은 금테. 색은 storybook.css 토큰(--sb-*, --gold, --txt, --muted, --red)만 쓴다.
+ * 상단 재화 바(z 5)와 내비(z 6)는 그대로 보이고, 이 층(z 4)은 그 사이 공간만 쓴다. 위치는 skill-tree.js fitOverlay 가 잰다.
+ */
+#meta.gx-open #tab-heroes .panel-heroes { visibility: hidden; }
+/* 영웅 화면 이름 줄 아래 성장 진입 버튼(스킬 트리 · 초월). 기존 btn-ghost btn-sm 를 그대로 쓴다. */
+.hs-growth-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.hs-growth-links .btn { padding: 4px 10px; font-size: 12px; }
+
+.gx-layer {
+  position: absolute; z-index: 4;
+  top: var(--gx-top, 52px); left: var(--gx-left, 8px);
+  right: calc(8px + var(--sar, 0px)); bottom: calc(6px + var(--sab, 0px));
+  display: grid; gap: 10px; align-items: stretch;
+  color: var(--txt); font-family: var(--font); pointer-events: none;
+}
+.gx-layer[hidden] { display: none; }
+.gx-layer > * { pointer-events: auto; min-width: 0; min-height: 0; margin-bottom: var(--gx-lift, 0px); }
+.gx-layer *, .gx-layer *::before, .gx-layer *::after { box-sizing: border-box; }
+
+.gx-panel, .gx-card {
+  border: 2px solid transparent; border-radius: 18px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--sb-teal-lo) 92%, transparent), color-mix(in srgb, var(--sb-night) 95%, transparent)) padding-box, var(--sb-frame) border-box;
+  box-shadow: var(--sb-shadow), inset 0 1px 0 rgba(255, 255, 255, .18);
+}
+.gx-panel { display: flex; flex-direction: column; padding: 8px 12px 10px; overflow: hidden; }
+.gx-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line); flex: 0 0 auto; }
+.gx-title { margin: 0; font-family: var(--disp); font-size: clamp(15px, 2.1vw, 26px); color: var(--sb-gold); text-shadow: 0 2px 0 var(--sb-gold-edge); letter-spacing: .02em; }
+:root:root .btn.gx-close { width: 34px; height: 34px; min-width: 34px; padding: 0; border-radius: 50%; font-size: 20px; line-height: 1; flex: 0 0 auto; }
+.gx-close::after { content: ''; position: absolute; inset: -6px; }
+:root:root .btn.gx-outline {
+  --e: var(--sb-gold-edge);
+  border: 2px solid transparent;
+  background: linear-gradient(180deg, var(--sb-teal-lo), var(--sb-night)) padding-box, var(--sb-frame) border-box;
+  color: var(--sb-cream);
+}
+.gx-layer :is(button, [tabindex]):focus-visible { outline: 3px solid var(--sb-gold-hi); outline-offset: 2px; }
+.gx-ribbon {
+  align-self: stretch; margin: -2px -2px 0; padding: 4px 10px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  border: 2px solid transparent; border-radius: 999px;
+  background: linear-gradient(180deg, var(--sb-teal), var(--sb-night)) padding-box, var(--sb-frame) border-box;
+  font-family: var(--disp); font-size: clamp(12px, 1.7vw, 20px); color: var(--sb-cream); text-shadow: 0 1px 2px rgba(0, 0, 0, .6);
+}
+.gx-portrait { flex: 1 1 0; min-height: 0; width: 100%; object-fit: contain; object-position: 50% 100%; filter: drop-shadow(0 8px 10px rgba(6, 22, 44, .45)); }
+/* 두루마리(스킬 초기화서) — 양피지 토큰으로 그린 작은 아이콘 */
+.gx-scroll {
+  display: inline-block; flex: 0 0 auto; width: 16px; height: 21px; border-radius: 3px; transform: rotate(-14deg);
+  background: linear-gradient(180deg, var(--sb-gold-lo) 0 3px, var(--sb-parchment) 3px calc(100% - 3px), var(--sb-gold-lo) calc(100% - 3px));
+  box-shadow: 0 1px 0 var(--sb-gold-edge);
+}
+
+/* ---------------- 스킬 트리 배치: 영웅 · 트리 · 상세 ---------------- */
+.st-layer { grid-template-columns: minmax(0, 25fr) minmax(0, 45fr) minmax(0, 30fr); }
+.st-hero { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; }
+.st-hero-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0 8px 8px; flex: 0 0 auto; }
+.st-sp {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
+  width: clamp(52px, 13vh, 92px); aspect-ratio: 1; border-radius: 50%; border: 3px solid transparent; margin-top: 4px;
+  background: radial-gradient(circle at 50% 30%, var(--sb-teal-lo), var(--sb-night) 70%) padding-box, var(--sb-frame) border-box;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--sb-gold) 45%, transparent), inset 0 0 10px rgba(0, 0, 0, .5);
+}
+.st-sp small { font-size: clamp(9px, 1.2vw, 14px); font-weight: 900; color: var(--sb-gold); }
+.st-sp-num { font-family: var(--disp); font-size: clamp(22px, 4.4vh, 36px); color: var(--sb-cream); text-shadow: 0 2px 0 var(--sb-gold-edge); }
+.st-sp-label { margin: 0; font-size: clamp(10px, 1.3vw, 15px); font-weight: 900; color: var(--sb-cream); }
+:root:root .btn.st-reset { flex-direction: row; gap: 6px; width: 100%; padding: 6px 8px; font-size: clamp(11px, 1.5vw, 17px); border-radius: 14px; white-space: nowrap; }
+.st-reset-name { overflow: hidden; text-overflow: ellipsis; }
+.st-price { display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px; border-radius: 999px; background: rgba(0, 0, 0, .3); color: var(--sb-coral); font-size: .92em; }
+.st-price .ic { width: 14px; height: 14px; }
+
+.st-tree { gap: 4px; }
+.st-grid {
+  flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-rows: auto minmax(12px, 1fr) auto; align-content: space-evenly; justify-items: center; column-gap: 6px; padding-top: 6px;
+}
+.st-cell { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; width: 100%; }
+.st-icon {
+  position: relative; display: block; padding: 0; cursor: pointer; flex: 0 0 auto;
+  width: min(100%, clamp(44px, 16vh, 100px)); aspect-ratio: 1; border-radius: 14px; border: 3px solid transparent;
+  background: var(--sb-night) padding-box, var(--sb-frame) border-box;
+  box-shadow: 0 4px 0 rgba(6, 22, 44, .45), 0 6px 12px rgba(6, 22, 44, .4);
+  transition: transform .12s, box-shadow .2s;
+}
+.st-icon img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
+.st-icon.is-locked { background: var(--sb-night) padding-box, linear-gradient(180deg, var(--muted), color-mix(in srgb, var(--muted) 40%, var(--sb-night))) border-box; }
+.st-icon.is-locked img { filter: grayscale(1) brightness(.48); }
+.st-icon.is-unlearned img { filter: grayscale(.55) brightness(.72); }
+.st-icon.is-ready { box-shadow: 0 4px 0 rgba(6, 22, 44, .45), 0 0 0 2px var(--sb-gold), 0 0 18px var(--sb-gold); animation: stReady 1.6s ease-in-out infinite; }
+.st-icon.is-ready img { filter: brightness(.9); }
+.st-cell.is-selected .st-icon { transform: scale(1.06); box-shadow: 0 4px 0 rgba(6, 22, 44, .45), 0 0 0 2px var(--sb-gold-hi), 0 0 20px color-mix(in srgb, var(--sb-gold) 80%, transparent); }
+@keyframes stReady { 50% { box-shadow: 0 4px 0 rgba(6, 22, 44, .45), 0 0 0 2px var(--sb-gold-hi), 0 0 28px var(--sb-gold); } }
+@media (prefers-reduced-motion: reduce) { .st-icon.is-ready { animation: none; } }
+/* 자물쇠: 몸통 + 고리 */
+.st-lock { position: absolute; left: 50%; top: 56%; width: 32%; height: 26%; transform: translate(-50%, -50%); border-radius: 4px; background: linear-gradient(180deg, var(--sb-cream), var(--muted)); box-shadow: 0 2px 4px rgba(0, 0, 0, .6); }
+.st-lock::before { content: ''; position: absolute; left: 18%; right: 18%; bottom: 92%; height: 85%; border: 3px solid var(--sb-cream); border-bottom: 0; border-radius: 999px 999px 0 0; }
+.st-slot { position: absolute; top: -6px; left: -6px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 6px; background: linear-gradient(180deg, var(--sb-gold-hi), var(--sb-gold-lo)); color: var(--sb-ink); font-size: 12px; line-height: 20px; text-align: center; box-shadow: 0 1px 0 var(--sb-gold-edge); }
+
+.st-pill {
+  display: flex; align-items: center; justify-content: center; gap: 4px; max-width: 100%; min-height: 24px; padding: 0 2px 0 9px;
+  border: 2px solid transparent; border-radius: 999px; font-weight: 900; font-size: clamp(11px, 1.4vw, 17px); color: var(--sb-cream); white-space: nowrap;
+  background: var(--sb-night) padding-box, var(--sb-frame) border-box;
+}
+.st-pill:has(.st-gate) { padding: 0 9px; }
+.st-cell.is-locked .st-pill { background: var(--sb-night) padding-box, linear-gradient(180deg, var(--muted), color-mix(in srgb, var(--muted) 40%, var(--sb-night))) border-box; color: var(--muted); }
+.st-cell.is-ready .st-gate { color: var(--sb-gold); }
+.st-plus {
+  position: relative; width: 22px; height: 22px; padding: 0; border-radius: 50%; flex: 0 0 auto; cursor: pointer;
+  border: 2px solid var(--sb-grass-lo); color: #fff; font-weight: 900; font-size: 15px; line-height: 1;
+  background: linear-gradient(180deg, var(--sb-grass), var(--sb-grass-lo)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 2px 0 var(--sb-grass-lo);
+  text-shadow: 0 1px 0 var(--sb-grass-lo);
+}
+.st-plus::after { content: ''; position: absolute; inset: -9px; }
+.st-plus:disabled { filter: grayscale(1) brightness(.7); cursor: default; }
+.st-arrow { position: relative; width: 4px; height: 100%; min-height: 12px; border-radius: 2px; background: linear-gradient(180deg, var(--sb-gold-hi), var(--sb-gold)); margin-bottom: 7px; }
+.st-arrow::after { content: ''; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); border: 7px solid transparent; border-top: 8px solid var(--sb-gold); border-bottom: 0; }
+.st-arrow:not(.is-open) { background: color-mix(in srgb, var(--muted) 55%, transparent); }
+.st-arrow:not(.is-open)::after { border-top-color: color-mix(in srgb, var(--muted) 55%, transparent); }
+
+.st-detail { gap: 6px; padding: 10px 12px; overflow-y: auto; overscroll-behavior: contain; }
+.st-detail-head { display: flex; gap: 10px; align-items: center; }
+.st-icon-lg { width: clamp(44px, 15vh, 96px); cursor: default; }
+.st-names { min-width: 0; }
+.st-name { margin: 0; font-family: var(--disp); font-size: clamp(14px, 2.2vw, 28px); color: var(--sb-gold); text-shadow: 0 2px 0 var(--sb-gold-edge); line-height: 1.15; }
+.st-lv { margin: 2px 0; font-weight: 900; font-size: clamp(12px, 1.7vw, 22px); color: var(--sb-cream); }
+.st-kind { display: inline-block; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--line); font-size: 10px; color: var(--muted); }
+.st-desc { margin: 0; font-size: clamp(11px, 1.45vw, 16px); line-height: 1.45; color: var(--txt); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.st-stats { display: grid; grid-template-columns: auto 1fr; gap: 4px 8px; margin: 0; padding: 6px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: clamp(11px, 1.5vw, 17px); }
+.st-stats dt { color: var(--muted); font-weight: 700; }
+.st-stats dd { margin: 0; display: flex; justify-content: flex-end; align-items: center; gap: 6px; font-weight: 900; white-space: nowrap; }
+.st-to { color: var(--sb-gold); }
+.st-next { color: var(--sb-grass); }
+.st-req h4 { margin: 0 0 2px; color: var(--sb-gold); font-size: clamp(11px, 1.5vw, 17px); }
+.st-req p { margin: 0; font-size: clamp(10px, 1.3vw, 14px); }
+.gx-layer .is-met { color: var(--muted); }
+.gx-layer .is-short { color: var(--red); font-weight: 900; }
+.st-equip { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.st-equip-btn { width: 36px; height: 30px; border-radius: 10px; border: 2px solid var(--line); background: var(--sb-night); color: var(--sb-cream); font-weight: 900; cursor: pointer; }
+.st-equip-btn.is-on { background: linear-gradient(180deg, var(--sb-gold-hi), var(--sb-gold-lo)); color: var(--sb-ink); border-color: var(--sb-gold-edge); }
+:root:root .btn.st-learn { margin-top: auto; width: 100%; flex: 0 0 auto; padding: 8px 10px; font-size: clamp(15px, 2.3vw, 28px); font-family: var(--disp); }
+.st-reason { margin: 0; font-size: 11px; color: var(--muted); text-align: center; }
+
+/* 낮은 가로 화면(844x390 등): 여백을 줄이고 설명은 두 줄 */
+@media (max-height: 460px) {
+  .gx-layer { gap: 6px; }
+  .gx-panel { padding: 6px 8px 8px; border-radius: 14px; }
+  .gx-card { border-radius: 14px; }
+  .st-grid { padding-top: 4px; column-gap: 4px; }
+  .st-pill { min-height: 22px; }
+  .st-desc { -webkit-line-clamp: 2; }
+  .st-detail { gap: 4px; padding: 6px 8px; }
+  .st-stats { padding: 3px 0; gap: 2px 6px; }
+  :root:root .btn.st-learn { padding: 6px 8px; }
+  :root:root .btn.st-reset { padding: 5px 6px; }
+}

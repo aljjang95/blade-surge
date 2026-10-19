@@ -1,0 +1,81 @@
+/*
+ * 영웅 초월 화면. 설계도 transcend-screen.
+ * 공용 틀(.gx-layer/.gx-panel/.gx-outline)은 skill-tree.css 에 있다. 색은 storybook.css·style.css 토큰만 쓴다.
+ */
+.tc-layer { grid-template-columns: minmax(0, 32fr) minmax(0, 36fr) minmax(0, 32fr); }
+.tc-stats { align-self: start; max-height: 100%; }
+.tc-empty { grid-column: 1 / -1; align-self: center; justify-self: center; max-width: 420px; }
+.tc-empty p { color: var(--muted); font-size: 13px; }
+.tc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* ---- 능력치 비교표 ---- */
+.tc-table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: clamp(11px, 1.45vw, 17px); font-weight: 900; font-variant-numeric: tabular-nums; }
+.tc-table thead th { font-size: .82em; color: var(--muted); font-weight: 700; padding: 3px 2px 5px; }
+.tc-table thead .tc-after { color: var(--sb-grass); }
+.tc-table tbody tr + tr { border-top: 1px solid var(--line); }
+.tc-table td, .tc-table th { padding: clamp(3px, 1.2vh, 10px) 2px; white-space: nowrap; text-align: right; }
+.tc-table .tc-label { text-align: left; font-weight: 900; color: var(--sb-cream); }
+.tc-label span { vertical-align: middle; }
+.tc-ico { display: inline-block; width: 1.25em; margin-right: 3px; text-align: center; font-style: normal; color: var(--sb-cream); vertical-align: middle; }
+.tc-ico-atk::before { content: '\2694\FE0E'; }
+.tc-ico-hp::before { content: '\2665\FE0E'; color: var(--sb-coral); }
+.tc-ico-skill::before { content: '\2739\FE0E'; color: var(--sb-gold); }
+.tc-ico-cd::before { content: '\29D7\FE0E'; }
+.tc-ico-ult::before { content: '\2737\FE0E'; color: var(--sb-sky); }
+.tc-now { color: var(--sb-cream); }
+.tc-table .tc-arrow { color: var(--sb-gold); text-align: center; font-size: 1.2em; }
+.tc-next { color: var(--sb-grass); }
+.tc-delta { color: var(--sb-grass); font-size: .82em; }
+
+/* ---- 결정 3단계 ---- */
+.tc-center { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+.tc-crystals { display: flex; align-items: flex-end; justify-content: center; gap: clamp(2px, 1vw, 12px); flex: 0 0 auto; padding-top: 4px; }
+.tc-gem-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; transition: transform .2s, opacity .2s; }
+.tc-gem { display: block; width: clamp(30px, 9vh, 76px); aspect-ratio: .72; clip-path: polygon(50% 0, 100% 36%, 50% 100%, 0 36%); }
+.tc-gem-SR { background: linear-gradient(115deg, rgba(255, 255, 255, .85) 0 12%, transparent 13% 50%, rgba(255, 255, 255, .25) 51% 55%, transparent 56%), linear-gradient(180deg, var(--sb-sky), var(--sb-sky-lo) 62%, var(--sb-night)); }
+.tc-gem-SSR { background: linear-gradient(115deg, rgba(255, 255, 255, .9) 0 12%, transparent 13% 50%, rgba(255, 255, 255, .3) 51% 55%, transparent 56%), linear-gradient(180deg, var(--sb-gold-hi), var(--sb-gold) 45%, var(--sb-gold-lo)); }
+.tc-gem-SSSR { background: linear-gradient(115deg, rgba(255, 255, 255, .9) 0 12%, transparent 13% 50%, rgba(255, 255, 255, .3) 51% 55%, transparent 56%), conic-gradient(from 210deg, var(--red), var(--purple), var(--sb-sky), var(--sb-grass), var(--sb-gold), var(--red)); }
+.tc-gem-stone { background: linear-gradient(115deg, rgba(255, 255, 255, .85) 0 14%, transparent 15%), linear-gradient(180deg, var(--purple), var(--red)); }
+.tc-plinth {
+  padding: 1px clamp(5px, 1vw, 12px); border: 2px solid transparent; border-radius: 8px; font-family: var(--disp); font-size: clamp(11px, 1.6vw, 20px); line-height: 1.2;
+  background: linear-gradient(180deg, var(--sb-teal-lo), var(--sb-night)) padding-box, var(--sb-frame) border-box; box-shadow: 0 3px 0 rgba(6, 22, 44, .45);
+}
+.tc-gem-wrap[data-grade='SR'] .tc-plinth { color: var(--sb-sky); }
+.tc-gem-wrap[data-grade='SSR'] .tc-plinth { color: var(--sb-gold); }
+.tc-gem-wrap[data-grade='SSSR'] .tc-plinth { color: var(--sb-coral); }
+.tc-gem-wrap.is-current { transform: scale(1.12); filter: drop-shadow(0 0 12px var(--sb-gold-hi)) brightness(1.12); }
+.tc-gem-wrap.is-current[data-grade='SR'] { filter: drop-shadow(0 0 12px var(--sb-sky)) brightness(1.12); }
+.tc-gem-wrap.is-current[data-grade='SSSR'] { filter: drop-shadow(0 0 14px var(--red)) brightness(1.15); }
+.tc-gem-wrap.is-past { opacity: .8; }
+.tc-gem-wrap.is-next { opacity: .82; filter: saturate(.85); }
+.tc-gem-wrap.is-future { opacity: .55; filter: saturate(.55); }
+.tc-chev { align-self: center; margin-bottom: 14px; font-size: clamp(16px, 3vw, 34px); font-weight: 900; color: color-mix(in srgb, var(--muted) 60%, transparent); }
+.tc-chev.is-lit { color: var(--sb-gold); text-shadow: 0 2px 0 var(--sb-gold-edge); }
+
+/* ---- 제단 위 영웅 ---- */
+.tc-hero { position: relative; flex: 1 1 0; min-height: 0; display: flex; justify-content: center; }
+.tc-hero .gx-portrait { position: relative; z-index: 1; height: 100%; flex: 0 1 auto; padding-bottom: 6%; }
+.tc-altar {
+  position: absolute; left: 6%; right: 6%; bottom: 0; height: 26%; border-radius: 50%;
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--sb-sky) 60%, transparent) 0 34%, color-mix(in srgb, var(--sb-sky-lo) 35%, transparent) 35% 52%, color-mix(in srgb, var(--sb-gold) 75%, transparent) 53% 57%, transparent 58% 66%, color-mix(in srgb, var(--sb-gold) 55%, transparent) 67% 69%, transparent 70%);
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--sb-sky) 70%, transparent));
+}
+
+/* ---- 재료 ---- */
+.tc-mats { gap: 6px; }
+.tc-mat-list { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: clamp(4px, 1vh, 10px); flex: 1 1 auto; min-height: 0; }
+.tc-mat { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; padding: clamp(3px, 1vh, 10px) 10px; border-radius: 12px; border: 1px solid var(--line); background: rgba(0, 0, 0, .2); }
+.tc-mat-ico { width: clamp(24px, 7.5vh, 52px); height: clamp(24px, 7.5vh, 52px); object-fit: contain; border-radius: 10px; }
+.tc-mat-hero { object-fit: cover; background: var(--sb-teal-lo); border: 2px solid var(--line); }
+i.tc-mat-ico.tc-gem { width: clamp(18px, 5.5vh, 38px); height: auto; justify-self: center; margin: 0 3px; }
+.tc-mat-name { font-weight: 900; font-size: clamp(12px, 1.6vw, 19px); color: var(--sb-cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tc-amount { font-weight: 900; font-size: clamp(12px, 1.6vw, 19px); white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--sb-cream); }
+:root:root .btn.tc-go { width: 100%; flex: 0 0 auto; padding: clamp(5px, 1.6vh, 14px) 10px; font-family: var(--disp); font-size: clamp(16px, 2.6vw, 32px); border-radius: 999px; }
+:root:root .btn.tc-pack { flex-direction: row; justify-content: center; gap: 10px; width: 100%; flex: 0 0 auto; padding: clamp(4px, 1.3vh, 12px) 10px; font-size: clamp(13px, 1.9vw, 24px); border-radius: 999px; color: var(--sb-gold); }
+.tc-pack-go { font-size: 1.2em; line-height: 1; }
+.tc-reason { margin: 0; font-size: 11px; color: var(--muted); text-align: center; }
+
+@media (max-height: 460px) {
+  .tc-mat { gap: 6px; padding: 3px 8px; }
+  .tc-table thead th { padding: 1px 2px 3px; }
+}
