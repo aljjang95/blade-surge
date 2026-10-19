@@ -1,5 +1,6 @@
 import { Euler, Quaternion, MathUtils } from 'three';
 import corrections from '../data/combat-pose-v1.json';
+import { isAuthoredCombatClip } from './combat-motion-clips.js';
 
 export const COMBAT_POSE_CORRECTIONS = corrections;
 // 60Hz에서 보정 회전은 한 뼈당 프레임당 최대 14.5도(상한 15도에 여유). 원본 클립의 시간과 게임 판정에는 관여하지 않는다.
@@ -24,7 +25,8 @@ export function combatPoseWeight(curve, time) {
  * 외형 단계가 바뀌면 clips 안의 클립 객체가 오버레이로 교체될 수 있어(로그·궁수 회피·찌르기)
  * 클립은 별칭 이름으로 매 프레임 조회한다(조회는 객체를 만들지 않는다).
  * 액션은 existingAction으로 읽기만 한다. 클립·액션·히트 시각은 변경하지 않는다.
- * 한 뼈의 보정 회전은 프레임당 COMBAT_POSE_RATE/60(14.5도)까지만 변해 교차 페이드·시각 점프에서도 튀지 않는다.
+ * 기본 보정 차이는 프레임당 14.5도다. 일반 활 당기기의 오른팔은 저작 표의 32도 상한을 쓴다.
+ * 클립에 구운 회전은 중복 적용하지 않고 믹서의 원래 교차 페이드로 연결한다.
  */
 export function createCombatPose(root, heroId, mixer, clips, data = corrections[heroId]) {
   if (!data) return null;
@@ -34,7 +36,7 @@ export function createCombatPose(root, heroId, mixer, clips, data = corrections[
     const keys = config.keys || config.curve.map(([t, weight]) => ({ t, bones: Object.fromEntries(
       Object.entries(config.bones).map(([boneName, xyz]) => [boneName, xyz.map(value => value * weight)])
     ) }));
-    const aliases = (config.aliases || [name]).filter(alias => alias !== 'Idle' && clips[alias]);
+    const aliases = (config.aliases || [name]).filter(alias => alias !== 'Idle' && clips[alias] && !isAuthoredCombatClip(clips[alias]));
     if (!aliases.length) continue;
     const offsets = [];
     for (const boneName of Object.keys(keys[0].bones)) {
@@ -42,7 +44,7 @@ export function createCombatPose(root, heroId, mixer, clips, data = corrections[
       if (!node?.isBone) return null;
       let bone = byName.get(boneName);
       if (!bone) {
-        bone = { node, base: new Quaternion(), corrected: new Quaternion(), target: new Quaternion(), current: new Quaternion() };
+        bone = { node, base: new Quaternion(), corrected: new Quaternion(), target: new Quaternion(), current: new Quaternion(), rate: COMBAT_POSE_RATE };
         byName.set(boneName, bone); bones.push(bone);
       }
       const angles = new Float64Array(keys.length * 3);
@@ -51,7 +53,7 @@ export function createCombatPose(root, heroId, mixer, clips, data = corrections[
       }
       offsets.push({ bone, angles });
     }
-    entries.push({ aliases, offsets, times: keys.map(key => key.t) });
+    entries.push({ aliases, offsets, times: keys.map(key => key.t), rate: MathUtils.degToRad((config.maxStepDegrees || 14.5) * 60) });
   }
   if (!entries.length) return null;
   const partial = new Quaternion(), rotation = new Quaternion(), euler = new Euler();
@@ -78,7 +80,7 @@ export function createCombatPose(root, heroId, mixer, clips, data = corrections[
     },
     apply(dt = 1 / 60) {
       if (disposed || applied || suspended) return;
-      for (let i = 0; i < bones.length; i++) bones[i].target.identity();
+      for (let i = 0; i < bones.length; i++) { bones[i].target.identity(); bones[i].rate = COMBAT_POSE_RATE; }
       for (let i = 0; i < entries.length; i++) {
         const entry = entries[i], names = entry.aliases, times = entry.times;
         for (let n = 0; n < names.length; n++) {
@@ -100,6 +102,7 @@ export function createCombatPose(root, heroId, mixer, clips, data = corrections[
           const blend = u * u * (3 - 2 * u), a = (key - 1) * 3, b = key * 3;
           for (let j = 0; j < entry.offsets.length; j++) {
             const offset = entry.offsets[j], angles = offset.angles;
+            offset.bone.rate = Math.max(offset.bone.rate, entry.rate);
             euler.set(angles[a] + (angles[b] - angles[a]) * blend,
               angles[a + 1] + (angles[b + 1] - angles[a + 1]) * blend,
               angles[a + 2] + (angles[b + 2] - angles[a + 2]) * blend, 'XYZ');
@@ -108,11 +111,11 @@ export function createCombatPose(root, heroId, mixer, clips, data = corrections[
           }
         }
       }
-      const step = COMBAT_POSE_RATE * Math.min(1 / 60, Math.max(0, dt));
+      const frameDt = Math.min(1 / 60, Math.max(0, dt));
       for (let i = 0; i < bones.length; i++) {
         const bone = bones[i];
         bone.base.copy(bone.node.quaternion);
-        bone.current.rotateTowards(bone.target, step);
+        bone.current.rotateTowards(bone.target, bone.rate * frameDt);
         bone.node.quaternion.multiply(bone.current);
         bone.corrected.copy(bone.node.quaternion);
       }
