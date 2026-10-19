@@ -3035,283 +3035,188 @@
           "t": 0,
           "bones": {
             "mixamorigRightArm": [
-              -15,
-              0,
+              -12.5,
+              -1.25,
               0
             ],
             "mixamorigRightForeArm": [
               0,
-              0,
+              -5,
               0
             ],
             "mixamorigRightHand": [
-              -2.5,
+              -1.25,
               0,
               0
             ],
             "mixamorigLeftArm": [
-              0,
-              0,
-              -10
+              -1.25,
+              -1.25,
+              -1.25
             ],
             "mixamorigLeftForeArm": [
-              0,
-              0,
-              0
+              1.25,
+              1.25,
+              1.25
             ],
             "mixamorigLeftHand": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
+              1.25,
               0,
               0
             ]
           }
         },
         {
-          "t": 0.043478260869565216,
+          "t": 0.1,
           "bones": {
             "mixamorigRightArm": [
-              -15,
-              0,
+              -20,
+              -1.25,
               0
             ],
             "mixamorigRightForeArm": [
               0,
-              -2.5,
+              -1.25,
               0
             ],
             "mixamorigRightHand": [
-              0,
+              -1.25,
               0,
               0
             ],
             "mixamorigLeftArm": [
-              0,
-              0,
-              0
+              -1.25,
+              -1.25,
+              -1.25
             ],
             "mixamorigLeftForeArm": [
-              0,
-              0,
-              0
+              1.25,
+              1.25,
+              1.25
             ],
             "mixamorigLeftHand": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
+              1.25,
               0,
               0
             ]
           }
         },
         {
-          "t": 0.08695652173913043,
+          "t": 0.11764705882352956,
           "bones": {
             "mixamorigRightArm": [
-              -15,
-              0,
+              -26.290161306737218,
+              -0.8069153266843014,
               0
             ],
             "mixamorigRightForeArm": [
               0,
-              -2.5,
+              0.838165326684309,
               0
             ],
             "mixamorigRightHand": [
-              0,
+              -0.9341733665784855,
               0,
               0
             ],
             "mixamorigLeftArm": [
-              -25,
-              25,
-              0
+              -20.37500000000003,
+              -1.25,
+              -1.25
             ],
             "mixamorigLeftForeArm": [
-              -25,
-              20,
-              0
+              1.25,
+              -0.9654233665784928,
+              1.25
             ],
             "mixamorigLeftHand": [
-              15,
-              10,
-              30
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              -27.5,
-              -10,
-              10
-            ]
-          }
-        },
-        {
-          "t": 0.13043478260869565,
-          "bones": {
-            "mixamorigRightArm": [
-              -15,
-              0,
-              -10
-            ],
-            "mixamorigRightForeArm": [
-              -10,
-              -10,
-              0
-            ],
-            "mixamorigRightHand": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftArm": [
-              -2.5,
-              0,
-              0
-            ],
-            "mixamorigLeftForeArm": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftHand": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
+              1.25,
               0,
               0
             ]
           }
         },
         {
-          "t": 0.17391304347826086,
+          "t": 0.12352941176470601,
           "bones": {
             "mixamorigRightArm": [
-              -20,
-              25,
-              7.5
+              -23.899450437614473,
+              -0.724862609403618,
+              0
             ],
             "mixamorigRightForeArm": [
               0,
-              -20,
+              1.2248626094036181,
               0
             ],
             "mixamorigRightHand": [
-              -20,
+              -0.8756869529819098,
               0,
               0
             ],
             "mixamorigLeftArm": [
-              -5,
-              -5,
-              -20
+              -13.25,
+              -1.25,
+              -1.25
             ],
             "mixamorigLeftForeArm": [
-              -2.5,
-              -32.5,
-              -2.5
+              1.25,
+              -1.3756869529819098,
+              1.25
             ],
             "mixamorigLeftHand": [
-              -10,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
+              1.25,
               0,
               0
             ]
           }
         },
         {
-          "t": 0.21739130434782608,
+          "t": 0.184313725490196,
           "bones": {
             "mixamorigRightArm": [
-              -20,
-              25,
-              7.5
+              -19.059475844649125,
+              -0.8514137444526249,
+              0
             ],
             "mixamorigRightForeArm": [
               0,
-              -20,
+              -4.3216758221280624,
               0
             ],
             "mixamorigRightHand": [
-              -20,
+              -17.916020844317565,
               0,
               0
             ],
             "mixamorigLeftArm": [
-              -5,
-              -5,
-              -20
+              0.44235826632274744,
+              -1.25,
+              -1.25
             ],
             "mixamorigLeftForeArm": [
-              -2.5,
-              -32.5,
-              -2.5
+              1.25,
+              -15.74293127773688,
+              1.25
             ],
             "mixamorigLeftHand": [
-              -10,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
+              1.25,
               0,
               0
             ]
           }
         },
         {
-          "t": 0.2608695652173913,
+          "t": 0.2,
           "bones": {
             "mixamorigRightArm": [
-              -20,
-              25,
-              7.5
+              -5,
+              2.5,
+              0
             ],
             "mixamorigRightForeArm": [
               0,
-              -20,
+              -5,
               0
             ],
             "mixamorigRightHand": [
@@ -3320,578 +3225,308 @@
               0
             ],
             "mixamorigLeftArm": [
-              -5,
-              -5,
-              -20
+              -1.25,
+              -1.25,
+              -1.25
             ],
             "mixamorigLeftForeArm": [
-              -2.5,
-              -32.5,
-              -2.5
-            ],
-            "mixamorigLeftHand": [
-              -10,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "t": 0.30434782608695654,
-          "bones": {
-            "mixamorigRightArm": [
-              -20,
-              25,
-              7.5
-            ],
-            "mixamorigRightForeArm": [
-              0,
-              -20,
-              0
-            ],
-            "mixamorigRightHand": [
-              -20,
-              0,
-              0
-            ],
-            "mixamorigLeftArm": [
-              -5,
-              -5,
-              -20
-            ],
-            "mixamorigLeftForeArm": [
-              -2.5,
-              -32.5,
-              -2.5
-            ],
-            "mixamorigLeftHand": [
-              -10,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "t": 0.34782608695652173,
-          "bones": {
-            "mixamorigRightArm": [
-              -20,
-              25,
-              7.5
-            ],
-            "mixamorigRightForeArm": [
-              0,
-              -20,
-              0
-            ],
-            "mixamorigRightHand": [
-              -20,
-              0,
-              0
-            ],
-            "mixamorigLeftArm": [
-              -5,
-              -5,
-              -20
-            ],
-            "mixamorigLeftForeArm": [
-              -2.5,
-              -32.5,
-              -2.5
-            ],
-            "mixamorigLeftHand": [
-              -10,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "t": 0.391304347826087,
-          "bones": {
-            "mixamorigRightArm": [
-              -20,
-              25,
-              7.5
-            ],
-            "mixamorigRightForeArm": [
-              0,
-              -20,
-              0
-            ],
-            "mixamorigRightHand": [
-              -20,
-              0,
-              0
-            ],
-            "mixamorigLeftArm": [
-              -5,
-              -5,
-              -20
-            ],
-            "mixamorigLeftForeArm": [
-              -2.5,
-              -32.5,
-              -2.5
-            ],
-            "mixamorigLeftHand": [
-              -10,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "t": 0.43478260869565216,
-          "bones": {
-            "mixamorigRightArm": [
-              -20,
-              25,
-              7.5
-            ],
-            "mixamorigRightForeArm": [
-              0,
-              -20,
-              0
-            ],
-            "mixamorigRightHand": [
-              -20,
-              0,
-              0
-            ],
-            "mixamorigLeftArm": [
-              -5,
-              -5,
-              -20
-            ],
-            "mixamorigLeftForeArm": [
-              -2.5,
-              -32.5,
-              -2.5
-            ],
-            "mixamorigLeftHand": [
-              -10,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "t": 0.4782608695652174,
-          "bones": {
-            "mixamorigRightArm": [
-              -20,
-              25,
-              7.5
-            ],
-            "mixamorigRightForeArm": [
-              0,
-              -20,
-              0
-            ],
-            "mixamorigRightHand": [
-              -20,
-              0,
-              0
-            ],
-            "mixamorigLeftArm": [
-              -5,
-              -5,
-              -20
-            ],
-            "mixamorigLeftForeArm": [
-              -2.5,
-              -32.5,
-              -2.5
-            ],
-            "mixamorigLeftHand": [
-              -10,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "t": 0.5217391304347826,
-          "bones": {
-            "mixamorigRightArm": [
-              -20,
-              25,
-              7.5
-            ],
-            "mixamorigRightForeArm": [
-              0,
-              -20,
-              0
-            ],
-            "mixamorigRightHand": [
-              -20,
-              0,
-              0
-            ],
-            "mixamorigLeftArm": [
-              -5,
-              -5,
-              -20
-            ],
-            "mixamorigLeftForeArm": [
-              -2.5,
-              -32.5,
-              -2.5
-            ],
-            "mixamorigLeftHand": [
-              -10,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "t": 0.5652173913043478,
-          "bones": {
-            "mixamorigRightArm": [
-              -20,
-              25,
-              7.5
-            ],
-            "mixamorigRightForeArm": [
-              0,
-              -20,
-              0
-            ],
-            "mixamorigRightHand": [
-              -20,
-              0,
-              0
-            ],
-            "mixamorigLeftArm": [
-              -5,
-              -5,
-              -20
-            ],
-            "mixamorigLeftForeArm": [
-              -2.5,
-              -32.5,
-              -2.5
-            ],
-            "mixamorigLeftHand": [
-              -10,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "t": 0.6086956521739131,
-          "bones": {
-            "mixamorigRightArm": [
-              -20,
-              25,
-              7.5
-            ],
-            "mixamorigRightForeArm": [
-              0,
-              -20,
-              0
-            ],
-            "mixamorigRightHand": [
-              -20,
-              0,
-              0
-            ],
-            "mixamorigLeftArm": [
-              -5,
-              -5,
-              -20
-            ],
-            "mixamorigLeftForeArm": [
-              -2.5,
-              -32.5,
-              -2.5
-            ],
-            "mixamorigLeftHand": [
-              -10,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "t": 0.6521739130434783,
-          "bones": {
-            "mixamorigRightArm": [
-              -7.5,
-              15,
-              0
-            ],
-            "mixamorigRightForeArm": [
-              0,
-              -10,
-              0
-            ],
-            "mixamorigRightHand": [
-              -10,
-              0,
-              0
-            ],
-            "mixamorigLeftArm": [
-              5,
-              0,
-              -30
-            ],
-            "mixamorigLeftForeArm": [
-              -2.5,
-              -32.5,
-              -2.5
-            ],
-            "mixamorigLeftHand": [
-              -10,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "t": 0.6956521739130435,
-          "bones": {
-            "mixamorigRightArm": [
-              0,
-              35,
-              0
-            ],
-            "mixamorigRightForeArm": [
-              0,
-              -10,
-              0
-            ],
-            "mixamorigRightHand": [
-              -20,
-              0,
-              0
-            ],
-            "mixamorigLeftArm": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftForeArm": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftHand": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "t": 0.7391304347826086,
-          "bones": {
-            "mixamorigRightArm": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigRightForeArm": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigRightHand": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftArm": [
-              0,
-              0,
-              -5
-            ],
-            "mixamorigLeftForeArm": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftHand": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
-              0,
-              0
-            ]
-          }
-        },
-        {
-          "t": 0.782608695652174,
-          "bones": {
-            "mixamorigRightArm": [
-              -20,
-              0,
-              0
-            ],
-            "mixamorigRightForeArm": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigRightHand": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftArm": [
+              1.25,
               -17.5,
-              10,
-              -15
-            ],
-            "mixamorigLeftForeArm": [
-              -7.5,
-              0,
-              0
+              1.25
             ],
             "mixamorigLeftHand": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
+              1.25,
               0,
               0
             ]
           }
         },
         {
-          "t": 0.8260869565217391,
+          "t": 0.2549019607843134,
           "bones": {
             "mixamorigRightArm": [
-              -15,
+              -11.85014813307101,
+              0.7997037338579798,
+              1.2997037338579798
+            ],
+            "mixamorigRightForeArm": [
               0,
+              -5,
+              0
+            ],
+            "mixamorigRightHand": [
+              -20,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              9.89985186692899,
+              -1.25,
+              -1.25
+            ],
+            "mixamorigLeftForeArm": [
+              1.25,
+              -17.5,
+              1.25
+            ],
+            "mixamorigLeftHand": [
+              -0.04970373385797977,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.2725490196078427,
+          "bones": {
+            "mixamorigRightArm": [
+              -8.251133426264438,
+              3.9234338132063806,
+              0.40485897964019557
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              -5,
+              0
+            ],
+            "mixamorigRightHand": [
+              -20,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              10.38741757233845,
+              -1.25,
+              -1.25
+            ],
+            "mixamorigLeftForeArm": [
+              1.25,
+              -17.5,
+              1.25
+            ],
+            "mixamorigLeftHand": [
+              0.8451410203598044,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.3,
+          "bones": {
+            "mixamorigRightArm": [
+              -1.25,
+              10,
+              7.5
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              -5,
+              0
+            ],
+            "mixamorigRightHand": [
+              -20,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              2.5,
+              -1.25,
+              -1.25
+            ],
+            "mixamorigLeftForeArm": [
+              1.25,
+              -17.5,
+              1.25
+            ],
+            "mixamorigLeftHand": [
+              -6.25,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.34901960784313657,
+          "bones": {
+            "mixamorigRightArm": [
+              -3.069860008593941,
+              4,
+              7.5
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              -5,
+              0
+            ],
+            "mixamorigRightHand": [
+              -20,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              3.68013999140606,
+              -1.25,
+              -1.25
+            ],
+            "mixamorigLeftForeArm": [
+              1.25,
+              -21.13972001718788,
+              1.25
+            ],
+            "mixamorigLeftHand": [
+              0.3897200171878814,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.4,
+          "bones": {
+            "mixamorigRightArm": [
+              -5,
+              10,
+              7.5
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              -5,
+              0
+            ],
+            "mixamorigRightHand": [
+              -20,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              -1.25,
+              -1.25,
+              -1.25
+            ],
+            "mixamorigLeftForeArm": [
+              1.25,
+              -25,
+              1.25
+            ],
+            "mixamorigLeftHand": [
+              1.25,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.40784313725490107,
+          "bones": {
+            "mixamorigRightArm": [
+              -11.167999999999648,
+              10,
+              2.123305425515361
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              -5,
+              0
+            ],
+            "mixamorigRightHand": [
+              -20,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              -0.1940000000001172,
+              -1.25,
+              -1.25
+            ],
+            "mixamorigLeftForeArm": [
+              1.25,
+              -25,
+              1.25
+            ],
+            "mixamorigLeftHand": [
+              1.25,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.41960784313725397,
+          "bones": {
+            "mixamorigRightArm": [
+              -14,
+              10,
+              0.7480267770315256
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              -5,
+              0
+            ],
+            "mixamorigRightHand": [
+              -20,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              1.75,
+              -1.25,
+              -1.25
+            ],
+            "mixamorigLeftForeArm": [
+              1.25,
+              -25,
+              1.25
+            ],
+            "mixamorigLeftHand": [
+              1.25,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.46666666666666556,
+          "bones": {
+            "mixamorigRightArm": [
+              -8.358758578662645,
+              10,
+              0.2791601504915562
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              -5,
+              0
+            ],
+            "mixamorigRightHand": [
+              -20,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              2.8695861928875477,
+              -1.25,
+              -1.25
+            ],
+            "mixamorigLeftForeArm": [
+              1.25,
+              -25,
+              1.25
+            ],
+            "mixamorigLeftHand": [
+              1.25,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.5,
+          "bones": {
+            "mixamorigRightArm": [
+              -5,
+              10,
               0
             ],
             "mixamorigRightForeArm": [
@@ -3900,167 +3535,372 @@
               0
             ],
             "mixamorigRightHand": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftArm": [
-              -2.5,
-              0,
-              -17.5
-            ],
-            "mixamorigLeftForeArm": [
               -20,
               0,
               0
             ],
+            "mixamorigLeftArm": [
+              -1.25,
+              -1.25,
+              -1.25
+            ],
+            "mixamorigLeftForeArm": [
+              1.25,
+              -25,
+              1.25
+            ],
             "mixamorigLeftHand": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
+              1.25,
               0,
               0
             ]
           }
         },
         {
-          "t": 0.8695652173913043,
+          "t": 0.5607843137254889,
           "bones": {
             "mixamorigRightArm": [
-              -15,
-              0,
-              0
+              -8.527789085645864,
+              7.527789085645863,
+              2.472210914354137
             ],
             "mixamorigRightForeArm": [
               0,
-              -2.5,
+              -5,
               0
             ],
             "mixamorigRightHand": [
-              0,
+              -20,
               0,
               0
             ],
             "mixamorigLeftArm": [
-              0,
-              0,
-              0
+              1.75,
+              -1.25,
+              -1.25
             ],
             "mixamorigLeftForeArm": [
-              0,
-              0,
-              0
+              -1.2222109143541369,
+              -27.472210914354136,
+              -1.2222109143541369
             ],
             "mixamorigLeftHand": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
+              1.25,
               0,
               0
             ]
           }
         },
         {
-          "t": 0.9130434782608695,
+          "t": 0.6,
           "bones": {
             "mixamorigRightArm": [
-              -15,
-              0,
-              0
+              -1.25,
+              6.25,
+              3.75
             ],
             "mixamorigRightForeArm": [
               0,
-              -2.5,
+              -5,
               0
             ],
             "mixamorigRightHand": [
-              0,
+              -20,
               0,
               0
             ],
             "mixamorigLeftArm": [
-              0,
-              0,
-              -5
+              -1.25,
+              -1.25,
+              -1.25
             ],
             "mixamorigLeftForeArm": [
-              0,
-              0,
-              0
+              -2.5,
+              -28.75,
+              -2.5
             ],
             "mixamorigLeftHand": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
+              1.25,
               0,
               0
             ]
           }
         },
         {
-          "t": 0.9565217391304348,
+          "t": 0.6490196078431356,
           "bones": {
             "mixamorigRightArm": [
-              -15,
-              0,
-              0
+              -1.25,
+              10.84738342115513,
+              0.75
             ],
             "mixamorigRightForeArm": [
               0,
-              0,
+              -13.324408194650044,
               0
             ],
             "mixamorigRightHand": [
-              -2.5,
+              -20,
               0,
               0
             ],
             "mixamorigLeftArm": [
-              -7.5,
-              0,
-              -15
+              16.36625364431485,
+              1.9418731778425755,
+              -6.866253644314849
             ],
             "mixamorigLeftForeArm": [
-              0,
-              0,
-              0
+              -0.4188979513374891,
+              -12.101183610699913,
+              -0.4188979513374891
             ],
             "mixamorigLeftHand": [
+              1.25,
               0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.6549019607843121,
+          "bones": {
+            "mixamorigRightArm": [
+              -1.25,
+              10.999259334644591,
+              3.75
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              -13.599407467715674,
+              0
+            ],
+            "mixamorigRightHand": [
+              -20,
               0,
               0
             ],
-            "mixamorigRightShoulder": [
+            "mixamorigLeftArm": [
+              10.75,
+              -7.25,
+              -13.25
+            ],
+            "mixamorigLeftForeArm": [
+              -0.3501481330710816,
+              -11.551185064568653,
+              -0.3501481330710816
+            ],
+            "mixamorigLeftHand": [
+              1.25,
               0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.6843137254901943,
+          "bones": {
+            "mixamorigRightArm": [
+              -1.25,
+              21.09677715649778,
+              0.75
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              -18.215598761443974,
+              0
+            ],
+            "mixamorigRightHand": [
+              -20,
               0,
               0
             ],
-            "mixamorigLeftShoulder": [
+            "mixamorigLeftArm": [
+              14.095442590614375,
+              3.0772787046928123,
+              -16.595442590614375
+            ],
+            "mixamorigLeftForeArm": [
+              0.8038996903609938,
+              -2.3188024771120492,
+              0.8038996903609938
+            ],
+            "mixamorigLeftHand": [
+              1.25,
               0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.7,
+          "bones": {
+            "mixamorigRightArm": [
+              -1.25,
+              25,
+              3.75
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              -20,
+              0
+            ],
+            "mixamorigRightHand": [
+              -20,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              -1.25,
+              -1.25,
+              -1.25
+            ],
+            "mixamorigLeftForeArm": [
+              1.25,
+              1.25,
+              1.25
+            ],
+            "mixamorigLeftHand": [
+              1.25,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.7607843137254882,
+          "bones": {
+            "mixamorigRightArm": [
+              -8.666632743062294,
+              -1.3054764004786854,
+              -0.6666327430622934
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              -1.1111563425836088,
+              0
+            ],
+            "mixamorigRightHand": [
+              1.361054571770488,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              -7.25,
+              -1.25,
+              -1.25
+            ],
+            "mixamorigLeftForeArm": [
+              1.25,
+              1.25,
+              1.25
+            ],
+            "mixamorigLeftHand": [
+              1.25,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.784313725490194,
+          "bones": {
+            "mixamorigRightArm": [
+              -17.15065472555774,
+              -1.2695276929685,
+              0.9053452744424071
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              -3.63112703258924,
+              0
+            ],
+            "mixamorigRightHand": [
+              -0.33090879073666035,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              -0.36200000000029364,
+              -1.25,
+              -1.25
+            ],
+            "mixamorigLeftForeArm": [
+              1.25,
+              1.25,
+              1.25
+            ],
+            "mixamorigLeftHand": [
+              1.25,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.8,
+          "bones": {
+            "mixamorigRightArm": [
+              -12.5,
+              -1.25,
+              -7.5
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              -5,
+              0
+            ],
+            "mixamorigRightHand": [
+              -1.25,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              -1.25,
+              -1.25,
+              -1.25
+            ],
+            "mixamorigLeftForeArm": [
+              1.25,
+              1.25,
+              1.25
+            ],
+            "mixamorigLeftHand": [
+              1.25,
+              0,
+              0
+            ]
+          }
+        },
+        {
+          "t": 0.9,
+          "bones": {
+            "mixamorigRightArm": [
+              -12.5,
+              -1.25,
+              0
+            ],
+            "mixamorigRightForeArm": [
+              0,
+              -5,
+              0
+            ],
+            "mixamorigRightHand": [
+              -1.25,
+              0,
+              0
+            ],
+            "mixamorigLeftArm": [
+              -1.25,
+              -1.25,
+              -1.25
+            ],
+            "mixamorigLeftForeArm": [
+              1.25,
+              1.25,
+              1.25
+            ],
+            "mixamorigLeftHand": [
+              1.25,
               0,
               0
             ]
@@ -4070,42 +3910,32 @@
           "t": 1,
           "bones": {
             "mixamorigRightArm": [
-              -15,
-              0,
+              -12.5,
+              -1.25,
               0
             ],
             "mixamorigRightForeArm": [
               0,
-              0,
+              -5,
               0
             ],
             "mixamorigRightHand": [
-              -2.5,
+              -1.25,
               0,
               0
             ],
             "mixamorigLeftArm": [
-              0,
-              0,
-              -5
+              -1.25,
+              -1.25,
+              -1.25
             ],
             "mixamorigLeftForeArm": [
-              0,
-              0,
-              0
+              1.25,
+              1.25,
+              1.25
             ],
             "mixamorigLeftHand": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigRightShoulder": [
-              0,
-              0,
-              0
-            ],
-            "mixamorigLeftShoulder": [
-              0,
+              1.25,
               0,
               0
             ]

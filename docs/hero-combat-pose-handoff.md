@@ -233,3 +233,187 @@
 
 - bun run build 후 node tools/preview-local.mjs(BLADE_PREVIEW_PORT=5198), 다른 터미널에서 node tools/combat-mesh-qa.mjs http://127.0.0.1:5198 <출력폴더> [직업쉼표목록] [동작필터]. 출력: report.json(기준 문구·직업별 idleRaw·표본 전부)과 captures/(무오버레이 3시점 JPG).
 - 전체 실행은 약 4~5분, 직업별 단독 실행은 1분 안팎이다. 판정 숫자는 껍질 근사이므로 클립 수정 전후를 같은 도구·같은 시작 상태로 비교한다.
+
+## 2026-10-19 보정 층 적용 결과 (결함 94 → 19)
+
+위 인계 항목을 클립 원본·해시 고정 파일(src/engine/hero-body-motion.js, src/data/higher-body-*.json, 영웅 GLB)을 건드리지 않고 새 가산 보정 층으로 처리했다. 로비 Idle 교정(src/engine/lobby-pose.js)과 같은 방식이다.
+
+- 구성: src/engine/combat-pose.js(층), src/data/combat-pose-v1.json(직업×클립별 키 곡선 보정 데이터). 게임 연결은 src/game/actor.js(restore → mixer.update → updateCombatPose → apply), player.js(생성), main.js(마을 쇼케이스, 로비 Idle 교정 뒤에 얹음, 해제 세 곳).
+- 동작: 보정은 직업×클립 이름(별칭 포함)으로 찾고, 클립 진행 시각의 키 곡선(smoothstep 보간)에 액션의 실효 가중치를 곱해 얹는다. Idle은 표에 없어 로비 교정과 겹치지 않는다. 클립 길이·액션 시각·히트 프레임·피해·범위는 건드리지 않는다(테스트로 고정). 프레임 루프는 새 객체를 만들지 않으며, 영웅 인스턴스당 하나이고 Actor.dispose에서 해제한다.
+- 판정 보호: 활 화살 발사 위치(Player.arrowOrigin)는 보정을 잠시 벗겨(suspend/resume) 클립 자세에서 읽는다. 처음엔 보정이 활 위치를 옮겨 궁수 조준 판정 QA(aim-hitbox-truth-qa)가 7개 스킬에서 실패했고, 이 수정으로 보정 전과 같은 통과(40개 통과, 0개 실패)로 돌아왔다.
+- 보정 크기: 뼈당 최대 각도 기사 38.6°, 야만전사 36.3°, 마법사 28.0°, 도적 37.9°, 궁수 39.3° (전부 40° 이내). 보정 뼈는 양팔·양손(위팔·아래팔·손)과 일부 클립의 양 어깨.
+- 연속성: 보정 회전은 프레임당 14.5°까지만 변한다. 실제 게임 루프에서 마을·전투 전 동작(직업 5개, 약 2.2만 프레임)을 재생해 잰 프레임 간 보정 변화 최대값은 14.50°였다(work/cycles/20261019-combat-pose-fix/continuity.json).
+- 손잡이-손 거리: 전 직업 전 동작 최대 5.0cm(기준 8cm).
+- 측정: tools/combat-mesh-qa.mjs를 기준·방법 변경 없이 117개에 다시 돌렸다(개발 서버). 결함 94 → 19. 마법사 0, 도적 0, 기사 5, 야만전사 2, 궁수 12.
+- 제외한 보정: 궁수 활 당기기(RangerBowUpper)는 수치가 14.8→10.9cm로 일부만 줄고 활이 약 30° 기울어져 자세가 무너져 보정하지 않는다.
+- 시각 확인: 직업별 상위 결함 동작을 보정 전/후 정면·측면·후면 3시점(같은 시점 기준)으로 캡처해 눈으로 확인했다(work/cycles/20261019-combat-pose-fix/comparison, comparison2).
+
+### 직업×동작별 전/후 (cm, 기준 초과 깊이)
+
+### 기사 (knight)
+
+| 동작 | 클립 | 전(결함 깊이 cm) | 후 | 판정 후 |
+|---|---|---|---|---|
+| hub-idle | Idle | 통과 | **통과** | 정상 |
+| hub-walk | Running_A | 8.2 (무기+보조) | **통과** | 판정불가 |
+| hub-Cheer | Cheer | 18.1 (무기+보조+팔→몸통) | **통과** | 판정불가 |
+| hub-Interact | Interact | 15.1 (무기+보조+팔→몸통) | 13.3 (무기) | 결함 |
+| idle | Idle | 통과 | **통과** | 정상 |
+| run | Running_A | 8.4 (무기+보조+팔→몸통) | **통과** | 판정불가 |
+| attack1 | 1H_Melee_Attack_Slice_Horizontal | 15.4 (무기+보조) | 7.7 (무기) | 결함 |
+| attack2 | 1H_Melee_Attack_Slice_Diagonal | 13.9 (무기+보조) | **통과** | 오탐 |
+| attack3 | 1H_Melee_Attack_Stab | 12.9 (무기+보조+팔→몸통) | **통과** | 판정불가 |
+| attack4 | 2H_Melee_Attack_Spin | 18.0 (무기+보조+팔→몸통) | 16.8 (무기+팔→몸통) | 결함 |
+| attack5 | 1H_Melee_Attack_Slice_Horizontal | 18.5 (무기+보조+팔→몸통) | 3.8 (무기) | 결함 |
+| attack6 | 1H_Melee_Attack_Chop | 20.1 (무기+보조+팔→몸통) | **통과** | 판정불가 |
+| skill0-holy_slash | 1H_Melee_Attack_Slice_Horizontal | 17.3 (무기+보조+팔→몸통) | 8.2 (무기+보조+팔→몸통) | 결함 |
+| skill1-shield_bash | Block_Hit | 통과 | **통과** | 판정불가 |
+| skill2-judgment | Spellcast_Raise | 19.7 (무기+보조) | **통과** | 판정불가 |
+| skill3-dragon_slash | 2H_Melee_Attack_Chop | 20.6 (무기+보조+팔→몸통) | **통과** | 판정불가 |
+| skill4-chain_bind | Spellcast_Raise | 18.9 (무기+보조) | **통과** | 판정불가 |
+| skill5-sanctuary | Spellcast_Raise | 19.7 (무기+보조) | **통과** | 판정불가 |
+| skill6-sunbreaker | 2H_Melee_Attack_Chop | 20.8 (무기+보조+팔→몸통) | **통과** | 판정불가 |
+| skill7-heavenfall | Spellcast_Raise | 19.7 (무기+보조) | **통과** | 판정불가 |
+| dodge | Dodge_Forward | 8.3 (무기+보조) | **통과** | 판정불가 |
+| hit | Hit_A | 8.4 (무기) | **통과** | 판정불가 |
+| cheer | Cheer | 18.1 (무기+보조) | **통과** | 판정불가 |
+| interact | Interact | 15.1 (무기+보조+팔→몸통) | **통과** | 판정불가 |
+
+### 야만전사 (barbarian)
+
+| 동작 | 클립 | 전(결함 깊이 cm) | 후 | 판정 후 |
+|---|---|---|---|---|
+| hub-idle | Idle | 통과 | **통과** | 정상 |
+| hub-walk | Running_A | 8.9 (무기) | **통과** | 판정불가 |
+| hub-Cheer | Cheer | 26.3 (무기) | **통과** | 오탐 |
+| hub-Interact | Interact | 25.1 (무기) | **통과** | 판정불가 |
+| idle | Idle | 통과 | **통과** | 오탐 |
+| run | Running_A | 8.8 (무기) | **통과** | 판정불가 |
+| attack1 | 2H_Melee_Attack_Slice | 22.1 (무기) | **통과** | 오탐 |
+| attack2 | 2H_Melee_Attack_Stab | 19.0 (무기) | **통과** | 오탐 |
+| attack3 | 2H_Melee_Attack_Spinning | 21.6 (무기+팔→몸통) | 13.8 (무기) | 결함 |
+| attack4 | 2H_Melee_Attack_Chop | 25.9 (무기+팔→몸통) | **통과** | 판정불가 |
+| attack5 | Jump_Full_Short | 23.2 (무기) | **통과** | 판정불가 |
+| skill0-whirlwind | 2H_Melee_Attack_Spin | 22.8 (무기+팔→몸통) | 8.8 (무기) | 결함 |
+| skill1-quake | 2H_Melee_Attack_Chop | 25.4 (무기+팔→몸통) | **통과** | 판정불가 |
+| skill2-berserk | Cheer | 23.8 (무기) | **통과** | 오탐 |
+| skill3-hell_axe | Jump_Full_Short | 23.1 (무기) | **통과** | 판정불가 |
+| skill4-bull_rush | 2H_Melee_Attack_Stab | 18.6 (무기) | **통과** | 오탐 |
+| skill5-magma_zone | 2H_Melee_Attack_Chop | 25.8 (무기) | **통과** | 판정불가 |
+| skill6-bloodquake | 2H_Melee_Attack_Chop | 25.4 (무기+팔→몸통) | **통과** | 판정불가 |
+| skill7-cataclysm | Jump_Full_Short | 22.9 (무기) | **통과** | 판정불가 |
+| dodge | Dodge_Forward | 통과 | **통과** | 판정불가 |
+| hit | Hit_A | 통과 | **통과** | 판정불가 |
+| cheer | Cheer | 25.5 (무기) | **통과** | 오탐 |
+| interact | Interact | 25.1 (무기) | **통과** | 판정불가 |
+
+### 마법사 (mage)
+
+| 동작 | 클립 | 전(결함 깊이 cm) | 후 | 판정 후 |
+|---|---|---|---|---|
+| hub-idle | Idle | 통과 | **통과** | 정상 |
+| hub-walk | Running_A | 통과 | **통과** | 판정불가 |
+| hub-Cheer | Cheer | 통과 | **통과** | 판정불가 |
+| hub-Interact | Interact | 19.8 (무기+팔→몸통) | **통과** | 판정불가 |
+| idle | Idle | 통과 | **통과** | 오탐 |
+| run | Running_A | 통과 | **통과** | 판정불가 |
+| attack1 | Spellcast_Shoot | 9.2 (무기) | **통과** | 판정불가 |
+| attack2 | Spellcast_Shoot | 9.2 (무기) | **통과** | 판정불가 |
+| attack3 | Spellcast_Long | 통과 | **통과** | 판정불가 |
+| attack4 | Spellcast_Shoot | 7.3 (무기) | **통과** | 판정불가 |
+| attack5 | Spellcast_Raise | 14.8 (무기) | **통과** | 판정불가 |
+| skill0-fireball | Spellcast_Shoot | 17.8 (무기) | **통과** | 판정불가 |
+| skill1-chain | Spellcast_Raise | 10.1 (무기) | **통과** | 판정불가 |
+| skill2-blizzard | Spellcast_Long | 7.2 (무기) | **통과** | 판정불가 |
+| skill3-meteor | Spellcast_Raise | 9.4 (무기) | **통과** | 판정불가 |
+| skill4-arc_reflect | Spellcast_Shoot | 18.2 (무기) | **통과** | 판정불가 |
+| skill5-chrono_seal | Spellcast_Raise | 10.1 (무기) | **통과** | 판정불가 |
+| skill6-star_prison | Spellcast_Long | 통과 | **통과** | 판정불가 |
+| skill7-absolute_zero | Spellcast_Raise | 10.1 (무기) | **통과** | 판정불가 |
+| dodge | Dodge_Forward | 통과 | **통과** | 판정불가 |
+| hit | Hit_A | 통과 | **통과** | 판정불가 |
+| cheer | Cheer | 통과 | **통과** | 판정불가 |
+| interact | Interact | 7.7 (무기) | **통과** | 판정불가 |
+
+### 도적 (rogue)
+
+| 동작 | 클립 | 전(결함 깊이 cm) | 후 | 판정 후 |
+|---|---|---|---|---|
+| hub-idle | Idle | 통과 | **통과** | 정상 |
+| hub-walk | Running_A | 26.4 (무기) | **통과** | 판정불가 |
+| hub-Cheer | Cheer | 24.2 (무기) | **통과** | 판정불가 |
+| hub-Interact | Interact | 23.6 (무기) | **통과** | 판정불가 |
+| idle | Idle | 통과 | **통과** | 정상 |
+| run | Running_A | 27.5 (무기) | **통과** | 판정불가 |
+| attack1 | Dualwield_Melee_Attack_Slice | 23.9 (무기+팔→몸통) | **통과** | 판정불가 |
+| attack2 | Dualwield_Melee_Attack_Chop | 21.4 (무기) | **통과** | 판정불가 |
+| attack3 | Dualwield_Melee_Attack_Slice | 23.9 (무기+팔→몸통) | **통과** | 판정불가 |
+| attack4 | Dodge_Forward | 21.0 (무기) | **통과** | 판정불가 |
+| attack5 | Dualwield_Melee_Attack_Chop | 21.4 (무기) | **통과** | 판정불가 |
+| attack6 | Dualwield_Melee_Attack_Stab | 20.9 (무기) | **통과** | 판정불가 |
+| skill0-shadow_dash | Dodge_Forward | 21.9 (무기) | **통과** | 판정불가 |
+| skill1-poison_bomb | Throw | 21.0 (무기) | **통과** | 판정불가 |
+| skill2-flurry | Dualwield_Melee_Attack_Stab | 25.7 (무기+팔→몸통) | **통과** | 판정불가 |
+| skill3-thousand | Spellcast_Raise | 18.7 (무기) | **통과** | 판정불가 |
+| skill4-shadow_mark | Dualwield_Melee_Attack_Stab | 21.5 (무기) | **통과** | 판정불가 |
+| skill5-void_step | Dodge_Forward | 22.2 (무기) | **통과** | 판정불가 |
+| skill6-night_parade | Dualwield_Melee_Attack_Slice | 25.7 (무기+팔→몸통) | **통과** | 판정불가 |
+| skill7-eclipse_edge | Dodge_Forward | 22.3 (무기) | **통과** | 판정불가 |
+| dodge | Dodge_Forward | 통과 | **통과** | 판정불가 |
+| hit | Hit_A | 21.7 (무기) | **통과** | 오탐 |
+| cheer | Cheer | 24.2 (무기) | **통과** | 판정불가 |
+| interact | Interact | 23.6 (무기) | **통과** | 판정불가 |
+
+### 궁수 (ranger)
+
+| 동작 | 클립 | 전(결함 깊이 cm) | 후 | 판정 후 |
+|---|---|---|---|---|
+| hub-idle | Idle | 통과 | **통과** | 정상 |
+| hub-walk | Running_A | 3.8 (무기) | **통과** | 판정불가 |
+| hub-Cheer | Cheer | 5.7 (무기) | **통과** | 판정불가 |
+| hub-Interact | Interact | 5.8 (무기) | 4.1 (무기) | 결함 |
+| idle | Idle | 통과 | **통과** | 정상 |
+| run | Running_A | 11.1 (팔→몸통) | **통과** | 판정불가 |
+| attack1 | Bow_Shoot | 14.7 (무기+팔→몸통) | 14.7 (무기+팔→몸통) | 결함 |
+| attack2 | Bow_Shoot | 14.8 (무기+팔→몸통) | 14.8 (무기+팔→몸통) | 결함 |
+| attack3 | Bow_Shoot | 14.8 (무기+팔→몸통) | 14.8 (무기+팔→몸통) | 결함 |
+| attack4 | Bow_Shoot | 14.9 (무기+팔→몸통) | 14.9 (무기+팔→몸통) | 결함 |
+| attack5 | Bow_Shoot | 14.8 (무기+팔→몸통) | 14.8 (무기+팔→몸통) | 결함 |
+| skill0-ranger_pierce | Bow_Shoot | 14.5 (무기+팔→몸통) | 14.5 (무기+팔→몸통) | 결함 |
+| skill1-ranger_volley | Bow_Shoot | 14.8 (무기+팔→몸통) | 14.8 (무기+팔→몸통) | 결함 |
+| skill2-ranger_retreat | Bow_Shoot | 14.7 (무기+팔→몸통) | 14.7 (무기+팔→몸통) | 결함 |
+| skill3-ranger_tempest | Bow_Shoot | 14.8 (무기+팔→몸통) | 14.8 (무기+팔→몸통) | 결함 |
+| skill4-ranger_quickshot | Bow_Shoot | 14.7 (무기+팔→몸통) | **통과** | 판정불가 |
+| skill5-ranger_binding | Bow_Shoot | 14.7 (무기+팔→몸통) | 14.7 (무기+팔→몸통) | 결함 |
+| skill6-gale_hunt | Bow_Shoot | 14.7 (무기+팔→몸통) | **통과** | 판정불가 |
+| skill7-skyfall_arrows | Bow_Shoot | 14.6 (무기+팔→몸통) | 14.6 (무기+팔→몸통) | 결함 |
+| dodge | Dodge_Forward | 9.0 (무기) | **통과** | 판정불가 |
+| hit | Hit_A | 통과 | **통과** | 판정불가 |
+| cheer | Cheer | 10.5 (무기+팔→몸통) | **통과** | 판정불가 |
+| interact | Interact | 12.1 (팔→몸통) | **통과** | 판정불가 |
+
+
+### 남은 결함 19건과 사유
+
+| 직업 | 동작 | 클립 | 프레임 (클립 진행) | 깊이(cm) | 부위 | 사유 |
+|---|---|---|---|---|---|---|
+| knight | hub-Interact | Interact | 0 (0%) | 13.3 | 무기 | 측정 하네스가 이전 동작 없이 첫 프레임에 클립을 즉시 100% 재생한다. 보정은 연속성 때문에 프레임당 14.5도까지만 변해 첫 프레임에 목표에 닿지 못한다. 게임은 마을 동작을 0.16초 크로스페이드로, 승리 연출을 0.2초 페이드로 재생하고 Interact는 재생하지 않는다. |
+| knight | attack1 | 1H_Melee_Attack_Slice_Horizontal | 11 (40%) | 7.7 | 무기 | 가로 베기(타격 직전, 클립 진행 최대 5.2%/프레임): 이 프레임 하나만 보면 40도 이하 해가 있다(단일 프레임 시험). 연속 조건 안의 최선 곡선에서 타격 직전 한 프레임이 남았다(깊이 15.4→7.7cm로 절반). 보정 속도 제한을 풀면 attack1·attack5는 통과함을 확인했다(실험). |
+| knight | attack4 | 2H_Melee_Attack_Spin | 8 (21%) | 16.8 | 무기+팔→몸통 | 회전 베기(클립 진행 최대 2.0~2.4%/프레임): 이 프레임 하나만 보면 뼈당 40도 이하 보정으로 통과하는 해가 있다(단일 프레임 시험). 연속성(프레임당 14.5도 이하)과 시전 시작 페이드의 가중치 비례 규칙을 지킨 곡선 탐색의 최선 해에서 이 프레임이 남았다. 해결 불가의 증명은 아니며 속도 제한을 풀었던 실험에서는 기사 attack4가 6.4cm로 줄었다. |
+| knight | attack5 | 1H_Melee_Attack_Slice_Horizontal | 11 (40%) | 3.8 | 무기 | 가로 베기(타격 직전, 클립 진행 최대 5.2%/프레임): 이 프레임 하나만 보면 40도 이하 해가 있다(단일 프레임 시험). 연속 조건 안의 최선 곡선에서 타격 직전 한 프레임이 남았다(깊이 15.4→7.7cm로 절반). 보정 속도 제한을 풀면 attack1·attack5는 통과함을 확인했다(실험). |
+| knight | skill0-holy_slash | 1H_Melee_Attack_Slice_Horizontal | 12 (36%) | 8.2 | 무기+보조+팔→몸통 | 가로 베기(타격 직전, 클립 진행 최대 5.2%/프레임): 이 프레임 하나만 보면 40도 이하 해가 있다(단일 프레임 시험). 연속 조건 안의 최선 곡선에서 타격 직전 한 프레임이 남았다(깊이 15.4→7.7cm로 절반). 보정 속도 제한을 풀면 attack1·attack5는 통과함을 확인했다(실험). |
+| barbarian | attack3 | 2H_Melee_Attack_Spinning | 27 (55%) | 13.8 | 무기 | 회전 베기(클립 진행 최대 2.0~2.4%/프레임): 이 프레임 하나만 보면 뼈당 40도 이하 보정으로 통과하는 해가 있다(단일 프레임 시험). 연속성(프레임당 14.5도 이하)과 시전 시작 페이드의 가중치 비례 규칙을 지킨 곡선 탐색의 최선 해에서 이 프레임이 남았다. 해결 불가의 증명은 아니며 속도 제한을 풀었던 실험에서는 기사 attack4가 6.4cm로 줄었다. |
+| barbarian | skill0-whirlwind | 2H_Melee_Attack_Spin | 26 (28%) | 8.8 | 무기 | 회전 베기(클립 진행 최대 2.0~2.4%/프레임): 이 프레임 하나만 보면 뼈당 40도 이하 보정으로 통과하는 해가 있다(단일 프레임 시험). 연속성(프레임당 14.5도 이하)과 시전 시작 페이드의 가중치 비례 규칙을 지킨 곡선 탐색의 최선 해에서 이 프레임이 남았다. 해결 불가의 증명은 아니며 속도 제한을 풀었던 실험에서는 기사 attack4가 6.4cm로 줄었다. |
+| ranger | hub-Interact | Interact | 0 (0%) | 4.1 | 무기 | 측정 하네스가 이전 동작 없이 첫 프레임에 클립을 즉시 100% 재생한다. 보정은 연속성 때문에 프레임당 14.5도까지만 변해 첫 프레임에 목표에 닿지 못한다. 게임은 마을 동작을 0.16초 크로스페이드로, 승리 연출을 0.2초 페이드로 재생하고 Interact는 재생하지 않는다. |
+| ranger | attack1 | Bow_Shoot | 11 (44%) | 14.7 | 무기+팔→몸통 | 활 당기기(클립 진행 최대 13.5%/프레임): 시위 손이 몸통 중앙선 안쪽 가슴 속 약 20cm에 오는 것이 클립 설계다. 팔 40도·어깨까지 써도 14.8→10.9cm까지만 줄고 그때 활이 조준 방향에서 약 30도 기울어 자세가 무너져(비교 캡처) 이 클립은 보정하지 않는다. |
+| ranger | attack2 | Bow_Shoot | 10 (43%) | 14.8 | 무기+팔→몸통 | 활 당기기(클립 진행 최대 13.5%/프레임): 시위 손이 몸통 중앙선 안쪽 가슴 속 약 20cm에 오는 것이 클립 설계다. 팔 40도·어깨까지 써도 14.8→10.9cm까지만 줄고 그때 활이 조준 방향에서 약 30도 기울어 자세가 무너져(비교 캡처) 이 클립은 보정하지 않는다. |
+| ranger | attack3 | Bow_Shoot | 15 (44%) | 14.8 | 무기+팔→몸통 | 활 당기기(클립 진행 최대 13.5%/프레임): 시위 손이 몸통 중앙선 안쪽 가슴 속 약 20cm에 오는 것이 클립 설계다. 팔 40도·어깨까지 써도 14.8→10.9cm까지만 줄고 그때 활이 조준 방향에서 약 30도 기울어 자세가 무너져(비교 캡처) 이 클립은 보정하지 않는다. |
+| ranger | attack4 | Bow_Shoot | 15 (43%) | 14.9 | 무기+팔→몸통 | 활 당기기(클립 진행 최대 13.5%/프레임): 시위 손이 몸통 중앙선 안쪽 가슴 속 약 20cm에 오는 것이 클립 설계다. 팔 40도·어깨까지 써도 14.8→10.9cm까지만 줄고 그때 활이 조준 방향에서 약 30도 기울어 자세가 무너져(비교 캡처) 이 클립은 보정하지 않는다. |
+| ranger | attack5 | Bow_Shoot | 19 (43%) | 14.8 | 무기+팔→몸통 | 활 당기기(클립 진행 최대 13.5%/프레임): 시위 손이 몸통 중앙선 안쪽 가슴 속 약 20cm에 오는 것이 클립 설계다. 팔 40도·어깨까지 써도 14.8→10.9cm까지만 줄고 그때 활이 조준 방향에서 약 30도 기울어 자세가 무너져(비교 캡처) 이 클립은 보정하지 않는다. |
+| ranger | skill0-ranger_pierce | Bow_Shoot | 11 (44%) | 14.5 | 무기+팔→몸통 | 활 당기기(클립 진행 최대 13.5%/프레임): 시위 손이 몸통 중앙선 안쪽 가슴 속 약 20cm에 오는 것이 클립 설계다. 팔 40도·어깨까지 써도 14.8→10.9cm까지만 줄고 그때 활이 조준 방향에서 약 30도 기울어 자세가 무너져(비교 캡처) 이 클립은 보정하지 않는다. |
+| ranger | skill1-ranger_volley | Bow_Shoot | 16 (44%) | 14.8 | 무기+팔→몸통 | 활 당기기(클립 진행 최대 13.5%/프레임): 시위 손이 몸통 중앙선 안쪽 가슴 속 약 20cm에 오는 것이 클립 설계다. 팔 40도·어깨까지 써도 14.8→10.9cm까지만 줄고 그때 활이 조준 방향에서 약 30도 기울어 자세가 무너져(비교 캡처) 이 클립은 보정하지 않는다. |
+| ranger | skill2-ranger_retreat | Bow_Shoot | 17 (43%) | 14.7 | 무기+팔→몸통 | 활 당기기(클립 진행 최대 13.5%/프레임): 시위 손이 몸통 중앙선 안쪽 가슴 속 약 20cm에 오는 것이 클립 설계다. 팔 40도·어깨까지 써도 14.8→10.9cm까지만 줄고 그때 활이 조준 방향에서 약 30도 기울어 자세가 무너져(비교 캡처) 이 클립은 보정하지 않는다. |
+| ranger | skill3-ranger_tempest | Bow_Shoot | 56 (43%) | 14.8 | 무기+팔→몸통 | 활 당기기(클립 진행 최대 13.5%/프레임): 시위 손이 몸통 중앙선 안쪽 가슴 속 약 20cm에 오는 것이 클립 설계다. 팔 40도·어깨까지 써도 14.8→10.9cm까지만 줄고 그때 활이 조준 방향에서 약 30도 기울어 자세가 무너져(비교 캡처) 이 클립은 보정하지 않는다. |
+| ranger | skill5-ranger_binding | Bow_Shoot | 20 (44%) | 14.7 | 무기+팔→몸통 | 활 당기기(클립 진행 최대 13.5%/프레임): 시위 손이 몸통 중앙선 안쪽 가슴 속 약 20cm에 오는 것이 클립 설계다. 팔 40도·어깨까지 써도 14.8→10.9cm까지만 줄고 그때 활이 조준 방향에서 약 30도 기울어 자세가 무너져(비교 캡처) 이 클립은 보정하지 않는다. |
+| ranger | skill7-skyfall_arrows | Bow_Shoot | 26 (43%) | 14.6 | 무기+팔→몸통 | 활 당기기(클립 진행 최대 13.5%/프레임): 시위 손이 몸통 중앙선 안쪽 가슴 속 약 20cm에 오는 것이 클립 설계다. 팔 40도·어깨까지 써도 14.8→10.9cm까지만 줄고 그때 활이 조준 방향에서 약 30도 기울어 자세가 무너져(비교 캡처) 이 클립은 보정하지 않는다. |
+
