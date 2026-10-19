@@ -8,13 +8,15 @@ import './transcend.css';
 
 const pct = (v) => Math.round(v * 100);
 const up = (text) => '▲ ' + text;
+/** 재사용 대기 감소율. 0이면 '-0%' 대신 '0%'. */
+const cdCut = (cdMul) => { const n = pct(1 - cdMul); return n > 0 ? '-' + n + '%' : '0%'; };
 /** 능력치 비교표의 행. before/after 는 heroStats. after 가 없으면(최고 등급) 다음 값과 증가폭을 비운다. */
 export function transcendRows(before, after) {
   const rows = [
     { key: 'atk', label: '공격력', now: num(before.atk), next: after && num(after.atk), delta: after && up(Math.round((after.atk / Math.max(1, before.atk) - 1) * 100) + '%') },
     { key: 'hp', label: '체력', now: num(before.hp), next: after && num(after.hp), delta: after && up(Math.round((after.hp / Math.max(1, before.hp) - 1) * 100) + '%') },
     { key: 'skill', label: '스킬 피해', now: pct(before.skillMul) + '%', next: after && pct(after.skillMul) + '%', delta: after && up(pct(after.skillMul) - pct(before.skillMul) + '%p') },
-    { key: 'cd', label: '재사용 대기', now: '-' + pct(1 - before.cdMul) + '%', next: after && '-' + pct(1 - after.cdMul) + '%', delta: after && up(pct(before.cdMul) - pct(after.cdMul) + '%p') },
+    { key: 'cd', label: '재사용 대기', now: cdCut(before.cdMul), next: after && cdCut(after.cdMul), delta: after && up(pct(before.cdMul) - pct(after.cdMul) + '%p') },
     { key: 'ult', label: '궁극기 충전', now: String(pct(before.ultGain)), next: after && String(pct(after.ultGain)), delta: after && up(Math.round((after.ultGain / Math.max(0.01, before.ultGain) - 1) * 100) + '%') },
   ];
   return rows.map((r) => ({ ...r, next: r.next || null, delta: r.delta || null }));
@@ -80,7 +82,8 @@ export class TranscendView extends GrowthOverlay {
       c.append(el('i', 'tc-gem tc-gem-' + g), el('b', 'tc-plinth', g));
       crystals.append(c);
     });
-    const hero = el('div', 'tc-hero'); const img = el('img', 'gx-portrait'); img.alt = ''; img.setAttribute('aria-hidden', 'true'); this.portrait(img, id);
+    const hero = el('div', 'tc-hero'); const img = el('img', 'gx-portrait'); img.alt = ''; img.setAttribute('aria-hidden', 'true');
+    const portraits = [[img, id]];
     hero.append(el('i', 'tc-altar'), img);
     center.append(crystals, hero);
 
@@ -91,7 +94,7 @@ export class TranscendView extends GrowthOverlay {
     for (const m of materials) {
       const li = el('li', 'tc-mat' + (m.short ? ' is-short' : ''));
       let icon;
-      if (m.key === 'shards') { icon = el('img', 'tc-mat-ico tc-mat-hero'); this.portrait(icon, id); }
+      if (m.key === 'shards') { icon = el('img', 'tc-mat-ico tc-mat-hero'); portraits.push([icon, id]); }
       else if (m.key === 'gold') { icon = el('img', 'tc-mat-ico'); icon.src = resourceArt('gold'); }
       else icon = el('i', 'tc-mat-ico tc-gem tc-gem-stone');
       icon.alt = ''; icon.setAttribute('aria-hidden', 'true');
@@ -118,6 +121,7 @@ export class TranscendView extends GrowthOverlay {
 
     this.root.append(stats, center, mats);
     this.columns = [stats, center, mats]; this.keys = keys;
+    this.bindPortraits(portraits);
     this.fit();
     const target = keys.get(this.focusKey);
     (target && !target.disabled ? target : keys.get('pack'))?.focus?.({ preventScroll: true });

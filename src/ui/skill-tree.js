@@ -41,6 +41,8 @@ export class GrowthOverlay {
     this.onResize = () => { if (this.isOpen) this.fit(); };
   }
   get eco() { return this.meta.eco; }
+  /** 초상은 화면에 붙은 뒤 바인딩한다(bindHeroPortrait 는 연결된 img 에만 결과를 반영한다). */
+  bindPortraits(list) { for (const [img, id] of list) this.portrait(img, id); }
   mount() {
     if (this.root) return this.root;
     const root = el('section', 'gx-layer ' + this.kind + '-layer'); root.hidden = true;
@@ -128,7 +130,7 @@ export function cellLabel(cell) {
 }
 
 const LEARN_FAIL = { level: (r) => '캐릭터 Lv.' + (r.need || '') + '에 해금됩니다', sp: () => '스킬 포인트가 부족합니다', max: () => '이미 최대 레벨입니다', storage: () => '저장하지 못해 스킬 포인트를 되돌렸습니다', skill: () => '스킬을 찾을 수 없습니다' };
-const RESET_FAIL = { scroll: '스킬 초기화서가 없습니다', gems: '보석이 부족합니다', storage: '저장하지 못해 초기화를 취소했습니다' };
+const RESET_FAIL = { scroll: '스킬 초기화서가 없습니다', gems: '보석이 부족합니다', nothing: '되돌릴 스킬 포인트가 없습니다', storage: '저장하지 못해 초기화를 취소했습니다' };
 
 // ------------------------------------------------------------------ 화면
 export class SkillTreeView extends GrowthOverlay {
@@ -151,12 +153,14 @@ export class SkillTreeView extends GrowthOverlay {
 
     // ---- 왼쪽: 영웅 초상 · 이름/레벨 · SP 원 · 초기화
     const left = el('div', 'gx-col st-hero');
-    const portrait = el('img', 'gx-portrait'); portrait.alt = ''; portrait.setAttribute('aria-hidden', 'true'); this.portrait(portrait, id);
+    const portrait = el('img', 'gx-portrait'); portrait.alt = ''; portrait.setAttribute('aria-hidden', 'true');
     const card = el('div', 'gx-card st-hero-card');
     card.append(el('div', 'gx-ribbon', def.name + ' · Lv.' + (h.level || 1)));
     const ring = el('div', 'st-sp'); ring.setAttribute('role', 'status'); ring.setAttribute('aria-label', '남은 스킬 포인트 ' + sp.available);
     ring.append(el('small', '', 'SP'), el('b', 'st-sp-num', String(sp.available)));
-    card.append(ring, el('p', 'st-sp-label', '남은 스킬 포인트'), this.resetButton(id, sp, key));
+    const reset = this.resetButton(id, sp, key);
+    card.append(ring, el('p', 'st-sp-label', '남은 스킬 포인트'), reset);
+    if (reset.reasonNode) card.append(reset.reasonNode);
     left.append(portrait, card);
 
     // ---- 가운데: 기본 4 → 금색 화살표 → 각성 4
@@ -192,6 +196,7 @@ export class SkillTreeView extends GrowthOverlay {
 
     this.root.append(left, tree, detail);
     this.columns = [left, tree, detail]; this.keys = keys;
+    this.bindPortraits([[portrait, id]]);
     this.fit();
     const target = keys.get(this.focusKey);
     (target && !target.disabled ? target : keys.get('cell-' + this.sel))?.focus?.({ preventScroll: true });
@@ -203,6 +208,8 @@ export class SkillTreeView extends GrowthOverlay {
     const img = el('img'); img.src = c.skill.icon; img.alt = ''; icon.append(img);
     if (c.state === 'locked') icon.append(el('i', 'st-lock'));
     if (c.slot) icon.append(el('b', 'st-slot', c.slot));
+    // 각성 칸은 관문 레벨을 아이콘 모서리에 늘 보인다(습득 뒤에도 어느 관문 스킬인지 읽힌다).
+    if (c.awaken && !(c.level === 0)) { const gate = el('b', 'st-gate-tag', 'Lv.' + c.need); gate.setAttribute('aria-hidden', 'true'); icon.append(gate); }
     icon.onclick = () => { this.sel = c.i; this.focusKey = 'cell-' + c.i; playSfx('ui_click', 0.35); this.render(); };
     const pill = el('div', 'st-pill');
     if (c.awaken && c.level === 0) { const gate = el('span', 'st-gate', c.state === 'ready' ? '습득 가능' : 'Lv.' + c.need); gate.setAttribute('aria-hidden', 'true'); pill.append(gate); }
@@ -253,7 +260,10 @@ export class SkillTreeView extends GrowthOverlay {
     else { price.append(el('i', 'ic ic-gem'), el('span', '', num(q.gemPrice))); say = '보석 ' + num(q.gemPrice); }
     b.append(scroll, el('span', 'st-reset-name', '스킬 초기화'), price);
     b.disabled = !q || refund <= 0;
-    b.setAttribute('aria-label', '스킬 초기화, ' + (refund > 0 ? '돌려받는 스킬 포인트 ' + refund + ', ' + say : '돌려받을 스킬 포인트가 없습니다'));
+    b.setAttribute('aria-label', '스킬 초기화, ' + (refund > 0 ? '돌려받는 스킬 포인트 ' + refund + ', ' + say : RESET_FAIL.nothing));
+    // 되돌릴 SP가 없으면 버튼을 끄고 이유를 버튼 아래에 보인다.
+    b.reasonNode = null;
+    if (q && refund <= 0) { const why = el('p', 'st-reason st-reset-reason', RESET_FAIL.nothing); why.id = 'st-reset-reason'; b.setAttribute('aria-describedby', 'st-reset-reason'); b.reasonNode = why; }
     b.onclick = () => this.reset();
     return b;
   }

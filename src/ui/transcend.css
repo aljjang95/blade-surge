@@ -54,7 +54,8 @@
 
 /* ---- 제단 위 영웅 ---- */
 .tc-hero { position: relative; flex: 1 1 0; min-height: 0; display: flex; justify-content: center; }
-.tc-hero .gx-portrait { position: relative; z-index: 1; height: 100%; flex: 0 1 auto; padding-bottom: 6%; }
+/* 제단 위 초상은 원형 메달로 둔다(정사각 스냅샷의 배경 모서리를 감춘다). */
+.tc-hero .gx-portrait { position: relative; z-index: 1; flex: 0 1 auto; height: 82%; width: auto; max-width: 100%; align-self: flex-start; border-radius: 50%; }
 .tc-altar {
   position: absolute; left: 6%; right: 6%; bottom: 0; height: 26%; border-radius: 50%;
   background: radial-gradient(ellipse at center, color-mix(in srgb, var(--sb-sky) 60%, transparent) 0 34%, color-mix(in srgb, var(--sb-sky-lo) 35%, transparent) 35% 52%, color-mix(in srgb, var(--sb-gold) 75%, transparent) 53% 57%, transparent 58% 66%, color-mix(in srgb, var(--sb-gold) 55%, transparent) 67% 69%, transparent 70%);
