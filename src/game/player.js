@@ -13,6 +13,7 @@ import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, M
 import { RangerAim } from './ranger-aim.js';
 import { enemyImpactIn } from './enemies.js';
 import { SkillAimView } from './skill-aim/aim-view.js';
+import { createCombatPose } from '../engine/combat-pose.js';
 import { skillAimShape, playerSkillAimShape } from './skill-aim/shapes.js';
 
 const _v = new THREE.Vector3();
@@ -99,6 +100,8 @@ export class Player extends Actor {
     if (this.bowLayers?.rapid) this.clips.RangerBowUpperRapid = this.bowLayers.rapid;
     // 궁수: 판정 방향(yaw)은 즉시 바뀌고, 렌더 피벗만 짧게 따라 돈다(회피 방향 전환·회피→조준 사격의 몸 전체 스냅 완화).
     this.turnSmoothing = !!this.bowLayers;
+    // 전투·마을 클립이 무기·팔을 몸에 파묻는 결함을 직업×클립별 가산 회전으로 보정한다(클립·시간 불변).
+    this.heroPose = createCombatPose(this.model, def.id, this.mixer, this.clips);
     this._bowLegs = null; this._bowLegBlend = 0;
     this.play('Idle');
     this.footT = 0;
