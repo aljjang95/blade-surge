@@ -1,0 +1,60 @@
+{
+  "productSource": "c899684c903f1acbc53e3107e4100724434537a9",
+  "typecheck": {
+    "command": "bun run typecheck",
+    "exitCode": 0,
+    "log": "typecheck-final.log"
+  },
+  "suite": {
+    "command": "bun test --timeout 30000 --path-ignore-patterns '**/work/qa/auto-20261020/baseline-source/**'",
+    "scope": "현재 저장소의 모든 테스트. 새로 추출한 과거 비교용 소스의 중복 테스트만 제외. 현재 제품 테스트의 제외·수정·완화 없음.",
+    "exitCode": 1,
+    "passed": 2381,
+    "skipped": 4,
+    "failed": 8,
+    "files": 260,
+    "seconds": 115.33,
+    "log": "tests-current.log"
+  },
+  "knownFailures": [
+    {
+      "file": "test/combat-sound-library.test.ts",
+      "count": 1,
+      "reason": "배송 효과음의 디코딩 피크 0.98 상한 실패.",
+      "ownership": "오디오·자산은 쓰기 금지. 원본 소스에서 이미 실패한 항목."
+    },
+    {
+      "file": "test/expedition-audio-routing.test.ts",
+      "count": 4,
+      "reason": "기존 Flow 치명타·마무리·혼전 강조음 기대와 Mirelo 이전 중인 현재 소리 계약의 불일치.",
+      "ownership": "오디오 레인 소유. 원본 소스에서 이미 실패한 항목."
+    },
+    {
+      "file": "test/hit-sound-layers.test.ts",
+      "count": 1,
+      "reason": "영웅 접촉 레이어를 포함한 최악 피크 합 1.75 상한 실패.",
+      "ownership": "오디오·자산은 쓰기 금지. 원본 소스에서 이미 실패한 항목."
+    },
+    {
+      "file": "test/dopamine-contract.test.ts",
+      "count": 2,
+      "reason": "기존 테스트는 레벨만 올린 미습득 각성 스킬의 장착 성공을 기대한다. 현행 브리프는 skills[i]=0 미습득 스킬의 장착·사용 금지다.",
+      "ownership": "경제·성장 및 기존 테스트 파일은 이 요청의 쓰기 범위 밖. 제품 규칙을 되돌리거나 기대를 완화하지 않았다."
+    }
+  ],
+  "regression": {
+    "file": "test/auto-healer-aim.test.ts",
+    "beforeFix": "실제 Player 콤보 진입 뒤 lockTarget이 치유사가 아닌 보스여서 실패.",
+    "afterFix": "치유사 잠금과 실제 평타 명중 통과. 전체 검사에서도 통과."
+  },
+  "build": {
+    "command": "bun run build",
+    "exitCode": 0,
+    "log": "fixed-build.log",
+    "warnings": "기존 동적·정적 import 혼용과 번들 크기 경고."
+  },
+  "limitations": [
+    "최초 bun test --timeout 30000은 비교용 추출 소스의 테스트까지 찾아 4701 통과·8 건너뜀·28 실패였다. 이 중 과거 소스의 PC bridge 실패 20개는 정본 검사에 포함하지 않는다.",
+    "전체 테스트 통과라는 완료 조건은 아직 충족하지 못했다. 남은 8개는 독립된 레인의 통합 수정이 필요하다."
+  ]
+}
