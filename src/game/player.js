@@ -16,6 +16,9 @@ import { SkillAimView } from './skill-aim/aim-view.js';
 import { skillAimShape, playerSkillAimShape } from './skill-aim/shapes.js';
 
 const _v = new THREE.Vector3();
+// 궁수 전투 시점(카메라 고도 약 50°)에서 앞머리·윗눈꺼풀이 오른쪽 눈을 가려 애꾸처럼 보이던 문제(2026-10-19 S26 실기기 확인).
+// 클립이 머리 뼈를 쓴 직후 턱을 일정량 들어 두 눈을 드러낸다. 판정·위치·난수와 무관한 렌더 뼈 보정이다.
+const RANGER_HEAD_LIFT = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(12));
 const ATTACK_INPUT_BUFFER_SEC = 0.14;
 const DODGE_INPUT_BUFFER_SEC = 0.12;
 const ATTACK_CANCEL_EARLY = 0.16;
@@ -95,6 +98,8 @@ export class Player extends Actor {
     // 수동 궁수 조준 보조와 사격 중 이동용 상·하체 층. 다른 영웅과 AUTO 경로는 쓰지 않는다.
     this.rangerAim = def.weapon === 'bow' ? new RangerAim() : null;
     this.bowLayers = this.rangerAim ? rangerBowLayers(this.clips) : null;
+    const headBone = def.id === 'ranger' ? this.model.getObjectByName('mixamorigHead') : null;
+    this.headLift = headBone?.isBone ? { bone: headBone, base: new THREE.Quaternion(), applied: false } : null;
     if (this.bowLayers) this.clips.RangerBowUpper = this.bowLayers.upper;
     if (this.bowLayers?.rapid) this.clips.RangerBowUpperRapid = this.bowLayers.rapid;
     // 궁수: 판정 방향(yaw)은 즉시 바뀌고, 렌더 피벗만 짧게 따라 돈다(회피 방향 전환·회피→조준 사격의 몸 전체 스냅 완화).
@@ -716,7 +721,12 @@ export class Player extends Actor {
         id ? playerSkillAimShape(this, id, this._skillAimShape) : null);
     }
     if (!this.alive || this.auto || this.stun > 0) { this.attackBufferYaw = null; this.comboQueuedYaw = null; }
+    // 머리 트랙이 없는 클립에서도 누적되지 않게 지난 프레임 보정 전 값을 먼저 되돌린다.
+    if (this.headLift?.applied) { this.headLift.bone.quaternion.copy(this.headLift.base); this.headLift.applied = false; }
     super.update(dt);
+    if (this.headLift && this.alive) {
+      const lift = this.headLift; lift.base.copy(lift.bone.quaternion); lift.bone.quaternion.multiply(RANGER_HEAD_LIFT); lift.applied = true;
+    }
     if (this.rangerAim) this.updateBowRig(dt);
     this.hurtFeedbackT = Math.max(0, (this.hurtFeedbackT || 0) - dt);
     this.attackBufferT = Math.max(0, (this.attackBufferT || 0) - dt);
