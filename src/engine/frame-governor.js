@@ -23,6 +23,7 @@ export class FrameGovernor {
     this.lastStepAt = NaN; this.lastRenderAt = NaN;
     this.lastRafAt = NaN; this.refreshMs = 1000 / 60;
     this.mode = ''; this.renderAllowed = false; this.targetFps = 0;
+    this.calm = false;
     this.renderedFps = 0; this.p95FrameMs = 0; this.missRatio = 0;
     this.nextAt = NaN; this.lastEvaluation = NaN;
     this.overloadMs = 0; this.headroomMs = 0; this.stableMs = 0;
@@ -41,14 +42,18 @@ export class FrameGovernor {
     this.reset(now); this.renderAllowed = false; this.targetFps = 0;
   }
 
-  /** 이전 실행 이후의 초를 반환한다. 건너뛴 rAF 시간도 포함하며 0이면 실행하지 않는다. */
-  advance(now, mode = 'battle', renderAllowed = true, suspended = false) {
+  /**
+   * 이전 실행 이후의 초를 반환한다. 건너뛴 rAF 시간도 포함하며 0이면 실행하지 않는다.
+   * calm: 터치 기기에서 손을 뗀 채 지켜보는 중(AUTO 시청 등)이면 전투도 45fps로 그려 발열 총량을 줄인다.
+   */
+  advance(now, mode = 'battle', renderAllowed = true, suspended = false, calm = false) {
     if (!Number.isFinite(now)) return 0;
     if (suspended) { this.suspend(now); return 0; }
     const rafMs = now - this.lastRafAt;
     this.lastRafAt = now;
     if (rafMs > 0.5 && rafMs < 100) this.refreshMs += (Math.min(1000 / 60, rafMs) - this.refreshMs) * 0.1;
-    const fps = mode === 'battle' ? (this.tier === 4 ? 45 : 60) : 30;
+    this.calm = mode === 'battle' && calm === true;
+    const fps = mode === 'battle' ? (this.tier === 4 || this.calm ? 45 : 60) : 30;
     const target = renderAllowed ? fps : 0;
     if (this.mode !== mode || this.targetFps !== target || this.renderAllowed !== renderAllowed) {
       // 화면 복귀·모드 전환의 대기 시간을 부하 표본에 섞지 않는다.
@@ -113,7 +118,8 @@ export class FrameGovernor {
     const overloaded = (this.p95FrameMs > interval * 1.35 + refreshTolerance && excessRatio > 0.15) || excessRatio > 0.25;
     const comfortable = this.p95FrameMs < interval * 1.35 + refreshTolerance && excessRatio < 0.12;
     this.overloadMs = overloaded ? this.overloadMs + evaluationMs : 0;
-    this.headroomMs = comfortable ? this.headroomMs + evaluationMs : 0;
+    // 지켜보는 45fps 구간의 여유로 품질을 되올리면 손을 댄 60fps에서 다시 밀려 품질이 오르내린다.
+    this.headroomMs = comfortable && !this.calm ? this.headroomMs + evaluationMs : 0;
     if ((this.overloadMs >= DOWN_MS && this.tier < 4) || (this.headroomMs >= UP_MS && this.tier > 0)) {
       this.tier += this.overloadMs >= DOWN_MS ? 1 : -1;
       this.stableMs = 0; this.overloadMs = 0; this.headroomMs = 0;

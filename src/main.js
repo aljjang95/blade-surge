@@ -243,6 +243,13 @@ class App {
       document.addEventListener('visibilitychange', resetGovernor);
       window.addEventListener('pagehide', resetGovernor);
       window.addEventListener('pageshow', resetGovernor);
+      // 터치 기기에서 손을 뗀 시간만 기록한다. 판정은 loop의 touchCalm이 하고 입력 처리에는 관여하지 않는다.
+      this.touchDevice = window.matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+      this.lastTouchAt = performance.now(); this.touchesDown = 0;
+      const touched = event => { this.lastTouchAt = performance.now(); this.touchesDown = event.touches?.length ?? 0; };
+      for (const type of ['touchstart', 'touchmove', 'touchend', 'touchcancel']) window.addEventListener(type, touched, { capture: true, passive: true });
+      const pressed = () => { this.lastTouchAt = performance.now(); };
+      for (const type of ['pointerdown', 'keydown', 'wheel']) window.addEventListener(type, pressed, { capture: true, passive: true });
     }
     this.renderer.setThermalTier(this.frameGovernor.tier);
     const st = this.eco.s.settings; audio.setSfxOn(st.sfx); audio.setMusicOn(st.music); audio.haptics = st.haptics; if (!st.haptics) audio.vibe(0); audio.setVoiceOn(st.voice !== false);
@@ -449,7 +456,7 @@ class App {
     const governor = this.frameGovernor;
     const suspended = !!(this.testPause || this.stageStarting || this.contextLost || document.hidden);
     const render = !suspended && canRenderFrame(this, document);
-    const realDt = governor.advance(t, this.mode, render, suspended);
+    const realDt = governor.advance(t, this.mode, render, suspended, this.touchCalm?.(t) === true);
     if (suspended) this.last = t;
     if (!realDt) return;
     this.last = t;
@@ -458,6 +465,10 @@ class App {
     // 기존 장시간 정지의 dt 상한은 유지하며, 평소 간격 제어 시간은 시뮬레이션에 모두 넘긴다.
     this.step(Math.min(0.05, realDt), render);
     if (this.renderer.renderCount !== count) governor.recordFrame(t, performance.now() - started);
+  }
+  /** 터치 기기에서 4초 넘게 손을 떼고 지켜보는 중인지. 데스크톱·누르고 있는 동안은 항상 false다. */
+  touchCalm(now) {
+    return this.touchDevice === true && this.touchesDown === 0 && now - this.lastTouchAt > 4000;
   }
   /** 한 프레임 진행 (테스트 시 고정 dt로 호출 가능) */
   step(realDt, render = true) {
