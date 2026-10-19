@@ -39,7 +39,7 @@ const TOWN_VARIANTS = {
   ranger_pierce: [['교관 판정강화', 'starcrest_ranger_pierce']],
 };
 // 끌어당김(몰이) 스킬: 실제 Enemy 물리로 끌려온 위치 기준으로 잰다. 필수 네 가지(shield_bash·quake·whirlwind·hell_axe) 외에 같은 방식으로 환경변수로 늘릴 수 있다.
-const PULL_SKILLS = (process.env.AIM_PULL || 'shield_bash,quake,whirlwind,hell_axe,heavenfall,star_prison,absolute_zero,night_parade,eclipse_edge,bloodquake').split(',').filter(Boolean);
+const PULL_SKILLS = (process.env.AIM_PULL || '*').split(',').filter(Boolean);
 
 // 브라우저 안에서 도는 함수(직렬화되므로 바깥 변수를 쓰지 않는다).
 function pageRun({ hero, jobId, inDepth, outGap, enemyRadius, only, noArea, randomSeeds, townVariants, pullSkills }) {
@@ -154,6 +154,13 @@ function pageRun({ hero, jobId, inDepth, outGap, enemyRadius, only, noArea, rand
       }
     }
     // 실제 경계 거리로 검증: 안쪽은 표시 안(sd<0), 바깥은 0.75m 이상 밖이어야 한다. 다른 하위 도형 안에 들어가 어긋난 후보는 버린다.
+    // 몰이 한계(envelope)가 영웅 중심 원인 선·부채꼴 스킬(dragon_slash·flurry)은 그 원 안쪽 한계 안 0.4m와 바깥 0.8m를 8방향으로 잰다.
+    if (s.envelopeKind === 'pull' && s.envelope > 0 && (s.kind === 'cone' || s.kind === 'line')) {
+      for (let k = 0; k < 8; k++) {
+        const f = (15 + k * 45) * Math.PI / 180, lab = Math.round(15 + k * 45) + '°', at = rr => [rr * Math.cos(f), rr * Math.sin(f)];
+        add('pull', '끌림 한계 안 ' + lab, ...at(s.envelope - 0.4)); add('out', '끌림 밖 ' + lab, ...at(s.envelope + outGap));
+      }
+    }
     // 레인 다발: 레인마다 끝·옆 안/밖 표본, 레인 사이 틈(이웃 레인 방향의 이등분선) 표본. 틈 표본은 표시 밖이므로 맞지 않아야 한다.
     if (s.lanes > 0) {
       const n = s.lanes | 0, hw = Math.max(0.7, s.laneHalf * 2) / 2, len = s.laneLen, d = Math.min(inDepth, hw);
@@ -176,7 +183,8 @@ function pageRun({ hero, jobId, inDepth, outGap, enemyRadius, only, noArea, rand
         }
       }
     }
-    return c.map(q => ({ ...q, a: +q.a.toFixed(3), c: +q.c.toFixed(3), sd: +sdOf(list, q.a, q.c).toFixed(3) })).filter(q => q.group === 'in' ? q.sd < -0.05 : q.group === 'band' || q.group === 'pull' ? q.sd > 0.3 : q.group.startsWith('hop') ? true : q.sd >= outGap - 0.05);
+    const inEnv = q => (s.kind === 'cone' || s.kind === 'line') && s.envelopeKind === 'pull' && s.envelope > 0 && Math.hypot(q.a, q.c) < s.envelope + outGap - 0.05 && !(q.name || '').startsWith('끌림');
+    return c.map(q => ({ ...q, a: +q.a.toFixed(3), c: +q.c.toFixed(3), sd: +sdOf(list, q.a, q.c).toFixed(3) })).filter(q => q.group === 'in' ? q.sd < -0.05 : q.group === 'band' || q.group === 'pull' ? q.sd > 0.3 : q.group.startsWith('hop') ? true : q.sd >= outGap - 0.05 && !(q.group === 'out' && inEnv(q)));
   };
   const spawnPool = n => { for (let i = pool.length; i < n; i++) { const e = b.spawnEnemy(defKey, null, null, new THREE.Vector3(o0.x + 5000, 0, o0.z + 5000)); if (!e) throw new Error('표본 적 생성 실패: ' + defKey); freeze(e); park(e); pool.push(e); } };
   const realRandom = Math.random;
@@ -217,7 +225,7 @@ function pageRun({ hero, jobId, inDepth, outGap, enemyRadius, only, noArea, rand
       if (noArea[sk.id]) { vr.exception = noArea[sk.id]; towns.learned = savedLearned; if (opt.proc && !hadProc) b.procs.delete(opt.proc); continue; }
       const list = parts(shape, frac); vr.parts = list;
       const samples = samplesFor(shape, list, frac, sk.id); spawnPool(2);
-      const pull = pullSkills.includes(sk.id);
+      const pull = pullSkills.includes('*') || pullSkills.includes(sk.id);
       const seeds = randomSeeds[sk.id] || 1;
       for (const sm of samples) {
         const w = pt(sm.a, sm.c); sm.x = +(w.x - o0.x).toFixed(3); sm.z = +(w.z - o0.z).toFixed(3);

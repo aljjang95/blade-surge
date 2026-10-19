@@ -322,6 +322,9 @@ test('envelope가 있는 스킬은 확정 반지름과 envelope 값이 고정되
     heavenfall: { confirmed: 8, envelope: 12, kind: 'pull' }, star_prison: { confirmed: 7, envelope: 12, kind: 'pull' },
     absolute_zero: { confirmed: 9, envelope: 12, kind: 'pull' }, night_parade: { confirmed: 5, envelope: 9, kind: 'pull' },
     eclipse_edge: { confirmed: 8, envelope: 10, kind: 'pull' }, bloodquake: { confirmed: 8, envelope: 9, kind: 'pull' },
+    // 영웅 중심 몰이(2026-10-19 2차 재감사 후 전 스킬 몰이 물리 검사): 부채꼴·자기 중심이라 점선 원은 영웅 중심이다.
+    dragon_slash: { confirmed: 7.2, envelope: 12, kind: 'pull' }, flurry: { confirmed: 4, envelope: 4.5, kind: 'pull' },
+    blizzard: { confirmed: 6.8, envelope: 8.5, kind: 'pull' }, sanctuary: { confirmed: 8, envelope: 11.5, kind: 'pull' },
   };
   const p = player('meteor'), view = new SkillAimView(new THREE.Scene()), aim = { active: true, cancel: false, x: 0, z: 1, dist01: .5 };
   const out: any = {}, withEnvelope: string[] = [];
@@ -340,7 +343,7 @@ test('envelope가 있는 스킬은 확정 반지름과 envelope 값이 고정되
     expect(view.envelopeMaterial.uniforms.uRadius.value).toBeCloseTo(shape.envelope);
     expect(view.envelope.position.z).toBeCloseTo(shape.kind === 'circle' ? shape.range * aim.dist01 : 0);
     expect(view.envelope.renderOrder).toBeLessThan(view.target.renderOrder);
-    if (shape.kind === 'circle') expect(view.target.scale.x).toBeCloseTo(shape.radius); else expect(view.range.scale.x).toBeCloseTo(shape.range);
+    if (shape.kind === 'circle') expect(view.target.scale.x).toBeCloseTo(shape.radius); else expect(view.range.scale.x).toBeCloseTo(shape.range + (shape.origin || 0) + (shape.tip || 0));
   }
   expect(withEnvelope.sort()).toEqual(Object.keys(expected).sort());
   view.dispose();
