@@ -185,7 +185,7 @@ function pageRun({ hero, jobId, inDepth, outGap, enemyRadius, only, noArea, rand
     }
     const inEnv = q => (s.kind === 'cone' || s.kind === 'line') && s.envelopeKind === 'pull' && s.envelope > 0 && Math.hypot(q.a, q.c) < s.envelope + outGap - 0.05 && !(q.name || '').startsWith('끌림');
     // 표적 의존 스킬(shadow_mark 등: 표시 안 대상이 있어야 후속 몰이·폭발이 실행된다)을 위해 모든 표본에 표시 안 앵커 적 하나를 함께 둔다(3차 재감사: 표적 없이는 후속 몰이·폭발을 놓침). 점멸·투사체 스킬은 앵커가 판정 자체를 바꾸므로 넣지 않는다.
-    if (['shadow_mark', 'chrono_seal'].includes(skillId)) for (const q of c) if (!q.anchor) q.anchor = { a: 9, c: 0 };
+    if (['shadow_mark', 'chrono_seal', 'void_step'].includes(skillId)) for (const q of c) if (!q.anchor) q.anchor = { a: 9, c: 0 };
     return c.map(q => ({ ...q, a: +q.a.toFixed(3), c: +q.c.toFixed(3), sd: +sdOf(list, q.a, q.c).toFixed(3) })).filter(q => q.group === 'in' ? q.sd < -0.05 : q.group === 'band' || q.group === 'pull' ? q.sd > 0.3 : q.group.startsWith('hop') ? true : q.sd >= outGap - 0.05 && !(q.group === 'out' && inEnv(q)));
   };
   const spawnPool = n => { for (let i = pool.length; i < n; i++) { const e = b.spawnEnemy(defKey, null, null, new THREE.Vector3(o0.x + 5000, 0, o0.z + 5000)); if (!e) throw new Error('표본 적 생성 실패: ' + defKey); freeze(e); park(e); pool.push(e); } };
