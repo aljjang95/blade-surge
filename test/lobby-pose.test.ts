@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { AnimationClip, AnimationMixer, Bone, Group, Quaternion, QuaternionKeyframeTrack } from 'three';
 import { readFileSync } from 'node:fs';
-import { createLobbyPose, LOBBY_POSE_CORRECTIONS } from '../src/engine/lobby-pose.js';
+import { createLobbyPose, lobbyPoseWeight, LOBBY_POSE_CORRECTIONS } from '../src/engine/lobby-pose.js';
 
 function rig(hero = 'mage') {
   const root = new Group();
@@ -59,6 +59,34 @@ describe('로비 전용 자세 교정', () => {
   test('직업 교체와 두 전투 입장 경로는 쇼케이스 교정을 먼저 해제한다', () => {
     const source = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
     expect(source.match(/this\.showcase\.pose\?\.dispose\(\); disposeCharacter/g)?.length).toBe(3);
-    expect(source).toContain('s.pose?.restore();\n        if (!this.reducedMotion.matches || this.hubMovement.moving) s.mixer.update(realDt);\n        s.pose?.apply();');
+    expect(source).toContain('s.pose?.restore();\n        if (!this.reducedMotion.matches || this.hubMovement.moving) s.mixer.update(realDt);');
+    expect(source).toContain('s.pose?.apply(lobbyPoseWeight(s.idleAction));');
+  });
+  test('교정은 Idle 가중치만큼만 얹힌다: 걷기·감정 표현에서는 줄이거나 끈다', () => {
+    const running = (w: number) => ({ isRunning: () => true, getEffectiveWeight: () => w });
+    expect(lobbyPoseWeight(null)).toBe(1);
+    expect(lobbyPoseWeight(running(1))).toBe(1);
+    expect(lobbyPoseWeight(running(.4))).toBe(.4);
+    expect(lobbyPoseWeight(running(-.2))).toBe(0);
+    expect(lobbyPoseWeight(running(1.7))).toBe(1);
+    expect(lobbyPoseWeight({ isRunning: () => false, getEffectiveWeight: () => 1 })).toBe(0);
+
+    const root = rig('knight'), pose = createLobbyPose(root, 'knight')!;
+    const bone = root.children[0] as Bone, base = bone.quaternion.clone();
+    pose.apply(0); expect(bone.quaternion.equals(base)).toBe(true);
+    pose.restore(); expect(bone.quaternion.equals(base)).toBe(true);
+    pose.apply(1); const full = bone.quaternion.clone(); pose.restore();
+    pose.apply(.5); const half = bone.quaternion.clone(); pose.restore();
+    expect(full.equals(base)).toBe(false);
+    // 반 가중치는 원본과 전체 교정의 중간 회전이다.
+    expect(half.angleTo(base)).toBeCloseTo(full.angleTo(base) / 2, 5);
+    expect(half.angleTo(full)).toBeCloseTo(full.angleTo(base) / 2, 5);
+    pose.dispose(); expect(bone.quaternion.equals(base)).toBe(true);
+  });
+  test('부분 가중치 적용도 프레임마다 새 객체를 만들지 않는다', () => {
+    const source = readFileSync(new URL('../src/engine/lobby-pose.js', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
+    const apply = source.slice(source.indexOf('    apply(weight = 1)'), source.indexOf('    dispose()'));
+    expect(apply).not.toMatch(/\bnew\b|\.clone\(|\.map\(|\.filter\(|\.slice\(/);
+    expect(source.slice(source.indexOf('export function lobbyPoseWeight'), source.indexOf('export function createLobbyPose'))).not.toMatch(/\bnew\b|\.clone\(/);
   });
 });

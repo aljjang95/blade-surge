@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { installCombatMotionClips } from './combat-motion-clips.js';
 import { registerHeroBodyMotion, prepareHeroBodyMotion, commitHeroBodyMotion, selectedBodyMotionIdentity, disposeHeroBodyMotion } from './hero-body-motion.js';
 import { preloadArmory } from './armory-assets.js';
 import { forgeHeroWeapons } from './forged-weapons.js';
@@ -529,7 +530,7 @@ export function spawnCharacter(gltf) {
   const clips = {};
   for (const c of gltf.animations) clips[c.name] = c;
   for (const [alias, name] of Object.entries(contract?.aliases || {})) clips[alias] = clips[name];
-  try { registerHeroBodyMotion(root, clips); }
+  try { registerHeroBodyMotion(root, clips); installCombatMotionClips(clips, contract?.heroId); }
   catch (error) {
     // 아직 공유 재질을 쓰므로 실패한 clone의 skeleton·mixer만 정리한다.
     rigRoot.traverse(node => { if (node.isSkinnedMesh) node.skeleton.dispose(); });

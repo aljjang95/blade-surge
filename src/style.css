@@ -1032,6 +1032,8 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 #hud .skill-btn .aim-knob { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #ffffff, #dff8ff 55%, #7fe6ff); box-shadow: 0 0 0 2px #2ab8e6, 0 0 14px #5fe6ff; opacity: 0; pointer-events: none; transform: translate(var(--aim-x, 0px), var(--aim-y, 0px)); transition: opacity .08s; }
 #hud .skill-btn.aiming .aim-knob { opacity: 1; }
 #hud .skill-btn.aiming::after { content: ''; position: absolute; inset: -18px; border-radius: 50%; border: 2px solid #5fe6ffaa; box-shadow: 0 0 16px #5fe6ff66 inset; pointer-events: none; }
+/* 취소 버튼 아래(skill 버튼 위)에는 둘 자리가 없어 위치는 그대로 두고, 버튼이 떠 있는 동안 겹치는 우상단 임무 카드(#objective)를 숨긴다(tools/aim-cancel-overlap-qa.mjs). */
+#hud:has(#skill-aim-cancel.on) #objective { opacity: 0; transition: opacity .1s; }
 #skill-aim-cancel { position: absolute; top: calc(96px + var(--sat, 0px)); right: calc(118px + var(--sar, 0px)); z-index: 14; width: 62px; height: 62px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; background: radial-gradient(circle, #7a0f1cdd, #3a0710dd); border: 3px solid #ff4d5e; box-shadow: 0 0 0 2px #2a0208, 0 0 18px #ff2d4580; color: #fff; opacity: 0; transform: scale(.8); pointer-events: none; transition: opacity .1s, transform .1s; }
 #skill-aim-cancel b { font-size: 26px; line-height: 1; color: #ff5a68; text-shadow: 0 0 6px #ff1d3a; }
 #skill-aim-cancel small { font-size: 9px; font-weight: 800; letter-spacing: .04em; }

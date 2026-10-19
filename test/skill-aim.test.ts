@@ -4,7 +4,7 @@ import { Input, skillAimThreshold } from '../src/engine/input.js';
 import { cameraRelativeMove } from '../src/engine/camera-control.js';
 import { Player } from '../src/game/player.js';
 import { SKILLS } from '../src/game/skills.js';
-import { skillAimShape, playerSkillAimShape } from '../src/game/skill-aim/shapes.js';
+import { skillAimShape, playerSkillAimShape, BOW_SOCKET } from '../src/game/skill-aim/shapes.js';
 import { SkillAimView } from '../src/game/skill-aim/aim-view.js';
 
 class Element extends EventTarget {
@@ -217,4 +217,170 @@ test('표시는 동일 메시·버퍼를 재사용하고 전투 상태를 변경
   view.update(p, { ...aim, cancel: true }, out); expect(view.group.visible).toBe(false);
   let disposed = 0; geometry.addEventListener('dispose', () => disposed++); view.dispose();
   expect(scene.children).toHaveLength(0); expect(disposed).toBe(1);
+});
+
+// ---- 표시 = 판정(tools/aim-hitbox-truth-qa.mjs 실측으로 고친 스킬) ----
+// 레인(시작점에서 각도 ang로 len만큼 나가는 반폭 hw의 사각형)의 경계 거리(음수면 안). 좌표는 영웅 앞쪽 a, 오른쪽 c.
+function laneSd(a: number, c: number, lane: any) {
+  const ra = a - lane.sa, rc = c - lane.sc, cs = Math.cos(lane.ang), sn = Math.sin(lane.ang);
+  const along = ra * cs + rc * sn, across = -ra * sn + rc * cs;
+  const qa = Math.abs(along - lane.len / 2) - lane.len / 2, qc = Math.abs(across) - lane.hw;
+  return Math.hypot(Math.max(qa, 0), Math.max(qc, 0)) + Math.min(Math.max(qa, qc), 0);
+}
+// 표시 모양의 레인 목록(aim-view와 같은 식).
+function lanesOf(shape: any) {
+  const list: any[] = [];
+  for (let i = 0; i < shape.lanes; i++) {
+    const off = i - (shape.lanes - 1) / 2; if (shape.laneSkipCenter && off === 0) continue;
+    const ang = off * shape.laneStep;
+    list.push({ ang, hw: shape.laneHalf, len: shape.laneLen, sa: shape.laneBaseA + shape.laneReach * Math.cos(ang), sc: shape.laneBaseC + shape.laneReach * Math.sin(ang) });
+  }
+  return list;
+}
+function projectilesOf(id: string, learned: any = null) {
+  const p = player(id), list: any[] = [];
+  if (learned) p.game.app = { eco: { s: { towns: { learned } } } };
+  // 활 영웅: 화살 시작점 = 활 소켓 + 화살 방향 × .35(player.js arrowOrigin). 소켓은 영웅 기준 앞 .64·오른쪽 .07(실측, BOW_SOCKET).
+  if (id.startsWith('ranger') || id === 'gale_hunt') {
+    p.def = { ...p.def, weapon: 'bow' };
+    p.arrowOrigin = (dir: THREE.Vector3) => {
+      const f = new THREE.Vector3(Math.sin(p.yaw), 0, Math.cos(p.yaw)), r = new THREE.Vector3(Math.cos(p.yaw), 0, -Math.sin(p.yaw));
+      return p.pos.clone().addScaledVector(f, BOW_SOCKET.a).addScaledVector(r, BOW_SOCKET.c).addScaledVector(dir, BOW_SOCKET.reach).setY(1.3);
+    };
+  }
+  p.game.spawnProjectile = (value: any) => list.push(value);
+  p.game.hitArea = () => 0; p.game.timeCtl = { slowmo() {} }; p.game.renderer = new Proxy({}, { get: () => () => {}, set: () => true });
+  (SKILLS as any)[id].cast(p.game, p, { dmg: 10, data: {} });
+  return { p, list };
+}
+// 각 투사체 몸통 가장자리 두 점이 시간 구간 전체에서 방향각이 같은 레인 안에 있는지 확인한다(영웅 앞쪽 a, 오른쪽 c).
+function expectSweptLanes(p: any, list: any[], lanes: any[]) {
+  const ux = Math.sin(p.yaw), uz = Math.cos(p.yaw), vx = Math.cos(p.yaw), vz = -Math.sin(p.yaw);
+  for (const q of list) for (let t = 0; t <= 1.001; t += .125) {
+    const ang = Math.atan2(q.dir.x * vx + q.dir.z * vz, q.dir.x * ux + q.dir.z * uz);
+    const lane = lanes.find(l => Math.abs(l.ang - ang) < 1e-6); expect(lane).toBeDefined();
+    const cx = q.pos.x - p.pos.x + q.dir.x * q.speed * q.life * t, cz = q.pos.z - p.pos.z + q.dir.z * q.speed * q.life * t;
+    for (const side of [-1, 1]) {
+      const px = cx + q.dir.z * q.radius * side, pz = cz - q.dir.x * q.radius * side;
+      expect(laneSd(px * ux + pz * uz, px * vx + pz * vz, lane)).toBeLessThanOrEqual(.05);
+    }
+  }
+}
+
+test('직선 투사체 표시는 몸통 반경만큼 끝이 더 나가 실제 최대 도달 지점을 덮는다', () => {
+  for (const id of ['holy_slash', 'ranger_pierce', 'ranger_quickshot', 'fireball']) {
+    const { p, list } = projectilesOf(id), shape: any = playerSkillAimShape(p, id, {});
+    const q = list[0], along = Math.hypot(q.pos.x - p.pos.x, q.pos.z - p.pos.z);
+    expect(shape.origin + shape.range + shape.tip).toBeGreaterThanOrEqual(along + q.speed * q.life + q.radius - .02);
+    expect(shape.tip).toBeGreaterThanOrEqual(shape.width / 2);
+  }
+});
+
+// 화살 다발(교관 추가탄 네 발 포함)은 부채꼴로 채우지 않고 화살마다 레인으로 그려 발 사이 틈을 비운다.
+test('화살 다발 표시는 화살마다 레인을 두고 각 화살 몸통이 훑는 영역을 덮으며 발 사이는 비운다', () => {
+  const cases: [string, any, number][] = [['ranger_volley', null, 3], ['ranger_volley', { ranger: ['oathhold_ranger_extra'] }, 4], ['ranger_tempest', null, 7], ['ranger_binding', null, 5], ['gale_hunt', null, 3]];
+  for (const [id, learned, count] of cases) {
+    const { p, list } = projectilesOf(id, learned), shape: any = playerSkillAimShape(p, id, {});
+    expect(list).toHaveLength(count); expect(shape.lanes).toBe(count); expect(shape.laneSkipCenter).toBe(0); expect(shape.laneReach).toBeCloseTo(BOW_SOCKET.reach);
+    const lanes = lanesOf(shape); expectSweptLanes(p, list, lanes);
+    // 레인 끝은 마지막 몸통 가장자리(이동 거리 + 반경)와 보정을 덮는다.
+    expect(shape.laneLen).toBeGreaterThanOrEqual(list[0].speed * list[0].life + list[0].radius);
+    // 이웃 레인 사이 이등분선의 먼 지점은 어느 레인 안도 아니고(경계에서 .3m 이상) 틈으로 남는다. 가장 좁은 다발(화살 일곱 발)도 해당한다.
+    for (let i = 0; i < lanes.length - 1; i++) {
+      const mid = (lanes[i].ang + lanes[i + 1].ang) / 2, d = shape.origin + shape.laneLen * .9;
+      expect(Math.min(...lanes.map(l => laneSd(d * Math.cos(mid), d * Math.sin(mid), l)))).toBeGreaterThan(.3);
+    }
+  }
+});
+
+test('용살검 파동 세 줄기는 레인으로 그려지고 각 파동 몸통을 덮는다', () => {
+  const { p, list } = projectilesOf('dragon_slash'), shape: any = playerSkillAimShape(p, 'dragon_slash', {});
+  expect(list).toHaveLength(3); expect(shape.lanes).toBe(3); expect(shape.laneStep).toBeCloseTo(.32); expect(shape.laneHalf).toBeCloseTo(1.5);
+  expectSweptLanes(p, list, lanesOf(shape));
+});
+
+test('확정 범위만 그리는 스킬과 끝 원이 없는 반사창', () => {
+  const p = player('meteor');
+  const meteor: any = playerSkillAimShape(p, 'meteor', {}), magma: any = playerSkillAimShape(p, 'magma_zone', {}), arc: any = playerSkillAimShape(p, 'arc_reflect', {});
+  // meteor: 첫 낙하(r 3.4)만 어느 방향에서도 확정. 바깥 한계 7.8은 운이 맞아야 닿는 띠다.
+  expect(meteor.radius).toBeCloseTo(3.4); expect(meteor.envelope).toBeCloseTo(7.8);
+  // magma_zone: 균열 장판(r 6.4)이 확정. 기둥 고리 7.5는 기둥 방향에서만 닿는다.
+  expect(magma.range).toBeCloseTo(6.4); expect(magma.envelope).toBeCloseTo(7.5);
+  // arc_reflect: 폭발은 열두 번째 반사 위치에서 터지므로 직선 끝 원이 없다.
+  expect(arc.radius).toBe(0);
+  // 원본 판정 기준 수치는 그대로다.
+  expect(skillAimShape('meteor')!.radius).toBeCloseTo(7.8); expect(skillAimShape('magma_zone')!.range).toBeCloseTo(7.5);
+});
+
+// 확정 영역과 구분되는 바깥 한계(envelope): 확률 띠(chance)와 몰이 한계(pull)를 점선 원으로 그린다. 값은 tools/aim-hitbox-truth-qa.mjs 실측이다.
+test('envelope가 있는 스킬은 확정 반지름과 envelope 값이 고정되고 점선 원이 확정 영역과 따로 그려진다', () => {
+  const expected: Record<string, { confirmed: number; envelope: number; kind: string }> = {
+    meteor: { confirmed: 3.4, envelope: 7.8, kind: 'chance' }, magma_zone: { confirmed: 6.4, envelope: 7.5, kind: 'chance' },
+    shield_bash: { confirmed: 5, envelope: 7, kind: 'pull' }, quake: { confirmed: 8, envelope: 9, kind: 'pull' },
+    whirlwind: { confirmed: 3.8, envelope: 5.5, kind: 'pull' }, hell_axe: { confirmed: 6, envelope: 7.5, kind: 'pull' },
+    // 몰이 필살기: 확정 반지름은 hitRadius, 한계는 정식 빌드 몰이 물리 실측(재감사 2026-10-19: 표시 밖 8방향 전부 피격).
+    heavenfall: { confirmed: 8, envelope: 12, kind: 'pull' }, star_prison: { confirmed: 7, envelope: 12, kind: 'pull' },
+    absolute_zero: { confirmed: 9, envelope: 12, kind: 'pull' }, night_parade: { confirmed: 5, envelope: 9, kind: 'pull' },
+    eclipse_edge: { confirmed: 8, envelope: 10, kind: 'pull' }, bloodquake: { confirmed: 8, envelope: 9, kind: 'pull' },
+    // 영웅 중심 몰이(2026-10-19 2차 재감사 후 전 스킬 몰이 물리 검사): 부채꼴·자기 중심이라 점선 원은 영웅 중심이다.
+    dragon_slash: { confirmed: 7.2, envelope: 12, kind: 'pull' }, flurry: { confirmed: 4, envelope: 4.5, kind: 'pull' },
+    blizzard: { confirmed: 6.8, envelope: 8.5, kind: 'pull' }, sanctuary: { confirmed: 8, envelope: 11.5, kind: 'pull' },
+    // 봉인 대상 주변 폭발(3.8m)이 표시 9.5m 밖으로 번진다(3차 재감사 이후 표적 앵커 검사).
+    chrono_seal: { confirmed: 9.5, envelope: 13.3, kind: 'chance' },
+  };
+  const p = player('meteor'), view = new SkillAimView(new THREE.Scene()), aim = { active: true, cancel: false, x: 0, z: 1, dist01: .5 };
+  const out: any = {}, withEnvelope: string[] = [];
+  for (const id of Object.keys(SKILLS)) {
+    const shape: any = playerSkillAimShape(p, id, out); view.update(p, aim, shape);
+    expect(shape.envelopeKind === '').toBe(!(shape.envelope > 0));
+    if (!(shape.envelope > 0)) { expect(view.envelope.visible).toBe(false); continue; }
+    withEnvelope.push(id);
+    const want = expected[id]; expect(want).toBeDefined();
+    // 확정 반지름: 지점형은 radius, 자기 중심형은 range. envelope는 항상 확정보다 크다.
+    const confirmed = shape.kind === 'circle' ? shape.radius : shape.range;
+    expect(confirmed).toBeCloseTo(want.confirmed); expect(shape.envelope).toBeCloseTo(want.envelope); expect(shape.envelopeKind).toBe(want.kind);
+    expect(shape.envelope).toBeGreaterThan(confirmed);
+    // 점선 원: 보이고, envelope 반지름이며, 지점형은 지점 중심(range × dist01), 자기 중심형은 영웅 중심이다. 확정 원 위에 덮이지 않도록 아래층이다.
+    expect(view.envelope.visible).toBe(true); expect(view.envelope.scale.x).toBeCloseTo(shape.envelope);
+    expect(view.envelopeMaterial.uniforms.uRadius.value).toBeCloseTo(shape.envelope);
+    expect(view.envelope.position.z).toBeCloseTo(shape.kind === 'circle' ? shape.range * aim.dist01 : 0);
+    expect(view.envelope.renderOrder).toBeLessThan(view.target.renderOrder);
+    if (shape.kind === 'circle') expect(view.target.scale.x).toBeCloseTo(shape.radius); else expect(view.range.scale.x).toBeCloseTo(shape.range + (shape.origin || 0) + (shape.tip || 0));
+  }
+  expect(withEnvelope.sort()).toEqual(Object.keys(expected).sort());
+  view.dispose();
+});
+
+test('분열 화염 교관 변형은 옆으로 갈라지는 투사체마다 레인을 더한다', () => {
+  const mage = (learned: any) => { const p = player('fireball', { def: { id: 'mage', skills: [{ id: 'fireball', cd: 5, dmg: 1, mp: 10 }] } }); p.game.app = { eco: { s: { towns: { learned } } } }; return p; };
+  const base: any = playerSkillAimShape(mage({}), 'fireball', {}), split: any = playerSkillAimShape(mage({ mage: ['oathhold_mage_split'] }), 'fireball', {});
+  expect(base.lanes).toBe(0); expect(base.radius).toBeCloseTo(4.2);
+  expect(split.radius).toBeCloseTo(5.2); expect(split.lanes).toBe(3); expect(split.laneSkipCenter).toBe(1); expect(split.laneReach).toBe(0); expect(split.laneBaseA).toBeCloseTo(split.origin);
+  // 갈라지는 투사체 둘(속도 15 × 수명 .8, 몸통 .55, 조준 축 위 시작점)이 레인 안에 들어간다.
+  const lanes = lanesOf(split); expect(lanes).toHaveLength(2);
+  for (const lane of lanes) for (const t of [0, .5, 1]) for (const side of [-1, 1]) {
+    const along = split.origin + 12 * t * Math.cos(lane.ang) - side * .55 * Math.sin(lane.ang), across = 12 * t * Math.sin(lane.ang) + side * .55 * Math.cos(lane.ang);
+    expect(laneSd(along, across, lane)).toBeLessThanOrEqual(.05);
+  }
+  const view = new SkillAimView(new THREE.Scene()), pl = mage({ mage: ['oathhold_mage_split'] });
+  view.update(pl, { active: true, cancel: false, x: 0, z: 1, dist01: 1 }, split);
+  expect(view.laneNodes.filter((n: any) => n.pivot.visible)).toHaveLength(2); expect(view.lane.visible).toBe(true); view.dispose();
+});
+
+test('화살 다발은 부채꼴·사거리 원판 없이 레인만 그리고 용살검은 근접 부채꼴에 레인을 더한다', () => {
+  const view = new SkillAimView(new THREE.Scene()), p = player(), aim = { active: true, cancel: false, x: 0, z: 1, dist01: 1 };
+  const out: any = {};
+  const shown = () => view.laneNodes.filter((n: any) => n.pivot.visible).length;
+  view.update(p, aim, playerSkillAimShape(p, 'ranger_volley', out));
+  expect(view.cone.visible).toBe(false); expect(view.range.visible).toBe(false); expect(view.lane.visible).toBe(false); expect(view.head.visible).toBe(false);
+  expect(shown()).toBe(3);
+  // 바깥 레인은 조준 축에서 laneStep만큼 돌고, 시작점은 각 레인 방향으로 origin만큼 나간다.
+  const node = view.laneNodes[0]; expect(node.pivot.rotation.y).toBeCloseTo(-out.laneStep); expect(node.mesh.position.z).toBeCloseTo(BOW_SOCKET.reach);
+  expect(node.pivot.position.z).toBeCloseTo(BOW_SOCKET.a); expect(node.pivot.position.x).toBeCloseTo(BOW_SOCKET.c);
+  expect(node.mesh.scale.x).toBeCloseTo(out.laneHalf * 2); expect(node.mesh.scale.y).toBeCloseTo(out.laneLen);
+  view.update(p, aim, playerSkillAimShape(p, 'dragon_slash', out));
+  expect(view.cone.visible).toBe(true); expect(view.cone.position.z).toBeCloseTo(0); expect(view.lane.visible).toBe(false); expect(shown()).toBe(3);
+  view.update(p, aim, playerSkillAimShape(p, 'holy_slash', out));
+  expect(shown()).toBe(0); expect(view.range.visible).toBe(true); expect(view.lane.scale.y).toBeCloseTo(out.range + out.tip);
+  view.dispose();
 });

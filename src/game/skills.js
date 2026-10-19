@@ -7,6 +7,20 @@ import { hasTownSkillVariant } from './town-combat.js';
 
 const _v = new THREE.Vector3();
 const fwd = (p, d = 1) => p.forward(new THREE.Vector3()).multiplyScalar(d).add(p.pos);
+/** game.hitRadius와 같되 영웅에서 limit m 안의 적만 친다(표시 범위 밖 폭발 피해를 막는 스킬용). */
+function hitWithin(game, p, center, radius, limit, dmg, opts = {}) {
+  let n = 0;
+  for (const e of game.enemies) {
+    if (!e.alive || e.spawning || p.distTo(e) >= limit) continue;
+    const dx = e.pos.x - center.x, dz = e.pos.z - center.z;
+    if (Math.hypot(dx, dz) - e.radius * 0.5 > radius) continue;
+    const from = opts.dirFrom || center;
+    game.damageEnemy(e, dmg, { ...opts, dirx: e.pos.x - from.x, dirz: e.pos.z - from.z }); n++;
+    if (n >= 30) break;
+  }
+  game.routeObjectives?.strike?.(game, center.x, center.z, radius);
+  return n;
+}
 const targets = (game, p, max = 6, range = 10) => game.enemies.filter((e) => e.alive && !e.spawning && p.distTo(e) < range).sort((a, b) => p.distTo(a) - p.distTo(b)).slice(0, max);
 const rangerOrigin = (p, dir) => p.def?.weapon === 'bow' && p.arrowOrigin ? p.arrowOrigin(dir) : p.pos.clone().addScaledVector(dir, .9).setY(1.2);
 function rangerArrows(game, p, dmg, count = 1, options = {}) {
@@ -40,12 +54,12 @@ export const SKILL_PROJECTILES = Object.freeze({
 export const SKILL_AIM_SHAPES = Object.freeze({
   guardian_guard: { kind: 'self', range: 0 },
   guardian_rebuke: { kind: 'self', range: 4, radius: 4 },
-  ranger_pierce: { kind: 'line', range: SKILL_PROJECTILES.pierce.speed * SKILL_PROJECTILES.pierce.life, width: .65 * 2, origin: .8 },
-  ranger_volley: { kind: 'cone', range: SKILL_PROJECTILES.volley.speed * SKILL_PROJECTILES.volley.life, angle: .48 * 180 / Math.PI, width: 1.6, origin: .8 },
-  ranger_retreat: { kind: 'line', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, width: 1.4, origin: .8 },
-  ranger_tempest: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: 1.08 * 180 / Math.PI, width: 1.9, origin: .8 },
-  ranger_quickshot: { kind: 'line', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, width: 1.4, origin: .8 },
-  ranger_binding: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: .72 * 180 / Math.PI, width: 1.4, origin: .8 },
+  ranger_pierce: { kind: 'line', range: SKILL_PROJECTILES.pierce.speed * SKILL_PROJECTILES.pierce.life, width: .65 * 2, origin: 1 },
+  ranger_volley: { kind: 'cone', range: SKILL_PROJECTILES.volley.speed * SKILL_PROJECTILES.volley.life, angle: .48 * 180 / Math.PI, width: 1.6, origin: 1 },
+  ranger_retreat: { kind: 'line', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, width: 1.4, origin: 1 },
+  ranger_tempest: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: 1.08 * 180 / Math.PI, width: 1.9, origin: 1 },
+  ranger_quickshot: { kind: 'line', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, width: 1.4, origin: 1 },
+  ranger_binding: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: .72 * 180 / Math.PI, width: 1.4, origin: 1 },
   holy_slash: { kind: 'line', range: SKILL_PROJECTILES.holy.speed * SKILL_PROJECTILES.holy.life, width: 4, origin: 1 },
   shield_bash: { kind: 'circle', range: 1.2, radius: 5 },
   judgment: { kind: 'self', range: 12, radius: 2.2 },
@@ -79,7 +93,7 @@ export const SKILL_AIM_SHAPES = Object.freeze({
   absolute_zero: { kind: 'circle', range: 17, radius: 9 },
   night_parade: { kind: 'circle', range: 13, radius: 5 },
   eclipse_edge: { kind: 'circle', range: 16, radius: 8 },
-  gale_hunt: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: .36 * 180 / Math.PI, width: 1.8, origin: .8 },
+  gale_hunt: { kind: 'cone', range: SKILL_PROJECTILES.ranger.speed * SKILL_PROJECTILES.ranger.life, angle: .36 * 180 / Math.PI, width: 1.8, origin: 1 },
   skyfall_arrows: { kind: 'circle', range: 18, radius: 2.2 + 4.2 },
 });
 for (const shape of Object.values(SKILL_AIM_SHAPES)) Object.freeze(shape);
@@ -233,7 +247,21 @@ export const SKILLS = {
       audio.magic({ vol: 0.5, base: 330, notes: [0, 7, 12, 19, 24], step: 0.09, type: 'sawtooth' });
       c.data.vac = 0;
     },
-    update(game, p, c, dt) { c.data.vac -= dt; if (c.data.vac <= 0 && c.t < 1.1) { c.data.vac = 0.1; game.vacuum(p.pos, 12, 9); } },
+    update(game, p, c, dt) {
+      c.data.vac -= dt;
+      if (c.data.vac <= 0 && c.t < 1.1) {
+        c.data.vac = 0.1;
+        // 이미 부채꼴 안(130°, 사거리 7.2m)에 든 적은 끌지 않는다: 끌어도 맞는 위치인데 연속 힘으로 정면 표본이 영웅을 지나치거나 겹쳐 빠지는 것을 막는다(몰이 포함 판정 검사).
+        const half = THREE.MathUtils.degToRad(SKILL_AIM_SHAPES.dragon_slash.angle) / 2, R = SKILL_AIM_SHAPES.dragon_slash.range;
+        for (const e of game.enemies) {
+          if (!e.alive || e.spawning) continue;
+          const dx = e.pos.x - p.pos.x, dz = e.pos.z - p.pos.z, d2 = dx * dx + dz * dz;
+          if (d2 > 144) continue;
+          if (d2 < R * R) { let diff = Math.abs(Math.atan2(dx, dz) - p.yaw); diff = Math.min(diff, Math.PI * 2 - diff); if (diff <= half) continue; }
+          e.pull(p.pos.x, p.pos.z, 9);
+        }
+      }
+    },
     cast(game, p, c) {
       const f = p.forward(new THREE.Vector3());
       game.hitArea(p, p.pos, p.yaw, SKILL_AIM_SHAPES.dragon_slash.range, SKILL_AIM_SHAPES.dragon_slash.angle, c.dmg, { kb: 10, kind: 'slash', finisher: true, skillCast:c, up: true, source: p });
@@ -816,9 +844,16 @@ export const SKILLS = {
         if (!alive.length) return;
         const hub = alive.reduce((a, e) => a.add(e.pos), new THREE.Vector3()).multiplyScalar(1 / alive.length);
         for (const e of alive) game.fx.boltTex(e.pos.clone().setY(1), hub.clone().setY(1), 0xb26bff, { width: 1.4, life: 0.28 });
-        game.vacuum(hub, 14, 26);
+        // 표시(자기 중심 13m) 밖 적은 끌지도 치지도 않는다: 표식 대상이 먼 곳에 있으면 표시 밖 적이 몰려와 맞던 것을 막는다(3차 재감사 shadow_mark 다중 표적).
+        const reach = SKILL_AIM_SHAPES.shadow_mark.range;
+        audio.suck({ vol: 0.22, dur: 0.4 });
+        for (const e of game.enemies) {
+          if (!e.alive || e.spawning || p.distTo(e) >= reach) continue;
+          const dx = e.pos.x - hub.x, dz = e.pos.z - hub.z;
+          if (dx * dx + dz * dz <= 196) e.pull(hub.x, hub.z, 26);
+        }
         game.after(0.18, () => {
-          game.hitRadius(hub, 5.5, c.dmg * 1.6, { kb: 6, kind: 'slash', up: true, source: p, dirFrom: hub });
+          hitWithin(game, p, hub, 5.5, reach, c.dmg * 1.6, { kb: 6, kind: 'slash', up: true, source: p, dirFrom: hub });
           game.fx.texFlash(hub, 'singularity', 0xb26bff, { size: 9, life: 0.5, spin: 0.6, grow: 1.5, y: 0.6 });
           game.fx.explosion(hub, { size: 7, color: 0xd0a0ff, life: 0.5 });
           game.fx.shockTex(hub, 0xb26bff, { r1: 6.5, life: 0.5 });
