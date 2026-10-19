@@ -21,3 +21,15 @@ for (const [name, bossZ, healerX, healerZ, escorts] of [
   for (let i = 0; i < 120 && !p.hitDone; i++) stepCombatFlow(f, 1 / 60);
   expect(f.events.hits.some((hit: any) => hit.enemy === healer && hit.basic)).toBe(true);
 });
+
+test('AUTO는 준비된 궁극기로 보스 회복 무리를 끊고, 지원 적이 없으면 기존 보스 마무리 기준을 따른다', () => {
+  for (const withHealer of [false, true]) {
+    const f = createCombatFlowFixture(runtime, 'knight'), p: any = f.player;
+    spawnCombatFlowEnemy(f, p.pos.x, p.pos.z + 4, { isBoss: true, hp: 1e6, maxHp: 1e6, stun: 60 });
+    if (withHealer) spawnCombatFlowEnemy(f, p.pos.x + 3, p.pos.z + 4, { behavior: 'shaman', hp: 1e6, maxHp: 1e6, stun: 60 });
+    p.auto = true; p.ult = p.ultMax; p.cds.fill(Infinity);
+    p.autoMove(1 / 60);
+    const ultSlot = p.def.skills.findIndex((skill: any) => skill.ult);
+    expect(f.game.input.queue.includes(`skill${ultSlot}`)).toBe(withHealer);
+  }
+});

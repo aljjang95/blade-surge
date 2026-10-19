@@ -677,9 +677,11 @@ export class Player extends Actor {
         if (!ready) continue;
         const bossFinish = !!boss && boss === e && boss.hp / Math.max(1, boss.maxHp) <= .35;
         const emergencyCrowd = cluster >= 8 && this.hp / Math.max(1, this.maxHp) <= .45;
+        // 회복 무리를 그대로 두면 보스가 마무리 체력에 도달하지 않는다. 준비된 궁극기로 지원을 먼저 끊는다.
+        const supportBurst = !!boss && e.behavior === 'shaman' && cluster >= 2;
         const linkReady = !!this.game.getComboLinkSnapshot?.().ready;
         const controlOpening = linkReady || e.breakT > 0 || (e.telegraph > 0 && d < 5);
-        if (sk.ult && !bossFinish && !emergencyCrowd) continue;
+        if (sk.ult && !bossFinish && !emergencyCrowd && !supportBurst) continue;
         if (!sk.ult && !controlOpening && cluster < 5) continue;
         const wantCluster = this.game.stage?.expedition?.kind === 'arena' ? 1 : sk.ult ? 1 : sk.awaken ? 2 : 1;
         if (cluster >= wantCluster && d < (this.def.ranged ? 11 : 8)) { this.game.input.press('skill' + slot); return out; }
