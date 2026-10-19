@@ -36,7 +36,7 @@ export function summarizeSamples(samples) {
 }
 
 /** 브라우저 안에 측정·재생 도구를 설치한다. 직렬화되므로 바깥 변수를 쓰지 않는다. */
-function installProbe() {
+export function installProbe() {
   const T = window.__THREE, V = T.Vector3, app = window.app, DT = 1 / 60, SPEC_HEAD_R = .35;
   if (!T || !app) throw new Error('window.__THREE / window.app 없음');
   const low = s => s.toLowerCase().replace(/mixamorig:?/, '');
@@ -212,8 +212,11 @@ function installProbe() {
       if (t === 'end') break;
       if (t === null || t === undefined) continue;
       if (inBattle) actions.add(player().actionName);
-      samples.push([f, +t.toFixed(3), ...measure(rig)]);
-      if (opts.stopAt !== undefined && samples.length - 1 === opts.stopAt) { image = capture(rig); detail = q.lastDetail; break; }
+      // q.hook이 있으면(combat-mesh-qa.mjs) 측정·캡처를 그쪽이 맡는다. 근사 도형 측정은 q.oldMeasure로 함께 부른다.
+      const m = q.hook ? q.hook.measure(rig, f) : measure(rig);
+      if (m === null) continue; // hook이 이 프레임 표본을 건너뛰길 요청
+      samples.push([f, +t.toFixed(3), ...m]);
+      if (opts.stopAt !== undefined && samples.length - 1 === opts.stopAt) { image = q.hook ? q.hook.capture(rig) : capture(rig); detail = q.lastDetail; break; }
     }
     return { samples, image, detail, held: rig.held.map(h => h.kind + ':' + h.mesh.parent?.name), actions: [...actions], ...extra };
   }
@@ -293,10 +296,11 @@ function installProbe() {
     app.companionAgent?.endBattle?.();
   };
   q.info = () => { const p = player(); return { combos: p.def.combo.map(c => c.anim), skills: p.def.skills.map(s => ({ id: s.id, anim: s.anim, ult: !!s.ult })), loadout: p.skillLoadout, clips: Object.keys(p.clips) }; };
+  q.oldMeasure = measure; q.refresh = refresh; q.scaleOf = scaleOf;
   window.__poseQA = q;
 }
 
-async function openPage(browser, origin) {
+export async function openPage(browser, origin) {
   const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, serviceWorkers: 'block', reducedMotion: 'no-preference' });
   const page = await context.newPage();
   await page.goto(origin + '/');
