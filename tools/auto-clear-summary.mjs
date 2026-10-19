@@ -6,7 +6,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const arg = key => process.argv.find(s => s.startsWith(`--${key}=`))?.slice(key.length + 3);
 const out = path.join(root, 'work/qa/auto-20261020');
 const beforeTag = arg('before') || 'baseline-97bc087';
-const afterTag = arg('after') || 'fixed-c899684';
+const afterTag = arg('after') || 'fixed-af4a258';
 const before = JSON.parse(await fs.readFile(path.join(out, beforeTag, 'report.json'), 'utf8'));
 const after = JSON.parse(await fs.readFile(path.join(out, afterTag, 'report.json'), 'utf8'));
 for (const report of [before, after]) {
@@ -22,6 +22,7 @@ const summary = report => {
     clearRatePercent: round(wins.length / report.runs.length * 100),
     unassistedWins: wins.filter(r => r.unassistedWin).length, meanClearSeconds: mean(wins),
     deaths: report.runs.reduce((n, r) => n + r.deaths, 0),
+    objectiveFailures: wins.filter(r => r.last.result.route === false || r.last.result.conquest === false).map(r => r.id),
     failures: report.runs.filter(r => r.status !== 'win').map(r => ({ id: r.id, status: r.status, elapsed: r.last?.elapsed })),
     stallSuspects: report.runs.reduce((n, r) => n + r.stallSuspects.length, 0), errors: report.errors };
 };
