@@ -651,7 +651,8 @@ export class Player extends Actor {
         if (x.behavior !== 'shaman' || x.distTo(e) > 7) continue;
         const dd = this.distTo(x); if (dd < best) { best = dd; healer = x; }
       }
-      if (healer) e = healer;
+      // 이동 목표와 다음 평타·스킬의 조준 잠금을 함께 전환한다. 보스 잠금을 남기면 치유사 곁에서도 보스만 계속 때린다.
+      if (healer) { e = healer; this.lockTarget = healer; }
     }
     if (priority) this.lockTarget = priority;
     const precision = this.game.conquest?.precisionNeeded(e);

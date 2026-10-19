@@ -4,7 +4,6 @@ import { chromium } from 'playwright';
 import { preview } from 'vite';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { installMetricsDriver } from './metrics-driver.mjs';
@@ -108,10 +107,11 @@ await page.evaluate(() => { const a = window.app; a.testPause = true; a.ui.close
           catch (err) { pauseError = String(err.message) + ' reasons=' + [...b.pauseReasons].join('|'); break; }
         }
         const room = W?.roomAt(P.pos.x, P.pos.z), target = b.autoTarget;
-        const near = b.enemies.filter(e => e.alive && !e.spawning).map(e => ({ d: +Math.hypot(e.pos.x - P.pos.x, e.pos.z - P.pos.z).toFixed(1), id: e.def?.name, room: e.homeRoom?.id, x: +e.pos.x.toFixed(1), z: +e.pos.z.toFixed(1) })).sort((x, y) => x.d - y.d).slice(0, 3);
+        const near = b.enemies.filter(e => e.alive && !e.spawning).map(e => ({ d: +Math.hypot(e.pos.x - P.pos.x, e.pos.z - P.pos.z).toFixed(1), id: e.def?.name, behavior: e.behavior, hp: Math.round(e.hp), room: e.homeRoom?.id, x: +e.pos.x.toFixed(1), z: +e.pos.z.toFixed(1) })).sort((x, y) => x.d - y.d).slice(0, 6);
         const enemyHp = Math.round(b.enemies.reduce((sum, e) => sum + (e.alive ? e.hp : 0), 0));
         return { active: b.active, paused: b.paused, pauseError, deaths, elapsed: +b.elapsed.toFixed(1), kills: b.kills, enemyHp,
           pos: [+P.pos.x.toFixed(1), +P.pos.z.toFixed(1)], state: P.state, hp: Math.round(P.hp), auto: P.auto,
+          aim: P.lockTarget ? { id: P.lockTarget.def?.name, behavior: P.lockTarget.behavior, alive: P.lockTarget.alive } : null,
           cleared: W ? W.rooms.filter(r => r.cleared).length : 0, rooms: W ? W.rooms.length : 0, sealed: !!W?.sealed,
           room: room?.id ?? null, target: target ? { id: target.id, type: target.type, cleared: target.cleared, attunementPending: !!target.attunementPending } : null,
           route: b.routeObjectives ? { progress: b.routeObjectives.progress, hint: b.routeObjectives.hint?.() } : null,
@@ -137,12 +137,20 @@ await page.evaluate(() => { const a = window.app; a.testPause = true; a.ui.close
       await page.evaluate(() => { for (let i = 0; i < 360; i++) window.app.step(1 / 60, false); });
       await page.waitForTimeout(2500);
       row.settle = await page.evaluate(() => {
-        const a = window.app, b = a.battle, result = document.getElementById('result');
-        return { active: b.active, win: b.result?.win ?? null, resultVisible: !!result && !result.classList.contains('hidden') && getComputedStyle(result).display !== 'none',
+        const a = window.app, b = a.battle;
+        // 일반 결과와 React 원정 결과는 서로 다른 화면이다. 실제 저장 완료 표시도 함께 검사한다.
+        const result = b.stage?.expedition ? document.querySelector('.exp-result-save[data-save="saved"]') : document.getElementById('result');
+        const box = result?.getBoundingClientRect();
+        return { active: b.active, win: b.result?.win ?? null, resultVisible: !!box?.width && !!box?.height && getComputedStyle(result).visibility !== 'hidden',
           expeditionPending: !!a.expedition.s.pending, receipt: b.result?.expeditionReceipt ? { ok: b.result.expeditionReceipt.ok } : null };
       });
-      row.status = row.last?.result?.win && row.settle.win && !row.settle.active && row.settle.resultVisible && !row.settle.expeditionPending
+      row.status = row.last?.result?.win && row.settle.win && !row.settle.active && row.settle.resultVisible && !row.settle.expeditionPending && (run.kind === 'stage' || row.settle.receipt?.ok)
         ? 'win' : row.last?.active ? 'timeout' : row.last?.result?.win ? 'settlement-failed' : 'lost';
+    }
+    if (row.status !== 'win' || index === 0 || run.id === 'route-bellfall_crypt-standard') {
+      await page.evaluate(() => window.app.step(0, true));
+      row.screenshot = `${run.id}.png`;
+      await page.screenshot({ path: path.join(out, row.screenshot) });
     }
   } catch (err) { row.status = 'error'; row.error = String(err.message).slice(0, 400); }
   finally { await context.close(); }
