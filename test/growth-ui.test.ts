@@ -48,6 +48,17 @@ function setup(heroId = 'knight', answer = true) {
 }
 const spOf = (view: any) => Number(view.root.byClass('st-sp-num')[0].textContent);
 
+test('성장 화면이 열려 있는 동안만 로비 3D 영웅을 숨기고, 닫거나 다른 화면으로 바꾸면 다시 보인다', () => {
+  const { meta } = setup('knight'); const showcase = { root: { visible: true } }; meta.app = { showcase, wardrobe: { hide() {} } };
+  const tc: any = new TranscendView(meta), st: any = new SkillTreeView(meta);
+  tc.open('mage'); expect(showcase.root.visible).toBe(false);
+  // 열린 채로 쇼케이스가 새 영웅으로 교체돼도(영웅 장착 등) 다시 렌더할 때 겹쳐 보이지 않는다.
+  meta.app.showcase = { root: { visible: true } }; tc.render(); expect(meta.app.showcase.root.visible).toBe(false);
+  tc.close({ rerender: false, restoreFocus: false }); expect(meta.app.showcase.root.visible).toBe(true);
+  st.open('knight'); expect(meta.app.showcase.root.visible).toBe(false);
+  st.close({ rerender: false, restoreFocus: false }); expect(meta.app.showcase.root.visible).toBe(true);
+});
+
 test('스킬 트리: SP 원은 실제 남은 SP이고, + 를 누르면 레벨이 오르고 SP가 줄어든다', () => {
   const { eco, meta } = setup(); const h = eco.hero('knight'); h.level = 5;
   const view: any = new SkillTreeView(meta); expect(view.open('knight')).toBe(true);
