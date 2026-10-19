@@ -1,10 +1,12 @@
 import { $, fmt } from './ui.js';
 import { bindHeroPortrait } from './hero-portraits.js';
+import { SkillTreeView } from './skill-tree.js';
+import { TranscendView } from './transcend.js';
 import { uiArt, resourceArt, RESOURCE_ART } from './illustrated.js';
 import { audio } from '../engine/audio.js';
 import { musicForScene, MUSIC_MIX } from '../data/music.js';
 import { heroVoiceName } from '../engine/hero-voice.js';
-import { HEROES, HERO_ORDER, RARITY, heroStats, levelExp, starShards, skillUpGold } from '../data/heroes.js';
+import { HEROES, HERO_ORDER, RARITY, heroStats, levelExp, starShards } from '../data/heroes.js';
 import { heroProgressionHtml, trainingButtonLabel } from './hero-progression.js';
 import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST, craftable, itemStats, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, enhanceMult, ENH_MAX, RARITY_COLOR , RARITY_INFO, rarityRank, enhanceDown} from '../data/items.js';
 import { SKUS, SHOP_TABS, GACHA, BATTLE_PASS, PASS_TRACK, DAILY_REWARDS } from '../data/shop.js';
@@ -258,6 +260,13 @@ export class Meta {
     this.app.wardrobe?.show(id);
     if (!own) { det.innerHTML = `<div class="hs-locked"><h2>${def.name}</h2><div class="sub">${def.title} · ${def.rarity}</div><p style="color:var(--muted);font-size:13px">${def.skills.map((s) => s.name).join(' · ')}</p><button class="btn btn-gold" id="h-summon">소환으로 획득</button></div>`; $('h-summon').onclick = () => this.openTab('gacha'); return; }
     renderOwnedHero(this, id, det);
+    // 성장 진입: 스킬 트리(SP)와 초월(SR→SSR→SSSR). 이름 줄 아래에 작게 둔다.
+    const growthLinks = document.createElement('div'); growthLinks.className = 'hs-growth-links';
+    for (const [label, open] of [['스킬 트리', () => this.openSkillTree(id)], ['초월', () => this.openTranscend(id)]]) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-ghost btn-sm'; b.textContent = label;
+      b.setAttribute('aria-label', HEROES[id].name + ' ' + label + ' 열기'); b.onclick = open; growthLinks.append(b);
+    }
+    det.querySelector('.hs-id')?.append(growthLinks);
   }
   setListHtml(heroId) {
     const b = this.eco.heroEquipBonus(heroId); const counts = b.sets || {};
@@ -287,12 +296,19 @@ export class Meta {
       });
     } });
   }
-  showSkill(id, i) {
-    const def = HEROES[id]; const sk = def.skills[i]; const h = this.eco.hero(id); const lv = h.skills[i]; const cost = skillUpGold(lv);
-    const locked = !!(sk.unlock && h.level < sk.unlock);
-    const lockNote = locked ? `<p style="color:#ff9ad8;font-weight:900">영웅 Lv.${sk.unlock} 달성 시 해금 (현재 Lv.${h.level})</p>` : '';
-    this.ui.modal(`<h2>${sk.name} ${sk.unlock ? '<small style="font-size:11px;color:#ff9ad8">각성</small>' : ''} <small style="font-size:12px">Lv.${lv}</small></h2><p>${sk.desc}</p>${lockNote}<p>피해 배율 <b style="color:var(--gold)">${(sk.dmg * (1 + (lv - 1) * 0.12)).toFixed(1)}x${sk.ticks ? ` × ${sk.ticks}회` : ''}</b> ${sk.ult ? '· 궁극기 (게이지 100)' : `· 쿨타임 ${sk.cd}초 · MP ${sk.mp || 0}`}</p>
-      <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-up" ${lv >= 10 || locked ? 'disabled' : ''}>${locked ? `Lv.${sk.unlock}에 해금` : '강화'} <small>${locked ? '' : `<i class="ic ic-gold"></i> ${fmt(cost)}`}</small></button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-up').onclick = () => { if (locked) return; if (this.eco.upgradeSkill(id, i)) { this.trackFunnel('upgrade', { kind: 'skill', level: lv + 1 }); audio.play('jingle_win1', { vol: 0.5 }); this.ui.closeModal(); this.renderHeroes(); this.ui.toast(`${sk.name} Lv.${lv + 1}!`, 'gold'); } else { this.ui.toast('골드 부족', 'red'); this.offerGold(); } }; } });
+  /** 스킬 상세는 SP 스킬 트리 화면으로 연다(골드 강화 모달 대체). */
+  showSkill(id, i) { return this.openSkillTree(id, i); }
+  openSkillTree(id = this.heroSel || this.eco.s.selected, i = 0) {
+    if (!this.eco.ownHero(id)) return false;
+    this.skillTree ||= new SkillTreeView(this, { portrait: (img, heroId) => bindHeroPortrait(img, this.app, heroId) });
+    this.transcendView?.close({ rerender: false, restoreFocus: false });
+    return this.skillTree.open(id, i);
+  }
+  openTranscend(id = this.heroSel || this.eco.s.selected) {
+    if (!this.eco.ownHero(id)) return false;
+    this.transcendView ||= new TranscendView(this, { portrait: (img, heroId) => bindHeroPortrait(img, this.app, heroId) });
+    this.skillTree?.close({ rerender: false, restoreFocus: false });
+    return this.transcendView.open(id);
   }
   /** 가방 장비 시트 — 현재 장비와 나란히 비교하고 장착·강화를 한 곳에서 한다. */
   showItem(uid, heroId, options) { return showItemSheet(this, uid, heroId, options); }

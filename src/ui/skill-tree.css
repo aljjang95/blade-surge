@@ -4,6 +4,9 @@
  * 상단 재화 바(z 5)와 내비(z 6)는 그대로 보이고, 이 층(z 4)은 그 사이 공간만 쓴다. 위치는 skill-tree.js fitOverlay 가 잰다.
  */
 #meta.gx-open #tab-heroes .panel-heroes { visibility: hidden; }
+/* 영웅 화면 이름 줄 아래 성장 진입 버튼(스킬 트리 · 초월). 기존 btn-ghost btn-sm 를 그대로 쓴다. */
+.hs-growth-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.hs-growth-links .btn { padding: 4px 10px; font-size: 12px; }
 
 .gx-layer {
   position: absolute; z-index: 4;
