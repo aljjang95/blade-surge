@@ -94,6 +94,7 @@
 .st-lock { position: absolute; left: 50%; top: 56%; width: 32%; height: 26%; transform: translate(-50%, -50%); border-radius: 4px; background: linear-gradient(180deg, var(--sb-cream), var(--muted)); box-shadow: 0 2px 4px rgba(0, 0, 0, .6); }
 .st-lock::before { content: ''; position: absolute; left: 18%; right: 18%; bottom: 92%; height: 85%; border: 3px solid var(--sb-cream); border-bottom: 0; border-radius: 999px 999px 0 0; }
 .st-slot { position: absolute; top: -6px; left: -6px; min-width: 20px; height: 20px; padding: 0 4px; border-radius: 6px; background: linear-gradient(180deg, var(--sb-gold-hi), var(--sb-gold-lo)); color: var(--sb-ink); font-size: 12px; line-height: 20px; text-align: center; box-shadow: 0 1px 0 var(--sb-gold-edge); }
+.st-gate-tag { position: absolute; right: -6px; bottom: -6px; height: 18px; padding: 0 5px; border-radius: 6px; border: 1px solid var(--sb-gold); background: var(--sb-night); color: var(--sb-gold); font-size: 11px; line-height: 16px; }
 
 .st-pill {
   display: flex; align-items: center; justify-content: center; gap: 4px; max-width: 100%; min-height: 24px; padding: 0 2px 0 9px;
@@ -103,13 +104,19 @@
 .st-pill:has(.st-gate) { padding: 0 9px; }
 .st-cell.is-locked .st-pill { background: var(--sb-night) padding-box, linear-gradient(180deg, var(--muted), color-mix(in srgb, var(--muted) 40%, var(--sb-night))) border-box; color: var(--muted); }
 .st-cell.is-ready .st-gate { color: var(--sb-gold); }
+/* + 버튼: 터치 영역은 44px(lobby-clarity.css 계약), 보이는 초록 원은 ::before 24px. 음수 여백으로 알약 높이를 키우지 않는다. */
 .st-plus {
-  position: relative; width: 22px; height: 22px; padding: 0; border-radius: 50%; flex: 0 0 auto; cursor: pointer;
-  border: 2px solid var(--sb-grass-lo); color: #fff; font-weight: 900; font-size: 15px; line-height: 1;
-  background: linear-gradient(180deg, var(--sb-grass), var(--sb-grass-lo)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 2px 0 var(--sb-grass-lo);
-  text-shadow: 0 1px 0 var(--sb-grass-lo);
+  position: relative; z-index: 0; display: grid; place-items: center; flex: 0 0 auto; cursor: pointer;
+  width: 44px; height: 44px; min-height: 44px; margin: -11px -11px -11px -8px; padding: 0;
+  border: 0; border-radius: 50%; background: none; box-shadow: none;
+  color: #fff; font-weight: 900; font-size: 16px; line-height: 1; text-shadow: 0 1px 0 var(--sb-grass-lo);
 }
-.st-plus::after { content: ''; position: absolute; inset: -9px; }
+.st-plus::before {
+  content: ''; position: absolute; z-index: -1; left: 50%; top: 50%; width: 24px; height: 24px; transform: translate(-50%, -50%);
+  border-radius: 50%; border: 2px solid var(--sb-grass-lo);
+  background: linear-gradient(180deg, var(--sb-grass), var(--sb-grass-lo)); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .6), 0 2px 0 var(--sb-grass-lo);
+}
+#meta .gx-layer .st-plus { font-size: 16px !important; line-height: 1; }
 .st-plus:disabled { filter: grayscale(1) brightness(.7); cursor: default; }
 .st-arrow { position: relative; width: 4px; height: 100%; min-height: 12px; border-radius: 2px; background: linear-gradient(180deg, var(--sb-gold-hi), var(--sb-gold)); margin-bottom: 7px; }
 .st-arrow::after { content: ''; position: absolute; left: 50%; bottom: -8px; transform: translateX(-50%); border: 7px solid transparent; border-top: 8px solid var(--sb-gold); border-bottom: 0; }
@@ -138,6 +145,17 @@
 .st-equip-btn.is-on { background: linear-gradient(180deg, var(--sb-gold-hi), var(--sb-gold-lo)); color: var(--sb-ink); border-color: var(--sb-gold-edge); }
 :root:root .btn.st-learn { margin-top: auto; width: 100%; flex: 0 0 auto; padding: 8px 10px; font-size: clamp(15px, 2.3vw, 28px); font-family: var(--disp); }
 .st-reason { margin: 0; font-size: 11px; color: var(--muted); text-align: center; }
+
+/* 기존 가독성 계약(lobby-clarity.css: #meta 안 버튼 최소 44px·14px 글자, !important)을 지키며 시안 크기를 맞춘다.
+   큰 행동 버튼은 계약보다 크게만 바꾸고(줄이지 않는다), 앞선 예외(#citadel-dungeon-prepare)와 같은 방식으로 덮는다. */
+#meta .gx-layer .btn.gx-close { width: 44px; height: 44px; min-width: 44px; margin: -6px -4px -6px 0; font-size: 22px !important; }
+#meta .gx-layer .st-equip-btn { width: 44px; }
+#meta .gx-layer .btn.st-learn, #meta .gx-layer .btn.tc-go { font-family: var(--font-title) !important; font-size: var(--type-title) !important; }
+#meta .gx-layer .btn.st-reset, #meta .gx-layer .btn.tc-pack { font-size: var(--type-body) !important; }
+@media (max-height: 460px) {
+  #meta .gx-layer .btn.st-learn, #meta .gx-layer .btn.tc-go { font-size: var(--type-label) !important; }
+  #meta .gx-layer .btn.st-reset, #meta .gx-layer .btn.tc-pack { font-size: var(--type-sm) !important; }
+}
 
 /* 낮은 가로 화면(844x390 등): 여백을 줄이고 설명은 두 줄 */
 @media (max-height: 460px) {

@@ -80,7 +80,8 @@ export class TranscendView extends GrowthOverlay {
       c.append(el('i', 'tc-gem tc-gem-' + g), el('b', 'tc-plinth', g));
       crystals.append(c);
     });
-    const hero = el('div', 'tc-hero'); const img = el('img', 'gx-portrait'); img.alt = ''; img.setAttribute('aria-hidden', 'true'); this.portrait(img, id);
+    const hero = el('div', 'tc-hero'); const img = el('img', 'gx-portrait'); img.alt = ''; img.setAttribute('aria-hidden', 'true');
+    const portraits = [[img, id]];
     hero.append(el('i', 'tc-altar'), img);
     center.append(crystals, hero);
 
@@ -91,7 +92,7 @@ export class TranscendView extends GrowthOverlay {
     for (const m of materials) {
       const li = el('li', 'tc-mat' + (m.short ? ' is-short' : ''));
       let icon;
-      if (m.key === 'shards') { icon = el('img', 'tc-mat-ico tc-mat-hero'); this.portrait(icon, id); }
+      if (m.key === 'shards') { icon = el('img', 'tc-mat-ico tc-mat-hero'); portraits.push([icon, id]); }
       else if (m.key === 'gold') { icon = el('img', 'tc-mat-ico'); icon.src = resourceArt('gold'); }
       else icon = el('i', 'tc-mat-ico tc-gem tc-gem-stone');
       icon.alt = ''; icon.setAttribute('aria-hidden', 'true');
@@ -118,6 +119,7 @@ export class TranscendView extends GrowthOverlay {
 
     this.root.append(stats, center, mats);
     this.columns = [stats, center, mats]; this.keys = keys;
+    this.bindPortraits(portraits);
     this.fit();
     const target = keys.get(this.focusKey);
     (target && !target.disabled ? target : keys.get('pack'))?.focus?.({ preventScroll: true });
