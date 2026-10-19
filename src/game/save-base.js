@@ -98,6 +98,7 @@ export function normalizeSave(raw, fresh) {
   // 화면 흔들림은 사람이 직접 고른 true/false 만 저장한다. null(미선택)이면 동작 줄이기 선호를 따라 정한다.
   s.settings.screenShake = typeof raw.settings?.screenShake === 'boolean' ? raw.settings.screenShake : null;
   s.settings.lobbyCamera = normalizeLobbyCamera(raw.settings?.lobbyCamera);
+  s.settings.autoTarget = typeof raw.settings?.autoTarget === 'boolean' ? raw.settings.autoTarget : true;
   s.name = s.name.trim().slice(0, 20) || fresh.name;
   s.expedition = normalizeExpedition(raw.expedition);
   s.towns = normalizeTownState({ ...raw.towns, _migrationExpedition: raw.expedition, _migrationHeroes: raw.heroes });
