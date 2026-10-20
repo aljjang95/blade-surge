@@ -10,3 +10,9 @@ public/models/heroes-next/rogue-t3-body-motion-v1.json -text
 public/models/heroes-next/rogue-crow-body-motion-v1.json -text
 public/models/heroes-next/rogue-t2-body-motion-v2.json -text
 src/engine/hero-body-motion.js text eol=lf
+
+# combat-pose-timing.json이 고정한 보호 파일 SHA-256을 Windows·Linux에서 동일하게 유지한다.
+src/data/rogue-t2-body-motion-v2.json text eol=lf
+src/data/higher-body-motion-v1.json text eol=lf
+src/data/higher-body-revisions-v1.json text eol=lf
+tools/combat-mesh-qa.mjs text eol=lf
