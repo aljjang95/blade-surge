@@ -1,6 +1,10 @@
 import { DIALOGUE_MODEL, REPLY_SCHEMA, dialogueMessages, parseDialogueReply, parseDialogueRequest } from '../src/companion/dialogue-contract';
 import { handlePartyRequest, PartyRoom } from './party';
+import { createSocialHub, handleSocialRequest } from '../packages/tll-social/src/server/index';
+import { SOCIAL_CONFIG } from '../src/social/config.js';
 export { PartyRoom };
+// 커뮤니티(채팅·친구·명예의 전당·게시판) Durable Object. 게임 설정을 고정한 클래스다.
+export const SocialHub = createSocialHub(SOCIAL_CONFIG);
 
 interface Store {
   get<T>(key: string): Promise<T | undefined>;
@@ -13,6 +17,8 @@ interface Env {
   DIALOGUE_BUDGET: { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } };
   APP_ORIGIN: string;
   PARTIES?: { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } };
+  SOCIAL?: { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } };
+  SOCIAL_DEV_ORIGINS?: string;
   DIALOGUE_ENABLED: string;
   DIALOGUE_APPROVAL_UNTIL?: string;
   DIALOGUE_APPROVAL_ID?: string;
@@ -101,6 +107,7 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
     const origin = url.origin === 'https://blade.tllhouse.com' ? url.origin : env.APP_ORIGIN;
     return handlePartyRequest(request, { ...env, PARTIES:env.PARTIES, APP_ORIGIN:origin });
   }
+  if (url.pathname === '/api/social' || url.pathname.startsWith('/api/social/')) return handleSocialRequest(request, env, SOCIAL_CONFIG);
   if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
   if (url.pathname !== '/api/companion') return json({ error: 'not-found' }, 404);
   if (request.method !== 'POST') return json({ error: 'method' }, 405);
