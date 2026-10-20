@@ -1,0 +1,452 @@
+{
+ "schemaVersion": 1,
+ "cycle": "20261020-drops-region-party-sfx",
+ "cycleStatus": "shipped",
+ "objective": "[gogo:20261020-drops-region-party-sfx] 몬스터 드랍(지역·난이도·계급)과 결과·가방 장착/판매/강화, 지역 권장 레벨·다음 지역 안내, 파티 게스트 영웅별 원격 타격음, 무과금 SR→SSR 21~28일 과금 압박과 확정권·패키지 단축 일수 표시를 실제 브라우저로 검증하고 blade.tllhouse.com에 배포한다",
+ "chunk": {
+  "name": "드랍·지역 진행·파티 원격 타격음·과금 압박 강화",
+  "why": "대표님 '몬스터 잡으면 떨어지는 템 … 레벨링 … 맵 플로우 전부 개선', '캐릭터마다 효과음 전부 달리', 과금 압박 결정 '강하게: SSR 초월까지 약 3~4주, 확정권·패키지 가치를 키움'",
+  "notDoing": "실제 결제 SDK, S26 실기기(D10), 커뮤니티·로비 추천 던전 패널"
+ },
+ "subject": {
+  "kind": "mixed",
+  "identity": {
+   "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+   "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261020-drops-region-party-sfx\\integration",
+   "branch": "codex/20261020-drops-region-party-sfx",
+   "commit": "303403968d9af908d89e7f97b042ea289f11acfd",
+   "tree": "f1ef2a5598a080eb6e51277f64beb7cbcffd5018",
+   "artifact": {
+    "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261020-drops-region-party-sfx\\integration\\dist\\version.json",
+    "sha256": "314c83753d8c7c45e73a9958f8689745646df62449aba5a13da2ec4733b93c00"
+   }
+  },
+  "digest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a",
+  "observedAt": "2026-10-20T09:52:23.782Z"
+ },
+ "requirements": [
+  {
+   "id": "A1",
+   "claim": "드랍 테이블이 지역(장)·난이도·적 계급별로 다르다: 같은 계급에서 장이 오르거나 난이도가 오르면 E 이상 장비 확률과 재료 수량이 단조 증가하고, 4~6장 재료는 1~3장과 수량·종류 조합이 다르며, 실제 데이터 표(장×계급×난이도 기대 가치)에 쓸모없는 드랍(가치 0·중복 행)이 없다 / tools/loot-report.mjs 출력 + 단위 테스트",
+   "status": "passed",
+   "surfaces": [
+    "tools/loot-report.mjs 출력 + 단위 테스트"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\loot-report.txt",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\loot-report.txt",
+     "sha256": "0246744e7518b791a20be0250902ed5f753f2eba1d9bfdb26d6ad5dbde2772bb",
+     "command": "bun tools/loot-report.mjs",
+     "observedAt": "2026-10-20T10:11:51.501Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\fulltest-3034039.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\fulltest-3034039.log",
+     "sha256": "def26c637fad9224fb634aec166ccc86c1f9c1c82c1713d454f2f5b1a9204688",
+     "command": "bun test --timeout 30000 (economy-loot-progression 포함)",
+     "observedAt": "2026-10-20T10:11:52.601Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    }
+   ],
+   "neededInput": null,
+   "note": "tools/loot-report.mjs: 장 6 × 계급 3 × 난이도 3 = 54조합, 가치 0·완전 중복 0. 같은 계급에서 장·난이도가 오르면 E 이상 확률·재료 수량 단조 증가(단위 테스트). 4~6장은 재료 두 종(유리 잎+잿불 핵 등) 동시 지급, 6장 일반 적 N 비중 35→10%. drops.js 가 stage.difficultyId 를 넘김. 출처 D7"
+  },
+  {
+   "id": "A2",
+   "claim": "실제 전투(원정 시작 → 처치 → 결과)에서 받은 장비가 결과 화면에 보이고, 결과·가방 화면에서 그 장비를 실제 탭으로 장착·판매·강화하면 능력치·골드·강화 단계가 바뀌고 새로고침 뒤 유지된다 / 브라우저 844x390·1280x590 실제 전투·탭·새로고침, 겹침 검사",
+   "status": "passed",
+   "surfaces": [
+    "브라우저 844x390·1280x590 실제 전투·탭·새로고침, 겹침 검사"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A2.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A2.json",
+     "sha256": "719124a18979ab1831829a01571fd61fd598ee9521e7cca1603ea593d9f400f7",
+     "command": "node tools/gogo-qa-20261020-drops.mjs --origin http://127.0.0.1:5381/ --out final/ui",
+     "observedAt": "2026-10-20T10:11:53.724Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A2-844-result-loot-cards.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A2-844-result-loot-cards.png",
+     "sha256": "75ba6d613f1314561dd3bfe7d1cbfd9b9a497704756af0c1dc3aa1d56b13b755",
+     "command": "gogo-qa-20261020-drops A2 844",
+     "observedAt": "2026-10-20T10:11:54.822Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A2-844-item-sheet-enhanced.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A2-844-item-sheet-enhanced.png",
+     "sha256": "6ed5735081441e47d9e7f3575ffac1376a8a72cad0fb753e97ab6b58474aec67",
+     "command": "gogo-qa-20261020-drops A2 844",
+     "observedAt": "2026-10-20T10:11:55.913Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A2-1280-result-loot-cards.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A2-1280-result-loot-cards.png",
+     "sha256": "883e20305405e1e0deb29ec0bd27fe6729946dd4dc681076b7d577ee19e35c0a",
+     "command": "gogo-qa-20261020-drops A2 1280",
+     "observedAt": "2026-10-20T10:11:56.985Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A2-1280-hero-bag-new.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A2-1280-hero-bag-new.png",
+     "sha256": "282f8a9a232b1dc4f0db10762ae33007ecdc23caf8ad0ee6607fb791b29a9c0e",
+     "command": "gogo-qa-20261020-drops A2 1280",
+     "observedAt": "2026-10-20T10:11:58.044Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    }
+   ],
+   "neededInput": null,
+   "note": "844x390·1280x590 실제 전투(적 HP=1·AUTO 픽스처 injected) → 결과 전리품 카드(▲ 장착 추천/판매가 표시) → 카드 탭 → 장착·판매(골드 +판매가)·강화(단계 증가) → 새로고침 유지. 가방·인벤토리 NEW 배지(세션 메모리, 스키마 불변). rectOverlap 겹침 0, 페이지 오류 0, 점검 35개 통과. 출처 D7"
+  },
+  {
+   "id": "A3",
+   "claim": "지역별 권장 레벨과 실제 경험치 곡선(첫 클리어+처치 경험치, 하루 30분)을 실제 데이터로 계산해 표로 적고, 다음 장 시작 권장 레벨과 도달 레벨 차가 -3~+1 안이다(벽·너무 쉬운 구간 없음) / tools/progression-estimate.mjs 출력 + 단위 테스트",
+   "status": "passed",
+   "surfaces": [
+    "tools/progression-estimate.mjs 출력 + 단위 테스트"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\progression-estimate.txt",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\progression-estimate.txt",
+     "sha256": "a943666ee88d9af21eff7dc46baf2dd311b61ca70f810b0b46097c8b971fc153",
+     "command": "bun tools/progression-estimate.mjs",
+     "observedAt": "2026-10-20T10:11:59.107Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\fulltest-3034039.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\fulltest-3034039.log",
+     "sha256": "def26c637fad9224fb634aec166ccc86c1f9c1c82c1713d454f2f5b1a9204688",
+     "command": "bun test --timeout 30000 (economy-region-pace 포함)",
+     "observedAt": "2026-10-20T10:12:00.171Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    }
+   ],
+   "neededInput": null,
+   "note": "tools/progression-estimate.mjs: 스토리 첫 클리어·하루 30분 기준 장 끝 도달 Lv 20/29/35/39/42/44, 다음 장 권장 Lv 20/30/35/40/43 → 차이 0/-1/0/-1/-1(기준 -3~+1). 권장 Lv 표 CHAPTER_START_LEVEL 1/12/22/30/35/39 → 1/20/30/35/40/43(이전엔 도달 Lv가 권장보다 2~7 높아 너무 쉬웠음). 출처 D8"
+  },
+  {
+   "id": "A4",
+   "claim": "스테이지를 깨면 결과 화면과 캠페인 화면에 다음 스테이지/지역·권장 Lv·내 레벨 대비 상태·대표 보상이 보이고 실제 탭으로 다음 스테이지로 간다. 장 10스테이지를 깨면 다음 지역이 열리고 그 지역 안내가 보인다 / 브라우저 844x390·1280x590 캠페인 실제 진행(진행도 주입은 구분 표기)",
+   "status": "passed",
+   "surfaces": [
+    "브라우저 844x390·1280x590 캠페인 실제 진행(진행도 주입은 구분 표기)"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A4.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A4.json",
+     "sha256": "53c0ba35e86550f0dd33108054b8b3dcd45c8e195f15674dd1e30784dea293a8",
+     "command": "node tools/gogo-qa-20261020-drops.mjs --origin http://127.0.0.1:5381/ --out final/ui",
+     "observedAt": "2026-10-20T10:12:01.237Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A4-844-result-next-guide.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A4-844-result-next-guide.png",
+     "sha256": "ee0aed91d9b3ee085a8502f164c3f0baea66b671b62d1e66d7705e058144de15",
+     "command": "gogo-qa-20261020-drops A4 844",
+     "observedAt": "2026-10-20T10:12:02.359Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A4-1280-result-next-guide.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A4-1280-result-next-guide.png",
+     "sha256": "2d9825330a721dffe67312f4fd59c344edb61114291e0bb5ddc9b6e9c9e9a160",
+     "command": "gogo-qa-20261020-drops A4 1280",
+     "observedAt": "2026-10-20T10:12:03.464Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A4-844-campaign-2-1.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A4-844-campaign-2-1.png",
+     "sha256": "c0d748c03bf60b5c089b972ca67087843b85b014994e410d2767cd788554bd4d",
+     "command": "gogo-qa-20261020-drops A4 844",
+     "observedAt": "2026-10-20T10:12:04.566Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A4-844-campaign-1-9-nightmare.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A4-844-campaign-1-9-nightmare.png",
+     "sha256": "8c15b8f1945b4f8053a8d3e38fc6580d1ab83f82287c2dcb5c96bb024f7d7022",
+     "command": "gogo-qa-20261020-drops A4 844",
+     "observedAt": "2026-10-20T10:12:05.650Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    }
+   ],
+   "neededInput": null,
+   "note": "844x390·1280x590: 1-10 실제 클리어 결과 화면 '다음 출격 · 새 지역 개방: 불씨 왕국의 용광로 · 2-1 · 권장 Lv.20 · 내 Lv.19 · 도전 가능 · 대표 보상 잿불 핵 ×3 · 보스 에픽 이상 70%' → 다음 탭 → 2-1 전투 진입 → 새로고침 뒤 2-1 상세 권장 Lv.20. 캠페인 상세 권장 Lv·내 Lv·상태 표시, 난이도 전환 시 전리품 안내 문구가 실제 lootTable 값으로 바뀜. 진행도·레벨 주입은 injected. 점검 46개 통과, 겹침 0. 출처 D8"
+  },
+  {
+   "id": "A5",
+   "claim": "파티 게스트가 받는 원격 타격 이벤트에 공격자 영웅이 실리고 게스트가 그 영웅의 타격음(무기별 레이어)을 재생한다. 공격자 정보가 없는 구버전 이벤트는 기존 소리로 안전하게 재생되고 Worker 검증을 통과한다 / 2클라이언트 브라우저 파티 재생 로그 + protocol/worker 단위 테스트",
+   "status": "passed",
+   "surfaces": [
+    "2클라이언트 브라우저 파티 재생 로그 + protocol/worker 단위 테스트"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\party\\report.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\party\\report.json",
+     "sha256": "678ea37012e0226f17dd50f89e57149c6df6d031e3dde662c4596c9aab64ba4e",
+     "command": "bun run build && node tools/gogo-qa-20261020-party.mjs --serve --out final/party",
+     "observedAt": "2026-10-20T10:12:06.701Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\party-run.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\party-run.log",
+     "sha256": "d09b31438617526c23726fbc5e097aa88e475f257a1676d856af9f1964acec83",
+     "command": "node tools/gogo-qa-20261020-party.mjs --serve",
+     "observedAt": "2026-10-20T10:12:07.771Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\fulltest-3034039.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\fulltest-3034039.log",
+     "sha256": "def26c637fad9224fb634aec166ccc86c1f9c1c82c1713d454f2f5b1a9204688",
+     "command": "bun test --timeout 30000 (party-hit-hero·party-client 포함)",
+     "observedAt": "2026-10-20T10:12:08.838Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\live\\party-live-smoke.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\live\\party-live-smoke.json",
+     "sha256": "617b15e9305b0d3d3fdc294d39d769abac2c76de2f8f3bc8c3c743fd36d5e9a9",
+     "command": "정식 호스트 파티 Worker: 새 클라이언트 hero 전달, 구 클라이언트 hero 제거",
+     "observedAt": "2026-10-20T10:18:18.086Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    }
+   ],
+   "neededInput": null,
+   "note": "로컬 wrangler dev(Durable Object) + 브라우저 2개 실제 파티 생성·참가·출격·WebSocket. 호스트 knight + 게스트 barbarian/mage/rogue/ranger 4라운드: 모든 hit 이벤트에 hero 실림, 게스트가 공격자 영웅별 hero/<영웅>/hit_* 레이어 재생, 공격 안 한 영웅 레이어 0, 영웅 5명 샘플 서로 겹치지 않음, 오류 0. 구버전 이벤트(hero 없음)는 slash 폴백, 구 클라이언트 소켓에는 Worker 가 hero 제거(heroHits 선언 기반, 단위 테스트 4조합). 출처 D1c 정식 호스트 파티 Worker 라이브 스모크도 통과."
+  },
+  {
+   "id": "A6",
+   "claim": "무과금 하루 30분(ch1·top 두 전략)에서 SR→SSR 초월이 21~28일이고 SSR→SSSR 누적 일수를 적으며, SSR 확정권 1장·보석/현금 패키지가 각각 며칠을 줄이는지 계산하고 상점·소환 화면 문구에 보인다. 현금 전용 관문 없음, 기존 저장의 보유 영웅·조각·재화는 줄지 않는다 / tools/economy-estimate.mjs 전후 출력 + 단위 테스트 + 브라우저 상점·소환 캡처",
+   "status": "passed",
+   "surfaces": [
+    "tools/economy-estimate.mjs 전후 출력 + 단위 테스트 + 브라우저 상점·소환 캡처"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\economy-estimate.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\economy-estimate.json",
+     "sha256": "f997ec780db65178811788179fdf3697b37d765ba98dee21ec146a575be6064b",
+     "command": "bun tools/economy-estimate.mjs --pretty",
+     "observedAt": "2026-10-20T10:12:09.903Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A6.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A6.json",
+     "sha256": "7870660e8548af3611e048e878b1a0a0892699a9961ac453d66aaba5ce7f06cf",
+     "command": "node tools/gogo-qa-20261020-drops.mjs --origin http://127.0.0.1:5381/ --out final/ui",
+     "observedAt": "2026-10-20T10:12:10.963Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A6-844-shop-pack.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A6-844-shop-pack.png",
+     "sha256": "9ed2a02dfd7f6d5fa2d0bdbbe954db56a96e1d234f58dd68cc50c71bacd91479",
+     "command": "gogo-qa-20261020-drops A6 844",
+     "observedAt": "2026-10-20T10:12:12.036Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A6-844-gacha-with-ticket.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A6-844-gacha-with-ticket.png",
+     "sha256": "83d6579165cf11b2f429554f4f38235a61f538eef0a4499f09989affc610c491",
+     "command": "gogo-qa-20261020-drops A6 844",
+     "observedAt": "2026-10-20T10:12:13.135Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A6-1280-shop-gem.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\ui\\A6-1280-shop-gem.png",
+     "sha256": "dd489497e0b79f479420f584f46cac07ceed1f9ee3c30d211c994d356c582533",
+     "command": "gogo-qa-20261020-drops A6 1280",
+     "observedAt": "2026-10-20T10:12:14.211Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    }
+   ],
+   "neededInput": null,
+   "note": "tools/economy-estimate.mjs 전→후(무과금, 하루 30분): SR→SSR ch1 6→26일·top 5→28일, SSSR 누적 ch1 19→64일·top 11→82일(60분/일: SSR 4→16·3→25, SSSR 11→39·9→73). 조정: 초월 조각 SSR 60→180·SSSR 120→220, 보스 조각 확률 하향(n=4), 중복 소환 조각 10→40, 상품 내용 강화(가격 불변). 단축: SSR 확정권 1장 1→5일(픽업 SSR→SSSR 21→16일), 스타터 5일, 월정액 2일, 성장 5일, 토벌 10일, 초월 패키지 14일, VIP 3일, 보석 1~11일. 현금 전용 관문 없음, 보유량 감소·저장 이관 없음, 결제 미연결 유지. 상점 17개 상품·소환 확정권 버튼에 단축 문구(스토리 30분/일·별 승급 제외 예상) 844·1280 캡처, 점검 42개 통과. 출처 D2c"
+  },
+  {
+   "id": "A7",
+   "claim": "typecheck·전체 테스트·빌드 통과 후 같은 SHA가 정식 호스트 blade.tllhouse.com에 배포돼 다시 읽히고 파티 Worker 경로가 새 형식을 받는다 / tools/deploy.mjs 영수증·version.json·라이브 스모크",
+   "status": "passed",
+   "surfaces": [
+    "tools/deploy.mjs 영수증·version.json·라이브 스모크"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\build-3034039.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\build-3034039.log",
+     "sha256": "38810fc59bac0c01f319ff6e8467e372a0bfbc62e9b9310ff0f09f942905ec49",
+     "command": "bun run build (3034039)",
+     "observedAt": "2026-10-20T10:12:15.283Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\typecheck-3034039.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\typecheck-3034039.log",
+     "sha256": "5a3973f79ed9becd5f23c4feff467513814de7ea381d75a4d2e339aa8b8edca9",
+     "command": "bun run typecheck (3034039)",
+     "observedAt": "2026-10-20T10:12:16.365Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\deploy-bcaa852.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\deploy-bcaa852.log",
+     "sha256": "ca2dd2f3e77b08fce5bcc7da97f730e6249df60892c0f5bd020ed2eed14c7786",
+     "command": "node tools/deploy.mjs --auth=wrangler (deploy worktree bcaa852)",
+     "observedAt": "2026-10-20T10:18:12.666Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\live\\version-readback.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\live\\version-readback.json",
+     "sha256": "382dc6707b1c8a4c66b9c7a5799290fe587b2f2174093a2fa1579900ebdaa132",
+     "command": "GET https://blade.tllhouse.com/version.json",
+     "observedAt": "2026-10-20T10:18:13.735Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\live\\party-live-smoke.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\live\\party-live-smoke.json",
+     "sha256": "617b15e9305b0d3d3fdc294d39d769abac2c76de2f8f3bc8c3c743fd36d5e9a9",
+     "command": "node party-live-smoke.mjs (정식 호스트 파티 Worker WebSocket 3개)",
+     "observedAt": "2026-10-20T10:18:14.822Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\live\\ui\\A6.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\live\\ui\\A6.json",
+     "sha256": "42b68027d1e6dfeaf4c97cc26831b151f394c8b57a29693228dc36fa744b4886",
+     "command": "node tools/gogo-qa-20261020-drops.mjs --origin https://blade.tllhouse.com/ --only A6",
+     "observedAt": "2026-10-20T10:18:15.920Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\live\\ui\\A6-844-shop-pack.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-drops-region-party-sfx\\evidence\\final\\live\\ui\\A6-844-shop-pack.png",
+     "sha256": "7db3a8ae9ba26a2e74042b0a0171d762d4f14b23ff423a641ae8b46fb578585b",
+     "command": "정식 호스트 상점 패키지 탭 844",
+     "observedAt": "2026-10-20T10:18:16.992Z",
+     "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+    }
+   ],
+   "neededInput": null,
+   "note": "typecheck·전체 테스트 2,722 통과·빌드(3034039) → PR #218 squash → main bcaa852(병합 소스 다이제스트 동일) → tools/deploy.mjs --auth=wrangler → Worker blade-surge 버전 fcdf5007, 배포 08a3624f → https://blade.tllhouse.com/version.json sha bcaa852·dirty false. 라이브 스모크: 파티 Worker WebSocket 3개로 새 형식(hero) 수락, 새 클라이언트 전달·구 클라이언트 제거·호스트 오류 0. 정식 호스트 상점·소환 단축 문구 점검 42개 통과(비로그인 /api/social/me 401 2건은 정상 응답). 출처 D9"
+  }
+ ],
+ "freshReview": {
+  "required": true,
+  "status": "passed",
+  "reviewer": "anthropic/claude-sonnet-5-5 high(경제·드랍, Sol 작성) + gpt-6.1-sol xhigh(파티 형식, Sonnet 작성)",
+  "scope": "4dd5147..944de73 경제·드랍·상품·파티 통신",
+  "findings": "경제 P0 0·P1 1(별 승급과 초월이 같은 조각을 써 일수가 하한값) → 가정·문구에 '별 승급 제외' 명시(321c923, ae0a1c8). P2 6 중 5 수정(첫 결제 2배 문구, VIP 설명, 강화 패키지 용도, 대표 드랍 재료 2종, 기준 표기), 1건(테스트 1e-9 허용)은 보고. 파티 P0 0·P1 1(원격 공격 홀드가 자동 연타) → 상승 에지 큐(501d62a)·테스트, P2 1(게스트 사운드 전체 프리로드) → 타격음 2개만(a2f63c1). 최종 소스에서 파티 QA 재실행 통과"
+ },
+ "remaining": [],
+ "verdict": "passed",
+ "acceptanceChanges": [],
+ "weakened": [],
+ "deploy": {
+  "target": "https://blade.tllhouse.com (Worker blade-surge)",
+  "version": "fcdf5007-c942-4967-a876-8f8d4b325e91",
+  "sha": "bcaa852123dc7cbef28291e84931360857dd218a",
+  "pr": "https://github.com/aljjang95/blade-surge/pull/218",
+  "deploymentId": "08a3624f-e119-4d4e-8267-c1f156710cfe",
+  "readback": "GET https://blade.tllhouse.com/version.json → sha bcaa852123dc7cbef28291e84931360857dd218a, dirty false; 파티 Worker 라이브 WebSocket 스모크 통과; 상점·소환 단축 문구 라이브 점검 42개 통과",
+  "rollback": "wrangler rollback 으로 직전 배포 cf670d84-dc5a-4b5c-b13c-226700aa42e4(버전 b511ebbc-c777-4394-8dc1-6f0b827cdef1, main b17f0c0)로 되돌림. tools/deploy.mjs 영수증에 rollbackDeploymentId 기록",
+  "subjectDigest": "src:fc333c8e0dacb7d896cc1c7f9cba7904f716dad7d1e190eb2ac3c89fdce36a3a"
+ },
+ "lanes": [
+  {
+   "lane": "econ",
+   "model": "gpt-6.1-sol xhigh",
+   "agentId": "01a1586a-fc89-7721-9c66-5d971dbefffb",
+   "branch": "codex/20261020-drops-region-party-sfx-econ"
+  },
+  {
+   "lane": "party",
+   "model": "anthropic/claude-sonnet-5-5 high",
+   "agentId": "01a1586b-03ac-78c1-8c02-a4c8fb4ced56",
+   "branch": "codex/20261020-drops-region-party-sfx-party"
+  },
+  {
+   "lane": "ui",
+   "model": "anthropic/claude-sonnet-5-5 high",
+   "agentId": "01a1587e-87d2-7892-9af8-1ccbad88b8df",
+   "branch": "codex/20261020-drops-region-party-sfx-ui"
+  },
+  {
+   "lane": "review-econ",
+   "model": "anthropic/claude-sonnet-5-5 high",
+   "agentId": "01a15884-394d-7c03-82ac-c7d9cce46c40",
+   "branch": "(읽기 전용)"
+  },
+  {
+   "lane": "review-party",
+   "model": "gpt-6.1-sol xhigh",
+   "agentId": "01a15884-3cfa-7533-92ca-02c7b52eda60",
+   "branch": "(읽기 전용)"
+  }
+ ],
+ "harnessChanges": [
+  "tools/gogo-qa-20261020-drops.mjs: 공용 rectOverlap 겹침 검사(지난 사이클 마찰 'visible 검사만으로 겹침을 못 잡음' 해소) + A2·A4·A6 실제 탭 QA",
+  "tools/gogo-qa-20261020-party.mjs: wrangler dev(DO) 자동 기동 2클라이언트 파티 타격음 QA",
+  "tools/loot-report.mjs·tools/progression-estimate.mjs: 드랍 가치표·레벨 곡선 계산기, economy-estimate.mjs --emit-pace 로 src/data/economy-pace.js 생성"
+ ],
+ "frictions": [
+  "파티 레인이 기존 회귀 발견: 호스트가 게스트 attack 입력을 공격 큐에 넣지 않아 게스트 평타가 나가지 않았음(수동 전투 개편 f6cf025 이후) → 이번에 상승 에지로 수정",
+  "리뷰어 2개가 ui 레인과 겹쳐 로컬 서브에이전트가 잠시 3개(리뷰어는 읽기 전용)",
+  "PowerShell Start-Process 가 정책에 막혀 개발 서버는 exec 세션으로 띄움",
+  "integration 워크트리에 node_modules 가 없어 첫 테스트가 three 미설치로 실패 → lanes.mjs create 에 --setup 'bun install --frozen-lockfile'를 쓰는 편이 낫다",
+  "loot-report·progression-estimate 출력이 표 텍스트라 .json 이름으로 저장하면 안 됨"
+ ],
+ "standingGates": [],
+ "next": "S26 실기기 묶음(D10): 등급·드랍·결과 화면·파티를 실기기 터치로 확인. 그 전에 대표님 결정 후보: 별 승급과 초월이 같은 조각을 쓰는 구조(별 1→5에 조각 300)를 유지할지",
+ "quota": null,
+ "updatedAt": "2026-10-20T10:18:32.852Z"
+}

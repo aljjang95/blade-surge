@@ -1,0 +1,57 @@
+{
+ "cycle": "20261020-drops-region-party-sfx",
+ "agents": [
+  {
+   "id": "01a1586a-fc89-7721-9c66-5d971dbefffb",
+   "nickname": "Descartes",
+   "model": "gpt-6.1-sol",
+   "effort": "xhigh",
+   "role": "econ",
+   "writeScope": "loot-tables, drops, hero-grades, shop, economy-pace, growth-flow, stages 수치, economy/loot/progression 도구, 해당 test",
+   "brief": "C:/Users/heart/AppData/Local/APEX/lanes/aljjang95-blade-surge/20261020-drops-region-party-sfx/integration/work/cycles/20261020-drops-region-party-sfx/brief.md",
+   "spawnedAt": "2026-10-20T08:26:21.722Z",
+   "closedAt": "2026-10-20T08:47:42.631Z"
+  },
+  {
+   "id": "01a1586b-03ac-78c1-8c02-a4c8fb4ced56",
+   "nickname": "Planck",
+   "model": "anthropic/claude-sonnet-5-5",
+   "effort": "high",
+   "role": "party",
+   "writeScope": "src/party/*, worker/party*.ts, combat-sound-library export, 해당 test, tools/gogo-qa-20261020-party.mjs",
+   "brief": "C:/Users/heart/AppData/Local/APEX/lanes/aljjang95-blade-surge/20261020-drops-region-party-sfx/integration/work/cycles/20261020-drops-region-party-sfx/brief.md",
+   "spawnedAt": "2026-10-20T08:26:21.722Z",
+   "closedAt": "2026-10-20T08:53:45.512Z"
+  },
+  {
+   "id": "01a1587e-87d2-7892-9af8-1ccbad88b8df",
+   "nickname": "Galileo",
+   "model": "anthropic/claude-sonnet-5-5",
+   "effort": "high",
+   "role": "ui",
+   "writeScope": "region-guide, src/ui/*, main.js 결과, index.html, css, test, tools/gogo-qa-20261020-drops.mjs",
+   "brief": "C:/Users/heart/AppData/Local/APEX/lanes/aljjang95-blade-surge/20261020-drops-region-party-sfx/integration/work/cycles/20261020-drops-region-party-sfx/brief.md",
+   "spawnedAt": "2026-10-20T08:47:42.632Z"
+  },
+  {
+   "id": "01a15884-394d-7c03-82ac-c7d9cce46c40",
+   "nickname": "Gibbs",
+   "model": "anthropic/claude-sonnet-5-5",
+   "effort": "high",
+   "role": "review-econ",
+   "writeScope": "읽기 전용",
+   "brief": "C:/Users/heart/AppData/Local/APEX/lanes/aljjang95-blade-surge/20261020-drops-region-party-sfx/integration/work/cycles/20261020-drops-region-party-sfx/brief.md",
+   "spawnedAt": "2026-10-20T08:53:45.512Z"
+  },
+  {
+   "id": "01a15884-3cfa-7533-92ca-02c7b52eda60",
+   "nickname": "Sartre",
+   "model": "gpt-6.1-sol",
+   "effort": "xhigh",
+   "role": "review-party",
+   "writeScope": "읽기 전용",
+   "brief": "C:/Users/heart/AppData/Local/APEX/lanes/aljjang95-blade-surge/20261020-drops-region-party-sfx/integration/work/cycles/20261020-drops-region-party-sfx/brief.md",
+   "spawnedAt": "2026-10-20T08:53:45.512Z"
+  }
+ ]
+}
