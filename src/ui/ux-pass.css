@@ -333,3 +333,26 @@
   .hs-id h2 { font-size: 18px !important; }
   .hs-id .sub { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.3; }
 }
+
+/* =====================================================================
+   8) 마을 걷기 입구 카드: 이동 조이스틱을 절대 가리지 않는 컴팩트 카드 + 접기.
+   - 카드 빈 곳은 터치를 통과시키고(버튼·세부 줄만 받는다) 조이스틱을 카드 위에 둔다.
+   - 세로 화면에서는 카드 높이를 조이스틱 아래 여백(스틱 바닥 206px − 카드 바닥 100px − 라벨)까지로 제한한다.
+   - 접힌 카드(작은 화면 기본)는 이름·안내 토글·행동 버튼 한 줄만 남긴다.
+   ===================================================================== */
+.citadel-hub-ui .citadel-hub-near { pointer-events: none; z-index: 1; }
+.citadel-hub-ui .citadel-hub-near .citadel-hub-interact, .citadel-hub-ui .citadel-hub-near-toggle { pointer-events: auto; }
+.citadel-hub-ui .citadel-hub-stick { z-index: 3; }
+.citadel-hub-near-toggle { flex: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-width: 44px; min-height: 44px; padding: 0 11px; border: 1px solid #b9a56fb3; border-radius: 22px; background: #fff7dfe6; color: #4a3a1c; font: 700 12px/1 var(--font-ui, system-ui, sans-serif); cursor: pointer; touch-action: manipulation; }
+.citadel-hub-near-toggle:focus-visible { outline: 3px solid #fff3b0; outline-offset: 2px; }
+.citadel-hub-near-toggle-caret { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid currentColor; transition: transform .15s; }
+.citadel-hub-ui[data-near-collapsed="false"] .citadel-hub-near-toggle-caret { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .citadel-hub-near-toggle-caret { transition: none; } }
+.citadel-hub-ui[data-near-collapsed="true"] .citadel-hub-near-detail, .citadel-hub-ui[data-near-collapsed="true"] .citadel-hub-near-copy small { display: none; }
+.citadel-hub-ui[data-near-collapsed="false"] .citadel-hub-near-detail { display: block; max-height: 2.9em; overflow-y: auto; overscroll-behavior: contain; pointer-events: auto; touch-action: pan-y; }
+@media (orientation: portrait) {
+  :root:root:root:root .citadel-hub-ui .citadel-hub-near { max-height: 82px; gap: 8px; padding-block: 8px; overflow: hidden; }
+  .citadel-hub-ui .citadel-hub-near-copy small { display: none; }
+  .citadel-hub-ui .citadel-hub-near-name { font-size: 14px; line-height: 1.25; }
+  .citadel-hub-ui[data-near-collapsed="false"] .citadel-hub-near-detail { font-size: 11px; line-height: 1.4; }
+}
