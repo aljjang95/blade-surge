@@ -38,3 +38,13 @@
 .stage-level[data-tone=warn] .stage-level-state{color:#ffd070}
 .stage-level[data-tone=bad] .stage-level-state{color:#ff8a8a}
 .stage-level[data-tone=muted] .stage-level-state{color:#a9b5b8}
+/* 결과 화면 다음 출격 안내 */
+.next-guide{display:grid;gap:3px;padding:8px 12px;margin-bottom:10px;border:1px solid #d8b87859;border-radius:12px;background:#d8b8781a;text-align:left}
+.next-guide[data-new-region=true]{border-color:#ffd070;background:#ffd0701f;box-shadow:0 0 14px #ffd07033}
+.next-guide-title{margin:0;font-size:13px;color:#ffe0a0}
+.next-guide p{margin:0;font-size:12px;line-height:1.5;color:var(--txt)}
+.next-guide .next-guide-region{font-size:14px;color:#ffd070}
+.next-guide .next-guide-stage{font-weight:800}
+.next-guide-level[data-tone=good] b{color:#7be0a4}.next-guide-level[data-tone=warn] b{color:#ffd070}.next-guide-level[data-tone=bad] b{color:#ff8a8a}.next-guide-level[data-tone=muted] b{color:#a9b5b8}
+.next-guide-level .next-guide-detail{color:#9fb0aa;font-size:10px}
+.next-guide .next-guide-drops{color:#bac8c2;font-size:11px}

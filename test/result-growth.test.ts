@@ -281,3 +281,20 @@ test('late timers and stale save retry cannot revive an old result or settle an 
   expect(get('result-loot').children).toHaveLength(0); expect(f.ui.retryResultSave(f.result)).toBe(false);
   f.battle.active = true; f.ui.showResult(f.battle, true); expect(f.ui.resultData).toBeNull(); expect(f.settlements()).toBe(1);
 });
+
+test('승리 결과는 다음 출격 스테이지·새 지역·권장 Lv 대비 상태·대표 보상을 안내만 하고 다음 버튼 동작은 바꾸지 않는다', () => {
+  const f = fixture(); f.save.progress.unlocked = 11; // 1-10 클리어 직후: 다음은 2-1(새 지역)
+  f.ui.showResult(f.battle, true);
+  const block = get('result-growth').all().find(n => n.className === 'next-guide')!;
+  expect(block).toBeDefined(); expect(block.dataset.newRegion).toBe('true');
+  const text = block.textContent;
+  expect(text).toContain('다음 출격'); expect(text).toContain('새 지역 개방: ' + stageDef(2, 1).chapter.name);
+  expect(text).toContain('2-1 · ' + stageDef(2, 1).title); expect(text).toContain('권장 Lv.' + stageDef(2, 1).recommendedLevel);
+  expect(text).toMatch(/내 Lv\.\d+/); expect(text).toContain('대표 보상');
+  expect(f.calls).not.toContain('start');
+});
+
+test('패배 결과에는 다음 출격 안내가 없다', () => {
+  const f = fixture(false, 0); f.ui.showResult(f.battle, false);
+  expect(get('result-growth').all().some(n => n.className === 'next-guide')).toBe(false);
+});
