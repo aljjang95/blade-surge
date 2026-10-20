@@ -65,11 +65,11 @@ test('empty-world mouse drag changes the rendered walking view and saves only af
   const base = { ...walkingLobbyCameraPosition(false, app.renderer.lobbyCamera) };
   expect(send(doc, 'pointerdown', pointer()).defaultPrevented).toBe(true);
   send(doc, 'pointermove', { ...pointer(), clientX: 200, clientY: 120 });
-  expect(controls.value).toEqual({ yaw: -26, pitch: 14, zoom: 100 });
+  expect(controls.value).toEqual({ yaw: 64, pitch: 14, zoom: 100 });
   expect(walkingLobbyCameraPosition(false, app.renderer.lobbyCamera).x).not.toBe(base.x);
   expect(saveCount).toBe(0);
   send(doc, 'pointerup', pointer()); expect(saveCount).toBe(1); expect(world.captures.size).toBe(0);
-  send(doc, 'pointermove', { ...pointer(), clientX: 400 }); expect(controls.value.yaw).toBe(-26);
+  send(doc, 'pointermove', { ...pointer(), clientX: 400 }); expect(controls.value.yaw).toBe(64);
 });
 test('joystick touch and a foreign UI touch never enter the camera gesture', () => {
   const joystick = new Surface(), hub = new HubControls({ isActive: app.canWalkHub, joystick, host, document: doc });
@@ -78,8 +78,8 @@ test('joystick touch and a foreign UI touch never enter the camera gesture', () 
   expect(hub.pointer?.id).toBe(8); expect(controls.touch.size).toBe(0);
   send(doc, 'pointerdown', pointer(9, pad, true));
   send(doc, 'pointermove', { ...pointer(9, pad, true), clientX: 180 });
-  // 문턱 8px을 뺀 72px만 회전한다: 19 - 72 * .45
-  expect(controls.value.yaw).toBe(-13); expect(hub.pointer?.id).toBe(8); expect(hub.update().x).toBeGreaterThan(0);
+  // 문턱 8px을 뺀 72px만 회전한다: 19 + 72 * .45(왼쪽으로 끌면 장면이 손가락을 따라오므로 yaw 증가)
+  expect(controls.value.yaw).toBe(51); expect(hub.pointer?.id).toBe(8); expect(hub.update().x).toBeGreaterThan(0);
   send(doc, 'pointerup', stick); expect(pad.hasPointerCapture(9)).toBe(true);
   const interact = new Surface(); interact.ui = true;
   send(doc, 'pointerdown', pointer(10, interact, true)); expect(controls.touch.has(10)).toBe(false);
@@ -94,15 +94,15 @@ test('성채 조이스틱을 쥔 채 빈 화면 한 손가락 회전과 두 손�
   send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 104 }); expect(controls.value.yaw).toBe(19);
   expect(world.hasPointerCapture(1)).toBe(false);
   send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 128 });
-  expect(controls.value.yaw).toBe(10); expect(world.hasPointerCapture(1)).toBe(true);
+  expect(controls.value.yaw).toBe(28); expect(world.hasPointerCapture(1)).toBe(true);
   expect(send(doc, 'pointerdown', { ...pointer(2, world, true), clientX: 168 }).defaultPrevented).toBe(true);
   send(doc, 'pointermove', { ...pointer(2, world, true), clientX: 208 });
-  expect(controls.value).toEqual({ yaw: 10, pitch: 11, zoom: 135 });
+  expect(controls.value).toEqual({ yaw: 28, pitch: 11, zoom: 135 });
   send(doc, 'pointermove', { ...pointer(2, world, true), clientX: 172 }); expect(controls.value.zoom).toBe(110);
   expect(hub.pointer?.id).toBe(8); expect(hub.update().x).toBeGreaterThan(0); expect(saveCount).toBe(0);
   send(doc, 'pointerup', { ...pointer(2, world, true), clientX: 172 });
-  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 128 }); expect(controls.value.yaw).toBe(10);
-  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 148 }); expect(controls.value.yaw).toBe(1);
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 128 }); expect(controls.value.yaw).toBe(28);
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 148 }); expect(controls.value.yaw).toBe(37);
   expect(saveCount).toBe(0);
   send(doc, 'pointerup', { ...pointer(1, world, true), clientX: 148 });
   expect(saveCount).toBe(1); expect(world.captures.size).toBe(0); expect(hub.pointer?.id).toBe(8);
@@ -116,13 +116,13 @@ test('default selection lobby without town walk still orbits by empty-world touc
   controls.updateActivity(); expect(controls.active).toBe(true);
   send(doc, 'pointerdown', pointer(1, world, true));
   send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 128 });
-  expect(controls.value.yaw).toBe(10); expect(world.hasPointerCapture(1)).toBe(true);
+  expect(controls.value.yaw).toBe(28); expect(world.hasPointerCapture(1)).toBe(true);
   send(doc, 'pointerup', { ...pointer(1, world, true), clientX: 128 }); expect(saveCount).toBe(1);
   for (const state of [{ blocked: true }, { lobbyVisible: false }, { mode: 'battle' }]) {
     Object.assign(app, { blocked: false, lobbyVisible: true, mode: 'lobby' }, state); controls.updateActivity();
     expect(controls.active).toBe(false);
     send(doc, 'pointerdown', pointer(5, world, true)); send(doc, 'pointermove', { ...pointer(5, world, true), clientX: 200 });
-    expect(controls.value.yaw).toBe(10); expect(world.captures.size).toBe(0);
+    expect(controls.value.yaw).toBe(28); expect(world.captures.size).toBe(0);
     send(doc, 'pointerup', pointer(5, world, true));
   }
 });
@@ -136,15 +136,15 @@ test('per-frame lobby input release keeps a selection-lobby camera finger while 
   releaseBlockedLobbyInput(app);
   expect(controls.touch.size).toBe(1); expect(controls.touch.mode).toBe('pending');
   send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 128 });
-  expect(controls.value.yaw).toBe(10);
+  expect(controls.value.yaw).toBe(28);
   releaseBlockedLobbyInput(app);
   expect(controls.touch.mode).toBe('rotate'); expect(world.hasPointerCapture(1)).toBe(true);
-  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 148 }); expect(controls.value.yaw).toBe(1);
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 148 }); expect(controls.value.yaw).toBe(37);
   expect(hubClears).toBe(2); expect(saveCount).toBe(0);
   // 모달 등으로 시점 조작이 막히면 같은 프레임 정리가 제스처를 끝내고 한 번 저장한다.
   app.blocked = true; releaseBlockedLobbyInput(app);
   expect(controls.touch.size).toBe(0); expect(world.captures.size).toBe(0); expect(saveCount).toBe(1);
-  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 300 }); expect(controls.value.yaw).toBe(1);
+  send(doc, 'pointermove', { ...pointer(1, world, true), clientX: 300 }); expect(controls.value.yaw).toBe(37);
 });
 test('two camera-pad touches pinch and the remaining touch continues without an orbit jump', () => {
   send(doc, 'pointerdown', pointer(2, pad, true));
@@ -154,7 +154,7 @@ test('two camera-pad touches pinch and the remaining touch continues without an 
   send(doc, 'pointerup', pointer(2, pad, true));
   expect(pad.hasPointerCapture(2)).toBe(false); expect(pad.hasPointerCapture(3)).toBe(true);
   send(doc, 'pointermove', { ...pointer(3, pad, true), clientX: 180 }); expect(controls.value.yaw).toBe(19);
-  send(doc, 'pointermove', { ...pointer(3, pad, true), clientX: 200 }); expect(controls.value.yaw).toBe(10);
+  send(doc, 'pointermove', { ...pointer(3, pad, true), clientX: 200 }); expect(controls.value.yaw).toBe(28);
   send(doc, 'pointerup', pointer(3, pad, true)); expect(pad.captures.size).toBe(0); expect(saveCount).toBe(1);
 });
 test('capture clear and modal, stage or battle boundaries preserve the chosen view without stale drag', () => {
@@ -196,7 +196,7 @@ test('wheel, visible zoom controls and reset remain independent of battle framin
   expect(world.captures.size).toBe(0); expect(controls.value).toEqual({ yaw: 19, pitch: 11, zoom: 100 });
   expect(app.renderer.battleCamera).toEqual({ yaw: 35, zoom: 90 });
   expect(send(pad, 'keydown', { key: 'ArrowLeft', ctrlKey: true }).defaultPrevented).toBe(false);
-  expect(send(pad, 'keydown', { key: 'ArrowLeft' }).defaultPrevented).toBe(true); expect(controls.value.yaw).toBe(11);
+  expect(send(pad, 'keydown', { key: 'ArrowLeft' }).defaultPrevented).toBe(true); expect(controls.value.yaw).toBe(27);
   send(pad, 'keydown', { key: 'Home' }); expect(controls.value.yaw).toBe(19);
 });
 test('focused camera action buttons and closing the panel return ownership so native hub W resumes', () => {

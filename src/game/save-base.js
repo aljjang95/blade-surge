@@ -3,6 +3,7 @@ import { ITEM_BY_ID, SLOTS, ENH_MAX } from '../data/items.js';
 import { CHAPTERS, STAGES_PER_CHAPTER } from '../data/stages.js';
 import { BATTLE_PASS, GACHA } from '../data/shop.js';
 import { normalizeLobbyCamera } from '../engine/lobby-camera.js';
+import { normalizeCameraInvert } from '../engine/camera-invert.js';
 import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { normalizeTownState } from '../data/towns.js';
@@ -103,6 +104,7 @@ export function normalizeSave(raw, fresh) {
   // 화면 흔들림은 사람이 직접 고른 true/false 만 저장한다. null(미선택)이면 동작 줄이기 선호를 따라 정한다.
   s.settings.screenShake = typeof raw.settings?.screenShake === 'boolean' ? raw.settings.screenShake : null;
   s.settings.lobbyCamera = normalizeLobbyCamera(raw.settings?.lobbyCamera);
+  Object.assign(s.settings, normalizeCameraInvert(raw.settings));
   s.settings.autoTarget = typeof raw.settings?.autoTarget === 'boolean' ? raw.settings.autoTarget : true;
   s.name = s.name.trim().slice(0, 20) || fresh.name;
   s.expedition = normalizeExpedition(raw.expedition);

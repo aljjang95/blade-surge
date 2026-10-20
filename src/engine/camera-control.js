@@ -1,6 +1,7 @@
 import './camera-gestures.css';
 import { Vector3 } from 'three';
 import { WorldTouchGesture } from './world-gesture.js';
+import { cameraPitchSign, cameraYawSign } from './camera-invert.js';
 const clamp = (value, fallback, min, max) => Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
 
 /** 화면에서 끈 방향을 영웅이 서 있는 바닥 평면의 월드 방향으로 바꾼다(원근 단축 보정). 결과를 out.x/out.z에 쓰고 성공 여부를 돌려준다. */
@@ -91,8 +92,10 @@ export class CameraControls {
     document.addEventListener('pointermove', event => {
       if (this.drag?.id === event.pointerId && event.pointerType !== 'touch') {
         if (!this.active) { this.finish(); return; }
-        this.set({ ...this.value, yaw: this.drag.yaw - (event.clientX - this.drag.x) * BATTLE_ROTATE_YAW,
-          pitch: this.drag.pitch + (event.clientY - this.drag.y) * BATTLE_ROTATE_PITCH });
+        // 끄는 방향으로 장면이 따라온다. 설정의 좌우·상하 반전은 이벤트마다 읽어 즉시 반영한다.
+        const ys = cameraYawSign(this.settings), ps = cameraPitchSign(this.settings);
+        this.set({ ...this.value, yaw: this.drag.yaw + (event.clientX - this.drag.x) * BATTLE_ROTATE_YAW * ys,
+          pitch: this.drag.pitch + (event.clientY - this.drag.y) * BATTLE_ROTATE_PITCH * ps });
         event.preventDefault();
         return;
       }
@@ -105,7 +108,8 @@ export class CameraControls {
       }
       if (step === 'rotate-start' || step === 'rotate') {
         const base = this.touchBase;
-        this.set({ yaw: base.yaw - this.touch.dx * BATTLE_ROTATE_YAW, pitch: base.pitch + this.touch.dy * BATTLE_ROTATE_PITCH,
+        const ys = cameraYawSign(this.settings), ps = cameraPitchSign(this.settings);
+        this.set({ yaw: base.yaw + this.touch.dx * BATTLE_ROTATE_YAW * ys, pitch: base.pitch + this.touch.dy * BATTLE_ROTATE_PITCH * ps,
           zoom: this.currentValue().zoom });
         event.preventDefault();
       } else if (step === 'pinch') {
@@ -149,10 +153,12 @@ export class CameraControls {
     this.pad?.addEventListener('keydown', event => {
       if (!this.active || event.ctrlKey || event.metaKey || event.altKey) return;
       const v = this.currentValue();
-      if (event.key === 'ArrowLeft') v.yaw -= 8;
-      else if (event.key === 'ArrowRight') v.yaw += 8;
-      else if (event.key === 'ArrowUp') v.pitch += 3;
-      else if (event.key === 'ArrowDown') v.pitch -= 3;
+      const ys = cameraYawSign(this.settings), ps = cameraPitchSign(this.settings);
+      // 왼쪽 방향키는 시야를 왼쪽으로 돌린다(yaw 증가 = 시야 왼쪽 회전).
+      if (event.key === 'ArrowLeft') v.yaw += 8 * ys;
+      else if (event.key === 'ArrowRight') v.yaw -= 8 * ys;
+      else if (event.key === 'ArrowUp') v.pitch += 3 * ps;
+      else if (event.key === 'ArrowDown') v.pitch -= 3 * ps;
       else if (event.key === '+' || event.key === '=') v.zoom += 5;
       else if (event.key === '-') v.zoom -= 5;
       else if (event.key === 'Home') { event.preventDefault(); event.stopPropagation(); this.reset(); return; }
@@ -160,6 +166,7 @@ export class CameraControls {
       event.preventDefault(); event.stopPropagation(); this.set(v);
     });
   }
+  get settings() { return this.app.eco?.s?.settings; }
   get active() {
     const battle = this.app.battle;
     return this.app.mode === 'battle' && !!battle?.active && !battle.paused && battle.player?.alive !== false
