@@ -83,7 +83,8 @@ function build(app) {
     },
     canRecruit() { return !!(app.party && app.party.isHost && app.party.party && app.party.party.status === 'lobby'); },
     openParty() { ui.close(); app.party && app.party.view.open(); },
-    canOpenPanel() { return app.mode === 'lobby' && !app.stageStarting && !inBattle() && !app.contextLost; },
+    // 게임 팝업(출석 보상 등)이 떠 있을 때는 열지 않는다. 메뉴 창(#oath-menu)은 버튼을 누르는 순간 이미 닫힌다.
+    canOpenPanel() { return app.mode === 'lobby' && !app.stageStarting && !inBattle() && !app.contextLost && !document.querySelector('dialog[open]:not(#oath-menu), #modal.show'); },
     diagnostics() {
       return {
         version: BUILD_ID,
