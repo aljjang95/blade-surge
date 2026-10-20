@@ -46,7 +46,9 @@ async function open(browser, rec, viewport = VIEW, { seed = null, initScript = n
   page.setDefaultTimeout(20000);
   const s = { context, page, rec, viewport };
   page.on('pageerror', (e) => rec.pageErrors.push('pageerror: ' + String(e).slice(0, 300)));
-  page.on('console', (m) => { if (m.type() !== 'error') return; const t = m.text(); if (/Ignored attempt to cancel a touchstart event with cancelable=false/.test(t)) { rec.ignoredConsole = (rec.ignoredConsole || 0) + 1; return; } rec.pageErrors.push('console: ' + t.slice(0, 300)); });
+  // Vite 개발 서버는 Worker 경로(/api/social/*, 커뮤니티 #216)를 서빙하지 않아 404 가 난다. 그 404 만 따로 세고 다른 실패는 그대로 오류로 본다.
+  page.on('response', (r) => { if (r.status() === 404 && new URL(r.url()).pathname.startsWith('/api/social/')) rec.devWorker404 = (rec.devWorker404 || 0) + 1; });
+  page.on('console', (m) => { if (m.type() !== 'error') return; const t = m.text(); if (/Ignored attempt to cancel a touchstart event with cancelable=false/.test(t)) { rec.ignoredConsole = (rec.ignoredConsole || 0) + 1; return; } if (/status of 404/.test(t) && /\/api\/social\//.test(m.location()?.url || '')) { rec.ignoredDevWorker404 = (rec.ignoredDevWorker404 || 0) + 1; return; } rec.pageErrors.push('console: ' + t.slice(0, 300) + (m.location()?.url ? ' @ ' + m.location().url : '')); });
   s.close = () => context.close();
   rec.cur = s;
   return s;
