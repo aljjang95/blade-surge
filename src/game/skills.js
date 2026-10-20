@@ -4,6 +4,7 @@ import { applyKnightSlashVariant, knightSlashVariantForBattle } from './knight-b
 import { AWAKENING_III } from './awakening-iii.js';
 import { gatherEnemies } from './crowd-gather.js';
 import { hasTownSkillVariant } from './town-combat.js';
+import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
 
 const _v = new THREE.Vector3();
 const fwd = (p, d = 1) => p.forward(new THREE.Vector3()).multiplyScalar(d).add(p.pos);
@@ -944,3 +945,15 @@ export const SKILLS = {
   ...AWAKENING_III,
 
 };
+
+// 스킬별 전장 장악 VFX: 기존 cast 지점에서 레시피를 한 번 호출한다(판정·피해·타이밍은 원래 cast 그대로).
+for (const id of Object.keys(SKILL_VFX)) {
+  const impl = SKILLS[id];
+  if (!impl || impl.vfxWrapped) continue;
+  const cast = impl.cast;
+  impl.cast = function (game, p, c) {
+    try { castSkillVfx(game, id, p, c); } catch (error) { console.warn('skill vfx', id, error); }
+    return cast?.call(this, game, p, c);
+  };
+  impl.vfxWrapped = true;
+}

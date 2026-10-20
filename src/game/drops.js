@@ -4,6 +4,7 @@ import { getPart, softCircleTex } from '../engine/assets.js';
 import { RARITY_COLOR, ITEM_BY_ID } from '../data/items.js';
 import { createLootVisual } from './loot-visual.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
+import { lootTable, pickLootRarity } from '../data/loot-tables.js';
 
 const _v = new THREE.Vector3();
 
@@ -57,6 +58,11 @@ export class DropSystem {
       else if (kind === 'stone2') { mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.28), this._mat(0x3a7bff, 2.0)); mesh.userData.own = true; }
       else if (kind === 'stone3') { mesh = new THREE.Mesh(new THREE.OctahedronGeometry(0.34), this._mat(0xffd35a, 2.4)); mesh.userData.own = true; }
       else if (kind === 'frag') { mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.1, 6), this._mat(0xb26bff, 2.0)); mesh.userData.own = true; }
+      else if (['heroShard', 'transcendStone', 'material'].includes(kind)) {
+        // 지역 재료도 기존 강화석과 같은 공유 형상을 재사용한다.
+        this._geoMaterial ||= new THREE.OctahedronGeometry(.24);
+        mesh = new THREE.Mesh(this._geoMaterial, this._mat(kind === 'transcendStone' ? 0xff5a8a : kind === 'heroShard' ? 0xffcf5a : 0x87cbb0, 1.6));
+      }
       else { mesh = createLootVisual(payload, this._lootMaterials); }
       mesh.position.copy(pos); mesh.position.y = 0.6 + Math.random() * 0.3;
       mesh.castShadow = false;
@@ -123,6 +129,15 @@ export class DropSystem {
     } else if (it.kind === 'frag') {
       this.fragments += it.payload; g.ui.flyReward(pos, `세트 조각 +${it.payload}`, g.renderer.camera, 'stone');
       audio.magic({ vol: 0.25, base: 520, notes: [0, 7, 12], step: 0.04 }); g.fx.burst(pos, 0xb26bff, { n: 8, speed: 5, size: 0.3, life: 0.4 });
+    } else if (['heroShard', 'transcendStone', 'material'].includes(it.kind)) {
+      const ledger = this.fieldLedger();
+      if (!ledger || ledger.settled) return;
+      if (it.kind === 'heroShard') ledger.heroShards += it.payload;
+      else if (it.kind === 'transcendStone') ledger.transcendStones += it.payload;
+      else ledger.materials[it.payload.id] = (ledger.materials[it.payload.id] || 0) + it.payload.n;
+      const name = it.kind === 'heroShard' ? '영웅 조각' : it.kind === 'transcendStone' ? '초월석' : '지역 재료';
+      g.ui.flyReward(pos, `${name} +${it.payload.n || it.payload}`, g.renderer.camera, 'stone');
+      g.fx.burst(pos, 0xffcf5a, { n: 5, speed: 4, size: .25, life: .35 });
     } else {
       this.loot.push(it.payload);
       const def = ITEM_BY_ID[it.payload.id];
@@ -138,24 +153,41 @@ export class DropSystem {
     if (!fieldDropsAllowed(stage) || !fieldDropsAllowed(this.game.stage)) return;
     // 무리 졸개는 몰이 밀도만 더한다. 보상은 기존 명단·방 정화에서만 나온다.
     if (enemy.packFollower) return;
+    this.fieldLedger();
+    const rank = enemy.isBoss ? 'boss' : enemy.isElite ? 'elite' : 'normal', table = lootTable(stage.ch, rank);
     const pos = enemy.pos.clone();
     const g = enemy.def.gold || 1;
-    const goldAmt = Math.max(1, Math.floor(g * stage.scale * (0.8 + Math.random() * 0.5)));
+    const goldAmt = Math.max(1, Math.floor(g * stage.scale * table.goldMultiplier * (0.8 + Math.random() * 0.5)));
     this.spawn(pos, 'gold', goldAmt, { count: enemy.isBoss ? 8 : enemy.isElite ? 3 : 1, spread: enemy.isBoss ? 2 : 1 });
     const frontier = frontierEffectForStage(stage);
     if (!enemy.summoned && frontier?.kind === 'goldPerKill') this.spawn(pos, 'gold', frontier.value, { count: 1, spread: 0.7 });
-    if (enemy.isBoss || enemy.isElite || Math.random() < 0.18) this.spawn(pos, 'stone', enemy.isBoss ? 5 : enemy.isElite ? 2 : 1, { count: 1 });
+    if (table.stoneChance === 1 || Math.random() < table.stoneChance) this.spawn(pos, 'stone', table.stones, { count: 1 });
     // 비석 상위 등급: 엘리트 → 상급, 보스 → 전설. 세트 조각은 엘리트·보스에서만 (제작 30개)
-    if (enemy.isElite) { this.spawn(pos, 'stone2', 1, { count: 1 }); if (Math.random() < 0.6) this.spawn(pos, 'frag', 2, { count: 1 }); }
-    if (enemy.isBoss) { this.spawn(pos, 'stone2', 2, { count: 1 }); this.spawn(pos, 'stone3', 1, { count: 1 }); this.spawn(pos, 'frag', 5, { count: 1, spread: 1.5 }); }
+    if (table.stones2) this.spawn(pos, 'stone2', table.stones2, { count: 1 });
+    if (table.stones3) this.spawn(pos, 'stone3', table.stones3, { count: 1 });
+    if (table.fragments && (table.fragmentChance === 1 || Math.random() < table.fragmentChance)) this.spawn(pos, 'frag', table.fragments, { count: 1, spread: 1.5 });
+    // 소환된 적은 기존처럼 기본 골드·강화석만 남기고 새 성장 재료는 주지 않는다.
+    if (this._ledger && !enemy.summoned) {
+      if (Math.random() < table.heroShards.chance) this.spawn(pos, 'heroShard', table.heroShards.n);
+      if (Math.random() < table.transcendStones.chance) this.spawn(pos, 'transcendStone', table.transcendStones.n);
+      if (table.material.chance === 1 || Math.random() < table.material.chance) this.spawn(pos, 'material', { id: table.material.id, n: table.material.n });
+    }
     // 장비: 엘리트 확정, 보스 2개, 잡몹 낮은 확률
     // 장비: 보스 3, 엘리트 2, 잡몹 8% — 자주 떨어지되 대부분 흰·초록 (등급 가중치가 희소성을 만든다)
-    const rolls = enemy.isBoss ? 3 : enemy.isElite ? 2 : (Math.random() < 0.08 ? 1 : 0);
+    const rolls = table.gearChance === 1 || Math.random() < table.gearChance ? table.gearRolls : 0;
     for (let i = 0; i < rolls; i++) {
-      const table = enemy.isBoss ? 'boss' : enemy.isElite ? 'elite' : 'normal';
-      const inst = this.game.rollDrop(table);
+      const eco = this.game.app?.eco, rarity = pickLootRarity(table.gearWeights);
+      const inst = eco?.fieldDrop ? { ...eco.fieldDrop(rarity), rarity } : this.game.rollDrop(rank);
       if (inst) this.spawn(pos, 'item', inst, { count: 1, spread: 1.4 });
     }
   }
-  clear() { while (this.items.length) this._remove(this.items.length - 1); this.gold = 0; this.stones = 0; this.stones2 = 0; this.stones3 = 0; this.fragments = 0; this.loot = []; }
+  fieldLedger() {
+    if (!this._ledger || this._ledger.stage !== this.game.stage) this._ledger = this.game.app?.eco?.beginFieldRewards?.(this.game.stage, this.game.heroId);
+    return this._ledger;
+  }
+  clear() {
+    this.game.app?.eco?.discardFieldRewards?.(this._ledger); this._ledger = null;
+    while (this.items.length) this._remove(this.items.length - 1);
+    this.gold = 0; this.stones = 0; this.stones2 = 0; this.stones3 = 0; this.fragments = 0; this.loot = [];
+  }
 }

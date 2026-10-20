@@ -1,0 +1,704 @@
+{
+  "id": "A7",
+  "title": "등급 오라·화면 중앙 UI 겹침",
+  "pass": false,
+  "checks": [
+    {
+      "name": "SSSR: GradeAura 그룹 표시(group.visible)",
+      "ok": false,
+      "detail": {
+        "grade": "SR",
+        "group": true,
+        "visible": false,
+        "ring": false,
+        "aura": false,
+        "ringOpacity": 0,
+        "ringMapSet": false,
+        "auraMapSet": false,
+        "heroGrade": "SSSR"
+      }
+    },
+    {
+      "name": "SSSR: 지면 링·몸 오라 모두 표시",
+      "ok": false,
+      "detail": {
+        "ring": false,
+        "aura": false
+      }
+    },
+    {
+      "name": "전투 DOM UI 중앙 보호 영역 겹침 0(2초 간격 10회 표본)",
+      "ok": false,
+      "detail": [
+        {
+          "sample": 3,
+          "items": [
+            {
+              "id": null,
+              "cls": "reward-fly",
+              "text": "+1",
+              "world": false,
+              "rect": [
+                421,
+                134,
+                438,
+                154
+              ],
+              "op": 0.08
+            },
+            {
+              "id": null,
+              "cls": "reward-fly",
+              "text": "+6",
+              "world": false,
+              "rect": [
+                422,
+                163,
+                438,
+                183
+              ],
+              "op": 0.69
+            },
+            {
+              "id": null,
+              "cls": "reward-fly",
+              "text": "강화석 +1",
+              "world": false,
+              "rect": [
+                422,
+                163,
+                481,
+                183
+              ],
+              "op": 0.69
+            },
+            {
+              "id": null,
+              "cls": "reward-fly",
+              "text": "+1",
+              "world": false,
+              "rect": [
+                422,
+                167,
+                439,
+                187
+              ],
+              "op": 0.79
+            },
+            {
+              "id": null,
+              "cls": "reward-fly",
+              "text": "+6",
+              "world": false,
+              "rect": [
+                422,
+                169,
+                439,
+                189
+              ],
+              "op": 0.81
+            },
+            {
+              "id": null,
+              "cls": "reward-fly",
+              "text": "+6",
+              "world": false,
+              "rect": [
+                422,
+                169,
+                439,
+                189
+              ],
+              "op": 0.81
+            }
+          ]
+        },
+        {
+          "sample": 6,
+          "items": [
+            {
+              "id": null,
+              "cls": "reward-fly",
+              "text": "+1",
+              "world": false,
+              "rect": [
+                415,
+                126,
+                432,
+                146
+              ],
+              "op": 0.08
+            },
+            {
+              "id": null,
+              "cls": "reward-fly",
+              "text": "강화석 +1",
+              "world": false,
+              "rect": [
+                417,
+                129,
+                476,
+                149
+              ],
+              "op": 0.13
+            },
+            {
+              "id": null,
+              "cls": "reward-fly",
+              "text": "+1",
+              "world": false,
+              "rect": [
+                422,
+                176,
+                439,
+                196
+              ],
+              "op": 0.94
+            }
+          ]
+        },
+        {
+          "sample": 7,
+          "items": [
+            {
+              "id": "masterworks",
+              "cls": "mw-dialog",
+              "text": "BLADE SURGE · CHRONICLES",
+              "world": false,
+              "rect": [
+                42,
+                8,
+                802,
+                382
+              ],
+              "op": 1
+            },
+            {
+              "id": null,
+              "cls": "mw-choice-title",
+              "text": "이번 싸움을 바꿀 힘",
+              "world": false,
+              "rect": [
+                139,
+                129,
+                783,
+                160
+              ],
+              "op": 1
+            },
+            {
+              "id": null,
+              "cls": "",
+              "text": "3개 중 하나를 선택하면 이번 출격에 즉시 ",
+              "world": false,
+              "rect": [
+                139,
+                166,
+                783,
+                186
+              ],
+              "op": 1
+            }
+          ]
+        },
+        {
+          "sample": 8,
+          "items": [
+            {
+              "id": "masterworks",
+              "cls": "mw-dialog",
+              "text": "BLADE SURGE · CHRONICLES",
+              "world": false,
+              "rect": [
+                42,
+                8,
+                802,
+                382
+              ],
+              "op": 1
+            },
+            {
+              "id": null,
+              "cls": "mw-choice-title",
+              "text": "이번 싸움을 바꿀 힘",
+              "world": false,
+              "rect": [
+                139,
+                129,
+                783,
+                160
+              ],
+              "op": 1
+            },
+            {
+              "id": null,
+              "cls": "",
+              "text": "3개 중 하나를 선택하면 이번 출격에 즉시 ",
+              "world": false,
+              "rect": [
+                139,
+                166,
+                783,
+                186
+              ],
+              "op": 1
+            }
+          ]
+        },
+        {
+          "sample": 9,
+          "items": [
+            {
+              "id": "masterworks",
+              "cls": "mw-dialog",
+              "text": "BLADE SURGE · CHRONICLES",
+              "world": false,
+              "rect": [
+                42,
+                8,
+                802,
+                382
+              ],
+              "op": 1
+            },
+            {
+              "id": null,
+              "cls": "mw-choice-title",
+              "text": "이번 싸움을 바꿀 힘",
+              "world": false,
+              "rect": [
+                139,
+                129,
+                783,
+                160
+              ],
+              "op": 1
+            },
+            {
+              "id": null,
+              "cls": "",
+              "text": "3개 중 하나를 선택하면 이번 출격에 즉시 ",
+              "world": false,
+              "rect": [
+                139,
+                166,
+                783,
+                186
+              ],
+              "op": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "SSR: GradeAura 그룹 표시(금색 링, 몸 오라 없음)",
+      "ok": false,
+      "detail": {
+        "grade": "SR",
+        "group": true,
+        "visible": false,
+        "ring": false,
+        "aura": false,
+        "ringOpacity": 0,
+        "ringMapSet": false,
+        "auraMapSet": false,
+        "heroGrade": "SSR"
+      }
+    }
+  ],
+  "injected": [
+    "eco 상태 준비: {\"hero\":\"knight\",\"level\":null,\"grade\":\"SSSR\",\"gold\":0,\"tutorial\":true}",
+    "eco 상태 준비: {\"hero\":\"knight\",\"level\":null,\"grade\":\"SSR\",\"gold\":0,\"tutorial\":true}"
+  ],
+  "real": [
+    "부팅: #btn-ignore-rotate·#boot-start 실제 탭 → lobby",
+    "전투 진입: #citadel-dungeon-prepare → 원정 시작 → 건너뛰기 탭 → mode=battle",
+    "AUTO 버튼 실제 탭(전투 중 UI 표본 확보)"
+  ],
+  "observed": {
+    "sssrAura": {
+      "grade": "SR",
+      "group": true,
+      "visible": false,
+      "ring": false,
+      "aura": false,
+      "ringOpacity": 0,
+      "ringMapSet": false,
+      "auraMapSet": false,
+      "heroGrade": "SSSR"
+    },
+    "overlapSamples": [
+      {
+        "i": 0,
+        "zone": {
+          "x0": 281,
+          "x1": 563,
+          "y0": 103,
+          "y1": 180
+        },
+        "ui": [],
+        "dmgNumbers": 0
+      },
+      {
+        "i": 1,
+        "zone": {
+          "x0": 281,
+          "x1": 563,
+          "y0": 103,
+          "y1": 180
+        },
+        "ui": [],
+        "dmgNumbers": 0
+      },
+      {
+        "i": 2,
+        "zone": {
+          "x0": 281,
+          "x1": 563,
+          "y0": 103,
+          "y1": 180
+        },
+        "ui": [],
+        "dmgNumbers": 0
+      },
+      {
+        "i": 3,
+        "zone": {
+          "x0": 281,
+          "x1": 563,
+          "y0": 103,
+          "y1": 180
+        },
+        "ui": [
+          {
+            "id": null,
+            "cls": "reward-fly",
+            "text": "+1",
+            "world": false,
+            "rect": [
+              421,
+              134,
+              438,
+              154
+            ],
+            "op": 0.08
+          },
+          {
+            "id": null,
+            "cls": "reward-fly",
+            "text": "+6",
+            "world": false,
+            "rect": [
+              422,
+              163,
+              438,
+              183
+            ],
+            "op": 0.69
+          },
+          {
+            "id": null,
+            "cls": "reward-fly",
+            "text": "강화석 +1",
+            "world": false,
+            "rect": [
+              422,
+              163,
+              481,
+              183
+            ],
+            "op": 0.69
+          },
+          {
+            "id": null,
+            "cls": "reward-fly",
+            "text": "+1",
+            "world": false,
+            "rect": [
+              422,
+              167,
+              439,
+              187
+            ],
+            "op": 0.79
+          },
+          {
+            "id": null,
+            "cls": "reward-fly",
+            "text": "+6",
+            "world": false,
+            "rect": [
+              422,
+              169,
+              439,
+              189
+            ],
+            "op": 0.81
+          },
+          {
+            "id": null,
+            "cls": "reward-fly",
+            "text": "+6",
+            "world": false,
+            "rect": [
+              422,
+              169,
+              439,
+              189
+            ],
+            "op": 0.81
+          }
+        ],
+        "dmgNumbers": 0
+      },
+      {
+        "i": 4,
+        "zone": {
+          "x0": 281,
+          "x1": 563,
+          "y0": 103,
+          "y1": 180
+        },
+        "ui": [],
+        "dmgNumbers": 0
+      },
+      {
+        "i": 5,
+        "zone": {
+          "x0": 281,
+          "x1": 563,
+          "y0": 103,
+          "y1": 180
+        },
+        "ui": [],
+        "dmgNumbers": 0
+      },
+      {
+        "i": 6,
+        "zone": {
+          "x0": 281,
+          "x1": 563,
+          "y0": 103,
+          "y1": 180
+        },
+        "ui": [
+          {
+            "id": null,
+            "cls": "reward-fly",
+            "text": "+1",
+            "world": false,
+            "rect": [
+              415,
+              126,
+              432,
+              146
+            ],
+            "op": 0.08
+          },
+          {
+            "id": null,
+            "cls": "reward-fly",
+            "text": "강화석 +1",
+            "world": false,
+            "rect": [
+              417,
+              129,
+              476,
+              149
+            ],
+            "op": 0.13
+          },
+          {
+            "id": null,
+            "cls": "reward-fly",
+            "text": "+1",
+            "world": false,
+            "rect": [
+              422,
+              176,
+              439,
+              196
+            ],
+            "op": 0.94
+          }
+        ],
+        "dmgNumbers": 0
+      },
+      {
+        "i": 7,
+        "zone": {
+          "x0": 281,
+          "x1": 563,
+          "y0": 103,
+          "y1": 180
+        },
+        "ui": [
+          {
+            "id": "masterworks",
+            "cls": "mw-dialog",
+            "text": "BLADE SURGE · CHRONICLES",
+            "world": false,
+            "rect": [
+              42,
+              8,
+              802,
+              382
+            ],
+            "op": 1
+          },
+          {
+            "id": null,
+            "cls": "mw-choice-title",
+            "text": "이번 싸움을 바꿀 힘",
+            "world": false,
+            "rect": [
+              139,
+              129,
+              783,
+              160
+            ],
+            "op": 1
+          },
+          {
+            "id": null,
+            "cls": "",
+            "text": "3개 중 하나를 선택하면 이번 출격에 즉시 ",
+            "world": false,
+            "rect": [
+              139,
+              166,
+              783,
+              186
+            ],
+            "op": 1
+          }
+        ],
+        "dmgNumbers": 0
+      },
+      {
+        "i": 8,
+        "zone": {
+          "x0": 281,
+          "x1": 563,
+          "y0": 103,
+          "y1": 180
+        },
+        "ui": [
+          {
+            "id": "masterworks",
+            "cls": "mw-dialog",
+            "text": "BLADE SURGE · CHRONICLES",
+            "world": false,
+            "rect": [
+              42,
+              8,
+              802,
+              382
+            ],
+            "op": 1
+          },
+          {
+            "id": null,
+            "cls": "mw-choice-title",
+            "text": "이번 싸움을 바꿀 힘",
+            "world": false,
+            "rect": [
+              139,
+              129,
+              783,
+              160
+            ],
+            "op": 1
+          },
+          {
+            "id": null,
+            "cls": "",
+            "text": "3개 중 하나를 선택하면 이번 출격에 즉시 ",
+            "world": false,
+            "rect": [
+              139,
+              166,
+              783,
+              186
+            ],
+            "op": 1
+          }
+        ],
+        "dmgNumbers": 0
+      },
+      {
+        "i": 9,
+        "zone": {
+          "x0": 281,
+          "x1": 563,
+          "y0": 103,
+          "y1": 180
+        },
+        "ui": [
+          {
+            "id": "masterworks",
+            "cls": "mw-dialog",
+            "text": "BLADE SURGE · CHRONICLES",
+            "world": false,
+            "rect": [
+              42,
+              8,
+              802,
+              382
+            ],
+            "op": 1
+          },
+          {
+            "id": null,
+            "cls": "mw-choice-title",
+            "text": "이번 싸움을 바꿀 힘",
+            "world": false,
+            "rect": [
+              139,
+              129,
+              783,
+              160
+            ],
+            "op": 1
+          },
+          {
+            "id": null,
+            "cls": "",
+            "text": "3개 중 하나를 선택하면 이번 출격에 즉시 ",
+            "world": false,
+            "rect": [
+              139,
+              166,
+              783,
+              186
+            ],
+            "op": 1
+          }
+        ],
+        "dmgNumbers": 0
+      }
+    ],
+    "ssrAura": {
+      "grade": "SR",
+      "group": true,
+      "visible": false,
+      "ring": false,
+      "aura": false,
+      "ringOpacity": 0,
+      "ringMapSet": false,
+      "auraMapSet": false,
+      "heroGrade": "SSR"
+    }
+  },
+  "captures": [
+    "A7-sssr-844.png",
+    "A7-sssr-mid.png",
+    "A7-sssr-1280.png",
+    "A7-ssr-844.png",
+    "A7-ssr-1280.png"
+  ],
+  "pageErrors": [],
+  "started": "2026-10-20T05:22:37.889Z",
+  "finished": "2026-10-20T05:23:53.041Z"
+}

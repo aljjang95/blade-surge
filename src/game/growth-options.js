@@ -1,4 +1,5 @@
-import { HEROES, skillUpGold, levelExp } from '../data/heroes.js';
+import { HEROES, levelExp } from '../data/heroes.js';
+import { canLearnSkill } from '../data/skill-tree.js';
 import { ITEM_BY_ID, SLOTS, itemStats, enhanceCost, enhanceStones, enhanceChance, enhanceStoneTier, STONE_KEY } from '../data/items.js';
 import { MASTERY_NODES } from '../data/masterworks.js';
 
@@ -27,12 +28,13 @@ export function growthOptions(save) {
     options.push({ kind: 'equipment', heroId, uid: item.uid, name: ITEM_BY_ID[item.id].name, from: item.enh, to: item.enh + 1, gold, stones });
     break;
   }
-  const skills = def.skills.map((skill, index) => ({ skill, index, rank: hero.skills?.[index] }))
-    .filter(({ skill, rank }) => Number.isInteger(rank) && rank >= 1 && rank < 10 && hero.level >= (skill.unlock || 1) && save.gold >= skillUpGold(rank))
+  // 스킬은 스킬 포인트(SP)로 배우고 올린다. 지금 남은 SP로 가능한 것 중 가장 낮은 레벨(새 각성 습득 포함)을 안내한다.
+  const skills = def.skills.map((skill, index) => ({ skill, index, rank: Math.floor(Number(hero.skills?.[index]) || 0), check: canLearnSkill(def, hero, index) }))
+    .filter(({ check }) => check.ok)
     .sort((a, b) => a.rank - b.rank || a.index - b.index);
   if (skills.length) {
-    const { skill, index, rank } = skills[0];
-    options.push({ kind: 'skill', heroId, index, name: skill.name, from: rank, to: rank + 1, gold: skillUpGold(rank) });
+    const { skill, index, rank, check } = skills[0];
+    options.push({ kind: 'skill', heroId, index, name: skill.name, from: rank, to: rank + 1, sp: check.cost, gold: 0 });
   }
   const mastery = save.masterworks, unlocked = mastery?.unlocked || [];
   const node = MASTERY_NODES.find(n => !unlocked.includes(n.id) && mastery?.renown >= n.cost

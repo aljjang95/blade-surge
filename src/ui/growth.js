@@ -75,13 +75,13 @@ export function renderGrowthPreparation(container, app, result) {
   for (const option of options) {
     const button = element('button', '', 'growth-action'); button.type = 'button'; button.dataset.growth = option.kind;
     const equip = option.mode === 'equip';
-    const label = option.kind === 'equipment' ? equip ? '첫 장비 비교' : '장비 강화' : option.kind === 'skill' ? '스킬 강화' : '숙련 배우기';
+    const label = option.kind === 'equipment' ? equip ? '첫 장비 비교' : '장비 강화' : option.kind === 'skill' ? (option.from === 0 ? '스킬 습득' : '스킬 강화') : '숙련 배우기';
     let detail;
     if (equip) detail = option.name + ' · 비어 있는 ' + SLOT_NAME[option.slot] + ' 슬롯';
     else if (option.kind === 'equipment') detail = option.name + ' +' + option.from + ' → +' + option.to + ' · 성공 100%';
     else if (option.kind === 'skill') detail = option.name + ' Lv.' + option.from + ' → Lv.' + option.to;
     else detail = option.name + ' · ' + option.description;
-    const cost = equip ? '비교 후 무료 장착' : option.kind === 'mastery' ? '명성 ' + number(option.renown)
+    const cost = equip ? '비교 후 무료 장착' : option.kind === 'mastery' ? '명성 ' + number(option.renown) : option.kind === 'skill' ? '스킬 포인트 ' + number(option.sp)
       : '골드 ' + number(option.gold) + (option.stones ? ' · 강화석 ' + number(option.stones) : '');
     const icon = element('img', ''); icon.src = uiArt(option.kind === 'equipment' ? 'loadout' : option.kind === 'skill' ? 'hero-xp' : 'renown'); icon.alt = '';
     const copy = element('span', '', 'growth-action-copy');

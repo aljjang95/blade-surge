@@ -4,6 +4,7 @@ import { createArrowVisual, releaseProjectileVisual } from '../engine/arrow-visu
 import { CAMERA_PRESETS } from '../engine/renderer.js';
 import { battleFraming, framingBlend } from '../engine/battle-framing.js';
 import { Player } from './player.js';
+import { clearShot } from './ranger-aim.js';
 import { Enemy, HOSTILE_PROJECTILE_REACH } from './enemies.js';
 import { DropSystem, fieldDropsAllowed } from './drops.js';
 import { TreasureChests } from './treasure-chest.js';
@@ -645,16 +646,21 @@ export class Battle {
   // ---------------- 히트 판정 ----------------
   hitArea(src, pos, yaw, range, arcDeg, dmg, opts = {}) {
     const half = THREE.MathUtils.degToRad(arcDeg) / 2; let n = 0;
-    const reachPad = opts.precision ? 0.35 : 1.5;
+    const reachPad = opts.basic ? 1.5 : opts.precision ? .35 : 1.5;
     const r2 = (range + reachPad) * (range + reachPad);
     for (const e of this.enemies) {
       if (!e.alive || e.spawning) continue;
       const dx = e.pos.x - pos.x, dz = e.pos.z - pos.z;
       if (dx * dx + dz * dz > r2) continue;
-      const d = Math.hypot(dx, dz) - e.radius * (opts.precision ? 0.35 : 0.6);
+      const distance = Math.hypot(dx, dz);
+      const d = distance - e.radius * (opts.basic ? 1 : opts.precision ? .35 : .6);
       if (d > range) continue;
       const ang = Math.atan2(dx, dz); let diff = Math.abs(ang - yaw); diff = Math.min(diff, Math.PI * 2 - diff);
-      if (diff > half && (opts.precision || d > 0.9)) continue;
+      // 평타는 적 몸이 칼날 부채꼴에 걸리면 명중한다. 중심점만 검사하면 시각적으로 겹쳐도 빗나갔다.
+      // 수동(정밀)은 몸 절반까지만 허용해 옆에 선 적을 앞 타격이 함께 베지 않게 한다(방향 선택 계약).
+      const bodyArc = opts.basic ? Math.asin(Math.min(1, e.radius * (opts.precision ? .5 : 1) / Math.max(e.radius, distance))) : 0;
+      if (diff > half + bodyArc && (opts.precision || d > .9)) continue;
+      if (opts.basic && !clearShot(this.world, pos.x, pos.z, e.pos.x, e.pos.z, e.radius)) continue;
       this.damageEnemy(e, dmg, { ...opts, dirx: dx, dirz: dz }); n++;
       if (n >= 24) break;
     }
@@ -714,7 +720,7 @@ export class Battle {
       this._contactBudget = budget; this._contactAt = budget.at;
       if (budget.emit) this.fx.flash(hitPos, color, { size: contact.size, life: .10 });
       if (budget.emit && contact.particles) this.fx.directional(hitPos, _v.set(dirx, 0, dirz).normalize(), color, { n: contact.particles, speed: contact.heavy ? 9 : 6 });
-      audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy || crit || !!e.isBoss, finisher: !!opts.finisher, boss: !!e.isBoss });
+      audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy || crit || !!e.isBoss, finisher: !!opts.finisher, boss: !!e.isBoss, weapon: p.def?.weapon });
       if (contact.stop) this.timeCtl.hitstop(contact.stop);
       if (p === this.player && !p.auto && contact.haptic) audio.vibe(contact.haptic);
       if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);

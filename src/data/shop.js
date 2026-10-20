@@ -15,9 +15,11 @@ export const SKUS = [
   { id: 'monthly', tab: 'hot', kind: 'cash', name: '월정액 카드', price: 5900, priceLabel: '₩5,900', icon: '/img/icon_gem.webp', badge: 'BEST',
     desc: '즉시 보석 600 + 30일간 매일 보석 100 (총 3,600)', rewards: { gems: 600, monthly: 30 } },
   { id: 'growth', tab: 'pack', kind: 'cash', name: '성장 패키지', price: 12000, priceLabel: '₩12,000', icon: '/img/icon_chest_epic.webp', badge: '인기',
-    desc: '보석 2,400 · 소환권 10 · 골드 200,000 · 강화석', rewards: { gems: 2400, tickets: 10, gold: 200000 } },
+    desc: '보석 2,400 · 소환권 10 · 골드 200,000 · 초월석 5 (SSSR 초월 성장)', rewards: { gems: 2400, tickets: 10, gold: 200000, transcendStones: 5 } },
   { id: 'boss_pack', tab: 'pack', kind: 'cash', name: '해골 군주 토벌 패키지', price: 33000, priceLabel: '₩33,000', icon: '/img/icon_chest_legend.webp', badge: '한정', limited: true, hours: 72,
-    desc: 'SSR 장비 선택 상자 · 보석 6,000 · 소환권 20', rewards: { gems: 6000, tickets: 20, ssrGear: 1 } },
+    desc: 'SSR 장비 선택 상자 · 보석 6,000 · 소환권 20 · 초월석 10 (SSSR 초월 성장)', rewards: { gems: 6000, tickets: 20, ssrGear: 1, transcendStones: 10 } },
+  { id: 'transcend_pack', tab: 'pack', kind: 'cash', name: 'SSSR 초월 성장 패키지', price: 33000, priceLabel: '₩33,000', icon: '/img/icon_stone_3.webp', badge: '결제 준비 중',
+    desc: '결제 준비 중 · 초월석 30 · 선택 영웅 조각 60 (지급 없음)', rewards: { transcendStones: 30, heroChoiceShards: 60 } },
   { id: 'vip_pass', tab: 'pack', kind: 'cash', name: 'VIP 멤버십 (30일)', price: 19000, priceLabel: '₩19,000', icon: '/img/icon_vip.webp',
     desc: '에너지 최대치 +50 · 골드 획득 +30% · 소탕 티켓 매일 5장', rewards: { vipDays: 30, gems: 1000 } },
 
@@ -30,6 +32,9 @@ export const SKUS = [
   { id: 'gem6', tab: 'gem', kind: 'cash', name: '보석 12,000', price: 129000, priceLabel: '₩129,000', icon: '/img/icon_gem.webp', gems: 12000, bonus: 12000 },
 
   // ---- 강화 재료 (과금 핵심) ----
+  { id: 'skill_reset1', tab: 'enh', kind: 'gem', name: '스킬 초기화서', price: 300, icon: '/img/icon_protect.webp', desc: '스킬 초기화서 ×1 · 투자 SP 반환', rewards: { skillResets: 1 } },
+  { id: 'skill_reset5', tab: 'enh', kind: 'gem', name: '스킬 초기화서 ×5', price: 1250, icon: '/img/icon_protect.webp', desc: '스킬 초기화서 ×5 · 투자 SP 반환', rewards: { skillResets: 5 }, badge: '묶음 할인' },
+  { id: 'tstone10', tab: 'enh', kind: 'gem', name: '초월석 ×10', price: 900, icon: '/img/icon_stone_3.webp', desc: '초월석 ×10 · SSR/SSSR 초월 성장 재료', rewards: { transcendStones: 10 } },
   { id: 'stone1', tab: 'enh', kind: 'gem', name: '강화석 10', price: 150, icon: '/img/icon_stone_1.webp', desc: '강화석 ×10', rewards: { stones: 10 } },
   { id: 'stone2', tab: 'enh', kind: 'gem', name: '강화석 60', price: 720, icon: '/img/icon_stone_1.webp', desc: '강화석 ×60', rewards: { stones: 60 }, badge: '+20%' },
   { id: 'stone_hi', tab: 'enh', kind: 'gem', name: '상급 강화석 10', price: 480, icon: '/img/icon_stone_2.webp', desc: '상급 강화석 ×10 (+10~+14 강화용)', rewards: { stones2: 10 } },
@@ -51,13 +56,14 @@ export const SKUS = [
 ];
 
 // 가중치 단위. softPity회 연속 미당첨 뒤(softPity+1번째)부터 SSR 가중치가 매 회 softPityStep씩 오르고 pity번째는 SSR 확정.
-// SSR 결과: 픽업 영웅 50% · 픽업을 제외한 다른 SSR 영웅 풀 25% · SSR 장비 25%
+// SSR 결과: 픽업 영웅 50% · 다른 SSR 영웅 25% · SSR 장비 20% · 초월석 5개 5%
 // SR 결과: 영웅 40% · 장비 40% · 강화 재료 20% / R 결과: 장비 55% · 강화 재료 45%
 // materials는 등급별 재료 몫(w는 그 등급 안에서의 비율). 등급마다 영웅 + 장비 + 재료 비율의 합은 1이다.
 export const GACHA = { single: 300, ten: 2700, pity: 80, softPity: 60, softPityStep: 6, featured: 'barbarian', rates: { R: 86, SR: 12, SSR: 2 },
-  ssrSplit: { featured: 0.5, pool: 0.25, gear: 0.25 }, srSplit: { hero: 0.4, gear: 0.4 }, rSplit: { gear: 0.55 },
+  ssrSplit: { featured: 0.5, pool: 0.25, gear: 0.20 }, srSplit: { hero: 0.4, gear: 0.4 }, rSplit: { gear: 0.55 },
   materials: {
-    SR: [{ k: 'stones2', n: 5, w: 0.12 }, { k: 'protect', n: 1, w: 0.08 }],
+    SSR: [{ k: 'transcendStones', n: 5, w: 0.05 }],
+    SR: [{ k: 'stones2', n: 5, w: 0.10 }, { k: 'protect', n: 1, w: 0.05 }, { k: 'transcendStones', n: 1, w: 0.05 }],
     R: [{ k: 'stones', n: 10, w: 0.35 }, { k: 'bless', n: 1, w: 0.10 }],
   },
   dupShards: 10 };
@@ -65,12 +71,14 @@ export const BATTLE_PASS = { price: 9900, maxLevel: 30, xpPerLevel: 100 };
 export const ENERGY = { max: 100, regenSec: 180 };
 
 export const DAILY_REWARDS = [
-  { gold: 5000 }, { gems: 100 }, { tickets: 1 }, { gold: 15000 }, { gems: 200 }, { tickets: 2 }, { ssrTicket: 1 },
+  { gold: 5000 }, { gems: 100 }, { tickets: 1, skillResets: 1 }, { gold: 15000 }, { gems: 200 }, { tickets: 2 }, { ssrTicket: 1 },
 ];
 
 export const PASS_TRACK = Array.from({ length: 30 }, (_, i) => {
   const lv = i + 1;
   const free = lv % 5 === 0 ? { gems: 100 } : (lv % 2 ? { gold: 4000 * lv } : { tickets: 1 });
   const prem = lv % 10 === 0 ? { ssrTicket: 1 } : (lv % 5 === 0 ? { gems: 500 } : (lv % 2 ? { gems: 120 } : { tickets: 2 }));
+  if ([5, 15, 25].includes(lv)) prem.transcendStones = 5;
+  if ([8, 18, 28].includes(lv)) prem.skillResets = 1;
   return { lv, free, prem };
 });
