@@ -1,5 +1,6 @@
 import { afterEach, expect, mock, spyOn, test } from 'bun:test';
 import { PartyState } from '../worker/party-state';
+import { PartyRoom } from '../worker/party';
 import { PARTY_HEROES, PARTY_LIMITS, validPartySnapshot } from '../src/party/protocol.js';
 import { partyHitHeroMessage } from '../src/party/visual-protocol.js';
 import { PartySession } from '../src/party/session.js';
@@ -89,6 +90,23 @@ test('호스트: party Battle.damageEnemy 가 source(파티원)를 공격자로 
   expect(calls.map(c => [c[1], c[2]])).toEqual([[40, member], [40, hostPlayer], [40, hostPlayer]]);
   PartyBattle.prototype.damageEnemy.call(game, { hp: 0 }, 0, {});
   expect(calls).toHaveLength(3);
+});
+
+// ---- 게스트 재생 ----
+test('Durable Object 중계: heroHits 를 선언한 클라이언트만 hero 를 받고, 구버전 소켓은 걷힌 스냅샷을 받는다', () => {
+  const { r } = running();
+  const room: any = new PartyRoom({ storage: {} as any });
+  const got: Record<string, any[]> = { old: [], mid: [], fresh: [] };
+  for (const id of Object.keys(got)) room.sockets.set(id, { send: (text: string) => got[id].push(JSON.parse(text)), close() {} });
+  room.visualClients.add('mid'); room.avatarClients.add('mid');
+  room.visualClients.add('fresh'); room.avatarClients.add('fresh'); room.heroHitClients.add('fresh');
+  room.dispatch([{ message: { type: 'snapshot', seq: 1, snapshot: snap(r, [hit({ hero: 'ranger' })]) } }]);
+  for (const id of ['old', 'mid']) {
+    expect(got[id][0].snapshot.events).toEqual([hit()]);
+    expect(validPartySnapshot(got[id][0].snapshot)).toBe(true);
+  }
+  expect(got.fresh[0].snapshot.events).toEqual([hit({ hero: 'ranger' })]);
+  room.drop('fresh', 'test'); expect(room.heroHitClients.has('fresh')).toBe(false);
 });
 
 // ---- 게스트 재생 ----
