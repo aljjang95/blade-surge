@@ -581,8 +581,10 @@ for (key, lod), obj in objects.items():
 # 무손실 meshopt 전달 압축(기존 던전 포지 키트와 같은 도구).
 # node가 없으면 subprocess가 FileNotFoundError를 내므로 실행 파일을 먼저 찾는다.
 node = shutil.which('node')
+compressed = False
 if node:
     subprocess.run([node, str(ROOT / 'tools/art/compress-dungeon-forge.mjs'), *map(str, files)], check=True, cwd=ROOT)
+    compressed = True
 else:
     print('경고: node가 없어 meshopt 압축을 건너뜀', file=sys.stderr)
 
@@ -598,7 +600,7 @@ for (key, lod), obj in objects.items():
                    'bytes': path.stat().st_size, 'sha256': hashlib.sha256(path.read_bytes()).hexdigest(),
                    'triangles': info['triangles'], 'vertices': info['vertices'], 'draws': info['draws'],
                    'materials': info['materials'], 'boundsGltf': info['boundsGltf'],
-                   'meshoptCompressed': node.returncode == 0, 'vertexColors': True, 'textures': 0,
+                   'meshoptCompressed': compressed, 'vertexColors': True, 'textures': 0,
                    'labelKo': labels[key][0], 'category': labels[key][1]})
 for key, _, _, _ in PROPS:
     print('TRIS', key, [a['triangles'] for a in assets if a['id'] == key])
