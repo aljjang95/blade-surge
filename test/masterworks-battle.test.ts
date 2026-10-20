@@ -232,7 +232,7 @@ test('AUTO는 각인·만남 선택 창을 열지 않고 기본 선택으로 이
   // 만남은 예전 선택이 없으면 첫 선택지를 고르고 보상이 한 번만 들어간다.
   game.run.queue=[{kind:'story',id:'lantern'}];
   game.resolveAutoOffers();
-  expect(game.run.queue).toHaveLength(0);expect(state.story.lantern).toBeTruthy();
+  expect(game.run.queue).toHaveLength(0);expect((state.story as any).lantern).toBeTruthy();
   game.resolveAutoOffers();expect(game.run.queue).toHaveLength(0);
   // 수동 플레이: 같은 체크포인트에서 선택 창을 연다.
   const manual=fixture();manual.game.stage=game.stage;manual.game.world=buildExpeditionWorld(game.stage);
