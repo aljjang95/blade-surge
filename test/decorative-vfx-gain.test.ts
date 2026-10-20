@@ -23,8 +23,9 @@ test('장식 발광 상한은 작은 접촉을 그대로 두고 넓은 폭발만
   for (const size of [0, 1.45, 2.4, 3, 4, NaN, Infinity]) expect(decorativeBurstGain(size)).toBe(1);
   const gains = [5, 6, 8, 10, 12, 20].map(decorativeBurstGain);
   expect(gains[0]).toBeLessThan(1);
-  expect(gains.every((gain, i) => gain >= .2 && (!i || gain <= gains[i - 1]))).toBe(true);
-  expect(gains[4]).toBeLessThanOrEqual(.3);
+  // 타격감 복원: 큰 폭발도 장식 RGB 의 70% 는 남긴다(예전 하한 .28 은 큰 폭발을 거의 지웠다).
+  expect(gains.every((gain, i) => gain >= .7 && (!i || gain <= gains[i - 1]))).toBe(true);
+  expect(gains[4]).toBeCloseTo(.7, 10);
   expect(gains[5]).toBe(gains[4]);
 });
 
@@ -65,7 +66,7 @@ test('큰 충격파는 텍스처와 폴백 모두 RGB만 낮추고 지름·알�
         expect(candidate.consumed).toEqual(baseline.consumed); expect(candidate.next).toBe(baseline.next);
         const ratio = candidate.rgb.r / baseline.rgb.r;
         if (radius === 3) expect(ratio).toBe(1);
-        else { expect(ratio).toBeGreaterThanOrEqual(.2); expect(ratio).toBeLessThanOrEqual(.3); }
+        else { expect(ratio).toBeGreaterThanOrEqual(.69); expect(ratio).toBeLessThanOrEqual(.71); }
         expect(color.equals(originalColor)).toBe(true);
       }
     }

@@ -145,7 +145,7 @@ test('contact tiers, reduced motion, quiet/noProc and stop recovery are bounded'
   expect(contactProfile({finisher:true},true,false,true)).toMatchObject({stop:0,particles:0});
   expect(contactProfile({quietStop:true},false,false,false)?.stop).toBe(0);
   const time=new TimeCtl();let advanced=0;
-  for(let i=0;i<120;i++){time.hitstop(10);advanced+=time.step(1/60);expect(time.stop).toBeLessThanOrEqual(.12);}
+  for(let i=0;i<120;i++){time.hitstop(10);advanced+=time.step(1/60);expect(time.stop).toBeLessThanOrEqual(.18);}
   expect(advanced).toBeGreaterThan(.4);expect(new TimeCtl()._rearm).toBe(0);
 });
 test('beacon persists through occlusion without animation and disposes each resource once',()=>{
@@ -259,7 +259,7 @@ for(const Battle of [BaseBattle,RpgBattle])test(Battle===BaseBattle?'base contac
  const e:any={alive:true,pos:new Vector3(),def:{scale:1},hurt:()=>10,receiveImpact(){bodies++;}};
  Battle.prototype.damageEnemy.call(g,e,10,{quietStop:true});
  for(let i=0;i<30;i++)Battle.prototype.damageEnemy.call(g,e,10,{finisher:true});
- expect(emissions).toBe(1);expect(particles).toBe(1);expect(sounds).toBe(2);expect(g.timeCtl.stop).toBe(.065);expect(g.combo).toBe(31);
+ expect(emissions).toBe(1);expect(particles).toBe(1);expect(sounds).toBe(2);expect(g.timeCtl.stop).toBe(.11);expect(g.combo).toBe(31);
  if(Battle===RpgBattle)expect(bodies).toBe(31);
  g.elapsed+=.061;g.app.reducedMotion.matches=true;g.timeCtl=new TimeCtl();
  Battle.prototype.damageEnemy.call(g,e,10,{quietStop:true});Battle.prototype.damageEnemy.call(g,e,10,{finisher:true});expect(particles).toBe(1);expect(g.timeCtl.stop).toBe(0);

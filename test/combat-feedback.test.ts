@@ -182,10 +182,13 @@ test('cached HUD envelopes contain the declared combo, streak and cue transforms
   const combo = combatHudAnimationRegion('combo', box, true);
   const oathStreak = combatHudAnimationRegion('kill-streak', box, true);
   const plainStreak = combatHudAnimationRegion('kill-streak', box, false);
+  // 연속 처치 알약은 왼쪽 가운데 기준으로 .9→1 등장, 단계 상승 때 1.06배까지 빛난다.
+  for (const scale of [.9, .95, 1, 1.03, 1.06]) {
+    expect(inside(oathStreak, corners(box.left, box.top + height / 2, 0, 0, scale))).toBe(true);
+    expect(inside(plainStreak, corners(box.left, box.top + height / 2, 0, 0, scale))).toBe(true);
+  }
   for (const t of [0, .25, .5, .75, 1]) {
     expect(inside(combo, corners(box.right, box.top + height / 2, 0, 0, 1.4 - .4 * t, -4 * (1 - t)))).toBe(true);
-    expect(inside(oathStreak, corners(box.left + width / 2, box.top + height / 2, -width / 2, -4 * (1 - t), .92 + .08 * t))).toBe(true);
-    expect(inside(plainStreak, corners(box.left + width / 2, box.top + height / 2, -width / 2, -height / 2, .86 + .14 * t))).toBe(true);
   }
   const cue = combatHudAnimationRegion('combat-cue', box, true);
   for (const [scale, dy] of [[.82, -12], [1.08, 0], [1, 0], [.96, -6], [.88, -10]]) {
@@ -370,6 +373,7 @@ test('실제 RPG 피해의 표시·억제와 서로 다른 DOM 수명은 다음 
       const gameRandom = seeded();
       Math.random = () => { calls++; return gameRandom(); };
       for (let i = 0; i < 32; i++) {
+        battle.dmgFrame = 0;   // 프레임 경계: 한 프레임의 신규 숫자 상한은 update 에서 초기화된다
         if (earlyRetirement || i === 16) f.retire();
         const before = f.layer.children.length;
         // proc/contact 연출을 생략하는 실제 요청에도 숫자의 기존 4-node admission은 그대로 실행한다.
@@ -379,8 +383,10 @@ test('실제 RPG 피해의 표시·억제와 서로 다른 DOM 수명은 다음 
       expect(calls).toBe(64);
       const next = Array.from({ length: 4 }, () => Math.random());
       f.retire();
-      expect(f.layer.children).toHaveLength(0); expect(f.fx.dmgPool).toHaveLength(4);
-      expect(f.created).toHaveLength(4);
+      // 동시 표시 상한이 일반 4→12 로 늘어, 오래 남기는 쪽은 DOM 노드를 12개까지 만든다.
+      const nodes = earlyRetirement ? 4 : 12;
+      expect(f.layer.children).toHaveLength(0); expect(f.fx.dmgPool).toHaveLength(nodes);
+      expect(f.created).toHaveLength(nodes);
       expect(f.created.every(el => el.handlers.size === 0 && el._dmgDone === null)).toBe(true);
       expect(amounts.every(amount => Number.isFinite(amount) && amount >= 90 && amount < 110)).toBe(true);
       return { amounts, next, admitted };
@@ -389,7 +395,8 @@ test('실제 RPG 피해의 표시·억제와 서로 다른 DOM 수명은 다음 
   const early = scenario(true), late = scenario(false), untouched = seeded();
   for (let i = 0; i < 64; i++) untouched();
   const expectedNext = Array.from({ length: 4 }, () => untouched());
-  expect(early.admitted).toBe(32); expect(late.admitted).toBe(4);
+  // 늦은 정리: 미리 채운 4개 + 8개 승인 뒤 상한 12 에 막히고, 16번째에서 비운 뒤 12개를 다시 승인한다.
+  expect(early.admitted).toBe(32); expect(late.admitted).toBe(20);
   expect(early.amounts).toEqual(late.amounts);
   expect(early.next).toEqual(expectedNext); expect(late.next).toEqual(expectedNext);
 });

@@ -1,15 +1,17 @@
-import { ARENA_RIVALS } from '../data/expansion.js';
+import { ALL_DUNGEONS, ARENA_RIVALS } from '../data/expansion.js';
 import { FIELD_DUNGEONS } from '../data/open-fields.js';
-import { EXPEDITION_ROUTES as DUNGEONS } from '../data/expedition-routes.js';
+import { EXPEDITION_ROUTES as ROUTES } from '../data/expedition-routes.js';
 import { ENEMIES } from '../data/stages.js';
 import { Floor } from './world.js';
 import { expeditionDepth, depthStage } from '../data/expedition-depths.js';
 import { conquestForRun } from '../data/expedition-conquests.js';
 import { frontierFromSnapshot, frontierEffectForStage } from '../data/seasonal-content.js';
 import { gardenMasteryForStage, gardenMasteryDiagonals } from '../data/garden-mastery.js';
+const DUNGEONS = Object.freeze([...ALL_DUNGEONS, ...ROUTES.filter(route => !ALL_DUNGEONS.some(dungeon => dungeon.id === route.id))]);
 
 export const EXPEDITION_LAYOUTS = {
-  ...Object.fromEntries(FIELD_DUNGEONS.map(d => [d.id, d.layout])),
+  // 필드와 컨셉 던전(world 레인)은 카탈로그 항목이 레이아웃을 직접 가진다.
+  ...Object.fromEntries([...FIELD_DUNGEONS, ...ALL_DUNGEONS.filter(d => d.layout)].map(d => [d.id, d.layout])),
   glass_garden: { spacing: [30, 30], size: [20, 20], width: 6, cells: [[0,0],[1,0],[1,-1],[2,0],[3,0]], edges: [[0,1],[1,2],[1,3],[3,4]], types: ['start','normal','treasure','normal','boss'] },
   ember_vault: { spacing: [34, 26], size: [24, 16], width: 8, cells: [[0,0],[1,0],[2,0]], edges: [[0,1],[1,2]], types: ['start','elite','boss'] },
   star_archive: { spacing: [28, 34], size: [16, 24], width: 6, cells: [[0,0],[0,1],[1,1],[1,2]], edges: [[0,1],[1,2],[2,3]], types: ['start','normal','elite','boss'] },
@@ -24,9 +26,17 @@ export const EXPEDITION_LAYOUTS = {
   comet_bastion: { spacing: [29, 32], size: [20, 24], width: 7, cells: [[0,0],[1,0],[1,1],[2,1],[2,0],[3,0],[3,-1],[4,-1],[5,-1]], edges: [[0,1],[1,2],[1,3],[2,3],[3,4],[4,5],[5,6],[6,7],[7,8]], types: ['start','normal','treasure','normal','elite','normal','elite','treasure','boss'] },
   arena: { spacing: [32, 32], size: [24, 24], width: 8, cells: [[0,0],[1,0]], edges: [[0,1]], types: ['start','boss'] },
 };
+Object.assign(EXPEDITION_LAYOUTS, {
+  rootbound_grotto: { spacing: [30, 28], size: [22, 20], width: 7, cells: [[0,0],[1,0],[1,1],[2,1],[2,0],[3,0],[4,0]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]], types: ['start','normal','treasure','normal','elite','treasure','boss'] },
+  hollowbell_arboretum: { spacing: [28, 30], size: [20, 22], width: 7, cells: [[0,0],[1,0],[1,-1],[2,-1],[2,0],[3,0],[4,0]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]], types: ['start','normal','treasure','normal','elite','treasure','boss'] },
+  slagwater_foundry: { spacing: [34, 25], size: [24, 17], width: 8, cells: [[0,0],[1,0],[2,0],[2,1],[3,1],[4,1],[5,1]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]], types: ['start','normal','elite','treasure','normal','elite','boss'] },
+  emberwake_drydock: { spacing: [32, 24], size: [22, 18], width: 8, cells: [[0,0],[1,0],[1,1],[2,1],[3,1],[3,0],[4,0]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]], types: ['start','normal','treasure','normal','elite','treasure','boss'] },
+  aurora_icewell: { spacing: [27, 32], size: [18, 22], width: 7, cells: [[0,0],[0,1],[1,1],[1,2],[2,2],[2,1],[3,1]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]], types: ['start','normal','treasure','normal','elite','treasure','boss'] },
+  crownfall_glacier: { spacing: [31, 27], size: [22, 18], width: 7, cells: [[0,0],[1,0],[1,-1],[2,-1],[3,-1],[3,0],[4,0]], edges: [[0,1],[1,2],[2,3],[3,4],[4,5],[5,6]], types: ['start','normal','elite','normal','treasure','elite','boss'] },
+});
 // Keep fallback advice on the same contract as the published route card.
-const TACTICS = Object.fromEntries(DUNGEONS.map(d => [d.id, d.tactic]));
-const BELLFALL_SUPPORT_CASTING = DUNGEONS.find(dungeon => dungeon.id === 'bellfall_crypt').supportCasting;
+const TACTICS = Object.fromEntries(ROUTES.map(d => [d.id, d.tactic]));
+const BELLFALL_SUPPORT_CASTING = ROUTES.find(dungeon => dungeon.id === 'bellfall_crypt').supportCasting;
 const DUELS = {
   rookie: { enemyId: 'garden_captain', pattern: ['slam','spin'], behavior: 'shield', hp: 6500, tactic: '푸른 가드 때 공격을 멈추고 강타 뒤 반격하세요. 강한 타격 4회로 방패를 깰 수 있습니다.' },
   duelist: { enemyId: 'garden_captain', pattern: ['dash','spin','dash'], dodge: 0.22, hp: 8500, tactic: '회피하는 결투사의 돌진을 옆으로 피하세요. 회전이 끝나는 순간이 빈틈입니다.' },
@@ -88,6 +98,8 @@ export function buildExpeditionWorld(stage) {
   if (!layout) throw new RangeError('탐험 동선이 없습니다.');
   const seed = [...(id + (depth === 'deep' ? ':deep' : ''))].reduce((n, c) => n * 31 + c.charCodeAt(0), 17) >>> 0;
   const world = new Floor(stage.idx, stage.theme || stage.chapter.theme, seed, layout);
+  world.expeditionRouteId = id;
+  world.expeditionDepth = depth;
   if (kind === 'dungeon' && id === 'glass_garden' && depth === 'standard' &&
       !stage.party && !stage.riftId && !stage.expedition.riftId && !stage.expedition.conquestId) {
     // 기존 방·봉인·난수 진행을 만든 뒤 보물방과 장치방 사이의 실제 순환만 연다.
@@ -104,6 +116,36 @@ export function buildExpeditionWorld(stage) {
     }
   }
   return world;
+}
+
+/**
+ * 무리 졸개: 원정 방 무리를 두껍게 하는 작고 약한 근접 잡몹(같은 종, 0.8배 크기, 이름 뒤 '졸개').
+ * 실제 체력·AI·피해로 싸우고 방 정화 조건에 들어간다. 처치하면 궁극기·MP·연속 처치·세트 발동 같은
+ * 전투 자원은 채우지만 장비·골드·경험치·도감·의뢰 처치 수와 전술/경로 목표 명단에는 들어가지 않는다.
+ * 방 보상 예산은 기존 명단과 방 정화 보상 그대로다.
+ */
+export const PACK_FOLLOWER = Object.freeze({ hp: .5, atk: .65, scale: .8, min: 3, max: 7 });
+
+/** 졸개 정의는 원래 종 정의를 복사해 크기·체력·공격과 표시 이름만 바꾼다. */
+export function packFollowerDef(def) {
+  if (!def) return def;
+  return { ...def, name: `${def.name} 졸개`, hp: def.hp * PACK_FOLLOWER.hp, atk: def.atk * PACK_FOLLOWER.atk,
+    scale: def.scale * PACK_FOLLOWER.scale, exp: 0, gold: 0, elite: false, boss: false, packFollower: true };
+}
+
+/** 원정 개인 던전의 일반·정예·보물방에만 붙인다. 파티·전술 공략·균열·투기장·보스방은 기존 명단 그대로다. */
+export function expeditionFollowers(stage, room, rosterLength) {
+  const expedition = stage?.expedition;
+  if (!expedition || expedition.kind !== 'dungeon' || stage.party || stage.riftId || expedition.riftId || expedition.conquestId) return [];
+  if (!room || !['normal', 'elite', 'treasure'].includes(room.type) || !(rosterLength > 0)) return [];
+  const R = stage.rosterFor?.(room.type);
+  const pool = (R?.trash || []).filter(id => { const def = ENEMIES[id]; return def && !def.ranged && !def.elite && !def.boss && def.behavior !== 'shaman'; });
+  if (!pool.length) return [];
+  const share = room.type === 'elite' ? .7 : room.type === 'treasure' ? .6 : .85;
+  const n = Math.max(PACK_FOLLOWER.min, Math.min(PACK_FOLLOWER.max, Math.round(rosterLength * share)));
+  const list = [];
+  for (let i = 0; i < n; i++) list.push(pool[(i + room.id) % pool.length]);
+  return list;
 }
 
 export function expeditionRoster(stage, room) {

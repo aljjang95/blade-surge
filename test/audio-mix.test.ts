@@ -1,5 +1,6 @@
 import {afterEach, expect, spyOn, mock, test} from 'bun:test';
 import {AudioSys} from '../src/engine/audio.js';
+import {heroSoundFiles, skillSound, ultimateSound} from '../src/engine/combat-sound-library.js';
 
 test('겹친 스토어 음악 음소거는 소유한 토큰만 해제하고 믹스·SFX·음성은 유지한다', () => {
   const s: any = new AudioSys(), values: number[] = [];
@@ -25,15 +26,20 @@ function fixture(){
   const s:any=new AudioSys();
   s.ctx={currentTime:1,state:'running',createGain:()=>new Node(),createBufferSource:()=>new Node(),createMediaElementSource:()=>new Node(),decodeAudioData:async(b:any)=>b};
   s.sfxGain=new Node();s.voiceGain=new Node();s.musicGain=new Node();s.musicDuckGain=new Node();
-  s.buffers['hit']=s.buffers['ui_click']=s.buffers['expansion/flow-impact-heavy']={duration:1};
+  s.buffers['hit']=s.buffers['ui_click']={duration:1};
+  for(const name of heroSoundFiles('mage'))s.buffers[name]={name,duration:1};
   s.voiceBuf.bark={duration:1}; return s;
 }
 afterEach(()=>mock.restore());
-test('sample cap evicts lowest priority, preserves UI and Flow heavy during crowd spam, cleans end',()=>{
-  const s=fixture(); const ui=s.play('ui_click'), flow=s.play('expansion/flow-impact-heavy');
+test('sample cap evicts lowest priority, preserves UI and the ultimate cast/impact during crowd spam, cleans end',()=>{
+  const s=fixture(); const ui=s.play('ui_click');
+  s.skillRelease({ult:true,school:'meteor',hero:'mage'});
+  const voiceOf=(name:string)=>[...s._voices].find((v:any)=>v.src.buffer?.name===name) as any;
+  const cast=voiceOf(skillSound('meteor','mage')), impact=voiceOf(ultimateSound('mage'));
+  expect(cast).toBeDefined();expect(impact).toBeDefined();
   for(let i=0;i<100;i++)s.play('hit',{min:0});
-  expect(s._voices.size).toBe(16);expect(ui.stopped).toBe(false);expect(flow.stopped).toBe(false);
-  const voice=[...s._voices][0] as any;voice.src.onended();
+  expect(s._voices.size).toBe(16);expect(ui.stopped).toBe(false);expect(cast.src.stopped).toBe(false);expect(impact.src.stopped).toBe(false);
+  const voice=[...s._voices].find((v:any)=>v.src.buffer===s.buffers.hit) as any;voice.src.onended();
   expect(s._voices.size).toBe(15);expect(voice.src.disconnected).toBe(true);expect(voice.gain.disconnected).toBe(true);
 });
 test('barks capped independently and voice/SFX mute stops all active voices and zeros bus',async()=>{

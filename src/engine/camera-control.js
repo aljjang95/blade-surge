@@ -1,4 +1,32 @@
+import './camera-gestures.css';
+import { Vector3 } from 'three';
+import { WorldTouchGesture } from './world-gesture.js';
 const clamp = (value, fallback, min, max) => Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback;
+
+/** 화면에서 끈 방향을 영웅이 서 있는 바닥 평면의 월드 방향으로 바꾼다(원근 단축 보정). 결과를 out.x/out.z에 쓰고 성공 여부를 돌려준다. */
+export function screenDragToGround(camera, origin, sx, sy, out, scratch, width, height) {
+  if (!camera || !origin || !(width > 0) || !(height > 0)) return false;
+  const length = Math.hypot(sx, sy); if (length < 1e-6) return false;
+  const [hero, ray, eye] = scratch;
+  hero.set(origin.x, origin.y, origin.z).project(camera);
+  if (!Number.isFinite(hero.x) || hero.z > 1) return false;
+  // 화면에서 영웅 위치로부터 끈 방향으로 일정 픽셀 떨어진 점을 바닥에 다시 투영한다.
+  const step = Math.min(width, height) * .18;
+  ray.set(hero.x + sx / length * step * 2 / width, hero.y - sy / length * step * 2 / height, .5).unproject(camera);
+  eye.copy(camera.position); ray.sub(eye);
+  if (Math.abs(ray.y) < 1e-6) return false;
+  const t = (origin.y - eye.y) / ray.y; if (!(t > 0)) return false;
+  const dx = eye.x + ray.x * t - origin.x, dz = eye.z + ray.z * t - origin.z, d = Math.hypot(dx, dz);
+  if (!(d > 1e-6)) return false;
+  out.x = dx / d; out.z = dz / d; return true;
+}
+export function pinchZoom(startZoom, startDistance, distance, min = 70, max = 140) {
+  if (!Number.isFinite(startZoom) || !Number.isFinite(startDistance) || startDistance <= 0 || !Number.isFinite(distance)) return startZoom;
+  return Math.max(min, Math.min(max, startZoom * distance / startDistance));
+}
+export function pointerDistance(first, second) {
+  return Math.max(1, Math.hypot(first.x - second.x, first.y - second.y));
+}
 export function normalizeBattleCamera(value = {}) {
   value = value || {};
   return { yaw: Number.isFinite(value.yaw) ? ((value.yaw + 180) % 360 + 360) % 360 - 180 : 0,
@@ -16,12 +44,18 @@ export function cameraRelativeMove(x, y, yaw = 0) {
   return { x: x * c + y * s, y: -x * s + y * c };
 }
 
-/** Empty-world right drag and a dedicated touch pad never claim movement/action touches. */
+const BATTLE_ROTATE_YAW = .35, BATTLE_ROTATE_PITCH = .15;
+// 조이스틱·스킬·공격 버튼·모달·접이식 메뉴·창은 각자 터치를 소유한다.
+const BATTLE_UI = '#joy, .actions, #actions, button, input, select, textarea, a, [contenteditable], [role="dialog"], dialog, details, summary, .mpl-win, .mpl-quickbar, #battle-camera-controls';
+
+/** 빈 world 한 손가락 회전·두 손가락 핀치와 마우스 오른쪽 드래그. 이동/행동 터치는 가져가지 않는다. */
 export class CameraControls {
   constructor(app) {
     this.app = app;
     this.pad = document.getElementById('battle-camera-pad');
     this.value = normalizeBattleCamera();
+    this.touch = new WorldTouchGesture();
+    this.touchBase = this.value;
     app.renderer.battleCamera = this.value;
     // Battle pause, death, modal and stage transitions already clear gameplay input.
     // End capture at that same boundary, even if no pointer event arrives while paused.
@@ -30,10 +64,22 @@ export class CameraControls {
       const e = app.renderer.camera.matrixWorld.elements;
       return Math.atan2(-e[2], e[0]);
     };
-    const ui = '#joy, #actions, button, input, select, textarea, a, [role="dialog"], #battle-camera-controls';
+    const aimScratch = [new Vector3(), new Vector3(), new Vector3()];
+    app.input.screenAimDir = (sx, sy, out) => screenDragToGround(app.renderer.camera, app.battle?.player?.pos, sx, sy, out, aimScratch, innerWidth, innerHeight);
+    const ui = BATTLE_UI;
     document.addEventListener('pointerdown', event => {
       const onPad = !!this.pad && this.pad.contains(event.target);
-      if (!this.active || this.drag || (!onPad && (event.pointerType === 'touch' || event.button !== 2 || event.target.closest?.(ui)))) return;
+      if (event.pointerType === 'touch') {
+        // 숨긴 시점 패드는 빈 화면과 같은 제스처로 취급한다. 조이스틱 손가락과 동시에 쓸 수 있다.
+        if (!this.active || event.defaultPrevented || (!onPad && event.target?.closest?.(ui))) return;
+        const role = this.touch.down(event.pointerId, event.clientX, event.clientY, onPad ? this.pad : event.target);
+        if (role !== 'pinch') return;
+        if (!this.capture(this.touch.first) || !this.capture(this.touch.second)) { this.finish(); return; }
+        this.touchBase = this.currentValue();
+        event.preventDefault();
+        return;
+      }
+      if (!this.active || this.drag || (!onPad && (event.button !== 2 || event.target.closest?.(ui)))) return;
       if (onPad && event.button !== 0 && event.button !== 2) return;
       const surface = onPad ? this.pad : event.target;
       const value = this.currentValue();
@@ -43,13 +89,44 @@ export class CameraControls {
       event.preventDefault();
     });
     document.addEventListener('pointermove', event => {
-      if (!this.drag || event.pointerId !== this.drag.id) return;
+      if (this.drag?.id === event.pointerId && event.pointerType !== 'touch') {
+        if (!this.active) { this.finish(); return; }
+        this.set({ ...this.value, yaw: this.drag.yaw - (event.clientX - this.drag.x) * BATTLE_ROTATE_YAW,
+          pitch: this.drag.pitch + (event.clientY - this.drag.y) * BATTLE_ROTATE_PITCH });
+        event.preventDefault();
+        return;
+      }
+      if (!this.touch.has(event.pointerId)) return;
       if (!this.active) { this.finish(); return; }
-      this.set({ ...this.value, yaw: this.drag.yaw - (event.clientX - this.drag.x) * .35,
-        pitch: this.drag.pitch + (event.clientY - this.drag.y) * .15 });
-      event.preventDefault();
+      const step = this.touch.move(event.pointerId, event.clientX, event.clientY);
+      if (step === 'rotate-start') {
+        if (!this.capture(this.touch.first)) { this.finish(); return; }
+        this.touchBase = this.currentValue();
+      }
+      if (step === 'rotate-start' || step === 'rotate') {
+        const base = this.touchBase;
+        this.set({ yaw: base.yaw - this.touch.dx * BATTLE_ROTATE_YAW, pitch: base.pitch + this.touch.dy * BATTLE_ROTATE_PITCH,
+          zoom: this.currentValue().zoom });
+        event.preventDefault();
+      } else if (step === 'pinch') {
+        this.set({ ...this.currentValue(), zoom: pinchZoom(this.touchBase.zoom, 1, this.touch.ratio) });
+        event.preventDefault();
+      }
     });
     for (const name of ['pointerup', 'pointercancel', 'lostpointercapture']) document.addEventListener(name, event => {
+      const pointer = this.touch.get(event.pointerId);
+      if (pointer) {
+        // 다른 요소가 잃은 캡처 알림은 이 제스처의 종료가 아니다.
+        if (name === 'lostpointercapture' && event.target && event.target !== pointer.surface) return;
+        if (name !== 'pointerup') { this.finish(); return; }
+        const engaged = this.touch.mode === 'rotate' || this.touch.mode === 'pinch';
+        const step = this.touch.up(event.pointerId);
+        this.release(pointer);
+        // 핀치 뒤 남은 손가락은 지금 시점과 위치를 새 기준으로 삼아 튀지 않는다.
+        if (step === 'resume') this.touchBase = this.currentValue();
+        if (engaged && event.cancelable) event.preventDefault();
+        return;
+      }
       if (this.drag?.id === event.pointerId) this.finish();
     });
     window.addEventListener('blur', () => this.finish());
@@ -83,13 +160,24 @@ export class CameraControls {
       event.preventDefault(); event.stopPropagation(); this.set(v);
     });
   }
-  get active() { return this.app.mode === 'battle' && !!this.app.battle?.active && !this.app.battle.paused && !document.getElementById('modal')?.classList.contains('show'); }
+  get active() {
+    const battle = this.app.battle;
+    return this.app.mode === 'battle' && !!battle?.active && !battle.paused && battle.player?.alive !== false
+      && !document.getElementById('modal')?.classList.contains('show');
+  }
   // 지역 시점이 바뀐 뒤에도 새 조작은 현재 화면의 값을 기준으로 시작한다.
   currentValue() { return normalizeBattleCamera(this.app.renderer.battleCamera || this.value); }
   set(value) { this.value = normalizeBattleCamera(value); this.app.renderer.battleCamera = this.value; }
   reset() { this.finish(); this.set({}); }
+  capture(pointer) {
+    try { pointer?.surface?.setPointerCapture?.(pointer.id); return !!pointer; } catch { return false; }
+  }
+  release(pointer) {
+    if (pointer?.surface?.hasPointerCapture?.(pointer.id)) pointer.surface.releasePointerCapture(pointer.id);
+  }
   finish() {
-    const drag = this.drag; this.drag = null;
-    if (drag?.surface.hasPointerCapture?.(drag.id)) drag.surface.releasePointerCapture(drag.id);
+    const drag = this.drag, first = this.touch.first, second = this.touch.second;
+    this.drag = null; this.touch.clear();
+    this.release(drag); this.release(first); this.release(second);
   }
 }

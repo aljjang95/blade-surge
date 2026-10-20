@@ -4,6 +4,7 @@ import { ENCOUNTER_ART, MOB_ART, RIFT_ART } from './encounter-art.js';
 import { CAMPAIGN_MODELS } from './encounter-models.js';
 import { BOSS_ENCOUNTERS, BOSS_SIGNATURES } from './boss-encounters.js';
 import { MOB_ROLE_ENEMIES } from './mob-roles.js';
+import { recommendedLevel, representativeDrops } from './loot-tables.js';
 
 // 지역별 맹세와 기믹은 모험 화면과 전투가 함께 사용한다.
 export const CHAPTERS = [
@@ -15,23 +16,27 @@ export const CHAPTERS = [
   { id: 6, name: '함께 잇는 귀환로', theme: 'garden', encounterPrefix: 'homecoming', color: '#87cbb0', boss: 'homecoming_finalboss', tagline: '구한 세계를, 함께 살아갈 곳으로.', summary: '왕관이 부서진 다음 날. 다섯 지역에 남은 명령의 잔향을 걷어 내고 사람들의 귀환로를 연결한다.', oath: '돌아오는 누구도 홀로 남겨 두지 않겠다는 약속', mechanic: { name: '귀환의 공명', description: '남겨진 명령이 공명 고리로 번집니다. 경고 띠 밖으로 이동하며 귀환문을 지키세요.' } },
 ];
 export const STAGES_PER_CHAPTER = 10;
+for (const chapter of CHAPTERS) {
+  // 표시용 진행 정보는 열거하지 않는다. 기존 경로·스테이지 JSON 지문과 저장 계약을 바꾸지 않는다.
+  Object.defineProperties(chapter, { recommendedLevel: { value: recommendedLevel(chapter.id) }, representativeDrops: { value: representativeDrops(chapter.id) } });
+}
 const ROSTER = {
-  garden: { trash: ['skel_minion', 'skel_rogue', 'ghost', 'bomb_slime', 'skel_shield', 'bone_orc'], ranged: ['skel_mage', 'ghost_skull', 'skel_priest'], elite: ['elite_skel_captain', 'elite_bone_lord', 'elite_wraith'] },
-  forge: { trash: ['orc', 'orc_blob', 'tribal', 'cacto_wall', 'bomb_imp', 'imp'], ranged: ['hywirl', 'armabee', 'tribal_shaman'], elite: ['elite_orc_chief', 'elite_bluedemon'] },
-  frost: { trash: ['ghost', 'skel_shield', 'blob_green', 'bone_orc', 'skel_rogue', 'golem_guard'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_yeti', 'elite_wraith', 'elite_golem'] },
+  garden: { trash: ['skel_minion', 'skel_rogue', 'ghost', 'bomb_slime', 'skel_shield', 'bone_orc', 'grave_burrower'], ranged: ['skel_mage', 'ghost_skull', 'skel_priest'], elite: ['elite_skel_captain', 'elite_bone_lord', 'elite_wraith'] },
+  forge: { trash: ['orc', 'orc_blob', 'tribal', 'cacto_wall', 'bomb_imp', 'imp', 'ash_burrower'], ranged: ['hywirl', 'armabee', 'tribal_shaman'], elite: ['elite_orc_chief', 'elite_bluedemon'] },
+  frost: { trash: ['ghost', 'skel_shield', 'blob_green', 'bone_orc', 'skel_rogue', 'golem_guard', 'frost_burrower'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_yeti', 'elite_wraith', 'elite_golem'] },
   tide: { trash: ['squidle', 'blob_pink', 'alien', 'mushnub', 'bomb_abyss', 'golem_guard'], ranged: ['glub', 'abyss_seer', 'armabee_evo'], elite: ['elite_golem', 'elite_mushroom_king', 'elite_dragonling'] },
   crown: { trash: ['ninja', 'skel_shield', 'alien', 'bomb_abyss', 'bone_orc', 'imp'], ranged: ['abyss_seer', 'tribal_shaman', 'hywirl'], elite: ['elite_bluedemon', 'elite_skel_captain', 'elite_dragonling'] },
 };
 // The dungeon route is also a combat identity. Each authored layout gets its own
 // pack composition so a different map changes the pressure, silhouettes and ranged mix.
 const DUNGEON_ROSTERS = {
-  procession: { trash: ['skel_minion', 'ghost', 'skel_rogue', 'skel_shield', 'bomb_slime', 'bone_orc'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_skel_captain', 'elite_wraith', 'elite_bone_lord'] },
+  procession: { trash: ['skel_minion', 'ghost', 'skel_rogue', 'skel_shield', 'bomb_slime', 'bone_orc', 'grave_burrower'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_skel_captain', 'elite_wraith', 'elite_bone_lord'] },
   greenhouse: { trash: ['ghost', 'bomb_slime', 'skel_rogue', 'skel_minion', 'skel_shield', 'bone_orc'], ranged: ['skel_priest', 'ghost_skull', 'skel_mage'], elite: ['elite_wraith', 'elite_bone_lord', 'elite_skel_captain'] },
   tribunal: { trash: ['skel_shield', 'bone_orc', 'skel_minion', 'ghost', 'bomb_slime', 'skel_rogue'], ranged: ['skel_mage', 'skel_priest', 'ghost_skull'], elite: ['elite_bone_lord', 'elite_skel_captain', 'elite_wraith'] },
   confluence: { trash: ['squidle', 'ghost', 'alien', 'mushnub', 'bomb_abyss', 'skel_minion'], ranged: ['glub', 'ghost_skull', 'abyss_seer'], elite: ['elite_golem', 'elite_skel_captain', 'elite_dragonling'] },
-  kiln: { trash: ['orc', 'orc_blob', 'tribal', 'cacto_wall', 'bomb_imp', 'imp'], ranged: ['tribal_shaman', 'hywirl', 'armabee'], elite: ['elite_orc_chief', 'elite_bluedemon', 'elite_orc_chief'] },
+  kiln: { trash: ['orc', 'orc_blob', 'tribal', 'cacto_wall', 'bomb_imp', 'imp', 'ash_burrower'], ranged: ['tribal_shaman', 'hywirl', 'armabee'], elite: ['elite_orc_chief', 'elite_bluedemon', 'elite_orc_chief'] },
   uprising: { trash: ['orc_blob', 'bomb_imp', 'orc', 'imp', 'tribal', 'cacto_wall'], ranged: ['hywirl', 'tribal_shaman', 'armabee'], elite: ['elite_bluedemon', 'elite_orc_chief', 'elite_bluedemon'] },
-  archive: { trash: ['ghost', 'blob_green', 'skel_shield', 'bone_orc', 'skel_rogue', 'golem_guard'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_wraith', 'elite_yeti', 'elite_golem'] },
+  archive: { trash: ['ghost', 'blob_green', 'skel_shield', 'bone_orc', 'skel_rogue', 'golem_guard', 'frost_burrower'], ranged: ['ghost_skull', 'skel_mage', 'skel_priest'], elite: ['elite_wraith', 'elite_yeti', 'elite_golem'] },
   reverseRiver: { trash: ['blob_green', 'golem_guard', 'ghost', 'skel_rogue', 'skel_shield', 'bone_orc'], ranged: ['skel_mage', 'ghost_skull', 'skel_priest'], elite: ['elite_golem', 'elite_wraith', 'elite_yeti'] },
   beacon: { trash: ['squidle', 'blob_pink', 'alien', 'mushnub', 'bomb_abyss', 'golem_guard'], ranged: ['abyss_seer', 'glub', 'armabee_evo'], elite: ['elite_dragonling', 'elite_golem', 'elite_mushroom_king'] },
   lostShip: { trash: ['blob_pink', 'squidle', 'bomb_abyss', 'alien', 'golem_guard', 'mushnub'], ranged: ['glub', 'armabee_evo', 'abyss_seer'], elite: ['elite_mushroom_king', 'elite_dragonling', 'elite_golem'] },
@@ -72,7 +77,7 @@ export function stageDef(ch, st) {
   }
   const enemy = ENEMIES[enemyId];
   const dungeonBoss = (dungeonBossId && ENEMIES[dungeonBossId]) || enemy;
-  return {
+  const stage = {
     ch, st, idx, code: `${ch}-${st}`, title: scene.title, chapter, name: `${ch}-${st} · ${scene.title}`,
     dungeon, dungeonBossId, epilogueFinale: ch === 6 && st === 10,
     boss, finale: ch === 5 && st === 10, waves, scale, energy: 6 + Math.floor(idx / 6),
@@ -82,6 +87,7 @@ export function stageDef(ch, st) {
     objective: `${dungeon.name}의 전투 방을 정리해 봉인을 해제하고 ${dungeonBoss.name} 처치`,
     rewards: { gold: Math.floor(400 * scale), exp: Math.floor(110 * scale), bp: 60 + (boss ? 60 : 0), firstGems: rank === 'finalboss' ? 300 : boss ? 150 : 60, dropChance: boss ? 1 : 0.6, stones: 2 + (boss ? 4 : 0) },
   };
+  return Object.defineProperties(stage, { recommendedLevel: { value: recommendedLevel(ch, st) }, representativeDrops: { value: chapter.representativeDrops } });
 }
 
 // scale = 모델 배율(리그 기본 배율에 곱해짐). hp/atk 은 스테이지 scale 로 곱해진다.
@@ -107,6 +113,11 @@ export const ENEMIES = {
   skel_priest: { name: '해골 사제', model: 'Skeleton_Runekeeper', hp: 595, atk: 18, spd: 3.2, range: 8.0, atkTime: 2.4, weapon: 'Skeleton_Staff', ranged: true, exp: 18, scale: 1.05, gold: 3, projColor: 0xa0ffb0, behavior: 'shaman', summon: 'skel_minion', tint: '#b0ffc0' },
   // shield: 정면 피해 80% 감소. 뒤·옆에서 치거나, 마무리 타격(kb≥4) 4번이면 가드 브레이크 3초
   skel_shield: { name: '해골 방패병', model: 'Skeleton_Bulwark', hp: 1260, atk: 26, spd: 3.4, range: 2.2, atkTime: 1.6, weapon: 'Skeleton_Blade', shield: 'Skeleton_Shield_Large_A', exp: 16, scale: 1.05, gold: 2, armor: 0.1, behavior: 'shield' },
+  // burrower: 땅속으로 숨어(조준·몰이·피격 불가) 다가온 뒤 0.75초 예고 원 자리에서 솟구쳐 띄운다.
+  // 예고 중에는 반쯤 드러나 맞을 수 있고 기절시키면 취소된다. 솟은 직후 0.9초는 무방비(받는 피해 1.5배).
+  grave_burrower: { name: '무덤 균사 잠행꾼', model: 'Blob_Mushnub_Evolved', hp: 640, atk: 24, spd: 4.4, range: 1.9, atkTime: 1.2, exp: 13, scale: 0.6, gold: 1, behavior: 'burrower', tint: '#c9a27a' },
+  ash_burrower: { name: '잿더미 굴착꾼', model: 'Big_Cactoro', hp: 900, atk: 33, spd: 4.2, range: 2.0, atkTime: 1.25, exp: 16, scale: 0.95, gold: 2, behavior: 'burrower', tint: '#ff9a62' },
+  frost_burrower: { name: '서리굴 잠행꾼', model: 'Blob_Orc', hp: 820, atk: 28, spd: 4.3, range: 2.0, atkTime: 1.2, exp: 15, scale: 1.0, gold: 2, behavior: 'burrower', tint: '#9fd8ff' },
   // ================= 2장 · 불타는 왕좌 (오크 · 악마) =================
   orc:      { name: '오크 전사', model: 'Big_Orc', hp: 1050, atk: 29, spd: 4.0, range: 2.2, atkTime: 1.3, exp: 12, scale: 1.0, gold: 2 },
   orc_blob: { name: '꼬마 오크', model: 'Blob_Orc', hp: 595, atk: 22, spd: 4.8, range: 1.8, atkTime: 1.0, exp: 10, scale: 1.0, gold: 1 },
@@ -214,6 +225,16 @@ export const ENEMIES = {
     phasePatterns: [['archive_retrace','fan','archive_hourglass','slam'], ['archive_hourglass','archive_retrace','summon','fan'], ['archive_retrace','archive_hourglass','soulrain']],
     phaseHints: ['지나온 길이 역순으로 터집니다.', '바깥 고리 다음은 안쪽 원입니다.', '네 번째 기록과 마지막 공명까지 확인하세요.'],
     tactic: '방금 지나온 세 자리가 역순으로 폭발합니다. 모래시계가 닫히기 전에 바깥 고리로 이동하세요.', projColor: 0x9ed5ff },
+  // ================= 컨셉 던전 전용 보스 (2026-10-17) =================
+  // 전투 수치·판정 크기(scale)·kit는 교체 전 보스(obsidian_hydra / ash_colossus)와 같다. 바뀌는 것은 이름·외형·기술뿐이다.
+  // 외형은 다른 던전·심층·캠페인 최종 보스가 쓰지 않는 기존 라이브러리 자산(frost_golem / shadow_soldier)이며 새 GLB가 아니다.
+  // 전용 초상은 없다(보스 바 초상 숨김). tactic·phaseHints는 아래에서 실제 기술 이름·cue로 채운다.
+  tidegate_titan: { name: '빙하 수문의 거신', model: 'Big_TidegateTitan', hp: 18800, atk: 72, spd: 4.2, range: 3.4, atkTime: 1.55, exp: 300, scale: 2.5, boss: true, armor: 0.27, gold: 62, kit: 'dragon', signatureBoss: true, tint: '#8ff7ff',
+    phasePatterns: [['tidegate_flood','slam','tidegate_ring_gap','fan'], ['tidegate_ring_gap','tidegate_flood','spin','slam'], ['tidegate_flood','tidegate_ring_gap','dash']],
+    projColor: 0x8ff7ff },
+  pulley_colossus: { name: '도르래 거수', model: 'Big_PulleyColossus', hp: 20400, atk: 75, spd: 3.4, range: 3.6, atkTime: 1.6, exp: 320, scale: 2.45, boss: true, armor: 0.29, gold: 66, kit: 'reaper', signatureBoss: true, tint: '#ffb35c',
+    phasePatterns: [['pulley_ore_fall','slam','pulley_chain_line','spin'], ['pulley_chain_line','pulley_ore_fall','fan','slam'], ['pulley_ore_fall','pulley_chain_line','dash']],
+    projColor: 0xffb35c },
 };
 
 // 검수된 기존 리그만 재사용한다. 전용 원화의 3D 모델이 완성됐다는 뜻은 아니다.
@@ -293,6 +314,11 @@ for (const id of new Set(Object.values(DUNGEON_BOSS_BASE))) {
   const def = ENEMIES[id];
   def.tactic = signatureAdvice(def.phasePatterns.flat());
   def.phaseHints = def.phasePatterns.map(signatureAdvice);
+}
+// 컨셉 전용 보스도 같은 규칙으로 실제 기술의 이름·cue만 안내한다(카드·준비·페이즈 알림이 같은 문장을 쓴다).
+for (const id of ['tidegate_titan', 'pulley_colossus']) {
+  const def = ENEMIES[id];
+  Object.assign(def, { pattern: def.phasePatterns[0], tactic: signatureAdvice(def.phasePatterns.flat()), phaseHints: def.phasePatterns.map(signatureAdvice) });
 }
 
 // Keep each authored dungeon's boss silhouette and attack vocabulary distinct.

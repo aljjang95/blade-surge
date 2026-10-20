@@ -38,9 +38,10 @@ test('citadel preset exposes the outward world instead of hiding it behind free 
  expect(LOBBY_VIEWS.city).toMatchObject({yaw:180,pitch:12,zoom:78});expect(LOBBY_VIEWS.front.zoom).toBeLessThan(96);
 });
 test('actual local strike pose is bounded, resets, and respects reduced motion',()=>{
- const a:any={motionRoot:new THREE.Group(),game:{app:{reducedMotion:{matches:false}}}};
+ // updateCombatPose 끝의 렌더 방향 보간(updateTurnSmoothing)도 실제 Actor 메서드로 지나가게 한다(turnSmoothing 꺼짐 = 회전 변화 없음).
+ const a:any={motionRoot:new THREE.Group(),game:{app:{reducedMotion:{matches:false}}},updateTurnSmoothing:Actor.prototype.updateTurnSmoothing};
  Actor.prototype.receiveStrikeRecoil.call(a,1);Actor.prototype.updateCombatPose.call(a,.016);expect(a.motionRoot.position.z).toBeLessThan(-.05);
- Actor.prototype.updateCombatPose.call(a,.2);expect(a.motionRoot.position.length()).toBe(0);
+ Actor.prototype.updateCombatPose.call(a,.2);expect(a.motionRoot.position.length()).toBe(0);expect(a.motionRoot.rotation.y).toBe(0);
  a.game.app.reducedMotion.matches=true;Actor.prototype.receiveStrikeRecoil.call(a,1);expect(a._strikeRecoil).toBeNull();
 });
 test('ordinary basic contact requests haptics without making misses into hits',()=>{

@@ -1,9 +1,10 @@
 import { PARTY_HEROES, PARTY_LIMITS, sanitizePartyName, validPartyInput, validPartySnapshot, validPartyStats } from '../src/party/protocol.js';
+import { AVATAR_BY_ID } from '../src/data/avatars.js';
 
 export class PartyError extends Error {
   constructor(public readonly code: string, public readonly status = 400) { super(code); }
 }
-export interface Member { id: string; name: string; heroId: string; ready: boolean }
+export interface Member { id: string; name: string; heroId: string; avatar?: string; ready: boolean }
 export interface Run { runId: string; stageIdx: number; seed: number; startedAt: number }
 export interface Effect { to?: string; except?: string; message: Record<string, unknown> }
 type Rate = { second: number; count: number; bytes: number; inputs: number; snapshots: number; inputSeq: number; snapshotSeq: number };
@@ -24,17 +25,19 @@ export class PartyState {
     if (now >= this.expiresAt) { this.status = 'closed'; throw new PartyError('expired', 410); }
     if (this.status === 'closed' || this.status === 'finished') throw new PartyError('closed', 410);
   }
-  join(name: string, heroId: string, ticket: string | null, now: number): { id: string; effects: Effect[] } {
+  join(name: string, heroId: string, ticket: string | null, now: number, avatar?: string): { id: string; effects: Effect[] } {
     this.ensure(now);
     if (this.status !== 'lobby') throw new PartyError('already-started', 409);
     if (!PARTY_HEROES.includes(heroId)) throw new PartyError('hero');
+    // 모르는 아바타나 다른 영웅의 아바타는 입장을 막지 않고 외형만 버린다(배포 순서 차이 대비).
+    if (avatar !== undefined && AVATAR_BY_ID[avatar]?.heroId !== heroId) avatar = undefined;
     if (ticket && ticket !== this.hostTicket) throw new PartyError('ticket', 403);
     const host = ticket === this.hostTicket;
     if (host && this.hostId) throw new PartyError('host-connected', 409);
     if (!host && !this.hostId) throw new PartyError('host-not-connected', 409);
     if (this.members.size >= PARTY_LIMITS.members) throw new PartyError('full', 409);
     const id = this.uuid();
-    this.members.set(id, { id, name: sanitizePartyName(name), heroId, ready: false });
+    this.members.set(id, { id, name: sanitizePartyName(name), heroId, ...(avatar ? { avatar } : {}), ready: false });
     this.rates.set(id, { second: -1, count: 0, bytes: 0, inputs: 0, snapshots: 0, inputSeq: -1, snapshotSeq: -1 });
     if (host) this.hostId = id;
     return { id, effects: [{ to: id, message: { type: 'welcome', playerId: id, party: this.view() } }, this.party()] };
@@ -97,8 +100,9 @@ export class PartyState {
       if (++rate.snapshots > PARTY_LIMITS.snapshotsPerSecond) throw new PartyError('rate', 429);
       if (!Number.isInteger(m.seq) || m.seq < 0 || m.seq > 2147483647 || !validPartySnapshot(m.snapshot)) throw new PartyError('snapshot-schema');
       if (m.seq <= rate.snapshotSeq || m.snapshot.tick <= this.lastTick) throw new PartyError('sequence');
+      // 아바타 이전 호스트는 avatar 를 싣지 않는다. 값이 있을 때만 입장 때 받은 외형과 같아야 한다.
       if (m.snapshot.players.length !== this.members.size || m.snapshot.players.some((p: any) =>
-        this.members.get(p.id)?.heroId !== p.heroId)) throw new PartyError('snapshot-members');
+        this.members.get(p.id)?.heroId !== p.heroId || (p.avatar !== undefined && this.members.get(p.id)?.avatar !== p.avatar))) throw new PartyError('snapshot-members');
       rate.snapshotSeq = m.seq; this.lastTick = m.snapshot.tick;
       return [{ except: id, message: { type: 'snapshot', seq: m.seq, snapshot: m.snapshot } }];
     }

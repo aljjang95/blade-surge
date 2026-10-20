@@ -1,0 +1,445 @@
+{
+ "blender": "4.3.2",
+ "source": "hero_ranger_t1.glb",
+ "clips": {
+  "idle": {
+   "frames": [
+    0,
+    238
+   ],
+   "seconds": 9.9167,
+   "keys": [
+    {
+     "frame": 0,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5518,
+     "minTipZ": 0.849,
+     "gripZ": 0.871
+    },
+    {
+     "frame": 119,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5518,
+     "minTipZ": 0.805,
+     "gripZ": 0.87
+    },
+    {
+     "frame": 238,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5518,
+     "minTipZ": 0.848,
+     "gripZ": 0.87
+    }
+   ]
+  },
+  "run": {
+   "frames": [
+    0,
+    16
+   ],
+   "seconds": 0.6667,
+   "keys": [
+    {
+     "frame": 0,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5717,
+     "minTipZ": 0.367,
+     "gripZ": 1.002
+    },
+    {
+     "frame": 4,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5365,
+     "minTipZ": 0.441,
+     "gripZ": 0.944
+    },
+    {
+     "frame": 8,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5586,
+     "minTipZ": 0.366,
+     "gripZ": 0.999
+    },
+    {
+     "frame": 12,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5365,
+     "minTipZ": 0.399,
+     "gripZ": 0.967
+    },
+    {
+     "frame": 16,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5717,
+     "minTipZ": 0.378,
+     "gripZ": 1.001
+    }
+   ]
+  },
+  "dodge": {
+   "frames": [
+    0,
+    12
+   ],
+   "seconds": 0.5,
+   "keys": [
+    {
+     "frame": 0,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.2644,
+     "minTipZ": 0.769,
+     "gripZ": 1.04
+    },
+    {
+     "frame": 12,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.2644,
+     "minTipZ": 0.773,
+     "gripZ": 1.038
+    }
+   ]
+  },
+  "Dodge_Backward": {
+   "frames": [
+    0,
+    12
+   ],
+   "seconds": 0.5,
+   "keys": [
+    {
+     "frame": 0,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.2644,
+     "minTipZ": 0.773,
+     "gripZ": 1.038
+    },
+    {
+     "frame": 12,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.2644,
+     "minTipZ": 0.769,
+     "gripZ": 1.04
+    }
+   ]
+  },
+  "bow_shoot": {
+   "frames": [
+    0,
+    24
+   ],
+   "seconds": 1.0,
+   "keys": [
+    {
+     "frame": 0,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5518,
+     "minTipZ": 0.849,
+     "gripZ": 0.871
+    },
+    {
+     "frame": 3,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.0,
+     "minTipZ": 0.967,
+     "gripZ": 1.156
+    },
+    {
+     "frame": 7,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.2851,
+     "minTipZ": 0.958,
+     "gripZ": 1.148
+    },
+    {
+     "frame": 10,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.2851,
+     "minTipZ": 0.954,
+     "gripZ": 1.143
+    },
+    {
+     "frame": 11,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.4679,
+     "minTipZ": 0.953,
+     "gripZ": 1.142
+    },
+    {
+     "frame": 14,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5109,
+     "minTipZ": 0.949,
+     "gripZ": 1.138
+    },
+    {
+     "frame": 18,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5242,
+     "minTipZ": 0.945,
+     "gripZ": 1.137
+    },
+    {
+     "frame": 24,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5518,
+     "minTipZ": 0.847,
+     "gripZ": 0.868
+    }
+   ]
+  },
+  "hit": {
+   "frames": [
+    0,
+    23
+   ],
+   "seconds": 0.9583,
+   "keys": [
+    {
+     "frame": 0,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.4134,
+     "minTipZ": 0.826,
+     "gripZ": 1.058
+    },
+    {
+     "frame": 6,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.4608,
+     "minTipZ": 0.586,
+     "gripZ": 1.127
+    },
+    {
+     "frame": 23,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.4134,
+     "minTipZ": 0.819,
+     "gripZ": 1.059
+    }
+   ]
+  },
+  "death": {
+   "frames": [
+    0,
+    93
+   ],
+   "seconds": 3.875,
+   "keys": [
+    {
+     "frame": 0,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.4134,
+     "minTipZ": 0.826,
+     "gripZ": 1.058
+    },
+    {
+     "frame": 93,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.4134,
+     "minTipZ": 0.216,
+     "gripZ": 1.056
+    }
+   ]
+  },
+  "cheer": {
+   "frames": [
+    0,
+    204
+   ],
+   "seconds": 8.5,
+   "keys": [
+    {
+     "frame": 0,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5518,
+     "minTipZ": 0.781,
+     "gripZ": 0.856
+    },
+    {
+     "frame": 24,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.7848,
+     "minTipZ": 0.779,
+     "gripZ": 0.856
+    },
+    {
+     "frame": 180,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.7848,
+     "minTipZ": 0.786,
+     "gripZ": 0.858
+    },
+    {
+     "frame": 204,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5518,
+     "minTipZ": 0.782,
+     "gripZ": 0.857
+    }
+   ]
+  },
+  "interact": {
+   "frames": [
+    0,
+    82
+   ],
+   "seconds": 3.4167,
+   "keys": [
+    {
+     "frame": 0,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5518,
+     "minTipZ": 0.805,
+     "gripZ": 0.862
+    },
+    {
+     "frame": 20,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.564,
+     "minTipZ": 0.746,
+     "gripZ": 0.935
+    },
+    {
+     "frame": 60,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.564,
+     "minTipZ": 0.842,
+     "gripZ": 0.877
+    },
+    {
+     "frame": 82,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5518,
+     "minTipZ": 0.807,
+     "gripZ": 0.862
+    }
+   ]
+  },
+  "cast_shoot": {
+   "frames": [
+    0,
+    55
+   ],
+   "seconds": 2.2917,
+   "keys": [
+    {
+     "frame": 0,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5518,
+     "minTipZ": 0.652,
+     "gripZ": 0.986
+    },
+    {
+     "frame": 55,
+     "wristL_err": 0.0,
+     "wristR_err": 0.0,
+     "bowAxisErrDeg": 0.0,
+     "pinchToRestNock": 0.5518,
+     "minTipZ": 0.653,
+     "gripZ": 0.986
+    }
+   ]
+  }
+ },
+ "grip": {
+  "name": "RangerBowGrip_L",
+  "parent": "mixamorig:LeftHand",
+  "matrix_parent_space": [
+   [
+    -1.9830169677734375,
+    -42.28131103515625,
+    0.025712966918945312,
+    0.2092299461364746
+   ],
+   [
+    -42.26976776123047,
+    1.9830780029296875,
+    0.9880313873291016,
+    -4.067997932434082
+   ],
+   [
+    -0.9881477355957031,
+    0.02060985565185547,
+    -42.31624984741211,
+    -1.5624618530273438
+   ],
+   [
+    0.0,
+    0.0,
+    0.0,
+    1.0
+   ]
+  ]
+ },
+ "nock": {
+  "name": "RangerDrawNock_R",
+  "parent": "mixamorig:RightHand"
+ }
+}

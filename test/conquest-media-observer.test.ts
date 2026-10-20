@@ -1,4 +1,6 @@
-import { expect, test } from 'bun:test';
+import { expect, setDefaultTimeout, test } from 'bun:test';
+// 실제 자식 프로세스·렌더를 쓰므로 PC가 바쁠 때 기본 5초 제한에 걸리지 않게 한다.
+setDefaultTimeout(30_000);
 import { existsSync, readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { classifyMediaCancellations, installConquestMediaObserver } from '../tools/conquest-media-observer.mjs';
@@ -196,4 +198,82 @@ test.skipIf(!existsSync(replayFailure))('preserved replay failure without native
   const doc2Media = r.media.filter((m: any) => m.documentId === 2);
   expect(classifyMediaCancellations(doc2Failures, doc2Media).unresolved).toHaveLength(1);
   expect(r.status).toBe('fail');
+});
+
+// 실패 요청 종료(failedAt=2000) 뒤 새로 생성된 같은 URL 인스턴스(로비 복귀 BGM)를 누적 스냅샷에 더한다.
+function addLaterLifecycle(f: { events: any[]; media: any[]; failure: any }, id = 4) {
+  const later = { id, src: f.failure.url, readyState: 0, currentTime: 0, paused: true, connected: false, error: null, collected: false };
+  f.events.push({ ...later, kind: 'source-created', at: 2010 },
+    { ...later, kind: 'source-connect', at: 2010.1, connected: true, argumentCount: 1, connectionAmbiguous: false },
+    { ...later, kind: 'play-call', at: 2010.2, connected: true },
+    { ...later, kind: 'loadstart', at: 2030, paused: false, connected: true, isTrusted: true, nativeTimeStamp: 2025, nativeTimeOrigin: 0, nativeAt: 2025 },
+    { ...later, kind: 'playing', at: 2040, paused: false, connected: true, readyState: 3 });
+  f.media[0].snapshot.tracks.push({ ...later, currentTime: .05, readyState: 4, paused: false, connected: true });
+  return f;
+}
+const laterStart = (f: { events: any[] }) => f.events.find(e => e.kind === 'loadstart' && e.id === 4);
+test('regression: cumulative snapshot sameURL later lifecycle does not make the failed request start ambiguous', () => {
+  const f = addLaterLifecycle(nativeInitiationFixture()), before = JSON.stringify(f);
+  const result = classifyMediaCancellations([f.failure], f.media);
+  expect(result.unresolved).toHaveLength(0); expect(result.classified).toHaveLength(1);
+  expect(result.classified[0]).toMatchObject({ matchedInstanceId: 1,
+    requestStartEvidence: { anchorKind: 'trusted-native-loadstart', nativeLoadstartAt: 1000, startDeltaMs: 0,
+      laterLifecycleInitiationsExcluded: [{ id: 4, nativeLoadstartAt: 2025, loadstartObservedAt: 2030 }] },
+    stoppedInstances: [{ id: 1, disconnectedAt: 1701 }], replacement: { id: 2 } });
+  expect(JSON.stringify(f)).toBe(before);
+  // 실패 시점 체크포인트와 이후 누적 체크포인트를 함께 넘겨도 같은 인스턴스·종료 증거로 묶인다.
+  const checkpoint = nativeInitiationFixture(), both = [checkpoint.media[0], f.media[0]];
+  const combined = classifyMediaCancellations([f.failure], both);
+  expect(combined.unresolved).toHaveLength(0);
+  expect(combined.classified[0]).toMatchObject({ matchedInstanceId: 1, observationAt: 2100, stoppedInstances: [{ id: 1 }] });
+});
+const laterNegative: Record<string, (f: ReturnType<typeof nativeInitiationFixture>) => void> = {
+  'later native initiation precedes failure end': f => { Object.assign(laterStart(f), { nativeAt: 1999, nativeTimeStamp: 1999 }); },
+  'later native initiation exactly at failure end': f => { Object.assign(laterStart(f), { nativeAt: 2000, nativeTimeStamp: 2000 }); },
+  'late delivery of pre-end native initiation': f => { Object.assign(laterStart(f), { at: 2500, nativeAt: 1990, nativeTimeStamp: 1990 }); },
+  'later instance first observed before end': f => { f.events.push({ ...f.events.find(e => e.id === 4), kind: 'play-call', at: 1990 }); },
+  'later instance created before end': f => { f.events.find(e => e.id === 4 && e.kind === 'source-created').at = 1990; },
+  'later instance without source creation': f => { f.events.splice(f.events.findIndex(e => e.id === 4 && e.kind === 'source-created'), 1); },
+  'later instance event with unknown time': f => { f.events.find(e => e.id === 4 && e.kind === 'playing').at = NaN; },
+  'later initiation on the failed instance': f => { laterStart(f).id = 1; },
+  'later initiation untrusted': f => { laterStart(f).isTrusted = false; },
+  'later initiation missing native time': f => { delete laterStart(f).nativeAt; },
+  'later initiation missing native origin': f => { delete laterStart(f).nativeTimeOrigin; },
+  'later initiation inconsistent clock': f => { laterStart(f).nativeTimeStamp = 2024; },
+  'later initiation native after observation': f => { Object.assign(laterStart(f), { nativeAt: 2031, nativeTimeStamp: 2031 }); },
+  'overlapping pre-end initiation by another instance': f => { f.events.push({ ...f.events.find(e => e.kind === 'loadstart' && e.id === 1), id: 5, at: 1500, nativeAt: 1500, nativeTimeStamp: 1500 }); },
+  'missing failure end': f => { delete f.failure.failedAt; },
+  'later lifecycle observed in another document': f => { f.media.push({ ...f.media[0], documentId: 2, snapshot: { ...f.media[0].snapshot, at: 2200 } }); },
+  'later lifecycle request also failed': f => { f.failure.__duplicate = true; },
+};
+for (const [name, change] of Object.entries(laterNegative)) test(`later lifecycle unresolved: ${name}`, () => {
+  const f = addLaterLifecycle(nativeInitiationFixture()); change(f);
+  const failures = f.failure.__duplicate
+    ? [{ ...f.failure, __duplicate: undefined }, { ...f.failure, __duplicate: undefined, started: 2025, responseAt: 2035, failedAt: 2090 }]
+    : [f.failure];
+  const result = classifyMediaCancellations(failures, f.media);
+  expect(result.classified).toHaveLength(0); expect(result.unresolved).toHaveLength(failures.length);
+});
+for (const [name, change] of Object.entries({ ...cases, ...nativeNegative })) test(`later lifecycle cannot rescue existing negative: ${name}`, () => {
+  const f = nativeInitiationFixture(); change(f); addLaterLifecycle(f);
+  const result = classifyMediaCancellations([f.failure], f.media);
+  expect(result.classified).toHaveLength(0); expect(result.unresolved).toHaveLength(1);
+});
+test('source-created anchor path is unchanged by later lifecycles and reports no exclusion', () => {
+  const f = addLaterLifecycle(fixture() as any);
+  const result = classifyMediaCancellations([f.failure], f.media);
+  expect(result.classified[0]).toMatchObject({ requestStartEvidence: { anchorKind: 'source-created', laterLifecycleInitiationsExcluded: [] } });
+});
+// 2026-10-16 로컬 journey 원본(불변) 재평가. 컨테이너 scratch에만 있으며 release 증거가 아니다.
+const journeyReport = '/workspace/scratch/blade-local-adoption-20261016/journey-local/report.json';
+test.skipIf(!existsSync(journeyReport))('preserved journey raw report: fixed boundary classifies lobby cancellation at every post-failure checkpoint', () => {
+  const r = JSON.parse(readFileSync(journeyReport, 'utf8'));
+  expect(r.status).toBe('fail'); expect(r.mediaCancellations.unresolved[0].reason).toBe('ambiguous-or-missing-request-start-instance');
+  for (const count of [2, 3, 4]) {
+    const result = classifyMediaCancellations(r.requestFailures, r.media.slice(0, count));
+    expect(result.unresolved).toHaveLength(0);
+    expect(result.classified.map((c: any) => [c.matchedInstanceId, c.stoppedInstances.map((s: any) => s.id), c.replacement.id]))
+      .toEqual([[1, [1], 2]]);
+    expect(result.classified[0].requestStartEvidence.laterLifecycleInitiationsExcluded.map((e: any) => e.id)).toEqual(count === 2 ? [] : [4]);
+  }
 });

@@ -1,18 +1,24 @@
+/* 서체 · 글자 토큰 정본을 먼저 읽는다. 동화풍 스킨은 별도 파일에 둔다(:root 를 겹쳐 쓴 선택자라 로드 순서와 무관하게 이긴다). */
+@import './platform/typography.css';
+@import './ui/storybook.css';
 :root {
   --gold: #ffcf5a; --gold2: #ff9a1f; --blue: #4cc3ff; --blue2: #2266ff; --red: #ff3b5c; --purple: #b26bff; --green: #6bff8f;
   --bg: #0b0a12; --panel: rgba(16, 14, 30, .86); --panel2: rgba(30, 26, 52, .9); --line: rgba(255, 215, 120, .25);
   --txt: #f4efe6; --muted: #a49ec0;
   --r-n: #9aa3b2; --r-r: #4cc3ff; --r-sr: #b26bff; --r-ssr: #ffcf5a; --r-ur: #ff5a7a;
-  --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px); --sal: env(safe-area-inset-left, 0px); --sar: env(safe-area-inset-right, 0px);
-  --font: 'Noto Sans KR', system-ui, -apple-system, sans-serif; --disp: 'Black Han Sans', 'Noto Sans KR', sans-serif;
+  --sat: var(--safe-area-inset-top, env(safe-area-inset-top, 0px)); --sab: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --sal: var(--safe-area-inset-left, env(safe-area-inset-left, 0px)); --sar: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+  --font: var(--font-ui); --disp: var(--font-title);
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--txt); font-family: var(--font); overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
+html, body { margin: 0; width: 100%; min-width: 100vw; height: 100%; min-height: 100dvh; background: var(--bg); color: var(--txt); font-family: var(--font); overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
 button { font-family: inherit; color: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
 img { -webkit-user-drag: none; pointer-events: none; }
 b { font-weight: 900; }
 .hidden { display: none !important; }
 #gl { position: fixed; inset: 0; width: 100%; height: var(--app-height, 100%); display: block; touch-action: none; }
+#hud { touch-action: none; }
+#hud button, #joy { touch-action: manipulation; }
 
 .screen { position: fixed; inset: 0; bottom: auto; height: var(--app-height, 100%); display: none; pointer-events: none; }
 .screen.show { display: block; }
@@ -88,6 +94,16 @@ b { font-weight: 900; }
 .boot-tip.on { opacity: 1; }
 .boot-tip b { color: var(--gold); }
 .boot-credit { position: absolute; bottom: calc(10px + var(--sab)); font-size: 10px; color: rgba(255,255,255,.35); z-index: 1; }
+/* 시작 실패 안내: 원인별 문구 · 오류 코드 · 다시 시도 · 문의용 정보(허용 목록 필드만) */
+.boot-failure { position: relative; z-index: 1; max-width: min(88vw, 520px); display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; color: rgba(255,255,255,.86); font-size: 13px; line-height: 1.5; }
+.boot-failure[hidden] { display: none; }
+.boot-failure p { margin: 0; }
+.boot-failure-code { color: var(--muted); font-size: 12px; }
+.boot-failure-code b { color: var(--gold); letter-spacing: .04em; }
+.boot-failure details { font-size: 12px; color: rgba(255,255,255,.7); }
+.boot-failure summary { cursor: pointer; min-height: 32px; line-height: 32px; }
+.boot-failure pre { margin: 4px 0 8px; padding: 8px 10px; text-align: left; white-space: pre-wrap; user-select: text; -webkit-user-select: text; background: rgba(0,0,0,.4); border-radius: 6px; font-size: 11px; line-height: 1.5; }
+#boot:has(.boot-failure:not([hidden])) .boot-tip { display: none; }
 @keyframes pulse { 0%,100% { transform: scale(1) } 50% { transform: scale(1.05) } }
 @keyframes buttonGlow { 0%,100% { opacity:1 } 50% { opacity:.88 } }
 
@@ -275,6 +291,13 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .shop-item .badge.first { background: var(--green); color: #052; }
 .shop-item .timer { font-size: 10px; color: var(--red); }
 .shop-item .sold { position: absolute; inset: 0; background: rgba(0,0,0,.6); border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 900; color: var(--muted); }
+.avatar-shop-item { min-height: 178px; }
+.avatar-shop-item .si-body { width: 100%; }
+.avatar-shop-item.avatar-pending { filter: saturate(.55); }
+.hero-avatar-row { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 8px; padding: 6px 10px; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: rgba(255,255,255,.04); }
+.hero-avatar-row > div { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.hero-avatar-row small { color: var(--muted); font-size: 10px; overflow-wrap: anywhere; }
+.hero-avatar-row .btn { flex: 0 0 auto; min-width: 110px; }
 
 /* pass */
 .pass-head { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; border-bottom: 1px solid var(--line); gap: 10px; }
@@ -329,13 +352,22 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .combo.hot b { color: #ff5a7a; -webkit-text-stroke: 1px #6b0018; }
 .combo.pop { animation: comboPop .18s ease-out; }
 @keyframes comboPop { 0% { transform: scale(1.4) rotate(-4deg) } 100% { transform: none } }
-.kill-streak { position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%) scale(.86); display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 8px 16px 9px; border: 1px solid rgba(255,177,92,.65); border-radius: 14px; background: linear-gradient(135deg, rgba(63,22,13,.88), rgba(21,11,16,.82)); box-shadow: 0 0 22px rgba(255,117,43,.3); opacity: 0; pointer-events: none; transition: opacity .16s, transform .16s; }
-.kill-streak.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-.kill-streak b { color: #ffd27d; font-family: var(--disp); font-size: 32px; line-height: .9; text-shadow: 0 0 12px #ff6d25; }
-.kill-streak span { color: #fff2dc; font-size: 10px; font-weight: 900; letter-spacing: .16em; }
-.kill-streak em { color: #ffae6e; font-size: 9px; font-style: normal; }
-.kill-streak.hot { border-color: #ff5a7a; box-shadow: 0 0 28px rgba(255,40,88,.45); }
-.kill-streak.hot b { color: #ff9eae; text-shadow: 0 0 15px #ff2658; }
+/* 연속 처치: 전투 중앙을 가리지 않도록 콤보 배지 옆 알약으로 붙는다(설계도 battle-hud C1).
+   위치는 UI.placeKillStreak()이 콤보 배지의 레이아웃 좌표로 --ks-left/--ks-top을 정한다. 다른 CSS에서 위치를 덮어쓰지 않는다. */
+#hud .kill-streak { position: absolute; left: var(--ks-left, calc(14px + var(--sal, 0px))); top: var(--ks-top, calc(140px + var(--sat, 0px))); right: auto; bottom: auto; z-index: 12; display: flex; flex-direction: row; align-items: center; gap: 4px; min-width: 0; height: var(--ks-height, 34px); box-sizing: border-box; padding: 0 9px 0 8px; border: 1px solid #d9b46ccc; border-radius: 999px; background: linear-gradient(135deg, rgba(74,36,128,.94), rgba(30,16,60,.92)); box-shadow: 0 0 0 1px #2a144f inset, 0 0 12px rgba(168,108,255,.55); white-space: nowrap; opacity: 0; pointer-events: none; transform-origin: left center; transform: scale(.9); transition: opacity .16s, transform .16s; }
+#hud .kill-streak.show { opacity: 1; transform: scale(1); }
+#hud .kill-streak.tier-up { animation: killStreakTierUp .42s ease-out; }
+#hud .kill-streak b { color: #ffd77e; font-family: var(--disp); font-size: 19px; line-height: 1; -webkit-text-stroke: 0; text-shadow: 0 0 8px #ff9a2e, 0 2px 0 #4a2300; }
+#hud .kill-streak span { color: #fff4de; font-size: 10px; font-weight: 800; letter-spacing: 0; }
+#hud .kill-streak em { color: #ffcf8f; font-size: 10px; font-weight: 700; font-style: normal; }
+#hud .kill-streak em::before { content: '· '; color: #e9d7ff; }
+#hud .kill-streak.hot { border-color: #ff6f8c; box-shadow: 0 0 0 1px #4f0f24 inset, 0 0 14px rgba(255,52,96,.6); }
+#hud .kill-streak.hot b { color: #ffb0bd; text-shadow: 0 0 9px #ff2658, 0 2px 0 #4a0012; }
+#hud .kill-streak.compact { gap: 2px; padding: 0 7px 0 6px; }
+#hud .kill-streak.compact b { font-size: 16px; }
+#hud .kill-streak.compact span, #hud .kill-streak.compact em { font-size: 9px; }
+#hud .kill-streak.mini em { display: none; }
+@keyframes killStreakTierUp { 0% { transform: scale(1); filter: brightness(1); } 35% { transform: scale(1.06); filter: brightness(1.45); } 100% { transform: scale(1); filter: brightness(1); } }
 .combat-cue { position: absolute; left: 50%; top: calc(23% + var(--sat)); z-index: 8; min-width: 132px; max-width: calc((100% - max(var(--sal, 0px), var(--sar, 0px)) - max(var(--sal, 0px), var(--sar, 0px)) - 32px) / 1.08); padding: 7px 14px 8px; border: 1px solid rgba(255,75,99,.8); border-radius: 999px; background: linear-gradient(180deg, rgba(64,10,22,.92), rgba(18,7,14,.86)); color: #ffd9de; font-size: 12px; font-weight: 900; letter-spacing: .12em; text-align: center; text-shadow: 0 1px 4px #000; box-shadow: 0 0 18px rgba(255,52,79,.35); opacity: 0; transform: translate(-50%, -10px) scale(.88); pointer-events: none; }
 .combat-cue[data-tone="gold"] { border-color: rgba(255,207,90,.9); background: linear-gradient(180deg, rgba(71,42,8,.94), rgba(22,12,6,.88)); color: #fff0bd; box-shadow: 0 0 18px rgba(255,190,60,.35); }
 .combat-cue.on { animation: combatCueIn .72s cubic-bezier(.18,.9,.28,1) both; }
@@ -627,8 +659,8 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 @media (orientation: landscape) {
   /* ---- 좌측 세로 네비 레일 ---- */
   .bottomnav {
-    top: 0; bottom: 0; right: auto; left: 0; width: calc(62px + env(safe-area-inset-left, 0px));
-    height: auto; padding: 0 0 0 env(safe-area-inset-left, 0px);
+    top: 0; bottom: 0; right: auto; left: 0; width: calc(62px + var(--sal));
+    height: auto; padding: 0 0 0 var(--sal);
     flex-direction: column; justify-content: center; gap: 4px;
     border-top: 0; border-right: 1px solid var(--line);
     background: linear-gradient(90deg, #1a1630, #0d0b18);
@@ -639,14 +671,14 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .dot { top: 6px; right: 12px; }
 
   /* ---- 상단바 ---- */
-  .topbar { left: calc(62px + env(safe-area-inset-left, 0px)); padding: calc(4px + var(--sat)) 10px 4px; }
+  .topbar { left: calc(62px + var(--sal)); padding: calc(4px + var(--sat)) 10px 4px; }
   .avatar { width: 36px; height: 36px; border-radius: 10px; }
   .prof-name { font-size: 12px; } .prof-lv { font-size: 10px; }
   .cur { font-size: 12px; min-width: 66px; padding: 3px 5px 3px 7px; }
   .cur-sub { font-size: 8px; }
 
   /* ---- 패널: 레일 오른쪽 전체 ---- */
-  .panel { left: calc(62px + env(safe-area-inset-left, 0px)); top: calc(50px + var(--sat)); bottom: 0; }
+  .panel { left: calc(62px + var(--sal)); top: calc(50px + var(--sat)); bottom: 0; }
   .panel-head { padding: 6px 12px; }
   .panel h2 { font-size: 18px; }
   .stage-grid { grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; padding: 8px 12px; }
@@ -665,17 +697,17 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .pass-track { padding: 10px; }
 
   /* ---- 로비 ---- */
-  .lobby-left { left: calc(70px + env(safe-area-inset-left, 0px)); top: calc(56px + var(--sat)); flex-direction: row; flex-wrap: wrap; width: 120px; gap: 6px; }
+  .lobby-left { left: calc(70px + var(--sal)); top: calc(56px + var(--sat)); flex-direction: row; flex-wrap: wrap; width: 120px; gap: 6px; }
   .sq-btn { width: 50px; height: 50px; }
   .lobby-right { top: calc(56px + var(--sat)); right: 10px; flex-direction: row; }
   .promo-btn { width: 74px; }
-  .lobby-hero-name { left: calc(76px + env(safe-area-inset-left, 0px)); bottom: 16px; }
+  .lobby-hero-name { left: calc(76px + var(--sal)); bottom: 16px; }
   #lobby-hero-name { font-size: 24px; }
   .lobby-bottom { left: auto; right: 16px; bottom: calc(14px + var(--sab)); align-items: flex-end; gap: 6px; }
   .btn-battle { width: 210px; padding: 11px; font-size: 22px; }
 
   /* ---- 전투 HUD (가로 전용 배치) ---- */
-  .hud-top { top: calc(6px + var(--sat)); left: calc(10px + env(safe-area-inset-left, 0px)); right: 10px; }
+  .hud-top { top: calc(6px + var(--sat)); left: calc(10px + var(--sal)); right: 10px; }
   .hud-bars { width: 26vw; max-width: 230px; }
   .hud-portrait { width: 42px; height: 42px; }
   .wave { font-size: 15px; } .stage-name { font-size: 10px; }
@@ -684,7 +716,7 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .combo b { font-size: 46px; } .combo span { font-size: 14px; }
   .joy-base { left: 84px; bottom: calc(78px + var(--sab)); width: 112px; height: 112px; }
   .joystick { width: 42%; height: 78%; }
-  .actions { right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(14px + var(--sab)); width: 210px; height: 178px; }
+  .actions { right: calc(16px + var(--sar)); bottom: calc(14px + var(--sab)); width: 210px; height: 178px; }
   .attack-btn { width: 86px; height: 86px; font-size: 19px; }
   .dodge-btn { right: 96px; bottom: 4px; width: 58px; height: 58px; }
   .skill-btn { width: 58px; height: 58px; }
@@ -825,8 +857,6 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   .tutorial-copy-wrap p { font-size: 10px; }
   .tutorial-actions { grid-column: 1 / -1; flex-direction: row; }
   .tutorial-actions .btn { flex: 1; min-height: 42px; }
-  .kill-streak { top: 37%; padding: 6px 12px 7px; }
-  .kill-streak b { font-size: 27px; }
 }
 
 /* ---------- 컨트롤 손맛: 락온 / 퍼펙트 회피 ---------- */
@@ -907,6 +937,16 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   #tab-gacha .banner-txt { padding: 10px 12px; }
   #tab-gacha .banner-txt h2 { font-size: 26px; }
 }
+@media (max-width: 420px) {
+  .shop-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; padding: 7px; }
+  .shop-item.big { grid-column: span 2; }
+  .avatar-shop-item { min-height: 170px; padding: 7px 5px; }
+  .avatar-shop-item .si-name { font-size: 11px; }
+  .avatar-shop-item .si-desc { font-size: 9px; }
+  .avatar-shop-item .btn { font-size: 11px; }
+  .hero-avatar-row { align-items: stretch; flex-direction: column; }
+  .hero-avatar-row .btn { width: 100%; }
+}
 @media (orientation: landscape) and (max-height: 380px) {
   #tab-gacha .gacha-btns .btn { padding: 7px 10px; font-size: 15px; }
   #tab-gacha .gacha-btns .btn small { font-size: 11px; }
@@ -986,3 +1026,17 @@ button.loot-item { font-family: inherit; cursor: pointer; }
   #hud .exp-potions[data-heal-hint]::before { font-size: 11px; padding: 6px 8px; }
 }
 .heal-hint-live { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* 와일드 리프트식 스킬 조준(설계도 skill-aim): 버튼 위 드래그 원과 조준 중에만 보이는 취소 구역 */
+#hud .skill-btn.aiming { overflow: visible; z-index: 6; }
+#hud .skill-btn .aim-knob { position: absolute; left: 50%; top: 50%; width: 26px; height: 26px; margin: -13px 0 0 -13px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #ffffff, #dff8ff 55%, #7fe6ff); box-shadow: 0 0 0 2px #2ab8e6, 0 0 14px #5fe6ff; opacity: 0; pointer-events: none; transform: translate(var(--aim-x, 0px), var(--aim-y, 0px)); transition: opacity .08s; }
+#hud .skill-btn.aiming .aim-knob { opacity: 1; }
+#hud .skill-btn.aiming::after { content: ''; position: absolute; inset: -18px; border-radius: 50%; border: 2px solid #5fe6ffaa; box-shadow: 0 0 16px #5fe6ff66 inset; pointer-events: none; }
+/* 취소 버튼 아래(skill 버튼 위)에는 둘 자리가 없어 위치는 그대로 두고, 버튼이 떠 있는 동안 겹치는 우상단 임무 카드(#objective)를 숨긴다(tools/aim-cancel-overlap-qa.mjs). */
+#hud:has(#skill-aim-cancel.on) #objective { opacity: 0; transition: opacity .1s; }
+#skill-aim-cancel { position: absolute; top: calc(96px + var(--sat, 0px)); right: calc(118px + var(--sar, 0px)); z-index: 14; width: 62px; height: 62px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; background: radial-gradient(circle, #7a0f1cdd, #3a0710dd); border: 3px solid #ff4d5e; box-shadow: 0 0 0 2px #2a0208, 0 0 18px #ff2d4580; color: #fff; opacity: 0; transform: scale(.8); pointer-events: none; transition: opacity .1s, transform .1s; }
+#skill-aim-cancel b { font-size: 26px; line-height: 1; color: #ff5a68; text-shadow: 0 0 6px #ff1d3a; }
+#skill-aim-cancel small { font-size: 9px; font-weight: 800; letter-spacing: .04em; }
+#skill-aim-cancel.on { opacity: .92; transform: scale(1); }
+#skill-aim-cancel.hot { opacity: 1; transform: scale(1.14); background: radial-gradient(circle, #c4182c, #5a0a16); }
+#skill-aim-cancel.hot b { color: #fff; }

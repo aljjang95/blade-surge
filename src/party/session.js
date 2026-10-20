@@ -3,7 +3,8 @@ import { HEROES, heroStats } from '../data/heroes.js';
 import { ENEMIES, stageDef, STAGES_PER_CHAPTER, CHAPTERS } from '../data/stages.js';
 import { Player } from '../game/player.js';
 import { Enemy } from '../game/enemies.js';
-import { loadModel, disposeCharacter } from '../engine/assets.js';
+import { applyBurrowDepth } from '../game/burrow.js';
+import { loadModel, disposeCharacter, preloadAvatarBody } from '../engine/assets.js';
 import { audio } from '../engine/audio.js';
 import { PARTY_CODE, PARTY_ACTIONS, PARTY_LIMITS, sanitizePartyName, validPartySnapshot } from './protocol.js';
 import { RemoteInput, actorSnapshot, partyHeroState, normalizedPartyStats, canonicalPartyCode } from './replication.js';
@@ -76,7 +77,8 @@ export class PartySession {
     this.playerId = null; this.party = null; this.name = sanitizePartyName(this.name);
     const url = new URL(`/api/party/${code}`, location.href); url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     url.searchParams.set('name', this.name); url.searchParams.set('hero', this.heroId);
-    url.searchParams.set('visuals', '1');
+    const avatar = this.app.eco.equippedAvatar(this.heroId); if (avatar) url.searchParams.set('avatar', avatar);
+    url.searchParams.set('visuals', '1'); url.searchParams.set('avatars', '1');
     if (ticket) url.searchParams.set('ticket', ticket);
     const socket = this.socket = new WebSocket(url); this.lastMessage = performance.now(); this.presence.reset(this.lastMessage);
     return new Promise((resolve, reject) => {
@@ -137,7 +139,7 @@ export class PartySession {
       const ch = Math.ceil(run.stageIdx / STAGES_PER_CHAPTER), st = (run.stageIdx - 1) % STAGES_PER_CHAPTER + 1;
       const stage = { ...stageDef(ch, st), party:{runId:run.runId,seed:run.seed} };
       const me = members.find(m => m.id === this.playerId); if (!me) throw new Error('party member missing');
-      app.mode = 'battle'; document.body.classList.add('party-playing'); await app.battle.start(stage, me.heroId, partyHeroState(), {});
+      app.mode = 'battle'; document.body.classList.add('party-playing'); await app.battle.start(stage, me.heroId, partyHeroState(), {}, me.avatar);
       if (!this.run || this.finishing) { app.battle.stop(); return; }
       app.battle.player.auto = false; document.getElementById('btn-auto').classList.remove('on');
       app.battle.chronicle.hud.hidden = true; app.battle.rpgView.hudButton.hidden = true;
@@ -158,7 +160,8 @@ export class PartySession {
       if (member.id === this.playerId) player = battle.player;
       else {
         const proxy = new Proxy(battle, {get:(target, key) => key === 'player' ? player : key === 'input' ? input : key === 'onPlayerDeath' ? p => this.playerDown(p) : Reflect.get(target, key), set:(target,key,value)=>Reflect.set(target,key,value)});
-        player = new Player(proxy, await loadModel(def.model), def, heroStats(def, partyHeroState(), {}), [1,1,1,1,1,1,1,1], {}, 20, [4,5]);
+        const gltf = await loadModel(def.model); await preloadAvatarBody(member.avatar);
+        player = new Player(proxy, gltf, def, heroStats(def, partyHeroState(), {}), [1,1,1,1,1,1,1,1], {}, 20, [4,5], member.avatar);
       }
       player.partyId = member.id; player.stats = normalizedPartyStats(heroStats(def, partyHeroState(), {}), battle.stage.scale);
       player.maxHp = player.hp = player.stats.hp; player.heroLevel = 20; player.auto = false;
@@ -213,8 +216,9 @@ export class PartySession {
     const mpEvents = this.members.map(m => { const p = this.players.get(m.id); return p ? {type:'mp',id:m.id,value:Math.max(0,p.mp)} : null; }).filter(Boolean);
     const events = this.events.splice(0, Math.max(0, PARTY_LIMITS.events - mpEvents.length)); events.push(...mpEvents);
     return { tick:++this.tick,elapsed:b.elapsed,paused:b.paused,warnings:capturePartyWarnings(b),visuals:this.visuals.splice(0),
-      players:this.members.map(m => { const p = this.players.get(m.id); return {...actorSnapshot(p,m.id),heroId:m.heroId,ult:p.ult,cds:p.cds.map(v => Math.max(0,v))}; }),
-      enemies:b.enemies.filter(e => e.partyId).slice(0,180).map(e => ({...actorSnapshot(e,e.partyId),key:e.speciesId,boss:e.isBoss,elite:e.isElite})),
+      players:this.members.map(m => { const p = this.players.get(m.id); return {...actorSnapshot(p,m.id),heroId:m.heroId,...(m.avatar ? {avatar:m.avatar} : {}),ult:p.ult,cds:p.cds.map(v => Math.max(0,v))}; }),
+      // 잠행 중인 적만 숨은 깊이(sub)를 싣는다. 평소 스냅샷 크기는 그대로다.
+      enemies:b.enemies.filter(e => e.partyId).slice(0,180).map(e => ({...actorSnapshot(e,e.partyId),key:e.speciesId,boss:e.isBoss,elite:e.isElite,...(e.burrow?.phase ? {sub:+e.burrow.depth().toFixed(3)} : {})})),
       rooms:b.world.rooms.map((r,i) => ({id:i,discovered:!!r.discovered,cleared:!!r.cleared,activated:!!r.spawned})), roomsCleared:b.roomsCleared,
       bossDefeated:!!b.bossDefeated,portal:b.portal ? {x:b.portal.pos.x,z:b.portal.pos.z} : null,events,
       projectiles:b.projectiles.slice(0,160).map((p,i)=>({id:'p'+i,x:p.pos.x,y:p.pos.y,z:p.pos.z,yaw:Math.atan2(p.dir.x,p.dir.z)})) };
@@ -258,6 +262,7 @@ export class PartySession {
         enemy.partyId=item.id; enemy.speciesId=item.key; enemy.spawning=false; this.replicas.set(item.id,enemy);
       }
       this.applyPose(enemy,item,dt);
+      if (item.sub !== undefined || enemy.burrow) applyBurrowDepth(enemy,item.sub);
     }
     for (const [id, enemy] of this.replicas) if (!ids.has(id)) { enemy.dispose(); this.replicas.delete(id); }
     b.enemies = [...this.replicas.values()]; b.boss = b.enemies.find(e => e.isBoss && e.alive) || null;

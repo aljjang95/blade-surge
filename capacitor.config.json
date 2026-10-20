@@ -8,5 +8,8 @@
     "captureInput": true,
     "webContentsDebuggingEnabled": false,
     "backgroundColor": "#090d19"
+  },
+  "plugins": {
+    "SystemBars": { "insetsHandling": "css", "style": "DARK", "hidden": true }
   }
 }

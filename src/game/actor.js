@@ -1,17 +1,26 @@
 import * as THREE from 'three';
 import { materialsOf, spawnCharacter } from '../engine/assets.js';
 import { RIGS } from '../data/rigs.js';
-import { attackPhase, attackBody } from './combat-motion.js';
+import { attackPhase, attackBody, monsterAttackPhase } from './combat-motion.js';
 
 const _v = new THREE.Vector3();
 const _weaponQuaternion = new THREE.Quaternion();
 export const ARENA_R = 15.5;
+// 처치 연출(위로 튀며 회전)의 길이와 결정적 변주. 게임 난수를 소비하지 않는다.
+const LAUNCH_SEC = 0.55;
+// 렌더 피벗 방향 보간 시간상수(초). 0.1초 안에 90% 따라간다.
+const TURN_SMOOTH_SEC = 0.045;
+let launchSerial = 0x2f6e2b1;
+const launchNoise = () => (launchSerial = (Math.imul(launchSerial, 1664525) + 1013904223) >>> 0) / 4294967296;
 
 export class Actor {
-  /** @param {*} game @param {*} gltf @param {{scale?: number, tint?: string|number|null, rig?: string}} options */
-  constructor(game, gltf, { scale = 1, tint = null, rig = 'kaykit' } = {}) {
+  /** @param {*} game @param {*} gltf @param {{scale?: number, tint?: string|number|null, rig?: string, roster?: *}} options */
+  constructor(game, gltf, { scale = 1, tint = null, rig = 'kaykit', roster = null } = {}) {
     this.rig = RIGS[rig] || RIGS.kaykit; this.rigName = rig;
     this.game = game;
+    this.libraryAsset = gltf.scene.userData.libraryAsset || null;
+    // 여러 기존 모델 이름이 같은 Tripo 자산(캐시된 glTF 하나)을 공유하므로 로스터는 호출자가 자기 정의로 넘긴다.
+    this.libraryRoster = roster || gltf.scene.userData.libraryRoster || null;
     const { root, mixer, clips } = spawnCharacter(gltf);
     this.model = root; this.mixer = mixer; this.clips = clips;
     this.root = new THREE.Group();
@@ -19,6 +28,12 @@ export class Actor {
     this.motionRoot = new THREE.Group(); this.root.add(this.motionRoot); this.motionRoot.add(root); root.scale.multiplyScalar(scale);
     this._attackMotion = null; this._impact = null;
     this.scale = scale;
+    if (this.libraryRoster?.scale) this.model.scale.multiplyScalar(this.libraryRoster.scale);
+    // 등장·자폭 연출이 배율을 다시 쓸 때 로스터 보정을 잃지 않도록 최종 모델 배율을 기준으로 남긴다.
+    this.modelScale = this.model.scale.x;
+    // 비행 클립(사망·내려찍기)은 모델 단위로 hover 만큼 내려와 착지한다. 실제 적용 배율을 곱해야 지면에 맞는다.
+    const hover = (this.libraryAsset?.hover ?? 0) * scale * (this.libraryRoster?.scale || 1);
+    if (hover > 0) this.rig = { ...this.rig, hover };
     this.pos = this.root.position; this.yaw = 0;
     this.vel = new THREE.Vector3(); this.kb = new THREE.Vector3();
     this.hp = 100; this.maxHp = 100; this.alive = true; this.dead = false;
@@ -28,7 +43,9 @@ export class Actor {
     // 틴트: 곱하면 Quaternius 텍스처가 통짜 색으로 뭉개진다 → 원래 색과 lerp
     // KayKit 은 밝은 아틀라스라 틴트가 잘 먹지만, Quaternius 는 채도가 높아 색을 건드리면 통짜로 뭉갠다.
     if (tint && rig === 'kaykit' && !this.model.userData.authoredContract) { const c = new THREE.Color(tint); for (const m of this.mats) if (!m.userData.tllAuthored) m.color?.lerp(c, 0.85); }
-    this.deathT = -1; this.hurtAnimT = 0;
+    // 라이브러리 몬스터는 손그림 텍스처를 살리며 적 정의 색조(지역 변종·정예)를 옅게 입힌다. 재질은 인스턴스별 복제본이다.
+    else if (tint && rig === 'library') { const c = new THREE.Color(tint); for (const m of this.mats) m.color?.lerp(c, 0.32); }
+    this.deathT = -1; this.hurtAnimT = 0; this.launchT = -1; this.launchH = 0; this.launchTilt = 0; this.launchSpin = 0;
     this.mixer.addEventListener('finished', (e) => this.onAnimFinished?.(e));
     game.scene.add(this.root);
   }
@@ -36,9 +53,16 @@ export class Actor {
   /** 논리 애니 키를 리그별 실제 클립 이름으로. 배열이면 랜덤. 없으면 idle 폴백 */
   A(key) {
     const v = this.rig[key];
-    const pick = Array.isArray(v) ? v[Math.floor(Math.random() * v.length)] : v;
-    if (pick && this.clips[pick]) return pick;
-    // 폴백 체인
+    const choices = Array.isArray(v) ? v : [v];
+    const available = choices.filter((name) => name && this.clips[name]);
+    if (available.length) return available.length === 1 ? available[0] : available[Math.floor(Math.random() * available.length)];
+    // 라이브러리 클립은 제작 시점에 선택적으로 추가되므로 논리 키별 폴백을 둔다.
+    const chain = {
+      attack2: ['attack'], attackHeavy: ['attack', 'attack2'], attackSpin: ['attackHeavy', 'attack'],
+      attackJump: ['attackHeavy', 'attack'], cast: ['attack'], raise: ['cast', 'attack'],
+      summon: ['roar', 'cast', 'attack'], spawn: ['roar', 'idle'], run: ['walk'],
+    }[key] || [];
+    for (const fallback of chain) if (this.clips[this.rig[fallback]] || this.clips[fallback]) return this.clips[this.rig[fallback]] ? this.rig[fallback] : fallback;
     for (const k of [key === 'run' ? 'walk' : null, 'idleCombat', 'idle']) {
       if (!k) continue; const f = this.rig[k]; const fp = Array.isArray(f) ? f[0] : f;
       if (fp && this.clips[fp]) return fp;
@@ -60,8 +84,11 @@ export class Actor {
   playTimed(name, duration, opts = {}) {
     const clip = this.clips[name]; if (!clip) return null;
     const action = this.play(name, { ...opts, once: true, speed: clip.duration / duration });
-    // Multi-hit/spin clips retain linear timing. Other basic combos pin their original hitAt.
-    if (action && this.state === 'attack' && this.def?.combo?.includes(this.current) && !this.current.ticks && this.current.move !== 'spin') {
+    // 영웅 콤보와 몬스터 라이브러리 공격 모두 렌더 클립의 접촉 프레임을 고정한다.
+    if (action && this.state === 'attack' && opts.phase === 'monster') {
+      this._attackMotion = { action, clip, phase: 'monster', duration, hitAt: opts.hitAt, impactAt: opts.impactAt };
+      action.timeScale = 0;
+    } else if (action && this.state === 'attack' && this.def?.combo?.includes(this.current) && !this.current.ticks && this.current.move !== 'spin') {
       this._attackMotion = { action, combo: this.current, clip };
       action.timeScale = 0;
     }
@@ -69,8 +96,15 @@ export class Actor {
   }
   receiveImpact(dirx, dirz, strength = 0.5) {
     if (this.game.app?.reducedMotion?.matches) return;
-    const angle = (Math.hypot(dirx, dirz) > 0 ? Math.atan2(dirx, dirz) : this.yaw) - this.yaw - (this.rig.faceFlip ? Math.PI : 0);
+    const angle = (Math.hypot(dirx, dirz) > 0 ? Math.atan2(dirx, dirz) : this.yaw) - this.yaw - (this.rig?.faceFlip ? Math.PI : 0);
     this._impact = { t: 0, strength: Math.min(1, Math.max(0, strength)), x: Math.sin(angle), z: Math.cos(angle) };
+  }
+  /** 처치 연출: 렌더 피벗만 위로 튀며 한 바퀴 돈다. 판정 위치·드랍·충돌 루트는 건드리지 않고 제자리로 돌아온다. */
+  launchOnKill(strength = 1) {
+    if (this.game.app?.reducedMotion?.matches) return;
+    this.launchT = 0; this.launchH = (0.9 + launchNoise() * 0.4) * Math.min(1.6, Math.max(0.6, strength));
+    this.launchTilt = (launchNoise() < 0.5 ? -1 : 1) * (0.7 + launchNoise() * 0.5);
+    this.launchSpin = (launchNoise() < 0.5 ? -1 : 1);
   }
   receiveStrikeRecoil(strength = .5) {
     if (!this.game.app?.reducedMotion?.matches) this._strikeRecoil = {t:0,strength:Math.min(1,Math.max(0,strength))};
@@ -79,13 +113,32 @@ export class Actor {
     const pivot = this.motionRoot, reduced = this.game.app?.reducedMotion?.matches;
     pivot.position.set(0, 0, 0); pivot.rotation.set(0, 0, 0); pivot.scale.set(1,1,1);
     const motion = this._attackMotion;
-    if (motion && this.state === 'attack' && this.current === motion.combo && this.action === motion.action) {
-      const c = motion.combo;
-      const expires = this.buffs?.t > 0 && this.buffs.t <= dt;
-      const speed = (expires ? 1 : (this.buffs?.atkSpd || 1)) * (this.stormT > dt ? 1.4 : 1);
-      const t = Math.min(1, (this.stateT + dt) / (c.dur / speed));
-      motion.action.time = attackPhase(t, c.hitAt) * motion.clip.duration;
+    if (motion && this.state === 'attack' && this.action === motion.action &&
+      (motion.phase === 'monster' || this.current === motion.combo)) {
+      if (motion.phase === 'monster') {
+        const t = Math.min(1, (this.stateT + dt) / motion.duration);
+        motion.action.time = monsterAttackPhase(t, motion.hitAt, motion.impactAt) * motion.clip.duration;
+      } else {
+        const c = motion.combo;
+        const expires = this.buffs?.t > 0 && this.buffs.t <= dt;
+        const speed = (expires ? 1 : (this.buffs?.atkSpd || 1)) * (this.stormT > dt ? 1.4 : 1);
+        const t = Math.min(1, (this.stateT + dt) / (c.dur / speed));
+        motion.action.time = attackPhase(t, c.hitAt) * motion.clip.duration;
+      }
       this.mixer.update(0);
+    }
+    if (!reduced && this._monsterAttackPose && this.state === 'attack') {
+      const pose = this._monsterAttackPose;
+      const t = Math.min(1, (this.stateT + dt) / pose.duration);
+      const weight = Math.min(2, Math.max(.5, (this.scale || 1) * (pose.heightM || 1)));
+      const before = t < pose.hitAt ? Math.sin(Math.PI * t / pose.hitAt) : 0;
+      const snap = t >= pose.hitAt && pose.hitAt < .999 ? Math.max(0, 1 - (t - pose.hitAt) / (1 - pose.hitAt)) ** 1.65 : 0;
+      const profile = pose.profile;
+      const heavy = profile === 'brute' || pose.boss || pose.elite ? 1.2 : profile === 'soldier' ? .75 : 1;
+      pivot.rotation.x += (-before * .13 + snap * .2) * weight * heavy;
+      pivot.position.z += (-before * .08 + snap * .16) * weight;
+      if (profile === 'blob') pivot.scale.set(1 + snap * .16, 1 - snap * .12, 1 + snap * .16);
+      else if (profile === 'flyer' || profile === 'drake') pivot.position.y += before * .12 - snap * .2;
     }
     const c = this.current;
     if (!reduced && this.state === 'attack' && this.def?.combo?.includes(c)) {
@@ -103,6 +156,17 @@ export class Actor {
         pivot.position.z -= kick * .16; pivot.rotation.x -= kick * .12; pivot.rotation.z += kick * .035;
       }
     }
+    if (this.launchT >= 0) {
+      this.launchT += dt;
+      const k = this.launchT / LAUNCH_SEC;
+      if (k >= 1 || reduced) this.launchT = -1;
+      else {
+        // 포물선 높이와 한 바퀴 회전은 모두 k=0 과 k=1 에서 0(또는 한 바퀴)이라 끝날 때 튀지 않는다.
+        pivot.position.y += this.launchH * 4 * k * (1 - k);
+        pivot.rotation.x += this.launchTilt * Math.sin(k * Math.PI);
+        pivot.rotation.y += this.launchSpin * k * Math.PI * 2;
+      }
+    }
     if (this._impact) {
       const i = this._impact; i.t += dt;
       if (i.t >= 0.24 || reduced) this._impact = null;
@@ -115,6 +179,15 @@ export class Actor {
         pivot.scale.set(1 + squash*.55, 1 - squash, 1 + squash*.55);
       }
     }
+    this.updateTurnSmoothing(dt, reduced);
+  }
+  /** 렌더 전용 방향 보간: 판정 방향(yaw)은 즉시, 보이는 몸은 시간상수 TURN_SMOOTH_SEC 로 따라 돈다. 판정·위치·난수는 건드리지 않는다. */
+  updateTurnSmoothing(dt, reduced) {
+    if (!this.turnSmoothing || reduced || !this.alive) { this._shownYaw = this.yaw; return; }
+    if (!Number.isFinite(this._shownYaw)) this._shownYaw = this.yaw;
+    const lag = Math.atan2(Math.sin(this._shownYaw - this.yaw), Math.cos(this._shownYaw - this.yaw)) * Math.exp(-dt / TURN_SMOOTH_SEC);
+    this._shownYaw = this.yaw + lag;
+    if (Math.abs(lag) > 1e-4) this.motionRoot.rotation.y += lag;
   }
   face(x, z) { this.yaw = Math.atan2(x - this.pos.x, z - this.pos.z); }
   faceDir(dx, dz) { if (dx || dz) this.yaw = Math.atan2(dx, dz); }
@@ -140,8 +213,11 @@ export class Actor {
   }
   knockback(dirx, dirz, force) { const l = Math.hypot(dirx, dirz) || 1; this.kb.x += dirx / l * force; this.kb.z += dirz / l * force; }
   update(dt) {
+    // 영웅 가산 자세 층(heroPose): 이전 프레임 보정을 되돌린 뒤 mixer가 원본을 쓰고, 마지막에 보정을 얹는다.
+    this.heroPose?.restore();
     this.mixer.update(dt);
     this.updateCombatPose(dt);
+    this.heroPose?.apply(dt);
     // 넉백 감쇠
     const fx0 = this.pos.x, fz0 = this.pos.z;
     if (this.kb.lengthSq() > 0.0001) { this.pos.addScaledVector(this.kb, dt); this.kb.multiplyScalar(Math.pow(0.02, dt)); }
@@ -165,12 +241,14 @@ export class Actor {
   }
   die() {
     if (!this.alive) return; this.alive = false; this.deathT = 0; this.vel.set(0, 0, 0);
-    this.play(Math.random() < 0.5 ? 'Death_A' : 'Death_B', { once: true, clamp: true, fade: 0.08 });
+    // 리그별 사망 클립(KayKit Death_A/B, Tripo 라이브러리 death)을 논리 키로 고른다. 난수 소비는 1회로 동일하다.
+    const deathClip = this.rig?.death === 'death' || (Array.isArray(this.rig?.death) && this.rig.death[0] === 'death') ? 'death' : null;
+    this.play(deathClip && this.clips?.[deathClip] ? deathClip : (Math.random() < 0.5 ? 'Death_A' : 'Death_B'), { once: true, clamp: true, fade: 0.08 });
     for (const m of this.mats) { m.transparent = true; }
   }
   dispose() {
     if (this.disposed) return; this.disposed = true;
-    this.game.scene.remove(this.root); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.mixer.getRoot());
+    this.game.scene.remove(this.root); this.heroPose?.dispose(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.mixer.getRoot());
     const skeletons = new Set(), materials = new Set();
     this.model.traverse((o) => {
       if (o.isSkinnedMesh) skeletons.add(o.skeleton);

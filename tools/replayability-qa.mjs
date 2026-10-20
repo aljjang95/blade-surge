@@ -156,7 +156,7 @@ async function inspectJournal(page, record, fromResult) {
   if (fromResult) {
     await page.locator('.exp-result-shell').getByText('성장 기록 · 의뢰 보상', { exact: true }).click();
     await page.locator('.exp-result-shell').getByRole('button', { name: '명성으로 영구 숙련 배우기', exact: true }).click();
-  } else await page.locator('.oath-nav-growth').click();
+  } else { await page.locator('.oath-nav-menu').click(); await page.locator('.mw-open').click(); }
   await page.locator('#masterworks .mw-tabs').getByRole('button', { name: '기록', exact: true }).click();
   const card = page.locator(`[data-run-history="${record.runId}"]`);
   await card.scrollIntoViewIfNeeded();

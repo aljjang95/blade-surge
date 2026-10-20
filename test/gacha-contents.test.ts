@@ -24,7 +24,7 @@ describe('gacha contents', () => {
     // 모든 장비 항목은 실제 장비 데이터와 등급이 맞다
     const items = ITEM_BY_ID as Record<string, { rarity: string }>;
     for (const x of list.filter((x) => x.kind === 'gear')) expect(items[x.id].rarity).toBe(x.rarity!);
-    expect(list.filter((x) => x.kind === 'material').map((x) => x.id).sort()).toEqual(['bless', 'protect', 'stones', 'stones2']);
+    expect(list.filter((x) => x.kind === 'material').map((x) => x.id).sort()).toEqual(['bless', 'protect', 'stones', 'stones2', 'transcendStones', 'transcendStones']);
   });
 
   test('seeded pulls match the published per-kind shares and materials land in the save', () => {

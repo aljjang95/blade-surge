@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { applyDungeonStoneDetail, applySurfaceDetail } from '../engine/surface-textures.js';
+import { applyDungeonStoneDetail, applySurfaceDetail, projectSurfaceUV, STAR_ARCHIVE_TEXTURES } from '../engine/surface-textures.js';
 import { GARDEN_MASTERY } from '../data/garden-mastery.js';
+import { isStarArchive, mulberry32 } from './world.js';
 
 const PALETTES = {
   crypt: [0x8e98ae, 0x938269, 0x749ebd],
@@ -43,6 +44,7 @@ function architectureBatches(floor) {
 
 /** 지역 건축은 가까운 방의 같은 재질·그림자끼리 병합하고 소유 자원만 회수한다. */
 export function buildRegionArchitecture(floor, theme) {
+  if (isStarArchive(floor)) return buildStarArchiveArchitecture(floor);
   const group = new THREE.Group(); group.name = `region-${theme}`;
   const colors = PALETTES[theme];
   const ownedGeometry = [], materials = [];
@@ -466,6 +468,302 @@ export function buildRegionArchitecture(floor, theme) {
     mesh.userData.roomRanges = batch.ranges[i];
     mesh.castShadow = i !== 2; mesh.receiveShadow = true;
     geometry.computeBoundingBox(); geometry.computeBoundingSphere(); group.add(mesh);
+  }
+  return group;
+}
+
+/** C9의 별빛 서고. 전투 상태·충돌 마스크에는 쓰지 않고 방별 재질 배치만 소유한다. */
+function buildStarArchiveArchitecture(floor) {
+  const group = new THREE.Group(); group.name = 'region-star-archive';
+  const textures = STAR_ARCHIVE_TEXTURES;
+  const materials = [
+    new THREE.MeshStandardMaterial({ map: textures.floor || null, color: 0xc2c9d5, roughness: .48, metalness: .08 }),
+    new THREE.MeshStandardMaterial({ color: 0xd8b66e, roughness: .32, metalness: .58, emissive: 0x8c601f, emissiveIntensity: .15 }),
+    new THREE.MeshStandardMaterial({ map: textures.books || null, color: 0xd4e6ff, roughness: .52, metalness: .12, emissive: 0x71baff, emissiveMap: textures.books || null, emissiveIntensity: .38 }),
+    new THREE.MeshStandardMaterial({ map: textures.rosette || null, color: 0x9e9d9a, roughness: .58, metalness: .18, transparent: true, alphaTest: .03, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
+    new THREE.MeshBasicMaterial({ map: textures.crystal || null, color: 0xb3dbff, transparent: true, alphaTest: .04, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true }),
+    new THREE.MeshStandardMaterial({ color: 0x73c9ef, emissive: 0x399fe8, emissiveIntensity: 1.15, roughness: .18, metalness: .28, flatShading: true }),
+    new THREE.MeshBasicMaterial({ color: 0xa8d4ff, transparent: true, opacity: .08, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, blending: THREE.AdditiveBlending }),
+  ];
+  // 광선은 외곽의 정적 평면 네 장만 쓴다. 반사·광원 패스를 추가하지 않는다.
+  materials[6].onBeforeCompile = shader => {
+    shader.vertexShader = 'varying vec2 archiveBeamUv;\n' + shader.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\narchiveBeamUv = uv;');
+    shader.fragmentShader = 'varying vec2 archiveBeamUv;\n' + shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      diffuseColor.a *= pow(max(0.0, 1.0 - abs(archiveBeamUv.x * 2.0 - 1.0)), 2.0)
+        * smoothstep(0.0, 0.2, archiveBeamUv.y) * (1.0 - smoothstep(0.7, 1.0, archiveBeamUv.y));`);
+  };
+  materials[6].customProgramCacheKey = () => 'star-archive-edge-moonbeam-v1';
+  const owned = [], armillaries = [];
+  const transform = new THREE.Object3D();
+  group.userData.roomDetails = [];
+  let time = 0, disposed = false;
+  group.userData.update = dt => {
+    time += dt;
+    // 게임의 난수·시간을 읽거나 변경하지 않으며 프레임마다 객체를 만들지 않는다.
+    for (let i = 0; i < armillaries.length; i++) armillaries[i].rotation.y = time * .09;
+  };
+  group.userData.dispose = () => {
+    if (disposed) return;
+    disposed = true; group.removeFromParent();
+    for (const geometry of owned) geometry.dispose();
+    for (const material of materials) material.dispose();
+  };
+  const merged = (parts, material, name, shadow = true) => {
+    if (!parts.length) return null;
+    const geometry = mergeGeometries(parts);
+    for (const part of parts) part.dispose();
+    if (!geometry) throw new Error('별빛 서고 장식 병합 실패');
+    owned.push(geometry); geometry.computeBoundingSphere();
+    const mesh = new THREE.Mesh(geometry, materials[material]);
+    mesh.name = name; mesh.castShadow = shadow; mesh.receiveShadow = material < 4;
+    mesh.userData.starArchive = true; mesh.userData.surface = material === 3;
+    // 원령은 depthWrite=false인 투명 캐릭터다. 바닥을 먼저 그려 원령의 다리를 덮지 않는다.
+    if (material === 3) mesh.renderOrder = -1;
+    group.add(mesh); return mesh;
+  };
+  for (const room of floor.rooms) {
+    const { x, z } = room, hw = room.w / 2, hh = room.h / 2;
+    const parts = materials.map(() => []);
+    const put = (geometry, material, px, py, pz, rx = 0, ry = 0, rz = 0) => {
+      transform.position.set(px, py, pz); transform.rotation.set(rx, ry, rz); transform.updateMatrix();
+      geometry.applyMatrix4(transform.matrix);
+      if (material === 0) projectSurfaceUV(geometry, .1);
+      const flat = geometry.index ? geometry.toNonIndexed() : geometry;
+      if (flat !== geometry) geometry.dispose();
+      parts[material].push(flat);
+    };
+    const box = (px, py, pz, w, h, d, m = 0, ry = 0) => put(new THREE.BoxGeometry(w, h, d), m, px, py, pz, 0, ry);
+    // 모서리 장식과 책장은 복도의 실제 폭까지 피한다.
+    const corridorAt = (px, pz, radius = 1.8) => floor.corridors.some(c =>
+      Math.abs(px - c.x) < c.w / 2 + radius && Math.abs(pz - c.z) < c.h / 2 + radius);
+    const shelf = (px, pz, yaw, width = 4.2) => {
+      const c = Math.cos(yaw), s = Math.sin(yaw);
+      const piece = (lx, y, lz, w, h, d, m = 0) => box(px + lx * c + lz * s, y, pz - lx * s + lz * c, w, h, d, m, yaw);
+      piece(0, 2.75, -.22, width, 5.5, .8);
+      const face = new THREE.PlaneGeometry(width - .32, 4.7);
+      // 세 줄짜리 원본의 절반 폭을 사용해 책 한 권의 비례와 선반 높이를 맞춘다.
+      const uv = face.getAttribute('uv');
+      for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * .5);
+      put(face, 2, px + s * .21, 2.85, pz + c * .21, 0, yaw);
+      for (const side of [-1, 1]) {
+        piece(side * (width / 2 - .12), 2.85, .28, .24, 5.5, .62);
+        piece(side * (width / 2 - .12), 2.85, .61, .045, 4.8, .035, 1);
+        piece(side * (width / 2 - .12), .35, .35, .5, .22, .9);
+        piece(side * (width / 2 - .12), 5.3, .35, .5, .22, .9, 1);
+      }
+      for (const y of [.35, 2, 3.65, 5.3]) {
+        piece(0, y, .32, width + .15, .18, .8);
+        piece(0, y + .1, .73, width + .15, .045, .035, 1);
+      }
+      piece(0, .14, .12, width + .4, .28, 1.35);
+      piece(0, 5.6, .1, width + .4, .28, 1.2);
+    };
+    for (const side of [-1, 1]) {
+      for (let pz = z - hh + 3.2; pz <= z + hh - 3; pz += 4.7) {
+        const px = x + side * (hw - .25);
+        if (!corridorAt(px, pz, 2.3)) shelf(px, pz, -side * Math.PI / 2);
+      }
+      // 책장 사이의 결정 기둥: 전투 중심을 비우면서 현재 카메라에서도 서고 재질을 읽게 한다.
+      for (const depth of [-.48, .48]) {
+        const px = x + side * (hw - .65), pz = z + hh * depth;
+        if (corridorAt(px, pz, 1.4)) continue;
+        box(px, .44, pz, 1.2, .88, 1.2);
+        box(px, .93, pz, 1.3, .1, 1.3, 1);
+        put(new THREE.PlaneGeometry(1.65, 2.6), 4, px, 2.25, pz, 0, -side * .35);
+        put(new THREE.OctahedronGeometry(.45, 0).scale(1, 2.8, 1), 5, px, 1.95, pz);
+        put(new THREE.PlaneGeometry(1.8, 7), 6, px, 3.7, pz, 0, 0, side * .12);
+      }
+      for (const end of [-1, 1]) {
+        const px = x + side * (hw - .85), pz = z + end * (hh - 1.5);
+        if (corridorAt(px, pz, 1.4)) continue;
+        box(px, .35, pz, 1.6, .6, 1.6);
+        box(px, .69, pz, 1.7, .08, 1.7, 1);
+        // 두 교차면을 방 배치에 병합해 카메라 이동에도 결정의 부피를 유지한다.
+        put(new THREE.PlaneGeometry(2.4, 3.4), 4, px, 2.36, pz, 0, .25);
+        put(new THREE.PlaneGeometry(2.2, 3.25), 4, px, 2.28, pz, 0, Math.PI / 2 + .25);
+        put(new THREE.OctahedronGeometry(.68, 0).scale(.8, 2, .8), 5, px, 1.8, pz);
+      }
+    }
+    // 후면 출입구가 없는 면에만 기록고와 혼천의를 세운다.
+    const rear = z - hh + .25;
+    for (let px = x - hw + 3; px < x + hw - 2; px += 4.7) {
+      if (!corridorAt(px, rear, 2.3)) shelf(px, rear, 0);
+    }
+    const free = [[0, -1], [-1, 0], [1, 0], [0, 1]].find(([sx, sz]) =>
+      !corridorAt(x + sx * (hw + .6), z + sz * (hh + .6), 3));
+    if (free) {
+      const ax = x + free[0] * (hw - 1.6), az = z + free[1] * (hh - 1.6);
+      box(ax, .4, az, 3, .8, 2.2);
+      put(new THREE.CylinderGeometry(.3, .65, 1.8, 12), 1, ax, 1.55, az);
+      const rings = [];
+      for (let i = 0; i < 4; i++) {
+        const ring = new THREE.TorusGeometry(1.65 + i * .13, .055, 6, 48);
+        ring.rotateX(i * Math.PI / 4); ring.rotateY(i * .47);
+        rings.push(ring.toNonIndexed()); ring.dispose();
+      }
+      const armillary = merged(rings, 1, 'star-archive-armillary-' + room.id, false);
+      armillary.position.set(ax, 3.65, az); armillaries.push(armillary);
+      put(new THREE.IcosahedronGeometry(.72, 1), 5, ax, 3.65, az);
+    }
+    const diameter = Math.min(room.w, room.h) * .6;
+    put(new THREE.PlaneGeometry(diameter, diameter), 3, x, .075, z, -Math.PI / 2);
+    // 가장자리 금 장식은 위험 표시(.11)보다 낮고 중앙의 통행을 가리지 않는다.
+    for (const side of [-1, 1]) {
+      box(x + side * (hw - 1.15), .062, z, .055, .012, room.h - 2.3, 1);
+      box(x, .062, z + side * (hh - 1.15), room.w - 2.3, .012, .055, 1);
+    }
+    for (let i = 0; i < parts.length; i++) merged(parts[i], i, 'star-archive-room-' + room.id + '-' + i, i < 2);
+    group.userData.roomDetails.push({ roomId: room.id, theme: 'star-archive', centerClear: true, diameter });
+  }
+  return group;
+}
+
+// ===================== 마을 테마 던전·필드 장식 =====================
+// 잿불 항구(따뜻한 부두 소품)와 별마루 설원(얼음 결정·눈더미)의 던전·필드에만 덧붙인다.
+// 이동 마스크·충돌·기존 건축은 건드리지 않고, 걷는 칸 위에는 두지 않는다.
+const TOWN_DECOR_DUNGEONS = Object.freeze({
+  emberport: ['cinder_tide_lock', 'ashforge_catacomb', 'star_archive', 'nightglass_observatory'],
+  starcrest: ['astral_leviathan_spire', 'verdigris_sanctum', 'sable_mirage_basin', 'comet_bastion'],
+});
+const TOWN_DECOR_FIELDS = Object.freeze({ coast: 'emberport', mountain: 'starcrest' });
+const seedOfRoute = id => [...id].reduce((n, c) => n * 31 + c.charCodeAt(0), 17) >>> 0;
+const townByRoute = new Map(Object.entries(TOWN_DECOR_DUNGEONS).flatMap(([town, ids]) => ids.map(id => [id, town])));
+const townBySeed = new Map(Object.entries(TOWN_DECOR_DUNGEONS).flatMap(([town, ids]) => ids.map(id => [seedOfRoute(id), town])));
+
+/** 던전 층(시드로 경로를 역산)이나 필드 층이 어느 마을의 장식을 쓰는지. 해당 없으면 null. */
+export function townDecorFor(floor) {
+  const field = floor?.layout?.field;
+  if (field) return TOWN_DECOR_FIELDS[field] || null;
+  if (floor?.expeditionRouteId) return townByRoute.get(floor.expeditionRouteId) || null;
+  return townBySeed.get(floor?.seed) || null;
+}
+
+const DECOR_HEIGHT = Object.freeze({ lamp: 2.2, crates: 1.2, barrels: 1, crystal: 1.8, deco: 1.6 });
+const LIBRARY_DECOR_ROLES = Object.freeze({ lamp: 'lamp', lantern: 'lamp', crate: 'crates', crates: 'crates', barrel: 'barrels', barrels: 'barrels', crystal: 'crystal', deco: 'deco' });
+
+/** 장식 자리: 방 모서리 벽쪽(던전) 또는 길 바깥 가장자리(필드). 회랑 입구와 걷는 칸은 비운다. */
+export function townDecorPlacements(floor, townId) {
+  const random = mulberry32((floor.seed ^ 0x7d3c91) >>> 0), out = [], field = !!floor.layout?.field;
+  const kinds = townId === 'emberport' ? ['lamp', 'barrels', 'crates', 'lamp'] : ['crystal', 'drift', 'lamp', 'crystal'];
+  const inCorridor = (x, z) => (floor.corridors || []).some(c => Math.abs(x - c.x) < c.w / 2 + 2.6 && Math.abs(z - c.z) < c.h / 2 + 2.6);
+  const near = (x, z, r) => out.some(p => Math.hypot(p.x - x, p.z - z) < r);
+  for (const room of floor.rooms) {
+    const hw = room.w / 2, hh = room.h / 2, boss = room.type === 'boss';
+    const count = field ? 5 : boss ? 7 : 4;
+    for (let i = 0; i < count; i++) {
+      let x, z;
+      if (field) {
+        // 필드는 방 둘레 바깥 고리에서, 길(걷는 칸)이 아닌 자리만 쓴다.
+        const angle = random() * Math.PI * 2, reach = 1.18 + random() * .22;
+        x = room.x + Math.cos(angle) * hw * reach; z = room.z + Math.sin(angle) * hh * reach;
+        if (floor.walkable(x, z) || floor.walkable(x + 1, z) || floor.walkable(x - 1, z) || floor.walkable(x, z + 1) || floor.walkable(x, z - 1)) continue;
+      } else {
+        // 던전은 네 모서리 안쪽 벽 가까이 한 줄(기둥은 hw-1.6 이므로 그 바깥).
+        const sx = i % 2 ? 1 : -1, sz = i < 2 ? -1 : 1, slide = (random() - .5) * 2.4;
+        x = room.x + sx * (hw - .95); z = room.z + sz * (hh - 3.4 + slide);
+        if (i >= 4) { x = room.x + (random() - .5) * (room.w - 8); z = room.z - hh + .95 + (random() < .5 ? 0 : room.h - 1.9); }
+        if (inCorridor(x, z)) continue;
+      }
+      if (near(x, z, 1.6)) continue;
+      out.push({ kind: kinds[i % kinds.length], x, z, yaw: random() * Math.PI * 2, scale: .9 + random() * .3, room: room.id });
+    }
+  }
+  return out;
+}
+
+/**
+ * 마을 테마 장식 그룹. 라이브러리 소품(manifest kind 'prop' + tags ['town:<id>', ...])이 읽혔으면 그 모델을
+ * 역할별로 인스턴싱하고, 없으면 절차적 도형을 재질별로 병합한다. 공간 청크로 나눠 컬링이 먹게 한다.
+ * @param {any} floor
+ * @param {string} townId
+ * @param {{ libraryProps?: Array<{asset:any, scene:THREE.Object3D}> }} [options]
+ */
+export function buildTownDecor(floor, townId, { libraryProps = [] } = {}) {
+  const group = new THREE.Group(); group.name = 'town-decor-' + townId;
+  const placements = townDecorPlacements(floor, townId), owned = [], materials = [];
+  let disposed = false;
+  group.userData = { townId, count: placements.length, dispose() {
+    if (disposed) return; disposed = true;
+    group.traverse(node => { if (node.isInstancedMesh) node.dispose(); });
+    for (const geometry of owned) geometry.dispose();
+    for (const material of materials) material.dispose();
+    group.removeFromParent();
+  } };
+  const lib = new Map();
+  for (const entry of libraryProps) for (const tag of entry.asset?.tags || []) if (LIBRARY_DECOR_ROLES[tag]) {
+    const role = LIBRARY_DECOR_ROLES[tag]; if (!lib.has(role)) lib.set(role, []); lib.get(role).push(entry); break;
+  }
+  const roleOf = kind => kind === 'lamp' ? 'lamp' : kind === 'drift' ? null : kind;
+  const procedural = [], instanced = new Map();
+  for (const p of placements) {
+    const entries = lib.get(roleOf(p.kind));
+    if (entries?.length) { const entry = entries[p.room % entries.length]; if (!instanced.has(entry)) instanced.set(entry, []); instanced.get(entry).push(p); } else procedural.push(p);
+  }
+  // 라이브러리 소품: 인스턴싱(원본 높이를 역할 높이로 정규화).
+  const object = new THREE.Object3D();
+  for (const [entry, list] of instanced) {
+    const role = LIBRARY_DECOR_ROLES[(entry.asset.tags || []).find(tag => LIBRARY_DECOR_ROLES[tag])] || 'deco';
+    entry.scene.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(entry.scene), size = box.getSize(new THREE.Vector3());
+    if (!(size.y > 0)) { procedural.push(...list); continue; }
+    const base = (DECOR_HEIGHT[role] || 1.6) / size.y;
+    entry.scene.traverse(node => {
+      if (!node.isMesh || node.isSkinnedMesh) return;
+      const mesh = new THREE.InstancedMesh(node.geometry, node.material, list.length);
+      list.forEach((p, index) => {
+        const scale = base * p.scale;
+        object.position.set(p.x, -box.min.y * scale, p.z); object.rotation.set(0, p.yaw, 0); object.scale.setScalar(scale); object.updateMatrix();
+        mesh.setMatrixAt(index, object.matrix.clone().multiply(node.matrixWorld));
+      });
+      mesh.name = 'town-decor-library-' + entry.asset.id; mesh.castShadow = false; mesh.receiveShadow = true; mesh.computeBoundingSphere(); group.add(mesh);
+    });
+  }
+  if (!procedural.length) return group;
+  // 절차적 소품: 재질 3종(불투명 두 가지 + 발광)을 청크별로 병합.
+  const embers = townId === 'emberport';
+  const lit = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  const glow = new THREE.MeshBasicMaterial({ vertexColors: true, fog: true });
+  materials.push(lit, glow);
+  const chunks = new Map(), tr = new THREE.Object3D(), color = new THREE.Color();
+  const bucket = p => { const key = Math.floor(p.x / 44) + ',' + Math.floor(p.z / 44); if (!chunks.has(key)) chunks.set(key, { lit: [], glow: [] }); return chunks.get(key); };
+  const put = (list, geometry, hex, p, lx, ly, lz, sx = 1, sy = 1, sz = 1) => {
+    const flat = geometry.index ? geometry.toNonIndexed() : geometry; if (flat !== geometry) geometry.dispose();
+    const c = Math.cos(p.yaw), s = Math.sin(p.yaw);
+    tr.position.set(p.x + (lx * c + lz * s) * p.scale, ly * p.scale, p.z + (-lx * s + lz * c) * p.scale); tr.rotation.set(0, p.yaw, 0); tr.scale.set(sx * p.scale, sy * p.scale, sz * p.scale); tr.updateMatrix();
+    flat.applyMatrix4(tr.matrix); flat.deleteAttribute('uv'); color.set(hex);
+    const values = new Float32Array(flat.getAttribute('position').count * 3);
+    for (let i = 0; i < values.length; i += 3) { values[i] = color.r; values[i + 1] = color.g; values[i + 2] = color.b; }
+    flat.setAttribute('color', new THREE.BufferAttribute(values, 3)); list.push(flat);
+  };
+  for (const p of procedural) {
+    const { lit: L, glow: G } = bucket(p);
+    if (p.kind === 'lamp') {
+      if (embers) {
+        put(L, new THREE.CylinderGeometry(.09, .12, 2, 7), 0x5c3d2c, p, 0, 1, 0); put(L, new THREE.BoxGeometry(.5, .06, .06), 0x5c3d2c, p, .18, 1.9, 0);
+        put(G, new THREE.BoxGeometry(.26, .34, .26), 0xffb868, p, .36, 1.64, 0); put(L, new THREE.ConeGeometry(.22, .2, 4), 0xb8742c, p, .36, 1.9, 0);
+      } else {
+        put(L, new THREE.CylinderGeometry(.08, .11, 1.8, 7), 0xcfe0f2, p, 0, .9, 0);
+        put(G, new THREE.OctahedronGeometry(.28, 0), 0x9fe8ff, p, 0, 2.05, 0);
+      }
+    } else if (p.kind === 'barrels') {
+      for (const x of [-.55, 0, .55]) { put(L, new THREE.CylinderGeometry(.26, .3, .74, 9), 0x6a4630, p, x, .37, 0); put(L, new THREE.CylinderGeometry(.31, .31, .05, 9), 0xc98a3c, p, x, .34, 0); }
+    } else if (p.kind === 'crates') {
+      put(L, new THREE.BoxGeometry(.84, .62, .62), 0x7a5232, p, -.45, .31, 0); put(L, new THREE.BoxGeometry(.8, .6, .6), 0x5d4630, p, .45, .3, .05); put(L, new THREE.BoxGeometry(.7, .5, .55), 0x866040, p, 0, .87, 0);
+    } else if (p.kind === 'crystal') {
+      for (const [x, h, r, tilt] of [[-.5, 1, .2, -.1], [0, 1.7, .26, .04], [.5, 1.2, .2, .12]]) put(G, new THREE.ConeGeometry(r, h, 5), 0x8fe4ff, p, x, h / 2, 0, 1, 1, 1);
+      put(L, new THREE.BoxGeometry(1.7, .14, .6), 0xcfe0f2, p, 0, .07, 0);
+    } else if (p.kind === 'drift') {
+      put(L, new THREE.SphereGeometry(1, 9, 6), 0xf1f7ff, p, 0, -.12, 0, 1.5, .42, 1.1);
+    }
+  }
+  for (const [key, { lit: litParts, glow: glowParts }] of chunks) {
+    for (const [parts, material, name] of [[litParts, lit, 'lit'], [glowParts, glow, 'glow']]) {
+      if (!parts.length) continue;
+      const geometry = mergeGeometries(parts); for (const part of parts) part.dispose();
+      if (!geometry) continue;
+      owned.push(geometry); geometry.computeBoundingSphere();
+      const mesh = new THREE.Mesh(geometry, material); mesh.name = 'town-decor-' + name + '-' + key; mesh.castShadow = false; mesh.receiveShadow = false; group.add(mesh);
+    }
   }
   return group;
 }

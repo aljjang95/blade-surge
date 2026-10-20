@@ -1,0 +1,9 @@
+/* Android WebView 140 미만은 env(safe-area-inset-*)가 틀릴 수 있다. Capacitor SystemBars가 주입하는
+   --safe-area-inset-*를 먼저 쓰고, 웹·iOS처럼 변수가 없으면 기존 env() 값으로 돌아간다.
+   html:root는 style.css의 :root보다 우선하므로 불러오는 순서와 무관하다. */
+html:root {
+  --sat: var(--safe-area-inset-top, env(safe-area-inset-top, 0px));
+  --sab: var(--safe-area-inset-bottom, env(safe-area-inset-bottom, 0px));
+  --sal: var(--safe-area-inset-left, env(safe-area-inset-left, 0px));
+  --sar: var(--safe-area-inset-right, env(safe-area-inset-right, 0px));
+}

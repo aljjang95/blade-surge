@@ -95,8 +95,10 @@ export class Minimap {
       const w = Math.max(2, room.w * this.scale), h = Math.max(2, room.h * this.scale);
       const boss = room.type === ROOM_TYPE.BOSS, elite = room.type === ROOM_TYPE.ELITE, treasure = room.type === ROOM_TYPE.TREASURE;
       g.fillStyle = room.cleared ? '#526b6070' : boss ? '#c86f76' : elite ? '#b39156' : treasure ? '#a6f0d4' : '#b6b89e';
-      g.fillRect(x, y, w, h); g.lineWidth = room.id === currentRoomId ? 2 : 1;
-      g.strokeStyle = room.id === currentRoomId ? '#f7efcc' : '#cad1b980'; g.strokeRect(x, y, w, h);
+      g.lineWidth = room.id === currentRoomId ? 2 : 1; g.strokeStyle = room.id === currentRoomId ? '#f7efcc' : '#cad1b980';
+      // 원형 마당은 실제 충돌 모양대로 원으로 그린다.
+      if (room.shape === 'disk') { g.beginPath(); g.arc(x + w / 2, y + h / 2, Math.min(w, h) / 2, 0, Math.PI * 2); g.fill(); g.stroke(); }
+      else { g.fillRect(x, y, w, h); g.strokeRect(x, y, w, h); }
       const glyph = room.conquestLabel || (boss ? '♜' : treasure && !room.cleared ? '◇' : elite && !room.cleared ? '!' : '');
       if (glyph) { const [cx, cy] = this.px(room.x, room.z); g.fillStyle = '#102b24';
         g.font = `700 ${width > 160 ? 14 : 10}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(glyph, cx, cy); }

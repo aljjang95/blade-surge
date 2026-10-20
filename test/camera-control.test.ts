@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import * as THREE from 'three';
-import { battleCameraOffset, cameraRelativeMove, normalizeBattleCamera } from '../src/engine/camera-control.js';
+import { battleCameraOffset, cameraRelativeMove, normalizeBattleCamera, pinchZoom, pointerDistance } from '../src/engine/camera-control.js';
 import { Input } from '../src/engine/input.js';
 import { lobbyCameraPosition, normalizeLobbyCamera } from '../src/engine/lobby-camera.js';
 
@@ -15,6 +15,13 @@ describe('user camera and screen movement', () => {
       expect(value.y).toBeGreaterThan(0); expect(value.z).toBeGreaterThan(0);
       expect(Math.hypot(value.x,value.y,value.z)).toBeLessThan(25);
     }
+  });
+  test('pinch zoom uses a distance ratio and clamps to the battle range', () => {
+    expect(pointerDistance({x: 10, y: 20}, {x: 40, y: 60})).toBe(50);
+    expect(pinchZoom(100, 100, 140)).toBe(140);
+    expect(pinchZoom(100, 100, 50)).toBe(70);
+    expect(pinchZoom(100, 100, 120)).toBe(120);
+    expect(pinchZoom(100, 0, 120)).toBe(100);
   });
   test('screen right/forward follow actual camera orientation through an orbit', () => {
     for (const yaw of [0, 90, -90, 179]) {

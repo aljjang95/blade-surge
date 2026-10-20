@@ -1,9 +1,12 @@
 import * as THREE from 'three';
 import { RARITY_INFO, ITEM_BY_ID } from '../data/items.js';
-import { materialsOf } from '../engine/assets.js';
+import { materialsOf, applyLibraryHeroBody, applyLibraryHeroTier } from '../engine/assets.js';
+import { libraryAssetForAvatar } from '../engine/library-assets.js';
+import { heroAppearanceTier } from '../data/hero-library.js';
 import { applyArmorAppearance } from './armor-appearance.js';
 import { applyArmoryAppearance } from '../engine/armory-assets.js';
 import { weaponLook, WEAPON_GLOW } from '../data/weapon-looks.js';
+import { acquireItemGeometry, createItemMaterial, ITEM_WEAPON_FORMS } from '../engine/item-forge.js';
 const wLookEarly = (heroId, inst) => weaponLook(heroId, inst, LOOKS);
 
 /**
@@ -54,11 +57,22 @@ const BODY_GLOW = { N: 0, S: 0.02, E: 0.035, U: 0.05, L: 0.07 };
  * @param equip  { weapon: inst|null, armor: inst|null, ... }  (inst = { id, enh })
  * @returns { trailColor, aura }  — 무기 궤적 색, 오라 색(없으면 null)
  */
-export function applyLook(model, def, equip = {}) {
+export function applyLook(model, def, equip = {}, opts = {}) {
   const L = LOOKS[def.id];
   const w = equip.weapon ? ITEM_BY_ID[equip.weapon.id] : null, a = equip.armor ? ITEM_BY_ID[equip.armor.id] : null;
-  applyArmorAppearance(model, def, a?.slot === 'armor' ? a : null);
-  applyArmoryAppearance(model, equip, ITEM_BY_ID, def);
+  const avatarAsset = opts.avatarId ? libraryAssetForAvatar(opts.avatarId) : null;
+  const hasAvatar = !!avatarAsset;
+  // 라이브러리 영웅: 갑옷 단계 몸체로 교체. 아직 받지 않은 단계는 비동기로 받은 뒤 외형을 다시 적용한다.
+  if (model.userData.authoredContract?.role === 'hero') {
+    const swapped = hasAvatar
+      ? applyLibraryHeroBody(model, avatarAsset, () => { applyLook(model, def, equip, opts); model.userData.onLibraryBodySwap?.(); })
+      : applyLibraryHeroTier(model, heroAppearanceTier(equip, ITEM_BY_ID), () => { applyLook(model, def, equip, opts); model.userData.onLibraryBodySwap?.(); });
+    if (swapped) model.userData.onLibraryBodySwap?.();
+  }
+  // 아바타 몸체가 흉갑·어깨·허리 장식을 소유하므로 기존 몸통 장식은 겹치지 않게 끈다.
+  // 무기/방패 노드와 병기고의 반지·장화는 외형 계약상 그대로 유지한다.
+  applyArmorAppearance(model, def, hasAvatar ? null : (a?.slot === 'armor' ? a : null));
+  applyLibraryArmoryAppearance(model, hasAvatar ? { ...equip, armor: null } : equip, def);
   // 보일 노드: 슬롯이 비었으면 def.show 중 그 그룹 것, 있으면 등급표
   let show = new Set(def.show);
   if (L) {
@@ -67,6 +81,7 @@ export function applyLook(model, def, equip = {}) {
     // 양손 무기는 두 손으로 쥐므로 방패를 들지 않는다 (방어구 방패 메시는 방어구가 있을 때도 양손이면 숨긴다).
     if (wLookEarly(def.id, equip.weapon)?.twoHanded) for (const n of L.armorNodes) if (/Shield/.test(n)) show.delete(n);
   }
+  applyItemWeapons(model, L, w);
   for (const n of [...ALL_WEAPON_NODES, 'Bow', 'Arrow']) { const o = model.getObjectByName(n); if (o) o.visible = show.has(n); }
   if (w?.modelNode && ['knight', 'barbarian'].includes(def.id) && model.userData.armoryAppearance?.includes(w.id)) {
     for (const n of L.weaponNodes) { const o = model.getObjectByName(n); if (o) o.visible = false; }
@@ -99,4 +114,76 @@ export function applyLook(model, def, equip = {}) {
   const enhMax = Math.max(...['weapon', 'armor', 'ring', 'boots'].map((s) => equip[s]?.enh || 0));
   const auraCol = enhMax >= 20 ? 0xff8af0 : enhMax >= 15 ? 0xffd060 : enhMax >= 10 ? (wCol ? wCol.getHex() : def.color) : null;
   return { trailColor: w && w.rarity !== 'N' ? wCol.getHex() : new THREE.Color(def.color).getHex(), aura: auraCol, enhMax, weapon: wLook };
+}
+
+// 기존 노드의 변환·이름·애니메이션을 유지한다. 원본 버퍼는 빌린 것이므로 해제하지 않는다.
+function applyItemWeapons(model, looks, item) {
+  const owned = model.userData.itemWeaponAppearance || (model.userData.itemWeaponAppearance = new Map());
+  const targets = new Set(item && !item.modelNode ? looks?.weapon?.[item.rarity] || [] : []);
+  for (const [name, state] of owned) {
+    const node = model.getObjectByName(name);
+    if (state.itemId === item?.id && targets.has(name) && node === state.node) continue;
+    state.clear(); owned.delete(name);
+  }
+  for (const name of targets) {
+    if (owned.has(name)) continue;
+    const node = model.getObjectByName(name), form = ITEM_WEAPON_FORMS[name];
+    if (!node || !form) continue;
+    const meshes = [];
+    node.traverse(o => { if (o.isMesh && !o.isSkinnedMesh) meshes.push(o); });
+    if (!meshes.length) continue;
+    node.updateWorldMatrix(true, true);
+    const inverse = node.matrixWorld.clone().invert();
+    const saved = meshes.map(mesh => ({ mesh, geometry: mesh.geometry, material: mesh.material, visible: mesh.visible }));
+    const contractBounds = node.userData.weaponForgeBounds;
+    const bounds = contractBounds ? new THREE.Box3(new THREE.Vector3().fromArray(contractBounds.min), new THREE.Vector3().fromArray(contractBounds.max)) : new THREE.Box3();
+    if (!contractBounds) for (const mesh of meshes) {
+      mesh.geometry.computeBoundingBox();
+      bounds.union(mesh.geometry.boundingBox.clone().applyMatrix4(new THREE.Matrix4().multiplyMatrices(inverse, mesh.matrixWorld)));
+    }
+    // 소켓을 모르는 임시/외부 리그에는 적용하지 않는다. 원점 계약을 추측해 이동하지 않는다.
+    const axis = form === 'bow' ? 'z' : 'y';
+    if (bounds.isEmpty() || bounds.min[axis] >= 0 || bounds.max[axis] <= 0) continue;
+    const lease = acquireItemGeometry(form, item, bounds), material = createItemMaterial(item);
+    const target = meshes[0], relative = new THREE.Matrix4().multiplyMatrices(inverse, target.matrixWorld);
+    let geometry = lease.geometry, localOwned = false;
+    // 대장간 v2 메시의 항등 변환은 버퍼를 그대로 공유한다. 구형 자식 변환은 한 번 역변환한다.
+    if (!relative.equals(new THREE.Matrix4())) { geometry = lease.geometry.clone().applyMatrix4(relative.invert()); localOwned = true; }
+    target.geometry = geometry; target.material = material;
+    for (const mesh of meshes.slice(1)) mesh.visible = false;
+    let cleared = false, explicit = false;
+    const restore = () => {
+      if (cleared) return; cleared = true;
+      for (const original of saved) {
+        original.mesh.geometry = original.geometry; original.mesh.material = original.material; original.mesh.visible = original.visible;
+      }
+      if (localOwned) geometry.dispose();
+      lease.release(); owned.delete(name);
+      // Actor와 disposeCharacter는 재질 dispose로 폐기한다. 그 경로에서도 참조를 정확히 한 번 반환한다.
+      if (!explicit) for (const m of new Set(saved.flatMap(original => Array.isArray(original.material) ? original.material : [original.material]))) m.dispose();
+    };
+    for (const part of material) part.addEventListener('dispose', restore);
+    owned.set(name, { node, itemId: item.id, clear() { explicit = true; restore(); for (const part of material) part.dispose(); } });
+  }
+}
+
+function applyLibraryArmoryAppearance(model, equip, def) {
+  const contract = model.userData.authoredContract;
+  if (contract?.role !== 'hero' || !contract.handBones) { applyArmoryAppearance(model, equip, ITEM_BY_ID, def); return; }
+  // 병기고 장식은 이름이 handslot.* 인 스킨 본을 찾으므로 Mixamo 손 본 이름을 잠시 바꾼다.
+  const renamed = [];
+  for (const side of ['r', 'l']) {
+    const bone = model.getObjectByName(contract.handBones[side]);
+    if (!bone) continue;
+    renamed.push([bone, bone.name, `handslot.${side}`]); bone.name = `handslot.${side}`;
+  }
+  try { applyArmoryAppearance(model, equip, ITEM_BY_ID, def); }
+  finally {
+    for (const [bone, name, key] of renamed) {
+      bone.name = name;
+      // 장식 변환은 KayKit handslot 프레임 기준이므로 축 보정 소켓으로 옮긴다.
+      const socket = model.getObjectByName(contract.sockets[key]);
+      if (socket) for (const child of [...bone.children]) if (child.userData.armoryItem) socket.add(child);
+    }
+  }
 }

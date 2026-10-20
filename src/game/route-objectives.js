@@ -3,6 +3,8 @@ import { routeObjectiveForStage } from '../data/route-objectives.js';
 import { CoolingValves } from './cooling-valves.js';
 import { NightglassRecords } from './nightglass-records.js';
 import { AstralConstellations } from './astral-constellations.js';
+import { FalseThrones } from './false-thrones.js';
+import { CometOrbits } from './comet-orbits.js';
 
 /** @typedef {{id:number, x:number, z:number, type:string, label:string, spawned:boolean, cleared:boolean, discovered:boolean}} Room */
 /** @typedef {{rooms:Room[], startRoom:Room, bossRoom:Room, sealed?:boolean, minX?:number, minZ?:number, cols?:number, buildFlow:(x:number,z:number)=>Int32Array|null|undefined}} World */
@@ -15,6 +17,8 @@ export function createRouteObjectives(stage, world) {
   if (!def) return null;
   if ('kind' in def && def.kind === 'constellations') return new AstralConstellations(def, world);
   if ('kind' in def && def.kind === 'records') return new NightglassRecords(def, world);
+  if ('kind' in def && def.kind === 'thrones') return new FalseThrones(def, world);
+  if ('kind' in def && def.kind === 'orbits') return new CometOrbits(def, world);
   return 'kind' in def && def.kind === 'cooling' ? new CoolingValves(def, world) : new RouteObjectives(def, world);
 }
 
@@ -28,18 +32,21 @@ export class RouteObjectives {
   #report = null;
   #markerT = 0;
   #lastHint = '';
+  #wrongT = 0;
+  #burstCooldown = 0;
+  #bursts = 0;
 
   /** @param {NonNullable<ReturnType<typeof routeObjectiveForStage>>} def @param {World} world */
   constructor(def, world) {
     this.def = def; this.world = world;
     const { minX, minZ, cols } = world;
-    if (typeof minX !== 'number' || typeof minZ !== 'number' || typeof cols !== 'number') throw new RangeError('종문 이동 지도가 준비되지 않았습니다.');
+    if (typeof minX !== 'number' || typeof minZ !== 'number' || typeof cols !== 'number') throw new RangeError(`${def.noun || '종문'} 이동 지도가 준비되지 않았습니다.`);
     const flow = world.buildFlow(world.startRoom.x, world.startRoom.z);
     this.gates = def.gates.map(({ roomId, label }) => {
       const room = world.rooms.find(r => r.id === roomId);
       if (!room || room.type === 'boss' || room.type === 'start' || !flow ||
           flow[Math.floor(room.z - minZ) * cols + Math.floor(room.x - minX)] < 0) {
-        throw new RangeError(`종문 ${roomId}에 봉인 밖 접근 경로가 없습니다.`);
+        throw new RangeError(`${def.noun || '종문'} ${roomId}에 봉인 밖 접근 경로가 없습니다.`);
       }
       room.label = label;
       return { room, label, ready: false, attuned: false, expected: 0, spawned: 0, prepared: false };
@@ -48,6 +55,10 @@ export class RouteObjectives {
   get progress() { return this.#progress; }
   get hold() { return this.#hold; }
   get complete() { return this.#progress === this.gates.length; }
+  /** 종문·역류 밸브처럼 같은 순차 유지 규칙을 쓰는 목표의 이름. */
+  get noun() { return this.def.noun || '종문'; }
+  get verb() { return this.def.verb || '조율'; }
+  get bursts() { return this.#bursts; }
   autoRoom() { return this.#closed || this.#report ? null : this.gates[this.#progress]?.room || null; }
   interrupt() { this.#hold = 0; }
   stop() { this.#closed = true; this.interrupt(); }
@@ -87,9 +98,9 @@ export class RouteObjectives {
   }
   canWin() { return this.canUnseal() && !this.world.sealed && this.world.bossRoom.cleared; }
   hint() {
-    const gate = this.gates[this.#progress];
-    if (!gate) return `종문 3/3 조율 완료 · ${this.canUnseal() ? '보스 처치' : '남은 구역 정화'}`;
-    return `종문 ${this.#progress}/3 · 다음 ${gate.label} · ${gate.ready ? `중심 2초 유지 (${this.#hold.toFixed(1)}/2)` : '적 처치 후 중심 2초'}`;
+    const gate = this.gates[this.#progress], n = this.gates.length, hold = this.def.holdSeconds;
+    if (!gate) return `${this.noun} ${n}/${n} ${this.verb} 완료 · ${this.canUnseal() ? '보스 처치' : '남은 구역 정화'}`;
+    return `${this.noun} ${this.#progress}/${n} · 다음 ${gate.label} · ${gate.ready ? `중심 ${hold}초 유지 (${this.#hold.toFixed(1)}/${hold})` : `적 처치 후 중심 ${hold}초`}`;
   }
   /** @param {Game} game */
   refreshHint(game) {
@@ -110,9 +121,10 @@ export class RouteObjectives {
         gate.attuned = true; this.#progress++; this.interrupt(); this.#markerT = 0;
         game.markCleared(gate.room);
         game.autoTarget = this.autoRoom();
-        game.ui.toast(`${gate.label} 조율 완료 · ${this.#progress}/3`, 'gold');
+        game.ui.toast(`${gate.label} ${this.verb} 완료 · ${this.#progress}/${this.gates.length}`, 'gold');
       }
     }
+    this.wrongStepUpdate(game, dt);
     // Existing shipped magic circle and pooled text; no new asset/mesh ownership.
     this.#markerT -= dt;
     if (this.#markerT <= 0) {
@@ -122,16 +134,34 @@ export class RouteObjectives {
         if (cue.attuned || !room.discovered || Math.hypot(game.player.pos.x - room.x, game.player.pos.z - room.z) > 22) continue;
         const next = i === this.#progress;
         const pos = new Vector3(room.x, 0, room.z);
-        game.fx.castCircle(pos, next ? 0xffd060 : 0x8394ac, { radius: this.def.radius, life: 2 });
-        game.fx.damage(pos, 0, { text: `${i + 1}번 종문 · ${next ? cue.ready ? '중심 2초' : '적 정화' : '순서 대기'}` });
+        const danger = !next && cue.ready && !!this.def.wrongStep;
+        game.fx.castCircle(pos, next ? this.def.cueColor ?? 0xffd060 : danger ? this.def.wrongStep.color : 0x8394ac, { radius: this.def.radius, life: 2 });
+        game.fx.damage(pos, 0, { text: `${i + 1}번 ${this.noun} · ${next ? cue.ready ? `중심 ${this.def.holdSeconds}초` : '적 정화' : danger ? '차례 아님 · 밟으면 포자 폭발' : '순서 대기'}` });
       }
     }
     this.refreshHint(game);
   }
+  /** 정화됐지만 차례가 아닌 목표 중심에 머물면 피해를 준다(정의에 wrongStep이 있을 때만). @param {Game} game @param {number} dt */
+  wrongStepUpdate(game, dt) {
+    const ws = this.def.wrongStep;
+    if (!ws) return;
+    this.#burstCooldown = Math.max(0, this.#burstCooldown - dt);
+    const pos = game.player.pos;
+    const wrong = this.gates.find((g, i) => i > this.#progress && g.ready && !g.attuned &&
+      Math.hypot(pos.x - g.room.x, pos.z - g.room.z) <= this.def.radius);
+    this.#wrongT = wrong && this.#burstCooldown <= 0 ? this.#wrongT + dt : 0;
+    if (!wrong || this.#wrongT + 1e-9 < ws.seconds) return;
+    this.#wrongT = 0; this.#burstCooldown = ws.cooldown; this.#bursts++; this.interrupt();
+    const dx = pos.x - wrong.room.x, dz = pos.z - wrong.room.z, d = Math.hypot(dx, dz) || 1;
+    game.player.hurt?.(game.player.maxHp * ws.damage, { dirx: dx / d, dirz: dz / d, kb: 2, kind: 'magic' });
+    game.fx.castCircle(new Vector3(wrong.room.x, 0, wrong.room.z), ws.color, { radius: this.def.radius, life: .8 });
+    game.ui.toast(`${wrong.label} · 차례가 아닌 ${this.noun} · 포자 폭발`, 'red');
+  }
   /** A result never manufactures missing holds or turns a loss into completion.
    * @param {boolean} win */
   finish(win) {
-    if (!this.#report) this.#report = Object.freeze({ id: this.def.id, complete: !!win && !this.#closed && this.canWin(),
+    if (!this.#report) this.#report = Object.freeze({ id: this.def.id, label: `${this.noun} ${this.verb}`, complete: !!win && !this.#closed && this.canWin(),
+      ...(this.def.wrongStep ? { sporeBursts: this.#bursts } : {}),
       progress: this.#progress, target: this.gates.length, rooms: Object.freeze(this.gates.slice(0, this.#progress).map(g => g.room.id)) });
     return this.#report;
   }

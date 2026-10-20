@@ -1,4 +1,6 @@
-import { expect, test } from 'bun:test';
+import { expect, setDefaultTimeout, test } from 'bun:test';
+// 실제 자식 프로세스·렌더를 쓰므로 PC가 바쁠 때 기본 5초 제한에 걸리지 않게 한다.
+setDefaultTimeout(30_000);
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import * as THREE from 'three';
@@ -264,7 +266,7 @@ test('기존 세 표면과 컷어웨이 재질을 공유하며 소유 지오메�
     expect(materials.size).toBe(3);
     for (const mesh of meshes) {
       const material = mesh.material as THREE.MeshStandardMaterial; occlusion.bind(material);
-      expect(material.clippingPlanes).toBe(occlusion.planes); expect(material.clipIntersection).toBe(true);
+      expect(occlusion.isBound(material)).toBe(true); expect(material.clippingPlanes).toBeNull();
       if (mesh.userData.materialRole === 0) {
         expect(material.map).toBe(textures[0]); expect(material.normalMap).toBe(textures[1]);
         expect(material.roughnessMap).toBe(textures[2]); expect(material.normalScale.toArray()).toEqual([.45, .45]);

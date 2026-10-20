@@ -20,7 +20,27 @@ function mainObjectiveView(battle) {
     if (gate) {
       const kind = route.def?.kind;
       const title = kind === 'constellations' ? '별자리 복원' : kind === 'records' ? '기록 복원'
-        : kind === 'cooling' ? '냉각선 복구' : '종문 조율';
+        : kind === 'thrones' ? '가짜 왕좌 파괴'
+        : kind === 'orbits' ? '궤도 고리 정렬'
+        : kind === 'cooling' ? route.copy?.title || '냉각선 복구' : `${route.noun || '종문'} ${route.verb || '조율'}`;
+      if (kind === 'orbits') {
+        // 순서가 자유라 다음 고리는 아직 정렬하지 않은 첫 고리다. 남은 각도만 보여준다.
+        const next = route.current || gate;
+        const values = { progress: count(route.progress), total: route.gates.length, roomId: next.room.discovered ? next.room.id : null };
+        if (!next.room.discovered) return step(title, '다음 구역을 찾아 이동', values);
+        if (!next.ready) return step(title, '이 구역의 적을 먼저 처치', values);
+        if (next.warn === 'center') return step(title, '중심 유성 · 푸른 선 밖으로', values);
+        return step(title, `룬석을 밀어 별에 맞추기 · ${route.offBy(next)}°`, values);
+      }
+      if (kind === 'thrones') {
+        // 순서가 자유라 다음 왕좌는 아직 부수지 않은 첫 왕좌다. 균열 수만 보여준다.
+        const next = route.current || gate;
+        const values = { progress: count(route.progress), total: route.gates.length, roomId: next.room.discovered ? next.room.id : null,
+          hold: count(next.hits), holdTotal: count(route.def.hits) };
+        if (!next.room.discovered) return step(title, '다음 구역을 찾아 이동', values);
+        if (!next.ready) return step(title, '이 구역의 적을 먼저 처치', values);
+        return step(title, next.phase === 'still' ? '모래시계 멈춤 · 지금 왕좌 공격' : '모래시계 회전 · 멈출 때까지 대기', values);
+      }
       const values = { progress: count(route.progress), total: route.gates.length,
         roomId: gate.room.discovered ? gate.room.id : null };
       if (!gate.room.discovered) return step(title, '다음 구역을 찾아 이동', values);
@@ -75,7 +95,7 @@ export function discoveredMapView(world) {
   }
   return { rooms: known.map(room => ({ id: room.id, x: room.x, z: room.z, w: room.w, h: room.h,
     type: room.type, label: room.label || '', cleared: !!room.cleared, attunementPending: !!room.attunementPending,
-    conquestLabel: room.conquestLabel || '' })), corridors, sealed: !!world.sealed };
+    conquestLabel: room.conquestLabel || '', ...(room.shape === 'disk' ? { shape: 'disk' } : {}) })), corridors, sealed: !!world.sealed };
 }
 
 export function discoveredPoint(view, x, z) {

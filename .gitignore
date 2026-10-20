@@ -22,6 +22,10 @@ tools/voice/.fail.json
 # Local verification, downloaded originals and portable runtime
 work/
 .local/
+
+# Blender/Python authoring bytecode stays local.
+**/__pycache__/
+*.py[cod]
 *.ait
 *.jks
 *.keystore

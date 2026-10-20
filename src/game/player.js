@@ -5,32 +5,84 @@ import { Actor } from './actor.js';
 import { audio } from '../engine/audio.js';
 import { SKILLS } from './skills.js';
 import { applyLook } from './look.js';
-import { materialsOf } from '../engine/assets.js';
+import { materialsOf, poseRangerBowString } from '../engine/assets.js';
 import { HeroBeacon } from './hero-beacon.js';
+import { GradeAura, resolveHeroGrade } from '../engine/grade-aura.js';
 import { CONTROL_ULT_GAIN, ultimateLockDuration } from './control-rewards.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
-import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC } from './progression.js';
+import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC, DODGE_INVULN_SEC } from './progression.js';
+import { RangerAim, aimTargetValid, clearShot } from './ranger-aim.js';
+import { enemyImpactIn } from './enemies.js';
+import { SkillAimView } from './skill-aim/aim-view.js';
+import { createCombatPose } from '../engine/combat-pose.js';
+import { skillAimShape, playerSkillAimShape } from './skill-aim/shapes.js';
 
 const _v = new THREE.Vector3();
+// 궁수 전투 시점(카메라 고도 약 36°)에서 모자 챙·앞머리가 눈을 가려 애꾸처럼 보이던 문제(2026-10-19 S26 실기기, 2026-10-20 재지적).
+// 클립이 머리 뼈를 쓴 직후 고개를 뒤로 젖혀 얼굴을 카메라 쪽으로 들어 두 눈을 드러낸다. 판정·위치·난수와 무관한 렌더 뼈 보정이다.
+// 머리 뼈 로컬 축: 앞 +x, 위 +y, 귀 +z. 피치(고개 젖힘)는 z 축 회전이다. 예전 값은 앞 축(x) 12°로 옆으로 기울이는 롤이라 눈이 드러나지 않았다.
+// 로비 포즈와 다른 직업은 이 보정을 쓰지 않는다. t1·t2·t3·여우 몸 모델의 머리 뼈 축은 같다.
+export const RANGER_HEAD_LIFT = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), THREE.MathUtils.degToRad(30));
 const ATTACK_INPUT_BUFFER_SEC = 0.14;
 const DODGE_INPUT_BUFFER_SEC = 0.12;
 const ATTACK_CANCEL_EARLY = 0.16;
 const ATTACK_CANCEL_RECOVERY = 0.12;
 const COMBO_QUEUE_OPEN = 0.28;
 const SKILL_CANCEL_AFTER_HIT = 0.05;
+// 수동 궁수: 사격 중 이동 속도 배율, 회피에서 사격으로 넘어가는 최소 회피 시간, 다리 층 블렌드 속도
+export const RANGER_MOVE_SHOT_SPEED = 0.55;
+export const RANGER_DODGE_SHOT_AT = 0.16;
+// 원거리 AUTO가 붙은 적에게서 연속으로 물러서는 최대 시간. 무리가 같이 따라붙으면 그 자리에서 싸운다(적 원거리 2.4초와 같은 장치).
+const AUTO_RANGED_RETREAT_SEC = 1.2;
+const RANGER_LEG_BLEND = 10;
+const LOWER_BODY_TRACK = /hips|leg|foot|toe/i;
+const bowLayerCache = new WeakMap();
+// 상체 사격 층 클립 이름. 다리 층은 이 클립이 재생되는 동안(공격·스킬·궁극기)만 켠다.
+const RANGER_UPPER_CLIPS = new Set(['RangerBowUpper', 'RangerBowUpperRapid']);
+// 시전 뒤 +0.12·+0.24초에 화살을 더 쏘는 스킬은 세 번 당기는 클립(bow_shoot_rapid)으로 재생하고, 각 발사 직후 시위를 쉼 위치로 놓는다.
+const RANGER_RAPID_SKILLS = new Set(['ranger_quickshot', 'gale_hunt']);
+const RANGER_RAPID_RELEASES = [0, .12, .24];
+const RANGER_STRING_SNAP = .04;
+/** 활 사격 클립의 상체 트랙과 달리기·대기 클립의 하체 트랙을 나눈다. 같은 원본 클립은 인스턴스끼리 공유한다. */
+export function rangerBowLayers(clips) {
+  const bow = clips?.Bow_Shoot, run = clips?.Running_A, idle = clips?.Idle;
+  if (!bow || !run || !idle) return null;
+  let entry = bowLayerCache.get(bow);
+  if (!entry) {
+    const lower = (track) => LOWER_BODY_TRACK.test(THREE.PropertyBinding.parseTrackName(track.name).nodeName || '');
+    const rapid = clips.bow_shoot_rapid;
+    entry = {
+      upper: new THREE.AnimationClip('RangerBowUpper', bow.duration, bow.tracks.filter((t) => !lower(t))),
+      rapid: rapid ? new THREE.AnimationClip('RangerBowUpperRapid', rapid.duration, rapid.tracks.filter((t) => !lower(t))) : null,
+      run: new THREE.AnimationClip('RangerLegsRun', run.duration, run.tracks.filter(lower)),
+      idle: new THREE.AnimationClip('RangerLegsIdle', idle.duration, idle.tracks.filter(lower)),
+    };
+    bowLayerCache.set(bow, entry);
+  }
+  return entry;
+}
 
 export class Player extends Actor {
-  constructor(game, gltf, def, stats, skillLevels = [1, 1, 1, 1, 1, 1], equip = {}, heroLevel = 1, skillLoadout = [4, 5]) {
+  constructor(game, gltf, def, stats, skillLevels = [1, 1, 1, 1, 1, 1], equip = {}, heroLevel = 1, skillLoadout = [4, 5], avatarId = null) {
     super(game, gltf, { scale: 1.0 });
-    this.def = def; this.stats = stats; this.skillLevels = def.skills.map((_, i) => skillLevels[i] || 1);
-    this.heroLevel = heroLevel; this.skillLoadout = normalizeSkillLoadout(def, skillLoadout);   // 각성 스킬 해금 판정용
+    // 각성 스킬 0레벨은 미습득이다. 값이 없을 때만 기본(기본 스킬 1, 각성 0)으로 채운다.
+    this.def = def; this.stats = stats; this.skillLevels = def.skills.map((sk, i) => Number.isInteger(skillLevels[i]) && skillLevels[i] >= 0 ? skillLevels[i] : sk.unlock ? 0 : 1);
+    this.heroLevel = heroLevel; this.skillLoadout = normalizeSkillLoadout(def, skillLoadout, this.skillLevels, heroLevel);
     this.maxHp = stats.hp; this.hp = stats.hp;
-    this.look = applyLook(this.model, def, equip);   // 장비 외형: 무기/방패 메시 + 등급 발광 + 궤적색
+    this.look = applyLook(this.model, def, equip, { avatarId });   // 장비 외형: 무기/방패 메시 + 등급 발광 + 궤적색
     this.beacon = new HeroBeacon(this.root, this.model);
+    this.gradeAura = new GradeAura(this.root); this.gradeAura.prepare(resolveHeroGrade(this), game.fx);
+    this.skillAimView = new SkillAimView(game.scene); this._skillAimShape = {};
     // The outfit is attached after Actor construction; include it in hit/death/revive effects.
     const dressedMaterials = new Set();
     this.model.traverse(o => { if (o.isMesh) for (const m of materialsOf(o)) if (m.emissive) dressedMaterials.add(m); });
     this.mats = [...dressedMaterials];
+    // 라이브러리 영웅의 갑옷 단계 몸체가 바뀌면 피격 발광 대상 재질을 다시 모은다.
+    this.model.userData.onLibraryBodySwap = () => {
+      const next = new Set();
+      this.model.traverse(o => { if (o.isMesh) for (const m of materialsOf(o)) if (m.emissive) next.add(m); });
+      this.mats = [...next];
+    };
     this.auraT = 0;
     this.state = 'idle'; this.stateT = 0;
     this.comboIdx = 0; this.comboQueued = false; this.attackBufferT = 0; this.dodgeBufferT = 0; this.hitDone = false; this.comboWindow = 0;
@@ -38,16 +90,30 @@ export class Player extends Actor {
     // 정지·초점 이탈·재출격은 짧은 입력 버퍼와 방향을 폐기하되 수락된 콤보는 보존한다.
     this._offDodgeInputClear = game.input?.onClear?.(() => {
       this.dodgeBufferT = 0; this.attackBufferT = 0; this.attackBufferYaw = null; this.comboQueuedYaw = null;
+      this.skillAimView.group.visible = false;
     });
     this.cds = def.skills.map(() => 0); this.ult = 0; this.ultMax = 100; this.ultGainLock = 0;
     this.maxMp = MP_BASE; this.mp = MP_BASE; this.mpRegen = MP_REGEN_PER_SEC; this.dodgeCd = 0;
     this.dr = 0; this.drT = 0; this.sanctum = null;   // 성역: 피해 감소
     this.buffs = { atk: 1, spd: 1, atkSpd: 1, t: 0 }; this.stormT = 0;
     this.auto = false; this.autoT = 0; this.magnetMul = 1; this._autoHubCounts = [];
+    this._autoEnemies = []; this._autoOut = { x: 0, y: 0 };
     this.sprint = 0; this.sprintT = 0; this.lockTarget = null; this.perfectWindow = 0; this.perfectCd = 0; this.counterWindow = 0;
     this.trail = null; this.current = null; this.skillCtx = null;
     this.hurtFeedbackT = 0;
     this.moveDir = new THREE.Vector3();
+    // 수동 궁수 조준 보조와 사격 중 이동용 상·하체 층. 다른 영웅과 AUTO 경로는 쓰지 않는다.
+    this.rangerAim = def.weapon === 'bow' ? new RangerAim() : null;
+    this.bowLayers = this.rangerAim ? rangerBowLayers(this.clips) : null;
+    const headBone = def.id === 'ranger' ? this.model.getObjectByName('mixamorigHead') : null;
+    this.headLift = headBone?.isBone ? { bone: headBone, base: new THREE.Quaternion(), applied: false } : null;
+    if (this.bowLayers) this.clips.RangerBowUpper = this.bowLayers.upper;
+    if (this.bowLayers?.rapid) this.clips.RangerBowUpperRapid = this.bowLayers.rapid;
+    // 궁수: 판정 방향(yaw)은 즉시 바뀌고, 렌더 피벗만 짧게 따라 돈다(회피 방향 전환·회피→조준 사격의 몸 전체 스냅 완화).
+    this.turnSmoothing = !!this.bowLayers;
+    // 전투·마을 클립이 무기·팔을 몸에 파묻는 결함을 직업×클립별 가산 회전으로 보정한다(클립·시간 불변).
+    this.heroPose = createCombatPose(this.model, def.id, this.mixer, this.clips);
+    this._bowLegs = null; this._bowLegBlend = 0;
     this.play('Idle');
     this.footT = 0;
     audio.preloadBarks([0, 1, 2, 3].map((i) => `hero_${def.voiceId || def.id}_atk${i}`).concat([0, 1].map((i) => `hero_${def.voiceId || def.id}_fin${i}`), [0, 1, 2].map((i) => `hero_${def.voiceId || def.id}_hurt${i}`), [0, 1, 2].map((i) => `hero_${def.voiceId || def.id}_skill${i}`), [`hero_${def.voiceId || def.id}_perfect`]));
@@ -68,8 +134,11 @@ export class Player extends Actor {
   addMp(n) { this.mp = Math.max(0, Math.min(this.maxMp, this.mp + n)); return this.mp; }
   combatSkillIndex(slot) { return skillIndexForCombatSlot(this.skillLoadout, slot); }
   combatSkill(slot) { const index = this.combatSkillIndex(slot); return { index, skill: this.def.skills[index] }; }
-  tryCastCombatSkill(slot) { const index = this.combatSkillIndex(slot); return index >= 0 && this.tryCastSkill(index); }
-  dispose() { this._offDodgeInputClear?.(); this._offDodgeInputClear = null; this.attackBufferYaw = null; this.comboQueuedYaw = null; this.beacon?.dispose(); super.dispose(); }
+  tryCastCombatSkill(slot, aim = null) { const index = this.combatSkillIndex(slot); return index >= 0 && this.tryCastSkill(index, aim); }
+  dispose() { this.model.userData.libraryDisposed = true; this._offDodgeInputClear?.(); this._offDodgeInputClear = null; this.attackBufferYaw = null; this.comboQueuedYaw = null; this.rangerAim?.clear(); this.skillAimView?.dispose(); this.beacon?.dispose(); this.gradeAura?.dispose(); super.dispose(); }
+  /** 수동 궁수만 이동과 조준을 분리한다. AUTO 는 기존 autoAim 경로를 그대로 쓴다. */
+  get manualBow() { return !!this.rangerAim && !this.auto; }
+  canDodgeShoot() { return this.manualBow && this.state === 'dodge' && this.stateT >= RANGER_DODGE_SHOT_AT && this.stun <= 0; }
 
   // ---------------- 입력 처리 ----------------
   handleInput(input, dt) {
@@ -80,6 +149,20 @@ export class Player extends Actor {
     // 카메라 기준 이동: 화면 위 = -z 방향
     this.moveDir.set(mx, 0, my);
     const wantMove = this.moveDir.lengthSq() > 0.01;
+
+    // 다른 행동이 이 프레임을 먼저 수락해도 공격 의도는 남긴다. 현재 행동(회피·경직·스킬·기절)의 남은 시간만큼 보존한다.
+    if (input.consume('attack')) {
+      let wait = Math.max(0, this.stun || 0);
+      if (this.state === 'dodge' || this.state === 'hurt') wait = Math.max(wait, .32 - this.stateT);
+      if ((this.state === 'skill' || this.state === 'ult') && this.skillCtx) {
+        const c = this.skillCtx; wait = Math.max(wait, (c.impl.total || c.impl.dur || .8) - c.t);
+      }
+      this.attackBufferT = wait + ATTACK_INPUT_BUFFER_SEC;
+      // 기절 중 누른 입력은 공격만 보존하고 방향은 버린다(기존 기절 경계 계약).
+      this.attackBufferYaw = !this.auto && this.stun <= 0 && wantMove ? Math.atan2(mx, my) : null;
+      // 콤보 예약으로 바뀐 입력은 버퍼에서 비운다. 한 번 누른 입력이 두 번 공격으로 늘어나지 않는다.
+      if (this.state === 'attack' && this.canQueueCombo()) { this.comboQueued = true; this.comboQueuedYaw = this.attackBufferYaw; this.attackBufferT = 0; }
+    }
 
     // 회피는 즉시 실행하고, 공격 중 이른 입력만 짧게 보존한다. 입력이
     // 공격의 commit 경계를 넘어서면 다음 프레임에 바로 굴러야 한다.
@@ -92,17 +175,20 @@ export class Player extends Actor {
     if (this.dodgeBufferT > 0 && this.dodgeCd <= 0 && this.stun <= 0 &&
       (this.state === 'idle' || this.state === 'move' || (this.state === 'attack' && this.canDodgeCancel()))) return this.dodge(wantMove ? this.moveDir : null);
     // 전투 입력은 0~3 고정 + Q/E 장착 슬롯 4/5만 노출한다.
-    for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot)) return; }
+    for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot, input.takeAim?.(slot))) return; }
     // 공격: 입력 버퍼는 버튼을 누른 순간의 의도를 보존하지만, 버튼 홀드 자체는
     // 다음 콤보를 예약하지 않는다. 수동 전투에서 타이밍을 직접 결정하게 하는 경계다.
-    if (input.consume('attack')) {
-      this.attackBufferT = ATTACK_INPUT_BUFFER_SEC;
-      this.attackBufferYaw = !this.auto && this.stun <= 0 && wantMove ? Math.atan2(mx, my) : null;
-      if (this.state === 'attack' && this.canQueueCombo()) { this.comboQueued = true; this.comboQueuedYaw = this.attackBufferYaw; }
-    }
-    if ((this.state === 'idle' || this.state === 'move') && this.attackBufferT > 0) {
+    if (this.stun <= 0 && (this.state === 'idle' || this.state === 'move' || this.canDodgeShoot()) && this.attackBufferT > 0) {
       this.attackBufferT = 0;
       this.startCombo(0, this.attackBufferYaw);
+    }
+    // 수동 궁수는 사격 중에도 이동한다. 몸은 조준 방향을 유지하고 속도만 입력을 따라 부드럽게 맞춘다.
+    if (this.state === 'attack' && this.manualBow && this.stun <= 0) {
+      const frontier = wantMove ? frontierEffectForStage(this.game.stage) : null;
+      const frontierSpeed = frontier?.kind === 'moveSpeedMultiplier' ? frontier.value : 1;
+      const speed = wantMove ? this.stats.spd * this.buffs.spd * frontierSpeed * (this.slow ? 0.5 : 1) * RANGER_MOVE_SHOT_SPEED : 0;
+      _v.copy(this.moveDir); if (wantMove) _v.normalize().multiplyScalar(speed);
+      this.vel.lerp(_v, 1 - Math.exp(-14 * dt));
     }
     // 이동
     if (this.state === 'idle' || this.state === 'move') {
@@ -139,21 +225,55 @@ export class Player extends Actor {
     return e;
   }
 
+  get basicAutoTarget() { return this.game.app?.eco?.s?.settings?.autoTarget !== false; }
+  /** 공격 시작점에서만 선택한다. 이동 입력·난수와 무관하며 벽 뒤/소멸한 표적은 유지하지 않는다. */
+  basicTarget(range = this.def.ranged ? 12 : 7) {
+    const enemies = this.game.enemies || [];
+    if (enemies.includes(this.lockTarget) && aimTargetValid(this, this.lockTarget, range)) return this.lockTarget;
+    let best = null, score = Infinity;
+    const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
+    for (const e of enemies) {
+      if (!aimTargetValid(this, e, range)) continue;
+      const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, d = Math.hypot(dx, dz);
+      const facing = d > 1e-6 ? (dx * fx + dz * fz) / d : 1;
+      // 거리 우선, 정면 쪽 가산, 보스·정예 가중
+      const next = d + (1 - facing) * 1.5 - (e.isBoss ? 2 : e.isElite ? .8 : 0);
+      if (next < score) { best = e; score = next; }
+    }
+    return best;
+  }
+
   // ---------------- 기본 콤보 ----------------
   startCombo(idx, inputYaw = null) {
     if (idx === 0 && this.comboResume && this.comboResume.t > 0) { idx = this.comboResume.idx; this.comboResume = null; }
     const c = this.def.combo[idx]; if (!c) return;
+    // 구르기를 사격으로 끊으면 회피 무적도 그 순간 끝난다(다른 출처의 남은 무적은 유지). 회피→사격→회피 연쇄 무적 방지.
+    if (this.state === 'dodge') this.invuln = Math.max(0, (this.invulnOther || 0) - this.stateT);
+    // 수동 궁수: 사거리 안의 보이는 적을 조준한다(공격 시작 시점). 대상이 없으면 아래 기존 규칙으로 쏜다.
+    const manualBow = this.manualBow && this.alive && this.stun <= 0;
+    const aimed = manualBow && c.projectile === 'arrow' ? this.rangerAim.select(this, c.range) : null;
+    const aimYaw = aimed ? this.rangerAim.yawTo(this, aimed) : null;
+    if (aimYaw !== null) { this.yaw = aimYaw; this.lockTarget = aimed; }
     // 수락한 새 입력만 다음 타격의 시작 방향을 고른다. 진행 중 타격은 꺾지 않는다.
-    if (!this.auto && this.alive && this.stun <= 0 && Number.isFinite(inputYaw)) this.yaw = inputYaw;
+    else if (!this.auto && this.alive && this.stun <= 0 && Number.isFinite(inputYaw)) this.yaw = inputYaw;
     this.attackBufferYaw = null; this.comboQueuedYaw = null;
     this.state = 'attack'; this.stateT = 0; this.comboIdx = idx; this.comboQueued = false; this.hitDone = false; this.current = c;
     this._gatherAttackSerial = (this._gatherAttackSerial || 0) + 1;
-    this.vel.set(0, 0, 0);
+    // 수동 궁수는 회피·이동 속도를 이어 받아 사격 중 이동한다. 다른 영웅은 기존처럼 멈춰 선다.
+    if (!manualBow) this.vel.set(0, 0, 0);
     // AUTO만 적을 향해 몸을 돌린다. 수동 공격은 새 입력으로 고른 방향을
     // 유지하며, 입력이 없으면 현재 바라보는 방향을 그대로 사용한다.
-    const target = this.auto ? this.autoAim(this.def.ranged ? 12 : 7) : null;
+    const target = this.auto ? this.autoAim(this.def.ranged ? 12 : 7)
+      : !manualBow && this.basicAutoTarget ? this.basicTarget() : null;
+    if (target) {
+      this.face(target.pos.x, target.pos.z); this.lockTarget = target;
+      // 기존 FX 링을 공격 이벤트마다 한 번 사용한다. 프레임마다 메시/옵션을 만들지 않는다.
+      if (!this.auto) this.game.fx.ring(target.pos, this.def.accent || this.def.color, { r0: 1.1, r1: 1.1, life: .45, y: .06 });
+    }
     const dur = c.dur / (this.buffs.atkSpd * (this.stormT > 0 ? 1.4 : 1));
-    this.playTimed(c.anim, dur, { fade: ['knight','barbarian'].includes(this.def.id) ? .035 : .06 });
+    const layered = manualBow && this.bowLayers && c.anim === 'Bow_Shoot';
+    this.playTimed(layered ? 'RangerBowUpper' : c.anim, dur, { fade: ['knight','barbarian'].includes(this.def.id) ? .035 : .06 });
+    if (layered) this.startBowLegs();
     gatherWarriorWindup(this, c, dur);
     this.ticksLeft = c.ticks ? c.ticks - 1 : 0; this.nextTick = 0; this.through = null;
     const f = this.forward(_v);
@@ -170,7 +290,11 @@ export class Player extends Actor {
     } else if (c.move === 'spin') {
       gatherEnemies(this.game, this.pos, c.range + 1.5, 9, c.hitAt * dur);   // 회전베기: 접촉 전 실제 이동으로 모은다.
       this.vel.copy(f).multiplyScalar(0.8);
-    } else if (!this.def.ranged && this.auto) { const d = target ? Math.max(0, Math.min(2.2, this.distTo(target) - 1.6)) : 0.6; this.vel.copy(f).multiplyScalar(d / Math.max(0.15, c.hitAt * dur)); }   // AUTO만 적에게 붙는다
+    } else if (!this.def.ranged && (this.auto || target)) {
+      // AUTO·자동 타겟팅은 타격 시점까지 대상 쪽으로 붙어 사거리 안에 넣는다.
+      const d = target ? Math.max(0, Math.min(4.5, this.distTo(target) - Math.max(1.6, c.range - .5))) : .6;
+      this.vel.copy(f).multiplyScalar(d / Math.max(.01, c.hitAt * dur));
+    }
     audio.whoosh({ vol: 0.35 + idx * 0.08, pitch: this.def.ranged ? 1.6 : (c.move === 'slam' ? 0.6 : 1 + idx * 0.12), dur: c.move === 'spin' ? 0.4 : 0.22 });
     // 기합 — 던파식. 마무리 타는 항상, 일반 타는 확률로 (매 타마다 지르면 시끄럽다)
     const V = `hero_${this.def.voiceId || this.def.id}_`;
@@ -194,7 +318,13 @@ export class Player extends Actor {
   stopTrail() { if (this.trail) { this.trail.stop(); this.trail = null; } }
   arrowOrigin(dir = this.forward(new THREE.Vector3())) {
     const bow = this.model?.getObjectByName('Bow');
-    if (bow) { this.model.updateWorldMatrix(true, true); return bow.getWorldPosition(new THREE.Vector3()).addScaledVector(dir, .35); }
+    if (bow) {
+      // 화살 발사 위치는 판정이므로 보정 전 클립 자세로 읽는다(보정은 화면 연출).
+      this.heroPose?.suspend(); this.model.updateWorldMatrix(true, true);
+      const origin = bow.getWorldPosition(new THREE.Vector3()).addScaledVector(dir, .35);
+      this.heroPose?.resume(); this.model.updateWorldMatrix(true, true);
+      return origin;
+    }
     return this.pos.clone().addScaledVector(dir, .8).setY(1.3);
   }
   doComboHit(tick = 0) {
@@ -207,6 +337,12 @@ export class Player extends Actor {
     const f = this.forward(_v.clone());
     const gravity = this.game.hasProc('gravity_pull');
     if (c.projectile === 'arrow') {
+      // 발사 시점: 수동 궁수는 대상을 다시 확인한다. 죽었거나 가려졌거나 멀어졌으면 다른 유효 대상, 없으면 현재 방향.
+      if (tick === 0 && this.manualBow) {
+        const target = this.rangerAim.select(this, c.range);
+        const yaw = target ? this.rangerAim.yawTo(this, target) : null;
+        if (yaw !== null) { this.yaw = yaw; this.lockTarget = target; this.forward(f); }
+      }
       const count = c.arrowCount || 1;
       for (let i = 0; i < count; i++) {
         const dir = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (i - (count - 1) / 2) * .22);
@@ -305,11 +441,20 @@ export class Player extends Actor {
 
   // ---------------- 회피 ----------------
   dodge(dir) {
+    if (this.attackBufferT > 0) this.attackBufferT = Math.max(this.attackBufferT, .32 + ATTACK_INPUT_BUFFER_SEC);
     // Evade without throwing away the earned combo. A cancelled windup repeats
     // its own step; it cannot skip ahead to a free finishing blow.
     if (this.state === 'attack' && this.current) this.comboResume = {idx:this.hitDone?(this.comboIdx+1)%this.def.combo.length:this.comboIdx,t:1.25};
     this.attackBufferYaw = null; this.comboQueuedYaw = null;
-    this.dodgeBufferT = 0; this.stopTrail(); this.state = 'dodge'; this.stateT = 0; this.invuln = 0.4; this.dodgeCd = DODGE_COOLDOWN_SEC;
+    // 회피 무적은 구르기 안쪽에만 둔다. 부활·포탈 등 다른 출처의 남은 무적은 따로 기억해 줄이지 않는다.
+    const now = Number.isFinite(this.game?.elapsed) ? this.game.elapsed : NaN;
+    this.invulnOther = this.invuln > 0 ? this.invuln : 0;
+    // AUTO 가 요청한 회피가 실제로 시작된 순간에만 그 예고를 처리한 것으로 기록한다(버퍼 만료로 못 구른 요청은 다시 시도).
+    const threat = this.auto ? this._autoDodgeThreat : null;
+    if (threat) { this._autoDodgeFrom = threat; this._autoDodgeUntil = (Number.isFinite(now) ? now : 0) + Math.max(0, this._autoDodgeLead ?? threat.telegraph ?? 0) + .15; }
+    this._autoDodgeThreat = null; this._autoDodgeLead = null;
+    this.dodgeBufferT = 0; this.stopTrail(); this.state = 'dodge'; this.stateT = 0;
+    this.invuln = Math.max(this.invulnOther, DODGE_INVULN_SEC); this.dodgeCd = DODGE_COOLDOWN_SEC;
     this.perfectWindow = 0.28;   // 이 안에 피격 판정이 스치면 퍼펙트
     if (this.def.jobId === 'ranger') this.gainJobResource(1);
     // 수동 무방향 회피는 적을 보면서 물러선다. 방향 입력과 AUTO는 기존 전방 회피를 유지한다.
@@ -328,12 +473,12 @@ export class Player extends Actor {
     }
   }
   /** 각성 스킬 해금 여부 — 레벨 구간(unlock)을 넘겼는가 */
-  unlocked(i) { const sk = this.def.skills[i]; return !!sk && (!sk.unlock || this.heroLevel >= sk.unlock); }
+  unlocked(i) { const sk = this.def.skills[i]; return !!sk && (!sk.unlock || (this.heroLevel >= sk.unlock && (this.skillLevels?.[i] ?? 1) >= 1)); }
 
   // ---------------- 스킬 ----------------
-  tryCastSkill(i) {
+  tryCastSkill(i, aim = null) {
     const sk = this.def.skills[i]; if (!sk) return false;
-    if (!this.unlocked(i)) { this.game.ui.toast(`Lv.${sk.unlock} 각성으로 해금됩니다`, 'red'); audio.play('ui_error', { vol: 0.5 }); return false; }
+    if (!this.unlocked(i)) { this.game.ui.toast(this.heroLevel < sk.unlock ? `Lv.${sk.unlock} 각성으로 해금됩니다` : 'SP로 스킬을 먼저 습득하세요', 'red'); audio.play('ui_error', { vol: 0.5 }); return false; }
     if (sk.ult) { if (this.ult < this.ultMax) { this.game.ui.toast('궁극기 게이지 부족', 'red'); audio.play('ui_error', { vol: 0.5 }); return false; } }
     else if (this.cds[i] > 0) return false;
     if (this.state === 'ult' || this.state === 'dodge' || this.stun > 0) return false;
@@ -342,19 +487,33 @@ export class Player extends Actor {
     const impl = SKILLS[sk.id]; if (!impl) return false;
     const mpCost = skillMpCost(sk), currentMp = Number.isFinite(this.mp) ? this.mp : MP_BASE;
     if (mpCost > currentMp) { this.game.ui.toast(`MP 부족 · ${mpCost} 필요`, 'red'); audio.play('ui_error', { vol: 0.5 }); return false; }
+    if (this.attackBufferT > 0) this.attackBufferT = Math.max(this.attackBufferT, (impl.total || impl.dur || .8) + ATTACK_INPUT_BUFFER_SEC);
     // 실제로 전환할 수 있는 스킬만 진행 중 평타의 궤적을 종료한다.
     this.stopTrail();
     this.attackBufferYaw = null; this.comboQueuedYaw = null;
-    if (sk.ult) { this.ult = 0; this.ultGainLock = ultimateLockDuration(impl); this.state = 'ult'; } else { this.mp = currentMp - mpCost; this.cds[i] = this.game.skillCooldown?.(sk.cd) ?? sk.cd; this.state = 'skill'; }
+    const cooldown = sk.cd * (this.stats?.cdMul ?? 1);
+    if (sk.ult) { this.ult = 0; this.ultGainLock = ultimateLockDuration(impl); this.state = 'ult'; } else { this.mp = currentMp - mpCost; this.cds[i] = this.game.skillCooldown?.(cooldown) ?? cooldown; this.state = 'skill'; }
     this.stateT = 0; this.vel.set(0, 0, 0);
-    if (this.auto) this.autoAim(12);
+    const aimed = aim && Number.isFinite(aim.x) && Number.isFinite(aim.z) && Math.hypot(aim.x, aim.z) > 1e-6;
+    if (aimed) this.yaw = Math.atan2(aim.x, aim.z);
+    else if (this.auto) this.autoAim(12);
     const lvMult = 1 + (this.skillLevels[i] - 1) * 0.12;
-    this.skillCtx = { sk, impl, t: 0, cast: false, done: false, dmg: this.atk * sk.dmg * lvMult, level: this.skillLevels[i], data: {} };
-    if (sk.anim) this.playTimed(sk.anim, impl.dur || 0.8, { fade: 0.06 });
+    this.skillCtx = { sk, impl, t: 0, cast: false, done: false, dmg: this.atk * sk.dmg * lvMult * (this.stats?.skillMul ?? 1), level: this.skillLevels[i], data: {} };
+    if (aimed) {
+      const shape = skillAimShape(sk.id), length = Math.hypot(aim.x, aim.z);
+      const fraction = Number.isFinite(aim.dist01) ? Math.max(0, Math.min(1, aim.dist01)) : 1;
+      const distance = shape?.kind === 'circle' ? shape.range * fraction : Math.max(1, shape?.range || 1);
+      this.skillCtx.data.aimPoint = new THREE.Vector3(this.pos.x + aim.x / length * distance, this.pos.y, this.pos.z + aim.z / length * distance);
+    }
+    // 궁수 활 스킬: 상체 사격 층 + 속도에 맞춘 다리 층(후퇴 스킬이 서 있는 자세로 미끄러지지 않게). 연속 발사 스킬은 세 번 당기는 클립.
+    const bowSkillClip = sk.anim === 'Bow_Shoot' && this.bowLayers
+      ? (RANGER_RAPID_SKILLS.has(sk.id) && this.clips.RangerBowUpperRapid ? 'RangerBowUpperRapid' : 'RangerBowUpper') : null;
+    if (sk.anim) this.playTimed(bowSkillClip || sk.anim, impl.dur || 0.8, { fade: 0.06 });
+    if (bowSkillClip) this.startBowLegs();
     if (!sk.ult && this.def.id === 'ranger') audio.whoosh({ vol: .45, pitch: 1.6, dur: .2 });
     else if (!sk.ult) audio.bark(`hero_${this.def.voiceId || this.def.id}_skill${i}`, { vol: 0.95, min: 1.5 });   // 스킬 이름 외침
     audio.skillRelease({ ult: !!sk.ult, school: sk.id || 'arcane', hero: this.def.id });
-    if (sk.ult) { this.game.ultCinematic(sk, this); audio.charge({ vol: 0.35, dur: 0.7 }); if (this.def.id !== 'ranger') audio.voice(`hero_${this.def.voiceId || this.def.id}_ult`, { min: 8, duck: 0.5, dur: 1.6 }); if (this.game.hasProc('phoenix_burn')) this.game.after(0.35, () => this.game.phoenixBurn(this)); }
+    if (sk.ult) { this.game.ultCinematic(sk, this); audio.charge({ vol: 0.35, dur: 0.7 }); audio.voice(`hero_${this.def.voiceId || this.def.id}_ult`, { min: 8, duck: 0.5, dur: 1.6 }); if (this.game.hasProc('phoenix_burn')) this.game.after(0.35, () => this.game.phoenixBurn(this)); }
     else if (this.game.hasProc('gravity_hole')) { const t = this.lockTarget && this.lockTarget.alive ? this.lockTarget.pos.clone() : this.pos.clone().addScaledVector(this.forward(_v.clone()), 4); this.game.singularity(t); }
     if (!sk.ult) this.game.sp?.onSkillCast(i, sk);   // 룬 4세트: 만장전이면 과부하 — 이 스킬의 쿨타임이 0이 된다
     impl.start?.(this.game, this, this.skillCtx);
@@ -431,13 +590,56 @@ export class Player extends Actor {
     if (this.hp <= 0) { this.hp = 0; this.stopTrail(); this.state = 'dead'; this.die(); this.game.onPlayerDeath(this); }
     return true;
   }
-  die() { this.attackBufferYaw = null; this.comboQueuedYaw = null; if (this.alive) this.knightLifeEpoch = (this.knightLifeEpoch || 0) + 1; this.beacon?.setFocus(false); super.die(); }
+  die() { this.attackBufferYaw = null; this.comboQueuedYaw = null; this.rangerAim?.clear(); if (this.alive) this.knightLifeEpoch = (this.knightLifeEpoch || 0) + 1; this.beacon?.setFocus(false); super.die(); }
+
+  // ---------------- 궁수 활 리그 ----------------
+  /** 상체 사격 층과 함께 하체(대기·달리기) 층을 켠다. 사격이 끝나면 updateBowRig 가 끈다. */
+  startBowLegs() {
+    const layers = this.bowLayers; if (!layers) return;
+    if (!this._bowLegs) this._bowLegs = { idle: this.mixer.clipAction(layers.idle), run: this.mixer.clipAction(layers.run), on: false };
+    const legs = this._bowLegs;
+    if (!legs.on) {
+      this._bowLegBlend = Math.min(1, this.vel.length() / Math.max(.01, this.stats.spd * RANGER_MOVE_SHOT_SPEED));
+      for (const a of [legs.idle, legs.run]) { a.reset(); a.enabled = true; a.setLoop(THREE.LoopRepeat, Infinity); a.play(); a.fadeIn(.06); }
+      legs.on = true;
+    }
+    legs.idle.setEffectiveWeight(1 - this._bowLegBlend); legs.run.setEffectiveWeight(this._bowLegBlend);
+  }
+  /** 매 프레임: 사격 다리 층 블렌드와 시위(발사 전이면 실제 오른손 노크 소켓)를 시뮬레이션 상태로 맞춘다. */
+  updateBowRig(dt) {
+    const legs = this._bowLegs;
+    if (legs?.on) {
+      if (!['attack', 'skill', 'ult'].includes(this.state) || !RANGER_UPPER_CLIPS.has(this.actionName) || !this.alive) {
+        legs.idle.fadeOut(.15); legs.run.fadeOut(.15); legs.on = false;
+      } else {
+        const top = Math.max(.01, this.stats.spd * RANGER_MOVE_SHOT_SPEED), speed = Math.hypot(this.vel.x, this.vel.z);
+        const want = Math.min(1, speed / top);
+        this._bowLegBlend += (want - this._bowLegBlend) * Math.min(1, dt * RANGER_LEG_BLEND);
+        legs.idle.setEffectiveWeight(1 - this._bowLegBlend); legs.run.setEffectiveWeight(this._bowLegBlend);
+        // 조준 방향 뒤로 물러서면 달리기 다리를 거꾸로 돌려 뒷걸음으로 읽힌다.
+        const back = speed > .05 && (this.vel.x * Math.sin(this.yaw) + this.vel.z * Math.cos(this.yaw)) < -.3 * speed;
+        legs.run.timeScale = (back ? -1 : 1) * (.75 + .45 * this._bowLegBlend);
+      }
+    }
+    const c = this.current, sk = this.skillCtx;
+    const drawing = this.alive && ((this.state === 'attack' && !this.hitDone && c?.projectile === 'arrow')
+      || ((this.state === 'skill' || this.state === 'ult') && !!sk && this.skillDrawing(sk)));
+    this.bowStringHeld = poseRangerBowString(this.model, drawing);
+  }
+  /** 스킬 시전 중 시위를 당기고 있는가. 연속 발사 스킬은 각 발사 직후 짧게 놓았다가 다음 당김에서 다시 잡는다. */
+  skillDrawing(sk) {
+    if (!sk.cast) return true;
+    if (this.actionName !== 'RangerBowUpperRapid') return false;
+    const since = sk.t - (sk.impl.dur || 0.8) * sk.sk.castAt;
+    return RANGER_RAPID_RELEASES.some((at, i) => i > 0 && since > RANGER_RAPID_RELEASES[i - 1] + RANGER_STRING_SNAP && since < at);
+  }
   revive() { this.beacon?.setFocus(false); this.alive = true; this.dead = false; this.deathT = -1; this.hp = this.maxHp; this.state = 'idle'; this.invuln = 2; this.pos.y = 0; for (const m of this.mats) m.transparent = false; this.play('Idle'); }
 
   // ---------------- 자동 전투 ----------------
   autoMove(dt) {
-    const out = { x: 0, y: 0 };
-    const list = this.game.enemies.filter((e) => e.alive && !e.spawning);
+    const out = this._autoOut || (this._autoOut = { x: 0, y: 0 }); out.x = out.y = 0;
+    const list = this._autoEnemies || (this._autoEnemies = []); list.length = 0;
+    for (const e of this.game.enemies) if (e.alive && !e.spawning) list.push(e);
     if (!list.length) return this.autoExplore(dt);
     const counts = this._autoHubCounts || (this._autoHubCounts = []);
     // 같은 적 쌍의 거리는 한 번만 읽고 양쪽에 상대 가중치를 더한다.
@@ -459,80 +661,172 @@ export class Player extends Actor {
       if (score > bestN) { bestN = score; hub = c; }
     }
     const priority = this.game.conquest?.autoEnemy(list);
-    const e = priority || hub || list[0];
-    if (priority) this.lockTarget = priority;
+    let e = priority || hub || list[0];
+    // 보스·정예 곁의 치유 주술사를 먼저 처치한다. 남겨 두면 6초마다 최대 체력의 15%를 회복시켜 보스전이 끝나지 않았다.
+    if (!priority) {
+      let healer = null, best = Infinity;
+      for (const x of list) {
+        if (x.behavior !== 'shaman') continue;
+        // 방패병 무리가 더 밀집해도 보스 치유 차단이 먼저다. 현재 무리 중심에만 매달리면 지원 소환마다 회복이 반복된다.
+        let supportsPriority = false;
+        for (const ally of list) if (ally !== x && (ally.isBoss || ally.isElite) && x.distTo(ally) <= 7) { supportsPriority = true; break; }
+        if (!supportsPriority) continue;
+        const dd = this.distTo(x);
+        // 군중 밀침으로 거리가 뒤집힐 때마다 다른 치유사를 치면 서로 회복해 아무도 죽지 않는다. 접근 중인 유효 치유사는 끝까지 마무리한다.
+        if (x === this.lockTarget && dd <= 12) { healer = x; break; }
+        if (dd < best) { best = dd; healer = x; }
+      }
+      if (healer) e = healer;
+    }
+    // 이동 목표와 다음 평타·스킬의 조준을 맞춘다. 치유사 자체가 무리 중심일 때도 이전 보스 잠금을 남기지 않는다.
+    this.lockTarget = e;
     const precision = this.game.conquest?.precisionNeeded(e);
     // Move past the escort line before firing at an ordered target. Ranged
     // bolts still collide normally; AUTO does not make other enemies immune.
     const d = this.distTo(e); const want = this.def.ranged ? (precision ? 2.8 : 7) : 1.9;
-    if (this.state === 'idle' || this.state === 'move') {
+    // 원거리 AUTO 후퇴 시간: 붙은 적이 없을 때만 천천히 회복한다. 계속 붙어 있으면 상한에 머물러 제자리 공격을 이어 간다.
+    const close = this.def.ranged && d < want - 3;
+    if (!close) this._autoBackT = Math.max(0, (this._autoBackT || 0) - dt * .5);
+    const canMove = this.state === 'idle' || this.state === 'move';
+    const healingPressure = !priority && e.behavior === 'shaman';
+    // 평타를 계속 예약하는 AUTO도 실제 취소 창에서는 회복 지원을 스킬로 끊을 수 있어야 한다.
+    if (canMove || (healingPressure && this.state === 'attack' && this.canSkillCancel())) {
       // 스킬 우선: 적이 3마리 이상 뭉쳤을 때 광역기 우선
-      const cluster = list.reduce((a, x) => a + (x.distTo(e) < 4.5 ? 1 : 0), 0);
+      let cluster = 0, boss = null;
+      for (const x of list) { if (x.distTo(e) < 4.5) cluster++; if (!boss && x.isBoss) boss = x; }
       for (let slot = 5; !precision && slot >= 0; slot--) {
         const i = skillIndexForCombatSlot(this.skillLoadout, slot), sk = this.def.skills[i]; if (!sk || !this.unlocked(i)) continue;
         if (sk.id === 'guardian_guard' && !(e.telegraph > 0 && d < 5)) continue;
         const ready = sk.ult ? this.ult >= this.ultMax : this.cds[i] <= 0 && skillMpCost(sk) <= (this.mp ?? MP_BASE);
         if (!ready) continue;
-        const boss = e.isBoss ? e : list.find(x => x.isBoss && x.alive);
         const bossFinish = !!boss && boss === e && boss.hp / Math.max(1, boss.maxHp) <= .35;
         const emergencyCrowd = cluster >= 8 && this.hp / Math.max(1, this.maxHp) <= .45;
+        // 회복 무리를 그대로 두면 보스가 마무리 체력에 도달하지 않는다. 준비된 궁극기로 지원을 먼저 끊는다.
+        const supportBurst = !!boss && e.behavior === 'shaman' && cluster >= 2;
         const linkReady = !!this.game.getComboLinkSnapshot?.().ready;
-        const controlOpening = linkReady || e.breakT > 0 || (e.telegraph > 0 && d < 5);
-        if (sk.ult && !bossFinish && !emergencyCrowd) continue;
+        const controlOpening = healingPressure || linkReady || e.breakT > 0 || (e.telegraph > 0 && d < 5);
+        if (sk.ult && !bossFinish && !emergencyCrowd && !supportBurst) continue;
         if (!sk.ult && !controlOpening && cluster < 5) continue;
         const wantCluster = this.game.stage?.expedition?.kind === 'arena' ? 1 : sk.ult ? 1 : sk.awaken ? 2 : 1;
         if (cluster >= wantCluster && d < (this.def.ranged ? 11 : 8)) { this.game.input.press('skill' + slot); return out; }
       }
-      if (d > want + 0.4) {
-        const W = this.game.world; const er = W && W.roomAt(e.pos.x, e.pos.z), pr = W && W.roomAt(this.pos.x, this.pos.z);
-        const flow = (W && er && er !== pr) ? W.buildFlow(er.x, er.z) : null;   // 다른 방의 적: 직선은 벽에 박힌다
-        const fd = flow && W.flowDir(flow, this.pos.x, this.pos.z);
-        if (fd) { out.x = fd[0]; out.y = fd[1]; }
-        else { const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; }
+    }
+    if (canMove) {
+      // 벽에 가린 적은 같은 방이어도 거리장을 따라 돌아간다(직선으로 벽에 박혀 제자리걸음하던 경로).
+      if (d > want + .4 || !clearShot(this.game.world, this.pos.x, this.pos.z, e.pos.x, e.pos.z)) {
+        Player.prototype.autoPath.call(this, e.pos.x, e.pos.z, out);
       }
-      else if (this.def.ranged && d < want - 3) { const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = -dx / l; out.y = -dz / l; }
+      else if (close && (this._autoBackT || 0) < AUTO_RANGED_RETREAT_SEC && this.autoBackStep(e, out)) this._autoBackT = (this._autoBackT || 0) + dt;
       else this.game.input.press('attack');
     } else if (!precision && this.state === 'attack' && d < want + 2.5) this.game.input.press('attack');   // 사거리 밖(물러서는 원거리 몹)이면 콤보를 끊고 이동으로 돌아간다 — 안 끊으면 허공 콤보가 영원히 이어진다
-    // 예고 회피 — 콤보 중에도 타격이 끝났으면 캔슬해서 구른다. 보스·엘리트의 큰 예고는 거의 확실히, 잡몹은 절반쯤 (적 위협 회전: 콤보 중 회피 불가라 보스전에서 HP 의 30% 를 그냥 맞았다)
-    if (this.state === 'idle' || this.state === 'move' || (this.state === 'attack' && this.hitDone)) {
-      const threat = list.find((x) => x.telegraph > 0 && this.distTo(x) < (x.isBoss ? 5.5 : x.isElite ? 5 : 4));
-      if (threat && (this.dodgeCd || 0) <= 0 && Math.random() < dt * (threat.isBoss || threat.isElite ? 9 : 3)) this.game.input.press('dodge');
+    // 예고 회피 — 콤보 중에도 지금 캔슬할 수 있는 프레임이면 구른다. 보스·엘리트의 큰 예고는 거의 확실히, 잡몹은 절반쯤 (적 위협 회전: 콤보 중 회피 불가라 보스전에서 HP 의 30% 를 그냥 맞았다)
+    // 캔슬 창 밖에서 누르면 회피 입력 버퍼가 나중에 굴려 무적이 타격과 어긋난다. 그래서 지금 바로 구를 수 있을 때만 판단한다.
+    // 회피 무적(DODGE_INVULN_SEC)은 구르기보다 짧다. 실제 타격까지 남은 시간이 그 창 안일 때만 눌러야 구르기가 피해를 막는다.
+    // 이 프레임 입력 뒤 Player.update가 무적을, Enemy.update가 예고를 같은 dt씩 줄이므로 한 프레임을 남긴다.
+    // 타격 정지로 짧아진 프레임 다음에는 실제 프레임 길이로 돌아오므로 남길 몫은 실제 프레임 길이(dt/scale)다.
+    if (this.state === 'idle' || this.state === 'move' || this.state === 'attack') {
+      const now = this.game.elapsed || 0;
+      const clock = this.game.timeCtl, frameDt = clock?.scale > 0 ? dt / clock.scale : dt;
+      let threat = null, lead = Infinity;
+      for (const x of list) {
+        if (!(x.telegraph > 0) || this.distTo(x) >= (x.isBoss ? 5.5 : x.isElite ? 5 : 4)) continue;
+        // 쿨타임이 없어도 같은 예고 하나에는 실제로 한 번 구른 뒤 다시 구르지 않는다.
+        if (x === this._autoDodgeFrom && now < this._autoDodgeUntil) continue;
+        const t = enemyImpactIn(x, this);
+        if (t < lead) { lead = t; threat = x; }
+      }
+      // 무적 중이면 다시 구르지 않는다. 확률은 무적 창 안에서만 쓴다(잡몹 약 절반, 보스·엘리트 약 9할).
+      if (threat && lead + frameDt < DODGE_INVULN_SEC && (this.state !== 'attack' || this.canDodgeCancel()) &&
+        !(this.invuln > 0) && (this.dodgeCd || 0) <= 0 && Math.random() < dt * (threat.isBoss || threat.isElite ? 9 : 3)) {
+        this.game.input.press('dodge'); this._autoDodgeThreat = threat; this._autoDodgeLead = lead;
+      }
     }
     return out;
   }
+  /** 원거리 AUTO의 후퇴 한 걸음. 몸 길이만큼 뒤에 몸이 그대로 들어가지 않으면(World.resolve가 막거나 벽을 따라 미끄러뜨릴 자리) 물러서지 않는다. */
+  autoBackStep(e, out) {
+    const dx = e.pos.x - this.pos.x, dz = e.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1, ux = -dx / l, uz = -dz / l;
+    const W = this.game.world;
+    if (W) {
+      // Actor.update의 World.resolve(반경 0.8배)가 그대로 받아들이는 자리인지 같은 네 점으로 본다(프레임 할당 없음).
+      const r = this.radius * 0.8, step = r * 2, tx = this.pos.x + ux * step, tz = this.pos.z + uz * step;
+      if (!(W.walkable(tx + r, tz) && W.walkable(tx - r, tz) && W.walkable(tx, tz + r) && W.walkable(tx, tz - r))) return false;
+    }
+    out.x = ux; out.y = uz; return true;
+  }
   /** 적이 없으면 다음 목표 방으로 이동 (보스 발견 시 보스방 우선) */
   autoExplore(dt) {
-    const out = { x: 0, y: 0 };
+    const out = this._autoOut || (this._autoOut = { x: 0, y: 0 }); out.x = out.y = 0;
     const g = this.game, W = g.world; if (!W) return out;
-    if (g.portal && (!g.stage?.party || !this.partyPortaled)) { const dx = g.portal.pos.x - this.pos.x, dz = g.portal.pos.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; return out; }   // 봉인 해제 포탈 → 보스방 앞
+    // 봉인 해제 포탈 → 보스방 앞. 포탈이 벽 뒤에 열리면 거리장으로 돌아간다.
+    if (g.portal && (!g.stage?.party || !this.partyPortaled)) return Player.prototype.autoPath.call(this, g.portal.pos.x, g.portal.pos.z, out);
     let target = g.conquest?.autoRoom() || g.autoTarget;
     if (!target || target.cleared || !W.rooms.includes(target)) {
-      const cands = W.rooms.filter((r) => !r.cleared && !(W.sealed && r === W.bossRoom));   // 봉인된 보스방은 못 들어간다
-      if (!cands.length) return out;
+      let nearest = null, distance = Infinity;   // 봉인된 보스방은 못 들어간다
+      for (const room of W.rooms) {
+        if (room.cleared || (W.sealed && room === W.bossRoom)) continue;
+        const d = Math.hypot(room.x - this.pos.x, room.z - this.pos.z);
+        if (d < distance) { distance = d; nearest = room; }
+      }
+      if (!nearest) return out;
       // 봉인이 풀린 보스방을 찾았으면 보스 우선, 아니면 가장 가까운 미클리어 방
       const boss = W.bossRoom;
       target = (boss && !boss.cleared && boss.discovered && !W.sealed) ? boss
-        : cands.sort((a, b) => Math.hypot(a.x - this.pos.x, a.z - this.pos.z) - Math.hypot(b.x - this.pos.x, b.z - this.pos.z))[0];
+        : nearest;
       g.autoTarget = target;
     }
     const point = g.routeObjectives?.autoPoint?.(target) || target;
+    // 공격으로 부수는 목표(가짜 왕좌): 멈춘 모래시계 옆이면 왕좌를 향해 친다.
+    const strike = g.routeObjectives?.autoStrike?.(this);
+    if (strike) {
+      this.yaw = Math.atan2(strike.pos.x - this.pos.x, strike.pos.z - this.pos.z);
+      // 콤보를 이어 붙이면 마지막 타격이 회전 구간에 닿아 반사된다. 새 공격은 쉬는 상태에서만 시작한다.
+      if (this.state === 'idle' || this.state === 'move') g.input.press('attack');
+      return out;
+    }
     if (point !== target && Math.hypot(point.x - this.pos.x, point.z - this.pos.z) < .65) return out;
-    const flow = W.buildFlow(point.x, point.z);
-    const d = W.flowDir(flow, this.pos.x, this.pos.z);
-    if (d) { out.x = d[0]; out.y = d[1]; }
-    else { const dx = point.x - this.pos.x, dz = point.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; }
+    return Player.prototype.autoPath.call(this, point.x, point.z, out);
+  }
+  /** 몸 폭만큼의 직선이 열려 있으면 곧장, 벽에 가리면 거리장을 따라 간다. 할당 없음. */
+  autoPath(x, z, out) {
+    const W = this.game.world, dx = x - this.pos.x, dz = z - this.pos.z;
+    const length = Math.hypot(dx, dz);
+    // 중심선만 보면 벽 모서리에 몸이 걸려 제자리걸음한다. 몸 반경만큼 양옆 선도 검사한다.
+    const side = length > 1e-6 ? (this.radius || .7) * .8 / length : 0, ox = -dz * side, oz = dx * side;
+    // 거리장이 없는 월드(아레나·단순 픽스처)는 직선으로 간다.
+    if (W?.buildFlow && (!W.walkable || !clearShot(W, this.pos.x, this.pos.z, x, z) ||
+      !clearShot(W, this.pos.x + ox, this.pos.z + oz, x + ox, z + oz) || !clearShot(W, this.pos.x - ox, this.pos.z - oz, x - ox, z - oz))) {
+      const flow = W.buildFlow(x, z), dir = W.flowDir(flow, this.pos.x, this.pos.z);
+      if (dir) { out.x = dir[0]; out.y = dir[1]; return out; }
+    }
+    // 목적 셀에 들어왔거나 거리장이 없으면 남은 거리만 직선으로 좁힌다.
+    out.x = length > .05 ? dx / length : 0; out.y = length > .05 ? dz / length : 0;
     return out;
   }
 
   // ---------------- 업데이트 ----------------
   update(dt) {
+    // 렌더 소유 메시만 변경한다. 드래그 상태는 전투 판정이나 시계에 관여하지 않는다.
+    if (this.skillAimView) {
+      const aim = this.game.input?.skillAim;
+      const id = aim?.active ? this.def.skills[this.combatSkillIndex(aim.slot)]?.id : null;
+      this.skillAimView.update(this, this.game.input?.enabled && !this.game.paused ? aim : null,
+        id ? playerSkillAimShape(this, id, this._skillAimShape) : null);
+    }
     if (!this.alive || this.auto || this.stun > 0) { this.attackBufferYaw = null; this.comboQueuedYaw = null; }
+    // 머리 트랙이 없는 클립에서도 누적되지 않게 지난 프레임 보정 전 값을 먼저 되돌린다.
+    if (this.headLift?.applied) { this.headLift.bone.quaternion.copy(this.headLift.base); this.headLift.applied = false; }
     super.update(dt);
+    if (this.headLift && this.alive) {
+      const lift = this.headLift; lift.base.copy(lift.bone.quaternion); lift.bone.quaternion.multiply(RANGER_HEAD_LIFT); lift.applied = true;
+    }
+    if (this.rangerAim) this.updateBowRig(dt);
     this.hurtFeedbackT = Math.max(0, (this.hurtFeedbackT || 0) - dt);
     this.attackBufferT = Math.max(0, (this.attackBufferT || 0) - dt);
     if (this.attackBufferT === 0) this.attackBufferYaw = null;
     this.dodgeBufferT = Math.max(0, (this.dodgeBufferT || 0) - dt);
     this.beacon.update(this.alive, this.yaw, { state: this.state, color: this.def.accent || this.def.color, reduced: !!this.game.app?.reducedMotion?.matches });
+    this.gradeAura?.update(dt, resolveHeroGrade(this), { alive: this.alive, reduced: !!this.game.app?.reducedMotion?.matches, lite: !!this.game.fx?.lite });
     this.guardT = Math.max(0, (this.guardT || 0) - dt);
     this.tonicAtkT = Math.max(0, (this.tonicAtkT || 0) - dt);
     this.tonicGuardT = Math.max(0, (this.tonicGuardT || 0) - dt);
@@ -554,12 +848,22 @@ export class Player extends Actor {
     this.stateT += dt;
     if (this.state === 'attack') {
       const c = this.current; const dur = c.dur / (this.buffs.atkSpd * (this.stormT > 0 ? 1.4 : 1)); const t = this.stateT / dur;
+      if (this.attackBufferT > 0 && this.canQueueCombo()) { this.comboQueued = true; this.comboQueuedYaw = this.attackBufferYaw; this.attackBufferT = 0; }
+      const moveShot = this.manualBow && c.projectile === 'arrow';
+      // 발사 전까지 수동 궁수의 몸은 유효한 조준 대상을 따라 돈다(이동 방향과 무관).
+      // 대상이 벽 뒤·사거리 밖·목록 밖으로 무효가 되면 그쪽으로 돌지 않고 마지막 유효 방향을 유지한다. 발사 순간 다른 유효 대상을 다시 고른다.
+      if (moveShot && !this.hitDone && this.rangerAim.target) {
+        if (!this.rangerAim.holds(this, c.range)) {
+          if (this.lockTarget === this.rangerAim.target) this.lockTarget = null;
+          this.rangerAim.target = null;
+        } else { const yaw = this.rangerAim.yawTo(this); if (yaw !== null) this.yaw = yaw; }
+      }
       if (c.move === 'spin' && !this.hitDone) gatherEnemies(this.game, this.pos, c.range + 1.5, 9);
-      if (!this.hitDone && t >= c.hitAt) { this.hitDone = true; this.doComboHit(0); if (c.move !== 'spin') this.vel.multiplyScalar(c.move === 'lunge' ? 0.35 : 0.2); this.nextTick = c.hitAt + (1 - c.hitAt) / (c.ticks || 1); }
+      if (!this.hitDone && t >= c.hitAt) { this.hitDone = true; this.doComboHit(0); if (c.move !== 'spin' && !moveShot) this.vel.multiplyScalar(c.move === 'lunge' ? 0.35 : 0.2); this.nextTick = c.hitAt + (1 - c.hitAt) / (c.ticks || 1); }
       if (this.hitDone && this.ticksLeft > 0 && t >= this.nextTick) { this.ticksLeft--; this.doComboHit((c.ticks || 1) - this.ticksLeft - 1); this.nextTick += (1 - c.hitAt) / (c.ticks || 1); }   // 회오리 연타
       if (c.through && this.ghostT !== undefined) { this.ghostT += dt; if (this.ghostT > 0.06 && !this.hitDone) { this.ghostT = 0; this.game.fx.ghost(this.model, this.def.color, { life: 0.25, opacity: 0.4 }); } }
       if (this.hitDone && this.trail && t >= c.hitAt + 0.25 && !this.ticksLeft) this.stopTrail();
-      if (this.hitDone && c.move !== 'spin') this.vel.multiplyScalar(Math.pow(0.001, dt));
+      if (this.hitDone && c.move !== 'spin' && !moveShot) this.vel.multiplyScalar(Math.pow(0.001, dt));
       // 콤보 연계 창: 타격 직후부터 (0.18 → 0.1: 타 사이 공백이 '끊김'으로 읽혔다). 연타 중엔 마지막 tick 뒤
       const chainAt = c.ticks ? this.nextTick - 0.02 : c.hitAt + 0.1;
       if (this.hitDone && this.comboQueued && !this.ticksLeft && t >= chainAt) { const next = this.comboIdx + 1; if (next < this.def.combo.length) { this.startCombo(next, this.comboQueuedYaw); return; } else if (t >= c.hitAt + 0.3) { this.startCombo(0, this.comboQueuedYaw); return; } }   // 마무리 뒤에도 idle 을 거치지 않고 1타로
@@ -577,6 +881,10 @@ export class Player extends Actor {
       if (!c.cast && c.t >= castT) { c.cast = true; c.impl.cast?.(this.game, this, c); this.game.onSkillReleased?.(this,c); }
       c.impl.update?.(this.game, this, c, dt);
       if (c.t >= (c.impl.total || c.impl.dur || 0.8)) { c.done = true; c.impl.end?.(this.game, this, c); this.state = 'idle'; this.vel.set(0, 0, 0); this.stopTrail(); this.play('Idle', { fade: 0.2 }); }
+    }
+    // 회피·경직·스킬·기절이 끝난 프레임에 보존한 공격을 바로 시작한다(다음 입력 처리까지 기다리면 버퍼가 만료될 수 있다).
+    if (this.state === 'idle' && this.stun <= 0 && this.attackBufferT > 0) {
+      this.attackBufferT = 0; this.startCombo(0, this.attackBufferYaw);
     }
   }
 }

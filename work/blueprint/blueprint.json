@@ -1,0 +1,897 @@
+{
+  "schemaVersion": 1,
+  "status": "locked",
+  "product": {
+    "name": "Blade Surge",
+    "oneLine": "모바일 가로 화면 3D 액션 RPG(Vite+Three.js, Cloudflare)",
+    "audience": "폰으로 짧게 던전을 도는 액션 RPG 플레이어",
+    "platform": "Android/모바일 브라우저 가로, 데스크톱 브라우저",
+    "viewports": [
+      "1280x590",
+      "844x390",
+      "800x360",
+      "1440x900"
+    ],
+    "visual": true,
+    "existing": true
+  },
+  "concepts": [
+    {
+      "id": "C1",
+      "group": "combat-hud-20261018",
+      "title": "콤보 배지 옆 알약형 연속 처치",
+      "image": "images/hud-c1.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 5,
+        "distinct": 3
+      },
+      "chosen": true,
+      "note": "좌상단 HUD 묶음 안에 붙어 전투 중앙이 비고 콤보 배지와 함께 읽힌다",
+      "sha256": "ad62d21447abee4c4008d261f3270d8de45a8d8e76faa5ce9812de9df0d8726f"
+    },
+    {
+      "id": "C2",
+      "group": "combat-hud-20261018",
+      "title": "상단 중앙 지역명 아래 얇은 리본",
+      "image": "images/hud-c2.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": false,
+      "note": "보스 경고·목표 배너와 같은 자리를 다툰다",
+      "sha256": "f35ae0fa2671a01930136bc9783b708fc813c33d478918c9bfbcf31067315527"
+    },
+    {
+      "id": "C3",
+      "group": "combat-hud-20261018",
+      "title": "스킬 버튼 옆 원형 메달",
+      "image": "images/hud-c3.jpg",
+      "scores": {
+        "fit": 3,
+        "clarity": 4,
+        "feasibility": 3,
+        "distinct": 4
+      },
+      "chosen": false,
+      "note": "엄지 조작 영역이라 오터치·가림 위험",
+      "sha256": "de88e811006d7c271a30e73ce851e7f34f01935f8e243018e79382d04b1788cb"
+    },
+    {
+      "id": "C4",
+      "group": "map-art-20261018",
+      "title": "따뜻한 손그림풍 고대 서고 던전",
+      "image": "images/map-m1.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 4,
+        "feasibility": 4,
+        "distinct": 5
+      },
+      "chosen": true,
+      "note": "현재 지역 이름(별빛 서고)과 맞고, 밝은 바닥과 어두운 벽 대비로 적이 잘 보인다",
+      "sha256": "3edd2658ab284211d6964f35fb80f9c222234518e190477c92a6b317092d0723"
+    },
+    {
+      "id": "C5",
+      "group": "map-art-20261018",
+      "title": "달빛 크리스털 폐허",
+      "image": "images/map-m2.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": false,
+      "note": "성좌·심연 계열 지역 후보",
+      "sha256": "09d34767d6d2d8922ddb2bf6a5ea8f56e568914067d4e41c75361663aba5b397"
+    },
+    {
+      "id": "C6",
+      "group": "map-art-20261018",
+      "title": "장난감풍 로우폴리 석조 던전",
+      "image": "images/map-m3.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 5,
+        "feasibility": 5,
+        "distinct": 3
+      },
+      "chosen": false,
+      "note": "초반 장례길·기본 던전 후보, 가장 구현 쉬움",
+      "sha256": "b6db4f94265e27c32344840c2d1d5c4c4f33f91e50e9566b4bd4d55d27bdc6b7"
+    },
+    {
+      "id": "C7",
+      "group": "lobby-ui-20261018",
+      "title": "오른쪽 세로 추천 던전 패널 + 하단 3탭 도크",
+      "image": "images/lobby-u1.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 5,
+        "distinct": 2
+      },
+      "chosen": false,
+      "note": "현재와 가까워 위험이 적지만 개선 폭이 작다",
+      "sha256": "a6559ac732e71cbdc4b5814711a9875c0bcb4478b9c9ad323388a986e511556b"
+    },
+    {
+      "id": "C8",
+      "group": "lobby-ui-20261018",
+      "title": "하단 던전 카드 캐러셀 + 왼쪽 세로 탭 + 큰 출격 버튼",
+      "image": "images/lobby-u2.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": true,
+      "note": "던전 선택이 한눈에 보이고 영웅이 가려지지 않는다(대표님 규칙: UI는 플레이를 가리지 않는다)",
+      "sha256": "fc8ea098fcb8124429804f191bf8dbae811ec6ff2159348fa448e9490d2d7bcf"
+    },
+    {
+      "id": "C9",
+      "group": "star-archive-20261018",
+      "title": "흰 대리석·금 별 나침반·크리스털 책장 별빛 서고",
+      "image": "images/star-s1.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": true,
+      "note": "지역 원화(star_archive.webp)와 같은 화풍, 밝은 바닥 위에 적·영웅이 또렷하다",
+      "sha256": "ccb2c07af67ee73834efa7e16ffa2fb21f8769d0530f4db1557b7b661a485de3"
+    },
+    {
+      "id": "C10",
+      "group": "star-archive-20261018",
+      "title": "밤하늘 별자리 선 서고",
+      "image": "images/star-s2.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": false,
+      "note": "보스 방·심층용 후보",
+      "sha256": "30ddd07b8b7d49fa54cfb986c4435c358e89cb7ee1493e4969a6338fcf04f4e3"
+    },
+    {
+      "id": "C11",
+      "group": "star-archive-20261018",
+      "title": "구름 위 발코니 서고",
+      "image": "images/star-s3.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 3,
+        "distinct": 5
+      },
+      "chosen": false,
+      "note": "외벽 개방이 넓어 전투 공간 경계가 약함",
+      "sha256": "afa4bd6c264f60abc460ab76df591b65e627a9a1a8d72f279e377325aca2cb0c"
+    },
+    {
+      "id": "C12",
+      "group": "citadel-gate-20261020",
+      "title": "고대 성채 석조 아치: 쐐기돌·룬 음각·이끼",
+      "image": "images/gate-concept-A.png",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": true,
+      "note": "기존 14종 던전별 관문 장식(왕관·결정·종 등)을 유지한 채 공통 기둥·아치 뼈대만 바꿔 품질을 올릴 수 있다. 룬 음각이 포털 색을 따라가 던전 구분도 유지",
+      "sha256": "c770c768b5edabf7c7fd02a0ef81b90cde40bcf63d997c21846a2183c7230949"
+    },
+    {
+      "id": "C13",
+      "group": "citadel-gate-20261020",
+      "title": "룬 단조 요새: 금속 띠·깃발·결정 왕관",
+      "image": "images/gate-concept-B.png",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": false,
+      "note": "금속 띠와 각진 기둥은 좋지만 깃발 천과 큰 왕관이 던전별 장식과 겹친다. 금속 띠·리벳은 A에 일부 차용",
+      "sha256": "fde0875fd79138b38c9e0caa04fb94b03dc66432f2d94414269d500f323d39ca"
+    },
+    {
+      "id": "C14",
+      "group": "citadel-gate-20261020",
+      "title": "성소: 대리석 꼬임 기둥·떠다니는 룬석·천",
+      "image": "images/gate-concept-C.png",
+      "scores": {
+        "fit": 3,
+        "clarity": 4,
+        "feasibility": 3,
+        "distinct": 5
+      },
+      "chosen": false,
+      "note": "꼬임 기둥과 천 휘장은 삼각형 수가 많고 다른 던전 테마와 톤이 맞지 않는다",
+      "sha256": "8a040cb6d2741c8e986b5ff39c5bcf9ef046f419a46486815b9986a80142b809"
+    },
+    {
+      "id": "C15",
+      "group": "progression-20261019",
+      "title": "던파식 세로 스킬 트리 + SP + 초기화",
+      "image": "images/skilltree-c1.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": true,
+      "note": "대표님이 말한 던파식 레벨·스킬 찍기·초기화 감각이 가장 직접 보이고, 잠긴 각성 스킬의 레벨 관문이 한 화면에 보여 레벨업 동기가 생긴다",
+      "sha256": "fd0a833aa6d26ba2c6e6fc70d37e48855b11cdf4c4174910f37c4417b0d40366"
+    },
+    {
+      "id": "C16",
+      "group": "progression-20261019",
+      "title": "스킬 카드 레일",
+      "image": "images/skilltree-c2.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 4,
+        "distinct": 3
+      },
+      "chosen": false,
+      "note": "카드가 커서 8개 스킬이 한 화면에 다 안 들어가고 레벨 관문 흐름이 약하다",
+      "sha256": "ed74b1f4083451506c91067544a9389fbd15414ecc5c7b7f32449b98a6d7f6ab"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "battle-hud",
+      "type": "screen",
+      "group": "combat-hud-20261018",
+      "title": "전투 HUD (연속 처치 재배치)",
+      "image": "images/hud-c1.jpg",
+      "checks": [
+        "화면 중앙(가로 30~70%, 세로 25~75%)에 연속 처치 카드가 없다",
+        "연속 처치는 35 COMBO 배지 오른쪽에 같은 높이의 알약형으로 붙는다",
+        "금색 숫자와 작은 글자 \"연속 처치 · 사냥 본능\", 보라 테두리 발광",
+        "20연속 이상은 붉은 테두리로 바뀐다",
+        "5·10·20·30 알림도 중앙을 가리지 않는다",
+        "나머지 HUD 위치·크기는 기존 그대로"
+      ],
+      "risks": [
+        "oath-visual.css, battle-readability.css, mobile-combat.css에 kill-streak 위치 규칙이 겹쳐 있다: 한 규칙으로 정리",
+        "좁은 화면(800x360)에서 알약이 HP 패널과 겹치면 콤보 배지 아래 줄로 내리는 대체 배치"
+      ],
+      "copy": [
+        "연속 처치",
+        "사냥 본능",
+        "광란",
+        "전장의 지배자"
+      ],
+      "sha256": "ad62d21447abee4c4008d261f3270d8de45a8d8e76faa5ce9812de9df0d8726f"
+    },
+    {
+      "id": "kill-streak-pill",
+      "type": "component",
+      "group": "combat-hud-20261018",
+      "title": "연속 처치 알약 표시",
+      "checks": [
+        "등장 시 짧은 확대 펄스, 사라질 때 페이드",
+        "pointer-events 없음"
+      ]
+    },
+    {
+      "id": "skill-aim",
+      "type": "screen",
+      "group": "combat-hud-20261018",
+      "title": "와일드 리프트식 스킬 조준",
+      "image": "images/hud-aim.jpg",
+      "checks": [
+        "스킬 버튼을 누른 채 끌면 영웅 발밑에 반투명 사거리 원",
+        "영웅에서 끈 방향으로 빛나는 하늘색 직선 레인과 화살촉",
+        "스킬 버튼 위에 작은 드래그 원",
+        "미니맵 왼쪽에 빨간 원형 취소(X) 구역이 조준 중에만 보인다",
+        "조준 중에도 이동 조이스틱과 HUD는 그대로"
+      ],
+      "risks": [
+        "지면 표시는 재사용 메시 1세트(링·레인·부채꼴·원)로 만들고 매 프레임 할당 없이 위치·회전만 갱신",
+        "app.step(dt) 결정성: 입력은 조준 벡터를 기존 press 경로에 실어 보내고 시뮬레이션은 같은 방향을 쓴다",
+        "AUTO 모드와 키보드 입력은 기존 동작 유지"
+      ],
+      "copy": [
+        "취소"
+      ],
+      "sha256": "15bfba1f385e1175eb59638dace77baa126f0de2284a6b73f47bcac661bbbae9"
+    },
+    {
+      "id": "aim-input",
+      "type": "system",
+      "group": "combat-hud-20261018",
+      "title": "드래그 조준 입력",
+      "checks": [
+        "짧은 탭은 기존 빠른 시전(자동 조준)",
+        "끌었다 놓으면 그 방향·거리로 시전",
+        "취소 구역에서 놓으면 시전 없음, 쿨다운·MP 그대로",
+        "이동 조이스틱과 동시 멀티터치"
+      ]
+    },
+    {
+      "id": "skill-shape-data",
+      "type": "data",
+      "group": "combat-hud-20261018",
+      "title": "스킬별 조준 모양 데이터",
+      "checks": [
+        "직선(길이·폭), 부채꼴(반경·각도), 지점 원(사거리·반경), 자기 중심 중 하나",
+        "표시 크기가 실제 판정 범위와 같은 숫자를 쓴다"
+      ]
+    },
+    {
+      "id": "skill-cast",
+      "type": "system",
+      "group": "combat-hud-20261018",
+      "title": "기존 스킬 시전(Player.tryCastSkill)",
+      "checks": [
+        "조준 방향이 있으면 그 방향, 없으면 기존 자동 조준"
+      ]
+    },
+    {
+      "id": "lobby-hero-pose",
+      "type": "asset",
+      "title": "로비 영웅 대기 자세 좌우 균형",
+      "checks": [
+        "어깨 높이가 같고 양팔이 몸통에서 같은 거리로 자연스럽게 내려온다",
+        "로비에 나오는 모든 직업 모델"
+      ],
+      "risks": [
+        "클라우드 자가개선루프가 #189에서 상위 몸체 모션(src/engine/hero-body-motion.js, higher-body-*)을 고쳤다: 고치기 전에 origin/main을 다시 받고 겹치면 그 채팅에 한 번 알린다",
+        "실제 로비 캡처를 기반으로 로비 시안을 다시 뽑아 group lobby-pose로 추가"
+      ]
+    },
+    {
+      "id": "asset-foundry",
+      "type": "system",
+      "title": "TLL-Asset-Foundry 재사용 라이브러리",
+      "checks": [
+        "Tripo 원본, Blender 정리본, Mixamo 리그·클립, 엔진용 GLB가 한 레코드로 묶인다",
+        "library-index.json에서 장르·용도·리그·폴리 수·라이선스로 찾을 수 있다",
+        "웹·Roblox·Unity가 바로 쓸 내보내기 형식과 사용 안내가 있다"
+      ]
+    },
+    {
+      "id": "dungeon-map-art",
+      "type": "screen",
+      "group": "map-art-20261018",
+      "title": "던전 맵 그래픽(지역별 환경 아트)",
+      "image": "images/map-m1.jpg",
+      "checks": [
+        "바닥은 밝고 읽기 쉬운 석재 타일(마모된 모서리·틈새 이끼), 벽·책장은 어둡게",
+        "바닥의 호박색 룬 원과 테두리 무늬",
+        "벽면 책장·스테인드글라스·촛불, 창에서 들어오는 빛줄기",
+        "먼지 입자, 따뜻한 색온도",
+        "전투 중앙은 장식 없이 비우고 소품은 가장자리"
+      ],
+      "risks": [
+        "큰 반복 바닥은 생성 텍스처(타일·룬)와 베이크 AO로, 책장·창·촛대는 Tripo 소품 → Blender 헤드리스 → 인스턴싱",
+        "빛줄기는 가산 혼합 평면, 먼지는 인스턴스 파티클로 모바일 프레임 예산 안",
+        "지역마다 C5·C6 방향을 별도 시안 묶음으로 확장"
+      ],
+      "copy": [],
+      "sha256": "3edd2658ab284211d6964f35fb80f9c222234518e190477c92a6b317092d0723"
+    },
+    {
+      "id": "lobby-screen",
+      "type": "screen",
+      "group": "lobby-ui-20261018",
+      "title": "로비 화면(던전 선택·출격)",
+      "image": "images/lobby-u2.jpg",
+      "checks": [
+        "영웅은 왼쪽 중앙에 가려지지 않고 서 있다",
+        "왼쪽 가장자리 세로 탭(던전, 영웅·장비, 메뉴)과 빨간 알림 점",
+        "오른쪽 위 추천 던전 상세(그림, 이름, 설명, 입장 에너지, 주요 보상)",
+        "오른쪽 아래 던전 카드 캐러셀(그림, 이름, 에너지 비용, 넘기기 화살표)",
+        "오른쪽 아래 모서리 큰 원형 금색 출격 버튼(교차 검)",
+        "금색 장식 테두리, 남색·양피지 톤"
+      ],
+      "risks": [
+        "카드 그림은 기존 던전 썸네일(public/img) 재사용, 없는 지역은 생성",
+        "기존 출격 준비 흐름(에너지·보상·저장)은 그대로 버튼만 연결",
+        "844x390·800x360에서 캐러셀 카드 수를 줄이고 영웅이 가려지지 않게"
+      ],
+      "copy": [
+        "던전",
+        "영웅·장비",
+        "메뉴",
+        "추천 던전",
+        "입장 에너지",
+        "주요 보상",
+        "출격"
+      ],
+      "sha256": "fc8ea098fcb8124429804f191bf8dbae811ec6ff2159348fa448e9490d2d7bcf"
+    },
+    {
+      "id": "lobby-hero-idle",
+      "type": "asset",
+      "group": "lobby-ui-20261018",
+      "title": "로비 영웅 대기 자세",
+      "checks": [
+        "대표님이 지적한 팔 균형 문제 없이 서 있는 자세"
+      ]
+    },
+    {
+      "id": "star-archive-room",
+      "type": "screen",
+      "group": "star-archive-20261018",
+      "title": "별빛 서고 전투 방",
+      "image": "images/star-s1.jpg",
+      "checks": [
+        "흰·옅은 파랑 대리석 타일 바닥에 금색 줄눈",
+        "전투 공간 중앙 아래 큰 금 별 나침반 장식(남색 원판)",
+        "양쪽 벽 흰 대리석 책장과 빛나는 청색 크리스털 책",
+        "모서리 투명한 청색 크리스털 무리",
+        "뒤쪽 벽 위 금색 혼천의(아밀러리 구)",
+        "위에서 내리는 차가운 달빛과 은은한 청색 번짐",
+        "전투 중앙은 장식 없이 바닥만"
+      ],
+      "risks": [
+        "바닥은 public/textures/star-archive/floor-marble.webp 반복, 나침반은 rosette.webp 데칼 평면",
+        "책장 면은 crystal-books.webp를 기존 frost 책장 상자에 입히고 인스턴싱",
+        "크리스털은 crystal-cluster.webp 빌보드 또는 저폴리 기하+가산 발광",
+        "혼천의는 토러스 3~4개 병합 메시",
+        "모바일 프레임 p95 27ms 이하 유지(현재 기준)"
+      ],
+      "copy": [],
+      "sha256": "ccb2c07af67ee73834efa7e16ffa2fb21f8769d0530f4db1557b7b661a485de3"
+    },
+    {
+      "id": "citadel-gate-structure",
+      "type": "component",
+      "group": "citadel-gate-20261020",
+      "title": "성채 관문 공통 구조물(기둥·아치·받침)",
+      "image": "images/gate-concept-A.png",
+      "checks": [
+        "기둥이 단일 상자가 아니라 계단식 받침(2~3단) + 모서리를 깎은 돌 블록 쌓기 + 기둥머리로 읽힌다",
+        "아치는 쐐기돌(voussoir) 조각들이 둥글게 이어지고 가운데 쐐기돌이 크고 앞으로 튀어나온다",
+        "기둥 앞면과 아치 돌에 포털 색으로 빛나는 룬 음각(가는 발광 선)이 있다",
+        "돌 표면에 균열·이끼 패치가 있어 평평한 단색 블록으로 보이지 않는다",
+        "던전별 고유 장식(온실 지붕, 종, 바퀴, 결정 등)과 포털 색은 그대로 유지된다",
+        "로비 기본 카메라와 근접 카메라 모두에서 컨셉 A의 실루엣(두꺼운 기둥, 둥근 쐐기돌 아치, 큰 쐐기돌)과 같다"
+      ],
+      "risks": [
+        "모바일 부하: 관문 하나의 draw call은 재질 역할 수(stone/metal/glow/crystal/portal) 그대로 유지, 삼각형은 관문당 기존 대비 2배 이하로 제한하고 수치를 기록",
+        "14종 루트마다 posts()/arch() 호출이 다르다: 공통 빌더를 바꾸면 모든 루트를 캡처로 확인",
+        "low 품질에서는 이끼·균열 디테일 생략 가능"
+      ],
+      "copy": [],
+      "sha256": "c770c768b5edabf7c7fd02a0ef81b90cde40bcf63d997c21846a2183c7230949"
+    },
+    {
+      "id": "skill-tree-screen",
+      "type": "screen",
+      "group": "progression-20261019",
+      "title": "스킬 트리 (SP 습득·강화·초기화)",
+      "image": "images/skilltree-c1.jpg",
+      "checks": [
+        "왼쪽 열: 영웅 초상, 직업명, Lv, 큰 금색 원형 SP 카운터(\"남은 스킬 포인트\"), 하단 스킬 초기화 버튼(두루마리 아이콘+보석 가격 또는 보유 초기화서 수)",
+        "가운데: 위쪽 기본 스킬 4개 줄, 아래로 금색 화살표 연결선을 따라 각성 스킬이 Lv.10/20/35/50 관문 순서로 내려간다",
+        "스킬 칸: 정사각 아이콘, 금테(습득)·회색+자물쇠(미해금), 아래 레벨 n/10 알약과 + 버튼",
+        "오른쪽: 선택 스킬 상세(아이콘, 이름, Lv n/10, 설명, 피해 배율 현재→다음, 재사용 대기 현재→다음, 필요 조건 캐릭터 레벨·SP), 하단 큰 금색 \"습득 (SP n)\" 또는 \"강화 (SP n)\" 버튼",
+        "남색 바탕, 금색 테두리, 상단 보석·골드 바",
+        "각 칸 탭 = 오른쪽 상세 갱신, + 또는 큰 버튼 = SP 사용"
+      ],
+      "risks": [
+        "844x390에서 3열이 다 들어가야 한다: 가운데 트리는 4열×최대 3행(8개 스킬: 기본 4 + 각성 4)이라 이미지보다 행이 적다. 이미지의 4행 격자 대신 기본 4 + 각성 4의 2행 구조에 관문 레벨 라벨을 단다",
+        "이미지 속 \"다음 레벨 미리보기\" 영상 칸은 스킬 아이콘 확대+VFX 색 그라디언트 카드로 구현한다",
+        "초상은 기존 /img/tll/*-original-v1.webp를 쓴다"
+      ],
+      "copy": [
+        "스킬 트리",
+        "남은 스킬 포인트",
+        "스킬 초기화",
+        "습득",
+        "강화",
+        "피해 배율",
+        "재사용 대기시간",
+        "다음 레벨 효과",
+        "필요 조건",
+        "캐릭터 레벨",
+        "스킬 포인트",
+        "최대 레벨"
+      ],
+      "sha256": "fd0a833aa6d26ba2c6e6fc70d37e48855b11cdf4c4174910f37c4417b0d40366"
+    },
+    {
+      "id": "transcend-screen",
+      "type": "screen",
+      "group": "progression-20261019",
+      "title": "영웅 초월 (SR→SSR→SSSR)",
+      "image": "images/transcend-c1.jpg",
+      "checks": [
+        "가운데 영웅 일러스트와 원형 제단, 아래 SR(파랑)→SSR(보라)→SSSR(분홍·무지개 발광) 결정 3개와 화살표, 현재 등급 결정이 가장 밝다",
+        "왼쪽: 초월 전후 능력치 비교표(공격력, 체력, 스킬 피해, 재사용 대기, 궁극기 충전)와 초록 화살표",
+        "오른쪽: 필요 재료(영웅 조각 n/m, 초월석 n/m, 골드) 부족 수치는 붉게, 큰 자홍 \"초월하기\" 버튼, 그 아래 금색 \"초월 패키지\" 상점 바로가기",
+        "최고 등급이면 버튼이 \"최고 등급\"으로 잠긴다"
+      ],
+      "risks": [
+        "하단 탭바는 기존 로비 탭을 그대로 쓴다(새로 만들지 않는다)",
+        "결정 3개는 CSS 다이아몬드+발광 그라디언트로 그린다"
+      ],
+      "copy": [
+        "영웅 초월",
+        "초월 전후 능력치 비교",
+        "초월에 필요한 재료",
+        "영웅 조각",
+        "초월석",
+        "골드",
+        "초월하기",
+        "초월 패키지",
+        "최고 등급"
+      ],
+      "sha256": "560e6eed95b8cb31cef092af4aab74b55f9af2b59bd7fd8182c23840d3de17ba"
+    },
+    {
+      "id": "grade-rules",
+      "type": "rule",
+      "group": "progression-20261019",
+      "title": "등급 규칙 src/data/hero-grades.js",
+      "checks": [
+        "SR 1.5배·SSR 2.0배·SSSR 2.6배 능력치",
+        "스킬 피해 1/1.2/1.45, 재사용 대기 1/0.92/0.85, 궁극기 충전 +0/+10/+20%",
+        "SSSR은 전용 오라와 스킬 시그니처 VFX"
+      ]
+    },
+    {
+      "id": "skill-point-rules",
+      "type": "rule",
+      "group": "progression-20261019",
+      "title": "SP 규칙 src/data/skill-tree.js",
+      "checks": [
+        "시작 3 SP + 레벨당 1 + 10레벨마다 +2",
+        "각성 첫 습득·궁극기·6레벨 이상은 2 SP",
+        "Lv.20 미만 초기화 무료, 이후 스킬 초기화서(보석 상점)"
+      ]
+    },
+    {
+      "id": "monetization",
+      "type": "flow",
+      "group": "progression-20261019",
+      "title": "과금 흐름",
+      "checks": [
+        "가챠 SR/SSR 결과에 초월석 재료 추가",
+        "보석 상품: 스킬 초기화서, 초월석 묶음",
+        "현금 패키지: 초월 패키지(가격 표시·결제 준비 중, 실제 지급 없음)",
+        "SSSR은 초월로만 도달(소환 확률표에 없음)"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "battle-hud",
+      "to": "kill-streak-pill",
+      "type": "contains"
+    },
+    {
+      "from": "battle-hud",
+      "to": "skill-aim",
+      "type": "navigates"
+    },
+    {
+      "from": "skill-aim",
+      "to": "aim-input",
+      "type": "contains"
+    },
+    {
+      "from": "aim-input",
+      "to": "skill-shape-data",
+      "type": "reads"
+    },
+    {
+      "from": "aim-input",
+      "to": "skill-cast",
+      "type": "calls"
+    },
+    {
+      "from": "lobby-hero-pose",
+      "to": "asset-foundry",
+      "type": "writes"
+    },
+    {
+      "from": "dungeon-map-art",
+      "to": "battle-hud",
+      "type": "contains"
+    },
+    {
+      "from": "dungeon-map-art",
+      "to": "asset-foundry",
+      "type": "reads"
+    },
+    {
+      "from": "lobby-screen",
+      "to": "lobby-hero-idle",
+      "type": "contains"
+    },
+    {
+      "from": "lobby-screen",
+      "to": "battle-hud",
+      "type": "navigates"
+    },
+    {
+      "from": "lobby-hero-idle",
+      "to": "lobby-hero-pose",
+      "type": "reads"
+    },
+    {
+      "from": "star-archive-room",
+      "to": "dungeon-map-art",
+      "type": "contains"
+    },
+    {
+      "from": "star-archive-room",
+      "to": "asset-foundry",
+      "type": "writes"
+    },
+    {
+      "from": "lobby-screen",
+      "to": "citadel-gate-structure",
+      "type": "contains"
+    },
+    {
+      "from": "skill-tree-screen",
+      "to": "skill-point-rules",
+      "type": "reads"
+    },
+    {
+      "from": "transcend-screen",
+      "to": "grade-rules",
+      "type": "reads"
+    },
+    {
+      "from": "transcend-screen",
+      "to": "monetization",
+      "type": "navigates"
+    },
+    {
+      "from": "skill-tree-screen",
+      "to": "monetization",
+      "type": "navigates"
+    }
+  ],
+  "acceptance": [
+    {
+      "id": "A1",
+      "node": "battle-hud",
+      "criterion": "전투 중 연속 처치가 올라가도 화면 중앙 전투 영역에 카드가 뜨지 않고 콤보 배지 옆 알약에 숫자와 단계가 보인다",
+      "surface": "브라우저 1280x590·844x390·800x360 가로 실제 전투 캡처와 Android 실기기"
+    },
+    {
+      "id": "A2",
+      "node": "battle-hud",
+      "criterion": "5·10·20 연속 처치 알림이 적과 영웅을 가리지 않는다",
+      "surface": "같은 전투에서 20연속 이상 처치 캡처"
+    },
+    {
+      "id": "A3",
+      "node": [
+        "skill-aim",
+        "aim-input"
+      ],
+      "criterion": "스킬 버튼을 끄는 동안 사거리 원과 방향 레인이 보이고 손을 떼면 그 방향으로 스킬이 나간다",
+      "surface": "모바일 터치 에뮬레이션 드래그와 Android 실기기 터치"
+    },
+    {
+      "id": "A4",
+      "node": "aim-input",
+      "criterion": "스킬 버튼을 짧게 탭하면 지금처럼 바로 자동 조준 시전된다",
+      "surface": "브라우저 터치와 키보드"
+    },
+    {
+      "id": "A5",
+      "node": "aim-input",
+      "criterion": "취소 구역에서 손을 떼면 스킬이 나가지 않고 쿨다운과 MP가 그대로다",
+      "surface": "브라우저 터치와 메트릭"
+    },
+    {
+      "id": "A6",
+      "node": [
+        "skill-aim",
+        "skill-shape-data"
+      ],
+      "criterion": "직선·부채꼴·지점 스킬의 지면 표시가 실제로 맞는 범위와 같다",
+      "surface": "디버그 판정 오버레이와 표시 비교 캡처"
+    },
+    {
+      "id": "A7",
+      "node": "lobby-hero-pose",
+      "criterion": "로비에서 모든 직업 영웅의 좌우 팔 높이와 몸통 거리가 대칭으로 보인다",
+      "surface": "로비 1280x590 직업별 캡처와 뼈 위치 수치"
+    },
+    {
+      "id": "A8",
+      "node": "asset-foundry",
+      "criterion": "다른 게임 작업자가 index에서 에셋을 찾아 GLB·FBX·텍스처와 사용 안내를 바로 받아 쓸 수 있다",
+      "surface": "G: TLL-Asset-Foundry 실제 폴더와 index 다시 읽기"
+    },
+    {
+      "id": "A9",
+      "node": "dungeon-map-art",
+      "criterion": "별빛 서고 지역 전투 화면이 시안 C4처럼 따뜻한 서고 환경으로 보이고, 전투 중앙의 적과 영웅이 바닥과 대비되어 또렷하다",
+      "surface": "개발 서버·정식 호스트 1280x590·844x390 전투 캡처와 blueprint shot 비교, 모바일 프레임 시간"
+    },
+    {
+      "id": "A10",
+      "node": "lobby-screen",
+      "criterion": "로비에서 던전 카드를 넘겨 고르고 큰 출격 버튼으로 기존 출격 준비 흐름에 들어가며, 어느 화면 크기에서도 영웅이 UI에 가려지지 않는다",
+      "surface": "로비 1280x590·844x390·800x360 캡처, 카드 선택·출격 실제 터치, blueprint shot 비교"
+    },
+    {
+      "id": "A11",
+      "node": "star-archive-room",
+      "criterion": "별빛 서고 전투 방이 시안 C9처럼 흰 대리석 바닥·금 나침반·크리스털 책장·혼천의로 보이고 적·영웅이 바닥과 대비되어 또렷하며 프레임이 기존보다 크게 나빠지지 않는다",
+      "surface": "실제 로비→출격→전투 캡처 1280x590·844x390와 blueprint shot, 프레임 p50·p95"
+    },
+    {
+      "id": "A20",
+      "node": "skill-tree-screen",
+      "criterion": "영웅 레벨이 오르면 SP가 늘고, 잠긴 각성 스킬은 관문 레벨 도달 후 SP 2로 습득해야 전투 Q/E에 쓸 수 있다",
+      "surface": "브라우저 844x390·1280x590 실제 클릭, 저장 후 새로고침 유지"
+    },
+    {
+      "id": "A21",
+      "node": "skill-tree-screen",
+      "criterion": "스킬 초기화로 SP가 모두 돌아오고 각성 스킬은 미습득으로 돌아간다. Lv.20 이상은 초기화서가 1개 줄고, 없으면 상점으로 안내된다",
+      "surface": "같은 화면 실제 클릭"
+    },
+    {
+      "id": "A22",
+      "node": "transcend-screen",
+      "criterion": "재료가 충분하면 초월하기로 등급이 오르고 전투력·스킬 피해·재사용 대기가 바뀐 값으로 보이고 전투에서 실제로 적용된다",
+      "surface": "브라우저 844x390 실제 클릭 + 전투 진입 후 쿨타임 표시"
+    },
+    {
+      "id": "A23",
+      "node": "monetization",
+      "criterion": "현금 상품은 가격과 결제 준비 중만 보이고 보상을 주지 않는다. 보석 상품은 보석을 차감하고 재료를 준다",
+      "surface": "상점 실제 클릭"
+    }
+  ],
+  "decisions": [
+    {
+      "id": "D1",
+      "text": "연속 처치 위치는 C1(콤보 배지 옆 알약). C2는 보스·목표 배너와 충돌, C3는 엄지 영역 가림",
+      "source": "대표님 2026-10-18 \"연속 처치 창이 화면을 가려 불편\" + 점수표"
+    },
+    {
+      "id": "D2",
+      "text": "스킬은 와일드 리프트식 드래그 조준(논타겟, 방향 지정). 탭 빠른 시전과 AUTO는 유지",
+      "source": "대표님 2026-10-18 \"와일드 리프트처럼 슬라이드 형식으로 방향 설정\""
+    },
+    {
+      "id": "D3",
+      "text": "로비 시안은 실제 로비 캡처 기반으로 덩어리 채팅에서 다시 생성한다(이번 생성본은 화풍이 달라 잠그지 않음)",
+      "source": "지휘 채팅 판단"
+    },
+    {
+      "id": "D4",
+      "text": "큰 덩어리마다 새 채팅에서 진행하고 끝나면 보관한다",
+      "source": "대표님 2026-10-18 \"큰 작업이 끝나면 새로운 세션에서\""
+    },
+    {
+      "id": "D5",
+      "text": "던전 맵 아트 첫 목표는 C4(서고). C5는 성좌·심연 계열, C6는 초반 기본 던전 후보로 지역별 시안 묶음에서 다시 고른다",
+      "source": "대표님 2026-10-18 \"나머지 부분들 컨셉 이미지 잘 뽑아서 세워 놨으면\" + 점수표"
+    },
+    {
+      "id": "D6",
+      "text": "로비 UI는 C8(하단 카드 캐러셀·왼쪽 탭·큰 출격). C7은 현재와 차이가 작다",
+      "source": "대표님 2026-10-18 \"여러 가지에 대한 맵 그래픽 UI\" + 점수표"
+    },
+    {
+      "id": "D7",
+      "text": "별빛 서고는 C9. 확장 던전 그림 5장(뿌리잠식 동굴·슬래그워터 제련소·불씨항 건선거·오로라 빙정호·왕관붕괴 빙하)은 기존 원화 화풍으로 생성해 채운다",
+      "source": "대표님 2026-10-18 맵 그래픽 UI + 3차 사이클 빠진 그림"
+    },
+    {
+      "id": "D10",
+      "text": "스킬 트리는 C9(던파식 세로 트리). 대표님이 던파의 레벨업·스킬 찍기·초기화 캐시템 감각을 직접 언급",
+      "source": "대표님 2026-10-18 요청"
+    },
+    {
+      "id": "D11",
+      "text": "SSSR은 소환으로 나오지 않고 초월로만 도달한다. 소환 확률표(R/SR/SSR) 고지를 바꾸지 않고 상위 등급을 성장 목표로 둔다",
+      "source": "점수표: 확률 고지 일관성과 장기 목표"
+    },
+    {
+      "id": "D12",
+      "text": "현금 결제는 실제 스토어 SDK·영수증 검증 전까지 지급하지 않는다(PRD §3.3, 저장소 AGENTS)",
+      "source": "저장소 계약"
+    }
+  ],
+  "outOfScope": [
+    "새 스킬 추가",
+    "결제·광고"
+  ],
+  "changes": [
+    {
+      "at": "2026-10-18T10:24:07.318Z",
+      "reason": "던전 맵 아트 시안 묶음(C4~C6) 추가와 C4 선택, 노드 dungeon-map-art·기준 A9",
+      "from": "967ba628fca4",
+      "to": "2d3397e774ce"
+    },
+    {
+      "at": "2026-10-18T10:26:14.117Z",
+      "reason": "로비 UI 시안 묶음(C7·C8) 추가, C8 선택, 노드 lobby-screen·lobby-hero-idle·기준 A10",
+      "from": "2d3397e774ce",
+      "to": "1f15de4e43b4"
+    },
+    {
+      "at": "2026-10-18T11:34:53.725Z",
+      "reason": "별빛 서고 시안 묶음(C9~C11) 추가, C9 선택, 노드 star-archive-room·기준 A11",
+      "from": "1f15de4e43b4",
+      "to": "9ed6cdc41d3d"
+    },
+    {
+      "at": "2026-10-18T18:26:35.041Z",
+      "reason": "성장·과금 묶음(progression-20261019) 추가: 스킬 트리·초월 화면, 등급·SP 규칙, 과금 흐름",
+      "from": "1f15de4e43b4",
+      "to": "bdf0d7689e4f"
+    },
+    {
+      "at": "2026-10-18T19:30:51.210Z",
+      "reason": "대표님 지적(2026-10-19): Runware 시안이 블레이드 서지 화풍과 달라 폐기. 실제 로비(lobby-u1)·전투 HUD(hud-c1) 캡처를 참조로 GPT 이미지로 다시 생성한 스킬 트리·카드·초월 시안으로 교체",
+      "from": "bdf0d7689e4f",
+      "to": "f2ec82cf00eb"
+    },
+    {
+      "at": "2026-10-19T19:01:52.334Z",
+      "reason": "성채 관문 구조물 품질 개선 묶음 추가(대표님 2026-10-19 '게이트가 퀄리티가 너무 구리다'): 시안 3개 중 A 고대 성채 석조 아치 선택",
+      "from": "9ed6cdc41d3d",
+      "to": "a71f7f3111c7"
+    },
+    {
+      "at": "2026-10-19T19:02:14.184Z",
+      "reason": "관문 노드 연결 type 표기 수정",
+      "from": "a71f7f3111c7",
+      "to": "cb02ee4e527b"
+    },
+    {
+      "at": "2026-10-20T04:34:23.353Z",
+      "reason": "origin/main 병합: main의 star-archive(C9~C11)·citadel-gate(C12~C14)·A11과 이 브랜치의 progression-20261019(스킬 트리·초월·등급·과금, A20~A23·D10~D12)를 함께 보존. id 충돌로 progression 시안 C9·C10을 C15·C16으로 변경",
+      "from": "cb02ee4e527b",
+      "to": "edeb0b05b529"
+    }
+  ],
+  "shots": [
+    {
+      "node": "lobby-screen",
+      "image": "images/shots/lobby-screen-20261018T110911-3d59c0.png",
+      "sha256": "8eef2862436a1e1bb46a56987fb2d11871b852169a32f64f5b44250b975d88cd",
+      "at": "2026-10-18T11:09:11.482Z",
+      "blueprintDigest": "1f15de4e43b4c159d9e829313cd5b30910059c4f9435736a23cd7af81291b941",
+      "note": "1280x590 개발 서버 b81c1b5"
+    },
+    {
+      "node": "star-archive-room",
+      "image": "images/shots/star-archive-room-20261018T120454-3b17ae.png",
+      "sha256": "3a4d982fd940567c92b97e5d3a8ee9a29b9a6465914f8ee39cde750078dbe11b",
+      "at": "2026-10-18T12:04:54.966Z",
+      "blueprintDigest": "9ed6cdc41d3da8b82adeea82a26d30d278d1e5fbf4feadf938c9b6c794d8fed7",
+      "note": "1280x590 개발 서버 556aaaf 실제 진입"
+    }
+  ],
+  "lockedDigest": "edeb0b05b5294fe66406ef8e2cc73a5f69b80d2d9f239dab6a1871041fcf2416",
+  "lockedAt": "2026-10-20T04:34:23.353Z",
+  "firstLockedAt": "2026-10-18T07:12:43.638Z"
+}

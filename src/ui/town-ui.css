@@ -1,0 +1,148 @@
+/* 마을 이동 · 상인 · 스킬 교관. 동화풍 청록 틀 + 양피지 본문(storybook.css 톤) */
+.town-dialog { --town-a: #3d9cb4; --town-b: #e9d49c; --town-accent: #dec796; color: #3a2a14; font-family: var(--font-ui, system-ui, sans-serif);
+  width: min(980px, calc(100vw - 24px)); max-height: calc(100dvh - 24px); margin: auto; padding: 0; overflow: hidden;
+  border: 4px solid transparent; border-radius: 24px;
+  background: linear-gradient(170deg, #2d86a2, #17506b) padding-box, var(--sb-frame, linear-gradient(180deg, #fff2a6, #ffc83d 42%, #dd8a26 74%, #a35a14)) border-box;
+  box-shadow: 0 28px 90px #06131ddb; }
+.town-dialog[open] { display: flex; flex-direction: column; }
+.town-dialog::backdrop { background: #081822b5; backdrop-filter: blur(5px); }
+.town-dialog *, .town-dialog *::before, .town-dialog *::after { box-sizing: border-box; }
+.town-dialog button { font: inherit; cursor: pointer; touch-action: manipulation; }
+.town-dialog button:focus-visible { outline: 3px solid #fff3b0; outline-offset: 3px; }
+.town-dialog button:disabled { cursor: not-allowed; }
+.town-dialog .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.town-shell { display: flex; flex-direction: column; min-height: 0; max-height: calc(100dvh - 32px); }
+.town-head { flex: none; display: flex; align-items: center; gap: 14px; padding: 14px 22px; color: #fff; background: linear-gradient(180deg, #2f8aa6, #1d6482); border-bottom: 2px solid #ffe08a66; }
+.town-eyebrow { display: block; font-size: 10px; letter-spacing: .16em; color: #ffe9a6; font-weight: 800; }
+.town-head h2 { margin: 4px 0 0; font-family: var(--disp, inherit); font-weight: 400; font-size: clamp(22px, 3.4vw, 30px); line-height: 1.2; text-shadow: 0 2px 0 #0b3a52; }
+.town-close { margin-left: auto; flex: none; min-height: 44px; padding: 8px 18px; color: #fff; border: 2px solid #ffe08a99; border-radius: 12px; background: linear-gradient(180deg, #3e82ab, #265a82); font-size: 13px; font-weight: 800; text-shadow: 0 1px 2px #0b2a44; }
+.town-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 22px 18px; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #c8963a #f8e6b8;
+  background: linear-gradient(180deg, #fff9e6, #f8e6b8); }
+.town-foot { flex: none; display: flex; align-items: center; gap: 12px; padding: 10px 22px; background: linear-gradient(180deg, #2f8aa6, #1d6482); border-top: 2px solid #ffe08a44; }
+.town-foot button { min-height: 44px; margin-left: auto; padding: 8px 16px; color: #fff; border: 2px solid #ffe08a88; border-radius: 12px; background: linear-gradient(180deg, #3e82ab, #265a82); font-size: 12px; font-weight: 800; white-space: nowrap; }
+.town-foot-hint { margin-left: auto; font-size: 11px; color: #d6f1fb; }
+.town-status { flex: 1; min-width: 0; margin: 0; min-height: 18px; font-size: 12px; line-height: 1.5; color: #e6f6ff; }
+.town-status[data-tone='success'] { color: #c9ffb0; }
+.town-status[data-tone='error'] { color: #ffd0b8; }
+.town-intro { margin: 0 0 12px; font-size: 13px; line-height: 1.6; color: #7a5a30; }
+
+/* 마을 지도 */
+.town-map { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+.town-card { display: flex; flex-direction: column; min-width: 0; overflow: hidden; border: 3px solid #e9c97c; border-radius: 18px; background: linear-gradient(#fffdf4, #fbefd0); box-shadow: 0 4px 0 #96641e59, 0 8px 14px #3c280a33; }
+.town-card[data-state='here'] { border-color: #ffc83d; box-shadow: 0 0 0 3px #fff3b0, 0 0 20px #ffd24d99, 0 4px 0 #96641e59; }
+.town-card[data-state='locked'] { border-color: #cdbf9c; }
+.town-card-art { position: relative; flex: none; height: 104px; overflow: hidden; background: linear-gradient(180deg, var(--town-a), var(--town-b)); }
+.town-card-art i { position: absolute; display: block; }
+.town-card[data-town='oathhold'] .town-card-art i:nth-child(1) { left: 12%; bottom: 0; width: 22%; height: 62%; background: #2c6a78; clip-path: polygon(0 100%, 0 30%, 20% 30%, 20% 0, 40% 0, 40% 30%, 60% 30%, 60% 0, 80% 0, 80% 30%, 100% 30%, 100% 100%); }
+.town-card[data-town='oathhold'] .town-card-art i:nth-child(2) { left: 40%; bottom: 0; width: 26%; height: 82%; background: #3a8190; clip-path: polygon(0 100%, 0 40%, 50% 0, 100% 40%, 100% 100%); }
+.town-card[data-town='oathhold'] .town-card-art i:nth-child(3) { right: 8%; bottom: 0; width: 18%; height: 48%; background: #2c6a78; clip-path: polygon(0 100%, 0 30%, 50% 0, 100% 30%, 100% 100%); }
+.town-card[data-town='emberport'] .town-card-art i:nth-child(1) { left: 54%; top: 18%; width: 34px; height: 34px; border-radius: 50%; background: #ffe3a0; box-shadow: 0 0 22px 8px #ffb15a99; }
+.town-card[data-town='emberport'] .town-card-art i:nth-child(2) { left: 14%; bottom: 14px; width: 46%; height: 34px; background: #3c2330; clip-path: polygon(0 0, 100% 0, 88% 100%, 12% 100%); }
+.town-card[data-town='emberport'] .town-card-art i:nth-child(3) { left: 32%; bottom: 40px; width: 18%; height: 46px; background: #ffe9c4; clip-path: polygon(0 0, 100% 100%, 0 100%); }
+.town-card[data-town='starcrest'] .town-card-art i:nth-child(1) { left: -4%; bottom: 0; width: 56%; height: 70%; background: #e8f2ff; clip-path: polygon(0 100%, 48% 0, 100% 100%); }
+.town-card[data-town='starcrest'] .town-card-art i:nth-child(2) { right: -6%; bottom: 0; width: 60%; height: 52%; background: #bcd6f4; clip-path: polygon(0 100%, 52% 0, 100% 100%); }
+.town-card[data-town='starcrest'] .town-card-art i:nth-child(3) { left: 18%; top: 14%; width: 5px; height: 5px; border-radius: 50%; background: #fff; box-shadow: 40px 12px 0 #fff, 90px -2px 0 #cfe9ff, 150px 18px 0 #fff; }
+.town-card[data-state='locked'] .town-card-art { filter: grayscale(.85) brightness(.82); }
+.town-card[data-state='locked'] .town-card-art::after { content: '잠김'; position: absolute; right: 10px; top: 10px; padding: 3px 10px; border-radius: 999px; background: #3a2a14d9; color: #fff3d0; font-size: 11px; font-weight: 800; }
+.town-card[data-state='here'] .town-card-art::after { content: '현재 위치'; position: absolute; right: 10px; top: 10px; padding: 3px 10px; border-radius: 999px; background: linear-gradient(180deg, #ffe773, #ffb52c); color: #4a2406; font-size: 11px; font-weight: 900; }
+.town-card-copy { display: flex; flex: 1; flex-direction: column; gap: 6px; padding: 12px 14px 14px; min-width: 0; }
+.town-card-copy small { font-size: 10px; letter-spacing: .1em; color: #b0701c; font-weight: 900; }
+.town-card h3 { margin: 0; font-family: var(--disp, inherit); font-weight: 400; font-size: 20px; color: #4a2c0e; line-height: 1.25; overflow-wrap: anywhere; }
+.town-mood { margin: 0; font-size: 12px; line-height: 1.5; color: #7a5a30; }
+.town-gates { display: flex; flex-wrap: wrap; gap: 5px; margin: 2px 0 0; padding: 0; list-style: none; }
+.town-gates li { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border: 1px solid #e0c58a; border-radius: 999px; background: #fff6d6; font-size: 11px; color: #5a3d17; }
+.town-gates li[data-cleared='true'] { background: #dff5c9; border-color: #8cc86d; color: #1f5a22; }
+.town-gate-mark { font-weight: 900; }
+.town-lock { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 8px; margin-top: 4px; }
+.town-progress { height: 11px; overflow: hidden; border: 2px solid #c9a85f; border-radius: 999px; background: #f1e1b5; }
+.town-progress i { display: block; height: 100%; border-radius: 999px; background: linear-gradient(180deg, #ffe773, #f48c14); }
+.town-progress-text { font-size: 12px; font-weight: 900; color: #7a410f; font-variant-numeric: tabular-nums; }
+.town-lock p { grid-column: 1 / -1; margin: 0; font-size: 12px; line-height: 1.5; color: #8a4a1a; font-weight: 700; word-break: keep-all; overflow-wrap: anywhere; }
+.town-go { margin-top: auto; min-height: 44px; padding: 8px 12px; color: #4a2406; border: 2px solid #874a0e; border-radius: 12px; font-weight: 900; font-size: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.5) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #ffe773, #ffb52c 58%, #f48c14); box-shadow: 0 3px 0 #874a0e, inset 0 1px 0 #ffffffb3; }
+.town-go:disabled { color: #7d6d57; border-color: #b9a77d; background: #e8dcba; box-shadow: none; }
+.town-card[data-state='locked'] .town-go { margin-top: 6px; }
+
+/* 상인 · 교관 */
+.town-wallet { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; padding: 8px 14px; border: 2px solid #e7c27a; border-radius: 14px; background: #ffffff8c; }
+.town-wallet span { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #7a5a30; font-weight: 700; }
+.town-wallet img { width: 26px; height: 26px; object-fit: contain; }
+.town-wallet strong { margin-left: auto; font-size: 22px; color: #7a410f; font-variant-numeric: tabular-nums; }
+.town-section { margin: 14px 0 8px; font-family: var(--disp, inherit); font-weight: 400; font-size: 17px; color: #4a2c0e; }
+.town-offers { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.town-offer { --rarity: #e6e6e6; display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 10px 12px; border: 3px solid #e9c97c; border-left: 8px solid var(--rarity); border-radius: 16px; background: linear-gradient(#fffdf4, #fbefd0); box-shadow: 0 3px 0 #96641e40; }
+.town-offer-icon { width: 64px; height: 64px; object-fit: cover; border: 2px solid var(--rarity); border-radius: 14px; background: #10202a; box-shadow: 0 3px 5px #0003; }
+.town-offer-copy { min-width: 0; }
+.town-offer-copy small { display: block; font-size: 10px; letter-spacing: .06em; font-weight: 900; color: #7a5a30; }
+.town-offer[data-rarity] small { color: color-mix(in srgb, var(--rarity) 55%, #5a3d17); }
+.town-offer h3 { margin: 2px 0 3px; font-size: 15px; line-height: 1.3; font-weight: 800; color: #3a2a14; overflow-wrap: anywhere; }
+.town-offer p { margin: 0 0 4px; font-size: 12px; line-height: 1.5; color: #6a4e26; }
+.town-need { color: #8a4a1a !important; font-weight: 700; }
+.town-prices { display: flex; flex-wrap: wrap; gap: 4px; }
+.town-price { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 4px; border-radius: 999px; background: #fff0c4; border: 1px solid #e0c58a; font-size: 11px; font-weight: 800; color: #5a3d17; font-variant-numeric: tabular-nums; }
+.town-price img { width: 18px; height: 18px; object-fit: contain; }
+.town-price.is-short { background: #ffe1d6; border-color: #e8a68c; color: #9a3a1a; }
+.town-buy { min-width: 76px; min-height: 48px; padding: 8px 12px; color: #4a2406; border: 2px solid #874a0e; border-radius: 12px; font-weight: 900; font-size: 13px;
+  background: linear-gradient(180deg, rgba(255,255,255,.5) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #ffe773, #ffb52c 58%, #f48c14); box-shadow: 0 3px 0 #874a0e; }
+.town-buy:disabled { color: #7d6d57; border-color: #b9a77d; background: #e8dcba; box-shadow: none; }
+.town-skill-sigil { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; color: #fff; font-size: 26px; background: radial-gradient(circle at 35% 30%, var(--town-a), var(--town-b)); border: 3px solid #ffd24d; box-shadow: 0 0 0 2px #7a410f; }
+.town-skill[data-learned='true'] { opacity: .8; border-left-color: #7bc86a; }
+.town-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.town-skills { grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); }
+.town-tabs button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 4px 12px 4px 4px; border: 2px solid #e0c58a; border-radius: 999px; background: #fff6d6; color: #5a3d17; font-size: 12px; font-weight: 800; }
+.town-tabs button[aria-pressed='true'] { border-color: #874a0e; background: linear-gradient(180deg, #ffe773, #ffb52c); color: #4a2406; }
+.town-tabs img { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; }
+.town-empty { margin: 18px 0; padding: 18px; border: 2px dashed #d3b574; border-radius: 14px; text-align: center; font-size: 13px; color: #7a5a30; }
+
+/* 마을 도착 연출과 걷기 HUD의 지도 버튼 */
+.town-travel-veil { position: fixed; inset: 0; z-index: 9999; display: grid; place-content: center; gap: 6px; text-align: center; pointer-events: none; color: #fff;
+  background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--town-accent) 70%, #0b1e2c), #07131d 75%); opacity: 0; animation: town-veil 1.4s ease both; }
+.town-travel-veil strong { font-family: var(--disp, inherit); font-weight: 400; font-size: clamp(28px, 6vw, 46px); text-shadow: 0 3px 0 #0006; }
+.town-travel-veil small { letter-spacing: .3em; font-size: 12px; color: var(--town-accent); }
+@keyframes town-veil { 0% { opacity: 0; } 28% { opacity: 1; } 62% { opacity: 1; } 100% { opacity: 0; } }
+.citadel-hub-place .town-place-row { display: flex; align-items: center; gap: 10px; }
+.citadel-hub-place .town-map-chip { pointer-events: auto; flex: none; min-height: 26px; padding: 2px 11px; border: 2px solid #874a0e; border-radius: 999px; color: #4a2406; font: inherit; font-size: 11px; font-weight: 900; line-height: 1.2; cursor: pointer;
+  background: linear-gradient(180deg, #ffe773, #ffb52c 58%, #f48c14); box-shadow: 0 2px 0 #874a0e; text-shadow: none; }
+.citadel-hub-place .town-map-chip:focus-visible { outline: 3px solid #fff3b0; outline-offset: 3px; }
+
+@media (max-width: 760px) {
+  .town-map { grid-template-columns: 1fr; }
+  .town-card { flex-direction: row; }
+  .town-card-art { width: 96px; height: auto; }
+  .town-offers { grid-template-columns: 1fr; }
+}
+@media (max-height: 520px) {
+  .town-dialog { max-height: calc(100dvh - 10px); border-width: 3px; border-radius: 18px; }
+  .town-shell { max-height: calc(100dvh - 16px); }
+  .town-head { padding: 6px 14px; }
+  .town-head h2 { margin-top: 1px; font-size: 20px; }
+  .town-close { min-height: 40px; padding: 4px 14px; }
+  .town-body { padding: 8px 12px 10px; }
+  .town-foot { padding: 4px 12px; }
+  .town-foot button { min-height: 40px; }
+  .town-intro { display: none; }
+  .town-map { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .town-card { flex-direction: column; border-width: 2px; border-radius: 14px; }
+  .town-card-art { width: auto; height: 42px; }
+  .town-card-copy { gap: 3px; padding: 6px 9px 8px; }
+  .town-card-copy small { font-size: 9px; }
+  .town-card h3 { font-size: 15px; }
+  .town-mood { display: none; }
+  .town-gates li { padding: 1px 6px; font-size: 10px; }
+  .town-lock p { font-size: 10px; }
+  .town-go { min-height: 40px; font-size: 12px; }
+  .town-offers { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .town-offer { grid-template-columns: 44px minmax(0, 1fr) auto; gap: 8px; padding: 7px 9px; }
+  .town-offer-icon { width: 44px; height: 44px; }
+  .town-skill-sigil { width: 40px; height: 40px; font-size: 18px; }
+  .town-wallet { margin-bottom: 8px; padding: 4px 10px; }
+  .town-wallet strong { font-size: 18px; }
+  .town-section { margin: 8px 0 5px; font-size: 14px; }
+  .town-tabs { gap: 4px; margin-bottom: 8px; }
+  .town-tabs button { min-height: 40px; font-size: 11px; }
+  .town-tabs img { width: 28px; height: 28px; }
+}
+@media (prefers-reduced-motion: reduce) { .town-travel-veil { animation-duration: .01s; } }
+/* 마을 이름 칸(가장 긴 '별마루 설원 마을' + 이동 칩)이 가로 화면의 '출격 메뉴로' 버튼과 겹치지 않게 비켜 준다. */
+/* 마을 이름판(왼쪽 20px부터 폭 약 280px) 오른쪽에 붙인다. 272px 일 때 이름판 끝(300px)과 겹쳤다. */
+@media (orientation: landscape) and (min-width: 700px) { .oath-visual .citadel-hub-active .citadel-command-return { left: calc(312px + var(--sal, 0px)); } }

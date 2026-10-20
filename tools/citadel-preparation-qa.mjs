@@ -179,7 +179,7 @@ try {
     const after = await state(); unchanged(report.initial, after, 'Native manual setting', { allowAuto: true }); assert(after.primary.autoBattle === false, 'Manual choice was not durably saved'); report.checks.nativeManualSetting = { before: report.initial.autoBattle, after: after.autoBattle };
   });
   await step('Choose a real prior Lv4 AUTO perfect-dodge goal through native journal', async () => {
-    const before = await state(); await page.locator('.oath-nav-growth').tap(); await page.locator('#masterworks[open] .mw-tabs').getByRole('button', { name: '기록', exact: true }).tap();
+    const before = await state(); await page.locator('.oath-nav-menu').tap(); await page.locator('.mw-open').tap(); await page.locator('#masterworks[open] .mw-tabs').getByRole('button', { name: '기록', exact: true }).tap();
     await page.locator('#masterworks[open] [data-goal-run="4"]').tap(); await page.locator('#masterworks[open] [data-personal-goal-metric="perfects"]').tap();
     await page.waitForFunction(() => window.app.masterworks.s.personalGoal?.metric === 'perfects'); await page.locator('#masterworks[open] .mw-close').tap();
     const after = await state(); unchanged(before, after, 'Native real-history goal selection', { allowGoal: true });

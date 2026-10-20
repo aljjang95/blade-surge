@@ -9,34 +9,39 @@ import { buildExpeditionStage, buildExpeditionWorld } from '../src/game/expediti
 // Independent accepted totals: [existing altar/route holds, additional waves].
 // Astral choices have an independent four-confirmation contract below.
 // A treasure room alone is not an altar, and reinforcement counts are per elite.
-const contracts: Record<string, { standard: number[]; deep: number[] }> = {
+const contracts: Record<string, { standard: number[] | null; deep: number[] }> = {
   glass_garden: { standard: [1, 0], deep: [2, 0] },
   ember_vault: { standard: [0, 2], deep: [0, 2] },
   star_archive: { standard: [0, 0], deep: [2, 0] },
   bellfall_crypt: { standard: [3, 0], deep: [2, 2] },
   cinder_tide_lock: { standard: [2, 4], deep: [3, 4] },
   nightglass_observatory: { standard: [3, 0], deep: [5, 0] },
-  eclipse_hydra_vault: { standard: [0, 0], deep: [0, 4] },
-  ashforge_catacomb: { standard: [0, 0], deep: [0, 4] },
+  eclipse_hydra_vault: { standard: [3, 0], deep: [0, 4] },
+  ashforge_catacomb: { standard: [4, 0], deep: [0, 4] },
   astral_leviathan_spire: { standard: [0, 0], deep: [2, 2] },
-  verdigris_sanctum: { standard: [0, 0], deep: [2, 4] },
-  sable_mirage_basin: { standard: [0, 0], deep: [0, 4] },
-  comet_bastion: { standard: [0, 0], deep: [2, 4] },
+  verdigris_sanctum: { standard: [3, 0], deep: [2, 4] },
+  sable_mirage_basin: { standard: [3, 0], deep: [0, 4] },
+  comet_bastion: { standard: [4, 0], deep: [2, 4] },
+  // 컨셉 던전 2곳: 기본 원정 문구는 concept-dungeons 테스트가 맡고, 새 심층만 같은 표에 넣는다(정예 3곳 × 증원 1회).
+  glacier_tide_basin: { standard: null, deep: [0, 3] },
+  sunbrass_quarry: { standard: null, deep: [0, 3] },
 };
 
 // Disallow the specific unsupported interactions, without freezing prose or
 // rejecting narrative names such as a hydra's three heads or a ruined orbit.
 const unsupportedInstructions = /밸브|냉각로|(?:기록|기록물)\s*(?:세|3)\s*장|(?:별자리|성좌).*(?:복원|밟)|가짜 왕좌.*(?:깨|파괴)|궤도 고리.*정렬|생명 제단|포자 폭발|(?:세|3) 머리.*(?:들리|고개)|발자국.*환영|보라색 모래시계|푸른 궤도선/;
 
-test('all twelve exported dungeons have exactly one standard and one deep contract', () => {
+test('all twelve exported dungeons have exactly one standard and one deep contract; concept routes add deep only', () => {
   const ids = Object.keys(contracts).sort();
-  expect(DUNGEONS.map(d => d.id).sort()).toEqual(ids);
+  expect(DUNGEONS.map(d => d.id).sort()).toEqual(ids.filter(id => contracts[id].standard));
   expect(EXPEDITION_DEPTHS.map(d => d.id).sort()).toEqual(ids);
   expect(EXPEDITION_DEPTHS.every(d => d.depth === 'deep')).toBe(true);
 });
 
 for (const [id, contract] of Object.entries(contracts)) {
   for (const depth of ['standard', 'deep'] as const) {
+    const expected = contract[depth];
+    if (!expected) continue;
     test(`${id}/${depth}: published instructions match playable holds, waves and boss cues`, () => {
       const definition: any = (depth === 'standard' ? DUNGEONS : EXPEDITION_DEPTHS).find(d => d.id === id);
       const stage = buildExpeditionStage('dungeon', id, null, { depth });
@@ -50,7 +55,7 @@ for (const [id, contract] of Object.entries(contracts)) {
       const holds = (selectionRoute ? 0 : route?.gates.length || 0) + altarHolds;
       const selections = selectionRoute ? route!.gates.length : 0;
       expect(selections).toBe(id === 'astral_leviathan_spire' && depth === 'standard' ? 4 : 0);
-      expect([holds, elites * reinforcements]).toEqual(contract[depth]);
+      expect([holds, elites * reinforcements]).toEqual(expected);
       expect(stage.objective).toBe(definition.objective);
       expect(stage.encounter.tactic).toBe(definition.tactic);
       if (depth === 'standard') expect(definition.stage.objective).toBe(definition.objective);
@@ -72,13 +77,40 @@ for (const [id, contract] of Object.entries(contracts)) {
         expect(stage.encounter.tactic).toMatch(/모래시계 단서를 1초 읽고.*문자·도형 판에서 1초 유지/);
         expect(stage.encounter.tactic).toMatch(/오답.*판 밖.*재시도/);
         expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번', '4번']);
+      } else if (id === 'verdigris_sanctum' && depth === 'standard') {
+        expect(stage.objective).toMatch(/생명 제단 세 개/);
+        expect(stage.encounter.tactic).toMatch(/적.*처치.*빛 안.*2초.*정화/);
+        expect(stage.encounter.tactic).toMatch(/차례가 아닌.*1초.*포자/);
+        expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번']);
+      } else if (id === 'ashforge_catacomb' && depth === 'standard') {
+        expect(Number(stage.objective.match(/과열 용광로\s*(\d+)곳/)?.[1])).toBe(holds);
+        expect(stage.encounter.tactic).toMatch(/1\.4초 예고/);
+        expect(stage.encounter.tactic).toMatch(/청록 조작판.*2초 유지/);
+        expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번', '4번']);
+      } else if (id === 'eclipse_hydra_vault' && depth === 'standard') {
+        expect(Number(stage.objective.match(/역류 밸브 (세|3) ?개/) ? 3 : 0)).toBe(holds);
+        expect(stage.encounter.tactic).toMatch(/적.*처치.*빛 안.*2초.*잠그/);
+        expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번']);
+      } else if (id === 'comet_bastion' && depth === 'standard') {
+        expect(Number(stage.objective.match(/궤도 고리 (네|4) ?개/) ? 4 : 0)).toBe(holds);
+        expect(stage.encounter.tactic).toMatch(/적.*처치.*룬석을 몸으로 밀어 별 표식/);
+        expect(stage.encounter.tactic).toMatch(/안쪽이 안전.*중심 유성.*푸른 선 밖/);
+        expect(stage.encounter.tactic).toMatch(/어느 순서/);
+        expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번', '4번']);
+      } else if (id === 'sable_mirage_basin' && depth === 'standard') {
+        expect(Number(stage.objective.match(/가짜 왕좌 (세|3) ?개/) ? 3 : 0)).toBe(holds);
+        expect(stage.encounter.tactic).toMatch(/적.*처치.*보라 모래시계가 멈춘 동안.*다섯 차례 공격/);
+        expect((route as any).hits).toBe(5);
+        expect(stage.encounter.tactic).toMatch(/도는 동안.*반사/);
+        expect(stage.encounter.tactic).toMatch(/어느 순서/);
+        expect(stage.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번']);
       } else if (holds) {
         expect(stage.encounter.tactic).toMatch(/적.*처치.*중심.*2초.*공명/);
         if (!route) expect(stage.objective).toMatch(/2초\s*공명/);
       }
       if (!holds) expect(stage.objective).not.toMatch(/공명|제단/);
       const waves = stage.objective.match(/정예방\s*(\d+)곳의 증원 각\s*(\d+)회/);
-      expect(Number(waves?.[1] || 0) * Number(waves?.[2] || 0)).toBe(contract[depth][1]);
+      expect(Number(waves?.[1] || 0) * Number(waves?.[2] || 0)).toBe(expected[1]);
       if (reinforcements) {
         expect(Number(waves?.[1])).toBe(elites);
         expect(Number(waves?.[2])).toBe(reinforcements);
@@ -87,6 +119,10 @@ for (const [id, contract] of Object.entries(contracts)) {
       expect(stage.objective).toMatch(/처치|쓰러뜨리/);
       for (const copy of [definition.objective, definition.tactic, stage.objective, stage.encounter.tactic]) {
         const checked = id === 'cinder_tide_lock' ? copy.replaceAll('밸브', '')
+          : id === 'eclipse_hydra_vault' && depth === 'standard' ? copy.replaceAll('밸브', '')
+          : id === 'verdigris_sanctum' && depth === 'standard' ? copy.replaceAll('생명 제단', '').replaceAll('포자가 터져', '')
+          : id === 'sable_mirage_basin' && depth === 'standard' ? copy.replaceAll('가짜 왕좌', '왕좌')
+          : id === 'comet_bastion' && depth === 'standard' ? copy.replaceAll('궤도 고리', '고리').replaceAll('푸른 궤도선', '푸른 선')
           : id === 'nightglass_observatory' ? copy.replace(/기록\s*3장/g, '')
           : id === 'astral_leviathan_spire' && depth === 'standard' && selectionRoute
             ? copy.replaceAll('별자리 4개 순서대로 복원', '') : copy;
@@ -113,8 +149,8 @@ test('standard bellfall promises three ordered gates, deep keeps two unordered t
   const standard = buildExpeditionStage('dungeon', 'bellfall_crypt', null);
   const route = routeObjectiveForStage(standard)!;
   expect(route.gates.map(g => g.roomId)).toEqual([2, 3, 5]);
-  expect(route.holdSeconds).toBe(2);
-  expect(route.radius).toBe(3);
+  expect((route as { holdSeconds?: number }).holdSeconds).toBe(2);
+  expect((route as { radius?: number }).radius).toBe(3);
   expect(standard.objective).toMatch(/세 개의 종문.*순서/);
   expect(standard.encounter.tactic.match(/\d번/g)).toEqual(['1번', '2번', '3번']);
   expect(standard.encounter.tactic).toMatch(/순서가 아닌 종문.*기다/);

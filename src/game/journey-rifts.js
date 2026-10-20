@@ -1,4 +1,4 @@
-import { DUNGEONS } from '../data/expansion.js';
+import { ALL_DUNGEONS as DUNGEONS } from '../data/expansion.js';
 
 export const RIFT_RULES = [
   { id: 'iron', name: '철갑의 균열', description: '철갑이 피해 45%를 막습니다. 연속타·마무리로 BREAK를 만들고 열린 틈을 공격하세요.', hp: 1, atk: 1 },

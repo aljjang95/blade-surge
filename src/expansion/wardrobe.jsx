@@ -55,7 +55,7 @@ function Character({ app, id, equipment, yaw, reduced, onLook, onFit }) {
   const instance = useMemo(() => {
     const def = HEROES[id];
     const copy = spawnCharacter(app.models[def.model]);
-    copy.look = applyLook(copy.root, def, equipment);
+    copy.look = applyLook(copy.root, def, equipment, { avatarId: app.eco.equippedAvatar(id) });
     if (copy.clips.Idle) copy.mixer.clipAction(copy.clips.Idle).play();
     copy.frame = measureWardrobeFrame(copy);
     return copy;
@@ -86,13 +86,22 @@ function WardrobeView({ app, id, equipment }) {
   const [yaw, setYaw] = useState(.28);
   const [frame, setFrame] = useState(null);
   const reduced = app.reducedMotion.matches;
+  // 아이템 시트 같은 모달이 패널을 덮는 동안에는 매 프레임 그리지 않는다(시트의 3D 미리보기와 GPU를 나눠 쓰지 않게).
+  const [covered, setCovered] = useState(() => !!document.querySelector('#modal.show'));
+  useEffect(() => {
+    const modal = document.getElementById('modal');
+    if (!modal) return undefined;
+    const sync = () => setCovered(modal.classList.contains('show'));
+    const watch = new MutationObserver(sync); watch.observe(modal, { attributes: true, attributeFilter: ['class'] }); sync();
+    return () => watch.disconnect();
+  }, []);
   const armor = ITEM_BY_ID[equipment.armor?.id];
   return <div className="wardrobe-view"><h3>{HEROES[id].name} · 착용 모습</h3>
-    <div className="wardrobe-canvas"><Canvas dpr={[1,1.5]} camera={{position:[0,1.5,5.4],fov:36}} frameloop={reduced?'demand':'always'} gl={{antialias:true,alpha:true,powerPreference:'low-power'}} onCreated={({camera})=>camera.lookAt(0,1.35,0)}>
+    <div className="wardrobe-canvas"><Canvas dpr={[1,1.5]} camera={{position:[0,1.5,5.4],fov:36}} frameloop={reduced||covered?'demand':'always'} gl={{antialias:true,alpha:true,powerPreference:'low-power'}} onCreated={({camera})=>camera.lookAt(0,1.35,0)}>
       <FitCamera frame={frame}/><ambientLight intensity={1.3}/><directionalLight position={[3,5,4]} intensity={2.5}/><directionalLight position={[-3,2,-2]} color="#97d9d2" intensity={1.6}/>
       <Character app={app} id={id} equipment={equipment} yaw={yaw} reduced={reduced} onFit={setFrame}/>
       <mesh rotation={[-Math.PI/2,0,0]} position={[0,-.025,0]}><circleGeometry args={[1.25,48]}/><meshStandardMaterial color="#365849" roughness={.9}/></mesh>
-    </Canvas></div>
+    </Canvas>{!frame && <p className="wardrobe-loading" role="status">착용 모습을 불러오는 중</p>}</div>
     <div className="wardrobe-controls"><button aria-label="착용 모습 왼쪽 회전" onClick={()=>setYaw(yaw-Math.PI/4)}>↶</button><button onClick={()=>setYaw(0)}>정면</button><button aria-label="착용 모습 오른쪽 회전" onClick={()=>setYaw(yaw+Math.PI/4)}>↷</button></div>
     <p className="wardrobe-caption">{armor?armor.name:'기본 의상'}<br/>장착 즉시 외형 반영</p>
   </div>;
@@ -129,7 +138,8 @@ export class Wardrobe {
   show(id) {
     if (!this.app.models[HEROES[id].model]) return;
     const equipment=this.app.eco.heroEquipInsts(id);
-    this.root.render(<WardrobeView key={id+JSON.stringify(equipment)} app={this.app} id={id} equipment={equipment}/>);
+    // 아바타 착용·해제도 새 인스턴스로 다시 그리도록 키에 넣는다.
+    this.root.render(<WardrobeView key={id+JSON.stringify(equipment)+(this.app.eco.equippedAvatar(id)||'')} app={this.app} id={id} equipment={equipment}/>);
   }
   hide() { this.root.render(null); }
   /** 소환 구성품의 무기 외형 미리보기. 모달 안 요소에 별도 React 루트를 둔다. */

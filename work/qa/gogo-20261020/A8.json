@@ -1,0 +1,332 @@
+{
+  "id": "A8",
+  "title": "스킬 트리 각성 습득·장착 거부·유지",
+  "pass": true,
+  "checks": [
+    {
+      "name": "습득 가능한 각성 스킬이 있다",
+      "ok": true,
+      "detail": [
+        {
+          "i": 4,
+          "state": "is-ready",
+          "awaken": true,
+          "label": "성쇄 · 결박, 습득 가능, 스킬 포인트 2"
+        },
+        {
+          "i": 5,
+          "state": "is-ready",
+          "awaken": true,
+          "label": "천상의 성역, 습득 가능, 스킬 포인트 2"
+        },
+        {
+          "i": 6,
+          "state": "is-ready",
+          "awaken": true,
+          "label": "성검 · 태양파쇄, 습득 가능, 스킬 포인트 2"
+        },
+        {
+          "i": 7,
+          "state": "is-locked",
+          "awaken": true,
+          "label": "천상 · 신벌강림, 잠김, 캐릭터 Lv.50 필요"
+        }
+      ]
+    },
+    {
+      "name": "습득: 스킬 레벨 0→1",
+      "ok": true,
+      "detail": {
+        "before": 0,
+        "after": 1
+      }
+    },
+    {
+      "name": "습득: SP 감소",
+      "ok": true,
+      "detail": {
+        "before": 38,
+        "after": 36
+      }
+    },
+    {
+      "name": "한 번 더 올리기: 레벨 1→2·SP 추가 감소",
+      "ok": true,
+      "detail": {
+        "level": 2,
+        "sp": [
+          36,
+          35
+        ]
+      }
+    },
+    {
+      "name": "미습득 각성 스킬: UI에 장착 행 없음",
+      "ok": true,
+      "detail": [
+        {
+          "idx": 5,
+          "equipRowVisible": false,
+          "learnDisabled": false
+        },
+        {
+          "idx": 6,
+          "equipRowVisible": false,
+          "learnDisabled": false
+        },
+        {
+          "idx": 7,
+          "equipRowVisible": false,
+          "learnDisabled": true
+        }
+      ]
+    },
+    {
+      "name": "미습득 각성 스킬: setSkillLoadout 거부(false)",
+      "ok": true,
+      "detail": [
+        {
+          "idx": 5,
+          "slot0": false,
+          "slot1": false
+        },
+        {
+          "idx": 6,
+          "slot0": false,
+          "slot1": false
+        },
+        {
+          "idx": 7,
+          "slot0": false,
+          "slot1": false
+        }
+      ]
+    },
+    {
+      "name": "새로고침 뒤 스킬 레벨 유지",
+      "ok": true,
+      "detail": [
+        1,
+        1,
+        1,
+        1,
+        2,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "name": "새로고침 뒤 SP 유지",
+      "ok": true,
+      "detail": {
+        "before": 35,
+        "after": 35
+      }
+    }
+  ],
+  "injected": [
+    "eco 상태 준비: {\"hero\":\"knight\",\"level\":30,\"grade\":null,\"gold\":0,\"tutorial\":true}",
+    "미습득 각성 스킬 장착 시도는 eco.setSkillLoadout API 직접 호출(UI에는 장착 행이 없음을 함께 확인)"
+  ],
+  "real": [
+    "부팅: #btn-ignore-rotate·#boot-start 실제 탭 → lobby",
+    "하단 내비 영웅·장비 → \"스킬 트리\" 실제 탭",
+    "각성 스킬 칸 탭 → \"습득\" 버튼 실제 탭",
+    "\"강화\" 버튼 한 번 더 실제 탭",
+    "새로고침(page.reload)"
+  ],
+  "observed": {
+    "start": {
+      "id": "knight",
+      "level": 30,
+      "skills": [
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0,
+        0
+      ],
+      "loadout": [
+        4,
+        5
+      ],
+      "sp": 38,
+      "spent": 0,
+      "earned": 38
+    },
+    "cellsBefore": [
+      {
+        "i": 0,
+        "state": "is-learned",
+        "awaken": false,
+        "label": "성검 일섬, Lv.1/10"
+      },
+      {
+        "i": 1,
+        "state": "is-learned",
+        "awaken": false,
+        "label": "철벽 강타, Lv.1/10"
+      },
+      {
+        "i": 2,
+        "state": "is-learned",
+        "awaken": false,
+        "label": "심판의 빛, Lv.1/10"
+      },
+      {
+        "i": 3,
+        "state": "is-learned",
+        "awaken": false,
+        "label": "용살검 · 천공, Lv.1/10"
+      },
+      {
+        "i": 4,
+        "state": "is-ready",
+        "awaken": true,
+        "label": "성쇄 · 결박, 습득 가능, 스킬 포인트 2"
+      },
+      {
+        "i": 5,
+        "state": "is-ready",
+        "awaken": true,
+        "label": "천상의 성역, 습득 가능, 스킬 포인트 2"
+      },
+      {
+        "i": 6,
+        "state": "is-ready",
+        "awaken": true,
+        "label": "성검 · 태양파쇄, 습득 가능, 스킬 포인트 2"
+      },
+      {
+        "i": 7,
+        "state": "is-locked",
+        "awaken": true,
+        "label": "천상 · 신벌강림, 잠김, 캐릭터 Lv.50 필요"
+      }
+    ],
+    "target": {
+      "idx": 4,
+      "others": [
+        5,
+        6,
+        7
+      ]
+    },
+    "afterLearn": {
+      "learnLabel": "습득 (SP 2)",
+      "id": "knight",
+      "level": 30,
+      "skills": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        0,
+        0,
+        0
+      ],
+      "loadout": [
+        4,
+        5
+      ],
+      "sp": 36,
+      "spent": 2,
+      "earned": 38
+    },
+    "afterUpgrade": {
+      "id": "knight",
+      "level": 30,
+      "skills": [
+        1,
+        1,
+        1,
+        1,
+        2,
+        0,
+        0,
+        0
+      ],
+      "loadout": [
+        4,
+        5
+      ],
+      "sp": 35,
+      "spent": 3,
+      "earned": 38
+    },
+    "equipAttempt": {
+      "ui": [
+        {
+          "idx": 5,
+          "equipRowVisible": false,
+          "learnDisabled": false
+        },
+        {
+          "idx": 6,
+          "equipRowVisible": false,
+          "learnDisabled": false
+        },
+        {
+          "idx": 7,
+          "equipRowVisible": false,
+          "learnDisabled": true
+        }
+      ],
+      "api": [
+        {
+          "idx": 5,
+          "slot0": false,
+          "slot1": false
+        },
+        {
+          "idx": 6,
+          "slot0": false,
+          "slot1": false
+        },
+        {
+          "idx": 7,
+          "slot0": false,
+          "slot1": false
+        }
+      ],
+      "loadoutAfter": [
+        4,
+        5
+      ]
+    },
+    "afterReload": {
+      "id": "knight",
+      "level": 30,
+      "skills": [
+        1,
+        1,
+        1,
+        1,
+        2,
+        0,
+        0,
+        0
+      ],
+      "loadout": [
+        4,
+        5
+      ],
+      "sp": 35,
+      "spent": 3,
+      "earned": 38
+    }
+  },
+  "captures": [
+    "A8-tree-open.png",
+    "A8-learned-1.png",
+    "A8-learned-2.png"
+  ],
+  "pageErrors": [],
+  "started": "2026-10-20T05:01:44.656Z",
+  "finished": "2026-10-20T05:02:00.594Z"
+}

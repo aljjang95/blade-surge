@@ -1,5 +1,5 @@
 import { PARTY_CODE, PARTY_LIMITS } from '../src/party/protocol.js';
-import { partyVisualMessage } from '../src/party/visual-protocol.js';
+import { partyAvatarMessage, partyVisualMessage } from '../src/party/visual-protocol.js';
 import { PartyError, PartyState, type Effect } from './party-state';
 
 interface Storage {
@@ -46,7 +46,7 @@ export async function handlePartyRequest(request: Request, env: PartyEnv): Promi
   }
   const room = env.PARTIES.get(env.PARTIES.idFromName(`room:${code}`));
   const joinUrl = new URL('https://party.internal/join');
-  for (const key of ['name', 'hero', 'ticket', 'visuals']) {
+  for (const key of ['name', 'hero', 'avatar', 'ticket', 'visuals', 'avatars']) {
     const value = url.searchParams.get(key);
     if (value !== null) joinUrl.searchParams.set(key, value);
   }
@@ -59,6 +59,7 @@ export class PartyRoom {
   private room?: PartyState;
   private sockets = new Map<string, Socket>();
   private visualClients = new Set<string>();
+  private avatarClients = new Set<string>();
   constructor(private readonly ctx: { storage: Storage }) {}
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url), now = Date.now();
@@ -93,10 +94,11 @@ export class PartyRoom {
     if (!this.room) return json({ error: 'room-unavailable' }, 410);
     if (now >= this.room.expiresAt) { this.end('expired'); return json({ error: 'expired' }, 410); }
     try {
-      const result = this.room.join(url.searchParams.get('name') ?? '', url.searchParams.get('hero') ?? '', url.searchParams.get('ticket'), now);
+      const result = this.room.join(url.searchParams.get('name') ?? '', url.searchParams.get('hero') ?? '', url.searchParams.get('ticket'), now, url.searchParams.get('avatar') ?? undefined);
       const pair = new WebSocketPair(), server = pair[1];
       server.accept(); this.sockets.set(result.id, server);
       if (url.searchParams.get('visuals') === '1') this.visualClients.add(result.id);
+      if (url.searchParams.get('avatars') === '1') this.avatarClients.add(result.id);
       server.addEventListener('message', event => {
         try {
           if (Date.now() >= this.room!.expiresAt) { this.end('expired'); return; }
@@ -120,11 +122,16 @@ export class PartyRoom {
   private dispatch(effects: Effect[]) {
     const failed: string[] = [];
     for (const effect of effects) {
-      const text = JSON.stringify(effect.message);
-      const legacyText = JSON.stringify(partyVisualMessage(effect.message, false));
+      // 클라이언트 능력(시각 효과·아바타)별로 직렬화 결과를 한 번씩만 만든다.
+      const texts = new Map<string, string>();
+      const textFor = (visuals: boolean, avatars: boolean) => {
+        const key = `${+visuals}${+avatars}`;
+        if (!texts.has(key)) texts.set(key, JSON.stringify(partyAvatarMessage(partyVisualMessage(effect.message, visuals), avatars)));
+        return texts.get(key)!;
+      };
       for (const [id, socket] of this.sockets) {
         if ((effect.to && effect.to !== id) || effect.except === id) continue;
-        try { socket.send(this.visualClients.has(id) ? text : legacyText); } catch { failed.push(id); }
+        try { socket.send(textFor(this.visualClients.has(id), this.avatarClients.has(id))); } catch { failed.push(id); }
       }
     }
     for (const id of new Set(failed)) this.drop(id, 'send-failed');
@@ -135,11 +142,12 @@ export class PartyRoom {
     if (!socket) return;
     this.sockets.delete(id);
     this.visualClients.delete(id);
+    this.avatarClients.delete(id);
     try { socket.close(1000, reason); } catch { /* already closed */ }
     if (this.room) this.dispatch(this.room.disconnect(id));
   }
   private closeAll() {
-    const sockets = [...this.sockets.values()]; this.sockets.clear(); this.visualClients.clear();
+    const sockets = [...this.sockets.values()]; this.sockets.clear(); this.visualClients.clear(); this.avatarClients.clear();
     for (const socket of sockets) { try { socket.close(1000, 'party-ended'); } catch { /* already closed */ } }
   }
   private end(reason: string) { if (this.room) this.dispatch(this.room.abort(reason)); this.closeAll(); }

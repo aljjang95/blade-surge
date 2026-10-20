@@ -2,6 +2,7 @@
 import { EXPEDITION_SETS, EXPEDITION_ITEMS } from './expedition-items.js';
 import { SUMMON_GEAR } from './summon-gear.js';
 import { ARMORY_SETS, ARMORY_ITEMS } from './armory.js';
+import { GEAR_ITEMS, assignGearLooks } from './gear-catalog.js';
 export const SLOTS = ['weapon', 'armor', 'ring', 'boots'];
 export const SLOT_NAME = { weapon: '무기', armor: '방어구', ring: '반지', boots: '신발' };
 
@@ -124,6 +125,8 @@ export const ITEM_POOL = {
   ],
 };
 export const ITEM_BY_ID = {};
+for (const slot of SLOTS) for (const item of ITEM_POOL[slot]) if (!item.set) item.icon = `/img/gear/${item.id}.webp`;
+for (const item of GEAR_ITEMS) ITEM_POOL[item.slot].push(item);
 for (const set of ARMORY_SETS) { SETS[set.id] = set; THEMED_SETS.push(set.id); }
 for (const item of ARMORY_ITEMS) ITEM_POOL[item.slot].push(item);
 for (const set of EXPEDITION_SETS) SETS[set.id] = set;
@@ -135,6 +138,18 @@ for (const s of SLOTS) { const seen = {}; ITEM_POOL[s].forEach((it) => {
   ITEM_BY_ID[it.id] = { ...it, slot: s, set: it.set || RARITY_SET[it.rarity] || null, variant: k, sheetIcon };
 }); }
 /** 등급별 아이템 목록 */
+// 마을 상인 전용 무기·갑옷. 드랍·가챠 풀(ITEM_POOL)에는 넣지 않아 기존 확률을 보존하고 ITEM_BY_ID에만 등록한다.
+// appearanceTier는 판매 마을 tier(성채 1·항구 2·설원 3)와 같다. 기존 아이템은 이 필드 없이 등급으로 계산된다.
+export const TOWN_ITEMS = [
+  { ...W('w_town_oath', '서약 수비대검', 'S', 1.15, { crit: 0.02, appearanceTier: 1, icon: '/img/it_s_weapon_3.webp' }), slot: 'weapon' },
+  { ...A('a_town_oath', '서약 수비대 갑주', 'S', 1.15, { appearanceTier: 1, icon: '/img/it_s_armor_3.webp' }), slot: 'armor' },
+  { ...W('w_town_ember', '잿불 항해검', 'E', 1.2, { crit: 0.05, appearanceTier: 2, icon: '/img/it_e_weapon_3.webp' }), slot: 'weapon' },
+  { ...A('a_town_ember', '잿불 항해 갑주', 'E', 1.2, { appearanceTier: 2, icon: '/img/it_e_armor_3.webp' }), slot: 'armor' },
+  { ...W('w_town_star', '별마루 성검', 'L', 1.12, { crit: 0.1, appearanceTier: 3, icon: '/img/it_l_weapon_3.webp' }), slot: 'weapon' },
+  { ...A('a_town_star', '별마루 설원 갑주', 'L', 1.12, { crit: 0.03, appearanceTier: 3, icon: '/img/it_l_armor_3.webp' }), slot: 'armor' },
+];
+for (const it of TOWN_ITEMS) ITEM_BY_ID[it.id] = { ...it, icon: `/img/gear/${it.id}.webp`, set: RARITY_SET[it.rarity] || null, variant: 3, sheetIcon: null };
+assignGearLooks(ITEM_BY_ID);
 export const ITEMS_OF = (rarity, slot = null) => Object.values(ITEM_BY_ID).filter((it) => it.rarity === rarity && (!slot || it.slot === slot));
 /** 등급 순서 인덱스 (정렬용) */
 export const rarityRank = (r) => RARITIES.indexOf(r);

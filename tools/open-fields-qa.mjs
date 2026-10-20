@@ -53,7 +53,7 @@ try {
   await page.locator('#boot-start:not(.hidden)').waitFor({state:'visible',timeout:180000});await page.locator('#boot-start').click();
   await page.waitForFunction(()=>window.app?.mode==='lobby'&&!document.querySelector('#boot.show'),null,{timeout:90000});
   for(let i=0;i<8;i++){if(await page.locator('#modal.show #m-cancel').isVisible())await page.locator('#m-cancel').click();await page.waitForTimeout(200);}
-  await page.locator('#citadel-command-fields').click();
+  await page.locator('.oath-nav-menu').click(); await page.locator('#menu-fields').click();
   for(const viewport of [{width:360,height:800},{width:390,height:844},{width:1440,height:900}]) {
     await page.setViewportSize(viewport);await rotate();const rows=[];
     for(const d of FIELD_DUNGEONS){const card=page.locator(`.exp-dungeon[data-depth="fields"][data-dungeon="${d.id}"]`),button=card.locator('.exp-primary');await button.scrollIntoViewIfNeeded();await card.locator('.exp-dungeon-art > img').evaluate(e=>e.decode());

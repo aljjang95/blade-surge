@@ -1,0 +1,376 @@
+/*
+ * 동화풍 캐주얼 판타지 스킨 — 밝고 채도 높은 색, 금테·두툼한 버튼·리본 헤더·보석 슬롯.
+ *
+ * 규칙
+ *  - 시각 속성(배경·테두리·그림자·글꼴·색)만 바꾼다. 위치·크기·표시 여부 같은 배치 속성은 기존 레이아웃 CSS 가 소유한다.
+ *  - 기존 oath/garden/readability 규칙이 id 선택자로 겹쳐 쌓여 있어서, :root 를 겹쳐 쓴 선택자로 순서와 무관하게 이긴다.
+ *  - 새 이미지 없이 CSS 그라디언트만 쓴다(번들 크기·드로우콜 영향 없음). 움직임은 transform/opacity 만, 동작 줄이기에서는 끈다.
+ */
+:root:root {
+  --sb-gold-hi: #fff4b4; --sb-gold: #ffd24d; --sb-gold-lo: #e8932a; --sb-gold-edge: #7a410f;
+  --sb-ink: #3a2a14; --sb-cream: #fff8e4; --sb-parchment: #f8e6b8;
+  --sb-teal-hi: #46a6bd; --sb-teal: #2a7b94; --sb-teal-lo: #174d66; --sb-night: #0f3048;
+  --sb-grass: #78d576; --sb-grass-lo: #2f9358; --sb-sky: #74c4f6; --sb-sky-lo: #2f74cb; --sb-coral: #ffa070; --sb-coral-lo: #cf5a3e;
+  --sb-frame: linear-gradient(180deg, #fff2a6 0%, #ffc83d 42%, #dd8a26 74%, #a35a14 100%);
+  --sb-shadow: 0 5px 0 rgba(20, 12, 4, .3), 0 12px 26px rgba(6, 22, 44, .45);
+  /* 제목도 UI 서체의 Bold 한 벌을 쓴다(typography.css). 둥근 장식 서체는 쓰지 않는다. */
+  --disp: var(--font-title);
+  --bg: #0f2c44; --panel: rgba(21, 66, 96, .9); --panel2: rgba(32, 90, 120, .95); --line: rgba(255, 216, 112, .45);
+  --txt: #fff8e8; --muted: #c4dce8; --gold: #ffd24d; --gold2: #ff9a1f;
+}
+
+/* ---------- 버튼: 두툼한 외곽선 + 윗면 광택 + 바닥 그림자 ---------- */
+:root:root .btn {
+  --e: #6b3a0c;
+  border-radius: 16px;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, .4);
+  box-shadow: 0 0 0 2px var(--e), 0 5px 0 2px var(--e), 0 10px 14px 2px rgba(8, 20, 40, .38), inset 0 2px 0 rgba(255, 255, 255, .75), inset 0 -4px 0 rgba(0, 0, 0, .13);
+}
+:root:root .btn:active { transform: translateY(3px); box-shadow: 0 0 0 2px var(--e), 0 2px 0 2px var(--e), 0 4px 8px 2px rgba(8, 20, 40, .3), inset 0 2px 0 rgba(255, 255, 255, .6), inset 0 -3px 0 rgba(0, 0, 0, .13); }
+:root:root .btn-gold { --e: #874a0e; color: #4a2406; background: linear-gradient(180deg, rgba(255,255,255,.55) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #ffe773, #ffb52c 58%, #f48c14); }
+:root:root .btn-blue { --e: #134a8e; color: #fff; text-shadow: 0 1px 0 #0b3470, 0 0 6px rgba(10, 50, 120, .5); background: linear-gradient(180deg, rgba(255,255,255,.5) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #92dcff, #42a8ff 56%, #1f70ee); }
+:root:root .btn-red { --e: #861a2c; color: #fff; text-shadow: 0 1px 0 #6a0f20; background: linear-gradient(180deg, rgba(255,255,255,.45) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #ff9aae, #ff4864 56%, #d11e44); }
+:root:root .btn-ghost { --e: #12344f; color: #fff; text-shadow: 0 1px 2px rgba(0, 20, 40, .7); background: linear-gradient(180deg, rgba(255,255,255,.26) 0 47%, rgba(255,255,255,.04) 48%), linear-gradient(180deg, #3e82ab, #265a82); }
+:root:root .btn-ad { --e: #0f6a3a; color: #08361c; background: linear-gradient(180deg, rgba(255,255,255,.5) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #a6ffc4, #4fe08c 58%, #1fb862); }
+:root:root .btn[disabled] { filter: grayscale(.75) brightness(.78); }
+:root:root .btn small { text-shadow: none; }
+:root:root .btn-battle { font-family: var(--disp); }
+
+/* ---------- 상단 바: 금테 캡슐 ---------- */
+:root:root:root #meta .profile,
+:root:root:root #meta .cur {
+  border: 2px solid transparent;
+  background: linear-gradient(180deg, #3b95ad, #1e5f7b) padding-box, var(--sb-frame) border-box;
+  color: #fff9e6;
+  box-shadow: 0 3px 0 rgba(10, 30, 50, .35), 0 8px 16px rgba(6, 28, 50, .35), inset 0 1px 0 rgba(255, 255, 255, .45);
+  text-shadow: 0 1px 2px rgba(0, 24, 44, .7);
+}
+:root:root:root #meta .topbar .avatar { border: 3px solid var(--sb-gold); box-shadow: 0 0 0 2px #7a410f, 0 0 12px rgba(255, 214, 90, .55); background: #fff1c8; }
+:root:root:root #meta .topbar .prof-name { color: #fff; font-family: var(--disp); font-weight: 400; font-size: 15px; letter-spacing: .02em; }
+:root:root:root #meta .topbar .prof-lv { color: #d6f1fb; }
+:root:root:root #meta .cur .plus { background: linear-gradient(180deg, #b6f58a, #4fc447); border: 2px solid #1f7a2c; color: #0e4a1a; box-shadow: inset 0 1px 0 rgba(255, 255, 255, .7), 0 2px 0 #1b6a28; text-shadow: none; }
+:root:root:root #meta .cur .ic { filter: drop-shadow(0 1px 1px rgba(0, 30, 50, .6)); }
+
+/* ---------- 하단 내비게이션: 하늘빛 바닥 + 금테, 선택 탭은 빛나는 보석 ---------- */
+:root:root:root #meta .bottomnav {
+  border: 3px solid transparent;
+  background: linear-gradient(180deg, #2f86a2 0%, #195a76 55%, #123f58 100%) padding-box, var(--sb-frame) border-box;
+  box-shadow: 0 5px 0 rgba(10, 24, 40, .35), 0 14px 28px rgba(6, 26, 46, .5), inset 0 2px 0 rgba(255, 255, 255, .4);
+}
+:root:root:root #meta .bottomnav button { color: #fff6dc; text-shadow: 0 1px 2px rgba(0, 24, 44, .8); font-weight: 900; }
+:root:root:root #meta .bottomnav button.on {
+  border: 2px solid #ffe08a;
+  background: radial-gradient(ellipse at 50% 20%, rgba(255, 244, 170, .55), rgba(255, 190, 60, .2) 60%, rgba(255, 190, 60, 0)), linear-gradient(180deg, #2d8fae, #1b6382);
+  color: #fff3b8;
+  box-shadow: 0 0 14px rgba(255, 214, 90, .55), inset 0 1px 0 rgba(255, 255, 255, .55);
+}
+:root:root:root #meta .bottomnav button .ic,
+:root:root:root #meta .bottomnav button[data-tab=home] .ic { border: 2px solid #ffd96a; background-color: #164d68; box-shadow: 0 2px 0 rgba(8, 28, 44, .45), inset 0 0 8px rgba(255, 235, 150, .35); }
+:root:root:root #meta .bottomnav button.on .ic { box-shadow: 0 0 10px rgba(255, 224, 120, .8), inset 0 0 8px rgba(255, 235, 150, .5); }
+:root:root:root #meta .bottomnav .dot, :root:root .dot { background: #ff4766; border: 2px solid #fff; box-shadow: 0 0 6px rgba(255, 60, 100, .8); }
+
+/* ---------- 출격 선택 패널: 금테 양피지 + 보석빛 카드 ---------- */
+
+:root:root .citadel-command-return { border: 2px solid transparent; background: linear-gradient(#3b95ad, #1e5f7b) padding-box, var(--sb-frame) border-box; color: #fff; text-shadow: 0 1px 2px rgba(0, 24, 40, .7); }
+
+/* ---------- 마을 알림·카메라 도구 ---------- */
+:root:root .citadel-hub-active .citadel-hub-place { border: 2px solid #e6b64d; background: linear-gradient(120deg, #fffaf0, #f6dfae); }
+:root:root .citadel-hub-active .citadel-hub-near { border: 3px solid #e6b64d; background: linear-gradient(125deg, #fffaf0, #f6dfae); }
+:root:root .citadel-hub-active .citadel-hub-interact { border: 2px solid #874a0e; background: linear-gradient(180deg, rgba(255,255,255,.5) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #ffe773, #ffb52c 58%, #f48c14); box-shadow: 0 3px 0 #874a0e, inset 0 1px 0 rgba(255, 255, 255, .7); font-weight: 900; }
+:root:root:root.oath-visual #tab-home #lobby-camera-toggle, :root:root:root.oath-visual #tab-home .lobby-camera-buttons button, :root:root:root.oath-visual #tab-home .oath-build-entry, :root:root:root.oath-visual #tab-home .lobby-left .companion-launcher { border: 2px solid #ffe08a; background: linear-gradient(#3b95ad, #1e5f7b); color: #fff; box-shadow: 0 3px 0 rgba(8, 30, 48, .4); text-shadow: 0 1px 2px rgba(0, 24, 40, .7); }
+
+/* ---------- 패널·탭: 맑은 청록 바닥 + 금색 구분선 ---------- */
+:root:root .panel { background: linear-gradient(180deg, rgba(36, 106, 136, .93), rgba(18, 62, 92, .95)); border-top: 3px solid #ffd96a; border-bottom: 3px solid #ffd96a; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .15), 0 10px 30px rgba(6, 26, 46, .4); }
+:root:root .panel-head, :root:root .pass-head { border-bottom: 2px solid rgba(255, 216, 112, .55); }
+:root:root .panel h2, :root:root .pass-head h2 { font-family: var(--disp); font-weight: 400; color: #fff6d0; text-shadow: 0 2px 0 rgba(8, 36, 60, .6); letter-spacing: .02em; }
+:root:root .chapter-tabs button { border: 2px solid rgba(255, 255, 255, .5); background: linear-gradient(180deg, #4aa6c0, #277696); color: #fff; box-shadow: 0 3px 0 rgba(8, 36, 60, .4); text-shadow: 0 1px 2px rgba(0, 30, 50, .6); border-radius: 12px; }
+:root:root .chapter-tabs button.on { border-color: #874a0e; background: linear-gradient(180deg, rgba(255,255,255,.5) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #ffe773, #ffb52c 58%, #f48c14); color: #4a2406; text-shadow: 0 1px 0 rgba(255, 255, 255, .5); }
+:root:root .stage-cell { border: 2px solid rgba(255, 255, 255, .55); background: linear-gradient(180deg, rgba(255,255,255,.3) 0 42%, rgba(255,255,255,0) 43%), linear-gradient(180deg, #4aa6c0, #1f6485); box-shadow: 0 3px 0 rgba(8, 36, 60, .45); text-shadow: 0 1px 2px rgba(0, 30, 50, .6); }
+:root:root .stage-cell.boss { border-color: #ffb3bd; background: linear-gradient(180deg, rgba(255,255,255,.3) 0 42%, rgba(255,255,255,0) 43%), linear-gradient(180deg, #e35572, #9b1f3f); }
+:root:root .stage-cell.on { border-color: var(--sb-gold); box-shadow: 0 0 0 2px #7a410f, 0 0 16px rgba(255, 214, 90, .8); }
+:root:root .stage-detail { background: linear-gradient(180deg, rgba(12, 50, 76, .75), rgba(8, 34, 56, .85)); border-top: 2px solid rgba(255, 216, 112, .6); }
+:root:root .stage-detail h3 { font-family: var(--disp); font-weight: 400; color: #fff6d0; }
+:root:root .reward-chip { background: rgba(255, 248, 220, .18); border: 1px solid rgba(255, 216, 112, .5); }
+
+/* ---------- 영웅·장비: 보석 슬롯 ---------- */
+:root:root .hero-list { border-right: 2px solid rgba(255, 216, 112, .5); }
+:root:root .hero-card { border: 3px solid #e6c066; border-radius: 14px; box-shadow: 0 3px 0 rgba(8, 30, 48, .5), inset 0 0 0 1px rgba(255, 255, 255, .35); }
+:root:root .hero-card.on { border-color: #fff0a0; box-shadow: 0 0 0 2px #7a410f, 0 0 16px rgba(255, 224, 110, .85); }
+:root:root .hero-detail h2 { font-family: var(--disp); font-weight: 400; text-shadow: 0 2px 0 rgba(8, 36, 60, .6); }
+:root:root .stat { background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.06)); border: 1px solid rgba(255, 216, 112, .35); border-radius: 10px; }
+:root:root .equip-slot, :root:root .inventory-item {
+  border: 3px solid #e6c066; border-radius: 14px;
+  background: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, .28), rgba(255, 255, 255, 0) 60%), linear-gradient(180deg, #2c7d98, #164b66);
+  box-shadow: 0 3px 0 rgba(8, 30, 48, .5), inset 0 0 12px rgba(255, 240, 170, .3);
+}
+:root:root .equip-slot:not(.has) { border-style: dashed; border-color: rgba(255, 220, 120, .6); box-shadow: inset 0 0 10px rgba(0, 20, 40, .35); }
+:root:root .skill-ic { border: 2px solid #ffe08a; border-radius: 14px; box-shadow: 0 2px 0 rgba(8, 30, 48, .5); }
+:root:root .next-challenge { border: 2px solid rgba(255, 216, 112, .7); background: linear-gradient(180deg, rgba(255, 224, 120, .18), rgba(255, 224, 120, .06)); border-radius: 16px; }
+:root:root .bag-filters button { border: 2px solid rgba(255, 255, 255, .45); background: linear-gradient(#3e95b0, #226c88); border-radius: 12px; color: #fff; }
+:root:root .bag-filters button[aria-pressed="true"] { border-color: #874a0e; background: linear-gradient(#ffe773, #ffb52c); color: #4a2406; }
+:root:root .rar-SSR { box-shadow: inset 0 0 14px rgba(255, 207, 90, .6), 0 0 10px rgba(255, 207, 90, .4) !important; }
+
+/* ---------- 소환: 금테 배너 ---------- */
+:root:root .gacha-wrap { background: radial-gradient(ellipse at 50% 15%, rgba(120, 90, 220, .55), transparent 62%), linear-gradient(180deg, rgba(40, 110, 150, .35), rgba(20, 60, 100, .5)); }
+:root:root .gacha-banner { border: 4px solid transparent; background: linear-gradient(#150d26, #150d26) padding-box, var(--sb-frame) border-box; box-shadow: 0 6px 0 rgba(90, 50, 10, .4), 0 0 34px rgba(255, 200, 90, .35), 0 16px 30px rgba(6, 20, 40, .5); border-radius: 22px; }
+:root:root .banner-kicker { color: #ffe37a; text-shadow: 0 1px 2px #000; }
+:root:root .banner-txt h2 { font-family: var(--disp); font-weight: 400; -webkit-text-stroke: 2px #6a3408; paint-order: stroke fill; color: #fff6cf; text-shadow: 0 3px 0 rgba(106, 52, 8, .6); }
+:root:root .banner-sub { color: #f2e9ff; }
+:root:root .gacha-foot { color: #e4f3fa; }
+:root:root .link { color: #bfe6ff; }
+
+/* ---------- 상점·패스 ---------- */
+:root:root .shop-item { border: 3px solid #e6c066; background: linear-gradient(180deg, rgba(255,255,255,.2) 0 36%, rgba(255,255,255,0) 37%), linear-gradient(180deg, #2f89a4, #1a5a76); box-shadow: 0 4px 0 rgba(8, 30, 48, .5), inset 0 0 0 1px rgba(255, 255, 255, .3); border-radius: 18px; }
+:root:root .shop-item.hot { border-color: #fff0a0; background: linear-gradient(180deg, rgba(255,255,255,.22) 0 36%, rgba(255,255,255,0) 37%), linear-gradient(180deg, #c8741f, #7e3a10); }
+:root:root .shop-item .si-name { color: #fff; text-shadow: 0 1px 2px rgba(0, 24, 44, .7); }
+:root:root .shop-item .timer, :root:root .shop-item .si-desc .timer { color: #ffd0d8; }
+:root:root .shop-item.hot .si-desc { color: #fff1d6; }
+:root:root .shop-item .si-desc, :root:root .shop-notice { color: #eaf6fb; }
+:root:root .shop-item .badge { border: 2px solid #fff; background: linear-gradient(#ff7088, #e0284e); box-shadow: 0 2px 0 #861a2c; }
+:root:root .shop-item .si-desc { color: #e6f4fa; }
+:root:root .shop-item .si-bonus { color: #b8ff9a; }
+:root:root .pass-cell { border: 3px solid #e6c066; background: linear-gradient(180deg, #2f89a4, #1a5a76); box-shadow: 0 3px 0 rgba(8, 30, 48, .5); }
+:root:root .pass-cell.prem { border-color: #e2b2ff; background: linear-gradient(180deg, #8a54d6, #50278f); }
+:root:root .bar { background: rgba(8, 30, 48, .6); border: 2px solid rgba(255, 255, 255, .35); box-shadow: inset 0 2px 3px rgba(0, 0, 0, .4); }
+:root:root .bar > div { background: linear-gradient(180deg, #a6e4ff, #3da8ff 55%, #1f6fe6); }
+
+/* ---------- 모달·일시정지·메뉴: 금테 카드 + 리본 제목 ---------- */
+:root:root .modal-box, :root:root .oath-menu {
+  border: 4px solid transparent;
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,0) 22%), linear-gradient(170deg, #2d86a2, #17506b) padding-box, var(--sb-frame) border-box;
+  box-shadow: 0 6px 0 rgba(90, 50, 10, .4), 0 22px 50px rgba(4, 20, 40, .6), inset 0 0 0 2px rgba(255, 255, 255, .25);
+  color: var(--txt);
+}
+:root:root .modal-box h2, :root:root .oath-menu-heading h2 {
+  display: block; width: fit-content; max-width: 100%; margin-inline: auto; padding: 4px 34px 6px;
+  font-family: var(--disp); font-weight: 400; color: #fffbe6; letter-spacing: .03em;
+  -webkit-text-stroke: 2px #7a410f; paint-order: stroke fill; text-shadow: 0 2px 0 rgba(90, 40, 5, .55);
+  background: linear-gradient(180deg, rgba(255,255,255,.4) 0 46%, rgba(255,255,255,0) 47%), linear-gradient(180deg, #ffd24d, #f0961f);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 50%, 100% 100%, 0 100%, 14px 50%);
+}
+:root:root .oath-menu-heading { background: transparent; color: var(--txt); border-bottom: 2px solid rgba(255, 216, 112, .5); }
+:root:root .oath-menu-close { border: 2px solid #ffe08a; border-radius: 14px; background: linear-gradient(#3b95ad, #1e5f7b); color: #fff; }
+:root:root .modal-box p { color: #e6f4fa; }
+:root:root .oath-menu-grid > button { border: 2px solid rgba(255, 255, 255, .55); background: linear-gradient(180deg, rgba(255,255,255,.28) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #46a8c0, #23738f); color: #fff; box-shadow: 0 4px 0 rgba(8, 30, 48, .5); text-shadow: 0 1px 2px rgba(0, 30, 50, .7); border-radius: 16px; }
+:root:root .citadel-hub-dialog { border: 4px solid transparent; border-radius: 24px; background: linear-gradient(170deg, #2d86a2, #17506b) padding-box, var(--sb-frame) border-box; }
+:root:root .citadel-hub-destination-heading, :root:root .citadel-hub-destination-footer { background: linear-gradient(180deg, #2f8aa6, #1d6482); }
+:root:root .citadel-hub-destination-actions .citadel-hub-go { background: linear-gradient(180deg, rgba(255,255,255,.5) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #ffe773, #ffb52c 58%, #f48c14); color: #4a2406; border: 2px solid #874a0e; box-shadow: 0 4px 0 #874a0e, inset 0 1px 0 rgba(255, 255, 255, .7); font-weight: 900; }
+:root:root .citadel-hub-depth { background: linear-gradient(#2a7a96, #195a76); border: 2px solid rgba(255, 224, 138, .55); }
+:root:root .citadel-hub-depth:has(input:checked) { border-color: #ffe08a; background: linear-gradient(#3b9db8, #226f8d); box-shadow: 0 0 12px rgba(255, 214, 90, .55); }
+
+/* 출격 준비창: 동화풍 파란 패널 위에 남아 있던 모험 수첩(양피지)용 진한 글자를 밝은 색으로 바꾼다.
+   이름표(양피지 카드)와 시작 버튼은 자체 배경이 있어 그대로 둔다. 작은 글씨 카드는 한 단계 짙은 바탕을 깐다. */
+:root:root.oath-visual .citadel-hub-destination-body :where(p, span, small, strong, b, h3, legend, summary, li, div, label),
+:root:root.oath-visual .citadel-hub-destination-footer :where(p, span, small, strong, b, div, label) { color: #e8f5fa; text-shadow: 0 1px 2px rgba(4, 30, 46, .55); }
+:root:root.oath-visual .citadel-hub-destination-body :where(h3, strong, b),
+:root:root.oath-visual .citadel-hub-destination-footer :where(strong, b) { color: #fffbe6; }
+:root:root.oath-visual .citadel-hub-destination-body :where(h3 small, legend, .citadel-hub-preparation-note, .citadel-hub-depth small),
+:root:root.oath-visual .citadel-hub-destination-stats span,
+:root:root.oath-visual .citadel-hub-journal-oaths > summary > span:last-child,
+:root:root.oath-visual .citadel-hub-dialog .citadel-hub-risk-persistence,
+:root:root.oath-visual .citadel-hub-dialog #citadel-fury-rule { color: #d3ecf5; }
+:root:root.oath-visual .citadel-hub-dialog #citadel-challenge-active { color: #fffbe6; }
+:root:root.oath-visual .citadel-hub-depth.is-locked small,
+:root:root.oath-visual .citadel-hub-dialog .citadel-hub-unlock-note { color: #ffe6b0; }
+:root:root.oath-visual .citadel-hub-dialog .citadel-hub-access { color: #fff3c4; font-size: 11px; text-shadow: 0 1px 2px rgba(4, 30, 46, .7); }
+:root:root.oath-visual .citadel-hub-dialog .citadel-hub-access[data-blocked="true"],
+:root:root.oath-visual .citadel-hub-dialog .citadel-hub-challenge-notice { justify-self: start; width: fit-content; padding: 3px 9px; border-radius: 7px; background: rgba(6, 34, 52, .62); color: #ffe2a0; font-weight: 700; }
+:root:root.oath-visual .citadel-hub-rewards li,
+:root:root.oath-visual .citadel-hub-potions li,
+:root:root.oath-visual .citadel-hub-journal-rules,
+:root:root.oath-visual .citadel-hub-journal-oaths,
+:root:root.oath-visual .citadel-hub-frontier,
+:root:root.oath-visual .citadel-hub-personal-goal,
+:root:root.oath-visual .citadel-hub-challenge-details { background: rgba(6, 38, 56, .38); border-color: rgba(255, 224, 138, .38); }
+:root:root.oath-visual .citadel-hub-dialog :focus-visible { outline-color: #ffe08a; }
+:root:root.oath-visual .citadel-hub-depth strong { font-weight: 700; }
+:root:root.oath-visual .citadel-hub-depth:has(input:checked) { background: linear-gradient(#2b87a2, #1b5e7a); }
+@media (max-height: 560px) and (orientation: landscape) {
+  /* 낮은 가로 화면에서 버튼 글자가 두 줄로 꺾이지 않도록 버튼 칸을 넓힌다. */
+  :root:root.oath-visual .citadel-hub-destination-footer { grid-template-columns: minmax(0, 1fr) min(300px, 52%); }
+  :root:root.oath-visual .citadel-hub-destination-actions button { white-space: nowrap; }
+}
+
+/* ---------- 결과 화면 ---------- */
+:root:root #result { background: radial-gradient(ellipse at 50% 30%, rgba(255, 210, 90, .22), rgba(6, 22, 44, .78) 65%); }
+:root:root:root #result .result-box {
+  border: 4px solid transparent;
+  border-radius: 26px;
+  background: linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,0) 20%), linear-gradient(170deg, #2b86a3, #17506b) padding-box, var(--sb-frame) border-box;
+  box-shadow: 0 6px 0 rgba(90, 50, 10, .4), 0 24px 56px rgba(4, 20, 40, .65), inset 0 0 0 2px rgba(255, 255, 255, .25);
+}
+:root:root #result .result-title {
+  padding: 0 44px 2px; line-height: 1.15; letter-spacing: .08em; color: #fffbe6;
+  -webkit-text-stroke: 3px #7a410f; paint-order: stroke fill; text-shadow: 0 3px 0 rgba(90, 40, 5, .55);
+  background: linear-gradient(180deg, rgba(255,255,255,.4) 0 46%, rgba(255,255,255,0) 47%), linear-gradient(180deg, #ffd24d, #f0961f);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 50%, 100% 100%, 0 100%, 18px 50%);
+  filter: none;
+}
+:root:root #result .result-title.lose { color: #fff0f2; -webkit-text-stroke-color: #6a0f20; text-shadow: 0 3px 0 rgba(60, 5, 15, .55); background: linear-gradient(180deg, rgba(255,255,255,.3) 0 46%, rgba(255,255,255,0) 47%), linear-gradient(180deg, #ff6b86, #c4203f); }
+:root:root .stars i.on { filter: drop-shadow(0 0 10px rgba(255, 220, 90, .95)) drop-shadow(0 2px 0 #8a4a0e); }
+:root:root .result-stats { color: #d6eef9; }
+:root:root .result-stats b { color: #fff3b0; }
+:root:root .growth-summary { border: 2px solid rgba(255, 224, 138, .7); background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.06)); border-radius: 16px; }
+:root:root .growth-summary .growth-level { color: #b8ff9a; font-family: var(--disp); text-shadow: 0 1px 2px rgba(0, 40, 20, .6); }
+:root:root .growth-action { border: 2px solid rgba(255, 224, 138, .6); background: linear-gradient(180deg, rgba(255, 244, 190, .22), rgba(255, 244, 190, .08)); border-radius: 14px; color: #fff; }
+:root:root .growth-action:hover { background: rgba(255, 244, 190, .3); }
+:root:root .growth-action strong { color: #fff0a0; }
+:root:root .growth-action span { color: #fff; }
+:root:root .growth-action small { color: #cfe8f2; }
+:root:root .result-growth h2 { color: #fff6d0; font-family: var(--disp); font-weight: 400; }
+:root:root .result-growth p { color: #d6eef9; }
+:root:root #result .result-btns { background: transparent; border-top: 2px solid rgba(255, 216, 112, .5); }
+:root:root .loot-item { border-width: 3px; border-radius: 14px; background: radial-gradient(circle at 50% 30%, rgba(255,255,255,.28), rgba(255,255,255,0) 60%), linear-gradient(180deg, #2c7d98, #164b66); box-shadow: 0 3px 0 rgba(8, 30, 48, .5), inset 0 0 10px rgba(255, 240, 170, .3); }
+:root:root .loot-item .nm { color: #e6f4fa; }
+
+/* ---------- 소환 연출 카드 ---------- */
+:root:root .rcard .front { border-width: 4px; border-radius: 14px; box-shadow: 0 0 24px var(--rc), 0 0 0 2px rgba(255, 255, 255, .6); }
+:root:root .rcard .back { border: 3px solid #ffe08a; background: radial-gradient(circle at 50% 40%, #6a50d0, #2a1c70); color: #ffe08a; }
+
+/* ---------- 전투 HUD ---------- */
+:root:root:root:root #hud .hud-player {
+  border: 2px solid transparent; border-radius: 16px;
+  background: linear-gradient(180deg, rgba(40, 118, 150, .9), rgba(16, 58, 90, .92)) padding-box, var(--sb-frame) border-box;
+  box-shadow: 0 3px 0 rgba(8, 24, 40, .4), 0 8px 18px rgba(4, 20, 40, .4), inset 0 1px 0 rgba(255, 255, 255, .4);
+}
+:root:root:root:root #hud .hud-portrait { border: 3px solid var(--sb-gold); border-radius: 14px; box-shadow: 0 0 0 2px #7a410f, 0 0 10px rgba(255, 214, 90, .5); background: #1b4e6a; }
+/* 막대는 테두리 대신 바깥 그림자 링으로 윤곽을 낸다 — 테두리를 두껍게 하면 안쪽 높이가 줄어 숫자가 잘린다. */
+:root:root:root:root #hud .hpbar { border: 1px solid #3b1f0a; border-radius: 9px; background: #2a160a; box-shadow: 0 0 0 1.5px #ffe9a8, 0 2px 0 1.5px #7a410f, inset 0 2px 3px rgba(0, 0, 0, .55); }
+:root:root:root:root #hud .hpbar > div { background: linear-gradient(180deg, #d7ff9a 0%, #73e052 38%, #29b648 100%) !important; }
+:root:root:root:root #hud .hpbar span, :root:root:root:root #hud .mpbar span { color: #fff; text-shadow: 0 1px 0 #1a0c04, 0 0 3px #1a0c04, 1px 0 0 #1a0c04, -1px 0 0 #1a0c04; letter-spacing: .02em; }
+:root:root:root:root #hud .hpbar::after, :root:root:root:root #hud .mpbar::after { content: ''; position: absolute; left: 3px; right: 3px; top: 1px; height: 38%; border-radius: 6px; background: linear-gradient(rgba(255, 255, 255, .55), rgba(255, 255, 255, 0)); pointer-events: none; }
+:root:root:root:root #hud .mpbar { border: 1px solid #12284a; border-radius: 7px; background: #0e1c36; box-shadow: 0 0 0 1px #d8f0ff, 0 2px 0 1px #123a6a, inset 0 2px 3px rgba(0, 0, 0, .55); }
+:root:root:root:root #hud .mpbar > div { background: linear-gradient(180deg, #b6ecff, #46b4ff 50%, #2275f0) !important; }
+:root:root:root:root #hud .expbar { border: 1px solid #4a2a7a; background: #1d1038; box-shadow: 0 0 0 1px #e8d0ff; }
+:root:root:root:root #hud .expbar > div { background: linear-gradient(180deg, #f0c4ff, #b36bff 55%, #7d3fe0); }
+:root:root:root:root #hud .ultbar { border: 1px solid #7a410f; background: #2a160a; border-radius: 5px; }
+:root:root:root:root #hud .ultbar > div { background: linear-gradient(180deg, #fff3a8, #ffb52c 60%, #f08a12); box-shadow: 0 0 8px rgba(255, 190, 60, .8); }
+:root:root:root:root #hud .rpg-xp, :root:root:root:root #hud .hud-player .rpg-xp span { color: #fff7dc; text-shadow: 0 1px 2px rgba(0, 24, 44, .85); }
+:root:root:root:root #hud .hud-center .wave { font-family: var(--disp); color: #fff6d0; -webkit-text-stroke: 2px #7a410f; paint-order: stroke fill; text-shadow: 0 2px 0 rgba(90, 40, 5, .5); }
+:root:root:root:root #hud .hud-center .stage-name { color: #e4f4fb; text-shadow: 0 1px 3px rgba(0, 20, 40, .9); }
+:root:root:root:root #hud .hud-btn, :root:root:root:root #hud .hud-right-top .hud-btn {
+  border: 2px solid #ffe08a; border-radius: 12px; color: #fff; text-shadow: 0 1px 2px rgba(0, 24, 44, .8);
+  background: linear-gradient(180deg, rgba(255,255,255,.28) 0 47%, rgba(255,255,255,.04) 48%), linear-gradient(180deg, #3e95b0, #1f6482);
+  box-shadow: 0 3px 0 rgba(8, 28, 44, .55);
+}
+:root:root:root:root #hud .hud-btn.on, :root:root:root:root #hud .hud-right-top #btn-auto.on { background: linear-gradient(180deg, rgba(255,255,255,.5) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #ffe773, #ffb52c 60%, #f48c14); color: #4a2406; text-shadow: 0 1px 0 rgba(255, 255, 255, .5); box-shadow: 0 0 12px rgba(255, 214, 90, .8), 0 3px 0 #874a0e; }
+:root:root:root:root #hud #minimap-wrap #btn-map, :root:root:root:root #hud #minimap-wrap canvas { border-radius: 10px; }
+:root:root:root:root #hud #minimap-wrap #btn-map { border: 2px solid transparent; background: linear-gradient(180deg, rgba(20, 70, 100, .85), rgba(10, 40, 66, .9)) padding-box, var(--sb-frame) border-box; box-shadow: 0 3px 0 rgba(8, 28, 44, .45), 0 6px 14px rgba(4, 20, 40, .4); color: #fff; }
+:root:root:root:root #hud #objective { border: 2px solid rgba(255, 224, 138, .7); border-left: 4px solid #ffc83d; border-radius: 10px; background: linear-gradient(180deg, rgba(30, 90, 120, .88), rgba(14, 54, 84, .9)); color: #eaf7fd; text-shadow: 0 1px 2px rgba(0, 20, 40, .8); box-shadow: 0 3px 0 rgba(8, 28, 44, .35); }
+:root:root:root:root #hud #objective b, :root:root:root:root #hud #objective .battle-objective-title { color: #fff0a0; }
+:root:root:root:root #hud .combo { border: 2px solid transparent; border-radius: 12px; background: linear-gradient(180deg, rgba(30, 90, 120, .9), rgba(14, 54, 84, .92)) padding-box, var(--sb-frame) border-box; opacity: 1; box-shadow: 0 3px 0 rgba(8, 28, 44, .4); }
+:root:root:root:root #hud .combo b { color: #fff0a0; font-family: var(--disp); -webkit-text-stroke: 1.5px #7a410f; paint-order: stroke fill; text-shadow: 0 2px 0 rgba(90, 40, 5, .5); }
+:root:root:root:root #hud .combo.hot b { color: #ffb0be; -webkit-text-stroke-color: #6a0f20; }
+:root:root:root:root #hud .combo span { color: #fff; font-family: var(--disp); text-shadow: 0 1px 2px rgba(0, 24, 44, .8); }
+:root:root:root:root #hud .kill-streak { border: 2px solid transparent; background: linear-gradient(180deg, #5a2a8a, #2a1250) padding-box, var(--sb-frame) border-box; }
+:root:root:root:root #hud .kill-streak b { font-family: var(--disp); -webkit-text-stroke: 1.5px #5a2a00; paint-order: stroke fill; }
+:root:root:root:root #hud .combat-cue { border-width: 2px; }
+:root:root:root:root #hud .bossbar img { border: 3px solid #ffd0d8; box-shadow: 0 0 0 2px #7a1428, 0 0 14px rgba(255, 60, 90, .7); }
+:root:root:root:root #hud .boss-name { font-family: var(--disp); color: #fff0f2; -webkit-text-stroke: 2px #7a1428; paint-order: stroke fill; }
+:root:root:root:root #hud .boss-hp { border: 2px solid #4a0f1c; border-radius: 8px; background: #2a0a12; box-shadow: inset 0 2px 3px rgba(0, 0, 0, .55); }
+:root:root:root:root #hud .boss-hp > div { background: linear-gradient(180deg, #ffb0be, #ff4864 55%, #c81c40); }
+
+/* 스킬·공격·회피: 금테 보석 버튼 */
+:root:root:root:root #hud .skill-btn {
+  border: 3px solid #ffe08a; background: radial-gradient(circle at 50% 30%, #3f95b0, #123f58);
+  box-shadow: 0 0 0 2px #7a410f, 0 4px 0 2px #7a410f, 0 8px 14px rgba(4, 20, 40, .5), inset 0 0 8px rgba(255, 240, 170, .35);
+}
+:root:root:root:root #hud .skill-btn img { filter: saturate(1.2) contrast(1.05); }
+:root:root:root:root #hud .skill-btn .key { color: #fff; text-shadow: 0 1px 2px #000, 0 0 3px #000; font-weight: 900; }
+:root:root:root:root #hud .skill-btn.ult { border-color: #fff0a0; box-shadow: 0 0 0 2px #7a410f, 0 4px 0 2px #7a410f, 0 0 16px rgba(255, 214, 90, .65), inset 0 0 10px rgba(255, 240, 170, .5); }
+:root:root:root:root #hud .skill-btn.awk { border-color: #ffc2ea; box-shadow: 0 0 0 2px #7a1a5a, 0 4px 0 2px #7a1a5a, 0 0 12px rgba(255, 120, 210, .55); }
+:root:root:root:root #hud .skill-btn.locked { border-color: rgba(255, 255, 255, .4); box-shadow: 0 0 0 2px #2a3a48; }
+:root:root:root:root #hud .skill-btn .cd { color: #fff; text-shadow: 0 1px 0 #000, 0 0 4px #000; font-family: var(--disp); }
+:root:root:root:root #hud .attack-btn {
+  border: 4px solid #fff7da; font-family: var(--disp); font-size: 22px; color: #fffbe6; letter-spacing: .04em;
+  -webkit-text-stroke: 2px #7a410f; paint-order: stroke fill; text-shadow: 0 2px 0 rgba(90, 40, 5, .5);
+  background: linear-gradient(180deg, rgba(255,255,255,.45) 0 46%, rgba(255,255,255,0) 47%), radial-gradient(circle at 40% 30%, #ffe27a, #ff9d1e 62%, #e0600a);
+  box-shadow: 0 0 0 3px #874a0e, 0 6px 0 3px #874a0e, 0 12px 18px rgba(8, 20, 40, .5), 0 0 22px rgba(255, 190, 70, .55), inset 0 -5px 0 rgba(120, 50, 0, .2);
+}
+:root:root:root:root #hud .attack-btn:active { box-shadow: 0 0 0 3px #874a0e, 0 3px 0 3px #874a0e, 0 6px 10px rgba(8, 20, 40, .5), 0 0 28px rgba(255, 190, 70, .8); }
+:root:root:root:root #hud .dodge-btn {
+  border: 3px solid #eaf8ff; color: #fff; font-family: var(--disp); text-shadow: 0 1px 2px rgba(0, 30, 80, .85);
+  background: linear-gradient(180deg, rgba(255,255,255,.45) 0 46%, rgba(255,255,255,0) 47%), radial-gradient(circle at 40% 30%, #9be4ff, #3aa5ff 62%, #1a64e0);
+  box-shadow: 0 0 0 2px #134a8e, 0 5px 0 2px #134a8e, 0 10px 14px rgba(4, 20, 40, .45);
+}
+:root:root:root:root #hud .joy-base { border: 3px solid rgba(255, 244, 190, .75); background: radial-gradient(circle, rgba(255, 255, 255, .22), rgba(255, 255, 255, .06)); box-shadow: inset 0 0 14px rgba(255, 240, 170, .25), 0 0 0 2px rgba(122, 65, 15, .45); }
+:root:root:root:root #hud .joy-knob { background: radial-gradient(circle at 35% 30%, #fffbe6, #ffd24d 70%, #e8932a); box-shadow: 0 3px 0 #7a410f, 0 6px 10px rgba(0, 0, 0, .45); }
+:root:root:root:root #hud .wave-banner { font-family: var(--disp); -webkit-text-stroke: 2px #7a410f; paint-order: stroke fill; color: #fffbe6; }
+
+/* ---------- 튜토리얼 카드·토스트 ---------- */
+:root:root .tutorial-card { border: 3px solid transparent; background: linear-gradient(170deg, #2d86a2, #17506b) padding-box, var(--sb-frame) border-box; box-shadow: 0 5px 0 rgba(90, 50, 10, .4), 0 16px 40px rgba(4, 20, 40, .55); }
+:root:root .tutorial-copy-wrap h2 { font-family: var(--disp); color: #fff6d0; text-shadow: 0 2px 0 rgba(8, 36, 60, .6); }
+:root:root .tutorial-copy-wrap p { color: #e4f4fb; }
+
+/* ---------- 부트 화면 ---------- */
+:root:root #boot-start { font-family: var(--disp); letter-spacing: .04em; }
+:root:root #boot-fill { background: linear-gradient(180deg, #fff3a8, #ffb52c 60%, #f08a12); box-shadow: 0 0 12px rgba(255, 190, 60, .8); }
+:root:root .boot-bar { border: 2px solid #ffe08a; background: rgba(10, 30, 50, .65); height: 12px; }
+
+/* ---------- 모험(캠페인) 탭 ---------- */
+:root:root #tab-stage .panel { background: linear-gradient(180deg, rgba(42, 118, 148, .94), rgba(18, 62, 92, .96)); color: #fff8e8; }
+:root:root #tab-stage .campaign-heading h2 { font-family: var(--disp); font-weight: 400; font-size: 22px; letter-spacing: .03em; color: #fff6d0; text-shadow: 0 2px 0 rgba(8, 36, 60, .6); }
+:root:root #tab-stage #chapter-tabs button { border: 2px solid rgba(255, 255, 255, .5); border-radius: 12px; color: #fff; background: linear-gradient(180deg, rgba(255,255,255,.22) 0 47%, rgba(255,255,255,.02) 48%), linear-gradient(180deg, #3f9fb8, #22708b); box-shadow: 0 3px 0 rgba(8, 36, 60, .45); text-shadow: 0 1px 2px rgba(0, 30, 50, .6); }
+:root:root #tab-stage #chapter-tabs button.on { border-color: #874a0e; color: #4a2406; text-shadow: 0 1px 0 rgba(255, 255, 255, .5); background: linear-gradient(180deg, rgba(255,255,255,.5) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #ffe773, #ffb52c 58%, #f48c14); }
+:root:root #tab-stage #chapter-tabs button.lock { opacity: .75; filter: saturate(.55); }
+/* campaign.css 가 #tab-stage 아이디 선택자를 쓰므로 같은 아이디를 붙여 이긴다. */
+:root:root #tab-stage .chapter-brief { border: 3px solid #e9c97c; border-left: 8px solid var(--region-glow); border-radius: 18px; background: linear-gradient(116deg, color-mix(in srgb, var(--region-glow) 38%, #fff8e4), #fff4d4 80%); box-shadow: 0 4px 0 rgba(120, 70, 12, .3), inset 0 0 0 1px rgba(255, 255, 255, .6); color: var(--sb-ink); }
+:root:root #tab-stage .chapter-copy h3 { font-family: var(--disp); font-weight: 400; color: #4a2c0e; text-shadow: 0 2px 0 rgba(255, 255, 255, .8); }
+:root:root #tab-stage .chapter-copy p, :root:root #tab-stage .chapter-brief p { color: #6a4c28; }
+:root:root #tab-stage .campaign-eyebrow { color: #b0701c; font-weight: 900; }
+:root:root #tab-stage .campaign-progress, :root:root #tab-stage .campaign-progress span { color: #6a4c28; }
+:root:root #tab-stage .campaign-progress b { color: #4a2c0e; font-family: var(--disp); }
+:root:root #tab-stage .campaign-progress b small { color: #8a6a3c; }
+:root:root #tab-stage .campaign-progress progress { accent-color: #f0961f; }
+:root:root #tab-stage .chapter-facts span { border: 1px solid #e0c27a; background: rgba(255, 255, 255, .55); }
+:root:root #tab-stage .chapter-facts b { color: #4a2c0e; }
+:root:root #tab-stage .chapter-facts small { color: #8a6a3c; }
+:root:root #tab-stage .chapter-map-scene { border: 2px solid #e0c27a; background: radial-gradient(circle at 50% 40%, color-mix(in srgb, var(--region-glow) 45%, transparent), transparent 60%), #1a4a5e; }
+:root:root #tab-stage .chapter-cast { border: 2px solid #e0c27a; }
+:root:root #tab-stage .stage-cell { border-radius: 14px; }
+:root:root #battle-info-actions > .hud-btn, :root:root #battle-info-actions > details > summary { border: 2px solid #ffe08a; border-radius: 12px; color: #fff; background: linear-gradient(180deg, rgba(255,255,255,.26) 0 47%, rgba(255,255,255,.04) 48%), linear-gradient(180deg, #3f9fb8, #22708b); box-shadow: 0 3px 0 rgba(8, 36, 60, .45); text-shadow: 0 1px 2px rgba(0, 30, 50, .6); }
+:root:root #tab-stage .stage-cell.lock { opacity: .6; filter: saturate(.5); }
+
+/* ---------- 모험 허브(던전·결투장·공방·전직·퀘스트) ---------- */
+:root:root .adventure-nav { background: linear-gradient(180deg, rgba(8, 40, 64, .55), rgba(8, 40, 64, .3)); border-bottom: 3px solid #ffd96a; gap: 8px; }
+:root:root .adventure-nav button { border: 2px solid rgba(255, 255, 255, .45); border-radius: 12px; color: #fff; text-shadow: 0 1px 2px rgba(0, 30, 50, .7); background: linear-gradient(180deg, rgba(255,255,255,.22) 0 47%, rgba(255,255,255,.02) 48%), linear-gradient(180deg, #3f9fb8, #22708b); box-shadow: 0 3px 0 rgba(8, 36, 60, .45); }
+:root:root .adventure-nav button.on { border-color: #874a0e; color: #4a2406; text-shadow: 0 1px 0 rgba(255, 255, 255, .5); background: linear-gradient(180deg, rgba(255,255,255,.5) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #ffe773, #ffb52c 58%, #f48c14); }
+:root:root .exp-shell { background: radial-gradient(ellipse at 50% -10%, rgba(255, 238, 170, .35), transparent 55%), linear-gradient(180deg, #4aa6c0 0%, #2a7b94 38%, #174d66 100%); color: #fff8e8; }
+:root:root .exp-shell button { border: 2px solid rgba(255, 255, 255, .55); background: linear-gradient(180deg, rgba(255,255,255,.22) 0 47%, rgba(255,255,255,.02) 48%), linear-gradient(180deg, #3f9fb8, #22708b); color: #fff; border-radius: 12px; box-shadow: 0 3px 0 rgba(8, 36, 60, .45); text-shadow: 0 1px 2px rgba(0, 30, 50, .6); }
+:root:root .exp-shell button:hover:not(:disabled) { border-color: #ffe08a; filter: brightness(1.08); }
+:root:root .exp-shell button.exp-primary { border-color: #874a0e; background: linear-gradient(180deg, rgba(255,255,255,.5) 0 47%, rgba(255,255,255,0) 48%), linear-gradient(180deg, #ffe773, #ffb52c 58%, #f48c14); color: #4a2406; text-shadow: 0 1px 0 rgba(255, 255, 255, .5); box-shadow: 0 3px 0 #874a0e; }
+:root:root .exp-shell .exp-tabs { border-bottom: 3px solid #ffd96a; background: rgba(8, 40, 64, .35); }
+:root:root .exp-shell .exp-tabs button { border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: none; box-shadow: none; color: #d6eef9; text-shadow: 0 1px 2px rgba(0, 30, 50, .7); }
+:root:root .exp-shell .exp-tabs button.active { border-bottom-color: #ffd96a; color: #fff3b8; }
+:root:root .exp-header { border-bottom: 3px solid #ffd96a; background: linear-gradient(180deg, rgba(8, 40, 64, .45), rgba(8, 40, 64, .15)); }
+:root:root .exp-brand h1, :root:root .exp-shell h2 { font-family: var(--disp); font-weight: 400; letter-spacing: .02em; color: #fff6d0; text-shadow: 0 2px 0 rgba(8, 36, 60, .6); }
+:root:root .exp-seal, :root:root .exp-gold, :root:root .exp-pill { color: #ffe37a; }
+:root:root .exp-shell p, :root:root .exp-brand small, :root:root .exp-account, :root:root .exp-footer, :root:root .exp-footer > span { color: #d6eef9; }
+:root:root .exp-account b { color: #fff3b8; }
+:root:root .exp-eyebrow { color: #ffe37a; }
+:root:root .exp-dungeon, :root:root .exp-recipe, :root:root .exp-job, :root:root .exp-quest, :root:root .exp-rivals article, :root:root .exp-forge-aside, :root:root .exp-current { border: 3px solid #e6c066; border-radius: 18px; background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.04)), linear-gradient(180deg, #2b7f9b, #174d66); box-shadow: 0 4px 0 rgba(8, 30, 48, .5), inset 0 0 0 1px rgba(255, 255, 255, .25); }
+:root:root .exp-card-body h3, :root:root .exp-recipe h3, :root:root .exp-job h3, :root:root .exp-quest h3, :root:root .exp-rivals h3, :root:root .exp-current strong { font-family: var(--disp); font-weight: 400; color: #fff6d0; }
+:root:root .exp-card-body > small, :root:root .exp-recipe small, :root:root .exp-job small, :root:root .exp-rivals small { color: #ffe37a; }
+:root:root .exp-recipe p, :root:root .exp-material-line small, :root:root .exp-cost, :root:root .exp-job ul, :root:root .exp-quest small, :root:root .exp-chips, :root:root .exp-current small, :root:root .exp-current span, :root:root .exp-material-reward span { color: #d6eef9; }
+:root:root .exp-chips span { background: rgba(255, 255, 255, .14); border: 1px solid rgba(255, 224, 138, .4); }
+:root:root .exp-route, :root:root .exp-route b { color: #e4f4fb; border-color: rgba(255, 224, 138, .5); }
+:root:root .exp-footer { border-top: 3px solid #ffd96a; background: rgba(8, 40, 64, .4); }
+:root:root .exp-job.selected { border-color: #fff0a0; box-shadow: 0 0 16px rgba(255, 214, 90, .6), 0 4px 0 rgba(8, 30, 48, .5); }
+:root:root .exp-xp, :root:root .exp-progress { background: rgba(8, 30, 48, .55); }
+:root:root .exp-xp i, :root:root .exp-progress i { background: linear-gradient(180deg, #fff3a8, #ffb52c); }
+:root:root .exp-entry { border: 3px solid transparent; background: linear-gradient(180deg, #3b95ad, #1e5f7b) padding-box, var(--sb-frame) border-box; color: #fff; }
+:root:root .exp-potions button { border: 2px solid #ffe08a; background: linear-gradient(#2c7d98, #164b66); }
+
+/* ---------- 영웅 성장 카드 ---------- */
+:root:root .hero-hunt-progress { border: 3px solid #e6c066; border-radius: 18px; background: linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.04)), linear-gradient(180deg, #2b7f9b, #174d66); box-shadow: 0 4px 0 rgba(8, 30, 48, .5); }
+:root:root .hero-hunt-progress progress::-webkit-progress-bar { background: rgba(8, 30, 48, .6); }
+:root:root .hero-hunt-progress progress::-webkit-progress-value { background: linear-gradient(180deg, #fff3a8, #ffb52c 60%, #f08a12); }
+:root:root .skill-book-card { border: 2px solid rgba(255, 224, 138, .55); background: linear-gradient(180deg, rgba(255,255,255,.16), rgba(255,255,255,.05)); border-radius: 14px; }
+:root:root #hero-wardrobe { background: radial-gradient(ellipse at 50% 70%, rgba(255, 238, 170, .3), transparent 60%), linear-gradient(180deg, #4aa6c0, #1f6a85); }
+
+/* ---------- 초점·접근성: 금색 포커스 링은 유지하고 눌림 피드백만 부드럽게 ---------- */
+:root:root button:focus-visible { outline: 3px solid #fff4b4; outline-offset: 3px; }
+@media (prefers-reduced-motion: no-preference) {
+  :root:root .btn, :root:root #hud .attack-btn { transition: transform .08s, filter .15s; }
+}

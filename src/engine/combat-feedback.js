@@ -16,8 +16,8 @@ export function compactCombatStatus(text) {
 
 export function decorativeBurstGain(size) {
   // 작은 접촉은 그대로 두고 넓은 폭발·충격파가 겹칠 때의 백색 번짐만 낮춘다.
-  // 크기·판정·수명·알파 곡선은 바꾸지 않는 장식 RGB 상한이다.
-  return Number.isFinite(size) ? 1 - Math.max(0, Math.min(1, (size - 4) / 8)) * .72 : 1;
+  // 크기·판정·수명·알파 곡선은 바꾸지 않는 장식 RGB 상한이다. 큰 폭발도 70% 까지는 남겨 화려함을 지킨다.
+  return Number.isFinite(size) ? 1 - Math.max(0, Math.min(1, (size - 4) / 8)) * .3 : 1;
 }
 
 export function boundedFeedbackGain(gain) {
@@ -61,9 +61,9 @@ export function combatHudAnimationRegion(id, box, oathVisual = false) {
     right = originX + 1.4 * height / 2 * sine;
     top = originY - vertical; bottom = originY + vertical;
   } else if (id === 'kill-streak') {
-    left = box.left - width / 2; right = box.left + width / 2;
-    top = oathVisual ? box.top - 4 : box.top - height / 2;
-    bottom = oathVisual ? box.bottom : box.top + height / 2;
+    // 왼쪽 가운데 기준으로 .9→1 확대, 단계 상승 때 최대 1.06배로 빛난다.
+    right = box.left + width * 1.06;
+    top = box.top + height / 2 - height * 1.06 / 2; bottom = box.top + height / 2 + height * 1.06 / 2;
   } else if (id === 'combat-cue') {
     left = box.left - width * .54; right = box.left + width * .54;
     top = box.top - height * .04 - 12; bottom = box.bottom + height * .04;

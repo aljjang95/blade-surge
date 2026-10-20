@@ -76,7 +76,7 @@ function energyTransition(before,after,cost,label){
 async function journal(){
   // The original .mw-open is inside the closed Oath menu after native reload.
   // Use the same actually visible native growth entry as replayability QA.
-  if(!await page.locator('#masterworks[open]').isVisible())await page.locator('.oath-nav-growth').click();
+  if(!await page.locator('#masterworks[open]').isVisible()){await page.locator('.oath-nav-menu').click();await page.locator('.mw-open').click();}
   await page.locator('#masterworks .mw-tabs').getByRole('button',{name:'기록',exact:true}).click();
   const panel=page.locator('.mw-personal-goal');await panel.waitFor({state:'visible'});await panel.scrollIntoViewIfNeeded();return panel;
 }

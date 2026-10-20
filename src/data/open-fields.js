@@ -30,3 +30,21 @@ export const FIELD_DUNGEONS = [
     layout('city', [38,38], [28,28], 12, [[0,0],[1,0],[0,1],[1,1],[2,1],[3,1]],
       [[0,1],[0,2],[1,3],[2,3],[3,4],[4,5]], ['서문 광장','북쪽 시장길','남쪽 시장길','상인의 창고','종탑 대로','왕립 분수 광장'])),
 ];
+
+export const FIELD_CONTENT = Object.freeze({
+  windmeadow: Object.freeze({ townId: 'oathhold', gathering: { material: 'glass_leaf', nodes: 6, respawnSeconds: 45 }, elites: ['glass_warden', 'ironbark_bulwark'], hiddenTreasures: ['windmeadow_root_cache'], events: ['meadow_wind_rift'] }),
+  sunbreak_coast: Object.freeze({ townId: 'oathhold', gathering: { material: 'glass_leaf', nodes: 5, respawnSeconds: 50 }, elites: ['hydra_scaleguard'], hiddenTreasures: ['sunbreak_tide_chest'], events: ['coast_return_beacon'] }),
+  skywind_pass: Object.freeze({ townId: 'starcrest', gathering: { material: 'star_dust', nodes: 6, respawnSeconds: 55 }, elites: ['archive_warden', 'celestial_warden'], hiddenTreasures: ['skywind_aurora_cache'], events: ['pass_reverse_echo'] }),
+  dawnward_city: Object.freeze({ townId: 'emberport', gathering: { material: 'ember_core', nodes: 6, respawnSeconds: 48 }, elites: ['foundry_bulwark', 'slag_colossus'], hiddenTreasures: ['dawnward_smelter_cache'], events: ['city_pressure_alarm'] }),
+});
+
+export const FIELD_CONTENT_BY_ID = Object.freeze(Object.fromEntries(Object.entries(FIELD_CONTENT).map(([id, value]) => [id, { id, ...value }])));
+
+export function fieldContentFor(fieldId) {
+  return FIELD_CONTENT_BY_ID[fieldId] || null;
+}
+
+export function fieldForTown(townId) {
+  const fieldId = { oathhold: 'windmeadow', emberport: 'dawnward_city', starcrest: 'skywind_pass' }[townId];
+  return fieldId ? fieldContentFor(fieldId) : null;
+}

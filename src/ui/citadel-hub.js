@@ -1,12 +1,13 @@
 import './citadel-hub.css';
 import { DUNGEONS, MATERIALS, CONSUMABLES } from '../data/expansion.js';
-import { CITADEL_HUB_HOTSPOTS } from '../data/citadel-hub.js';
+import { CITADEL_HUB_HOTSPOTS, findHotspot } from '../data/citadel-hub.js';
+import { TownUI } from './town-ui.js';
 import { citadelPreparation } from '../game/citadel-preparation.js';
-import { HEROES } from '../data/heroes.js';
+import { bindHeroPortrait } from './hero-portraits.js';
 import { personalMetricLabel, personalMetricValue } from './personal-goal-labels.js';
 
 const safe = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
-const verbs = { dungeon: '입장 확인', campaign: '캠페인 보기', arena: '상대 고르기', merchant: '물약 구매', trainer: '전투 준비', steward: '결투 안내' };
+const verbs = { dungeon: '입장 확인', campaign: '캠페인 보기', arena: '상대 고르기', merchant: '상점 보기', trainer: '기술 배우기', steward: '결투 안내', waystone: '이동석 사용' };
 const count = value => Number(value).toLocaleString('ko-KR');
 const potionArt = id => `/img/departure-journal/icons/potion-${id === 'hp_tonic' ? 'health' : id === 'overdrive' ? 'power' : 'guard'}.webp`;
 const rewardCards = rewards => {
@@ -90,6 +91,9 @@ export class CitadelHubUI {
     this.dialog.addEventListener('keydown', event => this.containDestinationTab(event));
     this.ecoListener = () => { if (this.opened && this.dialogSpot) this.refreshDestination(); };
     this.unsub = this.app.eco?.onChange?.(this.ecoListener);
+    // 마을 이동·상인·교관 패널과 마을 장면 동기화(app.townUI). 서비스는 app.towns 를 우선한다.
+    this.app.townUI ??= new TownUI(this.app);
+    this.app.townUI.renderPlace(this.root);
   }
   containDestinationTab(event) {
     if (!this.opened || !this.dialog.open || event.key !== 'Tab' || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
@@ -118,39 +122,50 @@ export class CitadelHubUI {
     if (!this.visible) this.clear();
   }
   update(nearest, state = {}) {
-    const spot = typeof nearest === 'string' ? CITADEL_HUB_HOTSPOTS.find(s => s.id === nearest) : nearest;
+    const spot = typeof nearest === 'string' ? findHotspot(nearest) : nearest;
     this.nearest = spot || null;
     this.root.dataset.nearby = spot ? 'true' : 'false';
-    this.name.textContent = spot?.label || '성채의 길';
+    this.name.textContent = spot?.label || this.app.townUI?.placeName() || '성채의 길';
     this.detail.textContent = spot ? spot.kind === 'dungeon'
-      ? `탐험 Lv.${spot.minLevel} · 에너지 ${spot.energy}` : spot.description : '던전과 안내관에게 다가가세요';
+      ? `탐험 Lv.${spot.minLevel} · 에너지 ${spot.energy}` : spot.kind === 'waystone' && this.app.townUI
+        ? `${spot.description} ${this.app.townUI.waystoneSummary()}` : spot.description : '던전과 안내관에게 다가가세요';
     this.interactLabel.textContent = spot ? verbs[spot.kind] || '확인' : '대화 · 입장';
     this.interactButton.disabled = !spot || !!state.blocked || this.opened || this.busy;
     this.root.style.setProperty('--citadel-near-accent', spot?.accent || '#d3c29c');
   }
   interact(spot = this.nearest, trigger = this.interactButton) {
     if (!spot || this.busy || this.opened || this.app.stageStarting || this.app.mode !== 'lobby') return false;
-    const canonical = CITADEL_HUB_HOTSPOTS.find(s => s.id === spot.id); if (!canonical) return false;
+    const canonical = findHotspot(spot.id); if (!canonical) return false;
     this.app.hubControls?.clear(); this.app.citadelControls?.clear();
     if (this.onDestination) {
       const handled = this.onDestination(canonical, trigger);
       if (handled !== undefined) return handled;
     }
     if (canonical.kind === 'dungeon') return this.openDestination(canonical, trigger);
-    if (canonical.kind === 'merchant') { this.app.citadelShop?.open(trigger); return true; }
-    if (canonical.kind === 'trainer') { this.app.battle?.chronicle?.open('build'); return true; }
+    if (canonical.kind === 'merchant') {
+      // 마을 상점에 물건이 있으면 마을 상인 패널, 없으면 기존 물약 상점.
+      if (this.app.townUI?.hasMerchant()) return !!this.app.townUI.openMerchant(trigger);
+      this.app.citadelShop?.open(trigger); return true;
+    }
+    if (canonical.kind === 'trainer') {
+      if (this.app.townUI?.hasTrainer()) return !!this.app.townUI.openTrainer(trigger);
+      this.app.battle?.chronicle?.open('build'); return true;
+    }
+    if (canonical.kind === 'waystone') return !!this.app.townUI?.openMap(trigger);
     if (canonical.kind === 'arena' || canonical.kind === 'steward') { this.app.expeditionUI.open('arena'); return true; }
     if (canonical.kind === 'campaign') { this.app.meta.openTab('stage'); return true; }
     return false;
   }
-  openDestination(spot, trigger = this.interactButton) {
+  /** @param {{ depth?: 'standard'|'deep' }} [options] 최근 원정이 심층이었다면 같은 단계로 준비창을 연다. */
+  openDestination(spot, trigger = this.interactButton, { depth = 'standard' } = {}) {
     const canonical = CITADEL_HUB_HOTSPOTS.find(item => item.id === spot?.id && item.kind === 'dungeon');
     const def = canonical && DUNGEONS.find(d => d.id === canonical.route);
     if (!def || this.opened || this.busy || this.app.mode !== 'lobby' || this.app.stageStarting) return false;
     spot = canonical;
     this.app.citadel?.clearInput?.();
     this.trigger = trigger; this.returnFocus = trigger?.isConnected ? trigger : document.activeElement;
-    this.dialogSpot = spot; this.selectedDepth = 'standard'; this.opened = true;
+    // 지원하지 않는 단계는 기본 원정으로 연다. 단계 선택은 준비창 안에서 다시 바꿀 수 있다.
+    this.dialogSpot = spot; this.selectedDepth = citadelPreparation(this.app, def.id, depth).ok ? depth : 'standard'; this.opened = true;
     this.renderDestination(def, spot);
     this.dialog.showModal(); this.dialog.querySelector('[data-citadel-depth]:checked')?.focus({ preventScroll: true });
     return true;
@@ -164,8 +179,8 @@ export class CitadelHubUI {
       <header class="citadel-hub-destination-heading"><div class="citadel-hub-destination-art"><span></span></div><div class="citadel-hub-destination-identity"><small class="citadel-hub-eyebrow">원정 준비</small><h2 id="citadel-destination-title"></h2><b data-citadel-unlock></b></div><button type="button" class="citadel-hub-dismiss" aria-label="출격 준비 닫기">닫기</button></header>
       <div class="citadel-hub-destination-body"><fieldset class="citadel-hub-depths"><legend>원정 단계</legend>${preparation.depthOptions.map(option => `<label class="citadel-hub-depth"><input type="radio" name="citadel-depth" value="${safe(option.depth)}" data-citadel-depth="${safe(option.depth)}" aria-describedby="citadel-depth-${safe(option.depth)}-state" ${option.depth === this.selectedDepth ? 'checked' : ''}><span class="citadel-hub-depth-copy"><strong>${safe(option.label)}</strong><small id="citadel-depth-${safe(option.depth)}-state"></small></span></label>`).join('')}</fieldset>
       <div class="citadel-hub-destination-stats"><span>입장 비용 <b data-citadel-cost></b></span><span>현재 보유 <b data-citadel-energy></b></span></div><p class="citadel-hub-unlock-note" hidden></p>
-      <section class="citadel-hub-preparation-section" aria-label="클리어 보상"><h3>원정 보상 <small>REWARDS</small></h3><ul class="citadel-hub-rewards"></ul><div class="citadel-hub-first-reward"></div></section>
-      <section class="citadel-hub-preparation-section" aria-label="보유 물약"><h3>출격 준비 <small>PREPARATION</small></h3><div class="citadel-hub-loadout"><div class="citadel-hub-hero" aria-label="출격 영웅"><img alt="" width="76" height="76"><p></p></div><ul class="citadel-hub-potions"></ul></div><p class="citadel-hub-preparation-note">물약은 전투에서 사용 · 이 화면에서는 소모되지 않습니다.</p></section>
+      <section class="citadel-hub-preparation-section" aria-label="클리어 보상"><h3>원정 보상</h3><ul class="citadel-hub-rewards"></ul><div class="citadel-hub-first-reward"></div></section>
+      <section class="citadel-hub-preparation-section" aria-label="보유 물약"><h3>출격 준비</h3><div class="citadel-hub-loadout"><div class="citadel-hub-hero" aria-label="출격 영웅"><img alt="" width="76" height="76"><p></p></div><ul class="citadel-hub-potions"></ul></div><p class="citadel-hub-preparation-note">물약은 전투에서 사용 · 이 화면에서는 소모되지 않습니다.</p></section>
       <details class="citadel-hub-journal-rules"><summary>목표 · 규칙 보기</summary><p id="citadel-destination-description"></p><section class="citadel-hub-action-cue" aria-label="출격 전 행동 안내" hidden><strong data-citadel-cue-depth></strong><p data-citadel-cue-objective></p><p data-citadel-cue-action></p></section><p class="citadel-hub-tactics" hidden></p><section class="citadel-hub-preparation-section" aria-label="원정 목표"><h3>이번 원정의 목표</h3><p class="citadel-hub-objective"></p></section><section class="citadel-hub-frontier" aria-label="프론티어 효과"></section><section class="citadel-hub-personal-goal" aria-label="개인 목표"><div class="citadel-hub-goal-copy"></div><button type="button" class="citadel-hub-goal-open">기록에서 목표 보기</button></section></details>
       <details class="citadel-hub-journal-oaths"><summary><span id="citadel-challenge-active"></span><span>변경</span></summary><section class="citadel-hub-risk-choice" aria-label="서약 선택"><div class="citadel-hub-risk-row"><button type="button" class="citadel-hub-fury" aria-pressed="false" aria-describedby="citadel-fury-rule citadel-fury-persistence citadel-challenge-active"><span>분노의 적</span><strong data-citadel-fury-state></strong></button><div><p id="citadel-fury-rule"></p><p class="citadel-hub-risk-persistence">선택 즉시 저장 · 해제할 때까지 유지</p></div></div></section><section class="citadel-hub-challenge-details" aria-label="서약 효과 상세"><h3>현재 출격에 적용할 서약</h3><ul data-citadel-challenge-list></ul><p data-citadel-challenge-effects></p><p data-citadel-fury-preview></p><p id="citadel-fury-persistence">선택은 즉시 저장되며 해제할 때까지 개인 캠페인·원정에 유지됩니다. 파티·아레나에는 적용되지 않습니다.</p><p>완료 명성은 클리어 정산에서 계산합니다. 필드 골드·장비와 기본 클리어 보상은 기존 규칙을 따릅니다.</p></section></details>
       </div></div><div class="citadel-hub-destination-footer"><p class="citadel-hub-challenge-notice" role="status" aria-live="polite" hidden></p><p class="citadel-hub-access" role="status" aria-live="polite"></p><div class="citadel-hub-destination-actions"><button type="button" class="citadel-hub-cancel">돌아가기</button><button type="button" class="citadel-hub-go"></button></div></div></div>`;
@@ -237,7 +252,8 @@ export class CitadelHubUI {
     this.dialog.style.setProperty('--citadel-near-accent', selected.accent || def.accent || '#a6d7cc');
     const art = this.dialog.querySelector('.citadel-hub-destination-art');
     art.style.backgroundImage = `url("${def.id === 'glass_garden' && preparation.depth === 'standard' ? '/img/departure-journal/glass-conservatory.webp' : selected.art || def.art}")`;
-    art.querySelector('span').textContent = selected.subtitle || def.subtitle || def.theme.toUpperCase();
+    // 영문 부제 microtype은 쓰지 않는다. 한국어 제목이 바로 아래에 있다.
+    art.querySelector('span').textContent = '';
     this.dialog.querySelector('#citadel-destination-title').textContent = selected.name;
     this.dialog.querySelector('#citadel-destination-description').textContent = selected.description;
     for (const option of preparation.depthOptions) {
@@ -272,7 +288,7 @@ export class CitadelHubUI {
     const frontier = preparation.frontier;
     this.dialog.querySelector('.citadel-hub-frontier').innerHTML = frontier ? `<h3>이번 주 프론티어 · ${safe(frontier.name)}</h3><p>${safe(frontier.modifier)}</p>` : `<p>${preparation.depth === 'deep' ? '프론티어 효과는 기본 원정에만 적용됩니다.' : '이번 원정에 적용되는 프론티어 효과가 없습니다.'}</p>`;
     this.dialog.querySelector('.citadel-hub-hero p').textContent = `${preparation.hero.name} · 출격 Lv.${preparation.hero.level} · ${preparation.hero.controlLabel}`;
-    this.dialog.querySelector('.citadel-hub-hero img').src = HEROES[this.app.eco.s.selected].portrait;
+    bindHeroPortrait(this.dialog.querySelector('.citadel-hub-hero img'), this.app, this.app.eco.s.selected);
     this.dialog.querySelector('.citadel-hub-potions').innerHTML = preparation.potions.map(potion => `<li data-citadel-potion="${safe(potion.id)}"><img src="${potionArt(potion.id)}" alt="" width="44" height="44"><div><strong>${safe(potion.name)}</strong><span><kbd>${safe(potion.key)}</kbd><b data-citadel-potion-count>${count(potion.count)}개</b></span></div><details><summary>효과</summary><p>${safe(potion.description)}</p></details></li>`).join('');
     const challenges = preparation.challenges, fury = challenges.choices.find(challenge => challenge.id === 'fury');
     const toggle = this.dialog.querySelector('.citadel-hub-fury');
@@ -293,7 +309,12 @@ export class CitadelHubUI {
     goalSection.querySelector('.citadel-hub-goal-copy').innerHTML = `<h3>${safe(goal.title)}</h3>${goal.condition ? `<p class="citadel-hub-goal-context">${safe(goal.condition)}</p>` : ''}${goal.target ? `<strong class="citadel-hub-goal-target">${safe(goal.target)}</strong>` : ''}${goal.baseline ? `<span class="citadel-hub-goal-baseline">${safe(goal.baseline)}</span>` : ''}<p>${safe(goal.description)}</p><small>개인 목표는 추가 보상을 지급하지 않습니다.</small>`;
     go.disabled = !access.ok || this.busy;
     go.textContent = `${preparation.depth === 'deep' ? '심층 원정 시작' : '원정 시작'} · 에너지 ${access.cost}`;
-    this.dialog.querySelector('.citadel-hub-access').textContent = access.error || '입장을 확정하면 에너지가 소모됩니다.';
+    const accessLine = this.dialog.querySelector('.citadel-hub-access');
+    accessLine.textContent = access.error || '입장을 확정하면 에너지가 소모됩니다.';
+    // 입장 불가 사유는 평소 안내와 구분해 강조한다.
+    accessLine.dataset.blocked = String(!access.ok);
+    // 서약 변경 제한 사유가 입장 사유와 같으면 같은 문장을 두 번 보이지 않는다.
+    if (notice.textContent === accessLine.textContent) notice.hidden = true;
     this.reviewedPreparation = preparationSignature(preparation);
   }
   close() {
@@ -320,6 +341,7 @@ export class CitadelHubUI {
     const listeners = this.app.eco?.listeners, listenerIndex = listeners?.indexOf(this.ecoListener);
     if (listenerIndex >= 0) listeners.splice(listenerIndex, 1);
     this.interactButton.removeEventListener('click', this.clickHandler);
+    this.app.townUI?.destroy(); this.app.townUI = null;
     this.root.remove(); this.dialog.remove();
   }
 }

@@ -5,10 +5,11 @@ import { createRouteObjectives } from '../src/game/route-objectives.js';
 import { CoolingValves, coolingVent, coolingVentContains } from '../src/game/cooling-valves.js';
 import { Battle } from '../src/game/battle-base.js';
 import { Player } from '../src/game/player.js';
+import { battleObjectiveView } from '../src/ui/battle-objective-view.js';
 
 const noop = () => {};
-function fixture(depth = 'standard') {
-  const stage = buildExpeditionStage('dungeon', 'cinder_tide_lock', null, { depth });
+function fixture(depth = 'standard', routeId = 'cinder_tide_lock') {
+  const stage = buildExpeditionStage('dungeon', routeId, null, { depth });
   const world = buildExpeditionWorld(stage);
   const messages: string[] = [], hits: number[] = [];
   const g: any = Object.create(Battle.prototype);
@@ -24,7 +25,9 @@ function fixture(depth = 'standard') {
       forward: (v: Vector3) => v.set(1, 0, 0), dispose: noop,
       hurt: (n: number) => { hits.push(n); return true; } },
     spawnEnemy(_id: string, _near: any, room: any) {
-      g.routeObjectives.spawn(room); g.enemies.push({ alive: true, homeRoom: room, dispose: noop });
+      // 실제 spawnEnemy 처럼 무리 졸개는 목표 명단 영수증에 넣지 않고 생성한 적을 돌려준다.
+      if (!g._spawningFollower) g.routeObjectives?.spawn(room);
+      const enemy = { alive: true, homeRoom: room, maxHp: 1, hp: 1, atk: 1, dispose: noop }; g.enemies.push(enemy); return enemy;
     },
   });
   const route = createRouteObjectives(stage, world) as CoolingValves;
@@ -87,7 +90,8 @@ test('delayed spawns and queued reinforcements prevent premature interaction and
   f.g.markCleared(room); expect(gate.ready).toBe(false);
   for (const pending of f.g.pending.splice(0)) f.g.spawnEnemy(pending.t, null, pending.room);
   killWave(f, room); expect(gate.ready).toBe(true); expect(room.cleared).toBe(false);
-  expect(f.g.enemies.length).toBe(10); // initial 2 + two existing waves of 4
+  // initial 2 + two existing waves of 4. 보상·영수증 없는 무리 졸개는 웨이브 중복 판단에서 뺀다.
+  expect(f.g.enemies.filter((e: any) => !e.packFollower).length).toBe(10);
   f.g.player.pos.copy(gate.pad); f.g.updateExpedition(2);
   expect(room.cleared).toBe(true); expect(f.g.roomsCleared).toBe(1);
   f.g.markCleared(room); f.g.updateExpedition(2); expect(f.g.roomsCleared).toBe(1);
@@ -155,4 +159,45 @@ test('AUTO routes to the actual safe pad and stops inside its hold radius', () =
   expect(f.route.autoPoint(gate.room)).toBe(gate.pad);
   let disposed = 0; (f.route as any).view = { dispose: () => disposed++ };
   f.route.stop(); f.route.stop(); expect(disposed).toBe(1); expect(f.route.autoPoint(gate.room)).toBeNull();
+});
+
+test('재벼림 제련소 일반: 과열 용광로 4곳을 순서대로 식혀야 봉인이 풀리고 분출은 피해를 준다', () => {
+  const f = fixture('standard', 'ashforge_catacomb');
+  expect(f.route).toBeInstanceOf(CoolingValves);
+  expect(f.route.def.id).toBe('ashforge_furnaces_standard');
+  expect(f.route.gates.map((g: any) => g.room.id)).toEqual([1, 2, 3, 5]);
+  for (const gate of f.route.gates) expect(['normal', 'elite']).toContain(gate.room.type);
+  expect(createRouteObjectives(buildExpeditionStage('dungeon', 'ashforge_catacomb', null, { depth: 'deep' }), buildExpeditionWorld(buildExpeditionStage('dungeon', 'ashforge_catacomb', null, { depth: 'deep' })))).toBeNull();
+
+  // 3번 용광로를 먼저 정리해도 1번 전에는 식힐 수 없다.
+  const third = open(f, 3);
+  expect(third.attuned).toBe(false); expect(f.route.progress).toBe(0);
+  expect(f.route.hint()).toMatch(/^용광로 0\/4 · 1번 용광로 · 입구 송풍로/);
+
+  // 1번 용광로: 과열 예고 뒤 분출 띠 안에 있으면 피해를 받고 조작이 끊긴다.
+  const first = defend(f, 1) && f.route.gates[0];
+  expect(battleObjectiveView(f.g)).toMatchObject({ title: '용광로 냉각', progress: 0, total: 4 });
+  const vent = coolingVent(first);
+  f.g.player.pos.set(vent.x, 0, vent.z);
+  f.g.updateExpedition(4 + 1.4 + .1);
+  expect(f.hits.length).toBe(1);
+  expect(f.route.hold).toBe(0);
+  // 분출이 끝나면 띠와 조작판이 반대편으로 옮겨간다. 옮겨간 조작판에서 식힌다.
+  const padX = first.pad.x;
+  f.g.player.pos.set(first.room.x, 0, first.room.z + 6); f.g.updateExpedition(1);
+  expect(first.pad.x).not.toBe(padX);
+  f.g.player.pos.copy(first.pad); f.g.updateExpedition(2);
+  expect(first.attuned).toBe(true); expect(f.route.progress).toBe(1);
+  expect(f.messages).toContain('1번 용광로 · 입구 송풍로 냉각 · 용광로 1/4 냉각');
+
+  open(f, 2);
+  // 미리 정리해 둔 3번은 차례가 되면 조작판만 유지하면 된다.
+  f.g.player.pos.copy(third.pad); f.g.updateExpedition(2);
+  expect(f.route.progress).toBe(3);
+  for (const id of [4, 6]) { const room = enter(f, id); killWave(f, room); }
+  expect(f.route.canUnseal()).toBe(false);
+  open(f, 5);
+  expect(f.route.complete).toBe(true); expect(f.route.canUnseal()).toBe(true);
+  expect(f.route.hint()).toBe('용광로 4/4 냉각 · 보스 처치');
+  expect(f.route.finish(false)).toMatchObject({ id: 'ashforge_furnaces_standard', complete: false, progress: 4, target: 4, overheatHits: 1 });
 });

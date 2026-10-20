@@ -11,11 +11,9 @@
   <link rel="icon" href="/img/icon.png" />
   <link rel="apple-touch-icon" href="/img/icon.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <!-- 웹폰트는 렌더를 막지 않는다. 회선이 느리거나 폰트 CDN 이 죽으면 부트가 통째로 그만큼 늦어졌다 (하네스 실측 0.9초 → 14.9초) -->
-  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet" media="print" onload="this.media='all';this.onload=null" />
-  <noscript><link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet" /></noscript>
+  <!-- UI 서체는 자체 호스트 Blade Sans KR(Noto Sans CJK KR 서브셋, SIL OFL 1.1) 한 벌이다. 외부 폰트 CDN 에 의존하지 않고,
+       파일을 못 받아도 font-display: swap 으로 OS 한국어 서체가 같은 정보를 그린다. 정의는 src/platform/typography.css -->
+  <link rel="preload" href="/fonts/blade-sans-kr-400.woff2" as="font" type="font/woff2" crossorigin />
 </head>
 <body>
   <canvas id="gl"></canvas>
@@ -34,6 +32,12 @@
       <div class="boot-row"><div id="boot-msg">에셋 로딩 중…</div><div id="boot-pct">0%</div></div>
     </div>
     <button id="boot-start" class="btn btn-gold btn-xl hidden">터치하여 시작</button>
+    <section id="boot-failure" class="boot-failure" role="alert" hidden>
+      <p id="boot-failure-message"></p>
+      <p class="boot-failure-code">오류 코드 <b id="boot-failure-code"></b></p>
+      <button type="button" class="btn btn-gold" id="boot-retry">다시 시도</button>
+      <details><summary>문의용 정보 보기</summary><pre id="boot-failure-detail"></pre><button type="button" class="btn btn-ghost btn-sm" id="boot-failure-copy">정보 복사</button></details>
+    </section>
     <div id="boot-tip" class="boot-tip"></div>
     <div class="boot-credit">3D: KayKit · Quaternius (CC0) · SFX: Kenney (CC0) · BGM: 자체 생성</div>
   </div>
@@ -46,9 +50,9 @@
         <div class="prof-txt"><div class="prof-name" id="top-name">보스</div><div class="prof-lv">VIP <b id="top-vip">0</b> · Lv.<b id="top-lv">1</b></div></div>
       </div>
       <div class="currencies">
-        <div class="cur cur-energy" id="cur-energy"><i class="ic ic-energy"></i><span id="v-energy">100</span>/<span id="v-energy-max">100</span><button class="plus" data-open="energy">+</button><div class="cur-sub" id="v-energy-timer"></div></div>
-        <div class="cur cur-gold"><i class="ic ic-gold"></i><span id="v-gold">0</span><button class="plus" data-open="shop-gold">+</button></div>
-        <div class="cur cur-gem"><i class="ic ic-gem"></i><span id="v-gem">0</span><button class="plus" data-open="shop-gem">+</button></div>
+        <div class="cur cur-energy" id="cur-energy"><i class="ic ic-energy"></i><span id="v-energy">100</span>/<span id="v-energy-max">100</span><button class="plus" data-open="energy" aria-label="에너지 충전">+</button><div class="cur-sub" id="v-energy-timer"></div></div>
+        <div class="cur cur-gold"><i class="ic ic-gold"></i><span id="v-gold">0</span><button class="plus" data-open="shop-gold" aria-label="골드 충전">+</button></div>
+        <div class="cur cur-gem"><i class="ic ic-gem"></i><span id="v-gem">0</span><button class="plus" data-open="shop-gem" aria-label="보석 충전">+</button></div>
       </div>
     </div>
 
@@ -183,6 +187,7 @@
     </div>
     <div class="bossbar hidden" id="bossbar"><img id="boss-portrait" alt="" /><div class="bb-body"><div class="boss-name" id="boss-name">해골 군주</div><div class="boss-hp"><div id="boss-hp"></div></div></div></div>
     <div class="combat-cue" id="combat-cue" aria-live="polite"></div>
+    <div id="skill-aim-cancel" aria-hidden="true"><b>✕</b><small>취소</small></div>
     <div class="combo hidden" id="combo"><b id="combo-n">0</b><span>COMBO</span></div>
     <div class="kill-streak" id="kill-streak"><b id="kill-streak-n">0</b><span>연속 처치</span><em id="kill-streak-tier">사냥 본능</em></div>
     <div class="joystick" id="joy"><div class="joy-base"><div class="joy-knob" id="joy-knob"></div></div></div>
@@ -191,12 +196,12 @@
       <button type="button" id="btn-map-interact" disabled aria-keyshortcuts="F"><span class="map-tactics-action-name">조작판으로 이동</span><small class="map-tactics-action-detail"></small></button>
     </section>
     <div class="actions">
-      <button class="skill-btn" data-skill="0"><img alt="" /><div class="cd"></div><span class="key">1</span></button>
-      <button class="skill-btn" data-skill="1"><img alt="" /><div class="cd"></div><span class="key">2</span></button>
-      <button class="skill-btn" data-skill="2"><img alt="" /><div class="cd"></div><span class="key">3</span></button>
-      <button class="skill-btn ult" data-skill="3"><img alt="" /><div class="cd"></div><span class="key">R</span></button>
-      <button class="skill-btn awk" data-skill="4"><img alt="" /><div class="cd"></div><span class="key">Q</span><div class="lock"><b>10</b></div></button>
-      <button class="skill-btn awk" data-skill="5"><img alt="" /><div class="cd"></div><span class="key">E</span><div class="lock"><b>20</b></div></button>
+      <button class="skill-btn" data-skill="0"><img alt="" /><div class="cd"></div><i class="aim-knob" aria-hidden="true"></i><span class="key">1</span></button>
+      <button class="skill-btn" data-skill="1"><img alt="" /><div class="cd"></div><i class="aim-knob" aria-hidden="true"></i><span class="key">2</span></button>
+      <button class="skill-btn" data-skill="2"><img alt="" /><div class="cd"></div><i class="aim-knob" aria-hidden="true"></i><span class="key">3</span></button>
+      <button class="skill-btn ult" data-skill="3"><img alt="" /><div class="cd"></div><i class="aim-knob" aria-hidden="true"></i><span class="key">R</span></button>
+      <button class="skill-btn awk" data-skill="4"><img alt="" /><div class="cd"></div><i class="aim-knob" aria-hidden="true"></i><span class="key">Q</span><div class="lock"><b>10</b></div></button>
+      <button class="skill-btn awk" data-skill="5"><img alt="" /><div class="cd"></div><i class="aim-knob" aria-hidden="true"></i><span class="key">E</span><div class="lock"><b>20</b></div></button>
       <button class="dodge-btn" id="btn-dodge"><span class="dodge-label">회피</span><span class="dodge-cd" hidden></span></button>
       <button class="attack-btn" id="btn-attack"><span>공격</span></button>
     </div>

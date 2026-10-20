@@ -5,7 +5,7 @@ The current game uses **casual-v2**: rounded headwear and padding, matte pastel 
 TLL-authored headwear, armour, clothing and articulated limbs, produced in Blender 5.1 by `tools/art/author-identity.py`.
 These GLBs are fittings, not standalone animated characters. `assembleHeroIdentity` binds them to the original shipped skeleton.
 
-The final composite preserves KayKit CC0 faces, skeletons, animation and selectable weapons. It is a derivative character redesign, not a claim of exclusive ownership over the original assets. Original GLBs and source credit remain available. Monsters and the skeletal companion retain their original designs in this change.
+The final composite preserves KayKit CC0 faces, skeletons, animation and selectable weapons. It is a derivative character redesign, not a claim of exclusive ownership over the original assets. Original GLBs and source credit remain available. 적·보스·동행은 asset-library의 소유 생성 Tripo 자산과 monster-roster 계약을 사용한다.
 
 Reproduce with Blender background mode and `--python-exit-code 1 --python tools/art/author-identity.py -- --masters <new revision directory>`. A nonempty masters directory is rejected. Headband contours are measured from the original source geometry and bound to its SHA-256 in `tools/art/head-profiles.json`. The shipped square PNG portraits are UI avatar textures rendered from the assembled runtime models, using `tools/art/render-portraits.js`; they do not define the landscape game viewport.
 

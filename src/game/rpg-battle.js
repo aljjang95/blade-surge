@@ -15,6 +15,8 @@ import { frontierEffectForStage } from '../data/seasonal-content.js';
 import '../ui/rpg.css';
 
 const direction = new THREE.Vector3();
+// 데미지 숫자 동시 표시 상한(fx.maxDmg 40 이내)과 프레임당 신규 표시 상한
+const DMG_CAP = 12, DMG_CAP_CRIT = 20, DMG_PER_FRAME = 6;
 
 /** Additive extension: encounter, damage, gear, skills and stage-clear rewards stay in the base. */
 export class Battle extends BaseBattle {
@@ -85,8 +87,10 @@ export class Battle extends BaseBattle {
     // Result presentation keeps animation timers alive, but its reward ledger is closed.
     if (!this.active) return;
     if (!this.killLedger.claim(enemy)) return;
+    audio.kill({ boss: !!enemy.isBoss, elite: !!enemy.isElite });
     const rpg = this.ensureRpg();
-    if (enemy.speciesId && Object.hasOwn(ENEMIES, enemy.speciesId)) {
+    // 무리 졸개는 도감 처치·경험치에 넣지 않는다(기존 명단 보상만 유지).
+    if (enemy.speciesId && Object.hasOwn(ENEMIES, enemy.speciesId) && !enemy.packFollower) {
       recordMonster(rpg, enemy.speciesId, enemy.level, this.stage.idx, true, stageExpeditionEncounter(this.stage));
       const hero = this.app.eco.hero(this.heroId);
       const award = grantCombatXp(hero, enemy.xpReward || 0, levelExp);
@@ -113,7 +117,7 @@ export class Battle extends BaseBattle {
   victory() { this.flushRpg(); super.victory(); if (this.result) { this.result.combatXp = this.combatXp; this.result.growthStart = this.growthStart; } this.rpgView?.refresh(); }
   defeat() { this.flushRpg(); super.defeat(); if (this.result) { this.result.combatXp = this.combatXp; this.result.growthStart = this.growthStart; } this.rpgView?.refresh(); }
   update(realDt) {
-    this.feedbackCount = 0; this.feedbackSound = false;
+    this.feedbackCount = 0; this.feedbackSound = false; this.dmgFrame = 0;
     super.update(realDt);
     if (!Number.isFinite(realDt) || realDt <= 0) return;
     this.saveT += realDt; this.viewT += realDt;
@@ -130,7 +134,7 @@ export class Battle extends BaseBattle {
     const dealt = enemy.hurt(amount, { ...opts, crit });
     if (!(dealt > 0)) return;
     if (this.sp && !opts.noProc) this.sp.onHit(enemy, opts);
-    this.dmgDealt += dealt; this.combo++; this.comboT = 2.5;
+    this.dmgDealt += dealt; this.combo++; this.comboT = 2.5; audio.comboStep(this.combo);
     this.maxCombo = Math.max(this.maxCombo, this.combo); this.ui.setCombo(this.combo);
     const gain = ultHitGain({ basic: opts.basic === true, crit });
     if (gain) p.addUlt(gain * (p.stats.ultGain || 1));
@@ -140,7 +144,8 @@ export class Battle extends BaseBattle {
     }
     this.lastTarget = enemy;
     const hitPos = enemy.pos.clone().setY(1.1 * enemy.def.scale);
-    if (this.fx.dmgLayer.children.length < (crit||opts.finisher?8:4)) this.fx.damage(hitPos, dealt, {
+    // 동시 숫자 상한을 키우되 한 프레임에 새로 띄우는 수는 제한해 군중 타격에서 DOM 갱신이 몰리지 않게 한다.
+    if (this.fx.dmgLayer.children.length < (crit||opts.finisher?DMG_CAP_CRIT:DMG_CAP) && (this.dmgFrame = (this.dmgFrame | 0) + 1) <= DMG_PER_FRAME) this.fx.damage(hitPos, dealt, {
       crit, kind: opts.kind === 'magic' ? 'skill' : '', finisher: !!opts.finisher, boss: !!enemy.isBoss,
       heavy: contactProfile(opts, crit, enemy.isBoss, true)?.heavy,
     });
@@ -149,7 +154,7 @@ export class Battle extends BaseBattle {
     const dx = opts.dirx || 0, dz = opts.dirz || 0;
     const feedback=contactFeedback({finisher:opts.finisher,crit,boss:enemy.isBoss,elite:enemy.isElite,reduced:!!this.app.reducedMotion?.matches});
     enemy.receiveImpact(dx, dz, feedback.recoil);
-    if (opts.basic && p === this.player && !p.auto) { this.impactTarget = enemy; this.impactT = .16; }
+    // 수동 평타가 맞을 때마다 카메라 구도를 대상 쪽으로 당기지 않는다(사용자 시점 유지).
     // Every eligible hit recoils; only expensive contact feedback shares the time budget.
     const budget = contactBudget(this._contactBudget, this.elapsed, contact);
     if (!budget) return;
@@ -160,13 +165,13 @@ export class Battle extends BaseBattle {
       this.fx.contact(hitPos,direction.set(dx,0,dz).normalize(),color,{size:contact.size,particles:contact.particles,light:false,kind:opts.kind||'slash',tier:contact.tier});
     }
     {
-      audio.hit(opts.kind || 'slash', { crit, heavy:contact.heavy || crit || !!enemy.isBoss, finisher: !!opts.finisher, boss: !!enemy.isBoss });
+      audio.hit(opts.kind || 'slash', { crit, heavy:contact.heavy || crit || !!enemy.isBoss, finisher: !!opts.finisher, boss: !!enemy.isBoss, counter: !!opts.counter, weapon: p.def?.weapon, light: !opts.basic && !opts.finisher });
       if (p === this.player && !p.auto && contact.haptic) audio.vibe(contact.haptic);
       if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);
     }
     if (contact.stop>0) this.timeCtl.hitstop(contact.stop);
-    if (feedback.heavy || crit) { this.renderer?.shake?.(opts.finisher ? 0.16 : 0.055); this.renderer?.punch?.(opts.finisher ? 0.12 : 0.035); }
-    // Directional body recoil carries ordinary hits; only heavy/critical contacts
-    // add a bounded camera response so light hits keep the view readable.
+    // 명중은 화면 전체 카메라 킥·줌 없이 대상 반동·몸 반동·VFX·히트스톱·소리·진동으로 전달한다.
+    // 색수차는 마무리타에서만 짧게 다시 켠다(감쇠·상한은 렌더러가 소유한다).
+    if (opts.finisher && this.renderer) this.renderer.aberr = Math.max(this.renderer.aberr || 0, 0.7);
   }
 }

@@ -1,0 +1,43 @@
+{
+ "domain": "전투 조작감·HUD·로비 캐릭터 품질과 재사용 3D 에셋 라이브러리",
+ "slug": "전투-조작감hud로비-캐릭터-품질과-재사용-3d-에셋-라이브러리",
+ "threadId": "01a14dc1-2350-7bb2-a023-aaaa355d5947",
+ "status": "running",
+ "cycles": 0,
+ "noProgressStreak": 0,
+ "reservePercent": 2,
+ "allowCredits": false,
+ "ownerQuotes": [],
+ "goalMode": "goal",
+ "goalObjective": "[ralph:전투-조작감hud로비-캐릭터-품질과-재사용-3d-에셋-라이브러리] 전투 조작감·HUD·로비 캐릭터 품질과 재사용 3D 에셋 라이브러리를 dod(C:/Users/heart/AppData/Local/APEX/gogo/aljjang95-blade-surge/ralph/전투-조작감hud로비-캐릭터-품질과-재사용-3d-에셋-라이브러리/dod.md)의 모든 항목이 실제 표면 증거로 passed가 되도록 큰 덩어리마다 새 채팅에서 ㄱㄱ 사이클을 반복해 완성하고 배포한다(이 채팅은 지휘 채팅). 사이클마다 ralph-state로 상태, dod, plan, log를 갱신하고 영수증을 남긴다. 완료: 모든 항목 passed와 다른 모델의 최종 감사 통과. 사람만 할 수 있는 항목은 external_gate와 필요한 입력으로 보고하고 나머지를 끝내면 완료로 본다. 오케스트레이터 공급자의 주간 플랜 한도가 예약분(2%)까지 쓰이면 진행 중 작업을 커밋·푸시하고 인계를 남긴 뒤 멈춘다. 지킬 것: 다른 세션·프로젝트 작업, 비밀값, 배포 롤백 경로. 같은 항목이 두 사이클 연속 진척이 없으면 blocked로 두고 다음 항목으로 간다.",
+ "heartbeatId": "automation-9",
+ "resumeAt": null,
+ "stopReason": null,
+ "lastQuota": null,
+ "lastCycleCost": null,
+ "costs": [],
+ "dod": "0/12",
+ "dodLock": {
+  "at": "2026-10-18T07:15:23.292Z",
+  "rows": {
+   "D1a": "bc190023539c635a",
+   "D1b": "0ff9257f472f6e65",
+   "D2a": "7462cf0dfeee87fe",
+   "D2b": "9f9d327723bd3a9f",
+   "D2c": "10f3c5cc01264af7",
+   "D2d": "3069d7f6197e696f",
+   "D3a": "3faaa02956c90f7f",
+   "D3b": "cf3b3a718ea5275d",
+   "D4a": "29122d07e908bb4d",
+   "D4b": "589d09106cc84f61",
+   "D5": "0542f1c9fa31c8b3",
+   "D6": "6b2f7df7ab28450d"
+  }
+ },
+ "weakened": [],
+ "windDown": false,
+ "finalAudit": null,
+ "startedAt": "2026-10-18T07:14:59.551Z",
+ "lastCycleAt": null,
+ "updatedAt": "2026-10-18T07:16:31.776Z"
+}
