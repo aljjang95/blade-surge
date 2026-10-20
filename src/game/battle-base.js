@@ -4,6 +4,7 @@ import { createArrowVisual, releaseProjectileVisual } from '../engine/arrow-visu
 import { CAMERA_PRESETS } from '../engine/renderer.js';
 import { battleFraming, framingBlend } from '../engine/battle-framing.js';
 import { Player } from './player.js';
+import { FEEL, KillChain, killSlowmo } from './feel.js';
 import { clearShot } from './ranger-aim.js';
 import { Enemy, HOSTILE_PROJECTILE_REACH } from './enemies.js';
 import { DropSystem, fieldDropsAllowed } from './drops.js';
@@ -41,6 +42,27 @@ const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + 
 /** 히트스탑 / 슬로우모션 타임 컨트롤 */
 export class TimeCtl extends ImpactClock {}
 
+/** 묶음 처치(짧은 창 안의 연속 처치) — 월드 위 문구·링·가장자리 틴트로만 알리고 단계마다 작은 보상(궁극기·MP)을 준다. 누적 연속 처치 알약은 기존 그대로다.
+ * 표현 호출(fx·renderer)은 선택적이다: 단위 테스트의 최소 가짜 전투도 처치 경로를 지난다. */
+export function feelOnKill(b, e) {
+  // 파티 원정은 살아 있는 파티원 모두가 같은 묶음 보상을 받는다(일반 처치 궁극기 분배와 같은 규칙).
+  const p = b.player, party = b.stage?.party && b.app?.party?.livingPlayers ? b.app.party.livingPlayers() : null;
+  if (!party && !p?.alive) return;
+  const chain = b.killChain || (b.killChain = new KillChain());
+  const ev = chain.kill(Number.isFinite(b.elapsed) ? b.elapsed : 0);
+  if (ev.step < 0) return;
+  const reduced = !!b.app?.reducedMotion?.matches, st = FEEL.kill.multiSteps[ev.step];
+  for (const member of party || [p]) {
+    if (!member?.alive) continue;
+    member.addUlt(st.ult * (member.stats?.ultGain || 1)); if (st.mp) member.addMp?.(st.mp);
+  }
+  b.fx?.shockTex?.(e.pos, 0xffd060, { r1: st.ring, life: 0.45 });
+  if (b.fx?.dmgLayer && b.fx.dmgLayer.children.length < 30) b.fx.damage(e.pos.clone().setY(1.2 * (e.def?.scale || 1)), 0, { text: `${ev.multi}마리 격파`, kind: 'skill' });
+  audio.ting({ vol: 0.34, freq: 1500 * st.pitch }); audio.ting({ vol: 0.22, freq: 2250 * st.pitch });
+  if (!reduced) b.renderer?.flashScreen?.(0.1 + 0.03 * ev.step, 0xffd060);
+  if (p?.alive && !p.auto) audio.vibe([12, 10, 26]);
+}
+
 export class Battle {
   constructor(app) {
     this.app = app; this.scene = app.renderer.scene; this.renderer = app.renderer; this.fx = app.fx; this.input = app.input; this.ui = app.ui; this.arena = app.arena;
@@ -52,6 +74,7 @@ export class Battle {
     this.wave = 0; this.waveT = 0; this.stage = null; this.boss = null; this.result = null; this.revived = 0; this.treasureRooms = 0;
     this.pending = []; // 지속 스폰 큐
     this.maxAlive = 34; this.peakAlive = 0; this.controlFinisherTokens = new WeakSet();
+    this.killChain = new KillChain(); this.lastSlowAt = -1e9;
   }
   after(sec, fn) { this.timers.push({ t: sec, fn }); }
   /** 정지 화면과 동행 대화는 각자 소유한 정지만 해제한다. */
@@ -79,7 +102,7 @@ export class Battle {
     this._contactAt = -Infinity; this._contactBudget = null;
     this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0; this.bossDefeated = false;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
-    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.treasureRooms = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false;
+    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.treasureRooms = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false; this.killChain = new KillChain(); this.lastSlowAt = -1e9;
     this.clearPortal();
     const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = heroStats(def, heroState, equipBonus);
     this.setBonus = equipBonus.active || [];
@@ -575,9 +598,10 @@ export class Battle {
   }
   onEnemyDeath(e) {
     if (this.conquest?.death(e)) { this.ui.toast(this.conquest.hint(), 'gold'); this.ui.setObjective(this.world); }
-    this.kills++; this.waveKilled++; this.killStreak++; this.killStreakT = 3.4;
+    this.kills++; this.waveKilled++; this.killStreak++; this.killStreakT = FEEL.kill.streakHold;
     const streakTier = this.killStreak >= 20 ? '전장의 지배자' : this.killStreak >= 10 ? '광란' : '사냥 본능';
     this.ui?.setKillStreak?.(this.killStreak, streakTier);
+    feelOnKill(this, e);
     // 단계 알림은 콤보 옆 연속 처치 알약이 직접 빛나며 보여 준다. 전투 중앙에 알림을 띄우지 않는다.
     this.player.addUlt(ultKillGain(e)); this.player.addMp?.(2);
     if (this.sp) this.sp.onKill(e);
@@ -609,10 +633,15 @@ export class Battle {
     }
     // 이 방 소속 적이 전멸하면 방 클리어
     const rm = e.homeRoom;
+    let emptied = false;
+    if (rm) rm.killsDone = (rm.killsDone | 0) + 1;
     if (rm && !rm.cleared) {
       const left = this.enemies.some((x) => x.alive && x.homeRoom === rm) || this.pending.some((n) => n.room === rm) || rm.spawnsDue > 0;
-      if (!left) this.markCleared(rm);
+      if (!left) { emptied = true; this.markCleared(rm); }
     }
+    // 방의 마지막 적·정예 처치의 짧은 슬로우(동작 줄이기에서는 끈다). 끝 구간은 1 로 부드럽게 복귀한다.
+    const sm = killSlowmo({ elite: !!e.isElite, boss: !!e.isBoss, roomEmptied: emptied, roomKills: rm ? rm.killsDone : 0, now: this.elapsed, lastAt: this.lastSlowAt, reduced: !!this.app?.reducedMotion?.matches });
+    if (sm) { this.lastSlowAt = this.elapsed; this.timeCtl.slowmo(sm.scale, sm.sec, sm.ease); }
   }
   onPlayerDeath() {
     this.mapTactics?.cancel();

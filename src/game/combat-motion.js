@@ -60,14 +60,29 @@ export const HITSTOP_CAP = 0.18;
 /** Uses the unscaled clock, and consumes partial-frame stops rather than dropping a whole frame.
  * Repeated hits extend a stop to a maximum, never sum a stop per enemy. */
 export class ImpactClock {
-  constructor() { this.stop = 0; this.slow = 1; this.slowT = 0; this.scale = 1; this._stopped = 0; this._rearm = 0; }
+  constructor() { this.stop = 0; this.slow = 1; this.slowT = 0; this.slowEase = 0; this.scale = 1; this._stopped = 0; this._rearm = 0; }
   hitstop(seconds) {
     if (!Number.isFinite(seconds) || seconds <= 0 || this._rearm > 0) return;
     this.stop = Math.max(this.stop, Math.min(seconds, Math.max(0, HITSTOP_CAP - this._stopped)));
   }
-  slowmo(scale, seconds) {
+  /** ease > 0 이면 마지막 ease 초 동안 배율이 1 로 선형 복귀한다(끝에서 뚝 끊기지 않는다). 기본 0 은 기존과 같다. */
+  slowmo(scale, seconds, ease = 0) {
     if (!Number.isFinite(scale) || !Number.isFinite(seconds) || seconds <= 0) return;
-    this.slow = Math.min(this.slow, Math.max(0.05, Math.min(1, scale))); this.slowT = Math.max(this.slowT, seconds);
+    this.slow = Math.min(this.slow, Math.max(0.05, Math.min(1, scale)));
+    // 더 길게 이어지는 호출이 복귀 구간을 정한다.
+    if (seconds >= this.slowT) this.slowEase = Number.isFinite(ease) ? Math.max(0, Math.min(ease, seconds)) : 0;
+    this.slowT = Math.max(this.slowT, seconds);
+  }
+  /** 남은 슬로우 시간이 a 에서 b(a>b)로 줄어드는 동안의 sim 시간 적분. */
+  _slowSpan(a, b) {
+    const s = this.slow, e = this.slowEase;
+    if (!(e > 0)) return s * (a - b);
+    let total = 0;
+    const hi = Math.max(a, e), lo = Math.max(b, e);
+    if (hi > lo) total += s * (hi - lo);
+    const u = Math.min(a, e), v = Math.min(b, e);
+    if (u > v) total += (u - v) - (1 - s) * (u * u - v * v) / (2 * e);
+    return total;
   }
   step(realDt) {
     if (!Number.isFinite(realDt) || realDt <= 0) return 0;
@@ -78,9 +93,9 @@ export class ImpactClock {
     let remaining = dt - frozen, scaled = remaining;
     if (remaining > 0 && this.slowT > 0) {
       const slowPart = Math.min(this.slowT, remaining);
-      scaled = slowPart * this.slow + remaining - slowPart;
+      scaled = this._slowSpan(this.slowT, this.slowT - slowPart) + remaining - slowPart;
       this.slowT = Math.max(0, this.slowT - remaining);
-      if (this.slowT === 0) this.slow = 1;
+      if (this.slowT === 0) { this.slow = 1; this.slowEase = 0; }
     }
     if (this.stop === 0 && this._stopped > 0) { this._rearm = Math.max(this._rearm, 0.045); this._stopped = 0; }
     this.scale = scaled / realDt;

@@ -7,6 +7,7 @@ import * as motion from '../../src/game/combat-motion.js';
 import * as apex from '../../src/game/apex-combat.js';
 import {contactProfile,contactBudget} from '../../src/game/combat-contact.js';
 import * as control from '../../src/game/control-rewards.js';
+import * as feel from '../../src/game/feel.js';
 import * as encounters from '../../src/game/rpg-encounters.js';
 class Vector { set(x,y,z){this.x=x;this.y=y;this.z=z;return this} normalize(){return this} clone(){return new Vector().set(this.x||0,this.y||0,this.z||0)} setY(y){this.y=y;return this} }
 class Base { onEnemyDeath(){this.baseDeaths=(this.baseDeaths||0)+1} }
@@ -14,8 +15,8 @@ const ENEMIES={a:{exp:8,hp:490,atk:20}};
 const HEROES={knight:{skills:[{unlock:10}]}};
 let played=0;const killCalls=[],comboCalls=[];const audio={hit:()=>played++,vibe:()=>{},kill:o=>killCalls.push(o),comboStep:n=>comboCalls.push(n)};
 const source=readFileSync(new URL('../../src/game/rpg-battle.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replace('export class Battle','class Battle');
-const names=['THREE','BaseBattle','ENEMIES','HEROES','heroStats','levelExp','audio','ImpactClock','contactFeedback','contactProfile','contactBudget','normalizeRpg','recordMonster','monsterLevel','monsterXp','grantCombatXp','KillLedger','buildCatalogue','RpgView','stageExpeditionEncounter','encounterLevelLabel','CONTROL_MP_GAIN','CONTROL_ULT_GAIN','ultHitGain'];
-const Battle=new Function(...names,source+'\nreturn Battle;')({Vector3:Vector},Base,ENEMIES,HEROES,(_d,h)=>({hp:100+h.level*10,atk:h.level*2,crit:0,critDmg:1.5,ultGain:1}),()=>100,audio,motion.ImpactClock,apex.contactFeedback,contactProfile,contactBudget,core.normalizeRpg,core.recordMonster,core.monsterLevel,core.monsterXp,core.grantCombatXp,core.KillLedger,()=>[],class{},encounters.stageExpeditionEncounter,encounters.encounterLevelLabel,control.CONTROL_MP_GAIN,control.CONTROL_ULT_GAIN,control.ultHitGain);
+const names=['THREE','BaseBattle','ENEMIES','HEROES','heroStats','levelExp','audio','ImpactClock','contactFeedback','contactProfile','contactBudget','normalizeRpg','recordMonster','monsterLevel','monsterXp','grantCombatXp','KillLedger','buildCatalogue','RpgView','stageExpeditionEncounter','encounterLevelLabel','CONTROL_MP_GAIN','CONTROL_ULT_GAIN','ultHitGain','HitCrowd','hitWeight','weightedHitstop','flashFor'];
+const Battle=new Function(...names,source+'\nreturn Battle;')({Vector3:Vector},Base,ENEMIES,HEROES,(_d,h)=>({hp:100+h.level*10,atk:h.level*2,crit:0,critDmg:1.5,ultGain:1}),()=>100,audio,motion.ImpactClock,apex.contactFeedback,contactProfile,contactBudget,core.normalizeRpg,core.recordMonster,core.monsterLevel,core.monsterXp,core.grantCombatXp,core.KillLedger,()=>[],class{},encounters.stageExpeditionEncounter,encounters.encounterLevelLabel,control.CONTROL_MP_GAIN,control.CONTROL_ULT_GAIN,control.ultHitGain,feel.HitCrowd,feel.hitWeight,feel.weightedHitstop,feel.flashFor);
 function setup(){
  const h={level:1,exp:95},s={heroes:{knight:h},rpg:core.normalizeRpg(null,['a'])};
  const b=Object.create(Battle.prototype);let saves=0,warnings=0,notices=0,flashes=0;
@@ -74,7 +75,9 @@ test('crowd damage retains all hits but bounds impact VFX and sound',()=>{
  const {b,counts}=setup();played=0;let impacts=0;
  for(let i=0;i<30;i++)b.damageEnemy({alive:true,spawning:false,def:{scale:1},pos:new Vector(),hurt:()=>10,receiveImpact:()=>impacts++},10,{dirx:1,dirz:0});
  const profile=contactProfile({},false,false,false);assert.equal(profile.stop,.045);
- assert.equal(b.combo,30);assert.equal(b.dmgDealt,300);assert.equal(impacts,30);assert.equal(counts().flashes,1);assert.equal(played,1);assert.equal(b.timeCtl.stop,profile.stop);
+ assert.equal(b.combo,30);assert.equal(b.dmgDealt,300);assert.equal(impacts,30);assert.equal(counts().flashes,1);assert.equal(played,1);
+ // 같은 창의 군중 타격은 무게(crowdCap)만큼만 길어지고 한 번의 정지 상한 안이다. 타격마다 합산되지 않는다.
+ assert.equal(b.timeCtl.stop,feel.weightedHitstop(profile.stop,feel.FEEL.hitstop.crowdCap));assert.ok(b.timeCtl.stop<=feel.FEEL.hitstop.max);
  // Advance the real clock through stop consumption and rearm, and reset the per-frame budget.
  b.elapsed+=b.timeCtl.step(.03);b.elapsed+=b.timeCtl.step(.12);b.elapsed+=b.timeCtl.step(.06); // 정지가 .045 로 늘어 정지 소비 + 재무장(.045s) + 60ms 창을 모두 지나도록 진행한다
  assert.ok(b.elapsed>=.06);assert.equal(b.timeCtl.stop,0);

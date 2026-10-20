@@ -52,11 +52,11 @@ test('빈 화면 한 손가락은 문턱을 넘은 뒤에만 회전하고 조이
   expect(send(doc,'pointermove',touch(1,world,160,100)).defaultPrevented).toBe(true);
   expect(world.hasPointerCapture(1)).toBe(true);
   // 문턱 8px만큼 기준점을 옮겨 시작 순간 튀지 않는다: (60-8)*.35
-  expect(camera.value.yaw).toBeCloseTo(-18.2,6); expect(camera.value.pitch).toBe(0);
+  expect(camera.value.yaw).toBeCloseTo(18.2,6); expect(camera.value.pitch).toBe(0);
   send(doc,'pointermove',touch(1,world,160,140)); expect(camera.value.pitch).toBeCloseTo(6,6);
   expect(send(doc,'pointerup',touch(1,world,160,140)).defaultPrevented).toBe(true);
   expect(world.captured.size).toBe(0); expect(camera.touch.size).toBe(0);
-  send(doc,'pointermove',touch(1,world,400,140)); expect(camera.value.yaw).toBeCloseTo(-18.2,6);
+  send(doc,'pointermove',touch(1,world,400,140)); expect(camera.value.yaw).toBeCloseTo(18.2,6);
   // 탭만 하고 뗀 손가락은 시점을 바꾸지 않고 기본 동작도 막지 않는다.
   send(doc,'pointerdown',touch(2)); expect(send(doc,'pointerup',touch(2)).defaultPrevented).toBe(false);
 });
@@ -72,7 +72,7 @@ test('두 빈 화면 손가락은 핀치하고 남은 손가락은 자기 위치
   send(doc,'pointerup',touch(1,world,100,100));
   expect(world.hasPointerCapture(1)).toBe(false); expect(world.hasPointerCapture(2)).toBe(true);
   send(doc,'pointermove',touch(2,world,150,100)); expect(camera.value).toEqual({yaw:0,pitch:0,zoom:125});
-  send(doc,'pointermove',touch(2,world,170,100)); expect(camera.value.yaw).toBeCloseTo(-7,6);
+  send(doc,'pointermove',touch(2,world,170,100)); expect(camera.value.yaw).toBeCloseTo(7,6);
   expect(camera.value.zoom).toBe(125);
   send(doc,'pointerup',touch(2,world,170,100)); expect(world.captured.size).toBe(0);
 });
@@ -99,14 +99,14 @@ test('취소·다른 요소 캡처 알림·사망·모달·resize 경계에서 �
 });
 test('숨긴 시점 패드 터치도 빈 화면 제스처와 같은 문턱을 쓴다',()=>{
   send(doc,'pointerdown',touch(2,pad)); send(doc,'pointermove',touch(2,pad,200,100));
-  expect(pad.hasPointerCapture(2)).toBe(true); expect(camera.value.yaw).toBeCloseTo(-32.2,6);
+  expect(pad.hasPointerCapture(2)).toBe(true); expect(camera.value.yaw).toBeCloseTo(32.2,6);
   send(doc,'pointercancel',touch(2,pad)); expect(pad.hasPointerCapture(2)).toBe(false);
 });
 test('camera key consumes arrow and preserves browser shortcuts',()=>{
   expect(send(pad,'keydown',{key:'ArrowLeft'}).defaultPrevented).toBe(true);
-  expect(camera.value.yaw).toBe(-8);
+  expect(camera.value.yaw).toBe(8); // 왼쪽 방향키는 시야를 왼쪽으로 돌린다
   expect(send(pad,'keydown',{key:'ArrowLeft',ctrlKey:true}).defaultPrevented).toBe(false);
-  expect(camera.value.yaw).toBe(-8);
+  expect(camera.value.yaw).toBe(8);
 });
 test('pinch browser zoom is not intercepted and ordinary wheel stays bounded',()=>{
   expect(send(doc,'wheel',{target:world,deltaY:-1,ctrlKey:true}).defaultPrevented).toBe(false);
@@ -135,18 +135,18 @@ test('native right drags start from current region view rather than the prior he
   expect(camera.drag).toMatchObject({yaw:-7,pitch:2,zoom:102});
   expect(app.renderer.battleCamera).toBe(profile);
   send(doc,'pointermove',{...pointer(),clientX:357});
-  expect(camera.value.yaw).toBeCloseTo(-96.95,10);
+  expect(camera.value.yaw).toBeCloseTo(82.95,10);
   expect(camera.value.pitch).toBe(2); expect(camera.value.zoom).toBe(102);
   send(doc,'pointerup',pointer());
   send(doc,'pointerdown',pointer(2));
   send(doc,'pointermove',{...pointer(2),clientX:357});
-  expect(camera.value.yaw).toBeCloseTo(173.1,10);
+  expect(camera.value.yaw).toBeCloseTo(172.9,10);
   expect(app.renderer.battleCamera).toBe(camera.value);
   send(doc,'pointerup',pointer(2));
 });
 test('camera pad keys and zoom buttons preserve current renderer yaw and pitch',()=>{
   const cases:[string,{yaw:number,pitch:number,zoom:number}][] = [
-    ['ArrowLeft',{yaw:-15,pitch:2,zoom:102}],['ArrowRight',{yaw:1,pitch:2,zoom:102}],
+    ['ArrowLeft',{yaw:1,pitch:2,zoom:102}],['ArrowRight',{yaw:-15,pitch:2,zoom:102}],
     ['ArrowUp',{yaw:-7,pitch:5,zoom:102}],['ArrowDown',{yaw:-7,pitch:-1,zoom:102}],
     ['+',{yaw:-7,pitch:2,zoom:107}],['=',{yaw:-7,pitch:2,zoom:107}],['-',{yaw:-7,pitch:2,zoom:97}],
   ];
@@ -166,7 +166,7 @@ test('ordinary wheel uses the current profile and its zoom survives a captured d
   expect(send(doc,'wheel',{target:world,deltaY:-120}).defaultPrevented).toBe(true);
   expect(camera.value).toEqual({yaw:-7,pitch:2,zoom:107});
   send(doc,'pointermove',{...pointer(),clientX:180});
-  expect(camera.value).toEqual({yaw:-35,pitch:2,zoom:107});
+  expect(camera.value).toEqual({yaw:21,pitch:2,zoom:107});
   send(doc,'pointerup',pointer());
   staleDialWithCurrentProfile(); send(doc,'wheel',{target:world,deltaY:120});
   expect(camera.value).toEqual({yaw:-7,pitch:2,zoom:97});
@@ -175,13 +175,13 @@ test('clear then a fresh preset drag changes neither prior capture origin nor cu
   staleDialWithCurrentProfile(); send(doc,'pointerdown',pointer());
   send(doc,'pointermove',{...pointer(),clientX:200});
   send(doc,'pointermove',{...pointer(),clientX:250});
-  expect(camera.value.yaw).toBeCloseTo(-59.5,10); // 항상 최초 포인터 위치가 기준이다.
+  expect(camera.value.yaw).toBeCloseTo(45.5,10); // 항상 최초 포인터 위치가 기준이다.
   clear(); expect(world.hasPointerCapture(1)).toBe(false);
   const nextProfile = {yaw:23,pitch:6,zoom:118}; app.renderer.battleCamera = nextProfile;
   send(doc,'pointermove',{...pointer(),clientX:300});
   expect(app.renderer.battleCamera).toBe(nextProfile);
   send(doc,'pointerdown',pointer(2)); send(doc,'pointermove',{...pointer(2),clientX:140});
-  expect(camera.value).toEqual({yaw:9,pitch:6,zoom:118});
+  expect(camera.value).toEqual({yaw:37,pitch:6,zoom:118});
   send(doc,'pointerup',pointer(2));
 });
 test('rejected intents do not synchronize the stale dial or mutate the current profile',()=>{
@@ -215,4 +215,21 @@ test('native reset deliberately ends capture and restores defaults instead of th
   expect(send(pad,'keydown',{key:'Home'}).defaultPrevented).toBe(true);
   expect(pad.hasPointerCapture(2)).toBe(false);
   expect(app.renderer.battleCamera).toEqual({yaw:0,pitch:0,zoom:100});
+});
+test('좌우·상하 반전 설정은 전투 드래그·터치·방향키에 이벤트마다 즉시 반영된다',()=>{
+  const settings:Record<string,unknown> = {}; app.eco = {s:{settings}};
+  // 기본: 왼쪽(-)으로 끌면 장면이 손가락을 따라오도록 yaw 감소, 아래로 끌면 pitch 증가
+  send(doc,'pointerdown',pointer()); send(doc,'pointermove',{...pointer(),clientX:60,clientY:120});
+  expect(camera.value.yaw).toBeCloseTo(-14,6); expect(camera.value.pitch).toBeCloseTo(3,6);
+  // 같은 드래그 도중 설정을 바꿔도 다음 이벤트부터 바로 뒤집힌다(재시작 불필요)
+  settings.cameraInvertX = true; settings.cameraInvertY = true;
+  send(doc,'pointermove',{...pointer(),clientX:60,clientY:120});
+  expect(camera.value.yaw).toBeCloseTo(14,6); expect(camera.value.pitch).toBeCloseTo(-3,6);
+  send(doc,'pointerup',pointer());
+  camera.set({yaw:0,pitch:0,zoom:100});
+  send(pad,'keydown',{key:'ArrowLeft'}); expect(camera.value.yaw).toBe(-8);
+  send(pad,'keydown',{key:'ArrowUp'}); expect(camera.value.pitch).toBe(-3);
+  settings.cameraInvertX = false; settings.cameraInvertY = false; camera.set({yaw:0,pitch:0,zoom:100});
+  send(pad,'keydown',{key:'ArrowLeft'}); expect(camera.value.yaw).toBe(8);
+  send(pad,'keydown',{key:'ArrowUp'}); expect(camera.value.pitch).toBe(3);
 });

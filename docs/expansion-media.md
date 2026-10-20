@@ -43,3 +43,10 @@ Measured media: H.264 1280×720, 24 fps, 192 frames, 8.000 seconds, AAC stereo 4
 Detailed receipt: `work/media-evidence/flow-video-generation.json`; probe: `flow-video-probe.json`; visual samples: `flow-video-keyframes.jpg`. The latest local video technique registry was reread. Selected planning vocabulary: `event-bound-monotonic-camera`, for one stable portal reveal; provider T2V was explicitly requested, I2V was not used. No publishing/deployment occurred.
 
 Application integration verified: first garden entrance pauses game progression while the muted film is shown; reduced-motion skips automatic playback. The in-game region-film button replayed the delivered file at 1280x720, duration 8s, currentTime 1.253s with 34 decoded frames. Skip restored the original focus and usable menu; natural removal and input restoration were also observed.
+
+### 입장 영상 화질·가로 표시 개선 (2026-10-20)
+
+- 영상은 재생성하지 않았다. 보존된 Veo 3.1 Fast 720p 원본을 클라우드 ffmpeg로 Lanczos 업스케일(`scale=1920:1080:flags=lanczos,unsharp=5:5:0.6:5:5:0.0`)하고 `libx264 -preset slow -crf 20 -profile:v high -pix_fmt yuv420p -movflags +faststart`로 다시 인코딩했다(오디오는 복사). 720p 원본에 없던 디테일이 생기는 것이 아니라 윤곽을 다듬고 화면 크기에 맞춘 해상도로 내보낸 것이다.
+- 전달 파일: H.264 High 1920×1080, 24 fps, 192프레임, 8.000초, AAC 48 kHz 그대로. 10,880,053 bytes, SHA-256 `D135C16B7B4856C6B52D6AB1E26F1C1EF3107422B8C1FC8AE7D3C012AD27B7E4`. 이전 전달 파일(1280×720 remux)은 5,996,786 bytes. CRF 17은 15.7MB, 19는 12.3MB라 12MB 이하 목표에 맞춰 20을 골랐다.
+- 전체 디코드 통과, 같은 시점(4초) 프레임 전후 비교에서 선명도만 오르고 블록·링잉 같은 아티팩트는 보이지 않았다. 포스터(`glass_garden.webp`, 1672×941)는 16:9로 정상이라 그대로 둔다.
+- 표시: 세로 화면에서는 영상 오버레이를 90도 돌려 가로 프레임으로 채우고, 제목·건너뛰기도 함께 돌아 같은 프레임 위에 놓인다. 프레임 비율이 16:9에 15% 이내일 때만 cover, 길쭉한 폰 화면은 contain. 가능하면 `screen.orientation.lock('landscape')`도 시도하되 실패해도 기다리거나 막지 않는다. 실기기 확인은 하지 않았고 viewport 에뮬레이션으로만 봤다.

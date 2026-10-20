@@ -183,8 +183,8 @@
   .oath-visual #meta .bottomnav button { height: 72px; padding: 3px; font-size: 11px; }
   .oath-visual #meta .tab:not(#tab-home) { top: calc(74px + var(--sat)) !important; bottom: calc(98px + var(--sab)) !important; }
   .citadel-hub-active .citadel-hub-place { left: 12px; top: calc(76px + var(--sat)); }
-  .oath-visual .citadel-hub-active #tab-home .lobby-camera-tools { left: 12px; top: calc(192px + var(--sat)); }
-  .oath-visual .citadel-hub-active #tab-home .lobby-left { right: 12px; top: calc(80px + var(--sat)); }
+  .oath-visual .citadel-hub-active #tab-home .lobby-camera-tools { left: 12px; top: calc(218px + var(--sat)); } /* 복귀 버튼(아래 끝 210px) 아래 8px */
+  .oath-visual .citadel-hub-active #tab-home .lobby-left { right: 12px; top: calc(166px + var(--sat)); } /* 장소 칩과 겹치지 않게 복귀 버튼과 같은 줄 */
   .citadel-hub-active .citadel-hub-near { right: 12px; bottom: calc(100px + var(--sab)); width: calc(100% - 24px); padding: 10px 12px; }
   .citadel-hub-active .citadel-hub-near-name { font-size: 14px; }
   .citadel-hub-active .citadel-hub-stick { bottom: calc(206px + var(--sab)); }

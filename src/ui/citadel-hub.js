@@ -45,6 +45,12 @@ const goalCopy = goal => {
   return { status: 'matching', title: '개인 목표 · 비교 준비', description: '경로·원정 단계·전투 구성·영웅·출격 레벨·조작이 저장한 목표와 일치합니다. 전투 중 AUTO를 전환하면 실제 조작 조건으로 비교합니다.', condition, target, baseline };
 };
 
+const NEAR_COLLAPSE_KEY = 'bladesurge.hubNearCollapsed';
+/** 입구 안내 카드의 첫 상태: 저장한 선택이 우선, 없으면 작은 화면(높이 500 미만·너비 420 미만)에서만 접는다. */
+export const nearInitialCollapsed = (stored, width, height) => stored === '1' ? true : stored === '0' ? false : height < 500 || width < 420;
+const readNearStored = () => { try { return localStorage.getItem(NEAR_COLLAPSE_KEY); } catch { return null; } };
+const writeNearStored = value => { try { localStorage.setItem(NEAR_COLLAPSE_KEY, value ? '1' : '0'); } catch { /* 저장소 차단 환경은 이번 세션에서만 유지한다. */ } };
+
 /** Native controls and destination dialogs for the walking lobby. */
 export class CitadelHubUI {
   constructor(app, { onInteract, onDestination } = {}) {
@@ -55,13 +61,16 @@ export class CitadelHubUI {
     this.root.setAttribute('aria-label', '성채 출격 광장');
     this.root.innerHTML = `<div class="citadel-hub-place"><small>CITADEL</small><strong>출격 광장</strong><span>길을 따라 입구로 이동하세요</span></div>
       <div class="citadel-hub-hint"><span><kbd>WASD</kbd> <kbd>방향키</kbd> 이동</span><span><kbd>E</kbd> 대화 · 입장</span></div>
-      <div class="citadel-hub-near"><div class="citadel-hub-near-copy"><small>가까운 입구</small><strong class="citadel-hub-near-name">성채의 길</strong><span class="citadel-hub-near-detail">던전과 안내관에게 다가가세요</span></div><button type="button" class="citadel-hub-interact" disabled><kbd>E</kbd><span>대화 · 입장</span></button></div>
+      <div class="citadel-hub-near"><div class="citadel-hub-near-copy"><small>가까운 입구</small><strong class="citadel-hub-near-name">성채의 길</strong><span class="citadel-hub-near-detail" id="citadel-hub-near-detail">던전과 안내관에게 다가가세요</span></div><button type="button" class="citadel-hub-near-toggle" aria-controls="citadel-hub-near-detail"><span class="citadel-hub-near-toggle-text">안내</span><span class="citadel-hub-near-toggle-caret" aria-hidden="true"></span></button><button type="button" class="citadel-hub-interact" disabled><kbd>E</kbd><span>대화 · 입장</span></button></div>
       <div class="citadel-hub-stick" role="group" aria-label="성채 이동 조이스틱"><span class="citadel-hub-stick-cross" aria-hidden="true"></span><span class="citadel-hub-knob" aria-hidden="true"></span><span class="citadel-hub-stick-label" aria-hidden="true">이동</span></div>`;
     document.body.append(this.root);
     this.name = this.root.querySelector('.citadel-hub-near-name');
     this.detail = this.root.querySelector('.citadel-hub-near-detail');
     this.interactButton = this.root.querySelector('.citadel-hub-interact');
     this.interactLabel = this.interactButton.querySelector('span');
+    this.nearToggle = this.root.querySelector('.citadel-hub-near-toggle');
+    this.nearToggle.addEventListener('click', () => this.setNearCollapsed(this.root.dataset.nearCollapsed !== 'true', true));
+    this.setNearCollapsed(nearInitialCollapsed(readNearStored(), window.innerWidth, window.innerHeight));
     this.touchStick = this.root.querySelector('.citadel-hub-stick');
     this.touchKnob = this.root.querySelector('.citadel-hub-knob');
     this.clickHandler = () => {
@@ -116,6 +125,13 @@ export class CitadelHubUI {
     const target = event.shiftKey && active === first ? last : !event.shiftKey && active === last ? first : null;
     if (!target) return;
     event.preventDefault(); target.focus();
+  }
+  /** 입구 안내 카드의 세부 줄을 접거나 편다. 접힌 카드는 이름·버튼만 남아 조이스틱 영역을 비운다. */
+  setNearCollapsed(collapsed, persist = false) {
+    this.root.dataset.nearCollapsed = String(!!collapsed);
+    this.nearToggle.setAttribute('aria-expanded', String(!collapsed));
+    this.nearToggle.setAttribute('aria-label', collapsed ? '안내 펼치기' : '안내 접기');
+    if (persist) writeNearStored(!!collapsed);
   }
   setVisible(visible) {
     this.visible = !!visible; this.root.hidden = !this.visible;
