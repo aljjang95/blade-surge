@@ -196,4 +196,5 @@ test('FX.update: 전투 일시정지 동안에는 전투 VFX 시계가 흐르지
   // 메인 루프가 일시정지 상태를 그대로 넘기는지(Battle.update 가 시간을 멈추는 상태와 같은 값)
   const main = (await import('node:fs')).readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
   expect(main).toContain('this.fx.update(dt, !!this.battle.paused)');
+  expect(main).toContain('this.renderer.update(dt, realDt, !!this.battle.paused)');
 });

@@ -70,6 +70,12 @@ test('마지막 적 속도선: 낮은 화질·동작 줄이기·높은 열 등�
   expect(make().u.uSpeed.value.y).toBeCloseTo(880 / 400, 5);
   expect(make({ quality: 'low' }).u.uSpeed.value.x).toBe(0);
   expect(make({ postFxEnabled: false }).u.uSpeed.value.x).toBe(0);
+  // 전투 일시정지 중에는 속도선 무늬 시계가 멈추고, 재개하면 이어서 흐른다
+  const clock = make(); clock.u.uSpeedClock = { value: 0 };
+  clock.update(1 / 60, 1 / 60); const before = clock.u.uSpeedClock.value;
+  clock.update(1 / 60, 1 / 60, true); clock.update(1 / 60, 1 / 60, true);
+  expect(clock.u.uSpeedClock.value).toBe(before);
+  clock.update(1 / 60, 1 / 60); expect(clock.u.uSpeedClock.value).toBeCloseTo(before + 1 / 60, 6);
   const hot = rendererFixture(); hot.u.uSpeed = { value: new THREE.Vector2() }; hot.thermalTier = 3; hot.setSpeedAccent(.8); hot.update(1 / 60, 1 / 60);
   expect(hot.u.uSpeed.value.x).toBe(0);
 });
