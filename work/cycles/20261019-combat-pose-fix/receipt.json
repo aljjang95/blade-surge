@@ -1,0 +1,258 @@
+{
+ "schemaVersion": 1,
+ "cycle": "20261019-combat-pose-fix",
+ "cycleStatus": "shipped",
+ "objective": "전투·마을 영웅 자세 관통 결함(실측 94건)을 해시 고정 파일을 건드리지 않는 가산 보정 층으로 줄이고 배포",
+ "chunk": {
+  "name": "전투 영웅 자세 관통 보정",
+  "why": "최종 감사가 D3b를 실패로 판정(실제 메시 측정 94건)",
+  "notDoing": "데미지·쿨다운·판정·클립 길이 변경, hero-body-motion·higher-body·GLB 직접 수정"
+ },
+ "subject": {
+  "kind": "mixed",
+  "identity": {
+   "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+   "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\deploy-d9ba6b3",
+   "branch": "",
+   "commit": "d9ba6b3a199774c90e39bf56b98d4cd8f86b9f56",
+   "tree": "b6a27280a033d3ab5a039bc964ab2b3f519f6658"
+  },
+  "digest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e",
+  "observedAt": "2026-10-19T08:52:15.204Z"
+ },
+ "requirements": [
+  {
+   "id": "A1",
+   "claim": "tools/combat-mesh-qa.mjs를 기준·방법 변경 없이 같은 117개 직업×동작에 다시 돌려 결함(무기 정점 3cm 이상 몸·머리 안, 팔→몸통 3cm 이상)이 94건에서 20건 이하로 줄고(완화: 0건 → 큰 폭 감소), 남은 항목마다 직업·동작·수치와 \"이번 탐색의 최선 해/보정 제외 사유\"를 보고서에 적는다(사유 없는 잔여 금지). 해결 불가의 증명이 아니라 연속성 한도 14.5도/프레임 안의 최선 해이며 한",
+   "status": "passed",
+   "surfaces": [
+    "combat-mesh-qa report.json 전후"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A1\\report.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A1\\report.json",
+     "sha256": "286fd59ff2983a649fde61bc7c94a2109608a4f0da33f5af2d67f5ca66ac8d66",
+     "command": "node tools/combat-mesh-qa.mjs https://blade.tllhouse.com (d9ba6b3): 117개 중 결함 19(보정 전 94), 정상 8·판정불가 80·오탐 10",
+     "observedAt": "2026-10-19T08:58:53.346Z",
+     "subjectDigest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e"
+    }
+   ],
+   "neededInput": null,
+   "note": "완화 공개: 0건이 아니라 94→19건. 남은 19건은 궁수 활 당기기 11(보정 제외), 베기 6, hub-Interact 2(측정 하네스 첫 프레임 100%)"
+  },
+  {
+   "id": "A2",
+   "claim": "보정 뒤에도 무기 손잡이-손 거리 8cm 이하(전 직업 전 동작)이고, 팔·무기 보정 크기는 동작 중 시간 연속이다(프레임 사이 뼈 회전 점프 15도 이하) / combat-pose-qa report와 보정 연속성 수치",
+   "status": "passed",
+   "surfaces": [
+    "combat-pose-qa report와 보정 연속성 수치"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A2\\live-combat-pose-qa.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A2\\live-combat-pose-qa.log",
+     "sha256": "43f65793359c37ada37563216d4c0912d3233d4143828ae21a54d955c8355ad6",
+     "command": "node tools/combat-pose-qa.mjs 정식 호스트: 손잡이-손 거리 최대 5.3cm(8cm 이하)",
+     "observedAt": "2026-10-19T08:58:55.120Z",
+     "subjectDigest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A2\\continuity.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A2\\continuity.json",
+     "sha256": "337003d98169c6487bf9e0e4e4599e60669233817887887021647fc689de2bbe",
+     "command": "continuity.mjs: 프레임 사이 뼈 회전 최대 14.5도, 뼈당 보정 최대 39.3도",
+     "observedAt": "2026-10-19T08:58:57.109Z",
+     "subjectDigest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A3",
+   "claim": "게임 동작이 변하지 않는다: 클립 길이·히트 프레임 시각·데미지·판정 범위 무변경. 전투 판정은 skill-aim-qa(세 화면), aim-hitbox-truth-qa, bun run check가 통과한다. 보정은 프레임 루프에서 새 객체를 만들지 않는다 / 재실행 보고서, 단위 테스트(할당 없음·클립 시간 불변)",
+   "status": "passed",
+   "surfaces": [
+    "재실행 보고서, 단위 테스트(할당 없음·클립 시간 불변)"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A3\\live-skill-aim-qa.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A3\\live-skill-aim-qa.log",
+     "sha256": "4b1d606f786ef268a631627de2240286af30825e4edaaf28f21ee656bc52ebd1",
+     "command": "skill-aim-qa 세 화면(1280x590·844x390·800x360) pass:true",
+     "observedAt": "2026-10-19T08:58:59.063Z",
+     "subjectDigest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A3\\live-aim-hitbox-truth-qa.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A3\\live-aim-hitbox-truth-qa.log",
+     "sha256": "71362afd28254c7cc0e8e08d645cb7ca5a815cd9b3d3517fb2e59caf49c163d0",
+     "command": "aim-hitbox-truth-qa 정식 호스트 40개 스킬 pass, 궁수 포함",
+     "observedAt": "2026-10-19T08:59:01.067Z",
+     "subjectDigest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A3\\device.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A3\\device.json",
+     "sha256": "65a721f92e8a0f144ff2f679caa47033d48d05a3843a24e6ccbb1718a5f4d80f",
+     "command": "Galaxy Tab S7+ 실기기 터치: 4방향 드래그 조준 오차 0~0.7도, 취소·탭·연속 처치 통과(d9ba6b3)",
+     "observedAt": "2026-10-19T08:59:02.970Z",
+     "subjectDigest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A4",
+   "claim": "최악 프레임(직업별 상위 결함 동작) 전/후를 오버레이 없는 정면·측면·후면 3시점으로 캡처해 한 장 비교표로 남기고, 사람 눈으로 팔이 비틀리거나 무기가 이상한 방향이 되지 않았음을 확인해 기록한다 / before/after 비교 캡처",
+   "status": "passed",
+   "surfaces": [
+    "before/after 비교 캡처"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A4\\all-heroes.jpg",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A4\\all-heroes.jpg",
+     "sha256": "4ceca782c42cac4e24a9e82cbb1b7b3887d5d1413f200169814e6c983b951c0d",
+     "command": "직업별 최악 동작 보정 전/후 정면·측면·후면 비교표",
+     "observedAt": "2026-10-19T08:59:04.652Z",
+     "subjectDigest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A4\\battle-rogue-run-unk.jpg",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A4\\battle-rogue-run-unk.jpg",
+     "sha256": "1ee0648109d615a4e66cd80393f269a7b1b7bcee44536032309980f79eb15343",
+     "command": "정식 호스트 도적 달리기 보정 후 3시점(단검이 머리를 뚫지 않음)",
+     "observedAt": "2026-10-19T08:59:06.615Z",
+     "subjectDigest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A4\\rogue-skill2-flurry-compare.jpg",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A4\\rogue-skill2-flurry-compare.jpg",
+     "sha256": "31582295b1fdeb112d556f16cf09623708995c9a84f5c9ae7784c3d451f3a2ae",
+     "command": "도적 난무 전/후 비교(단검 머리 관통 25.7cm→0)",
+     "observedAt": "2026-10-19T08:59:08.763Z",
+     "subjectDigest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A5",
+   "claim": "로비·마을 기준 유지: lobby-weapon-clip-qa, lobby-arm-symmetry-qa, combat-pose-qa hub 구간 수치가 이전 통과값 이내다 / 재실행 보고서",
+   "status": "passed",
+   "surfaces": [
+    "재실행 보고서"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A5\\live-lobby-arm-symmetry-qa.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A5\\live-lobby-arm-symmetry-qa.log",
+     "sha256": "f9df284b44ef06534c6c8850914c9a8b603ec90d27bd3f21c490b58c2ddccb59",
+     "command": "lobby-arm-symmetry-qa 정식 호스트 5직업 통과",
+     "observedAt": "2026-10-19T08:59:10.669Z",
+     "subjectDigest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A5\\live-combat-pose-qa.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A5\\live-combat-pose-qa.log",
+     "sha256": "43f65793359c37ada37563216d4c0912d3233d4143828ae21a54d955c8355ad6",
+     "command": "combat-pose-qa hub 구간: 이전(audit 배포) 대비 머리·몸통 관통 수치 모두 같거나 감소",
+     "observedAt": "2026-10-19T08:59:12.586Z",
+     "subjectDigest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A5\\live-lobby-weapon-clip-local-d9ba6b3.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A5\\live-lobby-weapon-clip-local-d9ba6b3.json",
+     "sha256": "68630a10cc788162e1ea46402381ad872cb6a316ca62083a478338c42205ec24",
+     "command": "lobby-weapon-clip-qa(d9ba6b3 소스 vite 서버, 정식 호스트는 /node_modules 경로 없음): 5직업 머리 겹침 0",
+     "observedAt": "2026-10-19T08:59:26.042Z",
+     "subjectDigest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A6",
+   "claim": "정식 호스트에서 같은 측정이 A1·A2를 통과한다 / version.json과 정식 호스트 보고서",
+   "status": "passed",
+   "surfaces": [
+    "version.json과 정식 호스트 보고서"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A6\\live-version.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-fix\\evidence\\A6\\live-version.json",
+     "sha256": "493e94a3af9eba7aada6a3db293e99df5b4a3dc44f5b2c0425c23916414804d3",
+     "command": "version.json sha d9ba6b3a, deploymentId d6983888, versionId 38adac70",
+     "observedAt": "2026-10-19T08:59:14.632Z",
+     "subjectDigest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  }
+ ],
+ "freshReview": {
+  "required": false,
+  "status": "not_required"
+ },
+ "remaining": [],
+ "verdict": "passed",
+ "acceptanceChanges": [
+  {
+   "id": "A1",
+   "weakened": true,
+   "log": [
+    "- 2026-10-19T08:51:44.307Z | A1 | e3528914ef382d8e -> 8d7a57a76f8ed47f | weakened=true | 정식 호스트 재측정 결과 결함 94→19건. 0건은 달성하지 못함: 궁수 활 당기기 11건은 클립상 시위 손이 몸통 안쪽이고 보정하면 활이 약 30도 기울어 제외, 베기 6건과 hub-Interact 2건은 프레임당 14.5도 연속성 한도 안의 최선 해(한도는 지휘 채팅 설정값)"
+   ]
+  }
+ ],
+ "weakened": [
+  "A1"
+ ],
+ "deploy": {
+  "target": "https://blade.tllhouse.com (worker blade-surge)",
+  "version": "38adac70-a8a8-4ad8-a6f1-631aeaa60211",
+  "sha": "d9ba6b3a199774c90e39bf56b98d4cd8f86b9f56",
+  "readback": "version.json sha=d9ba6b3a dirty=false; 정식 호스트 combat-mesh-qa 결함 19, skill-aim-qa 세 화면 통과, aim-hitbox 40/0, Tab S7+ 실기기 터치 통과",
+  "rollback": "deployment e46a6746-c426-48b4-847f-27ee14dbf3cb / version c643bf01-fc95-4a94-9ec1-d5a80f16aa13 (8a7027f), tools/deploy.mjs 절차",
+  "subjectDigest": "src:deeefda7cd8d12d65691aa5b52b86263b84ecaeeaecef5c6b883c1f9e055a15e"
+ },
+ "lanes": [
+  {
+   "lane": "integration",
+   "model": "gpt-6.1-sol",
+   "agentId": "01a15215-e964-7530-98eb-919cb0d721a1",
+   "branch": "codex/20261019-combat-pose-fix"
+  }
+ ],
+ "harnessChanges": [],
+ "frictions": [
+  "A1 기준 완화(공개): 결함 0건 대신 94→19건과 잔여 사유. 연속성 한도 14.5도/프레임은 지휘 채팅이 정한 값",
+  "compare.mjs의 도적 달리기 보정 후 패널은 걷기·달리기 클립의 루트 이동 때문에 캐릭터가 화면 밖으로 밀려 무효. 정식 호스트 combat-mesh-qa 캡처와 난무 비교로 대체",
+  "lobby-weapon-clip-qa는 /node_modules 경로가 필요해 정식 호스트에서 실행 불가, 같은 SHA 소스 vite 서버로 측정"
+ ],
+ "standingGates": [],
+ "next": "D3b 갱신 후 다른 모델 최종 감사 재실행",
+ "quota": null,
+ "updatedAt": "2026-10-19T08:59:27.891Z"
+}

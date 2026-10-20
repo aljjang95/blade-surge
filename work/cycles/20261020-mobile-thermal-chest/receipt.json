@@ -1,0 +1,238 @@
+{
+ "schemaVersion": 1,
+ "cycle": "20261020-mobile-thermal-chest",
+ "cycleStatus": "partial",
+ "objective": "모바일 발열을 실기기로 확인하며 줄이고, 플레이를 가리는 위쪽 상태창을 치우고, 보물상자를 길게 눌러 여는 손맛을 넣고, 궁수 눈과 관문 품질을 고친다",
+ "chunk": null,
+ "subject": {
+  "kind": "mixed",
+  "identity": {
+   "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+   "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\tasks\\aljjang95-blade-surge\\wt\\20261018-mobile-thermal-chest-hud",
+   "branch": "codex/task-20261018-mobile-thermal-chest-hud",
+   "commit": "2cf4def7a38e7b6105f33361f076a6d79ff29bd5",
+   "tree": "f14e25dca27ef5b916b25075ee52c069da50a1b8"
+  },
+  "digest": "src:f2e0f6ad64600860e8252f5f47da2ed01281dc4d5238edcbd62fc48972a22641",
+  "observedAt": "2026-10-19T18:40:21.712Z"
+ },
+ "requirements": [
+  {
+   "id": "A1",
+   "claim": "120Hz 기기에서 전투 렌더가 초당 60회 이하로 제한되고 로비는 30회 이하다 / 갤럭시 탭 S7+ 실측 FPS(전후)",
+   "status": "passed",
+   "surfaces": [
+    "갤럭시 탭 S7+ 실측 FPS(전후)"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A1\\A1-fps.md",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A1\\A1-fps.md",
+     "sha256": "c2fbe4e91ae83ce301c0f37617781655fdde6b663eeedad947ca9c44e91a9fb9",
+     "command": "node work/probe/phone-thermal.mjs tab-live-bdea615 (TARGET_URL https://blade.tllhouse.com/, 탭 S7+ 12분)",
+     "observedAt": "2026-10-19T18:44:25.657Z",
+     "subjectDigest": "src:f2e0f6ad64600860e8252f5f47da2ed01281dc4d5238edcbd62fc48972a22641"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A1\\tab-live-bdea615.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A1\\tab-live-bdea615.json",
+     "sha256": "5e2bce711a90ed747877388606f3d4a1dd4c4684637fca3063f1d2908b156c43",
+     "command": "node work/probe/phone-thermal.mjs tab-live-bdea615",
+     "observedAt": "2026-10-19T18:44:39.157Z",
+     "subjectDigest": "src:f2e0f6ad64600860e8252f5f47da2ed01281dc4d5238edcbd62fc48972a22641"
+    }
+   ],
+   "neededInput": null,
+   "note": "라이브 bdea615 탭 12분: 전투 targetFps 60, 렌더 최대 약 56, tier 0→3. 로비 30fps는 단위 테스트만(탭 로비 실측 없음)."
+  },
+  {
+   "id": "A2",
+   "claim": "같은 12분 AUTO 원정에서 변경 빌드의 AP·배터리 최고 온도 상승폭이 현재 main 빌드보다 작다 / 갤럭시 탭 S7+ adb thermalservice 전후 표",
+   "status": "failed",
+   "surfaces": [
+    "갤럭시 탭 S7+ adb thermalservice 전후 표"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A2\\A2-table.md",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A2\\A2-table.md",
+     "sha256": "d7a527eec6aefb104ea134f1b3b540e0f0439df03e84d706fe44c8cf70264359",
+     "command": "탭 S7+ 12분 AUTO 3회 비교(main 94711eb, 라이브 bdea615, 실험 a1ef022)",
+     "observedAt": "2026-10-19T18:44:48.485Z",
+     "subjectDigest": "src:f2e0f6ad64600860e8252f5f47da2ed01281dc4d5238edcbd62fc48972a22641"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A2\\tab-base-main.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A2\\tab-base-main.json",
+     "sha256": "2912abce98c380f8175969969f15b197a8019bb5274bd1bf4b2325e2bbda0950",
+     "command": "node work/probe/phone-thermal.mjs tab-base-main",
+     "observedAt": "2026-10-19T18:44:54.052Z",
+     "subjectDigest": "src:f2e0f6ad64600860e8252f5f47da2ed01281dc4d5238edcbd62fc48972a22641"
+    }
+   ],
+   "neededInput": null,
+   "note": "최고 AP 59.1→58.8, 최고 표면 37.6→37.7, 12분 평균 AP 55.1→54.2. 측정 오차 범위로 감소 미입증. 손 뗌 45fps 실험(a1ef022)도 평균 53.4/35.6으로 차이 없어 미배포·되돌림."
+  },
+  {
+   "id": "A3",
+   "claim": "정예·보스 근처에서 화면 위쪽 가운데 줄 대신 적 머리 위 표식이 보이고 옛 두 줄은 그려지지 않는다 / 915x412 모바일 캡처와 DOM 측정",
+   "status": "passed",
+   "surfaces": [
+    "915x412 모바일 캡처와 DOM 측정"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A3\\tag-2.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A3\\tag-2.png",
+     "sha256": "c5a059d28ecb9dae8e9ecd66286453491649a78b1f67b7a1a10c4cdac91375c6",
+     "command": "node work/probe/chest-qa.mjs https://blade.tllhouse.com/ (915x412, 위쪽 가운데 대상 줄 없음)",
+     "observedAt": "2026-10-19T18:45:00.750Z",
+     "subjectDigest": "src:f2e0f6ad64600860e8252f5f47da2ed01281dc4d5238edcbd62fc48972a22641"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A4",
+   "claim": "보물방 정화 후 상자를 직접 길게 터치하면 1.2초 진행 원이 차고 뚜껑이 열리며 보상이 나온다 / 915x412 CDP 실제 터치 입력 캡처와 상태",
+   "status": "passed",
+   "surfaces": [
+    "915x412 CDP 실제 터치 입력 캡처와 상태"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A4\\chest-holding-2.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A4\\chest-holding-2.png",
+     "sha256": "402f8b36dbdf740d4122f9c68a2b224a27026d65fff32a7d72b98ee56e564144",
+     "command": "node work/probe/chest-qa.mjs https://blade.tllhouse.com/ (CDP 실제 터치로 상자 길게 누름, 진행 원)",
+     "observedAt": "2026-10-19T18:45:06.245Z",
+     "subjectDigest": "src:f2e0f6ad64600860e8252f5f47da2ed01281dc4d5238edcbd62fc48972a22641"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A4\\chest-open-2.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A4\\chest-open-2.png",
+     "sha256": "bd07101678fc340e45586c5ebd3548c24d7bdc0b9cdabcfb740dac7d497fb5cf",
+     "command": "node work/probe/chest-qa.mjs https://blade.tllhouse.com/ (뚜껑 열림, 보상 획득)",
+     "observedAt": "2026-10-19T18:45:11.717Z",
+     "subjectDigest": "src:f2e0f6ad64600860e8252f5f47da2ed01281dc4d5238edcbd62fc48972a22641"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A5",
+   "claim": "궁수가 로비·전투 기본 시점에서 두 눈이 보인다 / 로비·전투 근접 캡처",
+   "status": "failed",
+   "surfaces": [
+    "로비·전투 근접 캡처"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A5\\g-lobby-face-2.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A5\\g-lobby-face-2.png",
+     "sha256": "f52a6defcfde4b6ddc8c0093f8da874f637af614ba5f02c6523694cdffe67566",
+     "command": "node work/probe/ranger-face.mjs https://blade.tllhouse.com/ (로비 정면: 두 눈 보임)",
+     "observedAt": "2026-10-19T18:45:16.038Z",
+     "subjectDigest": "src:f2e0f6ad64600860e8252f5f47da2ed01281dc4d5238edcbd62fc48972a22641"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A5\\battle-live-1.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A5\\battle-live-1.png",
+     "sha256": "296e6c529f198cc47cb61cb3fece2841f7c913b5c3d88e91c42d32009ca41481",
+     "command": "node work/probe/ranger-battle.mjs https://blade.tllhouse.com/ live (전투 시점: 모자 챙·앞머리가 눈을 가림)",
+     "observedAt": "2026-10-19T18:45:21.746Z",
+     "subjectDigest": "src:f2e0f6ad64600860e8252f5f47da2ed01281dc4d5238edcbd62fc48972a22641"
+    }
+   ],
+   "neededInput": null,
+   "note": "로비 정면은 두 눈 보임. 전투 기본 시점(내려다보는 각도)에서는 모자 챙과 앞머리가 눈을 가려 여전히 한쪽만 보이는 프레임이 있음."
+  },
+  {
+   "id": "A6",
+   "claim": "관문 포털이 아치 윤곽을 채우는 깊이 터널로 보인다 / 로비 근접 캡처 전후",
+   "status": "passed",
+   "surfaces": [
+    "로비 근접 캡처 전후"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A6\\live-close.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A6\\live-close.png",
+     "sha256": "554f9be446f7658d997396ac93b38eec1b8b82778243f9cbf98e037c0fc31732",
+     "command": "node work/probe/gate-shot.mjs https://blade.tllhouse.com/ live (아치형 빛 터널)",
+     "observedAt": "2026-10-19T18:45:26.785Z",
+     "subjectDigest": "src:f2e0f6ad64600860e8252f5f47da2ed01281dc4d5238edcbd62fc48972a22641"
+    }
+   ],
+   "neededInput": null,
+   "note": "포털 안쪽은 아치를 채우는 빛 터널로 바뀜. 돌기둥·아치 구조물 메시는 그대로(D5의 구조물 품질은 남음)."
+  },
+  {
+   "id": "A7",
+   "claim": "정식 호스트 blade.tllhouse.com version.json SHA가 병합된 main과 같다 / version.json",
+   "status": "passed",
+   "surfaces": [
+    "version.json"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A7\\A7-version.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-mobile-thermal-chest\\evidence\\A7\\A7-version.json",
+     "sha256": "fa83c35d2663f3d7a71ef332088f95934b7882d3b7781133fa348ef40b4b619c",
+     "command": "curl https://blade.tllhouse.com/version.json (sha bdea615 = origin/main)",
+     "observedAt": "2026-10-19T18:45:30.520Z",
+     "subjectDigest": "src:f2e0f6ad64600860e8252f5f47da2ed01281dc4d5238edcbd62fc48972a22641"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  }
+ ],
+ "freshReview": {
+  "required": false,
+  "status": "not_required"
+ },
+ "remaining": [
+  "A2 발열 감소: 무부하 대조군으로 탭 AP 지표 자격 확인 후, S26 Ultra 재페어링·충전 해제 상태 전류(에너지) 비교",
+  "A5 궁수 전투 시점 눈 가림(모자 챙·앞머리)",
+  "D5 관문 구조물 메시 품질",
+  "상자 보상 획득 카드가 조이스틱을 덮음(UI가 조작부를 가림)"
+ ],
+ "verdict": "incomplete",
+ "acceptanceChanges": [],
+ "weakened": [],
+ "deploy": {
+  "target": "https://blade.tllhouse.com",
+  "version": "a44f5661-cfd4-400e-b97d-21c1e1d88ef5",
+  "readback": "version.json sha bdea615a2c399ebcee705a44113ec1a941e0dd65 (2026-10-20 03:40 KST)",
+  "rollback": "61b25427-122b-4fe3-9cb5-6f38230ee408",
+  "subjectDigest": "src:f2e0f6ad64600860e8252f5f47da2ed01281dc4d5238edcbd62fc48972a22641"
+ },
+ "lanes": [],
+ "harnessChanges": [],
+ "frictions": [
+  "S26 Ultra 오프라인, 폴드4 연결 경로 없음 → 대표님 폰 대신 탭 S7+로 측정",
+  "탭 무선 디버깅이 측정 도중 untrusted로 바뀌어 무부하 대조군 미완",
+  "탭은 충전 중이라 전류(에너지) 비교 불가, AP 온도는 SoC가 천장 근처로 유지해 변경 효과를 가려내지 못함",
+  "앱 재시작으로 Sonnet 레인 유실 → 오케스트레이터가 직접 구현",
+  "이미지 생성 401로 컨셉 시안 생략"
+ ],
+ "standingGates": [],
+ "next": "다음 덩어리: (1) 발열 계측 자격 확인(무부하 대조군·전류 측정)과 S26 실측, 실험 브랜치 codex/exp-touch-calm-45fps A/B (2) 궁수 전투 시점 눈 (3) 관문 구조물 메시 (4) 보상 카드 위치",
+ "quota": null,
+ "updatedAt": "2026-10-19T18:45:40.993Z",
+ "summary": "상태창 이동·상자 길게 누르기·관문 포털 터널·프레임 상한은 라이브(bdea615)에서 동작 확인. 탭 S7+ 실측에서 발열 감소는 입증 못 함(최고·평균 온도 차 1도 안쪽). 궁수 눈은 전투 시점에서 아직 가려짐. 관문 구조물 메시는 미개선."
+}

@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "cycle": "20261019-tab-device-qa",
+  "cycleStatus": "shipped",
+  "objective": "갤럭시 탭 S7+ 실기기에서 정식 호스트의 연속 처치 위치, 드래그 조준, 취소, 탭, 로비를 실제 터치로 확인한다",
+  "chunk": {
+    "name": "Tab S7+ 실기기 터치 마감",
+    "why": "dod D6 마지막 항목",
+    "notDoing": "코드 변경, 발열 장시간 측정"
+  },
+  "subject": {
+    "kind": "mixed",
+    "identity": {
+      "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+      "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\deploy-tabqa",
+      "branch": "",
+      "commit": "fa8951831ac42d5f33d02420508a622c413c259c",
+      "tree": "c10f803528e74c8976fc3ae5f5496f78511f9488"
+    },
+    "digest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29",
+    "observedAt": "2026-10-18T23:58:13.799Z"
+  },
+  "requirements": [
+    {
+      "id": "A1",
+      "claim": "태블릿 Chrome 정식 호스트 전투 중 연속 처치 알약이 콤보 옆 왼쪽 가장자리에 있고 화면 가운데 1/3(플레이 영역)과 겹치지 않는다 / 태블릿 스크린샷과 기기 Chrome DOM 위치",
+      "status": "passed",
+      "surfaces": [
+        "태블릿 스크린샷과 기기 Chrome DOM 위치"
+      ],
+      "evidence": [
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A1\\a1-killstreak.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A1\\a1-killstreak.png",
+          "sha256": "adb26090ea8bbc43dc03ea6eb2904124a1caa29f14e2cf7b279df5f3a9a215bc",
+          "command": "device-qa.mjs: Tab S7+ Chrome AUTO 실전 10연속 처치 알약",
+          "observedAt": "2026-10-18T23:58:15.103Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A1\\device.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A1\\device.json",
+          "sha256": "c40861d035191628d98f8eb02177e0821c9a8e99fc45450a002393f0edc98852",
+          "command": "device-qa.mjs killstreak: 알약 l115~r239 / 가운데 1/3(498~995) 침범 없음",
+          "observedAt": "2026-10-18T23:58:16.363Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A2",
+      "claim": "태블릿에서 실제 터치로 스킬 버튼을 4방향으로 끌면 조준 표시가 켜지고 놓으면 스킬이 발동하며 영웅이 끈 방향(오차 20° 이내)을 바라본다 / adb 입력, 기기 게임 상태 읽기, 끄는 중 스크린샷",
+      "status": "passed",
+      "surfaces": [
+        "adb 입력, 기기 게임 상태 읽기, 끄는 중 스크린샷"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A2\\device.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A2\\device.json",
+          "sha256": "c40861d035191628d98f8eb02177e0821c9a8e99fc45450a002393f0edc98852",
+          "command": "device-qa.mjs adb motionevent 4방향 드래그: 오차 0~0.7도",
+          "observedAt": "2026-10-18T23:58:17.588Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A2\\a2-aim-hold.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A2\\a2-aim-hold.png",
+          "sha256": "5394d0a42f0cdd8c2094f1498e6f65375da7d553c5e841d16dce5bda7afc6bf6",
+          "command": "끄는 중 방향 레인 표시",
+          "observedAt": "2026-10-18T23:58:18.780Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A3",
+      "claim": "취소 구역으로 끌어 놓으면 스킬이 나가지 않고(MP·쿨다운 유지), 짧게 탭하면 바로 발동한다 / adb 입력과 기기 게임 상태 읽기",
+      "status": "passed",
+      "surfaces": [
+        "adb 입력과 기기 게임 상태 읽기"
+      ],
+      "evidence": [
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A3\\a3-cancel-hold.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A3\\a3-cancel-hold.png",
+          "sha256": "aee0fe8c6e96345f4cd7af45f0f8fa6033494900dbe8abcdbfe9050629dd45e9",
+          "command": "취소 구역 hot",
+          "observedAt": "2026-10-18T23:58:19.977Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A3\\device.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A3\\device.json",
+          "sha256": "c40861d035191628d98f8eb02177e0821c9a8e99fc45450a002393f0edc98852",
+          "command": "취소: 시전 없음 MP·쿨다운 유지, 탭: 즉시 시전",
+          "observedAt": "2026-10-18T23:58:21.179Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A4",
+      "claim": "태블릿 Chrome 정식 호스트 로비가 카드 캐러셀·왼쪽 탭·원형 출격 버튼으로 보이고 페이지 오류가 없다 / 태블릿 로비 스크린샷과 콘솔 오류 수",
+      "status": "passed",
+      "surfaces": [
+        "태블릿 로비 스크린샷과 콘솔 오류 수"
+      ],
+      "evidence": [
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A4\\a4-lobby.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A4\\a4-lobby.png",
+          "sha256": "80920a3f34daec486cedd8f572aa7cd16a3d9202fc5e6257696fc00fd30c49f0",
+          "command": "Tab S7+ 정식 호스트 로비",
+          "observedAt": "2026-10-18T23:58:22.363Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A4\\device.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A4\\device.json",
+          "sha256": "c40861d035191628d98f8eb02177e0821c9a8e99fc45450a002393f0edc98852",
+          "command": "pageerror 0건",
+          "observedAt": "2026-10-18T23:58:23.598Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A5",
+      "claim": "기기·OS·Chrome 버전·화면 크기·배터리 온도와 테스트한 version.json sha가 기록된다 / device.json",
+      "status": "passed",
+      "surfaces": [
+        "device.json"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A5\\device.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-tab-device-qa\\evidence\\A5\\device.json",
+          "sha256": "c40861d035191628d98f8eb02177e0821c9a8e99fc45450a002393f0edc98852",
+          "command": "SM-T970 Android 13, 1752x2800, 배터리 236(23.6C), version sha fa89518",
+          "observedAt": "2026-10-18T23:58:24.804Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    }
+  ],
+  "freshReview": {
+    "required": false,
+    "status": "not_required"
+  },
+  "remaining": [],
+  "verdict": "passed",
+  "acceptanceChanges": [],
+  "weakened": [],
+  "deploy": {
+    "target": "https://blade.tllhouse.com (worker blade-surge) — 코드 변경 없는 검증 사이클",
+    "version": "1ad58abc-7643-4790-9920-10f8045ba58b",
+    "sha": "fa8951831ac42d5f33d02420508a622c413c259c",
+    "readback": "기기에서 읽은 version.json sha=fa89518 dirty=false; SM-T970 Android 13 Chrome 155 1752x2800, 배터리 23.6C",
+    "rollback": "deployment 1f15d737-a9b7-4fbb-980b-bbc1b4a618e0 / version 1ad58abc, 이전 7ff53c3e, tools/deploy.mjs 절차",
+    "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+  },
+  "lanes": [
+    {
+      "lane": "integration",
+      "model": "anthropic/claude-opus-5-5",
+      "agentId": "commander",
+      "branch": "(검증만)"
+    }
+  ],
+  "harnessChanges": [],
+  "frictions": [
+    "S26은 대표님이 사용 중이거나 연결이 끊겨 Tab S7+로 전환(원래 dod 증거 기기)",
+    "태블릿 Chrome이 데스크톱 모드라 탭 줄·주소창 때문에 화면 좌표가 어긋남 → 알려진 지점을 실제로 터치해 브라우저 좌표와 비교하는 보정으로 해결",
+    "연속 처치는 AUTO 실전 처치로 확인(10연속)이며 20연속은 측정하지 않음",
+    "입력은 모두 adb 실제 터치지만 전투 시작은 app.startStage 픽스처(무적·쿨다운0·MP 가득·AUTO 끔)",
+    "조준 중 취소 버튼이 퀘스트 카드 글자를 가림(실기기 캡처 a2-aim-hold)"
+  ],
+  "standingGates": [],
+  "next": "P2 정리(취소 버튼·퀘스트 카드, 800x360 알림 폭, 단계 문구), 다른 모델 최종 감사 재실행",
+  "quota": null,
+  "updatedAt": "2026-10-18T23:58:40.580Z"
+}

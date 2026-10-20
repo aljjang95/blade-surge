@@ -1,0 +1,244 @@
+{
+  "schemaVersion": 1,
+  "cycle": "20261018-hero-pose-audit",
+  "cycleStatus": "shipped",
+  "objective": "로비 쇼케이스 전용 자세 교정으로 마법사 지팡이 기울기와 좌우 손 높이 불균형을 바로잡고 다섯 직업 무기·머리 겹침을 없앤다",
+  "chunk": {
+    "name": "로비 영웅 자세 감사와 교정",
+    "why": "대표님 지적: 로비 캐릭터 왼팔·오른팔 균형이 안 맞음",
+    "notDoing": "전투 애니메이션, 클라우드 루프 소유 hero-body-motion·GLB, 실기기"
+  },
+  "subject": {
+    "kind": "mixed",
+    "identity": {
+      "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+      "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261018-hero-pose-audit\\integration",
+      "branch": "codex/20261018-hero-pose-audit",
+      "commit": "3e4415680f83d5a7d0df8286b106d3d18019d5b0",
+      "tree": "59537bb2a7ade48b12743670e593629d294a6665"
+    },
+    "digest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961",
+    "observedAt": "2026-10-18T17:57:29.385Z"
+  },
+  "requirements": [
+    {
+      "id": "A1",
+      "claim": "로비 마법사의 지팡이가 대기 동작 전체(한 주기 여러 시점)에서 머리·모자 영역을 지나지 않고 몸 옆에 거의 수직(수직에서 25° 이내)으로 선다 / 로비 정면 캡처와 지팡이 축·머리 뼈 거리 실측",
+      "status": "passed",
+      "surfaces": [
+        "로비 정면 캡처와 지팡이 축·머리 뼈 거리 실측"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A1\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A1\\report.json",
+          "sha256": "61b9006c59dd1838b84825703d3e629d522b412231f062c347aa91c0a6c50d17",
+          "command": "node tools/lobby-weapon-clip-qa.mjs http://127.0.0.1:5189 out all after 12",
+          "observedAt": "2026-10-18T17:57:29.721Z",
+          "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A1\\mage-a.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A1\\mage-a.png",
+          "sha256": "5eab160597ac5bb238a445f0d815fe0156dc6c9d2cdaf6aecc8df6d97f4b5bec",
+          "command": "node tools/hero-front-qa.mjs http://127.0.0.1:5189",
+          "observedAt": "2026-10-18T17:57:30.051Z",
+          "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A1\\mage-b.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A1\\mage-b.png",
+          "sha256": "2ecf68ec8435aec69959b0147653e92e86abf06b0eec07712d8f019ff299afed",
+          "command": "node tools/hero-front-qa.mjs http://127.0.0.1:5189",
+          "observedAt": "2026-10-18T17:57:30.486Z",
+          "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A2",
+      "claim": "로비 마법사의 좌우 손 높이 차가 무기 쥔 자세를 감안해 25cm 이하로 줄고 어깨 높이는 기존 수준(3cm 이하)을 유지한다 / tools/lobby-pose-qa.mjs 뼈 위치 수치",
+      "status": "passed",
+      "surfaces": [
+        "tools/lobby-pose-qa.mjs 뼈 위치 수치"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A2\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A2\\report.json",
+          "sha256": "61b9006c59dd1838b84825703d3e629d522b412231f062c347aa91c0a6c50d17",
+          "command": "node tools/lobby-weapon-clip-qa.mjs http://127.0.0.1:5189 out all after 12",
+          "observedAt": "2026-10-18T17:57:30.852Z",
+          "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A3",
+      "claim": "다섯 직업 모두 로비 대기 동작 한 주기 동안 무기 메시 경계가 머리 뼈 주변(머리 반경)과 겹치지 않는다 / 직업별 무기·머리 겹침 실측과 정면 캡처",
+      "status": "passed",
+      "surfaces": [
+        "직업별 무기·머리 겹침 실측과 정면 캡처"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A3\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A3\\report.json",
+          "sha256": "61b9006c59dd1838b84825703d3e629d522b412231f062c347aa91c0a6c50d17",
+          "command": "node tools/lobby-weapon-clip-qa.mjs http://127.0.0.1:5189 out all after 12",
+          "observedAt": "2026-10-18T17:57:31.242Z",
+          "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A3\\knight-a.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A3\\knight-a.png",
+          "sha256": "ff86eadbcc2b64de9f96bee48570e5589250dc95d27a5f09d2ecbf338c723c25",
+          "command": "node tools/hero-front-qa.mjs http://127.0.0.1:5189",
+          "observedAt": "2026-10-18T17:57:31.657Z",
+          "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A3\\ranger-a.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A3\\ranger-a.png",
+          "sha256": "3eea53ae66078c87e6814a899fc82dc3409b40ca55a58cd1966d446d06d967b6",
+          "command": "node tools/hero-front-qa.mjs http://127.0.0.1:5189",
+          "observedAt": "2026-10-18T17:57:32.047Z",
+          "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A3\\barbarian-a.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A3\\barbarian-a.png",
+          "sha256": "7749d61a67821c20292fcea5dc09f61011a784ea24ef65fa9993e0a5085982df",
+          "command": "node tools/hero-front-qa.mjs http://127.0.0.1:5189",
+          "observedAt": "2026-10-18T17:57:32.479Z",
+          "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A4",
+      "claim": "전투 진입 뒤 영웅의 대기·공격 동작은 바뀌지 않는다(교정은 로비 쇼케이스에만 적용) / 전투 캡처와 교정 비적용 단위 테스트",
+      "status": "passed",
+      "surfaces": [
+        "전투 캡처와 교정 비적용 단위 테스트"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A4\\combat-bone-compare.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A4\\combat-bone-compare.json",
+          "sha256": "f183d99e02d16ea9f75ea207343418cfd55e7ab610ddd98c903f68cad7491894",
+          "command": "tools/lobby-pose-combat-qa.mjs before/after 뼈 비교",
+          "observedAt": "2026-10-18T17:57:32.932Z",
+          "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A4\\combat-compare.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A4\\combat-compare.png",
+          "sha256": "4d3cc9c3e5d2bd0e046eebd10beead52a3617a7be42ca590a112406a07d2341d",
+          "command": "tools/lobby-pose-combat-qa.mjs",
+          "observedAt": "2026-10-18T17:57:34.768Z",
+          "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A4\\check.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A4\\check.log",
+          "sha256": "b61754fe48f4356a5761304fbd0c1e68c4b4212432d5a976181a17994ba3ff16",
+          "command": "bun run check",
+          "observedAt": "2026-10-18T17:57:35.702Z",
+          "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A5",
+      "claim": "정식 호스트에서 같은 로비 화면이 보인다 / version.json과 로비 정면 캡처",
+      "status": "passed",
+      "surfaces": [
+        "version.json과 로비 정면 캡처"
+      ],
+      "evidence": [
+        {
+          "kind": "readback",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A5\\live-version.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A5\\live-version.json",
+          "sha256": "e62690250654f6a9955bf018605bdc8685d297e8578ef6cb3032a5b08c10b2a6",
+          "command": "GET https://blade.tllhouse.com/version.json",
+          "observedAt": "2026-10-18T18:08:40.638Z",
+          "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+        },
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A5\\mage-a.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A5\\mage-a.png",
+          "sha256": "899738876ef6f5aa374ceb9e50960d79831a02c7235110cfdddf48fbba1139f0",
+          "command": "node tools/hero-front-qa.mjs https://blade.tllhouse.com live-front",
+          "observedAt": "2026-10-18T18:08:42.859Z",
+          "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+        },
+        {
+          "kind": "deploy",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A5\\deploy.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-hero-pose-audit\\evidence\\A5\\deploy.log",
+          "sha256": "1f5800d395920115097ac4ad64ffbcecdf9aae7cfb48b46fa701f742dd2197ce",
+          "command": "node tools/deploy.mjs --auth=wrangler",
+          "observedAt": "2026-10-18T18:08:44.961Z",
+          "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+        }
+      ],
+      "neededInput": null,
+      "note": "무기 겹침 측정 도구는 개발 서버 경로(/node_modules)에서 three를 불러와 정식 빌드에서 실행되지 않음. 같은 소스 다이제스트의 로컬 측정(A1~A3)과 정식 호스트 정면 캡처 10장으로 확인"
+    }
+  ],
+  "freshReview": {
+    "required": false,
+    "status": "not_required"
+  },
+  "remaining": [],
+  "verdict": "passed",
+  "acceptanceChanges": [],
+  "weakened": [],
+  "deploy": {
+    "target": "https://blade.tllhouse.com (worker blade-surge)",
+    "version": "1004ac30-a1a9-4d0b-9818-867b4b38b7f2",
+    "sha": "bdb8c8660ffa94b821ba678f41677897a435e2c9",
+    "readback": "version.json sha=bdb8c86 dirty=false; 정식 호스트 로비 정면 캡처 5직업×2각도, 마법사 지팡이 세움·머리 겹침 없음",
+    "rollback": "deployment 583dd1a4-dcf8-4e8c-bebf-0382e4161861 / version 842d042e-b405-4980-a8b8-5483333bb9a8, tools/deploy.mjs 절차",
+    "subjectDigest": "src:567a5031a2961774510b00600686c5ad014d1c52b7adcd975f361df8d3856961"
+  },
+  "lanes": [
+    {
+      "lane": "integration",
+      "model": "claude-opus-5-5",
+      "agentId": "commander",
+      "branch": "codex/20261018-hero-pose-audit"
+    }
+  ],
+  "harnessChanges": [],
+  "frictions": [
+    "lobby-weapon-clip-qa.mjs가 개발 서버 전용 import(/node_modules/three, /src/game/look.js)를 써서 정식 호스트에서 실패 → 정식 호스트는 정면 캡처로 확인. 다음에 window.__THREE와 app 상태만 쓰도록 바꾸면 정식 빌드에서도 측정 가능",
+    "S26 실기기: 같은 adbkey로 10-14에는 연결됐으나 지금은 키 거부(untrusted), 페어링 코드 만료로 재페어링 실패 → 새 코드 필요"
+  ],
+  "standingGates": [],
+  "next": "실기기(S26 재페어링) 마감 사이클, 그 전에는 상단 재화 바 시안 스타일",
+  "quota": null,
+  "updatedAt": "2026-10-18T18:08:58.595Z"
+}

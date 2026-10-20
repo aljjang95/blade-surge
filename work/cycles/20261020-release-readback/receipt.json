@@ -1,0 +1,64 @@
+{
+ "schemaVersion": 1,
+ "cycle": "20261020-release-readback",
+ "cycleStatus": "shipped",
+ "objective": "정식 호스트 배포 SHA와 main 일치 확인",
+ "chunk": null,
+ "subject": {
+  "kind": "mixed",
+  "identity": {
+   "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+   "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\tasks\\aljjang95-blade-surge\\wt\\20261020-gate-stone-surface",
+   "branch": "codex/task-20261020-gate-stone-surface",
+   "commit": "a626ef69f3be64636696cbbe25c31a5fad3ba39d",
+   "tree": "0973af4f147b87ca6210e7e6c85e9a37277175ec"
+  },
+  "digest": "src:f04e837eebf34ead72a59e81b4a5f7965a69122ac2802fd8b022e162e5181837",
+  "observedAt": "2026-10-19T22:21:39.780Z"
+ },
+ "requirements": [
+  {
+   "id": "A1",
+   "claim": "정식 호스트 blade.tllhouse.com의 version.json SHA가 origin/main 최신 SHA와 같고 dirty=false다 / version.json과 git ls-remote",
+   "status": "passed",
+   "surfaces": [
+    "version.json과 git ls-remote"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-release-readback\\evidence\\A1\\readback.txt",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-release-readback\\evidence\\A1\\readback.txt",
+     "sha256": "0819c109c656e19273f6a24e671e04858855f99ccfed8d45bf9a5ae9aeadc3e1",
+     "command": "curl https://blade.tllhouse.com/version.json; git ls-remote origin refs/heads/main",
+     "observedAt": "2026-10-19T22:21:40.847Z",
+     "subjectDigest": "src:f04e837eebf34ead72a59e81b4a5f7965a69122ac2802fd8b022e162e5181837"
+    }
+   ],
+   "neededInput": null,
+   "note": "live 85c0e1f = origin/main 85c0e1f, dirty false"
+  }
+ ],
+ "freshReview": {
+  "required": false,
+  "status": "not_required"
+ },
+ "remaining": [],
+ "verdict": "passed",
+ "acceptanceChanges": [],
+ "weakened": [],
+ "deploy": {
+  "target": "https://blade.tllhouse.com",
+  "version": "b5001175-3d43-440d-ade5-aa8520c62fb8",
+  "readback": "version.json sha 85c0e1f16d3bf4477fac597f4efeccca65165429 dirty false",
+  "rollback": "b82ed370-cc09-4195-8eb5-620db8f6eb93",
+  "subjectDigest": "src:f04e837eebf34ead72a59e81b4a5f7965a69122ac2802fd8b022e162e5181837"
+ },
+ "lanes": [],
+ "harnessChanges": [],
+ "frictions": [],
+ "standingGates": [],
+ "next": null,
+ "quota": null,
+ "updatedAt": "2026-10-19T22:21:41.066Z"
+}
