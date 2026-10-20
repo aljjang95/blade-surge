@@ -1,6 +1,7 @@
 import { Battle as RpgBattle } from './rpg-battle.js';
 import { MasterworksService } from './masterworks-service.js';
 import { MasterworksView } from '../ui/masterworks.js';
+import { TargetTag } from '../ui/target-tag.js';
 import { BOONS, STORY_EVENTS } from '../data/masterworks.js';
 import { boonChoices, boonEffects, masteryEffects, difficultyEffects, recordProgress, recordDiscovery, grantRenown, resolveStory } from './masterworks-core.js';
 import { applyBuildStats, postureHit, tickPosture } from './masterworks-combat.js';
@@ -15,6 +16,8 @@ export class Battle extends RpgBattle {
     super(app);
     this.masterworks = new MasterworksService(app); app.masterworks = this.masterworks;
     this.chronicle = new MasterworksView(app, this);
+    // 대상 적 이름·HP·균형은 화면 위쪽 줄 대신 적 머리 위 표식으로 보인다.
+    this.targetTag = typeof document !== 'undefined' ? new TargetTag() : null;
     app.eco.onChange(() => this.chronicle.refresh());
   }
   async start(...args) {
@@ -263,5 +266,6 @@ export class Battle extends RpgBattle {
       }
     }
     this.chronicle?.tick(realDt);
+    this.targetTag?.update(this, this.renderer, realDt, this.app?.mode);
   }
 }

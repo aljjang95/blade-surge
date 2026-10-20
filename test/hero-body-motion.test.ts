@@ -65,7 +65,16 @@ test('실제 direct 여우만 저작 골반 트랙을 쓰고 공유 궁수 GLB·
     expect(direct.clips.Death_A).toBe(direct.clips.death); expect(direct.clips.Death_B).toBe(direct.clips.death);
     expect(second.clips.death).toBe(direct.clips.death);
     expect(ordinary.clips.Death_A).toBe(death);
-    for (const clip of base.animations as THREE.AnimationClip[]) if (!['dodge', 'death'].includes(clip.name)) expect(direct.clips[clip.name]).toBe(clip);
+    for (const clip of base.animations as THREE.AnimationClip[]) {
+      if (['dodge', 'death'].includes(clip.name)) continue;
+      // 대표님이 허용한 Interact 회전 저작만 별도 복제한다. 골반과 공유 원본 보호는 유지한다.
+      if (clip.name === 'interact') {
+        const authored = direct.clips.interact;
+        expect(authored).not.toBe(clip); expect(authored.duration).toBe(clip.duration);
+        expect(authored).toBe(ordinary.clips.interact); expect(authored).toBe(second.clips.interact);
+        for (let i = 0; i < clip.tracks.length; i++) if (clip.tracks[i].ValueTypeName !== 'quaternion') expect(authored.tracks[i]).toBe(clip.tracks[i]);
+      } else expect(direct.clips[clip.name]).toBe(clip);
+    }
     expect(fingerprint(base.animations)).toEqual(before); expect(fingerprint(fox.animations)).toEqual(before);
   } finally {
     for (const instance of [direct, second, ordinary]) disposeCharacter(instance.root, instance.mixer);

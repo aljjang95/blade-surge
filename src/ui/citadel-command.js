@@ -2,6 +2,7 @@ import { HEROES } from '../data/heroes.js';
 import { citadelHotspot } from '../data/citadel-hub.js';
 import { dungeonLanding } from './dungeon-landing.js';
 import './dungeon-lobby.css';
+import './lobby-carousel.css';
 
 const element = (tag, className, text) => {
   const node = document.createElement(tag);
@@ -16,6 +17,16 @@ const action = (label, callback, className = '') => {
   return button;
 };
 const fmt = (value) => Number(value || 0).toLocaleString('ko-KR');
+// 정적 마크업만 쓰는 장식 아이콘. 읽기 이름은 버튼의 aria-label 이 맡는다.
+const icon = (markup) => { const holder = document.createElement('template'); holder.innerHTML = markup; return holder.content.firstElementChild; };
+const BOLT = '<svg class="dl-ico dl-ico-bolt" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M13.6 1.8 4.8 13.6h5.9l-1.4 8.6 9.9-12.5h-6z"/></svg>';
+const LOCK = '<svg class="dl-ico dl-ico-lock" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 10V8a5 5 0 0 1 10 0v2h1.5a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 19.5v-8A1.5 1.5 0 0 1 5.5 10zm2 0h6V8a3 3 0 0 0-6 0z"/></svg>';
+const NEXT = '<svg class="dl-ico" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 4 8 8-8 8" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const SWORDS = '<svg class="dl-swords" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><g fill="#fbe39a" stroke="#6a4210" stroke-width="2" stroke-linejoin="round"><g transform="rotate(42 32 34)"><path d="M32 3l5.5 8.5V37h-11V11.5z"/><path d="M20 37h24v5.5H20z"/><path d="M29.2 42.5h5.6V56h-5.6z"/><circle cx="32" cy="58.5" r="3.2"/></g><g transform="rotate(-42 32 34)"><path d="M32 3l5.5 8.5V37h-11V11.5z"/><path d="M20 37h24v5.5H20z"/><path d="M29.2 42.5h5.6V56h-5.6z"/><circle cx="32" cy="58.5" r="3.2"/></g></g></svg>';
+// 잠금 사유('탐험 레벨 2 필요')에서 카드에 넣을 짧은 조건만 뽑는다. 전체 문장은 상세와 읽기 이름에 남는다.
+const shortLock = (reason) => { const level = /레벨\s*(\d+)/.exec(reason || ''); return level ? `Lv.${level[1]}` : '잠김'; };
+/** 로비 카드(약 90px)는 원화(1672px) 대신 320px 썸네일을 쓴다. 상세 패널은 원화를 그대로 쓴다. */
+export const cardThumb = (art) => typeof art === 'string' && /^\/img\/expansion\/[^/]+\.webp$/.test(art) ? art.replace('/img/expansion/', '/img/expansion/thumb/') : art;
 export const CITADEL_COMMAND_COLLAPSED_KEY = 'blade-surge.citadel-command.collapsed';
 // 예전 접힘 저장값은 읽기만 호환한다. 새 착지 화면은 접지 않으며 이 값을 지우지 않는다.
 // 저장 공간 접근 자체가 거부되는 브라우저(사이트 데이터 차단)는 localStorage getter 가 예외를 던진다.
@@ -36,6 +47,11 @@ export class CitadelCommand {
     this.app = app;
     this.visible = false;
     this.model = null;
+    // 카드로 고른 던전. 추천 던전이 바뀌면 readModel 이 비운다.
+    this.selectedId = null;
+    this.lastRecommendedId = null;
+    this.cardViews = new Map();
+    this.shownCardId = null;
     this.root = element('section', 'dl-landing');
     this.root.id = 'citadel-command';
     this.root.hidden = true;
@@ -66,11 +82,12 @@ export class CitadelCommand {
     this.status.setAttribute('role', 'status');
     this.status.setAttribute('aria-live', 'polite');
 
+    // 오른쪽 아래 모서리의 큰 원형 출격 버튼. 누르면 선택한 던전의 기존 준비창을 연다.
     this.prepare = action('', (button) => this.openPreparation(button), 'dl-cta citadel-command-quick-launch');
     this.prepare.id = 'citadel-dungeon-prepare';
-    this.prepareLabel = element('span', 'dl-cta-label', '출격 준비');
+    this.prepareLabel = element('span', 'dl-cta-label', '출격');
     this.prepareCost = element('small', 'dl-cta-cost');
-    this.prepare.append(this.prepareLabel, this.prepareCost);
+    this.prepare.append(icon(SWORDS), this.prepareLabel, this.prepareCost);
     // main.js 의 기존 참조 이름. 이제 같은 단일 CTA 를 가리킨다.
     this.quickLaunch = this.prepare;
 
@@ -86,7 +103,21 @@ export class CitadelCommand {
     // 설명 영역만 내부 스크롤한다. 출격 준비 버튼과 비용은 짧은 가로 화면에서도 항상 보인다.
     const body = element('div', 'dl-body');
     body.append(this.card, facts, this.status);
-    this.root.append(head, body, this.prepare, links, this.hero);
+    // 오른쪽 위: 선택한 던전 상세. 오른쪽 아래: 가로 카드 줄과 원형 출격 버튼. 영웅이 서는 왼쪽 가운데는 비워 둔다.
+    this.panel = element('div', 'dl-panel');
+    this.panel.append(head, body, this.hero);
+    this.cards = element('div', 'dl-cards');
+    this.cards.setAttribute('role', 'group');
+    this.cards.setAttribute('aria-label', '던전 선택');
+    this.cards.addEventListener('scroll', () => this.syncNext(), { passive: true });
+    this.next = action('', () => this.scrollCards(), 'dl-next');
+    this.next.setAttribute('aria-label', '던전 카드 더 보기');
+    this.next.append(icon(NEXT));
+    const bar = element('div', 'dl-cards-bar');
+    bar.append(this.cards, this.next);
+    this.dock = element('div', 'dl-dock');
+    this.dock.append(bar, this.prepare);
+    this.root.append(this.panel, links, this.dock);
     document.getElementById('tab-home').append(this.root);
 
     this.returnButton = action('← 출격 메뉴로', () => app.setHubWalkMode(false), 'citadel-command-return');
@@ -114,12 +145,90 @@ export class CitadelCommand {
 
   readModel() {
     const { eco, expedition } = this.app;
-    return dungeonLanding({ expedition, history: eco.s.masterworks?.history, energy: eco.s.energy });
+    const read = () => dungeonLanding({ expedition, history: eco.s.masterworks?.history, energy: eco.s.energy, selectedId: this.selectedId });
+    let model = read();
+    // 추천 던전이 바뀌면(클리어·최근 원정 갱신) 이전 선택을 버리고 새 추천을 보여 준다.
+    if (model.recommendedId !== this.lastRecommendedId) {
+      const changed = this.lastRecommendedId !== null;
+      this.lastRecommendedId = model.recommendedId;
+      if (changed && this.selectedId) { this.selectedId = null; model = read(); }
+    }
+    return model;
+  }
+
+  /** 카드를 눌러 던전을 고른다. 상세만 바뀌고 저장·에너지는 건드리지 않는다. */
+  select(id) {
+    this.selectedId = id;
+    this.refresh();
+  }
+
+  ensureCards(cards) {
+    if (this.cardViews.size) return;
+    for (const card of cards) {
+      const button = element('button', 'dl-pick');
+      button.type = 'button';
+      button.dataset.dungeonId = card.id;
+      const art = element('img', 'dl-pick-art');
+      art.alt = ''; art.decoding = 'async'; art.loading = 'lazy'; art.draggable = false;
+      const name = element('span', 'dl-pick-name');
+      const meta = element('span', 'dl-pick-meta');
+      const text = element('span', 'dl-pick-cost');
+      meta.append(icon(BOLT), icon(LOCK), text);
+      button.append(art, name, meta);
+      button.addEventListener('click', () => this.select(card.id));
+      this.cards.append(button);
+      this.cardViews.set(card.id, { button, art, name, text });
+    }
+  }
+
+  updateCards(model) {
+    this.ensureCards(model.cards);
+    for (const card of model.cards) {
+      const view = this.cardViews.get(card.id);
+      if (!view) continue;
+      const { button } = view;
+      const thumb = cardThumb(card.art);
+      if (view.art.getAttribute('src') !== thumb) view.art.src = thumb;
+      if (view.name.textContent !== card.name) view.name.textContent = card.name;
+      const cost = card.unlocked ? String(card.cost) : shortLock(card.lockReason);
+      if (view.text.textContent !== cost) view.text.textContent = cost;
+      const selected = String(card.id === model.selectedId), locked = String(!card.unlocked);
+      if (button.getAttribute('aria-pressed') !== selected) button.setAttribute('aria-pressed', selected);
+      if (button.dataset.locked !== locked) button.dataset.locked = locked;
+      button.style.setProperty('--pick-accent', card.accent);
+      const label = `${card.name}, 입장 에너지 ${card.cost}${card.unlocked ? '' : `, 잠김: ${card.lockReason}`}`;
+      if (button.getAttribute('aria-label') !== label) button.setAttribute('aria-label', label);
+    }
+    // 선택이 바뀐 직후에만 가려진 카드를 줄 안으로 가져온다. 사용자가 넘겨 둔 위치는 그대로 둔다.
+    if (this.shownCardId !== model.selectedId) {
+      this.shownCardId = model.selectedId;
+      const view = this.cardViews.get(model.selectedId), list = this.cards;
+      if (view && list.clientWidth) {
+        const { offsetLeft: left, offsetWidth: width } = view.button;
+        if (left < list.scrollLeft || left + width > list.scrollLeft + list.clientWidth) list.scrollTo({ left: Math.max(0, left - (list.clientWidth - width) / 2), behavior: 'auto' });
+      }
+    }
+    this.syncNext();
+  }
+
+  /** 오른쪽 화살표: 줄 끝에서는 처음으로 돌아가는 방향으로 바뀐다. */
+  scrollCards() {
+    const list = this.cards, max = list.scrollWidth - list.clientWidth;
+    const atEnd = list.scrollLeft >= max - 4;
+    const reduce = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    list.scrollTo({ left: atEnd ? 0 : Math.min(max, list.scrollLeft + list.clientWidth * 0.8), behavior: reduce ? 'auto' : 'smooth' });
+  }
+
+  syncNext() {
+    const list = this.cards, max = list.scrollWidth - list.clientWidth;
+    this.next.dataset.end = String(list.scrollLeft >= max - 4);
+    this.next.hidden = max <= 4 && list.clientWidth > 0;
   }
 
   refresh() {
     const { eco } = this.app;
     const model = this.model = this.readModel();
+    this.updateCards(model);
     this.root.dataset.reason = model.reason;
     this.reason.textContent = model.outcome ? `${model.label} · ${model.outcome === 'victory' ? '승리' : '패배'}` : model.label;
     this.progress.textContent = `정복 ${model.cleared}/${model.total}`;
@@ -153,6 +262,7 @@ export class CitadelCommand {
     if (this.status.textContent !== statusText) this.status.textContent = statusText;
     this.status.dataset.blocked = String(!!blocked);
     this.prepare.disabled = false;
+    this.prepare.dataset.locked = String(!model.unlocked);
     this.prepareCost.textContent = `에너지 ${model.cost}`;
     this.prepare.setAttribute('aria-label', `${model.name} ${model.depthLabel} 출격 준비 열기, 입장 에너지 ${model.cost}${blocked ? `, ${blocked}` : ''}`);
   }
