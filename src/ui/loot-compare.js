@@ -4,6 +4,11 @@ import { ITEM_BY_ID, RARITY_INFO } from '../data/items.js';
 const fresh = new Set();
 /** 이번 세션에서 새로 얻은 장비 uid 를 NEW 로 표시한다. */
 export function markFresh(uids) { for (const uid of uids || []) if (Number.isInteger(uid)) fresh.add(uid); }
+/** 전투 시작 시점의 invSeq 이후 인벤토리에 들어온 장비(결과 카드에 없는 전투 중 직접 획득 포함)를 NEW 로 표시한다. */
+export function markFreshSince(eco, invSeqAtStart) {
+  if (!Number.isInteger(invSeqAtStart)) return;
+  markFresh((eco?.s?.inventory || []).filter((inst) => inst.uid >= invSeqAtStart).map((inst) => inst.uid));
+}
 export function isFresh(uid) { return fresh.has(uid); }
 /** 장비를 열어 보면 NEW 를 끈다. */
 export function clearFresh(uid) { fresh.delete(uid); }

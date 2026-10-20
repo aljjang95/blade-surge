@@ -2,7 +2,7 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { Economy } from '../src/game/economy.js';
 import { ITEM_POOL, RARITY_INFO } from '../src/data/items.js';
 import { buildInventoryModel } from '../src/ui/maple-inventory.js';
-import { compareLoot, compareText, markFresh, isFresh, clearFresh, resetFresh, freshCount } from '../src/ui/loot-compare.js';
+import { compareLoot, compareText, markFresh, markFreshSince, isFresh, clearFresh, resetFresh, freshCount } from '../src/ui/loot-compare.js';
 
 const oldStorage = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
 beforeEach(() => {
@@ -50,3 +50,14 @@ test('NEW 표시는 세션 메모리에만 있고 열어 보면 꺼지며 가방
   markFresh([undefined as any, 'x' as any, b.uid]);
   expect(freshCount()).toBe(1);
 });
+
+test('전투 시작 이후 인벤토리에 들어온 장비는 전부 NEW(markFreshSince)', () => {
+  const eco = make();
+  const old = give(eco, poolId('weapon', 'N'));
+  const since = eco.s.invSeq;
+  const a = give(eco, poolId('ring', 'N')), b = give(eco, poolId('armor', 'E'));
+  markFreshSince(eco, since);
+  expect(isFresh(old.uid)).toBe(false); expect(isFresh(a.uid)).toBe(true); expect(isFresh(b.uid)).toBe(true);
+  resetFresh(); markFreshSince(eco, undefined as any); expect(freshCount()).toBe(0);
+});
+

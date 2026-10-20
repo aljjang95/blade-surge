@@ -338,10 +338,127 @@ async function A4(browser, rec) {
 }
 
 
+
+import { ITEM_BY_ID, RARITY_INFO, ITEM_POOL } from '../src/data/items.js';
+const EPIC_PER_SLOT = Object.fromEntries(Object.keys(ITEM_POOL).map((slot) => [slot, ITEM_POOL[slot].find((it) => it.rarity === 'E').id]));
+
+// ---------- A2: 결과 전리품 → 장착·판매·강화 → 새로고침 ----------
+const invSnap = (s) => s.page.evaluate(() => { const e = window.app.eco, id = e.s.selected, h = e.hero(id); return { gold: e.s.gold, stones: e.s.stones, power: e.heroPower(id), equip: { ...h.equip }, inv: e.s.inventory.map((x) => ({ uid: x.uid, id: x.id, enh: x.enh })) }; });
+async function A2view(browser, rec, viewport) {
+  const s = await open(browser, rec, viewport), tag = viewport.width + '';
+  try {
+    await boot(s); await prepareState(s, { hero: 'knight', level: 60, unlocked: 1, gold: 500000 });
+    // 주입: 강화 재료와 부위별 에픽 장비 착용(낮은 등급 전리품이 "판매" 판정으로 나오도록 비교 기준을 만든다)
+    const base = JSON.parse(JSON.stringify(EPIC_PER_SLOT));
+    await s.page.evaluate((base) => { const e = window.app.eco; e.s.stones = 200; e.s.stones2 = 50; const h = e.hero(e.s.selected); for (const [slot, id] of Object.entries(base)) { const inst = { uid: e.s.invSeq++, id, enh: 0 }; e.s.inventory.push(inst); h.equip[slot] = inst.uid; } e.emit(); }, base);
+    rec.inject('강화석 200·상급 강화석 50 지급 + 부위별 에픽(E) 장비 4개 지급·착용(비교 기준)');
+    const before = await invSnap(s); rec.obs('before-' + tag, before);
+    await tapTab(s, 'stage'); rec.did('메뉴 → 모험 실제 탭');
+    await startStageFromDetail(s, '1-1');
+    const win = await winFastFixture(s); rec.obs('battleMs-' + tag, win.ms);
+    const lootOrder = await s.page.evaluate(() => (window.app.battle.result?.reward?.loot || []).map((x) => x.uid)); // 결과 카드 순서
+    const afterBattle = await invSnap(s), byUid = new Map(afterBattle.inv.map((x) => [x.uid, x]));
+    const loot = lootOrder.map((u) => byUid.get(u)).filter(Boolean);
+    rec.obs('lootCount-' + tag, loot.length);
+    rec.check(tag + ' 실제 전투(1-1) 승리 뒤 새 장비를 얻었다(' + loot.length + '개)', loot.length >= 1 && await s.page.evaluate(() => window.app.battle.result?.win === true), { loot: loot.length });
+    await s.page.locator('#result-loot-details > summary').tap(); rec.did('결과 "획득 보상" 펼치기 실제 탭'); await s.page.waitForTimeout(600);
+    const cards = await s.page.evaluate(() => [...document.querySelectorAll('#result-loot .loot-item[data-verdict]')].map((c) => ({ verdict: c.dataset.verdict, lc: c.querySelector('.lc')?.textContent.trim() || '', aria: c.getAttribute('aria-label') || '', disabled: c.disabled })));
+    rec.obs('lootCards-' + tag, { total: cards.length, byVerdict: cards.reduce((m, c) => (m[c.verdict] = (m[c.verdict] || 0) + 1, m), {}), sample: cards.slice(0, 6) });
+    await rec.shot(s, 'result-loot-cards');
+    rec.check(tag + ' 결과 전리품 카드마다 비교 문구(.lc)와 설명이 있다', cards.length === loot.length && cards.every((c) => c.lc && /장비 비교 · /.test(c.aria)), { cards: cards.length, loot: loot.length });
+    const expectVerdicts = await s.page.evaluate((uids) => { const e = window.app.eco, id = e.s.selected; return uids.map((u) => { const p = e.previewItem(id, u); if (!p) return 'none'; if (p.remove) return 'equipped'; const d = Math.round(p.after.power - p.before.power); return d > 0 ? 'better' : d < 0 ? 'worse' : 'same'; }); }, lootOrder);
+    // 장착 전 기준으로 계산한 판정이므로, 결과 화면이 그렸을 때와 같아야 한다
+    rec.check(tag + ' 카드 판정(더 좋음/판매)이 현재 장착 대비 전투력 증감과 카드 순서까지 같다', JSON.stringify(cards.map((c) => c.verdict)) === JSON.stringify(expectVerdicts), { cards: cards.map((c) => c.verdict).join(','), expect: expectVerdicts.join(',') });
+    rec.check(tag + ' 판정이 한 종류가 아니다(추천·판매 둘 다 보인다)', new Set(cards.map((c) => c.verdict)).size >= 2, [...new Set(cards.map((c) => c.verdict))]);
+    const worse = cards.find((c) => c.verdict === 'worse');
+    rec.check(tag + ' "판매" 카드 문구가 판매가를 보인다', !worse || /^판매 [\d,]+$/.test(worse.lc), worse);
+    // 겹침: 스크롤 영역에 보이는 부분만 하단 버튼과 비교한다
+    const visOv = await s.page.evaluate(() => { const sc = document.querySelector('#result .result-scroll').getBoundingClientRect(), btn = document.querySelector('.result-btns').getBoundingClientRect(); const hit = []; document.querySelectorAll('#result-loot .loot-item').forEach((c, i) => { const r = c.getBoundingClientRect(); const top = Math.max(r.top, sc.top), bottom = Math.min(r.bottom, sc.bottom); if (bottom <= top) return; const ow = Math.min(r.right, btn.right) - Math.max(r.left, btn.left), oh = Math.min(bottom, btn.bottom) - Math.max(top, btn.top); if (ow > 0.5 && oh > 0.5) hit.push({ i, ow, oh }); }); return { hit, scrollBottom: sc.bottom, btnTop: btn.top }; });
+    const ovR = await overlapReport(s.page, [['#result .result-scroll', '.result-btns']]);
+    rec.check(tag + ' 결과: 스크롤 영역에 보이는 전리품 카드·스크롤 영역이 하단 버튼과 겹치지 않는다', visOv.hit.length === 0 && ovR.found.length === 0, { visOv, found: ovR.found.slice(0, 2) });
+    const cardFit = await s.page.evaluate(() => [...document.querySelectorAll('#result-loot .loot-item .lc')].map((l) => { const c = l.closest('.loot-item').getBoundingClientRect(), r = l.getBoundingClientRect(); return { text: l.textContent, inside: r.left >= c.left - 0.5 && r.right <= c.right + 0.5 && r.bottom <= c.bottom + 0.5 }; }));
+    rec.check(tag + ' 결과: 비교 문구가 카드 밖으로 넘치지 않는다', cardFit.length > 0 && cardFit.every((x) => x.inside), cardFit.filter((x) => !x.inside).slice(0, 3));
+    // 카드 실제 탭 → 영웅 탭 + 장비 시트
+    const pickIdx = Math.max(0, cards.findIndex((c) => c.verdict === 'better')), pick = loot[pickIdx], pd = ITEM_BY_ID[pick.id];
+    await s.page.locator('#result-loot .loot-item[data-verdict]').nth(pickIdx).scrollIntoViewIfNeeded();
+    await s.page.locator('#result-loot .loot-item[data-verdict]').nth(pickIdx).tap(); rec.did('결과 전리품 카드 실제 탭(▲ 장착 추천 카드)'); await s.page.waitForTimeout(900);
+    const sheet = await s.page.evaluate(() => ({ tab: document.getElementById('tab-heroes')?.classList.contains('show'), name: document.querySelector('#modal.show .item-sheet h2')?.innerText || '', eq: document.querySelector('#modal.show #i-eq')?.innerText || '', sell: !!document.querySelector('#modal.show #i-sell'), enh: !!document.querySelector('#modal.show #e-go') }));
+    rec.obs('sheet-' + tag, sheet); await rec.shot(s, 'item-sheet-from-result');
+    rec.check(tag + ' 카드 탭 → 영웅 탭 + 해당 장비(' + pd.name + ') 시트(장착·판매·강화 버튼)', sheet.tab && sheet.name.includes(pd.name) && !!sheet.eq && sheet.sell && sheet.enh, sheet);
+    // 장착
+    const preEq = await invSnap(s), wasEquipped = Object.values(preEq.equip).includes(pick.uid);
+    if (!wasEquipped) { await s.page.locator('#modal.show #i-eq').tap(); rec.did('시트 #i-eq(장착하기) 실제 탭'); await s.page.waitForTimeout(700); }
+    const postEq = await invSnap(s);
+    const verdict = cards[pickIdx].verdict, sign = Math.sign(postEq.power - preEq.power);
+    rec.check(tag + ' 장착: ' + pd.slot + ' 슬롯이 해당 장비로 바뀌고 전투력 증감 부호가 카드 판정(' + verdict + ')과 같다', postEq.equip[pd.slot] === pick.uid && (verdict === 'better' ? sign > 0 : verdict === 'worse' ? sign < 0 : true), { verdict, preEq: { power: preEq.power, slot: preEq.equip[pd.slot] }, postEq: { power: postEq.power, slot: postEq.equip[pd.slot] }, wasEquipped });
+    // 영웅 가방 NEW: 연 장비는 꺼지고 이번에 얻은 나머지는 켜진다
+    const lootSet = lootOrder;
+    const bagNew = await s.page.evaluate(({ lootSet, openUid }) => { const set = new Set(lootSet); const cells = [...document.querySelectorAll('#hero-bag [data-inv]')]; return { items: cells.length, news: cells.filter((c) => c.querySelector('.bag-new')).length, mismatch: cells.filter((c) => { const uid = +c.dataset.inv, want = set.has(uid) && uid !== openUid; return !!c.querySelector('.bag-new') !== want; }).map((c) => c.dataset.inv).slice(0, 5) }; }, { lootSet, openUid: pick.uid });
+    rec.obs('bagNew-' + tag, bagNew); await rec.shot(s, 'hero-bag-new');
+    rec.check(tag + ' 가방: 이번에 얻은 장비(연 것 제외)에만 NEW(' + bagNew.news + '개), 연 장비는 꺼졌다', bagNew.news > 0 && bagNew.mismatch.length === 0, bagNew);
+    const ovB = await overlapReport(s.page, [['#hero-bag .bag-new', '#hero-bag .bag-eq'], ['#hero-bag .bag-new', '#hero-bag .inventory-level'], ['#hero-bag .bag-new', '#hero-bag .inventory-name']]);
+    rec.check(tag + ' 가방: NEW 표시가 착용·강화 표시와 겹치지 않는다', ovB.found.length === 0, ovB.found.slice(0, 3));
+    // 판매: 이번에 얻은 장비 중 장착하지 않은 것(가방에서 실제 탭)
+    const sellTarget = await s.page.evaluate((lootSet) => { const e = window.app.eco, h = e.hero(e.s.selected), worn = new Set(Object.values(h.equip)); const cell = [...document.querySelectorAll('#hero-bag [data-inv]')].find((c) => lootSet.includes(+c.dataset.inv) && !worn.has(+c.dataset.inv)); return cell ? +cell.dataset.inv : null; }, lootSet);
+    rec.check(tag + ' 가방에 판매할 새 장비가 있다', sellTarget !== null, sellTarget);
+    const sd = ITEM_BY_ID[byUid.get(sellTarget).id];
+    const preSell = await invSnap(s);
+    await s.page.locator('#hero-bag [data-inv="' + sellTarget + '"]').tap(); rec.did('가방 새 장비 칸 실제 탭(판매 대상)'); await s.page.waitForTimeout(700);
+    await s.page.locator('#modal.show #i-sell').tap(); rec.did('시트 #i-sell 실제 탭'); await s.page.waitForTimeout(500);
+    await s.page.locator('#modal.show #m-ok').tap(); rec.did('판매 확인 #m-ok 실제 탭'); await s.page.waitForTimeout(700);
+    const postSell = await invSnap(s), expGold = RARITY_INFO[sd.rarity]?.sell || 200;
+    rec.check(tag + ' 판매(' + sd.name + '): 골드 +' + expGold + ', 장비 1개 감소', postSell.gold - preSell.gold === expGold && postSell.inv.length === preSell.inv.length - 1 && !postSell.inv.some((x) => x.uid === sellTarget), { gold: [preSell.gold, postSell.gold], inv: [preSell.inv.length, postSell.inv.length] });
+    // 강화: 장착한 장비(가방에서 실제 탭)
+    await s.page.evaluate((slot) => { window.app.meta.bagSlot = slot; window.app.meta.renderHeroes(); }, pd.slot); await s.page.waitForTimeout(400);
+    await s.page.locator('#hero-bag [data-inv="' + pick.uid + '"]').tap(); rec.did('가방 장착 장비 칸 실제 탭(강화 대상)'); await s.page.waitForTimeout(700);
+    const preEnh = await invSnap(s), enhBefore = preEnh.inv.find((x) => x.uid === pick.uid).enh;
+    let tries = 0, enhAfter = enhBefore, goldAfter = preEnh.gold;
+    while (tries < 4 && enhAfter <= enhBefore) {
+      tries++;
+      if (!await s.page.locator('#modal.show #e-go').count()) { await s.page.locator('#hero-bag [data-inv="' + pick.uid + '"]').tap().catch(() => {}); await s.page.waitForTimeout(600); }
+      await s.page.locator('#modal.show #e-go').tap(); rec.did('시트 #e-go(강화하기) 실제 탭'); await s.page.waitForTimeout(2600);
+      const cur = await invSnap(s); enhAfter = (cur.inv.find((x) => x.uid === pick.uid) || { enh: -1 }).enh; goldAfter = cur.gold;
+      if (enhAfter < 0) break;
+    }
+    await rec.shot(s, 'item-sheet-enhanced');
+    rec.check(tag + ' 강화: 단계 +' + enhBefore + ' → +' + enhAfter + '(시도 ' + tries + ')·골드 감소', enhAfter > enhBefore && goldAfter < preEnh.gold, { enhBefore, enhAfter, tries, gold: [preEnh.gold, goldAfter] });
+    // 새로고침 뒤 유지
+    const finalBefore = await invSnap(s);
+    await s.page.reload({ waitUntil: 'domcontentloaded' }); rec.did('새로고침(page.reload)'); await boot(s);
+    const finalAfter = await invSnap(s); rec.obs('persist-' + tag, { before: { gold: finalBefore.gold, equip: finalBefore.equip, inv: finalBefore.inv.length }, after: { gold: finalAfter.gold, equip: finalAfter.equip, inv: finalAfter.inv.length } });
+    rec.check(tag + ' 새로고침 뒤 장착·강화 단계·골드·장비 목록 유지', finalAfter.equip[pd.slot] === pick.uid && (finalAfter.inv.find((x) => x.uid === pick.uid) || {}).enh === enhAfter && finalAfter.gold === finalBefore.gold && finalAfter.inv.length === finalBefore.inv.length && !finalAfter.inv.some((x) => x.uid === sellTarget), { before: finalBefore.equip, after: finalAfter.equip });
+    await tapTab(s, 'heroes'); await s.page.waitForTimeout(500);
+    rec.check(tag + ' 새로고침 뒤 NEW 표시는 없다(세션 메모리, 저장 스키마 불변)', await s.page.evaluate(() => document.querySelectorAll('#hero-bag .bag-new').length) === 0);
+  } catch (e) { await errShot(s); throw e; } finally { await s.close(); }
+}
+
+// 1280: 인벤토리 창(I 키, 데스크톱 단축키)에서 NEW 확인. 키 입력은 실제 키보드 이벤트다.
+async function A2inventory(browser, rec) {
+  const s = await open(browser, rec, WIDE);
+  try {
+    await boot(s); await prepareState(s, { hero: 'knight', level: 60, unlocked: 1, gold: 500000 });
+    const before = await invSnap(s), had = new Set(before.inv.map((x) => x.uid));
+    await tapTab(s, 'stage'); await startStageFromDetail(s, '1-1'); await winFastFixture(s);
+    const loot = (await invSnap(s)).inv.filter((x) => !had.has(x.uid));
+    await s.page.locator('#btn-result-lobby').tap(); rec.did('결과 #btn-result-lobby 실제 탭'); await s.page.waitForFunction(() => window.app.mode === 'lobby', undefined, { timeout: 30000 }); await s.page.waitForTimeout(900);
+    await s.page.keyboard.press('KeyI'); rec.did('키보드 I(인벤토리 창) 입력'); await s.page.waitForTimeout(900);
+    const inv = await s.page.evaluate(() => ({ cells: document.querySelectorAll('.mpl-cell.has-gear').length, news: document.querySelectorAll('.mpl-new').length, aria: [...document.querySelectorAll('.mpl-cell.has-gear')].filter((c) => c.querySelector('.mpl-new')).map((c) => c.getAttribute('aria-label')).slice(0, 5) }));
+    rec.obs('inventoryWindow', inv); await rec.shot(s, 'inventory-window-new');
+    rec.check('1280 인벤토리 창에서 새 장비 ' + loot.length + '개에 NEW', inv.news === loot.length && loot.length > 0, { inv, loot: loot.length });
+    const ov = await overlapReport(s.page, [['.mpl-new', '.mpl-enh'], ['.mpl-new', '.mpl-worn'], ['.mpl-new', '.mpl-qty']]);
+    rec.check('1280 인벤토리: NEW 가 강화·착용 표시와 겹치지 않는다', ov.found.length === 0, ov.found.slice(0, 3));
+    const first = s.page.locator('.mpl-cell.has-gear:has(.mpl-new)').first(); await first.click(); rec.did('인벤토리 NEW 칸 클릭(마우스)'); await s.page.waitForTimeout(700);
+    await s.page.locator('#modal.show #i-close').tap().catch(() => {}); await s.page.waitForTimeout(500);
+    rec.check('1280 NEW 칸을 열면 NEW 가 하나 줄어든다', await s.page.evaluate(() => document.querySelectorAll('.mpl-new').length) === loot.length - 1, await s.page.evaluate(() => document.querySelectorAll('.mpl-new').length));
+  } catch (e) { await errShot(s); throw e; } finally { await s.close(); }
+}
+async function A2(browser, rec) { await A2view(browser, rec, VIEW); await A2view(browser, rec, WIDE); await A2inventory(browser, rec); }
+
+
 /*__INSERT__*/
 
 // ---------- 러너 ----------
-const CRITERIA = { A4: ['다음 스테이지·지역·권장 Lv·대표 보상', A4], A6: ['상점·소환 단축 일수 문구', A6] };
+const CRITERIA = { A2: ['전리품 비교·장착·판매·강화·새로고침', A2], A4: ['다음 스테이지·지역·권장 Lv·대표 보상', A4], A6: ['상점·소환 단축 일수 문구', A6] };
 const GL = arg('gl', 'gpu');
 const browser = await chromium.launch(GL === 'swift' ? launchOpts() : { args: ['--use-angle=d3d11', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--autoplay-policy=no-user-gesture-required'] });
 const summary = { started: new Date().toISOString(), origin, out, viewport: VIEW, wide: WIDE, criteria: {} };

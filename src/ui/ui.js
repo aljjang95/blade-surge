@@ -9,7 +9,7 @@ import { ROOM_TYPE } from '../game/world.js';
 import { resultStoryHtml } from './campaign.js';
 import { levelExp } from '../data/heroes.js';
 import { renderGrowthPreparation, canPrepareGrowth } from './growth.js';
-import { compareLoot, compareText, markFresh, clearFresh } from './loot-compare.js';
+import { compareLoot, compareText, markFresh, markFreshSince, clearFresh } from './loot-compare.js';
 import { comboFeedback } from './combo-feedback.js';
 import { skillFeedback } from './skill-feedback.js';
 import { BattleReadability } from './battle-readability.js';
@@ -234,7 +234,7 @@ export class UI {
     if (this.app.battle?.world !== floor) return;
     this.readability.renderObjective(this.app.battle);
   }
-  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { if (this.combatCueOwner) this.clearCombatCue(this.combatCueOwner, this.combatCueEl?.textContent); this.readability?.clear(); this.refreshComboFeedback(); this.refreshSkillFeedback(); this.refreshDodgeFeedback(); this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } else this.observeCombatNoticeHeaders(); this.refreshCombatNoticeLayout(); }
+  showHud(on) { this.combatNotices.clear(); if (on) { this.el.toast.replaceChildren(); this._invSeqAtBattleStart = this.eco?.s?.invSeq; } this.show(this.el.hud, on); if (!on) { if (this.combatCueOwner) this.clearCombatCue(this.combatCueOwner, this.combatCueEl?.textContent); this.readability?.clear(); this.refreshComboFeedback(); this.refreshSkillFeedback(); this.refreshDodgeFeedback(); this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } else this.observeCombatNoticeHeaders(); this.refreshCombatNoticeLayout(); }
   pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; b.setPaused('manual', on); this.show(this.el.pause, on); if (!on && this.el.pause.contains(document.activeElement)) document.activeElement?.blur?.(); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
@@ -661,7 +661,7 @@ export class UI {
       // completeStage and recordCampaign must settle before affordability is calculated.
       this.refreshResultGrowth(r);
       stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
-      markFresh(rw.loot.map((it) => it.uid));
+      markFresh(rw.loot.map((it) => it.uid)); markFreshSince(eco, this._invSeqAtBattleStart);
       const items = [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];
       lootDetails.querySelector('summary').textContent = `획득 보상 · 장비 ${rw.loot.length}개 · 펼쳐서 비교`;
       if (r.campaignReward?.levelGold) items.push({ g: { k: 'gold', n: r.campaignReward.levelGold, label: '탐험 레벨업' } });
