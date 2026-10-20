@@ -11,13 +11,14 @@ import { AVATARS } from '../data/avatars.js';
 import { libraryAssetForAvatar } from '../engine/library-assets.js';
 import { dungeonLanding } from './dungeon-landing.js';
 import { itemIconHtml, itemVisual } from './item-presentation.js';
+import { heroGrade } from '../data/hero-grades.js';
 
 /**
  * 영웅 · 장비 화면의 구성 요소.
  * 첫 화면은 3D 미리보기 + 장착 슬롯 4개 + 가방이며, 성장 · 스킬 · 세트는 탭으로 나눈다.
  * 모든 함수는 Meta 인스턴스를 첫 인자로 받아 기존 economy · app 서비스를 그대로 쓴다.
  */
-const RC = { N: 'var(--r-n)', R: 'var(--r-r)', SR: 'var(--r-sr)', SSR: 'var(--r-ssr)' };
+const RC = { N: 'var(--r-n)', R: 'var(--r-r)', SR: 'var(--r-sr)', SSR: 'var(--r-ssr)', SSSR: 'var(--r-sssr)' };
 export const HERO_PANES = Object.freeze([
   { id: 'gear', label: '장비' },
   { id: 'growth', label: '성장' },
@@ -65,7 +66,7 @@ export function renderOwnedHero(meta, id, det) {
   const avatar = AVATARS.find((entry) => entry.heroId === id), avatarReady = !!avatar && !!libraryAssetForAvatar(avatar.id), avatarOwned = !!avatar && eco.s.avatars.owned.includes(avatar.id), avatarEquipped = !!avatar && eco.equippedAvatar(id) === avatar.id;
   const avatarRow = avatar ? '<section class="hero-avatar-row" aria-label="' + esc(def.name) + ' 아바타"><div><b>캐시 아바타</b><small>' + esc(avatar.name) + ' · 순수 외형 · 성능 영향 없음</small></div><button type="button" class="btn btn-ghost btn-sm hero-avatar-action" data-avatar-action="' + avatar.id + '" ' + (avatarReady ? '' : 'disabled') + '>' + (avatarReady ? (avatarOwned ? (avatarEquipped ? '착용 중 · 해제' : '보유 중 · 착용') : '<i class="ic ic-gem"></i> ' + fmt(avatar.price) + ' 보석') : '준비 중') + '</button></section>' : '';
   det.innerHTML = '<div class="hs-slots" role="group" aria-label="' + esc(def.name) + ' 장착 장비">' + slots + '</div>' +
-    '<header class="hs-head"><div class="hs-id"><h2>' + esc(def.name) + ' <small style="color:' + RC[def.rarity] + '">' + def.rarity + '</small></h2><div class="sub">' + esc(def.title) + ' · Lv.' + h.level + ' · ' + '★'.repeat(h.star) + '☆'.repeat(5 - h.star) + ' · 전투력 <b>' + fmt(st.power) + '</b></div></div>' +
+    '<header class="hs-head"><div class="hs-id"><h2>' + esc(def.name) + ' <small class="hs-grade" data-grade="' + heroGrade(def, h) + '" style="color:' + RC[heroGrade(def, h)] + '">' + heroGrade(def, h) + '</small></h2><div class="sub">' + esc(def.title) + ' · Lv.' + h.level + ' · ' + '★'.repeat(h.star) + '☆'.repeat(5 - h.star) + ' · 전투력 <b>' + fmt(st.power) + '</b></div></div>' +
     '<div class="hs-go">' + (selected ? '<span class="hs-on">출전 중</span>' + sortie : '<button type="button" class="btn btn-ghost btn-sm" id="h-sel">출전시키기</button>') + '</div></header>' +
     // 가로 화면의 hero-detail 은 display:contents 격자라 새 형제 요소가 엉뚱한 칸에 앉는다. 아바타 줄은 본문 안에 둔다.
     '<div class="hs-main">' + avatarRow + '<div class="hs-tabs" role="tablist" aria-label="영웅 정보">' + HERO_PANES.map((entry) => '<button type="button" role="tab" id="hs-tab-' + entry.id + '" data-pane="' + entry.id + '" aria-controls="hs-panel" aria-selected="' + (entry.id === pane) + '" tabindex="' + (entry.id === pane ? 0 : -1) + '">' + entry.label + (entry.id === 'gear' ? '<small>가방 ' + eco.s.inventory.length + '</small>' : '') + '</button>').join('') + '</div>' +

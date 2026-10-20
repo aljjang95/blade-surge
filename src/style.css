@@ -277,6 +277,23 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 
 /* shop */
 .shop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px; overflow-y: auto; padding-bottom: 20px; }
+/* 성장 흐름 줄(보석 → 소환 → 중복 조각 → 초월 → 더 강한 전투)과 상품별 용도 표시. growth-flow.js 가 문구를 정한다. */
+/* 패널은 세로 flex 라 줄이 줄어들어 위가 잘렸다(844·1280 캡처). 높이를 고정하고 줄어들지 않게 한다. */
+.shop-flow { display: flex; flex: 0 0 auto; align-items: center; gap: 3px; margin: 4px 0 2px; padding: 1px 0; min-height: 22px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+/* 초월 최고 등급(SSSR) 색. hero-grades.js GRADE_RULES.SSSR.color 와 같다. */
+:root { --r-sssr: #ff5a8a; }
+.rar-SSSR { border-color: var(--r-sssr) !important; box-shadow: inset 0 0 14px rgba(255, 90, 138, .5), 0 0 10px rgba(255, 90, 138, .35) !important; }
+.bg-SSSR { background: linear-gradient(90deg, #ff5a8a, #ffcf5a, #7ad7ff); color: #2a0010; }
+.shop-flow::-webkit-scrollbar { display: none; }
+.shop-flow .sf-step { flex: 0 0 auto; display: inline-flex; align-items: baseline; gap: 4px; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(255, 207, 90, .35); background: rgba(12, 8, 24, .55); color: var(--sb-cream, #f3e6c8); font-size: 11px; line-height: 1.3; cursor: pointer; }
+.shop-flow .sf-step b { font-weight: 900; }
+.shop-flow .sf-step small { color: var(--gold, #ffcf5a); font-size: 10px; font-weight: 700; }
+.shop-flow .sf-arrow { color: var(--gold, #ffcf5a); font-weight: 900; font-size: 12px; }
+/* 칩은 공통 터치 규칙(최소 44px)을 따른다. 844x390 에서도 상품 가격 버튼이 첫 화면에 남는 것을 캡처로 확인했다. */
+.shop-item .si-flow { font-size: 9px; line-height: 1.2; font-weight: 800; color: #ffd98a; }
+.shop-item .si-flow[data-role=transcend] { color: #ff8fb0; }
+.shop-item .si-flow[data-role=reset] { color: #9fe3c2; }
+#btn-pull-ssr.hidden { display: none; }
 .shop-item { position: relative; background: var(--panel2); border: 1px solid rgba(255,255,255,.14); border-radius: 14px; padding: 10px 6px 8px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
 .shop-item.hot { border-color: var(--gold); background: linear-gradient(180deg, rgba(80,50,10,.9), rgba(30,20,10,.9)); }
 .shop-item.big { grid-column: span 3; flex-direction: row; text-align: left; gap: 12px; padding: 10px 12px; }
@@ -950,6 +967,8 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 @media (orientation: landscape) and (max-height: 380px) {
   #tab-gacha .gacha-btns .btn { padding: 7px 10px; font-size: 15px; }
   #tab-gacha .gacha-btns .btn small { font-size: 11px; }
+  #tab-gacha .gacha-btns { gap: 5px; }
+  #tab-gacha #btn-pull-ssr { padding: 5px 10px; font-size: 13px; }
   #tab-gacha .gacha-odds { font-size: 11px !important; }
   #tab-gacha .banner-txt h2 { font-size: 22px; }
   #tab-gacha .banner-sub, #tab-gacha .banner-timer { font-size: 11px; }

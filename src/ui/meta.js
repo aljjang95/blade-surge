@@ -25,6 +25,8 @@ import { availableDifficulties } from '../game/difficulty.js';
 import { AVATARS } from '../data/avatars.js';
 import { libraryAssetForAvatar } from '../engine/library-assets.js';
 import { itemVisual, itemIconHtml } from './item-presentation.js';
+import { GROWTH_FLOW, skuFlowRole, shardProgress } from '../data/growth-flow.js';
+import { heroGrade } from '../data/hero-grades.js';
 // 공개 확률은 실제 소환 코드와 같은 식(gachaRates/gachaChances)에서만 계산한다. 화면에 숫자를 따로 적지 않는다.
 const pct = (p, d = 1) => (p * 100).toFixed(d) + '%';
 const clampPity = (n) => Math.max(0, Math.min(GACHA.pity, Math.floor(Number(n) || 0)));
@@ -76,7 +78,7 @@ export const stageKeyArt = (stage) => {
   return resolveEnemyPortrait(id, ENEMIES[id]);
 };
 
-const RC = { N: 'var(--r-n)', R: 'var(--r-r)', SR: 'var(--r-sr)', SSR: 'var(--r-ssr)' };
+const RC = { N: 'var(--r-n)', R: 'var(--r-r)', SR: 'var(--r-sr)', SSR: 'var(--r-ssr)', SSSR: 'var(--r-sssr)' };
 const hms = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); const d = Math.floor(s / 86400); const h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60; return (d ? d + '일 ' : '') + `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${ss.toString().padStart(2, '0')}`; };
 
 export class Meta {
@@ -98,6 +100,7 @@ export class Meta {
     $('promo-monthly').addEventListener('click', () => this.buy('monthly'));
     $('btn-pull1').addEventListener('click', () => this.pull(1));
     $('btn-pull10').addEventListener('click', () => this.pull(10));
+    $('btn-pull-ssr').addEventListener('click', () => this.pullSSR());
     $('btn-rates').addEventListener('click', () => this.showRates());
     $('btn-pass-buy').addEventListener('click', () => this.buyPass());
     $('btn-reveal-skip').addEventListener('click', () => this.revealSkip());
@@ -141,6 +144,8 @@ export class Meta {
     $('dot-pass').classList.toggle('on', this.eco.passClaimable() > 0); $('dot-gacha').classList.toggle('on', s.tickets > 0 || s.ssrTickets > 0); $('dot-shop').classList.toggle('on', !s.purchases.includes('starter'));
     this.refreshMenuBadge();
     $('v-ticket').textContent = s.tickets + (s.ssrTickets ? ` (SSR확정 ${s.ssrTickets})` : ''); $('v-pity').textContent = s.pity; $('pity-left').textContent = GACHA.pity - s.pity;
+    // SSR 확정권은 확률 정보 창 안이 아니라 소환 버튼 줄에서 바로 쓴다(보유할 때만 보인다).
+    $('btn-pull-ssr').classList.toggle('hidden', !(s.ssrTickets > 0)); $('v-ssr-ticket').textContent = s.ssrTickets || 0;
     this.refreshGachaOdds();
     $('promo-starter').style.display = s.purchases.includes('starter') ? 'none' : '';
     $('promo-monthly').style.display = s.monthlyUntil > Date.now() ? 'none' : '';
@@ -148,7 +153,9 @@ export class Meta {
   }
   refreshHome() {
     const s = this.eco.s; const def = HEROES[s.selected]; const nx = this.eco.nextStage();
-    $('lobby-hero-name').textContent = def.name; $('lobby-rarity').textContent = def.rarity; $('lobby-rarity').style.background = RC[def.rarity]; $('lobby-power').textContent = fmt(this.eco.heroPower(s.selected));
+    // 초월로 오른 현재 등급을 보인다(시작 등급 def.rarity 가 아니라).
+    const grade = heroGrade(def, this.eco.hero(s.selected));
+    $('lobby-hero-name').textContent = def.name; $('lobby-rarity').textContent = grade; $('lobby-rarity').style.background = RC[grade]; $('lobby-power').textContent = fmt(this.eco.heroPower(s.selected));
     const complete = campaignFinished(s.progress);
     $('stage-pill-txt').textContent = complete ? '캠페인 완주 · 새로운 원정' : nx.name; $('battle-cost').textContent = nx.energy;
     $('btn-battle').firstElementChild.textContent = complete ? '심층 원정' : '출 격';
@@ -247,11 +254,12 @@ export class Meta {
     if (!HEROES[this.heroSel]) this.heroSel = this.eco.s.selected;
     for (const id of HERO_ORDER) {
       const def = HEROES[id]; const own = this.eco.ownHero(id); const h = this.eco.hero(id);
-      const c = document.createElement('button'); c.type = 'button'; c.className = `hero-card rar-${def.rarity}` + (own ? '' : ' lock') + (this.heroSel === id ? ' on' : '');
+      const grade = own ? heroGrade(def, h) : def.rarity;
+      const c = document.createElement('button'); c.type = 'button'; c.className = `hero-card rar-${grade}` + (own ? '' : ' lock') + (this.heroSel === id ? ' on' : '');
       c.dataset.heroId = id;
       c.setAttribute('aria-label', `${def.name}${own ? ' 출전 선택' : ' 미보유 정보'}`);
       c.setAttribute('aria-pressed', String(this.eco.s.selected === id));
-      c.innerHTML = `<img onerror="this.style.background='${def.color}'"><span class="rar bg-${def.rarity}">${def.rarity}</span>${own ? `<span class="lv">Lv.${h.level} ${'★'.repeat(h.star)}</span>` : '<span class="lockt">미보유</span>'}`;
+      c.innerHTML = `<img onerror="this.style.background='${def.color}'"><span class="rar bg-${grade}">${grade}</span>${own ? `<span class="lv">Lv.${h.level} ${'★'.repeat(h.star)}</span>` : '<span class="lockt">미보유</span>'}`;
       c.onclick = (event) => { if (own) this.selectHero(id, event.detail === 0 && document.activeElement === c); else { this.heroSel = id; this.renderHeroes(); } };
       list.appendChild(c);
       bindHeroPortrait(c.querySelector('img'), this.app, id);
@@ -333,6 +341,8 @@ export class Meta {
       : ` 다음 소환 SSR ${pct(next, 1)} · ${soft}번째부터 확률 상승 · ${left}회 안에 SSR 확정`);
   }
   async pull(n) {
+    // 결과 화면이 열려 있는 동안에는 어떤 소환도 다시 시작하지 않는다(리뷰 P1: 초점이 남은 버튼 Enter 반복으로 재화가 추가 소모되고 앞 결과가 사라짐).
+    if (this._revealOpen) return;
     const s = this.eco.s; const cost = n === 10 ? GACHA.ten : GACHA.single; const useTicket = n === 1 ? s.tickets > 0 : s.tickets >= 10;
     if (!useTicket && s.gems < cost) { audio.play('ui_error'); const ok = await this.ui.confirm('보석 부족', `보석 ${fmt(cost)}개가 필요합니다 (보유 ${fmt(s.gems)})<br>보석은 출석·임무·스테이지 첫 클리어·패스 무료 보상으로 모을 수 있어요.`, { ok: '보석 상점 보기', cancel: '취소' }); if (ok) this.openTab('shop', 'gem'); return; }
     const pityBefore = clampPity(s.pity);
@@ -340,14 +350,16 @@ export class Meta {
     this.trackPull(n, useTicket ? 'tickets' : 'gems', pityBefore, results);
     this.showReveal(results);
   }
-  pullSSR() { const pityBefore = clampPity(this.eco.s.pity); const r = this.eco.pullSSR(); if (!r) { this.ui.toast(this.eco.lastGachaError === 'storage' ? '저장 실패로 SSR 확정권 사용을 취소했습니다.' : '사용할 SSR 확정권이 없습니다.', 'red'); return; } this.trackPull(1, 'ssr_ticket', pityBefore, r); this.showReveal(r); }
+  pullSSR() { if (this._revealOpen) return; const pityBefore = clampPity(this.eco.s.pity); const r = this.eco.pullSSR(); if (!r) { this.ui.toast(this.eco.lastGachaError === 'storage' ? '저장 실패로 SSR 확정권 사용을 취소했습니다.' : '사용할 SSR 확정권이 없습니다.', 'red'); return; } this.trackPull(1, 'ssr_ticket', pityBefore, r); this.showReveal(r); }
   trackPull(count, currency, pityBefore, results) {
     const n = (rar) => results.filter((r) => r.rar === rar).length;
     this.trackFunnel('gacha_pull', { count, currency, pityBefore, ssr: n('SSR'), sr: n('SR'), dupes: results.filter((r) => r.type === 'hero' && r.dup).length });
   }
   showReveal(results) {
+    this._revealOpen = true; (this._revealTimers || []).forEach(clearTimeout);
     const R = $('reveal'); this.ui.show(R, true); this.app.setLobbyVisible(false);
     const stage = $('reveal-stage'), cards = $('reveal-cards'); stage.innerHTML = ''; cards.innerHTML = ''; $('reveal-foot').classList.add('hidden'); $('btn-reveal-skip').classList.remove('hidden');
+    $('btn-reveal-skip').focus({ preventScroll: true });
     const best = results.some((r) => r.rar === 'SSR') ? 'SSR' : results.some((r) => r.rar === 'SR') ? 'SR' : 'R';
     audio.playMusic(musicForScene({ scene: 'gacha' }), MUSIC_MIX); audio.play('pack_open', { vol: 0.8 }); audio.magic({ vol: 0.4, base: 392, notes: [0, 4, 7, 12, 16, 19], step: 0.09 });
     const beamColor = { R: '#4cc3ff', SR: '#b26bff', SSR: '#ffcf5a' }[best];
@@ -358,7 +370,7 @@ export class Meta {
     results.forEach((r, i) => {
       const c = document.createElement('div'); c.className = 'rcard' + (results.length === 1 ? ' single' : '') + ' ' + r.rar; c.style.setProperty('--rc', RC[r.rar]);
       const img = r.type === 'hero' ? r.img : r.type === 'material' ? resourceArt(r.k) : itemVisual(ITEM_BY_ID[r.item.id], { heroId: this.eco.s.selected }).iconUrl; const name = r.type === 'hero' ? r.name : r.type === 'material' ? (REWARD_LABEL[r.k]?.[0] || r.k) + ' ×' + r.n : ITEM_BY_ID[r.item.id].name;
-      const sub = r.type === 'hero' ? (r.dup ? '조각 +' + r.shards : '') : r.type === 'material' ? '강화 재료' : ITEM_BY_ID[r.item.id].slot === 'weapon' ? (weaponLook(this.eco.s.selected, r.item, LOOKS)?.form || '') : SLOT_NAME[ITEM_BY_ID[r.item.id].slot];
+      const sub = r.type === 'hero' ? (r.dup ? this.dupShardText(r) : '') : r.type === 'material' ? (r.k === 'transcendStones' ? '초월 재료' : '강화 재료') : ITEM_BY_ID[r.item.id].slot === 'weapon' ? (weaponLook(this.eco.s.selected, r.item, LOOKS)?.form || '') : SLOT_NAME[ITEM_BY_ID[r.item.id].slot];
       c.innerHTML = `<div class="inner"><div class="face back">?</div><div class="face front"><img src="${img}" onerror="this.remove()"><span class="rr">${r.rar}</span>${r.type === 'hero' && !r.dup ? '<span class="new">NEW</span>' : ''}<div class="nm">${name}${sub ? `<br><small style="color:var(--muted)">${sub}</small>` : ''}</div></div></div>`;
       cards.appendChild(c);
       const t = setTimeout(() => { c.classList.add('flip'); if (r.rar === 'SSR') { audio.play('jingle_legend', { vol: 0.9 }); audio.vibe([30, 30, 100]); stage.innerHTML = ''; const f = document.createElement('div'); f.className = 'flash'; f.style.setProperty('--c', '#ffcf5a'); stage.appendChild(f); } else if (r.rar === 'SR') { audio.play('ui_glass', { vol: 0.7, rate: 1.2 }); } else audio.play('card_place', { vol: 0.5 }); if (i === results.length - 1) this.revealDone(); }, 1800 + i * 260);
@@ -367,8 +379,13 @@ export class Meta {
     this._revealResults = results;
   }
   revealSkip() { this._revealTimers.forEach(clearTimeout); document.querySelectorAll('.rcard').forEach((c) => c.classList.add('flip')); audio.play('card_fan', { vol: 0.6 }); this.revealDone(); }
-  revealDone() { $('reveal-foot').classList.remove('hidden'); $('btn-reveal-skip').classList.add('hidden'); const s = this.eco.s; $('btn-reveal-again').disabled = s.gems < GACHA.ten && s.tickets < 10; }
-  revealClose() { this.ui.show($('reveal'), false); this.app.setLobbyVisible(this.tab === 'home'); audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX); this.refreshTop(); if (this._revealResults?.some((r) => r.type === 'hero' && !r.dup)) this.ui.toast('새 영웅 획득! 영웅 탭에서 출전 설정', 'gold'); }
+  /** 중복 영웅 결과: 받은 조각과 다음 초월까지의 진행(조각은 이미 지급된 뒤의 보유량). */
+  dupShardText(r) {
+    const p = shardProgress(HEROES[r.id], this.eco.hero(r.id));
+    return '조각 +' + r.shards + (p.need ? ' · 초월 ' + p.have + '/' + p.need : ' · 최고 등급');
+  }
+  revealDone() { $('reveal-foot').classList.remove('hidden'); $('btn-reveal-skip').classList.add('hidden'); const s = this.eco.s; $('btn-reveal-again').disabled = s.gems < GACHA.ten && s.tickets < 10; $('btn-reveal-close').focus({ preventScroll: true }); }
+  revealClose() { this._revealOpen = false; this.ui.show($('reveal'), false); this.app.setLobbyVisible(this.tab === 'home'); audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX); this.refreshTop(); if (this._revealResults?.some((r) => r.type === 'hero' && !r.dup)) this.ui.toast('새 영웅 획득! 영웅 탭에서 출전 설정', 'gold'); }
   showGachaContents(filter) { return showGachaContents.call(this, filter); }
   showWeaponPreview(itemId, heroId, enh) { return showWeaponPreview.call(this, itemId, heroId, enh); }
   showRates() {
@@ -412,6 +429,7 @@ export class Meta {
   renderShop() {
     const tabs = $('shop-tabs'); tabs.innerHTML = SHOP_TABS.map((t) => `<button data-t="${t.id}" class="${t.id === this.shopTab ? 'on' : ''}">${t.name}</button>`).join('');
     tabs.querySelectorAll('button').forEach((b) => b.onclick = () => { if (this.shopTab === b.dataset.t) return; this.shopTab = b.dataset.t; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); });
+    this.renderShopFlow();
     const notice = $('shop-notice');
     if (notice) notice.innerHTML = this.shopTab === 'avatar' ? '<b>아바타는 보석으로 구매하는 순수 외형 상품입니다.</b> 전투 수치에는 영향이 없습니다.' : `<b>가격·상품은 미리보기입니다.</b> 결제 연결 전에는 유료 구매와 지급이 없습니다.`
       + (this.shopTab === 'gem' || this.shopTab === 'hot' ? ` 첫 결제 2배는 결제 연결 후 확인된 구매에 상품별 1회 적용됩니다.` : '')
@@ -426,14 +444,33 @@ export class Meta {
       // 현금 상품은 가격 미리보기와 준비 중 상태를 함께 보여 준다. 보석 상품은 1개당 가격으로 비교할 수 있게 한다.
       const value = cash && sku.gems ? `<div class="si-desc">기본 ${fmt(sku.gems)}개 · 1개당 ₩${(sku.price / sku.gems).toFixed(1)}</div>` : '';
       d.innerHTML = `${sku.badge ? `<span class="badge">${sku.badge}</span>` : ''}${first ? '<span class="badge first" style="left:auto;right:-4px;transform:rotate(5deg)">첫 결제 2배</span>' : ''}<img src="${sku.icon}" alt="" onerror="this.remove()"><div class="si-body"><div class="si-name">${sku.name}</div><div class="si-desc">${sku.desc || ''}</div>${value}${sku.gems ? `<div class="si-bonus">${first ? `첫 결제 시 +${fmt(sku.bonus)} (결제 연결 후)` : `+${fmt(Math.floor(sku.gems * 0.1))} 보너스`}</div>` : ''}${sku.limited ? `<div class="timer" data-timer="${sku.id}">남은 시간 ${hms(this.eco.limitedLeft(sku))}</div>` : ''}${cash ? '<div class="si-desc">가격 미리보기 · 결제 준비 중</div>' : ''}<button class="btn ${sku.kind === 'gem' ? 'btn-blue' : 'btn-gold'}"${cash ? ` aria-label="${sku.name} ${sku.priceLabel}, 결제 준비 중"` : ''}>${price}</button></div>${sold ? '<div class="sold">구매 완료</div>' : ''}`;
+      const role = skuFlowRole(sku);
+      if (role) { const tag = document.createElement('div'); tag.className = 'si-flow'; tag.dataset.role = role.role; tag.textContent = role.label; d.querySelector('.si-name').after(tag); }
       d.querySelector('button').onclick = () => this.buy(sku.id);
       grid.appendChild(d);
     }
   }
+  /** 상점 위 성장 흐름 줄: 보석 → 소환 → 중복 조각 → 초월 → 더 강한 전투. 각 단계는 실제 화면으로 이어진다. */
+  renderShopFlow() {
+    let row = $('shop-flow');
+    if (!row) { row = document.createElement('nav'); row.id = 'shop-flow'; row.className = 'shop-flow'; row.setAttribute('aria-label', '성장 흐름'); $('shop-notice')?.before(row); }
+    if (!row) return;
+    const s = this.eco.s, h = this.eco.hero(), p = shardProgress(HEROES[s.selected], h);
+    const value = { gems: fmt(s.gems), summon: '소환권 ' + s.tickets + (s.ssrTickets ? ' · 확정권 ' + s.ssrTickets : ''), shards: p.need ? p.have + '/' + p.need : '최고', transcend: p.next ? p.grade + '→' + p.next : p.grade, battle: '' };
+    const go = { gems: () => { this.shopTab = 'gem'; this.renderShop(); }, summon: () => this.openTab('gacha'), shards: () => this.openTab('gacha'), transcend: () => { this.heroSel = s.selected; this.openTab('heroes'); this.openTranscend(s.selected); }, battle: () => this.openTab('home') };
+    row.replaceChildren();
+    GROWTH_FLOW.forEach((step, i) => {
+      if (i) { const a = document.createElement('span'); a.className = 'sf-arrow'; a.setAttribute('aria-hidden', 'true'); a.textContent = '›'; row.append(a); }
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'sf-step'; b.dataset.step = step.id; b.title = step.hint;
+      b.innerHTML = `<b></b>${value[step.id] ? '<small></small>' : ''}`; b.querySelector('b').textContent = step.label; if (value[step.id]) b.querySelector('small').textContent = value[step.id];
+      b.setAttribute('aria-label', step.label + (value[step.id] ? ' ' + value[step.id] : '') + ', ' + step.hint);
+      b.onclick = go[step.id]; row.append(b);
+    });
+  }
   async buy(id) {
     const sku = this.eco.sku(id); if (!sku) return; const s = this.eco.s;
     if (sku.once && s.purchases.includes(id)) { this.ui.toast('이미 구매한 상품입니다', 'red'); return; }
-    if (sku.kind === 'gem') { if (s.gems < sku.price) { audio.play('ui_error'); const ok = await this.ui.confirm('보석 부족', `보석 ${sku.price}개가 필요합니다`, { ok: '보석 충전' }); if (ok) this.openTab('shop', 'gem'); return; } const r = this.eco.purchase(id); audio.pick('coin', 2, { vol: 0.7 }); this.ui.rewardToast(r.got); this.renderShop(); return; }
+    if (sku.kind === 'gem') { if (s.gems < sku.price) { audio.play('ui_error'); const ok = await this.ui.confirm('보석 부족', `보석 ${fmt(sku.price)}개가 필요합니다 (보유 ${fmt(s.gems)})<br>보석은 출석·임무·스테이지 첫 클리어·패스 무료 보상으로 모을 수 있어요. 보석 상품은 결제 연결 전까지 가격 미리보기입니다.`, { ok: '보석 탭 보기' }); if (ok) this.openTab('shop', 'gem'); return; } const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(r?.reason === 'storage' ? '저장하지 못해 구매를 취소했습니다' : '구매하지 못했습니다', 'red'); return; } audio.pick('coin', 2, { vol: 0.7 }); this.ui.rewardToast(r.got); this.renderShop(); this.refreshTop(); return; }
     // 현금 구매는 항상 paySheet만 거친다. 열림만 기록하고 성공·지급은 기록하지 않는다.
     this.trackFunnel('paysheet_open', { sku: id });
     const ok = await this.ui.paySheet(sku); if (!ok) return;
