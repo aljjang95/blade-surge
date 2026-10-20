@@ -120,7 +120,7 @@ export function createSocialClient(options) {
   /** @type {SocialState} */
   const state = {
     me: null, isAdmin: false, titles: [],
-    friends: new Map(), requests: { incoming: [], outgoing: [] }, blocks: new Set(),
+    friends: new Map(), requests: { incoming: [], outgoing: [] }, blocks: new Set(), blockMinis: new Map(),
     channels: [], currentWorld: null, partyChannel: null,
     messages: new Map(), unread: new Map(), connection: 'offline',
   };
@@ -383,6 +383,8 @@ export function createSocialClient(options) {
     const blocks = Array.isArray(data.blocks) ? data.blocks : Array.isArray(data.blocked) ? data.blocked : null;
     if (blocks) {
       state.blocks = new Set(blocks.map(item => (typeof item === 'string' ? item : unwrapMini(item)?.id)).filter(id => typeof id === 'string'));
+      // 설정 화면의 차단 목록에 이름을 보여 주기 위해 서버가 준 PublicMini를 함께 둔다.
+      state.blockMinis = new Map(blocks.map(item => unwrapMini(item)).filter(Boolean).map(mini => [mini.id, mini]));
     }
     if (Array.isArray(data.friends)) {
       const next = new Map();
@@ -587,6 +589,7 @@ export function createSocialClient(options) {
     state.friends = new Map();
     state.requests = { incoming: [], outgoing: [] };
     state.blocks = new Set();
+    state.blockMinis = new Map();
     state.channels = [];
     state.currentWorld = null;
     state.partyChannel = null;

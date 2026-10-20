@@ -103,7 +103,7 @@ describe('친구 목록·메뉴', () => {
     const stranger = nameMenuItems({ meId: ME, target: mini(OTHER, 'a') }).map(i => i.id);
     expect(stranger).toEqual(['profile', 'friend', 'whisper', 'block', 'report']);
     const friend = nameMenuItems({ meId: ME, target: mini(OTHER, 'a'), friendIds: new Set([OTHER]) }).map(i => i.id);
-    expect(friend).not.toContain('friend');
+    expect(friend).toEqual(['profile', 'whisper', 'unfriend', 'block', 'report']);
     const blocked = nameMenuItems({ meId: ME, target: mini(OTHER, 'a'), blockedIds: new Set([OTHER]) }).map(i => i.id);
     expect(blocked).toContain('unblock');
   });

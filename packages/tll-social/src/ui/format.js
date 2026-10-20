@@ -94,6 +94,16 @@ export function checkNickname(value) {
   if (!/^[가-힣A-Za-z0-9_]+$/.test(name)) return { ok: false, name, error: 'chars' };
   return { ok: true, name, error: null };
 }
+/** 문자열 → 0~359 색상 값(초상 대체 원 색). 같은 id는 항상 같은 색. */
+export function hueOf(value) {
+  let h = 2166136261;
+  for (const ch of String(value ?? '')) { h ^= ch.codePointAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  return h % 360;
+}
+export function initialOf(name) {
+  const first = [...String(name ?? '').trim()][0];
+  return first ? first.toUpperCase() : '?';
+}
 export function badgeText(count) {
   if (!Number.isFinite(count) || count <= 0) return '';
   return count > 99 ? '99+' : String(Math.floor(count));
@@ -151,6 +161,16 @@ const ERRORS = Object.freeze({
   'no-request': '이미 처리된 요청이에요.',
   'blocks-full': '차단 목록이 가득 찼어요.',
   duplicate: '같은 말을 계속 보낼 수 없어요.',
+  repeat: '같은 말을 계속 보낼 수 없어요.',
+  full: '이 광장은 가득 찼어요. 다른 광장을 골라 주세요.',
+  'not-joined': '광장에 아직 들어가지 못했어요. 잠시 후 다시 시도해 주세요.',
+  'hello-required': '연결 중이에요. 잠시 후 다시 시도해 주세요.',
+  content: '알 수 없는 던전이에요.',
+  members: '현재 인원이 정원보다 많을 수 없어요.',
+  integer: '숫자 값을 확인해 주세요.',
+  note: '한마디는 40자까지 쓸 수 있어요.',
+  title: '제목은 2~40자로 써 주세요.',
+  body: '내용을 확인해 주세요.',
   'post-not-found': '글을 찾지 못했어요.',
   category: '분류를 골라 주세요.',
   'admin-only': '관리자만 할 수 있어요.',

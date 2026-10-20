@@ -178,6 +178,7 @@ export function nameMenuItems({ meId, target, friendIds = new Set(), blockedIds 
   const items = [{ id: 'profile', label: '프로필' }];
   if (!friendIds.has(target.id)) items.push({ id: 'friend', label: '친구 요청' });
   items.push({ id: 'whisper', label: '귓속말', disabled: !canWhisper });
+  if (friendIds.has(target.id)) items.push({ id: 'unfriend', label: '친구 삭제' });
   items.push(blockedIds.has(target.id) ? { id: 'unblock', label: '차단 해제' } : { id: 'block', label: '차단' });
   items.push({ id: 'report', label: '신고' });
   return items;
