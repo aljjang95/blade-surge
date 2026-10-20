@@ -3,6 +3,7 @@
 // 현금 상품은 결제 연결 전까지 지급하지 않는다(Economy.paymentAvailable). 여기서는 용도 표시만 정한다.
 import { GRADE_UP_COST, gradeUpCost, heroGrade, nextGrade } from './hero-grades.js';
 import { GACHA } from './shop.js';
+import { ECONOMY_PACE } from './economy-pace.js';
 
 export const GROWTH_FLOW = Object.freeze([
   Object.freeze({ id: 'gems', label: '보석', hint: '출석·임무·첫 클리어·패스 무료 보상' }),
@@ -13,6 +14,15 @@ export const GROWTH_FLOW = Object.freeze([
 ]);
 
 const fmt = (n) => Number(n).toLocaleString('ko-KR');
+
+/** 하루 30분·1장 반복 기댓값. 상품의 실제 대상과 무료 기준을 같은 문구에 남긴다. */
+export function paceLabel(skuIdOrKey) {
+  if (!Object.hasOwn(ECONOMY_PACE.savings, skuIdOrKey)) return null;
+  const saving = ECONOMY_PACE.savings[skuIdOrKey];
+  if (!saving || saving.days <= 0) return null;
+  const action = skuIdOrKey === 'ssrTicket' ? '확정권 1장' : '보상 수령';
+  return `${saving.target} · 무과금 약 ${saving.freeDays}일 → ${action} 시 약 ${saving.withDays}일 (1장·30분/일 예상)`;
+}
 
 /**
  * 상점 상품이 성장 흐름에서 맡는 용도. 여러 보상을 담은 묶음은 가장 희소한 용도 하나를 고른다.

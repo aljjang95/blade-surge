@@ -154,7 +154,8 @@ export class DropSystem {
     // 무리 졸개는 몰이 밀도만 더한다. 보상은 기존 명단·방 정화에서만 나온다.
     if (enemy.packFollower) return;
     this.fieldLedger();
-    const rank = enemy.isBoss ? 'boss' : enemy.isElite ? 'elite' : 'normal', table = lootTable(stage.ch, rank);
+    const rank = enemy.isBoss ? 'boss' : enemy.isElite ? 'elite' : 'normal';
+    const table = lootTable(stage.ch, rank, stage.difficultyId || stage.campaignDifficulty?.id || 'story');
     const pos = enemy.pos.clone();
     const g = enemy.def.gold || 1;
     const goldAmt = Math.max(1, Math.floor(g * stage.scale * table.goldMultiplier * (0.8 + Math.random() * 0.5)));
@@ -170,7 +171,9 @@ export class DropSystem {
     if (this._ledger && !enemy.summoned) {
       if (Math.random() < table.heroShards.chance) this.spawn(pos, 'heroShard', table.heroShards.n);
       if (Math.random() < table.transcendStones.chance) this.spawn(pos, 'transcendStone', table.transcendStones.n);
-      if (table.material.chance === 1 || Math.random() < table.material.chance) this.spawn(pos, 'material', { id: table.material.id, n: table.material.n });
+      for (const material of table.materials) {
+        if (material.chance === 1 || Math.random() < material.chance) this.spawn(pos, 'material', { id: material.id, n: material.n });
+      }
     }
     // 장비: 엘리트 확정, 보스 2개, 잡몹 낮은 확률
     // 장비: 보스 3, 엘리트 2, 잡몹 8% — 자주 떨어지되 대부분 흰·초록 (등급 가중치가 희소성을 만든다)

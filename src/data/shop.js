@@ -13,18 +13,18 @@ export const SKUS = [
   { id: 'starter', tab: 'hot', kind: 'cash', name: '스타터 팩', price: 1200, priceLabel: '₩1,200', icon: '/img/icon_chest_legend.webp', badge: '92% 할인', limited: true, hours: 24, once: true,
     desc: 'SSR 확정 소환권 1 · 보석 1,000 · 골드 50,000', rewards: { gems: 1000, gold: 50000, ssrTicket: 1 } },
   { id: 'monthly', tab: 'hot', kind: 'cash', name: '월정액 카드', price: 5900, priceLabel: '₩5,900', icon: '/img/icon_gem.webp', badge: 'BEST',
-    desc: '즉시 보석 600 + 30일간 매일 보석 100 (총 3,600)', rewards: { gems: 600, monthly: 30 } },
+    desc: '즉시 보석 1,200 + 30일간 매일 보석 100 (총 4,200)', rewards: { gems: 1200, monthly: 30 } },
   { id: 'growth', tab: 'pack', kind: 'cash', name: '성장 패키지', price: 12000, priceLabel: '₩12,000', icon: '/img/icon_chest_epic.webp', badge: '인기',
-    desc: '보석 2,400 · 소환권 10 · 골드 200,000 · 초월석 5 (SSSR 초월 성장)', rewards: { gems: 2400, tickets: 10, gold: 200000, transcendStones: 5 } },
+    desc: '보석 2,400 · 소환권 30 · 골드 200,000 · 초월석 5 (초월 성장)', rewards: { gems: 2400, tickets: 30, gold: 200000, transcendStones: 5 } },
   { id: 'boss_pack', tab: 'pack', kind: 'cash', name: '해골 군주 토벌 패키지', price: 33000, priceLabel: '₩33,000', icon: '/img/icon_chest_legend.webp', badge: '한정', limited: true, hours: 72,
-    desc: 'SSR 장비 선택 상자 · 보석 6,000 · 소환권 20 · 초월석 10 (SSSR 초월 성장)', rewards: { gems: 6000, tickets: 20, ssrGear: 1, transcendStones: 10 } },
+    desc: 'SSR 장비 상자 · 보석 6,000 · 소환권 60 · 초월석 10 (초월 성장)', rewards: { gems: 6000, tickets: 60, ssrGear: 1, transcendStones: 10 } },
   { id: 'transcend_pack', tab: 'pack', kind: 'cash', name: 'SSSR 초월 성장 패키지', price: 33000, priceLabel: '₩33,000', icon: '/img/icon_stone_3.webp', badge: '결제 준비 중',
-    desc: '결제 준비 중 · 초월석 30 · 선택 영웅 조각 60 (지급 없음)', rewards: { transcendStones: 30, heroChoiceShards: 60 } },
+    desc: '결제 준비 중 · 초월석 30 · SSR 확정권 3 · 소환권 60 (지급 없음)', rewards: { transcendStones: 30, ssrTicket: 3, tickets: 60 } },
   { id: 'vip_pass', tab: 'pack', kind: 'cash', name: 'VIP 멤버십 (30일)', price: 19000, priceLabel: '₩19,000', icon: '/img/icon_vip.webp',
-    desc: '에너지 최대치 +50 · 골드 획득 +30% · 소탕 티켓 매일 5장', rewards: { vipDays: 30, gems: 1000 } },
+    desc: '30일 골드 획득 +30% · 보석 1,000 · 소환권 20', rewards: { vipDays: 30, gems: 1000, tickets: 20 } },
 
   // ---- 보석 ----
-  { id: 'gem1', tab: 'gem', kind: 'cash', name: '보석 300',   price: 3900,   priceLabel: '₩3,900',   icon: '/img/icon_gem.webp', gems: 300,   bonus: 300 },
+  { id: 'gem1', tab: 'gem', kind: 'cash', name: '보석 300',   price: 3900,   priceLabel: '₩3,900',   icon: '/img/icon_gem.webp', gems: 300,   bonus: 1500 },
   { id: 'gem2', tab: 'gem', kind: 'cash', name: '보석 980',   price: 12000,  priceLabel: '₩12,000',  icon: '/img/icon_gem.webp', gems: 980,   bonus: 980 },
   { id: 'gem3', tab: 'gem', kind: 'cash', name: '보석 1,980', price: 25000,  priceLabel: '₩25,000',  icon: '/img/icon_gem.webp', gems: 1980,  bonus: 1980, badge: '인기' },
   { id: 'gem4', tab: 'gem', kind: 'cash', name: '보석 3,280', price: 39000,  priceLabel: '₩39,000',  icon: '/img/icon_gem.webp', gems: 3280,  bonus: 3280 },
@@ -43,7 +43,7 @@ export const SKUS = [
   { id: 'protect5', tab: 'enh', kind: 'gem', name: '보호 주문서 ×5', price: 1250, icon: '/img/icon_protect.webp', desc: '파괴 방지 ×5', rewards: { protect: 5 }, badge: '인기' },
   { id: 'bless1', tab: 'enh', kind: 'gem', name: '축복 주문서', price: 200, icon: '/img/icon_bless.webp', desc: '강화 성공률 +20% ×1', rewards: { bless: 1 } },
   { id: 'enh_pack', tab: 'enh', kind: 'cash', name: '강화 마스터 패키지', price: 22000, priceLabel: '₩22,000', icon: '/img/icon_protect.webp', badge: '한정', limited: true, hours: 48,
-    desc: '보호 주문서 10 · 축복 주문서 10 · 강화석 200 · 골드 300,000', rewards: { protect: 10, bless: 10, stones: 200, gold: 300000 } },
+    desc: '보호 주문서 10 · 축복 주문서 10 · 강화석 200 · 골드 300,000 · 소환권 20', rewards: { protect: 10, bless: 10, stones: 200, gold: 300000, tickets: 20 } },
 
   // ---- 골드 (보석 소모) ----
   { id: 'gold1', tab: 'gold', kind: 'gem', name: '골드 주머니', price: 100,  icon: '/img/icon_gold.webp', desc: '골드 20,000', rewards: { gold: 20000 } },
@@ -66,7 +66,8 @@ export const GACHA = { single: 300, ten: 2700, pity: 80, softPity: 60, softPityS
     SR: [{ k: 'stones2', n: 5, w: 0.10 }, { k: 'protect', n: 1, w: 0.05 }, { k: 'transcendStones', n: 1, w: 0.05 }],
     R: [{ k: 'stones', n: 10, w: 0.35 }, { k: 'bless', n: 1, w: 0.10 }],
   },
-  dupShards: 10 };
+  // 확정권 중복도 같은 지급 경로를 탄다. 40조각으로 장기 초월 재료의 체감 가치를 보장한다.
+  dupShards: 40 };
 export const BATTLE_PASS = { price: 9900, maxLevel: 30, xpPerLevel: 100 };
 export const ENERGY = { max: 100, regenSec: 180 };
 
