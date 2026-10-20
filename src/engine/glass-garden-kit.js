@@ -45,24 +45,30 @@ export function extractKitGeometry(scene) {
   return parts;
 }
 
-/** 키트 하나의 실패가 던전 입장을 막지 않는다. 장식 자산은 선택 사항이다. */
+async function loadKitFile(fetcher, id, lod) {
+  const response = await fetcher(`${GLASS_GARDEN_KIT_ROOT}${id}${lod ? '-lod1' : ''}.glb`, { signal: AbortSignal.timeout(4500) });
+  if (!response.ok) return false;
+  const bytes = await response.arrayBuffer();
+  if (bytes.byteLength > MAX_BYTES) return false;
+  const gltf = await loader.parseAsync(bytes, GLASS_GARDEN_KIT_ROOT);
+  const entry = templates.get(id) || {};
+  entry[lod ? 'lod1' : 'lod0'] = extractKitGeometry(gltf.scene);
+  templates.set(id, entry);
+  return true;
+}
+
+/** 키트 하나의 실패가 던전 입장을 막지 않는다. 장식 자산은 선택 사항이다.
+ * 진행 중인 요청만 공유하고, 실패(HTTP 오류·크기 초과·예외)는 캐시에 남기지 않아 다음 호출이 다시 시도한다. */
 export async function preloadGlassGardenKit({ fetcher = globalThis.fetch } = {}) {
   const jobs = [];
   for (const id of GLASS_GARDEN_KIT_ASSETS) for (const lod of [0, 1]) {
     const key = `${id}:${lod}`;
-    if (!pending.has(key)) pending.set(key, (async () => {
-      try {
-        const response = await fetcher(`${GLASS_GARDEN_KIT_ROOT}${id}${lod ? '-lod1' : ''}.glb`, { signal: AbortSignal.timeout(4500) });
-        if (!response.ok) return false;
-        const bytes = await response.arrayBuffer();
-        if (bytes.byteLength > MAX_BYTES) return false;
-        const gltf = await loader.parseAsync(bytes, GLASS_GARDEN_KIT_ROOT);
-        const entry = templates.get(id) || {};
-        entry[lod ? 'lod1' : 'lod0'] = extractKitGeometry(gltf.scene);
-        templates.set(id, entry);
-        return true;
-      } catch { pending.delete(key); return false; }
-    })());
+    if (!pending.has(key)) {
+      const task = loadKitFile(fetcher, id, lod).then(
+        loaded => { if (!loaded) pending.delete(key); return loaded; },
+        () => { pending.delete(key); return false; });
+      pending.set(key, task);
+    }
     jobs.push(pending.get(key).then(loaded => ({ id, lod, loaded })));
   }
   const results = await Promise.all(jobs);
@@ -74,6 +80,8 @@ export function glassGardenKitTemplates() {
   for (const id of GLASS_GARDEN_KIT_ASSETS) if (!templates.get(id)?.lod0) return null;
   return templates;
 }
+/** 템플릿과 요청 캐시를 모두 비운다(시험용). */
+export function clearGlassGardenKit() { templates.clear(); pending.clear(); }
 export function setGlassGardenKitTemplates(map) {
   templates.clear();
   for (const [id, entry] of map) templates.set(id, entry);

@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { mulberry32, ROOM_TYPE } from './world.js';
 import { GARDEN_MAP_TACTICS } from '../data/map-tactics.js';
+import { Pack, pickRoomPack, planRoomPacks, packSlot } from './pack-pursuit.js';
+import { PACK_FOLLOWER } from './expedition-combat.js';
 import { createGlowMaterial, createMatteMaterial } from '../engine/glass-garden-kit.js';
 
 /**
@@ -16,6 +18,10 @@ export const GLASS_GARDEN_DECOR = Object.freeze({
   gateMargin: 2.5,          // 보스 봉인 사각형 주변
   pillarRadius: .8, torchRadius: 1.1, bannerRadius: 1.4, landmarkHalfWidth: 5.9, landmarkDepth: 5.4,
   propGap: .35,             // 장식끼리 최소 간격
+  packClearance: .9,        // 무리 대형 자리(적 몸 반경 .6 + 여유)와 장식 발자국 사이 최소 거리
+  // 유리 정원 방 명단 길이(기본·심층)와 졸개 비율은 expedition-combat.js의 expeditionRoster·expeditionFollowers를 따른다. test가 실제 명단과 대조한다.
+  packRoster: Object.freeze({ normal: [6, 7], elite: [5, 5], treasure: [3, 4] }),
+  packFollowerShare: Object.freeze({ normal: .85, elite: .7, treasure: .6 }),
   cameraSideMaxHeight: 1.55, // 카메라 쪽(남쪽) 띠에는 낮은 소품만
   maxTrianglesPerRoom: 7200,
 });
@@ -30,7 +36,8 @@ export const GLASS_GARDEN_PROPS = Object.freeze({
   'hanging-lantern': Object.freeze({ shape: 'round', radius: .6, height: 2.42, tris: 287, lod1: 99, center: [.15, 0] }),
 });
 
-const SHIFTS = Object.freeze([0, .7, -.7, 1.4, -1.4, 2.1, -2.1]);
+// 막힌 자리는 선호 위치에서 벽을 따라 가까운 순으로 옮겨 가며 찾는다(무리 대형·입구·기둥을 피해 비어 있는 구간을 쓴다).
+const SHIFTS = Object.freeze(Array.from({ length: 41 }, (_, i) => (i % 2 ? 1 : -1) * Math.ceil(i / 2) * .7).sort((a, b) => Math.abs(a) - Math.abs(b) || b - a));
 
 // 앞면(+Z)이 방 안쪽을 보게 하는 Y축 회전. 북=-Z 벽, 남=+Z 벽(카메라 쪽).
 const WALLS = Object.freeze({
@@ -88,6 +95,67 @@ export function footprintPoints(placement) {
   return points;
 }
 
+/** 한 점에서 소품 발자국까지의 거리(안이면 0). */
+export function footprintGap(placement, x, z) {
+  const spec = GLASS_GARDEN_PROPS[placement.asset], s = placement.scale || 1, c = Math.cos(placement.yaw), n = Math.sin(placement.yaw);
+  const dx = x - placement.x, dz = z - placement.z, lx = dx * c - dz * n, lz = dx * n + dz * c;
+  if (spec.shape === 'rect') return Math.hypot(Math.max(0, Math.abs(lx) - spec.half * s), Math.max(0, Math.abs(lz) - spec.depth * s));
+  const [ox, oz] = spec.center || [0, 0];
+  return Math.max(0, Math.hypot(lx - ox * s, lz - oz * s) - spec.radius * s);
+}
+
+const reserveCache = new WeakMap();
+/**
+ * 운영 경로(planRoomPacks·packSlot)가 이 방에서 적을 세울 수 있는 모든 자리. 앵커는 진입 위치와 명단 수에 따라 고정 격자에서 고르므로
+ * 입구 안쪽 지점·방 중심·2 m 격자를 진입 위치로, 영웅 위치는 3 m 격자로, 방 종류별 명단 길이 범위를 명단 수로 열거하고, 한 무리가 졸개까지 전부 받는 최악의 자리 수
+ * (명단 + 졸개)만큼 나선 자리를 모은다. 진입 위치는 런타임에 정해지지만 이 집합은 층에서만 나오므로 결정적이다.
+ * @returns {{x: number, z: number}[]}
+ */
+export function packSlotPoints(floor, room) {
+  if (!floor?.inner || room.type === ROOM_TYPE.START || room.type === ROOM_TYPE.BOSS) return [];
+  let byRoom = reserveCache.get(floor);
+  if (!byRoom) reserveCache.set(floor, byRoom = new Map());
+  if (byRoom.has(room.id)) return byRoom.get(room.id);
+  const rect = walkableRect(floor, room), entries = new Map([[`${room.x}|${room.z}`, { x: room.x, z: room.z }]]);
+  // 진입 위치: 입구에서 방 안쪽 0.5·2 m 지점 + 방 전체 2 m 격자(대시·밀림으로 문 밖 어디서든 들어올 수 있다고 본다).
+  for (const [dx, dz] of wallOpenings(floor, rect)) {
+    const len = Math.hypot(room.x - dx, room.z - dz) || 1;
+    for (const depth of [.5, 2]) {
+      const x = dx + (room.x - dx) / len * depth, z = dz + (room.z - dz) / len * depth;
+      entries.set(`${Math.round(x)}|${Math.round(z)}`, { x, z });
+    }
+  }
+  const heroes = [{ x: room.x, z: room.z }];
+  for (let x = rect.x0 + 1; x < rect.x1; x += 2) for (let z = rect.z0 + 1; z < rect.z1; z += 2) entries.set(`${Math.round(x)}|${Math.round(z)}g`, { x, z });
+  for (let x = rect.x0 + .5; x < rect.x1; x += 3) for (let z = rect.z0 + .5; z < rect.z1; z += 3) heroes.push({ x, z });
+  // 진입 위치 × 영웅 위치(진입 직후 몇 걸음 안, 진입 지점들 또는 방 중심) × 명단 수마다 운영의 방 무리 선택(pickRoomPack, Battle.roomPackFor와 같은 함수)과 대형 자리(packSlot)를
+  // 그대로 돌려 적이 설 수 있는 모든 자리를 모은다. 졸개(명단 뒤)까지 같은 방식으로 이어서 세운다.
+  const [lo, hi] = GLASS_GARDEN_DECOR.packRoster[room.type] || [0, 0], share = GLASS_GARDEN_DECOR.packFollowerShare[room.type] || 0;
+  const points = [], seen = new Set(), out = { x: 0, z: 0 };
+  for (let count = lo; count <= hi && count > 0; count++) {
+    const total = count + Math.max(PACK_FOLLOWER.min, Math.min(PACK_FOLLOWER.max, Math.round(count * share)));
+    // 진입 위치마다 앵커 조합이 같은 경우가 대부분이라 조합별로 한 번만 돌린다(표본을 줄이지 않고 중복만 합친다).
+    const layouts = new Map();
+    for (const entry of entries.values()) {
+      const planned = planRoomPacks(floor, room, count, entry.x, entry.z) || [];
+      layouts.set(planned.map(pack => `${pack.x}|${pack.z}`).join(';'), planned);
+    }
+    for (const planned of layouts.values()) {
+      for (const hero of heroes) {
+        const fake = { packs: planned.map(pack => new Pack(room, pack.x, pack.z)), packCursor: 0 };
+        for (let i = 0; i < total; i++) {
+          const pack = pickRoomPack(fake, hero);
+          packSlot(floor, pack, out);
+          const key = `${Math.round(out.x * 20)}|${Math.round(out.z * 20)}`;
+          if (!seen.has(key)) { seen.add(key); points.push({ x: out.x, z: out.z }); }
+        }
+      }
+    }
+  }
+  byRoom.set(room.id, points);
+  return points;
+}
+
 const distance = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 const radiusOf = (placement) => { const spec = GLASS_GARDEN_PROPS[placement.asset], s = placement.scale || 1; return (spec.shape === 'rect' ? Math.hypot(spec.half, spec.depth) : spec.radius + Math.hypot(...(spec.center || [0, 0]))) * s; };
 
@@ -124,7 +192,9 @@ export function placementViolation(floor, room, placement, placed = []) {
   for (const point of tacticPoints(room)) if (distance(placement, point) < r + 2.2) return 'tactic';
   // 6) 카메라 쪽 띠에는 낮은 소품만
   if (placement.wall === 'S' && spec.height * s > D.cameraSideMaxHeight) return 'camera-side';
-  // 7) 장식끼리 겹침
+  // 7) 무리 대형: 진입·명단에 따라 운영 경로가 적을 세울 수 있는 어떤 자리와도 clearance 이상 떨어진다(값 비싼 검사라 마지막 전에).
+  for (const point of packSlotPoints(floor, room)) if (footprintGap(placement, point.x, point.z) < D.packClearance) return 'pack';
+  // 8) 장식끼리 겹침
   for (const other of placed) if (distance(placement, other) < r + radiusOf(other) + D.propGap) return 'overlap';
   return null;
 }
@@ -211,7 +281,6 @@ export function planGlassGardenDecor(floor) {
       else { x = rect.x1 - inset; z = cz + slot.u; }
       const yaw = wall.yaw + (spec.spin ? (jitter - .5) * 1.4 : 0);
       if (tris + spec.tris > GLASS_GARDEN_DECOR.maxTrianglesPerRoom) continue;
-      // 막힌 자리는 벽 방향으로 조금 옮겨 가며 다시 시도한다(입구·기둥·횃불 회피).
       let accepted = null;
       for (const shift of SHIFTS) {
         const along = slot.wall === 'N' || slot.wall === 'S' ? { x: x + shift, z } : { x, z: z + shift };

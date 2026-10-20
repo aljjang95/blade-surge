@@ -19,6 +19,7 @@ import hashlib
 import json
 import math
 import random
+import shutil
 import struct
 import os
 import subprocess
@@ -28,8 +29,9 @@ from pathlib import Path
 from mathutils import Matrix, Vector
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / 'public/models/glass-garden-kit-v1'
-ART = ROOT / 'art/glass-garden-kit-v1'
+# 확인용 실행에서 커밋된 GLB를 덮어쓰지 않도록 출력 폴더를 환경 변수로 바꿀 수 있다.
+OUT = Path(os.environ.get('GG_OUT_DIR') or ROOT / 'public/models/glass-garden-kit-v1')
+ART = Path(os.environ.get('GG_ART_DIR') or ROOT / 'art/glass-garden-kit-v1')
 OUT.mkdir(parents=True, exist_ok=True)
 ART.mkdir(parents=True, exist_ok=True)
 SEED = 20261021
@@ -682,6 +684,17 @@ scene.render.filepath = str(ART / 'glass-garden-kit-v1-preview.png')
 if RENDER:
     bpy.ops.render.render(write_still=True)
 
+def montage(inputs, direction, output, extra=()):
+    """ImageMagick(magick 또는 convert)으로 이미지를 이어 붙인다. 도구가 없거나 실패하면 False를 돌려주고 예외를 내지 않는다."""
+    tool = shutil.which('magick') or shutil.which('convert')
+    if not tool:
+        return False
+    try:
+        return subprocess.run([tool, *map(str, inputs), direction, *extra, str(output)]).returncode == 0
+    except OSError:
+        return False
+
+
 # 소품별 4방향 턴테이블(정면·우·후·좌). 줄마다 한 소품, 칸마다 90도씩 돌린다.
 camera.data.type = 'ORTHO'
 for obj in row1 + row0:
@@ -710,14 +723,18 @@ for (key, *_), obj in zip(PROPS, row0):
         cells.append(path)
     row_path = TURN / f'row-{key}.png'
     if RENDER:
-        subprocess.run(['convert', *map(str, cells), '+append', str(row_path)], check=True)
+        if not montage(cells, '+append', row_path):
+            kept = ART / 'turntable-cells'
+            kept.mkdir(parents=True, exist_ok=True)
+            for cell in cells:
+                shutil.copy(cell, kept / cell.name)
     rows.append(row_path)
     obj.hide_render = True
 turn_paths = rows
 # 네 장을 세로로 이어 붙여 한 장의 턴테이블 시트로 둔다(ImageMagick이 없으면 낱장을 남긴다).
 sheet = ART / 'glass-garden-kit-v1-turntable.png'
-if RENDER and subprocess.run(['convert', *map(str, turn_paths), '-append', '-quality', '95', str(sheet)]).returncode != 0:
-    print('경고: convert가 없어 턴테이블 낱장을 합치지 못함', file=sys.stderr)
+if RENDER and not montage(turn_paths, '-append', sheet, ['-quality', '95']):
+    print(f'알림: ImageMagick(magick/convert)이 없어 턴테이블 시트를 합치지 않았다. 낱장은 {ART / "turntable-cells"}에 남겼다.', file=sys.stderr)
 (ART / 'glass-garden-kit-v1.blend1').unlink(missing_ok=True)
 print(json.dumps({'version': VERSION, 'assets': len(assets), 'triangles': {a['file']: a['triangles'] for a in assets},
                   'bytes': sum(a['bytes'] for a in assets), 'turn': [str(p) for p in turn_paths]}, ensure_ascii=False))

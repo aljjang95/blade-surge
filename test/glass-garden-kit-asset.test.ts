@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { GLASS_GARDEN_KIT_ASSETS, extractKitGeometry } from '../src/engine/glass-garden-kit.js';
+import { GLASS_GARDEN_KIT_ASSETS, clearGlassGardenKit, extractKitGeometry, glassGardenKitTemplates, preloadGlassGardenKit } from '../src/engine/glass-garden-kit.js';
 import { GLASS_GARDEN_PROPS } from '../src/game/glass-garden-decor.js';
 
 const root = new URL('../', import.meta.url);
@@ -118,4 +118,29 @@ test('런타임 로더 경로: GLTFLoader + meshopt로 풀고 재질별 지오�
     // 발광 재질이 있는 소품은 같은 GLB 안의 두 번째 프리미티브로 나온다.
     expect(parts.glow.length).toBe(asset.materials.includes('gg_glow') ? 1 : 0);
   }
+});
+
+test('선로딩은 실패를 캐시하지 않는다: HTTP 오류와 네트워크 예외 뒤 다음 호출이 다시 받아 성공한다', async () => {
+  clearGlassGardenKit();
+  const files = (url: string) => new Response(readFileSync(new URL(`public${url.replace(/^.*(\/models\/)/, '/models/')}`, root)));
+  const calls: string[] = [];
+  const failing = (status: number | 'throw') => async (url: string) => { calls.push(url); if (status === 'throw') throw new TypeError('network'); return new Response('x', { status }); };
+  const total = GLASS_GARDEN_KIT_ASSETS.length * 2;
+  const first = await preloadGlassGardenKit({ fetcher: failing(503) as any });
+  expect(first).toMatchObject({ loaded: 0, total }); expect(glassGardenKitTemplates()).toBeNull();
+  const second = await preloadGlassGardenKit({ fetcher: failing('throw') as any });   // 503이 캐시됐다면 fetcher를 부르지 않는다
+  expect(second).toMatchObject({ loaded: 0, total }); expect(calls).toHaveLength(total * 2);
+  const third = await preloadGlassGardenKit({ fetcher: (async (url: string) => { calls.push(url); return files(url); }) as any });
+  expect(third).toMatchObject({ loaded: total, total }); expect(calls).toHaveLength(total * 3);
+  expect(glassGardenKitTemplates()).not.toBeNull();
+  // 성공은 캐시된다: 네 번째 호출은 요청하지 않는다.
+  const fourth = await preloadGlassGardenKit({ fetcher: failing(500) as any });
+  expect(fourth).toMatchObject({ loaded: total, total }); expect(calls).toHaveLength(total * 3);
+  // 용량 초과(MAX_BYTES)도 실패로 보고 캐시하지 않는다.
+  clearGlassGardenKit();
+  const big = await preloadGlassGardenKit({ fetcher: (async () => new Response(new Uint8Array(300000))) as any });
+  expect(big.loaded).toBe(0);
+  const again = await preloadGlassGardenKit({ fetcher: (async (url: string) => files(url)) as any });
+  expect(again.loaded).toBe(total);
+  clearGlassGardenKit();
 });

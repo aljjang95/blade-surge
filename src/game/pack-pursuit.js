@@ -186,6 +186,18 @@ export function planRoomPacks(world, room, count, entryX, entryZ) {
   return chosen.map(c => new Pack(room, c.x, c.z));
 }
 
+/** 방 명단의 다음 무리. 순서대로 돌리되 영웅이 서 있는 앵커(6m 안)에는 새 병력을 세우지 않는다. Battle.roomPackFor와 장식 배치가 같은 규칙을 쓴다. */
+export function pickRoomPack(room, heroPos) {
+  const packs = room.packs, p = heroPos;
+  const cursor = room.packCursor || 0; room.packCursor = cursor + 1;
+  let pack = packs[cursor % packs.length];
+  if (p && Math.hypot(pack.x - p.x, pack.z - p.z) < 6) {
+    let far = -1;
+    for (const other of packs) { const d = Math.hypot(other.x - p.x, other.z - p.z); if (d > far) { far = d; pack = other; } }
+  }
+  return pack;
+}
+
 /** 무리 대형의 다음 자리. 황금각 나선이라 인원이 늘어도 겹치지 않는다. */
 export function packSlot(world, pack, out) {
   const i = pack.slots++, a = i * 2.399963, r = i ? .95 + .62 * Math.sqrt(i) : 0;

@@ -29,7 +29,7 @@ import { ConquestRun } from './expedition-conquests.js';
 import { createRouteObjectives } from './route-objectives.js';
 import { createMapTactics } from './map-tactics.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
-import { alertPack, joinPack, packSlot, planRoomPacks } from './pack-pursuit.js';
+import { alertPack, joinPack, packSlot, pickRoomPack, planRoomPacks } from './pack-pursuit.js';
 import { preloadFieldSurface } from './open-field-scene.js';
 import { preloadGlassGardenKit } from '../engine/glass-garden-kit.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
@@ -565,16 +565,7 @@ export class Battle {
     return e;
   }
   /** 방 명단의 다음 무리. 순서대로 돌리되 플레이어가 서 있는 앵커(6m 안)에는 새 병력을 세우지 않는다. */
-  roomPackFor(room) {
-    const packs = room.packs, p = this.player?.pos;
-    const cursor = room.packCursor || 0; room.packCursor = cursor + 1;
-    let pack = packs[cursor % packs.length];
-    if (p && Math.hypot(pack.x - p.x, pack.z - p.z) < 6) {
-      let far = -1;
-      for (const other of packs) { const d = Math.hypot(other.x - p.x, other.z - p.z); if (d > far) { far = d; pack = other; } }
-    }
-    return pack;
-  }
+  roomPackFor(room) { return pickRoomPack(room, this.player?.pos); }
   summonMinions(boss, n) {
     if (this.stage?.expedition?.kind === 'arena') return;
     if (!this.active || !boss.alive || this.bossDefeated) return;

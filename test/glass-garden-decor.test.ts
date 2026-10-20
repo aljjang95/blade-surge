@@ -5,10 +5,11 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { Floor, ROOM_TYPE } from '../src/game/world.js';
-import { buildExpeditionStage, buildExpeditionWorld, EXPEDITION_LAYOUTS } from '../src/game/expedition-combat.js';
+import { buildExpeditionStage, buildExpeditionWorld, expeditionFollowers, expeditionRoster, EXPEDITION_LAYOUTS } from '../src/game/expedition-combat.js';
+import { Pack, pickRoomPack, planRoomPacks, packSlot } from '../src/game/pack-pursuit.js';
 import { GLASS_GARDEN_KIT_ASSETS, extractKitGeometry } from '../src/engine/glass-garden-kit.js';
 import { createMapTactics } from '../src/game/map-tactics.js';
-import { GLASS_GARDEN_DECOR, GLASS_GARDEN_PROPS, buildGlassGardenDecor, footprintPoints, planGlassGardenDecor, placementViolation,
+import { GLASS_GARDEN_DECOR, GLASS_GARDEN_PROPS, buildGlassGardenDecor, footprintGap, footprintPoints, packSlotPoints, planGlassGardenDecor, placementViolation,
   roomFixtures, tacticPoints, walkableRect, wallOpenings } from '../src/game/glass-garden-decor.js';
 
 setDefaultTimeout(30_000);
@@ -135,6 +136,84 @@ test('발자국을 전부 막힌 칸으로 쳐도 모든 방이 시작방에서 
   }
 });
 
+// ---- 무리 대형(planRoomPacks·pickRoomPack·packSlot 운영 경로) ----
+const packWorlds = () => {
+  const rows: [string, any, any][] = [];
+  for (const depth of ['standard', 'deep'] as const) {
+    const stage = buildExpeditionStage('dungeon', 'glass_garden', null, { depth });
+    rows.push([depth, buildExpeditionWorld(stage), stage]);
+  }
+  const stage = buildExpeditionStage('dungeon', 'glass_garden', null);
+  for (const seed of [11, 29, 4242]) rows.push([`시드 ${seed}`, seededWorld(seed), stage]);
+  return rows;
+};
+
+test('장식 배치가 가정한 방 명단·졸개 수가 운영 명단을 덮는다', () => {
+  for (const [name, world, stage] of packWorlds()) for (const room of world.rooms) {
+    if (!['normal', 'elite', 'treasure'].includes(room.type)) continue;
+    const [lo, hi] = (GLASS_GARDEN_DECOR.packRoster as Record<string, number[]>)[room.type];
+    const roster = expeditionRoster(stage, room).length;
+    expect(roster, `${name} 방${room.id}`).toBeGreaterThanOrEqual(lo); expect(roster).toBeLessThanOrEqual(hi);
+    const followers = expeditionFollowers(stage, room, roster).length;
+    const share = (GLASS_GARDEN_DECOR.packFollowerShare as Record<string, number>)[room.type];
+    expect(followers).toBeLessThanOrEqual(Math.max(3, Math.min(7, Math.round(roster * share))));
+  }
+});
+
+test('운영 무리 경로가 세울 수 있는 모든 자리(진입 격자 × 영웅 위치 × 졸개 포함)가 장식 발자국에서 clearance 이상 떨어진다', () => {
+  let checked = 0, slots = 0;
+  for (const [name, world, stage] of packWorlds()) {
+    let combat = 0;
+    const plan = planGlassGardenDecor(world);
+    for (const room of world.rooms) {
+      if (!['normal', 'elite', 'treasure'].includes(room.type)) continue;
+      const decor = plan.filter((entry: any) => entry.roomId === room.id);
+      expect(decor.length, `${name} 방${room.id}에 장식이 남아 있다`).toBeGreaterThanOrEqual(1);
+      combat += decor.length;
+      const roster = expeditionRoster(stage, room).length, total = roster + expeditionFollowers(stage, room, roster).length;
+      const rect = walkableRect(world, room);
+      // 구현이 쓰지 않은 독립 표본: 방 전체 3 m 격자와 모든 입구 안쪽 지점을 진입 위치로, 영웅은 진입 위치 또는 그 주변.
+      const entries: { x: number; z: number }[] = [{ x: room.x, z: room.z }];
+      for (let x = rect.x0 + 1.5; x < rect.x1; x += 3) for (let z = rect.z0 + 1.5; z < rect.z1; z += 3) entries.push({ x, z });
+      for (const door of wallOpenings(world, rect).filter((_, i) => i % 3 === 0)) entries.push({ x: door[0] + Math.sign(room.x - door[0]) * .8, z: door[1] + Math.sign(room.z - door[1]) * .8 });
+      for (const entry of entries) {
+        const planned = planRoomPacks(world, room, roster, entry.x, entry.z)!;
+        for (const [hx, hz] of [[0, 0], [2.5, 0], [-2.5, 0], [0, 2.5], [0, -2.5]]) {
+          const hero = { x: entry.x + hx, z: entry.z + hz }, fake = { packs: planned.map((pack: any) => new Pack(room, pack.x, pack.z)), packCursor: 0 }, out = { x: 0, z: 0 };
+          for (let i = 0; i < total; i++) {
+            packSlot(world, pickRoomPack(fake, hero), out); slots++;
+            for (const placement of decor) {
+              if (footprintGap(placement, out.x, out.z) < GLASS_GARDEN_DECOR.packClearance - 1e-9) {
+                throw new Error(`${name} 방${room.id} 진입 ${entry.x.toFixed(1)},${entry.z.toFixed(1)} 슬롯 ${out.x.toFixed(2)},${out.z.toFixed(2)}가 ${placement.asset}(${placement.x.toFixed(1)},${placement.z.toFixed(1)}) 안`);
+              }
+            }
+          }
+          checked++;
+        }
+      }
+    }
+    expect(combat, `${name} 전투방 장식 합계(장식이 사라져 검사가 헛돌지 않게)`).toBeGreaterThanOrEqual(8);
+  }
+  expect(checked).toBeGreaterThan(1000); expect(slots).toBeGreaterThan(10000);
+});
+
+test('무리 자리 집합은 층에서만 정해지고(결정적) 시작·보스방에는 없다, 장식은 그 집합과 겹치지 않는다', () => {
+  const world = gardenWorld('standard');
+  expect(packSlotPoints(world, world.startRoom)).toEqual([]);
+  expect(packSlotPoints(world, world.bossRoom)).toEqual([]);
+  const room = world.rooms[1], once = packSlotPoints(world, room);
+  expect(once.length).toBeGreaterThan(20);
+  expect(packSlotPoints(gardenWorld('standard'), gardenWorld('standard').rooms[1])).toEqual(once);
+  // 일부러 슬롯 위에 놓은 후보는 거부된다.
+  const slot = once[0], rect = walkableRect(world, room);
+  const probe = { asset: 'crystal-cluster-s', roomId: room.id, wall: 'W', x: slot.x, z: slot.z, yaw: Math.PI / 2, scale: 1, tone: 0 };
+  expect(footprintGap(probe, slot.x, slot.z)).toBe(0);
+  expect(placementViolation(world, room, { ...probe, x: rect.x0 + .9 })).not.toBeNull();
+  const violation = (p: any) => placementViolation(world, room, p);
+  const onSlot = once.find((point: any) => violation({ ...probe, x: point.x, z: point.z }) === 'pack');
+  expect(onSlot).toBeDefined();
+});
+
 test('환경 제어 장치방(방 3)의 조작판·당김 종착점은 MapTactics 실제 좌표와 같은 식으로 비운다', () => {
   const stage = buildExpeditionStage('dungeon', 'glass_garden', null);
   const world = buildExpeditionWorld(stage);
@@ -168,7 +247,7 @@ test('같은 규칙이 일부러 어긴 배치를 거부한다(입구·기둥·�
   expect(placementViolation(world, room, at('crystal-cluster-s', doorWall, door[1]))).toBe('door');
   // 입구에서 충분히 떨어진 같은 벽 자리는 통과한다(기둥·횃불을 피해 모서리 쪽 빈 곳).
   const clear = [...Array(40)].map((_, i) => rect.z0 + 1 + i * .5).filter(z => !placementViolation(world, room, at('crystal-cluster-s', doorWall, z)));
-  expect(clear.length).toBeGreaterThan(3);
+  expect(clear.length).toBeGreaterThanOrEqual(1);
   // 중앙 이동 영역(벽 띠 밖)은 거부
   expect(placementViolation(world, room, { ...at('crystal-cluster-l', 'N', room.x), z: room.z })).toMatch(/lane/);
   // 보이는 벽 속·벽 밖
@@ -181,7 +260,8 @@ test('같은 규칙이 일부러 어긴 배치를 거부한다(입구·기둥·�
   expect(placementViolation(world, room, at('trellis-arch', 'S', room.x + 3.1))).toBe('camera-side');
   // 겹침
   const first = at('crystal-cluster-s', 'W', clear[0]);
-  expect(placementViolation(world, room, { ...first, z: first.z + .4 }, [first])).toBe('overlap');
+  expect(placementViolation(world, room, first)).toBeNull();
+  expect(placementViolation(world, room, first, [first])).toBe('overlap');
   // 랜드마크 방(보스)의 북쪽 가운데는 비운다.
   const boss = world.bossRoom, bossRect = walkableRect(world, boss);
   expect(roomFixtures(boss).landmark).toBe(true);
