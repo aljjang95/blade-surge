@@ -11,6 +11,7 @@ import { GradeAura, resolveHeroGrade } from '../engine/grade-aura.js';
 import { CONTROL_ULT_GAIN, ultimateLockDuration } from './control-rewards.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC, DODGE_INVULN_SEC } from './progression.js';
+import { FEEL, dodgeCancelOpen, comboQueueOpen, skillCancelOpen } from './feel.js';
 import { RangerAim, aimTargetValid, clearShot } from './ranger-aim.js';
 import { enemyImpactIn } from './enemies.js';
 import { SkillAimView } from './skill-aim/aim-view.js';
@@ -23,12 +24,9 @@ const _v = new THREE.Vector3();
 // 머리 뼈 로컬 축: 앞 +x, 위 +y, 귀 +z. 피치(고개 젖힘)는 z 축 회전이다. 예전 값은 앞 축(x) 12°로 옆으로 기울이는 롤이라 눈이 드러나지 않았다.
 // 로비 포즈와 다른 직업은 이 보정을 쓰지 않는다. t1·t2·t3·여우 몸 모델의 머리 뼈 축은 같다.
 export const RANGER_HEAD_LIFT = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), THREE.MathUtils.degToRad(30));
-const ATTACK_INPUT_BUFFER_SEC = 0.14;
-const DODGE_INPUT_BUFFER_SEC = 0.12;
-const ATTACK_CANCEL_EARLY = 0.16;
-const ATTACK_CANCEL_RECOVERY = 0.12;
-const COMBO_QUEUE_OPEN = 0.28;
-const SKILL_CANCEL_AFTER_HIT = 0.05;
+// 입력 버퍼·취소 창은 game/feel.js 의 FEEL.input 한 표가 소유한다.
+const ATTACK_INPUT_BUFFER_SEC = FEEL.input.attackBuffer;
+const DODGE_INPUT_BUFFER_SEC = FEEL.input.dodgeBuffer;
 // 수동 궁수: 사격 중 이동 속도 배율, 회피에서 사격으로 넘어가는 최소 회피 시간, 다리 층 블렌드 속도
 export const RANGER_MOVE_SHOT_SPEED = 0.55;
 export const RANGER_DODGE_SHOT_AT = 0.16;
@@ -421,8 +419,7 @@ export class Player extends Actor {
     if (!c) return false;
     const dur = c.dur / ((this.buffs?.atkSpd || 1) * (this.stormT > 0 ? 1.4 : 1));
     const t = this.stateT / Math.max(0.01, dur);
-    if (!this.hitDone) return t >= ATTACK_CANCEL_EARLY && t < c.hitAt - 0.04;
-    return t >= c.hitAt + ATTACK_CANCEL_RECOVERY && t < Math.min(0.92, c.hitAt + 0.26);
+    return dodgeCancelOpen(t, c.hitAt, this.hitDone);
   }
   attackProgress() {
     if (this.state !== 'attack' || !this.current) return 1;
@@ -431,12 +428,11 @@ export class Player extends Actor {
   }
   canQueueCombo() {
     if (this.state !== 'attack' || !this.current) return false;
-    return this.hitDone || this.attackProgress() >= Math.max(COMBO_QUEUE_OPEN, this.current.hitAt - 0.12);
+    return comboQueueOpen(this.attackProgress(), this.current.hitAt, this.hitDone);
   }
   canSkillCancel() {
     if (this.state !== 'attack' || !this.current) return true;
-    const t = this.attackProgress();
-    return this.hitDone && t >= this.current.hitAt + SKILL_CANCEL_AFTER_HIT && t < 0.9;
+    return skillCancelOpen(this.attackProgress(), this.current.hitAt, this.hitDone);
   }
 
   // ---------------- 회피 ----------------
