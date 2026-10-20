@@ -18,6 +18,7 @@ const steps = arg('steps', 'a1,a2,a3,a4').split(',').map((s) => s.trim().toLower
 const port = +arg('port', '9341');
 const origin = arg('origin', 'https://blade.tllhouse.com/');
 const holder = arg('holder', 'gogo:20261020-s26-device-acceptance');
+const a2part = arg('a2', 'both'); // both | campaign
 const FORWARD_PS = 'C:/Users/heart/.codex/tools/tab-connect/adb-forward.ps1';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const round = (n, d = 2) => (Number.isFinite(n) ? +n.toFixed(d) : n);
@@ -94,12 +95,15 @@ async function tapSel(sel, { text = null, index = 0, label = sel, retry = true }
     const list = text ? all.filter((n) => new RegExp(text).test(n.textContent.trim())) : all;
     const el = list[index]; if (!el) return null;
     let r = el.getBoundingClientRect();
-    if (r.top < 0 || r.bottom > innerHeight || r.left < 0 || r.right > innerWidth) { el.scrollIntoView({ block: 'center', inline: 'center' }); r = el.getBoundingClientRect(); }
+    // 화면 밖이거나 스크롤 영역의 보이는 부분 밖이거나 가운데가 다른 요소에 덮였으면 먼저 스크롤해 끌어온다.
+    const hidden = (r) => { if (r.top < 0 || r.bottom > innerHeight || r.left < 0 || r.right > innerWidth) return true; for (let p = el.parentElement; p; p = p.parentElement) { const cs = getComputedStyle(p); if (/(auto|scroll)/.test(cs.overflowY + cs.overflowX)) { const q = p.getBoundingClientRect(); if (r.top < q.top - 1 || r.bottom > q.bottom + 1) return true; } } const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !(t && (t === el || el.contains(t))); };
+    if (hidden(r)) { el.scrollIntoView({ block: 'center', inline: 'center' }); r = el.getBoundingClientRect(); }
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2, top = document.elementFromPoint(cx, cy);
     window.__qaEl = el;
     return { cx, cy, w: r.width, h: r.height, covered: !(top && (top === el || el.contains(top))), coverBy: top ? (top.id || top.className || top.tagName) + '' : null };
   }, { sel, text, index });
   if (!info) { const diag = await ev(({ sel }) => [...document.querySelectorAll(sel)].slice(0, 4).map((n) => { const r = n.getBoundingClientRect(), cs = getComputedStyle(n); return [Math.round(r.width), Math.round(r.height), cs.display, cs.visibility, n.isConnected]; }), { sel }); throw new Error('요소 없음: ' + label + ' ' + JSON.stringify(diag)); }
+  if (info && info.covered) { await sleep(400); const again = await ev(() => { const el = window.__qaEl, r = el.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, t = document.elementFromPoint(cx, cy); return { cx, cy, covered: !(t && (t === el || el.contains(t))), coverBy: t ? (t.id || t.className || t.tagName) + '' : null }; }); Object.assign(info, again); if (info.covered) throw new Error('덮임(누르지 않음): ' + label + ' by ' + info.coverBy); }
   const t = await tapAt(info.cx, info.cy, label);
   // 명중: 눌린 요소가 대상 안이거나, 탭 직전 대상이 그 지점의 맨 위였고 실제 포인터가 대상 가운데(±4px)에 도착함(탭으로 대상이 다시 그려진 경우).
   const landed = !!t.got && Math.abs(t.got.x - info.cx) <= 4 && Math.abs(t.got.y - info.cy) <= 4 && !info.covered;
@@ -128,7 +132,7 @@ function newRec(id, title) {
   rec.inject = (t) => rec.injected.push(t);
   rec.did = (t) => rec.real.push(t);
   rec.obs = (k, v) => { rec.observed[k] = v; };
-  rec.tap = async (sel, o = {}) => { let t; try { t = await tapSel(sel, o); } catch (e) { if (!/요소 없음/.test(String(e))) throw e; await sleep(1500); t = await tapSel(sel, o); } rec.taps.push({ label: t.label, X: t.X, Y: t.Y, hit: t.hit, covered: t.covered }); rec.did('실제 터치(adb input tap): ' + t.label + (t.hit ? '' : ' [명중 확인 실패]')); return t; };
+  rec.tap = async (sel, o = {}) => { let t; try { t = await tapSel(sel, o); } catch (e) { if (!/요소 없음/.test(String(e))) throw e; await sleep(1500); try { t = await tapSel(sel, o); } catch (e2) { rec.obs('startStageCalls', await ev(() => ({ ss: window.__ss || null, clicks: (window.__clicks || []).slice(-12), now: Math.round(performance.now()) })).catch(() => null)); rec.obs('failState', await ev(() => ({ mode: window.app.mode, result: document.getElementById('result')?.className, fs: !!document.fullscreenElement, vw: innerWidth, vh: innerHeight, modal: document.querySelector('#modal.show') ? document.querySelector('#modal.show').innerText.slice(0, 120) : null, tabs: [...document.querySelectorAll('.tab.show, [id^=tab-].show')].map((n) => n.id) })).catch(() => null)); await shot(rec, 'fail').catch(() => {}); throw e2; } } rec.taps.push({ label: t.label, X: t.X, Y: t.Y, hit: t.hit, covered: t.covered }); rec.did('실제 터치(adb input tap): ' + t.label + (t.hit ? '' : ' [명중 확인 실패]')); return t; };
   report.steps[id] = rec; return rec;
 }
 
@@ -308,9 +312,13 @@ async function showBagCell(rec, uid) {
 }
 async function stepA2() {
   const rec = newRec('A2', 'AUTO 무사망 클리어(원정·캠페인), 전리품 → 장착·판매·강화');
-  if (!await ev(() => window.app?.mode === 'battle' && window.app.battle?.active)) { await boot(rec); await prepare(rec, { hero: 'knight', energy: 200 }); rec.check('전투 진입', await enterBattle(rec)); }
+  if (a2part === 'campaign') { await boot(rec); await prepare(rec, { hero: 'knight', energy: 200 }); }
+  await ev(() => { const A = window.app; if (A.__ssWrapped) return; A.__ssWrapped = true; const o = A.startStage.bind(A); window.__ss = []; A.startStage = (...x) => { window.__ss.push({ t: Math.round(performance.now()), stage: x[0]?.code || x[0]?.name || null, stack: String(new Error().stack).split('\n').slice(1, 7).join(' | ').slice(0, 900) }); return o(...x); }; window.__clicks = []; addEventListener('click', (e) => { window.__clicks.push({ t: Math.round(performance.now()), id: e.target?.id || String(e.target?.className || e.target?.tagName).slice(0, 40), trusted: e.isTrusted, type: e.pointerType ?? null }); if (window.__clicks.length > 40) window.__clicks.shift(); }, true); });
+  rec.inject('진단 훅: app.startStage 호출 스택·click 기록(읽기 전용 래퍼)');
+  if (a2part !== 'campaign' && !await ev(() => window.app?.mode === 'battle' && window.app.battle?.active)) { await boot(rec); await prepare(rec, { hero: 'knight', energy: 200 }); rec.check('전투 진입', await enterBattle(rec)); }
   const before = new Set((await invSnap()).inv.map((x) => x.uid));
   // (1) 로비 원정: AUTO 클리어 → 전리품 보기 → 장비 정비 → 가방에서 장착·판매·강화
+  if (a2part === 'both') {
   const f1 = await autoToResult(rec, 'expedition');
   if (f1.kind === 'expedition') {
     if (await visible('summary', '전리품 보기')) { await rec.tap('summary', { text: '전리품 보기', label: '획득 장비 · 전리품 보기 펼치기' }); await sleep(900); }
@@ -368,6 +376,7 @@ async function stepA2() {
     rec.check('강화: 단계 상승·골드 감소', e1 > e0 && gEnd < s0.gold, { e0, e1, tries });
     await closeModals(rec);
   }
+  }
   // (2) 캠페인 1-1: AUTO 클리어 → 결과 전리품 카드 탭 → 장비 시트 → 장착
   await rec.tap('.bottomnav .oath-nav-menu', { label: '하단 메뉴' }); await sleep(600);
   await rec.tap('#oath-menu button[data-tab="stage"]', { label: '메뉴 → 모험' }); await sleep(1000);
@@ -377,7 +386,11 @@ async function stepA2() {
   await initMap();
   const beforeC = new Set((await invSnap()).inv.map((x) => x.uid));
   const f2 = await autoToResult(rec, 'campaign');
-  if (await visible('#result-loot-details > summary') && !await ev(() => document.querySelector('#result-loot-details')?.open)) { await rec.tap('#result-loot-details > summary', { label: '획득 보상 펼치기' }); await sleep(700); }
+  const foldTrace = await ev(async () => { const out = []; for (let i = 0; i < 16; i++) { const d = document.getElementById('result-loot-details'), r = d?.getBoundingClientRect(), sc = document.querySelector('#result .result-scroll'); out.push({ i, exists: !!d, hidden: d?.hidden ?? null, h: r ? Math.round(r.height) : null, top: r ? Math.round(r.top) : null, scrollH: sc?.scrollHeight ?? null, clientH: sc?.clientHeight ?? null, resultShow: document.getElementById('result')?.classList.contains('show') ?? null, mode: window.app.mode, active: !!window.app.battle?.active, win: window.app.battle?.result?.win ?? null }); await new Promise((r) => setTimeout(r, 150)); } return out; });
+  rec.obs('lootFoldTrace', foldTrace);
+  const foldOk = await ev(() => { const d = document.getElementById('result-loot-details'); return !!d && !d.hidden && d.getBoundingClientRect().height > 0; });
+  rec.check('캠페인 승리 결과에 "획득 보상" 접힘이 보임', foldOk, foldTrace.slice(-2));
+  if (foldOk && !await ev(() => document.getElementById('result-loot-details').open)) { await rec.tap('#result-loot-details', { label: '획득 보상 펼치기(접힘 영역, Chrome 155 는 summary 크기를 0 으로 보고함)' }); await sleep(700); }
   const cards = await ev(() => [...document.querySelectorAll('#result-loot .loot-item[data-verdict]')].map((c) => ({ verdict: c.dataset.verdict, lc: c.querySelector('.lc')?.textContent.trim() || '' })));
   rec.obs('campaignCards', cards); await shot(rec, 'campaign-loot-cards');
   rec.check('캠페인 결과에 전리품 카드', cards.length > 0, cards.length);
