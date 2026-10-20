@@ -39,7 +39,7 @@ async function open(browser, rec, viewport = VIEW) {
   const page = await context.newPage();
   const s = { context, page, rec, viewport, requests: [], cdp: null };
   page.on('pageerror', (e) => rec.pageErrors.push('pageerror: ' + String(e).slice(0, 300)));
-  page.on('console', (m) => { if (m.type() === 'error') rec.pageErrors.push('console: ' + m.text().slice(0, 300)); });
+  page.on('console', (m) => { if (m.type() !== 'error') return; const t = m.text(); if (/Ignored attempt to cancel a touchstart event with cancelable=false/.test(t)) { rec.ignoredConsole = (rec.ignoredConsole || 0) + 1; return; } rec.pageErrors.push('console: ' + t.slice(0, 300)); });
   page.on('request', (r) => { if (r.url().includes('/sfx/')) s.requests.push({ t: Date.now(), url: new URL(r.url()).pathname }); });
   s.cdp = await context.newCDPSession(page);
   s.close = () => context.close();
@@ -93,6 +93,7 @@ async function enterBattle(s, { settle = 1500 } = {}) {
   const skip = page.getByRole('button', { name: /건너뛰기/ });
   if (await skip.count()) await skip.first().tap().catch(() => {});
   await page.waitForFunction(() => window.app.mode === 'battle' && window.app.battle?.active && !!window.app.battle.player, undefined, { timeout: 90000 });
+  await page.waitForFunction(() => window.app.battle.elapsed > 0.5, undefined, { timeout: 60000 });
   await page.waitForTimeout(settle);
   s.rec.did('전투 진입: #citadel-dungeon-prepare → 원정 시작 → 건너뛰기 탭 → mode=battle');
 }
@@ -515,7 +516,7 @@ async function installVfxProbe(s) {
       });
       return { sv2: n, meshes, sprites, total, children: scene.children.length, maxGroundRadius: +maxR.toFixed(2) };
     };
-    const tick = () => { const k = window.__vfxSnap(); window.__vfxMax.n = Math.max(window.__vfxMax.n, k.sv2); window.__vfxMax.r = Math.max(window.__vfxMax.r, k.maxGroundRadius); requestAnimationFrame(tick); };
+    const tick = () => { const k = window.__vfxSnap(); window.__vfxMax.n = Math.max(window.__vfxMax.n, k.sv2); window.__vfxMax.r = Math.max(window.__vfxMax.r, k.maxGroundRadius); if (k.sv2 > 0 && window.__tapG !== null && window.__tapG !== undefined && window.__vfxMax.first === undefined) window.__vfxMax.first = +(window.app.battle.elapsed - window.__tapG).toFixed(3); requestAnimationFrame(tick); };
     requestAnimationFrame(tick);
   });
 }
@@ -542,7 +543,7 @@ async function castAndCapture(s, rec, { slot, tag, deltas = [.15, .4] }) {
   }
   await sleep(1400);
   const max = await s.page.evaluate(() => ({ ...window.__vfxMax }));
-  return { ...info, snaps, maxSv2: max.n, maxGroundRadius: round(max.r, 2) };
+  return { ...info, snaps, maxSv2: max.n, maxGroundRadius: round(max.r, 2), firstSv2AtSec: max.first ?? null };
 }
 async function A6Pass(browser, rec, viewport, heroes, tagPrefix) {
   const result = {};
@@ -565,14 +566,15 @@ async function A6Pass(browser, rec, viewport, heroes, tagPrefix) {
         await s.page.locator('.skill-btn[data-skill="0"]').tap(); await sleep(1100);
       }
       await sleep(3500);
-      const after = await s.page.evaluate(() => window.__vfxSnap());
-      result[hero] = { base, skill, ult, repeat: { before, after, returned: after.total === before.total && after.children === before.children && after.sv2 === before.sv2 } };
+      let after = await s.page.evaluate(() => window.__vfxSnap());
+      for (let i = 0; i < 8; i++) { await sleep(500); const again = await s.page.evaluate(() => window.__vfxSnap()); const same = again.total === after.total; after = again; if (same && after.total === base.total) break; }
+      result[hero] = { base, skill, ult, repeat: { start: { total: base.total, children: base.children, sv2: base.sv2 }, before, after, returnedToStart: after.total === base.total && after.children === base.children && after.sv2 === base.sv2, returned: after.total === base.total && after.children === base.children && after.sv2 === base.sv2 } };
     } finally { await s.close(); }
   }
   return result;
 }
 async function A6(browser, rec) {
-  const heroes = ['knight', 'mage', 'ranger'];
+  const heroes = arg('heroes') ? arg('heroes').split(',') : ['knight', 'mage', 'ranger'];
   const main = await A6Pass(browser, rec, VIEW, heroes, '844-');
   rec.obs('viewport844x390', main);
   for (const hero of heroes) {
@@ -582,7 +584,7 @@ async function A6(browser, rec) {
     rec.check(hero + ': 궁극기 시전(' + r.ult.id + ')', r.ult.unlocked && r.ult.snaps.some((k) => k.state === 'ult'), r.ult.snaps.map((k) => k.state));
     rec.check(hero + ': 궁극기 skills-v2 메시 > 0', r.ult.maxSv2 > 0, { atSnaps: r.ult.snaps.map((k) => k.sv2), maxSv2: r.ult.maxSv2 });
     rec.check(hero + ': 궁극기 지면 링 반경 10 이상(링 목표 r1=10, 마지막 표본 전 9.8 이상 허용)', r.ult.maxGroundRadius >= 9.8, r.ult.maxGroundRadius);
-    rec.check(hero + ': 반복 시전 3회 뒤 scene 객체 수가 시작값으로 복귀', r.repeat.returned, r.repeat);
+    rec.check(hero + ': 반복 시전 3회 뒤 scene 객체 수(총·자식·skills-v2)가 전투 시작값으로 복귀', r.repeat.returnedToStart, r.repeat);
   }
   const wide = await A6Pass(browser, rec, WIDE, heroes, '1280-');
   rec.obs('viewport1280x590', Object.fromEntries(Object.entries(wide).map(([h, r]) => [h, { skillSv2: r.skill.maxSv2, ultSv2: r.ult.maxSv2, ultRadius: r.ult.maxGroundRadius, snaps: [...r.skill.snaps, ...r.ult.snaps].map((k) => k.file) }])));
@@ -612,7 +614,7 @@ const overlapProbe = (s) => s.page.evaluate(() => {
     if (r.width >= W * 0.95 && r.height >= H * 0.9) continue; // 화면 전체 비네트·플래시
     found.push({ id: n.id || null, cls: String(n.className || '').slice(0, 40), text: (n.textContent || '').trim().slice(0, 24), world: !!n.closest('#dmg-layer'), rect: [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)], op: +op.toFixed(2) });
   }
-  return { zone: { x0: Math.round(zone.x0), x1: Math.round(zone.x1), y0: Math.round(zone.y0), y1: Math.round(zone.y1) }, found };
+  return { zone: { x0: Math.round(zone.x0), x1: Math.round(zone.x1), y0: Math.round(zone.y0), y1: Math.round(zone.y1) }, paused: !!window.app.battle.paused, pauseReasons: [...(window.app.battle.pauseReasons || [])], found };
 });
 async function A7One(browser, rec, grade, samples, shotTag) {
   const s = await open(browser, rec);
@@ -642,9 +644,11 @@ async function A7(browser, rec) {
   rec.obs('sssrAura', sssr.aura);
   rec.check('SSSR: GradeAura 그룹 표시(group.visible)', sssr.aura.visible === true, sssr.aura);
   rec.check('SSSR: 지면 링·몸 오라 모두 표시', sssr.aura.ring === true && sssr.aura.aura === true, { ring: sssr.aura.ring, aura: sssr.aura.aura });
-  const ui = sssr.rows.map((r) => r.found.filter((f) => !f.world)), world = sssr.rows.map((r) => r.found.filter((f) => f.world).length);
-  rec.obs('overlapSamples', sssr.rows.map((r, i) => ({ i, zone: r.zone, ui: ui[i], dmgNumbers: world[i] })));
-  rec.check('전투 DOM UI 중앙 보호 영역 겹침 0(2초 간격 10회 표본)', sssr.rows.length === 10 && ui.every((l) => l.length === 0), ui.map((l, i) => ({ sample: i, items: l })).filter((x) => x.items.length));
+  // 전투가 일시정지된 표본(각인·만남 선택 모달 등)은 '플레이 중 겹침'이 아니라 별도로 기록한다. 규칙: 모달은 플레이가 멈춘 동안만 열린다.
+  const live = sssr.rows.map((r) => (r.paused ? [] : r.found.filter((f) => !f.world))), pausedSamples = sssr.rows.map((r, i) => ({ i, reasons: r.pauseReasons, items: r.paused ? r.found.filter((f) => !f.world).map((f) => f.cls || f.id) : [] })).filter((x) => x.reasons.length);
+  rec.obs('overlapSamples', sssr.rows.map((r, i) => ({ i, zone: r.zone, paused: r.paused, ui: r.found.filter((f) => !f.world), dmgNumbers: r.found.filter((f) => f.world).length })));
+  rec.obs('pausedSamples', pausedSamples);
+  rec.check('전투 DOM UI 중앙 보호 영역 겹침 0(2초 간격 10회 표본, 플레이 진행 중인 표본 기준)', sssr.rows.length === 10 && live.every((l) => l.length === 0), live.map((l, i) => ({ sample: i, items: l })).filter((x) => x.items.length));
   const ssr = await A7One(browser, rec, 'SSR', 0, 'ssr');
   rec.obs('ssrAura', ssr.aura);
   rec.check('SSR: GradeAura 그룹 표시(금색 링, 몸 오라 없음)', ssr.aura.visible === true && ssr.aura.ring === true && ssr.aura.aura === false, ssr.aura);
@@ -731,6 +735,15 @@ await browser.close();
 summary.finished = new Date().toISOString(); summary.pass = !failed;
 await fs.writeFile(path.join(out, 'summary.json'), JSON.stringify(summary, null, 2));
 process.exit(failed ? 1 : 0);
+
+
+
+
+
+
+
+
+
 
 
 

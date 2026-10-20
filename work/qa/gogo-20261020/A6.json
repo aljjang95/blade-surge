@@ -1,0 +1,686 @@
+{
+  "id": "A6",
+  "title": "스킬·궁극기 skills-v2 VFX",
+  "pass": true,
+  "checks": [
+    {
+      "name": "knight: 스킬 시전(holy_slash)",
+      "ok": true,
+      "detail": [
+        "skill",
+        "skill"
+      ]
+    },
+    {
+      "name": "knight: 스킬 시전 직후 skills-v2 텍스처 메시 > 0",
+      "ok": true,
+      "detail": {
+        "atSnaps": [
+          0,
+          2
+        ],
+        "maxSv2": 2,
+        "keys": 10
+      }
+    },
+    {
+      "name": "knight: 궁극기 시전(dragon_slash)",
+      "ok": true,
+      "detail": [
+        "ult",
+        "ult"
+      ]
+    },
+    {
+      "name": "knight: 궁극기 skills-v2 메시 > 0",
+      "ok": true,
+      "detail": {
+        "atSnaps": [
+          0,
+          0
+        ],
+        "maxSv2": 3
+      }
+    },
+    {
+      "name": "knight: 궁극기 지면 링 반경 10 이상(링 목표 r1=10, 마지막 표본 전 9.8 이상 허용)",
+      "ok": true,
+      "detail": 10
+    },
+    {
+      "name": "knight: 반복 시전 3회 뒤 scene 객체 수(총·자식·skills-v2)가 전투 시작값으로 복귀",
+      "ok": true,
+      "detail": {
+        "start": {
+          "total": 261,
+          "children": 29,
+          "sv2": 0
+        },
+        "before": {
+          "sv2": 0,
+          "meshes": 0,
+          "sprites": 0,
+          "total": 261,
+          "children": 29,
+          "maxGroundRadius": 0
+        },
+        "after": {
+          "sv2": 0,
+          "meshes": 0,
+          "sprites": 0,
+          "total": 261,
+          "children": 29,
+          "maxGroundRadius": 0
+        },
+        "returnedToStart": true,
+        "returned": true
+      }
+    },
+    {
+      "name": "mage: 스킬 시전(fireball)",
+      "ok": true,
+      "detail": [
+        "skill",
+        "skill"
+      ]
+    },
+    {
+      "name": "mage: 스킬 시전 직후 skills-v2 텍스처 메시 > 0",
+      "ok": true,
+      "detail": {
+        "atSnaps": [
+          0,
+          2
+        ],
+        "maxSv2": 2,
+        "keys": 10
+      }
+    },
+    {
+      "name": "mage: 궁극기 시전(meteor)",
+      "ok": true,
+      "detail": [
+        "ult",
+        "ult"
+      ]
+    },
+    {
+      "name": "mage: 궁극기 skills-v2 메시 > 0",
+      "ok": true,
+      "detail": {
+        "atSnaps": [
+          0,
+          0
+        ],
+        "maxSv2": 3
+      }
+    },
+    {
+      "name": "mage: 궁극기 지면 링 반경 10 이상(링 목표 r1=10, 마지막 표본 전 9.8 이상 허용)",
+      "ok": true,
+      "detail": 10
+    },
+    {
+      "name": "mage: 반복 시전 3회 뒤 scene 객체 수(총·자식·skills-v2)가 전투 시작값으로 복귀",
+      "ok": true,
+      "detail": {
+        "start": {
+          "total": 244,
+          "children": 29,
+          "sv2": 0
+        },
+        "before": {
+          "sv2": 0,
+          "meshes": 0,
+          "sprites": 0,
+          "total": 249,
+          "children": 34,
+          "maxGroundRadius": 0
+        },
+        "after": {
+          "sv2": 0,
+          "meshes": 0,
+          "sprites": 0,
+          "total": 244,
+          "children": 29,
+          "maxGroundRadius": 0
+        },
+        "returnedToStart": true,
+        "returned": true
+      }
+    },
+    {
+      "name": "ranger: 스킬 시전(ranger_pierce)",
+      "ok": true,
+      "detail": [
+        "skill",
+        "skill"
+      ]
+    },
+    {
+      "name": "ranger: 스킬 시전 직후 skills-v2 텍스처 메시 > 0",
+      "ok": true,
+      "detail": {
+        "atSnaps": [
+          0,
+          2
+        ],
+        "maxSv2": 2,
+        "keys": 10
+      }
+    },
+    {
+      "name": "ranger: 궁극기 시전(ranger_tempest)",
+      "ok": true,
+      "detail": [
+        "ult",
+        "ult"
+      ]
+    },
+    {
+      "name": "ranger: 궁극기 skills-v2 메시 > 0",
+      "ok": true,
+      "detail": {
+        "atSnaps": [
+          0,
+          0
+        ],
+        "maxSv2": 3
+      }
+    },
+    {
+      "name": "ranger: 궁극기 지면 링 반경 10 이상(링 목표 r1=10, 마지막 표본 전 9.8 이상 허용)",
+      "ok": true,
+      "detail": 10
+    },
+    {
+      "name": "ranger: 반복 시전 3회 뒤 scene 객체 수(총·자식·skills-v2)가 전투 시작값으로 복귀",
+      "ok": true,
+      "detail": {
+        "start": {
+          "total": 281,
+          "children": 29,
+          "sv2": 0
+        },
+        "before": {
+          "sv2": 0,
+          "meshes": 0,
+          "sprites": 0,
+          "total": 281,
+          "children": 29,
+          "maxGroundRadius": 0
+        },
+        "after": {
+          "sv2": 0,
+          "meshes": 0,
+          "sprites": 0,
+          "total": 281,
+          "children": 29,
+          "maxGroundRadius": 0
+        },
+        "returnedToStart": true,
+        "returned": true
+      }
+    },
+    {
+      "name": "knight 1280x590: 스킬·궁극기 skills-v2 메시 > 0",
+      "ok": true,
+      "detail": {
+        "skill": 2,
+        "ult": 3
+      }
+    },
+    {
+      "name": "mage 1280x590: 스킬·궁극기 skills-v2 메시 > 0",
+      "ok": true,
+      "detail": {
+        "skill": 2,
+        "ult": 3
+      }
+    },
+    {
+      "name": "ranger 1280x590: 스킬·궁극기 skills-v2 메시 > 0",
+      "ok": true,
+      "detail": {
+        "skill": 2,
+        "ult": 3
+      }
+    }
+  ],
+  "injected": [
+    "eco 상태 준비: {\"hero\":\"knight\",\"level\":30,\"grade\":null,\"gold\":0,\"tutorial\":true}",
+    "스킬 시전 직전 쿨다운 0·MP 가득·궁극기 게이지 가득(P.cds/P.mp/P.ult)",
+    "eco 상태 준비: {\"hero\":\"mage\",\"level\":30,\"grade\":null,\"gold\":0,\"tutorial\":true}",
+    "eco 상태 준비: {\"hero\":\"ranger\",\"level\":30,\"grade\":null,\"gold\":0,\"tutorial\":true}"
+  ],
+  "real": [
+    "부팅: #btn-ignore-rotate·#boot-start 실제 탭 → lobby",
+    "전투 진입: #citadel-dungeon-prepare → 원정 시작 → 건너뛰기 탭 → mode=battle"
+  ],
+  "observed": {
+    "viewport844x390": {
+      "knight": {
+        "base": {
+          "sv2": 0,
+          "meshes": 0,
+          "sprites": 0,
+          "total": 261,
+          "children": 29,
+          "maxGroundRadius": 0,
+          "keys": [
+            "sv2-aura-sssr",
+            "sv2-skill-chain-lightning",
+            "sv2-skill-holy-wave",
+            "sv2-skill-ice-burst",
+            "sv2-skill-lava-crack",
+            "sv2-skill-meteor",
+            "sv2-skill-rune-circle-gold",
+            "sv2-skill-shadow-slash",
+            "sv2-skill-wind-arrow-trail",
+            "sv2-skill-rune-circle-violet"
+          ]
+        },
+        "skill": {
+          "id": "holy_slash",
+          "name": "성검 일섬",
+          "ult": false,
+          "unlocked": true,
+          "state": "idle",
+          "snaps": [
+            {
+              "delta": 0.15,
+              "atSec": 0.167,
+              "state": "skill",
+              "sv2": 0,
+              "meshes": 0,
+              "sprites": 0,
+              "total": 262,
+              "children": 30,
+              "maxGroundRadius": 0,
+              "file": "A6-844-knight-skill-150ms.png"
+            },
+            {
+              "delta": 0.4,
+              "atSec": 0.417,
+              "state": "skill",
+              "sv2": 2,
+              "meshes": 1,
+              "sprites": 1,
+              "total": 266,
+              "children": 34,
+              "maxGroundRadius": 2.33,
+              "file": "A6-844-knight-skill-400ms.png"
+            }
+          ],
+          "maxSv2": 2,
+          "maxGroundRadius": 2.88,
+          "firstSv2AtSec": 0.25
+        },
+        "ult": {
+          "id": "dragon_slash",
+          "name": "용살검 · 천공",
+          "ult": true,
+          "unlocked": true,
+          "state": "idle",
+          "snaps": [
+            {
+              "delta": 0.15,
+              "atSec": 0.15,
+              "state": "ult",
+              "sv2": 0,
+              "meshes": 0,
+              "sprites": 0,
+              "total": 266,
+              "children": 32,
+              "maxGroundRadius": 0,
+              "file": "A6-844-knight-ult-150ms.png"
+            },
+            {
+              "delta": 0.4,
+              "atSec": 0.408,
+              "state": "ult",
+              "sv2": 0,
+              "meshes": 0,
+              "sprites": 0,
+              "total": 266,
+              "children": 32,
+              "maxGroundRadius": 0,
+              "file": "A6-844-knight-ult-400ms.png"
+            }
+          ],
+          "maxSv2": 3,
+          "maxGroundRadius": 10,
+          "firstSv2AtSec": 0.675
+        },
+        "repeat": {
+          "start": {
+            "total": 261,
+            "children": 29,
+            "sv2": 0
+          },
+          "before": {
+            "sv2": 0,
+            "meshes": 0,
+            "sprites": 0,
+            "total": 261,
+            "children": 29,
+            "maxGroundRadius": 0
+          },
+          "after": {
+            "sv2": 0,
+            "meshes": 0,
+            "sprites": 0,
+            "total": 261,
+            "children": 29,
+            "maxGroundRadius": 0
+          },
+          "returnedToStart": true,
+          "returned": true
+        }
+      },
+      "mage": {
+        "base": {
+          "sv2": 0,
+          "meshes": 0,
+          "sprites": 0,
+          "total": 244,
+          "children": 29,
+          "maxGroundRadius": 0,
+          "keys": [
+            "sv2-skill-holy-wave",
+            "sv2-skill-chain-lightning",
+            "sv2-aura-sssr",
+            "sv2-skill-ice-burst",
+            "sv2-skill-meteor",
+            "sv2-skill-lava-crack",
+            "sv2-skill-rune-circle-gold",
+            "sv2-skill-wind-arrow-trail",
+            "sv2-skill-rune-circle-violet",
+            "sv2-skill-shadow-slash"
+          ]
+        },
+        "skill": {
+          "id": "fireball",
+          "name": "화염구",
+          "ult": false,
+          "unlocked": true,
+          "state": "idle",
+          "snaps": [
+            {
+              "delta": 0.15,
+              "atSec": 0.167,
+              "state": "skill",
+              "sv2": 0,
+              "meshes": 0,
+              "sprites": 0,
+              "total": 252,
+              "children": 35,
+              "maxGroundRadius": 0,
+              "file": "A6-844-mage-skill-150ms.png"
+            },
+            {
+              "delta": 0.4,
+              "atSec": 0.417,
+              "state": "skill",
+              "sv2": 2,
+              "meshes": 1,
+              "sprites": 1,
+              "total": 249,
+              "children": 32,
+              "maxGroundRadius": 2.35,
+              "file": "A6-844-mage-skill-400ms.png"
+            }
+          ],
+          "maxSv2": 2,
+          "maxGroundRadius": 2.63,
+          "firstSv2AtSec": 0.217
+        },
+        "ult": {
+          "id": "meteor",
+          "name": "메테오 스톰",
+          "ult": true,
+          "unlocked": true,
+          "state": "idle",
+          "snaps": [
+            {
+              "delta": 0.15,
+              "atSec": 0.154,
+              "state": "ult",
+              "sv2": 0,
+              "meshes": 0,
+              "sprites": 0,
+              "total": 257,
+              "children": 38,
+              "maxGroundRadius": 0,
+              "file": "A6-844-mage-ult-150ms.png"
+            },
+            {
+              "delta": 0.4,
+              "atSec": 0.408,
+              "state": "ult",
+              "sv2": 0,
+              "meshes": 0,
+              "sprites": 0,
+              "total": 257,
+              "children": 38,
+              "maxGroundRadius": 0,
+              "file": "A6-844-mage-ult-400ms.png"
+            }
+          ],
+          "maxSv2": 3,
+          "maxGroundRadius": 10,
+          "firstSv2AtSec": 0.508
+        },
+        "repeat": {
+          "start": {
+            "total": 244,
+            "children": 29,
+            "sv2": 0
+          },
+          "before": {
+            "sv2": 0,
+            "meshes": 0,
+            "sprites": 0,
+            "total": 249,
+            "children": 34,
+            "maxGroundRadius": 0
+          },
+          "after": {
+            "sv2": 0,
+            "meshes": 0,
+            "sprites": 0,
+            "total": 244,
+            "children": 29,
+            "maxGroundRadius": 0
+          },
+          "returnedToStart": true,
+          "returned": true
+        }
+      },
+      "ranger": {
+        "base": {
+          "sv2": 0,
+          "meshes": 0,
+          "sprites": 0,
+          "total": 281,
+          "children": 29,
+          "maxGroundRadius": 0,
+          "keys": [
+            "sv2-aura-sssr",
+            "sv2-skill-chain-lightning",
+            "sv2-skill-holy-wave",
+            "sv2-skill-ice-burst",
+            "sv2-skill-lava-crack",
+            "sv2-skill-meteor",
+            "sv2-skill-rune-circle-gold",
+            "sv2-skill-rune-circle-violet",
+            "sv2-skill-shadow-slash",
+            "sv2-skill-wind-arrow-trail"
+          ]
+        },
+        "skill": {
+          "id": "ranger_pierce",
+          "name": "바람 관통화살",
+          "ult": false,
+          "unlocked": true,
+          "state": "idle",
+          "snaps": [
+            {
+              "delta": 0.15,
+              "atSec": 0.15,
+              "state": "skill",
+              "sv2": 0,
+              "meshes": 0,
+              "sprites": 0,
+              "total": 281,
+              "children": 29,
+              "maxGroundRadius": 0,
+              "file": "A6-844-ranger-skill-150ms.png"
+            },
+            {
+              "delta": 0.4,
+              "atSec": 0.417,
+              "state": "skill",
+              "sv2": 2,
+              "meshes": 1,
+              "sprites": 1,
+              "total": 284,
+              "children": 32,
+              "maxGroundRadius": 2.52,
+              "file": "A6-844-ranger-skill-400ms.png"
+            }
+          ],
+          "maxSv2": 2,
+          "maxGroundRadius": 2.88,
+          "firstSv2AtSec": 0.217
+        },
+        "ult": {
+          "id": "ranger_tempest",
+          "name": "궁극 · 폭풍의 일곱 화살",
+          "ult": true,
+          "unlocked": true,
+          "state": "idle",
+          "snaps": [
+            {
+              "delta": 0.15,
+              "atSec": 0.154,
+              "state": "ult",
+              "sv2": 0,
+              "meshes": 0,
+              "sprites": 0,
+              "total": 282,
+              "children": 30,
+              "maxGroundRadius": 0,
+              "file": "A6-844-ranger-ult-150ms.png"
+            },
+            {
+              "delta": 0.4,
+              "atSec": 0.408,
+              "state": "ult",
+              "sv2": 0,
+              "meshes": 0,
+              "sprites": 0,
+              "total": 282,
+              "children": 30,
+              "maxGroundRadius": 0,
+              "file": "A6-844-ranger-ult-400ms.png"
+            }
+          ],
+          "maxSv2": 3,
+          "maxGroundRadius": 10,
+          "firstSv2AtSec": 0.425
+        },
+        "repeat": {
+          "start": {
+            "total": 281,
+            "children": 29,
+            "sv2": 0
+          },
+          "before": {
+            "sv2": 0,
+            "meshes": 0,
+            "sprites": 0,
+            "total": 281,
+            "children": 29,
+            "maxGroundRadius": 0
+          },
+          "after": {
+            "sv2": 0,
+            "meshes": 0,
+            "sprites": 0,
+            "total": 281,
+            "children": 29,
+            "maxGroundRadius": 0
+          },
+          "returnedToStart": true,
+          "returned": true
+        }
+      }
+    },
+    "viewport1280x590": {
+      "knight": {
+        "skillSv2": 2,
+        "ultSv2": 3,
+        "ultRadius": 10,
+        "snaps": [
+          "A6-1280-knight-skill-150ms.png",
+          "A6-1280-knight-skill-400ms.png",
+          "A6-1280-knight-ult-150ms.png",
+          "A6-1280-knight-ult-400ms.png"
+        ]
+      },
+      "mage": {
+        "skillSv2": 2,
+        "ultSv2": 3,
+        "ultRadius": 10,
+        "snaps": [
+          "A6-1280-mage-skill-150ms.png",
+          "A6-1280-mage-skill-400ms.png",
+          "A6-1280-mage-ult-150ms.png",
+          "A6-1280-mage-ult-400ms.png"
+        ]
+      },
+      "ranger": {
+        "skillSv2": 2,
+        "ultSv2": 3,
+        "ultRadius": 10,
+        "snaps": [
+          "A6-1280-ranger-skill-150ms.png",
+          "A6-1280-ranger-skill-400ms.png",
+          "A6-1280-ranger-ult-150ms.png",
+          "A6-1280-ranger-ult-400ms.png"
+        ]
+      }
+    }
+  },
+  "captures": [
+    "A6-844-knight-skill-150ms.png",
+    "A6-844-knight-skill-400ms.png",
+    "A6-844-knight-ult-150ms.png",
+    "A6-844-knight-ult-400ms.png",
+    "A6-844-mage-skill-150ms.png",
+    "A6-844-mage-skill-400ms.png",
+    "A6-844-mage-ult-150ms.png",
+    "A6-844-mage-ult-400ms.png",
+    "A6-844-ranger-skill-150ms.png",
+    "A6-844-ranger-skill-400ms.png",
+    "A6-844-ranger-ult-150ms.png",
+    "A6-844-ranger-ult-400ms.png",
+    "A6-1280-knight-skill-150ms.png",
+    "A6-1280-knight-skill-400ms.png",
+    "A6-1280-knight-ult-150ms.png",
+    "A6-1280-knight-ult-400ms.png",
+    "A6-1280-mage-skill-150ms.png",
+    "A6-1280-mage-skill-400ms.png",
+    "A6-1280-mage-ult-150ms.png",
+    "A6-1280-mage-ult-400ms.png",
+    "A6-1280-ranger-skill-150ms.png",
+    "A6-1280-ranger-skill-400ms.png",
+    "A6-1280-ranger-ult-150ms.png",
+    "A6-1280-ranger-ult-400ms.png"
+  ],
+  "pageErrors": [],
+  "started": "2026-10-20T05:19:09.378Z",
+  "ignoredConsole": 15,
+  "finished": "2026-10-20T05:22:37.888Z"
+}

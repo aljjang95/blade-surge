@@ -1,5 +1,5 @@
 {
-  "started": "2026-10-20T04:53:10.659Z",
+  "started": "2026-10-20T05:19:09.377Z",
   "origin": "http://127.0.0.1:5342/",
   "out": "C:\\Users\\heart\\AppData\\Local\\APEX\\tasks\\aljjang95-blade-surge\\wt\\20261020-qa\\work\\qa\\gogo-20261020",
   "viewport": {
@@ -7,12 +7,22 @@
     "height": 390
   },
   "criteria": {
-    "A3": {
+    "A6": {
       "pass": true,
       "failedChecks": [],
       "pageErrors": 0
+    },
+    "A7": {
+      "pass": false,
+      "failedChecks": [
+        "SSSR: GradeAura 그룹 표시(group.visible)",
+        "SSSR: 지면 링·몸 오라 모두 표시",
+        "전투 DOM UI 중앙 보호 영역 겹침 0(2초 간격 10회 표본)",
+        "SSR: GradeAura 그룹 표시(금색 링, 몸 오라 없음)"
+      ],
+      "pageErrors": 0
     }
   },
-  "finished": "2026-10-20T04:53:38.535Z",
-  "pass": true
+  "finished": "2026-10-20T05:23:53.261Z",
+  "pass": false
 }
