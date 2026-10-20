@@ -1,0 +1,191 @@
+{
+ "schemaVersion": 1,
+ "cycle": "20261020-s26-device-acceptance",
+ "cycleStatus": "blocked_external",
+ "objective": "[gogo:20261020-s26-device-acceptance] S26 Ultra 실기기에서 전투 진입·자동 조준 평타·조이스틱, AUTO 클리어·전리품 장착/판매/강화, 스킬 VFX·등급 오라·효과음 이벤트, 소환·초월·상점·스킬 초기화 화면을 실제 터치로 확인하고 결함이 있으면 고쳐 배포한다",
+ "chunk": {
+  "name": "S26 실기기 터치 확인(루프 D10)",
+  "why": "루프 dod 중 D10만 남음, 지금까지 화면 검증은 데스크톱 터치 모드뿐",
+  "notDoing": "새 기능·경제 수치·결제 SDK, 발열·온도 측정(대표님 지시로 삭제)"
+ },
+ "subject": {
+  "kind": "mixed",
+  "identity": {
+   "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+   "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261020-s26-device-acceptance\\integration",
+   "branch": "codex/20261020-s26-device-acceptance",
+   "commit": "73c242e025b722ce7b98626392a395cb3abd615b",
+   "tree": "5983463febab2fedeb6d1af7c4c82fe45906a990"
+  },
+  "digest": "src:b85ac247f43af1dfbb4e9f4bd6c9f0f138dcfbdda6315edf5e65e7db55470851",
+  "observedAt": "2026-10-20T14:19:56.294Z"
+ },
+ "requirements": [
+  {
+   "id": "A1",
+   "claim": "S26 Chrome에서 정식 호스트를 열고 실제 터치로 로비 → 출격 준비 → 원정 시작 → 전투에 들어가며, 공격 버튼 탭이 자동 조준 평타로 적 HP를 줄이고 조이스틱 드래그가 영웅을 움직인다 / S26 실기기 adb 터치 + CDP 상태 로그 + 화면 캡처",
+   "status": "external_gate",
+   "surfaces": [
+    "S26 실기기 adb 터치 + CDP 상태 로그 + 화면 캡처"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-s26-device-acceptance\\evidence\\A1\\report.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-s26-device-acceptance\\evidence\\A1\\report.json",
+     "sha256": "c8caa4c0257a5616b1886009b3214fe2f9acaa6be60eca408509903e741aa775",
+     "command": "node tools/gogo-qa-20261020-s26.mjs --serial 192.168.219.104:38053 --out tab-final --steps a1,a2,a3,a4 (대체 기기 Galaxy Tab S7+ SM-T970, S26 미연결)",
+     "observedAt": "2026-10-20T14:20:14.633Z",
+     "subjectDigest": "src:b85ac247f43af1dfbb4e9f4bd6c9f0f138dcfbdda6315edf5e65e7db55470851"
+    }
+   ],
+   "neededInput": "S26 Ultra 무선 디버깅 페어링: 설정 > 개발자 옵션 > 무선 디버깅 > 페어링 코드로 기기 페어링의 IP:포트와 6자리 코드(1분 안에 사용, 저장 안 함). 받으면 같은 명령을 --serial <S26> 으로 실행",
+   "note": "대체 기기 탭 S7+(Android 13·Chrome 155, 1493x934 CSS·dpr 1.875 전체화면 가로)에서 통과: 실제 adb 탭 10회 전부 명중, 평타가 가장 가까운 적(296HP)을 0° 오차로 조준해 처치, 조이스틱 1.5초 드래그로 4.5m 이동. S26 자체는 미실행."
+  },
+  {
+   "id": "A2",
+   "claim": "AUTO 버튼 탭으로 스테이지 1개를 사망 없이 클리어하고, 결과 화면 전리품 카드의 장착·판매·강화가 실제 터치로 동작한다(능력치·골드·강화 단계 변화) / S26 실기기 로그·캡처",
+   "status": "external_gate",
+   "surfaces": [
+    "S26 실기기 로그·캡처"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-s26-device-acceptance\\evidence\\A2\\report.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-s26-device-acceptance\\evidence\\A2\\report.json",
+     "sha256": "c8caa4c0257a5616b1886009b3214fe2f9acaa6be60eca408509903e741aa775",
+     "command": "node tools/gogo-qa-20261020-s26.mjs --serial 192.168.219.104:38053 --out tab-final --steps a1,a2,a3,a4 (대체 기기 Galaxy Tab S7+ SM-T970, S26 미연결)",
+     "observedAt": "2026-10-20T14:20:16.308Z",
+     "subjectDigest": "src:b85ac247f43af1dfbb4e9f4bd6c9f0f138dcfbdda6315edf5e65e7db55470851"
+    }
+   ],
+   "neededInput": "S26 Ultra 무선 디버깅 페어링: 설정 > 개발자 옵션 > 무선 디버깅 > 페어링 코드로 기기 페어링의 IP:포트와 6자리 코드(1분 안에 사용, 저장 안 함). 받으면 같은 명령을 --serial <S26> 으로 실행",
+   "note": "대체 기기 탭에서 통과: 원정 유리 정원 AUTO 32초 무사망 승리·새 장비 16개 → 전리품 보기 → 장비 정비 → 가방 장착(전투력 10152→10361)·판매(골드 +200)·강화(+0→+1). 캠페인 1-1 AUTO 무사망 승리 → 결과 전리품 카드 탭 → 장비 시트 → 장착. S26 자체는 미실행."
+  },
+  {
+   "id": "A3",
+   "claim": "스킬(궁극기 포함) 시전 VFX와 SSR·SSSR 오라가 화면 중앙 플레이 영역을 가리지 않고 보이며, 효과음 재생 이벤트(AudioBufferSourceNode start, AudioContext running)가 실제로 발생한다 / S26 실기기 캡처 + 재생 이벤트 로그",
+   "status": "external_gate",
+   "surfaces": [
+    "S26 실기기 캡처 + 재생 이벤트 로그"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-s26-device-acceptance\\evidence\\A3\\report.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-s26-device-acceptance\\evidence\\A3\\report.json",
+     "sha256": "c8caa4c0257a5616b1886009b3214fe2f9acaa6be60eca408509903e741aa775",
+     "command": "node tools/gogo-qa-20261020-s26.mjs --serial 192.168.219.104:38053 --out tab-final --steps a1,a2,a3,a4 (대체 기기 Galaxy Tab S7+ SM-T970, S26 미연결)",
+     "observedAt": "2026-10-20T14:20:17.719Z",
+     "subjectDigest": "src:b85ac247f43af1dfbb4e9f4bd6c9f0f138dcfbdda6315edf5e65e7db55470851"
+    }
+   ],
+   "neededInput": "S26 Ultra 무선 디버깅 페어링: 설정 > 개발자 옵션 > 무선 디버깅 > 페어링 코드로 기기 페어링의 IP:포트와 6자리 코드(1분 안에 사용, 저장 안 함). 받으면 같은 명령을 --serial <S26> 으로 실행",
+   "note": "대체 기기 탭에서 통과: SSR·SSSR 각각 스킬 1~3과 궁극기 시전(skill·ult 상태), 오라 grade·visible 확인, 보호 영역 덮는 UI 0건, AudioBufferSourceNode.start 30회 이상 증가·컨텍스트 running, /sfx/mirelo-v1 파일 40개 수신. S26 자체는 미실행."
+  },
+  {
+   "id": "A4",
+   "claim": "소환·초월·상점·스킬 초기화 화면이 S26 가로 화면에서 잘리거나 겹치지 않고(요소 사각형이 화면 안, 버튼끼리 겹침 없음) 실제 터치로 열고 닫힌다 / S26 실기기 캡처 + 사각형 검사 로그",
+   "status": "external_gate",
+   "surfaces": [
+    "S26 실기기 캡처 + 사각형 검사 로그"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-s26-device-acceptance\\evidence\\A4\\report.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-s26-device-acceptance\\evidence\\A4\\report.json",
+     "sha256": "c8caa4c0257a5616b1886009b3214fe2f9acaa6be60eca408509903e741aa775",
+     "command": "node tools/gogo-qa-20261020-s26.mjs --serial 192.168.219.104:38053 --out tab-final --steps a1,a2,a3,a4 (대체 기기 Galaxy Tab S7+ SM-T970, S26 미연결)",
+     "observedAt": "2026-10-20T14:20:19.591Z",
+     "subjectDigest": "src:b85ac247f43af1dfbb4e9f4bd6c9f0f138dcfbdda6315edf5e65e7db55470851"
+    }
+   ],
+   "neededInput": "S26 Ultra 무선 디버깅 페어링: 설정 > 개발자 옵션 > 무선 디버깅 > 페어링 코드로 기기 페어링의 IP:포트와 6자리 코드(1분 안에 사용, 저장 안 함). 받으면 같은 명령을 --serial <S26> 으로 실행",
+   "note": "대체 기기 탭에서 통과: 소환·상점(hot·gem·pack·enh)·초월·스킬 트리·초기화 확인창 모두 잘림 0·덮임 0, 초기화 창 취소로 닫힘. S26 자체는 미실행."
+  },
+  {
+   "id": "A6",
+   "claim": "측정한 정식 호스트 빌드 SHA가 version.json과 같고, 고친 것이 있으면 typecheck·전체 테스트·빌드 → land → tools/deploy.mjs 배포 → 정식 호스트 SHA 일치까지 확인된다 / version.json 읽기 + 배포 영수증",
+   "status": "passed",
+   "surfaces": [
+    "version.json 읽기 + 배포 영수증"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-s26-device-acceptance\\evidence\\A6\\version-readback.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-s26-device-acceptance\\evidence\\A6\\version-readback.json",
+     "sha256": "47346d58db129dcb6365d4883196d8fbebdfa133afa814be60e549abf9208760",
+     "command": "Invoke-WebRequest https://blade.tllhouse.com/version.json; git rev-parse origin/main",
+     "observedAt": "2026-10-20T14:20:21.044Z",
+     "subjectDigest": "src:b85ac247f43af1dfbb4e9f4bd6c9f0f138dcfbdda6315edf5e65e7db55470851"
+    }
+   ],
+   "neededInput": null,
+   "note": "정식 호스트 version.json sha bcaa852(dirty false) = 테스트 시 탭이 읽은 빌드. 이번 사이클은 제품 코드를 바꾸지 않아 배포 없음. origin/main 은 다른 채팅의 #215(2224520)가 병합됐지만 아직 배포 전"
+  }
+ ],
+ "freshReview": {
+  "required": false,
+  "status": "not_required"
+ },
+ "remaining": [],
+ "verdict": "blocked",
+ "acceptanceChanges": [
+  {
+   "id": "A5",
+   "weakened": true,
+   "log": [
+    "- 2026-10-20T13:45:37.929Z | A5 | 84c1b8983392bddf -> (removed) | weakened=true | 대표님 직접 지시(지휘 채팅 01a15674 정정 2026-10-20): 발열·온도·스로틀 측정과 10분 전투 프레임 기록을 범위에서 삭제"
+   ]
+  }
+ ],
+ "weakened": [
+  "A5"
+ ],
+ "deploy": {
+  "target": "https://blade.tllhouse.com (Worker blade-surge)",
+  "version": "배포 없음(제품 코드 변경 없음)",
+  "readback": "version.json sha bcaa852123dc7cbef28291e84931360857dd218a dirty=false",
+  "rollback": "해당 없음(현행 배포 08a3624f / Worker fcdf5007 유지)",
+  "subjectDigest": "src:b85ac247f43af1dfbb4e9f4bd6c9f0f138dcfbdda6315edf5e65e7db55470851",
+  "blockedBy": [
+   "A1",
+   "A2",
+   "A3",
+   "A4"
+  ]
+ },
+ "lanes": [
+  {
+   "lane": "integration",
+   "model": "anthropic/claude-opus-5-5",
+   "agentId": null,
+   "branch": "codex/20261020-s26-device-acceptance"
+  }
+ ],
+ "harnessChanges": [
+  "2026-10-20 tab-connect/adb-forward.ps1: 함수 Adb → Invoke-AdbExe(이름 충돌로 무한 재귀, 포워드 생성 불가였음). 백업 .bak-20261020T1045Z-recursion, 실제 add/list/clean 확인",
+  "2026-10-20 tool-routing: 웹 게임 실기기 Android Chrome 실터치 QA 행 추가(tools/gogo-qa-20261020-s26.mjs 방식)"
+ ],
+ "frictions": [
+  "S26 Ultra 무선 디버깅이 꺼져 있다가(no-adb-port) 뒤에 포트가 열렸지만 untrusted. 페어링 코드는 사람만 줄 수 있어 실기기 기준 4개가 external_gate",
+  "adb-forward.ps1 이 함수 이름 충돌로 무한 재귀(공용 도구, 이번에 수정)",
+  "안드로이드 Chrome 은 CDP /json/new 를 거절 → Target.createTarget 사용",
+  "원정 결과와 캠페인 결과가 다른 화면이라 결과 감지·전리품 경로가 둘",
+  "스크롤 영역 밖 요소를 좌표로 누르면 그 자리의 다른 버튼(결과 다시)이 눌림 → 덮임 시 누르지 않게 수정. Chrome 155 는 details>summary 크기를 0 으로 보고",
+  "앱 재시작으로 채팅이 중단돼 미커밋 도구가 남았음(재개 후 커밋)"
+ ],
+ "standingGates": [
+  {
+   "name": "s26-device-connect",
+   "action": "asked",
+   "at": "2026-10-20T14:21:12.640Z"
+  }
+ ],
+ "next": "S26 페어링 코드를 받으면 node tools/gogo-qa-20261020-s26.mjs --serial <S26 시리얼> --steps a1,a2,a3,a4 한 번으로 A1~A4 를 S26 에서 닫는다(약 10분)",
+ "quota": null,
+ "updatedAt": "2026-10-20T14:21:13.048Z"
+}
