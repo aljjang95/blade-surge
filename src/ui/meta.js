@@ -442,7 +442,7 @@ export class Meta {
     this.renderShopFlow();
     const notice = $('shop-notice');
     if (notice) notice.innerHTML = this.shopTab === 'avatar' ? '<b>아바타는 보석으로 구매하는 순수 외형 상품입니다.</b> 전투 수치에는 영향이 없습니다.' : `<b>가격·상품은 미리보기입니다.</b> 결제 연결 전에는 유료 구매와 지급이 없습니다.`
-      + (this.shopTab === 'gem' || this.shopTab === 'hot' ? ` 첫 결제 2배는 결제 연결 후 확인된 구매에 상품별 1회 적용됩니다.` : '')
+      + (this.shopTab === 'gem' || this.shopTab === 'hot' ? ` 첫 결제 보너스는 결제 연결 후 확인된 구매에 상품별 1회 적용됩니다.` : '')
       + `<br>무료 보석: 출석·임무·첫 클리어·패스 무료 보상 / 사용: 소환 ${fmt(GACHA.single)} (10회 ${fmt(GACHA.ten)})·강화 재료·골드·에너지`;
     const grid = $('shop-grid'); grid.innerHTML = ''; const s = this.eco.s;
     if (this.shopTab === 'avatar') { this.renderAvatarShop(grid); return; }
@@ -453,7 +453,7 @@ export class Meta {
       const price = sku.kind === 'gem' ? `<i class="ic ic-gem"></i> ${sku.price}` : sku.priceLabel;
       // 현금 상품은 가격 미리보기와 준비 중 상태를 함께 보여 준다. 보석 상품은 1개당 가격으로 비교할 수 있게 한다.
       const value = cash && sku.gems ? `<div class="si-desc">기본 ${fmt(sku.gems)}개 · 1개당 ₩${(sku.price / sku.gems).toFixed(1)}</div>` : '';
-      d.innerHTML = `${sku.badge ? `<span class="badge">${sku.badge}</span>` : ''}${first ? '<span class="badge first" style="left:auto;right:-4px;transform:rotate(5deg)">첫 결제 2배</span>' : ''}<img src="${sku.icon}" alt="" onerror="this.remove()"><div class="si-body"><div class="si-name">${sku.name}</div><div class="si-desc">${sku.desc || ''}</div>${value}${sku.gems ? `<div class="si-bonus">${first ? `첫 결제 시 +${fmt(sku.bonus)} (결제 연결 후)` : `+${fmt(Math.floor(sku.gems * 0.1))} 보너스`}</div>` : ''}${sku.limited ? `<div class="timer" data-timer="${sku.id}">남은 시간 ${hms(this.eco.limitedLeft(sku))}</div>` : ''}${cash ? '<div class="si-desc">가격 미리보기 · 결제 준비 중</div>' : ''}<button class="btn ${sku.kind === 'gem' ? 'btn-blue' : 'btn-gold'}"${cash ? ` aria-label="${sku.name} ${sku.priceLabel}, 결제 준비 중"` : ''}>${price}</button></div>${sold ? '<div class="sold">구매 완료</div>' : ''}`;
+      d.innerHTML = `${sku.badge ? `<span class="badge">${sku.badge}</span>` : ''}${first ? '<span class="badge first" style="left:auto;right:-4px;transform:rotate(5deg)">첫 결제 보너스</span>' : ''}<img src="${sku.icon}" alt="" onerror="this.remove()"><div class="si-body"><div class="si-name">${sku.name}</div><div class="si-desc">${sku.desc || ''}</div>${value}${sku.gems ? `<div class="si-bonus">${first ? `첫 결제 시 +${fmt(sku.bonus)} (결제 연결 후)` : `+${fmt(Math.floor(sku.gems * 0.1))} 보너스`}</div>` : ''}${sku.limited ? `<div class="timer" data-timer="${sku.id}">남은 시간 ${hms(this.eco.limitedLeft(sku))}</div>` : ''}${cash ? '<div class="si-desc">가격 미리보기 · 결제 준비 중</div>' : ''}<button class="btn ${sku.kind === 'gem' ? 'btn-blue' : 'btn-gold'}"${cash ? ` aria-label="${sku.name} ${sku.priceLabel}, 결제 준비 중"` : ''}>${price}</button></div>${sold ? '<div class="sold">구매 완료</div>' : ''}`;
       const role = skuFlowRole(sku);
       if (role) { const tag = document.createElement('div'); tag.className = 'si-flow'; tag.dataset.role = role.role; tag.textContent = role.label; d.querySelector('.si-name').after(tag); }
       const pace = paceShort(sku.id);
@@ -487,7 +487,7 @@ export class Meta {
     this.trackFunnel('paysheet_open', { sku: id });
     const ok = await this.ui.paySheet(sku); if (!ok) return;
     const r = this.eco.purchase(id); if (!r?.ok) return;
-    this.ui.purchaseDone(sku, r.got, r.vipUp ? `<p style="color:var(--gold);font-weight:900">VIP ${r.vipUp} 달성!</p>` : (r.got.first ? '<p style="color:var(--green);font-weight:900">첫 결제 2배 보너스 적용!</p>' : ''));
+    this.ui.purchaseDone(sku, r.got, r.vipUp ? `<p style="color:var(--gold);font-weight:900">VIP ${r.vipUp} 달성!</p>` : (r.got.first ? '<p style="color:var(--green);font-weight:900">첫 결제 보너스 적용!</p>' : ''));
     if (this.tab === 'shop') this.renderShop(); this.refreshTop();
   }
 
