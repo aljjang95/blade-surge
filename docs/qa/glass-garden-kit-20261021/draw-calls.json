@@ -1,0 +1,315 @@
+{
+  "label": "measure-high2",
+  "scope": "Local headless Chromium (SwiftShader) 844x390 touch emulation. Hero placed directly by the QA script; not a device/GPU/feel result.",
+  "expedition": {
+    "route": "glass_garden",
+    "depth": "standard",
+    "rooms": 5
+  },
+  "decor": {
+    "placements": 58,
+    "meshes": 10,
+    "triangles": 19173,
+    "rooms": 5,
+    "lod": 0,
+    "children": 10
+  },
+  "target": "http://127.0.0.1:5186/ (Vite dev, local only)",
+  "rooms": [
+    {
+      "room": 0,
+      "type": "start",
+      "view": "center",
+      "callsWith": 87,
+      "callsWithout": 85,
+      "deltaCalls": 2,
+      "trianglesWith": 256038,
+      "deltaTriangles": 4373,
+      "quality": "high"
+    },
+    {
+      "room": 0,
+      "type": "start",
+      "view": "west",
+      "callsWith": 71,
+      "callsWithout": 67,
+      "deltaCalls": 4,
+      "trianglesWith": 242563,
+      "deltaTriangles": 6535,
+      "quality": "high"
+    },
+    {
+      "room": 0,
+      "type": "start",
+      "view": "east",
+      "callsWith": 79,
+      "callsWithout": 74,
+      "deltaCalls": 5,
+      "trianglesWith": 267356,
+      "deltaTriangles": 8966,
+      "quality": "high"
+    },
+    {
+      "room": 0,
+      "type": "start",
+      "view": "north",
+      "callsWith": 78,
+      "callsWithout": 74,
+      "deltaCalls": 4,
+      "trianglesWith": 252449,
+      "deltaTriangles": 6535,
+      "quality": "high"
+    },
+    {
+      "room": 0,
+      "type": "start",
+      "view": "south",
+      "callsWith": 71,
+      "callsWithout": 67,
+      "deltaCalls": 4,
+      "trianglesWith": 254407,
+      "deltaTriangles": 6535,
+      "quality": "high"
+    },
+    {
+      "room": 1,
+      "type": "normal",
+      "view": "center",
+      "callsWith": 111,
+      "callsWithout": 103,
+      "deltaCalls": 8,
+      "trianglesWith": 459842,
+      "deltaTriangles": 14800,
+      "quality": "high"
+    },
+    {
+      "room": 1,
+      "type": "normal",
+      "view": "west",
+      "callsWith": 120,
+      "callsWithout": 116,
+      "deltaCalls": 4,
+      "trianglesWith": 603652,
+      "deltaTriangles": 5630,
+      "quality": "high"
+    },
+    {
+      "room": 1,
+      "type": "normal",
+      "view": "east",
+      "callsWith": 119,
+      "callsWithout": 113,
+      "deltaCalls": 6,
+      "trianglesWith": 616310,
+      "deltaTriangles": 9022,
+      "quality": "high"
+    },
+    {
+      "room": 1,
+      "type": "normal",
+      "view": "north",
+      "callsWith": 122,
+      "callsWithout": 118,
+      "deltaCalls": 4,
+      "trianglesWith": 625552,
+      "deltaTriangles": 5630,
+      "quality": "high"
+    },
+    {
+      "room": 1,
+      "type": "normal",
+      "view": "south",
+      "callsWith": 119,
+      "callsWithout": 113,
+      "deltaCalls": 6,
+      "trianglesWith": 621540,
+      "deltaTriangles": 9022,
+      "quality": "high"
+    },
+    {
+      "room": 2,
+      "type": "treasure",
+      "view": "center",
+      "callsWith": 116,
+      "callsWithout": 114,
+      "deltaCalls": 2,
+      "trianglesWith": 655572,
+      "deltaTriangles": 2162,
+      "quality": "high"
+    },
+    {
+      "room": 2,
+      "type": "treasure",
+      "view": "west",
+      "callsWith": 120,
+      "callsWithout": 118,
+      "deltaCalls": 2,
+      "trianglesWith": 716634,
+      "deltaTriangles": 2162,
+      "quality": "high"
+    },
+    {
+      "room": 2,
+      "type": "treasure",
+      "view": "east",
+      "callsWith": 117,
+      "callsWithout": 115,
+      "deltaCalls": 2,
+      "trianglesWith": 708352,
+      "deltaTriangles": 2162,
+      "quality": "high"
+    },
+    {
+      "room": 2,
+      "type": "treasure",
+      "view": "north",
+      "callsWith": 117,
+      "callsWithout": 115,
+      "deltaCalls": 2,
+      "trianglesWith": 708352,
+      "deltaTriangles": 2162,
+      "quality": "high"
+    },
+    {
+      "room": 2,
+      "type": "treasure",
+      "view": "south",
+      "callsWith": 121,
+      "callsWithout": 119,
+      "deltaCalls": 2,
+      "trianglesWith": 716698,
+      "deltaTriangles": 2162,
+      "quality": "high"
+    },
+    {
+      "room": 3,
+      "type": "normal",
+      "view": "center",
+      "callsWith": 148,
+      "callsWithout": 144,
+      "deltaCalls": 4,
+      "trianglesWith": 883164,
+      "deltaTriangles": 9170,
+      "quality": "high"
+    },
+    {
+      "room": 3,
+      "type": "normal",
+      "view": "west",
+      "callsWith": 164,
+      "callsWithout": 160,
+      "deltaCalls": 4,
+      "trianglesWith": 1055690,
+      "deltaTriangles": 5554,
+      "quality": "high"
+    },
+    {
+      "room": 3,
+      "type": "normal",
+      "view": "east",
+      "callsWith": 167,
+      "callsWithout": 161,
+      "deltaCalls": 6,
+      "trianglesWith": 1059618,
+      "deltaTriangles": 11332,
+      "quality": "high"
+    },
+    {
+      "room": 3,
+      "type": "normal",
+      "view": "north",
+      "callsWith": 165,
+      "callsWithout": 161,
+      "deltaCalls": 4,
+      "trianglesWith": 1054506,
+      "deltaTriangles": 5554,
+      "quality": "high"
+    },
+    {
+      "room": 3,
+      "type": "normal",
+      "view": "south",
+      "callsWith": 165,
+      "callsWithout": 159,
+      "deltaCalls": 6,
+      "trianglesWith": 1052334,
+      "deltaTriangles": 11332,
+      "quality": "high"
+    },
+    {
+      "room": 4,
+      "type": "boss",
+      "view": "center",
+      "callsWith": 152,
+      "callsWithout": 150,
+      "deltaCalls": 2,
+      "trianglesWith": 1004780,
+      "deltaTriangles": 5778,
+      "quality": "high"
+    },
+    {
+      "room": 4,
+      "type": "boss",
+      "view": "west",
+      "callsWith": 177,
+      "callsWithout": 173,
+      "deltaCalls": 4,
+      "trianglesWith": 1064920,
+      "deltaTriangles": 9170,
+      "quality": "high"
+    },
+    {
+      "room": 4,
+      "type": "boss",
+      "view": "east",
+      "callsWith": 153,
+      "callsWithout": 151,
+      "deltaCalls": 2,
+      "trianglesWith": 973116,
+      "deltaTriangles": 5778,
+      "quality": "high"
+    },
+    {
+      "room": 4,
+      "type": "boss",
+      "view": "north",
+      "callsWith": 150,
+      "callsWithout": 148,
+      "deltaCalls": 2,
+      "trianglesWith": 1009590,
+      "deltaTriangles": 5778,
+      "quality": "high"
+    },
+    {
+      "room": 4,
+      "type": "boss",
+      "view": "south",
+      "callsWith": 151,
+      "callsWithout": 149,
+      "deltaCalls": 2,
+      "trianglesWith": 993110,
+      "deltaTriangles": 5778,
+      "quality": "high"
+    }
+  ],
+  "summary": {
+    "deltaCalls": {
+      "min": 2,
+      "max": 8,
+      "mean": 3.72
+    },
+    "deltaTriangles": {
+      "min": 2162,
+      "max": 14800,
+      "mean": 6523
+    },
+    "callsWithout": {
+      "min": 67,
+      "max": 173
+    },
+    "callsWith": {
+      "min": 71,
+      "max": 177
+    }
+  }
+}

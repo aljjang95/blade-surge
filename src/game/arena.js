@@ -15,6 +15,8 @@ import { buildOpenFieldScene, FIELD_ATMOSPHERES } from './open-field-scene.js';
 import { libraryAssets } from '../engine/library-assets.js';
 import { buildConceptTerrain } from './concept-terrain.js';
 import { collectDungeonWallSegments, fitDungeonWallSegments, DUNGEON_WALL_CLEARANCE } from './dungeon-walls.js';
+import { buildGlassGardenDecor } from './glass-garden-decor.js';
+import { glassGardenKitTemplates, preloadGlassGardenKit } from '../engine/glass-garden-kit.js';
 
 const THEMES = {
   garden: { fog: 0x172b2b, bg: 0x172b2b, hemi: [0xa0b5ae, 0x283930], sun: 0xffedca, sunI: 2.3, torch: 0x8adbd0, tint: 0xcbd0b8 },
@@ -109,6 +111,7 @@ export class Arena {
     this.fieldScene?.userData.dispose(); this.fieldScene = null;
     this.conceptTerrain?.userData.dispose(); this.conceptTerrain = null;
     this.townDecor?.userData.dispose(); this.townDecor = null;
+    this.glassGardenDecor?.userData.dispose(); this.glassGardenDecor = null;
     for (const material of this.ownedMaterials) material.dispose(); this.ownedMaterials.clear();
     for (const geometry of this.ownedGeometry) geometry.dispose(); this.ownedGeometry.clear();
     for (const s of this.seals) disposeSeal(s);
@@ -468,6 +471,7 @@ export class Arena {
     if (!archive) {
       this.mountTownDecor(floorData);
       this.mountLandmarks(floorData, visual || { landmark: visualKey });
+      this.mountGlassGardenDecor(floorData);
     }
     this.buildSeals(floorData);
   }
@@ -479,6 +483,15 @@ export class Arena {
       .map((asset) => ({ asset, scene: this.hubModels[asset.id]?.scene })).filter((entry) => entry.scene?.userData?.libraryAsset);
     this.townDecor = buildTownDecor(floorData, townId, { libraryProps });
     this.group.add(this.townDecor);
+  }
+
+  /** 첫 던전 유리 정원만: Blender 소품 키트를 방 가장자리에 방별 병합 메시로 얹는다. 키트가 없으면 조용히 건너뛴다. */
+  mountGlassGardenDecor(floorData) {
+    if (floorData.expeditionRouteId !== 'glass_garden') return;
+    const templates = glassGardenKitTemplates();
+    if (!templates) { preloadGlassGardenKit().catch(() => {}); return; }
+    const decor = buildGlassGardenDecor(floorData, { templates, quality: this.renderer.quality, occlusion: this.occlusion });
+    this.glassGardenDecor = decor; this.group.add(decor);
   }
 
   update(dt, fx, playerPos) {
