@@ -46,3 +46,20 @@ test('SP 이전 저장이라도 번 SP 안에서 올렸으면 보상 SP는 0이�
   expect(new Economy().hero('knight').spBonus).toBe(7);
 });
 
+
+test('보상 SP 필드가 생기기 전의 SP 저장(등급·전체 스킬 배열은 있음)도 초과분을 한 번만 보상하고, 다시 불러와도 늘지 않는다', () => {
+  const seed = new Economy();
+  const raw = JSON.parse(JSON.stringify(seed.s));
+  for (const h of Object.values(raw.heroes) as any[]) delete h.spBonus;
+  raw.heroes.knight.level = 12; raw.heroes.knight.skills = [8, 7, 6, 5, 3, 3, 1, 1];
+  values.clear(); values.set('bladesurge_save_v1', JSON.stringify(raw));
+  const over = spSpent(HEROES.knight, raw.heroes.knight.skills) - spEarned(12);
+  const eco = new Economy();
+  expect(eco.hero('knight').spBonus).toBe(over);
+  eco.hero('knight').level = 13; expect(eco.skillPoints('knight').available).toBe(1);
+  eco.hero('knight').level = 12; eco.save();
+  expect(new Economy().hero('knight').spBonus).toBe(over);
+  // 새로 시작한 영웅의 0은 저장된 유효한 값이라 그대로 유지된다.
+  expect(new Economy().hero('mage').spBonus).toBe(0);
+});
+

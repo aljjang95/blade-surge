@@ -46,7 +46,9 @@ export function normalizeSave(raw, fresh) {
     h.skills = HEROES[id].skills.map((skill, i) => integer(h.skills[i], legacyHero ? 1 : skillBaseLevel(skill), skillBaseLevel(skill), SKILL_MAX_LV));
     // SP 이전 저장은 골드로 올린 스킬이 레벨로 번 SP보다 많을 수 있다. 그 차이를 보상 SP로 남겨
     // 남은 SP가 음수로 묶여 레벨을 올려도 스킬을 못 찍던 문제를 막는다(이미 올린 스킬은 그대로 둔다).
-    h.spBonus = legacyHero ? Math.max(0, spSpent(HEROES[id], h.skills) - spEarned(h.level)) : integer(h.spBonus, 0, 0, 999);
+    // 보상 SP 필드가 없는 저장(SP 이전 저장, 그리고 보상 SP가 생기기 전의 SP 저장)에서 한 번만 계산한다. 있으면 저장값(0 포함)을 그대로 쓴다.
+    const savedBonus = sourceHeroes[id]?.spBonus;
+    h.spBonus = Number.isSafeInteger(savedBonus) ? integer(savedBonus, 0, 0, 999) : Math.min(999, Math.max(0, spSpent(HEROES[id], h.skills) - spEarned(h.level)));
     h.grade = normalizeGrade(HEROES[id], typeof sourceHeroes[id]?.grade === 'string' ? sourceHeroes[id].grade : HEROES[id].rarity);
     h.skillLoadout = normalizeSkillLoadout(HEROES[id], h.skillLoadout);
     s.heroes[id] = h;

@@ -243,6 +243,18 @@ test('AUTO는 각인·만남 선택 창을 열지 않고 기본 선택으로 이
   manual.game.resolveAutoOffers();expect(manual.game.currentOffer()?.kind).toBe('boon');
 });
 
+test('AUTO라도 전투가 멈춘 동안(직접 연 선택 창·일시정지)은 확정하지 않고, 만남 저장 실패는 다시 고를 수 있게 남긴다',()=>{
+  const {game,state}=fixture();game.player.auto=true;
+  game.run.queue=[{kind:'story',id:'lantern'}];game.paused=true;
+  game.resolveAutoOffers();expect(game.run.queue).toHaveLength(1);expect((state.story as any).lantern).toBeUndefined();
+  game.paused=false;let toasts=0;game.ui.toast=()=>toasts++;
+  game.masterworks.transact=()=>({ok:false,error:'storage'});
+  game.resolveAutoOffers();expect(game.run.queue).toHaveLength(1);expect(game.run.queue[0].autoHold).toBe(true);expect(toasts).toBe(1);
+  game.resolveAutoOffers();expect(toasts).toBe(1);
+  game.masterworks.transact=(fn:any)=>fn(state);
+  expect(game.selectStory('guide').ok).toBe(true);expect(game.run.queue).toHaveLength(0);
+});
+
 function damageFixture() {
   const {game}=fixture(),bolts:any[]=[];
   Object.assign(game,{elapsed:10,counterUntil:0,chainUntil:0,feedbackSound:true,feedbackCount:0,dmgDealt:0,combo:0,maxCombo:0,timeCtl:{hitstop:noop}});
