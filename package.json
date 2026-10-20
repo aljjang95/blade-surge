@@ -20,6 +20,7 @@
     "assets:verify": "node tools/asset-library/verify.mjs"
   },
   "dependencies": {
+    "@apps-in-toss/web-framework": "3.8.0",
     "@capacitor/android": "8.5.1",
     "@capacitor/app": "8.1.1",
     "@capacitor/core": "8.5.1",
@@ -29,6 +30,7 @@
     "three": "^0.170.0"
   },
   "devDependencies": {
+    "@apps-in-toss/cli": "3.8.0",
     "@capacitor/cli": "8.5.1",
     "@types/bun": "^1.4.1",
     "@types/react": "19.2.14",

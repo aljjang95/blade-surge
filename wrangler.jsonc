@@ -4,6 +4,7 @@
   "name": "blade-surge",
   "main": "worker/index.ts",
   "routes": [{ "pattern": "blade.tllhouse.com", "custom_domain": true }],
+  "mtls_certificates": [{ "binding": "TOSS_MTLS", "certificate_id": "a9deb444-9316-4529-a76c-2e2c1b71fd8e", "remote": true }],
   "compatibility_date": "2025-06-01",
   "assets": {
     "binding": "ASSETS",
@@ -21,10 +22,18 @@
     "DIALOGUE_APPROVAL_ID": "",
     "DIALOGUE_APPROVAL_ISSUED_AT": "",
     "DIALOGUE_APPROVAL_UNTIL": "",
+    "COMMERCE_DATABASE_ID": "88d8e114-6c6d-408a-acca-52ede4e94d28",
+    "STORE_BILLING_ENABLED": "false",
+    "TOSS_REMOVE_ADS_ACTIVE": "false",
+    "TOSS_MTLS_APP_NAME": "blade-surge",
+    "TOSS_AD_GROUP_ID": "ait.v2.live.b311470e6321418c",
+    "TOSS_AD_GROUP_ENABLED": "true",
     // 커뮤니티: 관리자 playerId(쉼표 구분), 로컬 개발 origin 허용, 구글 OAuth 클라이언트 ID(비면 연동 꺼짐).
     "SOCIAL_ADMIN_IDS": "",
     "SOCIAL_DEV_ORIGINS": "false",
     "GOOGLE_CLIENT_IDS": ""
   },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  "triggers": { "crons": ["17 * * * *"] },
+  "d1_databases": [{ "binding": "COMMERCE_DB", "database_name": "blade-surge-commerce-production", "database_id": "88d8e114-6c6d-408a-acca-52ede4e94d28" }]
 }

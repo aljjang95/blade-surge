@@ -1,5 +1,6 @@
 import { DIALOGUE_MODEL, REPLY_SCHEMA, dialogueMessages, parseDialogueReply, parseDialogueRequest } from '../src/companion/dialogue-contract';
 import { handlePartyRequest, PartyRoom } from './party';
+import { handleStoreRequest, cleanupStoreMetadata, type StoreEnv } from './store';
 import { createSocialHub, handleSocialRequest } from '../packages/tll-social/src/server/index';
 import { SOCIAL_CONFIG } from '../src/social/config.js';
 export { PartyRoom };
@@ -11,7 +12,7 @@ interface Store {
   put(key: string, value: unknown): Promise<void>;
   transaction<T>(callback: (txn: Store) => Promise<T>): Promise<T>;
 }
-interface Env {
+interface Env extends StoreEnv {
   ASSETS: { fetch(request: Request): Promise<Response> };
   AI: { run(model: string, input: unknown): Promise<unknown> };
   DIALOGUE_BUDGET: { idFromName(name: string): unknown; get(id: unknown): { fetch(request: Request): Promise<Response> } };
@@ -102,6 +103,7 @@ export class DialogueBudget {
 
 export async function handleRequest(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
+  if (url.pathname.startsWith('/api/store/')) return handleStoreRequest(request, env);
   if (url.pathname === '/api/party' || url.pathname.startsWith('/api/party/')) {
     if (!env.PARTIES) return json({ error:'unavailable' },503);
     const origin = url.origin === 'https://blade.tllhouse.com' ? url.origin : env.APP_ORIGIN;
@@ -146,4 +148,7 @@ export async function handleRequest(request: Request, env: Env): Promise<Respons
   finally { if (timer) clearTimeout(timer); }
 }
 
-export default { fetch: handleRequest };
+export default { fetch: handleRequest, async scheduled(_event: unknown, env: Env) {
+  // 소유한 commerce DB의 오래된 임시 기록만 정리하고 구매·환불 원장은 보존한다.
+  await cleanupStoreMetadata(env);
+} };

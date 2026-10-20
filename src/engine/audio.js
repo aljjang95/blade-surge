@@ -49,7 +49,7 @@ export class AudioSys {
     this._barkLast = {}; this._voiceEpoch = 0; this._voiceLoads = new Map();
     this.mix = { music: 0.55, sfx: 0.9, voice: 1 };
     this._voices = new Set(); this.voiceLimits = { sfx: 16, bark: 4, narration: 1 };
-    this._musicTracks = new Set(); this._ducks = []; this._combatLevel = 1;
+    this._musicTracks = new Set(); this._ducks = []; this._combatLevel = 1; this._musicMutes = new Set();
     this._heroLoads = new Map(); this._swingLast = {}; this._heroHitLast = {}; this._heroWeapon = '';
   }
   async init() {
@@ -61,7 +61,9 @@ export class AudioSys {
     this.master = this.ctx.createGain(); this.master.connect(this.ctx.destination);
     this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = 0.9; this.sfxGain.connect(this.master);
     this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = 0.55;
-    this.musicDuckGain = this.ctx.createGain(); this.musicGain.connect(this.musicDuckGain); this.musicDuckGain.connect(this.master);
+    this.musicDuckGain = this.ctx.createGain(); this.musicGain.connect(this.musicDuckGain);
+    this.musicMuteGain = this.ctx.createGain(); this.musicMuteGain.gain.value = this._musicMutes.size ? 0 : 1;
+    this.musicDuckGain.connect(this.musicMuteGain); this.musicMuteGain.connect(this.master);
     // 컴프레서로 타격음 펀치감
     const comp = this.ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 6; comp.attack.value = 0.002; comp.release.value = 0.12;
     this.sfxGain.disconnect(); this.sfxGain.connect(comp);
@@ -117,6 +119,15 @@ export class AudioSys {
     return true;
   }
   resume() { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); }
+  // 저장된 믹스·전투 duck·SFX·음성에 영향 없이 소유한 음악 음소거만 해제한다.
+  acquireMusicMute() {
+    const token = {}; this._musicMutes.add(token);
+    this.musicMuteGain?.gain.setValueAtTime(0, this.now());
+    return () => {
+      if (!this._musicMutes.delete(token)) return;
+      this.musicMuteGain?.gain.setValueAtTime(this._musicMutes.size ? 0 : 1, this.now());
+    };
+  }
   now() { return this.ctx ? this.ctx.currentTime : 0; }
   getMix() { return { ...this.mix }; }
   getDiagnostics() {

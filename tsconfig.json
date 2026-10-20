@@ -17,5 +17,5 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "worker/**/*.ts", "test/**/*.ts", "packages/tll-social/src/**/*.ts", "packages/tll-social/test/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "worker/**/*.ts", "test/**/*.ts", "capacitor.config.ts", "apps-in-toss.config.ts", "packages/tll-social/src/**/*.ts", "packages/tll-social/test/**/*.ts"]
 }

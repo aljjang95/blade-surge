@@ -26,3 +26,6 @@ work/
 # Blender/Python authoring bytecode stays local.
 **/__pycache__/
 *.py[cod]
+*.ait
+*.jks
+*.keystore
