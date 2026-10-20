@@ -4,7 +4,7 @@ import { createArrowVisual, releaseProjectileVisual } from '../engine/arrow-visu
 import { CAMERA_PRESETS } from '../engine/renderer.js';
 import { battleFraming, framingBlend } from '../engine/battle-framing.js';
 import { Player } from './player.js';
-import { FEEL, KillChain, killSlowmo } from './feel.js';
+import { FEEL, KillChain, killSlowmo, slowAccentFor, slowAccentLevel } from './feel.js';
 import { clearShot } from './ranger-aim.js';
 import { Enemy, HOSTILE_PROJECTILE_REACH } from './enemies.js';
 import { DropSystem, fieldDropsAllowed } from './drops.js';
@@ -56,7 +56,9 @@ export function feelOnKill(b, e) {
     if (!member?.alive) continue;
     member.addUlt(st.ult * (member.stats?.ultGain || 1)); if (st.mp) member.addMp?.(st.mp);
   }
-  b.fx?.shockTex?.(e.pos, 0xffd060, { r1: st.ring, life: 0.45 });
+  // 단계 충격파는 전투 VFX 의 셰이더 링(+빛줄기)이 맡는다. 풀이 없는 최소 fx 는 기존 지면 링으로 대신한다.
+  if (b.fx?.multiKillWave) b.fx.multiKillWave(e.pos, ev.step, { reduced });
+  else b.fx?.shockTex?.(e.pos, 0xffd060, { r1: st.ring, life: 0.45 });
   if (b.fx?.dmgLayer && b.fx.dmgLayer.children.length < 30) b.fx.damage(e.pos.clone().setY(1.2 * (e.def?.scale || 1)), 0, { text: `${ev.multi}마리 격파`, kind: 'skill' });
   audio.ting({ vol: 0.34, freq: 1500 * st.pitch }); audio.ting({ vol: 0.22, freq: 2250 * st.pitch });
   if (!reduced) b.renderer?.flashScreen?.(0.1 + 0.03 * ev.step, 0xffd060);
@@ -102,7 +104,7 @@ export class Battle {
     this._contactAt = -Infinity; this._contactBudget = null;
     this.stage = stage; this.active = false; this.paused = false; this.pauseReasons.clear(); this.result = null; this.revived = 0; this.bossDefeated = false;
     this.enemies.length = 0; this.projectiles.length = 0; this.timers.length = 0; this.pending.length = 0; this.fx.clearAll(); this.drops.clear(); this.holes = [];
-    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.treasureRooms = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false; this.killChain = new KillChain(); this.lastSlowAt = -1e9;
+    this.combo = 0; this.killStreak = 0; this.killStreakT = 0; this.kills = 0; this.maxCombo = 0; this.dmgDealt = 0; this.elapsed = 0; this.impactTarget = null; this.impactT = 0; this.boss = null; this.peakAlive = 0; this.duelElapsed = 0; this.treasureRooms = 0; this.controlFinisherTokens = new WeakSet(); this.bossRush = false; this.killChain = new KillChain(); this.lastSlowAt = -1e9; this.slowAccent = null; this.renderer?.setSpeedAccent?.(0);
     this.clearPortal();
     const def = stage.party ? HEROES[heroId] : resolveJobHero(HEROES[heroId], this.app.eco.s.expedition?.selectedJob); const stats = heroStats(def, heroState, equipBonus);
     this.setBonus = equipBonus.active || [];
@@ -610,6 +612,7 @@ export class Battle {
     this.drops.onKill(e, this.stage);
     const big = e.isBoss || e.isElite;
     this.fx.burst(e.pos.clone().setY(1), 0xe0e0ff, { n: big ? 40 : 12, speed: 8, size: 0.4, up: 1 });
+    this.fx.deathShatter?.(e, { reduced: !!this.app?.reducedMotion?.matches });
     if (big) { this.fx.explosion(e.pos, { size: e.isBoss ? 7 : 4, color: e.isBoss ? 0xff8080 : 0xffd080 }); this.renderer.shake(0.4); }
     else {
       // 군중 처치에서 먼지 메시가 한 프레임에 수십 개 생기지 않도록 짧은 창마다 상한을 둔다.
@@ -641,7 +644,18 @@ export class Battle {
     }
     // 방의 마지막 적·정예 처치의 짧은 슬로우(동작 줄이기에서는 끈다). 끝 구간은 1 로 부드럽게 복귀한다.
     const sm = killSlowmo({ elite: !!e.isElite, boss: !!e.isBoss, roomEmptied: emptied, roomKills: rm ? rm.killsDone : 0, now: this.elapsed, lastAt: this.lastSlowAt, reduced: !!this.app?.reducedMotion?.matches });
-    if (sm) { this.lastSlowAt = this.elapsed; this.timeCtl.slowmo(sm.scale, sm.sec, sm.ease); }
+    if (sm) {
+      this.lastSlowAt = this.elapsed; this.timeCtl.slowmo(sm.scale, sm.sec, sm.ease);
+      // 마지막 적 슬로우에만 가장자리 속도선을 얹는다(동작 줄이기에서는 아예 켜지 않는다).
+      const accent = slowAccentFor(sm, !!this.app?.reducedMotion?.matches);
+      if (accent) this.slowAccent = accent;
+    }
+  }
+  /** 슬로우 남은 시간(실시간 초)에서 속도선 세기를 구해 렌더러에 넘긴다. 슬로우가 끝나면 0 으로 닫고 스스로 내려놓는다. */
+  driveSlowAccent() {
+    const a = this.slowAccent, left = this.timeCtl.slowT;
+    this.renderer?.setSpeedAccent?.(slowAccentLevel(left, a.sec, a.ease));
+    if (!(left > 0)) this.slowAccent = null;
   }
   onPlayerDeath() {
     this.mapTactics?.cancel();
@@ -861,6 +875,7 @@ export class Battle {
     if (!this.player) return;
     if (this.paused) return;
     const dt = this.timeCtl.step(realDt);
+    if (this.slowAccent) this.driveSlowAccent();
     this.elapsed += dt;
     this.impactT = Math.max(0, this.impactT - dt);
     for (let i = this.timers.length - 1; i >= 0; i--) { const t = this.timers[i]; t.t -= dt; if (t.t <= 0) { this.timers.splice(i, 1); t.fn(); } }
