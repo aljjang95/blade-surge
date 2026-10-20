@@ -47,3 +47,51 @@ export function tickerRect({ width, height, hudBottom = 0, controlsTop = height,
   const top = Math.min(Math.max(inset, hudBottom + 6), Math.max(inset, height - count * lineHeight - inset));
   return { left, top, right, bottom: top + count * lineHeight + 6, zone };
 }
+
+/**
+ * 조작 버튼 상단(보호 영역의 아래 경계)을 정한다.
+ * 보이는 조작 요소의 상단만 받는다. 요소가 없거나 결과가 HUD 하단 이하(영역이 뒤집힘)이면 화면 높이의 70%를 쓴다.
+ * @param {{ tops: number[], hudBottom?: number | null, height: number }} input
+ */
+export function resolveControlsTop({ tops, hudBottom = 0, height }) {
+  const safe = Math.round((Number(height) || 0) * 0.7);
+  const values = (Array.isArray(tops) ? tops : []).filter(value => Number.isFinite(value));
+  if (!values.length) return safe;
+  const top = Math.floor(Math.min(...values));
+  const bottom = Number.isFinite(hudBottom) ? hudBottom : 0;
+  return top > bottom ? top : safe;
+}
+
+/**
+ * 미확인 배지의 자리. 띠 줄 끝 오른쪽 → 띠 아래 → 빈 곳 훑기 순서로, 보호 영역·기존 HUD 버튼·띠와 겹치지 않는 첫 자리를 쓴다.
+ * 모두 겹치면 띠 아래(clear=false)로 돌려준다.
+ * @param {{
+ *   ticker: { left: number, top: number, right: number, bottom: number },
+ *   tickerVisible?: boolean,
+ *   size: { width: number, height: number },
+ *   screen: { width: number, height: number },
+ *   zone: { left: number, top: number, right: number, bottom: number },
+ *   obstacles?: { left: number, top: number, right: number, bottom: number }[],
+ *   gap?: number,
+ * }} input
+ */
+export function badgeRect({ ticker, tickerVisible = true, size, screen, zone, obstacles = [], gap = 4 }) {
+  const bw = Math.max(1, size.width), bh = Math.max(1, size.height);
+  const make = (left, top) => ({ left, top, right: left + bw, bottom: top + bh });
+  const blockers = obstacles.filter(o => o && [o.left, o.top, o.right, o.bottom].every(Number.isFinite));
+  if (tickerVisible) blockers.push(ticker);
+  const fits = r => r.left >= 0 && r.top >= 0 && r.right <= screen.width && r.bottom <= screen.height
+    && !rectsOverlap(r, zone) && !blockers.some(o => rectsOverlap(r, o));
+  const below = make(ticker.left, tickerVisible ? ticker.bottom + 2 : ticker.top);
+  const ordered = tickerVisible ? [make(ticker.right + gap, ticker.top), below] : [below];
+  for (const candidate of ordered) if (fits(candidate)) return { ...candidate, clear: true };
+  const lefts = [...new Set([ticker.left, ticker.right + gap, ...blockers.map(o => o.right + gap)])].sort((a, b) => a - b);
+  const lastTop = Math.max(ticker.top, screen.height - bh);
+  for (let top = ticker.top; top <= lastTop; top += 4) {
+    for (const left of lefts) {
+      const candidate = make(left, top);
+      if (fits(candidate)) return { ...candidate, clear: true };
+    }
+  }
+  return { ...below, clear: false };
+}

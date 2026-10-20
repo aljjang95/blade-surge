@@ -117,6 +117,28 @@ describe('친구와 차단', () => {
     expect((await h.call('POST', '/friends/request', { key: a.key, body: { playerId: b.id } })).body).toEqual({ error: 'blocked' });
     expect((await h.call('POST', '/friends/respond', { key: b.key, body: { playerId: c.id, accept: true } })).status).toBe(404);
   });
+  test('수락 이벤트에는 수락한 사람의 접속·상태가 실린다', async () => {
+    const h = setup();
+    const a = await h.player('에이'), b = await h.player('비비'), c = await h.player('씨씨');
+    h.connect(a);
+    h.connect(b);
+    await h.call('POST', '/friends/request', { key: a.key, body: { playerId: b.id } });
+    const accepted = await h.call('POST', '/friends/respond', { key: b.key, body: { playerId: a.id, accept: true } });
+    const toA = accepted.effects.find(e => (e.to as any).player === a.id)?.message as any;
+    expect(toA).toMatchObject({ t: 'friend', event: 'accepted', online: true, presence: { state: 'lobby' } });
+    expect(toA.player.id).toBe(b.id);
+    // 상호 요청으로 바로 친구가 되는 경로도 같다. 수락하는 쪽(씨씨)이 접속 중이 아니면 오프라인으로 실린다.
+    h.connect(a);
+    await h.call('POST', '/friends/request', { key: a.key, body: { playerId: c.id } });
+    h.connect(c);
+    const mutual = await h.call('POST', '/friends/request', { key: c.key, body: { playerId: a.id } });
+    expect(mutual.effects.find(e => (e.to as any).player === a.id)?.message).toMatchObject({ event: 'accepted', online: true });
+    const d = await h.player('디디');
+    h.connect(a);
+    await h.call('POST', '/friends/request', { key: a.key, body: { playerId: d.id } });
+    const offline = await h.call('POST', '/friends/respond', { key: d.key, body: { playerId: a.id, accept: true } });
+    expect(offline.effects.find(e => (e.to as any).player === a.id)?.message).toMatchObject({ event: 'accepted', online: false, presence: null });
+  });
 });
 
 describe('런 티켓과 명예의 전당', () => {

@@ -324,7 +324,7 @@ export class SocialCore {
     const myMini = this.mini(me.id);
     if (this.one('SELECT 1 AS x FROM friend_requests WHERE from_id = ? AND to_id = ?', target.id, me.id)) {
       this.befriend(me.id, target.id);
-      this.notify(c.out.effects, target.id, { t: 'friend', event: 'accepted', player: myMini }, '친구 요청이 수락되었습니다.');
+      this.notify(c.out.effects, target.id, this.acceptedMessage(me.id, myMini), '친구 요청이 수락되었습니다.');
       return { status: 'friends', player: this.mini(target.id) };
     }
     if (this.one('SELECT 1 AS x FROM friend_requests WHERE from_id = ? AND to_id = ?', me.id, target.id)) return { status: 'pending', player: this.mini(target.id) };
@@ -340,8 +340,13 @@ export class SocialCore {
     if (!this.one('SELECT 1 AS x FROM friend_requests WHERE from_id = ? AND to_id = ?', from, me.id)) throw new SocialError('no-request', 404);
     if (!accept) { this.run('DELETE FROM friend_requests WHERE from_id = ? AND to_id = ?', from, me.id); return { status: 'declined' }; }
     this.befriend(me.id, from);
-    this.notify(c.out.effects, from, { t: 'friend', event: 'accepted', player: this.mini(me.id) }, '친구 요청이 수락되었습니다.');
+    this.notify(c.out.effects, from, this.acceptedMessage(me.id), '친구 요청이 수락되었습니다.');
     return { status: 'friends', player: this.mini(from) };
+  }
+  /** 수락 이벤트에 수락한 사람의 접속·상태를 함께 실어, 요청자 화면이 처음부터 올바른 온라인 표시를 갖게 한다. */
+  private acceptedMessage(pid: string, mini: unknown = this.mini(pid)): Record<string, unknown> {
+    const online = this.online(pid);
+    return { t: 'friend', event: 'accepted', player: mini, online, presence: online ? this.presenceOf(pid) : null };
   }
   private friendRemove(me: any, c: Ctx) {
     const other = parsePlayerId(object(c.req.body, ['playerId']).playerId);

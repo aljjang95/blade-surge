@@ -2,6 +2,7 @@
 import { createSocialClient } from '../../packages/tll-social/src/client/index.js';
 import { createCommunityUI } from '../../packages/tll-social/src/ui/index.js';
 import { icon } from '../../packages/tll-social/src/ui/icons.js';
+import { resolveControlsTop } from '../../packages/tll-social/src/ui/layout.js';
 import { ALL_DUNGEONS } from '../data/expansion.js';
 import { HEROES } from '../data/heroes.js';
 import { STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
@@ -23,6 +24,18 @@ const BUILD_ID = buildIdentity(import.meta.url);
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 const quiet = fn => { try { return fn(); } catch (error) { if (typeof console !== 'undefined') console.warn('[social]', error && error.message); return undefined; } };
+
+/** 화면에 실제로 보이는 요소의 영역. display:none·visibility:hidden이거나 크기가 0이면 null. */
+function visibleRect(el) {
+  if (!el || !el.isConnected) return null;
+  const rect = el.getBoundingClientRect();
+  if (!(rect.width > 0 && rect.height > 0)) return null;
+  const style = window.getComputedStyle(el);
+  if (style.visibility === 'hidden' || style.display === 'none') return null;
+  return rect;
+}
+/** 전투 중 띠·배지가 피해야 할 기존 HUD 버튼(시점·일시정지·AUTO 등)의 영역. */
+const HUD_BUTTONS = '#hud button, #lobby-camera-toggle, #lobby-camera-pad > span';
 
 /** 사람마다 같은 영웅 초상이 나오도록 id로 고른다(서버는 영웅을 모른다). */
 function portraitPool() {
@@ -99,8 +112,13 @@ function build(app) {
       return el ? Math.ceil(el.getBoundingClientRect().bottom) : null;
     },
     controlsTop() {
-      const tops = ['#joy', '#hud .actions'].map(sel => document.querySelector(sel)).filter(Boolean).map(el => el.getBoundingClientRect().top);
-      return tops.length ? Math.floor(Math.min(...tops)) : null;
+      // #joy는 화면 왼쪽 절반을 덮는 투명 터치 영역이라 쓰지 않고, 눈에 보이는 조이스틱 원과 조작 버튼 묶음만 쓴다.
+      const tops = ['#hud .actions', '#hud .joy-base'].map(sel => visibleRect(document.querySelector(sel))).filter(Boolean).map(rect => rect.top);
+      return resolveControlsTop({ tops, hudBottom: hooks.hudBottom(), height: window.innerHeight });
+    },
+    hudObstacles() {
+      return [...document.querySelectorAll(HUD_BUTTONS)].map(visibleRect).filter(Boolean)
+        .map(rect => ({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }));
     },
     // 구글 로그인은 클라이언트 ID가 정해지면 googleSignIn을 채운다(없으면 화면에 "준비 중"으로 보인다).
     discordInvite: typeof config.discordInvite === 'string' ? config.discordInvite : null,
@@ -155,6 +173,8 @@ function build(app) {
     if (document.hidden) return;
     const battle = inBattle();
     if (ui.battle !== battle) ui.setBattle(battle);
+    // 출격 컷신(.exp-cinematic)이 떠 있는 동안은 띠·배지를 보류하고, 끝나면 다시 보인다.
+    ui.setHold(!!document.querySelector('.exp-cinematic'));
     const code = partyCode();
     if (code !== lastParty) {
       lastParty = code;

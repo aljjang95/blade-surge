@@ -2,7 +2,7 @@
 import { button, clear, copyText, disposer, el, rafOnce, reportError } from './dom.js';
 import { icon } from './icons.js';
 import { badgeText, checkNickname, errorMessage, fullName, hueOf, initialOf, TABS, WIDE_TABS } from './format.js';
-import { layoutFor, tickerRect } from './layout.js';
+import { badgeRect, layoutFor, tickerRect } from './layout.js';
 import { nameMenuItems, tickerText, unreadTotal } from './models.js';
 import { applyTheme, injectStyles } from './styles.js';
 import { createChatView } from './views/chat.js';
@@ -32,6 +32,7 @@ const NEEDS_PROFILE = new Set(['chat', 'party', 'friends']);
  *     discordInvite?: string | null,
  *     hudBottom?: () => number,
  *     controlsTop?: () => number,
+ *     hudObstacles?: () => ({ left: number, top: number, right: number, bottom: number }[]),
  *   }
  * }} options
  */
@@ -55,6 +56,7 @@ export function createCommunityUI(options) {
   let loading = null;
   let isOpen = false;
   let battle = false;
+  let held = false; // 컷신 같은 전체 화면 연출 동안 띠·배지를 보류한다
   let tab = 'chat';
   let layout = layoutFor(win.innerWidth, win.innerHeight);
   let destroyed = false;
@@ -341,11 +343,12 @@ export function createCommunityUI(options) {
     scheduleRefresh();
     emit('phase', { phase, error });
   }
-  function loadMe() {
+  /** @param {boolean} [manual] false면 자동 호출: 서버가 없는 것으로 확인된 동안은 요청을 보내지 않는다. 사용자가 연 경우만 한 번 다시 시도한다. */
+  function loadMe(manual = true) {
     if (loading) return loading;
     setPhase('loading');
     loading = (async () => {
-      const result = await client.me();
+      const result = await client.me({ manual: manual !== false });
       if (result.ok) { setPhase('ready'); client.connect(); }
       else if (result.error === 'no-profile') setPhase('noprofile');
       else setPhase('offline', result.error);
@@ -497,7 +500,7 @@ export function createCommunityUI(options) {
     get tab() { return tab; },
     get phase() { return phase; },
     /** 앱 시작 때 한 번 호출: 프로필이 있으면 조용히 연결하고, 서버가 없으면 오프라인으로 둔다. */
-    start() { return loadMe(); },
+    start() { return loadMe(false); },
     badgeCount,
     /** 전투 중에는 패널을 닫고 상단 가장자리 띠만 쓴다. */
     setBattle(active) {
@@ -510,6 +513,14 @@ export function createCommunityUI(options) {
       updateCorner();
     },
     get battle() { return battle; },
+    /** 컷신 등 전체 화면 연출 동안 전투 띠·배지를 숨긴다. 끝나면 남은 줄과 배지를 다시 보인다. */
+    setHold(active) {
+      active = !!active;
+      if (held === active) return;
+      held = active;
+      renderTicker();
+      updateCorner();
+    },
     on(event, fn) {
       let set = listeners.get(event);
       if (!set) { set = new Set(); listeners.set(event, set); }
@@ -546,7 +557,7 @@ export function createCommunityUI(options) {
     const t = Date.now();
     lines = lines.filter(l => t - l.at < TICKER_GONE_MS);
     clear(ticker);
-    if (!battle || !lines.length) { ticker.hidden = true; updateCorner(); return; }
+    if (!battle || held || !lines.length) { ticker.hidden = true; updateCorner(); return; }
     for (const l of lines) ticker.append(el('div', 'tls-tline' + (l.fame ? ' fame' : '') + (t - l.at >= TICKER_VISIBLE_MS ? ' fade' : ''), l.text));
     ticker.hidden = false;
     positionTicker();
@@ -575,13 +586,22 @@ export function createCommunityUI(options) {
   }
   function updateCorner(rect) {
     const n = badgeCount();
-    if (!battle || n <= 0) { corner.hidden = true; return; }
+    if (!battle || held || n <= 0) { corner.hidden = true; return; }
     clear(corner);
     corner.append(icon('chat', 12), el('span', '', badgeText(n)));
     corner.hidden = false;
     const r = rect || currentTickerRect();
-    corner.style.left = r.left + 'px';
-    corner.style.top = (ticker.hidden ? r.top : r.bottom + 2) + 'px';
+    // 기존 HUD 버튼(시점·일시정지 등)과 겹치지 않는 자리를 고른다.
+    const box = corner.getBoundingClientRect();
+    const spot = badgeRect({
+      ticker: r, tickerVisible: !ticker.hidden,
+      size: { width: box.width || 56, height: box.height || 20 },
+      screen: { width: win.innerWidth, height: win.innerHeight },
+      zone: r.zone,
+      obstacles: hooks.hudObstacles ? safeCall(() => hooks.hudObstacles()) || [] : [],
+    });
+    corner.style.left = spot.left + 'px';
+    corner.style.top = spot.top + 'px';
   }
 
   // ── 화면 크기·키보드 ─────────────────────────────

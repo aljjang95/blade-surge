@@ -39,6 +39,9 @@ export const HIDDEN_CLOSE_MS = 25000;
 export const BACKOFF_BASE_MS = 1000;
 export const BACKOFF_MAX_MS = 30000;
 export const PRESENCE_GAP_MS = 2000;
+/** 서버가 없거나(404) 닿지 않을 때 자동 요청을 줄이는 지수 백오프. 사용자가 직접 연 경우에만 한 번씩 다시 시도한다. */
+export const UNREACHABLE_BACKOFF_MIN_MS = 60000;
+export const UNREACHABLE_BACKOFF_MAX_MS = 900000;
 /** 재시도해도 소용없는 티켓 실패: 프로필 생성·키 교체 전까지 재연결하지 않는다. */
 const FATAL_TICKET_ERRORS = new Set(['bad-key', 'no-profile', 'banned']);
 const ID_TOKEN = /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/;
@@ -66,6 +69,11 @@ function cleanPresence(value) {
   const result = { state: value.state };
   if (typeof value.where === 'string') result.where = [...value.where.normalize('NFKC').trim()].slice(0, 24).join('');
   return result;
+}
+
+/** 서버가 아예 없는 것으로 볼 실패: 네트워크 오류, 또는 JSON 오류 코드 없이 돌아온 404(정적 호스팅 폴백). */
+function isUnreachable(result) {
+  return !result.ok && (result.error === 'network' || result.error === 'http-404');
 }
 
 /**
@@ -115,7 +123,23 @@ export function createSocialClient(options) {
     storage.setItem(keyName, deviceKey);
   }
 
-  const request = createRequester({ baseUrl, fetchImpl, timers, now, getKey: () => /** @type {string} */ (deviceKey) });
+  const rawRequest = createRequester({ baseUrl, fetchImpl, timers, now, getKey: () => /** @type {string} */ (deviceKey) });
+  let unreachableFails = 0;
+  let unreachableUntil = 0;
+  /** 서버 도달 여부를 기록한다. 실패가 이어지면 다음 자동 요청까지 간격이 60초부터 두 배씩 늘어난다. */
+  function noteReach(result) {
+    if (result.ok) { unreachableFails = 0; unreachableUntil = 0; return; }
+    if (!isUnreachable(result)) return;
+    unreachableFails = Math.min(unreachableFails + 1, 16);
+    unreachableUntil = now() + Math.min(UNREACHABLE_BACKOFF_MAX_MS, UNREACHABLE_BACKOFF_MIN_MS * 2 ** (unreachableFails - 1));
+  }
+  function backedOff() { return unreachableUntil > now(); }
+  /** @type {typeof rawRequest} */
+  const request = async (method, path, options) => {
+    const result = await rawRequest(method, path, options);
+    noteReach(result);
+    return result;
+  };
 
   /** @type {SocialState} */
   const state = {
@@ -158,6 +182,8 @@ export function createSocialClient(options) {
   let lastPresenceAt = -Infinity;
   let meLoaded = false;
   let destroyed = false;
+  /** 수락 이벤트에 접속 정보가 없을 때 /me 응답으로 다시 맞출 친구 id */
+  const staleOnline = new Set();
   /** @type {Presence} */
   let presence = cleanPresence(options.presence) ?? { state: 'lobby' };
   /** @type {string | null} */
@@ -234,7 +260,9 @@ export function createSocialClient(options) {
       return;
     }
     const base = Math.min(BACKOFF_MAX_MS, BACKOFF_BASE_MS * 2 ** attempt);
-    const delay = Math.round(Math.min(BACKOFF_MAX_MS, base * (0.8 + 0.4 * random())));
+    const jittered = Math.round(Math.min(BACKOFF_MAX_MS, base * (0.8 + 0.4 * random())));
+    // 서버가 없는 것으로 확인된 동안에는 백오프가 끝나기 전에 티켓을 다시 요청하지 않는다.
+    const delay = Math.max(jittered, unreachableUntil - now());
     attempt = Math.min(attempt + 1, 16);
     reconnectTimer = timers.setTimeout(() => {
       reconnectTimer = null;
@@ -246,6 +274,7 @@ export function createSocialClient(options) {
   async function open() {
     reconnectTimer = clearTimer(reconnectTimer);
     if (!wanted || destroyed || socket || connecting) return;
+    if (backedOff()) { scheduleReconnect(); return; }
     if (typeof WebSocketImpl !== 'function') {
       stopReason = 'websocket-unavailable';
       setConnection('offline');
@@ -394,10 +423,11 @@ export function createSocialClient(options) {
         if (!id || state.blocks.has(id)) continue;
         const prev = state.friends.get(id);
         // 소켓이 붙어 있으면 실시간 presence가 REST 응답보다 최신이다.
-        if (prev && state.connection === 'online') next.set(id, { mini: mini ?? prev.mini, online: prev.online, presence: prev.presence });
+        if (prev && state.connection === 'online' && !staleOnline.has(id)) next.set(id, { mini: mini ?? prev.mini, online: prev.online, presence: prev.presence });
         else next.set(id, { mini, online: item.online === true, presence: cleanPresence(item.presence) });
       }
       state.friends = next;
+      staleOnline.clear();
     }
     const req = data.requests && typeof data.requests === 'object' ? data.requests : data;
     const incoming = req.incoming ?? req.received;
@@ -469,7 +499,15 @@ export function createSocialClient(options) {
         } else if (message.event === 'accepted') {
           dropRequests(player.id);
           const prev = state.friends.get(player.id);
-          state.friends.set(player.id, { mini: player, online: prev ? prev.online : false, presence: prev ? prev.presence : null });
+          if (typeof message.online === 'boolean') {
+            // 서버가 수락한 사람의 접속·상태를 같이 보낸다.
+            state.friends.set(player.id, { mini: player, online: message.online, presence: message.online ? cleanPresence(message.presence) : null });
+          } else {
+            // 접속 정보가 없으면 /me로 맞춘다. 그 전까지는 알던 값을 유지한다.
+            state.friends.set(player.id, { mini: player, online: prev ? prev.online : false, presence: prev ? prev.presence : null });
+            staleOnline.add(player.id);
+            refreshMe();
+          }
         } else if (message.event === 'removed') {
           dropRequests(player.id);
           state.friends.delete(player.id);
@@ -560,6 +598,7 @@ export function createSocialClient(options) {
   }
 
   async function flushRunQueue() {
+    // 대기 중인 클리어는 플레이어의 기록이라 백오프와 상관없이 호출 시점마다 시도한다(호출 빈도가 낮다).
     if (flushingRuns || isOffline() || destroyed) return;
     flushingRuns = true;
     try {
@@ -612,7 +651,11 @@ export function createSocialClient(options) {
     changed();
   }
 
-  async function refreshMe() {
+  /**
+   * @param {{ manual?: boolean }} [options] manual이 아니면 서버가 없는 것으로 확인된 동안 요청을 보내지 않는다.
+   */
+  async function refreshMe(options) {
+    if (!(options && options.manual === true) && backedOff()) return fail('offline');
     const result = await request('GET', '/me');
     if (result.ok) {
       applyMe(result.data);
@@ -624,7 +667,7 @@ export function createSocialClient(options) {
   /** 친구·차단 변경 뒤 전체 상태를 다시 받아 응답 형태 추측을 피한다. */
   async function mutateThenRefresh(promise) {
     const result = await promise;
-    if (result.ok) await refreshMe();
+    if (result.ok) await refreshMe({ manual: true });
     return result;
   }
 
@@ -787,7 +830,7 @@ export function createSocialClient(options) {
           for (const [key, list] of state.messages) state.messages.set(key, list.filter(m => !(m.from && m.from.id === playerId)));
         } else state.blocks.delete(playerId);
         changed();
-        await refreshMe();
+        await refreshMe({ manual: true });
       }
       return result;
     },

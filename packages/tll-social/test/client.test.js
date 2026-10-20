@@ -389,6 +389,102 @@ describe('실시간 연결', () => {
     ws.serverSend({ t: 'friend', event: 'removed', player: STRANGER });
     expect(env.client.state.friends.has(STRANGER.id)).toBe(false);
   });
+
+  test('수락 이벤트가 접속·상태를 싣고 오면 요청자 화면에 바로 온라인으로 보인다', async () => {
+    const env = setup();
+    const ws = await connectOnline(env);
+    const before = env.fetch.calls.length;
+    ws.serverSend({ t: 'friend', event: 'accepted', player: STRANGER, online: true, presence: { state: 'battle', where: '건선거' } });
+    expect(env.client.state.friends.get(STRANGER.id)).toMatchObject({ online: true, presence: { state: 'battle', where: '건선거' } });
+    await flush();
+    expect(env.fetch.calls).toHaveLength(before);
+    ws.serverSend({ t: 'friend', event: 'accepted', player: FRIEND, online: false, presence: null });
+    expect(env.client.state.friends.get(FRIEND.id)).toMatchObject({ online: false, presence: null });
+  });
+
+  test('접속 정보 없는 수락 이벤트는 /me로 다시 받아 맞춘다', async () => {
+    let accepted = false;
+    const env = setup({ handler: call => {
+      if (call.url.endsWith('/me')) return json(200, { profile: ME, friends: accepted ? [{ player: STRANGER, online: true, presence: { state: 'lobby' } }] : [], requests: { incoming: [], outgoing: [] }, blocks: [], titles: [] });
+      return defaultHandler(call);
+    } });
+    const ws = await connectOnline(env);
+    await flush();
+    accepted = true;
+    ws.serverSend({ t: 'friend', event: 'accepted', player: STRANGER });
+    expect(env.client.state.friends.get(STRANGER.id)).toMatchObject({ online: false });
+    await flush();
+    expect(env.client.state.friends.get(STRANGER.id)).toMatchObject({ online: true, presence: { state: 'lobby' } });
+  });
+});
+
+describe('서버가 없을 때 자동 요청 줄이기', () => {
+  const notFound = () => new Response('<html>Not Found</html>', { status: 404, headers: { 'content-type': 'text/html' } });
+  const meCalls = env => env.fetch.calls.filter(call => call.url.endsWith('/me')).length;
+
+  test('첫 /me가 404면 60초 동안 자동 /me는 요청 없이 offline으로 돌려준다', async () => {
+    const env = setup({ handler: notFound });
+    expect(await env.client.me()).toMatchObject({ ok: false, error: 'http-404' });
+    expect(await env.client.me()).toMatchObject({ ok: false, error: 'offline' });
+    expect(await env.client.me()).toMatchObject({ ok: false, error: 'offline' });
+    expect(meCalls(env)).toBe(1);
+    await env.clock.advance(59000);
+    await env.client.me();
+    expect(meCalls(env)).toBe(1);
+    await env.clock.advance(1100);
+    await env.client.me();
+    expect(meCalls(env)).toBe(2);
+  });
+
+  test('연속 실패하면 간격이 두 배로 늘고, 사용자가 연 경우(manual)는 한 번 다시 시도한다', async () => {
+    const env = setup({ handler: notFound });
+    await env.client.me();
+    await env.clock.advance(60100);
+    await env.client.me();
+    expect(meCalls(env)).toBe(2);
+    await env.clock.advance(60100);
+    await env.client.me();
+    expect(meCalls(env)).toBe(2);
+    await env.clock.advance(60100);
+    await env.client.me();
+    expect(meCalls(env)).toBe(3);
+    expect(await env.client.me({ manual: true })).toMatchObject({ ok: false, error: 'http-404' });
+    expect(meCalls(env)).toBe(4);
+  });
+
+  test('네트워크 실패도 같고, 성공하면 백오프가 풀린다', async () => {
+    let up = false;
+    const env = setup({ handler: call => { if (!up) throw new TypeError('offline'); return defaultHandler(call); } });
+    expect(await env.client.me()).toMatchObject({ error: 'network' });
+    up = true;
+    expect(await env.client.me()).toMatchObject({ error: 'offline' });
+    expect((await env.client.me({ manual: true })).ok).toBe(true);
+    expect((await env.client.me()).ok).toBe(true);
+  });
+
+  test('JSON 오류 코드가 있는 404(no-profile)는 서버가 있는 것으로 본다', async () => {
+    const env = setup({ handler: () => json(404, { error: 'no-profile' }) });
+    expect(await env.client.me()).toMatchObject({ error: 'no-profile' });
+    expect(await env.client.me()).toMatchObject({ error: 'no-profile' });
+    expect(meCalls(env)).toBe(2);
+  });
+
+  test('ws-ticket이 404면 재연결 대기가 60초 이상이고 그동안 티켓을 다시 요청하지 않는다', async () => {
+    const env = setup({ handler: notFound });
+    env.client.connect();
+    await flush();
+    const tickets = () => env.fetch.calls.filter(call => call.url.endsWith('/ws-ticket')).length;
+    expect(tickets()).toBe(1);
+    expect(env.clock.pending()[0]).toBeGreaterThanOrEqual(60000);
+    env.winListeners.online();
+    await flush();
+    expect(tickets()).toBe(1);
+    await env.clock.advance(59000);
+    expect(tickets()).toBe(1);
+    await env.clock.advance(2000);
+    expect(tickets()).toBe(2);
+    expect(env.clock.pending()[0]).toBeGreaterThanOrEqual(110000);
+  });
 });
 
 describe('런 기록', () => {

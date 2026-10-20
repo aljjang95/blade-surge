@@ -79,7 +79,11 @@ export function listingModel(raw, { meId = null, config = null, now = Date.now()
   };
 }
 
-/** 전투 중 띠에 보여 줄 한 줄. 파티 채팅·서버 공지·귓속말·초대만 보인다(광장 잡담은 제외). */
+/**
+ * 전투 중 띠에 보여 줄 한 줄. 파티 채팅·서버 공지·귓속말·초대만 보인다.
+ * 광장(world-*) 잡담은 설계 노드 battle-chat-ticker가 '파티 채팅·서버 공지'만 띠에 올리도록 정했고,
+ * 전투 중에 많은 사람의 광장 대화가 계속 흘러 플레이를 방해하지 않게 하려는 의도라 일부러 제외한다. 바꾸려면 설계 노드부터 고친다.
+ */
 export function tickerText(msg, { meId = null, blocks = null } = {}) {
   if (!msg || typeof msg.text !== 'string') return null;
   if (msg.from && blocks && blocks.has(msg.from.id)) return null;
