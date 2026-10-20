@@ -200,10 +200,148 @@ async function A6view(browser, rec, viewport) {
 }
 async function A6(browser, rec) { await A6view(browser, rec, VIEW); await A6view(browser, rec, WIDE); }
 
+
+import { recommendedLevel } from '../src/data/loot-tables.js';
+import { lootGuide, levelStatusLabel } from '../src/data/region-guide.js';
+import { CHAPTERS } from '../src/data/stages.js';
+
+// ---------- 전투 공용(실제 탭으로 진입, 주입 픽스처로 빠르게 승리) ----------
+// 스테이지 상세의 #st-go 를 실제로 탭해 전투를 시작한다. 이야기 컷 "건너뛰기"가 뜨면 실제로 탭한다.
+async function startStageFromDetail(s, code) {
+  const { page } = s;
+  await page.locator('#stage-grid [data-stage="' + code + '"]').tap(); await page.waitForTimeout(500);
+  await page.locator('#st-go').tap(); s.rec.did('캠페인 ' + code + ' #st-go 실제 탭');
+  for (let i = 0; i < 20; i++) {
+    await page.waitForTimeout(500);
+    const skip = page.getByRole('button', { name: /건너뛰기/ });
+    if (await skip.count() && await skip.first().isVisible().catch(() => false)) { await skip.first().tap().catch(() => {}); s.rec.did('이야기 컷 "건너뛰기" 실제 탭'); }
+    if (await page.evaluate(() => window.app.mode === 'battle' && window.app.battle?.active && !!window.app.battle.player)) break;
+  }
+  await page.waitForFunction(() => window.app.mode === 'battle' && window.app.battle?.active && !!window.app.battle.player, undefined, { timeout: 90000 });
+  await page.waitForFunction(() => window.app.battle.elapsed > 0.5, undefined, { timeout: 60000 });
+}
+// 주입 픽스처: 살아 있는 적의 HP 를 1 로 낮추고 플레이어 HP 를 유지하며 AUTO 를 켠다(전투·처치·드랍·결산은 실제 코드 경로).
+async function winFastFixture(s, { timeout = 240000 } = {}) {
+  const { page } = s;
+  await page.evaluate(() => {
+    if (window.__qaFix) clearInterval(window.__qaFix);
+    window.__qaFix = setInterval(() => { const b = window.app.battle; if (!b?.active) return; for (const e of b.enemies) if (e.alive && e.hp > 1) e.hp = 1; const P = b.player; if (P?.alive) P.hp = P.maxHp; }, 80);
+  });
+  s.rec.inject('전투 픽스처: 살아 있는 적 HP=1, 플레이어 HP 유지(80ms 주기). 처치·드랍·결산은 실제 코드 경로');
+  const auto = await page.evaluate(() => !!window.app.battle.player?.auto);
+  if (!auto) { await page.locator('#btn-auto').tap(); s.rec.did('AUTO 버튼 실제 탭'); }
+  const t0 = Date.now();
+  await page.waitForFunction(() => document.getElementById('result')?.classList.contains('show'), undefined, { timeout });
+  await page.evaluate(() => { clearInterval(window.__qaFix); window.__qaFix = 0; });
+  await page.waitForTimeout(2400); // 결과 화면 연출·전리품 카드가 모두 붙을 때까지
+  return { ms: Date.now() - t0 };
+}
+
+// ---------- A4: 다음 스테이지·지역·권장 Lv·대표 보상 ----------
+const guideText = (s) => s.page.evaluate(() => ({
+  level: document.querySelector('#stage-detail .stage-level')?.innerText.replace(/\s+/g, ' ').trim() || null,
+  tone: document.querySelector('#stage-detail .stage-level')?.dataset.tone || null,
+  title: document.querySelector('#stage-detail .stage-level')?.title || null,
+  loot: document.querySelector('#stage-detail .stage-loot-guide')?.innerText.replace(/\s+/g, ' ').trim() || null,
+  diff: document.querySelector('#stage-detail .stage-loot-guide')?.dataset.lootDifficulty || null,
+  chips: [...document.querySelectorAll('#stage-detail .reward-chip')].map((c) => c.innerText.replace(/\s+/g, ' ').trim()),
+}));
+async function A4campaign(browser, rec, viewport) {
+  const s = await open(browser, rec, viewport), tag = viewport.width + '';
+  try {
+    await boot(s); await prepareState(s, { hero: 'knight', level: 15, unlocked: 10, starsThrough: 9 });
+    await tapTab(s, 'stage'); rec.did('메뉴 → 모험(캠페인) 실제 탭');
+    rec.check(tag + ' 캠페인 탭이 열렸다', await tabShown(s, 'stage'));
+    await s.page.locator('#stage-grid [data-stage="1-9"]').tap(); rec.did('1-9 칸 실제 탭'); await s.page.waitForTimeout(500);
+    const rec19 = recommendedLevel(1, 9);
+    const g = await guideText(s); rec.obs('stage19-' + tag, g);
+    await rec.shot(s, 'campaign-1-9');
+    rec.check(tag + ' 1-9 상세에 "권장 Lv.' + rec19 + ' · 내 Lv.15" 와 상태가 보인다', !!g.level && g.level.includes('권장 Lv.' + rec19) && g.level.includes('내 Lv.15') && g.level.includes(levelStatusLabel(15, rec19).text), g);
+    // 난이도 카드 실제 탭 → 전리품 문구가 실제 표(lootGuide)와 같고 난이도마다 달라진다
+    const texts = {};
+    for (const id of ['story', 'adept', 'nightmare']) {
+      await s.page.locator('#stage-detail [data-difficulty="' + id + '"]').tap(); rec.did('난이도 카드 ' + id + ' 실제 탭'); await s.page.waitForTimeout(450);
+      texts[id] = await guideText(s);
+      const expected = lootGuide(1, id).lines;
+      rec.check(tag + ' 난이도 ' + id + ': 전리품 문구가 lootTable 계산값과 같다', texts[id].diff === id && expected.every((l) => texts[id].loot.includes(l)), { loot: texts[id].loot, expected });
+    }
+    rec.obs('lootByDifficulty-' + tag, Object.fromEntries(Object.entries(texts).map(([k, v]) => [k, v.loot])));
+    await rec.shot(s, 'campaign-1-9-nightmare');
+    rec.check(tag + ' 난이도를 바꾸면 전리품 문구가 바뀐다(3종 모두 다름)', new Set(Object.values(texts).map((t) => t.loot)).size === 3);
+    rec.check(tag + ' 정예 칩 장비 개수가 표와 같다', texts.story.chips.some((c) => c.includes('장비 ' + lootGuide(1, 'story').elite.gearRolls + '개')), texts.story.chips);
+    // 레벨 상태 4종(주입한 레벨 + 칸 재선택 실제 탭)
+    for (const [lv, want] of [[5, '레벨 부족'], [rec19 - 2, '도전 가능'], [rec19, '준비 완료'], [rec19 + 12, '너무 쉬움']]) {
+      await s.page.evaluate((lv) => { const e = window.app.eco; e.hero(e.s.selected).level = lv; e.emit(); }, lv); rec.inject('영웅 레벨 ' + lv + ' 로 변경');
+      await s.page.locator('#stage-grid [data-stage="1-8"]').tap(); await s.page.waitForTimeout(250);
+      await s.page.locator('#stage-grid [data-stage="1-9"]').tap(); await s.page.waitForTimeout(400);
+      const t = await guideText(s);
+      rec.check(tag + ' 내 Lv.' + lv + ' → "' + want + '"', !!t.level && t.level.includes(want) && t.level.includes('내 Lv.' + lv), t);
+    }
+    // 겹침: 새 요소와 버튼·다른 줄
+    await s.page.evaluate((lv) => { const e = window.app.eco; e.hero(e.s.selected).level = lv; e.emit(); }, 15);
+    await s.page.locator('#stage-grid [data-stage="1-8"]').tap(); await s.page.waitForTimeout(250); await s.page.locator('#stage-grid [data-stage="1-9"]').tap(); await s.page.waitForTimeout(400);
+    const L = '#stage-detail .stage-level', G = '#stage-detail .stage-loot-guide';
+    const ov = await overlapReport(s.page, [[L, '#stage-detail .difficulty-picker'], [L, '#stage-detail .rewards'], [L, '#stage-detail .meta:not(.stage-stage-level):not(.stage-level)'], [L, '#st-go'], [L, '#st-sweep'], [G, '#st-go'], [G, '#st-sweep'], [G, '#stage-detail .rewards'], [G, '#stage-detail .difficulty-picker'], [G, L]]);
+    rec.check(tag + ' 캠페인: 권장 Lv 줄·전리품 문구가 난이도 카드·보상 칩·출격/소탕 버튼과 겹치지 않는다', ov.found.length === 0, { found: ov.found.slice(0, 3), checked: ov.checked.length });
+    await s.page.locator('#st-go').scrollIntoViewIfNeeded(); await s.page.waitForTimeout(250);
+    await rec.shot(s, 'campaign-launch-buttons');
+  } catch (e) { await errShot(s); throw e; } finally { await s.close(); }
+}
+async function A4result(browser, rec, viewport) {
+  const s = await open(browser, rec, viewport), tag = viewport.width + '';
+  try {
+    await boot(s); await prepareState(s, { hero: 'knight', level: 18, unlocked: 10, starsThrough: 9 });
+    await tapTab(s, 'stage'); rec.did('메뉴 → 모험(캠페인) 실제 탭');
+    const detail10 = await guideText(s); rec.obs('stage110-' + tag, detail10);
+    await startStageFromDetail(s, '1-10');
+    const win = await winFastFixture(s); rec.obs('battleMs-' + tag, win.ms);
+    const stageCode = await s.page.evaluate(() => window.app.battle.stage?.code);
+    rec.check(tag + ' 1-10 전투가 실제로 끝나 결과 화면(승리)이 떴다', stageCode === '1-10' && await s.page.evaluate(() => window.app.battle.result?.win === true && document.getElementById('result').classList.contains('show')), { stageCode });
+    // 결과 레이아웃: 안내 블록을 스크롤해서 보이게 한다
+    const blk = s.page.locator('#result-growth .next-guide'); 
+    rec.check(tag + ' 결과 화면에 "다음 출격" 블록이 있다', await blk.count() === 1);
+    await blk.scrollIntoViewIfNeeded(); await s.page.waitForTimeout(300);
+    const txt = (await blk.innerText()).replace(/\s+/g, ' ').trim(); rec.obs('nextGuide-' + tag, txt);
+    await rec.shot(s, 'result-next-guide');
+    const ch2 = CHAPTERS[1], rec21 = recommendedLevel(2, 1);
+    const myLv = await s.page.evaluate(() => window.app.eco.hero(window.app.eco.s.selected).level);
+    rec.check(tag + ' 안내: 새 지역 개방 · ' + ch2.name, txt.includes('새 지역 개방: ' + ch2.name), txt);
+    rec.check(tag + ' 안내: 다음 스테이지 2-1 + 권장 Lv.' + rec21 + ' + 내 Lv.' + myLv + ' + 상태', txt.includes('2-1') && txt.includes('권장 Lv.' + rec21) && txt.includes('내 Lv.' + myLv) && txt.includes(levelStatusLabel(myLv, rec21).text), { txt, myLv });
+    rec.check(tag + ' 안내: 대표 보상(재료·에픽 확률)', /대표 보상 · .+ ×\d+/.test(txt) && /에픽 이상 \d+%/.test(txt), txt);
+    const sc = await s.page.evaluate(() => { const r = document.querySelector('#result .result-scroll').getBoundingClientRect(), b = document.querySelector('#result-growth .next-guide').getBoundingClientRect(); return { scroll: { y: r.y, h: r.height, bottom: r.bottom, top: r.top }, guide: { top: b.top, bottom: b.bottom } }; });
+    rec.check(tag + ' 결과: 안내 블록이 스크롤 영역 안에 완전히 보인다', sc.guide.top >= sc.scroll.top - 0.5 && sc.guide.bottom <= sc.scroll.bottom + 0.5, sc);
+    const ov = await overlapReport(s.page, [['#result-growth .next-guide', '.result-btns'], ['#result-growth .next-guide', '#btn-result-next'], ['#result-growth .next-guide', '#btn-result-lobby'], ['#result-growth .next-guide', '#btn-result-retry'], ['#result-growth .next-guide', '#btn-result-double'], ['#result .result-scroll', '.result-btns']]);
+    rec.check(tag + ' 결과: 다음 출격 블록·스크롤 영역이 하단 버튼과 겹치지 않는다', ov.found.length === 0, { found: ov.found.slice(0, 3), checked: ov.checked.length });
+    const btns = await insideViewport(s.page, '#btn-result-next, #btn-result-lobby, #btn-result-retry');
+    rec.check(tag + ' 결과: 하단 버튼이 화면 안에 완전히 들어온다', btns.length >= 3 && btns.every((b) => b.inside), btns);
+    // 다음 탭 → 2-1 전투 시작
+    await s.page.locator('#btn-result-next').tap(); rec.did('결과 화면 #btn-result-next 실제 탭');
+    for (let i = 0; i < 20; i++) { await s.page.waitForTimeout(500); const skip = s.page.getByRole('button', { name: /건너뛰기/ }); if (await skip.count() && await skip.first().isVisible().catch(() => false)) await skip.first().tap().catch(() => {}); if (await s.page.evaluate(() => window.app.mode === 'battle' && window.app.battle?.active && window.app.battle.stage?.code === '2-1')) break; }
+    const next = await s.page.evaluate(() => ({ mode: window.app.mode, code: window.app.battle.stage?.code, active: window.app.battle.active }));
+    rec.check(tag + ' 다음 탭 → 2-1 전투 진입', next.mode === 'battle' && next.code === '2-1' && next.active, next);
+    await rec.shot(s, 'battle-2-1-started');
+    // 새로고침 뒤 캠페인 2-1 상세에 권장 Lv 표시
+    await s.page.reload({ waitUntil: 'domcontentloaded' }); rec.did('새로고침(page.reload)'); await boot(s);
+    await tapTab(s, 'stage');
+    const snap = await ecoSnap(s); rec.obs('afterReload-' + tag, snap);
+    await s.page.locator('#chapter-tabs [data-ch="2"]').tap(); await s.page.waitForTimeout(400);
+    await s.page.locator('#stage-grid [data-stage="2-1"]').tap(); await s.page.waitForTimeout(500);
+    const g21 = await guideText(s); rec.obs('stage21-' + tag, g21);
+    await rec.shot(s, 'campaign-2-1');
+    rec.check(tag + ' 새로고침 뒤 진행도 유지(unlocked ≥ 11)', snap.unlocked >= 11, snap);
+    rec.check(tag + ' 2-1 상세에 "권장 Lv.' + rec21 + '" 표시', !!g21.level && g21.level.includes('권장 Lv.' + rec21), g21);
+  } catch (e) { await errShot(s); throw e; } finally { await s.close(); }
+}
+async function A4(browser, rec) {
+  await A4campaign(browser, rec, VIEW); await A4campaign(browser, rec, WIDE);
+  await A4result(browser, rec, VIEW); await A4result(browser, rec, WIDE);
+}
+
+
 /*__INSERT__*/
 
 // ---------- 러너 ----------
-const CRITERIA = { A6: ['상점·소환 단축 일수 문구', A6] };
+const CRITERIA = { A4: ['다음 스테이지·지역·권장 Lv·대표 보상', A4], A6: ['상점·소환 단축 일수 문구', A6] };
 const GL = arg('gl', 'gpu');
 const browser = await chromium.launch(GL === 'swift' ? launchOpts() : { args: ['--use-angle=d3d11', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--autoplay-policy=no-user-gesture-required'] });
 const summary = { started: new Date().toISOString(), origin, out, viewport: VIEW, wide: WIDE, criteria: {} };
