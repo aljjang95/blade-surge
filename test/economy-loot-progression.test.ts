@@ -25,7 +25,8 @@ test('모든 적 등급에서 장이 오를수록 골드·경험치·강화석·
     for (const key of ['stones', 'stones2', 'stones3'] as const) expect(t[key]).toBeGreaterThanOrEqual(prev[key]);
     for (const threshold of [1, 2, 3, 4]) {
       const rarities = ['N', 'S', 'E', 'U', 'L'].slice(threshold);
-      expect(rarities.reduce((s, r) => s + (t.gearWeights as any)[r], 0)).toBeGreaterThanOrEqual(rarities.reduce((s, r) => s + (prev.gearWeights as any)[r], 0));
+      // 100% 부근의 이진 소수 합산 오차만 허용한다(확률 1e-11 미만).
+      expect(rarities.reduce((s, r) => s + (t.gearWeights as any)[r], 0) + 1e-9).toBeGreaterThanOrEqual(rarities.reduce((s, r) => s + (prev.gearWeights as any)[r], 0));
     }
     if (rank === 'boss') { expect(t.gearChance).toBe(1); expect(t.stoneChance).toBe(1); expect(t.material.chance).toBe(1); expect(t.gearRolls).toBe(3); }
     expect(CHAPTERS[ch - 1].representativeDrops.material).toBe(t.material.id);
@@ -92,7 +93,7 @@ test('드롭은 지역 장비 표를 사용하고 소환수는 새 성장 재료
   try { system.onKill(enemy, stage); } finally { Math.random = rng; }
   expect(spawned.filter(x => x[1] === 'item')).toHaveLength(3);
   expect(spawned.filter(x => x[1] === 'item').every(x => x[2].rarity === 'L')).toBe(true);
-  expect(spawned.find(x => x[1] === 'material')[2]).toEqual({ id: 'star_dust', n: 7 });
+  expect(spawned.filter(x => x[1] === 'material').map(x => x[2])).toEqual([{ id: 'star_dust', n: 7 }, { id: 'glass_leaf', n: 7 }]);
   const count = spawned.length;
   system.onKill({ ...enemy, packFollower: true }, stage);
   expect(spawned).toHaveLength(count);

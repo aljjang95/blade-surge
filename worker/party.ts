@@ -1,5 +1,5 @@
 import { PARTY_CODE, PARTY_LIMITS } from '../src/party/protocol.js';
-import { partyAvatarMessage, partyVisualMessage } from '../src/party/visual-protocol.js';
+import { partyAvatarMessage, partyHitHeroMessage, partyVisualMessage } from '../src/party/visual-protocol.js';
 import { PartyError, PartyState, type Effect } from './party-state';
 
 interface Storage {
@@ -46,7 +46,7 @@ export async function handlePartyRequest(request: Request, env: PartyEnv): Promi
   }
   const room = env.PARTIES.get(env.PARTIES.idFromName(`room:${code}`));
   const joinUrl = new URL('https://party.internal/join');
-  for (const key of ['name', 'hero', 'avatar', 'ticket', 'visuals', 'avatars']) {
+  for (const key of ['name', 'hero', 'avatar', 'ticket', 'visuals', 'avatars', 'heroHits']) {
     const value = url.searchParams.get(key);
     if (value !== null) joinUrl.searchParams.set(key, value);
   }
@@ -60,6 +60,7 @@ export class PartyRoom {
   private sockets = new Map<string, Socket>();
   private visualClients = new Set<string>();
   private avatarClients = new Set<string>();
+  private heroHitClients = new Set<string>();
   constructor(private readonly ctx: { storage: Storage }) {}
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url), now = Date.now();
@@ -99,6 +100,7 @@ export class PartyRoom {
       server.accept(); this.sockets.set(result.id, server);
       if (url.searchParams.get('visuals') === '1') this.visualClients.add(result.id);
       if (url.searchParams.get('avatars') === '1') this.avatarClients.add(result.id);
+      if (url.searchParams.get('heroHits') === '1') this.heroHitClients.add(result.id);
       server.addEventListener('message', event => {
         try {
           if (Date.now() >= this.room!.expiresAt) { this.end('expired'); return; }
@@ -122,16 +124,16 @@ export class PartyRoom {
   private dispatch(effects: Effect[]) {
     const failed: string[] = [];
     for (const effect of effects) {
-      // 클라이언트 능력(시각 효과·아바타)별로 직렬화 결과를 한 번씩만 만든다.
+      // 클라이언트 능력(시각 효과·아바타·타격 영웅)별로 직렬화 결과를 한 번씩만 만든다.
       const texts = new Map<string, string>();
-      const textFor = (visuals: boolean, avatars: boolean) => {
-        const key = `${+visuals}${+avatars}`;
-        if (!texts.has(key)) texts.set(key, JSON.stringify(partyAvatarMessage(partyVisualMessage(effect.message, visuals), avatars)));
+      const textFor = (visuals: boolean, avatars: boolean, heroHits: boolean) => {
+        const key = `${+visuals}${+avatars}${+heroHits}`;
+        if (!texts.has(key)) texts.set(key, JSON.stringify(partyHitHeroMessage(partyAvatarMessage(partyVisualMessage(effect.message, visuals), avatars), heroHits)));
         return texts.get(key)!;
       };
       for (const [id, socket] of this.sockets) {
         if ((effect.to && effect.to !== id) || effect.except === id) continue;
-        try { socket.send(textFor(this.visualClients.has(id), this.avatarClients.has(id))); } catch { failed.push(id); }
+        try { socket.send(textFor(this.visualClients.has(id), this.avatarClients.has(id), this.heroHitClients.has(id))); } catch { failed.push(id); }
       }
     }
     for (const id of new Set(failed)) this.drop(id, 'send-failed');
@@ -143,11 +145,12 @@ export class PartyRoom {
     this.sockets.delete(id);
     this.visualClients.delete(id);
     this.avatarClients.delete(id);
+    this.heroHitClients.delete(id);
     try { socket.close(1000, reason); } catch { /* already closed */ }
     if (this.room) this.dispatch(this.room.disconnect(id));
   }
   private closeAll() {
-    const sockets = [...this.sockets.values()]; this.sockets.clear(); this.visualClients.clear(); this.avatarClients.clear();
+    const sockets = [...this.sockets.values()]; this.sockets.clear(); this.visualClients.clear(); this.avatarClients.clear(); this.heroHitClients.clear();
     for (const socket of sockets) { try { socket.close(1000, 'party-ended'); } catch { /* already closed */ } }
   }
   private end(reason: string) { if (this.room) this.dispatch(this.room.abort(reason)); this.closeAll(); }

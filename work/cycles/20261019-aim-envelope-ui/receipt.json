@@ -1,0 +1,227 @@
+{
+  "schemaVersion": 1,
+  "cycle": "20261019-aim-envelope-ui",
+  "cycleStatus": "shipped",
+  "objective": "조준 표시의 확률 띠·끌어당김 한계 구분, 화살 레인 표시, 변형·연쇄·몰이 측정, 취소 버튼 가림과 알림 기준 정리",
+  "chunk": {
+    "name": "조준 표시 확률 띠·레인·HUD 정리",
+    "why": "최종 감사(sol)가 D2d 실패(확률 띠 표시 밖 적중), P2 취소 버튼·알림 기준 지적",
+    "notDoing": "데미지·쿨다운, 이동 적"
+  },
+  "subject": {
+    "kind": "mixed",
+    "identity": {
+      "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+      "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261019-aim-envelope-ui\\integration",
+      "branch": "codex/20261019-aim-envelope-ui",
+      "commit": "159301134edde9662e4f244f47d34fd45287ca1c",
+      "tree": "7813032a780a8360bf6a2d1c0995a60007249105"
+    },
+    "digest": "src:9bc95e54c4df37474804e3630371972a7d53d493fbefbd45c4da7c0b7500da80",
+    "observedAt": "2026-10-19T01:44:20.185Z"
+  },
+  "requirements": [
+    {
+      "id": "A1",
+      "claim": "envelope(확률 띠)가 있는 모든 스킬(최소 meteor, magma_zone)에서 확정 영역과 확률 한계가 화면에서 구분돼 그려지고(src/game/skill-aim/aim-view.js), 단위 테스트가 확정 반지름·envelope 값을 고정한다 / 겹침 캡처(확정/확률 구분)와 test/skill-aim.test.ts",
+      "status": "passed",
+      "surfaces": [
+        "겹침 캡처(확정/확률 구분)와 test/skill-aim.test.ts"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A1\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A1\\report.json",
+          "sha256": "2bcf499e076ee9c618ff47dce0535def266cf00efd67041a2562b275c10e795a",
+          "command": "tools/aim-envelope-shot.mjs 확정/확률 구분 표시 30행",
+          "observedAt": "2026-10-19T01:44:21.648Z",
+          "subjectDigest": "src:9bc95e54c4df37474804e3630371972a7d53d493fbefbd45c4da7c0b7500da80"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A1\\report-2.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A1\\report-2.json",
+          "sha256": "2b577dcb57513a79119b98303baa9f52fc1730d5678cb9b909c8b1461121be0a",
+          "command": "aim-hitbox-truth-qa 레인 표시",
+          "observedAt": "2026-10-19T01:44:23.020Z",
+          "subjectDigest": "src:9bc95e54c4df37474804e3630371972a7d53d493fbefbd45c4da7c0b7500da80"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A2",
+      "claim": "tools/aim-hitbox-truth-qa.mjs가 교관 강화 변형(wide·echo·split·star 등 playerSkillAimShape가 바꾸는 모든 변형)과 chain 도약 거리, 끌어당김(몰이) 스킬(shield_bash·quake·whirlwind·hell_axe)을 측정하고, 규칙(끌려온 적 위치 기준 등)을 보고서에 적는다. 확정 영역 안 표본은 모두 맞고 바깥 표본은 맞지 않으며, 확률 띠는 별도로 적중",
+      "status": "passed",
+      "surfaces": [
+        "tools/aim-hitbox-truth-qa.mjs report.json 변형·연쇄·몰이 행"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A2\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A2\\report.json",
+          "sha256": "c383816a1eb66f4da844e3ede46bd2517506f9f5b4c1afe279c2e3c74896298d",
+          "command": "node tools/aim-hitbox-truth-qa.mjs https://blade.tllhouse.com (42스킬 61변형 1072표본 실패 0)",
+          "observedAt": "2026-10-19T01:44:24.757Z",
+          "subjectDigest": "src:9bc95e54c4df37474804e3630371972a7d53d493fbefbd45c4da7c0b7500da80"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A2\\fixes.md",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A2\\fixes.md",
+          "sha256": "7fa8a8a2114c42c97dc14a14bae47516ac7f5aaa906257718f741043b1cdf917",
+          "command": "수정·측정 규칙 기록",
+          "observedAt": "2026-10-19T01:44:26.533Z",
+          "subjectDigest": "src:9bc95e54c4df37474804e3630371972a7d53d493fbefbd45c4da7c0b7500da80"
+        },
+        {
+          "kind": "readback",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A2\\live-version.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A2\\live-version.json",
+          "sha256": "ef7663bcb14f4f7a2c0532debf75836638d45165fca657a8a7206ea7e71599fa",
+          "command": "GET https://blade.tllhouse.com/version.json",
+          "observedAt": "2026-10-19T01:45:57.229Z",
+          "subjectDigest": "src:9bc95e54c4df37474804e3630371972a7d53d493fbefbd45c4da7c0b7500da80"
+        },
+        {
+          "kind": "deploy",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A2\\deploy.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A2\\deploy.log",
+          "sha256": "dcfb62c07587d48bfdd2b98657cabd4bf433b70745e3ebdc3382dc2623812385",
+          "command": "node tools/deploy.mjs --auth=wrangler",
+          "observedAt": "2026-10-19T01:45:57.495Z",
+          "subjectDigest": "src:9bc95e54c4df37474804e3630371972a7d53d493fbefbd45c4da7c0b7500da80"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A3",
+      "claim": "조준 중 나타나는 취소 버튼이 퀘스트 카드·HUD 글자와 겹치지 않는다(위치 이동 또는 겹치는 카드를 조준 중 숨김). 1280x590·844x390·800x360 캡처와 DOM 사각형 교차 0 / 세 화면 캡처와 사각형 교차 수치",
+      "status": "passed",
+      "surfaces": [
+        "세 화면 캡처와 사각형 교차 수치"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A3\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A3\\report.json",
+          "sha256": "2684d722fd99cab2ef0cf3671450a922d7c8f829f744945ba5009835bfc305d0",
+          "command": "node tools/aim-cancel-overlap-qa.mjs https://blade.tllhouse.com 세 화면 교차 0",
+          "observedAt": "2026-10-19T01:44:28.215Z",
+          "subjectDigest": "src:9bc95e54c4df37474804e3630371972a7d53d493fbefbd45c4da7c0b7500da80"
+        },
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A3\\a2-aim-hold.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A3\\a2-aim-hold.png",
+          "sha256": "bf473b6961da7022fd54910a869c17a79e9e027f2ffbabe3dd620f2d1ca7b260",
+          "command": "Tab S7+ 조준 중 취소 버튼 글자 미가림(8a7027f)",
+          "observedAt": "2026-10-19T01:44:29.724Z",
+          "subjectDigest": "src:9bc95e54c4df37474804e3630371972a7d53d493fbefbd45c4da7c0b7500da80"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A4",
+      "claim": "800x360을 포함한 세 화면에서 긴 알림·경고가 한 기준(왼쪽 30% 이내 또는 1/3 보호 구역, 하나로 통일하고 도구 집계도 같은 기준)으로 통과한다. kill-streak-hud-qa.mjs가 기준 불일치 없이 같은 값을 출력한다 / tools/kill-streak-hud-qa.mjs 보고서",
+      "status": "passed",
+      "surfaces": [
+        "tools/kill-streak-hud-qa.mjs 보고서"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A4\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A4\\report.json",
+          "sha256": "37f3e5c311ad404f4617b8ef59531ae7316d12abb7a079d9b48a610d1311066c",
+          "command": "node tools/kill-streak-hud-qa.mjs https://blade.tllhouse.com 세 화면 통과",
+          "observedAt": "2026-10-19T01:44:31.156Z",
+          "subjectDigest": "src:9bc95e54c4df37474804e3630371972a7d53d493fbefbd45c4da7c0b7500da80"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A5",
+      "claim": "tools/skill-aim-qa.mjs 세 화면, tools/aim-overlay-qa.mjs, bun run check가 그대로 통과한다 / 재실행 보고서와 check 로그",
+      "status": "passed",
+      "surfaces": [
+        "재실행 보고서와 check 로그"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A5\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A5\\report.json",
+          "sha256": "582d53ef9e9ae3bb3a9d1100133823fb021f1b69a72e0f3cc8021d40a738405d",
+          "command": "node tools/skill-aim-qa.mjs https://blade.tllhouse.com 세 화면",
+          "observedAt": "2026-10-19T01:44:32.595Z",
+          "subjectDigest": "src:9bc95e54c4df37474804e3630371972a7d53d493fbefbd45c4da7c0b7500da80"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A5\\report-2.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A5\\report-2.json",
+          "sha256": "7b09d033d48792460677f2b7d41a1b984457c3b622934ba4298902c9a6fbf4aa",
+          "command": "tools/aim-overlay-qa.mjs",
+          "observedAt": "2026-10-19T01:44:34.136Z",
+          "subjectDigest": "src:9bc95e54c4df37474804e3630371972a7d53d493fbefbd45c4da7c0b7500da80"
+        },
+        {
+          "kind": "test",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A5\\check.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-envelope-ui\\evidence\\A5\\check.log",
+          "sha256": "17d08321ecc2cd948a5ca052c24ac12f2eca805e4877e36587cd2be495dc5ea3",
+          "command": "bun run check (2377 pass 0 fail)",
+          "observedAt": "2026-10-19T01:44:35.494Z",
+          "subjectDigest": "src:9bc95e54c4df37474804e3630371972a7d53d493fbefbd45c4da7c0b7500da80"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    }
+  ],
+  "freshReview": {
+    "required": false,
+    "status": "not_required"
+  },
+  "remaining": [],
+  "verdict": "passed",
+  "acceptanceChanges": [],
+  "weakened": [],
+  "deploy": {
+    "target": "https://blade.tllhouse.com (worker blade-surge)",
+    "version": "c643bf01-fc95-4a94-9ec1-d5a80f16aa13",
+    "sha": "8a7027fb84a1a2d58ef0036a1610943361eb7e9f",
+    "rollback": "deployment 1f15d737-a9b7-4fbb-980b-bbc1b4a618e0 / version 1ad58abc-7643-4790-9920-10f8045ba58b, tools/deploy.mjs 절차",
+    "readback": "version.json sha=8a7027f dirty=false; 정식 호스트 aim-hitbox-truth 42스킬 61변형 1072표본 실패 0, skill-aim-qa·cancel·killstreak 세 화면 통과, Tab S7+ 실기기 터치 재확인",
+    "subjectDigest": "src:9bc95e54c4df37474804e3630371972a7d53d493fbefbd45c4da7c0b7500da80"
+  },
+  "lanes": [
+    {
+      "lane": "integration",
+      "model": "anthropic/claude-sonnet-5-5",
+      "agentId": "01a1517f-90e8-7d30-bfef-dc2bc7fb1bef",
+      "branch": "codex/20261019-aim-envelope-ui"
+    }
+  ],
+  "harnessChanges": [],
+  "frictions": [
+    "미달 1건(교관 추가탄 틈)을 기준 완화 없이 화살 레인 표시로 고침",
+    "다른 스킬(heavenfall·star_prison 등 8개)의 끌어당김 한계는 아직 표시하지 않음",
+    "취소 버튼을 아래로 옮기면 궁극기 글자와 겹쳐 폐기, 조준 중 임무 카드만 숨김"
+  ],
+  "standingGates": [],
+  "next": "최종 감사 재실행",
+  "quota": null,
+  "updatedAt": "2026-10-19T01:45:58.895Z"
+}

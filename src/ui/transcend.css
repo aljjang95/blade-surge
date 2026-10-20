@@ -75,8 +75,14 @@ i.tc-mat-ico.tc-gem { width: clamp(18px, 5.5vh, 38px); height: auto; justify-sel
 :root:root .btn.tc-pack { flex-direction: row; justify-content: center; gap: 10px; width: 100%; flex: 0 0 auto; padding: clamp(4px, 1.3vh, 12px) 10px; font-size: clamp(13px, 1.9vw, 24px); border-radius: 999px; color: var(--sb-gold); }
 .tc-pack-go { font-size: 1.2em; line-height: 1; }
 .tc-reason { margin: 0; font-size: 11px; color: var(--muted); text-align: center; }
+.tc-mat.is-short { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+:root:root .btn.tc-route { flex: 0 0 auto; padding: 2px 8px; min-height: 0; font-size: clamp(11px, 1.4vw, 15px); border-radius: 999px; color: var(--sb-gold); white-space: nowrap; }
 
 @media (max-height: 460px) {
   .tc-mat { gap: 6px; padding: 3px 8px; }
   .tc-table thead th { padding: 1px 2px 3px; }
+  /* 부족 재료 행에 44px 안내 버튼이 들어가면 3행+버튼 2개+안내문이 844x390·740x360 열을 넘쳐 골드 행이 초월하기 버튼에 가렸다.
+     짧은 화면에서는 행 위아래 여백을 없애고 안내문은 화면에서만 숨긴다(버튼의 aria-describedby 로 계속 읽힌다). */
+  .tc-mat.is-short { padding-top: 0; padding-bottom: 0; }
+  .tc-mats:has(.tc-route) .tc-reason { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }

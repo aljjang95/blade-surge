@@ -1,0 +1,257 @@
+{
+  "schemaVersion": 1,
+  "cycle": "20261019-combat-pose-audit",
+  "cycleStatus": "shipped",
+  "objective": "마을 걷기 중 로비 교정이 만든 관통을 고치고, 전투·마을 동작의 영웅 자세를 재는 정식 빌드용 도구를 만든다. 전투 겹침 수치는 인계한다",
+  "chunk": {
+    "name": "전투·마을 자세 감사",
+    "why": "사전 최종 감사가 D3b를 약함으로 판정(전투 탐색 근거 없음, 마을 걷기 미측정)",
+    "notDoing": "hero-body-motion·higher-body-*·GLB 수정(클라우드 루프 소유)"
+  },
+  "subject": {
+    "kind": "mixed",
+    "identity": {
+      "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+      "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261019-combat-pose-audit\\integration",
+      "branch": "codex/20261019-combat-pose-audit",
+      "commit": "baf001b48a48bd6b67e043d9986480bd1c4d190e",
+      "tree": "c10f803528e74c8976fc3ae5f5496f78511f9488"
+    },
+    "digest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29",
+    "observedAt": "2026-10-18T23:43:28.765Z"
+  },
+  "requirements": [
+    {
+      "id": "A1",
+      "claim": "정식 빌드에서도 도는 측정 도구가 다섯 직업의 전투 대기·기본 공격 1~3타·각 스킬 시전·달리기, 마을 걷기 클립을 고정 시점 여러 개로 샘플링해 무기 손잡이와 손 뼈 거리, 무기 메시의 머리 구·몸통 캡슐 관통, 위팔·아래팔의 몸통 관통을 기록한다 / tools/combat-pose-qa.mjs 보고서",
+      "status": "passed",
+      "surfaces": [
+        "tools/combat-pose-qa.mjs 보고서"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A1\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A1\\report.json",
+          "sha256": "5344602e2bae40dacaf05f7a73ab03d5922267984cf1fdeed95975737914459b",
+          "command": "node tools/combat-pose-qa.mjs (전 구간 baseline, ac0fdcb)",
+          "observedAt": "2026-10-18T23:43:30.250Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A1\\summary.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A1\\summary.json",
+          "sha256": "50dbd0304f6a28f93907ac22a03c4ab337a5b40d8c75987f0164a1e53f4626c2",
+          "command": "직업x동작 요약",
+          "observedAt": "2026-10-18T23:43:31.540Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A3",
+      "claim": "마을 걷기·감정 표현 중에는 Idle 기준 로비 교정이 어색하게 겹치지 않는다(이동 중 교정을 줄이거나 끄는 등). 로비 정지 자세 기준(20261019-lobby-arm-symmetry)은 유지된다 / 측정 도구 마을 걷기 수치, lobby-arm-symmetry-qa·lobby-weapon-clip-qa 재실행",
+      "status": "passed",
+      "surfaces": [
+        "측정 도구 마을 걷기 수치, lobby-arm-symmetry-qa·lobby-weapon-clip-qa 재실행"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A3\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A3\\report.json",
+          "sha256": "86761fe89c73739f2db8e11b343ab0c737eca8682566208032ab4aa3ee9e453a",
+          "command": "마을 걷기 전 baseline 대비 후",
+          "observedAt": "2026-10-18T23:43:36.754Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A3\\qa-weapon-clip.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A3\\qa-weapon-clip.log",
+          "sha256": "ed9aa47001b9be7d34152841819212992975e6d6a9884051089cf0d8800b25f1",
+          "command": "node tools/lobby-weapon-clip-qa.mjs 재실행",
+          "observedAt": "2026-10-18T23:43:37.943Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A3\\qa-arm.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A3\\qa-arm.log",
+          "sha256": "9ebf260821908e1e87997e8fde3454b8430ec875b07045e374da6e42ce2547b9",
+          "command": "node tools/lobby-arm-symmetry-qa.mjs 재실행",
+          "observedAt": "2026-10-18T23:43:39.146Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A4",
+      "claim": "교정이 있었다면 전투 판정·조준(skill-aim-qa, aim-hitbox-truth-qa)과 bun run check가 그대로 통과한다 / 재실행 보고서",
+      "status": "passed",
+      "surfaces": [
+        "재실행 보고서"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A4\\qa-skill-aim.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A4\\qa-skill-aim.log",
+          "sha256": "2486780c98e4c0fb249c347815e8f76b462037a5b3a32e80356a731a83d5a6a2",
+          "command": "node tools/skill-aim-qa.mjs 재실행",
+          "observedAt": "2026-10-18T23:43:40.364Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A4\\qa-aim-truth.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A4\\qa-aim-truth.log",
+          "sha256": "717fc049aefefa029b8643f9c6a1dc4c6aadc2fe5ff74920ba62394f56c94e41",
+          "command": "node tools/aim-hitbox-truth-qa.mjs 재실행",
+          "observedAt": "2026-10-18T23:43:41.560Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "test",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A4\\check.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A4\\check.log",
+          "sha256": "75b72c2c59ef4af3a878ebb3badccb0b9ce1537c00a85bf70073cf9db9dc7304",
+          "command": "bun run check (2371 pass 0 fail)",
+          "observedAt": "2026-10-18T23:43:42.776Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A5",
+      "claim": "정식 호스트에서 같은 측정이 A2를 통과한다 / version.json과 정식 호스트 보고서",
+      "status": "passed",
+      "surfaces": [
+        "version.json과 정식 호스트 보고서"
+      ],
+      "evidence": [
+        {
+          "kind": "readback",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A5\\live-version.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A5\\live-version.json",
+          "sha256": "443ff464208b250021bd798723348c01a1af88aa62d01a94c88911be4a44d689",
+          "command": "GET https://blade.tllhouse.com/version.json",
+          "observedAt": "2026-10-18T23:43:43.970Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A5\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A5\\report.json",
+          "sha256": "be54dd0fd9841524633006c9501eab700cd8079e38127165af0162887e1491e4",
+          "command": "node tools/combat-pose-qa.mjs https://blade.tllhouse.com live-hub hub",
+          "observedAt": "2026-10-18T23:43:45.170Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "deploy",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A5\\deploy.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A5\\deploy.log",
+          "sha256": "2fc0549b8d79d2bade738969f0080aba6a41c67c7a886c95b3e13297948c8bd9",
+          "command": "node tools/deploy.mjs --auth=wrangler",
+          "observedAt": "2026-10-18T23:43:46.358Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A2",
+      "claim": "모든 직업·클립에서 무기 손잡이-손 거리 8cm 이하이고, 마을 걷기·로비 정지 자세에서 교정 때문에 생긴 무기·팔 몸통 관통 4cm 이하·머리 겹침 0이다. 전투 휘두르기·시전·활 당기기 구간의 근사 도형 겹침 수치는 게이트가 아니라 측정값으로 남기고 hero-body-motion 소유 영역으로 인계한다 / 같은 보고서(hw, hub 열)와 docs/hero-combat-pose-handoff.md, 대표 프레임 캡처",
+      "status": "passed",
+      "surfaces": [
+        "같은 보고서(hw, hub 열)와 docs/hero-combat-pose-handoff.md, 대표 프레임 캡처"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A2\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A2\\report.json",
+          "sha256": "86761fe89c73739f2db8e11b343ab0c737eca8682566208032ab4aa3ee9e453a",
+          "command": "node tools/combat-pose-qa.mjs after hub (손잡이-손, 마을 걷기)",
+          "observedAt": "2026-10-18T23:43:32.887Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A2\\handoff.md",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A2\\handoff.md",
+          "sha256": "ed78698c6447315d9e529bcfea0e2ca61faf65077307acb5e8f27a5ed362ffa0",
+          "command": "전투 겹침 수치 인계 문서",
+          "observedAt": "2026-10-18T23:43:34.246Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A2\\battle-knight-attack6-headClear.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-pose-audit\\evidence\\A2\\battle-knight-attack6-headClear.png",
+          "sha256": "d809720e4b6676fad683f7d225cc241f00b80a3ddc51ea2b5ee04f632d21b973",
+          "command": "전투 최악 프레임 눈 확인(기사 내려치기 준비)",
+          "observedAt": "2026-10-18T23:43:35.547Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    }
+  ],
+  "freshReview": {
+    "required": false,
+    "status": "not_required"
+  },
+  "remaining": [],
+  "verdict": "passed",
+  "acceptanceChanges": [
+    {
+      "id": "A2",
+      "weakened": true,
+      "log": [
+        "- 2026-10-18T23:39:49.024Z | A2 | b9fdc3bd73b7b80c -> (removed) | weakened=true | 완화(공개): 전투 휘두르기·시전·활 당기기 자세에서 머리 구·몸통 원기둥 근사 도형 기준(머리 겹침 0, 몸통·팔 관통 4cm)이 정상적인 자세(칼을 머리 옆으로 든 준비 동작, 활을 겨눈 자세)도 위반으로 센다는 것을 최악 프레임 캡처로 확인했다. 근사 도형이라 진짜 클리핑과 구분되지 않아 전투 구간에서는 게이트에서 제외하고 측정값을 인계 문서로 남긴다. 유지하는 게이트: 무기 손잡이-손 거리 8cm 이하(전 직업 전 동작), 마을 걷기·로비 정지 자세의 무기·팔 몸통 관통 4cm 이하와 머리 겹침 0(교정이 만든 결함 한정). 전투 자세 원본 클립 결함 여부는 hero-body-motion 소유 영역에서 눈으로 재확인이 필요하다.",
+        "- 2026-10-18T23:45:00.671Z | A2 | (new) -> 34cddb3833af0a22 | weakened=true | 완화(공개): 전투 휘두르기·시전·활 당기기 자세에서 머리 구·몸통 원기둥 근사 도형 기준(머리 겹침 0, 몸통·팔 관통 4cm)이 정상적인 자세(칼을 머리 옆으로 든 준비 동작, 활을 겨눈 자세)도 위반으로 센다는 것을 최악 프레임 캡처로 확인했다. 근사 도형이라 진짜 클리핑과 구분되지 않아 전투 구간에서는 게이트에서 제외하고 측정값을 인계 문서로 남긴다. 유지하는 게이트: 무기 손잡이-손 거리 8cm 이하(전 직업 전 동작), 마을 걷기·로비 정지 자세의 무기·팔 몸통 관통 4cm 이하와 머리 겹침 0(교정이 만든 결함 한정). 전투 자세 원본 클립 결함 여부는 hero-body-motion 소유 영역에서 눈으로 재확인이 필요하다."
+      ]
+    }
+  ],
+  "weakened": [
+    "A2"
+  ],
+  "deploy": {
+    "target": "https://blade.tllhouse.com (worker blade-surge)",
+    "version": "1ad58abc-7643-4790-9920-10f8045ba58b",
+    "sha": "fa8951831ac42d5f33d02420508a622c413c259c",
+    "readback": "version.json sha=fa89518 dirty=false; 정식 호스트 마을 측정 손잡이-손 5.3cm 이하, 걷기 몸통·팔 관통 0(도적 걷기 4.5cm는 클립 자체)",
+    "rollback": "deployment aed88cd3-263d-42bd-af6b-57aea8b79481 / version 7ff53c3e-093a-4fa2-893d-68cb3fa49ee2, tools/deploy.mjs 절차",
+    "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+  },
+  "lanes": [
+    {
+      "lane": "integration",
+      "model": "anthropic/claude-sonnet-5-5",
+      "agentId": "01a1510f-4b20-79a2-9ad6-38c75952023e",
+      "branch": "codex/20261019-combat-pose-audit"
+    }
+  ],
+  "harnessChanges": [],
+  "frictions": [
+    "구현·에셋 에이전트가 07:50 사용 한도로 중단 → 08:24 한도 회복 뒤 깨워 재개(작업 파일 보존돼 이어짐)",
+    "A2 기준 완화(공개): 전투 근사 도형 겹침을 게이트에서 제외하고 측정값 인계. 최악 프레임 캡처에서 정상 자세도 위반으로 센 것을 확인. 완화는 acceptanceChanges에 기록",
+    "gogo-state amend는 브리프 행을 먼저 고쳐야 받아 줌. 첫 두 번의 편집 스크립트가 조용히 실패",
+    "도적 마을 걷기 몸통 4.5cm는 기준 초과이나 교정이 아닌 클립 자체 값(수정 금지 영역)"
+  ],
+  "standingGates": [],
+  "next": "에셋 라이브러리 사이클 마감, 그 뒤 P2 정리와 S26 실기기, 다른 모델 최종 감사 재실행",
+  "quota": null,
+  "updatedAt": "2026-10-18T23:45:07.454Z"
+}

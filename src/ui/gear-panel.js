@@ -11,13 +11,15 @@ import { AVATARS } from '../data/avatars.js';
 import { libraryAssetForAvatar } from '../engine/library-assets.js';
 import { dungeonLanding } from './dungeon-landing.js';
 import { itemIconHtml, itemVisual } from './item-presentation.js';
+import { heroGrade } from '../data/hero-grades.js';
+import { isFresh, clearFresh } from './loot-compare.js';
 
 /**
  * 영웅 · 장비 화면의 구성 요소.
  * 첫 화면은 3D 미리보기 + 장착 슬롯 4개 + 가방이며, 성장 · 스킬 · 세트는 탭으로 나눈다.
  * 모든 함수는 Meta 인스턴스를 첫 인자로 받아 기존 economy · app 서비스를 그대로 쓴다.
  */
-const RC = { N: 'var(--r-n)', R: 'var(--r-r)', SR: 'var(--r-sr)', SSR: 'var(--r-ssr)' };
+const RC = { N: 'var(--r-n)', R: 'var(--r-r)', SR: 'var(--r-sr)', SSR: 'var(--r-ssr)', SSSR: 'var(--r-sssr)' };
 export const HERO_PANES = Object.freeze([
   { id: 'gear', label: '장비' },
   { id: 'growth', label: '성장' },
@@ -65,7 +67,7 @@ export function renderOwnedHero(meta, id, det) {
   const avatar = AVATARS.find((entry) => entry.heroId === id), avatarReady = !!avatar && !!libraryAssetForAvatar(avatar.id), avatarOwned = !!avatar && eco.s.avatars.owned.includes(avatar.id), avatarEquipped = !!avatar && eco.equippedAvatar(id) === avatar.id;
   const avatarRow = avatar ? '<section class="hero-avatar-row" aria-label="' + esc(def.name) + ' 아바타"><div><b>캐시 아바타</b><small>' + esc(avatar.name) + ' · 순수 외형 · 성능 영향 없음</small></div><button type="button" class="btn btn-ghost btn-sm hero-avatar-action" data-avatar-action="' + avatar.id + '" ' + (avatarReady ? '' : 'disabled') + '>' + (avatarReady ? (avatarOwned ? (avatarEquipped ? '착용 중 · 해제' : '보유 중 · 착용') : '<i class="ic ic-gem"></i> ' + fmt(avatar.price) + ' 보석') : '준비 중') + '</button></section>' : '';
   det.innerHTML = '<div class="hs-slots" role="group" aria-label="' + esc(def.name) + ' 장착 장비">' + slots + '</div>' +
-    '<header class="hs-head"><div class="hs-id"><h2>' + esc(def.name) + ' <small style="color:' + RC[def.rarity] + '">' + def.rarity + '</small></h2><div class="sub">' + esc(def.title) + ' · Lv.' + h.level + ' · ' + '★'.repeat(h.star) + '☆'.repeat(5 - h.star) + ' · 전투력 <b>' + fmt(st.power) + '</b></div></div>' +
+    '<header class="hs-head"><div class="hs-id"><h2>' + esc(def.name) + ' <small class="hs-grade" data-grade="' + heroGrade(def, h) + '" style="color:' + RC[heroGrade(def, h)] + '">' + heroGrade(def, h) + '</small></h2><div class="sub">' + esc(def.title) + ' · Lv.' + h.level + ' · ' + '★'.repeat(h.star) + '☆'.repeat(5 - h.star) + ' · 전투력 <b>' + fmt(st.power) + '</b></div></div>' +
     '<div class="hs-go">' + (selected ? '<span class="hs-on">출전 중</span>' + sortie : '<button type="button" class="btn btn-ghost btn-sm" id="h-sel">출전시키기</button>') + '</div></header>' +
     // 가로 화면의 hero-detail 은 display:contents 격자라 새 형제 요소가 엉뚱한 칸에 앉는다. 아바타 줄은 본문 안에 둔다.
     '<div class="hs-main">' + avatarRow + '<div class="hs-tabs" role="tablist" aria-label="영웅 정보">' + HERO_PANES.map((entry) => '<button type="button" role="tab" id="hs-tab-' + entry.id + '" data-pane="' + entry.id + '" aria-controls="hs-panel" aria-selected="' + (entry.id === pane) + '" tabindex="' + (entry.id === pane ? 0 : -1) + '">' + entry.label + (entry.id === 'gear' ? '<small>가방 ' + eco.s.inventory.length + '</small>' : '') + '</button>').join('') + '</div>' +
@@ -177,14 +179,15 @@ export function renderBag(meta, heroId) {
     '<span class="bag-count" aria-live="polite">' + items.length + '/' + all.length + '개</span></div>' +
     '<div class="inv-list" role="list">' + (items.map((inst) => {
       const it = ITEM_BY_ID[inst.id], owner = owners.get(inst.uid);
-      const mark = owner === heroId ? '<em class="bag-eq">착용 중</em>' : owner ? '<em class="bag-eq other">' + esc(HEROES[owner].name.split(' ').pop()) + '</em>' : '';
-      return '<div class="bag-cell" role="listitem"><button type="button" class="bag-item rar-' + it.rarity + '" data-inv="' + inst.uid + '" aria-label="' + esc(it.name) + ' +' + inst.enh + ', ' + RARITY_INFO[it.rarity].name + (owner === heroId ? ', 착용 중' : owner ? ', 다른 영웅이 착용 중' : '') + '" title="' + esc(it.name) + '"><span class="bag-art">' + iconImg(it, ' decoding="async"', heroId) + '</span><span class="inventory-name">' + esc(it.name) + '</span><span class="inventory-level"><b>+' + inst.enh + '</b>' + (it.summon ? ' ✦' : '') + '</span>' + mark + '</button></div>';
+      const isNew = isFresh(inst.uid);
+      const mark = (isNew ? '<em class="bag-new">NEW</em>' : '') + (owner === heroId ? '<em class="bag-eq">착용 중</em>' : owner ? '<em class="bag-eq other">' + esc(HEROES[owner].name.split(' ').pop()) + '</em>' : '');
+      return '<div class="bag-cell" role="listitem"><button type="button" class="bag-item rar-' + it.rarity + '" data-inv="' + inst.uid + '" aria-label="' + esc(it.name) + ' +' + inst.enh + ', ' + RARITY_INFO[it.rarity].name + (owner === heroId ? ', 착용 중' : owner ? ', 다른 영웅이 착용 중' : '') + (isNew ? ', 새로 얻음' : '') + '" title="' + esc(it.name) + '"><span class="bag-art">' + iconImg(it, ' decoding="async"', heroId) + '</span><span class="inventory-name">' + esc(it.name) + '</span><span class="inventory-level"><b>+' + inst.enh + '</b>' + (it.summon ? ' ✦' : '') + '</span>' + mark + '</button></div>';
     }).join('') || '<p class="bag-empty">' + (all.length ? '조건에 맞는 장비가 없습니다. 필터를 바꿔 보세요.' : '가방이 비어 있습니다. 던전에서 전리품을 모으거나 제작 공방에서 만들어 보세요.') + '</p>') + '</div>';
   const rerender = (focus) => { renderBag(meta, heroId); if (focus) $('hero-bag')?.querySelector(focus)?.focus({ preventScroll: true }); };
   bag.querySelectorAll('[data-bag-slot]').forEach((button) => button.onclick = () => { meta.bagSlot = button.dataset.bagSlot; rerender('[data-bag-slot="' + meta.bagSlot + '"]'); });
   bag.querySelector('[data-bag-rarity]').onchange = (event) => { meta.bagRarity = event.target.value; rerender('[data-bag-rarity]'); };
   bag.querySelector('[data-bag-sort]').onchange = (event) => { meta.bagSort = event.target.value; rerender('[data-bag-sort]'); };
-  bag.querySelectorAll('[data-inv]').forEach((button) => button.onclick = () => meta.showItem(+button.dataset.inv, heroId));
+  bag.querySelectorAll('[data-inv]').forEach((button) => button.onclick = () => { clearFresh(+button.dataset.inv); meta.showItem(+button.dataset.inv, heroId); });
 }
 
 // ------------------------------------------------------------------ 비교 · 장착 · 강화 시트

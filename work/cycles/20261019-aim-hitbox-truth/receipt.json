@@ -1,0 +1,197 @@
+{
+  "schemaVersion": 1,
+  "cycle": "20261019-aim-hitbox-truth",
+  "cycleStatus": "shipped",
+  "objective": "스킬 조준 표시가 실제 판정 범위와 같도록, 표본 적 실측 도구로 다섯 직업(+수호 기사) 모든 범위 스킬을 재고 어긋난 표시를 고친다",
+  "chunk": {
+    "name": "조준 표시 = 판정 진실 검사",
+    "why": "사전 최종 감사(sonnet-5-5)가 D2d를 약함으로 판정(0건 통과 처리, 투사체 미측정)",
+    "notDoing": "데미지·쿨다운, 교관 강화 변형, 이동 적"
+  },
+  "subject": {
+    "kind": "mixed",
+    "identity": {
+      "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+      "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261019-aim-hitbox-truth\\integration",
+      "branch": "codex/20261019-aim-hitbox-truth",
+      "commit": "36eaa376b74da1f1f4a451a71d805dd10403c61b",
+      "tree": "7b8c567d7f85e10f4e0a02fbd8521e5fc37ba3c9"
+    },
+    "digest": "src:7d67cbdcec05a7f1c13dfe3360f885d0ccd82db0945bf9e9401411cecc66be73",
+    "observedAt": "2026-10-18T22:01:15.708Z"
+  },
+  "requirements": [
+    {
+      "id": "A1",
+      "claim": "측정 도구가 적 표본(표시 안쪽 경계 근처와 바깥 경계 근처)을 실제로 배치하고 시전 뒤 각 표본이 피해를 받았는지 기록한다. 범위 스킬에서 판정 0건이면 실패로 센다(범위 없는 자기 강화 스킬만 예외로 명시) / tools/aim-hitbox-truth-qa.mjs 보고서",
+      "status": "passed",
+      "surfaces": [
+        "tools/aim-hitbox-truth-qa.mjs 보고서"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A1\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A1\\report.json",
+          "sha256": "93a1482440f1bfb7ffcd6443300df416f31385d3a595479b1459f7714dea6434",
+          "command": "node tools/aim-hitbox-truth-qa.mjs http://127.0.0.1:5195 (42 skills, 597 samples)",
+          "observedAt": "2026-10-18T22:01:17.320Z",
+          "subjectDigest": "src:7d67cbdcec05a7f1c13dfe3360f885d0ccd82db0945bf9e9401411cecc66be73"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A2",
+      "claim": "다섯 직업의 모든 범위 스킬에서 표시 안쪽(경계에서 0.5m 안) 표본은 모두 맞고, 표시 바깥(경계에서 0.8m 밖) 표본은 하나도 맞지 않는다 / 같은 보고서, 직업별 스킬 표",
+      "status": "passed",
+      "surfaces": [
+        "같은 보고서, 직업별 스킬 표"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A2\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A2\\report.json",
+          "sha256": "93a1482440f1bfb7ffcd6443300df416f31385d3a595479b1459f7714dea6434",
+          "command": "node tools/aim-hitbox-truth-qa.mjs 표본 안 맞음/밖 안 맞음",
+          "observedAt": "2026-10-18T22:01:18.657Z",
+          "subjectDigest": "src:7d67cbdcec05a7f1c13dfe3360f885d0ccd82db0945bf9e9401411cecc66be73"
+        },
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A2\\overlay-ranger.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A2\\overlay-ranger.png",
+          "sha256": "356780ec466fd1d2a0da8b8e0de34220f99dc5c22489f07c033905a3e252678d",
+          "command": "aim-hitbox-truth overlay ranger",
+          "observedAt": "2026-10-18T22:01:19.979Z",
+          "subjectDigest": "src:7d67cbdcec05a7f1c13dfe3360f885d0ccd82db0945bf9e9401411cecc66be73"
+        },
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A2\\overlay-mage.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A2\\overlay-mage.png",
+          "sha256": "ee11adfbfc9c9ba06faaa1139fba01e82363a55a7e4990eb73739c0e40ece163",
+          "command": "aim-hitbox-truth overlay mage",
+          "observedAt": "2026-10-18T22:01:21.278Z",
+          "subjectDigest": "src:7d67cbdcec05a7f1c13dfe3360f885d0ccd82db0945bf9e9401411cecc66be73"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A3",
+      "claim": "A2에 어긋난 스킬은 표시(shapes.js) 또는 판정을 고쳐 맞추고, 고친 이유를 스킬별로 남긴다. 기존 조준 동작(드래그·탭·취소·키보드)은 그대로다 / 보고서 전후 비교, tools/skill-aim-qa.mjs 재실행, bun run check",
+      "status": "passed",
+      "surfaces": [
+        "보고서 전후 비교, tools/skill-aim-qa.mjs 재실행, bun run check"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A3\\fixes.md",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A3\\fixes.md",
+          "sha256": "cefb670ca7185f4baca4ffd99325ea95f8632ecb038c06042b2963ac41f45aff",
+          "command": "스킬별 수정 이유",
+          "observedAt": "2026-10-18T22:01:22.528Z",
+          "subjectDigest": "src:7d67cbdcec05a7f1c13dfe3360f885d0ccd82db0945bf9e9401411cecc66be73"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A3\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A3\\report.json",
+          "sha256": "a83f9bdcd45fc9382896b349519297d06797ade480e78a682b876301b98d39db",
+          "command": "node tools/skill-aim-qa.mjs 3 viewports",
+          "observedAt": "2026-10-18T22:01:23.761Z",
+          "subjectDigest": "src:7d67cbdcec05a7f1c13dfe3360f885d0ccd82db0945bf9e9401411cecc66be73"
+        },
+        {
+          "kind": "test",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A3\\check.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A3\\check.log",
+          "sha256": "341591c8101d8b51d413bcee6df507feb6775c536356894f2c523d4fbbcd3ed1",
+          "command": "bun run check (2369 pass, 0 fail)",
+          "observedAt": "2026-10-18T22:01:25.044Z",
+          "subjectDigest": "src:7d67cbdcec05a7f1c13dfe3360f885d0ccd82db0945bf9e9401411cecc66be73"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A4",
+      "claim": "정식 호스트에서 같은 도구가 A2를 통과한다 / version.json과 정식 호스트 보고서",
+      "status": "passed",
+      "surfaces": [
+        "version.json과 정식 호스트 보고서"
+      ],
+      "evidence": [
+        {
+          "kind": "readback",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A4\\live-version.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A4\\live-version.json",
+          "sha256": "9619afb538db08f86c9d7bfe040c6a50a2e862746050253f57e9d1610e1993e8",
+          "command": "GET https://blade.tllhouse.com/version.json",
+          "observedAt": "2026-10-18T22:06:14.558Z",
+          "subjectDigest": "src:7d67cbdcec05a7f1c13dfe3360f885d0ccd82db0945bf9e9401411cecc66be73"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A4\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A4\\report.json",
+          "sha256": "5b782422cc1c389045f403fffe687bdc4b5fe5bf3699a29bcd1f52fa6191bdab",
+          "command": "node tools/aim-hitbox-truth-qa.mjs https://blade.tllhouse.com live-qa",
+          "observedAt": "2026-10-18T22:06:15.906Z",
+          "subjectDigest": "src:7d67cbdcec05a7f1c13dfe3360f885d0ccd82db0945bf9e9401411cecc66be73"
+        },
+        {
+          "kind": "deploy",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A4\\deploy.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-hitbox-truth\\evidence\\A4\\deploy.log",
+          "sha256": "3c1c96589939493277c6cc68032d5b26a23bf1e8477334ab79b5938fdf38bdc1",
+          "command": "node tools/deploy.mjs --auth=wrangler",
+          "observedAt": "2026-10-18T22:06:17.286Z",
+          "subjectDigest": "src:7d67cbdcec05a7f1c13dfe3360f885d0ccd82db0945bf9e9401411cecc66be73"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    }
+  ],
+  "freshReview": {
+    "required": false,
+    "status": "not_required"
+  },
+  "remaining": [],
+  "verdict": "passed",
+  "acceptanceChanges": [],
+  "weakened": [],
+  "deploy": {
+    "target": "https://blade.tllhouse.com (worker blade-surge)",
+    "version": "7ff53c3e-093a-4fa2-893d-68cb3fa49ee2",
+    "sha": "ac0fdcb79eff920046f5ce4bab5a0cacb9512d61",
+    "readback": "version.json sha=ac0fdcb dirty=false; 정식 호스트 aim-hitbox-truth 42스킬 597표본 실패 0",
+    "rollback": "deployment fe9a16c8-3481-4db7-997e-f701abdc5439 / version 006d7904-f3e9-47ae-b643-ef11a0223761, tools/deploy.mjs 절차",
+    "subjectDigest": "src:7d67cbdcec05a7f1c13dfe3360f885d0ccd82db0945bf9e9401411cecc66be73"
+  },
+  "lanes": [
+    {
+      "lane": "integration",
+      "model": "anthropic/claude-sonnet-5-5",
+      "agentId": "01a150ca-0d3f-7891-82fb-5043b3d7e22d",
+      "branch": "codex/20261019-aim-hitbox-truth"
+    }
+  ],
+  "harnessChanges": [],
+  "frictions": [
+    "구현 에이전트가 약 55분 걸림(도구 디버깅 3회). 지휘 채팅 wait가 15분 상한에서 여러 번 끊겨 재대기",
+    "work/가 gitignore라 측정 보고서가 PR에 안 들어감 → 사이클 증거 폴더에 등록",
+    "gh CLI 로그아웃 상태 지속 → GitHub 커넥터로 PR·병합"
+  ],
+  "standingGates": [],
+  "next": "전투 자세 감사(D3b), 에셋 라이브러리 묶음·다른 프로젝트 가져오기(D4a/D4b)",
+  "quota": null,
+  "updatedAt": "2026-10-18T22:06:23.051Z"
+}

@@ -1,0 +1,183 @@
+{
+  "schemaVersion": 1,
+  "cycle": "20261019-asset-foundry-finish",
+  "cycleStatus": "shipped",
+  "objective": "미보관 원본 복구 시도, 도구를 라이브러리 안으로 넣고 문서만으로 재현되는 USAGE, 새 프로젝트 가져오기 시험, Drive 원격 확인",
+  "chunk": {
+    "name": "에셋 라이브러리 마감",
+    "why": "최종 감사(sol)가 D4a·D4b 약함: 미보관 원본 사유로만 통과, 도구 위치 안내 없음",
+    "notDoing": "새 Tripo 생성(크레딧)"
+  },
+  "subject": {
+    "kind": "mixed",
+    "identity": {
+      "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+      "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\deploy-8a7027f",
+      "branch": "",
+      "commit": "8a7027fb84a1a2d58ef0036a1610943361eb7e9f",
+      "tree": "4b5ce8967841d00ddf0713bdfaba38d900e478fd",
+      "artifact": {
+        "path": "G:\\내 드라이브\\10_스톡라이브러리\\04_그래픽3D템플릿\\TLL-Asset-Foundry\\library-index.json",
+        "sha256": "73efbc237c5908fc47935fd2923cd3826c5361dd00f4ac2b8c0c656fae6214cf"
+      }
+    },
+    "digest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f",
+    "observedAt": "2026-10-19T01:45:07.571Z"
+  },
+  "requirements": [
+    {
+      "id": "A1",
+      "claim": "미보관 원본으로 적힌 항목(v2 적, t2/t3 영웅 등 14개)을 PC 전체(다운로드, 게임 저장소 work/, 문서, 다른 프로젝트 폴더, Mixamo·Tripo 다운로드 흔적)에서 이름·해시로 찾아, 찾은 것은 archive_asset.py로 raw에 보관하고 bundle 칸을 파일 연결로 바꾼다. 못 찾은 것은 bundle에 \"원본 복구 불가\"와 시도한 위치를 적는다(사유 기재와 구분) / foundry-audit 보고",
+      "status": "passed",
+      "surfaces": [
+        "foundry-audit 보고서의 복구 수·복구 불가 수와 목록"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A1\\foundry-audit-final.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A1\\foundry-audit-final.json",
+          "sha256": "29bf4530c0ef1769137a4241539c5df9303ddfed6df856cba8cd5d2c5628b00a",
+          "command": "node tools/bundle-audit.mjs 68/68, 복구 불가 14건 표시, 문제 0",
+          "observedAt": "2026-10-19T01:45:09.312Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A1\\disk-scan.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A1\\disk-scan.json",
+          "sha256": "9fa97512a5685b2a47363b3e052656f2f7cf91cc689480869d92255dbde774fa",
+          "command": "디스크 전체 12979개 이름·sha256 대조",
+          "observedAt": "2026-10-19T01:45:11.077Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A2",
+      "claim": "catalog.mjs·bundle-audit.mjs·bundle-bind.mjs·archive_asset.py와 시험 파일이 라이브러리 안 tools/ 폴더에 있고(원본 스킬 폴더 복사본, 해시 일치), USAGE.md의 모든 명령이 라이브러리 루트 기준 상대 경로 tools/...로 적혀 있으며 의존성·Node 버전 안내가 있다 / USAGE.md와 tools/ 폴더 목록",
+      "status": "passed",
+      "surfaces": [
+        "USAGE.md와 tools/ 폴더 목록"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A2\\SHA256SUMS.txt",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A2\\SHA256SUMS.txt",
+          "sha256": "850d7c67d5ec177babb1e2154d499ef6a1445bed0553e160861760901d0b270e",
+          "command": "라이브러리 tools/ 복사본 해시",
+          "observedAt": "2026-10-19T01:45:12.761Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A2\\USAGE.md",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A2\\USAGE.md",
+          "sha256": "4aef662114a8e1fc5044de019a13e6e45d472fe23b9fa0724aa2d40ec3c64e2c",
+          "command": "node tools/... 상대 경로 USAGE",
+          "observedAt": "2026-10-19T01:45:14.259Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A3",
+      "claim": "저장소 밖 새 빈 프로젝트를 새로 만들어(이전 시험 폴더를 지우지 말고 새 폴더) USAGE.md만 보고 라이브러리 루트에서 tools/catalog.mjs find로 에셋을 골라 가져와 three.js에서 리그 캐릭터가 클립으로 움직이는 캡처를 남긴다. 문서에 없는 절대 경로를 쓰지 않는다 / 새 가져오기 시험 기록(명령·출력·캡처)",
+      "status": "passed",
+      "surfaces": [
+        "새 가져오기 시험 기록(명령·출력·캡처)"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A3\\import-test2.md",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A3\\import-test2.md",
+          "sha256": "42c0230207502d70d267e7564da1053936437b7cb4ce4cce3e53794bc85dc836",
+          "command": "새 프로젝트 가져오기 시험 기록",
+          "observedAt": "2026-10-19T01:45:15.716Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        },
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A3\\import-test2-t1.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A3\\import-test2-t1.png",
+          "sha256": "8f3c611729934919133dc021e62f90120ac2dafdfc3b533bfcfd8a9dc9dae5eb",
+          "command": "bs_bone_knight run 클립 캡처",
+          "observedAt": "2026-10-19T01:45:17.161Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A3\\import-test2-run.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A3\\import-test2-run.json",
+          "sha256": "ffd4505c04424f9ad82bc0d67ada6c72276f853b751249dfb0d9913106e32803",
+          "command": "손·발 월드 좌표 프레임별 변화",
+          "observedAt": "2026-10-19T01:45:18.487Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A4",
+      "claim": "Google Drive 원격 동기화: 라이브러리 index와 tools/ 파일이 원격에 올라갔는지 Drive 커넥터로 존재·크기를 확인하고 결과를 기록한다(확인 못 하면 못 한 이유) / Drive 확인 기록",
+      "status": "passed",
+      "surfaces": [
+        "Drive 확인 기록"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A4\\drive-check.md",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-finish\\evidence\\A4\\drive-check.md",
+          "sha256": "04245ca00b60848721f711a8e44fd134ad942e36f6f00b97cd2bd950efa54a9a",
+          "command": "Drive 커넥터 크기 대조",
+          "observedAt": "2026-10-19T01:45:19.909Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    }
+  ],
+  "freshReview": {
+    "required": false,
+    "status": "not_required"
+  },
+  "remaining": [],
+  "verdict": "passed",
+  "acceptanceChanges": [],
+  "weakened": [],
+  "deploy": {
+    "target": "G:/내 드라이브/10_스톡라이브러리/04_그래픽3D템플릿/TLL-Asset-Foundry (공유 3D 에셋 라이브러리). 게임 호스트 배포 없음",
+    "version": "library-index.json + tools/(catalog.mjs 등 SHA256SUMS 일치) + USAGE.md + RAW_RECOVERY.*",
+    "sha": "8a7027fb84a1a2d58ef0036a1610943361eb7e9f",
+    "readback": "bundle-audit 68/68 문제 0, 새 프로젝트 가져오기 시험 캡처, Drive 커넥터 크기 일치(해시는 커넥터 미제공)",
+    "rollback": "library-index.backup-* 타임스탬프 백업과 cycles/20261019-asset-foundry-finish/out/*.before-*",
+    "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+  },
+  "lanes": [
+    {
+      "lane": "asset",
+      "model": "anthropic/claude-sonnet-5-5",
+      "agentId": "01a1517f-9850-7371-9ca9-0228047cb461",
+      "branch": "(저장소 밖)"
+    }
+  ],
+  "harnessChanges": [],
+  "frictions": [
+    "Tripo 원본 14개(v2 4 + t2/t3 10)는 디스크 전체·zip·휴지통까지 뒤져도 없음 → 복구 불가로 표시(사유 기재와 구분). 작업 ID로 Tripo Studio에서 다시 받는 것은 로그인 브라우저가 필요해 미시도",
+    "Drive 커넥터는 sha256을 주지 않아 크기·수정 시각만 대조",
+    "라이브러리 tools/는 스킬 scripts/의 복사본이라 한쪽만 고치면 어긋남(SHA256SUMS로 확인)"
+  ],
+  "standingGates": [],
+  "next": "Tripo 원본 14개 재다운로드(로그인 필요)",
+  "quota": null,
+  "updatedAt": "2026-10-19T01:46:02.283Z"
+}

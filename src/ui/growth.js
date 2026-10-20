@@ -1,6 +1,7 @@
 import { growthOptions, growthSummary } from '../game/growth-options.js';
 import { uiArt } from './illustrated.js';
 import { SLOT_NAME } from '../data/items.js';
+import { nextGuide, levelStatusLabel } from '../data/region-guide.js';
 
 const number = n => n.toLocaleString('ko-KR');
 const element = (tag, text, className) => {
@@ -54,6 +55,26 @@ function renderSummary(container, app, result) {
   container.append(box);
 }
 
+/** 승리 결과: 다음 출격 스테이지·새 지역·권장 Lv 대비 내 레벨·대표 보상. 안내만 하며 btn-result-next 동작은 바꾸지 않는다. */
+export function renderNextGuide(container, app, result) {
+  if (!result?.win || app.battle.stage?.expedition) return;
+  // 이번 사냥 성장 요약과 같은 레벨 기준(재화 변경으로 다시 그려도 사냥 시점 기록을 유지한다).
+  const eco = app.eco, level = summaries.get(result)?.level || eco.hero(app.battle.heroId)?.level || 1;
+  const guide = nextGuide(eco.s.progress, level);
+  const box = element('div', '', 'next-guide'); box.dataset.status = guide.status; box.dataset.newRegion = String(guide.newRegion);
+  box.append(element('h2', '다음 출격', 'next-guide-title'));
+  if (guide.allCleared) { box.append(element('p', '모든 지역을 정화했습니다. 숙련·악몽 난이도로 다시 도전해 보세요.', 'next-guide-done')); container.append(box); return; }
+  if (guide.newRegion) box.append(element('strong', '새 지역 개방: ' + guide.chapterName, 'next-guide-region'));
+  box.append(element('p', guide.stage.code + ' · ' + guide.stage.title, 'next-guide-stage'));
+  const state = levelStatusLabel(level, guide.recommendedLevel);
+  const row = element('p', '', 'next-guide-level'); row.dataset.tone = state.tone;
+  row.append(element('span', '권장 Lv.' + guide.recommendedLevel + ' · 내 Lv.' + level + ' · ', 'next-guide-lv'), element('b', state.text), element('span', ' (' + state.detail + ')', 'next-guide-detail'));
+  box.append(row);
+  const drops = guide.representativeDrops;
+  box.append(element('p', '대표 보상 · ' + drops.materials.map(m => m.name + ' ×' + m.n).join(' · ') + ' · 보스 에픽 이상 ' + Math.round(drops.epicChance * 100) + '%', 'next-guide-drops'));
+  container.append(box);
+}
+
 /** Inline campaign result actions; opening a destination never upgrades or purchases. */
 export function renderGrowthPreparation(container, app, result) {
   container.replaceChildren();
@@ -66,6 +87,7 @@ export function renderGrowthPreparation(container, app, result) {
     return;
   }
   renderSummary(container, app, result);
+  renderNextGuide(container, app, result);
   container.append(element('h2', '다음 출격 준비', 'growth-options-title'));
   const options = growthOptions(app.eco.s);
   container.append(element('p', options.length
