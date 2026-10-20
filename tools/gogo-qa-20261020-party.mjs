@@ -160,7 +160,7 @@ async function round(browser, guestHero, index) {
     // 게스트의 기본 공격(attack)은 호스트 RemoteInput 이 큐에 넣지 않아 호스트에서 실행되지 않으므로(별도 보고) 스킬로 검증한다.
     await guest.page.evaluate(() => { let n = 0; window.__qaPress = setInterval(() => { window.app.input.press('skill' + (n++ % 4)); }, 450); });
     const deadline = Date.now() + COMBAT_MS;
-    while (Date.now() < deadline && ![hostHero, guestHero].every((h) => host.hitFrames.concat(guest.hitFrames).filter((f) => f.hero === h).length >= 0 && guest.hitFrames.filter((f) => f.hero === h).length >= MIN_HITS)) await sleep(500);
+    while (Date.now() < deadline && ![hostHero, guestHero].every((h) => guest.hitFrames.filter((f) => f.hero === h).length >= MIN_HITS)) await sleep(500);
     rec.remoteInputs = await host.page.evaluate(() => [...window.app.party.inputs.entries()].map(([id, i]) => { const p = window.app.party.players.get(id);
       return { hero: p.def.id, local: p === window.app.battle.player, attackHeld: i.attackHeld, age: Math.round(performance.now() - i.last), alive: p.alive, state: p.state, mp: Math.round(p.mp ?? 0), stun: p.stun, cast: p.casting ?? null }; }));
     rec.guestState = await guest.page.evaluate(() => ({ hidden: document.hidden, paused: window.app.battle.paused, snapPaused: window.app.party.snapshot?.paused, held: window.app.input.attackHeld, mode: window.app.mode }));
