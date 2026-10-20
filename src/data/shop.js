@@ -21,7 +21,7 @@ export const SKUS = [
   { id: 'transcend_pack', tab: 'pack', kind: 'cash', name: 'SSSR 초월 성장 패키지', price: 33000, priceLabel: '₩33,000', icon: '/img/icon_stone_3.webp', badge: '결제 준비 중',
     desc: '결제 준비 중 · 초월석 30 · SSR 확정권 3 · 소환권 60 (지급 없음)', rewards: { transcendStones: 30, ssrTicket: 3, tickets: 60 } },
   { id: 'vip_pass', tab: 'pack', kind: 'cash', name: 'VIP 멤버십 (30일)', price: 19000, priceLabel: '₩19,000', icon: '/img/icon_vip.webp',
-    desc: '30일 골드 획득 +30% · 보석 1,000 · 소환권 20', rewards: { vipDays: 30, gems: 1000, tickets: 20 } },
+    desc: '30일 에너지 최대치 +50 · 골드 획득 +30% · 보석 1,000 · 소환권 20', rewards: { vipDays: 30, gems: 1000, tickets: 20 } },
 
   // ---- 보석 ----
   { id: 'gem1', tab: 'gem', kind: 'cash', name: '보석 300',   price: 3900,   priceLabel: '₩3,900',   icon: '/img/icon_gem.webp', gems: 300,   bonus: 1500 },

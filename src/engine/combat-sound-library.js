@@ -7,6 +7,14 @@ export const HERO_IDS = Object.freeze(['knight', 'barbarian', 'mage', 'rogue', '
 // 무기 → 영웅. 다섯 영웅의 무기가 서로 달라 호출부가 영웅 id를 넘기지 않아도 영웅별 소리를 고른다.
 export const HERO_BY_WEAPON = Object.freeze({ '1h': 'knight', '2h': 'barbarian', staff: 'mage', dual: 'rogue', bow: 'ranger' });
 export const SWING_VARIANTS = 3;
+/** 영웅 → 무기(HERO_BY_WEAPON 의 역). 파티 게스트가 원격 타격의 공격자 영웅으로 무기 레이어를 고른다. */
+export const WEAPON_BY_HERO = Object.freeze(Object.fromEntries(Object.entries(HERO_BY_WEAPON).map(([weapon, hero]) => [hero, weapon])));
+/** 영웅의 기본 공격 타격 종류(전투 중 로컬 타격이 쓰는 kind). 활은 무기 규칙이 투사체 접촉음으로 바꾼다. */
+const PARTY_HIT_KIND = Object.freeze({ knight: 'slash', barbarian: 'slash', mage: 'magic', rogue: 'slash', ranger: 'slash' });
+/** 원격 타격 재생 인자 { kind, weapon }. 알 수 없는 영웅이면 null(호출 쪽이 기존 slash 로 내려간다). */
+export function partyHitProfile(heroId) {
+  return Object.hasOwn(WEAPON_BY_HERO, heroId) ? { kind: PARTY_HIT_KIND[heroId], weapon: WEAPON_BY_HERO[heroId] } : null;
+}
 export const HERO_HIT_VARIANTS = 2;
 export const HERO_SKILLS = Object.freeze({
   knight: Object.freeze(['holy_slash', 'shield_bash', 'judgment', 'dragon_slash', 'chain_bind', 'sanctuary', 'sunbreaker', 'heavenfall']),

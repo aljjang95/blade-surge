@@ -34,7 +34,8 @@ export class Battle extends SoloBattle {
     const hp = enemy.hp;
     RpgBattle.prototype.damageEnemy.call(this, enemy, damage, options);
     const dealt = Math.max(0, hp - enemy.hp);
-    if (dealt) this.app.party.hitEvent(enemy, dealt);
+    // 피해를 준 파티원(투사체·소환 포함 source)을 RpgBattle.damageEnemy 와 같은 규칙으로 정해 영웅을 싣는다.
+    if (dealt) this.app.party.hitEvent(enemy, dealt, options.source?.stats ? options.source : this.player);
   }
   onPlayerDeath(player = this.player) {
     if (!this.stage?.party) return super.onPlayerDeath();

@@ -50,7 +50,7 @@ export function lootTable(chapter = 1, rank = 'normal', difficulty = 'story') {
 }
 export function representativeDrops(chapter) {
   const table = lootTable(chapter, 'boss');
-  return { material: table.material.id, stoneTier: table.stones3 ? 3 : table.stones2 ? 2 : 1,
+  return { material: table.material.id, materials: table.materials.map(m => m.id), stoneTier: table.stones3 ? 3 : table.stones2 ? 2 : 1,
     gearWeights: table.gearWeights, heroShards: true, transcendStones: true };
 }
 // 권장 레벨과 10 이상 차이나도 50~150% 범위다. 낮은 장 무한 파밍과 추격 성장 모두 제한한다.
