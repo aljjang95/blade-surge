@@ -392,7 +392,7 @@ async function A2view(browser, rec, viewport) {
     const verdict = cards[pickIdx].verdict, sign = Math.sign(postEq.power - preEq.power);
     rec.check(tag + ' 장착: ' + pd.slot + ' 슬롯이 해당 장비로 바뀌고 전투력 증감 부호가 카드 판정(' + verdict + ')과 같다', postEq.equip[pd.slot] === pick.uid && (verdict === 'better' ? sign > 0 : verdict === 'worse' ? sign < 0 : true), { verdict, preEq: { power: preEq.power, slot: preEq.equip[pd.slot] }, postEq: { power: postEq.power, slot: postEq.equip[pd.slot] }, wasEquipped });
     // 영웅 가방 NEW: 연 장비는 꺼지고 이번에 얻은 나머지는 켜진다
-    const lootSet = lootOrder;
+    const lootSet = afterBattle.inv.filter((x) => !before.inv.some((b) => b.uid === x.uid)).map((x) => x.uid); // 전투 중 얻은 장비 전부(결과 카드 밖 직접 획득 포함)
     const bagNew = await s.page.evaluate(({ lootSet, openUid }) => { const set = new Set(lootSet); const cells = [...document.querySelectorAll('#hero-bag [data-inv]')]; return { items: cells.length, news: cells.filter((c) => c.querySelector('.bag-new')).length, mismatch: cells.filter((c) => { const uid = +c.dataset.inv, want = set.has(uid) && uid !== openUid; return !!c.querySelector('.bag-new') !== want; }).map((c) => c.dataset.inv).slice(0, 5) }; }, { lootSet, openUid: pick.uid });
     rec.obs('bagNew-' + tag, bagNew); await rec.shot(s, 'hero-bag-new');
     rec.check(tag + ' 가방: 이번에 얻은 장비(연 것 제외)에만 NEW(' + bagNew.news + '개), 연 장비는 꺼졌다', bagNew.news > 0 && bagNew.mismatch.length === 0, bagNew);
@@ -448,7 +448,6 @@ async function A2inventory(browser, rec) {
     const ov = await overlapReport(s.page, [['.mpl-new', '.mpl-enh'], ['.mpl-new', '.mpl-worn'], ['.mpl-new', '.mpl-qty']]);
     rec.check('1280 인벤토리: NEW 가 강화·착용 표시와 겹치지 않는다', ov.found.length === 0, ov.found.slice(0, 3));
     const first = s.page.locator('.mpl-cell.has-gear:has(.mpl-new)').first(); await first.click(); rec.did('인벤토리 NEW 칸 클릭(마우스)'); await s.page.waitForTimeout(700);
-    await s.page.locator('#modal.show #i-close').tap().catch(() => {}); await s.page.waitForTimeout(500);
     rec.check('1280 NEW 칸을 열면 NEW 가 하나 줄어든다', await s.page.evaluate(() => document.querySelectorAll('.mpl-new').length) === loot.length - 1, await s.page.evaluate(() => document.querySelectorAll('.mpl-new').length));
   } catch (e) { await errShot(s); throw e; } finally { await s.close(); }
 }

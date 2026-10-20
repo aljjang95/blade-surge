@@ -170,7 +170,7 @@ export class MapleInventory {
       this.selected = cell.key;
       if (cell.type === 'gear') {
         // 기존 아이템 시트(착용 · 강화 · 판매)를 그대로 연다. 장착 중이면 그 영웅 기준으로 비교한다.
-        this.sheetKey = cell.key; clearFresh(cell.uid);
+        this.sheetKey = cell.key; clearFresh(cell.uid); button.querySelector('.mpl-new')?.remove();
         this.meta.showItem(cell.uid, cell.owner || this.eco.s.selected);
       } else {
         win.body.querySelectorAll('.mpl-cell.is-selected').forEach((node) => node.classList.remove('is-selected'));
