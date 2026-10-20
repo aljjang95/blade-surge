@@ -185,6 +185,22 @@ test('준비 구간 setWarm: 두 메시가 보이는 순회에 잡히고 끝나�
   expect(v.shards.mesh.visible).toBe(true); expect(v.shards.mesh.count).toBe(v.shards.high);
 });
 
+test('setWarm 겹침: 새 준비가 이전 준비를 대체해도 마지막 준비가 끝날 때까지 보이고, update 도 숨기지 않는다', () => {
+  const scene = new THREE.Scene(), v = new CombatVfx(scene);
+  v.setWarm(true); v.setWarm(true);   // 두 번째 준비 시작
+  v.setWarm(false);                  // 첫 준비가 먼저 끝남
+  v.update(1 / 60);
+  expect(v.waves.mesh.visible).toBe(true); expect(v.shards.mesh.visible).toBe(true);
+  v.setWarm(false);
+  expect(v.waves.mesh.visible).toBe(false); expect(v.waves.mesh.count).toBe(0);
+  v.setWarm(false); expect(v.warm).toBe(0);   // 넘쳐 내려가지 않는다
+});
+
+test('충격파 재질은 양면을 한 번에 그린다(forceSinglePass)', () => {
+  const v = new CombatVfx(new THREE.Scene());
+  expect((v.waves.mesh.material as THREE.Material).forceSinglePass).toBe(true);
+});
+
 test('FX.update: 전투 일시정지 동안에는 전투 VFX 시계가 흐르지 않고 재개하면 이어진다', async () => {
   const { FX } = await import('../src/engine/fx.js');
   const pool = { update() {} };

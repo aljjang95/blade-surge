@@ -182,7 +182,7 @@ export class CombatVfx {
     const waveMat = new THREE.ShaderMaterial({
       uniforms: { uTime: this.uTime },
       vertexShader: WAVE_VERT, fragmentShader: WAVE_FRAG,
-      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, forceSinglePass: true,   // 양면을 한 번에(인스턴스 1드로우)
     });
     // 영웅 주변에서는 기존 가산 이펙트와 같은 규칙으로 옅어진다(영웅 윤곽을 덮지 않는다).
     focus?.bind?.(waveMat);
@@ -190,11 +190,16 @@ export class CombatVfx {
       { aCenter: 3, aParams: 4, aShape: 4, aColor: 3, aLife: 2 }, 9);
   }
   setQuality(q) { this.lite = q === 'low'; }
-  /** FX.prepare 동안만: 첫 처치 전에도 두 셰이더가 실제 전투 타깃으로 컴파일되도록 메시를 count 1 로 보이게 한다(칸이 비어 아무것도 그려지지 않는다). */
+  /** FX.prepare 동안만: 첫 처치 전에도 두 셰이더가 실제 전투 타깃으로 컴파일되도록 메시를 count 1 로 보이게 한다(칸이 비어 아무것도 그려지지 않는다).
+   * 준비가 겹쳐(새 준비가 이전 준비를 대체) 돌 수 있어 참조 횟수로 센다: 마지막 준비가 끝날 때만 원래 상태로 돌린다. */
   setWarm(on) {
-    for (const ring of [this.shards, this.waves]) {
-      if (on) { ring.mesh.visible = true; ring.mesh.count = Math.max(1, ring.high); } else ring.sync(this.clock);
-    }
+    this.warm = Math.max(0, (this.warm || 0) + (on ? 1 : -1));
+    for (const ring of [this.shards, this.waves]) ring.sync(this.clock);
+    this._applyWarm();
+  }
+  _applyWarm() {
+    if (!(this.warm > 0)) return;
+    for (const ring of [this.shards, this.waves]) { ring.mesh.visible = true; ring.mesh.count = Math.max(1, ring.high); }
   }
   /** dt 는 sim 시간(초). 히트스톱 중 0 이면 모든 파편·파면이 그대로 멈춘다. */
   update(dt) {
@@ -205,6 +210,7 @@ export class CombatVfx {
     this.uTime.value = this.clock;
     this.shards.flush(); this.waves.flush();
     this.shards.sync(this.clock); this.waves.sync(this.clock);
+    this._applyWarm();
   }
 
   /** 적 한 마리의 파편 폭발. 낸 파편 수를 돌려준다. enemy: pos, kb(넉백 벡터), mats, def.scale, isBoss/isElite. */
