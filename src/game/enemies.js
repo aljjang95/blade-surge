@@ -95,6 +95,8 @@ export class Enemy extends Actor {
     if (def.ghostly) { for (const m of this.mats) { m.transparent = true; m.opacity = 0.8; m.depthWrite = false; } this.tintEmissive = new THREE.Color(0.18, 0.34, 0.5); }
     this.state = 'spawn'; this.stateT = 0; this.spawning = true; this.telegraph = 0;
     this.atkCd = 0.6 + Math.random() * 1.2; this.hitAt = 0.5; this.attackDur = def.atkTime; this.attackDone = false;
+    /** 종락 심층 합창 장막(BellfallDeepCounter)이 붙는 자리. 없으면 피해가 그대로다. */
+    this.damageVeil = null;
     this.stagger = 0; this.poison = 0; this.poisonT = 0; this.phase = 0; this.enraged = false; this.special = null;
     this.gatherT = 0; this.gatherBlockT = 0; this.gatherX = 0; this.gatherZ = 0; this.gatherSpeed = 0; this.gatherWindupOwner = null;
     this.patternTurn = 0;
@@ -266,7 +268,7 @@ export class Enemy extends Actor {
     ring.scale.setScalar(burrowing ? BURROW.radius / .9 * (1 + pulse * .02) : 1.02 + (1 - remaining) * .22 + pulse * .06);
     ring.material.opacity = .35 + (1 - remaining) * .42 + pulse * .12;
   }
-  hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false } = {}) {
+  hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false, attacker = null } = {}) {
     if (!this.alive || this.spawning) return 0;
     // 맞은 무리와 시야가 닿는 가까운 경계 무리는 피한 공격에도 깨어난다.
     packNoise(this.game, this);
@@ -289,6 +291,9 @@ export class Enemy extends Actor {
     }
     const armor = this.def.armor || 0; dmg *= 1 - armor;
     if (this.burrow) dmg *= this.burrow.damageMul();
+    // 보스 피해 배율(종락 합창 장막·잿불금고 후방 노출). 후방 노출은 공격자(Battle.damageEnemy 의 영웅)의 위치로 등 뒤·정면을 가른다.
+    // 광역기·세트 효과의 dirx·dirz 는 폭발 중심 → 적 방향이라 영웅 위치와 다를 수 있다(BUNDLE-14 리뷰 P1).
+    if (this.damageVeil) dmg = this.damageVeil.filter(dmg, attacker);
     this.hp -= dmg;
     // 강타·띄우기는 몰이를 끝내고 기존 저항·넉백을 그대로 적용한다.
     if (kb >= 6 || up) this.gatherT = 0;
@@ -296,14 +301,16 @@ export class Enemy extends Actor {
     this.receiveImpact(dirx, dirz, Math.min(1, .35 + kb * .08));
     const resist = this.isBoss ? 0.25 : this.isElite ? 0.5 : 1;
     this.knockback(dirx, dirz, kb * resist * (this.def.armor ? 0.6 : 1));
-    if (stun > 0) this.stun = Math.max(this.stun, stun * (this.isBoss ? 0.4 : 1));
+    // 종락 심층 합창 장막이 삼중 조종을 지키는 동안에는 기절·경직으로 조종을 끊지 않는다(마지막 울림은 반드시 온다).
+    const guarded = this.damageVeil ? this.damageVeil.guards(this) : false;
+    if (stun > 0 && !guarded) this.stun = Math.max(this.stun, stun * (this.isBoss ? 0.4 : 1));
     // 예고 중 기절은 피격 순간 바로 솟구치기를 끊는다(한 프레임보다 짧은 기절도 놓치지 않는다).
     if (stun > 0) this.burrow?.interrupt();
     if (this.stun > 0) this.mobRole?.cancel();
     if (slow > 0) { this.slow = 0.5; this.slowT = slow; }
     if (poison) { this.poison = 4; }
     const staggerOK = (!this.isBoss || crit || kb >= 6) && (!this.isElite || crit || kb >= 4); const warrior = this.def.armor && !crit && kb < 4;
-    if (staggerOK && !warrior && this.state !== 'dead') {
+    if (staggerOK && !warrior && !guarded && this.state !== 'dead') {
       // 일반 몹은 수동 기본 공격의 접촉에서 공격을 끊는다. 보스/엘리트의
       // 슈퍼아머는 유지해 강적과 잡몹의 타격 언어를 구분한다.
       if (this.state !== 'attack' || kb >= 4 || (hitReact && !this.isBoss && !this.isElite)) { this.signatures?.clear(); this.mobRole?.clear(); this.state = 'hurt'; this.stateT = 0; this.stagger = 0.22 + Math.min(0.4, kb * 0.03); this.play(this.A(kb >= 4 || crit || finisher ? 'hitHeavy' : 'hit'), { once: true, fade: 0.04, speed: 1.8 }); this.telegraph = 0; this.attackDone = false; }
@@ -354,6 +361,8 @@ export class Enemy extends Actor {
     this.mobRole?.beforeStep(dt);
     const gathering = prepareEnemyGather(this, dt);
     super.update(dt);
+    // 스킬·세트 효과가 기절을 직접 써도 장막이 지키는 삼중 조종은 끊기지 않는다(Enemy.hurt 와 같은 규칙).
+    if (this.stun > 0 && this.damageVeil?.guards(this)) this.stun = 0;
     this.gatherBlockT = Math.max(0, (this.gatherBlockT || 0) - dt);
     if (gathering) this.vel.set(0, 0, 0);
     if(this.signatures){
@@ -362,7 +371,7 @@ export class Enemy extends Actor {
     }
     if (this.marker) { if (this.alive) { this.marker.rotation.z += dt * 1.2; this.marker.material.opacity = 0.5 + Math.sin(this.game.elapsed * 3) * 0.18; } else this.marker.visible = false; }
     this.updateSkillTelegraph();
-    if (this.poison > 0) { this.poison -= dt; this.poisonT -= dt; if (this.poisonT <= 0) { this.poisonT = 0.5; if (this.alive) { const d = this.maxHp * 0.02 + 8; this.hp -= d; this.game.fx.damage(this.pos, d, { kind: 'skill' }); this.game.fx.embers(this.pos, 0x80ff90, { n: 3, radius: 0.5, life: 0.6 }); if (this.hp <= 0) { this.hp = 0; this.kill(0, 0, 2); } } } this.tintEmissive = new THREE.Color(0, 0.25, 0.05); }
+    if (this.poison > 0) { this.poison -= dt; this.poisonT -= dt; if (this.poisonT <= 0) { this.poisonT = 0.5; if (this.alive) { const raw = this.maxHp * 0.02 + 8, d = this.damageVeil ? this.damageVeil.filter(raw) : raw; this.hp -= d; this.game.fx.damage(this.pos, d, { kind: 'skill' }); this.game.fx.embers(this.pos, 0x80ff90, { n: 3, radius: 0.5, life: 0.6 }); if (this.hp <= 0) { this.hp = 0; this.kill(0, 0, 2); } } } this.tintEmissive = new THREE.Color(0, 0.25, 0.05); }
     else if (this.tintEmissive && !this.enraged && !this.isElite && !(this._crystal > 0)) this.tintEmissive = null;   // 결정화 틴트는 세트 쪽이 되돌린다
     if (!this.alive) return;
     this.stateT += dt; const p = this.player; if (!p) return;
@@ -419,7 +428,12 @@ export class Enemy extends Actor {
     const steer = packSteer(this, p, separation, canCommit);
     const sx = steer.x, sz = steer.z;
 
-    if (this.state === 'chase') {
+    if (this.state === 'chase' && this.damageVeil?.pins?.(this)) {
+      // 보스 묶임(잿불금고 심층 후방 노출, 재벼림 심층 거수 사슬): 제자리에 서고 방향을 바꾸지 않는다. 공격 대기는 그대로 흐르고,
+      // 새 공격을 막아야 하는 동안은 컨트롤러가 대기를 붙잡는다. 거수 사슬 기둥이 열린 동안은 영웅이 사거리 밖일 때만 묶는다.
+      this.atkCd -= dt; this.vel.set(0, 0, 0);
+      if (this.actionName !== this.rig.idleCombat && this.actionName !== this.rig.idle) this.play(this.A('idleCombat'), { fade: 0.15 });
+    } else if (this.state === 'chase') {
       // 무리 경계·발각·경로 추격. 발각 전에는 앵커에서 경계하거나 추적을 잃은 뒤 자기 방으로 돌아간다.
       if (!updatePursuit(this, this.game, p, d, dt, _route)) {
         if (idlePursuit(this, this.game, sx, sz, _route)) {

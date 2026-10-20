@@ -29,7 +29,8 @@ body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,
 .experience-v2.oath-visual #hud.battle-readability #objective{grid-column:1;grid-row:1;position:static;max-width:none;display:grid;gap:4px;white-space:normal;text-align:left;padding:8px 9px;border:1px solid #b6b89e2e;border-left:2px solid #b39156;background:#10251fdc;border-radius:3px 7px 7px 3px;line-height:1.4;min-width:0;font-size:11px;color:#d2dbc8}
 .battle-objective-title{font-size:12px;color:#f0e6c8;font-weight:700}
 .battle-objective-title>span{font-size:10px;color:#a6f0d4;white-space:nowrap}
-.battle-objective-action{color:#c9d6c5;font-weight:500;overflow-wrap:anywhere}
+/* 한글은 기본값이면 음절 단위로 끊겨 '대/기'처럼 갈라진다. 공백에서만 줄을 바꾸고 아주 긴 토큰만 anywhere 로 자른다. */
+.battle-objective-action{color:#c9d6c5;font-weight:500;word-break:keep-all;overflow-wrap:anywhere}
 .battle-objective-hold{width:100%;height:5px;accent-color:#a6f0d4}
 .battle-objective-challenge{font-size:10px;color:#d3bd8a;line-height:1.4}
 #map-tactics-context:not([data-phase=ready]) .map-tactics-context-copy>strong{display:block;font-size:11px}
@@ -91,6 +92,8 @@ body:has(#hud.show.battle-readability) #toast-layer{top:var(--battle-notice-top,
  .experience-v2.oath-visual #hud.battle-readability .bossbar{left:214px;right:258px;top:65px}
  .experience-v2.oath-visual #hud.battle-readability #minimap-wrap{grid-template-columns:144px 72px;gap:7px}
  .experience-v2.oath-visual #hud.battle-readability #minimap{width:72px;height:72px}
+ /* 144px 목표창은 줄 간격과 안쪽 여백을 줄여 같은 문구가 차지하는 높이(곧 위에서 내려오는 알림과 겹치는 면적)를 줄인다. */
+ .experience-v2.oath-visual #hud.battle-readability #objective{gap:3px;padding:6px 8px;line-height:1.3}
  .experience-v2.oath-visual #hud.battle-readability .hud-right-top .hud-btn{padding:0 6px;font-size:10px}
  #hud.battle-readability #map-tactics-context{gap:5px;display:grid;grid-template-columns:1fr}
  .map-tactics-context-copy>strong{display:none}

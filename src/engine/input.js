@@ -1,6 +1,8 @@
 import { cameraRelativeMove } from './camera-control.js';
 // 가상 조이스틱 + 액션 버튼 + 키보드
 const GAMEPAD_DEADZONE = 0.16;
+// 물리적으로 눌린 이동 키만 추적한다. 정지·창 때문에 keys 가 비워져도 키를 다시 누르지 않고 이동을 이어 가기 위함이다.
+const MOVE_CODES = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 const GAMEPAD_ACTIONS = ['attack', 'dodge', 'skill0', 'skill1', 'skill2', 'skill3', 'skill4', 'skill5'];
 
 export function skillAimThreshold(radius = 56) { return Math.min(14, radius * 0.25); }
@@ -22,6 +24,8 @@ export class Input {
     this.attackSources = new Set(); this.clearListeners = new Set();
     this.enabled = false;
     this.keys = {};
+    this.held = new Uint8Array(MOVE_CODES.length); // MOVE_CODES 순서, 실제로 눌려 있는 이동 키
+    this._restoreKeys = false; this._wasEnabled = false;
     this.gamepadMove = { x: 0, y: 0 };
     this.gamepadButtons = new Uint8Array(GAMEPAD_ACTIONS.length);
     this.gamepadConnected = false;
@@ -34,7 +38,7 @@ export class Input {
   takeAim(slot) { const aim = this.aimedCasts.get(slot); this.aimedCasts.delete(slot); return aim; }
   onClear(listener) { this.clearListeners.add(listener); return () => this.clearListeners.delete(listener); }
   _attack(source, held) { if (held) this.attackSources.add(source); else this.attackSources.delete(source); this.attackHeld = this.attackSources.size > 0; }
-  clear() { this.queue.length = 0; this.aimedCasts?.clear(); this._clearSkillAim(); this.attackSources.clear(); this.attackHeld = false; this.keys = {}; this.gamepadButtons.fill(0); this.gamepadConnected = false; this.gamepadMove.x = this.gamepadMove.y = 0; this.move.x = this.move.y = 0; this._resetJoy(); for (const listener of this.clearListeners) listener(); }
+  clear() { this.queue.length = 0; this.aimedCasts?.clear(); this._clearSkillAim(); this.attackSources.clear(); this.attackHeld = false; this.keys = {}; this._restoreKeys = true; this.gamepadButtons.fill(0); this.gamepadConnected = false; this.gamepadMove.x = this.gamepadMove.y = 0; this.move.x = this.move.y = 0; this._resetJoy(); for (const listener of this.clearListeners) listener(); }
   _clearSkillAim() {
     if (this.skillGestures) for (const g of this.skillGestures.values()) this._resetSkillKnob(g);
     this.skillGestures?.clear(); this.skillAim = null; this._showSkillCancel();
@@ -208,6 +212,18 @@ export class Input {
     btn('btn-map-interact', () => this.press('interact'));
     document.querySelectorAll('.skill-btn').forEach(b => this._bindSkill(b));
 
+    // 이동 키 held 추적: 입력이 켜져 있을 때 새로 눌린 키만 넣는다. 꺼진 동안 눌렀거나 로비에서 누른 채 전투에 들어온 키는
+    // 자동 반복(repeat)만 들어오므로 넣지 않는다(다시 눌러야 이동). button·dialog 대상도 넣고, 글자 입력 요소와 수식 키 조합은 넣지 않는다.
+    window.addEventListener('keydown', (e) => {
+      if (!this.enabled || e.repeat || e.ctrlKey || e.metaKey || e.altKey || e.target?.closest?.('input, textarea, select, [contenteditable]')) return;
+      const i = MOVE_CODES.indexOf(e.code); if (i >= 0) this.held[i] = 1;
+    });
+    // keyup 은 대상·활성 여부와 상관없이 held 에서 뺀다. 마을·상점 대화상자가 keyup 전파를 막아도 받도록 캡처 단계에서 듣는다.
+    // macOS 는 Cmd 를 누른 동안 다른 키의 keyup 을 보내지 않으므로 Meta keyup 에서 held 를 비운다(BUNDLE-10 리뷰 P3-1).
+    window.addEventListener('keyup', (e) => {
+      if (e.key === 'Meta' || e.code === 'MetaLeft' || e.code === 'MetaRight') { this.held.fill(0); return; }
+      const i = MOVE_CODES.indexOf(e.code); if (i >= 0) this.held[i] = 0;
+    }, true);
     window.addEventListener('keydown', (e) => {
       if (!this.enabled || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.target?.closest?.('button, input, textarea, select, [contenteditable], [role="dialog"], dialog, #battle-camera-controls')) return;
       if (!/^(Key[WASDJKRQEF]|Arrow(Left|Right|Up|Down)|Space|Shift(Left|Right)|Digit[1-6])$/.test(e.code)) return;
@@ -224,16 +240,22 @@ export class Input {
       if (!e.target?.closest?.('button, input, textarea, select, [contenteditable], [role="dialog"], dialog, #battle-camera-controls')) return;
       this.keys = {}; this._attack('KeyJ', false); this._attack('Space', false);
     });
-    window.addEventListener('blur', () => this.clear());
-    window.addEventListener('pagehide', () => this.clear());
+    // keyup 을 놓칠 수 있는 경우(포커스 이탈·페이지 숨김)에만 held 를 비운다.
+    window.addEventListener('blur', () => { this.held.fill(0); this.clear(); });
+    window.addEventListener('pagehide', () => { this.held.fill(0); this.clear(); });
     window.addEventListener('orientationchange', () => this.clear());
     window.addEventListener('resize', () => this.clear());
-    document.addEventListener('visibilitychange', () => { if (document.hidden) this.clear(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) { this.held.fill(0); this.clear(); } });
   }
   update() {
     this._updateGamepad();
     if (this.skillAim?.active) this._aimWorld(this.skillAim);
-    if (!this.enabled) { this.move.x = this.move.y = 0; return; }
+    if (!this.enabled) { this.move.x = this.move.y = 0; this._wasEnabled = false; return; }
+    // 입력이 다시 켜졌거나 clear() 뒤 첫 갱신이면, 계속 눌려 있던 이동 키를 keys 에 되살린다(공격·회피·스킬은 제외).
+    if ((!this._wasEnabled || this._restoreKeys) && this.held) {
+      for (let i = 0; i < MOVE_CODES.length; i++) if (this.held[i]) this.keys[MOVE_CODES[i]] = true;
+    }
+    this._wasEnabled = true; this._restoreKeys = false;
     if (this.joy.active) {
       this.move.x = this.screenMove.x; this.move.y = this.screenMove.y;
     } else if (this.gamepadConnected) {

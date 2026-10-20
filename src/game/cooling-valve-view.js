@@ -4,10 +4,13 @@ import { hazardVertexShader } from './region-hazards.js';
 
 // A dark outline and white hatching remain distinct on the orange forge floor.
 // Geometry still covers exactly the same rectangle as coolingVentContains.
-const ventFragmentShader = `varying vec2 vUv; uniform float fired, opacity;
+// tint 가 0 이면 기존 붉은 띠 그대로, 1 이면 정의의 띠 색(color)으로 바탕과 빗금을 칠한다(밀물 파란 띠).
+const ventFragmentShader = `varying vec2 vUv; uniform vec3 color; uniform float fired, opacity, tint;
 void main(){vec2 q=abs(vUv-.5)*2.;float edge=max(q.x,q.y);
 float hatch=step(.74,fract((vUv.x*4.+vUv.y*12.)*.65));
-vec3 c=mix(vec3(.85,.025,.08),vec3(1.,.91,.77),hatch*.65);
+vec3 base=mix(vec3(.85,.025,.08),color*.82,tint);
+vec3 light=mix(vec3(1.,.91,.77),mix(color,vec3(1.),.72),tint);
+vec3 c=mix(base,light,hatch*.65);
 if(edge>.88)c=vec3(.035,.055,.065);if(edge>.96)c=vec3(1.,.9,.72);
 gl_FragColor=vec4(c,opacity*(edge>.88?.95:.66+fired*.17));}`;
 
@@ -17,6 +20,10 @@ export class CoolingValveView {
   constructor(scene, gltf, route) {
     this.group = new THREE.Group(); this.group.name = 'TLL_CoolingValves'; scene.add(this.group);
     this.materials = new Set(); this.textures = new Set();
+    // 밀물 띠·뜨거운 동안의 상태등 색과 닫힘 라벨은 정의에서 온다(없으면 기존 주황·'충격파 대기').
+    this.ventColor = route.def.ventColor ?? 0xff863e;
+    this.ventTint = route.def.ventColor == null ? 0 : 1;
+    this.waitLabel = route.copy?.waitShort ?? '충격파 대기';
     this.plane = new THREE.PlaneGeometry(1, 1); this.plane.rotateX(-Math.PI / 2);
     this.ring = new THREE.RingGeometry(route.def.radius - .18, route.def.radius, 32); this.ring.rotateX(-Math.PI / 2);
     this.entries = route.gates.map((gate, i) => {
@@ -39,8 +46,8 @@ export class CoolingValveView {
       const pad = new THREE.Mesh(this.ring, padMaterial); pad.position.y = .10; root.add(pad);
       const ventMaterial = new THREE.ShaderMaterial({ vertexShader: hazardVertexShader, fragmentShader: ventFragmentShader,
         transparent: true, depthWrite: false, side: THREE.DoubleSide,
-        uniforms: { color: { value: new THREE.Color(0xff863e) }, size: { value: new THREE.Vector2(4, 12) },
-          shape: { value: 2 }, safeRadius: { value: 0 }, opacity: { value: .7 }, fired: { value: 0 } } });
+        uniforms: { color: { value: new THREE.Color(this.ventColor) }, size: { value: new THREE.Vector2(4, 12) },
+          shape: { value: 2 }, safeRadius: { value: 0 }, opacity: { value: .7 }, fired: { value: 0 }, tint: { value: this.ventTint } } });
       this.materials.add(ventMaterial);
       const vent = new THREE.Mesh(this.plane, ventMaterial); vent.position.y = .12; vent.renderOrder = 2; root.add(vent);
       const pipeMaterial = new THREE.MeshBasicMaterial({ color: 0x35444d }); this.materials.add(pipeMaterial);
@@ -57,16 +64,21 @@ export class CoolingValveView {
     this.update(route);
   }
   update(route) {
+    // 충격파 뒤에만 조작판이 열리는 정의(shockWindow, 재벼림 심층)에서만 닫힘 표시를 쓴다. padOpen 이 없거나 다른 정의면 기존과 같다.
+    const gated = !!route.def.shockWindow && typeof route.padOpen === 'function';
     for (const entry of this.entries) {
       const gate = route.gates[entry.index], current = entry.index === route.progress;
       entry.root.visible = gate.room.discovered;
       const hot = current && gate.prepared && ['warning', 'vent'].includes(gate.phase);
-      const color = gate.attuned ? 0x64e2c2 : hot ? 0xff863e : current ? 0xffd181 : 0x788392;
+      const color = gate.attuned ? 0x64e2c2 : hot ? this.ventColor : current ? 0xffd181 : 0x788392;
       for (const m of entry.statusMaterials) { m.color.setHex(color); if (m.emissive) { m.emissive.setHex(color); m.emissiveIntensity = .35; } }
       if (entry.wheel) entry.wheel.rotation.z = entry.wheelStart + (gate.attuned ? 1 : current ? route.hold / route.def.holdSeconds : 0) * Math.PI * 1.5;
       entry.pad.visible = current && gate.ready;
       entry.pad.position.x = gate.pad.x - gate.room.x;
-      entry.pad.material.opacity = .55 + .45 * (current ? route.hold / route.def.holdSeconds : 0);
+      // 닫힘(충격파 대기): 회색·옅게. 열림: 청록, 유지 비율만큼 진해진다.
+      const closed = gated && current && gate.ready && !route.padOpen(gate);
+      entry.pad.material.color.setHex(closed ? 0x6d7a86 : 0x56e6d5);
+      entry.pad.material.opacity = closed ? .45 : .55 + .45 * (current ? route.hold / route.def.holdSeconds : 0);
       const h = coolingVent(gate);
       entry.vent.visible = hot;
       entry.vent.position.x = h.x - gate.room.x; entry.vent.scale.set(h.width, 1, h.length);
@@ -74,12 +86,12 @@ export class CoolingValveView {
       entry.vent.material.uniforms.fired.value = gate.phase === 'vent' ? 1 : 0;
       entry.vent.material.uniforms.opacity.value = gate.phase === 'vent' ? .95 : .6;
       entry.pipe.material.color.setHex(gate.attuned ? 0x64e2c2 : 0x35444d);
-      const state = gate.attuned ? '냉각 완료' : !current ? '대기' : gate.ready ? '조작 2초' : '방어';
+      const state = gate.attuned ? '냉각 완료' : !current ? '대기' : gate.ready ? (closed ? this.waitLabel : '조작 2초') : '방어';
       if (state !== entry.labelState && entry.context) {
         entry.labelState = state;
         const c = entry.context; c.clearRect(0, 0, 256, 64);
         c.fillStyle = 'rgba(9,18,27,.9)'; c.fillRect(0, 0, 256, 64);
-        c.fillStyle = gate.attuned ? '#64e2c2' : '#ffe0a5'; c.font = 'bold 30px sans-serif'; c.textAlign = 'center';
+        c.fillStyle = gate.attuned ? '#64e2c2' : closed ? '#c3ccd4' : '#ffe0a5'; c.font = `bold ${closed ? 26 : 30}px sans-serif`; c.textAlign = 'center';
         c.fillText(`${String(entry.index + 1).padStart(2, '0')} · ${state}`, 128, 43); entry.texture.needsUpdate = true;
       }
     }

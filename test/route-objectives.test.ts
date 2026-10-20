@@ -73,15 +73,22 @@ test('three numbered authored bellfall rooms are accessible through the sealed f
   expect(f.world.rooms[5].label).toContain('3번 종문');
 });
 
-test('only standard solo bellfall is selected; party, rift, deep, conquest and other routes keep legacy paths', () => {
+test('only solo bellfall standard and deep are selected; party, rift, conquest and other routes keep legacy paths', () => {
   const base: any = buildExpeditionStage('dungeon', 'bellfall_crypt', null);
   const variants = [
     { ...base, party: {} }, { ...base, riftId: 'iron' },
-    ...[{ depth: 'deep' }, { depth: undefined }, { conquestId: 'fake' }, { riftId: 'iron' },
+    ...[{ depth: undefined }, { depth: 'unknown' }, { conquestId: 'fake' }, { riftId: 'iron' },
       { kind: 'arena' }, { id: 'glass_garden' }, { id: '__proto__' }].map(change => ({ ...base, expedition: { ...base.expedition, ...change } })),
     { ...base, expedition: undefined },
   ];
   expect(routeObjectiveForStage(base)).toBe(ROUTE_OBJECTIVES.bellfall_crypt);
+  // 심층은 종문 역순 공명이고, 같은 원정의 파티·균열·정복·결투 변형은 일반 경로를 유지한다.
+  const deep: any = buildExpeditionStage('dungeon', 'bellfall_crypt', null, { depth: 'deep' });
+  expect(routeObjectiveForStage(deep)).toBe(ROUTE_OBJECTIVES.bellfall_deep);
+  for (const change of [{ party: {} }, { riftId: 'iron' }, { expedition: { ...deep.expedition, conquestId: 'fake' } },
+    { expedition: { ...deep.expedition, riftId: 'iron' } }, { expedition: { ...deep.expedition, kind: 'arena' } }]) {
+    expect(createRouteObjectives({ ...deep, ...change }, buildExpeditionWorld(deep))).toBeNull();
+  }
   for (const stage of variants) {
     expect(createRouteObjectives(stage, buildExpeditionWorld(base))).toBeNull();
   }
@@ -236,7 +243,9 @@ test('일식 수문 일반: 역류 밸브 3개를 순서대로 잠가야 봉인�
   for (const id of [2, 5, 7]) expect(flow[cell(f.world, f.world.rooms[id])]).toBeGreaterThanOrEqual(0);
   expect(flow[cell(f.world, f.world.bossRoom)]).toBe(-1);
   expect(f.world.rooms[7].label).toContain('3번 역류 밸브');
-  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'eclipse_hydra_vault', null, { depth: 'deep' }))).toBeNull();
+  // 심층은 별도 정의(역류 밸브 4곳 봉인)를 받고, 일반 정의는 바뀌지 않는다.
+  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'eclipse_hydra_vault', null, { depth: 'deep' }))).toBe(ROUTE_OBJECTIVES.eclipse_deep);
+  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'eclipse_hydra_vault', null))).toBe(ROUTE_OBJECTIVES.eclipse_standard);
 
   // 2번 밸브를 먼저 정리해도 1번 전에는 잠기지 않는다.
   clearCombat(f, 5); tickAt(f, 5, 3);
@@ -272,7 +281,7 @@ test('녹청의 성역 일반: 생명 제단 3곳은 길과 다른 순서이며,
   f.g.player.hurt = (n: number) => { hits.push(n); return true; };
   expect(f.route.def.id).toBe('verdigris_life_altars');
   expect(f.route.gates.map((gate: any) => gate.room.id)).toEqual([3, 2, 6]);
-  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'verdigris_sanctum', null, { depth: 'deep' }))).toBeNull();
+  expect(routeObjectiveForStage(buildExpeditionStage('dungeon', 'verdigris_sanctum', null, { depth: 'deep' }))).toBe(ROUTE_OBJECTIVES.verdigris_deep);   // 심층은 BUNDLE-11 의 별도 목표
 
   // 길에서 먼저 만나는 2번 방 제단을 정화해도 차례가 아니다. 중심 0.9초는 안전, 1초가 차면 포자 폭발.
   clearCombat(f, 2);
@@ -303,4 +312,3 @@ test('종문과 역류 밸브에는 포자 폭발 규칙이 없다', () => {
   expect(hits).toHaveLength(0);
   expect(f.route.finish(false)).not.toHaveProperty('sporeBursts');
 });
-

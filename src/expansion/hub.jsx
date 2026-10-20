@@ -20,11 +20,29 @@ import { citadelHotspot } from '../data/citadel-hub.js';
 import { dungeonContinuation } from '../ui/dungeon-journey.js';
 import { conceptNextChallenge, conceptBossCard, conceptLoopStatus, isConceptLoopRoute } from '../ui/concept-challenge.js';
 import { DungeonJourney } from './dungeon-journey.jsx';
+import { ROUTE_OBJECTIVES } from '../data/route-objectives.js';
 import './hub.css';
 import './app-content.css';
 import './depths.css';
 
 const fmt = n => Math.floor(n || 0).toLocaleString('ko-KR');
+/** 종락 심층 종문 결과 줄. counterWindows(합창 장막 반격 창 횟수)는 숫자일 때만 불협 뒤, 완료 앞에 붙인다. */
+export const bellfallDeepBellsResultLine = report => `종문 역순 공명 ${report.progress}/${report.target} · 불협 ${report.discords}회${Number.isFinite(report.counterWindows)?` · 반격 창 ${report.counterWindows}회`:''}${report.complete?' · 완료':''}`;
+/** 혜성 기사단장 푸른 궤도선 결과 줄(BUNDLE-06). bossMeteors(떨어진 유성 수)·bossMeteorHits(영웅 피격 수)로 만든다. 피격 수가 숫자가 아니면 0회로 둔다. */
+export const cometBossOrbitResultLine = report => `푸른 궤도선 유성 ${report.bossMeteors}회 · 피격 ${Number.isFinite(report.bossMeteorHits)?report.bossMeteorHits:0}회`;
+/** 잿불금고 심층 사슬 집행자 후방 결과 줄(BUNDLE-14). rear{ rearHits, windows, frontHits }로 만든다. 숫자가 아닌 횟수는 0회로 둔다. */
+export const emberRearResultLine = rear => `사슬 집행자 후방 공격 ${Number.isFinite(rear.rearHits)?rear.rearHits:0}회 · 노출 ${Number.isFinite(rear.windows)?rear.windows:0}번 · 정면 막힘 ${Number.isFinite(rear.frontHits)?rear.frontHits:0}회`;
+/** 재벼림 심층 거수의 사슬 결과 줄(BUNDLE-15). chains{ cuts, count, windows, misses }로 만든다. 숫자가 아닌 값은 0으로 둔다. */
+export const ashforgeChainResultLine = chains => `거수의 사슬 끊음 ${Number.isFinite(chains.cuts)?chains.cuts:0}/${Number.isFinite(chains.count)?chains.count:0} · 기둥 창 ${Number.isFinite(chains.windows)?chains.windows:0}번 · 놓침 ${Number.isFinite(chains.misses)?chains.misses:0}번`;
+/** 녹청 심층 포자 수로 결과 줄(BUNDLE-11). channel{ crossed, sporeHits, floods }로 만든다. 숫자가 아닌 횟수는 0회로 둔다. */
+export const sporeChannelResultLine = channel => `포자 수로 돌파 ${channel.crossed?'완료':'미완료'} · 포자 피격 ${Number.isFinite(channel.sporeHits)?channel.sporeHits:0}회 · 범람 ${Number.isFinite(channel.floods)?channel.floods:0}회`;
+/** 성운 첨탑 외곽 고리 정의(ring)를 결과 보고의 id 로 찾는다. 못 찾으면 심층 정의(BUNDLE-12 문구). */
+export const astralRingDefFor = report => Object.values(ROUTE_OBJECTIVES).find(def => def?.id === report?.id && def.ring)?.ring ?? ROUTE_OBJECTIVES.astral_deep.ring;
+/** 성운 첨탑 외곽 고리 결과 줄(심층 BUNDLE-12, 일반 BUNDLE-13). ring{ purified, marks, shardHits, collapses }와 정의 문구(title·mark·shard, 표지 수)로 만든다. 숫자가 아닌 횟수는 0회로 둔다.
+ * @param {any} ring @param {{ title: string, mark: string, shard: string, marks: ReadonlyArray<unknown> }} [def] */
+export const astralRingResultLine = (ring, def = ROUTE_OBJECTIVES.astral_deep.ring) => `${def.title} ${ring.purified?'완료':'미완료'} · ${def.mark} ${Number.isFinite(ring.marks)?ring.marks:0}/${def.marks.length} · ${def.shard} 피격 ${Number.isFinite(ring.shardHits)?ring.shardHits:0}회 · 붕괴 ${Number.isFinite(ring.collapses)?ring.collapses:0}회`;
+/** 성운 첨탑 심층 외곽 고리 결과 줄(BUNDLE-12 이름 유지). */
+export const astralDeepRingResultLine = ring => astralRingResultLine(ring, ROUTE_OBJECTIVES.astral_deep.ring);
 const MATERIAL_ART = Object.fromEntries(MATERIALS.map(m=>[m.id,resourceArt(m.id)]));
 const ART = { arena: '/img/expansion/arena.webp', guild_map: '/img/expansion/guild_map.webp' };
 const COLORS = { glass_garden: '#9be1ba', ember_vault: '#ffad6e', star_archive: '#9bbdff' };
@@ -79,7 +97,15 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
         </div>
         {result.routeObjective?.pages && <p aria-label="기록 복원 결과">기록 복원 {result.routeObjective.progress}/{result.routeObjective.target} · {result.routeObjective.pages.map(page=>page.label).join(' → ') || '복원한 기록 없음'}</p>}
         {result.routeObjective?.constellations && <p aria-label="별자리 복원 결과">별자리 복원 {result.routeObjective.progress}/{result.routeObjective.target} · {result.routeObjective.constellations.map(station=>station.label).join(' → ') || '복원한 별자리 없음'} · 오답 {result.routeObjective.mistakes}회</p>}
-        {result.routeObjective?.label && !result.routeObjective.pages && !result.routeObjective.constellations && <p aria-label={result.routeObjective.label+' 결과'}>{result.routeObjective.label} {result.routeObjective.progress}/{result.routeObjective.target}{result.routeObjective.complete?' · 완료':''}</p>}
+        {result.routeObjective?.id==='comet_deep_orbits' && <p aria-label="궤도 고리 연결 결과">궤도 고리 연결 {result.routeObjective.progress}/{result.routeObjective.target} · 붕괴 실패 {result.routeObjective.collapseFailures}회 · 유성 피격 {result.routeObjective.stormHits}회{result.routeObjective.complete?' · 완료':''}</p>}
+        {result.routeObjective?.id==='bellfall_deep_bells' && <p aria-label="종문 역순 공명 결과">{bellfallDeepBellsResultLine(result.routeObjective)}</p>}
+        {result.routeObjective?.label && result.routeObjective.id!=='comet_deep_orbits' && result.routeObjective.id!=='bellfall_deep_bells' && !result.routeObjective.pages && !result.routeObjective.constellations && !result.routeObjective.ring && <p aria-label={result.routeObjective.label+' 결과'}>{result.routeObjective.label} {result.routeObjective.progress}/{result.routeObjective.target}{result.routeObjective.complete?' · 완료':''}</p>}
+        {result.routeObjective?.rear && <p aria-label="사슬 집행자 후방 결과">{emberRearResultLine(result.routeObjective.rear)}</p>}
+        {result.routeObjective?.chains && <p aria-label="거수의 사슬 결과">{ashforgeChainResultLine(result.routeObjective.chains)}</p>}
+        {result.routeObjective?.ring && <p aria-label={astralRingDefFor(result.routeObjective).title+' 결과'}>{astralRingResultLine(result.routeObjective.ring, astralRingDefFor(result.routeObjective))}</p>}
+        {result.routeObjective?.escape && <p aria-label="거울 미궁 탈출 결과">거울 미궁 탈출 {result.routeObjective.escape.escaped?'완료':'미완료'} · 거울 붕괴 {result.routeObjective.escape.collapses}회 · 환영 거울 {result.routeObjective.escape.illusions}회</p>}
+        {result.routeObjective?.channel && <p aria-label="포자 수로 돌파 결과">{sporeChannelResultLine(result.routeObjective.channel)}</p>}
+        {(result.routeObjective?.id==='comet_orbit_rings'||result.routeObjective?.id==='comet_deep_orbits') && Number.isFinite(result.routeObjective.bossMeteors) && <p aria-label="푸른 궤도선 결과">{cometBossOrbitResultLine(result.routeObjective)}</p>}
         {mapTactics&&<section className="map-tactics-result" data-map-tactics-result aria-label="정원의 장치 사용 결과"><strong>{mapTactics.title}</strong><p>{mapTactics.detail}</p></section>}
         <div className="exp-result-save" data-save={result.saveError?'error':'saved'} role={result.saveError?'alert':'status'}>
           {result.saveError?<><div><strong>정산 저장 실패</strong><p>저장 공간을 확인한 뒤 다시 저장해 주세요. 저장 전에는 이동할 수 없습니다.</p></div><button ref={focusRef} className="exp-primary" onClick={retrySave}>정산 다시 저장</button></>:<p>{result.win?'정산 저장 완료 · 보상을 보관했습니다.':'결과 저장 완료 · 다시 도전할 수 있습니다.'}</p>}

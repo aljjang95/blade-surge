@@ -260,16 +260,21 @@ export class Floor {
   }
   /** 목표 지점까지의 BFS 거리장 (길찾기). 목표가 바뀔 때만 다시 계산 */
   buildFlow(tx, tz) {
-    const cellX = Math.floor((tx - this.minX) / CELL), cellZ = Math.floor((tz - this.minZ) / CELL);
-    if (this._flow && this._flowX === cellX && this._flowZ === cellZ) return this._flow;
-    const N = this.cols * this.rows;
-    // 이동하는 목표도 같은 버퍼로 계산한다. BFS 큐/방향 배열을 매 프레임 만들지 않는다.
-    const dist = this._flowBuffer?.length === N ? this._flowBuffer : (this._flowBuffer = new Int32Array(N)); dist.fill(-1);
     const sx = Math.floor((tx - this.minX) / CELL), sz = Math.floor((tz - this.minZ) / CELL);
     if (sx < 0 || sz < 0 || sx >= this.cols || sz >= this.rows) return null;
-    const q = this._flowQueue?.length === N ? this._flowQueue : (this._flowQueue = new Int32Array(N)); let head = 0, tail = 0;
+    // 캐시 키는 BFS 시작 칸이다. 반올림 좌표로 묶으면 같은 키의 다른 칸 목표가 이전 칸의 거리장을 받아
+    // AUTO 가 두 칸 사이를 왕복했다(혜성 심층 룬석 밀기, BUNDLE-01 진단 seed 11·22).
+    const key = sz * this.cols + sx;
+    if (this._flowKey === key) return this._flow;
+    const N = this.cols * this.rows;
     const si = sz * this.cols + sx;
+    // 걸을 수 없는 시작 칸은 할당 없이 null 을 돌려주고 직전 캐시를 건드리지 않는다.
     if (this.inner[si] !== 1) return null;
+    // 거리장은 호출자가 이후에도 들고 쓰므로 매번 새로 만들고, 큐는 칸 수가 같으면 인스턴스 버퍼를 재사용한다.
+    const dist = new Int32Array(N).fill(-1);
+    let q = this._flowQ;
+    if (!q || q.length !== N) q = this._flowQ = new Int32Array(N);
+    let head = 0, tail = 0;
     dist[si] = 0; q[tail++] = si;
     while (head < tail) {
       const cur = q[head++]; const cz = (cur / this.cols) | 0, cx = cur - cz * this.cols; const d = dist[cur];
@@ -281,7 +286,7 @@ export class Floor {
         dist[ni] = d + 1; q[tail++] = ni;
       }
     }
-    this._flowX = cellX; this._flowZ = cellZ; this._flow = dist; return dist;
+    this._flowKey = key; this._flow = dist; return dist;
   }
   /** 거리장을 따라 내려가는 방향 (없으면 직선) */
   flowDir(flow, wx, wz) {

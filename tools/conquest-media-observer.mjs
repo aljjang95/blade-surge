@@ -131,37 +131,66 @@ export function classifyMediaCancellations(failures, mediaSnapshots) {
     // AudioNode creation may precede the native resource-loading task. Accept
     // actual initiation proof only when the old match is absent, never ambiguous.
     // Keep the same 250ms bound and every response/closure/playback requirement.
-    if (matches.length === 0 && created.length === 1
-      && Number.isSafeInteger(failure.documentId) && failure.documentId > 0
-      && observations.every(observation => observation.documentId === failure.documentId)) {
-      const born = created[0];
+    const documentBound = Number.isSafeInteger(failure.documentId) && failure.documentId > 0
+      && observations.every(observation => observation.documentId === failure.documentId);
+    const sameUrlLoadstarts = events.filter(event => event.kind === 'loadstart' && event.src === failure.url);
+    // loadstart 한 개의 시각 항등식·음수 아님 검사. 값이 하나라도 유한하지 않으면 거짓이다.
+    const nativeClockSound = event => [event.at, event.nativeAt, event.nativeTimeStamp, event.nativeTimeOrigin].every(finite)
+      && event.nativeTimeStamp >= 0 && event.nativeTimeOrigin >= 0
+      && event.nativeAt === event.nativeTimeOrigin + event.nativeTimeStamp;
+    const firstPlayOf = id => events.filter(event => event.kind === 'playing' && event.id === id
+      && event.src === failure.url && finite(event.at)).sort((a, b) => a.at - b.at)[0];
+    // 요청 시작 창 안의 native 시각이면 관측(at)이 실패 뒤로 늦어졌어도 경쟁 loadstart로 센다.
+    const inStartWindow = event => finite(event.nativeAt) && Math.abs(event.nativeAt - start) <= 250;
+    if (matches.length === 0 && created.length === 1 && documentBound) {
+      // M1: 실패 뒤에 다시 만들어진 같은 곡의 loadstart는 이 요청을 시작할 수 없다.
+      const born = created[0], firstPlay = firstPlayOf(born.id);
       // 누적 스냅샷에는 실패 요청이 끝난 뒤의 같은 URL 재생도 남는다. 실패 요청 수명과
       // 겹칠 수 없음이 완전히 증명된 이후 인스턴스의 initiation만 모호성 집합에서 뺀다.
       // 다른 인스턴스, 신뢰된 native 이벤트, 일관된 시계, native/관찰 시각 모두 failedAt
-      // 초과, 해당 인스턴스의 첫 관찰과 source 생성도 failedAt 이후여야 한다. 하나라도
-      // 불확실하면 그대로 initiation으로 세어 모호(unresolved)로 남긴다.
+      // 초과, 해당 인스턴스의 첫 관찰과 source 생성도 failedAt 이후여야 하고, native 시각이
+      // 요청 시작 창 밖이어야 한다. 하나라도 불확실하면 그대로 initiation으로 세어 모호(unresolved)로 남긴다.
       const laterLifecycle = event => event.id !== born.id && event.isTrusted === true
-        && [event.at, event.nativeAt, event.nativeTimeStamp, event.nativeTimeOrigin].every(finite)
-        && event.nativeTimeStamp >= 0 && event.nativeTimeOrigin >= 0
-        && event.nativeAt === event.nativeTimeOrigin + event.nativeTimeStamp
+        && nativeClockSound(event) && !inStartWindow(event)
         && end < event.nativeAt && event.nativeAt <= event.at
         && events.every(other => other.id !== event.id || (finite(other.at) && other.at > end))
         && events.some(other => other.id === event.id && other.kind === 'source-created' && other.src === failure.url);
-      const sameUrlStarts = events.filter(event => event.kind === 'loadstart' && event.src === failure.url);
-      const later = sameUrlStarts.filter(laterLifecycle);
-      const initiations = sameUrlStarts.filter(event => !later.includes(event));
-      const firstPlay = events.filter(event => event.kind === 'playing' && event.id === born.id
-        && event.src === failure.url && finite(event.at)).sort((a, b) => a.at - b.at)[0];
+      const later = sameUrlLoadstarts.filter(laterLifecycle);
+      const initiations = sameUrlLoadstarts.filter(event => !later.includes(event));
       const initiation = initiations[0];
       if (initiations.length === 1 && initiation.id === born.id && initiation.isTrusted === true
-        && [initiation.at, initiation.nativeAt, initiation.nativeTimeStamp, initiation.nativeTimeOrigin, born.at].every(finite)
-        && initiation.nativeTimeStamp >= 0 && initiation.nativeTimeOrigin >= 0
-        && initiation.nativeAt === initiation.nativeTimeOrigin + initiation.nativeTimeStamp && firstPlay
+        && finite(born.at) && nativeClockSound(initiation) && firstPlay
         && born.at <= initiation.nativeAt && initiation.nativeAt <= initiation.at
-        && initiation.at <= firstPlay.at && initiation.at <= end
+        && initiation.at <= firstPlay.at && firstPlay.at <= end
         && Math.abs(initiation.nativeAt - start) <= 250) {
         matches = [born]; anchorKind = 'trusted-native-loadstart'; anchor = initiation;
         excludedLater = later.map(event => ({ id: event.id, nativeLoadstartAt: event.nativeAt, loadstartObservedAt: event.at }));
+      }
+    } else if (matches.length === 0 && created.length >= 2 && documentBound
+      && new Set(created.map(e => e.id)).size === created.length
+      && (failure.status === 200 && !failure.range || /^bytes=0-\d*$/.test(failure.range || ''))) {
+      // M2: 리소스 첫 바이트 요청이고 창 안 loadstart가 정확히 하나일 때만 소유 인스턴스를 확정한다.
+      // 시각이 깨진 loadstart가 하나라도 있으면 창 집합을 신뢰할 수 없으므로 판단하지 않는다.
+      const window = sameUrlLoadstarts.filter(inStartWindow);
+      // 실패 뒤에 관측된 loadstart도 시작 시각이 불명확하면 창 안 경쟁자를 배제할 수 없으므로 같이 본다.
+      const clockBroken = sameUrlLoadstarts.some(event => ![event.nativeAt, event.nativeTimeStamp, event.nativeTimeOrigin].every(finite)
+        || event.nativeAt !== event.nativeTimeOrigin + event.nativeTimeStamp);
+      const initiation = window[0], born = initiation && created.find(e => e.id === initiation.id);
+      const firstPlay = born && firstPlayOf(born.id);
+      if (!clockBroken && window.length === 1 && initiation.isTrusted === true && born && firstPlay
+        && finite(born.at) && nativeClockSound(initiation)
+        && born.at <= initiation.nativeAt && initiation.nativeAt <= initiation.at
+        && initiation.at <= firstPlay.at && firstPlay.at <= end
+        // 모든 created 인스턴스가 자기 id의 신뢰된 loadstart를 가져야 하고, 가장 이른 것이 정상 순서여야 한다.
+        && created.every(instance => {
+          const own = sameUrlLoadstarts.filter(event => event.id === instance.id && event.isTrusted === true);
+          if (!own.length || !own.every(event => finite(event.nativeAt))) return false;
+          const earliest = own.reduce((a, b) => b.nativeAt < a.nativeAt ? b : a), play = firstPlayOf(instance.id);
+          return !!play && finite(instance.at) && nativeClockSound(earliest)
+            && instance.at <= earliest.nativeAt && earliest.nativeAt <= earliest.at
+            && earliest.at <= play.at && play.at <= end;
+        })) {
+        matches = [born]; anchorKind = 'trusted-native-loadstart'; anchor = initiation;
       }
     }
     if (matches.length !== 1 || new Set(created.map(e=>e.id)).size !== created.length) {
@@ -188,6 +217,7 @@ export function classifyMediaCancellations(failures, mediaSnapshots) {
     if (!replacement) { reject('no-replacement-playback-proof'); continue; }
     classified.push({ classification: 'observed-stopped-media-cancellation', request: { ...failure },
       matchedInstanceId: matches[0].id, requestStartEvidence: { anchorKind, createdAt: matches[0].at,
+        candidateInstances: created.length,
         nativeLoadstartAt: anchorKind === 'trusted-native-loadstart' ? anchor.nativeAt : null,
         loadstartObservedAt: anchorKind === 'trusted-native-loadstart' ? anchor.at : null,
         startDeltaMs: (anchorKind === 'trusted-native-loadstart' ? anchor.nativeAt : anchor.at) - start,

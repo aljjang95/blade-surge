@@ -1,0 +1,253 @@
+{
+ "source": "b01/qa/cand-bca5e98-auto/report.json documentId 1",
+ "expectedBeforeFix": "ambiguous-or-missing-request-start-instance",
+ "expectedAfterFix": {
+  "matchedInstanceId": 1,
+  "anchorKind": "trusted-native-loadstart",
+  "stoppedInstanceIds": [
+   1
+  ],
+  "replacementId": 2
+ },
+ "failure": {
+  "engine": "chromium",
+  "url": "http://127.0.0.1:36527/bgm/regions/lobby.mp3",
+  "started": 1792037018795.542,
+  "responseAt": 1792037018861.869,
+  "failedAt": 1792037051438.564,
+  "type": "media",
+  "status": 206,
+  "error": "net::ERR_ABORTED",
+  "range": "bytes=0-",
+  "contentRange": "bytes 0-3391051/3391052",
+  "documentId": 1
+ },
+ "media": [
+  {
+   "engine": "chromium",
+   "documentId": 1,
+   "snapshot": {
+    "at": 1792037066893.2998,
+    "droppedEvents": 0,
+    "events": [
+     {
+      "id": 1,
+      "kind": "source-created",
+      "src": "http://127.0.0.1:36527/bgm/regions/lobby.mp3",
+      "at": 1792037013665.5999,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": true,
+      "connected": false,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 1,
+      "kind": "source-connect",
+      "src": "http://127.0.0.1:36527/bgm/regions/lobby.mp3",
+      "at": 1792037013665.7,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": true,
+      "connected": true,
+      "error": null,
+      "collected": false,
+      "argumentCount": 1,
+      "connectionAmbiguous": false
+     },
+     {
+      "id": 1,
+      "kind": "play-call",
+      "src": "http://127.0.0.1:36527/bgm/regions/lobby.mp3",
+      "at": 1792037013665.7,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": true,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 1,
+      "kind": "play-return",
+      "src": "http://127.0.0.1:36527/bgm/regions/lobby.mp3",
+      "at": 1792037013665.7,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 1,
+      "kind": "loadstart",
+      "src": "http://127.0.0.1:36527/bgm/regions/lobby.mp3",
+      "at": 1792037018846.5,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false,
+      "isTrusted": true,
+      "nativeAt": 1792037018787.7,
+      "nativeTimeStamp": 17695.79999999702,
+      "nativeTimeOrigin": 1792037001091.9
+     },
+     {
+      "id": 1,
+      "kind": "loadedmetadata",
+      "src": "http://127.0.0.1:36527/bgm/regions/lobby.mp3",
+      "at": 1792037019000.9,
+      "currentTime": 0,
+      "readyState": 4,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 1,
+      "kind": "playing",
+      "src": "http://127.0.0.1:36527/bgm/regions/lobby.mp3",
+      "at": 1792037019001,
+      "currentTime": 0,
+      "readyState": 4,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 2,
+      "kind": "source-created",
+      "src": "http://127.0.0.1:36527/bgm/regions/frost.mp3",
+      "at": 1792037030655.5,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": true,
+      "connected": false,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 1,
+      "kind": "pause-call",
+      "src": "http://127.0.0.1:36527/bgm/regions/lobby.mp3",
+      "at": 1792037034794.5,
+      "currentTime": 15.5578,
+      "readyState": 4,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 1,
+      "kind": "pause-return",
+      "src": "http://127.0.0.1:36527/bgm/regions/lobby.mp3",
+      "at": 1792037034794.5999,
+      "currentTime": 15.55787,
+      "readyState": 4,
+      "paused": true,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 1,
+      "kind": "source-disconnect",
+      "src": "http://127.0.0.1:36527/bgm/regions/lobby.mp3",
+      "at": 1792037034794.5999,
+      "currentTime": 15.55787,
+      "readyState": 4,
+      "paused": true,
+      "connected": false,
+      "error": null,
+      "collected": false,
+      "argumentCount": 0,
+      "connectionAmbiguous": false
+     },
+     {
+      "id": 1,
+      "kind": "pause",
+      "src": "http://127.0.0.1:36527/bgm/regions/lobby.mp3",
+      "at": 1792037035355.7998,
+      "currentTime": 15.55787,
+      "readyState": 4,
+      "paused": true,
+      "connected": false,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 2,
+      "kind": "loadedmetadata",
+      "src": "http://127.0.0.1:36527/bgm/regions/frost.mp3",
+      "at": 1792037036765.5999,
+      "currentTime": 0.872,
+      "readyState": 4,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 2,
+      "kind": "playing",
+      "src": "http://127.0.0.1:36527/bgm/regions/frost.mp3",
+      "at": 1792037036765.5999,
+      "currentTime": 0.872,
+      "readyState": 4,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 4,
+      "kind": "source-created",
+      "src": "http://127.0.0.1:36527/bgm/regions/lobby.mp3",
+      "at": 1792037066756.5,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": true,
+      "connected": false,
+      "error": null,
+      "collected": false
+     },
+     {
+      "id": 4,
+      "kind": "loadstart",
+      "src": "http://127.0.0.1:36527/bgm/regions/lobby.mp3",
+      "at": 1792037066805.5999,
+      "currentTime": 0,
+      "readyState": 0,
+      "paused": false,
+      "connected": true,
+      "error": null,
+      "collected": false,
+      "isTrusted": true,
+      "nativeAt": 1792037066803.0999,
+      "nativeTimeStamp": 65711.19999999925,
+      "nativeTimeOrigin": 1792037001091.9
+     }
+    ],
+    "tracks": [
+     {
+      "id": 2,
+      "src": "http://127.0.0.1:36527/bgm/regions/frost.mp3",
+      "currentTime": 22.674667,
+      "readyState": 4,
+      "paused": true,
+      "connected": false,
+      "error": null,
+      "collected": false
+     }
+    ]
+   }
+  }
+ ]
+}

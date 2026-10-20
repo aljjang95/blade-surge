@@ -17,14 +17,33 @@ function cameraAt(offset: {x:number;y:number;z:number}, look: THREE.Vector3, asp
   camera.position.copy(vector(offset)); camera.lookAt(look); camera.updateMatrixWorld(true); return camera;
 }
 
-test('only normal solo Astral standard owns portrait fit, including shared visual/deep exclusions', () => {
+test('only normal solo Astral standard owns portrait fit, including shared visual exclusions', () => {
   expect(minimumBattleAspect(standard())).toBe(.8);
   const normal = standard();
   for (const excluded of [undefined, {}, {party:{}}, {expedition:{kind:'arena',id:normal.expedition.id,depth:'standard'}},
     {...normal,party:{}}, {...normal,riftId:'glass_rift'},
     {expedition:{...normal.expedition,riftId:'rift'}}, {expedition:{...normal.expedition,conquestId:'conquest'}},
-    {expedition:{...normal.expedition,depth:'deep'}}, {expedition:{...normal.expedition,id:'star_archive'}},
+    {expedition:{...normal.expedition,id:'star_archive'}},
     {expedition:{...normal.expedition,depth:undefined}}]) expect(minimumBattleAspect(excluded)).toBe(0);
+});
+
+const deep = () => ({ expedition: { kind: 'dungeon', id: 'astral_leviathan_spire', depth: 'deep' } });
+
+test('solo Astral deep shares the standard portrait fit, and every other deep/party/rift/conquest scope stays at zero', () => {
+  expect(minimumBattleAspect(deep())).toBe(.8);
+  const base = deep();
+  for (const excluded of [{ ...base, party: {} }, { ...base, riftId: 'glass_rift' },
+    { expedition: { ...base.expedition, riftId: 'rift' } }, { expedition: { ...base.expedition, conquestId: 'conquest' } },
+    { expedition: { ...base.expedition, kind: 'arena' } }, { expedition: { ...base.expedition, id: 'star_archive' } },
+    { expedition: { ...base.expedition, id: 'verdigris_sanctum' } }, { expedition: { ...base.expedition, depth: 'abyss' } }]) {
+    expect(minimumBattleAspect(excluded)).toBe(0);
+  }
+  // 정의 한 곳(stage 가 실제로 만드는 원정)에서도 같은 범위가 나온다.
+  const stage = buildExpeditionStage('dungeon', 'astral_leviathan_spire', null, { depth: 'deep' });
+  expect(stage.expedition.depth).toBe('deep');
+  expect(minimumBattleAspect(stage)).toBe(.8);
+  expect(minimumBattleAspect(buildExpeditionStage('dungeon', 'verdigris_sanctum', null, { depth: 'deep' }))).toBe(0);
+  expect(minimumBattleAspect(buildExpeditionStage('dungeon', 'comet_bastion', null, { depth: 'deep' }))).toBe(0);
 });
 
 test('disabled/desktop values are exactly preserved and portrait expansion remains bounded', () => {
@@ -66,6 +85,23 @@ test('default authored Astral camera keeps every physical choice circumference i
     expect(projected.z).toBeGreaterThan(-1); expect(projected.z).toBeLessThan(1);
   }
   expect(unfitHorizontal).toBeGreaterThan(1); // Real geometry reproduces the narrow horizontal regression.
+});
+
+test('Astral deep authored camera also keeps every physical choice circumference in the portrait frustum', () => {
+  const profile = dungeonVisualFor(deep()).camera, route = ROUTE_OBJECTIVES.astral_deep;
+  const offset = battleCameraOffset({x:profile.side,y:profile.y,z:profile.z},profile), look = new THREE.Vector3(0,profile.lookY,0);
+  const narrow = cameraAt(offset,look,390/844,profile.fov+14);
+  const fitted = cameraAt(fitBattleCameraOffset(offset,look,390/844,minimumBattleAspect(deep())),look,390/844,profile.fov+14);
+  let unfitHorizontal = 0;
+  for (const choice of route.choices) for (let sample=0;sample<32;sample++) {
+    const angle=sample*Math.PI*2/32;
+    const ground = new THREE.Vector3(choice.dx+Math.cos(angle)*route.radius,.12,choice.dz+Math.sin(angle)*route.radius);
+    unfitHorizontal=Math.max(unfitHorizontal,Math.abs(ground.clone().project(narrow).x));
+    const projected=ground.project(fitted);
+    expect(Math.abs(projected.x)).toBeLessThan(1); expect(Math.abs(projected.y)).toBeLessThan(1);
+    expect(projected.z).toBeGreaterThan(-1); expect(projected.z).toBeLessThan(1);
+  }
+  expect(unfitHorizontal).toBeGreaterThan(1); // 보정이 없으면 같은 가로 잘림이 생긴다.
 });
 
 function rendererFixture() {
@@ -149,7 +185,9 @@ test('each visual assignment resets scope before missing-camera return and other
   const chosen={yaw:27,pitch:6,zoom:120};r.battleCamera=chosen;
   r.setBattleVisual(null);expect(r.battleMinimumAspect).toBe(0);expect(r.battleCamera).toBe(chosen);
   r.setBattleVisual(visual,standard());r.setBattleVisual({});expect(r.battleMinimumAspect).toBe(0);
-  r.setBattleVisual(visual,standard());r.setBattleVisual(visual,{expedition:{...standard().expedition,depth:'deep'}});expect(r.battleMinimumAspect).toBe(0);
+  r.setBattleVisual(visual,standard());r.setBattleVisual(visual,deep());expect(r.battleMinimumAspect).toBe(.8);
+  r.setBattleVisual(visual,{expedition:{...deep().expedition,conquestId:'conquest'}});expect(r.battleMinimumAspect).toBe(0);
+  r.setBattleVisual(visual,standard());r.setBattleVisual(visual,{expedition:{...standard().expedition,depth:'abyss'}});expect(r.battleMinimumAspect).toBe(0);
   r.setBattleVisual(visual,standard());r.setBattleVisual(visual,{expedition:{kind:'dungeon',id:'star_archive',depth:'standard'}});expect(r.battleMinimumAspect).toBe(0);
 });
 

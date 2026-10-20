@@ -131,6 +131,14 @@ export class UI {
       this.combatNoticeResize.observe(el); this.combatNoticeObservedHeaders.add(el);
     }
     this.combatNoticeHeaderEls = [this.el.hud.querySelector('.hud-top'), $('bossbar'), ...leaves].filter(Boolean);
+    // 목표창은 가로 화면에서 절대 위치라 위쪽 HUD 아래 끝에 잡히지 않는다. 알림과 실제로 겹칠 때만 따로 본다.
+    const objective = $('objective');
+    if (this.combatNoticeObservedObjective !== objective) {
+      if (this.combatNoticeObservedObjective) this.combatNoticeResize.unobserve(this.combatNoticeObservedObjective);
+      if (objective) this.combatNoticeResize.observe(objective);
+      this.combatNoticeObservedObjective = objective || null;
+    }
+    this.combatNoticeSideEls = objective ? [objective] : [];
   }
   refreshCombatNoticeLayout() {
     const hud = this.el?.hud, toast = this.el?.toast;
@@ -142,6 +150,24 @@ export class UI {
       for (const el of this.combatNoticeHeaderEls || []) {
         const rect = el.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0 && Number.isFinite(rect.bottom)) bottom = Math.max(bottom, rect.bottom);
+      }
+      // 640×360 등 좁은 가로 화면에서 가운데 알림이 오른쪽 목표창 둘째 줄을 덮었다(BUNDLE-02 U3).
+      // 실제 알림 요소의 가로 범위가 목표창과 겹치고, 지금 자리에 놓인 알림 띠가 목표창과 세로로도 겹칠 때만 그 아래로 내린다.
+      // 화면 아래쪽에 고정된 목표창(세로 모바일)이나 옆으로 비켜 있는 목표창 때문에 알림이 움직이지는 않는다.
+      const sides = this.combatNoticeSideEls;
+      if (sides?.length && toast.childElementCount) {
+        let left = Infinity, right = -Infinity, height = 0;
+        for (const child of toast.children) {
+          const rect = child.getBoundingClientRect();
+          if (!(rect.width > 0 && rect.height > 0)) continue;
+          left = Math.min(left, rect.left); right = Math.max(right, rect.right); height += rect.height;
+        }
+        const top = bottom + 6;
+        for (const el of sides) {
+          const rect = el.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0 && Number.isFinite(rect.bottom) && rect.left < right && rect.right > left
+            && rect.top < top + height && rect.bottom > top) bottom = Math.max(bottom, rect.bottom);
+        }
       }
       const cue = this.combatCueEl;
       if (cue?.classList.contains('on') && cue.offsetParent === hud) {
@@ -159,6 +185,7 @@ export class UI {
       toast.style.removeProperty('--battle-notice-top');
       toast.classList?.remove('edge-strip');
       this.combatNoticeHeaderEls = [];
+      this.combatNoticeSideEls = [];
     }
     const noticeBottom = shown && toast.childElementCount ? toast.getBoundingClientRect().bottom : 0;
     writeHudStyle(hud.style, '--combat-notice-bottom', `${noticeBottom}px`);
@@ -510,7 +537,8 @@ export class UI {
     this.refreshSkillFeedback(b);
     this.refreshDodgeFeedback(b);
     this.readability?.update(b, dt);
-    const astralChoice = !!b.active && b.routeObjectives?.def?.id === 'astral_constellations_standard';
+    const astralId = b.routeObjectives?.def?.id;
+    const astralChoice = !!b.active && (astralId === 'astral_constellations_standard' || astralId === 'astral_fallen_constellations_deep');
     if (this._astralChoiceHud !== astralChoice) {
       this.el.hud.classList.toggle('astral-choice-hud', astralChoice);
       this._astralChoiceHud = astralChoice;

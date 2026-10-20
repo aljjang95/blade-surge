@@ -2,6 +2,8 @@
 export function postureHit(enemy, dealt, {finisher=false,kind='slash',quiet=false,breakPower=0} = {}) {
   if (!(dealt > 0) || !enemy.alive || enemy.spawning || quiet) return false;
   if (enemy.breakT > 0) return false;
+  // 종락 심층 합창 장막이 지키는 삼중 조종은 브레이크로 끊지 않는다(자세도 쌓지 않는다).
+  if (enemy.damageVeil?.guards?.(enemy)) return false;
   const gain = (finisher ? 28 : kind === 'magic' ? 15 : 10) * (1 + Math.max(0,Math.min(.6,breakPower)));
   const limit = enemy.isBoss ? 150 : enemy.isElite ? 110 : 80;
   enemy.postureMax = limit;
