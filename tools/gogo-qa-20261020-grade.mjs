@@ -606,7 +606,7 @@ async function A5(browser, rec) {
         rec.check('(f/' + variant + ') Lv5 무료 초기화 모달(돌려받는 SP 28)', /스킬 포인트 28/.test(mt) && /무료/.test(mt), mt);
         await tapModal(s, '#m-ok'); rec.did('모달 "무료 초기화"(#m-ok) 실제 탭');
         const h2 = await heroSnap(s, 'mage'); rec.obs('f_' + variant + '_afterReset', h2);
-        rec.check('(f/' + variant + ') 초기화 뒤에도 bonus 유지, available = earned + bonus 전체(28)', h2.sp.bonus === 21 && h2.sp.available === h2.sp.earned + h2.sp.bonus && h2.sp.available === 28 && h2.sp.spent === 0, h2.sp);
+        rec.check('(f/' + variant + ') 초기화 뒤에도 bonus 21 유지, available = 전체 예산(레벨 획득 7 + bonus 21 = 28, skillPoints.earned 는 예산 포함값)', h2.sp.bonus === 21 && h2.sp.earned === 28 && h2.sp.earned - h2.sp.bonus === 7 && h2.sp.available === 28 && h2.sp.spent === 0, h2.sp);
         await s.page.reload({ waitUntil: 'domcontentloaded' }); rec.did('새로고침(page.reload)'); await boot(s);
         const h3 = await heroSnap(s, 'mage'); rec.obs('f_' + variant + '_afterReload', h3);
         rec.check('(f/' + variant + ') 새로고침 뒤에도 bonus 21·available 28', h3.sp.bonus === 21 && h3.sp.available === 28, h3.sp);
