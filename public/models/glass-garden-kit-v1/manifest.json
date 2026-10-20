@@ -1,0 +1,436 @@
+{
+  "version": "glass-garden-kit-v1",
+  "schema": 1,
+  "blender": "5.2.2 LTS",
+  "generator": "tools/art/build-glass-garden-kit-v1.py",
+  "generatorSha256": "fb9056a482c15fde0e16c82bbd74d8e7888d0c43e776a7cb498f81604d2bc0d8",
+  "seed": 20261021,
+  "rights": "Original authored geometry and palette; no external assets or generation providers",
+  "license": "Project-owned original assets",
+  "runtime": {
+    "units": "metres",
+    "up": "+Y",
+    "forward": "+Z",
+    "pivot": "ground-centred",
+    "static": true,
+    "materialRoles": {
+      "gg_matte": "lit vertex-colour surface",
+      "gg_glow": "emissive x vertex colour, double sided"
+    }
+  },
+  "policy": {
+    "maxTrianglesPerAsset": 1500,
+    "lod1Ratio": [
+      0.3,
+      0.5
+    ],
+    "maxDrawsPerAsset": 2,
+    "textures": false,
+    "transparentSurfaces": false,
+    "lights": false,
+    "skins": false,
+    "animations": false
+  },
+  "reference": [
+    "public/img/expansion/glass_garden.webp",
+    "docs/assets/citadel-hub-v1/reference-source/glass-garden-trellis-reference.png"
+  ],
+  "assets": [
+    {
+      "id": "crystal-cluster-s",
+      "lod": 0,
+      "file": "crystal-cluster-s.glb",
+      "url": "/models/glass-garden-kit-v1/crystal-cluster-s.glb",
+      "bytes": 18484,
+      "sha256": "023f5b0542d87f6856b53b6aa8c04077fd711876d19f89ad4fbfc488dc2bbf06",
+      "triangles": 230,
+      "vertices": 606,
+      "draws": 2,
+      "materials": [
+        "gg_matte",
+        "gg_glow"
+      ],
+      "boundsGltf": {
+        "min": [
+          -0.5042467713356018,
+          0,
+          -0.505643367767334
+        ],
+        "max": [
+          0.5042467713356018,
+          0.9734711647033691,
+          0.505643367767334
+        ]
+      },
+      "meshoptCompressed": true,
+      "vertexColors": true,
+      "textures": 0,
+      "labelKo": "작은 민트 수정 군집",
+      "category": "crystal"
+    },
+    {
+      "id": "crystal-cluster-s",
+      "lod": 1,
+      "file": "crystal-cluster-s-lod1.glb",
+      "url": "/models/glass-garden-kit-v1/crystal-cluster-s-lod1.glb",
+      "bytes": 10176,
+      "sha256": "302913d1ed89e7daa139a6278cdf5274e777ca40689f18fe0339a5b2778a7af2",
+      "triangles": 92,
+      "vertices": 252,
+      "draws": 2,
+      "materials": [
+        "gg_matte",
+        "gg_glow"
+      ],
+      "boundsGltf": {
+        "min": [
+          -0.5042467713356018,
+          0,
+          -0.49017906188964844
+        ],
+        "max": [
+          0.5042467713356018,
+          0.9734711647033691,
+          0.49017906188964844
+        ]
+      },
+      "meshoptCompressed": true,
+      "vertexColors": true,
+      "textures": 0,
+      "labelKo": "작은 민트 수정 군집",
+      "category": "crystal",
+      "lodRatio": 0.4
+    },
+    {
+      "id": "crystal-cluster-l",
+      "lod": 0,
+      "file": "crystal-cluster-l.glb",
+      "url": "/models/glass-garden-kit-v1/crystal-cluster-l.glb",
+      "bytes": 24668,
+      "sha256": "6d9140e1d2c6444b0aef388c7a0255677f8e65730152d7919c488b0a7567518b",
+      "triangles": 334,
+      "vertices": 862,
+      "draws": 2,
+      "materials": [
+        "gg_matte",
+        "gg_glow"
+      ],
+      "boundsGltf": {
+        "min": [
+          -0.9820778369903564,
+          0,
+          -0.8920092582702637
+        ],
+        "max": [
+          0.9820778369903564,
+          1.9858211278915405,
+          0.8920092582702637
+        ]
+      },
+      "meshoptCompressed": true,
+      "vertexColors": true,
+      "textures": 0,
+      "labelKo": "큰 민트 수정 군집",
+      "category": "crystal"
+    },
+    {
+      "id": "crystal-cluster-l",
+      "lod": 1,
+      "file": "crystal-cluster-l-lod1.glb",
+      "url": "/models/glass-garden-kit-v1/crystal-cluster-l-lod1.glb",
+      "bytes": 11548,
+      "sha256": "4747144ea9206f3b914440623e8163bb6a40390e2a97941c517afd8572d9f6f5",
+      "triangles": 116,
+      "vertices": 308,
+      "draws": 2,
+      "materials": [
+        "gg_matte",
+        "gg_glow"
+      ],
+      "boundsGltf": {
+        "min": [
+          -0.8999228477478027,
+          0,
+          -0.8869473338127136
+        ],
+        "max": [
+          0.8999228477478027,
+          1.9469351768493652,
+          0.8869473338127136
+        ]
+      },
+      "meshoptCompressed": true,
+      "vertexColors": true,
+      "textures": 0,
+      "labelKo": "큰 민트 수정 군집",
+      "category": "crystal",
+      "lodRatio": 0.347
+    },
+    {
+      "id": "trellis-arch",
+      "lod": 0,
+      "file": "trellis-arch.glb",
+      "url": "/models/glass-garden-kit-v1/trellis-arch.glb",
+      "bytes": 43000,
+      "sha256": "d14bf1ba0f09451eeb56dca974596fc4462e37aa436f9c07baa4709201828b1a",
+      "triangles": 777,
+      "vertices": 1807,
+      "draws": 2,
+      "materials": [
+        "gg_matte",
+        "gg_glow"
+      ],
+      "boundsGltf": {
+        "min": [
+          -1.7914310693740845,
+          0,
+          -0.5586894750595093
+        ],
+        "max": [
+          1.7914310693740845,
+          3.844622850418091,
+          0.5586894750595093
+        ]
+      },
+      "meshoptCompressed": true,
+      "vertexColors": true,
+      "textures": 0,
+      "labelKo": "깨진 유리 격자 아치",
+      "category": "architecture"
+    },
+    {
+      "id": "trellis-arch",
+      "lod": 1,
+      "file": "trellis-arch-lod1.glb",
+      "url": "/models/glass-garden-kit-v1/trellis-arch-lod1.glb",
+      "bytes": 18464,
+      "sha256": "71dfea976e09cd4c2d4d04b34f61b1ddc984df5a4074a0b89dd9e28a48992b29",
+      "triangles": 316,
+      "vertices": 664,
+      "draws": 2,
+      "materials": [
+        "gg_matte",
+        "gg_glow"
+      ],
+      "boundsGltf": {
+        "min": [
+          -1.649999976158142,
+          0,
+          -0.5586894750595093
+        ],
+        "max": [
+          1.649999976158142,
+          3.778562068939209,
+          0.5586894750595093
+        ]
+      },
+      "meshoptCompressed": true,
+      "vertexColors": true,
+      "textures": 0,
+      "labelKo": "깨진 유리 격자 아치",
+      "category": "architecture",
+      "lodRatio": 0.407
+    },
+    {
+      "id": "planter-crystal",
+      "lod": 0,
+      "file": "planter-crystal.glb",
+      "url": "/models/glass-garden-kit-v1/planter-crystal.glb",
+      "bytes": 23400,
+      "sha256": "f354968328329c0c7f02c6c63d0b5cb4689d9743ae8e3156e69fb961cd89b577",
+      "triangles": 328,
+      "vertices": 858,
+      "draws": 2,
+      "materials": [
+        "gg_matte",
+        "gg_glow"
+      ],
+      "boundsGltf": {
+        "min": [
+          -0.6729699373245239,
+          0,
+          -0.7109484672546387
+        ],
+        "max": [
+          0.6729699373245239,
+          1.4988861083984375,
+          0.7109484672546387
+        ]
+      },
+      "meshoptCompressed": true,
+      "vertexColors": true,
+      "textures": 0,
+      "labelKo": "수정 잎 화분",
+      "category": "planting"
+    },
+    {
+      "id": "planter-crystal",
+      "lod": 1,
+      "file": "planter-crystal-lod1.glb",
+      "url": "/models/glass-garden-kit-v1/planter-crystal-lod1.glb",
+      "bytes": 10832,
+      "sha256": "ec47f4e1f4b62798497386b4f9357dcc51caf0248a8f81aeb97dbc30cee2eed5",
+      "triangles": 120,
+      "vertices": 310,
+      "draws": 2,
+      "materials": [
+        "gg_matte",
+        "gg_glow"
+      ],
+      "boundsGltf": {
+        "min": [
+          -0.5785268545150757,
+          0,
+          -0.6600000262260437
+        ],
+        "max": [
+          0.5785268545150757,
+          1.4988861083984375,
+          0.6600000262260437
+        ]
+      },
+      "meshoptCompressed": true,
+      "vertexColors": true,
+      "textures": 0,
+      "labelKo": "수정 잎 화분",
+      "category": "planting",
+      "lodRatio": 0.366
+    },
+    {
+      "id": "moss-edging",
+      "lod": 0,
+      "file": "moss-edging.glb",
+      "url": "/models/glass-garden-kit-v1/moss-edging.glb",
+      "bytes": 21548,
+      "sha256": "606f5bba65625b61c62c34d1c1426cbc6a50dee0e2b7dd70ffc7f9e7a3bdb3c2",
+      "triangles": 288,
+      "vertices": 768,
+      "draws": 2,
+      "materials": [
+        "gg_matte",
+        "gg_glow"
+      ],
+      "boundsGltf": {
+        "min": [
+          -1.0143640041351318,
+          0,
+          -0.37921470403671265
+        ],
+        "max": [
+          1.0143640041351318,
+          0.7573181986808777,
+          0.37921470403671265
+        ]
+      },
+      "meshoptCompressed": true,
+      "vertexColors": true,
+      "textures": 0,
+      "labelKo": "이끼 돌 테두리 모듈",
+      "category": "edging"
+    },
+    {
+      "id": "moss-edging",
+      "lod": 1,
+      "file": "moss-edging-lod1.glb",
+      "url": "/models/glass-garden-kit-v1/moss-edging-lod1.glb",
+      "bytes": 10936,
+      "sha256": "1608b619f19b67fdea12ded0db5c17af3b07d26380ca879826bc7d6ade039018",
+      "triangles": 116,
+      "vertices": 292,
+      "draws": 2,
+      "materials": [
+        "gg_matte",
+        "gg_glow"
+      ],
+      "boundsGltf": {
+        "min": [
+          -0.9547210931777954,
+          0,
+          -0.47913795709609985
+        ],
+        "max": [
+          0.9547210931777954,
+          0.7173181772232056,
+          0.47913795709609985
+        ]
+      },
+      "meshoptCompressed": true,
+      "vertexColors": true,
+      "textures": 0,
+      "labelKo": "이끼 돌 테두리 모듈",
+      "category": "edging",
+      "lodRatio": 0.403
+    },
+    {
+      "id": "hanging-lantern",
+      "lod": 0,
+      "file": "hanging-lantern.glb",
+      "url": "/models/glass-garden-kit-v1/hanging-lantern.glb",
+      "bytes": 17460,
+      "sha256": "5511e8bad0a4f84312f662e8470ab23b8995803aef75081a6df471da9f80c647",
+      "triangles": 287,
+      "vertices": 619,
+      "draws": 2,
+      "materials": [
+        "gg_matte",
+        "gg_glow"
+      ],
+      "boundsGltf": {
+        "min": [
+          -0.25999999046325684,
+          0,
+          -0.21882611513137817
+        ],
+        "max": [
+          0.5635398030281067,
+          2.4196176528930664,
+          0.2709311246871948
+        ]
+      },
+      "meshoptCompressed": true,
+      "vertexColors": true,
+      "textures": 0,
+      "labelKo": "걸이 유리 등",
+      "category": "light"
+    },
+    {
+      "id": "hanging-lantern",
+      "lod": 1,
+      "file": "hanging-lantern-lod1.glb",
+      "url": "/models/glass-garden-kit-v1/hanging-lantern-lod1.glb",
+      "bytes": 8828,
+      "sha256": "4e66d3fc6483acfdc5e30f8499e7ac84b8ed2027fcbdd837119db9ec30fa8067",
+      "triangles": 99,
+      "vertices": 209,
+      "draws": 2,
+      "materials": [
+        "gg_matte",
+        "gg_glow"
+      ],
+      "boundsGltf": {
+        "min": [
+          -0.23999999463558197,
+          0,
+          -0.23999999463558197
+        ],
+        "max": [
+          0.547235906124115,
+          2.414968490600586,
+          0.23999999463558197
+        ]
+      },
+      "meshoptCompressed": true,
+      "vertexColors": true,
+      "textures": 0,
+      "labelKo": "걸이 유리 등",
+      "category": "light",
+      "lodRatio": 0.345
+    }
+  ],
+  "evidence": {
+    "sourceBlend": "art/glass-garden-kit-v1/glass-garden-kit-v1.blend",
+    "preview": "art/glass-garden-kit-v1/glass-garden-kit-v1-preview.png",
+    "turntable": "art/glass-garden-kit-v1/glass-garden-kit-v1-turntable.png",
+    "runtimeVisualReview": "Separate game camera verification required"
+  }
+}

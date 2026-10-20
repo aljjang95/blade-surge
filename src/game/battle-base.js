@@ -31,6 +31,7 @@ import { createMapTactics } from './map-tactics.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
 import { alertPack, joinPack, packSlot, planRoomPacks } from './pack-pursuit.js';
 import { preloadFieldSurface } from './open-field-scene.js';
+import { preloadGlassGardenKit } from '../engine/glass-garden-kit.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
 import { dungeonVisualFor } from '../data/dungeon-visuals.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
@@ -120,6 +121,7 @@ export class Battle {
     this.autoTarget = this.routeObjectives?.autoRoom() || null;
     this.visual = dungeonVisualFor(stage);
     if (stage.field) await preloadFieldSurface();
+    if (this.world.expeditionRouteId === 'glass_garden') await preloadGlassGardenKit();
     if (this._startGeneration !== startGeneration) return;
     // 보물방 상자는 전투가 직접 소유하는 열 수 있는 상자로 놓는다. 보상이 없는 모드는 기존 장식 상자를 그대로 둔다.
     this.arena.interactiveChests = fieldDropsAllowed(stage); this.arena.chestPoses = new Map();
