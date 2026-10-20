@@ -36,12 +36,19 @@ test('remote input normalizes identifiers and expires held and queued input afte
   input.expire(1351);expect(input.move).toEqual({x:0,y:0});expect(input.attackHeld).toBe(false);expect(input.queue).toEqual([]);
 });
 
-test('remote held attack reaches the host player through the attack queue',()=>{
+test('remote attack press reaches the host attack queue once per press, holding does not repeat',()=>{
   const input=new RemoteInput();
   input.receive({x:0,y:0,attack:true,actions:[]},1000);
   expect(input.consume('attack')).toBe(true);
-  input.receive({x:0,y:0,attack:false,actions:[]},1060);
+  input.receive({x:0,y:0,attack:true,actions:[]},1060);
+  input.receive({x:0,y:0,attack:true,actions:[]},1120);
   expect(input.consume('attack')).toBe(false);
+  input.receive({x:0,y:0,attack:false,actions:[]},1180);
+  input.receive({x:0,y:0,attack:true,actions:[]},1240);
+  expect(input.consume('attack')).toBe(true);
+  input.expire(1600);
+  input.receive({x:0,y:0,attack:true,actions:[]},1700);
+  expect(input.consume('attack')).toBe(true);
 });
 
 test('party stat normalization is immutable and applies the documented attack and durability curves',()=>{
