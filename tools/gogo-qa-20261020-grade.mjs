@@ -397,6 +397,15 @@ async function A3(browser, rec) {
 async function shopSnapshot(s) {
   return s.page.evaluate(() => ({ items: [...document.querySelectorAll('#shop-grid .shop-item')].map((d) => ({ name: d.querySelector('.si-name')?.textContent.trim(), flow: d.querySelector('.si-flow')?.textContent.trim() || null, role: d.querySelector('.si-flow')?.dataset.role || null, cash: /결제 준비 중/.test(d.textContent) })) }));
 }
+// #shop-flow 칩이 상점 패널 머리(.panel-head) 아래에서 잘리지 않고 완전히 보이는지(첫 .sf-step top >= panel-head bottom, 칩 전체가 뷰포트 안).
+const flowClip = (s) => s.page.evaluate(() => {
+  const head = document.querySelector('#tab-shop .panel-head'), steps = [...document.querySelectorAll('#shop-flow .sf-step')], row = document.getElementById('shop-flow');
+  if (!head || !steps.length) return { ok: false, reason: 'missing', head: !!head, steps: steps.length };
+  const hb = head.getBoundingClientRect().bottom, rects = steps.map((b) => b.getBoundingClientRect()), rr = row.getBoundingClientRect();
+  return { headBottom: Math.round(hb * 10) / 10, firstStepTop: Math.round(rects[0].top * 10) / 10, minTop: Math.round(Math.min(...rects.map((r) => r.top)) * 10) / 10, maxBottom: Math.round(Math.max(...rects.map((r) => r.bottom)) * 10) / 10, rowTop: Math.round(rr.top * 10) / 10, viewportH: innerHeight, viewportW: innerWidth, minLeft: Math.round(Math.min(...rects.map((r) => r.left)) * 10) / 10, maxRight: Math.round(Math.max(...rects.map((r) => r.right)) * 10) / 10,
+    ok: rects[0].top >= hb - 0.5 && Math.min(...rects.map((r) => r.top)) >= hb - 0.5 && Math.max(...rects.map((r) => r.bottom)) <= innerHeight + 0.5 && Math.min(...rects.map((r) => r.left)) >= -0.5 && Math.max(...rects.map((r) => r.right)) <= innerWidth + 0.5 };
+});
+
 async function A4(browser, rec) {
   const s = await open(browser, rec);
   try {
@@ -405,6 +414,8 @@ async function A4(browser, rec) {
     const flow = await s.page.evaluate(() => { const row = document.getElementById('shop-flow'); return { present: !!row && row.offsetParent !== null, steps: [...(row?.querySelectorAll('.sf-step') || [])].map((b) => ({ step: b.dataset.step, text: b.textContent.trim().replace(/\s+/g, ' '), visible: b.offsetParent !== null })) }; });
     rec.obs('flow844', flow);
     rec.check('844: #shop-flow 에 5단계(gems,summon,shards,transcend,battle) 보임', flow.present && flow.steps.map((x) => x.step).join() === 'gems,summon,shards,transcend,battle' && flow.steps.every((x) => x.visible), flow);
+    const clip844 = await flowClip(s); rec.obs('flowClip844', clip844);
+    rec.check('844: 흐름 칩이 패널 머리 아래에 완전히 보임(첫 .sf-step top >= .panel-head bottom, 칩 전체가 화면 안)', clip844.ok, clip844);
     await rec.shot(s, 'shop-flow-844');
     // 탭별 .si-flow
     const perTab = {};
@@ -444,6 +455,8 @@ async function A4(browser, rec) {
     await tapTab(w, 'shop');
     const flowW = await w.page.evaluate(() => [...document.querySelectorAll('#shop-flow .sf-step')].map((b) => ({ step: b.dataset.step, visible: b.offsetParent !== null })));
     rec.obs('flow1280', flowW); rec.check('1280: #shop-flow 5단계 보임', flowW.length === 5 && flowW.every((x) => x.visible), flowW);
+    const clip1280 = await flowClip(w); rec.obs('flowClip1280', clip1280);
+    rec.check('1280: 흐름 칩이 패널 머리 아래에 완전히 보임(첫 .sf-step top >= .panel-head bottom, 칩 전체가 화면 안)', clip1280.ok, clip1280);
     await rec.shot(w, 'shop-flow-1280');
     const rolesW = await shopSnapshot(w); rec.check('1280: 추천 탭 상품에 .si-flow', rolesW.items.length > 0 && rolesW.items.every((i) => i.flow), rolesW.items.filter((i) => !i.flow).map((i) => i.name));
   } catch (e) { await errShot(w); throw e; } finally { await w.close(); }
