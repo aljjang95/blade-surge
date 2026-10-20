@@ -485,10 +485,10 @@ class App {
       this.tutorial.update();
       this.party?.update(realDt);
       const dt = realDt * this.battle.timeCtl.scale;
-      this.fx.update(dt);
+      this.fx.update(dt, !!this.battle.paused);
       if (this.battle.player) { this._auto = this.battle.player.auto; }
       // 킬 카운트 → 임무
-      this.renderer.update(dt, realDt); if (render && canRenderFrame(this, document)) this.renderer.render();
+      this.renderer.update(dt, realDt, !!this.battle.paused); if (render && canRenderFrame(this, document)) this.renderer.render();
     } else if (this.mode === 'lobby') {
       // 입장 준비 중에는 성채 장면을 정지하고 네이티브 UI와 음악을 유지한다.
       if (this.hubUI?.opened && this.hubUI.dialog?.open) return;

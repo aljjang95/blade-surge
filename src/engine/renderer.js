@@ -26,7 +26,9 @@ const FinalShader = {
     uVignette: { value: 0.35 },
     uRadial: { value: 0 },     // 방사형 블러
     uDesat: { value: 0 },      // 채도 감소 (사망/슬로우)
+    uSpeed: { value: new THREE.Vector2(0, 1) },   // 마지막 적 슬로우의 가장자리 속도선: (세기 0~1, 화면 가로세로비)
     uTime: { value: 0 },
+    uSpeedClock: { value: 0 },   // 속도선 무늬 전용 시계: 전투 일시정지 중에는 흐르지 않는다
     uPlayerMask: { value: null },
     uPlayerOutlineStep: { value: new THREE.Vector2() },
     uPlayerOutlineActive: { value: 0 },
@@ -40,7 +42,7 @@ const FinalShader = {
   },
   vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
   fragmentShader: `
-    uniform sampler2D tDiffuse; uniform float uAberr, uFlash, uVignette, uRadial, uDesat, uTime; uniform vec3 uFlashColor;
+    uniform sampler2D tDiffuse; uniform float uAberr, uFlash, uVignette, uRadial, uDesat, uTime, uSpeedClock; uniform vec3 uFlashColor; uniform vec2 uSpeed;
     uniform float uGrade, uSat; uniform vec3 uCool, uWarm, uLift, uRegion;
     varying vec2 vUv;
     ${PLAYER_SILHOUETTE_FRAGMENT}
@@ -74,6 +76,21 @@ const FinalShader = {
       // 화면 중앙(영웅·적)은 그대로 두고 가장자리는 실제로 보일 만큼 짙게 물들인다.
       float impactEdge = smoothstep(0.34, 0.9, d);
       col = mix(col, uFlashColor * 0.78, clamp(uFlash * impactEdge * 0.85, 0.0, 0.46));
+      if (uSpeed.x > 0.001) {
+        // 가장자리 전용 속도선·그늘. 거리 r 은 축별 정규화(네 변의 중점이 모두 r=1, 모서리 약 1.19)라 가로·세로 화면비와 무관하게
+        // 네 변 어디서나 바깥 마스크에 닿고, r < 0.52 인 중앙(영웅·적)은 마스크가 0 이라 절대 건드리지 않는다.
+        vec2 a2 = abs(c * 2.0);
+        float r = pow(pow(a2.x, 4.0) + pow(a2.y, 4.0), 0.25);
+        float edge = smoothstep(0.52, 1.0, r);
+        vec2 q = c * vec2(uSpeed.y, 1.0);   // 줄 방향만 화면비를 보정해 어느 비율에서도 중심에서 고르게 퍼진다
+        float u = atan(q.y, q.x) / 6.2831853 + 0.5;
+        float n = 44.0, id = floor(u * n);
+        float h = fract(sin((id + floor(uSpeedClock * 14.0) * 7.0) * 91.7) * 43758.5453);   // 14fps 로 끊어 바뀌는 손그림풍 줄 배치
+        float lane = abs(fract(u * n) - 0.5) * 2.0;
+        float line = (1.0 - smoothstep(0.0, 0.16 + 0.34 * h, lane)) * step(0.35, h) * smoothstep(0.64 + 0.18 * (1.0 - h), 0.98, r);
+        col = mix(col, vec3(1.0, 0.97, 0.88), clamp(line * uSpeed.x * 0.75, 0.0, 0.62));
+        col *= 1.0 - edge * uSpeed.x * 0.3;
+      }
       gl_FragColor = vec4(playerOutline(col, uv), 1.0);
     }`,
 };
@@ -184,7 +201,7 @@ export class Renderer {
     this.rimLight = new THREE.DirectionalLight(0xb4d6ff, RIM_INTENSITY);
     this.scene.add(this.rimLight, this.rimLight.target);
     this._gradeKey = 'default'; this._grade = gradeFor('default'); this._gradeTarget = gradeFor('default');
-    this.flash = 0; this.aberr = 0; this.radial = 0; this.desat = 0;
+    this.flash = 0; this.aberr = 0; this.radial = 0; this.desat = 0; this.speedAccent = 0;
     // 카메라는 사용자 시점·지역 구도만 따른다. 동작 줄이기 선호는 후처리 왜곡을 끈다.
     this.postFxEnabled = true;
 
@@ -301,12 +318,16 @@ export class Renderer {
   shake() {}
   /** 화면 전체 FOV 줌 펄스도 쓰지 않는다(공격마다 화면이 확대·축소되지 않는다). */
   punch() {}
+  /** 마지막 적 슬로우 가장자리 속도선 세기(0~1). 동작 줄이기·로비·낮은 화질에서는 update 가 0 으로 막는다. */
+  setSpeedAccent(level = 0) { this.speedAccent = Number.isFinite(level) ? Math.max(0, Math.min(1, level)) : 0; }
   flashScreen(strength = 1, color = 0xffffff) {
     // 동작 줄이기에서는 예전 상한(0.25)을 유지하고, 일반 설정에서만 가장자리 틴트를 더 짙게 쓴다.
     this.flash = Math.max(this.flash, Math.min(this.postFxEnabled ? FLASH_MAX : 0.25, strength)); this.u.uFlashColor.value.set(color);
   }
-  update(dt, realDt) {
+  /** paused: 전투 일시정지 중이면 속도선 무늬 시계를 멈춰 정지 화면을 그대로 둔다. */
+  update(dt, realDt, paused = false) {
     this.time += realDt;
+    this.speedClock = (this.speedClock || 0) + (paused ? 0 : realDt);
     const rig = this.rig, cam = this.camera;
     let desired;
     if (rig.mode === 'lobby') {
@@ -358,7 +379,9 @@ export class Renderer {
     this.u.uAberr.value = post ? Math.min(this.aberr, ABERR_MAX) * ABERR_SCALE : 0;
     this.u.uRadial.value = post && this.quality !== 'low' ? Math.min(this.radial, RADIAL_MAX) * RADIAL_SCALE : 0;
     this.u.uDesat.value = this.desat;
+    this.u.uSpeed?.value.set(post && this.quality !== 'low' && this.thermalTier < 3 ? this.speedAccent || 0 : 0, this._width / Math.max(1, this._height) || 1);
     this.u.uTime.value = this.time;
+    if (this.u.uSpeedClock) this.u.uSpeedClock.value = this.speedClock;
     this._updateGrade(realDt, rig.mode === 'lobby'); this._updateRim();
   }
   render() {

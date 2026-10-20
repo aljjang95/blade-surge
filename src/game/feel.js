@@ -21,7 +21,7 @@ export const FEEL = Object.freeze({
   }),
   // 슬로우모션(sim dt 배율). 끝 ease 초 동안 1 로 부드럽게 복귀한다.
   slowmo: Object.freeze({
-    roomClear: Object.freeze({ scale: .32, sec: .5, ease: .28 }),   // 방의 마지막 적
+    roomClear: Object.freeze({ scale: .32, sec: .5, ease: .28, accent: true }),   // 방의 마지막 적(accent: 가장자리 속도선)
     eliteKill: Object.freeze({ scale: .5, sec: .26, ease: .16 }),
     minRoomKills: 4,     // 이 수 이상 처치한 방의 마지막 적일 때만(1~2마리 방에선 끊김이 거슬린다)
     cooldown: 5,         // 슬로우 사이 최소 시뮬레이션 간격(초)
@@ -37,6 +37,40 @@ export const FEEL = Object.freeze({
       Object.freeze({ n: 8, ult: 3, mp: 4, ring: 5.6, pitch: 1.5 }),
       Object.freeze({ n: 12, ult: 5, mp: 6, ring: 7, pitch: 1.8 }),
     ]),
+  }),
+  // 전투 VFX(절차적 셰이더·인스턴싱). 시간은 FX.update 로 들어오는 sim dt 뿐이라 히트스톱·슬로우를 그대로 따른다.
+  // 난수는 전투 난수와 분리된 VfxRng 스트림만 쓴다. 길이 m, 속도 m/s, 시간 초.
+  vfx: Object.freeze({
+    // 처치 파편: InstancedMesh 한 장(고정 용량)을 가장 오래된 칸부터 돌려 쓴다. 파편은 적 팔레트 색, 넉백 방향으로 날아가 중력으로 떨어진다.
+    shards: Object.freeze({
+      capacity: 256,
+      count: Object.freeze({ minion: 9, elite: 18, boss: 32 }),
+      frameBudget: 80,      // 한 프레임에 새로 낼 수 있는 파편 상한(군중 동시 처치에서도 업로드가 일정하다)
+      liteScale: .5, reducedScale: .5,   // 낮음 화질·동작 줄이기에서는 개수를 절반으로(그 외 모든 값은 그대로)
+      life: .5, lifeJitter: .18,
+      speed: 5.6, speedJitter: .5,       // 넉백 방향 성분
+      spread: 3.4,                       // 옆으로 흩어지는 폭
+      up: 3.4, upJitter: 3,
+      gravity: 26, drag: 1.5,
+      size: .15, sizeJitter: .55, sizeByScale: Object.freeze([.7, 1.7]),   // 적 배율에 비례하되 이 범위로 묶는다
+      spin: 16, glowSec: .1,             // 처음 glowSec 동안 흰빛으로 번쩍
+      heightFrac: .55, bodyHeight: 1.7,  // 폭발 지점 = 적 위치 + bodyHeight * 배율 * heightFrac
+      saturation: 1.25, lightMin: .3, lightMax: .72, accentLift: .22, accentShare: .3, darkShare: .18, darkScale: .45,
+    }),
+    // 묶음 처치 단계(multiSteps 와 같은 인덱스) 충격파. 반지름은 multiSteps[i].ring 을 그대로 쓴다(링 크기를 한 곳에서만 정한다).
+    wave: Object.freeze({
+      capacity: 8,
+      steps: Object.freeze([
+        Object.freeze({ life: .5, edge: .5, gain: .5, rays: 10, rayGain: .45 }),
+        Object.freeze({ life: .55, edge: .58, gain: .6, rays: 14, rayGain: .55 }),
+        Object.freeze({ life: .62, edge: .66, gain: .7, rays: 18, rayGain: .65 }),
+        Object.freeze({ life: .72, edge: .75, gain: .82, rays: 24, rayGain: .75 }),
+      ]),
+      color: 0xffd060, height: .09,
+      liteGain: .8, reducedGain: .6, reducedLife: .8,   // 낮음: 광선 끔·밝기 낮춤 / 동작 줄이기: 광선 끔·짧고 어둡게
+    }),
+    // 마지막 적 슬로우 동안 화면 가장자리에만 얹는 속도선·그늘. 중앙(r < innerR)은 절대 건드리지 않는다.
+    speedLines: Object.freeze({ rampIn: .08, peak: .85 }),
   }),
   // 입력 버퍼·취소 창(초 / 공격 진행도 0~1). Player 가 같은 값을 쓴다.
   input: Object.freeze({
@@ -133,4 +167,43 @@ export function comboQueueOpen(t, hitAt, hitDone) {
 export function skillCancelOpen(t, hitAt, hitDone) {
   const I = FEEL.input;
   return hitDone && t >= hitAt + I.skillCancelAfterHit && t < I.skillCancelEnd;
+}
+
+// ---- 전투 VFX 순수 계산(난수·시간·DOM 없음) ----
+/** 처치 파편 개수. 등급(졸개·정예·보스)별 기본에 낮음 화질·동작 줄이기 배율을 곱한다. */
+export function shardCount(kind = {}, { lite = false, reduced = false } = {}) {
+  // 런타임 Enemy 는 isBoss/isElite 로 노출한다(boss/elite 표기도 받는다).
+  const S = FEEL.vfx.shards, boss = !!(kind?.isBoss || kind?.boss), elite = !!(kind?.isElite || kind?.elite);
+  const base = boss ? S.count.boss : elite ? S.count.elite : S.count.minion;
+  return Math.max(0, Math.round(base * (lite ? S.liteScale : 1) * (reduced ? S.reducedScale : 1)));
+}
+
+/** 묶음 처치 단계의 충격파 인자. 반지름은 FEEL.kill.multiSteps[step].ring. 잘못된 단계는 null. */
+export function waveParams(step, { lite = false, reduced = false } = {}) {
+  const W = FEEL.vfx.wave, tier = W.steps[step], kill = FEEL.kill.multiSteps[step];
+  if (!tier || !kill) return null;
+  const quiet = lite || reduced;
+  return {
+    radius: kill.ring,
+    life: tier.life * (reduced ? W.reducedLife : 1),
+    edge: tier.edge,
+    gain: tier.gain * (reduced ? W.reducedGain : lite ? W.liteGain : 1),
+    rays: quiet ? 0 : tier.rays,
+    rayGain: quiet ? 0 : tier.rayGain,
+    color: W.color,
+  };
+}
+
+/** 마지막 적 슬로우의 가장자리 속도선 세기(0~peak). remaining/total/ease 는 ImpactClock 의 slowT·slowmo 인자와 같은 초 단위. */
+export function slowAccentLevel(remaining, total, ease = 0) {
+  const V = FEEL.vfx.speedLines;
+  if (!(remaining > 0) || !(total > 0)) return 0;
+  const inK = clamp((total - remaining) / V.rampIn, 0, 1), outK = ease > 0 ? clamp(remaining / ease, 0, 1) : 1;
+  const k = Math.min(inK, outK);
+  return V.peak * k * k * (3 - 2 * k);
+}
+
+/** 슬로우 판정(killSlowmo 결과)에서 속도선 인자를 뽑는다. accent 표시가 없거나 동작 줄이기면 null — 속도선은 켜지지 않는다. */
+export function slowAccentFor(slowmo, reduced = false) {
+  return slowmo && slowmo.accent && !reduced ? { sec: slowmo.sec, ease: slowmo.ease } : null;
 }
