@@ -34,13 +34,14 @@ export function skuFlowRole(sku) {
   if (r.transcendStones || r.heroChoiceShards) return { role: 'transcend', label: `초월 재료 · SSR ${GRADE_UP_COST.SSR.transcendStones}개 · SSSR ${GRADE_UP_COST.SSSR.transcendStones}개 필요` };
   if (r.ssrTicket) return { role: 'summon', label: 'SSR 확정 소환 · 중복이면 조각' };
   if (r.skillResets) return { role: 'reset', label: '스킬 트리 초기화 · 투자 SP 전액 반환' };
+  // 강화 묶음에 소환권이 섞여 있어도 주 용도는 장비 강화다.
+  if (r.stones || r.stones2 || r.stones3 || r.protect || r.bless) return { role: 'gear', label: '장비 강화' };
   const gems = sku.gems || r.gems || 0;
   if (r.tickets || gems) {
     const pulls = (r.tickets || 0) + Math.floor(gems / GACHA.single);
     return { role: 'summon', label: `소환 ${fmt(pulls)}회분 · 중복 영웅은 초월 조각` };
   }
   if (r.gold) return { role: 'gold', label: `초월 골드(SSR ${fmt(GRADE_UP_COST.SSR.gold)})·영웅 레벨업` };
-  if (r.stones || r.stones2 || r.stones3 || r.protect || r.bless) return { role: 'gear', label: '장비 강화' };
   if (r.energy) return { role: 'energy', label: '원정 에너지 · 보스 조각 파밍' };
   return null;
 }
