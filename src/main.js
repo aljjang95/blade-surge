@@ -485,7 +485,7 @@ class App {
       this.tutorial.update();
       this.party?.update(realDt);
       const dt = realDt * this.battle.timeCtl.scale;
-      this.fx.update(dt);
+      this.fx.update(dt, !!this.battle.paused);
       if (this.battle.player) { this._auto = this.battle.player.auto; }
       // 킬 카운트 → 임무
       this.renderer.update(dt, realDt); if (render && canRenderFrame(this, document)) this.renderer.render();

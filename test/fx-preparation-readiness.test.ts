@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { FX } from '../src/engine/fx.js';
+import { CombatVfx } from '../src/engine/combat-vfx.js';
 
 const root = globalThis as any;
 let oldDocument: any, oldRaf: any, oldTimeout: any, oldClearTimeout: any, clock: ReturnType<typeof timerClock>;
@@ -495,4 +496,21 @@ test('compiled reflection covers the existing main, warm, shadow, mask and final
   expect(f.compileCalls()).toBe(5); expect(f.nativeAsyncCalls()).toBe(0);
   for (const key of f.programs.keys()) expect(f.events.filter(e => e === `uniforms:${key}`)).toHaveLength(1);
   expect(f.current()).toBe(f.previous); expect(f.hazards.parent).toBe(f.fx.scene); expect(f.template.parent).toBeNull();
+});
+
+test('prepare 는 숨겨진 전투 VFX 두 메시도 보이게 해 컴파일하고 끝나면 원래대로 돌려놓는다', async () => {
+  const f = fixture(); f.fx.vfx = new CombatVfx(f.fx.scene);
+  const meshes = [f.fx.vfx.shards.mesh, f.fx.vfx.waves.mesh];
+  expect(meshes.every(m => !m.visible)).toBe(true);
+  // r170 compile 처럼 보이는 객체만 순회하는 렌더러: 숨겨진 메시의 재질은 컴파일되지 않는다.
+  const compiled = new Set<THREE.Material>(), base = f.renderer.compile;
+  f.renderer.compile = (scene: THREE.Scene, camera: THREE.Camera, target: THREE.Scene | null) => {
+    scene.traverseVisible((o: any) => { if (o.isInstancedMesh) compiled.add(o.material); });
+    return base(scene, camera, target);
+  };
+  const result = observe(f.fx.prepare(f.renderer, {}, f.target));
+  await clock.advance(10); await finish(result);
+  expect(result.value).toBe(true);
+  expect(compiled.has(f.fx.vfx.shards.mesh.material)).toBe(true); expect(compiled.has(f.fx.vfx.waves.mesh.material)).toBe(true);
+  expect(meshes.every(m => !m.visible && m.count === 0)).toBe(true);
 });

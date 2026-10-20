@@ -163,3 +163,37 @@ test('feelOnKill: 단계 진입마다 충격파 풀에 단계·동작 줄이기 
   calls.length = 0; run(make2(true), 3); expect(calls).toEqual([[0, true]]);
   calls.length = 0; run(make2(false, false), 3); expect(calls).toEqual(['ring']);
 });
+
+test('shardCount: 런타임 Enemy 필드(isBoss/isElite)로 정예·보스 개수를 고른다', () => {
+  const real = enemy({ isElite: true }), boss = enemy({ isBoss: true });
+  expect(shardCount(real)).toBe(S.count.elite); expect(shardCount(boss)).toBe(S.count.boss);
+  expect(shardCount({ isBoss: true, isElite: true })).toBe(S.count.boss);
+  expect(shardCount(enemy())).toBe(S.count.minion);
+  const v = make(); expect(v.shatter(boss)).toBe(Math.min(S.count.boss, S.frameBudget));
+  v.update(.016); expect(v.shatter(real)).toBe(S.count.elite);
+});
+
+test('준비 구간 setWarm: 두 메시가 보이는 순회에 잡히고 끝나면 원래 숨김·count 0 으로 돌아온다', () => {
+  const scene = new THREE.Scene(), v = new CombatVfx(scene);
+  const seen = () => { const out: THREE.Object3D[] = []; scene.traverseVisible(o => { if ((o as any).isInstancedMesh) out.push(o); }); return out; };
+  expect(seen()).toEqual([]);
+  v.setWarm(true);
+  expect(seen()).toEqual([v.shards.mesh, v.waves.mesh]); expect(v.shards.mesh.count).toBeGreaterThanOrEqual(1);
+  v.setWarm(false);
+  expect(seen()).toEqual([]); expect(v.shards.mesh.count).toBe(0);
+  v.shatter(enemy()); v.setWarm(true); v.setWarm(false);   // 살아 있는 파편이 있으면 계속 보인다
+  expect(v.shards.mesh.visible).toBe(true); expect(v.shards.mesh.count).toBe(v.shards.high);
+});
+
+test('FX.update: 전투 일시정지 동안에는 전투 VFX 시계가 흐르지 않고 재개하면 이어진다', async () => {
+  const { FX } = await import('../src/engine/fx.js');
+  const pool = { update() {} };
+  const fx: any = Object.create(FX.prototype);
+  Object.assign(fx, { sparks: pool, glow: pool, smoke: pool, items: [], impactLights: { update() {} }, trails: [], vfx: make() });
+  fx.update(.1, false); expect(fx.vfx.clock).toBeCloseTo(.1, 6);
+  fx.update(.1, true); fx.update(.1, true); expect(fx.vfx.clock).toBeCloseTo(.1, 6);
+  fx.update(.1); expect(fx.vfx.clock).toBeCloseTo(.2, 6);
+  // 메인 루프가 일시정지 상태를 그대로 넘기는지(Battle.update 가 시간을 멈추는 상태와 같은 값)
+  const main = (await import('node:fs')).readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  expect(main).toContain('this.fx.update(dt, !!this.battle.paused)');
+});

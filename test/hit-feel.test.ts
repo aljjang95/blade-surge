@@ -62,6 +62,18 @@ test('색수차·방사형 블러·플래시는 상한 안에서만 올라가고
   expect(low.u.uAberr.value).toBeGreaterThan(0); expect(low.u.uRadial.value).toBe(0);
 });
 
+test('마지막 적 속도선: 낮은 화질·동작 줄이기·높은 열 등급에서는 꺼지고 일반에서만 켜진다', () => {
+  const make = (extra: Record<string, unknown> = {}) => {
+    const r = rendererFixture(extra); r.u.uSpeed = { value: new THREE.Vector2() }; r.thermalTier = 0; r.setSpeedAccent(.8); r.update(1 / 60, 1 / 60); return r;
+  };
+  expect(make().u.uSpeed.value.x).toBeCloseTo(.8, 5);
+  expect(make().u.uSpeed.value.y).toBeCloseTo(880 / 400, 5);
+  expect(make({ quality: 'low' }).u.uSpeed.value.x).toBe(0);
+  expect(make({ postFxEnabled: false }).u.uSpeed.value.x).toBe(0);
+  const hot = rendererFixture(); hot.u.uSpeed = { value: new THREE.Vector2() }; hot.thermalTier = 3; hot.setSpeedAccent(.8); hot.update(1 / 60, 1 / 60);
+  expect(hot.u.uSpeed.value.x).toBe(0);
+});
+
 test('화면 흔들림 설정은 직접 고른 true/false 만 저장하고 미선택·손상 값은 null 로 둔다', () => {
   const values = new Map<string, string>(), previous = Object.getOwnPropertyDescriptor(globalThis, 'localStorage');
   Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: {

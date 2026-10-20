@@ -76,15 +76,17 @@ const FinalShader = {
       float impactEdge = smoothstep(0.34, 0.9, d);
       col = mix(col, uFlashColor * 0.78, clamp(uFlash * impactEdge * 0.85, 0.0, 0.46));
       if (uSpeed.x > 0.001) {
-        // 가장자리 전용 속도선·그늘. 화면 모서리 거리 r(0~1)가 innerR 아래인 중앙(영웅·적)은 마스크가 0 이라 절대 건드리지 않는다.
-        vec2 q = c * 2.0 * vec2(uSpeed.y, 1.0);
-        float r = length(q) / sqrt(uSpeed.y * uSpeed.y + 1.0);
-        float edge = smoothstep(0.52, 0.94, r);
+        // 가장자리 전용 속도선·그늘. 거리 r 은 축별 정규화(네 변의 중점이 모두 r=1, 모서리 약 1.19)라 가로·세로 화면비와 무관하게
+        // 네 변 어디서나 바깥 마스크에 닿고, r < 0.52 인 중앙(영웅·적)은 마스크가 0 이라 절대 건드리지 않는다.
+        vec2 a2 = abs(c * 2.0);
+        float r = pow(pow(a2.x, 4.0) + pow(a2.y, 4.0), 0.25);
+        float edge = smoothstep(0.52, 1.0, r);
+        vec2 q = c * vec2(uSpeed.y, 1.0);   // 줄 방향만 화면비를 보정해 어느 비율에서도 중심에서 고르게 퍼진다
         float u = atan(q.y, q.x) / 6.2831853 + 0.5;
         float n = 44.0, id = floor(u * n);
         float h = fract(sin((id + floor(uTime * 14.0) * 7.0) * 91.7) * 43758.5453);   // 14fps 로 끊어 바뀌는 손그림풍 줄 배치
         float lane = abs(fract(u * n) - 0.5) * 2.0;
-        float line = (1.0 - smoothstep(0.0, 0.16 + 0.34 * h, lane)) * step(0.35, h) * smoothstep(0.62 + 0.2 * (1.0 - h), 0.98, r);
+        float line = (1.0 - smoothstep(0.0, 0.16 + 0.34 * h, lane)) * step(0.35, h) * smoothstep(0.64 + 0.18 * (1.0 - h), 0.98, r);
         col = mix(col, vec3(1.0, 0.97, 0.88), clamp(line * uSpeed.x * 0.75, 0.0, 0.62));
         col *= 1.0 - edge * uSpeed.x * 0.3;
       }
@@ -374,7 +376,7 @@ export class Renderer {
     this.u.uAberr.value = post ? Math.min(this.aberr, ABERR_MAX) * ABERR_SCALE : 0;
     this.u.uRadial.value = post && this.quality !== 'low' ? Math.min(this.radial, RADIAL_MAX) * RADIAL_SCALE : 0;
     this.u.uDesat.value = this.desat;
-    this.u.uSpeed?.value.set(post && this.thermalTier < 3 ? this.speedAccent || 0 : 0, this._width / Math.max(1, this._height) || 1);
+    this.u.uSpeed?.value.set(post && this.quality !== 'low' && this.thermalTier < 3 ? this.speedAccent || 0 : 0, this._width / Math.max(1, this._height) || 1);
     this.u.uTime.value = this.time;
     this._updateGrade(realDt, rig.mode === 'lobby'); this._updateRim();
   }
