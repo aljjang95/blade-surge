@@ -290,6 +290,8 @@ async function A3(browser, rec) {
 // ---------- A4 ----------
 async function openSettings(s) {
   await closeModals(s.page);
+  // 설정 입구는 하단 "메뉴" 다이얼로그 안에 있다.
+  if (!await s.page.locator('#btn-settings').isVisible().catch(() => false)) { await s.page.locator('.oath-nav-menu').tap(); await s.page.waitForTimeout(500); }
   await s.page.locator('#btn-settings').tap(); await s.page.waitForSelector('#modal.show .toggle[data-k="autoTarget"]', { timeout: 10000 });
   await s.page.waitForTimeout(250);
 }
