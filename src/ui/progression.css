@@ -56,3 +56,11 @@
 .loot-item[data-verdict=worse] .lc,.loot-item[data-verdict=same] .lc{color:#ffd070}
 .bag-item .bag-new{position:absolute;left:3px;top:22px;padding:0 4px;border-radius:5px;background:#ff5a7a;color:#fff;font-style:normal;font-size:10px;font-weight:900;line-height:14px;pointer-events:none}
 .mpl-new{right:2px;bottom:2px;padding:1px 3px;border-radius:2px;background:#ff5a7a;color:#fff;font-size:9px;text-shadow:none}
+/* 상점·소환 단축 일수 문구 (pace-short.js) */
+.shop-item .si-pace{display:grid;gap:1px;font-size:10px;line-height:1.25;color:#bfe9d0}
+.shop-item .si-pace b{font-weight:900;color:#d9ffe8}
+.shop-item .si-pace em{font-style:normal;font-weight:900;color:#7be0a4}
+.shop-item .si-pace small{font-size:9px;color:#8fb3a2}
+.gacha-pace{margin:4px 0 0;font-size:11px;line-height:1.35;text-align:center;color:#ffd98a}
+.gacha-pace[hidden],.pace-ssr[hidden]{display:none}
+#btn-pull-ssr .pace-ssr{display:block;margin-top:1px;font-size:10px;font-weight:900;color:#fff2c0}

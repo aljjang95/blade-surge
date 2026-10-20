@@ -28,6 +28,7 @@ import { itemVisual, itemIconHtml } from './item-presentation.js';
 import { GROWTH_FLOW, skuFlowRole, shardProgress } from '../data/growth-flow.js';
 import { heroGrade } from '../data/hero-grades.js';
 import { levelStatusLabel, lootGuide } from '../data/region-guide.js';
+import { paceShort } from './pace-short.js';
 // 공개 확률은 실제 소환 코드와 같은 식(gachaRates/gachaChances)에서만 계산한다. 화면에 숫자를 따로 적지 않는다.
 const pct = (p, d = 1) => (p * 100).toFixed(d) + '%';
 const clampPity = (n) => Math.max(0, Math.min(GACHA.pity, Math.floor(Number(n) || 0)));
@@ -147,7 +148,7 @@ export class Meta {
     $('v-ticket').textContent = s.tickets + (s.ssrTickets ? ` (SSR확정 ${s.ssrTickets})` : ''); $('v-pity').textContent = s.pity; $('pity-left').textContent = GACHA.pity - s.pity;
     // SSR 확정권은 확률 정보 창 안이 아니라 소환 버튼 줄에서 바로 쓴다(보유할 때만 보인다).
     $('btn-pull-ssr').classList.toggle('hidden', !(s.ssrTickets > 0)); $('v-ssr-ticket').textContent = s.ssrTickets || 0;
-    this.refreshGachaOdds();
+    this.refreshGachaOdds(); this.refreshGachaPace();
     $('promo-starter').style.display = s.purchases.includes('starter') ? 'none' : '';
     $('promo-monthly').style.display = s.monthlyUntil > Date.now() ? 'none' : '';
     if (this.tab === 'home') this.refreshHome();
@@ -334,6 +335,12 @@ export class Meta {
   /** 로컬 퍼널 기록. 계측 실패가 화면 흐름을 막지 않는다. */
   trackFunnel(name, payload) { try { return funnelFor(this.app).track(name, payload); } catch { return { ok: false, reason: 'unavailable' }; } }
   /** 배너·하단 카운터를 실제 확률식으로 채운다. s.pity는 마지막 SSR 이후 누적 횟수라 다음 소환 순번은 s.pity + 1이다. */
+  /** SSR 확정권 1장이 초월 일수를 며칠 줄이는지(economy-pace). 없으면 줄을 숨긴다. */
+  refreshGachaPace() {
+    const pace = paceShort('ssrTicket'), line = $('gacha-pace'), tag = $('pace-ssr');
+    if (line) { line.hidden = !pace; line.textContent = pace ? 'SSR 확정권 1장 · ' + pace.text + ' (' + pace.saved + ') · ' + pace.basis : ''; if (pace) line.title = pace.full; }
+    if (tag) { tag.hidden = !pace; tag.textContent = pace ? pace.saved + ' 단축' : ''; }
+  }
   refreshGachaOdds() {
     const rates = gachaRates(), pity = clampPity(this.eco.s.pity), next = gachaChances(pity + 1).SSR, left = Math.max(1, GACHA.pity - pity);
     const set = (id, v) => { const el = $(id); if (el) el.textContent = v; };
@@ -449,6 +456,8 @@ export class Meta {
       d.innerHTML = `${sku.badge ? `<span class="badge">${sku.badge}</span>` : ''}${first ? '<span class="badge first" style="left:auto;right:-4px;transform:rotate(5deg)">첫 결제 2배</span>' : ''}<img src="${sku.icon}" alt="" onerror="this.remove()"><div class="si-body"><div class="si-name">${sku.name}</div><div class="si-desc">${sku.desc || ''}</div>${value}${sku.gems ? `<div class="si-bonus">${first ? `첫 결제 시 +${fmt(sku.bonus)} (결제 연결 후)` : `+${fmt(Math.floor(sku.gems * 0.1))} 보너스`}</div>` : ''}${sku.limited ? `<div class="timer" data-timer="${sku.id}">남은 시간 ${hms(this.eco.limitedLeft(sku))}</div>` : ''}${cash ? '<div class="si-desc">가격 미리보기 · 결제 준비 중</div>' : ''}<button class="btn ${sku.kind === 'gem' ? 'btn-blue' : 'btn-gold'}"${cash ? ` aria-label="${sku.name} ${sku.priceLabel}, 결제 준비 중"` : ''}>${price}</button></div>${sold ? '<div class="sold">구매 완료</div>' : ''}`;
       const role = skuFlowRole(sku);
       if (role) { const tag = document.createElement('div'); tag.className = 'si-flow'; tag.dataset.role = role.role; tag.textContent = role.label; d.querySelector('.si-name').after(tag); }
+      const pace = paceShort(sku.id);
+      if (pace) { const line = document.createElement('div'); line.className = 'si-pace'; line.title = pace.full; line.setAttribute('aria-label', pace.full); line.innerHTML = '<b>' + pace.text + '</b> <em>' + pace.saved + '</em><small>' + pace.basis + '</small>'; (d.querySelector('.si-flow') || d.querySelector('.si-name')).after(line); }
       d.querySelector('button').onclick = () => this.buy(sku.id);
       grid.appendChild(d);
     }
