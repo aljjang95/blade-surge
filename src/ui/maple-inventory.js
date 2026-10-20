@@ -5,6 +5,7 @@ import { CONSUMABLES, MATERIALS } from '../data/expansion.js';
 import { ITEM_BY_ID, RARITY_COLOR, RARITY_INFO, SLOTS, SLOT_NAME, rarityRank } from '../data/items.js';
 import { resourceArt, uiArt } from './illustrated.js';
 import { itemVisual } from './item-presentation.js';
+import { isFresh, clearFresh } from './loot-compare.js';
 
 export const INVENTORY_TABS = Object.freeze([
   { id: 'gear', label: '장비' }, { id: 'use', label: '소비' }, { id: 'etc', label: '기타' }, { id: 'cash', label: '캐시' },
@@ -57,7 +58,7 @@ export function buildInventoryModel(eco, { tab = 'gear', slot = 'all' } = {}) {
         const it = ITEM_BY_ID[inst.id], owner = owners.get(inst.uid) || null;
         // 칸을 누르면 착용자(없으면 출전 영웅) 문맥 시트가 열린다. 칸 그림도 같은 영웅의 형태로 그린다.
         const visual = itemVisual(it, { heroId: owner || eco.s?.selected });
-        return { type: 'gear', key: 'g' + inst.uid, uid: inst.uid, itemId: it.id, name: it.name, icon: visual.iconUrl, fallbackIcon: visual.fallbackUrl, visual: visual.renderSet, rarity: it.rarity, rarityName: RARITY_INFO[it.rarity]?.name || '', color: RARITY_COLOR[it.rarity] || '#9aa3b2', slot: it.slot, slotName: SLOT_NAME[it.slot], enh: inst.enh || 0, owner, ownerName: owner ? HEROES[owner]?.name || '' : '' };
+        return { type: 'gear', key: 'g' + inst.uid, uid: inst.uid, itemId: it.id, name: it.name, icon: visual.iconUrl, fallbackIcon: visual.fallbackUrl, visual: visual.renderSet, rarity: it.rarity, rarityName: RARITY_INFO[it.rarity]?.name || '', color: RARITY_COLOR[it.rarity] || '#9aa3b2', slot: it.slot, slotName: SLOT_NAME[it.slot], enh: inst.enh || 0, fresh: isFresh(inst.uid), owner, ownerName: owner ? HEROES[owner]?.name || '' : '' };
       });
   } else if (safeTab === 'use') {
     cells = [...USE_STACKS, ...EXPEDITION_USE].map((def) => ({ def, qty: amount(state, def) })).filter((row) => row.qty > 0)
@@ -154,8 +155,9 @@ export class MapleInventory {
     button.append(img);
     if (cell.type === 'gear') {
       if (cell.enh > 0) button.append(el('span', 'mpl-badge mpl-enh', '+' + cell.enh));
+      if (cell.fresh) button.append(el('span', 'mpl-badge mpl-new', 'NEW'));
       if (cell.owner) { const mark = el('span', 'mpl-badge mpl-worn', '착'); mark.title = cell.ownerName + ' 착용 중'; button.append(mark); }
-      button.setAttribute('aria-label', cell.name + ' +' + cell.enh + ', ' + cell.rarityName + ', ' + cell.slotName + (cell.owner ? ', ' + cell.ownerName + ' 착용 중' : ''));
+      button.setAttribute('aria-label', cell.name + ' +' + cell.enh + ', ' + cell.rarityName + ', ' + cell.slotName + (cell.owner ? ', ' + cell.ownerName + ' 착용 중' : '') + (cell.fresh ? ', 새로 얻음' : ''));
     } else if (cell.type === 'stack') {
       button.append(el('span', 'mpl-badge mpl-qty', fmt(cell.qty)));
       button.setAttribute('aria-label', cell.name + ' ' + fmt(cell.qty) + '개');
@@ -168,7 +170,7 @@ export class MapleInventory {
       this.selected = cell.key;
       if (cell.type === 'gear') {
         // 기존 아이템 시트(착용 · 강화 · 판매)를 그대로 연다. 장착 중이면 그 영웅 기준으로 비교한다.
-        this.sheetKey = cell.key;
+        this.sheetKey = cell.key; clearFresh(cell.uid); button.querySelector('.mpl-new')?.remove();
         this.meta.showItem(cell.uid, cell.owner || this.eco.s.selected);
       } else {
         win.body.querySelectorAll('.mpl-cell.is-selected').forEach((node) => node.classList.remove('is-selected'));
