@@ -37,7 +37,7 @@ export class Actor {
     this.pos = this.root.position; this.yaw = 0;
     this.vel = new THREE.Vector3(); this.kb = new THREE.Vector3();
     this.hp = 100; this.maxHp = 100; this.alive = true; this.dead = false;
-    this.action = null; this.actionName = ''; this.flashT = 0; this.flashDuration = 0; this.flashColor = new THREE.Color(1, 1, 1);
+    this.action = null; this.actionName = ''; this.flashT = 0; this.flashDuration = 0; this.flashGain = 1; this.flashColor = new THREE.Color(1, 1, 1);
     this.stun = 0; this.slow = 0; this.slowT = 0; this.invuln = 0; this.radius = 0.7 * scale;
     this.mats = []; this.model.traverse((o) => { if (o.isMesh) this.mats.push(...materialsOf(o).filter((m) => m.emissive)); });
     // 틴트: 곱하면 Quaternius 텍스처가 통짜 색으로 뭉개진다 → 원래 색과 lerp
@@ -193,14 +193,14 @@ export class Actor {
   faceDir(dx, dz) { if (dx || dz) this.yaw = Math.atan2(dx, dz); }
   forward(out = new THREE.Vector3()) { return out.set(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
   distTo(o) { return Math.hypot(o.pos.x - this.pos.x, o.pos.z - this.pos.z); }
-  flash(color = 0xffffff, t = 0.12) { this.flashT = this.flashDuration = t; this.flashColor.set(color); }
+  flash(color = 0xffffff, t = 0.12, gain = 1) { this.flashT = this.flashDuration = t; this.flashColor.set(color); this.flashGain = gain; }
   updateHitFeedback(dt) {
     // 피격 신호는 재질 위의 짧은 악센트다. 긴 치명타도 더 밝아지지 않는다.
     // 장비·유령의 기존 발광은 보존하고, 흰 발광으로 텍스처를 지우지 않는다.
     if (this.flashT > 0) {
       this.flashT = Math.max(0, this.flashT - dt);
       const k = this.flashT / this.flashDuration;
-      const strength = (this.game.app?.reducedMotion?.matches ? .16 : .38) * k * k;
+      const strength = (this.game.app?.reducedMotion?.matches ? .16 : .38 * (this.flashGain || 1)) * k * k;
       for (const m of this.mats) {
         m.emissive.copy(this.flashColor).multiplyScalar(strength);
         if (this.tintEmissive) m.emissive.add(this.tintEmissive);

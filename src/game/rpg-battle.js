@@ -6,6 +6,7 @@ import { audio } from '../engine/audio.js';
 import { ImpactClock } from './combat-motion.js';
 import { contactFeedback } from './apex-combat.js';
 import { contactProfile, contactBudget } from './combat-contact.js';
+import { HitCrowd, hitWeight, weightedHitstop, flashFor } from './feel.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain } from './control-rewards.js';
 import { normalizeRpg, recordMonster, monsterLevel, monsterXp, grantCombatXp, KillLedger } from './rpg-core.js';
 import { buildCatalogue } from './rpg-catalogue.js';
@@ -23,7 +24,7 @@ export class Battle extends BaseBattle {
   constructor(app) {
     super(app);
     this.killLedger = new KillLedger(); this.combatXp = 0; this.rpgDirty = false; this.saveT = 0;
-    this.feedbackCount = 0; this.feedbackSound = false; this.viewT = 0;
+    this.feedbackCount = 0; this.feedbackSound = false; this.viewT = 0; this.hitCrowd = new HitCrowd();
     this.ensureRpg();
     this.rpgView = new RpgView(app, this, buildCatalogue(), { heroStats, levelExp, HEROES });
     app.eco.onChange(() => { this.ensureRpg(); this.rpgView.refresh(); });
@@ -56,7 +57,7 @@ export class Battle extends BaseBattle {
     // Do not replace that run's XP ledger or growth snapshot from the old call.
     if (generation !== this._startGeneration) return;
     this.growthStart = growthStart;
-    this.timeCtl = new ImpactClock(); this.killLedger = new KillLedger();
+    this.timeCtl = new ImpactClock(); this.killLedger = new KillLedger(); this.hitCrowd = new HitCrowd();
     this.combatXp = 0; this.saveT = 0; this.viewT = 0; this.lastTarget = null;
     this.ensureRpg(); this.rpgView?.refresh();
   }
@@ -155,6 +156,13 @@ export class Battle extends BaseBattle {
     const dx = opts.dirx || 0, dz = opts.dirz || 0;
     const feedback=contactFeedback({finisher:opts.finisher,crit,boss:enemy.isBoss,elite:enemy.isElite,reduced:!!this.app.reducedMotion?.matches});
     enemy.receiveImpact(dx, dz, feedback.recoil);
+    // 타격 무게(큰 피해 비율·군중 동시 타격·정예·결정타)가 정지와 섬광을 키운다. 같은 창의 모든 타격이 무게에 기여하므로 예산 밖 타격도 센다.
+    const weight = hitWeight({ dealt, maxHp: enemy.maxHp, crowd: (this.hitCrowd || (this.hitCrowd = new HitCrowd())).hit(this.elapsed), elite: enemy.isElite, killed: !enemy.alive });
+    if (contact.stop > 0) {
+      this.timeCtl.hitstop(weightedHitstop(contact.stop, weight));
+      const flash = flashFor(weight);
+      if (weight > .05 && flash.sec > enemy.flashT) enemy.flash(crit ? 0xffd040 : 0xffffff, flash.sec, flash.gain);
+    }
     // 수동 평타가 맞을 때마다 카메라 구도를 대상 쪽으로 당기지 않는다(사용자 시점 유지).
     // Every eligible hit recoils; only expensive contact feedback shares the time budget.
     const budget = contactBudget(this._contactBudget, this.elapsed, contact);
@@ -170,7 +178,6 @@ export class Battle extends BaseBattle {
       if (p === this.player && !p.auto && contact.haptic) audio.vibe(contact.haptic);
       if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);
     }
-    if (contact.stop>0) this.timeCtl.hitstop(contact.stop);
     // 명중은 화면 전체 카메라 킥·줌 없이 대상 반동·몸 반동·VFX·히트스톱·소리·진동으로 전달한다.
     // 색수차는 마무리타에서만 짧게 다시 켠다(감쇠·상한은 렌더러가 소유한다).
     if (opts.finisher && this.renderer) this.renderer.aberr = Math.max(this.renderer.aberr || 0, 0.7);
