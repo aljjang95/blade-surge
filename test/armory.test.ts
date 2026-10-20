@@ -1,5 +1,4 @@
 ﻿import { test, expect } from 'bun:test';
-import { FEEL } from '../src/game/feel.js';
 import { readFileSync, existsSync } from 'node:fs';
 import { ARMORY_ITEMS, ARMORY_SETS } from '../src/data/armory.js';
 import { ITEM_BY_ID, ITEM_POOL, ITEMS_OF, THEMED_SETS, craftable, CRAFT_COST } from '../src/data/items.js';
@@ -260,7 +259,7 @@ for(const Battle of [BaseBattle,RpgBattle])test(Battle===BaseBattle?'base contac
  const e:any={alive:true,pos:new Vector3(),def:{scale:1},hurt:()=>10,receiveImpact(){bodies++;}};
  Battle.prototype.damageEnemy.call(g,e,10,{quietStop:true});
  for(let i=0;i<30;i++)Battle.prototype.damageEnemy.call(g,e,10,{finisher:true});
- expect(emissions).toBe(1);expect(particles).toBe(1);expect(sounds).toBe(2);expect(g.timeCtl.stop).toBe(Battle===BaseBattle?.11:FEEL.hitstop.max);expect(g.combo).toBe(31);   // RPG 는 같은 창 30타도 무게 상한(max) 안의 한 번의 정지(합산 아님)
+ expect(emissions).toBe(1);expect(particles).toBe(1);expect(sounds).toBe(2);expect(g.timeCtl.stop).toBe(.11);expect(g.combo).toBe(31);
  if(Battle===RpgBattle)expect(bodies).toBe(31);
  g.elapsed+=.061;g.app.reducedMotion.matches=true;g.timeCtl=new TimeCtl();
  Battle.prototype.damageEnemy.call(g,e,10,{quietStop:true});Battle.prototype.damageEnemy.call(g,e,10,{finisher:true});expect(particles).toBe(1);expect(g.timeCtl.stop).toBe(0);

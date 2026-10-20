@@ -157,7 +157,7 @@ export class Battle extends BaseBattle {
     const feedback=contactFeedback({finisher:opts.finisher,crit,boss:enemy.isBoss,elite:enemy.isElite,reduced:!!this.app.reducedMotion?.matches});
     enemy.receiveImpact(dx, dz, feedback.recoil);
     // 타격 무게(큰 피해 비율·군중 동시 타격·정예·결정타)가 정지와 섬광을 키운다. 같은 창의 모든 타격이 무게에 기여하므로 예산 밖 타격도 센다.
-    const weight = hitWeight({ dealt, maxHp: enemy.maxHp, crowd: (this.hitCrowd || (this.hitCrowd = new HitCrowd())).hit(this.elapsed), elite: enemy.isElite, killed: !enemy.alive });
+    const weight = hitWeight({ dealt, maxHp: enemy.maxHp, crowd: (this.hitCrowd || (this.hitCrowd = new HitCrowd())).hit(this.elapsed, enemy), elite: enemy.isElite, killed: !enemy.alive });
     if (contact.stop > 0) {
       this.timeCtl.hitstop(weightedHitstop(contact.stop, weight));
       const flash = flashFor(weight);

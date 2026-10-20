@@ -76,12 +76,14 @@ export function flashFor(weight) {
   return { sec: Math.min(F.maxSec, F.baseSec * (1 + w * .6)), gain: Math.min(F.gainMax, 1 + w * F.perWeight) };
 }
 
-/** 같은 창 안의 동시 타격 수를 센다. 객체를 재사용해 프레임마다 할당하지 않는다. */
+/** 같은 창 안에서 맞은 서로 다른 대상 수를 센다. 같은 적을 연타·협공해도 군중으로 세지 않는다.
+ * 대상이 없으면(구형 호출) 호출마다 하나로 센다. Set 을 재사용해 프레임마다 할당하지 않는다. */
 export class HitCrowd {
-  constructor() { this.at = -1e9; this.n = 0; }
-  reset() { this.at = -1e9; this.n = 0; }
-  hit(now) {
-    if (!(now - this.at <= FEEL.hitstop.crowdWindow) || now < this.at) { this.at = now; this.n = 0; }
+  constructor() { this.at = -1e9; this.n = 0; this.seen = new Set(); }
+  reset() { this.at = -1e9; this.n = 0; this.seen.clear(); }
+  hit(now, target) {
+    if (!(now - this.at <= FEEL.hitstop.crowdWindow) || now < this.at) { this.at = now; this.n = 0; this.seen.clear(); }
+    if (target != null) { if (this.seen.has(target)) return Math.max(1, this.n); this.seen.add(target); }
     return ++this.n;
   }
 }

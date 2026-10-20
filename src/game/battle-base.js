@@ -45,17 +45,22 @@ export class TimeCtl extends ImpactClock {}
 /** 묶음 처치(짧은 창 안의 연속 처치) — 월드 위 문구·링·가장자리 틴트로만 알리고 단계마다 작은 보상(궁극기·MP)을 준다. 누적 연속 처치 알약은 기존 그대로다.
  * 표현 호출(fx·renderer)은 선택적이다: 단위 테스트의 최소 가짜 전투도 처치 경로를 지난다. */
 export function feelOnKill(b, e) {
-  const p = b.player; if (!p?.alive) return;
+  // 파티 원정은 살아 있는 파티원 모두가 같은 묶음 보상을 받는다(일반 처치 궁극기 분배와 같은 규칙).
+  const p = b.player, party = b.stage?.party && b.app?.party?.livingPlayers ? b.app.party.livingPlayers() : null;
+  if (!party && !p?.alive) return;
   const chain = b.killChain || (b.killChain = new KillChain());
   const ev = chain.kill(Number.isFinite(b.elapsed) ? b.elapsed : 0);
   if (ev.step < 0) return;
-  const reduced = !!b.app?.reducedMotion?.matches, st = FEEL.kill.multiSteps[ev.step], gain = p.stats?.ultGain || 1;
-  p.addUlt(st.ult * gain); if (st.mp) p.addMp?.(st.mp);
+  const reduced = !!b.app?.reducedMotion?.matches, st = FEEL.kill.multiSteps[ev.step];
+  for (const member of party || [p]) {
+    if (!member?.alive) continue;
+    member.addUlt(st.ult * (member.stats?.ultGain || 1)); if (st.mp) member.addMp?.(st.mp);
+  }
   b.fx?.shockTex?.(e.pos, 0xffd060, { r1: st.ring, life: 0.45 });
   if (b.fx?.dmgLayer && b.fx.dmgLayer.children.length < 30) b.fx.damage(e.pos.clone().setY(1.2 * (e.def?.scale || 1)), 0, { text: `${ev.multi}마리 격파`, kind: 'skill' });
   audio.ting({ vol: 0.34, freq: 1500 * st.pitch }); audio.ting({ vol: 0.22, freq: 2250 * st.pitch });
   if (!reduced) b.renderer?.flashScreen?.(0.1 + 0.03 * ev.step, 0xffd060);
-  if (!p.auto) audio.vibe([12, 10, 26]);
+  if (p?.alive && !p.auto) audio.vibe([12, 10, 26]);
 }
 
 export class Battle {

@@ -53,6 +53,13 @@ test('군중 동시 타격 수: 창 안에서 누적하고 창이 지나면 다�
   c.reset(); expect(c.hit(0)).toBe(1);
 });
 
+test('군중 동시 타격 수: 같은 적을 창 안에서 여러 번 때리면 하나로 센다', () => {
+  const c = new HitCrowd(), a = {}, b = {};
+  expect(c.hit(1, a)).toBe(1); expect(c.hit(1, a)).toBe(1); expect(c.hit(1.01, a)).toBe(1);
+  expect(c.hit(1.02, b)).toBe(2); expect(c.hit(1.03, b)).toBe(2);
+  expect(c.hit(1 + FEEL.hitstop.crowdWindow * 3, b)).toBe(1);   // 새 창은 다시 센다
+});
+
 test('ImpactClock 슬로우 ease: 끝에서 1 로 선형 복귀하고 총 적분이 해석값과 같다', () => {
   const dt = 1 / 120, sum = (clock: ImpactClock, n: number) => { let sim = 0; for (let i = 0; i < n; i++) sim += clock.step(dt); return sim; };
   // ease 없음(기존): 0.5초 동안 0.4 배율 → sim 0.2초
@@ -216,4 +223,22 @@ test('feelOnKill: 묶음 3마리째에 보상·월드 위 문구, 동작 줄이�
   const d = make(); d.battle.player.alive = false;
   for (let i = 1; i <= 3; i++) { d.battle.elapsed = i * .1; d.battle.killStreak = i; feelOnKill(d.battle, enemy()); }
   expect(d.log.ult).toBe(0);
+});
+
+test('feelOnKill: 파티 원정은 살아 있는 파티원 모두에게 묶음 보상을 준다', async () => {
+  const THREE = await import('three');
+  const { feelOnKill } = await import('../src/game/battle-base.js');
+  const member = (alive = true) => { const m = { alive, auto: true, stats: { ultGain: 1 }, ult: 0, mp: 0, addUlt(n: number) { m.ult += n; }, addMp(n: number) { m.mp += n; } }; return m; };
+  const host = member(), guest = member(), fallen = member(false);
+  const battle: any = { player: host, elapsed: 0, killStreak: 0, stage: { party: true }, app: { reducedMotion: { matches: true }, party: { livingPlayers: () => [host, guest, fallen].filter(m => m.alive) } } };
+  const enemy = () => ({ pos: new THREE.Vector3(), def: { scale: 1 } });
+  for (let i = 1; i <= 3; i++) { battle.elapsed = i * .1; feelOnKill(battle, enemy()); }
+  const st = FEEL.kill.multiSteps[0];
+  expect(host.ult).toBe(st.ult); expect(guest.ult).toBe(st.ult); expect(fallen.ult).toBe(0);
+  expect(guest.mp).toBe(st.mp || 0);
+  // 호스트가 쓰러져도 남은 파티원은 받는다
+  const h2 = member(false), g2 = member();
+  const b2: any = { player: h2, elapsed: 0, stage: { party: true }, app: { reducedMotion: { matches: true }, party: { livingPlayers: () => [g2] } } };
+  for (let i = 1; i <= 3; i++) { b2.elapsed = i * .1; feelOnKill(b2, enemy()); }
+  expect(g2.ult).toBe(st.ult); expect(h2.ult).toBe(0);
 });
