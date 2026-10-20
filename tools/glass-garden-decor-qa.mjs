@@ -99,7 +99,7 @@ try {
       await writeFile(`${dir}/report.json`, JSON.stringify(report, null, 2));
     }
   }
-} catch (error) { if (!error.benign) report.fatal = String(error?.stack || error); try { await shot('failure'); } catch {} }
+} catch (error) { if (!error.benign) { report.fatal = String(error?.stack || error); process.exitCode = 1; } try { await shot('failure'); } catch {} }
 await writeFile(`${dir}/report.json`, JSON.stringify(report, null, 2));
 await browser.close();
 console.log(JSON.stringify({ dir, fatal: report.fatal, expedition: report.expedition, decor: report.decor, errors: report.errors, rooms: report.rooms.map(r => [r.room, r.view, r.with.calls, r.without.calls, r.deltaTriangles]) }, null, 1));

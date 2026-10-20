@@ -120,6 +120,17 @@ test('런타임 로더 경로: GLTFLoader + meshopt로 풀고 재질별 지오�
   }
 });
 
+test('LOD0만 모두 받아지고 LOD1 하나라도 실패하면 키트를 노출하지 않고, 다음 선로딩이 LOD1을 다시 받는다', async () => {
+  clearGlassGardenKit();
+  const files = (url: string) => new Response(readFileSync(new URL(`public${url.replace(/^.*(\/models\/)/, '/models/')}`, root)));
+  const lod1Fails = (async (url: string) => (/-lod1\.glb/.test(url) ? new Response('x', { status: 503 }) : files(url))) as any;
+  const partial = await preloadGlassGardenKit({ fetcher: lod1Fails });
+  expect(partial.loaded).toBe(GLASS_GARDEN_KIT_ASSETS.length); expect(glassGardenKitTemplates()).toBeNull();
+  const retried = await preloadGlassGardenKit({ fetcher: (async (url: string) => files(url)) as any });
+  expect(retried.loaded).toBe(GLASS_GARDEN_KIT_ASSETS.length * 2); expect(glassGardenKitTemplates()).not.toBeNull();
+  clearGlassGardenKit();
+});
+
 test('선로딩은 실패를 캐시하지 않는다: HTTP 오류와 네트워크 예외 뒤 다음 호출이 다시 받아 성공한다', async () => {
   clearGlassGardenKit();
   const files = (url: string) => new Response(readFileSync(new URL(`public${url.replace(/^.*(\/models\/)/, '/models/')}`, root)));

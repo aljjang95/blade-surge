@@ -77,7 +77,7 @@ export async function preloadGlassGardenKit({ fetcher = globalThis.fetch } = {})
 
 /** 모든 소품의 두 LOD가 준비됐을 때만 장식을 올린다(일부만 있는 반쪽 장식을 막는다). */
 export function glassGardenKitTemplates() {
-  for (const id of GLASS_GARDEN_KIT_ASSETS) if (!templates.get(id)?.lod0) return null;
+  for (const id of GLASS_GARDEN_KIT_ASSETS) { const t = templates.get(id); if (!t?.lod0 || !t?.lod1) return null; }
   return templates;
 }
 /** 템플릿과 요청 캐시를 모두 비운다(시험용). */
