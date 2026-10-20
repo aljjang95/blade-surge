@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { materialsOf, spawnCharacter } from '../engine/assets.js';
 import { RIGS } from '../data/rigs.js';
 import { attackPhase, attackBody, monsterAttackPhase } from './combat-motion.js';
+import { ROGUE_KNIFE_GRIP_AXIS_REVISION } from '../engine/rogue-grip-axis.js';
 
 const _v = new THREE.Vector3();
 const _weaponQuaternion = new THREE.Quaternion();
@@ -259,6 +260,19 @@ export class Actor {
   /** GLTFLoader 는 노드 이름의 '.' 등을 제거함 → 원본/정제 이름 모두 검색 */
   node(name) { return this.model.getObjectByName(name) || this.model.getObjectByName(name.replace(/[^\w-]/g, '')); }
   weaponPoints(handName = 'handslot.r', len = 1.3, points = [new THREE.Vector3(), new THREE.Vector3()]) {
+    // 도적 교정 단검만 실제 무기 루트의 긴 축을 따른다. 공용 소켓과 병기고 장식은 그대로 둔다.
+    const contract = this.model.userData.authoredContract;
+    const knifeName = handName === 'handslot.r' ? 'Knife' : handName === 'handslot.l' ? 'Knife_Offhand' : null;
+    if (contract?.role === 'hero' && contract.heroId === 'rogue' && knifeName) {
+      const knife = this.node(knifeName);
+      if (knife?.visible && knife.userData.forgedWeapon === 'dagger'
+        && knife.userData.rogueKnifeGripAxis?.revision === ROGUE_KNIFE_GRIP_AXIS_REVISION) {
+        const a = points[0]; knife.getWorldPosition(a);
+        const b = points[1].setFromMatrixColumn(knife.matrixWorld, 1);
+        b.normalize().multiplyScalar(len * this.scale).add(a);
+        return points;
+      }
+    }
     handName = this.model.userData.authoredContract?.sockets?.[handName] || handName;
     const h = this.node(handName); if (!h) return null;
     const a = points[0]; h.getWorldPosition(a);
