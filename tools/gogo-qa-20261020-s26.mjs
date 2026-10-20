@@ -102,7 +102,9 @@ async function tapSel(sel, { text = null, index = 0, label = sel, retry = true }
   }, { sel, text, index });
   if (!info) throw new Error('요소 없음: ' + label);
   const t = await tapAt(info.cx, info.cy, label);
-  let hit = await ev(() => !!(window.__qa.lastTarget && window.__qaEl && (window.__qaEl === window.__qa.lastTarget || window.__qaEl.contains(window.__qa.lastTarget))));
+  // 명중: 눌린 요소가 대상 안이거나, 탭 직전 대상이 그 지점의 맨 위였고 실제 포인터가 대상 가운데(±4px)에 도착함(탭으로 대상이 다시 그려진 경우).
+  const landed = !!t.got && Math.abs(t.got.x - info.cx) <= 4 && Math.abs(t.got.y - info.cy) <= 4 && !info.covered;
+  let hit = landed || await ev(() => !!(window.__qa.lastTarget && window.__qaEl && (window.__qaEl === window.__qa.lastTarget || window.__qaEl.contains(window.__qa.lastTarget))));
   if (!hit && retry) { await sleep(300); return tapSel(sel, { text, index, label, retry: false }); }
   return { label, ...info, ...t, hit };
 }
