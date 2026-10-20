@@ -278,7 +278,8 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 /* shop */
 .shop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px; overflow-y: auto; padding-bottom: 20px; }
 /* 성장 흐름 줄(보석 → 소환 → 중복 조각 → 초월 → 더 강한 전투)과 상품별 용도 표시. growth-flow.js 가 문구를 정한다. */
-.shop-flow { display: flex; align-items: center; gap: 3px; margin: 0 0 4px; overflow-x: auto; scrollbar-width: none; }
+/* 패널은 세로 flex 라 줄이 줄어들어 위가 잘렸다(844·1280 캡처). 높이를 고정하고 줄어들지 않게 한다. */
+.shop-flow { display: flex; flex: 0 0 auto; align-items: center; gap: 3px; margin: 4px 0 2px; padding: 1px 0; min-height: 22px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
 /* 초월 최고 등급(SSSR) 색. hero-grades.js GRADE_RULES.SSSR.color 와 같다. */
 :root { --r-sssr: #ff5a8a; }
 .rar-SSSR { border-color: var(--r-sssr) !important; box-shadow: inset 0 0 14px rgba(255, 90, 138, .5), 0 0 10px rgba(255, 90, 138, .35) !important; }
@@ -288,6 +289,7 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .shop-flow .sf-step b { font-weight: 900; }
 .shop-flow .sf-step small { color: var(--gold, #ffcf5a); font-size: 10px; font-weight: 700; }
 .shop-flow .sf-arrow { color: var(--gold, #ffcf5a); font-weight: 900; font-size: 12px; }
+/* 칩은 공통 터치 규칙(최소 44px)을 따른다. 844x390 에서도 상품 가격 버튼이 첫 화면에 남는 것을 캡처로 확인했다. */
 .shop-item .si-flow { font-size: 9px; line-height: 1.2; font-weight: 800; color: #ffd98a; }
 .shop-item .si-flow[data-role=transcend] { color: #ff8fb0; }
 .shop-item .si-flow[data-role=reset] { color: #9fe3c2; }
