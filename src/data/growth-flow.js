@@ -15,13 +15,13 @@ export const GROWTH_FLOW = Object.freeze([
 
 const fmt = (n) => Number(n).toLocaleString('ko-KR');
 
-/** 하루 30분·1장 반복 기댓값. 상품의 실제 대상과 무료 기준을 같은 문구에 남긴다. */
+/** 하루 30분·스토리·1장 반복 기댓값. 별 승급에 조각을 쓰지 않을 때 기준이며, 대상과 무료 기준을 같은 문구에 남긴다. */
 export function paceLabel(skuIdOrKey) {
   if (!Object.hasOwn(ECONOMY_PACE.savings, skuIdOrKey)) return null;
   const saving = ECONOMY_PACE.savings[skuIdOrKey];
   if (!saving || saving.days <= 0) return null;
   const action = skuIdOrKey === 'ssrTicket' ? '확정권 1장' : '보상 수령';
-  return `${saving.target} · 무과금 약 ${saving.freeDays}일 → ${action} 시 약 ${saving.withDays}일 (1장·30분/일 예상)`;
+  return `${saving.target} · 무과금 약 ${saving.freeDays}일 → ${action} 시 약 ${saving.withDays}일 (스토리 30분/일·별 승급 제외 예상)`;
 }
 
 /**
