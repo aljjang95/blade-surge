@@ -1,5 +1,6 @@
 import './camera-gestures.css';
 import { WorldTouchGesture } from './world-gesture.js';
+import { cameraPitchSign, cameraYawSign } from './camera-invert.js';
 
 export const LOBBY_VIEWS = {
   oath: { label: '기본', yaw: 19, pitch: 11, zoom: 100 },
@@ -143,10 +144,12 @@ export class LobbyCameraControls {
     this.pad.addEventListener('keydown', event => {
       if (!this.active || event.ctrlKey || event.metaKey || event.altKey) return;
       const v = this.value;
-      if (event.key === 'ArrowLeft') v.yaw -= 8;
-      else if (event.key === 'ArrowRight') v.yaw += 8;
-      else if (event.key === 'ArrowUp') v.pitch += 3;
-      else if (event.key === 'ArrowDown') v.pitch -= 3;
+      const settings = this.app.eco.s.settings, ys = cameraYawSign(settings), ps = cameraPitchSign(settings);
+      // 왼쪽 방향키는 시야를 왼쪽으로 돌린다(yaw 증가 = 시야 왼쪽 회전).
+      if (event.key === 'ArrowLeft') v.yaw += 8 * ys;
+      else if (event.key === 'ArrowRight') v.yaw -= 8 * ys;
+      else if (event.key === 'ArrowUp') v.pitch += 3 * ps;
+      else if (event.key === 'ArrowDown') v.pitch -= 3 * ps;
       else if (event.key === '+' || event.key === '=') v.zoom += 5;
       else if (event.key === '-') v.zoom -= 5;
       else if (event.key === 'Home') { event.preventDefault(); event.stopPropagation(); this.reset(); return; }
@@ -186,8 +189,10 @@ export class LobbyCameraControls {
   }
   reset() { this.finish(); this.set(LOBBY_VIEWS.oath); }
   orbit(base, dx, dy) {
-    const yaw = base.yaw - dx * LOBBY_ROTATE_YAW;
-    this.set({ ...this.value, yaw: ((yaw + 540) % 360) - 180, pitch: base.pitch + dy * LOBBY_ROTATE_PITCH }, false);
+    // 화면을 끄는 방향으로 장면이 따라온다(왼쪽으로 끌면 시야는 오른쪽으로 돈다). 설정의 좌우·상하 반전으로 뒤집는다.
+    const settings = this.app.eco.s.settings;
+    const yaw = base.yaw + dx * LOBBY_ROTATE_YAW * cameraYawSign(settings);
+    this.set({ ...this.value, yaw: ((yaw + 540) % 360) - 180, pitch: base.pitch + dy * LOBBY_ROTATE_PITCH * cameraPitchSign(settings) }, false);
   }
   capture(pointer) {
     try { pointer?.surface?.setPointerCapture?.(pointer.id); return !!pointer; } catch { return false; }
