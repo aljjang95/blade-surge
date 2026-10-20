@@ -341,6 +341,8 @@ export class Meta {
       : ` 다음 소환 SSR ${pct(next, 1)} · ${soft}번째부터 확률 상승 · ${left}회 안에 SSR 확정`);
   }
   async pull(n) {
+    // 결과 화면이 열려 있는 동안에는 어떤 소환도 다시 시작하지 않는다(리뷰 P1: 초점이 남은 버튼 Enter 반복으로 재화가 추가 소모되고 앞 결과가 사라짐).
+    if (this._revealOpen) return;
     const s = this.eco.s; const cost = n === 10 ? GACHA.ten : GACHA.single; const useTicket = n === 1 ? s.tickets > 0 : s.tickets >= 10;
     if (!useTicket && s.gems < cost) { audio.play('ui_error'); const ok = await this.ui.confirm('보석 부족', `보석 ${fmt(cost)}개가 필요합니다 (보유 ${fmt(s.gems)})<br>보석은 출석·임무·스테이지 첫 클리어·패스 무료 보상으로 모을 수 있어요.`, { ok: '보석 상점 보기', cancel: '취소' }); if (ok) this.openTab('shop', 'gem'); return; }
     const pityBefore = clampPity(s.pity);
@@ -348,14 +350,16 @@ export class Meta {
     this.trackPull(n, useTicket ? 'tickets' : 'gems', pityBefore, results);
     this.showReveal(results);
   }
-  pullSSR() { const pityBefore = clampPity(this.eco.s.pity); const r = this.eco.pullSSR(); if (!r) { this.ui.toast(this.eco.lastGachaError === 'storage' ? '저장 실패로 SSR 확정권 사용을 취소했습니다.' : '사용할 SSR 확정권이 없습니다.', 'red'); return; } this.trackPull(1, 'ssr_ticket', pityBefore, r); this.showReveal(r); }
+  pullSSR() { if (this._revealOpen) return; const pityBefore = clampPity(this.eco.s.pity); const r = this.eco.pullSSR(); if (!r) { this.ui.toast(this.eco.lastGachaError === 'storage' ? '저장 실패로 SSR 확정권 사용을 취소했습니다.' : '사용할 SSR 확정권이 없습니다.', 'red'); return; } this.trackPull(1, 'ssr_ticket', pityBefore, r); this.showReveal(r); }
   trackPull(count, currency, pityBefore, results) {
     const n = (rar) => results.filter((r) => r.rar === rar).length;
     this.trackFunnel('gacha_pull', { count, currency, pityBefore, ssr: n('SSR'), sr: n('SR'), dupes: results.filter((r) => r.type === 'hero' && r.dup).length });
   }
   showReveal(results) {
+    this._revealOpen = true; (this._revealTimers || []).forEach(clearTimeout);
     const R = $('reveal'); this.ui.show(R, true); this.app.setLobbyVisible(false);
     const stage = $('reveal-stage'), cards = $('reveal-cards'); stage.innerHTML = ''; cards.innerHTML = ''; $('reveal-foot').classList.add('hidden'); $('btn-reveal-skip').classList.remove('hidden');
+    $('btn-reveal-skip').focus({ preventScroll: true });
     const best = results.some((r) => r.rar === 'SSR') ? 'SSR' : results.some((r) => r.rar === 'SR') ? 'SR' : 'R';
     audio.playMusic(musicForScene({ scene: 'gacha' }), MUSIC_MIX); audio.play('pack_open', { vol: 0.8 }); audio.magic({ vol: 0.4, base: 392, notes: [0, 4, 7, 12, 16, 19], step: 0.09 });
     const beamColor = { R: '#4cc3ff', SR: '#b26bff', SSR: '#ffcf5a' }[best];
@@ -380,8 +384,8 @@ export class Meta {
     const p = shardProgress(HEROES[r.id], this.eco.hero(r.id));
     return '조각 +' + r.shards + (p.need ? ' · 초월 ' + p.have + '/' + p.need : ' · 최고 등급');
   }
-  revealDone() { $('reveal-foot').classList.remove('hidden'); $('btn-reveal-skip').classList.add('hidden'); const s = this.eco.s; $('btn-reveal-again').disabled = s.gems < GACHA.ten && s.tickets < 10; }
-  revealClose() { this.ui.show($('reveal'), false); this.app.setLobbyVisible(this.tab === 'home'); audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX); this.refreshTop(); if (this._revealResults?.some((r) => r.type === 'hero' && !r.dup)) this.ui.toast('새 영웅 획득! 영웅 탭에서 출전 설정', 'gold'); }
+  revealDone() { $('reveal-foot').classList.remove('hidden'); $('btn-reveal-skip').classList.add('hidden'); const s = this.eco.s; $('btn-reveal-again').disabled = s.gems < GACHA.ten && s.tickets < 10; $('btn-reveal-close').focus({ preventScroll: true }); }
+  revealClose() { this._revealOpen = false; this.ui.show($('reveal'), false); this.app.setLobbyVisible(this.tab === 'home'); audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX); this.refreshTop(); if (this._revealResults?.some((r) => r.type === 'hero' && !r.dup)) this.ui.toast('새 영웅 획득! 영웅 탭에서 출전 설정', 'gold'); }
   showGachaContents(filter) { return showGachaContents.call(this, filter); }
   showWeaponPreview(itemId, heroId, enh) { return showWeaponPreview.call(this, itemId, heroId, enh); }
   showRates() {

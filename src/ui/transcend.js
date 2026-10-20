@@ -156,5 +156,8 @@ export class TranscendView extends GrowthOverlay {
     this.close({ rerender: false, restoreFocus: false });
     if (route === 'gacha') this.meta.openTab?.('gacha');
     else this.meta.openTab?.('shop', route === 'shop-gold' ? 'gold' : 'enh');
+    // 키보드 초점이 BODY 로 빠지지 않게 도착 화면의 첫 행동 버튼으로 옮긴다(리뷰 P2).
+    const target = route === 'gacha' ? document.getElementById('btn-pull1') : document.querySelector('#shop-grid .shop-item button');
+    target?.focus?.({ preventScroll: true });
   }
 }
