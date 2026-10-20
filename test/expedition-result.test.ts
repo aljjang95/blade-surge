@@ -16,7 +16,7 @@ function expand(node: any): any[] {
 const all = (node: any): any[] => typeof node !== 'object' ? [] : [node, ...node.children.flatMap(all)];
 const text = (node: any): string => typeof node !== 'object' ? String(node) : node.children.map(text).join('');
 
-function fixture(overrides: any = {}) {
+function fixture(overrides: any = {}, appExtra: any = {}) {
   const calls: any[] = [], item = Object.values(ITEM_BY_ID)[0];
   const result: any = { win: true, kind: 'dungeon', id: 'glass_garden', name: '유리 정원', depth: 'standard',
     kills: 37, combo: 12, time: 109.7, saveError: null,
@@ -24,7 +24,9 @@ function fixture(overrides: any = {}) {
       loot: Array.from({ length: 45 }, (_, i) => ({ uid: i + 1, id: item.id })) }, ...overrides };
   const app: any = { stageStarting: false, battle: { result: { masterworks: { renown: 5, breaks: 2, perfects: 3, boons: [] } },
     chronicle: { open: (tab: string) => calls.push(['mastery', tab]) } },
-    journeyView: { open: (tab: string) => calls.push(['journey', tab]) }, toLobby: () => calls.push(['lobby']) };
+    journeyView: { open: (tab: string) => calls.push(['journey', tab]) }, toLobby: () => calls.push(['lobby']),
+    meta: { openTab: (tab: string) => calls.push(['tab', tab]) } };
+  Object.assign(app, appExtra);
   const controller: any = { app, result, close: () => calls.push(['close']), open: (tab: string) => calls.push(['open', tab]),
     showResult: (...args: any[]) => calls.push(['save', ...args]) };
   const launch = (...args: any[]) => calls.push(['launch', ...args]);
@@ -39,7 +41,8 @@ test('victory summary precedes folded growth and loot; all departure actions rem
   const footer = f.nodes.find(n => n.type === 'footer'), details = f.nodes.filter(n => n.type === 'details');
   expect(f.view.children).toContain(footer); expect(all(scroll)).not.toContain(footer);
   expect(f.nodes.filter(n => n.props.className?.split(' ').includes('exp-scroll'))).toHaveLength(1);
-  expect(footer.children.filter((n: any) => n.type === 'button')).toHaveLength(3);
+  // 결과 하단은 다시 도전 · 장비 정비 두 행동(다음 던전이 있으면 그 앞에 하나 더). 로비는 머리글이다.
+  expect(footer.children.filter((n: any) => n.type === 'button')).toHaveLength(2);
   expect(details).toHaveLength(2); expect(details.every(n => !n.props.open)).toBe(true);
   const summary = f.nodes.find(n => n.props.className === 'exp-result-summary');
   expect(text(summary)).toContain('원정 승리'); expect(text(summary)).toContain('유리 정원');
@@ -90,17 +93,27 @@ for (const gate of ['failed-later', 'stale', 'starting']) test(`${gate} blocks p
   expect(f.calls).toEqual([]);
 });
 
-test('retry preserves deep, rift and conquest identity; forge and quests clear the result only on departure', () => {
+test('retry preserves deep, rift and conquest identity; gear maintenance clears the result only on departure', () => {
   const f = fixture({ depth: 'deep', riftId: 'glass_garden', conquestId: EXPEDITION_CONQUESTS[0].id });
   f.button('다시 도전').props.onClick();
   expect(f.calls).toEqual([['launch', 'dungeon', 'glass_garden', { rift: true, depth: 'deep', conquestId: EXPEDITION_CONQUESTS[0].id }]]);
   expect(f.controller.result).toBe(f.result);
-  for (const [label, tab] of [['전리품 정비', 'forge'], ['퀘스트 확인', 'quests']]) {
-    const next = fixture(); next.button(label).props.onClick();
-    expect(next.controller.result).toBeNull(); expect(next.calls).toEqual([['lobby'], ['open', tab]]);
-  }
+  // 정산 → 장비 확인을 한 번에 잇는다. 제작 공방 · 퀘스트는 결과 하단의 동급 버튼이 아니라 메뉴에서 연다.
+  const gear = fixture(); gear.button('장비 정비').props.onClick();
+  expect(gear.controller.result).toBeNull(); expect(gear.calls).toEqual([['lobby'], ['tab', 'heroes']]);
+  expect(gear.button('전리품 정비')).toBeUndefined(); expect(gear.button('퀘스트 확인')).toBeUndefined();
+  const blocked = fixture({ saveError: 'storage' });
+  expect(blocked.button('장비 정비').props.disabled).toBe(true);
 });
 
+// item-identity: 결과 전리품은 출전 영웅이 실제로 드는 형태의 그림이다(가방 · 장착 칸과 같은 그림). 장비 정비는 그 영웅의 장비 화면을 연다.
+test('ranger result loot uses the bow-form weapon art and gear maintenance opens that hero', () => {
+  const f = fixture({ rewards: { gold: 1, xp: 1, heroExp: 1, stones: 0, loot: [{ uid: 9, id: 'w_storm' }] } }, { eco: { s: { selected: 'ranger' } } });
+  const srcs = f.nodes.filter(n => n.type === 'img').map(n => String(n.props.src));
+  expect(srcs.some(src => src.endsWith('/forms/w_storm--bow.webp'))).toBe(true);
+  f.button('장비 정비').props.onClick();
+  expect(f.app.meta.heroSel).toBe('ranger'); expect(f.calls).toEqual([['lobby'], ['tab', 'heroes']]);
+});
 test('growth and journey keep their existing destinations after a successful save', () => {
   const f = fixture();
   f.button('명성으로 영구 숙련 배우기').props.onClick(); f.button('성장 여정 · 의뢰 보상').props.onClick();

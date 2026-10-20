@@ -89,7 +89,8 @@ export class Battle extends BaseBattle {
     if (!this.killLedger.claim(enemy)) return;
     audio.kill({ boss: !!enemy.isBoss, elite: !!enemy.isElite });
     const rpg = this.ensureRpg();
-    if (enemy.speciesId && Object.hasOwn(ENEMIES, enemy.speciesId)) {
+    // 무리 졸개는 도감 처치·경험치에 넣지 않는다(기존 명단 보상만 유지).
+    if (enemy.speciesId && Object.hasOwn(ENEMIES, enemy.speciesId) && !enemy.packFollower) {
       recordMonster(rpg, enemy.speciesId, enemy.level, this.stage.idx, true, stageExpeditionEncounter(this.stage));
       const hero = this.app.eco.hero(this.heroId);
       const award = grantCombatXp(hero, enemy.xpReward || 0, levelExp);
@@ -154,7 +155,7 @@ export class Battle extends BaseBattle {
     const dx = opts.dirx || 0, dz = opts.dirz || 0;
     const feedback=contactFeedback({finisher:opts.finisher,crit,boss:enemy.isBoss,elite:enemy.isElite,reduced:!!this.app.reducedMotion?.matches});
     enemy.receiveImpact(dx, dz, feedback.recoil);
-    if (opts.basic && p === this.player && !p.auto) { this.impactTarget = enemy; this.impactT = .16; }
+    // 수동 평타가 맞을 때마다 카메라 구도를 대상 쪽으로 당기지 않는다(사용자 시점 유지).
     // Every eligible hit recoils; only expensive contact feedback shares the time budget.
     const budget = contactBudget(this._contactBudget, this.elapsed, contact);
     if (!budget) return;
@@ -170,11 +171,8 @@ export class Battle extends BaseBattle {
       if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);
     }
     if (contact.stop>0) this.timeCtl.hitstop(contact.stop);
-    // 카메라 킥은 타격이 나아가는 방향으로 한 번 밀렸다가 돌아온다. 일반 명중은 몸 반동만 쓴다.
-    if (feedback.heavy || crit) { this.renderer?.shake?.(opts.finisher ? 0.5 : 0.2, dx, dz); this.renderer?.punch?.(opts.finisher ? 0.5 : 0.18); }
+    // 명중은 화면 전체 카메라 킥·줌 없이 대상 반동·몸 반동·VFX·히트스톱·소리·진동으로 전달한다.
     // 색수차는 마무리타에서만 짧게 다시 켠다(감쇠·상한은 렌더러가 소유한다).
     if (opts.finisher && this.renderer) this.renderer.aberr = Math.max(this.renderer.aberr || 0, 0.7);
-    // Directional body recoil carries ordinary hits; only heavy/critical contacts
-    // add a bounded camera response so light hits keep the view readable.
   }
 }

@@ -1,0 +1,140 @@
+{
+  "id": "A4",
+  "title": "설정에서 자동 타겟 끄기·유지·yaw 유지",
+  "pass": true,
+  "checks": [
+    {
+      "name": "탭 직후 토글이 꺼짐",
+      "ok": true,
+      "detail": {
+        "before": {
+          "on": true,
+          "aria": "true"
+        },
+        "after": {
+          "on": false,
+          "aria": "false"
+        }
+      }
+    },
+    {
+      "name": "탭 직후 eco.s.settings.autoTarget===false",
+      "ok": true
+    },
+    {
+      "name": "새로고침 뒤 eco.s.settings.autoTarget===false",
+      "ok": true,
+      "detail": false
+    },
+    {
+      "name": "새로고침 뒤 설정 화면에서도 꺼짐",
+      "ok": true,
+      "detail": {
+        "on": false,
+        "aria": "false"
+      }
+    },
+    {
+      "name": "픽스처 배치",
+      "ok": true,
+      "detail": {
+        "ok": true,
+        "name": "해골 자객",
+        "hp": 630,
+        "dist": 2.9999999999999973,
+        "yaw0": 4.055637227289575,
+        "toEnemy": 0.9140445736997813,
+        "state": "idle",
+        "othersMin": 4.041175777501073
+      }
+    },
+    {
+      "name": "공격이 시작됨",
+      "ok": true,
+      "detail": [
+        "idle",
+        "attack"
+      ]
+    },
+    {
+      "name": "yaw 유지(0.5초 안 최대 변화 10도 이하, 적 쪽으로 돌지 않음)",
+      "ok": true,
+      "detail": {
+        "yawShiftMax": 0,
+        "errToEnemyMin": 175.2
+      }
+    },
+    {
+      "name": "다시 켜기 후 eco.s.settings.autoTarget===true",
+      "ok": true,
+      "detail": {
+        "on": true,
+        "aria": "true"
+      }
+    }
+  ],
+  "injected": [
+    "eco 상태 준비: {\"hero\":\"knight\",\"level\":null,\"grade\":null,\"gold\":0,\"tutorial\":true}",
+    "전투 픽스처: 플레이어를 가장 가까운 적에서 3 거리로 이동하고 yaw 를 적 반대 방향으로 설정"
+  ],
+  "real": [
+    "부팅: #btn-ignore-rotate·#boot-start 실제 탭 → lobby",
+    "설정 → \"공격 자동 타겟팅\" 행 토글 실제 탭(끄기)",
+    "새로고침(page.reload)",
+    "전투 진입: #citadel-dungeon-prepare → 원정 시작 → 건너뛰기 탭 → mode=battle",
+    "AUTO 버튼 실제 탭(적이 있는 방까지 이동)",
+    "AUTO 버튼 실제 탭(끄기)",
+    "실제 공격 버튼 탭(자동 타겟 꺼짐)",
+    "설정에서 다시 켜기 실제 탭"
+  ],
+  "observed": {
+    "toggleBefore": {
+      "on": true,
+      "aria": "true"
+    },
+    "toggleAfterTap": {
+      "on": false,
+      "aria": "false"
+    },
+    "toggleAfterReload": {
+      "on": false,
+      "aria": "false"
+    },
+    "fixture": {
+      "ok": true,
+      "name": "해골 자객",
+      "hp": 630,
+      "dist": 2.9999999999999973,
+      "yaw0": 4.055637227289575,
+      "toEnemy": 0.9140445736997813,
+      "state": "idle",
+      "othersMin": 4.041175777501073
+    },
+    "tapAttackOff": {
+      "tapped": true,
+      "frames": 85,
+      "windowSec": 0.5,
+      "errDegStart": 179.5,
+      "errDegMinInWindow": 175.2,
+      "errDegAtWindowEnd": 175.2,
+      "yawShiftMaxInWindowDeg": 0,
+      "hpBefore": 630,
+      "hpFirstDrop": 525.9,
+      "hpDropAtSec": 0.067,
+      "hpAtPlacement": 630,
+      "lockSet": false,
+      "states": [
+        "idle",
+        "attack"
+      ]
+    }
+  },
+  "captures": [
+    "A4-settings-off.png",
+    "A4-settings-after-reload.png",
+    "A4-after-attack.png"
+  ],
+  "pageErrors": [],
+  "started": "2026-10-20T04:54:52.211Z",
+  "finished": "2026-10-20T04:55:25.371Z"
+}

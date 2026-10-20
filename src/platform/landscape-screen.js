@@ -1,4 +1,8 @@
-/** 첫 터치 안에서 전체화면을 요청하고, 승인된 화면에서 가로 잠금을 시도한다. */
+/**
+ * 첫 터치 안에서 전체화면을 요청하고, 승인된 화면에서 가로 잠금을 시도한다.
+ * navigationUI:'hide'는 브라우저가 따르지 않아도 되는 힌트라 OS 막대가 숨었다는 증거로 쓰지 않는다.
+ * 결과: fullscreen 'active' | 'unavailable'(거절) | 'unsupported'(API 없음, 예: iPhone Safari).
+ */
 export function requestLandscapeScreen(view = window, doc = document) {
   const orientation = view.screen?.orientation;
   const result = { fullscreen: doc.fullscreenElement ? 'active' : 'unsupported', orientation: 'unsupported' };

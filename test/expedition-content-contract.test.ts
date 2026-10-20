@@ -9,7 +9,7 @@ import { buildExpeditionStage, buildExpeditionWorld } from '../src/game/expediti
 // Independent accepted totals: [existing altar/route holds, additional waves].
 // Astral choices have an independent four-confirmation contract below.
 // A treasure room alone is not an altar, and reinforcement counts are per elite.
-const contracts: Record<string, { standard: number[]; deep: number[] }> = {
+const contracts: Record<string, { standard: number[] | null; deep: number[] }> = {
   glass_garden: { standard: [1, 0], deep: [2, 0] },
   ember_vault: { standard: [0, 2], deep: [3, 2] },
   star_archive: { standard: [0, 0], deep: [2, 0] },
@@ -22,6 +22,9 @@ const contracts: Record<string, { standard: number[]; deep: number[] }> = {
   verdigris_sanctum: { standard: [3, 0], deep: [4, 4] },
   sable_mirage_basin: { standard: [3, 0], deep: [4, 4] },
   comet_bastion: { standard: [4, 0], deep: [5, 4] },
+  // 컨셉 던전 2곳: 기본 원정 문구는 concept-dungeons 테스트가 맡고, 새 심층만 같은 표에 넣는다(정예 3곳 × 증원 1회).
+  glacier_tide_basin: { standard: null, deep: [0, 3] },
+  sunbrass_quarry: { standard: null, deep: [0, 3] },
 };
 
 // Disallow the specific unsupported interactions, without freezing prose or
@@ -41,15 +44,17 @@ function expectCometBossCopy(tactic: string, boss: any) {
   expect(tactic.indexOf('보스방에는 푸른 궤도선이')).toBeLessThan(tactic.indexOf((ENEMIES as Record<string, any>).comet_bastion.tactic));
 }
 
-test('all twelve exported dungeons have exactly one standard and one deep contract', () => {
+test('all twelve exported dungeons have exactly one standard and one deep contract; concept routes add deep only', () => {
   const ids = Object.keys(contracts).sort();
-  expect(DUNGEONS.map(d => d.id).sort()).toEqual(ids);
+  expect(DUNGEONS.map(d => d.id).sort()).toEqual(ids.filter(id => contracts[id].standard));
   expect(EXPEDITION_DEPTHS.map(d => d.id).sort()).toEqual(ids);
   expect(EXPEDITION_DEPTHS.every(d => d.depth === 'deep')).toBe(true);
 });
 
 for (const [id, contract] of Object.entries(contracts)) {
   for (const depth of ['standard', 'deep'] as const) {
+    const expected = contract[depth];
+    if (!expected) continue;
     test(`${id}/${depth}: published instructions match playable holds, waves and boss cues`, () => {
       const definition: any = (depth === 'standard' ? DUNGEONS : EXPEDITION_DEPTHS).find(d => d.id === id);
       const stage = buildExpeditionStage('dungeon', id, null, { depth });
@@ -63,7 +68,7 @@ for (const [id, contract] of Object.entries(contracts)) {
       const holds = (selectionRoute ? 0 : route?.gates.length || 0) + altarHolds;
       const selections = selectionRoute ? route!.gates.length : 0;
       expect(selections).toBe(id === 'astral_leviathan_spire' ? 4 : 0);
-      expect([holds, elites * reinforcements]).toEqual(contract[depth]);
+      expect([holds, elites * reinforcements]).toEqual(expected);
       expect(stage.objective).toBe(definition.objective);
       expect(stage.encounter.tactic).toBe(definition.tactic);
       if (depth === 'standard') expect(definition.stage.objective).toBe(definition.objective);
@@ -325,7 +330,7 @@ for (const [id, contract] of Object.entries(contracts)) {
       }
       if (!holds) expect(stage.objective).not.toMatch(/공명|제단/);
       const waves = stage.objective.match(/정예방\s*(\d+)곳의 증원 각\s*(\d+)회/);
-      expect(Number(waves?.[1] || 0) * Number(waves?.[2] || 0)).toBe(contract[depth][1]);
+      expect(Number(waves?.[1] || 0) * Number(waves?.[2] || 0)).toBe(expected[1]);
       if (reinforcements) {
         expect(Number(waves?.[1])).toBe(elites);
         expect(Number(waves?.[2])).toBe(reinforcements);

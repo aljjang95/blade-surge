@@ -46,7 +46,7 @@ describe('gacha rarity contract', () => {
     expect(gachaChances(GACHA.softPity + 1).SSR).toBeCloseTo((2 + GACHA.softPityStep) / (100 + GACHA.softPityStep), 10);
     for (let i = GACHA.softPity + 1; i < GACHA.pity; i++) expect(rates.ssrByPull[i]).toBeGreaterThan(rates.ssrByPull[i - 1]);
     expect(rates.ssrByPull[GACHA.pity - 1]).toBe(1);
-    expect(rates.ssrSplit.featuredHero + rates.ssrSplit.otherSsrHero + rates.ssrSplit.ssrGear).toBeCloseTo(1, 10);
+    expect(rates.ssrSplit.featuredHero + rates.ssrSplit.otherSsrHero + rates.ssrSplit.ssrGear + rates.ssrSplit.materials).toBeCloseTo(1, 10);
     expect(rates.ssrSplit.otherHeroes).not.toContain(GACHA.featured);
   });
 });

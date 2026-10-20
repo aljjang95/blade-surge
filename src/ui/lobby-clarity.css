@@ -1,0 +1,185 @@
+/* 로비·출격 여정의 공통 글자와 접힌 정비 입구. 전투 HUD는 별도 정책을 유지한다. */
+.oath-visual #meta,
+.oath-visual #oath-menu,
+.oath-visual .citadel-hub-dialog,
+.adventure-nav {
+  font-family: var(--font-ui);
+}
+.oath-visual #meta :is(button, summary),
+.oath-visual #oath-menu :is(button, summary),
+.oath-visual .citadel-hub-dialog :is(button, summary, kbd) {
+  font-family: var(--font-ui);
+}
+.oath-visual #meta .bottomnav button,
+.oath-visual #oath-menu .oath-menu-list button,
+.oath-visual #meta :is(.seg button, .hero-tab, .exp-tabs button),
+.adventure-nav > button,
+.adventure-tools :is(summary, button),
+.oath-visual .citadel-hub-dialog :is(button, summary) {
+  min-height: 44px;
+  font-size: var(--type-sm);
+  font-weight: var(--weight-label);
+  line-height: var(--lh-sm);
+}
+.oath-visual .citadel-hub-dialog :is(
+  .citadel-hub-access, .citadel-hub-challenge-notice,
+  .citadel-hub-unlock-note, .citadel-hub-risk-persistence, #citadel-fury-rule,
+  .citadel-hub-depth strong, .citadel-hub-potions b,
+  .citadel-hub-destination-stats b
+) {
+  font-size: var(--type-sm);
+  line-height: var(--lh-sm);
+}
+.oath-visual .citadel-hub-dialog :is(
+  p, small, legend, kbd, .citadel-hub-eyebrow,
+  [data-citadel-unlock], .citadel-hub-depth small,
+  .citadel-hub-rewards span, .citadel-hub-potions strong,
+  .citadel-hub-potions details p, .citadel-hub-preparation-note,
+  .citadel-hub-goal-context, .citadel-hub-goal-baseline,
+  .citadel-hub-challenge-details li, .citadel-hub-challenge-details li span,
+  .citadel-hub-destination-art > span
+) {
+  font-size: var(--type-xs);
+  line-height: var(--lh-xs);
+}
+.oath-visual .citadel-hub-dialog .citadel-hub-potions kbd {
+  width: 24px;
+  height: 24px;
+}
+.oath-visual .citadel-hub-dialog h3 small {
+  font-family: var(--font-ui);
+  font-size: var(--type-xs);
+  letter-spacing: .04em;
+}
+.oath-visual .citadel-hub-dialog .citadel-hub-hero p {
+  overflow-wrap: anywhere;
+}
+.adventure-nav {
+  display: flex;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.adventure-nav > button[hidden],
+.adventure-tools button[hidden] {
+  display: none;
+}
+.adventure-tools {
+  min-width: 140px;
+  max-width: 100%;
+  border: 1px solid #b7a16b80;
+  border-radius: 8px;
+  background: #193d35;
+  color: #f6edda;
+}
+.adventure-tools > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 14px;
+  cursor: pointer;
+  list-style: none;
+}
+.adventure-tools > summary::-webkit-details-marker {
+  display: none;
+}
+.adventure-tools > summary::after {
+  content: '+';
+  font-size: 20px;
+}
+.adventure-tools[open] > summary::after {
+  content: '−';
+}
+.adventure-tools-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 0 8px 8px;
+}
+.adventure-tools-list button {
+  min-width: 0;
+  padding: 8px 10px;
+  white-space: normal;
+}
+.adventure-tools :focus-visible {
+  outline: 3px solid #e3c58c;
+  outline-offset: 3px;
+}
+@media (max-width: 600px) {
+  .adventure-tools[open] {
+    flex-basis: 100%;
+  }
+}
+
+/* 기존 스킨의 id/inline 크기보다 이 여정의 최소 가독성 계약을 우선한다. */
+.oath-visual #meta button,
+.oath-visual #oath-menu button,
+.oath-visual .exp-shell button,
+.oath-visual .citadel-hub-dialog :is(button, summary) {
+  font-family: var(--font-ui) !important;
+  font-size: var(--type-sm) !important;
+  line-height: var(--lh-sm);
+  min-height: 44px;
+}
+.oath-visual #citadel-dungeon-prepare,
+.oath-visual .citadel-hub-dialog .citadel-hub-go {
+  font-size: var(--type-label) !important;
+}
+#tab-stage .adventure-nav {
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+#tab-stage .adventure-nav > button[hidden] {
+  display: none;
+}
+#tab-stage .adventure-tools {
+  flex: 1;
+}
+#tab-stage .adventure-tools > summary {
+  min-height: 48px;
+}
+.oath-visual #meta :is(.hero-card .lv, .hero-card .rar, .hero-card .lockt,
+  .wardrobe-help, .wardrobe-hint, .cs-head [style*="font-size:10px"],
+  .set-list [style*="font-size:10px"], .set-list > [style*="font-size:11px"]) {
+  font-size: var(--type-xs) !important;
+  line-height: var(--lh-xs);
+}
+.oath-visual .citadel-hub-dialog .citadel-hub-access,
+.oath-visual .citadel-hub-dialog .citadel-hub-challenge-notice,
+.oath-visual .citadel-hub-dialog .citadel-hub-unlock-note,
+.oath-visual .citadel-hub-dialog #citadel-fury-rule {
+  font-size: var(--type-sm);
+}
+@media (max-width: 600px) {
+  #tab-stage .adventure-tools[open] {
+    flex-basis: 100%;
+  }
+}
+
+/* 전투 종료 결과는 로비 외형 모드 밖에서도 같은 글자 계약을 사용한다. */
+#tab-stage .exp-shell,
+#tab-stage .exp-shell button {
+  font-family: var(--font-ui);
+}
+#tab-stage .exp-shell button,
+#tab-stage .exp-shell .exp-cost {
+  font-family: var(--font-ui) !important;
+  font-size: var(--type-sm) !important;
+  line-height: var(--lh-sm);
+  min-height: 44px;
+}
+#tab-stage .exp-shell :is(
+  .exp-brand small, .exp-account small, .exp-chips span,
+  .exp-loot-reveal small, .exp-result-summary small,
+  .exp-card-body p, .exp-season-route
+) {
+  font-size: var(--type-xs) !important;
+  line-height: var(--lh-xs);
+}
+
+/* 결과 헤더의 기존 important 규칙보다 구체적으로 최소 크기를 보장한다. */
+#tab-stage .exp-result-shell .exp-result-header .exp-close {
+  font-size: var(--type-sm) !important;
+}

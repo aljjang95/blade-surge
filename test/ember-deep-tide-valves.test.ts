@@ -108,7 +108,7 @@ test('심층 정의: 냉각 밸브 3곳이 방 2·3·4 순서이고 방 종류·
 test('문구의 숫자는 실제 레이아웃·mechanics 와 같다: 정예방 2곳 × 증원 1회, 밸브 3곳, 유지 2초', () => {
   const f = fixture();
   const depth = EXPEDITION_DEPTHS.find(d => d.id === 'ember_vault')!;
-  const elites = depth.layout.types.filter(t => t === 'elite').length;
+  const elites = depth.layout.types.filter((t: string) => t === 'elite').length;
   expect(elites).toBe(f.world.rooms.filter(r => r.type === 'elite').length);
   expect(f.stage.expedition.mechanics.reinforcements).toBe(1);
   expect(f.stage.objective).toBe('냉각 밸브 ' + f.route.gates.length + '곳을 밀물 뒤 순서대로 개방하고 정예방 ' + elites + '곳의 증원 각 '

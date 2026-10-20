@@ -1,10 +1,11 @@
 import {
-  COMBAT_SOUND_FILES, attackSound, skillSound, ULTIMATE_SOUND,
+  attackSound, skillSound, ultimateSound, heroSoundFiles, heroHitSound, heroForWeapon, HERO_IDS, HERO_HIT_VARIANTS, SWING_VARIANTS,
+  FX_VARIANTS, FX_SOUND_FILES, UI_SOUND_NAMES, SFX_LIBRARY, sfxUrl,
   COMBO_STINGERS, HIT_BUS_GAIN, HIT_PRIORITY, HIT_SOUND_FILES, HIT_VARIANTS, HIT_VOICES, HIT_VOICES_PREMIUM, HIT_WINDOW, KILL_SOUND,
   comboSoundName, hitLayers, hitSoundName, hitTier, isPremiumHit,
 } from './combat-sound-library.js';
 
-// Web Audio: 샘플(Kenney CC0) + 프로시저럴 합성 SFX + BGM 크로스페이드 + 햅틱
+// Web Audio: Mirelo SFX 샘플(public/sfx/mirelo-v1) + 샘플이 없을 때만 쓰는 합성 폴백 + BGM 크로스페이드 + 햅틱
 // 오디오 타이머/음소거가 전투와 보상의 Math.random 순서를 바꾸지 않는다.
 // 장식용 스트림은 한 번만 시드하고, 노이즈 샘플마다 외부 난수를 호출하지 않는다.
 function createAudioRandom() {
@@ -17,10 +18,9 @@ function createAudioRandom() {
     return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
   };
 }
-const SFX_FILES = ['hit_punch0', 'hit_punch1', 'hit_punch2', 'hit_metal0', 'hit_metal1', 'hit_metal2', 'hit_soft0', 'hit_soft1', 'hit_bell', 'hit_mining', 'hit_wood', 'hit_plate', 'hit_glass',
-  'ui_click', 'ui_confirm', 'ui_select', 'ui_back', 'ui_error', 'ui_open', 'ui_close', 'ui_max', 'ui_drop', 'ui_bong', 'ui_glass', 'ui_pluck',
-  'coin0', 'coin1', 'coin_stack', 'pack_open', 'card_fan', 'card_place', 'jingle_win0', 'jingle_win1', 'jingle_legend',
-  'expansion/flow-impact-light', 'expansion/flow-impact-heavy', ...COMBAT_SOUND_FILES, ...HIT_SOUND_FILES];
+// 공용(UI·효과·타격)은 시작 때, 영웅 세트는 그 영웅이 처음 소리를 낼 때 불러온다(모바일 메모리: 영웅당 약 22초 분량).
+const SFX_FILES = [...UI_SOUND_NAMES, ...FX_SOUND_FILES, ...HIT_SOUND_FILES];
+const HIT_BUS_PREFIX = SFX_LIBRARY + 'hit/';
 // TTS 원본은 보정하지 않고, 영웅별 실측 편차만 재생 버스에서 맞춘다.
 const HERO_VOICE_GAIN = { barbarian: .2, knight: .32, mage: 1, ranger: 1.2, rogue: 3.8 };
 
@@ -50,6 +50,7 @@ export class AudioSys {
     this.mix = { music: 0.55, sfx: 0.9, voice: 1 };
     this._voices = new Set(); this.voiceLimits = { sfx: 16, bark: 4, narration: 1 };
     this._musicTracks = new Set(); this._ducks = []; this._combatLevel = 1;
+    this._heroLoads = new Map(); this._swingLast = {}; this._heroHitLast = {}; this._heroWeapon = '';
   }
   async init() {
     if (this.ctx) return true;
@@ -78,12 +79,35 @@ export class AudioSys {
     comp.connect(out);
     this.voiceGain = this.ctx.createGain(); this.voiceGain.gain.value = 1; this.voiceGain.connect(this.master); this._barkLast = {};
     this.setMix(this.mix);
-    await Promise.all(SFX_FILES.map(async (n) => {
-      const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 8000);
-      try { const ab = await (await fetch(`/sfx/${n}.mp3`, { signal: controller.signal })).arrayBuffer(); this.buffers[n] = await this.ctx.decodeAudioData(ab); }
-      catch (e) { console.warn('sfx fail', n); }
-      finally { clearTimeout(timeout); }
-    }));
+    await Promise.all(SFX_FILES.map((n) => this._loadSfx(n)));
+    return true;
+  }
+  async _loadSfx(n) {
+    if (this.buffers[n]) return this.buffers[n];
+    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 8000);
+    try { const ab = await (await fetch(sfxUrl(n), { signal: controller.signal })).arrayBuffer(); this.buffers[n] = await this.ctx.decodeAudioData(ab); }
+    catch (e) { console.warn('sfx fail', n); }
+    finally { clearTimeout(timeout); }
+    return this.buffers[n] || null;
+  }
+  /** 영웅 효과음 세트(휘두름·마무리·타격·궁극기·스킬 8)를 한 번만 불러온다. 아직 없으면 그 순간은 공용 효과로 대신한다. */
+  preloadHero(heroId) {
+    if (!this.ctx || !HERO_IDS.includes(heroId)) return Promise.resolve(false);
+    if (!this._heroLoads.has(heroId)) this._heroLoads.set(heroId, Promise.all(heroSoundFiles(heroId).map((n) => this._loadSfx(n))).then(() => true));
+    return this._heroLoads.get(heroId);
+  }
+  /** 같은 변형이 연달아 나오지 않게 고른다. */
+  _rotate(store, key, count) {
+    if (count < 2) return 0;
+    const last = store[key] ?? -1, next = (last + 1 + Math.floor(this._random() * (count - 1))) % count;
+    store[key] = next; return next;
+  }
+  /** 예전 합성음 자리에 Mirelo 효과 샘플을 낸다. 샘플이 준비됐으면 true(호출한 합성음은 건너뛴다). */
+  _fx(family, { vol = 0.5, rate = 1, min = 0.04, priority = 2 } = {}) {
+    const count = FX_VARIANTS[family] || 0; if (!count || !this.ctx) return false;
+    const name = `${SFX_LIBRARY}fx/${family}_${this._rotate(this._variantLast, 'fx:' + family, count)}`;
+    if (!this.buffers[name]) return false;
+    this.play(name, { vol: Math.min(1, vol * 1.4), rate, vary: 0.05, min, priority });
     return true;
   }
   resume() { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); }
@@ -147,7 +171,7 @@ export class AudioSys {
     return src;
   }
   /** 샘플 재생 (피치 랜덤, 볼륨, 최소 간격) */
-  play(name, { vol = 1, rate = 1, vary = 0.08, min = 0.03, delay = 0, bus = name.startsWith('hit-v2/') ? 'hit' : '', priority = name.startsWith('ui_') ? 4 : name.includes('flow-impact-heavy') ? 5 : name.includes('flow-impact') ? 3 : 1 } = {}) {
+  play(name, { vol = 1, rate = 1, vary = 0.08, min = 0.03, delay = 0, bus = name.startsWith(HIT_BUS_PREFIX) ? 'hit' : '', priority = name.startsWith('ui_') ? 4 : 1 } = {}) {
     if (!this.enabled || !this.mix.sfx || !this.ctx) return;
     const b = this.buffers[name]; if (!b) return;
     const t = this.now(); if (this.lastPlay[name] !== undefined && t - this.lastPlay[name] < min) return; this.lastPlay[name] = t;
@@ -190,7 +214,7 @@ export class AudioSys {
   }
   /** 검 휘두름 */
   whoosh({ vol = 0.5, pitch = 1, dur = 0.25 } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('whoosh', { vol, rate: Math.max(0.6, Math.min(1.6, pitch)) })) return; const t = this.now();
     const n = this._noise(dur + 0.05); const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.2;
     f.frequency.setValueAtTime(600 * pitch, t); f.frequency.exponentialRampToValueAtTime(3200 * pitch, t + dur * 0.5); f.frequency.exponentialRampToValueAtTime(400 * pitch, t + dur);
     const g = this.ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + dur * 0.25); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
@@ -198,14 +222,14 @@ export class AudioSys {
   }
   /** 타격 보강용 저역 펀치 */
   thump({ vol = 0.6, freq = 90, dur = 0.18 } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('thump', { vol, rate: Math.max(0.7, Math.min(1.4, freq / 90)), min: 0.03 })) return; const t = this.now();
     const o = this.ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(freq * 2.2, t); o.frequency.exponentialRampToValueAtTime(freq * 0.6, t + dur);
     const g = this.ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     o.connect(g); g.connect(this.sfxGain); o.start(t); o.stop(t + dur + 0.02);
   }
   /** 폭발 */
   boom({ vol = 0.9, dur = 0.7, low = 60 } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('boom', { vol, rate: Math.max(0.75, Math.min(1.25, low / 60)), priority: 3 })) return; const t = this.now();
     const n = this._noise(dur); const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(4000, t); f.frequency.exponentialRampToValueAtTime(120, t + dur);
     const g = this.ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     n.connect(f); f.connect(g); g.connect(this.sfxGain); n.start(t); n.stop(t + dur);
@@ -213,7 +237,7 @@ export class AudioSys {
   }
   /** 전기/번개 */
   zap({ vol = 0.5, dur = 0.3 } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('zap', { vol })) return; const t = this.now();
     const o = this.ctx.createOscillator(); o.type = 'sawtooth';
     const steps = 12; for (let i = 0; i < steps; i++) o.frequency.setValueAtTime(300 + this._random() * 2400, t + (dur * i) / steps);
     const f = this.ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 900;
@@ -224,7 +248,7 @@ export class AudioSys {
   }
   /** 마법 차지/발동 (상승 아르페지오) */
   magic({ vol = 0.35, base = 440, notes = [0, 4, 7, 12], step = 0.06, type = 'triangle' } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('magic', { vol, rate: Math.max(0.7, Math.min(1.4, base / 440)) })) return; const t = this.now();
     notes.forEach((n, i) => {
       const o = this.ctx.createOscillator(); o.type = type; o.frequency.value = base * Math.pow(2, n / 12);
       const g = this.ctx.createGain(); const st = t + i * step; g.gain.setValueAtTime(0, st); g.gain.linearRampToValueAtTime(vol, st + 0.02); g.gain.exponentialRampToValueAtTime(0.001, st + 0.35);
@@ -233,14 +257,14 @@ export class AudioSys {
   }
   /** 불꽃 (지속 노이즈) */
   fire({ vol = 0.3, dur = 0.6 } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('fire', { vol })) return; const t = this.now();
     const n = this._noise(dur); const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 0.5;
     const g = this.ctx.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + 0.05); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
     n.connect(f); f.connect(g); g.connect(this.sfxGain); n.start(t); n.stop(t + dur);
   }
   /** 크리티컬 팅 */
   ting({ vol = 0.4, freq = 1800 } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('ting', { vol, rate: Math.max(0.7, Math.min(1.5, freq / 1800)), min: 0.03 })) return; const t = this.now();
     const o = this.ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(freq, t); o.frequency.exponentialRampToValueAtTime(freq * 0.5, t + 0.25);
     const g = this.ctx.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
     o.connect(g); g.connect(this.sfxGain); o.start(t); o.stop(t + 0.32);
@@ -287,18 +311,14 @@ export class AudioSys {
   }
   _hasHitLibrary() { return !!(this.buffers[hitSoundName('b_basic', 0)] && this.buffers[hitSoundName('t_slash', 0)]); }
   _renderLayeredHit(kind, { crit, finisher, tier, weapon }) {
-    for (const layer of hitLayers(kind, tier, { weapon, crit })) {
-      const name = hitSoundName(layer.id, this._variant(layer.id));
+    for (const layer of hitLayers(kind, tier, { weapon: weapon || this._heroWeapon, crit })) {
+      const name = layer.role === 'hero' ? heroHitSound(layer.hero, this._rotate(this._heroHitLast, layer.hero, HERO_HIT_VARIANTS)) : hitSoundName(layer.id, this._variant(layer.id));
       if (!this.buffers[name]) continue;
-      this.play(name, { vol: layer.vol, rate: layer.rate, vary: layer.role === 'body' ? 0.04 : 0.06, min: 0.008, priority: layer.priority });
-    }
-    // Flow Music score-derived impact accent; 기본 타격음에만 낮게 겹친다.
-    if (tier === 'heavy' || crit || finisher) {
-      const weight = finisher || !crit ? 'heavy' : 'light';
-      this.play(`expansion/flow-impact-${weight}`, { vol: weight === 'heavy' ? 0.14 : 0.1, vary: 0, min: 0.05 });
+      this.play(name, { vol: layer.vol, rate: layer.rate, vary: layer.role === 'body' ? 0.04 : 0.06, min: 0.008, priority: layer.priority, bus: 'hit' });
     }
   }
   _renderHit(kind, event) {
+    if (kind === 'hurt' && this._fx('hurt', { vol: 0.85, min: 0.05, priority: 3 })) return;
     if (kind !== 'hurt' && this._hasHitLibrary()) { this._renderLayeredHit(kind, event); return; }
     this._renderLegacyHit(kind, event);
   }
@@ -319,11 +339,6 @@ export class AudioSys {
     this.contactSnap({ vol: finisher ? 0.27 : heavy ? 0.2 : 0.11, freq: finisher ? 980 : heavy ? 1260 : 1900 });
     if (finisher) this.contactSnap({ vol: 0.1, freq: 620 });
     if (crit) this.ting({ vol: finisher ? 0.6 : 0.46, freq: 1500 + this._random() * 600 });
-    // Flow Music score-derived impact accent; 기본 CC0 타격음에만 낮게 겹친다.
-    if (heavy || crit) {
-      const weight = finisher || !crit ? 'heavy' : 'light';
-      this.play(`expansion/flow-impact-${weight}`, { vol: weight === 'heavy' ? 0.16 : 0.12, vary: 0, min: 0.05 });
-    }
   }
 
   /** Very short filtered transient separates weapon contact from the longer body thump. */
@@ -340,7 +355,7 @@ export class AudioSys {
   _osc(type, freq, t, dur, vol, dest) { const o = this.ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(freq, t); const g = this.ctx.createGain(); this._env(g, t, 0.005, dur, vol); o.connect(g); g.connect(dest || this.sfxGain); o.start(t); o.stop(t + dur + 0.05); return o; }
   /** 금속 검격 (스윕 + 링잉) */
   clang({ vol = 0.5, freq = 2400, dur = 0.35 } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('clang', { vol, rate: Math.max(0.7, Math.min(1.4, freq / 2400)) })) return; const t = this.now();
     for (const [m, v] of [[1, 1], [1.51, 0.5], [2.11, 0.3], [3.07, 0.18]]) {
       const o = this.ctx.createOscillator(); o.type = 'triangle'; o.frequency.setValueAtTime(freq * m * (0.97 + this._random() * 0.06), t);
       const g = this.ctx.createGain(); this._env(g, t, 0.002, dur * (1 / m), vol * v);
@@ -349,25 +364,25 @@ export class AudioSys {
   }
   /** 얼음 결정 (고음 반짝 + 크랙) */
   ice({ vol = 0.45, dur = 0.45 } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('ice', { vol })) return; const t = this.now();
     for (let i = 0; i < 5; i++) { const st = t + i * 0.025; const o = this.ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(2600 + this._random() * 2600, st); const g = this.ctx.createGain(); this._env(g, st, 0.003, dur * 0.6, vol * (0.5 + this._random() * 0.5)); o.connect(g); g.connect(this.sfxGain); o.start(st); o.stop(st + dur); }
     const n = this._noise(dur * 0.5); const f = this.ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 3000;
     const g2 = this.ctx.createGain(); this._env(g2, t, 0.004, dur * 0.4, vol * 0.5); n.connect(f); f.connect(g2); g2.connect(this.sfxGain); n.start(t); n.stop(t + dur);
   }
   /** 신성한 빛 (밝은 상승 코드 + 벨) */
   holy({ vol = 0.4, base = 523, dur = 0.9 } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('holy', { vol, rate: Math.max(0.8, Math.min(1.3, base / 523)) })) return; const t = this.now();
     [0, 4, 7, 11, 14].forEach((n, i) => { const st = t + i * 0.045; const o = this.ctx.createOscillator(); o.type = 'sine'; o.frequency.setValueAtTime(base * Math.pow(2, n / 12), st); const g = this.ctx.createGain(); this._env(g, st, 0.01, dur - i * 0.05, vol * (1 - i * 0.12)); o.connect(g); g.connect(this.sfxGain); o.start(st); o.stop(st + dur); });
     this.ting({ vol: vol * 0.5, freq: base * 4 });
   }
   /** 어둠/저주 (하강 디튠) */
   dark({ vol = 0.45, base = 180, dur = 0.8 } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('dark', { vol })) return; const t = this.now();
     for (const det of [1, 1.012, 0.988]) { const o = this.ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(base * det, t); o.frequency.exponentialRampToValueAtTime(base * det * 0.45, t + dur); const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(1400, t); f.frequency.exponentialRampToValueAtTime(240, t + dur); const g = this.ctx.createGain(); this._env(g, t, 0.02, dur, vol / 3); o.connect(f); f.connect(g); g.connect(this.sfxGain); o.start(t); o.stop(t + dur + 0.05); }
   }
   /** 진공 흡입 (몹몰이) — 상승 노이즈 스윕 */
   suck({ vol = 0.35, dur = 0.5 } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('suck', { vol })) return; const t = this.now();
     const n = this._noise(dur); const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 4;
     f.frequency.setValueAtTime(220, t); f.frequency.exponentialRampToValueAtTime(2600, t + dur);
     const g = this.ctx.createGain(); this._env(g, t, dur * 0.5, dur * 0.5, vol);
@@ -375,7 +390,7 @@ export class AudioSys {
   }
   /** 회복 / 버프 */
   buff({ vol = 0.4, base = 392, dur = 0.7, down = false } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx(down ? 'fail' : 'buff', { vol })) return; const t = this.now();
     const o = this.ctx.createOscillator(); o.type = 'triangle';
     o.frequency.setValueAtTime(base, t); o.frequency.exponentialRampToValueAtTime(base * (down ? 0.5 : 2), t + dur * 0.8);
     const g = this.ctx.createGain(); this._env(g, t, 0.03, dur, vol);
@@ -384,17 +399,18 @@ export class AudioSys {
   /** 레벨업 / 강화 성공 (아르페지오 + 벨) */
   levelUp({ vol = 0.45, base = 523 } = {}) {
     if (!this.enabled || !this.ctx) return;
+    if (this._fx('levelup', { vol, min: 0.3, priority: 4 })) return;
     this.magic({ vol, base, notes: [0, 4, 7, 12, 16, 19], step: 0.055, type: 'triangle' });
     setTimeout(() => this.ting({ vol: vol * 0.7, freq: base * 4 }), 330);
   }
   /** 강화 실패 (하강 불협) */
   fail({ vol = 0.5 } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('fail', { vol, priority: 4 })) return; const t = this.now();
     [0, -1, -3].forEach((n, i) => { const st = t + i * 0.08; const o = this.ctx.createOscillator(); o.type = 'square'; o.frequency.setValueAtTime(300 * Math.pow(2, n / 12), st); const g = this.ctx.createGain(); this._env(g, st, 0.01, 0.28, vol * 0.3); o.connect(g); g.connect(this.sfxGain); o.start(st); o.stop(st + 0.35); });
   }
   /** 장비 파괴 (유리 깨짐 + 저역 임팩트) */
   shatter({ vol = 0.7 } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('shatter', { vol, priority: 4 })) return; const t = this.now();
     const n = this._noise(0.7); const f = this.ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.setValueAtTime(4000, t); f.frequency.exponentialRampToValueAtTime(700, t + 0.6);
     const g = this.ctx.createGain(); this._env(g, t, 0.002, 0.65, vol); n.connect(f); f.connect(g); g.connect(this.sfxGain); n.start(t); n.stop(t + 0.7);
     this.thump({ vol: vol * 0.8, freq: 55, dur: 0.4 }); this.dark({ vol: vol * 0.5, base: 140, dur: 0.7 });
@@ -418,7 +434,7 @@ export class AudioSys {
   }
   /** 궁극기 차징 (상승 사이렌) */
   charge({ vol = 0.4, dur = 0.8 } = {}) {
-    if (!this.enabled || !this.ctx) return; const t = this.now();
+    if (!this.enabled || !this.ctx) return; if (this._fx('charge', { vol, priority: 3 })) return; const t = this.now();
     const o = this.ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(1600, t + dur);
     const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(600, t); f.frequency.exponentialRampToValueAtTime(4000, t + dur);
     const g = this.ctx.createGain(); this._env(g, t, dur * 0.7, dur * 0.3, vol);
@@ -487,9 +503,10 @@ export class AudioSys {
   /** 공격 시작과 접촉 사이를 분리해 입력 순간과 실제 타격 순간을 귀로 읽게 한다. */
   attackRelease({ weapon = 'blade', finisher = false, ranged = false } = {}) {
     if (this.enabled && this.mix.sfx && this.ctx) {
-      const sample = attackSound(weapon, ranged);
+      const hero = heroForWeapon(weapon); this._heroWeapon = weapon; this.preloadHero(hero);
+      const sample = attackSound(weapon, ranged, { finisher, hero, variant: this._rotate(this._swingLast, hero, SWING_VARIANTS) });
       if (this.buffers[sample]) {
-        this.play(sample, { vol: finisher ? .86 : .56, rate: finisher ? .84 : 1, vary: .035, min: .06, priority: finisher ? 4 : 2 });
+        this.play(sample, { vol: finisher ? .9 : .62, vary: .035, min: .06, priority: finisher ? 4 : 2 });
       } else {
         const pitch = ranged ? 1.55 : weapon === '2h' ? 0.72 : weapon === 'dual' ? 1.22 : 1;
         this.whoosh({ vol: finisher ? 0.7 : 0.42, pitch, dur: finisher ? 0.32 : 0.2 });
@@ -503,10 +520,11 @@ export class AudioSys {
   /** 스킬 발동 시전음. 일반 공격과 다른 상승음으로 기술 입력을 구분한다. */
   skillRelease({ ult = false, school = 'arcane', hero = '' } = {}) {
     if (this.enabled && this.mix.sfx && this.ctx) {
+      this.preloadHero(hero);
       const sample = skillSound(school, hero);
       if (this.buffers[sample]) {
-        this.play(sample, { vol: ult ? .74 : .64, rate: ult ? .88 : 1, vary: .02, min: .08, priority: 5 });
-        if (ult) { this.play(ULTIMATE_SOUND, { vol: .42, vary: 0, min: .2, priority: 5 }); this.ultimateDuck(); }
+        this.play(sample, { vol: ult ? .8 : .7, vary: .02, min: .08, priority: 5 });
+        if (ult) { const impact = ultimateSound(hero); if (this.buffers[impact]) this.play(impact, { vol: .62, vary: 0, min: .2, priority: 5, delay: .18 }); this.ultimateDuck(); }
       } else {
         const base = school.includes('fire') ? 210 : school.includes('ice') ? 520 : school.includes('void') ? 150 : 360;
         if (ult) { this.charge({ vol: 0.5, dur: 0.52 }); this.thump({ vol: 0.5, freq: 52, dur: 0.24 }); this.ultimateDuck(); }
@@ -519,6 +537,8 @@ export class AudioSys {
   /** 몹 기술의 예고는 낮게, 짧게 울려 위험 인지를 먼저 전달한다. */
   enemyTelegraph({ kind = 'melee', boss = false, urgent = false } = {}) {
     if (this.enabled && this.ctx) {
+      const fam = kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind.startsWith('role:') ? 'tele_magic' : kind === 'slam' || kind === 'crusher' ? 'tele_slam' : 'tele_melee';
+      if (this._fx(fam, { vol: boss ? 0.42 : 0.24, rate: boss ? 0.85 : 1, priority: boss ? 4 : 2 })) { this.vibe(urgent || boss ? [10, 14, 24] : 7); return; }
       if (kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind.startsWith('role:')) this.charge({ vol: boss ? 0.34 : 0.18, dur: boss ? 0.58 : 0.36 });
       else if (kind === 'slam' || kind === 'crusher') this.thump({ vol: boss ? 0.34 : 0.18, freq: boss ? 54 : 76, dur: 0.24 });
       else this.whoosh({ vol: boss ? 0.3 : 0.14, pitch: 0.55, dur: 0.26 });
@@ -529,6 +549,8 @@ export class AudioSys {
   /** 예고가 끝나고 실제 판정이 발생하는 순간의 release. */
   enemyRelease({ kind = 'melee', boss = false, heavy = false } = {}) {
     if (this.enabled && this.ctx) {
+      const fam = kind === 'soulrain' || kind === 'fan' || kind === 'magic' ? 'rel_magic' : heavy || kind === 'slam' || kind === 'crusher' ? 'rel_slam' : 'rel_melee';
+      if (this._fx(fam, { vol: boss ? 0.5 : 0.26, rate: boss ? 0.85 : 1, priority: boss ? 4 : 2 })) { this.vibe(boss || heavy ? [18, 12, 38] : 12); return; }
       if (kind === 'soulrain' || kind === 'fan' || kind === 'magic') this.zap({ vol: boss ? 0.34 : 0.18, dur: 0.22 });
       else if (heavy || kind === 'slam' || kind === 'crusher') this.boom({ vol: boss ? 0.54 : 0.26, dur: 0.34, low: boss ? 48 : 68 });
       else this.whoosh({ vol: boss ? 0.42 : 0.22, pitch: 0.62, dur: 0.18 });
@@ -537,7 +559,7 @@ export class AudioSys {
   }
 
   dodgeRelease({ perfect = false } = {}) {
-    if (this.enabled && this.ctx) this.whoosh({ vol: perfect ? 0.62 : 0.48, pitch: perfect ? 1.05 : 0.72, dur: 0.24 });
+    if (this.enabled && this.ctx && !this._fx(perfect ? 'dodge_perfect' : 'dodge', { vol: perfect ? 0.62 : 0.5, priority: 3 })) this.whoosh({ vol: perfect ? 0.62 : 0.48, pitch: perfect ? 1.05 : 0.72, dur: 0.24 });
     this.vibe(perfect ? [12, 20, 32] : 15);
   }
 

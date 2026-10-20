@@ -26,7 +26,9 @@ function fixture(depth = 'standard') {
     // 렌더 액터만 대체한다. 입장/스폰 큐/증원/보상/봉인/결과/길찾기는 실제 메서드다.
     roomRoster: () => ['guard', 'guard'],
     spawnEnemy(_id: string, _near: any, room: any) {
-      g.routeObjectives?.spawn(room); g.enemies.push({ alive: true, homeRoom: room, dispose: noop });
+      // 실제 spawnEnemy 처럼 무리 졸개는 목표 명단 영수증에 넣지 않고 생성한 적을 돌려준다.
+      if (!g._spawningFollower) g.routeObjectives?.spawn(room);
+      const enemy = { alive: true, homeRoom: room, maxHp: 1, hp: 1, atk: 1, dispose: noop }; g.enemies.push(enemy); return enemy;
     },
   });
   const route = createRouteObjectives(stage, world) as NightglassRecords;
@@ -226,7 +228,8 @@ test('existing elite reinforcement waves cannot duplicate or permit early record
   f.g.maxAlive = 0; killWave(f, room); expect(room.forgeWave).toBe(2); expect(f.g.pending).toHaveLength(4);
   f.g.markCleared(room); expect(room.cleared).toBe(false);
   for (const pending of f.g.pending.splice(0)) f.g.spawnEnemy(pending.t, null, pending.room);
-  killWave(f, room); expect(room.cleared).toBe(true); expect(f.g.enemies).toHaveLength(10);
+  // 보상·영수증 없는 무리 졸개는 웨이브 중복 판단에서 뺀다.
+  killWave(f, room); expect(room.cleared).toBe(true); expect(f.g.enemies.filter((e: any) => !e.packFollower)).toHaveLength(10);
   const paid = f.drops.length; f.g.markCleared(room); expect(f.drops.length).toBe(paid);
 });
 

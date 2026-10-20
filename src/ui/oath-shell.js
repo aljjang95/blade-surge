@@ -1,13 +1,19 @@
 const el=(tag,cls,text)=>{const n=document.createElement(tag);n.className=cls||'';if(text)n.textContent=text;return n;};
-/** 메뉴 창 묶음(메이플식). order 는 묶음 안의 표시 순서이고, 목록에 없는 버튼은 시스템 묶음 끝에 붙는다. */
-const MENU_GROUPS=[
- {id:'character',title:'캐릭터 · 성장',order:['rpg-open','mw-open','journey-lobby']},
- {id:'reward',title:'보상',order:['btn-daily','btn-mail','tab:pass','btn-quest']},
+/** 메뉴 창 묶음. order 는 묶음 안의 표시 순서이고, 목록에 없는 버튼은 시스템 묶음 끝에 붙는다.
+ * 기본 로비의 최상위 목적지는 던전 · 영웅·장비 · 메뉴 3개뿐이며 나머지 입구는 모두 이 안의 보조 입구다. */
+export const MENU_GROUPS=[
+ {id:'adventure',title:'모험',order:['tab:stage','menu-fields']},
+ {id:'character',title:'성장 · 정비',order:['mw-open','arsenal-open','rpg-open','journey-lobby','menu-forge','citadel-command-supply']},
+ {id:'reward',title:'보상 · 임무',order:['btn-daily','btn-mail','btn-quest','menu-town-quests','tab:pass']},
  {id:'shop',title:'상점 · 소환',order:['tab:gacha','tab:shop']},
- {id:'system',title:'시스템',order:['btn-guide','btn-settings','app-mode-open','party-open']},
+ {id:'system',title:'시스템',order:['menu-companion','btn-guide','btn-settings','app-mode-open']},
 ];
-const MENU_ART={'rpg-open':'nav-journal','mw-open':'nav-mastery','journey-lobby':'nav-journey','app-mode-open':'settings','party-open':'nav-arena'};
-const menuKey=b=>b.dataset.tab?'tab:'+b.dataset.tab:b.id&&MENU_GROUPS.some(g=>g.order.includes(b.id))?b.id:['rpg-open','mw-open','journey-lobby'].find(c=>b.classList.contains(c))||b.id||'';
+const MENU_ART={'rpg-open':'nav-journal','mw-open':'nav-mastery','journey-lobby':'nav-journey','app-mode-open':'settings','arsenal-open':'nav-jobs','tab:stage':'nav-quests','menu-fields':'nav-journey','menu-forge':'nav-forge','citadel-command-supply':'treasure-chest','menu-town-quests':'nav-quests','menu-companion':'nav-heroes'};
+// 타인 의존 콘텐츠(파티)는 기본 솔로 로비에서 숨긴다. 기능·저장은 그대로 두고 입구만 감춘다.
+const HIDDEN_ENTRIES=new Set(['party-open']);
+const CLASS_KEYS=['rpg-open','mw-open','journey-lobby','arsenal-open'];
+export const menuKey=b=>b.dataset.menuKey?b.dataset.menuKey:b.dataset.tab?'tab:'+b.dataset.tab:b.id&&MENU_GROUPS.some(g=>g.order.includes(b.id))?b.id:CLASS_KEYS.find(c=>b.classList.contains(c))||b.id||'';
+export const LOBBY_DESTINATIONS=Object.freeze(['home','heroes','menu']);
 /** Reparent existing controls, preserving their listeners, IDs, policies and contents. */
 export class OathShell {
  constructor(app){
@@ -22,20 +28,27 @@ export class OathShell {
   const trigger=el('button','oath-nav-menu','메뉴');trigger.type='button';trigger.setAttribute('aria-controls',this.menu.id);trigger.setAttribute('aria-expanded','false');
   trigger.addEventListener('click',()=>this.open());this.trigger=trigger;
   const original=[...nav.querySelectorAll('button')];
-  const selected=['home','heroes','stage'].map(id=>original.find(b=>b.dataset.tab===id));
+  const selected=['home','heroes'].map(id=>original.find(b=>b.dataset.tab===id));
   for(const button of original)if(!selected.includes(button))this.place(button);
   for(const button of selected)if(button)nav.append(button);
-  const homeButton=selected[0];if(homeButton){for(const node of homeButton.childNodes)if(node.nodeType===3&&node.textContent.trim())node.textContent='출격';homeButton.addEventListener('click',()=>app.setHubWalkMode(false));}
+  const relabel=(button,label)=>{if(!button)return;for(const node of button.childNodes)if(node.nodeType===3&&node.textContent.trim())node.textContent=label;};
+  const [homeButton,heroButton]=selected;
+  relabel(homeButton,'던전');relabel(heroButton,'영웅·장비');
+  if(homeButton)homeButton.addEventListener('click',()=>app.setHubWalkMode(false));
+  // 모험 탭 입구는 메뉴 안에서 캠페인 · 던전 목록을 여는 보조 입구가 된다.
+  relabel(original.find(b=>b.dataset.tab==='stage'),'캠페인');
   const offers=home.querySelector('.lobby-right');if(offers?.children.length){const detail=el('details','oath-menu-offers'),summary=el('summary','','추가 상품 안내'),items=el('div');items.append(...offers.children);detail.append(summary,items);this.menu.append(detail);}
-  const growth=el('button','oath-nav-growth','성장');growth.type='button';growth.onclick=()=>{app.setHubWalkMode(false);document.querySelector('.mw-open')?.click();};nav.append(growth,trigger);
+  nav.append(trigger);nav.dataset.destinations=String(LOBBY_DESTINATIONS.length);
   // 기존 그림을 장식으로 연결하고 메뉴 이름과 이벤트 소유권을 유지한다.
-  for(const [button,icon] of [[growth,'ic-growth'],[trigger,'ic-menu']]){
-   const art=el('i',`ic ${icon}`);art.setAttribute('aria-hidden','true');button.prepend(art);
-  }
+  {const art=el('i','ic ic-menu');art.setAttribute('aria-hidden','true');trigger.prepend(art);}
   for(const button of document.querySelectorAll('#tab-home .lobby-left > button')){
    if(button.classList.contains('companion-launcher'))continue; // React/bootstrap retains its original parent.
-   if(button.classList.contains('arsenal-open')){button.classList.add('oath-build-entry');home.append(button);}else this.place(button);
+   this.place(button);
   }
+  // 착지 화면에서 뺀 캠페인 외 보조 입구(필드 · 보급 · 공방 · 의뢰 · 동행)를 메뉴에 둔다.
+  for(const button of app.commandUI?.menuEntries||[])this.place(button);
+  // 모험 탭 안의 결투장 입구도 기본 솔로 로비에서 숨긴다. 기존 결과·기록·저장은 유지된다.
+  const arena=document.querySelector('.adventure-nav [data-section="arena"]');if(arena){arena.hidden=true;arena.setAttribute('aria-hidden','true');}
   const destination=el('section','oath-destination');destination.setAttribute('aria-label','다음 모험');
   destination.append(el('small','oath-kicker','다음 모험'));
   for(const node of [home.querySelector('.journey-strip'),home.querySelector('.stage-pill'),home.querySelector('#btn-battle')])if(node)destination.append(node);
@@ -57,13 +70,17 @@ export class OathShell {
  open(){if(this.disposed||this.app.mode!=='lobby'||this.app.stageStarting||this.menu.open)return;this.app.setHubWalkMode(false);this.app.input.clear();this.restoreFocus=true;this.menu.showModal();this.trigger.setAttribute('aria-expanded','true');}
  /** 버튼을 알맞은 묶음에 넣는다. DOM · id · 리스너는 그대로 옮기기만 한다. */
  place(button){
-  const key=menuKey(button),found=this.groups.get(MENU_GROUPS.find(g=>g.order.includes(key))?.id)||this.groups.get('system'),{def,section,list}=found;
+  const key=menuKey(button);
   button.dataset.menuKey=key;
+  if(HIDDEN_ENTRIES.has(key)){button.hidden=true;button.setAttribute('aria-hidden','true');this.hiddenHost().append(button);return;}
+  const found=this.groups.get(MENU_GROUPS.find(g=>g.order.includes(key))?.id)||this.groups.get('system'),{def,section,list}=found;
   // 아이콘이 없는 버튼에는 기존 그림을 장식으로만 붙인다(이름·리스너는 그대로).
   if(MENU_ART[key]&&!button.querySelector('.ic,img')){const art=document.createElement('img');art.className='oath-menu-art';art.alt='';art.setAttribute('aria-hidden','true');art.src='/img/ui-crafted/'+MENU_ART[key]+'.webp';button.prepend(art);}
   const rank=b=>{const i=def.order.indexOf(b.dataset.menuKey);return i<0?99:i;};
   const before=[...list.children].find(b=>rank(b)>rank(button));before?list.insertBefore(button,before):list.append(button);section.hidden=false;
  }
+ /** 숨긴 입구의 보관 위치. 노드·리스너·id 를 지우지 않고 화면 밖에 둔다. */
+ hiddenHost(){if(!this.archive){this.archive=el('div','oath-hidden-entries');this.archive.hidden=true;this.menu.append(this.archive);}return this.archive;}
  close(){if(!this.menu.open)return;this.restoreFocus=true;this.menu.close();}
  dispose(){if(this.disposed)return;this.disposed=true;this.observer.disconnect();this.modalObserver.disconnect();document.removeEventListener('close',this.returnMenuFocus,true);this.close();}
 }

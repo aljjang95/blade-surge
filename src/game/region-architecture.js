@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { applyDungeonStoneDetail, applySurfaceDetail } from '../engine/surface-textures.js';
+import { applyDungeonStoneDetail, applySurfaceDetail, projectSurfaceUV, STAR_ARCHIVE_TEXTURES } from '../engine/surface-textures.js';
 import { GARDEN_MASTERY } from '../data/garden-mastery.js';
-import { mulberry32 } from './world.js';
+import { isStarArchive, mulberry32 } from './world.js';
 
 const PALETTES = {
   crypt: [0x8e98ae, 0x938269, 0x749ebd],
@@ -44,6 +44,7 @@ function architectureBatches(floor) {
 
 /** 지역 건축은 가까운 방의 같은 재질·그림자끼리 병합하고 소유 자원만 회수한다. */
 export function buildRegionArchitecture(floor, theme) {
+  if (isStarArchive(floor)) return buildStarArchiveArchitecture(floor);
   const group = new THREE.Group(); group.name = `region-${theme}`;
   const colors = PALETTES[theme];
   const ownedGeometry = [], materials = [];
@@ -467,6 +468,152 @@ export function buildRegionArchitecture(floor, theme) {
     mesh.userData.roomRanges = batch.ranges[i];
     mesh.castShadow = i !== 2; mesh.receiveShadow = true;
     geometry.computeBoundingBox(); geometry.computeBoundingSphere(); group.add(mesh);
+  }
+  return group;
+}
+
+/** C9의 별빛 서고. 전투 상태·충돌 마스크에는 쓰지 않고 방별 재질 배치만 소유한다. */
+function buildStarArchiveArchitecture(floor) {
+  const group = new THREE.Group(); group.name = 'region-star-archive';
+  const textures = STAR_ARCHIVE_TEXTURES;
+  const materials = [
+    new THREE.MeshStandardMaterial({ map: textures.floor || null, color: 0xc2c9d5, roughness: .48, metalness: .08 }),
+    new THREE.MeshStandardMaterial({ color: 0xd8b66e, roughness: .32, metalness: .58, emissive: 0x8c601f, emissiveIntensity: .15 }),
+    new THREE.MeshStandardMaterial({ map: textures.books || null, color: 0xd4e6ff, roughness: .52, metalness: .12, emissive: 0x71baff, emissiveMap: textures.books || null, emissiveIntensity: .38 }),
+    new THREE.MeshStandardMaterial({ map: textures.rosette || null, color: 0x9e9d9a, roughness: .58, metalness: .18, transparent: true, alphaTest: .03, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }),
+    new THREE.MeshBasicMaterial({ map: textures.crystal || null, color: 0xb3dbff, transparent: true, alphaTest: .04, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true }),
+    new THREE.MeshStandardMaterial({ color: 0x73c9ef, emissive: 0x399fe8, emissiveIntensity: 1.15, roughness: .18, metalness: .28, flatShading: true }),
+    new THREE.MeshBasicMaterial({ color: 0xa8d4ff, transparent: true, opacity: .08, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, blending: THREE.AdditiveBlending }),
+  ];
+  // 광선은 외곽의 정적 평면 네 장만 쓴다. 반사·광원 패스를 추가하지 않는다.
+  materials[6].onBeforeCompile = shader => {
+    shader.vertexShader = 'varying vec2 archiveBeamUv;\n' + shader.vertexShader.replace('#include <uv_vertex>', '#include <uv_vertex>\narchiveBeamUv = uv;');
+    shader.fragmentShader = 'varying vec2 archiveBeamUv;\n' + shader.fragmentShader.replace('#include <color_fragment>', `#include <color_fragment>
+      diffuseColor.a *= pow(max(0.0, 1.0 - abs(archiveBeamUv.x * 2.0 - 1.0)), 2.0)
+        * smoothstep(0.0, 0.2, archiveBeamUv.y) * (1.0 - smoothstep(0.7, 1.0, archiveBeamUv.y));`);
+  };
+  materials[6].customProgramCacheKey = () => 'star-archive-edge-moonbeam-v1';
+  const owned = [], armillaries = [];
+  const transform = new THREE.Object3D();
+  group.userData.roomDetails = [];
+  let time = 0, disposed = false;
+  group.userData.update = dt => {
+    time += dt;
+    // 게임의 난수·시간을 읽거나 변경하지 않으며 프레임마다 객체를 만들지 않는다.
+    for (let i = 0; i < armillaries.length; i++) armillaries[i].rotation.y = time * .09;
+  };
+  group.userData.dispose = () => {
+    if (disposed) return;
+    disposed = true; group.removeFromParent();
+    for (const geometry of owned) geometry.dispose();
+    for (const material of materials) material.dispose();
+  };
+  const merged = (parts, material, name, shadow = true) => {
+    if (!parts.length) return null;
+    const geometry = mergeGeometries(parts);
+    for (const part of parts) part.dispose();
+    if (!geometry) throw new Error('별빛 서고 장식 병합 실패');
+    owned.push(geometry); geometry.computeBoundingSphere();
+    const mesh = new THREE.Mesh(geometry, materials[material]);
+    mesh.name = name; mesh.castShadow = shadow; mesh.receiveShadow = material < 4;
+    mesh.userData.starArchive = true; mesh.userData.surface = material === 3;
+    // 원령은 depthWrite=false인 투명 캐릭터다. 바닥을 먼저 그려 원령의 다리를 덮지 않는다.
+    if (material === 3) mesh.renderOrder = -1;
+    group.add(mesh); return mesh;
+  };
+  for (const room of floor.rooms) {
+    const { x, z } = room, hw = room.w / 2, hh = room.h / 2;
+    const parts = materials.map(() => []);
+    const put = (geometry, material, px, py, pz, rx = 0, ry = 0, rz = 0) => {
+      transform.position.set(px, py, pz); transform.rotation.set(rx, ry, rz); transform.updateMatrix();
+      geometry.applyMatrix4(transform.matrix);
+      if (material === 0) projectSurfaceUV(geometry, .1);
+      const flat = geometry.index ? geometry.toNonIndexed() : geometry;
+      if (flat !== geometry) geometry.dispose();
+      parts[material].push(flat);
+    };
+    const box = (px, py, pz, w, h, d, m = 0, ry = 0) => put(new THREE.BoxGeometry(w, h, d), m, px, py, pz, 0, ry);
+    // 모서리 장식과 책장은 복도의 실제 폭까지 피한다.
+    const corridorAt = (px, pz, radius = 1.8) => floor.corridors.some(c =>
+      Math.abs(px - c.x) < c.w / 2 + radius && Math.abs(pz - c.z) < c.h / 2 + radius);
+    const shelf = (px, pz, yaw, width = 4.2) => {
+      const c = Math.cos(yaw), s = Math.sin(yaw);
+      const piece = (lx, y, lz, w, h, d, m = 0) => box(px + lx * c + lz * s, y, pz - lx * s + lz * c, w, h, d, m, yaw);
+      piece(0, 2.75, -.22, width, 5.5, .8);
+      const face = new THREE.PlaneGeometry(width - .32, 4.7);
+      // 세 줄짜리 원본의 절반 폭을 사용해 책 한 권의 비례와 선반 높이를 맞춘다.
+      const uv = face.getAttribute('uv');
+      for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * .5);
+      put(face, 2, px + s * .21, 2.85, pz + c * .21, 0, yaw);
+      for (const side of [-1, 1]) {
+        piece(side * (width / 2 - .12), 2.85, .28, .24, 5.5, .62);
+        piece(side * (width / 2 - .12), 2.85, .61, .045, 4.8, .035, 1);
+        piece(side * (width / 2 - .12), .35, .35, .5, .22, .9);
+        piece(side * (width / 2 - .12), 5.3, .35, .5, .22, .9, 1);
+      }
+      for (const y of [.35, 2, 3.65, 5.3]) {
+        piece(0, y, .32, width + .15, .18, .8);
+        piece(0, y + .1, .73, width + .15, .045, .035, 1);
+      }
+      piece(0, .14, .12, width + .4, .28, 1.35);
+      piece(0, 5.6, .1, width + .4, .28, 1.2);
+    };
+    for (const side of [-1, 1]) {
+      for (let pz = z - hh + 3.2; pz <= z + hh - 3; pz += 4.7) {
+        const px = x + side * (hw - .25);
+        if (!corridorAt(px, pz, 2.3)) shelf(px, pz, -side * Math.PI / 2);
+      }
+      // 책장 사이의 결정 기둥: 전투 중심을 비우면서 현재 카메라에서도 서고 재질을 읽게 한다.
+      for (const depth of [-.48, .48]) {
+        const px = x + side * (hw - .65), pz = z + hh * depth;
+        if (corridorAt(px, pz, 1.4)) continue;
+        box(px, .44, pz, 1.2, .88, 1.2);
+        box(px, .93, pz, 1.3, .1, 1.3, 1);
+        put(new THREE.PlaneGeometry(1.65, 2.6), 4, px, 2.25, pz, 0, -side * .35);
+        put(new THREE.OctahedronGeometry(.45, 0).scale(1, 2.8, 1), 5, px, 1.95, pz);
+        put(new THREE.PlaneGeometry(1.8, 7), 6, px, 3.7, pz, 0, 0, side * .12);
+      }
+      for (const end of [-1, 1]) {
+        const px = x + side * (hw - .85), pz = z + end * (hh - 1.5);
+        if (corridorAt(px, pz, 1.4)) continue;
+        box(px, .35, pz, 1.6, .6, 1.6);
+        box(px, .69, pz, 1.7, .08, 1.7, 1);
+        // 두 교차면을 방 배치에 병합해 카메라 이동에도 결정의 부피를 유지한다.
+        put(new THREE.PlaneGeometry(2.4, 3.4), 4, px, 2.36, pz, 0, .25);
+        put(new THREE.PlaneGeometry(2.2, 3.25), 4, px, 2.28, pz, 0, Math.PI / 2 + .25);
+        put(new THREE.OctahedronGeometry(.68, 0).scale(.8, 2, .8), 5, px, 1.8, pz);
+      }
+    }
+    // 후면 출입구가 없는 면에만 기록고와 혼천의를 세운다.
+    const rear = z - hh + .25;
+    for (let px = x - hw + 3; px < x + hw - 2; px += 4.7) {
+      if (!corridorAt(px, rear, 2.3)) shelf(px, rear, 0);
+    }
+    const free = [[0, -1], [-1, 0], [1, 0], [0, 1]].find(([sx, sz]) =>
+      !corridorAt(x + sx * (hw + .6), z + sz * (hh + .6), 3));
+    if (free) {
+      const ax = x + free[0] * (hw - 1.6), az = z + free[1] * (hh - 1.6);
+      box(ax, .4, az, 3, .8, 2.2);
+      put(new THREE.CylinderGeometry(.3, .65, 1.8, 12), 1, ax, 1.55, az);
+      const rings = [];
+      for (let i = 0; i < 4; i++) {
+        const ring = new THREE.TorusGeometry(1.65 + i * .13, .055, 6, 48);
+        ring.rotateX(i * Math.PI / 4); ring.rotateY(i * .47);
+        rings.push(ring.toNonIndexed()); ring.dispose();
+      }
+      const armillary = merged(rings, 1, 'star-archive-armillary-' + room.id, false);
+      armillary.position.set(ax, 3.65, az); armillaries.push(armillary);
+      put(new THREE.IcosahedronGeometry(.72, 1), 5, ax, 3.65, az);
+    }
+    const diameter = Math.min(room.w, room.h) * .6;
+    put(new THREE.PlaneGeometry(diameter, diameter), 3, x, .075, z, -Math.PI / 2);
+    // 가장자리 금 장식은 위험 표시(.11)보다 낮고 중앙의 통행을 가리지 않는다.
+    for (const side of [-1, 1]) {
+      box(x + side * (hw - 1.15), .062, z, .055, .012, room.h - 2.3, 1);
+      box(x, .062, z + side * (hh - 1.15), room.w - 2.3, .012, .055, 1);
+    }
+    for (let i = 0; i < parts.length; i++) merged(parts[i], i, 'star-archive-room-' + room.id + '-' + i, i < 2);
+    group.userData.roomDetails.push({ roomId: room.id, theme: 'star-archive', centerClear: true, diameter });
   }
   return group;
 }

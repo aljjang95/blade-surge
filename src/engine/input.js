@@ -5,6 +5,8 @@ const GAMEPAD_DEADZONE = 0.16;
 const MOVE_CODES = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 const GAMEPAD_ACTIONS = ['attack', 'dodge', 'skill0', 'skill1', 'skill2', 'skill3', 'skill4', 'skill5'];
 
+export function skillAimThreshold(radius = 56) { return Math.min(14, radius * 0.25); }
+
 function stick(value) {
   const n = Number.isFinite(value) ? value : 0;
   const sign = n < 0 ? -1 : 1;
@@ -18,6 +20,7 @@ export class Input {
     this.move = { x: 0, y: 0 }; // -1..1 (x: 좌우, y: 앞뒤 — 화면 기준)
     this.screenMove = { x: 0, y: 0 };
     this.attackHeld = false; this.queue = [];
+    this.skillAim = null; this.aimedCasts = new Map(); this.skillGestures = new Map();
     this.attackSources = new Set(); this.clearListeners = new Set();
     this.enabled = false;
     this.keys = {};
@@ -32,9 +35,98 @@ export class Input {
   }
   press(a) { if (this.enabled && !this.queue.includes(a)) this.queue.push(a); }
   consume(a) { const i = this.queue.indexOf(a); if (i >= 0) { this.queue.splice(i, 1); return true; } return false; }
+  takeAim(slot) { const aim = this.aimedCasts.get(slot); this.aimedCasts.delete(slot); return aim; }
   onClear(listener) { this.clearListeners.add(listener); return () => this.clearListeners.delete(listener); }
   _attack(source, held) { if (held) this.attackSources.add(source); else this.attackSources.delete(source); this.attackHeld = this.attackSources.size > 0; }
-  clear() { this.queue.length = 0; this.attackSources.clear(); this.attackHeld = false; this.keys = {}; this._restoreKeys = true; this.gamepadButtons.fill(0); this.gamepadConnected = false; this.gamepadMove.x = this.gamepadMove.y = 0; this.move.x = this.move.y = 0; this._resetJoy(); for (const listener of this.clearListeners) listener(); }
+  clear() { this.queue.length = 0; this.aimedCasts?.clear(); this._clearSkillAim(); this.attackSources.clear(); this.attackHeld = false; this.keys = {}; this._restoreKeys = true; this.gamepadButtons.fill(0); this.gamepadConnected = false; this.gamepadMove.x = this.gamepadMove.y = 0; this.move.x = this.move.y = 0; this._resetJoy(); for (const listener of this.clearListeners) listener(); }
+  _clearSkillAim() {
+    if (this.skillGestures) for (const g of this.skillGestures.values()) this._resetSkillKnob(g);
+    this.skillGestures?.clear(); this.skillAim = null; this._showSkillCancel();
+  }
+  _resetSkillKnob(g) {
+    g.button.style.removeProperty('--aim-x'); g.button.style.removeProperty('--aim-y');
+    g.button.classList?.remove('aiming');
+  }
+  _showSkillCancel() {
+    const el = globalThis.document?.getElementById?.('skill-aim-cancel');
+    el?.classList?.toggle('on', !!this.skillAim?.active);
+    el?.classList?.toggle('hot', !!this.skillAim?.cancel);
+  }
+  _aimWorld(aim) {
+    // 바닥 평면 투영이 가능하면 화면에서 끈 방향과 지면 레인이 정확히 겹치게 한다.
+    if (this.screenAimDir?.(aim.sx, aim.sy, aim)) return;
+    const yaw = this.getCameraYaw?.() ?? 0, angle = Number.isFinite(yaw) ? yaw : 0;
+    const length = Math.hypot(aim.sx, aim.sy), c = Math.cos(angle), s = Math.sin(angle);
+    if (length < 1e-6) return;
+    // cameraRelativeMove와 같은 회전식이며 표시 프레임에는 객체를 만들지 않는다.
+    aim.x = (aim.sx * c + aim.sy * s) / length;
+    aim.z = (-aim.sx * s + aim.sy * c) / length;
+  }
+  _moveSkill(g, t) {
+    const dx = t.clientX - g.cx, dy = t.clientY - g.cy, distance = Math.hypot(dx, dy);
+    g.aim.active ||= distance >= skillAimThreshold(g.radius);
+    const scale = 1 / Math.max(g.radius, distance);
+    g.aim.sx = dx * scale; g.aim.sy = dy * scale;
+    g.aim.dist01 = Math.min(1, distance / g.radius);
+    this._aimWorld(g.aim);
+    const cancel = document.getElementById('skill-aim-cancel');
+    const rect = cancel?.getBoundingClientRect();
+    g.aim.cancel = !!rect && g.aim.active && t.clientX >= rect.left && t.clientX <= rect.right && t.clientY >= rect.top && t.clientY <= rect.bottom;
+    this.skillAim = g.aim;
+    const knobX = t.clientX - g.bx, knobY = t.clientY - g.by;
+    const knobScale = Math.min(1, g.radius / (Math.hypot(knobX, knobY) || 1));
+    g.button.style.setProperty('--aim-x', `${knobX * knobScale}px`);
+    g.button.style.setProperty('--aim-y', `${knobY * knobScale}px`);
+    g.button.classList?.toggle('aiming', g.aim.active);
+    this._showSkillCancel();
+  }
+  _bindSkill(button) {
+    const slot = Number(button.dataset.skill);
+    if (!Number.isInteger(slot) || slot < 0 || slot > 5) return;
+    const start = e => {
+      if (!this.enabled || this.skillGestures.has(slot) || (!e.changedTouches && e.button !== 0)) return;
+      const t = e.changedTouches ? e.changedTouches[0] : e;
+      if (!t) return;
+      const rect = button.getBoundingClientRect();
+      const g = { button, owner: e.changedTouches ? t.identifier : 'mouse', cx: t.clientX, cy: t.clientY,
+        bx: rect.left + rect.width / 2, by: rect.top + rect.height / 2,
+        radius: Math.max(14, Math.min(rect.width, rect.height) / 2),
+        aim: { slot, active: false, sx: 0, sy: 0, x: 0, z: 0, dist01: 0, cancel: false } };
+      this.skillGestures.set(slot, g);
+      e.preventDefault(); e.stopPropagation();
+    };
+    const contact = (e, g) => {
+      if (!e.changedTouches) return g.owner === 'mouse' ? e : null;
+      for (const t of e.changedTouches) if (t.identifier === g.owner) return t;
+      return null;
+    };
+    const move = e => {
+      const g = this.skillGestures.get(slot); if (!g || !this.enabled) return;
+      const t = contact(e, g); if (!t) return;
+      this._moveSkill(g, t); if (e.cancelable) e.preventDefault();
+    };
+    const end = e => {
+      const g = this.skillGestures.get(slot); if (!g || (e.type === 'mouseup' && e.button !== 0)) return;
+      const t = contact(e, g); if (!t) return;
+      this._moveSkill(g, t);
+      const action = 'skill' + slot;
+      if (this.enabled && e.type !== 'touchcancel' && !g.aim.cancel && !this.queue.includes(action)) {
+        if (g.aim.active) this.aimedCasts.set(slot, { slot, x: g.aim.x, z: g.aim.z, dist01: g.aim.dist01 });
+        else this.aimedCasts.delete(slot);
+        this.press(action);
+      }
+      this._resetSkillKnob(g); this.skillGestures.delete(slot);
+      this.skillAim = null;
+      for (const other of this.skillGestures.values()) if (other.aim.active) this.skillAim = other.aim;
+      this._showSkillCancel(); if (e.cancelable) e.preventDefault();
+    };
+    button.addEventListener('touchstart', start, { passive: false });
+    button.addEventListener('mousedown', start);
+    window.addEventListener('touchmove', move, { passive: false });
+    window.addEventListener('touchend', end, { passive: false });
+    window.addEventListener('touchcancel', end, { passive: false });
+    window.addEventListener('mousemove', move); window.addEventListener('mouseup', end);
+  }
   _resetJoy() { this.joy.active = false; this.joy.id = null; this.move.x = this.move.y = this.screenMove.x = this.screenMove.y = 0; this.el.knob.style.transform = 'translate(-50%,-50%)'; this.el.base.style.left = ''; this.el.base.style.bottom = ''; this.el.base.style.top = ''; this.el.base.style.transform = ''; }
   _updateGamepad() {
     if (!this.enabled) return;
@@ -118,7 +210,7 @@ export class Input {
     btn('btn-attack', () => { this._attack('button', true); this.press('attack'); }, () => { this._attack('button', false); });
     btn('btn-dodge', () => this.press('dodge'));
     btn('btn-map-interact', () => this.press('interact'));
-    document.querySelectorAll('.skill-btn').forEach((b) => btn(b, () => this.press('skill' + b.dataset.skill)));
+    document.querySelectorAll('.skill-btn').forEach(b => this._bindSkill(b));
 
     // 이동 키 held 추적: 입력이 켜져 있을 때 새로 눌린 키만 넣는다. 꺼진 동안 눌렀거나 로비에서 누른 채 전투에 들어온 키는
     // 자동 반복(repeat)만 들어오므로 넣지 않는다(다시 눌러야 이동). button·dialog 대상도 넣고, 글자 입력 요소와 수식 키 조합은 넣지 않는다.
@@ -157,6 +249,7 @@ export class Input {
   }
   update() {
     this._updateGamepad();
+    if (this.skillAim?.active) this._aimWorld(this.skillAim);
     if (!this.enabled) { this.move.x = this.move.y = 0; this._wasEnabled = false; return; }
     // 입력이 다시 켜졌거나 clear() 뒤 첫 갱신이면, 계속 눌려 있던 이동 키를 keys 에 되살린다(공격·회피·스킬은 제외).
     if ((!this._wasEnabled || this._restoreKeys) && this.held) {

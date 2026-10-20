@@ -39,13 +39,68 @@ test('pause input clear ends capture before resume so stale drag cannot jump',()
   app.battle.paused=false;
   send(doc,'pointermove',{...pointer(),clientX:300}); expect(camera.value.yaw).toBe(0);
 });
-test('touch world and foreign pointers cannot steal camera pad drag',()=>{
-  send(doc,'pointerdown',{...pointer(),pointerType:'touch'}); expect(camera.drag).toBeUndefined();
-  send(doc,'pointerdown',{...pointer(2,pad),pointerType:'touch',button:0});
-  send(doc,'pointermove',{...pointer(3,pad),clientX:200}); expect(camera.value.yaw).toBe(0);
-  send(doc,'pointerup',pointer(3,pad)); expect(pad.hasPointerCapture(2)).toBe(true);
-  send(doc,'pointermove',{...pointer(2,pad),clientX:200}); expect(camera.value.yaw).toBe(-35);
-  send(doc,'pointercancel',pointer(2,pad)); expect(pad.hasPointerCapture(2)).toBe(false);
+const touch = (id=1,target=world,clientX=100,clientY=100) => ({pointerId:id,pointerType:'touch',button:0,clientX,clientY,target});
+test('빈 화면 한 손가락은 문턱을 넘은 뒤에만 회전하고 조이스틱·버튼 터치는 가져가지 않는다',()=>{
+  const joy = Object.assign(new Surface(),{ui:true}), skill = Object.assign(new Surface(),{ui:true});
+  send(doc,'pointerdown',touch(7,joy,60,500)); send(doc,'pointerdown',touch(8,skill,700,500));
+  send(doc,'pointermove',touch(7,joy,160,500)); send(doc,'pointermove',touch(8,skill,800,500));
+  expect(camera.value).toEqual({yaw:0,pitch:0,zoom:100}); expect(camera.touch.size).toBe(0);
+  // 조이스틱 손가락이 남아 있어도 빈 화면 손가락은 따로 시점을 돌린다.
+  expect(send(doc,'pointerdown',touch(1)).defaultPrevented).toBe(false);
+  expect(send(doc,'pointermove',touch(1,world,105,103)).defaultPrevented).toBe(false);
+  expect(camera.value.yaw).toBe(0); expect(world.hasPointerCapture(1)).toBe(false);
+  expect(send(doc,'pointermove',touch(1,world,160,100)).defaultPrevented).toBe(true);
+  expect(world.hasPointerCapture(1)).toBe(true);
+  // 문턱 8px만큼 기준점을 옮겨 시작 순간 튀지 않는다: (60-8)*.35
+  expect(camera.value.yaw).toBeCloseTo(-18.2,6); expect(camera.value.pitch).toBe(0);
+  send(doc,'pointermove',touch(1,world,160,140)); expect(camera.value.pitch).toBeCloseTo(6,6);
+  expect(send(doc,'pointerup',touch(1,world,160,140)).defaultPrevented).toBe(true);
+  expect(world.captured.size).toBe(0); expect(camera.touch.size).toBe(0);
+  send(doc,'pointermove',touch(1,world,400,140)); expect(camera.value.yaw).toBeCloseTo(-18.2,6);
+  // 탭만 하고 뗀 손가락은 시점을 바꾸지 않고 기본 동작도 막지 않는다.
+  send(doc,'pointerdown',touch(2)); expect(send(doc,'pointerup',touch(2)).defaultPrevented).toBe(false);
+});
+test('두 빈 화면 손가락은 핀치하고 남은 손가락은 자기 위치에서 점프 없이 회전을 이어 간다',()=>{
+  send(doc,'pointerdown',touch(1,world,100,100));
+  expect(send(doc,'pointerdown',touch(2,world,140,100)).defaultPrevented).toBe(true);
+  expect(world.hasPointerCapture(1) && world.hasPointerCapture(2)).toBe(true);
+  send(doc,'pointerdown',touch(3,world,300,300)); expect(camera.touch.has(3)).toBe(false);
+  send(doc,'pointermove',touch(2,world,150,100));
+  expect(camera.value).toEqual({yaw:0,pitch:0,zoom:125});
+  send(doc,'pointermove',touch(2,world,200,100)); expect(camera.value.zoom).toBe(140);
+  send(doc,'pointermove',touch(2,world,150,100)); expect(camera.value.zoom).toBe(125);
+  send(doc,'pointerup',touch(1,world,100,100));
+  expect(world.hasPointerCapture(1)).toBe(false); expect(world.hasPointerCapture(2)).toBe(true);
+  send(doc,'pointermove',touch(2,world,150,100)); expect(camera.value).toEqual({yaw:0,pitch:0,zoom:125});
+  send(doc,'pointermove',touch(2,world,170,100)); expect(camera.value.yaw).toBeCloseTo(-7,6);
+  expect(camera.value.zoom).toBe(125);
+  send(doc,'pointerup',touch(2,world,170,100)); expect(world.captured.size).toBe(0);
+});
+test('취소·다른 요소 캡처 알림·사망·모달·resize 경계에서 제스처를 정리하고 멈춘 시점을 유지한다',()=>{
+  const rotate = (id:number) => { send(doc,'pointerdown',touch(id)); send(doc,'pointermove',touch(id,world,140,100)); };
+  rotate(1); const chosen = camera.value;
+  send(doc,'lostpointercapture',touch(1,pad)); expect(world.hasPointerCapture(1)).toBe(true);
+  send(doc,'pointercancel',touch(1)); expect(world.captured.size).toBe(0);
+  send(doc,'pointermove',touch(1,world,300,100)); expect(camera.value).toEqual(chosen);
+  rotate(2); send(doc,'lostpointercapture',touch(2)); expect(world.captured.size).toBe(0); expect(camera.touch.size).toBe(0);
+  for (const end of [() => { app.battle.player = {alive:false}; }, () => { modal.showing = true; }]) {
+    rotate(3); const before = camera.value; end();
+    expect(send(doc,'pointermove',touch(3,world,400,100)).defaultPrevented).toBe(false);
+    expect(camera.value).toEqual(before); expect(world.captured.size).toBe(0);
+    expect(send(doc,'pointerdown',touch(4)).defaultPrevented).toBe(false); expect(camera.touch.size).toBe(0);
+    app.battle.player = {alive:true}; modal.showing = false;
+  }
+  for (const type of ['resize','blur','orientationchange']) {
+    send(doc,'pointerdown',touch(5)); send(doc,'pointerdown',touch(6,world,160,100));
+    send(host,type); expect(world.captured.size).toBe(0); expect(camera.touch.size).toBe(0);
+  }
+  send(doc,'pointerdown',touch(5)); send(doc,'pointerdown',touch(6,world,160,100)); clear();
+  expect(world.captured.size).toBe(0); expect(camera.touch.size).toBe(0);
+});
+test('숨긴 시점 패드 터치도 빈 화면 제스처와 같은 문턱을 쓴다',()=>{
+  send(doc,'pointerdown',touch(2,pad)); send(doc,'pointermove',touch(2,pad,200,100));
+  expect(pad.hasPointerCapture(2)).toBe(true); expect(camera.value.yaw).toBeCloseTo(-32.2,6);
+  send(doc,'pointercancel',touch(2,pad)); expect(pad.hasPointerCapture(2)).toBe(false);
 });
 test('camera key consumes arrow and preserves browser shortcuts',()=>{
   expect(send(pad,'keydown',{key:'ArrowLeft'}).defaultPrevented).toBe(true);

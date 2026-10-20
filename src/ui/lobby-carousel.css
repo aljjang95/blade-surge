@@ -1,0 +1,212 @@
+/* 로비 던전 카드 캐러셀(설계도 lobby-screen / 시안 C8).
+   오른쪽 위: 선택한 던전 상세. 오른쪽 아래: 가로 던전 카드 줄 + 큰 원형 출격 버튼. 왼쪽 가장자리: 세로 탭(기존 하단 탭 버튼을 그대로 재배치).
+   영웅이 서는 왼쪽 가운데는 비워 둔다(대표님 규칙: UI는 플레이를 가리지 않는다). 가로 화면은 높이 520px 이하(휴대폰)와 그 위로 나눈다. */
+#citadel-command.dl-landing {
+  --dl-line: #c99a4a;
+  --dl-line-dark: #5a4020;
+  --dl-panel: linear-gradient(180deg, rgba(18, 32, 52, .95), rgba(9, 18, 31, .95));
+  --dl-muted: #b9c4cc;
+  --dl-text: #f6efdc;
+  --dl-gold: #f2cd77;
+  --pick-w: 100px; --pick-h: 112px; --launch: 124px;
+  position: absolute; inset: 0; z-index: 12; display: block; width: auto; max-height: none; margin: 0; padding: 0;
+  background: none; border: 0; border-radius: 0; box-shadow: none; pointer-events: none;
+  color: var(--dl-text); font-family: var(--font-ui, var(--font)); font-size: var(--type-body, 16px); line-height: 1.5; font-weight: 500;
+  text-align: left; text-shadow: none; letter-spacing: -0.01em; word-break: keep-all; overflow-wrap: anywhere;
+}
+#citadel-command .dl-panel, #citadel-command .dl-dock, #citadel-command .dl-links { pointer-events: auto; }
+
+/* ---------- 오른쪽 위 상세 패널 ---------- */
+#citadel-command .dl-panel {
+  position: absolute; right: max(12px, calc(var(--sar, 0px) + 8px)); top: calc(84px + var(--sat, 0px));
+  width: clamp(340px, 29vw, 420px); box-sizing: border-box; display: flex; flex-direction: column; gap: 8px; padding: 12px 16px 12px;
+  /* 링크 줄과 카드 줄 위에서 끝나도록 높이를 제한하고, 넘치면 본문만 내부 스크롤한다 */
+  max-height: calc(100% - 84px - var(--sat, 0px) - var(--launch) - 80px - var(--sab, 0px));
+  background: var(--dl-panel); border: 2px solid var(--dl-line); border-radius: 6px;
+  box-shadow: inset 0 0 0 1px var(--dl-line-dark), inset 0 0 18px rgba(0, 0, 0, .55), 0 0 0 1px #2a1d0b, 0 14px 34px rgba(0, 0, 0, .5);
+}
+#citadel-command .dl-panel::before, #citadel-command .dl-panel::after {
+  content: ''; position: absolute; top: -7px; width: 10px; height: 10px; background: linear-gradient(135deg, #fbe39a, #b98230); border: 1px solid #5a4020; transform: rotate(45deg);
+}
+#citadel-command .dl-panel::before { left: -6px; }
+#citadel-command .dl-panel::after { right: -6px; }
+#citadel-command .dl-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex: none; padding-bottom: 6px; border-bottom: 1px solid rgba(226, 178, 90, .4); }
+#citadel-command .dl-reason { color: var(--dl-gold); font-size: 18px; font-weight: 800; letter-spacing: 0; }
+#citadel-command .dl-progress { color: var(--dl-muted); font-size: var(--type-sm, 14px); font-variant-numeric: tabular-nums; }
+#citadel-command .dl-body { display: flex; flex-direction: column; gap: 8px; flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+#citadel-command .dl-card { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 14px; align-items: start; }
+#citadel-command .dl-art { width: 112px; height: 112px; object-fit: cover; border-radius: 4px; border: 2px solid var(--dl-line); box-shadow: 0 0 0 1px #2a1d0b, inset 0 0 0 1px rgba(255, 255, 255, .08); background: #13242f; background: linear-gradient(160deg, color-mix(in srgb, var(--route-accent, #3a4a66) 55%, #0b1523), #0b1523); }
+#citadel-command .dl-art[hidden] { display: none; }
+#citadel-command .dl-copy { min-width: 0; }
+#citadel-command .dl-name { margin: 0; color: #fff; font-size: clamp(24px, 2.3vw, 32px); line-height: 1.15; font-weight: 800; letter-spacing: -0.02em; text-shadow: 0 2px 0 rgba(0, 0, 0, .5); }
+#citadel-command .dl-depth { margin: 4px 0 0; color: var(--route-accent, #9de3a6); font-size: var(--type-sm, 14px); font-weight: 800; }
+#citadel-command .dl-desc { margin: 4px 0 0; color: var(--dl-muted); font-size: var(--type-sm, 14px); line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+#citadel-command .dl-facts { display: grid; gap: 4px; margin: 0; padding: 8px 0 0; border-top: 1px solid rgba(226, 178, 90, .4); }
+#citadel-command .dl-fact { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+#citadel-command .dl-fact dt { color: var(--dl-muted); font-size: var(--type-sm, 14px); }
+#citadel-command .dl-fact dd { margin: 0; color: #fff; font-size: var(--type-body, 16px); font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+#citadel-command .dl-fact[data-short="true"] dd { color: #ffb48a; }
+#citadel-command .dl-status { margin: 0; color: var(--dl-muted); font-size: var(--type-sm, 14px); line-height: 1.4; }
+#citadel-command .dl-status:empty { display: none; }
+#citadel-command .dl-status[data-blocked="true"] { color: #ffcf9a; }
+#citadel-command .dl-hero { flex: none; margin: 0; color: var(--dl-muted); font-size: var(--type-sm, 14px); font-variant-numeric: tabular-nums; }
+
+/* ---------- 작은 보조 링크(다른 던전 · 마을 둘러보기) ---------- */
+#citadel-command .dl-links { position: absolute; right: max(12px, calc(var(--sar, 0px) + 8px)); bottom: calc(var(--launch) + 22px + var(--sab, 0px)); display: flex; gap: 6px; }
+.oath-visual #citadel-command.dl-landing .dl-link {
+  min-width: 0; min-height: 40px; margin: 0; padding: 0 14px; border: 1px solid rgba(226, 178, 90, .55); border-radius: 20px;
+  background: rgba(10, 20, 34, .82); color: var(--dl-text); font-family: inherit; font-size: var(--type-sm, 14px) !important; font-weight: 800; line-height: 1.2; text-align: center; white-space: nowrap; cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .35);
+}
+#citadel-command .dl-link:hover { background: rgba(30, 48, 74, .9); }
+#citadel-command .dl-link:focus-visible, #citadel-command .dl-pick:focus-visible, #citadel-command .dl-next:focus-visible, #citadel-command .dl-cta:focus-visible { outline: 3px solid #fff1bf; outline-offset: 2px; }
+
+/* ---------- 오른쪽 아래: 카드 줄 + 원형 출격 ---------- */
+#citadel-command .dl-dock {
+  position: absolute; right: max(10px, calc(var(--sar, 0px) + 6px)); bottom: calc(8px + var(--sab, 0px));
+  width: min(640px, 46vw); display: flex; align-items: flex-end; box-sizing: border-box;
+}
+#citadel-command .dl-cards-bar {
+  position: relative; flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 4px; box-sizing: border-box; height: calc(var(--pick-h) + 14px); margin-bottom: 4px; padding: 6px 6px 6px 10px;
+  background: linear-gradient(180deg, rgba(34, 24, 12, .96), rgba(14, 12, 12, .96)); border: 2px solid var(--dl-line); border-radius: 8px 4px 4px 8px;
+  box-shadow: inset 0 0 0 1px var(--dl-line-dark), inset 0 0 14px rgba(0, 0, 0, .6), 0 10px 24px rgba(0, 0, 0, .5);
+}
+#citadel-command .dl-cards {
+  position: relative; flex: 1 1 auto; min-width: 0; display: flex; gap: 6px; height: 100%; padding-top: 6px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x proximity; overscroll-behavior-x: contain; touch-action: pan-x; scrollbar-width: none;
+}
+#citadel-command .dl-cards::-webkit-scrollbar { display: none; }
+.oath-visual #citadel-command.dl-landing .dl-pick {
+  position: relative; flex: 0 0 var(--pick-w); width: var(--pick-w); height: calc(var(--pick-h) - 6px); min-height: 0; margin: 0; padding: 4px; box-sizing: border-box; scroll-snap-align: start;
+  display: flex; flex-direction: column; align-items: stretch; gap: 3px; border: 2px solid #7a5a2c; border-radius: 4px; background: linear-gradient(180deg, #1c2a3e, #0c1523); color: var(--dl-text);
+  font-family: inherit; font-size: 15px !important; font-weight: 800; line-height: 1.15; text-align: center; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: pan-x;
+}
+#citadel-command .dl-pick::before { content: ''; position: absolute; left: 50%; top: -8px; width: 9px; height: 9px; margin-left: -5px; background: #b98a3c; border: 1px solid #4d3515; transform: rotate(45deg); }
+#citadel-command .dl-pick-art { flex: 1 1 auto; min-height: 0; width: 100%; object-fit: cover; border-radius: 2px; pointer-events: none; background: #13242f; background: linear-gradient(160deg, color-mix(in srgb, var(--pick-accent, #3a4a66) 55%, #0b1523), #0b1523); }
+#citadel-command .dl-pick-name { flex: none; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+#citadel-command .dl-pick-meta { flex: none; display: flex; align-items: center; justify-content: center; gap: 4px; font-size: 15px; font-variant-numeric: tabular-nums; color: #f9d98a; }
+#citadel-command .dl-ico { width: 14px; height: 14px; fill: currentColor; flex: none; }
+#citadel-command .dl-ico-lock { display: none; }
+#citadel-command .dl-pick[data-locked="true"] .dl-ico-bolt { display: none; }
+#citadel-command .dl-pick[data-locked="true"] .dl-ico-lock { display: block; }
+#citadel-command .dl-pick[data-locked="true"] { color: #b6bcc4; }
+#citadel-command .dl-pick[data-locked="true"] .dl-pick-meta { color: #c2c7ce; }
+#citadel-command .dl-pick[data-locked="true"] .dl-pick-art { filter: grayscale(.6) brightness(.72); }
+#citadel-command .dl-pick[aria-pressed="true"] { border-color: #ffd877; background: linear-gradient(180deg, #2b3b54, #121d30); box-shadow: 0 0 0 2px #7a4f12, 0 0 16px 3px rgba(255, 200, 90, .65); z-index: 1; }
+#citadel-command .dl-pick[aria-pressed="true"]::before { background: #ffe39a; }
+.oath-visual #citadel-command.dl-landing .dl-next {
+  flex: none; align-self: center; width: 26px; min-width: 0; height: 52px; min-height: 0; margin: 0; padding: 0; display: grid; place-items: center;
+  border: 2px solid #7a5a2c; border-radius: 6px; background: linear-gradient(180deg, #2a2112, #15110b); color: var(--dl-gold); cursor: pointer;
+}
+#citadel-command .dl-next[hidden] { display: none; }
+#citadel-command .dl-next .dl-ico { width: 16px; height: 16px; fill: none; transition: transform .15s; }
+#citadel-command .dl-next[data-end="true"] .dl-ico { transform: scaleX(-1); }
+
+.oath-visual #citadel-command.dl-landing .dl-cta {
+  position: relative; flex: none; width: var(--launch); height: var(--launch); min-height: 0; margin: 0 0 0 -14px; padding: 0; box-sizing: border-box; border-radius: 50%; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; color: #fff; font-family: inherit; text-align: center; cursor: pointer;
+  border: 4px solid #e9b650; background: radial-gradient(circle at 50% 38%, #c46a1c 0%, #8e3d0f 58%, #5a230a 100%);
+  box-shadow: 0 0 0 3px #6a4210, 0 0 0 5px #f6d27a66, inset 0 0 0 3px #3b1706, inset 0 4px 14px rgba(255, 190, 90, .5), 0 12px 26px rgba(0, 0, 0, .55), 0 0 26px rgba(255, 176, 60, .45);
+  -webkit-tap-highlight-color: transparent;
+}
+#citadel-command .dl-swords { width: 44%; height: 44%; margin-top: 2px; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .55)); }
+.oath-visual #citadel-command.dl-landing .dl-cta-label { font-size: 26px !important; font-weight: 900; line-height: 1.05; letter-spacing: 0; color: #fff; text-shadow: 0 2px 0 #3b1706, 0 0 8px rgba(0, 0, 0, .6); }
+#citadel-command .dl-cta-cost { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+#citadel-command .dl-cta:hover { filter: brightness(1.08); }
+#citadel-command .dl-cta:active { transform: translateY(1px) scale(.985); }
+#citadel-command .dl-cta:disabled { cursor: default; filter: grayscale(.7) brightness(.7); }
+#citadel-command .dl-cta[data-locked="true"] { filter: grayscale(.55) brightness(.8); }
+
+/* ---------- 짧은 가로 화면(휴대폰 가로): 카드 3장, 상세는 설명을 접고 두 칸 요약 ---------- */
+@media (orientation: landscape) and (max-height: 520px) {
+  #citadel-command.dl-landing { --pick-w: 80px; --pick-h: 92px; --launch: 104px; }
+  #citadel-command .dl-panel { top: calc(46px + var(--sat, 0px)); right: max(8px, calc(var(--sar, 0px) + 4px)); width: min(360px, calc(100vw - 440px)); gap: 6px; padding: 8px 12px; max-height: calc(100% - 46px - var(--sat, 0px) - var(--launch) - 56px - var(--sab, 0px)); }
+  #citadel-command .dl-head { padding-bottom: 4px; }
+  #citadel-command .dl-reason { font-size: 15px; }
+  #citadel-command .dl-card { grid-template-columns: 56px minmax(0, 1fr); gap: 10px; align-items: center; }
+  #citadel-command .dl-art { width: 56px; height: 56px; }
+  #citadel-command .dl-name { font-size: 22px; }
+  #citadel-command .dl-depth { margin-top: 2px; font-size: 13px; }
+  #citadel-command .dl-desc, #citadel-command .dl-hero { display: none; }
+  #citadel-command .dl-facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 10px; padding-top: 6px; }
+  #citadel-command .dl-fact { flex-direction: column; align-items: flex-start; gap: 0; }
+  #citadel-command .dl-fact dt { font-size: 12px; }
+  #citadel-command .dl-fact dd { font-size: 14px; text-align: left; }
+  #citadel-command .dl-status { font-size: 12px; }
+  #citadel-command .dl-links { bottom: calc(var(--launch) + 14px + var(--sab, 0px)); right: max(8px, calc(var(--sar, 0px) + 4px)); }
+  .oath-visual #citadel-command.dl-landing .dl-link { min-height: 36px; padding: 0 10px; font-size: 13px !important; }
+  #citadel-command .dl-dock { right: max(6px, var(--sar, 0px)); bottom: calc(4px + var(--sab, 0px)); width: min(400px, calc(100vw - 440px)); }
+  #citadel-command .dl-cards-bar { padding: 4px 4px 4px 8px; }
+  #citadel-command .dl-cards { padding-top: 5px; }
+  .oath-visual #citadel-command.dl-landing .dl-pick { padding: 3px; font-size: 12px !important; }
+  #citadel-command .dl-pick-name { font-size: 12px; }
+  #citadel-command .dl-pick-meta { font-size: 13px; }
+  #citadel-command .dl-ico { width: 12px; height: 12px; }
+  .oath-visual #citadel-command.dl-landing .dl-next { width: 22px; height: 44px; }
+  .oath-visual #citadel-command.dl-landing .dl-cta { border-width: 3px; margin-left: -12px; }
+  .oath-visual #citadel-command.dl-landing .dl-cta-label { font-size: 20px !important; }
+}
+/* 높이 400px 이하(800x360 등): 상세를 한 줄 더 줄이고 링크를 카드 위에 바짝 둔다 */
+@media (orientation: landscape) and (max-height: 400px) {
+  #citadel-command .dl-panel { top: calc(44px + var(--sat, 0px)); gap: 4px; padding: 6px 10px; }
+  #citadel-command .dl-depth { display: none; }
+  #citadel-command .dl-links { bottom: calc(var(--launch) + 10px + var(--sab, 0px)); }
+  #citadel-command .dl-facts { padding-top: 4px; }
+}
+/* 세로 화면: 영웅을 위에 두고 상세 · 링크 · 카드 줄을 하단 탭 위에 쌓는다 */
+@media (orientation: portrait) {
+  #citadel-command.dl-landing { --pick-w: 84px; --pick-h: 96px; --launch: 92px; inset: auto 0 calc(80px + var(--sab, 0px)) 0; display: flex; flex-direction: column; gap: 8px; padding: 0 max(10px, var(--sar, 0px)) 0 max(10px, var(--sal, 0px)); }
+  #citadel-command .dl-panel, #citadel-command .dl-links, #citadel-command .dl-dock { position: static; width: auto; }
+  #citadel-command .dl-panel { padding: 10px 12px; gap: 6px; }
+  #citadel-command .dl-card { grid-template-columns: 56px minmax(0, 1fr); gap: 10px; align-items: center; }
+  #citadel-command .dl-art { width: 56px; height: 56px; }
+  #citadel-command .dl-name { font-size: 22px; }
+  #citadel-command .dl-desc, #citadel-command .dl-hero { display: none; }
+  #citadel-command .dl-facts { padding-top: 6px; gap: 2px; }
+  #citadel-command .dl-links { justify-content: flex-end; }
+  #citadel-command .dl-dock { margin-bottom: 4px; }
+  .oath-visual #citadel-command.dl-landing .dl-pick { font-size: 13px !important; }
+  #citadel-command .dl-pick-name { font-size: 13px; }
+  .oath-visual #citadel-command.dl-landing .dl-cta-label { font-size: 20px !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #citadel-command .dl-cta:active { transform: none; }
+  #citadel-command .dl-next .dl-ico { transition: none; }
+}
+
+/* ---------- 왼쪽 가장자리 세로 탭: 기존 하단 탭 버튼(던전 · 영웅·장비 · 메뉴)을 같은 DOM 그대로 재배치한다 ---------- */
+@media (orientation: landscape) {
+  :root:root:root:root:root:root #meta .bottomnav {
+    --rail-w: 96px;
+    left: max(6px, var(--sal, 0px)); right: auto; top: calc(80px + var(--sat, 0px)); bottom: calc(10px + var(--sab, 0px)); transform: none; width: var(--rail-w); height: auto;
+    padding: 10px 4px; gap: 4px; flex-direction: column; justify-content: space-evenly; align-items: stretch; z-index: 6;
+    border: 2px solid #c99a4a; border-radius: 20px;
+    background: linear-gradient(180deg, #14243a 0%, #0b1524 100%);
+    box-shadow: inset 0 0 0 1px #5a4020, inset 0 0 16px rgba(0, 0, 0, .55), 0 10px 24px rgba(0, 0, 0, .5);
+  }
+  :root:root:root:root:root:root #meta .bottomnav button {
+    flex: 0 0 auto; position: relative; width: 100%; max-width: none; height: auto; min-height: 44px; padding: 6px 0; gap: 4px; flex-direction: column; justify-content: center; align-items: center;
+    border: 0; border-radius: 12px; background: none; box-shadow: none; color: #f2e4bd; font-size: 15px !important; font-weight: 800; line-height: 1.15; text-shadow: 0 1px 2px rgba(0, 0, 0, .8); touch-action: manipulation;
+  }
+  :root:root:root:root:root:root #meta .bottomnav button.on { background: none; border: 0; box-shadow: none; color: #ffe39a; }
+  :root:root:root:root:root:root #meta .bottomnav button .ic,
+  :root:root:root:root:root:root #meta .bottomnav button[data-tab=home] .ic {
+    width: 58px; height: 58px; border: 3px solid #d8a74c; border-radius: 50%; background-color: #0c2a26; background-size: 88%; background-position: center; background-repeat: no-repeat;
+    box-shadow: 0 0 0 1px #3d2a0f, inset 0 0 10px rgba(0, 0, 0, .5);
+  }
+  :root:root:root:root:root:root #meta .bottomnav button.on .ic { box-shadow: 0 0 0 3px #f6d27a, 0 0 16px 4px rgba(255, 200, 90, .75), inset 0 0 10px rgba(0, 0, 0, .4); }
+  :root:root:root:root:root:root #meta .bottomnav button .dot,
+  :root:root:root:root:root:root #meta .bottomnav .oath-nav-menu .dot { top: 4px; right: calc(50% - 38px); }
+  /* 걷기 모드에서는 탭을 숨기고 '← 출격 메뉴로' 버튼만 둔다 */
+  body.citadel-hub-active #meta .bottomnav { display: none !important; }
+}
+@media (orientation: landscape) and (min-height: 521px) {
+  :root:root:root:root:root:root #meta .tab:not(#tab-home) { left: calc(112px + var(--sal, 0px)) !important; bottom: calc(12px + var(--sab, 0px)) !important; }
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  :root:root:root:root:root:root #meta .bottomnav { --rail-w: 66px; top: calc(46px + var(--sat, 0px)); bottom: calc(6px + var(--sab, 0px)); padding: 6px 3px; border-radius: 16px; }
+  :root:root:root:root:root:root #meta .bottomnav button { font-size: 12px !important; padding: 4px 0; }
+  :root:root:root:root:root:root #meta .bottomnav button .ic,
+  :root:root:root:root:root:root #meta .bottomnav button[data-tab=home] .ic { width: 40px; height: 40px; border-width: 2px; }
+  :root:root:root:root:root:root #meta .bottomnav button .dot,
+  :root:root:root:root:root:root #meta .bottomnav .oath-nav-menu .dot { top: 2px; right: calc(50% - 28px); }
+}

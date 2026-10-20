@@ -8,6 +8,8 @@ const _weaponQuaternion = new THREE.Quaternion();
 export const ARENA_R = 15.5;
 // 처치 연출(위로 튀며 회전)의 길이와 결정적 변주. 게임 난수를 소비하지 않는다.
 const LAUNCH_SEC = 0.55;
+// 렌더 피벗 방향 보간 시간상수(초). 0.1초 안에 90% 따라간다.
+const TURN_SMOOTH_SEC = 0.045;
 let launchSerial = 0x2f6e2b1;
 const launchNoise = () => (launchSerial = (Math.imul(launchSerial, 1664525) + 1013904223) >>> 0) / 4294967296;
 
@@ -177,6 +179,15 @@ export class Actor {
         pivot.scale.set(1 + squash*.55, 1 - squash, 1 + squash*.55);
       }
     }
+    this.updateTurnSmoothing(dt, reduced);
+  }
+  /** 렌더 전용 방향 보간: 판정 방향(yaw)은 즉시, 보이는 몸은 시간상수 TURN_SMOOTH_SEC 로 따라 돈다. 판정·위치·난수는 건드리지 않는다. */
+  updateTurnSmoothing(dt, reduced) {
+    if (!this.turnSmoothing || reduced || !this.alive) { this._shownYaw = this.yaw; return; }
+    if (!Number.isFinite(this._shownYaw)) this._shownYaw = this.yaw;
+    const lag = Math.atan2(Math.sin(this._shownYaw - this.yaw), Math.cos(this._shownYaw - this.yaw)) * Math.exp(-dt / TURN_SMOOTH_SEC);
+    this._shownYaw = this.yaw + lag;
+    if (Math.abs(lag) > 1e-4) this.motionRoot.rotation.y += lag;
   }
   face(x, z) { this.yaw = Math.atan2(x - this.pos.x, z - this.pos.z); }
   faceDir(dx, dz) { if (dx || dz) this.yaw = Math.atan2(dx, dz); }
@@ -202,8 +213,11 @@ export class Actor {
   }
   knockback(dirx, dirz, force) { const l = Math.hypot(dirx, dirz) || 1; this.kb.x += dirx / l * force; this.kb.z += dirz / l * force; }
   update(dt) {
+    // 영웅 가산 자세 층(heroPose): 이전 프레임 보정을 되돌린 뒤 mixer가 원본을 쓰고, 마지막에 보정을 얹는다.
+    this.heroPose?.restore();
     this.mixer.update(dt);
     this.updateCombatPose(dt);
+    this.heroPose?.apply(dt);
     // 넉백 감쇠
     const fx0 = this.pos.x, fz0 = this.pos.z;
     if (this.kb.lengthSq() > 0.0001) { this.pos.addScaledVector(this.kb, dt); this.kb.multiplyScalar(Math.pow(0.02, dt)); }
@@ -234,7 +248,7 @@ export class Actor {
   }
   dispose() {
     if (this.disposed) return; this.disposed = true;
-    this.game.scene.remove(this.root); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.mixer.getRoot());
+    this.game.scene.remove(this.root); this.heroPose?.dispose(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.mixer.getRoot());
     const skeletons = new Set(), materials = new Set();
     this.model.traverse((o) => {
       if (o.isSkinnedMesh) skeletons.add(o.skeleton);

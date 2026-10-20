@@ -65,6 +65,41 @@ export function planBossSignature(key, {room,origin,target,history=[],phase=0,tu
     const points=[anchor,targetInRoom({x:anchor.x+direction*6.4,z:anchor.z},r)];
     if(phase===2)points.push(targetInRoom({x:points[1].x,z:anchor.z+(anchor.z>=r.z?-1:1)*6.4},r));
     points.forEach((q,i)=>disk(q,short*.7,1.8+i*1.6,{safeRadius:2.6,warnAt:Math.max(0,i*1.6),damage:1.2}));
+  } else if(key==='tidegate_flood') {
+    // 빙하 수문 범람: 거신이 선 마른 수로를 사이에 두고 먼 쪽 수문이 먼저, 플레이어 쪽 수문이 나중에 잠긴다.
+    // 먼저 잠긴 쪽은 다음 물결 때 이미 빠진 물이라 안전하다. 마지막 페이즈는 수로가 좁아지고 먼 쪽이 한 번 더 잠긴다.
+    const horizontal=(turn+phase)%2===0,half=(horizontal?r.h:r.w)/2,along=(horizontal?r.w:r.h)-2,centre=horizontal?r.z:r.x;
+    const channelWidth=phase===2?3.6:4.4,channel=centre+clamp((horizontal?o.z:o.x)-centre,-half*.45,half*.45);
+    const near=(horizontal?p.z:p.x)<channel?-1:1;
+    const flood=(side,at)=>{
+      const from=side<0?centre-half+1:channel+channelWidth/2,to=side<0?channel-channelWidth/2:centre+half-1,mid=(from+to)/2;
+      lane(horizontal?{x:r.x,z:mid}:{x:mid,z:r.z},along,to-from,horizontal?0:Math.PI/2,at,{push:5});
+    };
+    flood(-near,1.4);flood(near,2.5);if(phase===2)flood(-near,3.6);
+  } else if(key==='tidegate_ring_gap') {
+    // 원형 마당의 물결 고리: 바깥 물결과 가운데 소용돌이가 함께 친 뒤 그 사이 빈 고리를 가운데 물결이 덮는다.
+    const centre={x:r.x,z:r.z},outer=Math.min(short*.46,13.5),core=outer*.36;
+    ring(centre,outer,1.4,{push:5});disk(centre,core,1.4,{push:5});
+    ring(centre,outer*.72,2.7,{push:5});if(phase>0)ring(centre,outer,2.7,{push:5});
+    if(phase===2)disk(centre,core,3.9,{push:5});
+  } else if(key==='pulley_ore_fall') {
+    // 도르래가 마당 둘레를 돌며 광석 상자를 차례로 떨어뜨리고, 마지막 상자는 시전 순간 플레이어가 서 있던 자리로 온다.
+    const centre={x:r.x,z:r.z},radius=Math.min(short*.3,7.5),count=phase===0?3:4,turnSign=turn%2?-1:1;
+    const start=Math.atan2(p.z-centre.z,p.x-centre.x)+turnSign*Math.PI/2;
+    for(let i=0;i<count;i++){const a=start+turnSign*i*Math.PI*2/(count+1);disk(targetInRoom({x:centre.x+Math.cos(a)*radius,z:centre.z+Math.sin(a)*radius},r),2.6,1.35+i*.45);}
+    disk(p,phase===2?3:2.6,1.7+count*.45,{damage:1.25,push:4});
+  } else if(key==='pulley_chain_line') {
+    // 북쪽(화면 위쪽) 두 도르래에서 사슬이 시전 순간의 플레이어 자리를 지나 반대편 끝까지 당겨진다.
+    const anchors=[{x:r.x-r.w*.3,z:r.z-r.h/2+1},{x:r.x+r.w*.3,z:r.z-r.h/2+1}];
+    const chain=(a,at)=>{
+      const dx=p.x-a.x,dz=p.z-a.z,distance=Math.hypot(dx,dz)||1,ux=dx/distance,uz=dz/distance;
+      const tx=ux>0?(r.x+r.w/2-1-a.x)/ux:ux<0?(r.x-r.w/2+1-a.x)/ux:Infinity,tz=uz>0?(r.z+r.h/2-1-a.z)/uz:uz<0?(r.z-r.h/2+1-a.z)/uz:Infinity;
+      const end=Math.max(distance,Math.min(tx,tz));
+      lane({x:a.x+ux*end/2,z:a.z+uz*end/2},end,2.6,Math.atan2(uz,ux),at,{push:4});
+    };
+    const first=(turn+phase)%2;
+    chain(anchors[first],1.45);chain(anchors[1-first],phase===2?1.45:2.6);
+    if(phase>0){const dx=p.x-o.x,dz=p.z-o.z;lane({x:(o.x+p.x)/2,z:(o.z+p.z)/2},Math.hypot(dx,dz)+3,2.6,Math.atan2(dz,dx),phase===2?2.75:3.7,{push:4});}
   }
   if(!events.length||events.length>BOSS_SIGNATURE_CAPACITY)throw Error(`Invalid signature budget: ${key}`);
   const lastStrike=Math.max(...events.map(e=>e.at));

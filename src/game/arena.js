@@ -3,7 +3,8 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { VFX_TEX } from '../engine/assets.js';
 import { getPart } from '../engine/assets.js';
 import { buildRegionArchitecture, buildTownDecor, townDecorFor } from './region-architecture.js';
-import { ROOM_TYPE, mulberry32 } from './world.js';
+import { ROOM_TYPE, isStarArchive, mulberry32 } from './world.js';
+import { STAR_ARCHIVE_TEXTURES } from '../engine/surface-textures.js';
 import { buildCitadelHubScene, townLibraryProps } from './citadel-hub-scene.js';
 import { activeTownId, TOWN_THEMES } from '../data/citadel-hub.js';
 import { buildLobbyWorld } from './lobby-world.js';
@@ -12,6 +13,8 @@ import { softCircleTex } from '../engine/assets.js';
 import { applyDungeonSurface, collectDungeonTiles, projectDungeonSurface } from './dungeon-surface.js';
 import { buildOpenFieldScene, FIELD_ATMOSPHERES } from './open-field-scene.js';
 import { libraryAssets } from '../engine/library-assets.js';
+import { buildConceptTerrain } from './concept-terrain.js';
+import { collectDungeonWallSegments, fitDungeonWallSegments, DUNGEON_WALL_CLEARANCE } from './dungeon-walls.js';
 
 const THEMES = {
   garden: { fog: 0x172b2b, bg: 0x172b2b, hemi: [0xa0b5ae, 0x283930], sun: 0xffedca, sunI: 2.3, torch: 0x8adbd0, tint: 0xcbd0b8 },
@@ -33,8 +36,14 @@ const DUNGEON_ATMOSPHERES = {
   beacon: { fog: 0x0d3037, bg: 0x08212b, hemi: [0x80d2d2, 0x123643], sun: 0xb5f6ef, sunI: 2.55, torch: 0x4be6d2, tint: 0x9adbd1 },
   tribunal: { fog: 0x2a2139, bg: 0x171323, hemi: [0xd1b7d6, 0x342743], sun: 0xffe1bd, sunI: 2.65, torch: 0xf5a2d4, tint: 0xd5c0d8 },
   confluence: { fog: 0x19312b, bg: 0x0d211d, hemi: [0xb5dbc3, 0x204139], sun: 0xffe8b9, sunI: 2.55, torch: 0x9be6ba, tint: 0xb8d2ac },
+  glacier: { fog: 0x8fcfe0, bg: 0x6fb4d8, hemi: [0xe3f5ff, 0x2a5d76], sun: 0xfff6e8, sunI: 2.7, torch: 0xff7fbf, tint: 0xd5e2f2 },
+  quarry: { fog: 0xd8a47c, bg: 0xc98a5c, hemi: [0xffeeda, 0x5c3a24], sun: 0xffd9b0, sunI: 2.55, torch: 0xffa040, tint: 0xf2cfa0 },
 };
 const TILE = 4;
+export const STAR_ARCHIVE_ATMOSPHERE = Object.freeze({
+  fog: 0x263448, bg: 0x162235, hemi: [0xc9d5eb, 0x363945],
+  sun: 0xe8f0ff, sunI: 2.15, torch: 0x8accff, tint: 0xd1d8e2,
+});
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 // A seal owns its three generated meshes. Texture maps remain shared VFX assets.
@@ -92,11 +101,13 @@ export class Arena {
   }
   clear() {
     this.occlusion.reset();
+    delete this.group.userData.dungeonWalls;
     this.clearSky();
     this.lobbyHall?.userData.dispose(); this.lobbyHall = null;
     this.lobbyWorld?.userData.dispose(); this.lobbyWorld = null; this.renderer.lobbyOccluders = [];
     this.regionArchitecture?.userData.dispose(); this.regionArchitecture = null;
     this.fieldScene?.userData.dispose(); this.fieldScene = null;
+    this.conceptTerrain?.userData.dispose(); this.conceptTerrain = null;
     this.townDecor?.userData.dispose(); this.townDecor = null;
     for (const material of this.ownedMaterials) material.dispose(); this.ownedMaterials.clear();
     for (const geometry of this.ownedGeometry) geometry.dispose(); this.ownedGeometry.clear();
@@ -117,14 +128,50 @@ export class Arena {
     const { mesh: src, part } = this._meshOf(name); if (!src) return;
     const { castShadow = true, chunk = 44 } = opts;
     const mat = src.material.clone(); this.ownedMaterials.add(mat); if (tint) mat.color.multiply(new THREE.Color(tint));
-    if (opts.cutaway) this.occlusion.bind(mat);
     part.updateWorldMatrix(true, true);
     const local = new THREE.Matrix4().copy(part.matrixWorld).invert().multiply(src.matrixWorld);
+    let wallAlignment = null;
+    if (opts.alignedWall) {
+      // 압축 정점의 해독·파트 내부 변환을 먼저 적용한 치수다. 원본 버퍼와 지오메트리는 건드리지 않는다.
+      const bounds = new THREE.Box3().setFromBufferAttribute(src.geometry.getAttribute('position')).applyMatrix4(local);
+      const size = bounds.getSize(new THREE.Vector3()), center = bounds.getCenter(new THREE.Vector3());
+      if (![size.x, size.y, size.z].every(value => Number.isFinite(value) && value > 1e-6)) throw new Error('던전 벽 자산의 치수가 올바르지 않습니다.');
+      wallAlignment = { width: size.x, height: size.y, depth: size.z,
+        bounds: { min: bounds.min.toArray(), max: bounds.max.toArray() } };
+      local.premultiply(new THREE.Matrix4().makeTranslation(-center.x, -bounds.min.y, -center.z));
+    }
     let geometry = src.geometry;
     if (opts.dungeonSurface && applyDungeonSurface(mat)) {
       geometry = projectDungeonSurface(src.geometry, local, TILE);
       this.ownedGeometry.add(geometry);
     }
+    if (opts.starArchiveSurface || opts.starArchiveStone) {
+      mat.color.set(opts.starArchiveStone ? 0xbfc5d2 : 0x9da3b0); mat.vertexColors = false;
+      mat.map = STAR_ARCHIVE_TEXTURES.floor || null;
+      mat.bumpMap = null; mat.normalMap = null; mat.roughnessMap = null;
+      mat.roughness = .64; mat.metalness = .12;
+      mat.userData.surfaceTexture = opts.starArchiveStone ? 'star-archive-marble-frame' : 'star-archive-floor';
+      const stone = !!opts.starArchiveStone;
+      // 이미지 내 4×4 줄눈을 10m마다 반복한다. 인스턴스 회전·청크와 무관한 월드 UV다.
+      mat.onBeforeCompile = shader => {
+        shader.vertexShader = shader.vertexShader.replace('#include <uv_vertex>', `#include <uv_vertex>
+          #ifdef USE_MAP
+            vec4 archivePoint = vec4(position, 1.0);
+            vec3 archiveNormal = normal;
+            #ifdef USE_INSTANCING
+              archivePoint = instanceMatrix * archivePoint;
+              archiveNormal = mat3(instanceMatrix) * archiveNormal;
+            #endif
+            vec3 archiveWorld = (modelMatrix * archivePoint).xyz;
+            archiveNormal = abs(mat3(modelMatrix) * archiveNormal);
+            vMapUv = ${stone ? '(archiveNormal.y > .5 ? archiveWorld.xz : archiveNormal.x > archiveNormal.z ? archiveWorld.zy : archiveWorld.xy)' : 'archiveWorld.xz'} / 10.0;
+          #endif`);
+      };
+      mat.customProgramCacheKey = () => 'star-archive-world-marble-v2-' + stone;
+      mat.envMap = this.renderer.characterEnvironment?.texture || null;
+      mat.envMapIntensity = .35;
+    }
+    if (opts.cutaway) this.occlusion.bind(mat);
 
     // 공간 버킷으로 분할
     const buckets = new Map();
@@ -136,7 +183,26 @@ export class Arena {
     for (const list of buckets.values()) {
       const im = new THREE.InstancedMesh(geometry, mat, list.length);
       if (opts.dungeonSurface) im.name = `dungeon-surface-${name}`;
-      list.forEach((t, i) => { o.position.set(t.x, t.y || 0, t.z); o.rotation.set(0, t.ry || 0, 0); o.scale.setScalar(t.s || 1); o.updateMatrix(); im.setMatrixAt(i, o.matrix.multiply(local)); });
+      if (wallAlignment) {
+        im.name = `dungeon-wall-${name}`;
+        im.userData.dungeonWall = { sourceName: name, sourceDimensions: wallAlignment,
+          clearance: DUNGEON_WALL_CLEARANCE, instances: [] };
+      }
+      list.forEach((t, i) => {
+        if (wallAlignment) {
+          const clearance = t.clearance ?? DUNGEON_WALL_CLEARANCE;
+          const outward = wallAlignment.depth / 2 + clearance;
+          o.position.set(t.x + t.normalX * outward, t.y || 0, t.z + t.normalZ * outward);
+          o.scale.set(t.length / wallAlignment.width, 1, 1);
+          im.userData.dungeonWall.instances.push({ index: i, boundary: { ...t.boundary },
+            length: t.length, normal: { x: t.normalX, z: t.normalZ },
+            center: { x: o.position.x, z: o.position.z },
+            clearance, innerFace: { x: t.x + t.normalX * clearance, z: t.z + t.normalZ * clearance } });
+        } else {
+          o.position.set(t.x, t.y || 0, t.z); o.scale.setScalar(t.s || 1);
+        }
+        o.rotation.set(0, t.ry || 0, 0); o.updateMatrix(); im.setMatrixAt(i, o.matrix.multiply(local));
+      });
       im.castShadow = castShadow; im.receiveShadow = true; im.frustumCulled = true;
       im.computeBoundingSphere?.();   // 청크 기준 타이트한 바운드 → 컬링이 실제로 걸린다
       this.group.add(im); out.push(im);
@@ -279,13 +345,16 @@ export class Arena {
     this.floorData = floorData;
     const visualKey = visual?.landmark || floorData.layout?.landmark || 'crypt';
     const field = floorData.layout?.field;
-    const T = { ...(THEMES[theme] || THEMES.crypt), ...(DUNGEON_ATMOSPHERES[visualKey] || {}), ...(FIELD_ATMOSPHERES[field] || {}) };
+    const concept = floorData.layout?.concept;
+    const archive = isStarArchive(floorData);
+    const T = { ...(THEMES[theme] || THEMES.crypt), ...(DUNGEON_ATMOSPHERES[visualKey] || {}), ...(FIELD_ATMOSPHERES[field] || {}), ...(archive ? STAR_ARCHIVE_ATMOSPHERE : {}) };
     const random = mulberry32((floorData.seed || floorData.floor * 7919) ^ 0x51a7);
     const rnd = (a, b) => a + random() * (b - a);
-    this.scene.background = new THREE.Color(T.bg); this.scene.fog.color.set(T.fog); this.scene.fog.density = field ? .008 : .026;
+    // 컨셉 던전은 먼 절벽·수문이 보이는 열린 분지라 안개를 옅게 둔다.
+    this.scene.background = new THREE.Color(T.bg); this.scene.fog.color.set(T.fog); this.scene.fog.density = archive ? .014 : field ? .008 : concept ? .011 : .026;
     this.buildSky(visual, floorData.seed || floorData.floor || 1);
 
-    const hemi = new THREE.HemisphereLight(T.hemi[0], T.hemi[1], 1.5); this.scene.add(hemi); this.lights.push(hemi);
+    const hemi = new THREE.HemisphereLight(T.hemi[0], T.hemi[1], archive ? 1.05 : 1.5); this.scene.add(hemi); this.lights.push(hemi);
     // 넓은 맵이라 태양 그림자 카메라는 플레이어를 따라다니게 (update 에서 갱신)
     const sun = new THREE.DirectionalLight(T.sun, T.sunI); sun.position.set(10, 22, 8); sun.castShadow = true;
     sun.shadow.mapSize.set(1024, 1024);
@@ -299,14 +368,21 @@ export class Arena {
       this.group.add(this.fieldScene); this.buildSeals(floorData); this.mountTownDecor(floorData); return;
     }
 
+    if (concept) {
+      // 자체 생성 컨셉 지형: 보행면·충돌 경계 난간·배경 볼륨을 한 모듈이 소유하고 시선 셰이더만 공유한다.
+      this.conceptTerrain = buildConceptTerrain(floorData, concept, { quality: this.renderer.quality, bindSightline: material => this.occlusion.bind(material) });
+      this.group.add(this.conceptTerrain); this.buildSeals(floorData); return;
+    }
+
     // ---- 바닥 (방 + 복도) ----
     const tiles = collectDungeonTiles(floorData, random, TILE);
     this.group.userData.dungeonSurface = { sampledTiles: tiles.sampledTiles, uniqueTiles: tiles.uniqueTiles };
-    for (const k in tiles.transforms) this.instanced(k, tiles.transforms[k], T.tint, { castShadow: false, dungeonSurface: true });
+    for (const k in tiles.transforms) this.instanced(k, tiles.transforms[k], T.tint, { castShadow: false, dungeonSurface: true, starArchiveSurface: archive });
 
-    // ---- 벽: 걷기 가능 셀의 경계에 세운다 ----
+    // ---- 벽: 1m 건축 마스크 경계 바깥에 정렬한다 ----
     const walls = { wall: [], wall_cracked: [], wall_broken: [], wall_arched: [], wall_window_open: [] };
-    const variants = ['wall', 'wall', 'wall', 'wall_cracked', 'wall_arched', 'wall_window_open', 'wall_broken'];
+    // 예전 4m 표본의 난수 소비 횟수는 그대로 두어 뒤의 방 장식 배치를 보존한다.
+    let legacyVariantDraws = 0;
     const W = floorData;
     const step = TILE;
     const seen = new Set();
@@ -322,12 +398,23 @@ export class Arena {
           if (W.walkable(nx, nz)) continue;
           const kk = `${Math.round(cx)}_${Math.round(cz)}_${dx}_${dz}`;
           if (seen.has(kk)) continue; seen.add(kk);
-          const v = variants[Math.floor(random() * variants.length)];
-          walls[v].push({ x: cx + dx * step / 2, z: cz + dz * step / 2, ry });
+          random(); legacyVariantDraws++;
         }
       }
     }
-    for (const k in walls) this.instanced(k, walls[k], T.tint, { cutaway: true });
+    // 자산의 실제 두께로 1m 홈의 반대편 보행 셀까지 검사한다.
+    const wallDepths = {};
+    for (const name in walls) {
+      const { mesh, part } = this._meshOf(name); if (!mesh) continue;
+      part.updateWorldMatrix(true, true);
+      const local = new THREE.Matrix4().copy(part.matrixWorld).invert().multiply(mesh.matrixWorld);
+      const bounds = new THREE.Box3().setFromBufferAttribute(mesh.geometry.getAttribute('position')).applyMatrix4(local);
+      wallDepths[name] = bounds.max.z - bounds.min.z;
+    }
+    const alignedWalls = fitDungeonWallSegments(floorData, collectDungeonWallSegments(floorData), wallDepths);
+    for (const wall of alignedWalls) walls[wall.variant].push(wall);
+    this.group.userData.dungeonWalls = { segments: alignedWalls.length, legacyVariantDraws };
+    for (const k in walls) this.instanced(k, walls[k], T.tint, { cutaway: true, alignedWall: true, starArchiveStone: archive });
 
     // ---- 방 장식 ----
     const pillars = [], banners = [];
@@ -347,7 +434,7 @@ export class Arena {
         banners.push({ x: r.x - 5, z: r.z - r.h / 2 + 0.6, ry: 0 }, { x: r.x + 5, z: r.z - r.h / 2 + 0.6, ry: 0 });
         if (!floorData.layout) this.place('stairs_wide', r.x, r.z - r.h / 2 + 2.2, 0, 1, T.tint);
       }
-      if (r.type === ROOM_TYPE.TREASURE && !r.objectiveProp) { const chest = { x: r.x, z: r.z, ry: rnd(0, 6.28), s: 1.2 }; if (!addLibraryProp('chest_gold', chest)) this.place('chest_gold', chest.x, chest.z, chest.ry, chest.s); this.place('coin_stack_large', r.x + 1.6, r.z + 1.2, 0, 1); this.place('coin_stack_medium', r.x - 1.7, r.z + 0.9, 0, 1); }
+      if (r.type === ROOM_TYPE.TREASURE && !r.objectiveProp) { const chest = { x: r.x, z: r.z, ry: rnd(0, 6.28), s: 1.2 }; this.chestPoses?.set(r.id, chest); if (!this.interactiveChests && !addLibraryProp('chest_gold', chest)) this.place('chest_gold', chest.x, chest.z, chest.ry, chest.s); this.place('coin_stack_large', r.x + 1.6, r.z + 1.2, 0, 1); this.place('coin_stack_medium', r.x - 1.7, r.z + 0.9, 0, 1); }
       const n = floorData.layout ? 0 : 2 + Math.floor(random() * 3);
       for (let i = 0; i < n; i++) {
         const px = r.x + rnd(-1, 1) * (r.w / 2 - 2.2), pz = r.z + rnd(-1, 1) * (r.h / 2 - 2.2);
@@ -357,24 +444,31 @@ export class Arena {
       // 방마다 횃불 2개
       for (const [ox, oz] of [[-hw, 0], [hw, 0]]) {
         const lx = r.x + ox, lz = r.z + oz;
-        this.torchPos.push(new THREE.Vector3(lx, 2.6, lz));
+        if (!archive) this.torchPos.push(new THREE.Vector3(lx, 2.6, lz));
         if (this.torches.length < 14) {
-          const l = new THREE.PointLight(T.torch, 22, 15, 2); l.position.set(lx, 3, lz);
-          this.scene.add(l); this.lights.push(l); this.torches.push({ l, i0: 22, seed: this.torches.length * 1.7, room: r });
+          const intensity = archive ? 9 : 22;
+          const l = new THREE.PointLight(T.torch, intensity, 15, 2); l.position.set(lx, archive ? 5 : 3, lz);
+          this.scene.add(l); this.lights.push(l); this.torches.push({ l, i0: intensity, seed: this.torches.length * 1.7, room: r });
         }
       }
       // 방 역할은 기존 지역 건축 배치에 병합된 실제 회랑 문턱 표식이 나타낸다.
     }
     for (const [asset, transforms] of libraryPropTransforms) this.placeLibraryProps(asset, transforms);
-    this.instanced('pillar_decorated', pillars, T.tint, { cutaway: true });
+    if (!archive) this.instanced('pillar_decorated', pillars, T.tint, { cutaway: true });
     this.instanced('banner_shield_red', banners);
     this.regionArchitecture = buildRegionArchitecture(floorData, theme);
     this.regionArchitecture.traverse(node => {
-      if (node.isMesh) for (const material of Array.isArray(node.material) ? node.material : [node.material]) this.occlusion.bind(material);
+      if (archive && node.isMesh && node.material.isMeshStandardMaterial) {
+        node.material.envMap = this.renderer.characterEnvironment?.texture || null;
+        node.material.envMapIntensity = .45;
+      }
+      if (node.isMesh && !node.userData.surface) for (const material of Array.isArray(node.material) ? node.material : [node.material]) this.occlusion.bind(material);
     });
     this.group.add(this.regionArchitecture);
-    this.mountTownDecor(floorData);
-    this.mountLandmarks(floorData, visual || { landmark: visualKey });
+    if (!archive) {
+      this.mountTownDecor(floorData);
+      this.mountLandmarks(floorData, visual || { landmark: visualKey });
+    }
     this.buildSeals(floorData);
   }
 
@@ -388,13 +482,19 @@ export class Arena {
   }
 
   update(dt, fx, playerPos) {
+    this.regionArchitecture?.userData.update?.(dt);
     this.fieldScene?.userData.update(dt);
+    this.conceptTerrain?.userData.update(dt);
     if (this.skyGroup && playerPos) this.skyGroup.position.set(playerPos.x, 0, playerPos.z);
     this.occlusion.setTarget(this.floorData ? playerPos : null);
     this.t += dt;
     for (const s of this.seals) { s.material.opacity = 0.5 + Math.sin(this.t * 4) * 0.08; const r = s.userData.rune, g = s.userData.sigil; if (r) { r.rotation.z += dt * 0.8; r.material.opacity = 0.55 + Math.sin(this.t * 6) * 0.2; } if (g) { g.rotation.z -= dt * 0.5; g.material.opacity = 0.8 + Math.sin(this.t * 5) * 0.15; } }
     for (const t of this.torches) t.l.intensity = t.i0 * (0.85 + Math.sin(this.t * 13 + t.seed) * 0.08 + Math.sin(this.t * 31 + t.seed * 3) * 0.07);
-    if (this.sun && playerPos) { this.sun.position.set(playerPos.x + 10, 22, playerPos.z + 8); this.sun.target.position.copy(playerPos); this.sun.target.updateMatrixWorld(); }
+    if (this.sun && playerPos) {
+      const archive = isStarArchive(this.floorData);
+      this.sun.position.set(playerPos.x + (archive ? -6 : 10), archive ? 18 : 22, playerPos.z + (archive ? -8 : 8));
+      this.sun.target.position.copy(playerPos); this.sun.target.updateMatrixWorld();
+    }
     if (fx && this.torchPos.length && Math.random() < dt * 24 && playerPos) {
       const p = this.torchPos[Math.floor(Math.random() * this.torchPos.length)];
       if (Math.abs(p.x - playerPos.x) < 22 && Math.abs(p.z - playerPos.z) < 22)
@@ -402,3 +502,5 @@ export class Arena {
     }
   }
 }
+
+

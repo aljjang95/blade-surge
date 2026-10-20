@@ -10,10 +10,11 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
-import { displaySize, renderPixelRatio } from '../platform/mobile-display.js';
+import { displaySize, renderPixelRatio, thermalRenderProfile } from '../platform/mobile-display.js';
 import { rebindEnvironment, createStorybookEnvironment } from './environment.js';
 import { ShaderProgramValidator } from './shader-program-validator.js';
 import { PlayerSilhouette, PLAYER_SILHOUETTE_FRAGMENT } from './player-silhouette.js';
+import { acquireWebGL2Context, GraphicsStartupError } from '../platform/startup-compat.js';
 
 // 최종 합성 셰이더: 색수차 · 비네트 · 히트 플래시 · 방사형 블러(궁극기) · 색보정
 const FinalShader = {
@@ -77,10 +78,9 @@ const FinalShader = {
     }`,
 };
 
-// 카메라 킥은 월드 단위, FOV 펀치는 도 단위다. 프레이밍이 깨지지 않도록 작은 상한을 둔다.
-const KICK_PUSH = 0.62, KICK_LATERAL = 0.3, KICK_DIP = 0.2, FOV_PUNCH = 1.8, FOV_PUNCH_MAX = 3.4;
 const FLASH_MAX = 0.6, ABERR_MAX = 2, ABERR_SCALE = 0.012, RADIAL_MAX = 0.6, RADIAL_SCALE = 0.1;
-const _kickFwd = new THREE.Vector3();
+/** 세로 선택 로비에서 바라보는 점을 낮추는 양(월드 단위). 390x844 기본 시점에서 영웅 발 y 560→434px, 머리 315→183px. */
+export const LOBBY_PORTRAIT_LOOK_DROP = 1;
 
 // 지역별 색 보정 — 키는 dungeon-visuals 의 key. cool/warm/lift 는 기본값에 지역 색조만 얹는다.
 const GRADE_BASE = { sat: 0.22, cool: [0.9, 0.98, 1.1], warm: [1.1, 1.03, 0.9], lift: [0.012, 0.016, 0.03], region: [1, 1, 1], fog: 0.4 };
@@ -120,7 +120,18 @@ export const CAMERA_PRESETS = {
 export class Renderer {
   constructor(canvas) {
     this.canvas = canvas;
-    const r = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false, depth: true });
+    // 컨텍스트를 직접 하나만 만든다. 고성능 요청이 거절되면 기본 GPU 선택으로 한 번만 다시 시도한다.
+    const { context, powerPreference } = acquireWebGL2Context(canvas);
+    this.contextPowerPreference = powerPreference;
+    let r;
+    try { r = new THREE.WebGLRenderer({ canvas, context, antialias: false, powerPreference, stencil: false, depth: true }); }
+    catch (error) { throw new GraphicsStartupError('gfx-init', error); }
+    // 외부 컨텍스트를 받으면 Three 는 컨텍스트의 alpha(true)로 기본 클리어 알파를 0 으로 잡는다.
+    // Three 가 직접 만들던 기존 경로와 같은 불투명 클리어(1)를 유지한다.
+    r.setClearAlpha(1);
+    // 컨텍스트 복구 때 Three 는 같은 alpha(true) 기준으로 배경 상태를 새로 만들어 클리어 알파가 0 으로 돌아간다.
+    // Three 의 복구 처리 다음에 실행되도록 생성 직후 등록해 기존 경로와 같은 1 을 다시 맞춘다.
+    canvas.addEventListener('webglcontextrestored', () => r.setClearAlpha(1));
     // Development keeps full Three diagnostics. Production still rejects failed links,
     // without synchronously fetching three success logs for every new program.
     r.debug.checkShaderErrors = import.meta.env?.DEV !== false;
@@ -136,6 +147,12 @@ export class Renderer {
     this.battleOcclusion = new BattleOcclusion();
     this.rebuildEnvironment();
     this.scene = new THREE.Scene();
+    this.touch = window.matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+    this.thermalTier = 0; this.renderCount = 0;
+    this._shadowSizes = new WeakMap();
+    this._syncShadow = object => this._applyShadowSize(object);
+    // 아레나가 교체하는 태양광에도 첫 렌더 전에 같은 해상도 정책을 적용한다.
+    this.scene.addEventListener('childadded', event => event.child.traverse(this._syncShadow));
     this.scene.background = new THREE.Color(0x0b0a12);
     this.scene.fog = new THREE.FogExp2(0x0b0a12, 0.028);
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 120);
@@ -168,8 +185,8 @@ export class Renderer {
     this.scene.add(this.rimLight, this.rimLight.target);
     this._gradeKey = 'default'; this._grade = gradeFor('default'); this._gradeTarget = gradeFor('default');
     this.flash = 0; this.aberr = 0; this.radial = 0; this.desat = 0;
-    // 설정의 '화면 흔들림'과 동작 줄이기 선호가 카메라 킥·FOV 펀치·후처리 왜곡을 끈다
-    this.shakeEnabled = true; this.postFxEnabled = true;
+    // 카메라는 사용자 시점·지역 구도만 따른다. 동작 줄이기 선호는 후처리 왜곡을 끈다.
+    this.postFxEnabled = true;
 
     const scheduleResize = () => {
       if (this._resizeFrame) return;
@@ -181,11 +198,35 @@ export class Renderer {
   }
   setQuality(q) {
     this.quality = q;
-    this.bloom.enabled = q !== 'low';
+    const profile = thermalRenderProfile(q, this.touch, this.thermalTier);
+    this.bloom.enabled = profile.bloomEnabled;
     this.r.shadowMap.enabled = q !== 'low';
+    // 종류는 사용자 설정 때만 바꾼다. 부하 단계 왕복으로 셰이더를 다시 컴파일하지 않는다.
+    this.r.shadowMap.type = profile.softShadow ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+    this.scene.traverse(this._syncShadow);
     // 낮음: 색 보정과 림라이트를 끈다(조명 개수는 그대로 두어 셰이더를 다시 짜지 않는다).
     if (this.rimLight) this.rimLight.intensity = q === 'low' ? 0 : RIM_INTENSITY;
     this.resize(true);
+  }
+  setThermalTier(tier) {
+    if (!Number.isInteger(tier) || tier < 0 || tier > 4 || tier === this.thermalTier) return;
+    const wasReduced = this.thermalTier >= 3;
+    this.thermalTier = tier;
+    this.bloom.enabled = this.quality !== 'low' && tier < 2;
+    this.scene.traverse(this._syncShadow);
+    if (wasReduced !== (tier >= 3)) this.resize(true);
+  }
+  _applyShadowSize(object) {
+    const shadow = object.shadow;
+    if (!object.castShadow || !shadow) return;
+    let base = this._shadowSizes.get(shadow);
+    if (!base) { base = { width: shadow.mapSize.x, height: shadow.mapSize.y }; this._shadowSizes.set(shadow, base); }
+    const scale = thermalRenderProfile(this.quality, this.touch, this.thermalTier).shadowScale;
+    const width = Math.max(128, Math.floor(base.width * scale)), height = Math.max(128, Math.floor(base.height * scale));
+    if (shadow.mapSize.x === width && shadow.mapSize.y === height) return;
+    shadow.mapSize.set(width, height);
+    // Three r170은 mapSize만 바꿔서는 기존 렌더 타깃을 다시 만들지 않는다.
+    shadow.map?.dispose(); shadow.map = null; shadow.needsUpdate = true;
   }
   rebuildEnvironment(templates = []) {
     const previous = this.characterEnvironment;
@@ -199,7 +240,7 @@ export class Renderer {
   resize(force = false) {
     const { width: w, height: h } = displaySize(window);
     const pr = renderPixelRatio({ width: w, height: h, dpr: window.devicePixelRatio, quality: this.quality,
-      touch: window.matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints > 0 });
+      touch: this.touch, thermalTier: this.thermalTier });
     document.documentElement.style.setProperty('--app-height', h + 'px');
     if (!force && this._width === w && this._height === h && this.r.getPixelRatio() === pr) return;
     this._width = w; this._height = h;
@@ -219,7 +260,7 @@ export class Renderer {
     }
     this.camera.aspect = w / h;
     // 세로 화면이면 시야를 넓혀 전장 확보
-    this.camera.fov = (this.rig?.fov ?? 46) + (w < h ? 14 : 0); this._fovPunch = 0;
+    this.camera.fov = (this.rig?.fov ?? 46) + (w < h ? 14 : 0);
     this.camera.updateProjectionMatrix();
     // 블룸 내부 해상도를 직접 강제한다.
     // 함정: UnrealBloomPass 의 `resolution` 필드는 생성자에서만 쓰인다. 그 뒤에는
@@ -227,7 +268,9 @@ export class Renderer {
     // 밉 체인을 다시 잡아버려서, resolution 을 아무리 낮춰도 아무 효과가 없다.
     // 블룸은 5단 밉 × (가로+세로 블러) = 10회 풀스크린 패스라 해상도 제곱으로 비싸진다.
     // composer.setSize 뒤에 setSize 를 다시 불러 덮어써야 실제로 낮아진다.
-    const bw = Math.min(320, Math.round(w / 3)), bh = Math.min(320, Math.round(h / 3));
+    const profile = thermalRenderProfile(this.quality, this.touch, this.thermalTier);
+    const bw = Math.max(1, Math.min(profile.bloomLimit, Math.round(w / profile.bloomDivisor)));
+    const bh = Math.max(1, Math.min(profile.bloomLimit, Math.round(h / profile.bloomDivisor)));
     this.bloom.resolution.set(bw, bh);
     this.bloom.setSize(bw, bh);
   }
@@ -253,17 +296,11 @@ export class Renderer {
     const want = this.rig.fov + (this._width < this._height ? 14 : 0);
     if (Math.abs(this.camera.fov - want) > 0.05) { this.camera.fov += (want - this.camera.fov) * Math.min(1, realDt * 3); this.camera.updateProjectionMatrix(); }
   }
-  /** 방향성 카메라 킥. 진동·랜덤 노이즈 없이 한 방향으로 밀렸다가 감쇠해 복귀한다.
-   * dx/dz 는 타격이 나아가는 월드 방향(선택). 없으면 화면 안쪽으로 밀리는 킥만 쓴다. */
-  shake(amount, dx = 0, dz = 0) {
-    if (!this.shakeEnabled || !(amount > 0)) return;
-    const rig = this.rig, a = Math.min(1, amount);
-    if (a < rig.trauma) return;   // 더 큰 킥이 진행 중이면 그 방향을 유지한다
-    rig.trauma = a;
-    const len = Math.hypot(dx, dz);
-    rig.kickX = len > 1e-4 ? dx / len : 0; rig.kickZ = len > 1e-4 ? dz / len : 0;
-  }
-  punch(z) { if (this.shakeEnabled && z > 0) this.rig.zoom = Math.max(this.rig.zoom, Math.min(2, z)); }
+  /** 화면 전체 카메라 킥·흔들림은 쓰지 않는다. 사용자의 드래그·핀치 시점이 타격마다 밀리거나 되튀지 않게 한다.
+   * 기존 호출부(전투·스킬·보스 연출)는 그대로 두고, 타격감은 무기·캐릭터 반동·VFX·히트스톱·소리·진동이 맡는다. */
+  shake() {}
+  /** 화면 전체 FOV 줌 펄스도 쓰지 않는다(공격마다 화면이 확대·축소되지 않는다). */
+  punch() {}
   flashScreen(strength = 1, color = 0xffffff) {
     // 동작 줄이기에서는 예전 상한(0.25)을 유지하고, 일반 설정에서만 가장자리 틴트를 더 짙게 쓴다.
     this.flash = Math.max(this.flash, Math.min(this.postFxEnabled ? FLASH_MAX : 0.25, strength)); this.u.uFlashColor.value.set(color);
@@ -271,11 +308,6 @@ export class Renderer {
   update(dt, realDt) {
     this.time += realDt;
     const rig = this.rig, cam = this.camera;
-    // 타격 카메라는 한 방향으로 밀렸다가 감쇠해 복귀한다. 진동·랜덤 노이즈는 금지한다.
-    // 실시간 dt 로 줄여 히트스탑 동안에도 킥이 화면에 남았다가 정상 속도로 돌아온다.
-    rig.trauma = Math.max(0, rig.trauma - realDt * 3.4);
-    const kick = rig.trauma * (2 - rig.trauma);   // 작은 타격도 읽히도록 앞쪽을 키운 감쇠 곡선
-    rig.zoom = Math.max(0, rig.zoom - realDt * 3);
     let desired;
     if (rig.mode === 'lobby') {
       const walking = this.lobbyNavigation;
@@ -286,16 +318,19 @@ export class Renderer {
       this.lobbySightline ??= new LobbySightline();
       if (!walking) desired.y += this.lobbySightline.solve(desired,rig.target,this.lobbyOccluders,performance.now());
       const lobbyFov = 46 + (window.innerWidth < window.innerHeight ? 14 : 0);
-      this._fovPunch = 0;
       if (cam.fov !== lobbyFov) { cam.fov = lobbyFov; cam.updateProjectionMatrix(); }
-      rig.pos.lerp(desired, 1 - Math.exp(-realDt * (walking ? 6 : 3)));
+      // 부팅·전투에서 로비로 바뀐 첫 프레임은 바로 자리 잡는다. 전투 좌표의 카메라에서 보간하면 광장을 가로질러 나무를 지난다.
+      // 로비 안의 시점·걷기 전환은 계속 부드럽게 보간한다.
+      if (!this._rigInLobby) rig.pos.copy(desired);
+      else rig.pos.lerp(desired, 1 - Math.exp(-realDt * (walking ? 6 : 3)));
       cam.position.copy(rig.pos);
       // Editorial offset reserves the right-hand destination panel, without moving the hero.
       const editorialShift = walking ? { x: 0, z: 0 } : lobbyCompositionShift(p, this._width >= this._height);
-      cam.lookAt(rig.target.x + editorialShift.x, rig.target.y + (walking ? .6 : 1.1), rig.target.z + editorialShift.z);
+      // 세로 선택 로비는 하단 착지 패널이 화면 아래 절반 가까이를 덮는다. 카메라 위치는 그대로 두고
+      // 바라보는 점만 낮춰 영웅을 상단 바와 패널 사이에 둔다(UX R7). 줌·펄스 없이 고정 구도다.
+      const portraitDrop = !walking && portrait ? LOBBY_PORTRAIT_LOOK_DROP : 0;
+      cam.lookAt(rig.target.x + editorialShift.x, rig.target.y + (walking ? .6 : 1.1) - portraitDrop, rig.target.z + editorialShift.z);
     } else {
-      // 이전 프레임의 FOV 펀치를 걷어낸 뒤 목표 FOV 로 보간하고, 이번 프레임의 펀치를 다시 얹는다.
-      if (this._fovPunch) cam.fov += this._fovPunch;
       const off = rig.offset.clone();
       off.x += rig.side + (rig.environmentSide || 0);   // 지역마다 전투 중심을 여는 비대칭 구도
       const controlled = battleCameraOffset(off, this.battleCamera);
@@ -307,22 +342,11 @@ export class Renderer {
       rig.pos.lerp(desired, 1 - Math.exp(-realDt * rig.lag));
       cam.position.copy(rig.pos);
       const look = rig.target.clone().add(rig.lookOffset);
-      // 킥은 렌더 카메라에만 얹는다. rig.pos 에 섞이지 않아 감쇠가 끝나면 원래 구도로 정확히 돌아온다.
-      if (kick > 0.002 && this.shakeEnabled) {
-        _kickFwd.subVectors(look, cam.position).normalize();
-        cam.position.addScaledVector(_kickFwd, KICK_PUSH * kick);
-        cam.position.y -= KICK_DIP * kick;
-        const lateral = KICK_LATERAL * kick;
-        cam.position.x -= (rig.kickX || 0) * lateral; cam.position.z -= (rig.kickZ || 0) * lateral;
-      }
       cam.lookAt(look);
-      const punch = this.shakeEnabled ? Math.min(FOV_PUNCH_MAX, rig.zoom * FOV_PUNCH) : 0;
-      const wasPunched = this._fovPunch;
-      cam.fov -= punch; this._fovPunch = punch;
-      if (punch || wasPunched) cam.updateProjectionMatrix();
     }
     // Arena supplies actual hero coordinates before this final camera update.
     this.battleOcclusion.update(cam.position, rig.mode !== 'lobby');
+    this._rigInLobby = rig.mode === 'lobby';
     // 포스트 유니폼 감쇠
     this.flash = Math.max(0, this.flash - realDt * 3.5);
     this.aberr = Math.max(0, this.aberr - realDt * 1.6);
@@ -346,6 +370,7 @@ export class Renderer {
     }
     this.lobbyAA.enabled = this.rig.mode === 'lobby'; this.composer.render();
     this.programValidator.validate(this.r);
+    this.renderCount++;
   }
   /** 지역 색 보정 목표를 정하고, 아레나가 깐 안개를 지역 하늘의 지평선 색 쪽으로 밝힌다(대기 원근). */
   _applyRegionLook(visual) {

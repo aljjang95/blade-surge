@@ -1,0 +1,41 @@
+{
+  "id": "rogue-library-axis-v1",
+  "useInGame": true,
+  "status": "GENERATED",
+  "asset": "hero_rogue_t1",
+  "reason": "궁수와 같은 원인(Mixamo 쿼터니언을 롤이 다른 Tripo 리그에 복사, 골반 수직 평탄화)으로 몸통·다리가 옆으로 꺾이고 구르기·사망이 떠 있던 문제를 Blender 전신 rest 축 리타깃·실제 스킨 접지·백스텝 저작으로 교정",
+  "source": {
+    "path": "asset-library/normalized/hero_rogue_t1.glb",
+    "sha256": "9d2dab5e01dd9df6b80f6343a1d32820772ca21080468011473893a009ea0539"
+  },
+  "axisReference": {
+    "path": "asset-library/normalized/hero_knight_t1.glb",
+    "role": "Mixamo 관례 본 축(읽기 전용)"
+  },
+  "output": {
+    "path": "/models/heroes-next/rogue-library-t1-axis-v1.glb",
+    "sha256": "c24b8eab468924a07c2c23bda9feddc51ea25cc6024321f9e2eccc6e46a88ead"
+  },
+  "clips": {
+    "cast_raise": 2.9583,
+    "cast_shoot": 2.2917,
+    "cheer": 8.5,
+    "chop": 1.5,
+    "death": 1.25,
+    "Dodge_Backward": 0.5,
+    "hit": 0.5,
+    "idle": 9.9167,
+    "interact": 3.4167,
+    "run": 0.6667,
+    "slash_h": 1.6667,
+    "stab": 1.7083,
+    "throw": 2.1667,
+    "dodge": 0.5
+  },
+  "tool": {
+    "blender": "4.3.2",
+    "author": "art-src/hero-axis/author_hero_axis_v1.py",
+    "packer": "tools/art/pack-ranger-library.mjs"
+  },
+  "license": "owner-generated (Tripo subscription) mesh unchanged; Mixamo body clips retargeted to the same skeleton; backstep authored in Blender from the same skeleton"
+}

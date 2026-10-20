@@ -1,6 +1,7 @@
 import * as THREE from 'three';
+import { bindHeroPortrait } from './hero-portraits.js';
 import { audio } from '../engine/audio.js';
-import { ITEM_BY_ID, ITEM_ICON, RARITY_COLOR } from '../data/items.js';
+import { ITEM_BY_ID, RARITY_COLOR } from '../data/items.js';
 import { REWARD_LABEL } from '../game/economy.js';
 import { Minimap } from './minimap.js';
 import { CombatNoticeQueue } from './combat-notices.js';
@@ -16,6 +17,7 @@ import { combatHudAnimationRegion } from '../engine/combat-feedback.js';
 import './campaign.css';
 import './combo-feedback.css';
 import './skill-feedback.css';
+import { itemIconHtml } from './item-presentation.js';
 
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => Math.floor(n).toLocaleString('ko-KR');
@@ -60,7 +62,7 @@ export class UI {
     const cameraControls = document.createElement('div');
     cameraControls.id = 'battle-camera-controls';
     cameraControls.setAttribute('aria-label', '전투 시점 조작');
-    cameraControls.innerHTML = '<div id="battle-camera-pad" tabindex="0" role="group" aria-label="드래그 또는 방향키로 시점 회전, 더하기 빼기로 확대 축소, Home으로 복원"><span>시점 회전</span><small>드래그 ↔ ↕</small></div><div class="battle-camera-buttons"><button type="button" id="battle-camera-zoom-in" aria-label="시점 확대">+</button><button type="button" id="battle-camera-reset">복원</button><button type="button" id="battle-camera-zoom-out" aria-label="시점 축소">−</button></div>';
+    cameraControls.innerHTML = '<div id="battle-camera-pad" tabindex="0" role="group" aria-label="드래그 또는 방향키로 시점 회전, 더하기 빼기로 확대 축소, Home으로 복원"><span>시점 회전</span><small>방향키 ← → ↑ ↓</small></div><div class="battle-camera-buttons"><button type="button" id="battle-camera-zoom-in" aria-label="시점 확대">+</button><button type="button" id="battle-camera-reset">복원</button><button type="button" id="battle-camera-zoom-out" aria-label="시점 축소">−</button></div>';
     this.el.hud.append(cameraControls);
     // 타격마다 읽지 않고 레이아웃 변경 때 실제 HUD·조작 영역을 저장한다.
     this.combatTextRegionEls = [
@@ -177,14 +179,55 @@ export class UI {
       }
       // The fixed global toast is a HUD sibling, so its layout property must live on the toast itself.
       writeHudStyle(toast.style, '--battle-notice-top', `${Math.ceil(bottom + 6)}px`);
+      this.placeCombatNoticeStrip(hud, toast);
     } else {
       toast.style.removeProperty('--battle-notice-top');
+      toast.classList?.remove('edge-strip');
       this.combatNoticeHeaderEls = [];
       this.combatNoticeSideEls = [];
     }
     const noticeBottom = shown && toast.childElementCount ? toast.getBoundingClientRect().bottom : 0;
     writeHudStyle(hud.style, '--combat-notice-bottom', `${noticeBottom}px`);
     this.refreshCombatTextRegions();
+  }
+  /** 가로 전투에서는 전투 경고(cue)·구역 배너·알림을 화면 중앙이 아니라 왼쪽 가장자리 열(콤보 아래, 시점 버튼 오른쪽)에 차례로 쌓는다.
+   *  대표님 규칙(2026-10-18): UI는 실제 플레이를 가리지 않는다. 화면 가운데 1/3은 비워 둔다. 공간이 모자라면 기존 배치를 유지한다. */
+  placeCombatNoticeStrip(hud, toast) {
+    const width = globalThis.innerWidth || 0, height = globalThis.innerHeight || 0;
+    const rect = el => { const r = el?.getBoundingClientRect?.(); return r && r.width > 0 && r.height > 0 ? r : null; };
+    const q = s => hud.querySelector?.(s);
+    const player = rect(q('.hud-player')), camera = rect(q('.oath-camera-details')), joy = rect(q('.joy-base'));
+    const cue = this.combatCueEl, banner = q('#wave-banner');
+    const px = v => Math.round(v) + 'px';
+    const clear = () => {
+      toast.classList?.remove('edge-strip'); hud.classList?.remove('side-stack');
+      for (const key of ['--battle-notice-left', '--battle-notice-right', '--battle-notice-max-h']) toast.style.removeProperty(key);
+    };
+    if (!(width > height) || !player) { clear(); return; }
+    const left = Math.max(camera ? camera.right : 58, 58) + 8, right = Math.floor(width / 3) - 8;
+    let top = player.bottom;
+    for (const el of [this.comboEl, this.killStreakEl]) { const r = rect(el); if (r && !el.classList?.contains('hidden')) top = Math.max(top, r.bottom); }
+    top += 8;
+    const limit = joy ? joy.top - 6 : height * .7;
+    if (right - left < 150 || limit - top < 60) { clear(); return; }
+    hud.classList?.add('side-stack');
+    const box = hud.getBoundingClientRect?.() || { left: 0, top: 0 };
+    writeHudStyle(hud.style, '--side-left', px(left - box.left));
+    writeHudStyle(hud.style, '--side-width', px(right - left));
+    let y = top;
+    // 켜져 있는 경고와 배너를 위에서부터 쌓는다(레이아웃 좌표: 변형 전 크기).
+    writeHudStyle(hud.style, '--side-cue-top', px(y - box.top));
+    if (cue?.classList?.contains('on') && cue.offsetWidth > 0) {
+      writeHudStyle(hud.style, '--side-cue-x', px(left - box.left + cue.offsetWidth / 2));
+      y += cue.offsetHeight + 6;
+    }
+    writeHudStyle(hud.style, '--side-banner-top', px(y - box.top));
+    if (banner?.classList?.contains('on') && banner.offsetHeight > 0) y += banner.offsetHeight + 6;
+    toast.classList?.add('edge-strip');
+    writeHudStyle(toast.style, '--battle-notice-top', px(y));
+    writeHudStyle(toast.style, '--battle-notice-left', px(left));
+    writeHudStyle(toast.style, '--battle-notice-right', px(width - right));
+    writeHudStyle(toast.style, '--battle-notice-max-h', px(Math.max(28, Math.min(44, limit - y))));
   }
   refreshCombatTextRegions() {
     if (typeof this.app.fx?.setCombatTextRegions !== 'function') return;
@@ -224,14 +267,50 @@ export class UI {
   toast(msg, cls = '', options = {}) { if (this.el.hud.classList.contains('show')) { this.combatNotices.push(msg, cls, options); return; } const d = document.createElement('div'); d.className = 'toast ' + cls; d.innerHTML = msg; this.el.toast.appendChild(d); setTimeout(() => d.remove(), 2200); while (this.el.toast.children.length > 4) this.el.toast.firstChild.remove(); }
   flyReward(worldPos, text, camera, kind = 'gold') { if (this.app.battle?.result || this.el.result.classList.contains('show') || document.querySelectorAll('.reward-fly').length > 8) return; const v = new THREE.Vector3().copy(worldPos).setY(1.5).project(camera); if (v.z > 1) return; const d = document.createElement('div'); d.className = 'reward-fly'; d.textContent = text; d.style.color = kind === 'stone' ? '#4cc3ff' : 'var(--gold)'; d.style.left = ((v.x * 0.5 + 0.5) * innerWidth) + 'px'; d.style.top = ((-v.y * 0.5 + 0.5) * innerHeight) + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 1000); }
   /** 필드 득템 팝업 */
+  /** 전리품 그림은 지금 싸운(출전) 영웅이 실제로 드는 형태로 그린다. */
+  lootHeroId() { return this.app.battle?.player?.def?.id ?? this.app.eco.s.selected; }
   lootPopup(def, rarity) {
     if (this.app.battle?.result || this.el.result.classList.contains('show')) return;
     while (this.lootLayer.children.length >= 2) this.lootLayer.firstChild.remove();
     const d = document.createElement('div'); d.className = 'loot-pop'; d.style.setProperty('--rc', RARITY_COLOR[rarity] || '#9aa3b2');
-    d.innerHTML = `<span class="lp-rar">${rarity}</span><img src="${ITEM_ICON(def)}" onerror="this.remove()"><span>${def.name}</span>`;
+    d.innerHTML = `<span class="lp-rar">${rarity}</span>${itemIconHtml(def, '', { heroId: this.lootHeroId() })}<span>${def.name}</span>`;
     this.lootLayer.appendChild(d); setTimeout(() => d.remove(), 1250);
+    this.placeLootStrip();
   }
-  rewardHtml(got) { return got.map((g) => { if (g.k === 'item') { const it = ITEM_BY_ID[g.item.id]; return `<span class="reward-chip rar-${it.rarity}" style="border:1px solid"><img src="${ITEM_ICON(it)}" style="width:18px;height:18px" onerror="this.remove()"> ${it.name}</span>`; } const [nm, ic] = REWARD_LABEL[g.k] || [g.k, '']; return `<span class="reward-chip"><img src="${ic}" style="width:18px;height:18px" onerror="this.remove()"> ${nm} +${fmt(g.n)}</span>`; }).join(''); }
+  /** 획득 장비 카드는 조이스틱·물약·스킬 버튼과 플레이 영역(가운데 3분의 1)을 피해 가장자리에 둔다(대표님 규칙 2026-10-18).
+   *  가로: 화면 위 가장자리 좁은 한 줄(스테이지 표시 오른쪽~우상단 버튼 왼쪽). 세로: 왼쪽 가장자리 열(상단 HUD 아래).
+   *  카드가 생길 때 한 번만 계산한다(프레임 루프 아님). 자리가 모자라면 기존 배치를 쓴다. */
+  placeLootStrip() {
+    const layer = this.lootLayer, hud = this.el?.hud;
+    if (!layer?.style) return;
+    const clear = () => {
+      layer.classList?.remove('loot-strip', 'loot-row', 'loot-col');
+      for (const key of ['--loot-left', '--loot-top', '--loot-max-w']) layer.style.removeProperty?.(key);
+    };
+    if (!hud?.classList?.contains('show') || typeof hud.getBoundingClientRect !== 'function') { clear(); return; }
+    const width = globalThis.innerWidth || 0, height = globalThis.innerHeight || 0;
+    const rect = el => { const r = el?.getBoundingClientRect?.(); return r && r.width > 0 && r.height > 0 ? r : null; };
+    const q = s => hud.querySelector?.(s);
+    const px = v => Math.round(v) + 'px';
+    let left, top, maxW, mode;
+    if (width > height) {
+      const player = rect(q('.hud-player')), actions = rect(q('.hud-right-top'));
+      left = Math.max(player ? player.right : 0, ...['.hud-center .wave', '.hud-center .stage-name'].map(s => rect(q(s))?.right || 0)) + 12;
+      maxW = (actions ? actions.left : width) - 12 - left;
+      top = (actions ? actions.top : 0) + 6; mode = 'loot-row';
+    } else {
+      let bottom = 0;
+      for (const el of [q('.hud-top'), q('#bossbar'), this.comboEl, this.killStreakEl]) {
+        const r = rect(el); if (r && !el.classList?.contains('hidden')) bottom = Math.max(bottom, r.bottom);
+      }
+      // 세로 화면의 알림 토스트는 헤더 바로 아래에 한 줄(최대 44px) 뜨므로 그 아래에서 시작한다.
+      left = 12; top = bottom + 8 + 44; maxW = Math.floor(width / 3) - 8 - left; mode = 'loot-col';
+    }
+    if (!(maxW >= 100) || !(top > 0)) { clear(); return; }
+    layer.classList.remove('loot-row', 'loot-col'); layer.classList.add('loot-strip', mode);
+    layer.style.setProperty('--loot-left', px(left)); layer.style.setProperty('--loot-top', px(top)); layer.style.setProperty('--loot-max-w', px(maxW));
+  }
+  rewardHtml(got) { return got.map((g) => { if (g.k === 'item') { const it = ITEM_BY_ID[g.item.id]; return `<span class="reward-chip rar-${it.rarity}" style="border:1px solid">${itemIconHtml(it, ' style="width:18px;height:18px"', { heroId: this.lootHeroId() })} ${it.name}</span>`; } const [nm, ic] = REWARD_LABEL[g.k] || [g.k, '']; return `<span class="reward-chip"><img src="${ic}" style="width:18px;height:18px" onerror="this.remove()"> ${nm} +${fmt(g.n)}</span>`; }).join(''); }
   rewardToast(got, cls = 'gold') { if (got && got.length) this.toast(this.rewardHtml(got), cls); }
 
   // ---------------- 모달 ----------------
@@ -292,7 +371,7 @@ export class UI {
       return label;
     });
     this._dodgeBtn = $('btn-dodge'); this._dodgeCd = this._dodgeBtn.querySelector('.dodge-cd'); this._dodgeDescription = null; this.refreshDodgeFeedback();
-    $('hud-portrait').src = def.portrait; $('hud-stage').textContent = '';
+    bindHeroPortrait($('hud-portrait'), this.app, def.id, { fallbackUrl: def.portrait }); $('hud-stage').textContent = '';
     this.skillBtns.forEach((b, slot) => {
       const { index, skill: sk } = player.combatSkill(slot);
       if (!sk) { b.style.display = 'none'; return; }
@@ -406,16 +485,50 @@ export class UI {
     $('hud-wave').textContent = stage?.code || `${floorNum}층`;
     $('hud-stage').textContent = `구역 ${clr}/${tot}${stage?.difficultyName ? ` · ${stage.difficultyName}` : ''}`;
   }
-  waveBanner(text) { const b = $('wave-banner'); b.textContent = text; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); }
+  waveBanner(text) { const b = $('wave-banner'); b.textContent = text; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); this.refreshCombatNoticeLayout?.(); }
   showBoss(name, on, portrait) { $('bossbar').classList.toggle('hidden', !on); $('boss-name').textContent = name; const im = $('boss-portrait'); if (portrait) { im.src = portrait; im.style.display = ''; } else im.style.display = 'none'; }
-  setCombo(n) { if (n <= 1) { this.comboEl.classList.add('hidden'); return; } this.comboEl.classList.remove('hidden'); this.comboN.textContent = n; this.comboEl.classList.toggle('hot', n >= 30); this.comboEl.classList.remove('pop'); void this.comboEl.offsetWidth; this.comboEl.classList.add('pop'); }
+  setCombo(n) { if (n <= 1) { this.comboEl.classList.add('hidden'); if (this.killStreakEl?.classList.contains('show')) this.placeKillStreak(); return; } const wasHidden = this.comboEl.classList.contains('hidden'); this.comboEl.classList.remove('hidden'); this.comboN.textContent = n; this.comboEl.classList.toggle('hot', n >= 30); this.comboEl.classList.remove('pop'); void this.comboEl.offsetWidth; this.comboEl.classList.add('pop'); if (this.killStreakEl?.classList.contains('show') && (wasHidden || n === 10 || n === 100)) this.placeKillStreak(); }
+  /** 연속 처치 알약을 콤보 배지 오른쪽(좁으면 아래)에 붙인다. 처치·콤보 표시가 바뀔 때만 레이아웃을 읽는다. */
+  placeKillStreak() {
+    const pill = this.killStreakEl, combo = this.comboEl, hud = this.el?.hud;
+    if (!pill || !combo) return;
+    const shown = !combo.classList.contains('hidden') && combo.offsetWidth > 0;
+    let left, top, height;
+    if (shown) { left = combo.offsetLeft; top = combo.offsetTop; height = combo.offsetHeight; }
+    else {
+      // 콤보가 숨겨져 있으면 콤보가 나타날 자리(계산된 left/top)에 알약을 둔다.
+      const cs = globalThis.getComputedStyle?.(combo);
+      left = Number.parseFloat(cs?.left); top = Number.parseFloat(cs?.top); height = 0;
+      if (!Number.isFinite(left)) left = 14; if (!Number.isFinite(top)) top = 140;
+    }
+    const pillHeight = Math.max(30, Math.min(40, height || 34));
+    const hudWidth = hud?.clientWidth || globalThis.innerWidth || 0;
+    const beside = shown ? left + combo.offsetWidth + 6 : left;
+    // 전투 중앙(가로 30% 이후)에 닿으면 글자를 줄인 알약으로 콤보 옆에 남긴다. 아래 줄은 시점 버튼과 겹치므로 쓰지 않는다.
+    pill.classList.remove('compact', 'mini');
+    const limit = hudWidth * .3;
+    if (hudWidth && beside + (pill.offsetWidth || 150) > limit) {
+      pill.classList.add('compact');
+      // 그래도 넘치면 단계 이름을 숨긴다(단계는 테두리 색으로 남는다).
+      if (beside + pill.offsetWidth > limit) pill.classList.add('mini');
+    }
+    pill.style.setProperty('--ks-left', beside + 'px');
+    pill.style.setProperty('--ks-top', top + (shown ? (height - pillHeight) / 2 : 0) + 'px');
+    pill.style.setProperty('--ks-height', pillHeight + 'px');
+  }
   setKillStreak(n, tier = '') {
     if (!this.killStreakEl) return;
-    if (n <= 1) { this.killStreakEl.classList.remove('show', 'hot'); return; }
+    if (n <= 1) { this.killStreakEl.classList.remove('show', 'hot', 'tier-up'); this._killStreakTier = ''; return; }
+    const label = tier || (n >= 20 ? '전장의 지배자' : n >= 10 ? '광란' : '사냥 본능');
     this.killStreakN.textContent = n;
-    this.killStreakTier.textContent = tier || (n >= 20 ? '전장의 지배자' : n >= 10 ? '광란' : '사냥 본능');
+    this.killStreakTier.textContent = label;
     this.killStreakEl.classList.toggle('hot', n >= 20);
-    this.killStreakEl.classList.remove('show'); void this.killStreakEl.offsetWidth; this.killStreakEl.classList.add('show');
+    this.placeKillStreak();
+    const tierUp = this._killStreakTier && this._killStreakTier !== label;
+    this._killStreakTier = label;
+    this.killStreakEl.classList.add('show');
+    // 단계가 올라갈 때만 알약 자체가 짧게 빛난다(중앙 알림을 대신한다).
+    if (tierUp) { this.killStreakEl.classList.remove('tier-up'); void this.killStreakEl.offsetWidth; this.killStreakEl.classList.add('tier-up'); }
   }
   ultCinema(name, def) { const c = $('ult-cinema'); $('ult-name').textContent = name; $('ult-name').style.textShadow = `0 0 20px ${def.color}, 0 4px 0 #000`; c.classList.remove('on'); void c.offsetWidth; c.classList.add('on'); setTimeout(() => c.classList.remove('on'), 1700); }
   updateHud(b, dt) {
@@ -592,7 +705,7 @@ export class UI {
             this.app.meta.openTab('heroes'); this.app.meta.showItem(x.it.uid, heroId);
           };
         }
-        if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}`; d.innerHTML = `<img src="${ITEM_ICON(def)}" onerror="this.remove()"><div class="nm">${def.name}</div>`; if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); }
+        if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}`; d.innerHTML = `${itemIconHtml(def, '', { heroId: this.lootHeroId() })}<div class="nm">${def.name}</div>`; if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); }
         else { const [nm, ic] = REWARD_LABEL[x.g.k] || [x.g.k, '']; d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(x.g.n)}</span><div class="nm">${x.g.label || nm}</div>`; audio.pick('coin', 2, { vol: 0.5 }); }
         loot.appendChild(d);
       }, 300 + Math.min(i * 60, 600)));

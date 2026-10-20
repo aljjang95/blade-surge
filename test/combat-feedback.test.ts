@@ -182,10 +182,13 @@ test('cached HUD envelopes contain the declared combo, streak and cue transforms
   const combo = combatHudAnimationRegion('combo', box, true);
   const oathStreak = combatHudAnimationRegion('kill-streak', box, true);
   const plainStreak = combatHudAnimationRegion('kill-streak', box, false);
+  // 연속 처치 알약은 왼쪽 가운데 기준으로 .9→1 등장, 단계 상승 때 1.06배까지 빛난다.
+  for (const scale of [.9, .95, 1, 1.03, 1.06]) {
+    expect(inside(oathStreak, corners(box.left, box.top + height / 2, 0, 0, scale))).toBe(true);
+    expect(inside(plainStreak, corners(box.left, box.top + height / 2, 0, 0, scale))).toBe(true);
+  }
   for (const t of [0, .25, .5, .75, 1]) {
     expect(inside(combo, corners(box.right, box.top + height / 2, 0, 0, 1.4 - .4 * t, -4 * (1 - t)))).toBe(true);
-    expect(inside(oathStreak, corners(box.left + width / 2, box.top + height / 2, -width / 2, -4 * (1 - t), .92 + .08 * t))).toBe(true);
-    expect(inside(plainStreak, corners(box.left + width / 2, box.top + height / 2, -width / 2, -height / 2, .86 + .14 * t))).toBe(true);
   }
   const cue = combatHudAnimationRegion('combat-cue', box, true);
   for (const [scale, dy] of [[.82, -12], [1.08, 0], [1, 0], [.96, -6], [.88, -10]]) {

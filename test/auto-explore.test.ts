@@ -101,7 +101,7 @@ test('AUTO는 실제 스킬 조건과 쿨다운 뒤 기본 공격 요청을 그�
   expect(f.step()).toEqual({ move: { x: 0, y: 0 }, requests: ['attack'] });
 });
 
-test('AUTO의 공격·commit 뒤 회피 요청 순서와 원래 회피 난수 소비를 유지한다', () => {
+test('AUTO의 공격·commit 뒤 회피 요청 순서를 유지하고, 지금 바로 구를 수 있는 프레임에서만 회피 난수를 쓴다', () => {
   const f = autoFixture([autoEnemy(1, 0, { isBoss: true, telegraph: .2 })]);
   const savedRandom = Math.random, rolls = [.1, .9, .4]; let consumed = 0;
   Math.random = () => rolls[consumed++];
@@ -109,7 +109,13 @@ test('AUTO의 공격·commit 뒤 회피 요청 순서와 원래 회피 난수 �
     expect(f.step()).toEqual({ move: { x: 0, y: 0 }, requests: ['attack', 'dodge'] });
     f.player.state = 'attack';
     expect(f.step()).toEqual({ move: { x: 0, y: 0 }, requests: ['attack'] });
+    // 타격 뒤라도 캔슬 창 밖이면 회피 입력이 버퍼에 남아 늦게 구르므로 판단(난수)을 하지 않는다.
     f.player.hitDone = true;
+    expect(f.step()).toEqual({ move: { x: 0, y: 0 }, requests: ['attack'] });
+    expect(consumed).toBe(1);
+    // 후딜 캔슬 창(타격 뒤 0.12~0.26) 안에서는 같은 요청 순서로 판단하고 난수를 한 번 쓴다.
+    Object.assign(f.player, { current: { dur: 1, hitAt: .4 }, stateT: .55, buffs: { atkSpd: 1 }, stormT: 0 });
+    expect(f.player.canDodgeCancel()).toBe(true);
     expect(f.step()).toEqual({ move: { x: 0, y: 0 }, requests: ['attack'] });
     expect(consumed).toBe(2); expect(Math.random()).toBe(.4);
   } finally { Math.random = savedRandom; }

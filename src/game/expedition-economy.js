@@ -143,7 +143,8 @@ export class ExpeditionEconomy {
     const conquest = this.s.pending.conquestId ? expeditionConquest(this.s.pending.conquestId) : null;
     const outcome = conquest ? readConquestOutcome(result.conquest, ticket, result.win) : null;
     if (conquest && result.win && !outcome) return { ok: false, error: '이 출격의 전술 공략 결과가 필요합니다.' };
-    return this.transact(() => {
+    const ledger = this.eco.fieldRewardsFor(null, ticket);
+    const settled = this.transact(() => {
       const p = this.s.pending, deep = p.depth === 'deep', def = deep ? expeditionDepth(p.target) : find(p.kind === 'dungeon' ? DUNGEONS : ARENA_RIVALS, p.target);
       this.s.pending = null;
       if (!result.win) return { ok: true, win: false, rewards: {} };
@@ -190,10 +191,17 @@ export class ExpeditionEconomy {
         seen.add(item.uid); return true;
       }).map(item => ({ ...inventory.get(item.uid) }));
       const heroId = this.eco.s.heroes[p.heroId] ? p.heroId : this.eco.s.selected;
-      const heroExp = applyFrontierRewards(def.rewards, frontier).xp;
+      // 새 성장 재화는 장부에서만 지급한다. 결과 객체의 숫자는 믿지 않는다(리뷰 P2).
+      const extras = p.kind === 'dungeon' ? ledger : null;
+      if (extras) got.push(...this.eco.applyFieldExtras(extras, heroId));
+      const combatExp = p.kind === 'dungeon' ? ledger?.exp ?? Math.min(num(field.fieldExp), 100000000) : 0;
+      const heroExp = applyFrontierRewards(def.rewards, frontier).xp + combatExp;
       const ups = this.eco.addHeroExp(heroId, heroExp, { silent: true });
-      return { ok: true, win: true, rewards: { ...rewards, got, loot, heroExp, ups, heroId } };
+      return { ok: true, win: true, rewards: { ...rewards, got, loot, heroExp, combatExp, ups, heroId } };
     });
+    // 실패한 저장은 같은 장부로 재시도한다. 성공/패배 정산만 장부를 닫는다.
+    if (settled.ok && ledger) ledger.settled = true;
+    return settled;
   }
   recordCampaign(result, stage) {
     if (!result || typeof result !== 'object' || result.win !== true || this.receipts.has(result)) return { ok: false, error: '기록할 새 승리가 없습니다.' };

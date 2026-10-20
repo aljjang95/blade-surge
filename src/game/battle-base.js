@@ -4,8 +4,10 @@ import { createArrowVisual, releaseProjectileVisual } from '../engine/arrow-visu
 import { CAMERA_PRESETS } from '../engine/renderer.js';
 import { battleFraming, framingBlend } from '../engine/battle-framing.js';
 import { Player } from './player.js';
-import { Enemy } from './enemies.js';
+import { clearShot } from './ranger-aim.js';
+import { Enemy, HOSTILE_PROJECTILE_REACH } from './enemies.js';
 import { DropSystem, fieldDropsAllowed } from './drops.js';
+import { TreasureChests } from './treasure-chest.js';
 import { Floor, ROOM_TYPE } from './world.js';
 import { ENEMIES } from '../data/stages.js';
 import { HEROES, heroStats } from '../data/heroes.js';
@@ -21,17 +23,19 @@ import { contactFeedback } from './apex-combat.js';
 import { ImpactClock } from './combat-motion.js';
 import { RegionHazards } from './region-hazards.js';
 import { resolveJobHero } from '../data/jobs.js';
-import { buildExpeditionWorld, expeditionRoster, applyBattleConsumable, canApplyBattleConsumable } from './expedition-combat.js';
+import { buildExpeditionWorld, expeditionRoster, expeditionFollowers, packFollowerDef, applyBattleConsumable, canApplyBattleConsumable } from './expedition-combat.js';
 import { ConquestRun } from './expedition-conquests.js';
 import { createRouteObjectives } from './route-objectives.js';
 import { createMapTactics } from './map-tactics.js';
 import { resolveCrowdContacts } from './crowd-contact.js';
+import { alertPack, joinPack, packSlot, planRoomPacks } from './pack-pursuit.js';
 import { preloadFieldSurface } from './open-field-scene.js';
 import { CONTROL_MP_GAIN, CONTROL_ULT_GAIN, ultHitGain, ultKillGain } from './control-rewards.js';
 import { dungeonVisualFor } from '../data/dungeon-visuals.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 
 const _v = new THREE.Vector3();
+const _slot = { x: 0, z: 0 };
 const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
 
 /** 히트스탑 / 슬로우모션 타임 컨트롤 */
@@ -92,7 +96,10 @@ export class Battle {
     this.visual = dungeonVisualFor(stage);
     if (stage.field) await preloadFieldSurface();
     if (this._startGeneration !== startGeneration) return;
+    // 보물방 상자는 전투가 직접 소유하는 열 수 있는 상자로 놓는다. 보상이 없는 모드는 기존 장식 상자를 그대로 둔다.
+    this.arena.interactiveChests = fieldDropsAllowed(stage); this.arena.chestPoses = new Map();
     this.arena.buildFloor(this.world, stage.chapter.theme, this.visual);
+    this.treasureChests?.dispose(); this.treasureChests = fieldDropsAllowed(stage) ? new TreasureChests(this) : null;
     await this.routeObjectives?.prepareView?.(this.scene);
     if (this._startGeneration !== startGeneration) return;
     await this.mapTactics?.prepareView(this.scene, this);
@@ -328,6 +335,9 @@ export class Battle {
     this.conquest?.prepareRoom(room, list);
     if (!list.length) { this.markCleared(room); return; }
     const isBoss = room.type === ROOM_TYPE.BOSS;
+    // 방 명단을 진입 반대편의 무리로 나눠 경계시킨다. 보스방·증원·소환은 기존처럼 바로 교전한다.
+    room.packs = isBoss ? null : planRoomPacks(this.world, room, list.length, this.player.pos.x, this.player.pos.z);
+    room.packQuota = room.packs ? list.length : 0; room.packAssigned = 0;
     if (isBoss) {
       audio.playMusic(musicForScene({ stage: this.stage, boss: true }), MUSIC_MIX); this.ui.waveBanner(this.stage.encounter?.label || 'BOSS'); this.renderer.shake(0.5); this.after(0.6, () => audio.voice(`${this.bossKey}_appear`, { min: 10 }));
       if (this.stage.encounter?.tactic) this.ui.toast(this.stage.encounter.tactic, 'gold');
@@ -339,11 +349,37 @@ export class Battle {
     else if (room.type === ROOM_TYPE.ELITE) { this.ui.waveBanner('ELITE'); audio.waveHorn({ vol: 0.42 }); audio.voice('elite', { min: 8 }); }
     else if (room.type === ROOM_TYPE.TREASURE) audio.voice('treasure', { min: 8 });
     // 한 번에 다 깔되 동시 상한을 넘으면 큐로
-    const initial = Math.min(list.length, this.maxAlive - this.enemies.filter((e) => e.alive).length);
-    for (let i = 0; i < initial; i++) this.after(0.08 + i * 0.07, () => this.spawnEnemy(list[i], null, room));
+    // 상한을 이미 넘긴 순간(소환 직후 등)에도 음수 자르기로 명단 앞부분이 사라지지 않게 0에서 멈춘다.
+    const initial = Math.max(0, Math.min(list.length, this.maxAlive - this.enemies.filter((e) => e.alive).length));
+    // 원정 무리의 약한 졸개는 명단 전원이 바로 설 수 있을 때만 그 뒤에 세운다(전술 명단 순서·대기열 보존).
+    const followers = room.packs && initial === list.length ? expeditionFollowers(this.stage, room, list.length) : [];
+    // 예약된 생성이 남은 동안에는 먼저 선 적을 모두 쓰러뜨려도 방을 정화하지 않는다.
+    room.spawnsDue = (room.spawnsDue || 0) + initial + followers.length;
+    for (let i = 0; i < initial; i++) this.after(0.08 + i * 0.07, () => { this.spawnEnemy(list[i], null, room); this.settleRoomSpawn(room); });
+    followers.forEach((t, i) => this.after(0.12 + (initial + i) * 0.07, () => { this.spawnFollower(t, room); this.settleRoomSpawn(room); }));
     for (const t of list.slice(initial)) this.pending.push({ t, room });   // 덮어쓰면 이전 방 잔여가 증발해 그 방이 영영 안 닫힌다
     room.pendingCount = list.length;
     if (!isBoss && !this.stage.expedition) this.callReinforcements(room);
+  }
+  /** 예약 생성 하나가 끝났다. 생성이 취소돼 처치 이벤트가 없더라도 남은 적이 없으면 방을 닫는다. */
+  settleRoomSpawn(room) {
+    room.spawnsDue = Math.max(0, (room.spawnsDue || 0) - 1);
+    if (!this.active || room.cleared || room.spawnsDue > 0) return;
+    if (!this.enemies.some(e => e.alive && e.homeRoom === room) && !this.pending.some(n => n.room === room)) this.markCleared(room);
+  }
+  /** 무리 졸개(expedition-combat.js PACK_FOLLOWER 계약). 상한이 차 있으면 세우지 않는다(대기열 없음). */
+  spawnFollower(type, room) {
+    if (!this.active || room.cleared || !room.packs?.length) return null;
+    let alive = 0; for (const e of this.enemies) if (e.alive) alive++;
+    if (alive >= this.maxAlive) return null;
+    const pack = this.roomPackFor(room); packSlot(this.world, pack, _slot);
+    let e;
+    this._spawningFollower = true;
+    try { e = this.spawnEnemy(type, null, room, new THREE.Vector3(_slot.x, 0, _slot.z)); } finally { this._spawningFollower = false; }
+    if (!e) return null;
+    e.packFollower = true; e.summoned = true; e.xpReward = 0;
+    joinPack(e, pack);
+    return e;
   }
   markCleared(room) {
     if (room.cleared) return;
@@ -387,8 +423,12 @@ export class Battle {
       // 보물방은 클리어 시 장비 상자
       if (fieldDropsAllowed(this.stage) && room.type === ROOM_TYPE.TREASURE) {
         this.treasureRooms++;
-        for (let i = 0; i < 3; i++) { const inst = this.rollDrop('elite'); if (inst) this.drops.spawn(new THREE.Vector3(room.x, 0.6, room.z), 'item', inst, { count: 1, spread: 1.6 }); }
-        this.drops.spawn(new THREE.Vector3(room.x, 0.6, room.z), 'stone', 8, { count: 3, spread: 2 });
+        // 보상은 정화 순간에 굴려 상자에 담는다(난수 순서 유지). 플레이어가 상자를 길게 눌러 열면 쏟아진다.
+        const rewards = [];
+        for (let i = 0; i < 3; i++) { const inst = this.rollDrop('elite'); if (inst) rewards.push({ kind: 'item', payload: inst, count: 1, spread: 1.6 }); }
+        rewards.push({ kind: 'stone', payload: 8, count: 3, spread: 2 });
+        if (this.treasureChests) this.treasureChests.add(room, rewards, this.arena.chestPoses?.get(room.id));
+        else for (const r of rewards) this.drops.spawn(new THREE.Vector3(room.x, 0.6, room.z), r.kind, r.payload, { count: r.count, spread: r.spread });
       }
     }
     this.ui.setObjective(this.world); this.ui.setFloorLabel(this.stage.idx, this.world);
@@ -451,7 +491,7 @@ export class Battle {
     this.scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); this.portal = null;
   }
 
-  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
+  stop() { this._startGeneration = (this._startGeneration || 0) + 1; this.renderer.playerSilhouette?.clearActor(); this.renderer.battleMinimumAspect = 0; this.routeObjectives?.stop(); this.routeObjectives = null; this.mapTactics?.stop(); this.mapTactics = null; this.treasureChests?.dispose(); this.treasureChests = null; this.hazards?.dispose(); this.hazards = null; this.active = false; this.app.companionAgent?.endBattle(); this.clearPortal(); this.input.enabled = false; this.input.clear(); this.ui.showHud(false); for (const e of this.enemies) e.dispose(); this.enemies.length = 0; for (const p of this.projectiles) releaseProjectileVisual(p.mesh); this.projectiles.length = 0; this.player?.dispose(); this.player = null; this.fx.clearAll(); this.drops.clear(); this.timers.length = 0; this.pending.length = 0; this.sp?.clear(); this.renderer.desat = 0; this.world = null; this.conquest = null; }
 
   spawnEnemy(type, near = null, room = null, at = null) {
     const runtimeType = !this.stage.expedition && type === this.stage.encounter?.enemyId && this.stage.dungeonBossId ? this.stage.dungeonBossId : type;
@@ -461,27 +501,52 @@ export class Battle {
       def = this.conquest.enemyDefinition(type, def, rm);
       const pattern = def.boss && this.conquest.bossPattern(); if (pattern) def = { ...def, pattern };
     }
-    let pos;
+    if (this._spawningFollower) def = packFollowerDef(def);
+    let pos, pack = null, rushing = false;
     if (at) { const [x, z] = this.world ? this.world.resolve(rm.x, rm.z, at.x, at.z, 0.6) : [at.x, at.z]; pos = new THREE.Vector3(x, 0, z); }
-    else if (near) { const a = Math.random() * Math.PI * 2; pos = near.clone().add(new THREE.Vector3(Math.cos(a) * 3, 0, Math.sin(a) * 3)); }
+    else if (near) {
+      const a = Math.random() * Math.PI * 2; pos = near.clone().add(new THREE.Vector3(Math.cos(a) * 3, 0, Math.sin(a) * 3));
+      // 소환 자리가 벽 속이면 소환자 쪽으로 미끄러뜨린다(벽에 박힌 소환수가 방 정화를 막았다).
+      if (this.world) { const [x, z] = this.world.resolve(near.x, near.z, pos.x, pos.z, 0.6); pos.x = x; pos.z = z; }
+    }
     else if (this.world && rm) {
-      let best = null;
-      for (let k = 0; k < 12; k++) {
-        const [x, z] = this.world.randomIn(rm, def.boss ? 4 : 2.2);
-        const d = this.player ? Math.hypot(x - this.player.pos.x, z - this.player.pos.z) : 99;
-        if (!best || d > best.d) best = { x, z, d };
-        if (d > (def.boss ? 7 : 5)) break;
+      pack = !def.boss && rm.packs?.length && rm.packAssigned < rm.packQuota ? this.roomPackFor(rm) : null;
+      if (pack) { rm.packAssigned++; packSlot(this.world, pack, _slot); pos = new THREE.Vector3(_slot.x, 0, _slot.z); }
+      else if (!def.boss && rm.packs?.length) {
+        // 명단 뒤의 증원 물결은 한 앵커에서 무리로 들어와 바로 교전한다(흩어진 한 마리씩 대신).
+        pack = this.roomPackFor(rm); packSlot(this.world, pack, _slot); pos = new THREE.Vector3(_slot.x, 0, _slot.z); rushing = true;
       }
-      pos = new THREE.Vector3(best.x, 0, best.z);
+      else {
+        let best = null;
+        for (let k = 0; k < 12; k++) {
+          const [x, z] = this.world.randomIn(rm, def.boss ? 4 : 2.2);
+          const d = this.player ? Math.hypot(x - this.player.pos.x, z - this.player.pos.z) : 99;
+          if (!best || d > best.d) best = { x, z, d };
+          if (d > (def.boss ? 7 : 5)) break;
+        }
+        pos = new THREE.Vector3(best.x, 0, best.z);
+      }
     } else { const a = Math.random() * Math.PI * 2, r = 11; pos = new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r); }
     const e = new Enemy(this, gltf, this.weaponsGltf, def, this.stage.scale, pos);
     e.homeRoom = rm;
+    if (pack) { joinPack(e, pack); if (rushing) alertPack(this, pack, e); }
     e.runtimeSpeciesId = runtimeType;
-    this.conquest?.spawn(e, runtimeType, rm);
-    this.routeObjectives?.spawn(rm);
+    // 무리 졸개는 전술·경로 목표의 명단 영수증에 넣지 않는다(카탈로그 명단 수 보존).
+    if (!this._spawningFollower) { this.conquest?.spawn(e, runtimeType, rm); this.routeObjectives?.spawn(rm); }
     this.enemies.push(e);
     if (def.boss) { this.boss = e; this.ui.showBoss(def.name, true, def.portrait); this.app.companionAgent?.observe('boss-spotted', { name: def.name, id: `${this.stage.idx}:${def.name}` }); }
     return e;
+  }
+  /** 방 명단의 다음 무리. 순서대로 돌리되 플레이어가 서 있는 앵커(6m 안)에는 새 병력을 세우지 않는다. */
+  roomPackFor(room) {
+    const packs = room.packs, p = this.player?.pos;
+    const cursor = room.packCursor || 0; room.packCursor = cursor + 1;
+    let pack = packs[cursor % packs.length];
+    if (p && Math.hypot(pack.x - p.x, pack.z - p.z) < 6) {
+      let far = -1;
+      for (const other of packs) { const d = Math.hypot(other.x - p.x, other.z - p.z); if (d > far) { far = d; pack = other; } }
+    }
+    return pack;
   }
   summonMinions(boss, n) {
     if (this.stage?.expedition?.kind === 'arena') return;
@@ -513,11 +578,11 @@ export class Battle {
     this.kills++; this.waveKilled++; this.killStreak++; this.killStreakT = 3.4;
     const streakTier = this.killStreak >= 20 ? '전장의 지배자' : this.killStreak >= 10 ? '광란' : '사냥 본능';
     this.ui?.setKillStreak?.(this.killStreak, streakTier);
-    if ([5, 10, 20, 30].includes(this.killStreak)) this.ui.toast(`${this.killStreak}연속 처치 · ${streakTier}`, this.killStreak >= 20 ? 'red' : 'gold', { urgent: false });
+    // 단계 알림은 콤보 옆 연속 처치 알약이 직접 빛나며 보여 준다. 전투 중앙에 알림을 띄우지 않는다.
     this.player.addUlt(ultKillGain(e)); this.player.addMp?.(2);
     if (this.sp) this.sp.onKill(e);
     if (this.hasProc('blood_leech') && this.player.alive) { const heal = Math.floor(this.player.maxHp * 0.03); this.player.hp = Math.min(this.player.maxHp, this.player.hp + heal); this.fx.embers(this.player.pos, 0xff3a5a, { n: 4, radius: 0.6, life: 0.6, rise: 2 }); if (this.fx.dmgLayer.children.length < 20) this.fx.damage(this.player.pos, heal, { kind: 'heal', text: '+' + heal }); }
-    if (!this.stage.party) this.app.eco.s.quests.kills++;
+    if (!this.stage.party && !e.packFollower) this.app.eco.s.quests.kills++;
     this.drops.onKill(e, this.stage);
     const big = e.isBoss || e.isElite;
     this.fx.burst(e.pos.clone().setY(1), 0xe0e0ff, { n: big ? 40 : 12, speed: 8, size: 0.4, up: 1 });
@@ -545,7 +610,7 @@ export class Battle {
     // 이 방 소속 적이 전멸하면 방 클리어
     const rm = e.homeRoom;
     if (rm && !rm.cleared) {
-      const left = this.enemies.some((x) => x.alive && x.homeRoom === rm) || this.pending.some((n) => n.room === rm);
+      const left = this.enemies.some((x) => x.alive && x.homeRoom === rm) || this.pending.some((n) => n.room === rm) || rm.spawnsDue > 0;
       if (!left) this.markCleared(rm);
     }
   }
@@ -583,6 +648,7 @@ export class Battle {
     this.player.play('Cheer', { fade: 0.2 }); audio.playMusic(null); audio.play('jingle_win0', { vol: 0.9 }); this.ui.showBoss('', false); this.after(1.2, () => audio.voice(heroVoiceName(this.heroId, 'win'))); this.after(3.8, () => audio.voice('floor_clear'));
     this.fx.burst(this.player.pos.clone().setY(1), 0xffd060, { n: 60, speed: 9, size: 0.5, up: 1.5, grav: 6, life: 1.2 }); this.fx.embers(this.player.pos, 0xffe080, { n: 40, radius: 2, life: 2, rise: 3 });
     // 남은 드랍 자동 수거
+    this.treasureChests?.openAll();
     this.player.magnetMul = 99;
     const explored = this.world ? this.world.rooms.filter((r) => r.cleared).length / this.world.rooms.length : 1;
     const hpRatio = this.player.hp / this.player.maxHp;
@@ -597,16 +663,21 @@ export class Battle {
   // ---------------- 히트 판정 ----------------
   hitArea(src, pos, yaw, range, arcDeg, dmg, opts = {}) {
     const half = THREE.MathUtils.degToRad(arcDeg) / 2; let n = 0;
-    const reachPad = opts.precision ? 0.35 : 1.5;
+    const reachPad = opts.basic ? 1.5 : opts.precision ? .35 : 1.5;
     const r2 = (range + reachPad) * (range + reachPad);
     for (const e of this.enemies) {
       if (!e.alive || e.spawning) continue;
       const dx = e.pos.x - pos.x, dz = e.pos.z - pos.z;
       if (dx * dx + dz * dz > r2) continue;
-      const d = Math.hypot(dx, dz) - e.radius * (opts.precision ? 0.35 : 0.6);
+      const distance = Math.hypot(dx, dz);
+      const d = distance - e.radius * (opts.basic ? 1 : opts.precision ? .35 : .6);
       if (d > range) continue;
       const ang = Math.atan2(dx, dz); let diff = Math.abs(ang - yaw); diff = Math.min(diff, Math.PI * 2 - diff);
-      if (diff > half && (opts.precision || d > 0.9)) continue;
+      // 평타는 적 몸이 칼날 부채꼴에 걸리면 명중한다. 중심점만 검사하면 시각적으로 겹쳐도 빗나갔다.
+      // 수동(정밀)은 몸 절반까지만 허용해 옆에 선 적을 앞 타격이 함께 베지 않게 한다(방향 선택 계약).
+      const bodyArc = opts.basic ? Math.asin(Math.min(1, e.radius * (opts.precision ? .5 : 1) / Math.max(e.radius, distance))) : 0;
+      if (diff > half + bodyArc && (opts.precision || d > .9)) continue;
+      if (opts.basic && !clearShot(this.world, pos.x, pos.z, e.pos.x, e.pos.z, e.radius)) continue;
       this.damageEnemy(e, dmg, { ...opts, dirx: dx, dirz: dz }); n++;
       if (n >= 24) break;
     }
@@ -661,15 +732,14 @@ export class Battle {
     const color = opts.kind === 'magic' ? 0xa0e0ff : crit ? 0xffd040 : 0xfff0d0;
     const contact = this.paused ? null : contactProfile(opts, crit, e.isBoss, this.app?.reducedMotion?.matches, p.def?.weapon);
     if (contact) e.receiveImpact?.(dirx, dirz, contactFeedback({ finisher: opts.finisher, crit, boss: e.isBoss, elite: e.isElite, reduced: !!this.app?.reducedMotion?.matches }).recoil);
-    if (opts.basic && p === this.player && !p.auto) { this.impactTarget = e; this.impactT = .16; }
+    // 수동 평타가 맞을 때마다 카메라 구도를 대상 쪽으로 당기지 않는다(사용자 시점 유지).
     const budget = contactBudget(this._contactBudget, this.elapsed, contact);
     if (budget) {
       this._contactBudget = budget; this._contactAt = budget.at;
       if (budget.emit) this.fx.flash(hitPos, color, { size: contact.size, life: .10 });
       if (budget.emit && contact.particles) this.fx.directional(hitPos, _v.set(dirx, 0, dirz).normalize(), color, { n: contact.particles, speed: contact.heavy ? 9 : 6 });
-      audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy || crit || !!e.isBoss, finisher: !!opts.finisher, boss: !!e.isBoss });
+      audio.hit(opts.kind || 'slash', { crit, heavy: contact.heavy || crit || !!e.isBoss, finisher: !!opts.finisher, boss: !!e.isBoss, weapon: p.def?.weapon });
       if (contact.stop) this.timeCtl.hitstop(contact.stop);
-      if (contact.tier !== 'light' || crit) { this.renderer?.shake?.(contact.tier === 'finisher' ? 0.5 : 0.2, dirx, dirz); this.renderer?.punch?.(contact.tier === 'finisher' ? 0.5 : 0.18); }
       if (p === this.player && !p.auto && contact.haptic) audio.vibe(contact.haptic);
       if (opts.basic) p.receiveStrikeRecoil?.(opts.finisher ? 1 : crit ? .8 : .55);
     }
@@ -698,7 +768,7 @@ export class Battle {
       let done = p.t >= p.life;
       if (p.hostile) {
         const targets = this.stage?.party ? this.app.party.livingPlayers() : [this.player];
-        for (const pl of targets) if (pl && pl.alive && Math.hypot(pl.pos.x - p.pos.x, pl.pos.z - p.pos.z) < p.radius + 0.6) { pl.hurt(p.dmg, { dirx: p.dir.x, dirz: p.dir.z, kb: p.kb, kind: p.kind }); done = true; this.fx.burst(p.pos, p.color, { n: 12, speed: 5, size: 0.3 }); break; }
+        for (const pl of targets) if (pl && pl.alive && Math.hypot(pl.pos.x - p.pos.x, pl.pos.z - p.pos.z) < p.radius + HOSTILE_PROJECTILE_REACH) { pl.hurt(p.dmg, { dirx: p.dir.x, dirz: p.dir.z, kb: p.kb, kind: p.kind }); done = true; this.fx.burst(p.pos, p.color, { n: 12, speed: 5, size: 0.3 }); break; }
       } else {
         for (const e of this.enemies) {
           if (!e.alive || e.spawning || p.hit.has(e)) continue;
@@ -785,6 +855,7 @@ export class Battle {
     this.routeObjectives?.observePlayer?.(this.player);
     for (let i = this.holes.length - 1; i >= 0; i--) { const h = this.holes[i]; h.t -= dt; this.vacuum(h.pos, 7, 1.1); if (h.t <= 0) this.holes.splice(i, 1); }
     if (this.sp) this.sp.update(dt);
+    this.treasureChests?.update(dt);
     this.drops.update(dt);
     if (this.comboT > 0) { this.comboT -= dt; if (this.comboT <= 0) { this.combo = 0; this.ui.setCombo(0); } }
     if (this.killStreakT > 0) { this.killStreakT -= dt; if (this.killStreakT <= 0) { this.killStreak = 0; this.ui?.setKillStreak?.(0); } }
@@ -819,3 +890,5 @@ export class Battle {
     this.ui.updateHud(this, realDt);
   }
 }
+
+

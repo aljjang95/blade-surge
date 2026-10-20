@@ -273,7 +273,7 @@ export function discoveredMapView(world) {
   }
   return { rooms: known.map(room => ({ id: room.id, x: room.x, z: room.z, w: room.w, h: room.h,
     type: room.type, label: room.label || '', cleared: !!room.cleared, attunementPending: !!room.attunementPending,
-    conquestLabel: room.conquestLabel || '' })), corridors, sealed: !!world.sealed };
+    conquestLabel: room.conquestLabel || '', ...(room.shape === 'disk' ? { shape: 'disk' } : {}) })), corridors, sealed: !!world.sealed };
 }
 
 export function discoveredPoint(view, x, z) {

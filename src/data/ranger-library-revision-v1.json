@@ -1,0 +1,57 @@
+{
+  "id": "ranger-library-v1",
+  "useInGame": true,
+  "status": "GENERATED",
+  "asset": "hero_ranger_t1",
+  "reason": "Mixamo 액션을 리타깃 없이 복사해 왼팔이 솟고 활이 클립마다 튀던 문제를 Blender IK 재저작으로 교정",
+  "source": {
+    "path": "asset-library/normalized/hero_ranger_t1.glb",
+    "sha256": "2c88389c285019a4b2b0e948736f6f01b1a1a173f28b2dcac054981b45e99b23"
+  },
+  "output": {
+    "path": "/models/heroes-next/ranger-library-t1-v1.glb",
+    "sha256": "5bbc7e7bce7f496b765350895e26c99cf22b106e8f5d1ae8c2a4211842af7f2b"
+  },
+  "sockets": {
+    "bowGrip": "RangerBowGrip_L",
+    "drawNock": "RangerDrawNock_R"
+  },
+  "bow": {
+    "nock": [
+      0.177,
+      0,
+      0
+    ],
+    "tips": [
+      [
+        0.014,
+        0,
+        1.1
+      ],
+      [
+        0.014,
+        0,
+        -1.1
+      ]
+    ],
+    "releasePhase": 0.42
+  },
+  "clips": {
+    "bow_shoot": 1,
+    "cast_shoot": 2.2917,
+    "cheer": 8.5,
+    "death": 3.875,
+    "dodge": 0.5,
+    "Dodge_Backward": 0.5,
+    "hit": 0.9583,
+    "idle": 9.9167,
+    "interact": 3.4167,
+    "run": 0.6667
+  },
+  "tool": {
+    "blender": "4.3.2",
+    "author": "art-src/ranger/author_ranger_library_v1.py",
+    "packer": "tools/art/pack-ranger-library.mjs"
+  },
+  "license": "owner-generated (Tripo subscription) mesh unchanged; arm/bow clips re-authored in Blender from the same skeleton"
+}

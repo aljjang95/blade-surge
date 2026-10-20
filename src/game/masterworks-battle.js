@@ -1,6 +1,7 @@
 import { Battle as RpgBattle } from './rpg-battle.js';
 import { MasterworksService } from './masterworks-service.js';
 import { MasterworksView } from '../ui/masterworks.js';
+import { TargetTag } from '../ui/target-tag.js';
 import { BOONS, STORY_EVENTS } from '../data/masterworks.js';
 import { boonChoices, boonEffects, masteryEffects, difficultyEffects, recordProgress, recordDiscovery, grantRenown, resolveStory } from './masterworks-core.js';
 import { applyBuildStats, postureHit, tickPosture } from './masterworks-combat.js';
@@ -15,6 +16,8 @@ export class Battle extends RpgBattle {
     super(app);
     this.masterworks = new MasterworksService(app); app.masterworks = this.masterworks;
     this.chronicle = new MasterworksView(app, this);
+    // 대상 적 이름·HP·균형은 화면 위쪽 줄 대신 적 머리 위 표식으로 보인다.
+    this.targetTag = typeof document !== 'undefined' ? new TargetTag() : null;
     app.eco.onChange(() => this.chronicle.refresh());
   }
   async start(...args) {
@@ -178,7 +181,8 @@ export class Battle extends RpgBattle {
     }
     this.player.chronicleShield=Math.round(this.player.maxHp*Math.min(.25,this.effects.shield||0));
     // Wait for the clearing blow to finish; the native pause owner freezes the same simulation.
-    if(checkpoint&&boon.ok)this.after(.45,()=>{ if(this.active&&this.player.alive&&this.currentOffer())this.chronicle.offer(); });
+    // AUTO 중에는 선택 창을 열지 않는다. update 의 resolveAutoOffers 가 기본 선택으로 이어 간다(AUTO 끝까지 클리어).
+    if(checkpoint&&boon.ok)this.after(.45,()=>{ if(this.active&&this.player.alive&&!this.player.auto&&this.currentOffer())this.chronicle.offer(); });
   }
   onPerfectDodge(p) {
     super.onPerfectDodge(p);
@@ -251,6 +255,7 @@ export class Battle extends RpgBattle {
   }
   update(realDt) {
     this.observeRunControl(realDt);
+    this.resolveAutoOffers();
     const before=this.elapsed; super.update(realDt);
     const dt=Math.max(0,this.elapsed-before);
     if(dt>0&&this.active&&this.run?.enabled) {
@@ -263,5 +268,22 @@ export class Battle extends RpgBattle {
       }
     }
     this.chronicle?.tick(realDt);
+    this.targetTag?.update(this, this.renderer, realDt, this.app?.mode);
+  }
+  /** AUTO 전투에서 남은 각인·만남 선택을 기본값으로 처리한다. 각인은 기존 8초 자동 적용과 같은 첫 선택지,
+   *  만남은 예전에 고른 선택(없으면 첫 선택지). 전투가 멈춘 동안(직접 연 선택 창·일시정지)은 사용자의 선택을 기다린다. */
+  resolveAutoOffers() {
+    if(!this.active||this.paused||!this.run?.enabled||this.player?.auto!==true||!this.player.alive)return;
+    const offer=this.currentOffer();if(!offer||offer.autoHold)return;
+    if(offer.kind==='boon') {
+      const result=this.applyBoonOffer(offer,offer.ids[0],{automatic:true});
+      if(result.ok)this.chronicle?.selectionDone?.();else this.run.queue.shift();
+    } else if(offer.kind==='story') {
+      const event=STORY_EVENTS.find(e=>e.id===offer.id);
+      const choice=event?.choices.find(c=>c.id===this.masterworks?.s?.story?.[event.id])||event?.choices[0];
+      if(!choice){this.run.queue.shift();return;}
+      // 저장 실패 등으로 확정하지 못하면 만남을 버리지 않고 남겨 두어 각인 버튼에서 직접 다시 고를 수 있게 한다.
+      if(!this.selectStory(choice.id).ok){offer.autoHold=true;this.ui?.toast?.('길 위의 만남을 기록하지 못했습니다 · 각인 버튼에서 다시 선택','red');}
+    } else this.run.queue.shift();
   }
 }

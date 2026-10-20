@@ -1,9 +1,12 @@
 // 영웅 정의 — 모델(KayKit Adventurers, CC0), 애니메이션, 스킬, 기본 스탯
+import { heroGrade } from './hero-grades.js';
+import { gradeRules } from './hero-grades.js';
 export const RARITY = {
   N:   { name: 'N',   color: '#9aa3b2', mult: 1.0 },
   R:   { name: 'R',   color: '#4cc3ff', mult: 1.2 },
   SR:  { name: 'SR',  color: '#b26bff', mult: 1.5 },
   SSR: { name: 'SSR', color: '#ffcf5a', mult: 2.0 },
+  SSSR: { name: 'SSSR', color: '#ff5a8a', mult: 2.6 },
 };
 
 export const HEROES = {
@@ -110,9 +113,10 @@ export const HEROES = {
     ],
   },
   // A distinct free adventurer; the Rogue's ranger job remains unchanged.
+  // 초상: 현행 3D 실바(교정본 ranger-library-v2)를 게임 로더로 렌더한 것(tools/art/ranger-portrait-studio.js). 옛 KayKit 남성 초상은 정체성이 달라 쓰지 않는다.
   ranger: {
   id: 'ranger', name: '바람추적자 실바', title: '숲의 명사수', rarity: 'SR', model: 'Ranger',
-  portrait: '/img/ranger-portrait.webp', voiceId: 'ranger', weapon: 'bow', ranged: true, jobId: 'ranger',
+  portrait: '/img/tll/ranger-render-v2.webp', voiceId: 'ranger', weapon: 'bow', ranged: true, jobId: 'ranger',
   color: '#7feac0', accent: '#d4ffdb', show: ['Bow'],
   base: { hp: 1120, atk: 145, def: 24, crit: .25, critDmg: 1.8, spd: 6.6 },
   combo: [
@@ -145,7 +149,8 @@ export const skillUpGold = (lv) => Math.floor(500 * Math.pow(1.4, lv - 1));
 
 export function heroStats(def, state, equipBonus = { atk: 0, hp: 0, crit: 0, def: 0 }) {
   const lv = state?.level || 1, star = state?.star || 1;
-  const rm = RARITY[def.rarity].mult;
+  // 초월로 오른 현재 등급이 배율을 정한다(시작 등급은 def.rarity).
+  const rm = RARITY[heroGrade(def, state)].mult;
   const lvm = 1 + (lv - 1) * 0.08;
   const stm = 1 + (star - 1) * 0.25;
   const eb = equipBonus;
@@ -154,7 +159,10 @@ export function heroStats(def, state, equipBonus = { atk: 0, hp: 0, crit: 0, def
   const defv = Math.floor(def.base.def * lvm) + (eb.def || 0);
   const crit = Math.min(0.8, def.base.crit + (eb.crit || 0));
   const critDmg = def.base.critDmg + (eb.critDmg || 0);
-  const ultGain = 1 + (eb.ultGain || 0);
+  // 등급(초월)이 스킬 피해·재사용 대기·궁극기 충전을 바꾼다. Player 가 stats.skillMul / cdMul / grade 를 읽는다.
+  const grade = heroGrade(def, state), gr = gradeRules(grade);
+  const ultGain = 1 + (eb.ultGain || 0) + gr.ultGain;
+  const skillMul = gr.skillMul, cdMul = gr.cdMul;
   const power = Math.floor(atk * 6 + hp * 0.5 + defv * 4 + crit * 1000 + (critDmg - 1.5) * 500);
-  return { hp, atk, def: defv, crit, critDmg, ultGain, spd: def.base.spd, power };
+  return { hp, atk, def: defv, crit, critDmg, ultGain, spd: def.base.spd, power, grade, skillMul, cdMul };
 }

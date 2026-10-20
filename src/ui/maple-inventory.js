@@ -2,8 +2,9 @@
 import { HEROES } from '../data/heroes.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
 import { CONSUMABLES, MATERIALS } from '../data/expansion.js';
-import { ITEM_BY_ID, ITEM_ICON, RARITY_COLOR, RARITY_INFO, SLOTS, SLOT_NAME, rarityRank } from '../data/items.js';
+import { ITEM_BY_ID, RARITY_COLOR, RARITY_INFO, SLOTS, SLOT_NAME, rarityRank } from '../data/items.js';
 import { resourceArt, uiArt } from './illustrated.js';
+import { itemVisual } from './item-presentation.js';
 
 export const INVENTORY_TABS = Object.freeze([
   { id: 'gear', label: '장비' }, { id: 'use', label: '소비' }, { id: 'etc', label: '기타' }, { id: 'cash', label: '캐시' },
@@ -54,7 +55,9 @@ export function buildInventoryModel(eco, { tab = 'gear', slot = 'all' } = {}) {
       .sort((a, b) => rarityRank(ITEM_BY_ID[b.id].rarity) - rarityRank(ITEM_BY_ID[a.id].rarity) || (b.enh || 0) - (a.enh || 0) || b.uid - a.uid)
       .map((inst) => {
         const it = ITEM_BY_ID[inst.id], owner = owners.get(inst.uid) || null;
-        return { type: 'gear', key: 'g' + inst.uid, uid: inst.uid, itemId: it.id, name: it.name, icon: ITEM_ICON(it), fallbackIcon: ITEM_ICON({ slot: it.slot, rarity: it.rarity }), rarity: it.rarity, rarityName: RARITY_INFO[it.rarity]?.name || '', color: RARITY_COLOR[it.rarity] || '#9aa3b2', slot: it.slot, slotName: SLOT_NAME[it.slot], enh: inst.enh || 0, owner, ownerName: owner ? HEROES[owner]?.name || '' : '' };
+        // 칸을 누르면 착용자(없으면 출전 영웅) 문맥 시트가 열린다. 칸 그림도 같은 영웅의 형태로 그린다.
+        const visual = itemVisual(it, { heroId: owner || eco.s?.selected });
+        return { type: 'gear', key: 'g' + inst.uid, uid: inst.uid, itemId: it.id, name: it.name, icon: visual.iconUrl, fallbackIcon: visual.fallbackUrl, visual: visual.renderSet, rarity: it.rarity, rarityName: RARITY_INFO[it.rarity]?.name || '', color: RARITY_COLOR[it.rarity] || '#9aa3b2', slot: it.slot, slotName: SLOT_NAME[it.slot], enh: inst.enh || 0, owner, ownerName: owner ? HEROES[owner]?.name || '' : '' };
       });
   } else if (safeTab === 'use') {
     cells = [...USE_STACKS, ...EXPEDITION_USE].map((def) => ({ def, qty: amount(state, def) })).filter((row) => row.qty > 0)

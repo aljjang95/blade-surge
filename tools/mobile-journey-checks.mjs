@@ -28,10 +28,11 @@ export async function runMobileJourneyChecks({ page, device, nativeCall, shortTo
   });
   await step('Menu sections reachable in portrait and short landscape', async row => {
     row.layouts = [];
-    await shortTouch('#citadel-dungeon-journey');
+    await shortTouch('#citadel-other-dungeons');
     for (const viewport of [{ width: 844, height: 300 }, { width: 667, height: 280 }, { width: 844, height: 390 }, { width: 932, height: 430 }, { width: 390, height: 844 }, { width: 320, height: 568 }]) {
       await resize(viewport);
-      for (const tab of ['arena', 'forge', 'jobs', 'quests', 'dungeons']) {
+      // 결투장은 기본 솔로 로비에서 숨김 보관한다(던전 우선 로비). 나머지 원정 화면 구역만 검사한다.
+      for (const tab of ['forge', 'jobs', 'quests', 'dungeons']) {
         await shortTouch(`.adventure-nav [data-section="${tab}"]`);
         await page.waitForFunction(tab => app.expeditionUI.initialTab === tab && document.querySelector('.exp-shell'), tab);
         const layout = await page.evaluate(() => {
@@ -149,7 +150,7 @@ export async function runMobileJourneyChecks({ page, device, nativeCall, shortTo
     const reloaded = await state();
     for (const key of ['gold', 'inventory', 'level', 'autoBattle']) assert(reloaded[key] === row.progress[key], `Reload lost ${key}`);
     assert(reloaded.expedition.stats.glass_garden === 1 && reloaded.expedition.claimed.includes('garden_scout'), 'Reload lost receipt');
-    await shortTouch('#citadel-dungeon-journey');
+    await shortTouch('#citadel-other-dungeons');
     assert(await page.locator('[data-journey-node="glass_garden"]').getAttribute('data-state') === 'cleared', 'Map lost completed marker');
     assert(await page.locator('[data-journey-node="ember_vault"]').getAttribute('aria-current') === 'step', 'Map lost next target');
     await screenshot('restored-dungeon-journey');

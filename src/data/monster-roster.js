@@ -54,6 +54,11 @@ export const MONSTER_ROSTER = Object.freeze({
   Flying_AbyssRegent: { asset: 'ember_drake', fallback: 'demon_lord', scale: 1.04 },
   Skeleton_HollowRegent: { asset: 'treant', fallback: 'goblin_chief', scale: 0.92 },
   Skeleton_OathRemnant: { asset: 'goblin_chief', fallback: 'goblin_brute', scale: 1.03 },
+  // ---- 컨셉 던전 전용 보스(2026-10-17): 다른 던전·심층·캠페인 최종 보스가 쓰지 않는 기존 자산 ----
+  // 빙하 수문의 거신: 얼음 결정 골렘(Glaciertitan). 표시 키 2.4m × 0.72 × 보스 배율 2.5 ≈ 4.3m.
+  Big_TidegateTitan: { asset: 'frost_golem', fallback: 'frost_yeti', scale: 0.72 },
+  // 도르래 거수: 가시 갑옷 병사 몸체에 황동 색조. 2.3m × 0.9 × 2.45 ≈ 5.1m.
+  Big_PulleyColossus: { asset: 'shadow_soldier', fallback: 'goblin_brute', scale: 0.9 },
 });
 
 /** 동행(해골 술사)도 무료 KayKit 대신 라이브러리 해골 마법사를 쓴다. */
@@ -62,4 +67,3 @@ export const COMPANION_ASSET = 'skeleton_mage';
 export function monsterRosterEntry(model) {
   return Object.hasOwn(MONSTER_ROSTER, model) ? MONSTER_ROSTER[model] : null;
 }
-

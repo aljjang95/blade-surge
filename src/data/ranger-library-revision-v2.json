@@ -1,0 +1,63 @@
+{
+  "id": "ranger-library-v2",
+  "useInGame": true,
+  "status": "GENERATED",
+  "asset": "hero_ranger_t1",
+  "reason": "Mixamo 쿼터니언을 롤이 다른 Tripo 리그에 복사해 몸통·다리가 옆으로 꺾이고(무릎 옆꺾임·상체 측경사) 골반 수직 이동이 평탄화되어 구르기·사망이 공중에 떠 있던 문제를, Blender 전신 rest 축 리타깃·실제 스킨 접지·활 사격/백스텝 재저작으로 교정",
+  "supersedes": "ranger-library-v1",
+  "source": {
+    "path": "asset-library/normalized/hero_ranger_t1.glb",
+    "sha256": "2c88389c285019a4b2b0e948736f6f01b1a1a173f28b2dcac054981b45e99b23"
+  },
+  "axisReference": {
+    "path": "asset-library/normalized/hero_knight_t1.glb",
+    "role": "Mixamo 관례 본 축(읽기 전용)"
+  },
+  "output": {
+    "path": "/models/heroes-next/ranger-library-t1-v2.glb",
+    "sha256": "7c694b6cdf7987897f042602842328fe94f2f0ffd5ebfd66ede105ae79ad4884"
+  },
+  "sockets": {
+    "bowGrip": "RangerBowGrip_L",
+    "drawNock": "RangerDrawNock_R"
+  },
+  "bow": {
+    "nock": [
+      0.177,
+      0,
+      0
+    ],
+    "tips": [
+      [
+        0.014,
+        0,
+        1.1
+      ],
+      [
+        0.014,
+        0,
+        -1.1
+      ]
+    ],
+    "releasePhase": 0.42
+  },
+  "clips": {
+    "bow_shoot": 1,
+    "bow_shoot_rapid": 1,
+    "cast_shoot": 2.2917,
+    "cheer": 8.5,
+    "death": 1.25,
+    "Dodge_Backward": 0.5,
+    "hit": 0.5,
+    "idle": 9.9167,
+    "interact": 3.4167,
+    "run": 0.6667,
+    "dodge": 0.5
+  },
+  "tool": {
+    "blender": "4.3.2",
+    "author": "art-src/ranger/author_ranger_library_v2.py",
+    "packer": "tools/art/pack-ranger-library.mjs"
+  },
+  "license": "owner-generated (Tripo subscription) mesh unchanged; Mixamo body clips retargeted to the same skeleton; bow/backstep clips authored in Blender from the same skeleton"
+}

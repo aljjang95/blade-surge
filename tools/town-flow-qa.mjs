@@ -205,7 +205,7 @@ try {
     && lock.text?.includes('레벨 ' + TOWNS[1].requiredLevel + ' 필요 (현재 ' + lock.level + ')'), { progress: lock.progress, text: lock.text, cleared, level: lock.level });
   await closeTown();
   await page.locator('#citadel-command-return').click();
-  await page.locator('[data-command-route="glass_garden"]').click();
+  await page.locator('#citadel-dungeon-prepare').click(); // 던전 우선 로비의 추천 던전(새 프로필은 유리 정원) 출격 준비
   await page.locator('.citadel-hub-dialog[open]').waitFor();
   report.expedition = { before: await state(), chunks: [] };
   await page.locator('.citadel-hub-go').click();

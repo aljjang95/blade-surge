@@ -47,6 +47,8 @@ export function hazardPattern(theme, room, player, cycle, full = true) {
 export function townHazardPattern(dungeonId, theme, room, player, cycle, full = true) {
   const dungeon = ALL_DUNGEONS.find(entry => entry.id === dungeonId);
   const mechanicId = dungeon?.mechanic?.id;
+  if (mechanicId === 'tidal_surge') return tidalSurgePattern(room, cycle, full);
+  if (mechanicId === 'pulley_drop') return pulleyDropPattern(room, player, cycle, full);
   const base = hazardPattern(theme || dungeon?.theme || 'garden', room, player, cycle, full);
   if (!dungeon?.mechanic) return base;
   if (!mechanicId || !base.length) return base;
@@ -57,6 +59,50 @@ export function townHazardPattern(dungeonId, theme, room, player, cycle, full = 
   if (mechanicId === 'aurora_retrace') return base.map((hazard, index) => ({ ...hazard, delay: 1.8 + (base.length - index - 1) * .35, slow: true }));
   if (mechanicId === 'crown_verdict') return base.map((hazard, index) => ({ ...hazard, safeRadius: Math.max(hazard.safeRadius || 0, 2.8), delay: 1.6 + index * .3 }));
   return base;
+}
+
+// 컨셉 던전 기믹의 첫 경고 문구(지역 규칙 이름 대신).
+export const CONCEPT_HAZARD_TOASTS = Object.freeze({
+  glacier_tide_basin: '조수 범람 · 반대편 난간이나 다른 다리로',
+  sunbrass_quarry: '도르래 낙석 · 원형 예고 밖으로',
+});
+// 바닥색과 대비되는 예고색(회색 석재 위 밝은 청록 / 모래빛 채석 바닥 위 진홍).
+export const CONCEPT_HAZARD_COLORS = Object.freeze({ glacier_tide_basin: 0x8ff7ff, sunbrass_quarry: 0xff3355 });
+
+/** 빙하 조수 분지: 긴 다리는 한쪽 절반이 주기마다 번갈아 잠기고, 원형 마당은 바깥 고리부터 물결이 밀려온다. */
+export function tidalSurgePattern(room, cycle, full = true) {
+  const base = { x: room.x, z: room.z, angle: 0, safeRadius: 0, slow: false, push: 6 };
+  if (room.shape === 'disk') {
+    const radius = Math.min(room.w, room.h) / 2;
+    const rings = [{ radius: radius * .97, delay: 1.5 }, { radius: radius * .6, delay: 2.2 }];
+    if (full) rings.push({ radius: radius * .3, delay: 2.9 });
+    return rings.map(ring => ({ ...base, type: 'ring', ...ring }));
+  }
+  const long = room.w >= room.h, length = (long ? room.w : room.h) - 2, short = long ? room.h : room.w;
+  const side = cycle % 2 ? 1 : -1, offset = short / 4;
+  const lane = { ...base, type: 'lane', angle: long ? 0 : Math.PI / 2, length, width: short / 2 - .3, delay: 1.6,
+    x: room.x + (long ? 0 : side * offset), z: room.z + (long ? side * offset : 0) };
+  return full ? [lane, { ...lane, delay: 2.5, x: room.x + (long ? 0 : -side * offset), z: room.z + (long ? -side * offset : 0) }] : [lane];
+}
+
+/** 석양 황동 채석장: 도르래가 원형 마당 둘레를 돌며 상자를 차례로 떨어뜨리고, 무리를 몰던 자리에도 하나 떨어진다. */
+export function pulleyDropPattern(room, player, cycle, full = true) {
+  const base = { angle: 0, safeRadius: 0, slow: false, push: 3, type: 'disk', radius: 2.7 };
+  if (room.shape === 'disk') {
+    const radius = Math.min(room.w, room.h) / 2, n = full ? 5 : 4, ring = radius * .52, start = cycle * .9;
+    const drops = Array.from({ length: n }, (_, i) => {
+      const a = start + i * Math.PI * 2 / n;
+      return { ...base, x: room.x + Math.cos(a) * ring, z: room.z + Math.sin(a) * ring, delay: 1.3 + i * .35 };
+    });
+    const px = player.x - room.x, pz = player.z - room.z, d = Math.hypot(px, pz), limit = radius - 3, k = d > limit ? limit / d : 1;
+    drops.push({ ...base, radius: 2.4, x: room.x + px * k, z: room.z + pz * k, delay: 1.3 + n * .35 });
+    return drops;
+  }
+  const long = room.w >= room.h, length = long ? room.w : room.h, short = long ? room.h : room.w;
+  return [0, 1, 2].map(i => {
+    const along = (i - 1) * length * .28, across = ((i + cycle) % 2 ? 1 : -1) * short * .18;
+    return { ...base, x: room.x + (long ? along : across), z: room.z + (long ? across : along), delay: 1.3 + i * .4 };
+  });
 }
 
 // 여섯 장의 재사용 평면. 중앙 안전 영역과 고리 안쪽은 실제로 비워 둔다.
@@ -99,7 +145,7 @@ export class RegionHazards {
     const frontier = frontierEffectForStage(g.stage);
     const radiusMul = frontier?.kind === 'hazardRadiusMultiplier' ? frontier.value : 1;
     const lead = frontier?.kind === 'telegraphLead' ? frontier.value : 0;
-    const frontierColor = frontier?.kind === 'warningColor' ? frontier.value : this.rule?.color || 0xffffff;
+    const frontierColor = frontier?.kind === 'warningColor' ? frontier.value : CONCEPT_HAZARD_COLORS[g.stage.expedition?.id] || this.rule?.color || 0xffffff;
     for (let i = 0; i < pattern.length; i++) {
       const source = pattern[i], h = { ...source, delay: source.delay + lead };
       if (h.type === 'lane') h.width *= radiusMul;
@@ -115,7 +161,7 @@ export class RegionHazards {
       u.size.value.set(x, z); u.shape.value = h.type === 'disk' ? 0 : h.type === 'ring' ? 1 : 2; u.safeRadius.value = h.safeRadius; u.color.value.setHex(frontierColor);
       u.fired.value = 0; u.opacity.value = .8;
     }
-    if (this.triggered === 1 || room.type === 'boss') g.ui.toast(this.rule.name, 'red');
+    if (this.triggered === 1 || room.type === 'boss') g.ui.toast(CONCEPT_HAZARD_TOASTS[g.stage.expedition?.id] || this.rule.name, 'red');
   }
   getPartyWarnings() {
     return this.slots.flatMap((s, i) => {

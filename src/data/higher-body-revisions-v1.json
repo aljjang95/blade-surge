@@ -1,0 +1,75 @@
+{
+  "schema": "blade-surge.higher-body-revisions.v1",
+  "revisions": [
+    {
+      "id": "ranger-t2-body-fit-v1",
+      "asset": "hero_ranger_t2",
+      "useInGame": true,
+      "status": "GENERATED",
+      "source": {
+        "path": "asset-library/normalized/hero_ranger_t2.glb",
+        "sha256": "e90f6b9c23458d26b47f9718803430c8efbd537740765f472fa48b80c79429db"
+      },
+      "output": {
+        "path": "/models/heroes-next/ranger-t2-body-fit-v1.glb",
+        "sha256": "539963fe3681d219e7ad9408d0aaf366dc2d32a83909fc5c03f465f15cfea915"
+      }
+    },
+    {
+      "id": "ranger-t3-body-fit-v1",
+      "asset": "hero_ranger_t3",
+      "useInGame": true,
+      "status": "GENERATED",
+      "source": {
+        "path": "asset-library/normalized/hero_ranger_t3.glb",
+        "sha256": "41a3a8cd9310ed8620f5a30cab45df1b20a29cb2055f7d35c1c3caaa12d4ad72"
+      },
+      "output": {
+        "path": "/models/heroes-next/ranger-t3-body-fit-v1.glb",
+        "sha256": "3c63985a59460b7268c06e46b4887d743fe604f39e8895987af7a0ff2173c9bf"
+      }
+    },
+    {
+      "id": "rogue-t2-body-fit-v1",
+      "asset": "hero_rogue_t2",
+      "useInGame": true,
+      "status": "GENERATED",
+      "source": {
+        "path": "asset-library/normalized/hero_rogue_t2.glb",
+        "sha256": "73459cf328b31d53a8068ef6ed7e81b5d8a6da515fdb03a14e7e63344e22a48a"
+      },
+      "output": {
+        "path": "/models/heroes-next/rogue-t2-body-fit-v1.glb",
+        "sha256": "bfc139cafb098ae3c707cc3d64c978faa4a2c13614be106c6c013c08e63845ed"
+      }
+    },
+    {
+      "id": "rogue-t3-body-fit-v1",
+      "asset": "hero_rogue_t3",
+      "useInGame": true,
+      "status": "GENERATED",
+      "source": {
+        "path": "asset-library/normalized/hero_rogue_t3.glb",
+        "sha256": "78fad9b7e5386e0d35fc0ea96214c7bc46aa7528771d1aa0c6885c6c69664c08"
+      },
+      "output": {
+        "path": "/models/heroes-next/rogue-t3-body-fit-v1.glb",
+        "sha256": "2a5c0724d7d806283568bd9a3c6bb8a4646145bd91347dc90a602ee36a8d572f"
+      }
+    },
+    {
+      "id": "rogue-crow-body-fit-v1",
+      "asset": "avatar_rogue_crow",
+      "useInGame": true,
+      "status": "GENERATED",
+      "source": {
+        "path": "asset-library/normalized/avatar_rogue_crow.glb",
+        "sha256": "a5d5e919156669f243c93e483543ecc00b21f1a82a3a88efbe6772f0bb5a259b"
+      },
+      "output": {
+        "path": "/models/heroes-next/rogue-crow-body-fit-v1.glb",
+        "sha256": "d6394ad14df1d0cab00183945cb199d02a85ee8d09d6c35e13c9a9aecb3b3f04"
+      }
+    }
+  ]
+}

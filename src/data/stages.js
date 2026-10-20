@@ -4,6 +4,7 @@ import { ENCOUNTER_ART, MOB_ART, RIFT_ART } from './encounter-art.js';
 import { CAMPAIGN_MODELS } from './encounter-models.js';
 import { BOSS_ENCOUNTERS, BOSS_SIGNATURES } from './boss-encounters.js';
 import { MOB_ROLE_ENEMIES } from './mob-roles.js';
+import { recommendedLevel, representativeDrops } from './loot-tables.js';
 
 // 지역별 맹세와 기믹은 모험 화면과 전투가 함께 사용한다.
 export const CHAPTERS = [
@@ -15,6 +16,10 @@ export const CHAPTERS = [
   { id: 6, name: '함께 잇는 귀환로', theme: 'garden', encounterPrefix: 'homecoming', color: '#87cbb0', boss: 'homecoming_finalboss', tagline: '구한 세계를, 함께 살아갈 곳으로.', summary: '왕관이 부서진 다음 날. 다섯 지역에 남은 명령의 잔향을 걷어 내고 사람들의 귀환로를 연결한다.', oath: '돌아오는 누구도 홀로 남겨 두지 않겠다는 약속', mechanic: { name: '귀환의 공명', description: '남겨진 명령이 공명 고리로 번집니다. 경고 띠 밖으로 이동하며 귀환문을 지키세요.' } },
 ];
 export const STAGES_PER_CHAPTER = 10;
+for (const chapter of CHAPTERS) {
+  // 표시용 진행 정보는 열거하지 않는다. 기존 경로·스테이지 JSON 지문과 저장 계약을 바꾸지 않는다.
+  Object.defineProperties(chapter, { recommendedLevel: { value: recommendedLevel(chapter.id) }, representativeDrops: { value: representativeDrops(chapter.id) } });
+}
 const ROSTER = {
   garden: { trash: ['skel_minion', 'skel_rogue', 'ghost', 'bomb_slime', 'skel_shield', 'bone_orc', 'grave_burrower'], ranged: ['skel_mage', 'ghost_skull', 'skel_priest'], elite: ['elite_skel_captain', 'elite_bone_lord', 'elite_wraith'] },
   forge: { trash: ['orc', 'orc_blob', 'tribal', 'cacto_wall', 'bomb_imp', 'imp', 'ash_burrower'], ranged: ['hywirl', 'armabee', 'tribal_shaman'], elite: ['elite_orc_chief', 'elite_bluedemon'] },
@@ -72,7 +77,7 @@ export function stageDef(ch, st) {
   }
   const enemy = ENEMIES[enemyId];
   const dungeonBoss = (dungeonBossId && ENEMIES[dungeonBossId]) || enemy;
-  return {
+  const stage = {
     ch, st, idx, code: `${ch}-${st}`, title: scene.title, chapter, name: `${ch}-${st} · ${scene.title}`,
     dungeon, dungeonBossId, epilogueFinale: ch === 6 && st === 10,
     boss, finale: ch === 5 && st === 10, waves, scale, energy: 6 + Math.floor(idx / 6),
@@ -82,6 +87,7 @@ export function stageDef(ch, st) {
     objective: `${dungeon.name}의 전투 방을 정리해 봉인을 해제하고 ${dungeonBoss.name} 처치`,
     rewards: { gold: Math.floor(400 * scale), exp: Math.floor(110 * scale), bp: 60 + (boss ? 60 : 0), firstGems: rank === 'finalboss' ? 300 : boss ? 150 : 60, dropChance: boss ? 1 : 0.6, stones: 2 + (boss ? 4 : 0) },
   };
+  return Object.defineProperties(stage, { recommendedLevel: { value: recommendedLevel(ch, st) }, representativeDrops: { value: chapter.representativeDrops } });
 }
 
 // scale = 모델 배율(리그 기본 배율에 곱해짐). hp/atk 은 스테이지 scale 로 곱해진다.
@@ -219,6 +225,16 @@ export const ENEMIES = {
     phasePatterns: [['archive_retrace','fan','archive_hourglass','slam'], ['archive_hourglass','archive_retrace','summon','fan'], ['archive_retrace','archive_hourglass','soulrain']],
     phaseHints: ['지나온 길이 역순으로 터집니다.', '바깥 고리 다음은 안쪽 원입니다.', '네 번째 기록과 마지막 공명까지 확인하세요.'],
     tactic: '방금 지나온 세 자리가 역순으로 폭발합니다. 모래시계가 닫히기 전에 바깥 고리로 이동하세요.', projColor: 0x9ed5ff },
+  // ================= 컨셉 던전 전용 보스 (2026-10-17) =================
+  // 전투 수치·판정 크기(scale)·kit는 교체 전 보스(obsidian_hydra / ash_colossus)와 같다. 바뀌는 것은 이름·외형·기술뿐이다.
+  // 외형은 다른 던전·심층·캠페인 최종 보스가 쓰지 않는 기존 라이브러리 자산(frost_golem / shadow_soldier)이며 새 GLB가 아니다.
+  // 전용 초상은 없다(보스 바 초상 숨김). tactic·phaseHints는 아래에서 실제 기술 이름·cue로 채운다.
+  tidegate_titan: { name: '빙하 수문의 거신', model: 'Big_TidegateTitan', hp: 18800, atk: 72, spd: 4.2, range: 3.4, atkTime: 1.55, exp: 300, scale: 2.5, boss: true, armor: 0.27, gold: 62, kit: 'dragon', signatureBoss: true, tint: '#8ff7ff',
+    phasePatterns: [['tidegate_flood','slam','tidegate_ring_gap','fan'], ['tidegate_ring_gap','tidegate_flood','spin','slam'], ['tidegate_flood','tidegate_ring_gap','dash']],
+    projColor: 0x8ff7ff },
+  pulley_colossus: { name: '도르래 거수', model: 'Big_PulleyColossus', hp: 20400, atk: 75, spd: 3.4, range: 3.6, atkTime: 1.6, exp: 320, scale: 2.45, boss: true, armor: 0.29, gold: 66, kit: 'reaper', signatureBoss: true, tint: '#ffb35c',
+    phasePatterns: [['pulley_ore_fall','slam','pulley_chain_line','spin'], ['pulley_chain_line','pulley_ore_fall','fan','slam'], ['pulley_ore_fall','pulley_chain_line','dash']],
+    projColor: 0xffb35c },
 };
 
 // 검수된 기존 리그만 재사용한다. 전용 원화의 3D 모델이 완성됐다는 뜻은 아니다.
@@ -298,6 +314,11 @@ for (const id of new Set(Object.values(DUNGEON_BOSS_BASE))) {
   const def = ENEMIES[id];
   def.tactic = signatureAdvice(def.phasePatterns.flat());
   def.phaseHints = def.phasePatterns.map(signatureAdvice);
+}
+// 컨셉 전용 보스도 같은 규칙으로 실제 기술의 이름·cue만 안내한다(카드·준비·페이즈 알림이 같은 문장을 쓴다).
+for (const id of ['tidegate_titan', 'pulley_colossus']) {
+  const def = ENEMIES[id];
+  Object.assign(def, { pattern: def.phasePatterns[0], tactic: signatureAdvice(def.phasePatterns.flat()), phaseHints: def.phasePatterns.map(signatureAdvice) });
 }
 
 // Keep each authored dungeon's boss silhouette and attack vocabulary distinct.

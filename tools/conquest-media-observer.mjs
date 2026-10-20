@@ -127,7 +127,7 @@ export function classifyMediaCancellations(failures, mediaSnapshots) {
     const events = latest.events;
     const created = events.filter(e => e.kind === 'source-created' && e.src === failure.url && e.at <= end);
     let matches = created.filter(e => Math.abs(e.at-start) <= 250);
-    let anchorKind = 'source-created', anchor = matches[0];
+    let anchorKind = 'source-created', anchor = matches[0], excludedLater = [];
     // AudioNode creation may precede the native resource-loading task. Accept
     // actual initiation proof only when the old match is absent, never ambiguous.
     // Keep the same 250ms bound and every response/closure/playback requirement.
@@ -145,8 +145,18 @@ export function classifyMediaCancellations(failures, mediaSnapshots) {
     if (matches.length === 0 && created.length === 1 && documentBound) {
       // M1: 실패 뒤에 다시 만들어진 같은 곡의 loadstart는 이 요청을 시작할 수 없다.
       const born = created[0], firstPlay = firstPlayOf(born.id);
-      // native 시각을 알 수 없는 loadstart는 관측 시각과 무관하게 창 안에서 시작했을 수 있으므로 경쟁자로 센다.
-      const initiations = sameUrlLoadstarts.filter(event => event.at <= end || inStartWindow(event) || !finite(event.nativeAt));
+      // 누적 스냅샷에는 실패 요청이 끝난 뒤의 같은 URL 재생도 남는다. 실패 요청 수명과
+      // 겹칠 수 없음이 완전히 증명된 이후 인스턴스의 initiation만 모호성 집합에서 뺀다.
+      // 다른 인스턴스, 신뢰된 native 이벤트, 일관된 시계, native/관찰 시각 모두 failedAt
+      // 초과, 해당 인스턴스의 첫 관찰과 source 생성도 failedAt 이후여야 하고, native 시각이
+      // 요청 시작 창 밖이어야 한다. 하나라도 불확실하면 그대로 initiation으로 세어 모호(unresolved)로 남긴다.
+      const laterLifecycle = event => event.id !== born.id && event.isTrusted === true
+        && nativeClockSound(event) && !inStartWindow(event)
+        && end < event.nativeAt && event.nativeAt <= event.at
+        && events.every(other => other.id !== event.id || (finite(other.at) && other.at > end))
+        && events.some(other => other.id === event.id && other.kind === 'source-created' && other.src === failure.url);
+      const later = sameUrlLoadstarts.filter(laterLifecycle);
+      const initiations = sameUrlLoadstarts.filter(event => !later.includes(event));
       const initiation = initiations[0];
       if (initiations.length === 1 && initiation.id === born.id && initiation.isTrusted === true
         && finite(born.at) && nativeClockSound(initiation) && firstPlay
@@ -154,6 +164,7 @@ export function classifyMediaCancellations(failures, mediaSnapshots) {
         && initiation.at <= firstPlay.at && firstPlay.at <= end
         && Math.abs(initiation.nativeAt - start) <= 250) {
         matches = [born]; anchorKind = 'trusted-native-loadstart'; anchor = initiation;
+        excludedLater = later.map(event => ({ id: event.id, nativeLoadstartAt: event.nativeAt, loadstartObservedAt: event.at }));
       }
     } else if (matches.length === 0 && created.length >= 2 && documentBound
       && new Set(created.map(e => e.id)).size === created.length
@@ -210,7 +221,8 @@ export function classifyMediaCancellations(failures, mediaSnapshots) {
         nativeLoadstartAt: anchorKind === 'trusted-native-loadstart' ? anchor.nativeAt : null,
         loadstartObservedAt: anchorKind === 'trusted-native-loadstart' ? anchor.at : null,
         startDeltaMs: (anchorKind === 'trusted-native-loadstart' ? anchor.nativeAt : anchor.at) - start,
-        isTrusted: anchorKind === 'trusted-native-loadstart' ? anchor.isTrusted : null },
+        isTrusted: anchorKind === 'trusted-native-loadstart' ? anchor.isTrusted : null,
+        laterLifecycleInitiationsExcluded: excludedLater },
       stoppedInstances: closures,
       replacement: { id: replacement.id, src: replacement.src, at: replacement.at, currentTime: replacement.currentTime, evidenceKind: replacement.kind },
       observationAt: latest.at, limitation: 'Lifecycle correlation; does not establish browser cancellation cause or audible output.' });

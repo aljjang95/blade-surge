@@ -1,8 +1,8 @@
 import { Plane } from 'three';
-import { BattleOcclusion } from './battle-occlusion.js';
+import { PlaneCutaway } from './battle-occlusion.js';
 
 /** 광장의 두 수관만 영웅과 카메라 사이에서 좁게 잘라 줄기·주변 숲을 보존한다. */
-export class CanopySightline extends BattleOcclusion {
+export class CanopySightline extends PlaneCutaway {
   constructor() {
     super();
     this.planes[1].constant = 2.15;

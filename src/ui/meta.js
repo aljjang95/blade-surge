@@ -1,11 +1,14 @@
 import { $, fmt } from './ui.js';
+import { bindHeroPortrait } from './hero-portraits.js';
+import { SkillTreeView } from './skill-tree.js';
+import { TranscendView } from './transcend.js';
 import { uiArt, resourceArt, RESOURCE_ART } from './illustrated.js';
 import { audio } from '../engine/audio.js';
 import { musicForScene, MUSIC_MIX } from '../data/music.js';
 import { heroVoiceName } from '../engine/hero-voice.js';
-import { HEROES, HERO_ORDER, RARITY, heroStats, levelExp, starShards, skillUpGold } from '../data/heroes.js';
+import { HEROES, HERO_ORDER, RARITY, heroStats, levelExp, starShards } from '../data/heroes.js';
 import { heroProgressionHtml, trainingButtonLabel } from './hero-progression.js';
-import { ITEM_BY_ID, ITEM_ICON, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST, craftable, itemStats, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, enhanceMult, ENH_MAX, RARITY_COLOR , RARITY_INFO, rarityRank, enhanceDown} from '../data/items.js';
+import { ITEM_BY_ID, SLOTS, SLOT_NAME, SETS, THEMED_SETS, CRAFT_COST, craftable, itemStats, enhanceCost, enhanceStones, enhanceStoneTier, STONE_KEY, STONE_NAME, enhanceChance, destroyChance, enhanceMult, ENH_MAX, RARITY_COLOR , RARITY_INFO, rarityRank, enhanceDown} from '../data/items.js';
 import { SKUS, SHOP_TABS, GACHA, BATTLE_PASS, PASS_TRACK, DAILY_REWARDS } from '../data/shop.js';
 import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../data/stages.js';
 import { resolveEnemyPortrait } from '../data/encounter-art.js';
@@ -21,6 +24,7 @@ import { guideHtml } from './guide.js';
 import { availableDifficulties } from '../game/difficulty.js';
 import { AVATARS } from '../data/avatars.js';
 import { libraryAssetForAvatar } from '../engine/library-assets.js';
+import { itemVisual, itemIconHtml } from './item-presentation.js';
 // 공개 확률은 실제 소환 코드와 같은 식(gachaRates/gachaChances)에서만 계산한다. 화면에 숫자를 따로 적지 않는다.
 const pct = (p, d = 1) => (p * 100).toFixed(d) + '%';
 const clampPity = (n) => Math.max(0, Math.min(GACHA.pity, Math.floor(Number(n) || 0)));
@@ -132,7 +136,7 @@ export class Meta {
       this.ui.toast(status === 'unavailable' ? '저장 공간을 사용할 수 없어 현재 진행은 이 창에서만 유지됩니다.' : status === 'recovered' ? '마지막 정상 저장에서 진행을 복구했습니다.' : '저장된 진행을 읽지 못했습니다. 복구용 원본은 보관했습니다.', 'red');
     }
     $('v-gold').textContent = fmt(s.gold); $('v-gem').textContent = fmt(s.gems); $('v-energy').textContent = s.energy; $('v-energy-max').textContent = this.eco.energyMax; $('v-energy-timer').textContent = this.eco.energyTimer();
-    $('top-vip').textContent = s.vip; $('top-lv').textContent = this.eco.hero().level; $('top-avatar').src = HEROES[s.selected].portrait; $('top-name').textContent = s.name;
+    $('top-vip').textContent = s.vip; $('top-lv').textContent = this.eco.hero().level; bindHeroPortrait($('top-avatar'), this.app, s.selected); $('top-name').textContent = s.name;
     $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
     $('dot-pass').classList.toggle('on', this.eco.passClaimable() > 0); $('dot-gacha').classList.toggle('on', s.tickets > 0 || s.ssrTickets > 0); $('dot-shop').classList.toggle('on', !s.purchases.includes('starter'));
     this.refreshMenuBadge();
@@ -247,14 +251,22 @@ export class Meta {
       c.dataset.heroId = id;
       c.setAttribute('aria-label', `${def.name}${own ? ' 출전 선택' : ' 미보유 정보'}`);
       c.setAttribute('aria-pressed', String(this.eco.s.selected === id));
-      c.innerHTML = `<img src="${def.portrait}" onerror="this.style.background='${def.color}'"><span class="rar bg-${def.rarity}">${def.rarity}</span>${own ? `<span class="lv">Lv.${h.level} ${'★'.repeat(h.star)}</span>` : '<span class="lockt">미보유</span>'}`;
+      c.innerHTML = `<img onerror="this.style.background='${def.color}'"><span class="rar bg-${def.rarity}">${def.rarity}</span>${own ? `<span class="lv">Lv.${h.level} ${'★'.repeat(h.star)}</span>` : '<span class="lockt">미보유</span>'}`;
       c.onclick = (event) => { if (own) this.selectHero(id, event.detail === 0 && document.activeElement === c); else { this.heroSel = id; this.renderHeroes(); } };
       list.appendChild(c);
+      bindHeroPortrait(c.querySelector('img'), this.app, id);
     }
     const id = this.heroSel; const def = HEROES[id]; const own = this.eco.ownHero(id); const det = $('hero-detail');
     this.app.wardrobe?.show(id);
     if (!own) { det.innerHTML = `<div class="hs-locked"><h2>${def.name}</h2><div class="sub">${def.title} · ${def.rarity}</div><p style="color:var(--muted);font-size:13px">${def.skills.map((s) => s.name).join(' · ')}</p><button class="btn btn-gold" id="h-summon">소환으로 획득</button></div>`; $('h-summon').onclick = () => this.openTab('gacha'); return; }
     renderOwnedHero(this, id, det);
+    // 성장 진입: 스킬 트리(SP)와 초월(SR→SSR→SSSR). 이름 줄 아래에 작게 둔다.
+    const growthLinks = document.createElement('div'); growthLinks.className = 'hs-growth-links';
+    for (const [label, open] of [['스킬 트리', () => this.openSkillTree(id)], ['초월', () => this.openTranscend(id)]]) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'btn btn-ghost btn-sm'; b.textContent = label;
+      b.setAttribute('aria-label', HEROES[id].name + ' ' + label + ' 열기'); b.onclick = open; growthLinks.append(b);
+    }
+    det.querySelector('.hs-id')?.append(growthLinks);
   }
   setListHtml(heroId) {
     const b = this.eco.heroEquipBonus(heroId); const counts = b.sets || {};
@@ -271,7 +283,7 @@ export class Meta {
   showCraft(heroId) {
     const s = this.eco.s;
     const html = `<h2>세트 제작</h2><p style="font-size:12px;color:var(--muted)">세트 조각 <b style="color:#b26bff">${s.fragments || 0}</b> 보유 · 부위당 ${CRAFT_COST}개 · 테마 세트 ${THEMED_SETS.length}종(아래로 스크롤). 조각은 엘리트·보스가 떨굽니다.</p>
-      <div class="craft-grid">${THEMED_SETS.map((sid) => { const S = SETS[sid]; const col = '#' + S.color.toString(16).padStart(6, '0'); return `<div class="craft-set"><div class="cs-head"><img src="${S.icon}" onerror="this.remove()"><div><div style="font-weight:900;color:${col}">${S.name}</div><div style="font-size:10px;color:var(--muted)">2: ${S.two.text}</div><div style="font-size:10px;color:var(--muted)">4: ${S.four.text}</div></div></div><div class="cs-slots">${SLOTS.map((sl) => { const it = craftable(sid, sl); const own = s.inventory.filter((x) => x.id === it.id).length; return `<div class="equip-slot has rar-SR" data-craft="${sid}:${sl}" title="${it.name}"><img src="${ITEM_ICON(it)}" onerror="this.remove()"><span class="plus">${own ? '×' + own : ''}</span></div>`; }).join('')}</div></div>`; }).join('')}</div>
+      <div class="craft-grid">${THEMED_SETS.map((sid) => { const S = SETS[sid]; const col = '#' + S.color.toString(16).padStart(6, '0'); return `<div class="craft-set"><div class="cs-head"><img src="${S.icon}" onerror="this.remove()"><div><div style="font-weight:900;color:${col}">${S.name}</div><div style="font-size:10px;color:var(--muted)">2: ${S.two.text}</div><div style="font-size:10px;color:var(--muted)">4: ${S.four.text}</div></div></div><div class="cs-slots">${SLOTS.map((sl) => { const it = craftable(sid, sl); const own = s.inventory.filter((x) => x.id === it.id).length; return `<div class="equip-slot has rar-SR" data-craft="${sid}:${sl}" title="${it.name}">${itemIconHtml(ITEM_BY_ID[it.id] || it, '', { heroId: heroId || this.eco.s.selected })}<span class="plus">${own ? '×' + own : ''}</span></div>`; }).join('')}</div></div>`; }).join('')}</div>
       <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`;
     this.ui.modal(html, { onOpen: (b) => {
       b.querySelector('#m-cancel').onclick = () => { this.ui.closeModal(); this.renderHeroes(); };
@@ -284,12 +296,19 @@ export class Meta {
       });
     } });
   }
-  showSkill(id, i) {
-    const def = HEROES[id]; const sk = def.skills[i]; const h = this.eco.hero(id); const lv = h.skills[i]; const cost = skillUpGold(lv);
-    const locked = !!(sk.unlock && h.level < sk.unlock);
-    const lockNote = locked ? `<p style="color:#ff9ad8;font-weight:900">영웅 Lv.${sk.unlock} 달성 시 해금 (현재 Lv.${h.level})</p>` : '';
-    this.ui.modal(`<h2>${sk.name} ${sk.unlock ? '<small style="font-size:11px;color:#ff9ad8">각성</small>' : ''} <small style="font-size:12px">Lv.${lv}</small></h2><p>${sk.desc}</p>${lockNote}<p>피해 배율 <b style="color:var(--gold)">${(sk.dmg * (1 + (lv - 1) * 0.12)).toFixed(1)}x${sk.ticks ? ` × ${sk.ticks}회` : ''}</b> ${sk.ult ? '· 궁극기 (게이지 100)' : `· 쿨타임 ${sk.cd}초 · MP ${sk.mp || 0}`}</p>
-      <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-up" ${lv >= 10 || locked ? 'disabled' : ''}>${locked ? `Lv.${sk.unlock}에 해금` : '강화'} <small>${locked ? '' : `<i class="ic ic-gold"></i> ${fmt(cost)}`}</small></button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-up').onclick = () => { if (locked) return; if (this.eco.upgradeSkill(id, i)) { this.trackFunnel('upgrade', { kind: 'skill', level: lv + 1 }); audio.play('jingle_win1', { vol: 0.5 }); this.ui.closeModal(); this.renderHeroes(); this.ui.toast(`${sk.name} Lv.${lv + 1}!`, 'gold'); } else { this.ui.toast('골드 부족', 'red'); this.offerGold(); } }; } });
+  /** 스킬 상세는 SP 스킬 트리 화면으로 연다(골드 강화 모달 대체). */
+  showSkill(id, i) { return this.openSkillTree(id, i); }
+  openSkillTree(id = this.heroSel || this.eco.s.selected, i = 0) {
+    if (!this.eco.ownHero(id)) return false;
+    this.skillTree ||= new SkillTreeView(this, { portrait: (img, heroId) => bindHeroPortrait(img, this.app, heroId) });
+    this.transcendView?.close({ rerender: false, restoreFocus: false });
+    return this.skillTree.open(id, i);
+  }
+  openTranscend(id = this.heroSel || this.eco.s.selected) {
+    if (!this.eco.ownHero(id)) return false;
+    this.transcendView ||= new TranscendView(this, { portrait: (img, heroId) => bindHeroPortrait(img, this.app, heroId) });
+    this.skillTree?.close({ rerender: false, restoreFocus: false });
+    return this.transcendView.open(id);
   }
   /** 가방 장비 시트 — 현재 장비와 나란히 비교하고 장착·강화를 한 곳에서 한다. */
   showItem(uid, heroId, options) { return showItemSheet(this, uid, heroId, options); }
@@ -338,7 +357,7 @@ export class Meta {
     this._revealTimers = [];
     results.forEach((r, i) => {
       const c = document.createElement('div'); c.className = 'rcard' + (results.length === 1 ? ' single' : '') + ' ' + r.rar; c.style.setProperty('--rc', RC[r.rar]);
-      const img = r.type === 'hero' ? r.img : r.type === 'material' ? resourceArt(r.k) : ITEM_ICON(ITEM_BY_ID[r.item.id]); const name = r.type === 'hero' ? r.name : r.type === 'material' ? (REWARD_LABEL[r.k]?.[0] || r.k) + ' ×' + r.n : ITEM_BY_ID[r.item.id].name;
+      const img = r.type === 'hero' ? r.img : r.type === 'material' ? resourceArt(r.k) : itemVisual(ITEM_BY_ID[r.item.id], { heroId: this.eco.s.selected }).iconUrl; const name = r.type === 'hero' ? r.name : r.type === 'material' ? (REWARD_LABEL[r.k]?.[0] || r.k) + ' ×' + r.n : ITEM_BY_ID[r.item.id].name;
       const sub = r.type === 'hero' ? (r.dup ? '조각 +' + r.shards : '') : r.type === 'material' ? '강화 재료' : ITEM_BY_ID[r.item.id].slot === 'weapon' ? (weaponLook(this.eco.s.selected, r.item, LOOKS)?.form || '') : SLOT_NAME[ITEM_BY_ID[r.item.id].slot];
       c.innerHTML = `<div class="inner"><div class="face back">?</div><div class="face front"><img src="${img}" onerror="this.remove()"><span class="rr">${r.rar}</span>${r.type === 'hero' && !r.dup ? '<span class="new">NEW</span>' : ''}<div class="nm">${name}${sub ? `<br><small style="color:var(--muted)">${sub}</small>` : ''}</div></div></div>`;
       cards.appendChild(c);
@@ -359,7 +378,7 @@ export class Meta {
     const at = (k) => pct(rates.ssrByPull[k - 1], 1);
     const soft = softStart(rates), hard = rates.hardPity;
     const matRows = (grade, color) => (rates.materials[grade] || []).map((m) => row(`${grade} 강화 재료 · ${REWARD_LABEL[m.k]?.[0] || m.k} ×${m.n}`, b0[grade] * m.w, color)).join('');
-    this.ui.modal(`<h2>소환 확률</h2><p class="setting-help">1회 소환 기준 확률입니다. 10회 소환의 SR 이상 보장은 제외했습니다.</p><button class="btn btn-blue btn-sm" id="m-contents" style="width:100%;margin:4px 0">구성품 전체 보기 · 무기 외형 미리보기</button><table class="rates-table" aria-label="소환 등급별 확률">${row(`SSR 픽업 영웅 · ${featured}`, b0.SSR * sp.featuredHero, '--r-ssr')}${sp.otherSsrHero ? row(`SSR 다른 영웅${others ? ` · ${others}` : ''}`, b0.SSR * sp.otherSsrHero, '--r-ssr') : ''}${row('SSR 장비', b0.SSR * sp.ssrGear, '--r-ssr')}${row('SR 영웅', b0.SR * rates.srSplit.hero, '--r-sr')}${row('SR 장비', b0.SR * rates.srSplit.gear, '--r-sr')}${matRows('SR', '--r-sr')}${row('R 장비', b0.R * rates.rSplit.gear)}${matRows('R', '')}</table>
+    this.ui.modal(`<h2>소환 확률</h2><p class="setting-help">1회 소환 기준 확률입니다. 10회 소환의 SR 이상 보장은 제외했습니다.</p><button class="btn btn-blue btn-sm" id="m-contents" style="width:100%;margin:4px 0">구성품 전체 보기 · 무기 외형 미리보기</button><table class="rates-table" aria-label="소환 등급별 확률">${row(`SSR 픽업 영웅 · ${featured}`, b0.SSR * sp.featuredHero, '--r-ssr')}${sp.otherSsrHero ? row(`SSR 다른 영웅${others ? ` · ${others}` : ''}`, b0.SSR * sp.otherSsrHero, '--r-ssr') : ''}${row('SSR 장비', b0.SSR * sp.ssrGear, '--r-ssr')}${matRows('SSR', '--r-ssr')}${row('SR 영웅', b0.SR * rates.srSplit.hero, '--r-sr')}${row('SR 장비', b0.SR * rates.srSplit.gear, '--r-sr')}${matRows('SR', '--r-sr')}${row('R 장비', b0.R * rates.rSplit.gear)}${matRows('R', '')}</table>
       <p>SSR이 나오면 ${pct(sp.featuredHero, 0)} 확률로 픽업 영웅 ${featured}입니다.<br>${soft}번째 소환부터 SSR 확률이 오릅니다 (${soft}번째 ${at(soft)} · ${Math.min(hard - 1, soft + 9)}번째 ${at(Math.min(hard - 1, soft + 9))} · ${hard - 1}번째 ${at(hard - 1)}). ${hard}번째 소환은 SSR 확정입니다.<br>천장을 포함한 평균은 SSR 1회당 약 ${rates.expectedPullsPerSsr.toFixed(1)}회 (통합 SSR ${pct(rates.consolidatedSsr, 2)})입니다.<br>10회 소환은 SR 이상 1장을 보장합니다. 이미 가진 영웅이 나오면 조각 ${rates.dupShards}개로 바뀝니다.</p>
       <p><b>현재 누적 ${pity}회</b> · 다음 소환 SSR ${pct(gachaChances(pity + 1).SSR, 1)} · ${Math.max(1, hard - pity)}회 안에 SSR 확정</p>${this.eco.s.ssrTickets ? `<button class="btn btn-gold" style="width:100%" id="m-ssr">SSR 확정권 사용 (${this.eco.s.ssrTickets})</button>` : ''}<div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => { b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-contents').onclick = () => this.showGachaContents(); const s = b.querySelector('#m-ssr'); if (s) s.onclick = () => { this.ui.closeModal(); this.pullSSR(); }; } });
   }
@@ -463,10 +482,10 @@ export class Meta {
     const shakeRow = `<div class="setting-row"><span>화면 흔들림</span><button type="button" class="toggle ${shakeOn ? 'on' : ''}" data-k="screenShake" role="switch" aria-label="화면 흔들림" aria-checked="${shakeOn}"></button></div>`;
     const mix=this.app.arsenal.s.mix;
     const touchControls = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
-    const controlHelp = touchControls ? '왼쪽 조이스틱으로 이동 · 오른쪽 공격·회피 버튼 · 스킬 버튼 6개로 전투'
+    const controlHelp = touchControls ? '왼쪽 조이스틱으로 이동 · 오른쪽 공격·회피 버튼 · 스킬 버튼 6개로 전투 · 빈 화면 드래그로 시점 회전, 두 손가락으로 확대'
       : '이동 WASD · 공격 J/Space · 회피 K/Shift · 스킬 1~6 (4~6은 R/Q/E도 가능)';
     const mixRows=[['sfx','효과음 음량'],['music','배경음악 음량'],['voice','목소리 음량']].map(([key,label])=>`<div class="setting-row"><label for="mix-${key}">${label}</label><div class="setting-mix"><input id="mix-${key}" data-mix="${key}" type="range" min="0" max="100" step="1" value="${Math.round(mix[key]*100)}"><output for="mix-${key}">${Math.round(mix[key]*100)}%</output></div></div>`).join('');
-    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('settings')}" alt="">설정</h2>${row('sfx', '효과음')}${row('music', '배경음악')}${row('voice', '나레이션')}${row('haptics', '진동')}${shakeRow}<div class="setting-row setting-description"><span id="haptic-help" class="setting-help">${typeof navigator.vibrate === 'function' ? '일반 명중은 짧게, 마무리는 강하게 진동합니다. 기기·브라우저·시스템 설정에 따라 작동하지 않을 수 있습니다.' : '이 브라우저는 기기 진동을 지원하지 않습니다. 명중 반동과 타격음은 유지됩니다.'}</span></div><div class="setting-row"><span>그래픽</span><div class="seg">${['auto','low', 'mid', 'high'].map((q) => `<button data-q="${q}" class="${(st.quality||'auto') === q ? 'on' : ''}">${{auto:'자동',low: '낮음', mid: '보통', high: '높음' }[q]}</button>`).join('')}</div></div><div class="setting-row"><span>카메라</span><div class="seg">${['auto', 'top', 'action', 'wide'].map((c) => `<button data-cam="${c}" class="${(st.camera || 'auto') === c ? 'on' : ''}">${{ auto: 'AUTO', top: '탑다운', action: '액션', wide: '시네마틱' }[c]}</button>`).join('')}</div></div>
+    this.ui.modal(`<h2 class="ui-resource"><img src="${uiArt('settings')}" alt="">설정</h2>${row('sfx', '효과음')}${row('music', '배경음악')}${row('voice', '나레이션')}${row('haptics', '진동')}${row('autoTarget', '공격 자동 타겟팅')}${shakeRow}<div class="setting-row setting-description"><span id="haptic-help" class="setting-help">${typeof navigator.vibrate === 'function' ? '일반 명중은 짧게, 마무리는 강하게 진동합니다. 기기·브라우저·시스템 설정에 따라 작동하지 않을 수 있습니다.' : '이 브라우저는 기기 진동을 지원하지 않습니다. 명중 반동과 타격음은 유지됩니다.'}</span></div><div class="setting-row"><span>그래픽</span><div class="seg">${['auto','low', 'mid', 'high'].map((q) => `<button data-q="${q}" class="${(st.quality||'auto') === q ? 'on' : ''}">${{auto:'자동',low: '낮음', mid: '보통', high: '높음' }[q]}</button>`).join('')}</div></div><div class="setting-row"><span>카메라</span><div class="seg">${['auto', 'top', 'action', 'wide'].map((c) => `<button data-cam="${c}" class="${(st.camera || 'auto') === c ? 'on' : ''}">${{ auto: 'AUTO', top: '탑다운', action: '액션', wide: '시네마틱' }[c]}</button>`).join('')}</div></div>
       <div class="setting-row setting-description"><span id="cam-desc" class="setting-help">${CAM_DESC[st.camera || 'auto']}</span></div>
       <div class="setting-row"><span>조작</span><span id="input-help" class="setting-help">${controlHelp}</span></div>
       <div class="modal-btns"><button class="btn btn-red btn-sm" id="m-reset">데이터 초기화</button><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {

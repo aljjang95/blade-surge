@@ -25,7 +25,9 @@ function fixture(depth = 'standard', routeId = 'cinder_tide_lock') {
       forward: (v: Vector3) => v.set(1, 0, 0), dispose: noop,
       hurt: (n: number) => { hits.push(n); return true; } },
     spawnEnemy(_id: string, _near: any, room: any) {
-      g.routeObjectives.spawn(room); g.enemies.push({ alive: true, homeRoom: room, dispose: noop });
+      // 실제 spawnEnemy 처럼 무리 졸개는 목표 명단 영수증에 넣지 않고 생성한 적을 돌려준다.
+      if (!g._spawningFollower) g.routeObjectives?.spawn(room);
+      const enemy = { alive: true, homeRoom: room, maxHp: 1, hp: 1, atk: 1, dispose: noop }; g.enemies.push(enemy); return enemy;
     },
   });
   const route = createRouteObjectives(stage, world) as CoolingValves;
@@ -88,7 +90,8 @@ test('delayed spawns and queued reinforcements prevent premature interaction and
   f.g.markCleared(room); expect(gate.ready).toBe(false);
   for (const pending of f.g.pending.splice(0)) f.g.spawnEnemy(pending.t, null, pending.room);
   killWave(f, room); expect(gate.ready).toBe(true); expect(room.cleared).toBe(false);
-  expect(f.g.enemies.length).toBe(10); // initial 2 + two existing waves of 4
+  // initial 2 + two existing waves of 4. 보상·영수증 없는 무리 졸개는 웨이브 중복 판단에서 뺀다.
+  expect(f.g.enemies.filter((e: any) => !e.packFollower).length).toBe(10);
   f.g.player.pos.copy(gate.pad); f.g.updateExpedition(2);
   expect(room.cleared).toBe(true); expect(f.g.roomsCleared).toBe(1);
   f.g.markCleared(room); f.g.updateExpedition(2); expect(f.g.roomsCleared).toBe(1);

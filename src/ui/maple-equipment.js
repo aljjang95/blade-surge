@@ -1,7 +1,8 @@
 // 장비 창: 선택 영웅의 초상을 가운데 두고 무기 · 방어구 · 반지 · 신발 칸을 둘레에 놓는다.
 import { HEROES, heroStats } from '../data/heroes.js';
-import { ITEM_BY_ID, ITEM_ICON, RARITY_COLOR, RARITY_INFO, SLOTS, SLOT_NAME } from '../data/items.js';
+import { ITEM_BY_ID, RARITY_COLOR, RARITY_INFO, SLOTS, SLOT_NAME } from '../data/items.js';
 import { resourceArt, uiArt } from './illustrated.js';
+import { itemVisual } from './item-presentation.js';
 
 // 왼쪽 열 · 오른쪽 열에 놓을 부위 순서(위 → 아래).
 export const EQUIPMENT_LAYOUT = Object.freeze({ left: ['weapon', 'ring'], right: ['armor', 'boots'] });
@@ -12,7 +13,7 @@ export function buildEquipmentModel(eco, heroId = eco.s.selected) {
   const slots = SLOTS.map((slot) => {
     const inst = eco.s.inventory.find((x) => x.uid === hero.equip[slot]), it = inst && ITEM_BY_ID[inst.id];
     if (!it) return { slot, slotName: SLOT_NAME[slot], empty: true, art: uiArt('slot-' + slot) };
-    return { slot, slotName: SLOT_NAME[slot], empty: false, uid: inst.uid, itemId: it.id, name: it.name, icon: ITEM_ICON(it), fallbackIcon: ITEM_ICON({ slot: it.slot, rarity: it.rarity }), rarity: it.rarity, rarityName: RARITY_INFO[it.rarity]?.name || '', color: RARITY_COLOR[it.rarity] || '#9aa3b2', enh: inst.enh || 0 };
+    return { slot, slotName: SLOT_NAME[slot], empty: false, uid: inst.uid, itemId: it.id, name: it.name, icon: itemVisual(it, { heroId }).iconUrl, fallbackIcon: itemVisual(it, { heroId }).fallbackUrl, visual: itemVisual(it, { heroId }).renderSet, rarity: it.rarity, rarityName: RARITY_INFO[it.rarity]?.name || '', color: RARITY_COLOR[it.rarity] || '#9aa3b2', enh: inst.enh || 0 };
   });
   return { heroId, name: def.name, title: def.title, portrait: def.portrait, level: hero.level, star: hero.star, power: stats.power, slots, gold: eco.s.gold, gems: eco.s.gems };
 }

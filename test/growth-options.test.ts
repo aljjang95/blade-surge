@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { Economy } from '../src/game/economy.js';
 import { growthOptions, growthSummary } from '../src/game/growth-options.js';
 import { HEROES, levelExp } from '../src/data/heroes.js';
+import { canLearnSkill } from '../src/data/skill-tree.js';
 import { normalizeMasterworks, unlockMastery } from '../src/game/masterworks-core.js';
 import { ITEM_BY_ID, enhanceCost, enhanceStones } from '../src/data/items.js';
 
@@ -38,8 +39,8 @@ test('viewing growth options does not mutate the save, and every quoted action u
       expect(r.ok && r.success && !r.destroyed).toBe(true);
       expect(eco.s.gold).toBe(gold - option.gold); expect(eco.s.stones).toBe(stones - option.stones);
     } else if (option.kind === 'skill') {
-      expect(eco.upgradeSkill(option.heroId, option.index)).toBe(true);
-      expect(eco.s.gold).toBe(gold - option.gold);
+      expect(eco.upgradeSkill(option.heroId, option.index)).toMatchObject({ ok: true });
+      expect(eco.s.gold).toBe(gold);
     } else {
       const s: any = eco.s;
       expect(unlockMastery(s.masterworks, option.id).ok).toBe(true);
@@ -69,16 +70,25 @@ test('only the selected hero equipped item is suggested; removed items and forei
   expect(growthOptions(save).some(o => o.kind === 'equipment')).toBe(false);
 });
 
-test('locked or maxed skills are not advertised, and an exact affordable gold balance is honored', () => {
+// 스킬은 골드가 아니라 스킬 포인트(SP)로 배운다(2026-10-19 SP 스킬 트리). 같은 의도를 SP 기준으로 검사한다.
+test('locked or maxed skills are not advertised, and the exact remaining skill points are honored', () => {
   const eco = fixture(); const save: any = eco.s, hero = save.heroes.mage;
-  hero.level = 1; hero.skills = [10, 10, 10, 10, 1, 1];
+  hero.level = 1; hero.skills = [10, 10, 10, 10, 0, 0, 0, 0];
   expect(growthOptions(save).some(o => o.kind === 'skill')).toBe(false);
-  hero.level = 20;
+  hero.level = 20; hero.skills = [1, 1, 1, 1, 0, 0, 0, 0];
   const skill: any = growthOptions(save).find(o => o.kind === 'skill');
-  expect(skill.index).toBe(4); save.gold = skill.gold - 1;
-  expect(growthOptions(save).some(o => o.kind === 'skill')).toBe(false);
-  save.gold++;
+  expect(skill).toMatchObject({ index: 4, from: 0, to: 1, sp: 2, gold: 0 });
+  // 기본 스킬에 SP를 써서 정확히 2만 남기면 여전히 같은 안내, 1만 남기면 SP 2짜리 각성 습득은 안내하지 않는다.
+  // 기본 스킬(0~2)에 SP를 써서 남은 SP를 정확히 2로 맞춘다. 비용이 남길 몫을 넘으면 다른 스킬로 넘어간다.
+  const spendDownTo = (target: number) => { for (let guard = 0; guard < 200 && eco.skillPoints('mage').available > target; guard++) {
+    const pick = [0, 1, 2].find(i => { const c = canLearnSkill(HEROES.mage, hero, i); return c.ok && eco.skillPoints('mage').available - c.cost! >= target; });
+    if (pick === undefined) break; expect(eco.learnSkill('mage', pick).ok).toBe(true); } };
+  spendDownTo(2); expect(eco.skillPoints('mage').available).toBe(2);
   expect(growthOptions(save).find(o => o.kind === 'skill')).toEqual(skill);
+  expect(eco.learnSkill('mage', 1).ok).toBe(true);
+  const left = eco.skillPoints('mage').available, next: any = growthOptions(save).find(o => o.kind === 'skill');
+  expect(left).toBeLessThan(2);
+  if (next) { expect(next.index).not.toBe(4); expect(next.sp).toBeLessThanOrEqual(left); }
 });
 
 test('mastery offers respect prerequisites and exclude owned nodes with insufficient remaining renown', () => {
@@ -94,7 +104,8 @@ test('mastery offers respect prerequisites and exclude owned nodes with insuffic
 
 test('an empty or invalid current context cannot advertise a purchase', () => {
   const eco = fixture(); const save: any = eco.s;
-  save.gold = 0; save.stones = 0; save.masterworks.renown = 0;
+  // SP 가 남아 있지 않은 상태(모든 스킬 최대)로 둔다. 남은 SP 로 배우는 스킬은 구매가 아니므로 이 조건에서만 빈 목록이다.
+  save.gold = 0; save.stones = 0; save.masterworks.renown = 0; save.heroes.mage.skills = HEROES.mage.skills.map(() => 10);
   expect(growthOptions(save)).toEqual([]);
   expect(growthOptions(null)).toEqual([]);
   save.selected = 'missing'; expect(growthOptions(save)).toEqual([]);

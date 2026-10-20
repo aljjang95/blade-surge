@@ -18,6 +18,9 @@ export const FLOWMUSIC_CUE_PLAN = Object.freeze([
   { id: 'dungeon-garden-verdigris-20260914', scene: 'dungeon', route: 'verdigris_sanctum', target: 'garden', fallback: 'regions/garden', status: 'external-gui-pending' },
   { id: 'dungeon-crown-sable-20260914', scene: 'dungeon', route: 'sable_mirage_basin', target: 'crown', fallback: 'regions/crown', status: 'external-gui-pending' },
   { id: 'dungeon-frost-comet-20260914', scene: 'dungeon', route: 'comet_bastion', target: 'frost', fallback: 'regions/frost', status: 'external-gui-pending' },
+  // 컨셉 던전 심층 칸(2026-10-17). 대체 곡은 기본 원정이 이미 쓰는 지역 곡과 같아 실제 재생은 바뀌지 않는다.
+  { id: 'dungeon-tide-glacier-20261017', scene: 'dungeon', route: 'glacier_tide_basin', target: 'tide', fallback: 'regions/tide', status: 'external-gui-pending' },
+  { id: 'dungeon-forge-sunbrass-20261017', scene: 'dungeon', route: 'sunbrass_quarry', target: 'forge', fallback: 'regions/forge', status: 'external-gui-pending' },
   { id: 'arena-valor-six-20260914', scene: 'arena', target: 'arena', fallback: 'regions/arena', status: 'external-gui-pending' },
   { id: 'boss-signature-trilogy-20260914', scene: 'boss', target: 'boss', fallback: 'regions/boss', status: 'external-gui-pending' },
 ]);
