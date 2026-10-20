@@ -13,7 +13,7 @@ export function paceShort(key) {
   return {
     text: s.target + ' ' + s.freeDays + '일→' + s.withDays + '일',
     saved: '−' + s.days + '일',
-    basis: '무과금 ' + ECONOMY_PACE.minutesPerDay + '분/일 예상',
+    basis: '무과금 스토리 ' + ECONOMY_PACE.minutesPerDay + '분/일·별 승급 제외 예상',
     full,
   };
 }

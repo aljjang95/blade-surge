@@ -9,7 +9,7 @@ describe('상점·소환 단축 일수 짧은 문구', () => {
     const s = ECONOMY_PACE.savings.ssrTicket, p = paceShort('ssrTicket')!;
     expect(p.text).toBe(s.target + ' ' + s.freeDays + '일→' + s.withDays + '일');
     expect(p.saved).toBe('−' + s.days + '일');
-    expect(p.basis).toContain('무과금'); expect(p.basis).toContain(String(ECONOMY_PACE.minutesPerDay) + '분/일');
+    expect(p.basis).toContain('무과금'); expect(p.basis).toContain(String(ECONOMY_PACE.minutesPerDay) + '분/일'); expect(p.basis).toContain('별 승급 제외');
     expect(p.full).toBe(paceLabel('ssrTicket')!);
   });
   test('paceLabel 이 null 인 상품·없는 키는 아무것도 표시하지 않는다', () => {

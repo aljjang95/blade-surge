@@ -175,7 +175,7 @@ async function A6view(browser, rec, viewport) {
     const known = new Set(Object.keys(ECONOMY_PACE.savings).map(expectedPace).filter(Boolean));
     for (const it of all) if (it.pace) { const head = it.pace.split(' −')[0]; if (!known.has(head)) wrongText.push(it); }
     rec.check(tag + ' 상점: 모든 단축 문구가 economy-pace 의 대상·일수와 일치', wrongText.length === 0, wrongText.slice(0, 3));
-    rec.check(tag + ' 상점: 모든 문구에 기준(무과금 30분/일 예상)이 있다', all.filter((i) => i.pace).every((i) => /무과금 30분\/일 예상/.test(i.pace)), all.filter((i) => i.pace && !/무과금 30분\/일 예상/.test(i.pace)).slice(0, 3));
+    rec.check(tag + ' 상점: 모든 문구에 기준(스토리 30분/일·별 승급 제외 예상)이 있다', all.filter((i) => i.pace).every((i) => /별 승급 제외 예상/.test(i.pace)), all.filter((i) => i.pace && !/별 승급 제외 예상/.test(i.pace)).slice(0, 3));
     rec.check(tag + ' 상점: 단축 0일 상품(강화석 등)에는 문구가 없다', all.some((i) => !i.pace && /강화석|보호|축복/.test(i.name || '')), all.filter((i) => !i.pace).map((i) => i.name).slice(0, 6));
     // 소환 화면
     await tapTab(s, 'gacha'); rec.did('메뉴 → 소환 실제 탭');
@@ -184,7 +184,7 @@ async function A6view(browser, rec, viewport) {
     await rec.shot(s, 'gacha-with-ticket');
     const exp = expectedPace('ssrTicket'), saved = ECONOMY_PACE.savings.ssrTicket.days;
     rec.check(tag + ' 소환: SSR 확정권 버튼 보임 + "−' + saved + '일 단축" 태그', g.ssrVisible && g.tag === '−' + saved + '일 단축', g);
-    rec.check(tag + ' 소환: 줄 문구에 대상·전후 일수·단축·기준', !!exp && g.pace.includes('SSR 확정권 1장') && g.pace.includes(exp) && g.pace.includes('−' + saved + '일') && g.pace.includes('무과금 30분/일 예상'), { g, exp });
+    rec.check(tag + ' 소환: 줄 문구에 대상·전후 일수·단축·기준', !!exp && g.pace.includes('SSR 확정권 1장') && g.pace.includes(exp) && g.pace.includes('−' + saved + '일') && g.pace.includes('별 승급 제외 예상'), { g, exp });
     const ov = await overlapReport(s.page, [['#gacha-pace', '#btn-pull1'], ['#gacha-pace', '#btn-pull10'], ['#gacha-pace', '#btn-pull-ssr'], ['#gacha-pace', '.gacha-foot'], ['#gacha-pace', '#gacha-odds'], ['#pace-ssr', '#btn-pull-ssr small:not(.pace-ssr)'], ['#btn-pull-ssr', '#btn-pull10'], ['#btn-pull-ssr', '#btn-pull1']]);
     rec.check(tag + ' 소환: 단축 줄·SSR 버튼이 다른 요소와 겹치지 않는다', ov.found.length === 0, { found: ov.found.slice(0, 3), checked: ov.checked });
     const inside = await insideViewport(s.page, '#gacha-pace, #btn-pull-ssr, #btn-pull1, #btn-pull10, .gacha-foot');

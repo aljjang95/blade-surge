@@ -64,3 +64,11 @@
 .gacha-pace{margin:4px 0 0;font-size:11px;line-height:1.35;text-align:center;color:#ffd98a}
 .gacha-pace[hidden],.pace-ssr[hidden]{display:none}
 #btn-pull-ssr .pace-ssr{display:block;margin-top:1px;font-size:10px;font-weight:900;color:#fff2c0}
+/* 짧은 가로 화면(높이 420px 이하): 단축 줄이 화면 밖으로 밀리지 않게 소환 버튼을 낮추고 버튼 안 태그는 숨긴다(줄 문구가 같은 정보를 보인다). */
+@media (orientation:landscape) and (max-height:420px){
+  #tab-gacha .gacha-btns button.btn{padding-top:5px;padding-bottom:5px}
+  #tab-gacha .gacha-btns button.btn small{line-height:1.2}
+  #tab-gacha #btn-pull-ssr .pace-ssr{display:none}
+  #tab-gacha .gacha-pace{margin:0;font-size:10px;line-height:1.25}
+  #tab-gacha .gacha-wrap{row-gap:5px}
+}
