@@ -114,6 +114,14 @@ describe('P1-1 런 남용 완화와 관리자 감사', () => {
     h.advance(10000);
     expect((await h.call('POST', '/runs/clear', a.key, { runId: (r.body as any).runId })).status).toBe(200);
   });
+  test('상위 순위 부여 당시 summary는 재클리어로 지워지지 않는다', async () => {
+    const h = harness(), a = await h.player('순위감사');
+    expect((await h.clear(a.key)).status).toBe(200);
+    await h.clear(a.key, false);
+    const result = await h.call('GET', '/admin/clears', a.key, undefined, { admin: [a.id], query: 'contentId=cave' });
+    expect((result.body as any).top[0].summary).toEqual(summary());
+    expect((result.body as any).recent[0].summary).toBeNull();
+  });
 });
 
 describe('P1-2 기기 키 수명과 소켓', () => {
@@ -232,6 +240,12 @@ describe('P1-4 신고 검증과 자동 음소거', () => {
     expect(h.db.query('SELECT id FROM recent_messages WHERE id = ?').get(first.id)).toBeNull();
     h.advance(DAY + 1); h.say(s, '다음날');
     expect((h.db.query('SELECT COUNT(*) AS n FROM recent_messages').get() as any).n).toBe(1);
+  });
+  test('최근 작성자 인덱스가 만료돼도 실제 chat_log에 남은 메시지는 신고할 수 있다', async () => {
+    const h = harness(), a = await h.player('광장보관'), b = await h.player('오래된신고');
+    const m = msgOf(h.say(h.connect(a).s, '광장 기록'));
+    h.advance(DAY + 1);
+    expect((await h.report(b.key, a.id, m.id)).status).toBe(201);
   });
 });
 

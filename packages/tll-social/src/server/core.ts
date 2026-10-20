@@ -502,12 +502,14 @@ export class SocialCore {
     const newlyRanked = rank === 0 && !prior?.revoked && eligible;
     if (newlyRanked) rank = (this.one('SELECT COALESCE(MAX(rank), 0) AS r FROM clears WHERE content_id = ?', content.id).r as number) + 1;
     const subjectHash = newlyRanked ? subject : prior?.subject_hash ?? null;
+    const summaryJson = summary ? JSON.stringify(summary) : null;
+    const rankSummary = newlyRanked ? summaryJson : prior?.rank_summary ?? null;
     if (prior) {
       newBest = elapsed < prior.best_ms;
       bestMs = Math.min(prior.best_ms, elapsed);
-      this.run('UPDATE clears SET best_ms = ?, count = count + 1, rank = ?, subject_hash = ?, summary = ?, last_at = ?, first_at = ? WHERE content_id = ? AND player_id = ?', bestMs, rank, subjectHash, summary ? JSON.stringify(summary) : null, now, newlyRanked ? now : prior.first_at, content.id, me.id);
+      this.run('UPDATE clears SET best_ms = ?, count = count + 1, rank = ?, subject_hash = ?, summary = ?, rank_summary = ?, last_at = ?, first_at = ? WHERE content_id = ? AND player_id = ?', bestMs, rank, subjectHash, summaryJson, rankSummary, now, newlyRanked ? now : prior.first_at, content.id, me.id);
     } else {
-      this.run('INSERT INTO clears(content_id, player_id, first_at, best_ms, count, rank, subject_hash, summary, last_at) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)', content.id, me.id, now, elapsed, rank, subjectHash, summary ? JSON.stringify(summary) : null, now);
+      this.run('INSERT INTO clears(content_id, player_id, first_at, best_ms, count, rank, subject_hash, summary, rank_summary, last_at) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?)', content.id, me.id, now, elapsed, rank, subjectHash, summaryJson, rankSummary, now);
     }
     if (newlyRanked) {
       const mini = this.mini(me.id);
@@ -538,7 +540,7 @@ export class SocialCore {
     const top = rows('AND rank BETWEEN 1 AND 10 ORDER BY rank');
     const minis = this.minis([...recent, ...top].map(r => r.player_id));
     const view = (r: any) => ({ player: minis.get(r.player_id) ?? null, rank: r.rank, firstAt: r.first_at, lastAt: r.last_at, bestMs: r.best_ms, count: r.count, revoked: !!r.revoked, summary: r.summary ? JSON.parse(r.summary) : null });
-    return { contentId: content.id, recent: recent.map(view), top: top.map(view) };
+    return { contentId: content.id, recent: recent.map(view), top: top.map(r => view({ ...r, summary: r.rank_summary })) };
   }
 
   private fameRows(contentId: string, order: 'rank' | 'best', limit: number) {
@@ -677,6 +679,7 @@ export class SocialCore {
       if (!this.player(target)) throw new SocialError('player-not-found', 404);
     }
     const ref = body.ref === undefined ? null : text(body.ref, 0, 64, 'ref');
+    this.run('DELETE FROM recent_messages WHERE at < ?', this.d.now() - DAY);
     if (body.kind === 'chat' && (!ref || !this.reportedMessage(target, ref))) throw new SocialError('ref');
     const reason = text(body.reason ?? '', 0, 100, 'reason');
     this.limit('report:' + me.id, 10, HOUR);
@@ -708,7 +711,7 @@ export class SocialCore {
     const since = this.d.now() - DAY;
     const recent = this.one('SELECT author_id FROM recent_messages WHERE id = ? AND at >= ?', ref, since);
     if (recent) return recent.author_id === target;
-    const log = this.one('SELECT payload FROM chat_log WHERE id = ? AND at >= ?', ref, since);
+    const log = this.one('SELECT payload FROM chat_log WHERE id = ?', ref);
     if (!log) return false;
     const msg = JSON.parse(log.payload) as Msg;
     return (msg.kind === 'chat' || msg.kind === 'whisper') && msg.from?.id === target;

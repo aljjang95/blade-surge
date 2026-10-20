@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { Database } from 'bun:sqlite';
-import { createSocialHub, type HubSocket } from '../src/server/hub';
+import { createSocialHub, sha256Hex, type HubSocket, type HubOptions } from '../src/server/hub';
 import { handleSocialRequest } from '../src/server/router';
 import type { GameConfig } from '../src/shared/protocol';
 
@@ -29,7 +29,7 @@ class FakeSocket implements HubSocket {
   deserializeAttachment() { return structuredClone(this.att); }
   last(t: string) { return [...this.sent].reverse().find(m => m.t === t); }
 }
-function harness(env: Record<string, string> = {}) {
+function harness(env: Record<string, string> = {}, options: { google?: HubOptions['google']; config?: Partial<GameConfig> } = {}) {
   const db = new Database(':memory:');
   let t = 1_800_000_000_000;
   const sockets: FakeSocket[] = [];
@@ -40,8 +40,9 @@ function harness(env: Record<string, string> = {}) {
     getWebSockets(tag?: string) { return sockets.filter(s => !tag || s.tags.includes(tag)); },
     waitUntil(_p: Promise<unknown>) {},
   };
-  const Hub = createSocialHub(CONFIG, {
+  const Hub = createSocialHub({ ...CONFIG, ...options.config }, {
     now: () => t,
+    google: options.google,
     createPair: () => [new FakeSocket(), new FakeSocket()],
     upgradeResponse: () => Response.json({ upgraded: true }),
     fetch: async (url: string, init?: RequestInit) => { posted.push({ url, body: JSON.parse(String(init?.body)) }); return new Response(null, { status: 204 }); },
@@ -63,10 +64,63 @@ function harness(env: Record<string, string> = {}) {
     return { key, id: profile.id as string, ws, ticket: ticket as string };
   };
   const send = (ws: FakeSocket, m: unknown) => hub.webSocketMessage(ws, JSON.stringify(m));
-  return { ctx, Hub, call, join, send, sockets, posted, advance: (ms: number) => { t += ms; }, wake: () => { hub = new Hub(ctx, env); }, get hub() { return hub; } };
+  return { db, ctx, Hub, call, join, send, sockets, posted, advance: (ms: number) => { t += ms; }, wake: () => { hub = new Hub(ctx, env); }, get hub() { return hub; } };
 }
 
 describe('SocialHub 어댑터', () => {
+  test('recover의 keyHash 종료 effect가 hello 전후 소켓을 즉시 닫고 다른 기기는 유지한다', async () => {
+    const pair = await crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' }, true, ['sign', 'verify']) as CryptoKeyPair;
+    const jwk = await crypto.subtle.exportKey('jwk', pair.publicKey);
+    const h = harness({ GOOGLE_CLIENT_IDS: 'web-client' }, { google: {
+      fetch: async () => Response.json({ keys: [{ ...jwk, kid: 'k1', alg: 'RS256', use: 'sig' }] }),
+    } });
+    const enc = (o: unknown) => Buffer.from(JSON.stringify(o)).toString('base64url');
+    const head = enc({ alg: 'RS256', kid: 'k1' }) + '.' + enc({ iss: 'https://accounts.google.com', aud: 'web-client', sub: 'recover-test', iat: 1800000000, exp: 1800003600 });
+    const sig = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', pair.privateKey, new TextEncoder().encode(head));
+    const idToken = head + '.' + Buffer.from(sig).toString('base64url');
+    const a = await h.join('기기회수');
+    await h.send(a.ws, { t: 'hello' });
+    expect((await h.call('POST', '/auth/link', a.key, { provider: 'google', idToken })).status).toBe(200);
+    const oldTicket = (await h.call('POST', '/ws-ticket', a.key)).body.ticket;
+    await h.call('GET', '/ws?ticket=' + (await h.call('POST', '/ws-ticket', a.key)).body.ticket);
+    const pending = h.sockets[h.sockets.length - 1];
+    let kept: FakeSocket | undefined;
+    for (let i = 0; i < 5; i++) {
+      h.advance(1000); const deviceKey = newKey();
+      expect((await h.call('POST', '/auth/recover', undefined, { provider: 'google', idToken, deviceKey })).status).toBe(200);
+      if (i === 0) {
+        await h.call('GET', '/ws?ticket=' + (await h.call('POST', '/ws-ticket', deviceKey)).body.ticket);
+        kept = h.sockets[h.sockets.length - 1]; await h.send(kept, { t: 'hello' });
+      }
+    }
+    expect(a.ws.deserializeAttachment()).toMatchObject({ key_hash: await sha256Hex(CONFIG.gameId + ':' + a.key), closed: true });
+    expect(a.ws.closed).toEqual({ code: 4001, reason: 'key-revoked' });
+    expect(pending.closed).toEqual({ code: 4001, reason: 'key-revoked' });
+    expect(kept!.closed).toBeNull();
+    expect((await h.call('GET', '/ws?ticket=' + oldTicket)).status).toBe(401);
+    h.wake(); await h.send(kept!, { t: 'ping' }); expect(kept!.last('pong')).toEqual({ t: 'pong' });
+  });
+  test('절전된 기기 키가 삭제되었거나 attachment에 없으면 ping도 종료한다', async () => {
+    for (const missing of [false, true]) {
+      const h = harness(), a = await h.join('절전회수'); await h.send(a.ws, { t: 'hello' });
+      if (missing) {
+        const att = a.ws.deserializeAttachment() as any; delete att.key_hash; a.ws.serializeAttachment(att);
+      } else h.db.query('DELETE FROM player_keys WHERE player_id = ?').run(a.id);
+      h.wake(); await h.send(a.ws, { t: 'ping' });
+      expect(a.ws.closed).toEqual({ code: 4001, reason: 'key-revoked' });
+      expect(a.ws.last('pong')).toBeUndefined();
+    }
+  });
+  test('모든 광장 정원이 찬 hello도 welcome을 받으며 파티 채널을 사용할 수 있다', async () => {
+    const h = harness({}, { config: { worldChannels: 1, worldCapacity: 1 } });
+    const a = await h.join('광장선착'), b = await h.join('광장대기');
+    await h.send(a.ws, { t: 'hello' }); await h.send(b.ws, { t: 'hello' });
+    expect(b.ws.last('welcome')).toMatchObject({ world: null, channels: [{ id: 'world-1', count: 1 }], history: {} });
+    expect(b.ws.last('error')).toMatchObject({ code: 'full' }); expect(b.ws.closed).toBeNull();
+    await h.send(b.ws, { t: 'join', channel: 'party:ABCDEF0123456789ABCD' });
+    await h.send(b.ws, { t: 'say', channel: 'party:ABCDEF0123456789ABCD', text: '파티 사용', nonce: 'party-0001' });
+    expect(b.ws.last('msg').m.text).toBe('파티 사용');
+  });
   test('티켓 → 업그레이드 → hello/say 왕복, 절전 후 attachment로 복원', async () => {
     const h = harness();
     const a = await h.join('에이'), b = await h.join('비비');
