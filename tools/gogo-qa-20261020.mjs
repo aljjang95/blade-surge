@@ -450,8 +450,249 @@ async function A2(browser, rec) {
   rec.check('다섯 영웅의 재생 파일 내용(SHA-256)이 서로 겹치지 않음', dupContent.length === 0, dupContent);
 }
 
+// ---------- A5 ----------
+async function A5(browser, rec) {
+  const s = await open(browser, rec);
+  try {
+    await boot(s); await prepareState(s, { hero: 'knight' });
+    await enterBattle(s);
+    await s.page.evaluate(() => {
+      const st = window.__a5 = { deaths: 0, wasAlive: true, hpMin: 1, maxEnemies: 0 };
+      setInterval(() => { const b = window.app.battle, P = b?.player; if (!P) return; if (!P.alive && st.wasAlive) st.deaths++; st.wasAlive = P.alive; st.hpMin = Math.min(st.hpMin, P.hp / P.maxHp); st.maxEnemies = Math.max(st.maxEnemies, b.enemies.filter((e) => e.alive).length); }, 50);
+    });
+    await s.page.locator('#btn-auto').tap(); rec.did('전투 HUD AUTO 버튼(#btn-auto) 실제 탭');
+    const wall0 = Date.now(); let st = null, shotMid = false;
+    while (Date.now() - wall0 < 300000) {
+      await sleep(1000);
+      st = await s.page.evaluate(() => { const b = window.app.battle, P = b?.player, r = b?.result; return { active: !!b?.active, win: r ? !!r.win : null, resultShown: !!document.querySelector('#btn-result-lobby')?.offsetParent, elapsed: b ? +b.elapsed.toFixed(1) : null, kills: b?.kills ?? null, hp: P ? Math.round(P.hp) : null, maxHp: P ? Math.round(P.maxHp) : null, auto: P?.auto, rooms: b?.world ? b.world.rooms.filter((x) => x.cleared).length + '/' + b.world.rooms.length : null, a5: window.__a5 }; });
+      if (!shotMid && Date.now() - wall0 > 30000) { shotMid = true; await rec.shot(s, 'auto-mid'); }
+      if (st.resultShown || (!st.active && st.win !== null)) break;
+    }
+    await sleep(1500);
+    const fin = await s.page.evaluate(() => { const b = window.app.battle; return { win: b?.result ? !!b.result.win : null, resultShown: !!document.querySelector('#btn-result-lobby')?.offsetParent, resultTitle: document.querySelector('#result h1, #result .result-title, #result-title')?.textContent || null, elapsedGame: b ? +b.elapsed.toFixed(1) : null, kills: b?.kills ?? null, a5: window.__a5 }; });
+    await rec.shot(s, 'result');
+    const wallSec = round((Date.now() - wall0) / 1000, 1);
+    rec.obs('final', { ...fin, wallSeconds: wallSec, last: st }); rec.obs('deaths', fin.a5.deaths); rec.obs('minHpRatio', round(fin.a5.hpMin, 3)); rec.obs('maxAliveEnemies', fin.a5.maxEnemies);
+    rec.check('승리 화면까지 도달(300초 이내)', fin.win === true && fin.resultShown, { win: fin.win, resultShown: fin.resultShown, wallSeconds: wallSec });
+    rec.check('사망 0', fin.a5.deaths === 0, { deaths: fin.a5.deaths, minHpRatio: round(fin.a5.hpMin, 3) });
+  } finally { await s.close(); }
+}
+
+// ---------- A6 ----------
+// scene 계측: skills-v2 텍스처(VFX_TEX 의 sv2-*)를 쓰는 지면 메시·스프라이트 수, 지면 링 최대 반경, 총 객체 수.
+async function installVfxProbe(s) {
+  await s.page.evaluate(async () => {
+    const { VFX_TEX } = await import('/src/engine/assets.js');
+    const sv = new Set(Object.entries(VFX_TEX).filter(([k]) => k.startsWith('sv2-')).map(([, v]) => v));
+    window.__sv2Keys = Object.keys(VFX_TEX).filter((k) => k.startsWith('sv2-'));
+    window.__vfxMax = { n: 0, r: 0 };
+    window.__vfxSnap = () => {
+      const scene = window.app.renderer.scene; let n = 0, total = 0, maxR = 0, meshes = 0, sprites = 0;
+      scene.traverse((o) => {
+        total++;
+        const m = o.material; if (!m || !m.map || !sv.has(m.map) || !o.visible) return;
+        for (let a = o; a; a = a.parent) if (a.name === 'GradeAura') return;
+        n++; if (o.isMesh) { meshes++; maxR = Math.max(maxR, o.scale.x * (o.geometry?.parameters?.width || 1) / 2); } else if (o.isSprite) sprites++;
+      });
+      return { sv2: n, meshes, sprites, total, children: scene.children.length, maxGroundRadius: +maxR.toFixed(2) };
+    };
+    const tick = () => { const k = window.__vfxSnap(); window.__vfxMax.n = Math.max(window.__vfxMax.n, k.sv2); window.__vfxMax.r = Math.max(window.__vfxMax.r, k.maxGroundRadius); requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  });
+}
+// 스킬 버튼을 실제로 탭하고, 시전 직후 deltas(게임 초)마다 게임을 잠깐 멈춰 캡처한다(멈춤은 캡처 정확도용).
+async function castAndCapture(s, rec, { slot, tag, deltas = [.15, .4] }) {
+  await s.page.evaluate((slot) => {
+    const b = window.app.battle, P = b.player;
+    P.cds.fill(0); P.mp = P.maxMp; P.ult = P.ultMax; window.__vfxMax = { n: 0, r: 0 }; window.__tapG = null;
+    document.querySelector('.skill-btn[data-skill="' + slot + '"]').addEventListener('touchstart', () => { window.__tapG = b.elapsed; }, { capture: true, once: true });
+  }, slot);
+  const info = await s.page.evaluate((slot) => { const P = window.app.battle.player; return { id: P.def.skills[slot]?.id, name: P.def.skills[slot]?.name, ult: !!P.def.skills[slot]?.ult, unlocked: P.unlocked(slot), state: P.state }; }, slot);
+  await s.page.locator('.skill-btn[data-skill="' + slot + '"]').tap();
+  const snaps = [];
+  for (const d of deltas) {
+    const snap = await s.page.evaluate(async (d) => {
+      const b = window.app.battle;
+      for (let i = 0; i < 400 && (window.__tapG === null || b.elapsed - window.__tapG < d); i++) await new Promise((r) => requestAnimationFrame(r));
+      b.setPaused('gogo-qa', true);
+      return { atSec: +(b.elapsed - window.__tapG).toFixed(3), state: b.player.state, ...window.__vfxSnap() };
+    }, d);
+    const file = await rec.shot(s, tag + '-' + Math.round(d * 1000) + 'ms');
+    await s.page.evaluate(() => window.app.battle.setPaused('gogo-qa', false));
+    snaps.push({ delta: d, ...snap, file });
+  }
+  await sleep(1400);
+  const max = await s.page.evaluate(() => ({ ...window.__vfxMax }));
+  return { ...info, snaps, maxSv2: max.n, maxGroundRadius: round(max.r, 2) };
+}
+async function A6Pass(browser, rec, viewport, heroes, tagPrefix) {
+  const result = {};
+  for (const hero of heroes) {
+    const s = await open(browser, rec, viewport);
+    try {
+      await boot(s); await prepareState(s, { hero, level: 30 });
+      await enterBattle(s, { settle: 2500 });
+      await installVfxProbe(s); await sleep(500);
+      const base = await s.page.evaluate(() => ({ ...window.__vfxSnap(), keys: window.__sv2Keys }));
+      rec.inject('스킬 시전 직전 쿨다운 0·MP 가득·궁극기 게이지 가득(P.cds/P.mp/P.ult)');
+      const skill = await castAndCapture(s, rec, { slot: 0, tag: tagPrefix + hero + '-skill' });
+      await sleep(800);
+      const ult = await castAndCapture(s, rec, { slot: 3, tag: tagPrefix + hero + '-ult' });
+      await sleep(1500);
+      // 반복 시전 3회 → 효과가 끝난 뒤 scene 객체 수가 시작값으로 돌아오는지
+      const before = await s.page.evaluate(() => window.__vfxSnap());
+      for (let i = 0; i < 3; i++) {
+        await s.page.evaluate(() => { const P = window.app.battle.player; P.cds.fill(0); P.mp = P.maxMp; });
+        await s.page.locator('.skill-btn[data-skill="0"]').tap(); await sleep(1100);
+      }
+      await sleep(3500);
+      const after = await s.page.evaluate(() => window.__vfxSnap());
+      result[hero] = { base, skill, ult, repeat: { before, after, returned: after.total === before.total && after.children === before.children && after.sv2 === before.sv2 } };
+    } finally { await s.close(); }
+  }
+  return result;
+}
+async function A6(browser, rec) {
+  const heroes = ['knight', 'mage', 'ranger'];
+  const main = await A6Pass(browser, rec, VIEW, heroes, '844-');
+  rec.obs('viewport844x390', main);
+  for (const hero of heroes) {
+    const r = main[hero];
+    rec.check(hero + ': 스킬 시전(' + r.skill.id + ')', r.skill.snaps.every((k) => k.state === 'skill' || k.state === 'ult'), r.skill.snaps.map((k) => k.state));
+    rec.check(hero + ': 스킬 시전 직후 skills-v2 텍스처 메시 > 0', r.skill.snaps.some((k) => k.sv2 > 0) && r.skill.maxSv2 > 0, { atSnaps: r.skill.snaps.map((k) => k.sv2), maxSv2: r.skill.maxSv2, keys: r.base.keys.length });
+    rec.check(hero + ': 궁극기 시전(' + r.ult.id + ')', r.ult.unlocked && r.ult.snaps.some((k) => k.state === 'ult'), r.ult.snaps.map((k) => k.state));
+    rec.check(hero + ': 궁극기 skills-v2 메시 > 0', r.ult.maxSv2 > 0, { atSnaps: r.ult.snaps.map((k) => k.sv2), maxSv2: r.ult.maxSv2 });
+    rec.check(hero + ': 궁극기 지면 링 반경 10 이상(링 목표 r1=10, 마지막 표본 전 9.8 이상 허용)', r.ult.maxGroundRadius >= 9.8, r.ult.maxGroundRadius);
+    rec.check(hero + ': 반복 시전 3회 뒤 scene 객체 수가 시작값으로 복귀', r.repeat.returned, r.repeat);
+  }
+  const wide = await A6Pass(browser, rec, WIDE, heroes, '1280-');
+  rec.obs('viewport1280x590', Object.fromEntries(Object.entries(wide).map(([h, r]) => [h, { skillSv2: r.skill.maxSv2, ultSv2: r.ult.maxSv2, ultRadius: r.ult.maxGroundRadius, snaps: [...r.skill.snaps, ...r.ult.snaps].map((k) => k.file) }])));
+  for (const hero of heroes) rec.check(hero + ' 1280x590: 스킬·궁극기 skills-v2 메시 > 0', wide[hero].skill.maxSv2 > 0 && wide[hero].ult.maxSv2 > 0, { skill: wide[hero].skill.maxSv2, ult: wide[hero].ult.maxSv2 });
+}
+
+// ---------- A7 ----------
+// 화면 중앙 보호 영역(가로 가운데 1/3, 상단 HUD 아래~하단 조작부 위)과 겹치는 DOM UI 를 찾는다. 월드 이펙트·피해 숫자는 별도 표기.
+const overlapProbe = (s) => s.page.evaluate(() => {
+  const W = innerWidth, H = innerHeight, R = (n) => n.getBoundingClientRect();
+  const top = R(document.querySelector('.hud-top')).bottom;
+  const ctrl = [...document.querySelectorAll('.actions > *, .joy-base')].filter((n) => n.offsetParent).map((n) => R(n).top);
+  const zone = { x0: W / 3, x1: W * 2 / 3, y0: top, y1: Math.min(...ctrl) };
+  const skip = (n) => n.closest('.hud-top, .actions, #joy, canvas, #minimap-wrap, #btn-map, #skill-aim-cancel');
+  const found = [];
+  for (const n of document.body.querySelectorAll('*')) {
+    if (skip(n)) continue;
+    const cs = getComputedStyle(n); if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+    let op = 1; for (let a = n; a && a !== document.body; a = a.parentElement) { op *= parseFloat(getComputedStyle(a).opacity); if (a.hidden || getComputedStyle(a).display === 'none') op = 0; }
+    if (op < 0.05) continue;
+    const r = R(n); if (r.width < 2 || r.height < 2) continue;
+    const ix = Math.min(r.right, zone.x1) - Math.max(r.left, zone.x0), iy = Math.min(r.bottom, zone.y1) - Math.max(r.top, zone.y0);
+    if (ix <= 0 || iy <= 0) continue;
+    const own = [...n.childNodes].some((c) => c.nodeType === 3 && c.textContent.trim());
+    const bg = /rgba?\(/.test(cs.backgroundColor) && !/rgba\(\d+, \d+, \d+, 0\)/.test(cs.backgroundColor) && cs.backgroundColor !== 'transparent';
+    if (!(own || bg || cs.backgroundImage !== 'none' || n.tagName === 'IMG' || n.tagName === 'SVG')) continue;
+    if (r.width >= W * 0.95 && r.height >= H * 0.9) continue; // 화면 전체 비네트·플래시
+    found.push({ id: n.id || null, cls: String(n.className || '').slice(0, 40), text: (n.textContent || '').trim().slice(0, 24), world: !!n.closest('#dmg-layer'), rect: [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)], op: +op.toFixed(2) });
+  }
+  return { zone: { x0: Math.round(zone.x0), x1: Math.round(zone.x1), y0: Math.round(zone.y0), y1: Math.round(zone.y1) }, found };
+});
+async function A7One(browser, rec, grade, samples, shotTag) {
+  const s = await open(browser, rec);
+  try {
+    await boot(s); await prepareState(s, { hero: 'knight', grade });
+    await enterBattle(s, { settle: 2500 });
+    await sleep(800);
+    const aura = await s.page.evaluate(() => { const P = window.app.battle.player, a = P.gradeAura; return { grade: a?.grade, group: !!a?.group, visible: a?.group?.visible ?? null, ring: a?.ring?.visible ?? null, aura: a?.aura?.visible ?? null, ringOpacity: a?.ring?.material?.opacity ?? null, ringMapSet: !!a?.ring?.material?.map, auraMapSet: !!a?.aura?.material?.map, heroGrade: window.app.eco.hero(window.app.eco.s.selected).grade }; });
+    await rec.shot(s, shotTag + '-844');
+    const rows = [];
+    if (samples > 0) {
+      await s.page.locator('#btn-auto').tap(); rec.did('AUTO 버튼 실제 탭(전투 중 UI 표본 확보)');
+      for (let i = 0; i < samples; i++) { await sleep(2000); rows.push(await overlapProbe(s)); if (i === 4) await rec.shot(s, shotTag + '-mid'); }
+    }
+    await s.close();
+    // 1280x590 캡처
+    const w = await open(browser, rec, WIDE);
+    try {
+      await boot(w); await prepareState(w, { hero: 'knight', grade }); await enterBattle(w, { settle: 2500 }); await sleep(800);
+      await rec.shot(w, shotTag + '-1280');
+    } finally { await w.close(); }
+    return { aura, rows };
+  } catch (e) { await s.close().catch(() => {}); throw e; }
+}
+async function A7(browser, rec) {
+  const sssr = await A7One(browser, rec, 'SSSR', 10, 'sssr');
+  rec.obs('sssrAura', sssr.aura);
+  rec.check('SSSR: GradeAura 그룹 표시(group.visible)', sssr.aura.visible === true, sssr.aura);
+  rec.check('SSSR: 지면 링·몸 오라 모두 표시', sssr.aura.ring === true && sssr.aura.aura === true, { ring: sssr.aura.ring, aura: sssr.aura.aura });
+  const ui = sssr.rows.map((r) => r.found.filter((f) => !f.world)), world = sssr.rows.map((r) => r.found.filter((f) => f.world).length);
+  rec.obs('overlapSamples', sssr.rows.map((r, i) => ({ i, zone: r.zone, ui: ui[i], dmgNumbers: world[i] })));
+  rec.check('전투 DOM UI 중앙 보호 영역 겹침 0(2초 간격 10회 표본)', sssr.rows.length === 10 && ui.every((l) => l.length === 0), ui.map((l, i) => ({ sample: i, items: l })).filter((x) => x.items.length));
+  const ssr = await A7One(browser, rec, 'SSR', 0, 'ssr');
+  rec.obs('ssrAura', ssr.aura);
+  rec.check('SSR: GradeAura 그룹 표시(금색 링, 몸 오라 없음)', ssr.aura.visible === true && ssr.aura.ring === true && ssr.aura.aura === false, ssr.aura);
+}
+
+// ---------- A8 ----------
+async function skillState(s) {
+  return s.page.evaluate(() => {
+    const e = window.app.eco, id = e.s.selected, h = e.hero(id), sp = e.skillPoints(id);
+    return { id, level: h.level, skills: [...(h.skills || [])], loadout: h.skillLoadout, sp: sp.available, spent: sp.spent, earned: sp.earned };
+  });
+}
+async function A8(browser, rec) {
+  const s = await open(browser, rec);
+  try {
+    await boot(s); await prepareState(s, { hero: 'knight', level: 30 });
+    const s0 = await skillState(s); rec.obs('start', s0);
+    // 영웅 화면 → 스킬 트리(실제 탭)
+    await s.page.locator('.bottomnav button[data-tab="heroes"]').tap(); await sleep(900);
+    await s.page.locator('.hs-growth-links button', { hasText: '스킬 트리' }).tap(); rec.did('하단 내비 영웅·장비 → "스킬 트리" 실제 탭');
+    await s.page.waitForSelector('.st-layer:not([hidden]) .st-grid, .gx-layer.st-layer:not([hidden])', { timeout: 10000 }); await sleep(600);
+    await rec.shot(s, 'tree-open');
+    const cells = await s.page.evaluate(() => [...document.querySelectorAll('.st-cell')].map((c, i) => ({ i, state: [...c.classList].find((k) => k.startsWith('is-') && !['is-awaken', 'is-selected'].includes(k)), awaken: c.classList.contains('is-awaken'), label: c.querySelector('.st-icon')?.getAttribute('aria-label') })));
+    rec.obs('cellsBefore', cells);
+    const ready = cells.filter((c) => c.awaken && c.state === 'is-ready');
+    rec.check('습득 가능한 각성 스킬이 있다', ready.length > 0, cells.filter((c) => c.awaken));
+    if (!ready.length) return;
+    // 각성 칸의 스킬 인덱스는 data-key (cell-N)
+    const idx = await s.page.evaluate(() => { const c = [...document.querySelectorAll('.st-cell.is-awaken.is-ready .st-icon')][0]; return Number(c.dataset.key.replace('cell-', '')); });
+    const other = await s.page.evaluate((idx) => { const c = [...document.querySelectorAll('.st-cell.is-awaken .st-icon')].map((n) => Number(n.dataset.key.replace('cell-', ''))).filter((i) => i !== idx); return c; }, idx);
+    rec.obs('target', { idx, others: other });
+    await s.page.locator('.st-icon[data-key="cell-' + idx + '"]').tap(); await sleep(400);
+    const learnLabel1 = await s.page.locator('.st-learn').innerText();
+    await s.page.locator('.st-learn').tap(); rec.did('각성 스킬 칸 탭 → "습득" 버튼 실제 탭'); await sleep(700);
+    const s1 = await skillState(s); await rec.shot(s, 'learned-1');
+    rec.obs('afterLearn', { learnLabel: learnLabel1, ...s1 });
+    rec.check('습득: 스킬 레벨 0→1', s0.skills[idx] === 0 && s1.skills[idx] === 1, { before: s0.skills[idx], after: s1.skills[idx] });
+    rec.check('습득: SP 감소', s1.sp < s0.sp, { before: s0.sp, after: s1.sp });
+    await s.page.locator('.st-learn').tap(); rec.did('"강화" 버튼 한 번 더 실제 탭'); await sleep(700);
+    const s2 = await skillState(s); await rec.shot(s, 'learned-2');
+    rec.obs('afterUpgrade', s2);
+    rec.check('한 번 더 올리기: 레벨 1→2·SP 추가 감소', s2.skills[idx] === 2 && s2.sp < s1.sp, { level: s2.skills[idx], sp: [s1.sp, s2.sp] });
+    // 배우지 않은 각성 스킬은 장착 거부
+    const equipUi = []; const eqApi = [];
+    for (const o of other) {
+      await s.page.locator('.st-icon[data-key="cell-' + o + '"]').tap(); await sleep(350);
+      equipUi.push({ idx: o, equipRowVisible: await s.page.locator('.st-equip').count() > 0, learnDisabled: await s.page.locator('.st-learn').isDisabled() });
+      eqApi.push({ idx: o, slot0: await s.page.evaluate(([id, i]) => window.app.eco.setSkillLoadout(id, 0, i), [s0.id, o]), slot1: await s.page.evaluate(([id, i]) => window.app.eco.setSkillLoadout(id, 1, i), [s0.id, o]) });
+    }
+    rec.inject('미습득 각성 스킬 장착 시도는 eco.setSkillLoadout API 직접 호출(UI에는 장착 행이 없음을 함께 확인)');
+    rec.obs('equipAttempt', { ui: equipUi, api: eqApi, loadoutAfter: (await skillState(s)).loadout });
+    const unlearned = (await skillState(s)).skills;
+    const noEquipUi = equipUi.filter((u) => unlearned[u.idx] === 0).every((u) => !u.equipRowVisible);
+    rec.check('미습득 각성 스킬: UI에 장착 행 없음', noEquipUi, equipUi);
+    rec.check('미습득 각성 스킬: setSkillLoadout 거부(false)', eqApi.filter((a) => unlearned[a.idx] === 0).every((a) => a.slot0 === false && a.slot1 === false), eqApi);
+    // 새로고침 뒤 유지
+    await s.page.reload({ waitUntil: 'domcontentloaded' }); rec.did('새로고침(page.reload)');
+    await boot(s);
+    const s3 = await skillState(s);
+    rec.obs('afterReload', s3);
+    rec.check('새로고침 뒤 스킬 레벨 유지', s3.skills[idx] === 2, s3.skills);
+    rec.check('새로고침 뒤 SP 유지', s3.sp === s2.sp, { before: s2.sp, after: s3.sp });
+  } finally { await s.close(); }
+}
+
 // ---------- 러너 ----------
-const CRITERIA = { A1: ['전투·UI 효과음이 mirelo-v1 이고 예전 경로 요청 0', A1], A2: ['영웅 5명이 각자 전용 효과음을 재생하고 서로 겹치지 않음', A2], A3: ['자동 타겟 켜짐: 공격 시 적 쪽으로 회전·체력 감소', A3], A4: ['설정에서 자동 타겟 끄기·유지·yaw 유지', A4] };
+const CRITERIA = { A1: ['전투·UI 효과음이 mirelo-v1 이고 예전 경로 요청 0', A1], A2: ['영웅 5명이 각자 전용 효과음을 재생하고 서로 겹치지 않음', A2], A5: ['AUTO 첫 스테이지 승리·사망 0', A5], A6: ['스킬·궁극기 skills-v2 VFX', A6], A7: ['등급 오라·화면 중앙 UI 겹침', A7], A8: ['스킬 트리 각성 습득·장착 거부·유지', A8], A3: ['자동 타겟 켜짐: 공격 시 적 쪽으로 회전·체력 감소', A3], A4: ['설정에서 자동 타겟 끄기·유지·yaw 유지', A4] };
 // 기본은 이 PC 의 실제 GPU(ANGLE D3D11) 헤드리스 Chrome. --gl swift 면 swiftshader(소프트웨어, 게임 시간이 느려진다).
 const GL = arg('gl', 'gpu');
 const browser = await chromium.launch(GL === 'swift' ? launchOpts() : { args: ['--use-angle=d3d11', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--autoplay-policy=no-user-gesture-required'] });
@@ -471,5 +712,6 @@ await browser.close();
 summary.finished = new Date().toISOString(); summary.pass = !failed;
 await fs.writeFile(path.join(out, 'summary.json'), JSON.stringify(summary, null, 2));
 process.exit(failed ? 1 : 0);
+
 
 
