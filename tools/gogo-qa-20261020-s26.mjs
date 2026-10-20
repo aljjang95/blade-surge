@@ -1,10 +1,10 @@
-// 사이클 20261020-s26-device-acceptance 실기기 QA(A1~A5). 실제 안드로이드 Chrome에서 정식 호스트를 돌린다.
-// 사용: node tools/gogo-qa-20261020-s26.mjs --serial <adb 시리얼> --out <폴더> [--steps a1,a2,a3,a4,a5] [--minutes 11] [--port 9341]
+// 사이클 20261020-s26-device-acceptance 실기기 QA(A1~A4). 실제 안드로이드 Chrome에서 정식 호스트를 돌린다.
+// 사용: node tools/gogo-qa-20261020-s26.mjs --serial <adb 시리얼> --out <폴더> [--steps a1,a2,a3,a4] [--port 9341]
 //       [--origin https://blade.tllhouse.com/] [--holder gogo:20261020-s26-device-acceptance]
 // 입력: 게임 입력은 모두 adb shell input(tap·swipe, OS 터치 주입)이다. CDP(Chrome 원격 디버깅)는 상태 읽기·좌표 계산·상태 준비 주입에만 쓰고
 //       주입은 보고서 injected 로 따로 적는다.
 // 기기 보호: 입력·캡처 전마다 전경 창이 Chrome인지 확인하고 아니면 즉시 멈춘다(exit 4, 주인이 폰을 쓰는 중).
-//       시작 때 이 사이트 localStorage(게임 저장)를 백업하고 끝나면 그대로 복원한다. 화면 꺼짐 시간만 바꾸며 원래 값으로 되돌린다.
+//       시작 때 이 사이트 localStorage(게임 저장)를 백업하고 끝나면 그대로 복원한다. 기기 설정은 바꾸지 않으며 발열·온도 상태는 읽지 않는다.
 //       볼륨·밝기·앱 전환은 하지 않는다. 연 탭만 닫고 자기 adb forward 만 지운다.
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs/promises';
@@ -14,8 +14,7 @@ import crypto from 'node:crypto';
 const arg = (k, d = '') => { const i = process.argv.indexOf('--' + k); return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : d; };
 const serial = arg('serial'); if (!serial) { console.error('--serial 필요'); process.exit(2); }
 const out = path.resolve(arg('out', 'work/qa/s26'));
-const steps = arg('steps', 'a1,a2,a3,a4,a5').split(',').map((s) => s.trim().toLowerCase());
-const minutes = +arg('minutes', '11');
+const steps = arg('steps', 'a1,a2,a3,a4').split(',').map((s) => s.trim().toLowerCase());
 const port = +arg('port', '9341');
 const origin = arg('origin', 'https://blade.tllhouse.com/');
 const holder = arg('holder', 'gogo:20261020-s26-device-acceptance');
@@ -100,7 +99,7 @@ async function tapSel(sel, { text = null, index = 0, label = sel, retry = true }
     window.__qaEl = el;
     return { cx, cy, w: r.width, h: r.height, covered: !(top && (top === el || el.contains(top))), coverBy: top ? (top.id || top.className || top.tagName) + '' : null };
   }, { sel, text, index });
-  if (!info) throw new Error('요소 없음: ' + label);
+  if (!info) { const diag = await ev(({ sel }) => [...document.querySelectorAll(sel)].slice(0, 4).map((n) => { const r = n.getBoundingClientRect(), cs = getComputedStyle(n); return [Math.round(r.width), Math.round(r.height), cs.display, cs.visibility, n.isConnected]; }), { sel }); throw new Error('요소 없음: ' + label + ' ' + JSON.stringify(diag)); }
   const t = await tapAt(info.cx, info.cy, label);
   // 명중: 눌린 요소가 대상 안이거나, 탭 직전 대상이 그 지점의 맨 위였고 실제 포인터가 대상 가운데(±4px)에 도착함(탭으로 대상이 다시 그려진 경우).
   const landed = !!t.got && Math.abs(t.got.x - info.cx) <= 4 && Math.abs(t.got.y - info.cy) <= 4 && !info.covered;
@@ -485,59 +484,8 @@ async function stepA4() {
   rec.pass = rec.checks.every((c) => c.ok); await save(); return rec;
 }
 
-function thermal() {
-  const bat = sh('dumpsys battery');
-  const temp = +(bat.match(/temperature: (\d+)/)?.[1] || NaN) / 10, level = +(bat.match(/level: (\d+)/)?.[1] || NaN);
-  const plugged = /AC powered: true|USB powered: true|Wireless powered: true/.test(bat);
-  const ts = sh('dumpsys thermalservice');
-  const status = +(ts.match(/Thermal Status: (\d+)/)?.[1] ?? NaN);
-  const hal = ts.split('Current temperatures from HAL:')[1]?.split(/\n\S/)[0] || '';
-  const temps = {}; for (const m of hal.matchAll(/mValue=([\d.\-]+), mType=(\d+), mName=([^,]+)/g)) { const k = { 0: 'cpu', 1: 'gpu', 2: 'battery', 3: 'skin' }[m[2]] || 't' + m[2]; temps[k] = Math.max(temps[k] ?? -99, +m[1]); }
-  return { batteryC: temp, level, plugged, thermalStatus: status, hal: temps };
-}
-async function stepA5() {
-  const rec = newRec('A5', minutes + '분 연속 전투 프레임·발열');
-  if (!await ev(() => window.app?.mode === 'battle' && window.app.battle?.active)) { await boot(rec); await prepare(rec, { hero: 'knight', energy: 400 }); rec.check('전투 진입', await enterBattle(rec)); }
-  await setAuto(rec, true);
-  const samples = []; const t0 = Date.now(); let lastRaf = await ev(() => window.__qa.raf), lastT = Date.now(), battles = 1, nextSample = 0;
-  const startTherm = thermal(); rec.obs('thermalStart', startTherm);
-  while (Date.now() - t0 < minutes * 60000) {
-    await sleep(2000);
-    guard('측정 중 전경 확인');
-    if (await handleChoice(rec)) continue;
-    if (await resultShown()) {
-      const win = await ev(() => !!window.app.battle?.result?.win);
-      if (await visible('#btn-result-retry')) await rec.tap('#btn-result-retry', { label: '결과 → 다시' });
-      else await rec.tap('button', { text: '^다시 도전', label: '원정 결과 → 다시 도전' });
-      battles++; await sleep(1500);
-      for (let i = 0; i < 6; i++) { if (await visible('button', '건너뛰기')) await rec.tap('button', { text: '건너뛰기', label: '건너뛰기' }).catch(() => {}); if (await ev(() => window.app.mode === 'battle' && window.app.battle?.active && window.app.battle.elapsed > 0.5)) break; await sleep(800); }
-      await setAuto(rec, true); continue;
-    }
-    if (Date.now() - t0 >= nextSample) {
-      nextSample += 30000;
-      const g = await ev(() => { const f = window.app.frameGovernor; return { mode: window.app.mode, tier: f.tier, targetFps: f.targetFps, renderedFps: +f.renderedFps.toFixed(1), p95: +f.p95FrameMs.toFixed(1), miss: +f.missRatio.toFixed(3), raf: window.__qa.raf, battleActive: !!window.app.battle?.active, auto: !!window.app.battle?.player?.auto, enemies: window.app.battle?.enemies?.filter((e) => e.alive).length ?? null }; });
-      const now = Date.now(), rafFps = (g.raf - lastRaf) / ((now - lastT) / 1000); lastRaf = g.raf; lastT = now;
-      const th = thermal();
-      samples.push({ sec: round((now - t0) / 1000, 0), ...g, rafFps: round(rafFps, 1), ...th });
-      report.steps.A5.observed.samples = samples; await save();
-      if (samples.length % 4 === 1) await shot(rec, 'soak-' + String(samples.length).padStart(2, '0'));
-    }
-  }
-  const endTherm = thermal(); rec.obs('thermalEnd', endTherm); rec.obs('battles', battles);
-  // 1분 창(표본 2개) 평균 fps 가 목표의 70% 미만인 창이 연속 4개(2분) 이상이면 지속 저하
-  const battleS = samples.filter((s) => s.mode === 'battle' && s.targetFps > 0);
-  let run = 0, worst = 0; for (const s of battleS) { if (s.renderedFps < s.targetFps * 0.7) { run++; worst = Math.max(worst, run); } else run = 0; }
-  const fps = battleS.map((s) => s.renderedFps), avg = fps.length ? fps.reduce((a, b) => a + b, 0) / fps.length : null;
-  const maxBat = Math.max(...samples.map((s) => s.batteryC)), maxStatus = Math.max(...samples.map((s) => s.thermalStatus)), maxTier = Math.max(...samples.map((s) => s.tier));
-  rec.obs('summary', { samples: samples.length, battleSamples: battleS.length, durationMin: round((Date.now() - t0) / 60000, 1), avgRenderedFps: round(avg, 1), minRenderedFps: fps.length ? Math.min(...fps) : null, maxP95: Math.max(...battleS.map((s) => s.p95)), maxTier, batteryC: [startTherm.batteryC, endTherm.batteryC], maxBatteryC: maxBat, maxThermalStatus: maxStatus, skinC: [startTherm.hal.skin ?? null, endTherm.hal.skin ?? null], worstLowRunSamples: worst });
-  rec.check('측정 ' + minutes + '분 이상, 30초 간격 표본', (Date.now() - t0) >= minutes * 60000 - 5000 && samples.length >= minutes * 2 - 1, samples.length);
-  rec.check('지속 프레임 저하 없음(목표 70% 미만 연속 2분 미만)', worst < 4, { worst });
-  rec.check('과열 없음(thermal status < 3, 배터리 < 45°C)', maxStatus < 3 && maxBat < 45, { maxStatus, maxBat });
-  rec.pass = rec.checks.every((c) => c.ok); await save(); return rec;
-}
-
 // ---------- 시작·정리 ----------
-let backup = null, savedTimeout = null;
+let backup = null;
 async function main() {
   report.device = { model: sh('getprop ro.product.model').trim(), android: sh('getprop ro.build.version.release').trim(), chrome: (sh('dumpsys package com.android.chrome | grep versionName').match(/versionName=(\S+)/) || [])[1] || null, wmSize: sh('wm size').trim().replace(/\s+/g, ' '), density: sh('wm density').trim().replace(/\s+/g, ' ') };
   guard('시작');
@@ -556,11 +504,9 @@ async function main() {
   backup = await ev(() => { const o = {}; for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); o[k] = localStorage.getItem(k); } return o; });
   await fs.writeFile(path.join(out, 'localStorage-backup.json'), JSON.stringify(backup));
   report.settings.localStorageBackupKeys = Object.keys(backup).length;
-  savedTimeout = sh('settings get system screen_off_timeout').trim(); report.settings.screenOffTimeoutOriginal = savedTimeout;
-  if (steps.includes('a5')) { sh('settings put system screen_off_timeout 1800000'); report.settings.screenOffTimeoutSet = 1800000; }
   await save();
   for (const s of steps) {
-    const fn = { a1: stepA1, a2: stepA2, a3: stepA3, a4: stepA4, a5: stepA5 }[s]; if (!fn) continue;
+    const fn = { a1: stepA1, a2: stepA2, a3: stepA3, a4: stepA4 }[s]; if (!fn) continue;
     try { const r = await fn(); console.log(s.toUpperCase(), r.pass ? 'PASS' : 'FAIL', JSON.stringify(r.checks.filter((c) => !c.ok)).slice(0, 600)); }
     catch (e) { if (e instanceof OwnerBusy) throw e; report.errors.push({ step: s, error: String(e.stack || e).slice(0, 800) }); console.log(s.toUpperCase(), 'ERROR', String(e).slice(0, 300)); await save(); }
   }
@@ -569,7 +515,6 @@ async function cleanup() {
   const c = {};
   try { if (cdp && backup) { await cdp.send('Page.navigate', { url: origin + 'version.json' }); await sleep(2500); c.restored = await ev((b) => { localStorage.clear(); for (const [k, v] of Object.entries(b)) localStorage.setItem(k, v); return localStorage.length; }, backup); c.restoredMatches = c.restored === Object.keys(backup).length; } } catch (e) { c.restoreError = String(e); }
   try { cdp?.close(); if (targetId) c.tabClosed = await http('/json/close/' + targetId); } catch (e) { c.closeError = String(e); }
-  try { if (savedTimeout && report.settings.screenOffTimeoutSet) { sh('settings put system screen_off_timeout ' + savedTimeout); c.screenOffTimeout = sh('settings get system screen_off_timeout').trim(); } } catch (e) { c.settingError = String(e); }
   try { c.forward = execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', FORWARD_PS, '-Action', 'clean', '-Holder', holder, '-Serial', serial], { encoding: 'utf8' }).trim(); } catch (e) { c.forwardError = String(e); }
   report.cleanup = c; report.finished = new Date().toISOString(); await save();
 }
