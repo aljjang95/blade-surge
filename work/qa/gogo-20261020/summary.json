@@ -1,0 +1,18 @@
+{
+  "started": "2026-10-20T04:53:10.659Z",
+  "origin": "http://127.0.0.1:5342/",
+  "out": "C:\\Users\\heart\\AppData\\Local\\APEX\\tasks\\aljjang95-blade-surge\\wt\\20261020-qa\\work\\qa\\gogo-20261020",
+  "viewport": {
+    "width": 844,
+    "height": 390
+  },
+  "criteria": {
+    "A3": {
+      "pass": true,
+      "failedChecks": [],
+      "pageErrors": 0
+    }
+  },
+  "finished": "2026-10-20T04:53:38.535Z",
+  "pass": true
+}
