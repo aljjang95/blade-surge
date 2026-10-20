@@ -1,0 +1,59 @@
+import { describe, expect, test } from 'bun:test';
+import { isCompact, layoutFor, protectedZone, rectsOverlap, tickerRect } from '../src/ui/layout.js';
+
+const VIEWPORTS = [[844, 390], [800, 360], [1280, 590], [1440, 900], [932, 430]];
+
+describe('패널 배치', () => {
+  test('폰 가로는 좁은 화면, 데스크톱은 넓은 화면', () => {
+    expect(isCompact(844, 390)).toBe(true);
+    expect(isCompact(800, 360)).toBe(true);
+    expect(isCompact(1440, 900)).toBe(false);
+  });
+  test('사이드 시트는 화면의 약 45%이고 최소 폭을 지킨다', () => {
+    expect(layoutFor(1440, 900).sideWidth).toBe(560);
+    expect(layoutFor(844, 390).sideWidth).toBe(380);
+    expect(layoutFor(800, 360).sideWidth).toBe(360);
+    expect(layoutFor(320, 600).sideWidth).toBe(320);
+  });
+  test('소식 상세는 충분히 넓을 때만 오른쪽 열', () => {
+    expect(layoutFor(1440, 900).boardSplit).toBe(true);
+    expect(layoutFor(844, 390).boardSplit).toBe(false);
+  });
+});
+
+describe('보호 영역', () => {
+  test('가로 가운데 1/3이고 세로는 HUD 아래부터 조작 버튼 위까지', () => {
+    const zone = protectedZone({ width: 900, height: 400, hudBottom: 70, controlsTop: 300 });
+    expect(zone).toEqual({ left: 300, right: 600, top: 70, bottom: 300 });
+  });
+  test('범위를 벗어난 값은 화면 안으로 맞춘다', () => {
+    const zone = protectedZone({ width: 900, height: 400, hudBottom: 500, controlsTop: 100 });
+    expect(zone.top).toBe(400);
+    expect(zone.bottom).toBe(400);
+  });
+  test('겹침 판정', () => {
+    expect(rectsOverlap({ left: 0, top: 0, right: 10, bottom: 10 }, { left: 5, top: 5, right: 20, bottom: 20 })).toBe(true);
+    expect(rectsOverlap({ left: 0, top: 0, right: 10, bottom: 10 }, { left: 10, top: 0, right: 20, bottom: 10 })).toBe(false);
+  });
+});
+
+describe('전투 중 채팅 띠는 어떤 화면에서도 보호 영역을 가리지 않는다', () => {
+  for (const [w, h] of VIEWPORTS) {
+    test(w + 'x' + h, () => {
+      const hudBottom = Math.round(h * 0.2), controlsTop = Math.round(h * 0.62);
+      for (const lines of [1, 2]) {
+        const rect = tickerRect({ width: w, height: h, hudBottom, controlsTop, lines });
+        expect(rectsOverlap(rect, rect.zone)).toBe(false);
+        expect(rect.right).toBeLessThanOrEqual(w / 3);
+        expect(rect.left).toBeGreaterThanOrEqual(0);
+        expect(rect.top).toBeGreaterThanOrEqual(hudBottom);
+        expect(rect.bottom).toBeLessThanOrEqual(h);
+      }
+    });
+  }
+  test('줄 수는 최대 2줄', () => {
+    const a = tickerRect({ width: 844, height: 390, hudBottom: 60, lines: 5 });
+    const b = tickerRect({ width: 844, height: 390, hudBottom: 60, lines: 2 });
+    expect(a.bottom).toBe(b.bottom);
+  });
+});
