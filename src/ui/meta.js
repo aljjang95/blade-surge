@@ -457,7 +457,7 @@ export class Meta {
     if (!row) return;
     const s = this.eco.s, h = this.eco.hero(), p = shardProgress(HEROES[s.selected], h);
     const value = { gems: fmt(s.gems), summon: '소환권 ' + s.tickets + (s.ssrTickets ? ' · 확정권 ' + s.ssrTickets : ''), shards: p.need ? p.have + '/' + p.need : '최고', transcend: p.next ? p.grade + '→' + p.next : p.grade, battle: '' };
-    const go = { gems: () => { this.shopTab = 'gem'; this.renderShop(); }, summon: () => this.openTab('gacha'), shards: () => this.openTab('gacha'), transcend: () => this.openTranscend(s.selected), battle: () => this.openTab('home') };
+    const go = { gems: () => { this.shopTab = 'gem'; this.renderShop(); }, summon: () => this.openTab('gacha'), shards: () => this.openTab('gacha'), transcend: () => { this.heroSel = s.selected; this.openTab('heroes'); this.openTranscend(s.selected); }, battle: () => this.openTab('home') };
     row.replaceChildren();
     GROWTH_FLOW.forEach((step, i) => {
       if (i) { const a = document.createElement('span'); a.className = 'sf-arrow'; a.setAttribute('aria-hidden', 'true'); a.textContent = '›'; row.append(a); }
