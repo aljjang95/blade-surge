@@ -58,7 +58,8 @@ export function setupStoreAccess(app) {
       refreshModal = refresh; void refresh();
     } });
   });
-  document.querySelector('.oath-menu-grid').append(trigger);
+  // 메뉴 창은 묶음 구조라 직접 붙이지 않고 상점 묶음에 넣는다.
+  if (app.oathShell?.place) app.oathShell.place(trigger); else document.querySelector('.oath-menu-grid').append(trigger);
   void controller.activate().catch(() => {});
   window.addEventListener('pagehide', event => { void (event.persisted ? controller.suspend() : controller.dispose()).then(() => refreshModal()).catch(() => {}); });
   window.addEventListener('pageshow', event => { if (event.persisted) void controller.resume().then(() => refreshModal()).catch(() => {}); });

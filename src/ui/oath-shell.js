@@ -5,7 +5,7 @@ export const MENU_GROUPS=[
  {id:'adventure',title:'모험',order:['tab:stage','menu-fields']},
  {id:'character',title:'성장 · 정비',order:['mw-open','arsenal-open','rpg-open','journey-lobby','menu-forge','citadel-command-supply']},
  {id:'reward',title:'보상 · 임무',order:['btn-daily','btn-mail','btn-quest','menu-town-quests','tab:pass']},
- {id:'shop',title:'상점 · 소환',order:['tab:gacha','tab:shop']},
+ {id:'shop',title:'상점 · 소환',order:['tab:gacha','tab:shop','store-options']},
  {id:'system',title:'시스템',order:['menu-companion','btn-guide','btn-settings','app-mode-open']},
 ];
 const MENU_ART={'rpg-open':'nav-journal','mw-open':'nav-mastery','journey-lobby':'nav-journey','app-mode-open':'settings','arsenal-open':'nav-jobs','tab:stage':'nav-quests','menu-fields':'nav-journey','menu-forge':'nav-forge','citadel-command-supply':'treasure-chest','menu-town-quests':'nav-quests','menu-companion':'nav-heroes'};
