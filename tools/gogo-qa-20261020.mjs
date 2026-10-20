@@ -612,7 +612,7 @@ const overlapProbe = (s) => s.page.evaluate(() => {
     const bg = /rgba?\(/.test(cs.backgroundColor) && !/rgba\(\d+, \d+, \d+, 0\)/.test(cs.backgroundColor) && cs.backgroundColor !== 'transparent';
     if (!(own || bg || cs.backgroundImage !== 'none' || n.tagName === 'IMG' || n.tagName === 'SVG')) continue;
     if (r.width >= W * 0.95 && r.height >= H * 0.9) continue; // 화면 전체 비네트·플래시
-    found.push({ id: n.id || null, cls: String(n.className || '').slice(0, 40), text: (n.textContent || '').trim().slice(0, 24), world: !!n.closest('#dmg-layer'), rect: [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)], op: +op.toFixed(2) });
+    found.push({ id: n.id || null, cls: String(n.className || '').slice(0, 40), text: (n.textContent || '').trim().slice(0, 24), world: !!n.closest('#dmg-layer') || n.classList.contains('reward-fly'), rect: [Math.round(r.left), Math.round(r.top), Math.round(r.right), Math.round(r.bottom)], op: +op.toFixed(2) });
   }
   return { zone: { x0: Math.round(zone.x0), x1: Math.round(zone.x1), y0: Math.round(zone.y0), y1: Math.round(zone.y1) }, paused: !!window.app.battle.paused, pauseReasons: [...(window.app.battle.pauseReasons || [])], found };
 });
@@ -621,6 +621,8 @@ async function A7One(browser, rec, grade, samples, shotTag) {
   try {
     await boot(s); await prepareState(s, { hero: 'knight', grade });
     await enterBattle(s, { settle: 2500 });
+    // 오라 등급은 Player.update 첫 프레임에 적용된다. 그 프레임이 지날 때까지(최대 5초) 기다린 뒤 표본을 찍는다.
+    await s.page.waitForFunction((g) => window.app.battle?.player?.gradeAura?.grade === g, grade, { timeout: 5000 }).catch(() => {});
     await sleep(800);
     const aura = await s.page.evaluate(() => { const P = window.app.battle.player, a = P.gradeAura; return { grade: a?.grade, group: !!a?.group, visible: a?.group?.visible ?? null, ring: a?.ring?.visible ?? null, aura: a?.aura?.visible ?? null, ringOpacity: a?.ring?.material?.opacity ?? null, ringMapSet: !!a?.ring?.material?.map, auraMapSet: !!a?.aura?.material?.map, heroGrade: window.app.eco.hero(window.app.eco.s.selected).grade }; });
     await rec.shot(s, shotTag + '-844');
