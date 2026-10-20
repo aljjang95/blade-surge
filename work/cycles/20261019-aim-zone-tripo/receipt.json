@@ -1,0 +1,221 @@
+{
+ "schemaVersion": 1,
+ "cycle": "20261019-aim-zone-tripo",
+ "cycleStatus": "shipped",
+ "objective": "몰이 필살기 6종의 조준 표시를 실제 몰이 범위와 일치시키고 Tripo 원본 14개를 재다운로드해 라이브러리에 보관",
+ "chunk": {
+  "name": "몰이 필살기 표시=판정과 Tripo 원본 회수",
+  "why": "독립 재감사가 D2d·D4a를 실패로 판정",
+  "notDoing": "D3b 전투 자세 잔여 19건, 새 Tripo 생성"
+ },
+ "subject": {
+  "kind": "mixed",
+  "identity": {
+   "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+   "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\deploy-027238f",
+   "branch": "",
+   "commit": "027238f5126cd1e20c20c5ba76deca42b331ce30",
+   "tree": "9a6d634644146cb849ba7f127b97c8693cbc0aeb"
+  },
+  "digest": "src:6347dc47f1a9e1c677c367c4471b80fe50fe868398863eebb7053986114738df",
+  "observedAt": "2026-10-19T10:25:05.967Z"
+ },
+ "requirements": [
+  {
+   "id": "A1",
+   "claim": "tools/aim-hitbox-truth-qa.mjs를 몰이 포함 기본 설정(heavenfall·star_prison·absolute_zero·night_parade·eclipse_edge·bloodquake 추가, 교관 확장 변형 포함)으로 전 영웅·전 스킬에 돌려 실패 0이다 / aim-hitbox-truth-qa report 전후",
+   "status": "passed",
+   "surfaces": [
+    "aim-hitbox-truth-qa report 전후"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A1\\report.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A1\\report.json",
+     "sha256": "cd715de2b8eaaec7167f5a82f80da900a8c9e299855bf6d96e98c2b845a99bbd",
+     "command": "수정 전 몰이 포함 검사(AIM_PULL 확장): heavenfall·star_prison·absolute_zero·night_parade·eclipse_edge·bloodquake 모두 표시 밖 표본 피격(실패)",
+     "observedAt": "2026-10-19T10:33:37.070Z",
+     "subjectDigest": "src:6347dc47f1a9e1c677c367c4471b80fe50fe868398863eebb7053986114738df"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A1\\report-2.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A1\\report-2.json",
+     "sha256": "b91865d63c74134ff45cd4ad52def7376d57942ac426b5bb9f3960806cc9a7b5",
+     "command": "aim-hitbox-truth-qa 정식 호스트 027238f 전 영웅·전 스킬, 몰이 포함 기본 설정: 통과 40 실패 0",
+     "observedAt": "2026-10-19T10:33:43.085Z",
+     "subjectDigest": "src:6347dc47f1a9e1c677c367c4471b80fe50fe868398863eebb7053986114738df"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A2",
+   "claim": "새로 표시되는 몰이 한계 점선 원이 세 화면(1280x590, 844x390, 800x360)에서 실제로 그려지고 플레이 영역 보호 규칙(skill-aim-qa·aim-overlay-qa·aim-cancel-overlap)을 어기지 않는다 / aim-envelope-shot, skill-aim-qa, aim-overlay-qa 보고서·캡처",
+   "status": "passed",
+   "surfaces": [
+    "aim-envelope-shot, skill-aim-qa, aim-overlay-qa 보고서·캡처"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A2\\live-aim-envelope-shot.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A2\\live-aim-envelope-shot.log",
+     "sha256": "4d42151e0821de8b3cb20c04acd17ac469b036ec691deef412c10bb5ea871500",
+     "command": "aim-envelope-shot 정식 호스트 세 화면(1280x590·844x390·800x360) 몰이 한계 점선 원 6종 포함 pass:true",
+     "observedAt": "2026-10-19T10:33:49.820Z",
+     "subjectDigest": "src:6347dc47f1a9e1c677c367c4471b80fe50fe868398863eebb7053986114738df"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A2\\live-skill-aim-qa.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A2\\live-skill-aim-qa.log",
+     "sha256": "eff411c14b2fcd45a0ebca1c911f05ae85aab837eda9c9385d6993e1fb746ee1",
+     "command": "skill-aim-qa 정식 호스트 세 화면 pass:true",
+     "observedAt": "2026-10-19T10:33:56.808Z",
+     "subjectDigest": "src:6347dc47f1a9e1c677c367c4471b80fe50fe868398863eebb7053986114738df"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A2\\dev-aim-overlay-qa.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A2\\dev-aim-overlay-qa.log",
+     "sha256": "da522cf80a9f5e185ab5cdc9fed6f2787803aced4674c15b0ea1bfa4f9922d5d",
+     "command": "aim-overlay-qa 같은 소스 개발 서버(정식 호스트는 /src 경로 없음) pass:true",
+     "observedAt": "2026-10-19T10:34:02.327Z",
+     "subjectDigest": "src:6347dc47f1a9e1c677c367c4471b80fe50fe868398863eebb7053986114738df"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A2\\heavenfall-844x390.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A2\\heavenfall-844x390.png",
+     "sha256": "beb5a01fcea3d3a0a6e5990c7b2f11e997f929a75c01f5a3e054173016312201",
+     "command": "844x390 천상 신벌강림 조준 캡처",
+     "observedAt": "2026-10-19T10:34:11.716Z",
+     "subjectDigest": "src:6347dc47f1a9e1c677c367c4471b80fe50fe868398863eebb7053986114738df"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A3",
+   "claim": "단위 테스트(test/skill-aim.test.ts의 envelope 표)와 bun run check가 통과한다 / bun run check",
+   "status": "passed",
+   "surfaces": [
+    "bun run check"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A3\\check-clean.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A3\\check-clean.log",
+     "sha256": "c576935e59a412331ea07e9b8181e2f0748eac6ffcca329b6b5e243a20701c61",
+     "command": "bun run check 깨끗한 배포 워크트리 027238f exit 0(2395 테스트)",
+     "observedAt": "2026-10-19T10:34:18.122Z",
+     "subjectDigest": "src:6347dc47f1a9e1c677c367c4471b80fe50fe868398863eebb7053986114738df"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A4",
+   "claim": "Tripo 원본 GLB 14개(영웅 t2·t3 10, v2 적 4)를 Tripo Studio 기존 작업 번호로 다시 내려받아 라이브러리 raw에 보관하고 삼각형 수가 기록과 일치하며 bundle-audit 복구 불가 0건·문제 0건이다. 새 생성·크레딧 소모 없음 / bundle-audit 보고, 삼각형 대조",
+   "status": "passed",
+   "surfaces": [
+    "bundle-audit 보고, 삼각형 대조"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A4\\audit-after.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A4\\audit-after.log",
+     "sha256": "5e2495840cd6992e5be763f5cd91c5d2df879d27f6c3d4f6065f5df8cae05e43",
+     "command": "bundle-audit 복구 불가 0, 문제 0, 파일 345개 해시 확인, 68/68 칸",
+     "observedAt": "2026-10-19T10:34:24.206Z",
+     "subjectDigest": "src:6347dc47f1a9e1c677c367c4471b80fe50fe868398863eebb7053986114738df"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A4\\tripo-triangles-heroes.txt",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A4\\tripo-triangles-heroes.txt",
+     "sha256": "dd5b76a58e3a58d225bafd40017d95b6c4ccd481cab967853a8f7dec26d28822",
+     "command": "영웅 t2·t3 10개 Tripo 재다운로드 GLB 삼각형 수가 manifest와 모두 일치",
+     "observedAt": "2026-10-19T10:34:30.597Z",
+     "subjectDigest": "src:6347dc47f1a9e1c677c367c4471b80fe50fe868398863eebb7053986114738df"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A4\\tripo-triangles-enemies.txt",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A4\\tripo-triangles-enemies.txt",
+     "sha256": "9d2186399daab39828f35203b2f05ed2ffc345db8ef9f79bb369905974fefafb",
+     "command": "v2 적 4개 Tripo 재다운로드 GLB 삼각형 수가 라이브러리 기록과 모두 일치",
+     "observedAt": "2026-10-19T10:34:44.151Z",
+     "subjectDigest": "src:6347dc47f1a9e1c677c367c4471b80fe50fe868398863eebb7053986114738df"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A5",
+   "claim": "정식 호스트에서 A1·A2를 다시 통과한다 / version.json과 정식 호스트 보고서",
+   "status": "passed",
+   "surfaces": [
+    "version.json과 정식 호스트 보고서"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A5\\live-version.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-aim-zone-tripo\\evidence\\A5\\live-version.json",
+     "sha256": "d43a594d675ef34e8fb20f4a60d300ea2f46fdb516a33b0e7e70d1896270bc21",
+     "command": "version.json sha 027238f5, versionId c2843798, deploymentId 237f53f6",
+     "observedAt": "2026-10-19T10:34:55.237Z",
+     "subjectDigest": "src:6347dc47f1a9e1c677c367c4471b80fe50fe868398863eebb7053986114738df"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  }
+ ],
+ "freshReview": {
+  "required": false,
+  "status": "not_required"
+ },
+ "remaining": [],
+ "verdict": "passed",
+ "acceptanceChanges": [],
+ "weakened": [],
+ "deploy": {
+  "target": "https://blade.tllhouse.com (worker blade-surge)",
+  "version": "c2843798-e12d-4127-8f54-7caf9df1a34c",
+  "sha": "027238f5126cd1e20c20c5ba76deca42b331ce30",
+  "readback": "version.json sha=027238f5 dirty=false; 정식 호스트 aim-hitbox 40/0(몰이 포함), aim-envelope-shot·skill-aim-qa 세 화면 통과",
+  "rollback": "deployment 237f53f6-4389-472c-835d-ee0b26ed992a... 이전 d6983888-769b-424b-9b0a-1082a3b64b8f / version 38adac70-a8a8-4ad8-a6f1-631aeaa60211 (d9ba6b3), tools/deploy.mjs 절차",
+  "subjectDigest": "src:6347dc47f1a9e1c677c367c4471b80fe50fe868398863eebb7053986114738df"
+ },
+ "lanes": [
+  {
+   "lane": "integration",
+   "model": "anthropic/claude-opus-5-5",
+   "agentId": "commander-direct",
+   "branch": "codex/20261019-aim-zone-tripo"
+  }
+ ],
+ "harnessChanges": [],
+ "frictions": [
+  "12번째 덩어리 채팅이 workspace-write·on-request로 만들어져 중단 지시, 지휘 채팅이 직접 진행",
+  "같은 작업 트리에서 bun run check 도중 README를 바꿔 배포 차단 시험 1건이 실패(작업 트리 변경 탓). 깨끗한 배포 워크트리에서 exit 0",
+  "aim-overlay-qa·lobby 계열 도구는 /src 경로를 쓰므로 정식 호스트 대신 같은 SHA 개발 서버로 측정",
+  "Tab S7+ 실기기는 다른 채팅이 21:15까지 잠금 보유 중이라 이번 사이클에서 재확인 못함(이번 변경은 조준 표시 값이며 터치 입력 경로는 불변, d9ba6b3 실기기 통과 기록 유지)",
+  "sunbreaker는 skills.js 몰이가 아닌 각성 III 고유 판정이라 몰이 한계에서 제외",
+  "Tripo 원본 복구는 인앱 브라우저의 로그인된 Studio에서 작업 번호 URL로 열어 Export로 받음, 크레딧 잔액 변화 없음(14265)"
+ ],
+ "standingGates": [],
+ "next": "D3b 전투 자세 잔여 19건(클립 교정), 그 뒤 최종 감사 재실행",
+ "quota": null,
+ "updatedAt": "2026-10-19T10:35:07.744Z"
+}

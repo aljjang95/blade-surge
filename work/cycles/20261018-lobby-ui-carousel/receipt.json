@@ -1,0 +1,281 @@
+{
+  "schemaVersion": 1,
+  "cycle": "20261018-lobby-ui-carousel",
+  "cycleStatus": "shipped",
+  "objective": "로비를 시안 C8(던전 카드 캐러셀·왼쪽 세로 탭·원형 출격)대로 바꾸고 영웅을 가리지 않는다",
+  "chunk": {
+    "name": "로비 UI C8",
+    "why": "대표님 2026-10-18 맵 그래픽·UI 시안을 세우고 그대로 개발",
+    "notDoing": "로비 팔 자세(대표님 확인 대기), 던전 맵 아트"
+  },
+  "subject": {
+    "kind": "mixed",
+    "identity": {
+      "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+      "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261018-lobby-ui-carousel\\integration",
+      "branch": "codex/20261018-lobby-ui-carousel",
+      "commit": "0708eec33c08cf6f9888e0eca56afb9e769c96ff",
+      "tree": "7270f3036cde08a4f2981f3108653597201d3a9f"
+    },
+    "digest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0",
+    "observedAt": "2026-10-18T11:09:16.462Z"
+  },
+  "requirements": [
+    {
+      "id": "A1",
+      "claim": "로비에 왼쪽 세로 탭, 오른쪽 위 추천 던전 상세, 오른쪽 아래 던전 카드 줄과 큰 원형 출격 버튼이 시안 C8처럼 보인다 / 로비 1280x590·844x390·800x360 캡처와 blueprint shot",
+      "status": "passed",
+      "surfaces": [
+        "로비 1280x590·844x390·800x360 캡처와 blueprint shot"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A1\\lobby-1280x590.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A1\\lobby-1280x590.png",
+          "sha256": "8eef2862436a1e1bb46a56987fb2d11871b852169a32f64f5b44250b975d88cd",
+          "command": "node tools/lobby-occlusion-qa.mjs http://127.0.0.1:5184",
+          "observedAt": "2026-10-18T11:09:17.434Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A1\\lobby-844x390.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A1\\lobby-844x390.png",
+          "sha256": "3e7fa313d49e9633d51bba62dadbc17b4b0dbac1ab218573c60f1a070ea59692",
+          "command": "node tools/lobby-occlusion-qa.mjs http://127.0.0.1:5184",
+          "observedAt": "2026-10-18T11:09:18.452Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A1\\lobby-800x360.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A1\\lobby-800x360.png",
+          "sha256": "11877f2704642b085c65bde9ae21e5a6b0eddc186d8f0784af8ca8933f749f70",
+          "command": "node tools/lobby-occlusion-qa.mjs http://127.0.0.1:5184",
+          "observedAt": "2026-10-18T11:09:19.084Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A1\\check.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A1\\check.log",
+          "sha256": "dad91a1e1bd577603378e4d912b3e53ead2dc157b8173ff429517a6215e8ee35",
+          "command": "bun run check",
+          "observedAt": "2026-10-18T11:15:18.064Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A2",
+      "claim": "카드를 탭하면 상세가 그 던전으로 바뀌고 잠긴 던전은 잠금 표시와 해금 조건이 보인다 / 실제 터치 캡처",
+      "status": "passed",
+      "surfaces": [
+        "실제 터치 캡처"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A2\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A2\\report.json",
+          "sha256": "b265525a45539b999178132976f932c17e28fc82795d19140e8c70c6c0c1e553",
+          "command": "node tools/lobby-occlusion-qa.mjs http://127.0.0.1:5184",
+          "observedAt": "2026-10-18T11:09:19.651Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A2\\lobby-v4-844x390-b-locked.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A2\\lobby-v4-844x390-b-locked.png",
+          "sha256": "1a9385c9e1b05922d142025bacc8fc8e8088e8b80b769b16851c83b5263dce34",
+          "command": "Playwright 터치 잠긴 카드",
+          "observedAt": "2026-10-18T11:09:20.145Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A3",
+      "claim": "큰 출격 버튼을 누르면 선택한 던전으로 기존 출격 준비창이 열리고 그대로 전투에 들어간다 / 실제 터치로 전투 진입",
+      "status": "passed",
+      "surfaces": [
+        "실제 터치로 전투 진입"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A3\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A3\\report.json",
+          "sha256": "b265525a45539b999178132976f932c17e28fc82795d19140e8c70c6c0c1e553",
+          "command": "node tools/lobby-occlusion-qa.mjs http://127.0.0.1:5184",
+          "observedAt": "2026-10-18T11:09:20.778Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A3\\prep-844x390.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A3\\prep-844x390.png",
+          "sha256": "d65ea524a12547c081bffa17973578bdf5211db1728c58557d9e48908cc5582e",
+          "command": "node tools/lobby-occlusion-qa.mjs http://127.0.0.1:5184",
+          "observedAt": "2026-10-18T11:09:21.394Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A4",
+      "claim": "세 화면 크기에서 영웅 모델이 어떤 로비 UI에도 가려지지 않는다 / 영웅 화면 투영 상자와 UI 상자 겹침 측정",
+      "status": "passed",
+      "surfaces": [
+        "영웅 화면 투영 상자와 UI 상자 겹침 측정"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A4\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A4\\report.json",
+          "sha256": "b265525a45539b999178132976f932c17e28fc82795d19140e8c70c6c0c1e553",
+          "command": "node tools/lobby-occlusion-qa.mjs http://127.0.0.1:5184",
+          "observedAt": "2026-10-18T11:09:21.825Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A5",
+      "claim": "탭 이동(영웅·장비, 메뉴)과 마을 둘러보기 등 기존 기능이 그대로 동작한다 / 실제 터치와 기존 테스트",
+      "status": "passed",
+      "surfaces": [
+        "실제 터치와 기존 테스트"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A5\\lobby-v4-844x390-f-heroes.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A5\\lobby-v4-844x390-f-heroes.png",
+          "sha256": "11195c5e4f7c4c10f233f6d973ae590b78d1615ea67ee85783b8b5c74fdc58a1",
+          "command": "Playwright 터치 영웅·장비 탭",
+          "observedAt": "2026-10-18T11:09:22.638Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A5\\lobby-v4-844x390-h-menu.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A5\\lobby-v4-844x390-h-menu.png",
+          "sha256": "c421faa9c701cb083d0a2cba9f54f618266c5a5bd7bb8ad1ca4de9ff9f2bcc9f",
+          "command": "Playwright 터치 메뉴",
+          "observedAt": "2026-10-18T11:09:23.138Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A5\\lobby-v4-844x390-g-explore.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A5\\lobby-v4-844x390-g-explore.png",
+          "sha256": "0f404f9c2044867088acfd56f85a0b8d5a9f7ad7d6a916b70fd6ba9b95688ade",
+          "command": "Playwright 터치 마을 둘러보기",
+          "observedAt": "2026-10-18T11:09:23.628Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A6",
+      "claim": "정식 호스트에 배포된 버전에서 같은 로비가 보인다 / blade.tllhouse.com version.json과 로비 캡처",
+      "status": "passed",
+      "surfaces": [
+        "blade.tllhouse.com version.json과 로비 캡처"
+      ],
+      "evidence": [
+        {
+          "kind": "url",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A6\\live-version.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A6\\live-version.json",
+          "sha256": "74447155f80696027809528e63e8ae78ac6aa435ac3b171d9837723447da17e8",
+          "command": "node tools/deploy.mjs --auth=wrangler",
+          "observedAt": "2026-10-18T11:19:21.795Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A6\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A6\\report.json",
+          "sha256": "df190e37018935944954c43c15503c9eddd3930e0dbe69fc6759774f0f0dfc4a",
+          "command": "node tools/lobby-occlusion-qa.mjs https://blade.tllhouse.com",
+          "observedAt": "2026-10-18T11:19:22.378Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A6\\lobby-844x390.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A6\\lobby-844x390.png",
+          "sha256": "75090e9f878ff560285f3bbeea6d230df8705927b18770d9fe4e1bb20f1f0cb6",
+          "command": "node tools/lobby-occlusion-qa.mjs https://blade.tllhouse.com",
+          "observedAt": "2026-10-18T11:19:23.001Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A6\\deploy.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-lobby-ui-carousel\\evidence\\A6\\deploy.log",
+          "sha256": "ab17d43d320d4dd4220478579b1d51c8177a773c12d739a33a61e8fe83856328",
+          "command": "node tools/deploy.mjs --auth=wrangler",
+          "observedAt": "2026-10-18T11:19:23.718Z",
+          "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    }
+  ],
+  "freshReview": {
+    "required": false,
+    "status": "not_required"
+  },
+  "remaining": [],
+  "verdict": "passed",
+  "acceptanceChanges": [],
+  "weakened": [],
+  "deploy": {
+    "target": "https://blade.tllhouse.com (worker blade-surge)",
+    "version": "38010510-c06e-4016-8c76-b2377d23f91b",
+    "sha": "647a182fb0e2b0756a1df05f861cf2b1146e9d47",
+    "readback": "version.json sha=647a182 dirty=false; 정식 호스트 844x390 가림 0·카드→출격→전투 통과",
+    "rollback": "wrangler rollback 22bce794-c86c-4c79-bd99-56546aaf1514 (deployment ff02e65d), tools/deploy.mjs 절차",
+    "subjectDigest": "src:e228b1590dfc9f1aebe11034bf3f150a0844a54f71635c2096989b60c95f7aa0"
+  },
+  "lanes": [
+    {
+      "lane": "ui",
+      "model": "anthropic/claude-sonnet-5-5",
+      "agentId": "01a14e8f-b772-7a71-8175-da90479e0e4d",
+      "branch": "codex/20261018-lobby-ui-carousel"
+    },
+    {
+      "lane": "integration",
+      "model": "claude-opus-5-5",
+      "agentId": "commander",
+      "branch": "codex/20261018-lobby-ui-carousel"
+    }
+  ],
+  "harnessChanges": [],
+  "frictions": [
+    "확장 던전 5곳 그림 파일(/img/expansion/…)이 public에 없음 — 맵 아트 덩어리에서 생성",
+    "카드 5장 목표 대비 1280px 4장·폰 3장(영웅 가림 방지)",
+    "상단 재화 바는 시안의 남색 금테와 다름"
+  ],
+  "standingGates": [],
+  "next": "던전 맵 아트 C4(별빛 서고)와 누락된 확장 던전 그림 5장, 상단 재화 바 스타일",
+  "quota": null,
+  "updatedAt": "2026-10-18T11:19:24.917Z"
+}

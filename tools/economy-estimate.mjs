@@ -17,6 +17,7 @@ import { stageDef, ENEMIES, CHAPTERS, STAGES_PER_CHAPTER } from '../src/data/sta
 import { HEROES, HERO_ORDER, levelGold } from '../src/data/heroes.js';
 import { Economy, gachaChances } from '../src/game/economy.js';
 import { Floor, ROOM_TYPE } from '../src/game/world.js';
+import { monsterXp } from '../src/game/rpg-core.js';
 
 export const TOTAL_STAGES = CHAPTERS.length * STAGES_PER_CHAPTER;
 const DAY_SEC = 86400;
@@ -112,11 +113,12 @@ export function perRun(idx, { fullClear = true } = {}) {
   const stage = stageDef(ch, st), floor = new Floor(stage.idx, stage.chapter.theme, undefined, stage.dungeon?.layout);
   const out = { idx, code: stage.code, ch, st, energy: stage.energy, boss: stage.boss, bp: stage.rewards.bp, firstGems: stage.rewards.firstGems,
     milestoneTickets: st % 5 === 0 ? (st % 10 === 0 ? 2 : 1) : 0, bossTicket: stage.boss ? 0.3 : 0,
-    kills: { normal: 0, elite: 0, boss: 0 }, stageGold: stage.rewards.gold + (fullClear ? Math.floor(stage.rewards.gold * 0.4) : 0), fieldGold: 0, heroShards: 0, transcendStones: 0 };
+    kills: { normal: 0, elite: 0, boss: 0 }, combatExp: 0, stageGold: stage.rewards.gold + (fullClear ? Math.floor(stage.rewards.gold * 0.4) : 0), fieldGold: 0, heroShards: 0, transcendStones: 0 };
   for (const room of floor.rooms) for (const { type, w } of roomEntries(stage, room)) {
     const def = ENEMIES[type]; if (!def) throw new Error('알 수 없는 적 ' + type);
     const rank = rankOf(def), table = lootTable(ch, rank);
     out.kills[rank] += w;
+    out.combatExp += w * monsterXp(def, stage.scale, false);
     out.fieldGold += w * GOLD_COINS[rank] * expectedGoldRoll(def.gold || 1, stage.scale, table.goldMultiplier);
     out.heroShards += w * table.heroShards.chance * table.heroShards.n;
     out.transcendStones += w * table.transcendStones.chance * table.transcendStones.n;
@@ -160,7 +162,7 @@ export function gemsForShards(need, tickets, heroId) {
 // ---------------------------------------------------------------------------------------------
 // 하루 단위 시뮬레이션
 // ---------------------------------------------------------------------------------------------
-export const DEFAULTS = Object.freeze({ hero: 'mage', minutesPerDay: 30, stageMin: 3, strategy: 'ch1', frontierShare: 0.5, energyMode: 'bank', fullClear: true, maxDays: 400, ch1FarmIdx: 10, assumePullQuest: true, zero: [] });
+export const DEFAULTS = Object.freeze({ hero: 'mage', minutesPerDay: 30, stageMin: 3, strategy: 'ch1', frontierShare: 0.5, energyMode: 'session', fullClear: true, maxDays: 400, ch1FarmIdx: 10, assumePullQuest: false, zero: [] });
 
 const MATS = ['shards', 'transcendStones', 'gold'];
 const WALLET_KEY = { shards: 'shards', transcendStones: 'tStones', gold: 'gold' };
@@ -187,6 +189,10 @@ export function simulate(options = {}) {
   const o = { ...DEFAULTS, ...options }, heroId = o.hero, def = HEROES[heroId];
   const quests = questTable(), perDayEnergy = energyPerDay(), start = startingState(), w = freshWallet();
   for (const m of start.mail) addReward(w, m.rewards);                   // 환영 우편은 첫날 수령
+  const sku = o.dayOneSku ? SKUS.find(s => s.id === o.dayOneSku) : null;
+  if (o.dayOneSku && !sku) throw new RangeError('알 수 없는 상품 ' + o.dayOneSku);
+  const gift = o.dayOneRewards || (sku?.gems ? { gems: sku.gems + sku.bonus } : sku?.rewards) || {};
+  addReward(w, gift);
   let grade = heroBaseGrade(def), bank = ENERGY.max, passXp = 0, passClaimed = 0, kills = 0, runsTotal = 0, cleared = 0, dailyIdx = 0;
   const claimedQuests = new Set(), frontierCap = o.strategy === 'ch1' ? o.ch1FarmIdx : TOTAL_STAGES;
   const sources = { startGems: start.gems, mailGems: start.mail.reduce((n, m) => n + (m.rewards.gems || 0), 0), questGems: 0, dailyGems: 0, passGems: 0, firstClearGems: 0 };
@@ -194,33 +200,50 @@ export function simulate(options = {}) {
   const promotions = [], timeline = [], runsPerDay = Math.floor(o.minutesPerDay / o.stageMin);
   let matReady = {}, sinceDay = 0;
   for (let day = 1; day <= o.maxDays && nextGrade(grade); day++) {
-    const reward = DAILY_REWARDS[dailyIdx++ % DAILY_REWARDS.length]; addReward(w, reward); sources.dailyGems += reward.gems || 0;
-    if (o.energyMode === 'session') bank = Math.min(ENERGY.max, bank + perDayEnergy) + Math.floor(o.minutesPerDay * 60 / ENERGY.regenSec); else bank += perDayEnergy;
+    const vip = gift.vipDays && day <= gift.vipDays, energyMax = ENERGY.max + (vip ? 50 : 0);
+    const collect = reward => addReward(w, vip && reward.gold ? { ...reward, gold: Math.floor(reward.gold * 1.3) } : reward);
+    const reward = DAILY_REWARDS[dailyIdx++ % DAILY_REWARDS.length]; collect(reward); sources.dailyGems += reward.gems || 0;
+    if (gift.monthly && day <= gift.monthly) w.gems += 100;
+    // 확정권은 실제 rollResult('SSR', true)처럼 픽업 영웅만 준다. SR 영웅의 조각으로 바꾸지 않는다.
+    if (heroId === GACHA.featured && w.ssrTickets) { w.shards += w.ssrTickets * GACHA.dupShards; w.ssrTickets = 0; }
+    if (o.energyMode === 'session') bank = Math.min(energyMax, bank + (day > 1 ? perDayEnergy : 0)); else bank = perDayEnergy;
+    if (day === 1 && gift.energy) bank = Math.min(energyMax + 200, bank + gift.energy);
     // 오늘의 런: 프런티어(처음 깨는 스테이지)와 파밍(가장 높게 깬 스테이지 반복)
     const frontierWanted = cleared < frontierCap ? (o.strategy === 'ch1' ? runsPerDay : Math.round(runsPerDay * o.frontierShare)) : 0;
-    let frontierDone = 0, ranToday = 0;
+    let frontierDone = 0, ranToday = 0, spentMinutes = 0;
     for (let r = 0; r < runsPerDay; r++) {
       const useFrontier = cleared < frontierCap && frontierDone < frontierWanted;
       const idx = useFrontier ? cleared + 1 : (o.strategy === 'ch1' ? Math.min(o.ch1FarmIdx, Math.max(1, cleared)) : Math.max(1, cleared));
       const p = perRun(idx, { fullClear: o.fullClear });
-      if (bank < p.energy) break;
-      bank -= p.energy; ranToday++; runsTotal++; passXp += p.bp;
-      w.gold += p.gold; w.shards += p.heroShards; w.tStones += p.transcendStones; w.tickets += p.bossTicket;
+      const waitMinutes = bank < p.energy && o.energyMode === 'session' ? (p.energy - bank) * ENERGY.regenSec / 60 : 0;
+      if (spentMinutes + waitMinutes + o.stageMin > o.minutesPerDay || (bank < p.energy && !waitMinutes)) break;
+      if (waitMinutes) bank = p.energy;
+      spentMinutes += waitMinutes + o.stageMin;
+      bank -= p.energy;
+      if (o.energyMode === 'session') bank = Math.min(energyMax, bank + o.stageMin * 60 / ENERGY.regenSec);
+      ranToday++; runsTotal++; passXp += p.bp;
+      w.gold += vip ? Math.floor(p.gold * 1.3) : p.gold;
+      w.shards += p.heroShards; w.tStones += p.transcendStones; w.tickets += p.bossTicket;
       field.gold += p.gold; field.shards += p.heroShards; field.transcendStones += p.transcendStones; field.tickets += p.bossTicket;
       kills += p.kills.normal + p.kills.elite + p.kills.boss;
       if (useFrontier) { frontierDone++; cleared = idx; w.gems += p.firstGems; sources.firstClearGems += p.firstGems; w.tickets += p.milestoneTickets; }
     }
     // 1회성 임무(조건을 채운 날 수령)
     const metric = { kills, stages: runsTotal, pulls: o.assumePullQuest ? Infinity : 0 };
-    for (const q of quests) if (!claimedQuests.has(q.id) && metric[q.metric] >= q.max) { claimedQuests.add(q.id); addReward(w, q.rewards); sources.questGems += q.rewards.gems || 0; }
+    for (const q of quests) if (!claimedQuests.has(q.id) && metric[q.metric] >= q.max) { claimedQuests.add(q.id); collect(q.rewards); sources.questGems += q.rewards.gems || 0; }
     // 배틀패스 무료 트랙
     const level = Math.min(BATTLE_PASS.maxLevel, Math.floor(passXp / BATTLE_PASS.xpPerLevel) + 1);
-    while (passClaimed < level) { const r = PASS_TRACK[passClaimed].free; addReward(w, r); sources.passGems += r.gems || 0; passClaimed++; }
+    while (passClaimed < level) { const r = PASS_TRACK[passClaimed].free; collect(r); sources.passGems += r.gems || 0; passClaimed++; }
     // 이번 목표의 재료별 자력(보석 변환 없이) 달성일, 보석 포함 가능 여부
     // zero: 반사실 계산용. 지정한 재료의 요구량을 0으로 두면 그 재료가 병목이었는지 알 수 있다.
     const cost = { ...gradeUpCost(grade) }; for (const m of o.zero) cost[m] = 0;
     for (const m of MATS) if (matReady[m] === undefined && w[WALLET_KEY[m]] >= cost[m]) matReady[m] = day - sinceDay;
-    const plan = planPromotion(w, cost, heroId);
+    let plan = planPromotion(w, cost, heroId);
+    // 실제로 10회 이상 소환할 계획이 생긴 뒤에만 소환 임무를 수령한다.
+    const pullQuest = quests.find(q => q.metric === 'pulls');
+    if (pullQuest && !claimedQuests.has(pullQuest.id) && plan.shards.pulls >= pullQuest.max) {
+      claimedQuests.add(pullQuest.id); addReward(w, pullQuest.rewards); plan = planPromotion(w, cost, heroId);
+    }
     timeline.push({ day, runs: ranToday, cleared, gold: Math.round(w.gold), shards: +w.shards.toFixed(2), tStones: +w.tStones.toFixed(2), gems: w.gems, tickets: +w.tickets.toFixed(1), gemNeed: Number.isFinite(plan.gems) ? plan.gems : null });
     if (!plan.feasible) continue;
     const before = { ...w }, next = nextGrade(grade);
@@ -281,7 +304,7 @@ const levelGoldReference = () => Object.fromEntries([20, 30, 40].map(lv => [lv, 
 // ---------------------------------------------------------------------------------------------
 const brief = r => ({ minutesPerDay: r.options.minutesPerDay, strategy: r.options.strategy, stageMin: r.options.stageMin, energyMode: r.options.energyMode,
   daysToSSR: r.daysTo.SSR ?? null, daysToSSSR: r.daysTo.SSSR ?? null, runs: r.runs, clearedStages: r.clearedStages,
-  steps: r.promotions.map(p => ({ to: p.to, day: p.day, daysForStep: p.daysForStep, bottleneck: p.bottleneck, selfSufficientDays: p.selfSufficientDays, gemSpend: p.gemSpend, walletBefore: p.walletBefore })),
+    steps: r.promotions.map(p => ({ to: p.to, day: p.day, daysForStep: p.daysForStep, bottleneck: p.bottleneck, selfSufficientDays: p.selfSufficientDays, gemSpend: p.gemSpend, walletBefore: p.walletBefore })),
   sources: r.sources, field: r.field, wallet: r.wallet });
 
 /**
@@ -302,6 +325,43 @@ export function withBottlenecks(options) {
   return base;
 }
 
+/** 상품을 첫날 수령했을 때의 반사실. 현금 결제는 실행하지 않으며 지급 가능한 보상만 넣는다. */
+export function productSavings(options = {}) {
+  const baseOptions = { ...options, minutesPerDay: options.minutesPerDay ?? 30, strategy: options.strategy ?? 'ch1' };
+  const targets = {
+    SSR: { hero: 'mage', grade: 'SSR', label: '마법사 SR→SSR' },
+    SSSR: { hero: GACHA.featured, grade: 'SSSR', label: '픽업 SSR→SSSR' },
+  };
+  const baseline = Object.fromEntries(Object.entries(targets).map(([key, t]) => [key, simulate({ ...baseOptions, hero: t.hero }).daysTo[t.grade]]));
+  const measure = (key, extra, targetKey) => {
+    const t = targets[targetKey], after = simulate({ ...baseOptions, hero: t.hero, ...extra }).daysTo[t.grade];
+    return { key, target: t.label, hero: t.hero, grade: t.grade, freeDays: baseline[targetKey], withDays: after,
+      days: baseline[targetKey] - after };
+  };
+  /** @type {Record<string, ReturnType<typeof measure>>} */
+  const result = { ssrTicket: measure('ssrTicket', { dayOneRewards: { ssrTicket: 1 } }, 'SSSR') };
+  for (const sku of SKUS) {
+    const target = sku.id === 'transcend_pack' || sku.id === 'starter' ? 'SSSR' : 'SSR';
+    result[sku.id] = measure(sku.id, { dayOneSku: sku.id }, target);
+  }
+  return result;
+}
+
+export function economyPace() {
+  const free = simulate({ minutesPerDay: 30, strategy: 'ch1' });
+  return { minutesPerDay: 30, freeDays: { SSR: free.daysTo.SSR, SSSR: free.daysTo.SSSR }, savings: productSavings() };
+}
+
+export async function emitPace() {
+  const { writeFile } = await import('node:fs/promises');
+  const pace = economyPace();
+  await writeFile(new URL('../src/data/economy-pace.js', import.meta.url),
+    '// 자동 생성: bun tools/economy-estimate.mjs --emit-pace\n'
+    + '// 하루 30분·스토리·1장 반복·판당 3분·기댓값. 상품별 대상과 무료 기준은 savings 안에 함께 기록한다.\n'
+    + 'export const ECONOMY_PACE = ' + JSON.stringify(pace, null, 2) + ';\n');
+  return pace;
+}
+
 export function estimate(options = {}) {
   const { minutesList = [30, 60], strategies = ['ch1', 'top'], ...rest } = options, base = { ...DEFAULTS, ...rest };
   const scenarios = [];
@@ -319,11 +379,15 @@ export function estimate(options = {}) {
     summary,
     assumptions: { ...base, energyPerDay: energyPerDay(), energyStart: ENERGY.max,
       notes: ['기댓값 시뮬레이션: 난수 없음', 'ch1 = 1장 최종 스테이지(' + base.ch1FarmIdx + ')를 열 때까지 매 판 전진 후 그 스테이지를 반복', 'top = 프런티어 비율만큼 처음 깨는 스테이지로 전진하고 나머지는 가장 높게 깬 스테이지를 반복(전부 깬 뒤에는 6-10 반복)',
-        '전투는 항상 승리·전체 정화로 가정(전투력·난이도 게이트는 모델에 없음)', '영웅 레벨업 골드(levelGold)와 별 승급은 골드·조각을 따로 쓰므로 모델에 넣지 않음', 'SSR 확정권은 픽업 영웅 전용이라 대상 영웅 조각에 넣지 않음',
-        '소환으로 메우는 조각은 기댓값(천장 80·소프트 천장 반영)', '골드 코인은 모두 줍고, 소환된 적·무리 졸개의 드랍은 제외'] },
+        '전투는 항상 승리·전체 정화로 가정(전투력·난이도 게이트는 모델에 없음)', '영웅 레벨업 골드(levelGold)는 모델에 넣지 않음. 별 승급(promoteHero)은 초월과 같은 영웅 조각을 쓰므로, 일수는 별 승급에 조각을 쓰지 않을 때 기준(별 1→5에 조각 300 사용 시 그만큼 늦어짐)', 'SSR 확정권은 실제 픽업 영웅에게만 중복 조각 지급, SR 영웅에게는 0',
+        'session은 하루 한 세션·에너지 최대 100·회복 대기 시간 포함, bank는 여러 접속으로 하루 자연 회복량을 활용하는 민감도',
+        '소환 조각은 천장 반영 기댓값으로 결과를 보장하지 않음, 소환의 부수 초월석·장비 판매·선택 영웅 조각은 제외',
+        '상품 비교는 첫날 보상 수령 가정(결제 실행·가격 차감 없음), 보석 상품은 첫 구매 보너스 포함',
+        '골드 코인은 모두 줍고, 소환된 적·무리 졸개의 드랍은 제외'] },
     hero: { id: base.hero, startGrade: heroBaseGrade(HEROES[base.hero]), upCost: GRADE_UP_COST },
     summon: shardsPerPull(base.hero),
     scenarios, sensitivity, perStageSamples, freeIncome: freeIncome(), gemSinks: gemSinks(), levelGoldReference: levelGoldReference(),
+    productSavings: productSavings({ minutesPerDay: 30 }),
     cashOnlyGate: cash.hasCashOnlyGate, cashOnlyGateDetail: cash,
   };
 }
@@ -340,10 +404,11 @@ function parseArgs(argv) {
     else if (k === 'energy') o.energyMode = v;
     else if (k === 'hero') o.hero = v;
     else if (k === 'pretty') o.pretty = true;
+    else if (k === 'emit-pace') o.emitPace = true;
   }
   return o;
 }
 if (import.meta.main) {
-  const { pretty, ...args } = parseArgs(process.argv.slice(2));
-  console.log(JSON.stringify(estimate(args), null, pretty ? 2 : undefined));
+  const { pretty, emitPace: emit, ...args } = parseArgs(process.argv.slice(2));
+  console.log(JSON.stringify(emit ? await emitPace() : estimate(args), null, pretty ? 2 : undefined));
 }

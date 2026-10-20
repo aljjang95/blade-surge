@@ -1,0 +1,162 @@
+{
+ "schemaVersion": 1,
+ "cycle": "20261019-shadow-mark",
+ "cycleStatus": "shipped",
+ "objective": "표적 의존 스킬 shadow_mark·chrono_seal 표시=판정",
+ "chunk": {
+  "name": "표적 의존 스킬 표시=판정",
+  "why": "3차 재감사가 shadow_mark D2d 실패 판정",
+  "notDoing": "void_step 점멸 연쇄, Roblox·Unity 실제 가져오기"
+ },
+ "subject": {
+  "kind": "mixed",
+  "identity": {
+   "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+   "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\deploy-c33eb80",
+   "branch": "",
+   "commit": "c33eb8039a999bec1256fb95a31582f72295a089",
+   "tree": "458621b3f86dd2d8e83eab3aff0b2762423eeb03"
+  },
+  "digest": "src:78e6e49be752276c54cdfb293e94d7ab2d14523a10370e043cc23efa6529913b",
+  "observedAt": "2026-10-19T15:19:15.405Z"
+ },
+ "requirements": [
+  {
+   "id": "A1",
+   "claim": "표시 안 앵커 적을 함께 둔 shadow_mark·chrono_seal 검사를 포함한 aim-hitbox-truth-qa(전 스킬 몰이 기본값)가 전 영웅·전 스킬 실패 0이다. 수정 전 정식 호스트에서 shadow_mark가 실패(2/8)함을 같은 검사로 확인한다 / aim-hitbox-truth-qa report 전후",
+   "status": "passed",
+   "surfaces": [
+    "aim-hitbox-truth-qa report 전후"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-shadow-mark\\evidence\\A1\\report.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-shadow-mark\\evidence\\A1\\report.json",
+     "sha256": "2bc0f6211b5b4a1f0ea46c9201f3d3b0d6e69a631bcf09c1e567e0d67d85ba8d",
+     "command": "수정 전 정식 호스트 8738d464 shadow_mark 앵커 검사: 2/8 바깥 표본 피격(실패)",
+     "observedAt": "2026-10-19T15:19:16.942Z",
+     "subjectDigest": "src:78e6e49be752276c54cdfb293e94d7ab2d14523a10370e043cc23efa6529913b"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-shadow-mark\\evidence\\A1\\report-2.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-shadow-mark\\evidence\\A1\\report-2.json",
+     "sha256": "c16ab1089d5315333c9607f3324a47342940eb09668ca09edfd1bed0b5d40fd8",
+     "command": "aim-hitbox-truth-qa 정식 호스트 c33eb803 전 스킬 몰이+앵커(shadow_mark·chrono_seal): 통과 40 실패 0",
+     "observedAt": "2026-10-19T15:19:18.332Z",
+     "subjectDigest": "src:78e6e49be752276c54cdfb293e94d7ab2d14523a10370e043cc23efa6529913b"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A2",
+   "claim": "chrono_seal 점선 원이 세 화면에서 그려지고 skill-aim-qa 규칙을 어기지 않는다 / aim-envelope-shot, skill-aim-qa",
+   "status": "passed",
+   "surfaces": [
+    "aim-envelope-shot, skill-aim-qa"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-shadow-mark\\evidence\\A2\\live-aim-envelope-shot.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-shadow-mark\\evidence\\A2\\live-aim-envelope-shot.log",
+     "sha256": "52e151a6f61741b5064f64f5222cd665c0c8fb5f0ec117ad167564c9529ba859",
+     "command": "aim-envelope-shot 정식 호스트 세 화면 chrono_seal 13.3 chance 포함 pass:true",
+     "observedAt": "2026-10-19T15:19:19.880Z",
+     "subjectDigest": "src:78e6e49be752276c54cdfb293e94d7ab2d14523a10370e043cc23efa6529913b"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-shadow-mark\\evidence\\A2\\live-skill-aim-qa.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-shadow-mark\\evidence\\A2\\live-skill-aim-qa.log",
+     "sha256": "4b1d606f786ef268a631627de2240286af30825e4edaaf28f21ee656bc52ebd1",
+     "command": "skill-aim-qa 정식 호스트 세 화면 pass:true",
+     "observedAt": "2026-10-19T15:19:21.591Z",
+     "subjectDigest": "src:78e6e49be752276c54cdfb293e94d7ab2d14523a10370e043cc23efa6529913b"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A3",
+   "claim": "단위 테스트와 bun run check 통과 / bun run check",
+   "status": "passed",
+   "surfaces": [
+    "bun run check"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-shadow-mark\\evidence\\A3\\check.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-shadow-mark\\evidence\\A3\\check.log",
+     "sha256": "e2caba6ad0f023aad38ba69186540ba366aa4b64f0f4657c42168346ee3ae457",
+     "command": "bun run check be266b65(병합 전 브랜치) exit 0, 2395 통과 0 실패",
+     "observedAt": "2026-10-19T15:19:23.335Z",
+     "subjectDigest": "src:78e6e49be752276c54cdfb293e94d7ab2d14523a10370e043cc23efa6529913b"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A4",
+   "claim": "정식 호스트에서 A1·A2 재확인 / version.json과 보고서",
+   "status": "passed",
+   "surfaces": [
+    "version.json과 보고서"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-shadow-mark\\evidence\\A4\\live-version.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-shadow-mark\\evidence\\A4\\live-version.json",
+     "sha256": "6914d9824bcf302911d91052ef4d483206f5d3262204284616544e3fdeb6b5a7",
+     "command": "version.json sha c33eb803, versionId 691cc0be",
+     "observedAt": "2026-10-19T15:19:25.131Z",
+     "subjectDigest": "src:78e6e49be752276c54cdfb293e94d7ab2d14523a10370e043cc23efa6529913b"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  }
+ ],
+ "freshReview": {
+  "required": false,
+  "status": "not_required"
+ },
+ "remaining": [],
+ "verdict": "passed",
+ "acceptanceChanges": [],
+ "weakened": [],
+ "deploy": {
+  "target": "https://blade.tllhouse.com (worker blade-surge)",
+  "version": "691cc0be-1ec8-4567-a42b-bbf6b7056754",
+  "sha": "c33eb8039a999bec1256fb95a31582f72295a089",
+  "readback": "version.json sha=c33eb803 dirty=false; 정식 호스트 aim-hitbox 앵커 포함 40/0, 세 화면 envelope·skill-aim 통과",
+  "rollback": "이전 version 8738d464-58c2-4c16-b2e7-cac3595e1757 (11a54770), tools/deploy.mjs 절차",
+  "subjectDigest": "src:78e6e49be752276c54cdfb293e94d7ab2d14523a10370e043cc23efa6529913b"
+ },
+ "lanes": [
+  {
+   "lane": "integration",
+   "model": "anthropic/claude-opus-5-5",
+   "agentId": "commander-direct",
+   "branch": "codex/20261019-shadow-mark"
+  }
+ ],
+ "harnessChanges": [],
+ "frictions": [
+  "게임플레이 변경 공개: shadow_mark 몰이·폭발 피해를 영웅 13m 안 적으로 제한",
+  "앵커 검사를 전 스킬에 넣어 보니 점멸·투사체 스킬(void_step·fireball·arc_reflect·gale_hunt)이 앵커 탓에 판정이 달라져 shadow_mark·chrono_seal에만 적용",
+  "void_step은 점멸 연쇄로 표시 밖까지 닿을 수 있어 미수정 예외(대표님 결정 대기)",
+  "C: 디스크가 가득 차(315MB) 레인 생성이 실패해 완료된 옛 레인 5개를 lanes clean으로 정리, 8.8GB 확보"
+ ],
+ "standingGates": [],
+ "next": "void_step 결정, D4b 엔진 가져오기 범위 결정, 이후 최종 감사",
+ "quota": null,
+ "updatedAt": "2026-10-19T15:19:38.121Z"
+}

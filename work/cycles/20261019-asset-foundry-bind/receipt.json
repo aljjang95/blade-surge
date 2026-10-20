@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "cycle": "20261019-asset-foundry-bind",
+  "cycleStatus": "shipped",
+  "objective": "블레이드 서지 3D 에셋 68개 항목의 원본·정리본·리그·클립·export 칸을 파일 연결 또는 사유로 채우고, find 누락을 고치고, 다른 프로젝트에서 실제로 가져와 움직이는 시험을 한다",
+  "chunk": {
+    "name": "에셋 라이브러리 묶음 보강과 가져오기 시험",
+    "why": "사전 최종 감사가 D4a(증거가 2D 텍스처 기준, 클립 미연결)와 D4b(가져오기 시험 없음, find 누락 의심)를 약함으로 판정",
+    "notDoing": "새 Tripo 생성, 게임 저장소 코드 변경"
+  },
+  "subject": {
+    "kind": "mixed",
+    "identity": {
+      "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+      "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261019-combat-pose-audit\\integration",
+      "branch": "codex/20261019-combat-pose-audit",
+      "commit": "baf001b48a48bd6b67e043d9986480bd1c4d190e",
+      "tree": "c10f803528e74c8976fc3ae5f5496f78511f9488",
+      "artifact": {
+        "path": "G:\\내 드라이브\\10_스톡라이브러리\\04_그래픽3D템플릿\\TLL-Asset-Foundry\\library-index.json",
+        "sha256": "f30e4990d33e635b48dfc726933b7927ab827bfb8b5aa6d047c3216ca629fd78"
+      }
+    },
+    "digest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29",
+    "observedAt": "2026-10-18T23:45:23.166Z"
+  },
+  "requirements": [
+    {
+      "id": "A1",
+      "claim": "블레이드 서지 3D 에셋(캐릭터·적·소품) 각 항목이 library-index.json에서 원본(raw)·정리본(.blend)·리그·클립·GLB export 칸을 가지며, 실제 파일이 있으면 경로와 sha256이 맞고, 없으면 \"없음\"의 이유(예: 원본 미보관·외부 CC0 키트·리그 불필요)가 항목에 적혀 있다 / library-index.json 다시 읽기와 파일 존재·해시 검사 보고서",
+      "status": "passed",
+      "surfaces": [
+        "library-index.json 다시 읽기와 파일 존재·해시 검사 보고서"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A1\\foundry-audit.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A1\\foundry-audit.json",
+          "sha256": "e6b0530b37eb49158e2b98d6fa7728988e080ba855199a9afe2447f5cd750416",
+          "command": "node bundle-audit.mjs (330 files, 0 problems)",
+          "observedAt": "2026-10-18T23:45:24.462Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A1\\bundles-applied.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A1\\bundles-applied.json",
+          "sha256": "574f2087374c4a3f00064c959fa284b69faf01749a07f805e5b0c6463de88110",
+          "command": "68개 항목 bundle 기록",
+          "observedAt": "2026-10-18T23:45:25.715Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A2",
+      "claim": "Mixamo 클립이 그것을 쓰는 리그 에셋 항목에 연결돼(클립 이름·파일·sha256) 에셋 하나만 보고 리그와 클립을 함께 가져갈 수 있다 / 같은 검사 보고서",
+      "status": "passed",
+      "surfaces": [
+        "같은 검사 보고서"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A2\\foundry-audit.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A2\\foundry-audit.json",
+          "sha256": "e6b0530b37eb49158e2b98d6fa7728988e080ba855199a9afe2447f5cd750416",
+          "command": "node bundle-audit.mjs (clipsJsonReverseMissing 0, mixamo 클립 39개 연결)",
+          "observedAt": "2026-10-18T23:45:26.921Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A3",
+      "claim": "catalog.mjs find가 조건에 맞는 에셋을 빠짐없이 돌려준다(예: --role enemy --rigged --max-tris 20000 --tag fantasy 결과가 색인을 직접 걸러 센 수와 같다). 원인을 고치고 회귀 시험을 남긴다 / find 출력과 직접 계산 비교",
+      "status": "passed",
+      "surfaces": [
+        "find 출력과 직접 계산 비교"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A3\\build-stdout.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A3\\build-stdout.json",
+          "sha256": "5139fd3700269564d2b86fb257e4965d6faccd3f7e58f318013aaad93e59f14b",
+          "command": "catalog build 재빌드",
+          "observedAt": "2026-10-18T23:45:28.115Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "test",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A3\\catalog-test.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A3\\catalog-test.log",
+          "sha256": "99abed35be27ae7abd118df01b4ece9cc6e0614a8889746654f7c763f515df0d",
+          "command": "node --test catalog.test.mjs (16 pass)",
+          "observedAt": "2026-10-18T23:45:48.914Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A3\\find-enemy.txt",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A3\\find-enemy.txt",
+          "sha256": "51a8067f1b5c754b459fde5bd3068e64bb4f30e81a5a4b0fdba70744897c47c9",
+          "command": "catalog.mjs find --role enemy --rigged --max-tris 20000 --tag fantasy (35건)",
+          "observedAt": "2026-10-18T23:45:50.164Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A4",
+      "claim": "저장소 밖 새 프로젝트(C:/Users/heart/AppData/Local/APEX/scratch/asset-import-test)가 USAGE.md 절차만 따라 find로 에셋 2개(리그 있는 캐릭터 1, 소품 1)를 골라 가져오고, three.js 화면에 띄워 리그 캐릭터가 연결된 클립으로 실제 움직이는 캡처를 남긴다. Roblox·Unity용 형식 안내가 USAGE.md에 있고 해당 형식 파일이 실제로 있는지 확인한다 /",
+      "status": "passed",
+      "surfaces": [
+        "가져오기 시험 기록(명령·출력·캡처)"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A4\\import-test.md",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A4\\import-test.md",
+          "sha256": "99c3986778bf4776b4004f95a448b3b5d7b1fb9334f62029a7ff7c989af7a76e",
+          "command": "USAGE.md 절차 가져오기 시험 기록",
+          "observedAt": "2026-10-18T23:45:29.314Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A4\\import-test-t1.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A4\\import-test-t1.png",
+          "sha256": "e5cca0117b5c83237a88e71efe68917fb1ecb8ca1af457fac9cd8f88d5ea5c0b",
+          "command": "리그 캐릭터 run 클립 재생 캡처",
+          "observedAt": "2026-10-18T23:45:30.596Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        },
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A4\\import-test-t2.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-asset-foundry-bind\\evidence\\A4\\import-test-t2.png",
+          "sha256": "7badf429c83d88dcb8e679d0fd85ab753a34b173be34165e49e4ce25b389da58",
+          "command": "리그 캐릭터 run 클립 재생 캡처 2",
+          "observedAt": "2026-10-18T23:45:31.853Z",
+          "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    }
+  ],
+  "freshReview": {
+    "required": false,
+    "status": "not_required"
+  },
+  "remaining": [],
+  "verdict": "passed",
+  "acceptanceChanges": [],
+  "weakened": [],
+  "deploy": {
+    "target": "G:/내 드라이브/10_스톡라이브러리/04_그래픽3D템플릿/TLL-Asset-Foundry (공유 3D 에셋 라이브러리, Google Drive 동기화 폴더). 게임 호스트 배포 없음",
+    "version": "library-index.json bundle 필드 68개 항목 + catalog.mjs/bundle-audit.mjs/bundle-bind.mjs",
+    "sha": "fa8951831ac42d5f33d02420508a622c413c259c",
+    "readback": "bundle-audit.mjs 재실행: 파일 330개 존재·sha256 확인 문제 0건, clipsJsonReverseMissing 0; catalog.test.mjs 16개 통과; USAGE.md 절차 가져오기 시험 캡처",
+    "rollback": "같은 폴더 library-index.backup-20261018T232525800Z~233233539Z 4개와 out/backup(archive_asset.py 원본)로 복원",
+    "subjectDigest": "src:b5fef838c1e63d58e8920c2c211031316e7d5f4d84db421f5bd08debb26aac29"
+  },
+  "lanes": [
+    {
+      "lane": "asset",
+      "model": "anthropic/claude-sonnet-5-5",
+      "agentId": "01a15110-3144-7422-bf63-31a6d57b1aaa",
+      "branch": "(저장소 밖: TLL-Asset-Foundry, catalog.mjs)"
+    }
+  ],
+  "harnessChanges": [],
+  "frictions": [
+    "에이전트가 07:50 사용 한도로 중단 → 한도 회복 뒤 재개",
+    "Drive 동기화 폴더라 Google Drive 원격 동기화 완료는 확인하지 못함(로컬 G: 기준)",
+    "Shadow Hunter가 같은 library-index.json에 동시에 쓰고 있어 백업 후 다시 읽어 반영했고 그쪽 항목은 보존",
+    "게임 저장소 배포는 없음: 이 사이클은 공유 라이브러리와 도구만 변경"
+  ],
+  "standingGates": [],
+  "next": "P2 정리, S26 실기기, 다른 모델 최종 감사 재실행",
+  "quota": null,
+  "updatedAt": "2026-10-18T23:45:51.433Z"
+}

@@ -1,0 +1,230 @@
+{
+ "schemaVersion": 1,
+ "cycle": "20261020-ranger-eye-gate-mesh",
+ "cycleStatus": "partial",
+ "objective": "궁수 전투 시점 두 눈, 성채 관문 구조물 품질, 보상 카드·집중 표시가 조작부를 가리지 않게",
+ "chunk": null,
+ "subject": {
+  "kind": "mixed",
+  "identity": {
+   "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+   "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\tasks\\aljjang95-blade-surge\\wt\\20261020-ranger-eye-gate-mesh",
+   "branch": "codex/task-20261020-ranger-eye-gate-mesh",
+   "commit": "ef60e32530529c5a084b954d78b3ae07abeb6bcf",
+   "tree": "04f368c086acd47fcc0dda25e2d85e04fd759a8c"
+  },
+  "digest": "src:06e55025fe640b2cfb991abaf53a8550a799fa6fb62c4433e47caf8d4c54aa90",
+  "observedAt": "2026-10-19T20:17:44.378Z"
+ },
+ "requirements": [
+  {
+   "id": "A1",
+   "claim": "궁수가 전투 기본 시점의 대기·이동·공격 프레임에서 두 눈이 보인다(다른 직업 수준), 로비 정면 회귀 없음 / 915x412 dpr2 전투 얼굴 크롭 전후",
+   "status": "passed",
+   "surfaces": [
+    "915x412 dpr2 전투 얼굴 크롭 전후"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A1\\battle-live2-0.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A1\\battle-live2-0.png",
+     "sha256": "bccee5b9ad12fd6a70492a4d82a8370c879c24021e6e97a43d085aabba989408",
+     "command": "node work/probe/ranger-battle.mjs https://blade.tllhouse.com/ live2 (라이브 12541b2 전투 시점, 두 눈)",
+     "observedAt": "2026-10-19T20:17:46.982Z",
+     "subjectDigest": "src:06e55025fe640b2cfb991abaf53a8550a799fa6fb62c4433e47caf8d4c54aa90"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A1\\ba-battle.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A1\\ba-battle.png",
+     "sha256": "5cd7349ecd46aae8f01192d253d90313f465c9227db5e72284061b6cd5689a4f",
+     "command": "전후 비교(전 bdea615, 후 변경본) 915x412 dpr2",
+     "observedAt": "2026-10-19T20:17:49.396Z",
+     "subjectDigest": "src:06e55025fe640b2cfb991abaf53a8550a799fa6fb62c4433e47caf8d4c54aa90"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A1\\m-final.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A1\\m-final.png",
+     "sha256": "3763bbdc057bc6dfcdee594a64fee8f8e22a2000719bc2d3cf0ea2ffab2034ae",
+     "command": "대기·좌우·달리기·Bow_Shoot 3프레임",
+     "observedAt": "2026-10-19T20:17:51.842Z",
+     "subjectDigest": "src:06e55025fe640b2cfb991abaf53a8550a799fa6fb62c4433e47caf8d4c54aa90"
+    }
+   ],
+   "neededInput": null,
+   "note": "머리 보정 축 오류(앞 축 x 롤 → 귀 축 z 피치 30°). 라이브 전투 정면·사선 프레임 두 눈 확인, 옆모습은 한쪽만 보이는 것이 정상."
+  },
+  {
+   "id": "A2",
+   "claim": "성채 관문 기둥·아치가 잠긴 설계도 C12(고대 성채 석조 아치)처럼 계단식 받침·쐐기돌 아치·룬 음각·이끼·균열로 보이고 던전별 장식·포털 색 유지 / 로비 전경·근접 캡처 전후, 설계도 대비 차이 목록",
+   "status": "failed",
+   "surfaces": [
+    "로비 전경·근접 캡처 전후, 설계도 대비 차이 목록"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A2\\compare-sheet.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A2\\compare-sheet.png",
+     "sha256": "b4d7da0292392c969f069842c21f64f326e99c9bb1c4f7321cf8b2708676dd46",
+     "command": "컨셉 C12와 14개 루트 전후·low 비교 시트",
+     "observedAt": "2026-10-19T20:17:53.826Z",
+     "subjectDigest": "src:06e55025fe640b2cfb991abaf53a8550a799fa6fb62c4433e47caf8d4c54aa90"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A2\\live2-close.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A2\\live2-close.png",
+     "sha256": "1348d1100d927cea014b1e738911de3538a479ab7d8b384223af0263f164aaf5",
+     "command": "node work/probe/gate-shot.mjs https://blade.tllhouse.com/ live2 (라이브 근접)",
+     "observedAt": "2026-10-19T20:17:56.019Z",
+     "subjectDigest": "src:06e55025fe640b2cfb991abaf53a8550a799fa6fb62c4433e47caf8d4c54aa90"
+    }
+   ],
+   "neededInput": null,
+   "note": "쐐기돌 아치·이맛돌 보석·3단 받침·돌단 줄눈·룬·이끼는 구현. 시안 C12의 결 있는 돌 표면 질감, 아치 위를 덮는 풀·큰 덩굴, 불규칙한 풍화 윤곽이 남아 설계도 기준 결함으로 실패 처리."
+  },
+  {
+   "id": "A3",
+   "claim": "관문 draw call 수 유지, 루트별 삼각형 기존 대비 2배 이하, 로비 30fps 상한 유지 / 측정 스크립트 표",
+   "status": "passed",
+   "surfaces": [
+    "측정 스크립트 표"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A3\\gate-budget.md",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A3\\gate-budget.md",
+     "sha256": "290b19928d7e826fd6538245008cbbcbd55b3f6a6422b7f0688d5b948f78de10",
+     "command": "node work/probe/gate-budget.mjs (루트별 삼각형·draw call 전후)",
+     "observedAt": "2026-10-19T20:17:57.746Z",
+     "subjectDigest": "src:06e55025fe640b2cfb991abaf53a8550a799fa6fb62c4433e47caf8d4c54aa90"
+    }
+   ],
+   "neededInput": null,
+   "note": "draw call 루트별 동일, 삼각형 최대 1.96배(2배 이하 테스트)."
+  },
+  {
+   "id": "A4",
+   "claim": "상자 획득 카드와 집중 표시가 조이스틱·물약·스킬 버튼·플레이 영역과 겹침 0개 / 915x412·390x844·1493x766 rect 측정과 캡처",
+   "status": "passed",
+   "surfaces": [
+    "915x412·390x844·1493x766 rect 측정과 캡처"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A4\\live2.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A4\\live2.log",
+     "sha256": "172c06d6e92dcb783e45eede32a1fffb6775ab928da5466f6b768999d3602628",
+     "command": "node work/probe/hud-overlap.mjs https://blade.tllhouse.com/ live2 (915x412·390x844·1493x766 겹침 0)",
+     "observedAt": "2026-10-19T20:17:59.612Z",
+     "subjectDigest": "src:06e55025fe640b2cfb991abaf53a8550a799fa6fb62c4433e47caf8d4c54aa90"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A4\\chest-open.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A4\\chest-open.png",
+     "sha256": "b06c726b6019ead5b7cef93f5cdf88cca4cd4612841c0844d25010a929bc97d9",
+     "command": "node work/probe/chest-qa.mjs https://blade.tllhouse.com/ (실제 상자 개봉 흐름, 카드 위 가장자리)",
+     "observedAt": "2026-10-19T20:18:02.241Z",
+     "subjectDigest": "src:06e55025fe640b2cfb991abaf53a8550a799fa6fb62c4433e47caf8d4c54aa90"
+    }
+   ],
+   "neededInput": null,
+   "note": "라이브에서 세 화면 크기 겹침 0, 실제 상자 개봉 흐름에서 카드가 위 가장자리 줄."
+  },
+  {
+   "id": "A5",
+   "claim": "bun run check 통과 / 명령 출력",
+   "status": "passed",
+   "surfaces": [
+    "명령 출력"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A5\\A5-check.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A5\\A5-check.log",
+     "sha256": "e2160de78276df396122525e27db48110fd20461febf4e5f578284140aee5a1c",
+     "command": "bun run check (2413 pass, 0 fail, build)",
+     "observedAt": "2026-10-19T20:18:04.164Z",
+     "subjectDigest": "src:06e55025fe640b2cfb991abaf53a8550a799fa6fb62c4433e47caf8d4c54aa90"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A6",
+   "claim": "정식 호스트 blade.tllhouse.com version.json SHA가 병합된 main과 같다 / version.json",
+   "status": "passed",
+   "surfaces": [
+    "version.json"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A6\\A6-version.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-ranger-eye-gate-mesh\\evidence\\A6\\A6-version.json",
+     "sha256": "e88525850063b70f5c561ce07ce978f38c5185a8785aa6dba15600a78d863540",
+     "command": "curl https://blade.tllhouse.com/version.json (sha 12541b2 = origin/main)",
+     "observedAt": "2026-10-19T20:18:06.150Z",
+     "subjectDigest": "src:06e55025fe640b2cfb991abaf53a8550a799fa6fb62c4433e47caf8d4c54aa90"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  }
+ ],
+ "freshReview": {
+  "required": false,
+  "status": "not_required"
+ },
+ "remaining": [
+  "A2 관문 돌 표면 질감(생성 텍스처 또는 베이크), 아치 위 풀·덩굴, 풍화 윤곽"
+ ],
+ "verdict": "incomplete",
+ "acceptanceChanges": [],
+ "weakened": [],
+ "deploy": {
+  "target": "https://blade.tllhouse.com",
+  "version": "b82ed370-cc09-4195-8eb5-620db8f6eb93",
+  "readback": "version.json sha 12541b20273990cfc91785057718f73060c0e29c (verifiedAt 2026-10-19T20:13:04Z)",
+  "rollback": "a44f5661-cfd4-400e-b97d-21c1e1d88ef5 (deployment 6a8b030b-2e2b-4de5-99ce-7e21eece765d)",
+  "subjectDigest": "src:06e55025fe640b2cfb991abaf53a8550a799fa6fb62c4433e47caf8d4c54aa90",
+  "pr": "https://github.com/aljjang95/blade-surge/pull/211"
+ },
+ "lanes": [
+  {
+   "name": "궁수 눈",
+   "agent": "01a15587-ae40-7351-b2ee-735695071850",
+   "model": "anthropic/claude-sonnet-5-5 high"
+  },
+  {
+   "name": "HUD 카드",
+   "agent": "01a15587-b280-7223-a61e-ce5b2891b821",
+   "model": "anthropic/claude-sonnet-5-5 medium"
+  },
+  {
+   "name": "관문",
+   "agent": "01a1558a-ff3a-7ff1-a1fa-8492d4c9bc4c",
+   "model": "anthropic/claude-sonnet-5-5 high (2회차 지휘 결함 목록 반영)"
+  }
+ ],
+ "harnessChanges": [],
+ "frictions": [
+  "클라우드 덩어리(01a15580): apex-session 없음·VPN 미설정·Git 프록시 실패로 코드 변경 없이 종료",
+  "로컬 덩어리 채팅(01a15585)이 workspace-write·network false·on-request로 생성돼 중지, 지휘 채팅이 직접 진행",
+  "gh CLI 미인증 → GitHub 커넥터로 PR 생성·병합",
+  "관문 1회차가 시안 대비 얇아 결함 목록으로 2회차"
+ ],
+ "standingGates": [],
+ "next": "관문 돌 표면 질감 패스(생성 텍스처·삼면 투영 또는 정점 AO), 발열 계측 자격·S26 실측(대표님 페어링 게이트)",
+ "quota": null,
+ "updatedAt": "2026-10-19T20:18:33.676Z",
+ "summary": "궁수 눈·HUD 겹침은 라이브 12541b2에서 통과. 관문은 구조가 시안대로 바뀌었으나 돌 표면 질감 차이가 남음."
+}

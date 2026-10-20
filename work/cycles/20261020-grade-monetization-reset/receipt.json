@@ -1,0 +1,447 @@
+{
+ "schemaVersion": 1,
+ "cycle": "20261020-grade-monetization-reset",
+ "cycleStatus": "shipped",
+ "objective": "[gogo:20261020-grade-monetization-reset] 등급 과금 흐름(소환·SSR 확정권·중복 조각·초월·상점 용도·부족 재료 안내, 현금 상품 미지급)과 스킬 초기화 캐시템을 실제 브라우저 탭으로 검증하고 무과금 경제 기간을 계산한 뒤 blade.tllhouse.com에 배포한다",
+ "chunk": {
+  "name": "등급 과금 흐름(소환·초월·상점)과 스킬 초기화 캐시템",
+  "why": "대표님 2026-10-20 \"등급에 따라 스킬·강함이 다른 SR·SSSR을 캐시 플로우와 엮어 과금 구조\", \"스킬 잘못 찍으면 초기화 캐시템\" 요청. 1번 덩어리가 수치·로직을 넣었고 흐름 연결·실화면 검증·경제 점검이 남음",
+  "notDoing": "실제 결제 SDK·영수증 검증, 드랍·지역 진행(D7·D8), 파티 게스트 원격 타격음(D1c), S26 실기기(D10)"
+ },
+ "subject": {
+  "kind": "mixed",
+  "identity": {
+   "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+   "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261020-grade-monetization-reset\\integration",
+   "branch": "codex/20261020-grade-monetization-reset",
+   "commit": "d22709bc231a775c728e57475305a940172c43cb",
+   "tree": "20963a0638e906430587ff4d8e050f50c251d5b9",
+   "artifact": {
+    "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261020-grade-monetization-reset\\integration\\dist\\version.json",
+    "sha256": "cfd8d17be1172d26d8ef7b36ce1160c82ebce98422ebd8f70d9521b1210f82af"
+   }
+  },
+  "digest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd",
+  "observedAt": "2026-10-20T08:01:40.967Z"
+ },
+ "requirements": [
+  {
+   "id": "A1",
+   "claim": "같은 영웅(마법사, 시작 SR)을 SR·SSR·SSSR로 바꿔 같은 시드 전투에서 공격력·체력(×1.5/2/2.6), 스킬 피해(×1/1.2/1.45), 재사용 대기(×1/0.92/0.85), 궁극기 충전(+0/+0.1/+0.2), 전용 연출(없음/금색 링/무지개 링+오라)이 등급표대로 다르게 나온다 / 브라우저 844x390 실제 스킬 버튼 탭, 같은 시드 수치 표 + 등급별 캡처",
+   "status": "passed",
+   "surfaces": [
+    "브라우저 844x390 실제 스킬 버튼 탭, 같은 시드 수치 표 + 등급별 캡처"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A1.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A1.json",
+     "sha256": "b8ddeceb2433722d1bb8f00de17f04edd17ce5ca8029d2312828cb8a8c468399",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:42.108Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A1-sr-844.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A1-sr-844.png",
+     "sha256": "9aae860c14957e2c1dfd38e3155435cb4f419111b0f156d685b03bb5bb6e961e",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:43.216Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A1-ssr-844.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A1-ssr-844.png",
+     "sha256": "c7a3b90b0f7847b276a5cddb7c907bdc4f0ffc45a390523630d4cef7be71c6de",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:44.306Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A1-sssr-844.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A1-sssr-844.png",
+     "sha256": "65eee4499086c7173f82c35770de8d594000ec17f51c321d3550d640afa5404b",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:45.412Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    }
+   ],
+   "neededInput": null,
+   "note": "마법사 Lv30 같은 시드 실제 스킬 탭: atk 846/1128/1467(1:1.333:1.734), hp 4980/6640/8632, 스킬 피해÷공격력 3.5/4.2/5.075(skillMul 1/1.2/1.45), 화염구 재사용 4.98/4.58/4.23초(기대 5/4.6/4.25), 궁극기 충전 배율 1.0/1.1/1.2, 오라 없음/금색 링/링+몸 오라. 출처 D2a"
+  },
+  {
+   "id": "A2",
+   "claim": "소환 화면에서 보석 1회 소환과 SSR 확정권 버튼을 실제로 탭하면 결과가 나오고, 중복 영웅은 \"조각 +10 · 초월 n/필요\"로 보이며 조각이 저장된다(새로고침 유지) / 브라우저 844x390 소환 화면 실제 탭·새로고침",
+   "status": "passed",
+   "surfaces": [
+    "브라우저 844x390 소환 화면 실제 탭·새로고침"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A2.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A2.json",
+     "sha256": "88d262492aed4d72562b849ea2d33ad72966426802ff8bfce54a3b038f63b8c2",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:46.554Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A2-gacha-screen.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A2-gacha-screen.png",
+     "sha256": "2aea3731f8d176e7b8711424dec9bca6a4d2eea2bd92eeda588ca67a9f5bbd9f",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:47.666Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A2-reveal-ssr-ticket.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A2-reveal-ssr-ticket.png",
+     "sha256": "15072d98b4dbfd8c3fc0fca2baab353e5a8096f5ac000418ac9bd69e3ec0102b",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:48.747Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-e80b183\\REV-p1.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-e80b183\\REV-p1.json",
+     "sha256": "7824a9656deddcfff48dff523c7f26c092c338d533d92ed9418845a44efada8a",
+     "command": "리뷰 P1 Enter 반복 재현(e80b183, 이후 소환 코드 불변)",
+     "observedAt": "2026-10-20T08:01:49.826Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    }
+   ],
+   "neededInput": null,
+   "note": "소환 화면 SSR 확정 소환 버튼 실제 탭 → \"광전사 드라칸 조각 +10 · 초월 15/120\", 확정권 2→1, 1회 소환 보석 300 소모, 새로고침 유지. 리뷰 P1(Enter 반복 시 확정권 추가 소모) 수정 후 Enter 5회에 1장만 소모. 출처 D2b"
+  },
+  {
+   "id": "A3",
+   "claim": "초월 화면에서 부족 재료마다 구할 곳 버튼(조각→소환, 초월석→상점 강화, 골드→골드 상점)이 보이고 실제로 그 화면으로 가며, 상점에서 초월석을 보석으로 사서 SR→SSR 초월을 실제 탭으로 끝내면 등급이 저장되고 다음 전투 수치가 올라간다 / 브라우저 844x390·1280x590 초월·상점 실제 탭·새로고침·전투 수치",
+   "status": "passed",
+   "surfaces": [
+    "브라우저 844x390·1280x590 초월·상점 실제 탭·새로고침·전투 수치"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A3.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A3.json",
+     "sha256": "1805eb77b605af6d51871417b3429d8c8aaaae02f6f7e244ce8faeab2b1d633b",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:50.894Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A3-transcend-844.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A3-transcend-844.png",
+     "sha256": "d3857d71b1fea207f0fb8745e4e52009a1a278c70c23c4d759a984448c31ab10",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:52.030Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A3-transcend-1280.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A3-transcend-1280.png",
+     "sha256": "b9540106faf4ddf714e7665ee0d5327693872fdb0a01bf894e25dea76f6ff128",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:53.339Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A3-transcend-short-all.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A3-transcend-short-all.png",
+     "sha256": "0839db27a838bc250bd63aa488ff51eae48223754afeeea02f6c39758847244a",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:54.484Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A3-transcend-done.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A3-transcend-done.png",
+     "sha256": "2a70be1305d5266138610b4785e9837ca3e9bb99bc46d8acda44b7af5a2455c0",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:55.580Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    }
+   ],
+   "neededInput": null,
+   "note": "초월 화면 부족 재료 행 안내 버튼(소환·상점·골드) 실제 탭으로 각 화면 이동, 초월석 ×10 보석 900 구매 → SR→SSR 초월 탭 → 저장·새로고침 유지 → 전투 atk 846→1128. 844x390·1280x590. 짧은 화면에서 골드 행이 초월하기에 가리던 결함 수정 후 재검. 출처 D2b"
+  },
+  {
+   "id": "A4",
+   "claim": "상점이 성장 흐름 줄과 상품별 용도(소환·초월·초기화·골드)를 보여 주고, 현금 상품을 탭하면 \"결제 준비 중\"만 나오고 보석·재료·구매 기록이 바뀌지 않으며, 보석이 부족하면 무료 획득처와 보석 탭으로 안내한다 / 브라우저 844x390·1280x590 상점 실제 탭, 전후 재화 비교",
+   "status": "passed",
+   "surfaces": [
+    "브라우저 844x390·1280x590 상점 실제 탭, 전후 재화 비교"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A4.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A4.json",
+     "sha256": "a517a3bf7f1da434a8c121dc4b89502aa9e384b1720cc0b38197c0b8389fd6b2",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:56.669Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A4-shop-flow-844.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A4-shop-flow-844.png",
+     "sha256": "9411e660d8ed12489af90856f160b8b8f2e056136cc5e20e09c9c3c9749a3438",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:57.738Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A4-shop-flow-1280.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A4-shop-flow-1280.png",
+     "sha256": "db6799fe0af60cf175155eb451b2bfca8b388c27c9398489d44860f4d53712e3",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:58.825Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A4-paysheet-pack.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A4-paysheet-pack.png",
+     "sha256": "78e5b891afe22b7aa926ae11a2a4e5f2cd3954f18e5d34086b2f4117de311a4d",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:01:59.900Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A4-gems-short-modal.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A4-gems-short-modal.png",
+     "sha256": "33ef59a68237259d2c15d261d00a25bd6889d3a5ac63bad1d6918c8ef7f10b60",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:02:00.980Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A4-flow-transcend-opened.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A4-flow-transcend-opened.png",
+     "sha256": "ca2e2337e6318b69a6cc73b07862d53e2677b6714a75592a6ffe5bd15549ff48",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:02:02.054Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    }
+   ],
+   "neededInput": null,
+   "note": "상점 성장 흐름 줄 5단계와 6개 탭 상품별 용도 표시(844·1280), 현금 상품 3종 탭 → \"유료 구매 준비 중\"만, 보석·초월석·구매 기록·누적 결제 불변, 보석 부족 시 무료 획득처 안내 → 보석 탭. 흐름 줄 초월 단계가 상점 위에 겹쳐 열리던 결함 수정. 출처 D2b·AGENTS 결제 계약"
+  },
+  {
+   "id": "A5",
+   "claim": "스킬 초기화: Lv.20 미만 무료, 초기화서 있으면 1개 사용, 없으면 보석 300으로 사용, 투자 SP 전액 반환, 각성 스킬 Q/E 장착 해제, 새로고침 유지, 저장 실패 시 되돌림, SP 도입 이전 저장의 초과 스킬 레벨 보상 SP가 초기화 뒤에도 남는다 / 브라우저 844x390 스킬 트리 실제 탭·새로고침·저장 실패 주입 + 이전 저장 픽스처 + 단위 테스트",
+   "status": "passed",
+   "surfaces": [
+    "브라우저 844x390 스킬 트리 실제 탭·새로고침·저장 실패 주입 + 이전 저장 픽스처 + 단위 테스트"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A5.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A5.json",
+     "sha256": "8af09d967822c57ebe3d95e4d8eafcd79b61d536b7bebd95639589b2b39407e6",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:02:03.113Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A5-b-after-reset.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A5-b-after-reset.png",
+     "sha256": "97409ede5015bd36548aa2d522f0d21774c29589d68bf26a134fdffe69906fc3",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:02:04.240Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A5-c-gems-modal.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A5-c-gems-modal.png",
+     "sha256": "fb9c0a1a5075e939df445cba3ff6c34e888a2d0441a1d6e5f19d258923ff0fae",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:02:05.325Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A5-e-save-failed.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A5-e-save-failed.png",
+     "sha256": "7b36b526b7b0db66af4f29ab519c260a18565989bfb2843fa5a132d07c73765a",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:02:06.436Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A5-f-gradeless-tree.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\qa-final2\\A5-f-gradeless-tree.png",
+     "sha256": "c760581473418df0ec505c86cefa1ff27dcab3d3adb594ec36fcfac6f91566f1",
+     "command": "node tools/gogo-qa-20261020-grade.mjs --origin http://127.0.0.1:5361/ --out qa-final2",
+     "observedAt": "2026-10-20T08:02:07.516Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\fulltest-211fd0d.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\fulltest-211fd0d.log",
+     "sha256": "2ff4ae3f1b3f9aef457bc19f1b6c750708005064dc543a5557cba1e38dacfd2b",
+     "command": "bun test --timeout 30000 (211fd0d, 이후 커밋은 QA 도구만 변경)",
+     "observedAt": "2026-10-20T08:02:08.602Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\build-211fd0d.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\build-211fd0d.log",
+     "sha256": "a0fe66b92ed90783c67a2362f44edae3dd9ba9d34454f7d94ad880d0931f7a8d",
+     "command": "bun run build (211fd0d)",
+     "observedAt": "2026-10-20T08:02:09.743Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    }
+   ],
+   "neededInput": null,
+   "note": "스킬 트리 실제 탭: Lv12 무료, 초기화서 1개 사용(SP 전액 반환·Q/E 해제·새로고침 유지), 보석 300(1000→700), 보석 0이면 상점 강화 탭, 저장 실패 주입 시 토스트·원상태, SP 이전 저장 픽스처 2종 보상 SP 21 초기화·새로고침 뒤 유지. 전체 테스트 2500 통과. 출처 D6b"
+  },
+  {
+   "id": "A6",
+   "claim": "무과금 경로로 SR→SSR, SSR→SSSR 초월에 걸리는 기간과 보석 소비처를 실제 데이터에서 계산해 적고, 무과금 경로가 존재(현금 전용 관문 없음)하며 기준 기간을 넘으면 근거와 함께 조정한다 / tools/economy-estimate.mjs 출력 + 단위 테스트",
+   "status": "passed",
+   "surfaces": [
+    "tools/economy-estimate.mjs 출력 + 단위 테스트"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\economy-estimate.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\economy-estimate.json",
+     "sha256": "8c37a63ec81dcd4595628bd0523d09dfb75ea2743001ac6c8e1ffb19d9c72b64",
+     "command": "bun tools/economy-estimate.mjs --pretty",
+     "observedAt": "2026-10-20T08:02:10.847Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\econ-tests.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\econ-tests.log",
+     "sha256": "47e8a741d2220814075670ffdc3e7b30467937e24cf96cc049be68a70f2f40eb",
+     "command": "bun test 경제·초기화 5개 파일",
+     "observedAt": "2026-10-20T08:02:11.957Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    }
+   ],
+   "neededInput": null,
+   "note": "tools/economy-estimate.mjs(실제 데이터 모듈 계산): 무과금 마법사 SR→SSR 30분/일 5~6일, SSSR 누적 10~19일, 60분/일 3일/5~10일. 현금 전용 관문 없음. 병목은 영웅 조각(SSSR은 골드·초월석도). 특정 SR 영웅 조각은 소환 1회당 0.16개라 보석 소환은 비효율, 초월석은 보석 900/10개. 기준(SSR ≤21일) 안이라 수치 조정 안 함(과금 압박 강화는 제품 결정으로 다음 후보). 출처 덩어리 4번"
+  },
+  {
+   "id": "A7",
+   "claim": "typecheck·전체 테스트·빌드 통과 후 같은 SHA가 정식 호스트 blade.tllhouse.com에 배포돼 다시 읽힌다 / tools/deploy.mjs 영수증·version.json·실제 탭 스모크",
+   "status": "passed",
+   "surfaces": [
+    "tools/deploy.mjs 영수증·version.json·실제 탭 스모크"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\deploy-b17f0c0.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\deploy-b17f0c0.log",
+     "sha256": "f97a2f0194557e20303bad13da89ffad0c8a65ef754c31394b8ccc4d1c871cd0",
+     "command": "node tools/deploy.mjs --auth=wrangler (deploy worktree b17f0c0)",
+     "observedAt": "2026-10-20T08:05:44.550Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\live\\live-smoke.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\live\\live-smoke.json",
+     "sha256": "ed3056593aeaa7aa3e7d9b3e66bf4ba908391d64549bcc9fbcceb8ed4708d159",
+     "command": "GET https://blade.tllhouse.com/version.json + 실기 브라우저 스모크 844x390",
+     "observedAt": "2026-10-20T08:05:45.603Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\live\\live-shop-844.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-grade-monetization-reset\\evidence\\live\\live-shop-844.png",
+     "sha256": "6797753297043e271c6345f7de83d3b17ee11391f2458fb55998ecfc231d33e0",
+     "command": "blade.tllhouse.com 상점 강화 탭 캡처",
+     "observedAt": "2026-10-20T08:05:46.668Z",
+     "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+    }
+   ],
+   "neededInput": null,
+   "note": "PR squash → main → tools/deploy.mjs → blade.tllhouse.com version.json 읽기. 출처 D9"
+  }
+ ],
+ "freshReview": {
+  "required": true,
+  "status": "passed",
+  "reviewer": "gpt-6.1-sol xhigh (Noether)",
+  "scope": "8185b8b..3c3b20f 결제·재화·소환 경로",
+  "findings": "P0 0, P1 1(소환 결과 화면 중 확정권 추가 소모), P2 1(초월 안내 이동 뒤 초점 유실) → 1c1b96f 수정, 브라우저 재현으로 재검"
+ },
+ "remaining": [],
+ "verdict": "passed",
+ "acceptanceChanges": [],
+ "weakened": [],
+ "deploy": {
+  "target": "https://blade.tllhouse.com (Worker blade-surge)",
+  "version": "b511ebbc-c777-4394-8dc1-6f0b827cdef1",
+  "sha": "b17f0c0431146861db277061686ae9d0a0bd68e7",
+  "pr": "https://github.com/aljjang95/blade-surge/pull/217",
+  "deploymentId": "cf670d84-dc5a-4b5c-b13c-226700aa42e4",
+  "readback": "GET https://blade.tllhouse.com/version.json → sha b17f0c0431146861db277061686ae9d0a0bd68e7, dirty false; 실기 브라우저 844x390 상점 성장 흐름 5단계·상품 용도 11개, 소환 화면 #btn-pull-ssr 존재, 페이지 오류 0 (/api/social/me 401은 비로그인 정상)",
+  "rollback": "wrangler rollback 으로 직전 배포 9a8fe823-eb4a-4cf6-ab2d-f47097d369c6(버전 25f93213-c27b-415e-8668-e5e9a0152836, main 488f539 커뮤니티 #216)로 되돌림. tools/deploy.mjs 영수증에 rollbackDeploymentId 기록",
+  "subjectDigest": "src:08284e095c4a5792d8f0d855153c74ce05e96729ec11de665ed628630ee1c5dd"
+ },
+ "lanes": [
+  {
+   "lane": "econ",
+   "model": "anthropic/claude-sonnet-5-5",
+   "agentId": "01a15801-7fec-7a31-a4b5-7f8874104ebd",
+   "branch": "codex/20261020-grade-monetization-reset-econ"
+  },
+  {
+   "lane": "qa",
+   "model": "anthropic/claude-sonnet-5-5",
+   "agentId": "01a15806-be08-7700-99d6-4d4988704094",
+   "branch": "codex/20261020-grade-monetization-reset-qa"
+  },
+  {
+   "lane": "review",
+   "model": "gpt-6.1-sol",
+   "agentId": "01a15823-8f12-7ac0-b176-764bc15f99e9",
+   "branch": "(읽기 전용)"
+  }
+ ],
+ "harnessChanges": [
+  "tools/gogo-qa-20261020-grade.mjs: 등급·소환·초월·상점·초기화 A1~A5 실제 터치 QA 한 스크립트(--only, 출력 폴더 인자)",
+  "tools/economy-estimate.mjs: 무과금 초월 기간을 실제 데이터 모듈에서 계산(시나리오 인자)"
+ ],
+ "frictions": [
+  "자동 QA가 통과해도 캡처를 직접 보니 초월 화면 골드 행이 버튼에 가려 있었음 → 요소 visible 검사만으로는 겹침을 못 잡음, 다음엔 행 하단<버튼 상단 같은 겹침 검사를 넣을 것",
+  "origin/main의 .gitattributes(LF 고정) 병합 뒤 기존 워크트리의 보호 파일이 CRLF로 남아 해시 테스트 1건 실패 → 해당 파일 재체크아웃으로 해결",
+  "QA 도중 파일을 재체크아웃하면 개발 서버 HMR 재로드로 진행 중 기준이 실패함 → 소스 조작과 QA 실행을 겹치지 않기",
+  "하단 탭이 던전·영웅·메뉴 3개로 바뀌어 소환·상점은 메뉴 창 안 버튼으로 들어가야 함(QA 스크립트 반영)"
+ ],
+ "standingGates": [],
+ "next": "드랍·지역 진행(D7·D8)과 파티 게스트 원격 타격음(D1c). 과금 압박 조정(패스 무료 골드·일반 몹 조각 확률)은 대표님 제품 결정 후보",
+ "quota": null,
+ "updatedAt": "2026-10-20T08:06:02.212Z"
+}

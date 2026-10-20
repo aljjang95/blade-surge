@@ -67,6 +67,12 @@ export function partyVisualMessage(message, enabled) {
   return {...message,snapshot};
 }
 
+/** 공격자 영웅(hero) 이전 클라이언트는 events 키를 엄격히 검사하므로 hit 이벤트에서 hero 키만 걷어 낸다. */
+export function partyHitHeroMessage(message, enabled) {
+  if (enabled || message.type !== 'snapshot' || !message.snapshot?.events?.some(e => e.hero !== undefined)) return message;
+  return {...message,snapshot:{...message.snapshot,events:message.snapshot.events.map(({hero, ...event}) => event)}};
+}
+
 /** 아바타 이전 클라이언트는 players 키를 엄격히 검사하므로 스냅샷에서 아바타 외형 키만 걷어 낸다. */
 export function partyAvatarMessage(message, enabled) {
   if (enabled || message.type !== 'snapshot' || !message.snapshot?.players?.some(p => p.avatar !== undefined)) return message;

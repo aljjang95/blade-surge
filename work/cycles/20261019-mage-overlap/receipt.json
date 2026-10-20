@@ -1,0 +1,217 @@
+{
+ "schemaVersion": 1,
+ "cycle": "20261019-mage-overlap",
+ "cycleStatus": "shipped",
+ "objective": "마법사 지팡이와 모자챙·머리카락 겹침 8건 교정",
+ "chunk": {
+  "name": "마법사 장식 겹침 교정",
+  "why": "2차 재감사가 D3b를 실패로 판정(별도 시각 결함 8건 미수정)",
+  "notDoing": "데미지·판정·히트 프레임"
+ },
+ "subject": {
+  "kind": "mixed",
+  "identity": {
+   "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+   "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\deploy-11a5477",
+   "branch": "",
+   "commit": "11a547700c7ff31d96b099619885bdf8facc91a6",
+   "tree": "000daa1eef1c7ef88e5fc8cea49b5c1f4e289560"
+  },
+  "digest": "src:3bf358056d5e141b9ce9a0486e3a12fa3b254a26652e2b159f1f318b3587ed83",
+  "observedAt": "2026-10-19T14:14:18.176Z"
+ },
+ "requirements": [
+  {
+   "id": "A1",
+   "claim": "마법사 지팡이(무기)와 모자챙·머리카락의 겹침을 재는 측정(기존 combat-mesh-qa 방법을 유지하되 머리 구간 겹침을 따로 기록하고, 모자챙·머리카락 겹침을 눈으로 확인한 8개 동작의 대표 프레임에서 지팡이가 모자챙·머리카락을 통과하는 깊이를 cm로 재는 보조 측정을 추가)에서 8개 동작 모두 통과 깊이가 1.5cm 이하이거나, 남으면 대표 프레임 캡처와 수치와 해결 불가 시도 기록으로 대표님 예외 결정에 올린다 / 보",
+   "status": "passed",
+   "surfaces": [
+    "보조 측정 보고서와 전후 캡처"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A1\\report.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A1\\report.json",
+     "sha256": "a0745ad99e90c6a97f9ff559175b1b7a31db4b1af529224c539ad8733939bd08",
+     "command": "mage-head-overlap-qa 정식 호스트 11a54770: 8개 동작 모두 장식 외피 통과 깊이 1.05cm 이하(전 27.5~33.8cm)",
+     "observedAt": "2026-10-19T14:14:29.953Z",
+     "subjectDigest": "src:3bf358056d5e141b9ce9a0486e3a12fa3b254a26652e2b159f1f318b3587ed83"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A2",
+   "claim": "기존 combat-mesh-qa 117개는 결함 0을 유지하고, 마법사 외 직업은 보정 전후 같은 수치다. 손잡이-손 8cm 이하, 클립 길이·히트 프레임·판정 무변경 / combat-mesh-qa, combat-pose-qa",
+   "status": "passed",
+   "surfaces": [
+    "combat-mesh-qa, combat-pose-qa"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A2\\report.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A2\\report.json",
+     "sha256": "7ff5073b4c74d01cb49331aec98b3bea9deb82ecb3398512d65ab00a89fbb863",
+     "command": "combat-mesh-qa 정식 호스트 117개 pass:true 결함 0 유지",
+     "observedAt": "2026-10-19T14:14:31.577Z",
+     "subjectDigest": "src:3bf358056d5e141b9ce9a0486e3a12fa3b254a26652e2b159f1f318b3587ed83"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A2\\live-combat-pose-qa.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A2\\live-combat-pose-qa.log",
+     "sha256": "d84f637d4813346040f71553fddf77602480bbf8984f53b5fb23d6593b63686a",
+     "command": "combat-pose-qa 정식 호스트 손잡이-손 최대 5.3cm, 마법사 hub 구간 OK",
+     "observedAt": "2026-10-19T14:14:33.143Z",
+     "subjectDigest": "src:3bf358056d5e141b9ce9a0486e3a12fa3b254a26652e2b159f1f318b3587ed83"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A2\\live-lobby-arm-symmetry-qa.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A2\\live-lobby-arm-symmetry-qa.log",
+     "sha256": "f9df284b44ef06534c6c8850914c9a8b603ec90d27bd3f21c490b58c2ddccb59",
+     "command": "lobby-arm-symmetry-qa 정식 호스트 통과(마법사 포함 다른 직업 수치 동일)",
+     "observedAt": "2026-10-19T14:14:35.030Z",
+     "subjectDigest": "src:3bf358056d5e141b9ce9a0486e3a12fa3b254a26652e2b159f1f318b3587ed83"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A3",
+   "claim": "전·후 비교 캡처(정면·측면·후면)를 눈으로 확인해 팔·손목이 비틀리지 않고 지팡이 방향이 자연스럽다 / 비교 캡처",
+   "status": "passed",
+   "surfaces": [
+    "비교 캡처"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A3\\attack1-9.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A3\\attack1-9.png",
+     "sha256": "13bf9d4e5fd8fcd78c1b0d3e42dbb7d482952caae0273ab51ea77ffd6186a86e",
+     "command": "마법사 attack1 프레임 9 전후 비교 캡처",
+     "observedAt": "2026-10-19T14:14:37.164Z",
+     "subjectDigest": "src:3bf358056d5e141b9ce9a0486e3a12fa3b254a26652e2b159f1f318b3587ed83"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A3\\attack4-9.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A3\\attack4-9.png",
+     "sha256": "ccb69c6a7787f9e81649a7da03a2d436abd9ab225e02ba16834b31353d49daf8",
+     "command": "마법사 attack4 프레임 9 전후 비교 캡처",
+     "observedAt": "2026-10-19T14:14:39.188Z",
+     "subjectDigest": "src:3bf358056d5e141b9ce9a0486e3a12fa3b254a26652e2b159f1f318b3587ed83"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A3\\mage-overlap-result.md",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A3\\mage-overlap-result.md",
+     "sha256": "4b5584ee0b23d914848abe3649d0399c8db09f8789642f6910233485dffe45b2",
+     "command": "8개 동작 전후 깊이·비교 캡처 16장 육안 확인 기록",
+     "observedAt": "2026-10-19T14:14:41.232Z",
+     "subjectDigest": "src:3bf358056d5e141b9ce9a0486e3a12fa3b254a26652e2b159f1f318b3587ed83"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A4",
+   "claim": "skill-aim-qa 세 화면, aim-hitbox-truth-qa(몰이 포함, 마법사 스킬 발사 위치 포함), lobby-weapon-clip-qa, lobby-arm-symmetry-qa, bun run check 통과 / 재실행 보고서",
+   "status": "passed",
+   "surfaces": [
+    "재실행 보고서"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A4\\live-skill-aim-qa.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A4\\live-skill-aim-qa.log",
+     "sha256": "4b1d606f786ef268a631627de2240286af30825e4edaaf28f21ee656bc52ebd1",
+     "command": "skill-aim-qa 정식 호스트 세 화면 pass",
+     "observedAt": "2026-10-19T14:14:43.213Z",
+     "subjectDigest": "src:3bf358056d5e141b9ce9a0486e3a12fa3b254a26652e2b159f1f318b3587ed83"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A4\\live-mage-launch-origin-qa.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A4\\live-mage-launch-origin-qa.log",
+     "sha256": "81ad2d487787401500b9588a3de4aed40bd36d51940e4a3779265e47289c9571",
+     "command": "mage-launch-origin-qa 정식 호스트 마법사 스킬 발사 위치 대조 통과",
+     "observedAt": "2026-10-19T14:14:45.469Z",
+     "subjectDigest": "src:3bf358056d5e141b9ce9a0486e3a12fa3b254a26652e2b159f1f318b3587ed83"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A4\\check-clean.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A4\\check-clean.log",
+     "sha256": "c1326ee8a1582c352b1467cf50182e9cf9c438e4f94dec2140f03d87ff73e333",
+     "command": "bun run check 깨끗한 배포 워크트리 11a54770 exit 0, 2395 통과 0 실패",
+     "observedAt": "2026-10-19T14:22:46.405Z",
+     "subjectDigest": "src:3bf358056d5e141b9ce9a0486e3a12fa3b254a26652e2b159f1f318b3587ed83"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A5",
+   "claim": "정식 호스트에서 A1·A2·A4 재확인 / version.json과 보고서",
+   "status": "passed",
+   "surfaces": [
+    "version.json과 보고서"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A5\\live-version.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-mage-overlap\\evidence\\A5\\live-version.json",
+     "sha256": "f24b314b97c483d4dc558d92b763a44b9262a4636cf253014ad03c84f99bd3e6",
+     "command": "version.json sha 11a54770, versionId 8738d464",
+     "observedAt": "2026-10-19T14:14:47.482Z",
+     "subjectDigest": "src:3bf358056d5e141b9ce9a0486e3a12fa3b254a26652e2b159f1f318b3587ed83"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  }
+ ],
+ "freshReview": {
+  "required": false,
+  "status": "not_required"
+ },
+ "remaining": [],
+ "verdict": "passed",
+ "acceptanceChanges": [],
+ "weakened": [],
+ "deploy": {
+  "target": "https://blade.tllhouse.com (worker blade-surge)",
+  "version": "8738d464-58c2-4c16-b2e7-cac3595e1757",
+  "sha": "11a547700c7ff31d96b099619885bdf8facc91a6",
+  "readback": "version.json sha=11a54770 dirty=false; 정식 호스트 보조 측정 8개 1.05cm 이하, combat-mesh-qa 결함 0, 조준·발사 위치 통과",
+  "rollback": "이전 version 412f5f1e-5d9e-4169-aed5-9c8622ce82f2 (c4188b9), tools/deploy.mjs 절차",
+  "subjectDigest": "src:3bf358056d5e141b9ce9a0486e3a12fa3b254a26652e2b159f1f318b3587ed83"
+ },
+ "lanes": [
+  {
+   "lane": "integration",
+   "model": "gpt-6.1-sol",
+   "agentId": "01a1544e-5485-7432-a22e-043bc1536b85",
+   "branch": "codex/20261019-mage-overlap"
+  }
+ ],
+ "harnessChanges": [],
+ "frictions": [
+  "Tab S7+ 실기기는 다른 채팅이 2026-10-20 01:00까지 잠금을 쥐고 있어 이번 사이클에서 재확인 못함(마법사 클립 보정 데이터만 변경, 입력 경로 불변, 801ecff7에서 실기기 통과)",
+  "보조 측정의 1.5cm 기준은 이 사이클이 정한 값(brief A1)이며 combat-mesh-qa의 3cm와 다름"
+ ],
+ "standingGates": [],
+ "next": "3차 최종 감사",
+ "quota": null,
+ "updatedAt": "2026-10-19T14:22:46.815Z"
+}

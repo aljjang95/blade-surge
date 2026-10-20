@@ -1,10 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import { GRADE_UP_COST } from '../src/data/hero-grades.js';
+import { GACHA, SKUS } from '../src/data/shop.js';
+import { ECONOMY_PACE } from '../src/data/economy-pace.js';
 import { lootTable } from '../src/data/loot-tables.js';
-import { cashOnlyGates, estimate, gemsForGold, gemsForStones, perRun, shardsPerPull, simulate, startingState } from '../tools/economy-estimate.mjs';
+import { cashOnlyGates, economyPace, productSavings, estimate, gemsForGold, gemsForStones, perRun, shardsPerPull, simulate, startingState } from '../tools/economy-estimate.mjs';
 
 // 무과금(현금 0원) 초월 경로 기준: 기본 시나리오(하루 30분)에서 SR→SSR 초월이 이 일수 안에 끝나야 한다.
-const MAX_SSR_DAYS = 21;
+const MIN_SSR_DAYS = 21, MAX_SSR_DAYS = 28;
 
 describe('무과금 초월 경제 추정', () => {
   test('현금 전용 관문이 없다: 조각·초월석·골드 모두 현금 없이 얻는 경로가 있다', () => {
@@ -29,7 +31,9 @@ describe('무과금 초월 경제 추정', () => {
       expect(Number.isFinite(r.daysTo.SSR)).toBe(true);
       expect(Number.isFinite(r.daysTo.SSSR)).toBe(true);
       expect(r.daysTo.SSR).toBeLessThanOrEqual(MAX_SSR_DAYS);
-      expect(r.daysTo.SSSR).toBeGreaterThan(r.daysTo.SSR);
+      expect(r.daysTo.SSR).toBeGreaterThanOrEqual(MIN_SSR_DAYS);
+      expect(r.daysTo.SSSR).toBeGreaterThanOrEqual(r.daysTo.SSR * 2);
+      expect(r.daysTo.SSSR).toBeLessThanOrEqual(r.daysTo.SSR * 3);
     });
   }
 
@@ -43,7 +47,7 @@ describe('무과금 초월 경제 추정', () => {
 
   test('스테이지 1회 기댓값이 드랍 표와 맞는다(1-1 보스·정예·일반 처치 수 × 확률)', () => {
     const run = perRun(1), table = (rank: string) => lootTable(1, rank);
-    const expected = run.kills.boss * table('boss').heroShards.chance + run.kills.elite * table('elite').heroShards.chance + run.kills.normal * table('normal').heroShards.chance;
+    const expected = Object.entries(run.kills).reduce((n, [rank, kills]) => n + Number(kills) * table(rank).heroShards.chance * table(rank).heroShards.n, 0);
     expect(run.kills.boss).toBe(1);
     expect(run.heroShards).toBeCloseTo(expected, 9);
     expect(perRun(60).heroShards).toBeGreaterThan(run.heroShards);
@@ -51,7 +55,7 @@ describe('무과금 초월 경제 추정', () => {
 
   test('소환으로 얻는 SR 영웅 1명의 조각 기대값은 SR 확률 × 영웅 몫 × 중복 조각이다', () => {
     const sp = shardsPerPull('mage');
-    expect(sp.perSingle).toBeCloseTo(sp.share.SR * sp.heroShare * 10, 9);
+    expect(sp.perSingle).toBeCloseTo(sp.share.SR * sp.heroShare * GACHA.dupShards, 9);
     expect(sp.perTen).toBeGreaterThan(sp.perSingle * 10);
   });
 
@@ -60,5 +64,28 @@ describe('무과금 초월 경제 추정', () => {
     expect(gemsForStones(11).gems).toBe(1800);
     expect(gemsForGold(500000).gems).toBe(1800);
     expect(gemsForGold(0).gems).toBe(0);
+  });
+
+  test('생성된 화면용 상수는 추정기 출력과 완전히 같다', () => {
+    expect(JSON.stringify(ECONOMY_PACE)).toBe(JSON.stringify(economyPace()));
+  });
+
+  test('확정권은 마법사 조각이 아니며 픽업 SSR 대상에서만 줄어든다', () => {
+    const free = simulate(), gift = simulate({ dayOneRewards: { ssrTicket: 1 } });
+    expect(gift.daysTo).toEqual(free.daysTo);
+    const row = productSavings().ssrTicket;
+    expect(row.hero).toBe(GACHA.featured); expect(row.grade).toBe('SSSR');
+    expect(row.days).toBeGreaterThanOrEqual(1);
+    expect(row.freeDays - row.withDays).toBe(row.days);
+  });
+
+  test('모든 현금 상품은 첫날 수령 반사실에서 최소 하루를 단축한다', () => {
+    const savings = productSavings();
+    for (const sku of SKUS.filter(s => s.kind === 'cash')) {
+      const row = savings[sku.id as keyof typeof savings];
+      expect(row.days).toBeGreaterThanOrEqual(1);
+      expect(row.days).toBe(row.freeDays - row.withDays);
+    }
+    expect(SKUS.some(s => 'heroChoiceShards' in (s.rewards || {}))).toBe(false);
   });
 });

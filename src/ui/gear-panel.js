@@ -12,6 +12,7 @@ import { libraryAssetForAvatar } from '../engine/library-assets.js';
 import { dungeonLanding } from './dungeon-landing.js';
 import { itemIconHtml, itemVisual } from './item-presentation.js';
 import { heroGrade } from '../data/hero-grades.js';
+import { isFresh, clearFresh } from './loot-compare.js';
 
 /**
  * 영웅 · 장비 화면의 구성 요소.
@@ -178,14 +179,15 @@ export function renderBag(meta, heroId) {
     '<span class="bag-count" aria-live="polite">' + items.length + '/' + all.length + '개</span></div>' +
     '<div class="inv-list" role="list">' + (items.map((inst) => {
       const it = ITEM_BY_ID[inst.id], owner = owners.get(inst.uid);
-      const mark = owner === heroId ? '<em class="bag-eq">착용 중</em>' : owner ? '<em class="bag-eq other">' + esc(HEROES[owner].name.split(' ').pop()) + '</em>' : '';
-      return '<div class="bag-cell" role="listitem"><button type="button" class="bag-item rar-' + it.rarity + '" data-inv="' + inst.uid + '" aria-label="' + esc(it.name) + ' +' + inst.enh + ', ' + RARITY_INFO[it.rarity].name + (owner === heroId ? ', 착용 중' : owner ? ', 다른 영웅이 착용 중' : '') + '" title="' + esc(it.name) + '"><span class="bag-art">' + iconImg(it, ' decoding="async"', heroId) + '</span><span class="inventory-name">' + esc(it.name) + '</span><span class="inventory-level"><b>+' + inst.enh + '</b>' + (it.summon ? ' ✦' : '') + '</span>' + mark + '</button></div>';
+      const isNew = isFresh(inst.uid);
+      const mark = (isNew ? '<em class="bag-new">NEW</em>' : '') + (owner === heroId ? '<em class="bag-eq">착용 중</em>' : owner ? '<em class="bag-eq other">' + esc(HEROES[owner].name.split(' ').pop()) + '</em>' : '');
+      return '<div class="bag-cell" role="listitem"><button type="button" class="bag-item rar-' + it.rarity + '" data-inv="' + inst.uid + '" aria-label="' + esc(it.name) + ' +' + inst.enh + ', ' + RARITY_INFO[it.rarity].name + (owner === heroId ? ', 착용 중' : owner ? ', 다른 영웅이 착용 중' : '') + (isNew ? ', 새로 얻음' : '') + '" title="' + esc(it.name) + '"><span class="bag-art">' + iconImg(it, ' decoding="async"', heroId) + '</span><span class="inventory-name">' + esc(it.name) + '</span><span class="inventory-level"><b>+' + inst.enh + '</b>' + (it.summon ? ' ✦' : '') + '</span>' + mark + '</button></div>';
     }).join('') || '<p class="bag-empty">' + (all.length ? '조건에 맞는 장비가 없습니다. 필터를 바꿔 보세요.' : '가방이 비어 있습니다. 던전에서 전리품을 모으거나 제작 공방에서 만들어 보세요.') + '</p>') + '</div>';
   const rerender = (focus) => { renderBag(meta, heroId); if (focus) $('hero-bag')?.querySelector(focus)?.focus({ preventScroll: true }); };
   bag.querySelectorAll('[data-bag-slot]').forEach((button) => button.onclick = () => { meta.bagSlot = button.dataset.bagSlot; rerender('[data-bag-slot="' + meta.bagSlot + '"]'); });
   bag.querySelector('[data-bag-rarity]').onchange = (event) => { meta.bagRarity = event.target.value; rerender('[data-bag-rarity]'); };
   bag.querySelector('[data-bag-sort]').onchange = (event) => { meta.bagSort = event.target.value; rerender('[data-bag-sort]'); };
-  bag.querySelectorAll('[data-inv]').forEach((button) => button.onclick = () => meta.showItem(+button.dataset.inv, heroId));
+  bag.querySelectorAll('[data-inv]').forEach((button) => button.onclick = () => { clearFresh(+button.dataset.inv); meta.showItem(+button.dataset.inv, heroId); });
 }
 
 // ------------------------------------------------------------------ 비교 · 장착 · 강화 시트

@@ -3,6 +3,7 @@
 // 현금 상품은 결제 연결 전까지 지급하지 않는다(Economy.paymentAvailable). 여기서는 용도 표시만 정한다.
 import { GRADE_UP_COST, gradeUpCost, heroGrade, nextGrade } from './hero-grades.js';
 import { GACHA } from './shop.js';
+import { ECONOMY_PACE } from './economy-pace.js';
 
 export const GROWTH_FLOW = Object.freeze([
   Object.freeze({ id: 'gems', label: '보석', hint: '출석·임무·첫 클리어·패스 무료 보상' }),
@@ -14,6 +15,15 @@ export const GROWTH_FLOW = Object.freeze([
 
 const fmt = (n) => Number(n).toLocaleString('ko-KR');
 
+/** 하루 30분·스토리·1장 반복 기댓값. 별 승급에 조각을 쓰지 않을 때 기준이며, 대상과 무료 기준을 같은 문구에 남긴다. */
+export function paceLabel(skuIdOrKey) {
+  if (!Object.hasOwn(ECONOMY_PACE.savings, skuIdOrKey)) return null;
+  const saving = ECONOMY_PACE.savings[skuIdOrKey];
+  if (!saving || saving.days <= 0) return null;
+  const action = skuIdOrKey === 'ssrTicket' ? '확정권 1장' : '보상 수령';
+  return `${saving.target} · 무과금 약 ${saving.freeDays}일 → ${action} 시 약 ${saving.withDays}일 (스토리 30분/일·별 승급 제외 예상)`;
+}
+
 /**
  * 상점 상품이 성장 흐름에서 맡는 용도. 여러 보상을 담은 묶음은 가장 희소한 용도 하나를 고른다.
  * @returns {{ role: 'transcend'|'summon'|'reset'|'gold'|'gear'|'energy', label: string } | null}
@@ -24,13 +34,14 @@ export function skuFlowRole(sku) {
   if (r.transcendStones || r.heroChoiceShards) return { role: 'transcend', label: `초월 재료 · SSR ${GRADE_UP_COST.SSR.transcendStones}개 · SSSR ${GRADE_UP_COST.SSSR.transcendStones}개 필요` };
   if (r.ssrTicket) return { role: 'summon', label: 'SSR 확정 소환 · 중복이면 조각' };
   if (r.skillResets) return { role: 'reset', label: '스킬 트리 초기화 · 투자 SP 전액 반환' };
+  // 강화 묶음에 소환권이 섞여 있어도 주 용도는 장비 강화다.
+  if (r.stones || r.stones2 || r.stones3 || r.protect || r.bless) return { role: 'gear', label: '장비 강화' };
   const gems = sku.gems || r.gems || 0;
   if (r.tickets || gems) {
     const pulls = (r.tickets || 0) + Math.floor(gems / GACHA.single);
     return { role: 'summon', label: `소환 ${fmt(pulls)}회분 · 중복 영웅은 초월 조각` };
   }
   if (r.gold) return { role: 'gold', label: `초월 골드(SSR ${fmt(GRADE_UP_COST.SSR.gold)})·영웅 레벨업` };
-  if (r.stones || r.stones2 || r.stones3 || r.protect || r.bless) return { role: 'gear', label: '장비 강화' };
   if (r.energy) return { role: 'energy', label: '원정 에너지 · 보스 조각 파밍' };
   return null;
 }

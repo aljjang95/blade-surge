@@ -944,12 +944,13 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .oath-visual #tab-gacha .gacha-wrap { inset: 0; padding: 10px 12px; }
 /* 짧은 가로 화면: 배너는 왼쪽 전체 높이, 소환 버튼·천장·확률은 오른쪽 패널에 모은다. */
 @media (orientation: landscape) and (max-height: 500px) {
-  #tab-gacha .gacha-wrap { display: grid; grid-template-columns: minmax(0, 1fr) clamp(236px, 34%, 300px); grid-template-rows: minmax(0, 1fr) auto auto auto; column-gap: 12px; row-gap: 8px; }
+  #tab-gacha .gacha-wrap { display: grid; grid-template-columns: minmax(0, 1fr) clamp(236px, 34%, 300px); grid-template-rows: minmax(0, 1fr) auto auto auto auto; column-gap: 12px; row-gap: 8px; }
   #tab-gacha .gacha-wrap::before { content: ''; grid-column: 2; grid-row: 1 / -1; margin: 0 -8px; border-radius: 14px; background: rgba(12, 8, 24, .78); border: 1px solid rgba(255, 207, 90, .22); }
   #tab-gacha .gacha-banner { grid-column: 1; grid-row: 1 / -1; min-height: 0; }
   #tab-gacha .gacha-btns { grid-column: 2; grid-row: 2; flex-direction: column; gap: 8px; }
   #tab-gacha .gacha-btns .btn { padding: 9px 12px; font-size: 16px; }
   #tab-gacha .gacha-foot { grid-column: 2; grid-row: 3; align-items: center; gap: 8px; }
+  #tab-gacha .gacha-pace { grid-column: 2; grid-row: 5; }
   #tab-gacha .gacha-odds { grid-column: 2; grid-row: 4; margin: 0 0 4px !important; line-height: 1.35; color: #cfc6e6 !important; }
   #tab-gacha .banner-txt { padding: 10px 12px; }
   #tab-gacha .banner-txt h2 { font-size: 26px; }
