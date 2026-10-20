@@ -200,11 +200,14 @@ export function simulate(options = {}) {
   const promotions = [], timeline = [], runsPerDay = Math.floor(o.minutesPerDay / o.stageMin);
   let matReady = {}, sinceDay = 0;
   for (let day = 1; day <= o.maxDays && nextGrade(grade); day++) {
-    const reward = DAILY_REWARDS[dailyIdx++ % DAILY_REWARDS.length]; addReward(w, reward); sources.dailyGems += reward.gems || 0;
+    const vip = gift.vipDays && day <= gift.vipDays, energyMax = ENERGY.max + (vip ? 50 : 0);
+    const collect = reward => addReward(w, vip && reward.gold ? { ...reward, gold: Math.floor(reward.gold * 1.3) } : reward);
+    const reward = DAILY_REWARDS[dailyIdx++ % DAILY_REWARDS.length]; collect(reward); sources.dailyGems += reward.gems || 0;
     if (gift.monthly && day <= gift.monthly) w.gems += 100;
     // 확정권은 실제 rollResult('SSR', true)처럼 픽업 영웅만 준다. SR 영웅의 조각으로 바꾸지 않는다.
     if (heroId === GACHA.featured && w.ssrTickets) { w.shards += w.ssrTickets * GACHA.dupShards; w.ssrTickets = 0; }
-    if (o.energyMode === 'session') bank = Math.min(ENERGY.max, bank + perDayEnergy); else bank = perDayEnergy;
+    if (o.energyMode === 'session') bank = Math.min(energyMax, bank + (day > 1 ? perDayEnergy : 0)); else bank = perDayEnergy;
+    if (day === 1 && gift.energy) bank = Math.min(energyMax + 200, bank + gift.energy);
     // 오늘의 런: 프런티어(처음 깨는 스테이지)와 파밍(가장 높게 깬 스테이지 반복)
     const frontierWanted = cleared < frontierCap ? (o.strategy === 'ch1' ? runsPerDay : Math.round(runsPerDay * o.frontierShare)) : 0;
     let frontierDone = 0, ranToday = 0, spentMinutes = 0;
@@ -217,9 +220,9 @@ export function simulate(options = {}) {
       if (waitMinutes) bank = p.energy;
       spentMinutes += waitMinutes + o.stageMin;
       bank -= p.energy;
-      if (o.energyMode === 'session') bank = Math.min(ENERGY.max, bank + o.stageMin * 60 / ENERGY.regenSec);
+      if (o.energyMode === 'session') bank = Math.min(energyMax, bank + o.stageMin * 60 / ENERGY.regenSec);
       ranToday++; runsTotal++; passXp += p.bp;
-      w.gold += gift.vipDays && day <= gift.vipDays ? Math.floor(p.gold * 1.3) : p.gold;
+      w.gold += vip ? Math.floor(p.gold * 1.3) : p.gold;
       w.shards += p.heroShards; w.tStones += p.transcendStones; w.tickets += p.bossTicket;
       field.gold += p.gold; field.shards += p.heroShards; field.transcendStones += p.transcendStones; field.tickets += p.bossTicket;
       kills += p.kills.normal + p.kills.elite + p.kills.boss;
@@ -227,10 +230,10 @@ export function simulate(options = {}) {
     }
     // 1회성 임무(조건을 채운 날 수령)
     const metric = { kills, stages: runsTotal, pulls: o.assumePullQuest ? Infinity : 0 };
-    for (const q of quests) if (!claimedQuests.has(q.id) && metric[q.metric] >= q.max) { claimedQuests.add(q.id); addReward(w, q.rewards); sources.questGems += q.rewards.gems || 0; }
+    for (const q of quests) if (!claimedQuests.has(q.id) && metric[q.metric] >= q.max) { claimedQuests.add(q.id); collect(q.rewards); sources.questGems += q.rewards.gems || 0; }
     // 배틀패스 무료 트랙
     const level = Math.min(BATTLE_PASS.maxLevel, Math.floor(passXp / BATTLE_PASS.xpPerLevel) + 1);
-    while (passClaimed < level) { const r = PASS_TRACK[passClaimed].free; addReward(w, r); sources.passGems += r.gems || 0; passClaimed++; }
+    while (passClaimed < level) { const r = PASS_TRACK[passClaimed].free; collect(r); sources.passGems += r.gems || 0; passClaimed++; }
     // 이번 목표의 재료별 자력(보석 변환 없이) 달성일, 보석 포함 가능 여부
     // zero: 반사실 계산용. 지정한 재료의 요구량을 0으로 두면 그 재료가 병목이었는지 알 수 있다.
     const cost = { ...gradeUpCost(grade) }; for (const m of o.zero) cost[m] = 0;
@@ -335,6 +338,7 @@ export function productSavings(options = {}) {
     return { key, target: t.label, hero: t.hero, grade: t.grade, freeDays: baseline[targetKey], withDays: after,
       days: baseline[targetKey] - after };
   };
+  /** @type {Record<string, ReturnType<typeof measure>>} */
   const result = { ssrTicket: measure('ssrTicket', { dayOneRewards: { ssrTicket: 1 } }, 'SSSR') };
   for (const sku of SKUS) {
     const target = sku.id === 'transcend_pack' || sku.id === 'starter' ? 'SSSR' : 'SSR';
