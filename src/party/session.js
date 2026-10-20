@@ -131,8 +131,8 @@ export class PartySession {
     this.run = run; this.members = members; this.finishing = false; this.finishSent = false; this.snapshot = null; this.snapshotSeq = -1;
     this.seq = 0; this.tick = 0; this.sendT = 0; this.hudT = 0; this.events = []; this.pendingEvents = []; this.loaded = new Set();
     this.visuals=[]; this.pendingVisuals=[];
-    // 파티원 영웅의 타격음 세트를 미리 불러와 원격 타격이 첫 타부터 영웅별로 들리게 한다(영웅당 한 번만 로드).
-    for (const member of members) audio.preloadHero(member.heroId);
+    // 파티원 영웅의 타격음만 미리 불러와 원격 타격이 첫 타부터 영웅별로 들리게 한다(전체 세트는 자기 영웅만).
+    for (const member of members) audio.preloadHeroHits(member.heroId);
     this.loadStarted = performance.now(); this.lastMessage = performance.now(); this.presence.reset(this.lastMessage); this.view.dialog.close();
     const app = this.app; app.stageStarting = true;
     try {
