@@ -461,18 +461,37 @@ async function A5(browser, rec) {
       setInterval(() => { const b = window.app.battle, P = b?.player; if (!P) return; if (!P.alive && st.wasAlive) st.deaths++; st.wasAlive = P.alive; st.hpMin = Math.min(st.hpMin, P.hp / P.maxHp); st.maxEnemies = Math.max(st.maxEnemies, b.enemies.filter((e) => e.alive).length); }, 50);
     });
     await s.page.locator('#btn-auto').tap(); rec.did('전투 HUD AUTO 버튼(#btn-auto) 실제 탭');
-    const wall0 = Date.now(); let st = null, shotMid = false;
+    const wall0 = Date.now(); let st = null, shotMid = false; const stalls = [], modalPauses = [];
     while (Date.now() - wall0 < 300000) {
       await sleep(1000);
-      st = await s.page.evaluate(() => { const b = window.app.battle, P = b?.player, r = b?.result; return { active: !!b?.active, win: r ? !!r.win : null, resultShown: !!document.querySelector('#btn-result-lobby')?.offsetParent, elapsed: b ? +b.elapsed.toFixed(1) : null, kills: b?.kills ?? null, hp: P ? Math.round(P.hp) : null, maxHp: P ? Math.round(P.maxHp) : null, auto: P?.auto, rooms: b?.world ? b.world.rooms.filter((x) => x.cleared).length + '/' + b.world.rooms.length : null, a5: window.__a5 }; });
+      st = await s.page.evaluate(() => { const b = window.app.battle, P = b?.player, r = b?.result; return { active: !!b?.active, win: r ? !!r.win : null, resultShown: (() => { const v = (n) => { if (!n) return false; if (typeof n.checkVisibility === 'function') return n.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }); const r = n.getBoundingClientRect(), cs = getComputedStyle(n); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; }; return v(document.querySelector('#btn-result-lobby')) || [...document.querySelectorAll('h1,h2,h3,h4,strong,b,div,p,span')].some((n) => /^원정 (승리|실패|패배)$/.test(n.textContent.trim()) && v(n)); })(), elapsed: b ? +b.elapsed.toFixed(1) : null, kills: b?.kills ?? null, hp: P ? Math.round(P.hp) : null, maxHp: P ? Math.round(P.maxHp) : null, auto: P?.auto, rooms: b?.world ? b.world.rooms.filter((x) => x.cleared).length + '/' + b.world.rooms.length : null, a5: window.__a5 }; });
       if (!shotMid && Date.now() - wall0 > 30000) { shotMid = true; await rec.shot(s, 'auto-mid'); }
+      // 각인·만남 선택 모달은 게임을 멈추고 자동 적용 타이머(게임 시간 8초)도 멈춘다. 멈춤을 기록하고 실제 탭으로 첫 선택지를 고른다.
+      const choice = s.page.locator('.mw-boon, .mw-story-choice').first();
+      if (await choice.isVisible().catch(() => false) && !st.resultShown) {
+        const snap = () => s.page.evaluate(() => { const b = window.app.battle, P = b.player, d = document.querySelector('.mw-boon, .mw-story-choice')?.closest('dialog, [role=dialog], .mw-dialog, section, article') || null, r = d ? d.getBoundingClientRect() : null;
+          return { paused: !!b.paused, pauseReasons: [...(b.pauseReasons || [])], timeScale: b.timeScale ?? b.timeCtl?.scale ?? null, elapsed: +b.elapsed.toFixed(3), playerHp: Math.round(P.hp), playerState: P.state, enemyHpSum: Math.round(b.enemies.reduce((a, e) => a + (e.alive ? e.hp : 0), 0)), aliveEnemies: b.enemies.filter((e) => e.alive).length, modalCoverage: r ? +((Math.min(r.right, innerWidth) - Math.max(r.left, 0)) * (Math.min(r.bottom, innerHeight) - Math.max(r.top, 0)) / (innerWidth * innerHeight)).toFixed(2) : null }; });
+        const prev = { elapsed: st.elapsed, playerHp: st.hp, note: '직전 1초 폴링 값(모달이 열리기 전)' };
+        const m0 = await snap(); await sleep(1000); const m1 = await snap();
+        modalPauses.push({ wallSec: round((Date.now() - wall0) / 1000, 1), before: prev, atOpen: m0, after1sWall: m1,
+          elapsedDelta1s: round(m1.elapsed - m0.elapsed, 3), playerHpDelta: m1.playerHp - m0.playerHp, enemyHpDelta: m1.enemyHpSum - m0.enemyHpSum, pausesPlay: m1.elapsed === m0.elapsed && m1.enemyHpSum === m0.enemyHpSum && m1.playerHp === m0.playerHp });
+        const e0 = st.elapsed; await sleep(2000);
+        const e1 = await s.page.evaluate(() => +window.app.battle.elapsed.toFixed(1));
+        const kind = await s.page.evaluate(() => document.querySelector('.mw-boon') ? 'boon' : 'story');
+        stalls.push({ wallSec: round((Date.now() - wall0) / 1000, 1), kind, gameElapsedBefore: e0, gameElapsedAfter3sWall: e1, frozen: e1 === e0 });
+        if (stalls.length === 1) await rec.shot(s, 'imprint-modal');
+        await choice.tap().catch(() => {}); rec.did('각인·만남 선택 모달의 첫 선택지 실제 탭(AUTO 는 선택하지 않음)'); await sleep(800);
+        const closeBtn = s.page.locator('.mw-close, #m-cancel').first();
+        if (await choice.isVisible().catch(() => false) && await closeBtn.isVisible().catch(() => false)) await closeBtn.tap().catch(() => {});
+        continue;
+      }
       if (st.resultShown || (!st.active && st.win !== null)) break;
     }
     await sleep(1500);
-    const fin = await s.page.evaluate(() => { const b = window.app.battle; return { win: b?.result ? !!b.result.win : null, resultShown: !!document.querySelector('#btn-result-lobby')?.offsetParent, resultTitle: document.querySelector('#result h1, #result .result-title, #result-title')?.textContent || null, elapsedGame: b ? +b.elapsed.toFixed(1) : null, kills: b?.kills ?? null, a5: window.__a5 }; });
+    const fin = await s.page.evaluate(() => { const b = window.app.battle; return { win: b?.result ? !!b.result.win : null, resultShown: (() => { const v = (n) => { if (!n) return false; if (typeof n.checkVisibility === 'function') return n.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true }); const r = n.getBoundingClientRect(), cs = getComputedStyle(n); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; }; return v(document.querySelector('#btn-result-lobby')) || [...document.querySelectorAll('h1,h2,h3,h4,strong,b,div,p,span')].some((n) => /^원정 (승리|실패|패배)$/.test(n.textContent.trim()) && v(n)); })(), resultTitle: document.querySelector('#result h1, #result .result-title, #result-title')?.textContent || null, elapsedGame: b ? +b.elapsed.toFixed(1) : null, kills: b?.kills ?? null, a5: window.__a5 }; });
     await rec.shot(s, 'result');
     const wallSec = round((Date.now() - wall0) / 1000, 1);
-    rec.obs('final', { ...fin, wallSeconds: wallSec, last: st }); rec.obs('deaths', fin.a5.deaths); rec.obs('minHpRatio', round(fin.a5.hpMin, 3)); rec.obs('maxAliveEnemies', fin.a5.maxEnemies);
+    rec.obs('final', { ...fin, wallSeconds: wallSec, last: st }); rec.obs('autoStallsAtChoiceModal', stalls); rec.obs('imprintModalPausesPlay', { modals: modalPauses, anyPauses: modalPauses.some((m) => m.pausesPlay), allPause: modalPauses.length > 0 && modalPauses.every((m) => m.pausesPlay) }); rec.obs('deaths', fin.a5.deaths); rec.obs('minHpRatio', round(fin.a5.hpMin, 3)); rec.obs('maxAliveEnemies', fin.a5.maxEnemies);
     rec.check('승리 화면까지 도달(300초 이내)', fin.win === true && fin.resultShown, { win: fin.win, resultShown: fin.resultShown, wallSeconds: wallSec });
     rec.check('사망 0', fin.a5.deaths === 0, { deaths: fin.a5.deaths, minHpRatio: round(fin.a5.hpMin, 3) });
   } finally { await s.close(); }
@@ -712,6 +731,10 @@ await browser.close();
 summary.finished = new Date().toISOString(); summary.pass = !failed;
 await fs.writeFile(path.join(out, 'summary.json'), JSON.stringify(summary, null, 2));
 process.exit(failed ? 1 : 0);
+
+
+
+
 
 
 
