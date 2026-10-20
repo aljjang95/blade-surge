@@ -190,6 +190,12 @@ export class CombatVfx {
       { aCenter: 3, aParams: 4, aShape: 4, aColor: 3, aLife: 2 }, 9);
   }
   setQuality(q) { this.lite = q === 'low'; }
+  /** FX.prepare 동안만: 첫 처치 전에도 두 셰이더가 실제 전투 타깃으로 컴파일되도록 메시를 count 1 로 보이게 한다(칸이 비어 아무것도 그려지지 않는다). */
+  setWarm(on) {
+    for (const ring of [this.shards, this.waves]) {
+      if (on) { ring.mesh.visible = true; ring.mesh.count = Math.max(1, ring.high); } else ring.sync(this.clock);
+    }
+  }
   /** dt 는 sim 시간(초). 히트스톱 중 0 이면 모든 파편·파면이 그대로 멈춘다. */
   update(dt) {
     this.budget = FEEL.vfx.shards.frameBudget;

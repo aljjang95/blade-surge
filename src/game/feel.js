@@ -171,8 +171,10 @@ export function skillCancelOpen(t, hitAt, hitDone) {
 
 // ---- 전투 VFX 순수 계산(난수·시간·DOM 없음) ----
 /** 처치 파편 개수. 등급(졸개·정예·보스)별 기본에 낮음 화질·동작 줄이기 배율을 곱한다. */
-export function shardCount({ boss = false, elite = false } = {}, { lite = false, reduced = false } = {}) {
-  const S = FEEL.vfx.shards, base = boss ? S.count.boss : elite ? S.count.elite : S.count.minion;
+export function shardCount(kind = {}, { lite = false, reduced = false } = {}) {
+  // 런타임 Enemy 는 isBoss/isElite 로 노출한다(boss/elite 표기도 받는다).
+  const S = FEEL.vfx.shards, boss = !!(kind?.isBoss || kind?.boss), elite = !!(kind?.isElite || kind?.elite);
+  const base = boss ? S.count.boss : elite ? S.count.elite : S.count.minion;
   return Math.max(0, Math.round(base * (lite ? S.liteScale : 1) * (reduced ? S.reducedScale : 1)));
 }
 

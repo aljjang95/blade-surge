@@ -339,9 +339,10 @@ export class FX {
   setQuality(q) { this.quality = q; this.impactLights.setEnabled(q !== 'low'); this.vfx?.setQuality(q); }
   get lite() { return this.quality === 'low'; }
   add(obj, life, update, onEnd) { this.scene.add(obj); this.items.push({ obj, t: 0, life, update, onEnd }); return obj; }
-  update(dt) {
+  /** paused: 전투 일시정지(Battle.update 가 시간을 멈춘 상태)에서는 전투 VFX 시계를 흘리지 않는다. */
+  update(dt, paused = false) {
     this._killBudget = KILL_CONFIRM_PER_FRAME;
-    this.sparks.update(dt); this.glow.update(dt); this.smoke.update(dt); this.vfx?.update(dt);
+    this.sparks.update(dt); this.glow.update(dt); this.smoke.update(dt); this.vfx?.update(paused ? 0 : dt);
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i]; it.t += dt; const k = it.t / it.life;
       if (k >= 1) { this._finishItem(i); continue; }
@@ -426,6 +427,7 @@ export class FX {
     const captured = reflectCompiledPrograms ? { programs: new Map(), gl: null, properties: null } : null;
     const targetReadiness = [];
     const originalParents = [];
+    this.vfx?.setWarm(true);
     try {
       for (const object of new Set(preparationObjects)) {
         originalParents.push({ object, parent: object.parent }); warm.add(object);
@@ -493,6 +495,7 @@ export class FX {
         });
       return await prepareObjectReflection(renderer, readinessObjects, valid);
     } finally {
+      this.vfx?.setWarm(false);
       try {
         for (const { object, parent } of originalParents) {
           if (object.parent === warm) { warm.remove(object); if (parent && valid()) parent.add(object); }
