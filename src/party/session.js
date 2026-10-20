@@ -6,6 +6,7 @@ import { Enemy } from '../game/enemies.js';
 import { applyBurrowDepth } from '../game/burrow.js';
 import { loadModel, disposeCharacter, preloadAvatarBody } from '../engine/assets.js';
 import { audio } from '../engine/audio.js';
+import { partyHitProfile } from '../engine/combat-sound-library.js';
 import { PARTY_CODE, PARTY_ACTIONS, PARTY_LIMITS, sanitizePartyName, validPartySnapshot } from './protocol.js';
 import { RemoteInput, actorSnapshot, partyHeroState, normalizedPartyStats, canonicalPartyCode } from './replication.js';
 import { PartyView } from './view.js';
@@ -78,7 +79,7 @@ export class PartySession {
     const url = new URL(`/api/party/${code}`, location.href); url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     url.searchParams.set('name', this.name); url.searchParams.set('hero', this.heroId);
     const avatar = this.app.eco.equippedAvatar(this.heroId); if (avatar) url.searchParams.set('avatar', avatar);
-    url.searchParams.set('visuals', '1'); url.searchParams.set('avatars', '1');
+    url.searchParams.set('visuals', '1'); url.searchParams.set('avatars', '1'); url.searchParams.set('heroHits', '1');
     if (ticket) url.searchParams.set('ticket', ticket);
     const socket = this.socket = new WebSocket(url); this.lastMessage = performance.now(); this.presence.reset(this.lastMessage);
     return new Promise((resolve, reject) => {
@@ -130,6 +131,8 @@ export class PartySession {
     this.run = run; this.members = members; this.finishing = false; this.finishSent = false; this.snapshot = null; this.snapshotSeq = -1;
     this.seq = 0; this.tick = 0; this.sendT = 0; this.hudT = 0; this.events = []; this.pendingEvents = []; this.loaded = new Set();
     this.visuals=[]; this.pendingVisuals=[];
+    // 파티원 영웅의 타격음 세트를 미리 불러와 원격 타격이 첫 타부터 영웅별로 들리게 한다(영웅당 한 번만 로드).
+    for (const member of members) audio.preloadHero(member.heroId);
     this.loadStarted = performance.now(); this.lastMessage = performance.now(); this.presence.reset(this.lastMessage); this.view.dialog.close();
     const app = this.app; app.stageStarting = true;
     try {
@@ -210,7 +213,19 @@ export class PartySession {
       if (player === this.app.battle.player) this.app.input.enabled = !this.app.battle.paused;
     });
   }
-  hitEvent(enemy, value) { if (this.events.length < 32) this.events.push({type:'hit',id:enemy.partyId,x:enemy.pos.x,z:enemy.pos.z,value:Math.round(value)}); }
+  /** 공격자(피해를 준 파티원 Player)의 영웅 id. 파티원이 아니면 undefined(구버전 이벤트와 같은 형식). */
+  heroOf(attacker) { return attacker?.partyId ? this.members.find(m => m.id === attacker.partyId)?.heroId : undefined; }
+  hitEvent(enemy, value, attacker) {
+    if (this.events.length >= 32) return;
+    const hero = this.heroOf(attacker);
+    this.events.push({type:'hit',id:enemy.partyId,x:enemy.pos.x,z:enemy.pos.z,value:Math.round(value),...(hero ? {hero} : {})});
+  }
+  /** 게스트가 받은 원격 타격음: 공격자 영웅이 있으면 그 영웅 무기의 레이어로, 없으면 기존 slash 로 재생한다.
+   *  게스트 자신의 타격도 호스트에서만 계산되므로 로컬 재생이 따로 없어 중복되지 않는다. */
+  playRemoteHit(event) {
+    const profile = partyHitProfile(event.hero);
+    audio.hit(profile?.kind ?? 'slash', {...(profile ? {weapon:profile.weapon} : {}), heavy:event.value>1000});
+  }
   snapshotOf() {
     const b = this.app.battle;
     const mpEvents = this.members.map(m => { const p = this.players.get(m.id); return p ? {type:'mp',id:m.id,value:Math.max(0,p.mp)} : null; }).filter(Boolean);
@@ -275,7 +290,7 @@ export class PartySession {
       const pos = new THREE.Vector3(event.x,1,event.z), target = this.replicas.get(event.id);
       if (!this.app.reducedMotion.matches) { b.fx.flash(pos,0xffd080,{size:1.8,life:.12}); target?.flash(0xffffff); target?.receiveImpact(0,1,.5); }
       b.fx.damage(pos,event.value,{kind:'skill'});
-      audio.hit('slash',{heavy:event.value>1000});
+      this.playRemoteHit(event);
     } }
     b.renderer.rig.target.lerp(b.player.pos,1-Math.exp(-dt*10)); b.arena.update(dt,b.fx,b.player.pos);
     b.ui.setObjective(b.world); b.ui.updateHud(b,dt);
