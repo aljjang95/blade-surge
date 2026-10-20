@@ -39,6 +39,7 @@ import { applyRiftStage } from './game/journey-rifts.js';
 import { ArsenalService } from './game/arsenal-service.js';
 import { ArsenalView } from './ui/arsenal.js';
 import { PartySession } from './party/session.js';
+import { setupCommunity } from './social/integration.js';
 import './ui/mobile-combat.css';
 import './ui/progression.css';
 import './ui/illustrated.css';
@@ -222,6 +223,7 @@ class App {
     this.store = setupStoreAccess(this);
     this.meta.refreshMenuBadge();
     this.experienceView = new ExperienceView(this);
+    setupCommunity(this);
     setTimeout(() => { bootEl.classList.remove('show', 'leaving'); }, 620);
     // Mutations already persist at their owning action. An idle PWA/tab must not overwrite a newer tab's save.
     const suspend = () => { this.input.clear(); this.citadel.clearInput(); if (this.mode === 'battle') this.ui.pause(true); };

@@ -3,8 +3,12 @@ import { PARTY_ACTIONS } from './protocol.js';
 export class RemoteInput {
   constructor() { this.move = { x: 0, y: 0 }; this.attackHeld = false; this.queue = []; this.enabled = true; this.last = 0; }
   receive(packet, now) {
+    const wasHeld = this.attackHeld;
     this.move.x = packet.x; this.move.y = packet.y; this.attackHeld = packet.attack;
     for (const action of packet.actions) this.press(action);
+    // 호스트의 Player는 공격을 큐('attack')로만 받는다. 로컬 입력처럼 누르기 시작한 순간(상승 에지)에만
+    // 한 번 넣는다. 홀드 패킷마다 넣으면 누르고만 있어도 콤보가 자동으로 이어진다(Player 홀드 계약 위반).
+    if (packet.attack && !wasHeld && !this.queue.includes('attack')) this.queue.push('attack');
     this.last = now;
   }
   press(action) { if (PARTY_ACTIONS.includes(action) && !this.queue.includes(action)) this.queue.push(action); }

@@ -641,6 +641,29 @@ export class Player extends Actor {
     const list = this._autoEnemies || (this._autoEnemies = []); list.length = 0;
     for (const e of this.game.enemies) if (e.alive && !e.spawning) list.push(e);
     if (!list.length) return this.autoExplore(dt);
+    // 보스방 유성 예고(푸른 궤도선) 중 피격 구역에 있으면 공격·스킬을 멈추고 안전 지점으로 간다. 공격 동작 중이면 타격 뒤 회피로 빠진다.
+    const evade = this.game.routeObjectives?.autoEvade?.(this);
+    if (evade) {
+      const ex = evade.x - this.pos.x, ez = evade.z - this.pos.z, el = Math.hypot(ex, ez);
+      if (el > .3) { out.x = ex / el; out.y = ez / el; }
+      if (this.state === 'attack' && this.hitDone && (this.dodgeCd || 0) <= 0) this.game.input.press('dodge');
+      return out;
+    }
+    // 보스 후방 노출(잿불금고 심층) 중 등 뒤 사거리 밖이면 공격·스킬을 멈추고 경로 목표가 준 옆·등 뒤 지점으로 간다.
+    // 등 뒤 사거리 안이면 null 이라 평소처럼 친다. 지점에 닿았는데도 지점이 남으면(벽에 막힌 등 뒤 등) 멈춰 서지 않고 평소 전투로 넘어간다.
+    const flank = this.game.routeObjectives?.autoFlank?.(this);
+    if (flank) {
+      const fx = flank.x - this.pos.x, fz = flank.z - this.pos.z, fl = Math.hypot(fx, fz);
+      if (fl > .3) { out.x = fx / fl; out.y = fz / fl; return out; }
+    }
+    // 거수 사슬 기둥(재벼림 심층)이 열린 동안 버티기를 끝낼 수 있으면 공격·스킬 없이 기둥으로 가서 선다(.3 안이면 0 이동).
+    // 기둥에 닿을 수 없거나 남은 창이 모자라면 경로 목표가 null 을 돌려줘 평소 전투로 넘어간다.
+    const hold = this.game.routeObjectives?.autoHold?.(this);
+    if (hold) {
+      const hx = hold.x - this.pos.x, hz = hold.z - this.pos.z, hl = Math.hypot(hx, hz);
+      if (hl > .3) { out.x = hx / hl; out.y = hz / hl; }
+      return out;
+    }
     const counts = this._autoHubCounts || (this._autoHubCounts = []);
     // 같은 적 쌍의 거리는 한 번만 읽고 양쪽에 상대 가중치를 더한다.
     // 자기항도 원래 비교를 유지해 비유한 좌표를 이웃으로 세지 않는다.
@@ -760,6 +783,14 @@ export class Player extends Actor {
     const g = this.game, W = g.world; if (!W) return out;
     // 봉인 해제 포탈 → 보스방 앞. 포탈이 벽 뒤에 열리면 거리장으로 돌아간다.
     if (g.portal && (!g.stage?.party || !this.partyPortaled)) return Player.prototype.autoPath.call(this, g.portal.pos.x, g.portal.pos.z, out);
+    const goal = g.routeObjectives?.autoGoal?.();   // 경로 목표가 정한 지점(거울 미궁의 진짜 거울)으로 거리장 이동
+    if (goal) {
+      if (Math.hypot(goal.x - this.pos.x, goal.z - this.pos.z) < .65) return out;   // 목표 지점(또는 기다리는 제자리)에 닿았으면 멈춘다
+      const flow = W.buildFlow(goal.x, goal.z), d = W.flowDir(flow, this.pos.x, this.pos.z);
+      if (d) { out.x = d[0]; out.y = d[1]; }
+      else { const dx = goal.x - this.pos.x, dz = goal.z - this.pos.z, l = Math.hypot(dx, dz) || 1; out.x = dx / l; out.y = dz / l; }
+      return out;
+    }
     let target = g.conquest?.autoRoom() || g.autoTarget;
     if (!target || target.cleared || !W.rooms.includes(target)) {
       let nearest = null, distance = Infinity;   // 봉인된 보스방은 못 들어간다

@@ -2,6 +2,7 @@
 // 숫자는 Economy 계약 eco.transcendQuote(heroId) 의 before/after(heroStats)만 쓰고, 실행은 eco.transcend 만 부른다.
 import { HEROES } from '../data/heroes.js';
 import { GRADE_ORDER, gradeRank } from '../data/hero-grades.js';
+import { shortageRoutes } from '../data/growth-flow.js';
 import { resourceArt } from './illustrated.js';
 import { GrowthOverlay, el, btn, num, playSfx } from './skill-tree.js';
 import './transcend.css';
@@ -92,6 +93,7 @@ export class TranscendView extends GrowthOverlay {
     const mats = el('div', 'gx-panel tc-mats');
     const mh = el('header', 'gx-head'); mh.append(el('h2', 'gx-title', '초월에 필요한 재료'), this.closeButton()); mats.append(mh);
     const list = el('ul', 'tc-mat-list'), materials = transcendMaterials(q);
+    const routes = new Map(shortageRoutes(q).map((r) => [r.key, r]));
     for (const m of materials) {
       const li = el('li', 'tc-mat' + (m.short ? ' is-short' : ''));
       let icon;
@@ -104,6 +106,12 @@ export class TranscendView extends GrowthOverlay {
       else { amount.append(el('b', m.short ? 'is-short' : '', num(m.have))); if (m.need !== null) amount.append(el('span', '', ' / ' + num(m.need))); }
       li.setAttribute('aria-label', m.label + ' 보유 ' + num(m.have) + (m.need !== null ? ', 필요 ' + num(m.need) : '') + (m.short ? ', 부족' : ''));
       li.append(icon, el('span', 'tc-mat-name', m.label), amount);
+      // 부족한 재료는 그 자리에서 구할 곳(소환·상점 강화·골드 상점)으로 간다. 현금 패키지만 안내하지 않는다.
+      const route = m.short && routes.get(m.key);
+      if (route) {
+        const go = key('route-' + m.key, btn('btn btn-ghost gx-outline tc-route', route.label + ' ›', m.label + ' 구하기, ' + route.hint));
+        go.dataset.route = route.route; go.title = route.hint; go.onclick = () => this.toRoute(route.route); li.append(go);
+      }
       list.append(li);
     }
     mats.append(list);
@@ -117,7 +125,7 @@ export class TranscendView extends GrowthOverlay {
     mats.append(go, pack);
     if (q.next && !q.ok) {
       const short = materials.filter((m) => m.short).map((m) => m.label).join(', ');
-      const why = el('p', 'tc-reason', (short || '재료') + ' 부족 · 초월 패키지나 소환으로 모을 수 있습니다'); why.id = 'tc-reason'; go.setAttribute('aria-describedby', 'tc-reason'); mats.append(why);
+      const why = el('p', 'tc-reason', (short || '재료') + ' 부족 · 옆 버튼으로 구하거나 이 영웅으로 보스를 처치해 조각·초월석을 모으세요'); why.id = 'tc-reason'; go.setAttribute('aria-describedby', 'tc-reason'); mats.append(why);
     }
 
     this.root.append(stats, center, mats);
@@ -143,4 +151,13 @@ export class TranscendView extends GrowthOverlay {
     this.render(); return r;
   }
   toPackage() { this.close({ rerender: false, restoreFocus: false }); this.meta.openTab?.('shop', 'pack'); }
+  /** 부족 재료의 구할 곳: gacha = 소환 화면, shop-enh = 상점 강화 탭(초월석), shop-gold = 상점 골드 탭. */
+  toRoute(route) {
+    this.close({ rerender: false, restoreFocus: false });
+    if (route === 'gacha') this.meta.openTab?.('gacha');
+    else this.meta.openTab?.('shop', route === 'shop-gold' ? 'gold' : 'enh');
+    // 키보드 초점이 BODY 로 빠지지 않게 도착 화면의 첫 행동 버튼으로 옮긴다(리뷰 P2).
+    const target = route === 'gacha' ? document.getElementById('btn-pull1') : document.querySelector('#shop-grid .shop-item button');
+    target?.focus?.({ preventScroll: true });
+  }
 }

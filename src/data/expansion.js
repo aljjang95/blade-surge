@@ -1,6 +1,17 @@
 import { ENEMIES, stageDef } from './stages.js';
 import { EXPEDITION_ITEMS, EXPEDITION_SETS } from './expedition-items.js';
 import { ENCOUNTER_ART, RIFT_ART } from './encounter-art.js';
+import { ROUTE_OBJECTIVES } from './route-objectives.js';
+
+// 혜성 기사단장 보스방 푸른 궤도선 문구의 숫자는 규칙 정의(ROUTE_OBJECTIVES.comet_standard.boss)에서 계산한다.
+const COMET_BOSS_ORBIT = ROUTE_OBJECTIVES.comet_standard.boss;
+// 성운 첨탑 일반 기록 외곽 고리 문구의 숫자·낱말은 규칙 정의(ROUTE_OBJECTIVES.astral_standard.ring)에서 계산한다(BUNDLE-13).
+// 계약 테스트가 문구와 정의의 일치를 검사한다.
+const ASTRAL_STD_RING = ROUTE_OBJECTIVES.astral_standard.ring;
+const ASTRAL_STD_MARKS = ASTRAL_STD_RING.marks.length;
+const ASTRAL_STD_OBJECTIVE = `별자리 4개 순서대로 복원 → 모든 구역 정화 → ${ASTRAL_STD_RING.label} 이탈 → 성운의 레비아탄 처치`;
+const ASTRAL_STD_RING_TACTIC = `별자리 4개 순서대로 복원하고 모든 구역을 정화하면 보스방 앞 정예방에 ${ASTRAL_STD_RING.label}가 열립니다. 고리 방에 들어서면 제한 시간 ${ASTRAL_STD_RING.limit}초 안에 고리 위 ${ASTRAL_STD_RING.mark} ${ASTRAL_STD_MARKS}개에서 각각 ${ASTRAL_STD_RING.holdSeconds}초 머물러 모두 ${ASTRAL_STD_RING.verb}세요(순서 자유). ${ASTRAL_STD_RING.shard}이 중심으로 모이면 터지기 전에 중심 밖 고리 위로 비키세요(맞으면 최대 체력 ${Math.round(ASTRAL_STD_RING.damage * 100)}%). 시간이 다 되면 고리가 붕괴해 피해를 입고 ${ASTRAL_STD_RING.mark}가 흐려진 뒤 시간을 다시 잽니다. ${ASTRAL_STD_RING.mark} ${ASTRAL_STD_MARKS}개를 모두 ${ASTRAL_STD_RING.verb}면 보스 봉인이 풀립니다. `;
+const COMET_BOSS_COPY = `보스방에는 푸른 궤도선이 그려집니다. 기사단장이 공격하지 않는 틈에 ${COMET_BOSS_ORBIT.warning}초 유성 예고가 뜨고, 평소 유성은 푸른 선 바깥에 떨어지니 선 안쪽이 안전합니다. ${['첫', '두', '세', '네', '다섯'][COMET_BOSS_ORBIT.centerEvery - 1]} 번째마다 중심 유성이 선 안쪽을 덮으면 중앙을 버리고 푸른 선 바깥으로 피하세요(맞으면 최대 체력 ${Math.round(COMET_BOSS_ORBIT.damage * 100)}%). 유성 예고 동안 기사단장은 새 공격을 시작하지 않습니다.`;
 
 export const MATERIALS = [
   { id: 'glass_leaf', name: '유리 잎', description: '유리 정원에서 얻는 바람의 결정' },
@@ -81,8 +92,8 @@ const BASE_DUNGEONS = [
   }),
   dungeon('astral_leviathan_spire', '성운의 레비아탄 첨탑', 'frost', 3, 3, 'star_dust', '별의 잔해가 쌓인 첨탑에서 귀환 좌표를 삼킨 레비아탄을 추적하세요.', {
     art: ENCOUNTER_ART.boss_astral_leviathan, accent: '#9ccaff', subtitle: 'ASTRAL LEVIATHAN SPIRE',
-    objective: '별자리 4개 순서대로 복원 → 모든 구역 정화 → 성운의 레비아탄 처치',
-    tactic: `적을 처치한 뒤 1번→2번→3번→4번 조율판의 모래시계 단서를 1초 읽고, 같은 문자·도형 판에서 1초 유지하세요. 오답은 판 밖에서 재시도하며 공격·회피·피격·전투 재개 때 현재 선택이 초기화됩니다. 별자리 4개 순서대로 복원하고 모든 구역을 정화해야 보스 봉인이 열립니다. ${ENEMIES.astral_leviathan.tactic}`,
+    objective: ASTRAL_STD_OBJECTIVE,
+    tactic: `적을 처치한 뒤 1번→2번→3번→4번 조율판의 모래시계 단서를 1초 읽고, 같은 문자·도형 판에서 1초 유지하세요. 오답은 판 밖에서 재시도하며 공격·회피·피격·전투 재개 때 현재 선택이 초기화됩니다. ${ASTRAL_STD_RING_TACTIC}${ENEMIES.astral_leviathan.tactic}`,
     bossEnemy: 'astral_leviathan', bossHp: 22400, bossName: '성운의 레비아탄', rosterMode: 'astral',
     roster: { trash: ['astral_pagelet', 'nightglass_page', 'frost_mirror', 'astral_orbitling', 'ghost_skull', 'star_wisp'], ranged: ['archive_scribe', 'astral_pagelet', 'skel_mage'], elite: ['celestial_warden', 'archive_warden', 'elite_wraith'] },
   }),
@@ -103,7 +114,7 @@ const BASE_DUNGEONS = [
   dungeon('comet_bastion', '혜성의 유성 요새', 'frost', 6, 6, 'ember_core', '부서진 혜성 요새에는 유성 기사단장의 맹세가 남아 있습니다.', {
     art: ENCOUNTER_ART.boss_comet_bastion, accent: '#82bfff', subtitle: 'COMET BASTION',
     objective: '궤도 고리 네 개를 정렬해 혜성 요새의 봉인을 흔들고 모든 구역을 정화한 뒤 혜성의 유성 기사단장을 쓰러뜨리세요.',
-    tactic: `각 고리 구역의 적을 처치한 뒤 궤도 위 룬석을 몸으로 밀어 별 표식에 맞추면 고리가 정렬됩니다. 지나치면 반대편에서 되밀어야 합니다. 정렬 중 유성은 평소 푸른 궤도선 바깥에 떨어져 안쪽이 안전하지만, 붉은 원이 안쪽을 덮는 중심 유성 예고가 뜨면 푸른 선 밖으로 피하세요. 1번·2번·3번·4번 고리는 어느 순서로 정렬해도 됩니다. 고리 4개와 모든 구역을 정화하면 보스 봉인이 풀립니다. ${ENEMIES.comet_bastion.tactic}`,
+    tactic: `각 고리 구역의 적을 처치한 뒤 궤도 위 룬석을 몸으로 밀어 별 표식에 맞추면 고리가 정렬됩니다. 지나치면 반대편에서 되밀어야 합니다. 정렬 중 유성은 평소 푸른 궤도선 바깥에 떨어져 안쪽이 안전하지만, 붉은 원이 안쪽을 덮는 중심 유성 예고가 뜨면 푸른 선 밖으로 피하세요. 1번·2번·3번·4번 고리는 어느 순서로 정렬해도 됩니다. 고리 4개와 모든 구역을 정화하면 보스 봉인이 풀립니다. ${COMET_BOSS_COPY} ${ENEMIES.comet_bastion.tactic}`,
     bossEnemy: 'comet_bastion', bossHp: 28200, bossName: '혜성의 유성 기사단장', rosterMode: 'comet',
     roster: { trash: ['comet_spark', 'comet_orbit_mote', 'astral_pagelet', 'comet_spark', 'ghost_skull', 'frost_mirror'], ranged: ['comet_orbit_mote', 'archive_scribe', 'astral_pagelet'], elite: ['comet_bastion_warden', 'celestial_warden', 'elite_yeti'] },
   }),

@@ -575,3 +575,26 @@ test('HUD exit clears notice positioning and reentry observes replacement target
   toast.append(new El()); f.resize.deliver(nextTarget);
   expect(get('hud').style['--combat-notice-bottom']).toBe('240px');
 });
+
+// BUNDLE-02 U3: 좁은 가로 화면에서 가운데 알림이 오른쪽 절대 위치 목표창의 둘째 줄을 덮었다.
+// 실제 알림과 목표창이 가로·세로로 겹칠 때만 알림을 목표창 아래로 내리고, 비켜 있거나 화면 아래쪽 목표창은 무시한다.
+test('combat notice clears an overlapping absolute objective panel only when the notice actually overlaps it', () => {
+  const f = fixture(), toast = get('toast-layer'), objective = get('objective');
+  get('hud').bounds = { left: 0, top: 0, width: 640, height: 360 };
+  objective.bounds = { left: 405, top: 65, width: 140, height: 62 };
+  f.ui.showHud(true);
+  expect(f.resize.observed.has(objective)).toBe(true);
+  const notice = new El(); notice.textContent = '1번 궤도 고리 · 붕괴한 관측대'; notice.bounds = { left: 180, top: 110, width: 280, height: 24 };
+  toast.append(notice); f.resize.deliver(toast);
+  expect(toast.style['--battle-notice-top']).toBe('133px');
+  notice.bounds = { left: 220, top: 110, width: 160, height: 24 }; f.resize.deliver(toast);
+  expect(toast.style['--battle-notice-top']).toBe('110px');
+  notice.bounds = { left: 180, top: 110, width: 280, height: 24 };
+  objective.bounds = { left: 145, top: 600, width: 300, height: 60 }; f.resize.deliver(objective);
+  expect(toast.style['--battle-notice-top']).toBe('110px');
+  objective.bounds = { left: 405, top: 65, width: 140, height: 80 }; f.resize.deliver(objective);
+  expect(toast.style['--battle-notice-top']).toBe('151px');
+  objective.classList.add('hidden'); f.resize.deliver(objective);
+  expect(toast.style['--battle-notice-top']).toBe('110px');
+});
+

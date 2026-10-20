@@ -9,10 +9,11 @@ export const GRADE_RULES = Object.freeze({
   SSSR: Object.freeze({ id: 'SSSR', label: 'SSSR', color: '#ff5a8a', statMul: 2.6, skillMul: 1.45, cdMul: 0.85, ultGain: 0.2, signature: true, auraColor: 0xff5a8a }),
 });
 
-// 초월 비용: 목표 등급 기준. shards = 중복 소환 조각, transcendStones = 초월석, gold = 골드.
+// 초월 비용: 목표 등급 기준. 하루 30분·1장/최상위 파밍 모두 SSR 3~4주를 목표로 한다.
+// SSSR은 일회성 보석 소진 뒤 누적 2~3배 기간(도구 검증)이며 기존 보유량은 줄이지 않는다.
 export const GRADE_UP_COST = Object.freeze({
-  SSR: Object.freeze({ shards: 60, transcendStones: 10, gold: 300000 }),
-  SSSR: Object.freeze({ shards: 120, transcendStones: 30, gold: 1500000 }),
+  SSR: Object.freeze({ shards: 180, transcendStones: 10, gold: 300000 }),
+  SSSR: Object.freeze({ shards: 220, transcendStones: 30, gold: 1500000 }),
 });
 
 export const gradeRank = (grade) => GRADE_ORDER.indexOf(grade);

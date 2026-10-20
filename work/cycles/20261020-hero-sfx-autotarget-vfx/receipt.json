@@ -1,0 +1,565 @@
+{
+ "schemaVersion": 1,
+ "cycle": "20261020-hero-sfx-autotarget-vfx",
+ "cycleStatus": "shipped",
+ "objective": "[gogo:20261020-hero-sfx-autotarget-vfx] 영웅별 Mirelo 효과음·자동 타겟 평타·AUTO 클리어·스킬 VFX·SP 성장을 통합해 정식 호스트에 배포한다",
+ "chunk": {
+  "name": "영웅별 Mirelo 효과음·자동 타겟 평타·AUTO 클리어·스킬 VFX·SP 성장",
+  "why": "대표님 2026-10-20 요청 묶음이 통합 브랜치에 모였고 배포 전 실제 화면 확인이 남음",
+  "notDoing": "등급 과금 흐름·스킬 초기화 캐시템(D2a·D2b·D6b), 드랍·지역 진행(D7·D8), S26 실기기(D10)"
+ },
+ "subject": {
+  "kind": "mixed",
+  "identity": {
+   "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+   "worktree": "C:\\Users\\heart\\.codex\\worktrees\\c0ac\\블레이드 서지 2",
+   "branch": "codex/rsi-verdigris-altars-20261014",
+   "commit": "e60900ca4251e5a725b53d57571ad8cf9a53debe",
+   "tree": "aa68c9c4e64ebd49e37872ec7a7ed935a89352ca"
+  },
+  "digest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c",
+  "observedAt": "2026-10-20T06:02:23.202Z"
+ },
+ "requirements": [
+  {
+   "id": "A1",
+   "claim": "전투·UI 효과음이 모두 Mirelo 라이브러리(/sfx/mirelo-v1)에서 재생되고 Sonniss 출처 파일은 런타임에 요청되지 않는다 / 브라우저 844x390 전투 중 네트워크 요청 목록·재생 이름 로그",
+   "status": "passed",
+   "surfaces": [
+    "브라우저 844x390 전투 중 네트워크 요청 목록·재생 이름 로그"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A1\\A1-2.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A1\\A1-2.json",
+     "sha256": "50dec224d8651905208e5b92b8dd17e6aad0eb1d5196c63fd0cb2a4ccebd2a7f",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T05:59:54.049Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A1\\A1-battle-2.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A1\\A1-battle-2.png",
+     "sha256": "9240a51e63b4aef4bb5bec431bab7467bd132a054350a83d2858d463fc4675f1",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T05:59:56.140Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    }
+   ],
+   "neededInput": null,
+   "note": "844x390 전투: /sfx/ 요청과 재생이 모두 mirelo-v1, 예전 경로 요청 0, UI 클릭도 mirelo-v1"
+  },
+  {
+   "id": "A2",
+   "claim": "다섯 영웅의 휘두름·타격·스킬 효과음이 서로 다른 파일이고 파티 호스트에서 다른 멤버 소리가 섞이지 않는다 / 브라우저 영웅 5명 평타·스킬 재생 이름 로그 + 파티 무기 전달 단위 테스트",
+   "status": "passed",
+   "surfaces": [
+    "브라우저 영웅 5명 평타·스킬 재생 이름 로그 + 파티 무기 전달 단위 테스트"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A2\\A2-2.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A2\\A2-2.json",
+     "sha256": "31fa4a4764ce698c36805d06ef282b915f0e5ea140617d8ec2b19e9b03552dc8",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T05:59:57.925Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A2\\A2-barbarian.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A2\\A2-barbarian.png",
+     "sha256": "29be280cb4e0280aa5fa835d68ad5d562c68ce892ebfc1ec08ea169b161842f1",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:00.612Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A2\\A2-knight-2.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A2\\A2-knight-2.png",
+     "sha256": "70b16f7030489a8dd787389b75bdd00ea9200b05ced4a12fe0f0589328d296c0",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:03.810Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A2\\A2-mage.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A2\\A2-mage.png",
+     "sha256": "46548bfb0047fcad9f50e6fa6ed9eff917f04169ae9a2aa7c078c750f0aa0279",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:07.017Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\run-d6aba6b-2\\test.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\run-d6aba6b-2\\test.log",
+     "sha256": "7009460e858112d410a6a8447d564a648bb3c9694c89d7947f86185065ef8fea",
+     "command": "bun test --timeout 30000 (party host 무기 전달 포함 전체 2489 pass)",
+     "observedAt": "2026-10-20T06:00:58.698Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    }
+   ],
+   "neededInput": null,
+   "note": "영웅 5명 각각 mirelo-v1/hero/<id>/ 휘두름·타격·스킬 재생, 집합 겹침 없음. 파티 호스트 무기 전달 단위 테스트 통과"
+  },
+  {
+   "id": "A3",
+   "claim": "기본 공격을 누르면 반대쪽을 보고 있어도 가까운 적에게 자동으로 돌아 실제 피해가 들어간다(조이스틱 입력 중 우선순위를 기록) / 브라우저 844x390 첫 스테이지 실제 공격 버튼 탭, 각도·적 체력 측정",
+   "status": "passed",
+   "surfaces": [
+    "브라우저 844x390 첫 스테이지 실제 공격 버튼 탭, 각도·적 체력 측정"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A3\\A3-2.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A3\\A3-2.json",
+     "sha256": "a9f16c868a1a51408a5e7fdef6f149c03420b5e18b61999eccdae27239ef96c7",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:09.839Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A3\\A3-after-2.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A3\\A3-after-2.png",
+     "sha256": "680e547cbe281f5c57ed43bc60f3d28e805153bcd99eda96cef2d8166f81efbb",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:12.145Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A3\\A3-before.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A3\\A3-before.png",
+     "sha256": "a289b85f5ad2e16beddacd1a3ba12f00cd819dae35c54bf91967a33c851875ff",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:14.643Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A3\\A3-joystick-2.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A3\\A3-joystick-2.png",
+     "sha256": "03d833f63cccccafa01f319db9cb92740e4a1bab73e8bc6e3db02c73337855e6",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:16.639Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    }
+   ],
+   "neededInput": null,
+   "note": "공격 버튼 실제 탭 0.22초 안에 적 쪽으로 회전·피해. 조이스틱 반대 입력 중에도 자동조준 우선(의도: 켜짐은 자동조준, 조이스틱 방향은 A4의 끄기로 선택)"
+  },
+  {
+   "id": "A4",
+   "claim": "설정의 공격 자동 타겟팅을 끄면 새로고침 뒤에도 꺼져 있고 바라보는 방향으로 공격한다 / 브라우저 설정 토글 실제 탭·새로고침·같은 픽스처 비교",
+   "status": "passed",
+   "surfaces": [
+    "브라우저 설정 토글 실제 탭·새로고침·같은 픽스처 비교"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A4\\A4-2.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A4\\A4-2.json",
+     "sha256": "10982dfd81366c8b46b16a62db0b9c1817807e1611e43172299610c6a29b17d7",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:18.239Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A4\\A4-after-attack-2.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A4\\A4-after-attack-2.png",
+     "sha256": "725b836df6b506372b2ba75449dc3db7c5e4422448e128cbc6973289e2c7a909",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:19.998Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A4\\A4-settings-after-reload-2.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A4\\A4-settings-after-reload-2.png",
+     "sha256": "6654cc70ba1be31ee780db1134619f452a1f4ea13e59195c4f8ec16e2aa77aa8",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:22.620Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A4\\A4-settings-off.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A4\\A4-settings-off.png",
+     "sha256": "8b1d1c3a8d37dd61112066e98a8242c3f431b62678b73e28afe7c2d34f17cac2",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:24.970Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    }
+   ],
+   "neededInput": null,
+   "note": "설정 토글 탭→새로고침 뒤에도 꺼짐, 같은 픽스처에서 yaw 유지"
+  },
+  {
+   "id": "A5",
+   "claim": "AUTO로 캠페인 스테이지를 무사망 클리어한다 / auto-clear-qa 27개 동일 시드 결과 + 브라우저 실제 AUTO 버튼 1회 승리",
+   "status": "passed",
+   "surfaces": [
+    "auto-clear-qa 27개 동일 시드 결과 + 브라우저 실제 AUTO 버튼 1회 승리"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A5\\A5-2.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A5\\A5-2.json",
+     "sha256": "f44f9ceeba31930b18ad7086c09ce052c8ce02deb1a0902d65ed58376968837f",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:27.432Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A5\\A5-auto-mid.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A5\\A5-auto-mid.png",
+     "sha256": "2fdb131d92274ea97e38b8cc4fb48dcc38d546c7998dc0ca8c345f94fe86a765",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:29.276Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A5\\A5-result-2.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A5\\A5-result-2.png",
+     "sha256": "eaf2661a4733bef483042993868d53dbffba245821321987b6da01f51d28409d",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:31.947Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A5\\report-2.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A5\\report-2.json",
+     "sha256": "221d42d5ee130263c24e6ae9dc68203c8807c2efd90079ab46ffab98c1969682",
+     "command": "node tools/auto-clear-qa.mjs --tag=final-d6aba6b",
+     "observedAt": "2026-10-20T06:11:22.359Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    }
+   ],
+   "neededInput": null,
+   "note": "auto-clear-qa 27/27 무사망(기준 97bc087 25/27·사망 12), 브라우저 AUTO 버튼 탭 1회 승리·사망 0. 각인·만남 창 정지 결함 수정(b578d35·d6aba6b)"
+  },
+  {
+   "id": "A6",
+   "claim": "40개 스킬 시전 시 VFX 레이어가 나오고 궁극기·각성은 전장 반경 링이 퍼진다 / 브라우저 844x390 영웅별 스킬·궁극기 캡처 + skill-vfx 단위 테스트",
+   "status": "passed",
+   "surfaces": [
+    "브라우저 844x390 영웅별 스킬·궁극기 캡처 + skill-vfx 단위 테스트"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A6\\A6.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A6\\A6.json",
+     "sha256": "17e25fe801f0a37f52b010524d04ef31b6b14c84330c8725283be1326da3c6c5",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:35.262Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A6\\A6-1280-knight-skill-150ms.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A6\\A6-1280-knight-skill-150ms.png",
+     "sha256": "e750239ac1255dab7657beda72b80fe38ace2085d1ddb8cc9f129d20559c3c6f",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:38.316Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A6\\A6-1280-knight-skill-400ms.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A6\\A6-1280-knight-skill-400ms.png",
+     "sha256": "9c88803dc9f83a9519b51ae29e59dfebb8045f256606b64fea1153ca37db1d75",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:40.444Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A6\\A6-1280-knight-ult-150ms.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A6\\A6-1280-knight-ult-150ms.png",
+     "sha256": "17846fcd938d48dd0d60628fa78e6477efbee9d96e6339ebdfd774c7c72af40e",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:42.443Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\run-d6aba6b-2\\test.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\run-d6aba6b-2\\test.log",
+     "sha256": "7009460e858112d410a6a8447d564a648bb3c9694c89d7947f86185065ef8fea",
+     "command": "bun test --timeout 30000 (skill-vfx 40개 매핑 포함)",
+     "observedAt": "2026-10-20T06:01:00.992Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A6\\A6-844-mage-ult-400ms.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A6\\A6-844-mage-ult-400ms.png",
+     "sha256": "b83c5bee143dc3696ff8a55eb8a9d742bbf5b1ef02a23c2992f65cfff425e30d",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:01:15.480Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A6\\A6-844-knight-ult-400ms.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A6\\A6-844-knight-ult-400ms.png",
+     "sha256": "75e5ace3a995e798fdaf1f55450dd7a68ace056af866d21eca7a773b8f36cd65",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:01:18.091Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A6\\A6-844-ranger-skill-400ms.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A6\\A6-844-ranger-skill-400ms.png",
+     "sha256": "461be00bc7ffccd582823c030ac8c9a433cda6532ba007ed39810f9f4588e6b2",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:01:20.576Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    }
+   ],
+   "neededInput": null,
+   "note": "영웅 3명 스킬·궁극기 skills-v2 레이어, 궁극기 지면 링 반경 10, 반복 시전 뒤 scene 객체 수 복귀(844·1280)"
+  },
+  {
+   "id": "A7",
+   "claim": "SSR/SSSR 영웅 오라가 보이고 플레이 화면 중앙을 가리지 않는다 / 브라우저 844x390 SSSR 영웅 전투 캡처·중앙 보호 영역 측정",
+   "status": "passed",
+   "surfaces": [
+    "브라우저 844x390 SSSR 영웅 전투 캡처·중앙 보호 영역 측정"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A7\\A7.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A7\\A7.json",
+     "sha256": "2e401b9caf85c48aaf3776dc0bb0caa5ec527dce990fa136a50542d2cd45f733",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:44.491Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A7\\A7-ssr-1280.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A7\\A7-ssr-1280.png",
+     "sha256": "d83f4b96b31ff003d980d91827a12c29b849413e5525c64f107356c194a04965",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:46.294Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A7\\A7-ssr-844.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A7\\A7-ssr-844.png",
+     "sha256": "ce6f8015d8057e9727ca66595c445733950081d5d94496475e1114fa5e396963",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:48.366Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A7\\A7-sssr-1280.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A7\\A7-sssr-1280.png",
+     "sha256": "0a46be17e684cda198e4ef4ceca6def6a4ccdf5294510493ca18d2e80c0dec0c",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:50.137Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A7\\A7-sssr-844.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A7\\A7-sssr-844.png",
+     "sha256": "708179252799bdeca50f1aac3c660b61aa682e344688a5cc544b2df8deca80f8",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:01:22.833Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A7\\A7-sssr-mid.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A7\\A7-sssr-mid.png",
+     "sha256": "a4617360172551cc0ebe5344ce8881bc3efd54c61428ef0ef64975b410dc8c32",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:01:25.699Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    }
+   ],
+   "neededInput": null,
+   "note": "SSSR 링+몸 오라, SSR 금색 링만. 전투 중 DOM UI 중앙 보호 영역 겹침 0(10회 표본)"
+  },
+  {
+   "id": "A8",
+   "claim": "레벨업 SP로 스킬을 배우고 올리며, 배우지 않은 각성 스킬은 Q/E에 장착되지 않고, 새로고침 뒤에도 유지된다 / 브라우저 스킬 트리 실제 탭·새로고침 + 경제 단위 테스트",
+   "status": "passed",
+   "surfaces": [
+    "브라우저 스킬 트리 실제 탭·새로고침 + 경제 단위 테스트"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A8\\A8-2.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A8\\A8-2.json",
+     "sha256": "39c95a178bf0490019b210af3eafc7d45a007c32a4b6a71f9676a84bd909b897",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:51.702Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A8\\A8-learned-1.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A8\\A8-learned-1.png",
+     "sha256": "08e3035c5189e4c9ec424571ec7af0a7eaa7cb37e2a6b885bfbde9f20b08e22a",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:53.311Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A8\\A8-learned-2-2.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A8\\A8-learned-2-2.png",
+     "sha256": "344a1b6350530a4cae3da8418d4e3de4502d08c076aa7a7f8c585a337bb62c3b",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:55.193Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A8\\A8-tree-open-2.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\A8\\A8-tree-open-2.png",
+     "sha256": "7dcafe69889d6a9ec5fc7d22aa31148ae9bdeff0fbcc2c34733642035578329b",
+     "command": "node tools/gogo-qa-20261020.mjs --origin http://127.0.0.1:5347/ --out work/qa/gogo-d6aba6b",
+     "observedAt": "2026-10-20T06:00:56.899Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\run-d6aba6b-2\\test.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\run-d6aba6b-2\\test.log",
+     "sha256": "7009460e858112d410a6a8447d564a648bb3c9694c89d7947f86185065ef8fea",
+     "command": "bun test --timeout 30000 (legacy-sp-bonus·economy 포함)",
+     "observedAt": "2026-10-20T06:01:03.697Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    }
+   ],
+   "neededInput": null,
+   "note": "Lv30 스킬 트리 실제 탭: 각성 습득 SP 38→36, 강화 →35, 미습득 장착 거부, 새로고침 유지"
+  },
+  {
+   "id": "A9",
+   "claim": "같은 SHA가 정식 호스트 blade.tllhouse.com에 배포돼 다시 읽힌다 / tools/deploy.mjs 영수증·정식 호스트 version.json 읽기",
+   "status": "passed",
+   "surfaces": [
+    "tools/deploy.mjs 영수증·정식 호스트 version.json 읽기"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\deploy-8185b8b.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\deploy-8185b8b.log",
+     "sha256": "34bb9b5c2e10a37a7555299721834bdd154f15668de11867bb795361493d042f",
+     "command": "node tools/deploy.mjs --auth=wrangler (deploy worktree 8185b8b)",
+     "observedAt": "2026-10-20T06:17:00.410Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\readback-version.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\readback-version.json",
+     "sha256": "4b4669f36ece5790f2634960bba44670da3901f3e3576f13f368ca10053fe351",
+     "command": "GET https://blade.tllhouse.com/version.json",
+     "observedAt": "2026-10-20T06:17:01.712Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\live-smoke-844.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\live-smoke-844.json",
+     "sha256": "1afd66dcff01ca2d025cfefb34f5c1519364f2ea00f6f1c67adabd8c77914b3c",
+     "command": "node work/debug/live-smoke.mjs (blade.tllhouse.com 실제 탭 전투 진입·AUTO)",
+     "observedAt": "2026-10-20T06:17:03.007Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\live-smoke-844.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-hero-sfx-autotarget-vfx\\evidence\\live-smoke-844.png",
+     "sha256": "525a61e8eaeb16050caad99fc5d7488601e299166bd97e3d78453a9e6e6eb56c",
+     "command": "node work/debug/live-smoke.mjs",
+     "observedAt": "2026-10-20T06:17:04.369Z",
+     "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+    }
+   ],
+   "neededInput": null,
+   "note": "PR #213 squash → main 8185b8b, tools/deploy.mjs version-verified, blade.tllhouse.com/version.json sha 8185b8b(dirty false), 실기 브라우저 스모크 전투 진입·AUTO·mirelo-v1 요청·오류 0"
+  }
+ ],
+ "freshReview": {
+  "required": true,
+  "status": "passed",
+  "reviewer": "gpt-6.1-sol xhigh (Halley)",
+  "scope": "5adecc7 저장 이관, b578d35 AUTO 선택",
+  "findings": "P0 0, P1 1, P2 2 → d6aba6b 반영"
+ },
+ "remaining": [],
+ "verdict": "passed",
+ "acceptanceChanges": [],
+ "weakened": [],
+ "deploy": {
+  "target": "https://blade.tllhouse.com (Worker blade-surge)",
+  "version": "518462f0-05d3-43bd-b259-3b0993d71a98",
+  "sha": "8185b8b29f295a9504a17ec3b05607eafad324e9",
+  "pr": "https://github.com/aljjang95/blade-surge/pull/213",
+  "deploymentId": "f17851af-036d-4f77-805d-8eaea8363578",
+  "readback": "GET https://blade.tllhouse.com/version.json → sha 8185b8b29f29, dirty false; /sfx/mirelo-v1/hero/knight/swing_0.mp3 200 audio/mpeg; /img/vfx/skills-v2/aura-sssr.webp 200; 844x390 실제 탭으로 전투 진입·AUTO 동작, 페이지 오류 0",
+  "rollback": "wrangler rollback으로 직전 배포 9ef2049e-9366-4146-b52f-07f333e1476f(버전 b5001175-3d43-440d-ade5-aa8520c62fb8, main 85c0e1f)로 되돌림. tools/deploy.mjs 영수증에 rollbackDeploymentId 기록됨",
+  "subjectDigest": "src:11cae2ff5bf3418c3c3d8b8e69e751610a8cc55695b2994258386e237a1cfd1c"
+ },
+ "lanes": [
+  {
+   "lane": "vfx",
+   "model": "anthropic/claude-sonnet-5-5",
+   "agentId": "01a15686-95c2-77d3-8442-f9d5635c27e1",
+   "branch": "codex/20261019-lane-vfx"
+  },
+  {
+   "lane": "qa",
+   "model": "anthropic/claude-sonnet-5-5",
+   "agentId": "01a1579c-edcc-7753-92f1-c75d0846fe10",
+   "branch": "codex/20261020-qa"
+  },
+  {
+   "lane": "review",
+   "model": "gpt-6.1-sol",
+   "agentId": "01a157cb-2b35-72f0-acab-60b58bc5221d",
+   "branch": "(읽기 전용)"
+  }
+ ],
+ "harnessChanges": [
+  "tools/gogo-qa-20261020.mjs: A1~A8 브라우저 실제 입력 QA 하나로 묶음(포트·출력 폴더 인자)"
+ ],
+ "frictions": [
+  "앱 재시작이 2시간에 3회 겹쳐 실행 중 셀과 서브에이전트가 끊김 → 긴 검증은 start-detached로 띄우고 파일로 결과를 남겨야 함(이번에 적용)",
+  "Windows PowerShell 5가 BOM 없는 UTF-8 스크립트의 한글 경로를 깨뜨림",
+  "QA 산출물을 커밋하면 소스 다이제스트가 바뀌어 증거가 무효가 됨 → work/qa 캡처는 커밋하지 않고 evidence 폴더에 둠",
+  "gogo-state 기준 id가 A만 인식해 루프 dod D id와 별도 대응표가 필요"
+ ],
+ "standingGates": [],
+ "next": "등급 과금 흐름(소환·초월·상점 실제 화면)과 스킬 초기화 캐시템(D2a·D2b·D6b)",
+ "quota": null,
+ "updatedAt": "2026-10-20T06:17:19.481Z"
+}

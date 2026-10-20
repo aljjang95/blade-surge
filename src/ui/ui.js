@@ -9,6 +9,7 @@ import { ROOM_TYPE } from '../game/world.js';
 import { resultStoryHtml } from './campaign.js';
 import { levelExp } from '../data/heroes.js';
 import { renderGrowthPreparation, canPrepareGrowth } from './growth.js';
+import { compareLoot, compareText, markFresh, markFreshSince, clearFresh } from './loot-compare.js';
 import { comboFeedback } from './combo-feedback.js';
 import { skillFeedback } from './skill-feedback.js';
 import { BattleReadability } from './battle-readability.js';
@@ -130,6 +131,14 @@ export class UI {
       this.combatNoticeResize.observe(el); this.combatNoticeObservedHeaders.add(el);
     }
     this.combatNoticeHeaderEls = [this.el.hud.querySelector('.hud-top'), $('bossbar'), ...leaves].filter(Boolean);
+    // 목표창은 가로 화면에서 절대 위치라 위쪽 HUD 아래 끝에 잡히지 않는다. 알림과 실제로 겹칠 때만 따로 본다.
+    const objective = $('objective');
+    if (this.combatNoticeObservedObjective !== objective) {
+      if (this.combatNoticeObservedObjective) this.combatNoticeResize.unobserve(this.combatNoticeObservedObjective);
+      if (objective) this.combatNoticeResize.observe(objective);
+      this.combatNoticeObservedObjective = objective || null;
+    }
+    this.combatNoticeSideEls = objective ? [objective] : [];
   }
   refreshCombatNoticeLayout() {
     const hud = this.el?.hud, toast = this.el?.toast;
@@ -141,6 +150,24 @@ export class UI {
       for (const el of this.combatNoticeHeaderEls || []) {
         const rect = el.getBoundingClientRect();
         if (rect.width > 0 && rect.height > 0 && Number.isFinite(rect.bottom)) bottom = Math.max(bottom, rect.bottom);
+      }
+      // 640×360 등 좁은 가로 화면에서 가운데 알림이 오른쪽 목표창 둘째 줄을 덮었다(BUNDLE-02 U3).
+      // 실제 알림 요소의 가로 범위가 목표창과 겹치고, 지금 자리에 놓인 알림 띠가 목표창과 세로로도 겹칠 때만 그 아래로 내린다.
+      // 화면 아래쪽에 고정된 목표창(세로 모바일)이나 옆으로 비켜 있는 목표창 때문에 알림이 움직이지는 않는다.
+      const sides = this.combatNoticeSideEls;
+      if (sides?.length && toast.childElementCount) {
+        let left = Infinity, right = -Infinity, height = 0;
+        for (const child of toast.children) {
+          const rect = child.getBoundingClientRect();
+          if (!(rect.width > 0 && rect.height > 0)) continue;
+          left = Math.min(left, rect.left); right = Math.max(right, rect.right); height += rect.height;
+        }
+        const top = bottom + 6;
+        for (const el of sides) {
+          const rect = el.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0 && Number.isFinite(rect.bottom) && rect.left < right && rect.right > left
+            && rect.top < top + height && rect.bottom > top) bottom = Math.max(bottom, rect.bottom);
+        }
       }
       const cue = this.combatCueEl;
       if (cue?.classList.contains('on') && cue.offsetParent === hud) {
@@ -158,6 +185,7 @@ export class UI {
       toast.style.removeProperty('--battle-notice-top');
       toast.classList?.remove('edge-strip');
       this.combatNoticeHeaderEls = [];
+      this.combatNoticeSideEls = [];
     }
     const noticeBottom = shown && toast.childElementCount ? toast.getBoundingClientRect().bottom : 0;
     writeHudStyle(hud.style, '--combat-notice-bottom', `${noticeBottom}px`);
@@ -233,7 +261,7 @@ export class UI {
     if (this.app.battle?.world !== floor) return;
     this.readability.renderObjective(this.app.battle);
   }
-  showHud(on) { this.combatNotices.clear(); if (on) this.el.toast.replaceChildren(); this.show(this.el.hud, on); if (!on) { if (this.combatCueOwner) this.clearCombatCue(this.combatCueOwner, this.combatCueEl?.textContent); this.readability?.clear(); this.refreshComboFeedback(); this.refreshSkillFeedback(); this.refreshDodgeFeedback(); this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } else this.observeCombatNoticeHeaders(); this.refreshCombatNoticeLayout(); }
+  showHud(on) { this.combatNotices.clear(); if (on) { this.el.toast.replaceChildren(); this._invSeqAtBattleStart = this.eco?.s?.invSeq; } this.show(this.el.hud, on); if (!on) { if (this.combatCueOwner) this.clearCombatCue(this.combatCueOwner, this.combatCueEl?.textContent); this.readability?.clear(); this.refreshComboFeedback(); this.refreshSkillFeedback(); this.refreshDodgeFeedback(); this.el.hud.classList.remove('astral-choice-hud'); this._astralChoiceHud = false; this.combatCueEl?.classList.remove('on'); this.lootLayer?.replaceChildren(); document.querySelectorAll('.reward-fly').forEach(el=>el.remove()); $('hud-setgauge')?.classList.add('hidden'); this.comboEl.classList.add('hidden'); this.setKillStreak(0); $('bossbar').classList.add('hidden'); $('ult-cinema').classList.remove('on'); $('minimap-wrap').classList.add('hidden'); } else this.observeCombatNoticeHeaders(); this.refreshCombatNoticeLayout(); }
   pause(on) { const b = this.app.battle; if (!b.player || !b.active) return; b.setPaused('manual', on); this.show(this.el.pause, on); if (!on && this.el.pause.contains(document.activeElement)) document.activeElement?.blur?.(); audio.play(on ? 'ui_open' : 'ui_close', { vol: 0.5 }); }
 
   // ---------------- 토스트 / 보상 플라이 ----------------
@@ -509,7 +537,8 @@ export class UI {
     this.refreshSkillFeedback(b);
     this.refreshDodgeFeedback(b);
     this.readability?.update(b, dt);
-    const astralChoice = !!b.active && b.routeObjectives?.def?.id === 'astral_constellations_standard';
+    const astralId = b.routeObjectives?.def?.id;
+    const astralChoice = !!b.active && (astralId === 'astral_constellations_standard' || astralId === 'astral_fallen_constellations_deep');
     if (this._astralChoiceHud !== astralChoice) {
       this.el.hud.classList.toggle('astral-choice-hud', astralChoice);
       this._astralChoiceHud = astralChoice;
@@ -660,24 +689,28 @@ export class UI {
       // completeStage and recordCampaign must settle before affordability is calculated.
       this.refreshResultGrowth(r);
       stars.forEach((s, i) => { if (i < r.stars) later(() => { s.className = 'on pop'; audio.play('ui_glass', { vol: 0.6, rate: 1 + i * 0.2 }); audio.vibe(20); }, 400 + i * 300); });
+      markFresh(rw.loot.map((it) => it.uid)); markFreshSince(eco, this._invSeqAtBattleStart);
       const items = [...rw.got.map((g) => ({ g })), ...rw.loot.map((it) => ({ it }))];
       lootDetails.querySelector('summary').textContent = `획득 보상 · 장비 ${rw.loot.length}개 · 펼쳐서 비교`;
       if (r.campaignReward?.levelGold) items.push({ g: { k: 'gold', n: r.campaignReward.levelGold, label: '탐험 레벨업' } });
       items.forEach((x, i) => later(() => {
         const d = document.createElement(x.it ? 'button' : 'div');
         if (x.it) {
-          d.type = 'button'; d.setAttribute('aria-label', `${ITEM_BY_ID[x.it.id].name} 장비 비교`);
+          const cmp = compareLoot(eco, eco.s.selected, x.it.uid), cmpText = compareText(cmp);
+          d.dataset.verdict = cmp?.verdict || ''; d.dataset.cmp = cmpText.short;
+          d.type = 'button'; d.setAttribute('aria-label', `${ITEM_BY_ID[x.it.id].name} 장비 비교${cmpText.long ? ' · ' + cmpText.long : ''}`);
           d.disabled = !canPrepareGrowth(this.app, r);
           d.title = '이 장비 비교하기';
           d.onclick = () => {
             if (!canPrepareGrowth(this.app, r)) return;
+            clearFresh(x.it.uid);
             const heroId = eco.s.selected;
             this.app.toLobby(); if (this.app.mode !== 'lobby') return; this.app.meta.heroSel = heroId;
             this.app.meta.bagSlot = ITEM_BY_ID[x.it.id].slot;
             this.app.meta.openTab('heroes'); this.app.meta.showItem(x.it.uid, heroId);
           };
         }
-        if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}`; d.innerHTML = `${itemIconHtml(def, '', { heroId: this.lootHeroId() })}<div class="nm">${def.name}</div>`; if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); }
+        if (x.it) { const def = ITEM_BY_ID[x.it.id]; d.className = `loot-item rar-${def.rarity}`; d.innerHTML = `${itemIconHtml(def, '', { heroId: this.lootHeroId() })}<div class="nm">${def.name}</div>`; if (d.dataset.cmp) { const lc = document.createElement('div'); lc.className = 'lc'; lc.textContent = d.dataset.cmp; d.appendChild(lc); } if (def.rarity === 'L' || def.rarity === 'U') { audio.play('jingle_legend', { vol: 0.6 }); } else audio.play('ui_drop', { vol: 0.5 }); }
         else { const [nm, ic] = REWARD_LABEL[x.g.k] || [x.g.k, '']; d.className = 'loot-item'; d.innerHTML = `<img src="${ic}" onerror="this.remove()"><span>${fmt(x.g.n)}</span><div class="nm">${x.g.label || nm}</div>`; audio.pick('coin', 2, { vol: 0.5 }); }
         loot.appendChild(d);
       }, 300 + Math.min(i * 60, 600)));

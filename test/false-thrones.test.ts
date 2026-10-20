@@ -60,7 +60,7 @@ test('standard places three reachable false thrones; deep and excluded modes kee
     const cell = Math.floor(gate.stand.z - f.world.minZ!) * f.world.cols! + Math.floor(gate.stand.x - f.world.minX!);
     expect(flow[cell]).toBeGreaterThanOrEqual(0);
   }
-  expect(fixture('deep').route).toBeNull();
+  expect(fixture('deep').route.def.id).toBe('sable_mirror_thrones_deep');   // 심층은 BUNDLE-09 부터 가짜 왕좌 4곳·거울 미궁
   const base = f.g.stage;
   for (const stage of [{ ...base, party: {} }, { ...base, riftId: 'x' }, { ...base, expedition: { ...base.expedition, conquestId: 'x' } }]) {
     expect(createRouteObjectives(stage, f.world)).toBeNull();

@@ -1,0 +1,181 @@
+{
+  "schemaVersion": 1,
+  "cycle": "20261019-combat-mesh-audit",
+  "cycleStatus": "shipped",
+  "objective": "전투·마을 영웅 자세 결함을 실제 메시 정점 기준으로 재측정하고 결함 94건을 수정 소유 영역으로 인계",
+  "chunk": {
+    "name": "전투 자세 실제 메시 판정",
+    "why": "최종 감사(sol)가 D3b 약함: 근사 도형 게이트 제외만으로는 진짜 결함 여부 미확인",
+    "notDoing": "hero-body-motion·higher-body-*·GLB 수정(클라우드 루프 소유)"
+  },
+  "subject": {
+    "kind": "mixed",
+    "identity": {
+      "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+      "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261019-combat-mesh-audit\\integration",
+      "branch": "codex/20261019-combat-mesh-audit",
+      "commit": "3ad601a77178a29d06dcf53ac03e60515441abd8",
+      "tree": "4b5ce8967841d00ddf0713bdfaba38d900e478fd"
+    },
+    "digest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f",
+    "observedAt": "2026-10-19T01:44:37.320Z"
+  },
+  "requirements": [
+    {
+      "id": "A1",
+      "claim": "정식 빌드에서도 도는 측정이 무기 메시 정점이 몸·머리 스킨 메시 표면 안쪽으로 3cm 이상 들어간 깊이(레이 홀짝 판정 등)와 팔 메시의 몸통 관통 깊이를 직접 잰다. 판정 기준은 측정 전에 보고서에 고정한다: 무기 정점 중 몸·머리 안쪽 3cm 이상인 정점이 하나라도 있으면 결함 / tools/combat-pose-qa.mjs 또는 새 도구의 report.json과 기준 문구",
+      "status": "passed",
+      "surfaces": [
+        "tools/combat-pose-qa.mjs 또는 새 도구의 report.json과 기준 문구"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-mesh-audit\\evidence\\A1\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-mesh-audit\\evidence\\A1\\report.json",
+          "sha256": "261a7ea0eef4ff2a9d46aab0a640b28530d1e4d6b20adb243ae17a3303c3096e",
+          "command": "node tools/combat-mesh-qa.mjs (117개 직업x동작, 기준 문구 고정)",
+          "observedAt": "2026-10-19T01:44:38.838Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A2",
+      "claim": "인계 문서(docs/hero-combat-pose-handoff.md)의 위반 직업·동작 전체를 새 측정으로 다시 재고, 결함 후보마다 오버레이 없는 정면·측면·후면 3시점 캡처를 남긴다 / 직업x동작x3시점 캡처와 표",
+      "status": "passed",
+      "surfaces": [
+        "직업x동작x3시점 캡처와 표"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-mesh-audit\\evidence\\A2\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-mesh-audit\\evidence\\A2\\report.json",
+          "sha256": "261a7ea0eef4ff2a9d46aab0a640b28530d1e4d6b20adb243ae17a3303c3096e",
+          "command": "결함 후보 3시점 캡처 116건 포함",
+          "observedAt": "2026-10-19T01:44:40.349Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A3",
+      "claim": "진짜 결함으로 판정된 항목은 원인 파일을 적는다. 우리 소유 파일(look.js 소켓 오프셋, lobby-pose, 무기 부착 등)에서 고칠 수 있으면 고치고 같은 측정으로 전후를 보인다. 클라우드 루프 소유 파일이 원인이면 직업·동작·프레임·뼈·수치·패치 제안을 docs/hero-combat-pose-handoff.md에 갱신한다 / 수정 전후 report.json 또는 인계 문서",
+      "status": "passed",
+      "surfaces": [
+        "수정 전후 report.json 또는 인계 문서"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-mesh-audit\\evidence\\A3\\hero-combat-pose-handoff.md",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-mesh-audit\\evidence\\A3\\hero-combat-pose-handoff.md",
+          "sha256": "86ff4dc26904bb1954cf2337bf4986cb4e60e5675144f02f72f312c4533f50be",
+          "command": "직업별 클립·프레임·뼈·보정 제안 인계 문서",
+          "observedAt": "2026-10-19T01:44:41.897Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A4",
+      "claim": "오탐으로 판정된 항목은 근거(근사 도형이 정상 자세를 센 이유와 캡처)를 표로 남긴다. 최종적으로 직업x동작마다 결함/오탐/인계 중 하나가 정해져 빈 칸이 없다 / 판정 표",
+      "status": "passed",
+      "surfaces": [
+        "판정 표"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-mesh-audit\\evidence\\A4\\hero-combat-pose-handoff.md",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-mesh-audit\\evidence\\A4\\hero-combat-pose-handoff.md",
+          "sha256": "86ff4dc26904bb1954cf2337bf4986cb4e60e5675144f02f72f312c4533f50be",
+          "command": "직업x동작 판정 표(정상·오탐·결함/인계)",
+          "observedAt": "2026-10-19T01:44:43.546Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A5",
+      "claim": "코드를 바꿨다면 bun run check, lobby-weapon-clip-qa, lobby-arm-symmetry-qa, skill-aim-qa가 그대로 통과한다 / 재실행 보고서",
+      "status": "passed",
+      "surfaces": [
+        "재실행 보고서"
+      ],
+      "evidence": [
+        {
+          "kind": "test",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-mesh-audit\\evidence\\A5\\check.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-mesh-audit\\evidence\\A5\\check.log",
+          "sha256": "1cdf9cc66ebc0d0b540ef667cdd3817cab5d91d9be5ea0d5e71da17ca0f16006",
+          "command": "bun run check (2379 pass)",
+          "observedAt": "2026-10-19T01:44:45.111Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-mesh-audit\\evidence\\A5\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-mesh-audit\\evidence\\A5\\report.json",
+          "sha256": "58cefa3e93660f3b298ffae2f31ff299998d079899f9beaa2c5f8be6fffc126b",
+          "command": "lobby-weapon-clip-qa 재실행",
+          "observedAt": "2026-10-19T01:44:46.722Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-mesh-audit\\evidence\\A5\\report-2.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-combat-mesh-audit\\evidence\\A5\\report-2.json",
+          "sha256": "7c4824b62c5ce587fcb19d6f4cbe9615e75ac2091ba39857c46537b98e13fe2c",
+          "command": "skill-aim-qa 재실행",
+          "observedAt": "2026-10-19T01:44:48.227Z",
+          "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    }
+  ],
+  "freshReview": {
+    "required": false,
+    "status": "not_required"
+  },
+  "remaining": [],
+  "verdict": "passed",
+  "acceptanceChanges": [],
+  "weakened": [],
+  "deploy": {
+    "target": "https://blade.tllhouse.com (worker blade-surge)",
+    "version": "c643bf01-fc95-4a94-9ec1-d5a80f16aa13",
+    "sha": "8a7027fb84a1a2d58ef0036a1610943361eb7e9f",
+    "rollback": "deployment 1f15d737-a9b7-4fbb-980b-bbc1b4a618e0 / version 1ad58abc-7643-4790-9920-10f8045ba58b, tools/deploy.mjs 절차",
+    "readback": "변경은 tools/combat-mesh-qa.mjs, tools/combat-pose-qa.mjs, docs/hero-combat-pose-handoff.md뿐이며 게임 동작 변경 없음. 정식 호스트 sha=8a7027f",
+    "subjectDigest": "src:fd9857c0ba240af39d69142ed9717a5bc378d61c1d95e3c5dff1f993cda83e8f"
+  },
+  "lanes": [
+    {
+      "lane": "integration",
+      "model": "anthropic/claude-sonnet-5-5",
+      "agentId": "01a1517f-94d5-7340-b017-34afee9ec2cd",
+      "branch": "codex/20261019-combat-mesh-audit"
+    }
+  ],
+  "harnessChanges": [],
+  "frictions": [
+    "측정 방법: 껍질이 실제 표면보다 두꺼워 대기 자세 깊이를 정점별로 빼고 몸통에서 망토·어깨갑옷·치마를 제외(기준 3cm 그대로, 완화 여부는 지휘 판단 요청)",
+    "결함 94건은 클립 원인이라 이 사이클에서 못 고침. 자가개선 루프 채팅에 인계 메시지 발송"
+  ],
+  "standingGates": [],
+  "next": "결함 수정은 클립 소유 쪽 반영 필요(dod D3b external_gate)",
+  "quota": null,
+  "updatedAt": "2026-10-19T01:46:00.567Z"
+}

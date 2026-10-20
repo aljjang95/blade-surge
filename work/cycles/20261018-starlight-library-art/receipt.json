@@ -1,0 +1,334 @@
+{
+  "schemaVersion": 1,
+  "cycle": "20261018-starlight-library-art",
+  "cycleStatus": "shipped",
+  "objective": "별빛 서고 전투 방을 시안 C9처럼 바꾸고 빠진 확장 던전 원화를 채운다",
+  "chunk": {
+    "name": "별빛 서고 맵 아트 C9 + 확장 던전 원화 5장",
+    "why": "대표님 2026-10-18 맵 그래픽·UI 시안을 세우고 그대로 개발",
+    "notDoing": "다른 지역 맵 아트(C10·C11 후보), 로비 팔, 상단 재화 바"
+  },
+  "subject": {
+    "kind": "mixed",
+    "identity": {
+      "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+      "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261018-starlight-library-art\\integration",
+      "branch": "codex/20261018-starlight-library-art",
+      "commit": "7ed8fcee7f3f1faf8c9cd2df4410b95410196766",
+      "tree": "fecbbbd07db878a61220f4dfda1a9ac1f9a9c48e"
+    },
+    "digest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c",
+    "observedAt": "2026-10-18T12:12:53.052Z"
+  },
+  "requirements": [
+    {
+      "id": "A1",
+      "claim": "별빛 서고 전투 방 바닥이 흰·옅은 파랑 대리석 타일과 금 줄눈이고 전투 공간 중앙 아래 금 별 나침반이 보인다 / 실제 로비→출격→전투 캡처 1280x590·844x390",
+      "status": "passed",
+      "surfaces": [
+        "실제 로비→출격→전투 캡처 1280x590·844x390"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A1\\star_archive-1280x590-start.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A1\\star_archive-1280x590-start.png",
+          "sha256": "3a4d982fd940567c92b97e5d3a8ee9a29b9a6465914f8ee39cde750078dbe11b",
+          "command": "node tools/region-capture-qa.mjs http://127.0.0.1:5186 out star_archive",
+          "observedAt": "2026-10-18T12:04:58.524Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A1\\star_archive-844x390-start.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A1\\star_archive-844x390-start.png",
+          "sha256": "37f107d953a91b033255f3078f977c4c93f1626aaad695c83c0d27e046a91c2b",
+          "command": "node tools/region-capture-qa.mjs http://127.0.0.1:5186 out star_archive",
+          "observedAt": "2026-10-18T12:04:58.799Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A2",
+      "claim": "양쪽 벽에 빛나는 청색 크리스털 책장, 모서리에 크리스털 무리, 뒤쪽 위에 금 혼천의가 보이고 전투 중앙은 비어 있다 / 같은 캡처와 blueprint shot 비교",
+      "status": "passed",
+      "surfaces": [
+        "같은 캡처와 blueprint shot 비교"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A2\\star_archive-1280x590-fight.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A2\\star_archive-1280x590-fight.png",
+          "sha256": "9507221229e6d3611242ba617027783afd6eee6e0e98f9c5c078f92192d57252",
+          "command": "node tools/region-capture-qa.mjs http://127.0.0.1:5186 out star_archive",
+          "observedAt": "2026-10-18T12:04:59.109Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A2\\star_archive-844x390-fight.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A2\\star_archive-844x390-fight.png",
+          "sha256": "64646cd019dcdbddac0a865820b6cbcd599529fb345886edd01ee8f3f22421f9",
+          "command": "node tools/region-capture-qa.mjs http://127.0.0.1:5186 out star_archive",
+          "observedAt": "2026-10-18T12:04:59.428Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        }
+      ],
+      "neededInput": null,
+      "note": "혼천의 윗부분 일부 잘림, 카메라 쪽 벽 반투명 처리. 시안의 세밀한 조각·반사보다 단순"
+    },
+    {
+      "id": "A3",
+      "claim": "적과 영웅이 새 바닥과 대비되어 또렷하다(밝은 바닥에서도 실루엣·발밑 원이 보임) / 같은 캡처",
+      "status": "passed",
+      "surfaces": [
+        "같은 캡처"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A3\\star_archive-1280x590-fight.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A3\\star_archive-1280x590-fight.png",
+          "sha256": "9507221229e6d3611242ba617027783afd6eee6e0e98f9c5c078f92192d57252",
+          "command": "node tools/region-capture-qa.mjs http://127.0.0.1:5186 out star_archive",
+          "observedAt": "2026-10-18T12:04:59.735Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A4",
+      "claim": "프레임이 기존(1280x590 p95 27.1ms, 844x390 21.4ms)보다 25% 넘게 나빠지지 않는다 / tools/region-capture-qa.mjs 프레임 측정",
+      "status": "passed",
+      "surfaces": [
+        "tools/region-capture-qa.mjs 프레임 측정"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A4\\star_archive-report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A4\\star_archive-report.json",
+          "sha256": "d0be7b0bf9e104120a7dd76e5871a23f1186c444c0f3383b5104230863db659b",
+          "command": "node tools/region-capture-qa.mjs http://127.0.0.1:5186 out star_archive",
+          "observedAt": "2026-10-18T12:05:00.091Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A5",
+      "claim": "다른 지역(frost 테마를 쓰는 다른 던전 포함)의 모습은 의도치 않게 바뀌지 않는다 / 다른 frost 던전 캡처 비교",
+      "status": "passed",
+      "surfaces": [
+        "다른 frost 던전 캡처 비교"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A5\\nightglass_observatory-1280x590-fight.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A5\\nightglass_observatory-1280x590-fight.png",
+          "sha256": "3e3e1d5c65e45fa48269126361c417325d6b603d22233aa6a4163a977b8c2334",
+          "command": "node tools/region-capture-qa.mjs (다른 frost 던전)",
+          "observedAt": "2026-10-18T12:05:00.407Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A5\\nightglass_observatory-1280x590-start.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A5\\nightglass_observatory-1280x590-start.png",
+          "sha256": "274f3f81532882c535d9a9f7886a4259cc82ad71f55b697c261550e9199f7573",
+          "command": "node tools/region-capture-qa.mjs (다른 frost 던전)",
+          "observedAt": "2026-10-18T12:05:00.754Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A5\\nightglass_observatory-844x390-fight.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A5\\nightglass_observatory-844x390-fight.png",
+          "sha256": "da71d2bc6f9c33b3c371a974dc6f9e2baa1ecf676e2cc3db995fb90543ef1026",
+          "command": "node tools/region-capture-qa.mjs (다른 frost 던전)",
+          "observedAt": "2026-10-18T12:05:01.108Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A6",
+      "claim": "확장 던전 5곳(뿌리잠식 동굴·슬래그워터 제련소·불씨항 건선거·오로라 빙정호·왕관붕괴 빙하) 카드와 상세에 그림이 보인다 / 로비 카드 캡처",
+      "status": "passed",
+      "surfaces": [
+        "로비 카드 캡처"
+      ],
+      "evidence": [
+        {
+          "kind": "url",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A6\\live-lobby.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A6\\live-lobby.log",
+          "sha256": "7d6596747c13e08a1a9724f401d0cea2c40deb7bd5e15e231c4d15463d668aa3",
+          "command": "Playwright 정식 호스트 로비 카드 5곳 그림 로드",
+          "observedAt": "2026-10-18T12:12:53.423Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A6\\lobby-keyart-rootbound.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A6\\lobby-keyart-rootbound.png",
+          "sha256": "c4bff7d114a09f10b674441a96c3b8cec2d1cd88954b097aec34967f8b0d9973",
+          "command": "Playwright 정식 호스트 로비 카드",
+          "observedAt": "2026-10-18T12:12:53.750Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A6\\card-root-b.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A6\\card-root-b.png",
+          "sha256": "62d363054d02a0779d9a14ba7810d6a24cef8f0284edc1e1aaf7923a834ce207",
+          "command": "Playwright 정식 호스트 카드 디코드 후",
+          "observedAt": "2026-10-18T12:12:54.087Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        }
+      ],
+      "neededInput": null,
+      "note": "5곳 그림 모두 정식 호스트에서 로드(naturalWidth 1672). 작은 카드에서 lazy 이미지가 디코드 전 잠깐 빈 칸으로 보일 수 있어 썸네일 분리를 다음 사이클로 넘김"
+    },
+    {
+      "id": "A7",
+      "claim": "새 텍스처·그림이 TLL-Asset-Foundry에 출처와 함께 보관된다 / G: 보관 폴더와 catalog find",
+      "status": "passed",
+      "surfaces": [
+        "G: 보관 폴더와 catalog find"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A7\\lib-find-tex.txt",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A7\\lib-find-tex.txt",
+          "sha256": "c2aae2fc20b7d05dc182e0a60c7578da34b087dba03d4b94d915a99377354807",
+          "command": "node catalog.mjs find --role texture --tag image --all-versions",
+          "observedAt": "2026-10-18T12:05:01.434Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A7\\lib-find-keyart.txt",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A7\\lib-find-keyart.txt",
+          "sha256": "1f759ec16995e6e475b41205f42befe16a7c544ad81466d57d3678dea57ec98c",
+          "command": "node catalog.mjs find --role key-art",
+          "observedAt": "2026-10-18T12:05:01.741Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A7\\asset.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A7\\asset.json",
+          "sha256": "8dc6795afea4ccd5b8da99871ff5795ea424b626288a2054a995a8dd1072d02d",
+          "command": "archive_asset.py",
+          "observedAt": "2026-10-18T12:05:02.069Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A8",
+      "claim": "정식 호스트에 배포된 버전에서 같은 화면이 보인다 / blade.tllhouse.com version.json과 캡처",
+      "status": "passed",
+      "surfaces": [
+        "blade.tllhouse.com version.json과 캡처"
+      ],
+      "evidence": [
+        {
+          "kind": "url",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A8\\live-version.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A8\\live-version.json",
+          "sha256": "1ff5dfc91d2e48a30379c1a57a2b55c97245b92d2ae6312cf2ed7d88302c7ce2",
+          "command": "node tools/deploy.mjs --auth=wrangler",
+          "observedAt": "2026-10-18T12:12:54.469Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A8\\star_archive-844x390-start.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A8\\star_archive-844x390-start.png",
+          "sha256": "a4cb0966fb7f153d8b549bcd24b4fe2b78889ada64f84510f1e8b16519e9778c",
+          "command": "region-capture-qa https://blade.tllhouse.com star_archive",
+          "observedAt": "2026-10-18T12:12:54.808Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A8\\star_archive-report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A8\\star_archive-report.json",
+          "sha256": "cadfac2a511baf63b2721899deb6c5ed5b7701610bdbbaeebd5ac484506f0ed7",
+          "command": "region-capture-qa https://blade.tllhouse.com star_archive",
+          "observedAt": "2026-10-18T12:12:55.110Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A8\\deploy.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-starlight-library-art\\evidence\\A8\\deploy.log",
+          "sha256": "f3fd904b7673c8d2c3391265f7f1062a97d0268b9fc839939e79dd89b115d87e",
+          "command": "node tools/deploy.mjs --auth=wrangler",
+          "observedAt": "2026-10-18T12:12:55.511Z",
+          "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    }
+  ],
+  "freshReview": {
+    "required": false,
+    "status": "not_required"
+  },
+  "remaining": [],
+  "verdict": "passed",
+  "acceptanceChanges": [],
+  "weakened": [],
+  "deploy": {
+    "target": "https://blade.tllhouse.com (worker blade-surge)",
+    "version": "5b9e7527-b0f8-4768-b4e1-5b04fcb687f3",
+    "sha": "868a226dc1331a8b157cdd49d094f72eaaad2c26",
+    "readback": "version.json sha=868a226 dirty=false; 정식 호스트 별빛 서고 실제 진입 캡처와 프레임 p95 20.7/20.0ms; 로비 카드 그림 5장 로드",
+    "rollback": "wrangler rollback 38010510-c06e-4016-8c76-b2377d23f91b (deployment 640395bf), tools/deploy.mjs 절차",
+    "subjectDigest": "src:66736d5169d7ba4cb0fd2f5b5d9bde134c9bb2693e539eb882ab6ae333a07a3c"
+  },
+  "lanes": [
+    {
+      "lane": "art",
+      "model": "gpt-6-astra",
+      "agentId": "01a14ecc-02d5-7d42-b01a-26c95eeeb871",
+      "branch": "codex/20261018-starlight-library-art"
+    },
+    {
+      "lane": "integration",
+      "model": "claude-opus-5-5",
+      "agentId": "commander",
+      "branch": "codex/20261018-starlight-library-art"
+    }
+  ],
+  "harnessChanges": [
+    "catalog.mjs: 이미지 자산 역할 texture/key-art·image 태그·find가 이미지 경로 반환(CHANGELOG 2026-10-18)"
+  ],
+  "frictions": [
+    "로비 카드가 1672px 원화를 88px로 표시: lazy 디코드 지연과 용량 낭비 → 썸네일 분리",
+    "region-capture-qa가 /src 모듈을 import해 정식 빌드에서 실패 → data-dungeon-id 방식 수정본을 다음 사이클에 반영(APEX/gogo/aljjang95-blade-surge/region-capture-qa.next.mjs)",
+    "사이클 중 도구 커밋이 소스 다이제스트를 바꿔 증거가 무효화됨 → 도구 수정은 subject 등록 전에"
+  ],
+  "standingGates": [],
+  "next": "로비 카드 썸네일 분리와 상단 재화 바 시안 스타일, 실기기 확인 시 1·2차 기준 마감",
+  "quota": null,
+  "updatedAt": "2026-10-18T12:12:56.471Z"
+}

@@ -1,0 +1,219 @@
+{
+  "schemaVersion": 1,
+  "cycle": "20261019-lobby-arm-symmetry",
+  "cycleStatus": "shipped",
+  "objective": "로비 쇼케이스에서 다섯 직업의 좌우 팔(팔꿈치 거리·높이, 어깨 높이, 빈 손 위치)을 대칭으로 맞추고 지난 사이클의 지팡이·무기 겹침 기준을 유지한다",
+  "chunk": {
+    "name": "로비 영웅 좌우 팔 대칭",
+    "why": "dod D3a(대표님 2026-10-18 왼팔 오른팔 균형)를 대표님 답 대기 없이 실측으로 닫기",
+    "notDoing": "전투 동작·hero-body-motion·GLB(클라우드 루프 영역), 실기기"
+  },
+  "subject": {
+    "kind": "mixed",
+    "identity": {
+      "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+      "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261019-lobby-arm-symmetry\\integration",
+      "branch": "codex/20261019-lobby-arm-symmetry",
+      "commit": "88d37e0e495bf73fa5423fe1fc4bcd4dc334835d",
+      "tree": "f1d7fb5257eafb81772c369a00b28230eb286528"
+    },
+    "digest": "src:dc1c369adcf91a466f87426187d32def45ff0b2e8aa95902e67f6fa356ff6c9f",
+    "observedAt": "2026-10-18T19:05:29.872Z"
+  },
+  "requirements": [
+    {
+      "id": "A1",
+      "claim": "다섯 직업 모두 로비 Idle 한 주기(24시점) 동안 몸통 축 기준 좌우 팔꿈치 거리 차와 높이 차가 각각 6cm 이하, 어깨 높이 차가 3cm 이하다 / tools/lobby-arm-symmetry-qa.mjs 직업별 수치",
+      "status": "passed",
+      "surfaces": [
+        "tools/lobby-arm-symmetry-qa.mjs 직업별 수치"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A1\\arms-after.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A1\\arms-after.json",
+          "sha256": "36d4cfa1330b1281826e5464315db70beda055947b51c357e865f8916cdbd2e3",
+          "command": "node tools/lobby-arm-symmetry-qa.mjs http://127.0.0.1:5193 arms all after 24",
+          "observedAt": "2026-10-18T19:05:34.573Z",
+          "subjectDigest": "src:dc1c369adcf91a466f87426187d32def45ff0b2e8aa95902e67f6fa356ff6c9f"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A2",
+      "claim": "다섯 직업 모두 양손이 몸통 축에서 17cm 이상 떨어져 몸에 파묻히지 않고, 빈 손(마법사 왼손)은 34cm 이하로 몸 옆에 내려온다 / 같은 도구 손 거리 수치와 정면 캡처",
+      "status": "passed",
+      "surfaces": [
+        "같은 도구 손 거리 수치와 정면 캡처"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A2\\arms-after.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A2\\arms-after.json",
+          "sha256": "36d4cfa1330b1281826e5464315db70beda055947b51c357e865f8916cdbd2e3",
+          "command": "node tools/lobby-arm-symmetry-qa.mjs (hand lateral min/max)",
+          "observedAt": "2026-10-18T19:05:38.076Z",
+          "subjectDigest": "src:dc1c369adcf91a466f87426187d32def45ff0b2e8aa95902e67f6fa356ff6c9f"
+        },
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A2\\mage-a.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A2\\mage-a.png",
+          "sha256": "4382f552453a39215010d6455afccd970096bdcb8e93d70614aa0e397c085162",
+          "command": "node tools/hero-front-qa.mjs http://127.0.0.1:5193",
+          "observedAt": "2026-10-18T19:05:48.284Z",
+          "subjectDigest": "src:dc1c369adcf91a466f87426187d32def45ff0b2e8aa95902e67f6fa356ff6c9f"
+        },
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A2\\barbarian-a.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A2\\barbarian-a.png",
+          "sha256": "9973b76821d712ec9c1d523c048e01ccb1c10e9d9cec03925a71de51fcd91175",
+          "command": "node tools/hero-front-qa.mjs http://127.0.0.1:5193",
+          "observedAt": "2026-10-18T19:05:52.147Z",
+          "subjectDigest": "src:dc1c369adcf91a466f87426187d32def45ff0b2e8aa95902e67f6fa356ff6c9f"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A3",
+      "claim": "지난 사이클 기준 유지: 마법사 지팡이 기울기 25° 이내·좌우 손 높이 차 25cm 이하, 다섯 직업 무기·머리 겹침 0 / tools/lobby-weapon-clip-qa.mjs",
+      "status": "passed",
+      "surfaces": [
+        "tools/lobby-weapon-clip-qa.mjs"
+      ],
+      "evidence": [
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A3\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A3\\report.json",
+          "sha256": "ae53248d9f9e526cbb18fd25f88ad788a1bdd0845ea44e85b53e1bcf805d2308",
+          "command": "node tools/lobby-weapon-clip-qa.mjs http://127.0.0.1:5193 weapon all after 12",
+          "observedAt": "2026-10-18T19:05:57.396Z",
+          "subjectDigest": "src:dc1c369adcf91a466f87426187d32def45ff0b2e8aa95902e67f6fa356ff6c9f"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A4",
+      "claim": "전투 진입 뒤 영웅 뼈 회전은 교정 전과 같다(교정은 로비에만) / 전투 뼈 비교와 bun run check",
+      "status": "passed",
+      "surfaces": [
+        "전투 뼈 비교와 bun run check"
+      ],
+      "evidence": [
+        {
+          "kind": "compare",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A4\\combat-bone-compare.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A4\\combat-bone-compare.json",
+          "sha256": "84501ccf517105c3598937fe5633a5638578ddc65a17d6f14d758106cfd60c0d",
+          "command": "combat-bones.mjs local x2 + https://blade.tllhouse.com (bdb8c86), 60 steps x 4",
+          "observedAt": "2026-10-18T19:07:19.223Z",
+          "subjectDigest": "src:dc1c369adcf91a466f87426187d32def45ff0b2e8aa95902e67f6fa356ff6c9f"
+        },
+        {
+          "kind": "test",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A4\\check.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A4\\check.log",
+          "sha256": "6aa6a58b1b0e4039b7e85f77b2ca55d667a7ebaf4a2e8097e719154f1060db2f",
+          "command": "bun run check",
+          "observedAt": "2026-10-18T19:07:42.598Z",
+          "subjectDigest": "src:dc1c369adcf91a466f87426187d32def45ff0b2e8aa95902e67f6fa356ff6c9f"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A5",
+      "claim": "정식 호스트에서 같은 수치와 로비 정면 모습이 나온다 / version.json, 정식 호스트 대칭 측정, 정면 캡처",
+      "status": "passed",
+      "surfaces": [
+        "version.json, 정식 호스트 대칭 측정, 정면 캡처"
+      ],
+      "evidence": [
+        {
+          "kind": "readback",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A5\\live-version.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A5\\live-version.json",
+          "sha256": "401a6e688c221925b501ac83c8b6d123cf6f81b7afa8b160184a990a77ccf624",
+          "command": "GET https://blade.tllhouse.com/version.json",
+          "observedAt": "2026-10-18T19:23:09.298Z",
+          "subjectDigest": "src:dc1c369adcf91a466f87426187d32def45ff0b2e8aa95902e67f6fa356ff6c9f"
+        },
+        {
+          "kind": "measure",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A5\\arms-after.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A5\\arms-after.json",
+          "sha256": "c1f95aa1676ffd0a6c8d330038dfd2de39b85388c1f9dcd6c1cbad3e203e78f7",
+          "command": "node tools/lobby-arm-symmetry-qa.mjs https://blade.tllhouse.com live-arms all after 24",
+          "observedAt": "2026-10-18T19:23:11.412Z",
+          "subjectDigest": "src:dc1c369adcf91a466f87426187d32def45ff0b2e8aa95902e67f6fa356ff6c9f"
+        },
+        {
+          "kind": "screenshot",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A5\\mage-a.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A5\\mage-a.png",
+          "sha256": "cb2d1a0b67e89687e70987eb43daaf61c0a983d2c20c453e5130e40a08d581cb",
+          "command": "node tools/hero-front-qa.mjs https://blade.tllhouse.com live-front",
+          "observedAt": "2026-10-18T19:23:13.395Z",
+          "subjectDigest": "src:dc1c369adcf91a466f87426187d32def45ff0b2e8aa95902e67f6fa356ff6c9f"
+        },
+        {
+          "kind": "deploy",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A5\\deploy.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-lobby-arm-symmetry\\evidence\\A5\\deploy.log",
+          "sha256": "743dd8ddd290febc0150a6eafec302778fac7fff82a3533d8b19d937c68c0b59",
+          "command": "node tools/deploy.mjs --auth=wrangler",
+          "observedAt": "2026-10-18T19:23:15.296Z",
+          "subjectDigest": "src:dc1c369adcf91a466f87426187d32def45ff0b2e8aa95902e67f6fa356ff6c9f"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    }
+  ],
+  "freshReview": {
+    "required": false,
+    "status": "not_required"
+  },
+  "remaining": [],
+  "verdict": "passed",
+  "acceptanceChanges": [],
+  "weakened": [],
+  "deploy": {
+    "target": "https://blade.tllhouse.com (worker blade-surge)",
+    "version": "006d7904-f3e9-47ae-b643-ef11a0223761",
+    "sha": "0d6f6d08968032136ccd097cef48a697607b0e84",
+    "readback": "version.json sha=0d6f6d0 dirty=false; 정식 호스트 대칭 측정이 로컬과 동일(팔꿈치 거리 차 최대 4.3cm, 높이 차 5.2cm, 어깨 2.9cm), 로비 정면 캡처 10장",
+    "rollback": "deployment c1aab183-b8f4-416c-b4bd-373fb693968d / version 1004ac30-a1a9-4d0b-9818-867b4b38b7f2, tools/deploy.mjs 절차",
+    "subjectDigest": "src:dc1c369adcf91a466f87426187d32def45ff0b2e8aa95902e67f6fa356ff6c9f"
+  },
+  "lanes": [
+    {
+      "lane": "integration",
+      "model": "claude-opus-5-5",
+      "agentId": "commander",
+      "branch": "codex/20261019-lobby-arm-symmetry"
+    }
+  ],
+  "harnessChanges": [],
+  "frictions": [
+    "gh CLI가 로그아웃 상태라 PR 생성·병합을 GitHub 커넥터로 처리(PR #197, expected_head_sha로 병합)",
+    "마법사 몸통 기울기로 몸통 기준 어깨는 대칭이지만 바닥 기준 어깨가 3.9cm가 돼 지난 사이클 기준 실패 → 조정 도구에 두 기준을 함께 넣어 해결",
+    "빈 손 거리 34.02cm로 기준을 0.2mm 넘음 → 반올림하지 않고 재조정해 32.0cm",
+    "S26을 발열 측정 채팅과 동시에 조작한 일 → device-lock.ps1 추가"
+  ],
+  "standingGates": [],
+  "next": "S26 실기기 마감(발열 측정 채팅 잠금 해제 후), 그다음 다른 모델 최종 감사",
+  "quota": null,
+  "updatedAt": "2026-10-18T19:23:22.601Z"
+}

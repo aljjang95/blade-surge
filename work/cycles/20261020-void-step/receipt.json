@@ -1,0 +1,149 @@
+{
+ "schemaVersion": 1,
+ "cycle": "20261020-void-step",
+ "cycleStatus": "shipped",
+ "objective": "void_step 점멸 표적·피해를 표시 18m로 제한",
+ "chunk": {
+  "name": "void_step 표시=판정",
+  "why": "3차 재감사 이후 대표님 결정 1번",
+  "notDoing": "수치 변경"
+ },
+ "subject": {
+  "kind": "mixed",
+  "identity": {
+   "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+   "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\deploy-4319f3b",
+   "branch": "",
+   "commit": "4319f3b88d4d0d47d20048897e7e99cdc5733500",
+   "tree": "d03e55ef725a3da4f3df8c1412cc8afff674fa9c"
+  },
+  "digest": "src:3e7cd718b118779327e64e39dba674ca52c4c578981d56acf8c4cc7e3d5ac718",
+  "observedAt": "2026-10-19T17:15:30.083Z"
+ },
+ "requirements": [
+  {
+   "id": "A1",
+   "claim": "표시 안 앵커 적을 함께 둔 void_step 검사가 통과(수정 전 정식 호스트 4/8 실패)하고, 전 영웅·전 스킬 몰이+앵커 검사 실패 0이다 / aim-hitbox-truth-qa 전후",
+   "status": "passed",
+   "surfaces": [
+    "aim-hitbox-truth-qa 전후"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-void-step\\evidence\\A1\\report.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-void-step\\evidence\\A1\\report.json",
+     "sha256": "f2a7826b68785bbb37cad62c243c4408229e1fbdb7107f0b8a2de285348c0340",
+     "command": "수정 전 정식 호스트 c33eb803 void_step 앵커 검사 4/8 실패",
+     "observedAt": "2026-10-19T17:15:31.540Z",
+     "subjectDigest": "src:3e7cd718b118779327e64e39dba674ca52c4c578981d56acf8c4cc7e3d5ac718"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-void-step\\evidence\\A1\\report-2.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-void-step\\evidence\\A1\\report-2.json",
+     "sha256": "f9fde795110bbead867838192c0b4f879a68793c4be47326d80e0fea706a583a",
+     "command": "정식 호스트 4319f3b8 void_step 앵커 검사 8/8·0/8 통과",
+     "observedAt": "2026-10-19T17:15:32.827Z",
+     "subjectDigest": "src:3e7cd718b118779327e64e39dba674ca52c4c578981d56acf8c4cc7e3d5ac718"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-void-step\\evidence\\A1\\dev-full.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-void-step\\evidence\\A1\\dev-full.log",
+     "sha256": "c4784f997c6f6df8213f56809fbb355fa74ab8fddf3023998755f41ecf9d4195",
+     "command": "전 영웅·전 스킬 몰이+앵커 검사 실패 0 (같은 소스 개발 서버)",
+     "observedAt": "2026-10-19T17:15:34.074Z",
+     "subjectDigest": "src:3e7cd718b118779327e64e39dba674ca52c4c578981d56acf8c4cc7e3d5ac718"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A2",
+   "claim": "skill-aim-qa 세 화면 통과, bun run check 통과 / 보고서",
+   "status": "passed",
+   "surfaces": [
+    "보고서"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-void-step\\evidence\\A2\\live-skill-aim.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-void-step\\evidence\\A2\\live-skill-aim.log",
+     "sha256": "2486780c98e4c0fb249c347815e8f76b462037a5b3a32e80356a731a83d5a6a2",
+     "command": "skill-aim-qa 정식 호스트 세 화면 pass",
+     "observedAt": "2026-10-19T17:15:35.244Z",
+     "subjectDigest": "src:3e7cd718b118779327e64e39dba674ca52c4c578981d56acf8c4cc7e3d5ac718"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-void-step\\evidence\\A2\\check2.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-void-step\\evidence\\A2\\check2.log",
+     "sha256": "b752fe5b2cfe81c3cecd36b571be76471d62a788263a11c79fdf0179df0f9006",
+     "command": "bun run check 88211d6 exit 0, 2395 통과 0 실패",
+     "observedAt": "2026-10-19T17:15:36.449Z",
+     "subjectDigest": "src:3e7cd718b118779327e64e39dba674ca52c4c578981d56acf8c4cc7e3d5ac718"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A3",
+   "claim": "정식 호스트에서 A1·A2 재확인 / version.json과 보고서",
+   "status": "passed",
+   "surfaces": [
+    "version.json과 보고서"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-void-step\\evidence\\A3\\live-version.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-void-step\\evidence\\A3\\live-version.json",
+     "sha256": "d2276b331bb875240dc9f1132e162c27a06878c7c53619629d70e933d12fb334",
+     "command": "version.json sha 4319f3b8, versionId 61b25427",
+     "observedAt": "2026-10-19T17:15:37.628Z",
+     "subjectDigest": "src:3e7cd718b118779327e64e39dba674ca52c4c578981d56acf8c4cc7e3d5ac718"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  }
+ ],
+ "freshReview": {
+  "required": false,
+  "status": "not_required"
+ },
+ "remaining": [],
+ "verdict": "passed",
+ "acceptanceChanges": [],
+ "weakened": [],
+ "deploy": {
+  "target": "https://blade.tllhouse.com (worker blade-surge)",
+  "version": "61b25427-122b-4fe3-9cb5-6f38230ee408",
+  "sha": "4319f3b88d4d0d47d20048897e7e99cdc5733500",
+  "readback": "version.json sha=4319f3b8 dirty=false; void_step 앵커 검사 통과, skill-aim 세 화면 통과",
+  "rollback": "이전 version 1cf1e907-ffd5-4e5a-bc62-5174fc65a916, tools/deploy.mjs 절차",
+  "subjectDigest": "src:3e7cd718b118779327e64e39dba674ca52c4c578981d56acf8c4cc7e3d5ac718"
+ },
+ "lanes": [
+  {
+   "lane": "integration",
+   "model": "anthropic/claude-opus-5-5",
+   "agentId": "commander-direct",
+   "branch": "codex/20261020-void-step"
+  }
+ ],
+ "harnessChanges": [],
+ "frictions": [
+  "게임플레이 변경 공개: void_step 점멸 표적·피해·폭발 18m 제한",
+  "병합 직전 동기화로 main에 #208(의존성 정리)이 들어와 그 상태로 병합·배포(검사는 동기화 전 브랜치에서 통과)",
+  "실기기는 이번에도 미실행(입력 경로 불변), 대표님 지시로 중간 사이클은 브라우저·에뮬레이터로 확인"
+ ],
+ "standingGates": [],
+ "next": "최종 재감사",
+ "quota": null,
+ "updatedAt": "2026-10-19T17:15:38.932Z"
+}

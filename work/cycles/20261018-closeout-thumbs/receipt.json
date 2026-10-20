@@ -1,0 +1,346 @@
+{
+  "schemaVersion": 1,
+  "cycle": "20261018-closeout-thumbs",
+  "cycleStatus": "shipped",
+  "objective": "1·2차 기준을 현재 정식 빌드에서 재검증해 마감하고 로비 카드 썸네일을 적용한다",
+  "chunk": {
+    "name": "마감 재검증과 카드 썸네일",
+    "why": "dod는 shipped 사이클 증거만 인정",
+    "notDoing": "로비 팔, 실기기, 상단 재화 바"
+  },
+  "subject": {
+    "kind": "mixed",
+    "identity": {
+      "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+      "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261018-closeout-thumbs\\integration",
+      "branch": "codex/20261018-closeout-thumbs",
+      "commit": "4a95a13db7b66fd9db074cb8b6a498da2b399f20",
+      "tree": "0a3f0ef44a0188c7b60dab9f0ac19b8b8805dfd4"
+    },
+    "digest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8",
+    "observedAt": "2026-10-18T12:28:38.975Z"
+  },
+  "requirements": [
+    {
+      "id": "A1",
+      "claim": "전투 중 연속 처치가 올라가도 화면 중앙에 카드가 없고 콤보 배지 옆 알약에 숫자와 단계가 보인다 / 정식 호스트 실제 전투 1280x590·844x390·800x360 캡처와 위치 측정",
+      "status": "passed",
+      "surfaces": [
+        "정식 호스트 실제 전투 1280x590·844x390·800x360 캡처와 위치 측정"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A1\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A1\\report.json",
+          "sha256": "10c64abe928fffbc1cf8188fdf8904c8303d110649c3bc412ad0692af99056dd",
+          "command": "node tools/kill-streak-hud-qa.mjs https://blade.tllhouse.com",
+          "observedAt": "2026-10-18T12:42:08.153Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A1\\hud-844x390.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A1\\hud-844x390.png",
+          "sha256": "a976410f4aa4e84e8bff71704148ecada020f7ffd5a4f3eeaa15e4dded93295c",
+          "command": "node tools/kill-streak-hud-qa.mjs https://blade.tllhouse.com",
+          "observedAt": "2026-10-18T12:42:08.675Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A1\\hud-800x360.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A1\\hud-800x360.png",
+          "sha256": "7665759623adc4702bba29b144d415a40f093dbe204e5428ed61ce764e4f6a3d",
+          "command": "node tools/kill-streak-hud-qa.mjs https://blade.tllhouse.com",
+          "observedAt": "2026-10-18T12:42:09.135Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A1\\hud-1280x590.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A1\\hud-1280x590.png",
+          "sha256": "a7bd28304cdaa9501fdd5839f3cfcd0d3077a4baa22d576df6b2b09cc24ec85a",
+          "command": "node tools/kill-streak-hud-qa.mjs https://blade.tllhouse.com",
+          "observedAt": "2026-10-18T12:42:09.607Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A2",
+      "claim": "5·10·20 연속 처치 알림과 전투 경고·배너가 화면 가운데 1/3 전투 영역을 가리지 않는다 / 같은 측정의 보호 영역 침범 0",
+      "status": "passed",
+      "surfaces": [
+        "같은 측정의 보호 영역 침범 0"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A2\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A2\\report.json",
+          "sha256": "10c64abe928fffbc1cf8188fdf8904c8303d110649c3bc412ad0692af99056dd",
+          "command": "node tools/kill-streak-hud-qa.mjs https://blade.tllhouse.com",
+          "observedAt": "2026-10-18T12:42:09.988Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A3",
+      "claim": "스킬 버튼을 끄는 동안 사거리 원과 방향 레인이 보이고 놓은 방향으로 스킬이 나간다 / 정식 호스트 CDP 터치 드래그 4방향, 각도 오차",
+      "status": "passed",
+      "surfaces": [
+        "정식 호스트 CDP 터치 드래그 4방향, 각도 오차"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A3\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A3\\report.json",
+          "sha256": "ca801ec13b8efea5d666f292f7269a054f0e9d83c2cf30c7b7414cb8d97088ed",
+          "command": "node tools/skill-aim-qa.mjs https://blade.tllhouse.com",
+          "observedAt": "2026-10-18T12:42:10.384Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A3\\aim-hold-844x390.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A3\\aim-hold-844x390.png",
+          "sha256": "cf138210f320c42a3fae238e2ade9737089c9562823589f9bb3fd36dd8b1bb9f",
+          "command": "node tools/skill-aim-qa.mjs https://blade.tllhouse.com",
+          "observedAt": "2026-10-18T12:42:10.762Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A4",
+      "claim": "짧은 탭과 키보드로 기존처럼 바로 시전된다 / 같은 도구 탭·키보드 결과",
+      "status": "passed",
+      "surfaces": [
+        "같은 도구 탭·키보드 결과"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A4\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A4\\report.json",
+          "sha256": "ca801ec13b8efea5d666f292f7269a054f0e9d83c2cf30c7b7414cb8d97088ed",
+          "command": "node tools/skill-aim-qa.mjs https://blade.tllhouse.com",
+          "observedAt": "2026-10-18T12:42:11.144Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A5",
+      "claim": "취소 구역에서 놓으면 시전·쿨다운·MP 소모가 없다 / 같은 도구 취소 결과",
+      "status": "passed",
+      "surfaces": [
+        "같은 도구 취소 결과"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A5\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A5\\report.json",
+          "sha256": "ca801ec13b8efea5d666f292f7269a054f0e9d83c2cf30c7b7414cb8d97088ed",
+          "command": "node tools/skill-aim-qa.mjs https://blade.tllhouse.com",
+          "observedAt": "2026-10-18T12:42:11.507Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A5\\aim-cancel-844x390.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A5\\aim-cancel-844x390.png",
+          "sha256": "73990b4cd958fe4cde22d9fc52ca0721045f9b278cfc59caf2044706d8033910",
+          "command": "node tools/skill-aim-qa.mjs https://blade.tllhouse.com",
+          "observedAt": "2026-10-18T12:42:11.898Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A6",
+      "claim": "직선·부채꼴·지점 스킬의 지면 표시가 실제 판정 범위와 같다(5직업 30개 스킬, 초과 0.6m 이하) / 이 사이클 소스의 개발 서버 실측 tools/aim-overlay-qa.mjs",
+      "status": "passed",
+      "surfaces": [
+        "이 사이클 소스의 개발 서버 실측 tools/aim-overlay-qa.mjs"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A6\\report.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A6\\report.json",
+          "sha256": "9ed0b74036461284e5ac3dba00a59b567749a6e994d55660b49cb5225c873bb3",
+          "command": "node tools/aim-overlay-qa.mjs http://127.0.0.1:5187",
+          "observedAt": "2026-10-18T12:28:39.515Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A7",
+      "claim": "다른 게임 작업자가 라이브러리에서 역할·리그·폴리 수·태그로 3D·텍스처·원화를 찾고 엔진별 안내를 받는다 / catalog.mjs find 실제 출력, 드라이브 원격 USAGE.md",
+      "status": "passed",
+      "surfaces": [
+        "catalog.mjs find 실제 출력, 드라이브 원격 USAGE.md"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A7\\lib-find-3d.txt",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A7\\lib-find-3d.txt",
+          "sha256": "dcef71aac311ebae2f1f2e2a0bc182a8974a79981893e71684cb57e36137f4e4",
+          "command": "node catalog.mjs find --role enemy --rigged --max-tris 20000 --tag fantasy",
+          "observedAt": "2026-10-18T12:42:12.226Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A7\\lib-find-tex.txt",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A7\\lib-find-tex.txt",
+          "sha256": "3faae2b317dd3ab44bf54fcb2ae9c543e3ca12b6f3e8986b8d864538c0a7c9ac",
+          "command": "node catalog.mjs find --role texture --tag image",
+          "observedAt": "2026-10-18T12:42:12.531Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A7\\lib-find-keyart.txt",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A7\\lib-find-keyart.txt",
+          "sha256": "dbd0fbf467cbc24b57b2e0b5bd581ac3b49fa0cd67baf9929aa9d4dbdbe581c8",
+          "command": "node catalog.mjs find --role key-art",
+          "observedAt": "2026-10-18T12:42:12.828Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        },
+        {
+          "kind": "url",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A7\\USAGE.md",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A7\\USAGE.md",
+          "sha256": "817d3b3caa6b2a5c0ae77c8959a8e755bda9a1ce5178bd934e0e7090d4443431",
+          "command": "Drive USAGE.md",
+          "observedAt": "2026-10-18T12:42:13.229Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A8",
+      "claim": "로비 확장 던전 카드가 320px 썸네일로 바로 그려지고 상세 패널은 원화를 쓴다 / 정식 호스트 카드 캡처와 이미지 크기",
+      "status": "passed",
+      "surfaces": [
+        "정식 호스트 카드 캡처와 이미지 크기"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A8\\live-thumb2.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A8\\live-thumb2.log",
+          "sha256": "e0544f10532399bdc62bf5860952f1ff9c960bbca9cc0a67507ac02c76a0f4ee",
+          "command": "Playwright 정식 호스트 카드 썸네일",
+          "observedAt": "2026-10-18T12:42:13.663Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A8\\lobby-rootbound_grotto.png",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A8\\lobby-rootbound_grotto.png",
+          "sha256": "e6e24f29e1ab0abed6a0c120132e5e87609d7ee9e6ca4137c051f8ea1881a113",
+          "command": "Playwright 정식 호스트 카드 썸네일",
+          "observedAt": "2026-10-18T12:42:14.074Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A9",
+      "claim": "정식 호스트가 이 사이클 버전을 내보낸다 / version.json과 배포 영수증",
+      "status": "passed",
+      "surfaces": [
+        "version.json과 배포 영수증"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A9\\check.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A9\\check.log",
+          "sha256": "d4e738757e462f8159b228520711ef4f8ec64163284397b087204d3d521282ef",
+          "command": "bun run check",
+          "observedAt": "2026-10-18T12:28:39.981Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        },
+        {
+          "kind": "url",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A9\\live-version.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A9\\live-version.json",
+          "sha256": "aec2b03b7e3bb5d437ca0761c71a188ed2742ed25fee50febca7251f9a1cc2d5",
+          "command": "node tools/deploy.mjs --auth=wrangler",
+          "observedAt": "2026-10-18T12:42:14.495Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A9\\deploy2.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261018-closeout-thumbs\\evidence\\A9\\deploy2.log",
+          "sha256": "aaf053905a195c717312b38c29a07340b3b2497764264834c970f48d12623894",
+          "command": "node tools/deploy.mjs --auth=wrangler",
+          "observedAt": "2026-10-18T12:42:15.048Z",
+          "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    }
+  ],
+  "freshReview": {
+    "required": false,
+    "status": "not_required"
+  },
+  "remaining": [],
+  "verdict": "passed",
+  "acceptanceChanges": [],
+  "weakened": [],
+  "deploy": {
+    "target": "https://blade.tllhouse.com (worker blade-surge)",
+    "version": "842d042e-b405-4980-a8b8-5483333bb9a8",
+    "sha": "0f3fb828ced3303ec0f17622208e7d8ee1b2f23d",
+    "readback": "version.json sha=0f3fb82 dirty=false; 정식 호스트 HUD 3화면 침범 0, 조준 3화면 전부 통과, 카드 썸네일 320px·상세 원화",
+    "rollback": "wrangler rollback 5b9e7527-b0f8-4768-b4e1-5b04fcb687f3 (deployment 31d59285), tools/deploy.mjs 절차",
+    "subjectDigest": "src:b04bb85bef6ea5618fb39809e46a9cf7683f5c72a13b7b4d030cf89674115ed8"
+  },
+  "lanes": [
+    {
+      "lane": "integration",
+      "model": "claude-opus-5-5",
+      "agentId": "commander",
+      "branch": "codex/20261018-closeout-thumbs"
+    }
+  ],
+  "harnessChanges": [],
+  "frictions": [
+    "첫 배포 시도에서 D1 배포 잠금을 다른 배포가 보유해 중단 → 잠금을 빼앗지 않고 3분 뒤 재시도 성공",
+    "Playwright 요소 스크린샷이 스크롤 중인 카드에서 시간 초과 → 전체 화면 캡처로 대체"
+  ],
+  "standingGates": [],
+  "next": "실기기(대표님 기기)와 로비 팔(대표님 확인)이 오면 마감, 그 전에는 상단 재화 바 시안 스타일",
+  "quota": null,
+  "updatedAt": "2026-10-18T12:42:16.650Z"
+}

@@ -1,0 +1,170 @@
+{
+ "schemaVersion": 1,
+ "cycle": "20261019-sunbreaker-pull",
+ "cycleStatus": "shipped",
+ "objective": "전 스킬 몰이 판정 정합: sunbreaker 끌림 반경과 영웅 중심 몰이 한계 표시, 전 스킬 몰이 검사 기본화",
+ "chunk": {
+  "name": "전 스킬 몰이 판정 정합",
+  "why": "2차 재감사가 sunbreaker D2d 실패 판정, 전 스킬 검사로 4종 추가 발견",
+  "notDoing": "마법사 겹침(별도 사이클)"
+ },
+ "subject": {
+  "kind": "mixed",
+  "identity": {
+   "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+   "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\deploy-c4188b9",
+   "branch": "",
+   "commit": "c4188b9cdad51936239f8f917a29f248f8766fe9",
+   "tree": "661ac2e5e511295317157f6a7c470a0cb2f6dc1f"
+  },
+  "digest": "src:df35d989513b3adba08fb8bdac3b438af4d941687a9c731e0e6346d81cffff86",
+  "observedAt": "2026-10-19T14:07:33.030Z"
+ },
+ "requirements": [
+  {
+   "id": "A1",
+   "claim": "tools/aim-hitbox-truth-qa.mjs를 전 스킬 몰이 물리 기본값(AIM_PULL='*')으로 전 영웅·전 스킬·교관 변형에 돌려 실패 0이다 / aim-hitbox-truth-qa report",
+   "status": "passed",
+   "surfaces": [
+    "aim-hitbox-truth-qa report"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-sunbreaker-pull\\evidence\\A1\\qa-allpull0.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-sunbreaker-pull\\evidence\\A1\\qa-allpull0.log",
+     "sha256": "faafbbd3cf095ad2bb8d04e84ced62fc7635cb3e6763f723a6c81806843d83cb",
+     "command": "수정 전 전 스킬 몰이 검사(AIM_PULL=*): dragon_slash·sanctuary·sunbreaker·blizzard·flurry 실패",
+     "observedAt": "2026-10-19T14:07:37.168Z",
+     "subjectDigest": "src:df35d989513b3adba08fb8bdac3b438af4d941687a9c731e0e6346d81cffff86"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-sunbreaker-pull\\evidence\\A1\\report.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-sunbreaker-pull\\evidence\\A1\\report.json",
+     "sha256": "38e9cd0a1c89ada6e1bfe65223b37b54084d808b6d1bb22130611161c5f72f9b",
+     "command": "aim-hitbox-truth-qa 정식 호스트 c4188b9 전 스킬 몰이 기본값: 통과 40 실패 0",
+     "observedAt": "2026-10-19T14:07:41.135Z",
+     "subjectDigest": "src:df35d989513b3adba08fb8bdac3b438af4d941687a9c731e0e6346d81cffff86"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A2",
+   "claim": "새 몰이 점선 원(dragon_slash·flurry·blizzard·sanctuary)이 세 화면에서 그려지고 skill-aim-qa·aim-overlay-qa·aim-cancel 보호 영역 규칙을 어기지 않는다 / aim-envelope-shot, skill-aim-qa, aim-overlay-qa",
+   "status": "passed",
+   "surfaces": [
+    "aim-envelope-shot, skill-aim-qa, aim-overlay-qa"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-sunbreaker-pull\\evidence\\A2\\live-aim-envelope-shot.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-sunbreaker-pull\\evidence\\A2\\live-aim-envelope-shot.log",
+     "sha256": "4c056966b875c8e19bf84b72bcc28fc66f325035cd4a2aa40be8e1eadc2bb541",
+     "command": "aim-envelope-shot 정식 호스트 세 화면 몰이 점선 원 dragon_slash·flurry·blizzard·sanctuary 포함 pass:true",
+     "observedAt": "2026-10-19T14:07:47.315Z",
+     "subjectDigest": "src:df35d989513b3adba08fb8bdac3b438af4d941687a9c731e0e6346d81cffff86"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-sunbreaker-pull\\evidence\\A2\\live-skill-aim-qa.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-sunbreaker-pull\\evidence\\A2\\live-skill-aim-qa.log",
+     "sha256": "4b1d606f786ef268a631627de2240286af30825e4edaaf28f21ee656bc52ebd1",
+     "command": "skill-aim-qa 정식 호스트 세 화면 pass:true",
+     "observedAt": "2026-10-19T14:07:50.693Z",
+     "subjectDigest": "src:df35d989513b3adba08fb8bdac3b438af4d941687a9c731e0e6346d81cffff86"
+    },
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-sunbreaker-pull\\evidence\\A2\\dev-aim-overlay-qa.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-sunbreaker-pull\\evidence\\A2\\dev-aim-overlay-qa.log",
+     "sha256": "d32ccab2a21f9cf766163d39270defe134b5d204b8df3fef87a191afcc02dbd5",
+     "command": "aim-overlay-qa 같은 소스 개발 서버 pass:true",
+     "observedAt": "2026-10-19T14:07:53.996Z",
+     "subjectDigest": "src:df35d989513b3adba08fb8bdac3b438af4d941687a9c731e0e6346d81cffff86"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A3",
+   "claim": "단위 테스트와 bun run check 통과 / bun run check",
+   "status": "passed",
+   "surfaces": [
+    "bun run check"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-sunbreaker-pull\\evidence\\A3\\check.log",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-sunbreaker-pull\\evidence\\A3\\check.log",
+     "sha256": "0b447a060dc6b90649d5354eed6fbc607b61b7851c34ba2096347a3cd9649ead",
+     "command": "bun run check 79a5807(병합 전 브랜치) exit 0, 2395 통과 0 실패",
+     "observedAt": "2026-10-19T14:07:58.611Z",
+     "subjectDigest": "src:df35d989513b3adba08fb8bdac3b438af4d941687a9c731e0e6346d81cffff86"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A4",
+   "claim": "정식 호스트에서 A1·A2 재확인 / version.json과 정식 호스트 보고서",
+   "status": "passed",
+   "surfaces": [
+    "version.json과 정식 호스트 보고서"
+   ],
+   "evidence": [
+    {
+     "kind": "measure",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-sunbreaker-pull\\evidence\\A4\\live-version.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261019-sunbreaker-pull\\evidence\\A4\\live-version.json",
+     "sha256": "957995686335019fbdd7c08e97079bdbd1cc0964d45cb0815d257fa809ea023f",
+     "command": "version.json sha c4188b9c, versionId 412f5f1e",
+     "observedAt": "2026-10-19T14:08:00.949Z",
+     "subjectDigest": "src:df35d989513b3adba08fb8bdac3b438af4d941687a9c731e0e6346d81cffff86"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  }
+ ],
+ "freshReview": {
+  "required": false,
+  "status": "not_required"
+ },
+ "remaining": [],
+ "verdict": "passed",
+ "acceptanceChanges": [],
+ "weakened": [],
+ "deploy": {
+  "target": "https://blade.tllhouse.com (worker blade-surge)",
+  "version": "412f5f1e-5d9e-4169-aed5-9c8622ce82f2",
+  "sha": "c4188b9cdad51936239f8f917a29f248f8766fe9",
+  "readback": "version.json sha=c4188b9c dirty=false; 정식 호스트 aim-hitbox 전 스킬 몰이 40/0, 세 화면 envelope·skill-aim 통과",
+  "rollback": "deployment 이전 version 67867333-3bc1-4465-8cd5-6adb2c3de4f7 (801ecff7), tools/deploy.mjs 절차",
+  "subjectDigest": "src:df35d989513b3adba08fb8bdac3b438af4d941687a9c731e0e6346d81cffff86"
+ },
+ "lanes": [
+  {
+   "lane": "integration",
+   "model": "anthropic/claude-opus-5-5",
+   "agentId": "commander-direct",
+   "branch": "codex/20261019-sunbreaker-pull"
+  }
+ ],
+ "harnessChanges": [],
+ "frictions": [
+  "게임플레이 변경 공개: sunbreaker 귀환 끌림 반경 4.5→3.2, dragon_slash 몰이는 부채꼴 안 적 제외, 몰이 사운드(audio.suck) 한 번 재생이 dragon_slash 채널에서 빠짐",
+  "검사 기본값을 전 스킬 몰이로 바꿔 검사 시간이 늘어남(약 12분)",
+  "aim-overlay-qa는 /src 경로를 써서 같은 SHA 개발 서버로 측정"
+ ],
+ "standingGates": [],
+ "next": "마법사 겹침 사이클 병합 후 3차 최종 감사",
+ "quota": null,
+ "updatedAt": "2026-10-19T14:08:04.587Z"
+}

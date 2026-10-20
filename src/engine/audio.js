@@ -98,6 +98,12 @@ export class AudioSys {
     if (!this._heroLoads.has(heroId)) this._heroLoads.set(heroId, Promise.all(heroSoundFiles(heroId).map((n) => this._loadSfx(n))).then(() => true));
     return this._heroLoads.get(heroId);
   }
+  /** 파티 게스트용: 원격 타격 재생에 필요한 영웅 타격음 변형만 불러온다(전체 세트 15개 대신 2개). */
+  preloadHeroHits(heroId) {
+    if (!this.ctx || !HERO_IDS.includes(heroId)) return Promise.resolve(false);
+    if (this._heroLoads.has(heroId)) return this._heroLoads.get(heroId);
+    return Promise.all(Array.from({ length: HERO_HIT_VARIANTS }, (_, v) => this._loadSfx(heroHitSound(heroId, v)))).then(() => true);
+  }
   /** 같은 변형이 연달아 나오지 않게 고른다. */
   _rotate(store, key, count) {
     if (count < 2) return 0;

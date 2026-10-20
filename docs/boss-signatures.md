@@ -18,10 +18,28 @@ Acceptance and regression requirements:
   retained and offset-room cases; screenshots must show readable safe areas.
 - At most six reusable warning meshes per boss. Pause freezes warnings, and
   stun/death/stop cancel pending damage and remove the owned graphics.
+  Exception (BUNDLE-05): in the personal deep Bellfall Crypt, the chorus veil keeps
+  the sovereign's triple toll from being cut by stun, stagger or posture break until
+  its final ring opens the 3.5-second counter window (docs/bellfall-deep-bells.md).
+  Exception (BUNDLE-14): in the personal deep Ember Vault, the chain armor keeps the
+  executor's slag hammer (kiln_hammer) from being cut by stun, stagger or posture break
+  until its final ring; the executor then stays pinned for 4 seconds, starts no new
+  attack, and takes double damage from a hero behind it and half from one in front
+  (docs/ember-deep-tide-valves.md).
+  Exception (BUNDLE-15): in the personal deep Ashforge Catacomb, while chains remain, the colossus's
+  slag hammer (kiln_hammer) that started while chained is not cut by stun, stagger or posture break until
+  its final ring; a chain pillar then opens for 5 seconds, during which the colossus cannot chase (it still
+  attacks a hero within reach). Holding the pillar for 1.2 seconds breaks a chain: 5 seconds of stagger
+  with double damage taken and +10% damage taken for the rest of the fight per broken chain
+  (docs/ashforge-deep-furnaces.md).
 - Simultaneous overlapping shapes hit each living actor only once. Player.hurt
   owns invulnerability and damage mitigation; the host owns party simulation.
 - Boss signatures replace automatic ambient hazards in the final boss room;
   regular rooms and existing bosses retain their established hazards.
+  Exception (BUNDLE-06): in the personal Comet Bastion expedition (standard and deep), the
+  knight-commander's room draws a blue orbit line with its own meteors. A meteor warning
+  starts only while the boss is not attacking and holds the boss's next attack until the
+  meteor lands, so it never overlaps a signature warning (docs/comet-deep-orbits.md).
 - Mob pool iteration reaches all six melee and all three ranged species without
   changing normal-room capacity, reinforcement accounting or boss reward ledgers.
 - Actual app QA covers both signatures for all six bosses, phase selection,

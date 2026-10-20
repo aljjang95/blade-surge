@@ -1,0 +1,143 @@
+{
+  "schemaVersion": 1,
+  "cycle": "20261020-deps-audit-fix",
+  "cycleStatus": "shipped",
+  "objective": "개발 도구 의존성 보안 경고(bun.lock·package-lock.json)를 0건으로 정리하고 게임 빌드 산출물이 같음을 확인한 뒤 배포한다",
+  "chunk": {
+    "name": "개발 도구 의존성 보안 경고 정리",
+    "why": "푸시 때 GitHub 경고(높음 4)와 bun audit 17건, 대표님 ㄱㄱ(2026-10-20)",
+    "notDoing": "three·react·capacitor 등 런타임 의존성 주 버전 업그레이드, 게임 코드 변경"
+  },
+  "subject": {
+    "kind": "mixed",
+    "identity": {
+      "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+      "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\lanes\\aljjang95-blade-surge\\20261020-deps-audit-fix\\integration",
+      "branch": "codex/20261020-deps-audit-fix",
+      "commit": "622cf2de5db5007f79ff62521b3a6cb6f20ba75e",
+      "tree": "696c73a2b9303c4bc4b21261d560646a7840a2e6"
+    },
+    "digest": "src:5968285fed0c26ce52087dd2c64ae8b14e60f26e49b414161a3b11e02ff5810d",
+    "observedAt": "2026-10-19T16:52:19.562Z"
+  },
+  "requirements": [
+    {
+      "id": "A1",
+      "claim": "bun audit와 npm audit --package-lock-only가 모두 취약점 0건이다 / 두 감사 명령 출력",
+      "status": "passed",
+      "surfaces": [
+        "두 감사 명령 출력"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-deps-audit-fix\\evidence\\A1\\deps-audit.txt",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-deps-audit-fix\\evidence\\A1\\deps-audit.txt",
+          "sha256": "9161afcfa36be74cbf2dba0ab3665a22fa322e1211d80a069c6c3abf1e79aeb4",
+          "command": "bun audit; npm audit --package-lock-only",
+          "observedAt": "2026-10-19T16:52:25.865Z",
+          "subjectDigest": "src:5968285fed0c26ce52087dd2c64ae8b14e60f26e49b414161a3b11e02ff5810d"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A2",
+      "claim": "bun run check(타입·테스트·빌드)가 통과한다 / 전체 검사 로그",
+      "status": "passed",
+      "surfaces": [
+        "전체 검사 로그"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-deps-audit-fix\\evidence\\A2\\deps-check.log",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-deps-audit-fix\\evidence\\A2\\deps-check.log",
+          "sha256": "2a70f89ff7d4f8eae65cb426bf8e1f151615e4013c0df8ccc5de0334acb1dd80",
+          "command": "bun run check (tsc, bun test 2395 pass 0 fail, vite build)",
+          "observedAt": "2026-10-19T16:52:26.144Z",
+          "subjectDigest": "src:5968285fed0c26ce52087dd2c64ae8b14e60f26e49b414161a3b11e02ff5810d"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A3",
+      "claim": "의존성 갱신 전후 정식 빌드 산출물(dist 자산 해시)이 같아 게임 동작이 바뀌지 않는다 / dist 해시 비교",
+      "status": "passed",
+      "surfaces": [
+        "dist 해시 비교"
+      ],
+      "evidence": [
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-deps-audit-fix\\evidence\\A3\\deps-dist-compare.txt",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-deps-audit-fix\\evidence\\A3\\deps-dist-compare.txt",
+          "sha256": "62bf6620e87195631fc9f3fe57658306e3027b1b41364cc82b123474cc8787ee",
+          "command": "dist SHA256 비교 기준 c33eb80 대 622cf2d",
+          "observedAt": "2026-10-19T16:52:26.399Z",
+          "subjectDigest": "src:5968285fed0c26ce52087dd2c64ae8b14e60f26e49b414161a3b11e02ff5810d"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    },
+    {
+      "id": "A4",
+      "claim": "갱신된 wrangler로 tools/deploy.mjs 사전 점검과 배포가 동작하고 정식 호스트가 병합된 main을 서비스한다 / 정식 호스트 버전 다시 읽기, 핵심 화면 로드",
+      "status": "passed",
+      "surfaces": [
+        "정식 호스트 버전 다시 읽기, 핵심 화면 로드"
+      ],
+      "evidence": [
+        {
+          "kind": "url",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-deps-audit-fix\\evidence\\A4\\deps-live-smoke.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-deps-audit-fix\\evidence\\A4\\deps-live-smoke.json",
+          "sha256": "5f099da069e1725f95ea17bc13833b0654e267639400585349243a3c20804598",
+          "command": "playwright 844x390 정식 호스트 로드, version.json sha 94711eb, 페이지 오류 0",
+          "observedAt": "2026-10-19T16:56:28.880Z",
+          "subjectDigest": "src:5968285fed0c26ce52087dd2c64ae8b14e60f26e49b414161a3b11e02ff5810d"
+        },
+        {
+          "kind": "file",
+          "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-deps-audit-fix\\evidence\\A4\\deps-deploy-receipt.json",
+          "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-deps-audit-fix\\evidence\\A4\\deps-deploy-receipt.json",
+          "sha256": "67a392eb4e6f271b8da4e7cab6fa0e2b2ad71b779d37927b13b5b8fb3dce3a9c",
+          "command": "tools/deploy.mjs --auth=wrangler 영수증 version-verified",
+          "observedAt": "2026-10-19T16:56:29.379Z",
+          "subjectDigest": "src:5968285fed0c26ce52087dd2c64ae8b14e60f26e49b414161a3b11e02ff5810d"
+        }
+      ],
+      "neededInput": null,
+      "note": null
+    }
+  ],
+  "freshReview": {
+    "required": false,
+    "status": "not_required"
+  },
+  "remaining": [],
+  "verdict": "passed",
+  "acceptanceChanges": [],
+  "weakened": [],
+  "deploy": {
+    "target": "https://blade.tllhouse.com (worker blade-surge)",
+    "version": "1cf1e907-ffd5-4e5a-bc62-5174fc65a916",
+    "readback": "정식 호스트 version.json sha 94711eb5, 844x390 로드 200, 캔버스 3, 페이지 오류 0, deploy.mjs 영수증 version-verified",
+    "rollback": "wrangler rollback 691cc0be-1ec8-4567-a42b-bbf6b7056754 (직전 배포 d7c0c17b)",
+    "subjectDigest": "src:5968285fed0c26ce52087dd2c64ae8b14e60f26e49b414161a3b11e02ff5810d"
+  },
+  "lanes": [],
+  "harnessChanges": [],
+  "frictions": [
+    "package-lock.json이 bun.lock과 어긋난 채 방치돼 GitHub 경고의 원인이었음(이번에 동기화). 다음 사이클은 두 잠금 파일을 같이 점검",
+    "이 PC의 gh는 로그인되지 않아 PR·병합은 GitHub 앱 커넥터를 써야 함"
+  ],
+  "standingGates": [],
+  "next": "의존성 감사를 점검 항목으로 상시화하거나(주기 점검), 지휘 루프의 D3b·D4a 잔여 덩어리로 복귀",
+  "quota": null,
+  "updatedAt": "2026-10-19T16:56:40.597Z"
+}

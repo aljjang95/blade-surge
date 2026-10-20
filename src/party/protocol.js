@@ -52,8 +52,10 @@ export function validPartySnapshot(v) {
     && int(v.roomsCleared, 0, 64) && bool(v.bossDefeated) && (v.portal === null || (coord(v.portal) && keys(v.portal, ['x','z'])))
     && array(v.events, PARTY_LIMITS.events, e => obj(e) && str(e.type, 32)
       && (e.x === undefined || num(e.x)) && (e.z === undefined || num(e.z))
-      && Object.keys(e).every(k => ['type', 'x', 'z', 'id', 'value'].includes(k))
-      && (e.id === undefined || str(e.id)) && (e.value === undefined || num(e.value, 0, 1e9)))
+      && Object.keys(e).every(k => ['type', 'x', 'z', 'id', 'value', 'hero'].includes(k))
+      && (e.id === undefined || str(e.id)) && (e.value === undefined || num(e.value, 0, 1e9))
+      // hit 이벤트의 공격자 영웅(선택). 구버전 호스트는 보내지 않으며, 허용 목록 밖 값은 거부한다.
+      && (e.hero === undefined || PARTY_HEROES.includes(e.hero)))
     && (v.projectiles === undefined || array(v.projectiles, PARTY_LIMITS.projectiles,
       p => coord(p) && str(p.id) && num(p.y ?? 0) && num(p.yaw ?? 0, -100, 100)
         && keys(p, ['id','x','y','z','yaw'])));

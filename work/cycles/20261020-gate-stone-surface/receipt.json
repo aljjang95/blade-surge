@@ -1,0 +1,180 @@
+{
+ "schemaVersion": 1,
+ "cycle": "20261020-gate-stone-surface",
+ "cycleStatus": "partial",
+ "objective": "성채 관문 돌 표면 질감과 이끼·덩굴·풍화 윤곽을 시안 C12에 가깝게",
+ "chunk": null,
+ "subject": {
+  "kind": "mixed",
+  "identity": {
+   "repo": "C:\\Users\\heart\\Documents\\ChatGPT\\블레이드 서지 2",
+   "worktree": "C:\\Users\\heart\\AppData\\Local\\APEX\\tasks\\aljjang95-blade-surge\\wt\\20261020-gate-stone-surface",
+   "branch": "codex/task-20261020-gate-stone-surface",
+   "commit": "a626ef69f3be64636696cbbe25c31a5fad3ba39d",
+   "tree": "0973af4f147b87ca6210e7e6c85e9a37277175ec"
+  },
+  "digest": "src:f04e837eebf34ead72a59e81b4a5f7965a69122ac2802fd8b022e162e5181837",
+  "observedAt": "2026-10-19T22:21:08.896Z"
+ },
+ "requirements": [
+  {
+   "id": "A1",
+   "claim": "관문 돌이 시안 C12처럼 결·균열·모서리 하이라이트가 있는 손그림 돌 표면으로 보이고 루트별 색 구분 유지 / 14개 루트·로비·근접 캡처 전후, C12 비교 시트",
+   "status": "passed",
+   "surfaces": [
+    "14개 루트·로비·근접 캡처 전후, C12 비교 시트"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-gate-stone-surface\\evidence\\A1\\compare-sheet.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-gate-stone-surface\\evidence\\A1\\compare-sheet.png",
+     "sha256": "396dd08d685af2de0170813e42c5ab3963c737fe7c23d8fbeca81dc35282b8c6",
+     "command": "시안 C12와 4개 루트 정면·근접 전후 비교(915x412 dpr2 헤드리스)",
+     "observedAt": "2026-10-19T22:21:10.112Z",
+     "subjectDigest": "src:f04e837eebf34ead72a59e81b4a5f7965a69122ac2802fd8b022e162e5181837"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-gate-stone-surface\\evidence\\A1\\after-14-routes.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-gate-stone-surface\\evidence\\A1\\after-14-routes.png",
+     "sha256": "758b1771f70fafdfdc9b703d3f37753e0ae77235d2177588cedb5097c306b754",
+     "command": "14개 루트 정면 후",
+     "observedAt": "2026-10-19T22:21:11.232Z",
+     "subjectDigest": "src:f04e837eebf34ead72a59e81b4a5f7965a69122ac2802fd8b022e162e5181837"
+    }
+   ],
+   "neededInput": null,
+   "note": "512px 손그림 돌 타일을 삼면 투영으로 정점 색에 곱함. 결·균열·모서리 하이라이트 보임, 루트별 색 유지."
+  },
+  {
+   "id": "A2",
+   "claim": "아치 윗면 풀·이끼 덮개와 늘어진 덩굴, 불규칙한 풍화 윤곽이 시안 수준으로 보인다 / 근접 캡처와 비교 시트",
+   "status": "failed",
+   "surfaces": [
+    "근접 캡처와 비교 시트"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-gate-stone-surface\\evidence\\A2\\live-close.png",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-gate-stone-surface\\evidence\\A2\\live-close.png",
+     "sha256": "a9c1f821a270b9cfc758c01ef9197ace4fb77a1badaf9710c2dca0fa24dbb262",
+     "command": "node work/probe/gate-shot.mjs https://blade.tllhouse.com/ live (라이브 85c0e1f 근접)",
+     "observedAt": "2026-10-19T22:21:12.421Z",
+     "subjectDigest": "src:f04e837eebf34ead72a59e81b4a5f7965a69122ac2802fd8b022e162e5181837"
+    },
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-gate-stone-surface\\evidence\\A2\\remaining-diffs.md",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-gate-stone-surface\\evidence\\A2\\remaining-diffs.md",
+     "sha256": "16a93206ec2690add5a8e1d7b1dc200c7e71c6212a05c5834c4617a4f2ee0429",
+     "command": "시안 대비 남은 차이 목록",
+     "observedAt": "2026-10-19T22:21:13.743Z",
+     "subjectDigest": "src:f04e837eebf34ead72a59e81b4a5f7965a69122ac2802fd8b022e162e5181837"
+    }
+   ],
+   "neededInput": null,
+   "note": "아치 윗면 이끼 덮개·리본 덩굴·어긋난 윗선은 반영. 시안처럼 돌 가장자리를 두껍게 덮는 이끼, 돌마다 다른 손그림 얼룩, 바닥 돌무더기는 남아 실패 처리."
+  },
+  {
+   "id": "A3",
+   "claim": "관문 draw call 루트별 동일, 삼각형 bdea615 대비 2배 이하, 텍스처 512px webp 100KB 이하, 915x412 로비 30fps 상한 유지 / 예산 표·renderer.info",
+   "status": "passed",
+   "surfaces": [
+    "예산 표·renderer.info"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-gate-stone-surface\\evidence\\A3\\gate-budget.md",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-gate-stone-surface\\evidence\\A3\\gate-budget.md",
+     "sha256": "afb900bbcd1f1afab295d4406df46f5be115c0e6ccd03ab07caa9ae0d50bd38f",
+     "command": "node work/probe/gate-budget.mjs, gate-perf.mjs",
+     "observedAt": "2026-10-19T22:21:14.862Z",
+     "subjectDigest": "src:f04e837eebf34ead72a59e81b4a5f7965a69122ac2802fd8b022e162e5181837"
+    }
+   ],
+   "neededInput": null,
+   "note": "삼각형 bdea615 대비 최대 1.86배, draw call 동일, 915x412 mid 로비 30fps, 렌더 1회 2.76→2.83ms(헤드리스 데스크톱 GPU)."
+  },
+  {
+   "id": "A4",
+   "claim": "bun run check 통과 / 명령 출력",
+   "status": "passed",
+   "surfaces": [
+    "명령 출력"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-gate-stone-surface\\evidence\\A4\\commit-msg.txt",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-gate-stone-surface\\evidence\\A4\\commit-msg.txt",
+     "sha256": "9d38604a596f3f0dba974c6d6032421608a9149a90fdc1062086a7c60a42e5bc",
+     "command": "pdev land --check ",
+     "observedAt": "2026-10-19T22:21:16.007Z",
+     "subjectDigest": "src:f04e837eebf34ead72a59e81b4a5f7965a69122ac2802fd8b022e162e5181837"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  },
+  {
+   "id": "A5",
+   "claim": "정식 호스트 blade.tllhouse.com version.json SHA가 병합된 main과 같다 / version.json",
+   "status": "passed",
+   "surfaces": [
+    "version.json"
+   ],
+   "evidence": [
+    {
+     "kind": "file",
+     "reference": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-gate-stone-surface\\evidence\\A5\\A5-version.json",
+     "path": "C:\\Users\\heart\\AppData\\Local\\APEX\\gogo\\aljjang95-blade-surge\\cycles\\20261020-gate-stone-surface\\evidence\\A5\\A5-version.json",
+     "sha256": "e46374abc93a47892879b5a5cb863164ed09ed638e95a7169e5daf4b7082d538",
+     "command": "curl https://blade.tllhouse.com/version.json (85c0e1f = origin/main)",
+     "observedAt": "2026-10-19T22:21:17.235Z",
+     "subjectDigest": "src:f04e837eebf34ead72a59e81b4a5f7965a69122ac2802fd8b022e162e5181837"
+    }
+   ],
+   "neededInput": null,
+   "note": null
+  }
+ ],
+ "freshReview": {
+  "required": false,
+  "status": "not_required"
+ },
+ "remaining": [
+  "A2 이끼 두께·돌별 손그림 얼룩·바닥 돌무더기, 금속 아치 질감"
+ ],
+ "verdict": "incomplete",
+ "acceptanceChanges": [],
+ "weakened": [],
+ "deploy": {
+  "target": "https://blade.tllhouse.com",
+  "version": "b5001175-3d43-440d-ade5-aa8520c62fb8",
+  "readback": "version.json sha 85c0e1f16d3bf4477fac597f4efeccca65165429 (2026-10-19T22:20:03Z)",
+  "rollback": "b82ed370-cc09-4195-8eb5-620db8f6eb93 (deployment f242408e-d683-4ab0-8052-95406cbd3579)",
+  "subjectDigest": "src:f04e837eebf34ead72a59e81b4a5f7965a69122ac2802fd8b022e162e5181837",
+  "pr": "https://github.com/aljjang95/blade-surge/pull/212"
+ },
+ "lanes": [
+  {
+   "name": "관문 질감",
+   "agent": "01a155d4-6958-7de1-b32d-ecbe55097cad",
+   "model": "anthropic/claude-sonnet-5-5 high, drift 0"
+  }
+ ],
+ "harnessChanges": [],
+ "frictions": [
+  "첫 배포 시도가 D1 배포 잠금 보유 중(다른 배포)으로 중단, 잠금 해제 확인 후 재배포",
+  "하위 에이전트 임시 빌드 폴더 재귀 삭제가 실행 정책에 막힘(junction은 제거)",
+  "2번 덩어리에서 send_input으로 되살린 관문 에이전트의 모델 변경 여부는 장부 삭제로 확인 불가"
+ ],
+ "standingGates": [],
+ "next": "남은 기기·대표님 판정 게이트(S26 페어링, 관문 시각 판정)",
+ "quota": null,
+ "updatedAt": "2026-10-19T22:21:18.475Z",
+ "summary": "돌 질감·덩굴·풍화 윗선 라이브 85c0e1f 반영, 이끼 두께와 돌별 손그림 얼룩은 시안 대비 남음."
+}
