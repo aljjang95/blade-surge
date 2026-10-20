@@ -31,9 +31,17 @@ test('remote input normalizes identifiers and expires held and queued input afte
   input.receive({x:.5,y:-1,attack:true,actions:['skill0','skill0','dodge','invalid']},1000);
   expect(input.move).toEqual({x:.5,y:-1});expect(input.attackHeld).toBe(true);
   expect(input.consume('skill0')).toBe(true);expect(input.consume('skill0')).toBe(false);
-  expect(input.queue).toEqual(['dodge']);
-  input.expire(1350);expect(input.attackHeld).toBe(true);expect(input.queue).toEqual(['dodge']);
+  expect(input.queue).toEqual(['dodge','attack']);
+  input.expire(1350);expect(input.attackHeld).toBe(true);expect(input.queue).toEqual(['dodge','attack']);
   input.expire(1351);expect(input.move).toEqual({x:0,y:0});expect(input.attackHeld).toBe(false);expect(input.queue).toEqual([]);
+});
+
+test('remote held attack reaches the host player through the attack queue',()=>{
+  const input=new RemoteInput();
+  input.receive({x:0,y:0,attack:true,actions:[]},1000);
+  expect(input.consume('attack')).toBe(true);
+  input.receive({x:0,y:0,attack:false,actions:[]},1060);
+  expect(input.consume('attack')).toBe(false);
 });
 
 test('party stat normalization is immutable and applies the documented attack and durability curves',()=>{

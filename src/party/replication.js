@@ -5,6 +5,8 @@ export class RemoteInput {
   receive(packet, now) {
     this.move.x = packet.x; this.move.y = packet.y; this.attackHeld = packet.attack;
     for (const action of packet.actions) this.press(action);
+    // 호스트의 Player는 공격을 큐('attack')로만 받는다. 누름 상태만 켜면 게스트 평타가 실행되지 않는다.
+    if (packet.attack && !this.queue.includes('attack')) this.queue.push('attack');
     this.last = now;
   }
   press(action) { if (PARTY_ACTIONS.includes(action) && !this.queue.includes(action)) this.queue.push(action); }
