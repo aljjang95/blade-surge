@@ -289,7 +289,7 @@ test('승리 결과는 다음 출격 스테이지·새 지역·권장 Lv 대비 
   expect(block).toBeDefined(); expect(block.dataset.newRegion).toBe('true');
   const text = block.textContent;
   expect(text).toContain('다음 출격'); expect(text).toContain('새 지역 개방: ' + stageDef(2, 1).chapter.name);
-  expect(text).toContain('2-1 · ' + stageDef(2, 1).title); expect(text).toContain('권장 Lv.' + stageDef(2, 1).recommendedLevel);
+  expect(text).toContain('2-1 · ' + stageDef(2, 1).title); expect(text).toContain('권장 Lv.' + (stageDef(2, 1) as any).recommendedLevel);
   expect(text).toMatch(/내 Lv\.\d+/); expect(text).toContain('대표 보상');
   expect(f.calls).not.toContain('start');
 });

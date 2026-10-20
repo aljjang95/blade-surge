@@ -50,9 +50,11 @@ export function bossLootSummary(chapter, difficulty = 'story') {
   };
 }
 
+/** @typedef {{ gearRolls: number, gearChance: number, epicChance: number }} RankLoot */
+
 /**
  * 스테이지 전리품 안내 문구 묶음. 난이도를 바꾸면 값이 바뀐다.
- * @returns {{ lines: string[], boss: object, elite: object, normal: object }}
+ * @returns {{ lines: string[], boss: RankLoot, elite: RankLoot, normal: RankLoot }}
  */
 export function lootGuide(chapter, difficulty = 'story') {
   const boss = lootTable(chapter, 'boss', difficulty), elite = lootTable(chapter, 'elite', difficulty), normal = lootTable(chapter, 'normal', difficulty);
@@ -76,8 +78,8 @@ function frontierIndex(progress) {
 
 /**
  * 다음 출격 안내.
- * @param {{ unlocked?: number, stars?: Record<string, number>, difficulty?: string }} progress eco.s.progress
- * @param {number} heroLevel 출전 영웅 레벨
+ * @param {{ unlocked?: number, stars?: Record<string, number>, difficulty?: string } | undefined} progress eco.s.progress
+ * @param {number | undefined} heroLevel 출전 영웅 레벨
  */
 export function nextGuide(progress, heroLevel) {
   const idx = frontierIndex(progress);

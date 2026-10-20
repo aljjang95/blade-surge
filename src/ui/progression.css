@@ -48,3 +48,11 @@
 .next-guide-level[data-tone=good] b{color:#7be0a4}.next-guide-level[data-tone=warn] b{color:#ffd070}.next-guide-level[data-tone=bad] b{color:#ff8a8a}.next-guide-level[data-tone=muted] b{color:#a9b5b8}
 .next-guide-level .next-guide-detail{color:#9fb0aa;font-size:10px}
 .next-guide .next-guide-drops{color:#bac8c2;font-size:11px}
+/* 새 장비 비교·NEW 표시 (loot-compare.js) */
+.result-box .loot-item[data-verdict]{height:auto;min-height:68px;padding-bottom:3px}
+.loot-item .lc{position:static;margin-top:1px;font-size:9px;font-weight:900;line-height:11px;white-space:nowrap;color:#d8e3e6;text-shadow:0 1px 2px #000}
+.loot-item[data-verdict=better]{box-shadow:0 0 0 2px #7be0a4,0 0 10px #7be0a47a}
+.loot-item[data-verdict=better] .lc{color:#8dffb4}
+.loot-item[data-verdict=worse] .lc,.loot-item[data-verdict=same] .lc{color:#ffd070}
+.bag-item .bag-new{position:absolute;left:3px;top:22px;padding:0 4px;border-radius:5px;background:#ff5a7a;color:#fff;font-style:normal;font-size:10px;font-weight:900;line-height:14px;pointer-events:none}
+.mpl-new{right:2px;bottom:2px;padding:1px 3px;border-radius:2px;background:#ff5a7a;color:#fff;font-size:9px;text-shadow:none}
