@@ -279,6 +279,10 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .shop-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px; overflow-y: auto; padding-bottom: 20px; }
 /* 성장 흐름 줄(보석 → 소환 → 중복 조각 → 초월 → 더 강한 전투)과 상품별 용도 표시. growth-flow.js 가 문구를 정한다. */
 .shop-flow { display: flex; align-items: center; gap: 3px; margin: 0 0 4px; overflow-x: auto; scrollbar-width: none; }
+/* 초월 최고 등급(SSSR) 색. hero-grades.js GRADE_RULES.SSSR.color 와 같다. */
+:root { --r-sssr: #ff5a8a; }
+.rar-SSSR { border-color: var(--r-sssr) !important; box-shadow: inset 0 0 14px rgba(255, 90, 138, .5), 0 0 10px rgba(255, 90, 138, .35) !important; }
+.bg-SSSR { background: linear-gradient(90deg, #ff5a8a, #ffcf5a, #7ad7ff); color: #2a0010; }
 .shop-flow::-webkit-scrollbar { display: none; }
 .shop-flow .sf-step { flex: 0 0 auto; display: inline-flex; align-items: baseline; gap: 4px; padding: 2px 8px; border-radius: 999px; border: 1px solid rgba(255, 207, 90, .35); background: rgba(12, 8, 24, .55); color: var(--sb-cream, #f3e6c8); font-size: 11px; line-height: 1.3; cursor: pointer; }
 .shop-flow .sf-step b { font-weight: 900; }

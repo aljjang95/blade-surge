@@ -26,6 +26,7 @@ import { AVATARS } from '../data/avatars.js';
 import { libraryAssetForAvatar } from '../engine/library-assets.js';
 import { itemVisual, itemIconHtml } from './item-presentation.js';
 import { GROWTH_FLOW, skuFlowRole, shardProgress } from '../data/growth-flow.js';
+import { heroGrade } from '../data/hero-grades.js';
 // 공개 확률은 실제 소환 코드와 같은 식(gachaRates/gachaChances)에서만 계산한다. 화면에 숫자를 따로 적지 않는다.
 const pct = (p, d = 1) => (p * 100).toFixed(d) + '%';
 const clampPity = (n) => Math.max(0, Math.min(GACHA.pity, Math.floor(Number(n) || 0)));
@@ -77,7 +78,7 @@ export const stageKeyArt = (stage) => {
   return resolveEnemyPortrait(id, ENEMIES[id]);
 };
 
-const RC = { N: 'var(--r-n)', R: 'var(--r-r)', SR: 'var(--r-sr)', SSR: 'var(--r-ssr)' };
+const RC = { N: 'var(--r-n)', R: 'var(--r-r)', SR: 'var(--r-sr)', SSR: 'var(--r-ssr)', SSSR: 'var(--r-sssr)' };
 const hms = (ms) => { const s = Math.max(0, Math.floor(ms / 1000)); const d = Math.floor(s / 86400); const h = Math.floor((s % 86400) / 3600), m = Math.floor((s % 3600) / 60), ss = s % 60; return (d ? d + '일 ' : '') + `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${ss.toString().padStart(2, '0')}`; };
 
 export class Meta {
@@ -152,7 +153,9 @@ export class Meta {
   }
   refreshHome() {
     const s = this.eco.s; const def = HEROES[s.selected]; const nx = this.eco.nextStage();
-    $('lobby-hero-name').textContent = def.name; $('lobby-rarity').textContent = def.rarity; $('lobby-rarity').style.background = RC[def.rarity]; $('lobby-power').textContent = fmt(this.eco.heroPower(s.selected));
+    // 초월로 오른 현재 등급을 보인다(시작 등급 def.rarity 가 아니라).
+    const grade = heroGrade(def, this.eco.hero(s.selected));
+    $('lobby-hero-name').textContent = def.name; $('lobby-rarity').textContent = grade; $('lobby-rarity').style.background = RC[grade]; $('lobby-power').textContent = fmt(this.eco.heroPower(s.selected));
     const complete = campaignFinished(s.progress);
     $('stage-pill-txt').textContent = complete ? '캠페인 완주 · 새로운 원정' : nx.name; $('battle-cost').textContent = nx.energy;
     $('btn-battle').firstElementChild.textContent = complete ? '심층 원정' : '출 격';
@@ -251,11 +254,12 @@ export class Meta {
     if (!HEROES[this.heroSel]) this.heroSel = this.eco.s.selected;
     for (const id of HERO_ORDER) {
       const def = HEROES[id]; const own = this.eco.ownHero(id); const h = this.eco.hero(id);
-      const c = document.createElement('button'); c.type = 'button'; c.className = `hero-card rar-${def.rarity}` + (own ? '' : ' lock') + (this.heroSel === id ? ' on' : '');
+      const grade = own ? heroGrade(def, h) : def.rarity;
+      const c = document.createElement('button'); c.type = 'button'; c.className = `hero-card rar-${grade}` + (own ? '' : ' lock') + (this.heroSel === id ? ' on' : '');
       c.dataset.heroId = id;
       c.setAttribute('aria-label', `${def.name}${own ? ' 출전 선택' : ' 미보유 정보'}`);
       c.setAttribute('aria-pressed', String(this.eco.s.selected === id));
-      c.innerHTML = `<img onerror="this.style.background='${def.color}'"><span class="rar bg-${def.rarity}">${def.rarity}</span>${own ? `<span class="lv">Lv.${h.level} ${'★'.repeat(h.star)}</span>` : '<span class="lockt">미보유</span>'}`;
+      c.innerHTML = `<img onerror="this.style.background='${def.color}'"><span class="rar bg-${grade}">${grade}</span>${own ? `<span class="lv">Lv.${h.level} ${'★'.repeat(h.star)}</span>` : '<span class="lockt">미보유</span>'}`;
       c.onclick = (event) => { if (own) this.selectHero(id, event.detail === 0 && document.activeElement === c); else { this.heroSel = id; this.renderHeroes(); } };
       list.appendChild(c);
       bindHeroPortrait(c.querySelector('img'), this.app, id);
