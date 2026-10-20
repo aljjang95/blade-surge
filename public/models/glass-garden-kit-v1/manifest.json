@@ -3,7 +3,7 @@
   "schema": 1,
   "blender": "5.2.2 LTS",
   "generator": "tools/art/build-glass-garden-kit-v1.py",
-  "generatorSha256": "edb640f3701ea87470354545f737b56e63cbc621ede0b73f21d235ea01be2f26",
+  "generatorSha256": "8d5d842e6eec3e77d8a966201dc763d708da6dc1a63a6e226497d1307dc41a45",
   "seed": 20261021,
   "rights": "Original authored geometry and palette; no external assets or generation providers",
   "license": "Project-owned original assets",
