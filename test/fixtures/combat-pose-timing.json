@@ -793,9 +793,9 @@
   },
   "pinned": {
     "src/engine/hero-body-motion.js": "32c54ebb444722aa066f90e7256c6090f0e8c0b924577b26615a0523cf93cdf4",
-    "src/data/rogue-t2-body-motion-v2.json": "9eac337618475df517c9892025f0784dd9ddced116b8cb4b5d60b08d045da662",
-    "tools/combat-mesh-qa.mjs": "1ac2173b77db2c25785bc4d87e8d13c5fb590301c5d48cac04db46b41ccfdc34",
-    "src/data/higher-body-motion-v1.json": "4735bf9b80f3944d71cf978acdcb24d5632ad10bd0a4099446987c4907b82db6",
-    "src/data/higher-body-revisions-v1.json": "04640b8ac409875b0c05ffeb5f52961ee86d86458dfcac4a077c0395859794d2"
+    "src/data/rogue-t2-body-motion-v2.json": "16c695e2e24ce5d1819b0fb242ca69570523aff409fe6d8bc62d5aae7646fb1c",
+    "tools/combat-mesh-qa.mjs": "4a02ee11bda1799ce13c59f075d3f4399c8dcb3086396734f248a75ec9b2c9e5",
+    "src/data/higher-body-motion-v1.json": "3b5d0a0e6099350d5c3f322a3cf49c71f837d29403f65e26c3d7e1abacff9dcd",
+    "src/data/higher-body-revisions-v1.json": "a0cbf5437806619fd63cfa40fd72ccdcf7118f1fb52ca1bf645758a17812208e"
   }
 }
