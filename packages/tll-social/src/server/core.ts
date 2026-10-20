@@ -4,13 +4,13 @@ import {
 } from '../shared/protocol';
 import {
   SocialError, bool, channel as parseChannel, diagnostics, integer, object, partyCode, playerId as parsePlayerId,
-  playerName, presence as parsePresence, text,
+  playerName, presence as parsePresence, runSummary, text,
 } from '../shared/validation';
 import { filterChat, maskBanned } from '../shared/filter';
 import { titleForRank, titleLabel } from '../shared/titles';
 import { migrate, type Sql } from './schema';
 
-export type Target = { sid: string } | { player: string } | { channel: string } | { worlds: true } | { all: true };
+export type Target = { sid: string } | { player: string } | { keyHash: string } | { channel: string } | { worlds: true } | { all: true };
 export interface Effect { to: Target; message?: Record<string, unknown>; close?: { code: number; reason: string }; exclude?: string[] }
 export interface Webhook { kind: 'board' | 'fame'; title: string; description: string }
 export interface CoreResult { status: number; body: unknown; effects: Effect[]; webhooks: Webhook[] }
@@ -37,6 +37,7 @@ export interface CoreDeps {
 interface Ctx { req: CoreRequest; keyHash: string | null; out: CoreResult; pre: { subjectHash?: string; deviceKeyHash?: string } }
 
 const HOUR = 3600000;
+const DAY = 24 * HOUR;
 const LIMITS = { friends: 100, incoming: 50, blocks: 200, openRuns: 5, inbox: 100, keys: 5, sockets: 3, perSecond: 10, presenceMs: 2000, nonceMs: 600000 };
 const ADMIN_PATHS = new Set(['/admin/mute', '/admin/ban', '/admin/revoke-clear']);
 
@@ -50,7 +51,7 @@ const placeholders = (n: number) => Array.from({ length: n }, () => '?').join(',
 export class SocialCore {
   private second = new Map<string, { s: number; n: number }>();
   private burst = new Map<string, number[]>();
-  constructor(private readonly d: CoreDeps) { migrate(d.sql); }
+  constructor(private readonly d: CoreDeps) { this.tx(() => migrate(d.sql)); }
 
   private all(query: string, ...bindings: unknown[]): any[] { return this.d.sql.exec(query, ...bindings).toArray(); }
   private one(query: string, ...bindings: unknown[]): any { return this.all(query, ...bindings)[0]; }
@@ -103,6 +104,7 @@ export class SocialCore {
       if (hit) return this.publicProfile(hit[1], this.me(c.keyHash));
       if (path === '/listings') return this.listings(this.me(c.keyHash));
       if (path === '/fame') return this.fame();
+      if (path === '/admin/clears') { this.admin(c); return this.adminClears(c); }
       hit = m(/^\/fame\/([A-Za-z0-9_-]{1,64})$/);
       if (hit) return this.fameContent(hit[1]);
       if (path === '/board') return this.board(c);
@@ -231,7 +233,7 @@ export class SocialCore {
     this.limit('profile:' + c.req.ipHash, 5, HOUR);
     const no = (this.one('SELECT COALESCE(MAX(no), 0) AS n FROM players').n as number) + 1;
     const id = 'p_' + this.d.randomHex(12);
-    this.run('INSERT INTO players(id, name, tag, no, created_at) VALUES (?, ?, ?, ?, ?)', id, name, this.freeTag(name), no, now);
+    this.run('INSERT INTO players(id, name, tag, no, created_at, created_ip_hash) VALUES (?, ?, ?, ?, ?, ?)', id, name, this.freeTag(name), no, now, c.req.ipHash);
     this.run('INSERT INTO player_keys(key_hash, player_id, created_at, last_seen) VALUES (?, ?, ?, ?)', c.keyHash, id, now, now);
     if (no <= this.config.founders.maxNo) {
       this.grant(id, this.config.founders.titleId);
@@ -356,6 +358,8 @@ export class SocialCore {
     if (!this.one('SELECT 1 AS x FROM blocks WHERE owner = ? AND target = ?', me.id, target)
       && this.one('SELECT COUNT(*) AS n FROM blocks WHERE owner = ?', me.id).n >= LIMITS.blocks) throw new SocialError('blocks-full', 409);
     this.run('INSERT OR IGNORE INTO blocks(owner, target) VALUES (?, ?)', me.id, target);
+    this.purgeInboxFrom(me.id, target);
+    this.purgeInboxFrom(target, me.id);
     const hadFriend = this.areFriends(me.id, target);
     this.run('DELETE FROM friends WHERE (a = ? AND b = ?) OR (a = ? AND b = ?)', me.id, target, target, me.id);
     this.run('DELETE FROM friend_requests WHERE (from_id = ? AND to_id = ?) OR (from_id = ? AND to_id = ?)', me.id, target, target, me.id);
@@ -374,6 +378,14 @@ export class SocialCore {
     this.run('INSERT INTO dm_inbox(to_id, payload, created_at) VALUES (?, ?, ?)', to, JSON.stringify(msg), msg.at);
     this.run('DELETE FROM dm_inbox WHERE to_id = ? AND id NOT IN (SELECT id FROM dm_inbox WHERE to_id = ? ORDER BY id DESC LIMIT ?)', to, to, LIMITS.inbox);
   }
+  private inboxSender(msg: Msg): string | undefined {
+    return msg.from?.id ?? (msg.data as { player?: PublicMini } | undefined)?.player?.id;
+  }
+  private purgeInboxFrom(to: string, from: string): void {
+    for (const row of this.all('SELECT id, payload FROM dm_inbox WHERE to_id = ?', to)) {
+      if (this.inboxSender(JSON.parse(row.payload)) === from) this.run('DELETE FROM dm_inbox WHERE id = ?', row.id);
+    }
+  }
   /** 온라인이면 실시간으로, 오프라인이면 시스템 메시지를 보관함에 남긴다. */
   private notify(effects: Effect[], to: string, message: Record<string, unknown>, offlineText: string): void {
     if (this.online(to)) { effects.push({ to: { player: to }, message }); return; }
@@ -385,21 +397,23 @@ export class SocialCore {
     object(c.req.body ?? {}, []);
     const now = this.d.now();
     this.run('DELETE FROM ws_tickets WHERE expires_at <= ?', now);
+    this.limit('ticket:' + me.id, 20, 60000);
     const ticket = this.d.randomHex(16), expiresAt = now + SOCIAL_LIMITS.ticketMs;
-    this.run('INSERT INTO ws_tickets(ticket, player_id, expires_at) VALUES (?, ?, ?)', ticket, me.id, expiresAt);
+    this.run('INSERT INTO ws_tickets(ticket, player_id, expires_at, key_hash) VALUES (?, ?, ?, ?)', ticket, me.id, expiresAt, c.keyHash);
+    this.run('DELETE FROM ws_tickets WHERE player_id = ? AND ticket NOT IN (SELECT ticket FROM ws_tickets WHERE player_id = ? ORDER BY rowid DESC LIMIT 5)', me.id, me.id);
     return { ticket, expiresAt };
   }
-  /** 1회용 티켓을 소비하고 플레이어 id를 돌려준다. */
-  consumeTicket(ticket: unknown): string {
+  /** 1회용 티켓을 소비하고 발급 당시 신원과 기기 키를 돌려준다. */
+  consumeTicket(ticket: unknown): { playerId: string; keyHash: string } {
     if (typeof ticket !== 'string' || !WS_TICKET.test(ticket)) throw new SocialError('ticket', 401);
     return this.tx(() => {
-      const row = this.one('SELECT player_id, expires_at FROM ws_tickets WHERE ticket = ?', ticket);
+      const row = this.one('SELECT player_id, expires_at, key_hash FROM ws_tickets WHERE ticket = ?', ticket);
       this.run('DELETE FROM ws_tickets WHERE ticket = ? OR expires_at <= ?', ticket, this.d.now());
-      if (!row || row.expires_at <= this.d.now()) throw new SocialError('ticket', 401);
+      if (!row || row.expires_at <= this.d.now() || !this.one('SELECT 1 FROM player_keys WHERE key_hash = ? AND player_id = ?', row.key_hash, row.player_id)) throw new SocialError('ticket', 401);
       const p = this.player(row.player_id);
       if (!p) throw new SocialError('ticket', 401);
       if (p.banned) throw new SocialError('banned', 403);
-      return p.id as string;
+      return { playerId: p.id, keyHash: row.key_hash };
     });
   }
 
@@ -416,6 +430,7 @@ export class SocialCore {
     return { items: rows.filter(r => minis.has(r.host_id)).map(r => this.listingView(r, minis.get(r.host_id)!)) };
   }
   private saveListing(me: any, c: Ctx) {
+    this.speaker({ playerId: me.id });
     const body = object(c.req.body, ['partyCode', 'contentId', 'note', 'slots', 'members']);
     const code = partyCode(body.partyCode);
     const contentId = body.contentId === null || body.contentId === undefined ? null : this.content(body.contentId).id;
@@ -432,7 +447,8 @@ export class SocialCore {
     }
     const row = this.one('SELECT * FROM listings WHERE host_id = ?', me.id);
     const host = this.mini(me.id), view = this.listingView(row, host);
-    if (!existing) {
+    if (!existing && !this.one('SELECT 1 FROM rate_events WHERE key = ? AND at >= ?', 'listing-broadcast:' + me.id, now - SOCIAL_LIMITS.listingMs)) {
+      this.limit('listing-broadcast:' + me.id, 1, SOCIAL_LIMITS.listingMs);
       const contentName = contentId ? this.content(contentId).name : '자유 사냥';
       const m: Msg = { id: this.id(), channel: null, kind: 'listing', from: host, text: host.name + '님이 파티원을 모집합니다 · ' + contentName + ' (' + members + '/' + slots + ')', at: now, data: view };
       c.out.effects.push({ to: { worlds: true }, message: { t: 'msg', m }, exclude: this.blockSet(me.id) });
@@ -452,11 +468,11 @@ export class SocialCore {
     if (!content) throw new SocialError('content');
     return content;
   }
-  private linked(pid: string): boolean { return !!this.one('SELECT 1 AS x FROM account_links WHERE player_id = ?', pid); }
   private runStart(me: any, c: Ctx) {
     const body = object(c.req.body, ['contentId', 'mode']);
     const content = this.content(body.contentId);
     if (body.mode !== 'solo' && body.mode !== 'party') throw new SocialError('mode');
+    this.limit('run-start:' + me.id, 30, HOUR);
     const now = this.d.now();
     this.run('DELETE FROM runs WHERE started_at < ?', now - SOCIAL_LIMITS.runMs);
     const open = this.all('SELECT id FROM runs WHERE player_id = ? AND cleared_at IS NULL ORDER BY started_at, id', me.id);
@@ -467,7 +483,7 @@ export class SocialCore {
     return { runId, contentId: content.id, startedAt: now };
   }
   private runClear(me: any, c: Ctx) {
-    const runId = object(c.req.body, ['runId']).runId;
+    const body = object(c.req.body, ['runId', 'summary']), runId = body.runId;
     if (typeof runId !== 'string' || !/^[a-f0-9]{32}$/.test(runId)) throw new SocialError('run');
     const run = this.one('SELECT * FROM runs WHERE id = ? AND player_id = ?', runId, me.id);
     if (!run) throw new SocialError('run-not-found', 404);
@@ -475,18 +491,25 @@ export class SocialCore {
     const now = this.d.now(), elapsed = now - run.started_at, content = this.content(run.content_id);
     if (elapsed > SOCIAL_LIMITS.runMs) { this.run('DELETE FROM runs WHERE id = ?', runId); throw new SocialError('run-expired', 410); }
     if (elapsed < content.minClearSec * 1000) throw new SocialError('too-fast', 422);
+    const summary = runSummary(body.summary, elapsed);
     this.run('UPDATE runs SET cleared_at = ? WHERE id = ?', now, runId);
     const prior = this.one('SELECT * FROM clears WHERE content_id = ? AND player_id = ?', content.id, me.id);
     const newTitles: Title[] = [];
     let rank = prior?.rank ?? 0, bestMs = elapsed, newBest = true;
+    const subject = this.one('SELECT subject_hash FROM account_links WHERE player_id = ? AND provider = ?', me.id, 'google')?.subject_hash ?? null;
+    // 취소된 순위도 계정의 선점 이력으로 남긴다. 연동 해제로 순위를 복제하지 못한다.
+    const eligible = !this.config.fame?.requireLinked || (subject !== null && !this.one('SELECT 1 FROM clears WHERE content_id = ? AND subject_hash = ? AND rank > 0', content.id, subject));
+    const newlyRanked = rank === 0 && !prior?.revoked && eligible;
+    if (newlyRanked) rank = (this.one('SELECT COALESCE(MAX(rank), 0) AS r FROM clears WHERE content_id = ?', content.id).r as number) + 1;
+    const subjectHash = newlyRanked ? subject : prior?.subject_hash ?? null;
     if (prior) {
       newBest = elapsed < prior.best_ms;
       bestMs = Math.min(prior.best_ms, elapsed);
-      this.run('UPDATE clears SET best_ms = ?, count = count + 1 WHERE content_id = ? AND player_id = ?', bestMs, content.id, me.id);
+      this.run('UPDATE clears SET best_ms = ?, count = count + 1, rank = ?, subject_hash = ?, summary = ?, last_at = ?, first_at = ? WHERE content_id = ? AND player_id = ?', bestMs, rank, subjectHash, summary ? JSON.stringify(summary) : null, now, newlyRanked ? now : prior.first_at, content.id, me.id);
     } else {
-      const ranked = !this.config.fame?.requireLinked || this.linked(me.id);
-      rank = ranked ? (this.one('SELECT COALESCE(MAX(rank), 0) AS r FROM clears WHERE content_id = ?', content.id).r as number) + 1 : 0;
-      this.run('INSERT INTO clears(content_id, player_id, first_at, best_ms, count, rank) VALUES (?, ?, ?, ?, 1, ?)', content.id, me.id, now, elapsed, rank);
+      this.run('INSERT INTO clears(content_id, player_id, first_at, best_ms, count, rank, subject_hash, summary, last_at) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?)', content.id, me.id, now, elapsed, rank, subjectHash, summary ? JSON.stringify(summary) : null, now);
+    }
+    if (newlyRanked) {
       const mini = this.mini(me.id);
       const title = rank > 0 ? titleForRank(this.config, content.id, rank) : null;
       if (title && this.grant(me.id, title.id)) {
@@ -506,6 +529,16 @@ export class SocialCore {
       }
     }
     return { contentId: content.id, elapsedMs: elapsed, firstClear: !prior, rank, bestMs, newBest, newTitles };
+  }
+
+  private adminClears(c: Ctx) {
+    const content = this.content(c.req.query.get('contentId'));
+    const rows = (order: string) => this.all('SELECT * FROM clears WHERE content_id = ? ' + order, content.id);
+    const recent = rows('ORDER BY last_at DESC, player_id LIMIT 50');
+    const top = rows('AND rank BETWEEN 1 AND 10 ORDER BY rank');
+    const minis = this.minis([...recent, ...top].map(r => r.player_id));
+    const view = (r: any) => ({ player: minis.get(r.player_id) ?? null, rank: r.rank, firstAt: r.first_at, lastAt: r.last_at, bestMs: r.best_ms, count: r.count, revoked: !!r.revoked, summary: r.summary ? JSON.parse(r.summary) : null });
+    return { contentId: content.id, recent: recent.map(view), top: top.map(view) };
   }
 
   private fameRows(contentId: string, order: 'rank' | 'best', limit: number) {
@@ -644,15 +677,18 @@ export class SocialCore {
       if (!this.player(target)) throw new SocialError('player-not-found', 404);
     }
     const ref = body.ref === undefined ? null : text(body.ref, 0, 64, 'ref');
+    if (body.kind === 'chat' && (!ref || !this.reportedMessage(target, ref))) throw new SocialError('ref');
     const reason = text(body.reason ?? '', 0, 100, 'reason');
     this.limit('report:' + me.id, 10, HOUR);
     const now = this.d.now();
     this.run('INSERT INTO reports(reporter, target, kind, ref, reason, created_at) VALUES (?, ?, ?, ?, ?, ?)', me.id, target, body.kind, ref, reason, now);
     let autoMuted = false;
     if (body.kind === 'chat') {
-      const n = this.one('SELECT COUNT(DISTINCT reporter) AS n FROM reports WHERE target = ? AND kind = ? AND created_at >= ?', target, 'chat', now - HOUR).n;
+      const rows = this.all('SELECT r.reporter, r.ref, r.created_at AS reported_at, p.created_at, p.created_ip_hash FROM reports r JOIN players p ON p.id = r.reporter WHERE r.target = ? AND r.kind = ? AND r.created_at >= ? AND p.banned = 0', target, 'chat', now - HOUR);
+      const eligible = rows.filter(r => r.created_at <= r.reported_at - DAY && r.created_ip_hash && r.created_ip_hash !== 'unknown' && r.ref && this.reportedMessage(target, r.ref));
+      const reporters = new Set(eligible.map(r => r.reporter)), ips = new Set(eligible.map(r => r.created_ip_hash));
       const p = this.player(target);
-      if (n >= 3 && p.muted_until <= now) {
+      if (reporters.size >= 3 && ips.size >= 3 && p.muted_until <= now) {
         const until = now + 10 * 60000;
         this.run('UPDATE players SET muted_until = ? WHERE id = ?', until, target);
         c.out.effects.push({ to: { player: target }, message: { t: 'error', code: 'muted', retryAfterMs: until - now } });
@@ -661,6 +697,21 @@ export class SocialCore {
     }
     c.out.status = 201;
     return { ok: true, autoMuted };
+  }
+  /** 본문을 보관하지 않는 제한된 작성자 인덱스. 파티·귓속말도 신고할 수 있다. */
+  private rememberMessage(msg: Msg): void {
+    this.run('DELETE FROM recent_messages WHERE at < ?', this.d.now() - DAY);
+    this.run('INSERT INTO recent_messages(id, author_id, at) VALUES (?, ?, ?)', msg.id, msg.from!.id, msg.at);
+    this.run('DELETE FROM recent_messages WHERE id NOT IN (SELECT id FROM recent_messages ORDER BY at DESC, rowid DESC LIMIT 200)');
+  }
+  private reportedMessage(target: string, ref: string): boolean {
+    const since = this.d.now() - DAY;
+    const recent = this.one('SELECT author_id FROM recent_messages WHERE id = ? AND at >= ?', ref, since);
+    if (recent) return recent.author_id === target;
+    const log = this.one('SELECT payload FROM chat_log WHERE id = ? AND at >= ?', ref, since);
+    if (!log) return false;
+    const msg = JSON.parse(log.payload) as Msg;
+    return (msg.kind === 'chat' || msg.kind === 'whisper') && msg.from?.id === target;
   }
   private adminAction(_admin: any, c: Ctx) {
     const path = c.req.path;
@@ -701,6 +752,9 @@ export class SocialCore {
     if (existing && existing.player_id !== me.id) throw new SocialError('linked-elsewhere', 409);
     if (!existing) {
       if (this.one('SELECT 1 AS x FROM account_links WHERE provider = ? AND player_id = ?', provider, me.id)) throw new SocialError('already-linked', 409);
+      const prior = this.one('SELECT player_id, unlinked_at FROM account_link_history WHERE provider = ? AND subject_hash = ?', provider, subjectHash);
+      const remaining = prior ? prior.unlinked_at + 30 * DAY - this.d.now() : 0;
+      if (prior && prior.player_id !== me.id && remaining > 0) throw new SocialError('link-cooldown', 429, remaining);
       this.run('INSERT INTO account_links(provider, subject_hash, player_id, created_at) VALUES (?, ?, ?, ?)', provider, subjectHash, me.id, this.d.now());
     }
     return this.profile(this.player(me.id));
@@ -719,20 +773,26 @@ export class SocialCore {
     else this.run('INSERT INTO player_keys(key_hash, player_id, created_at, last_seen) VALUES (?, ?, ?, ?)', keyHash, p.id, now, now);
     // 키가 5개를 넘으면 가장 오래 안 쓴 키부터 지운다(방금 추가한 키는 남긴다).
     const keys = this.all('SELECT key_hash FROM player_keys WHERE player_id = ? AND key_hash != ? ORDER BY last_seen, created_at', p.id, keyHash);
-    for (const k of keys.slice(0, Math.max(0, keys.length + 1 - LIMITS.keys))) this.run('DELETE FROM player_keys WHERE key_hash = ?', k.key_hash);
+    for (const k of keys.slice(0, Math.max(0, keys.length + 1 - LIMITS.keys))) {
+      this.run('DELETE FROM player_keys WHERE key_hash = ?', k.key_hash);
+      this.run('DELETE FROM ws_tickets WHERE key_hash = ?', k.key_hash);
+      c.out.effects.push({ to: { keyHash: k.key_hash }, close: { code: 4001, reason: 'key-revoked' } });
+    }
     return this.profile(p);
   }
   private unlink(me: any, c: Ctx) {
     if (!c.req.clientIds.length) throw new SocialError('link-disabled', 503);
     const provider = object(c.req.body, ['provider']).provider;
     if (!(AUTH_PROVIDERS as readonly string[]).includes(provider)) throw new SocialError('provider');
+    const link = this.one('SELECT subject_hash FROM account_links WHERE provider = ? AND player_id = ?', provider, me.id);
+    if (link) this.run('INSERT INTO account_link_history(provider, subject_hash, player_id, unlinked_at) VALUES (?, ?, ?, ?) ON CONFLICT(provider, subject_hash) DO UPDATE SET player_id = excluded.player_id, unlinked_at = excluded.unlinked_at', provider, link.subject_hash, me.id, this.d.now());
     this.run('DELETE FROM account_links WHERE provider = ? AND player_id = ?', provider, me.id);
     return this.profile(this.player(me.id));
   }
 
   // ── WebSocket ─────────────────────────────────────────
-  openSession(playerId: string, sid: string): Session {
-    return { sid, playerId, connectedAt: this.d.now(), world: null, party: null, presence: { state: 'lobby' }, presenceAt: 0, hello: false };
+  openSession(playerId: string, sid: string, keyHash: string): Session {
+    return { sid, playerId, key_hash: keyHash, connectedAt: this.d.now(), world: null, party: null, presence: { state: 'lobby' }, presenceAt: 0, hello: false };
   }
   channelCounts(exceptSid?: string): { id: string; count: number }[] {
     const sessions = this.sessions();
@@ -759,6 +819,10 @@ export class SocialCore {
   message(session: Session, raw: string): Effect[] {
     const reply = (message: Record<string, unknown>): Effect => ({ to: { sid: session.sid }, message });
     try {
+      // 절전 복원된 attachment를 포함해 ping·hello보다 먼저 기기 키 수명을 검사한다.
+      if (session.closed || !session.key_hash || !this.one('SELECT 1 FROM player_keys WHERE key_hash = ? AND player_id = ?', session.key_hash, session.playerId)) throw new SocialError('key-revoked', 401);
+      const player = this.player(session.playerId);
+      if (!player || player.banned) throw new SocialError('banned', 403);
       if (new TextEncoder().encode(raw).length > SOCIAL_LIMITS.socketBytes) throw new SocialError('length');
       const now = this.d.now(), sec = Math.floor(now / 1000), rate = this.second.get(session.sid);
       if (!rate || rate.s !== sec) this.second.set(session.sid, { s: sec, n: 1 });
@@ -792,6 +856,7 @@ export class SocialCore {
       if (!(error instanceof SocialError)) throw error;
       const effects: Effect[] = [reply({ t: 'error', code: error.code, ...(error.retryAfterMs ? { retryAfterMs: Math.ceil(error.retryAfterMs) } : {}) })];
       if (error.code === 'banned') effects.push({ to: { sid: session.sid }, close: { code: 4003, reason: 'banned' } });
+      if (error.code === 'key-revoked') effects.push({ to: { sid: session.sid }, close: { code: 4001, reason: 'key-revoked' } });
       return effects;
     }
   }
@@ -804,16 +869,22 @@ export class SocialCore {
     const first = !session.hello;
     if (!session.world) {
       const counts = this.channelCounts(session.sid);
-      session.world = (counts.find(ch => ch.count < this.config.worldCapacity) ?? [...counts].sort((a, b) => a.count - b.count)[0]).id;
+      session.world = counts.find(ch => ch.count < this.config.worldCapacity)?.id ?? null;
     }
     session.hello = true;
     const inboxRows = this.all('SELECT id, payload FROM dm_inbox WHERE to_id = ? ORDER BY id', session.playerId);
+    const hidden = new Set(this.blockSet(session.playerId));
+    const inbox = inboxRows.map(r => JSON.parse(r.payload) as Msg).filter(m => {
+      const sender = this.inboxSender(m);
+      return !sender || !hidden.has(sender);
+    });
     if (inboxRows.length) this.run('DELETE FROM dm_inbox WHERE to_id = ? AND id <= ?', session.playerId, inboxRows[inboxRows.length - 1].id);
     const effects: Effect[] = [{ to: { sid: session.sid }, message: {
       t: 'welcome', me: this.mini(session.playerId), world: session.world, channels: this.channelCounts(),
-      history: { [session.world]: this.history(session.world, session.playerId) },
-      inbox: inboxRows.map(r => JSON.parse(r.payload)), friends: this.friendsOnline(session.playerId, session.sid),
+      history: session.world ? { [session.world]: this.history(session.world, session.playerId) } : {},
+      inbox, friends: this.friendsOnline(session.playerId, session.sid),
     } }];
+    if (!session.world) effects.push({ to: { sid: session.sid }, message: { t: 'error', code: 'full' } });
     if (first && !wasOnline) effects.push(...this.presenceEffects(session, true));
     return effects;
   }
@@ -830,7 +901,7 @@ export class SocialCore {
     session.party = ch;
     return [reply({ t: 'history', channel: ch, items: [] })];
   }
-  private speaker(session: Session): any {
+  private speaker(session: Pick<Session, 'playerId'>): any {
     const p = this.player(session.playerId), now = this.d.now();
     if (!p || p.banned) throw new SocialError('banned', 403);
     if (p.muted_until > now) throw new SocialError('muted', 403, p.muted_until - now);
@@ -858,10 +929,6 @@ export class SocialCore {
     stamps.push(now); this.burst.set(pid, stamps);
     this.run('INSERT INTO chat_state(player_id, last_at, text, repeats) VALUES (?, ?, ?, ?) ON CONFLICT(player_id) DO UPDATE SET last_at = excluded.last_at, text = excluded.text, repeats = excluded.repeats', pid, now, norm, repeats);
   }
-  private chatText(value: unknown): string {
-    const body = text(value, 1, this.config.chat.maxLen, 'length');
-    return filterChat(body, this.config.bannedWords);
-  }
   private say(session: Session, m: Record<string, any>): Effect[] {
     const ch = parseChannel(m.channel, this.config.worldChannels);
     if (ch !== session.world && ch !== session.party) throw new SocialError('not-joined');
@@ -871,6 +938,7 @@ export class SocialCore {
     const raw = text(m.text, 1, this.config.chat.maxLen, 'length');
     this.chatGate(session.playerId, raw);
     const msg: Msg = { id: this.id(), channel: ch, kind: 'chat', from: this.mini(session.playerId), text: filterChat(raw, this.config.bannedWords), at: this.d.now() };
+    this.rememberMessage(msg);
     if (ch.startsWith('world-')) {
       this.run('INSERT INTO chat_log(channel, id, at, payload) VALUES (?, ?, ?, ?)', ch, msg.id, msg.at, JSON.stringify(msg));
       this.run('DELETE FROM chat_log WHERE channel = ? AND id NOT IN (SELECT id FROM chat_log WHERE channel = ? ORDER BY at DESC, rowid DESC LIMIT ?)', ch, ch, this.config.chat.history);
@@ -896,11 +964,16 @@ export class SocialCore {
     this.speaker(session);
     const to = this.directTarget(session, m.to, this.config.dmFriendsOnly);
     if (!this.freshNonce(session.playerId, m.nonce)) return [];
-    const msg: Msg = { id: this.id(), channel: null, kind: 'whisper', from: this.mini(session.playerId), to, text: this.chatText(m.text), at: this.d.now() };
+    const raw = text(m.text, 1, this.config.chat.maxLen, 'length');
+    this.chatGate(session.playerId, raw);
+    const msg: Msg = { id: this.id(), channel: null, kind: 'whisper', from: this.mini(session.playerId), to, text: filterChat(raw, this.config.bannedWords), at: this.d.now() };
+    this.rememberMessage(msg);
     return this.deliverDirect(session, to, msg);
   }
   private invite(session: Session, m: Record<string, any>): Effect[] {
+    this.speaker(session);
     const to = this.directTarget(session, m.to, true), code = partyCode(m.partyCode), from = this.mini(session.playerId);
+    this.limit('invite:' + session.playerId, 10, 60000);
     const msg: Msg = { id: this.id(), channel: null, kind: 'invite', from, to, text: from.name + '님이 파티에 초대했습니다.', at: this.d.now(), data: { partyCode: code } };
     return this.deliverDirect(session, to, msg);
   }

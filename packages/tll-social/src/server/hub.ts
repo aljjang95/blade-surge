@@ -87,8 +87,8 @@ export function createSocialHub(config: GameConfig, options: HubOptions = {}) {
     }
 
     private upgrade(ticket: string | null): Response {
-      let playerId: string;
-      try { playerId = this.core.consumeTicket(ticket); }
+      let identity: { playerId: string; keyHash: string };
+      try { identity = this.core.consumeTicket(ticket); }
       catch (error) {
         if (error instanceof SocialError) return json({ error: error.code }, error.status);
         throw error;
@@ -97,7 +97,8 @@ export function createSocialHub(config: GameConfig, options: HubOptions = {}) {
         const pair = new (globalThis as any).WebSocketPair();
         return [pair[0], pair[1]] as [HubSocket, HubSocket];
       })();
-      const session = this.core.openSession(playerId, hex(8));
+      const { playerId, keyHash } = identity;
+      const session = this.core.openSession(playerId, hex(8), keyHash);
       this.ctx.acceptWebSocket(server, [playerId]);
       server.serializeAttachment(session);
       // 한 플레이어 소켓은 최대 3개. 넘으면 가장 오래된 것부터 닫는다.
@@ -137,6 +138,7 @@ export function createSocialHub(config: GameConfig, options: HubOptions = {}) {
 
     private match(to: Target, s: Session): boolean {
       if ('sid' in to) return s.sid === to.sid;
+      if ('keyHash' in to) return s.key_hash === to.keyHash;
       if (!s.hello) return false;
       if ('player' in to) return s.playerId === to.player;
       if ('channel' in to) return s.world === to.channel || s.party === to.channel;
@@ -156,9 +158,7 @@ export function createSocialHub(config: GameConfig, options: HubOptions = {}) {
           if (!hit) continue;
           if (data) { try { item.ws.send(data); } catch { /* 닫히는 중 */ } }
           if (effect.close) {
-            item.session.closed = true;
-            try { item.ws.serializeAttachment(item.session); } catch { /* 무시 */ }
-            try { item.ws.close(effect.close.code, effect.close.reason); } catch { /* 무시 */ }
+            this.shut(item.ws, item.session, effect.close.code, effect.close.reason);
           }
         }
       }

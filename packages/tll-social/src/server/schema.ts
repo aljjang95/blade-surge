@@ -5,7 +5,7 @@ export interface Sql {
 export function migrate(sql: Sql): void {
   sql.exec('CREATE TABLE IF NOT EXISTS schema_version (version INTEGER PRIMARY KEY)');
   const version = sql.exec('SELECT MAX(version) AS version FROM schema_version').toArray()[0]?.version ?? 0;
-  if (version >= 1) return;
+  if (version < 1) {
   const statements = [
     `CREATE TABLE players (id TEXT PRIMARY KEY, name TEXT NOT NULL, tag TEXT NOT NULL,
       no INTEGER NOT NULL UNIQUE, created_at INTEGER NOT NULL, renamed_at INTEGER, title_id TEXT, muted_until INTEGER NOT NULL DEFAULT 0,
@@ -53,4 +53,28 @@ export function migrate(sql: Sql): void {
   ];
   for (const statement of statements) sql.exec(statement);
   sql.exec('INSERT INTO schema_version(version) VALUES (1)');
+  }
+  if (version < 2) {
+    const statements = [
+      // 기존 프로필의 생성 IP는 추측하지 않고 자동 제재 근거에서 제외한다.
+      'ALTER TABLE players ADD COLUMN created_ip_hash TEXT',
+      'ALTER TABLE clears ADD COLUMN summary TEXT',
+      'ALTER TABLE clears ADD COLUMN subject_hash TEXT',
+      'ALTER TABLE clears ADD COLUMN last_at INTEGER',
+      'UPDATE clears SET last_at = first_at',
+      `UPDATE clears SET subject_hash = (SELECT subject_hash FROM account_links WHERE player_id = clears.player_id AND provider = 'google') WHERE rank > 0`,
+      'CREATE INDEX clears_subject ON clears(content_id, subject_hash, rank)',
+      'CREATE INDEX clears_recent ON clears(content_id, last_at)',
+      'CREATE TABLE account_link_history (provider TEXT NOT NULL, subject_hash TEXT NOT NULL, player_id TEXT NOT NULL, unlinked_at INTEGER NOT NULL, PRIMARY KEY(provider, subject_hash))',
+      'CREATE TABLE recent_messages (id TEXT PRIMARY KEY, author_id TEXT NOT NULL, at INTEGER NOT NULL)',
+      'CREATE INDEX recent_messages_at ON recent_messages(at)',
+      'ALTER TABLE ws_tickets ADD COLUMN key_hash TEXT',
+      // 발급 기기 키를 알 수 없는 기존 티켓은 다시 발급해야 한다.
+      'DELETE FROM ws_tickets',
+      'CREATE INDEX ws_tickets_player ON ws_tickets(player_id)',
+      'CREATE INDEX ws_tickets_key ON ws_tickets(key_hash)',
+    ];
+    for (const statement of statements) sql.exec(statement);
+    sql.exec('INSERT INTO schema_version(version) VALUES (2)');
+  }
 }

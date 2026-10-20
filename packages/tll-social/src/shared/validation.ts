@@ -1,4 +1,4 @@
-import { PARTY_CODE, PLAYER_ID, type Presence } from './protocol';
+import { PARTY_CODE, PLAYER_ID, SOCIAL_LIMITS, type Presence, type RunSummary } from './protocol';
 
 export class SocialError extends Error {
   constructor(public code: string, public status = 400, public retryAfterMs?: number) { super(code); }
@@ -21,6 +21,14 @@ export function integer(value: unknown, min: number, max: number): number {
 export function bool(value: unknown): boolean {
   if (typeof value !== 'boolean') throw new SocialError('boolean');
   return value;
+}
+/** 선택적 자기 보고이며 서버 경과·보스 처치·수치 상한만 검증한다. */
+export function runSummary(value: unknown, elapsedMs: number): RunSummary | null {
+  if (value === undefined) return null;
+  const s = object(value, ['elapsedMs', 'kills', 'roomsCleared', 'bossDefeated', 'hpLost']);
+  const elapsed = integer(s.elapsedMs, 0, Math.ceil(SOCIAL_LIMITS.runMs * 1.2));
+  if (s.bossDefeated !== true || elapsed < elapsedMs * 0.8 || elapsed > elapsedMs * 1.2) throw new SocialError('summary');
+  return { elapsedMs: elapsed, kills: integer(s.kills, 0, 1000000), roomsCleared: integer(s.roomsCleared, 0, 10000), bossDefeated: true, hpLost: integer(s.hpLost, 0, 1000000000) };
 }
 export function playerId(value: unknown): string {
   if (typeof value !== 'string' || !PLAYER_ID.test(value)) throw new SocialError('player');

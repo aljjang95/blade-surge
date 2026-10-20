@@ -13,6 +13,7 @@ export interface GameConfig {
   fame?: { requireLinked?: boolean };
 }
 export interface Title { id: string; label: string }
+export interface RunSummary { elapsedMs: number; kills: number; roomsCleared: number; bossDefeated: true; hpLost: number }
 export interface PublicMini { id: string; name: string; tag: string; no: number; title: Title | null; linked: boolean }
 export interface Presence { state: 'lobby' | 'battle' | 'party'; where?: string }
 export interface Msg {
@@ -28,6 +29,7 @@ export interface Msg {
 export interface Session {
   sid: string;
   playerId: string;
+  key_hash: string;
   connectedAt: number;
   world: string | null;
   party: string | null;

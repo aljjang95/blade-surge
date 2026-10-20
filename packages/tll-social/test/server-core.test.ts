@@ -30,10 +30,10 @@ function setup(over: Partial<GameConfig> = {}) {
   const player = async (name: string, ip?: string) => {
     const key = newKey();
     const r = await call('POST', '/profile', { key, body: { name }, ip });
-    return { key, id: (r.body as any).id as string, res: r };
+    return { key, keyHash: await core.keyHash(key), id: (r.body as any).id as string, res: r };
   };
-  const connect = (p: { id: string }) => {
-    const s = core.openSession(p.id, randomHex(8));
+  const connect = (p: { id: string; keyHash: string }) => {
+    const s = core.openSession(p.id, randomHex(8), p.keyHash);
     sessions.push(s);
     return { s, fx: core.message(s, JSON.stringify({ t: 'hello', presence: { state: 'lobby' } })) };
   };
@@ -215,16 +215,17 @@ describe('게시판·신고', () => {
     expect(page1.items.map((p: any) => p.title)).toEqual(['셋째', '둘째']);
     expect(page1.nextCursor).toBeNull();
   });
-  test('서로 다른 3명이 채팅 신고하면 10분 음소거', async () => {
+  test('가입 24시간 이상·서로 다른 IP의 3명이 실제 채팅을 신고하면 10분 음소거', async () => {
     const h = setup({ worldCapacity: 10 });
     const bad = await h.player('시끄러움');
     const rs = [await h.player('신고일'), await h.player('신고이'), await h.player('신고삼')];
-    const r1 = await h.call('POST', '/report', { key: rs[0].key, body: { kind: 'chat', target: bad.id, reason: '도배' } });
-    await h.call('POST', '/report', { key: rs[0].key, body: { kind: 'chat', target: bad.id, reason: '또' } });
+    h.advance(24 * 3600000);
+    const { s } = h.connect(bad), ref = msgOf(h.say(s, '신고할 메시지')).id;
+    const r1 = await h.call('POST', '/report', { key: rs[0].key, body: { kind: 'chat', target: bad.id, ref, reason: '도배' } });
+    await h.call('POST', '/report', { key: rs[0].key, body: { kind: 'chat', target: bad.id, ref, reason: '또' } });
     expect(r1.body).toEqual({ ok: true, autoMuted: false });
-    expect(((await h.call('POST', '/report', { key: rs[1].key, body: { kind: 'chat', target: bad.id } })).body as any).autoMuted).toBe(false);
-    expect(((await h.call('POST', '/report', { key: rs[2].key, body: { kind: 'chat', target: bad.id } })).body as any).autoMuted).toBe(true);
-    const { s } = h.connect(bad);
+    expect(((await h.call('POST', '/report', { key: rs[1].key, body: { kind: 'chat', target: bad.id, ref } })).body as any).autoMuted).toBe(false);
+    expect(((await h.call('POST', '/report', { key: rs[2].key, body: { kind: 'chat', target: bad.id, ref } })).body as any).autoMuted).toBe(true);
     expect(errorOf(h.say(s, '안녕'))).toBe('muted');
     h.advance(10 * 60000 + 1);
     expect(msgOf(h.say(s, '안녕'))?.text).toBe('안녕');
@@ -287,6 +288,7 @@ describe('실시간 채팅', () => {
     const welcome = h.connect(b).fx[0].message as any;
     expect(welcome.inbox.map((m: any) => [m.kind, m.text])).toEqual([['system', '새 친구 요청이 도착했습니다.'], ['whisper', '오프라인 안녕'], ['invite', '귓말러님이 파티에 초대했습니다.']]);
     expect(welcome.inbox[2].data).toEqual({ partyCode: 'ABCDEF0123456789ABCD' });
+    h.advance(1300);
     expect(w(b.id, '이제 온라인').map(e => e.to)).toEqual([{ player: a.id }, { player: b.id }]);
     const again = h.connect(b).fx[0].message as any;
     expect(again.inbox).toEqual([]);
