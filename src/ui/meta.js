@@ -27,6 +27,7 @@ import { libraryAssetForAvatar } from '../engine/library-assets.js';
 import { itemVisual, itemIconHtml } from './item-presentation.js';
 import { GROWTH_FLOW, skuFlowRole, shardProgress } from '../data/growth-flow.js';
 import { heroGrade } from '../data/hero-grades.js';
+import { levelStatusLabel, lootGuide } from '../data/region-guide.js';
 // 공개 확률은 실제 소환 코드와 같은 식(gachaRates/gachaChances)에서만 계산한다. 화면에 숫자를 따로 적지 않는다.
 const pct = (p, d = 1) => (p * 100).toFixed(d) + '%';
 const clampPity = (n) => Math.max(0, Math.min(GACHA.pity, Math.floor(Number(n) || 0)));
@@ -207,14 +208,16 @@ export class Meta {
     const difficulties = availableDifficulties(this.eco.s, d.ch, d.st);
     const selectedDifficulty = this.eco.difficultyFor(d.ch, d.st, this.eco.s.progress.difficulty || 'story');
     this.selectedDifficulty = selectedDifficulty.id;
+    const lootInfo = lootGuide(d.ch, selectedDifficulty.id), levelInfo = levelStatusLabel(this.eco.hero(this.eco.s.selected).level, d.recommendedLevel);
     const difficultyRequirement = (item) => item.id === 'adept' ? '1개 스테이지 클리어' : item.id === 'nightmare' ? '이 스테이지 ★3' : '기본 난이도';
     const difficultyHtml = difficulties.map((item) => `<button type="button" class="difficulty-card tone-${item.tone}${item.id === selectedDifficulty.id ? ' on' : ''}${item.unlocked ? '' : ' locked'}" data-difficulty="${item.id}" aria-pressed="${item.id === selectedDifficulty.id}" ${item.unlocked ? '' : 'disabled'}><img src="/img/ui/difficulty-${item.id}.svg" alt=""><span class="difficulty-copy"><b>${item.name}</b><small>${item.description}</small></span><span class="difficulty-reward">보상 ×${item.rewardMul.toFixed(2)}</span>${item.unlocked ? '' : `<em>🔒 ${difficultyRequirement(item)}</em>`}</button>`).join('');
     const detailArt = stageKeyArt(d);
     $('stage-detail').innerHTML = `<div class="stage-narrative"><div class="stage-hero-card">${detailArt ? `<img src="${detailArt}" alt="${storyText(d.encounter.name)} 아트" width="1680" height="944" loading="lazy" onerror="this.hidden=true">` : ''}<div class="stage-hero-shade"><span class="campaign-eyebrow">${d.code} · ${storyText(encounterLabel(d))}</span><h3>${storyText(d.title)}</h3><p>${storyText(d.story?.opening)}</p><span class="stage-hero-gate"><img src="${DUNGEON_ICON}" alt="" width="18" height="18">${storyText(d.dungeon?.name || '미지의 던전')}</span></div></div><p class="stage-objective"><b>이번 원정의 목표</b> ${storyText(d.objective)}</p>${dungeonBriefHtml(d)}${dungeonMapSvg(d)}<div class="stage-tactics"><p><b>${storyText(chapter.mechanic?.name)}</b> ${storyText(chapter.mechanic?.description)}</p><p><b>${storyText(d.encounter?.name)}</b> ${storyText(d.encounter?.tactic)}</p></div></div><div class="stage-launch"><div class="launch-kicker"><span>출격 준비</span><b>${unlocked ? '입장 가능한 던전' : '봉인된 던전'}</b></div>
       <div class="meta"><span>권장 전투력 <b style="color:${power >= d.recPower ? 'var(--green)' : 'var(--red)'}">${fmt(d.recPower)}</b></span><span>내 전투력 ${fmt(power)}</span></div>
+      <div class="meta stage-level" data-tone="${levelInfo.tone}" title="${levelInfo.detail}"><span>권장 Lv.<b>${d.recommendedLevel}</b> · 내 Lv.<b>${this.eco.hero(this.eco.s.selected).level}</b></span><span class="stage-level-state">${levelInfo.text}</span></div>
       <div class="difficulty-picker" role="group" aria-label="전투 난이도"><div class="difficulty-heading"><b>전투 난이도</b><span>${selectedDifficulty.name} · 보상과 적 압박이 함께 증가합니다</span></div>${difficultyHtml}</div>
-      <div class="rewards"><span class="reward-chip"><i class="ic ic-gold"></i> ${fmt(Math.floor(d.rewards.gold * selectedDifficulty.rewardMul))}</span><span class="reward-chip">완료 EXP ${Math.floor(d.rewards.exp * selectedDifficulty.expMul)}</span><span class="reward-chip">정예 처치 · 장비 2개</span>${!stars ? `<span class="reward-chip"><i class="ic ic-gem"></i> ${d.rewards.firstGems} 첫클리어</span>` : ''}</div>
-      <p class="stage-loot-guide">사냥 전리품 · 보스 장비 3개, 정예 장비 2개 확정 · 일반 적은 8% 확률. 처치 경험치는 전투 중 즉시 쌓입니다.</p>
+      <div class="rewards"><span class="reward-chip"><i class="ic ic-gold"></i> ${fmt(Math.floor(d.rewards.gold * selectedDifficulty.rewardMul))}</span><span class="reward-chip">완료 EXP ${Math.floor(d.rewards.exp * selectedDifficulty.expMul)}</span><span class="reward-chip">정예 처치 · 장비 ${lootInfo.elite.gearRolls}개</span>${!stars ? `<span class="reward-chip"><i class="ic ic-gem"></i> ${d.rewards.firstGems} 첫클리어</span>` : ''}</div>
+      <p class="stage-loot-guide" data-difficulty="${selectedDifficulty.id}"><b>사냥 전리품 · ${selectedDifficulty.name}</b>${lootInfo.lines.map((line) => '<span>' + line + '</span>').join('')}<span class="stage-loot-note">${levelInfo.detail} · 처치 경험치는 전투 중 즉시 쌓입니다.</span></p>
       ${unlocked ? '' : `<p class="stage-lock-note">${d.st === 1 ? `${d.ch - 1}-10` : `${d.ch}-${d.st - 1}`} 클리어 후 출격할 수 있습니다.</p>`}
       <div class="row"><button class="btn btn-ghost" id="st-sweep" ${stars < 3 || !unlocked ? 'disabled' : ''}><span>소탕</span><small>티켓 ${this.eco.s.sweep}</small></button><button class="btn btn-gold" id="st-go" ${unlocked ? '' : 'disabled'}><span>${unlocked ? '던전 입장' : '봉인 해제 필요'}</span><small>${unlocked ? '<i class="ic ic-energy"></i> 출격 에너지 -' + d.energy : '이전 관문을 먼저 정화하세요'}</small></button></div></div>`;
     $('stage-detail').querySelectorAll('[data-difficulty]').forEach((button) => button.onclick = () => {
