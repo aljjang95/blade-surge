@@ -340,8 +340,118 @@ async function A4(browser, rec) {
   } finally { await s.close(); }
 }
 
+// ---------- 전투 행동 도우미(실제 탭) ----------
+const hasLive = (s) => s.page.evaluate(() => { const b = window.app.battle; return !!b?.active && b.enemies.some((e) => e.alive && !e.spawning); });
+// 가까운 적 옆에 서서(주입) 실제 공격 버튼을 attacks 번 탭하고, 실제 스킬 버튼을 skills 에 적힌 슬롯 순서대로 탭한다.
+async function combatBurst(s, { attacks = 3, skills = [0], gap = 650 } = {}) {
+  const out = { attacks: 0, skills: [] };
+  for (let i = 0; i < attacks; i++) {
+    if (!await hasLive(s)) await waitForEnemies(s);
+    const fx = await placeFixture(s, { dist: 2.5, flip: false });
+    if (!fx.ok) continue;
+    await s.page.locator('#btn-attack').tap(); out.attacks++; await sleep(gap);
+  }
+  s.rec.did('실제 공격 버튼 탭 x' + out.attacks);
+  for (const slot of skills) {
+    if (!await hasLive(s)) await waitForEnemies(s);
+    await placeFixture(s, { dist: 3, flip: false });
+    await sleep(500);
+    const before = await s.page.evaluate((i) => { const P = window.app.battle.player; return { cd: P.cds[i], mp: P.mp, ult: P.ult, state: P.state }; }, slot);
+    await s.page.locator('.skill-btn[data-skill="' + slot + '"]').tap();
+    await sleep(250);
+    const after = await s.page.evaluate((i) => { const P = window.app.battle.player; return { cd: P.cds[i], mp: P.mp, ult: P.ult, state: P.state }; }, slot);
+    out.skills.push({ slot, before, after, cast: after.state === 'skill' || after.state === 'ult' || after.cd > before.cd || after.ult < before.ult });
+    await sleep(900);
+  }
+  s.rec.did('실제 스킬 버튼 탭 슬롯 ' + skills.join(','));
+  return out;
+}
+const classifyUrl = (u) => (u.startsWith('/sfx/mirelo-v1/') ? 'mirelo-v1' : u.startsWith('/sfx/voice/') ? 'voice' : 'legacy');
+// ---------- A1 ----------
+async function A1(browser, rec) {
+  const s = await open(browser, rec);
+  try {
+    await boot(s);
+    const hk = await hookAudio(s); rec.obs('audio', hk);
+    rec.check('오디오 컨텍스트 사용 가능', hk.ctx && hk.enabled && !hk.unavailable, hk);
+    await prepareState(s, { hero: 'knight' });
+    // UI 효과음: 실제 탭으로 메뉴를 열고 닫는다.
+    const uiMark = await sfxMark(s);
+    await s.page.locator('.oath-nav-menu').tap(); await sleep(500); await s.page.locator('#oath-menu .oath-menu-close').tap(); await sleep(500);
+    rec.did('메뉴 열기·닫기 실제 탭(UI 효과음)');
+    const uiLog = (await sfxLog(s)).slice(uiMark);
+    const reqBeforeBattle = s.requests.length;
+    await enterBattle(s); await waitForEnemies(s);
+    const mark = await sfxMark(s), reqMark = s.requests.length;
+    const burst = await combatBurst(s, { attacks: 4, skills: [0] });
+    await sleep(800);
+    const log = (await sfxLog(s)).slice(mark);
+    rec.obs('burst', burst);
+    const played = log.filter((e) => e.url), voices = log.filter((e) => e.group !== 'sfx' && e.group !== 'synth'), synth = log.filter((e) => e.group === 'synth');
+    const combatPlayed = played.filter((e) => !/^\/sfx\/mirelo-v1\/ui\//.test(e.url));
+    rec.obs('combatPlayed', Object.fromEntries([...new Set(combatPlayed.map((e) => e.url))].map((u) => [u, combatPlayed.filter((e) => e.url === u).length])));
+    rec.obs('voicePlays', voices.length); rec.obs('synthMethodCalls(샘플로 대체된 호출 포함)', Object.fromEntries([...new Set(synth.map((e) => e.name))].map((n) => [n, synth.filter((e) => e.name === n).length])));
+    rec.obs('uiPlayed', Object.fromEntries([...new Set(uiLog.filter((e) => e.url).map((e) => e.url))].map((u) => [u, uiLog.filter((e) => e.url === u).length])));
+    const reqs = s.requests; const byClass = { 'mirelo-v1': 0, voice: 0, legacy: 0 };
+    for (const r of reqs) byClass[classifyUrl(r.url)]++;
+    rec.obs('sfxRequests', { total: reqs.length, ...byClass, legacyUrls: [...new Set(reqs.filter((r) => classifyUrl(r.url) === 'legacy').map((r) => r.url))] });
+    rec.obs('requestsDuringBattleBurst', reqs.slice(reqMark).map((r) => r.url));
+    rec.check('전투 효과음 재생이 실제로 있었다(샘플 3회 이상)', combatPlayed.length >= 3, combatPlayed.length);
+    rec.check('재생된 모든 전투 효과음이 /sfx/mirelo-v1/', combatPlayed.every((e) => classifyUrl(e.url) === 'mirelo-v1'), combatPlayed.filter((e) => classifyUrl(e.url) !== 'mirelo-v1').map((e) => e.url));
+    rec.check('영웅 전용 소리(mirelo-v1/hero/knight/) 재생', combatPlayed.some((e) => e.url.includes('/hero/knight/')), null);
+    rec.check('스킬 시전 소리 재생(skill_*)', combatPlayed.some((e) => /\/skill_/.test(e.url)), null);
+    rec.check('공용 타격 레이어(mirelo-v1/hit/) 재생', combatPlayed.some((e) => e.url.includes('/mirelo-v1/hit/')), null);
+    rec.check('Sonniss 등 예전 경로 /sfx/ 요청 0', byClass.legacy === 0, rec.observed.sfxRequests.legacyUrls);
+    rec.check('UI 효과음도 mirelo-v1', uiLog.filter((e) => e.url).every((e) => classifyUrl(e.url) === 'mirelo-v1'), rec.observed.uiPlayed);
+    rec.check('스킬이 실제로 시전됨', burst.skills.every((k) => k.cast), burst.skills);
+    await rec.shot(s, 'battle');
+  } finally { await s.close(); }
+}
+
+// ---------- A2 ----------
+// 내용이 같은 파일이 영웅 사이에 섞여 있지 않은지 SHA-256 으로 비교한다(페이지 안에서 같은 출처 fetch).
+const hashUrls = (s, urls) => s.page.evaluate(async (list) => {
+  const out = {};
+  for (const u of list) { const ab = await (await fetch(u)).arrayBuffer(); const d = await crypto.subtle.digest('SHA-256', ab); out[u] = [...new Uint8Array(d)].map((b) => b.toString(16).padStart(2, '0')).join(''); }
+  return out;
+}, urls);
+async function A2(browser, rec) {
+  const perHero = {};
+  for (const hero of HEROES) {
+    const s = await open(browser, rec);
+    try {
+      await boot(s); const hk = await hookAudio(s);
+      await prepareState(s, { hero });
+      await enterBattle(s); await waitForEnemies(s);
+      const heroId = await s.page.evaluate(() => window.app.battle.player.def.id);
+      const mark = await sfxMark(s);
+      const burst = await combatBurst(s, { attacks: 3, skills: [0] });
+      await sleep(800);
+      const log = (await sfxLog(s)).slice(mark), played = log.filter((e) => e.url);
+      const heroFiles = [...new Set(played.filter((e) => e.url.includes('/mirelo-v1/hero/')).map((e) => e.url))];
+      const commonHit = [...new Set(played.filter((e) => e.url.includes('/mirelo-v1/hit/')).map((e) => e.url))];
+      const hashes = await hashUrls(s, heroFiles);
+      perHero[hero] = { heroId, audioCtx: hk.ctx, played: played.length, heroFiles, commonHit, hashes, burst, synth: log.filter((e) => e.group === 'synth').length };
+      await rec.shot(s, hero);
+    } finally { await s.close(); }
+  }
+  rec.obs('perHero', perHero);
+  for (const hero of HEROES) {
+    const p = perHero[hero];
+    rec.check(hero + ': 선택 영웅으로 전투 진입', p?.heroId === hero, p?.heroId);
+    rec.check(hero + ': mirelo-v1/hero/' + hero + '/ 파일 재생(스윙·스킬 포함)', !!p && p.heroFiles.length >= 2 && p.heroFiles.every((u) => u.includes('/mirelo-v1/hero/' + hero + '/')) && p.heroFiles.some((u) => /swing_|finisher/.test(u)) && p.heroFiles.some((u) => /skill_/.test(u)), p?.heroFiles);
+    rec.check(hero + ': 스킬 시전됨', !!p && p.burst.skills.every((k) => k.cast), p?.burst.skills);
+  }
+  const owner = new Map(); let dupPath = [], dupContent = [];
+  for (const hero of HEROES) for (const u of perHero[hero]?.heroFiles || []) { if (owner.has(u) && owner.get(u) !== hero) dupPath.push(u); owner.set(u, hero); }
+  const hashOwner = new Map();
+  for (const hero of HEROES) for (const [u, h] of Object.entries(perHero[hero]?.hashes || {})) { if (hashOwner.has(h) && hashOwner.get(h).hero !== hero) dupContent.push([hashOwner.get(h).url, u]); else hashOwner.set(h, { hero, url: u }); }
+  rec.check('다섯 영웅의 재생 파일 집합이 서로 겹치지 않음(경로)', dupPath.length === 0, dupPath);
+  rec.check('다섯 영웅의 재생 파일 내용(SHA-256)이 서로 겹치지 않음', dupContent.length === 0, dupContent);
+}
+
 // ---------- 러너 ----------
-const CRITERIA = { A3: ['자동 타겟 켜짐: 공격 시 적 쪽으로 회전·체력 감소', A3], A4: ['설정에서 자동 타겟 끄기·유지·yaw 유지', A4] };
+const CRITERIA = { A1: ['전투·UI 효과음이 mirelo-v1 이고 예전 경로 요청 0', A1], A2: ['영웅 5명이 각자 전용 효과음을 재생하고 서로 겹치지 않음', A2], A3: ['자동 타겟 켜짐: 공격 시 적 쪽으로 회전·체력 감소', A3], A4: ['설정에서 자동 타겟 끄기·유지·yaw 유지', A4] };
 // 기본은 이 PC 의 실제 GPU(ANGLE D3D11) 헤드리스 Chrome. --gl swift 면 swiftshader(소프트웨어, 게임 시간이 느려진다).
 const GL = arg('gl', 'gpu');
 const browser = await chromium.launch(GL === 'swift' ? launchOpts() : { args: ['--use-angle=d3d11', '--ignore-gpu-blocklist', '--enable-gpu-rasterization', '--autoplay-policy=no-user-gesture-required'] });
@@ -361,3 +471,5 @@ await browser.close();
 summary.finished = new Date().toISOString(); summary.pass = !failed;
 await fs.writeFile(path.join(out, 'summary.json'), JSON.stringify(summary, null, 2));
 process.exit(failed ? 1 : 0);
+
+
