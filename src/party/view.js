@@ -41,6 +41,12 @@ export class PartyView {
     }
     const invite = node('div', 'party-invite'); const code = node('input'); code.value = party.code.match(/.{1,5}/g).join('-'); code.readOnly = true; code.setAttribute('aria-label', '파티 초대 코드'); invite.append(code);
     this.button('초대 링크 복사', async () => { try { await navigator.clipboard.writeText(s.inviteUrl()); this.message('초대 링크를 복사했습니다.'); } catch { code.value = s.inviteUrl(); code.select(); this.message('초대 링크를 선택했습니다. 복사해 친구에게 보내 주세요.'); } }, invite); this.body.append(invite);
+    // 커뮤니티: 파티 대기실에서 모집 올리기·친구 초대로 바로 간다(이 창은 모달이라 먼저 닫는다).
+    const social = s.app.social;
+    if (social && party.status === 'lobby') {
+      if (s.isHost) this.button('모집 올리기', () => { this.dialog.close(); social.open('party'); }, invite);
+      this.button('친구 초대', () => { this.dialog.close(); social.open('friends'); }, invite);
+    }
     this.body.append(node('p', 'party-fine', '방장이 같은 세계를 진행합니다. 방장이 메뉴를 열면 일시 정지하며, 화면을 떠나 전투 정보가 멈추면 최대 60초 동안 기다립니다. 파티는 생성 후 45분 동안 유효합니다.'));
     const list = node('ul', 'party-members');
     for (const m of party.members) {

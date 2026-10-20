@@ -1,0 +1,11 @@
+{
+  "name": "@tll/social",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    "./server": "./src/server/index.ts",
+    "./shared/*": "./src/shared/*.ts"
+  }
+}
+
