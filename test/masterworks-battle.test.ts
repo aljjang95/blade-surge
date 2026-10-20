@@ -217,6 +217,32 @@ test('cleared rooms do not reopen an empty chronicle after all offers are exhaus
   expect(game.currentOffer()).toBeUndefined();for(const fn of scheduled)fn();expect(opened).toBe(0);
 });
 
+test('AUTO는 각인·만남 선택 창을 열지 않고 기본 선택으로 이어 가며, 수동 플레이는 그대로 선택 창을 연다',()=>{
+  // 브라우저 AUTO 1회에서 전투가 각인(14.2초)·만남(23.9초) 창에서 멈춰 탭을 기다리던 결함의 재현.
+  const {game,state}=fixture();game.stage=buildExpeditionStage('dungeon','glass_garden',{});game.world=buildExpeditionWorld(game.stage);
+  game.ui.waveBanner=noop;game.spawnEnemy=noop;game.run.round=2;
+  const scheduled:Function[]=[];let opened=0;game.after=(_sec:number,fn:Function)=>scheduled.push(fn);game.chronicle.offer=()=>opened++;
+  game.player.auto=true;
+  const room=game.world.rooms.find((r:any)=>r.type==='normal');game.markCleared(room);
+  expect(game.currentOffer()?.kind).toBe('boon');
+  for(const fn of scheduled)fn();expect(opened).toBe(0);
+  const picked=game.currentOffer().ids[0];
+  game.resolveAutoOffers();
+  expect(game.run.picked.at(-1)).toBe(picked);expect(game.run.autoPicked).toBe(1);
+  // 만남은 예전 선택이 없으면 첫 선택지를 고르고 보상이 한 번만 들어간다.
+  game.run.queue=[{kind:'story',id:'lantern'}];
+  game.resolveAutoOffers();
+  expect(game.run.queue).toHaveLength(0);expect(state.story.lantern).toBeTruthy();
+  game.resolveAutoOffers();expect(game.run.queue).toHaveLength(0);
+  // 수동 플레이: 같은 체크포인트에서 선택 창을 연다.
+  const manual=fixture();manual.game.stage=game.stage;manual.game.world=buildExpeditionWorld(game.stage);
+  manual.game.ui.waveBanner=noop;manual.game.spawnEnemy=noop;manual.game.run.round=2;
+  const later:Function[]=[];let shown=0;manual.game.after=(_s:number,fn:Function)=>later.push(fn);manual.game.chronicle.offer=()=>shown++;
+  manual.game.markCleared(manual.game.world.rooms.find((r:any)=>r.type==='normal'));
+  for(const fn of later)fn();expect(shown).toBe(1);
+  manual.game.resolveAutoOffers();expect(manual.game.currentOffer()?.kind).toBe('boon');
+});
+
 function damageFixture() {
   const {game}=fixture(),bolts:any[]=[];
   Object.assign(game,{elapsed:10,counterUntil:0,chainUntil:0,feedbackSound:true,feedbackCount:0,dmgDealt:0,combo:0,maxCombo:0,timeCtl:{hitstop:noop}});

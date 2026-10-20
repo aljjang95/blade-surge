@@ -181,7 +181,8 @@ export class Battle extends RpgBattle {
     }
     this.player.chronicleShield=Math.round(this.player.maxHp*Math.min(.25,this.effects.shield||0));
     // Wait for the clearing blow to finish; the native pause owner freezes the same simulation.
-    if(checkpoint&&boon.ok)this.after(.45,()=>{ if(this.active&&this.player.alive&&this.currentOffer())this.chronicle.offer(); });
+    // AUTO 중에는 선택 창을 열지 않는다. update 의 resolveAutoOffers 가 기본 선택으로 이어 간다(AUTO 끝까지 클리어).
+    if(checkpoint&&boon.ok)this.after(.45,()=>{ if(this.active&&this.player.alive&&!this.player.auto&&this.currentOffer())this.chronicle.offer(); });
   }
   onPerfectDodge(p) {
     super.onPerfectDodge(p);
@@ -254,6 +255,7 @@ export class Battle extends RpgBattle {
   }
   update(realDt) {
     this.observeRunControl(realDt);
+    this.resolveAutoOffers();
     const before=this.elapsed; super.update(realDt);
     const dt=Math.max(0,this.elapsed-before);
     if(dt>0&&this.active&&this.run?.enabled) {
@@ -267,5 +269,19 @@ export class Battle extends RpgBattle {
     }
     this.chronicle?.tick(realDt);
     this.targetTag?.update(this, this.renderer, realDt, this.app?.mode);
+  }
+  /** AUTO 전투에서 남은 각인·만남 선택을 기본값으로 처리한다. 각인은 기존 8초 자동 적용과 같은 첫 선택지,
+   *  만남은 예전에 고른 선택(없으면 첫 선택지). 선택 창이 열려 있어 전투가 멈춰 있어도 진행된다. */
+  resolveAutoOffers() {
+    if(!this.active||!this.run?.enabled||this.player?.auto!==true||!this.player.alive)return;
+    const offer=this.currentOffer();if(!offer)return;
+    if(offer.kind==='boon') {
+      const result=this.applyBoonOffer(offer,offer.ids[0],{automatic:true});
+      if(result.ok)this.chronicle?.selectionDone?.();else this.run.queue.shift();
+    } else if(offer.kind==='story') {
+      const event=STORY_EVENTS.find(e=>e.id===offer.id);
+      const choice=event?.choices.find(c=>c.id===this.masterworks?.s?.story?.[event.id])||event?.choices[0];
+      if(!choice||!this.selectStory(choice.id).ok)this.run.queue.shift();
+    } else this.run.queue.shift();
   }
 }
