@@ -13,14 +13,18 @@
     "html_handling": "auto-trailing-slash"
   },
   "ai": { "binding": "AI" },
-  "durable_objects": { "bindings": [{ "name": "DIALOGUE_BUDGET", "class_name": "DialogueBudget" }, { "name": "PARTIES", "class_name": "PartyRoom" }] },
-  "migrations": [{ "tag": "dialogue-budget-v1", "new_sqlite_classes": ["DialogueBudget"] }, { "tag": "party-dungeons-v1", "new_sqlite_classes": ["PartyRoom"] }],
+  "durable_objects": { "bindings": [{ "name": "DIALOGUE_BUDGET", "class_name": "DialogueBudget" }, { "name": "PARTIES", "class_name": "PartyRoom" }, { "name": "SOCIAL", "class_name": "SocialHub" }] },
+  "migrations": [{ "tag": "dialogue-budget-v1", "new_sqlite_classes": ["DialogueBudget"] }, { "tag": "party-dungeons-v1", "new_sqlite_classes": ["PartyRoom"] }, { "tag": "social-hub-v1", "new_sqlite_classes": ["SocialHub"] }],
   "vars": {
     "APP_ORIGIN": "https://blade.tllhouse.com",
     "DIALOGUE_ENABLED": "false",
     "DIALOGUE_APPROVAL_ID": "",
     "DIALOGUE_APPROVAL_ISSUED_AT": "",
-    "DIALOGUE_APPROVAL_UNTIL": ""
+    "DIALOGUE_APPROVAL_UNTIL": "",
+    // 커뮤니티: 관리자 playerId(쉼표 구분), 로컬 개발 origin 허용, 구글 OAuth 클라이언트 ID(비면 연동 꺼짐).
+    "SOCIAL_ADMIN_IDS": "",
+    "SOCIAL_DEV_ORIGINS": "false",
+    "GOOGLE_CLIENT_IDS": ""
   },
   "observability": { "enabled": true }
 }
