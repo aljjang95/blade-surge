@@ -1,4 +1,6 @@
 // 전투 HUD 연속 처치 위치 실측: 실제 스테이지에 들어가 실제 처치로 연속 처치를 올리고 요소 위치를 잰다.
+// 보호 구역은 하나다(대표님 규칙 2026-10-18 "화면 가운데 1/3"): 가로 [1/3, 2/3] × 세로 [HUD 상단 줄 아래, 화면 높이 85%].
+// 연속 처치·알림·경고·배너·모든 HUD 요소가 이 한 구역으로 판정한다(예전 30~70% × 25~75% 상자는 폐지, 참고용 legacy30 수치만 따로 남긴다).
 import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -29,7 +31,8 @@ for (const [w, h] of views) {
     return { killStreak: b.killStreak, peak, kills: b.kills };
   });
   // 화면 중앙을 차지하던 HUD 요소(경고·배너·긴 알림)를 실제 UI 경로로 띄워 함께 잰다.
-  await page.evaluate(() => { app.ui.combatCue('적의 공격', 'red', 4000); app.ui.waveBanner('봉인 해제'); app.ui.toast('이름의 장례길의 전투 방을 정리해 봉인을 해제하고 시계종의 주권자 · 관문 대장 처치'); });
+  // 알림 큐에 쌓인 자연 알림을 비우고 긴 알림을 긴급(red)으로 올려 바로 보이게 한다.
+  await page.evaluate(() => { app.ui.combatCue('적의 공격', 'red', 4000); app.ui.waveBanner('봉인 해제'); app.ui.combatNotices.clear(); app.ui.toast('이름의 장례길의 전투 방을 정리해 봉인을 해제하고 시계종의 주권자 · 관문 대장 처치', 'red'); });
   await page.waitForTimeout(350);
   const rects = await page.evaluate(() => {
     const r = sel => { const el = document.querySelector(sel); if (!el) return null; const b = el.getBoundingClientRect(); const cs = getComputedStyle(el); return { x: Math.round(b.x), y: Math.round(b.y), w: Math.round(b.width), h: Math.round(b.height), visible: cs.visibility !== 'hidden' && cs.display !== 'none' && +cs.opacity > 0.05 && b.width > 0, cls: String(el.className) }; };
@@ -38,11 +41,15 @@ for (const [w, h] of views) {
   });
   const file = path.join(out, 'hud-' + w + 'x' + h + '.png');
   await page.screenshot({ path: file });
-  const ks = rects.killStreak, cx0 = w * .3, cx1 = w * .7, cy0 = h * .25, cy1 = h * .75;
-  const overlap = a => a && a.x < cx1 && a.x + a.w > cx0 && a.y < cy1 && a.y + a.h > cy0;
-  result.push({ viewport: w + 'x' + h, kills, rects, centerClear: !(ks && ks.visible && overlap(ks)), playClear: rects.violators.length === 0, toastsCenterClear: rects.toasts.every(t => !overlap(t)), screenshot: file, errors });
+  const ks = rects.killStreak, P = rects.protectedArea;
+  const overlap = a => a && a.x < P.right && a.x + a.w > P.left && a.y < P.bottom && a.y + a.h > P.top;
+  // 참고용: 예전 기준(가로 30~70%)과 겹치는 알림 수. 판정에는 쓰지 않는다.
+  const legacy30 = rects.toasts.filter(t => t.x + t.w > w * .3 && t.x < w * .7 && t.y < h * .75 && t.y + t.h > h * .25).length;
+  const longNotice = rects.toasts.some(t => t.text.includes('이름의 장례길'));
+  result.push({ viewport: w + 'x' + h, kills, rects, longNoticeShown: longNotice, centerClear: !(ks && ks.visible && overlap(ks)), playClear: rects.violators.length === 0, toastsCenterClear: longNotice && rects.toasts.every(t => !overlap(t)), legacy30ToastOverlap: legacy30, screenshot: file, errors });
   await ctx.close();
 }
 await browser.close();
 await fs.writeFile(path.join(out, 'report.json'), JSON.stringify(result, null, 2));
-console.log(JSON.stringify(result.map(r => ({ v: r.viewport, kills: r.kills, ks: r.rects.killStreak, combo: r.rects.combo, centerClear: r.centerClear, toastsClear: r.toastsCenterClear, playClear: r.playClear, violators: r.rects.violators, toasts: r.rects.toasts, errors: r.errors.slice(0, 3) })), null, 1));
+console.log(JSON.stringify(result.map(r => ({ v: r.viewport, kills: r.kills, ks: r.rects.killStreak, combo: r.rects.combo, centerClear: r.centerClear, toastsClear: r.toastsCenterClear, longNoticeShown: r.longNoticeShown, legacy30: r.legacy30ToastOverlap, protectedArea: r.rects.protectedArea, playClear: r.playClear, violators: r.rects.violators, toasts: r.rects.toasts, errors: r.errors.slice(0, 3) })), null, 1));
+if (result.some(r => !r.centerClear || !r.toastsCenterClear || !r.playClear || r.errors.length)) process.exitCode = 1;

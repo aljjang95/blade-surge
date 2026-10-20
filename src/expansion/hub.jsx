@@ -241,7 +241,8 @@ export class ExpeditionUI {
     panel.append(this.nav,this.campaign,this.host);this.root=createRoot(this.host);
     this.entry=document.getElementById('btn-expedition');
     this.potions=document.createElement('div');this.potions.className='exp-potions';this.potions.setAttribute('aria-label','전투 소모품');document.getElementById('hud').append(this.potions);
-    this.combatStatus=document.createElement('div');this.combatStatus.className='exp-combat-status';document.getElementById('hud').append(this.combatStatus);
+    // 직업 자원('집중 0/3')은 전장 위에 떠 있지 않고 플레이어 HP 패널 마지막 줄에 둔다(UI는 플레이를 가리지 않는다).
+    this.combatStatus=document.createElement('div');this.combatStatus.className='hud-job-status';(document.querySelector('#hud .hud-bars')||document.getElementById('hud')).append(this.combatStatus);
     for(const [i,c] of CONSUMABLES.entries()){const b=document.createElement('button');b.dataset.potion=c.id;b.title=`${c.name} · ${['U','I','O'][i]} · ${c.description}`;b.innerHTML=`<img src="${resourceArt(c.id)}" alt=""><b>0</b><small>${['U','I','O'][i]}</small>`;b.onclick=()=>this.usePotion(c.id);this.potions.append(b);}
     document.addEventListener('keydown',e=>{if(e.repeat||e.target?.matches('input,textarea,[contenteditable="true"]'))return;const id={u:'hp_tonic',i:'overdrive',o:'aegis'}[e.key.toLowerCase()];if(id&&app.mode==='battle'){e.preventDefault();this.usePotion(id);}});
     app.eco.onChange(()=>{this.refreshPotions();if(this.opened)this.render();});this.refreshPotions();

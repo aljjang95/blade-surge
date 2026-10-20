@@ -1,4 +1,4 @@
-// 광장 채팅(시안 C12): 채널 알약·메시지 줄·빠른 문구·입력칸
+// 광장 채팅(시안 C17): 채널 알약·메시지 줄·빠른 문구·입력칸
 import { button, clear, el } from '../dom.js';
 import { icon } from '../icons.js';
 import { channelLabel, clockText, EMOJIS, errorMessage, fullName, QUICK_PHRASES, titleTone } from '../format.js';

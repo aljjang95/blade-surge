@@ -8,6 +8,7 @@ import { loadHeroModel, loadHeroAsset, spawnCharacter, poseRangerBowString, appl
 import { libraryAssetForHero, resolveAssetSource, revisedLibraryFile, rangerLibraryRevision } from '../src/engine/library-assets.js';
 import { attackPhase } from '../src/game/combat-motion.js';
 import { HEROES } from '../src/data/heroes.js';
+import { RANGER_HEAD_LIFT } from '../src/game/player.js';
 import manifest from '../asset-library/manifest.json';
 import { finishLibraryGLB } from '../tools/art/finish-library-materials.mjs';
 import REV_V1 from '../src/data/ranger-library-revision-v1.json';
@@ -368,4 +369,18 @@ test('사격: 만작에서 상체는 과녁 쪽으로 비틀리고(왼어깨 전
   }
   expect(pulls).toBe(3);
   disposeCharacter(inst.root, inst.mixer);
+});
+
+test('궁수 전투 머리 보정은 귀 축(z) 피치로 고개만 들고 옆으로 기울이지 않는다', async () => {
+  // 출시 GLB 의 머리 뼈 로컬 축(앞 +x, 귀 +z)을 월드에서 읽어, 보정 전후 앞 방향만 30° 위로 돌았는지 확인한다.
+  const gltf = await parse('../public' + REV.output.path);
+  const head = gltf.scene.getObjectByName('mixamorigHead') as THREE.Bone;
+  expect(head?.isBone).toBe(true);
+  gltf.scene.updateMatrixWorld(true);
+  const axis = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z).transformDirection(head.matrixWorld);
+  const front = axis(1, 0, 0), side = axis(0, 0, 1);
+  head.quaternion.multiply(RANGER_HEAD_LIFT); head.updateMatrixWorld(true);
+  expect(axis(0, 0, 1).distanceTo(side)).toBeLessThan(1e-4);
+  expect(THREE.MathUtils.radToDeg(front.angleTo(axis(1, 0, 0)))).toBeCloseTo(30, 1);
+  expect(axis(1, 0, 0).y).toBeGreaterThan(front.y + .3);
 });

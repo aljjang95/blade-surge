@@ -1,4 +1,4 @@
-// 친구·내 프로필(시안 C13)
+// 친구·내 프로필(시안 C18)
 import { button, clear, el } from '../dom.js';
 import { icon, laurel } from '../icons.js';
 import { errorMessage, fullName, parseFriendCode } from '../format.js';

@@ -7,7 +7,7 @@ export function isCompact(width, height) {
 
 /**
  * 화면 크기에서 패널 배치를 정한다.
- * - sideWidth: 사이드 시트(채팅·파티 모집) 폭. 시안 C12는 화면의 45%.
+ * - sideWidth: 사이드 시트(채팅·파티 모집) 폭. 시안 C17는 화면의 45%.
  * - margin: 넓은 화면 프레임(친구·명예의 전당·소식) 바깥 여백.
  */
 export function layoutFor(width, height) {

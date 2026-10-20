@@ -1,52 +1,91 @@
 import {afterEach, expect, mock, spyOn, test} from 'bun:test';
 import * as THREE from 'three';
 import {audio} from '../src/engine/audio.js';
+import {COMBAT_SOUND_FILES, HIT_SOUND_FILES} from '../src/engine/combat-sound-library.js';
 import {Battle} from '../src/game/battle.js';
 
 afterEach(() => mock.restore());
-function soundFixture() {
+/** library=true: Mirelo 타격 파일이 모두 준비된 실제 배송 상태. false: 파일이 없어 합성 폴백으로 내려가는 상태. */
+function soundFixture({library=true}={}) {
   const sound:any = new (audio.constructor as any)();
   const heard:string[] = [];
   sound.ctx = {currentTime:1,state:'running'};
   sound.pick = sound.thump = sound.ting = sound.contactSnap = () => {};
+  if (library) for (const name of [...HIT_SOUND_FILES, ...COMBAT_SOUND_FILES]) sound.buffers[name] = {name, duration:.3};
   sound.play = (name:string) => heard.push(name);
   return {sound,heard};
 }
-for (const [crit,finisher,accent] of [[false,false,null],[true,false,'light'],[false,true,'heavy'],[true,true,'heavy']] as const) {
-  test(`real damage path: critical=${crit}, finisher=${finisher} reaches ${accent ?? 'no'} Flow accent`, () => {
+/** 재생된 타격의 바디 레이어 id(b_basic·b_heavy·b_finisher …)와 치명타·영웅 접촉 레이어. */
+const bodies = (heard:string[]) => heard.filter(name => name.includes('/hit/b_')).map(name => name.replace(/^.*\/hit\/(b_[a-z]+)_\d+$/, '$1'));
+const crits = (heard:string[]) => heard.filter(name => name.includes('/hit/t_crit')).length;
+const heroes = (heard:string[]) => [...new Set(heard.filter(name => name.includes('/hero/')).map(name => name.split('/')[2]))];
+function damageGame({crit, weapon='1h', source}:{crit:boolean, weapon?:string, source?:any}) {
+  const noop=()=>{};
+  return {active:true,stage:{},app:{},feedbackCount:0,feedbackSound:false,
+    player:{def:{weapon},stats:{crit:crit?1:0,critDmg:1.5},addUlt:noop},dmgDealt:0,combo:0,maxCombo:0,ui:{setCombo:noop},
+    fx:{dmgLayer:{children:[]},damage:noop,contact:noop,texFlash:noop,light:noop,flash:noop,directional:noop},timeCtl:{hitstop:noop},renderer:{shake:noop},source} as any;
+}
+const target = () => ({alive:true,spawning:false,receiveImpact:noop0,hurt:()=>10,pos:new THREE.Vector3(),def:{scale:1}});
+function noop0() {}
+for (const [crit,finisher,body] of [[false,false,'b_basic'],[true,false,'b_heavy'],[false,true,'b_finisher'],[true,true,'b_finisher']] as const) {
+  test(`real damage path: critical=${crit}, finisher=${finisher} plays the ${body} body with the knight contact${crit ? ' and crit sparkle' : ''}`, () => {
     const {sound,heard} = soundFixture();
     spyOn(audio,'hit').mockImplementation(sound.hit.bind(sound));
     spyOn(audio,'vibe').mockImplementation(() => false);
-    const noop=()=>{};
-    const game:any={active:true,stage:{},app:{},feedbackCount:0,feedbackSound:false,player:{stats:{crit:crit?1:0,critDmg:1.5},addUlt:noop},dmgDealt:0,combo:0,maxCombo:0,ui:{setCombo:noop},
-      fx:{dmgLayer:{children:[]},damage:noop,contact:noop,texFlash:noop,light:noop},timeCtl:{hitstop:noop},renderer:{shake:noop}};
-    Battle.prototype.damageEnemy.call(game,{alive:true,spawning:false,receiveImpact:noop,hurt:()=>10,pos:new THREE.Vector3(),def:{scale:1}},10,{finisher});
+    // 평타 타격(basic). 평타·마무리가 아닌 스킬 틱은 rpg-battle 이 가벼운(light) 등급으로 보낸다.
+    const game = damageGame({crit});
+    Battle.prototype.damageEnemy.call(game,target(),10,{basic:true,finisher});
     expect(game.dmgDealt).toBe(10);
-    expect(heard).toEqual(accent ? [`expansion/flow-impact-${accent}`] : []);
+    expect(bodies(heard)).toEqual([body]);
+    expect(crits(heard)).toBe(crit ? 1 : 0);
+    expect(heroes(heard)).toEqual(['knight']);
+    expect(heard.some(name => name.startsWith('expansion/'))).toBe(false);
   });
 }
+test('party host: a party member hit plays that member hero contact, not the host hero', () => {
+  const {sound,heard} = soundFixture();
+  spyOn(audio,'hit').mockImplementation(sound.hit.bind(sound));
+  spyOn(audio,'vibe').mockImplementation(() => false);
+  const member = {def:{weapon:'bow'},stats:{crit:0,critDmg:1.5},addUlt:noop0};
+  const game = damageGame({crit:false, weapon:'2h'});
+  Battle.prototype.damageEnemy.call(game,target(),10,{basic:true,source:member});
+  expect(heroes(heard)).toEqual(['ranger']);
+  expect(bodies(heard)).toEqual(['b_basic']);
+});
+test('skill tick (neither basic nor finisher) drops to the light tier so crowd skills do not bury basic hits', () => {
+  const {sound,heard} = soundFixture();
+  spyOn(audio,'hit').mockImplementation(sound.hit.bind(sound));
+  spyOn(audio,'vibe').mockImplementation(() => false);
+  Battle.prototype.damageEnemy.call(damageGame({crit:false}),target(),10,{});
+  expect(bodies(heard)).toEqual(['b_light']);
+  expect(heroes(heard)).toEqual(['knight']);
+});
 test('crowd burst: 창당 2음 안에서 마무리가 즉시 울리고 이후 치명타는 창이 열릴 때 가장 센 하나만 낸다',()=>{
   const {sound,heard}=soundFixture(); let timer:()=>void=()=>{};
   spyOn(globalThis,'setTimeout').mockImplementation(((fn:()=>void)=>{timer=fn;return 99;}) as any);
   sound.hit();
   sound.hit('slash',{heavy:true,finisher:true});
   for(let i=0;i<30;i++) sound.hit('slash',{crit:true,heavy:true,finisher:false});
-  // 첫 두 타격은 즉시 재생되고(마무리의 강타 accent 포함) 나머지 30개는 대기열 하나로 합쳐진다.
-  expect(heard).toEqual(['expansion/flow-impact-heavy']);
+  // 첫 두 타격(일반·마무리)은 즉시 재생되고 나머지 30개는 대기열 하나로 합쳐진다.
+  expect(bodies(heard)).toEqual(['b_basic','b_finisher']);
   sound.ctx.currentTime+=.05; timer();
-  expect(heard).toEqual(['expansion/flow-impact-heavy','expansion/flow-impact-light']);
+  expect(bodies(heard)).toEqual(['b_basic','b_finisher','b_heavy']);
+  expect(crits(heard)).toBe(1);
   sound.setSfxOn(false);
 });
 test('mute cancels a queued critical accent before it can sound',()=>{
   const {sound,heard}=soundFixture(); let timer:()=>void=()=>{};
   spyOn(globalThis,'setTimeout').mockImplementation(((fn:()=>void)=>{timer=fn;return 99;}) as any);
   // 창당 2음을 채운 뒤의 세 번째(치명타)만 대기열에 남고, 음소거가 그것을 취소한다.
-  sound.hit(); sound.hit(); sound.hit('slash',{crit:true,heavy:true}); sound.setSfxOn(false);
+  sound.hit(); sound.hit(); const before=heard.length;
+  expect(bodies(heard)).toEqual(['b_basic','b_basic']);
+  sound.hit('slash',{crit:true,heavy:true}); sound.setSfxOn(false);
   sound.ctx.currentTime+=.1; timer();
-  expect(heard).toHaveLength(0);
+  expect(heard).toHaveLength(before); expect(crits(heard)).toBe(0);
 });
 test('hit tiers change the physical punch profile while retaining a short contact snap',()=>{
-  const {sound}=soundFixture(); const thumps:any[]=[]; const snaps:any[]=[];
+  // 합성 폴백(타격 파일이 없을 때)의 물리 펀치 프로필 계약.
+  const {sound}=soundFixture({library:false}); const thumps:any[]=[]; const snaps:any[]=[];
   sound.thump=(opts:any)=>thumps.push(opts); sound.contactSnap=(opts:any)=>snaps.push(opts); sound.ting=()=>{};
   sound._renderHit('slash',{crit:false,heavy:false,finisher:false,boss:false});
   sound._renderHit('slash',{crit:false,heavy:true,finisher:false,boss:false});

@@ -1,0 +1,66 @@
+{
+ "license": "owner-generated (GPT image)",
+ "note": "검은 배경 가산 혼합용 스킬 VFX 텍스처. 프롬프트 원문은 대화 기록, 화풍은 블레이드 서지 로비/HUD 기준",
+ "assets": {
+  "skill-holy-wave": {
+   "source": "ChatGPT image generation (Codex imagegen, GPT)",
+   "original": "exec-8f53b06d-be9f-4fa3-9054-38ed8ea817aa.png",
+   "file": "/img/vfx/skills-v2/skill-holy-wave.webp",
+   "createdAt": "2026-10-19"
+  },
+  "skill-rune-circle-gold": {
+   "source": "ChatGPT image generation (Codex imagegen, GPT)",
+   "original": "exec-7ff5fd8f-cfed-48c2-be27-d09ffed245a1.png",
+   "file": "/img/vfx/skills-v2/skill-rune-circle-gold.webp",
+   "createdAt": "2026-10-19"
+  },
+  "skill-rune-circle-violet": {
+   "source": "ChatGPT image generation (Codex imagegen, GPT)",
+   "original": "exec-6b6df178-cf98-45a0-aefb-1aa94fd58e74.png",
+   "file": "/img/vfx/skills-v2/skill-rune-circle-violet.webp",
+   "createdAt": "2026-10-19"
+  },
+  "skill-meteor": {
+   "source": "ChatGPT image generation (Codex imagegen, GPT)",
+   "original": "exec-83e0b134-4284-4448-b40e-338a9566dade.png",
+   "file": "/img/vfx/skills-v2/skill-meteor.webp",
+   "createdAt": "2026-10-19"
+  },
+  "skill-ice-burst": {
+   "source": "ChatGPT image generation (Codex imagegen, GPT)",
+   "original": "exec-a3919761-8796-4afc-b701-c50fca5d501b.png",
+   "file": "/img/vfx/skills-v2/skill-ice-burst.webp",
+   "createdAt": "2026-10-19"
+  },
+  "skill-shadow-slash": {
+   "source": "ChatGPT image generation (Codex imagegen, GPT)",
+   "original": "exec-610c3399-f059-4765-90f3-af3eeb5f7032.png",
+   "file": "/img/vfx/skills-v2/skill-shadow-slash.webp",
+   "createdAt": "2026-10-19"
+  },
+  "skill-wind-arrow-trail": {
+   "source": "ChatGPT image generation (Codex imagegen, GPT)",
+   "original": "exec-641f0b10-6787-4bbd-9f72-055c682a50a5.png",
+   "file": "/img/vfx/skills-v2/skill-wind-arrow-trail.webp",
+   "createdAt": "2026-10-19"
+  },
+  "skill-lava-crack": {
+   "source": "ChatGPT image generation (Codex imagegen, GPT)",
+   "original": "exec-851692a5-9850-4aa9-8646-8c5d0356c0b2.png",
+   "file": "/img/vfx/skills-v2/skill-lava-crack.webp",
+   "createdAt": "2026-10-19"
+  },
+  "aura-sssr": {
+   "source": "ChatGPT image generation (Codex imagegen, GPT)",
+   "original": "exec-199c7cc7-cf01-4bd8-a676-308e94f073a0.png",
+   "file": "/img/vfx/skills-v2/aura-sssr.webp",
+   "createdAt": "2026-10-19"
+  },
+  "skill-chain-lightning": {
+   "source": "ChatGPT image generation (Codex imagegen, GPT)",
+   "original": "exec-5349c6ca-a8b2-4034-8731-2fbe0cb86845.png",
+   "file": "/img/vfx/skills-v2/skill-chain-lightning.webp",
+   "createdAt": "2026-10-19"
+  }
+ }
+}

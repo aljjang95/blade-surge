@@ -10,7 +10,7 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
-import { displaySize, renderPixelRatio } from '../platform/mobile-display.js';
+import { displaySize, renderPixelRatio, thermalRenderProfile } from '../platform/mobile-display.js';
 import { rebindEnvironment, createStorybookEnvironment } from './environment.js';
 import { ShaderProgramValidator } from './shader-program-validator.js';
 import { PlayerSilhouette, PLAYER_SILHOUETTE_FRAGMENT } from './player-silhouette.js';
@@ -147,6 +147,12 @@ export class Renderer {
     this.battleOcclusion = new BattleOcclusion();
     this.rebuildEnvironment();
     this.scene = new THREE.Scene();
+    this.touch = window.matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+    this.thermalTier = 0; this.renderCount = 0;
+    this._shadowSizes = new WeakMap();
+    this._syncShadow = object => this._applyShadowSize(object);
+    // 아레나가 교체하는 태양광에도 첫 렌더 전에 같은 해상도 정책을 적용한다.
+    this.scene.addEventListener('childadded', event => event.child.traverse(this._syncShadow));
     this.scene.background = new THREE.Color(0x0b0a12);
     this.scene.fog = new THREE.FogExp2(0x0b0a12, 0.028);
     this.camera = new THREE.PerspectiveCamera(50, 1, 0.1, 120);
@@ -192,11 +198,35 @@ export class Renderer {
   }
   setQuality(q) {
     this.quality = q;
-    this.bloom.enabled = q !== 'low';
+    const profile = thermalRenderProfile(q, this.touch, this.thermalTier);
+    this.bloom.enabled = profile.bloomEnabled;
     this.r.shadowMap.enabled = q !== 'low';
+    // 종류는 사용자 설정 때만 바꾼다. 부하 단계 왕복으로 셰이더를 다시 컴파일하지 않는다.
+    this.r.shadowMap.type = profile.softShadow ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+    this.scene.traverse(this._syncShadow);
     // 낮음: 색 보정과 림라이트를 끈다(조명 개수는 그대로 두어 셰이더를 다시 짜지 않는다).
     if (this.rimLight) this.rimLight.intensity = q === 'low' ? 0 : RIM_INTENSITY;
     this.resize(true);
+  }
+  setThermalTier(tier) {
+    if (!Number.isInteger(tier) || tier < 0 || tier > 4 || tier === this.thermalTier) return;
+    const wasReduced = this.thermalTier >= 3;
+    this.thermalTier = tier;
+    this.bloom.enabled = this.quality !== 'low' && tier < 2;
+    this.scene.traverse(this._syncShadow);
+    if (wasReduced !== (tier >= 3)) this.resize(true);
+  }
+  _applyShadowSize(object) {
+    const shadow = object.shadow;
+    if (!object.castShadow || !shadow) return;
+    let base = this._shadowSizes.get(shadow);
+    if (!base) { base = { width: shadow.mapSize.x, height: shadow.mapSize.y }; this._shadowSizes.set(shadow, base); }
+    const scale = thermalRenderProfile(this.quality, this.touch, this.thermalTier).shadowScale;
+    const width = Math.max(128, Math.floor(base.width * scale)), height = Math.max(128, Math.floor(base.height * scale));
+    if (shadow.mapSize.x === width && shadow.mapSize.y === height) return;
+    shadow.mapSize.set(width, height);
+    // Three r170은 mapSize만 바꿔서는 기존 렌더 타깃을 다시 만들지 않는다.
+    shadow.map?.dispose(); shadow.map = null; shadow.needsUpdate = true;
   }
   rebuildEnvironment(templates = []) {
     const previous = this.characterEnvironment;
@@ -210,7 +240,7 @@ export class Renderer {
   resize(force = false) {
     const { width: w, height: h } = displaySize(window);
     const pr = renderPixelRatio({ width: w, height: h, dpr: window.devicePixelRatio, quality: this.quality,
-      touch: window.matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints > 0 });
+      touch: this.touch, thermalTier: this.thermalTier });
     document.documentElement.style.setProperty('--app-height', h + 'px');
     if (!force && this._width === w && this._height === h && this.r.getPixelRatio() === pr) return;
     this._width = w; this._height = h;
@@ -238,7 +268,9 @@ export class Renderer {
     // 밉 체인을 다시 잡아버려서, resolution 을 아무리 낮춰도 아무 효과가 없다.
     // 블룸은 5단 밉 × (가로+세로 블러) = 10회 풀스크린 패스라 해상도 제곱으로 비싸진다.
     // composer.setSize 뒤에 setSize 를 다시 불러 덮어써야 실제로 낮아진다.
-    const bw = Math.min(320, Math.round(w / 3)), bh = Math.min(320, Math.round(h / 3));
+    const profile = thermalRenderProfile(this.quality, this.touch, this.thermalTier);
+    const bw = Math.max(1, Math.min(profile.bloomLimit, Math.round(w / profile.bloomDivisor)));
+    const bh = Math.max(1, Math.min(profile.bloomLimit, Math.round(h / profile.bloomDivisor)));
     this.bloom.resolution.set(bw, bh);
     this.bloom.setSize(bw, bh);
   }
@@ -338,6 +370,7 @@ export class Renderer {
     }
     this.lobbyAA.enabled = this.rig.mode === 'lobby'; this.composer.render();
     this.programValidator.validate(this.r);
+    this.renderCount++;
   }
   /** 지역 색 보정 목표를 정하고, 아레나가 깐 안개를 지역 하늘의 지평선 색 쪽으로 밝힌다(대기 원근). */
   _applyRegionLook(visual) {

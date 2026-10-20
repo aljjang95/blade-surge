@@ -1,4 +1,4 @@
-// 명예의 전당(시안 C14): 던전 목록 · 시상대 · 서버 정복 순위 · 내 순위
+// 명예의 전당(시안 C19): 던전 목록 · 시상대 · 서버 정복 순위 · 내 순위
 import { button, clear, el } from '../dom.js';
 import { icon, laurel } from '../icons.js';
 import { clockText, dateText, durationText, errorMessage, fullName, hueOf } from '../format.js';

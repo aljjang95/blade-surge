@@ -1,8 +1,10 @@
 import './style.css';
 import * as THREE from 'three';
 import { Renderer } from './engine/renderer.js';
+import { FrameGovernor, canRenderFrame } from './engine/frame-governor.js';
 import { LobbyCameraControls, releaseBlockedLobbyInput } from './engine/lobby-camera.js';
-import { createLobbyPose } from './engine/lobby-pose.js';
+import { createLobbyPose, lobbyPoseWeight } from './engine/lobby-pose.js';
+import { createCombatPose } from './engine/combat-pose.js';
 import { bindTouchActivation } from './engine/touch-activation.js';
 import { CameraControls } from './engine/camera-control.js';
 import { setupPwa } from './platform/pwa.js';
@@ -72,7 +74,8 @@ const BOOT_TIPS = [
   '<b>질주</b> 중 적과 부딪히면 넉백. 무리 사이를 가르며 달려라.',
 ];
 
-import { applyLook } from './game/look.js';
+import { applyLook, LOOKS } from './game/look.js';
+import { playerSkillAimShape } from './game/skill-aim/shapes.js';
 import { createFunnelLog, sessionOpenEvents } from './game/funnel-events.js';
 
 // 시작 실패를 단계별로 분류하기 위한 현재 단계. App 생성자가 실패하면 인스턴스가 없으므로 모듈에 둔다.
@@ -232,6 +235,18 @@ class App {
     return typeof chosen === 'boolean' ? chosen : !this.reducedMotion?.matches;
   }
   applySettings() {
+    if (!this.frameGovernor) {
+      let storage = null;
+      try { storage = window.localStorage; } catch { /* 차단된 저장소에서는 세션 안에서만 조절한다. */ }
+      this.frameGovernor = new FrameGovernor({ storage });
+      this.frameGovernor.reset(performance.now());
+      window.__perfGovernor = this.frameGovernor;
+      const resetGovernor = () => this.frameGovernor.suspend(performance.now());
+      document.addEventListener('visibilitychange', resetGovernor);
+      window.addEventListener('pagehide', resetGovernor);
+      window.addEventListener('pageshow', resetGovernor);
+    }
+    this.renderer.setThermalTier(this.frameGovernor.tier);
     const st = this.eco.s.settings; audio.setSfxOn(st.sfx); audio.setMusicOn(st.music); audio.haptics = st.haptics; if (!st.haptics) audio.vibe(0); audio.setVoiceOn(st.voice !== false);
     audio.setMix(this.arsenal.s.mix);
     const q = resolveQuality(st.quality, { cores: navigator.hardwareConcurrency || 4, memory: navigator.deviceMemory || 4,
@@ -286,7 +301,7 @@ class App {
   async showcaseHero(id, first = false) {
     const def = HEROES[id];
     this.companionAgent?.cancelDialogue();
-    if (this.showcase) { this.hubMovement.detach(); this.showcase.pose?.dispose(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
+    if (this.showcase) { this.hubMovement.detach(); this.showcase.combatPose?.dispose(); this.showcase.pose?.dispose(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
     if (!this.arena.lobbyHall) this.arena.buildLobby();
     const { root, mixer, clips } = spawnCharacter(this.models[def.model]);
     root.rotation.y = Math.PI * 0.15;
@@ -296,8 +311,9 @@ class App {
     mixer.update(0);
     const pose = createLobbyPose(root, id);
     pose?.apply();
+    const combatPose = createCombatPose(root, id, mixer, clips);
     this.scene.add(root);
-    this.showcase = { root, mixer, clips, def, look, pose, t: 0, next: 4 + Math.random() * 3, auraT: 0 };
+    this.showcase = { root, mixer, clips, def, look, pose, combatPose, idleAction: a, t: 0, next: 4 + Math.random() * 3, auraT: 0 };
     this.hubMovement.attach(this.showcase);
     this.companionAgent?.syncLobbyContext();
     if (!first) { this.fx.pillar(root.position, def.color, { radius: 1.2, height: 8, life: 0.8 }); this.fx.burst(root.position.clone().setY(1), def.color, { n: 40, speed: 6, size: 0.4, up: 1 }); audio.magic({ vol: 0.3, base: 440, notes: [0, 4, 7, 12] }); }
@@ -372,7 +388,7 @@ class App {
       }
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
       $('stage-loading').hidden = false;
-      if (this.showcase) { this.hubMovement.detach(); this.showcase.pose?.dispose(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
+      if (this.showcase) { this.hubMovement.detach(); this.showcase.combatPose?.dispose(); this.showcase.pose?.dispose(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
       this.mode = 'battle';
       this._bossAttemptTracked = false;
       const id = this.eco.s.selected;
@@ -408,7 +424,7 @@ class App {
       this.journeyView?.close();
       this.ui.hideResult(); this.ui.show($('meta'), false); this.ui.closeModal();
       $('stage-loading').hidden = false;
-      if (this.showcase) { this.hubMovement.detach(); this.showcase.pose?.dispose(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
+      if (this.showcase) { this.hubMovement.detach(); this.showcase.combatPose?.dispose(); this.showcase.pose?.dispose(); disposeCharacter(this.showcase.root, this.showcase.mixer); this.showcase = null; }
       this.mode = 'battle';
       this._bossAttemptTracked = false;
       const heroId = this.eco.s.selected;
@@ -432,9 +448,18 @@ class App {
   // ---------- 루프 ----------
   loop(t) {
     requestAnimationFrame((tt) => this.loop(tt));
-    let realDt = Math.min(0.05, (t - this.last) / 1000); this.last = t;
-    if (this.testPause || this.stageStarting || this.contextLost || document.hidden) return;
-    this.step(realDt);
+    const governor = this.frameGovernor;
+    const suspended = !!(this.testPause || this.stageStarting || this.contextLost || document.hidden);
+    const render = !suspended && canRenderFrame(this, document);
+    const realDt = governor.advance(t, this.mode, render, suspended);
+    if (suspended) this.last = t;
+    if (!realDt) return;
+    this.last = t;
+    this.renderer.setThermalTier(governor.tier);
+    const count = this.renderer.renderCount, started = performance.now();
+    // 기존 장시간 정지의 dt 상한은 유지하며, 평소 간격 제어 시간은 시뮬레이션에 모두 넘긴다.
+    this.step(Math.min(0.05, realDt), render);
+    if (this.renderer.renderCount !== count) governor.recordFrame(t, performance.now() - started);
   }
   /** 한 프레임 진행 (테스트 시 고정 dt로 호출 가능) */
   step(realDt, render = true) {
@@ -458,7 +483,7 @@ class App {
       this.fx.update(dt);
       if (this.battle.player) { this._auto = this.battle.player.auto; }
       // 킬 카운트 → 임무
-      this.renderer.update(dt, realDt); if (render) this.renderer.render();
+      this.renderer.update(dt, realDt); if (render && canRenderFrame(this, document)) this.renderer.render();
     } else if (this.mode === 'lobby') {
       // 입장 준비 중에는 성채 장면을 정지하고 네이티브 UI와 음악을 유지한다.
       if (this.hubUI?.opened && this.hubUI.dialog?.open) return;
@@ -470,9 +495,13 @@ class App {
         this.hubMovement.update(realDt, move, yaw);
         if (this.hubControls.consumeInteract()) this.interactHub(this.hubMovement.nearest);
         // Walking animation remains functional when ambient motion is reduced.
+        s.combatPose?.restore();
         s.pose?.restore();
         if (!this.reducedMotion.matches || this.hubMovement.moving) s.mixer.update(realDt);
-        s.pose?.apply();
+        // 교정은 Idle 값이므로 Idle 가중치만큼만 얹는다(걷기·다른 클립에서는 줄이거나 끈다).
+        s.pose?.apply(lobbyPoseWeight(s.idleAction));
+        // 걷기·감정 표현 같은 마을 클립의 무기·팔 관통은 별도 가산 층이 보정한다(Idle 교정과 겹치지 않는 클립만 대상).
+        s.combatPose?.apply(realDt);
         this.renderer.rig.target.copy(s.root.position);
         this.hubUI.update(this.hubMovement.nearest, { blocked: !this.canWalkHub() });
         this.arena.lobbyHall?.userData.update(realDt, { nearestId: this.hubMovement.nearest?.id, playerPosition: s.root.position, reducedMotion: this.reducedMotion.matches });
@@ -480,7 +509,7 @@ class App {
       }
       this.arena.update(realDt, this.fx, this.showcase ? this.showcase.root.position : null); this.fx.update(realDt);
       this.renderer.update(realDt, realDt);
-      if (render && (this.lobbyVisible || this.meta.tab === 'home')) this.renderer.render();
+      if (render && canRenderFrame(this, document)) this.renderer.render();
     }
   }
 }
@@ -526,5 +555,9 @@ try {
   app = new App();
   window.app = app;
   window.__EN = ENEMIES; window.__stageDef = stageDef; window.__THREE = THREE;
+  // 조준 표시=판정 QA(tools/aim-hitbox-truth-qa.mjs)가 정식 빌드에서도 표시 모양을 읽도록 읽기 전용 함수만 노출한다.
+  window.__skillAimShape = playerSkillAimShape;
+  // 전투 자세 QA(tools/combat-pose-qa.mjs)가 정식 빌드에서도 무기·방어구 노드 이름을 읽도록 읽기 전용 표만 노출한다.
+  window.__LOOKS = LOOKS;
 } catch (error) { bootFailure(error); }
 if (app) app.boot().catch(error => bootFailure(error, app));

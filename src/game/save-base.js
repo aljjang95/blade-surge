@@ -7,6 +7,8 @@ import { normalizeExpedition } from './expedition-economy.js';
 import { normalizeSkillLoadout } from './progression.js';
 import { normalizeTownState } from '../data/towns.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
+import { normalizeGrade } from '../data/hero-grades.js';
+import { skillBaseLevel, spEarned, spSpent, SKILL_MAX_LV } from '../data/skill-tree.js';
 
 const record = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
 const integer = (value, fallback, min = 0, max = Number.MAX_SAFE_INTEGER) =>
@@ -36,7 +38,18 @@ export function normalizeSave(raw, fresh) {
   for (const id of Object.keys(HEROES)) {
     const h = fill(fresh.heroes.knight, sourceHeroes[id]);
     h.level = integer(h.level, 1, 1, 80); h.star = integer(h.star, 1, 1, 5);
-    h.skills = HEROES[id].skills.map((_, i) => integer(h.skills[i], 1, 1, 10));
+    // 각성 스킬은 0레벨(미습득)을 허용한다. SP 도입 전 저장(영웅에 grade 없음)은 예전처럼 빠진 칸을 1로 채워
+    // 이미 쓰던 스킬을 빼앗지 않는다. 새 저장은 각성 스킬을 0에서 시작해 SP로 배운다.
+    // SP 저장은 항상 전체 길이의 스킬 배열과 grade 를 함께 쓴다. 둘 중 하나라도 없으면 SP 이전 저장이다.
+    const savedSkills = sourceHeroes[id]?.skills;
+    const legacyHero = typeof sourceHeroes[id]?.grade !== 'string' || !Array.isArray(savedSkills) || savedSkills.length < HEROES[id].skills.length;
+    h.skills = HEROES[id].skills.map((skill, i) => integer(h.skills[i], legacyHero ? 1 : skillBaseLevel(skill), skillBaseLevel(skill), SKILL_MAX_LV));
+    // SP 이전 저장은 골드로 올린 스킬이 레벨로 번 SP보다 많을 수 있다. 그 차이를 보상 SP로 남겨
+    // 남은 SP가 음수로 묶여 레벨을 올려도 스킬을 못 찍던 문제를 막는다(이미 올린 스킬은 그대로 둔다).
+    // 보상 SP 필드가 없는 저장(SP 이전 저장, 그리고 보상 SP가 생기기 전의 SP 저장)에서 한 번만 계산한다. 있으면 저장값(0 포함)을 그대로 쓴다.
+    const savedBonus = sourceHeroes[id]?.spBonus;
+    h.spBonus = Number.isSafeInteger(savedBonus) ? integer(savedBonus, 0, 0, 999) : Math.min(999, Math.max(0, spSpent(HEROES[id], h.skills) - spEarned(h.level)));
+    h.grade = normalizeGrade(HEROES[id], typeof sourceHeroes[id]?.grade === 'string' ? sourceHeroes[id].grade : HEROES[id].rarity);
     h.skillLoadout = normalizeSkillLoadout(HEROES[id], h.skillLoadout);
     s.heroes[id] = h;
   }
@@ -90,6 +103,7 @@ export function normalizeSave(raw, fresh) {
   // 화면 흔들림은 사람이 직접 고른 true/false 만 저장한다. null(미선택)이면 동작 줄이기 선호를 따라 정한다.
   s.settings.screenShake = typeof raw.settings?.screenShake === 'boolean' ? raw.settings.screenShake : null;
   s.settings.lobbyCamera = normalizeLobbyCamera(raw.settings?.lobbyCamera);
+  s.settings.autoTarget = typeof raw.settings?.autoTarget === 'boolean' ? raw.settings.autoTarget : true;
   s.name = s.name.trim().slice(0, 20) || fresh.name;
   s.expedition = normalizeExpedition(raw.expedition);
   s.towns = normalizeTownState({ ...raw.towns, _migrationExpedition: raw.expedition, _migrationHeroes: raw.heroes });

@@ -183,6 +183,81 @@
     },
     {
       "id": "C12",
+      "group": "citadel-gate-20261020",
+      "title": "고대 성채 석조 아치: 쐐기돌·룬 음각·이끼",
+      "image": "images/gate-concept-A.png",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": true,
+      "note": "기존 14종 던전별 관문 장식(왕관·결정·종 등)을 유지한 채 공통 기둥·아치 뼈대만 바꿔 품질을 올릴 수 있다. 룬 음각이 포털 색을 따라가 던전 구분도 유지",
+      "sha256": "c770c768b5edabf7c7fd02a0ef81b90cde40bcf63d997c21846a2183c7230949"
+    },
+    {
+      "id": "C13",
+      "group": "citadel-gate-20261020",
+      "title": "룬 단조 요새: 금속 띠·깃발·결정 왕관",
+      "image": "images/gate-concept-B.png",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": false,
+      "note": "금속 띠와 각진 기둥은 좋지만 깃발 천과 큰 왕관이 던전별 장식과 겹친다. 금속 띠·리벳은 A에 일부 차용",
+      "sha256": "fde0875fd79138b38c9e0caa04fb94b03dc66432f2d94414269d500f323d39ca"
+    },
+    {
+      "id": "C14",
+      "group": "citadel-gate-20261020",
+      "title": "성소: 대리석 꼬임 기둥·떠다니는 룬석·천",
+      "image": "images/gate-concept-C.png",
+      "scores": {
+        "fit": 3,
+        "clarity": 4,
+        "feasibility": 3,
+        "distinct": 5
+      },
+      "chosen": false,
+      "note": "꼬임 기둥과 천 휘장은 삼각형 수가 많고 다른 던전 테마와 톤이 맞지 않는다",
+      "sha256": "8a040cb6d2741c8e986b5ff39c5bcf9ef046f419a46486815b9986a80142b809"
+    },
+    {
+      "id": "C15",
+      "group": "progression-20261019",
+      "title": "던파식 세로 스킬 트리 + SP + 초기화",
+      "image": "images/skilltree-c1.jpg",
+      "scores": {
+        "fit": 5,
+        "clarity": 5,
+        "feasibility": 4,
+        "distinct": 4
+      },
+      "chosen": true,
+      "note": "대표님이 말한 던파식 레벨·스킬 찍기·초기화 감각이 가장 직접 보이고, 잠긴 각성 스킬의 레벨 관문이 한 화면에 보여 레벨업 동기가 생긴다",
+      "sha256": "fd0a833aa6d26ba2c6e6fc70d37e48855b11cdf4c4174910f37c4417b0d40366"
+    },
+    {
+      "id": "C16",
+      "group": "progression-20261019",
+      "title": "스킬 카드 레일",
+      "image": "images/skilltree-c2.jpg",
+      "scores": {
+        "fit": 4,
+        "clarity": 4,
+        "feasibility": 4,
+        "distinct": 3
+      },
+      "chosen": false,
+      "note": "카드가 커서 8개 스킬이 한 화면에 다 안 들어가고 레벨 관문 흐름이 약하다",
+      "sha256": "ed74b1f4083451506c91067544a9389fbd15414ecc5c7b7f32449b98a6d7f6ab"
+    },
+    {
+      "id": "C17",
       "group": "community-1",
       "title": "로비 유지 사이드 시트",
       "image": "images/community-c1.jpg",
@@ -197,7 +272,7 @@
       "sha256": "ccfc743eed149e940b5cf992e62b05d14592bdd4c1f9937fa3157bf862c51d0a"
     },
     {
-      "id": "C13",
+      "id": "C18",
       "group": "community-1",
       "title": "커뮤니티 홀(친구·프로필)",
       "image": "images/community-c2.jpg",
@@ -212,7 +287,7 @@
       "sha256": "e6bfa612b2809fd3b5cc23c9bc1ca4869983e97fa9d689779b1a73c832f16720"
     },
     {
-      "id": "C14",
+      "id": "C19",
       "group": "community-1",
       "title": "명예의 전당 중심",
       "image": "images/community-c3.jpg",
@@ -425,6 +500,126 @@
       ],
       "copy": [],
       "sha256": "ccb2c07af67ee73834efa7e16ffa2fb21f8769d0530f4db1557b7b661a485de3"
+    },
+    {
+      "id": "citadel-gate-structure",
+      "type": "component",
+      "group": "citadel-gate-20261020",
+      "title": "성채 관문 공통 구조물(기둥·아치·받침)",
+      "image": "images/gate-concept-A.png",
+      "checks": [
+        "기둥이 단일 상자가 아니라 계단식 받침(2~3단) + 모서리를 깎은 돌 블록 쌓기 + 기둥머리로 읽힌다",
+        "아치는 쐐기돌(voussoir) 조각들이 둥글게 이어지고 가운데 쐐기돌이 크고 앞으로 튀어나온다",
+        "기둥 앞면과 아치 돌에 포털 색으로 빛나는 룬 음각(가는 발광 선)이 있다",
+        "돌 표면에 균열·이끼 패치가 있어 평평한 단색 블록으로 보이지 않는다",
+        "던전별 고유 장식(온실 지붕, 종, 바퀴, 결정 등)과 포털 색은 그대로 유지된다",
+        "로비 기본 카메라와 근접 카메라 모두에서 컨셉 A의 실루엣(두꺼운 기둥, 둥근 쐐기돌 아치, 큰 쐐기돌)과 같다"
+      ],
+      "risks": [
+        "모바일 부하: 관문 하나의 draw call은 재질 역할 수(stone/metal/glow/crystal/portal) 그대로 유지, 삼각형은 관문당 기존 대비 2배 이하로 제한하고 수치를 기록",
+        "14종 루트마다 posts()/arch() 호출이 다르다: 공통 빌더를 바꾸면 모든 루트를 캡처로 확인",
+        "low 품질에서는 이끼·균열 디테일 생략 가능"
+      ],
+      "copy": [],
+      "sha256": "c770c768b5edabf7c7fd02a0ef81b90cde40bcf63d997c21846a2183c7230949"
+    },
+    {
+      "id": "skill-tree-screen",
+      "type": "screen",
+      "group": "progression-20261019",
+      "title": "스킬 트리 (SP 습득·강화·초기화)",
+      "image": "images/skilltree-c1.jpg",
+      "checks": [
+        "왼쪽 열: 영웅 초상, 직업명, Lv, 큰 금색 원형 SP 카운터(\"남은 스킬 포인트\"), 하단 스킬 초기화 버튼(두루마리 아이콘+보석 가격 또는 보유 초기화서 수)",
+        "가운데: 위쪽 기본 스킬 4개 줄, 아래로 금색 화살표 연결선을 따라 각성 스킬이 Lv.10/20/35/50 관문 순서로 내려간다",
+        "스킬 칸: 정사각 아이콘, 금테(습득)·회색+자물쇠(미해금), 아래 레벨 n/10 알약과 + 버튼",
+        "오른쪽: 선택 스킬 상세(아이콘, 이름, Lv n/10, 설명, 피해 배율 현재→다음, 재사용 대기 현재→다음, 필요 조건 캐릭터 레벨·SP), 하단 큰 금색 \"습득 (SP n)\" 또는 \"강화 (SP n)\" 버튼",
+        "남색 바탕, 금색 테두리, 상단 보석·골드 바",
+        "각 칸 탭 = 오른쪽 상세 갱신, + 또는 큰 버튼 = SP 사용"
+      ],
+      "risks": [
+        "844x390에서 3열이 다 들어가야 한다: 가운데 트리는 4열×최대 3행(8개 스킬: 기본 4 + 각성 4)이라 이미지보다 행이 적다. 이미지의 4행 격자 대신 기본 4 + 각성 4의 2행 구조에 관문 레벨 라벨을 단다",
+        "이미지 속 \"다음 레벨 미리보기\" 영상 칸은 스킬 아이콘 확대+VFX 색 그라디언트 카드로 구현한다",
+        "초상은 기존 /img/tll/*-original-v1.webp를 쓴다"
+      ],
+      "copy": [
+        "스킬 트리",
+        "남은 스킬 포인트",
+        "스킬 초기화",
+        "습득",
+        "강화",
+        "피해 배율",
+        "재사용 대기시간",
+        "다음 레벨 효과",
+        "필요 조건",
+        "캐릭터 레벨",
+        "스킬 포인트",
+        "최대 레벨"
+      ],
+      "sha256": "fd0a833aa6d26ba2c6e6fc70d37e48855b11cdf4c4174910f37c4417b0d40366"
+    },
+    {
+      "id": "transcend-screen",
+      "type": "screen",
+      "group": "progression-20261019",
+      "title": "영웅 초월 (SR→SSR→SSSR)",
+      "image": "images/transcend-c1.jpg",
+      "checks": [
+        "가운데 영웅 일러스트와 원형 제단, 아래 SR(파랑)→SSR(보라)→SSSR(분홍·무지개 발광) 결정 3개와 화살표, 현재 등급 결정이 가장 밝다",
+        "왼쪽: 초월 전후 능력치 비교표(공격력, 체력, 스킬 피해, 재사용 대기, 궁극기 충전)와 초록 화살표",
+        "오른쪽: 필요 재료(영웅 조각 n/m, 초월석 n/m, 골드) 부족 수치는 붉게, 큰 자홍 \"초월하기\" 버튼, 그 아래 금색 \"초월 패키지\" 상점 바로가기",
+        "최고 등급이면 버튼이 \"최고 등급\"으로 잠긴다"
+      ],
+      "risks": [
+        "하단 탭바는 기존 로비 탭을 그대로 쓴다(새로 만들지 않는다)",
+        "결정 3개는 CSS 다이아몬드+발광 그라디언트로 그린다"
+      ],
+      "copy": [
+        "영웅 초월",
+        "초월 전후 능력치 비교",
+        "초월에 필요한 재료",
+        "영웅 조각",
+        "초월석",
+        "골드",
+        "초월하기",
+        "초월 패키지",
+        "최고 등급"
+      ],
+      "sha256": "560e6eed95b8cb31cef092af4aab74b55f9af2b59bd7fd8182c23840d3de17ba"
+    },
+    {
+      "id": "grade-rules",
+      "type": "rule",
+      "group": "progression-20261019",
+      "title": "등급 규칙 src/data/hero-grades.js",
+      "checks": [
+        "SR 1.5배·SSR 2.0배·SSSR 2.6배 능력치",
+        "스킬 피해 1/1.2/1.45, 재사용 대기 1/0.92/0.85, 궁극기 충전 +0/+10/+20%",
+        "SSSR은 전용 오라와 스킬 시그니처 VFX"
+      ]
+    },
+    {
+      "id": "skill-point-rules",
+      "type": "rule",
+      "group": "progression-20261019",
+      "title": "SP 규칙 src/data/skill-tree.js",
+      "checks": [
+        "시작 3 SP + 레벨당 1 + 10레벨마다 +2",
+        "각성 첫 습득·궁극기·6레벨 이상은 2 SP",
+        "Lv.20 미만 초기화 무료, 이후 스킬 초기화서(보석 상점)"
+      ]
+    },
+    {
+      "id": "monetization",
+      "type": "flow",
+      "group": "progression-20261019",
+      "title": "과금 흐름",
+      "checks": [
+        "가챠 SR/SSR 결과에 초월석 재료 추가",
+        "보석 상품: 스킬 초기화서, 초월석 묶음",
+        "현금 패키지: 초월 패키지(가격 표시·결제 준비 중, 실제 지급 없음)",
+        "SSSR은 초월로만 도달(소환 확률표에 없음)"
+      ]
     },
     {
       "id": "community-chat-sheet",
@@ -705,6 +900,31 @@
       "type": "writes"
     },
     {
+      "from": "lobby-screen",
+      "to": "citadel-gate-structure",
+      "type": "contains"
+    },
+    {
+      "from": "skill-tree-screen",
+      "to": "skill-point-rules",
+      "type": "reads"
+    },
+    {
+      "from": "transcend-screen",
+      "to": "grade-rules",
+      "type": "reads"
+    },
+    {
+      "from": "transcend-screen",
+      "to": "monetization",
+      "type": "navigates"
+    },
+    {
+      "from": "skill-tree-screen",
+      "to": "monetization",
+      "type": "navigates"
+    },
+    {
       "from": "community-chat-sheet",
       "to": "community-friends",
       "type": "navigates"
@@ -849,55 +1069,79 @@
       "surface": "실제 로비→출격→전투 캡처 1280x590·844x390와 blueprint shot, 프레임 p50·p95"
     },
     {
-      "id": "A12",
+      "id": "A20",
+      "node": "skill-tree-screen",
+      "criterion": "영웅 레벨이 오르면 SP가 늘고, 잠긴 각성 스킬은 관문 레벨 도달 후 SP 2로 습득해야 전투 Q/E에 쓸 수 있다",
+      "surface": "브라우저 844x390·1280x590 실제 클릭, 저장 후 새로고침 유지"
+    },
+    {
+      "id": "A21",
+      "node": "skill-tree-screen",
+      "criterion": "스킬 초기화로 SP가 모두 돌아오고 각성 스킬은 미습득으로 돌아간다. Lv.20 이상은 초기화서가 1개 줄고, 없으면 상점으로 안내된다",
+      "surface": "같은 화면 실제 클릭"
+    },
+    {
+      "id": "A22",
+      "node": "transcend-screen",
+      "criterion": "재료가 충분하면 초월하기로 등급이 오르고 전투력·스킬 피해·재사용 대기가 바뀐 값으로 보이고 전투에서 실제로 적용된다",
+      "surface": "브라우저 844x390 실제 클릭 + 전투 진입 후 쿨타임 표시"
+    },
+    {
+      "id": "A23",
+      "node": "monetization",
+      "criterion": "현금 상품은 가격과 결제 준비 중만 보이고 보상을 주지 않는다. 보석 상품은 보석을 차감하고 재료를 준다",
+      "surface": "상점 실제 클릭"
+    },
+    {
+      "id": "A24",
       "node": "community-chat-sheet",
       "criterion": "두 브라우저(서로 다른 기기 키)가 광장 1에서 서로의 메시지를 1초 안에 보고, 금칙어는 *로, 링크는 [링크]로 바뀌며, 도배는 안내와 함께 막힌다",
       "surface": "wrangler dev 로컬 + 실제 blade.tllhouse.com, 844x390·1440x900 캡처"
     },
     {
-      "id": "A13",
+      "id": "A25",
       "node": "community-friends",
       "criterion": "닉네임#태그로 친구 요청→상대 수락→서로 온라인·위치가 보이고, 귓속말과 파티 초대가 도착하며 초대의 참가 버튼이 기존 파티 방에 들어간다",
       "surface": "두 브라우저 실제 입력"
     },
     {
-      "id": "A14",
+      "id": "A26",
       "node": "first-clear-flow",
       "criterion": "던전을 처음 깬 첫 플레이어가 1위·\"최초 정복자\" 칭호를 받고 접속 중인 모든 사람에게 서버 최초 공지가 뜨며, 너무 빠른 클리어·중복 클리어는 기록되지 않는다",
       "surface": "실제 게임 던전 승리 + 서버 테스트"
     },
     {
-      "id": "A15",
+      "id": "A27",
       "node": "community-fame",
       "criterion": "명예의 전당에 던전별 최초 1~3위 시상대, 4~10위, 최단 기록, 서버 정복 순위, 내 순위가 실제 기록으로 표시된다",
       "surface": "1440x900·844x390 캡처, 시안 C14 비교"
     },
     {
-      "id": "A16",
+      "id": "A28",
       "node": "community-board",
       "criterion": "버그 제보 글에 진단 정보가 자동 첨부되고, 공감 토글·댓글·관리자 상태 변경·개발자 답변이 반영되며, 디스코드 웹훅이 설정되면 새 글이 디스코드에 올라간다",
       "surface": "두 브라우저 + 관리자 id, 웹훅은 설정된 경우만"
     },
     {
-      "id": "A17",
+      "id": "A29",
       "node": "battle-chat-ticker",
       "criterion": "전투 중 파티 채팅·서버 공지가 보호 영역을 가리지 않고 가장자리 띠로만 보인다",
       "surface": "전투 화면 844x390·1280x590 캡처의 요소 위치 측정"
     },
     {
-      "id": "A18",
+      "id": "A30",
       "node": "social-identity",
       "criterion": "처음 접속하면 로그인 없이 닉네임만 정해 바로 쓰고, 같은 기기에서 다시 열면 같은 신원·창립 번호가 유지된다",
       "surface": "브라우저 새로고침·재실행"
     },
     {
-      "id": "A19",
+      "id": "A31",
       "node": "google-link",
       "criterion": "GOOGLE_CLIENT_IDS가 설정되면 구글 연동 후 다른 브라우저에서 구글로 기록을 되찾고, 설정 전에는 버튼이 오류 없이 \"준비 중\"으로 보인다",
       "surface": "서버 테스트(자체 서명 토큰) + 실제 구글 연동은 클라이언트 ID 발급 후"
     },
     {
-      "id": "A20",
+      "id": "A32",
       "node": "social-hub",
       "criterion": "커뮤니티 서버가 꺼져 있거나 오프라인이어도 게임 시작·전투·정산·보상은 그대로 동작한다",
       "surface": "네트워크 차단 상태 실제 플레이"
@@ -940,22 +1184,37 @@
       "source": "대표님 2026-10-18 맵 그래픽 UI + 3차 사이클 빠진 그림"
     },
     {
-      "id": "D8",
-      "text": "커뮤니티는 C12(로비 유지 사이드 시트)를 기본 구조로, 친구·명예의 전당·소식 제보 탭은 넓은 화면(C13·C14·board)으로 연다",
+      "id": "D10",
+      "text": "스킬 트리는 C9(던파식 세로 트리). 대표님이 던파의 레벨업·스킬 찍기·초기화 캐시템 감각을 직접 언급",
+      "source": "대표님 2026-10-18 요청"
+    },
+    {
+      "id": "D11",
+      "text": "SSSR은 소환으로 나오지 않고 초월로만 도달한다. 소환 확률표(R/SR/SSR) 고지를 바꾸지 않고 상위 등급을 성장 목표로 둔다",
+      "source": "점수표: 확률 고지 일관성과 장기 목표"
+    },
+    {
+      "id": "D12",
+      "text": "현금 결제는 실제 스토어 SDK·영수증 검증 전까지 지급하지 않는다(PRD §3.3, 저장소 AGENTS)",
+      "source": "저장소 계약"
+    },
+    {
+      "id": "D13",
+      "text": "커뮤니티는 C17(로비 유지 사이드 시트)를 기본 구조로, 친구·명예의 전당·소식 제보 탭은 넓은 화면(C18·C19·board)으로 연다",
       "source": "대표님 2026-10-19 커뮤니티 시스템 요청, 점수표 C12 18 / C14 17 / C13 15"
     },
     {
-      "id": "D9",
+      "id": "D14",
       "text": "계정은 게스트 우선(기기 키), 구글 연동은 기록 보호용 선택 기능. 명예의 전당은 게스트도 등재하고 연동자에게 인증 표시. 개인정보는 구글 sub 해시만 저장",
       "source": "대표님 2026-10-19 \"구글 로그인 계정 진행해야하나? 그것까지 생각해서 남겨줘\""
     },
     {
-      "id": "D10",
+      "id": "D15",
       "text": "디스코드는 공식 서버를 두되 게임 안 게시판이 원본이다. 게시판 새 글·서버 최초 기록을 웹훅으로 디스코드에 자동 전달한다",
       "source": "대표님 2026-10-19 디스코드 방 운영 질문"
     },
     {
-      "id": "D11",
+      "id": "D16",
       "text": "커뮤니티 기능은 packages/tll-social 재사용 패키지로 만들어 다른 게임은 GameConfig만 바꿔 붙인다",
       "source": "대표님 2026-10-19 \"다른 게임들도 사용할 수 있으니까\""
     }
@@ -988,10 +1247,40 @@
       "to": "9ed6cdc41d3d"
     },
     {
-      "at": "2026-10-19T03:32:22.138Z",
-      "reason": "커뮤니티 묶음 community-1 추가: 시안 C12~C14, 화면 4개, 서버·신원·구글 연동·디스코드 노드, 기준 A12~A20, 결정 D8~D11 (대표님 2026-10-19 요청)",
+      "at": "2026-10-18T18:26:35.041Z",
+      "reason": "성장·과금 묶음(progression-20261019) 추가: 스킬 트리·초월 화면, 등급·SP 규칙, 과금 흐름",
+      "from": "1f15de4e43b4",
+      "to": "bdf0d7689e4f"
+    },
+    {
+      "at": "2026-10-18T19:30:51.210Z",
+      "reason": "대표님 지적(2026-10-19): Runware 시안이 블레이드 서지 화풍과 달라 폐기. 실제 로비(lobby-u1)·전투 HUD(hud-c1) 캡처를 참조로 GPT 이미지로 다시 생성한 스킬 트리·카드·초월 시안으로 교체",
+      "from": "bdf0d7689e4f",
+      "to": "f2ec82cf00eb"
+    },
+    {
+      "at": "2026-10-19T19:01:52.334Z",
+      "reason": "성채 관문 구조물 품질 개선 묶음 추가(대표님 2026-10-19 '게이트가 퀄리티가 너무 구리다'): 시안 3개 중 A 고대 성채 석조 아치 선택",
       "from": "9ed6cdc41d3d",
-      "to": "6784b9b7c658"
+      "to": "a71f7f3111c7"
+    },
+    {
+      "at": "2026-10-19T19:02:14.184Z",
+      "reason": "관문 노드 연결 type 표기 수정",
+      "from": "a71f7f3111c7",
+      "to": "cb02ee4e527b"
+    },
+    {
+      "at": "2026-10-20T04:34:23.353Z",
+      "reason": "origin/main 병합: main의 star-archive(C9~C11)·citadel-gate(C12~C14)·A11과 이 브랜치의 progression-20261019(스킬 트리·초월·등급·과금, A20~A23·D10~D12)를 함께 보존. id 충돌로 progression 시안 C9·C10을 C15·C16으로 변경",
+      "from": "cb02ee4e527b",
+      "to": "edeb0b05b529"
+    },
+    {
+      "at": "2026-10-20T07:30:07.480Z",
+      "reason": "커뮤니티 묶음 community-1 추가(main 병합 후 재적용): 시안 C17~C19, 화면 4개, 서버·신원·구글 연동·디스코드 노드, 기준 A24~A32, 결정 D13~D16 (대표님 2026-10-19 요청)",
+      "from": "edeb0b05b529",
+      "to": "9b7c37d26633"
     }
   ],
   "shots": [
@@ -1012,7 +1301,7 @@
       "note": "1280x590 개발 서버 556aaaf 실제 진입"
     }
   ],
-  "lockedDigest": "6784b9b7c65845b352e39ef718f490c36a1cafaf057dbf7c64af6aa41a0639f1",
-  "lockedAt": "2026-10-19T03:32:22.138Z",
+  "lockedDigest": "9b7c37d26633bd57531763195a42d7132b22c18207e5b17222a68a2ade6977d7",
+  "lockedAt": "2026-10-20T07:30:07.480Z",
   "firstLockedAt": "2026-10-18T07:12:43.638Z"
 }
