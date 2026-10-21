@@ -34,7 +34,7 @@ async function open(name, seed) {
   const shot = async (label) => { const file = `${name}-${label}.png`; await page.screenshot({ path: path.join(out, file), timeout: 120000 }); report.shots.push(file); return file; };
   const tap = async (selector, timeout = 20000) => {
     const target = page.locator(selector).first();
-    try { await target.tap({ timeout }); } catch (error) { const box = await target.boundingBox(); if (!box) throw error; await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2); }
+    try { await target.tap({ timeout }); } catch (error) { const box = await target.boundingBox(); if (!box) { await shot('tap-fail-' + selector.replace(/[^a-z0-9]+/gi, '_').slice(0, 40)).catch(() => {}); throw error; } await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2); }
   };
   const boot = async () => {
     await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 120000 });
