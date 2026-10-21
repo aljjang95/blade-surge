@@ -52,7 +52,7 @@ const DUELS = {
  * 체력·공격을 올려 전투가 35~50초(AUTO, app.step 기준) 이어지며 예고를 피해야 이득이 되게 한다.
  * 심층·전술 공략 판은 각자의 정의를 그대로 쓴다.
  */
-export const FIRST_DUNGEON_BOSS = Object.freeze({ hp: 36000, atk: 140, pattern: Object.freeze(['slam', 'spin', 'fan']) });
+export const FIRST_DUNGEON_BOSS = Object.freeze({ hp: 40000, atk: 115, pattern: Object.freeze(['slam', 'spin', 'fan']) });
 
 /** 종락 기본 개인 원정만 기존 주술사의 지원을 읽고 끊을 수 있게 한다. */
 export function supportCastingForStage(stage) {

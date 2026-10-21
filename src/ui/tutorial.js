@@ -3,8 +3,8 @@ import './tutorial.css';
 
 const STEPS = ['move', 'attack', 'dodge', 'skill', 'clear'];
 const TIPS = {
-  move: { n: '1 / 5', title: '이동', copy: '왼쪽 조이스틱을 밀어 적에게 다가가세요. · WASD/방향키', target: null },
-  attack: { n: '2 / 5', title: '공격은 꾹 누르기', copy: '공격 버튼을 누르고 있으면 콤보가 이어집니다. 방향을 잡고 다시 누르면 그쪽으로 이어져요. · J/Space', target: '#btn-attack' },
+  move: { n: '1 / 5', title: '이동', copy: '왼쪽 조이스틱을 밀어 이동하세요. 길을 따라 적에게 다가갑니다.', target: null },
+  attack: { n: '2 / 5', title: '공격은 꾹 누르기', copy: '공격 버튼을 누르고 있으면 콤보가 이어집니다. 방향을 잡고 다시 누르면 그쪽으로 이어져요.', target: '#btn-attack' },
   dodge: { n: '3 / 5', title: '피하고 이어치기', copy: '회피 · K/Shift: 방향을 잡으면 그쪽으로, 방향 없이 누르면 백스텝. 공격 직전 회피하면 퍼펙트!', target: '#btn-dodge' },
   skill: { n: '4 / 5', title: '스킬로 무리 상대하기', copy: '오른쪽 스킬 버튼 · 1~3/R. MP·쿨타임·궁극기 게이지가 준비된 스킬을 쓰세요.', target: '#hud .skill-btn[data-skill="0"]' },
   clear: { n: '5 / 5', title: '미니맵을 따라 정화하기', copy: '방을 정화하면 다음 길이 열립니다. 체력은 빨간 물약, 어려우면 상단 AUTO로 보조하세요.', target: null },

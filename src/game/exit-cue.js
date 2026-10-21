@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 // 시작방 첫 출구 안내. 시작방에는 적이 없어 길을 모르면 벽 앞에서 멈추므로, 바닥에 첫 출구 쪽으로 이어지는
 // 화살표 줄을 깔아 준다. 월드 안의 오브젝트라 전장 위 팝업이 아니며, 플레이어가 다음 방에 들어가면 사라진다.
-export const EXIT_CUE = Object.freeze({ count: 6, step: 2.6, start: 3.6, width: 2.1, length: 1.5, lift: .07 });
+export const EXIT_CUE = Object.freeze({ count: 6, step: 2.6, start: 3.6, width: 1.8, length: 1.3, lift: .07 });
 
 /**
  * 시작방 중심에서 첫 이웃방까지의 복도 경로(Floor.lShape: 가로 먼저, 다음 세로) 위에 화살표 자리를 계산한다.
