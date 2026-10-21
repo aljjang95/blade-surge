@@ -14,6 +14,7 @@ import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../data/stages.
 import { resolveEnemyPortrait } from '../data/encounter-art.js';
 import { REWARD_LABEL, gachaRates, gachaChances } from '../game/economy.js';
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
+import { revealPlan, tenPullStatus } from './reveal-plan.js';
 import { renderOwnedHero, renderBag, showItemSheet } from './gear-panel.js';
 import { weaponLook, weaponLookText } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
@@ -370,31 +371,46 @@ export class Meta {
     const R = $('reveal'); this.ui.show(R, true); this.app.setLobbyVisible(false);
     const stage = $('reveal-stage'), cards = $('reveal-cards'); stage.innerHTML = ''; cards.innerHTML = ''; $('reveal-foot').classList.add('hidden'); $('btn-reveal-skip').classList.remove('hidden');
     $('btn-reveal-skip').focus({ preventScroll: true });
-    const best = results.some((r) => r.rar === 'SSR') ? 'SSR' : results.some((r) => r.rar === 'SR') ? 'SR' : 'R';
+    // 연출 계획은 이미 정해진 결과를 어떻게 보여 줄지만 정한다(결과·확률은 그대로).
+    const plan = revealPlan(results), best = plan.best, beamColor = plan.tone.color;
+    stage.style.setProperty('--c', beamColor); R.dataset.best = best;
     audio.playMusic(musicForScene({ scene: 'gacha' }), MUSIC_MIX); audio.play('pack_open', { vol: 0.8 }); audio.magic({ vol: 0.4, base: 392, notes: [0, 4, 7, 12, 16, 19], step: 0.09 });
-    const beamColor = { R: '#4cc3ff', SR: '#b26bff', SSR: '#ffcf5a' }[best];
-    // 광선 연출: 등급 예고 (SSR이면 금색 빔 + 화면 흔들림)
-    setTimeout(() => { for (let i = 0; i < (best === 'SSR' ? 7 : best === 'SR' ? 4 : 2); i++) { const b = document.createElement('div'); b.className = 'beam'; b.style.setProperty('--c', beamColor); b.style.left = (50 + (i - 3) * 8) + '%'; b.style.animationDelay = i * 0.08 + 's'; stage.appendChild(b); } audio.play('ui_max', { vol: 0.7, rate: best === 'SSR' ? 0.6 : 1 }); if (best === 'SSR') { audio.vibe([50, 50, 50, 50, 200]); } }, 500);
-    setTimeout(() => { const f = document.createElement('div'); f.className = 'flash'; f.style.setProperty('--c', beamColor); stage.appendChild(f); audio.play(best === 'SSR' ? 'jingle_legend' : 'ui_bong', { vol: 0.9 }); }, 1300);
     this._revealTimers = [];
+    const later = (fn, ms) => { const t = setTimeout(fn, ms); this._revealTimers.push(t); };
+    // 충전: 최고 등급 색의 빛무리가 커지며 기대감을 만든다
+    const charge = document.createElement('div'); charge.className = 'charge'; stage.appendChild(charge);
+    // 광선 연출: 최고 등급이 높을수록 빔이 많고 길게 이어진다 (SSR이면 금색 빔 + 진동)
+    later(() => { for (let i = 0; i < plan.tone.beams; i++) { const b = document.createElement('div'); b.className = 'beam'; b.style.setProperty('--c', beamColor); b.style.left = (50 + (i - (plan.tone.beams - 1) / 2) * 8) + '%'; b.style.animationDelay = i * 0.08 + 's'; stage.appendChild(b); } audio.play('ui_max', { vol: 0.7, rate: best === 'SSR' ? 0.6 : 1 }); if (best === 'SSR') { audio.vibe([50, 50, 50, 50, 200]); } }, 400);
+    later(() => { charge.remove(); const f = document.createElement('div'); f.className = 'flash'; f.style.setProperty('--c', beamColor); stage.appendChild(f); audio.play(best === 'SSR' ? 'jingle_legend' : 'ui_bong', { vol: 0.9 }); }, plan.tone.charge);
     results.forEach((r, i) => {
       const c = document.createElement('div'); c.className = 'rcard' + (results.length === 1 ? ' single' : '') + ' ' + r.rar; c.style.setProperty('--rc', RC[r.rar]);
       const img = r.type === 'hero' ? r.img : r.type === 'material' ? resourceArt(r.k) : itemVisual(ITEM_BY_ID[r.item.id], { heroId: this.eco.s.selected }).iconUrl; const name = r.type === 'hero' ? r.name : r.type === 'material' ? (REWARD_LABEL[r.k]?.[0] || r.k) + ' ×' + r.n : ITEM_BY_ID[r.item.id].name;
       const sub = r.type === 'hero' ? (r.dup ? this.dupShardText(r) : '') : r.type === 'material' ? (r.k === 'transcendStones' ? '초월 재료' : '강화 재료') : ITEM_BY_ID[r.item.id].slot === 'weapon' ? (weaponLook(this.eco.s.selected, r.item, LOOKS)?.form || '') : SLOT_NAME[ITEM_BY_ID[r.item.id].slot];
-      c.innerHTML = `<div class="inner"><div class="face back">?</div><div class="face front"><img src="${img}" onerror="this.remove()"><span class="rr">${r.rar}</span>${r.type === 'hero' && !r.dup ? '<span class="new">NEW</span>' : ''}<div class="nm">${name}${sub ? `<br><small style="color:var(--muted)">${sub}</small>` : ''}</div></div></div>`;
+      // 영웅 일러스트는 카드를 가득 채우고, 장비·재료 아이콘은 잘리지 않게 안쪽에 맞춘다
+      c.innerHTML = `<div class="inner"><div class="face back">?</div><div class="face front ${r.type === 'hero' ? 'is-portrait' : 'is-icon'}"><img src="${img}" onerror="this.remove()"><span class="rr">${r.rar}</span>${r.type === 'hero' && !r.dup ? '<span class="new">NEW</span>' : ''}<div class="nm">${name}${sub ? `<br><small style="color:var(--muted)">${sub}</small>` : ''}</div></div></div>`;
       cards.appendChild(c);
-      const t = setTimeout(() => { c.classList.add('flip'); if (r.rar === 'SSR') { audio.play('jingle_legend', { vol: 0.9 }); audio.vibe([30, 30, 100]); stage.innerHTML = ''; const f = document.createElement('div'); f.className = 'flash'; f.style.setProperty('--c', '#ffcf5a'); stage.appendChild(f); } else if (r.rar === 'SR') { audio.play('ui_glass', { vol: 0.7, rate: 1.2 }); } else audio.play('card_place', { vol: 0.5 }); if (i === results.length - 1) this.revealDone(); }, 1800 + i * 260);
-      this._revealTimers.push(t);
+      const step = plan.cards[i];
+      if (step.hintAt !== null) later(() => c.classList.add('hint'), step.hintAt);
+      later(() => { c.classList.remove('hint'); c.classList.add('flip'); if (r.rar === 'SSR') { audio.play('jingle_legend', { vol: 0.9 }); audio.vibe([30, 30, 100]); const f = document.createElement('div'); f.className = 'flash'; f.style.setProperty('--c', '#ffcf5a'); stage.appendChild(f); setTimeout(() => f.remove(), 800); } else if (r.rar === 'SR') { audio.play('ui_glass', { vol: 0.7, rate: 1.2 }); } else audio.play('card_place', { vol: 0.5 }); }, step.at);
     });
+    later(() => this.revealDone(), plan.doneAt + 300);
     this._revealResults = results;
   }
-  revealSkip() { this._revealTimers.forEach(clearTimeout); document.querySelectorAll('.rcard').forEach((c) => c.classList.add('flip')); audio.play('card_fan', { vol: 0.6 }); this.revealDone(); }
+  revealSkip() { this._revealTimers.forEach(clearTimeout); document.querySelectorAll('.rcard').forEach((c) => { c.classList.remove('hint'); c.classList.add('flip'); }); $('reveal-stage').querySelectorAll('.charge,.beam').forEach((e) => e.remove()); audio.play('card_fan', { vol: 0.6 }); this.revealDone(); }
   /** 중복 영웅 결과: 받은 조각과 다음 초월까지의 진행(조각은 이미 지급된 뒤의 보유량). */
   dupShardText(r) {
     const p = shardProgress(HEROES[r.id], this.eco.hero(r.id));
     return '조각 +' + r.shards + (p.need ? ' · 초월 ' + p.have + '/' + p.need : ' · 최고 등급');
   }
-  revealDone() { $('reveal-foot').classList.remove('hidden'); $('btn-reveal-skip').classList.add('hidden'); const s = this.eco.s; $('btn-reveal-again').disabled = s.gems < GACHA.ten && s.tickets < 10; $('btn-reveal-close').focus({ preventScroll: true }); }
+  revealDone() {
+    $('reveal-foot').classList.remove('hidden'); $('btn-reveal-skip').classList.add('hidden');
+    // 재화가 모자라도 버튼을 끄지 않는다. 얼마가 부족한지 보여 주고, 누르면 기존 보석 부족 안내(상점 연결)가 뜬다.
+    const st = tenPullStatus(this.eco.s, GACHA), again = $('btn-reveal-again'), cost = again.querySelector('small');
+    again.disabled = false; again.classList.toggle('is-short', !st.ok); again.setAttribute('aria-disabled', st.ok ? 'false' : 'true');
+    if (cost) cost.innerHTML = st.ok ? `<i class="ic ic-gem"></i> ${st.label}` : `<i class="ic ic-gem"></i> ${fmt(st.need)} 부족 · 필요 ${fmt(GACHA.ten)}`;
+    again.title = st.ok ? '' : `보석 ${fmt(st.need)}개가 더 필요합니다 (보유 ${fmt(this.eco.s.gems)})`;
+    $('btn-reveal-close').focus({ preventScroll: true });
+  }
   revealClose() { this._revealOpen = false; this.ui.show($('reveal'), false); this.app.setLobbyVisible(this.tab === 'home'); audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX); this.refreshTop(); if (this._revealResults?.some((r) => r.type === 'hero' && !r.dup)) this.ui.toast('새 영웅 획득! 영웅 탭에서 출전 설정', 'gold'); }
   showGachaContents(filter) { return showGachaContents.call(this, filter); }
   showWeaponPreview(itemId, heroId, enh) { return showWeaponPreview.call(this, itemId, heroId, enh); }

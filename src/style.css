@@ -564,7 +564,20 @@ button.loot-item { font-family: inherit; cursor: pointer; }
 .rcard .front .new { position: absolute; top: 4px; right: 4px; font-size: 9px; font-weight: 900; background: var(--red); color: #fff; padding: 1px 5px; border-radius: 5px; }
 .rcard.SSR .inner { animation: ssrShake .7s ease-in-out; }
 @keyframes ssrShake { 0%,100% { transform: none } 20% { transform: translate(-4px, 2px) rotate(-2deg) } 40% { transform: translate(4px, -2px) rotate(2deg) } 60% { transform: translate(-4px, 0) rotate(-1deg) } 80% { transform: translate(4px, 0) rotate(1deg) } }
-.reveal-skip { position: absolute; right: 12px; top: calc(12px + var(--sat)); }
+.reveal-skip { position: absolute; right: 12px; top: calc(12px + var(--sat)); min-width: 88px; min-height: 44px; z-index: 3; }
+/* 소환 연출 보강: 충전 빛무리 · 등급 예고 · 장비 아이콘 안쪽 맞춤 · 재화 부족 안내 */
+.reveal-stage .charge { position: absolute; left: 50%; top: 46%; width: 60px; height: 60px; border-radius: 50%; transform: translate(-50%, -50%) scale(.3); background: radial-gradient(circle, #fff 0, var(--c, #fff) 38%, transparent 70%); filter: blur(3px); opacity: .0; animation: rcharge 1.6s ease-in forwards; }
+@keyframes rcharge { 0% { opacity: 0; transform: translate(-50%, -50%) scale(.3) } 30% { opacity: .85 } 100% { opacity: 1; transform: translate(-50%, -50%) scale(5.5) } }
+#reveal[data-best="SSR"] .reveal-stage .charge { animation-duration: 1.8s; }
+.rcard.hint .back { border-color: var(--rc, #fff); box-shadow: 0 0 16px var(--rc), inset 0 0 12px var(--rc); color: var(--rc); animation: rhint .24s ease-in-out infinite alternate; }
+@keyframes rhint { from { transform: translateY(0) scale(1) } to { transform: translateY(-3px) scale(1.06) } }
+.rcard .front.is-icon { background: radial-gradient(ellipse at 50% 42%, color-mix(in srgb, var(--rc, #9aa3b2) 38%, #1a1a24), #0c0c12 78%); }
+.rcard .front.is-icon .nm { background: linear-gradient(0deg, rgba(0,0,0,.95) 60%, transparent); }
+.rcard .front.is-icon img { inset: 12% 8% 40% 8%; width: 84%; height: 48%; object-fit: contain; filter: drop-shadow(0 4px 6px rgba(0,0,0,.6)); }
+.rcard.single .front.is-icon img { inset: 12% 8% 30% 8%; height: 58%; }
+#btn-reveal-again.is-short { filter: grayscale(.35); outline: 2px dashed #ff9a8a; outline-offset: 2px; }
+#btn-reveal-again.is-short small { color: #7a1f12; font-weight: 900; }
+@media (prefers-reduced-motion: reduce) { .reveal-stage .charge, .reveal-stage .beam, .rcard.hint .back, .rcard.SSR .inner { animation: none; } .rcard .inner { transition-duration: .01s; } }
 .reveal-foot { position: absolute; left: 0; right: 0; bottom: calc(16px + var(--sab)); display: flex; justify-content: center; gap: 10px; }
 
 /* ---------- modal ---------- */
