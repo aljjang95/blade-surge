@@ -3,12 +3,20 @@ import { openSync, writeFileSync, fsyncSync, closeSync, renameSync, unlinkSync }
 import { dirname } from 'node:path';
 import config from './release-config.json' with { type: 'json' };
 
+// 클라우드 세션은 CLOUDFLARE_API_BASE_URL(키를 붙여 주는 프록시)로만 인증된다. wrangler와 같은 변수를 따르고 https만 받는다.
+export function cloudflareApiBase(env = process.env) {
+  const base = env.CLOUDFLARE_API_BASE_URL || 'https://api.cloudflare.com/client/v4';
+  if (!/^https:\/\/[^\s?#]+$/.test(base)) throw new Error('CLOUDFLARE_API_BASE_URL은 https 주소여야 합니다.');
+  return base.replace(/\/+$/, '');
+}
+
 export function cloudflareQuery(env = process.env) {
   const account = env.CLOUDFLARE_ACCOUNT_ID, token = env.CLOUDFLARE_API_TOKEN;
   const database = env.APEX_RSI_DB || config.leaseDatabaseId;
   if (!/^[a-f0-9]{32}$/.test(account ?? '') || !token || !/^[a-f0-9-]{36}$/.test(database)) throw new Error('Cloudflare 자격증명 경로를 확인하세요.');
+  const api = cloudflareApiBase(env);
   return async (sql, params = []) => {
-    const response = await fetch(`https://api.cloudflare.com/client/v4/accounts/${account}/d1/database/${database}/query`, {
+    const response = await fetch(`${api}/accounts/${account}/d1/database/${database}/query`, {
       method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       body: JSON.stringify({ sql, params }), signal: AbortSignal.timeout(8000),
     });

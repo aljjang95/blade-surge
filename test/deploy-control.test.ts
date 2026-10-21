@@ -3,7 +3,7 @@ import { Database } from 'bun:sqlite';
 import { mkdtempSync, readFileSync, readdirSync, unlinkSync, rmdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { acquireDeploymentLease, canReleaseDeploymentLease, deployAndReconcile, persistDeployment, reconcileDeployment, RECONCILABLE_STATUSES } from '../tools/deploy-control.mjs';
+import { acquireDeploymentLease, cloudflareApiBase, cloudflareQuery, canReleaseDeploymentLease, deployAndReconcile, persistDeployment, reconcileDeployment, RECONCILABLE_STATUSES } from '../tools/deploy-control.mjs';
 
 test('rename 후 EIO는 정본과 메모리를 맞추고 배포 잠금을 유지한다', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'blade-sync-')), path = join(directory, 'receipt.json');
@@ -149,4 +149,16 @@ test('원격 상태 불명 또는 잠금 밖의 다른 배포가 끼면 성공�
     }) })).rejects.toThrow('원격 반영 상태');
     expect(f.states.at(-1)).toBe('outcome-unknown'); expect(f.states).not.toContain('version-verified');
   }
+});
+
+test('배포 잠금 D1 호출은 CLOUDFLARE_API_BASE_URL 프록시를 따르고 https가 아니면 거부한다', async () => {
+  expect(cloudflareApiBase({})).toBe('https://api.cloudflare.com/client/v4');
+  expect(cloudflareApiBase({ CLOUDFLARE_API_BASE_URL: 'https://proxy.example/p/cloudflare/client/v4/' })).toBe('https://proxy.example/p/cloudflare/client/v4');
+  expect(() => cloudflareApiBase({ CLOUDFLARE_API_BASE_URL: 'http://proxy.example/v4' })).toThrow();
+  const seen: string[] = [], original = globalThis.fetch;
+  globalThis.fetch = (async (url: string) => { seen.push(String(url)); return new Response(JSON.stringify({ success: true, result: [{ success: true, results: [] }] })); }) as typeof fetch;
+  try {
+    await cloudflareQuery({ CLOUDFLARE_API_BASE_URL: 'https://proxy.example/v4', CLOUDFLARE_ACCOUNT_ID: 'a'.repeat(32), CLOUDFLARE_API_TOKEN: 't' })('SELECT 1');
+  } finally { globalThis.fetch = original; }
+  expect(seen).toEqual([`https://proxy.example/v4/accounts/${'a'.repeat(32)}/d1/database/1e1295d4-01b8-4877-951e-8c100b4d7473/query`]);
 });
