@@ -61,6 +61,18 @@ export const FX_VARIANTS = Object.freeze({
   shatter: 1, levelup: 1, fail: 1, hurt: 2, dodge: 2, dodge_perfect: 1, tele_melee: 1, tele_magic: 1, tele_slam: 1, rel_melee: 1, rel_magic: 1, rel_slam: 1,
 });
 export const FX_SOUND_FILES = Object.freeze(Object.entries(FX_VARIANTS).flatMap(([id, n]) => Array.from({ length: n }, (_, i) => `${SFX_LIBRARY}fx/${id}_${i}`)));
+// 라운드로빈 파생 변형(2026-10-22 사운드 레인 h2): 전투 40초에 쿵 38번·팅 19번·충전 18번·예고 20번이 한 파일로 반복됐다.
+// Mirelo 원본에서 피치·EQ·꼬리만 바꾼 파생본(tools/audio/fx-variants.py, public/sfx/derived-v1/manifest.json)을 원본 뒤 번호로 잇는다.
+export const FX_DERIVED_LIBRARY = 'derived-v1/';
+export const FX_DERIVED = Object.freeze({ thump: 2, ting: 2, charge: 1, tele_melee: 1, tele_magic: 1 });
+export const FX_DERIVED_FILES = Object.freeze(Object.entries(FX_DERIVED).flatMap(([id, n]) => Array.from({ length: n }, (_, i) => `${FX_DERIVED_LIBRARY}fx/${id}_${(FX_VARIANTS[id] || 0) + i}`)));
+/** 공용 효과 한 가족의 전체 변형 수(Mirelo 원본 + 파생). */
+export const fxVariantCount = family => (FX_VARIANTS[family] || 0) + (FX_DERIVED[family] || 0);
+/** 변형 번호 → 버퍼 이름. 원본 수 미만은 mirelo-v1, 그 위는 derived-v1. */
+export function fxVariantName(family, variant = 0) {
+  const base = FX_VARIANTS[family] || 0, v = Math.abs(variant | 0) % Math.max(1, fxVariantCount(family));
+  return v < base ? `${SFX_LIBRARY}fx/${family}_${v}` : `${FX_DERIVED_LIBRARY}fx/${family}_${v}`;
+}
 // UI·보상: 예전 파일 이름(ui_click 등)을 그대로 쓰고 실제 파일만 mirelo-v1/ui/ 로 옮긴다.
 export const UI_SOUND_NAMES = Object.freeze(['hit_punch0', 'hit_punch1', 'hit_punch2', 'hit_metal0', 'hit_metal1', 'hit_metal2', 'hit_soft0', 'hit_soft1', 'hit_bell', 'hit_mining', 'hit_wood', 'hit_plate', 'hit_glass',
   'ui_click', 'ui_confirm', 'ui_select', 'ui_back', 'ui_error', 'ui_open', 'ui_close', 'ui_max', 'ui_drop', 'ui_bong', 'ui_glass', 'ui_pluck',

@@ -1,6 +1,6 @@
 import {
   attackSound, skillSound, ultimateSound, heroSoundFiles, heroHitSound, heroForWeapon, HERO_IDS, HERO_HIT_VARIANTS, SWING_VARIANTS,
-  FX_VARIANTS, FX_SOUND_FILES, UI_SOUND_NAMES, SFX_LIBRARY, sfxUrl,
+  FX_SOUND_FILES, UI_SOUND_NAMES, SFX_LIBRARY, sfxUrl,
   COMBO_STINGERS, HIT_BUS_GAIN, HIT_PRIORITY, HIT_SOUND_FILES, HIT_VARIANTS, HIT_VOICES, HIT_VOICES_PREMIUM, HIT_WINDOW, KILL_SOUND,
   comboSoundName, hitLayers, hitSoundName, hitTier, isPremiumHit,
 } from './combat-sound-library.js';
@@ -20,9 +20,14 @@ function createAudioRandom() {
   };
 }
 import { BGM_CROSSFADE, BGM_LOOPS, bgmTrimGain, bossIntroKind } from '../data/music.js';
-import { BOSS_INTRO, EVENT_SOUND_FILES, EVENT_SOUNDS, lootSound } from './combat-sound-library.js';
+import { BOSS_INTRO, EVENT_SOUND_FILES, EVENT_SOUNDS, FX_DERIVED_FILES, fxVariantCount, fxVariantName, lootSound } from './combat-sound-library.js';
 // SFX 두 버스를 합친 뒤의 이득. 마스터 리미터 앞 정점을 낮춰 타격 트랜지언트가 찌그러지지 않게 한다.
 export const SFX_SUM_GAIN = 0.5;
+// 타격 버스 덕킹 깊이(선형): 궁극기 -4.4dB, 보스 등장 스팅어 -6dB. 음악 덕킹과 따로 움직인다.
+export const HIT_DUCK = Object.freeze({
+  ultimate: Object.freeze({ amount: 0.6, hold: 0.55, recover: 0.9, attack: 0.03 }),
+  bossIntro: Object.freeze({ amount: 0.5, hold: 1.2, recover: 1.2, attack: 0.05 }),
+});
 const BOSS_WARNING_KINDS = new Set(['slam', 'crusher', 'soulrain', 'fan']);
 const EVENT_LOAD_TIMEOUT_MS = 30000;
 // 마스터 리미터: 음악·SFX·음성을 합친 출력이 0dBFS 를 넘지 않게 한다. 브라우저 압축기의 자동 메이크업
@@ -103,7 +108,8 @@ export class AudioSys {
       this.hitGain = this.ctx.createGain(); this.hitGain.gain.value = this.mix.sfx * HIT_BUS_GAIN;
       const hitComp = this.ctx.createDynamicsCompressor();
       hitComp.threshold.value = -12; hitComp.knee.value = 6; hitComp.ratio.value = 4; hitComp.attack.value = 0.003; hitComp.release.value = 0.1;
-      this.hitGain.connect(hitComp); hitComp.connect(sum);
+      // 타격 버스 덕킹: 궁극기·보스 등장 순간 몹 타격 더미를 잠깐 낮춰 큰 소리가 앞에 서게 한다(믹스 버스 사이드체인 흉내).
+      this.hitDuckGain = this.ctx.createGain(); this.hitGain.connect(this.hitDuckGain); this.hitDuckGain.connect(hitComp); hitComp.connect(sum);
     } catch { this.hitGain = null; /* 구형 호스트는 기존 버스만 쓴다 */ }
     comp.connect(out);
     this.voiceGain = this.ctx.createGain(); this.voiceGain.gain.value = 1; this.voiceGain.connect(this.master); this._barkLast = {};
@@ -111,6 +117,8 @@ export class AudioSys {
     await Promise.all(SFX_FILES.map((n) => this._loadSfx(n)));
     // 사건 효과음은 기다리지 않는다. 로비 장면 준비와 겹쳐 응답이 늦어도(소프트웨어 렌더 실측 9초) 넉넉히 기다린다.
     for (const n of EVENT_SOUND_FILES) this._loadSfx(n, EVENT_LOAD_TIMEOUT_MS);
+    // 라운드로빈 파생 변형도 기다리지 않는다. 오기 전에는 원본 변형만 돈다.
+    for (const n of FX_DERIVED_FILES) this._loadSfx(n, EVENT_LOAD_TIMEOUT_MS);
     return true;
   }
   async _loadSfx(n, timeoutMs = 8000) {
@@ -153,8 +161,10 @@ export class AudioSys {
   }
   /** 예전 합성음 자리에 Mirelo 효과 샘플을 낸다. 샘플이 준비됐으면 true(호출한 합성음은 건너뛴다). */
   _fx(family, { vol = 0.5, rate = 1, min = 0.04, priority = 2 } = {}) {
-    const count = FX_VARIANTS[family] || 0; if (!count || !this.ctx) return false;
-    const name = `${SFX_LIBRARY}fx/${family}_${this._rotate(this._variantLast, 'fx:' + family, count)}`;
+    const count = fxVariantCount(family); if (!count || !this.ctx) return false;
+    let name = fxVariantName(family, this._rotate(this._variantLast, 'fx:' + family, count));
+    // 파생 변형이 아직 안 왔으면 원본 첫 변형으로 낸다(합성음으로 떨어지지 않는다).
+    if (!this.buffers[name]) name = fxVariantName(family, 0);
     if (!this.buffers[name]) return false;
     this.play(name, { vol: Math.min(1, vol * 1.4), rate, vary: 0.05, min, priority });
     return true;
@@ -538,6 +548,7 @@ export class AudioSys {
     if (!this.enabled || !this.ctx || !this.mix.sfx) return null;
     if (!this._eventReady(spec.sound)) { this.waveHorn({ vol: 0.5, boss: true }); return null; }
     this.duck(spec.duck, spec.dur, { hold: spec.dur * 0.35, smooth: true, attack: 0.05 });
+    this.duckHits(HIT_DUCK.bossIntro);
     this.vibe([30, 30, 70]);
     return this.play(spec.sound, { vol: spec.vol, rate: spec.rate, vary: 0, min: 1, priority: 5 });
   }
@@ -635,6 +646,16 @@ export class AudioSys {
   /** 궁극기 BGM 덕킹: 빠르게 눌렀다가(attack) 잠깐 유지(hold)하고 부드러운 S 곡선으로 돌아온다(recover). */
   ultimateDuck({ amount = 0.12, hold = 0.9, recover = 1.6 } = {}) {
     this.duck(amount, hold + recover + 0.06, { hold, smooth: true, attack: 0.06 });
+    this.duckHits(HIT_DUCK.ultimate);
+  }
+  /** 타격 버스(몹 타격·처치·콤보)만 잠깐 낮춘다. 진행 중인 더 깊고 긴 덕킹은 약한 새 요청이 덮지 않는다. */
+  duckHits({ amount = 0.6, hold = 0.4, recover = 0.8, attack = 0.03 } = {}) {
+    if (!this.hitDuckGain || !this.ctx) return;
+    const t = this.now(), g = this.hitDuckGain.gain, end = t + attack + hold + recover;
+    if (this._hitDuck && this._hitDuck.end > t && this._hitDuck.amount <= amount && this._hitDuck.end >= end) return;
+    this._hitDuck = { amount, end };
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t);
+    g.linearRampToValueAtTime(amount, t + attack); g.setValueAtTime(amount, t + attack + hold); g.linearRampToValueAtTime(1, end);
   }
 
   /** 공격 시작과 접촉 사이를 분리해 입력 순간과 실제 타격 순간을 귀로 읽게 한다. */

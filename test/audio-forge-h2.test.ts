@@ -224,3 +224,57 @@ test('마스터 마지막 안전 클립은 작은 신호는 그대로 두고 어
   expect(Math.max(...c)).toBeLessThan(Math.pow(10, -1 / 20));
   for (let i = 1; i < c.length; i++) expect(c[i]).toBeGreaterThanOrEqual(c[i - 1]);
 });
+
+// ---------- 라운드로빈 파생 변형 · 타격 버스 덕킹 ----------
+import { FX_DERIVED, FX_DERIVED_FILES, FX_VARIANTS, fxVariantCount, fxVariantName } from '../src/engine/combat-sound-library.js';
+import { HIT_DUCK } from '../src/engine/audio.js';
+
+test('파생 변형은 모두 배송되고, 원본 Mirelo 파일 해시에 묶이며, 런타임 피치 흔들림보다 확실히 다른 소리다', () => {
+  const manifest = JSON.parse(readFileSync(join(root, 'public/sfx/derived-v1/manifest.json'), 'utf8'));
+  const base = JSON.parse(readFileSync(join(root, 'public/sfx/mirelo-v1/manifest.json'), 'utf8'));
+  expect(manifest.assets.map((a: any) => a.path).sort()).toEqual(FX_DERIVED_FILES.map(sfxUrl).sort());
+  for (const asset of manifest.assets) {
+    const data = readFileSync(join(root, 'public', asset.path));
+    expect(createHash('sha256').update(data).digest('hex')).toBe(asset.sha256);
+    const src = readFileSync(join(root, 'public', asset.derivedFrom.path));
+    expect(createHash('sha256').update(src).digest('hex')).toBe(asset.derivedFrom.sha256);
+    expect(base.assets.find((a: any) => a.path === asset.derivedFrom.path)?.taskUUID).toBe(asset.derivedFrom.taskUUID);
+    expect(asset.decodedPeak).toBeLessThanOrEqual(0.95);
+    expect(asset.onsetMs).toBeLessThanOrEqual(2);
+    expect(asset.durationSec).toBeGreaterThan(0.3); expect(asset.durationSec).toBeLessThanOrEqual(3.5);
+    expect(asset.spectralDistanceDb, asset.id).toBeGreaterThan(asset.runtimeJitterDistanceDb * 1.5);
+  }
+  expect(fxVariantCount('thump')).toBe(3);
+  expect(fxVariantName('thump', 0)).toBe('mirelo-v1/fx/thump_0');
+  expect(fxVariantName('thump', 2)).toBe('derived-v1/fx/thump_2');
+  expect(fxVariantName('whoosh', 2)).toBe('mirelo-v1/fx/whoosh_2');
+  for (const family of Object.keys(FX_DERIVED)) expect(FX_VARIANTS[family as keyof typeof FX_VARIANTS]).toBeGreaterThan(0);
+});
+
+test('쿵은 원본·파생 3벌을 돌아가며 같은 파일을 연달아 내지 않고, 파생본이 아직 없으면 원본으로 낸다', () => {
+  const s = sfxFixture();
+  for (const name of FX_DERIVED_FILES) s.buffers[name] = { name, duration: 0.6 };
+  const seq: string[] = [];
+  for (let i = 0; i < 30; i++) { s.ctx.currentTime += 0.2; s._voices.clear(); s.thump({ vol: 0.5 }); seq.push([...s._voices].map((v: any) => v.src.buffer.name).join(',')); }
+  expect(new Set(seq)).toEqual(new Set(['mirelo-v1/fx/thump_0', 'derived-v1/fx/thump_1', 'derived-v1/fx/thump_2']));
+  for (let i = 1; i < seq.length; i++) expect(seq[i]).not.toBe(seq[i - 1]);
+  const cold = sfxFixture(); let synth = 0; cold._noise = () => { synth++; throw new Error('synth'); };
+  for (let i = 0; i < 6; i++) { cold.ctx.currentTime += 0.2; cold.thump({ vol: 0.5 }); }
+  expect(synth).toBe(0);
+  expect(new Set([...cold._voices].map((v: any) => v.src.buffer.name))).toEqual(new Set(['mirelo-v1/fx/thump_0']));
+});
+
+test('궁극기·보스 등장은 음악과 별도로 타격 버스를 잠깐 낮췄다가 1 로 되돌리고, 약한 새 요청이 깊은 덕킹을 덮지 않는다', () => {
+  const s = sfxFixture(); s.hitDuckGain = new Node();
+  s.ultimateDuck();
+  const ev = s.hitDuckGain.gain.events;
+  expect(Math.min(...ev.map((e: any) => e.v))).toBeCloseTo(HIT_DUCK.ultimate.amount, 6);
+  expect(ev.at(-1).v).toBe(1);
+  const boss = sfxFixture(); boss.hitDuckGain = new Node();
+  boss.bossIntro(stageDef(1, 10));
+  expect(Math.min(...boss.hitDuckGain.gain.events.map((e: any) => e.v))).toBeCloseTo(HIT_DUCK.bossIntro.amount, 6);
+  const n = boss.hitDuckGain.gain.events.length;
+  boss.ctx.currentTime += 0.1; boss.duckHits({ amount: 0.9, hold: 0.1, recover: 0.1 });
+  expect(boss.hitDuckGain.gain.events.length).toBe(n);
+  expect(HIT_DUCK.bossIntro.amount).toBeLessThan(HIT_DUCK.ultimate.amount);
+});
