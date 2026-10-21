@@ -61,8 +61,16 @@ export class Actor {
       attack2: ['attack'], attackHeavy: ['attack', 'attack2'], attackSpin: ['attackHeavy', 'attack'],
       attackJump: ['attackHeavy', 'attack'], cast: ['attack'], raise: ['cast', 'attack'],
       summon: ['roar', 'cast', 'attack'], spawn: ['roar', 'idle'], run: ['walk'],
+      // 강타 피격 클립이 없는 자산은 일반 피격으로(예전에는 idle 로 떨어져 강타를 맞아도 서 있었다).
+      hitHeavy: ['hit'],
     }[key] || [];
-    for (const fallback of chain) if (this.clips[this.rig[fallback]] || this.clips[fallback]) return this.clips[this.rig[fallback]] ? this.rig[fallback] : fallback;
+    // 폴백은 난수 없이 리그 후보 중 첫 실제 클립, 없으면 논리 이름 그대로의 클립을 쓴다.
+    for (const fallback of chain) {
+      const mapped = this.rig[fallback];
+      if (Array.isArray(mapped)) { for (const name of mapped) if (name && this.clips[name]) return name; }
+      else if (mapped && this.clips[mapped]) return mapped;
+      if (this.clips[fallback]) return fallback;
+    }
     for (const k of [key === 'run' ? 'walk' : null, 'idleCombat', 'idle']) {
       if (!k) continue; const f = this.rig[k]; const fp = Array.isArray(f) ? f[0] : f;
       if (fp && this.clips[fp]) return fp;
