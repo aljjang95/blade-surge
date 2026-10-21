@@ -4,7 +4,7 @@ import {
 } from '../shared/protocol';
 import {
   SocialError, bool, channel as parseChannel, diagnostics, integer, object, partyCode, playerId as parsePlayerId,
-  playerName, presence as parsePresence, runSummary, text,
+  playerHero, playerName, presence as parsePresence, runSummary, text,
 } from '../shared/validation';
 import { filterChat, maskBanned } from '../shared/filter';
 import { titleForRank, titleLabel } from '../shared/titles';
@@ -113,6 +113,7 @@ export class SocialCore {
     }
     if (method === 'POST') {
       if (path === '/profile') return this.saveProfile(c);
+      if (path === '/me/hero') return this.setHero(this.me(c.keyHash), c.req.body);
       if (path === '/me/title') return this.setTitle(this.me(c.keyHash), c.req.body);
       if (path === '/friends/request') return this.friendRequest(this.me(c.keyHash), c);
       if (path === '/friends/respond') return this.friendRespond(this.me(c.keyHash), c);
@@ -174,8 +175,8 @@ export class SocialCore {
     const unique = [...new Set(ids)];
     for (let i = 0; i < unique.length; i += 90) {
       const chunk = unique.slice(i, i + 90);
-      for (const r of this.all('SELECT p.id, p.name, p.tag, p.no, p.title_id, EXISTS(SELECT 1 FROM account_links a WHERE a.player_id = p.id) AS linked FROM players p WHERE p.id IN (' + placeholders(chunk.length) + ')', ...chunk)) {
-        map.set(r.id, { id: r.id, name: r.name, tag: r.tag, no: r.no, title: r.title_id ? titleLabel(this.config, r.title_id) : null, linked: !!r.linked });
+      for (const r of this.all('SELECT p.id, p.name, p.tag, p.no, p.hero, p.title_id, EXISTS(SELECT 1 FROM account_links a WHERE a.player_id = p.id) AS linked FROM players p WHERE p.id IN (' + placeholders(chunk.length) + ')', ...chunk)) {
+        map.set(r.id, { id: r.id, name: r.name, tag: r.tag, no: r.no, hero: r.hero ?? null, title: r.title_id ? titleLabel(this.config, r.title_id) : null, linked: !!r.linked });
       }
     }
     return map;
@@ -220,7 +221,9 @@ export class SocialCore {
 
   private saveProfile(c: Ctx) {
     if (!c.keyHash) throw new SocialError('bad-key', 401);
-    const name = this.cleanName(object(c.req.body, ['name']).name);
+    const body = object(c.req.body, ['name', 'hero']);
+    const name = this.cleanName(body.name);
+    const hero = body.hero === undefined ? null : playerHero(body.hero);
     const now = this.d.now();
     const existing = this.one('SELECT p.* FROM player_keys k JOIN players p ON p.id = k.player_id WHERE k.key_hash = ?', c.keyHash);
     if (existing) {
@@ -233,7 +236,7 @@ export class SocialCore {
     this.limit('profile:' + c.req.ipHash, 5, HOUR);
     const no = (this.one('SELECT COALESCE(MAX(no), 0) AS n FROM players').n as number) + 1;
     const id = 'p_' + this.d.randomHex(12);
-    this.run('INSERT INTO players(id, name, tag, no, created_at, created_ip_hash) VALUES (?, ?, ?, ?, ?, ?)', id, name, this.freeTag(name), no, now, c.req.ipHash);
+    this.run('INSERT INTO players(id, name, tag, no, hero, created_at, created_ip_hash) VALUES (?, ?, ?, ?, ?, ?, ?)', id, name, this.freeTag(name), no, hero, now, c.req.ipHash);
     this.run('INSERT INTO player_keys(key_hash, player_id, created_at, last_seen) VALUES (?, ?, ?, ?)', c.keyHash, id, now, now);
     if (no <= this.config.founders.maxNo) {
       this.grant(id, this.config.founders.titleId);
@@ -261,6 +264,12 @@ export class SocialCore {
       title: p.title_id ? titleLabel(this.config, p.title_id) : null,
       isAdmin: this.isAdmin(p, c.req),
     };
+  }
+  private setHero(p: any, body: unknown) {
+    const hero = playerHero(object(body, ['hero']).hero);
+    this.limit('hero:' + p.id, 20, 60000);
+    this.run('UPDATE players SET hero = ? WHERE id = ?', hero, p.id);
+    return this.profile(this.player(p.id));
   }
   private setTitle(p: any, body: unknown) {
     const titleId = object(body, ['titleId']).titleId;

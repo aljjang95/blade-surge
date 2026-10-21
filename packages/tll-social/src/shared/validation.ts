@@ -1,4 +1,4 @@
-import { PARTY_CODE, PLAYER_ID, SOCIAL_LIMITS, type Presence, type RunSummary } from './protocol';
+import { PARTY_CODE, PARTY_HEROES, PLAYER_ID, SOCIAL_LIMITS, type Presence, type RunSummary } from './protocol';
 
 export class SocialError extends Error {
   constructor(public code: string, public status = 400, public retryAfterMs?: number) { super(code); }
@@ -42,6 +42,10 @@ export function playerName(value: unknown): string {
   const name = text(value, 2, 12, 'name');
   if (!/^[가-힣A-Za-z0-9_]+$/.test(name)) throw new SocialError('name');
   return name;
+}
+export function playerHero(value: unknown): string {
+  if (typeof value !== 'string' || !(PARTY_HEROES as readonly string[]).includes(value)) throw new SocialError('hero');
+  return value;
 }
 export function presence(value: unknown): Presence {
   const p = object(value, ['state', 'where']);

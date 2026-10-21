@@ -37,7 +37,7 @@
 
 ## 데이터 모델 (SQLite, schema_version 테이블로 마이그레이션)
 
-- players(id PK, name, tag, no, created_at, renamed_at, title_id, muted_until, banned, created_ip_hash). 생성 IP는 최초 가입 때의 해시만 저장하고 이후 요청 IP로 바꾸지 않는다. 공개 프로필에는 노출하지 않는다. name 2~12자(한글·영문·숫자·_), tag 4자리 숫자(같은 name 안에서 유일, 무작위), no는 1부터 증가하는 가입 순번(창립 모험가 번호). 키는 player_keys, 외부 계정은 account_links(위 '계정 결정' 참고).
+- players(id PK, name, tag, no, hero TEXT NULL, created_at, renamed_at, title_id, muted_until, banned, created_ip_hash). hero는 PARTY_HEROES(knight, barbarian, mage, rogue, ranger)의 선택 영웅이며 기존 프로필·생성 시 생략한 값은 null이다. 생성 IP는 최초 가입 때의 해시만 저장하고 이후 요청 IP로 바꾸지 않는다. 공개 프로필에는 노출하지 않는다. name 2~12자(한글·영문·숫자·_), tag 4자리 숫자(같은 name 안에서 유일, 무작위), no는 1부터 증가하는 가입 순번(창립 모험가 번호). 키는 player_keys, 외부 계정은 account_links(위 '계정 결정' 참고).
 - friends(a, b, created_at, PK(a,b)) 양방향 두 행, 최대 100명. friend_requests(from_id, to_id, created_at) 받은 요청 최대 50개.
 - blocks(owner, target) 최대 200명. 차단 관계의 채팅·귓속말·초대·친구요청·모집 목록은 서버가 걸러서 보내지 않는다.
 - runs(id PK, player_id, content_id, mode, started_at, cleared_at NULL). 2시간 지나면 무효·정리. 플레이어당 열린 런 최대 5개(넘으면 가장 오래된 것 폐기).
@@ -54,6 +54,8 @@
 - 속도 제한 중 소켓 초당 제한·채팅 묶음 제한은 메모리 맵(DO 인스턴스 수명), 채팅 간격·반복과 글·신고·프로필·런 시작·모집 방송·초대·티켓 발급 제한은 SQLite다.
 
 schema_version=2 마이그레이션은 SocialCore 생성 시 동기 트랜잭션으로 적용한다. 기존 순위·칭호·기록은 보존하고, 기존 프로필의 생성 IP와 기존 summary는 추측하지 않고 null로 둔다. 기존 순위의 subject_hash는 클리어 이전부터 유지된 구글 연동이 확인될 때만 채운다. 발급 키를 알 수 없는 v1 미사용 티켓은 삭제해 재발급하게 하며, key_hash 없는 기존 소켓은 다음 메시지에서 종료한다. 스키마 변경 실패는 전체 롤백하며 재시도할 수 있다. 이전 코드로 되돌려도 추가 열·테이블을 삭제하지 않는다.
+
+현행 schema_version=4는 v3의 기대 컬럼 목록·누락 시 추가 방식을 재사용해 players.hero TEXT를 보정한다. 기존 데이터와 발급 티켓은 유지하고, 기존 영웅은 추측하지 않아 null로 둔다.
 
 ## GameConfig (게임이 넘김)
 
@@ -79,7 +81,8 @@ schema_version=2 마이그레이션은 SocialCore 생성 시 동기 트랜잭션
 
 | 메서드 경로 | 인증 | 설명 |
 |---|---|---|
-| POST /profile {name} | 키 | 없으면 생성(no·tag 배정, no ≤ founders.maxNo면 founder 칭호), 있으면 이름 변경(24시간 1회, tag 재배정). 응답 Profile |
+| POST /profile {name, hero?} | 키 | 없으면 생성(no·tag 배정, hero 저장·생략 시 null, no ≤ founders.maxNo면 founder 칭호), 있으면 이름 변경(24시간 1회, tag 재배정, hero 유지). 허용하지 않는 hero는 400 hero. 응답 Profile |
+| POST /me/hero {hero} | 키 | PARTY_HEROES의 값만 허용하며 그 밖은 400 hero. 플레이어당 분당 20회(SQLite), 선택 영웅 변경 뒤 Profile 반환 |
 | GET /me | 키 | Profile, 친구(온라인·presence 포함), 받은·보낸 요청, 차단 목록, 칭호, 대표 칭호, isAdmin |
 | POST /me/title {titleId or null} | 키 | 보유한 칭호만 대표로 |
 | GET /players/lookup?code=이름#1234 | 키 | 공개 프로필 |
@@ -138,7 +141,7 @@ schema_version=2 마이그레이션은 SocialCore 생성 시 동기 트랜잭션
 
 모든 광장이 정원이면 hello는 welcome을 보내되 `world:null`, 현재 channels, 빈 history를 반환하고 이어서 `{t:'error', code:'full'}`을 보낸다. 소켓과 hello 상태는 유지해 파티 채널·귓속말·초대를 사용할 수 있으며 자리가 생기면 join으로 광장에 들어갈 수 있다. 정원이 찬 채널에 임의 배정하지 않는다.
 
-PublicMini = {id, name, tag, no, title: {id, label} or null}.
+PublicMini = {id, name, tag, no, hero: string or null, title: {id, label} or null, linked: boolean}. 채팅·친구·명예의 전당·게시판·모집의 공개 신원은 저장된 선택 영웅을 함께 전달한다.
 
 채팅 필터: 금칙어는 같은 길이의 '*'로 가린다(공백·특수문자 끼워 넣기 일부 대응). URL(http, www., 도메인 형태)은 '[링크]'로 바꾼다. 같은 내용 연속 3회 거부. 음소거·차단(ban)이면 거부. 공백만 있는 메시지 거부.
 
