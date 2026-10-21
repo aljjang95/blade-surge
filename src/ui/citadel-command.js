@@ -1,6 +1,8 @@
 import { HEROES } from '../data/heroes.js';
 import { citadelHotspot } from '../data/citadel-hub.js';
 import { dungeonLanding } from './dungeon-landing.js';
+import { isFirstSortie, firstSortieModel } from './first-sortie.js';
+import { stageDef } from '../data/stages.js';
 import './dungeon-lobby.css';
 import './lobby-carousel.css';
 
@@ -145,7 +147,13 @@ export class CitadelCommand {
 
   readModel() {
     const { eco, expedition } = this.app;
-    const read = () => dungeonLanding({ expedition, history: eco.s.masterworks?.history, energy: eco.s.energy, selectedId: this.selectedId });
+    const history = eco.s.masterworks?.history;
+    const read = () => {
+      const base = dungeonLanding({ expedition, history, energy: eco.s.energy, selectedId: this.selectedId });
+      // 신규 계정의 추천은 조작 안내가 붙는 캠페인 1-1. 카드로 다른 던전을 직접 고르면 그 선택을 따른다.
+      if (!this.selectedId && base.dungeon && isFirstSortie(eco.s, { history, dungeonsCleared: base.cleared })) return firstSortieModel(base, { energy: eco.s.energy });
+      return base;
+    };
     let model = read();
     // 추천 던전이 바뀌면(클리어·최근 원정 갱신) 이전 선택을 버리고 새 추천을 보여 준다.
     if (model.recommendedId !== this.lastRecommendedId) {
@@ -275,6 +283,8 @@ export class CitadelCommand {
     app.syncHub?.();
     const model = this.readModel();
     if (!model.dungeon) return false;
+    // 첫 출격: 준비창 없이 곧바로 캠페인 1-1(튜토리얼 포함). 에너지 부족·실패 처리는 startStage 가 맡는다.
+    if (model.campaign) { app.startStage(stageDef(model.campaign.ch, model.campaign.st)); return true; }
     const spot = citadelHotspot(`dungeon:${model.dungeon.id}`);
     if (!spot) {
       // 관문 없는 컨셉 원정도 홈의 최근 도전에서 바로 그 카드로 이어진다. 준비 화면 이동은 에너지를 쓰지 않는다.

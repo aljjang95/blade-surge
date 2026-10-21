@@ -22,6 +22,7 @@ import { createFunnelLog } from '../game/funnel-events.js';
 import { campaignFinished } from '../data/expedition-depths.js';
 import { storyText, encounterLabel, journalHtml, dungeonBriefHtml } from './campaign.js';
 import { guideHtml } from './guide.js';
+import { isFirstSortie } from './first-sortie.js';
 import { availableDifficulties } from '../game/difficulty.js';
 import { AVATARS } from '../data/avatars.js';
 import { libraryAssetForAvatar } from '../engine/library-assets.js';
@@ -655,6 +656,16 @@ export class Meta {
   /** 로비 진입 시 첫 모험과 받을 수 있는 무료 출석 보상을 안내한다. */
   autoPopups() {
     if (this.app.mode !== 'lobby' || this.app.companionAgent?.getSnapshot().open || document.querySelector('dialog[open]') || document.getElementById('modal').classList.contains('show')) return;
-    if (this.eco.dailyAvailable()) { this.showDaily(); return; }
+    if (!this.eco.dailyAvailable()) return;
+    // 신규 계정은 첫 전투 결과를 보기 전에는 출석 보상 팝업으로 흐름을 끊지 않는다. 보상은 그대로 남아 있고 첫 전투 뒤 로비·메뉴에서 받는다.
+    if (this.dailyDeferrable()) { this.dailyDeferred = true; return; }
+    this.dailyDeferred = false;
+    this.showDaily();
+  }
+  /** 아직 한 번도 전투를 끝내지 않은 신규 계정인가. 별 기록·던전 정복이 있는 기존 계정은 해당하지 않는다. */
+  dailyDeferrable() {
+    if (this.combatResultSeen) return false;
+    const stats = this.app.expedition?.s?.stats || {};
+    return isFirstSortie(this.eco.s, { history: this.eco.s.masterworks?.history, dungeonsCleared: (Number(stats.dungeonWins) || 0) + (Number(stats.campaignWins) || 0) + (Number(stats.arenaWins) || 0) });
   }
 }
