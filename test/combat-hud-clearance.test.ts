@@ -101,3 +101,21 @@ test('키보드 단축키 표시는 터치 입력에서만 숨긴다', () => {
   expect(css).toMatch(/html\[data-input="touch"\] #hud \.exp-potions small/);
   expect(css).not.toMatch(/data-input="keyboard"/);
 });
+
+// ---- 벽 시선 디더(8) ----
+import { sightBayer8 } from '../src/engine/battle-occlusion.js';
+test('시선 디더는 8x8 Bayer 64단계이고 칸마다 문턱이 모두 다르다', () => {
+  const seen = new Set<number>();
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) seen.add(Math.round(sightBayer8(x, y) * 64 - .5));
+  expect(seen.size).toBe(64);
+  expect(Math.min(...seen)).toBe(0); expect(Math.max(...seen)).toBe(63);
+  // 8칸 주기, 음수 좌표도 같은 문턱
+  expect(sightBayer8(9, 3)).toBe(sightBayer8(1, 3)); expect(sightBayer8(-7, 5)).toBe(sightBayer8(1, 5));
+});
+test('시선 디더의 문턱은 고르게 퍼져 어느 4x4 블록도 한쪽 절반에 몰리지 않는다', () => {
+  for (const ox of [0, 4]) for (const oy of [0, 4]) {
+    let low = 0;
+    for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) if (sightBayer8(ox + x, oy + y) < .5) low++;
+    expect(low).toBe(8);
+  }
+});

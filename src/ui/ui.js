@@ -43,6 +43,8 @@ export class UI {
     // The announcement must clear the actual notice height, including wrapped copy and rotation.
     this.combatNoticeResize = new ResizeObserver(() => {
       this.refreshCombatNoticeLayout();
+      // 콤보 칩 폭이 바뀌면(자릿수·서체 로딩) 연속 처치 알약이 칩 옆에 다시 붙는다.
+      if (this.killStreakEl?.classList.contains('show')) this.placeKillStreak();
     });
     this.combatNoticeResize.observe(this.el.toast);
     this.combatNoticeResize.observe(this.el.hud);

@@ -44,7 +44,7 @@ export class TargetTag {
     hud?.append(this.root);
     this.bossPosture = document.createElement('i'); this.bossPosture.className = 'bossbar-posture'; this.bossPosture.hidden = true;
     document.querySelector('#bossbar .bb-body')?.append(this.bossPosture);
-    this.lastEnemy = null; this.lastHp = NaN; this.idle = 0; this.label = ''; this.hud = hud; this.blockers = []; this.blockerT = 0; this.tagWidth = 64; this.bounds = { left: 0, top: 0, right: 0, bottom: 0 }; this.placed = { dx: 0, dy: 0, hidden: false };
+    this.clearanceHidden = false; this.lastEnemy = null; this.lastHp = NaN; this.idle = 0; this.label = ''; this.hud = hud; this.blockers = []; this.blockerT = 0; this.tagWidth = 64; this.bounds = { left: 0, top: 0, right: 0, bottom: 0 }; this.placed = { dx: 0, dy: 0, hidden: false };
   }
   update(battle, renderer, dt = 0, mode = 'battle') {
     const state = targetTagState(battle, { mode });
@@ -74,6 +74,7 @@ export class TargetTag {
     const half = this.tagWidth / 2;
     const bounds = this.bounds; bounds.right = w; bounds.bottom = h;
     const placed = placeOutside(this.placed, x - half, y - TAG_HEIGHT, x + half, y, this.blockers, bounds, TAG_SHIFT_LIMIT);
+    this.clearanceHidden = placed.hidden;
     if (placed.hidden) { this.root.hidden = true; return; }
     this.root.hidden = false;
     this.root.style.transform = 'translate3d(' + Math.round(x + placed.dx) + 'px,' + Math.round(y + placed.dy) + 'px,0) translate(-50%,-100%)';

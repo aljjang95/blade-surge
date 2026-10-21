@@ -7,9 +7,13 @@
     top: var(--combo-top, calc(107px + var(--sat, 0px))); left: calc(14px + var(--sal, 0px)); right: auto;
     padding: 2px 9px 2px 8px; gap: 5px; border-radius: 7px; line-height: 1; opacity: .94;
   }
+  :root:root:root:root:root:root #hud .combo { transform-origin: left top; }
+  :root:root:root:root:root:root #hud .combo.pop { animation: combo-pop-edge .18s ease-out; }
   :root:root:root:root:root:root #hud .combo b { font-size: 20px; line-height: 1; }
   :root:root:root:root:root:root #hud .combo span { font-size: 9px; }
 }
+
+@keyframes combo-pop-edge { 0% { transform: scale(1.12); } 100% { transform: none; } }
 
 /* 3) 목표 카드: 전투 중에는 제목 한 줄·반투명. 탭하면 펼친다(.is-expanded, 5초 뒤 자동 접힘). */
 :root:root:root:root:root:root #hud #objective {
@@ -25,7 +29,7 @@
 :root:root:root:root:root:root #hud #map-tactics-context .map-tactics-context-copy { display: none; }
 :root:root:root:root:root:root #hud #map-tactics-context { justify-content: flex-end; }
 :root:root:root:root:root:root #hud #room-intro {
-  position: absolute; left: 50%; top: calc(58px + var(--sat, 0px)); z-index: 19; transform: translateX(-50%);
+  position: absolute; left: 50%; top: calc(62px + var(--sat, 0px)); z-index: 19; transform: translateX(-50%);
   display: grid; gap: 2px; justify-items: center; text-align: center; max-width: min(40vw, 440px); box-sizing: border-box;
   padding: 6px 14px 7px; border-radius: 9px; border: 1px solid #e6cf8f99; background: #061411f2; color: #f4f1e2;
   box-shadow: 0 3px 12px #000a; pointer-events: none; opacity: 0;
