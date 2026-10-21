@@ -911,7 +911,7 @@ export class Player extends Actor {
     } else if (this.state === 'skill' || this.state === 'ult') {
       const c = this.skillCtx; c.t += dt;
       const castT = (c.impl.dur || 0.8) * c.sk.castAt;
-      if (!c.cast && c.t >= castT) { c.cast = true; c.impl.cast?.(this.game, this, c); this.game.onSkillReleased?.(this,c); }
+      if (!c.cast && c.t >= castT) { c.cast = true; if (this.state === 'ult') this.game.ultRelease?.(this); c.impl.cast?.(this.game, this, c); this.game.onSkillReleased?.(this,c); }
       c.impl.update?.(this.game, this, c, dt);
       if (c.t >= (c.impl.total || c.impl.dur || 0.8)) { c.done = true; c.impl.end?.(this.game, this, c); this.state = 'idle'; this.vel.set(0, 0, 0); this.stopTrail(); this.play('Idle', { fade: 0.2 }); }
     }
