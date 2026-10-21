@@ -113,9 +113,31 @@ export const BGM_CROSSFADE = 2.5;
 /** 곡의 재생 이득 보정(선형). 표에 없는 곡은 1. */
 export const bgmTrimGain = name => Math.pow(10, (BGM_LOOPS[name]?.trimDb || 0) / 20);
 
+// ---------- 캠페인 마을 곡 (X-1..X-10 지역 마을, 캠페인 마을 레인 c3 의 CAMPAIGN_TOWNS 와 같은 id) ----------
+// 마을 전용 곡은 FlowMusic 생성 대기다(docs/audio/flowmusic-brief-h2.md). 대기 중에는 c3 의 campaignTownMusic 과 같은 대체 곡:
+// 1지역은 기존 로비곡, 2~6지역은 그 지역 던전곡. c3 병합 뒤 campaignTownMusic(chapter) 는 townMusic(chapter) 를 돌려주면 된다.
+export const TOWN_CUE_PLAN = Object.freeze([
+  Object.freeze({ id: 'town-bellgarden', chapter: 1, town: 'bellgarden', fallback: 'regions/lobby', status: 'external-gui-pending' }),
+  Object.freeze({ id: 'town-emberforge', chapter: 2, town: 'emberforge', fallback: 'regions/forge', status: 'external-gui-pending' }),
+  Object.freeze({ id: 'town-frostarchive', chapter: 3, town: 'frostarchive', fallback: 'regions/frost', status: 'external-gui-pending' }),
+  Object.freeze({ id: 'town-tidelight', chapter: 4, town: 'tidelight', fallback: 'regions/tide', status: 'external-gui-pending' }),
+  Object.freeze({ id: 'town-dawncrown', chapter: 5, town: 'dawncrown', fallback: 'regions/crown', status: 'external-gui-pending' }),
+  Object.freeze({ id: 'town-homeward', chapter: 6, town: 'homeward', fallback: 'regions/homecoming', status: 'external-gui-pending' }),
+]);
+/** 캠페인 지역(1~6) 마을의 배경음. 배송 전에는 대체 곡, 범위 밖은 1지역. */
+export const townMusic = chapter => cueTrack(TOWN_CUE_PLAN.find(c => c.chapter === chapter) || TOWN_CUE_PLAN[0]);
+/** 캠페인 지역(1~6)의 X-1..X-10 전체 곡 지도: 마을·일반 관문·중간 보스(X-3, X-5, X-7)·최종 보스(X-10). 재고표·QA 용. */
+export function campaignMusicMap(chapter, { stageDef, perChapter = 10 }) {
+  const stages = Array.from({ length: perChapter }, (_, i) => {
+    const stage = stageDef(chapter, i + 1);
+    return { stage: `${chapter}-${i + 1}`, rank: stage?.encounter?.rank || 'normal', battle: musicForScene({ stage }), boss: musicForScene({ stage, boss: true }), intro: bossIntroKind(stage) };
+  });
+  return { chapter, town: townMusic(chapter), stages };
+}
+
 /** musicForScene 이 돌려줄 수 있는 모든 곡(배송 검사·채널 산출물 검사용). */
 export const MUSIC_TRACKS = Object.freeze([...new Set([
   'bgm_gacha', 'regions/lobby', 'regions/arena', 'regions/boss', MIDBOSS_TRACK,
   ...REGION_IDS.map(r => `regions/${r}`),
-  ...FLOWMUSIC_CUE_PLAN.map(cueTrack), ...BOSS_CUE_PLAN.map(cueTrack),
+  ...FLOWMUSIC_CUE_PLAN.map(cueTrack), ...BOSS_CUE_PLAN.map(cueTrack), ...TOWN_CUE_PLAN.map(cueTrack),
 ])].sort());

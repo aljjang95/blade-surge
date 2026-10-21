@@ -278,3 +278,29 @@ test('궁극기·보스 등장은 음악과 별도로 타격 버스를 잠깐 �
   expect(boss.hitDuckGain.gain.events.length).toBe(n);
   expect(HIT_DUCK.bossIntro.amount).toBeLessThan(HIT_DUCK.ultimate.amount);
 });
+
+// ---------- 캠페인 마을·X-1..X-10 곡 지도 ----------
+import { TOWN_CUE_PLAN, campaignMusicMap, townMusic } from '../src/data/music.js';
+
+test('캠페인 마을 6곳은 마을 레인(c3)과 같은 대체 곡을 쓰고, 생성 대기 칸도 실제 파일로 풀린다', () => {
+  expect(TOWN_CUE_PLAN.map(c => c.town)).toEqual(['bellgarden', 'emberforge', 'frostarchive', 'tidelight', 'dawncrown', 'homeward']);
+  expect(townMusic(1)).toBe('regions/lobby');
+  expect(townMusic(2)).toBe('regions/forge');
+  expect(townMusic(6)).toBe('regions/homecoming');
+  expect(townMusic(99)).toBe('regions/lobby');
+  for (const cue of TOWN_CUE_PLAN) expect(MUSIC_TRACKS).toContain(townMusic(cue.chapter));
+});
+
+test('지역마다 X-1..X-10 곡 지도: 일반 관문은 지역곡, 수문장·중간 보스는 중간 보스곡, X-10 은 최종 보스곡과 최종 스팅어', () => {
+  for (const chapter of CHAPTERS) {
+    const map = campaignMusicMap(chapter.id, { stageDef });
+    expect(map.stages).toHaveLength(10);
+    for (const row of map.stages) {
+      expect(MUSIC_TRACKS).toContain(row.battle); expect(MUSIC_TRACKS).toContain(row.boss);
+      expect(row.battle.startsWith('regions/')).toBe(true);
+    }
+    expect(map.stages[9].intro).toBe('finale');
+    expect(map.stages[9].boss).not.toBe(map.stages[4].boss);
+    expect(map.stages.filter(r => r.intro === 'midboss').map(r => r.stage)).toEqual([`${chapter.id}-3`, `${chapter.id}-5`, `${chapter.id}-7`]);
+  }
+});

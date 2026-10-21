@@ -7,8 +7,9 @@
 
 - 캠페인 보스: `src/data/music.js` 의 `BOSS_CUE_PLAN` 12칸(6지역 × 최종/중간). 최종 보스(X-10)는 `regions/boss`,
   중간 보스(X-5)·수문장(X-3, X-7)은 `expansion/flow-combat`(2026-09-09 FlowMusic 생성, 62.7초)으로 이미 서로 다르다.
-- 마을: 캠페인 마을 레인(c3)의 `campaignTownMusic` 이 1지역은 `regions/lobby`, 2~6지역은 그 지역 던전 곡을 쓴다.
-  마을 전용 곡이 오면 그 함수의 반환값만 바꾸면 된다.
+- 마을: `src/data/music.js` 의 `TOWN_CUE_PLAN` 6칸(c3 `CAMPAIGN_TOWNS` 와 같은 id)과 `townMusic(chapter)`. 대체 곡은 c3 의
+  `campaignTownMusic` 과 같다(1지역 `regions/lobby`, 2~6지역 그 지역 던전곡). c3 병합 때 `campaignTownMusic` 이 `townMusic` 을 돌려주게 한다.
+- X-1..X-10 전체 곡 지도는 `campaignMusicMap(chapter, { stageDef })` 로 뽑는다(일반 관문 지역곡, X-3·X-5·X-7 중간 보스곡, X-10 최종 보스곡).
 - 등장 스팅어(보스·중간 보스)는 Mirelo 효과음으로 이미 들어갔다(`public/sfx/mirelo-v1/event/`). 곡에 인트로 스팅어를 넣지 않는다.
 
 ## 공통 지시(Compose 패널)
@@ -47,7 +48,9 @@ Instrumental 켬. 모바일 액션 RPG 루프용. 3분 안팎, **끝을 페이�
 ## 받은 뒤(클라우드 세션에서 가능)
 
 1. 원본 WAV 는 Drive 원본 폴더에 보존하고, 게임용은 `public/bgm/regions/<cue>.mp3` 로 넣는다(-18 LUFS, -1.5 dBTP,
-   48kHz 스테레오 — 기존 `docs/media/region-audio.json` 과 같은 기준). Android 채널용 Opus 는 자산 압축 레인(f5)의 도구로 만든다.
+   48kHz 스테레오 — 기존 `docs/media/region-audio.json` 과 같은 기준). **Android 채널(googleplay·onestore)은 `regions/*` 를 Opus(.ogg)로만
+   싣는다(`bgmUrl`, `tools/optimize/dist-excludes.json`)** — 같은 이름의 `.ogg` 를 `bash tools/optimize/convert-media.sh` 로 꼭 함께 만든다.
+   `test/dist-excludes.test.ts` 가 MUSIC_TRACKS 기준으로 채널별 파일 누락을 잡는다.
 2. `python3 tools/audio/bgm-loop-points.py public/bgm/regions/<cue>.mp3` 로 루프 지점·이득을 재서 `BGM_LOOPS` 에 넣는다.
-3. 보스곡은 `BOSS_CUE_PLAN` 해당 칸에 `file: 'regions/<cue>', status: 'shipped'` 를 적는다. 마을곡은 `campaignTownMusic` 반환값을 바꾼다.
+3. 보스곡은 `BOSS_CUE_PLAN`, 마을곡은 `TOWN_CUE_PLAN` 해당 칸에 `file: 'regions/<cue>', status: 'shipped'` 를 적는다.
 4. `bun test test/audio-forge-h2.test.ts test/music-scenes.test.ts` 와 `node tools/audio/audio-capture-qa.mjs` 로 확인한다.
