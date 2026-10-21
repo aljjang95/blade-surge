@@ -8,6 +8,7 @@ import { HEROES } from '../data/heroes.js';
 import { STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
 import { buildIdentity } from '../platform/startup-compat.js';
 import { SOCIAL_CONFIG } from './config.js';
+import { googleSignIn } from './google-signin.js';
 
 const START_DELAY_MS = 2500;
 const WATCH_MS = 500;
@@ -159,7 +160,8 @@ function build(app) {
       return [...document.querySelectorAll(HUD_BUTTONS)].map(visibleRect).filter(Boolean)
         .map(rect => ({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }));
     },
-    // 구글 로그인은 클라이언트 ID가 정해지면 googleSignIn을 채운다(없으면 화면에 "준비 중"으로 보인다).
+    // 구글 로그인: 클라이언트 ID는 google-signin.js가 가진다(서버 GOOGLE_CLIENT_IDS와 같은 값).
+    googleSignIn,
     discordInvite: typeof config.discordInvite === 'string' ? config.discordInvite : null,
   };
 
