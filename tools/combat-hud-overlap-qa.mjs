@@ -42,6 +42,7 @@ for (const [w, h] of views) {
     await page.waitForFunction(() => app.battle?.active && app.battle.player && app.input.enabled, null, { timeout: 120000 });
     await page.waitForTimeout(1500);
 
+    await page.exposeFunction('qaShot', async name => { await page.screenshot({ path: path.join(out, `${name}-${w}x${h}.png`) }); return true; });
     // ---- 점검 본체: 한 번의 evaluate 로 같은 프레임 상태에서 모든 사각형을 읽는다 ----
     const result = await page.evaluate(async () => {
       const a = app, b = a.battle, p = b.player, T = window.__THREE, hud = document.getElementById('hud');
@@ -81,7 +82,9 @@ for (const [w, h] of views) {
       // 2) 콤보 칩 + 연속 처치
       a.ui.setCombo(54); a.ui.setKillStreak(17); render(2);
       await new Promise(r => setTimeout(r, 1500)); // 팝·등급 상승 애니메이션이 끝난 뒤 잰다
-      const card = rectOf(hud.querySelector('.hud-player')), chip = rectOf(document.getElementById('combo')), pill = rectOf(document.getElementById('kill-streak'));
+      // 팝·등급 상승 애니메이션의 변형은 빼고 레이아웃 사각형(offset*)으로 잰다. 소프트웨어 렌더는 프레임이 늦어 애니메이션이 오래 남는다.
+      const layoutRect = el => { if (!el || !(el.offsetWidth > 0)) return null; const hb = hud.getBoundingClientRect(); const left = hb.left + el.offsetLeft, top = hb.top + el.offsetTop; return box({ left, top, right: left + el.offsetWidth, bottom: top + el.offsetHeight, width: el.offsetWidth, height: el.offsetHeight }); };
+      const card = rectOf(hud.querySelector('.hud-player')), chip = layoutRect(document.getElementById('combo')), pill = layoutRect(document.getElementById('kill-streak'));
       const exp = rectOf(hud.querySelector('.expbar')), xpText = rectOf(hud.querySelector('.rpg-xp'));
       const others = blockers().filter(k => !['combo', 'kill-streak'].includes(k.id));
       res.combo = { chip, pill, card, exp, xpText,
@@ -120,11 +123,15 @@ for (const [w, h] of views) {
         // 숨김 해제 순간을 놓치지 않도록 관찰자로 잡는다(소프트웨어 렌더에서는 프레임이 늦다).
         let first = null;
         if (intro) new MutationObserver(() => { if (!intro.hidden && !first) first = measure(); }).observe(intro, { attributes: true, attributeFilter: ['hidden'] });
-        p.pos.set(room.x, 0, room.z); b.curRoom = room; a.input.clear();
+        p.pos.set(room.x, 0, room.z); b.curRoom = room; room.discovered = true; a.input.clear();
         for (let i = 0; i < 12; i++) a.step(1 / 60, false); render(1);
         a.ui.readability.update(b, 0);
         for (let i = 0; i < 20 && !first; i++) await new Promise(r => setTimeout(r, 100));
+        a.ui.setCombo(0); a.ui.setKillStreak(0);
+        await new Promise(r => setTimeout(r, 700));   // 토스트가 보이는(또는 옛 하단 안내문이 보이는) 장면을 증거로 남긴다
+        await window.qaShot('intro');
         res.intro = first || { available: true, shown: false };
+        if (!first) { const snap = b.mapTactics?.snapshot(b), rd = a.ui.readability; res.intro.debug = { introKey: rd.introKey, hidden: intro?.hidden, cls: intro?.className, ctxHidden: rd.context.hidden, cur: b.curRoom?.id, snap: snap && { roomId: snap.roomId, disc: snap.roomDiscovered, phase: snap.phase, used: snap.used, blocked: snap.blockedReason } }; }
         // 5.2초 애니메이션이 끝나면 숨는다(느린 렌더에서는 최대 40초까지 기다린다)
         for (let i = 0; i < 80 && intro && intro.hidden !== true; i++) await new Promise(r => setTimeout(r, 500));
         res.intro.hiddenAfterFade = intro?.hidden === true;

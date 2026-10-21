@@ -94,7 +94,7 @@ test('방 안내 토스트는 위쪽 가운데이고 읽을 수 있는 글자 �
   expect(rule).toMatch(/left:\s*50%/);
   expect(rule).toMatch(/top:\s*calc\(\s*\d+px/);
   expect(css).toMatch(/#room-intro span\s*\{[^}]*font-size:\s*clamp\(\s*1[2-9]px/);
-  expect(rule).toMatch(/background:\s*#06[0-9a-f]{4}f[0-9a-f]/);
+  expect(rule).toMatch(/background:\s*#06[0-9a-f]{4}[ef][0-9a-f]/);
 });
 test('키보드 단축키 표시는 터치 입력에서만 숨긴다', () => {
   expect(css).toMatch(/html\[data-input="touch"\] #hud \.skill-btn \.key/);

@@ -31,7 +31,7 @@
 :root:root:root:root:root:root #hud #room-intro {
   position: absolute; left: 50%; top: calc(62px + var(--sat, 0px)); z-index: 19; transform: translateX(-50%);
   display: grid; gap: 2px; justify-items: center; text-align: center; max-width: min(40vw, 440px); box-sizing: border-box;
-  padding: 6px 14px 7px; border-radius: 9px; border: 1px solid #e6cf8f99; background: #061411f2; color: #f4f1e2;
+  padding: 6px 14px 7px; border-radius: 9px; border: 1px solid #e6cf8f99; background: #061411eb; color: #f4f1e2;
   box-shadow: 0 3px 12px #000a; pointer-events: none; opacity: 0;
 }
 :root:root:root:root:root:root #hud #room-intro[hidden] { display: none; }
