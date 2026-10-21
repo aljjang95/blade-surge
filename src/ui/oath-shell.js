@@ -22,7 +22,12 @@ export class OathShell {
   const nav=document.querySelector('#meta .bottomnav'),home=document.querySelector('#tab-home');
   this.menu=el('dialog','oath-menu');this.menu.id='oath-menu';this.menu.setAttribute('aria-labelledby','oath-menu-title');
   const head=el('header','oath-menu-heading'),title=el('h2','','메뉴');title.id='oath-menu-title';
-  const close=el('button','oath-menu-close','✕');close.type='button';close.setAttribute('aria-label','닫기');close.addEventListener('click',()=>this.close());head.append(title,close);
+  const close=el('button','oath-menu-close','✕');close.type='button';close.setAttribute('aria-label','닫기');close.addEventListener('click',()=>this.close());
+  // 설정은 메뉴 맨 아래까지 내려가야 닿았다. 머리말(스크롤 밖)에 톱니 버튼을 고정해 어디서든 한 번에 연다. 기존 설정 버튼의 리스너를 그대로 쓴다.
+  const gear=el('button','oath-menu-gear');gear.type='button';gear.setAttribute('aria-label','설정');gear.title='설정';
+  {const art=el('i','ic ic-gear');art.setAttribute('aria-hidden','true');gear.append(art);}
+  gear.addEventListener('click',()=>document.getElementById('btn-settings')?.click());
+  head.append(title,gear,close);
   this.grid=el('div','oath-menu-grid');this.menu.append(head,this.grid);document.body.append(this.menu);
   this.groups=new Map(MENU_GROUPS.map(g=>{const section=el('section','oath-menu-group'),heading=el('h3','',g.title),list=el('div','oath-menu-list');section.dataset.group=g.id;section.hidden=true;section.append(heading,list);this.grid.append(section);return [g.id,{def:g,section,list}];}));
   const trigger=el('button','oath-nav-menu','메뉴');trigger.type='button';trigger.setAttribute('aria-controls',this.menu.id);trigger.setAttribute('aria-expanded','false');

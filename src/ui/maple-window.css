@@ -137,3 +137,33 @@
 :root:root:root:root .field-guide .guide-heading h2 { display: block; width: auto; max-width: none; margin: 0; padding: 0; font: 800 14px/1.2 var(--font); letter-spacing: .02em; color: #fff; background: none; clip-path: none; -webkit-text-stroke: 0; text-shadow: 0 1px 0 #0a1222; }
 :root:root:root:root .field-guide .guide-kicker { color: #cfe0ff; }
 
+
+/* ---------- 메뉴·설정·일시정지 다듬기 (f3-reward-ui) ---------- */
+/* 메뉴 머리말의 설정 톱니: 스크롤 밖에 고정돼 어디서든 닿는다(터치 44px) */
+:root:root:root:root .oath-menu-gear { display: grid; place-items: center; flex: none; margin-left: auto; min-width: 32px; width: 32px; min-height: 30px; height: 30px; padding: 0; border: 1px solid var(--mpl-border); border-radius: 3px; background: linear-gradient(#5b78b0, #3a5688); color: #fff; box-shadow: none; }
+:root:root:root:root .oath-menu-gear .ic { width: 22px; height: 22px; margin: 0; }
+:root:root:root:root .oath-menu-gear:focus-visible { outline: 2px solid #fff0b3; outline-offset: 1px; }
+@media (pointer: coarse) { :root:root:root:root .oath-menu-gear { width: 44px; height: 44px; } }
+/* 메뉴 목록 안의 숫자 배지는 글자 옆에 놓는다(바닥 탭용 절대 위치가 글자를 가리던 문제) */
+#oath-menu .oath-menu-list > #btn-expedition[data-ready]:not([data-ready="0"])::after { position: static; flex: none; order: 3; margin-left: auto; margin-right: 24px; top: auto; right: auto; min-width: 18px; padding: 1px 5px; text-align: center; font-size: 11px; line-height: 16px; }
+/* 커뮤니티: 아이콘이 .ic 가 아니어도 왼쪽 여백을 늘리지 않고, 글자는 한 줄로 둔다. 0 배지는 숨긴다 */
+#oath-menu .oath-menu-list > button:has(> svg) { padding-left: 10px; white-space: nowrap; }
+:root:root:root:root .oath-menu-list > button > svg { flex: none; }
+:root:root:root:root .oath-menu-list > button > span:not(.tls-launch-count) { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#community-open .tls-launch-count[hidden], .oath-menu-list .tls-launch-count[hidden] { display: none !important; }
+/* 설정 창의 위험 구역: 닫기와 떨어뜨려 접어 두고, 확인은 창 안에서 한 번 더 받는다 */
+.danger-zone { margin: 18px 0 4px; padding: 0; border: 1px dashed #d26a6a99; border-radius: 10px; background: #3a1b2218; }
+.danger-zone > summary { min-height: 44px; display: flex; align-items: center; padding: 0 14px; color: #f0a3a3; font-size: 12px; font-weight: 800; cursor: pointer; }
+.danger-zone .danger-body { display: grid; gap: 10px; padding: 0 14px 14px; }
+.danger-zone .danger-body > p, .danger-zone .danger-confirm > p { margin: 0; color: #e8c3c3; font-size: 12px; line-height: 1.6; }
+.danger-zone .danger-body .btn { min-height: 44px; }
+.danger-zone .danger-confirm { display: grid; gap: 8px; padding: 10px 12px; border: 1px solid #d26a6a; border-radius: 8px; background: #4a1c24; }
+.danger-zone .danger-confirm[hidden], .danger-zone .danger-body > .btn[hidden] { display: none; }
+.danger-zone .danger-confirm-btns { display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px; }
+/* 일시정지 메뉴의 네브 버튼: 전투 HUD 규칙이 글자를 숨겨 "N"만 남던 것을 글자까지 보이게 한다 */
+#pause-overlay .pause-btns .companion-launcher { display: flex; flex-direction: row; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 8px; position: static; width: auto; min-width: 0; height: auto; min-height: 44px; padding: 6px 12px; }
+#pause-overlay .pause-btns .companion-launcher .companion-launcher-copy { display: flex; flex-direction: row; align-items: baseline; gap: 6px; min-width: 0; text-align: left; }
+#pause-overlay .pause-btns .companion-launcher .companion-launcher-copy b { font-size: 14px; }
+#pause-overlay .pause-btns .companion-launcher .companion-launcher-copy small { display: inline; font-size: 12px; color: #dbeaf5; opacity: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#pause-overlay .pause-btns .companion-launcher .companion-launcher-mark { flex: none; width: 28px; height: 28px; font-size: 16px; }
+#pause-overlay .pause-btns .companion-launcher > .companion-link-dot { display: inline-block; }

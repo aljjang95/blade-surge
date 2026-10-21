@@ -149,3 +149,27 @@
   #tab-stage .exp-result-footer { gap:6px; }
   #tab-stage .exp-result-footer button { font-size:12px; }
 }
+
+/* 보상 칩 띠: 결과 화면 맨 위에서 바로 보이는 보상. 칩 색은 희귀도 색(--chip-color), 숫자는 카운트업. */
+#tab-stage .exp-result-rewards { margin:10px 0 4px; }
+#tab-stage .exp-result-shell .exp-reward-strip { gap:8px; }
+#tab-stage .exp-result-shell .exp-reward-chip { display:inline-flex; align-items:center; gap:6px; min-height:36px; padding:4px 11px 4px 6px; border:1px solid color-mix(in srgb,var(--chip-color) 70%,transparent); border-radius:999px; color:#f4efe0; font-size:13px; font-weight:700; background:linear-gradient(135deg,color-mix(in srgb,var(--chip-color) 24%,#0f1a1c),#0f1a1c); box-shadow:0 0 12px color-mix(in srgb,var(--chip-color) 28%,transparent),inset 0 1px 0 #ffffff18; animation:reward-chip-in .42s cubic-bezier(.2,.9,.3,1.2) both; animation-delay:var(--chip-delay,0ms); }
+#tab-stage .exp-result-shell .exp-reward-chip em { font-style:normal; font-weight:600; color:#d9e4dc; }
+#tab-stage .exp-result-shell .exp-reward-chip b { color:var(--chip-color); font-size:15px; font-variant-numeric:tabular-nums; }
+#tab-stage .exp-result-shell .exp-reward-chip img { width:24px; height:24px; }
+@keyframes reward-chip-in { from { opacity:0; transform:translateY(8px) scale(.9); } to { opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce) { #tab-stage .exp-result-shell .exp-reward-chip { animation:none; } }
+/* 사용하지 않은 정원의 장치는 설명 블록 대신 한 줄 라벨로만 둔다 */
+#tab-stage .map-tactics-result.map-tactics-unused { margin:6px 0; padding:2px 10px; border-left-width:2px; background:none; color:#97ad9f; font-size:12px; line-height:1.5; }
+/* 가로 폰(낮은 화면): 요약을 한 줄로 줄여 보상 칩이 첫 화면에 오게 한다 */
+@media (max-height:500px) {
+  #tab-stage .exp-result-scroll { padding-top:8px; padding-bottom:10px; }
+  #tab-stage .exp-result-summary { gap:8px 18px; }
+  #tab-stage .exp-result-heading h2 { font-size:22px; margin:0; display:inline; }
+  #tab-stage .exp-result-heading .exp-result-route { display:inline; margin-left:10px; font-size:14px; }
+  #tab-stage .exp-result-heading small { display:block; }
+  #tab-stage .exp-result-shell .exp-outcome-stats { gap:16px; }
+  #tab-stage .exp-result-shell .exp-outcome-stats b { font-size:18px; }
+  #tab-stage .exp-result-save { margin:6px 0; padding:4px 10px; }
+  #tab-stage .exp-result-footer { padding-top:6px; padding-bottom:calc(6px + var(--sab)); }
+}

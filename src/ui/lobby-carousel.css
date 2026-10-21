@@ -54,7 +54,7 @@
 /* ---------- 작은 보조 링크(다른 던전 · 마을 둘러보기) ---------- */
 #citadel-command .dl-links { position: absolute; right: max(12px, calc(var(--sar, 0px) + 8px)); bottom: calc(var(--launch) + 22px + var(--sab, 0px)); display: flex; gap: 6px; }
 .oath-visual #citadel-command.dl-landing .dl-link {
-  min-width: 0; min-height: 40px; margin: 0; padding: 0 14px; border: 1px solid rgba(226, 178, 90, .55); border-radius: 20px;
+  min-width: 44px; min-height: 44px; margin: 0; padding: 0 14px; border: 1px solid rgba(226, 178, 90, .55); border-radius: 20px;
   background: rgba(10, 20, 34, .82); color: var(--dl-text); font-family: inherit; font-size: var(--type-sm, 14px) !important; font-weight: 800; line-height: 1.2; text-align: center; white-space: nowrap; cursor: pointer;
   box-shadow: 0 4px 10px rgba(0, 0, 0, .35);
 }
@@ -94,7 +94,7 @@
 #citadel-command .dl-pick[aria-pressed="true"] { border-color: #ffd877; background: linear-gradient(180deg, #2b3b54, #121d30); box-shadow: 0 0 0 2px #7a4f12, 0 0 16px 3px rgba(255, 200, 90, .65); z-index: 1; }
 #citadel-command .dl-pick[aria-pressed="true"]::before { background: #ffe39a; }
 .oath-visual #citadel-command.dl-landing .dl-next {
-  flex: none; align-self: center; width: 26px; min-width: 0; height: 52px; min-height: 0; margin: 0; padding: 0; display: grid; place-items: center;
+  flex: none; align-self: center; width: 44px; min-width: 44px; height: 52px; min-height: 0; margin: 0; padding: 0; display: grid; place-items: center;
   border: 2px solid #7a5a2c; border-radius: 6px; background: linear-gradient(180deg, #2a2112, #15110b); color: var(--dl-gold); cursor: pointer;
 }
 #citadel-command .dl-next[hidden] { display: none; }
@@ -133,7 +133,7 @@
   #citadel-command .dl-fact dd { font-size: 14px; text-align: left; }
   #citadel-command .dl-status { font-size: 12px; }
   #citadel-command .dl-links { bottom: calc(var(--launch) + 14px + var(--sab, 0px)); right: max(8px, calc(var(--sar, 0px) + 4px)); }
-  .oath-visual #citadel-command.dl-landing .dl-link { min-height: 36px; padding: 0 10px; font-size: 13px !important; }
+  .oath-visual #citadel-command.dl-landing .dl-link { min-height: 44px; padding: 0 10px; font-size: 13px !important; }
   #citadel-command .dl-dock { right: max(6px, var(--sar, 0px)); bottom: calc(4px + var(--sab, 0px)); width: min(400px, calc(100vw - 440px)); }
   #citadel-command .dl-cards-bar { padding: 4px 4px 4px 8px; }
   #citadel-command .dl-cards { padding-top: 5px; }
@@ -141,7 +141,7 @@
   #citadel-command .dl-pick-name { font-size: 12px; }
   #citadel-command .dl-pick-meta { font-size: 13px; }
   #citadel-command .dl-ico { width: 12px; height: 12px; }
-  .oath-visual #citadel-command.dl-landing .dl-next { width: 22px; height: 44px; }
+  .oath-visual #citadel-command.dl-landing .dl-next { width: 44px; height: 48px; }
   .oath-visual #citadel-command.dl-landing .dl-cta { border-width: 3px; margin-left: -12px; }
   .oath-visual #citadel-command.dl-landing .dl-cta-label { font-size: 20px !important; }
 }
