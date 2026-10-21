@@ -53,7 +53,7 @@ function codeReferences() {
   for (const n of lib.FX_SOUND_FILES) add(lib.sfxUrl(n).slice(1), `fx:${n.split('/').pop()}`);
   for (const n of lib.HIT_SOUND_FILES) add(lib.sfxUrl(n).slice(1), `hit:${n.split('/').pop()}`);
   for (const n of lib.COMBAT_SOUND_FILES) add(lib.sfxUrl(n).slice(1), `hero:${n.split('/').slice(-2).join('/')}`);
-  for (const n of lib.FORGE_SOUND_FILES || []) add(lib.sfxUrl(n).slice(1), `forge:${n.split('/').pop()}`);
+  for (const n of lib.EVENT_SOUND_FILES || []) add(lib.sfxUrl(n).slice(1), `event:${n.split('/').pop()}`);
   const scenes = [['lobby', { scene: 'lobby' }], ['gacha', { scene: 'gacha' }], ['arena', { stage: { expedition: { kind: 'arena' } } }], ['boss', { boss: true }]];
   for (const t of ['garden', 'forge', 'frost', 'tide', 'crown']) scenes.push([`campaign:${t}`, { stage: { theme: t } }]);
   scenes.push(['campaign:homecoming', { stage: { ch: 6, theme: 'garden' } }]);

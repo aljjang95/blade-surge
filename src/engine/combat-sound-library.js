@@ -180,3 +180,28 @@ export function hitSoundName(id, variant = 0) {
   if (!name) { name = `${HIT_PREFIX}${id}_${variant}`; NAME_CACHE.set(key, name); }
   return name;
 }
+
+// ---------- 사건 효과음(2026-10-22 사운드 레인 h2): 보스 등장 스팅어·보스 경고·가챠·전리품 희귀도 ----------
+// Mirelo SFX 1.5 로 만들었다(tools/audio/mirelo-event-forge.py, 출처·SHA·후보 지표는 public/sfx/mirelo-v1/event/manifest.json).
+// 시작 때 기다리지 않고 공용 세트를 불러온 뒤 뒤에서 불러온다. 아직 없으면 예전 합성음·공용 샘플로 대신한다.
+const EVENT_PREFIX = SFX_LIBRARY + 'event/';
+export const EVENT_SOUNDS = Object.freeze({
+  stingerFinale: EVENT_PREFIX + 'stinger_finale', stingerMidboss: EVENT_PREFIX + 'stinger_midboss', bossWarning: EVENT_PREFIX + 'boss_warning',
+  gachaCharge: EVENT_PREFIX + 'gacha_charge', gachaRevealSr: EVENT_PREFIX + 'gacha_reveal_sr',
+  lootRare: EVENT_PREFIX + 'loot_rare', lootEpic: EVENT_PREFIX + 'loot_epic', lootLegend: EVENT_PREFIX + 'loot_legend',
+});
+export const EVENT_SOUND_FILES = Object.freeze(Object.values(EVENT_SOUNDS));
+/** 보스 등장 스팅어: 지역 최종 보스·중간 보스(수문장 포함)·그 밖의 보스(원정·대장). 길이는 BGM 덕킹 시간이다. */
+export const BOSS_INTRO = Object.freeze({
+  finale: Object.freeze({ sound: EVENT_SOUNDS.stingerFinale, vol: 0.95, rate: 1, duck: 0.3, dur: 3.3 }),
+  midboss: Object.freeze({ sound: EVENT_SOUNDS.stingerMidboss, vol: 0.8, rate: 1, duck: 0.45, dur: 3 }),
+  boss: Object.freeze({ sound: EVENT_SOUNDS.stingerFinale, vol: 0.72, rate: 1.08, duck: 0.45, dur: 2.6 }),
+});
+/** 전리품 줍기: 희귀도(N/S/E/U/L, 가챠 R/SR/SSR 도 받는다) → 소리. 일반은 기존 ui_drop. */
+export function lootSound(rarity) {
+  if (rarity === 'L' || rarity === 'SSR') return { sound: EVENT_SOUNDS.lootLegend, vol: 0.85, rate: 1, duck: 0.55 };
+  if (rarity === 'U') return { sound: EVENT_SOUNDS.lootEpic, vol: 0.8, rate: 0.92, duck: 0 };
+  if (rarity === 'E' || rarity === 'SR') return { sound: EVENT_SOUNDS.lootEpic, vol: 0.65, rate: 1, duck: 0 };
+  if (rarity === 'S' || rarity === 'R') return { sound: EVENT_SOUNDS.lootRare, vol: 0.5, rate: 1.05, duck: 0 };
+  return { sound: 'ui_drop', vol: 0.4, rate: 1, duck: 0 };
+}

@@ -28,7 +28,7 @@ export const FLOWMUSIC_CUE_PLAN = Object.freeze([
 export function flowMusicBriefForRoute(routeId) {
   return FLOWMUSIC_CUE_PLAN.find(cue => cue.route === routeId) || null;
 }
-/** @typedef {{ch?: number, theme?: string, townId?: string, encounterPrefix?: string, encounter?: {rank?: string}, chapter?: {id?: number, theme?: string, encounterPrefix?: string}, expedition?: {kind?: string}}} MusicStage */
+/** @typedef {{ch?: number, theme?: string, encounterPrefix?: string, encounter?: {rank?: string}, chapter?: {id?: number, theme?: string, encounterPrefix?: string}, expedition?: {kind?: string}}} MusicStage */
 
 /**
  * All starts and resumes resolve through the same scene policy.
@@ -37,7 +37,6 @@ export function flowMusicBriefForRoute(routeId) {
 export function musicForScene({ scene = 'battle', stage = null, boss = false } = {}) {
   if (scene === 'gacha') return 'bgm_gacha';
   if (scene === 'lobby') return 'regions/lobby';
-  if (scene === 'town') return cueTrack(TOWN_CUES[stage?.townId] || TOWN_CUES.oathhold);
   if (stage?.expedition?.kind === 'arena') return 'regions/arena';
   if (boss) return bossMusic(stage);
   if (stage?.expedition?.kind === 'dungeon' && stage?.expedition?.depth === 'deep') {
@@ -59,7 +58,7 @@ export function musicAfterIntro({ mode, active, stage, expectedStage, boss = fal
 }
 
 // ---------- 보스·중간 보스·마을 곡 (2026-10-22 사운드 레인 h2) ----------
-// 지역 최종 보스(X-10)와 중간 보스(X-5)·수문장(X-3, X-7)은 서로 다른 곡을 쓴다. 지역별 전용 보스곡·마을곡은
+// 지역 최종 보스(X-10)와 중간 보스(X-5)·수문장(X-3, X-7)은 서로 다른 곡을 쓴다. 지역별 전용 보스곡은
 // FlowMusic GUI(대표님 PC 로그인 세션) 생성 대기다. 생성 전에는 fallback(이미 배송된 곡)을 쓴다.
 // 생성된 파일을 public/bgm 에 넣으면 해당 항목에 file 과 status: 'shipped' 를 적는다(브리프: docs/audio/flowmusic-brief-h2.md).
 const MIDBOSS_TRACK = 'expansion/flow-combat';
@@ -69,11 +68,6 @@ export const BOSS_CUE_PLAN = Object.freeze(REGION_IDS.flatMap(region => [
   Object.freeze({ id: `boss-${region}-finale`, scene: 'boss', region, rank: 'finale', fallback: 'regions/boss', status: 'external-gui-pending' }),
   Object.freeze({ id: `boss-${region}-midboss`, scene: 'boss', region, rank: 'midboss', fallback: MIDBOSS_TRACK, status: 'external-gui-pending' }),
 ]));
-export const TOWN_CUES = Object.freeze({
-  oathhold: Object.freeze({ id: 'town-oathhold', scene: 'town', town: 'oathhold', fallback: 'regions/lobby', status: 'external-gui-pending' }),
-  emberport: Object.freeze({ id: 'town-emberport', scene: 'town', town: 'emberport', fallback: 'regions/lobby', status: 'external-gui-pending' }),
-  starcrest: Object.freeze({ id: 'town-starcrest', scene: 'town', town: 'starcrest', fallback: 'regions/lobby', status: 'external-gui-pending' }),
-});
 /** 배송된 곡이 있으면 그 곡, 아니면 검증된 대체 곡. 생성 대기 항목이 깨진 URL 이 되지 않는다. */
 const cueTrack = cue => cue.status === 'shipped' && cue.file ? cue.file : cue.fallback;
 function stageRegion(stage) {
@@ -118,5 +112,5 @@ export const bgmTrimGain = name => Math.pow(10, (BGM_LOOPS[name]?.trimDb || 0) /
 export const MUSIC_TRACKS = Object.freeze([...new Set([
   'bgm_gacha', 'regions/lobby', 'regions/arena', 'regions/boss', MIDBOSS_TRACK,
   ...REGION_IDS.map(r => `regions/${r}`),
-  ...FLOWMUSIC_CUE_PLAN.map(cueTrack), ...BOSS_CUE_PLAN.map(cueTrack), ...Object.values(TOWN_CUES).map(cueTrack),
+  ...FLOWMUSIC_CUE_PLAN.map(cueTrack), ...BOSS_CUE_PLAN.map(cueTrack),
 ])].sort());

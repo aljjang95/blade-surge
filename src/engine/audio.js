@@ -18,9 +18,11 @@ function createAudioRandom() {
     return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
   };
 }
-import { BGM_CROSSFADE, BGM_LOOPS, bgmTrimGain } from '../data/music.js';
+import { BGM_CROSSFADE, BGM_LOOPS, bgmTrimGain, bossIntroKind } from '../data/music.js';
+import { BOSS_INTRO, EVENT_SOUND_FILES, EVENT_SOUNDS, lootSound } from './combat-sound-library.js';
 // SFX 두 버스를 합친 뒤의 이득. 마스터 리미터 앞 정점을 낮춰 타격 트랜지언트가 찌그러지지 않게 한다.
 export const SFX_SUM_GAIN = 0.5;
+const BOSS_WARNING_KINDS = new Set(['slam', 'crusher', 'soulrain', 'fan']);
 // 마스터 리미터: 음악·SFX·음성을 합친 출력이 0dBFS 를 넘지 않게 한다. 브라우저 압축기의 자동 메이크업
 // (-0.6 × 0dBFS 입력의 출력 dB)을 계산해 출력 이득에서 되돌린다 → 천장 약 -1.5dBFS.
 export const MASTER_LIMITER = Object.freeze({ threshold: -2, knee: 0, ratio: 20, attack: 0.001, release: 0.12 });
@@ -95,6 +97,7 @@ export class AudioSys {
     this.voiceGain = this.ctx.createGain(); this.voiceGain.gain.value = 1; this.voiceGain.connect(this.master); this._barkLast = {};
     this.setMix(this.mix);
     await Promise.all(SFX_FILES.map((n) => this._loadSfx(n)));
+    for (const n of EVENT_SOUND_FILES) this._loadSfx(n);
     return true;
   }
   async _loadSfx(n) {
@@ -488,14 +491,49 @@ export class AudioSys {
     const g = this.ctx.createGain(); this._env(g, t, 0.002, 0.65, vol); n.connect(f); f.connect(g); g.connect(this.sfxGain); n.start(t); n.stop(t + 0.7);
     this.thump({ vol: vol * 0.8, freq: 55, dur: 0.4 }); this.dark({ vol: vol * 0.5, base: 140, dur: 0.7 });
   }
-  /** 아이템 획득 (희귀도별) */
+  /** 아이템 획득 (희귀도별). 희귀 이상은 전용 샘플, 전설은 BGM 을 잠깐 낮춰 들리게 한다. 샘플이 없으면 예전 합성음. */
   loot(rarity = 'N') {
     if (!this.enabled || !this.ctx) return;
+    const spec = lootSound(rarity);
+    if (this.buffers[spec.sound]) {
+      this.play(spec.sound, { vol: spec.vol, rate: spec.rate, vary: 0.03, min: 0.12, priority: rarity === 'L' || rarity === 'SSR' ? 5 : 4 });
+      if (spec.duck) { this.duck(spec.duck, 1.6, { hold: 0.35, smooth: true, attack: 0.05 }); this.play('jingle_legend', { vol: 0.45, delay: 0.12, min: 0.5, priority: 4 }); }
+      return;
+    }
     if (rarity === 'L' || rarity === 'SSR') { this.holy({ vol: 0.5, base: 659, dur: 1.1 }); this.play('jingle_legend', { vol: 0.6 }); this.vibe([30, 30, 90]); }
     else if (rarity === 'U') { this.holy({ vol: 0.35, base: 587, dur: 0.8 }); this.magic({ vol: 0.3, base: 440, notes: [0, 3, 7, 10], step: 0.05, type: 'triangle' }); }
     else if (rarity === 'E' || rarity === 'SR') { this.magic({ vol: 0.38, base: 587, notes: [0, 4, 7, 12], step: 0.05 }); this.ting({ vol: 0.3, freq: 2200 }); }
     else if (rarity === 'S' || rarity === 'R') { this.magic({ vol: 0.3, base: 523, notes: [0, 7], step: 0.05 }); }
     else this.play('ui_drop', { vol: 0.4 });
+  }
+  /** 보스 등장: 등급별 스팅어 + BGM 덕킹(새 보스곡이 페이드인하는 동안 스팅어가 앞에 선다). stage 로 등급을 고른다. */
+  bossIntro(stage = null) {
+    const spec = BOSS_INTRO[bossIntroKind(stage)] || BOSS_INTRO.boss;
+    if (!this.enabled || !this.ctx || !this.mix.sfx) return null;
+    if (!this.buffers[spec.sound]) { this.waveHorn({ vol: 0.5, boss: true }); return null; }
+    this.duck(spec.duck, spec.dur, { hold: spec.dur * 0.35, smooth: true, attack: 0.05 });
+    this.vibe([30, 30, 70]);
+    return this.play(spec.sound, { vol: spec.vol, rate: spec.rate, vary: 0, min: 1, priority: 5 });
+  }
+  /** 가챠 충전(연출 시작). */
+  gachaCharge() {
+    if (!this.enabled || !this.ctx) return;
+    if (this.buffers[EVENT_SOUNDS.gachaCharge]) this.play(EVENT_SOUNDS.gachaCharge, { vol: 0.7, vary: 0, min: 0.3, priority: 4 });
+    else this.magic({ vol: 0.4, base: 392, notes: [0, 4, 7, 12, 16, 19], step: 0.09 });
+  }
+  /** 가챠 최고 등급 공개 섬광: SSR 은 전설 징글 + 저역 충격 + BGM 덕킹, SR 은 크리스털 차임, R 은 종. */
+  gachaReveal(best = 'R') {
+    if (!this.enabled || !this.ctx) return;
+    if (best === 'SSR') { this.duck(0.35, 2.2, { hold: 0.6, smooth: true, attack: 0.05 }); this.play('jingle_legend', { vol: 0.9, min: 0.3, priority: 5 }); this.boom({ vol: 0.55, dur: 0.8, low: 48 }); return; }
+    if (best === 'SR' && this.buffers[EVENT_SOUNDS.gachaRevealSr]) { this.play(EVENT_SOUNDS.gachaRevealSr, { vol: 0.85, vary: 0, min: 0.2, priority: 4 }); this.play('ui_bong', { vol: 0.45, priority: 4 }); return; }
+    this.play('ui_bong', { vol: 0.9 });
+  }
+  /** 가챠 카드 한 장 뒤집기(등급별). */
+  gachaCard(rar = 'R') {
+    if (!this.enabled || !this.ctx) return;
+    if (rar === 'SSR') { this.play('jingle_legend', { vol: 0.9, min: 0.15, priority: 5 }); this.thump({ vol: 0.6, freq: 55, dur: 0.4 }); }
+    else if (rar === 'SR') { if (this.buffers[EVENT_SOUNDS.gachaRevealSr]) this.play(EVENT_SOUNDS.gachaRevealSr, { vol: 0.6, rate: 1.06, min: 0.05, priority: 4 }); else this.play('ui_glass', { vol: 0.7, rate: 1.2 }); }
+    else this.play('card_place', { vol: 0.5, min: 0.03 });
   }
   /** 코인/재화 픽업 (피치 상승 콤보) */
   coinPick(idx = 0) { this.pick('coin', 2, { vol: 0.26, rate: 1.15 + Math.min(12, idx) * 0.05, vary: 0.05, min: 0.015 }); }
@@ -611,6 +649,8 @@ export class AudioSys {
   enemyTelegraph({ kind = 'melee', boss = false, urgent = false } = {}) {
     if (this.enabled && this.ctx) {
       const fam = kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind.startsWith('role:') ? 'tele_magic' : kind === 'slam' || kind === 'crusher' ? 'tele_slam' : 'tele_melee';
+      // 보스의 큰 기술(내려찍기·탄막·부채꼴)은 짧은 저역 경보를 얹는다. 3초에 한 번까지라 패턴마다 울리지 않는다.
+      if (boss && BOSS_WARNING_KINDS.has(kind) && this.buffers[EVENT_SOUNDS.bossWarning]) this.play(EVENT_SOUNDS.bossWarning, { vol: 0.55, vary: 0.02, min: 3, priority: 4 });
       if (this._fx(fam, { vol: boss ? 0.42 : 0.24, rate: boss ? 0.85 : 1, priority: boss ? 4 : 2 })) { this.vibe(urgent || boss ? [10, 14, 24] : 7); return; }
       if (kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind.startsWith('role:')) this.charge({ vol: boss ? 0.34 : 0.18, dur: boss ? 0.58 : 0.36 });
       else if (kind === 'slam' || kind === 'crusher') this.thump({ vol: boss ? 0.34 : 0.18, freq: boss ? 54 : 76, dur: 0.24 });

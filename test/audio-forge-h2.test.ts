@@ -2,7 +2,7 @@ import { afterEach, expect, test } from 'bun:test';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { AudioSys, MASTER_LIMITER, MASTER_OUT_GAIN, SFX_SUM_GAIN } from '../src/engine/audio.js';
-import { BGM_CROSSFADE, BGM_LOOPS, BOSS_CUE_PLAN, MUSIC_TRACKS, TOWN_CUES, bgmTrimGain, bossIntroKind, musicForScene } from '../src/data/music.js';
+import { BGM_CROSSFADE, BGM_LOOPS, BOSS_CUE_PLAN, MUSIC_TRACKS, bgmTrimGain, bossIntroKind, musicForScene } from '../src/data/music.js';
 import { CHAPTERS, stageDef } from '../src/data/stages.js';
 import { DUNGEONS } from '../src/data/expansion.js';
 
@@ -28,13 +28,10 @@ test('캠페인 최종 보스·중간 보스·수문장은 서로 다른 보스�
   }
 });
 
-test('지역별 보스곡·마을곡 생성 대기 칸은 배송된 대체 곡으로 풀리고, 모든 곡 파일이 실제로 있다', () => {
+test('지역별 보스곡 생성 대기 칸은 배송된 대체 곡으로 풀리고, 모든 곡 파일이 실제로 있다', () => {
   expect(BOSS_CUE_PLAN.length).toBe(12);
   expect(new Set(BOSS_CUE_PLAN.map(c => c.id)).size).toBe(12);
   for (const cue of BOSS_CUE_PLAN) expect(cue.status).toBe('external-gui-pending');
-  expect(Object.keys(TOWN_CUES).sort()).toEqual(['emberport', 'oathhold', 'starcrest']);
-  for (const town of Object.keys(TOWN_CUES)) expect(musicForScene({ scene: 'town', stage: { townId: town } })).toBe('regions/lobby');
-  expect(musicForScene({ scene: 'town' })).toBe('regions/lobby');
   for (const name of MUSIC_TRACKS) expect(existsSync(join(root, 'public/bgm', name + '.mp3')), name).toBe(true);
   for (const chapter of CHAPTERS) for (let st = 1; st <= 10; st++) for (const boss of [false, true]) {
     expect(MUSIC_TRACKS).toContain(musicForScene({ stage: stageDef(chapter.id, st), boss }));
@@ -119,4 +116,86 @@ test('가챠곡은 측정 라우드니스만큼 낮춰 페이드인하고 끝나
   const el = FakeAudio.made[0]; el.ended = true; el.onended?.();
   expect(FakeAudio.made.length).toBe(2);
   expect(s.music.gain.gain.events.at(-1).t).toBeCloseTo(10.05, 6);
+});
+
+// ---------- 사건 효과음 ----------
+import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { BOSS_INTRO, EVENT_SOUNDS, EVENT_SOUND_FILES, FX_SOUND_FILES, lootSound, sfxUrl } from '../src/engine/combat-sound-library.js';
+import { RARITIES } from '../src/data/items.js';
+
+test('사건 효과음 파일은 모두 배송되고 매니페스트 SHA·출처와 일치한다', () => {
+  const manifest = JSON.parse(readFileSync(join(root, 'public/sfx/mirelo-v1/event/manifest.json'), 'utf8'));
+  expect(manifest.model ?? manifest.generator).toContain('mirelo');
+  for (const name of EVENT_SOUND_FILES) {
+    const url = sfxUrl(name), file = join(root, 'public', url);
+    expect(existsSync(file), url).toBe(true);
+    const asset = manifest.assets.find((a: any) => a.path === url);
+    expect(asset, url).toBeDefined();
+    expect(createHash('sha256').update(readFileSync(file)).digest('hex')).toBe(asset.sha256);
+    expect(asset.taskUUID).toMatch(/^[0-9a-f-]{36}$/);
+    expect(asset.decodedPeak).toBeLessThanOrEqual(0.95); // -1dBFS 정규화 + MP3 디코드 오버슈트(기존 라이브러리 0.94 이하와 같은 기준)
+  }
+});
+
+test('전리품 희귀도와 가챠 등급은 서로 다른 소리로 올라가고 전설만 BGM 을 낮춘다', () => {
+  const names = RARITIES.map(r => lootSound(r).sound);
+  expect(names[0]).toBe('ui_drop');
+  expect(new Set(names).size).toBe(4);
+  expect(lootSound('L').sound).toBe(EVENT_SOUNDS.lootLegend);
+  expect(lootSound('SSR').sound).toBe(EVENT_SOUNDS.lootLegend);
+  expect(lootSound('SR').sound).toBe(EVENT_SOUNDS.lootEpic);
+  expect(lootSound('R').sound).toBe(EVENT_SOUNDS.lootRare);
+  expect(RARITIES.filter(r => lootSound(r).duck > 0)).toEqual(['L']);
+  const vols = RARITIES.slice(1).map(r => lootSound(r).vol);
+  expect([...vols].sort((a, b) => a - b)).toEqual(vols);
+});
+
+function sfxFixture() {
+  const s: any = new AudioSys();
+  s.ctx = { currentTime: 5, state: 'running', createGain: () => new Node(), createBufferSource: () => Object.assign(new Node(), { playbackRate: new Param(), start() {}, stop() {}, onended: null, buffer: null }), createMediaElementSource: () => new Node() };
+  s.sfxGain = new Node(); s.voiceGain = new Node(); s.musicGain = new Node(); s.musicDuckGain = new Node();
+  for (const name of [...EVENT_SOUND_FILES, ...FX_SOUND_FILES, 'jingle_legend', 'ui_bong', 'card_place', 'ui_drop']) s.buffers[name] = { name, duration: 1 };
+  return s;
+}
+const playing = (s: any) => [...s._voices].map((v: any) => v.src.buffer?.name).filter((n: string) => !n.includes('/fx/'));
+
+test('보스 등장 스팅어는 최종/중간 보스를 구분하고 BGM 을 덕킹한다', () => {
+  const finale = sfxFixture();
+  finale.bossIntro(stageDef(1, 10));
+  expect(playing(finale)).toEqual([BOSS_INTRO.finale.sound]);
+  expect(Math.min(...finale.musicDuckGain.gain.events.map((e: any) => e.v))).toBeCloseTo(BOSS_INTRO.finale.duck, 6);
+  const mid = sfxFixture();
+  mid.bossIntro(stageDef(2, 5));
+  expect(playing(mid)).toEqual([BOSS_INTRO.midboss.sound]);
+  const gate = sfxFixture();
+  gate.bossIntro(stageDef(3, 7));
+  expect(playing(gate)).toEqual([BOSS_INTRO.midboss.sound]);
+  // 샘플이 아직 없으면 예전 뿔피리 합성음으로 대신한다(소리가 비지 않는다).
+  const cold = sfxFixture(); cold.buffers = {}; let horn = 0; cold.waveHorn = () => { horn++; };
+  expect(cold.bossIntro(stageDef(1, 10))).toBeNull(); expect(horn).toBe(1);
+  // SFX 를 끈 사용자는 스팅어도 덕킹도 받지 않는다.
+  const muted = sfxFixture(); muted.mix.sfx = 0; muted.bossIntro(stageDef(1, 10));
+  expect(playing(muted)).toEqual([]); expect(muted.musicDuckGain.gain.events.length).toBe(0);
+});
+
+test('가챠 연출은 충전 → 최고 등급 공개 → 카드별 등급음 순서로 서로 다른 소리를 낸다', () => {
+  const s = sfxFixture();
+  s.gachaCharge(); expect(playing(s)).toContain(EVENT_SOUNDS.gachaCharge);
+  const sr = sfxFixture(); sr.gachaReveal('SR'); expect(playing(sr)).toContain(EVENT_SOUNDS.gachaRevealSr);
+  const ssr = sfxFixture(); ssr.gachaReveal('SSR'); expect(playing(ssr)).toContain('jingle_legend');
+  expect(Math.min(...ssr.musicDuckGain.gain.events.map((e: any) => e.v))).toBeLessThan(0.5);
+  const r = sfxFixture(); r.gachaReveal('R'); expect(playing(r)).toEqual(['ui_bong']);
+  const cards = sfxFixture(); cards.gachaCard('R'); cards.gachaCard('SR'); expect(playing(cards)).toEqual(['card_place', EVENT_SOUNDS.gachaRevealSr]);
+});
+
+test('보스의 큰 기술 예고에만 경보음을 얹고 3초 안에 다시 울리지 않는다', () => {
+  const s = sfxFixture();
+  s.enemyTelegraph({ kind: 'melee', boss: true }); expect(playing(s)).not.toContain(EVENT_SOUNDS.bossWarning);
+  s.enemyTelegraph({ kind: 'slam', boss: true }); expect(playing(s).filter((n: string) => n === EVENT_SOUNDS.bossWarning).length).toBe(1);
+  s.ctx.currentTime += 1; s.enemyTelegraph({ kind: 'fan', boss: true });
+  expect(playing(s).filter((n: string) => n === EVENT_SOUNDS.bossWarning).length).toBe(1);
+  s.ctx.currentTime += 3; s.enemyTelegraph({ kind: 'soulrain', boss: true });
+  expect(playing(s).filter((n: string) => n === EVENT_SOUNDS.bossWarning).length).toBe(2);
+  const mob = sfxFixture(); mob.enemyTelegraph({ kind: 'slam', boss: false }); expect(playing(mob)).not.toContain(EVENT_SOUNDS.bossWarning);
 });
