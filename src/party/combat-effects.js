@@ -22,7 +22,7 @@ export class PartyCombatEffects {
     this.geometry = new THREE.PlaneGeometry(1,1); this.geometry.rotateX(-Math.PI/2);
     this.slots = Array.from({length:PARTY_WARNING_LIMIT},()=>{
       const material = new THREE.ShaderMaterial({vertexShader:hazardVertexShader,fragmentShader:hazardFragmentShader,transparent:true,depthWrite:false,side:THREE.DoubleSide,
-        uniforms:{color:{value:new THREE.Color()},size:{value:new THREE.Vector2()},shape:{value:0},safeRadius:{value:0},opacity:{value:.8},fired:{value:0}}});
+        uniforms:{color:{value:new THREE.Color()},size:{value:new THREE.Vector2()},shape:{value:0},safeRadius:{value:0},opacity:{value:.8},fired:{value:0},progress:{value:0}}});
       const mesh = new THREE.Mesh(this.geometry,material); mesh.visible=false; mesh.renderOrder=3; this.group.add(mesh); return {mesh,id:null};
     });
     this.disposed=false;
@@ -36,7 +36,7 @@ export class PartyCombatEffects {
       const width=w.kind==='lane'?w.length:w.radius*2,height=w.kind==='lane'?w.width:w.radius*2;
       mesh.position.set(w.x,.12,w.z);mesh.rotation.y=-w.angle;mesh.scale.set(width,1,height);
       u.color.value.setHex(w.color);u.size.value.set(width,height);u.shape.value=w.kind==='disk'?0:w.kind==='ring'?1:2;
-      u.safeRadius.value=w.safeRadius;u.fired.value=w.remaining===0?1:0;u.opacity.value=.65+.25*(1-Math.min(1,w.remaining/w.duration));
+      u.safeRadius.value=w.safeRadius;u.fired.value=w.remaining===0?1:0;u.progress.value=w.remaining===0?1:1-Math.min(1,w.remaining/w.duration);u.opacity.value=.65+.25*(1-Math.min(1,w.remaining/w.duration));
     }
     for(;index<this.slots.length;index++){this.slots[index].mesh.visible=false;this.slots[index].id=null;}
   }

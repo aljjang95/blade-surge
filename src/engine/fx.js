@@ -309,6 +309,10 @@ export class ParticlePool {
 // 처치 확정 섬광: 한 프레임에 낼 수 있는 상한과 색(공유 인스턴스라 호출마다 할당하지 않는다)
 const KILL_CONFIRM_PER_FRAME = 10;
 const KILL_COLOR = new THREE.Color(0xffe9a8);
+// 가산 노출 예산: 큰 장식(폭발·섬광·마법진)이 짧은 시간에 겹쳐 화면이 하얗게 날아가는 것을 막는다.
+// 최근 장식 면적(지름² 합)이 SOFT 를 넘으면 새 장식의 RGB 만 SOFT/누적 비율로 낮춘다(하한 FLOOR). 크기·수명·알파·난수는 그대로다.
+// 누적은 sim 시간 TAU 초로 지수 감쇠한다. 예고(telegraph)는 예산에 넣지도 낮추지도 않는다.
+export const FX_EXPOSURE = Object.freeze({ soft: 170, floor: .5, tau: .35, groundWeight: .5 });
 // ============ 일회성 메시 이펙트(스프라이트/링/참격/기둥) 관리 ============
 export class FX {
   constructor(scene, camera) {
@@ -338,6 +342,7 @@ export class FX {
     this.plane1 = new THREE.PlaneGeometry(1, 1);
     this.plane2 = new THREE.PlaneGeometry(2, 2);
     this.trails = [];
+    this._exposure = 0;
   }
   setQuality(q) { this.quality = q; this.impactLights.setEnabled(q !== 'low'); this.vfx?.setQuality(q); this.impact?.setQuality(q); }
   get lite() { return this.quality === 'low'; }
@@ -345,6 +350,7 @@ export class FX {
   /** paused: 전투 일시정지(Battle.update 가 시간을 멈춘 상태)에서는 전투 VFX 시계를 흘리지 않는다. */
   update(dt, paused = false) {
     this._killBudget = KILL_CONFIRM_PER_FRAME;
+    if (dt > 0 && this._exposure > 0) this._exposure *= Math.exp(-dt / FX_EXPOSURE.tau);
     this.sparks.update(dt); this.glow.update(dt); this.smoke.update(dt); this.vfx?.update(paused ? 0 : dt); this.impact?.update(paused ? 0 : dt);
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i]; it.t += dt; const k = it.t / it.life;
@@ -353,6 +359,13 @@ export class FX {
     }
     this.impactLights.update(dt);
     for (let i = this.trails.length - 1; i >= 0; i--) { const tr = this.trails[i]; tr.update(dt); if (tr.dead) { this.scene.remove(tr.mesh); this.trails.splice(i, 1); } }
+  }
+  /** 새 장식 하나의 노출 배율(0.5~1)을 돌려주고 그 면적을 누적한다. */
+  _exposureGain(size, weight = 1) {
+    const area = Number.isFinite(size) ? Math.max(0, size) ** 2 * weight : 0;
+    const before = this._exposure || 0;
+    this._exposure = before + area;
+    return before > FX_EXPOSURE.soft ? Math.max(FX_EXPOSURE.floor, FX_EXPOSURE.soft / before) : 1;
   }
   light(pos, color, intensity = 6, dist = 9, life = 0.35) {
     this.impactLights.emit(pos, color, intensity * 2.5, dist, life);
@@ -666,6 +679,12 @@ export class FX {
     const m = this._keep(new THREE.MeshBasicMaterial({ map: ringTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, opacity: 1 }), { telegraph });
     const mesh = new THREE.Mesh(this.plane2, m); mesh.position.copy(pos); mesh.position.y += y; mesh.renderOrder = 9;
     if (vertical) mesh.lookAt(this.camera.position); else mesh.rotation.x = -Math.PI / 2;
+    if (telegraph && !vertical) {
+      // 적 예고 고리: 위험 경계는 r1 에 고정하고(예전처럼 사그라들지 않는다), 안쪽 채움이 타격 시점까지 차오른다.
+      const fill = this._telegraphFill(this._diskGeometry(), color); fill.scale.setScalar(.001); mesh.add(fill);
+      mesh.scale.set(r1, r1, r1 * thick);
+      return this.add(mesh, life, (k) => { m.opacity = .55 + .45 * k; this._growTelegraphFill(fill, k, .97); }, () => { m.dispose(); fill.material.dispose(); });
+    }
     this.add(mesh, life, (k) => { const e = 1 - Math.pow(1 - k, 3); const r = r0 + (r1 - r0) * e; mesh.scale.set(r, r, r * thick); m.opacity = (1 - k) * 1.2; }, () => m.dispose());
   }
   // ---------- 참격 아크 (지면 평행, 캐릭터 전방) ----------
@@ -680,11 +699,27 @@ export class FX {
     mesh.position.copy(pos); mesh.position.y += height;
     mesh.rotation.order = 'YXZ'; mesh.rotation.y = yaw - Math.PI / 2 + (flip ? 0 : 0); mesh.rotation.x = -Math.PI / 2 + tilt * (flip ? -1 : 1);
     const dir = flip ? -1 : 1;
-    // 공격 범위를 읽는 예고는 판정까지 같은 크기·방향을 유지한다.
-    const update = telegraph ? (k) => { m.opacity = .8 + .2 * k; }
-      : (k) => { const e = 1 - Math.pow(1 - k, 2); mesh.scale.setScalar(0.7 + e * 0.6); m.opacity = 1 - e; mesh.rotation.z = dir * (e - 0.5) * 0.9; };
+    // 공격 범위를 읽는 예고는 판정까지 같은 크기·방향을 유지한다. 안쪽 채움이 적에게서 바깥으로 차올라 남은 시간을 보여 준다.
+    if (telegraph) {
+      const fill = this._telegraphFill(geo, color); fill.scale.setScalar(.001); mesh.add(fill);
+      return this.add(mesh, life, (k) => { m.opacity = .8 + .2 * k; this._growTelegraphFill(fill, k, 1); }, () => { m.dispose(); fill.material.dispose(); });
+    }
+    const update = (k) => { const e = 1 - Math.pow(1 - k, 2); mesh.scale.setScalar(0.7 + e * 0.6); m.opacity = 1 - e; mesh.rotation.z = dir * (e - 0.5) * 0.9; };
     this.add(mesh, life, update, () => m.dispose());
   }
+  /** 예고 채움: 같은 색의 일반 블렌딩 면(가산이 아니라 밝은 바닥에서도 붉게 읽힌다). 부모 예고 메시의 자식으로 붙는다. */
+  _telegraphFill(geometry, color) {
+    const m = this._keep(new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, opacity: 0 }), { telegraph: true });
+    const fill = new THREE.Mesh(geometry, m); fill.renderOrder = 8; fill.position.z = .004;
+    return fill;
+  }
+  /** 남은 시간 k(0→1)만큼 채움을 키운다. 끝 0.15 구간은 진하게 맥동해 '곧 맞는다'를 알린다. */
+  _growTelegraphFill(fill, k, reach) {
+    const e = Math.max(.02, Math.min(1, k)) * reach;
+    fill.scale.set(e, e, 1);
+    fill.material.opacity = .16 + .26 * k * k + (k > .85 ? .14 * Math.sin((k - .85) / .15 * Math.PI) : 0);
+  }
+  _diskGeometry() { return this._disk || (this._disk = new THREE.CircleGeometry(1, 40)); }
   // ---------- 검격 파동 (수직 초승달, 이동) ----------
   crescent(pos, dir, color, { size = 1.8, life = 0.5, speed = 0, tilt = -0.75 } = {}) {
     const geo = new THREE.RingGeometry(size * 0.55, size, 32, 1, Math.PI * 0.2, Math.PI * 0.6);
@@ -786,7 +821,7 @@ export class FX {
   texFlash(pos, name, color = 0xffffff, { size = 3, life = 0.35, spin = 0, grow = 1.3, y = 1, gain = 1 } = {}) {
     const tex = VFX_TEX[name]; if (!tex) return this.flash(pos, color, { size, life });
     const m = this._keep(new THREE.SpriteMaterial({ map: tex, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, rotation: Math.random() * Math.PI * 2 }));
-    m.color.multiplyScalar(boundedFeedbackGain(gain));
+    m.color.multiplyScalar(boundedFeedbackGain(gain) * this._exposureGain(size));
     const sp = new THREE.Sprite(m); sp.position.copy(pos); sp.position.y += y; sp.scale.setScalar(size * 0.4); sp.renderOrder = 11;
     this.add(sp, life, (k, t, dt) => { const e = 1 - Math.pow(1 - k, 2); sp.scale.setScalar(size * (0.4 + e * grow)); m.opacity = k < 0.25 ? k / 0.25 : 1 - (k - 0.25) / 0.75; m.rotation += spin * dt; }, () => m.dispose());
     return sp;
@@ -799,7 +834,7 @@ export class FX {
    */
   groundTex(pos, name, color = 0xffffff, { r0 = 0.2, r1 = 4, life = 0.5, spin = 1, y = 0.06, fadeIn = 0.15, hold = 0, telegraph = false, gain = 1 } = {}) {
     // 적의 실제 예고와 일반 마법진은 원래 밝기를 유지한다. 장식 호출만 RGB를 제한한다.
-    const intensity = telegraph ? 1 : boundedFeedbackGain(gain);
+    const intensity = telegraph ? 1 : boundedFeedbackGain(gain) * this._exposureGain(r1 * 2, FX_EXPOSURE.groundWeight);
     const tex = VFX_TEX[name]; if (!tex) return this.ring(pos, intensity < 1 ? new THREE.Color(color).multiplyScalar(intensity) : color, { r0, r1, life, y, telegraph });
     const m = this._addMat(tex, color, { telegraph });
     m.color.multiplyScalar(intensity);
@@ -815,7 +850,7 @@ export class FX {
   flipbook(pos, name, { size = 3, life = 0.6, color = 0xffffff, cols = 4, rows = 4, y = 1, blending = THREE.AdditiveBlending, opacity = 1, gain = 1 } = {}) {
     const tex = VFX_TEX[name]; if (!tex) return this.burst(pos, color, { n: 20 });
     const m = this._keep(new THREE.ShaderMaterial({
-      uniforms: { uTex: { value: tex }, uFrame: { value: 0 }, uGrid: { value: new THREE.Vector2(cols, rows) }, uColor: { value: new THREE.Color(color).multiplyScalar(boundedFeedbackGain(gain)) }, uScale: { value: size }, uAlpha: { value: opacity } },
+      uniforms: { uTex: { value: tex }, uFrame: { value: 0 }, uGrid: { value: new THREE.Vector2(cols, rows) }, uColor: { value: new THREE.Color(color).multiplyScalar(boundedFeedbackGain(gain) * this._exposureGain(size)) }, uScale: { value: size }, uAlpha: { value: opacity } },
       vertexShader: `uniform float uScale; varying vec2 vUv; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(0.0,0.0,0.0,1.0); mv.xy += position.xy * uScale; gl_Position = projectionMatrix * mv; }`,
       fragmentShader: `uniform sampler2D uTex; uniform float uFrame, uAlpha; uniform vec2 uGrid; uniform vec3 uColor; varying vec2 vUv;
         void main(){ float f = floor(uFrame); float cx = mod(f, uGrid.x); float cy = floor(f / uGrid.x); vec2 uv = (vUv + vec2(cx, uGrid.y - 1.0 - cy)) / uGrid; vec4 t = texture2D(uTex, uv); float lum = max(t.r, max(t.g, t.b)); gl_FragColor = vec4(t.rgb * uColor, lum * uAlpha); }`,
@@ -975,6 +1010,7 @@ export class FX {
     for (const t of this.trails) { this.scene.remove(t.mesh); t.dispose(); }
     this.trails.length = 0;
     for (const pool of [this.sparks, this.glow, this.smoke]) { pool.n = 0; pool.geo.setDrawRange(0, 0); }
+    this._exposure = 0;
     this.vfx?.clear(); this.impact?.clear();
     this.clearDamage();
   }
@@ -984,7 +1020,7 @@ export class FX {
     for (const pool of [this.sparks, this.glow, this.smoke]) { this.scene.remove(pool.mesh); pool.geo.dispose(); pool.mat.dispose(); }
     this.vfx?.dispose(); this.impact?.dispose();
     for (const slot of this.impactLights.slots) this.scene.remove(slot.light);
-    this.plane1.dispose(); this.plane2.dispose();
+    this.plane1.dispose(); this.plane2.dispose(); this._disk?.dispose();
     for (const material of new Set([...Object.values(this._mats), ...this._transparentMats.values(), ...this._depthMats.values()])) material.dispose();
     this._mats = {}; this._transparentMats.clear(); this._depthMats.clear();
     // Asset and particle textures belong to the shared asset cache.

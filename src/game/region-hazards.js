@@ -111,14 +111,19 @@ export const hazardFragmentShader = `
   varying vec2 vUv;
   uniform vec3 color;
   uniform vec2 size;
-  uniform float shape, safeRadius, opacity, fired;
+  uniform float shape, safeRadius, opacity, fired, progress;
   void main(){
-    vec2 p=(vUv-.5)*size; float r=length(p), edge;
+    vec2 p=(vUv-.5)*size; float r=length(p), edge, along;
     if(r<safeRadius)discard;
-    if(shape<1.5){float q=length(vUv-.5)*2.;if(q>1.||(shape>.5&&q<.78))discard;edge=step(.9,q)+(shape>.5?1.-step(.83,q):0.);}
-    else{vec2 q=abs(vUv-.5)*2.;edge=step(.91,max(q.x,q.y));}
+    // along: 채움이 진행하는 축(원판=중심→가장자리, 고리=안→바깥, 길=한쪽 끝→반대쪽 끝). 판정 도형과 경계는 그대로다.
+    if(shape<1.5){float q=length(vUv-.5)*2.;if(q>1.||(shape>.5&&q<.78))discard;edge=step(.9,q)+(shape>.5?1.-step(.83,q):0.);along=shape>.5?(q-.78)/.22:q;}
+    else{vec2 q=abs(vUv-.5)*2.;edge=step(.91,max(q.x,q.y));along=vUv.x;}
     float stripe=step(.7,fract((p.x+p.y)*.7));
-    gl_FragColor=vec4(color,opacity*(.18+edge*.62+stripe*.12+fired*.15));
+    // 남은 시간 채움: 진행 앞쪽에 밝은 선, 마지막 15%는 경계가 하얗게 달아올라 '지금 피하라'를 알린다.
+    float fill=1.-step(progress,along), front=exp(-pow((along-progress)/.04,2.))*step(.01,progress)*(1.-fired);
+    float urgent=smoothstep(.85,1.,progress)*(1.-fired);
+    vec3 c=mix(color,vec3(1.,.95,.85),clamp(front*.6+edge*urgent*.55,0.,1.));
+    gl_FragColor=vec4(c,opacity*(.18+edge*(.62+urgent*.3)+stripe*.12+fill*.2+front*.45+fired*.15));
   }`;
 
 export class RegionHazards {
@@ -129,7 +134,7 @@ export class RegionHazards {
     this.group = new THREE.Group(); this.group.name = 'region-hazards'; game.scene.add(this.group);
     this.slots = Array.from({ length: 6 }, () => {
       const material = new THREE.ShaderMaterial({ vertexShader: hazardVertexShader, fragmentShader: hazardFragmentShader, transparent: true, depthWrite: false, side: THREE.DoubleSide,
-        uniforms: { color: { value: new THREE.Color(this.rule?.color || 0xffffff) }, size: { value: new THREE.Vector2(1, 1) }, shape: { value: 0 }, safeRadius: { value: 0 }, opacity: { value: 1 }, fired: { value: 0 } } });
+        uniforms: { color: { value: new THREE.Color(this.rule?.color || 0xffffff) }, size: { value: new THREE.Vector2(1, 1) }, shape: { value: 0 }, safeRadius: { value: 0 }, opacity: { value: 1 }, fired: { value: 0 }, progress: { value: 0 } } });
       const mesh = new THREE.Mesh(this.geometry, material); mesh.visible = false; mesh.renderOrder = 2; this.group.add(mesh);
       return { mesh, hazard: null, age: 0, hit: false };
     });
@@ -159,7 +164,7 @@ export class RegionHazards {
       const x = h.type === 'lane' ? h.length : h.radius * 2, z = h.type === 'lane' ? h.width : h.radius * 2;
       m.position.set(h.x, .11, h.z); m.rotation.y = -h.angle; m.scale.set(x, 1, z);
       u.size.value.set(x, z); u.shape.value = h.type === 'disk' ? 0 : h.type === 'ring' ? 1 : 2; u.safeRadius.value = h.safeRadius; u.color.value.setHex(frontierColor);
-      u.fired.value = 0; u.opacity.value = .8;
+      u.fired.value = 0; u.opacity.value = .8; u.progress.value = 0;
     }
     if (this.triggered === 1 || room.type === 'boss') g.ui.toast(CONCEPT_HAZARD_TOASTS[g.stage.expedition?.id] || this.rule.name, 'red');
   }
@@ -190,6 +195,7 @@ export class RegionHazards {
       const fired = s.age >= h.delay;
       s.mesh.material.uniforms.fired.value = fired ? 1 : 0;
       s.mesh.material.uniforms.opacity.value = fired ? Math.max(0, 1 - (s.age - h.delay) / .5) : .65 + .25 * s.age / h.delay;
+      s.mesh.material.uniforms.progress.value = fired ? 1 : Math.min(1, s.age / Math.max(h.delay, 1e-3));
       if (fired && !s.hit) {
         s.hit = true;
         for (const p of targets) if (hazardContains(h, p.pos.x, p.pos.z)) {
