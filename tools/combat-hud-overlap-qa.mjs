@@ -159,6 +159,24 @@ for (const [w, h] of views) {
     result.hints.afterTouch = await page.evaluate(() => ({ input: document.documentElement.dataset.input,
       visible: [...document.querySelectorAll('#hud .skill-btn .key, #hud .exp-potions small')].filter(el => getComputedStyle(el).display !== 'none').length }));
 
+    // 증거 화면 1: 이름표가 영웅 HP 카드 오른쪽 아래에 걸리는 자리(수정 전에는 카드를 덮는다). 콤보·연속 처치 표시는 끈다.
+    const tagRow = await page.evaluate(() => {
+      const a = app, b = a.battle, p = b.player, T = window.__THREE, cam = a.renderer.camera;
+      a.ui.setCombo(0); a.ui.setKillStreak(0);
+      const card = document.querySelector('#hud .hud-player').getBoundingClientRect();
+      const e = b.enemies.find(x => x.alive && x.def.name === '뼈 오크') || b.enemies.find(x => x.alive);
+      const lift = 2.05 * (e.scale || 1);
+      const nx = (card.right + 30) / innerWidth * 2 - 1, ny = 1 - 2 * (card.top + 48) / innerHeight;
+      const v = new T.Vector3(nx, ny, .5).unproject(cam), o = cam.position, d = v.sub(o).normalize(), t = (lift - o.y) / d.y;
+      e.pos.set(o.x + d.x * t, 0, o.z + d.z * t); p.lockTarget = e; b.lastTarget = e;
+      a.step(1 / 60, false); a.step(1 / 60, true);
+      const tag = document.querySelector('#hud .target-tag'), r = tag && !tag.hidden ? tag.getBoundingClientRect() : null;
+      return { shown: !!r, byClearance: !!b.targetTag?.clearanceHidden, rect: r && [r.left, r.top, r.right, r.bottom].map(Math.round), card: [card.left, card.top, card.right, card.bottom].map(Math.round),
+        overlapsCard: r ? Math.max(0, Math.min(r.right, card.right) - Math.max(r.left, card.left)) * Math.max(0, Math.min(r.bottom, card.bottom) - Math.max(r.top, card.top)) : 0 };
+    });
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: path.join(out, `nameplate-${w}x${h}.png`), clip: { x: 0, y: 0, width: Math.min(w, 520), height: Math.min(h, 230) } });
+    result.nameplateAtCard = tagRow;
     await page.evaluate(() => { app.ui.setCombo(54); app.ui.setKillStreak(17); app.step(1 / 60, true); });
     await page.waitForTimeout(400);
     await page.screenshot({ path: path.join(out, `combat-${w}x${h}.png`) });
@@ -166,6 +184,7 @@ for (const [w, h] of views) {
 
     // ---- 판정 ----
     const fails = [];
+    if (result.nameplateAtCard.overlapsCard > 0) fails.push(`이름표가 HP 카드를 ${result.nameplateAtCard.overlapsCard}px² 덮음`);
     if (result.nameplates.overlaps > 0) fails.push(`이름표가 HUD 와 ${result.nameplates.overlaps}곳 겹침`);
     if (result.combo.chipHits.length) fails.push('콤보 칩이 HUD 와 겹침: ' + JSON.stringify(result.combo.chipHits));
     if (result.combo.pillHits.length) fails.push('연속 처치 알약이 HUD 와 겹침: ' + JSON.stringify(result.combo.pillHits));

@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import './target-tag.css';
-import { collectHudBlockers, placeOutside } from './hud-clearance.js';
+import { collectHudBlockers, placeOutside, HUD_BLOCKER_SELECTORS } from './hud-clearance.js';
 
 // 대표님 2026-10-18: 화면 위쪽 가운데 줄에 뜨던 대상 적 이름·HP 와 균형 게이지가 앞에서 몰려오는 적을 가렸다.
 // 두 줄을 대상 적 머리 위에 붙는 작은 표식 하나로 옮긴다. 보스는 이미 보스 바가 있으므로 균형만 보스 바 안의 가는 선으로 넣는다.
 const _head = new THREE.Vector3();
 const DIM_AFTER = 4;
 const RANGE = 14;
-const BLOCKER_REFRESH_SEC = 0.4;
+// HUD 사각형은 ResizeObserver(레이아웃이 끝난 뒤라 강제 레이아웃이 없다)로 갱신하고, 위치만 바뀐 경우를 위해 느린 안전 갱신을 둔다.
+const BLOCKER_REFRESH_SEC = 2;
 const TAG_HEIGHT = 28, TAG_MAX_WIDTH = 132, TAG_SHIFT_LIMIT = 44;
 // 글자 폭 추정(9px 서체): 한글은 약 9.2px, 숫자·기호는 약 5px. 레이아웃을 읽지 않고 겹침 판정에 쓴다(실제 폭은 항상 이 값 이하로 맞춘다).
 export const estimateTagWidth = label => {
@@ -44,7 +45,12 @@ export class TargetTag {
     hud?.append(this.root);
     this.bossPosture = document.createElement('i'); this.bossPosture.className = 'bossbar-posture'; this.bossPosture.hidden = true;
     document.querySelector('#bossbar .bb-body')?.append(this.bossPosture);
-    this.clearanceHidden = false; this.lastEnemy = null; this.lastHp = NaN; this.idle = 0; this.label = ''; this.hud = hud; this.blockers = []; this.blockerT = 0; this.tagWidth = 64; this.bounds = { left: 0, top: 0, right: 0, bottom: 0 }; this.placed = { dx: 0, dy: 0, hidden: false };
+    this.clearanceHidden = false; this.lastEnemy = null; this.lastHp = NaN; this.idle = 0; this.label = ''; this.hud = hud; this.blockers = []; this.blockerT = 0; this.observer = null; this.tagWidth = 64; this.bounds = { left: 0, top: 0, right: 0, bottom: 0 }; this.placed = { dx: 0, dy: 0, hidden: false };
+    if (typeof ResizeObserver === 'function' && hud?.querySelectorAll) {
+      this.observer = new ResizeObserver(() => { this.blockers = collectHudBlockers(this.hud); this.blockerT = BLOCKER_REFRESH_SEC; });
+      this.observer.observe(hud);
+      for (const selector of HUD_BLOCKER_SELECTORS) for (const el of hud.querySelectorAll(selector)) this.observer.observe(el);
+    }
   }
   update(battle, renderer, dt = 0, mode = 'battle') {
     const state = targetTagState(battle, { mode });
@@ -83,5 +89,5 @@ export class TargetTag {
     if (state.posture) { this.posture.style.transform = 'scaleX(' + state.posture.ratio.toFixed(3) + ')'; this.postureTrack.classList.toggle('is-broken', state.posture.broken); }
     this.root.classList.toggle('is-idle', this.idle >= DIM_AFTER);
   }
-  dispose() { this.root.remove(); this.bossPosture.remove(); }
+  dispose() { this.observer?.disconnect(); this.root.remove(); this.bossPosture.remove(); }
 }

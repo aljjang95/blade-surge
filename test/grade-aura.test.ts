@@ -30,6 +30,20 @@ test('SR은 오라 자원을 만들지 않고 SSR은 금색 링, SSSR은 무지�
   aura.dispose();
 });
 
+test('prepare 는 텍스처를 붙인 재질을 셰이더 준비 목록에 올리고 SR 은 아무것도 만들지 않는다', () => {
+  const kept: any[] = [], fx = { _keep: (m: any) => { kept.push({ material: m, map: m.map }); return m; } };
+  const sr = new GradeAura(new THREE.Group()); sr.prepare('SR', fx as any);
+  expect(kept).toHaveLength(0); expect((sr as any).group).toBeNull();
+  const ssr = new GradeAura(new THREE.Group()); ssr.prepare('SSR', fx as any);
+  // 링은 map 이 붙은 상태로 준비돼야 첫 표시에서 uv 변형을 다시 컴파일하지 않는다.
+  expect(kept[0].map).toBe(VFX_TEX[RING]);
+  const before = kept[0].material.map;
+  ssr.update(0.016, 'SSR'); expect((ssr as any).ring.material.map).toBe(before); // 갱신이 맵을 바꿔 needsUpdate 를 다시 일으키지 않는다
+  const sssr = new GradeAura(new THREE.Group()); kept.length = 0; sssr.prepare('SSSR', fx as any);
+  expect(kept[1].map).toBe(VFX_TEX[AURA]);
+  ssr.dispose(); sssr.dispose(); // 공유 평면 사용 수를 되돌려 다른 테스트의 dispose 계약을 건드리지 않는다
+});
+
 test('반복 갱신·등급 전환·사망·저사양에서도 노드 수가 늘지 않고 dispose가 모두 정리한다', () => {
   const root = new THREE.Group(), aura = new GradeAura(root);
   aura.update(0.016, 'SSSR'); const nodes = count(root);
