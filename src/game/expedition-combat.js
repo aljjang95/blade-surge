@@ -46,6 +46,14 @@ const DUELS = {
   void_oracle: { enemyId: 'frost_captain', pattern: ['archive_retrace','fan','archive_hourglass'], dodge: 0.16, hp: 15800, tactic: '보랏빛 파편이 멈춘 자리만 밟고, 되감긴 기록 경로로 돌아가지 마세요.' },
 };
 
+/**
+ * 첫 던전 '유리 정원' 보스(수호자) 튜닝. 이전에는 체력 8,500·공격 40·패턴 강타 하나뿐이라 AUTO 로 약 12~15초에 끝나고
+ * 영웅 체력이 거의 줄지 않았다. 기존 패턴 체계의 예고형 3종(강타 원·회전 고리·부채꼴 탄)을 순서대로 쓰고,
+ * 체력·공격을 올려 전투가 35~50초(AUTO, app.step 기준) 이어지며 예고를 피해야 이득이 되게 한다.
+ * 심층·전술 공략 판은 각자의 정의를 그대로 쓴다.
+ */
+export const FIRST_DUNGEON_BOSS = Object.freeze({ hp: 36000, atk: 140, pattern: Object.freeze(['slam', 'spin', 'fan']) });
+
 /** 종락 기본 개인 원정만 기존 주술사의 지원을 읽고 끊을 수 있게 한다. */
 export function supportCastingForStage(stage) {
   const expedition = stage?.expedition;
@@ -76,6 +84,8 @@ export function buildExpeditionStage(kind, id, eco, { depth = 'standard', conque
   if (!deep) enemy.summon = undefined;
   if (duel) enemy.portrait = def.portrait;
   if (!duel) enemy.hp = deep?.bossHp || def.bossHp || (id === 'ember_vault' ? 10500 : id === 'star_archive' ? 11500 : 8500);
+  // 첫 던전 보스: 카탈로그 정의(지문 고정)는 그대로 두고 전투에 넘기는 보스 사본만 조정한다.
+  if (kind === 'dungeon' && id === 'glass_garden' && !deep && !conquest) Object.assign(enemy, { hp: FIRST_DUNGEON_BOSS.hp, atk: FIRST_DUNGEON_BOSS.atk, pattern: [...FIRST_DUNGEON_BOSS.pattern] });
   if (activeFrontier?.effects.kind === 'bossStatMultiplier') enemy.hp = Math.floor(enemy.hp * activeFrontier.effects.value);
   const stage = { ...base, boss: true, finale: false, story: null, ...(activeFrontier ? { frontier: activeFrontier } : {}), expedition: { kind, id, depth, ...(def.rosterMode ? { rosterMode: def.rosterMode } : {}), ...(conquest ? { conquestId } : {}),
     mechanics: deep?.mechanics || { attunement: id === 'glass_garden' || id === 'bellfall_crypt', reinforcements: id === 'ember_vault' || id === 'cinder_tide_lock' ? 2 : 0 } },
