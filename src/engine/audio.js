@@ -47,6 +47,16 @@ function softClipCurve() {
   return curve;
 }
 
+/** 마스터 마지막 안전 클립: |x| 0.7 까지 그대로, 그 위는 약 0.87(-1.2dBFS)에 부드럽게 붙는다. 리미터가 놓친 순간 정점만 받는다. */
+export function masterClipCurve(size = 2049) {
+  const curve = new Float32Array(size), knee = 0.7, room = 0.19;
+  for (let i = 0; i < size; i++) {
+    const x = (i / (size - 1)) * 2 - 1, a = Math.abs(x);
+    curve[i] = Math.sign(x) * (a <= knee ? a : knee + room * Math.tanh((a - knee) / room));
+  }
+  return curve;
+}
+
 export class AudioSys {
   constructor() {
     this._random = createAudioRandom();
@@ -154,7 +164,8 @@ export class AudioSys {
       const lim = this.ctx.createDynamicsCompressor(), out = this.ctx.createGain();
       for (const k of ['threshold', 'knee', 'ratio', 'attack', 'release']) lim[k].value = MASTER_LIMITER[k];
       out.gain.value = MASTER_OUT_GAIN;
-      this.master.connect(lim); lim.connect(out); out.connect(this.ctx.destination);
+      const clip = this.ctx.createWaveShaper(); clip.curve = masterClipCurve();
+      this.master.connect(lim); lim.connect(out); out.connect(clip); clip.connect(this.ctx.destination);
       this.masterLimiter = lim;
     } catch { this.master.connect(this.ctx.destination); }
   }

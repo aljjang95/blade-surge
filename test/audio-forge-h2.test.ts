@@ -215,3 +215,12 @@ test('사건 효과음 첫 로드가 실패해도 다음 사건 때 다시 불�
     expect(playing(s)).toEqual([BOSS_INTRO.finale.sound]);
   } finally { (globalThis as any).fetch = realFetch; }
 });
+
+test('마스터 마지막 안전 클립은 작은 신호는 그대로 두고 어떤 입력도 -1dBFS 아래로 묶는다', async () => {
+  const { masterClipCurve } = await import('../src/engine/audio.js');
+  const c = masterClipCurve(2049), at = (x: number) => c[Math.round((x + 1) / 2 * 2048)];
+  expect(at(0.5)).toBeCloseTo(0.5, 3);
+  expect(at(-0.6)).toBeCloseTo(-0.6, 3);
+  expect(Math.max(...c)).toBeLessThan(Math.pow(10, -1 / 20));
+  for (let i = 1; i < c.length; i++) expect(c[i]).toBeGreaterThanOrEqual(c[i - 1]);
+});
