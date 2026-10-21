@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 export const ENVIRONMENT_KIT_ROOT = '/models/environment/studio-kit/';
 export const ENVIRONMENT_KIT_ASSETS = Object.freeze([
   'evergreen-tree', 'broadleaf-tree', 'mossy-rock-cluster', 'timber-cottage', 'village-gate', 'lantern',
 ]);
 const templates = new Map(), pending = new Map();
-const loader = new GLTFLoader();
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 
 /** 장식 자산 하나의 실패가 기존 광장의 이동·출격을 막지 않는다. */
 export async function preloadEnvironmentKit({ fetcher = globalThis.fetch } = {}) {

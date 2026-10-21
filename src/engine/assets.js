@@ -11,6 +11,7 @@ import { clone as skeletonClone } from 'three/addons/utils/SkeletonUtils.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { HEROES } from '../data/heroes.js';
 import { assembleHeroIdentity } from './hero-identity.js';
+import { tuneCharacterTextures } from './texture-sampling.js';
 import { preloadSurfaceTextures, projectSurfaceUV, surfaceRole, applySurfaceDetail } from './surface-textures.js';
 import { preloadDungeonSurface } from '../game/dungeon-surface.js';
 import { libraryAssets, createDefaultLibraryLoader } from './library-assets.js';
@@ -454,9 +455,11 @@ export function prepareModel(gltf, contract = null) {
   gltf.scene.traverse((o) => {
     if (!o.isMesh) return;
     o.castShadow = true; o.receiveShadow = true; o.frustumCulled = false;
+    // 저작 모델(contract)도 포함해 모든 캐릭터 텍스처에 밉맵 + 이방성 8(기기 최대치 이하)을 건다.
+    for (const material of materialsOf(o)) tuneCharacterTextures(material);
     if (contract) return;
     for (const material of materialsOf(o)) {
-      if (material.map) { material.map.colorSpace = THREE.SRGBColorSpace; material.map.anisotropy = 4; }
+      if (material.map) material.map.colorSpace = THREE.SRGBColorSpace;
       if (!material.userData.tllAuthored) { material.roughness = 0.85; material.metalness = 0; }
     }
     if (o.name.startsWith('TLL_Silva_') && materialsOf(o).every((m) => !m.map)) {
