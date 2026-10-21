@@ -243,6 +243,8 @@ test('파생 변형은 모두 배송되고, 원본 Mirelo 파일 해시에 묶�
     expect(asset.onsetMs).toBeLessThanOrEqual(2);
     expect(asset.durationSec).toBeGreaterThan(0.3); expect(asset.durationSec).toBeLessThanOrEqual(3.5);
     expect(asset.spectralDistanceDb, asset.id).toBeGreaterThan(asset.runtimeJitterDistanceDb * 1.5);
+    // 라운드로빈 사이 음량이 튀지 않는다: 몸통 세기(가장 센 150ms RMS)가 원본과 1.5dB 안이다.
+    expect(Math.abs(asset.bodyDb - asset.sourceBodyDb), asset.id).toBeLessThanOrEqual(1.5);
   }
   expect(fxVariantCount('thump')).toBe(3);
   expect(fxVariantName('thump', 0)).toBe('mirelo-v1/fx/thump_0');

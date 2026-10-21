@@ -58,7 +58,20 @@ def variant(x, pitch, low_db, high_db, tail):
     fade = min(len(y) // 4, int(max(0.03, 0.12 * len(y) / SR) * SR))
     if fade > 0: y[-fade:] *= np.linspace(1, 0, fade) ** 1.5
     ramp = int(0.0015 * SR); y[:ramp] *= np.linspace(0, 1, ramp)
-    return y / (np.max(np.abs(y)) or 1) * 0.89
+    return y
+
+
+def body_db(x):
+    """타격 몸통 세기: 가장 센 150ms 창의 RMS(dBFS). 짧은 효과음은 LUFS(400ms 창)가 측정되지 않아 이것으로 맞춘다."""
+    w = int(0.15 * SR); e = np.convolve(x ** 2, np.ones(w) / w, 'valid') if len(x) > w else np.array([np.mean(x ** 2)])
+    return float(10 * np.log10(np.max(e) + 1e-12))
+
+
+def match(y, ref_db):
+    """몸통 세기를 원본에 맞추고(라운드로빈 사이 음량 튐 방지), 정점은 -1dBFS(0.89)를 넘지 않게 한다."""
+    y = y * 10 ** ((ref_db - body_db(y)) / 20)
+    peak = np.max(np.abs(y))
+    return y * (0.89 / peak) if peak > 0.89 else y
 
 
 def log_spectral_distance(a, b):
@@ -81,7 +94,7 @@ def main():
         src_bytes = open(src_path, 'rb').read(); x = read(src_path)
         jitter = log_spectral_distance(x, signal.resample(x, int(len(x) / 1.05)))
         for idx, pitch, low_db, high_db, tail in specs:
-            y = variant(x, pitch, low_db, high_db, tail)
+            y = match(variant(x, pitch, low_db, high_db, tail), body_db(x))
             out = os.path.join(DST, f'{family}_{idx}.mp3')
             subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'f32le', '-ar', str(SR), '-ac', '1', '-i', '-', '-c:a', 'libmp3lame', '-b:a', '96k',
                             '-map_metadata', '-1', '-fflags', '+bitexact', '-flags:a', '+bitexact', out], input=y.astype(np.float32).tobytes(), check=True)
@@ -91,6 +104,7 @@ def main():
                           'onsetMs': round(int(np.argmax(np.abs(d) > 0.02)) / SR * 1000, 2),
                           'derivedFrom': {'path': f'/sfx/mirelo-v1/fx/{family}_0.mp3', 'sha256': hashlib.sha256(src_bytes).hexdigest(), 'taskUUID': base[f'fx/{family}_0']['taskUUID']},
                           'process': {'pitch': pitch, 'lowShelfDb': low_db, 'highShelfDb': high_db, 'tail': tail},
+                          'bodyDb': round(body_db(d), 2), 'sourceBodyDb': round(body_db(x), 2),
                           'spectralDistanceDb': round(log_spectral_distance(x, d), 2), 'runtimeJitterDistanceDb': round(jitter, 2)})
             print(items[-1]['id'], items[-1]['durationSec'], items[-1]['spectralDistanceDb'], 'vs jitter', items[-1]['runtimeJitterDistanceDb'])
     manifest = {'library': 'derived-v1', 'generator': 'tools/audio/fx-variants.py (Mirelo 원본의 피치·EQ·꼬리 파생, 새 생성 아님)',
