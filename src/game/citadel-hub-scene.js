@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { spawnCharacter, disposeCharacter } from '../engine/assets.js';
 import { CITADEL_HUB, CITADEL_HUB_HOTSPOTS, CITADEL_HUB_PROPS, CITADEL_HUB_ASSET_ROOT, TOWN_THEMES, townHub } from '../data/citadel-hub.js';
@@ -10,7 +11,7 @@ import { createCitadelGateDesignLibrary } from './citadel-gate-designs.js';
 
 const templates = new Map();
 const pending = new Map();
-const loader = new GLTFLoader();
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 
 // ---- Tripo 라이브러리 소품: manifest kind 'prop' + tags ['town:emberport', 'building'] ----
 const LIBRARY_ROLES = Object.freeze({
