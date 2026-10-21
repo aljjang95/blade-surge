@@ -47,12 +47,12 @@
     <div class="topbar">
       <div class="profile" id="btn-profile">
         <div class="avatar"><img id="top-avatar" src="/img/hero_knight.webp" alt="" /></div>
-        <div class="prof-txt"><div class="prof-name" id="top-name">보스</div><div class="prof-lv">VIP <b id="top-vip">0</b> · Lv.<b id="top-lv">1</b></div></div>
+        <div class="prof-txt"><div class="prof-name" id="top-name">보스</div><div class="prof-lv"><span id="top-vip-wrap">VIP <b id="top-vip">0</b> · </span>Lv.<b id="top-lv">1</b></div></div>
       </div>
       <div class="currencies">
         <div class="cur cur-energy" id="cur-energy"><i class="ic ic-energy"></i><span id="v-energy">100</span>/<span id="v-energy-max">100</span><button class="plus" data-open="energy" aria-label="에너지 충전">+</button><div class="cur-sub" id="v-energy-timer"></div></div>
         <div class="cur cur-gold"><i class="ic ic-gold"></i><span id="v-gold">0</span><button class="plus" data-open="shop-gold" aria-label="골드 충전">+</button></div>
-        <div class="cur cur-gem"><i class="ic ic-gem"></i><span id="v-gem">0</span><button class="plus" data-open="shop-gem" aria-label="보석 충전">+</button></div>
+        <div class="cur cur-gem"><i class="ic ic-gem"></i><span id="v-gem">0</span><button class="plus" id="plus-gem" data-open="shop-gem" aria-label="보석 충전">+</button></div>
       </div>
     </div>
 
@@ -79,8 +79,8 @@
         <button class="sq-btn" id="btn-settings"><i class="ic ic-gear"></i><span>설정</span></button>
       </div>
       <div class="lobby-right">
-        <button class="promo-btn" id="promo-starter"><div class="promo-tag">출시 준비</div><img src="/img/icon_chest_legend.webp" alt="" onerror="this.remove()" /><span>스타터 팩</span><em id="promo-timer">결제 연결 준비 중</em></button>
-        <button class="promo-btn" id="promo-monthly"><img src="/img/icon_gem.webp" alt="" onerror="this.remove()" /><span>멤버십</span><em>연결 준비 중</em></button>
+        <button class="promo-btn" id="promo-starter"><div class="promo-tag">추천</div><img src="/img/icon_chest_legend.webp" alt="" onerror="this.remove()" /><span>스타터 팩</span><em id="promo-timer">한정 상품</em></button>
+        <button class="promo-btn" id="promo-monthly"><img src="/img/icon_gem.webp" alt="" onerror="this.remove()" /><span>멤버십</span><em>월정액</em></button>
       </div>
       <div class="lobby-hero-name"><div class="hero-rarity" id="lobby-rarity">SSR</div><div id="lobby-hero-name">검성 아르카</div><div class="lobby-power">전투력 <b id="lobby-power">0</b></div></div>
       <div class="lobby-bottom">

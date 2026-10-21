@@ -1,5 +1,6 @@
 import { DIALOGUE_MODEL, REPLY_SCHEMA, dialogueMessages, parseDialogueReply, parseDialogueRequest } from '../src/companion/dialogue-contract';
 import { handlePartyRequest, PartyRoom } from './party';
+import { asSameOrigin, nativeOrigin, preflight, withCors } from './native-cors';
 import { handleStoreRequest, cleanupStoreMetadata, type StoreEnv } from './store';
 import { createSocialHub, handleSocialRequest } from '../packages/tll-social/src/server/index';
 import { SOCIAL_CONFIG } from '../src/social/config.js';
@@ -101,7 +102,16 @@ export class DialogueBudget {
   }
 }
 
+/** 앱(Capacitor WebView) 출처의 파티·커뮤니티·동행 호출에만 허용 목록 CORS를 적용하고 나머지는 그대로 라우팅한다. */
 export async function handleRequest(request: Request, env: Env): Promise<Response> {
+  const { pathname } = new URL(request.url);
+  const origin = nativeOrigin(request, pathname);
+  if (!origin) return route(request, env);
+  if (request.method === 'OPTIONS') return preflight(request, origin);
+  return withCors(await route(asSameOrigin(request, env.APP_ORIGIN), env), origin);
+}
+
+async function route(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   if (url.pathname.startsWith('/api/store/')) return handleStoreRequest(request, env);
   if (url.pathname === '/api/party' || url.pathname.startsWith('/api/party/')) {
