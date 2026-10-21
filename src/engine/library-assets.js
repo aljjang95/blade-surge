@@ -61,7 +61,14 @@ const LIBRARY_REVISIONS = Object.freeze([
 ]);
 let bundledFiles = {};
 try {
-  bundledFiles = import.meta.glob('../../asset-library/normalized/*.glb', { eager: true, query: '?url', import: 'default' });
+  // 아래 여덟 원본은 useInGame 교정본(heroes-next)이 대신 로드되어 번들 URL 이 쓰이지 않는다(revisedLibraryFile 이 항상 교정 경로를 돌려줌).
+  // 전달 크기를 위해 빌드 산출물에서 뺀다. 원본 파일·해시 계약은 asset-library/normalized 에 그대로 있다(test/library-bundle-exclusions.test.ts 가 검증).
+  bundledFiles = import.meta.glob([
+    '../../asset-library/normalized/*.glb',
+    '!../../asset-library/normalized/hero_ranger_t1.glb', '!../../asset-library/normalized/hero_ranger_t2.glb', '!../../asset-library/normalized/hero_ranger_t3.glb',
+    '!../../asset-library/normalized/hero_rogue_t1.glb', '!../../asset-library/normalized/hero_rogue_t2.glb', '!../../asset-library/normalized/hero_rogue_t3.glb',
+    '!../../asset-library/normalized/avatar_ranger_fox.glb', '!../../asset-library/normalized/avatar_rogue_crow.glb',
+  ], { eager: true, query: '?url', import: 'default' });
 } catch {
   // Bun의 계약 테스트는 Vite URL 변환 없이 공개 경로를 사용한다.
 }

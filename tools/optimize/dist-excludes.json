@@ -1,0 +1,128 @@
+{
+  "schema": "blade-surge.dist-excludes.v1",
+  "note": "빌드 산출물(dist, 스토어 채널 web)에서만 뺀다. public/ 의 원본 파일과 해시 계약은 그대로 둔다. entries 는 모든 채널에서, channelExcludes 는 그 채널 빌드에서만 뺀다. test/dist-excludes.test.ts 가 src·index.html·sw.js 어디에서도 참조되지 않음과 채널별 BGM 파일이 bgmUrl 과 정확히 맞는지 검사한다.",
+  "entries": [
+    {
+      "path": "bgm/bgm_battle.mp3",
+      "reason": "music.js 의 musicForScene 이 돌려주는 곡은 bgm_gacha 와 regions/* 뿐이다. 옛 전투곡(80kbps)."
+    },
+    {
+      "path": "bgm/bgm_battle2.mp3",
+      "reason": "musicForScene 이 돌려주지 않는 옛 전투곡."
+    },
+    {
+      "path": "bgm/bgm_boss.mp3",
+      "reason": "보스곡은 regions/boss. 옛 보스곡."
+    },
+    {
+      "path": "bgm/bgm_boss2.mp3",
+      "reason": "보스곡은 regions/boss. 옛 보스곡."
+    },
+    {
+      "path": "bgm/bgm_lobby.mp3",
+      "reason": "로비곡은 regions/lobby. 옛 로비곡."
+    },
+    {
+      "path": "bgm/expansion/flow-combat.mp3",
+      "reason": "어디에서도 이름이 나오지 않는 확장 전투곡 초안."
+    },
+    {
+      "path": "models/heroes-next/ranger-library-t1-v1.glb",
+      "reason": "궁수 library 개정 v1~v3 는 기록 JSON(테스트 전용)만 가리킨다. 게임은 ranger-library-t1-v4 만 쓴다(RANGER_LIBRARY_REVISION_ID)."
+    },
+    {
+      "path": "models/heroes-next/ranger-library-t1-v2.glb",
+      "reason": "위와 같음(v2)."
+    },
+    {
+      "path": "models/heroes-next/ranger-library-t1-v3.glb",
+      "reason": "위와 같음(v3)."
+    },
+    {
+      "path": "models/heroes-next/rogue-library-t1-axis-v1.glb",
+      "reason": "도적 1단계는 rogue-library-t1-v2 가 대신 쓰인다. axis-v1 은 기록 JSON(packedPath)과 테스트에만 나온다."
+    },
+    {
+      "path": "models/oathhall-v1",
+      "reason": "서약의 전당 v1. 로비는 sanctuary-v2 만 로드한다(oathhall-asset.js)."
+    },
+    {
+      "path": "models/oathhall-v2",
+      "reason": "서약의 전당 v2. 로비는 sanctuary-v2 만 로드한다(oathhall-asset.js)."
+    },
+    {
+      "path": "models/tll/knight-oath-v1.glb",
+      "reason": "oath-v1 스타일 GLB 는 테스트에서만 읽는다. 게임은 casual-v2 와 expedition 정체성을 쓴다."
+    },
+    {
+      "path": "models/tll/barbarian-oath-v1.glb",
+      "reason": "위와 같음."
+    },
+    {
+      "path": "models/tll/mage-oath-v1.glb",
+      "reason": "위와 같음."
+    },
+    {
+      "path": "models/tll/rogue-oath-v1.glb",
+      "reason": "위와 같음."
+    },
+    {
+      "path": "img/tll/knight-oath-v1.png",
+      "reason": "oath-v1 검수용 PNG. 게임 화면은 *-original-v1.webp 를 쓴다."
+    },
+    {
+      "path": "img/tll/barbarian-oath-v1.png",
+      "reason": "위와 같음."
+    },
+    {
+      "path": "img/tll/mage-oath-v1.png",
+      "reason": "위와 같음."
+    },
+    {
+      "path": "img/tll/rogue-oath-v1.png",
+      "reason": "위와 같음."
+    },
+    {
+      "path": "img/tll/knight-casual-v2.png",
+      "reason": "casual-v2 검수용 PNG. 게임은 GLB 로 직접 렌더한다."
+    },
+    {
+      "path": "img/tll/barbarian-casual-v2.png",
+      "reason": "위와 같음."
+    },
+    {
+      "path": "img/tll/mage-casual-v2.png",
+      "reason": "위와 같음."
+    },
+    {
+      "path": "img/tll/rogue-casual-v2.png",
+      "reason": "위와 같음."
+    }
+  ],
+  "channelExcludes": {
+    "web": [
+      {
+        "glob": "bgm/regions/*.ogg",
+        "reason": "Opus(.ogg) 지역곡은 Android 스토어 빌드 전용이다. 웹은 iOS 사파리(18.4 미만은 Ogg Opus 미지원)를 위해 원본 mp3 를 쓴다(music.js bgmUrl)."
+      }
+    ],
+    "apps-in-toss": [
+      {
+        "glob": "bgm/regions/*.ogg",
+        "reason": "앱인토스는 iOS WebView 를 포함하므로 원본 mp3 를 쓴다(music.js bgmUrl)."
+      }
+    ],
+    "googleplay": [
+      {
+        "glob": "bgm/regions/*.mp3",
+        "reason": "Android WebView 는 Opus 를 항상 재생하므로 같은 곡의 더 작은 Opus(.ogg)만 싣는다(music.js bgmUrl)."
+      }
+    ],
+    "onestore": [
+      {
+        "glob": "bgm/regions/*.mp3",
+        "reason": "ONE Store 도 Android WebView 라 Opus(.ogg)만 싣는다(music.js bgmUrl)."
+      }
+    ]
+  }
+}

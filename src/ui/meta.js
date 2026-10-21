@@ -43,12 +43,12 @@ const CAM_DESC = { auto: '상황에 맞춰 자동 — 탐험은 액션, 난전�
 const DUNGEON_ICON = '/img/ui-crafted/nav-dungeon.webp';
 const DUNGEON_GATE = '/img/ui-crafted/dungeon-gate.svg';
 const REGION_DUNGEON_ART = {
-  garden: '/img/ui-crafted/dungeon-garden-keyart.png',
-  forge: '/img/ui-crafted/dungeon-forge-keyart.png',
-  frost: '/img/ui-crafted/dungeon-frost-keyart.png',
-  tide: '/img/ui-crafted/dungeon-tide-keyart.png',
-  crown: '/img/ui-crafted/dungeon-crown-keyart.png',
-  homecoming: '/img/ui-crafted/dungeon-homecoming-keyart.png',
+  garden: '/img/ui-crafted/keyart/dungeon-garden-keyart.webp',
+  forge: '/img/ui-crafted/keyart/dungeon-forge-keyart.webp',
+  frost: '/img/ui-crafted/keyart/dungeon-frost-keyart.webp',
+  tide: '/img/ui-crafted/keyart/dungeon-tide-keyart.webp',
+  crown: '/img/ui-crafted/keyart/dungeon-crown-keyart.webp',
+  homecoming: '/img/ui-crafted/keyart/dungeon-homecoming-keyart.webp',
 };
 const dungeonMapSvg = (stage, { compact = false } = {}) => {
   const dungeon = stage?.dungeon;

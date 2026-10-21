@@ -1,4 +1,9 @@
+import { STORE_CHANNEL } from '../platform/store-channel.js';
 export const MUSIC_MIX = Object.freeze({ fade: 0.7, volume: 0.55 });
+/** Android 스토어 빌드(WebView 는 Opus 를 항상 재생한다)만 지역곡을 더 작은 Opus(.ogg)로 받는다. 웹·앱인토스(iOS 사파리 포함)는 원본 mp3 그대로다. */
+const OPUS_CHANNELS = new Set(['googleplay', 'onestore']);
+/** 곡 이름 -> 공개 URL. 지역곡(regions/*)만 Opus 파일이 있고, 가챠곡(80kbps mp3)은 모든 채널에서 mp3 다. */
+export const bgmUrl = (name, channel = STORE_CHANNEL) => `/bgm/${name}.${OPUS_CHANNELS.has(channel) && String(name).startsWith('regions/') ? 'ogg' : 'mp3'}`;
 const REGIONS = new Set(['garden', 'forge', 'frost', 'tide', 'crown', 'homecoming']);
 
 // FLOW web generation brief.  `fallback` is the verified shipped cue used

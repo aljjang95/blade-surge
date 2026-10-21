@@ -4,6 +4,7 @@ import {
   COMBO_STINGERS, HIT_BUS_GAIN, HIT_PRIORITY, HIT_SOUND_FILES, HIT_VARIANTS, HIT_VOICES, HIT_VOICES_PREMIUM, HIT_WINDOW, KILL_SOUND,
   comboSoundName, hitLayers, hitSoundName, hitTier, isPremiumHit,
 } from './combat-sound-library.js';
+import { bgmUrl } from '../data/music.js';
 
 // Web Audio: Mirelo SFX 샘플(public/sfx/mirelo-v1) + 샘플이 없을 때만 쓰는 합성 폴백 + BGM 크로스페이드 + 햅틱
 // 오디오 타이머/음소거가 전투와 보상의 Math.random 순서를 바꾸지 않는다.
@@ -597,7 +598,7 @@ export class AudioSys {
     for (const track of [...this._musicTracks]) if (track !== old) this._disposeMusic(track);
     if (old) { const g = old.gain; g.gain.cancelScheduledValues(this.now()); g.gain.setValueAtTime(g.gain.value, this.now()); g.gain.linearRampToValueAtTime(0, this.now() + fade); old.timer = setTimeout(() => this._disposeMusic(old), fade * 1000 + 100); }
     if (!name) { this.music = null; return; }
-    const el = new Audio(`/bgm/${name}.mp3`); el.loop = true; el.crossOrigin = 'anonymous'; el.preload = 'auto';
+    const el = new Audio(bgmUrl(name)); el.loop = true; el.crossOrigin = 'anonymous'; el.preload = 'auto';
     const src = this.ctx.createMediaElementSource(el); const g = this.ctx.createGain(); g.gain.value = 0; src.connect(g); g.connect(this.musicGain);
     el.play().catch(() => {});
     g.gain.linearRampToValueAtTime(volume, this.now() + fade);
