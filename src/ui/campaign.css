@@ -258,3 +258,40 @@ body:has(#result.show) #companion-root .companion-launcher:not([aria-expanded="t
   #tab-stage .stage-tactics { grid-template-columns: 1fr; }
   #tab-stage .stage-launch .row { grid-template-columns: .72fr 1.28fr; }
 }
+
+/* 지역 칩: 모든 화면에서 한 줄 가로 스크롤(스크롤 영역 안에 있어 고정되지 않고 내용과 함께 올라간다) */
+#tab-stage .campaign-scroll #chapter-tabs { display: flex; flex-wrap: nowrap; gap: 8px; margin: 0 -2px; padding: 8px 2px 10px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+#tab-stage .campaign-scroll #chapter-tabs::-webkit-scrollbar { display: none; }
+#tab-stage .campaign-scroll #chapter-tabs button { flex: 0 0 auto; min-width: 0; min-height: 44px; padding: 5px 14px; white-space: nowrap; scroll-snap-align: start; }
+#tab-stage .campaign-scroll #chapter-tabs button small { white-space: nowrap; }
+/* 하단 고정 출격 바: 스크롤 밖에서 항상 보인다 */
+#tab-stage .campaign-sortie { flex: 0 0 auto; display: flex; align-items: center; gap: 12px; padding: 8px max(14px, var(--sar, 0px)) calc(8px + var(--sab, 0px)) max(14px, var(--sal, 0px)); border-top: 1px solid color-mix(in srgb, var(--region-glow) 40%, #ffffff1b); background: linear-gradient(180deg, #0f1823, #0b1119); box-shadow: 0 -8px 18px #0006; }
+#tab-stage .campaign-sortie:empty { display: none; }
+#tab-stage .campaign-sortie .sortie-info { flex: 1 1 0; min-width: 0; display: grid; gap: 2px; }
+#tab-stage .campaign-sortie .sortie-info b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; color: #f2e4c9; }
+#tab-stage .campaign-sortie .sortie-info small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: #abb7b8; }
+#tab-stage .campaign-sortie .row { flex: 0 1 auto; display: grid; grid-template-columns: minmax(84px, .7fr) minmax(170px, 1.3fr); gap: 8px; margin: 0; }
+#tab-stage .campaign-sortie .row .btn { display: flex; min-height: 48px; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 4px 12px; border-radius: 8px; }
+#tab-stage .campaign-sortie .row .btn span { font-size: 14px; font-weight: 800; }
+#tab-stage .campaign-sortie .row .btn small { font-size: 10px; }
+#tab-stage .campaign-sortie #st-go:not(:disabled) { box-shadow: 0 0 0 1px #f0c66c66, 0 4px 12px #bb792b44; animation: dungeonCtaPulse 2.6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { #tab-stage .campaign-sortie #st-go:not(:disabled) { animation: none; } }
+@media (max-width: 600px) and (orientation: portrait) {
+  #tab-stage .campaign-sortie { flex-wrap: wrap; }
+  #tab-stage .campaign-sortie .sortie-info { flex-basis: 100%; }
+  #tab-stage .campaign-sortie .row { flex: 1 1 100%; }
+}
+/* 낮은 가로 화면: 머리말·칩·소개를 줄여 스테이지와 출격 버튼이 첫 화면에 오게 한다 */
+@media (orientation: landscape) and (max-height: 500px) {
+  #tab-stage .campaign-heading { padding: 4px 14px 4px; min-height: 0; }
+  #tab-stage .campaign-heading button { min-height: 44px; padding: 5px 12px; }
+  :root:root #tab-stage .campaign-heading h2 { font-size: 16px; line-height: 1.2; }
+  :root:root #tab-stage .campaign-heading { min-height: 0; }
+  :root:root #tab-stage .adventure-nav { padding-top: 2px; padding-bottom: 2px; }
+  :root:root #tab-stage .adventure-nav button { min-height: 44px; padding-top: 2px; padding-bottom: 2px; }
+  #tab-stage .campaign-scroll { padding-top: 0; }
+  #tab-stage .campaign-scroll #chapter-tabs { padding-top: 2px; padding-bottom: 6px; }
+  #tab-stage .campaign-scroll #chapter-tabs button { min-height: 44px; padding: 3px 12px; }
+  #tab-stage .campaign-sortie { padding-top: 5px; padding-bottom: calc(5px + var(--sab, 0px)); }
+  #tab-stage .campaign-sortie .row .btn { min-height: 44px; }
+}
