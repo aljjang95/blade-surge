@@ -15,6 +15,18 @@ const DEATH_TURN_SEC = 0.06;
 let launchSerial = 0x2f6e2b1;
 const launchNoise = () => (launchSerial = (Math.imul(launchSerial, 1664525) + 1013904223) >>> 0) / 4294967296;
 
+/** 지금 실제로 섞이는 무게에서 0 으로 내린다. three 의 fadeOut 은 항상 무게 1 에서 시작해서, 막 페이드인을 시작한 동작
+ * (예: 회피가 끝난 프레임의 Idle 직후 공격)이 다음 프레임에 전신 무게로 튀었다(고정 픽스처 회피 끝 46° 한 프레임 튐).
+ * 페이드 중이면 무게 보간기를 현재 믹서 시각에서 읽고, 아니면 유효 무게를 쓴다. 할당 없음. */
+export function fadeOutFromCurrent(action, duration) {
+  const interp = action._weightInterpolant, mixer = action._mixer;
+  let w = action.enabled === false ? 0 : action.getEffectiveWeight();
+  if (action.enabled !== false && interp && mixer) w = action.weight * interp.evaluate(mixer.time)[0];
+  w = Math.max(0, Math.min(1, Number.isFinite(w) ? w : 1));
+  if (typeof action._scheduleFading !== 'function') return action.fadeOut(duration);
+  return action._scheduleFading(duration, w, 0);
+}
+
 export class Actor {
   /** @param {*} game @param {*} gltf @param {{scale?: number, tint?: string|number|null, rig?: string, roster?: *}} options */
   constructor(game, gltf, { scale = 1, tint = null, rig = 'kaykit', roster = null } = {}) {
@@ -86,7 +98,7 @@ export class Actor {
     this._attackMotion = null;
     const a = this.mixer.clipAction(clip);
     if (this.action === a && !restart) { a.timeScale = speed; return a; }
-    if (this.action && this.action !== a) this.action.fadeOut(fade);
+    if (this.action && this.action !== a) fadeOutFromCurrent(this.action, fade);
     a.reset(); a.enabled = true; a.setLoop(loop && !once ? THREE.LoopRepeat : THREE.LoopOnce, Infinity); a.clampWhenFinished = clamp || once; a.timeScale = speed; a.setEffectiveWeight(1); a.fadeIn(fade); a.play();
     this.action = a; this.actionName = name; return a;
   }
