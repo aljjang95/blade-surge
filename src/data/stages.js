@@ -108,7 +108,7 @@ export const ENEMIES = {
 
   // --- 새 행동 3종 (PRD §4-6: 스탯만 다른 리스킨 금지) ---
   // bomber: 돌진 → 2.2 안에서 0.7초 도화선 → 자폭. (Blob_GreenSpikyBlob 은 다른 블롭의 2.2배 크기 GLB — scale 0.5 로 맞춘다. 0.95 였을 때 영웅의 4배짜리 괴물이 화면을 덮었다) 아군도 다친다 → 진공으로 무리에 끌어넣으면 연쇄 폭발
-  bomb_slime:  { name: '폭탄 슬라임', model: 'Blob_GreenSpikyBlob', hp: 385, atk: 33, spd: 6.4, range: 1.6, atkTime: 1.0, exp: 12, scale: 0.5, gold: 1, behavior: 'bomber', tint: '#ffd060' },
+  bomb_slime:  { name: '폭탄 슬라임', model: 'Blob_GreenSpikyBlob', hp: 385, atk: 33, spd: 6.4, range: 1.6, atkTime: 1.0, exp: 12, scale: 0.5, visualScale: 0.65, gold: 1, behavior: 'bomber', tint: '#ffd060' },
   // shaman: 거리 유지 + 6초마다 주변 아군 회복 + 9초마다 소환. 먼저 잡아야 한다
   skel_priest: { name: '해골 사제', model: 'Skeleton_Runekeeper', hp: 595, atk: 18, spd: 3.2, range: 8.0, atkTime: 2.4, weapon: 'Skeleton_Staff', ranged: true, exp: 18, scale: 1.05, gold: 3, projColor: 0xa0ffb0, behavior: 'shaman', summon: 'skel_minion', tint: '#b0ffc0' },
   // shield: 정면 피해 80% 감소. 뒤·옆에서 치거나, 마무리 타격(kb≥4) 4번이면 가드 브레이크 3초
@@ -135,7 +135,7 @@ export const ENEMIES = {
   cacto_wall:    { name: '가시 방벽', model: 'Big_Cactoro', hp: 1820, atk: 29, spd: 3.0, range: 2.1, atkTime: 1.7, exp: 18, scale: 1.1, gold: 2, armor: 0.15, behavior: 'shield' },
   // ================= 3장 · 심연의 제단 (이계 · 용) =================
   blob_pink:  { name: '심연 슬라임', model: 'Blob_PinkBlob', hp: 910, atk: 26, spd: 3.6, range: 1.8, atkTime: 1.3, exp: 13, scale: 1.0, gold: 2 },
-  blob_spiky: { name: '가시 슬라임', model: 'Blob_GreenSpikyBlob', hp: 1050, atk: 31, spd: 3.4, range: 1.8, atkTime: 1.4, exp: 14, scale: 0.55, armor: 0.15, gold: 2 },
+  blob_spiky: { name: '가시 슬라임', model: 'Blob_GreenSpikyBlob', hp: 1050, atk: 31, spd: 3.4, range: 1.8, atkTime: 1.4, exp: 14, scale: 0.55, visualScale: 0.65, armor: 0.15, gold: 2 },
   alien:      { name: '이계 침입자', model: 'Big_Alien', hp: 1190, atk: 37, spd: 4.4, range: 2.3, atkTime: 1.2, exp: 16, scale: 1.0, gold: 2 },
   squidle:    { name: '부유 촉수', model: 'Flying_Squidle', hp: 700, atk: 33, spd: 4.6, range: 2.2, atkTime: 1.1, exp: 15, scale: 1.0, gold: 2 },
   mushnub:    { name: '포자 괴물', model: 'Blob_Mushnub_Evolved', hp: 1120, atk: 29, spd: 3.4, range: 1.9, atkTime: 1.4, exp: 15, scale: 1.0, gold: 2 },
@@ -157,7 +157,7 @@ export const ENEMIES = {
   // ================= 종락·재의 밀물·밤유리 원정 =================
   // These encounters reuse verified rigs with authored phase signatures and
   // dedicated portrait/colour identity; they are not claimed as new GLB files.
-  glass_shardling: { name: '유리 파편충', model: 'Blob_GreenSpikyBlob', hp: 760, atk: 31, spd: 5.8, range: 1.7, atkTime: 1.0, exp: 16, scale: 0.55, gold: 2, behavior: 'bomber', tint: '#7fffe1' },
+  glass_shardling: { name: '유리 파편충', model: 'Blob_GreenSpikyBlob', hp: 760, atk: 31, spd: 5.8, range: 1.7, atkTime: 1.0, exp: 16, scale: 0.55, visualScale: 0.65, gold: 2, behavior: 'bomber', tint: '#7fffe1' },
   bell_wisp: { name: '종의 잔영', model: 'Flying_Ghost', hp: 610, atk: 28, spd: 5.8, range: 2.2, atkTime: 1.0, exp: 16, scale: 1.3, gold: 2, ghostly: true, dodge: 0.12, tint: '#b4fff3' },
   glass_tollmage: { name: '시계종 주술사', model: 'Skeleton_Runekeeper', hp: 720, atk: 23, spd: 3.3, range: 8.5, atkTime: 2.1, ranged: true, exp: 21, scale: 1.08, gold: 3, projColor: 0x7fe8ff, behavior: 'shaman', summon: 'glass_shardling', tint: '#b8f5ff' },
   glass_warden: { name: '유리 회랑 감시자', model: 'Skeleton_Bulwark', hp: 6400, atk: 55, spd: 3.5, range: 2.8, atkTime: 1.5, exp: 72, scale: 1.5, armor: 0.27, elite: true, behavior: 'shield', weapon: 'Skeleton_Axe', shield: 'Skeleton_Shield_Large_A', tint: '#8fffe2', gold: 10 },

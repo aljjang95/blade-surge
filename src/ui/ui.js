@@ -14,6 +14,8 @@ import { comboFeedback } from './combo-feedback.js';
 import { skillFeedback } from './skill-feedback.js';
 import { BattleReadability } from './battle-readability.js';
 import { writeHudStyle } from './hud-style-write.js';
+import { installInputModality } from './input-modality.js';
+import './combat-hud-clear.css';
 import { combatHudAnimationRegion } from '../engine/combat-feedback.js';
 import './campaign.css';
 import './combo-feedback.css';
@@ -27,6 +29,7 @@ export { $, fmt };
 export class UI {
   constructor(app) {
     this.app = app; this.eco = app.eco;
+    installInputModality();
     this._astralChoiceHud = false;
     this.el = { hud: $('hud'), meta: $('meta'), result: $('result'), modal: $('modal'), modalBox: $('modal-box'), toast: $('toast-layer'), boot: $('boot'), reveal: $('reveal'), pause: $('pause-overlay') };
     this.combatNoticeHeaderEls = [];
@@ -40,6 +43,8 @@ export class UI {
     // The announcement must clear the actual notice height, including wrapped copy and rotation.
     this.combatNoticeResize = new ResizeObserver(() => {
       this.refreshCombatNoticeLayout();
+      // 콤보 칩 폭이 바뀌면(자릿수·서체 로딩) 연속 처치 알약이 칩 옆에 다시 붙는다.
+      if (this.killStreakEl?.classList.contains('show')) this.placeKillStreak();
     });
     this.combatNoticeResize.observe(this.el.toast);
     this.combatNoticeResize.observe(this.el.hud);
@@ -488,11 +493,21 @@ export class UI {
   }
   waveBanner(text) { const b = $('wave-banner'); b.textContent = text; b.classList.remove('on'); void b.offsetWidth; b.classList.add('on'); this.refreshCombatNoticeLayout?.(); }
   showBoss(name, on, portrait) { $('bossbar').classList.toggle('hidden', !on); $('boss-name').textContent = name; const im = $('boss-portrait'); if (portrait) { im.src = portrait; im.style.display = ''; } else im.style.display = 'none'; }
-  setCombo(n) { if (n <= 1) { this.comboEl.classList.add('hidden'); if (this.killStreakEl?.classList.contains('show')) this.placeKillStreak(); return; } const wasHidden = this.comboEl.classList.contains('hidden'); this.comboEl.classList.remove('hidden'); this.comboN.textContent = n; this.comboEl.classList.toggle('hot', n >= 30); this.comboEl.classList.remove('pop'); void this.comboEl.offsetWidth; this.comboEl.classList.add('pop'); if (this.killStreakEl?.classList.contains('show') && (wasHidden || n === 10 || n === 100)) this.placeKillStreak(); }
+  /** 콤보 칩은 영웅 HP 카드(EXP 막대 포함) 바로 아래 가장자리 띠에 둔다. 가로 화면에서만 실제 카드 하단을 읽어 --combo-top 을 정한다. */
+  placeComboChip() {
+    const combo = this.comboEl, hud = this.el?.hud;
+    if (!combo || !hud?.querySelector) return;
+    if (!((globalThis.innerWidth || 0) > (globalThis.innerHeight || 0))) { combo.style.removeProperty('--combo-top'); return; }
+    const card = hud.querySelector('.hud-player')?.getBoundingClientRect?.();
+    if (!card || !(card.height > 0)) return;
+    writeHudStyle(combo.style, '--combo-top', Math.round(card.bottom - hud.getBoundingClientRect().top + 4) + 'px');
+  }
+  setCombo(n) { if (n <= 1) { this.comboEl.classList.add('hidden'); if (this.killStreakEl?.classList.contains('show')) this.placeKillStreak(); return; } const wasHidden = this.comboEl.classList.contains('hidden'); if (wasHidden) this.placeComboChip(); this.comboEl.classList.remove('hidden'); this.comboN.textContent = n; this.comboEl.classList.toggle('hot', n >= 30); this.comboEl.classList.remove('pop'); void this.comboEl.offsetWidth; this.comboEl.classList.add('pop'); if (this.killStreakEl?.classList.contains('show') && (wasHidden || n === 10 || n === 100)) this.placeKillStreak(); }
   /** 연속 처치 알약을 콤보 배지 오른쪽(좁으면 아래)에 붙인다. 처치·콤보 표시가 바뀔 때만 레이아웃을 읽는다. */
   placeKillStreak() {
     const pill = this.killStreakEl, combo = this.comboEl, hud = this.el?.hud;
     if (!pill || !combo) return;
+    this.placeComboChip();
     const shown = !combo.classList.contains('hidden') && combo.offsetWidth > 0;
     let left, top, height;
     if (shown) { left = combo.offsetLeft; top = combo.offsetTop; height = combo.offsetHeight; }

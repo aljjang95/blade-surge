@@ -64,10 +64,12 @@ uniform vec4 uSightShape;
 uniform vec4 uSightBase;
 uniform vec4 uSightDepth;
 uniform vec4 uSightBody;
-const float SIGHT_BAYER[16] = float[16]( 0., 8., 2., 10., 12., 4., 14., 6., 3., 11., 1., 9., 15., 7., 13., 5. );
-float sightBayer4( vec2 p ) {
-  ivec2 q = ivec2( mod( floor( p ), 4.0 ) );
-  return ( SIGHT_BAYER[ q.y * 4 + q.x ] + .5 ) / 16.;
+// 8x8 Bayer(64단계). 4x4(16단계)는 낮은 해상도에서 격자 무늬와 계단이 거칠게 보였다. 비트 연산만 쓰는 구성이라 배열·텍스처가 필요 없다.
+float sightBayer8( vec2 p ) {
+  ivec2 q = ivec2( mod( floor( p ), 8.0 ) );
+  int xr = q.x ^ q.y, yr = q.y;
+  int v = ( ( yr & 1 ) << 5 ) | ( ( xr & 1 ) << 4 ) | ( ( yr & 2 ) << 2 ) | ( ( xr & 2 ) << 1 ) | ( ( yr & 4 ) >> 1 ) | ( ( xr & 4 ) >> 2 );
+  return ( float( v ) + .5 ) / 64.;
 }`;
 
 // sightFade()와 같은 식. 고정 화면 디더라 프레임 사이에 패턴이 흔들리지 않고 경계가 서서히 움직인다.
@@ -89,8 +91,16 @@ if ( uSightShape.w > .5 ) {
   sightFade *= smoothstep( uSightDepth.x, uSightDepth.x + mix( uSightDepth.y, uSightBody.z, sightCover ), sightFront );
   sightFade *= smoothstep( uSightBase.x, uSightBase.y, vSightWorld.y );
   sightFade = max( sightFade, 1.0 - smoothstep( uSightDepth.z, uSightDepth.z + uSightDepth.w, sightLen ) );
-  if ( sightFade * uSightBase.z > sightBayer4( gl_FragCoord.xy ) ) discard;
+  if ( sightFade * uSightBase.z > sightBayer8( gl_FragCoord.xy ) ) discard;
 }`;
+
+/** sightBayer8() 의 CPU 사본(0~1 문턱). 64칸이 서로 다른 문턱을 갖는지 테스트한다. */
+export function sightBayer8(x, y) {
+  const qx = ((Math.floor(x) % 8) + 8) % 8, qy = ((Math.floor(y) % 8) + 8) % 8;
+  const xr = qx ^ qy, yr = qy;
+  const v = ((yr & 1) << 5) | ((xr & 1) << 4) | ((yr & 2) << 2) | ((xr & 2) << 1) | ((yr & 4) >> 1) | ((xr & 4) >> 2);
+  return (v + .5) / 64;
+}
 
 const smooth = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 const bindings = new WeakMap();
