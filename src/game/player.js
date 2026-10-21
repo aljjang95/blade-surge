@@ -149,7 +149,11 @@ export class Player extends Actor {
     const wantMove = this.moveDir.lengthSq() > 0.01;
 
     // 다른 행동이 이 프레임을 먼저 수락해도 공격 의도는 남긴다. 현재 행동(회피·경직·스킬·기절)의 남은 시간만큼 보존한다.
-    if (input.consume('attack')) {
+    // 버튼·키를 누르고 있으면 매 스텝 같은 공격 의도를 되살린다(2026-10-22 대표님 지시: 홀드는 평타를 계속 이어 간다).
+    // 새 입력 버퍼·콤보 예약 경로를 그대로 타므로 공격 속도·연계 창·회피/스킬 우선권은 탭과 같고, 떼면 버퍼 시간만 남고 끝난다.
+    // AUTO 는 자체 공격 루프가 있고, 입력이 꺼진 동안 남은 값은 믿지 않는다.
+    const attackTap = input.consume('attack');
+    if (attackTap || (!this.auto && input.enabled !== false && input.attackHeld)) {
       let wait = Math.max(0, this.stun || 0);
       if (this.state === 'dodge' || this.state === 'hurt') wait = Math.max(wait, .32 - this.stateT);
       if ((this.state === 'skill' || this.state === 'ult') && this.skillCtx) {
@@ -173,7 +177,7 @@ export class Player extends Actor {
     if (this.dodgeBufferT > 0 && this.dodgeCd <= 0 && this.stun <= 0 &&
       (this.state === 'idle' || this.state === 'move' || (this.state === 'attack' && this.canDodgeCancel()))) return this.dodge(wantMove ? this.moveDir : null);
     // 전투 입력은 0~3 고정 + Q/E 장착 슬롯 4/5만 노출한다.
-    for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot, input.takeAim?.(slot))) return; }
+    for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot, input.takeAim?.(slot) ?? this.heldMoveAim(wantMove))) return; }
     // 공격: 입력 버퍼는 버튼을 누른 순간의 의도를 보존하지만, 버튼 홀드 자체는
     // 다음 콤보를 예약하지 않는다. 수동 전투에서 타이밍을 직접 결정하게 하는 경계다.
     if (this.stun <= 0 && (this.state === 'idle' || this.state === 'move' || this.canDodgeShoot()) && this.attackBufferT > 0) {
@@ -210,6 +214,19 @@ export class Player extends Actor {
         if (this.state !== 'idle') { this.state = 'idle'; this.play('Idle', { fade: 0.2 }); }
       }
     }
+  }
+  /**
+   * 수동 궁수가 이동 입력(조이스틱·방향키)을 잡은 채 스킬을 탭하면 그 방향으로 쏜다.
+   * 사격 중 몸은 조준 보조 대상을 향하므로 이 보정이 없으면 입력과 다른 쪽으로 나간다. 끌어서 정한 조준이 있으면 그쪽이 우선이다.
+   * 방향만 정하고 지점(aimPoint)은 만들지 않으며, 재사용 객체라 프레임당 할당이 없다.
+   */
+  heldMoveAim(wantMove) {
+    if (!wantMove || !this.manualBow || this.stun > 0) return null;
+    const length = Math.hypot(this.moveDir.x, this.moveDir.z);
+    if (!(length > 1e-6)) return null;
+    const aim = this._heldMoveAim || (this._heldMoveAim = { x: 0, z: 0, dist01: 1, dirOnly: true });
+    aim.x = this.moveDir.x / length; aim.z = this.moveDir.z / length;
+    return aim;
   }
   nearestEnemy(maxDist = 99) {
     let best = null, bd = maxDist;
@@ -495,7 +512,7 @@ export class Player extends Actor {
     else if (this.auto) this.autoAim(12);
     const lvMult = 1 + (this.skillLevels[i] - 1) * 0.12;
     this.skillCtx = { sk, impl, t: 0, cast: false, done: false, dmg: this.atk * sk.dmg * lvMult * (this.stats?.skillMul ?? 1), level: this.skillLevels[i], data: {} };
-    if (aimed) {
+    if (aimed && !aim.dirOnly) {
       const shape = skillAimShape(sk.id), length = Math.hypot(aim.x, aim.z);
       const fraction = Number.isFinite(aim.dist01) ? Math.max(0, Math.min(1, aim.dist01)) : 1;
       const distance = shape?.kind === 'circle' ? shape.range * fraction : Math.max(1, shape?.range || 1);

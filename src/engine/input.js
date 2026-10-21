@@ -204,6 +204,8 @@ export class Input {
         owner = null; if (e.cancelable) e.preventDefault(); up && up();
       };
       this.onClear(() => { owner = null; });
+      // 안드로이드 길게 누르기(컨텍스트 메뉴)가 열리면 브라우저가 터치를 취소해 공격 홀드가 끊긴다. 버튼 위에서는 메뉴를 열지 않는다.
+      el.addEventListener('contextmenu', (e) => { if (e.cancelable) e.preventDefault(); });
       el.addEventListener('touchstart', d, { passive: false }); el.addEventListener('touchend', u); el.addEventListener('touchcancel', u);
       el.addEventListener('mousedown', d); window.addEventListener('mouseup', u); el.addEventListener('mouseleave', u);
     };
