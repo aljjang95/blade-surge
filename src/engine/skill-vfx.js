@@ -17,6 +17,9 @@ export const skillVfxKey = (name) => 'sv2-' + name;
 
 const R = (rune, tex, place, mode, color, size, extra = {}) => Object.freeze({ rune, tex: 'skill-' + tex, place, mode, color, size, ...extra });
 const GOLD = 'skill-rune-circle-gold', VIOLET = 'skill-rune-circle-violet';
+/** 원화별 지면 밝기. 얼음·성광 원화는 중심이 거의 흰색이라 10m 넘게 깔면 블룸과 함께 화면을 하얗게 덮었다(대마도사 눈보라·별감옥). */
+export const SKILL_GROUND_GAIN = Object.freeze({ 'skill-ice-burst': .42, 'skill-holy-wave': .6, 'skill-chain-lightning': .8, [GOLD]: .78, [VIOLET]: .85 });
+const groundGain = (name) => SKILL_GROUND_GAIN[name] ?? 1;
 
 /** 40개 스킬 ID → 레시피. place: self(시전자) / front(전방 dist) / aim(조준점). mode: flash(빌보드) / ground(지면).
  * aim 은 실제 스킬 판정과 같은 자리에 그린다: 조준점 → seek[사거리, 반경]의 최다 밀집 적(skills.js densest) → 전방 dist(0 이면 시전자).
@@ -127,9 +130,9 @@ export function castSkillVfx(game, skillId, player, ctx = null, seek = null) {
     const size = r.size * scale, color = r.color;
     // 1) 바닥 룬 서클
     const runeR = (1.8 + size * 0.28) * (r.place === 'self' ? 1 : 0.9);
-    fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: runeR * 0.35, r1: runeR, life: 0.55, spin: reduced ? 0 : 1.4, y: 0.07, fadeIn: 0.15, hold: 0.3 });
+    fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: runeR * 0.35, r1: runeR, life: 0.55, spin: reduced ? 0 : 1.4, y: 0.07, fadeIn: 0.15, hold: 0.3, gain: groundGain(r.rune) });
     // 2) 스킬 텍스처
-    if (r.mode === 'ground') fx.groundTex(_at, skillVfxKey(r.tex), color, { r0: size * 0.3, r1: size, life: 0.6, spin: reduced ? 0 : 0.5, y: 0.09, fadeIn: 0.1 });
+    if (r.mode === 'ground') fx.groundTex(_at, skillVfxKey(r.tex), color, { r0: size * 0.3, r1: size, life: 0.6, spin: reduced ? 0 : 0.5, y: 0.09, fadeIn: 0.1, gain: groundGain(r.tex) });
     else fx.texFlash(_at, skillVfxKey(r.tex), color, { size, life: 0.45, spin: reduced ? 0 : 0.6, grow: 1.1, y: 1 });
     if (!reduced && !crowded) {
       // 3) 노출 곱 섬광: 100ms 이하, 화면 전체가 아니라 월드 한 점
@@ -148,7 +151,7 @@ export function castSkillVfx(game, skillId, player, ctx = null, seek = null) {
     // 지면 텍스처가 이미 전장 반경(10m 이상)을 덮는 궁극기는 같은 크기의 링을 한 겹 더 쌓지 않는다(바닥 전체가 한 색으로 덮이는 것을 막는다).
     if (major && !crowded && !(r.mode === 'ground' && size >= 10)) {
       const wide = 10;
-      fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: 1, r1: wide, life: 0.9, spin: reduced ? 0 : 0.6, y: 0.06, fadeIn: 0.08, hold: 0.3 });
+      fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: 1, r1: wide, life: 0.9, spin: reduced ? 0 : 0.6, y: 0.06, fadeIn: 0.08, hold: 0.3, gain: groundGain(r.rune) * .8 });
     }
     if (major && !crowded && !reduced) game.renderer?.shake?.(0.9);
     return true;

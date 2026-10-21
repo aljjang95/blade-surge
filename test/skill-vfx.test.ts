@@ -2,7 +2,7 @@ import { expect, test } from 'bun:test';
 import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
 import { HERO_SKILLS } from '../src/engine/combat-sound-library.js';
-import { SKILL_VFX, SKILL_VFX_TEXTURES, MAJOR_SKILL_IDS, skillVfxKey, castSkillVfx, resolveHeroGrade } from '../src/engine/skill-vfx.js';
+import { SKILL_VFX, SKILL_VFX_TEXTURES, SKILL_GROUND_GAIN, MAJOR_SKILL_IDS, skillVfxKey, castSkillVfx, resolveHeroGrade } from '../src/engine/skill-vfx.js';
 import { SKILLS } from '../src/game/skills.js';
 import { HEROES } from '../src/data/heroes.js';
 
@@ -149,4 +149,18 @@ test('지면 텍스처가 이미 10m 이상인 궁극기는 전장 링을 한 �
   expect(wide).toHaveLength(1); expect(String(wide[0][2])).toBe(skillVfxKey('skill-wind-arrow-trail'));
   const flash = rig(); castSkillVfx(flash.game, 'meteor', flash.player);
   expect(flash.calls.filter(c => c[0] === 'ground' && c[4].r1 >= 10)).toHaveLength(1);
+});
+
+test('흰 결이 강한 얼음·성광 원화는 넓게 깔 때 지면 밝기를 낮춰 화면을 하얗게 덮지 않는다', () => {
+  expect(SKILL_GROUND_GAIN['skill-ice-burst']).toBeLessThan(0.5);
+  expect(SKILL_GROUND_GAIN['skill-holy-wave']).toBeLessThan(0.7);
+  for (const v of Object.values(SKILL_GROUND_GAIN)) expect(v).toBeGreaterThan(0.3);
+  const { calls, game, player } = rig();
+  castSkillVfx(game, 'absolute_zero', player, { data: {} });
+  const grounds = calls.filter(c => c[0] === 'ground');
+  const ice = grounds.find(c => c[2] === skillVfxKey('skill-ice-burst'));
+  expect(ice).toBeTruthy();
+  expect(ice[4].gain).toBeCloseTo(SKILL_GROUND_GAIN['skill-ice-burst'], 5);
+  // 룬 원진도 원화별 밝기를 따른다(0 이나 1 고정이 아님)
+  for (const g of grounds) expect(g[4].gain).toBeGreaterThan(0.3);
 });

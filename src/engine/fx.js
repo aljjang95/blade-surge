@@ -608,8 +608,9 @@ export class FX {
       hold: heavy ? t * 0.24 : 0,
     });
     this.ring(anchor, spec.accent, { r0: spec.radius * 0.22 * k, r1: spec.radius * 1.16 * k, life: Math.min(t, 0.56), width: heavy ? 0.72 : 0.48 });
+    const flashSize = spec.radius * (heavy ? 1.45 : 1.05) * k;
     this.texFlash(anchor.clone().setY(anchor.y + 0.6), spec.flash, spec.color, {
-      size: spec.radius * (heavy ? 1.45 : 1.05) * k,
+      size: flashSize, gain: decorativeBurstGain(flashSize) * (profile === 'frost' ? .7 : 1),
       life: Math.min(t, heavy ? 0.7 : 0.42),
       spin: profile === 'void' ? 1.35 : profile === 'arcane' ? 0.7 : 0.35,
       grow: heavy ? 1.6 : 1.2,
