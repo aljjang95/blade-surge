@@ -247,6 +247,29 @@ describe('궁수 궁극기 방향', () => {
       expect(Math.sin(p.yaw)).toBeCloseTo(-1, 5);
     }
   });
+  test('홀드 평타 선딜(스킬 취소 창이 닫힘)에 탭한 궁극기는 사라지지 않고 창이 열리면 나간다', () => {
+    for (const [name, move] of [['정지', { x: 0, y: 0 }], ['왼쪽 이동', { x: -1, y: 0 }]] as const) {
+      const f = ultFixture(), p: any = f.player, input = f.game.input, dt = 1 / 60;
+      input.attackHeld = true; input.move.x = move.x; input.move.y = move.y;
+      // 취소 창이 닫힌 평타 선딜 프레임을 찾는다.
+      for (let i = 0; i < 240 && !(p.state === 'attack' && !p.canSkillCancel() && !p.hitDone); i++) stepCombatFlow(f, dt);
+      expect(p.state === 'attack' && !p.canSkillCancel()).toBe(true);
+      const slot = ultSlot(p);
+      input.press('skill' + slot); stepCombatFlow(f, dt);
+      expect(p.state).toBe('attack');
+      let cast = false;
+      for (let i = 0; i < 24 && !cast; i++) { stepCombatFlow(f, dt); cast = p.state === 'ult'; }
+      expect(cast).toBe(true);
+      if (move.x < 0) expect(Math.sin(p.yaw)).toBeLessThan(-0.99);
+    }
+  });
+  test('조건이 안 되는 스킬(궁극기 게이지 부족)은 선딜 중이어도 보존하지 않는다', () => {
+    const f = ultFixture(), p: any = f.player, input = f.game.input, dt = 1 / 60;
+    p.ult = 0; input.attackHeld = true;
+    for (let i = 0; i < 240 && !(p.state === 'attack' && !p.canSkillCancel()); i++) stepCombatFlow(f, dt);
+    input.press('skill' + ultSlot(p)); stepCombatFlow(f, dt);
+    expect(p.skillBufferT).toBe(0);
+  });
   test('ranger 가 아닌 영웅은 기존대로 동작한다(방향 보정 없음)', () => {
     const f = fixture('knight'), p: any = f.player;
     p.moveDir.set(1, 0, 0);
