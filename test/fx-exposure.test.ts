@@ -44,3 +44,9 @@ test('적 예고 마법진은 예산에 넣지도 낮추지도 않고 clearAll �
   expect(warning.material.color.equals(color)).toBe(true);
   fx.clearAll(); fx.texFlash(p, 'holy_burst', 0xffffff, { size: 4 }); expect(rgb(fx)).toBe(1);
 }));
+
+test('차가운 영웅색(보라·청·비취)으로 칠하는 불꽃·폭발 원화는 밝기 결로 바꿔 색을 살리고, 따뜻한 색·흰빛은 원화 그대로다', async () => {
+  const { textureTintMix } = await import('../src/engine/fx.js');
+  for (const warm of [0xff7228, 0xffd060, 0xff3030, 0xfff0c0, 0xffffff]) expect(textureTintMix(warm)).toBe(0);
+  for (const cool of [0xb26bff, 0x4cc3ff, 0x7feac0, 0x72dfff]) expect(textureTintMix(cool)).toBeGreaterThan(.5);
+});

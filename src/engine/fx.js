@@ -8,6 +8,17 @@ import { WeaponTrail, createWeaponTrailMaterial } from './weapon-trail.js';
 import { compactCombatStatus, decorativeBurstGain, boundedFeedbackGain, combatTextRegions, combatTextViewport, heroCombatTextRegion, placeCombatStatus } from './combat-feedback.js';
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
+const _tintHsl = { h: 0, s: 0, l: 0 }, _tintColor = new THREE.Color();
+/** 불꽃·폭발 원화(주황 결)를 차가운 영웅색(보라·청·비취)으로 칠할 때 원화 색을 밝기로 바꿔 색을 살리는 비율.
+ * 따뜻한 색(빨강~노랑)과 흰빛·크림은 원화 그대로(0). 예전에는 보라를 곱해 주황·분홍 불기둥이 됐다. */
+export function textureTintMix(color) {
+  _tintColor.set(color).getHSL(_tintHsl);
+  if (_tintHsl.s < .25) return 0;
+  const h = _tintHsl.h;
+  return h <= .17 || h >= .95 ? 0 : .85;
+}
+// 원화 rgb 를 밝기(채도 없는 결)로 바꾸는 GLSL 조각. uTint 0 이면 원본.
+const TINT_GLSL = 'vec3 bsTint(vec3 c, float k) { float l = dot(c, vec3(.3, .59, .11)); return mix(c, vec3(l * 1.35), k); }\n';
 const preparationOwners = new WeakMap();
 
 /**
@@ -555,8 +566,9 @@ export class FX {
     // 둔기는 중심이 빈 충격 고리, 참격은 진행 방향의 얇은 날, 마법은 짧은 별빛이다.
     // 흰 플래시와 참격 아틀라스를 중첩하지 않아 적 몸과 다음 예고를 비워 둔다.
     const slash = kind === 'slash', blunt = kind === 'blunt';
+    // 또렷한 모양(자국·고리·별빛·불똥)은 impact 층이 그린다. 이 부드러운 스프라이트는 바탕 번짐으로만 남겨 적 몸을 크림색 타원으로 덮지 않는다.
     const cue = this.flash(pos, color, {
-      size: radius, life: reduced ? .08 : tier === 'finisher' ? .14 : .10,
+      size: reduced ? radius : radius * .62, life: reduced ? .08 : tier === 'finisher' ? .14 : .10,
       angle: reduced || blunt ? 0 : slash ? angle : Math.PI / 4,
       stretch: reduced || blunt ? 1 : slash ? (heavy ? 2 : 1.7) : 1.12,
       tex: blunt && !reduced ? 'ring' : 'spark', contact: true, stationary: reduced,
@@ -851,10 +863,11 @@ export class FX {
   flipbook(pos, name, { size = 3, life = 0.6, color = 0xffffff, cols = 4, rows = 4, y = 1, blending = THREE.AdditiveBlending, opacity = 1, gain = 1 } = {}) {
     const tex = VFX_TEX[name]; if (!tex) return this.burst(pos, color, { n: 20 });
     const m = this._keep(new THREE.ShaderMaterial({
-      uniforms: { uTex: { value: tex }, uFrame: { value: 0 }, uGrid: { value: new THREE.Vector2(cols, rows) }, uColor: { value: new THREE.Color(color).multiplyScalar(boundedFeedbackGain(gain) * this._exposureGain(size)) }, uScale: { value: size }, uAlpha: { value: opacity } },
+      uniforms: { uTex: { value: tex }, uFrame: { value: 0 }, uGrid: { value: new THREE.Vector2(cols, rows) }, uColor: { value: new THREE.Color(color).multiplyScalar(boundedFeedbackGain(gain) * this._exposureGain(size)) }, uScale: { value: size }, uAlpha: { value: opacity }, uTint: { value: blending === THREE.AdditiveBlending ? textureTintMix(color) : 0 } },
       vertexShader: `uniform float uScale; varying vec2 vUv; void main(){ vUv = uv; vec4 mv = modelViewMatrix * vec4(0.0,0.0,0.0,1.0); mv.xy += position.xy * uScale; gl_Position = projectionMatrix * mv; }`,
-      fragmentShader: `uniform sampler2D uTex; uniform float uFrame, uAlpha; uniform vec2 uGrid; uniform vec3 uColor; varying vec2 vUv;
-        void main(){ float f = floor(uFrame); float cx = mod(f, uGrid.x); float cy = floor(f / uGrid.x); vec2 uv = (vUv + vec2(cx, uGrid.y - 1.0 - cy)) / uGrid; vec4 t = texture2D(uTex, uv); float lum = max(t.r, max(t.g, t.b)); gl_FragColor = vec4(t.rgb * uColor, lum * uAlpha); }`,
+      fragmentShader: `uniform sampler2D uTex; uniform float uFrame, uAlpha, uTint; uniform vec2 uGrid; uniform vec3 uColor; varying vec2 vUv;
+        ${TINT_GLSL}
+        void main(){ float f = floor(uFrame); float cx = mod(f, uGrid.x); float cy = floor(f / uGrid.x); vec2 uv = (vUv + vec2(cx, uGrid.y - 1.0 - cy)) / uGrid; vec4 t = texture2D(uTex, uv); float lum = max(t.r, max(t.g, t.b)); gl_FragColor = vec4(bsTint(t.rgb, uTint) * uColor, lum * uAlpha); }`,
       transparent: true, depthWrite: false, blending, side: THREE.DoubleSide,
     }));
     const mesh = new THREE.Mesh(this.plane1, m); mesh.position.copy(pos); mesh.position.y += y; mesh.renderOrder = 12; mesh.frustumCulled = false;
@@ -870,15 +883,16 @@ export class FX {
     const make = () => {
       // Retain MeshBasic's alpha, fog and output transforms; only scrolling differs.
       const uniforms = THREE.UniformsUtils.clone(THREE.ShaderLib.basic.uniforms);
-      uniforms.map.value = tex; uniforms.diffuse.value.set(color); uniforms.uOffset = { value: 0 };
+      uniforms.map.value = tex; uniforms.diffuse.value.set(color); uniforms.uOffset = { value: 0 }; uniforms.uTint = { value: textureTintMix(color) };
       return new THREE.ShaderMaterial({
         uniforms, defines: { USE_MAP: '', MAP_UV: 'uv' },
         vertexShader: THREE.ShaderLib.basic.vertexShader,
-        fragmentShader: 'uniform float uOffset;\n' + THREE.ShaderLib.basic.fragmentShader.replace('#include <map_fragment>',
+        fragmentShader: 'uniform float uOffset, uTint;\n' + TINT_GLSL + THREE.ShaderLib.basic.fragmentShader.replace('#include <map_fragment>',
           // The authored flame is not vertically tileable. A traveling distortion
           // flows upward while anchoring all four edges, keeping its base and tip.
           THREE.ShaderChunk.map_fragment.replace('texture2D( map, vMapUv )',
-            'texture2D( map, vMapUv + vec2( sin( vMapUv.y * 16.0 + uOffset * 6.283185 ) * 0.022, sin( vMapUv.y * 12.0 + uOffset * 6.283185 ) * 0.035 ) * sin( vMapUv.y * 3.141593 ) * sin( vMapUv.x * 3.141593 ) )')),
+            'texture2D( map, vMapUv + vec2( sin( vMapUv.y * 16.0 + uOffset * 6.283185 ) * 0.022, sin( vMapUv.y * 12.0 + uOffset * 6.283185 ) * 0.035 ) * sin( vMapUv.y * 3.141593 ) * sin( vMapUv.x * 3.141593 ) )')
+            + '\n\tdiffuseColor.rgb = bsTint( diffuseColor.rgb / max( diffuse, vec3( .001 ) ), uTint ) * diffuse;'),
         transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: true,
       });
     };
