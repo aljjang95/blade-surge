@@ -83,3 +83,26 @@ test('영웅이 강타(kb≥6)를 맞으면 짧게 정지하고, 경타·동작 
   expect(dodging.player.hurt(20, { dirz: 1, kb: 7 })).toBe(false);
   expect(dodging.game.timeCtl.stop).toBe(0);
 });
+
+test('영웅 달리기 재생 배율은 실제 이동 속도를 따라가 디딤발 미끄러짐 비를 목표값으로 맞춘다', async () => {
+  const { heroRunTempo } = await import('../src/game/feel.js');
+  const L = FEEL.locomotion;
+  for (const [id, stride] of Object.entries(L.heroRunStride)) {
+    for (const speed of [5.6, 7.2, 9]) {
+      const ts = heroRunTempo(id, speed);
+      if (ts > L.min && ts < L.max) expect(speed / (stride * ts)).toBeCloseTo(L.targetSlide, 6);
+    }
+    expect(heroRunTempo(id, 1000)).toBe(L.max); expect(heroRunTempo(id, .1)).toBe(L.min);
+  }
+  // 실측 보폭이 없는 영웅은 예전 고정 배율
+  expect(heroRunTempo('unknown', 6, 0)).toBeCloseTo(1.1, 9); expect(heroRunTempo('unknown', 6, 1)).toBeCloseTo(1.45, 9);
+  // 실제 Player.handleInput 경로: 걷기 시작과 질주에서 같은 미끄러짐 비
+  const f = createCombatFlowFixture(runtime, 'knight'), p: any = f.player, dt = 1 / 60;
+  f.game.input.move.x = 1;
+  p.handleInput(f.game.input, dt);
+  const first = p.vel.length() / (L.heroRunStride.knight * p.action.timeScale);
+  for (let i = 0; i < 120; i++) p.handleInput(f.game.input, dt);
+  expect(p.sprint).toBe(1);
+  const sprint = p.vel.length() / (L.heroRunStride.knight * p.action.timeScale);
+  expect(first).toBeCloseTo(L.targetSlide, 3); expect(sprint).toBeCloseTo(L.targetSlide, 3);
+});

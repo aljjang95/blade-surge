@@ -17,6 +17,14 @@ export const FEEL = Object.freeze({
     weightCap: 1,      // 무게 합 상한(전부 겹쳐도 기본의 2배까지)
     max: .15,          // 한 번의 정지 상한(ImpactClock HITSTOP_CAP .18 보다 작다)
   }),
+  // 달리기 발 미끄러짐: heroRunStride 는 Running_A 를 배율 1 로 제자리 재생할 때 디딤발이 뒤로 가는 화면 속도(m/s).
+  // tools/anim-audit-qa.mjs(스키닝 정점 기준, 2026-10-22) 실측. 이동 속도 / (보폭 속도 × targetSlide) 로 재생 배율을 정한다.
+  // 예전 고정 배율(1.1 + 질주 .35)은 디딤발이 몸 이동의 42–70%만 따라가 얼음 위를 미끄러지듯 보였다(feel-fixture run 띠).
+  // targetSlide 1.35 는 발이 몸 이동의 74% 를 따라가게 남겨 2등신 캐릭터 다리가 지나치게 빨라 보이지 않게 하는 절충값이다.
+  locomotion: Object.freeze({
+    heroRunStride: Object.freeze({ knight: 2.77, barbarian: 2.74, mage: 3.55, rogue: 3.44, ranger: 3.22 }),
+    targetSlide: 1.35, min: .7, max: 2.6,
+  }),
   // 넉백 속도는 매 초 keep 배로 줄어든다(지수 마찰). 초기 속도 v 의 총 이동 = v / -ln(keep). 몰이(pull)도 같은 속도 벡터를 쓰므로 값은 바꾸지 않는다.
   knockback: Object.freeze({ keep: .02 }),
   // 피격 섬광: 가벼운 타격은 그대로(gain 1), 무거울수록 길고 밝다.
@@ -106,6 +114,13 @@ export function hitWeight({ dealt = 0, maxHp = 0, crowd = 1, elite = false, kill
 export function weightedHitstop(base, weight) {
   if (!(base > 0)) return 0;
   return Math.min(FEEL.hitstop.max, base * (1 + Math.max(0, num(weight))));
+}
+
+/** 영웅 달리기 클립 재생 배율. speed 는 실제 이동 속도(m/s, 질주·버프·둔화 반영). 실측 보폭이 없는 영웅은 예전 배율을 쓴다. */
+export function heroRunTempo(heroId, speed, sprint = 0) {
+  const L = FEEL.locomotion, stride = L.heroRunStride[heroId];
+  if (!(stride > 0) || !(speed > 0)) return 1.1 + Math.max(0, num(sprint)) * .35;
+  return clamp(speed / (stride * L.targetSlide), L.min, L.max);
 }
 
 /** 넉백 속도 감쇠 배율(dt 초 동안). 프레임 크기와 무관하게 같은 곡선이다. */

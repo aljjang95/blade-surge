@@ -11,7 +11,7 @@ import { GradeAura, resolveHeroGrade } from '../engine/grade-aura.js';
 import { CONTROL_ULT_GAIN, ultimateLockDuration } from './control-rewards.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC, DODGE_INVULN_SEC } from './progression.js';
-import { FEEL, dodgeCancelOpen, comboQueueOpen, skillCancelOpen } from './feel.js';
+import { FEEL, dodgeCancelOpen, comboQueueOpen, skillCancelOpen, heroRunTempo } from './feel.js';
 import { RangerAim, aimTargetValid, clearShot } from './ranger-aim.js';
 import { enemyImpactIn } from './enemies.js';
 import { SkillAimView } from './skill-aim/aim-view.js';
@@ -200,7 +200,8 @@ export class Player extends Actor {
         this.vel.copy(this.moveDir).multiplyScalar(spd);
         this.faceDir(this.moveDir.x, this.moveDir.z);
         if (this.state !== 'move') { this.state = 'move'; this.play('Running_A', { fade: 0.15 }); }
-        this.action.timeScale = (1.1 + this.sprint * 0.35) * this.buffs.spd;
+        // 재생 배율은 실제 이동 속도(질주·버프·둔화 포함)를 따라가 디딤발이 바닥에서 덜 미끄러진다(feel.js locomotion).
+        this.action.timeScale = this.def.id in FEEL.locomotion.heroRunStride ? heroRunTempo(this.def.id, spd, this.sprint) : (1.1 + this.sprint * 0.35) * this.buffs.spd;
         this.footT += dt;
         if (this.footT > (this.sprint > 0.5 ? 0.2 : 0.28)) { this.footT = 0; this.game.fx.dust(this.pos, { n: this.sprint > 0.5 ? 3 : 2, size: 0.6 + this.sprint * 0.4, life: 0.5, speed: 1 }); }
         if (this.sprint > 0.6 && Math.random() < dt * 8) this.game.fx.embers(this.pos, this.def.color, { n: 1, radius: 0.4, life: 0.35, size: 0.2, rise: 1 });
