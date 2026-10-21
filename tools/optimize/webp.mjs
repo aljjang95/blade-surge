@@ -4,9 +4,9 @@
 import sharp from 'sharp';
 
 /** 변환 규칙·합격선을 바꾸면 올려서 캐시를 무효화한다. */
-export const WEBP_OPTIMIZER_VERSION = 'image-ssim-v3';
+export const WEBP_OPTIMIZER_VERSION = 'image-ssim-v4';
 /** 합격선 세 단계. 캐릭터·적·장비를 그린 이미지는 STRICT, 배경·UI 는 RELAXED, 법선·거칠기처럼 값이 의미인 텍스처는 DATA. */
-export const TARGETS = Object.freeze({ strict: { ssim: 0.985, psnr: 36 }, relaxed: { ssim: 0.98, psnr: 35 }, data: { ssim: 0.99, psnr: 40 } });
+export const TARGETS = Object.freeze({ strict: { ssim: 0.985, psnr: 36 }, relaxed: { ssim: 0.975, psnr: 34 }, data: { ssim: 0.99, psnr: 40 } });
 const MIN_GAIN = 0.92;
 const SEARCH = { lo: 50, hi: 92 };
 
