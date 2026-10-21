@@ -614,6 +614,6 @@ export class Meta {
   dailyDeferrable() {
     if (this.combatResultSeen) return false;
     const stats = this.app.expedition?.s?.stats || {};
-    return isFirstSortie(this.eco.s, { history: this.eco.s.masterworks?.history, dungeonsCleared: Object.values(stats).reduce((n, v) => n + (Number(v) > 0 ? 1 : 0), 0) });
+    return isFirstSortie(this.eco.s, { history: this.eco.s.masterworks?.history, dungeonsCleared: (Number(stats.dungeonWins) || 0) + (Number(stats.campaignWins) || 0) + (Number(stats.arenaWins) || 0) });
   }
 }
