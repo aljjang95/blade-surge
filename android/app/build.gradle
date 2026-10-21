@@ -2,6 +2,12 @@ apply plugin: 'com.android.application'
 
 def signingPath = System.getenv('BLADESURGE_KEYSTORE')
 def signingPassword = System.getenv('BLADESURGE_KEYSTORE_PASSWORD')
+// 원격 서명 서비스(apex sign/play)가 업로드 키로 직접 서명하므로, 명시적으로 켠 경우에만 서명 없는 릴리스를 허용한다.
+// 디버그 키로 대체하지 않으며 signingConfig 자체를 붙이지 않는다.
+def unsignedForSigner = System.getenv('BLADESURGE_UNSIGNED_FOR_SIGNER') == '1'
+def versionCodeValue = (System.getenv('BLADESURGE_VERSION_CODE') ?: '1')
+if (!versionCodeValue.matches('[1-9][0-9]{0,8}')) throw new GradleException('BLADESURGE_VERSION_CODE는 양의 정수여야 합니다.')
+def versionNameValue = (System.getenv('BLADESURGE_VERSION_NAME') ?: '1.0')
 def providers = new groovy.json.JsonSlurper().parse(rootProject.file('../config/store-providers.json'))
 def adProvider = { channel ->
     def prefix = 'BLADESURGE_' + channel.toUpperCase()
@@ -32,8 +38,8 @@ android {
         applicationId "com.theluxurylord.bladesurge"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode versionCodeValue.toInteger()
+        versionName versionNameValue
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -58,7 +64,7 @@ android {
             buildConfigField 'String', 'STORE_AD_UNIT_ID', '"ca-app-pub-3940256099942544/1033173712"'
         }
         release {
-            if (signingPath && signingPassword) signingConfig signingConfigs.release
+            if (!unsignedForSigner && signingPath && signingPassword) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
@@ -68,8 +74,8 @@ android {
 // A release must use the app's own persistent key, never the debug certificate.
 tasks.matching { it.name == 'preReleaseBuild' || it.name.matches('pre.+ReleaseBuild') }.configureEach {
     doFirst {
-        if (!signingPath || !signingPassword || !file(signingPath).isFile()) {
-            throw new GradleException('Provide BLADESURGE_KEYSTORE and BLADESURGE_KEYSTORE_PASSWORD for a signed release.')
+        if (!unsignedForSigner && (!signingPath || !signingPassword || !file(signingPath).isFile())) {
+            throw new GradleException('Provide BLADESURGE_KEYSTORE and BLADESURGE_KEYSTORE_PASSWORD for a signed release (or BLADESURGE_UNSIGNED_FOR_SIGNER=1 for a remote-signer build).')
         }
         def channel = name.toLowerCase().contains('googleplay') ? 'googleplay' : name.toLowerCase().contains('onestore') ? 'onestore' : null
         if (!channel) throw new GradleException('스토어 채널이 지정된 릴리스가 필요합니다.')
