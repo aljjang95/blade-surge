@@ -101,6 +101,9 @@ const vfxRandom = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; 
 
 /**
  * 스킬 시전 순간의 장악 레이어. 판정·피해·타이밍은 건드리지 않는다.
+ * @param {any} game @param {string} skillId @param {any} player
+ * @param {{data?: {aimPoint?: THREE.Vector3}}|null} [ctx]
+ * @param {((game: any, player: any, range: number, radius: number) => THREE.Vector3|null)|null} [seek] 조준점이 없을 때 판정과 같은 밀집 적 탐색
  * @returns {boolean} 레시피를 실행했는지
  */
 export function castSkillVfx(game, skillId, player, ctx = null, seek = null) {
