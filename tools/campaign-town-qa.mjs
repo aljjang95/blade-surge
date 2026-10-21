@@ -34,7 +34,10 @@ async function open(name, seed) {
   const shot = async (label) => { const file = `${name}-${label}.png`; await page.screenshot({ path: path.join(out, file), timeout: 120000 }); report.shots.push(file); return file; };
   const tap = async (selector, timeout = 20000) => {
     const target = page.locator(selector).first();
-    try { await target.tap({ timeout }); } catch (error) { const box = await target.boundingBox(); if (!box) { await shot('tap-fail-' + selector.replace(/[^a-z0-9]+/gi, '_').slice(0, 40)).catch(() => {}); throw error; } await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2); }
+    try { await target.tap({ timeout }); } catch (error) {
+      // 터치가 이미 전달된 뒤(프레임이 느려 ack 만 늦은 경우)에는 다시 누르면 토글형 UI 가 도로 닫힌다. 다시 누르지 않는다.
+      if (/performing tap action/.test(String(error.message))) { await page.waitForTimeout(800); return; }
+      const box = await target.boundingBox(); if (!box) { await shot('tap-fail-' + selector.replace(/[^a-z0-9]+/gi, '_').slice(0, 40)).catch(() => {}); throw error; } await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2); }
   };
   const boot = async () => {
     await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 120000 });
@@ -56,11 +59,26 @@ async function openCampaign({ page, tap }) {
   if (tab !== 'stage') await page.evaluate(() => window.app.meta.openTab('stage'));
 }
 
+// 보스 띠(3.4초)·해금 띠(4.8초)는 실제 시간으로 사라지지만 SwiftShader 에서는 한 프레임 캡처가 그보다 오래 걸린다.
+// 나타나는 순간 같은 모양의 복제본을 애니메이션 없이 붙잡아 두어 캡처·측정이 놓치지 않게 한다(원본 동작은 그대로).
+async function holdBanners(page) {
+  await page.evaluate(() => {
+    if (window.__qaHold) return; window.__qaHold = true;
+    new MutationObserver((records) => { for (const r of records) for (const n of r.addedNodes) {
+      if (!(n instanceof HTMLElement) || n.dataset.qaHeld || !n.matches('.boss-intro, .region-unlock-banner')) continue;
+      const c = n.cloneNode(true); c.dataset.qaHeld = '1'; c.style.animation = 'none'; c.style.opacity = '1'; c.style.transform = n.classList.contains('boss-intro') ? 'translateX(-50%)' : c.style.transform;
+      n.after(c);
+    } }).observe(document.body, { childList: true, subtree: true });
+  });
+}
+const releaseBanners = (page) => page.evaluate(() => document.querySelectorAll('[data-qa-held]').forEach((n) => n.remove()));
+
 // AUTO 전투를 보스 등장 또는 종료까지 가속한다.
 async function fight(page, { until }) {
   await page.waitForFunction(() => window.app.battle?.active && !window.app.stageStarting && !!window.app.battle.player, null, { timeout: 180000 });
   await page.evaluate(() => { const a = window.app; a.testPause = true; a.battle.player.auto = true; a.ui.closeModal(); });
   await page.evaluate(installMetricsDriver, { storyEvents: [] });
+  await holdBanners(page);
   for (let chunk = 0; chunk < 240; chunk++) {
     const s = await page.evaluate((until) => {
       const a = window.app, b = a.battle, P = b.player; let seen = false;
@@ -116,7 +134,7 @@ try {
     check('1-5 보스방에서 중간 보스가 등장한다', seen.seen, seen);
     await t.page.waitForTimeout(250);
     await t.shot('01-boss-intro-and-hp-bar');
-    const ui = await t.page.evaluate(() => { const r = (s) => { const n = document.querySelector(s); if (!n) return null; const b = n.getBoundingClientRect(); return { x: Math.round(b.x), y: Math.round(b.y), r: Math.round(b.right), b: Math.round(b.bottom) }; }; return { intro: r('.boss-intro'), introText: document.querySelector('.boss-intro')?.textContent, bar: r('#bossbar'), rank: document.querySelector('#bossbar .boss-rank')?.textContent, joy: r('.joy-base'), attack: r('#btn-attack') }; });
+    const ui = await t.page.evaluate(() => { const r = (s) => { const n = document.querySelector(s); if (!n) return null; const b = n.getBoundingClientRect(); return { x: Math.round(b.x), y: Math.round(b.y), r: Math.round(b.right), b: Math.round(b.bottom) }; }; return { intro: r('.boss-intro'), introText: (document.querySelector('.boss-intro[data-qa-held]') || document.querySelector('.boss-intro'))?.textContent, bar: r('#bossbar'), rank: document.querySelector('#bossbar .boss-rank')?.textContent, joy: r('.joy-base'), attack: r('#btn-attack') }; });
     check('중간 보스 띠가 상단 가장자리에 있고 체력 막대에 계급 칩이 붙는다', ui.intro && ui.intro.y <= 12 && ui.intro.b <= 46 && /중간 보스/.test(ui.introText) && ui.rank === '중간 보스', ui);
     const end = await fight(t.page, { until: 'end' });
     await t.page.evaluate(() => { for (let i = 0; i < 360; i++) window.app.step(1 / 60, false); }); await t.page.waitForTimeout(2600);
@@ -140,17 +158,17 @@ try {
     check('1-10 보스방에서 지역 보스가 등장한다', seen.seen, seen);
     await t.page.waitForTimeout(250);
     await t.shot('02-boss-intro-and-hp-bar');
-    const ui = await t.page.evaluate(() => ({ introText: document.querySelector('.boss-intro')?.textContent, rank: document.querySelector('#bossbar .boss-rank')?.textContent, data: document.querySelector('.boss-intro')?.dataset.rank }));
+    const ui = await t.page.evaluate(() => ({ introText: (document.querySelector('.boss-intro[data-qa-held]') || document.querySelector('.boss-intro'))?.textContent, rank: document.querySelector('#bossbar .boss-rank')?.textContent, data: (document.querySelector('.boss-intro[data-qa-held]') || document.querySelector('.boss-intro'))?.dataset.rank }));
     check('지역 보스 띠와 체력 막대 계급 칩', /지역 보스/.test(ui.introText || '') && ui.rank === '지역 보스' && ui.data === 'regionboss', ui);
     await fight(t.page, { until: 'end' });
     await t.page.evaluate(() => { for (let i = 0; i < 360; i++) window.app.step(1 / 60, false); });
-    await t.page.waitForSelector('.region-unlock-banner', { timeout: 15000 }).catch(() => {});
+    await t.page.waitForSelector('.region-unlock-banner[data-qa-held]', { timeout: 30000, state: 'attached' }).catch(() => {});
     await t.page.waitForTimeout(700);
     await t.shot('03-result-unlock-celebration');
-    const res = await t.page.evaluate(() => ({ win: window.app.battle.result?.win, banner: document.querySelector('.region-unlock-banner')?.textContent, bannerTop: Math.round(document.querySelector('.region-unlock-banner')?.getBoundingClientRect().top ?? -1), state: window.app.eco.campaignTownState(), unlocked: window.app.eco.s.progress.unlocked, stars: Object.keys(window.app.eco.s.progress.stars).length, gems: window.app.eco.s.gems }));
+    const res = await t.page.evaluate(() => ({ win: window.app.battle.result?.win, banner: (document.querySelector('.region-unlock-banner[data-qa-held]') || document.querySelector('.region-unlock-banner'))?.textContent, bannerTop: Math.round((document.querySelector('.region-unlock-banner[data-qa-held]') || document.querySelector('.region-unlock-banner'))?.getBoundingClientRect().top ?? -1), state: window.app.eco.campaignTownState(), unlocked: window.app.eco.s.progress.unlocked, stars: Object.keys(window.app.eco.s.progress.stars).length, gems: window.app.eco.s.gems }));
     check('새 지역 해금 띠가 위쪽 가장자리에 나온다', res.win === true && /새 지역 해금 · 불씨 용광로 마을/.test(res.banner || '') && res.bannerTop <= 12, res);
     check('해금은 한 번만: 다음 지역 열림·마을 저장·첫 클리어 보석 1회', res.unlocked === 11 && res.state.latest === 2 && res.state.current === 2 && res.state.celebrated === 2 && res.stars === before.stars + 1 && res.gems - before.gems >= 300, { before, res });
-    await t.page.waitForTimeout(4600);
+    await releaseBanners(t.page); await t.page.waitForTimeout(4600);
     await t.page.evaluate(() => { window.app.testPause = false; }); // 전투 가속이 끝났으므로 실시간 루프를 되살린다
     await t.tap('#btn-result-lobby');
     await t.page.waitForFunction(() => window.app.mode === 'lobby', undefined, { timeout: 60000 });
@@ -204,9 +222,9 @@ try {
     await t.shot('01-lobby-first-sortie');
     const lobby = await t.page.evaluate(() => ({ town: window.app.eco.campaignTownState(), chip: document.querySelector('#campaign-town-chip')?.textContent, label: document.querySelector('#citadel-command')?.textContent?.replace(/\s+/g, ' ').slice(0, 80) }));
     check('신규 저장은 1지역 마을과 첫 출격 카드로 시작한다', lobby.town.current === 1 && /종지기/.test(lobby.chip) && /첫 출격/.test(lobby.label), lobby);
+    // 첫 출격 카드는 곧바로 캠페인 1-1 전투를 시작한다(준비 대화상자 없음).
     await t.tap('#citadel-dungeon-prepare'); await t.page.waitForTimeout(800);
-    await t.shot('02-first-sortie-prepare');
-    await t.tap('dialog[open] .citadel-hub-go');
+    await t.shot('02-first-sortie-loading');
     await t.page.waitForFunction(() => window.app.mode === 'battle' && window.app.battle?.active && !window.app.stageStarting, undefined, { timeout: 180000 }).catch(() => {});
     await t.page.waitForTimeout(2500);
     const battle = await t.page.evaluate(() => ({ mode: window.app.mode, code: window.app.battle?.stage?.code, tutorial: !!document.querySelector('#tutorial.show, .tutorial-card, #tut-card:not(.hidden)'), tut: window.app.tutorial?.active ?? null }));
