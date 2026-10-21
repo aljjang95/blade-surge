@@ -23,6 +23,7 @@ import { BOSS_INTRO, EVENT_SOUND_FILES, EVENT_SOUNDS, lootSound } from './combat
 // SFX 두 버스를 합친 뒤의 이득. 마스터 리미터 앞 정점을 낮춰 타격 트랜지언트가 찌그러지지 않게 한다.
 export const SFX_SUM_GAIN = 0.5;
 const BOSS_WARNING_KINDS = new Set(['slam', 'crusher', 'soulrain', 'fan']);
+const EVENT_LOAD_TIMEOUT_MS = 30000;
 // 마스터 리미터: 음악·SFX·음성을 합친 출력이 0dBFS 를 넘지 않게 한다. 브라우저 압축기의 자동 메이크업
 // (-0.6 × 0dBFS 입력의 출력 dB)을 계산해 출력 이득에서 되돌린다 → 천장 약 -1.5dBFS.
 export const MASTER_LIMITER = Object.freeze({ threshold: -2, knee: 0, ratio: 20, attack: 0.001, release: 0.12 });
@@ -97,16 +98,29 @@ export class AudioSys {
     this.voiceGain = this.ctx.createGain(); this.voiceGain.gain.value = 1; this.voiceGain.connect(this.master); this._barkLast = {};
     this.setMix(this.mix);
     await Promise.all(SFX_FILES.map((n) => this._loadSfx(n)));
-    for (const n of EVENT_SOUND_FILES) this._loadSfx(n);
+    // 사건 효과음은 기다리지 않는다. 로비 장면 준비와 겹쳐 응답이 늦어도(소프트웨어 렌더 실측 9초) 넉넉히 기다린다.
+    for (const n of EVENT_SOUND_FILES) this._loadSfx(n, EVENT_LOAD_TIMEOUT_MS);
     return true;
   }
-  async _loadSfx(n) {
+  async _loadSfx(n, timeoutMs = 8000) {
     if (this.buffers[n]) return this.buffers[n];
-    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 8000);
-    try { const ab = await (await fetch(sfxUrl(n), { signal: controller.signal })).arrayBuffer(); this.buffers[n] = await this.ctx.decodeAudioData(ab); }
-    catch (e) { console.warn('sfx fail', n); }
-    finally { clearTimeout(timeout); }
-    return this.buffers[n] || null;
+    if (this._sfxLoads?.has(n)) return this._sfxLoads.get(n);
+    const pending = (async () => {
+      const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), timeoutMs);
+      try { const ab = await (await fetch(sfxUrl(n), { signal: controller.signal })).arrayBuffer(); this.buffers[n] = await this.ctx.decodeAudioData(ab); }
+      catch (e) { console.warn('sfx fail', n); }
+      finally { clearTimeout(timeout); }
+      return this.buffers[n] || null;
+    })();
+    (this._sfxLoads ||= new Map()).set(n, pending);
+    pending.finally(() => this._sfxLoads.delete(n));
+    return pending;
+  }
+  /** 사건 효과음: 준비됐으면 true. 없으면 지금은 대체음을 쓰고 뒤에서 다시 불러온다(첫 시도가 로비 로딩과 겹쳐 시간 초과될 수 있다). */
+  _eventReady(name) {
+    if (this.buffers[name]) return true;
+    if (this.ctx) this._loadSfx(name, EVENT_LOAD_TIMEOUT_MS);
+    return false;
   }
   /** 영웅 효과음 세트(휘두름·마무리·타격·궁극기·스킬 8)를 한 번만 불러온다. 아직 없으면 그 순간은 공용 효과로 대신한다. */
   preloadHero(heroId) {
@@ -495,7 +509,7 @@ export class AudioSys {
   loot(rarity = 'N') {
     if (!this.enabled || !this.ctx) return;
     const spec = lootSound(rarity);
-    if (this.buffers[spec.sound]) {
+    if (this._eventReady(spec.sound)) {
       this.play(spec.sound, { vol: spec.vol, rate: spec.rate, vary: 0.03, min: 0.12, priority: rarity === 'L' || rarity === 'SSR' ? 5 : 4 });
       if (spec.duck) { this.duck(spec.duck, 1.6, { hold: 0.35, smooth: true, attack: 0.05 }); this.play('jingle_legend', { vol: 0.45, delay: 0.12, min: 0.5, priority: 4 }); }
       return;
@@ -510,7 +524,7 @@ export class AudioSys {
   bossIntro(stage = null) {
     const spec = BOSS_INTRO[bossIntroKind(stage)] || BOSS_INTRO.boss;
     if (!this.enabled || !this.ctx || !this.mix.sfx) return null;
-    if (!this.buffers[spec.sound]) { this.waveHorn({ vol: 0.5, boss: true }); return null; }
+    if (!this._eventReady(spec.sound)) { this.waveHorn({ vol: 0.5, boss: true }); return null; }
     this.duck(spec.duck, spec.dur, { hold: spec.dur * 0.35, smooth: true, attack: 0.05 });
     this.vibe([30, 30, 70]);
     return this.play(spec.sound, { vol: spec.vol, rate: spec.rate, vary: 0, min: 1, priority: 5 });
@@ -518,21 +532,21 @@ export class AudioSys {
   /** 가챠 충전(연출 시작). */
   gachaCharge() {
     if (!this.enabled || !this.ctx) return;
-    if (this.buffers[EVENT_SOUNDS.gachaCharge]) this.play(EVENT_SOUNDS.gachaCharge, { vol: 0.7, vary: 0, min: 0.3, priority: 4 });
+    if (this._eventReady(EVENT_SOUNDS.gachaCharge)) this.play(EVENT_SOUNDS.gachaCharge, { vol: 0.7, vary: 0, min: 0.3, priority: 4 });
     else this.magic({ vol: 0.4, base: 392, notes: [0, 4, 7, 12, 16, 19], step: 0.09 });
   }
   /** 가챠 최고 등급 공개 섬광: SSR 은 전설 징글 + 저역 충격 + BGM 덕킹, SR 은 크리스털 차임, R 은 종. */
   gachaReveal(best = 'R') {
     if (!this.enabled || !this.ctx) return;
     if (best === 'SSR') { this.duck(0.35, 2.2, { hold: 0.6, smooth: true, attack: 0.05 }); this.play('jingle_legend', { vol: 0.9, min: 0.3, priority: 5 }); this.boom({ vol: 0.55, dur: 0.8, low: 48 }); return; }
-    if (best === 'SR' && this.buffers[EVENT_SOUNDS.gachaRevealSr]) { this.play(EVENT_SOUNDS.gachaRevealSr, { vol: 0.85, vary: 0, min: 0.2, priority: 4 }); this.play('ui_bong', { vol: 0.45, priority: 4 }); return; }
+    if (best === 'SR' && this._eventReady(EVENT_SOUNDS.gachaRevealSr)) { this.play(EVENT_SOUNDS.gachaRevealSr, { vol: 0.85, vary: 0, min: 0.2, priority: 4 }); this.play('ui_bong', { vol: 0.45, priority: 4 }); return; }
     this.play('ui_bong', { vol: 0.9 });
   }
   /** 가챠 카드 한 장 뒤집기(등급별). */
   gachaCard(rar = 'R') {
     if (!this.enabled || !this.ctx) return;
     if (rar === 'SSR') { this.play('jingle_legend', { vol: 0.9, min: 0.15, priority: 5 }); this.thump({ vol: 0.6, freq: 55, dur: 0.4 }); }
-    else if (rar === 'SR') { if (this.buffers[EVENT_SOUNDS.gachaRevealSr]) this.play(EVENT_SOUNDS.gachaRevealSr, { vol: 0.6, rate: 1.06, min: 0.05, priority: 4 }); else this.play('ui_glass', { vol: 0.7, rate: 1.2 }); }
+    else if (rar === 'SR') { if (this._eventReady(EVENT_SOUNDS.gachaRevealSr)) this.play(EVENT_SOUNDS.gachaRevealSr, { vol: 0.6, rate: 1.06, min: 0.05, priority: 4 }); else this.play('ui_glass', { vol: 0.7, rate: 1.2 }); }
     else this.play('card_place', { vol: 0.5, min: 0.03 });
   }
   /** 코인/재화 픽업 (피치 상승 콤보) */
@@ -650,7 +664,7 @@ export class AudioSys {
     if (this.enabled && this.ctx) {
       const fam = kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind.startsWith('role:') ? 'tele_magic' : kind === 'slam' || kind === 'crusher' ? 'tele_slam' : 'tele_melee';
       // 보스의 큰 기술(내려찍기·탄막·부채꼴)은 짧은 저역 경보를 얹는다. 3초에 한 번까지라 패턴마다 울리지 않는다.
-      if (boss && BOSS_WARNING_KINDS.has(kind) && this.buffers[EVENT_SOUNDS.bossWarning]) this.play(EVENT_SOUNDS.bossWarning, { vol: 0.55, vary: 0.02, min: 3, priority: 4 });
+      if (boss && BOSS_WARNING_KINDS.has(kind) && this._eventReady(EVENT_SOUNDS.bossWarning)) this.play(EVENT_SOUNDS.bossWarning, { vol: 0.55, vary: 0.02, min: 3, priority: 4 });
       if (this._fx(fam, { vol: boss ? 0.42 : 0.24, rate: boss ? 0.85 : 1, priority: boss ? 4 : 2 })) { this.vibe(urgent || boss ? [10, 14, 24] : 7); return; }
       if (kind === 'soulrain' || kind === 'fan' || kind === 'magic' || kind.startsWith('role:')) this.charge({ vol: boss ? 0.34 : 0.18, dur: boss ? 0.58 : 0.36 });
       else if (kind === 'slam' || kind === 'crusher') this.thump({ vol: boss ? 0.34 : 0.18, freq: boss ? 54 : 76, dur: 0.24 });

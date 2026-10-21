@@ -199,3 +199,19 @@ test('보스의 큰 기술 예고에만 경보음을 얹고 3초 안에 다시 �
   expect(playing(s).filter((n: string) => n === EVENT_SOUNDS.bossWarning).length).toBe(2);
   const mob = sfxFixture(); mob.enemyTelegraph({ kind: 'slam', boss: false }); expect(playing(mob)).not.toContain(EVENT_SOUNDS.bossWarning);
 });
+
+test('사건 효과음 첫 로드가 실패해도 다음 사건 때 다시 불러오고, 그 사이에는 대체음을 낸다', async () => {
+  const s = sfxFixture(); delete s.buffers[BOSS_INTRO.finale.sound];
+  let calls = 0; const decoded = { name: BOSS_INTRO.finale.sound, duration: 3 };
+  const realFetch = globalThis.fetch;
+  (globalThis as any).fetch = async () => { calls++; return { arrayBuffer: async () => ({}) }; };
+  s.ctx.decodeAudioData = async () => decoded;
+  let horn = 0; s.waveHorn = () => { horn++; };
+  try {
+    expect(s.bossIntro(stageDef(1, 10))).toBeNull(); expect(horn).toBe(1);
+    s.bossIntro(stageDef(1, 10)); expect(calls).toBe(1); // 같은 파일을 겹쳐 받지 않는다
+    await s._loadSfx(BOSS_INTRO.finale.sound);
+    s.ctx.currentTime += 2; s.bossIntro(stageDef(1, 10));
+    expect(playing(s)).toEqual([BOSS_INTRO.finale.sound]);
+  } finally { (globalThis as any).fetch = realFetch; }
+});
