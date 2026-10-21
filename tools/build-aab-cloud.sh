@@ -40,7 +40,7 @@ npx cap sync android
 
 # 이전 산출물이 섞이지 않게 같은 변형의 번들만 지우고 다시 만든다.
 rm -rf android/app/build/outputs/bundle/googleplayRelease
-./android/gradlew -p android bundleGoogleplayRelease --no-daemon --console=plain
+bash android/gradlew -p android bundleGoogleplayRelease --no-daemon --console=plain
 
 aab="$(find android/app/build/outputs/bundle/googleplayRelease -maxdepth 1 -name '*.aab' | head -n 1)"
 [ -n "$aab" ] || { echo "AAB 산출물을 찾지 못했습니다." >&2; exit 1; }
