@@ -15,6 +15,7 @@
  * 필요한 것: CLOUDFLARE_API_TOKEN의 승인된 자식 프로세스 주입
  */
 import { execFileSync } from 'child_process';
+import { cloudflareApiBase } from './deploy-control.mjs';
 
 const ACC = process.env.CLOUDFLARE_ACCOUNT_ID || 'b761ad56f2b49b27a0f8eaf0928848a3';
 const DB = process.env.APEX_RSI_DB || '1e1295d4-01b8-4877-951e-8c100b4d7473';
@@ -22,10 +23,11 @@ const TOKEN = process.env.CLOUDFLARE_API_TOKEN;
 const REPO = process.env.GH_REPO || 'aljjang95/blade-surge';
 const SESSION = process.env.CLAUDE_SESSION_ID || process.env.SESSION || `pid-${process.pid}-${Date.now().toString(36)}`;
 const STALE_HOURS = 6;
+const API = cloudflareApiBase();
 if (!TOKEN) { console.error('CLOUDFLARE_API_TOKEN 이 없다 — 기존 로컬 담당의 승인된 보안 주입을 확인하세요'); process.exit(1); }
 
 async function q(sql, params = []) {
-  const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${ACC}/d1/database/${DB}/query`, {
+  const r = await fetch(`${API}/accounts/${ACC}/d1/database/${DB}/query`, {
     method: 'POST',
     headers: { authorization: `Bearer ${TOKEN}`, 'content-type': 'application/json' },
     body: JSON.stringify({ sql, params }),
