@@ -1,0 +1,49 @@
+/* 전투 HUD 가림 정리 (lane f4-combat-hud). 규칙: UI 는 영웅·앞길·위험물·착지점을 가리지 않는다. 피드백은 가장자리 띠나 월드 오브젝트에 둔다.
+ * 앞선 skin(storybook·oath-visual·mobile-combat)보다 항상 이기도록 선택자 우선순위를 일부러 높였다(:root 반복). 겹침 실측은 tools/combat-hud-overlap-qa.mjs. */
+
+/* 1) 콤보 칩: 영웅 HP 카드(EXP 막대 포함) 바로 아래 띠. 정확한 위치는 ui.js placeComboChip 이 카드 하단을 읽어 --combo-top 으로 준다. */
+@media (orientation: landscape) {
+  :root:root:root:root:root:root #hud .combo {
+    top: var(--combo-top, calc(107px + var(--sat, 0px))); left: calc(14px + var(--sal, 0px)); right: auto;
+    padding: 2px 9px 2px 8px; gap: 5px; border-radius: 7px; line-height: 1; opacity: .94;
+  }
+  :root:root:root:root:root:root #hud .combo b { font-size: 20px; line-height: 1; }
+  :root:root:root:root:root:root #hud .combo span { font-size: 9px; }
+}
+
+/* 3) 목표 카드: 전투 중에는 제목 한 줄·반투명. 탭하면 펼친다(.is-expanded, 5초 뒤 자동 접힘). */
+:root:root:root:root:root:root #hud #objective {
+  pointer-events: auto; cursor: pointer; justify-self: end; width: fit-content; max-width: 100%;
+  padding: 3px 9px; gap: 0; opacity: .6; transition: opacity .18s;
+}
+:root:root:root:root:root:root #hud #objective:not(.is-expanded) .battle-objective-action,
+:root:root:root:root:root:root #hud #objective:not(.is-expanded) .battle-objective-challenge { display: none; }
+:root:root:root:root:root:root #hud #objective.is-expanded { opacity: 1; padding: 8px 9px; gap: 4px; }
+:root:root:root:root:root:root #hud #objective:focus-visible { outline: 2px solid #ffe08a; outline-offset: 1px; opacity: 1; }
+
+/* 4) 방 진입 안내: 위쪽 가운데 가장자리 토스트. 읽을 수 있는 크기·대비로 잠깐 보였다가 사라진다. */
+:root:root:root:root:root:root #hud #map-tactics-context .map-tactics-context-copy { display: none; }
+:root:root:root:root:root:root #hud #map-tactics-context { justify-content: flex-end; }
+:root:root:root:root:root:root #hud #room-intro {
+  position: absolute; left: 50%; top: calc(58px + var(--sat, 0px)); z-index: 19; transform: translateX(-50%);
+  display: grid; gap: 2px; justify-items: center; text-align: center; max-width: min(40vw, 440px); box-sizing: border-box;
+  padding: 6px 14px 7px; border-radius: 9px; border: 1px solid #e6cf8f99; background: #061411f2; color: #f4f1e2;
+  box-shadow: 0 3px 12px #000a; pointer-events: none; opacity: 0;
+}
+:root:root:root:root:root:root #hud #room-intro[hidden] { display: none; }
+:root:root:root:root:root:root #hud #room-intro strong { font-size: clamp(13px, 1.9vw, 17px); font-weight: 800; color: #ffe9a6; line-height: 1.25; }
+:root:root:root:root:root:root #hud #room-intro span { font-size: clamp(12px, 1.5vw, 14px); font-weight: 600; line-height: 1.35; color: #f1f4ea; word-break: keep-all; overflow-wrap: anywhere; }
+:root:root:root:root:root:root #hud #room-intro.on { animation: room-intro-fade 5.2s ease both; }
+@keyframes room-intro-fade {
+  0% { opacity: 0; transform: translate(-50%, -6px); }
+  7% { opacity: 1; transform: translate(-50%, 0); }
+  82% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; transform: translate(-50%, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  @keyframes room-intro-fade { 0% { opacity: 0; } 7% { opacity: 1; } 82% { opacity: 1; } 100% { opacity: 0; } }
+}
+
+/* 6) 키보드 단축키 표시는 터치 입력일 때 숨긴다(html[data-input]은 input-modality.js 가 정한다). */
+html[data-input="touch"] #hud .skill-btn .key,
+html[data-input="touch"] #hud .exp-potions small { display: none; }
