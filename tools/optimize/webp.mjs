@@ -4,10 +4,11 @@
 import sharp from 'sharp';
 
 /** 변환 규칙·합격선을 바꾸면 올려서 캐시를 무효화한다. */
-export const WEBP_OPTIMIZER_VERSION = 'webp-ssim985-psnr36-v2';
-const TARGET = { ssim: 0.985, psnr: 36 };
+export const WEBP_OPTIMIZER_VERSION = 'image-ssim-v3';
+/** 합격선 세 단계. 캐릭터·적·장비를 그린 이미지는 STRICT, 배경·UI 는 RELAXED, 법선·거칠기처럼 값이 의미인 텍스처는 DATA. */
+export const TARGETS = Object.freeze({ strict: { ssim: 0.985, psnr: 36 }, relaxed: { ssim: 0.98, psnr: 35 }, data: { ssim: 0.99, psnr: 40 } });
 const MIN_GAIN = 0.92;
-const SEARCH = { lo: 60, hi: 90 };
+const SEARCH = { lo: 50, hi: 92 };
 
 /** 알파를 곱한 RGB(PSNR 용)와 그 휘도 평면(SSIM 용)을 만든다. 투명한 화소의 숨은 RGB 값은 비교에서 빠진다. */
 async function decodePremultiplied(input) {
@@ -55,12 +56,14 @@ function ssim(a, b, width, height) {
  * @param {Uint8Array} source 원본 WebP
  * @returns {Promise<{bytes: Uint8Array, meta: {quality: number, ssim: number, psnr: number}}|{skipped: string}>}
  */
-export async function optimizeWebp(source) {
+export async function optimizeWebp(source, TARGET = TARGETS.strict) {
   const metadata = await sharp(source).metadata();
-  if (metadata.format !== 'webp' || (metadata.pages || 1) > 1) return { skipped: '정지 WebP 가 아님' };
+  const jpeg = metadata.format === 'jpeg';
+  if ((metadata.format !== 'webp' && !jpeg) || (metadata.pages || 1) > 1) return { skipped: '정지 WebP/JPEG 가 아님' };
   const reference = await decodePremultiplied(source);
   const attempt = async (quality) => {
-    const bytes = new Uint8Array(await sharp(source).webp({ quality, effort: 5, smartSubsample: true, alphaQuality: 100 }).toBuffer());
+    const encoder = sharp(source);
+    const bytes = new Uint8Array(await (jpeg ? encoder.jpeg({ quality, mozjpeg: true }) : encoder.webp({ quality, effort: 5, smartSubsample: true, alphaQuality: 100 })).toBuffer());
     const decoded = await decodePremultiplied(bytes);
     if (decoded.width !== reference.width || decoded.height !== reference.height) return null;
     return { bytes, quality, ssim: ssim(reference.luma, decoded.luma, reference.width, reference.height), psnr: psnr(reference.rgb, decoded.rgb) };

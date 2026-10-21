@@ -10,12 +10,17 @@ import { fileURLToPath } from 'node:url';
 import os from 'node:os';
 import { Worker } from 'node:worker_threads';
 import { optimizeGlb, verifyOptimized, GLB_OPTIMIZER_VERSION } from './glb.mjs';
-import { optimizeWebp, WEBP_OPTIMIZER_VERSION } from './webp.mjs';
+import { WEBP_OPTIMIZER_VERSION, TARGETS } from './webp.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '../..');
 /** meshopt 디코더를 붙이지 않은 로더가 읽는 폴더. 이 폴더의 GLB 는 압축하지 않는다. */
 const NO_MESHOPT = ['models/armory-v1/'];
+/** 캐릭터 인물 그림은 재인코딩하지 않는다(대표님 피드백: 캐릭터가 뭉개져 보이면 안 된다). GLB 안 텍스처도 바이트 그대로 둔다. */
+const NO_WEBP_RECODE = ['img/tll/'];
+/** 이미지 폴더별 합격선. 캐릭터·적·장비를 그린 그림은 strict, 값이 의미인 텍스처는 data, 나머지 배경·UI 는 relaxed. */
+const IMAGE_TARGET = [['img/encounters/', 'strict'], ['img/gear/', 'strict'], ['img/item-renders/', 'strict'], ['img/armory-v1/', 'strict'], ['img/materials-cc0/', 'data'], ['textures/', 'data']];
+const targetFor = (rel) => IMAGE_TARGET.find(([prefix]) => rel.startsWith(prefix))?.[1] || 'relaxed';
 const sha256 = (bytes) => createHash('sha256').update(bytes).digest('hex');
 
 async function walk(dir) {
@@ -104,11 +109,11 @@ export async function optimizeDist(outDir, { log = console.log, cacheDir = path.
   // 3. WebP: 캐시에 없는 것만 작업자 스레드로 병렬 재인코딩한다.
   if (images) {
     const tasks = [];
-    for (const file of files.filter(f => f.endsWith('.webp')).sort()) {
+    for (const file of files.filter(f => /\.(webp|jpe?g)$/.test(f)).sort()) {
       const rel = path.relative(outDir, file).split(path.sep).join('/'), stat = await fs.stat(file);
-      if (stat.size < 12 * 1024) continue;
-      const source = new Uint8Array(await fs.readFile(file)), key = `${WEBP_OPTIMIZER_VERSION}-${sha256(source)}.webp`;
-      tasks.push({ file, rel, source, key, row: null });
+      if (stat.size < 12 * 1024 || NO_WEBP_RECODE.some(prefix => rel.startsWith(prefix))) continue;
+      const source = new Uint8Array(await fs.readFile(file)), target = targetFor(rel), key = `${WEBP_OPTIMIZER_VERSION}-${target}-${sha256(source)}.img`;
+      tasks.push({ file, rel, source, key, target, row: null });
     }
     const queue = [];
     for (const task of tasks) {
@@ -128,7 +133,7 @@ export async function optimizeDist(outDir, { log = console.log, cacheDir = path.
             await writeCache(cacheDir, task.key, task.result);
             pump();
           });
-          worker.postMessage({ id: task.rel, bytes: task.source.buffer.slice(task.source.byteOffset, task.source.byteOffset + task.source.byteLength) });
+          worker.postMessage({ id: task.rel, target: TARGETS[task.target], bytes: task.source.buffer.slice(task.source.byteOffset, task.source.byteOffset + task.source.byteLength) });
         };
         worker.once('error', reject);
         pump();
