@@ -80,7 +80,8 @@ export function stageDef(ch, st) {
   const stage = {
     ch, st, idx, code: `${ch}-${st}`, title: scene.title, chapter, name: `${ch}-${st} · ${scene.title}`,
     dungeon, dungeonBossId, epilogueFinale: ch === 6 && st === 10,
-    boss, finale: ch === 5 && st === 10, waves, scale, energy: 6 + Math.floor(idx / 6),
+    boss, midboss: rank === 'midboss', regionBoss: rank === 'finalboss', unlocksChapter: st === STAGES_PER_CHAPTER && ch < CHAPTERS.length ? ch + 1 : null,
+    finale: ch === 5 && st === 10, waves, scale, energy: 6 + Math.floor(idx / 6),
     rosterFor: () => R, recPower: Math.floor(2600 * scale),
     encounter: { rank, label: RANK_LABELS[rank], name: dungeonBoss.name, enemyId, dungeonBossId, tactic: dungeonBoss.tactic || enemy.tactic },
     story: { opening: scene.opening, revelation: scene.revelation, aftermath: scene.aftermath },

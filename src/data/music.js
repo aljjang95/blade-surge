@@ -1,3 +1,5 @@
+import { activeCampaignTownChapter, campaignTownMusic } from './campaign-towns.js';
+
 export const MUSIC_MIX = Object.freeze({ fade: 0.7, volume: 0.55 });
 const REGIONS = new Set(['garden', 'forge', 'frost', 'tide', 'crown', 'homecoming']);
 
@@ -36,7 +38,8 @@ export function flowMusicBriefForRoute(routeId) {
  */
 export function musicForScene({ scene = 'battle', stage = null, boss = false } = {}) {
   if (scene === 'gacha') return 'bgm_gacha';
-  if (scene === 'lobby') return 'regions/lobby';
+  // 로비는 열려 있는 캠페인 마을의 지역 곡을 쓴다(1지역 마을은 기존 로비 곡).
+  if (scene === 'lobby') return campaignTownMusic(activeCampaignTownChapter());
   if (stage?.expedition?.kind === 'arena') return 'regions/arena';
   if (boss) return 'regions/boss';
   if (stage?.expedition?.kind === 'dungeon' && stage?.expedition?.depth === 'deep') {
