@@ -573,7 +573,11 @@ export class Player extends Actor {
       audio.hit('hurt'); audio.vibe(heavy ? [30, 20, 30] : 8); audio.bark(`hero_${this.def.voiceId || this.def.id}_hurt`, { n: 3, vol: heavy ? .8 : .6, min: .7 });
       if (!heavy && this.motionRoot) this.receiveImpact(dirx, dirz, .18);
     }
-    if (heavy) this.knockback(dirx, dirz, kb);
+    if (heavy) {
+      this.knockback(dirx, dirz, kb);
+      // 강타를 맞은 순간 짧게 멈춰 무게를 읽게 한다(동작 줄이기에서는 멈추지 않는다). 연속 정지 재무장 규칙은 ImpactClock 이 지킨다.
+      if (!this.game.app?.reducedMotion?.matches) this.game.timeCtl?.hitstop?.(FEEL.hitstop.base.received);
+    }
     if (this.game.hasProc('blood_rage') && (this._bloodCd || 0) <= this.game.elapsed) { this._bloodCd = this.game.elapsed + 1.5; this.game.bloodBurst(this); }
     // 스킬/궁극기 중엔 슈퍼아머. 기본 콤보 중에도 경타(kb<6)는 끊지 못한다 — 무리 속에서 잡몹 한 대마다 콤보가 1타로 돌아가던 것이 '끊김'의 절반
     const armored = !heavy || this.state === 'skill' || this.state === 'ult' || this.state === 'dodge';

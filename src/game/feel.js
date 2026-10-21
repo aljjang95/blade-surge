@@ -4,17 +4,21 @@
 export const FEEL = Object.freeze({
   // 히트스탑: base 는 타격 등급별 기본 정지(초). 실제 정지 = base * (1 + 무게 합), 상한 max.
   hitstop: Object.freeze({
-    base: Object.freeze({ light: .045, basic: .05, crit: .06, boss: .06, heavy: .075, counter: .09, finisher: .11 }),
+    // h3-feel 고정 픽스처 측정(2026-10-22): 치명타가 평타(.05)와 10ms 차이라 구분되지 않았고, 마무리·처치가 레퍼런스(110–150, 처치 120–180ms)보다 가벼웠다.
+    // 평타·경타 리듬은 그대로 두고 치명타·강타·반격·마무리만 올린다. received 는 영웅이 강타(kb≥6)를 맞았을 때의 정지다.
+    base: Object.freeze({ light: .045, basic: .05, crit: .072, boss: .06, heavy: .085, counter: .1, finisher: .12, received: .07 }),
     shareGain: 2,      // 쓰러지지 않은 타격의 피해 / 대상 최대 HP 비율에 곱한다(큰 한 방일수록 무겁다)
     shareCap: .4,
     crowdStep: .05,    // 같은 창(crowdWindow) 안에서 두 번째 대상부터 한 명당 더해지는 무게
     crowdCap: .3,
     crowdWindow: .06,
     elite: .2,         // 정예 타격
-    kill: .12,         // 쓰러뜨리는 타격은 피해 비율 대신 이 값(졸개 일격 처치가 매번 무겁지 않게)
+    kill: .2,          // 쓰러뜨리는 타격은 피해 비율 대신 이 값(졸개 평타 처치 60ms, 마무리 처치 144ms, 정예 마무리 처치는 상한)
     weightCap: 1,      // 무게 합 상한(전부 겹쳐도 기본의 2배까지)
-    max: .13,          // 한 번의 정지 상한(ImpactClock HITSTOP_CAP .18 보다 작다)
+    max: .15,          // 한 번의 정지 상한(ImpactClock HITSTOP_CAP .18 보다 작다)
   }),
+  // 넉백 속도는 매 초 keep 배로 줄어든다(지수 마찰). 초기 속도 v 의 총 이동 = v / -ln(keep). 몰이(pull)도 같은 속도 벡터를 쓰므로 값은 바꾸지 않는다.
+  knockback: Object.freeze({ keep: .02 }),
   // 피격 섬광: 가벼운 타격은 그대로(gain 1), 무거울수록 길고 밝다.
   flash: Object.freeze({
     baseSec: .12, maxSec: .22, gainMax: 1.6, perWeight: .55,
@@ -103,6 +107,12 @@ export function weightedHitstop(base, weight) {
   if (!(base > 0)) return 0;
   return Math.min(FEEL.hitstop.max, base * (1 + Math.max(0, num(weight))));
 }
+
+/** 넉백 속도 감쇠 배율(dt 초 동안). 프레임 크기와 무관하게 같은 곡선이다. */
+export function knockbackDecay(dt) { return Math.pow(FEEL.knockback.keep, Math.max(0, num(dt))); }
+
+/** 초기 넉백 속도(m/s)가 멈출 때까지 미는 총 거리(m). 히트스톱(dt 0) 동안은 움직이지 않으므로 정지 길이와 무관하다. */
+export function knockbackTravel(speed) { return Math.max(0, num(speed)) / -Math.log(FEEL.knockback.keep); }
 
 /** 섬광 지속(초)·밝기 배율. 무게 0 이면 기존 값(0.12초, 배율 1)과 같다. */
 export function flashFor(weight) {

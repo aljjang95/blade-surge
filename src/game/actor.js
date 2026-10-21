@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { materialsOf, spawnCharacter } from '../engine/assets.js';
 import { RIGS } from '../data/rigs.js';
 import { attackPhase, attackBody, monsterAttackPhase } from './combat-motion.js';
+import { knockbackDecay } from './feel.js';
 
 const _v = new THREE.Vector3();
 const _weaponQuaternion = new THREE.Quaternion();
@@ -228,7 +229,7 @@ export class Actor {
     this.heroPose?.apply(dt);
     // 넉백 감쇠
     const fx0 = this.pos.x, fz0 = this.pos.z;
-    if (this.kb.lengthSq() > 0.0001) { this.pos.addScaledVector(this.kb, dt); this.kb.multiplyScalar(Math.pow(0.02, dt)); }
+    if (this.kb.lengthSq() > 0.0001) { this.pos.addScaledVector(this.kb, dt); this.kb.multiplyScalar(knockbackDecay(dt)); }
     this.pos.addScaledVector(this.vel, dt);
     // 벽 충돌 (월드가 있으면 슬라이딩, 없으면 원형 아레나)
     const W = this.game.world;
