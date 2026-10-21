@@ -8,6 +8,7 @@ import { HEROES } from '../data/heroes.js';
 import { STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
 import { buildIdentity } from '../platform/startup-compat.js';
 import { SOCIAL_CONFIG } from './config.js';
+import { googleSignIn } from './google-signin.js';
 
 const START_DELAY_MS = 2500;
 const WATCH_MS = 500;
@@ -37,9 +38,55 @@ function visibleRect(el) {
 /** 전투 중 띠·배지가 피해야 할 기존 HUD 버튼(시점·일시정지·AUTO 등)의 영역. */
 const HUD_BUTTONS = '#hud button, #lobby-camera-toggle, #lobby-camera-pad > span';
 
-/** 사람마다 같은 영웅 초상이 나오도록 id로 고른다(서버는 영웅을 모른다). */
+/** 영웅 정보가 없는 기존 공개 신원에만 id 해시 초상을 쓴다. */
 function portraitPool() {
   return Object.values(HEROES).filter(hero => hero && typeof hero.portrait === 'string');
+}
+
+/** 게임의 선택 영웅을 프로필 생성·변경과 초상 조회에 연결한다. */
+export function bindCommunityHero(client, selectedHero) {
+  const pool = portraitPool();
+  const originalProfile = client.profile;
+  const profile = (name, hero = selectedHero()) => originalProfile.call(client, name, hero);
+  client.profile = profile;
+  let syncing = false, active = true, retryAt = 0;
+  const sync = async () => {
+    const me = client.state.me, hero = selectedHero();
+    if (!active || syncing || !me || !Object.hasOwn(HEROES, hero) || me.hero === hero || Date.now() < retryAt) return;
+    syncing = true;
+    try {
+      const result = await client.setHero(hero);
+      if (!result.ok) retryAt = Date.now() + Math.max(5000, result.retryAfterMs || 0);
+    } catch { retryAt = Date.now() + 5000; }
+    finally {
+      syncing = false;
+      // 응답 대기 중 다시 고른 영웅도 직렬로 보낸다. 같은 영웅의 실패는 다음 감시 주기에서 재시도한다.
+      if (active && selectedHero() !== hero) void sync();
+    }
+  };
+  const offState = client.on('state', () => { void sync(); });
+  return {
+    portraitFor(mini) {
+      if (!mini) return null;
+      const hero = Object.hasOwn(HEROES, mini.hero) ? HEROES[mini.hero] : null;
+      if (hero && hero.portrait) return hero.portrait;
+      if (mini.id === client.state.me?.id) {
+        const selected = selectedHero();
+        const ownHero = Object.hasOwn(HEROES, selected) ? HEROES[selected] : null;
+        if (ownHero && ownHero.portrait) return ownHero.portrait;
+      }
+      if (!pool.length) return null;
+      let h = 0;
+      for (const ch of String(mini.id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+      return pool[h % pool.length].portrait;
+    },
+    sync,
+    destroy() {
+      active = false;
+      offState();
+      if (client.profile === profile) client.profile = originalProfile;
+    },
+  };
 }
 
 /** 앱 시작 때 한 번 호출한다. 실패해도 게임은 그대로 돈다. */
@@ -52,7 +99,7 @@ function build(app) {
   const config = SOCIAL_CONFIG;
   const contentIds = new Set(config.contents.map(c => c.id));
   const client = createSocialClient({ gameId: config.gameId, presence: { state: 'lobby' } });
-  const pool = portraitPool();
+  const heroProfile = bindCommunityHero(client, () => app.eco.s.selected);
 
   // ── 대략 fps: 프레임 간격의 이동 평균(보이는 동안만) ──
   let fps = 0, lastFrame = 0, sampling = true;
@@ -74,14 +121,7 @@ function build(app) {
   const inBattle = () => app.mode === 'battle' || !!(app.party && app.party.run);
 
   const hooks = {
-    portraitFor(mini) {
-      if (!mini || !pool.length) return null;
-      const meId = client.state.me && client.state.me.id;
-      if (mini.id === meId) { const hero = HEROES[app.eco.s.selected]; if (hero && hero.portrait) return hero.portrait; }
-      let h = 0;
-      for (const ch of String(mini.id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-      return pool[h % pool.length].portrait;
-    },
+    portraitFor: heroProfile.portraitFor,
     contentArt(id) { const d = ALL_DUNGEONS.find(item => item.id === id); return d && d.art ? d.art : null; },
     joinParty(code) {
       if (!app.party || app.party.run || app.mode !== 'lobby') return false;
@@ -120,7 +160,8 @@ function build(app) {
       return [...document.querySelectorAll(HUD_BUTTONS)].map(visibleRect).filter(Boolean)
         .map(rect => ({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }));
     },
-    // 구글 로그인은 클라이언트 ID가 정해지면 googleSignIn을 채운다(없으면 화면에 "준비 중"으로 보인다).
+    // 구글 로그인: 클라이언트 ID는 google-signin.js가 가진다(서버 GOOGLE_CLIENT_IDS와 같은 값).
+    googleSignIn,
     discordInvite: typeof config.discordInvite === 'string' ? config.discordInvite : null,
   };
 
@@ -171,6 +212,7 @@ function build(app) {
   let lastScene = '', lastWhere = '', lastParty = null;
   const watch = () => {
     if (document.hidden) return;
+    void heroProfile.sync();
     const battle = inBattle();
     if (ui.battle !== battle) ui.setBattle(battle);
     // 출격 컷신(.exp-cinematic)이 떠 있는 동안은 띠·배지를 보류하고, 끝나면 다시 보인다.
@@ -267,6 +309,7 @@ function build(app) {
     close: () => ui.close(),
     destroy() {
       clearInterval(timer); clearTimeout(startTimer); sampling = false;
+      heroProfile.destroy();
       ui.destroy(); client.destroy(); launcher.remove(); style.remove();
     },
   };

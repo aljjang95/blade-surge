@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { Database } from 'bun:sqlite';
 import { SocialCore, type Effect } from '../src/server/core';
 import { randomHex, sha256Hex } from '../src/server/hub';
-import type { GameConfig, Session } from '../src/shared/protocol';
+import { PARTY_HEROES, type GameConfig, type Session } from '../src/shared/protocol';
 
 const BASE: GameConfig = {
   gameId: 'test-game', worldChannels: 2, worldCapacity: 2,
@@ -27,9 +27,9 @@ function setup(over: Partial<GameConfig> = {}) {
   });
   const call = (method: string, path: string, o: { key?: string; body?: unknown; query?: string; ip?: string; admin?: string[] } = {}) =>
     core.handle({ method, path, query: new URLSearchParams(o.query ?? ''), body: o.body, key: o.key ?? null, ipHash: o.ip ?? 'ip-' + Math.random(), adminIds: o.admin ?? [], clientIds: [] });
-  const player = async (name: string, ip?: string) => {
+  const player = async (name: string, ip?: string, hero?: string) => {
     const key = newKey();
-    const r = await call('POST', '/profile', { key, body: { name }, ip });
+    const r = await call('POST', '/profile', { key, body: { name, ...(hero === undefined ? {} : { hero }) }, ip });
     return { key, keyHash: await core.keyHash(key), id: (r.body as any).id as string, res: r };
   };
   const connect = (p: { id: string; keyHash: string }) => {
@@ -38,7 +38,7 @@ function setup(over: Partial<GameConfig> = {}) {
     return { s, fx: core.message(s, JSON.stringify({ t: 'hello', presence: { state: 'lobby' } })) };
   };
   const say = (s: Session, text: string, channel = s.world, nonce = 'n' + randomHex(6)) => core.message(s, JSON.stringify({ t: 'say', channel, text, nonce }));
-  return { core, call, player, connect, say, sessions, advance: (ms: number) => { t += ms; }, now: () => t };
+  return { db, core, call, player, connect, say, sessions, advance: (ms: number) => { t += ms; }, now: () => t };
 }
 const errorOf = (fx: Effect[]) => (fx.find(e => e.message?.t === 'error')?.message as any)?.code;
 const msgOf = (fx: Effect[]) => (fx.find(e => e.message?.t === 'msg')?.message as any)?.m;
@@ -91,6 +91,88 @@ describe('프로필과 인증', () => {
     expect((await h.player('사람6', 'same')).res.status).toBe(429);
     h.advance(3600001);
     expect((await h.player('사람7', 'same')).res.status).toBe(201);
+  });
+});
+
+describe('선택 영웅', () => {
+  test('다섯 영웅을 프로필 생성 때 저장하고 생략하면 null이다', async () => {
+    const h = setup();
+    for (const hero of PARTY_HEROES) {
+      const p = await h.player('영웅선택', undefined, hero);
+      expect(p.res).toMatchObject({ status: 201, body: { hero } });
+      expect(h.db.query('SELECT hero FROM players WHERE id = ?').get(p.id)).toEqual({ hero });
+      expect(h.core.minis([p.id]).get(p.id)?.hero).toBe(hero);
+    }
+    const guest = await h.player('기본초상');
+    expect(guest.res.body).toMatchObject({ hero: null });
+    expect(h.core.minis([guest.id]).get(guest.id)?.hero).toBeNull();
+  });
+
+  test('생성·변경에서 허용하지 않는 영웅은 400 hero이고 기존 값은 보존한다', async () => {
+    const h = setup(), p = await h.player('유효영웅', undefined, 'mage');
+    for (const hero of ['paladin', 'Mage', '', ' mage ', '__proto__', null, 1, {}, []]) {
+      expect(await h.call('POST', '/profile', { key: newKey(), body: { name: '거부영웅', hero } })).toMatchObject({ status: 400, body: { error: 'hero' } });
+      expect(await h.call('POST', '/me/hero', { key: p.key, body: { hero } })).toMatchObject({ status: 400, body: { error: 'hero' } });
+    }
+    expect(await h.call('POST', '/me/hero', { key: p.key, body: {} })).toMatchObject({ status: 400, body: { error: 'hero' } });
+    expect(await h.call('POST', '/me/hero', { key: p.key, body: { hero: 'rogue', extra: true } })).toMatchObject({ status: 400, body: { error: 'schema' } });
+    expect(h.core.minis([p.id]).get(p.id)?.hero).toBe('mage');
+  });
+
+  test('이름 변경·같은 이름 재요청은 hero를 덮어쓰지 않는다', async () => {
+    const h = setup(), p = await h.player('처음영웅', undefined, 'ranger');
+    expect(await h.call('POST', '/profile', { key: p.key, body: { name: '이름변경', hero: 'knight' } })).toMatchObject({ status: 200, body: { id: p.id, name: '이름변경', hero: 'ranger' } });
+    expect(await h.call('POST', '/profile', { key: p.key, body: { name: '이름변경', hero: 'barbarian' } })).toMatchObject({ status: 200, body: { hero: 'ranger' } });
+    h.advance(24 * 3600000 + 1);
+    expect(await h.call('POST', '/profile', { key: p.key, body: { name: '영웅유지' } })).toMatchObject({ status: 200, body: { hero: 'ranger' } });
+  });
+
+  test('/me/hero는 키 인증으로 본인 영웅만 변경하고 Profile을 반환한다', async () => {
+    const h = setup(), p = await h.player('영웅변경', undefined, 'knight'), other = await h.player('다른사람', undefined, 'mage');
+    expect(await h.call('POST', '/me/hero', { body: { hero: 'rogue' } })).toMatchObject({ status: 401, body: { error: 'bad-key' } });
+    expect(await h.call('POST', '/me/hero', { key: newKey(), body: { hero: 'rogue' } })).toMatchObject({ status: 401, body: { error: 'no-profile' } });
+    expect(await h.call('POST', '/me/hero', { key: p.key, body: { hero: 'rogue' } })).toMatchObject({ status: 200, body: { id: p.id, hero: 'rogue', createdAt: h.now(), links: [], titles: expect.any(Array) } });
+    expect((await h.call('GET', '/me', { key: p.key })).body).toMatchObject({ profile: { hero: 'rogue' } });
+    expect(h.core.minis([other.id]).get(other.id)?.hero).toBe('mage');
+    await h.call('POST', '/admin/ban', { key: other.key, admin: [other.id], body: { playerId: p.id, banned: true } });
+    expect(await h.call('POST', '/me/hero', { key: p.key, body: { hero: 'knight' } })).toMatchObject({ status: 403, body: { error: 'banned' } });
+  });
+
+  test('/me/hero는 플레이어당 분당 20회로 제한한다', async () => {
+    const h = setup(), p = await h.player('선택제한'), other = await h.player('독립제한');
+    for (let i = 0; i < 20; i++) expect((await h.call('POST', '/me/hero', { key: p.key, body: { hero: 'mage' } })).status).toBe(200);
+    expect(await h.call('POST', '/me/hero', { key: p.key, body: { hero: 'knight' } })).toMatchObject({ status: 429, body: { error: 'rate', retryAfterMs: 60000 } });
+    expect(h.core.minis([p.id]).get(p.id)?.hero).toBe('mage');
+    expect((await h.call('POST', '/me/hero', { key: other.key, body: { hero: 'rogue' } })).status).toBe(200);
+    h.advance(60001);
+    expect((await h.call('POST', '/me/hero', { key: p.key, body: { hero: 'ranger' } })).status).toBe(200);
+  });
+
+  test('채팅·친구·명예의 전당·게시판·모집의 PublicMini에 hero가 포함된다', async () => {
+    const h = setup(), p = await h.player('초상전달', undefined, 'barbarian'), viewer = await h.player('상대화면');
+    const mini = { id: p.id, hero: 'barbarian' };
+    const connected = h.connect(p);
+    expect(connected.fx.find(e => e.message?.t === 'welcome')?.message?.me).toMatchObject(mini);
+    expect(msgOf(h.say(connected.s, '영웅초상'))?.from).toMatchObject(mini);
+    await h.call('POST', '/friends/request', { key: p.key, body: { playerId: viewer.id } });
+    expect((await h.call('GET', '/me', { key: viewer.key })).body).toMatchObject({ requests: { incoming: [{ player: mini }] } });
+    await h.call('POST', '/friends/respond', { key: viewer.key, body: { playerId: p.id, accept: true } });
+    expect((await h.call('GET', '/me', { key: viewer.key })).body).toMatchObject({ friends: [mini] });
+    const post = await h.call('POST', '/board', { key: p.key, body: { category: 'question', title: '초상확인', body: '선택한 영웅' } });
+    expect(post.body).toMatchObject({ author: mini });
+    expect((await h.call('GET', '/board')).body).toMatchObject({ items: [{ author: mini }] });
+    const postId = (post.body as any).id;
+    await h.call('POST', '/board/' + postId + '/comment', { key: p.key, body: { body: '댓글초상' } });
+    expect((await h.call('GET', '/board/' + postId)).body).toMatchObject({ comments: [{ author: mini }] });
+    await h.call('POST', '/listings', { key: p.key, body: { partyCode: 'A'.repeat(20), contentId: 'cave', note: '같이가요', slots: 4, members: 1 } });
+    expect((await h.call('GET', '/listings', { key: viewer.key })).body).toMatchObject({ items: [{ host: mini }] });
+    const start = await h.call('POST', '/runs/start', { key: p.key, body: { contentId: 'cave', mode: 'solo' } });
+    h.advance(50000);
+    await h.call('POST', '/runs/clear', { key: p.key, body: { runId: (start.body as any).runId } });
+    expect((await h.call('GET', '/fame/cave')).body).toMatchObject({ first: [{ player: mini }], fastest: [{ player: mini }] });
+    await h.call('POST', '/me/hero', { key: p.key, body: { hero: 'ranger' } });
+    expect(msgOf(h.say(connected.s, '바뀐초상'))?.from).toMatchObject({ id: p.id, hero: 'ranger' });
+    expect((await h.call('GET', '/fame/cave')).body).toMatchObject({ first: [{ player: { id: p.id, hero: 'ranger' } }] });
   });
 });
 

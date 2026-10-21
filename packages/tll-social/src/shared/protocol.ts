@@ -14,7 +14,7 @@ export interface GameConfig {
 }
 export interface Title { id: string; label: string }
 export interface RunSummary { elapsedMs: number; kills: number; roomsCleared: number; bossDefeated: true; hpLost: number }
-export interface PublicMini { id: string; name: string; tag: string; no: number; title: Title | null; linked: boolean }
+export interface PublicMini { id: string; name: string; tag: string; no: number; hero: string | null; title: Title | null; linked: boolean }
 export interface Presence { state: 'lobby' | 'battle' | 'party'; where?: string }
 export interface Msg {
   id: string;
@@ -42,6 +42,7 @@ export const SOCIAL_PREFIX = '/api/social';
 export const DEVICE_KEY = /^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/;
 export const PLAYER_ID = /^p_[a-f0-9]{24}$/;
 export const PARTY_CODE = /^[A-F0-9]{20}$/;
+export const PARTY_HEROES = ['knight', 'barbarian', 'mage', 'rogue', 'ranger'] as const;
 export const NONCE = /^[A-Za-z0-9_-]{8,32}$/;
 export const WS_TICKET = /^[a-f0-9]{32}$/;
 export const AUTH_PROVIDERS = ['google'] as const;

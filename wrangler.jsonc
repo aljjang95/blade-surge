@@ -31,7 +31,7 @@
     // 커뮤니티: 관리자 playerId(쉼표 구분), 로컬 개발 origin 허용, 구글 OAuth 클라이언트 ID(비면 연동 꺼짐).
     "SOCIAL_ADMIN_IDS": "",
     "SOCIAL_DEV_ORIGINS": "false",
-    "GOOGLE_CLIENT_IDS": ""
+    "GOOGLE_CLIENT_IDS": "898058209232-qr2isup4rafe3fhhgt5e1vvntu267sf3.apps.googleusercontent.com"
   },
   "observability": { "enabled": true },
   "triggers": { "crons": ["17 * * * *"] },

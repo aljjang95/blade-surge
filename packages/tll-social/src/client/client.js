@@ -7,7 +7,7 @@ import { createRequester, fail, isRetryable } from './http.js';
  * @typedef {import('./http.js').SocialResult} SocialResult
  * @typedef {import('./http.js').SocialFail} SocialFail
  * @typedef {{ id: string, label: string }} Title
- * @typedef {{ id: string, name: string, tag: string, no: number, title: Title | null, linked?: boolean }} PublicMini
+ * @typedef {{ id: string, name: string, tag: string, no: number, hero: string | null, title: Title | null, linked?: boolean }} PublicMini
  * @typedef {{ state: 'lobby' | 'battle' | 'party', where?: string }} Presence
  * @typedef {{ id: string, channel: string | null, kind: 'chat' | 'whisper' | 'system' | 'invite' | 'fame' | 'listing', from?: PublicMini, to?: string, text: string, at: number, data?: unknown }} Msg
  * @typedef {{ mini: PublicMini | null, online: boolean, presence: Presence | null }} FriendEntry
@@ -778,9 +778,9 @@ export function createSocialClient(options) {
     },
 
     // 프로필
-    /** @param {string} name */
-    async profile(name) {
-      const result = await request('POST', '/profile', { body: { name } });
+    /** @param {string} name @param {string} [hero] */
+    async profile(name, hero) {
+      const result = await request('POST', '/profile', { body: { name, hero } });
       if (result.ok) {
         applyProfile(result.data);
         changed();
@@ -789,6 +789,15 @@ export function createSocialClient(options) {
       return result;
     },
     me: refreshMe,
+    /** @param {string} hero */
+    async setHero(hero) {
+      const result = await request('POST', '/me/hero', { body: { hero } });
+      if (result.ok) {
+        if (!applyProfile(result.data)) await refreshMe();
+        changed();
+      }
+      return result;
+    },
     /** @param {string | null} titleId */
     async setTitle(titleId) {
       const result = await request('POST', '/me/title', { body: { titleId } });

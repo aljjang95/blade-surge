@@ -366,7 +366,7 @@ textarea.tls-input{padding:.6em .9em;resize:none;line-height:1.4;min-height:5em}
 .tls-modal .tls-blur{filter:blur(6px);transition:filter .15s}
 .tls-modal .tls-blur.show{filter:none}
 .tls-secret{padding:.5em .7em;border-radius:.6em;background:#08122c;border:1px solid #2e4a90;font-family:ui-monospace,Consolas,monospace;word-break:break-all;font-size:.9em}
-.tls-toasts{position:fixed;left:50%;transform:translateX(-50%);top:calc(10px + env(safe-area-inset-top,0px));display:flex;flex-direction:column;align-items:center;gap:.4em;pointer-events:none;z-index:50;max-width:min(92vw,30em)}
+.tls-toasts{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(8px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;align-items:center;gap:.4em;pointer-events:none;z-index:50;max-width:min(92vw,24em)}
 .tls-toast{display:flex;align-items:center;gap:.7em;padding:.55em .9em;border-radius:.8em;background:rgba(10,22,54,.96);border:1px solid #4a72c8;box-shadow:0 6px 18px rgba(0,0,0,.55);font-weight:700;pointer-events:auto;animation:tls-pop .18s ease-out}
 .tls-toast.warn{border-color:var(--tls-red)}
 .tls-toast.good{border-color:var(--tls-green)}

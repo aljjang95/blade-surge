@@ -190,6 +190,51 @@ describe('REST 오류 정규화', () => {
   });
 });
 
+describe('선택 영웅 프로필', () => {
+  test('profile(name, hero)는 선택 영웅을 본문에 넣고 반환 프로필을 반영한다', async () => {
+    const profile = { ...ME, hero: 'mage' };
+    const env = setup({ handler: () => json(201, profile) });
+    const states = [];
+    env.client.on('state', state => states.push(state.me));
+    expect(await env.client.profile(ME.name, 'mage')).toEqual({ ok: true, status: 201, data: profile });
+    expect(env.fetch.calls[0]).toMatchObject({ url: '/api/social/profile', method: 'POST', body: { name: ME.name, hero: 'mage' } });
+    expect(env.fetch.calls[0].headers.Authorization).toBe('Bearer ' + env.client.exportKey());
+    expect(env.client.state.me).toEqual(profile);
+    expect(states).toEqual([profile]);
+  });
+
+  test('profile(name) 호출은 hero를 생략하는 기존 본문을 유지한다', async () => {
+    const env = setup({ handler: () => json(201, { ...ME, hero: null }) });
+    await env.client.profile(ME.name);
+    expect(env.fetch.calls[0].body).toEqual({ name: ME.name });
+    expect(env.client.state.me.hero).toBeNull();
+  });
+
+  test('setHero는 키 인증으로 /me/hero를 호출하고 state.me를 갱신한다', async () => {
+    const profile = { ...ME, hero: 'ranger' };
+    const env = setup({ handler: call => call.url.endsWith('/me/hero') ? json(200, profile) : defaultHandler(call) });
+    await env.client.me();
+    const states = [];
+    env.client.on('state', state => states.push(state.me));
+    expect(await env.client.setHero('ranger')).toEqual({ ok: true, status: 200, data: profile });
+    const call = env.fetch.calls.at(-1);
+    expect(call).toMatchObject({ url: '/api/social/me/hero', method: 'POST', body: { hero: 'ranger' } });
+    expect(call.headers.Authorization).toBe('Bearer ' + env.client.exportKey());
+    expect(env.client.state.me).toEqual(profile);
+    expect(states).toEqual([profile]);
+  });
+
+  test('setHero 오류는 그대로 반환하고 기존 프로필·상태 알림을 보존한다', async () => {
+    const env = setup({ handler: call => call.url.endsWith('/me/hero') ? json(400, { error: 'hero' }) : defaultHandler(call) });
+    await env.client.me();
+    const states = [];
+    env.client.on('state', state => states.push(state.me));
+    expect(await env.client.setHero('paladin')).toEqual({ ok: false, status: 400, error: 'hero' });
+    expect(env.client.state.me).toEqual(ME);
+    expect(states).toEqual([]);
+  });
+});
+
 describe('실시간 연결', () => {
   test('ticket → wss URL → hello → welcome 상태 반영', async () => {
     const env = setup();
