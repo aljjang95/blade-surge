@@ -1,0 +1,40 @@
+/* 로비 마을 칩 · 마을 목록 · 새 지역 해금 띠. 상단 가장자리에만 놓여 전투·광장을 가리지 않는다. */
+.campaign-town-chip { --town-accent: #87cbb0; position: relative; flex: 0 1 auto; min-width: 0; max-width: 34%; margin: 0 auto 0 10px; display: grid; grid-template-columns: 1fr auto; grid-template-areas: 'tag tag' 'name caret'; align-items: center; column-gap: 6px; min-height: 40px; padding: 3px 11px 4px; text-align: left; color: #f6ecd0; font-family: inherit; border: 2px solid color-mix(in srgb, var(--town-accent) 80%, #fff 10%); border-radius: 12px; background: linear-gradient(180deg, color-mix(in srgb, var(--town-accent) 26%, #10242c), #0d1c24); box-shadow: 0 2px 0 #00000066, inset 0 0 0 1px #ffffff1c; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.campaign-town-chip[hidden] { display: none !important; }
+.campaign-town-chip small { grid-area: tag; font-size: 8px; letter-spacing: .12em; color: color-mix(in srgb, var(--town-accent) 70%, #fff); line-height: 1.1; }
+.campaign-town-chip b { grid-area: name; font-size: 13px; font-weight: 800; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.campaign-town-chip i { grid-area: caret; font-style: normal; font-size: 11px; color: var(--town-accent); }
+.campaign-town-chip:focus-visible, .campaign-town-row:focus-visible { outline: 3px solid #fff3c2; outline-offset: 2px; }
+.campaign-town-menu { position: absolute; z-index: 30; left: calc(100px + var(--sal, 0px)); top: calc(54px + var(--sat, 0px)); width: min(330px, calc(100% - 120px)); max-height: calc(100% - 70px - var(--sat, 0px)); overflow-y: auto; overscroll-behavior: contain; padding: 6px; display: grid; gap: 5px; border: 2px solid #e9c97c; border-radius: 14px; background: #0c1b23f2; box-shadow: 0 10px 28px #000a; }
+.campaign-town-menu[hidden] { display: none !important; }
+.campaign-town-row { --town-accent: #87cbb0; display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 9px; min-height: 44px; padding: 5px 10px 5px 6px; text-align: left; color: #f1e8cf; font-family: inherit; border: 1px solid #ffffff22; border-radius: 10px; background: #15303a; cursor: pointer; }
+.campaign-town-row.on { border-color: var(--town-accent); background: color-mix(in srgb, var(--town-accent) 24%, #15303a); }
+.campaign-town-row.lock { color: #8e9aa3; background: #101e26; cursor: default; }
+.campaign-town-mark { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; font-weight: 800; font-size: 13px; color: #1a1408; background: var(--town-accent); }
+.campaign-town-row.lock .campaign-town-mark { background: #46535c; color: #aab4bb; }
+.campaign-town-copy { min-width: 0; display: grid; gap: 1px; }
+.campaign-town-copy b { font-size: 13px; line-height: 1.2; }
+.campaign-town-copy small { font-size: 10px; color: #b9c6c2; line-height: 1.25; }
+.campaign-town-row em { font-style: normal; font-size: 10px; font-weight: 700; color: var(--town-accent); }
+.campaign-town-row.lock em { color: #7f8b93; }
+.region-unlock-banner { --town-accent: #ffd27a; position: fixed; z-index: 60; top: calc(6px + var(--sat, 0px)); left: 50%; transform: translateX(-50%); max-width: min(92vw, 520px); display: flex; align-items: center; gap: 10px; padding: 6px 18px 6px 12px; color: #fff4d2; pointer-events: none; border: 2px solid var(--town-accent); border-radius: 999px; background: linear-gradient(90deg, color-mix(in srgb, var(--town-accent) 30%, #1a1226), #1a1226e8 70%); box-shadow: 0 6px 22px #000b, 0 0 20px color-mix(in srgb, var(--town-accent) 55%, transparent); animation: region-unlock-in .5s cubic-bezier(.2, .9, .3, 1.2) both, region-unlock-out .5s ease-in 4.2s forwards; }
+.region-unlock-banner > span { font-size: 22px; color: var(--town-accent); text-shadow: 0 0 10px var(--town-accent); }
+.region-unlock-banner b { display: block; font-size: 14px; font-weight: 800; letter-spacing: .01em; }
+.region-unlock-banner small { display: block; font-size: 10px; color: #e4d7b6; }
+@keyframes region-unlock-in { from { opacity: 0; transform: translate(-50%, -140%); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes region-unlock-out { to { opacity: 0; transform: translate(-50%, -140%); } }
+@media (prefers-reduced-motion: reduce) { .region-unlock-banner { animation: none; } }
+@media (max-width: 700px) { .campaign-town-chip { max-width: 30%; margin-left: 6px; padding: 2px 8px 3px; } .campaign-town-chip b { font-size: 11px; } .campaign-town-menu { left: calc(60px + var(--sal, 0px)); } }
+
+/* ---------- 중간 보스(X-5)·지역 보스(X-10) 표식: 체력 막대 이름 앞 계급 칩과 상단 가장자리 띠 ---------- */
+#bossbar .boss-rank { display: inline-block; margin-right: 6px; padding: 1px 7px 2px; border-radius: 999px; font-style: normal; font-size: .72em; font-weight: 800; letter-spacing: .04em; vertical-align: 1px; color: #2a1606; background: #f1c15a; }
+#bossbar[data-rank="regionboss"] .boss-rank { color: #fff; background: linear-gradient(180deg, #e0485c, #a21c36); box-shadow: 0 0 8px #ff5a7a99; }
+.boss-intro { position: absolute; z-index: 12; left: 50%; top: calc(3px + var(--sat, 0px)); transform: translateX(-50%); max-width: 46%; display: flex; align-items: center; gap: 7px; padding: 2px 14px 3px 4px; pointer-events: none; white-space: nowrap; color: #fff3d6; font-size: 12px; border: 1px solid #f1c15a; border-radius: 999px; background: linear-gradient(90deg, #4a2a0a, #1a1226e6 80%); box-shadow: 0 3px 10px #0009; animation: boss-intro 3.4s ease both; }
+.boss-intro i { font-style: normal; font-weight: 800; font-size: 11px; padding: 1px 8px; border-radius: 999px; color: #2a1606; background: #f1c15a; }
+.boss-intro b { font-size: 12px; color: #ffd98a; }
+.boss-intro span { overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
+.boss-intro[data-rank="regionboss"] { border-color: #ff6b86; background: linear-gradient(90deg, #5a1224, #1a1226e6 80%); }
+.boss-intro[data-rank="regionboss"] i { color: #fff; background: linear-gradient(180deg, #e0485c, #a21c36); }
+.boss-intro[data-rank="regionboss"] b { color: #ffb4c0; }
+@keyframes boss-intro { 0% { opacity: 0; transform: translate(-50%, -120%); } 10% { opacity: 1; transform: translate(-50%, 0); } 85% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, -120%); } }
+@media (prefers-reduced-motion: reduce) { .boss-intro { animation: none; } }
