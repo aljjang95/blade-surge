@@ -2,10 +2,17 @@ import { defineConfig } from 'vite';
 import { existsSync, realpathSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { optimizeDist } from './tools/optimize/optimize-dist.mjs';
 const projectRoot = fileURLToPath(new URL('.', import.meta.url));
 const scratchRoot = path.resolve(projectRoot, 'work');
+let assetOutDir = '', assetChannel = 'web';
 export default defineConfig({
   plugins: [{
+    // 공개 소스(public/, asset-library/)는 그대로 두고 산출물 사본에서만 미사용 자산을 빼고 GLB·WebP 를 줄인다(tools/optimize).
+    name: 'optimize-shipped-assets', apply: 'build', enforce: 'post',
+    configResolved(config) { assetOutDir = path.resolve(config.root, config.build.outDir); assetChannel = ['googleplay', 'onestore', 'apps-in-toss'].includes(config.mode) ? config.mode : 'web'; },
+    async closeBundle() { if (process.env.BLADE_SKIP_ASSET_OPTIMIZE !== '1') await optimizeDist(assetOutDir, { channel: assetChannel }); },
+  }, {
     name: 'refresh-engraving-assets', apply: 'build',
     configResolved(config) {
       const out = path.resolve(config.root, config.build.outDir);
