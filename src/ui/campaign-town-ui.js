@@ -79,7 +79,7 @@ export class CampaignTownUI {
     document.querySelector('.region-unlock-banner')?.remove();
     const node = document.createElement('div');
     node.className = 'region-unlock-banner'; node.setAttribute('role', 'status'); node.style.setProperty('--town-accent', unlock.accent || '#ffd27a');
-    node.innerHTML = `<span aria-hidden="true">★</span><div><b>새 지역 해금 · ${esc(unlock.name)}</b><small>로비로 돌아가면 마을이 바뀝니다</small></div>`;
+    node.innerHTML = `<span aria-hidden="true">★</span><b>새 지역 해금 · ${esc(unlock.name)}</b><small>로비로 돌아가면 마을이 바뀝니다</small>`;
     document.body.append(node);
     audio.play('jingle_win1', { vol: 0.55 });
     setTimeout(() => node.remove(), 4800);

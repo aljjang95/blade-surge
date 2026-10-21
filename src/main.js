@@ -317,7 +317,7 @@ class App {
     const next = setActiveCampaignTownChapter(this.eco.campaignTownState().current);
     if (next === before) return false;
     if (rebuild && this.arena.lobbyHall) {
-      this.arena.buildLobby(); this.hubMovement.reset(); this.syncHub();
+      this.arena.buildLobby(); this.hubMovement.reset(); this.syncHub(); this.townUI?.renderPlace();
       if (this.mode === 'lobby') audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX);
     }
     return true;
