@@ -45,7 +45,7 @@ export function installFeelProbe() {
     return { f: q.frame, sc: r3(tc.scale), stop: r3(tc.stop), slow: tc.slowT > 0 ? r3(tc.slow) : 1,
       ps: p.state, pa: p.actionName, hd: !!p.hitDone, ci: p.comboIdx, inv: r3(p.invuln), cq: p.state === 'attack' ? p.canQueueCombo() : null,
       cd: p.state === 'attack' ? p.canDodgeCancel() : null, pose: poseDelta(), w: weights(p),
-      cam: [r3(cam.position.x - p.pos.x), r3(cam.position.y), r3(cam.position.z - p.pos.z)], fov: r3(cam.fov),
+      cam: [r3(cam.position.x - p.pos.x), r3(cam.position.y), r3(cam.position.z - p.pos.z)], fov: r3(cam.fov), kick: r3(app.renderer.kickOffset || 0),
       pmr: mr(p), pfl: r3(p.flashT), px: r3(p.pos.x), pz: r3(p.pos.z), hp: Math.round(p.hp),
       e: q.tracked.map(e => ({ a: e.alive, x: r3(e.pos.x), z: r3(e.pos.z), kb: r3(Math.hypot(e.kb.x, e.kb.z)), mr: mr(e), fl: r3(e.flashT),
         st: e.state, an: e.actionName, y: r3(e.motionRoot.position.y), sx: r3(e.motionRoot.scale.y), dead: !!e.dead, vis: e.model.visible })) };

@@ -130,7 +130,8 @@ export function heroMetrics(h) {
       slowmo: s.stops.filter(x => x.slowmo).map(x => x.slowmo), stops: s.stops.filter(x => x.sec).length,
       maxStopMs: r1(Math.max(0, ...s.stops.filter(x => x.sec).map(x => x.sec)) * 1000),
       kbMaxM: r2(Math.max(0, ...rows[0].e.map((_, i) => knockbackDistance(rows, i)))),
-      fovRange: r1(Math.max(...rows.map(r => r.fov)) - Math.min(...rows.map(r => r.fov))), transitions: transitions(rows) };
+      fovRange: r1(Math.max(...rows.map(r => r.fov)) - Math.min(...rows.map(r => r.fov))), transitions: transitions(rows),
+      kickCm: r1(Math.max(0, ...rows.map(r => r.kick || 0)) * 100) };
   }
   return m;
 }
@@ -164,6 +165,8 @@ export function table(before, after = null) {
   row('스킬1 입력→첫 피격 ms / 맞은 수 / 정지 ms', m => `${m.skill.pressToFirstHitMs} / ${m.skill.struck} / ${m.skill.hitstopMs}`);
   row('궁극기 입력→첫 피격 ms / 맞은 수 / 최대 정지 ms', m => `${m.ult.pressToFirstHitMs} / ${m.ult.struck} / ${m.ult.maxStopMs}`);
   row('궁극기 슬로우 [배율,초,복귀]', m => m.ult.slowmo.map(s => `[${s.join(',')}]`).join(' '));
+  row('궁극기 카메라 펀치 최대 cm / 전환 최악 튐', m => `${m.ult.kickCm} / ${fmtPops(m.ult.transitions)}`);
+  row('스킬1 전환 최악 튐', m => fmtPops(m.skill.transitions));
   row('정예 마무리 처치: 정지 ms / 슬로우', m => `${m.kill.finisherHitstopMs} / ${m.kill.slowmo.map(s => `[${s.join(',')}]`).join(' ')}`);
   row('정예 사망 클립 / 들림 m / 사라짐 ms', m => `${m.kill.eliteDeathClip} / ${m.kill.eliteLaunchM} / ${m.kill.eliteRemoveMs}`);
   row('졸개 평타 처치: 클립 / 들림 m / 넉백 m', m => m.kill.trash.map(t => `${t.clip}/${t.launchM}/${t.kbM}`).join(', '));
