@@ -18,6 +18,16 @@ function createAudioRandom() {
     return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
   };
 }
+import { BGM_CROSSFADE, BGM_LOOPS, bgmTrimGain } from '../data/music.js';
+// SFX 두 버스를 합친 뒤의 이득. 마스터 리미터 앞 정점을 낮춰 타격 트랜지언트가 찌그러지지 않게 한다.
+export const SFX_SUM_GAIN = 0.5;
+// 마스터 리미터: 음악·SFX·음성을 합친 출력이 0dBFS 를 넘지 않게 한다. 브라우저 압축기의 자동 메이크업
+// (-0.6 × 0dBFS 입력의 출력 dB)을 계산해 출력 이득에서 되돌린다 → 천장 약 -1.5dBFS.
+export const MASTER_LIMITER = Object.freeze({ threshold: -2, knee: 0, ratio: 20, attack: 0.001, release: 0.12 });
+export const MASTER_OUT_GAIN = (() => {
+  const { threshold, ratio } = MASTER_LIMITER, makeupDb = -0.6 * (threshold + -threshold / ratio);
+  return Math.pow(10, (-makeupDb + 0.4) / 20);
+})();
 // 공용(UI·효과·타격)은 시작 때, 영웅 세트는 그 영웅이 처음 소리를 낼 때 불러온다(모바일 메모리: 영웅당 약 22초 분량).
 const SFX_FILES = [...UI_SOUND_NAMES, ...FX_SOUND_FILES, ...HIT_SOUND_FILES];
 const HIT_BUS_PREFIX = SFX_LIBRARY + 'hit/';
@@ -58,7 +68,7 @@ export class AudioSys {
     if (typeof AC !== 'function') { this.unavailable = true; return false; }
     try { this.ctx = new AC({ latencyHint: 'interactive' }); }
     catch { this.unavailable = true; return false; }
-    this.master = this.ctx.createGain(); this.master.connect(this.ctx.destination);
+    this.master = this.ctx.createGain(); this._connectMasterOut();
     this.sfxGain = this.ctx.createGain(); this.sfxGain.gain.value = 0.9; this.sfxGain.connect(this.master);
     this.musicGain = this.ctx.createGain(); this.musicGain.gain.value = 0.55;
     this.musicDuckGain = this.ctx.createGain(); this.musicGain.connect(this.musicDuckGain);
@@ -72,6 +82,9 @@ export class AudioSys {
     let out = this.master;
     try {
       const sum = this.ctx.createGain(), shaper = this.ctx.createWaveShaper();
+      // 두 버스의 압축기 자동 메이크업(약 +7dB, +5dB)과 hit 버스 이득이 겹쳐 몹몰이·보스전에서 소프트 클립이 계속 포화됐다
+      // (2026-10-22 실제 녹음: 보스전 30초 내내 0dBFS, RMS -10dBFS). 합친 뒤 헤드룸을 두고 소프트 클립은 드문 정점만 받는다.
+      sum.gain.value = SFX_SUM_GAIN;
       shaper.curve = softClipCurve(); sum.connect(shaper); shaper.connect(this.master); out = sum;
       this.hitGain = this.ctx.createGain(); this.hitGain.gain.value = this.mix.sfx * HIT_BUS_GAIN;
       const hitComp = this.ctx.createDynamicsCompressor();
@@ -117,6 +130,49 @@ export class AudioSys {
     if (!this.buffers[name]) return false;
     this.play(name, { vol: Math.min(1, vol * 1.4), rate, vary: 0.05, min, priority });
     return true;
+  }
+  /** master → 리미터 → 출력 이득 → destination. 구형 호스트에서 압축기를 못 만들면 직접 연결한다. */
+  _connectMasterOut() {
+    try {
+      const lim = this.ctx.createDynamicsCompressor(), out = this.ctx.createGain();
+      for (const k of ['threshold', 'knee', 'ratio', 'attack', 'release']) lim[k].value = MASTER_LIMITER[k];
+      out.gain.value = MASTER_OUT_GAIN;
+      this.master.connect(lim); lim.connect(out); out.connect(this.ctx.destination);
+      this.masterLimiter = lim;
+    } catch { this.master.connect(this.ctx.destination); }
+  }
+  /** 곡별 음량 보정과 루프: 끝 페이드·여운 전 loopEnd 에서 BGM_CROSSFADE 초 동안 loopStart 부터 새 재생을 겹친다. */
+  _armMusicLoop(track, name, fade) {
+    const trim = bgmTrimGain(name), loop = BGM_LOOPS[name];
+    track.name = name; track.trim = trim;
+    if (trim !== 1) {
+      const g = track.gain.gain, t = this.now();
+      g.cancelScheduledValues(t); g.setValueAtTime(0, t); g.linearRampToValueAtTime(track.volume * trim, t + fade);
+    }
+    if (!loop) return;
+    track.el.loop = false;
+    const handoff = () => {
+      if (track.looped || this.music !== track) return;
+      const el = track.el;
+      if (!el.ended && el.currentTime < loop.loopEnd - BGM_CROSSFADE) return;
+      track.looped = true;
+      this._loopMusic(track, loop, el.ended ? 0.05 : BGM_CROSSFADE);
+    };
+    track.el.ontimeupdate = handoff; track.el.onended = handoff;
+  }
+  _loopMusic(track, loop, xfade) {
+    const base = track.el.currentSrc || track.el.src;
+    const el = new Audio(loop.loopStart > 0 ? `${base.split('#')[0]}#t=${loop.loopStart}` : base.split('#')[0]);
+    el.crossOrigin = 'anonymous'; el.preload = 'auto';
+    const src = this.ctx.createMediaElementSource(el), g = this.ctx.createGain(), t = this.now();
+    g.gain.value = 0; src.connect(g); g.connect(this.musicGain);
+    el.play().catch(() => {});
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(track.volume * track.trim, t + xfade);
+    const old = track.gain.gain; old.cancelScheduledValues(t); old.setValueAtTime(old.value, t); old.linearRampToValueAtTime(0, t + xfade);
+    track.timer = setTimeout(() => this._disposeMusic(track), xfade * 1000 + 150);
+    const next = { el, gain: g, src, volume: track.volume };
+    this.music = next; this._musicTracks.add(next);
+    this._armMusicLoop(next, track.name, xfade);
   }
   resume() { if (this.ctx && this.ctx.state !== 'running') this.ctx.resume().catch(() => {}); }
   // 저장된 믹스·전투 duck·SFX·음성에 영향 없이 소유한 음악 음소거만 해제한다.
@@ -582,7 +638,7 @@ export class AudioSys {
 
   // ---------- BGM ----------
   _disposeMusic(track) {
-    clearTimeout(track.timer); track.el.pause(); track.src.disconnect(); track.gain.disconnect();
+    clearTimeout(track.timer); track.el.ontimeupdate = null; track.el.onended = null; track.el.pause(); track.src.disconnect(); track.gain.disconnect();
     this._musicTracks.delete(track);
   }
   playMusic(name, { fade = 1.2, volume = 0.55 } = {}) {
@@ -603,6 +659,7 @@ export class AudioSys {
     g.gain.linearRampToValueAtTime(volume, this.now() + fade);
     this.music = { el, gain: g, src, volume };
     this._musicTracks.add(this.music);
+    this._armMusicLoop(this.music, name, fade);
   }
   /** BGM 덕킹. options.hold: 최저 구간 유지 시간(초), smooth: 복귀를 S 곡선으로, attack: 내려가는 시간(기본 0.1초). */
   duck(amount = 0.25, dur = 1.5, { hold = 0, smooth = false, attack = 0.1 } = {}) {
