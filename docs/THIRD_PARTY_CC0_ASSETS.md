@@ -1,5 +1,14 @@
 # Third-party CC0 runtime assets
 
+## 자체 렌더 대체 자산 — 광전사 드라칸 배너·초상 (IP 위험 제거)
+- 교체 사유: 기존 `banner_featured.webp`·`hero_barbarian.webp`는 외부 유명 게임 캐릭터(붉은 얼굴·몸 도색, 수염, 사슬, 불타는 도끼)와 인상이 매우 비슷해 출시 심사·권리 위험이 있었다. 두 파일을 모두 교체했다.
+- 새 이미지: 게임이 실제로 쓰는 3D 영웅 모델 `hero_barbarian_t1`(`asset-library/manifest.json`, 소유자 생성 Tripo 모델 + Mixamo 애니메이션)을 게임과 같은 경로(`loadHeroModel` → `spawnCharacter` → `applyLook` 양손 도끼)로 Three.js에서 그린 자체 렌더다. 외부 이미지 다운로드·이미지 생성 AI를 쓰지 않았고 배경 그라데이션·불씨도 코드로 그렸다.
+- 재현: `node tools/art/barbarian-banner-capture.mjs <dev 서버 origin> <출력.png> banner cheer 0.5 0.25`(900×1200, 영웅은 위쪽 가로 배너 칸에 맞춰 오른쪽 위에 배치), `... portrait cheer 0.5 0.2`(768×768). PNG를 WebP(품질 86)로 저장했다. 소스는 `tools/art/barbarian-banner-studio.{html,js}`.
+- 같은 크기·형식: `public/img/banner_featured.webp` 900×1200 WebP, `public/img/hero_barbarian.webp` 768×768 WebP.
+- 사용처: 소환 탭 배너(`src/ui/meta.js` `refreshGacha`, `index.html` `#banner-art`). 영웅 카드·초상·소환 카드의 일러스트는 별도 자체 제작 원화 `public/img/tll/barbarian-original-v1.webp`(붉은 머리 영웅, 도색 없음)이며 그대로 둔다. `hero_barbarian.webp`는 현재 코드에서 직접 참조하지 않지만 같은 위험이 있어 함께 교체했다.
+- SHA256: `banner_featured.webp` `d96c3dda4860a8eae7711e199f12be722c220d3c42c33317145c760de8c9e5cf`, `hero_barbarian.webp` `cd79eae828c6d059e6e4ad0024272f51cd38741ff10714abf2777e2c93498910`.
+- 이전 파일은 git 이력에만 남아 있고(`975e36c`) 런타임·문서에서 다시 쓰지 않는다. 새 일러스트가 필요하면 위 렌더 경로나 자체 제작 원화를 쓴다.
+
 ## Poly Haven — Medieval Wall 02
 - Asset: `Medieval Wall 02`
 - Author: Rob Tuytel
