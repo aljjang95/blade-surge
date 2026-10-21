@@ -11,12 +11,12 @@ import { heroTrainingQuote } from './hero-training.js';
 import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
 import { freshTownState } from '../data/towns.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
+import { createSeededRng } from '../shared/rng.js';
 import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
 import { baselineSkillLevels, canLearnSkill, spBonus, spBudget, spSpent, spAvailable, skillLearned, FREE_RESET_BELOW_LEVEL } from '../data/skill-tree.js';
 import { levelExperienceMultiplier, stageRecommendedLevel } from '../data/loot-tables.js';
 
 const KEY = 'bladesurge_save_v1';
-const now = () => Date.now();
 // 분해: 판매 골드의 절반과 강화석(에픽은 상급)을 돌려준다. 유니크 이상은 일괄 분해 대상에서 보호한다.
 export function salvageRewards(inst) {
   const rarity = ITEM_BY_ID[inst?.id]?.rarity;
@@ -30,13 +30,13 @@ export function freshHeroState(id) {
   const def = HEROES[id];
   return { level: 1, exp: 0, star: 1, shards: 0, grade: heroBaseGrade(def), skills: baselineSkillLevels(def), spBonus: 0, skillLoadout: [4, 5], equip: { weapon: null, armor: null, ring: null, boots: null } };
 }
+// 규칙 시계·난수: 주입값이 없거나 프로토타입 메서드를 일반 객체로 빌려 쓸 때도 호출 시점의 Date.now/Math.random으로 돌아간다.
+const nowOf = (eco) => (typeof eco?.now === 'function' ? eco.now() : Date.now());
+const rngOf = (eco) => (typeof eco?.rng === 'function' ? eco.rng : Math.random);
 const pickWeighted = (w, rng = Math.random) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = rng() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
 
-/** 가챠 전용 결정적 RNG (mulberry32). 전투·드랍 RNG는 그대로 Math.random을 쓴다. */
-export function createSeededRng(seed) {
-  let a = seed >>> 0;
-  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-}
+// 가챠 전용 결정적 RNG (mulberry32)는 src/shared/rng.js로 옮겼다. 기존 import 경로를 위해 다시 내보낸다.
+export { createSeededRng };
 /** pity = 마지막 SSR 이후 이번 소환의 순번(1부터). softPity회 연속 미당첨 뒤, 즉 softPity+1번째 소환부터 SSR 가중치가 오른다. */
 export function gachaSsrWeight(pity) { return GACHA.rates.SSR + (pity > GACHA.softPity ? (pity - GACHA.softPity) * GACHA.softPityStep : 0); }
 export function gachaChances(pity) {
@@ -92,23 +92,33 @@ export function gachaContents() {
 }
 
 export class Economy {
-  /** @param {{ gachaRng?: () => number, gachaSeed?: number }} [options] 가챠 RNG 주입(테스트·재현용) */
+  /**
+   * @param {{ gachaRng?: () => number, gachaSeed?: number, rng?: () => number, now?: () => number, storage?: { getItem(key: string): string|null, setItem(key: string, value: string): void, removeItem(key: string): void } }} [options]
+   * gachaRng/gachaSeed: 가챠 RNG 주입(테스트·재현용). rng: 강화·드랍 등 나머지 규칙 난수. now: 규칙 시계(ms).
+   * storage: 저장소. 생략하면 호출 시점의 globalThis.localStorage를 쓴다(테스트가 중간에 바꿔 끼워도 따라간다).
+   */
   constructor(options = {}) {
+    // load()가 생성자 안에서 불리므로 시계·난수·저장소를 먼저 고정한다.
+    this.now = typeof options.now === 'function' ? options.now : () => Date.now();
+    this.rng = typeof options.rng === 'function' ? options.rng : () => Math.random();
+    this._storage = options.storage || null;
     this.gachaRng = typeof options.gachaRng === 'function' ? options.gachaRng : Number.isInteger(options.gachaSeed) ? createSeededRng(options.gachaSeed) : Math.random;
     this.storageStatus = 'ready'; this.hasStoredSave = false; this.lastGachaError = null; this.s = this.load(); this._lastGoodSave = JSON.stringify(this.s); this.listeners = []; this.bonusReceipts = new WeakSet(); this.tickEnergy();
   }
+  /** 주입 저장소, 없으면 호출 시점의 localStorage. 접근 자체가 throw할 수 있어 try 안에서만 읽는다. */
+  get storage() { return this._storage || globalThis.localStorage; }
   onChange(fn) { this.listeners.push(fn); }
   emit() { const saved = this.save(); for (const f of this.listeners) f(this.s); return saved; }
   recordJourneyAction(stat, amount = 1) {
     const s = this.s; s.journey = normalizeJourney(s.journey);
-    const at = now(), period = periodAt(at); refreshPeriods(s.journey, at);
+    const at = nowOf(this), period = periodAt(at); refreshPeriods(s.journey, at);
     s.actionSequence = (Number.isSafeInteger(s.actionSequence) ? s.actionSequence : 0) + 1;
     return recordJourneyActionCore(s.journey, { receiptId: `action:${s.actionSequence}`, stat, amount, day: period.day, week: period.week });
   }
   fresh() {
     return {
       expedition: normalizeExpedition(), journey: normalizeJourney(), actionSequence: 0,
-      schemaVersion: 1, created: now(), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: now(), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
+      schemaVersion: 1, created: nowOf(this), name: '보스', gold: 12000, gems: 1500, energy: ENERGY.max, energyT: nowOf(this), tickets: 5, ssrTickets: 0, sweep: 3, stones: 12, stones2: 0, stones3: 0, fragments: 0, protect: 1, bless: 1,
       transcendStones: 0, skillResets: 1,
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
       selected: 'knight', inventory: [], invSeq: 1, avatars: { owned: [], equipped: {} },
@@ -117,13 +127,13 @@ export class Economy {
       pity: 0, gacha: { pity: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
       daily: { day: 0, last: 0 }, mail: [{ id: 1, title: '환영합니다, 보스님!', body: '사전등록 보상이 도착했습니다.', rewards: { gems: 500, tickets: 3 }, read: false }],
-      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, cameraInvertX: false, cameraInvertY: false }, limitedStart: now(),
+      quests: { kills: 0, stages: 0, pulls: 0, claimed: [] }, guide: { seen: false }, tutorial: { completed: false }, settings: { sfx: true, music: true, haptics: true, voice: true, quality: 'auto', camera: 'auto', screenShake: null, autoTarget: true, cameraInvertX: false, cameraInvertY: false }, limitedStart: nowOf(this),
     };
   }
   load() {
     for (const key of [KEY, KEY + '_backup']) {
       try {
-        const raw = localStorage.getItem(key); if (!raw) continue;
+        const raw = this.storage.getItem(key); if (!raw) continue;
         this.hasStoredSave = true;
         try {
           const s = this.migrate(JSON.parse(raw));
@@ -132,7 +142,7 @@ export class Economy {
         } catch {
           this.storageStatus = 'recovery-needed';
           // 읽지 못한 원본을 보존한 뒤 마지막 정상 저장을 시도한다.
-          if (!localStorage.getItem(KEY + '_recovery')) localStorage.setItem(KEY + '_recovery', raw);
+          if (!this.storage.getItem(KEY + '_recovery')) this.storage.setItem(KEY + '_recovery', raw);
         }
       } catch { this.storageStatus = 'unavailable'; }
     }
@@ -146,14 +156,14 @@ export class Economy {
     try {
       const raw = JSON.stringify(this.s);
       // 현재 진행 저장이 우선이다. 백업 공간 부족이 정상 저장을 막지 않는다.
-      localStorage.setItem(KEY, raw);
-      try { if (this._lastGoodSave) localStorage.setItem(KEY + '_backup', this._lastGoodSave); } catch {}
+      this.storage.setItem(KEY, raw);
+      try { if (this._lastGoodSave) this.storage.setItem(KEY + '_backup', this._lastGoodSave); } catch {}
       this._lastGoodSave = raw; this.storageStatus = 'ready'; return true;
     } catch { this.storageStatus = 'unavailable'; return false; }
   }
   reset() {
     let cleared = true;
-    try { for (const key of [KEY, KEY + '_backup', KEY + '_recovery']) localStorage.removeItem(key); }
+    try { for (const key of [KEY, KEY + '_backup', KEY + '_recovery']) this.storage.removeItem(key); }
     catch { cleared = false; }
     this.s = this.fresh(); this._lastGoodSave = JSON.stringify(this.s); this.bonusReceipts = new WeakSet(); this.emit();
     return cleared && this.storageStatus === 'ready';
@@ -163,26 +173,26 @@ export class Economy {
     const raw = JSON.stringify(this.s);
     this._lastGoodSave = raw;
     try {
-      localStorage.setItem(KEY, raw);
-      localStorage.setItem(KEY + '_backup', raw);
+      this.storage.setItem(KEY, raw);
+      this.storage.setItem(KEY + '_backup', raw);
       this.storageStatus = 'ready'; return true;
     } catch {
       // 취소된 차감 상태가 복구 경로에서 되살아나지 않도록 낡은 백업을 제거한다.
-      try { localStorage.removeItem(KEY + '_backup'); } catch {}
+      try { this.storage.removeItem(KEY + '_backup'); } catch {}
       this.storageStatus = 'unavailable'; return false;
     }
   }
 
   // ---------- 화폐 ----------
-  get isVip() { return this.s.vipUntil > now(); }
+  get isVip() { return this.s.vipUntil > nowOf(this); }
   get energyMax() { return ENERGY.max + (this.isVip ? 50 : 0); }
   tickEnergy() {
-    const s = this.s; const max = this.energyMax; if (s.energy >= max) { s.energyT = now(); return; }
-    const gained = Math.floor((now() - s.energyT) / (ENERGY.regenSec * 1000));
-    if (gained > 0) { s.energy = Math.min(max, s.energy + gained); s.energyT += gained * ENERGY.regenSec * 1000; if (s.energy >= max) s.energyT = now(); }
+    const s = this.s; const max = this.energyMax; if (s.energy >= max) { s.energyT = nowOf(this); return; }
+    const gained = Math.floor((nowOf(this) - s.energyT) / (ENERGY.regenSec * 1000));
+    if (gained > 0) { s.energy = Math.min(max, s.energy + gained); s.energyT += gained * ENERGY.regenSec * 1000; if (s.energy >= max) s.energyT = nowOf(this); }
   }
-  energyTimer() { const s = this.s; if (s.energy >= this.energyMax) return ''; const left = ENERGY.regenSec * 1000 - (now() - s.energyT) % (ENERGY.regenSec * 1000); const m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000); return `${m}:${sec.toString().padStart(2, '0')}`; }
-  spendEnergy(n) { this.tickEnergy(); if (this.s.energy < n) return false; if (this.s.energy >= this.energyMax) this.s.energyT = now(); this.s.energy -= n; this.emit(); return true; }
+  energyTimer() { const s = this.s; if (s.energy >= this.energyMax) return ''; const left = ENERGY.regenSec * 1000 - (nowOf(this) - s.energyT) % (ENERGY.regenSec * 1000); const m = Math.floor(left / 60000), sec = Math.floor((left % 60000) / 1000); return `${m}:${sec.toString().padStart(2, '0')}`; }
+  spendEnergy(n) { this.tickEnergy(); if (this.s.energy < n) return false; if (this.s.energy >= this.energyMax) this.s.energyT = nowOf(this); this.s.energy -= n; this.emit(); return true; }
   addRewards(r, opts = {}) {
     const s = this.s; const got = [];
     if (r.gold) { const g = Math.floor(r.gold * (this.isVip && opts.applyVip !== false ? 1.3 : 1)); s.gold += g; got.push({ k: 'gold', n: g }); }
@@ -199,8 +209,8 @@ export class Economy {
     if (r.bless) { s.bless += r.bless; got.push({ k: 'bless', n: r.bless }); }
     if (r.transcendStones) { s.transcendStones = (s.transcendStones || 0) + r.transcendStones; got.push({ k: 'transcendStones', n: r.transcendStones }); }
     if (r.skillResets) { s.skillResets = (s.skillResets || 0) + r.skillResets; got.push({ k: 'skillResets', n: r.skillResets }); }
-    if (r.monthly) { s.monthlyUntil = Math.max(now(), s.monthlyUntil) + r.monthly * 86400000; got.push({ k: 'monthly', n: r.monthly }); }
-    if (r.vipDays) { s.vipUntil = Math.max(now(), s.vipUntil) + r.vipDays * 86400000; s.vip = Math.max(s.vip, 1); got.push({ k: 'vip', n: r.vipDays }); }
+    if (r.monthly) { s.monthlyUntil = Math.max(nowOf(this), s.monthlyUntil) + r.monthly * 86400000; got.push({ k: 'monthly', n: r.monthly }); }
+    if (r.vipDays) { s.vipUntil = Math.max(nowOf(this), s.vipUntil) + r.vipDays * 86400000; s.vip = Math.max(s.vip, 1); got.push({ k: 'vip', n: r.vipDays }); }
     if (r.ssrGear) { for (let i = 0; i < r.ssrGear; i++) { const it = this.addItem('SSR'); got.push({ k: 'item', item: it }); } }
     if (!opts.silent) this.emit();
     return got;
@@ -329,7 +339,7 @@ export class Economy {
   grantHero(id) { if (this.s.heroes[id]) { this.s.heroes[id].shards += GACHA.dupShards; return { dup: true, shards: GACHA.dupShards }; } this.s.heroes[id] = freshHeroState(id); return { dup: false, shards: 0 }; }
   // ---------- 장비 ----------
   /** @param {string} rarity @param {string|null} slot */
-  addItem(rarity, slot = null, rng = Math.random) {
+  addItem(rarity, slot = null, rng = rngOf(this)) {
     slot = slot || SLOTS[Math.floor(rng() * SLOTS.length)];
     if (GACHA_ITEM_RARITY[rarity]) rarity = GACHA_ITEM_RARITY[rarity];   // 가챠 등급(R/SR/SSR) → 장비 등급
     const pool = ITEM_POOL[slot].filter((x) => x.rarity === rarity);
@@ -348,11 +358,11 @@ export class Economy {
     if (protect && this.s.protect <= 0) return { ok: false, reason: 'protect' };
     if (bless && this.s.bless <= 0) return { ok: false, reason: 'bless' };
     this.s.gold -= cost; this.s[sk] -= stones; if (protect) this.s.protect--; if (bless) this.s.bless--;
-    let chance = enhanceChance(lv) + (bless ? 0.2 : 0); const success = Math.random() < chance;
+    let chance = enhanceChance(lv) + (bless ? 0.2 : 0); const success = rngOf(this)() < chance;
     let destroyed = false, down = 0;
     if (success) inst.enh++;
     else {
-      if (!protect && Math.random() < destroyChance(lv)) { destroyed = true; this.s.inventory.splice(this.s.inventory.indexOf(inst), 1); for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } }
+      if (!protect && rngOf(this)() < destroyChance(lv)) { destroyed = true; this.s.inventory.splice(this.s.inventory.indexOf(inst), 1); for (const hid in this.s.heroes) { const e = this.s.heroes[hid].equip; for (const sl of SLOTS) if (e[sl] === uid) e[sl] = null; } }
       else if (enhanceDown(lv)) { down = enhanceDown(lv); inst.enh -= down; }
     }
     this.s.quests.enh = (this.s.quests.enh || 0) + 1;
@@ -440,9 +450,9 @@ export class Economy {
     const milestone = first && stage.st % 5 === 0 ? { tickets: stage.st % 10 === 0 ? 2 : 1 } : {};
     const got = this.addRewards({ gold: r.gold * m + fieldGold * m + (fullClearBonus?.gold || 0), gems: first ? r.firstGems : 0, stones: (r.stones || 0) * m + fieldStones, stones2: fieldStones2 * m, stones3: fieldStones3 * m, fragments: fieldFragments * m + (stage.boss ? 5 : 0) + (fullClearBonus?.fragments || 0), ...milestone }, { silent: true });
     for (const l of fieldLoot) loot.push(l);
-    if (fullClearBonus) loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_ELITE)));
-    if (double && Math.random() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE))); }
-    if (stage.boss && Math.random() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
+    if (fullClearBonus) loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_ELITE, rngOf(this))));
+    if (double && rngOf(this)() < r.dropChance) { loot.push(this.addItem(pickWeighted(RARITY_WEIGHT_STAGE, rngOf(this)))); }
+    if (stage.boss && rngOf(this)() < 0.3) { s.tickets += 1; got.push({ k: 'tickets', n: 1 }); }
     // 초월석·영웅 조각·지역 재료는 전투 중 서비스가 쌓은 장부만 믿는다. 장부가 없으면 호출 인자로 새 재화를 주지 않는다(리뷰 P2).
     if (ledger) got.push(...this.applyFieldExtras(ledger, heroId));
     const prevLv = this.hero(heroId).level;
@@ -529,7 +539,7 @@ export class Economy {
   }
   // ---------- 상점 ----------
   sku(id) { return SKUS.find((x) => x.id === id); }
-  limitedLeft(sku) { if (!sku.limited) return 0; const end = this.s.limitedStart + sku.hours * 3600000; return Math.max(0, end - now()); }
+  limitedLeft(sku) { if (!sku.limited) return 0; const end = this.s.limitedStart + sku.hours * 3600000; return Math.max(0, end - nowOf(this)); }
   /** 현금 결제는 실제 스토어 SDK와 영수증 검증이 연결되기 전까지 상태를 바꾸거나 보상을 주지 않는다 (PRD §3.3). */
   paymentAvailable() { return false; }
   purchase(id) {
@@ -573,7 +583,7 @@ export class Economy {
     this.s.avatars.equipped[heroId] = id; this.emit(); return { ok: true };
   }
   equippedAvatar(heroId = this.s.selected) { const id = this.s.avatars?.equipped?.[heroId]; return AVATAR_BY_ID[id]?.heroId === heroId ? id : null; }
-  claimMonthly() { const s = this.s; if (s.monthlyUntil < now()) return false; const day = Math.floor(now() / 86400000); if (s.monthlyClaimed === day) return false; s.monthlyClaimed = day; this.addRewards({ gems: 100 }); return true; }
+  claimMonthly() { const s = this.s; if (s.monthlyUntil < nowOf(this)) return false; const day = Math.floor(nowOf(this) / 86400000); if (s.monthlyClaimed === day) return false; s.monthlyClaimed = day; this.addRewards({ gems: 100 }); return true; }
   // ---------- 배틀패스 ----------
   get passLevel() { return Math.min(BATTLE_PASS.maxLevel, Math.floor(this.s.pass.xp / BATTLE_PASS.xpPerLevel) + 1); }
   addPassXp(xp) { const before = this.passLevel; this.s.pass.xp += xp; return this.passLevel - before; }
@@ -586,8 +596,8 @@ export class Economy {
   claimPass(lv, prem) { const p = this.s.pass; const arr = prem ? p.claimedPrem : p.claimedFree; if (!Number.isInteger(lv) || !PASS_TRACK[lv - 1] || arr.includes(lv) || lv > this.passLevel || (prem && !p.premium)) return null; arr.push(lv); const r = PASS_TRACK[lv - 1][prem ? 'prem' : 'free']; return this.addRewards(r); }
   passClaimable() { const p = this.s.pass; let n = 0; for (let lv = 1; lv <= this.passLevel; lv++) { if (!p.claimedFree.includes(lv)) n++; if (p.premium && !p.claimedPrem.includes(lv)) n++; } return n; }
   // ---------- 출석 ----------
-  dailyAvailable() { const d = Math.floor(now() / 86400000); return this.s.daily.last !== d; }
-  claimDaily() { if (!this.dailyAvailable()) return null; const s = this.s; const d = Math.floor(now() / 86400000); s.daily.last = d; const idx = s.daily.day % DAILY_REWARDS.length; s.daily.day++; return { idx, got: this.addRewards(DAILY_REWARDS[idx]) }; }
+  dailyAvailable() { const d = Math.floor(nowOf(this) / 86400000); return this.s.daily.last !== d; }
+  claimDaily() { if (!this.dailyAvailable()) return null; const s = this.s; const d = Math.floor(nowOf(this) / 86400000); s.daily.last = d; const idx = s.daily.day % DAILY_REWARDS.length; s.daily.day++; return { idx, got: this.addRewards(DAILY_REWARDS[idx]) }; }
   // ---------- 우편 ----------
   claimMail(id) { const m = this.s.mail.find((x) => x.id === id); if (!m || m.read) return null; m.read = true; return this.addRewards(m.rewards); }
   unreadMail() { return this.s.mail.filter((m) => !m.read).length; }
