@@ -155,6 +155,9 @@ test('배포 잠금 D1 호출은 CLOUDFLARE_API_BASE_URL 프록시를 따르고 
   expect(cloudflareApiBase({})).toBe('https://api.cloudflare.com/client/v4');
   expect(cloudflareApiBase({ CLOUDFLARE_API_BASE_URL: 'https://proxy.example/p/cloudflare/client/v4/' })).toBe('https://proxy.example/p/cloudflare/client/v4');
   expect(() => cloudflareApiBase({ CLOUDFLARE_API_BASE_URL: 'http://proxy.example/v4' })).toThrow();
+  expect(cloudflareApiBase({ CLOUDFLARE_API_BASE_URL: 'http://127.0.0.1:41234/client/v4' })).toBe('http://127.0.0.1:41234/client/v4');
+  expect(() => cloudflareApiBase({ CLOUDFLARE_API_BASE_URL: 'http://127.0.0.1.evil.example/v4' })).toThrow();
+  expect(() => cloudflareApiBase({ CLOUDFLARE_API_BASE_URL: 'http://localhost:41234/v4' })).toThrow();
   const seen: string[] = [], original = globalThis.fetch;
   globalThis.fetch = (async (url: string) => { seen.push(String(url)); return new Response(JSON.stringify({ success: true, result: [{ success: true, results: [] }] })); }) as typeof fetch;
   try {
