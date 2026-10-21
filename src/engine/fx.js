@@ -641,7 +641,8 @@ export class FX {
     if (!(this._killBudget > 0)) return;
     this._killBudget--;
     // 크게 터졌다 빠르게 사그라드는 따뜻한 섬광 한 점 + 방사형 불꽃 몇 점
-    this.glow.emit(pos.x, pos.y + 1, pos.z, 0, 0.5, 0, KILL_COLOR, this.lite ? 2.4 : 3.4, 0.2, { grav: 0, drag: 0.9, shrink: 0.2 });
+    // 큰 크림색 구(3.4)는 적을 베이지 덩어리로 덮었다. 또렷한 처치 섬광은 impact.kill 이 맡고 여기서는 작은 잔광만 남긴다.
+    this.glow.emit(pos.x, pos.y + 1, pos.z, 0, 0.5, 0, KILL_COLOR, this.lite ? 1.2 : 1.6, 0.2, { grav: 0, drag: 0.9, shrink: 0.2 });
     const n = this.lite ? 3 : 6;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + this._killBudget * 0.7, s = 7 + (i % 2) * 3;
@@ -862,7 +863,8 @@ export class FX {
     return mesh;
   }
   explosion(pos, { size = 4, color = 0xffffff, life = 0.55, opacity = 1 } = {}) { this.flipbook(pos, 'explosion', { size, life, color, y: size * 0.35, opacity, gain: decorativeBurstGain(size) }); }
-  dustPuff(pos, { size = 3, life = 0.9, color = 0xa89880 } = {}) { this.flipbook(pos, 'dust', { size, life, color, y: size * 0.3, blending: THREE.NormalBlending, opacity: 0.75 }); }
+  // 먼지는 발밑에 낮게 깔린 옅은 흙빛이다. 예전(높이 0.3×크기, 불투명도 .75)은 처치·강타 순간 적 몸을 베이지 덩어리로 덮었다.
+  dustPuff(pos, { size = 3, life = 0.9, color = 0x8f826f } = {}) { this.flipbook(pos, 'dust', { size, life, color, y: size * 0.16, blending: THREE.NormalBlending, opacity: 0.42 }); }
   /** 화염 기둥: 교차 2장 + UV 스크롤 */
   _fireMaterial(tex, color) {
     const make = () => {

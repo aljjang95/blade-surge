@@ -123,3 +123,30 @@ test('Math.random은 정상·예외 경로 모두 원래 함수로 복원된다'
   expect(() => castSkillVfx(bad.game, 'meteor', bad.player)).toThrow();
   expect(Math.random).toBe(orig);
 });
+test('조준점이 없는 조준 스킬은 실제 판정과 같은 밀집 적 위치에 그리고, 적이 없으면 판정과 같은 전방 거리로 내려간다', () => {
+  const { game, player, calls } = rig();
+  game.enemies = []; player.distTo = () => 0;
+  const target = new THREE.Vector3(7, 0, -3), seen: any[] = [];
+  const seek = (_g: any, _p: any, range: number, radius: number) => { seen.push([range, radius]); return target.clone(); };
+  castSkillVfx(game, 'meteor', player, { data: {} }, seek);
+  expect(seen).toEqual([[15, 5]]);
+  const ground = calls.find(c => c[0] === 'ground');
+  expect(ground[1].x).toBeCloseTo(7); expect(ground[1].z).toBeCloseTo(-3);
+  // 밀집 적이 없으면 skills.js 의 fwd(p, 4) 와 같은 자리.
+  const empty = rig(); empty.game.enemies = []; empty.player.distTo = () => 0;
+  castSkillVfx(empty.game, 'meteor', empty.player, { data: {} }, () => null);
+  const fallback = empty.calls.find(c => c[0] === 'ground');
+  expect(fallback[1].z).toBeCloseTo(empty.player.pos.z + 4); expect(fallback[1].x).toBeCloseTo(empty.player.pos.x);
+  // 조준점이 있으면 그것이 우선이다.
+  const aimed = rig(); aimed.game.enemies = []; aimed.player.distTo = () => 0;
+  castSkillVfx(aimed.game, 'meteor', aimed.player, { data: { aimPoint: new THREE.Vector3(-2, 0, 9) } }, seek);
+  expect(aimed.calls.find(c => c[0] === 'ground')[1].z).toBeCloseTo(9);
+});
+
+test('지면 텍스처가 이미 10m 이상인 궁극기는 전장 링을 한 겹 더 쌓지 않는다', () => {
+  const ground = rig(); castSkillVfx(ground.game, 'skyfall_arrows', ground.player);
+  const wide = ground.calls.filter(c => c[0] === 'ground' && c[4].r1 >= 10);
+  expect(wide).toHaveLength(1); expect(String(wide[0][2])).toBe(skillVfxKey('skill-wind-arrow-trail'));
+  const flash = rig(); castSkillVfx(flash.game, 'meteor', flash.player);
+  expect(flash.calls.filter(c => c[0] === 'ground' && c[4].r1 >= 10)).toHaveLength(1);
+});
