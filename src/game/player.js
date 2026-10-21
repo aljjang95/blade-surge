@@ -11,7 +11,7 @@ import { GradeAura, resolveHeroGrade } from '../engine/grade-aura.js';
 import { CONTROL_ULT_GAIN, ultimateLockDuration } from './control-rewards.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 import { normalizeSkillLoadout, skillIndexForCombatSlot, skillMpCost, MP_BASE, MP_REGEN_PER_SEC, DODGE_COOLDOWN_SEC, DODGE_INVULN_SEC } from './progression.js';
-import { FEEL, dodgeCancelOpen, comboQueueOpen, skillCancelOpen, heroRunTempo } from './feel.js';
+import { FEEL, attackBlend, dodgeCancelOpen, comboQueueOpen, skillCancelOpen, heroRunTempo } from './feel.js';
 import { RangerAim, aimTargetValid, clearShot } from './ranger-aim.js';
 import { enemyImpactIn } from './enemies.js';
 import { SkillAimView } from './skill-aim/aim-view.js';
@@ -246,6 +246,7 @@ export class Player extends Actor {
   startCombo(idx, inputYaw = null) {
     if (idx === 0 && this.comboResume && this.comboResume.t > 0) { idx = this.comboResume.idx; this.comboResume = null; }
     const c = this.def.combo[idx]; if (!c) return;
+    const prevState = this.state;   // 크로스페이드 길이를 고르는 직전 상태(공격 연타 vs 회피·대기에서 시작)
     // 구르기를 사격으로 끊으면 회피 무적도 그 순간 끝난다(다른 출처의 남은 무적은 유지). 회피→사격→회피 연쇄 무적 방지.
     if (this.state === 'dodge') this.invuln = Math.max(0, (this.invulnOther || 0) - this.stateT);
     // 수동 궁수: 사거리 안의 보이는 적을 조준한다(공격 시작 시점). 대상이 없으면 아래 기존 규칙으로 쏜다.
@@ -271,7 +272,7 @@ export class Player extends Actor {
     }
     const dur = c.dur / (this.buffs.atkSpd * (this.stormT > 0 ? 1.4 : 1));
     const layered = manualBow && this.bowLayers && c.anim === 'Bow_Shoot';
-    this.playTimed(layered ? 'RangerBowUpper' : c.anim, dur, { fade: ['knight','barbarian'].includes(this.def.id) ? .035 : .06 });
+    this.playTimed(layered ? 'RangerBowUpper' : c.anim, dur, { fade: attackBlend(prevState, this.def.weapon) });
     if (layered) this.startBowLegs();
     gatherWarriorWindup(this, c, dur);
     this.ticksLeft = c.ticks ? c.ticks - 1 : 0; this.nextTick = 0; this.through = null;
@@ -459,7 +460,7 @@ export class Player extends Actor {
     const d = dir ? dir.clone().normalize() : this.forward(_v.clone()).multiplyScalar(backstep ? -1 : 1);
     if (!backstep) this.faceDir(d.x, d.z);
     this.vel.copy(d).multiplyScalar(19);
-    this.play(backstep && this.has('dodge') ? this.A('dodge') : 'Dodge_Forward', { once: true, fade: 0.05, speed: 1.6 });
+    this.play(backstep && this.has('dodge') ? this.A('dodge') : 'Dodge_Forward', { once: true, fade: FEEL.blend.dodge, speed: 1.6 });
     audio.dodgeRelease();
     this.game.fx.dust(this.pos, { n: 8, size: 1.2 });
     this.ghostT = 0;
@@ -586,7 +587,7 @@ export class Player extends Actor {
       // 회피와 같은 실행 경계: 타격 전에는 반복하고 마무리 타격을 실행했으면 첫 타로 돌아간다.
       if (this.state === 'attack' && this.current) { this.comboResume = { idx: this.hitDone ? (this.comboIdx + 1) % this.def.combo.length : this.comboIdx, t: 1.2 }; }
       this.attackBufferYaw = null; this.comboQueuedYaw = null;
-      this.stopTrail(); this.state = 'hurt'; this.stateT = 0; this.play(Math.random() < 0.5 ? 'Hit_A' : 'Hit_B', { once: true, fade: 0.05, speed: 1.6 });
+      this.stopTrail(); this.state = 'hurt'; this.stateT = 0; this.play(Math.random() < 0.5 ? 'Hit_A' : 'Hit_B', { once: true, fade: FEEL.blend.hurt, speed: 1.6 });
     }
     if (this.hp <= 0) { this.hp = 0; this.stopTrail(); this.state = 'dead'; this.die(); this.game.onPlayerDeath(this); }
     return true;

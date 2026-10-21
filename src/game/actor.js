@@ -11,6 +11,7 @@ export const ARENA_R = 15.5;
 const LAUNCH_SEC = 0.55;
 // 렌더 피벗 방향 보간 시간상수(초). 0.1초 안에 90% 따라간다.
 const TURN_SMOOTH_SEC = 0.045;
+const DEATH_TURN_SEC = 0.06;
 let launchSerial = 0x2f6e2b1;
 const launchNoise = () => (launchSerial = (Math.imul(launchSerial, 1664525) + 1013904223) >>> 0) / 4294967296;
 
@@ -187,6 +188,11 @@ export class Actor {
         const squash = Math.min(.09, decay * .09);
         pivot.scale.set(1 + squash*.55, 1 - squash, 1 + squash*.55);
       }
+    }
+    if (this._deathTurn) {
+      // 처치 순간 공격자 쪽으로 돌아선 몸을 렌더에서만 시간상수 DEATH_TURN_SEC 로 따라 돌린다.
+      this._deathTurn = reduced || Math.abs(this._deathTurn) < 1e-3 ? 0 : this._deathTurn * Math.exp(-dt / DEATH_TURN_SEC);
+      pivot.rotation.y += this._deathTurn;
     }
     this.updateTurnSmoothing(dt, reduced);
   }

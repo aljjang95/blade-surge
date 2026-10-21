@@ -27,6 +27,27 @@ export const FEEL = Object.freeze({
     // 몬스터: src/data/locomotion-stride.js 의 보폭 표. 걷기 전용 큰 몸집이 지나치게 종종거리지 않게 상한을 낮춘다.
     monsterMin: .6, monsterMax: 2.2,
   }),
+  // 영웅 클립 크로스페이드(초). 고정 픽스처(2026-10-22)에서 회피 끝→공격(.035초, 2프레임)이 44–50°, 쌍검 연타(.06초)가 59° 한 프레임에
+  // 튀었다(주변 프레임의 4–5배). 연타 섞기는 다음 타의 선딜(접촉 진행도의 64%) 안, 회복 섞기는 접촉 전이라 접촉 프레임·판정 시각은 바뀌지 않는다.
+  blend: Object.freeze({
+    chain: Object.freeze({ '1h': .07, '2h': .07, dual: .08, staff: .08, bow: .08 }),   // 공격 → 다음 타(쌍검 선딜 85ms 안)
+    recover: .1,        // 회피·경직·대기 → 공격(앞 자세가 공격 자세와 멀다)
+    dodge: .08,         // 공격·이동 → 회피(무적·이동은 첫 프레임에 바로 시작한다)
+    hurt: .07,          // 영웅 피격(경직) 클립
+  }),
+  // 적 피격 반응. 경타는 예전처럼 빠르게(1.8배) 움찔하고, 강타·치명타·마무리는 강타 클립을 조금 느리게 끝까지 보여 무게를 읽게 한다.
+  // 경직 = base + kb × perKb(상한 kbCap) + 강타 heavyHold. 접촉 반응 시작은 같은 프레임이다.
+  react: Object.freeze({ lightSpeed: 1.8, heavySpeed: 1.4, base: .22, perKb: .03, kbCap: .4, heavyHold: .1 }),
+  // 사망 변주(결정적, 난수 없음). 시체는 맞은 방향을 등지도록 돌아 넘어지고(맞은 쪽으로 쓰러지지 않게), 처치 등급마다 쓰러지는 박자가 다르다.
+  death: Object.freeze({ snap: 1.3, normal: 1, heavy: .82 }),
+  // 연출 박자(궁극기·보스 처치). 슬로우는 끝 ease 초 동안 1 로 부드럽게 복귀한다(예전엔 뚝 끊겼다).
+  // kick 은 렌더 카메라만 시선 방향으로 밀었다 되돌리는 한 번의 방향성 펀치다(무작위 흔들림 아님, rig·사용자 시점 불변).
+  cinematic: Object.freeze({
+    ultStart: Object.freeze({ scale: .25, sec: .7, ease: .3 }),
+    ultRelease: Object.freeze({ stop: .06, kick: .7 }),
+    bossKill: Object.freeze({ stop: .15, scale: .15, sec: 1.8, ease: .8, kick: 1.1 }),
+  }),
+  camera: Object.freeze({ kickIn: .07, kickOut: .38, kickMax: 1.4 }),
   // 넉백 속도는 매 초 keep 배로 줄어든다(지수 마찰). 초기 속도 v 의 총 이동 = v / -ln(keep). 몰이(pull)도 같은 속도 벡터를 쓰므로 값은 바꾸지 않는다.
   knockback: Object.freeze({ keep: .02 }),
   // 피격 섬광: 가벼운 타격은 그대로(gain 1), 무거울수록 길고 밝다.
@@ -137,6 +158,48 @@ export function knockbackDecay(dt) { return Math.pow(FEEL.knockback.keep, Math.m
 
 /** 초기 넉백 속도(m/s)가 멈출 때까지 미는 총 거리(m). 히트스톱(dt 0) 동안은 움직이지 않으므로 정지 길이와 무관하다. */
 export function knockbackTravel(speed) { return Math.max(0, num(speed)) / -Math.log(FEEL.knockback.keep); }
+
+/** 영웅 공격 클립의 크로스페이드(초). prevState 는 공격을 시작하기 직전의 상태, weapon 은 영웅 무기 종류. */
+export function attackBlend(prevState, weapon) {
+  const B = FEEL.blend;
+  if (prevState !== 'attack') return B.recover;
+  return B.chain[weapon] ?? B.recover;
+}
+
+const _react = { key: 'hit', speed: 1, stagger: 0 };
+/** 적 피격 반응: 재생할 논리 클립 키, 재생 배율, 경직(초). kb 는 넉백 세기(저항 적용 전).
+ * 군중 타격에서 매 접촉 호출되므로 반환 객체(out, 기본은 모듈 하나)를 재사용한다. 바로 읽고 보관하지 않는다. */
+export function enemyHitReact(kb = 0, crit = false, finisher = false, out = _react) {
+  const R = FEEL.react, k = Math.max(0, num(kb)), heavy = k >= 4 || !!crit || !!finisher;
+  out.key = heavy ? 'hitHeavy' : 'hit'; out.speed = heavy ? R.heavySpeed : R.lightSpeed;
+  out.stagger = R.base + Math.min(R.kbCap, k * R.perKb) + (heavy ? R.heavyHold : 0);
+  return out;
+}
+
+/** 사망 변주. 반환: 사망 클립 재생 배율과 시체가 바라볼 방향(맞은 방향의 반대 = 공격자 쪽, 라디안) 또는 null.
+ * 쓰러뜨린 타격이 마무리·치명타·강타(kb≥6)면 빠르게 꺾이고, 정예·보스는 무겁게 천천히 쓰러진다. 같은 입력은 늘 같은 결과다. */
+export function deathStyle({ dirx = 0, dirz = 0, kb = 0, crit = false, finisher = false, elite = false, boss = false } = {}) {
+  const D = FEEL.death, l = Math.hypot(num(dirx), num(dirz));
+  const speed = boss || elite ? D.heavy : finisher || crit || num(kb) >= 6 ? D.snap : D.normal;
+  return { speed, faceYaw: l > 1e-6 ? Math.atan2(-dirx / l, -dirz / l) : null };
+}
+
+/** 렌더 카메라 펀치 거리(m): t 초 동안 kickIn 에 걸쳐 부드럽게 amount 까지 들어갔다가 kickOut 동안 0 으로 돌아온다. 범위 밖은 0. */
+export function cameraKick(t, amount) {
+  const C = FEEL.camera, a = clamp(num(amount), 0, C.kickMax);
+  if (!(t >= 0) || a === 0) return 0;
+  if (t < C.kickIn) { const k = t / C.kickIn; return a * k * k * (3 - 2 * k); }
+  const u = (t - C.kickIn) / C.kickOut;
+  if (u >= 1) return 0;
+  return a * (1 - u) * (1 - u);
+}
+
+/** 연출 박자 판정. kind: 'ultStart' | 'ultRelease' | 'bossKill'. 동작 줄이기에서는 정지(히트스톱)만 남기고 슬로우·카메라 펀치를 끈다. */
+export function cinematicBeat(kind, reduced = false) {
+  const c = FEEL.cinematic[kind];
+  if (!c) return null;
+  return { stop: c.stop || 0, slowmo: !reduced && c.scale ? { scale: c.scale, sec: c.sec, ease: c.ease } : null, kick: reduced ? 0 : c.kick || 0 };
+}
 
 /** 섬광 지속(초)·밝기 배율. 무게 0 이면 기존 값(0.12초, 배율 1)과 같다. */
 export function flashFor(weight) {
