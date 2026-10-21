@@ -12,7 +12,7 @@ const config: GameConfig = {
 };
 
 const expectedColumns: Record<string, Record<string, string>> = {
-  players: { created_ip_hash: 'TEXT' },
+  players: { created_ip_hash: 'TEXT', hero: 'TEXT' },
   clears: { summary: 'TEXT', rank_summary: 'TEXT', subject_hash: 'TEXT', last_at: 'INTEGER' },
   ws_tickets: { key_hash: 'TEXT' },
 };
@@ -41,7 +41,7 @@ const expectedIndexes: Record<string, [string, string[]]> = {
 };
 
 function expectLatestSchema(db: Database) {
-  expect(db.query('SELECT MAX(version) AS version FROM schema_version').get()).toEqual({ version: 3 });
+  expect(db.query('SELECT MAX(version) AS version FROM schema_version').get()).toEqual({ version: 4 });
   for (const [table, columns] of Object.entries(expectedColumns)) {
     const actual = db.query(`PRAGMA table_info(${table})`).all() as { name: string; type: string }[];
     for (const [name, type] of Object.entries(columns)) expect(actual).toContainEqual(expect.objectContaining({ name, type }));
@@ -126,13 +126,13 @@ function legacyV2() {
   return h;
 }
 
-test('v1→v3는 모든 기대 컬럼·인덱스를 만들고 기존 순위·기록을 보존한다', () => {
+test('v1→v4는 모든 기대 컬럼·인덱스를 만들고 기존 순위·기록을 보존한다', () => {
   const h = legacy(), before = dataSnapshot(h.db);
   h.create();
   expectLatestSchema(h.db);
   expect(dataSnapshot(h.db)).toEqual({
     ...before,
-    players: (before.players as object[]).map(row => ({ ...row, created_ip_hash: null })),
+    players: (before.players as object[]).map(row => ({ ...row, created_ip_hash: null, hero: null })),
     clears: (before.clears as any[]).map(row => ({
       ...row, summary: null, rank_summary: null, last_at: row.first_at,
       subject_hash: row.player_id === 'ranked' ? 'subject-before-clear' : null,
@@ -152,24 +152,47 @@ test('v1→v3는 모든 기대 컬럼·인덱스를 만들고 기존 순위·기
   expect(dataSnapshot(h.db)).toEqual(data);
 });
 
-test('rank_summary 없는 v2→v3는 누락만 보정하고 기존 데이터·발급 티켓을 보존한다', () => {
+test('rank_summary 없는 v2→v4는 누락만 보정하고 기존 데이터·발급 티켓을 보존한다', () => {
   const h = legacyV2();
   const before = dataSnapshot(h.db);
   expect(() => h.db.query('SELECT rank_summary FROM clears').all()).toThrow('no such column');
   h.create();
   expectLatestSchema(h.db);
   const after = dataSnapshot(h.db);
-  expect(after).toEqual({ ...before, clears: (before.clears as object[]).map(row => ({ ...row, rank_summary: null })) });
+  expect(after).toEqual({
+    ...before,
+    players: (before.players as object[]).map(row => ({ ...row, hero: null })),
+    clears: (before.clears as object[]).map(row => ({ ...row, rank_summary: null })),
+  });
   expect(() => h.create()).not.toThrow();
   expectLatestSchema(h.db);
   expect(dataSnapshot(h.db)).toEqual(after);
 });
 
-test('최신 DB는 두 번 재실행해도 스키마·전체 데이터를 변경하지 않는다', () => {
+test('v3→v4는 hero를 null로 추가하고 기존 데이터·발급 티켓을 보존한다', () => {
+  const h = legacyV2();
+  h.db.exec('INSERT INTO schema_version VALUES (3); ALTER TABLE clears ADD COLUMN rank_summary TEXT');
+  const before = dataSnapshot(h.db);
+  h.create();
+  expectLatestSchema(h.db);
+  expect(dataSnapshot(h.db)).toEqual({ ...before, players: (before.players as object[]).map(row => ({ ...row, hero: null })) });
+});
+
+test('v3에 hero가 이미 있으면 기존 영웅을 보존하고 누락 컬럼만 보정한다', () => {
+  const h = legacyV2();
+  h.db.exec("INSERT INTO schema_version VALUES (3); ALTER TABLE players ADD COLUMN hero TEXT; UPDATE players SET hero = 'mage' WHERE id = 'ranked'");
+  const before = dataSnapshot(h.db);
+  h.create();
+  expectLatestSchema(h.db);
+  expect(dataSnapshot(h.db)).toEqual({ ...before, clears: (before.clears as object[]).map(row => ({ ...row, rank_summary: null })) });
+});
+
+test('최신 DB는 두 번 재실행해도 스키마·전체 데이터와 선택 영웅을 변경하지 않는다', () => {
   const h = legacyV2();
   h.db.exec('ALTER TABLE clears ADD COLUMN rank_summary TEXT');
   h.create();
   h.db.exec(`UPDATE clears SET rank_summary = '{"kills":10}' WHERE player_id = 'ranked'`);
+  h.db.exec("UPDATE players SET hero = 'ranger' WHERE id = 'ranked'");
   const data = dataSnapshot(h.db);
   const schema = h.db.query('SELECT type, name, sql FROM sqlite_master ORDER BY type, name').all();
   for (let i = 0; i < 2; i++) {
@@ -196,13 +219,25 @@ test('보정된 v2 DB에서 runs/clear가 성공하고 기존 순위 요약을 �
     .toEqual({ rank: 1, count: 3, first_at: 200, subject_hash: 'ranked-subject', summary: JSON.stringify(summary), rank_summary: null });
 });
 
-test('v2→v3 도중 오류는 새 컬럼·버전·데이터를 롤백하고 재시도한다', () => {
+test('v2→v4 도중 오류는 새 컬럼·버전·데이터를 롤백하고 재시도한다', () => {
   const h = legacyV2(), data = dataSnapshot(h.db);
   expect(() => h.create('CREATE INDEX IF NOT EXISTS clears_subject')).toThrow('마이그레이션 실패 주입');
   expect(h.db.query('SELECT MAX(version) AS version FROM schema_version').get()).toEqual({ version: 2 });
   expect(h.db.query('PRAGMA table_info(clears)').all().map((row: any) => row.name)).not.toContain('rank_summary');
   expect(dataSnapshot(h.db)).toEqual(data);
   expect(() => h.create()).not.toThrow();
+  expectLatestSchema(h.db);
+});
+
+test('v3→v4 도중 오류는 hero·버전·전체 데이터를 롤백하고 재시도한다', () => {
+  const h = legacyV2();
+  h.db.exec('INSERT INTO schema_version VALUES (3); ALTER TABLE clears ADD COLUMN rank_summary TEXT');
+  const before = dataSnapshot(h.db);
+  expect(() => h.create('CREATE INDEX IF NOT EXISTS clears_subject')).toThrow('마이그레이션 실패 주입');
+  expect(h.db.query('SELECT MAX(version) AS version FROM schema_version').get()).toEqual({ version: 3 });
+  expect(h.db.query('PRAGMA table_info(players)').all().map((row: any) => row.name)).not.toContain('hero');
+  expect(dataSnapshot(h.db)).toEqual(before);
+  h.create();
   expectLatestSchema(h.db);
 });
 
