@@ -26,8 +26,25 @@ export function installAnimAudit() {
     const L = named.find(b => side(b) === 'L'), R = named.find(b => side(b) === 'R');
     return L && R ? [L, R] : named.slice(0, 2);
   };
-  /** clip 을 mixer 에서 단독 재생하며 t 들의 (뼈 쿼터니언, 발 월드 위치) 표본을 모은다. */
+  // 뼈 월드 위치는 골격 배율(예: Mixamo cm 골격 + 0.01 모델 배율)에 따라 화면과 다를 수 있다.
+  // 그 뼈에 가장 크게 묶인 정점 하나를 실제 스키닝(getVertexPosition)으로 옮겨 화면 위치를 쓴다.
+  const marker = (root, bone) => {
+    let best = null;
+    root.traverse(o => {
+      if (!o.isSkinnedMesh) return; const bi = o.skeleton.bones.indexOf(bone); if (bi < 0) return;
+      const si = o.geometry.attributes.skinIndex, sw = o.geometry.attributes.skinWeight;
+      for (let i = 0; i < si.count; i++) for (let c = 0; c < 4; c++) if (si.getComponent(i, c) === bi) { const w = sw.getComponent(i, c); if (!best || w > best.w) best = { mesh: o, i, w }; }
+    });
+    return best;
+  };
+  const visual = (root, bone, out, cache) => {
+    let m = cache.get(bone); if (m === undefined) { m = marker(root, bone); cache.set(bone, m); }
+    if (!m) return out.setFromMatrixPosition(bone.matrixWorld);
+    return m.mesh.getVertexPosition(m.i, out).applyMatrix4(m.mesh.matrixWorld);
+  };
+  /** clip 을 mixer 에서 단독 재생하며 t 들의 (뼈 쿼터니언, 발 화면 위치) 표본을 모은다. */
   const sample = (root, mixer, clip, n, feet, bones, origin) => {
+    const cache = new Map();
     mixer.stopAllAction();
     const a = mixer.clipAction(clip); a.reset(); a.setLoop(T.LoopRepeat, Infinity); a.enabled = true; a.setEffectiveWeight(1); a.play();
     const out = [];
@@ -35,8 +52,9 @@ export function installAnimAudit() {
       const t = clip.duration * i / n;
       mixer.setTime(Math.min(t, clip.duration - 1e-4));
       root.updateMatrixWorld(true);
-      const fp = feet.map(f => { const v = f.getWorldPosition(new T.Vector3()); return [v.x - origin.x, v.y - origin.y, v.z - origin.z]; });
-      out.push({ t, q: bones.map(b => b.quaternion.clone()), fp });
+      const fp = feet.map(f => { const v = visual(root, f, new T.Vector3(), cache); return [v.x - origin.x, v.y - origin.y, v.z - origin.z]; });
+      const hv = visual(root, bones[0], new T.Vector3(), cache);
+      out.push({ t, q: bones.map(b => b.quaternion.clone()), fp, hip: [hv.x - origin.x, hv.y - origin.y, hv.z - origin.z] });
     }
     a.stop();
     return out;
@@ -61,9 +79,13 @@ export function installAnimAudit() {
     let seam = 0; const first = s[0], last = s[s.length - 1];
     for (let i = 0; i < bones.length; i++) seam = Math.max(seam, angle(first.q[i], last.q[i]));
     const stance = feet.length === 2 ? [stanceSpeed(s, 0), stanceSpeed(s, 1)].filter(v => v !== null) : [];
-    return { name: clip.name, dur: Math.round(clip.duration * 1000) / 1000, tracks: clip.tracks.length,
+    // 뿌리(첫 뼈) 수평 이동: 제자리 클립이 아니면 반복마다 몸이 앞으로 갔다가 되돌아 튄다.
+    const hx = s.map(x => x.hip[0]), hz = s.map(x => x.hip[2]);
+    const rootRangeM = Math.round(Math.hypot(Math.max(...hx) - Math.min(...hx), Math.max(...hz) - Math.min(...hz)) * 100) / 100;
+    const rootDriftM = Math.round(Math.hypot(last.hip[0] - first.hip[0], last.hip[2] - first.hip[2]) * 100) / 100;
+    return { name: clip.name, dur: Math.round(clip.duration * 1000) / 1000, tracks: clip.tracks.length, rootRangeM, rootDriftM, rootBone: bones[0]?.name,
       maxFromRestDeg: Math.round(motion), seamDeg: Math.round(seam * 10) / 10,
-      footStanceMps: stance.length ? Math.round(stance.reduce((a, b) => a + b, 0) / stance.length * 100) / 100 : null };
+      footStanceMps: stance.length ? Math.round(stance.reduce((a, b) => a + b, 0) / stance.length * 1000) / 1000 : null };
   };
   const q = {};
   q.heroes = async () => {
@@ -95,6 +117,8 @@ export function installAnimAudit() {
       if (out[key]) { out[key].species.push(id); continue; }
       const e = b.spawnEnemy(id, null, room, new T.Vector3(room.x + 6, 0, room.z + 6));
       if (!e) { out[key] = { species: [id], error: 'spawn failed' }; continue; }
+      // 등장 팝인(popIn)이 첫 프레임 모델 배율을 0 으로 두므로 측정 동안 최종 배율로 고정한다.
+      const scale0 = e.model.scale.x; e.model.scale.setScalar(e.modelScale);
       try {
         e.root.updateMatrixWorld(true);
         const bones = bonesOf(e.model), feet = feetOf(bones);
@@ -111,7 +135,7 @@ export function installAnimAudit() {
         out[key] = { species: [id], model: def.model, rig: e.rigName, scale: def.scale || 1, library: e.libraryAsset?.id || null,
           spd: def.spd, feet: feet.map(f => f.name), keys, clips,
           locomotion: { clip: loco, animSpeed, slide: st && st.footStanceMps ? Math.round(def.spd / (st.footStanceMps * animSpeed) * 100) / 100 : null } };
-      } finally { e.dispose(); b.enemies.splice(b.enemies.indexOf(e), 1); }
+      } finally { e.model.scale.setScalar(scale0); e.dispose(); b.enemies.splice(b.enemies.indexOf(e), 1); }
     }
     return out;
   };
