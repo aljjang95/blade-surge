@@ -13,15 +13,25 @@
 #battle-tutorial[hidden], #battle-tutorial [hidden] { display: none; }
 #battle-tutorial .tutorial-toggle {
   align-self: center;
-  min-height: 40px;
-  padding: 8px 13px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 10px 14px;
   border: 1px solid #d6bd7666;
   border-radius: 8px;
   background: #102622e8;
   color: #e7dcc3;
-  font: 600 11px var(--font);
+  font: 600 12px var(--font);
   cursor: pointer;
   pointer-events: auto;
+}
+/* 아직 한 번도 열어 보지 않은 접힌 안내 버튼: 놓치지 않도록 은은하게 맥동한다. */
+#battle-tutorial .tutorial-toggle[data-pulse='true'] {
+  border-color: #f2d98ccc;
+  animation: tutorialTogglePulse 1.8s ease-in-out infinite;
+}
+@keyframes tutorialTogglePulse {
+  from { box-shadow: 0 0 0 0 #f2d98c55; }
+  to { box-shadow: 0 0 0 7px #f2d98c00, 0 0 14px #f2d98c66; }
 }
 /* 접힌 안내는 보스 체력줄 위의 첫 줄에 두고 펼친 카드의 기존 위치는 유지한다. */
 #battle-tutorial .tutorial-toggle[aria-expanded='false'] {
@@ -64,8 +74,38 @@
 }
 @media (orientation: landscape) and (max-height: 420px) {
   #battle-tutorial { padding-top: calc(62px + var(--sat)); }
-  #battle-tutorial .tutorial-toggle { min-height: 36px; padding: 6px 11px; }
+  #battle-tutorial .tutorial-toggle { min-height: 44px; padding: 8px 12px; }
   #battle-tutorial .tutorial-card { gap: 6px; padding: 8px 10px; }
+}
+/* 가로 화면: 펼친 안내는 전장 위가 아니라 아래 가장자리 띠(조이스틱·물약과 스킬 버튼 사이)에 둔다. 접기 버튼은 접힌 위치와 같다. */
+@media (orientation: landscape) {
+  #battle-tutorial .tutorial-toggle[aria-expanded='true'] {
+    position: absolute;
+    top: calc(12px + var(--sat));
+    right: calc(var(--tutorial-folded-right, 146px) + var(--sar));
+    max-width: 120px;
+    white-space: nowrap;
+  }
+  #battle-tutorial .tutorial-card {
+    position: absolute;
+    left: calc(50% + 46px);
+    bottom: calc(8px + var(--sab));
+    transform: translateX(-50%);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    width: min(330px, calc(100vw - 340px));
+    min-width: 230px;
+    gap: 8px;
+    padding: 7px 9px;
+  }
+  #battle-tutorial .tutorial-card[hidden] { display: none; }
+  #battle-tutorial .tutorial-copy-wrap h2 { margin: 1px 0 2px; font-size: 13px; line-height: 1.2; }
+  #battle-tutorial .tutorial-copy-wrap p { font-size: 11px; line-height: 1.4; }
+  #battle-tutorial .tutorial-actions { flex-direction: column; min-width: 0; gap: 4px; }
+  #battle-tutorial .tutorial-actions .btn { min-height: 44px; min-width: 56px; flex: none; padding: 4px 8px; }
+  /* 첫 전투 안내는 행동하면 알아서 다음 단계로 넘어간다. '다음 안내' 는 숨기고 '그만 보기' 만 둔다. */
+  #battle-tutorial.guided #tutorial-next { display: none; }
 }
 @media (orientation: portrait) {
   /* 좌측 물약 행 아래, 짧은 화면의 시점 버튼과 이동 스틱 위에 별도 공간을 쓴다. */
@@ -78,4 +118,5 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .tutorial-focus { animation: none; box-shadow: 0 0 0 2px #dfc88288; }
+  #battle-tutorial .tutorial-toggle[data-pulse='true'] { animation: none; box-shadow: 0 0 0 2px #f2d98c99; }
 }

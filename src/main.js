@@ -342,6 +342,8 @@ class App {
       const outcome = this.expedition.settle(this.expeditionTicket, { win: false });
       if (outcome.ok) this.expeditionTicket = null;
     }
+    // 첫 전투 결과를 본 뒤 로비로 돌아오면 미뤄 둔 출석 팝업을 한 번 띄운다.
+    const fromCombatResult = this.mode === 'battle' && !!this.battle?.result;
     if (this.mode === 'battle') { this.battle.stop(); }
     this.citadel.clearInput(); this.hubUI.close(); this.citadelShop.close(); this.hubMovement.reset(); this.hubWalkMode = false;
     this._bossAttemptTracked = false;
@@ -354,7 +356,8 @@ class App {
     audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX);
     this.meta.openTab('home'); this.meta.refreshTop();
     this.syncHub();
-    if (first) setTimeout(() => this.meta.autoPopups(), 600);
+    if (fromCombatResult) this.meta.combatResultSeen = true;
+    if (first || (fromCombatResult && this.meta.dailyDeferred)) setTimeout(() => this.meta.autoPopups(), 600);
   }
   resetProgress() {
     if (this.stageStarting) return false;
