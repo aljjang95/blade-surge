@@ -7,8 +7,9 @@ const DOWN_MS = 5000, UP_MS = 60000, REMEMBER_MS = 60000;
 // 동적 해상도: 과부하 2초 지속 시 한 단계 낮추고, 여유 10초 지속 시 한 단계 올린다(변경 사이 최소 2.5초).
 // 올린 직후 20초 안에 다시 내려가면 올림 대기를 두 배로(최대 80초) 늘려 같은 단계를 계속 두드리지 않는다.
 const RES_DOWN_MS = 2000, RES_UP_MS = 10000, RES_COOLDOWN_MS = 2500, RES_UP_MAX_MS = 80000, RES_FAILED_PROBE_MS = 20000, RES_HOLD_MS = 40000;
-// 지속 부하 판단은 놓친 프레임 비율로 조금 더 민감하게 본다(약 53fps 이하). 여유는 거의 놓치지 않을 때만 인정한다.
-const RES_MISS_OVERLOAD = 0.12, RES_MISS_ROOMY = 0.02;
+// 지속 부하 판단은 실제 렌더 fps 로 조금 더 민감하게 본다(목표의 90% 미만). 화면 주사율과 목표가 어긋나 생기는 양자화(45fps 목표 등)에
+// 속지 않도록 놓친 프레임 비율이 아니라 평균 fps 를 쓴다. 여유는 목표의 97% 이상이고 큰 끊김이 없을 때만 인정한다.
+const RES_FPS_OVERLOAD = 0.9, RES_FPS_ROOMY = 0.97, RES_EXCESS_ROOMY = 0.05;
 
 /** 온도 추정 대신 실제 렌더 간격으로 지속 부하를 판단한다. 게임 저장에는 접근하지 않는다. */
 export class FrameGovernor {
@@ -137,8 +138,8 @@ export class FrameGovernor {
     this.overloadMs = overloaded ? this.overloadMs + evaluationMs : 0;
     this.headroomMs = comfortable ? this.headroomMs + evaluationMs : 0;
     this.severeOverload = excessRatio > 0.25;
-    this._adaptResolution(evaluationMs, this.missRatio > RES_MISS_OVERLOAD || overloaded,
-      this.missRatio < RES_MISS_ROOMY && this.p95FrameMs < interval * 1.15 + refreshTolerance);
+    this._adaptResolution(evaluationMs, this.renderedFps < this.targetFps * RES_FPS_OVERLOAD || overloaded,
+      this.renderedFps >= this.targetFps * RES_FPS_ROOMY && excessRatio < RES_EXCESS_ROOMY);
     // 해상도를 더 낮출 수 있는 동안은 중간 정도의 과부하를 배율이 먼저 흡수한다(그림자·블룸을 끄기 전에 해상도부터).
     // 심한 과부하이거나 배율이 이미 최저면 기존대로 단계를 올린다.
     const tierMayRise = this.severeOverload || this.resolutionLocked || this.resolutionScale <= RESOLUTION_SCALE.min;
@@ -166,7 +167,8 @@ export class FrameGovernor {
       this.count = 0; this.index = 0; this.lastRenderAt = NaN;
       return;
     }
-    if (this.resSinceChangeMs >= RES_HOLD_MS && this.resUpWaitMs !== RES_UP_MS) this.resUpWaitMs = RES_UP_MS;
+    // 올린 단계를 오래 유지했다면(시험 성공) 백오프를 풀고, 내려와 머무는 동안에는 늘어난 대기를 그대로 둔다.
+    if (this.resLastDir > 0 && this.resSinceChangeMs >= RES_HOLD_MS && this.resUpWaitMs !== RES_UP_MS) this.resUpWaitMs = RES_UP_MS;
     if (this.scaleStorage && this.resSinceChangeMs >= REMEMBER_MS && this.savedScale !== this.resolutionScale) {
       try {
         this.scaleStorage.setItem(PERF_SCALE_KEY, JSON.stringify({ version: 1, scale: this.resolutionScale }));

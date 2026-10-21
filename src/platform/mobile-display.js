@@ -30,7 +30,8 @@ export function snapResolutionScale(scale) {
 
 export function renderPixelRatio({ width, height, dpr = 1, quality = 'mid', touch = false, thermalTier = 0, resolutionScale = 1 }) {
   const limits = RENDER_LIMITS[quality] || RENDER_LIMITS.mid;
-  const ratio = Math.min(Number.isFinite(dpr) && dpr > 0 ? dpr : 1, limits.dpr);
+  // 데스크톱은 픽셀 예산이 없으므로 이전과 같이 DPR 2 를 넘기지 않는다. 2.5 는 예산이 걸린 터치 기기에서만 쓴다.
+  const ratio = Math.min(Number.isFinite(dpr) && dpr > 0 ? dpr : 1, touch ? limits.dpr : Math.min(limits.dpr, 2));
   // 고해상도 태블릿을 포함해 모든 전체 화면 후처리 버퍼를 제한한다.
   const base = touch ? Math.min(ratio, Math.sqrt(limits.pixels / Math.max(1, width * height))) : ratio;
   // 지속 부하 3단계: 해상도를 20% 낮춘다. 갤럭시 탭 S7+ 실측(2026-10-20)에서 기본값이 이미 0.94라

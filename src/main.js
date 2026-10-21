@@ -243,7 +243,7 @@ class App {
     if (!this.frameGovernor) {
       let storage = null;
       try { storage = window.localStorage; } catch { /* 차단된 저장소에서는 세션 안에서만 조절한다. */ }
-      this.frameGovernor = new FrameGovernor({ storage });
+      this.frameGovernor = new FrameGovernor({ storage, scaleStorage: storage });
       this.frameGovernor.reset(performance.now());
       window.__perfGovernor = this.frameGovernor;
       const resetGovernor = () => this.frameGovernor.suspend(performance.now());
@@ -252,6 +252,7 @@ class App {
       window.addEventListener('pageshow', resetGovernor);
     }
     this.renderer.setThermalTier(this.frameGovernor.tier);
+    this.renderer.setResolutionScale(this.frameGovernor.resolutionScale);
     const st = this.eco.s.settings; audio.setSfxOn(st.sfx); audio.setMusicOn(st.music); audio.haptics = st.haptics; if (!st.haptics) audio.vibe(0); audio.setVoiceOn(st.voice !== false);
     audio.setMix(this.arsenal.s.mix);
     const q = resolveQuality(st.quality, { cores: navigator.hardwareConcurrency || 4, memory: navigator.deviceMemory || 4,
@@ -466,6 +467,7 @@ class App {
     if (!realDt) return;
     this.last = t;
     this.renderer.setThermalTier(governor.tier);
+    this.renderer.setResolutionScale(governor.resolutionScale);
     const count = this.renderer.renderCount, started = performance.now();
     // 기존 장시간 정지의 dt 상한은 유지하며, 평소 간격 제어 시간은 시뮬레이션에 모두 넘긴다.
     this.step(Math.min(0.05, realDt), render);

@@ -10,10 +10,11 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { FXAAShader } from 'three/addons/shaders/FXAAShader.js';
-import { displaySize, renderPixelRatio, thermalRenderProfile } from '../platform/mobile-display.js';
+import { displaySize, renderPixelRatio, thermalRenderProfile, snapResolutionScale, sharpenStrength, battleNeedsFxaa } from '../platform/mobile-display.js';
 import { rebindEnvironment, createStorybookEnvironment } from './environment.js';
 import { ShaderProgramValidator } from './shader-program-validator.js';
 import { PlayerSilhouette, PLAYER_SILHOUETTE_FRAGMENT } from './player-silhouette.js';
+import { setDeviceMaxAnisotropy } from './texture-sampling.js';
 import { acquireWebGL2Context, GraphicsStartupError } from '../platform/startup-compat.js';
 
 // 최종 합성 셰이더: 색수차 · 비네트 · 히트 플래시 · 방사형 블러(궁극기) · 색보정
@@ -95,6 +96,35 @@ const FinalShader = {
     }`,
 };
 
+// 대비 적응형 선명화(AMD FidelityFX CAS 방식). 이웃 4칸의 최소·최대로 "여유 있는 곳"만 강하게 키우므로
+// 이미 대비가 큰 윤곽선에는 후광이 생기지 않는다. 톤매핑·sRGB 변환이 끝난 화면(OutputPass 뒤)에 적용한다.
+const SharpenShader = {
+  uniforms: {
+    tDiffuse: { value: null },
+    uTexel: { value: new THREE.Vector2(1, 1) },   // 렌더 해상도 기준 1픽셀의 UV 크기
+    uSharp: { value: 0.5 },                       // 0(약함)~1(강함)
+  },
+  vertexShader: `varying vec2 vUv; void main(){ vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse; uniform vec2 uTexel; uniform float uSharp;
+    varying vec2 vUv;
+    void main(){
+      vec3 e = texture2D(tDiffuse, vUv).rgb;
+      vec3 b = texture2D(tDiffuse, vUv + vec2(0.0, -uTexel.y)).rgb;
+      vec3 d = texture2D(tDiffuse, vUv + vec2(-uTexel.x, 0.0)).rgb;
+      vec3 f = texture2D(tDiffuse, vUv + vec2(uTexel.x, 0.0)).rgb;
+      vec3 h = texture2D(tDiffuse, vUv + vec2(0.0, uTexel.y)).rgb;
+      vec3 mn = min(min(min(d, e), min(f, b)), h);
+      vec3 mx = max(max(max(d, e), max(f, b)), h);
+      // 신호 한계까지 남은 거리 / 최대값 → 채널별 적응 가중치.
+      vec3 amp = sqrt(clamp(min(mn, 1.0 - mx) / max(mx, vec3(1e-4)), 0.0, 1.0));
+      float peak = -1.0 / mix(8.0, 5.0, clamp(uSharp, 0.0, 1.0));
+      vec3 w = amp * peak;
+      vec3 col = (b * w + d * w + f * w + h * w + e) / (1.0 + 4.0 * w);
+      gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+    }`,
+};
+
 const FLASH_MAX = 0.6, ABERR_MAX = 2, ABERR_SCALE = 0.012, RADIAL_MAX = 0.6, RADIAL_SCALE = 0.1;
 /** 세로 선택 로비에서 바라보는 점을 낮추는 양(월드 단위). 390x844 기본 시점에서 영웅 발 y 560→434px, 머리 315→183px. */
 export const LOBBY_PORTRAIT_LOOK_DROP = 1;
@@ -154,6 +184,7 @@ export class Renderer {
     r.debug.checkShaderErrors = import.meta.env?.DEV !== false;
     this.programValidator = new ShaderProgramValidator();
     this.isWebGL2 = r.capabilities.isWebGL2;
+    setDeviceMaxAnisotropy(r.capabilities.getMaxAnisotropy());
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.ACESFilmicToneMapping;
     r.toneMappingExposure = 1.12;
@@ -165,7 +196,7 @@ export class Renderer {
     this.rebuildEnvironment();
     this.scene = new THREE.Scene();
     this.touch = window.matchMedia('(any-pointer: coarse)').matches || navigator.maxTouchPoints > 0;
-    this.thermalTier = 0; this.renderCount = 0;
+    this.thermalTier = 0; this.renderCount = 0; this.resolutionScale = 1; this.nativeRatio = 1;
     this._shadowSizes = new WeakMap();
     this._syncShadow = object => this._applyShadowSize(object);
     // 아레나가 교체하는 태양광에도 첫 렌더 전에 같은 해상도 정책을 적용한다.
@@ -195,6 +226,9 @@ export class Renderer {
     this.composer.addPass(new OutputPass());
     this.lobbyAA = new ShaderPass(FXAAShader); this.lobbyAA.enabled = false;
     this.composer.addPass(this.lobbyAA);
+    // 선명화는 항상 마지막(FXAA 뒤)이다. 낮음 화질에서는 끈다.
+    this.sharpenPass = new ShaderPass(SharpenShader); this.sharpenPass.enabled = false;
+    this.composer.addPass(this.sharpenPass);
     this.u = this.finalPass.uniforms;
     this.playerSilhouette = new PlayerSilhouette(this.u, this.finalPass);
     // 림라이트: 그림자 없는 약한 방향광 하나. 구성이 고정이라 셰이더가 다시 컴파일되지 않는다.
@@ -233,6 +267,13 @@ export class Renderer {
     this.scene.traverse(this._syncShadow);
     if (wasReduced !== (tier >= 3)) this.resize(true);
   }
+  /** 동적 해상도 배율(0.6~1.0, 0.1 단계). 단계가 바뀔 때만 렌더 타깃을 다시 잡는다. */
+  setResolutionScale(scale) {
+    const next = snapResolutionScale(scale);
+    if (next === this.resolutionScale) return;
+    this.resolutionScale = next;
+    this.resize(true);
+  }
   _applyShadowSize(object) {
     const shadow = object.shadow;
     if (!object.castShadow || !shadow) return;
@@ -257,7 +298,8 @@ export class Renderer {
   resize(force = false) {
     const { width: w, height: h } = displaySize(window);
     const pr = renderPixelRatio({ width: w, height: h, dpr: window.devicePixelRatio, quality: this.quality,
-      touch: this.touch, thermalTier: this.thermalTier });
+      touch: this.touch, thermalTier: this.thermalTier, resolutionScale: this.resolutionScale });
+    this.nativeRatio = Number.isFinite(window.devicePixelRatio) && window.devicePixelRatio > 0 ? window.devicePixelRatio : 1;
     document.documentElement.style.setProperty('--app-height', h + 'px');
     if (!force && this._width === w && this._height === h && this.r.getPixelRatio() === pr) return;
     this._width = w; this._height = h;
@@ -267,6 +309,8 @@ export class Renderer {
     this.composer.setSize(w, h);
     this.playerSilhouette.resize(w, h, pr);
     this.lobbyAA.uniforms.resolution.value.set(1 / (w * this.r.getPixelRatio()), 1 / (h * this.r.getPixelRatio()));
+    this.sharpenPass.uniforms.uTexel.value.copy(this.lobbyAA.uniforms.resolution.value);
+    this.sharpenPass.uniforms.uSharp.value = sharpenStrength(pr, this.nativeRatio);
     if (this.rig?.mode === 'battle' && this.battleMinimumAspect > 0) {
       const look = this.rig.target.clone().add(this.rig.lookOffset);
       const fitted = refitBattleCameraPosition(this.rig.pos, look, this.camera.aspect, w / h, this.battleMinimumAspect);
@@ -391,7 +435,10 @@ export class Renderer {
       this.heroEffectFocus.setTarget(this.heroEffectTarget?.());
       this.heroEffectFocus.update(this.r, this.camera);
     }
-    this.lobbyAA.enabled = this.rig.mode === 'lobby'; this.composer.render();
+    // 로비는 항상 FXAA, 전투는 렌더 해상도가 기기 해상도보다 낮아 모서리가 확대될 때만 켠다. 선명화는 낮음 화질 외 모두 켠다.
+    this.lobbyAA.enabled = this.rig.mode === 'lobby' || battleNeedsFxaa(this.pixelRatio, this.nativeRatio, this.quality);
+    this.sharpenPass.enabled = this.quality !== 'low';
+    this.composer.render();
     this.programValidator.validate(this.r);
     this.renderCount++;
   }
