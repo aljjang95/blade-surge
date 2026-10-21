@@ -122,7 +122,8 @@ export class TranscendView extends GrowthOverlay {
     const pack = key('pack', btn('btn btn-ghost gx-outline tc-pack', '', '초월 패키지, 상점 패키지 탭으로 이동'));
     pack.append(el('span', 'tc-pack-name', '초월 패키지'), el('span', 'tc-pack-go', '›'));
     pack.onclick = () => this.toPackage();
-    mats.append(go, pack);
+    // 초월 패키지는 현금 상품이라 실제 결제가 연결됐을 때만 안내한다.
+    if (this.meta.payOn?.()) mats.append(go, pack); else mats.append(go);
     if (q.next && !q.ok) {
       const short = materials.filter((m) => m.short).map((m) => m.label).join(', ');
       const why = el('p', 'tc-reason', (short || '재료') + ' 부족 · 옆 버튼으로 구하거나 이 영웅으로 보스를 처치해 조각·초월석을 모으세요'); why.id = 'tc-reason'; go.setAttribute('aria-describedby', 'tc-reason'); mats.append(why);

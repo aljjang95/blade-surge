@@ -128,6 +128,8 @@ class App {
     startup.stage = 'platform';
     this.pwa = isNativeApp() || STORE_CHANNEL !== 'web' ? null : setupPwa({ canApplyUpdate: () => this.mode === 'lobby' && !this.stageStarting && !this.party?.run });
     if (this.pwa) this.appModeView = new AppModeView(this);
+    // 스토어 앱은 이미 전체 화면·가로 고정이라 브라우저용 전체화면 전환 버튼을 쓰지 않는다(AppModeView가 없으면 눌러도 동작하지 않는다).
+    else document.getElementById('btn-rotate-fullscreen')?.setAttribute('hidden', '');
     this.nativeApp = setupNativeApp(this);
     startup.stage = 'settings';
     this.last = performance.now();

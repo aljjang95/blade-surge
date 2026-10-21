@@ -117,6 +117,7 @@ b { font-weight: 900; }
 .currencies { display: flex; gap: 6px; }
 .cur { position: relative; display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.14); border-radius: 20px; padding: 4px 6px 4px 8px; font-size: 13px; font-weight: 700; min-width: 74px; }
 .cur .plus { width: 18px; height: 18px; border-radius: 50%; background: var(--green); color: #063; font-weight: 900; font-size: 14px; line-height: 18px; margin-left: 2px; }
+#plus-gem[hidden], #top-vip-wrap[hidden], #btn-rotate-fullscreen[hidden], .modal-btns [hidden], #store-note[hidden] { display: none !important; }
 .cur-sub { position: absolute; left: 10px; top: 100%; font-size: 9px; color: var(--muted); font-weight: 400; white-space: nowrap; }
 
 /* ---------- tabs ---------- */

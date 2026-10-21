@@ -153,12 +153,21 @@ test('초월: 재료가 모자라면 부족 표시와 함께 버튼이 꺼지고
 
 test('초월: 최고 등급이면 "최고 등급"으로 잠기고 초월 패키지는 상점 패키지 탭으로 간다', () => {
   const { eco, meta } = setup('knight'); eco.hero('knight').grade = 'SSSR';
+  meta.payOn = () => true; // 결제가 연결된 때에만 현금 패키지 입구가 있다
   const view: any = new TranscendView(meta); view.open('knight');
   const go = view.root.key('go');
   expect(go.textContent).toBe('최고 등급'); expect(go.disabled).toBe(true);
   view.root.key('pack').click();
   expect(meta.tabs.at(-1)).toEqual(['shop', 'pack']);
   expect(view.isOpen).toBe(false);
+});
+
+test('초월: 결제가 연결되지 않으면 현금 초월 패키지 입구를 보이지 않는다', () => {
+  const { eco, meta } = setup('knight'); eco.hero('knight').grade = 'SSSR';
+  meta.payOn = () => false;
+  const view: any = new TranscendView(meta); view.open('knight');
+  expect(view.root.byClass('tc-pack').length).toBe(0);
+  expect(view.root.key('go').textContent).toBe('최고 등급');
 });
 
 test('스킬 초기화: 되돌릴 SP가 없으면 버튼이 꺼지고 이유가 보이며, Economy가 nothing 을 돌려주면 그 이유를 알린다', async () => {

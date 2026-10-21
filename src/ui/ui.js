@@ -584,7 +584,7 @@ export class UI {
     const cost = 50 * (b.revived + 1); const gems = this.eco.s.gems;
     this.modal(`<h2 style="color:#ff5a7a">쓰러졌다…</h2><p>보석 <b style="color:var(--gold)">${cost}</b>개로 그 자리에서 부활합니다.<br>부활 시 주변 적 넉백 + 2초 무적</p><p style="font-size:11px">보유 보석 ${fmt(gems)}</p>
       <div class="modal-btns"><button class="btn btn-ghost" id="r-no"><span>${b.stage?.expedition ? '전투 마치기' : '정비하기'}</span><small>부활 없이 전투 종료</small></button><button class="btn btn-gold" id="r-yes"><span>부활</span><small><i class="ic ic-gem"></i> ${cost}</small></button></div>
-      ${gems < cost ? '<button class="btn btn-blue" id="r-shop" style="width:100%;margin-top:8px">보석 충전하기</button>' : ''}`, {
+      ${gems < cost && this.app.meta?.payOn?.() ? '<button class="btn btn-blue" id="r-shop" style="width:100%;margin-top:8px">보석 충전하기</button>' : ''}`, {
       onOpen: (box) => {
         box.querySelector('#r-no').onclick = () => { if (!b.active || b.player.alive) return; this.closeModal(); b.defeat(); };
         box.querySelector('#r-yes').onclick = () => { if (!b.active || b.player.alive) return; if (this.eco.s.gems < cost) { this.toast('보석이 부족합니다', 'red'); audio.play('ui_error'); return; } this.eco.s.gems -= cost; this.eco.emit(); this.closeModal(); b.revivePlayer(); };
