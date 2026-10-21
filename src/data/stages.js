@@ -80,15 +80,20 @@ export function stageDef(ch, st) {
   const stage = {
     ch, st, idx, code: `${ch}-${st}`, title: scene.title, chapter, name: `${ch}-${st} · ${scene.title}`,
     dungeon, dungeonBossId, epilogueFinale: ch === 6 && st === 10,
-    boss, midboss: rank === 'midboss', regionBoss: rank === 'finalboss', unlocksChapter: st === STAGES_PER_CHAPTER && ch < CHAPTERS.length ? ch + 1 : null,
-    finale: ch === 5 && st === 10, waves, scale, energy: 6 + Math.floor(idx / 6),
+    boss, finale: ch === 5 && st === 10, waves, scale, energy: 6 + Math.floor(idx / 6),
     rosterFor: () => R, recPower: Math.floor(2600 * scale),
     encounter: { rank, label: RANK_LABELS[rank], name: dungeonBoss.name, enemyId, dungeonBossId, tactic: dungeonBoss.tactic || enemy.tactic },
     story: { opening: scene.opening, revelation: scene.revelation, aftermath: scene.aftermath },
     objective: `${dungeon.name}의 전투 방을 정리해 봉인을 해제하고 ${dungeonBoss.name} 처치`,
     rewards: { gold: Math.floor(400 * scale), exp: Math.floor(110 * scale), bp: 60 + (boss ? 60 : 0), firstGems: rank === 'finalboss' ? 300 : boss ? 150 : 60, dropChance: boss ? 1 : 0.6, stones: 2 + (boss ? 4 : 0) },
   };
-  return Object.defineProperties(stage, { recommendedLevel: { value: recommendedLevel(ch, st) }, representativeDrops: { value: chapter.representativeDrops } });
+  // 캠페인 표식은 열거되지 않는 속성으로 둔다: 원정·아레나 정의가 stageDef 를 펼쳐(spread) 쓰므로 그쪽 필드·지문이 바뀌지 않고,
+  // 원정 전투가 캠페인 보스 표식을 물려받지 않는다. 캠페인 UI 는 stageDef 객체에서 직접 읽는다.
+  return Object.defineProperties(stage, {
+    recommendedLevel: { value: recommendedLevel(ch, st) }, representativeDrops: { value: chapter.representativeDrops },
+    midboss: { value: rank === 'midboss' }, regionBoss: { value: rank === 'finalboss' },
+    unlocksChapter: { value: st === STAGES_PER_CHAPTER && ch < CHAPTERS.length ? ch + 1 : null },
+  });
 }
 
 // scale = 모델 배율(리그 기본 배율에 곱해짐). hp/atk 은 스테이지 scale 로 곱해진다.

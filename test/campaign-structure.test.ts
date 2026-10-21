@@ -113,3 +113,27 @@ describe('캠페인 마을 데이터', () => {
     expect(resolveCampaignTown(p, once)).toEqual(once);
   });
 });
+
+describe('보스 표식은 캠페인에만 붙는다', () => {
+  test('표식 속성은 열거되지 않아 원정·아레나가 stageDef 를 펼쳐도 필드와 지문이 바뀌지 않는다', () => {
+    const stage = stageDef(1, 10) as any;
+    expect(Object.keys(stage)).not.toContain('midboss');
+    expect(Object.keys(stage)).not.toContain('regionBoss');
+    expect(Object.keys(stage)).not.toContain('unlocksChapter');
+    const copy = { ...stage } as any;
+    expect(copy.midboss).toBeUndefined();
+    expect(stage.regionBoss).toBe(true);
+    expect(JSON.stringify(copy)).not.toMatch(/midboss"|regionBoss|unlocksChapter/);
+  });
+
+  test('전투용 난이도 스냅샷(스프레드 복사)에서도 X-5·X-10 만 표식을 얻고 원정 전투는 얻지 않는다', async () => {
+    const { campaignBossTag } = await import('../src/ui/ui.js');
+    const { applyDifficulty, DIFFICULTIES } = await import('../src/game/difficulty.js');
+    const snap = (ch: number, st: number) => applyDifficulty(stageDef(ch, st), DIFFICULTIES.adept);
+    expect(campaignBossTag(snap(1, 5))).toEqual({ rank: 'midboss', label: '중간 보스' });
+    expect(campaignBossTag(snap(3, 10))).toEqual({ rank: 'regionboss', label: '지역 보스' });
+    for (const st of [1, 2, 3, 4, 6, 7, 8, 9]) expect(campaignBossTag(snap(2, st))).toBeNull();
+    expect(campaignBossTag({ ...stageDef(1, 5), expedition: { kind: 'dungeon', id: 'x' } })).toBeNull();
+    expect(campaignBossTag(null)).toBeNull();
+  });
+});

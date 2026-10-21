@@ -26,8 +26,10 @@ const $ = (id) => document.getElementById(id);
 
 /** 캠페인 X-5(중간 보스)·X-10(지역 보스) 표식. 그 밖의 전투는 null. */
 export function campaignBossTag(stage) {
-  if (stage?.midboss) return { rank: 'midboss', label: '중간 보스' };
-  if (stage?.regionBoss) return { rank: 'regionboss', label: '지역 보스' };
+  // 전투가 쓰는 스테이지는 난이도 스냅샷(스프레드 복사)이라 stageDef 의 비열거 표식을 잃는다. ch/st 로 다시 판정하고 원정·아레나는 제외한다.
+  if (!stage || stage.expedition || !Number.isInteger(stage.ch) || stage.encounter?.rank === undefined) return null;
+  if (stage.st === 5 && stage.encounter.rank === 'midboss') return { rank: 'midboss', label: '중간 보스' };
+  if (stage.st === 10 && stage.encounter.rank === 'finalboss') return { rank: 'regionboss', label: '지역 보스' };
   return null;
 }
 const fmt = (n) => Math.floor(n).toLocaleString('ko-KR');
