@@ -267,7 +267,7 @@ export class Renderer {
     this.scene.traverse(this._syncShadow);
     if (wasReduced !== (tier >= 3)) this.resize(true);
   }
-  /** 동적 해상도 배율(0.6~1.0, 0.1 단계). 단계가 바뀔 때만 렌더 타깃을 다시 잡는다. */
+  /** 동적 해상도 배율(0.7~1.0, 0.1 단계). 단계가 바뀔 때만 렌더 타깃을 다시 잡는다. */
   setResolutionScale(scale) {
     const next = snapResolutionScale(scale);
     if (next === this.resolutionScale) return;

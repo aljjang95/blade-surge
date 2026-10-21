@@ -18,10 +18,11 @@ export const RENDER_LIMITS = Object.freeze({
   high: Object.freeze({ dpr: 2.5, pixels: 2200000 }),
 });
 
-/** 동적 해상도 배율 범위와 단계. 한 단계(10%)마다 렌더 타깃을 다시 잡으므로 큰 폭으로 움직이지 않는다. */
-export const RESOLUTION_SCALE = Object.freeze({ min: 0.6, max: 1, step: 0.1 });
+/** 동적 해상도 배율 범위와 단계. 한 단계(10%)마다 렌더 타깃을 다시 잡으므로 큰 폭으로 움직이지 않는다.
+ * 최소 0.7: 갤럭시 S26 급(출발 2.0)에서도 바닥이 1.4로, 예전 고정값(1.5)에 가깝다. 그보다 더 낮추는 것은 열 단계 3(×0.8)의 몫이다. */
+export const RESOLUTION_SCALE = Object.freeze({ min: 0.7, max: 1, step: 0.1 });
 
-/** 배율을 단계 격자(0.6, 0.7 ... 1.0)에 맞춘다. 부동소수점 오차 없이 비교할 수 있게 소수 첫째 자리로 고정한다. */
+/** 배율을 단계 격자(0.7, 0.8, 0.9, 1.0)에 맞춘다. 부동소수점 오차 없이 비교할 수 있게 소수 첫째 자리로 고정한다. */
 export function snapResolutionScale(scale) {
   if (!Number.isFinite(scale)) return RESOLUTION_SCALE.max;
   const stepped = Math.round(scale / RESOLUTION_SCALE.step) * RESOLUTION_SCALE.step;

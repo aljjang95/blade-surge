@@ -17,7 +17,7 @@ export class FrameGovernor {
   constructor({ storage = null, scaleStorage = null } = {}) {
     this.storage = storage;
     this.scaleStorage = scaleStorage;
-    // 동적 해상도 배율(0.6~1.0, 0.1 단계). 이전 실행에서 안정적이던 값을 이어받아 약한 기기가 매번 처음부터 버벅이지 않게 한다.
+    // 동적 해상도 배율(0.7~1.0, 0.1 단계). 이전 실행에서 안정적이던 값을 이어받아 약한 기기가 매번 처음부터 버벅이지 않게 한다.
     this.resolutionScale = RESOLUTION_SCALE.max; this.savedScale = RESOLUTION_SCALE.max;
     this.resolutionLocked = false;
     try {

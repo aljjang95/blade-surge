@@ -17,7 +17,7 @@ const memoryStorage = (initial?: string) => {
   return { data, getItem: (k: string) => data.get(k) ?? null, setItem: (k: string, v: string) => { data.set(k, v); } };
 };
 
-test('배율은 0.6~1.0의 10% 격자에 맞춰지고 잘못된 값은 최대로 돌아간다', () => {
+test('배율은 0.7~1.0의 10% 격자에 맞춰지고 잘못된 값은 최대로 돌아간다', () => {
   expect(snapResolutionScale(0.73)).toBe(0.7);
   expect(snapResolutionScale(0.2)).toBe(RESOLUTION_SCALE.min);
   expect(snapResolutionScale(3)).toBe(1);
@@ -31,7 +31,7 @@ test('decideResolutionStep: 과부하 지속이면 한 단계 낮추고 여유 �
   expect(decideResolutionStep({ scale: 0.8, headroomMs: 10000 })).toBe(1);
   expect(decideResolutionStep({ scale: 0.8, headroomMs: 9999 })).toBe(0);
   // 최소·최대에서는 더 움직이지 않는다.
-  expect(decideResolutionStep({ scale: 0.6, overloadMs: 99999 })).toBe(0);
+  expect(decideResolutionStep({ scale: 0.7, overloadMs: 99999 })).toBe(0);
   expect(decideResolutionStep({ scale: 1, headroomMs: 99999 })).toBe(0);
   // 직전 변경 뒤 쿨다운 안에서는 멈춘다. 낮춤과 올림이 동시에 성립해도 낮춤이 이긴다.
   expect(decideResolutionStep({ scale: 1, overloadMs: 5000, sinceChangeMs: 2499 })).toBe(0);
@@ -43,11 +43,14 @@ test('배율은 픽셀 비율에 곱해지지만 0.6 아래로 내려가지 않�
   const s26 = { width: 915, height: 412, dpr: 3.5, quality: 'mid', touch: true };
   expect(renderPixelRatio(s26)).toBe(2);
   expect(renderPixelRatio({ ...s26, resolutionScale: 0.8 })).toBeCloseTo(1.6, 8);
-  expect(renderPixelRatio({ ...s26, resolutionScale: 0.6 })).toBeCloseTo(1.2, 8);
-  expect(renderPixelRatio({ ...s26, resolutionScale: 0.6, thermalTier: 3 })).toBeCloseTo(0.96, 8);
-  // 기본값이 이미 낮은 기기는 배율 때문에 0.6 아래로 가지 않는다.
-  expect(renderPixelRatio({ width: 1000, height: 500, dpr: 1, quality: 'mid', touch: true, resolutionScale: 0.6 })).toBe(0.6);
-  expect(renderPixelRatio({ width: 1000, height: 500, dpr: 0.5, quality: 'mid', touch: true, resolutionScale: 0.6 })).toBe(0.5);
+  // 최소 배율(0.7)에서도 S26 급 바닥은 1.4로 예전 고정값(1.5)에 가깝다. 범위 밖 배율은 격자에 맞춰진다.
+  expect(renderPixelRatio({ ...s26, resolutionScale: 0.7 })).toBeCloseTo(1.4, 8);
+  expect(renderPixelRatio({ ...s26, resolutionScale: 0.3 })).toBeCloseTo(1.4, 8);
+  expect(renderPixelRatio({ ...s26, resolutionScale: 0.7, thermalTier: 3 })).toBeCloseTo(1.12, 8);
+  // 열 단계 3 + 최소 배율이 겹쳐도 기본값이 1 근처인 기기는 0.6 아래로 가지 않는다(열 단계가 이미 더 낮으면 그 값).
+  expect(renderPixelRatio({ width: 1000, height: 500, dpr: 1, quality: 'mid', touch: true, resolutionScale: 0.7, thermalTier: 3 })).toBe(0.6);
+  expect(renderPixelRatio({ width: 1000, height: 500, dpr: 1, quality: 'mid', touch: true, resolutionScale: 0.7 })).toBeCloseTo(0.7, 8);
+  expect(renderPixelRatio({ width: 1000, height: 500, dpr: 0.5, quality: 'mid', touch: true, resolutionScale: 0.7 })).toBeCloseTo(0.5, 8);
   // 이전 정책(고정 예산)보다 항상 같거나 선명하다: 모든 기기에서 새 출발점 >= 옛 값(mid 1.5·1.0M).
   for (const [w, h, d] of [[915, 412, 3.5], [1280, 800, 2], [800, 360, 2.75], [390, 844, 3]]) {
     const old = Math.min(Math.min(d, 1.5), Math.sqrt(1000000 / (w * h)));
@@ -79,8 +82,8 @@ test('거버너: 지속 과부하는 2초마다 한 단계씩 해상도를 낮�
     if (g.advance(t, 'battle', true)) g.recordFrame(t, 2);
     if (g.resolutionScale !== last) { changes++; expect(last - g.resolutionScale).toBeCloseTo(0.1, 8); last = g.resolutionScale; }
   }
-  expect(g.resolutionScale).toBe(0.6);
-  expect(changes).toBe(4);
+  expect(g.resolutionScale).toBe(0.7);
+  expect(changes).toBe(3);
 });
 
 test('거버너: 단발 끊김은 해상도를 바꾸지 않고 안정적이면 올림 대기(10초) 뒤 한 단계 올린다', () => {
@@ -153,9 +156,9 @@ test('Renderer.setResolutionScale 은 단계가 바뀔 때만 렌더 타깃을 �
   renderer.setResolutionScale(1); expect(resizes).toBe(0);
   renderer.setResolutionScale(0.9); expect(resizes).toBe(1);
   renderer.setResolutionScale(0.9); renderer.setResolutionScale(0.91); expect(resizes).toBe(1);
-  renderer.setResolutionScale(0.6); expect(resizes).toBe(2);
+  renderer.setResolutionScale(0.7); expect(resizes).toBe(2);
   renderer.setResolutionScale(0.2); expect(resizes).toBe(2);
-  expect(renderer.resolutionScale).toBe(0.6);
+  expect(renderer.resolutionScale).toBe(0.7);
 });
 
 test('캐릭터 텍스처: 밉맵 + LinearMipmapLinear + 이방성 min(8, 기기 최대)', () => {
