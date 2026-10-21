@@ -146,7 +146,7 @@ for (const [w, h] of views) {
       res.hints = { input: document.documentElement.dataset.input, total: hintEls.length, visibleOnTouch: hintEls.filter(vis).length };
 
       // 6) 폭탄 슬라임 vs 영웅 화면 높이
-      const heightPx = actor => { const bb = new T.Box3().setFromObject(actor.root); let miny = 1e9, maxy = -1e9;
+      const heightPx = actor => { const bb = new T.Box3().setFromObject(actor.model || actor.root); let miny = 1e9, maxy = -1e9;
         for (const x of [bb.min.x, bb.max.x]) for (const y of [bb.min.y, bb.max.y]) for (const z of [bb.min.z, bb.max.z]) { const v = new T.Vector3(x, y, z).project(cam); const sy = (1 - v.y) * .5 * innerHeight; miny = Math.min(miny, sy); maxy = Math.max(maxy, sy); }
         return maxy - miny; };
       const slime = spawnAt('bomb_slime', p.pos.x + 2, p.pos.z + 3);
