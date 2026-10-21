@@ -10,6 +10,7 @@ import { partyHitProfile } from '../engine/combat-sound-library.js';
 import { PARTY_CODE, PARTY_ACTIONS, PARTY_LIMITS, sanitizePartyName, validPartySnapshot } from './protocol.js';
 import { RemoteInput, actorSnapshot, partyHeroState, normalizedPartyStats, canonicalPartyCode } from './replication.js';
 import { PartyView } from './view.js';
+import { apiUrl, publicHref } from '../platform/api-base.js';
 import { capturePartyWarnings, PartyCombatEffects } from './combat-effects.js';
 import { queuePartyVisual } from './visual-protocol.js';
 import { capturePartyEffects, PartyVisualPlayer } from './visual-effects.js';
@@ -54,12 +55,12 @@ export class PartySession {
     this.view.updatePresence(status);
   }
   send(message) { if (this.socket?.readyState === WebSocket.OPEN && this.socket.bufferedAmount < 128 * 1024) { this.socket.send(JSON.stringify(message)); return true; } return false; }
-  inviteUrl() { const url = new URL(location.href); url.search = ''; url.hash = ''; url.searchParams.set('party', this.party.code); return url.href; }
+  inviteUrl() { const url = new URL(publicHref()); url.search = ''; url.hash = ''; url.searchParams.set('party', this.party.code); return url.href; }
   async create() {
     if (this.connecting || this.app.stageStarting || this.app.mode !== 'lobby') return;
     this.connecting = true; this.view.message('파티를 만들고 있습니다.'); this.view.render();
     try {
-      const response = await fetch('/api/party', { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}', signal:AbortSignal.timeout(10000) });
+      const response = await fetch(apiUrl('/api/party'), { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}', signal:AbortSignal.timeout(10000) });
       const data = await response.json(); if (!response.ok) throw new Error(ERRORS[data.error] || '파티 서버에 연결하지 못했습니다.');
       await this.connect(data.code, data.hostTicket);
     } catch (e) { this.view.message(e.message); }
@@ -76,7 +77,7 @@ export class PartySession {
   connect(code, ticket) {
     const generation = ++this.generation; this.socket?.close();
     this.playerId = null; this.party = null; this.name = sanitizePartyName(this.name);
-    const url = new URL(`/api/party/${code}`, location.href); url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+    const url = new URL(apiUrl(`/api/party/${code}`), location.href); url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
     url.searchParams.set('name', this.name); url.searchParams.set('hero', this.heroId);
     const avatar = this.app.eco.equippedAvatar(this.heroId); if (avatar) url.searchParams.set('avatar', avatar);
     url.searchParams.set('visuals', '1'); url.searchParams.set('avatars', '1'); url.searchParams.set('heroHits', '1');

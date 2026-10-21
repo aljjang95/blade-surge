@@ -7,6 +7,7 @@ import { ALL_DUNGEONS } from '../data/expansion.js';
 import { HEROES } from '../data/heroes.js';
 import { STAGES_PER_CHAPTER, stageDef } from '../data/stages.js';
 import { buildIdentity } from '../platform/startup-compat.js';
+import { apiBase, isNativeBuild } from '../platform/api-base.js';
 import { SOCIAL_CONFIG } from './config.js';
 import { googleSignIn } from './google-signin.js';
 
@@ -98,7 +99,9 @@ export function setupCommunity(app) {
 function build(app) {
   const config = SOCIAL_CONFIG;
   const contentIds = new Set(config.contents.map(c => c.id));
-  const client = createSocialClient({ gameId: config.gameId, presence: { state: 'lobby' } });
+  // 앱(WebView 출처 https://localhost)에서는 상대 경로가 localhost로 가므로 정식 호스트의 절대 주소를 쓴다. 웹은 기존 같은 출처 그대로.
+  const native = isNativeBuild();
+  const client = createSocialClient({ gameId: config.gameId, presence: { state: 'lobby' }, ...(native ? { baseUrl: apiBase() + '/api/social' } : {}) });
   const heroProfile = bindCommunityHero(client, () => app.eco.s.selected);
 
   // ── 대략 fps: 프레임 간격의 이동 평균(보이는 동안만) ──
@@ -161,7 +164,8 @@ function build(app) {
         .map(rect => ({ left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }));
     },
     // 구글 로그인: 클라이언트 ID는 google-signin.js가 가진다(서버 GOOGLE_CLIENT_IDS와 같은 값).
-    googleSignIn,
+    // 구글 웹 로그인(GSI 팝업)은 앱 WebView(https://localhost)에서 동작이 확인되지 않아 앱에서는 연결하지 않는다(화면에는 '준비 중'으로 표시).
+    googleSignIn: native ? undefined : googleSignIn,
     discordInvite: typeof config.discordInvite === 'string' ? config.discordInvite : null,
   };
 
