@@ -40,7 +40,13 @@ npx cap sync android
 
 # 이전 산출물이 섞이지 않게 같은 변형의 번들만 지우고 다시 만든다.
 rm -rf android/app/build/outputs/bundle/googleplayRelease
-bash android/gradlew -p android bundleGoogleplayRelease --no-daemon --console=plain
+# 클라우드 프록시 경유 Maven 다운로드가 429(Too Many Requests)로 끊길 수 있어, 받은 캐시를 이어서 최대 5번 다시 시도한다.
+for attempt in 1 2 3 4 5; do
+  if bash android/gradlew -p android bundleGoogleplayRelease --no-daemon --console=plain; then break; fi
+  [ "$attempt" -lt 5 ] || { echo "gradle 빌드가 5번 모두 실패했습니다." >&2; exit 1; }
+  echo "gradle 재시도 대기($attempt/5)..." >&2
+  sleep 30
+done
 
 aab="$(find android/app/build/outputs/bundle/googleplayRelease -maxdepth 1 -name '*.aab' | head -n 1)"
 [ -n "$aab" ] || { echo "AAB 산출물을 찾지 못했습니다." >&2; exit 1; }
