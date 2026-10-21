@@ -12,6 +12,8 @@ import { beginEnemyGather, prepareEnemyGather } from './crowd-gather.js';
 import { EnemyDashWarning } from './enemy-dash-warning.js';
 import { hazardContains } from './region-hazards.js';
 import { monsterRosterEntry } from '../data/monster-roster.js';
+import { MONSTER_STRIDE } from '../data/locomotion-stride.js';
+import { monsterLocoTempo } from './feel.js';
 import { canCommitRanged, escapeWall, idlePursuit, packNoise, updatePursuit } from './pack-pursuit.js';
 
 const _v = new THREE.Vector3();
@@ -269,6 +271,11 @@ export class Enemy extends Actor {
     ring.scale.setScalar(burrowing ? BURROW.radius / .9 * (1 + pulse * .02) : 1.02 + (1 - remaining) * .22 + pulse * .06);
     ring.material.opacity = .35 + (1 - remaining) * .42 + pulse * .12;
   }
+  /** 걷기·달리기 클립의 재생 배율(보폭 표에 있으면). 표 조회만 하고 할당하지 않는다. */
+  locoTempo(clip, speed) {
+    const stride = MONSTER_STRIDE[this.def.model]?.[clip];
+    return stride ? monsterLocoTempo(stride, this.scale, speed) : null;
+  }
   hurt(dmg, { crit = false, dirx = 0, dirz = 0, kb = 2, stun = 0, kind = 'slash', up = false, slow = 0, poison = false, hitReact = false, finisher = false, basic = false, attacker = null } = {}) {
     if (!this.alive || this.spawning) return 0;
     // 맞은 무리와 시야가 닿는 가까운 경계 무리는 피한 공격에도 깨어난다.
@@ -440,7 +447,9 @@ export class Enemy extends Actor {
         if (idlePursuit(this, this.game, sx, sz, _route)) {
           this.faceDir(_route.x, _route.z);
           const walk = this.def.spd < 4 ? this.A('walk') : this.A('run');
-          if (this.actionName !== walk) this.play(walk, { fade: 0.15 });
+          const tempo = this.locoTempo(walk, Math.hypot(this.vel.x, this.vel.z));
+          if (this.actionName !== walk) this.play(walk, { fade: 0.15, speed: tempo ?? 1 });
+          else if (tempo !== null && this.action) this.action.timeScale = tempo;
         } else if (this.actionName !== this.rig.idleCombat && this.actionName !== this.rig.idle) this.play(this.A('idleCombat'), { fade: 0.2 });
         return;
       }
@@ -456,7 +465,10 @@ export class Enemy extends Actor {
         this.backT = Math.max(0, (this.backT || 0) - dt * .5);
         const spd = this.def.spd * spdMul * _route.pace; this.vel.set(_route.x * spd + sx, 0, _route.z * spd + sz);
         const run = this.def.spd < 4 ? this.A('walk') : this.A('run');
-        if (this.actionName !== run) this.play(run, { fade: 0.15, speed: spdMul * (this.def.spd > 5 ? 1.2 : 1) });
+        // 다리 있는 몬스터는 실제 이동 속도에 재생 배율을 맞춰 디딤발 미끄러짐을 줄인다(보폭 표에 없는 모델은 기존 배율).
+        const tempo = this.locoTempo(run, spd);
+        if (this.actionName !== run) this.play(run, { fade: 0.15, speed: tempo ?? spdMul * (this.def.spd > 5 ? 1.2 : 1) });
+        else if (tempo !== null && this.action) this.action.timeScale = tempo;
       } else if (this.def.ranged && d < range * 0.45 && (this.backT = (this.backT || 0) + dt) < RANGED_RETREAT_SEC) {
         const spd = this.def.spd * 0.8; this.vel.set(-dx / d * spd + sx, 0, -dz / d * spd + sz); if (this.actionName !== this.A('back')) this.play(this.A('back'), { fade: 0.15 });
       } else {

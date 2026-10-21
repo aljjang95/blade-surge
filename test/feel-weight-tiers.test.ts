@@ -106,3 +106,26 @@ test('영웅 달리기 재생 배율은 실제 이동 속도를 따라가 디딤
   const sprint = p.vel.length() / (L.heroRunStride.knight * p.action.timeScale);
   expect(first).toBeCloseTo(L.targetSlide, 3); expect(sprint).toBeCloseTo(L.targetSlide, 3);
 });
+
+test('몬스터 보폭 표: 실제 적 모델만 담고, 재생 배율은 이동 속도에 비례하며 상·하한을 지킨다', async () => {
+  const { monsterLocoTempo } = await import('../src/game/feel.js');
+  const { MONSTER_STRIDE } = await import('../src/data/locomotion-stride.js');
+  const models = new Set(Object.values(runtime.ENEMIES as Record<string, { model: string }>).map(d => d.model));
+  for (const [model, clips] of Object.entries(MONSTER_STRIDE)) {
+    expect(models.has(model), model).toBe(true);
+    for (const v of Object.values(clips as Record<string, number>)) { expect(v).toBeGreaterThan(.3); expect(v).toBeLessThan(6); }
+  }
+  const L = FEEL.locomotion;
+  const t = monsterLocoTempo(2, 1, 4)!;
+  expect(4 / (2 * t)).toBeCloseTo(L.targetSlide, 6);
+  expect(monsterLocoTempo(2, 1, 5)!).toBeCloseTo(t * 5 / 4, 6);
+  expect(monsterLocoTempo(.5, 1, 99)).toBe(L.monsterMax);
+  expect(monsterLocoTempo(2, 1, 0)).toBe(L.monsterMin);
+  expect(monsterLocoTempo(0, 1, 4)).toBeNull();
+  // 실제 Enemy: 표에 있는 모델은 배율, 없는 모델은 null
+  const f = createCombatFlowFixture(runtime, 'knight');
+  const skel: any = spawnCombatFlowEnemy(f, f.room.x, f.room.z + 3, { id: 'skel_minion', scale: .95 });
+  expect(skel.locoTempo('run', 4.6)).toBeCloseTo(monsterLocoTempo(MONSTER_STRIDE.Skeleton_Vanguard.run, .95, 4.6)!, 9);
+  const blob: any = spawnCombatFlowEnemy(f, f.room.x + 2, f.room.z + 3, { id: 'blob_green', scale: 1 });
+  expect(blob.locoTempo('walk', 3)).toBeNull();
+});

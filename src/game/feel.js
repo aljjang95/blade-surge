@@ -24,6 +24,8 @@ export const FEEL = Object.freeze({
   locomotion: Object.freeze({
     heroRunStride: Object.freeze({ knight: 2.77, barbarian: 2.74, mage: 3.55, rogue: 3.44, ranger: 3.22 }),
     targetSlide: 1.35, min: .7, max: 2.6,
+    // 몬스터: src/data/locomotion-stride.js 의 보폭 표. 걷기 전용 큰 몸집이 지나치게 종종거리지 않게 상한을 낮춘다.
+    monsterMin: .6, monsterMax: 2.2,
   }),
   // 넉백 속도는 매 초 keep 배로 줄어든다(지수 마찰). 초기 속도 v 의 총 이동 = v / -ln(keep). 몰이(pull)도 같은 속도 벡터를 쓰므로 값은 바꾸지 않는다.
   knockback: Object.freeze({ keep: .02 }),
@@ -121,6 +123,13 @@ export function heroRunTempo(heroId, speed, sprint = 0) {
   const L = FEEL.locomotion, stride = L.heroRunStride[heroId];
   if (!(stride > 0) || !(speed > 0)) return 1.1 + Math.max(0, num(sprint)) * .35;
   return clamp(speed / (stride * L.targetSlide), L.min, L.max);
+}
+
+/** 몬스터 걷기·달리기 재생 배율. strideUnit 은 액터 배율 1 기준 보폭 속도(m/s), 없으면 null(호출자가 기존 배율 사용). */
+export function monsterLocoTempo(strideUnit, actorScale, speed) {
+  const L = FEEL.locomotion;
+  if (!(strideUnit > 0) || !(actorScale > 0)) return null;
+  return clamp(Math.max(0, num(speed)) / (strideUnit * actorScale * L.targetSlide), L.monsterMin, L.monsterMax);
 }
 
 /** 넉백 속도 감쇠 배율(dt 초 동안). 프레임 크기와 무관하게 같은 곡선이다. */
