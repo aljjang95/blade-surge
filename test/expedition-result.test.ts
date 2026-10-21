@@ -152,3 +152,31 @@ test('Astral result shows only frozen restored identities and wrong attempts, in
     if (progress < 4) expect(text(f.view)).not.toContain(`${progress + 1}번 조율판`);
   }
 });
+
+test('보상 칩 띠가 요약 바로 다음, 접힌 상세보다 앞에 오고 장비 칩은 최고 희귀도 색을 쓴다', () => {
+  const f = fixture(), strip = f.nodes.find(n => n.props.className === 'exp-chips exp-reward-strip');
+  const summary = f.nodes.find(n => n.props.className === 'exp-result-summary'), details = f.nodes.filter(n => n.type === 'details');
+  expect(strip).toBeDefined();
+  expect(f.nodes.indexOf(summary)).toBeLessThan(f.nodes.indexOf(strip)); expect(f.nodes.indexOf(strip)).toBeLessThan(f.nodes.indexOf(details[0]));
+  const chips = f.nodes.filter(n => n.props.className === 'exp-reward-chip');
+  expect(chips.map(text)).toEqual(expect.arrayContaining(['골드 +1,234', '영웅 EXP +150', '강화석 +3']));
+  const gear = chips.find(n => n.props['data-tier'] === 'loot');
+  expect(text(gear)).toBe('장비 +45'); expect(gear.props.style['--chip-color']).toMatch(/^#[0-9a-f]{6}$/i);
+});
+
+test('미사용 정원의 장치는 한 줄 라벨로만 접고 사용했다면 설명 블록을 유지한다', () => {
+  const find = (receipt: any) => fixture({ mapTactics: receipt }).nodes.find(n => n.props['data-map-tactics-result'] !== undefined);
+  const unused = find({ id: 'garden_plinths_standard', roomId: 3, used: false, canceled: false });
+  expect(unused.type).toBe('p'); expect(unused.props.className).toContain('map-tactics-unused'); expect(text(unused)).toBe('정원의 장치 · 미사용');
+  const used = find({ id: 'garden_plinths_standard', roomId: 3, used: true, canceled: false, selectedId: 'gather', affectedCount: 4 });
+  expect(used.type).toBe('section'); expect(text(used)).toContain('제어 대상 4명');
+});
+
+test('보상 숫자 카운트업은 모션 줄이기 설정에서 즉시 최종값을 쓴다', async () => {
+  const { countUpRef } = await import('../src/expansion/hub.jsx');
+  const el: any = { dataset: { count: '1234' }, textContent: '', isConnected: true };
+  const g: any = globalThis, prev = g.matchMedia;
+  g.matchMedia = () => ({ matches: true });
+  try { countUpRef(el); expect(el.textContent).toBe('+1,234'); } finally { g.matchMedia = prev; }
+  countUpRef(null);
+});
