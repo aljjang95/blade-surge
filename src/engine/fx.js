@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { softCircleTex, sparkTex, ringTex, slashTex, smokeTex, VFX_TEX } from './assets.js';
 import { ImpactLights } from './impact-lights.js';
 import { CombatVfx } from './combat-vfx.js';
+import { ImpactVfx } from './impact-vfx.js';
 import { HeroEffectFocus } from './hero-effect-focus.js';
 import { WeaponTrail, createWeaponTrailMaterial } from './weapon-trail.js';
 import { compactCombatStatus, decorativeBurstGain, boundedFeedbackGain, combatTextRegions, combatTextViewport, heroCombatTextRegion, placeCombatStatus } from './combat-feedback.js';
@@ -321,6 +322,8 @@ export class FX {
     this.impactLights = new ImpactLights(scene);
     // 처치 파편·묶음 처치 충격파: 인스턴스 풀 2장(드로우콜 2). 시계는 아래 update(dt) 의 sim dt.
     this.vfx = new CombatVfx(scene, { focus: this.focus });
+    // 타격·치명타·처치 임팩트 프레임: 인스턴스 1장(드로우콜 1). 시계는 vfx 와 같은 sim dt.
+    this.impact = new ImpactVfx(scene, { focus: this.focus, camera });
     this.lights = this.impactLights.slots;
     this.dmgLayer = document.getElementById('dmg-layer');
     this.dmgPool = []; this.maxDmg = 40; this._killBudget = KILL_CONFIRM_PER_FRAME;
@@ -336,13 +339,13 @@ export class FX {
     this.plane2 = new THREE.PlaneGeometry(2, 2);
     this.trails = [];
   }
-  setQuality(q) { this.quality = q; this.impactLights.setEnabled(q !== 'low'); this.vfx?.setQuality(q); }
+  setQuality(q) { this.quality = q; this.impactLights.setEnabled(q !== 'low'); this.vfx?.setQuality(q); this.impact?.setQuality(q); }
   get lite() { return this.quality === 'low'; }
   add(obj, life, update, onEnd) { this.scene.add(obj); this.items.push({ obj, t: 0, life, update, onEnd }); return obj; }
   /** paused: 전투 일시정지(Battle.update 가 시간을 멈춘 상태)에서는 전투 VFX 시계를 흘리지 않는다. */
   update(dt, paused = false) {
     this._killBudget = KILL_CONFIRM_PER_FRAME;
-    this.sparks.update(dt); this.glow.update(dt); this.smoke.update(dt); this.vfx?.update(paused ? 0 : dt);
+    this.sparks.update(dt); this.glow.update(dt); this.smoke.update(dt); this.vfx?.update(paused ? 0 : dt); this.impact?.update(paused ? 0 : dt);
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i]; it.t += dt; const k = it.t / it.life;
       if (k >= 1) { this._finishItem(i); continue; }
@@ -427,7 +430,7 @@ export class FX {
     const captured = reflectCompiledPrograms ? { programs: new Map(), gl: null, properties: null } : null;
     const targetReadiness = [];
     const originalParents = [];
-    this.vfx?.setWarm(true);
+    this.vfx?.setWarm(true); this.impact?.setWarm(true);
     try {
       for (const object of new Set(preparationObjects)) {
         originalParents.push({ object, parent: object.parent }); warm.add(object);
@@ -495,7 +498,7 @@ export class FX {
         });
       return await prepareObjectReflection(renderer, readinessObjects, valid);
     } finally {
-      this.vfx?.setWarm(false);
+      this.vfx?.setWarm(false); this.impact?.setWarm(false);
       try {
         for (const { object, parent } of originalParents) {
           if (object.parent === warm) { warm.remove(object); if (parent && valid()) parent.add(object); }
@@ -529,7 +532,7 @@ export class FX {
     }
   }
   /** 접촉 하나에 날·둔기·마법의 실루엣 하나만 남기고 불꽃은 기존 풀을 쓴다. */
-  contact(pos, dir, color, { size = 1.6, particles = 5, light = false, kind = 'slash', tier = 'light' } = {}) {
+  contact(pos, dir, color, { size = 1.6, particles = 5, light = false, kind = 'slash', tier = 'light', crit = false } = {}) {
     const count = Number.isFinite(particles) ? Math.max(0, Math.min(12, Math.round(particles))) : 0;
     const radius = Number.isFinite(size) ? Math.max(.4, Math.min(2, size)) : 1;
     const reduced = count === 0, heavy = tier !== 'light';
@@ -555,6 +558,8 @@ export class FX {
       size: heavy ? .25 : .18, life: .18, spread: blunt ? .7 : slash ? .2 : .4,
     });
     if (light && !reduced) this.light(pos, color, 3.2, 3.5, .1);
+    // 임팩트 프레임(코어·베기 자국/고리/별빛·불똥, 치명타 금빛 십자): 인스턴스 층이라 fx.items·불꽃 풀·난수를 건드리지 않는다.
+    this.impact?.hit(pos, dir, { hero: this._heroId(), kind, tier, crit: !!crit, reduced });
     return cue;
   }
   /**
@@ -632,7 +637,12 @@ export class FX {
   }
 
   /** 적 한 마리의 처치 파편 폭발(적 팔레트 색, 넉백 방향). 낸 파편 수를 돌려준다. */
-  deathShatter(enemy, { reduced = false } = {}) { return this.vfx?.shatter(enemy, { reduced }) || 0; }
+  deathShatter(enemy, { reduced = false } = {}) {
+    if (enemy?.pos) this.impact?.kill(enemy.pos, { elite: !!enemy.isElite, boss: !!enemy.isBoss, hero: this._heroId(), reduced });
+    return this.vfx?.shatter(enemy, { reduced }) || 0;
+  }
+  /** 현재 조종 중인 영웅 id(타격 색 언어용). 초점 대상이 없으면 빈 값. */
+  _heroId() { const t = this.focus?.target; return t?.alive ? (t.def?.id || '') : ''; }
   /** 묶음 처치 단계(0~3) 충격파 + 방사형 빛줄기. 기존 shockTex 링 자리를 대신한다(반지름은 FEEL.kill.multiSteps[].ring). */
   multiKillWave(pos, step, { reduced = false } = {}) { return !!this.vfx?.wave(pos, step, { reduced }); }
 
@@ -965,14 +975,14 @@ export class FX {
     for (const t of this.trails) { this.scene.remove(t.mesh); t.dispose(); }
     this.trails.length = 0;
     for (const pool of [this.sparks, this.glow, this.smoke]) { pool.n = 0; pool.geo.setDrawRange(0, 0); }
-    this.vfx?.clear();
+    this.vfx?.clear(); this.impact?.clear();
     this.clearDamage();
   }
   dispose() {
     if (this._disposed) return;
     this._disposed = true; this.clearAll();
     for (const pool of [this.sparks, this.glow, this.smoke]) { this.scene.remove(pool.mesh); pool.geo.dispose(); pool.mat.dispose(); }
-    this.vfx?.dispose();
+    this.vfx?.dispose(); this.impact?.dispose();
     for (const slot of this.impactLights.slots) this.scene.remove(slot.light);
     this.plane1.dispose(); this.plane2.dispose();
     for (const material of new Set([...Object.values(this._mats), ...this._transparentMats.values(), ...this._depthMats.values()])) material.dispose();
