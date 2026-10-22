@@ -14,8 +14,9 @@ export const FULL_MANIFEST_NAME = 'asset-manifest.full.json';
 export const MANIFEST_SCHEMA = 'blade-surge.asset-manifest.v1';
 export const HASH_LENGTH = 16;
 
-/** glob -> 정규식. * 는 / 를 넘지 않고 ** 는 넘으며 {a,b} 묶음을 지원한다. */
-export function globToRegExp(glob) {
+/** glob -> 정규식. * 는 / 를 넘지 않고 ** 는 넘으며 {a,b} 묶음(안에 * 가능)을 지원한다. */
+export function globToRegExp(glob) { return new RegExp(`^${globBody(glob)}$`); }
+function globBody(glob) {
   let out = '', i = 0;
   while (i < glob.length) {
     const c = glob[i];
@@ -26,11 +27,11 @@ export function globToRegExp(glob) {
     if (c === '{') {
       const end = glob.indexOf('}', i);
       if (end < 0) throw new Error(`닫히지 않은 중괄호: ${glob}`);
-      out += '(?:' + glob.slice(i + 1, end).split(',').map(escapeRegExp).join('|') + ')'; i = end + 1; continue;
+      out += '(?:' + glob.slice(i + 1, end).split(',').map(globBody).join('|') + ')'; i = end + 1; continue;
     }
     out += escapeRegExp(c); i += 1;
   }
-  return new RegExp(`^${out}$`);
+  return out;
 }
 const escapeRegExp = (text) => text.replace(/[.+?^$()|[\]\\]/g, '\\$&');
 

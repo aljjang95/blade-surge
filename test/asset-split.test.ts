@@ -25,6 +25,8 @@ test('glob: * 는 폴더를 넘지 않고 ** 는 넘으며 {a,b} 를 지원한�
   expect(globToRegExp('img/**').test('img/x/y/a.webp')).toBe(true);
   expect(globToRegExp('img/{a,b}.webp').test('img/b.webp')).toBe(true);
   expect(globToRegExp('img/{a,b}.webp').test('img/c.webp')).toBe(false);
+  expect(globToRegExp('img/{boss_*,chronicle_*}.webp').test('img/boss_x.webp')).toBe(true);
+  expect(globToRegExp('img/{boss_*,chronicle_*}.webp').test('img/mob_x.webp')).toBe(false);
   expect(globToRegExp('assets/hero_*_t2-*.glb').test('assets/hero_knight_t2-DXA55axF.glb')).toBe(true);
   expect(globToRegExp('bgm/regions/forge.*').test('bgm/regions/forge.ogg')).toBe(true);
 });
@@ -82,6 +84,10 @@ test('2~6지역의 곡·조우 일러스트·키아트는 지역 묶음 region-N
     expect(classify(`img/encounters/${theme}_captain.webp`, split), theme).toMatchObject({ class: 'remote', group: `region-${n}` });
     expect(classify(`img/ui-crafted/keyart/dungeon-${theme}-keyart.webp`, split), theme).toMatchObject({ class: 'remote', group: `region-${n}` });
   }
+  // 로비 던전 카드가 부팅 직후 그리는 원정 보스 일러스트는 core, 던전 안 몬스터 일러스트만 remote.
+  expect(classify('img/encounters/boss_obsidian_hydra.webp', split)?.class).toBe('core');
+  expect(classify('img/encounters/chronicle_glass_hour_sovereign.webp', split)?.class).toBe('core');
+  expect(classify('img/encounters/mob_cinderling.webp', split)).toMatchObject({ class: 'remote', group: 'expeditions' });
   // 새 BGM 은 규칙에 적지 않아도 기본이 remote 다.
   expect(classify('bgm/regions/new-town-song.ogg', split)).toMatchObject({ class: 'remote', group: 'bgm-extra' });
   expect(classify('video/expansion/glass-garden-intro.mp4', split)).toMatchObject({ class: 'remote', group: 'cinematic' });

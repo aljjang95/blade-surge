@@ -19,15 +19,14 @@
 
     { "class": "core", "glob": "img/encounters/garden_*.webp", "reason": "1지역 조우 일러스트" },
     { "class": "core", "glob": "img/encounters/boss_warlord.webp", "reason": "공용 보스 초상(전투 HUD 기본값)" },
-    { "class": "core", "glob": "img/encounters/boss_demon.webp", "reason": "공용 보스 초상" },
-    { "class": "core", "glob": "img/encounters/boss_dragon.webp", "reason": "공용 보스 초상" },
     { "class": "remote", "group": "region-2", "glob": "img/encounters/forge_*.webp", "reason": "2지역 조우 일러스트" },
     { "class": "remote", "group": "region-3", "glob": "img/encounters/frost_*.webp", "reason": "3지역 조우 일러스트" },
     { "class": "remote", "group": "region-4", "glob": "img/encounters/tide_*.webp", "reason": "4지역 조우 일러스트" },
     { "class": "remote", "group": "region-5", "glob": "img/encounters/crown_*.webp", "reason": "5지역 조우 일러스트" },
     { "class": "remote", "group": "region-6", "glob": "img/encounters/homecoming_*.webp", "reason": "6지역 조우 일러스트" },
     { "class": "remote", "group": "arena", "glob": "img/encounters/arena_*.webp", "reason": "아레나 상대 초상" },
-    { "class": "remote", "group": "expeditions", "glob": "img/encounters/**", "reason": "원정 던전 보스·몬스터 일러스트(boss_*, mob_*, chronicle_*)" },
+    { "class": "core", "glob": "img/encounters/{boss_*,chronicle_*}.webp", "reason": "원정 던전 보스 일러스트: 로비 던전 카드 목록이 부팅 직후 모두 그린다(첫 화면)" },
+    { "class": "remote", "group": "expeditions", "glob": "img/encounters/mob_*.webp", "reason": "원정 던전 몬스터 일러스트(던전 안에서만 보인다)" },
 
     { "class": "core", "glob": "img/ui-crafted/keyart/dungeon-garden-keyart.webp", "reason": "1지역 던전 키아트" },
     { "class": "remote", "group": "region-2", "glob": "img/ui-crafted/keyart/dungeon-forge-keyart.webp", "reason": "2지역 던전 키아트" },
