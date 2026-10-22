@@ -35,14 +35,22 @@ export const SIGNATURES = {
   },
   // 독무 폭탄: 착탄 지점에 조준 원이 먼저 잡히고, 0.5초 뒤 착탄 순간 독 가시 고리 + 짙은 보라 고리 + 솟는 독 거품.
   poison_bomb(ctx) {
-    const { impact, at, lite } = ctx; const LAND = .5;
-    impact.mark(at, MAGENTA, { radius: 2.2, life: LAND + .15, style: MARK_STYLE.reticle });
+    const { impact, at, player, lite } = ctx; const LAND = .5, ARC = 4;
+    impact.mark(at, MAGENTA, { radius: 2.8, life: LAND + .15, style: MARK_STYLE.reticle });
+    // 투척 궤적: skills.js 독 구슬과 같은 포물선(높이 1.5 + sin(kπ)×4, 0.5초)을 여섯 토막 점선으로 따라 그린다.
+    for (let i = 0, n = lite ? 3 : 6; i < n; i++) {
+      const k0 = i / n, k1 = (i + 1) / n;
+      _a.set(player.pos.x + (at.x - player.pos.x) * k0, 1.5 + Math.sin(k0 * Math.PI) * ARC, player.pos.z + (at.z - player.pos.z) * k0);
+      _b.set(player.pos.x + (at.x - player.pos.x) * k1, 1.5 + Math.sin(k1 * Math.PI) * ARC, player.pos.z + (at.z - player.pos.z) * k1);
+      _d.copy(_b).sub(_a);
+      impact.beam(_a, _d, _d.length() * .8, i % 2 ? POISON : MAGENTA, { width: .14, fade: .35, delay: k0 * LAND });
+    }
     impact.mark(at, POISON, { radius: 4.4, life: .9, style: MARK_STYLE.thorn, delay: LAND, angle: .3 });
     impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 2.4, DEEP, .38, { grow: 1, delay: LAND });
     impact._emit(IMPACT_KIND.star, at.x, .6, at.z, 1.4, POISON, .1, { angle: .3, grow: .5, delay: LAND });
-    for (let i = 0, n = lite ? 4 : 9; i < n; i++) {
+    for (let i = 0, n = lite ? 5 : 12; i < n; i++) {
       const a = i * 2.4, r = .8 + (i % 3) * 1.1;
-      impact._emit(IMPACT_KIND.streak, at.x + Math.cos(a) * r, .3, at.z + Math.sin(a) * r, .24, i % 3 ? POISON : MAGENTA, .7,
+      impact._emit(IMPACT_KIND.streak, at.x + Math.cos(a) * r, .3, at.z + Math.sin(a) * r, .32, i % 3 ? POISON : MAGENTA, .7,
         { vx: Math.cos(a) * .6, vy: 2.6 + (i % 4) * .6, vz: Math.sin(a) * .6, stretch: .5, grow: 1, gravity: -1, delay: LAND + (i % 3) * .08 });
     }
   },
@@ -84,7 +92,9 @@ export const SIGNATURES = {
     for (let i = 0, n = lite ? 3 : 6; i < n; i++) {
       const a = yawOf(f) + (i - (n - 1) / 2) * .55, r = 3.2 + (i % 2) * 1.3, t = .18 + i * .09;
       _b.set(player.pos.x + Math.cos(a) * r, 0, player.pos.z + Math.sin(a) * r);
-      impact.mark(_b, VIOLET, { radius: .9, life: .9, style: MARK_STYLE.reticle, angle: i * .7 });
+      impact.mark(_b, VIOLET, { radius: 1.1, life: 1, style: MARK_STYLE.reticle, angle: i * .7 });
+      // 표식 기둥: 표식이 찍힌 자리에서 짙은 보라 빛줄기가 솟는다(어디가 표식인지 한눈에).
+      if (!lite) { _a.set(_b.x, .1, _b.z); _d.set(0, 1, 0); impact.beam(_a, _d, 2.4, i % 2 ? DEEP : VIOLET, { speed: 14, width: .13, fade: .6 }); }
       impact._emit(IMPACT_KIND.cut, _b.x, 1, _b.z, 1.8, MAGENTA, .24, { angle: ang + .8, stretch: 1.1, grow: .9, delay: t });
       impact._emit(IMPACT_KIND.cut, _b.x, 1, _b.z, 1.8, VIOLET, .24, { angle: ang - .8, stretch: 1.1, grow: .9, delay: t + .04 });
     }
@@ -115,7 +125,13 @@ export const SIGNATURES = {
     for (let w = 0; w < 3; w++) for (let i = 0; i < n; i++) {
       const a = (i / n) * 6.2831853 + w * .55;
       _b.set(at.x + Math.cos(a) * R, .9, at.z + Math.sin(a) * R); _d.set(-Math.sin(a), 0, Math.cos(a));
-      impact._emit(IMPACT_KIND.cut, _b.x, _b.y, _b.z, 2, w === 1 ? MAGENTA : VIOLET, .24, { angle: cutAngle(impact, _d), stretch: 1.1, grow: .9, delay: w * .1 });
+      impact._emit(IMPACT_KIND.cut, _b.x, _b.y, _b.z, 2.3, w === 1 ? MAGENTA : DEEP, .26, { angle: cutAngle(impact, _d), stretch: 1.1, grow: .9, delay: w * .1 });
+    }
+    // 행렬 궤도: 둘레를 도는 바닥 호 12토막이 세 박자에 나눠 켜진다(돌아가는 칼날 행진).
+    for (let j = 0, m = lite ? 6 : 12; j < m; j++) {
+      const a = (j / m) * 6.2831853;
+      _b.set(at.x + Math.cos(a) * (R - .4), .08, at.z + Math.sin(a) * (R - .4)); _d.set(-Math.sin(a), 0, Math.cos(a));
+      impact.beam(_b, _d, 6.2831853 * (R - .4) / m * .85, j % 2 ? NIGHT : DEEP, { width: .26, fade: .45, delay: (j % 3) * .1 });
     }
     impact._emit(IMPACT_KIND.ring, at.x, .6, at.z, 3, DEEP, .36, { grow: 1, delay: .2 });
   },
@@ -132,6 +148,23 @@ export const SIGNATURES = {
       const a = (i / n) * 6.2831853;
       impact._emit(IMPACT_KIND.streak, at.x + Math.cos(a) * 2.4, .8, at.z + Math.sin(a) * 2.4, .34, i % 2 ? MAGENTA : DEEP, .4,
         { vx: Math.cos(a) * 16, vy: 1.5, vz: Math.sin(a) * 16, stretch: 1, grow: 1, delay: HIT });
+    }
+  },
+};
+
+/**
+ * 궁극기 예비 표식(시전 연출 중 바로 보인다). skill-signatures.js 의 SKILL_PRELUDES 가 합친다.
+ * @type {Record<string, (ctx: import('./skill-signatures.js').SigCtx) => void>}
+ */
+export const PRELUDES = {
+  // 천 개의 칼날: 둘레 가시 대원이 깔리고, 여덟 자루 칼날 빛이 땅에서 하늘로 솟아오른다(곧 쏟아질 칼날을 모은다).
+  thousand(ctx) {
+    const { impact, player, lite } = ctx;
+    impact.mark(player.pos, DEEP, { radius: 6.5, life: 1.3, style: MARK_STYLE.thorn, angle: .6 });
+    for (let i = 0, n = lite ? 4 : 8; i < n; i++) {
+      const a = (i / n) * 6.2831853 + .3, r = 3.2 + (i % 2) * 1.6;
+      _a.set(player.pos.x + Math.cos(a) * r, .1, player.pos.z + Math.sin(a) * r); _d.set(0, 1, 0);
+      impact.beam(_a, _d, 5, i % 2 ? MAGENTA : VIOLET, { speed: 16, tail: 2.5, width: .14, delay: i * .07 });
     }
   },
 };

@@ -5,7 +5,7 @@ import {capturePartyEffects,PartyVisualPlayer} from '../src/party/visual-effects
 import {capturePartyVisual,validPartyVisual,queuePartyVisual,partyVisualMessage,PARTY_VISUAL_LIMIT,PARTY_VISUAL_BUDGET} from '../src/party/visual-protocol.js';
 
 const pos=()=>new THREE.Vector3(3,0,-4);
-const circle=(at=10)=>capturePartyVisual('castCircle',[pos(),0x80e0ff,{radius:7,life:3.2}],at)!;
+const circle=(at=10)=>capturePartyVisual('castCircle',[pos(),0x2a8cff,{radius:6.8,life:3.2}],at)!;
 
 test('actual blizzard start captures its ground cue once and leaves the host renderer intact',()=>{
   let hostDraws=0;const events:any[]=[];
@@ -16,7 +16,7 @@ test('actual blizzard start captures its ground cue once and leaves the host ren
   expect(hostDraws).toBe(1);expect(events).toHaveLength(1);
   expect(events[0]).toEqual(circle());
   p.pos.set(99,99,99);expect(events[0].pos).toEqual({x:3,y:0,z:-4});
-  expect(fx.castCircle(pos(),0x80e0ff,{radius:7,life:3.2})).toBe('drawn');
+  expect(fx.castCircle(pos(),0x2a8cff,{radius:6.8,life:3.2})).toBe('drawn');
 });
 
 test('visual validator rejects executable payloads, unknown textures, oversize and non-finite values',()=>{
@@ -43,8 +43,8 @@ test('replay preserves position, shape, color and remaining lifetime',()=>{
   const fx={castCircle:(...args:any[])=>calls.push(args)};
   const player=new PartyVisualPlayer(fx);
   expect(player.play([circle()],10.2)).toBe(1);
-  expect(calls[0][0].toArray()).toEqual([3,0,-4]);expect(calls[0][1]).toBe(0x80e0ff);
-  expect(calls[0][2].radius).toBe(7);expect(calls[0][2].life).toBeCloseTo(3);
+  expect(calls[0][0].toArray()).toEqual([3,0,-4]);expect(calls[0][1]).toBe(0x2a8cff);
+  expect(calls[0][2].radius).toBe(6.8);expect(calls[0][2].life).toBeCloseTo(3);
   expect(player.play([circle()],14)).toBe(0);expect(player.play([circle()],NaN)).toBe(0);
 });
 
@@ -63,7 +63,7 @@ test('reduced motion retains stationary ground markers and suppresses bolts and 
   const calls:any[]=[];const player=new PartyVisualPlayer({groundTex:(...args:any[])=>calls.push(args),iceBurst(){throw Error('motion');}});
   const burst=capturePartyVisual('iceBurst',[pos(),{}],10)!;
   expect(player.play([circle(),burst],10,true)).toBe(1);
-  expect(calls[0][3]).toMatchObject({r0:7,r1:7,spin:0});
+  expect(calls[0][3]).toMatchObject({r0:6.8,r1:6.8,spin:0});
 });
 
 test('legacy snapshots keep all combat fields and stripping visuals never mutates the shared packet',()=>{

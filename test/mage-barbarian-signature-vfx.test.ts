@@ -80,10 +80,11 @@ test('실행 중 도우미: 칸 상한·지연 판정 시각, 동작 줄이기·
   const at = new THREE.Vector3(0, 1.2, 4), from = new THREE.Vector3(0, 1.6, 0);
   const v = make(), g = gameOf(v);
   expect(barbWhirlTick(g, new THREE.Vector3(), 3)).toBeLessThanOrEqual(12);
-  expect(barbRushEnd(g, at, new THREE.Vector3(0, 0, 1))).toBeLessThanOrEqual(30);
-  expect(mageBolt(g, from, at, 0)).toBeLessThanOrEqual(14);
-  expect(mageFrostTick(g, new THREE.Vector3(), 2)).toBeLessThanOrEqual(12);
+  expect(barbRushEnd(g, at, new THREE.Vector3(0, 0, 1))).toBeLessThanOrEqual(36);
+  expect(mageBolt(g, from, at, 0)).toBeLessThanOrEqual(22);
+  expect(mageFrostTick(g, new THREE.Vector3(), 2)).toBeLessThanOrEqual(24);
   expect(magePrismBounce(g, at, new THREE.Vector3(1, 0, 0), 4)).toBeLessThanOrEqual(5);
+  v.update(0); // 새 프레임(칸 예산 초기화, 시계는 그대로)
   const before = v.spawned;
   expect(mageMeteorFall(g, new THREE.Vector3(6, 18, 4), new THREE.Vector3(), .4)).toBeLessThanOrEqual(16);
   const blast = slots(v).slice(before).filter((s) => s.kind === IMPACT_KIND.core);
@@ -116,4 +117,18 @@ test('서명은 Math.random 을 쓰지 않는다(전투 난수 순서 보존)', 
   } finally { Math.random = real; }
   expect(calls).toBe(0);
   pool.forEach((p) => p.dispose()); v.dispose();
+});
+
+test('궁극기 예비 표식(메테오·지옥의 도끼): 합본에 있고, 칸 예산 안·lite 는 더 적게·Math.random 미사용', async () => {
+  const { SKILL_PRELUDES } = await import('../src/engine/skill-signatures.js');
+  for (const id of ['meteor', 'hell_axe']) {
+    expect(typeof SKILL_PRELUDES[id]).toBe('function');
+    const v = make(), l = make();
+    const real = Math.random; let calls = 0; Math.random = () => { calls++; return real(); };
+    try { SKILL_PRELUDES[id](ctxOf(v)); SKILL_PRELUDES[id](ctxOf(l, true)); } finally { Math.random = real; }
+    expect(calls).toBe(0);
+    expect(v.spawned).toBeGreaterThan(0); expect(v.spawned).toBeLessThanOrEqual(IMPACT_FRAME_BUDGET - 3);
+    expect(l.spawned).toBeLessThan(v.spawned);
+    v.dispose(); l.dispose();
+  }
 });

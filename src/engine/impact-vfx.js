@@ -45,17 +45,18 @@ export const IMPACT_TIERS = Object.freeze({
   boss: Object.freeze({ core: 1.0, coreLife: .11, cut: 2.1, ring: 1.8, streaks: 6, speed: 11.5, streakLife: .2 }),
 });
 /** 궁수 화살 궤적 언어(모두 비취 계열). tail = 꼬리 길이 m, width = 반폭 m, glow = 넓은 옅은 번짐 한 줄을 더할지, style = 광선 모양.
- *  기본 평타는 짧은 꼬리, 관통은 길고 곧은 선 + 번짐, 일제 사격은 중간, 폭풍(궁극기)은 쌍나선 바람, 속박은 덩굴 물결이다. */
+ *  기본 평타는 짧은 꼬리, 관통은 길고 굵은 곧은 선 + 넓은 번짐, 일제 사격은 중간, 폭풍(궁극기)·이탈·질풍은 쌍나선 바람, 속박은 덩굴 물결이다.
+ *  스킬 화살은 내려다보는 카메라에서 짧게 보이므로 평타보다 굵게(h1b 레인 B). */
 export const ARROW_STREAKS = Object.freeze({
   basic: Object.freeze({ tail: 4.5, width: .065, color: 0x3fe0a0, glow: 0, style: 0, muzzle: 0 }),
   finisher: Object.freeze({ tail: 7, width: .1, color: 0x3fe0a0, glow: .26, style: 0, muzzle: .55 }),
-  pierce: Object.freeze({ tail: 13, width: .1, color: 0x52f0b4, glow: .34, style: 0, muzzle: .8 }),
+  pierce: Object.freeze({ tail: 16, width: .17, color: 0x52f0b4, glow: .55, style: 0, muzzle: 1.1 }),
   volley: Object.freeze({ tail: 6, width: .08, color: 0x3fe0a0, glow: .2, style: 0, muzzle: .5 }),
-  retreat: Object.freeze({ tail: 5, width: .075, color: 0x7affc8, glow: 0, style: 0, muzzle: .45 }),
+  retreat: Object.freeze({ tail: 6, width: .1, color: 0x7affc8, glow: .22, style: 2, muzzle: .6 }),
   storm: Object.freeze({ tail: 9, width: .12, color: 0x3fe0a0, glow: .3, style: 2, muzzle: .7 }),
-  quick: Object.freeze({ tail: 5, width: .07, color: 0x9fffd8, glow: 0, style: 0, muzzle: .5 }),
-  bind: Object.freeze({ tail: 8, width: .1, color: 0x63e08a, glow: .22, style: 1, muzzle: .55 }),
-  gale: Object.freeze({ tail: 7, width: .09, color: 0x3fe0a0, glow: .24, style: 2, muzzle: .5 }),
+  quick: Object.freeze({ tail: 7, width: .12, color: 0x7affc8, glow: .3, style: 0, muzzle: .7 }),
+  bind: Object.freeze({ tail: 9, width: .13, color: 0x63e08a, glow: .3, style: 1, muzzle: .65 }),
+  gale: Object.freeze({ tail: 8, width: .12, color: 0x3fe0a0, glow: .32, style: 2, muzzle: .6 }),
 });
 export const IMPACT_CAPACITY = 512;
 /** 한 프레임에 새로 낼 수 있는 칸 상한(군중 동시 타격에도 업로드·채움 비용이 일정하다). */
