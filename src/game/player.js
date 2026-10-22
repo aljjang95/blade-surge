@@ -26,6 +26,7 @@ const _v = new THREE.Vector3();
 export const RANGER_HEAD_LIFT = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), THREE.MathUtils.degToRad(30));
 // 입력 버퍼·취소 창은 game/feel.js 의 FEEL.input 한 표가 소유한다.
 const ATTACK_INPUT_BUFFER_SEC = FEEL.input.attackBuffer;
+const SKILL_INPUT_BUFFER_SEC = .3;   // 평타 선딜에 막힌 스킬 탭을 보존하는 시간(홀드 평타 중에도 스킬이 사라지지 않게)
 const DODGE_INPUT_BUFFER_SEC = FEEL.input.dodgeBuffer;
 // 수동 궁수: 사격 중 이동 속도 배율, 회피에서 사격으로 넘어가는 최소 회피 시간, 다리 층 블렌드 속도
 export const RANGER_MOVE_SHOT_SPEED = 0.55;
@@ -85,9 +86,11 @@ export class Player extends Actor {
     this.state = 'idle'; this.stateT = 0;
     this.comboIdx = 0; this.comboQueued = false; this.attackBufferT = 0; this.dodgeBufferT = 0; this.hitDone = false; this.comboWindow = 0;
     this.attackBufferYaw = null; this.comboQueuedYaw = null;
+    this.skillBufferT = 0; this.skillBufferSlot = -1; this.skillBufferAim = null;
     // 정지·초점 이탈·재출격은 짧은 입력 버퍼와 방향을 폐기하되 수락된 콤보는 보존한다.
     this._offDodgeInputClear = game.input?.onClear?.(() => {
       this.dodgeBufferT = 0; this.attackBufferT = 0; this.attackBufferYaw = null; this.comboQueuedYaw = null;
+      this.skillBufferT = 0; this.skillBufferAim = null;
       this.skillAimView.group.visible = false;
     });
     this.cds = def.skills.map(() => 0); this.ult = 0; this.ultMax = 100; this.ultGainLock = 0;
@@ -141,6 +144,7 @@ export class Player extends Actor {
   // ---------------- 입력 처리 ----------------
   handleInput(input, dt) {
     if (!this.alive || this.auto || this.stun > 0) { this.attackBufferYaw = null; this.comboQueuedYaw = null; }
+    if (!this.alive || this.auto) this.skillBufferT = 0;
     if (!this.alive) return;
     let mx = input.move.x, my = input.move.y;
     if (this.auto) { const m = this.autoMove(dt); mx = m.x; my = m.y; }
@@ -149,7 +153,11 @@ export class Player extends Actor {
     const wantMove = this.moveDir.lengthSq() > 0.01;
 
     // 다른 행동이 이 프레임을 먼저 수락해도 공격 의도는 남긴다. 현재 행동(회피·경직·스킬·기절)의 남은 시간만큼 보존한다.
-    if (input.consume('attack')) {
+    // 버튼·키를 누르고 있으면 매 스텝 같은 공격 의도를 되살린다(2026-10-22 대표님 지시: 홀드는 평타를 계속 이어 간다).
+    // 새 입력 버퍼·콤보 예약 경로를 그대로 타므로 공격 속도·연계 창·회피/스킬 우선권은 탭과 같고, 떼면 버퍼 시간만 남고 끝난다.
+    // AUTO 는 자체 공격 루프가 있고, 입력이 꺼진 동안 남은 값은 믿지 않는다.
+    const attackTap = input.consume('attack');
+    if (attackTap || (!this.auto && input.enabled !== false && input.attackHeld)) {
       let wait = Math.max(0, this.stun || 0);
       if (this.state === 'dodge' || this.state === 'hurt') wait = Math.max(wait, .32 - this.stateT);
       if ((this.state === 'skill' || this.state === 'ult') && this.skillCtx) {
@@ -173,7 +181,20 @@ export class Player extends Actor {
     if (this.dodgeBufferT > 0 && this.dodgeCd <= 0 && this.stun <= 0 &&
       (this.state === 'idle' || this.state === 'move' || (this.state === 'attack' && this.canDodgeCancel()))) return this.dodge(wantMove ? this.moveDir : null);
     // 전투 입력은 0~3 고정 + Q/E 장착 슬롯 4/5만 노출한다.
-    for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) { if (this.tryCastCombatSkill(slot, input.takeAim?.(slot))) return; }
+    // 평타 선딜(타격 전)에는 스킬 취소가 닫혀 있다. 홀드 평타 중에는 이 구간이 계속 돌아오므로, 막힌 스킬 탭은 짧게 보존했다가
+    // 취소 창이 열리면 한 번 시도한다(탭 한 번이 선딜에 걸려 사라지지 않게). 다른 이유로 못 쓰는 스킬은 보존하지 않는다.
+    if ((this.skillBufferT || 0) > 0) {
+      this.skillBufferT = Math.max(0, this.skillBufferT - dt);
+      if (this.state !== 'attack' || this.canSkillCancel()) {
+        const slot = this.skillBufferSlot, aim = this.skillBufferAim; this.skillBufferT = 0; this.skillBufferAim = null;
+        if (this.tryCastCombatSkill(slot, aim)) return;
+      }
+    }
+    for (let slot = 0; slot < 6; slot++) if (input.consume('skill' + slot)) {
+      const aim = input.takeAim?.(slot) ?? this.heldMoveAim(wantMove);
+      if (this.tryCastCombatSkill(slot, aim)) return;
+      if (this.skillCancelBlocked(slot)) { this.skillBufferSlot = slot; this.skillBufferT = SKILL_INPUT_BUFFER_SEC; this.skillBufferAim = aim ? { x: aim.x, z: aim.z, dist01: aim.dist01, dirOnly: aim.dirOnly } : null; }
+    }
     // 공격: 입력 버퍼는 버튼을 누른 순간의 의도를 보존하지만, 버튼 홀드 자체는
     // 다음 콤보를 예약하지 않는다. 수동 전투에서 타이밍을 직접 결정하게 하는 경계다.
     if (this.stun <= 0 && (this.state === 'idle' || this.state === 'move' || this.canDodgeShoot()) && this.attackBufferT > 0) {
@@ -210,6 +231,27 @@ export class Player extends Actor {
         if (this.state !== 'idle') { this.state = 'idle'; this.play('Idle', { fade: 0.2 }); }
       }
     }
+  }
+  /** 스킬을 쓸 수 있는 조건은 모두 맞는데 진행 중인 평타의 취소 창이 아직 닫혀 있어서만 막힌 상태인가. */
+  skillCancelBlocked(slot) {
+    if (this.auto || this.state !== 'attack' || this.canSkillCancel() || this.stun > 0) return false;
+    const index = this.combatSkillIndex(slot), sk = this.def.skills[index];
+    if (!sk || !this.unlocked(index) || !SKILLS[sk.id]) return false;
+    if (sk.ult ? this.ult < this.ultMax : this.cds[index] > 0) return false;
+    return skillMpCost(sk) <= (Number.isFinite(this.mp) ? this.mp : MP_BASE);
+  }
+  /**
+   * 수동 궁수가 이동 입력(조이스틱·방향키)을 잡은 채 스킬을 탭하면 그 방향으로 쏜다.
+   * 사격 중 몸은 조준 보조 대상을 향하므로 이 보정이 없으면 입력과 다른 쪽으로 나간다. 끌어서 정한 조준이 있으면 그쪽이 우선이다.
+   * 방향만 정하고 지점(aimPoint)은 만들지 않으며, 재사용 객체라 프레임당 할당이 없다.
+   */
+  heldMoveAim(wantMove) {
+    if (!wantMove || !this.manualBow || this.stun > 0) return null;
+    const length = Math.hypot(this.moveDir.x, this.moveDir.z);
+    if (!(length > 1e-6)) return null;
+    const aim = this._heldMoveAim || (this._heldMoveAim = { x: 0, z: 0, dist01: 1, dirOnly: true });
+    aim.x = this.moveDir.x / length; aim.z = this.moveDir.z / length;
+    return aim;
   }
   nearestEnemy(maxDist = 99) {
     let best = null, bd = maxDist;
@@ -495,7 +537,7 @@ export class Player extends Actor {
     else if (this.auto) this.autoAim(12);
     const lvMult = 1 + (this.skillLevels[i] - 1) * 0.12;
     this.skillCtx = { sk, impl, t: 0, cast: false, done: false, dmg: this.atk * sk.dmg * lvMult * (this.stats?.skillMul ?? 1), level: this.skillLevels[i], data: {} };
-    if (aimed) {
+    if (aimed && !aim.dirOnly) {
       const shape = skillAimShape(sk.id), length = Math.hypot(aim.x, aim.z);
       const fraction = Number.isFinite(aim.dist01) ? Math.max(0, Math.min(1, aim.dist01)) : 1;
       const distance = shape?.kind === 'circle' ? shape.range * fraction : Math.max(1, shape?.range || 1);
