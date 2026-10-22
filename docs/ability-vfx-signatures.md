@@ -74,3 +74,7 @@ position, kills or victory state. The generated report and PNGs live under
 - 드로우콜 +13 원인 확정: `hero-vfx-scorecard` 가 매 프레임 `thermalTier`·`bloomOn` 을 기록한다. swiftshader 에서 frameGovernor 가
   첫 영웅 측정 뒤 단계 2로 올라가 블룸 패스(밉 흐림·합성, 드로우콜 13)를 끈다 — 단계 0/1 은 같은 장면에서 정확히 +13.
   전/후 비교는 `--tier 2` 로 고정한다.
+- 다듬기(h1c): 화염구 착탄은 넓은 고리·마법진 채움·폭발 원화를 줄이고 지름 ≈1.1m 진한 코어+별빛(낮은 화질 유지), 레시피 `noBurst`.
+  눈보라 가시·소용돌이는 `BEAM_STYLE.ice`(옅은 하늘색 심·진한 청 가장자리·끝이 가는 결정), 프리즘은 삼각 윤곽+분광 다섯 갈래
+  `BEAM_STYLE.prism`(옅은 청 코어·섬광 제거). 궁수 관통 `screenReach` 는 끝점 표식이 844x390 화면 안에 들도록 표시 거리만 .5m 단위로
+  줄인다(최소 5m, 투사체 사거리·판정 불변).
