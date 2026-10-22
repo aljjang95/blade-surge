@@ -46,4 +46,4 @@ AAB 가 서명 서비스 한도(약 100MB)에 닿고 콘텐츠(3개월치 지역
 - 시도했다가 되돌린 것: 2지역 이후 몬스터 몸체(대악마·나무 수호자·불사조 ≈3.5MB)를 remote 로 옮기면 부팅의 `preloadAll`/`App.boot` 이 `MODEL_LIST` 전체를 즉시 로드(`this.models`, 환경맵·셰이더 워밍)하므로 부팅이 호스트 요청을 하게 돼 QA 가 실패한다. 이 몬스터를 remote 로 보내려면 부팅 예열을 지연 로딩으로 바꾸는 별도 작업이 필요하다.
 
 ### 갱신 2 (PR #228 병합 뒤 재측정)
-- main 의 몬스터·영웅 애니메이션 팩(`models/anim-packs`, 5.9MB)이 core 에 들어와 AAB 가 61.24MB 로 다시 60MB(10진)를 넘었다. 팩은 몬스터 몸체와 함께 부팅 예열(`MODEL_LIST`)이 읽으므로 remote 로 보낼 수 없어, 1지역 보스 곡(1.5MB)·중간 보스 곡(1.0MB)을 `early-music` 묶음(remote)으로 옮겼다. 로비 진입 때 `remote-prefetch` 의 `EARLY_GROUP` 이 네트워크 종류와 상관없이(데이터 절약 모드 제외) 받는다.
+- 최종: 서명 없는 AAB 58,746,060바이트(58.7MB, sha256 5cd362a5…). main 의 몬스터·영웅 애니메이션 팩(`models/anim-packs`, 5.9MB)이 core 에 들어와 AAB 가 61.24MB 로 다시 60MB(10진)를 넘었다. 팩은 몬스터 몸체와 함께 부팅 예열(`MODEL_LIST`)이 읽으므로 remote 로 보낼 수 없어, 1지역 보스 곡(1.5MB)·중간 보스 곡(1.0MB)을 `early-music` 묶음(remote)으로 옮겼다. 로비 진입 때 `remote-prefetch` 의 `EARLY_GROUP` 이 네트워크 종류와 상관없이(데이터 절약 모드 제외) 받는다.
