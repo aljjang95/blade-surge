@@ -17,6 +17,7 @@
     "deploy": "node tools/deploy.mjs",
     "pc:bridge": "node tools/pc-bridge.mjs",
     "metrics": "node tools/metrics.mjs",
+    "sim:90d": "bun tools/sim-90d.mjs --assert",
     "assets:ingest": "node tools/asset-library/ingest.mjs",
     "assets:verify": "node tools/asset-library/verify.mjs"
   },
