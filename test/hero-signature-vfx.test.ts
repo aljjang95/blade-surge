@@ -99,10 +99,17 @@ test('궁수 서명: Math.random 미사용, 시전 프레임 칸 상한(투사�
 
 test('궁수 관통 관통점·폭풍 일곱 갈래·화살비 낙하가 판정 시각과 맞는다', () => {
   const ctx = (v: ImpactVfx) => ({ fx: null, impact: v, player: { pos: new THREE.Vector3() }, at: new THREE.Vector3(0, 0, 7), f: new THREE.Vector3(0, 0, 1), lite: false, scale: 1 } as any);
-  // 관통: 화살(27m/s)이 4·8·12m 를 지나는 순간 별빛.
+  // 관통: 화살(27m/s)이 관통점 3.5·6.5·9.5m 와 끝점 11m 를 지나는 순간 별빛.
   let v = make(); SKILL_SIGNATURES.ranger_pierce(ctx(v));
   const stars = Array.from({ length: v.ring.high }, (_, i) => i).filter(i => v.ring.a.aShape[i * 4] === IMPACT_KIND.star && v.ring.a.aLife[i * 2] > 0).map(i => v.ring.a.aLife[i * 2]);
-  expect(stars.map(t => +t.toFixed(4))).toEqual([4 / 27, 8 / 27, 12 / 27].map(t => +t.toFixed(4)));
+  expect(stars.map(t => +t.toFixed(4))).toEqual([3.5 / 27, 6.5 / 27, 9.5 / 27, 11 / 27].map(t => +t.toFixed(4)));
+  v.dispose();
+  // 연사: 과녁 세 겹 가시 고리가 박자 명중 시각(i×.12 + 6.5/28)에 하나씩 켜지고 같은 때 함께 사라진다(1 → 2 → 3 겹).
+  v = make(); SKILL_SIGNATURES.ranger_quickshot(ctx(v));
+  const rings = Array.from({ length: v.ring.high }, (_, i) => i).filter(i => v.ring.a.aShape[i * 4] === IMPACT_KIND.mark && v.ring.a.aShape[i * 4 + 3] === MARK_STYLE.thorn);
+  expect(rings.map(i => +v.ring.a.aLife[i * 2].toFixed(4))).toEqual([0, .12, .24].map(d => +(d + 6.5 / 28).toFixed(4)));
+  expect(new Set(rings.map(i => +(v.ring.a.aLife[i * 2] + v.ring.a.aLife[i * 2 + 1]).toFixed(4))).size).toBe(1);
+  expect(rings.map(i => v.ring.a.aShape[i * 4 + 1])).toEqual([1.5, 2.6, 3.7].map(r => expect.closeTo(r, 5)));
   v.dispose();
   // 폭풍: 바닥 갈래 방향이 일곱 개(실제 화살 ±3×0.18rad).
   v = make(); SKILL_SIGNATURES.ranger_tempest(ctx(v));

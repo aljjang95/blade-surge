@@ -24,7 +24,7 @@ function bow(ctx, out) { return out.copy(ctx.player.pos).addScaledVector(ctx.f, 
 function rotY(f, a, out) { const c = Math.cos(a), s = Math.sin(a); return out.set(f.x * c + f.z * s, 0, -f.x * s + f.z * c).normalize(); }
 /** 바닥 번짐용 어두운 비취·이끼빛. 가산 혼합에서 흰 심이 땅색과 더해져 백화되지 않게 밝기를 낮춘 색이다. */
 const DEEP = 0x1c9a6c, MOSS = 0x2fae5a;
-const _e = new THREE.Vector3();
+const _e = new THREE.Vector3(), _a2 = new THREE.Vector3();
 
 /**
  * 바닥 '레일': 광선 한 줄은 머리(앞)만 밝고 시작점 쪽이 흐려 영웅 앞 화면에서는 거의 안 보였다.
@@ -43,33 +43,43 @@ function rail(impact, from, dir, d0, d1, seg, color, { width = .2, speed = 28, l
 
 /** @type {Record<string, (ctx: SigCtx) => void>} */
 const RANGER = {
-  // 관통: 화살이 지나는 길을 따라 바닥에 굵은 레일(가운데 대시 + 양옆 가는 두 가닥)과 2m 마다 가로 침목이 차례로 켜진다.
-  // 카메라가 진행 방향을 내려다보는 구도라 세로 선은 짧게 보이므로, 화면에 가로로 길게 서는 침목이 '일직선 레일'을 읽게 한다.
-  // 화살이 4·8·12m 를 지나는 순간 관통점마다 십자 별빛과 작은 고리가 꿰인다.
+  // 관통: 카메라가 진행 방향을 내려다보는 구도라 길을 따르는 세로 요소는 영웅 바로 위 띠에 몰려 적·조준 마름모에 가린다.
+  // 그래서 '어디까지 꿰뚫었나'는 옆으로 퍼지는 요소가 맡는다: 화살이 지난 자리 양옆으로 갈라지는 바람 갈래(뒤로 젖힌 V),
+  // 관통점(3.5·6.5·9.5m)마다 화면 가로로 길게 남는 충격 자국(바닥 가로 광선 + 가로 참격 + 가시 매듭, 약 1초 잔광),
+  // 끝점(11m)엔 큰 관통 나침 고리와 별빛. 바닥 레일은 가운데 대시 한 줄만 남긴다.
   ranger_pierce(ctx) {
     const { impact, f, player, lite } = ctx; const o = bow(ctx, _a), SPEED = 27;
     _b.copy(player.pos).setY(.07);
-    rail(impact, _b, f, .8, 12.2, 1.9, JADE, { width: .7, speed: SPEED, life: .7 });
-    if (!lite) for (const side of [-.7, .7]) rail(impact, _b, f, .8, 12.2, 1.9, JADE, { width: .12, speed: SPEED, life: .6, side });
-    _d.set(-f.z, 0, f.x);
-    for (let d = 1.5; d < 12; d += 2) {
-      // 침목은 가운데에서 양쪽으로 그어 끝이 밝다(광선은 머리 쪽이 밝다).
-      _e.copy(_b).addScaledVector(f, d);
-      impact.beam(_e, _d, 1.1, JADE, { width: .16, fade: .55, delay: d / SPEED });
-      _d.negate(); impact.beam(_e, _d, 1.1, JADE, { width: .16, fade: .55, delay: d / SPEED }); _d.negate();
-    }
+    rail(impact, _b, f, .8, 12.2, 1.9, JADE, { width: .5, speed: SPEED, life: .75 });
     impact.beam(o, f, 16, JADE, { speed: SPEED, tail: 9, width: .22 });
-    // 관통 창날: 내려다보는 구도에서 화면 세로 기둥으로 서는 넓은 어두운 비취 번짐(화살이 지난 뒤에도 0.8초 남는다).
-    impact.beam(o, f, 13, DEEP, { width: .65, fade: .8 });
-    impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 1.3, JADE_HOT, .1, { angle: yawOf(f) * .2, grow: .5 });
-    for (const d of [4, 8, 12]) {
-      _e.copy(o).addScaledVector(f, d); const t = d / SPEED;
-      impact._emit(IMPACT_KIND.star, _e.x, _e.y, _e.z, 2.2, JADE, .3, { angle: .785, grow: .4, delay: t });
-      impact._emit(IMPACT_KIND.ring, _e.x, _e.y, _e.z, 1.6, JADE, .32, { grow: 1, delay: t });
-      // 관통점: 화살 진행에 수직으로 그어지는 꿰뚫음 자국 + 바닥 가시 매듭(꿰인 자리가 남는다).
-      impact._emit(IMPACT_KIND.cut, _e.x, _e.y, _e.z, 2.2, JADE, .34, { angle: (impact._screenAngle?.(f) ?? 0) + 1.5708, stretch: 1.2, grow: .9, delay: t });
-      if (!lite) impact.mark(_e, JADE, { radius: 1.1, life: .6, style: MARK_STYLE.thorn, angle: d * .4, delay: t });
+    impact.beam(o, f, 13, DEEP, { width: .5, fade: .8 });
+    impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 1.2, JADE_HOT, .1, { angle: yawOf(f) * .2, grow: .5 });
+    // 바람 갈래: 화살이 지나는 순간 길 양옆으로 뒤로 젖혀 갈라지는 쌍나선 바람(화살 뒤로 벌어지는 물결).
+    if (!lite) for (let d = 2; d <= 10; d += 2) {
+      _e.copy(_b).addScaledVector(f, d);
+      for (const s of [-1, 1]) impact.beam(_e, rotY(f, s * 2.45, _d), 2.2, d % 4 ? JADE : DEEP, { width: .38, style: BEAM_STYLE.gale, fade: .9, delay: d / SPEED });
     }
+    const ang = (impact._screenAngle?.(f) ?? 0) + 1.5708;
+    _d.set(-f.z, 0, f.x);
+    for (const d of [3.5, 6.5, 9.5]) {
+      const t = d / SPEED;
+      // 관통점 가로 충격 자국: 바닥에 진행 수직으로 양쪽 2.6m 씩 그어지고(끝이 밝다) 1초 가까이 남는다.
+      _e.copy(_b).addScaledVector(f, d);
+      impact.beam(_e, _d, 2.6, JADE, { width: .2, fade: 1, delay: t });
+      _d.negate(); impact.beam(_e, _d, 2.6, JADE, { width: .2, fade: 1, delay: t }); _d.negate();
+      if (!lite) impact.mark(_e, JADE, { radius: 1.6, life: .95, style: MARK_STYLE.thorn, angle: d * .4, delay: t });
+      _e.copy(o).addScaledVector(f, d);
+      impact._emit(IMPACT_KIND.cut, _e.x, _e.y, _e.z, 2.6, DEEP, .38, { angle: ang, stretch: 1.5, grow: .9, delay: t });
+      impact._emit(IMPACT_KIND.star, _e.x, _e.y, _e.z, 1.4, JADE, .24, { angle: .785, grow: .4, delay: t });
+      impact._emit(IMPACT_KIND.ring, _e.x, _e.y, _e.z, 2, JADE, .32, { grow: 1, delay: t });
+    }
+    // 끝점: 큰 관통 나침 고리 + 별빛 + 고리(어디까지 꿰뚫었나).
+    const END = 11, te = END / SPEED;
+    _e.copy(_b).addScaledVector(f, END);
+    impact.mark(_e, JADE_HOT, { radius: 2.6, life: .9, style: MARK_STYLE.compass, angle: yawOf(f), delay: te });
+    _e.copy(o).addScaledVector(f, END);
+    impact._emit(IMPACT_KIND.star, _e.x, _e.y, _e.z, 1.8, JADE, .24, { angle: .3, grow: .4, delay: te });
+    impact._emit(IMPACT_KIND.ring, _e.x, _e.y, _e.z, 3.2, JADE, .4, { grow: 1, delay: te });
   },
   // 일제 사격: 실제 세 발(±0.24rad)과 같은 방향으로 바닥에 세 갈래 대시 궤적이 뚜렷이 갈라지고,
   // 부채꼴 테가 감싸며, 7.5m 지점에서 갈래마다 화살촉 자국이 그어진다.
@@ -117,24 +127,29 @@ const RANGER = {
         { vx: -Math.sin(a) * 11, vy: 2.2, vz: Math.cos(a) * 11, stretch: 1, grow: 1, delay: w * .1 });
     }
   },
-  // 연사: 6.5m 앞 과녁에 조준 원 두 겹이 조여들고, 세 박자(0, .12, .24초)마다 굵은 화살 줄·바닥 대시 줄·활 끝 별빛·과녁 고리가 찍힌다.
+  // 연사: 6.5m 앞 과녁에 조준 원이 잡히고, 세 박자(0, .12, .24초)마다 굵은 화살 줄·활 끝 별빛·과녁 X 자가 찍힌다.
+  // 리듬은 과녁 위 세 겹 가시 고리가 박자마다 한 겹씩 바깥으로 늘며(짙은 비취 → 비취 → 밝은 비취, 박자마다 진해짐) 함께 남고,
+  // 과녁 옆엔 박자 수만큼 가로 막대(≡)가 쌓인다. 영웅 앞 세로 띠의 바닥 대시는 쓰지 않는다.
   ranger_quickshot(ctx) {
-    const { impact, f, player } = ctx; const SPEED = 28, AIM = 6.5;
+    const { impact, f, player } = ctx; const SPEED = 28, AIM = 6.5, FLY = AIM / SPEED;
     _b.copy(player.pos).addScaledVector(f, AIM);
-    impact.mark(_b, JADE_HOT, { radius: 2.2, life: .85, style: MARK_STYLE.reticle });
-    impact.mark(_b, JADE, { radius: 1.1, life: .5, style: MARK_STYLE.thorn, delay: .24 + AIM / SPEED });
-    impact.mark(_b, JADE, { radius: 2.5, life: .65, style: MARK_STYLE.reticle, angle: .785, delay: .06 });
-    const o = bow(ctx, _a);
+    impact.mark(_b, JADE, { radius: 2.2, life: .6, style: MARK_STYLE.reticle });
+    const o = bow(ctx, _a), BEAT = [DEEP, 0x2cc488, JADE];
+    _d.set(-f.z, 0, f.x);
     for (let i = 0; i < 3; i++) {
-      const d = i * .12;
+      const d = i * .12, hit = d + FLY, c = BEAT[i];
       impact.beam(o, f, 12, i === 2 ? JADE_HOT : JADE, { speed: SPEED, tail: 5, width: .18, delay: d });
       impact.beam(o, f, AIM + 1, DEEP, { width: .42, fade: .4, delay: d });
-      impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, .9 + i * .25, JADE_HOT, .09, { angle: .3, grow: .5, delay: d });
-      impact._emit(IMPACT_KIND.ring, _b.x, .5, _b.z, 1.6 + i * .45, JADE, .28, { grow: 1, delay: d + AIM / SPEED });
-      _e.copy(player.pos).setY(.08).addScaledVector(f, 1 + i * 1.7);
-      impact.beam(_e, f, 1.4, JADE, { width: .3, fade: .45, delay: d });
-      // 과녁 명중 박자마다 엇갈린 X 자(세 박자 = 세 획).
-      impact._emit(IMPACT_KIND.cut, _b.x, 1, _b.z, 1.9, i === 2 ? JADE_HOT : JADE, .26, { angle: (i - 1) * .9, stretch: 1.1, grow: .9, delay: d + AIM / SPEED });
+      impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, .8 + i * .2, JADE_HOT, .09, { angle: .3, grow: .5, delay: d });
+      // 과녁 세 겹 고리(1.5·2.6·3.7m): 모두 같은 때(마지막 박자 + .8초) 사라지므로 1 → 2 → 3 겹으로 쌓인다. 가운데 빌보드 고리는 쓰지 않는다(백화).
+      impact.mark(_b, c, { radius: 1.5 + i * 1.1, life: 1.05 - d, style: MARK_STYLE.thorn, angle: i * .6, delay: hit });
+      impact._emit(IMPACT_KIND.cut, _b.x, 1, _b.z, 1.9 + i * .3, i ? JADE : DEEP, .26, { angle: (i - 1) * .9, stretch: 1.1, grow: .9, delay: hit });
+      // 박자 막대: 고리 바깥 양옆에서 가로로 뻗는다(과녁 가운데는 비워 흰 덩어리를 만들지 않는다). 세 박자 = 앞뒤로 세 줄.
+      for (const s of [-1, 1]) {
+        _e.copy(_b).setY(.08).addScaledVector(f, (i - 1) * .7).addScaledVector(_d, s * 3.9);
+        _a2.copy(_d).multiplyScalar(s);
+        impact.beam(_e, _a2, 1 + i * .45, c, { width: .16, fade: .95 - d, delay: hit });
+      }
     }
   },
   // 속박의 화살: 다섯 발 방향으로 바닥을 기는 덩굴 물결 대시(이끼빛) + 부채 + 앞으로 차례로 돋는 가시 매듭.
