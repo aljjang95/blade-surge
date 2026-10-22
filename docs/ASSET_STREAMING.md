@@ -33,3 +33,8 @@ AAB 가 서명 서비스 한도(약 100MB)에 닿고 콘텐츠(3개월치 지역
 ## 검증
 `node tools/remote-assets-qa.mjs <출력폴더>`: APK 폴더를 `https://localhost` 로, 호스트를 web dist 로 대신 응답(`_headers` 규칙 적용)하며 제목 → 로비 → 1-1 → 2지역 마을(시드)·아바타 몸체 → 캠페인 2지역 → 소환을 지나고,
 호스트를 끊은 두 번째 로드가 보관본만으로 뜨는지 본다. 소프트웨어 렌더·Chromium 에뮬이며 실기기 증거가 아니다.
+
+## 실측 결과 (2026-10-22, 클라우드 컨테이너)
+- 산출물 분할: core 1521개 83.0MB / remote 81개 46.5MB(11개 묶음, 최적화 산출물 기준).
+- `bash tools/build-aab-cloud.sh --version-code 3 --version-name 1.0.2`: 서명 없는 AAB 61,186,426바이트(58.4MiB, sha256 585c7164…). 이전 99.94MB 대비 약 39% 감소. 업로드하지 않았다.
+- `node tools/remote-assets-qa.mjs`: 24/24 통과(로컬 404·호스트 404·CORS 0, 폴백 0, 두 번째 로드 내려받기 0·보관본 복원).
