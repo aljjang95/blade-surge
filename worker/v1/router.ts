@@ -8,9 +8,12 @@ import { getMe, runCommand } from './cmd';
 import { settleRun, startRun } from './runs';
 import { importLegacy, shadowSnapshot } from './import';
 import { createGoogleVerifier } from '../../packages/tll-social/src/server/google';
+import { catalog, intent, state as iapState, verify as iapVerify, type IapDeps, type IapEnv } from './iap';
+import { handleRtdn } from './rtdn';
+import { ingestFunnel } from './funnel';
 
 export const V1_PREFIX = '/api/v1';
-export interface V1Env extends AuthEnv {
+export interface V1Env extends AuthEnv, IapEnv {
   APP_ORIGIN: string;
   V1_ENABLED?: string;
   SOCIAL_DEV_ORIGINS?: string;
@@ -19,21 +22,32 @@ const LOCAL = /^http:\/\/(?:localhost|127\.0\.0\.1)(?::\d{1,5})?$/;
 const allowedOrigin = (origin: string, env: V1Env) => origin === env.APP_ORIGIN || (env.SOCIAL_DEV_ORIGINS === 'true' && LOCAL.test(origin));
 
 let googleVerifier: ReturnType<typeof createGoogleVerifier> | null = null;
-export const defaultDeps: AuthDeps = {
+export const defaultDeps: AuthDeps & IapDeps = {
   now: () => Date.now(),
-  verifyIdToken: (_provider, token, clientIds) => (googleVerifier ??= createGoogleVerifier()).verify(token, clientIds),
+  // Pub/Sub push OIDC 토큰은 만료 전까지 재사용될 수 있어 발급 후 1시간까지 받는다(구글 로그인 토큰은 기존 10분).
+  verifyIdToken: (provider, token, clientIds) => (googleVerifier ??= createGoogleVerifier()).verify(token, clientIds, provider === 'pubsub' ? 3600000 : 600000),
 };
 
 export function v1Flags(env: V1Env): Record<string, boolean> {
-  return { v1: env.V1_ENABLED === 'true', serverAuthority: (Number(env.V1_SERVER_AUTHORITY_PERCENT) || 0) > 0 };
+  return { v1: env.V1_ENABLED === 'true', serverAuthority: (Number(env.V1_SERVER_AUTHORITY_PERCENT) || 0) > 0, iap: env.IAP_ENABLED === 'true' };
 }
 
-export async function handleV1Request(request: Request, env: V1Env, deps: AuthDeps = defaultDeps): Promise<Response> {
+export async function handleV1Request(request: Request, env: V1Env, deps: AuthDeps & IapDeps = defaultDeps): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname.slice(V1_PREFIX.length) || '/';
   try {
     if (env.V1_ENABLED !== 'true') return json({ error: 'unavailable' }, 503);
     if (path.length > 120 || url.search.length > 256) return json({ error: 'too-long' }, 414);
+    // RTDN은 브라우저가 아니라 Google Pub/Sub이 부른다(Origin 없음). OIDC 토큰으로 따로 인증한다.
+    if (path === '/iap/rtdn') {
+      if (request.method !== 'POST') return json({ error: 'method' }, 405);
+      const rtdnDb = env.COMMERCE_DB as D1Database | undefined;
+      if (!rtdnDb || !await schemaReady(rtdnDb)) return json({ error: 'unavailable' }, 503);
+      const rc: Ctx = { env, db: rtdnDb, deps, now: deps.now(), request };
+      await rateLimit(rc, 'rtdn', 'global');
+      const r = await handleRtdn(rc);
+      return json({ outcome: r.outcome }, r.status);
+    }
     const origin = request.headers.get('origin');
     // 상태를 바꾸는 요청은 허용 origin이 반드시 있어야 한다(네이티브 앱은 index.ts가 정식 origin으로 바꾼다).
     // 브라우저는 같은 출처 GET에 Origin을 붙이지 않는다. GET은 Bearer 토큰(쿠키 아님)만 받으므로 Origin 없이 허용한다.
@@ -47,6 +61,11 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
     if (method === 'POST' && path === '/auth/session') { await rateLimit(c, 'session', await ipKey(request)); return json(await createSession(c, await readJson(request))); }
     if (method === 'POST' && path === '/auth/recover') { await rateLimit(c, 'recover', await ipKey(request)); return json(await recover(c, await readJson(request))); }
     if (method === 'GET' && path === '/me') return json(await getMe(c, await requireSession(c), v1Flags(env)));
+    if (method === 'GET' && (path === '/iap/catalog' || path === '/iap/state')) {
+      const auth = await requireSession(c);
+      await rateLimit(c, 'iapRead', auth.account.account_id);
+      return json(path === '/iap/catalog' ? await catalog(c, auth) : await iapState(c, auth));
+    }
     if (method === 'POST') {
       const auth = await requireSession(c);
       if (path === '/auth/link') return json(await link(c, auth, await readJson(request)));
@@ -55,6 +74,9 @@ export async function handleV1Request(request: Request, env: V1Env, deps: AuthDe
       if (path === '/cmd') { await rateLimit(c, 'cmd', auth.account.account_id); return json(await runCommand(c, auth, await readJson(request))); }
       if (path === '/import') { await rateLimit(c, 'import', await ipKey(request)); return json(await importLegacy(c, auth, await readJson(request, IMPORT_LIMIT))); }
       if (path === '/shadow/snapshot') return json(await shadowSnapshot(c, auth, await readJson(request, IMPORT_LIMIT)));
+      if (path === '/iap/intent') { await rateLimit(c, 'iap', auth.account.account_id); return json(await intent(c, auth, await readJson(request))); }
+      if (path === '/iap/verify') { await rateLimit(c, 'iap', auth.account.account_id); return json(await iapVerify(c, auth, await readJson(request))); }
+      if (path === '/funnel') { await rateLimit(c, 'funnel', auth.account.account_id); return json(await ingestFunnel(c, auth, await readJson(request))); }
       if (path === '/runs/start') { await rateLimit(c, 'runStart', auth.account.account_id); return json(await startRun(c, auth, await readJson(request))); }
       const settle = path.match(/^\/runs\/([A-Za-z0-9_-]{8,64})\/settle$/);
       if (settle) return json(await settleRun(c, auth, settle[1], await readJson(request)));

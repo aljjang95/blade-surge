@@ -71,3 +71,15 @@
 - 전투·보스 화면에 튜토리얼 안내 문구가 일부 남아 있다(실제 UI).
 - 소프트웨어 렌더(SwiftShader) 캡처다. 실기기 화질·성능 증거가 아니다.
 - 스크린샷 24장 합계 약 60MB라 저장소 용량을 늘린다. 필요하면 태블릿 세트만 빼도 된다.
+
+## 인앱 상품
+
+- 준비된 것: 카탈로그(`src/shared/iap-catalog.js`)의 판매 상품 4개(`remove_ads_v1` 4,900원, `starter_pack_v1` 1,200원, `season_pass_s1` 9,900원, `monthly_card_v1` 월 5,900원 구독)의 Play 등록 정의 `iap-products.json`(카탈로그에서 `node tools/play-iap-register.mjs --write-json`으로 생성, 테스트가 일치 검사)와 등록 스크립트 `tools/play-iap-register.mjs`. 보석 팩 3종은 `paid-gem-split` 게이트라 제외.
+- 현재 Play에는 등록된 상품이 없다(새 API `oneTimeProducts`·`subscriptions` 조회가 모두 빈 목록). 구 API `inappproducts`는 막혀 있어 쓰지 않는다.
+- 기본 실행은 dry-run이다(요청 출력만, 쓰기 없음). `NODE_USE_ENV_PROXY=1 node tools/play-iap-register.mjs --probe`는 읽기 GET 두 개로 현재 등록 상태만 본다.
+- 실제 등록은 대표님 확인 뒤에만: `node tools/play-iap-register.mjs --apply --i-have-owner-approval` (두 플래그가 모두 있어야 한다. 클라우드 세션에서는 `NODE_USE_ENV_PROXY=1` 필요). 실패하면 그 요청에서 즉시 멈춘다.
+- 등록 전 확인할 것:
+  - 가격: 카탈로그 값은 후보다(`docs/BM_DESIGN.md` 3장). 등록하면 KR 판매가로 공개된다.
+  - 세금 분류(`taxAndComplianceSettings`): 스크립트는 값을 넣지 않는다. 콘솔에서 상품 유형별 분류를 확인한다.
+  - 환불 문구: 상품 설명과 스토어 문구에 환불·구독 해지 안내가 맞는지, 월정액 설명(자동 갱신, 언제든 해지)이 약관과 일치하는지.
+  - 스크립트 안 `apply 전 확인` 주석이 붙은 필드(`legacyCompatible`, `batchUpdateStates` 요청 객체명, 구독 `benefits` 필수 여부)는 첫 실행 전에 공식 문서로 재확인한다.

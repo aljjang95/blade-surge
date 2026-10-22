@@ -32,6 +32,7 @@ import { heroGrade } from '../data/hero-grades.js';
 import { levelStatusLabel, lootGuide } from '../data/region-guide.js';
 import { paceShort } from './pace-short.js';
 import { campaignTown } from '../data/campaign-towns.js';
+const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 // 공개 확률은 실제 소환 코드와 같은 식(gachaRates/gachaChances)에서만 계산한다. 화면에 숫자를 따로 적지 않는다.
 const pct = (p, d = 1) => (p * 100).toFixed(d) + '%';
 const clampPity = (n) => Math.max(0, Math.min(GACHA.pity, Math.floor(Number(n) || 0)));
@@ -117,12 +118,22 @@ export class Meta {
     this.eco.onChange(() => this.refreshTop());
     setInterval(() => this.tick(), 1000);
   }
-  /** 실제 스토어 결제·영수증 검증이 연결됐는지. Economy.paymentAvailable()가 true가 되면 현금 상품 화면이 자동으로 다시 나타난다. */
-  payOn() { return this.eco.paymentAvailable?.() === true; }
-  /** 지금 상점 탭 id에 보여 줄 상품. 결제가 없으면 현금 상품(₩)과 VIP·첫 결제 보너스 상품은 제외한다. */
+  /** 서버 검증 결제(Play 카탈로그)가 연결됐는지. 패스 프리미엄 줄처럼 "결제 가능" 자체를 묻는 곳에 쓴다. */
+  billingOn() { return this.eco.paymentAvailable?.() === true; }
+  /** 보석·패키지 같은 현금 상품 입구(보석 충전·초월 패키지 버튼)를 보일지. 카탈로그에서 실제 판매하는 상품이 그 탭에 있을 때만 true. */
+  payOn() { return this.billingOn() && (this.shopSkus('gem').length > 0 || this.shopSkus('pack').length > 0); }
+  /** 현금 SKU는 서버 카탈로그에 매핑된(enabled·eligible) 상품이고 Play 가격이 있을 때만 판다. 카탈로그 밖·비활성 상품은 계속 숨긴다. */
+  cashProduct(id) {
+    const billing = this.eco.billing;
+    if (!billing || !this.billingOn()) return null;
+    const p = billing.productForShopSku?.(id);
+    return p && p.sellable === true && typeof p.formattedPrice === 'string' ? p : null;
+  }
+  /** VIP 멤버십·누적 결제(spentKRW) 표시는 판매하지 않으므로 결제 연결과 무관하게 숨긴다. */
+  vipShown() { return false; }
+  /** 지금 상점 탭 id에 보여 줄 상품. 현금 상품은 카탈로그에서 판매 중인 것만(가격은 Play 값). */
   shopSkus(tab = this.shopTab) {
-    const pay = this.payOn();
-    return SKUS.filter((x) => (pay || x.kind !== 'cash') && (x.tab === tab || (tab === 'hot' && x.badge && x.tab !== 'gem' && x.tab !== 'energy' && x.tab !== 'gold')));
+    return SKUS.filter((x) => (x.kind !== 'cash' || this.cashProduct(x.id)) && (x.tab === tab || (tab === 'hot' && x.badge && x.tab !== 'gem' && x.tab !== 'energy' && x.tab !== 'gold')));
   }
   /** 상품이 하나도 없는 탭(결제 없는 보석·패키지)은 감춘다. */
   shopTabs() { return SHOP_TABS.filter((t) => this.shopSkus(t.id).length); }
@@ -157,18 +168,20 @@ export class Meta {
       this.ui.toast(status === 'unavailable' ? '저장 공간을 사용할 수 없어 현재 진행은 이 창에서만 유지됩니다.' : status === 'recovered' ? '마지막 정상 저장에서 진행을 복구했습니다.' : '저장된 진행을 읽지 못했습니다. 복구용 원본은 보관했습니다.', 'red');
     }
     $('v-gold').textContent = fmt(s.gold); $('v-gem').textContent = fmt(s.gems); $('v-energy').textContent = s.energy; $('v-energy-max').textContent = this.eco.energyMax; $('v-energy-timer').textContent = this.eco.energyTimer();
-    $('top-vip-wrap').hidden = !this.payOn(); $('plus-gem').hidden = !this.payOn();
+    $('top-vip-wrap').hidden = !this.vipShown(); $('plus-gem').hidden = !this.payOn();
     $('top-vip').textContent = s.vip; $('top-lv').textContent = this.eco.hero().level; bindHeroPortrait($('top-avatar'), this.app, s.selected); $('top-name').textContent = s.name;
     $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
-    $('dot-pass').classList.toggle('on', this.eco.passClaimable() > 0); $('dot-gacha').classList.toggle('on', s.tickets > 0 || s.ssrTickets > 0); $('dot-shop').classList.toggle('on', this.payOn() && !s.purchases.includes('starter'));
+    $('dot-pass').classList.toggle('on', this.eco.passClaimable() > 0); $('dot-gacha').classList.toggle('on', s.tickets > 0 || s.ssrTickets > 0); $('dot-shop').classList.toggle('on', !!this.cashProduct('starter'));
     this.refreshMenuBadge();
     $('v-ticket').textContent = s.tickets + (s.ssrTickets ? ` (SSR확정 ${s.ssrTickets})` : ''); $('v-pity').textContent = s.pity; $('pity-left').textContent = GACHA.pity - s.pity;
     // SSR 확정권은 확률 정보 창 안이 아니라 소환 버튼 줄에서 바로 쓴다(보유할 때만 보인다).
     $('btn-pull-ssr').classList.toggle('hidden', !(s.ssrTickets > 0)); $('v-ssr-ticket').textContent = s.ssrTickets || 0;
     this.refreshGachaOdds(); this.refreshGachaPace();
-    if (this.payOn()) {
-      $('promo-starter').style.display = s.purchases.includes('starter') ? 'none' : '';
-      $('promo-monthly').style.display = s.monthlyUntil > Date.now() ? 'none' : '';
+    // 홈 프로모션 버튼은 부트 때 결제가 없으면 DOM에서 치워진다(나중에 결제가 연결돼도 상점 탭으로만 판매).
+    const promoStarter = $('promo-starter'), promoMonthly = $('promo-monthly');
+    if (this.billingOn()) {
+      if (promoStarter) promoStarter.style.display = this.cashProduct('starter') ? '' : 'none';
+      if (promoMonthly) promoMonthly.style.display = this.cashProduct('monthly') ? '' : 'none';
     }
     if (this.tab === 'home') this.refreshHome();
   }
@@ -188,7 +201,7 @@ export class Meta {
   }
   tick() {
     const s = this.eco.s; this.eco.tickEnergy(); $('v-energy').textContent = s.energy; $('v-energy-timer').textContent = this.eco.energyTimer();
-    if (this.payOn()) $('promo-timer').textContent = '한정 상품';
+    if (this.billingOn() && $('promo-timer')) $('promo-timer').textContent = '한정 상품';
     $('banner-timer').textContent = hms(this.eco.s.limitedStart + 7 * 86400000 - Date.now());
     if (this.tab === 'shop') document.querySelectorAll('[data-timer]').forEach((el) => { el.textContent = '남은 시간 ' + hms(this.eco.limitedLeft(this.eco.sku(el.dataset.timer))); });
     // 월정액 자동 지급
@@ -476,24 +489,24 @@ export class Meta {
   renderShop() {
     const visibleTabs = this.shopTabs();
     if (this.shopTab !== 'avatar' && !visibleTabs.some((t) => t.id === this.shopTab)) this.shopTab = visibleTabs[0]?.id ?? 'hot';
-    const pay = this.payOn();
     const tabs = $('shop-tabs'); tabs.innerHTML = visibleTabs.map((t) => `<button data-t="${t.id}" class="${t.id === this.shopTab ? 'on' : ''}">${t.name}</button>`).join('');
     tabs.querySelectorAll('button').forEach((b) => b.onclick = () => { if (this.shopTab === b.dataset.t) return; this.shopTab = b.dataset.t; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); });
     this.renderShopFlow();
     const notice = $('shop-notice');
     if (notice) notice.innerHTML = this.shopTab === 'avatar' ? '<b>아바타는 보석으로 구매하는 순수 외형 상품입니다.</b> 전투 수치에는 영향이 없습니다.'
-      : (pay && (this.shopTab === 'gem' || this.shopTab === 'hot') ? '첫 결제 보너스는 확인된 구매에 상품별 1회 적용됩니다.<br>' : '')
-      + `무료 보석: 출석·임무·첫 클리어·패스 무료 보상 / 사용: 소환 ${fmt(GACHA.single)} (10회 ${fmt(GACHA.ten)})·강화 재료·골드·에너지`;
+      : `무료 보석: 출석·임무·첫 클리어·패스 무료 보상 / 사용: 소환 ${fmt(GACHA.single)} (10회 ${fmt(GACHA.ten)})·강화 재료·골드·에너지`;
     const grid = $('shop-grid'); grid.innerHTML = ''; const s = this.eco.s;
     if (this.shopTab === 'avatar') { this.renderAvatarShop(grid); return; }
     for (const sku of this.shopSkus()) {
       const d = document.createElement('div'); const big = sku.tab === 'hot' || sku.tab === 'pack'; d.className = 'shop-item' + (sku.badge ? ' hot' : '') + (big ? ' big' : '');
       const first = sku.gems && !s.firstPurchaseUsed[sku.id]; const sold = sku.once && s.purchases.includes(sku.id);
       const cash = sku.kind === 'cash';
-      const price = sku.kind === 'gem' ? `<i class="ic ic-gem"></i> ${sku.price}` : sku.priceLabel;
+      // 현금 상품 가격은 Play가 돌려준 문구만 쓴다(카탈로그 가격은 표시하지 않는다).
+      const priceText = cash ? this.cashProduct(sku.id)?.formattedPrice || '' : '';
+      const price = sku.kind === 'gem' ? `<i class="ic ic-gem"></i> ${sku.price}` : esc(priceText);
       // 현금 상품은 결제가 연결됐을 때만 이 목록에 온다. 보석 상품은 1개당 가격으로 비교할 수 있게 한다.
-      const value = cash && sku.gems ? `<div class="si-desc">기본 ${fmt(sku.gems)}개 · 1개당 ₩${(sku.price / sku.gems).toFixed(1)}</div>` : '';
-      d.innerHTML = `${sku.badge ? `<span class="badge">${sku.badge}</span>` : ''}${first ? '<span class="badge first" style="left:auto;right:-4px;transform:rotate(5deg)">첫 결제 보너스</span>' : ''}<img src="${sku.icon}" alt="" onerror="this.remove()"><div class="si-body"><div class="si-name">${sku.name}</div><div class="si-desc">${sku.desc || ''}</div>${value}${sku.gems ? `<div class="si-bonus">${first ? `첫 결제 시 +${fmt(sku.bonus)}` : `+${fmt(Math.floor(sku.gems * 0.1))} 보너스`}</div>` : ''}${sku.limited ? `<div class="timer" data-timer="${sku.id}">남은 시간 ${hms(this.eco.limitedLeft(sku))}</div>` : ''}<button class="btn ${sku.kind === 'gem' ? 'btn-blue' : 'btn-gold'}"${cash ? ` aria-label="${sku.name} ${sku.priceLabel}"` : ''}>${price}</button></div>${sold ? '<div class="sold">구매 완료</div>' : ''}`;
+      const value = cash && sku.gems && sku.priceLabel ? `<div class="si-desc">기본 ${fmt(sku.gems)}개 · 1개당 ₩${(sku.price / sku.gems).toFixed(1)}</div>` : '';
+      d.innerHTML = `${sku.badge ? `<span class="badge">${sku.badge}</span>` : ''}${first ? '<span class="badge first" style="left:auto;right:-4px;transform:rotate(5deg)">첫 결제 보너스</span>' : ''}<img src="${sku.icon}" alt="" onerror="this.remove()"><div class="si-body"><div class="si-name">${sku.name}</div><div class="si-desc">${sku.desc || ''}</div>${value}${sku.gems ? `<div class="si-bonus">${first ? `첫 결제 시 +${fmt(sku.bonus)}` : `+${fmt(Math.floor(sku.gems * 0.1))} 보너스`}</div>` : ''}${sku.limited ? `<div class="timer" data-timer="${sku.id}">남은 시간 ${hms(this.eco.limitedLeft(sku))}</div>` : ''}<button class="btn ${sku.kind === 'gem' ? 'btn-blue' : 'btn-gold'}"${cash ? ` aria-label="${sku.name} ${esc(priceText)}"` : ''}>${price}</button></div>${sold ? '<div class="sold">구매 완료</div>' : ''}`;
       const role = skuFlowRole(sku);
       if (role) { const tag = document.createElement('div'); tag.className = 'si-flow'; tag.dataset.role = role.role; tag.textContent = role.label; d.querySelector('.si-name').after(tag); }
       const pace = paceShort(sku.id);
@@ -509,7 +522,7 @@ export class Meta {
     if (!row) return;
     const s = this.eco.s, h = this.eco.hero(), p = shardProgress(HEROES[s.selected], h);
     const value = { gems: fmt(s.gems), summon: '소환권 ' + s.tickets + (s.ssrTickets ? ' · 확정권 ' + s.ssrTickets : ''), shards: p.need ? p.have + '/' + p.need : '최고', transcend: p.next ? p.grade + '→' + p.next : p.grade, battle: '' };
-    const go = { gems: () => { if (this.payOn()) { this.shopTab = 'gem'; this.renderShop(); } else this.ui.toast('보석은 출석·임무·첫 클리어·패스 무료 보상으로 모을 수 있어요'); }, summon: () => this.openTab('gacha'), shards: () => this.openTab('gacha'), transcend: () => { this.heroSel = s.selected; this.openTab('heroes'); this.openTranscend(s.selected); }, battle: () => this.openTab('home') };
+    const go = { gems: () => { if (this.shopSkus('gem').length) { this.shopTab = 'gem'; this.renderShop(); } else this.ui.toast('보석은 출석·임무·첫 클리어·패스 무료 보상으로 모을 수 있어요'); }, summon: () => this.openTab('gacha'), shards: () => this.openTab('gacha'), transcend: () => { this.heroSel = s.selected; this.openTab('heroes'); this.openTranscend(s.selected); }, battle: () => this.openTab('home') };
     row.replaceChildren();
     GROWTH_FLOW.forEach((step, i) => {
       if (i) { const a = document.createElement('span'); a.className = 'sf-arrow'; a.setAttribute('aria-hidden', 'true'); a.textContent = '›'; row.append(a); }
@@ -519,21 +532,49 @@ export class Meta {
       b.onclick = go[step.id]; row.append(b);
     });
   }
+  /**
+   * 서버 검증 결제: 확인 창 → billing.buy(intent → Play → 서버 verify). 지급은 서버 응답을 적용한 결과(got)로만 보여 준다.
+   * @param {{ id: string, name: string, icon?: string, desc?: string }} sku @param {string} productId
+   */
+  async payWithBilling(sku, productId) {
+    const product = this.cashProduct(sku.id), billing = this.eco.billing;
+    if (!product || !billing) { this.ui.toast('지금은 구매할 수 없습니다', 'red'); return null; }
+    const ok = await this.ui.confirm('구매 확인', `${esc(sku.name)}<br>${esc(product.formattedPrice)} · Google Play 결제`, { ok: '구매하기', cancel: '취소' });
+    if (!ok) return null;
+    const r = await billing.buy(productId);
+    if (r.reason === 'cancelled') return null;
+    if (r.ok) return r;
+    if (r.reason === 'pending') this.ui.toast('결제 대기 중 — 승인되면 자동 지급', 'gold');
+    else this.ui.toast(this.purchaseFailText(r), 'red');
+    return null;
+  }
+  async buyWithBilling(sku) {
+    const product = this.cashProduct(sku.id);
+    const r = product ? await this.payWithBilling(sku, product.id) : null;
+    if (!r) { if (this.tab === 'shop') this.renderShop(); return; }
+    this.ui.purchaseDone(sku, r.got || []);
+    if (this.tab === 'shop') this.renderShop(); this.refreshTop();
+  }
   /** 구매 실패를 조용히 넘기지 않고 이유별 문구로 알린다. */
   purchaseFailText(result) {
     const reason = result?.reason;
     if (reason === 'storage') return '저장하지 못해 구매를 취소했습니다';
     if (reason === 'payment-unavailable') return '스토어 결제가 아직 연결되지 않아 구매할 수 없습니다';
-    if (reason === 'once') return '이미 구매한 상품입니다';
+    if (reason === 'once' || reason === 'not-eligible' || reason === 'already-subscribed') return '이미 구매한 상품입니다';
+    if (reason === 'use-billing' || reason === 'unavailable' || reason === 'billing-disabled') return '지금은 구매할 수 없습니다';
+    if (reason === 'verify-failed') return '결제 확인이 늦어지고 있어요. 잠시 뒤 자동으로 반영됩니다';
+    if (reason === 'refunded' || reason === 'expired') return '환불·만료된 결제입니다';
+    if (reason === 'busy') return '결제 처리 중입니다';
     if (reason === 'gems') return '보석이 부족합니다';
     return '구매하지 못했습니다';
   }
   async buy(id) {
     const sku = this.eco.sku(id); if (!sku) return; const s = this.eco.s;
     if (sku.once && s.purchases.includes(id)) { this.ui.toast('이미 구매한 상품입니다', 'red'); return; }
-    if (sku.kind === 'gem') { if (s.gems < sku.price) { audio.play('ui_error'); const ok = await this.ui.confirm('보석 부족', `보석 ${fmt(sku.price)}개가 필요합니다 (보유 ${fmt(s.gems)})<br>보석은 출석·임무·스테이지 첫 클리어·패스 무료 보상으로 모을 수 있어요.`, this.payOn() ? { ok: '보석 탭 보기' } : { ok: '확인', cancel: null }); if (ok && this.payOn()) this.openTab('shop', 'gem'); return; } const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(this.purchaseFailText(r), 'red'); return; } audio.pick('coin', 2, { vol: 0.7 }); this.ui.rewardToast(r.got); this.renderShop(); this.refreshTop(); return; }
+    if (sku.kind === 'gem') { if (s.gems < sku.price) { audio.play('ui_error'); const ok = await this.ui.confirm('보석 부족', `보석 ${fmt(sku.price)}개가 필요합니다 (보유 ${fmt(s.gems)})<br>보석은 출석·임무·스테이지 첫 클리어·패스 무료 보상으로 모을 수 있어요.`, this.shopSkus('gem').length ? { ok: '보석 탭 보기' } : { ok: '확인', cancel: null }); if (ok && this.shopSkus('gem').length) this.openTab('shop', 'gem'); return; } const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(this.purchaseFailText(r), 'red'); return; } audio.pick('coin', 2, { vol: 0.7 }); this.ui.rewardToast(r.got); this.renderShop(); this.refreshTop(); return; }
     // 현금 구매는 항상 paySheet만 거친다. 열림만 기록하고 성공·지급은 기록하지 않는다.
     this.trackFunnel('paysheet_open', { sku: id });
+    if (this.billingOn()) { await this.buyWithBilling(sku); return; }
     const ok = await this.ui.paySheet(sku); if (!ok) return;
     const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(this.purchaseFailText(r), 'red'); return; }
     this.ui.purchaseDone(sku, r.got, r.vipUp ? `<p style="color:var(--gold);font-weight:900">VIP ${r.vipUp} 달성!</p>` : (r.got.first ? '<p style="color:var(--green);font-weight:900">첫 결제 보너스 적용!</p>' : ''));
@@ -543,7 +584,7 @@ export class Meta {
   // ================= 배틀패스 =================
   renderPass() {
     const eco = this.eco; const p = eco.s.pass; const lv = eco.passLevel; $('pass-lv').textContent = lv; $('pass-fill').style.width = (p.xp % BATTLE_PASS.xpPerLevel) + '%'; $('pass-xp').textContent = `${p.xp % BATTLE_PASS.xpPerLevel}/${BATTLE_PASS.xpPerLevel}`;
-    const pay = this.payOn(), showPrem = pay || p.premium; // 결제 없이 살 수 없는 프리미엄 줄은 숨긴다(이미 해금한 저장은 그대로 보인다).
+    const showPrem = this.billingOn() || p.premium; // 결제 없이 살 수 없는 프리미엄 줄은 숨긴다(이미 해금한 저장은 그대로 보인다).
     $('btn-pass-buy').style.display = showPrem ? (p.premium ? 'none' : '') : 'none';
     const tr = $('pass-track'); tr.innerHTML = '';
     const cell = (r, prem, l) => { const claimed = (prem ? p.claimedPrem : p.claimedFree).includes(l); const can = l <= lv && !claimed && (!prem || p.premium); const k = Object.keys(r)[0]; const [nm, ic] = REWARD_LABEL[k]; return `<div class="pass-cell ${prem ? 'prem' : ''} ${l > lv || (prem && !p.premium) ? 'lock' : ''} ${can ? 'claim' : ''} ${claimed ? 'done' : ''}" data-lv="${l}" data-prem="${prem ? 1 : 0}"><img src="${RESOURCE_ART[k]?resourceArt(k):ic}" onerror="this.remove()"><span>${nm} ${fmt(r[k])}</span></div>`; };
@@ -556,6 +597,12 @@ export class Meta {
     if (this.eco.s.pass.premium) return;
     const sku = { id: 'pass', name: '시즌 패스 프리미엄', priceLabel: '₩9,900', icon: '/img/icon_pass.webp', desc: '프리미엄 보상 30단계 해금 · SSR 확정권 3장 포함' };
     this.trackFunnel('paysheet_open', { sku: sku.id });
+    if (this.billingOn()) {
+      // 패스는 카탈로그 상품 season_pass_s1(shopSku 'pass'). 가격 문구는 Play 값만 보인다.
+      const r = await this.payWithBilling({ ...sku, id: 'pass' }, 'season_pass_s1');
+      if (r) this.ui.purchaseDone({ ...sku, name: sku.name }, r.got || []);
+      this.renderPass(); return;
+    }
     const ok = await this.ui.paySheet(sku); if (!ok) return; const result = this.eco.buyPass(); if (!result?.ok) { this.ui.toast(this.purchaseFailText(result), 'red'); return; } this.ui.purchaseDone(sku, [{ k: 'gems', n: 0 }].filter((x) => x.n)); this.renderPass();
   }
 
@@ -634,7 +681,7 @@ export class Meta {
     } });
   }
   showProfile() {
-    const s = this.eco.s, pay = this.payOn(), vipNext = [0, 1, 20000, 50000, 100000, 300000];
+    const s = this.eco.s, pay = this.vipShown(), vipNext = [0, 1, 20000, 50000, 100000, 300000];
     // VIP·누적 결제 줄은 실제 결제가 연결됐을 때만 보인다. 결제가 없으면 기록만 보여 준다.
     const vip = pay ? `<p>VIP ${s.vip} · 누적 결제 ₩${fmt(s.spentKRW)}<br>${s.vip < 5 ? `다음 VIP까지 ₩${fmt(vipNext[s.vip + 1] - s.spentKRW)}` : '최고 등급'}</p><p>VIP 혜택: 에너지 최대 +50 · 골드 +30%${this.eco.isVip ? ' <b style="color:var(--green)">(활성)</b>' : ' <b style="color:var(--red)">(VIP 멤버십 필요)</b>'}</p>` : '';
     this.ui.modal(`<h2 id="profile-name"></h2>${vip}<p>총 소환 ${s.totalPulls}회 · 처치 ${s.quests.kills} · 클리어 ${s.quests.stages}</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button>${pay ? '<button class="btn btn-gold" id="m-vip">VIP 멤버십</button>' : ''}</div>`, { onOpen: (b) => { b.querySelector('#profile-name').textContent = s.name; b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); const vipButton = b.querySelector('#m-vip'); if (vipButton) vipButton.onclick = () => { this.ui.closeModal(); this.buy('vip_pass'); }; } });

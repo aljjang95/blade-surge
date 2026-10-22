@@ -81,7 +81,8 @@ describe('무과금 초월 경제 추정', () => {
 
   test('모든 현금 상품은 첫날 수령 반사실에서 최소 하루를 단축한다', () => {
     const savings = productSavings();
-    for (const sku of SKUS.filter(s => s.kind === 'cash')) {
+    // 보상이 없는 권한 상품(광고 제거)은 단축 일수가 없다.
+    for (const sku of SKUS.filter(s => s.kind === 'cash' && Object.keys(s.rewards || {}).length)) {
       const row = savings[sku.id as keyof typeof savings];
       expect(row.days).toBeGreaterThanOrEqual(1);
       expect(row.days).toBe(row.freeDays - row.withDays);

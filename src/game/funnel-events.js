@@ -1,6 +1,7 @@
 // 로컬 전용 퍼널 계측 링 버퍼. 네트워크 전송·DOM 접근·세이브 원문 저장이 없다.
 // 이벤트 이름과 payload 키는 고정 스키마로만 허용하며 자유 문자열·개인정보는 저장하지 않는다.
-// 결제/패스/광고 "성공"·지급 이벤트는 실제 SDK 영수증 검증 전까지 의도적으로 정의하지 않는다.
+// 결제 "성공" 이벤트(purchase_verified)는 서버 verify가 granted를 돌려준 뒤에만 기록한다. 시트 열림·구매 시도·취소·대기는 성공이 아니다.
+// 구매 토큰·주문 ID는 어떤 이벤트에도 넣지 않는다.
 import { SKUS, SHOP_TABS } from '../data/shop.js';
 
 export const FUNNEL_STORAGE_KEY = 'bladesurge_funnel_v1';
@@ -45,8 +46,10 @@ const SCHEMA = Object.freeze({
     optional: {},
   },
   shop_view: { required: { tab: oneOf(TAB_IDS) }, optional: {} },
-  // 결제 시트 "열림"만 기록한다. 구매 성공·지급은 영수증 검증 경로가 생길 때 별도 설계한다.
+  // 결제 시트 "열림"만 기록한다. 성공은 purchase_verified(서버 검증 뒤)로만 남긴다.
   paysheet_open: { required: { sku: oneOf([...SKU_IDS, 'pass']) }, optional: {} },
+  // 서버가 영수증을 검증하고 지급(granted)했을 때만 기록한다. 토큰·금액은 넣지 않는다.
+  purchase_verified: { required: { sku: oneOf([...SKU_IDS, 'pass']) }, optional: {} },
   return_session: { required: { gapDays: int(0, 3650) }, optional: {} },
 });
 
