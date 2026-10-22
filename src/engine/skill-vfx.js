@@ -36,7 +36,7 @@ export const SKILL_VFX = Object.freeze({
   sunbreaker: R(GOLD, 'holy-wave', 'front', 'flash', 0xffc040, 9, { dist: 4 }),
   heavenfall: R(GOLD, 'holy-wave', 'aim', 'flash', 0xfff0a0, 11, { dist: 0, seek: [15, 5] }),
   // 광전사
-  whirlwind: R(GOLD, 'lava-crack', 'self', 'ground', 0xff7a4a, 5),
+  whirlwind: R(VIOLET, 'lava-crack', 'self', 'ground', 0xff4a1a, 5),
   quake: R(GOLD, 'lava-crack', 'aim', 'ground', 0xff9a4a, 8, { dist: 1.5 }),
   berserk: R(VIOLET, 'lava-crack', 'self', 'ground', 0xff3030, 6),
   hell_axe: R(GOLD, 'meteor', 'aim', 'flash', 0xff7a30, 10, { dist: 4, seek: [13, 4] }),
@@ -47,12 +47,12 @@ export const SKILL_VFX = Object.freeze({
   // 대마도사
   fireball: R(GOLD, 'meteor', 'front', 'flash', 0xff7228, 4, { dist: 3 }),
   chain: R(VIOLET, 'chain-lightning', 'self', 'flash', 0x70b8ff, 6),
-  blizzard: R(VIOLET, 'ice-burst', 'self', 'ground', 0x72dfff, 7),
+  blizzard: R(VIOLET, 'ice-burst', 'self', 'ground', 0x2a9cff, 7),
   meteor: R(GOLD, 'meteor', 'aim', 'flash', 0xff8a40, 11, { dist: 4, seek: [15, 5] }),
   arc_reflect: R(VIOLET, 'chain-lightning', 'front', 'flash', 0x9fd8ff, 5, { dist: 4 }),
   chrono_seal: R(VIOLET, 'rune-circle-violet', 'self', 'ground', 0x8a7cff, 9, { gain: .6 }),
-  star_prison: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x74c8ff, 9, { dist: 5, seek: [16, 5] }),
-  absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x7fd0ff, 12, { dist: 6, seek: [17, 6] }),
+  star_prison: R(VIOLET, 'ice-burst', 'aim', 'none', 0x5a6cff, 9, { dist: 5, seek: [16, 5] }),
+  absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x2a8cff, 12, { dist: 6, seek: [17, 6] }),
   // 암살자
   shadow_dash: R(VIOLET, 'shadow-slash', 'front', 'flash', 0xb26bff, 5, { dist: 3, ghost: true }),
   poison_bomb: R(VIOLET, 'shadow-slash', 'aim', 'ground', 0x70e060, 6, { dist: 5, seek: [13, 3.5] }),
