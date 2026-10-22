@@ -15,8 +15,9 @@ const knightRune = (game, pos, r, life) => game.fx.groundTex?.(pos, 'circle_gold
 function knightChain(game, from, to, { life = .55, width = .09 } = {}) {
   const impact = game.fx.impact; if (!impact?.beam) return;
   _chainDir.copy(to).sub(from); const L = _chainDir.length(); if (!(L > .1)) return;
-  impact.beam(from, _chainDir, L, 0xff9a18, { width, fade: life, style: BEAM_STYLE.vine });
-  impact.beam(from, _chainDir, L, 0xffc23a, { width: width * .45, fade: life * .8 });
+  impact.beam(from, _chainDir, L, 0xff8a10, { width, fade: life, style: BEAM_STYLE.vine });
+  impact.beam(from, _chainDir, L, 0xffb21e, { width: width * .5, fade: life * .85 });
+  impact.beam(from, _chainDir, L, 0xffd86a, { width: width * .18, fade: life * .7 });
 }
 const fwd = (p, d = 1) => p.forward(new THREE.Vector3()).multiplyScalar(d).add(p.pos);
 /** game.hitRadius와 같되 영웅에서 limit m 안의 적만 친다(표시 범위 밖 폭발 피해를 막는 스킬용). */
@@ -563,7 +564,7 @@ export const SKILLS = {
   chain_bind: {
     dur: 0.85,
     start(game, p, c) {
-      knightRune(game, p.pos, 2.6, 0.85);
+      knightRune(game, p.pos, 2, 0.85);
       audio.magic({ vol: 0.4, base: 440, notes: [0, 5, 9, 12], step: 0.05 });
       c.data.bound = [];
     },
@@ -573,9 +574,9 @@ export const SKILLS = {
       game.vacuum(p.pos, 12, 30);
       ts.forEach((e, i) => game.after(i * 0.045, () => {
         if (!e.alive) return;
-        knightChain(game, _chainFrom.copy(p.pos).setY(1.5), e.pos.clone().setY(1.0), { life: 0.6, width: .1 });
+        knightChain(game, _chainFrom.copy(p.pos).setY(1.5), e.pos.clone().setY(1.0), { life: 0.75, width: .26 });
         // 묶인 적 발밑: 금빛 마법진 대신 사슬 가시 고리(인스턴스 층).
-        game.fx.impact?.mark?.(e.pos, 0xffb21e, { radius: 1.3, life: 1.9, style: MARK_STYLE.thorn, angle: i });
+        game.fx.impact?.mark?.(e.pos, 0xff8a10, { radius: 1, life: 1.9, style: MARK_STYLE.thorn, angle: i });
         e.stun = Math.max(e.stun, 2.0 * (e.isBoss ? 0.35 : 1));
         game.damageEnemy(e, c.dmg * 0.45, { kind: 'magic', kb: 0, source: p, quietStop: i > 1 });
         audio.clang({ vol: 0.28, freq: 1700 + i * 130, dur: 0.22 });
@@ -586,7 +587,7 @@ export const SKILLS = {
       const hold = () => {
         if (n-- <= 0 || !game.active) return;
         game.vacuum(p.pos, 12, 11);
-        for (const e of c.data.bound) if (e.alive) { e.stun = Math.max(e.stun, 0.45); if (n % 3 === 0) knightChain(game, _chainFrom.copy(p.pos).setY(1.5), e.pos.clone().setY(1.0), { life: 0.3, width: .07 }); }
+        for (const e of c.data.bound) if (e.alive) { e.stun = Math.max(e.stun, 0.45); if (n % 3 === 0) knightChain(game, _chainFrom.copy(p.pos).setY(1.5), e.pos.clone().setY(1.0), { life: 0.36, width: .12 }); }
         game.after(0.12, hold);
       }; game.after(0.25, hold);
       // 사슬 파열
