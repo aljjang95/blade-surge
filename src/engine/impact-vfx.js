@@ -67,13 +67,13 @@ export const IMPACT_STACK = Object.freeze({ slots: 24, sec: .07, dist: .9 });
 const VERT = `
   attribute vec3 aOrigin; attribute vec3 aVel; attribute vec4 aShape; attribute vec3 aColor; attribute vec2 aLife; attribute vec2 aMotion;
   uniform float uTime;
-  varying vec2 vUv; varying vec3 vColor; varying float vK; varying float vKind; varying float vStyle;
+  varying vec2 vUv; varying vec3 vColor; varying float vK; varying float vKind; varying float vStyle; varying float vSize;
   void main() {
     float t = uTime - aLife.x;
     // 광선은 aShape.z, 지면 표식은 aShape.w 에 모양 번호를 담는다.
     vStyle = aShape.x > 5.5 ? aShape.w : aShape.z;
     float k = t / max(aLife.y, 0.001);
-    vUv = position.xy * 2.0; vColor = aColor; vK = k; vKind = aShape.x;
+    vUv = position.xy * 2.0; vColor = aColor; vK = k; vKind = aShape.x; vSize = aShape.y;
     if (t < 0.0 || k >= 1.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
     float kind = aShape.x;
     if (kind > 4.5 && kind < 5.5) {
@@ -121,7 +121,7 @@ const VERT = `
   }`;
 
 const FRAG = `
-  varying vec2 vUv; varying vec3 vColor; varying float vK; varying float vKind; varying float vStyle;
+  varying vec2 vUv; varying vec3 vColor; varying float vK; varying float vKind; varying float vStyle; varying float vSize;
   void main() {
     float k = vK; if (k >= 1.0) discard;
     vec2 uv = vUv; float r = length(uv);
@@ -181,7 +181,8 @@ const FRAG = `
         float rays = pow(abs(cos(ang * 3.5)), 60.0) * step(0.62, r) * step(r, 0.9);
         a = (ring + rays) * fade;
       }
-      col = mix(vColor, vec3(1.0), 0.2);
+      // 흰색 섞임은 작은 표식(반경 ≤ 1m)만 20%, 큰 표식(≥ 3m)은 0 — 넓은 금빛 선이 청회색 바닥 위에서 복숭아·파스텔로 바래지 않게.
+      col = mix(vColor, vec3(1.0), 0.2 * (1.0 - smoothstep(1.0, 3.0, vSize)));
     } else if (vKind < 0.5) {
       // 코어: 짧게 터졌다 사라지는 하얀 심 + 영웅색 테
       float body = exp(-r * r * 7.0), hot = exp(-r * r * 30.0);
