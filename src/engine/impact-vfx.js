@@ -483,17 +483,18 @@ export class ImpactVfx {
         if (!lite) this.mark(pos, C.color, { radius: 2 * g, life: .45, style: MARK_STYLE.compass, angle: this.rng.next() * 6.28 });
       }
     } else if (C.shape === 'cross') {
-      // 암살자: 보라 교차 베기 — 두 자국이 한 박자 차로 X 를 긋고, 단계가 오르면 세 번째 가로 자국. 마무리는 네 갈래 자국 + 보라 파편.
+      // 암살자: 보라 교차 베기 — 두 자국이 한 박자 차로 X 를 긋고, 단계가 오르면 세 번째 가로 자국.
+      // 마무리는 중심을 비켜 위·아래로 벌린 큰 X + 보라 파편(마무리 폭발과 한 점에 겹쳐 하얗게 타지 않게 중심 자국은 생략).
       const w = .72 + .18 * s;
-      this._emit(IMPACT_KIND.cut, x, y, z, C.base * g, C.color, .17, { angle: angle + w, stretch: 1.25, grow: .92 });
-      this._emit(IMPACT_KIND.cut, x, y + .03, z, C.base * g * .92, C.deep, .17, { angle: angle - w, stretch: 1.25, grow: .92, delay: .03 });
-      if (s > .6 && !lite) this._emit(IMPACT_KIND.cut, x, y + .06, z, C.base * g * .8, C.color, .15, { angle, stretch: 1.4, grow: .92, delay: .06 });
-      if (finisher) {
-        // 마무리 X 두 자국은 중심을 비켜 위·아래로 벌려 긋는다(네 자국이 한 점에 겹쳐 하얗게 타던 것을 막는다).
-        for (let i = 0; i < 2; i++) this._emit(IMPACT_KIND.cut, x, y + (i ? -.35 : .35), z, C.base * g * .95, C.deep, .2, { angle: angle + 1.5708 * i + .785, stretch: 1.5, grow: .92, delay: .07 + i * .025 });
+      if (!finisher) {
+        this._emit(IMPACT_KIND.cut, x, y, z, C.base * g, C.color, .17, { angle: angle + w, stretch: 1.25, grow: .92 });
+        this._emit(IMPACT_KIND.cut, x, y + .03, z, C.base * g * .92, C.deep, .17, { angle: angle - w, stretch: 1.25, grow: .92, delay: .03 });
+        if (s > .6 && !lite) this._emit(IMPACT_KIND.cut, x, y + .06, z, C.base * g * .8, C.color, .15, { angle, stretch: 1.4, grow: .92, delay: .06 });
+      } else {
+        for (let i = 0; i < 2; i++) this._emit(IMPACT_KIND.cut, x, y + (i ? -.45 : .45), z, C.base * g, i ? C.deep : C.color, .22, { angle: angle + (i ? -1 : 1) * w, stretch: 1.5, grow: .92, delay: .03 + i * .03 });
         for (let i = 0, n = lite ? 3 : 6; i < n; i++) {
           const a = (i / n) * 6.2831853 + .3, sp = 6 + this.rng.next() * 3;
-          this._emit(IMPACT_KIND.shard, x, y, z, .2, C.color, .3, { vx: Math.cos(a) * sp, vy: 1.5, vz: Math.sin(a) * sp, angle: a, stretch: 1.8, grow: .8, gravity: 10, delay: .07 });
+          this._emit(IMPACT_KIND.shard, x, y, z, .2, C.color, .3, { vx: Math.cos(a) * sp, vy: 1.5, vz: Math.sin(a) * sp, angle: a, stretch: 1.8, grow: .8, gravity: 10, delay: .05 });
         }
       }
     } else if (C.shape === 'smash') {
