@@ -38,6 +38,7 @@ import { dungeonVisualFor } from '../data/dungeon-visuals.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 
 const _v = new THREE.Vector3();
+const _ultColor = new THREE.Color();
 const _slot = { x: 0, z: 0 };
 const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
 
@@ -870,7 +871,9 @@ export class Battle {
     this.ui.ultCinema(sk.name, p.def);
     this.playBeat('ultStart'); this.renderer.radial = 0.35; this.renderer.punch(1.2); this.renderer.aberr = 0.8;
     audio.ultimateDuck(); audio.play('ui_max', { vol: 0.8, rate: 0.6 }); audio.vibe([60, 30, 60, 30, 120]);
-    this.fx.castCircle(p.pos, p.def.color, { radius: 5, life: 1.2 });
+    // 발밑 마법진은 영웅색을 .45 밝기로 낮춘 반경 2.5m 원: 반경 5m·밝기 1 금빛 원이 모든 영웅 궁극기를 같은 원으로 덮었다.
+    // 같은 castCircle 호출 한 번이라 재질 생성(난수)·파티 재생 기록 순서는 그대로다. 판정·stun 은 아래 그대로.
+    this.fx.castCircle(p.pos, _ultColor.set(p.def.color).multiplyScalar(.45).getHex(), { radius: 2.5, life: 1.2 });
     this.fx.light(p.pos, p.def.color, 12, 14, 1.2);
     for (const e of this.enemies) if (e.alive && !e.isBoss && e.pos.distanceToSquared(p.pos) <= 4.5 ** 2) e.stun = Math.max(e.stun, 0.3);
   }

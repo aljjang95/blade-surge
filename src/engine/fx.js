@@ -40,8 +40,8 @@ export const ABILITY_VFX_PROFILES = Object.freeze({
   steel: Object.freeze({ ground: 'circle_gold', flash: 'slash', secondary: 'holy_burst', color: 0xffd060, accent: 0xffffff, radius: 2.8, burst: 14, light: 0.9 }),
   fire: Object.freeze({ ground: 'circle_demon', flash: 'explosion', secondary: 'phoenix', color: 0xff7228, accent: 0xffd060, radius: 3.6, burst: 20, light: 1.2, pillar: true }),
   // 냉기 강조색은 흰빛(0xdff8ff) 대신 진한 하늘색: 눈보라·절대영도에서 얼음 원화와 겹쳐 화면이 하얗게 덮였다.
-  frost: Object.freeze({ ground: 'circle_gold', flash: 'ice', secondary: 'shockwave', color: 0x5fcfff, accent: 0x8fd8ff, radius: 3.4, burst: 16, light: 1.0 }),
-  arcane: Object.freeze({ ground: 'circle_gold', flash: 'lightning_chain', secondary: 'lightning', color: 0x70b8ff, accent: 0xd7f4ff, radius: 3.0, burst: 15, light: 1.0 }),
+  frost: Object.freeze({ ground: 'circle_gold', flash: 'ice', secondary: 'shockwave', color: 0x5fcfff, accent: 0x8fd8ff, radius: 3.4, burst: 16, light: 1.0, groundColor: 0x1f86ff, groundScale: .8 }),
+  arcane: Object.freeze({ ground: 'circle_gold', flash: 'lightning_chain', secondary: 'lightning', color: 0x70b8ff, accent: 0xd7f4ff, radius: 3.0, burst: 15, light: 1.0, groundColor: 0x3a5cff, groundScale: .8 }),
   nature: Object.freeze({ ground: 'circle_gold', flash: 'phoenix', secondary: 'dust', color: 0x63e08a, accent: 0xd7ff9d, radius: 3.3, burst: 18, light: 0.85 }),
   void: Object.freeze({ ground: 'circle_demon', flash: 'singularity', secondary: 'blood_burst', color: 0x8f55ff, accent: 0xd5a6ff, radius: 3.2, burst: 18, light: 1.1 }),
 });
@@ -621,6 +621,7 @@ export class FX {
     if (light && !reduced) this.light(pos, color, 3.2, 3.5, .1);
     // 임팩트 프레임(코어·베기 자국/고리/별빛·불똥, 치명타 금빛 십자): 인스턴스 층이라 fx.items·불꽃 풀·난수를 건드리지 않는다.
     this.impact?.hit(pos, dir, { hero: this._heroId(), kind, tier, crit: !!crit, reduced });
+    this._comboLayer(pos, dir, tier, reduced);
     return cue;
   }
   /**
@@ -634,9 +635,11 @@ export class FX {
     const k = Math.max(0.35, Math.min(2.4, Number.isFinite(scale) ? scale : 1));
     const t = Math.max(0.18, Math.min(2.2, Number.isFinite(life) ? life : 0.48));
     const anchor = pos.clone();
-    this.groundTex(anchor, spec.ground, spec.color, {
-      r0: spec.radius * 0.18 * k,
-      r1: spec.radius * k,
+    // 차가운 학파(서리·비전)의 옅은 하늘색 지면 원판은 가산으로 겹쳐 흰 원판이 됐다: 진한 청 groundColor 와 .8배 반경을 쓴다.
+    const groundK = k * (spec.groundScale ?? 1);
+    this.groundTex(anchor, spec.ground, spec.groundColor ?? spec.color, {
+      r0: spec.radius * 0.18 * groundK,
+      r1: spec.radius * groundK,
       life: t,
       spin: profile === 'void' ? -1.8 : profile === 'frost' ? 0.8 : 1.25,
       y: 0.075,
@@ -693,7 +696,8 @@ export class FX {
     this._killBudget--;
     // 크게 터졌다 빠르게 사그라드는 따뜻한 섬광 한 점 + 방사형 불꽃 몇 점
     // 큰 크림색 구(3.4)는 적을 베이지 덩어리로 덮었다. 또렷한 처치 섬광은 impact.kill 이 맡고 여기서는 작은 잔광만 남긴다.
-    this.glow.emit(pos.x, pos.y + 1, pos.z, 0, 0.5, 0, KILL_COLOR, this.lite ? 1.2 : 1.6, 0.2, { grav: 0, drag: 0.9, shrink: 0.2 });
+    // 크림색 잔광 구(1.6)는 처치마다 흰 구름으로 남았다. 영혼 불꽃·파편(impact.kill)이 신호를 맡으니 잔광은 작게(1.0).
+    this.glow.emit(pos.x, pos.y + 1, pos.z, 0, 0.5, 0, KILL_COLOR, this.lite ? .8 : 1.0, 0.2, { grav: 0, drag: 0.9, shrink: 0.2 });
     const n = this.lite ? 3 : 6;
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + this._killBudget * 0.7, s = 7 + (i % 2) * 3;
@@ -705,6 +709,17 @@ export class FX {
   deathShatter(enemy, { reduced = false } = {}) {
     if (enemy?.pos) this.impact?.kill(enemy.pos, { elite: !!enemy.isElite, boss: !!enemy.isBoss, hero: this._heroId(), reduced });
     return this.vfx?.shatter(enemy, { reduced }) || 0;
+  }
+  /** 평타 연계 층: 조종 영웅이 평타 연계 중이면 휘두름 한 번당 한 번(첫 접촉점) 단계별 연계 연출을 낸다.
+   *  판정·피해·난수와 무관하다(영웅 상태만 읽는다). 같은 연계 항목을 .25초 안에 다시 치면(다단 회전·군중) 건너뛴다. */
+  _comboLayer(pos, dir, tier, reduced) {
+    const t = this.focus?.target, combo = t?.def?.combo;
+    if (!this.impact || !t?.alive || t.state !== 'attack' || !t.current || !combo?.length) return 0;
+    const step = Math.max(0, combo.indexOf(t.current)); if (combo[step] !== t.current) return 0;
+    const clock = this.impact.clock;
+    if (this._comboSwing === t.current && clock >= this._comboSwingAt && clock - this._comboSwingAt < .25) return 0;
+    this._comboSwing = t.current; this._comboSwingAt = clock;
+    return this.impact.combo(pos, dir, { hero: t.def.id, step, steps: combo.length, finisher: !!t.current.finisher || tier === 'finisher', reduced });
   }
   /** 현재 조종 중인 영웅 id(타격 색 언어용). 초점 대상이 없으면 빈 값. */
   _heroId() { const t = this.focus?.target; return t?.alive ? (t.def?.id || '') : ''; }
@@ -845,6 +860,12 @@ export class FX {
     return this.focus.bind(createWeaponTrailMaterial(slashTex(), color));
   }
   trail(getPoints, color, options = {}) {
+    // 연계 단계가 오를수록 궤적이 길게 남고 넓어진다(마지막 타 = 1.4배 수명). 판정 시간·게인 곡선은 그대로다.
+    const t = this.focus?.target, combo = t?.def?.combo, step = combo?.length > 1 && t.current ? combo.indexOf(t.current) : -1;
+    if (step > 0) {
+      const s = step / (combo.length - 1);
+      options = { ...options, life: (options.life ?? .24) * (1 + .4 * s), width: Math.min(1, (options.width ?? 1) * (1 + .14 * s)) };
+    }
     const tr = new WeaponTrail(getPoints, this._trailMaterial(color), options);
     this.scene.add(tr.mesh); this.trails.push(tr); return tr;
   }
