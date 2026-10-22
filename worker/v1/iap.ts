@@ -147,7 +147,7 @@ export async function verify(c: Ctx, auth: Authed, body: Record<string, unknown>
 
 /** 계정의 최근 지급·역분개와 권한. 클라이언트는 아직 적용하지 않은 grant/reversal만 로컬에 반영한다. */
 export async function state(c: Ctx, auth: Authed) {
-  if (await billingReason(c) === 'iap-schema-missing' || !await iapSchemaReady(c.db)) fail(503, 'iap-schema-missing');
+  if (!await iapSchemaReady(c.db)) fail(503, 'iap-schema-missing');
   return stateFor(c, auth.account.account_id);
 }
 async function stateFor(c: Ctx, accountId: string) {
