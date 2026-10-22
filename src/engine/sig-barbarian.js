@@ -43,7 +43,7 @@ export function risingEmbers(impact, c, n, r, color, { delay = 0, rise = 7, life
 }
 
 /** 땅에서 비스듬히 솟는 불꽃 혀·바위 가시(지면에서 위·바깥으로 그어지는 짧은 광선). */
-function earthSpikes(impact, c, n, r0, r1, color, { delay = 0, h = 2, width = .16, fade = .4, phase = 0, out = .5 } = {}) {
+function earthSpikes(impact, c, n, r0, r1, color, { delay = 0, h = 2, width = .3, fade = .4, phase = 0, out = .5 } = {}) {
   for (let i = 0; i < n; i++) {
     const a = phase + (i / n) * TAU + (impact.rng.next() - .5) * .4, r = r0 + (r1 - r0) * impact.rng.next();
     _a.set(c.x + Math.cos(a) * r, .02, c.z + Math.sin(a) * r);
@@ -91,7 +91,7 @@ export function barbRushEnd(game, center, f) {
   // 밀어붙인 방향으로 펼쳐지는 불씨 부채 + 앞쪽 불꽃 혀(벽처럼 뭉친 적이 터진 자리).
   _a.copy(center).addScaledVector(f, -2.4);
   impact.mark(_a, DEEP_EMBER, { radius: 6.2, life: .45, style: MARK_STYLE.fan, angle: yawOf(f) });
-  earthSpikes(impact, center, lite ? 4 : 9, 1, 4, EMBER, { h: 2.6, width: .18, out: .6, phase: yawOf(f) });
+  earthSpikes(impact, center, lite ? 4 : 9, 1, 4, EMBER, { h: 2.6, width: .32, out: .6, phase: yawOf(f) });
   impact._emit(IMPACT_KIND.cut, center.x, 1.3, center.z, 3.6, FLAME, .26, { angle: impact._screenAngle(_d.set(-f.z, 0, f.x)), stretch: 1.3, grow: .8 });
   return impact.spawned - before;
 }
@@ -120,7 +120,7 @@ export const SIGNATURES = {
     impact._emit(IMPACT_KIND.ring, player.pos.x, 1, player.pos.z, 3.4, CRIMSON, .32, { grow: 1 });
     for (let w = 0; w < 2; w++) risingEmbers(impact, player.pos, lite ? 5 : 11, 1.1, w ? CRIMSON : EMBER, { delay: w * .18, rise: 9, life: .6, size: .26 });
     // 분노 불꽃 혀: 몸 둘레에서 위로 핥아 오르는 붉은 불길 두 물결(오라의 실루엣).
-    for (let w = 0; w < 2; w++) earthSpikes(impact, player.pos, lite ? 4 : 8, .9, 1.4, w ? EMBER : CRIMSON, { delay: w * .2, h: 3.2, width: .17, out: .15, phase: w * .4, fade: .3 });
+    for (let w = 0; w < 2; w++) earthSpikes(impact, player.pos, lite ? 4 : 8, .9, 1.4, w ? EMBER : CRIMSON, { delay: w * .2, h: 3.2, width: .32, out: .15, phase: w * .4, fade: .3 });
   },
   // 지옥의 도끼(궁극기): 착탄점에 진홍 가시 고리가 먼저 잡히고, 하늘에서 불의 궤적이 .5초 뒤(판정 순간)에 꽂힌다.
   // 착탄: 세로 도끼 호 + 용암 균열 열두 갈래 + 큰 고리 두 겹 + 불씨 기둥.
@@ -183,8 +183,8 @@ export const SIGNATURES = {
     risingEmbers(impact, c, lite ? 5 : 10, 5, FLAME, { delay: .2, rise: 8 });
     risingEmbers(impact, c, lite ? 3 : 6, 2.5, CRIMSON, { rise: 6 });
     // 무너지는 대지: 핏빛 바위 가시(0초, 6m 안) → 불씨 바위 가시(.2초, 8m 안)가 바깥으로 비스듬히 솟는다.
-    earthSpikes(impact, c, lite ? 4 : 8, 3, 6, CRIMSON, { h: 2.2, width: .18 });
-    earthSpikes(impact, c, lite ? 5 : 10, 5, 8.5, EMBER, { delay: .2, h: 2.8, width: .2, phase: .3 });
+    earthSpikes(impact, c, lite ? 4 : 8, 3, 6, CRIMSON, { h: 2.2, width: .32 });
+    earthSpikes(impact, c, lite ? 5 : 10, 5, 8.5, EMBER, { delay: .2, h: 2.8, width: .36, phase: .3 });
   },
   // 종말·화산심장(최상위 각성): 화산 심장이 맥동(진홍 가시 고리)하다 .3초에 분화 — 하늘로 솟는 불의 기둥 광선 다섯,
   // 용암 균열 열네 갈래, 거대 고리 두 겹, 불씨 분수.

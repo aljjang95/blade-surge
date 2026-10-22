@@ -69,12 +69,13 @@ export function mageBolt(game, from, to, step = 0) {
   const before = impact.spawned, lite = !!game.fx.lite;
   // 굵은 청색 번개 + 가는 청백 심 + 가운데서 아래로 갈라지는 가지 + 끝점 별빛·고리·튀는 전하.
   const F = _stars[6].copy(from), T = _stars[7].copy(to);
-  zigzag(impact, F, T, lite ? 4 : 6, 1, C.bolt, { width: .26, fade: .36 });
+  // 광선 폭(width)은 가장자리까지의 반폭이고 보이는 심은 그 1/5 정도라, 번개는 두껍게 준다.
+  zigzag(impact, F, T, lite ? 4 : 6, 1, C.bolt, { width: .55, fade: .36 });
   if (!lite) {
-    zigzag(impact, F, T, 5, 1.4, C.boltHot, { width: .08, fade: .24 });
+    zigzag(impact, F, T, 5, 1.4, C.boltHot, { width: .18, fade: .24 });
     _stars[5].copy(F).lerp(T, .45); _a.copy(T).sub(F); _stars[4].set(-_a.z, 0, _a.x).normalize();
     _stars[3].copy(_stars[5]).addScaledVector(_stars[4], (step % 2 ? 1 : -1) * 1.6); _stars[3].y = Math.max(.2, _stars[5].y - 1.1);
-    zigzag(impact, _stars[5], _stars[3], 3, 1.2, C.bolt, { width: .11, fade: .26 });
+    zigzag(impact, _stars[5], _stars[3], 3, 1.2, C.bolt, { width: .26, fade: .26 });
   }
   impact._emit(IMPACT_KIND.star, T.x, T.y, T.z, step < 2 ? 1.8 : 1.4, C.bolt, .18, { angle: .4 + step, grow: .5 });
   impact._emit(IMPACT_KIND.ring, T.x, T.y, T.z, 1.6, C.boltHot, .24, { grow: 1 });
@@ -99,7 +100,7 @@ export function mageFrostTick(game, pos, i, radius = 6.8) {
   const before = impact.spawned;
   // 큰 가시 고리는 옅은 흰 바퀴로 읽혀 몸 둘레 3m 서리 고리만 두고, 판정 반경은 얼음 가시가 채운다.
   impact.mark(pos, C.frostMid, { radius: 3, life: .42, style: MARK_STYLE.thorn, angle: i * .37 });
-  iceSpikes(impact, pos, game.fx.lite ? 4 : 8, 1.5, radius - .3, i % 2 ? C.frost : C.frostHot, { phase: i * .9, width: .15, h: 1.7 });
+  iceSpikes(impact, pos, game.fx.lite ? 4 : 8, 1.5, radius - .3, i % 2 ? C.frost : C.frostHot, { phase: i * .9, width: .3, h: 1.7 });
   // 폭풍의 회전: 몸을 감아 도는 서리 줄기(접선 속도). 흰 눈송이 대신 하늘색 선.
   const n = game.fx.lite ? 4 : 9;
   for (let k = 0; k < n; k++) {
@@ -120,7 +121,7 @@ export function magePrismBounce(game, pos, dir, n = 0) {
     const base = Math.atan2(dir.z, dir.x);
     for (const [j, col] of [C.prism, C.arcaneHot, C.bolt].entries()) {
       const a = base + (j - 1) * .4; _d.set(Math.cos(a), 0, Math.sin(a));
-      impact.beam(pos, _d, 3.6, col, { speed: 30, tail: 2, width: .09 });
+      impact.beam(pos, _d, 3.6, col, { speed: 30, tail: 2, width: .2 });
     }
   }
   return impact.spawned - before;
@@ -135,7 +136,7 @@ export const SIGNATURES = {
     impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 2, C.fire, .26, { grow: 1 });
     impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 1.2, C.fireHot, .2, { grow: 1, delay: .05 });
     impact._streaks(_a, f, lite ? 5 : 12, 12, .36, C.fireHot, { up: 1.2, spread: .5, size: .24 });
-    impact.beam(_a, f, 6.5, C.fire, { speed: 15, tail: 3.5, width: .3, style: BEAM_STYLE.gale });
+    impact.beam(_a, f, 6.5, C.fire, { speed: 15, tail: 3.5, width: .5, style: BEAM_STYLE.gale });
     // 발밑 화염 학파 문양: 작은 주황 나침 폭발 표식(공용 룬 대신).
     impact.mark(ctx.player.pos, C.fire, { radius: 2.2, life: .5, style: MARK_STYLE.compass, angle: Math.atan2(f.z, f.x) });
   },
@@ -144,22 +145,22 @@ export const SIGNATURES = {
     const { impact, player } = ctx;
     _p0.set(player.pos.x + .6, 9, player.pos.z - .4); _p1.copy(player.pos).setY(1.8);
     _stars[0].copy(_p0); _stars[1].copy(_p1);
-    zigzag(impact, _stars[0], _stars[1], 7, 1.1, C.bolt, { width: .28, fade: .34 });
-    zigzag(impact, _stars[0], _stars[1], 5, 1.5, C.boltHot, { width: .08, fade: .22 });
+    zigzag(impact, _stars[0], _stars[1], 7, 1.1, C.bolt, { width: .55, fade: .34 });
+    zigzag(impact, _stars[0], _stars[1], 5, 1.5, C.boltHot, { width: .18, fade: .22 });
     impact._emit(IMPACT_KIND.star, _stars[1].x, _stars[1].y, _stars[1].z, 1.8, C.bolt, .18, { angle: .4, grow: .5 });
     impact._emit(IMPACT_KIND.ring, player.pos.x, .4, player.pos.z, 2.8, C.bolt, .28, { grow: 1 });
     // 발밑 정전기: 바닥을 기는 짧은 번개 가지 여섯.
     for (let k = 0; k < (ctx.lite ? 3 : 6); k++) {
       const a = (k / 6) * TAU + .3; _stars[2].copy(player.pos).setY(.1);
       _stars[3].set(player.pos.x + Math.cos(a) * 2.6, .1, player.pos.z + Math.sin(a) * 2.6);
-      zigzag(impact, _stars[2], _stars[3], 3, 1.3, C.bolt, { width: .07, fade: .26, delay: .03 });
+      zigzag(impact, _stars[2], _stars[3], 3, 1.3, C.bolt, { width: .2, fade: .26, delay: .03 });
     }
   },
   // 빙결 폭풍: 판정 반경(6.8m) 서리 가시 고리가 폭풍 내내 남고 바깥 둘레에 얼음 가시 벽이 솟는다. 틱마다는 mageFrostTick.
   blizzard(ctx) {
     const { impact, player, lite } = ctx;
     impact.mark(player.pos, C.frostMid, { radius: 3.4, life: 1.2, style: MARK_STYLE.thorn, angle: .3 });
-    iceSpikes(impact, player.pos, lite ? 7 : 16, 6.2, 7, C.frost, { h: 2, width: .16, fade: 1.6 });
+    iceSpikes(impact, player.pos, lite ? 7 : 16, 6.2, 7, C.frost, { h: 2, width: .3, fade: 1.6 });
   },
   // 메테오 스톰(궁극기): 낙하 구역(7.8m)에 주황 나침 표식과 열기 고리가 먼저 깔린다. 한 발마다의 궤적·폭발은 mageMeteorFall.
   meteor(ctx) {
@@ -176,7 +177,7 @@ export const SIGNATURES = {
     const base = Math.atan2(f.z, f.x);
     for (const [j, col] of [C.prism, C.arcaneHot, C.bolt].entries()) {
       const a = base + (j - 1) * .12; _d.set(Math.cos(a), 0, Math.sin(a));
-      impact.beam(_a, _d, 10, col, { speed: 30, tail: 5, width: .1 });
+      impact.beam(_a, _d, 10, col, { speed: 30, tail: 5, width: .22 });
     }
     // 발밑 프리즘 문양: 청록 조준 원(굴절 각을 재는 원).
     impact.mark(ctx.player.pos, C.prism, { radius: 1.8, life: .5, style: MARK_STYLE.reticle, angle: base });
@@ -209,7 +210,7 @@ export const SIGNATURES = {
     }
     for (let k = 0; k < N; k++) {
       const j = (k + 3) % N; _d.copy(_stars[j]).sub(_stars[k]);
-      impact.beam(_stars[k], _d, _d.length(), C.starLine, { speed: 70, width: .13, delay: k * .025, fade: .45 });
+      impact.beam(_stars[k], _d, _d.length(), C.starLine, { speed: 70, width: .24, delay: k * .025, fade: .45 });
     }
     impact._emit(IMPACT_KIND.star, at.x, 1, at.z, 2.6, C.star, .2, { angle: .3, grow: .4, delay: T });
     impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 4.5, C.star, .34, { grow: 1, delay: T });
@@ -232,7 +233,7 @@ export const SIGNATURES = {
       _a.set(at.x + _d.x * .8, .08, at.z + _d.z * .8);
       impact.beam(_a, _d, 7 + impact.rng.next() * 3, i % 2 ? C.frost : C.frostHot, { speed: 55, width: .12, delay: T, fade: .55 });
     }
-    iceSpikes(impact, at, lite ? 8 : 18, 1, 8, C.frost, { delay: T, h: 2.4, width: .17, fade: .8 });
+    iceSpikes(impact, at, lite ? 8 : 18, 1, 8, C.frost, { delay: T, h: 2.4, width: .32, fade: .8 });
     impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 5, C.frost, .4, { grow: 1, delay: T });
     impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 3.2, C.frostHot, .3, { grow: 1, delay: T + .06 });
   },
