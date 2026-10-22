@@ -189,7 +189,7 @@ async function prepareLibraryHero(gltf, asset) {
   });
   await forgeHeroWeapons(gltf, hero.model);
   if (heroId === 'ranger') rigRangerBowString(gltf.scene);
-  prepareModel(gltf, heroModelContract(asset, gltf.scene, clipAsset));
+  prepareModel(gltf, heroModelContract(asset, gltf.scene, clipAsset, gltf.animations));
   heroBodies.set(asset.id, gltf);
   return gltf;
 }

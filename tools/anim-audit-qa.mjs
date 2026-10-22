@@ -96,7 +96,7 @@ export function installAnimAudit() {
       s.mixer.stopAllAction(); s.mixer.update(0); root.updateMatrixWorld(true);
       const rest = bones.map(b => b.quaternion.clone());
       const def = s.def, clips = {};
-      for (const name of ['Idle', 'Running_A', 'Dodge_Forward', 'Hit_A', 'Hit_B', 'Death_A', 'Death_B', ...def.combo.map(c => c.anim), ...def.skills.map(k => k.anim)]) {
+      for (const name of ['Idle', 'Running_A', 'Dodge_Forward', 'Hit_A', 'Hit_B', 'Hit_L', 'Hit_R', 'Death_A', 'Death_B', ...def.combo.map(c => c.anim), ...def.skills.map(k => k.anim)]) {
         if (clips[name] !== undefined) continue;
         const clip = s.clips[name]; clips[name] = clip ? clipStats(root, s.mixer, clip, bones, feet, rest) : 'MISSING';
       }

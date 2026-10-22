@@ -5,6 +5,7 @@ import RANGER_LIBRARY_REVISION from '../data/ranger-library-revision-v4.json';
 import ROGUE_LIBRARY_REVISION from '../data/rogue-library-revision-v2.json';
 import FOX_BODY_REVISION from '../data/fox-body-revision-v1.json';
 import HIGHER_BODY_REVISIONS from '../data/higher-body-revisions-v1.json';
+import ANIM_PACKS from '../data/anim-packs-v1.json';
 
 export { LIBRARY_SCHEMA, triangleLimit };
 // v3: v2 저작(전신 rest 축 리타깃·실제 스킨 접지·활 사격·백스텝, art-src/ranger/author_ranger_library_v2.py)을 Blender 5.2.2 에서 다시 굽고
@@ -136,6 +137,43 @@ export function validateLibraryModel(gltf, asset) {
   return gltf;
 }
 
+// ---- 애니메이션 팩(h4-anim) ----
+// tools/blender/build-anim-packs.mjs 가 원본 GLB 에서 절차적으로 만든 새 클립(뼈대 전용 GLB). 원본 파일·해시 계약은 그대로 두고
+// 원본을 읽은 뒤 팩의 클립만 덧붙인다. 팩이 만들어진 원본 SHA 가 지금 게임이 읽는 원본과 다르면 붙이지 않는다(오래된 팩 방지).
+const ANIM_PACK_BY_ASSET = new Map((ANIM_PACKS.packs || []).map((pack) => [pack.asset, pack]));
+export const animPacks = () => ANIM_PACKS;
+export function animPackFor(assetId) { return ANIM_PACK_BY_ASSET.get(assetId) || null; }
+
+/** 게임이 이 자산에 대해 실제로 읽는 원본(교정본 포함)의 SHA. */
+export function shippedSourceSha(asset) {
+  const entry = LIBRARY_REVISIONS.find((e) => e.revision.asset === asset?.id);
+  if (entry?.revision?.useInGame && entry.revision.status === 'GENERATED') return entry.revision.output.sha256;
+  return asset?.sha256 || null;
+}
+
+/** 팩 클립을 원본 glTF 의 animations 끝에 덧붙인다. 같은 이름 클립은 원본을 우선한다. 덧붙인 이름 목록을 돌려준다. */
+export function mergeAnimPack(gltf, pack, packGltf) {
+  const names = new Set(gltf.animations.map((clip) => clip.name)), added = [];
+  for (const clip of packGltf?.animations || []) {
+    if (!Object.hasOwn(pack.clips, clip.name) || names.has(clip.name)) continue;
+    gltf.animations.push(clip); names.add(clip.name); added.push(clip.name);
+  }
+  return added;
+}
+
+export function attachAnimPack(gltf, asset, load, warn) {
+  const pack = animPackFor(asset.id);
+  if (!pack) return gltf;
+  if (pack.source?.sha256 !== shippedSourceSha(asset)) { warn(`anim pack skipped (source changed): ${asset.id}`); return gltf; }
+  return Promise.resolve().then(() => load(pack.path)).then((packGltf) => {
+    // 병합 중 예외도 팩만 버리고 원본 클립으로 계속한다(몸체 전체가 대체 경로로 떨어지지 않게). 덧붙이던 클립은 되돌린다.
+    const count = gltf.animations.length;
+    try { gltf.scene.userData.animPack = { asset: pack.asset, clips: mergeAnimPack(gltf, pack, packGltf) }; }
+    catch (error) { gltf.animations.length = count; warn(`anim pack merge failed, using source clips only: ${asset.id}`, error); }
+    return gltf;
+  }, (error) => { warn(`anim pack failed, using source clips only: ${asset.id}`, error); return gltf; });
+}
+
 export function createLibraryLoader(value, load, prepare = (gltf) => gltf, warn = console.warn) {
   const assets = validateManifest(value).assets;
   const cache = new Map();
@@ -147,7 +185,7 @@ export function createLibraryLoader(value, load, prepare = (gltf) => gltf, warn 
     load(asset, fallback, prepareAsset = prepare) {
       if (cache.has(asset.id)) return cache.get(asset.id);
       let promise;
-      promise = Promise.resolve().then(() => load(resolveAssetSource(asset))).then((gltf) => {
+      promise = Promise.resolve().then(() => load(resolveAssetSource(asset))).then((gltf) => attachAnimPack(gltf, asset, load, warn)).then((gltf) => {
         validateLibraryModel(gltf, asset);
         gltf.scene.userData.libraryAsset = asset;
         gltf.scene.traverse((node) => {
