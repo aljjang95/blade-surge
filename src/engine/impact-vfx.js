@@ -396,10 +396,11 @@ export class ImpactVfx {
     if (!this.enabled || !pos) return 0;
     const before = this.spawned, k = boss ? 1.8 : elite ? 1.35 : 1, P = HERO_IMPACT_PALETTE[hero] || HERO_IMPACT_PALETTE.default;
     const x = pos.x, y = pos.y + 1, z = pos.z;
-    this._emit(IMPACT_KIND.core, x, y, z, .9 * k, boss || elite ? KILL_COLOR : P.accent, reduced ? .1 : .13, { grow: .5 });
+    // 중심 코어는 작게(.65): 같은 자리의 타격 코어·마법 별빛·연계 구체와 가산으로 겹쳐 대마도사 처치가 흰 청 덩어리가 됐다.
+    this._emit(IMPACT_KIND.core, x, y, z, .65 * k, boss || elite ? KILL_COLOR : P.accent, reduced ? .1 : .12, { grow: .5 });
     if (reduced) return this.spawned - before;
     this._emit(IMPACT_KIND.ring, x, y, z, 2 * k, P.accent, .24, { grow: 1 });
-    this._emit(IMPACT_KIND.star, x, y, z, 1.3 * k, boss || elite ? KILL_COLOR : P.accent, .12, { angle: .2, grow: .5 });
+    if (boss || elite) this._emit(IMPACT_KIND.star, x, y, z, 1.3 * k, KILL_COLOR, .12, { angle: .2, grow: .5 });
     // 방사형 파편: 진행 방향으로 늘어난 마름모가 튀었다 떨어진다(영웅색 / 처치 금색 번갈아).
     const n = this.lite ? 4 : boss ? 10 : elite ? 8 : 7;
     for (let i = 0; i < n; i++) {
