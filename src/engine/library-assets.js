@@ -146,7 +146,8 @@ export function createLibraryLoader(value, load, prepare = (gltf) => gltf, warn 
     heroAssets(heroId) { return heroLibraryAssets(value, heroId); },
     load(asset, fallback, prepareAsset = prepare) {
       if (cache.has(asset.id)) return cache.get(asset.id);
-      const promise = Promise.resolve().then(() => load(resolveAssetSource(asset))).then((gltf) => {
+      let promise;
+      promise = Promise.resolve().then(() => load(resolveAssetSource(asset))).then((gltf) => {
         validateLibraryModel(gltf, asset);
         gltf.scene.userData.libraryAsset = asset;
         gltf.scene.traverse((node) => {
@@ -156,7 +157,10 @@ export function createLibraryLoader(value, load, prepare = (gltf) => gltf, warn 
       }).catch((error) => {
         warn(`library asset failed, using configured library fallback: ${asset.id}`, error);
         // 폴백까지 실패하면 캐시를 비워 다음 호출에서 다시 시도한다.
-        return Promise.resolve().then(fallback).catch((fallbackError) => { cache.delete(asset.id); throw fallbackError; });
+        const result = Promise.resolve().then(fallback).catch((fallbackError) => { cache.delete(asset.id); throw fallbackError; });
+        // 스트리밍 자산을 받지 못한 일시 실패(오프라인 등)는 이번 폴백만 쓰고 결과를 캐시에 남기지 않아 다음 요청에서 다시 받는다.
+        if (error?.remoteAssetUnavailable) result.finally(() => { if (cache.get(asset.id) === promise) cache.delete(asset.id); }).catch(() => {});
+        return result;
       });
       cache.set(asset.id, promise);
       return promise;
