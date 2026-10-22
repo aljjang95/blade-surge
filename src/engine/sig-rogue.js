@@ -38,7 +38,7 @@ export const SIGNATURES = {
     const { impact, at, lite } = ctx; const LAND = .5;
     impact.mark(at, MAGENTA, { radius: 2.2, life: LAND + .15, style: MARK_STYLE.reticle });
     impact.mark(at, POISON, { radius: 4.4, life: .9, style: MARK_STYLE.thorn, delay: LAND, angle: .3 });
-    impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 4.2, DEEP, .38, { grow: 1, delay: LAND });
+    impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 2.4, DEEP, .38, { grow: 1, delay: LAND });
     impact._emit(IMPACT_KIND.star, at.x, .6, at.z, 1.4, POISON, .1, { angle: .3, grow: .5, delay: LAND });
     for (let i = 0, n = lite ? 4 : 9; i < n; i++) {
       const a = i * 2.4, r = .8 + (i % 3) * 1.1;
@@ -73,7 +73,8 @@ export const SIGNATURES = {
       impact.beam(_a, _d, len, i % 2 ? VIOLET : MAGENTA, { speed: SPEED, tail: 3.5, width: .13, delay: Math.max(0, hitT - len / SPEED) });
       impact._emit(IMPACT_KIND.cut, _b.x, .5, _b.z, 1.4, i % 2 ? DEEP : VIOLET, .3, { angle: a, stretch: 1, grow: .9, delay: hitT });
     }
-    impact._emit(IMPACT_KIND.ring, player.pos.x, .8, player.pos.z, 7, DEEP, .5, { grow: 1, delay: 1.2 });
+    impact.mark(player.pos, MAGENTA, { radius: 7, life: .5, style: MARK_STYLE.reticle, delay: 1.2 });
+    impact._emit(IMPACT_KIND.ring, player.pos.x, .8, player.pos.z, 3, DEEP, .45, { grow: 1, delay: 1.2 });
   },
   // 그림자 표식: 표시 범위(13m)를 두른 표식 원 + 둘레 여섯 점에 표식 가시가 차례로 돋고 분신의 X 자국이 그어진다.
   // 모인 표식이 터지는 순간(표식 6개 기준 .18+6×.09+.43초) 가운데 짙은 고리.
@@ -88,11 +89,11 @@ export const SIGNATURES = {
       impact._emit(IMPACT_KIND.cut, _b.x, 1, _b.z, 1.8, VIOLET, .24, { angle: ang - .8, stretch: 1.1, grow: .9, delay: t + .04 });
     }
     _b.copy(player.pos).addScaledVector(f, 3.6);
-    impact._emit(IMPACT_KIND.ring, _b.x, .7, _b.z, 5, DEEP, .4, { grow: 1, delay: HUB });
+    impact._emit(IMPACT_KIND.ring, _b.x, .7, _b.z, 3, DEEP, .4, { grow: 1, delay: HUB });
     impact.mark(_b, MAGENTA, { radius: 3, life: .5, style: MARK_STYLE.thorn, delay: HUB });
   },
   // 공허 보법: 둘레 여덟 점을 잇는 순간이동 별꼴 연쇄(점멸 박자 0.13초마다 한 획)와 획 끝 칼날 자국,
-  // 바닥엔 짙은 공허 원. 끝(total 2초 - 시전 .045초)에 큰 고리 두 겹.
+  // 바닥엔 짙은 공허 원. 끝(total 2초 - 시전 .045초)에 바닥 시계판 + 작은 고리.
   void_step(ctx) {
     const { impact, player, lite } = ctx; const P = 8, R = 4.2;
     impact.mark(player.pos, NIGHT, { radius: 6.5, life: 2, style: MARK_STYLE.thorn, angle: .3 });
@@ -104,8 +105,8 @@ export const SIGNATURES = {
       impact.beam(_a, _d, len, i % 2 ? DEEP : VIOLET, { speed: 120, tail: 0, width: .14, fade: .3, delay: t });
       impact._emit(IMPACT_KIND.cut, _b.x, 1, _b.z, 1.9, i % 2 ? MAGENTA : VIOLET, .2, { angle: cutAngle(impact, _d) + (i % 2 ? .8 : -.8), stretch: 1.1, grow: .9, delay: t + len / 120 });
     }
-    impact._emit(IMPACT_KIND.ring, player.pos.x, 1, player.pos.z, 8, DEEP, .5, { grow: 1, delay: 1.9 });
-    impact._emit(IMPACT_KIND.ring, player.pos.x, 1, player.pos.z, 5.5, MAGENTA, .4, { grow: 1, delay: 1.95 });
+    impact.mark(player.pos, VIOLET, { radius: 7, life: .55, style: MARK_STYLE.clock, delay: 1.9 });
+    impact._emit(IMPACT_KIND.ring, player.pos.x, 1, player.pos.z, 3.2, MAGENTA, .4, { grow: 1, delay: 1.95 });
   },
   // 야행 · 그림자연무: 착탄점 둘레(반경 5m)를 칼날 행렬이 세 박자(0, .1, .2초)로 돌며 접선 방향으로 베고, 바닥엔 짙은 가시 원.
   night_parade(ctx) {
@@ -116,16 +117,16 @@ export const SIGNATURES = {
       _b.set(at.x + Math.cos(a) * R, .9, at.z + Math.sin(a) * R); _d.set(-Math.sin(a), 0, Math.cos(a));
       impact._emit(IMPACT_KIND.cut, _b.x, _b.y, _b.z, 2, w === 1 ? MAGENTA : VIOLET, .24, { angle: cutAngle(impact, _d), stretch: 1.1, grow: .9, delay: w * .1 });
     }
-    impact._emit(IMPACT_KIND.ring, at.x, .6, at.z, 5.6, DEEP, .36, { grow: 1, delay: .2 });
+    impact._emit(IMPACT_KIND.ring, at.x, .6, at.z, 3, DEEP, .36, { grow: 1, delay: .2 });
   },
   // 일식 · 무영절명(최상위 각성): 착탄점에 가시 원이 조여들고(예비), 판정 순간(.3초) 일식 고리 —
-  // 짙은 보라 큰 테 + 자홍 안쪽 테 + 바깥으로 뻗는 코로나 줄기 + 가운데 X 자 칼날.
+  // 짙은 보라 시계판 큰 테 + 자홍 가시 안쪽 테(바닥) + 바깥으로 뻗는 코로나 줄기 + 가운데 X 자 칼날. 화면을 가로지르는 큰 빌보드 고리는 쓰지 않는다.
   eclipse_edge(ctx) {
     const { impact, at, lite } = ctx; const HIT = .3;
     impact.mark(at, VIOLET, { radius: 7.5, life: HIT + .1, style: MARK_STYLE.thorn, angle: .3 });
     impact.mark(at, NIGHT, { radius: 8.2, life: .9, style: MARK_STYLE.clock, delay: HIT });
-    impact._emit(IMPACT_KIND.ring, at.x, 1, at.z, 9, DEEP, .55, { grow: 1, delay: HIT });
-    impact._emit(IMPACT_KIND.ring, at.x, 1, at.z, 6, MAGENTA, .4, { grow: 1, delay: HIT + .05 });
+    impact.mark(at, MAGENTA, { radius: 5.6, life: .7, style: MARK_STYLE.thorn, angle: 1.2, delay: HIT + .05 });
+    impact._emit(IMPACT_KIND.ring, at.x, 1, at.z, 3.4, MAGENTA, .4, { grow: 1, delay: HIT });
     for (const s of [-1, 1]) impact._emit(IMPACT_KIND.cut, at.x, 1.2, at.z, 4.2, s > 0 ? MAGENTA : VIOLET, .32, { angle: s * .8, stretch: 1.2, grow: .9, delay: HIT + (s > 0 ? .04 : 0) });
     for (let i = 0, n = lite ? 6 : 14; i < n; i++) {
       const a = (i / n) * 6.2831853;

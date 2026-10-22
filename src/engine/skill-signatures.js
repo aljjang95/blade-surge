@@ -96,7 +96,7 @@ const RANGER = {
       rail(impact, _b, _d, 1, 13, 4, i % 2 ? JADE_HOT : JADE, { width: i % 2 ? .28 : .46, speed: 28, life: .8, style: i % 2 ? BEAM_STYLE.line : BEAM_STYLE.gale });
     }
     impact._emit(IMPACT_KIND.star, o.x, o.y, o.z, 2.4, JADE_HOT, .1, { angle: .3, grow: .4 });
-    impact._emit(IMPACT_KIND.ring, o.x, o.y, o.z, 3.6, JADE, .34, { grow: 1 });
+    impact._emit(IMPACT_KIND.ring, o.x, o.y, o.z, 3.2, JADE, .34, { grow: 1 });
     const n = lite ? 3 : 6;
     for (let w = 0; w < 2; w++) for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + w * .45, r = 1.6 + w * .9;
