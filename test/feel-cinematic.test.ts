@@ -57,6 +57,15 @@ test('실제 Battle.playBeat: 시간 시계·렌더러에 나눠 보내고, 동�
   expect(lastScale).toBeGreaterThan(.9);
 });
 
+test('실제 Battle.playBeat: 저장된 화면 흔들림 OFF 면 카메라 펀치를 보내지 않고 정지·슬로우는 그대로', () => {
+  const f = createCombatFlowFixture(runtime, 'knight'); const kicks: number[] = [];
+  f.game.app.reducedMotion.matches = false; (f.game.app as any).screenShakeOn = () => false;
+  (f.game.renderer as any).kick = (n: number) => kicks.push(n);
+  for (const kind of ['ultRelease', 'bossKill']) (f.game as any).playBeat(kind);
+  expect(kicks).toEqual([]);
+  expect(f.game.timeCtl.slowT).toBeGreaterThan(0);
+});
+
 test('실제 Player 궁극기: 시전 순간에만 ultRelease 가 한 번 불린다(일반 스킬은 아님)', () => {
   const f = createCombatFlowFixture(runtime, 'knight'), p: any = f.player; const calls: any[] = [];
   (f.game as any).ultRelease = (who: any) => calls.push(who);
