@@ -290,8 +290,10 @@ def monster_hit_knockback(ctx, name='hitKnockback'):
   base = 'hit'
   src = L.duration(ctx.acts[base])
   # 충격 박자는 클립 길이와 무관하게 초 단위로 둔다(원본 피격이 2초 넘는 대형 몬스터도 0.12초에 젖혀진다).
+  # 길이는 0.62~0.8초로 묶는다. 강타 경직(약 0.5~0.72초, 1.4배속)이 끝나기 전에 시작 자세로 돌아와야 다음 동작으로 튀지 않는다
+  # (원본 피격이 2초인 대형 몬스터는 앞부분만 쓰고 끝 30% 에서 시작 자세로 수렴한다).
   hold = 0.1
-  dur = max(0.62, src + hold)
+  dur = min(0.8, max(0.62, src + hold))
   times = L.grid(dur)
   frames = L.sample(ctx.arm, ctx.acts[base], [max(0.0, min(src, t - hold)) for t in times])
   hh, h = ctx.hh, rest_height(ctx)
@@ -323,7 +325,7 @@ def monster_hit_knockback(ctx, name='hitKnockback'):
         for root in roots: L.translate_world(ctx.rig, g, root, UP * lift)
       out.append(g)
   if ctx.humanoid: out, _ = L.ground_fix(ctx.arm, ctx.rig, out, times, ctx.hips)
-  out = L.seam_blend(out, times, out[0], 0.85)
+  out = L.seam_blend(out, times, out[0], 0.7)
   ctx.add(name, times, out, base, 'hit-knockback', {'duration': round(dur, 4), 'holdS': hold, 'restHeightM': round(h, 3)})
 
 
@@ -345,7 +347,7 @@ RECIPES = {
   ],
   'hero_mage_t1': HERO_HITS + HERO_DEATHS,
   # 도적·궁수 사망·회피·찌르기는 몸체별 저작 보정(hero-body-motion)과 활 접지 계약이 원본 클립에 묶여 있어 바꾸지 않는다.
-  'hero_rogue_t1': HERO_HITS + [('death_back', death_back)],
+  'hero_rogue_t1': HERO_HITS,
   'hero_ranger_t1': HERO_HITS,
 }
 HUMANOID_SPAWN = {'bone_knight', 'shadow_soldier', 'skeleton_mage', 'goblin_chief', 'goblin_raider', 'goblin_brute', 'frost_yeti', 'demon_lord'}
