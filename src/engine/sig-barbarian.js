@@ -13,6 +13,8 @@ const { ember: EMBER, flame: FLAME, crimson: CRIMSON, blood: BLOOD, molten: MOLT
 const TAU = Math.PI * 2;
 /** 큰 지면 표식(6m 이상)은 가산이라 원색 그대로면 바닥이 분홍·크림으로 바랜다. 같은 색상을 어둡게 낮춰 채도를 지킨다. */
 const DEEP_EMBER = 0xb8380e, DEEP_CRIMSON = 0xa0140e;
+/** 가시 고리 표식은 반경이 커지면 옅은 바퀴(크림·분홍 원판)로 읽힌다. 넓은 판정은 용암 균열 길이로 보이고 표식은 이 반경까지만. */
+const THORN_MAX = 4.5;
 const _a = new THREE.Vector3(), _b = new THREE.Vector3(), _d = new THREE.Vector3();
 /** 실제 임팩트 층인지(테스트 대역·미초기화 FX 에서 도우미가 전투 루프를 깨지 않게). */
 const live = (impact) => !!impact && impact.enabled !== false && typeof impact.beam === 'function' && typeof impact.mark === 'function' && !!impact.rng;
@@ -72,7 +74,7 @@ export function barbWhirlTick(game, pos, i) {
 export function barbRushEnd(game, center, f) {
   const impact = game?.fx?.impact; if (!live(impact) || !center || game.app?.reducedMotion?.matches) return 0;
   const lite = !!game.fx.lite, before = impact.spawned;
-  impact.mark(center, DEEP_CRIMSON, { radius: 6.2, life: .5, style: MARK_STYLE.thorn, angle: yawOf(f) });
+  impact.mark(center, DEEP_CRIMSON, { radius: THORN_MAX, life: .5, style: MARK_STYLE.thorn, angle: yawOf(f) });
   impact._emit(IMPACT_KIND.ring, center.x, .6, center.z, 4.5, EMBER, .3, { grow: 1 });
   lavaFissures(impact, center, lite ? 4 : 8, .8, 7, EMBER, { phase: yawOf(f) });
   risingEmbers(impact, center, lite ? 5 : 12, 3, FLAME);
@@ -90,7 +92,7 @@ export const SIGNATURES = {
   // 대지 분쇄: 내리친 자리에서 용암 균열 열 갈래가 판정 반경(8m)까지 갈라지고, 세 박자(0/.08/.16) 고리와 불씨가 솟는다.
   quake(ctx) {
     const { impact, at, lite } = ctx;
-    impact.mark(at, DEEP_CRIMSON, { radius: 8, life: .6, style: MARK_STYLE.thorn });
+    impact.mark(at, DEEP_CRIMSON, { radius: THORN_MAX, life: .6, style: MARK_STYLE.thorn });
     lavaFissures(impact, at, lite ? 5 : 10, .6, 8.5, EMBER, { speed: 55 });
     for (const [i, d] of [0, .08, .16].entries()) impact._emit(IMPACT_KIND.ring, at.x, .5, at.z, 2.4 + i * 1, i === 1 ? MOLTEN : EMBER, .3, { grow: 1, delay: d });
     risingEmbers(impact, at, lite ? 6 : 14, 4, FLAME, { delay: .04 });
@@ -107,7 +109,7 @@ export const SIGNATURES = {
   // 착탄: 세로 도끼 호 + 용암 균열 열두 갈래 + 큰 고리 두 겹 + 불씨 기둥.
   hell_axe(ctx) {
     const { impact, at: t, lite } = ctx; const FALL = .5;
-    impact.mark(t, DEEP_CRIMSON, { radius: 6, life: FALL + .5, style: MARK_STYLE.thorn });
+    impact.mark(t, DEEP_CRIMSON, { radius: 4, life: FALL + .5, style: MARK_STYLE.thorn });
     _a.set(t.x, 16, t.z); _d.set(0, -1, 0);
     impact.beam(_a, _d, 16, EMBER, { speed: 32, tail: 7, width: .32 });
     impact._emit(IMPACT_KIND.cut, t.x, 2.2, t.z, 5.5, FLAME, .32, { angle: -Math.PI / 2 + .25, grow: .7, delay: FALL - .04 });
@@ -140,16 +142,16 @@ export const SIGNATURES = {
       impact._emit(IMPACT_KIND.ring, _b.x, .4, _b.z, 3, i % 2 ? CRIMSON : EMBER, .28, { grow: 1, delay: d });
       if (!lite) risingEmbers(impact, _b, 3, 1, MOLTEN, { delay: d, rise: 10 });
     }
-    impact.mark(c, DEEP_EMBER, { radius: 6.4, life: 1.4, style: MARK_STYLE.thorn, delay: .75 });
+    impact.mark(c, DEEP_EMBER, { radius: 3.6, life: 1.4, style: MARK_STYLE.thorn, delay: .75 });
     lavaFissures(impact, c, lite ? 4 : 8, 1, 6.4, CRIMSON, { delay: .75, speed: 30, width: .09, fade: 1 });
   },
   // 혈왕·대지붕괴: 두 번 무너진다 — 0초 진홍 가시 고리(6m) + 핏빛 균열, .2초 불씨 가시 고리(8m) + 더 긴 균열·큰 고리·불기둥 불씨.
   bloodquake(ctx) {
     const { impact, player, lite } = ctx; const c = player.pos;
-    impact.mark(c, DEEP_CRIMSON, { radius: 6, life: .5, style: MARK_STYLE.thorn });
+    impact.mark(c, DEEP_CRIMSON, { radius: 3.4, life: .5, style: MARK_STYLE.thorn });
     impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 3.4, CRIMSON, .3, { grow: 1 });
     lavaFissures(impact, c, lite ? 4 : 8, .6, 6, CRIMSON, { speed: 50 });
-    impact.mark(c, DEEP_EMBER, { radius: 8, life: .6, style: MARK_STYLE.thorn, angle: .31, delay: .2 });
+    impact.mark(c, DEEP_EMBER, { radius: THORN_MAX, life: .6, style: MARK_STYLE.thorn, angle: .31, delay: .2 });
     impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 4.6, EMBER, .34, { grow: 1, delay: .2 });
     lavaFissures(impact, c, lite ? 6 : 12, 1, 9, EMBER, { speed: 60, delay: .2, phase: .26, width: .13 });
     risingEmbers(impact, c, lite ? 6 : 14, 5, FLAME, { delay: .2, rise: 8 });
@@ -159,8 +161,8 @@ export const SIGNATURES = {
   // 용암 균열 열네 갈래, 거대 고리 두 겹, 불씨 분수.
   cataclysm(ctx) {
     const { impact, at, lite } = ctx; const T = .3;
-    impact.mark(at, DEEP_CRIMSON, { radius: 9, life: T + .55, style: MARK_STYLE.thorn });
-    impact.mark(at, EMBER, { radius: 4.5, life: T + .2, style: MARK_STYLE.thorn, angle: .31 });
+    impact.mark(at, DEEP_CRIMSON, { radius: THORN_MAX, life: T + .55, style: MARK_STYLE.thorn });
+    impact.mark(at, EMBER, { radius: 2.6, life: T + .2, style: MARK_STYLE.thorn, angle: .31 });
     risingEmbers(impact, at, lite ? 3 : 7, 2, CRIMSON, { rise: 4 });
     _d.set(0, 1, 0);
     for (let i = 0; i < (lite ? 3 : 5); i++) {
