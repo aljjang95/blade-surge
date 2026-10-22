@@ -5,7 +5,8 @@ import { join, relative } from 'node:path';
 import { classify, compileSplit, globToRegExp, loadSplit, scanOutput, stripRemote, summarize, verifyChannelBuild, writeAssetManifests } from '../tools/optimize/asset-split.mjs';
 import { bgmUrl, musicForScene, townMusic } from '../src/data/music.js';
 import { ENCOUNTER_ART } from '../src/data/encounter-art.js';
-import { STAGES_PER_CHAPTER, stageDef } from '../src/data/stages.js';
+import { ENEMIES, STAGES_PER_CHAPTER, stageDef } from '../src/data/stages.js';
+import { monsterRosterEntry } from '../src/data/monster-roster.js';
 import manifest from '../asset-library/manifest.json';
 import { NATIVE_ORIGINS } from '../worker/native-cors';
 
@@ -46,12 +47,24 @@ test('모든 규칙은 이유가 있고, remote 규칙은 묶음 이름이 있�
 
 // 번들이 만드는 해시 이름(assets/<이름>-<해시>.glb)은 public 에 없으니 asset-library 목록으로 분류를 확인한다.
 const hashed = (id: string) => `assets/${id}-Ab12Cd34.glb`;
-test('번들 해시 이름 GLB: 1단계 영웅·몬스터는 core, 2·3단계 몸체와 아바타는 remote', () => {
+// 1지역 편성에 없는 몬스터(2지역부터)는 remote 다.
+const LATE_MONSTERS = new Set(['demon_lord', 'treant', 'fire_phoenix']);
+test('번들 해시 이름 GLB: 1단계 영웅·1지역 몬스터는 core, 2·3단계 몸체·아바타·2지역 이후 몬스터는 remote', () => {
   for (const asset of manifest.assets as { id: string; role?: string; armorTier?: number; avatar?: boolean }[]) {
     const verdict = classify(hashed(asset.id), split)!;
-    const expected = asset.avatar ? 'remote' : asset.role === 'hero' && (asset.armorTier || 1) >= 2 ? 'remote' : 'core';
+    const expected = asset.avatar || LATE_MONSTERS.has(asset.id) ? 'remote' : asset.role === 'hero' && (asset.armorTier || 1) >= 2 ? 'remote' : 'core';
     expect(verdict.class, asset.id).toBe(expected);
   }
+});
+
+// 1지역(1-1~1-10) 캠페인 파도에 나오는 몬스터 몸체는 모두 core 여야 한다(첫 플레이가 네트워크를 기다리지 않는다).
+test('1지역 캠페인 몬스터 몸체는 전부 core', () => {
+  const ids = new Set<string>();
+  for (let st = 1; st <= STAGES_PER_CHAPTER; st++) for (const wave of (stageDef(1, st) as any).waves) for (const id of wave) {
+    const model = (ENEMIES as any)[id]?.model; const entry = model && monsterRosterEntry(model); if (entry) ids.add(entry.asset);
+  }
+  expect(ids.size).toBeGreaterThan(5);
+  for (const id of ids) expect(classify(hashed(id), split)!.class).toBe('core');
 });
 
 test('낡은 remote 규칙이 없다: 모든 remote 규칙이 public 파일 또는 번들 해시 GLB 와 맞는다', () => {
