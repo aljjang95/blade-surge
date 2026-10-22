@@ -171,9 +171,9 @@ test('_headers: remote 가 있는 모든 폴더에 앱 출처 CORS 가 있고, �
   expect([...folders].sort()).toEqual(['/assets/', '/bgm/', '/img/', '/models/', '/video/']);
   for (const folder of folders) {
     const rule = rules.find(entry => entry.prefix === folder);
-    expect(rule, folder).toBeDefined();
+    expect(rule).toBeDefined();
     const allow = rule!.headers['access-control-allow-origin'];
-    expect(NATIVE_ORIGINS, folder).toContain(allow);
+    expect(NATIVE_ORIGINS).toContain(allow);
     expect(allow).not.toBe('*');
     expect(rule!.headers['access-control-allow-credentials']).toBeUndefined();
   }
