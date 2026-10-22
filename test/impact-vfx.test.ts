@@ -80,3 +80,8 @@ test('서 있는 큰 빛과 광선 면적은 블룸 부하(load)로 쌓이고, �
   v.clear(); expect(v.load).toBe(0);
   v.dispose();
 });
+
+test('링 한 바퀴(군중 2배 실측 최대 생성 속도 기준)가 가장 긴 표식·광선 수명보다 길다', async () => {
+  const m: any = await import('../src/engine/impact-vfx.js');
+  expect(m.IMPACT_CAPACITY / (m.IMPACT_PEAK_RATE * m.IMPACT_CROWD_FACTOR)).toBeGreaterThan(m.IMPACT_LONGEST_LIFE);
+});

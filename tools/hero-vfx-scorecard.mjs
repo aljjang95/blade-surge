@@ -136,7 +136,7 @@ try {
         const png = await page.screenshot();
         const file = `${hero}-${c.id}-${Math.round(t * 1000)}.png`;
         await fs.writeFile(path.join(out, file), png);
-        const live = await page.evaluate(() => { const r = window.app.renderer; const f = window.app.fx; return { particles: f.sparks.n + f.glow.n + f.smoke.n, fxItems: f.items.length, exposure: +(window.app.fx._exposure || 0).toFixed(1), bloom: +(r.bloom?.strength ?? 0).toFixed(3) }; });
+        const live = await page.evaluate(() => { const r = window.app.renderer; const f = window.app.fx; return { particles: f.sparks.n + f.glow.n + f.smoke.n, fxItems: f.items.length, exposure: +(window.app.fx._exposure || 0).toFixed(1), bloom: +(r.bloom?.strength ?? 0).toFixed(3), impactSpawned: f.impact?.spawned ?? null, impactLive: f.impact?.live?.() ?? null }; });
         shots.push({ t: +t.toFixed(2), file, calls, ...(await metrics(png, basePng)), ...live });
       }
       const peak = shots.reduce((m, s) => Math.max(m, s.bright), 0), peakWhite = shots.reduce((m, s) => Math.max(m, s.white), 0);

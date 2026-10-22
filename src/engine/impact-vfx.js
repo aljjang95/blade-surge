@@ -58,7 +58,14 @@ export const ARROW_STREAKS = Object.freeze({
   bind: Object.freeze({ tail: 9, width: .13, color: 0x63e08a, glow: .3, style: 1, muzzle: .65 }),
   gale: Object.freeze({ tail: 8, width: .12, color: 0x3fe0a0, glow: .32, style: 2, muzzle: .6 }),
 });
-export const IMPACT_CAPACITY = 512;
+/** 링 칸 수. 표식·광선은 지연 포함 수명이 2.2초까지 길다(결박 파열 1.75초 지연 + .45초, 독무 웅덩이·성역 문양 1.5~1.6초). 점수표 실측 최대 생성 속도는 단일 스킬
+ * 425칸/초(대마도사 프리즘, 적 8기)라, 군중 전투에서 그 두 배(850칸/초)가 나와도 한 바퀴(2.4초)가 가장 긴 수명보다 길게 2048칸을 둔다.
+ * 512칸은 0.6~1.2초에 한 바퀴 돌아 긴 표식이 수명 중간에 새 칸으로 덮였다. 드로우콜은 그대로 1. */
+export const IMPACT_CAPACITY = 2048;
+/** 가장 긴 장식 수명(지연 포함, 초). 링 한 바퀴가 이보다 길어야 한다(테스트가 확인). */
+export const IMPACT_LONGEST_LIFE = 2.2;
+/** 점수표 실측 최대 생성 속도(칸/초)와 군중 배수. */
+export const IMPACT_PEAK_RATE = 425, IMPACT_CROWD_FACTOR = 2;
 /** 한 프레임에 새로 낼 수 있는 칸 상한(군중 동시 타격에도 업로드·채움 비용이 일정하다). */
 export const IMPACT_FRAME_BUDGET = 72;
 /** 같은 자리 겹침 억제: STACK_SEC 초 안에 STACK_DIST m 안쪽을 다시 치면 코어·자국을 다시 그리지 않고 불똥만 낸다.
