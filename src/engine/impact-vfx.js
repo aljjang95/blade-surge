@@ -31,7 +31,7 @@ const CRIT_COLOR = 0xffd23a, CRIT_DEEP = 0xffa81e, KILL_COLOR = 0xffe2a0;
 export const HERO_COMBO = Object.freeze({
   knight: Object.freeze({ shape: 'arc', color: 0xffc23a, hot: 0xffe27a, base: 1.55, grow: .5 }),
   ranger: Object.freeze({ shape: 'arrow', color: 0x3fe0a0, hot: 0x9fffd8, base: .7, grow: .45 }),
-  mage: Object.freeze({ shape: 'orb', color: 0x5aa8ff, hot: 0x9fd0ff, base: .85, grow: .5 }),
+  mage: Object.freeze({ shape: 'orb', color: 0x3f86ff, hot: 0x7fb8ff, base: .6, grow: .5 }),
   rogue: Object.freeze({ shape: 'cross', color: 0xb466ff, hot: 0xe2b8ff, deep: 0x8a3cff, base: 1.2, grow: .45 }),
   barbarian: Object.freeze({ shape: 'smash', color: 0xff5a1e, hot: 0xff9a3a, base: 1.1, grow: .55 }),
 });
