@@ -12,7 +12,8 @@ export const IMPACT_KIND = Object.freeze({ core: 0, streak: 1, star: 2, ring: 3,
 // 5 광선: 시작점에서 aVel(월드 벡터) 끝까지 aMotion.x(m/s) 속도로 머리가 나아가고 aShape.w(m) 뒤에서 꼬리가 따라온다.
 //   화살 비행 궤적과 같은 속도로 그어져 '관통 일직선'을 읽게 한다. aShape.z = 모양(0 직선, 1 덩굴 물결, 2 쌍나선 바람).
 // 6 지면 표식: 월드 XZ 평면에 눕는 표식. aShape.z = 회전, aShape.w = 모양(0 조준 원, 1 부채꼴, 2 가시 고리, 3 나침 고리, 4 시계판).
-export const BEAM_STYLE = Object.freeze({ line: 0, vine: 1, gale: 2 });
+// 3 얼음 가시: 흰 심 없이 옅은 하늘색 심 → 진한 청 가장자리, 머리(끝)로 갈수록 가늘어지는 결정. 4 분광: 흰 심 없이 제 빛깔 그대로의 날카로운 선(프리즘).
+export const BEAM_STYLE = Object.freeze({ line: 0, vine: 1, gale: 2, ice: 3, prism: 4 });
 export const MARK_STYLE = Object.freeze({ reticle: 0, fan: 1, thorn: 2, compass: 3, clock: 4 });
 
 /** 영웅별 타격 색 언어: core = 달아오른 중심, accent = 불똥·고리·자국. 기본 공격·스킬 모두 같은 색 계열을 쓴다. */
@@ -140,15 +141,31 @@ const FRAG = `
       if (vStyle > 0.5 && vStyle < 1.5) y -= sin(uv.x * 9.0 + k * 18.0) * 0.32;
       float along = pow(clamp(uv.x * 0.5 + 0.5, 0.0, 1.0), 1.4);
       float core = exp(-y * y * 70.0), glow = exp(-y * y * 5.0) * 0.4;
-      if (vStyle > 1.5) {
+      if (vStyle > 1.5 && vStyle < 2.5) {
         // 쌍나선 바람: 심 양옆을 꼬이며 감는 두 가닥.
         float w1 = uv.y - sin(uv.x * 7.0 - k * 22.0) * 0.55, w2 = uv.y + sin(uv.x * 7.0 - k * 22.0) * 0.55;
         glow += (exp(-w1 * w1 * 40.0) + exp(-w2 * w2 * 40.0)) * 0.55;
       }
       float headHot = smoothstep(0.82, 1.0, uv.x);
-      a = (core * (0.55 + 0.45 * along) + glow * along) * (0.35 + 0.65 * along) * (1.0 - smoothstep(0.78, 1.0, k));
-      a *= 1.0 - smoothstep(0.92, 1.0, abs(uv.x));
-      col = mix(vColor, vec3(1.0), clamp(core * (0.45 + headHot * 0.5), 0.0, 1.0));
+      if (vStyle > 2.5) {
+        // 얼음·분광: 흰 심(백화) 없이 몸이 또렷한 띠. 얼음은 끝으로 갈수록 가늘어지고 심이 옅은 하늘색, 가장자리는 본색(진한 청).
+        float ice = 1.0 - step(3.5, vStyle);
+        float u01 = clamp(uv.x * 0.5 + 0.5, 0.0, 1.0);
+        float taper = mix(1.0, mix(1.0, 0.14, u01), ice);
+        float yy = abs(uv.y) / taper;
+        // 기존 선의 보이는 심(반폭 ≈ .15)과 같은 굵기로 몸을 자르고, 바깥은 본색 옅은 테만 남긴다(넓은 파스텔 띠 금지).
+        float body = 1.0 - smoothstep(0.16, 0.3, yy);
+        float halo = exp(-yy * yy * 7.0) * 0.2;
+        float coreF = exp(-yy * yy * 60.0);
+        a = (body * (0.6 + 0.4 * along) + halo * along) * (1.0 - smoothstep(0.78, 1.0, k));
+        a *= 1.0 - smoothstep(0.92, 1.0, abs(uv.x));
+        vec3 pale = mix(vColor, vec3(0.5, 0.8, 1.0), 0.34);
+        col = ice > 0.5 ? mix(vColor * 0.85, pale, coreF) : vColor * (0.85 + 0.3 * coreF);
+      } else {
+        a = (core * (0.55 + 0.45 * along) + glow * along) * (0.35 + 0.65 * along) * (1.0 - smoothstep(0.78, 1.0, k));
+        a *= 1.0 - smoothstep(0.92, 1.0, abs(uv.x));
+        col = mix(vColor, vec3(1.0), clamp(core * (0.45 + headHot * 0.5), 0.0, 1.0));
+      }
     } else if (vKind > 5.5 && vKind < 6.5) {
       // 지면 표식: 얇은 선 위주(바닥 가산 면적을 작게). 마지막 25% 에 사라진다.
       float fade = (k < 0.12 ? k / 0.12 : 1.0) * (1.0 - smoothstep(0.75, 1.0, k));

@@ -770,6 +770,7 @@ export const SKILLS = {
       const prev = new THREE.Vector3();
       const lance = game.fx.orb(0x2f8cff, 0.5);   // 프리즘 창: 옅은 하늘색(0x9fd8ff) 구·후광은 흰 덩어리로만 보였다(h1b). 진한 청 구 + 굵은 궤적(magePrismTrail)으로 읽힌다 lance.position.copy(state.pos);
       lance.userData.core.userData.ownGeo = true;   // fx 가 정리할 수 있게 표시 (안 하면 캐스트마다 지오메트리가 샌다)
+      lance.userData.halo?.scale?.setScalar(1.1);   // 표시만: 2m 가산 후광이 시전 직후 옅은 청색 원으로 보였다(h1c). 판정 반경(1.7m)과 무관
       const disposeLance = () => { lance.userData.core.material.dispose(); lance.userData.halo.material.dispose(); };
 
       audio.zap({ vol: 0.5, dur: 0.3 });
@@ -788,9 +789,10 @@ export const SKILLS = {
           state.hit.add(e); state.bounces++;
           const mul = 1 + state.bounces * 0.22;
           game.damageEnemy(e, c.dmg * mul, { kind: 'magic', kb: 2.2, source: p, dirx: state.dir.x, dirz: state.dir.z, quietStop: state.bounces > 2 });
-          game.fx.flash(e.pos.clone().setY(1.2), 0x3a9cff, { size: 1.8, life: 0.1 });
+          // 표시만(h1c): 1.8m 섬광·2.4m 충격파 원판이 첫 반사(시전 직후)마다 옅은 청색 큰 원으로 보였다. 굴절 지점은 magePrismBounce 의 선이 맡는다.
+          game.fx.flash(e.pos.clone().setY(1.2), 0x2a7cff, { size: 1, life: 0.08 });
           game.fx.burst(e.pos.clone().setY(1.1), 0x4a9cff, { n: 12, speed: 8, size: 0.3 });
-          game.fx.shockTex(e.pos, 0x2f7cff, { r1: 2.4, life: 0.25 });
+          game.fx.shockTex(e.pos, 0x2a5cd8, { r1: 1.5, life: 0.22 });
           audio.clang({ vol: 0.3, freq: 1400 + state.bounces * 180, dur: 0.2 });
           // 다음 적을 향해 굴절
           let best = null, bd = 15;

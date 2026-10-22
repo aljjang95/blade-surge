@@ -45,11 +45,13 @@ export const SKILL_VFX = Object.freeze({
   bloodquake: R(VIOLET, 'lava-crack', 'self', 'ground', 0xd02020, 9, { noRune: true, sig: true }),
   cataclysm: R(GOLD, 'meteor', 'aim', 'flash', 0xff5a3c, 12, { dist: 2 }),
   // 대마도사
-  fireball: R(GOLD, 'meteor', 'front', 'flash', 0xff7228, 4, { dist: 3, noRune: true, sig: true }),
+  // 화염구·프리즘: 시전 순간 전방 3~4m 허공에 운석 원화·임팩트 코어(옅은 하늘색·주황 덩어리)가 먼저 터져 '덩어리'로 읽혔다(h1c).
+  // 착탄 중심은 투사체 폭발(_fireImpact)·서명이 맡고, 레시피는 원화·섬광·코어를 생략한다(noBurst).
+  fireball: R(GOLD, 'meteor', 'front', 'none', 0xff7228, 4, { dist: 3, noRune: true, sig: true, noBurst: true }),
   chain: R(VIOLET, 'chain-lightning', 'self', 'flash', 0x5aa8ff, 4.5, { noRune: true, sig: true, gain: .7 }),
   blizzard: R(VIOLET, 'ice-burst', 'self', 'none', 0x2a9cff, 7, { noRune: true, sig: true }),
   meteor: R(GOLD, 'meteor', 'aim', 'flash', 0xff8a40, 11, { dist: 4, seek: [15, 5] }),
-  arc_reflect: R(VIOLET, 'chain-lightning', 'front', 'none', 0x5fc8ff, 4, { dist: 4, noRune: true, sig: true }),
+  arc_reflect: R(VIOLET, 'chain-lightning', 'front', 'none', 0x5fc8ff, 4, { dist: 4, noRune: true, sig: true, noBurst: true }),
   chrono_seal: R(VIOLET, 'rune-circle-violet', 'self', 'none', 0x8a7cff, 9, { noRune: true, sig: true }),
   star_prison: R(VIOLET, 'ice-burst', 'aim', 'none', 0x5a6cff, 9, { dist: 5, seek: [16, 5], noRune: true, sig: true }),
   absolute_zero: R(VIOLET, 'ice-burst', 'aim', 'ground', 0x2a8cff, 12, { dist: 6, seek: [17, 6] }),
@@ -137,7 +139,7 @@ export function castSkillVfx(game, skillId, player, ctx = null, seek = null) {
     // 2) 스킬 텍스처
     if (r.mode === 'ground') fx.groundTex(_at, skillVfxKey(r.tex), color, { r0: size * 0.3, r1: size, life: 0.6, spin: reduced ? 0 : 0.5, y: 0.09, fadeIn: 0.1, gain: groundGain(r.tex) * g });
     else if (r.mode === 'flash') fx.texFlash(_at, skillVfxKey(r.tex), color, { size, life: 0.45, spin: reduced ? 0 : 0.6, grow: 1.1, y: 1, gain: g });
-    if (!reduced && !crowded) {
+    if (!reduced && !crowded && !r.noBurst) {
       // 3) 노출 곱 섬광: 100ms 이하, 화면 전체가 아니라 월드 한 점
       // 자기 중심 스킬은 섬광·임팩트 중심이 영웅 몸통을 하얗게 덮지 않게 발목 높이에 작게 찍는다.
       const self = r.place === 'self';
