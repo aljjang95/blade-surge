@@ -2,14 +2,14 @@ import * as THREE from 'three';
 import { softCircleTex, sparkTex, ringTex, slashTex, smokeTex, VFX_TEX } from './assets.js';
 import { ImpactLights } from './impact-lights.js';
 import { CombatVfx } from './combat-vfx.js';
-import { ImpactVfx, HERO_IMPACT_PALETTE, IMPACT_KIND } from './impact-vfx.js';
+import { ImpactVfx, HERO_IMPACT_PALETTE, IMPACT_KIND, MARK_STYLE } from './impact-vfx.js';
 import { spawnSanctum } from './sanctum-vfx.js';
 import { HeroEffectFocus } from './hero-effect-focus.js';
 import { WeaponTrail, createWeaponTrailMaterial } from './weapon-trail.js';
 import { bloomLoadFor, compactCombatStatus, decorativeBurstGain, boundedFeedbackGain, combatTextRegions, combatTextViewport, heroCombatTextRegion, placeCombatStatus } from './combat-feedback.js';
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
-const _tintHsl = { h: 0, s: 0, l: 0 }, _tintColor = new THREE.Color(), _sigRing = new THREE.Color();
+const _tintHsl = { h: 0, s: 0, l: 0 }, _tintColor = new THREE.Color(), _sigRing = new THREE.Color(), _fireMarkPos = new THREE.Vector3();
 /** 불꽃·폭발 원화(주황 결)를 차가운 영웅색(보라·청·비취)으로 칠할 때 원화 색을 밝기로 바꿔 색을 살리는 비율.
  * 따뜻한 색(빨강~노랑)과 흰빛·크림은 원화 그대로(0). 예전에는 보라를 곱해 주황·분홍 불기둥이 됐다. */
 export function textureTintMix(color) {
@@ -39,10 +39,14 @@ export const ABILITY_VFX_PROFILES = Object.freeze({
   // party fight, so every school now has a unique silhouette pair.
   steel: Object.freeze({ ground: 'circle_gold', flash: 'slash', secondary: 'holy_burst', color: 0xffd060, accent: 0xffffff, radius: 2.8, burst: 14, light: 0.9 }),
   // 화염: 크림 강조색(0xffd060)·밝은 주황 폭발 원화가 가산으로 겹쳐 흰 코어가 됐다. 진홍 쪽 주황과 불씨 주황으로 낮춘다.
-  fire: Object.freeze({ ground: 'circle_demon', flash: 'explosion', secondary: 'phoenix', color: 0xff5418, accent: 0xff8a26, radius: 3.6, burst: 20, light: 1.2, pillar: true, flashGain: .72 }),
+  // 화염구 착탄·발사 순간 폭발 원화(주황·노랑 심)와 불사조 잔상이 블룸에서 크림 번짐이 됐다(h1b): 본색은 진홍 쪽, 강조는 진한 주황,
+  // 원화 밝기를 낮추고 또렷한 모양은 _fireImpact 의 나침 폭발 표식·불꽃 혀가 맡는다.
+  fire: Object.freeze({ ground: 'circle_demon', flash: 'explosion', secondary: 'phoenix', color: 0xf0401a, accent: 0xff641a, radius: 3.6, burst: 20, light: 1.2, pillar: true, flashGain: .5, groundGain: .8, secondaryGain: .6 }),
   // 냉기 강조색은 흰빛(0xdff8ff) 대신 진한 하늘색: 눈보라·절대영도에서 얼음 원화와 겹쳐 화면이 하얗게 덮였다.
   // 서리: 옅은 하늘색(0x5fcfff) 기운이 지면·고리에 흰빛으로 번졌다. 진한 청 결정색으로.
-  frost: Object.freeze({ ground: 'circle_gold', flash: 'ice', secondary: 'shockwave', color: 0x2f8cff, accent: 0x62b4ff, radius: 3.4, burst: 16, light: 1.0, groundColor: 0x1466f0, groundScale: .8, flashGain: .7 }),
+  // 눈보라 발밑 옅은 하늘색 기운(h1b): 얼음 원화 섬광·충격파 잔상·지면 문양이 발밑에 겹쳐 흰 안개가 됐다. 강조색을 진한 청으로,
+  // 얼음 원화와 지면 밝기를 낮춘다(모양은 sig-mage 의 서리 가시·소용돌이 팔이 맡는다).
+  frost: Object.freeze({ ground: 'circle_gold', flash: 'ice', secondary: 'shockwave', color: 0x2f8cff, accent: 0x2f74ff, radius: 3.4, burst: 16, light: 1.0, groundColor: 0x1258e8, groundScale: .8, flashGain: .45, groundGain: .7, secondaryGain: .4 }),
   arcane: Object.freeze({ ground: 'circle_gold', flash: 'lightning_chain', secondary: 'lightning', color: 0x70b8ff, accent: 0xd7f4ff, radius: 3.0, burst: 15, light: 1.0, groundColor: 0x3a5cff, groundScale: .8 }),
   nature: Object.freeze({ ground: 'circle_gold', flash: 'phoenix', secondary: 'dust', color: 0x63e08a, accent: 0xd7ff9d, radius: 3.3, burst: 18, light: 0.85 }),
   void: Object.freeze({ ground: 'circle_demon', flash: 'singularity', secondary: 'blood_burst', color: 0x8f55ff, accent: 0xd5a6ff, radius: 3.2, burst: 18, light: 1.1 }),
@@ -651,6 +655,7 @@ export class FX {
       y: 0.075,
       fadeIn: 0.08,
       hold: heavy ? t * 0.24 : 0,
+      gain: spec.groundGain ?? 1,
     });
     // 고리 띠 두께는 반지름에 비례해 6m 넘는 무거운 서명에서 흰 도넛이 됐다(눈보라·시간 봉인). 흰 강조색 대신 학파 색을 낮춰 쓴다.
     _sigRing.set(spec.color).multiplyScalar(heavy ? .5 : .75);
@@ -672,6 +677,8 @@ export class FX {
       spin: profile === 'void' ? -1.1 : profile === 'arcane' ? 0.95 : -0.45,
       grow: heavy ? 1.25 : 0.9,
       y: 0,
+      // 잔상 원화(불사조·충격파)는 강조색 그대로 가산이라 화염·서리에서 발밑 크림/흰 원판이 됐다: 학파별 밝기 상한(h1b).
+      gain: spec.secondaryGain ?? 1,
     });
     this.burst(anchor.clone().setY(anchor.y + 0.55), spec.accent, {
       n: Math.round(spec.burst * (heavy ? 1.35 : 1)),
@@ -693,7 +700,16 @@ export class FX {
     const before = I.spawned, rng = I.rng, y = (pos.y || 0) + .5;
     I._emit(IMPACT_KIND.ring, pos.x, y, pos.z, 3.4 * k, 0xd8261a, .34, { grow: 1 });
     I._emit(IMPACT_KIND.ring, pos.x, y, pos.z, 2.2 * k, 0xff6a1e, .26, { grow: 1, delay: .04 });
+    // 바닥 나침 폭발 표식(진홍): 크림 원화 번짐 대신 '폭발이 터진 자리'를 모양으로 남긴다(h1b 화염구·운석 착탄).
+    _fireMarkPos.set(pos.x, 0, pos.z);
+    I.mark(_fireMarkPos, 0xc8201a, { radius: 2.4 * k, life: heavy ? .7 : .55, style: MARK_STYLE.compass, angle: rng.next() * 6.2831853 });
     if (this.lite) return I.spawned - before;
+    // 바깥으로 눕는 불꽃 혀 여섯: 폭발 고리 둘레에서 비스듬히 솟아 별 모양 실루엣을 만든다.
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * 6.2831853 + .3, r = 1.4 * k;
+      I._emit(IMPACT_KIND.streak, pos.x + Math.cos(a) * r, .35, pos.z + Math.sin(a) * r, .3 * k, i % 2 ? 0xff5a14 : 0xd8261a, .42,
+        { vx: Math.cos(a) * 6 * k, vy: 5, vz: Math.sin(a) * 6 * k, stretch: 1.3, grow: 1, gravity: 10, delay: .02 });
+    }
     for (let i = 0, n = heavy ? 10 : 7; i < n; i++) {
       const a = (i / n) * 6.2831853 + rng.next() * .5, sp = (7 + rng.next() * 5) * k;
       I._emit(IMPACT_KIND.shard, pos.x, y, pos.z, .26 * k, i % 2 ? 0xff8a26 : 0xe8341c, .42 + rng.next() * .14,

@@ -11,10 +11,10 @@ import { IMPACT_KIND, MARK_STYLE, BEAM_STYLE } from './impact-vfx.js';
  * 대상이 실행 중에 정해지는 번개 사슬·운석·반사·눈보라 틱은 skills.js 가 그 순간 아래 도우미(mage*)를 부른다.
  */
 export const MAGE_COLORS = Object.freeze({
-  fire: 0xff5a1a, fireHot: 0xffa030, bolt: 0x5aa8ff, boltHot: 0xa8dcff, frost: 0x2a9cff, frostHot: 0x6ccaff,
+  fire: 0xff5a1a, fireHot: 0xffa030, fireDeep: 0xd8261a, bolt: 0x5aa8ff, boltHot: 0xa8dcff, frost: 0x2a9cff, frostHot: 0x6ccaff,
   arcane: 0x7a5cff, arcaneHot: 0xb09cff, star: 0x4a5cff, starLine: 0x6a7cff, starGold: 0xffc85a, prism: 0x7fe0ff,
   // 지면 서리 고리는 가산이라 원색이면 바닥이 하얗게 바랜다. 같은 색상을 낮춘 진한 하늘색으로 그린다.
-  frostMid: 0x1f7fd0,
+  frostMid: 0x1f7fd0, frostDeep: 0x1650c8,
   // 번개 광선은 심이 흰색 쪽으로 섞이고 가산이라, 원색 청을 쓰면 굵게 했을 때 흰 선이 된다. 진한 청으로 그려 청백을 유지한다.
   boltDeep: 0x2a6cff, boltCore: 0x4a90ff, prismDeep: 0x2a90d0,
 });
@@ -96,50 +96,75 @@ export function mageMeteorFall(game, start, pt, fall = .4) {
   return impact.spawned - before;
 }
 
-/** 눈보라 판정 틱(.4초마다): 판정 반경 서리 가시 고리 + 바닥에서 솟는 얼음 가시. */
+/** 바닥 서리 소용돌이 팔: arms 갈래가 r0 → r1 로 감기며 뻗는 짧은 지면 광선. 눈보라의 '회오리' 실루엣(흰 원판 대신 진한 청 선). */
+function frostSpiral(impact, c, arms, segs, r0, r1, phase, { width = .4, fade = .45, delay = 0 } = {}) {
+  for (let j = 0; j < arms; j++) {
+    for (let k = 0; k < segs; k++) {
+      const t0 = k / segs, t1 = (k + 1) / segs, base = phase + (j / arms) * TAU;
+      const a0 = base + t0 * 1.7, a1 = base + t1 * 1.7, q0 = r0 + (r1 - r0) * t0, q1 = r0 + (r1 - r0) * t1;
+      _p0.set(c.x + Math.cos(a0) * q0, .08, c.z + Math.sin(a0) * q0);
+      _d.set(c.x + Math.cos(a1) * q1 - _p0.x, 0, c.z + Math.sin(a1) * q1 - _p0.z);
+      impact.beam(_p0, _d, _d.length(), k % 2 ? C.frostMid : C.frostDeep, { width: width * (1.25 - t0 * .5), fade, delay: delay + k * .03 });
+    }
+  }
+}
+
+/** 눈보라 판정 틱(.4초마다): 몸 둘레 서리 가시 고리 + 판정 반경까지 감겨 나가는 서리 소용돌이 팔 + 바닥에서 솟는 얼음 가시. */
 export function mageFrostTick(game, pos, i, radius = 6.8) {
   const impact = game?.fx?.impact; if (!live(impact) || !pos || reducedOf(game)) return 0;
-  const before = impact.spawned;
-  // 큰 가시 고리는 옅은 흰 바퀴로 읽혀 몸 둘레 3m 서리 고리만 두고, 판정 반경은 얼음 가시가 채운다.
-  impact.mark(pos, C.frostMid, { radius: 3, life: .42, style: MARK_STYLE.thorn, angle: i * .37 });
-  iceSpikes(impact, pos, game.fx.lite ? 4 : 8, 1.5, radius - .3, i % 2 ? C.frost : C.frostHot, { phase: i * .9, width: .3, h: 1.7 });
-  // 얼음 결정 반짝임: 판정 반경 안 네 점에 진한 하늘색 작은 별(결정면).
-  for (let k = 0; k < (game.fx.lite ? 2 : 4); k++) {
-    const a = i * 1.3 + k * 1.57, r = 2.2 + ((i + k) % 3) * 1.4;
+  const before = impact.spawned, lite = !!game.fx.lite;
+  // 큰 가시 고리는 옅은 흰 바퀴로 읽혀(3m 도 발밑 옅은 하늘색 띠였다) 몸 둘레 2.4m 진한 청 서리 고리만 두고, 판정 반경은 소용돌이 팔·얼음 가시가 채운다.
+  impact.mark(pos, C.frostDeep, { radius: 2.4, life: .42, style: MARK_STYLE.thorn, angle: i * .37 });
+  // 틱마다 .55rad 씩 돌아가는 세 갈래 소용돌이(폭풍이 도는 방향이 판정 박자마다 읽힌다).
+  frostSpiral(impact, pos, lite ? 2 : 3, 3, 1.6, radius - .4, i * .55);
+  // 얼음 가시: 옅은 frostHot(흰 심 광선) 대신 진한 하늘색 두 톤.
+  iceSpikes(impact, pos, lite ? 3 : 6, 1.5, radius - .3, i % 2 ? C.frostMid : C.frostDeep, { phase: i * .9, width: .2, h: 1.7 });
+  // 얼음 결정 반짝임: 판정 반경 안 두 점에 진한 하늘색 작은 별(결정면).
+  for (let k = 0; k < (lite ? 1 : 2); k++) {
+    const a = i * 1.3 + k * 3.14, r = 2.6 + ((i + k) % 3) * 1.2;
     impact._emit(IMPACT_KIND.star, pos.x + Math.cos(a) * r, .9 + (k % 2) * .6, pos.z + Math.sin(a) * r, .6, C.frostMid, .3, { angle: a, grow: .6, delay: k * .05 });
   }
-  // 폭풍의 회전: 몸을 감아 도는 서리 줄기(접선 속도). 흰 눈송이 대신 하늘색 선.
-  const n = game.fx.lite ? 4 : 9;
+  // 폭풍의 회전: 몸을 감아 도는 서리 줄기(접선 속도). 흰 눈송이 대신 진한 하늘색 선.
+  const n = lite ? 3 : 6;
   for (let k = 0; k < n; k++) {
     const a = i * .7 + (k / n) * TAU, r = 2.5 + (k % 3) * 1.4;
-    impact._emit(IMPACT_KIND.streak, pos.x + Math.cos(a) * r, 1 + (k % 4) * .6, pos.z + Math.sin(a) * r, .2, k % 2 ? C.frost : C.frostHot, .38,
+    impact._emit(IMPACT_KIND.streak, pos.x + Math.cos(a) * r, 1 + (k % 4) * .6, pos.z + Math.sin(a) * r, .2, k % 2 ? C.frost : C.frostMid, .38,
       { vx: -Math.sin(a) * 12, vy: -1.5, vz: Math.cos(a) * 12, stretch: 1.2, grow: 1 });
   }
   return impact.spawned - before;
 }
 
-/** 프리즘 난반사 한 번(skills.js arc_reflect 가 튕길 때 부른다): 청록 별빛 + 세 빛깔로 갈라지는 짧은 광선. */
+/** 프리즘 스펙트럼 다섯 빛깔(보라 → 남 → 청 → 청록 → 비취). 가산이라 진한 색만 쓴다(옅은 색은 흰 심이 된다). */
+const PRISM_SPECTRUM = Object.freeze([0x7a3cff, 0x3a4cff, 0x1f7cff, 0x2a90d0, 0x16b49a]);
+
+/** 프리즘 난반사 한 번(skills.js arc_reflect 가 튕길 때 부른다): 굴절 지점 두 겹 고리 + 바닥 굴절 표식 + 스펙트럼 다섯 갈래 광선.
+ *  창이 작고 빨라 앞 시점에서 짧게만 보이던 것을, 튕긴 자리마다 .5초 남는 표식·빛 부채로 읽히게 한다(h1b). */
 export function magePrismBounce(game, pos, dir, n = 0) {
   const impact = game?.fx?.impact; if (!live(impact) || !pos || reducedOf(game)) return 0;
   const before = impact.spawned;
   // 맞은 자리 별빛(흰 심)은 적 몸을 하얗게 덮어 빼고, 청록·보라 두 겹 고리로 굴절 지점을 찍는다.
   impact._emit(IMPACT_KIND.ring, pos.x, pos.y, pos.z, 1.2 + Math.min(n, 12) * .08, C.prismDeep, .22, { grow: 1 });
   impact._emit(IMPACT_KIND.ring, pos.x, pos.y, pos.z, 1.8, C.arcane, .26, { grow: 1, delay: .04 });
+  _q.set(pos.x, 0, pos.z);
+  impact.mark(_q, C.prismDeep, { radius: 1.4 + Math.min(n, 12) * .05, life: .55, style: MARK_STYLE.compass, angle: n * .6 });
   if (!game.fx.lite && dir) {
     const base = Math.atan2(dir.z, dir.x);
-    for (const [j, col] of [C.prismDeep, C.arcane, C.boltDeep].entries()) {
-      const a = base + (j - 1) * .4; _d.set(Math.cos(a), 0, Math.sin(a));
-      impact.beam(pos, _d, 3.6, col, { speed: 30, tail: 2, width: .2 });
+    for (let j = 0; j < PRISM_SPECTRUM.length; j++) {
+      const a = base + (j - 2) * .22; _d.set(Math.cos(a), 0, Math.sin(a));
+      impact.beam(pos, _d, 4.6, PRISM_SPECTRUM[j], { speed: 32, tail: 2.6, width: .2 });
     }
   }
   return impact.spawned - before;
 }
 
-/** 프리즘 창이 지나간 자리(매 프레임 한 마디, skills.js arc_reflect 가 부른다): 진한 청록 광선이 짧게 남는다. */
+/** 프리즘 창이 지나간 자리(매 프레임 한 마디, skills.js arc_reflect 가 부른다): 진한 청록 굵은 궤적 + 가는 보라 심이 .7초 남아
+ *  굴절 경로 전체가 꺾인 빛줄기로 읽힌다. */
 export function magePrismTrail(game, from, to) {
   const impact = game?.fx?.impact; if (!live(impact) || !from || !to || reducedOf(game)) return 0;
   _d.copy(to).sub(from); const l = _d.length(); if (!(l > .01)) return 0;
-  return impact.beam(from, _d, l, C.prismDeep, { width: .36, fade: .45 }) ? 1 : 0;
+  let used = impact.beam(from, _d, l, C.prismDeep, { width: .46, fade: .7 }) ? 1 : 0;
+  if (!game.fx.lite && impact.beam(from, _d, l, C.arcane, { width: .14, fade: .5 })) used++;
+  return used;
 }
 
 /**
@@ -166,21 +191,21 @@ export const PRELUDES = {
 
 /** @type {Record<string, (ctx: import('./skill-signatures.js').SigCtx) => void>} */
 export const SIGNATURES = {
-  // 화염구: 손끝 주황 고리 + 앞으로 뿜는 불똥 + 화염구를 감고 따라가는 쌍나선 불길(앞 5m).
+  // 화염구: 손끝 진홍 고리 + 앞으로 뿜는 불똥 + 화염구를 감고 따라가는 쌍나선 불길(앞 6.5m) + 지나는 길의 불똥.
+  // 손끝 밝은 주황(fireHot) 고리·불똥은 화염구 후광과 겹쳐 크림 번짐이 됐다(h1b): 진홍 본색 위주로, 발밑 나침 표식은 _fireImpact 가 맡는다.
   fireball(ctx) {
     const { impact, player, f, lite } = ctx;
     _a.copy(player.pos).addScaledVector(f, 1).setY(1.4);
-    impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 2, C.fire, .26, { grow: 1 });
-    impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 1.2, C.fireHot, .2, { grow: 1, delay: .05 });
-    impact._streaks(_a, f, lite ? 5 : 12, 12, .36, C.fireHot, { up: 1.2, spread: .5, size: .24 });
+    impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 1.7, C.fire, .24, { grow: 1 });
+    impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 1, C.fireDeep, .2, { grow: 1, delay: .05 });
+    impact._streaks(_a, f, lite ? 5 : 10, 12, .36, C.fire, { up: 1.2, spread: .5, size: .24 });
     impact.beam(_a, f, 6.5, C.fire, { speed: 15, tail: 3.5, width: .5, style: BEAM_STYLE.gale });
+    if (!lite) impact.beam(_a, f, 6.5, C.fireDeep, { speed: 15, tail: 2, width: .9, style: BEAM_STYLE.gale, delay: .02 });
     // 화염구가 지나는 길에 떨어지는 불똥(화염구 속도 15m/s 와 같은 박자).
     for (let k = 0; k < (lite ? 3 : 6); k++) {
       const d = 1.2 + k * 1.1; _b.copy(_a).addScaledVector(f, d);
-      impact._emit(IMPACT_KIND.streak, _b.x, _b.y, _b.z, .22, k % 2 ? C.fire : C.fireHot, .4, { vx: f.z * 3 * (k % 2 ? 1 : -1), vy: 1, vz: -f.x * 3 * (k % 2 ? 1 : -1), stretch: 1, grow: 1, gravity: 14, delay: d / 15 });
+      impact._emit(IMPACT_KIND.streak, _b.x, _b.y, _b.z, .22, k % 2 ? C.fire : C.fireDeep, .4, { vx: f.z * 3 * (k % 2 ? 1 : -1), vy: 1, vz: -f.x * 3 * (k % 2 ? 1 : -1), stretch: 1, grow: 1, gravity: 14, delay: d / 15 });
     }
-    // 발밑 화염 학파 문양: 작은 주황 나침 폭발 표식(공용 룬 대신).
-    impact.mark(ctx.player.pos, C.fire, { radius: 2.2, life: .5, style: MARK_STYLE.compass, angle: Math.atan2(f.z, f.x) });
   },
   // 번개 사슬: 하늘에서 들어 올린 손으로 청백 번개가 내리꽂히고 발밑 짧은 고리. 연쇄 마디는 mageBolt.
   chain(ctx) {
@@ -201,8 +226,10 @@ export const SIGNATURES = {
   // 빙결 폭풍: 판정 반경(6.8m) 서리 가시 고리가 폭풍 내내 남고 바깥 둘레에 얼음 가시 벽이 솟는다. 틱마다는 mageFrostTick.
   blizzard(ctx) {
     const { impact, player, lite } = ctx;
-    impact.mark(player.pos, C.frostMid, { radius: 3.4, life: 1.2, style: MARK_STYLE.thorn, angle: .3 });
-    iceSpikes(impact, player.pos, lite ? 7 : 16, 6.2, 7, C.frost, { h: 2, width: .3, fade: 1.6 });
+    impact.mark(player.pos, C.frostDeep, { radius: 2.6, life: 1.2, style: MARK_STYLE.thorn, angle: .3 });
+    iceSpikes(impact, player.pos, lite ? 7 : 16, 6.2, 7, C.frostDeep, { h: 2, width: .18, fade: 1.6 });
+    // 시전 순간 바깥에서 몸 쪽으로 감기는 네 갈래 소용돌이(폭풍이 모이는 예비 동작). 틱 소용돌이는 mageFrostTick.
+    if (!lite) frostSpiral(impact, player.pos, 4, 3, 1.2, 6.4, .2, { width: .6, fade: .6 });
   },
   // 메테오 스톰(궁극기): 낙하 구역(7.8m)에 주황 나침 표식과 열기 고리가 먼저 깔린다. 한 발마다의 궤적·폭발은 mageMeteorFall.
   meteor(ctx) {
@@ -210,20 +237,22 @@ export const SIGNATURES = {
     impact.mark(at, C.fire, { radius: 4.5, life: 1.8, style: MARK_STYLE.compass });
     impact._emit(IMPACT_KIND.ring, at.x, .4, at.z, 4.5, C.fire, .36, { grow: 1 });
   },
-  // 프리즘 난반사: 손끝 청록 별빛에서 빛이 세 갈래(청록·보라·청)로 갈라져 앞으로 뻗는다. 튕길 때는 magePrismBounce.
+  // 프리즘 난반사: 손끝 두 겹 고리에서 빛이 스펙트럼 다섯 갈래(보라 → 비취)로 부채처럼 갈라져 앞으로 뻗고, 바닥에 굴절 각을 재는
+  // 조준 원과 앞으로 펼쳐지는 빛 부채 표식이 남는다. 튕길 때는 magePrismBounce, 궤적은 magePrismTrail.
   arc_reflect(ctx) {
-    const { impact, player, f } = ctx;
+    const { impact, player, f, lite } = ctx;
     _a.copy(player.pos).addScaledVector(f, 1.2).setY(1.3);
-    // 프리즘 광선은 심이 흰색 쪽으로 섞이니 진한 세 빛깔(청록·보라·청)로 그리고, 손끝은 별빛 대신 두 겹 고리.
+    // 프리즘 광선은 심이 흰색 쪽으로 섞이니 진한 빛깔만 쓰고, 손끝은 별빛 대신 두 겹 고리.
     impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 1.4, C.prismDeep, .22, { grow: 1 });
     impact._emit(IMPACT_KIND.ring, _a.x, _a.y, _a.z, 2.2, C.arcane, .28, { grow: 1, delay: .04 });
     const base = Math.atan2(f.z, f.x);
-    for (const [j, col] of [C.prismDeep, C.arcane, C.boltDeep].entries()) {
-      const a = base + (j - 1) * .12; _d.set(Math.cos(a), 0, Math.sin(a));
-      impact.beam(_a, _d, 10, col, { speed: 30, tail: 5, width: .22 });
+    for (let j = 0; j < (lite ? 3 : PRISM_SPECTRUM.length); j++) {
+      const jj = lite ? j * 2 : j, a = base + (jj - 2) * .09; _d.set(Math.cos(a), 0, Math.sin(a));
+      impact.beam(_a, _d, 10, PRISM_SPECTRUM[jj], { speed: 30, tail: 5, width: .22 });
     }
-    // 발밑 프리즘 문양: 청록 조준 원(굴절 각을 재는 원).
-    impact.mark(ctx.player.pos, C.prismDeep, { radius: 1.8, life: .5, style: MARK_STYLE.reticle, angle: base });
+    // 바닥: 발밑 청록 조준 원 + 앞으로 펼쳐지는 보라 빛 부채(굴절이 시작되는 방향).
+    impact.mark(player.pos, C.prismDeep, { radius: 1.8, life: .5, style: MARK_STYLE.reticle, angle: base });
+    if (!lite) impact.mark(player.pos, C.arcane, { radius: 5, life: .45, style: MARK_STYLE.fan, angle: base, delay: .03 });
   },
   // 시간 봉인: 바닥 시계판(skills.js)에 더해 열두 시각 눈금 자리에 보라 별빛이 한 바퀴 차례로 켜지고 큰 보라 고리가 퍼진다.
   chrono_seal(ctx) {
