@@ -55,7 +55,8 @@ const ZONE_FRAG = `
 
 /** 기둥 수별 지오메트리 캐시. 적응 품질이 lite(4)↔정상(8)을 오가도 새로 만들지 않고, 살아 있는 성역이 쓰는 옛 지오메트리를 버리지 않는다. */
 const pillarGeometries = new Map();
-/** n 개의 기둥 사각형(가로 -.5~.5, 세로 0~1)을 한 지오메트리로 묶는다. aPillar = (각도, 솟는 순서). 모든 성역이 공유한다. */
+/** n 개의 기둥 사각형(가로 -.5~.5, 세로 0~1)을 한 지오메트리로 묶는다. aPillar = (각도, 솟는 순서). 모든 성역이 공유한다.
+ * @param {number} [n] */
 export function sanctumPillarGeometry(n = SANCTUM.pillars) {
   const cached = pillarGeometries.get(n); if (cached) return cached;
   const pos = new Float32Array(n * 4 * 3), pil = new Float32Array(n * 4 * 2), idx = [];
