@@ -54,7 +54,7 @@ test('번들 해시 이름 GLB: 1단계 영웅·몬스터는 core, 2·3단계 �
 test('낡은 remote 규칙이 없다: 모든 remote 규칙이 public 파일 또는 번들 해시 GLB 와 맞는다', () => {
   const names = [...publicFiles, ...(manifest.assets as { id: string }[]).map(asset => hashed(asset.id))];
   // 웹 호스트에만 있는 Opus(.ogg) 지역곡도 public 에 있다.
-  for (const rule of split.rules.filter(rule => rule.class === 'remote')) {
+  for (const rule of split.rules.filter((rule: any) => rule.class === 'remote')) {
     expect(names.some(name => rule.re.test(name)), `${rule.glob} 와 맞는 파일이 없습니다`).toBe(true);
   }
 });
@@ -99,7 +99,7 @@ function fixture() {
 test('scanOutput/writeAssetManifests: core·remote 를 가르고 내용 해시와 묶음 크기를 적는다', async () => {
   const f = fixture();
   try {
-    const { manifest: m } = await writeAssetManifests(f.dir, { split, channel: 'googleplay', full: true, log: () => {} });
+    const { manifest: m } = (await writeAssetManifests(f.dir, { split, channel: 'googleplay', full: true, log: () => {} })) as any;
     expect(Object.keys(m.remote).sort()).toEqual(['assets/hero_knight_t2-bb.glb', 'bgm/regions/forge.ogg', 'img/encounters/forge_captain.webp']);
     expect(m.remote['bgm/regions/forge.ogg']).toMatchObject({ g: 'region-2', b: 5 });
     expect(m.remote['bgm/regions/forge.ogg'].h).toMatch(/^[0-9a-f]{16}$/);
