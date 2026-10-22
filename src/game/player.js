@@ -20,6 +20,8 @@ import { skillAimShape, playerSkillAimShape } from './skill-aim/shapes.js';
 
 const _v = new THREE.Vector3();
 const _glintAt = new THREE.Vector3();
+// 노바 마무리 색: 영웅색을 진하게(옅은 큰 원판이 화면 아래를 파스텔로 덮지 않게).
+const _novaColor = new THREE.Color();
 // 궁수 전투 시점(카메라 고도 약 36°)에서 모자 챙·앞머리가 눈을 가려 애꾸처럼 보이던 문제(2026-10-19 S26 실기기, 2026-10-20 재지적).
 // 클립이 머리 뼈를 쓴 직후 고개를 뒤로 젖혀 얼굴을 카메라 쪽으로 들어 두 눈을 드러낸다. 판정·위치·난수와 무관한 렌더 뼈 보정이다.
 // 머리 뼈 로컬 축: 앞 +x, 위 +y, 귀 +z. 피치(고개 젖힘)는 z 축 회전이다. 예전 값은 앞 축(x) 12°로 옆으로 기울이는 롤이라 눈이 드러나지 않았다.
@@ -412,7 +414,7 @@ export class Player extends Actor {
       const hits = this.game.hitRadius(this.pos, c.range, dmg, { kb: c.kb + (counterFinisher ? 2 : 0), stun: counterFinisher ? .4 : 0, kind: 'magic', finisher: true, counter: counterFinisher, comboToken, source: this, basic: true });
       this.game.sp?.onComboHit(hits);
       // 마무리 노바: 옅은 강조색(accent, 크림·흰빛 계열) 대신 영웅 본색으로, 크기 2.4→1.8배(영웅·적을 하얗게 덮지 않게).
-      this.game.fx.holyBurst(this.pos, { size: c.range * 1.8, life: 0.45, color: this.def.color }); this.game.fx.shockTex(this.pos, this.def.color, { r1: c.range * 1.6, life: 0.4 }); this.game.fx.ring(this.pos, this.def.color, { r0: 0.5, r1: c.range + 1, life: 0.35, vertical: false });
+      const deep = _novaColor.set(this.def.color).multiplyScalar(.62).getHex(); this.game.fx.holyBurst(this.pos, { size: c.range * 1.25, life: 0.4, color: deep }); this.game.fx.shockTex(this.pos, deep, { r1: c.range * 1.15, life: 0.35 }); this.game.fx.ring(this.pos, deep, { r0: 0.5, r1: c.range, life: 0.3, vertical: false });
       this.game.renderer.shake(0.4); audio.magic({ vol: 0.4, base: 330, notes: [0, 7, 12], step: 0.04 }); audio.boom({ vol: 0.4, dur: 0.4, low: 90 });
       if (!hits) audio.whoosh({ vol: 0.15, pitch: 1.8, dur: 0.12 });
       return;
