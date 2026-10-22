@@ -2,16 +2,33 @@ import * as THREE from 'three';
 import { materialsOf, spawnCharacter } from '../engine/assets.js';
 import { RIGS } from '../data/rigs.js';
 import { attackPhase, attackBody, monsterAttackPhase } from './combat-motion.js';
+import { knockbackDecay } from './feel.js';
 
 const _v = new THREE.Vector3();
 const _weaponQuaternion = new THREE.Quaternion();
 export const ARENA_R = 15.5;
 // 처치 연출(위로 튀며 회전)의 길이와 결정적 변주. 게임 난수를 소비하지 않는다.
 const LAUNCH_SEC = 0.55;
+// 피격 발광 정점·상한. 예전 .38×무게(최대 1.6 → .6)는 흰 해골 재질을 블룸 임계 위로 올려 적마다 크림색 구름이 됐다.
+// 모양 있는 타격 신호는 impact 층(영웅색 코어·자국·불똥)이 맡고, 몸 발광은 '맞았다'는 짧은 악센트로만 남긴다.
+export const HIT_FLASH = Object.freeze({ peak: .26, max: .32, reduced: .16 });
 // 렌더 피벗 방향 보간 시간상수(초). 0.1초 안에 90% 따라간다.
 const TURN_SMOOTH_SEC = 0.045;
+const DEATH_TURN_SEC = 0.06;
 let launchSerial = 0x2f6e2b1;
 const launchNoise = () => (launchSerial = (Math.imul(launchSerial, 1664525) + 1013904223) >>> 0) / 4294967296;
+
+/** 지금 실제로 섞이는 무게에서 0 으로 내린다. three 의 fadeOut 은 항상 무게 1 에서 시작해서, 막 페이드인을 시작한 동작
+ * (예: 회피가 끝난 프레임의 Idle 직후 공격)이 다음 프레임에 전신 무게로 튀었다(고정 픽스처 회피 끝 46° 한 프레임 튐).
+ * 페이드 중이면 무게 보간기를 현재 믹서 시각에서 읽고, 아니면 유효 무게를 쓴다. 할당 없음. */
+export function fadeOutFromCurrent(action, duration) {
+  const interp = action._weightInterpolant, mixer = action._mixer;
+  let w = action.enabled === false ? 0 : action.getEffectiveWeight();
+  if (action.enabled !== false && interp && mixer) w = action.weight * interp.evaluate(mixer.time)[0];
+  w = Math.max(0, Math.min(1, Number.isFinite(w) ? w : 1));
+  if (typeof action._scheduleFading !== 'function') return action.fadeOut(duration);
+  return action._scheduleFading(duration, w, 0);
+}
 
 export class Actor {
   /** @param {*} game @param {*} gltf @param {{scale?: number, tint?: string|number|null, rig?: string, roster?: *}} options */
@@ -61,8 +78,16 @@ export class Actor {
       attack2: ['attack'], attackHeavy: ['attack', 'attack2'], attackSpin: ['attackHeavy', 'attack'],
       attackJump: ['attackHeavy', 'attack'], cast: ['attack'], raise: ['cast', 'attack'],
       summon: ['roar', 'cast', 'attack'], spawn: ['roar', 'idle'], run: ['walk'],
+      // 강타 피격 클립이 없는 자산은 일반 피격으로(예전에는 idle 로 떨어져 강타를 맞아도 서 있었다).
+      hitHeavy: ['hit'],
     }[key] || [];
-    for (const fallback of chain) if (this.clips[this.rig[fallback]] || this.clips[fallback]) return this.clips[this.rig[fallback]] ? this.rig[fallback] : fallback;
+    // 폴백은 난수 없이 리그 후보 중 첫 실제 클립, 없으면 논리 이름 그대로의 클립을 쓴다.
+    for (const fallback of chain) {
+      const mapped = this.rig[fallback];
+      if (Array.isArray(mapped)) { for (const name of mapped) if (name && this.clips[name]) return name; }
+      else if (mapped && this.clips[mapped]) return mapped;
+      if (this.clips[fallback]) return fallback;
+    }
     for (const k of [key === 'run' ? 'walk' : null, 'idleCombat', 'idle']) {
       if (!k) continue; const f = this.rig[k]; const fp = Array.isArray(f) ? f[0] : f;
       if (fp && this.clips[fp]) return fp;
@@ -76,7 +101,7 @@ export class Actor {
     this._attackMotion = null;
     const a = this.mixer.clipAction(clip);
     if (this.action === a && !restart) { a.timeScale = speed; return a; }
-    if (this.action && this.action !== a) this.action.fadeOut(fade);
+    if (this.action && this.action !== a) fadeOutFromCurrent(this.action, fade);
     a.reset(); a.enabled = true; a.setLoop(loop && !once ? THREE.LoopRepeat : THREE.LoopOnce, Infinity); a.clampWhenFinished = clamp || once; a.timeScale = speed; a.setEffectiveWeight(1); a.fadeIn(fade); a.play();
     this.action = a; this.actionName = name; return a;
   }
@@ -179,6 +204,11 @@ export class Actor {
         pivot.scale.set(1 + squash*.55, 1 - squash, 1 + squash*.55);
       }
     }
+    if (this._deathTurn) {
+      // 처치 순간 공격자 쪽으로 돌아선 몸을 렌더에서만 시간상수 DEATH_TURN_SEC 로 따라 돌린다.
+      this._deathTurn = reduced || Math.abs(this._deathTurn) < 1e-3 ? 0 : this._deathTurn * Math.exp(-dt / DEATH_TURN_SEC);
+      pivot.rotation.y += this._deathTurn;
+    }
     this.updateTurnSmoothing(dt, reduced);
   }
   /** 렌더 전용 방향 보간: 판정 방향(yaw)은 즉시, 보이는 몸은 시간상수 TURN_SMOOTH_SEC 로 따라 돈다. 판정·위치·난수는 건드리지 않는다. */
@@ -200,7 +230,7 @@ export class Actor {
     if (this.flashT > 0) {
       this.flashT = Math.max(0, this.flashT - dt);
       const k = this.flashT / this.flashDuration;
-      const strength = (this.game.app?.reducedMotion?.matches ? .16 : .38 * (this.flashGain || 1)) * k * k;
+      const strength = (this.game.app?.reducedMotion?.matches ? HIT_FLASH.reduced : Math.min(HIT_FLASH.max, HIT_FLASH.peak * (this.flashGain || 1))) * k * k;
       for (const m of this.mats) {
         m.emissive.copy(this.flashColor).multiplyScalar(strength);
         if (this.tintEmissive) m.emissive.add(this.tintEmissive);
@@ -220,7 +250,7 @@ export class Actor {
     this.heroPose?.apply(dt);
     // 넉백 감쇠
     const fx0 = this.pos.x, fz0 = this.pos.z;
-    if (this.kb.lengthSq() > 0.0001) { this.pos.addScaledVector(this.kb, dt); this.kb.multiplyScalar(Math.pow(0.02, dt)); }
+    if (this.kb.lengthSq() > 0.0001) { this.pos.addScaledVector(this.kb, dt); this.kb.multiplyScalar(knockbackDecay(dt)); }
     this.pos.addScaledVector(this.vel, dt);
     // 벽 충돌 (월드가 있으면 슬라이딩, 없으면 원형 아레나)
     const W = this.game.world;

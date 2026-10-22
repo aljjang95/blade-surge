@@ -37,8 +37,8 @@ export function enemyPalette(enemy, base, accent) {
   return base;
 }
 
-/** 고정 용량 링 버퍼. 가장 오래된 칸부터 덮어쓰고, 살아 있는 구간만 그리도록 count/visible 을 관리한다. */
-class InstanceRing {
+/** 고정 용량 링 버퍼. 가장 오래된 칸부터 덮어쓰고, 살아 있는 구간만 그리도록 count/visible 을 관리한다. 타격 섬광(impact-vfx)도 같은 링을 쓴다. */
+export class InstanceRing {
   constructor(scene, geometry, material, capacity, attributes, renderOrder) {
     this.capacity = capacity; this.cursor = 0; this.high = 0; this.lastExpiry = NEVER; this.lo = capacity; this.hi = -1;
     this.expiry = new Float32Array(capacity).fill(NEVER);

@@ -32,15 +32,24 @@ test('manual basic attacks keep facing and spacing instead of auto-aiming or rus
   expect(p.vel.length()).toBe(0);
 });
 
-test('held attack does not reserve the entire combo; a fresh press does', () => {
+test('held attack keeps starting the combo until it is released', () => {
   const started: number[] = [];
   const p = manualPlayer({ startCombo: (index: number) => started.push(index) });
   const held = { move: { x: 0, y: 0 }, attackHeld: true, consume: () => false };
   Player.prototype.handleInput.call(p, held, 0.016);
-  expect(started).toHaveLength(0);
+  expect(started).toEqual([0]);
 
-  const pressed = { move: { x: 0, y: 0 }, attackHeld: true, consume: (name: string) => name === 'attack' };
-  Player.prototype.handleInput.call(p, pressed, 0.016);
+  // 떼면 새 예약이 없다. 이미 시작한 타는 그대로 끝난다.
+  const released = { move: { x: 0, y: 0 }, attackHeld: false, consume: () => false };
+  p.state = 'idle';
+  Player.prototype.handleInput.call(p, released, 0.016);
+  expect(started).toEqual([0]);
+
+  // 입력이 꺼진 동안 남은 홀드 값(또는 AUTO)은 공격을 만들지 않는다.
+  const stale = { move: { x: 0, y: 0 }, attackHeld: true, enabled: false, consume: () => false };
+  Player.prototype.handleInput.call(p, stale, 0.016);
+  p.auto = true; p.autoMove = () => ({ x: 0, y: 0 });
+  Player.prototype.handleInput.call(p, { ...stale, enabled: true }, 0.016);
   expect(started).toEqual([0]);
 });
 

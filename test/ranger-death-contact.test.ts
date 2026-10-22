@@ -111,7 +111,8 @@ test('v4 사망: 1단계·갑옷 2·3단계·여우 아바타 모두 실제 활 
     }
     disposeCharacter(inst.root, inst.mixer);
   }
-});
+  // 아바타 4종 × 전 프레임 스키닝 검사라 단독 약 9초, 병렬 부하 시 20초 가까이 걸린다(기본 5초 제한에서 시간 초과로만 실패).
+}, 60_000);
 
 test('v4 사망은 쓰러짐(18f=0.75초까지)·몸·끝 자세가 v3 와 같고 정착 구간 활 회전에 새 튐이 없다', async () => {
   const inst = spawnCharacter(await loadHeroModel('ranger', 1)), old = await v3Death(), now = inst.clips.death;

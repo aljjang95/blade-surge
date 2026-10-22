@@ -83,21 +83,65 @@ afterEach(() => {
   }
 });
 
-test('fresh first departure is playable immediately and starts with a collapsed guide', () => {
+test('fresh first departure is playable immediately and shows the essential controls expanded without blocking input', () => {
   key('keydown', 'KeyW'); key('keydown', 'Space'); input.update();
   const queue = [...input.queue];
   expect(tutorial.begin(stage)).toBe(true);
   expect(battle.paused).toBe(false); expect(battle.pauseReasons.size).toBe(0); expect(input.enabled).toBe(true);
   expect((input.keys as Record<string, boolean>).KeyW).toBe(true); expect(input.attackHeld).toBe(true); expect(input.queue).toEqual(queue);
-  expect(elements.get('battle-tutorial')!.hidden).toBe(false); expect(elements.get('tutorial-panel')!.hidden).toBe(true);
-  expect((tutorial as any).toggle.textContent).toBe('조작 안내 보기'); expect(events).toEqual([]);
+  // 첫 전투는 조이스틱 이동 안내부터 펼쳐진 채 시작하고, 전투·입력은 멈추지 않는다.
+  expect(elements.get('battle-tutorial')!.hidden).toBe(false); expect(elements.get('tutorial-panel')!.hidden).toBe(false);
+  expect((tutorial as any).phase).toBe('move'); expect(elements.get('tutorial-title')!.textContent).toBe('이동');
+  expect(elements.get('tutorial-copy')!.textContent).toContain('조이스틱');
+  expect(elements.get('battle-tutorial')!.classes.has('guided')).toBe(true);
+  expect((tutorial as any).toggle.textContent).toBe('안내 접기'); expect(events).toEqual([{ name: 'tutorial_step', data: { step: 1 } }]);
   expect(saves).toBe(0); expect(app.eco.s.tutorial.completed).toBe(false);
 });
 
-test('actual attack, dodge and skill state transitions never pause or clear an ongoing command', () => {
+test('guided first run advances by the action performed and folds to a pulsing toggle when the time window ends', () => {
+  tutorial.begin(stage);
+  for (const [state, phase] of [['move', 'attack'], ['attack', 'dodge'], ['skill', 'clear']]) {
+    battle.player.state = state; tutorial.update();
+    expect((tutorial as any).phase).toBe(phase); expect(elements.get('tutorial-panel')!.hidden).toBe(false);
+  }
+  // 앞 단계를 건너뛰고 뒤 단계 행동을 먼저 해도 다음 단계로 이어지고, 이미 지난 단계로는 돌아가지 않는다.
+  tutorial.end(); tutorial.begin(stage);
+  battle.player.state = 'dodge'; tutorial.update(); expect((tutorial as any).phase).toBe('skill');
+  battle.player.state = 'attack'; tutorial.update(); expect((tutorial as any).phase).toBe('skill');
+  // 마지막 안내는 10초, 행동 없는 단계는 30초 뒤에 접히고 접힌 버튼은 열어 보기 전까지 맥동한다.
+  battle.elapsed = 29.9; tutorial.update(); expect(elements.get('tutorial-panel')!.hidden).toBe(false);
+  battle.elapsed = 30; tutorial.update(); expect(elements.get('tutorial-panel')!.hidden).toBe(true);
+  const toggle = (tutorial as any).toggle as ElementStub;
+  expect(toggle.dataset.pulse).toBe('true'); expect(elements.get('battle-tutorial')!.classes.has('guided')).toBe(false);
+  toggle.dispatchEvent(new Event('click'));
+  expect(elements.get('tutorial-panel')!.hidden).toBe(false); expect(toggle.dataset.pulse).toBe('false');
+  expect(battle.paused).toBe(false); expect(saves).toBe(0);
+});
+
+test('the toggle pulse stays off once the player has opened the guide on this device', () => {
+  const values = new Map<string, string>();
+  Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: { getItem: (k: string) => values.get(k) ?? null, setItem: (k: string, v: string) => values.set(k, v) } });
+  try {
+    const first = new BattleTutorial(app); first.begin(stage); first.setExpanded(false);
+    expect((first as any).toggle.dataset.pulse).toBe('true');
+    (first as any).toggle.dispatchEvent(new Event('click')); first.setExpanded(false);
+    expect((first as any).toggle.dataset.pulse).toBe('false');
+    expect(values.get('blade-surge.tutorial-toggle-opened')).toBe('1');
+    expect((new BattleTutorial(app) as any).toggleOpened).toBe(true);
+  } finally { Reflect.deleteProperty(globalThis, 'localStorage'); }
+});
+
+test('the guide toggle keeps a 44px touch target and the strip stays on the bottom edge in landscape', async () => {
+  const css = await Bun.file(new URL('../src/ui/tutorial.css', import.meta.url)).text();
+  expect(css).toMatch(/\.tutorial-toggle \{[^}]*min-height: 44px;[^}]*min-width: 44px;/);
+  expect(css).not.toMatch(/\.tutorial-toggle \{[^}]*min-height: 3\d/);
+  expect(css).toMatch(/orientation: landscape\) \{[\s\S]*\.tutorial-card \{[^}]*position: absolute;[^}]*bottom: calc\(8px/);
+});
+
+test('actual move, attack, dodge and skill state transitions never pause or clear an ongoing command', () => {
   tutorial.begin(stage);
   key('keydown', 'Space'); input.press('skill0');
-  for (const [state, phase] of [['attack', 'dodge'], ['dodge', 'skill'], ['skill', 'clear']]) {
+  for (const [state, phase] of [['move', 'attack'], ['attack', 'dodge'], ['dodge', 'skill'], ['skill', 'clear']]) {
     battle.player.state = state; tutorial.update();
     expect((tutorial as any).phase).toBe(phase);
     expect(battle.paused).toBe(false); expect(battle.pauseReasons.size).toBe(0); expect(input.enabled).toBe(true);
@@ -107,9 +151,12 @@ test('actual attack, dodge and skill state transitions never pause or clear an o
 
 test('folding and rereading return only tutorial button focus to the playable canvas', () => {
   tutorial.begin(stage); const toggle = (tutorial as any).toggle as ElementStub;
+  // 첫 전투 안내는 펼쳐진 채 시작하므로 먼저 접고 다시 읽는다.
+  toggle.focus(); toggle.dispatchEvent(new Event('click'));
+  expect(elements.get('tutorial-panel')!.hidden).toBe(true); expect((document as any).activeElement).toBe(app.canvas);
   toggle.focus(); toggle.dispatchEvent(new Event('click'));
   expect(elements.get('tutorial-panel')!.hidden).toBe(false); expect((document as any).activeElement).toBe(app.canvas);
-  expect(elements.get('tutorial-copy')!.textContent).toContain('다시 누르기');
+  expect(elements.get('tutorial-copy')!.textContent).toContain('조이스틱');
   key('keydown', 'KeyW'); key('keydown', 'Space'); input.update();
   expect(input.move.y).toBe(-1); expect(input.attackHeld).toBe(true);
   key('keyup', 'Space'); key('keyup', 'KeyW');
@@ -126,7 +173,7 @@ test('manual and companion pause owners stay authoritative while the guide is hi
   tutorial.update(); tutorial.resumeCurrent(); tutorial.nextTip();
   expect([...battle.pauseReasons]).toEqual(['manual', 'companion']); expect(input.enabled).toBe(false);
   expect(elements.get('battle-tutorial')!.hidden).toBe(true); expect((document as any).activeElement).toBe(previousFocus);
-  expect((tutorial as any).phase).toBe('attack');
+  expect((tutorial as any).phase).toBe('move');
   battle.setPaused('manual', false); tutorial.update(); expect(elements.get('battle-tutorial')!.hidden).toBe(true);
   battle.setPaused('companion', false); tutorial.update(); expect(elements.get('battle-tutorial')!.hidden).toBe(false);
 });
@@ -136,7 +183,7 @@ test('ending an interrupted first run and redeparting preserves an incomplete sa
   tutorial.begin(stage); tutorial.setExpanded(true); tutorial.end();
   expect(app.eco.s.tutorial).toEqual({ completed: false, retained: 'existing' }); expect(saves).toBe(0);
   expect(elements.get('battle-tutorial')!.hidden).toBe(true);
-  expect(tutorial.begin(stage)).toBe(true); expect(elements.get('tutorial-panel')!.hidden).toBe(true);
+  expect(tutorial.begin(stage)).toBe(true); expect(elements.get('tutorial-panel')!.hidden).toBe(false);
   expect(battle.player.auto).toBe(true); expect(app.journey.s.autoBattle).toBe(true); expect(app._auto).toBe(true);
   expect(input.enabled).toBe(true); expect(battle.paused).toBe(false);
 });
@@ -171,7 +218,7 @@ test('clearing the first room without dodge or skill lessons completes the saved
   expect(input.enabled).toBe(true); expect(battle.paused).toBe(false);
 });
 
-test('a collapsed optional lesson never suppresses the first low-health potion hint', () => {
+test('the edge guide strip never suppresses the first low-health potion hint', () => {
   const potion: any = new ElementStub('button'); potion.parentElement = { dataset: {} };
   potion.querySelector = () => ({ textContent: '3' });
   const previousQuery = document.querySelector.bind(document);

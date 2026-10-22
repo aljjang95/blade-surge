@@ -58,7 +58,46 @@ function HeroPortrait({app, id, ...rest}) {
 function Icon({id}) { return <img src={uiArt(id)} alt="" loading="lazy" decoding="async"/>; }
 function Detail({children,label="효과 자세히"}) { return <details className="ui-details"><summary>{label}</summary>{children}</details>; }
 function ForgePreview() { return <div className="exp-relic exp-relic-art"><img src={uiArt('nav-forge')} alt="재료를 정련하는 공방"/></div>; }
-function RewardChips({rewards={}}) { return <div className="exp-chips">{rewards.gold>0 && <span><Icon id="gold"/>골드 +{fmt(rewards.gold)}</span>}{rewards.xp>0 && <span><Icon id="hero-xp"/>원정 EXP +{fmt(rewards.xp)}</span>}{MATERIALS.filter(m=>rewards.materials?.[m.id]).map(m=><span key={m.id}><img src={resourceArt(m.id)} alt=""/>{m.name} +{rewards.materials[m.id]}</span>)}{CONSUMABLES.filter(m=>rewards.consumables?.[m.id]).map(m=><span key={m.id}><img src={resourceArt(m.id)} alt=""/>{m.name} +{rewards.consumables[m.id]}</span>)}</div>; }
+/** 보상 칩 숫자 카운트업. 훅 없이 ref 콜백으로 DOM 텍스트만 바꾼다(프레임당 할당 없음, 모션 줄이기 설정이면 즉시 최종값). */
+const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
+export function countUpRef(el) {
+  if (!el) return;
+  const target = Number(el.dataset.count) || 0;
+  const reduce = typeof matchMedia === 'function' && matchMedia(REDUCED_MOTION_QUERY).matches;
+  if (reduce || target <= 1 || typeof requestAnimationFrame !== 'function') { el.textContent = '+' + fmt(target); return; }
+  const duration = Math.min(900, 380 + target * 0.4), delay = Number(el.dataset.delay) || 0;
+  let start = 0;
+  const frame = now => {
+    if (!el.isConnected) return;
+    if (!start) start = now + delay;
+    const t = Math.max(0, Math.min(1, (now - start) / duration));
+    el.textContent = '+' + fmt(target * (1 - (1 - t) ** 3));
+    if (t < 1) requestAnimationFrame(frame); else el.textContent = '+' + fmt(target);
+  };
+  el.textContent = '+0';
+  requestAnimationFrame(frame);
+}
+/** 보상 칩 한 줄. 색은 희귀도 색(장비는 이번에 얻은 최고 등급)을 쓴다. */
+const CHIP_COLORS = { gold: '#ffd35c', xp: '#7fd0ff', heroExp: '#7fd0ff', stone: '#c07cff', material: '#5ce07a', consumable: '#ff8f8f' };
+function RewardChip({n, tier, color, icon, label, order}) {
+  return <span className="exp-reward-chip" data-tier={tier} style={{'--chip-color':color||CHIP_COLORS[tier],'--chip-delay':`${order*70}ms`}}>{icon}<em>{label}</em> <b ref={countUpRef} data-count={n} data-delay={order*70}>{'+'+fmt(n)}</b></span>;
+}
+function RewardStrip({rewards={}, win=true, saved=true}) {
+  const chips=[];
+  const add=(tier,n,label,icon,color)=>{if(n>0)chips.push({tier,n,label,icon,color});};
+  add('gold',rewards.gold,'골드',<Icon id="gold"/>);
+  add('xp',rewards.xp,'원정 EXP',<Icon id="hero-xp"/>);
+  if(win&&saved){
+    const loot=rewards.loot||[], top=loot.map(i=>ITEM_BY_ID[i.id]?.rarity).filter(Boolean).sort((a,b)=>rarityRank(b)-rarityRank(a))[0];
+    add('heroExp',rewards.heroExp,'영웅 EXP',<Icon id="hero-xp"/>);
+    add('loot',loot.length,'장비',<Icon id="slot-armor"/>,top?RARITY_COLOR[top]:'#e6e6e6');
+    add('stone',rewards.stones,'강화석',<Icon id="material-stone"/>);
+  }
+  for(const m of MATERIALS)add('material',rewards.materials?.[m.id],m.name,<img src={resourceArt(m.id)} alt=""/>);
+  for(const m of CONSUMABLES)add('consumable',rewards.consumables?.[m.id],m.name,<img src={resourceArt(m.id)} alt=""/>);
+  if(!chips.length)return null;
+  return <div className="exp-chips exp-reward-strip">{chips.map((c,i)=><RewardChip key={c.tier+c.label} {...c} order={i}/>)}</div>;
+}
 
 function RunGrowth({app, disabled, onOpen}) {
   const r=app.battle?.result?.masterworks;if(!r)return null;
@@ -95,6 +134,11 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
           <div className="exp-outcome-stats"><span><b>{result.kills}</b>처치</span><span><b>{result.combo}</b>최대 콤보</span><span><b>{Math.floor(result.time)}초</b>전투 시간</span></div>
           {app.battle?.result?.masterworks?.personalGoal&&<p aria-label="이번 출격의 개인 목표">{personalResultLabel(app.battle.result.masterworks.personalGoal)}</p>}
         </div>
+        <section className="exp-result-rewards" aria-label={result.saveError?'저장 대기 중인 보상':'원정 보상'}>
+          <RewardStrip rewards={rewards} win={result.win} saved={!result.saveError}/>
+          {rewards.firstClear&&!result.saveError&&<p className="exp-first-clear">첫 정복 보상까지 받았습니다.</p>}
+          {!result.win&&!result.saveError&&<p>이번 도전의 클리어 보상은 없습니다.</p>}
+        </section>
         {result.routeObjective?.pages && <p aria-label="기록 복원 결과">기록 복원 {result.routeObjective.progress}/{result.routeObjective.target} · {result.routeObjective.pages.map(page=>page.label).join(' → ') || '복원한 기록 없음'}</p>}
         {result.routeObjective?.constellations && <p aria-label="별자리 복원 결과">별자리 복원 {result.routeObjective.progress}/{result.routeObjective.target} · {result.routeObjective.constellations.map(station=>station.label).join(' → ') || '복원한 별자리 없음'} · 오답 {result.routeObjective.mistakes}회</p>}
         {result.routeObjective?.id==='comet_deep_orbits' && <p aria-label="궤도 고리 연결 결과">궤도 고리 연결 {result.routeObjective.progress}/{result.routeObjective.target} · 붕괴 실패 {result.routeObjective.collapseFailures}회 · 유성 피격 {result.routeObjective.stormHits}회{result.routeObjective.complete?' · 완료':''}</p>}
@@ -106,16 +150,10 @@ export function ExpeditionResult({controller, launch, message, focusRef}) {
         {result.routeObjective?.escape && <p aria-label="거울 미궁 탈출 결과">거울 미궁 탈출 {result.routeObjective.escape.escaped?'완료':'미완료'} · 거울 붕괴 {result.routeObjective.escape.collapses}회 · 환영 거울 {result.routeObjective.escape.illusions}회</p>}
         {result.routeObjective?.channel && <p aria-label="포자 수로 돌파 결과">{sporeChannelResultLine(result.routeObjective.channel)}</p>}
         {(result.routeObjective?.id==='comet_orbit_rings'||result.routeObjective?.id==='comet_deep_orbits') && Number.isFinite(result.routeObjective.bossMeteors) && <p aria-label="푸른 궤도선 결과">{cometBossOrbitResultLine(result.routeObjective)}</p>}
-        {mapTactics&&<section className="map-tactics-result" data-map-tactics-result aria-label="정원의 장치 사용 결과"><strong>{mapTactics.title}</strong><p>{mapTactics.detail}</p></section>}
+        {mapTactics&&(result.mapTactics?.used?<section className="map-tactics-result" data-map-tactics-result aria-label="정원의 장치 사용 결과"><strong>{mapTactics.title}</strong><p>{mapTactics.detail}</p></section>:<p className="map-tactics-result map-tactics-unused" data-map-tactics-result aria-label="정원의 장치 사용 결과">{mapTactics.title}</p>)}
         <div className="exp-result-save" data-save={result.saveError?'error':'saved'} role={result.saveError?'alert':'status'}>
           {result.saveError?<><div><strong>정산 저장 실패</strong><p>저장 공간을 확인한 뒤 다시 저장해 주세요. 저장 전에는 이동할 수 없습니다.</p></div><button ref={focusRef} className="exp-primary" onClick={retrySave}>정산 다시 저장</button></>:<p>{result.win?'정산 저장 완료 · 보상을 보관했습니다.':'결과 저장 완료 · 다시 도전할 수 있습니다.'}</p>}
         </div>
-        <section className="exp-result-rewards" aria-label={result.saveError?'저장 대기 중인 보상':'원정 보상'}>
-          <RewardChips rewards={rewards}/>
-          {result.win&&!result.saveError&&<div className="exp-chips"><span><Icon id="hero-xp"/>영웅 EXP +{rewards.heroExp||0}</span><span><Icon id="slot-armor"/>장비 {rewards.loot?.length||0}개</span><span><Icon id="material-stone"/>강화석 +{rewards.stones||0}</span></div>}
-          {rewards.firstClear&&!result.saveError&&<p className="exp-first-clear">첫 정복 보상까지 받았습니다.</p>}
-          {!result.win&&!result.saveError&&<p>이번 도전의 클리어 보상은 없습니다.</p>}
-        </section>
         {result.conquestId&&<Detail label="전술 공략 결과"><ConquestResult result={result} launch={(...args)=>depart(()=>launch(...args))}/></Detail>}
         {!result.saveError&&!!rewards.loot?.length&&<Detail label={`획득 장비 ${rewards.loot.length}개 · 전리품 보기`}><LootReveal loot={rewards.loot} heroId={app.battle?.player?.def?.id ?? app.eco?.s?.selected ?? null}/></Detail>}
         {(app.battle?.result?.masterworks||app.journeyView)&&<Detail label="성장 기록 · 의뢰 보상">

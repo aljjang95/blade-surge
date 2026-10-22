@@ -6,21 +6,27 @@ export function setupStoreAccess(app) {
   const controller = new StoreController(app);
   let refreshModal = () => Promise.resolve();
   const trigger = document.createElement('button'); trigger.type = 'button'; trigger.id = 'store-options'; trigger.textContent = '광고 · 구매 복원';
+  // 스토어가 결제·광고 중 하나라도 실제로 켰다고 확인해 줄 때만 입구를 보인다. 확인 전·미준비 상태에서 구매처럼 보이지 않게 한다.
+  trigger.style.display = 'none';
+  const syncTrigger = () => { trigger.style.display = controller.capabilities?.billing || controller.capabilities?.ads ? '' : 'none'; };
   trigger.addEventListener('click', () => {
     if (!controller.active() || controller.busy) return;
-    app.ui.modal('<h2 id="store-title">광고 · 구매 복원</h2><p>광고 제거는 현재 스토어의 계정에서 복원됩니다.</p><p id="store-notice" role="status">스토어 연결 확인 중…</p><div class="modal-btns"><button id="store-buy" disabled>광고 제거</button><button id="store-restore" disabled>구매 복원</button><button id="store-ad" disabled>전면광고 보기</button><button id="store-privacy" hidden>광고 개인정보 설정</button><button id="m-cancel">닫기</button></div>', { onOpen: box => {
+    app.ui.modal('<h2 id="store-title">광고 · 구매 복원</h2><p id="store-note">광고 제거는 현재 스토어의 계정에서 복원됩니다.</p><p id="store-notice" role="status">스토어 연결 확인 중…</p><div class="modal-btns"><button id="store-buy" disabled>광고 제거</button><button id="store-restore" disabled>구매 복원</button><button id="store-ad" disabled>전면광고 보기</button><button id="store-privacy" hidden>광고 개인정보 설정</button><button id="m-cancel">닫기</button></div>', { onOpen: box => {
       const notice = box.querySelector('#store-notice'), buy = box.querySelector('#store-buy'), restore = box.querySelector('#store-restore'),
         ad = box.querySelector('#store-ad'), privacy = box.querySelector('#store-privacy'), cancel = box.querySelector('#m-cancel');
       const visible = () => notice.isConnected && box.querySelector('#store-notice') === notice && app.ui.el.modal.classList.contains('show');
       let priceReady = false;
       const render = () => {
         if (!visible()) return;
+        // 스토어가 켜지 않은 기능의 버튼은 비활성이 아니라 숨긴다(광고 제거 구매·복원은 결제가 켜졌을 때만, 광고 보기는 광고가 켜졌을 때만).
+        buy.hidden = restore.hidden = !controller.capabilities?.billing; ad.hidden = !controller.capabilities?.ads;
+        box.querySelector('#store-note').hidden = !controller.capabilities?.billing;
         buy.disabled = !controller.active() || controller.busy || !controller.capabilities?.billing || !priceReady;
         restore.disabled = !controller.active() || controller.busy || !controller.capabilities?.billing;
         ad.disabled = !controller.active() || controller.busy || !controller.capabilities?.ads; cancel.disabled = controller.busy;
         privacy.hidden = !controller.adapter?.capabilities?.privacyOptionsRequired;
         privacy.disabled = controller.busy;
-        notice.textContent = controller.capabilities?.billing ? '상품과 가격을 확인한 뒤 현재 스토어에서 결제합니다.' : '현재 스토어 결제가 준비 중입니다.';
+        notice.textContent = controller.capabilities?.billing ? '상품과 가격을 확인한 뒤 현재 스토어에서 결제합니다.' : controller.capabilities?.ads ? '광고 설정을 확인할 수 있습니다.' : '현재 스토어 기능을 확인하지 못했습니다.';
       };
       const close = () => { if (controller.busy) return; refreshModal = () => Promise.resolve(); box.removeEventListener('keydown', trap); box.removeAttribute('role'); box.removeAttribute('aria-modal'); box.removeAttribute('aria-labelledby'); app.ui.closeModal(); trigger.focus(); };
       const trap = event => {
@@ -53,14 +59,14 @@ export function setupStoreAccess(app) {
             if (typeof price === 'string' && price.length) { priceReady = true; if (visible()) buy.textContent = `광고 제거 · ${price}`; }
           } catch { if (generation !== controller.generation || !visible()) return; priceReady = false; }
         }
-        if (generation === controller.generation) render();
+        if (generation === controller.generation) { render(); syncTrigger(); }
       };
       refreshModal = refresh; void refresh();
     } });
   });
   // 메뉴 창은 묶음 구조라 직접 붙이지 않고 상점 묶음에 넣는다.
   if (app.oathShell?.place) app.oathShell.place(trigger); else document.querySelector('.oath-menu-grid').append(trigger);
-  void controller.activate().catch(() => {});
+  void controller.activate().then(syncTrigger).catch(() => {});
   window.addEventListener('pagehide', event => { void (event.persisted ? controller.suspend() : controller.dispose()).then(() => refreshModal()).catch(() => {}); });
   window.addEventListener('pageshow', event => { if (event.persisted) void controller.resume().then(() => refreshModal()).catch(() => {}); });
   return controller;

@@ -10,6 +10,7 @@ import { resolveDifficulty } from './difficulty.js';
 import { heroTrainingQuote } from './hero-training.js';
 import { normalizeJourney, periodAt, recordJourneyAction as recordJourneyActionCore, refreshPeriods } from './journey-core.js';
 import { freshTownState } from '../data/towns.js';
+import { campaignTown, latestTownChapter, regionUnlockedBy, resolveCampaignTown, CAMPAIGN_TOWN_COUNT } from '../data/campaign-towns.js';
 import { AVATAR_BY_ID } from '../data/avatars.js';
 import { heroBaseGrade, heroGrade, nextGrade, gradeUpCost } from '../data/hero-grades.js';
 import { baselineSkillLevels, canLearnSkill, spBonus, spBudget, spSpent, spAvailable, skillLearned, FREE_RESET_BELOW_LEVEL } from '../data/skill-tree.js';
@@ -113,6 +114,7 @@ export class Economy {
       heroes: Object.fromEntries(Object.keys(HEROES).map(id => [id, freshHeroState(id)])),
       selected: 'knight', inventory: [], invSeq: 1, avatars: { owned: [], equipped: {} },
       progress: { unlocked: 1, stars: {}, difficulty: 'story' }, // stars['1-1'] = 3
+      campaignTown: { current: 0, celebrated: 0 }, // 0 = 아직 고르지 않음(가장 최근 해금 마을을 따른다)
       towns: freshTownState(),
       pity: 0, gacha: { pity: 0 }, totalPulls: 0, firstPurchaseUsed: {}, purchases: [], spentKRW: 0, vip: 0, vipUntil: 0, monthlyUntil: 0, monthlyClaimed: 0,
       pass: { xp: 0, premium: false, claimedFree: [], claimedPrem: [] },
@@ -427,13 +429,49 @@ export class Economy {
     this.emit();
     return next;
   }
+  /** 캠페인 마을 상태. { latest: 해금한 가장 먼 지역, current: 로비가 보여 주는 마을, celebrated: 축하를 보여 준 가장 먼 지역 } */
+  campaignTownState() { return resolveCampaignTown(this.s.progress, this.s.campaignTown); }
+  campaignTownList() {
+    const state = this.campaignTownState();
+    return Array.from({ length: CAMPAIGN_TOWN_COUNT }, (_, index) => {
+      const town = campaignTown(index + 1);
+      return { ...town, unlocked: town.chapter <= state.latest, current: town.chapter === state.current, unlockHint: town.chapter === 1 ? '' : `${town.chapter - 1}-10 클리어 시 해금` };
+    });
+  }
+  /** 해금한 마을 중 하나를 로비 마을로 고른다. 해금하지 않았거나 같은 마을이면 저장하지 않는다. */
+  setCampaignTown(chapter) {
+    const state = this.campaignTownState();
+    if (!Number.isSafeInteger(chapter) || chapter < 1 || chapter > state.latest) return false;
+    if (chapter === state.current && this.s.campaignTown?.current === chapter) return true;
+    const before = this.s.campaignTown;
+    this.s.campaignTown = { current: chapter, celebrated: state.celebrated };
+    if (!this.emit()) { this.s.campaignTown = before; return false; }
+    return true;
+  }
+  /** 해금 축하를 보여 준 뒤 한 번만 기록한다. */
+  markTownCelebrated(chapter) {
+    const state = this.campaignTownState();
+    if (!Number.isSafeInteger(chapter) || chapter <= state.celebrated || chapter > state.latest) return false;
+    this.s.campaignTown = { current: state.current, celebrated: chapter };
+    return this.emit();
+  }
+  unlockRegionTown(stage, before = this.campaignTownState()) {
+    const next = regionUnlockedBy(stage), latest = latestTownChapter(this.s.progress);
+    if (!next || latest <= before.latest) return null;
+    this.s.campaignTown = { current: latest, celebrated: before.celebrated };
+    const town = campaignTown(latest);
+    return { chapter: latest, townId: town.id, name: town.name, accent: town.accent };
+  }
   isUnlocked(ch, st) { return Number.isInteger(ch) && Number.isInteger(st) && ch >= 1 && ch <= CHAPTERS.length && st >= 1 && st <= STAGES_PER_CHAPTER && this.stageIndex(ch, st) <= this.s.progress.unlocked; }
   nextStage() { const idx = Math.min(this.s.progress.unlocked, CHAPTERS.length * STAGES_PER_CHAPTER); const ch = Math.ceil(idx / STAGES_PER_CHAPTER), st = ((idx - 1) % STAGES_PER_CHAPTER) + 1; return stageDef(ch, st); }
   completeStage(stage, stars, { double = false, fieldGold = 0, fieldStones = 0, fieldStones2 = 0, fieldStones3 = 0, fieldFragments = 0, fieldLoot = [], fieldExp = 0, fieldHeroShards = 0, fieldTranscendStones = 0, fieldMaterials = {}, fullClear = false } = {}) {
     const ledger = this.fieldRewardsFor(stage), heroId = ledger?.heroId || this.s.selected;
     const s = this.s; const key = this.stageKey(stage.ch, stage.st); const first = !s.progress.stars[key];
+    const townBefore = this.campaignTownState();
     s.progress.stars[key] = Math.max(s.progress.stars[key] || 0, stars);
     if (stage.idx >= s.progress.unlocked) s.progress.unlocked = Math.min(CHAPTERS.length * STAGES_PER_CHAPTER, stage.idx + 1);
+    // 지역 마지막 관문(X-10)을 처음 클리어해 다음 지역이 열리면 로비 마을도 그 지역 마을로 바뀐다(저장됨). 축하는 한 번만 보여 준다.
+    const regionUnlock = this.unlockRegionTown(stage, townBefore);
     const m = double ? 2 : 1; const r = stage.rewards; const loot = [];
     const fullClearBonus = fullClear ? { exp: Math.floor(r.exp * 0.5), gold: Math.floor(r.gold * 0.4), fragments: 10, eliteGear: 1 } : null;
     // 필드 드랍(전투 중 획득한 골드/강화석)은 여기서 정산. 장비는 이미 인벤토리에 들어감.
@@ -455,7 +493,7 @@ export class Economy {
     const awakened = (HEROES[heroId].skills || []).filter((k) => k.unlock && prevLv < k.unlock && nowLv >= k.unlock);
     const passUps = this.addPassXp(r.bp);
     s.quests.stages++; const saved = this.emit();
-    const receipt = { got, loot, ups, passUps, first, exp: stageExp, combatExp, totalExp: stageExp + combatExp, heroId, awakened, fullClearBonus,
+    const receipt = { got, loot, ups, passUps, first, exp: stageExp, combatExp, totalExp: stageExp + combatExp, heroId, awakened, fullClearBonus, regionUnlock,
       ok: saved, saveError: !saved };
     this.bonusReceipts.add(receipt);
     return receipt;

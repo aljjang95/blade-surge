@@ -1,3 +1,4 @@
+import { apiUrl } from '../platform/api-base.js';
 import { parseDialogueReply, type DialogueReply, type DialogueRequest } from './dialogue-contract';
 
 export type DialogueTransport = (request: DialogueRequest, signal: AbortSignal) => Promise<DialogueReply>;
@@ -5,7 +6,7 @@ export class DialogueError extends Error {
   constructor(readonly retryAfter = 15) { super('dialogue-unavailable'); }
 }
 export const requestDialogue: DialogueTransport = async (request, signal) => {
-  const response = await fetch('/api/companion', {
+  const response = await fetch(apiUrl('/api/companion'), {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
     body: JSON.stringify(request), signal,
   });

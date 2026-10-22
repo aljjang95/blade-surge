@@ -14,6 +14,7 @@ import { CHAPTERS, STAGES_PER_CHAPTER, ENEMIES, stageDef } from '../data/stages.
 import { resolveEnemyPortrait } from '../data/encounter-art.js';
 import { REWARD_LABEL, gachaRates, gachaChances } from '../game/economy.js';
 import { showGachaContents, showWeaponPreview } from './gacha-contents.js';
+import { revealPlan, tenPullStatus } from './reveal-plan.js';
 import { renderOwnedHero, renderBag, showItemSheet } from './gear-panel.js';
 import { weaponLook, weaponLookText } from '../data/weapon-looks.js';
 import { LOOKS } from '../game/look.js';
@@ -21,6 +22,7 @@ import { createFunnelLog } from '../game/funnel-events.js';
 import { campaignFinished } from '../data/expedition-depths.js';
 import { storyText, encounterLabel, journalHtml, dungeonBriefHtml } from './campaign.js';
 import { guideHtml } from './guide.js';
+import { isFirstSortie } from './first-sortie.js';
 import { availableDifficulties } from '../game/difficulty.js';
 import { AVATARS } from '../data/avatars.js';
 import { libraryAssetForAvatar } from '../engine/library-assets.js';
@@ -29,6 +31,7 @@ import { GROWTH_FLOW, skuFlowRole, shardProgress } from '../data/growth-flow.js'
 import { heroGrade } from '../data/hero-grades.js';
 import { levelStatusLabel, lootGuide } from '../data/region-guide.js';
 import { paceShort } from './pace-short.js';
+import { campaignTown } from '../data/campaign-towns.js';
 // 공개 확률은 실제 소환 코드와 같은 식(gachaRates/gachaChances)에서만 계산한다. 화면에 숫자를 따로 적지 않는다.
 const pct = (p, d = 1) => (p * 100).toFixed(d) + '%';
 const clampPity = (n) => Math.max(0, Math.min(GACHA.pity, Math.floor(Number(n) || 0)));
@@ -41,12 +44,12 @@ const CAM_DESC = { auto: '상황에 맞춰 자동 — 탐험은 액션, 난전�
 const DUNGEON_ICON = '/img/ui-crafted/nav-dungeon.webp';
 const DUNGEON_GATE = '/img/ui-crafted/dungeon-gate.svg';
 const REGION_DUNGEON_ART = {
-  garden: '/img/ui-crafted/dungeon-garden-keyart.png',
-  forge: '/img/ui-crafted/dungeon-forge-keyart.png',
-  frost: '/img/ui-crafted/dungeon-frost-keyart.png',
-  tide: '/img/ui-crafted/dungeon-tide-keyart.png',
-  crown: '/img/ui-crafted/dungeon-crown-keyart.png',
-  homecoming: '/img/ui-crafted/dungeon-homecoming-keyart.png',
+  garden: '/img/ui-crafted/keyart/dungeon-garden-keyart.webp',
+  forge: '/img/ui-crafted/keyart/dungeon-forge-keyart.webp',
+  frost: '/img/ui-crafted/keyart/dungeon-frost-keyart.webp',
+  tide: '/img/ui-crafted/keyart/dungeon-tide-keyart.webp',
+  crown: '/img/ui-crafted/keyart/dungeon-crown-keyart.webp',
+  homecoming: '/img/ui-crafted/keyart/dungeon-homecoming-keyart.webp',
 };
 const dungeonMapSvg = (stage, { compact = false } = {}) => {
   const dungeon = stage?.dungeon;
@@ -98,8 +101,11 @@ export class Meta {
     $('btn-settings').addEventListener('click', () => this.showSettings());
     $('btn-guide').addEventListener('click', (event) => { event.stopPropagation(); setTimeout(() => this.showGuide(), 0); });
     $('btn-profile').addEventListener('click', () => this.showProfile());
-    $('promo-starter').addEventListener('click', () => this.buy('starter'));
-    $('promo-monthly').addEventListener('click', () => this.buy('monthly'));
+    // 실제 결제가 연결되기 전에는 현금 상품 입구를 DOM에서 치운다(메뉴 묶음이 만들어지기 전이라 빈 안내 묶음도 생기지 않는다).
+    if (this.payOn()) {
+      $('promo-starter').addEventListener('click', () => this.buy('starter'));
+      $('promo-monthly').addEventListener('click', () => this.buy('monthly'));
+    } else { $('promo-starter').remove(); $('promo-monthly').remove(); }
     $('btn-pull1').addEventListener('click', () => this.pull(1));
     $('btn-pull10').addEventListener('click', () => this.pull(10));
     $('btn-pull-ssr').addEventListener('click', () => this.pullSSR());
@@ -111,6 +117,15 @@ export class Meta {
     this.eco.onChange(() => this.refreshTop());
     setInterval(() => this.tick(), 1000);
   }
+  /** 실제 스토어 결제·영수증 검증이 연결됐는지. Economy.paymentAvailable()가 true가 되면 현금 상품 화면이 자동으로 다시 나타난다. */
+  payOn() { return this.eco.paymentAvailable?.() === true; }
+  /** 지금 상점 탭 id에 보여 줄 상품. 결제가 없으면 현금 상품(₩)과 VIP·첫 결제 보너스 상품은 제외한다. */
+  shopSkus(tab = this.shopTab) {
+    const pay = this.payOn();
+    return SKUS.filter((x) => (pay || x.kind !== 'cash') && (x.tab === tab || (tab === 'hot' && x.badge && x.tab !== 'gem' && x.tab !== 'energy' && x.tab !== 'gold')));
+  }
+  /** 상품이 하나도 없는 탭(결제 없는 보석·패키지)은 감춘다. */
+  shopTabs() { return SHOP_TABS.filter((t) => this.shopSkus(t.id).length); }
   openTab(tab, sub) {
     if (this.app.expeditionUI?.result?.saveError && (tab !== 'stage' || sub !== 'dungeons')) { this.ui.toast('전리품 정산을 먼저 저장해 주세요.', 'red'); return; }
     if (this.app.expeditionUI?.result && (tab !== 'stage' || !sub || sub === 'campaign')) { this.app.expeditionUI.result = null; this.app.toLobby(); }
@@ -118,6 +133,7 @@ export class Meta {
     document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('show', t.id === 'tab-' + tab));
     document.querySelectorAll('.bottomnav button').forEach((b) => b.classList.toggle('on', b.dataset.tab === tab));
     this.app.setLobbyVisible(tab === 'home');
+    this.app.townChip?.sync(tab);
     this.app.expeditionUI?.syncTab(tab, sub);
     if (tab !== 'heroes') this.app.wardrobe?.hide();
     if (tab === 'stage') this.renderStages(); if (tab === 'heroes') this.renderHeroes(); if (tab === 'shop') { if (sub) this.shopTab = sub; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); } if (tab === 'pass') this.renderPass(); if (tab === 'gacha') this.refreshGacha();
@@ -141,16 +157,19 @@ export class Meta {
       this.ui.toast(status === 'unavailable' ? '저장 공간을 사용할 수 없어 현재 진행은 이 창에서만 유지됩니다.' : status === 'recovered' ? '마지막 정상 저장에서 진행을 복구했습니다.' : '저장된 진행을 읽지 못했습니다. 복구용 원본은 보관했습니다.', 'red');
     }
     $('v-gold').textContent = fmt(s.gold); $('v-gem').textContent = fmt(s.gems); $('v-energy').textContent = s.energy; $('v-energy-max').textContent = this.eco.energyMax; $('v-energy-timer').textContent = this.eco.energyTimer();
+    $('top-vip-wrap').hidden = !this.payOn(); $('plus-gem').hidden = !this.payOn();
     $('top-vip').textContent = s.vip; $('top-lv').textContent = this.eco.hero().level; bindHeroPortrait($('top-avatar'), this.app, s.selected); $('top-name').textContent = s.name;
     $('dot-daily').classList.toggle('on', this.eco.dailyAvailable()); $('dot-mail').classList.toggle('on', this.eco.unreadMail() > 0); $('dot-quest').classList.toggle('on', this.eco.questClaimable() > 0);
-    $('dot-pass').classList.toggle('on', this.eco.passClaimable() > 0); $('dot-gacha').classList.toggle('on', s.tickets > 0 || s.ssrTickets > 0); $('dot-shop').classList.toggle('on', !s.purchases.includes('starter'));
+    $('dot-pass').classList.toggle('on', this.eco.passClaimable() > 0); $('dot-gacha').classList.toggle('on', s.tickets > 0 || s.ssrTickets > 0); $('dot-shop').classList.toggle('on', this.payOn() && !s.purchases.includes('starter'));
     this.refreshMenuBadge();
     $('v-ticket').textContent = s.tickets + (s.ssrTickets ? ` (SSR확정 ${s.ssrTickets})` : ''); $('v-pity').textContent = s.pity; $('pity-left').textContent = GACHA.pity - s.pity;
     // SSR 확정권은 확률 정보 창 안이 아니라 소환 버튼 줄에서 바로 쓴다(보유할 때만 보인다).
     $('btn-pull-ssr').classList.toggle('hidden', !(s.ssrTickets > 0)); $('v-ssr-ticket').textContent = s.ssrTickets || 0;
     this.refreshGachaOdds(); this.refreshGachaPace();
-    $('promo-starter').style.display = s.purchases.includes('starter') ? 'none' : '';
-    $('promo-monthly').style.display = s.monthlyUntil > Date.now() ? 'none' : '';
+    if (this.payOn()) {
+      $('promo-starter').style.display = s.purchases.includes('starter') ? 'none' : '';
+      $('promo-monthly').style.display = s.monthlyUntil > Date.now() ? 'none' : '';
+    }
     if (this.tab === 'home') this.refreshHome();
   }
   refreshHome() {
@@ -169,7 +188,7 @@ export class Meta {
   }
   tick() {
     const s = this.eco.s; this.eco.tickEnergy(); $('v-energy').textContent = s.energy; $('v-energy-timer').textContent = this.eco.energyTimer();
-    $('promo-timer').textContent = '결제 연결 준비 중';
+    if (this.payOn()) $('promo-timer').textContent = '한정 상품';
     $('banner-timer').textContent = hms(this.eco.s.limitedStart + 7 * 86400000 - Date.now());
     if (this.tab === 'shop') document.querySelectorAll('[data-timer]').forEach((el) => { el.textContent = '남은 시간 ' + hms(this.eco.limitedLeft(this.eco.sku(el.dataset.timer))); });
     // 월정액 자동 지급
@@ -178,7 +197,9 @@ export class Meta {
 
   // ================= 스테이지 =================
   renderStages() {
-    const tabs = $('chapter-tabs'); tabs.innerHTML = CHAPTERS.map((c) => `<button type="button" data-ch="${c.id}" aria-pressed="${c.id === this.chapter}" class="${c.id === this.chapter ? 'on' : ''} ${this.eco.isUnlocked(c.id, 1) ? '' : 'lock'}"><small>REGION 0${c.id}${this.eco.isUnlocked(c.id, 1) ? '' : ' · 미개방'}</small>${storyText(c.name)}</button>`).join('');
+    const townNow = this.eco.campaignTownState().current;
+    const clearedIn = (ch) => Array.from({ length: STAGES_PER_CHAPTER }, (_, i) => this.eco.s.progress.stars[`${ch}-${i + 1}`] || 0).filter(Boolean).length;
+    const tabs = $('chapter-tabs'); tabs.innerHTML = CHAPTERS.map((c) => `<button type="button" data-ch="${c.id}" aria-pressed="${c.id === this.chapter}" class="cmap-chip ${c.id === this.chapter ? 'on' : ''} ${this.eco.isUnlocked(c.id, 1) ? '' : 'lock'}"><small>REGION 0${c.id}${this.eco.isUnlocked(c.id, 1) ? '' : ' · 미개방'}</small><span class="cmap-chip-name">${storyText(c.name)}</span><em class="cmap-chip-count" aria-label="정화 ${clearedIn(c.id)}개 중 ${STAGES_PER_CHAPTER}개">${clearedIn(c.id)}/${STAGES_PER_CHAPTER}</em>${c.id === townNow ? '<i class="cmap-chip-town">마을</i>' : ''}</button>`).join('');
     tabs.querySelectorAll('button').forEach((b) => b.onclick = () => { this.chapter = +b.dataset.ch; this.renderStages(); tabs.querySelector(`[data-ch="${this.chapter}"]`)?.focus({ preventScroll: true }); });
     const grid = $('stage-grid'); grid.innerHTML = '';
     const next = this.eco.nextStage(); if (!this.stage || this.stage.ch !== this.chapter) this.stage = (next.ch === this.chapter) ? next : stageDef(this.chapter, 1);
@@ -195,12 +216,12 @@ export class Meta {
     $('chapter-brief').innerHTML = `<div class="chapter-copy"><span class="campaign-eyebrow">${storyText(chapter.tagline)}</span><h3>${storyText(chapter.name)}</h3><p>${storyText(chapter.summary)}</p><div class="chapter-facts"><span><b>${cleared}</b><small>정화된 관문</small></span><span><b>${total}/${CHAPTERS.length * STAGES_PER_CHAPTER}</b><small>전체 기록</small></span><span><b>${storyText(chapter.mechanic.name)}</b><small>지역 기믹</small></span></div></div><div class="chapter-map-scene" aria-label="${storyText(chapter.name)} 원정 지도"><div class="chapter-map-glow"></div><img class="chapter-map-gate" src="${DUNGEON_GATE}" alt="" width="96" height="96"><img class="chapter-map-icon" src="${DUNGEON_ICON}" alt="" width="32" height="32"><div class="chapter-route">${mapStops}</div><span class="chapter-map-caption">정화 루트 · 10개 관문</span></div><figure class="chapter-cast chapter-dungeon-art"><img src="${regionArt}" width="1680" height="944" alt="${storyText(chapter.name)} 전용 던전 키아트" decoding="async"><figcaption>${storyText(chapter.name)}<small>지역 전용 던전 키아트</small></figcaption></figure><div class="campaign-progress"><b>${cleared}<small> / ${STAGES_PER_CHAPTER}</small></b><span>지역 정복 · 전체 ${total}/${CHAPTERS.length * STAGES_PER_CHAPTER}</span><progress value="${cleared}" max="${STAGES_PER_CHAPTER}" aria-label="${storyText(chapter.name)} 클리어 진행도"></progress></div>`;
     for (let st = 1; st <= STAGES_PER_CHAPTER; st++) {
       const d = stageDef(this.chapter, st); const unlocked = this.eco.isUnlocked(this.chapter, st); const stars = this.eco.s.progress.stars[`${this.chapter}-${st}`] || 0;
-      const cell = document.createElement('button'); cell.type = 'button'; cell.className = 'stage-cell' + (d.boss ? ' boss' : '') + (unlocked ? '' : ' lock') + (this.stage.st === st ? ' on' : '');
+      const cell = document.createElement('button'); cell.type = 'button'; cell.className = 'stage-cell' + (d.boss ? ' boss' : '') + (d.midboss ? ' is-midboss' : '') + (d.regionBoss ? ' is-regionboss' : '') + (unlocked ? '' : ' lock') + (stars ? ' cleared' : '') + (this.stage.st === st ? ' on' : '');
       cell.dataset.stage = d.code; cell.dataset.rank = d.encounter?.rank || 'captain'; cell.setAttribute('aria-pressed', String(this.stage.st === st));
       cell.setAttribute('aria-label', `${d.code} ${d.title} · ${encounterLabel(d)} · ${unlocked ? stars ? `별 ${stars}개` : '도전 가능' : '미개방, 소개 보기'}`);
       const cardArt = stageKeyArt(d);
       const nodeArt = cardArt ? `<img src="${cardArt}" alt="${storyText(d.encounter.name)} 아트" width="48" height="48" loading="lazy" onerror="this.hidden=true">` : `<span class="stage-node-map">${dungeonMapSvg(d, { compact: true })}</span>`;
-      cell.innerHTML = `<span class="stage-connector" aria-hidden="true"></span><span class="stage-node${d.boss ? ' boss' : ''}">${nodeArt}${unlocked ? '<i class="stage-node-mark">입장</i>' : '<i class="stage-node-lock">봉인</i>'}</span><span class="stage-code">${d.code}</span><span class="stage-title">${storyText(d.title)}</span><span class="stage-rank">${storyText(encounterLabel(d))}</span><span aria-hidden="true" class="st ${stars ? '' : 'none'}">${unlocked ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : '미개방'}</span>`;
+      cell.innerHTML = `<span class="stage-connector" aria-hidden="true"></span><span class="stage-node${d.boss ? ' boss' : ''}">${nodeArt}${unlocked ? '<i class="stage-node-mark">입장</i>' : '<i class="stage-node-lock">봉인</i>'}</span><span class="stage-code">${d.code}</span><span class="stage-title">${storyText(d.title)}</span><span class="stage-rank">${storyText(encounterLabel(d))}</span>${d.midboss ? '<i class="stage-flag" aria-hidden="true">중간 보스</i>' : d.regionBoss ? `<i class="stage-flag" aria-hidden="true">${d.finale ? '최종 보스' : '지역 보스'}</i>` : ''}<span aria-hidden="true" class="st ${stars ? '' : 'none'}">${unlocked ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : '미개방'}</span>`;
       cell.onclick = () => { this.stage = d; this.renderStages(); grid.querySelector(`[data-stage="${d.code}"]`)?.focus({ preventScroll: true }); };
       grid.appendChild(cell);
     }
@@ -213,14 +234,15 @@ export class Meta {
     const difficultyRequirement = (item) => item.id === 'adept' ? '1개 스테이지 클리어' : item.id === 'nightmare' ? '이 스테이지 ★3' : '기본 난이도';
     const difficultyHtml = difficulties.map((item) => `<button type="button" class="difficulty-card tone-${item.tone}${item.id === selectedDifficulty.id ? ' on' : ''}${item.unlocked ? '' : ' locked'}" data-difficulty="${item.id}" aria-pressed="${item.id === selectedDifficulty.id}" ${item.unlocked ? '' : 'disabled'}><img src="/img/ui/difficulty-${item.id}.svg" alt=""><span class="difficulty-copy"><b>${item.name}</b><small>${item.description}</small></span><span class="difficulty-reward">보상 ×${item.rewardMul.toFixed(2)}</span>${item.unlocked ? '' : `<em>🔒 ${difficultyRequirement(item)}</em>`}</button>`).join('');
     const detailArt = stageKeyArt(d);
-    $('stage-detail').innerHTML = `<div class="stage-narrative"><div class="stage-hero-card">${detailArt ? `<img src="${detailArt}" alt="${storyText(d.encounter.name)} 아트" width="1680" height="944" loading="lazy" onerror="this.hidden=true">` : ''}<div class="stage-hero-shade"><span class="campaign-eyebrow">${d.code} · ${storyText(encounterLabel(d))}</span><h3>${storyText(d.title)}</h3><p>${storyText(d.story?.opening)}</p><span class="stage-hero-gate"><img src="${DUNGEON_ICON}" alt="" width="18" height="18">${storyText(d.dungeon?.name || '미지의 던전')}</span></div></div><p class="stage-objective"><b>이번 원정의 목표</b> ${storyText(d.objective)}</p>${dungeonBriefHtml(d)}${dungeonMapSvg(d)}<div class="stage-tactics"><p><b>${storyText(chapter.mechanic?.name)}</b> ${storyText(chapter.mechanic?.description)}</p><p><b>${storyText(d.encounter?.name)}</b> ${storyText(d.encounter?.tactic)}</p></div></div><div class="stage-launch"><div class="launch-kicker"><span>출격 준비</span><b>${unlocked ? '입장 가능한 던전' : '봉인된 던전'}</b></div>
+    $('stage-detail').innerHTML = `<div class="stage-narrative"><div class="stage-hero-card">${detailArt ? `<img src="${detailArt}" alt="${storyText(d.encounter.name)} 아트" width="1680" height="944" loading="lazy" onerror="this.hidden=true">` : ''}<div class="stage-hero-shade"><span class="campaign-eyebrow">${d.code} · ${storyText(encounterLabel(d))}</span><h3>${storyText(d.title)}</h3><p>${storyText(d.story?.opening)}</p><span class="stage-hero-gate"><img src="${DUNGEON_ICON}" alt="" width="18" height="18">${storyText(d.dungeon?.name || '미지의 던전')}</span></div></div><p class="stage-objective"><b>이번 원정의 목표</b> ${storyText(d.objective)}</p>${d.unlocksChapter ? `<p class="stage-unlock-note"><b>지역 해금</b> 처음 클리어하면 다음 지역이 열립니다. 새 지역 · ${storyText(CHAPTERS[d.unlocksChapter - 1].name)} / 로비 마을 · ${storyText(campaignTown(d.unlocksChapter).name)} / 첫 클리어 보석 ${d.rewards.firstGems} · 소탕 티켓 2장</p>` : d.midboss ? `<p class="stage-unlock-note mid"><b>중간 보스</b> 지역의 절반 지점입니다. 처음 클리어하면 첫 클리어 보석 ${d.rewards.firstGems}과 소탕 티켓 1장을 받습니다.</p>` : ''}${dungeonBriefHtml(d)}${dungeonMapSvg(d)}<div class="stage-tactics"><p><b>${storyText(chapter.mechanic?.name)}</b> ${storyText(chapter.mechanic?.description)}</p><p><b>${storyText(d.encounter?.name)}</b> ${storyText(d.encounter?.tactic)}</p></div></div><div class="stage-launch"><div class="launch-kicker"><span>출격 준비</span><b>${unlocked ? '입장 가능한 던전' : '봉인된 던전'}</b></div>
       <div class="meta"><span>권장 전투력 <b style="color:${power >= d.recPower ? 'var(--green)' : 'var(--red)'}">${fmt(d.recPower)}</b></span><span>내 전투력 ${fmt(power)}</span></div>
       <div class="meta stage-level" data-tone="${levelInfo.tone}" title="${levelInfo.detail}"><span>권장 Lv.<b>${d.recommendedLevel}</b> · 내 Lv.<b>${this.eco.hero(this.eco.s.selected).level}</b></span><span class="stage-level-state">${levelInfo.text}</span></div>
       <div class="difficulty-picker" role="group" aria-label="전투 난이도"><div class="difficulty-heading"><b>전투 난이도</b><span>${selectedDifficulty.name} · 보상과 적 압박이 함께 증가합니다</span></div>${difficultyHtml}</div>
       <div class="rewards"><span class="reward-chip"><i class="ic ic-gold"></i> ${fmt(Math.floor(d.rewards.gold * selectedDifficulty.rewardMul))}</span><span class="reward-chip">완료 EXP ${Math.floor(d.rewards.exp * selectedDifficulty.expMul)}</span><span class="reward-chip">정예 처치 · 장비 ${lootInfo.elite.gearRolls}개</span>${!stars ? `<span class="reward-chip"><i class="ic ic-gem"></i> ${d.rewards.firstGems} 첫클리어</span>` : ''}</div>
       <p class="stage-loot-guide" data-loot-difficulty="${selectedDifficulty.id}"><b>사냥 전리품 · ${selectedDifficulty.name}</b>${lootInfo.lines.map((line) => '<span>' + line + '</span>').join('')}<span class="stage-loot-note">${levelInfo.detail} · 처치 경험치는 전투 중 즉시 쌓입니다.</span></p>
-      ${unlocked ? '' : `<p class="stage-lock-note">${d.st === 1 ? `${d.ch - 1}-10` : `${d.ch}-${d.st - 1}`} 클리어 후 출격할 수 있습니다.</p>`}
-      <div class="row"><button class="btn btn-ghost" id="st-sweep" ${stars < 3 || !unlocked ? 'disabled' : ''}><span>소탕</span><small>티켓 ${this.eco.s.sweep}</small></button><button class="btn btn-gold" id="st-go" ${unlocked ? '' : 'disabled'}><span>${unlocked ? '던전 입장' : '봉인 해제 필요'}</span><small>${unlocked ? '<i class="ic ic-energy"></i> 출격 에너지 -' + d.energy : '이전 관문을 먼저 정화하세요'}</small></button></div></div>`;
+      ${unlocked ? '' : `<p class="stage-lock-note">${d.st === 1 ? `${d.ch - 1}-10` : `${d.ch}-${d.st - 1}`} 클리어 후 출격할 수 있습니다.</p>`}</div>`;
+    // 출격 버튼은 스크롤 밖 하단 고정 바에 둔다(낮은 가로 화면에서도 항상 보인다). id 와 동작은 그대로다.
+    $('campaign-sortie').innerHTML = `<div class="sortie-info"><b>${d.code} ${storyText(d.title)}</b><small>권장 전투력 <span style="color:${power >= d.recPower ? 'var(--green)' : 'var(--red)'}">${fmt(d.recPower)}</span> · 내 ${fmt(power)}</small></div><div class="row"><button class="btn btn-ghost" id="st-sweep" ${stars < 3 || !unlocked ? 'disabled' : ''}><span>소탕</span><small>티켓 ${this.eco.s.sweep}</small></button><button class="btn btn-gold" id="st-go" ${unlocked ? '' : 'disabled'}><span>${unlocked ? '던전 입장' : '봉인 해제 필요'}</span><small>${unlocked ? '<i class="ic ic-energy"></i> 출격 에너지 -' + d.energy : '이전 관문을 먼저 정화하세요'}</small></button></div>`;
     $('stage-detail').querySelectorAll('[data-difficulty]').forEach((button) => button.onclick = () => {
       const next = this.eco.setDifficulty(button.dataset.difficulty, d.ch, d.st);
       this.selectedDifficulty = next.id;
@@ -370,31 +392,46 @@ export class Meta {
     const R = $('reveal'); this.ui.show(R, true); this.app.setLobbyVisible(false);
     const stage = $('reveal-stage'), cards = $('reveal-cards'); stage.innerHTML = ''; cards.innerHTML = ''; $('reveal-foot').classList.add('hidden'); $('btn-reveal-skip').classList.remove('hidden');
     $('btn-reveal-skip').focus({ preventScroll: true });
-    const best = results.some((r) => r.rar === 'SSR') ? 'SSR' : results.some((r) => r.rar === 'SR') ? 'SR' : 'R';
-    audio.playMusic(musicForScene({ scene: 'gacha' }), MUSIC_MIX); audio.play('pack_open', { vol: 0.8 }); audio.magic({ vol: 0.4, base: 392, notes: [0, 4, 7, 12, 16, 19], step: 0.09 });
-    const beamColor = { R: '#4cc3ff', SR: '#b26bff', SSR: '#ffcf5a' }[best];
-    // 광선 연출: 등급 예고 (SSR이면 금색 빔 + 화면 흔들림)
-    setTimeout(() => { for (let i = 0; i < (best === 'SSR' ? 7 : best === 'SR' ? 4 : 2); i++) { const b = document.createElement('div'); b.className = 'beam'; b.style.setProperty('--c', beamColor); b.style.left = (50 + (i - 3) * 8) + '%'; b.style.animationDelay = i * 0.08 + 's'; stage.appendChild(b); } audio.play('ui_max', { vol: 0.7, rate: best === 'SSR' ? 0.6 : 1 }); if (best === 'SSR') { audio.vibe([50, 50, 50, 50, 200]); } }, 500);
-    setTimeout(() => { const f = document.createElement('div'); f.className = 'flash'; f.style.setProperty('--c', beamColor); stage.appendChild(f); audio.play(best === 'SSR' ? 'jingle_legend' : 'ui_bong', { vol: 0.9 }); }, 1300);
+    // 연출 계획은 이미 정해진 결과를 어떻게 보여 줄지만 정한다(결과·확률은 그대로).
+    const plan = revealPlan(results), best = plan.best, beamColor = plan.tone.color;
+    stage.style.setProperty('--c', beamColor); R.dataset.best = best;
+    audio.playMusic(musicForScene({ scene: 'gacha' }), MUSIC_MIX); audio.play('pack_open', { vol: 0.8 }); audio.gachaCharge();
     this._revealTimers = [];
+    const later = (fn, ms) => { const t = setTimeout(fn, ms); this._revealTimers.push(t); };
+    // 충전: 최고 등급 색의 빛무리가 커지며 기대감을 만든다
+    const charge = document.createElement('div'); charge.className = 'charge'; stage.appendChild(charge);
+    // 광선 연출: 최고 등급이 높을수록 빔이 많고 길게 이어진다 (SSR이면 금색 빔 + 진동)
+    later(() => { for (let i = 0; i < plan.tone.beams; i++) { const b = document.createElement('div'); b.className = 'beam'; b.style.setProperty('--c', beamColor); b.style.left = (50 + (i - (plan.tone.beams - 1) / 2) * 8) + '%'; b.style.animationDelay = i * 0.08 + 's'; stage.appendChild(b); } audio.play('ui_max', { vol: 0.7, rate: best === 'SSR' ? 0.6 : 1 }); if (best === 'SSR') { audio.vibe([50, 50, 50, 50, 200]); } }, 400);
+    later(() => { charge.remove(); const f = document.createElement('div'); f.className = 'flash'; f.style.setProperty('--c', beamColor); stage.appendChild(f); audio.gachaReveal(best); }, plan.tone.charge);
     results.forEach((r, i) => {
       const c = document.createElement('div'); c.className = 'rcard' + (results.length === 1 ? ' single' : '') + ' ' + r.rar; c.style.setProperty('--rc', RC[r.rar]);
       const img = r.type === 'hero' ? r.img : r.type === 'material' ? resourceArt(r.k) : itemVisual(ITEM_BY_ID[r.item.id], { heroId: this.eco.s.selected }).iconUrl; const name = r.type === 'hero' ? r.name : r.type === 'material' ? (REWARD_LABEL[r.k]?.[0] || r.k) + ' ×' + r.n : ITEM_BY_ID[r.item.id].name;
       const sub = r.type === 'hero' ? (r.dup ? this.dupShardText(r) : '') : r.type === 'material' ? (r.k === 'transcendStones' ? '초월 재료' : '강화 재료') : ITEM_BY_ID[r.item.id].slot === 'weapon' ? (weaponLook(this.eco.s.selected, r.item, LOOKS)?.form || '') : SLOT_NAME[ITEM_BY_ID[r.item.id].slot];
-      c.innerHTML = `<div class="inner"><div class="face back">?</div><div class="face front"><img src="${img}" onerror="this.remove()"><span class="rr">${r.rar}</span>${r.type === 'hero' && !r.dup ? '<span class="new">NEW</span>' : ''}<div class="nm">${name}${sub ? `<br><small style="color:var(--muted)">${sub}</small>` : ''}</div></div></div>`;
+      // 영웅 일러스트는 카드를 가득 채우고, 장비·재료 아이콘은 잘리지 않게 안쪽에 맞춘다
+      c.innerHTML = `<div class="inner"><div class="face back">?</div><div class="face front ${r.type === 'hero' ? 'is-portrait' : 'is-icon'}"><img src="${img}" onerror="this.remove()"><span class="rr">${r.rar}</span>${r.type === 'hero' && !r.dup ? '<span class="new">NEW</span>' : ''}<div class="nm">${name}${sub ? `<br><small style="color:var(--muted)">${sub}</small>` : ''}</div></div></div>`;
       cards.appendChild(c);
-      const t = setTimeout(() => { c.classList.add('flip'); if (r.rar === 'SSR') { audio.play('jingle_legend', { vol: 0.9 }); audio.vibe([30, 30, 100]); stage.innerHTML = ''; const f = document.createElement('div'); f.className = 'flash'; f.style.setProperty('--c', '#ffcf5a'); stage.appendChild(f); } else if (r.rar === 'SR') { audio.play('ui_glass', { vol: 0.7, rate: 1.2 }); } else audio.play('card_place', { vol: 0.5 }); if (i === results.length - 1) this.revealDone(); }, 1800 + i * 260);
-      this._revealTimers.push(t);
+      const step = plan.cards[i];
+      if (step.hintAt !== null) later(() => c.classList.add('hint'), step.hintAt);
+      later(() => { c.classList.remove('hint'); c.classList.add('flip'); if (r.rar === 'SSR') { audio.gachaCard('SSR'); audio.vibe([30, 30, 100]); const f = document.createElement('div'); f.className = 'flash'; f.style.setProperty('--c', '#ffcf5a'); stage.appendChild(f); setTimeout(() => f.remove(), 800); } else audio.gachaCard(r.rar); }, step.at);
     });
+    later(() => this.revealDone(), plan.doneAt + 300);
     this._revealResults = results;
   }
-  revealSkip() { this._revealTimers.forEach(clearTimeout); document.querySelectorAll('.rcard').forEach((c) => c.classList.add('flip')); audio.play('card_fan', { vol: 0.6 }); this.revealDone(); }
+  revealSkip() { this._revealTimers.forEach(clearTimeout); document.querySelectorAll('.rcard').forEach((c) => { c.classList.remove('hint'); c.classList.add('flip'); }); $('reveal-stage').querySelectorAll('.charge,.beam').forEach((e) => e.remove()); audio.play('card_fan', { vol: 0.6 }); this.revealDone(); }
   /** 중복 영웅 결과: 받은 조각과 다음 초월까지의 진행(조각은 이미 지급된 뒤의 보유량). */
   dupShardText(r) {
     const p = shardProgress(HEROES[r.id], this.eco.hero(r.id));
     return '조각 +' + r.shards + (p.need ? ' · 초월 ' + p.have + '/' + p.need : ' · 최고 등급');
   }
-  revealDone() { $('reveal-foot').classList.remove('hidden'); $('btn-reveal-skip').classList.add('hidden'); const s = this.eco.s; $('btn-reveal-again').disabled = s.gems < GACHA.ten && s.tickets < 10; $('btn-reveal-close').focus({ preventScroll: true }); }
+  revealDone() {
+    $('reveal-foot').classList.remove('hidden'); $('btn-reveal-skip').classList.add('hidden');
+    // 재화가 모자라도 버튼을 끄지 않는다. 얼마가 부족한지 보여 주고, 누르면 기존 보석 부족 안내(상점 연결)가 뜬다.
+    const st = tenPullStatus(this.eco.s, GACHA), again = $('btn-reveal-again'), cost = again.querySelector('small');
+    again.disabled = false; again.classList.toggle('is-short', !st.ok); again.setAttribute('aria-disabled', st.ok ? 'false' : 'true');
+    if (cost) cost.innerHTML = st.ok ? `<i class="ic ic-gem"></i> ${st.label}` : `<i class="ic ic-gem"></i> ${fmt(st.need)} 부족 · 필요 ${fmt(GACHA.ten)}`;
+    again.title = st.ok ? '' : `보석 ${fmt(st.need)}개가 더 필요합니다 (보유 ${fmt(this.eco.s.gems)})`;
+    $('btn-reveal-close').focus({ preventScroll: true });
+  }
   revealClose() { this._revealOpen = false; this.ui.show($('reveal'), false); this.app.setLobbyVisible(this.tab === 'home'); audio.playMusic(musicForScene({ scene: 'lobby' }), MUSIC_MIX); this.refreshTop(); if (this._revealResults?.some((r) => r.type === 'hero' && !r.dup)) this.ui.toast('새 영웅 획득! 영웅 탭에서 출전 설정', 'gold'); }
   showGachaContents(filter) { return showGachaContents.call(this, filter); }
   showWeaponPreview(itemId, heroId, enh) { return showWeaponPreview.call(this, itemId, heroId, enh); }
@@ -437,23 +474,26 @@ export class Meta {
     this.renderShop(); this.refreshTop();
   }
   renderShop() {
-    const tabs = $('shop-tabs'); tabs.innerHTML = SHOP_TABS.map((t) => `<button data-t="${t.id}" class="${t.id === this.shopTab ? 'on' : ''}">${t.name}</button>`).join('');
+    const visibleTabs = this.shopTabs();
+    if (this.shopTab !== 'avatar' && !visibleTabs.some((t) => t.id === this.shopTab)) this.shopTab = visibleTabs[0]?.id ?? 'hot';
+    const pay = this.payOn();
+    const tabs = $('shop-tabs'); tabs.innerHTML = visibleTabs.map((t) => `<button data-t="${t.id}" class="${t.id === this.shopTab ? 'on' : ''}">${t.name}</button>`).join('');
     tabs.querySelectorAll('button').forEach((b) => b.onclick = () => { if (this.shopTab === b.dataset.t) return; this.shopTab = b.dataset.t; this.renderShop(); this.trackFunnel('shop_view', { tab: this.shopTab }); });
     this.renderShopFlow();
     const notice = $('shop-notice');
-    if (notice) notice.innerHTML = this.shopTab === 'avatar' ? '<b>아바타는 보석으로 구매하는 순수 외형 상품입니다.</b> 전투 수치에는 영향이 없습니다.' : `<b>가격·상품은 미리보기입니다.</b> 결제 연결 전에는 유료 구매와 지급이 없습니다.`
-      + (this.shopTab === 'gem' || this.shopTab === 'hot' ? ` 첫 결제 보너스는 결제 연결 후 확인된 구매에 상품별 1회 적용됩니다.` : '')
-      + `<br>무료 보석: 출석·임무·첫 클리어·패스 무료 보상 / 사용: 소환 ${fmt(GACHA.single)} (10회 ${fmt(GACHA.ten)})·강화 재료·골드·에너지`;
+    if (notice) notice.innerHTML = this.shopTab === 'avatar' ? '<b>아바타는 보석으로 구매하는 순수 외형 상품입니다.</b> 전투 수치에는 영향이 없습니다.'
+      : (pay && (this.shopTab === 'gem' || this.shopTab === 'hot') ? '첫 결제 보너스는 확인된 구매에 상품별 1회 적용됩니다.<br>' : '')
+      + `무료 보석: 출석·임무·첫 클리어·패스 무료 보상 / 사용: 소환 ${fmt(GACHA.single)} (10회 ${fmt(GACHA.ten)})·강화 재료·골드·에너지`;
     const grid = $('shop-grid'); grid.innerHTML = ''; const s = this.eco.s;
     if (this.shopTab === 'avatar') { this.renderAvatarShop(grid); return; }
-    for (const sku of SKUS.filter((x) => x.tab === this.shopTab || (this.shopTab === 'hot' && x.badge && x.tab !== 'gem' && x.tab !== 'energy' && x.tab !== 'gold'))) {
+    for (const sku of this.shopSkus()) {
       const d = document.createElement('div'); const big = sku.tab === 'hot' || sku.tab === 'pack'; d.className = 'shop-item' + (sku.badge ? ' hot' : '') + (big ? ' big' : '');
       const first = sku.gems && !s.firstPurchaseUsed[sku.id]; const sold = sku.once && s.purchases.includes(sku.id);
       const cash = sku.kind === 'cash';
       const price = sku.kind === 'gem' ? `<i class="ic ic-gem"></i> ${sku.price}` : sku.priceLabel;
-      // 현금 상품은 가격 미리보기와 준비 중 상태를 함께 보여 준다. 보석 상품은 1개당 가격으로 비교할 수 있게 한다.
+      // 현금 상품은 결제가 연결됐을 때만 이 목록에 온다. 보석 상품은 1개당 가격으로 비교할 수 있게 한다.
       const value = cash && sku.gems ? `<div class="si-desc">기본 ${fmt(sku.gems)}개 · 1개당 ₩${(sku.price / sku.gems).toFixed(1)}</div>` : '';
-      d.innerHTML = `${sku.badge ? `<span class="badge">${sku.badge}</span>` : ''}${first ? '<span class="badge first" style="left:auto;right:-4px;transform:rotate(5deg)">첫 결제 보너스</span>' : ''}<img src="${sku.icon}" alt="" onerror="this.remove()"><div class="si-body"><div class="si-name">${sku.name}</div><div class="si-desc">${sku.desc || ''}</div>${value}${sku.gems ? `<div class="si-bonus">${first ? `첫 결제 시 +${fmt(sku.bonus)} (결제 연결 후)` : `+${fmt(Math.floor(sku.gems * 0.1))} 보너스`}</div>` : ''}${sku.limited ? `<div class="timer" data-timer="${sku.id}">남은 시간 ${hms(this.eco.limitedLeft(sku))}</div>` : ''}${cash ? '<div class="si-desc">가격 미리보기 · 결제 준비 중</div>' : ''}<button class="btn ${sku.kind === 'gem' ? 'btn-blue' : 'btn-gold'}"${cash ? ` aria-label="${sku.name} ${sku.priceLabel}, 결제 준비 중"` : ''}>${price}</button></div>${sold ? '<div class="sold">구매 완료</div>' : ''}`;
+      d.innerHTML = `${sku.badge ? `<span class="badge">${sku.badge}</span>` : ''}${first ? '<span class="badge first" style="left:auto;right:-4px;transform:rotate(5deg)">첫 결제 보너스</span>' : ''}<img src="${sku.icon}" alt="" onerror="this.remove()"><div class="si-body"><div class="si-name">${sku.name}</div><div class="si-desc">${sku.desc || ''}</div>${value}${sku.gems ? `<div class="si-bonus">${first ? `첫 결제 시 +${fmt(sku.bonus)}` : `+${fmt(Math.floor(sku.gems * 0.1))} 보너스`}</div>` : ''}${sku.limited ? `<div class="timer" data-timer="${sku.id}">남은 시간 ${hms(this.eco.limitedLeft(sku))}</div>` : ''}<button class="btn ${sku.kind === 'gem' ? 'btn-blue' : 'btn-gold'}"${cash ? ` aria-label="${sku.name} ${sku.priceLabel}"` : ''}>${price}</button></div>${sold ? '<div class="sold">구매 완료</div>' : ''}`;
       const role = skuFlowRole(sku);
       if (role) { const tag = document.createElement('div'); tag.className = 'si-flow'; tag.dataset.role = role.role; tag.textContent = role.label; d.querySelector('.si-name').after(tag); }
       const pace = paceShort(sku.id);
@@ -469,7 +509,7 @@ export class Meta {
     if (!row) return;
     const s = this.eco.s, h = this.eco.hero(), p = shardProgress(HEROES[s.selected], h);
     const value = { gems: fmt(s.gems), summon: '소환권 ' + s.tickets + (s.ssrTickets ? ' · 확정권 ' + s.ssrTickets : ''), shards: p.need ? p.have + '/' + p.need : '최고', transcend: p.next ? p.grade + '→' + p.next : p.grade, battle: '' };
-    const go = { gems: () => { this.shopTab = 'gem'; this.renderShop(); }, summon: () => this.openTab('gacha'), shards: () => this.openTab('gacha'), transcend: () => { this.heroSel = s.selected; this.openTab('heroes'); this.openTranscend(s.selected); }, battle: () => this.openTab('home') };
+    const go = { gems: () => { if (this.payOn()) { this.shopTab = 'gem'; this.renderShop(); } else this.ui.toast('보석은 출석·임무·첫 클리어·패스 무료 보상으로 모을 수 있어요'); }, summon: () => this.openTab('gacha'), shards: () => this.openTab('gacha'), transcend: () => { this.heroSel = s.selected; this.openTab('heroes'); this.openTranscend(s.selected); }, battle: () => this.openTab('home') };
     row.replaceChildren();
     GROWTH_FLOW.forEach((step, i) => {
       if (i) { const a = document.createElement('span'); a.className = 'sf-arrow'; a.setAttribute('aria-hidden', 'true'); a.textContent = '›'; row.append(a); }
@@ -479,14 +519,23 @@ export class Meta {
       b.onclick = go[step.id]; row.append(b);
     });
   }
+  /** 구매 실패를 조용히 넘기지 않고 이유별 문구로 알린다. */
+  purchaseFailText(result) {
+    const reason = result?.reason;
+    if (reason === 'storage') return '저장하지 못해 구매를 취소했습니다';
+    if (reason === 'payment-unavailable') return '스토어 결제가 아직 연결되지 않아 구매할 수 없습니다';
+    if (reason === 'once') return '이미 구매한 상품입니다';
+    if (reason === 'gems') return '보석이 부족합니다';
+    return '구매하지 못했습니다';
+  }
   async buy(id) {
     const sku = this.eco.sku(id); if (!sku) return; const s = this.eco.s;
     if (sku.once && s.purchases.includes(id)) { this.ui.toast('이미 구매한 상품입니다', 'red'); return; }
-    if (sku.kind === 'gem') { if (s.gems < sku.price) { audio.play('ui_error'); const ok = await this.ui.confirm('보석 부족', `보석 ${fmt(sku.price)}개가 필요합니다 (보유 ${fmt(s.gems)})<br>보석은 출석·임무·스테이지 첫 클리어·패스 무료 보상으로 모을 수 있어요. 보석 상품은 결제 연결 전까지 가격 미리보기입니다.`, { ok: '보석 탭 보기' }); if (ok) this.openTab('shop', 'gem'); return; } const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(r?.reason === 'storage' ? '저장하지 못해 구매를 취소했습니다' : '구매하지 못했습니다', 'red'); return; } audio.pick('coin', 2, { vol: 0.7 }); this.ui.rewardToast(r.got); this.renderShop(); this.refreshTop(); return; }
+    if (sku.kind === 'gem') { if (s.gems < sku.price) { audio.play('ui_error'); const ok = await this.ui.confirm('보석 부족', `보석 ${fmt(sku.price)}개가 필요합니다 (보유 ${fmt(s.gems)})<br>보석은 출석·임무·스테이지 첫 클리어·패스 무료 보상으로 모을 수 있어요.`, this.payOn() ? { ok: '보석 탭 보기' } : { ok: '확인', cancel: null }); if (ok && this.payOn()) this.openTab('shop', 'gem'); return; } const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(this.purchaseFailText(r), 'red'); return; } audio.pick('coin', 2, { vol: 0.7 }); this.ui.rewardToast(r.got); this.renderShop(); this.refreshTop(); return; }
     // 현금 구매는 항상 paySheet만 거친다. 열림만 기록하고 성공·지급은 기록하지 않는다.
     this.trackFunnel('paysheet_open', { sku: id });
     const ok = await this.ui.paySheet(sku); if (!ok) return;
-    const r = this.eco.purchase(id); if (!r?.ok) return;
+    const r = this.eco.purchase(id); if (!r?.ok) { this.ui.toast(this.purchaseFailText(r), 'red'); return; }
     this.ui.purchaseDone(sku, r.got, r.vipUp ? `<p style="color:var(--gold);font-weight:900">VIP ${r.vipUp} 달성!</p>` : (r.got.first ? '<p style="color:var(--green);font-weight:900">첫 결제 보너스 적용!</p>' : ''));
     if (this.tab === 'shop') this.renderShop(); this.refreshTop();
   }
@@ -494,10 +543,11 @@ export class Meta {
   // ================= 배틀패스 =================
   renderPass() {
     const eco = this.eco; const p = eco.s.pass; const lv = eco.passLevel; $('pass-lv').textContent = lv; $('pass-fill').style.width = (p.xp % BATTLE_PASS.xpPerLevel) + '%'; $('pass-xp').textContent = `${p.xp % BATTLE_PASS.xpPerLevel}/${BATTLE_PASS.xpPerLevel}`;
-    $('btn-pass-buy').style.display = p.premium ? 'none' : '';
+    const pay = this.payOn(), showPrem = pay || p.premium; // 결제 없이 살 수 없는 프리미엄 줄은 숨긴다(이미 해금한 저장은 그대로 보인다).
+    $('btn-pass-buy').style.display = showPrem ? (p.premium ? 'none' : '') : 'none';
     const tr = $('pass-track'); tr.innerHTML = '';
     const cell = (r, prem, l) => { const claimed = (prem ? p.claimedPrem : p.claimedFree).includes(l); const can = l <= lv && !claimed && (!prem || p.premium); const k = Object.keys(r)[0]; const [nm, ic] = REWARD_LABEL[k]; return `<div class="pass-cell ${prem ? 'prem' : ''} ${l > lv || (prem && !p.premium) ? 'lock' : ''} ${can ? 'claim' : ''} ${claimed ? 'done' : ''}" data-lv="${l}" data-prem="${prem ? 1 : 0}"><img src="${RESOURCE_ART[k]?resourceArt(k):ic}" onerror="this.remove()"><span>${nm} ${fmt(r[k])}</span></div>`; };
-    PASS_TRACK.forEach((t) => { const d = document.createElement('div'); d.className = 'pass-col' + (t.lv <= lv ? ' reached' : ''); d.innerHTML = `<div class="plv">Lv.${t.lv}</div>${cell(t.free, false, t.lv)}${cell(t.prem, true, t.lv)}`; tr.appendChild(d); });
+    PASS_TRACK.forEach((t) => { const d = document.createElement('div'); d.className = 'pass-col' + (t.lv <= lv ? ' reached' : ''); d.innerHTML = `<div class="plv">Lv.${t.lv}</div>${cell(t.free, false, t.lv)}${showPrem ? cell(t.prem, true, t.lv) : ''}`; tr.appendChild(d); });
     tr.querySelectorAll('.pass-cell').forEach((c) => c.onclick = () => { const l = +c.dataset.lv, prem = c.dataset.prem === '1'; if (prem && !p.premium) { this.buyPass(); return; } const got = eco.claimPass(l, prem); if (got) { if (!prem) this.trackFunnel('reward_claim', { source: 'pass_free' }); audio.pick('coin', 2, { vol: 0.6 }); this.ui.rewardToast(got); this.renderPass(); } });
     // 현재 레벨로 스크롤
     const col = tr.children[Math.max(0, lv - 2)]; if (col) tr.scrollLeft = col.offsetLeft - 20;
@@ -506,7 +556,7 @@ export class Meta {
     if (this.eco.s.pass.premium) return;
     const sku = { id: 'pass', name: '시즌 패스 프리미엄', priceLabel: '₩9,900', icon: '/img/icon_pass.webp', desc: '프리미엄 보상 30단계 해금 · SSR 확정권 3장 포함' };
     this.trackFunnel('paysheet_open', { sku: sku.id });
-    const ok = await this.ui.paySheet(sku); if (!ok) return; const result = this.eco.buyPass(); if (!result?.ok) return; this.ui.purchaseDone(sku, [{ k: 'gems', n: 0 }].filter((x) => x.n)); this.renderPass();
+    const ok = await this.ui.paySheet(sku); if (!ok) return; const result = this.eco.buyPass(); if (!result?.ok) { this.ui.toast(this.purchaseFailText(result), 'red'); return; } this.ui.purchaseDone(sku, [{ k: 'gems', n: 0 }].filter((x) => x.n)); this.renderPass();
   }
 
   // ================= 출석 / 우편 / 임무 / 설정 =================
@@ -538,7 +588,8 @@ export class Meta {
       <div class="setting-row setting-description"><span id="cam-desc" class="setting-help">${CAM_DESC[st.camera || 'auto']}</span></div>
       ${row('cameraInvertX', '카메라 좌우 반전')}${row('cameraInvertY', '카메라 상하 반전')}<div class="setting-row setting-description"><span class="setting-help">시점을 끌어 돌릴 때 기본은 손가락을 끄는 쪽으로 화면이 따라옵니다. 반대가 편하면 켜세요. 로비·마을·전투에 바로 적용됩니다.</span></div>
       <div class="setting-row"><span>조작</span><span id="input-help" class="setting-help">${controlHelp}</span></div>
-      <div class="modal-btns"><button class="btn btn-red btn-sm" id="m-reset">데이터 초기화</button><button class="btn btn-ghost" id="m-cancel">닫기</button></div>`, { onOpen: (b) => {
+      <div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button></div>
+      <details class="danger-zone"><summary>위험 구역 · 데이터 초기화</summary><div class="danger-body"><p>모든 진행 데이터(영웅·장비·재화·진행도)가 삭제되고 되돌릴 수 없습니다.</p><button type="button" class="btn btn-red btn-sm" id="m-reset">데이터 초기화</button><div class="danger-confirm" id="m-reset-confirm" hidden role="alert"><p><b>정말 초기화할까요?</b> 이 작업은 되돌릴 수 없습니다.</p><div class="danger-confirm-btns"><button type="button" class="btn btn-ghost btn-sm" id="m-reset-no">취소</button><button type="button" class="btn btn-red btn-sm" id="m-reset-yes">네, 모두 삭제합니다</button></div></div></div></details>`, { onOpen: (b) => {
       b.querySelector('#m-cancel').onclick = () => this.ui.closeModal();
       b.querySelector('.modal-btns').insertAdjacentHTML('beforebegin',mixRows+'<p id="mix-notice" role="status"></p>');
       const pwa = this.app.pwa, pwaState = pwa?.getState();
@@ -575,12 +626,18 @@ export class Meta {
       b.querySelectorAll('.toggle').forEach((t) => t.onclick = () => { const k = t.dataset.k; st[k] = k === 'screenShake' ? !this.app.screenShakeOn() : !st[k]; const on = k === 'screenShake' ? st[k] : !!st[k]; t.classList.toggle('on', on); t.setAttribute('aria-checked',String(on)); this.app.applySettings(); this.eco.save(); });
       b.querySelectorAll('[data-cam]').forEach((c) => c.onclick = () => { st.camera = c.dataset.cam; b.querySelectorAll('[data-cam]').forEach((x) => x.classList.toggle('on', x === c)); b.querySelector('#cam-desc').textContent = CAM_DESC[st.camera]; this.app.applySettings(); this.eco.save(); audio.play('ui_open', { vol: 0.3 }); });
       b.querySelectorAll('[data-q]').forEach((q) => q.onclick = () => { st.quality = q.dataset.q; b.querySelectorAll('[data-q]').forEach((x) => x.classList.toggle('on', x === q)); this.app.applySettings(); this.eco.save(); });
-      b.querySelector('#m-reset').onclick = async () => { if (await this.ui.confirm('초기화', '모든 진행 데이터가 삭제됩니다. 계속할까요?', { okCls: 'btn-red' })) { if (this.app.resetProgress()) location.reload(); else this.ui.toast('저장 공간을 초기화하지 못했습니다. 브라우저의 저장 권한을 확인해 주세요.', 'red'); } };
+      // 데이터 초기화는 위험 구역 안으로 옮기고, 확인은 창 안의 단계로 둔다(window.confirm 없음).
+      const resetBtn = b.querySelector('#m-reset'), resetConfirm = b.querySelector('#m-reset-confirm');
+      resetBtn.onclick = () => { resetBtn.hidden = true; resetConfirm.hidden = false; b.querySelector('#m-reset-no').focus({ preventScroll: true }); };
+      b.querySelector('#m-reset-no').onclick = () => { resetConfirm.hidden = true; resetBtn.hidden = false; resetBtn.focus({ preventScroll: true }); };
+      b.querySelector('#m-reset-yes').onclick = () => { if (this.app.resetProgress()) location.reload(); else this.ui.toast('저장 공간을 초기화하지 못했습니다. 브라우저의 저장 권한을 확인해 주세요.', 'red'); };
     } });
   }
   showProfile() {
-    const s = this.eco.s; const vipNext = [0, 1, 20000, 50000, 100000, 300000];
-    this.ui.modal(`<h2 id="profile-name"></h2><p>VIP ${s.vip} · 누적 결제 ₩${fmt(s.spentKRW)} (목업)<br>${s.vip < 5 ? `다음 VIP까지 ₩${fmt(vipNext[s.vip + 1] - s.spentKRW)}` : '최고 등급'}</p><p>VIP 혜택: 에너지 최대 +50 · 골드 +30%${this.eco.isVip ? ' <b style="color:var(--green)">(활성)</b>' : ' <b style="color:var(--red)">(VIP 멤버십 필요)</b>'}</p><p>총 소환 ${s.totalPulls}회 · 처치 ${s.quests.kills} · 클리어 ${s.quests.stages}</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button><button class="btn btn-gold" id="m-vip">VIP 멤버십</button></div>`, { onOpen: (b) => { b.querySelector('#profile-name').textContent = s.name; b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); b.querySelector('#m-vip').onclick = () => { this.ui.closeModal(); this.buy('vip_pass'); }; } });
+    const s = this.eco.s, pay = this.payOn(), vipNext = [0, 1, 20000, 50000, 100000, 300000];
+    // VIP·누적 결제 줄은 실제 결제가 연결됐을 때만 보인다. 결제가 없으면 기록만 보여 준다.
+    const vip = pay ? `<p>VIP ${s.vip} · 누적 결제 ₩${fmt(s.spentKRW)}<br>${s.vip < 5 ? `다음 VIP까지 ₩${fmt(vipNext[s.vip + 1] - s.spentKRW)}` : '최고 등급'}</p><p>VIP 혜택: 에너지 최대 +50 · 골드 +30%${this.eco.isVip ? ' <b style="color:var(--green)">(활성)</b>' : ' <b style="color:var(--red)">(VIP 멤버십 필요)</b>'}</p>` : '';
+    this.ui.modal(`<h2 id="profile-name"></h2>${vip}<p>총 소환 ${s.totalPulls}회 · 처치 ${s.quests.kills} · 클리어 ${s.quests.stages}</p><div class="modal-btns"><button class="btn btn-ghost" id="m-cancel">닫기</button>${pay ? '<button class="btn btn-gold" id="m-vip">VIP 멤버십</button>' : ''}</div>`, { onOpen: (b) => { b.querySelector('#profile-name').textContent = s.name; b.querySelector('#m-cancel').onclick = () => this.ui.closeModal(); const vipButton = b.querySelector('#m-vip'); if (vipButton) vipButton.onclick = () => { this.ui.closeModal(); this.buy('vip_pass'); }; } });
   }
   showGuide({ first = false } = {}) {
     const s = this.eco.s, heroId = s.selected, def = HEROES[heroId], hero = this.eco.hero(heroId);
@@ -603,6 +660,16 @@ export class Meta {
   /** 로비 진입 시 첫 모험과 받을 수 있는 무료 출석 보상을 안내한다. */
   autoPopups() {
     if (this.app.mode !== 'lobby' || this.app.companionAgent?.getSnapshot().open || document.querySelector('dialog[open]') || document.getElementById('modal').classList.contains('show')) return;
-    if (this.eco.dailyAvailable()) { this.showDaily(); return; }
+    if (!this.eco.dailyAvailable()) return;
+    // 신규 계정은 첫 전투 결과를 보기 전에는 출석 보상 팝업으로 흐름을 끊지 않는다. 보상은 그대로 남아 있고 첫 전투 뒤 로비·메뉴에서 받는다.
+    if (this.dailyDeferrable()) { this.dailyDeferred = true; return; }
+    this.dailyDeferred = false;
+    this.showDaily();
+  }
+  /** 아직 한 번도 전투를 끝내지 않은 신규 계정인가. 별 기록·던전 정복이 있는 기존 계정은 해당하지 않는다. */
+  dailyDeferrable() {
+    if (this.combatResultSeen) return false;
+    const stats = this.app.expedition?.s?.stats || {};
+    return isFirstSortie(this.eco.s, { history: this.eco.s.masterworks?.history, dungeonsCleared: (Number(stats.dungeonWins) || 0) + (Number(stats.campaignWins) || 0) + (Number(stats.arenaWins) || 0) });
   }
 }

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { spawnCharacter, disposeCharacter } from '../engine/assets.js';
 import { CITADEL_HUB, CITADEL_HUB_HOTSPOTS, CITADEL_HUB_PROPS, CITADEL_HUB_ASSET_ROOT, TOWN_THEMES, townHub } from '../data/citadel-hub.js';
@@ -10,7 +11,7 @@ import { createCitadelGateDesignLibrary } from './citadel-gate-designs.js';
 
 const templates = new Map();
 const pending = new Map();
-const loader = new GLTFLoader();
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 
 // ---- Tripo 라이브러리 소품: manifest kind 'prop' + tags ['town:emberport', 'building'] ----
 const LIBRARY_ROLES = Object.freeze({
@@ -79,11 +80,13 @@ export async function preloadCitadelHubAssets({ quality = 'high', fetcher = glob
 /**
  * The visible geometry and collision data refer to the same ground plane (y=0).
  * townId 없이 부르면 12개 게이트가 모두 선 원본 성채 광장이고, townId를 주면 그 마을의 장면이다.
- * @param {{ models?: Record<string, any>, environmentTexture?: any, quality?: string, assets?: any, camera?: any, townId?: string | null, libraryProps?: Array<any> }} [options]
+ * @param {{ models?: Record<string, any>, environmentTexture?: any, quality?: string, assets?: any, camera?: any, townId?: string | null, libraryProps?: Array<any>, skin?: any }} [options]
  */
-export function buildCitadelHubScene({ models = {}, environmentTexture = null, quality = 'high', assets = templates, camera = null, townId = null, libraryProps = [] } = {}) {
+export function buildCitadelHubScene({ models = {}, environmentTexture = null, quality = 'high', assets = templates, camera = null, townId = null, libraryProps = [], skin = null } = {}) {
   const town = townId && TOWN_THEMES[townId] ? townId : null;
-  const theme = TOWN_THEMES[town || 'oathhold'], palette = theme.palette, legacyLook = !town || town === 'oathhold';
+  // skin: 캠페인 지역 마을(campaign-towns.js). 광장 구조는 서비스 마을이 정하고 색·부두 소품 톤만 지역 마을이 덮는다.
+  const base = TOWN_THEMES[town || 'oathhold'], theme = skin ? { ...base, palette: skin.palette, waystone: skin.waystone, accent: skin.accent } : base;
+  const palette = theme.palette, legacyPlaza = !town || town === 'oathhold', legacyLook = legacyPlaza && !skin;
   const hub = town ? townHub(town) : null;
   const hotspots = hub ? hub.hotspots : CITADEL_HUB_HOTSPOTS, hubProps = hub ? hub.props : CITADEL_HUB_PROPS;
   const root = new THREE.Group(); root.name = 'Citadel_PlayableHub';
@@ -135,7 +138,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
   const plaza = batch();
   const pavingPath = `${CITADEL_HUB_ASSET_ROOT}paving.glb`;
   const pavingSource = legacyLook ? (assets instanceof Map ? assets.get(pavingPath) : assets[pavingPath]) : null;
-  if (legacyLook) {
+  if (legacyPlaza) {
     plaza.box(25.6, .32, 25.6, shadowStone, 0, -.22, 0);
     plaza.box(25.1, .08, 25.1, stone, 0, -.045, 0);
     // Broad low-contrast paving provides scale without disguising the routes.
@@ -440,7 +443,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
 
   // 기존 충돌·입구와 같은 광장을 쓰며 높은 수목은 이동 경계 밖에 둔다.
   const grove = [];
-  if (legacyLook) {
+  if (legacyPlaza) {
     for (const side of [-1, 1]) {
       for (const z of [-8.4, -2.8, 3.5]) {
         grove.push({ asset: z === -2.8 ? 'broadleaf-tree' : 'evergreen-tree', x: side * 15.4, z,
@@ -466,7 +469,8 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
     }
   }
   const gardenAssets = buildEnvironmentInstances(grove, { name: 'Citadel_PlazaGarden' });
-  if (GROVE_TINT[town]) tintGroup(gardenAssets, ...GROVE_TINT[town]);
+  const groveTint = GROVE_TINT[town] || skin?.grove;
+  if (groveTint) tintGroup(gardenAssets, ...groveTint);
   if (gardenAssets.userData.batchCount) root.add(gardenAssets);
   const courtyardTrees = buildEnvironmentInstances(legacyLook ? [-1, 1].map(side => ({
     asset: 'broadleaf-tree', x: side * 6, z: -4.8, y: .47, yaw: side * .9, scale: .57,
@@ -522,7 +526,7 @@ export function buildCitadelHubScene({ models = {}, environmentTexture = null, q
 
   let disposed = false, nearestId = null;
   root.userData = {
-    version: 'citadel-playable-hub-v1', townId: town, spatial: hub || CITADEL_HUB, hotspots,
+    version: 'citadel-playable-hub-v1', townId: town, campaignChapter: skin?.chapter || 1, spatial: hub || CITADEL_HUB, hotspots,
     authoredAssetCount,
     environmentInstanceCount: gardenAssets.userData.instanceCount + courtyardTrees.userData.instanceCount,
     hotspotNodes: gateNodes,

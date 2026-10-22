@@ -24,6 +24,15 @@ export class BattleReadability {
     this.contextTitle = this.context.querySelector('.map-tactics-context-copy strong');
     this.contextDetail = this.context.querySelector('.map-tactics-context-copy span');
     this.mapButton = document.getElementById('btn-map');
+    // 전투 중 목표 카드는 한 줄로 줄여 반투명하게 둔다(위쪽 적을 가리지 않게). 탭하면 잠시 펼친다.
+    this.objective.setAttribute('role', 'button'); this.objective.tabIndex = 0; this.objective.setAttribute('aria-expanded', 'false');
+    this.objective.addEventListener('click', () => this.toggleObjective());
+    this.objective.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); this.toggleObjective(); } });
+    // 방 진입 안내는 하단 장치 줄이 아니라 위쪽 가운데 가장자리에 잠깐 떴다 사라지는 토스트로 보인다.
+    this.intro = node('div', 'room-intro'); this.intro.id = 'room-intro'; this.intro.hidden = true; this.intro.setAttribute('role', 'status');
+    this.introTitle = node('strong', ''); this.introDetail = node('span', ''); this.intro.append(this.introTitle, this.introDetail);
+    this.intro.addEventListener('animationend', () => { this.intro.hidden = true; this.intro.classList.remove('on'); });
+    this.hud.append(this.intro);
     this.mapButton.setAttribute('aria-label', '발견한 구역 지도 열기 · ?는 보스 기척의 방향');
     this.dialog = node('dialog', 'battle-atlas'); this.dialog.id = 'battle-atlas';
     this.dialog.setAttribute('aria-labelledby', 'battle-atlas-title');
@@ -48,6 +57,18 @@ export class BattleReadability {
     this.resize.observe(this.canvas);
     // 정지 진입 시 기존 Input 초기화 직후 장치 표시도 실제 정지 상태로 바꾼다.
     this.clearListener = app.input.onClear(() => this.update(app.battle));
+  }
+  /** 목표 카드 펼침/접기. 펼친 카드는 5초 뒤 스스로 접힌다(타이머는 입력 때만 만든다). */
+  toggleObjective(open = !this.objective.classList.contains('is-expanded')) {
+    this.objective.classList.toggle('is-expanded', open); this.objective.setAttribute('aria-expanded', String(open));
+    clearTimeout(this.objectiveTimer);
+    if (open) this.objectiveTimer = setTimeout(() => this.toggleObjective(false), 5000);
+  }
+  /** 같은 key 는 한 번만 띄운다. 애니메이션을 다시 시작하려면 클래스를 뗐다 붙인다. */
+  showIntro(key, title, detail) {
+    if (!this.intro || this.introKey === key) return;
+    this.introKey = key; this.introTitle.textContent = title; this.introDetail.textContent = detail;
+    this.intro.hidden = false; this.intro.classList.remove('on'); void this.intro.offsetWidth; this.intro.classList.add('on');
   }
   layoutControls(battle) {
     const tray = document.getElementById('battle-info-actions'), top = this.hud.querySelector('.hud-right-top');
@@ -102,7 +123,7 @@ export class BattleReadability {
       const selected = snapshot.nodes.find(entry => entry.id === snapshot.selectedId);
       const effect = nearby?.id === 'gather' ? '적 모으기' : '적 밀어내기';
       this.actionName.textContent = snapshot.used ? `${selected?.label || '장치'} · ${snapshot.phase === 'canceled' ? '중단' : snapshot.phase === 'windup' ? '발동 준비' : snapshot.phase === 'active' ? '발동 중' : '사용 완료'}`
-        : nearby ? `${nearby.label} 발동 · F` : '조작판으로 이동';
+        : nearby ? `${nearby.label} 발동${document.documentElement.dataset.input === 'touch' ? '' : ' · F'}` : '조작판으로 이동';
       this.actionDetail.textContent = snapshot.used ? `제어 대상 ${snapshot.affectedCount}명${snapshot.remainingSeconds > 0 ? ` · ${snapshot.remainingSeconds.toFixed(1)}초` : ''}`
         : snapshot.actionable ? `${effect} · 대상 ${snapshot.targetCount}명` : blockedCopy[snapshot.blockedReason] || '장치의 조작판으로 이동';
       const mastery = gardenMasteryForStage(battle.stage);
@@ -111,6 +132,10 @@ export class BattleReadability {
         : mastery ? `이 방에서 1회 · ${nearby ? mastery.hints[nearby.id] : mastery.priorityHint}`
           : '이 방에서 1회 · 적 모으기 / 밀어내기';
       this.action.setAttribute('aria-label', `${this.actionName.textContent} · ${this.actionDetail.textContent} · 이 방에서 1회`);
+      // 방에 들어올 때 한 번, 장치를 쓰거나 중단할 때 한 번만 안내한다(남은 초처럼 매 프레임 바뀌는 글은 넣지 않는다).
+      const roomKey = `${battle.stage?.idx ?? 0}:${snapshot.roomId}`;
+      if (!snapshot.used) this.showIntro(roomKey, mastery?.label || '정원의 장치', mastery ? `이 방에서 1회 · ${mastery.priorityHint}` : '이 방에서 1회 · 적 모으기 / 밀어내기');
+      else this.showIntro(`${roomKey}:${snapshot.phase}`, selected?.label || '장치', snapshot.phase === 'canceled' ? '중단됨' : snapshot.phase === 'windup' ? '발동 준비' : snapshot.phase === 'active' ? `발동 중 · 제어 대상 ${snapshot.affectedCount}명` : '이 방의 장치 사용 완료');
     }
     if (this.dialog.open) this.refreshMap(battle, goal);
   }
@@ -158,5 +183,9 @@ export class BattleReadability {
     // 버튼에 초점을 남기면 기존 키보드 입력 보호 규칙이 WASD/F를 차단한다.
     if (restoreFocus && battle?.active && !battle.paused && this.app.mode === 'battle') this.app.canvas?.focus({ preventScroll: true });
   }
-  clear() { this.closeMap(false); this.context.hidden = true; this.action.disabled = true; this.goalKey = null; this.roomsKey = null; }
+  clear() {
+    this.closeMap(false); this.context.hidden = true; this.action.disabled = true; this.goalKey = null; this.roomsKey = null;
+    if (this.intro) { this.intro.hidden = true; this.intro.classList.remove('on'); this.introKey = null; }
+    if (this.objective?.classList) this.toggleObjective(false);
+  }
 }

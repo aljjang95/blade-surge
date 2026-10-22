@@ -4,17 +4,52 @@
 export const FEEL = Object.freeze({
   // 히트스탑: base 는 타격 등급별 기본 정지(초). 실제 정지 = base * (1 + 무게 합), 상한 max.
   hitstop: Object.freeze({
-    base: Object.freeze({ light: .045, basic: .05, crit: .06, boss: .06, heavy: .075, counter: .09, finisher: .11 }),
+    // h3-feel 고정 픽스처 측정(2026-10-22): 치명타가 평타(.05)와 10ms 차이라 구분되지 않았고, 마무리·처치가 레퍼런스(110–150, 처치 120–180ms)보다 가벼웠다.
+    // 평타·경타 리듬은 그대로 두고 치명타·강타·반격·마무리만 올린다. received 는 영웅이 강타(kb≥6)를 맞았을 때의 정지다.
+    base: Object.freeze({ light: .045, basic: .05, crit: .072, boss: .06, heavy: .085, counter: .1, finisher: .12, received: .07 }),
     shareGain: 2,      // 쓰러지지 않은 타격의 피해 / 대상 최대 HP 비율에 곱한다(큰 한 방일수록 무겁다)
     shareCap: .4,
     crowdStep: .05,    // 같은 창(crowdWindow) 안에서 두 번째 대상부터 한 명당 더해지는 무게
     crowdCap: .3,
     crowdWindow: .06,
     elite: .2,         // 정예 타격
-    kill: .12,         // 쓰러뜨리는 타격은 피해 비율 대신 이 값(졸개 일격 처치가 매번 무겁지 않게)
+    kill: .2,          // 쓰러뜨리는 타격은 피해 비율 대신 이 값(졸개 평타 처치 60ms, 마무리 처치 144ms, 정예 마무리 처치는 상한)
     weightCap: 1,      // 무게 합 상한(전부 겹쳐도 기본의 2배까지)
-    max: .13,          // 한 번의 정지 상한(ImpactClock HITSTOP_CAP .18 보다 작다)
+    max: .15,          // 한 번의 정지 상한(ImpactClock HITSTOP_CAP .18 보다 작다)
   }),
+  // 달리기 발 미끄러짐: heroRunStride 는 Running_A 를 배율 1 로 제자리 재생할 때 디딤발이 뒤로 가는 화면 속도(m/s).
+  // tools/anim-audit-qa.mjs(스키닝 정점 기준, 2026-10-22) 실측. 이동 속도 / (보폭 속도 × targetSlide) 로 재생 배율을 정한다.
+  // 예전 고정 배율(1.1 + 질주 .35)은 디딤발이 몸 이동의 42–70%만 따라가 얼음 위를 미끄러지듯 보였다(feel-fixture run 띠).
+  // targetSlide 1.35 는 발이 몸 이동의 74% 를 따라가게 남겨 2등신 캐릭터 다리가 지나치게 빨라 보이지 않게 하는 절충값이다.
+  locomotion: Object.freeze({
+    heroRunStride: Object.freeze({ knight: 2.77, barbarian: 2.74, mage: 3.55, rogue: 3.44, ranger: 3.22 }),
+    targetSlide: 1.35, min: .7, max: 2.6,
+    // 몬스터: src/data/locomotion-stride.js 의 보폭 표. 걷기 전용 큰 몸집이 지나치게 종종거리지 않게 상한을 낮춘다.
+    monsterMin: .6, monsterMax: 2.2,
+  }),
+  // 영웅 클립 크로스페이드(초). 고정 픽스처(2026-10-22)에서 회피 끝→공격(.035초, 2프레임)이 44–50°, 쌍검 연타(.06초)가 59° 한 프레임에
+  // 튀었다(주변 프레임의 4–5배). 연타 섞기는 다음 타의 선딜(접촉 진행도의 64%) 안, 회복 섞기는 접촉 전이라 접촉 프레임·판정 시각은 바뀌지 않는다.
+  blend: Object.freeze({
+    chain: Object.freeze({ '1h': .07, '2h': .07, dual: .08, staff: .08, bow: .08 }),   // 공격 → 다음 타(쌍검 선딜 85ms 안)
+    recover: .1,        // 회피·경직·대기 → 공격(앞 자세가 공격 자세와 멀다)
+    dodge: .08,         // 공격·이동 → 회피(무적·이동은 첫 프레임에 바로 시작한다)
+    hurt: .07,          // 영웅 피격(경직) 클립
+  }),
+  // 적 피격 반응. 경타는 예전처럼 빠르게(1.8배) 움찔하고, 강타·치명타·마무리는 강타 클립을 조금 느리게 끝까지 보여 무게를 읽게 한다.
+  // 경직 = base + kb × perKb(상한 kbCap) + 강타 heavyHold. 접촉 반응 시작은 같은 프레임이다.
+  react: Object.freeze({ lightSpeed: 1.8, heavySpeed: 1.4, base: .22, perKb: .03, kbCap: .4, heavyHold: .1 }),
+  // 사망 변주(결정적, 난수 없음). 시체는 맞은 방향을 등지도록 돌아 넘어지고(맞은 쪽으로 쓰러지지 않게), 처치 등급마다 쓰러지는 박자가 다르다.
+  death: Object.freeze({ snap: 1.3, normal: 1, heavy: .82 }),
+  // 연출 박자(궁극기·보스 처치). 슬로우는 끝 ease 초 동안 1 로 부드럽게 복귀한다(예전엔 뚝 끊겼다).
+  // kick 은 렌더 카메라만 시선 방향으로 밀었다 되돌리는 한 번의 방향성 펀치다(무작위 흔들림 아님, rig·사용자 시점 불변).
+  cinematic: Object.freeze({
+    ultStart: Object.freeze({ scale: .25, sec: .7, ease: .3 }),
+    ultRelease: Object.freeze({ stop: .06, kick: .7 }),
+    bossKill: Object.freeze({ stop: .15, scale: .15, sec: 1.8, ease: .8, kick: 1.1 }),
+  }),
+  camera: Object.freeze({ kickIn: .07, kickOut: .38, kickMax: 1.4 }),
+  // 넉백 속도는 매 초 keep 배로 줄어든다(지수 마찰). 초기 속도 v 의 총 이동 = v / -ln(keep). 몰이(pull)도 같은 속도 벡터를 쓰므로 값은 바꾸지 않는다.
+  knockback: Object.freeze({ keep: .02 }),
   // 피격 섬광: 가벼운 타격은 그대로(gain 1), 무거울수록 길고 밝다.
   flash: Object.freeze({
     baseSec: .12, maxSec: .22, gainMax: 1.6, perWeight: .55,
@@ -102,6 +137,68 @@ export function hitWeight({ dealt = 0, maxHp = 0, crowd = 1, elite = false, kill
 export function weightedHitstop(base, weight) {
   if (!(base > 0)) return 0;
   return Math.min(FEEL.hitstop.max, base * (1 + Math.max(0, num(weight))));
+}
+
+/** 영웅 달리기 클립 재생 배율. speed 는 실제 이동 속도(m/s, 질주·버프·둔화 반영). 실측 보폭이 없는 영웅은 예전 배율을 쓴다. */
+export function heroRunTempo(heroId, speed, sprint = 0) {
+  const L = FEEL.locomotion, stride = L.heroRunStride[heroId];
+  if (!(stride > 0) || !(speed > 0)) return 1.1 + Math.max(0, num(sprint)) * .35;
+  return clamp(speed / (stride * L.targetSlide), L.min, L.max);
+}
+
+/** 몬스터 걷기·달리기 재생 배율. strideUnit 은 액터 배율 1 기준 보폭 속도(m/s), 없으면 null(호출자가 기존 배율 사용). */
+export function monsterLocoTempo(strideUnit, actorScale, speed) {
+  const L = FEEL.locomotion;
+  if (!(strideUnit > 0) || !(actorScale > 0)) return null;
+  return clamp(Math.max(0, num(speed)) / (strideUnit * actorScale * L.targetSlide), L.monsterMin, L.monsterMax);
+}
+
+/** 넉백 속도 감쇠 배율(dt 초 동안). 프레임 크기와 무관하게 같은 곡선이다. */
+export function knockbackDecay(dt) { return Math.pow(FEEL.knockback.keep, Math.max(0, num(dt))); }
+
+/** 초기 넉백 속도(m/s)가 멈출 때까지 미는 총 거리(m). 히트스톱(dt 0) 동안은 움직이지 않으므로 정지 길이와 무관하다. */
+export function knockbackTravel(speed) { return Math.max(0, num(speed)) / -Math.log(FEEL.knockback.keep); }
+
+/** 영웅 공격 클립의 크로스페이드(초). prevState 는 공격을 시작하기 직전의 상태, weapon 은 영웅 무기 종류. */
+export function attackBlend(prevState, weapon) {
+  const B = FEEL.blend;
+  if (prevState !== 'attack') return B.recover;
+  return B.chain[weapon] ?? B.recover;
+}
+
+const _react = { key: 'hit', speed: 1, stagger: 0 };
+/** 적 피격 반응: 재생할 논리 클립 키, 재생 배율, 경직(초). kb 는 넉백 세기(저항 적용 전).
+ * 군중 타격에서 매 접촉 호출되므로 반환 객체(out, 기본은 모듈 하나)를 재사용한다. 바로 읽고 보관하지 않는다. */
+export function enemyHitReact(kb = 0, crit = false, finisher = false, out = _react) {
+  const R = FEEL.react, k = Math.max(0, num(kb)), heavy = k >= 4 || !!crit || !!finisher;
+  out.key = heavy ? 'hitHeavy' : 'hit'; out.speed = heavy ? R.heavySpeed : R.lightSpeed;
+  out.stagger = R.base + Math.min(R.kbCap, k * R.perKb) + (heavy ? R.heavyHold : 0);
+  return out;
+}
+
+/** 사망 변주. 반환: 사망 클립 재생 배율과 시체가 바라볼 방향(맞은 방향의 반대 = 공격자 쪽, 라디안) 또는 null.
+ * 쓰러뜨린 타격이 마무리·치명타·강타(kb≥6)면 빠르게 꺾이고, 정예·보스는 무겁게 천천히 쓰러진다. 같은 입력은 늘 같은 결과다. */
+export function deathStyle({ dirx = 0, dirz = 0, kb = 0, crit = false, finisher = false, elite = false, boss = false } = {}) {
+  const D = FEEL.death, l = Math.hypot(num(dirx), num(dirz));
+  const speed = boss || elite ? D.heavy : finisher || crit || num(kb) >= 6 ? D.snap : D.normal;
+  return { speed, faceYaw: l > 1e-6 ? Math.atan2(-dirx / l, -dirz / l) : null };
+}
+
+/** 렌더 카메라 펀치 거리(m): t 초 동안 kickIn 에 걸쳐 부드럽게 amount 까지 들어갔다가 kickOut 동안 0 으로 돌아온다. 범위 밖은 0. */
+export function cameraKick(t, amount) {
+  const C = FEEL.camera, a = clamp(num(amount), 0, C.kickMax);
+  if (!(t >= 0) || a === 0) return 0;
+  if (t < C.kickIn) { const k = t / C.kickIn; return a * k * k * (3 - 2 * k); }
+  const u = (t - C.kickIn) / C.kickOut;
+  if (u >= 1) return 0;
+  return a * (1 - u) * (1 - u);
+}
+
+/** 연출 박자 판정. kind: 'ultStart' | 'ultRelease' | 'bossKill'. 동작 줄이기에서는 정지(히트스톱)만 남기고 슬로우·카메라 펀치를 끈다. */
+export function cinematicBeat(kind, reduced = false) {
+  const c = FEEL.cinematic[kind];
+  if (!c) return null;
+  return { stop: c.stop || 0, slowmo: !reduced && c.scale ? { scale: c.scale, sec: c.sec, ease: c.ease } : null, kick: reduced ? 0 : c.kick || 0 };
 }
 
 /** 섬광 지속(초)·밝기 배율. 무게 0 이면 기존 값(0.12초, 배율 1)과 같다. */

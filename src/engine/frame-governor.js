@@ -1,12 +1,33 @@
+import { RESOLUTION_SCALE, decideResolutionStep, snapResolutionScale } from '../platform/mobile-display.js';
+
 export const PERF_TIER_KEY = 'bladesurge_perf_tier_v1';
+export const PERF_SCALE_KEY = 'bladesurge_perf_scale_v1';
 const WINDOW_MS = 3000, SAMPLE_COUNT = 256;
 const DOWN_MS = 5000, UP_MS = 60000, REMEMBER_MS = 60000;
+// 동적 해상도: 과부하 2초 지속 시 한 단계 낮추고, 여유 10초 지속 시 한 단계 올린다(변경 사이 최소 2.5초).
+// 올린 직후 20초 안에 다시 내려가면 올림 대기를 두 배로(최대 80초) 늘려 같은 단계를 계속 두드리지 않는다.
+const RES_DOWN_MS = 2000, RES_UP_MS = 10000, RES_COOLDOWN_MS = 2500, RES_UP_MAX_MS = 80000, RES_FAILED_PROBE_MS = 20000, RES_HOLD_MS = 40000;
+// 지속 부하 판단은 실제 렌더 fps 로 조금 더 민감하게 본다(목표의 90% 미만). 화면 주사율과 목표가 어긋나 생기는 양자화(45fps 목표 등)에
+// 속지 않도록 놓친 프레임 비율이 아니라 평균 fps 를 쓴다. 여유는 목표의 97% 이상이고 큰 끊김이 없을 때만 인정한다.
+const RES_FPS_OVERLOAD = 0.9, RES_FPS_ROOMY = 0.97, RES_EXCESS_ROOMY = 0.05;
 
 /** 온도 추정 대신 실제 렌더 간격으로 지속 부하를 판단한다. 게임 저장에는 접근하지 않는다. */
 export class FrameGovernor {
-  /** @param {{ storage?: Pick<Storage, 'getItem' | 'setItem'> | null }} [options] */
-  constructor({ storage = null } = {}) {
+  /** @param {{ storage?: Pick<Storage, 'getItem' | 'setItem'> | null, scaleStorage?: Pick<Storage, 'getItem' | 'setItem'> | null }} [options] */
+  constructor({ storage = null, scaleStorage = null } = {}) {
     this.storage = storage;
+    this.scaleStorage = scaleStorage;
+    // 동적 해상도 배율(0.7~1.0, 0.1 단계). 이전 실행에서 안정적이던 값을 이어받아 약한 기기가 매번 처음부터 버벅이지 않게 한다.
+    this.resolutionScale = RESOLUTION_SCALE.max; this.savedScale = RESOLUTION_SCALE.max;
+    this.resolutionLocked = false;
+    try {
+      const saved = JSON.parse(scaleStorage?.getItem(PERF_SCALE_KEY) ?? 'null');
+      if (saved?.version === 1 && Number.isFinite(saved.scale)) {
+        this.resolutionScale = snapResolutionScale(saved.scale); this.savedScale = this.resolutionScale;
+      }
+    } catch { /* 저장소가 차단되거나 손상됐어도 기본 배율로 시작한다. */ }
+    this.resOverloadMs = 0; this.resHeadroomMs = 0; this.resSinceChangeMs = Infinity;
+    this.resUpWaitMs = RES_UP_MS; this.resLastDir = 0; this.severeOverload = false;
     this.tier = 0;
     this.savedTier = -1;
     try {
@@ -34,6 +55,7 @@ export class FrameGovernor {
     this.lastRenderAt = NaN; this.lastEvaluation = NaN;
     this.count = 0; this.index = 0;
     this.overloadMs = 0; this.headroomMs = 0;
+    this.resOverloadMs = 0; this.resHeadroomMs = 0;
     this.renderedFps = 0; this.p95FrameMs = 0; this.missRatio = 0;
   }
 
@@ -54,6 +76,7 @@ export class FrameGovernor {
       // 화면 복귀·모드 전환의 대기 시간을 부하 표본에 섞지 않는다.
       this.lastRenderAt = NaN; this.lastEvaluation = NaN;
       this.count = 0; this.index = 0; this.overloadMs = 0; this.headroomMs = 0;
+      this.resOverloadMs = 0; this.resHeadroomMs = 0;
       this.renderedFps = 0; this.p95FrameMs = 0; this.missRatio = 0;
       this.nextAt = now;
     }
@@ -114,11 +137,49 @@ export class FrameGovernor {
     const comfortable = this.p95FrameMs < interval * 1.35 + refreshTolerance && excessRatio < 0.12;
     this.overloadMs = overloaded ? this.overloadMs + evaluationMs : 0;
     this.headroomMs = comfortable ? this.headroomMs + evaluationMs : 0;
-    if ((this.overloadMs >= DOWN_MS && this.tier < 4) || (this.headroomMs >= UP_MS && this.tier > 0)) {
+    this.severeOverload = excessRatio > 0.25;
+    this._adaptResolution(evaluationMs, this.renderedFps < this.targetFps * RES_FPS_OVERLOAD || overloaded,
+      this.renderedFps >= this.targetFps * RES_FPS_ROOMY && excessRatio < RES_EXCESS_ROOMY);
+    // 해상도를 더 낮출 수 있는 동안은 중간 정도의 과부하를 배율이 먼저 흡수한다(그림자·블룸을 끄기 전에 해상도부터).
+    // 심한 과부하이거나 배율이 이미 최저면 기존대로 단계를 올린다.
+    const tierMayRise = this.severeOverload || this.resolutionLocked || this.resolutionScale <= RESOLUTION_SCALE.min;
+    if ((this.overloadMs >= DOWN_MS && this.tier < 4 && tierMayRise) || (this.headroomMs >= UP_MS && this.tier > 0)) {
       this.tier += this.overloadMs >= DOWN_MS ? 1 : -1;
       this.stableMs = 0; this.overloadMs = 0; this.headroomMs = 0;
       this.count = 0; this.index = 0; this.lastRenderAt = NaN;
     }
+  }
+
+  /** 1초마다 한 번 호출된다. 배열·객체를 만들지 않고 숫자 상태만 갱신한다. */
+  _adaptResolution(evaluationMs, overloaded, roomy) {
+    if (this.resolutionLocked) return;
+    this.resOverloadMs = overloaded ? this.resOverloadMs + evaluationMs : 0;
+    this.resHeadroomMs = roomy ? this.resHeadroomMs + evaluationMs : 0;
+    this.resSinceChangeMs += evaluationMs;
+    const step = decideResolutionStep({ scale: this.resolutionScale, overloadMs: this.resOverloadMs, headroomMs: this.resHeadroomMs,
+      sinceChangeMs: this.resSinceChangeMs, downMs: RES_DOWN_MS, upMs: this.resUpWaitMs, cooldownMs: RES_COOLDOWN_MS });
+    if (step) {
+      // 올린 직후 곧 다시 내려갔다면 그 단계는 이 기기에 무거운 것이다 → 다음 올림은 더 오래 기다린다.
+      if (step < 0 && this.resLastDir > 0 && this.resSinceChangeMs < RES_FAILED_PROBE_MS) this.resUpWaitMs = Math.min(RES_UP_MAX_MS, this.resUpWaitMs * 2);
+      this.resolutionScale = snapResolutionScale(this.resolutionScale + step * RESOLUTION_SCALE.step);
+      this.resLastDir = step; this.resSinceChangeMs = 0; this.resOverloadMs = 0; this.resHeadroomMs = 0;
+      // 해상도가 바뀌기 전 표본은 새 부하를 대표하지 않는다.
+      this.count = 0; this.index = 0; this.lastRenderAt = NaN;
+      return;
+    }
+    // 올린 단계를 오래 유지했다면(시험 성공) 백오프를 풀고, 내려와 머무는 동안에는 늘어난 대기를 그대로 둔다.
+    if (this.resLastDir > 0 && this.resSinceChangeMs >= RES_HOLD_MS && this.resUpWaitMs !== RES_UP_MS) this.resUpWaitMs = RES_UP_MS;
+    if (this.scaleStorage && this.resSinceChangeMs >= REMEMBER_MS && this.savedScale !== this.resolutionScale) {
+      try {
+        this.scaleStorage.setItem(PERF_SCALE_KEY, JSON.stringify({ version: 1, scale: this.resolutionScale }));
+        this.savedScale = this.resolutionScale;
+      } catch { /* 용량 초과·차단은 플레이를 중단하지 않는다. */ }
+    }
+  }
+
+  /** QA·진단용: 배율을 고정하고 자동 조절을 멈춘다. 일반 플레이에서는 호출하지 않는다. */
+  lockResolution(scale = RESOLUTION_SCALE.max) {
+    this.resolutionScale = snapResolutionScale(scale); this.resolutionLocked = true;
   }
 
   snapshot() {

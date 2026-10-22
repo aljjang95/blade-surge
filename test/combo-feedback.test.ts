@@ -27,13 +27,20 @@ for (const definition of Object.values(HEROES)) test(`${definition.id}: all auth
     expect(player.canQueueCombo()).toBe(false);
     expect(comboFeedback(battle)).toMatchObject({ status: 'windup', stage: index + 1,
       total: definition.combo.length, finisher: current.finisher === true, progress: 0, nextStage: null });
-    // Early fresh intent and a continuously held button are not accepted reservations.
+    // 연계 창이 닫힌 동안에는 새 입력도 홀드도 예약으로 받지 않는다.
     player.handleInput(input(true), .016);
     expect(player.comboQueued).toBe(false); expect(comboFeedback(battle).status).toBe('windup');
+    player.handleInput(input(false, true), .016);
+    expect(player.comboQueued).toBe(false); expect(comboFeedback(battle).status).toBe('windup');
+    player.attackBufferT = 0;
     player.stateT = current.dur * .9;
     expect(player.canQueueCombo()).toBe(true);
-    player.handleInput(input(false, true), .016);
+    // 창이 열려 있으면 입력이 없을 때는 'ready' 이고, 홀드는 새 입력과 같이 다음 타를 예약한다(2026-10-22 홀드 연속 공격).
+    player.handleInput(input(false), .016);
     expect(player.comboQueued).toBe(false); expect(comboFeedback(battle).status).toBe('ready');
+    player.handleInput(input(false, true), .016);
+    expect(player.comboQueued).toBe(true); expect(comboFeedback(battle).status).toBe('queued');
+    player.comboQueued = false; player.attackBufferT = 0;
     player.handleInput(input(true), .016);
     expect(player.comboQueued).toBe(true);
     expect(comboFeedback(battle)).toMatchObject({ status: 'queued', label: '예약됨', stage: index + 1,

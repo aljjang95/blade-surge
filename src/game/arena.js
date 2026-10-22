@@ -8,6 +8,7 @@ import { STAR_ARCHIVE_TEXTURES } from '../engine/surface-textures.js';
 import { buildCitadelHubScene, townLibraryProps } from './citadel-hub-scene.js';
 import { activeTownId, TOWN_THEMES } from '../data/citadel-hub.js';
 import { buildLobbyWorld } from './lobby-world.js';
+import { activeCampaignSkin } from '../data/campaign-towns.js';
 import { BattleOcclusion } from '../engine/battle-occlusion.js';
 import { softCircleTex } from '../engine/assets.js';
 import { applyDungeonSurface, collectDungeonTiles, projectDungeonSurface } from './dungeon-surface.js';
@@ -243,7 +244,8 @@ export class Arena {
     this.clear();
     const T = THEMES.lobby;
     // 현재 마을의 하늘·안개·조명. 서약의 성채 값은 기존 광장과 같다.
-    const townId = activeTownId(), A = (TOWN_THEMES[townId] || TOWN_THEMES.oathhold).atmosphere;
+    // 캠페인 지역 마을(2~6지역)이 열려 있으면 그 마을의 하늘·안개·조명을 쓴다. 1지역은 서비스 마을 값 그대로다.
+    const townId = activeTownId(), skin = activeCampaignSkin(), A = (skin || TOWN_THEMES[townId] || TOWN_THEMES.oathhold).atmosphere;
     this.scene.background = new THREE.Color(A.bg); this.scene.fog.color.set(A.fog); this.scene.fog.density = A.density;
     const hemi = new THREE.HemisphereLight(A.hemi[0], A.hemi[1], A.hemiI); this.scene.add(hemi); this.lights.push(hemi);
     const sun = new THREE.DirectionalLight(A.sun, A.sunI); sun.position.set(...A.sunPos); sun.castShadow = true;
@@ -251,8 +253,8 @@ export class Arena {
     sun.shadow.camera.near = 1; sun.shadow.camera.far = 50; sun.shadow.bias = -0.0015; sun.shadow.normalBias = 0.02;
     this.scene.add(sun); this.lights.push(sun);
     this.lobbyHall = buildCitadelHubScene({ models: this.hubModels, environmentTexture: this.renderer.characterEnvironment.texture, quality: this.renderer.quality, camera: this.renderer.camera,
-      townId, libraryProps: townLibraryProps(townId, this.hubModels) }); this.group.add(this.lobbyHall);
-    this.lobbyWorld = buildLobbyWorld({ quality: this.renderer.quality, townId }); this.group.add(this.lobbyWorld);
+      townId, skin, libraryProps: townLibraryProps(townId, this.hubModels) }); this.group.add(this.lobbyHall);
+    this.lobbyWorld = buildLobbyWorld({ quality: this.renderer.quality, townId, skin }); this.group.add(this.lobbyWorld);
     this.renderer.lobbyOccluders = [];this.lobbyHall.traverse(o=>{if(o.isMesh)this.renderer.lobbyOccluders.push(o);});
     this.lobbyHall.traverse((o) => { if (o.isMesh && o.material.isMeshStandardMaterial) { o.material.envMap = this.renderer.characterEnvironment.texture; o.material.envMapIntensity = .3; } });
     const rim = new THREE.DirectionalLight(A.rim, A.rimI); rim.position.set(2, 4, -4);

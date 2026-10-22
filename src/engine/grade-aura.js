@@ -34,6 +34,11 @@ export class GradeAura {
   prepare(grade, fx = null) {
     if (this.disposed || (grade !== 'SSR' && grade !== 'SSSR')) return;
     this._build();
+    // 텍스처를 먼저 붙인다: map 유무는 셰이더 프로그램 키에 들어간다. 맵 없는 재질만 준비하면 첫 표시 때 uv 변형 두 개
+    // (링 앞면·뒷면)가 로딩이 끝난 뒤에 컴파일돼 전투 첫 장면이 끊겼다(실측: 로딩 직후 프로그램 +2, hero-effect-focus-v4:alpha).
+    const ringTex = VFX_TEX[RING_TEX], auraTex = VFX_TEX[AURA_TEX];
+    if (ringTex) this.ring.material.map = ringTex;
+    if (auraTex && grade === 'SSSR') this.aura.material.map = auraTex;
     fx?._keep?.(this.ring.material); fx?._keep?.(this.aura.material);
   }
   /** @param {'SR'|'SSR'|'SSSR'} grade */

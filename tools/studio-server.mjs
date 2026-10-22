@@ -26,7 +26,7 @@ const vendorFiles = new Map([
   ['addons/environments/RoomEnvironment.js', 'examples/jsm/environments/RoomEnvironment.js'],
   ['addons/libs/meshopt_decoder.module.js', 'examples/jsm/libs/meshopt_decoder.module.js'],
 ].map(([url, file]) => [`/vendor/${url}`, path.join(root, 'node_modules/three', file)]));
-const contentTypes = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.glb': 'model/gltf-binary', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.bin': 'application/octet-stream', '.mp3': 'audio/mpeg' };
+const contentTypes = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.glb': 'model/gltf-binary', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.bin': 'application/octet-stream', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.mp4': 'video/mp4' };
 let catalogCache = null;
 let catalogPromise = null;
 let allowedAssets = new Set();

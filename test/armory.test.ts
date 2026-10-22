@@ -5,6 +5,7 @@ import { ITEM_BY_ID, ITEM_POOL, ITEMS_OF, THEMED_SETS, craftable, CRAFT_COST } f
 import { Economy } from '../src/game/economy.js';
 import { ArmoryProcs } from '../src/game/armory-procs.js';
 import { contactProfile, contactBudget } from '../src/game/combat-contact.js';
+import { FEEL } from '../src/game/feel.js';
 import { HeroBeacon } from '../src/game/hero-beacon.js';
 import { Actor } from '../src/game/actor.js';
 import { FX } from '../src/engine/fx.js';
@@ -259,7 +260,7 @@ for(const Battle of [BaseBattle,RpgBattle])test(Battle===BaseBattle?'base contac
  const e:any={alive:true,pos:new Vector3(),def:{scale:1},hurt:()=>10,receiveImpact(){bodies++;}};
  Battle.prototype.damageEnemy.call(g,e,10,{quietStop:true});
  for(let i=0;i<30;i++)Battle.prototype.damageEnemy.call(g,e,10,{finisher:true});
- expect(emissions).toBe(1);expect(particles).toBe(1);expect(sounds).toBe(2);expect(g.timeCtl.stop).toBe(.11);expect(g.combo).toBe(31);
+ expect(emissions).toBe(1);expect(particles).toBe(1);expect(sounds).toBe(2);expect(g.timeCtl.stop).toBe(FEEL.hitstop.base.finisher);expect(g.combo).toBe(31);
  if(Battle===RpgBattle)expect(bodies).toBe(31);
  g.elapsed+=.061;g.app.reducedMotion.matches=true;g.timeCtl=new TimeCtl();
  Battle.prototype.damageEnemy.call(g,e,10,{quietStop:true});Battle.prototype.damageEnemy.call(g,e,10,{finisher:true});expect(particles).toBe(1);expect(g.timeCtl.stop).toBe(0);

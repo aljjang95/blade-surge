@@ -125,6 +125,7 @@ function nativeResizeFixture(r:any, width:number, height:number) {
     r.composer = {setPixelRatio:noop,setSize:noop};
     r.playerSilhouette = {size:[] as number[], resize(w:number,h:number,pr:number) { this.size=[w,h,pr]; }};
     r.lobbyAA = {uniforms:{resolution:{value:new THREE.Vector2()}}};
+    r.sharpenPass = {uniforms:{uTexel:{value:new THREE.Vector2()},uSharp:{value:0}}};
     r.bloom = {resolution:new THREE.Vector2(),setSize:noop}; r.quality='high';
   }
   try {
