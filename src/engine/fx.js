@@ -356,6 +356,7 @@ export function texFlashFitSize(size, grow = 1.3) {
   return Math.min(size, TEX_FLASH_MAX_DIAMETER / reach);
 }
 // ============ 일회성 메시 이펙트(스프라이트/링/참격/기둥) 관리 ============
+const _orbWhite = new THREE.Color(1, 1, 1);
 export class FX {
   constructor(scene, camera) {
     this.scene = scene; this.camera = camera;
@@ -843,7 +844,8 @@ export class FX {
   // ---------- 발광 구체 (투사체 본체) ----------
   orb(color, size = 0.4) {
     const g = new THREE.Group();
-    const core = new THREE.Mesh(new THREE.SphereGeometry(size * 0.5, 12, 10), this._keep(new THREE.MeshBasicMaterial({ color: 0xffffff })));
+    // 탄 심은 순백 대신 탄 색을 45% 밝힌 색: 하얀 구가 후광과 겹쳐 대마도사 평타·처치마다 흰 거품으로 보였다.
+    const core = new THREE.Mesh(new THREE.SphereGeometry(size * 0.5, 12, 10), this._keep(new THREE.MeshBasicMaterial({ color: new THREE.Color(color).lerp(_orbWhite, .45) })));
     const halo = new THREE.Sprite(this._keep(new THREE.SpriteMaterial({ map: softCircleTex(), color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }))); halo.scale.setScalar(size * 4);
     g.add(core, halo); g.userData.halo = halo; g.userData.core = core; return g;
   }
