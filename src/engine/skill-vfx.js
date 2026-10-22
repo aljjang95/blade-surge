@@ -26,15 +26,15 @@ const groundGain = (name) => SKILL_GROUND_GAIN[name] ?? 1;
  * aim 은 실제 스킬 판정과 같은 자리에 그린다: 조준점 → seek[사거리, 반경]의 최다 밀집 적(skills.js densest) → 전방 dist(0 이면 시전자).
  * 예전에는 조준점이 없을 때 전방 8~9m 에 그려 판정 위치와 연출이 어긋났다. */
 export const SKILL_VFX = Object.freeze({
-  // 검성
-  holy_slash: R(GOLD, 'holy-wave', 'front', 'flash', 0xffd060, 5, { dist: 3 }),
-  shield_bash: R(GOLD, 'holy-wave', 'aim', 'ground', 0xffe0a0, 6, { dist: 1.2 }),
-  judgment: R(GOLD, 'holy-wave', 'self', 'flash', 0xfff3b0, 6),
-  dragon_slash: R(GOLD, 'holy-wave', 'front', 'flash', 0xffd060, 10, { dist: 4 }),
-  chain_bind: R(GOLD, 'chain-lightning', 'self', 'flash', 0xfff0b0, 6),
-  sanctuary: R(GOLD, 'holy-wave', 'self', 'ground', 0xffc845, 8, { gain: .5 }),
-  sunbreaker: R(GOLD, 'holy-wave', 'front', 'flash', 0xffc040, 9, { dist: 4 }),
-  heavenfall: R(GOLD, 'holy-wave', 'aim', 'flash', 0xfff0a0, 11, { dist: 0, seek: [15, 5] }),
+  // 검성: 홀리웨이브 원화(크림 덩어리)·큰 금빛 지면 텍스처 대신 발밑 작은 룬만 두고, 모양은 sig-knight.js 의 광선·고리·표식이 맡는다.
+  holy_slash: R(GOLD, 'holy-wave', 'self', 'none', 0xffb21e, 2.5, { sig: true, gain: .7 }),
+  shield_bash: R(GOLD, 'holy-wave', 'aim', 'none', 0xffb21e, 3, { dist: 1.2, sig: true, gain: .7 }),
+  judgment: R(GOLD, 'holy-wave', 'self', 'none', 0xffb21e, 3, { sig: true, gain: .7 }),
+  dragon_slash: R(GOLD, 'holy-wave', 'self', 'none', 0xff9a18, 5, { sig: true, gain: .15 }),
+  chain_bind: R(GOLD, 'chain-lightning', 'self', 'none', 0xffb21e, 3, { sig: true, gain: .7 }),
+  sanctuary: R(GOLD, 'holy-wave', 'self', 'none', 0xffb21e, 2.5, { sig: true, gain: .5 }),
+  sunbreaker: R(GOLD, 'holy-wave', 'self', 'none', 0xff9a18, 4, { sig: true, gain: .15 }),
+  heavenfall: R(GOLD, 'holy-wave', 'aim', 'none', 0xffb21e, 5, { dist: 0, seek: [15, 5], sig: true, gain: .15 }),
   // 광전사
   whirlwind: R(GOLD, 'lava-crack', 'self', 'ground', 0xff7a4a, 5),
   quake: R(GOLD, 'lava-crack', 'aim', 'ground', 0xff9a4a, 8, { dist: 1.5 }),

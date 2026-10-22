@@ -5,6 +5,7 @@ import { AWAKENING_III } from './awakening-iii.js';
 import { gatherEnemies } from './crowd-gather.js';
 import { hasTownSkillVariant } from './town-combat.js';
 import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
+import { MARK_STYLE } from '../engine/impact-vfx.js';
 
 const _v = new THREE.Vector3();
 const _judgeSky = new THREE.Vector3(), _judgeDir = new THREE.Vector3();
@@ -194,8 +195,9 @@ export const SKILLS = {
       const f = p.forward(new THREE.Vector3()); const spawn = fwd(p, 1); spawn.y = 1.2;
       // 성검 참격: 금빛 바깥 날 + 밝은 금 안쪽 날(흰 날은 블룸과 겹쳐 크림 덩어리가 됐다) + 작은 금빛 성광.
       game.fx.slashSprite(spawn, f, 0xffc23a, { size: 4.2, life: 0.7, speed: 22, tilt: -0.5 });
-      game.fx.slashSprite(spawn, f, 0xffe7a0, { size: 3.0, life: 0.55, speed: 24, tilt: -0.5 });
-      game.fx.holyBurst(spawn, { size: 2.6, life: 0.3, color: 0xffb02a }); game.fx.light(spawn, 0xffd060, 9, 12, 0.5);
+      game.fx.slashSprite(spawn, f, 0xffcf4a, { size: 3.0, life: 0.55, speed: 24, tilt: -0.5 });
+      // 성광 원화(holyBurst)는 칼날 앞에 크림 덩어리를 남겼다. 수평 빛 칼날은 sig-knight 의 긴 광선이 맡는다.
+      game.fx.light(spawn, 0xffd060, 9, 12, 0.5);
       audio.bladeWave({ vol: 0.7 }); audio.holy({ vol: 0.3, base: 880, dur: 0.6 });
       game.renderer.shake(0.25); audio.vibe(30);
       game.spawnProjectile({ pos: spawn.clone(), dir: f, speed: SKILL_PROJECTILES.holy.speed, radius: SKILL_PROJECTILES.holy.radius, dmg: c.dmg, color: 0xfff0a0, size: 0, owner: p, kb: 5, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.holy.life, visual: null });
@@ -217,10 +219,9 @@ export const SKILLS = {
       game.hitRadius(center, SKILL_AIM_SHAPES.shield_bash.radius, c.dmg, { kb: 7, kind: 'blunt', stun: 1.4, source: p });
       if (hasTownSkillVariant(p, 'shield_bash', 'aftershock')) game.after(.22, () => game.hitRadius(center, 3.4, c.dmg * .45, { kb: 3, kind: 'blunt', stun: .45, source: p, quietStop: true }));
       // 방패 강타: 크림 폭발 원화(4.5m, 적 키 높이) 대신 바닥을 두 번 때리는 금빛 충격 고리 + 낮은 금빛 임팩트 + 사방 불똥.
-      game.fx.shockTex(center, 0xffc23a, { r1: 6.5, life: 0.5 });
-      game.after(.08, () => { if (game.active) game.fx.shockTex(center, 0xff9a20, { r1: 4.2, life: 0.4 }); });
-      game.fx.impact?.burst?.(center.clone().setY(.45), 0xffc23a, { size: 1.8 });
-      game.fx.dustPuff(center, { size: 5 }); game.fx.burst(center.clone().setY(0.5), 0xffc860, { n: 26, speed: 9, size: 0.4, up: .3 });
+      // 바닥 전체를 덮던 금빛 충격 원화 두 겹(6.5m) → 진한 주황 금 한 겹(3.6m). 방패 충격 고리·지면 균열은 sig-knight 서명.
+      game.fx.shockTex(center, 0xff9a20, { r1: 3.6, life: 0.4 });
+      game.fx.dustPuff(center, { size: 3.5 }); game.fx.burst(center.clone().setY(0.5), 0xffa830, { n: 14, speed: 9, size: 0.34, up: .3 });
       game.fx.light(center, 0xffd080, 10, 14, 0.4);
       game.renderer.shake(0.8); game.renderer.punch(1);
       audio.boom({ vol: 0.8, dur: 0.5, low: 70 }); audio.play('hit_plate', { vol: 0.9, rate: 0.8 }); audio.vibe([40, 30, 60]);
@@ -228,7 +229,7 @@ export const SKILLS = {
   },
   judgment: {
     dur: 1.0, total: 1.5,
-    start(game, p) { game.fx.castCircle(p.pos, 0xfff3b0, { radius: 4, life: 1.0 }); },
+    start(game, p) { game.fx.castCircle(p.pos, 0xffb21e, { radius: 2.6, life: 1.0 }); },
     cast(game, p, c) {
       // 인력의 심판(교관): 표적을 고르기 전에 주변 적을 시전자 쪽으로 끌어온다.
       if (hasTownSkillVariant(p, 'judgment', 'pull')) game.vacuum(p.pos, 12, 18);
@@ -237,27 +238,31 @@ export const SKILLS = {
       const pts = ts.length ? ts.map((e) => e.pos.clone()) : [fwd(p, 3)];
       pts.forEach((pt, i) => {
         const delay = i * 0.07;
+        // 표적마다 조준 원(예고)이 먼저 잡히고, 하늘 광선은 판정 시각(delay)에 바닥에 닿도록 미리 출발한다.
+        game.fx.impact?.mark?.(pt, 0xffb21e, { radius: 1.5, life: delay + .35, style: MARK_STYLE.reticle });
+        game.fx.impact?.beam?.(_judgeSky.set(pt.x - .6, 12, pt.z - .4), _judgeDir.set(.6, -12, .4), 12, 0xffc23a, { speed: 160, width: .14, fade: .25, delay: Math.max(0, delay - .075) });
         game.after(delay, () => {
           // Keep all eight hits/particle cues; only the first four get the
           // two-plane pillar so a dense Judgment stays within the render budget.
           // 심판의 빛기둥: 크림(0xfff0c0) 대신 금빛 결, 폭 1.4m. 착지점에는 하늘에서 내리꽂는 얇은 광선과 금빛 고리.
           if (i < 4) game.fx.firePillar(pt, { height: 11, width: 1.4, life: 0.5, color: 0xffc040 });
           game.hitRadius(pt, 2.2, c.dmg, { kb: 2, kind: 'magic', up: true, source: p, quietStop: i > 1 });
-          if (i < 5) game.fx.holyBurst(pt, { size: 2.4, life: 0.3, color: 0xffb02a });
-          game.fx.impact?.beam?.(_judgeSky.set(pt.x - .6, 12, pt.z - .4), _judgeDir.set(.6, -12, .4), 12, 0xffe08a, { speed: 80, tail: 5, width: .12 });
-          game.fx.burst(pt.clone().setY(0.6), 0xffd27a, { n: 12, speed: 7, size: 0.35, up: 1.2 });
+          if (i < 5) game.fx.holyBurst(pt, { size: 1.6, life: 0.24, color: 0xff9a18 });
+          game.fx.impact?.mark?.(pt, 0xff9a18, { radius: 1.3, life: .4, style: MARK_STYLE.thorn });
+          game.fx.burst(pt.clone().setY(0.6), 0xffb040, { n: 12, speed: 7, size: 0.32, up: 1.2 });
           if (i < 3) game.fx.light(pt, 0xfff0c0, 8, 8, 0.4);
           game.renderer.shake(0.22); audio.holy({ vol: 0.22, base: 659 + i * 40, dur: 0.5 }); audio.thump({ vol: 0.4, freq: 80 });
         });
       });
-      game.renderer.flashScreen(0.18, 0xffe0a0);
+      game.renderer.flashScreen(0.1, 0xffb040);
     },
   },
   dragon_slash: {
     dur: 1.2, total: 2.1,
     start(game, p, c) {
-      game.fx.castCircle(p.pos, 0xffd060, { radius: 6, life: 1.2 });
-      game.fx.firePillar(p.pos, { height: 9, width: 2.4, life: 1.0, color: 0xffd060 });
+      // 기 모으기: 큰 금빛 마법진(6m) 대신 작은 진 + 진한 주황 금 기둥(폭 1.6m).
+      game.fx.castCircle(p.pos, 0xff9a18, { radius: 2.4, life: 1.2 });
+      game.fx.firePillar(p.pos, { height: 10, width: 1.6, life: 1.0, color: 0xff9a18 });
       game.fx.embers(p.pos, 0xffcf5a, { n: 30, radius: 1.5, life: 1.2, rise: 5 });
       audio.magic({ vol: 0.5, base: 330, notes: [0, 7, 12, 19, 24], step: 0.09, type: 'sawtooth' });
       c.data.vac = 0;
@@ -284,19 +289,18 @@ export const SKILLS = {
       for (let i = -1; i <= 1; i++) {
         const d = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.32);
         const sp = p.pos.clone().addScaledVector(d, 1.5).setY(1.3);
-        game.fx.slashSprite(sp, d, i === 0 ? 0xffe7a0 : 0xffb830, { size: 5.5, life: 0.8, speed: 20, tilt: -0.5 + i * 0.25 });
+        game.fx.slashSprite(sp, d, i === 0 ? 0xffc23a : 0xff9a18, { size: 5.5, life: 0.8, speed: 20, tilt: -0.5 + i * 0.25 });
         game.spawnProjectile({ pos: sp.clone(), dir: d, speed: 20, radius: 1.5, dmg: c.dmg * 0.35, color: 0xffe080, size: 0, owner: p, kb: 6, kind: 'slash', pierce: true, life: 0.8, visual: null });
       }
       const hitC = fwd(p, 3.5);
       // 용참 착탄: 크림 폭발(11m)·성광(12m)·화면 섬광 .45 는 화면을 하얗게 덮었다. 진한 금 폭발(6m) + 바닥 충격 2겹 + 금빛 임팩트 + 부채꼴 불똥으로 '앞으로 베어 낸' 방향을 남긴다.
-      game.fx.explosion(hitC, { size: 6, color: 0xffa020, life: 0.6 });
-      game.fx.shockTex(hitC, 0xffc040, { r1: 14, life: 0.7 }); game.after(.1, () => { if (game.active) game.fx.shockTex(hitC, 0xff9a20, { r1: 8, life: 0.5 }); });
-      game.fx.holyBurst(hitC, { size: 6, life: 0.45, color: 0xffb02a });
-      game.fx.impact?.burst?.(hitC.clone().setY(1), 0xffc23a, { size: 3 });
+      // 14m 금빛 충격 원화·성광 원화는 바닥을 한 색으로 덮었다. 진한 폭발(5m) + 주황 충격 한 겹(8m). 수직 참격·부채 균열은 sig-knight 서명.
+      game.fx.explosion(hitC, { size: 5, color: 0xff8a10, life: 0.55 });
+      game.fx.shockTex(hitC, 0xff9a20, { r1: 8, life: 0.55 });
       game.fx.directional(hitC.clone().setY(1), f, 0xffc860, { n: 24, speed: 16, size: 0.45, spread: 1.1 });
-      game.fx.dustPuff(hitC, { size: 8 }); game.fx.burst(hitC.setY(1), 0xffd27a, { n: 30, speed: 14, size: 0.45, up: 0.8 });
+      game.fx.dustPuff(hitC, { size: 6 }); game.fx.burst(hitC.setY(1), 0xffa830, { n: 24, speed: 14, size: 0.42, up: 0.8 });
       game.fx.light(fwd(p, 3), 0xffd060, 16, 18, 0.6);
-      game.renderer.shake(1); game.renderer.punch(1.5); game.renderer.flashScreen(0.22, 0xffe0a0); game.renderer.aberr = 1.2; game.timeCtl.slowmo(0.35, 0.5);
+      game.renderer.shake(1); game.renderer.punch(1.5); game.renderer.flashScreen(0.14, 0xffa030); game.renderer.aberr = 1.2; game.timeCtl.slowmo(0.35, 0.5);
       audio.boom({ vol: 1, dur: 0.9, low: 50 }); audio.bladeWave({ vol: 1 }); audio.holy({ vol: 0.45, base: 523, dur: 1.1 }); audio.vibe([80, 40, 120]);
     },
   },
@@ -550,7 +554,7 @@ export const SKILLS = {
   chain_bind: {
     dur: 0.85,
     start(game, p, c) {
-      game.fx.castCircle(p.pos, 0xffe08a, { radius: 5.5, life: 0.85 });
+      game.fx.castCircle(p.pos, 0xffb21e, { radius: 3, life: 0.85 });
       audio.magic({ vol: 0.4, base: 440, notes: [0, 5, 9, 12], step: 0.05 });
       c.data.bound = [];
     },
@@ -562,12 +566,13 @@ export const SKILLS = {
       ts.forEach((e, i) => game.after(i * 0.045, () => {
         if (!e.alive) return;
         game.fx.boltTex(chest(), e.pos.clone().setY(1.0), 0xffe08a, { width: 2.4, life: 0.55 });
-        game.fx.castCircle(e.pos, 0xffd060, { radius: 1.7, life: 1.9 });
+        // 묶인 적 발밑: 금빛 마법진 대신 사슬 가시 고리(인스턴스 층).
+        game.fx.impact?.mark?.(e.pos, 0xffb21e, { radius: 1.3, life: 1.9, style: MARK_STYLE.thorn, angle: i });
         e.stun = Math.max(e.stun, 2.0 * (e.isBoss ? 0.35 : 1));
         game.damageEnemy(e, c.dmg * 0.45, { kind: 'magic', kb: 0, source: p, quietStop: i > 1 });
         audio.clang({ vol: 0.28, freq: 1700 + i * 130, dur: 0.22 });
       }));
-      game.renderer.flashScreen(0.14, 0xffe0a0); game.renderer.shake(0.35); audio.vibe([20, 20, 40]);
+      game.renderer.shake(0.35); audio.vibe([20, 20, 40]);
       // 결박 유지 — 사슬이 1.4초간 계속 조인다
       let n = 12;
       const hold = () => {
@@ -582,11 +587,11 @@ export const SKILLS = {
         const center = p.pos.clone();
         for (const e of c.data.bound) if (e.alive) game.fx.boltTex(center.clone().setY(1.4), e.pos.clone().setY(1), 0xffd060, { width: 2.4, life: 0.2 });
         game.hitRadius(center, 7.5, c.dmg, { kb: 10, kind: 'magic', up: true, source: p, dirFrom: center });
-        game.fx.shockTex(center, 0xffe08a, { r1: 9.5, life: 0.55 });
-        game.fx.holyBurst(center, { size: 9, life: 0.45 });
-        game.fx.burst(center.clone().setY(0.8), 0xffd27a, { n: 46, speed: 13, size: 0.45, up: 1.1 });
+        // 사슬 파열: 크림 성광(9m) 대신 주황 금 충격 한 겹 + 서명의 퍼지는 고리.
+        game.fx.shockTex(center, 0xff9a20, { r1: 7.5, life: 0.5 });
+        game.fx.burst(center.clone().setY(0.8), 0xffa830, { n: 30, speed: 13, size: 0.4, up: 1.1 });
         game.fx.light(center, 0xffd060, 15, 16, 0.5);
-        game.renderer.shake(0.8); game.renderer.punch(1); game.renderer.flashScreen(0.18, 0xffe0a0);
+        game.renderer.shake(0.8); game.renderer.punch(1); game.renderer.flashScreen(0.1, 0xffa030);
         audio.boom({ vol: 0.9, dur: 0.7, low: 60 }); audio.holy({ vol: 0.4, base: 660, dur: 0.8 }); audio.vibe([60, 30, 90]);
       });
     },
@@ -596,15 +601,15 @@ export const SKILLS = {
   sanctuary: {
     dur: 1.0,
     // 준비 마법진은 낮은 밝기(.55)로: 성역 경계가 나타나기 전부터 금빛이 바닥을 다 덮지 않게 한다.
-    start(game, p) { game.fx.groundTex(p.pos, 'circle_gold', 0xffd060, { r0: 2.8, r1: 7, life: 1.0, spin: 1.6, y: 0.07, fadeIn: 0.2, hold: 0.35, gain: .55 }); audio.magic({ vol: 0.45, base: 523, notes: [0, 4, 7, 12], step: 0.08 }); },
+    start(game, p) { game.fx.groundTex(p.pos, 'circle_gold', 0xffb21e, { r0: 1.2, r1: 3, life: 1.0, spin: 1.6, y: 0.07, fadeIn: 0.2, hold: 0.35, gain: .5 }); audio.magic({ vol: 0.45, base: 523, notes: [0, 4, 7, 12], step: 0.08 }); },
     cast(game, p, c) {
       const center = p.pos.clone().setY(0); const R = 8.0, LIFE = 7.0;
       p.dr = 0.35; p.drT = LIFE; p.sanctum = { pos: center, r: R };
       // 지면 성역: 옅은 회전 룬(밝기 .38) + 얇은 경계 원과 가는 빛기둥 8개(차례로 솟음, 드로우콜 2). 예전 마법진 2장 + 불기둥 16장 + 화면 섬광은 시전 순간 화면을 금빛으로 덮었다.
-      game.fx.groundTex(center, 'circle_gold', 0xffc845, { r0: R * 0.2, r1: R * .94, life: LIFE, spin: 0.35, y: 0.07, fadeIn: 0.3, hold: LIFE - 1.2, gain: .38 });
-      game.fx.sanctum?.(center, { radius: R, life: LIFE, color: 0xffc845 });
-      game.fx.light(center, 0xffd060, 7, 14, 0.6);
-      game.renderer.flashScreen(0.12, 0xffe6a0); game.renderer.shake(0.4);
+      // 7초 내내 바닥 전체(7.5m)를 덮던 금빛 룬 원화와 화면 섬광을 뺐다. 경계 원·빛기둥(sanctum) + 서명 문양만 남는다.
+      game.fx.sanctum?.(center, { radius: R, life: LIFE, color: 0xff9a10 });
+      game.fx.light(center, 0xffb040, 5, 12, 0.5);
+      game.renderer.shake(0.4);
       audio.holy({ vol: 0.5, base: 523, dur: 1.4 }); audio.boom({ vol: 0.5, dur: 0.5, low: 80 }); audio.vibe([40, 30, 60]);
       let t = 0, ticks = Math.round(LIFE / 0.5);
       const tick = () => {
@@ -621,7 +626,7 @@ export const SKILLS = {
         const a = Math.random() * Math.PI * 2, r = Math.random() * R;
         // 성역 안 맥동: 큰 성광 섬광(3m) 대신 바닥의 작은 금빛 별빛 한 점.
         game.fx.impact?.burst?.(center.clone().add(new THREE.Vector3(Math.cos(a) * r, .4, Math.sin(a) * r)), 0xffc23a, { size: 1 });
-        game.fx.embers(center, 0xffd27a, { n: 6, radius: R * 0.8, life: 1.2, rise: 3 });
+        game.fx.embers(center, 0xffb040, { n: 6, radius: R * 0.8, life: 1.2, rise: 3 });
         audio.holy({ vol: 0.14, base: 784, dur: 0.4 });
         game.after(0.5, tick);
       }; tick();
@@ -936,8 +941,8 @@ export const SKILLS = {
     },
   },
   // ================= 고위 액티브 Lv.35 / Lv.50 =================
-  sunbreaker: { dur:.85, cast(game,p,c){ const at=fwd(p,4); game.vacuum(at,8,18); game.hitRadius(at,5.5,c.dmg,{kb:8,kind:'slash',source:p,dirFrom:at}); game.fx.shockTex(at,0xffd060,{r1:6,life:.45}); game.after(.18,()=>{if(game.active)game.hitRadius(at,6.5,c.dmg*.65,{kb:10,kind:'slash',source:p,dirFrom:at});}); } },
-  heavenfall: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,15,5)||p.pos.clone(); game.vacuum(at,12,24); game.fx.castCircle(at,0xfff0a0,{radius:7,life:.7}); game.after(.28,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.25,{kb:14,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xfff0a0,life:.55});}); } },
+  sunbreaker: { dur:.85, cast(game,p,c){ const at=fwd(p,4); game.vacuum(at,8,18); game.hitRadius(at,5.5,c.dmg,{kb:8,kind:'slash',source:p,dirFrom:at}); game.fx.shockTex(at,0xff9a20,{r1:4.5,life:.4}); game.after(.18,()=>{if(game.active)game.hitRadius(at,6.5,c.dmg*.65,{kb:10,kind:'slash',source:p,dirFrom:at});}); } },
+  heavenfall: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,15,5)||p.pos.clone(); game.vacuum(at,12,24); game.fx.castCircle(at,0xffb21e,{radius:3,life:.7}); game.after(.28,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.25,{kb:14,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:6.5,color:0xff9a18,life:.5});}); } },
   // 설원의 혈진(교관): 두 번째 붕괴가 반경 8 → 9.5, 피해 0.8 → 1.1배가 된다.
   bloodquake: { dur:.9, cast(game,p,c){ const echo=hasTownSkillVariant(p,'bloodquake','echo'); const at=p.pos.clone(); game.vacuum(at,9,22); game.hitRadius(at,6,c.dmg,{kb:7,kind:'blunt',source:p,dirFrom:at}); game.after(.2,()=>{if(game.active)game.hitRadius(at,echo?9.5:8,c.dmg*(echo?1.1:.8),{kb:12,kind:'blunt',up:true,source:p,dirFrom:at});}); } },
   cataclysm: { dur:1.1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||fwd(p,2); game.fx.castCircle(at,0xff5a3c,{radius:8,life:.8}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.3,{kb:16,kind:'blunt',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:12,color:0xff5a3c,life:.65});}); } },

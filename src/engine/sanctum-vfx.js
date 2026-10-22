@@ -42,14 +42,15 @@ const ZONE_FRAG = `
     float r = length(vUv); if (r > 1.0) discard;
     float ang = atan(vUv.y, vUv.x);
     float edge = exp(-pow((r - 0.965) / 0.012, 2.0));
-    float halo = exp(-pow((r - 0.965) / 0.06, 2.0)) * 0.28;
+    // 경계 번짐은 좁고 옅게(예전 폭 .06·세기 .28 은 반경 8m 에서 50cm 넘는 복숭아빛 띠가 됐다).
+    float halo = exp(-pow((r - 0.965) / 0.03, 2.0)) * 0.14;
     float inner = exp(-pow((r - 0.56) / 0.008, 2.0)) * 0.35;
     // 경계 안쪽을 천천히 도는 24개 눈금(룬 자리)
     float ticks = step(0.0, sin(ang * 24.0 + uTime * 0.6) - 0.82) * step(0.88, r) * step(r, 0.935) * 0.55;
     float fill = smoothstep(0.55, 0.97, r) * 0.05;
     float a = (edge + halo + inner + ticks + fill) * uAlpha * uPeak;
     if (a < 0.003) discard;
-    gl_FragColor = vec4(mix(uColor, vec3(1.0), edge * 0.25), a);
+    gl_FragColor = vec4(mix(uColor, vec3(1.0), edge * 0.1), a);
   }`;
 
 let pillarGeometry = null, pillarCount = 0;
