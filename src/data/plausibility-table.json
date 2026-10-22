@@ -1,0 +1,15 @@
+{
+  "version": "p1-defaults-1",
+  "note": "MMO P1-E T1 개연성 상한. tools/mmo-calibrate.mjs가 스테이지·난이도별 값을 채운다. 표에 없는 스테이지는 defaults를 쓴다.",
+  "dpsPerAtk": 40,
+  "damageSlack": 0.2,
+  "maxRevives": 3,
+  "wallClockSlack": 1.2,
+  "defaults": {
+    "minClearMs": 20000,
+    "kills": { "normal": 400, "elite": 30, "boss": 3 },
+    "summonedKills": 120,
+    "maxRooms": 16
+  },
+  "stages": {}
+}

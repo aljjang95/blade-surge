@@ -47,6 +47,8 @@ export async function handleSocialRequest(request: Request, env: SocialEnv, conf
   if (!env.SOCIAL) return json({ error: 'unavailable' }, 503);
   const path = url.pathname.slice(SOCIAL_PREFIX.length) || '/';
   if (path.length > 200 || url.search.length > 1024) return json({ error: 'too-long' }, 414);
+  // Worker→DO 내부 전용 경로는 공개 라우팅하지 않는다.
+  if (path === '/internal' || path.startsWith('/internal/')) return json({ error: 'not-found' }, 404);
   const upgrade = request.headers.get('upgrade')?.toLowerCase() === 'websocket';
   const origin = request.headers.get('origin');
   // 공개 GET은 origin 헤더가 없어도 되지만, 그 외 요청과 WebSocket은 허용 origin이 반드시 있어야 한다.
