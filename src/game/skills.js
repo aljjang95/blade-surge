@@ -554,7 +554,7 @@ export const SKILLS = {
   chain_bind: {
     dur: 0.85,
     start(game, p, c) {
-      game.fx.castCircle(p.pos, 0xffe08a, { radius: 5.5, life: 0.85 });
+      game.fx.castCircle(p.pos, 0xffb21e, { radius: 3, life: 0.85 });
       audio.magic({ vol: 0.4, base: 440, notes: [0, 5, 9, 12], step: 0.05 });
       c.data.bound = [];
     },
@@ -607,7 +607,7 @@ export const SKILLS = {
       p.dr = 0.35; p.drT = LIFE; p.sanctum = { pos: center, r: R };
       // 지면 성역: 옅은 회전 룬(밝기 .38) + 얇은 경계 원과 가는 빛기둥 8개(차례로 솟음, 드로우콜 2). 예전 마법진 2장 + 불기둥 16장 + 화면 섬광은 시전 순간 화면을 금빛으로 덮었다.
       // 7초 내내 바닥 전체(7.5m)를 덮던 금빛 룬 원화와 화면 섬광을 뺐다. 경계 원·빛기둥(sanctum) + 서명 문양만 남는다.
-      game.fx.sanctum?.(center, { radius: R, life: LIFE, color: 0xffb21e });
+      game.fx.sanctum?.(center, { radius: R, life: LIFE, color: 0xff9a10 });
       game.fx.light(center, 0xffb040, 5, 12, 0.5);
       game.renderer.shake(0.4);
       audio.holy({ vol: 0.5, base: 523, dur: 1.4 }); audio.boom({ vol: 0.5, dur: 0.5, low: 80 }); audio.vibe([40, 30, 60]);

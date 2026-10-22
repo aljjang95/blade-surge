@@ -98,7 +98,7 @@ Object.assign(SIGNATURES, {
   // 성역: 돔 경계 문양(가시 고리 = 벽, 나침 = 안쪽 문양) + 네 방위에서 솟는 가는 빛 광선. 경계·기둥 본체는 sanctum-vfx.
   sanctuary(ctx) {
     const { impact, player, f, lite } = ctx; const R = 8;
-    impact.mark(player.pos, WIDE, { radius: R * .62, life: 1.4, style: MARK_STYLE.compass, angle: yawOf(f) });
+    impact.mark(player.pos, AMBER, { radius: 2.6, life: 1.4, style: MARK_STYLE.compass, angle: yawOf(f) });
     const n = lite ? 2 : 4;
     for (let i = 0; i < n; i++) {
       const ang = yawOf(f) + (i / n) * Math.PI * 2;
@@ -126,7 +126,7 @@ Object.assign(SIGNATURES, {
   heavenfall(ctx) {
     const { impact, at, lite, scale } = ctx; const T = KNIGHT_SIG_TIMING.heavenfallHit;
     const SPEED = 110, H = 14;
-    impact.mark(at, WIDE_GOLD, { radius: 8 * scale, life: T + .35, style: MARK_STYLE.reticle });
+    impact.mark(at, WIDE_GOLD, { radius: 5.5 * scale, life: T + .35, style: MARK_STYLE.reticle });
     const n = lite ? 4 : 7;
     for (let i = 0; i < n; i++) {
       const r = i === 0 ? 0 : 4.2, ang = i * (Math.PI * 2 / (n - 1));
