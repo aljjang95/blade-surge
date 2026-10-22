@@ -113,3 +113,17 @@ test('보스 돌진 통로는 보스 예고 셰이더로 그려지고 출발(.45
   expect(last).toBeGreaterThan(.9);
   enemy.dashWarning.dispose();
 });
+
+test('파티 손님 화면: 보스 일반 패턴 경고(id ":boss")는 보스 예고 셰이더로, 일반 적 경고는 기존 셰이더로 그린다', async () => {
+  const { PartyCombatEffects } = await import('../src/party/combat-effects.js');
+  const { enemyPartyWarnings } = await import('../src/game/enemies.js');
+  const make = (isBoss: boolean) => enemyPartyWarnings({ alive: true, spawning: false, partyId: 'p1', state: 'attack', attackDone: false, attackDur: 1.8, hitAt: .55,
+    stateT: .2, special: 'spin', isBoss, pos: { x: 0, z: 0 }, yaw: 0, def: { range: 3 } })[0];
+  const boss = make(true), mob = make(false);
+  expect(boss.id).toContain(':boss'); expect(boss.color).toBe(0xff3030); expect(mob.id).not.toContain(':boss');
+  const effects = new PartyCombatEffects(new THREE.Scene());
+  effects.update([boss, { ...mob, id: 'p1:mob' }]);
+  expect(effects.slots[0].mesh.material).toBe(effects.slots[0].boss);
+  expect(effects.slots[1].mesh.material).toBe(effects.slots[1].plain);
+  effects.dispose();
+});
