@@ -7,7 +7,7 @@ import { hasTownSkillVariant } from './town-combat.js';
 import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
 import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
 import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
-import { mageBolt, mageMeteorFall, mageFrostTick, magePrismBounce } from '../engine/sig-mage.js';
+import { mageBolt, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail } from '../engine/sig-mage.js';
 import { MARK_STYLE, BEAM_STYLE } from '../engine/impact-vfx.js';
 import { decorativeBurstGain } from '../engine/combat-feedback.js';
 
@@ -386,7 +386,7 @@ export const SKILLS = {
   },
   hell_axe: {
     dur: 1.0, total: 2.4,
-    start(game, p, c) { audio.fire({ vol: 0.5, dur: 1.2 }); audio.magic({ vol: 0.5, base: 196, notes: [0, 5, 7, 12], step: 0.12, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff5020, { radius: 5, life: 1.0, demon: true }); game.fx.embers(p.pos, 0xff5020, { n: 30, radius: 2, life: 1.5, rise: 6 }); },
+    start(game, p, c) { skillPrelude(game, p, 'hell_axe'); audio.fire({ vol: 0.5, dur: 1.2 }); audio.magic({ vol: 0.5, base: 196, notes: [0, 5, 7, 12], step: 0.12, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff5020, { radius: 5, life: 1.0, demon: true }); game.fx.embers(p.pos, 0xff5020, { n: 30, radius: 2, life: 1.5, rise: 6 }); },
     cast(game, p, c) {
       const target = c.data.aimPoint?.clone() || densest(game, p, SKILL_AIM_SHAPES.hell_axe.range, 4) || fwd(p, 4);
       c.data.target = target;
@@ -447,7 +447,7 @@ export const SKILLS = {
   },
   blizzard: {
     dur: 1.0, total: 3.4,
-    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x2a8cff, { radius: 6.8, life: 3.2 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: .9, life: 1.1, heavy: true }); },
+    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x2a8cff, { radius: 6.8, life: 3.2 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: .6, life: 1.1, heavy: true }); },
     update(game, p, c, dt) {
       const m = game.input.move; const spd = p.stats.spd * 0.5; p.vel.set(m.x * spd, 0, m.y * spd);
       if (c.t > 0.6 && p.actionName !== 'Spellcasting') p.play('Spellcasting', { fade: 0.2 });
@@ -458,7 +458,7 @@ export const SKILLS = {
       if (c.data.tick <= 0) {
         c.data.tick = 0.4; const i = c.data.n = (c.data.n || 0) + 1;
         game.hitRadius(p.pos, wide ? 8.6 : 6.8, c.dmg, { kb: 0.5, kind: 'magic', slow: 1.2, source: p, dirFrom: p.pos, quietStop: true });
-        game.fx.shockTex(p.pos, 0x4fb4ff, { r1: 7.5, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 0.55, life: 0.32 });
+        game.fx.shockTex(p.pos, 0x1f6fd0, { r1: 7.5, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 0.4, life: 0.32 });
         const a = Math.random() * Math.PI * 2, r = 1 + Math.random() * 4;
         game.fx.iceBurst(p.pos.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)), { size: 4, life: 0.45, color: 0x2a9cff });
         game.fx.burst(p.pos.clone().setY(0.3), 0x4aaeff, { n: 20, speed: 8, size: 0.35, up: 0.6, spread: 0.6 });
@@ -469,7 +469,7 @@ export const SKILLS = {
   },
   meteor: {
     dur: 1.0, total: 3.0,
-    start(game, p, c) { audio.magic({ vol: 0.5, base: 261, notes: [0, 7, 12, 19, 24, 31], step: 0.1, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff9a40, { radius: 6, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 8, width: 2, life: 0.9, color: 0xff9a40 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 1.35, life: 0.78, heavy: true }); },
+    start(game, p, c) { audio.magic({ vol: 0.5, base: 261, notes: [0, 7, 12, 19, 24, 31], step: 0.1, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff9a40, { radius: 6, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 8, width: 2, life: 0.9, color: 0xff9a40 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 1.0, life: 0.78, heavy: true }); skillPrelude(game, p, 'meteor'); },
     cast(game, p, c) {
       const focus = c.data.aimPoint?.clone() || densest(game, p, SKILL_AIM_SHAPES.meteor.range, 5) || fwd(p, 4);
       const pts = [];
@@ -776,6 +776,7 @@ export const SKILLS = {
         state.pos.addScaledVector(state.dir, SPEED * dt);
         lance.position.copy(state.pos);
         game.fx.boltTex(prev, state.pos, 0x5fc8ff, { width: 0.9, life: 0.14 });
+        magePrismTrail(game, prev, state.pos); // 프리즘 창 궤적(인스턴스 층)
         // 적 반사
         let bounced = false;
         for (const e of game.enemies) {

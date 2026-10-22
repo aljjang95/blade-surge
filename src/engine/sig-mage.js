@@ -130,6 +130,35 @@ export function magePrismBounce(game, pos, dir, n = 0) {
   return impact.spawned - before;
 }
 
+/** 프리즘 창이 지나간 자리(매 프레임 한 마디, skills.js arc_reflect 가 부른다): 진한 청록 광선이 짧게 남는다. */
+export function magePrismTrail(game, from, to) {
+  const impact = game?.fx?.impact; if (!live(impact) || !from || !to || reducedOf(game)) return 0;
+  _d.copy(to).sub(from); const l = _d.length(); if (!(l > .01)) return 0;
+  return impact.beam(from, _d, l, C.prismDeep, { width: .3, fade: .22 }) ? 1 : 0;
+}
+
+/**
+ * 궁극기 예비 표식(시전 연출 중 바로 보인다). skill-signatures.js 의 SKILL_PRELUDES 가 합친다.
+ * @type {Record<string, (ctx: import('./skill-signatures.js').SigCtx) => void>}
+ */
+export const PRELUDES = {
+  // 메테오 스톰: 발밑 주황 나침 진이 조여들고, 하늘로 불길 광선 셋이 솟아 운석을 부른다. 몸 둘레 불씨가 위로 빨려 오른다.
+  meteor(ctx) {
+    const { impact, player, lite } = ctx; const c = player.pos;
+    impact.mark(c, C.fire, { radius: 3.6, life: 1.1, style: MARK_STYLE.compass, angle: .3 });
+    _d.set(0, 1, 0);
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * TAU + .5; _a.set(c.x + Math.cos(a) * 1.4, .2, c.z + Math.sin(a) * 1.4);
+      impact.beam(_a, _d, 12, i === 1 ? C.fireHot : C.fire, { speed: 30, tail: 5, width: .3, delay: i * .12 });
+    }
+    for (let k = 0, n = lite ? 5 : 12; k < n; k++) {
+      const a = (k / n) * TAU, r = 2.6;
+      impact._emit(IMPACT_KIND.streak, c.x + Math.cos(a) * r, .3, c.z + Math.sin(a) * r, .24, k % 2 ? C.fire : C.fireHot, .55,
+        { vx: -Math.cos(a) * 3, vy: 6, vz: -Math.sin(a) * 3, stretch: 1.2, grow: 1, gravity: -2, delay: (k % 4) * .1 });
+    }
+  },
+};
+
 /** @type {Record<string, (ctx: import('./skill-signatures.js').SigCtx) => void>} */
 export const SIGNATURES = {
   // 화염구: 손끝 주황 고리 + 앞으로 뿜는 불똥 + 화염구를 감고 따라가는 쌍나선 불길(앞 5m).

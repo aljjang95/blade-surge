@@ -118,3 +118,17 @@ test('서명은 Math.random 을 쓰지 않는다(전투 난수 순서 보존)', 
   expect(calls).toBe(0);
   pool.forEach((p) => p.dispose()); v.dispose();
 });
+
+test('궁극기 예비 표식(메테오·지옥의 도끼): 합본에 있고, 칸 예산 안·lite 는 더 적게·Math.random 미사용', async () => {
+  const { SKILL_PRELUDES } = await import('../src/engine/skill-signatures.js');
+  for (const id of ['meteor', 'hell_axe']) {
+    expect(typeof SKILL_PRELUDES[id]).toBe('function');
+    const v = make(), l = make();
+    const real = Math.random; let calls = 0; Math.random = () => { calls++; return real(); };
+    try { SKILL_PRELUDES[id](ctxOf(v)); SKILL_PRELUDES[id](ctxOf(l, true)); } finally { Math.random = real; }
+    expect(calls).toBe(0);
+    expect(v.spawned).toBeGreaterThan(0); expect(v.spawned).toBeLessThanOrEqual(IMPACT_FRAME_BUDGET - 3);
+    expect(l.spawned).toBeLessThan(v.spawned);
+    v.dispose(); l.dispose();
+  }
+});

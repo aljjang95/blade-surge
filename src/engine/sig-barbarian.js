@@ -96,6 +96,21 @@ export function barbRushEnd(game, center, f) {
   return impact.spawned - before;
 }
 
+/**
+ * 궁극기 예비 표식(시전 연출 중 바로 보인다). skill-signatures.js 의 SKILL_PRELUDES 가 합친다.
+ * @type {Record<string, (ctx: import('./skill-signatures.js').SigCtx) => void>}
+ */
+export const PRELUDES = {
+  // 지옥의 도끼: 도약 전 발밑 진홍 가시 고리 + 몸을 감싸 솟는 불꽃 혀 + 하늘로 오르는 불씨(도끼에 불을 싣는다).
+  hell_axe(ctx) {
+    const { impact, player, lite } = ctx;
+    impact.mark(player.pos, DEEP_CRIMSON, { radius: 3.4, life: .9, style: MARK_STYLE.thorn });
+    earthSpikes(impact, player.pos, lite ? 4 : 8, 1.2, 1.9, EMBER, { h: 4, width: .38, out: .2, fade: .3 });
+    earthSpikes(impact, player.pos, lite ? 3 : 6, 1.2, 1.9, CRIMSON, { h: 3.2, width: .34, out: .2, fade: .3, delay: .2, phase: .5 });
+    risingEmbers(impact, player.pos, lite ? 5 : 12, 2, FLAME, { rise: 10, life: .7 });
+  },
+};
+
 /** @type {Record<string, (ctx: import('./skill-signatures.js').SigCtx) => void>} */
 export const SIGNATURES = {
   // 회오리 참격: 시전 순간 판정 반경(3.8m)에 붉은 가시 고리가 몸을 둘러 '도는 칼날 영역'을 표시한다. 틱마다의 호는 barbWhirlTick.
@@ -119,8 +134,8 @@ export const SIGNATURES = {
     impact.mark(player.pos, BLOOD, { radius: 4.2, life: .7, style: MARK_STYLE.thorn, angle: .31, delay: .1 });
     impact._emit(IMPACT_KIND.ring, player.pos.x, 1, player.pos.z, 3.4, CRIMSON, .32, { grow: 1 });
     for (let w = 0; w < 2; w++) risingEmbers(impact, player.pos, lite ? 5 : 11, 1.1, w ? CRIMSON : EMBER, { delay: w * .18, rise: 9, life: .6, size: .26 });
-    // 분노 불꽃 혀: 몸 둘레에서 위로 핥아 오르는 붉은 불길 두 물결(오라의 실루엣).
-    for (let w = 0; w < 2; w++) earthSpikes(impact, player.pos, lite ? 4 : 8, .9, 1.4, w ? EMBER : CRIMSON, { delay: w * .2, h: 3.2, width: .32, out: .15, phase: w * .4, fade: .3 });
+    // 분노 불꽃 혀: 몸 둘레에서 위로 핥아 오르는 붉은 불길 세 물결(오라의 실루엣). 몸·불기둥에 묻히지 않게 반경 1.3~2m, 키 4.5m.
+    for (let w = 0; w < 3; w++) earthSpikes(impact, player.pos, lite ? 4 : 9, 1.3, 2, w === 1 ? EMBER : CRIMSON, { delay: w * .18, h: 4.5, width: .4, out: .22, phase: w * .35, fade: .35 });
   },
   // 지옥의 도끼(궁극기): 착탄점에 진홍 가시 고리가 먼저 잡히고, 하늘에서 불의 궤적이 .5초 뒤(판정 순간)에 꽂힌다.
   // 착탄: 세로 도끼 호 + 용암 균열 열두 갈래 + 큰 고리 두 겹 + 불씨 기둥.
@@ -176,7 +191,10 @@ export const SIGNATURES = {
     const { impact, player, lite } = ctx; const c = player.pos;
     impact.mark(c, DEEP_CRIMSON, { radius: 3.4, life: .5, style: MARK_STYLE.thorn });
     impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 3.4, CRIMSON, .3, { grow: 1 });
-    lavaFissures(impact, c, lite ? 4 : 8, .6, 6, CRIMSON, { speed: 50 });
+    lavaFissures(impact, c, lite ? 4 : 8, .6, 6, BLOOD, { speed: 50, width: .16 });
+    // 두 번 내리찍는 세로 도끼 호(핏빛 → 불씨): 혈왕의 두 박자.
+    impact._emit(IMPACT_KIND.cut, c.x, 1.6, c.z, 4, CRIMSON, .24, { angle: -Math.PI / 2 + .3, grow: .7 });
+    impact._emit(IMPACT_KIND.cut, c.x, 1.6, c.z, 5, EMBER, .26, { angle: -Math.PI / 2 - .3, grow: .7, delay: .2 });
     impact.mark(c, DEEP_EMBER, { radius: THORN_MAX, life: .6, style: MARK_STYLE.thorn, angle: .31, delay: .2 });
     impact._emit(IMPACT_KIND.ring, c.x, .5, c.z, 4.6, EMBER, .34, { grow: 1, delay: .2 });
     lavaFissures(impact, c, lite ? 6 : 12, 1, 9, EMBER, { speed: 60, delay: .2, phase: .26, width: .13 });

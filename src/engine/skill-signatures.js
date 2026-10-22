@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { IMPACT_KIND, MARK_STYLE, BEAM_STYLE } from './impact-vfx.js';
 import { SIGNATURES as KNIGHT } from './sig-knight.js';
-import { SIGNATURES as MAGE } from './sig-mage.js';
+import { SIGNATURES as MAGE, PRELUDES as MAGE_PRELUDES } from './sig-mage.js';
 import { SIGNATURES as ROGUE, PRELUDES as ROGUE_PRELUDES } from './sig-rogue.js';
-import { SIGNATURES as BARBARIAN } from './sig-barbarian.js';
+import { SIGNATURES as BARBARIAN, PRELUDES as BARBARIAN_PRELUDES } from './sig-barbarian.js';
 
 /**
  * 스킬별 '모양 언어' 서명. castSkillVfx 가 레시피(바닥 룬·텍스처) 뒤에 한 번 부른다.
@@ -216,6 +216,8 @@ export const SKILL_PRELUDES = {
     }
   },
   ...ROGUE_PRELUDES,
+  ...MAGE_PRELUDES,
+  ...BARBARIAN_PRELUDES,
 };
 
 /** 영웅별 서명 합본. 궁수는 이 파일, 나머지 영웅은 sig-<영웅>.js 가 맡는다. */
