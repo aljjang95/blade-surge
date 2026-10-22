@@ -27,7 +27,7 @@ export function createPlayCatalogAdapter(plugin) {
       }
       return { status: r.status, products: r.products, unavailableProductIds: r.unavailableProductIds };
     },
-    purchase: async ({ productId, type, basePlanId = undefined, obfuscatedAccountId }) => {
+    purchase: async ({ productId, type, basePlanId = /** @type {string | undefined} */ (undefined), obfuscatedAccountId }) => {
       if (!validId(productId) || !TYPES.includes(type) || typeof obfuscatedAccountId !== 'string' || !obfuscatedAccountId) throw Error('purchase-incomplete');
       const call = { productId, type, obfuscatedAccountId };
       if (type === 'subs' && basePlanId) call.basePlanId = basePlanId;
