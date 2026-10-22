@@ -15,6 +15,10 @@ import { rebindEnvironment, createStorybookEnvironment } from './environment.js'
 import { ShaderProgramValidator } from './shader-program-validator.js';
 import { PlayerSilhouette, PLAYER_SILHOUETTE_FRAGMENT } from './player-silhouette.js';
 import { acquireWebGL2Context, GraphicsStartupError } from '../platform/startup-compat.js';
+import { BLOOM_ADAPT } from './combat-feedback.js';
+
+// 기본 블룸 세기. 큰 장식이 겹치면 BLOOM_ADAPT.minScale 배까지 낮춘다.
+export const BLOOM_STRENGTH = 0.62;
 
 // 최종 합성 셰이더: 색수차 · 비네트 · 히트 플래시 · 방사형 블러(궁극기) · 색보정
 const FinalShader = {
@@ -188,7 +192,9 @@ export class Renderer {
     this.composer.setPixelRatio(this.pixelRatio);
     this.renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(this.renderPass);
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.62, 0.62, 0.84);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), BLOOM_STRENGTH, 0.62, 0.84);
+    // 장식 노출 부하(0~1, FX.bloomLoad). 올라갈 때는 즉시, 내려갈 때는 BLOOM_ADAPT.release/초로 풀린다.
+    this.bloomLoad = null; this._bloomLoad = 0;
     this.composer.addPass(this.bloom);
     this.finalPass = new ShaderPass(FinalShader);
     this.composer.addPass(this.finalPass);
@@ -373,6 +379,7 @@ export class Renderer {
     this.aberr = Math.max(0, this.aberr - realDt * 1.6);
     this.radial = Math.max(0, this.radial - realDt * 1.2);
     this.u.uFlash.value = this.flash;
+    this._updateBloomLoad(realDt);
     // 색수차·방사형 블러는 궁극기·마무리타·보스 처치처럼 skills/battle 이 직접 올린 값만 쓰고, 상한을 둔다.
     // 로비·동작 줄이기에서는 공격 실루엣을 지키기 위해 끄고, 8탭 방사형 블러는 낮음 화질에서도 끈다(색수차는 3탭이라 유지).
     const post = this.postFxEnabled && rig.mode !== 'lobby';
@@ -383,6 +390,13 @@ export class Renderer {
     this.u.uTime.value = this.time;
     if (this.u.uSpeedClock) this.u.uSpeedClock.value = this.speedClock;
     this._updateGrade(realDt, rig.mode === 'lobby'); this._updateRim();
+  }
+  /** 궁극기처럼 큰 가산 장식이 겹친 순간에만 블룸 세기를 낮춰 화면 백화를 막는다. 일반 타격은 원래 세기다. */
+  _updateBloomLoad(realDt) {
+    const target = Math.max(0, Math.min(1, Number(this.bloomLoad?.()) || 0));
+    const dt = Number.isFinite(realDt) && realDt > 0 ? realDt : 0;
+    this._bloomLoad = Math.max(target, (this._bloomLoad || 0) - dt * BLOOM_ADAPT.release);
+    if (this.bloom) this.bloom.strength = BLOOM_STRENGTH * (1 - (1 - BLOOM_ADAPT.minScale) * this._bloomLoad);
   }
   render() {
     this.playerSilhouette.render(this.r, this.camera, this.playerSilhouetteTarget?.());

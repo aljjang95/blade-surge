@@ -5,10 +5,10 @@ import { CombatVfx } from './combat-vfx.js';
 import { ImpactVfx } from './impact-vfx.js';
 import { HeroEffectFocus } from './hero-effect-focus.js';
 import { WeaponTrail, createWeaponTrailMaterial } from './weapon-trail.js';
-import { compactCombatStatus, decorativeBurstGain, boundedFeedbackGain, combatTextRegions, combatTextViewport, heroCombatTextRegion, placeCombatStatus } from './combat-feedback.js';
+import { bloomLoadFor, compactCombatStatus, decorativeBurstGain, boundedFeedbackGain, combatTextRegions, combatTextViewport, heroCombatTextRegion, placeCombatStatus } from './combat-feedback.js';
 
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _q = new THREE.Quaternion();
-const _tintHsl = { h: 0, s: 0, l: 0 }, _tintColor = new THREE.Color();
+const _tintHsl = { h: 0, s: 0, l: 0 }, _tintColor = new THREE.Color(), _sigRing = new THREE.Color();
 /** 불꽃·폭발 원화(주황 결)를 차가운 영웅색(보라·청·비취)으로 칠할 때 원화 색을 밝기로 바꿔 색을 살리는 비율.
  * 따뜻한 색(빨강~노랑)과 흰빛·크림은 원화 그대로(0). 예전에는 보라를 곱해 주황·분홍 불기둥이 됐다. */
 export function textureTintMix(color) {
@@ -324,6 +324,29 @@ const KILL_COLOR = new THREE.Color(0xffe9a8);
 // 최근 장식 면적(지름² 합)이 SOFT 를 넘으면 새 장식의 RGB 만 SOFT/누적 비율로 낮춘다(하한 FLOOR). 크기·수명·알파·난수는 그대로다.
 // 누적은 sim 시간 TAU 초로 지수 감쇠한다. 예고(telegraph)는 예산에 넣지도 낮추지도 않는다.
 export const FX_EXPOSURE = Object.freeze({ soft: 170, floor: .5, tau: .35, groundWeight: .5 });
+// 카메라를 향하는 텍스처 섬광의 최대 화면 지름(월드 m, 최종 확대 시점). 모바일 가로 화면의 전투 폭은 약 20m라
+// 12m 넘는 빌보드(용참·성광 폭발 24m, 냉기 서명 16m)는 영웅·적·다음 예고를 통째로 하얗게 덮었다.
+// 넓은 장악감은 지면 원진·충격파(바닥에 눕는 층)가 맡고, 서 있는 섬광은 이 지름 안에서 모양을 보여 준다.
+export const TEX_FLASH_MAX_DIAMETER = 10;
+// 장식 지면층(마법진·충격 고리) 색 규칙: 파스텔(밝기 높고 채도 낮음)은 가산으로 3~4겹 쌓이면 흰색이 된다
+// (성역 0xfff3b0·시간 봉인 0xc0d8ff·눈보라 0x80e0ff 가 화면을 하얗게 덮음). 색상은 지키고 밝기를 낮추고 채도를 올려
+// 겹쳐도 영웅색(금·청·보라·비취·주황)으로 남게 한다. 이미 진한 색(밝기 ≤ pastel)과 예고(telegraph)는 손대지 않는다.
+export const DECAL_COLOR = Object.freeze({ pastel: .7, light: .6, lightKeep: .4, satMin: .82, greyLight: .72 });
+const _decalHsl = { h: 0, s: 0, l: 0 };
+/** 지면 장식 색을 겹쳐도 하얗게 날지 않는 진한 색으로 바꿔 out 에 쓴다(할당 없음). */
+export function vividDecalColor(color, out) {
+  out.set(color).getHSL(_decalHsl, THREE.SRGBColorSpace);
+  let { h, s, l } = _decalHsl;
+  if (s < .12) { if (l > DECAL_COLOR.greyLight) out.setHSL(h, s, DECAL_COLOR.greyLight, THREE.SRGBColorSpace); return out; }
+  if (l <= DECAL_COLOR.pastel) return out;
+  return out.setHSL(h, Math.max(s, DECAL_COLOR.satMin), DECAL_COLOR.light + (l - DECAL_COLOR.pastel) * DECAL_COLOR.lightKeep, THREE.SRGBColorSpace);
+}
+/** texFlash 의 최종 지름 size*(0.4+grow) 가 상한을 넘지 않게 size 를 줄인다. 작은 섬광은 그대로다. */
+export function texFlashFitSize(size, grow = 1.3) {
+  if (!Number.isFinite(size) || size <= 0) return size;
+  const reach = 0.4 + Math.max(0, Number.isFinite(grow) ? grow : 0);
+  return Math.min(size, TEX_FLASH_MAX_DIAMETER / reach);
+}
 // ============ 일회성 메시 이펙트(스프라이트/링/참격/기둥) 관리 ============
 export class FX {
   constructor(scene, camera) {
@@ -371,6 +394,8 @@ export class FX {
     this.impactLights.update(dt);
     for (let i = this.trails.length - 1; i >= 0; i--) { const tr = this.trails[i]; tr.update(dt); if (tr.dead) { this.scene.remove(tr.mesh); this.trails.splice(i, 1); } }
   }
+  /** 렌더러 블룸 감쇠용 현재 부하(0~1). */
+  bloomLoad() { return bloomLoadFor(this._exposure || 0); }
   /** 새 장식 하나의 노출 배율(0.5~1)을 돌려주고 그 면적을 누적한다. */
   _exposureGain(size, weight = 1) {
     const area = Number.isFinite(size) ? Math.max(0, size) ** 2 * weight : 0;
@@ -607,7 +632,9 @@ export class FX {
       fadeIn: 0.08,
       hold: heavy ? t * 0.24 : 0,
     });
-    this.ring(anchor, spec.accent, { r0: spec.radius * 0.22 * k, r1: spec.radius * 1.16 * k, life: Math.min(t, 0.56), width: heavy ? 0.72 : 0.48 });
+    // 고리 띠 두께는 반지름에 비례해 6m 넘는 무거운 서명에서 흰 도넛이 됐다(눈보라·시간 봉인). 흰 강조색 대신 학파 색을 낮춰 쓴다.
+    _sigRing.set(spec.color).multiplyScalar(heavy ? .5 : .75);
+    this.ring(anchor, _sigRing, { r0: spec.radius * 0.22 * k, r1: spec.radius * 1.16 * k, life: Math.min(t, 0.56), width: heavy ? 0.72 : 0.48 });
     const flashSize = spec.radius * (heavy ? 1.45 : 1.05) * k;
     this.texFlash(anchor.clone().setY(anchor.y + 0.6), spec.flash, spec.color, {
       size: flashSize, gain: decorativeBurstGain(flashSize) * (profile === 'frost' ? .7 : 1),
@@ -691,6 +718,7 @@ export class FX {
   ring(pos, color, { r0 = 0.3, r1 = 4, life = 0.45, width = 0.5, y = 0.08, vertical = false, thick = 1, telegraph = false } = {}) {
     // 평면 링은 양면을 한 번에 그린다. 준비 단계에도 같은 패스 설정을 전달한다.
     const m = this._keep(new THREE.MeshBasicMaterial({ map: ringTex(), color, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, opacity: 1 }), { telegraph });
+    if (!telegraph && !vertical) vividDecalColor(color, m.color);
     const mesh = new THREE.Mesh(this.plane2, m); mesh.position.copy(pos); mesh.position.y += y; mesh.renderOrder = 9;
     if (vertical) mesh.lookAt(this.camera.position); else mesh.rotation.x = -Math.PI / 2;
     if (telegraph && !vertical) {
@@ -833,6 +861,7 @@ export class FX {
   _addMat(tex, color, { blending = THREE.AdditiveBlending, telegraph = false } = {}) { return this._keep(new THREE.MeshBasicMaterial({ map: tex, color, blending, transparent: true, depthWrite: false, side: THREE.DoubleSide, forceSinglePass: true, opacity: 1 }), { telegraph }); }
   /** 카메라를 향하는 텍스처 플래시 (holy_burst, ice, shockwave 등) */
   texFlash(pos, name, color = 0xffffff, { size = 3, life = 0.35, spin = 0, grow = 1.3, y = 1, gain = 1 } = {}) {
+    size = texFlashFitSize(size, grow);
     const tex = VFX_TEX[name]; if (!tex) return this.flash(pos, color, { size, life });
     const m = this._keep(new THREE.SpriteMaterial({ map: tex, color, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, rotation: Math.random() * Math.PI * 2 }));
     m.color.multiplyScalar(boundedFeedbackGain(gain) * this._exposureGain(size));
@@ -849,8 +878,14 @@ export class FX {
   groundTex(pos, name, color = 0xffffff, { r0 = 0.2, r1 = 4, life = 0.5, spin = 1, y = 0.06, fadeIn = 0.15, hold = 0, telegraph = false, gain = 1 } = {}) {
     // 적의 실제 예고와 일반 마법진은 원래 밝기를 유지한다. 장식 호출만 RGB를 제한한다.
     const intensity = telegraph ? 1 : boundedFeedbackGain(gain) * this._exposureGain(r1 * 2, FX_EXPOSURE.groundWeight);
-    const tex = VFX_TEX[name]; if (!tex) return this.ring(pos, intensity < 1 ? new THREE.Color(color).multiplyScalar(intensity) : color, { r0, r1, life, y, telegraph });
+    if (!VFX_TEX[name]) {
+      // 폴백 고리도 같은 색 규칙 → 밝기 순서다(고리가 받은 색은 이미 진하므로 다시 바뀌지 않는다).
+      const c = telegraph ? color : vividDecalColor(color, new THREE.Color());
+      return this.ring(pos, intensity < 1 ? new THREE.Color(c).multiplyScalar(intensity) : c, { r0, r1, life, y, telegraph });
+    }
+    const tex = VFX_TEX[name];
     const m = this._addMat(tex, color, { telegraph });
+    if (!telegraph) vividDecalColor(color, m.color);
     m.color.multiplyScalar(intensity);
     const mesh = new THREE.Mesh(this.plane2, m); mesh.rotation.x = -Math.PI / 2; mesh.position.copy(pos); mesh.position.y = y; mesh.renderOrder = 8;
     this.add(mesh, life, (k, t, dt) => { const e = 1 - Math.pow(1 - k, 3); const r = r0 + (r1 - r0) * e; mesh.scale.set(r, r, 1); mesh.rotation.z += spin * dt; m.opacity = k < fadeIn ? k / fadeIn : (hold > 0 ? (k < 0.65 ? 1 : 1 - (k - 0.65) / 0.35) : 1 - (k - fadeIn) / (1 - fadeIn)); }, () => m.dispose());
