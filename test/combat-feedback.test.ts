@@ -1,7 +1,7 @@
 import { expect, test } from 'bun:test';
-import { Group } from 'three';
+import { BoxGeometry, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial } from 'three';
 import { AudioSys } from '../src/engine/audio.js';
-import { HeroBeacon } from '../src/game/hero-beacon.js';
+import { HeroBeacon, HERO_OVER_BEACON_ORDER } from '../src/game/hero-beacon.js';
 import { enemySkillLabel } from '../src/game/enemies.js';
 
 test('action beacon increases the hero silhouette signal only during committed combat states', () => {
@@ -15,6 +15,36 @@ test('action beacon increases the hero silhouette signal only during committed c
     expect(beacon.primaryRing.scale.x).toBeGreaterThan(1);
     expect(beacon.locator.scale.y).toBeGreaterThan(idleLocator);
     expect(beacon.focusRing.material.color.getHex()).toBe(0xffc45c);
+  } finally {
+    beacon.dispose();
+  }
+});
+
+test('영웅 불투명 몸은 바닥 링보다 늦게 그려 링의 뒤쪽 호가 몸 위에 겹치지 않는다', () => {
+  const root = new Group(), model = new Group();
+  const body = new Mesh(new BoxGeometry(), new MeshStandardMaterial());
+  const cape = new Mesh(new BoxGeometry(), [new MeshStandardMaterial(), new MeshStandardMaterial()]);
+  const glow = new Mesh(new BoxGeometry(), new MeshBasicMaterial({ transparent: true }));
+  const authored = new Mesh(new BoxGeometry(), new MeshStandardMaterial()); authored.renderOrder = 7;
+  model.add(body, cape, glow, authored); root.add(model);
+  const beacon = new HeroBeacon(root, model);
+  try {
+    beacon.update(true, 0);
+    for (const ring of [beacon.shadowRing, beacon.primaryRing, beacon.focusRing, beacon.arrow]) {
+      // 링은 그대로 깊이 시험 없이 가림을 넘어 보인다.
+      expect(ring.material.depthTest).toBe(false);
+      expect(ring.renderOrder).toBeLessThan(HERO_OVER_BEACON_ORDER);
+    }
+    expect(body.renderOrder).toBe(HERO_OVER_BEACON_ORDER);
+    expect(cape.renderOrder).toBe(HERO_OVER_BEACON_ORDER);
+    expect(glow.renderOrder).toBe(0);
+    expect(authored.renderOrder).toBe(7);
+    // 사망 페이드처럼 투명이 되면 원래 순서로, 부활하면 다시 링 위로.
+    body.material.transparent = true; beacon.update(false, 0); expect(body.renderOrder).toBe(0);
+    body.material.transparent = false; beacon.update(true, 0); expect(body.renderOrder).toBe(HERO_OVER_BEACON_ORDER);
+    // 몸체 교체로 새로 붙은 메시도 다음 프레임에 맞춘다.
+    const swapped = new Mesh(new BoxGeometry(), new MeshStandardMaterial()); model.add(swapped);
+    beacon.update(true, 0); expect(swapped.renderOrder).toBe(HERO_OVER_BEACON_ORDER);
   } finally {
     beacon.dispose();
   }
