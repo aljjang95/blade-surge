@@ -621,6 +621,7 @@ export class FX {
     if (light && !reduced) this.light(pos, color, 3.2, 3.5, .1);
     // 임팩트 프레임(코어·베기 자국/고리/별빛·불똥, 치명타 금빛 십자): 인스턴스 층이라 fx.items·불꽃 풀·난수를 건드리지 않는다.
     this.impact?.hit(pos, dir, { hero: this._heroId(), kind, tier, crit: !!crit, reduced });
+    this._comboLayer(pos, dir, tier, reduced);
     return cue;
   }
   /**
@@ -705,6 +706,17 @@ export class FX {
   deathShatter(enemy, { reduced = false } = {}) {
     if (enemy?.pos) this.impact?.kill(enemy.pos, { elite: !!enemy.isElite, boss: !!enemy.isBoss, hero: this._heroId(), reduced });
     return this.vfx?.shatter(enemy, { reduced }) || 0;
+  }
+  /** 평타 연계 층: 조종 영웅이 평타 연계 중이면 휘두름 한 번당 한 번(첫 접촉점) 단계별 연계 연출을 낸다.
+   *  판정·피해·난수와 무관하다(영웅 상태만 읽는다). 같은 연계 항목을 .25초 안에 다시 치면(다단 회전·군중) 건너뛴다. */
+  _comboLayer(pos, dir, tier, reduced) {
+    const t = this.focus?.target, combo = t?.def?.combo;
+    if (!this.impact || !t?.alive || t.state !== 'attack' || !t.current || !combo?.length) return 0;
+    const step = Math.max(0, combo.indexOf(t.current)); if (combo[step] !== t.current) return 0;
+    const clock = this.impact.clock;
+    if (this._comboSwing === t.current && clock >= this._comboSwingAt && clock - this._comboSwingAt < .25) return 0;
+    this._comboSwing = t.current; this._comboSwingAt = clock;
+    return this.impact.combo(pos, dir, { hero: t.def.id, step, steps: combo.length, finisher: !!t.current.finisher || tier === 'finisher', reduced });
   }
   /** 현재 조종 중인 영웅 id(타격 색 언어용). 초점 대상이 없으면 빈 값. */
   _heroId() { const t = this.focus?.target; return t?.alive ? (t.def?.id || '') : ''; }
@@ -845,6 +857,12 @@ export class FX {
     return this.focus.bind(createWeaponTrailMaterial(slashTex(), color));
   }
   trail(getPoints, color, options = {}) {
+    // 연계 단계가 오를수록 궤적이 길게 남고 넓어진다(마지막 타 = 1.4배 수명). 판정 시간·게인 곡선은 그대로다.
+    const t = this.focus?.target, combo = t?.def?.combo, step = combo?.length > 1 && t.current ? combo.indexOf(t.current) : -1;
+    if (step > 0) {
+      const s = step / (combo.length - 1);
+      options = { ...options, life: (options.life ?? .24) * (1 + .4 * s), width: Math.min(1, (options.width ?? 1) * (1 + .14 * s)) };
+    }
     const tr = new WeaponTrail(getPoints, this._trailMaterial(color), options);
     this.scene.add(tr.mesh); this.trails.push(tr); return tr;
   }
