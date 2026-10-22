@@ -63,9 +63,12 @@ export async function startRun(c: Ctx, auth: Authed, body: Record<string, unknow
   return receipt;
 }
 
+/** 계정당 감사 플래그 상한. 잘못된 정산을 반복 전송해 audit_flags를 부풀리는 남용을 막는다(상한 뒤에는 기록만 생략). */
+export const AUDIT_FLAGS_PER_ACCOUNT = 200;
 async function flag(c: Ctx, accountId: string, runId: string, kind: string, detail: unknown, severity = 1) {
-  await c.db.prepare('INSERT INTO audit_flags(account_id, run_id, kind, severity, detail, at) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind(accountId, runId, kind, severity, JSON.stringify(detail).slice(0, 2000), c.now).run();
+  await c.db.prepare(`INSERT INTO audit_flags(account_id, run_id, kind, severity, detail, at)
+    SELECT ?, ?, ?, ?, ?, ? WHERE (SELECT COUNT(*) FROM audit_flags WHERE account_id = ?) < ?`)
+    .bind(accountId, runId, kind, severity, JSON.stringify(detail).slice(0, 2000), c.now, accountId, AUDIT_FLAGS_PER_ACCOUNT).run();
 }
 
 export async function settleRun(c: Ctx, auth: Authed, runId: string, body: Record<string, unknown>) {

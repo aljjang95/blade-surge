@@ -12,6 +12,12 @@ import { parityHash } from '../../src/shared/state-hash.js';
 const INSTALL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const HOLD_MS = 30 * 24 * 3600 * 1000;
 
+/** 정화 상한의 경과일 기준: 클라이언트 세이브의 created가 아니라 서버가 계정을 만든 시각. */
+async function accountCreatedAt(c: Ctx, accountId: string): Promise<number> {
+  const row = await c.db.prepare('SELECT created_at FROM accounts WHERE account_id = ?').bind(accountId).first<{ created_at: number }>();
+  return row?.created_at ?? c.now;
+}
+
 export async function importLegacy(c: Ctx, auth: Authed, body: Record<string, unknown>) {
   onlyKeys(body, ['installId', 'save', 'clientHash'], ['installId', 'save']);
   if (typeof body.installId !== 'string' || !INSTALL_ID.test(body.installId)) fail(400, 'install-id');
@@ -24,7 +30,7 @@ export async function importLegacy(c: Ctx, auth: Authed, body: Record<string, un
   if (prior) fail(409, prior.account_id === accountId ? 'already-imported' : 'install-imported', { status: prior.status });
   const doc = await loadAccountDoc(c.db, accountId);
   const raw = JSON.stringify(body.save);
-  const result = sanitizeLegacySave(body.save, { now: c.now });
+  const result = sanitizeLegacySave(body.save, { now: c.now, createdAt: await accountCreatedAt(c, accountId) });
   // 서버에서 이미 진행한 계정(rev>1: 명령·정산 이력)은 덮어쓰지 않는다. 원문만 'rejected'로 보관한다.
   const untouched = doc.rev === 1;
   const status = !result.ok ? 'rejected' : untouched ? (auth.account.authority === 'server' ? 'imported' : 'shadow') : 'rejected';
@@ -61,12 +67,13 @@ export async function shadowSnapshot(c: Ctx, auth: Authed, body: Record<string, 
   const accountId = auth.account.account_id, opId = `snap:${accountId}:${body.cid}`;
   const replay = await ledgerReceipt(c.db, opId, accountId);
   if (replay) return { ...(replay.receipt as object), replayed: true };
+  // 임포트가 먼저다: 정화 기준이 되는 원문·상태가 없는 계정의 그림자 스냅샷은 재화를 마음대로 깎을 수 있으므로 거부한다.
+  const imported = await c.db.prepare('SELECT status FROM legacy_saves WHERE account_id = ?').bind(accountId).first<{ status: string }>();
+  if (!imported || (imported.status !== 'shadow' && imported.status !== 'imported')) fail(409, 'import-required');
   const doc = await loadAccountDoc(c.db, accountId);
-  const result = sanitizeLegacySave(body.save, { now: c.now });
+  const result = sanitizeLegacySave(body.save, { now: c.now, createdAt: await accountCreatedAt(c, accountId) });
   if (!result.ok) fail(400, 'save');
-  // 상한 계산의 경과일은 서버가 처음 본 문서의 created를 기준으로 한다(로컬 created 조작 무효).
-  const created = Number((doc.state as { created?: unknown }).created);
-  const eco = loadEconomy({ ...result.state, created: Number.isSafeInteger(created) ? created : result.state.created }, { now: c.now });
+  const eco = loadEconomy(result.state, { now: c.now });
   const next = docOf(eco), hash = parityHash(eco.s);
   const receipt = { rev: doc.rev + 1, stateHash: hash, clamped: result.report.clamped, match: body.clientHash === undefined ? null : body.clientHash === hash, serverTime: c.now };
   const outcome = await casCommit(c.db, { accountId, baseRev: doc.rev, doc: next.text, now: c.now,

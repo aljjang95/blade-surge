@@ -1,6 +1,7 @@
 // MMO P1-B: 게스트 세션·연동·복구·해제 (docs/MMO_DESIGN.md 3.2).
 // 인증 수단은 서버가 확인하는 비밀(기기 키 deviceKey, 서명 세션 토큰, 제공자 ID 토큰)뿐이다. 기기 ID는 쓰지 않는다.
-import { type D1Database, V1Error } from './db';
+import { type D1Database, V1Error, isConstraint } from './db';
+import { ipKey, rateLimit } from './limit';
 import { fail, onlyKeys } from './http';
 import { CHANNELS, TOKEN_TTL_MS, type Channel, type SessionClaims, resolveSecret, sha256Hex, signToken, verifyToken, randomHex } from './token';
 import { createAccountDoc } from './state';
@@ -94,6 +95,8 @@ export async function createSession(c: Ctx, body: Record<string, unknown>) {
   const keyHash = await deviceKeyHash(body.deviceKey);
   let account = await accountByKey(c.db, keyHash), created = false;
   if (!account) {
+    // 새 계정 생성은 IP(해시)당 시간 한도를 따로 둔다(기기 키 대량 발급으로 계정을 찍어 내는 남용 차단).
+    await rateLimit(c, 'sessionNew', await ipKey(c.request));
     const player = await resolvePlayer(c.env, keyHash);
     await ensureAccount(c, player.playerId, keyHash, channel, player.banned);
     account = await accountByKey(c.db, keyHash);
@@ -166,8 +169,19 @@ export async function link(c: Ctx, auth: Authed, body: Record<string, unknown>) 
   if (!owner) {
     const mine = await c.db.prepare('SELECT 1 AS x FROM account_links WHERE provider = ? AND account_id = ?').bind(provider, auth.account.account_id).first();
     if (mine) fail(409, 'already-linked');
-    await c.db.prepare('INSERT INTO account_links(provider, subject_hash, account_id, created_at) VALUES (?, ?, ?, ?)')
-      .bind(provider, hash, auth.account.account_id, c.now).run();
+    try {
+      await c.db.prepare('INSERT INTO account_links(provider, subject_hash, account_id, created_at) VALUES (?, ?, ?, ?)')
+        .bind(provider, hash, auth.account.account_id, c.now).run();
+    } catch (error) {
+      // 동시 요청이 먼저 같은 제공자 계정(PRIMARY KEY) 또는 이 계정의 같은 제공자(UNIQUE)를 차지했다: 500이 아니라 409.
+      if (!isConstraint(error)) throw error;
+      const winner = await c.db.prepare('SELECT account_id FROM account_links WHERE provider = ? AND subject_hash = ?').bind(provider, hash).first<{ account_id: string }>();
+      if (winner && winner.account_id !== auth.account.account_id) {
+        const other = await accountById(c.db, winner.account_id);
+        fail(409, 'linked-elsewhere', { mine: summary(auth.account), other: other ? summary(other) : null });
+      }
+      fail(409, 'already-linked');
+    }
   }
   return { linked: await links(c.db, auth.account.account_id) };
 }
@@ -190,6 +204,8 @@ export async function recover(c: Ctx, body: Record<string, unknown>) {
   if (!target) fail(404, 'no-link');
   assertActive(target);
   const current = await accountByKey(c.db, keyHash);
+  // 제재(차단)·삭제 중인 계정의 기기 키로는 다른 계정으로 갈아타 제재를 피할 수 없다.
+  if (current) assertActive(current);
   const writes = [];
   if (!current) writes.push(c.db.prepare('INSERT INTO account_keys(key_hash, account_id, created_at, last_seen) VALUES (?, ?, ?, ?)').bind(keyHash, target.account_id, c.now, c.now));
   else if (current.account_id !== target.account_id) {
@@ -209,9 +225,14 @@ export async function recover(c: Ctx, body: Record<string, unknown>) {
   return { ...await issue(c.env, target, channel, c.now), switchedFrom: current && current.account_id !== target.account_id ? current.account_id : null };
 }
 
+/** 연동 해제는 세션 토큰만으로 하지 않고 제공자 ID 토큰을 다시 확인한다(탈취된 세션이 복구 수단을 지우지 못하게). */
 export async function unlink(c: Ctx, auth: Authed, body: Record<string, unknown>) {
-  onlyKeys(body, ['provider']);
+  onlyKeys(body, ['provider', 'idToken']);
   if (!(PROVIDERS as readonly unknown[]).includes(body.provider)) fail(400, 'provider');
+  const hash = await subjectHash(c, body.provider, body.idToken);
+  const owned = await c.db.prepare('SELECT 1 AS x FROM account_links WHERE provider = ? AND subject_hash = ? AND account_id = ?')
+    .bind(body.provider as string, hash, auth.account.account_id).first();
+  if (!owned) fail(403, 'reauth-mismatch');
   await c.db.prepare('DELETE FROM account_links WHERE provider = ? AND account_id = ?').bind(body.provider as string, auth.account.account_id).run();
   return { linked: await links(c.db, auth.account.account_id) };
 }

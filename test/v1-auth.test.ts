@@ -93,7 +93,10 @@ describe('MMO P1-B 신원·세션', () => {
     const c = await h.session();
     await h.send('POST', '/auth/link', { provider: 'google', idToken: 'tok-carol' }, c.token);
     expect((await h.send('POST', '/auth/recover', { provider: 'google', idToken: 'tok-alice', deviceKey: c.deviceKey })).body.error).toBe('key-in-use');
-    expect((await h.send('POST', '/auth/unlink', { provider: 'google' }, c.token)).body.linked).toEqual([]);
+    // 연동 해제는 ID 토큰 재인증이 필요하다: 없으면 400, 다른 사람의 토큰이면 403, 본인 토큰이면 해제.
+    expect((await h.send('POST', '/auth/unlink', { provider: 'google' }, c.token)).status).toBe(400);
+    expect((await h.send('POST', '/auth/unlink', { provider: 'google', idToken: 'tok-alice' }, c.token)).body.error).toBe('reauth-mismatch');
+    expect((await h.send('POST', '/auth/unlink', { provider: 'google', idToken: 'tok-carol' }, c.token)).body.linked).toEqual([]);
   });
 
   test('기존 소셜 deviceKey는 기존 playerId로 입양되고 친구·칭호가 유지된다', async () => {

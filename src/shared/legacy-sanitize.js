@@ -30,16 +30,17 @@ export function elapsedDays(created, now) {
 
 /**
  * @param {unknown} raw 로컬 세이브 원문(JSON 객체)
- * @param {{ now: number }} opts 서버 시계
+ * @param {{ now: number, createdAt?: number }} opts 서버 시계, 서버 계정 생성 시각(있으면 경과일의 기준이며 세이브의 created는 무시한다)
  * @returns {{ ok: true, state: any, report: any } | { ok: false, reason: string, report: any }}
  */
-export function sanitizeLegacySave(raw, { now }) {
+export function sanitizeLegacySave(raw, { now, createdAt }) {
   let eco;
   try { eco = EconomyCore.fromState(raw, { now: () => now, rng: () => 0.5 }); }
   catch { return { ok: false, reason: 'corrupt', report: { clamped: {}, severe: false } }; }
   const fresh = EconomyCore.fromState(null, { now: () => now, rng: () => 0.5 }).s;
   const s = eco.snapshot();
-  const { from, days } = elapsedDays(raw?.created, now);
+  // 세이브 안의 created는 클라이언트가 고칠 수 있으므로, 서버가 아는 계정 생성 시각이 있으면 그것만 쓴다.
+  const { from, days } = elapsedDays(createdAt !== undefined ? createdAt : raw?.created, now);
   const clamped = {};
   let severe = false;
   const clamp = (path, value, cap) => {
