@@ -109,6 +109,8 @@ try {
     const rows = [];
     for (const c of cases) {
       await page.evaluate(({ c }) => { window.__seed(7); window.__fixture(c.kind === 'kill' ? 1 : 1e12); window.__step(20); }, { c });
+      // --pre: 진단용 페이지 코드(예: 특정 fx 메서드 끄기). 기본 측정에는 쓰지 않는다.
+      if (arg('pre')) await page.evaluate(code => (0, eval)(code), arg('pre'));
       const basePng = await page.screenshot();
       const started = await page.evaluate(({ c }) => {
         const p = window.app.battle.player;

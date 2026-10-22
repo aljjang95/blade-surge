@@ -93,7 +93,7 @@ Object.assign(SIGNATURES, {
     const hit = _a.copy(player.pos).addScaledVector(f, 3.5);
     // 수직 참격: 굵은 진한 금 광선 + 얇은 뜨거운 심 + 좌우 잔결. 위에서 아래로 그어진다(판정 순간 바닥 도달).
     _b.set(hit.x, 10 * scale, hit.z); _d.set(0, -1, 0);
-    impact.beam(_b, _d, 10 * scale, AMBER, { speed: 140, width: .42, fade: .32 });
+    impact.beam(_b, _d, 10 * scale, AMBER, { speed: 140, width: .26, fade: .28 });
     for (const s of [-1, 1]) {
       _b.set(hit.x + f.z * s * .9, 8 * scale, hit.z - f.x * s * .9);
       impact.beam(_b, _d, 8 * scale, GOLD, { speed: 120, width: .12, fade: .26, delay: .03 });

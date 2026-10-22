@@ -247,6 +247,8 @@ export class ImpactVfx {
   constructor(scene, { focus = null, camera = null, seed = 0x1a9c7e55 } = {}) {
     this.enabled = true; this.lite = false; this.clock = 0; this.seed = seed >>> 0; this.rng = new VfxRng(this.seed);
     this.camera = camera; this.budget = IMPACT_FRAME_BUDGET; this.spawned = 0;
+    /** 이번 프레임에 낸 밝은 면적(m², FX 가 노출 예산으로 가져가고 0 으로 돌린다). */
+    this.load = 0;
     this.recent = new Float32Array(IMPACT_STACK.slots * 4).fill(-1e9); this.recentAt = 0;
     this.uTime = { value: 0 };
     const material = new THREE.ShaderMaterial({
@@ -285,6 +287,8 @@ export class ImpactVfx {
     _c.set(color); A.aColor[i3] = _c.r; A.aColor[i3 + 1] = _c.g; A.aColor[i3 + 2] = _c.b;
     A.aLife[i2] = start; A.aLife[i2 + 1] = life;
     A.aMotion[i2] = grow; A.aMotion[i2 + 1] = gravity;
+    // 서 있는 빛(코어·별빛·고리·참격) 면적을 블룸 부하로 넘긴다. 광선·지면 표식은 가는 선이라 따로 센다.
+    if (kind !== IMPACT_KIND.beam && kind !== IMPACT_KIND.mark) this.load += size * size * (stretch > 1 ? stretch : 1);
     this.spawned++;
     return true;
   }
@@ -552,6 +556,7 @@ export class ImpactVfx {
     // 수명: 머리가 끝에 닿고 꼬리가 따라올 때까지. 꼬리가 없으면 도달 뒤 fade 초 동안 사라진다.
     const life = speed > 0 ? (L + (tail > 0 ? tail : speed * fade)) / speed : fade;
     if (!this._emit(IMPACT_KIND.beam, from.x, from.y, from.z, width, color, life, { vx: dir.x * k, vy: dir.y * k, vz: dir.z * k, angle: style, stretch: tail, grow: speed, delay })) return null;
+    this.load += width * length * 2;
     const slot = this.lastSlot;
     return { slot, start: this.ring.a.aLife[slot * 2] };
   }
@@ -591,6 +596,6 @@ export class ImpactVfx {
   }
   /** 살아 있는 칸 수(점검·테스트용). */
   live() { return this.ring.live(this.clock); }
-  clear() { this.recent.fill(-1e9); this.recentAt = 0; this.ring.clear(); this.clock = 0; this.uTime.value = 0; this.rng = new VfxRng(this.seed); this.budget = IMPACT_FRAME_BUDGET; }
+  clear() { this.recent.fill(-1e9); this.recentAt = 0; this.ring.clear(); this.clock = 0; this.uTime.value = 0; this.rng = new VfxRng(this.seed); this.budget = IMPACT_FRAME_BUDGET; this.load = 0; }
   dispose() { this.ring.dispose(); }
 }

@@ -396,6 +396,8 @@ export class FX {
   update(dt, paused = false) {
     this._killBudget = KILL_CONFIRM_PER_FRAME;
     if (dt > 0 && this._exposure > 0) this._exposure *= Math.exp(-dt / FX_EXPOSURE.tau);
+    // 인스턴스 임팩트 층(서명·타격)의 밝은 면적도 블룸 자동 감쇠 부하에 넣는다(색은 낮추지 않는다).
+    if (this.impact?.load > 0) { this._exposure = (this._exposure || 0) + this.impact.load; this.impact.load = 0; }
     this.sparks.update(dt); this.glow.update(dt); this.smoke.update(dt); this.vfx?.update(paused ? 0 : dt); this.impact?.update(paused ? 0 : dt);
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i]; it.t += dt; const k = it.t / it.life;

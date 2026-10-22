@@ -68,3 +68,15 @@ test('히트스톱(dt 0)에는 시계가 멈춰 임팩트 프레임이 그대로
   expect(v.uTime.value).toBe(t); expect(v.live()).toBeGreaterThan(0);
   v.dispose();
 });
+
+test('서 있는 큰 빛과 광선 면적은 블룸 부하(load)로 쌓이고, 지면 표식은 세지 않으며 clear 가 비운다', () => {
+  const v = make();
+  v._emit(IMPACT_KIND.mark, 0, 0, 0, 6, 0xffaa00, .5);
+  expect(v.load).toBe(0);
+  v._emit(IMPACT_KIND.ring, 0, 1, 0, 3, 0xffaa00, .3);
+  expect(v.load).toBeCloseTo(9, 5);
+  v.beam(new THREE.Vector3(0, 10, 0), new THREE.Vector3(0, -1, 0), 10, 0xffaa00, { width: .25 });
+  expect(v.load).toBeCloseTo(9 + 5, 5);
+  v.clear(); expect(v.load).toBe(0);
+  v.dispose();
+});
