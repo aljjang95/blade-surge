@@ -7,7 +7,12 @@ import { InstanceRing, VfxRng } from './combat-vfx.js';
 // CPU 는 낼 때만 칸을 쓰고, 프레임마다 하는 일은 시계(uTime) 갱신뿐이다. 시계는 FX.update 의 sim dt 라
 // 히트스톱 동안 섬광이 그 자리에 '정지 화면'으로 남는다. 난수는 전투 난수와 분리된 VfxRng 만 쓴다(Math.random 미사용).
 
-export const IMPACT_KIND = Object.freeze({ core: 0, streak: 1, star: 2, ring: 3, cut: 4 });
+export const IMPACT_KIND = Object.freeze({ core: 0, streak: 1, star: 2, ring: 3, cut: 4, beam: 5, mark: 6 });
+// 5 광선: 시작점에서 aVel(월드 벡터) 끝까지 aMotion.x(m/s) 속도로 머리가 나아가고 aShape.w(m) 뒤에서 꼬리가 따라온다.
+//   화살 비행 궤적과 같은 속도로 그어져 '관통 일직선'을 읽게 한다. aShape.z = 모양(0 직선, 1 덩굴 물결, 2 쌍나선 바람).
+// 6 지면 표식: 월드 XZ 평면에 눕는 표식. aShape.z = 회전, aShape.w = 모양(0 조준 원, 1 부채꼴, 2 가시 고리, 3 나침 고리).
+export const BEAM_STYLE = Object.freeze({ line: 0, vine: 1, gale: 2 });
+export const MARK_STYLE = Object.freeze({ reticle: 0, fan: 1, thorn: 2, compass: 3 });
 
 /** 영웅별 타격 색 언어: core = 달아오른 중심, accent = 불똥·고리·자국. 기본 공격·스킬 모두 같은 색 계열을 쓴다. */
 export const HERO_IMPACT_PALETTE = Object.freeze({
@@ -28,6 +33,19 @@ export const IMPACT_TIERS = Object.freeze({
   counter: Object.freeze({ core: 1.05, coreLife: .12, cut: 2.2, ring: 1.9, streaks: 8, speed: 12.5, streakLife: .22 }),
   boss: Object.freeze({ core: 1.0, coreLife: .11, cut: 2.1, ring: 1.8, streaks: 6, speed: 11.5, streakLife: .2 }),
 });
+/** 궁수 화살 궤적 언어(모두 비취 계열). tail = 꼬리 길이 m, width = 반폭 m, glow = 넓은 옅은 번짐 한 줄을 더할지, style = 광선 모양.
+ *  기본 평타는 짧은 꼬리, 관통은 길고 곧은 선 + 번짐, 일제 사격은 중간, 폭풍(궁극기)은 쌍나선 바람, 속박은 덩굴 물결이다. */
+export const ARROW_STREAKS = Object.freeze({
+  basic: Object.freeze({ tail: 4.5, width: .065, color: 0x3fe0a0, glow: 0, style: 0, muzzle: 0 }),
+  finisher: Object.freeze({ tail: 7, width: .1, color: 0x3fe0a0, glow: .26, style: 0, muzzle: .55 }),
+  pierce: Object.freeze({ tail: 13, width: .1, color: 0x52f0b4, glow: .34, style: 0, muzzle: .8 }),
+  volley: Object.freeze({ tail: 6, width: .08, color: 0x3fe0a0, glow: .2, style: 0, muzzle: .5 }),
+  retreat: Object.freeze({ tail: 5, width: .075, color: 0x7affc8, glow: 0, style: 0, muzzle: .45 }),
+  storm: Object.freeze({ tail: 9, width: .12, color: 0x3fe0a0, glow: .3, style: 2, muzzle: .7 }),
+  quick: Object.freeze({ tail: 5, width: .07, color: 0x9fffd8, glow: 0, style: 0, muzzle: .5 }),
+  bind: Object.freeze({ tail: 8, width: .1, color: 0x63e08a, glow: .22, style: 1, muzzle: .55 }),
+  gale: Object.freeze({ tail: 7, width: .09, color: 0x3fe0a0, glow: .24, style: 2, muzzle: .5 }),
+});
 export const IMPACT_CAPACITY = 384;
 /** 한 프레임에 새로 낼 수 있는 칸 상한(군중 동시 타격에도 업로드·채움 비용이 일정하다). */
 export const IMPACT_FRAME_BUDGET = 72;
@@ -35,13 +53,39 @@ export const IMPACT_FRAME_BUDGET = 72;
 const VERT = `
   attribute vec3 aOrigin; attribute vec3 aVel; attribute vec4 aShape; attribute vec3 aColor; attribute vec2 aLife; attribute vec2 aMotion;
   uniform float uTime;
-  varying vec2 vUv; varying vec3 vColor; varying float vK; varying float vKind;
+  varying vec2 vUv; varying vec3 vColor; varying float vK; varying float vKind; varying float vStyle;
   void main() {
     float t = uTime - aLife.x;
+    // 광선은 aShape.z, 지면 표식은 aShape.w 에 모양 번호를 담는다.
+    vStyle = aShape.x > 5.5 ? aShape.w : aShape.z;
     float k = t / max(aLife.y, 0.001);
     vUv = position.xy * 2.0; vColor = aColor; vK = k; vKind = aShape.x;
     if (t < 0.0 || k >= 1.0) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
     float kind = aShape.x;
+    if (kind > 4.5 && kind < 5.5) {
+      // 광선: 머리 = 속도×시간(끝에서 멈춤), 꼬리 = 머리 - 꼬리 길이. 화면에서 선 방향으로 늘이고 옆으로 폭만큼.
+      float L = length(aVel), speed = aMotion.x;
+      float head = speed > 0.0 ? min(L, t * speed) : L;
+      float tail = aShape.w > 0.0 ? clamp(t * max(speed, 0.001) - aShape.w, 0.0, L) : 0.0;
+      vec3 dirW = aVel / max(L, 0.0001);
+      vec3 pw = aOrigin + dirW * mix(tail, head, position.x + 0.5);
+      vec4 mvb = viewMatrix * vec4(pw, 1.0);
+      vec2 ax = (mat3(viewMatrix) * dirW).xy; float al = length(ax);
+      ax = al > 0.0001 ? ax / al : vec2(1.0, 0.0);
+      mvb.xy += vec2(-ax.y, ax.x) * position.y * aShape.y * 2.0;
+      vUv = vec2(position.x * 2.0, position.y * 2.0);
+      gl_Position = projectionMatrix * mvb;
+      return;
+    }
+    if (kind > 5.5 && kind < 6.5) {
+      // 지면 표식: 처음 20% 동안 1.35배에서 제자리로 좁혀 들어온다(조준이 '잡히는' 느낌).
+      float e0 = 1.0 - pow(1.0 - min(k * 5.0, 1.0), 3.0);
+      float sz = aShape.y * mix(1.35, 1.0, e0);
+      float c = cos(aShape.z), sn = sin(aShape.z);
+      vec2 q = vec2(position.x * c - position.y * sn, position.x * sn + position.y * c) * sz * 2.0;
+      gl_Position = projectionMatrix * viewMatrix * vec4(aOrigin + vec3(q.x, 0.0, q.y), 1.0);
+      return;
+    }
     // 줄기만 감속·중력으로 움직이고, 나머지는 접촉점에 붙어 있다.
     float drag = 7.0, s = (1.0 - exp(-drag * t)) / drag;
     vec3 p = aOrigin + aVel * s; p.y -= 0.5 * aMotion.y * t * t;
@@ -63,15 +107,60 @@ const VERT = `
   }`;
 
 const FRAG = `
-  varying vec2 vUv; varying vec3 vColor; varying float vK; varying float vKind;
+  varying vec2 vUv; varying vec3 vColor; varying float vK; varying float vKind; varying float vStyle;
   void main() {
     float k = vK; if (k >= 1.0) discard;
     vec2 uv = vUv; float r = length(uv);
     float a = 0.0; vec3 col = vColor;
-    if (vKind < 0.5) {
+    if (vKind > 4.5 && vKind < 5.5) {
+      // 광선: 가운데 하얀 심 + 영웅색 번짐. 머리(+x)가 가장 밝고 꼬리로 갈수록 옅어진다.
+      float y = uv.y;
+      if (vStyle > 0.5 && vStyle < 1.5) y -= sin(uv.x * 9.0 + k * 18.0) * 0.32;
+      float along = pow(clamp(uv.x * 0.5 + 0.5, 0.0, 1.0), 1.4);
+      float core = exp(-y * y * 70.0), glow = exp(-y * y * 5.0) * 0.4;
+      if (vStyle > 1.5) {
+        // 쌍나선 바람: 심 양옆을 꼬이며 감는 두 가닥.
+        float w1 = uv.y - sin(uv.x * 7.0 - k * 22.0) * 0.55, w2 = uv.y + sin(uv.x * 7.0 - k * 22.0) * 0.55;
+        glow += (exp(-w1 * w1 * 40.0) + exp(-w2 * w2 * 40.0)) * 0.55;
+      }
+      float headHot = smoothstep(0.82, 1.0, uv.x);
+      a = (core * (0.55 + 0.45 * along) + glow * along) * (0.35 + 0.65 * along) * (1.0 - smoothstep(0.78, 1.0, k));
+      a *= 1.0 - smoothstep(0.92, 1.0, abs(uv.x));
+      col = mix(vColor, vec3(1.0), clamp(core * (0.45 + headHot * 0.5), 0.0, 1.0));
+    } else if (vKind > 5.5 && vKind < 6.5) {
+      // 지면 표식: 얇은 선 위주(바닥 가산 면적을 작게). 마지막 25% 에 사라진다.
+      float fade = (k < 0.12 ? k / 0.12 : 1.0) * (1.0 - smoothstep(0.75, 1.0, k));
+      float ang = atan(uv.y, uv.x);
+      if (vStyle < 0.5) {
+        // 조준 원: 바깥 원 + 안쪽 점선 원 + 네 방향 눈금 + 중심 점
+        float ring = exp(-pow((r - 0.86) / 0.035, 2.0));
+        float dash = exp(-pow((r - 0.55) / 0.03, 2.0)) * step(0.0, sin(ang * 8.0 + k * 6.0));
+        float tick = (1.0 - smoothstep(0.035, 0.07, min(abs(uv.x), abs(uv.y)))) * step(0.6, r) * step(r, 0.82);
+        float dot0 = exp(-r * r * 140.0);
+        a = (ring + dash * 0.7 + tick * 0.9 + dot0) * fade;
+      } else if (vStyle < 1.5) {
+        // 부채꼴: +x 방향 ±0.42rad 안쪽, 가장자리 두 선과 바깥 호가 또렷하고 안은 옅다
+        float half = 0.42, inA = 1.0 - smoothstep(half - 0.02, half, abs(ang));
+        float edgeL = exp(-pow((abs(ang) - half) * r / 0.03, 2.0)) * step(r, 0.98);
+        float arc = exp(-pow((r - 0.95) / 0.03, 2.0)) * inA;
+        float sweep = smoothstep(0.0, 1.0, k * 3.0);
+        a = ((inA * 0.12 * step(r, 0.95) + arc) * step(r, sweep + 0.02) + edgeL * 0.8) * fade;
+      } else if (vStyle < 2.5) {
+        // 가시 고리: 얇은 원 + 안쪽으로 찌르는 가시 10개(속박)
+        float ring = exp(-pow((r - 0.8) / 0.04, 2.0));
+        float sp = pow(abs(cos(ang * 5.0 + 0.3)), 30.0) * step(0.45, r) * step(r, 0.8) * (1.0 - (0.8 - r) / 0.35 * 0.6);
+        a = (ring + sp) * fade;
+      } else {
+        // 나침 고리: 큰 원 + 일곱 갈래 눈금(폭풍 일곱 화살)
+        float ring = exp(-pow((r - 0.9) / 0.03, 2.0)) + exp(-pow((r - 0.62) / 0.02, 2.0)) * 0.5;
+        float rays = pow(abs(cos(ang * 3.5)), 60.0) * step(0.62, r) * step(r, 0.9);
+        a = (ring + rays) * fade;
+      }
+      col = mix(vColor, vec3(1.0), 0.2);
+    } else if (vKind < 0.5) {
       // 코어: 짧게 터졌다 사라지는 하얀 심 + 영웅색 테
       float body = exp(-r * r * 7.0), hot = exp(-r * r * 30.0);
-      a = (body * 0.42 + hot) * pow(1.0 - k, 1.8);
+      a = (body * 0.3 + hot) * pow(1.0 - k, 1.8);
       col = mix(vColor, vec3(1.0), clamp(hot * 1.4, 0.0, 1.0));
     } else if (vKind < 1.5) {
       // 줄기: 앞(+x)이 달아오른 캡슐
@@ -143,15 +232,17 @@ export class ImpactVfx {
     this.ring.flush(); this.ring.sync(this.clock); this._applyWarm();
   }
   /** 칸 하나를 쓴다. 예산이 없으면 false. */
-  _emit(kind, x, y, z, size, color, life, { vx = 0, vy = 0, vz = 0, angle = 0, stretch = 1, grow = .35, gravity = 0 } = {}) {
+  _emit(kind, x, y, z, size, color, life, { vx = 0, vy = 0, vz = 0, angle = 0, stretch = 1, grow = .35, gravity = 0, delay = 0 } = {}) {
     if (!this.enabled || this.budget <= 0 || !(life > 0) || !(size > 0)) return false;
     this.budget--;
-    const slot = this.ring.claim(this.clock + life), A = this.ring.a, i3 = slot * 3, i4 = slot * 4, i2 = slot * 2;
+    const start = this.clock + (delay > 0 ? delay : 0);
+    const slot = this.ring.claim(start + life), A = this.ring.a, i3 = slot * 3, i4 = slot * 4, i2 = slot * 2;
+    this.lastSlot = slot;
     A.aOrigin[i3] = x; A.aOrigin[i3 + 1] = y; A.aOrigin[i3 + 2] = z;
     A.aVel[i3] = vx; A.aVel[i3 + 1] = vy; A.aVel[i3 + 2] = vz;
     A.aShape[i4] = kind; A.aShape[i4 + 1] = size; A.aShape[i4 + 2] = angle; A.aShape[i4 + 3] = stretch;
     _c.set(color); A.aColor[i3] = _c.r; A.aColor[i3 + 1] = _c.g; A.aColor[i3 + 2] = _c.b;
-    A.aLife[i2] = this.clock; A.aLife[i2 + 1] = life;
+    A.aLife[i2] = start; A.aLife[i2 + 1] = life;
     A.aMotion[i2] = grow; A.aMotion[i2 + 1] = gravity;
     this.spawned++;
     return true;
@@ -187,8 +278,9 @@ export class ImpactVfx {
     _view.copy(pos);
     if (this.camera) { _dir.setFromMatrixPosition(this.camera.matrixWorld).sub(pos); const l = _dir.length(); if (l > 1e-3) _view.addScaledVector(_dir, .35 / l); }
     const x = _view.x, y = _view.y, z = _view.z;
-    if (reduced) { this._emit(IMPACT_KIND.core, x, y, z, T.core * .7, P.core, .08, { grow: 1 }); return this.spawned - before; }
-    this._emit(IMPACT_KIND.core, x, y, z, T.core, crit ? CRIT_HOT : P.core, T.coreLife, { grow: .45 });
+    // 코어는 영웅 강조색 번짐 + 셰이더의 하얀 심이다. 크림색 코어는 군중을 한꺼번에 칠 때 적마다 크림 덩어리로 겹쳐 보였다.
+    if (reduced) { this._emit(IMPACT_KIND.core, x, y, z, T.core * .7, P.accent, .08, { grow: 1 }); return this.spawned - before; }
+    this._emit(IMPACT_KIND.core, x, y, z, T.core, crit ? CRIT_HOT : P.accent, T.coreLife, { grow: .45 });
     if (kind === 'blunt') this._emit(IMPACT_KIND.ring, x, y, z, T.ring * 1.15, P.accent, .2, { grow: 1 });
     else if (kind === 'magic') this._emit(IMPACT_KIND.star, x, y, z, T.core * 1.3, P.accent, .14, { angle: .4, grow: .6 });
     else this._emit(IMPACT_KIND.cut, x, y, z, T.cut, P.accent, heavy ? .2 : .16, { angle, stretch: 1.25, grow: .92 });
@@ -208,7 +300,7 @@ export class ImpactVfx {
     if (!this.enabled || !pos) return 0;
     const before = this.spawned, k = boss ? 1.8 : elite ? 1.35 : 1, P = HERO_IMPACT_PALETTE[hero] || HERO_IMPACT_PALETTE.default;
     const x = pos.x, y = pos.y + 1, z = pos.z;
-    this._emit(IMPACT_KIND.core, x, y, z, 1.3 * k, KILL_COLOR, reduced ? .1 : .16, { grow: .5 });
+    this._emit(IMPACT_KIND.core, x, y, z, 1.1 * k, boss || elite ? KILL_COLOR : P.accent, reduced ? .1 : .16, { grow: .5 });
     if (reduced) return this.spawned - before;
     this._emit(IMPACT_KIND.ring, x, y, z, 2.3 * k, P.accent, .26, { grow: 1 });
     this._emit(IMPACT_KIND.star, x, y, z, 1.8 * k, KILL_COLOR, .16, { angle: .2, grow: .5 });
@@ -229,6 +321,53 @@ export class ImpactVfx {
     this._emit(IMPACT_KIND.star, pos.x, pos.y, pos.z, s * 1.2, color, .16, { angle: .3, grow: .5 });
     this._emit(IMPACT_KIND.ring, pos.x, pos.y, pos.z, s * 1.4, color, .24, { grow: 1 });
     return this.spawned - before;
+  }
+  /**
+   * 화살·관통 광선 한 줄. from 에서 dir 방향 length(m)까지 speed(m/s)로 머리가 나아가고 tail(m) 뒤에서 꼬리가 따라온다.
+   * 화살과 같은 속도·궤적이라 '어디로 꿰뚫었는지'가 남는다. 돌려준 표(handle)로 명중 시 stopBeam 해 과녁에서 멈춘다.
+   * @returns {{slot: number, start: number}|null}
+   */
+  beam(from, dir, length, color, { speed = 0, tail = 0, width = .09, style = BEAM_STYLE.line, delay = 0, fade = .12 } = {}) {
+    if (!this.enabled || !from || !dir || !(length > 0)) return null;
+    const dl = Math.hypot(dir.x, dir.y, dir.z); if (!(dl > 1e-6)) return null;
+    const L = Math.min(60, length), k = L / dl;
+    // 수명: 머리가 끝에 닿고 꼬리가 따라올 때까지. 꼬리가 없으면 도달 뒤 fade 초 동안 사라진다.
+    const life = speed > 0 ? (L + (tail > 0 ? tail : speed * fade)) / speed : fade;
+    if (!this._emit(IMPACT_KIND.beam, from.x, from.y, from.z, width, color, life, { vx: dir.x * k, vy: dir.y * k, vz: dir.z * k, angle: style, stretch: tail, grow: speed, delay })) return null;
+    const slot = this.lastSlot;
+    return { slot, start: this.ring.a.aLife[slot * 2] };
+  }
+  /** 화살 한 발의 궤적(+ 옅은 번짐, 활 끝 작은 고리). 화살과 같은 속도로 그어진다. 명중 정지용 표를 돌려준다. */
+  arrowStreak(pos, dir, speed, life, style = 'basic') {
+    if (!this.enabled || !pos || !dir) return null;
+    const S = ARROW_STREAKS[style] || ARROW_STREAKS.basic, len = speed * life;
+    if (this.lite && !S.glow) return this.beam(pos, dir, len, S.color, { speed, tail: S.tail * .7, width: S.width, style: S.style });
+    const glow = S.glow > 0 && !this.lite ? this.beam(pos, dir, len, S.color, { speed, tail: S.tail * .55, width: S.glow, style: 0 }) : null;
+    const h = this.beam(pos, dir, len, S.color, { speed, tail: S.tail, width: S.width, style: S.style });
+    if (S.muzzle > 0) this._emit(IMPACT_KIND.ring, pos.x, pos.y, pos.z, S.muzzle, S.color, .16, { grow: 1 });
+    if (h && glow) h.glow = glow;
+    return h || glow;
+  }
+  /** 명중해 사라진 화살의 광선을 과녁(이동 거리 traveled)에서 멈추고 꼬리가 따라와 닫히게 한다. 칸이 재활용됐으면 무시한다. */
+  stopBeam(handle, traveled) {
+    if (!handle || !(traveled >= 0)) return false;
+    if (handle.glow) this.stopBeam(handle.glow, traveled);
+    const A = this.ring.a, i2 = handle.slot * 2, i3 = handle.slot * 3, i4 = handle.slot * 4;
+    if (A.aLife[i2] !== handle.start || A.aShape[i4] !== IMPACT_KIND.beam) return false;
+    const L = Math.hypot(A.aVel[i3], A.aVel[i3 + 1], A.aVel[i3 + 2]); if (!(L > 1e-6) || traveled >= L) return false;
+    const speed = A.aMotion[i2], tail = A.aShape[i4 + 3], k = Math.max(.01, traveled) / L;
+    A.aVel[i3] *= k; A.aVel[i3 + 1] *= k; A.aVel[i3 + 2] *= k;
+    if (speed > 0) {
+      A.aLife[i2 + 1] = Math.min(A.aLife[i2 + 1], (traveled + (tail > 0 ? tail : speed * .12)) / speed);
+      this.ring.expiry[handle.slot] = A.aLife[i2] + A.aLife[i2 + 1];
+    }
+    const r = this.ring; if (handle.slot < r.lo) r.lo = handle.slot; if (handle.slot > r.hi) r.hi = handle.slot;
+    return true;
+  }
+  /** 지면에 눕는 표식 한 장(조준 원·부채꼴·가시 고리·나침 고리). radius m, angle 은 월드 XZ 회전(라디안). */
+  mark(pos, color, { radius = 1.5, life = .6, style = MARK_STYLE.reticle, angle = 0, delay = 0, y = .06 } = {}) {
+    if (!pos) return false;
+    return this._emit(IMPACT_KIND.mark, pos.x, (pos.y || 0) + y, pos.z, radius, color, life, { angle, stretch: style, delay });
   }
   /** 살아 있는 칸 수(점검·테스트용). */
   live() { return this.ring.live(this.clock); }

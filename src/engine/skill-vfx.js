@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { VFX_TEX } from './assets.js';
 import { HERO_SKILLS } from './combat-sound-library.js';
 import { normalizeGrade } from '../data/hero-grades.js';
+import { SKILL_SIGNATURES } from './skill-signatures.js';
 
 /**
  * 스킬별 '전장 장악' 레이어. 기존 스킬 연출(skills.js)은 그대로 두고,
@@ -31,7 +32,7 @@ export const SKILL_VFX = Object.freeze({
   judgment: R(GOLD, 'holy-wave', 'self', 'flash', 0xfff3b0, 6),
   dragon_slash: R(GOLD, 'holy-wave', 'front', 'flash', 0xffd060, 10, { dist: 4 }),
   chain_bind: R(GOLD, 'chain-lightning', 'self', 'flash', 0xfff0b0, 6),
-  sanctuary: R(GOLD, 'holy-wave', 'self', 'ground', 0xffe9a0, 8),
+  sanctuary: R(GOLD, 'holy-wave', 'self', 'ground', 0xffc845, 8, { gain: .5 }),
   sunbreaker: R(GOLD, 'holy-wave', 'front', 'flash', 0xffc040, 9, { dist: 4 }),
   heavenfall: R(GOLD, 'holy-wave', 'aim', 'flash', 0xfff0a0, 11, { dist: 0, seek: [15, 5] }),
   // 광전사
@@ -61,15 +62,15 @@ export const SKILL_VFX = Object.freeze({
   void_step: R(VIOLET, 'shadow-slash', 'self', 'flash', 0x8a4aff, 7, { ghost: true }),
   night_parade: R(VIOLET, 'shadow-slash', 'aim', 'ground', 0xb26bff, 8, { dist: 3, seek: [13, 4], ghost: true }),
   eclipse_edge: R(VIOLET, 'shadow-slash', 'aim', 'flash', 0xb26bff, 11, { dist: 5, seek: [16, 5], ghost: true }),
-  // 레인저
-  ranger_pierce: R(GOLD, 'wind-arrow-trail', 'front', 'flash', 0x7feac0, 5, { dist: 4 }),
-  ranger_volley: R(GOLD, 'wind-arrow-trail', 'front', 'flash', 0x7feac0, 6, { dist: 4 }),
-  ranger_retreat: R(GOLD, 'wind-arrow-trail', 'self', 'flash', 0x7feac0, 4),
-  ranger_tempest: R(GOLD, 'wind-arrow-trail', 'front', 'flash', 0x7feac0, 10, { dist: 5 }),
-  ranger_quickshot: R(GOLD, 'wind-arrow-trail', 'front', 'flash', 0x9fffd8, 5, { dist: 4 }),
-  ranger_binding: R(GOLD, 'wind-arrow-trail', 'front', 'ground', 0x63e08a, 6, { dist: 4 }),
-  gale_hunt: R(GOLD, 'wind-arrow-trail', 'front', 'flash', 0x7feac0, 8, { dist: 5 }),
-  skyfall_arrows: R(GOLD, 'wind-arrow-trail', 'aim', 'ground', 0x7feac0, 12, { dist: 7, seek: [18, 6] }),
+  // 레인저: 큰 바람 텍스처 섬광(전방 4m 흰 덩어리) 대신 발밑 비취 룬만 두고, 모양은 skill-signatures.js 의 광선·표식이 맡는다.
+  ranger_pierce: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 3, { sig: true }),
+  ranger_volley: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 3.5, { sig: true }),
+  ranger_retreat: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 3, { sig: true, ghost: true }),
+  ranger_tempest: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 5, { sig: true, gain: .6 }),
+  ranger_quickshot: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x9fffd8, 3, { sig: true }),
+  ranger_binding: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x63e08a, 3.5, { sig: true }),
+  gale_hunt: R(GOLD, 'wind-arrow-trail', 'self', 'none', 0x3fe0a0, 4, { sig: true, gain: .6 }),
+  skyfall_arrows: R(GOLD, 'wind-arrow-trail', 'aim', 'ground', 0x3fe0a0, 12, { dist: 7, seek: [18, 6], sig: true, gain: .5 }),
 });
 
 // 궁극기(인덱스 3)와 고위 각성(6·7)만 전장 장악 링 + 카메라 펀치 1회를 쓴다.
@@ -127,19 +128,21 @@ export function castSkillVfx(game, skillId, player, ctx = null, seek = null) {
     else if (r.place === 'aim' && r.seek && typeof seek === 'function' && Array.isArray(game.enemies) && typeof player.distTo === 'function' && (_seek = seek(game, player, r.seek[0], r.seek[1]))) _at.copy(_seek);
     else _at.copy(player.pos).addScaledVector(_f, r.dist ?? 3);
     _at.y = player.pos.y;
-    const size = r.size * scale, color = r.color;
+    const size = r.size * scale, color = r.color, g = r.gain ?? 1;
     // 1) 바닥 룬 서클
     const runeR = (1.8 + size * 0.28) * (r.place === 'self' ? 1 : 0.9);
-    fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: runeR * 0.35, r1: runeR, life: 0.55, spin: reduced ? 0 : 1.4, y: 0.07, fadeIn: 0.15, hold: 0.3, gain: groundGain(r.rune) });
+    fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: runeR * 0.35, r1: runeR, life: 0.55, spin: reduced ? 0 : 1.4, y: 0.07, fadeIn: 0.15, hold: 0.3, gain: groundGain(r.rune) * g });
     // 2) 스킬 텍스처
-    if (r.mode === 'ground') fx.groundTex(_at, skillVfxKey(r.tex), color, { r0: size * 0.3, r1: size, life: 0.6, spin: reduced ? 0 : 0.5, y: 0.09, fadeIn: 0.1, gain: groundGain(r.tex) });
-    else fx.texFlash(_at, skillVfxKey(r.tex), color, { size, life: 0.45, spin: reduced ? 0 : 0.6, grow: 1.1, y: 1 });
+    if (r.mode === 'ground') fx.groundTex(_at, skillVfxKey(r.tex), color, { r0: size * 0.3, r1: size, life: 0.6, spin: reduced ? 0 : 0.5, y: 0.09, fadeIn: 0.1, gain: groundGain(r.tex) * g });
+    else if (r.mode === 'flash') fx.texFlash(_at, skillVfxKey(r.tex), color, { size, life: 0.45, spin: reduced ? 0 : 0.6, grow: 1.1, y: 1, gain: g });
     if (!reduced && !crowded) {
       // 3) 노출 곱 섬광: 100ms 이하, 화면 전체가 아니라 월드 한 점
-      _p.copy(_at); _p.y += 1;
-      fx.flash?.(_p, color, { size: 1.4 * scale, life: 0.08 });
+      // 자기 중심 스킬은 섬광·임팩트 중심이 영웅 몸통을 하얗게 덮지 않게 발목 높이에 작게 찍는다.
+      const self = r.place === 'self';
+      _p.copy(_at); _p.y += self ? .35 : 1;
+      fx.flash?.(_p, color, { size: (self ? .9 : 1.4) * scale, life: 0.08 });
       // 착탄 중심의 또렷한 임팩트 프레임(코어·별빛·고리, 인스턴스 층 1드로우). 넓은 텍스처 연출 위에 '어디서 터졌는지'를 찍는다.
-      fx.impact?.burst?.(_p, color, { size: Math.min(3.2, (1 + size * 0.14) * scale) });
+      fx.impact?.burst?.(_p, color, { size: Math.min(self ? 1.6 : 3.2, (1 + size * 0.14) * scale * (self ? .6 : 1)) });
       // 4) 먼지와 잔상
       if (!lite) {
         _p.copy(_at); _p.y += 0.3;
@@ -147,11 +150,13 @@ export function castSkillVfx(game, skillId, player, ctx = null, seek = null) {
         if (r.ghost && player.model) fx.ghost?.(player.model, color, { life: 0.3, opacity: 0.4 });
       }
     }
+    // 스킬 고유 모양 언어(광선·지면 표식·고리, 인스턴스 층). 동작 줄이기에서는 생략한다.
+    if (r.sig && !reduced && fx.impact && SKILL_SIGNATURES[skillId]) SKILL_SIGNATURES[skillId]({ fx, impact: fx.impact, player, at: _at, f: _f, lite, scale });
     // 궁극기·50레벨 각성: 지면 링이 전장 반경으로 퍼지고 카메라 펀치 1회
     // 지면 텍스처가 이미 전장 반경(10m 이상)을 덮는 궁극기는 같은 크기의 링을 한 겹 더 쌓지 않는다(바닥 전체가 한 색으로 덮이는 것을 막는다).
     if (major && !crowded && !(r.mode === 'ground' && size >= 10)) {
       const wide = 10;
-      fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: 1, r1: wide, life: 0.9, spin: reduced ? 0 : 0.6, y: 0.06, fadeIn: 0.08, hold: 0.3, gain: groundGain(r.rune) * .8 });
+      fx.groundTex(_at, skillVfxKey(r.rune), color, { r0: 1, r1: wide, life: 0.9, spin: reduced ? 0 : 0.6, y: 0.06, fadeIn: 0.08, hold: 0.3, gain: groundGain(r.rune) * .8 * g });
     }
     if (major && !crowded && !reduced) game.renderer?.shake?.(0.9);
     return true;

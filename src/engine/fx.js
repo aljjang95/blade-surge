@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { softCircleTex, sparkTex, ringTex, slashTex, smokeTex, VFX_TEX } from './assets.js';
 import { ImpactLights } from './impact-lights.js';
 import { CombatVfx } from './combat-vfx.js';
-import { ImpactVfx } from './impact-vfx.js';
+import { ImpactVfx, HERO_IMPACT_PALETTE } from './impact-vfx.js';
+import { spawnSanctum } from './sanctum-vfx.js';
 import { HeroEffectFocus } from './hero-effect-focus.js';
 import { WeaponTrail, createWeaponTrailMaterial } from './weapon-trail.js';
 import { bloomLoadFor, compactCombatStatus, decorativeBurstGain, boundedFeedbackGain, combatTextRegions, combatTextViewport, heroCombatTextRegion, placeCombatStatus } from './combat-feedback.js';
@@ -597,9 +598,12 @@ export class FX {
     // 둔기는 중심이 빈 충격 고리, 참격은 진행 방향의 얇은 날, 마법은 짧은 별빛이다.
     // 흰 플래시와 참격 아틀라스를 중첩하지 않아 적 몸과 다음 예고를 비워 둔다.
     const slash = kind === 'slash', blunt = kind === 'blunt';
+    // 크림색(0xfff0d0) 바탕 번짐은 영웅 강조색으로 바꾼다: 군중을 한꺼번에 칠 때 적마다 크림 구름이 생기던 원인(검성 방패 강타·광전사 회전베기).
+    const pal = HERO_IMPACT_PALETTE[this._heroId()];
+    if (pal && !crit && kind !== 'magic') color = pal.accent;
     // 또렷한 모양(자국·고리·별빛·불똥)은 impact 층이 그린다. 이 부드러운 스프라이트는 바탕 번짐으로만 남겨 적 몸을 크림색 타원으로 덮지 않는다.
     const cue = this.flash(pos, color, {
-      size: reduced ? radius : radius * .62, life: reduced ? .08 : tier === 'finisher' ? .14 : .10,
+      size: reduced ? radius : radius * .5, life: reduced ? .08 : tier === 'finisher' ? .14 : .10,
       angle: reduced || blunt ? 0 : slash ? angle : Math.PI / 4,
       stretch: reduced || blunt ? 1 : slash ? (heavy ? 2 : 1.7) : 1.12,
       tex: blunt && !reduced ? 'ring' : 'spark', contact: true, stationary: reduced,
@@ -896,6 +900,12 @@ export class FX {
     const mesh = new THREE.Mesh(this.plane2, m); mesh.rotation.x = -Math.PI / 2; mesh.position.copy(pos); mesh.position.y = y; mesh.renderOrder = 8;
     this.add(mesh, life, (k, t, dt) => { const e = 1 - Math.pow(1 - k, 3); const r = r0 + (r1 - r0) * e; mesh.scale.set(r, r, 1); mesh.rotation.z += spin * dt; m.opacity = k < fadeIn ? k / fadeIn : (hold > 0 ? (k < 0.65 ? 1 : 1 - (k - 0.65) / 0.35) : 1 - (k - fadeIn) / (1 - fadeIn)); }, () => m.dispose());
     return mesh;
+  }
+  /** 아군 화살 궤적(인스턴스 층, 드로우콜 0 추가). 명중 정지용 표를 돌려준다. */
+  arrowStreak(pos, dir, speed, life, style) { return this.impact?.arrowStreak(pos, dir, speed, life, style) ?? null; }
+  /** 지속 영역(성역): 얇은 경계 원 + 차례로 솟는 가는 빛기둥. 드로우콜 2. 낮은 화질은 기둥을 반으로 줄인다. */
+  sanctum(pos, { radius = 8, life = 7, color = 0xffc845 } = {}) {
+    return spawnSanctum(this, pos, { radius, life, color, pillars: this.lite ? 4 : 8, gain: this._exposureGain(radius * 2, FX_EXPOSURE.groundWeight) });
   }
   /** 시전 마법진: 캐스터 아래에서 회전, 커졌다가 사라짐 */
   castCircle(pos, color = 0xffd060, { radius = 2.4, life = 0.9, demon = false, telegraph = false } = {}) {

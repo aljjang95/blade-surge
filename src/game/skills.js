@@ -130,7 +130,7 @@ export const SKILLS = {
       const dir = p.forward(new THREE.Vector3()), pos = rangerOrigin(p, dir);
       // 별빛 관통(교관): 판정 반경 1.4배, 밀치기 4 → 7.
       const star = hasTownSkillVariant(p, 'ranger_pierce', 'star');
-      game.spawnProjectile({ pos, dir, speed: SKILL_PROJECTILES.pierce.speed, radius: (empowered ? 1.3 : SKILL_PROJECTILES.pierce.radius) * (star ? 1.4 : 1), dmg: c.dmg * (empowered ? 2 : 1), color: 0x7feac0, size: .45, owner: p, kb: star ? 7 : 4, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.pierce.life, visual: p.def?.weapon === 'bow' ? 'arrow' : undefined });
+      game.spawnProjectile({ pos, dir, speed: SKILL_PROJECTILES.pierce.speed, radius: (empowered ? 1.3 : SKILL_PROJECTILES.pierce.radius) * (star ? 1.4 : 1), dmg: c.dmg * (empowered ? 2 : 1), color: 0x7feac0, size: .45, owner: p, kb: star ? 7 : 4, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.pierce.life, visual: p.def?.weapon === 'bow' ? 'arrow' : undefined, streak: 'pierce' });
       audio.whoosh({ vol: .4, pitch: 1.5, dur: .2 });
     },
   },
@@ -150,7 +150,7 @@ export const SKILLS = {
   ranger_retreat: {
     dur: .7,
     cast(game, p, c) {
-      rangerArrows(game, p, c.dmg);
+      rangerArrows(game, p, c.dmg, 1, { streak: 'retreat' });
       p.vel.copy(p.forward(new THREE.Vector3())).multiplyScalar(-8);
       p.invuln = Math.max(p.invuln || 0, .6); p.gainJobResource(1);
     },
@@ -161,15 +161,15 @@ export const SKILLS = {
     cast(game, p, c) {
       const empowered = (p.jobResource || 0) >= 3;
       if (empowered) p.jobResource = 0;
-      rangerArrows(game, p, c.dmg * (empowered ? 1.5 : 1), 7, { radius: .95, kb: 5, size: .58 });
+      rangerArrows(game, p, c.dmg * (empowered ? 1.5 : 1), 7, { radius: .95, kb: 5, size: .58, streak: 'storm' });
     },
   },
   ranger_quickshot: {
     dur: .8,
     cast(game, p, c) {
-      rangerArrows(game, p, c.dmg); p.gainJobResource(1);
+      rangerArrows(game, p, c.dmg, 1, { streak: 'quick' }); p.gainJobResource(1);
       for (const delay of [.12, .24]) game.after(delay, () => {
-        if (game.active && game.player === p && p.alive) rangerArrows(game, p, c.dmg);
+        if (game.active && game.player === p && p.alive) rangerArrows(game, p, c.dmg, 1, { streak: 'quick' });
       });
     },
   },
@@ -180,7 +180,7 @@ export const SKILLS = {
       if (empowered) p.jobResource = 0;
       // 뿌리 속박(교관): 둔화 4 → 6초에 0.6초 기절을 더한다.
       const root = hasTownSkillVariant(p, 'ranger_binding', 'root');
-      rangerArrows(game, p, c.dmg * (empowered ? 2 : 1), 5, root ? { slow: 6, stun: .6, kb: 1 } : { slow: 4, kb: 1 });
+      rangerArrows(game, p, c.dmg * (empowered ? 2 : 1), 5, root ? { slow: 6, stun: .6, kb: 1, streak: 'bind' } : { slow: 4, kb: 1, streak: 'bind' });
     },
   },
   // ================= 검성 (성스러운 빛 · 몹몰이 심판) =================
@@ -214,10 +214,12 @@ export const SKILLS = {
       // 준비 시간에 실제로 모인 적을 원래 접촉 시점에 강타한다.
       game.hitRadius(center, SKILL_AIM_SHAPES.shield_bash.radius, c.dmg, { kb: 7, kind: 'blunt', stun: 1.4, source: p });
       if (hasTownSkillVariant(p, 'shield_bash', 'aftershock')) game.after(.22, () => game.hitRadius(center, 3.4, c.dmg * .45, { kb: 3, kind: 'blunt', stun: .45, source: p, quietStop: true }));
-      game.fx.shockTex(center, 0xffe0a0, { r1: 6.5, life: 0.5 });
-      game.fx.explosion(center, { size: 4.5, color: 0xffe0b0, life: 0.45 });
-      game.fx.dustPuff(center, { size: 5 }); game.fx.burst(center.clone().setY(0.5), 0xffd080, { n: 26, speed: 9, size: 0.4 });
-      game.fx.light(center, 0xffd080, 12, 14, 0.4);
+      // 방패 강타: 크림 폭발 원화(4.5m, 적 키 높이) 대신 바닥을 두 번 때리는 금빛 충격 고리 + 낮은 금빛 임팩트 + 사방 불똥.
+      game.fx.shockTex(center, 0xffc23a, { r1: 6.5, life: 0.5 });
+      game.after(.08, () => { if (game.active) game.fx.shockTex(center, 0xff9a20, { r1: 4.2, life: 0.4 }); });
+      game.fx.impact?.burst?.(center.clone().setY(.45), 0xffc23a, { size: 1.8 });
+      game.fx.dustPuff(center, { size: 5 }); game.fx.burst(center.clone().setY(0.5), 0xffc860, { n: 26, speed: 9, size: 0.4, up: .3 });
+      game.fx.light(center, 0xffd080, 10, 14, 0.4);
       game.renderer.shake(0.8); game.renderer.punch(1);
       audio.boom({ vol: 0.8, dur: 0.5, low: 70 }); audio.play('hit_plate', { vol: 0.9, rate: 0.8 }); audio.vibe([40, 30, 60]);
     },
@@ -585,21 +587,16 @@ export const SKILLS = {
   // ── 검성 Lv.20 : 성역 (경계 밖으로 못 나간다 + 내 피해 감소) ──
   sanctuary: {
     dur: 1.0,
-    start(game, p) { game.fx.castCircle(p.pos, 0xfff3b0, { radius: 7, life: 1.0 }); audio.magic({ vol: 0.45, base: 523, notes: [0, 4, 7, 12], step: 0.08 }); },
+    // 준비 마법진은 낮은 밝기(.55)로: 성역 경계가 나타나기 전부터 금빛이 바닥을 다 덮지 않게 한다.
+    start(game, p) { game.fx.groundTex(p.pos, 'circle_gold', 0xffd060, { r0: 2.8, r1: 7, life: 1.0, spin: 1.6, y: 0.07, fadeIn: 0.2, hold: 0.35, gain: .55 }); audio.magic({ vol: 0.45, base: 523, notes: [0, 4, 7, 12], step: 0.08 }); },
     cast(game, p, c) {
       const center = p.pos.clone().setY(0); const R = 8.0, LIFE = 7.0;
       p.dr = 0.35; p.drT = LIFE; p.sanctum = { pos: center, r: R };
-      // 지면 성역 + 회전 룬
-      game.fx.groundTex(center, 'circle_gold', 0xffe08a, { r0: R * 0.2, r1: R, life: LIFE, spin: 0.5, y: 0.07, fadeIn: 0.3, hold: LIFE - 1.2 });
-      game.fx.castCircle(center, 0xffd060, { radius: R * 0.55, life: LIFE });
-      // 경계 빛기둥 8개
-      for (let i = 0; i < 8; i++) {
-        const a = (i / 8) * Math.PI * 2;
-        const at = center.clone().add(new THREE.Vector3(Math.cos(a) * R, 0, Math.sin(a) * R));
-        game.after(i * 0.05, () => game.fx.firePillar(at, { height: 6.5, width: 1.1, life: LIFE * 0.9, color: 0xfff0c0 }));
-      }
-      game.fx.light(center, 0xffd060, 12, 18, 0.8);
-      game.renderer.flashScreen(0.3, 0xfff0c0); game.renderer.shake(0.4);
+      // 지면 성역: 옅은 회전 룬(밝기 .38) + 얇은 경계 원과 가는 빛기둥 8개(차례로 솟음, 드로우콜 2). 예전 마법진 2장 + 불기둥 16장 + 화면 섬광은 시전 순간 화면을 금빛으로 덮었다.
+      game.fx.groundTex(center, 'circle_gold', 0xffc845, { r0: R * 0.2, r1: R * .94, life: LIFE, spin: 0.35, y: 0.07, fadeIn: 0.3, hold: LIFE - 1.2, gain: .38 });
+      game.fx.sanctum?.(center, { radius: R, life: LIFE, color: 0xffc845 });
+      game.fx.light(center, 0xffd060, 7, 14, 0.6);
+      game.renderer.flashScreen(0.12, 0xffe6a0); game.renderer.shake(0.4);
       audio.holy({ vol: 0.5, base: 523, dur: 1.4 }); audio.boom({ vol: 0.5, dur: 0.5, low: 80 }); audio.vibe([40, 30, 60]);
       let t = 0, ticks = Math.round(LIFE / 0.5);
       const tick = () => {
@@ -609,12 +606,14 @@ export const SKILLS = {
         for (const e of game.enemies) {
           if (!e.alive || e.spawning) continue;
           const dx = e.pos.x - center.x, dz = e.pos.z - center.z, d = Math.hypot(dx, dz);
-          if (d > R - 1.2 && d < R + 3.5) { e.pull(center.x, center.z, 16); if (Math.random() < 0.4) game.fx.flash(e.pos.clone().setY(1.1), 0xfff0c0, { size: 1.8, life: 0.16 }); }
+          // 경계에 막힌 적: 크림 스프라이트 대신 작은 금빛 고리(인스턴스 층). 난수 소비 횟수는 그대로다.
+          if (d > R - 1.2 && d < R + 3.5) { e.pull(center.x, center.z, 16); if (Math.random() < 0.4) game.fx.impact?.burst?.(e.pos.clone().setY(1.1), 0xffc23a, { size: .7 }); }
         }
         game.hitRadius(center, R, c.dmg, { kb: 0, kind: 'magic', source: p, dirFrom: center, quiet: true });
         const a = Math.random() * Math.PI * 2, r = Math.random() * R;
-        game.fx.holyBurst(center.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)), { size: 3, life: 0.35 });
-        game.fx.embers(center, 0xfff0c0, { n: 6, radius: R * 0.8, life: 1.2, rise: 3 });
+        // 성역 안 맥동: 큰 성광 섬광(3m) 대신 바닥의 작은 금빛 별빛 한 점.
+        game.fx.impact?.burst?.(center.clone().add(new THREE.Vector3(Math.cos(a) * r, .4, Math.sin(a) * r)), 0xffc23a, { size: 1 });
+        game.fx.embers(center, 0xffd27a, { n: 6, radius: R * 0.8, life: 1.2, rise: 3 });
         audio.holy({ vol: 0.14, base: 784, dur: 0.4 });
         game.after(0.5, tick);
       }; tick();
@@ -938,8 +937,8 @@ export const SKILLS = {
   // 별그림자 행렬(교관): 흡인 반경 9 → 13, 베기 반경 5 → 6.5.
   night_parade: { dur:.85, cast(game,p,c){ const wide=hasTownSkillVariant(p,'night_parade','wide'); const at=c.data.aimPoint?.clone()||densest(game,p,13,4)||fwd(p,3); game.vacuum(at,wide?13:9,25); for(let i=0;i<3;i++)game.after(i*.1,()=>{if(game.active)game.hitRadius(at,wide?6.5:5,c.dmg*.55,{kb:2,kind:'slash',source:p,dirFrom:at,quietStop:i>0});}); } },
   eclipse_edge: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); game.fx.castCircle(at,0xb26bff,{radius:7,life:.7}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xb26bff,life:.55});}); } },
-  gale_hunt: { dur:.9, cast(game,p,c){ rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4}); for(const delay of [.12,.24])game.after(delay,()=>{if(game.active&&p.alive)rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4});}); } },
-  skyfall_arrows: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,18,6)||fwd(p,7); game.fx.castCircle(at,0x7feac0,{radius:8,life:.8}); for(let i=0;i<5;i++)game.after(.16+i*.09,()=>{if(!game.active)return;const hit=at.clone().add(new THREE.Vector3(Math.cos(i*2.4)*2.2,0,Math.sin(i*2.4)*2.2));game.hitRadius(hit,4.2,c.dmg*.42,{kb:4,kind:'slash',source:p,dirFrom:hit,quietStop:i>1});game.fx.shockTex(hit,0x7feac0,{r1:3.8,life:.3});}); } },
+  gale_hunt: { dur:.9, cast(game,p,c){ rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'}); for(const delay of [.12,.24])game.after(delay,()=>{if(game.active&&p.alive)rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'});}); } },
+  skyfall_arrows: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,18,6)||fwd(p,7); game.fx.groundTex(at,'circle_gold',0x3fe0a0,{r0:3.2,r1:8,life:.8,spin:1.6,y:.07,fadeIn:.2,hold:.35,gain:.5}); for(let i=0;i<5;i++)game.after(.16+i*.09,()=>{if(!game.active)return;const hit=at.clone().add(new THREE.Vector3(Math.cos(i*2.4)*2.2,0,Math.sin(i*2.4)*2.2));game.hitRadius(hit,4.2,c.dmg*.42,{kb:4,kind:'slash',source:p,dirFrom:hit,quietStop:i>1});game.fx.shockTex(hit,0x7feac0,{r1:3.8,life:.3});}); } },
 
   // Mechanics live outside the visual session's FX/SFX edits in this file.
   ...AWAKENING_III,

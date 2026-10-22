@@ -790,7 +790,7 @@ export class Battle {
   }
 
   // ---------------- 투사체 ----------------
-  spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, stun = 0, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false, counter = false, comboToken = null, skillCast = null, basic = false }) {
+  spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, stun = 0, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false, counter = false, comboToken = null, skillCast = null, basic = false, streak = null }) {
     const effect = frontierEffectForStage(this.stage);
     if (hostile && effect?.kind === 'projectileDamageMultiplier') dmg *= effect.value;
     let mesh = null;
@@ -802,7 +802,10 @@ export class Battle {
       mesh.position.copy(pos); this.scene.add(mesh);
     }
     const readableTrail = trail ?? (!hostile && kind === 'magic' ? color : null);
-    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, stun, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, counter, comboToken, skillCast, basic });
+    // 아군 화살은 같은 속도로 그어지는 비취 궤적을 남긴다(스킬마다 모양이 다르다). 판정·난수와 무관한 표시 층이다.
+    const streakStyle = !hostile && visual === 'arrow' ? (streak || (basic ? (finisher ? 'finisher' : 'basic') : 'volley')) : null;
+    const beam = streakStyle ? this.fx.arrowStreak?.(pos, dir, speed, life, streakStyle) ?? null : null;
+    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, stun, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, counter, comboToken, skillCast, basic, beam, streak: streakStyle });
   }
   updateProjectiles(dt) {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -820,12 +823,13 @@ export class Battle {
             p.hit.add(e);
             if (p.explode) { this.explode(p); done = true; break; }
             this.damageEnemy(e, p.dmg, { kb: p.kb, stun: p.stun, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, counter: p.counter, comboToken:p.comboToken, skillCast:p.skillCast, basic:p.basic });
+            if (p.streak === 'bind') this.fx.impact?.mark(e.pos, 0x63e08a, { radius: 1.1, life: .9, style: 2 });
             if (!p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); break; }
           }
         }
         if (!done && this.routeObjectives?.strikeProjectile?.(this, p) && !p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); }
       }
-      if (done) { if (p.explode && p.t >= p.life && !p.hit.size) this.explode(p); releaseProjectileVisual(p.mesh); this.projectiles.splice(i, 1); }
+      if (done) { if (p.explode && p.t >= p.life && !p.hit.size) this.explode(p); if (p.beam && p.t < p.life) this.fx.impact?.stopBeam(p.beam, p.t * p.speed); releaseProjectileVisual(p.mesh); this.projectiles.splice(i, 1); }
     }
   }
   explode(p) {
