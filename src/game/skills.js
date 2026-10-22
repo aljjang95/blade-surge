@@ -770,7 +770,7 @@ export const SKILLS = {
       const prev = new THREE.Vector3();
       const lance = game.fx.orb(0x2f8cff, 0.5);   // 프리즘 창: 옅은 하늘색(0x9fd8ff) 구·후광은 흰 덩어리로만 보였다(h1b). 진한 청 구 + 굵은 궤적(magePrismTrail)으로 읽힌다 lance.position.copy(state.pos);
       lance.userData.core.userData.ownGeo = true;   // fx 가 정리할 수 있게 표시 (안 하면 캐스트마다 지오메트리가 샌다)
-      lance.userData.halo.scale.setScalar(1.1);   // 표시만: 2m 가산 후광이 시전 직후 옅은 청색 원으로 보였다(h1c). 판정 반경(1.7m)과 무관
+      lance.userData.halo?.scale?.setScalar(1.1);   // 표시만: 2m 가산 후광이 시전 직후 옅은 청색 원으로 보였다(h1c). 판정 반경(1.7m)과 무관
       const disposeLance = () => { lance.userData.core.material.dispose(); lance.userData.halo.material.dispose(); };
 
       audio.zap({ vol: 0.5, dur: 0.3 });

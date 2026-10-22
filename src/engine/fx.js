@@ -705,7 +705,7 @@ export class FX {
     const before = I.spawned, rng = I.rng, y = (pos.y || 0) + .5;
     // 착탄 중심: 작고 진한 코어(지름 ≈ 1.1m, 진홍-주황 테·작은 달아오른 심) — 넓은 번짐 대신 '어디서 터졌는지'를 한 점으로 찍는다(h1c).
     I._emit(IMPACT_KIND.core, pos.x, y + .2, pos.z, .55 * k, 0xff3a0e, .18, { grow: .5 });
-    I._emit(IMPACT_KIND.star, pos.x, y + .2, pos.z, 1.1 * k, 0xe8341c, .16, { angle: rng.next() * 6.2831853, grow: .5 });
+    if (!this.lite) I._emit(IMPACT_KIND.star, pos.x, y + .2, pos.z, 1.1 * k, 0xe8341c, .16, { angle: rng.next() * 6.2831853, grow: .5 });
     I._emit(IMPACT_KIND.ring, pos.x, y, pos.z, 3.4 * k, 0xd8261a, .34, { grow: 1 });
     I._emit(IMPACT_KIND.ring, pos.x, y, pos.z, 2.2 * k, 0xff6a1e, .26, { grow: 1, delay: .04 });
     // 바닥 나침 폭발 표식(진홍): 크림 원화 번짐 대신 '폭발이 터진 자리'를 모양으로 남긴다(h1b 화염구·운석 착탄).
@@ -718,7 +718,7 @@ export class FX {
       I._emit(IMPACT_KIND.streak, pos.x + Math.cos(a) * r, .35, pos.z + Math.sin(a) * r, .3 * k, i % 2 ? 0xff5a14 : 0xd8261a, .42,
         { vx: Math.cos(a) * 6 * k, vy: 5, vz: Math.sin(a) * 6 * k, stretch: 1.3, grow: 1, gravity: 10, delay: .02 });
     }
-    for (let i = 0, n = heavy ? 10 : 7; i < n; i++) {
+    for (let i = 0, n = heavy ? 9 : 7; i < n; i++) {
       const a = (i / n) * 6.2831853 + rng.next() * .5, sp = (7 + rng.next() * 5) * k;
       I._emit(IMPACT_KIND.shard, pos.x, y, pos.z, .26 * k, i % 2 ? 0xff8a26 : 0xe8341c, .42 + rng.next() * .14,
         { vx: Math.cos(a) * sp, vy: 3 + rng.next() * 4, vz: Math.sin(a) * sp, angle: rng.next() * 6.2831853, stretch: 1.8, grow: .8, gravity: 14 });
