@@ -134,7 +134,7 @@ export async function stripRemote(webDir, manifest) {
  */
 export async function verifyChannelBuild(webDir, full) {
   const problems = [];
-  const present = new Set((await walk(webDir)).filter((rel) => rel !== MANIFEST_NAME && rel !== FULL_MANIFEST_NAME));
+  const present = new Set((await walk(webDir)).filter((rel) => rel !== MANIFEST_NAME && rel !== FULL_MANIFEST_NAME && rel !== 'version.json'));
   for (const [rel, row] of Object.entries(full.coreFiles)) {
     if (!present.has(rel)) { problems.push(`core 파일 없음: ${rel}`); continue; }
     const hash = hashBytes(await fs.readFile(path.join(webDir, rel)));

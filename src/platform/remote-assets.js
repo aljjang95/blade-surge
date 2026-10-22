@@ -212,7 +212,8 @@ export function createRemoteAssets(options = {}) {
           try { makeBlobUrl(path, await response.arrayBuffer(), response.headers?.get?.('content-type')); stats.restored += 1; } catch { /* 호스트 URL 로 간다 */ }
         }));
       })();
-      await Promise.race([restore, wait(restoreBudgetMs)]);
+      // 복원이 오래 걸려도 부팅은 예산(restoreBudgetMs) 안에서 이어 간다. 남은 복원은 뒤에서 계속되고, 그동안 해석은 호스트 주소로 간다.
+      let budget; await Promise.race([restore, new Promise((resolve) => { budget = setTimeout(resolve, restoreBudgetMs); })]); clearTimeout(budget);
     }
     return true;
   }
