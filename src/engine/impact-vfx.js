@@ -355,7 +355,7 @@ export class ImpactVfx {
     // 영웅 바로 앞 적을 칠 때 영웅 초점 마스크(.45배)·이름표 밖에서 읽힌다. 고리는 접촉점에 남는다.
     const x = at.x, y = at.y + .15, z = at.z;
     this._emit(IMPACT_KIND.star, x, y, z, T.core * 3, CRIT_COLOR, .14, { angle: 0, grow: .55 });
-    this._emit(IMPACT_KIND.ring, x, at.y, z, T.ring * 1.35, CRIT_DEEP, .3, { grow: 1 });
+    this._emit(IMPACT_KIND.ring, x, at.y, z, T.ring * 1.35, CRIT_DEEP, .4, { grow: 1 });
     if (this.lite) { this._streaks(at, dir, 2, T.speed * 1.15, T.streakLife, CRIT_COLOR, { spread: 1.6, size: .28 }); return; }
     // 십자 네 끝에 금 파편 눈금: 화면 기준 상하좌우로 짧게 밀려나며 .42초 머문다(잔광).
     const e = this.camera?.matrixWorld?.elements;
@@ -363,7 +363,7 @@ export class ImpactVfx {
       const a = i * 1.5707963, c = Math.cos(a), sn = Math.sin(a);
       // 화면 x축(e0..2)·y축(e4..6)으로 펼친다. 카메라가 없으면 월드 XZ.
       const vx = e ? (e[0] * c + e[4] * sn) * 5 : c * 5, vy = e ? (e[1] * c + e[5] * sn) * 5 : sn * 5, vz = e ? (e[2] * c + e[6] * sn) * 5 : 0;
-      this._emit(IMPACT_KIND.shard, x, y, z, .34, CRIT_COLOR, .42, { vx, vy, vz, angle: a, stretch: 1.6, grow: .6, delay: .03 });
+      this._emit(IMPACT_KIND.shard, x, y, z, .42, CRIT_COLOR, .52, { vx, vy, vz, angle: a, stretch: 1.7, grow: .6, delay: .03 });
     }
     this._streaks(at, dir, 3, T.speed * 1.15, T.streakLife * 1.1, CRIT_COLOR, { spread: 1.6, size: .28 });
   }

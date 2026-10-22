@@ -601,7 +601,8 @@ export class FX {
     const slash = kind === 'slash', blunt = kind === 'blunt';
     // 크림색(0xfff0d0) 바탕 번짐은 영웅 강조색으로 바꾼다: 군중을 한꺼번에 칠 때 적마다 크림 구름이 생기던 원인(검성 방패 강타·광전사 회전베기).
     const pal = HERO_IMPACT_PALETTE[this._heroId()];
-    if (pal && !crit && kind !== 'magic') color = pal.accent;
+    // 마법 타격도 영웅색으로(옅은 하늘색 0xa0e0ff 바탕 번짐은 대마도사 처치·연계마다 흰 거품으로 보였다).
+    if (pal && !crit) color = pal.accent;
     // 또렷한 모양(자국·고리·별빛·불똥)은 impact 층이 그린다. 이 부드러운 스프라이트는 바탕 번짐으로만 남겨 적 몸을 크림색 타원으로 덮지 않는다.
     const cue = this.flash(pos, color, {
       size: reduced ? radius : radius * .5, life: reduced ? .08 : tier === 'finisher' ? .14 : .10,

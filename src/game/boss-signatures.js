@@ -38,13 +38,13 @@ export const bossSignatureFragmentShader = `
     // 붉은 정체성 색(가마 0xff713d·도르래 0xff3355)은 붉은 바닥 위라 적색 채움이 묻힌다: 채움을 짙은 진홍으로 어둡게, 경계는 노란 열기로.
     float warm=step(.85,color.r)*(1.-step(.5,color.g));
     body=mix(body,mix(vec3(.32,.04,.03),vec3(.16,.02,.02),progress),warm);
-    rim=mix(rim,mix(vec3(1.,.86,.32),vec3(1.,.96,.6),pulse),warm);
+    rim=mix(rim,mix(vec3(1.,.82,.22),vec3(1.,.62,.1),pulse),warm);
     vec3 c=body;
     c=mix(c,vec3(.06,.02,.02),band);
     c=mix(c,vec3(1.,.72,.42),clamp(front*.75,0.,1.));
     c=mix(c,rim,edge);
     // 가장 바깥 .11m 는 밝은 주황 테: 붉은 바닥(가마)에서도 경계가 떠 보인다.
-    c=mix(c,vec3(1.,.74,.42),lip*(1.-fired));
+    c=mix(c,mix(vec3(1.,.74,.42),vec3(.2,.02,.02),warm),lip*(1.-fired));
     float a=.14+stripe*.08*(1.-fill)+fill*(.3+urgent*.16+warm*.18)+band*.55+front*.55+edge*(.85+pulse*.15)+fired*.3;
     gl_FragColor=vec4(c,clamp(opacity*a,0.,1.));
   }`;
