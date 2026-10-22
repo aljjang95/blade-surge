@@ -1,5 +1,5 @@
 // 일반 보스 공격 예고 점수표(h1c). 실제 개발 서버·실제 부팅 탭·실제 공격 버튼 터치 1회 + 보스 패턴 고정 시전·1/60초 고정 스텝 프레임.
-// 사용: node tools/boss-telegraph-scorecard.mjs --out <폴더> [--tag before] [--stages 1-5,5-10] [--patterns basic,spin] [--tier 2]
+// 사용: node tools/boss-telegraph-scorecard.mjs --out <폴더> [--tag before] [--stages 1-5,5-10] [--patterns basic,spin] [--tier 2] [--pre <진단 코드>]
 // 산출(커밋 금지): <out>/<tag>/<stage>-<pattern>-<pct>.png, <out>/<tag>/<stage>-montage.png, <out>/<tag>/metrics.json
 // 주입: 스테이지 직접 시작, 보스 이외 적 치우기·고정, 보스 패턴 목록을 한 패턴으로 덮어 startAttack 1회, 플레이어 무적·정지,
 //       Math.random 시드, app.testPause(1/60초 고정 스텝). 판정·피해 코드는 건드리지 않는다.
@@ -87,6 +87,8 @@ try {
     const rows = [];
     for (const pattern of patterns) {
       await page.evaluate(pattern => { window.__seed(11); window.__fixture(pattern); window.__step(12); }, pattern);
+      // --pre: 진단용 페이지 코드(예: 특정 fx 메서드 끄기). 기본 측정에는 쓰지 않는다.
+      if (arg('pre')) await page.evaluate(code => (0, eval)(code), arg('pre'));
       const basePng = await page.screenshot();
       const cast = await page.evaluate(() => {
         const boss = window.__boss, p = window.app.battle.player;
