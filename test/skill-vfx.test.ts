@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { HERO_SKILLS } from '../src/engine/combat-sound-library.js';
 import { SKILL_VFX, SKILL_VFX_TEXTURES, SKILL_GROUND_GAIN, MAJOR_SKILL_IDS, skillVfxKey, castSkillVfx, resolveHeroGrade } from '../src/engine/skill-vfx.js';
 import { SKILLS } from '../src/game/skills.js';
+import { SKILL_SIGNATURES } from '../src/engine/skill-signatures.js';
 import { HEROES } from '../src/data/heroes.js';
 
 const manifest = JSON.parse(readFileSync(new URL('../public/img/vfx/skills-v2/manifest.json', import.meta.url), 'utf8'));
@@ -37,6 +38,9 @@ test('실제 skills.js 시전이 레시피를 부르고 원래 cast도 이어서
     const { game, player, calls } = rig();
     try { (SKILLS as any)[id].cast(game, player, { dmg: 10, data: {}, t: 0 }); } catch { /* 원래 cast 는 가짜 게임에서 실패할 수 있다 */ }
     const grounds = calls.filter(c => c[0] === 'ground');
+    // noRune 레시피는 공용 룬(발밑·궁극기 넓은 링)을 깔지 않는다.
+    // 공용 룬을 끄는 대신 발밑 문양은 서명이 맡으므로 서명이 반드시 있어야 한다.
+    if ((SKILL_VFX as any)[id].noRune) { expect((SKILL_SIGNATURES as any)[id]).toBeTypeOf('function'); expect(grounds.filter(c => String(c[2]) === skillVfxKey((SKILL_VFX as any)[id].rune))).toEqual([]); continue; }
     expect(grounds.length).toBeGreaterThanOrEqual(1);
     expect(String(grounds[0][2])).toBe(skillVfxKey((SKILL_VFX as any)[id].rune));
   }
@@ -47,12 +51,12 @@ test('실제 skills.js 시전이 레시피를 부르고 원래 cast도 이어서
   expect(shots).toHaveLength(1);
 });
 
-test('궁극기와 고위 각성만 넓은 지면 링과 카메라 흔들림 1회를 쓴다', () => {
+test('궁극기와 고위 각성만 넓은 지면 링(noRune 서명 스킬 제외)과 카메라 흔들림 1회를 쓴다', () => {
   for (const id of ALL_IDS) {
     const { game, player, calls, shakes } = rig();
     expect(castSkillVfx(game, id, player)).toBe(true);
     const rings = calls.filter(c => c[0] === 'ground' && c[4].r1 >= 10);
-    if (MAJOR_SKILL_IDS.has(id)) { expect(shakes).toHaveLength(1); expect(rings.length).toBeGreaterThanOrEqual(1); }
+    if (MAJOR_SKILL_IDS.has(id)) { expect(shakes).toHaveLength(1); if ((SKILL_VFX as any)[id].noRune) { expect((SKILL_SIGNATURES as any)[id]).toBeTypeOf('function'); expect(rings).toHaveLength(0); } else expect(rings.length).toBeGreaterThanOrEqual(1); }
     else { expect(shakes).toHaveLength(0); expect(rings).toHaveLength(0); }
   }
   expect(MAJOR_SKILL_IDS.size).toBe(15);

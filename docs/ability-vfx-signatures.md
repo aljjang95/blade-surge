@@ -29,7 +29,7 @@ position, kills or victory state. The generated report and PNGs live under
 
 ## 임팩트 프레임·예고·노출 예산 (2026-10-22, h1-vfx 레인)
 
-- `src/engine/impact-vfx.js`: 타격·치명타·처치·스킬 착탄 중심을 인스턴스 메시 한 장(드로우콜 1, 384칸, 프레임당 72칸)에
+- `src/engine/impact-vfx.js`: 타격·치명타·처치·스킬 착탄 중심을 인스턴스 메시 한 장(드로우콜 1, 2048칸, 프레임당 72칸 — 군중 2배 실측 생성 속도에서도 한 바퀴가 최장 수명 2.2초보다 길다)에
   셰이더 도형 5종(코어 섬광·불똥 줄기·별빛·충격 고리·베기 자국)으로 그린다. 시계는 `FX.update` 의 sim dt라
   히트스톱 동안 임팩트가 정지 화면으로 남는다. 난수는 `VfxRng`만 써 전투 난수 순서를 바꾸지 않는다.
 - 영웅 타격 색 언어(`HERO_IMPACT_PALETTE`): 검성 금, 광전사 불씨 주황, 대마도사 비전 청, 암살자 보라, 레인저 비취.
@@ -45,5 +45,14 @@ position, kills or victory state. The generated report and PNGs live under
 - 백화 방지 3종(2026-10-22 후속): `TEX_FLASH_MAX_DIAMETER`(10m) — 서 있는 텍스처 섬광의 최종 지름 상한. `BLOOM_ADAPT`
   (`combat-feedback.js`) — 장식 노출 누적 60 초과부터 420 까지 블룸 세기를 0.62 → 0.28 로 낮추고 초당 1.2 로 복귀(일반 타격 0~30 은 영향 없음).
   `vividDecalColor` — 밝기 0.7 넘는 파스텔 지면층(성역·시간 봉인·눈보라)은 같은 색상의 진한 색(밝기 0.6~0.72, 채도 ≥ 0.82)으로 그린다. 예고는 제외.
-- 적 피격 발광은 `HIT_FLASH`(정점 .26, 상한 .32)로 묶고 처치·스킬 먼지는 흙빛(`DUST_COLOR`, 불투명 .34)이다.
+- 적 피격 발광은 `HIT_FLASH`(정점 .22, 상한 .26, 동작 줄이기 .16)로 묶고 처치·스킬 먼지는 흙빛(`DUST_COLOR`, 불투명 .34)이다.
 - 보스·지역 위험 예고 경계선은 정체성 색과 위험 적색을 반씩 섞는다(금빛 종 예고 ≠ 검성 금빛 마법진).
+
+## h1b 하이엔드 VFX (2026-10-22)
+
+- 영웅별 서명: `sig-knight.js`·`sig-mage.js`·`sig-rogue.js`·`sig-barbarian.js`와 궁수 `skill-signatures.js`. 합본 `SKILL_SIGNATURES`는 레시피에 서명이 있으면 모든 스킬에 시전 순간 적용되고, 궁극기 예비 표식 `SKILL_PRELUDES`(궁수 폭풍·암살자 천 개의 칼날·메테오·지옥의 도끼)는 `start`에서 `skillPrelude`로 부른다. 모두 인스턴스 임팩트 층(드로우콜 1)과 VfxRng만 쓴다.
+- 레시피 `noRune: true`: 공용 발밑 룬·궁극기 넓은 룬 링을 생략하고 서명이 발밑 문양을 맡는다(검성 물리 스킬, 대마도사·광전사 대부분).
+- `InstanceRing.flush`는 업로드 전까지 갱신 구간을 누적하고 `onUpload`에서만 비운다. 렌더를 건너뛴 sim 프레임(frameGovernor)에 낸 칸이 그려지지 않던 결함 수정.
+- 임팩트 층의 서 있는 빛·광선 면적(`ImpactVfx.load`)도 `FX._exposure`로 들어가 `BLOOM_ADAPT` 블룸 감쇠를 받는다(용살검 착탄 뒤 화면 중앙 크림 안개 제거).
+- 평타 연계 `combo()`/`HERO_COMBO`(단계별 성장·영웅별 마무리), 치명타 `_crit`(대상보다 넓은 사선 금빛 참격·바깥 광선·지면 십자), 처치(영웅색 지면 표식·파편·영혼 불꽃), 보스 고유기 예고 전용 셰이더(`bossSignatureFragmentShader`, 파티 손님 화면 포함). 지면 표식 흰 섞임은 반경 1m 20% → 3m 이상 0%.
+- 측정: `node tools/hero-vfx-scorecard.mjs --out <폴더> --tag <이름> [--heroes ..] [--only ..]` — 844x390, 실제 부팅·공격·스킬 터치 + 1/60초 고정 스텝 시전, 시점 4개, 밝은 픽셀·백화·변화·채도·색상·드로우콜·파티클, 영웅별 몽타주. 피해 숫자 DOM은 기본으로 숨긴다. 증거는 커밋하지 않는다.

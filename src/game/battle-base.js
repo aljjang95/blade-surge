@@ -18,6 +18,7 @@ import { heroAppearanceTier } from '../data/hero-library.js';
 import { ITEM_BY_ID } from '../data/items.js';
 import { RARITY_WEIGHT_STAGE, RARITY_WEIGHT_ELITE, RARITY_WEIGHT_BOSS } from '../data/items.js';
 import { audio } from '../engine/audio.js';
+import { HERO_IMPACT_PALETTE } from '../engine/impact-vfx.js';
 import { heroVoiceName } from '../engine/hero-voice.js';
 import { SetProcs } from './setprocs.js';
 import { contactProfile, contactBudget } from './combat-contact.js';
@@ -38,6 +39,7 @@ import { dungeonVisualFor } from '../data/dungeon-visuals.js';
 import { frontierEffectForStage } from '../data/seasonal-content.js';
 
 const _v = new THREE.Vector3();
+const _ultColor = new THREE.Color();
 const _slot = { x: 0, z: 0 };
 const pickWeighted = (w) => { const tot = Object.values(w).reduce((a, b) => a + b, 0); let r = Math.random() * tot; for (const k in w) { r -= w[k]; if (r <= 0) return k; } return Object.keys(w)[0]; };
 
@@ -610,7 +612,8 @@ export class Battle {
     if (!this.stage.party && !e.packFollower) this.app.eco.s.quests.kills++;
     this.drops.onKill(e, this.stage);
     const big = e.isBoss || e.isElite;
-    this.fx.burst(e.pos.clone().setY(1), 0xe0e0ff, { n: big ? 40 : 12, speed: 8, size: 0.4, up: 1 });
+    // 처치 불꽃은 조종 영웅의 타격 색(흰 라벤더 0xe0e0ff 는 처치마다 흰 퍼프로 읽혔다). 개수·속도·난수 사용은 그대로다.
+    this.fx.burst(e.pos.clone().setY(1), HERO_IMPACT_PALETTE[this.player?.def?.id]?.accent ?? 0xe0e0ff, { n: big ? 40 : 12, speed: 8, size: 0.4, up: 1 });
     this.fx.deathShatter?.(e, { reduced: !!this.app?.reducedMotion?.matches });
     if (big) { this.fx.explosion(e.pos, { size: e.isBoss ? 7 : 4, color: e.isBoss ? 0xff8080 : 0xffd080 }); this.renderer.shake(0.4); }
     else {
@@ -790,7 +793,7 @@ export class Battle {
   }
 
   // ---------------- 투사체 ----------------
-  spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, stun = 0, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false, counter = false, comboToken = null, skillCast = null, basic = false }) {
+  spawnProjectile({ pos, dir, speed, radius, dmg, color, size = 0.4, owner, kb = 2, stun = 0, kind = 'magic', life = 1.2, pierce = false, trail = null, explode = null, hostile = false, visual = undefined, slow = 0, finisher = false, counter = false, comboToken = null, skillCast = null, basic = false, streak = null }) {
     const effect = frontierEffectForStage(this.stage);
     if (hostile && effect?.kind === 'projectileDamageMultiplier') dmg *= effect.value;
     let mesh = null;
@@ -802,7 +805,10 @@ export class Battle {
       mesh.position.copy(pos); this.scene.add(mesh);
     }
     const readableTrail = trail ?? (!hostile && kind === 'magic' ? color : null);
-    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, stun, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, counter, comboToken, skillCast, basic });
+    // 아군 화살은 같은 속도로 그어지는 비취 궤적을 남긴다(스킬마다 모양이 다르다). 판정·난수와 무관한 표시 층이다.
+    const streakStyle = !hostile && visual === 'arrow' ? (streak || (basic ? (finisher ? 'finisher' : 'basic') : 'volley')) : null;
+    const beam = streakStyle ? this.fx.arrowStreak?.(pos, dir, speed, life, streakStyle) ?? null : null;
+    this.projectiles.push({ pos: pos.clone(), dir: dir.clone().normalize(), speed, radius, dmg, color, owner, kb, stun, kind, life, t: 0, pierce, hit: new Set(), mesh, trail: readableTrail, explode, hostile, slow, finisher, counter, comboToken, skillCast, basic, beam, streak: streakStyle });
   }
   updateProjectiles(dt) {
     for (let i = this.projectiles.length - 1; i >= 0; i--) {
@@ -820,12 +826,13 @@ export class Battle {
             p.hit.add(e);
             if (p.explode) { this.explode(p); done = true; break; }
             this.damageEnemy(e, p.dmg, { kb: p.kb, stun: p.stun, kind: p.kind, dirx: p.dir.x, dirz: p.dir.z, source: p.owner, slow: p.slow, finisher: p.finisher, counter: p.counter, comboToken:p.comboToken, skillCast:p.skillCast, basic:p.basic });
+            if (p.streak === 'bind') this.fx.impact?.mark(e.pos, 0x63e08a, { radius: 1.1, life: .9, style: 2 });
             if (!p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); break; }
           }
         }
         if (!done && this.routeObjectives?.strikeProjectile?.(this, p) && !p.pierce) { done = true; this.fx.burst(p.pos, p.color, { n: 10, speed: 5, size: 0.3 }); }
       }
-      if (done) { if (p.explode && p.t >= p.life && !p.hit.size) this.explode(p); releaseProjectileVisual(p.mesh); this.projectiles.splice(i, 1); }
+      if (done) { if (p.explode && p.t >= p.life && !p.hit.size) this.explode(p); if (p.beam && p.t < p.life) this.fx.impact?.stopBeam(p.beam, p.t * p.speed); releaseProjectileVisual(p.mesh); this.projectiles.splice(i, 1); }
     }
   }
   explode(p) {
@@ -866,7 +873,9 @@ export class Battle {
     this.ui.ultCinema(sk.name, p.def);
     this.playBeat('ultStart'); this.renderer.radial = 0.35; this.renderer.punch(1.2); this.renderer.aberr = 0.8;
     audio.ultimateDuck(); audio.play('ui_max', { vol: 0.8, rate: 0.6 }); audio.vibe([60, 30, 60, 30, 120]);
-    this.fx.castCircle(p.pos, p.def.color, { radius: 5, life: 1.2 });
+    // 발밑 마법진은 영웅색을 .45 밝기로 낮춘 반경 2.5m 원: 반경 5m·밝기 1 금빛 원이 모든 영웅 궁극기를 같은 원으로 덮었다.
+    // 같은 castCircle 호출 한 번이라 재질 생성(난수)·파티 재생 기록 순서는 그대로다. 판정·stun 은 아래 그대로.
+    this.fx.castCircle(p.pos, _ultColor.set(p.def.color).multiplyScalar(.45).getHex(), { radius: 2.5, life: 1.2 });
     this.fx.light(p.pos, p.def.color, 12, 14, 1.2);
     for (const e of this.enemies) if (e.alive && !e.isBoss && e.pos.distanceToSquared(p.pos) <= 4.5 ** 2) e.stun = Math.max(e.stun, 0.3);
   }

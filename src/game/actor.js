@@ -11,7 +11,8 @@ export const ARENA_R = 15.5;
 const LAUNCH_SEC = 0.55;
 // 피격 발광 정점·상한. 예전 .38×무게(최대 1.6 → .6)는 흰 해골 재질을 블룸 임계 위로 올려 적마다 크림색 구름이 됐다.
 // 모양 있는 타격 신호는 impact 층(영웅색 코어·자국·불똥)이 맡고, 몸 발광은 '맞았다'는 짧은 악센트로만 남긴다.
-export const HIT_FLASH = Object.freeze({ peak: .26, max: .32, reduced: .16 });
+// 군중 스킬 타격에서 적 몸 전체가 블룸과 함께 크림색으로 번지지 않게 정점·상한을 한 단계 더 낮춘다(.26/.32 → .22/.26).
+export const HIT_FLASH = Object.freeze({ peak: .22, max: .26, reduced: .16 });
 // 렌더 피벗 방향 보간 시간상수(초). 0.1초 안에 90% 따라간다.
 const TURN_SMOOTH_SEC = 0.045;
 const DEATH_TURN_SEC = 0.06;

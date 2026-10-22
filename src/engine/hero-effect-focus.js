@@ -24,7 +24,10 @@ float heroCosmeticFactor(vec2 uv) {
   float factor = heroEffectFactor(uv);
   if (heroCosmeticMaskActive < .5 || heroCosmeticMaskAllowed < .5) return factor;
   float mask = clamp(texture2D(heroCosmeticMask, uv).r, 0.0, 1.0);
-  return min(factor, mix(1.0, .35, mask));
+  // 픽셀 단위 영웅 실루엣이 있으면 영웅 몸 픽셀만 .35 로 지키고, 넓은 캡슐(머리 위·앞 1~2m 포함)은 .85 까지만 낮춘다.
+  // 캡슐 .45 가 영웅 바로 앞 적의 타격 코어·치명 십자·처치 불꽃을 반 이하로 죽였다(영웅은 실루엣이 계속 덮지 않게 지킨다).
+  float soft = mix(.85, 1.0, clamp((factor - .45) / .55, 0.0, 1.0));
+  return min(soft, mix(1.0, .35, mask));
 }
 `;
 
@@ -103,7 +106,7 @@ export class HeroEffectFocus {
       }
       shader.fragmentShader = extendMain(shader.fragmentShader, statement, scope === 'alpha' ? cosmeticMask : '');
     };
-    const cacheKey = () => prefix + (scope === 'alpha' ? '|hero-effect-focus-v4:' : '|hero-effect-focus-v3:') + scope;
+    const cacheKey = () => prefix + (scope === 'alpha' ? '|hero-effect-focus-v5:' : '|hero-effect-focus-v3:') + scope;
     material.onBeforeCompile = hook; material.customProgramCacheKey = cacheKey;
     material.needsUpdate = true;
     bindings.set(material, { owner: this, scope, original, prefix, hook, cacheKey });

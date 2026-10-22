@@ -76,7 +76,7 @@ test('additive binding preserves prior shader work/cache identity and changes al
   expect(value.fragmentShader).toContain('gl_FragColor.a *= heroCosmeticFactor(');
   expect(value.fragmentShader).not.toContain('gl_FragColor.rgb *=');
   expect(value.fragmentShader.indexOf('gl_FragColor.a *=')).toBeLessThan(value.fragmentShader.indexOf('float later()'));
-  expect(material.customProgramCacheKey()).toBe('authored-fire-program|hero-effect-focus-v4:alpha');
+  expect(material.customProgramCacheKey()).toBe('authored-fire-program|hero-effect-focus-v5:alpha');
   const normal = new THREE.SpriteMaterial({ transparent: true, blending: THREE.NormalBlending });
   const normalHook = normal.onBeforeCompile, normalKey = normal.customProgramCacheKey();
   focus.bind(normal); expect(normal.onBeforeCompile).toBe(normalHook); expect(normal.customProgramCacheKey()).toBe(normalKey);

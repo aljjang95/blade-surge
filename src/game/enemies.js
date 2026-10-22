@@ -15,6 +15,8 @@ import { monsterRosterEntry } from '../data/monster-roster.js';
 import { MONSTER_STRIDE } from '../data/locomotion-stride.js';
 import { deathStyle, enemyHitReact, monsterLocoTempo } from './feel.js';
 import { canCommitRanged, escapeWall, idlePursuit, packNoise, updatePursuit } from './pack-pursuit.js';
+import { HERO_IMPACT_PALETTE } from '../engine/impact-vfx.js';
+const _warnColor = new THREE.Color(), _danger = new THREE.Color(0xff3020);
 
 const _v = new THREE.Vector3();
 const _impactPoint = new THREE.Vector3();
@@ -354,7 +356,8 @@ export class Enemy extends Actor {
     if (this.eyeMat) this.eyeMat.emissiveIntensity = 0;
     // 보스·정예는 기존 대형 처치 연출이 있으므로 제외한다. 일반 몹만 튀어 오르며 처치 섬광을 남긴다.
     this.killFlair = !!flair && !this.isBoss && !this.isElite;
-    if (this.killFlair) { this.launchOnKill(flair.finisher ? 1.3 : flair.crit ? 1 : 0.8); this.flash(0xffe9a0, 0.26); }
+    // 처치 발광은 조종 영웅의 타격 색(크림 0xffe9a0 은 쓰러지는 몸 전체를 흰 거품으로 칠했다). 시간·세기는 그대로.
+    if (this.killFlair) { this.launchOnKill(flair.finisher ? 1.3 : flair.crit ? 1 : 0.8); this.flash(_warnColor.set(HERO_IMPACT_PALETTE[this.game.player?.def?.id]?.accent ?? 0xffe9a0).multiplyScalar(.55).getHex(), 0.26); }   // .55 배: 몸 전체 발광이 덩어리로 보이지 않게
     this.game.onEnemyDeath(this);
   }
   update(dt) {
@@ -566,7 +569,8 @@ export class Enemy extends Actor {
       audio.whoosh({ vol: .5, pitch: .5, dur: .5 });
     }
     else if (this.def.ranged && !this.special) { g.fx.flash(this.pos.clone().setY(1.6 * this.def.scale), 0xa0ff90, { size: 1.5 * this.def.scale, telegraph: true, life: dur * this.hitAt }); if (this.isBoss) audio.magic({ vol: 0.25, base: 200, notes: [0, 1, 0], step: 0.1, type: 'square' }); }
-    else if (this.special === 'fan') g.fx.slashArc(this.pos, this.yaw, this.def.projColor || 0x80ff90, { radius: 14, arc: 80, height: 0.1, telegraph: true, life: dur * this.hitAt, thickness: .6 });
+    // 부채꼴 탄막 예고: 정체성 색(초록 탄)과 위험 적색을 반씩 섞어 바닥 위에서 '맞으면 아프다'로 읽힌다(보스 고유기 예고와 같은 규칙). 도형·시간 불변.
+    else if (this.special === 'fan') g.fx.slashArc(this.pos, this.yaw, _warnColor.set(this.def.projColor || 0x80ff90).lerp(_danger, .5).getHex(), { radius: 14, arc: 80, height: 0.1, telegraph: true, life: dur * this.hitAt, thickness: .6 });
     else if (this.special === 'spin') g.fx.ring(this.pos, 0xff3030, { r0: 4.2, r1: 4.8, telegraph: true, life: dur * this.hitAt, y: 0.06, width: 1 });
     else if (this.special === 'slam') g.fx.ring(this.pos.clone().addScaledVector(f, 2), 0xff3030, { r0: 3.6, r1: 4.2, telegraph: true, life: dur * this.hitAt, y: 0.06 });
     else if (this.special === 'summon') { g.fx.castCircle(this.pos, 0xff3030, { radius: 4, telegraph: true, life: dur, demon: true }); }

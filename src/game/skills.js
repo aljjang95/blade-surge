@@ -5,8 +5,26 @@ import { AWAKENING_III } from './awakening-iii.js';
 import { gatherEnemies } from './crowd-gather.js';
 import { hasTownSkillVariant } from './town-combat.js';
 import { SKILL_VFX, castSkillVfx } from '../engine/skill-vfx.js';
+import { SKILL_PRELUDES } from '../engine/skill-signatures.js';
+import { barbWhirlTick, barbRushEnd } from '../engine/sig-barbarian.js';
+import { mageBolt, mageMeteorFall, mageFrostTick, magePrismBounce, magePrismTrail } from '../engine/sig-mage.js';
+import { MARK_STYLE, BEAM_STYLE } from '../engine/impact-vfx.js';
+import { decorativeBurstGain } from '../engine/combat-feedback.js';
 
 const _v = new THREE.Vector3();
+// 눈보라 눈송이: 옅은 하늘색(0x5cbcff) 큰 입자는 화면 위쪽에 흰 거품으로 보였다(h1b). 진한 청으로, 매 프레임 새 색을 만들지 않는다.
+const _blizzardFlake = new THREE.Color(0x2a8cff);
+const _judgeSky = new THREE.Vector3(), _judgeDir = new THREE.Vector3(), _chainFrom = new THREE.Vector3(), _chainDir = new THREE.Vector3();
+/** 검성 준비 진: castCircle(밝기 1 금빛 룬)은 모든 검성 스킬 발밑을 같은 큰 금 원으로 만들었다. 밝기 .45 진한 주황 금으로 작게. */
+const knightRune = (game, pos, r, life) => game.fx.groundTex?.(pos, 'circle_gold', 0xffa018, { r0: r * .4, r1: r, life, spin: 1.6, y: .07, fadeIn: .2, hold: .35, gain: .45 });
+/** 검성 사슬: 텍스처 번개(푸르게 보이는 흰 결) 대신 금 사슬 선(물결 광선) + 가는 심. 인스턴스 층이라 드로우콜이 늘지 않는다. */
+function knightChain(game, from, to, { life = .55, width = .09 } = {}) {
+  const impact = game.fx.impact; if (!impact?.beam) return;
+  _chainDir.copy(to).sub(from); const L = _chainDir.length(); if (!(L > .1)) return;
+  impact.beam(from, _chainDir, L, 0xff8a10, { width, fade: life, style: BEAM_STYLE.vine });
+  impact.beam(from, _chainDir, L, 0xffb21e, { width: width * .5, fade: life * .85 });
+  impact.beam(from, _chainDir, L, 0xffd86a, { width: width * .18, fade: life * .7 });
+}
 const fwd = (p, d = 1) => p.forward(new THREE.Vector3()).multiplyScalar(d).add(p.pos);
 /** game.hitRadius와 같되 영웅에서 limit m 안의 적만 친다(표시 범위 밖 폭발 피해를 막는 스킬용). */
 function hitWithin(game, p, center, radius, limit, dmg, opts = {}) {
@@ -40,6 +58,19 @@ function rangerArrows(game, p, dmg, count = 1, options = {}) {
       size: .45, owner: p, kb: 3, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.ranger.life, visual: 'arrow', ...options });
   }
   audio.whoosh({ vol: .4, pitch: 1.5, dur: .2 });
+}
+/** 궁극기 예비 표식: 시전 연출 동안 판정이 늦게 오므로 start 에서 바로 인스턴스 층 표식을 깐다(판정·난수 무관, 동작 줄이기 생략). */
+function skillPrelude(game, p, id) {
+  const impact = game.fx?.impact, fn = SKILL_PRELUDES[id];
+  if (!impact || !fn || game.app?.reducedMotion?.matches || typeof p.forward !== 'function') return;
+  try { fn({ fx: game.fx, impact, player: p, at: p.pos, f: p.forward(new THREE.Vector3()), lite: !!game.fx.lite, scale: 1 }); } catch (error) { console.warn('skill prelude', id, error); }
+}
+/** 암살자 그림자 파동: 노란 shockwave 원화에 보라를 곱하면 갈색이 돼서, 보라 소용돌이 원화(singularity)를 지면에 눕힌다.
+ *  shockTex 와 같은 드로우콜 1·같은 밝기 감쇠(decorativeBurstGain)·Math.random 미사용. */
+function shadowWave(game, pos, r1, life) {
+  const fx = game.fx;
+  if (typeof fx.groundTex === 'function') fx.groundTex(pos, 'singularity', 0xc890ff, { r0: .5, r1, life, spin: .4, y: .1, fadeIn: .05, gain: decorativeBurstGain(r1) * .85 });
+  else fx.shockTex?.(pos, 0xb26bff, { r1, life });
 }
 /** 적이 가장 밀집한 지점 (몹몰이 조준 보정) */
 function densest(game, p, range = 11, radius = 3.5) {
@@ -130,7 +161,7 @@ export const SKILLS = {
       const dir = p.forward(new THREE.Vector3()), pos = rangerOrigin(p, dir);
       // 별빛 관통(교관): 판정 반경 1.4배, 밀치기 4 → 7.
       const star = hasTownSkillVariant(p, 'ranger_pierce', 'star');
-      game.spawnProjectile({ pos, dir, speed: SKILL_PROJECTILES.pierce.speed, radius: (empowered ? 1.3 : SKILL_PROJECTILES.pierce.radius) * (star ? 1.4 : 1), dmg: c.dmg * (empowered ? 2 : 1), color: 0x7feac0, size: .45, owner: p, kb: star ? 7 : 4, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.pierce.life, visual: p.def?.weapon === 'bow' ? 'arrow' : undefined });
+      game.spawnProjectile({ pos, dir, speed: SKILL_PROJECTILES.pierce.speed, radius: (empowered ? 1.3 : SKILL_PROJECTILES.pierce.radius) * (star ? 1.4 : 1), dmg: c.dmg * (empowered ? 2 : 1), color: 0x7feac0, size: .45, owner: p, kb: star ? 7 : 4, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.pierce.life, visual: p.def?.weapon === 'bow' ? 'arrow' : undefined, streak: 'pierce' });
       audio.whoosh({ vol: .4, pitch: 1.5, dur: .2 });
     },
   },
@@ -150,7 +181,7 @@ export const SKILLS = {
   ranger_retreat: {
     dur: .7,
     cast(game, p, c) {
-      rangerArrows(game, p, c.dmg);
+      rangerArrows(game, p, c.dmg, 1, { streak: 'retreat' });
       p.vel.copy(p.forward(new THREE.Vector3())).multiplyScalar(-8);
       p.invuln = Math.max(p.invuln || 0, .6); p.gainJobResource(1);
     },
@@ -158,18 +189,19 @@ export const SKILLS = {
   },
   ranger_tempest: {
     dur: 1,
+    start(game, p) { skillPrelude(game, p, 'ranger_tempest'); },
     cast(game, p, c) {
       const empowered = (p.jobResource || 0) >= 3;
       if (empowered) p.jobResource = 0;
-      rangerArrows(game, p, c.dmg * (empowered ? 1.5 : 1), 7, { radius: .95, kb: 5, size: .58 });
+      rangerArrows(game, p, c.dmg * (empowered ? 1.5 : 1), 7, { radius: .95, kb: 5, size: .58, streak: 'storm' });
     },
   },
   ranger_quickshot: {
     dur: .8,
     cast(game, p, c) {
-      rangerArrows(game, p, c.dmg); p.gainJobResource(1);
+      rangerArrows(game, p, c.dmg, 1, { streak: 'quick' }); p.gainJobResource(1);
       for (const delay of [.12, .24]) game.after(delay, () => {
-        if (game.active && game.player === p && p.alive) rangerArrows(game, p, c.dmg);
+        if (game.active && game.player === p && p.alive) rangerArrows(game, p, c.dmg, 1, { streak: 'quick' });
       });
     },
   },
@@ -180,20 +212,22 @@ export const SKILLS = {
       if (empowered) p.jobResource = 0;
       // 뿌리 속박(교관): 둔화 4 → 6초에 0.6초 기절을 더한다.
       const root = hasTownSkillVariant(p, 'ranger_binding', 'root');
-      rangerArrows(game, p, c.dmg * (empowered ? 2 : 1), 5, root ? { slow: 6, stun: .6, kb: 1 } : { slow: 4, kb: 1 });
+      rangerArrows(game, p, c.dmg * (empowered ? 2 : 1), 5, root ? { slow: 6, stun: .6, kb: 1, streak: 'bind' } : { slow: 4, kb: 1, streak: 'bind' });
     },
   },
   // ================= 검성 (성스러운 빛 · 몹몰이 심판) =================
   holy_slash: {
     dur: 0.6,
-    start(game, p) { game.fx.castCircle(p.pos, 0xffd060, { radius: 2.6, life: 0.5 }); },
+    start(game, p) { knightRune(game, p.pos, 2.2, 0.5); },
     cast(game, p, c) {
       const variant = knightSlashVariantForBattle(game, p);
       if (variant === 'pierce') return applyKnightSlashVariant(game, p, c, variant);
       const f = p.forward(new THREE.Vector3()); const spawn = fwd(p, 1); spawn.y = 1.2;
-      game.fx.slashSprite(spawn, f, 0xfff0a0, { size: 4.2, life: 0.7, speed: 22, tilt: -0.5 });
-      game.fx.slashSprite(spawn, f, 0xffffff, { size: 3.0, life: 0.55, speed: 24, tilt: -0.5 });
-      game.fx.holyBurst(spawn, { size: 4, life: 0.3 }); game.fx.light(spawn, 0xffd060, 9, 12, 0.5);
+      // 성검 참격: 금빛 바깥 날 + 밝은 금 안쪽 날(흰 날은 블룸과 겹쳐 크림 덩어리가 됐다) + 작은 금빛 성광.
+      game.fx.slashSprite(spawn, f, 0xffc23a, { size: 4.2, life: 0.7, speed: 22, tilt: -0.5 });
+      game.fx.slashSprite(spawn, f, 0xffcf4a, { size: 3.0, life: 0.55, speed: 24, tilt: -0.5 });
+      // 성광 원화(holyBurst)는 칼날 앞에 크림 덩어리를 남겼다. 수평 빛 칼날은 sig-knight 의 긴 광선이 맡는다.
+      game.fx.light(spawn, 0xffd060, 9, 12, 0.5);
       audio.bladeWave({ vol: 0.7 }); audio.holy({ vol: 0.3, base: 880, dur: 0.6 });
       game.renderer.shake(0.25); audio.vibe(30);
       game.spawnProjectile({ pos: spawn.clone(), dir: f, speed: SKILL_PROJECTILES.holy.speed, radius: SKILL_PROJECTILES.holy.radius, dmg: c.dmg, color: 0xfff0a0, size: 0, owner: p, kb: 5, kind: 'slash', pierce: true, life: SKILL_PROJECTILES.holy.life, visual: null });
@@ -206,7 +240,7 @@ export const SKILLS = {
     start(game, p, c) {
       c.data.gatherCenter = c.data.aimPoint?.clone() || fwd(p, SKILL_AIM_SHAPES.shield_bash.range);
       gatherEnemies(game, c.data.gatherCenter, 7, 22, .25);
-      game.fx.castCircle(c.data.gatherCenter, 0xffe0a0, { radius: 5, life: .25 });
+      game.fx.castCircle(c.data.gatherCenter, 0xff9a18, { radius: 5, life: .25 });
     },
     update(game, _p, c) { if (!c.cast) gatherEnemies(game, c.data.gatherCenter, 7, 22); },
     cast(game, p, c) {
@@ -214,17 +248,18 @@ export const SKILLS = {
       // 준비 시간에 실제로 모인 적을 원래 접촉 시점에 강타한다.
       game.hitRadius(center, SKILL_AIM_SHAPES.shield_bash.radius, c.dmg, { kb: 7, kind: 'blunt', stun: 1.4, source: p });
       if (hasTownSkillVariant(p, 'shield_bash', 'aftershock')) game.after(.22, () => game.hitRadius(center, 3.4, c.dmg * .45, { kb: 3, kind: 'blunt', stun: .45, source: p, quietStop: true }));
-      game.fx.shockTex(center, 0xffe0a0, { r1: 6.5, life: 0.5 });
-      game.fx.explosion(center, { size: 4.5, color: 0xffe0b0, life: 0.45 });
-      game.fx.dustPuff(center, { size: 5 }); game.fx.burst(center.clone().setY(0.5), 0xffd080, { n: 26, speed: 9, size: 0.4 });
-      game.fx.light(center, 0xffd080, 12, 14, 0.4);
+      // 방패 강타: 크림 폭발 원화(4.5m, 적 키 높이) 대신 바닥을 두 번 때리는 금빛 충격 고리 + 낮은 금빛 임팩트 + 사방 불똥.
+      // 바닥 전체를 덮던 금빛 충격 원화 두 겹(6.5m) → 진한 주황 금 한 겹(3.6m). 방패 충격 고리·지면 균열은 sig-knight 서명.
+      game.fx.shockTex(center, 0xff9a20, { r1: 3.6, life: 0.4 });
+      game.fx.dustPuff(center, { size: 3.5 }); game.fx.burst(center.clone().setY(0.5), 0xffa830, { n: 14, speed: 9, size: 0.34, up: .3 });
+      game.fx.light(center, 0xffd080, 10, 14, 0.4);
       game.renderer.shake(0.8); game.renderer.punch(1);
       audio.boom({ vol: 0.8, dur: 0.5, low: 70 }); audio.play('hit_plate', { vol: 0.9, rate: 0.8 }); audio.vibe([40, 30, 60]);
     },
   },
   judgment: {
     dur: 1.0, total: 1.5,
-    start(game, p) { game.fx.castCircle(p.pos, 0xfff3b0, { radius: 4, life: 1.0 }); },
+    start(game, p) { knightRune(game, p.pos, 2.4, 1.0); },
     cast(game, p, c) {
       // 인력의 심판(교관): 표적을 고르기 전에 주변 적을 시전자 쪽으로 끌어온다.
       if (hasTownSkillVariant(p, 'judgment', 'pull')) game.vacuum(p.pos, 12, 18);
@@ -233,25 +268,31 @@ export const SKILLS = {
       const pts = ts.length ? ts.map((e) => e.pos.clone()) : [fwd(p, 3)];
       pts.forEach((pt, i) => {
         const delay = i * 0.07;
+        // 표적마다 조준 원(예고)이 먼저 잡히고, 하늘 광선은 판정 시각(delay)에 바닥에 닿도록 미리 출발한다.
+        game.fx.impact?.mark?.(pt, 0xffb21e, { radius: 1.5, life: delay + .35, style: MARK_STYLE.reticle });
+        game.fx.impact?.beam?.(_judgeSky.set(pt.x - .6, 12, pt.z - .4), _judgeDir.set(.6, -12, .4), 12, 0xffc23a, { speed: 160, width: .14, fade: .25, delay: Math.max(0, delay - .075) });
         game.after(delay, () => {
           // Keep all eight hits/particle cues; only the first four get the
           // two-plane pillar so a dense Judgment stays within the render budget.
-          if (i < 4) game.fx.firePillar(pt, { height: 11, width: 2.0, life: 0.5, color: 0xfff0c0 });
+          // 심판의 빛기둥: 크림(0xfff0c0) 대신 금빛 결, 폭 1.4m. 착지점에는 하늘에서 내리꽂는 얇은 광선과 금빛 고리.
+          if (i < 4) game.fx.firePillar(pt, { height: 11, width: 1.4, life: 0.5, color: 0xffc040 });
           game.hitRadius(pt, 2.2, c.dmg, { kb: 2, kind: 'magic', up: true, source: p, quietStop: i > 1 });
-          if (i < 5) game.fx.holyBurst(pt, { size: 3.5, life: 0.35 });
-          game.fx.burst(pt.clone().setY(0.6), 0xfff0c0, { n: 12, speed: 7, size: 0.35, up: 1.2 });
+          if (i < 5) game.fx.holyBurst(pt, { size: 1.6, life: 0.24, color: 0xff9a18 });
+          game.fx.impact?.mark?.(pt, 0xff9a18, { radius: 1.3, life: .4, style: MARK_STYLE.thorn });
+          game.fx.burst(pt.clone().setY(0.6), 0xffb040, { n: 12, speed: 7, size: 0.32, up: 1.2 });
           if (i < 3) game.fx.light(pt, 0xfff0c0, 8, 8, 0.4);
           game.renderer.shake(0.22); audio.holy({ vol: 0.22, base: 659 + i * 40, dur: 0.5 }); audio.thump({ vol: 0.4, freq: 80 });
         });
       });
-      game.renderer.flashScreen(0.35, 0xfff0c0);
+      game.renderer.flashScreen(0.1, 0xffb040);
     },
   },
   dragon_slash: {
     dur: 1.2, total: 2.1,
     start(game, p, c) {
-      game.fx.castCircle(p.pos, 0xffd060, { radius: 6, life: 1.2 });
-      game.fx.firePillar(p.pos, { height: 9, width: 2.4, life: 1.0, color: 0xffd060 });
+      // 기 모으기: 큰 금빛 마법진(6m) 대신 작은 진 + 진한 주황 금 기둥(폭 1.6m).
+      knightRune(game, p.pos, 2.4, 1.2);
+      game.fx.firePillar(p.pos, { height: 10, width: 1.6, life: 1.0, color: 0xff9a18 });
       game.fx.embers(p.pos, 0xffcf5a, { n: 30, radius: 1.5, life: 1.2, rise: 5 });
       audio.magic({ vol: 0.5, base: 330, notes: [0, 7, 12, 19, 24], step: 0.09, type: 'sawtooth' });
       c.data.vac = 0;
@@ -278,15 +319,18 @@ export const SKILLS = {
       for (let i = -1; i <= 1; i++) {
         const d = f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), i * 0.32);
         const sp = p.pos.clone().addScaledVector(d, 1.5).setY(1.3);
-        game.fx.slashSprite(sp, d, i === 0 ? 0xffffff : 0xffe080, { size: 5.5, life: 0.8, speed: 20, tilt: -0.5 + i * 0.25 });
+        game.fx.slashSprite(sp, d, i === 0 ? 0xffc23a : 0xff9a18, { size: 5.5, life: 0.8, speed: 20, tilt: -0.5 + i * 0.25 });
         game.spawnProjectile({ pos: sp.clone(), dir: d, speed: 20, radius: 1.5, dmg: c.dmg * 0.35, color: 0xffe080, size: 0, owner: p, kb: 6, kind: 'slash', pierce: true, life: 0.8, visual: null });
       }
       const hitC = fwd(p, 3.5);
-      game.fx.explosion(hitC, { size: 11, color: 0xffe0a0, life: 0.7 });
-      game.fx.shockTex(hitC, 0xffd060, { r1: 14, life: 0.7 }); game.fx.holyBurst(hitC, { size: 12, life: 0.5 });
-      game.fx.dustPuff(hitC, { size: 8 }); game.fx.burst(hitC.setY(1), 0xffe080, { n: 50, speed: 14, size: 0.5, up: 0.8 });
+      // 용참 착탄: 크림 폭발(11m)·성광(12m)·화면 섬광 .45 는 화면을 하얗게 덮었다. 진한 금 폭발(6m) + 바닥 충격 2겹 + 금빛 임팩트 + 부채꼴 불똥으로 '앞으로 베어 낸' 방향을 남긴다.
+      // 14m 금빛 충격 원화·성광 원화는 바닥을 한 색으로 덮었다. 진한 폭발(5m) + 주황 충격 한 겹(8m). 수직 참격·부채 균열은 sig-knight 서명.
+      game.fx.explosion(hitC, { size: 5, color: 0xff8a10, life: 0.55 });
+      game.fx.shockTex(hitC, 0xff9a20, { r1: 6, life: 0.5 });
+      game.fx.directional(hitC.clone().setY(1), f, 0xffc860, { n: 24, speed: 16, size: 0.45, spread: 1.1 });
+      game.fx.dustPuff(hitC, { size: 4 }); game.fx.burst(hitC.setY(1), 0xffa830, { n: 24, speed: 14, size: 0.42, up: 0.8 });
       game.fx.light(fwd(p, 3), 0xffd060, 16, 18, 0.6);
-      game.renderer.shake(1); game.renderer.punch(1.5); game.renderer.flashScreen(0.45, 0xfff0c0); game.renderer.aberr = 1.2; game.timeCtl.slowmo(0.35, 0.5);
+      game.renderer.shake(1); game.renderer.punch(1.5); game.renderer.flashScreen(0.14, 0xffa030); game.renderer.aberr = 1.2; game.timeCtl.slowmo(0.35, 0.5);
       audio.boom({ vol: 1, dur: 0.9, low: 50 }); audio.bladeWave({ vol: 1 }); audio.holy({ vol: 0.45, base: 523, dur: 1.1 }); audio.vibe([80, 40, 120]);
     },
   },
@@ -294,7 +338,7 @@ export const SKILLS = {
   // ================= 광전사 (불 · 회전 몹몰이) =================
   whirlwind: {
     dur: 1.6, total: 1.6,
-    start(game, p, c) { p.play('2H_Melee_Attack_Spinning', { fade: 0.05, speed: 2.2 }); c.data.tick = .16; p.startTrail(); audio.whoosh({ vol: 0.5, pitch: 0.7, dur: 0.5 }); game.fx.castCircle(p.pos, 0xff7a4a, { radius: 3.8, life: 1.5 }); },
+    start(game, p, c) { p.play('2H_Melee_Attack_Spinning', { fade: 0.05, speed: 2.2 }); c.data.tick = .16; p.startTrail(); audio.whoosh({ vol: 0.5, pitch: 0.7, dur: 0.5 }); game.fx.castCircle(p.pos, 0xff4a1a, { radius: 3.8, life: 1.5, demon: true }); },
     update(game, p, c, dt) {
       const m = game.input.move; const spd = p.stats.spd * 0.6; p.vel.set(m.x * spd, 0, m.y * spd);
       gatherEnemies(game, p.pos, 5.5, 12); // 첫 접촉 전에 모으고 연타 중 군집을 유지한다.
@@ -302,8 +346,9 @@ export const SKILLS = {
       if (c.data.tick <= 0) {
         c.data.tick = .22; const i = c.data.n = (c.data.n || 0) + 1;
         game.hitRadius(p.pos, hasTownSkillVariant(p, 'whirlwind', 'wide') ? 4.8 : 3.8, c.dmg, { kb: 2.5, kind: 'slash', source: p, dirFrom: p.pos, quietStop: i % 2 === 0 });
-        game.fx.slashSprite(p.pos.clone().setY(1.1), new THREE.Vector3(Math.sin(i * 1.5), 0, Math.cos(i * 1.5)), 0xff9a5a, { size: 4.4, life: 0.22, tilt: -1.45 });
-        game.fx.burst(p.pos.clone().setY(1), 0xffa060, { n: 5, speed: 6, size: 0.3 });
+        game.fx.slashSprite(p.pos.clone().setY(1.1), new THREE.Vector3(Math.sin(i * 1.5), 0, Math.cos(i * 1.5)), 0xff5a1e, { size: 4.4, life: 0.22, tilt: -1.45 });
+        game.fx.burst(p.pos.clone().setY(1), 0xff6a20, { n: 5, speed: 6, size: 0.3 });
+        barbWhirlTick(game, p.pos, i); // 광전사: 몸을 감는 불씨 도끼 호(판정 틱과 같은 순간)
         if (i % 3 === 0) game.fx.dustPuff(p.pos, { size: 3, life: 0.5 });
         audio.whoosh({ vol: 0.45, pitch: 0.9 + (i % 4) * 0.06, dur: 0.25 }); game.renderer.shake(0.12);
       }
@@ -318,7 +363,7 @@ export const SKILLS = {
       const center = c.data.gatherCenter || fwd(p, 1.5);
       game.hitRadius(center, SKILL_AIM_SHAPES.quake.radius, c.dmg, { kb: 9, kind: 'blunt', up: true, stun: 0.8, source: p, dirFrom: center });
       if (hasTownSkillVariant(p, 'quake', 'aftershock')) game.after(.28, () => game.hitRadius(center, 6, c.dmg * .55, { kb: 5, kind: 'blunt', up: true, source: p, dirFrom: center, quietStop: true }));
-      [0, 0.08, 0.16].forEach((d, i) => game.after(d, () => { game.fx.shockTex(center, i === 1 ? 0xffffff : 0xff9a4a, { r1: 5 + i * 4, life: 0.5 + i * 0.1 }); game.renderer.shake(0.5); audio.thump({ vol: 0.8, freq: 55 - i * 8, dur: 0.3 }); }));
+      [0, 0.08, 0.16].forEach((d, i) => game.after(d, () => { game.fx.shockTex(center, i === 1 ? 0xffc060 : 0xff7a2a, { r1: 5 + i * 4, life: 0.5 + i * 0.1 }); game.renderer.shake(0.5); audio.thump({ vol: 0.8, freq: 55 - i * 8, dur: 0.3 }); }));
       game.fx.explosion(center, { size: 8, color: 0xff9a50, life: 0.6 });
       game.fx.scorch(center, { radius: 4.5, life: 5 }); game.fx.dustPuff(center, { size: 7, life: 1.1 });
       game.fx.burst(center.clone().setY(0.4), 0xff8040, { n: 40, speed: 12, size: 0.5, up: 1.5, grav: 20 });
@@ -343,7 +388,7 @@ export const SKILLS = {
   },
   hell_axe: {
     dur: 1.0, total: 2.4,
-    start(game, p, c) { audio.fire({ vol: 0.5, dur: 1.2 }); audio.magic({ vol: 0.5, base: 196, notes: [0, 5, 7, 12], step: 0.12, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff5020, { radius: 5, life: 1.0, demon: true }); game.fx.embers(p.pos, 0xff5020, { n: 30, radius: 2, life: 1.5, rise: 6 }); },
+    start(game, p, c) { skillPrelude(game, p, 'hell_axe'); audio.fire({ vol: 0.5, dur: 1.2 }); audio.magic({ vol: 0.5, base: 196, notes: [0, 5, 7, 12], step: 0.12, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff5020, { radius: 5, life: 1.0, demon: true }); game.fx.embers(p.pos, 0xff5020, { n: 30, radius: 2, life: 1.5, rise: 6 }); },
     cast(game, p, c) {
       const target = c.data.aimPoint?.clone() || densest(game, p, SKILL_AIM_SHAPES.hell_axe.range, 4) || fwd(p, 4);
       c.data.target = target;
@@ -355,9 +400,10 @@ export const SKILLS = {
       let vt = 0; game.fx.add(new THREE.Object3D(), fall, (k, t, dt) => { vt -= dt; if (vt <= 0) { vt = 0.08; game.vacuum(target, 7.5, 12); } });
       game.after(fall, () => {
         game.hitRadius(target, SKILL_AIM_SHAPES.hell_axe.radius, c.dmg, { kb: 10, kind: 'blunt', up: true, stun: .7, source: p, dirFrom: target });
-        game.fx.explosion(target, { size: 14, color: 0xffb070, life: 0.8 });
+        game.fx.explosion(target, { size: 14, color: 0xff7a30, life: 0.8 });
+        game.fx.firePillar(target, { height: 12, width: 3.4, life: 0.7, color: 0xff4a1a }); // 광전사: 착탄 불기둥
         game.fx.scorch(target, { radius: 6, life: 8 });
-        [0, 0.1, 0.2].forEach((d, i) => game.after(d, () => game.fx.shockTex(target, i === 1 ? 0xffffff : 0xff6a20, { r1: 7 + i * 4, life: 0.6 })));
+        [0, 0.1, 0.2].forEach((d, i) => game.after(d, () => game.fx.shockTex(target, i === 1 ? 0xffb050 : 0xff6a20, { r1: 7 + i * 4, life: 0.6 })));
         game.fx.burst(target.clone().setY(0.5), 0xff7a20, { n: 70, speed: 16, size: 0.6, up: 1.4, grav: 18 });
         game.fx.dustPuff(target, { size: 10, life: 1.4 }); game.fx.embers(target, 0xff6020, { n: 60, radius: 5, life: 2.2, rise: 4 });
         game.fx.light(target, 0xff6020, 20, 22, 1);
@@ -370,18 +416,19 @@ export const SKILLS = {
   // ================= 대마도사 (원소 · 광역 몹몰이) =================
   fireball: {
     dur: 0.6,
-    start(game, p) { game.fx.castCircle(p.pos, 0xff7a20, { radius: 2.4, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 0.62, life: 0.42 }); },
+    // 시전 원·발사 섬광·탄 후광의 밝은 주황(0xff7a20·0xff9a40)이 블룸에서 크림 번짐이 됐다(h1b): 진홍 쪽 주황으로 낮추고 발사 섬광은 작게.
+    start(game, p) { game.fx.castCircle(p.pos, 0xe8401a, { radius: 2.4, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 0.5, life: 0.42 }); },
     cast(game, p, c) {
       const f = p.forward(new THREE.Vector3()); const sp = fwd(p, 1); sp.y = 1.4;
       const split = hasTownSkillVariant(p, 'fireball', 'split');
-      game.spawnProjectile({ pos: sp, dir: f, speed: SKILL_PROJECTILES.fire.speed, radius: SKILL_PROJECTILES.fire.radius, dmg: c.dmg, color: 0xff7a20, size: 0.9, owner: p, kb: 5, kind: 'magic', life: SKILL_PROJECTILES.fire.life, trail: 0xff7a20, explode: { radius: split ? 5.2 : 4.2, color: 0xff7a20, profile: 'fire' } });
+      game.spawnProjectile({ pos: sp, dir: f, speed: SKILL_PROJECTILES.fire.speed, radius: SKILL_PROJECTILES.fire.radius, dmg: c.dmg, color: 0xff4a12, size: 0.9, owner: p, kb: 5, kind: 'magic', life: SKILL_PROJECTILES.fire.life, trail: 0xff4a12, explode: { radius: split ? 5.2 : 4.2, color: 0xff7a20, profile: 'fire' } });
       if (split) for (const angle of [-.22, .22]) game.spawnProjectile({ pos: sp.clone(), dir: f.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), angle), speed: 15, radius: .55, dmg: c.dmg * .35, color: 0xffb040, size: .45, owner: p, kb: 3, kind: 'magic', life: .8, trail: 0xffa040 });
-      game.fx.flash(sp, 0xff9a40, { size: 2.4 }); audio.fire({ vol: 0.5, dur: 0.5 }); audio.whoosh({ vol: 0.4, pitch: 0.6, dur: 0.4 });
+      game.fx.flash(sp, 0xff4a12, { size: 1.3, life: 0.1 }); audio.fire({ vol: 0.5, dur: 0.5 }); audio.whoosh({ vol: 0.4, pitch: 0.6, dur: 0.4 });
     },
   },
   chain: {
     dur: 0.9,
-    start(game, p) { game.fx.castCircle(p.pos, 0xa0e0ff, { radius: 3, life: 0.8 }); game.fx.abilitySignature?.(p.pos, 'arcane', { scale: 0.72, life: 0.58 }); },
+    start(game, p) { game.fx.castCircle(p.pos, 0x3a8cff, { radius: 3, life: 0.8, demon: true }); game.fx.abilitySignature?.(p.pos, 'arcane', { scale: 0.72, life: 0.58 }); },
     cast(game, p, c) {
       let from = p.pos.clone().setY(1.6); let cur = p; const hit = new Set(); const chainN = 10;
       let step = 0;
@@ -390,8 +437,8 @@ export const SKILLS = {
         for (const e of game.enemies) { if (!e.alive || e.spawning || hit.has(e)) continue; const d = Math.hypot(e.pos.x - cur.pos.x, e.pos.z - cur.pos.z); if (d < bd) { bd = d; best = e; } }
         if (!best) return;
         hit.add(best); const to = best.pos.clone().setY(1.2);
-        game.fx.boltTex(from, to, 0xa0e0ff, { width: 1.8, life: 0.28 });
-        game.fx.flash(to, 0xc0f0ff, { size: 2.4 }); game.fx.burst(to, 0xa0e0ff, { n: 10, speed: 7, size: 0.3 }); game.fx.abilitySignature?.(to, 'arcane', { scale: 0.38, life: 0.24 });
+        game.fx.boltTex(from, to, 0x80c8ff, { width: 1.8, life: 0.28 }); mageBolt(game, from, to, step); // 번개 학파: 청백 지그재그
+        game.fx.flash(to, 0x6fbcff, { size: 2.4 }); game.fx.burst(to, 0x6fbcff, { n: 10, speed: 7, size: 0.3 }); game.fx.abilitySignature?.(to, 'arcane', { scale: 0.38, life: 0.24 });
         if (step < 4) game.fx.light(to, 0x80c0ff, 8, 8, 0.3);
         game.damageEnemy(best, c.dmg * (1 - step * 0.05), { kind: 'magic', kb: 1, stun: hasTownSkillVariant(p, 'chain', 'bind') ? .8 : .4, source: p, dirx: to.x - from.x, dirz: to.z - from.z, quietStop: step > 2 });
         audio.zap({ vol: 0.4, dur: 0.22 }); game.renderer.shake(0.15); if (step < 2) audio.vibe(20);
@@ -403,34 +450,36 @@ export const SKILLS = {
   },
   blizzard: {
     dur: 1.0, total: 3.4,
-    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x80e0ff, { radius: 7, life: 3.2 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 1.65, life: 1.1, heavy: true }); },
+    start(game, p, c) { c.data.tick = 0.3; audio.magic({ vol: 0.4, base: 587, notes: [0, 3, 7, 10, 14], step: 0.07 }); game.fx.castCircle(p.pos, 0x2a8cff, { radius: 6.8, life: 3.2 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: .6, life: 1.1, heavy: true }); },
     update(game, p, c, dt) {
       const m = game.input.move; const spd = p.stats.spd * 0.5; p.vel.set(m.x * spd, 0, m.y * spd);
       if (c.t > 0.6 && p.actionName !== 'Spellcasting') p.play('Spellcasting', { fade: 0.2 });
       const wide = hasTownSkillVariant(p, 'blizzard', 'wide');
       gatherEnemies(game, p.pos, wide ? 10.5 : 8.5, 9);
-      for (let i = 0; i < (game.fx.lite ? 2 : 5); i++) { const a = Math.random() * Math.PI * 2, r = Math.random() * 6.5; game.fx.glow.emit(p.pos.x + Math.cos(a) * r, 5 + Math.random() * 3, p.pos.z + Math.sin(a) * r, 0, -14, 0, new THREE.Color(0xa0e8ff), 0.35, 0.5, { grav: 20, shrink: 0.5 }); }
+      for (let i = 0; i < (game.fx.lite ? 2 : 5); i++) { const a = Math.random() * Math.PI * 2, r = Math.random() * 6.5; game.fx.glow.emit(p.pos.x + Math.cos(a) * r, 5 + Math.random() * 3, p.pos.z + Math.sin(a) * r, 0, -14, 0, _blizzardFlake, 0.24, 0.5, { grav: 20, shrink: 0.5 }); }
       c.data.tick -= dt;
       if (c.data.tick <= 0) {
         c.data.tick = 0.4; const i = c.data.n = (c.data.n || 0) + 1;
         game.hitRadius(p.pos, wide ? 8.6 : 6.8, c.dmg, { kb: 0.5, kind: 'magic', slow: 1.2, source: p, dirFrom: p.pos, quietStop: true });
-        game.fx.shockTex(p.pos, 0xc0f0ff, { r1: 7.5, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 0.55, life: 0.32 });
+        game.fx.shockTex(p.pos, 0x1f6fd0, { r1: 7.5, life: 0.5 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 0.4, life: 0.32 });
         const a = Math.random() * Math.PI * 2, r = 1 + Math.random() * 4;
-        game.fx.iceBurst(p.pos.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)), { size: 4, life: 0.45 });
-        game.fx.burst(p.pos.clone().setY(0.3), 0xd0f4ff, { n: 20, speed: 8, size: 0.35, up: 0.6, spread: 0.6 });
+        game.fx.iceBurst(p.pos.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)), { size: 3, life: 0.45, color: 0x1f6fe8 });
+        game.fx.burst(p.pos.clone().setY(0.3), 0x2a84ff, { n: 20, speed: 8, size: 0.3, up: 0.6, spread: 0.6 });
+        mageFrostTick(game, p.pos, i, wide ? 8.6 : 6.8); // 냉기 학파: 서리 가시 고리·얼음 가시
         audio.ice({ vol: 0.45, dur: 0.5 }); audio.whoosh({ vol: 0.28, pitch: 1.5, dur: 0.4 }); game.renderer.shake(0.15);
       }
     },
   },
   meteor: {
     dur: 1.0, total: 3.0,
-    start(game, p, c) { audio.magic({ vol: 0.5, base: 261, notes: [0, 7, 12, 19, 24, 31], step: 0.1, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff9a40, { radius: 6, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 8, width: 2, life: 0.9, color: 0xff9a40 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 1.35, life: 0.78, heavy: true }); },
+    start(game, p, c) { audio.magic({ vol: 0.5, base: 261, notes: [0, 7, 12, 19, 24, 31], step: 0.1, type: 'sawtooth' }); game.fx.castCircle(p.pos, 0xff9a40, { radius: 6, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 8, width: 2, life: 0.9, color: 0xff9a40 }); game.fx.abilitySignature?.(p.pos, 'fire', { scale: 1.0, life: 0.78, heavy: true }); skillPrelude(game, p, 'meteor'); },
     cast(game, p, c) {
       const focus = c.data.aimPoint?.clone() || densest(game, p, SKILL_AIM_SHAPES.meteor.range, 5) || fwd(p, 4);
       const pts = [];
       for (let i = 0; i < 5; i++) { const a = (i / 5) * Math.PI * 2 + Math.random(); const r = i === 0 ? 0 : 1.2 + Math.random() * 3.2; pts.push(focus.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r))); }
       pts.forEach((pt, i) => game.after(i * 0.19, () => {
         const orb = game.fx.orb(0xff6a20, 1.3); const start = pt.clone().add(new THREE.Vector3(6, 18, 4)); orb.position.copy(start); game.scene.add(orb);
+        mageMeteorFall(game, start, pt, 0.4); // 화염 학파: 불의 궤적 → 판정 순간 폭발
         game.fx.castCircle(pt, 0xff6a20, { radius: 4, life: 0.5, demon: true });
         game.fx.add(orb, 0.4, (k) => { orb.position.lerpVectors(start, pt, k * k); game.fx.embers(orb.position, 0xff8a30, { n: 3, radius: 0.4, life: 0.5, rise: 1 }); });
         game.after(0.4, () => {
@@ -457,11 +506,11 @@ export const SKILLS = {
       game.renderer.aberr = 0.9; game.renderer.radial = 0.4; audio.vibe(30);
     },
     update(game, p, c, dt) {
-      c.data.g += dt; if (c.data.g > 0.035) { c.data.g = 0; game.fx.ghost(p.model, 0xb26bff, { life: 0.35, opacity: 0.6 }); game.fx.embers(p.pos, 0xb26bff, { n: 3, radius: 0.5, life: 0.5 }); }
-      for (const e of game.enemies) { if (!e.alive || c.data.hit.has(e)) continue; if (p.distTo(e) < 2.6) { c.data.hit.add(e); game.damageEnemy(e, c.dmg, { kind: 'slash', kb: 2, stun: 0.5, source: p, dirx: p.vel.x, dirz: p.vel.z, quietStop: c.data.hit.size > 2 }); game.fx.slashSprite(e.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0xd0a0ff, { size: 3, life: 0.22, tilt: -1.2 }); } }
+      c.data.g += dt; if (c.data.g > 0.035) { c.data.g = 0; game.fx.ghost(p.model, 0x6a2cff, { life: 0.35, opacity: 0.7 }); game.fx.embers(p.pos, 0xb26bff, { n: 3, radius: 0.5, life: 0.5 }); }
+      for (const e of game.enemies) { if (!e.alive || c.data.hit.has(e)) continue; if (p.distTo(e) < 2.6) { c.data.hit.add(e); game.damageEnemy(e, c.dmg, { kind: 'slash', kb: 2, stun: 0.5, source: p, dirx: p.vel.x, dirz: p.vel.z, quietStop: c.data.hit.size > 2 }); game.fx.slashSprite(e.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0x7030ff, { size: 3, life: 0.22, tilt: -1.2 }); } }
       if (c.t > 0.42) p.vel.multiplyScalar(Math.pow(0.001, dt));
     },
-    end(game, p, c) { p.vel.set(0, 0, 0); game.fx.slashSprite(p.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0xd0a0ff, { size: 4.5, life: 0.3, tilt: -1.4 }); game.fx.shockTex(p.pos, 0xb26bff, { r1: 4, life: 0.3 }); game.fx.abilitySignature?.(p.pos, 'void', { scale: 0.85, life: 0.42, heavy: true }); audio.whoosh({ vol: 0.5, pitch: 1.4, dur: 0.2 }); },
+    end(game, p, c) { p.vel.set(0, 0, 0); game.fx.slashSprite(p.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0x7030ff, { size: 4.5, life: 0.3, tilt: -1.4 }); shadowWave(game, p.pos, 4, 0.3); game.fx.abilitySignature?.(p.pos, 'void', { scale: 0.85, life: 0.42, heavy: true }); audio.whoosh({ vol: 0.5, pitch: 1.4, dur: 0.2 }); },
   },
   poison_bomb: {
     dur: 0.8, total: 0.8,
@@ -489,7 +538,7 @@ export const SKILLS = {
   },
   flurry: {
     dur: 1.4, total: 1.4,
-    start(game, p, c) { c.data.tick = 0; c.data.n = 0; p.startTrail(); game.fx.castCircle(p.pos, 0xb26bff, { radius: 3, life: 1.3 }); const e = c.data.aimPoint ? null : p.nearestEnemy(9); if (e) { p.face(e.pos.x, e.pos.z); if (p.distTo(e) > 2.2) p.vel.copy(p.forward(new THREE.Vector3())).multiplyScalar((p.distTo(e) - 1.8) / 0.3); } },
+    start(game, p, c) { c.data.tick = 0; c.data.n = 0; p.startTrail(); game.fx.castCircle(p.pos, 0xb26bff, { radius: 3, life: 1.3, demon: true }); const e = c.data.aimPoint ? null : p.nearestEnemy(9); if (e) { p.face(e.pos.x, e.pos.z); if (p.distTo(e) > 2.2) p.vel.copy(p.forward(new THREE.Vector3())).multiplyScalar((p.distTo(e) - 1.8) / 0.3); } },
     update(game, p, c, dt) {
       if (c.t > 0.3) p.vel.set(0, 0, 0);
       game.vacuum(p.pos, 4.5, 6);
@@ -498,10 +547,10 @@ export const SKILLS = {
         c.data.tick = 0.115; const i = c.data.n++;
         const anims = ['Dualwield_Melee_Attack_Stab', 'Dualwield_Melee_Attack_Slice', 'Dualwield_Melee_Attack_Chop']; p.playTimed(anims[i % 3], 0.24, { fade: 0.03 });
         game.hitArea(p, p.pos, p.yaw, 3.4, 150, c.dmg, { kb: 0.6, kind: 'slash', source: p, quietStop: true });
-        game.fx.slashSprite(p.pos.clone().setY(0.9 + (i % 3) * 0.35), p.forward(new THREE.Vector3()), 0xd0a0ff, { size: 3.2, life: 0.18, tilt: (i % 2 ? 0.6 : -1.6), flip: i % 2 === 1 });
-        if (i % 2 === 0) game.fx.ghost(p.model, 0xb26bff, { life: 0.25, opacity: 0.4 });
+        game.fx.slashSprite(p.pos.clone().setY(0.9 + (i % 3) * 0.35), p.forward(new THREE.Vector3()), 0x7030ff, { size: 3.2, life: 0.18, tilt: (i % 2 ? 0.6 : -1.6), flip: i % 2 === 1 });
+        if (i % 2 === 0) game.fx.ghost(p.model, i % 4 ? 0x6a2cff : 0xb26bff, { life: 0.25, opacity: 0.5 });
         audio.whoosh({ vol: 0.32, pitch: 1.3 + i * 0.07, dur: 0.12 });
-        if (i === 9) { game.hitArea(p, p.pos, p.yaw, 4, 180, c.dmg * 2.5, { kb: 6, kind: 'slash', finisher: true, skillCast:c, source: p }); game.fx.explosion(fwd(p, 1.5), { size: 5, color: 0xd0a0ff, life: 0.4 }); game.fx.shockTex(p.pos, 0xb26bff, { r1: 5, life: 0.4 }); game.renderer.shake(0.5); }
+        if (i === 9) { game.hitArea(p, p.pos, p.yaw, 4, 180, c.dmg * 2.5, { kb: 6, kind: 'slash', finisher: true, skillCast:c, source: p }); game.fx.explosion(fwd(p, 1.5), { size: 5, color: 0xd0a0ff, life: 0.4 }); shadowWave(game, p.pos, 5, 0.4); game.renderer.shake(0.5); }
       }
     },
     end(game, p, c) {
@@ -512,22 +561,22 @@ export const SKILLS = {
   },
   thousand: {
     dur: 1.0, total: 3.0,
-    start(game, p, c) { audio.magic({ vol: 0.5, base: 293, notes: [0, 3, 7, 10, 12, 15, 19], step: 0.08, type: 'triangle' }); game.fx.castCircle(p.pos, 0xb26bff, { radius: 7, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 9, width: 2.2, life: 1.0, color: 0xb26bff }); game.fx.embers(p.pos, 0xd0a0ff, { n: 40, radius: 1.5, life: 1.4, rise: 6 }); },
+    start(game, p, c) { skillPrelude(game, p, 'thousand'); audio.magic({ vol: 0.5, base: 293, notes: [0, 3, 7, 10, 12, 15, 19], step: 0.08, type: 'triangle' }); game.fx.castCircle(p.pos, 0xb26bff, { radius: 7, life: 1.0, demon: true }); game.fx.firePillar(p.pos, { height: 9, width: 2.2, life: 1.0, color: 0xb26bff }); game.fx.embers(p.pos, 0xd0a0ff, { n: 40, radius: 1.5, life: 1.4, rise: 6 }); },
     cast(game, p, c) {
       let wave = 0;
       const tick = () => {
-        if (wave++ >= 8) { game.fx.shockTex(p.pos, 0xb26bff, { r1: 15, life: 0.8 }); game.fx.explosion(p.pos, { size: 10, color: 0xd0a0ff, life: 0.6 }); game.renderer.shake(0.8); game.timeCtl.slowmo(0.35, 0.5); audio.boom({ vol: 0.7, dur: 0.7 }); return; }
+        if (wave++ >= 8) { shadowWave(game, p.pos, 15, 0.8); game.fx.explosion(p.pos, { size: 10, color: 0xd0a0ff, life: 0.6 }); game.renderer.shake(0.8); game.timeCtl.slowmo(0.35, 0.5); audio.boom({ vol: 0.7, dur: 0.7 }); return; }
         game.vacuum(p.pos, 8, 5);
         const ts = targets(game, p, 3, 8); const pts = ts.length ? ts.map((e) => e.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 1.5, 0, (Math.random() - 0.5) * 1.5))) : [fwd(p, 3 + Math.random() * 3)];
         for (const pt of pts) {
           const dir = new THREE.Vector3(0.15, -1, 0.1).normalize(); const sp = pt.clone().add(new THREE.Vector3(-1.2, 8, -0.8));
-          game.fx.slashSprite(sp, dir, 0xd0a0ff, { size: 2.2, life: 0.16, speed: 52, tilt: 0 });
-          game.after(0.13, () => { game.hitRadius(pt, 1.8, c.dmg, { kb: 1.2, kind: 'slash', source: p, dirFrom: pt, quietStop: true }); game.fx.burst(pt.clone().setY(0.4), 0xd0a0ff, { n: 8, speed: 7, size: 0.3 }); game.fx.flash(pt.clone().setY(0.6), 0xe0c0ff, { size: 2.2, life: 0.15 }); game.fx.shockTex(pt, 0xb26bff, { r1: 2.4, life: 0.28 }); audio.clang({ vol: 0.32, freq: 2600, dur: 0.25 }); game.renderer.shake(0.12); });
+          game.fx.slashSprite(sp, dir, 0x7030ff, { size: 2.2, life: 0.16, speed: 52, tilt: 0 });
+          game.after(0.13, () => { game.hitRadius(pt, 1.8, c.dmg, { kb: 1.2, kind: 'slash', source: p, dirFrom: pt, quietStop: true }); game.fx.burst(pt.clone().setY(0.4), 0xd0a0ff, { n: 8, speed: 7, size: 0.3 }); game.fx.impact?.burst?.(pt.clone().setY(0.6), 0xb466ff, { size: 1.1 }); shadowWave(game, pt, 2.4, 0.28); audio.clang({ vol: 0.32, freq: 2600, dur: 0.25 }); game.renderer.shake(0.12); });
         }
         audio.whoosh({ vol: 0.28, pitch: 1.6, dur: 0.15 });
         game.after(0.15, tick);
       }; tick();
-      game.renderer.flashScreen(0.4, 0xd0a0ff); game.renderer.aberr = 1;
+      game.renderer.flashScreen(0.22, 0xb27aff); game.renderer.aberr = 1;
     },
   },
   // ================================================================
@@ -540,7 +589,7 @@ export const SKILLS = {
   chain_bind: {
     dur: 0.85,
     start(game, p, c) {
-      game.fx.castCircle(p.pos, 0xffe08a, { radius: 5.5, life: 0.85 });
+      knightRune(game, p.pos, 2, 0.85);
       audio.magic({ vol: 0.4, base: 440, notes: [0, 5, 9, 12], step: 0.05 });
       c.data.bound = [];
     },
@@ -548,35 +597,35 @@ export const SKILLS = {
       const ts = targets(game, p, 8, 12);
       c.data.bound = ts;
       game.vacuum(p.pos, 12, 30);
-      const chest = () => p.pos.clone().setY(1.5);
       ts.forEach((e, i) => game.after(i * 0.045, () => {
         if (!e.alive) return;
-        game.fx.boltTex(chest(), e.pos.clone().setY(1.0), 0xffe08a, { width: 2.4, life: 0.55 });
-        game.fx.castCircle(e.pos, 0xffd060, { radius: 1.7, life: 1.9 });
+        knightChain(game, _chainFrom.copy(p.pos).setY(1.5), e.pos.clone().setY(1.0), { life: 0.75, width: .26 });
+        // 묶인 적 발밑: 금빛 마법진 대신 사슬 가시 고리(인스턴스 층).
+        game.fx.impact?.mark?.(e.pos, 0xff8a10, { radius: 1, life: 1.9, style: MARK_STYLE.thorn, angle: i });
         e.stun = Math.max(e.stun, 2.0 * (e.isBoss ? 0.35 : 1));
         game.damageEnemy(e, c.dmg * 0.45, { kind: 'magic', kb: 0, source: p, quietStop: i > 1 });
         audio.clang({ vol: 0.28, freq: 1700 + i * 130, dur: 0.22 });
       }));
-      game.renderer.flashScreen(0.26, 0xfff0c0); game.renderer.shake(0.35); audio.vibe([20, 20, 40]);
+      game.renderer.shake(0.35); audio.vibe([20, 20, 40]);
       // 결박 유지 — 사슬이 1.4초간 계속 조인다
       let n = 12;
       const hold = () => {
         if (n-- <= 0 || !game.active) return;
         game.vacuum(p.pos, 12, 11);
-        for (const e of c.data.bound) if (e.alive) { e.stun = Math.max(e.stun, 0.45); if (n % 3 === 0) game.fx.boltTex(chest(), e.pos.clone().setY(1.0), 0xffd060, { width: 1.2, life: 0.16 }); }
+        for (const e of c.data.bound) if (e.alive) { e.stun = Math.max(e.stun, 0.45); if (n % 3 === 0) knightChain(game, _chainFrom.copy(p.pos).setY(1.5), e.pos.clone().setY(1.0), { life: 0.36, width: .12 }); }
         game.after(0.12, hold);
       }; game.after(0.25, hold);
       // 사슬 파열
       game.after(1.75, () => {
         if (!game.active) return;
         const center = p.pos.clone();
-        for (const e of c.data.bound) if (e.alive) game.fx.boltTex(center.clone().setY(1.4), e.pos.clone().setY(1), 0xffffff, { width: 3.2, life: 0.2 });
+        for (const e of c.data.bound) if (e.alive) knightChain(game, _chainFrom.copy(center).setY(1.4), e.pos.clone().setY(1), { life: 0.22, width: .13 });
         game.hitRadius(center, 7.5, c.dmg, { kb: 10, kind: 'magic', up: true, source: p, dirFrom: center });
-        game.fx.shockTex(center, 0xffe08a, { r1: 9.5, life: 0.55 });
-        game.fx.holyBurst(center, { size: 9, life: 0.45 });
-        game.fx.burst(center.clone().setY(0.8), 0xfff0c0, { n: 46, speed: 13, size: 0.45, up: 1.1 });
+        // 사슬 파열: 크림 성광(9m) 대신 주황 금 충격 한 겹 + 서명의 퍼지는 고리.
+        game.fx.shockTex(center, 0xff9a20, { r1: 7.5, life: 0.5 });
+        game.fx.burst(center.clone().setY(0.8), 0xffa830, { n: 30, speed: 13, size: 0.4, up: 1.1 });
         game.fx.light(center, 0xffd060, 15, 16, 0.5);
-        game.renderer.shake(0.8); game.renderer.punch(1); game.renderer.flashScreen(0.35, 0xfff0c0);
+        game.renderer.shake(0.8); game.renderer.punch(1); game.renderer.flashScreen(0.1, 0xffa030);
         audio.boom({ vol: 0.9, dur: 0.7, low: 60 }); audio.holy({ vol: 0.4, base: 660, dur: 0.8 }); audio.vibe([60, 30, 90]);
       });
     },
@@ -585,21 +634,16 @@ export const SKILLS = {
   // ── 검성 Lv.20 : 성역 (경계 밖으로 못 나간다 + 내 피해 감소) ──
   sanctuary: {
     dur: 1.0,
-    start(game, p) { game.fx.castCircle(p.pos, 0xfff3b0, { radius: 7, life: 1.0 }); audio.magic({ vol: 0.45, base: 523, notes: [0, 4, 7, 12], step: 0.08 }); },
+    // 준비 마법진은 낮은 밝기(.55)로: 성역 경계가 나타나기 전부터 금빛이 바닥을 다 덮지 않게 한다.
+    start(game, p) { game.fx.groundTex(p.pos, 'circle_gold', 0xffb21e, { r0: 1.2, r1: 3, life: 1.0, spin: 1.6, y: 0.07, fadeIn: 0.2, hold: 0.35, gain: .5 }); audio.magic({ vol: 0.45, base: 523, notes: [0, 4, 7, 12], step: 0.08 }); },
     cast(game, p, c) {
       const center = p.pos.clone().setY(0); const R = 8.0, LIFE = 7.0;
       p.dr = 0.35; p.drT = LIFE; p.sanctum = { pos: center, r: R };
-      // 지면 성역 + 회전 룬
-      game.fx.groundTex(center, 'circle_gold', 0xffe08a, { r0: R * 0.2, r1: R, life: LIFE, spin: 0.5, y: 0.07, fadeIn: 0.3, hold: LIFE - 1.2 });
-      game.fx.castCircle(center, 0xffd060, { radius: R * 0.55, life: LIFE });
-      // 경계 빛기둥 8개
-      for (let i = 0; i < 8; i++) {
-        const a = (i / 8) * Math.PI * 2;
-        const at = center.clone().add(new THREE.Vector3(Math.cos(a) * R, 0, Math.sin(a) * R));
-        game.after(i * 0.05, () => game.fx.firePillar(at, { height: 6.5, width: 1.1, life: LIFE * 0.9, color: 0xfff0c0 }));
-      }
-      game.fx.light(center, 0xffd060, 12, 18, 0.8);
-      game.renderer.flashScreen(0.3, 0xfff0c0); game.renderer.shake(0.4);
+      // 지면 성역: 옅은 회전 룬(밝기 .38) + 얇은 경계 원과 가는 빛기둥 8개(차례로 솟음, 드로우콜 2). 예전 마법진 2장 + 불기둥 16장 + 화면 섬광은 시전 순간 화면을 금빛으로 덮었다.
+      // 7초 내내 바닥 전체(7.5m)를 덮던 금빛 룬 원화와 화면 섬광을 뺐다. 경계 원·빛기둥(sanctum) + 서명 문양만 남는다.
+      game.fx.sanctum?.(center, { radius: R, life: LIFE, color: 0xff9a10 });
+      game.fx.light(center, 0xffb040, 5, 12, 0.5);
+      game.renderer.shake(0.4);
       audio.holy({ vol: 0.5, base: 523, dur: 1.4 }); audio.boom({ vol: 0.5, dur: 0.5, low: 80 }); audio.vibe([40, 30, 60]);
       let t = 0, ticks = Math.round(LIFE / 0.5);
       const tick = () => {
@@ -609,12 +653,14 @@ export const SKILLS = {
         for (const e of game.enemies) {
           if (!e.alive || e.spawning) continue;
           const dx = e.pos.x - center.x, dz = e.pos.z - center.z, d = Math.hypot(dx, dz);
-          if (d > R - 1.2 && d < R + 3.5) { e.pull(center.x, center.z, 16); if (Math.random() < 0.4) game.fx.flash(e.pos.clone().setY(1.1), 0xfff0c0, { size: 1.8, life: 0.16 }); }
+          // 경계에 막힌 적: 크림 스프라이트 대신 작은 금빛 고리(인스턴스 층). 난수 소비 횟수는 그대로다.
+          if (d > R - 1.2 && d < R + 3.5) { e.pull(center.x, center.z, 16); if (Math.random() < 0.4) game.fx.impact?.burst?.(e.pos.clone().setY(1.1), 0xffc23a, { size: .7 }); }
         }
         game.hitRadius(center, R, c.dmg, { kb: 0, kind: 'magic', source: p, dirFrom: center, quiet: true });
         const a = Math.random() * Math.PI * 2, r = Math.random() * R;
-        game.fx.holyBurst(center.clone().add(new THREE.Vector3(Math.cos(a) * r, 0, Math.sin(a) * r)), { size: 3, life: 0.35 });
-        game.fx.embers(center, 0xfff0c0, { n: 6, radius: R * 0.8, life: 1.2, rise: 3 });
+        // 성역 안 맥동: 큰 성광 섬광(3m) 대신 바닥의 작은 금빛 별빛 한 점.
+        game.fx.impact?.burst?.(center.clone().add(new THREE.Vector3(Math.cos(a) * r, .4, Math.sin(a) * r)), 0xffc23a, { size: 1 });
+        game.fx.embers(center, 0xffb040, { n: 6, radius: R * 0.8, life: 1.2, rise: 3 });
         audio.holy({ vol: 0.14, base: 784, dur: 0.4 });
         game.after(0.5, tick);
       }; tick();
@@ -661,8 +707,9 @@ export const SKILLS = {
       p.vel.set(0, 0, 0); p.stopTrail();
       const center = fwd(p, 2.4);
       game.hitRadius(center, 6.2, c.dmg, { kb: 13, kind: 'blunt', up: true, stun: 0.7, source: p, dirFrom: p.pos });
-      game.fx.explosion(center, { size: 9, color: 0xffa060, life: 0.6 });
-      game.fx.shockTex(center, 0xff8a40, { r1: 8, life: 0.5 });
+      game.fx.explosion(center, { size: 9, color: 0xff7a30, life: 0.6 });
+      game.fx.shockTex(center, 0xff5a1e, { r1: 8, life: 0.5 });
+      barbRushEnd(game, center, p.forward(_v)); // 광전사: 앞으로 터지는 용암 균열·분노 고리
       game.fx.scorch(center, { radius: 4, life: 5 }); game.fx.dustPuff(center, { size: 7, life: 1.1 });
       game.fx.burst(center.clone().setY(0.6), 0xff8040, { n: 44, speed: 14, size: 0.5, up: 1.4, grav: 18 });
       game.fx.light(center, 0xff8040, 14, 15, 0.5);
@@ -716,12 +763,12 @@ export const SKILLS = {
   // ── 대마도사 Lv.10 : 반사 투사체 (적과 벽을 튕기며 커진다) ──
   arc_reflect: {
     dur: 0.6,
-    start(game, p) { game.fx.castCircle(p.pos, 0xa0d8ff, { radius: 2.8, life: 0.55 }); audio.magic({ vol: 0.35, base: 880, notes: [0, 7, 12], step: 0.04 }); },
+    start(game, p) { game.fx.castCircle(p.pos, 0x3aa8ff, { radius: 2.8, life: 0.55, demon: true }); audio.magic({ vol: 0.35, base: 880, notes: [0, 7, 12], step: 0.04 }); },
     cast(game, p, c) {
       const state = { pos: fwd(p, 1.2).setY(1.3), dir: p.forward(new THREE.Vector3()), bounces: 0, hit: new Set(), acc: 0 };
       const MAXB = 12, SPEED = 30;
       const prev = new THREE.Vector3();
-      const lance = game.fx.orb(0x9fd8ff, 0.55); lance.position.copy(state.pos);
+      const lance = game.fx.orb(0x2f8cff, 0.5);   // 프리즘 창: 옅은 하늘색(0x9fd8ff) 구·후광은 흰 덩어리로만 보였다(h1b). 진한 청 구 + 굵은 궤적(magePrismTrail)으로 읽힌다 lance.position.copy(state.pos);
       lance.userData.core.userData.ownGeo = true;   // fx 가 정리할 수 있게 표시 (안 하면 캐스트마다 지오메트리가 샌다)
       const disposeLance = () => { lance.userData.core.material.dispose(); lance.userData.halo.material.dispose(); };
 
@@ -731,7 +778,8 @@ export const SKILLS = {
         prev.copy(state.pos);
         state.pos.addScaledVector(state.dir, SPEED * dt);
         lance.position.copy(state.pos);
-        game.fx.boltTex(prev, state.pos, 0xbfeaff, { width: 0.9, life: 0.14 });
+        game.fx.boltTex(prev, state.pos, 0x2f8cff, { width: 0.9, life: 0.14 });
+        magePrismTrail(game, prev, state.pos); // 프리즘 창 궤적(인스턴스 층)
         // 적 반사
         let bounced = false;
         for (const e of game.enemies) {
@@ -740,15 +788,16 @@ export const SKILLS = {
           state.hit.add(e); state.bounces++;
           const mul = 1 + state.bounces * 0.22;
           game.damageEnemy(e, c.dmg * mul, { kind: 'magic', kb: 2.2, source: p, dirx: state.dir.x, dirz: state.dir.z, quietStop: state.bounces > 2 });
-          game.fx.flash(e.pos.clone().setY(1.2), 0xdff4ff, { size: 2.6, life: 0.18 });
-          game.fx.burst(e.pos.clone().setY(1.1), 0xbfeaff, { n: 12, speed: 8, size: 0.3 });
-          game.fx.shockTex(e.pos, 0x9fd8ff, { r1: 2.4, life: 0.25 });
+          game.fx.flash(e.pos.clone().setY(1.2), 0x3a9cff, { size: 1.8, life: 0.1 });
+          game.fx.burst(e.pos.clone().setY(1.1), 0x4a9cff, { n: 12, speed: 8, size: 0.3 });
+          game.fx.shockTex(e.pos, 0x2f7cff, { r1: 2.4, life: 0.25 });
           audio.clang({ vol: 0.3, freq: 1400 + state.bounces * 180, dur: 0.2 });
           // 다음 적을 향해 굴절
           let best = null, bd = 15;
           for (const o of game.enemies) { if (!o.alive || o.spawning || state.hit.has(o)) continue; const d = Math.hypot(o.pos.x - state.pos.x, o.pos.z - state.pos.z); if (d < bd) { bd = d; best = o; } }
           if (best) state.dir.set(best.pos.x - state.pos.x, 0, best.pos.z - state.pos.z).normalize();
           else state.dir.applyAxisAngle(new THREE.Vector3(0, 1, 0), 2.1 + Math.random());
+          magePrismBounce(game, state.pos, state.dir, state.bounces); // 프리즘: 굴절 별빛·세 갈래 빛
           bounced = true; break;
         }
         // 벽 반사 — 탐침은 실제 스텝 크기로, 반사 뒤엔 벽에서 떼어 놓는다.
@@ -763,39 +812,41 @@ export const SKILLS = {
           if (!bx && !bz) state.dir.negate();                       // 오목한 구석: 되돌아 나온다
           state.pos.addScaledVector(state.dir, step * 1.2);          // 벽에서 떼어 놓기
           if (!game.world.walkable(state.pos.x, state.pos.z)) state.pos.copy(p.pos).setY(1.3);   // 그래도 벽 안이면 시전자에게 회수
-          game.fx.flash(state.pos, 0xdff4ff, { size: 2.2, life: 0.16 });
-          game.fx.shockTex(_v.copy(state.pos).setY(0), 0x9fd8ff, { r1: 2, life: 0.22 });
+          game.fx.flash(state.pos, 0x3a9cff, { size: 1.6, life: 0.1 });
+          game.fx.shockTex(_v.copy(state.pos).setY(0), 0x2f7cff, { r1: 2, life: 0.22 });
           audio.play('ui_pluck', { vol: 0.3, rate: 1.6 });
         }
         if (state.bounces >= MAXB) {
           game.hitRadius(state.pos, 4.5, c.dmg * 2.4, { kb: 8, kind: 'magic', up: true, source: p, dirFrom: state.pos });
-          game.fx.explosion(state.pos, { size: 7, color: 0xbfeaff, life: 0.5 });
-          game.fx.shockTex(state.pos.clone().setY(0), 0x9fd8ff, { r1: 6, life: 0.5 });
-          game.fx.burst(state.pos.clone(), 0xdff4ff, { n: 36, speed: 13, size: 0.4 });
+          game.fx.explosion(state.pos, { size: 7, color: 0x4a8cff, life: 0.5 });
+          game.fx.shockTex(state.pos.clone().setY(0), 0x2f7cff, { r1: 6, life: 0.5 });
+          game.fx.burst(state.pos.clone(), 0x5a8cff, { n: 36, speed: 13, size: 0.4 });
           game.renderer.shake(0.6); audio.boom({ vol: 0.7, dur: 0.5, low: 90 }); audio.vibe([40, 20, 60]);
           state.done = true; lance.visible = false;
         }
       }, disposeLance);
-      game.renderer.flashScreen(0.2, 0xbfeaff);
+      game.renderer.flashScreen(0.2, 0x6aa8ff);
     },
   },
 
   // ── 대마도사 Lv.20 : 시간 정지 + 각인 (멈춘 동안 준 피해가 해제 순간 터진다) ──
   chrono_seal: {
     dur: 1.0,
-    start(game, p) { game.fx.castCircle(p.pos, 0xc0d8ff, { radius: 8, life: 1.0 }); game.fx.abilitySignature?.(p.pos, 'frost', { scale: 1.65, life: 0.85, heavy: true }); audio.magic({ vol: 0.5, base: 392, notes: [0, 5, 10, 14, 19], step: 0.09, type: 'triangle' }); audio.charge({ vol: 0.4, dur: 0.9 }); },
+    start(game, p) { game.fx.castCircle(p.pos, 0x6a4cff, { radius: 6, life: 1.0, demon: true }); game.fx.abilitySignature?.(p.pos, 'arcane', { scale: 1.1, life: 0.7 }); audio.magic({ vol: 0.5, base: 392, notes: [0, 5, 10, 14, 19], step: 0.09, type: 'triangle' }); audio.charge({ vol: 0.4, dur: 0.9 }); },
     cast(game, p, c) {
       const center = p.pos.clone(); const R = 9.5, FREEZE = 3.0;
       const sealed = game.enemies.filter((e) => e.alive && !e.spawning && p.distTo(e) < R).slice(0, 24).map((e) => ({ e, hp: e.hp }));
-      game.fx.groundTex(center, 'circle_demon', 0xc0d8ff, { r0: 1, r1: R, life: FREEZE + 0.5, spin: -1.2, y: 0.07, fadeIn: 0.1, hold: FREEZE });
-      game.fx.shockTex(center, 0xdfe8ff, { r1: R + 1.5, life: 0.6 });
-      game.renderer.flashScreen(0.5, 0xdfe8ff); game.renderer.aberr = 1.3; game.renderer.shake(0.5);
+      // 시간 봉인 = 남보라 '시계' 언어: 바닥 시계판(12 눈금 + 봉인 시간 동안 한 바퀴 도는 바늘) + 옅은 룬. 얼음 흰빛과 구분한다.
+      game.fx.groundTex(center, 'circle_demon', 0x5a3ce0, { r0: 1, r1: R * .7, life: FREEZE + 0.5, spin: -1.2, y: 0.07, fadeIn: 0.1, hold: FREEZE, gain: .4 }); // 연보라 돔 대신 진한 보라 작은 진
+      game.fx.impact?.mark?.(center, 0xa898ff, { radius: R * .62, life: FREEZE + .3, style: 4 });
+      game.fx.shockTex(center, 0x9a8cff, { r1: R + 1.5, life: 0.6 });
+      game.renderer.flashScreen(0.2, 0xb8b0ff); game.renderer.aberr = 1.3; game.renderer.shake(0.5);
       game.timeCtl.slowmo(0.25, 0.5);
       audio.ice({ vol: 0.6, dur: 0.9 }); audio.dark({ vol: 0.35, base: 90, dur: 1.2 }); audio.vibe([80, 40, 40]);
       for (const s of sealed) {
         s.e.stun = Math.max(s.e.stun, FREEZE * (s.e.isBoss ? 0.4 : 1));
-        game.fx.iceBurst(s.e.pos, { size: 3, life: 0.4 });
-        game.fx.castCircle(s.e.pos, 0xc0d8ff, { radius: 1.4, life: FREEZE });
+        game.fx.iceBurst(s.e.pos, { size: 2.2, life: 0.4, color: 0x9a8cff });
+        game.fx.impact?.mark?.(s.e.pos, 0xa898ff, { radius: 1.1, life: FREEZE, style: 4 });
       }
       game.ui.toast(`시간 봉인 — ${sealed.length}명 정지`, 'gold');
       // 정지 유지 (넉백까지 얼린다)
@@ -803,22 +854,22 @@ export const SKILLS = {
       const hold = () => {
         if (n-- <= 0 || !game.active) return;
         for (const s of sealed) { if (!s.e.alive) continue; s.e.kb.set(0, 0, 0); s.e.vel.set(0, 0, 0); s.e.stun = Math.max(s.e.stun, 0.3); }
-        if (n % 6 === 0) for (const s of sealed) if (s.e.alive) game.fx.embers(s.e.pos, 0xc0d8ff, { n: 2, radius: 0.6, life: 0.6, rise: 1.2 });
+        if (n % 6 === 0) for (const s of sealed) if (s.e.alive) game.fx.embers(s.e.pos, 0xa898ff, { n: 2, radius: 0.6, life: 0.6, rise: 1.2 });
         game.after(0.1, hold);
       }; hold();
       // 해제 — 각인된 피해가 터진다
       game.after(FREEZE, () => {
         if (!game.active) return;
-        game.renderer.flashScreen(0.45, 0xdfe8ff); game.fx.abilitySignature?.(center, 'frost', { scale: 1.8, life: 0.62, heavy: true }); game.timeCtl.slowmo(0.35, 0.5); game.renderer.shake(0.9); game.renderer.punch(1.2);
+        game.renderer.flashScreen(0.22, 0xb8b0ff); game.fx.abilitySignature?.(center, 'arcane', { scale: 1.4, life: 0.6, heavy: true }); game.timeCtl.slowmo(0.35, 0.5); game.renderer.shake(0.9); game.renderer.punch(1.2);
         audio.boom({ vol: 1, dur: 0.9, low: 55 }); audio.shatter({ vol: 0.7 }); audio.vibe([90, 40, 120]);
         sealed.forEach((s, i) => game.after(i * 0.05, () => {
           const taken = Math.max(0, s.hp - (s.e.alive ? s.e.hp : 0));
           const at = s.e.pos.clone();
-          game.fx.explosion(at, { size: 6, color: 0xdfe8ff, life: 0.5 });
-          game.fx.iceBurst(at, { size: 5, life: 0.45 });
-          game.fx.burst(at.clone().setY(0.8), 0xc0d8ff, { n: 22, speed: 11, size: 0.4 });
+          game.fx.explosion(at, { size: 4.2, color: 0x8a7cff, life: 0.5 });
+          game.fx.impact?.burst?.(at.clone().setY(1), 0xa898ff, { size: 1.6 });
+          game.fx.burst(at.clone().setY(0.8), 0xa898ff, { n: 22, speed: 11, size: 0.4 });
           game.hitRadius(at, 3.8, c.dmg + taken * 0.75, { kb: 7, kind: 'magic', up: true, source: p, dirFrom: at, quietStop: i > 1 });
-          if (i < 3) game.fx.light(at, 0xc0d8ff, 12, 12, 0.4);
+          if (i < 3) game.fx.light(at, 0x9a8cff, 12, 12, 0.4);
           audio.ice({ vol: 0.35, dur: 0.4 }); game.renderer.shake(0.25);
         }));
       });
@@ -828,10 +879,10 @@ export const SKILLS = {
   // ── 암살자 Lv.10 : 표식 + 분신 순간이동 참격 ──
   shadow_mark: {
     dur: 0.7,
-    start(game, p) { game.fx.castCircle(p.pos, 0xb26bff, { radius: 4, life: 0.7 }); audio.dark({ vol: 0.4, base: 180, dur: 0.6 }); },
+    start(game, p) { game.fx.castCircle(p.pos, 0xb26bff, { radius: 4, life: 0.7, demon: true }); audio.dark({ vol: 0.4, base: 180, dur: 0.6 }); },
     cast(game, p, c) {
       const ts = targets(game, p, 8, 13);
-      if (!ts.length) { game.fx.shockTex(p.pos, 0xb26bff, { r1: 5, life: 0.4 }); return; }
+      if (!ts.length) { shadowWave(game, p.pos, 5, 0.4); return; }
       for (const e of ts) { game.fx.castCircle(e.pos, 0xb26bff, { radius: 1.5, life: 1.5, demon: true }); game.fx.embers(e.pos, 0xd0a0ff, { n: 8, radius: 0.8, life: 0.9, rise: 2 }); }
       audio.whoosh({ vol: 0.5, pitch: 0.8, dur: 0.4 });
       // 분신 3체가 표식을 차례로 친다
@@ -840,9 +891,9 @@ export const SKILLS = {
         const side = (i % 3) - 1;
         const at = e.pos.clone().add(new THREE.Vector3(Math.cos(i * 2.1) * 1.6, 0, Math.sin(i * 2.1) * 1.6));
         game.fx.ghost(p.model, 0xb26bff, { life: 0.32, opacity: 0.55, at });
-        game.fx.slashSprite(e.pos.clone().setY(1.1), new THREE.Vector3(e.pos.x - at.x, 0, e.pos.z - at.z).normalize(), 0xd0a0ff, { size: 3.4, life: 0.2, tilt: side * 1.2 });
+        game.fx.slashSprite(e.pos.clone().setY(1.1), new THREE.Vector3(e.pos.x - at.x, 0, e.pos.z - at.z).normalize(), 0x7030ff, { size: 3.4, life: 0.2, tilt: side * 1.2 });
         game.damageEnemy(e, c.dmg, { kind: 'slash', kb: 1.2, source: p, dirx: e.pos.x - at.x, dirz: e.pos.z - at.z, quietStop: i > 1 });
-        game.fx.flash(e.pos.clone().setY(1.2), 0xe0c0ff, { size: 2.2, life: 0.16 });
+        game.fx.flash(e.pos.clone().setY(1.2), 0xb27aff, { size: 1.6, life: 0.16 });
         audio.hit('slash', { heavy: i % 3 === 0 }); if (i < 3) audio.vibe(15);
         game.renderer.shake(0.18);
       }));
@@ -865,7 +916,7 @@ export const SKILLS = {
           hitWithin(game, p, hub, 5.5, reach, c.dmg * 1.6, { kb: 6, kind: 'slash', up: true, source: p, dirFrom: hub });
           game.fx.texFlash(hub, 'singularity', 0xb26bff, { size: 9, life: 0.5, spin: 0.6, grow: 1.5, y: 0.6 });
           game.fx.explosion(hub, { size: 7, color: 0xd0a0ff, life: 0.5 });
-          game.fx.shockTex(hub, 0xb26bff, { r1: 6.5, life: 0.5 });
+          shadowWave(game, hub, 6.5, 0.5);
           game.fx.burst(hub.clone().setY(0.8), 0xd0a0ff, { n: 40, speed: 12, size: 0.42 });
           game.renderer.shake(0.7); game.renderer.punch(0.9); game.renderer.flashScreen(0.3, 0xd0a0ff);
           audio.boom({ vol: 0.8, dur: 0.6, low: 70 }); audio.dark({ vol: 0.4, base: 120, dur: 0.6 }); audio.vibe([60, 30, 80]);
@@ -881,7 +932,7 @@ export const SKILLS = {
       c.data.n = 0; c.data.tick = 0; c.data.last = null; c.data.origin = p.pos.clone();
       p.invuln = 2.1; p.startTrail(); p.beacon?.setFocus(true, 0xd0a0ff);
       game.fx.texFlash(p.pos, 'singularity', 0x8a4aff, { size: 8, life: 0.5, spin: 0.8, grow: 1.4, y: 0.5 });
-      game.fx.shockTex(p.pos, 0x8a4aff, { r1: 5, life: 0.4 });
+      shadowWave(game, p.pos, 5, 0.4);
       game.renderer.aberr = 0.55; game.renderer.radial = 0.22; game.renderer.desat = 0.12;
       audio.dark({ vol: 0.6, base: 70, dur: 1.4 }); audio.suck({ vol: 0.4, dur: 1.2 }); audio.vibe([60, 30, 30]);
     },
@@ -905,7 +956,7 @@ export const SKILLS = {
       p.pos.set(at.x, 0, at.z); p.face(e.pos.x, e.pos.z);
       p.playTimed(c.data.n % 2 ? 'Dualwield_Melee_Attack_Slice' : 'Dualwield_Melee_Attack_Stab', 0.2, { fade: 0.03 });   // dur(0.5) 로 한 번 재생하면 나머지 1.5초는 마지막 프레임에서 멈춰 있다
       game.fx.boltTex(from.clone().setY(1), p.pos.clone().setY(1), 0xb26bff, { width: 1.6, life: 0.18 });
-      game.fx.slashSprite(e.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0xd0a0ff, { size: 3.6, life: 0.18, tilt: (c.data.n % 2 ? 0.8 : -1.5), flip: c.data.n % 2 === 1 });
+      game.fx.slashSprite(e.pos.clone().setY(1.1), p.forward(new THREE.Vector3()), 0x7030ff, { size: 3.6, life: 0.18, tilt: (c.data.n % 2 ? 0.8 : -1.5), flip: c.data.n % 2 === 1 });
       game.fx.flash(p.pos.clone().setY(1), 0x8a4aff, { size: 2.4, life: 0.15 });
       onlyWithin(game, o, VOID_STEP_REACH, () => game.hitArea(p, p.pos, p.yaw, 3.6, 200, c.dmg, { kb: 1.4, kind: 'slash', source: p, quietStop: c.data.n % 3 !== 0 }));
       audio.whoosh({ vol: 0.35, pitch: 1.2 + c.data.n * 0.06, dur: 0.14 });
@@ -919,7 +970,7 @@ export const SKILLS = {
       onlyWithin(game, c.data.origin || at, VOID_STEP_REACH, () => game.hitRadius(at, 7.5, c.dmg * 3.2, { kb: 12, kind: 'slash', up: true, finisher: true, skillCast:c, source: p, dirFrom: at }));
       game.fx.texFlash(at, 'singularity', 0xb26bff, { size: 12, life: 0.6, spin: 1.2, grow: 1.6, y: 1 });
       game.fx.explosion(at, { size: 10, color: 0xd0a0ff, life: 0.6 });
-      game.fx.shockTex(at, 0x8a4aff, { r1: 9, life: 0.6 });
+      shadowWave(game, at, 9, 0.6);
       game.fx.burst(at.clone().setY(1), 0xd0a0ff, { n: 60, speed: 15, size: 0.5, up: 0.9 });
       game.fx.light(at, 0xb26bff, 16, 18, 0.6);
       game.renderer.shake(1); game.renderer.punch(1.4); game.renderer.flashScreen(0.4, 0xd0a0ff); game.timeCtl.slowmo(0.35, 0.5);
@@ -927,19 +978,19 @@ export const SKILLS = {
     },
   },
   // ================= 고위 액티브 Lv.35 / Lv.50 =================
-  sunbreaker: { dur:.85, cast(game,p,c){ const at=fwd(p,4); game.vacuum(at,8,18); game.hitRadius(at,5.5,c.dmg,{kb:8,kind:'slash',source:p,dirFrom:at}); game.fx.shockTex(at,0xffd060,{r1:6,life:.45}); game.after(.18,()=>{if(game.active)game.hitRadius(at,6.5,c.dmg*.65,{kb:10,kind:'slash',source:p,dirFrom:at});}); } },
-  heavenfall: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,15,5)||p.pos.clone(); game.vacuum(at,12,24); game.fx.castCircle(at,0xfff0a0,{radius:7,life:.7}); game.after(.28,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.25,{kb:14,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xfff0a0,life:.55});}); } },
+  sunbreaker: { dur:.85, cast(game,p,c){ const at=fwd(p,4); game.vacuum(at,8,18); game.hitRadius(at,5.5,c.dmg,{kb:8,kind:'slash',source:p,dirFrom:at}); game.fx.shockTex(at,0xff9a20,{r1:4.5,life:.4}); game.after(.18,()=>{if(game.active)game.hitRadius(at,6.5,c.dmg*.65,{kb:10,kind:'slash',source:p,dirFrom:at});}); } },
+  heavenfall: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,15,5)||p.pos.clone(); game.vacuum(at,12,24); knightRune(game,at,3,.7); game.after(.28,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.25,{kb:14,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:6.5,color:0xff9a18,life:.5});}); } },
   // 설원의 혈진(교관): 두 번째 붕괴가 반경 8 → 9.5, 피해 0.8 → 1.1배가 된다.
-  bloodquake: { dur:.9, cast(game,p,c){ const echo=hasTownSkillVariant(p,'bloodquake','echo'); const at=p.pos.clone(); game.vacuum(at,9,22); game.hitRadius(at,6,c.dmg,{kb:7,kind:'blunt',source:p,dirFrom:at}); game.after(.2,()=>{if(game.active)game.hitRadius(at,echo?9.5:8,c.dmg*(echo?1.1:.8),{kb:12,kind:'blunt',up:true,source:p,dirFrom:at});}); } },
-  cataclysm: { dur:1.1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||fwd(p,2); game.fx.castCircle(at,0xff5a3c,{radius:8,life:.8}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.3,{kb:16,kind:'blunt',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:12,color:0xff5a3c,life:.65});}); } },
-  star_prison: { dur:.9, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); game.vacuum(at,13,28); game.fx.castCircle(at,0x74c8ff,{radius:7,life:.8}); game.after(.24,()=>{if(game.active)game.hitRadius(at,7,c.dmg*1.2,{kb:5,stun:1.2,kind:'magic',source:p,dirFrom:at});}); } },
+  bloodquake: { dur:.9, cast(game,p,c){ const echo=hasTownSkillVariant(p,'bloodquake','echo'); const at=p.pos.clone(); game.vacuum(at,9,22); game.hitRadius(at,6,c.dmg,{kb:7,kind:'blunt',source:p,dirFrom:at}); game.fx.shockTex(at,0xc81810,{r1:6.5,life:.4}); game.after(.2,()=>{if(!game.active)return;game.hitRadius(at,echo?9.5:8,c.dmg*(echo?1.1:.8),{kb:12,kind:'blunt',up:true,source:p,dirFrom:at});game.fx.shockTex(at,0xff4a1a,{r1:echo?10:8.5,life:.5});game.fx.scorch(at,{radius:5,life:5});}); } },
+  cataclysm: { dur:1.1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||fwd(p,2); game.fx.castCircle(at,0xff5a3c,{radius:8,life:.8}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.3,{kb:16,kind:'blunt',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:12,color:0xff5a3c,life:.65});game.fx.firePillar(at,{height:12,width:3.2,life:.7,color:0xff4a1a});game.fx.shockTex(at,0xff3a1a,{r1:11,life:.55});game.fx.scorch(at,{radius:6,life:6});}); } },
+  star_prison: { dur:.9, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); game.vacuum(at,13,28); game.fx.castCircle(at,0x4a4cff,{radius:7,life:.8,demon:true}); game.after(.24,()=>{if(game.active)game.hitRadius(at,7,c.dmg*1.2,{kb:5,stun:1.2,kind:'magic',source:p,dirFrom:at});}); } },
 
-  absolute_zero: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,17,6)||fwd(p,6); game.vacuum(at,12,18); game.fx.castCircle(at,0xccecff,{radius:8,life:.9}); game.after(.35,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.25,{kb:11,stun:1.8,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.iceBurst(at,{size:9,life:.55});}); } },
+  absolute_zero: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,17,6)||fwd(p,6); game.vacuum(at,12,18); game.fx.castCircle(at,0x2a8cff,{radius:8,life:.9,demon:true}); game.after(.35,()=>{if(!game.active)return;game.hitRadius(at,9,c.dmg*1.25,{kb:11,stun:1.8,kind:'magic',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.iceBurst(at,{size:7,life:.55,color:0x2a8cff});}); } },
   // 별그림자 행렬(교관): 흡인 반경 9 → 13, 베기 반경 5 → 6.5.
   night_parade: { dur:.85, cast(game,p,c){ const wide=hasTownSkillVariant(p,'night_parade','wide'); const at=c.data.aimPoint?.clone()||densest(game,p,13,4)||fwd(p,3); game.vacuum(at,wide?13:9,25); for(let i=0;i<3;i++)game.after(i*.1,()=>{if(game.active)game.hitRadius(at,wide?6.5:5,c.dmg*.55,{kb:2,kind:'slash',source:p,dirFrom:at,quietStop:i>0});}); } },
-  eclipse_edge: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); game.fx.castCircle(at,0xb26bff,{radius:7,life:.7}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xb26bff,life:.55});}); } },
-  gale_hunt: { dur:.9, cast(game,p,c){ rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4}); for(const delay of [.12,.24])game.after(delay,()=>{if(game.active&&p.alive)rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4});}); } },
-  skyfall_arrows: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,18,6)||fwd(p,7); game.fx.castCircle(at,0x7feac0,{radius:8,life:.8}); for(let i=0;i<5;i++)game.after(.16+i*.09,()=>{if(!game.active)return;const hit=at.clone().add(new THREE.Vector3(Math.cos(i*2.4)*2.2,0,Math.sin(i*2.4)*2.2));game.hitRadius(hit,4.2,c.dmg*.42,{kb:4,kind:'slash',source:p,dirFrom:hit,quietStop:i>1});game.fx.shockTex(hit,0x7feac0,{r1:3.8,life:.3});}); } },
+  eclipse_edge: { dur:1, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,16,5)||fwd(p,5); p.invuln=Math.max(p.invuln||0,1); game.vacuum(at,10,24); game.fx.castCircle(at,0xb26bff,{radius:7,life:.7,demon:true}); game.after(.3,()=>{if(!game.active)return;game.hitRadius(at,8,c.dmg*1.3,{kb:14,kind:'slash',up:true,finisher:true,skillCast:c,source:p,dirFrom:at});game.fx.explosion(at,{size:10,color:0xb26bff,life:.55});}); } },
+  gale_hunt: { dur:.9, cast(game,p,c){ rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'}); for(const delay of [.12,.24])game.after(delay,()=>{if(game.active&&p.alive)rangerArrows(game,p,c.dmg*.75,3,{radius:.9,kb:4,streak:'gale'});}); } },
+  skyfall_arrows: { dur:1.05, cast(game,p,c){ const at=c.data.aimPoint?.clone()||densest(game,p,18,6)||fwd(p,7); game.fx.groundTex(at,'circle_gold',0x3fe0a0,{r0:3.2,r1:8,life:.8,spin:1.6,y:.07,fadeIn:.2,hold:.35,gain:.5}); for(let i=0;i<5;i++)game.after(.16+i*.09,()=>{if(!game.active)return;const hit=at.clone().add(new THREE.Vector3(Math.cos(i*2.4)*2.2,0,Math.sin(i*2.4)*2.2));game.hitRadius(hit,4.2,c.dmg*.42,{kb:4,kind:'slash',source:p,dirFrom:hit,quietStop:i>1});game.fx.shockTex(hit,0x7feac0,{r1:3.8,life:.3});}); } },
 
   // Mechanics live outside the visual session's FX/SFX edits in this file.
   ...AWAKENING_III,
